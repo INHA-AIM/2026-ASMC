@@ -3,20 +3,21 @@
 > **개발 SIM: 26.R1.h3** (대회 배포 SIM 아님)  
 > Docker Desktop + `./scripts/docker_ros_up.sh` + `./scripts/udp_bridge.sh` 기준.  
 > 상세: [docs/network-udp-ros.md](../docs/network-udp-ros.md)  
-> 차량 센서 프리셋: [`ASMC_v1_vehicle_sensors.json`](./ASMC_v1_vehicle_sensors.json) (MORAI에 Import)
+> 센서셋: [`ASMC_sensor_set_v1.json`](./ASMC_sensor_set_v1.json) (Camera/LiDAR/GPS/IMU Import)
 
 ---
 
 ## 팀원이 할 일 (체크리스트)
 
-개인 Windows/WSL IP를 Docker·compose에 넣을 필요 **없음**.
+Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127.0.0.1`).
 
 1. Docker Desktop + WSL Integration ON → `./scripts/docker_ros_up.sh up`
 2. MORAI **Host/Dest IP 전부 `127.0.0.1`**
-3. 아래 **Network / Sensor Dest 포트**를 치트시트와 동일하게 (또는 `ASMC_v1_vehicle_sensors.json` 로드)
-4. **Cmd Control** 타입 = **Ego Ctrl Cmd**, Host/Dest = **9111 / 9112** (팀 표준)
-5. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh`
-6. 확인: `rostopic hz /Ego_topic` · `/velodyne_points` · `/image_jpeg/compressed`
+3. **센서셋** `ASMC_sensor_set_v1.json` Import (cam·lidar·gps·imu Dest)
+4. **Network Settings** (센서셋에 없음): Ego **909** · Object **7505** · Collision **9092**
+5. **Cmd Control**: 타입 **Ego Ctrl Cmd**, Host/Dest **9111 / 9112** (수정 불필요 — 팀 표준)
+6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh`
+7. 확인: `rostopic hz /Ego_topic` · `/velodyne_points` · `/image_jpeg/compressed`
 
 ---
 

@@ -160,7 +160,7 @@ rostopic echo /Ego_topic -n1   # wheel_angle, position, velocity
 
 참고 실측(26 + AIM06): Ego ~47 · cam1–3 ~20 · cam4 ~10 · gps ~5 · imu ~50 · lidar `/velodyne_points` ~7 (SIM 10 Hz·Docker UDP).
 
-차량 센서 프리셋 JSON: [`config/ASMC_v1_vehicle_sensors.json`](../config/ASMC_v1_vehicle_sensors.json)
+센서셋 JSON: [`config/ASMC_sensor_set_v1.json`](../config/ASMC_sensor_set_v1.json) (Camera/LiDAR/GPS/IMU만 · Network/Cmd는 별도)
 
 ---
 
