@@ -7,26 +7,22 @@
 | 조직 | [INHAautonav](https://github.com/INHAautonav) |
 | 팀원 | 정윤태, 양서준, 이강태, 안승현, 장원태, 손재호 |
 | 통합 리드 | 안승현 |
-| 상태 | 레거시 이식 완료 (PR #1–#4). 이후는 `feature/*` 개발 |
+| 상태 | **Phase 0 (~8/7):** 개인 레포 병행 · ASMC=문서/인프라/안승현 인지. **Phase 1:** module-owned trunk |
 
 ## 문서 (팀원 필독)
 
 | 문서 | 내용 |
 |------|------|
-| [docs/collaboration.md](docs/collaboration.md) | **★ 브랜치·PR·충돌 방지 (팀원 필독)** |
+| [docs/collaboration.md](docs/collaboration.md) | **★ Phase0/1 · WIP · Path A/B (필독)** |
+| [docs/network-udp-ros.md](docs/network-udp-ros.md) | **UDP↔ROS (26.R1.h3 · Docker `127.0.0.1`)** |
+| [docs/perception-agentic-loop.md](docs/perception-agentic-loop.md) | Loc-Aid/bake 에이전틱 eval |
 | [docs/getting-started.md](docs/getting-started.md) | 클론·첫 빌드 |
-| [docs/team-dev-guide.md](docs/team-dev-guide.md) | **팀원별 개발 경로·검증·주의사항** |
-| [docs/sim-verification-checklist.md](docs/sim-verification-checklist.md) | MORAI 시뮬 검증 (담당별) |
-| [docs/competition-environment.md](docs/competition-environment.md) | 대회 PC·센서·네트워크 규정 |
-| [docs/development-environment.md](docs/development-environment.md) | OS, Python 3.8, ROS Noetic, Docker |
-| [docs/architecture-overview.md](docs/architecture-overview.md) | 팀 아키텍처·모듈·인터페이스 |
-| [docs/git-workflow.md](docs/git-workflow.md) | 브랜치·PR 규칙 |
-| [docs/repository-layout.md](docs/repository-layout.md) | 파트별 폴더 격리 |
-| [docs/docker-guide.md](docs/docker-guide.md) | 컨테이너 빌드·재생성 |
-| [docs/integration-plan.md](docs/integration-plan.md) | 통합 진행 상황 |
-| [docs/planning-behavior-handoff.md](docs/planning-behavior-handoff.md) | behavior↔planner↔mpc |
-| [docs/morai-msgs-beta-policy.md](docs/morai-msgs-beta-policy.md) | beta_drive 정렬 규약 |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | 기여 규칙 요약 |
+| [docs/team-dev-guide.md](docs/team-dev-guide.md) | 팀원별 경로 |
+| [docs/integration-plan.md](docs/integration-plan.md) | Wave 1/2 |
+| [docs/sim-verification-checklist.md](docs/sim-verification-checklist.md) | 시뮬 검증 |
+| [docs/architecture-overview.md](docs/architecture-overview.md) | 아키텍처 |
+| [docs/git-workflow.md](docs/git-workflow.md) | Path A/B 명령 |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 기여 요약 |
 
 ## 빠른 시작
 
@@ -57,24 +53,29 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 │   ├── integration_launch/    # planning ✅
 │   ├── learning_by_cheating/  # learning ✅
 │   ├── perception/morai_3d_detection/  # perception ✅
+│   ├── morai_udp_bridge/      # UDP↔ROS (Ego/Ctrl) ✅
+│   ├── morai_sensor_bridge/   # UDP↔ROS (sensors) ✅
 │   └── MORAI-ROS_morai_msgs/  # submodule beta_drive
 ├── tools/
 │   ├── aim_scenario_runner/   # scenario ✅
 │   └── grpc_inha_univ/        # gRPC ✅
-├── scripts/                   # bridge, build, docker
+├── scripts/
+│   ├── rosbridge.sh           # WebSocket rosbridge (개발)
+│   ├── udp_bridge.sh          # UDP bridges (26 개발 / 대회 경로)
+│   └── …
 ├── mgeo_toolkit/ · R_KR_PG_KATRI/
-└── config/morai_bridge.env
+└── config/morai_rosbridge.env
 ```
 
 팀원별 **어느 폴더를 고칠지:** [docs/team-dev-guide.md](docs/team-dev-guide.md)
 
-## 브랜치
+## Git (Phase 0/1 · Trunk)
 
-- `main` — 안정 (직접 push 금지)
-- `feature/<이름>-<기능>` — 일상 개발
-- `integrate/<모듈>` — 통합 리드 대규모 이식 (1차 이식 완료)
+- **Phase 0:** 기능은 개인 레포 OK. ASMC `main` = 빌드되는 문서/인프라/안승현 인지만. **WIP는 Draft PR** ([collaboration §2.5](docs/collaboration.md))
+- **Phase 1:** 소유 모듈 → `main` 자주 푸시; interfaces/UDP/docker/교차 → Path B
+- 상세: [collaboration.md](docs/collaboration.md) · [network-udp-ros.md](docs/network-udp-ros.md)
 
-## 레거시 코드
+## 레거시 · Phase 0 분산 코드
 
-통합 이전 **분산 GitHub repo**는 읽기 전용 참조용입니다. 새 작업은 **본 repo**에서만 합니다.  
-upstream 매핑: [docs/integration-plan.md](docs/integration-plan.md) §4
+Phase 0에는 **개인/분산 레포**에서 기능을 완성한다 (`external/team/`).  
+Wave 2(8/7~)에 ASMC로 이식. 매핑: [docs/integration-plan.md](docs/integration-plan.md) · [team-status](../docs/competition/team-status.md)

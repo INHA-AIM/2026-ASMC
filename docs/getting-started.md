@@ -103,15 +103,27 @@ docker exec -it asmc-ros-noetic bash
 ./scripts/build_ws.sh
 ```
 
-## 5. 작업 브랜치 생성
+### MORAI UDP (26.R1.h3 개발)
+
+시뮬 UI IP는 **Host/Dest 모두 `127.0.0.1`**. 포트 치트시트: [`config/morai_udp_sim_cheat_sheet.md`](../config/morai_udp_sim_cheat_sheet.md).  
+상세: [network-udp-ros.md](./network-udp-ros.md).
 
 ```bash
-git checkout main && git pull
-git checkout -b feature/<이름>-<기능>
+source devel/setup.bash
+./scripts/udp_bridge.sh
 ```
 
-- 브랜치 규칙: [git-workflow.md](./git-workflow.md)
-- **팀원별 수정 경로·검증:** [team-dev-guide.md](./team-dev-guide.md)
-- 시뮬 검증: [sim-verification-checklist.md](./sim-verification-checklist.md)
+> 대회 배포 SIM이 아니라 **개발용 26.R1.h3** 기준이다.
+## 5. 일상 작업 (Git)
+
+```bash
+git checkout main && git pull --rebase origin main
+# Path A: 소유 모듈 + 빌드 통과 → push origin main
+# WIP 공유: feature/… + Draft PR (collaboration §2.5)
+# Phase 0 기능 개발: 개인 레포도 OK — team-status.md
+```
+
+- **필독:** [collaboration.md](./collaboration.md) · [network-udp-ros.md](./network-udp-ros.md)
+- [team-dev-guide.md](./team-dev-guide.md) · [sim-verification-checklist.md](./sim-verification-checklist.md)
 
 `behavior_planner` 빌드에는 Docker 이미지의 `libyaml-cpp-dev`가 필요합니다 (`./scripts/docker_ros_up.sh build`로 이미지 재생성).

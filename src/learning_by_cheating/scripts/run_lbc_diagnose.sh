@@ -21,7 +21,7 @@ echo ""
 
 {
   echo "=== bridge diagnose (shell) ==="
-  "$WS_ROOT/scripts/diagnose_morai_bridge.sh" 2>&1 || true
+  "$WS_ROOT/scripts/diagnose_morai_rosbridge.sh" 2>&1 || true
   echo ""
   echo "=== LBC BEV diagnose (python) ==="
   python3 "$LBC_SCRIPTS/lbc_bev_diagnose.py" \

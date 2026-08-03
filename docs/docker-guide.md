@@ -95,17 +95,23 @@ echo $DISPLAY   # :0 또는 :1 이어야 함
 
 Docker Desktop → WSL Integration 활성화, NVIDIA Container Toolkit 확인.
 
-### MORAI SIM + rosbridge (통합 후)
+### MORAI SIM + UDP 브릿지 (26.R1.h3 개발)
 
-> Bridge: `./scripts/bridge.sh` (포트 9090). 설정은 `config/morai_bridge.env`.
+> **개발 SIM = 26.R1.h3** (대회 SIM 아님).  
+> 치트시트: [`config/morai_udp_sim_cheat_sheet.md`](../config/morai_udp_sim_cheat_sheet.md) · 상세 [`network-udp-ros.md`](./network-udp-ros.md)
 
 | 항목 | 내용 |
 |------|------|
-| 시뮬 | Windows에서 MORAI 실행 |
-| ROS bridge | 기본 포트 **9090** (`rosbridge_websocket`) |
-| Docker Desktop + WSL | 컨테이너 IP ≠ `127.0.0.1` — WSL에서 `hostname -I` 첫 주소를 MORAI Bridge 설정에 입력 |
-| 연결 확인 | `rostopic list` / bridge 기동 후 9090 리슨 확인 |
+| 실행 | `./scripts/udp_bridge.sh` (rosbridge 아님) |
+| MORAI IP | Host/Dest 모두 **`127.0.0.1`** (compose UDP publish) |
+| Ctrl | `cmd_ip=host.docker.internal` · `cmd_port` **9111** (팀 표준 Host) |
+| rosbridge | `./scripts/rosbridge.sh` — 개발 편의 · **당일 금지** |
 
-Bridge 설정: `config/morai_bridge.env`, 실행 `./scripts/bridge.sh`
+```bash
+./scripts/docker_ros_up.sh up
+docker exec -it asmc-ros-noetic bash
+source devel/setup.bash
+./scripts/udp_bridge.sh
+```
 
-**주의:** `aim-noetic-pc`와 `asmc-ros-noetic` **동시 실행 금지** (ROS master 11311 충돌).
+**주의:** `aim-noetic-pc`와 `asmc-ros-noetic` **동시 실행 금지** (11311 충돌).

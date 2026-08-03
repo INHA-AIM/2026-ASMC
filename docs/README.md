@@ -1,26 +1,25 @@
 # 2026-ASMC 팀 문서
 
+> **최종 수정:** 2026-07-25  
 > **대상:** 팀원 전원  
 > **통합 리드:** 안승현  
-> **최종 수정:** 2026-07-20
 
 ## 읽는 순서
 
 1. [getting-started.md](./getting-started.md) — 클론·첫 실행
-2. [collaboration.md](./collaboration.md) — **★ 브랜치·PR·충돌 방지 (팀원 필독)**
-3. [team-dev-guide.md](./team-dev-guide.md) — **팀원별 개발 경로·검증·주의사항**
-4. [competition-environment.md](./competition-environment.md) — **대회 규정 v1.0 (본선)**
-5. [competition-data.md](./competition-data.md) — **본선 경로·센서·시나리오 데이터**
-6. [development-environment.md](./development-environment.md) — OS, Python, ROS, Docker 표준
-7. [architecture-overview.md](./architecture-overview.md) — 팀 아키텍처·모듈·인터페이스
-8. [git-workflow.md](./git-workflow.md) — 브랜치·PR·커밋 규칙 (상세)
-9. [repository-layout.md](./repository-layout.md) — 폴더·파트 격리
-10. [docker-guide.md](./docker-guide.md) — 컨테이너 빌드·재생성
-11. [integration-plan.md](./integration-plan.md) — 통합 진행 상황
-12. [planning-behavior-handoff.md](./planning-behavior-handoff.md) — behavior↔planner↔mpc 연동 규약
-13. [sim-verification-checklist.md](./sim-verification-checklist.md) — **MORAI 시뮬 검증 (담당별)**
-14. [morai-msgs-versions.md](./morai-msgs-versions.md) — 레포별 morai_msgs 버전
-15. [morai-msgs-beta-policy.md](./morai-msgs-beta-policy.md) — **beta_drive 정렬 규약 (통합·일상 작업)**
+2. [collaboration.md](./collaboration.md) — **★ Phase0/1 · WIP · Path A/B (필독)**
+3. [network-udp-ros.md](./network-udp-ros.md) — **UDP↔ROS (26.R1.h3 · `127.0.0.1` Docker)**  
+   · 치트시트 [config/morai_udp_sim_cheat_sheet.md](../config/morai_udp_sim_cheat_sheet.md)
+4. [team-dev-guide.md](./team-dev-guide.md) — 팀원별 경로 (Phase 0 개인 레포 표)
+5. [integration-plan.md](./integration-plan.md) — Wave 1/2
+6. [perception-agentic-loop.md](./perception-agentic-loop.md) — Loc-Aid/bake eval
+7. [architecture-overview.md](./architecture-overview.md)
+8. [competition-environment.md](./competition-environment.md)
+9. [git-workflow.md](./git-workflow.md)
+10. [sim-verification-checklist.md](./sim-verification-checklist.md)
+11. [morai-msgs-beta-policy.md](./morai-msgs-beta-policy.md)
+12. [morai-msgs-versions.md](./morai-msgs-versions.md) — msg 브랜치 · **대회 ROS 실측 요약**
+13. (로컬) [morai-competition-ros-topics.md](../../docs/competition/morai-competition-ros-topics.md) — 대회 UI 토픽 전부
 
 ## 본 repo에 포함되는 것
 
