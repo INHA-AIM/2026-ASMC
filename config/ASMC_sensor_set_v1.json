@@ -563,7 +563,7 @@
         },
         "lidar3DType": 0,
         "intensityType": 0,
-        "isVizPointCloud": true,
+        "isVizPointCloud": false,
         "frequencyIndex": 1,
         "optEq": 0,
         "gamma": 1.5,
