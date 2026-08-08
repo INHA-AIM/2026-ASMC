@@ -3,7 +3,8 @@
 > **개발 SIM: 26.R1.h3** (대회 배포 SIM 아님)  
 > Docker Desktop + `./scripts/docker_ros_up.sh` + `./scripts/udp_bridge.sh` 기준.  
 > 상세: [docs/network-udp-ros.md](../docs/network-udp-ros.md)  
-> 센서셋: [`ASMC_sensor_set_v1.json`](./ASMC_sensor_set_v1.json) (Camera/LiDAR/GPS/IMU Import)
+> 센서셋: [`ASMC_sensor_set_v1.json`](./ASMC_sensor_set_v1.json) (주행용 Camera×4/LiDAR/GPS/IMU)  
+> GT용(시맨틱 캠 포함): [`ASMC_sensor_set_GT.json`](./ASMC_sensor_set_GT.json) — 브릿지 수신은 후속 작업
 
 ---
 

@@ -495,9 +495,9 @@
       "m_SensorUniqueID": 5,
       "m_SensorType": 2,
       "pos": {
-        "x": "1.100",
+        "x": "0.800",
         "y": "0.000",
-        "z": "1.500"
+        "z": "1.450"
       },
       "rot": {
         "roll": "0.000",
@@ -563,7 +563,7 @@
         },
         "lidar3DType": 0,
         "intensityType": 0,
-        "isVizPointCloud": false,
+        "isVizPointCloud": true,
         "frequencyIndex": 1,
         "optEq": 0,
         "gamma": 1.5,
@@ -578,7 +578,7 @@
       "m_SensorUniqueID": 6,
       "m_SensorType": 4,
       "pos": {
-        "x": "1.200",
+        "x": "0.350",
         "y": "0.000",
         "z": "1.250"
       },
