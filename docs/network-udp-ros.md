@@ -1,6 +1,6 @@
 # UDP ↔ ROS 네트워크 가이드
 
-> **최종 수정:** 2026-08-04  
+> **최종 수정:** 2026-08-08  
 > **지위:** 팀 공식 권장  
 > **개발 SIM (현재):** **MORAI 26.R1.h3** — 대회 배포 SIM 아님  
 > **msg:** `src/MORAI-ROS_morai_msgs` submodule **`beta_drive`**  
@@ -117,18 +117,26 @@ PC마다 MORAI를 단독 실행하므로 포트 숫자가 같아도 **충돌하�
 
 ### 4.4 Sensor → Destination PORT
 
-| 센서 | Dest | ROS 토픽 |
-|------|------|----------|
-| camera-1 | **9291** | `/image_jpeg/compressed` |
-| camera-2 | **9293** | `/cam_left/image_jpeg/compressed` |
-| camera-3 | **9295** | `/cam_right/image_jpeg/compressed` |
-| camera-4 | **9297** | `/cam_extra/image_jpeg/compressed` |
-| 3D LiDAR | **9299** | `/velodyne_points` (Host **9298**) |
-| GPS | **9301** | `/gps` |
-| IMU | **9303** | `/imu` |
+MORAI Sensor 목록 순서 = **camera 1–4 → 3D LiDAR → GPS → IMU → semantic camera 8–10.**
+Dest는 이 순서대로 홀수로 배정하고 Host는 Dest−1이다.
 
-Host PORT는 Dest−1 패턴. **LiDAR 2368 금지.**  
-cam/gps/imu는 되는데 lidar만 0이면 Windows에서 Dest **9299**가 안 열린 것 → `./scripts/docker_ros_up.sh up` 후 브릿지 재실행.
+| # | 센서 | Host | Dest | ROS 토픽 |
+|---|------|------|------|----------|
+| 1 | camera-1 | 9290 | **9291** | `/image_jpeg/compressed` |
+| 2 | camera-2 | 9292 | **9293** | `/cam_left/image_jpeg/compressed` |
+| 3 | camera-3 | 9294 | **9295** | `/cam_right/image_jpeg/compressed` |
+| 4 | camera-4 | 9296 | **9297** | `/cam_extra/image_jpeg/compressed` |
+| 5 | 3D LiDAR | 9298 | **9299** | `/velodyne_points` |
+| 6 | GPS | 9300 | **9301** | `/gps` |
+| 7 | IMU | 9302 | **9303** | `/imu` |
+| 8 | semantic camera-8 | 9304 | **9305** | `/sem_front/image_jpeg/compressed` |
+| 9 | semantic camera-9 | 9306 | **9307** | `/sem_left/image_jpeg/compressed` |
+| 10 | semantic camera-10 | 9308 | **9309** | `/sem_right/image_jpeg/compressed` |
+
+**LiDAR 2368 금지.** semantic 8–10은 GT 센서셋에서만 쓰고 기본 OFF (§6).
+
+cam/gps/imu는 되는데 **lidar만 0**인 경우가 자주 나온다 → [§6.1](#61-lidar만-0일-때-9299-포워딩) 참고.
+포트 배정 자체는 문제가 아니므로 **9299를 다른 번호로 옮기지 말 것.**
 
 ---
 
@@ -167,10 +175,67 @@ rostopic echo /Ego_topic -n1   # wheel_angle, position, velocity
 - GT 수집: [`config/ASMC_sensor_set_GT.json`](../config/ASMC_sensor_set_GT.json) (위 + Semantic Camera×3 Dest **9305/9307/9309** → `/sem_{front,left,right}/image_jpeg/compressed`)
 
 LiDAR TF (`base_link`→`velodyne`, v1 기준): **x=0.80 y=0.0 z=1.45**  
-LiDAR Dest **2368 쓰지 말 것.** 9299만 안 열리면 compose 재생성(`docker_ros_up.sh up`).
+LiDAR Dest **2368 쓰지 말 것.**
 
 시맨틱(개발용): `./scripts/udp_bridge.sh enable_semantic_camera:=true`  
 (기본 OFF — 팀 공용 주행 브릿지와 분리)
+
+### 6.1 lidar만 0일 때 (9299 포워딩)
+
+`rostopic hz /velodyne_points`가 `no new messages`이고 브릿지 로그가 이렇게 나오는 증상:
+
+```
+rx cam1=3797  cam2=3800  cam3=3800  cam4=1900  gps=950  imu=8853  lidar=0
+lidar 수신 0건 - MORAI Sensor Destination Port 확인.
+```
+
+**포트 배정·MORAI 설정·브릿지 코드 문제가 아니다.** Docker Desktop의 9299 UDP 포워딩이
+끊긴 것이고, 컨테이너 안에서는 정상적으로 `0.0.0.0:9299`에 bind되어 있다 (`ss -lunp`로 확인 가능).
+
+**원인.** MORAI가 스트림을 쏘는 동안 컨테이너 쪽 9299에 리스너가 없으면
+Docker Desktop이 약 30초 후 이 포워딩을 스스로 철거한다. 한 번 철거되면 되살아나지 않는다.
+컨테이너를 먼저 띄우고 브릿지를 늦게 실행하면 그 사이에 죽는다. cam/gps/imu가 멀쩡한데
+lidar만 죽는 이유는 LiDAR 패킷 레이트가 훨씬 높아서다.
+
+**확인.** 브릿지 로그의 `rx ... lidar=` 카운터를 본다.
+`docker_ros_up.sh`가 찍는 `[OK] Windows UDP Dest open`은 **판단 근거가 못 된다** —
+`up` 2초 뒤 검사인데 포워딩은 죽기까지 30초쯤 살아 있어서 깨진 상태에서도 통과한다.
+Windows에서 직접 보려면:
+
+```powershell
+netstat -ano -p UDP | Select-String ':929[0-9]|:930[0-9]'
+```
+
+9291·9293·…·9309는 `com.docker.backend` PID로 떠 있는데 **9299만 없으면** 이 증상이다.
+
+**해결 1 — 컨테이너 재생성 (대부분).** 재생성한 뒤 **곧바로** 브릿지를 실행한다.
+컨테이너만 띄워두고 몇 분 뒤에 브릿지를 올리면 같은 증상이 재발한다.
+
+```bash
+./scripts/docker_ros_up.sh up
+docker exec -it asmc-ros-noetic bash
+source devel/setup.bash && ./scripts/udp_bridge.sh   # 지체 없이
+```
+
+**해결 2 — Docker Desktop 재시작 (재생성으로도 안 될 때).**
+Docker Desktop 내부 포워딩 상태가 깨지면 컨테이너를 몇 번 재생성해도 9299가 살아나지 않는다
+(측정: 300패킷 송신 → 0 수신, 같은 조건에서 9305는 정상 수신). 이때는 재시작해야 한다.
+
+**WSL 안에서 `docker desktop restart`를 쓰지 말 것** —
+`fork/exec /opt/docker-desktop/bin/com.docker.backend: no such file or directory`로 실패하면서
+아무것도 재시작하지 않는데 `docker ps`는 계속 동작해서 성공한 것처럼 보인다. Windows CLI를 쓴다:
+
+```bash
+"/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe" desktop restart
+```
+
+재시작 후 컨테이너는 restart policy가 `no`라 자동으로 안 올라온다.
+`./scripts/docker_ros_up.sh up`으로 다시 띄우고, 다른 컨테이너(`hmobility-sim` 등)도 `docker start`한다.
+
+**하지 말 것.** LiDAR Dest를 9299 외의 번호로 옮기는 것 (과거 `f47340a`에서 9311로 옮겼다가
+`db854dd`에서 되돌림). 포트 번호 문제가 아니라서 옮겨도 같은 증상이 재발하고,
+센서셋 JSON·launch·compose·문서를 전부 갈아야 하며 팀 포트 표만 어긋난다.
+compose의 `0.0.0.0:9299:9299/udp` 명시 bind도 이 증상에 효과가 없다 (축약형과 동일하게 0 수신).
 
 ---
 
