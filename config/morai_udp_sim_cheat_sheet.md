@@ -20,7 +20,16 @@ Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127
 6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh`
 7. 확인: `rostopic hz /Ego_topic` · `/velodyne_points` · `/image_jpeg/compressed`
 
-**LiDAR만 0이고 cam/gps/imu는 될 때:** Docker Desktop이 Dest **9299**를 안 연 경우가 많음 → WSL에서 `./scripts/docker_ros_up.sh up` 후 브릿지 재실행.
+**LiDAR만 0이고 cam/gps/imu는 될 때:** Docker Desktop의 **9299** 포워딩이 끊긴 것.
+컨테이너 쪽 9299에 리스너가 없는 동안 MORAI가 쏘면 ~30s 후 포워딩이 철거된다.
+
+1. `./scripts/docker_ros_up.sh up` → **곧바로** 브릿지 실행 (늦게 올리면 그 사이에 또 죽는다)
+2. 그래도 0이면 Docker Desktop 재시작 —
+   `"/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe" desktop restart`
+   (WSL 안의 `docker desktop restart` 는 실패하면서 성공처럼 보인다)
+
+판단은 `docker_ros_up.sh`의 `[OK]`가 아니라 브릿지 로그 `rx ... lidar=` 카운터로 한다.
+**9299를 다른 포트로 옮기지 말 것.** 상세: [docs/network-udp-ros.md §6.1](../docs/network-udp-ros.md#61-lidar만-0일-때-9299-포워딩)
 
 ---
 
