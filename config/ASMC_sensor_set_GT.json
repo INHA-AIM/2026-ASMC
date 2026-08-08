@@ -383,7 +383,7 @@
       "cc": {
         "sensorName": "DefaultSensor",
         "sensorType": 1,
-        "sensorPeriod": 0.10000000149011612,
+        "sensorPeriod": 0.05000000074505806,
         "commType": 1,
         "udpConfig": {
           "hostIP": "127.0.0.1",
@@ -753,9 +753,9 @@
         "commType": 1,
         "udpConfig": {
           "hostIP": "127.0.0.1",
-          "hostPort": 9090,
+          "hostPort": 9308,
           "destinationIP": "127.0.0.1",
-          "destinationPort": 9090,
+          "destinationPort": 9309,
           "receiveTimeout": 50,
           "isBufferThreadActivated": false,
           "receiveBufferSize": 0,
