@@ -123,9 +123,12 @@ PC마다 MORAI를 단독 실행하므로 포트 숫자가 같아도 **충돌하�
 | camera-2 | **9293** | `/cam_left/image_jpeg/compressed` |
 | camera-3 | **9295** | `/cam_right/image_jpeg/compressed` |
 | camera-4 | **9297** | `/cam_extra/image_jpeg/compressed` |
+| 3D LiDAR | **9299** | `/velodyne_points` (Host **9298**) |
 | GPS | **9301** | `/gps` |
 | IMU | **9303** | `/imu` |
-| 3D LiDAR | **9311** | `/velodyne_points` (Host **9310** · **9299/2368 금지**) |
+
+Host PORT는 Dest−1 패턴. **LiDAR 2368 금지.**  
+cam/gps/imu는 되는데 lidar만 0이면 Windows에서 Dest **9299**가 안 열린 것 → `./scripts/docker_ros_up.sh up` 후 브릿지 재실행.
 
 ---
 
@@ -159,11 +162,11 @@ rostopic echo /Ego_topic -n1   # wheel_angle, position, velocity
 참고 실측(26 + AIM06): Ego ~47 · cam1–3 ~20 · cam4 ~10 · gps ~5 · imu ~50 · lidar `/velodyne_points` ~7 (SIM 10 Hz·Docker UDP).
 
 센서셋 JSON:
-- 주행: [`config/ASMC_sensor_set_v1.json`](../config/ASMC_sensor_set_v1.json) (Camera×4 · LiDAR Dest **9311** · GPS · IMU · Network/Cmd는 별도)
+- 주행: [`config/ASMC_sensor_set_v1.json`](../config/ASMC_sensor_set_v1.json) (Camera×4 · LiDAR Dest **9299** · GPS · IMU · Network/Cmd는 별도)
 - GT 수집: [`config/ASMC_sensor_set_GT.json`](../config/ASMC_sensor_set_GT.json) (위 + Semantic Camera×3 Dest **9305/9307/9309** · Host **9304/9306/9308** · 브릿지 수신 미구현)
 
 LiDAR TF (`base_link`→`velodyne`, v1 기준): **x=0.80 y=0.0 z=1.45**  
-LiDAR Dest **9299·2368 쓰지 말 것** (Docker Desktop Windows UDP 미개방/drop).
+LiDAR Dest **2368 쓰지 말 것.** 9299만 안 열리면 compose 재생성(`docker_ros_up.sh up`).
 
 ---
 

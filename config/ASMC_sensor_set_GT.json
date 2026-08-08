@@ -877,9 +877,9 @@
         "commType": 1,
         "udpConfig": {
           "hostIP": "127.0.0.1",
-          "hostPort": 9310,
+          "hostPort": 9298,
           "destinationIP": "127.0.0.1",
-          "destinationPort": 9311,
+          "destinationPort": 9299,
           "receiveTimeout": 50,
           "isBufferThreadActivated": false,
           "receiveBufferSize": 0,

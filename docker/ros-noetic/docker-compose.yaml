@@ -15,16 +15,16 @@ services:
       - "909:909/udp"
       - "7505:7505/udp"
       - "9092:9092/udp"
-      # Sensor Dest: cam1–4 → gps → imu → lidar(9311)
-      # 9299는 Docker Desktop이 Windows에서 자주 안 열어 lidar=0 → 사용 금지
+      # Sensor Dest 순서: cam1–4 → lidar → gps → imu (Host는 publish 금지)
+      # LiDAR Dest는 9299 유지. Windows에서 9299가 안 열리면 docker_ros_up.sh up 으로 재생성.
       - "9291:9291/udp"   # camera-1
       - "9293:9293/udp"   # camera-2
       - "9295:9295/udp"   # camera-3
       - "9297:9297/udp"   # camera-4
+      - "0.0.0.0:9299:9299/udp"   # 3D LiDAR Dest (명시적 IPv4 bind)
       - "9301:9301/udp"   # gps
       - "9303:9303/udp"   # imu
-      - "9311:9311/udp"   # 3D LiDAR Dest
-      # GT semantic (브릿지 미수신 · publish만 예약)
+      # GT semantic Dest (브릿지 미수신 · publish 예약)
       - "9305:9305/udp"
       - "9307:9307/udp"
       - "9309:9309/udp"

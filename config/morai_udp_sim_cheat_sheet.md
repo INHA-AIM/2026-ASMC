@@ -20,7 +20,7 @@ Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127
 6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh`
 7. 확인: `rostopic hz /Ego_topic` · `/velodyne_points` · `/image_jpeg/compressed`
 
-LiDAR가 안 오면: `./scripts/docker_ros_up.sh up` 후 브릿지 재실행 (Docker Desktop UDP 바인딩 이슈).
+**LiDAR만 0이고 cam/gps/imu는 될 때:** Docker Desktop이 Dest **9299**를 안 연 경우가 많음 → WSL에서 `./scripts/docker_ros_up.sh up` 후 브릿지 재실행.
 
 ---
 
@@ -61,11 +61,12 @@ Dest:     9112
 | camera-2 | 9292 / **9293** | `/cam_left/image_jpeg/compressed` |
 | camera-3 | 9294 / **9295** | `/cam_right/image_jpeg/compressed` |
 | camera-4 | 9296 / **9297** | `/cam_extra/image_jpeg/compressed` |
+| 3D LiDAR | 9298 / **9299** | `/velodyne_points` |
 | GPS | 9300 / **9301** | `/gps` |
 | IMU | 9302 / **9303** | `/imu` |
-| 3D LiDAR | 9310 / **9311** | `/velodyne_points` |
 
-**금지:** LiDAR Dest **2368** · **9299** (Docker Desktop이 Windows에서 안 열거나 자주 drop)
+권장 Host = Dest − 1. 순서: cam1–4 → lidar → gps → imu.  
+**LiDAR Velodyne 기본 2368/2369 쓰지 말 것.**
 
 ---
 

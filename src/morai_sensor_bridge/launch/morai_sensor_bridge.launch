@@ -1,7 +1,7 @@
 <launch>
   <!-- AIM06 Sensor Dest: cam1–4 / GPS / IMU (Host/Dest 표의 Destination) -->
-  <!-- Dest: cam→gps→imu→lidar. 9299는 Docker Desktop이 Windows에서 자주 미개방. -->
-  <arg name="lidar_port"      default="9311"/>
+  <!-- Dest 순서: cam1–4 → lidar → gps → imu. Host는 SIM bind — listen/publish 금지. -->
+  <arg name="lidar_port"      default="9299"/>
   <arg name="lidar_host_port" default="0"/>
   <arg name="gps_port"        default="9301"/>
   <arg name="imu_port"        default="9303"/>
