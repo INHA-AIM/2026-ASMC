@@ -112,7 +112,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.0099999997764825821,
+        "minDepthRange": 0.009999999776482582,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
@@ -234,7 +234,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.0099999997764825821,
+        "minDepthRange": 0.009999999776482582,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
@@ -356,7 +356,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.0099999997764825821,
+        "minDepthRange": 0.009999999776482582,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
@@ -383,7 +383,7 @@
       "cc": {
         "sensorName": "DefaultSensor",
         "sensorType": 1,
-        "sensorPeriod": 0.05000000074505806,
+        "sensorPeriod": 0.10000000149011612,
         "commType": 1,
         "udpConfig": {
           "hostIP": "127.0.0.1",
@@ -478,7 +478,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.0099999997764825821,
+        "minDepthRange": 0.009999999776482582,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
@@ -600,7 +600,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.0099999997764825821,
+        "minDepthRange": 0.009999999776482582,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
@@ -722,7 +722,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.0099999997764825821,
+        "minDepthRange": 0.009999999776482582,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
@@ -844,7 +844,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.0099999997764825821,
+        "minDepthRange": 0.009999999776482582,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
@@ -861,7 +861,7 @@
       "m_SensorUniqueID": 5,
       "m_SensorType": 2,
       "pos": {
-        "x": "0.850",
+        "x": "0.800",
         "y": "0.000",
         "z": "1.450"
       },
@@ -944,7 +944,7 @@
       "m_SensorUniqueID": 6,
       "m_SensorType": 4,
       "pos": {
-        "x": "1.200",
+        "x": "0.350",
         "y": "0.000",
         "z": "1.250"
       },

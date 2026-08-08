@@ -112,7 +112,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.009999999776482582,
+        "minDepthRange": 0.0099999997764825821,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
@@ -234,7 +234,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.009999999776482582,
+        "minDepthRange": 0.0099999997764825821,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
@@ -356,7 +356,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.009999999776482582,
+        "minDepthRange": 0.0099999997764825821,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
@@ -478,7 +478,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.009999999776482582,
+        "minDepthRange": 0.0099999997764825821,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
