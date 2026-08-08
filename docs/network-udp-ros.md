@@ -156,6 +156,7 @@ rostopic hz /cam_extra/image_jpeg/compressed
 rostopic hz /gps
 rostopic hz /imu
 rostopic hz /velodyne_points
+rostopic hz /sem_front/image_jpeg/compressed   # GT 센서셋 사용 시
 rostopic echo /Ego_topic -n1   # wheel_angle, position, velocity
 ```
 
@@ -163,10 +164,12 @@ rostopic echo /Ego_topic -n1   # wheel_angle, position, velocity
 
 센서셋 JSON:
 - 주행: [`config/ASMC_sensor_set_v1.json`](../config/ASMC_sensor_set_v1.json) (Camera×4 · LiDAR Dest **9299** · GPS · IMU · Network/Cmd는 별도)
-- GT 수집: [`config/ASMC_sensor_set_GT.json`](../config/ASMC_sensor_set_GT.json) (위 + Semantic Camera×3 Dest **9305/9307/9309** · Host **9304/9306/9308** · 브릿지 수신 미구현)
+- GT 수집: [`config/ASMC_sensor_set_GT.json`](../config/ASMC_sensor_set_GT.json) (위 + Semantic Camera×3 Dest **9305/9307/9309** → `/sem_{front,left,right}/image_jpeg/compressed`)
 
 LiDAR TF (`base_link`→`velodyne`, v1 기준): **x=0.80 y=0.0 z=1.45**  
 LiDAR Dest **2368 쓰지 말 것.** 9299만 안 열리면 compose 재생성(`docker_ros_up.sh up`).
+
+시맨틱 끄기: `./scripts/udp_bridge.sh enable_semantic_camera:=false`
 
 ---
 

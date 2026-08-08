@@ -2,12 +2,15 @@
   MORAI UDP ↔ ROS bridges (NOT rosbridge / WebSocket).
 
   - morai_udp_bridge    : Ego / Object / Collision / Ctrl_cmd
-  - morai_sensor_bridge : Camera / LiDAR / GPS / IMU
+  - morai_sensor_bridge : Camera (+Semantic) / LiDAR / GPS / IMU
 
   Run: ./scripts/udp_bridge.sh
   Rosbridge (dev only): ./scripts/rosbridge.sh
 -->
 <launch>
+  <arg name="enable_semantic_camera" default="true"/>
   <include file="$(find morai_udp_bridge)/launch/morai_udp_bridge.launch" />
-  <include file="$(find morai_sensor_bridge)/launch/morai_sensor_bridge.launch" />
+  <include file="$(find morai_sensor_bridge)/launch/morai_sensor_bridge.launch">
+    <arg name="enable_semantic_camera" value="$(arg enable_semantic_camera)"/>
+  </include>
 </launch>

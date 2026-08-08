@@ -7,6 +7,7 @@ Network Settings(Ego/Simulator) 와는 프로토콜이 완전히 다르므로
 morai_udp_bridge 와 별도 노드로 돌린다.
 
   Camera×N JPEG 프래그먼트 -> sensor_msgs/CompressedImage
+  Semantic Camera JPEG      -> sensor_msgs/CompressedImage (동일 UDP 프래그먼트)
   3D Lidar Velodyne raw     -> sensor_msgs/PointCloud2
   GPS      NMEA ascii       -> morai_msgs/GPSMessage + sensor_msgs/NavSatFix
   IMU      #IMUData$        -> sensor_msgs/Imu
@@ -49,6 +50,16 @@ DEFAULT_CAMERAS = [
      "topic": "/cam_extra/image_jpeg/compressed", "frame": "camera_extra"},
 ]
 
+# ASMC_sensor_set_GT.json Semantic (cameraType=1) — front/left/right 정렬
+DEFAULT_SEMANTIC_CAMERAS = [
+    {"name": "sem_front", "port": 9305,
+     "topic": "/sem_front/image_jpeg/compressed", "frame": "camera_front_semantic"},
+    {"name": "sem_left", "port": 9307,
+     "topic": "/sem_left/image_jpeg/compressed", "frame": "camera_left_semantic"},
+    {"name": "sem_right", "port": 9309,
+     "topic": "/sem_right/image_jpeg/compressed", "frame": "camera_right_semantic"},
+]
+
 
 class SensorBridge(object):
 
@@ -65,13 +76,17 @@ class SensorBridge(object):
 
     def _start_all(self, p):
         if p("~enable_camera", True):
-            cams = p("~cameras", DEFAULT_CAMERAS)
+            cams = list(p("~cameras", DEFAULT_CAMERAS) or [])
             if not cams:
                 # 단일 포트 호환
                 cams = [{"name": "cam1",
                          "port": int(p("~camera_port", 9291)),
                          "topic": p("~camera_topic", "/image_jpeg/compressed"),
                          "frame": p("~camera_frame", "camera_front")}]
+            if p("~enable_semantic_camera", True):
+                sem = p("~semantic_cameras", DEFAULT_SEMANTIC_CAMERAS)
+                if sem:
+                    cams.extend(sem)
             for cam in cams:
                 self._start_camera(cam)
 
