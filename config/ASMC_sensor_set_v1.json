@@ -112,7 +112,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.0099999997764825821,
+        "minDepthRange": 0.009999999776482582,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
@@ -234,7 +234,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.0099999997764825821,
+        "minDepthRange": 0.009999999776482582,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
@@ -356,7 +356,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.0099999997764825821,
+        "minDepthRange": 0.009999999776482582,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
@@ -478,7 +478,7 @@
           "frameID": "",
           "childFrameID": ""
         },
-        "minDepthRange": 0.0099999997764825821,
+        "minDepthRange": 0.009999999776482582,
         "maxDepthRange": 100.0,
         "depthbit": 0,
         "lensDistortion": [
@@ -511,9 +511,9 @@
         "commType": 1,
         "udpConfig": {
           "hostIP": "127.0.0.1",
-          "hostPort": 9298,
+          "hostPort": 9310,
           "destinationIP": "127.0.0.1",
-          "destinationPort": 9299,
+          "destinationPort": 9311,
           "receiveTimeout": 50,
           "isBufferThreadActivated": false,
           "receiveBufferSize": 0,

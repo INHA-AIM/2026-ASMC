@@ -94,7 +94,7 @@ class SensorBridge(object):
                 rospy.loginfo("lidar model=%s ch=%d packets_per_frame=%d",
                               model, self.channel, n)
                 # Dest만 listen. Host 포트는 SIM bind — Docker에서 publish/listen 하지 말 것.
-                ports = [int(p("~lidar_port", 9299))]
+                ports = [int(p("~lidar_port", 9311))]
                 host_p = int(p("~lidar_host_port", 0))
                 if host_p > 0 and host_p not in ports:
                     ports.append(host_p)
