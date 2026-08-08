@@ -83,7 +83,7 @@ class SensorBridge(object):
                          "port": int(p("~camera_port", 9291)),
                          "topic": p("~camera_topic", "/image_jpeg/compressed"),
                          "frame": p("~camera_frame", "camera_front")}]
-            if p("~enable_semantic_camera", True):
+            if p("~enable_semantic_camera", False):
                 sem = p("~semantic_cameras", DEFAULT_SEMANTIC_CAMERAS)
                 if sem:
                     cams.extend(sem)

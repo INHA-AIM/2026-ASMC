@@ -59,7 +59,7 @@ fi
 echo "  cmd_ip         : ${CMD_IP} (Ctrl → Windows MORAI Host PORT)"
 echo "  Verify         : rostopic hz /Ego_topic"
 echo "                  rostopic hz /image_jpeg/compressed"
-echo "                  rostopic hz /sem_front/image_jpeg/compressed  # GT set"
+echo "                  rostopic hz /sem_front/image_jpeg/compressed  # if enable_semantic_camera:=true"
 echo "=========================================="
 echo ""
 

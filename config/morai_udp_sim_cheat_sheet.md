@@ -4,7 +4,7 @@
 > Docker Desktop + `./scripts/docker_ros_up.sh` + `./scripts/udp_bridge.sh` 기준.  
 > 상세: [docs/network-udp-ros.md](../docs/network-udp-ros.md)  
 > 센서셋: [`ASMC_sensor_set_v1.json`](./ASMC_sensor_set_v1.json) (주행용 Camera×4/LiDAR/GPS/IMU)  
-> GT용: [`ASMC_sensor_set_GT.json`](./ASMC_sensor_set_GT.json) (v1 + Semantic Camera×3 · 브릿지 기본 ON)
+> GT용: [`ASMC_sensor_set_GT.json`](./ASMC_sensor_set_GT.json) (v1 + Semantic Camera×3 · 브릿지 기본 **OFF**)
 
 ---
 
@@ -72,8 +72,12 @@ Dest:     9112
 
 ## GT Semantic Camera (ASMC_sensor_set_GT.json)
 
-브릿지가 기본으로 listen (`enable_semantic_camera:=true`).  
-MORAI에 GT 센서셋 Import 후 Play.
+팀 공용 브릿지 기본은 **OFF** (`enable_semantic_camera:=false`).  
+개발 시 GT 센서셋 Import 후:
+
+```bash
+./scripts/udp_bridge.sh enable_semantic_camera:=true
+```
 
 | 센서 | Host / Dest | ROS 토픽 |
 |------|-------------|----------|
@@ -81,7 +85,6 @@ MORAI에 GT 센서셋 Import 후 Play.
 | Semantic left (Camera-9) | 9306 / **9307** | `/sem_left/image_jpeg/compressed` |
 | Semantic right (Camera-10) | **9308 / 9309** | `/sem_right/image_jpeg/compressed` |
 
-끄기: `./scripts/udp_bridge.sh enable_semantic_camera:=false`  
 Camera-10은 예전 **9090**이 아님 (rosbridge와 충돌).
 
 ---

@@ -169,7 +169,8 @@ rostopic echo /Ego_topic -n1   # wheel_angle, position, velocity
 LiDAR TF (`base_link`→`velodyne`, v1 기준): **x=0.80 y=0.0 z=1.45**  
 LiDAR Dest **2368 쓰지 말 것.** 9299만 안 열리면 compose 재생성(`docker_ros_up.sh up`).
 
-시맨틱 끄기: `./scripts/udp_bridge.sh enable_semantic_camera:=false`
+시맨틱(개발용): `./scripts/udp_bridge.sh enable_semantic_camera:=true`  
+(기본 OFF — 팀 공용 주행 브릿지와 분리)
 
 ---
 

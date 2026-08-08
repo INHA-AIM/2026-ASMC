@@ -8,7 +8,7 @@
   Rosbridge (dev only): ./scripts/rosbridge.sh
 -->
 <launch>
-  <arg name="enable_semantic_camera" default="true"/>
+  <arg name="enable_semantic_camera" default="false"/>
   <include file="$(find morai_udp_bridge)/launch/morai_udp_bridge.launch" />
   <include file="$(find morai_sensor_bridge)/launch/morai_sensor_bridge.launch">
     <arg name="enable_semantic_camera" value="$(arg enable_semantic_camera)"/>
