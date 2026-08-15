@@ -1,5 +1,9 @@
 # Planner 3-패키지 통합 아키텍처 (v4 — 열린 결정사항 코드로 검증 완료)
 
+> **상태:** Legacy reference. 현재 Planning/Control 실행 규약은
+> [planning-control-udp.md](./planning-control-udp.md)이며 Behavior Planner는 미연동이다.
+> 이 문서의 ROS topic·integration launch 절차를 현재 파이프라인에 적용하지 않는다.
+
 > **출처:** [yuntae12-sudo/mpc_ws](https://github.com/yuntae12-sudo/mpc_ws) `INTEGRATION_PLAN.md` @ `72e2a37`  
 > **ASMC 반영:** `integrate/planning-v2` — `behavior_planner`, `behavior_bridge`, `integration.launch` 확장
 

@@ -25,7 +25,7 @@
 | PA | GT BEV → τ (teacher) | `src/learning_by_cheating/` | 안승현 |
 | SA_perc | 센서 → BEV̂ | `src/perception/morai_3d_detection/` | 손재호, 장원태 |
 | SA_plan | BEV̂ → τ | `src/learning_by_cheating/` | 안승현 |
-| Frenet + MPC | τ 생성·추종 → Ctrl_cmd | `src/planner/`, `src/mpc_controller/` | 이강태 / 정윤태·양서준 |
+| Frenet + MPC | UDP 경로 생성·추종 → UDP CtrlCmd | `src/frenet_planner/`, `src/mpc_controller/` | 이강태 / 정윤태·양서준 |
 | Scenario / gRPC | 시나리오·시뮬 API | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |
 | Bridge | ROS / UDP | `scripts/bridge.sh` (UDP 확장 예정) | 안승현, 정윤태 |
 
@@ -36,7 +36,9 @@
 > **"PA를 없앤다" = 배포 그래프에서 GT BEV 경로 제거.**  
 > **"SA_plan ≡ PA weight successor"** 로 정의하면 설계와 구현이 일치한다.
 
-## 4. MPC 요구사항
+## 4. Planning/Control 요구사항
+
+Planning/Control은 ROS/catkin/topic 없이 standalone C++17 + UDP로 실행한다. Behavior Planner는 현재 미연동이다. 상세 정본은 [planning-control-udp.md](./planning-control-udp.md)를 따른다.
 
 - Kinematic bicycle model (휠베이스 **3.0 m**, δ_max **40°**)
 - 횡방향 오차 e_y soft constraint (차선 이탈 방지)

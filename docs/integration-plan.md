@@ -26,6 +26,7 @@
 | 4 | `aim_scenario_runner` (jang) | ✅ PR #3 merged |
 | 5 | `morai-3d-detection` (jaeho) | ✅ PR #3 merged |
 | **1b** | **planning-v2:** `behavior_planner` + bridge + 주행 버그픽스 | ✅ PR #4 merged |
+| **1c** | **planning UDP-only:** standalone Frenet + MPC, Behavior 미연동 | ✅ `feature/yuntae-planner-controller` |
 | 6 | `interfaces/` τ·BEV 확정 | ⬜ [architecture-overview.md](./architecture-overview.md) §5 |
 | — | jang LBC gRPC multi-TL | ⬜ **추후** D-09 검증 후 판단 (통합 차단 아님) |
 | — | morai-3d-detection 시나리오 ROS 연동 (`adb1056`) | ⬜ **추후** — scenario runner `/dataset_control` publisher 선행 필요 |
@@ -59,6 +60,9 @@ cd <mpc_ws-clone> && git pull origin main
 | [sonshiny/morai-3d-detection](https://github.com/sonshiny/morai-3d-detection) | `src/perception/morai_3d_detection` | ✅ v1; ROS 시나리오 연동 defer |
 
 ## 5. planning-v2 요약 (mpc_ws `72e2a37`)
+
+> 이 절은 ROS 기반 이전 구현 기록이다. 현재 정본은
+> [planning-control-udp.md](./planning-control-udp.md)이며 upstream 기준은 `465833e`다.
 
 **신규 패키지:** `src/behavior_planner/` — MGeo 기반 상위 의사결정, `/behavior/context` publish
 

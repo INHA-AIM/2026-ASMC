@@ -8,18 +8,19 @@
 
 1. [getting-started.md](./getting-started.md) — 클론·첫 실행
 2. [collaboration.md](./collaboration.md) — **★ Phase0/1 · WIP · Path A/B (필독)**
-3. [network-udp-ros.md](./network-udp-ros.md) — **UDP↔ROS (26.R1.h3 · `127.0.0.1` Docker)**  
+3. [network-udp-ros.md](./network-udp-ros.md) — **UDP↔ROS (26.R1.h3 · `127.0.0.1` Docker)**
    · 치트시트 [config/morai_udp_sim_cheat_sheet.md](../config/morai_udp_sim_cheat_sheet.md)
 4. [team-dev-guide.md](./team-dev-guide.md) — 팀원별 경로 (Phase 0 개인 레포 표)
-5. [integration-plan.md](./integration-plan.md) — Wave 1/2
-6. [perception-agentic-loop.md](./perception-agentic-loop.md) — Loc-Aid/bake eval
-7. [architecture-overview.md](./architecture-overview.md)
-8. [competition-environment.md](./competition-environment.md)
-9. [git-workflow.md](./git-workflow.md)
-10. [sim-verification-checklist.md](./sim-verification-checklist.md)
-11. [morai-msgs-beta-policy.md](./morai-msgs-beta-policy.md)
-12. [morai-msgs-versions.md](./morai-msgs-versions.md) — msg 브랜치 · **대회 ROS 실측 요약**
-13. (로컬) [morai-competition-ros-topics.md](../../docs/competition/morai-competition-ros-topics.md) — 대회 UI 토픽 전부
+5. [planning-control-udp.md](./planning-control-udp.md) — **Planning/Control UDP-only 정본**
+6. [integration-plan.md](./integration-plan.md) — Wave 1/2
+7. [perception-agentic-loop.md](./perception-agentic-loop.md) — Loc-Aid/bake eval
+8. [architecture-overview.md](./architecture-overview.md)
+9. [competition-environment.md](./competition-environment.md)
+10. [git-workflow.md](./git-workflow.md)
+11. [sim-verification-checklist.md](./sim-verification-checklist.md)
+12. [morai-msgs-beta-policy.md](./morai-msgs-beta-policy.md)
+13. [morai-msgs-versions.md](./morai-msgs-versions.md) — msg 브랜치 · **대회 ROS 실측 요약**
+14. (로컬) [morai-competition-ros-topics.md](../../docs/competition/morai-competition-ros-topics.md) — 대회 UI 토픽 전부
 
 ## 본 repo에 포함되는 것
 

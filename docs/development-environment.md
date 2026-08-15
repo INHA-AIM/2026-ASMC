@@ -29,12 +29,12 @@
 
 ## 2. 언어·버전 표준
 
-### C++ (ROS 노드)
+### C++
 
 | 항목 | 값 |
 |------|-----|
-| 표준 | **C++14** |
-| 빌드 | catkin / catkin_make |
+| 표준 | ROS 모듈 **C++14**, Planning/Control **C++17** |
+| 빌드 | ROS: catkin / Planning·Control: standalone CMake |
 | 최적화 | `-O2` |
 
 ### Python
@@ -67,7 +67,7 @@
 
 | 이미지 | 경로 | 용도 | 담당 파트 |
 |--------|------|------|-----------|
-| `asmc/ros-noetic:dev` | `docker/ros-noetic/` | catkin, MORAI bridge, behavior_planner, MPC, 로깅 | planning, integration, learning |
+| `asmc/ros-noetic:dev` | `docker/ros-noetic/` | catkin 모듈 + standalone UDP Planning/Control 빌드, 로깅 | planning, integration, learning |
 | `asmc/perception-train:dev` | `docker/perception-train/` | PyTorch 학습·추론 | perception |
 
 **왜 2개인가:** ROS desktop-full과 CUDA PyTorch를 한 이미지에 넣으면 용량·충돌·재빌드 비용이 큼.  

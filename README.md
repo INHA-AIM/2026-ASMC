@@ -15,6 +15,7 @@
 |------|------|
 | [docs/collaboration.md](docs/collaboration.md) | **★ Phase0/1 · WIP · Path A/B (필독)** |
 | [docs/network-udp-ros.md](docs/network-udp-ros.md) | **UDP↔ROS (26.R1.h3 · Docker `127.0.0.1`)** |
+| [docs/planning-control-udp.md](docs/planning-control-udp.md) | **Planning/Control UDP-only 정본** |
 | [docs/perception-agentic-loop.md](docs/perception-agentic-loop.md) | Loc-Aid/bake 에이전틱 eval |
 | [docs/getting-started.md](docs/getting-started.md) | 클론·첫 빌드 |
 | [docs/team-dev-guide.md](docs/team-dev-guide.md) | 팀원별 경로 |
@@ -36,6 +37,9 @@ xhost +local:docker
 ./scripts/docker_ros_up.sh build
 ./scripts/docker_ros_up.sh up
 docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
+
+# ROS 없는 Planning/Control
+docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 ```
 
 상세: [docs/getting-started.md](docs/getting-started.md)
@@ -48,9 +52,9 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 ├── docker/                    # ros-noetic · perception-train
 ├── src/
 │   ├── behavior_planner/      # planning ✅
-│   ├── planner/               # planning ✅
-│   ├── mpc_controller/        # planning ✅ (pkg: mpc_node)
-│   ├── integration_launch/    # planning ✅
+│   ├── frenet_planner/        # standalone UDP planning ✅
+│   ├── mpc_controller/        # standalone UDP control ✅
+│   ├── integration_launch/    # ROS bridge launch only
 │   ├── learning_by_cheating/  # learning ✅
 │   ├── perception/morai_3d_detection/  # perception ✅
 │   ├── morai_udp_bridge/      # UDP↔ROS (Ego/Ctrl) ✅
