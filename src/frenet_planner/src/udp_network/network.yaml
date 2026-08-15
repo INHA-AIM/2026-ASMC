@@ -1,0 +1,32 @@
+network:
+  host_ip: "0.0.0.0"        # 이 프로세스가 bind할 IP (MORAI ego/object 수신용)
+  mpc_ip: "127.0.0.1"         # mpc_node로 PlannedPath를 보낼 목적지 IP
+
+  # ego_udp는 개발 진단 전용이다. 본선 기본 localization은 GPS/IMU다.
+  ego_vehicle_dst_port: 909
+
+  # 센서 기반 객체 입력 연동 전까지 대회 경로 Planner 검증에 임시 사용한다.
+  # perception 객체 인터페이스가 들어오면 이 수신 경로 자체를 제거한다.
+  object_info:
+    enabled: true
+    dst_port: 7505
+
+  # MORAI Sensor UDP의 GPS/IMU Destination Port와 일치해야 한다.
+  gps_dst_port: 9301
+  imu_dst_port: 9303
+
+  # MORAI GPS Info 창에 표시되는 UTM52N map offset. global path 좌표는
+  # UTM Easting/Northing에서 이 값을 뺀 로컬 좌표다.
+  gps_utm_offset:
+    east: 302595.0
+    north: 4124145.0
+
+  localization:
+    source: "gps_imu"       # ego_udp | gps_imu
+    gps_timeout: 0.5       # [s] 초과 시 GPS/IMU pose 무효
+    imu_timeout: 0.15      # [s]
+    max_prediction_time: 0.5  # [s] 마지막 GPS fix 이후 정속 예측 상한
+
+  # mpc_node의 udp_network/network.yaml에 있는 planned_path_host_port와
+  # 반드시 같은 값이어야 한다.
+  planned_path_dst_port: 9300

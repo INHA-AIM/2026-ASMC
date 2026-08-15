@@ -1,0 +1,135 @@
+# =========================================================
+# Frenet Frame Planner 파라미터 (mpc_controller에 통합된 버전)
+# Behavior Planner 미연동 상태로, 현재 모드 판단은 frenet_planner.cpp가 담당한다.
+# =========================================================
+
+planner:
+  wheelbase: 3.0    # [m] mpc_controller/src/config/mpc_params.yaml과 동일 값 유지
+  lane_width: 3.5   # [m] LANE_CHANGE 오프셋, FindLeader의 "내 차선" 판정(|d|<=lane_width/2)에 사용
+
+  # --- 곡률 기반 사전 감속 (mpc_controller 옛 path_planner.cpp에서 이식) ---
+  curve_speed:
+    target_vel: 10.0
+    curve_vel_sharp: 4.0
+    curve_vel_mid:   5.5
+    curve_vel_mild:  7.0
+    curve_th_sharp:  0.080
+    curve_th_mid:    0.035
+    curve_th_mild:   0.015
+    curve_lookahead_m: 15.0
+
+  # --- Following(Sec.V-A, constant-time-gap-law) ---
+  following:
+    time_gap: 1.0              # [s] tau - 목표 gap = min_gap + time_gap*leader_speed
+    min_gap: 5.0               # [m] D0 - 정지 시에도 유지할 최소 거리
+    gap_gain: 0.3              # [1/s] 간격 오차를 접근 속도로 변환하는 폐루프 이득
+    max_leader_search_s: 60.0  # [m] 이 거리 안의 선두 차량만 후보로 봄
+    min_leader_speed: 0.5      # [m/s] 이 이하는 정적 장애물로 보고 FOLLOWING에서 제외
+    exit_search_margin: 10.0   # [m] 진입 후 선두차량 유지용 탐색거리 hysteresis
+    leader_switch_margin: 3.0  # [m] 더 가까운 동일차선 차량으로 leader를 넘길 최소 거리차
+    dropout_grace_cycles: 5    # [cycle] ObjectInfo 일시 누락 허용(20Hz 기준 0.25s)
+
+  # --- AVOID: 내 차선의 정적 장애물 감지와 lateral 회피 ---
+  avoid:
+    detection_distance: 60.0  # [m] 최소 등록거리(충돌 lookahead가 더 길면 자동 확장)
+    shift_start_distance: 25.0 # [m] 이 거리부터 횡이동 시작
+    trigger_max_speed: 0.5    # [m/s] 이 속도 이하만 "정지 장애물"로 간주(그 이상은 Following)
+    avoid_offset: 5.0         # [m] 회피 시 lateral_d1 격자를 밀어낼 크기
+    comfortable_decel: 3.0    # [m/s^2] 추후 동적 시작거리 계산용(현재 미사용)
+    lateral_tolerance: 0.4    # [m] SHIFT 횟이동 완료 판정
+    pass_clearance: 1.0       # [m] 자차/장애물 길이 외 추가 통과 여유
+    prefer_right_when_equal: true # 좌/우 valid 품질이 거의 같으면 우측 우선
+
+  # --- 회전교차로 MERGE: global path상의 conflict_s에서 순환 차량의
+  # 도착 시간 gap을 확인하고, gap이 없으면 진입점 전에 정지한다. ---
+  merge:
+    conflict_s: 885.76         # [m] 실측한 회전교차로 대표 합류 충돌점
+    approach_distance: 45.0    # [m] 충돌점 전 MERGE 활성 거리
+    stop_buffer: 3.5           # [m] 정지 목표 s=882.26 (자차 반길이+안전마진+추가 여유)
+    conflict_radius: 6.0       # [m] 순환차 곡선예측의 충돌점 최근접 허용거리
+    min_object_speed: 0.5      # [m/s] 이보다 느린 객체는 순환 차량에서 제외
+    min_front_time_gap: 1.5    # [s] 선행 순환차 통과 후 최소 여유
+    min_rear_time_gap: 2.0     # [s] Ego 진입 후 후속 순환차까지 최소 여유
+    ego_clear_time: 1.5        # [s] Ego의 conflict zone 통과 시간
+    max_wait_time: 10.0        # [s] 진입 gap 탐색 시간범위
+    completion_distance: 8.0   # [m] 충돌점 통과 후 MERGE 종료 거리
+    commit_distance: 15.0      # [m] 이 거리부터 선택한 gap을 고정
+    safe_confirm_cycles: 3     # 연속 안전 판정 횟수(20Hz)
+    cross_speed_floor: 3.0     # [m/s] COMMIT/CROSS 중 교차구역 이탈 최저 목표속도
+
+  # --- 고주로/본선 합류 MERGE --------------------------------
+  # 실측한 세 합류 구간의 start/conflict/completion_s를 zone별로 사용한다.
+  # Global Path 자체가 본선으로 합류하므로 별도 차선변경 offset은 만들지 않는다.
+  highway_merge:
+    enabled: true
+    zones:
+      - name: highway_merge_1
+        start_s: 1113.35
+        completion_s: 1274.73
+        checkpoints:
+          - { conflict_s: 1237.04, clear_s: 1274.73 }
+      - name: highway_merge_2_3
+        start_s: 1424.45
+        completion_s: 1583.76
+        checkpoints:
+          - { conflict_s: 1524.41, clear_s: 1547.54 }
+          - { conflict_s: 1564.72, clear_s: 1583.76 }
+    approach_distance: 50.0 # 향후 속도 기반 start_s 사전 감지에 사용할 여유
+    stop_buffer: 4.0
+    target_corridor_half_width: 5.5 # 합류 전 평행한 본선 1개 차로까지 보수적으로 포함
+    object_search_distance: 100.0
+    min_heading_alignment: 0.5
+    min_front_gap: 8.0
+    min_rear_gap: 10.0
+    min_front_ttc: 2.0
+    min_rear_ttc: 3.0
+    max_wait_time: 10.0
+    commit_distance: 20.0
+    safe_confirm_cycles: 3
+    cross_speed_floor: 4.0
+
+  # --- 실시간 후보 경로 디버그 시각화 -----------------------
+  # Planner가 최신 스냅샷을 원자적으로 갱신하고 tools/planner_visualizer.py가 읽는다.
+  visualization:
+    enabled: true
+    publish_hz: 5.0
+    snapshot_path: "/tmp/frenet_planner_debug.json"
+
+  # --- PathGeneratorConfig (path_generator.hpp) ---------------
+  path_generator:
+    lateral_d1:     { min: -3.0, max: 3.0, step: 0.5 }
+    lateral_target_tolerance: 0.5 # [m] 모드별 목표 d 주변에서만 후보 생성
+    time_horizon:   { min: 1.5,  max: 5.0, step: 0.5 }
+    delta_s:        { min: -3.0, max: 3.0, step: 1.0 }
+    delta_s_dot:    { min: -2.0, max: 2.0, step: 1.0 }
+    dt: 0.1
+
+  # --- KinematicLimits (path_generator.hpp) -------------------
+  kinematic_limits:
+    max_lateral_accel: 3.0
+    max_longitudinal_accel: 3.0
+    max_curvature: 0.1704
+
+  # --- CostWeights (cost.hpp) ---------------------------------
+  cost_weights:
+    kj: 0.1
+    kt: 1.0
+    kd: 20.0
+    kd_path: 35.0
+    ks: 1.0
+    ks_dot: 1.0
+    klat: 1.0
+    klon: 1.0
+
+  # --- VehicleShape (collision_checker.hpp) -------------------
+  vehicle_shape:
+    width: 1.9
+    length: 4.5
+
+  # --- CollisionCheckConfig (collision_checker.hpp) -----------
+  collision_check:
+    safety_margin: 0.3
+    margin_growth_rate: 0.1
+    reactive_lookahead: 8.0
+
+waypoint_file: "/root/ws/R_KR_PG_KATRI/2026_molit_comp_global_path.txt"

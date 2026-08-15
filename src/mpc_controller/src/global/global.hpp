@@ -12,21 +12,6 @@
 #include <iostream>
 #include <array>
 
-#include <ros/ros.h>
-#include <morai_msgs/CtrlCmd.h>
-#include <morai_msgs/EgoVehicleStatus.h>
-
-// ========================================
-// 기본 구조체
-// ========================================
-
-// CSV에서 로드되는 reference waypoint
-struct Waypoint {
-    double x = 0.0;
-    double y = 0.0;
-    double curvature = 0.0;
-};
-
 // ========================================
 // 차량 상태 (MPC State)
 // ========================================
@@ -53,6 +38,27 @@ struct MPCResult {
     double cost = 0.0;
     bool   success = false;
     std::string solver_msg;
+};
+
+// ========================================
+// frenet_planner_node로부터 받는 "PlannedPath" 패킷의 파싱 결과.
+// frenet_planner 패키지가 이제 MORAI의 ego/object UDP를 직접 받아서 로컬
+// 경로를 계산하고, 그 경로 + 중계용 ego 상태(ego)를 이 프로세스로 보내준다
+// (planned_path_receiver.cpp가 파싱). mpc_controller는 더 이상 자체
+// EgoInfoReceiver를 두지 않고 이 값을 그대로 쓴다.
+// ========================================
+struct PlannedPath {
+    std::vector<double> x, y, yaw, kappa, v, a;  // frenet_planner의 CartesianPath와 동일 필드
+    double dt = 0.0;      // 샘플 간격 [s] (frenet_planner.sample_dt())
+    double d = 0.0;       // 진단용: 차선 중앙 기준 횡방향 오프셋
+    double d_dot = 0.0;   // 진단용: 횡방향 속도
+
+    // 중계된 ego 상태 (frenet_planner가 MORAI에서 받은 값 그대로 전달)
+    double ego_x = 0.0, ego_y = 0.0, ego_yaw = 0.0;
+    double ego_v = 0.0, ego_steer = 0.0, ego_accel = 0.0;
+
+    size_t size() const { return x.size(); }
+    bool empty() const { return x.empty(); }
 };
 
 // ========================================
@@ -92,12 +98,23 @@ struct MPCParams {
     double vel_min          = 0.0;     // [m/s]
     double vel_max          = 30.0;    // [m/s]
 
+    // 모드 독립 정지 데드락 감지/복구. 목표 경로는 전진하는데 실제 차량만
+    // 멈춘 상태가 지속될 때 solver의 제동 warm-start를 비우고 제한된 재출발을 한다.
+    double stuck_ego_speed = 0.1;       // [m/s]
+    double stuck_target_speed = 0.3;    // [m/s]
+    double stuck_min_path_progress = 0.5; // [m]
+    double stuck_timeout = 1.0;         // [s]
+    double stuck_recovery_duration = 0.75; // [s]
+    double stuck_launch_accel = 0.5;    // [m/s^2]
+
     // 비용 가중치
     double weight_path_error    = 5.0;
     double weight_heading_error = 2.0;
     double weight_speed_error   = 0.3;
     double weight_control       = 0.05;
     double weight_control_rate  = 0.5;
+    // steer와 독립된 acceleration 변화율 가중치
+    double weight_control_rate_accel = 4.5;
     double weight_terminal      = 5.0;   // 마지막 상태 가중치
 
     // 솔버 hyper-params
@@ -105,17 +122,6 @@ struct MPCParams {
     double lr_min       = 1e-4;  // 최소 학습률
     double convergence_eps = 1e-3;
     int    line_search_steps = 6;
-
-    // 경로/속도 plan
-    int    ref_window      = 60;   // 현재 위치 앞쪽으로 사용할 waypoint 수
-    double target_vel      = 60.0 / 3.6;  // 기본 목표 속도 [m/s]
-    double curve_vel_sharp = 30.0 / 3.6;
-    double curve_vel_mid   = 35.0 / 3.6;
-    double curve_vel_mild  = 45.0 / 3.6;
-    double curve_th_sharp  = 0.01;
-    double curve_th_mid    = 0.004;
-    double curve_th_mild   = 0.001;
-    double curve_lookahead_m = 15.0;  // [m] 이 거리 안에 더 급한 커브가 있으면 미리 그 커브 속도로 감속
 };
 
 // ========================================
@@ -126,23 +132,7 @@ struct MPCParams {
 extern MPCState  ego;
 extern MPCControl last_control;
 
-// 경로/맵 데이터
-extern std::vector<Waypoint> waypoints;
-
 // 파라미터
 extern MPCParams mpc_params;
-
-// /Ego_topic 최초 수신 여부 (수신 전엔 정지 명령만 발행)
-extern bool ego_received;
-
-// 진단/플래그
-extern int  closest_waypoint_idx;
-
-// ROS
-extern ros::Publisher cmd_pub;
-extern std::mutex ego_mutex;
-
-// CSV 경로
-extern std::string g_waypoint_file_path;
 
 #endif // MPC_GLOBAL_HPP

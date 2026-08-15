@@ -30,21 +30,21 @@ cd /root/ws && source devel/setup.bash
 
 ---
 
-## 1. Planning (behavior_planner + Frenet + MPC)
+## 1. Planning/Control (standalone UDP)
 
 | # | 확인 | 담당 | 통과 기준 |
 |---|------|------|-----------|
-| 1.1 | integration launch | 정윤태·이강태 | `roslaunch integration_launch integration.launch` — 3노드 기동 |
-| 1.2 | waypoint 로드 | 정윤태 | launch 로그에 `path_route1.txt` 오픈 성공 |
-| 1.3 | `/Ego_topic` 구독 | 정윤태 | behavior·planner·mpc 노드가 ego pose 수신 |
-| 1.4 | behavior context | 정윤태 | `/behavior/context` publish, `rostopic echo` 1회 |
-| 1.5 | plan feedback | 이강태 | `/planner/plan_feedback` publish |
-| 1.6 | trajectory publish | 이강태 | `/frenet_planner/trajectory` publish |
-| 1.7 | MPC tracking | 정윤태·양서준 | `/ctrl_cmd` 또는 MORAI 제어 토픽으로 차량 이동 |
-| 1.8 | trajectory vs CSV | 정윤태 | planner 켜짐 → external trajectory 사용 로그; planner 끔 → CSV fallback |
-| 1.9 | 저속·곡률 (v2 bugfix) | 정윤태 | 급커브·저속 구간에서 이탈·진동 없음 (`72e2a37` 검증 항목) |
+| 1.1 | standalone build | 정윤태·이강태 | `./scripts/build_planning_control.sh` 성공 |
+| 1.2 | global path 로드 | 이강태 | Planner 로그에 본선 global path 로드 성공 |
+| 1.3 | GPS/IMU UDP | 정윤태 | `9301/9303` 수신 후 localization 유효 |
+| 1.4 | 임시 객체 입력 | 정윤태 | 센서 연동 전 ObjectInfo `7505` 수신·장애물 반응 확인 |
+| 1.5 | PlannedPath UDP | 이강태 | Planner 송신과 MPC `127.0.0.1:9300` 수신 로그 |
+| 1.6 | CtrlCmd UDP | 정윤태·양서준 | MPC가 MORAI `9111`로 송신하고 차량 이동 |
+| 1.7 | MPC tracking | 정윤태·양서준 | 경로 이탈·조향 진동 없이 추종 |
+| 1.8 | 프로세스 종료 | 정윤태 | `Ctrl+C` 후 두 프로세스와 UDP socket 모두 종료 |
+| 1.9 | 저속·곡률 | 정윤태 | 급커브·저속 구간에서 이탈·진동 없음 |
 
-**비고:** UDP 전환은 `feature/yuntae-*` 별도 검증. behavior dashboard는 `http://localhost:8088` (선택).
+**비고:** Behavior Planner는 이 파이프라인에 연결하지 않는다. 상세 규약은 [planning-control-udp.md](./planning-control-udp.md)를 따른다.
 
 ---
 

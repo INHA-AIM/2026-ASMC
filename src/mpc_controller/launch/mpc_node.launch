@@ -1,7 +1,0 @@
-<launch>
-  <node pkg="mpc_node" type="mpc_node" name="mpc_node" output="screen">
-    <rosparam command="load" file="$(find mpc_node)/src/config/mpc_params.yaml" />
-    <param name="waypoint_file" value="$(find mpc_node)/src/config/path_route1.txt" />
-    <param name="ref_file" value="$(find mpc_node)/src/config/ref.txt" />
-  </node>
-</launch>

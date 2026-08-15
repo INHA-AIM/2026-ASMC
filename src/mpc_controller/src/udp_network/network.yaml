@@ -1,0 +1,16 @@
+network:
+  host_ip: "127.0.0.1"       # 이 프로세스가 bind할 IP (수신용)
+  user_ip: "host.docker.internal" # Docker에서 Windows MORAI로 송신
+
+  ctrl_cmd_host_port: 9111      # MORAI Cmd Control Host PORT
+  ctrl_cmd_dst_port: 9112       # MORAI UI 페어 포트(송신 코드는 host_port 사용)
+  collision_host_port: 9091
+  collision_dst_port: 9092
+  competition_host_port: 908  # 미사용
+  competition_dst_port: 909   # 미사용
+
+  # frenet_planner_node로부터 PlannedPath를 받는 포트. frenet_planner의
+  # udp_network/network.yaml에 있는 planned_path_dst_port와 반드시 같은 값이어야
+  # 한다. mpc_controller는 더 이상 MORAI의 ego(911)/object(7505) 포트를 직접
+  # 듣지 않는다 - frenet_planner_node가 그 역할을 맡는다.
+  planned_path_host_port: 9300

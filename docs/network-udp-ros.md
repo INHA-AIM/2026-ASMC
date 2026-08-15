@@ -31,6 +31,8 @@
 
 ## 2. 아키텍처
 
+Planning/Control 자체는 이 ROS bridge 구조를 사용하지 않는다. GPS/IMU UDP를 직접 수신하고 CtrlCmd UDP를 직접 송신하며, 상세는 [planning-control-udp.md](./planning-control-udp.md)를 따른다. 아래 구조는 ROS가 필요한 기타 모듈용이다.
+
 ```
 MORAI (Windows)  --UDP-->  morai_udp_bridge / morai_sensor_bridge  --> ROS topics
                               ^
@@ -150,6 +152,7 @@ cam/gps/imu는 되는데 **lidar만 0**인 경우가 자주 나온다 → [§6.1
 - Ego: UDP → **`wheel_angle`** (beta_drive; va의 `front_steer_angle` 아님)  
 - Ctrl: **`steering`** (rad) → UDP 정규화  
 - Object/Collision은 학습·eval용. **배포 추론 경로 privileged 금지**
+- standalone Frenet Planner는 센서 객체 입력 연동 전 대회 경로 검증을 위해 `ObjectInfo:7505`를 임시 사용한다. perception 연동 후 해당 receiver를 제거한다.
 
 ---
 

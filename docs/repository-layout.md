@@ -26,16 +26,16 @@
 
 ## 2. catkin·코드 패키지
 
-ROS 패키지는 **`src/<패키지명>/`** 바로 아래. 논리 그룹은 `src/<그룹>/README.md`만.
+ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래 둔다. 논리 그룹은 `src/<그룹>/README.md`만 둔다.
 
 ### planning_control (✅ PR #1·#4)
 
 | 패키지 | 경로 | 담당 | GitHub |
 |--------|------|------|--------|
 | Behavior planner | `src/behavior_planner/` | 정윤태·양서준 | @yuntae12-sudo · @yangseojun |
-| MPC (`mpc_node`) | `src/mpc_controller/` | 정윤태·양서준 | @yuntae12-sudo · @yangseojun |
-| Frenet planner | `src/planner/` | 이강태 | @kante2 |
-| 통합 launch | `src/integration_launch/` | 정윤태 | @yuntae12-sudo |
+| MPC (`mpc_node`, standalone UDP) | `src/mpc_controller/` | 정윤태·양서준 | @yuntae12-sudo · @yangseojun |
+| Frenet planner (standalone UDP) | `src/frenet_planner/` | 이강태 | @kante2 |
+| ROS bridge launch | `src/integration_launch/` | 정윤태 | @yuntae12-sudo |
 
 데이터 흐름: [planning-behavior-handoff.md](./planning-behavior-handoff.md)
 
@@ -73,7 +73,7 @@ ROS 패키지는 **`src/<패키지명>/`** 바로 아래. 논리 그룹은 `src/
 |------|--------|--------|--------|--------|--------|--------|
 | `src/behavior_planner/` | ✅ | ✅ | 👀 | 👀 | — | — |
 | `src/mpc_controller/` | ✅ | ✅ | 👀 | 👀 | — | — |
-| `src/planner/` | 👀 | 👀 | ✅ | 👀 | — | — |
+| `src/frenet_planner/` | 👀 | 👀 | ✅ | 👀 | — | — |
 | `src/integration_launch/` | ✅ | 👀 | 👀 | 👀 | — | — |
 | `src/learning_by_cheating/` | — | — | — | ✅ | — | — |
 | `scripts/bridge*` | — | — | — | ✅ | — | — |
@@ -106,7 +106,7 @@ CODEOWNERS 자동 리뷰: [.github/CODEOWNERS](../.github/CODEOWNERS)
 
 | 모듈 | ASMC 경로 |
 |------|-----------|
-| Behavior / Frenet / MPC | `src/behavior_planner/`, `planner/`, `mpc_controller/` |
+| Behavior / Frenet / MPC | `src/behavior_planner/`(미연동), `frenet_planner/`, `mpc_controller/` |
 | SA_perc | `src/perception/morai_3d_detection/` |
 | SA_plan / LBC | `src/learning_by_cheating/` |
 | Scenario / gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` |

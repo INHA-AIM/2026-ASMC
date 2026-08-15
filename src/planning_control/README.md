@@ -1,24 +1,16 @@
-# planning_control (논리 그룹)
+# Planning/Control
 
-판단·제어 파트. **실제 코드는 아래 catkin 패키지**에 있습니다 (이 폴더는 README만).
+Planner와 Controller는 ROS를 사용하지 않는 standalone UDP 프로그램이다.
 
-| 패키지 (`src/`) | 담당 | 상태 |
-|-----------------|------|------|
-| `behavior_planner/` | 정윤태·양서준 | ✅ planning-v2 (PR #4) |
-| `mpc_controller/` (`mpc_node`) | 정윤태·양서준·이강태 | ✅ |
-| `planner/` | 이강태 | ✅ |
-| `integration_launch/` | 정윤태 | ✅ |
-
-## 수정 범위
-
-- 위 패키지만 수정. 상세 파일: [docs/team-dev-guide.md](../../docs/team-dev-guide.md) §1–3
-- 핸드오프: [docs/planning-behavior-handoff.md](../../docs/planning-behavior-handoff.md)
-- 시뮬 검증: [docs/sim-verification-checklist.md](../../docs/sim-verification-checklist.md) §1
-
-## 의존성
-
-`morai_msgs` submodule (`beta_drive`), Docker에 `libyaml-cpp-dev` (behavior_planner).
+| 프로젝트 | 담당 | 빌드 |
+|---|---|---|
+| `src/frenet_planner/` | 이강태 | CMake, C++17 |
+| `src/mpc_controller/` | 정윤태·양서준 | CMake, C++17 |
+| `src/behavior_planner/` | 정윤태·양서준 | 현재 UDP 파이프라인 미연동 |
 
 ```bash
-roslaunch integration_launch integration.launch
+./scripts/build_planning_control.sh
+./scripts/run_planner_controller.sh
 ```
+
+정본 규약과 포트표는 [docs/planning-control-udp.md](../../docs/planning-control-udp.md)를 따른다. ROS 모듈은 별도로 `./scripts/build_ws.sh`로 빌드한다.

@@ -5,21 +5,22 @@
 control_frequency: 20.0
 
 mpc:
-  horizon: 14
-  dt: 0.1
+  horizon: 28
+  dt: 0.05             # control_frequency(20Hz=50ms)와 정합.
   max_iterations: 25
   wheelbase: 3.0
 
 cost:
-  path_error: 4.0
+  path_error: 6.0
   heading_error: 3.0      # 6.0→3.0: 과도한 heading 보정이 오버슈트 유발
   speed_error: 2.0        # 3.0→2.0: 급정거 방지
   control: 1.25            # 2.0→1.0: steer effort 페널티 완화
-  control_rate: 10.0      # 조향 변화율 억제 (accel은 cost_function 내부에서 *0.05)
+  control_rate: 100.0     # 90~110 사이의 값으로 조절해야함.
+  control_rate_accel: 4.5
   terminal: 8.0
 
 solver:
-  lr_init: 0.05
+  lr_init: 0.20
   lr_min: 0.0001
   convergence_eps: 0.001
   line_search_steps: 7
@@ -35,17 +36,12 @@ constraints:
     min: 0.0
     max: 60.0
 
-planning:
-  ref_window: 700
-  target_vel: 10.0
-  curve_vel_sharp: 4.0
-  curve_vel_mid:   5.5
-  curve_vel_mild:  7.0
-  curve_th_sharp:  0.080
-  curve_th_mid:    0.035
-  curve_th_mild:   0.015
-  curve_lookahead_m: 15.0  # [m] 이 거리 안에 더 급한 커브가 있으면 미리 그 속도로 감속
-
-# waypoint_file, ref_file — launch 파일에서 $(find mpc_node)로 주입 (경로 무관)
-waypoint_file: ""
-ref_file: ""
+# 목표 경로가 실제로 전진하는데 차량만 정지한 경우의 공통 복구 계층.
+# STOP/WAIT처럼 경로 목표속도가 0인 정상 정지에는 작동하지 않는다.
+stuck_recovery:
+  ego_speed_threshold: 0.1     # [m/s] 이 이하면 정지로 판정
+  target_speed_threshold: 0.3  # [m/s] 경로가 이보다 빨라야 주행 의도가 있다고 판정
+  min_path_progress: 0.5       # [m] horizon 경로가 실제 전진해야 함
+  timeout: 1.0                 # [s] 정지가 이 시간 지속되면 복구 시작
+  duration: 0.75               # [s] 한 번의 제한된 launch assist 시간
+  launch_accel: 0.5            # [m/s^2] 복구 중 최소 요구 가속도

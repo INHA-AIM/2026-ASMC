@@ -137,7 +137,7 @@ refactor(planner): 동작 변경 없는 리팩터
 | 경로 | 주 담당 |
 |------|---------|
 | `src/behavior_planner/`, `src/mpc_controller/`, `src/integration_launch/` | 정윤태·양서준 |
-| `src/planner/` | 이강태 |
+| `src/frenet_planner/` | 이강태 |
 | `src/learning_by_cheating/`, `scripts/bridge*` | 안승현 |
 | `src/perception/morai_3d_detection/` | 손재호 |
 | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |

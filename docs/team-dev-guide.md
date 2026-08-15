@@ -1,5 +1,9 @@
 # 팀원별 개발·검증 가이드
 
+> **Planning/Control 변경:** §1–3의 ROS topic·launch 기반 설명은 이전 구현 참고용이다.
+> 현재 작업 경로는 `src/frenet_planner/`, `src/mpc_controller/`이며 빌드·실행·포트는
+> [planning-control-udp.md](./planning-control-udp.md)를 우선 적용한다. Behavior Planner는 미연동이다.
+
 > **최종 수정:** 2026-07-08  
 > **대상:** 팀원 전원 (통합 코드 이식 완료 후)  
 > **원칙:** 새 작업은 **항상 `2026-ASMC` `main`에서 `feature/<이름>-…` 브랜치**로 한다. 개인 GitHub(`aim_ws`, `mpc_ws` 등)에는 **새 기능을 올리지 않는다.**
@@ -37,7 +41,7 @@
 | `src/MORAI-ROS_morai_msgs/` | submodule — **직접 커밋 금지**. 브랜치·핀 변경은 통합 리드 |
 | `docker/` | Dockerfile 변경 시 안승현 리뷰 |
 | `src/interfaces/README.md` | τ·BEV 스펙 — 3파트 합의 후 |
-| `src/integration_launch/launch/integration.launch` | planning 팀이 주, 타 파트 include 추가 시 합의 |
+| `src/integration_launch/` | ROS bridge launch 전용. Planning/Control 실행 추가 금지 |
 | `docs/` (공용 규약) | 내용 변경은 통합 리드 또는 PR 리뷰 |
 
 ### 공통 시작 명령
