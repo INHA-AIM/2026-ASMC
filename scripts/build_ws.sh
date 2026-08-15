@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# catkin 워크스페이스 빌드 (컨테이너 또는 네이티브 Noetic 내부)
+# ROS 모듈 catkin 빌드. UDP-only Planning/Control은 별도 CMake 빌드한다.
 set -euo pipefail
 cd "$(dirname "$(readlink -f "$0")")/.."
 
@@ -12,3 +12,4 @@ fi
 source /opt/ros/noetic/setup.bash
 catkin_make "$@"
 echo "[build_ws] done. source devel/setup.bash"
+echo "[build_ws] planning/control: ./scripts/build_planning_control.sh"
