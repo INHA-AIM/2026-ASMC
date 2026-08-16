@@ -1,0 +1,171 @@
+# m(미터) 단위
+Vehicle:
+  Length: 4.635
+  Width: 1.892
+  WheelBase: 3
+  # MORAI Ioniq 5 vehicle frame is located at the rear axle center.
+  FrontOverhang: 0.845
+  RearOverhang: 0.700
+  TurningRadius: 5.87
+  LiDAR:
+    # ASMC_sensor_set_v1.json pose in the vehicle frame (m, deg).
+    x: 0.80
+    y: 0.00
+    z: 1.45
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
+    Hz: 15
+  GPS:
+    x: 0.35
+    y: 0.00
+    z: 1.25
+    Hz: 30
+  Camera:
+    # Front camera (camera-1) from ASMC_sensor_set_v1.json.
+    x: 1.90
+    y: 0.00
+    z: 1.20
+    roll: 0.0
+    pitch: 2.0
+    yaw: 0.0
+    ImageWidth: 1280
+    ImageHeight: 720
+    HorizontalFOV: 90.0
+    fx: 640.0
+    fy: 640.0
+    cx: 640.0
+    cy: 360.0
+    Hz: 30
+  IMU:
+    Hz: 50
+  CAN:
+    Hz: 50
+
+Planning:
+  # 0 : Pure-Pursuit, 1 : Stanley, 2 : LKAS, 3 : Advanced-Stanley
+  Control_Type: 3
+  SafeMargin: 0.2 # 장애물 돌때, 최소 간격
+  SafeVel: 20 # 장애물 통과할때, 속도(KPH)
+  DWAParam:
+    vMax: 50 # 최대 속도 : 100km/h
+    vMin: 20 # 최소 속도 : 20km/h
+    aMargin: 1.0 # 가속도 마진
+    alphaMargin: 0 # 각가속도 마진
+    accTime: 7.4 # 0 -> 100km/h 가는데 걸린 시간
+    decTime: 3.08 # 100km/h -> 0 가는데 걸린 시간
+    alphaAccTime: 20.025 # CheckYawRate.py에서 확인
+    alphaDecTime: 0.32 # CheckYawRate.py에서 확인
+    Width: 5 # 샘플 가로 해상도
+    Length: 10 # 샘플 세로 해상도
+    SearchLen: 5 # 경로 평가 시 사용할 LD 값(idx 탐색 범위. m 아님. 인덱스 개수)
+    SamplingTime: 1 # 샘플링 시간(s)
+    ControlHz: 50 # 제어 주기(Hz)
+    PathCount: 19 # 생성할 경로 개수 (변경 시, Global.hpp에 const int32 c_SAMPLING도 동일하게 맞춰줘야함.)
+    alpha: 0.4 # Heading 항 Weight
+    beta: 0.2 # Distance 항 Weight
+    gamma: 0.1 # Velocity 항 Weight
+    delta: 0.3 # Clearance 항 Weight
+
+Control:
+  LD: 8
+  Default_KPH: 30
+  Pid:
+    Kp: 1.5
+    Ki: 0.0
+    Kd: 0.1
+
+Map:
+  Type: "KCity" # 주행할 맵 이름 명시(손재호 수정함)
+  KCity:
+    Path: src/Map/K-City/Path.txt
+    Ref: src/Map/K-City/ref.txt
+    InBoundary1: src/Map/K-City/Boundary/InBoundary1.txt
+    InBoundary2: src/Map/K-City/Boundary/InBoundary2.txt
+    InBoundary3: src/Map/K-City/Boundary/InBoundary3.txt
+    InBoundary4: src/Map/K-City/Boundary/InBoundary4.txt
+    OutBoundary: src/Map/K-City/Boundary/OutBoundary.txt
+  Sangam:
+    Path: src/Map/Sangam-NoBuildings/25hl_global_path.txt
+    Ref: src/Map/Sangam-NoBuildings/Ref.txt
+    InBoundary1: src/Map/Sangam-NoBuildings/Boundary_right.txt
+    InBoundary2: src/Map/Sangam-NoBuildings/25hl_global_path_left.txt
+    InBoundary3: src/Map/Sangam-NoBuildings/25hl_global_path_right.txt
+    OutBoundary: src/Map/Sangam-NoBuildings/Boundary_left.txt
+  Kiapi: null
+  Wonju-License:
+    Path: src/Map/Wonju-License/Path.txt
+    Ref: src/Map/Wonju-License/Ref.txt
+
+Camera:
+  # 0 : UDP, 1 : ROS
+  # The repository's morai_sensor_bridge owns the UDP ports and publishes
+  # /image_jpeg/compressed. Main therefore consumes the ROS topic.
+  CameraMode: 1
+  Display: 1
+  # 0.0.0.0 = 모든 NIC에서 수신. MORAI(Windows)에서 WSL로 UDP를 보낼 때
+  # 루프백(127.x)에 바인딩하면 수신이 안 되므로 ANY 바인딩 사용.
+  UDP1:
+    ip: "0.0.0.0"
+    port: 9097
+  UDP2:
+    ip: "0.0.0.0"
+    port: 9098
+  HSV:
+    lower_red1: [0, 185, 140]
+    upper_red1: [10, 255, 255]
+    lower_red2: [160, 185, 120]
+    upper_red2: [179, 255, 255]
+    lower_green: [59, 160, 110]
+    upper_green: [70, 255, 252]
+    lower_yellow: [20, 70, 120]
+    upper_yellow: [35, 255, 255]
+    lower_bright_yellow: [19, 109, 81]
+    upper_bright_yellow: [39, 163, 255]
+    lower_dark_yellow: [19, 60, 43]
+    upper_dark_yellow: [51, 219, 94]
+    lower_white: [11, 16, 169]
+    upper_white: [41, 64, 250]
+  TrafficLight:
+    Threshold: 200
+  BEV:
+    BEVHeight: 500
+    BEVWidth: 400
+    CamX: 1.9
+    CamY: 0
+    CamZ: 1.2
+    WorldPoints:
+      - 2.5
+      - 20.0
+      - -5.0
+      - 5.0
+    MAF: 8
+
+# Camera : X:1.9 / Y:0 / Z:1.4 / FOV:30  /HZ : 30 -> 신호등
+# Camera : X:2.4 / Y:0 / Z:1.2 / FOV:90  /HZ : 30 -> 정지선 및 퓨전
+
+LiDAR: # 라이다
+  # 0 : UDP, 1 : ROS
+  # The outer bridge publishes /velodyne_points; Main consumes that ROS topic.
+  LiDARMode: 1
+  UDP:
+    # Bind all WSL interfaces so a WSL IP change after reboot does not break the receiver.
+    # The active Velodyne driver port is passed by main.launch; keep this value in sync.
+    ip: "0.0.0.0"
+    port: 9299
+  Filter:
+    Range:
+      Min: 0.5
+      Max: 100.0
+    ROI:
+      MinX: -10.0
+      MaxX: 30.0
+      MinY: -10.0
+      MaxY: 10.0
+      MinZ: -2.0
+      MaxZ: 3.0
+  Clustering:
+    Enabled: true
+    Eps: 0.5
+    MinPoints: 5
+    Threshold: 300

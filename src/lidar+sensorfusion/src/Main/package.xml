@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>Main</name>
+  <version>0.0.1</version>
+  <description>ROS 패키지 설명</description>
+  <maintainer email="your_email@example.com">Your Name</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Core ROS and message dependencies -->
+  <build_depend>roscpp</build_depend>
+  <build_export_depend>roscpp</build_export_depend>
+  <exec_depend>roscpp</exec_depend>
+  
+  <build_depend>rospy</build_depend>
+  <exec_depend>rospy</exec_depend>
+
+  <build_depend>roslib</build_depend>
+  <build_export_depend>roslib</build_export_depend>
+  <exec_depend>roslib</exec_depend>
+
+  <build_depend>morai_msgs</build_depend>
+  <build_export_depend>morai_msgs</build_export_depend>
+  <exec_depend>morai_msgs</exec_depend>
+  
+  <build_depend>Msg</build_depend>
+  <build_export_depend>Msg</build_export_depend>
+  <exec_depend>Msg</exec_depend>
+
+  <build_depend>std_msgs</build_depend>
+  <build_export_depend>std_msgs</build_export_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <build_depend>geometry_msgs</build_depend>
+  <build_export_depend>geometry_msgs</build_export_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+
+  <!-- tf2 family dependencies -->
+  <build_depend>tf2</build_depend>
+  <build_export_depend>tf2</build_export_depend>
+  <exec_depend>tf2</exec_depend>
+
+  <build_depend>tf2_ros</build_depend>
+  <build_export_depend>tf2_ros</build_export_depend>
+  <exec_depend>tf2_ros</exec_depend>
+
+  <build_depend>tf2_geometry_msgs</build_depend>
+  <build_export_depend>tf2_geometry_msgs</build_export_depend>
+  <exec_depend>tf2_geometry_msgs</exec_depend>
+
+  <export>
+  </export>
+</package>

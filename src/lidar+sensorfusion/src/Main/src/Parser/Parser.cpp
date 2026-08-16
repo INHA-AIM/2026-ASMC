@@ -1,0 +1,402 @@
+#include "Parser.hpp"
+
+namespace
+{
+ros::Publisher g_CameraImagePublisher;
+}
+
+// Parser.cpp 파일 역할 
+// GPS/IMU -> 축 변환 후 SensorData에 담기
+// LiDAR -> 축 변환, PCL 변환
+// Camera -> Raw 데이터 이미지 형태로 변환 
+// 변환 용도로만 작성, ~Processing 함수는 각 센서별 처리 절차 코드 담는 곳으로 사용
+
+//==========================카메라========================== //  
+void *ParseCamera(void *p_NodeHandle)
+{
+    ros::NodeHandle *pst_NodeHandle = (ros::NodeHandle *)p_NodeHandle;
+    if (st_Camera.s32_CameraMode == 0)
+    {
+        ParseCameraUDP(*pst_NodeHandle);
+    }
+    else if (st_Camera.s32_CameraMode == 1)
+    {
+        ParseCameraROS(*pst_NodeHandle);
+    }
+    cv::destroyAllWindows();
+    return nullptr;
+}
+
+
+void ParseCameraUDP(ros::NodeHandle &st_NodeHandle)
+{
+    UDPReceiver cls_Receiver_c1(st_Camera.front_camera_udp);
+    cls_Receiver_c1.start();
+
+    UDPReceiver cls_Receiver_c2(st_Camera.traffic_light_camera_udp);
+    cls_Receiver_c2.start();
+
+    ros::Publisher st_PublishImg = st_NodeHandle.advertise<sensor_msgs::CompressedImage>("/camera/image/compressed", 1);
+    ros::Subscriber st_SubscribeYOLO = st_NodeHandle.subscribe("/YOLO/BBox", 1, YoloCallback);
+    ros::Rate rate(VisionHZ);
+    while (ros::ok())
+    {
+        size_t front_nbytes = 0;
+
+        // Camera 1 (Sensor Fusion, )
+        pthread_mutex_lock(&st_SensorData.st_MutexCamera);
+        if (auto image_data_opt = cls_Receiver_c1.get_image_data())
+        {
+            vector<uint8>& image_data = *image_data_opt;
+            if (!image_data.empty())
+            {
+                if (image_data.size() <= static_cast<size_t>(c_CAMERA_JPEG_SIZE))
+                {
+                    front_nbytes = image_data.size();
+                    memcpy(st_SensorData.st_RawCamera.arc_Buffer,
+                                image_data.data(),
+                                front_nbytes);
+                    st_SensorData.st_RawCamera.s32_Num = static_cast<int32_t>(front_nbytes);
+                    st_SensorData.st_RawCamera.u64_Timestamp = static_cast<uint64_t>(ros::Time::now().toNSec());
+                }
+                else
+                {
+                    ROS_WARN_THROTTLE(2.0, "Dropping oversized front-camera JPEG: %zu bytes", image_data.size());
+                }
+            }
+        }
+        sensor_msgs::CompressedImage msg;
+        if (front_nbytes > 0)
+        {
+            msg.header.stamp = ros::Time::now();
+            msg.format = "jpeg";
+            msg.data.resize(front_nbytes);
+            std::memcpy(msg.data.data(), st_SensorData.st_RawCamera.arc_Buffer, front_nbytes);
+            // 필요시 frame_id도 설정
+            msg.header.frame_id = "camera";
+        }
+        pthread_mutex_unlock(&st_SensorData.st_MutexCamera);
+
+
+        size_t traffic_light_nbytes = 0;
+        pthread_mutex_lock(&st_SensorData.st_MutexCamera);
+        if (auto image_data_opt = cls_Receiver_c2.get_image_data())
+        {
+            vector<uint8>& image_data = *image_data_opt;
+            if (!image_data.empty())
+            {
+                if (image_data.size() <= static_cast<size_t>(c_CAMERA_JPEG_SIZE))
+                {
+                    traffic_light_nbytes = image_data.size();
+                    memcpy(st_SensorData.st_RawCamera2.arc_Buffer,
+                                image_data.data(),
+                                traffic_light_nbytes);
+                    st_SensorData.st_RawCamera2.s32_Num = static_cast<int32_t>(traffic_light_nbytes);
+                    st_SensorData.st_RawCamera2.u64_Timestamp = static_cast<uint64_t>(ros::Time::now().toNSec());
+                }
+            }
+        }
+        pthread_mutex_unlock(&st_SensorData.st_MutexCamera);
+
+        if (front_nbytes > 0)
+            st_PublishImg.publish(msg);
+
+        ros::spinOnce();
+        rate.sleep();
+    }
+    cls_Receiver_c1.stop();
+    cls_Receiver_c2.stop();
+    cv::destroyAllWindows();
+}
+
+
+void ParseCameraROS(ros::NodeHandle &st_NodeHandle)
+{
+    // Keep the original Main/YOLO interface intact while the outer MORAI
+    // bridge owns the UDP receiver and publishes /image_jpeg/compressed.
+    g_CameraImagePublisher =
+        st_NodeHandle.advertise<sensor_msgs::CompressedImage>("/camera/image/compressed", 1);
+    ros::Subscriber st_SubscribeCamera = st_NodeHandle.subscribe("/image_jpeg/compressed", 1, CameraRosCallback);
+    ros::Subscriber st_SubscribeYOLO = st_NodeHandle.subscribe("/YOLO/BBox", 1, YoloCallback);
+    ros::Rate rate(VisionHZ);
+    while (ros::ok())
+    {
+        ros::spinOnce();
+        rate.sleep();
+    }
+}
+
+void CameraRosCallback(const sensor_msgs::CompressedImage::ConstPtr& msg)
+{
+    // 수신 크기만큼만 복사 (기존: sizeof(RawImageFrame) 고정 복사 → 범위 밖 읽기)
+    const size_t nbytes = std::min(msg->data.size(), static_cast<size_t>(c_CAMERA_JPEG_SIZE));
+    pthread_mutex_lock(&st_SensorData.st_MutexCamera);
+    memcpy(st_SensorData.st_RawCamera.arc_Buffer, msg->data.data(), nbytes);
+    st_SensorData.st_RawCamera.s32_Num = static_cast<int32>(nbytes);
+    st_SensorData.st_RawCamera.u64_Timestamp = static_cast<uint64>(ros::Time::now().toNSec());
+    pthread_mutex_unlock(&st_SensorData.st_MutexCamera);
+
+    g_CameraImagePublisher.publish(msg);
+}
+
+void YoloCallback(const Msg::Yolo_bbox_arr::ConstPtr& data)
+{
+    YoloDetectionResult st_YOLO;
+
+	for (int32 s32_Index = 0; s32_Index < data->yolo_bbox_arr.size(); s32_Index++)
+	{
+        const auto& detection = data->yolo_bbox_arr[s32_Index];
+		BBox st_BBox;
+		st_BBox.st_Max_pt.f32_X = detection.xMax;
+        st_BBox.st_Max_pt.f32_Y = detection.yMax;
+        st_BBox.st_Min_pt.f32_X = detection.xMin;
+        st_BBox.st_Min_pt.f32_Y = detection.yMin;
+        st_BBox.str_class = detection.classes;
+        st_YOLO.detected_objects.push_back(st_BBox);
+    }
+    pthread_mutex_lock(&st_SensorData.st_MutexYOLO);
+    st_SensorData.st_RawYOLO.vec_YOLO = st_YOLO.detected_objects;
+    st_SensorData.st_RawYOLO.b_Yolo_ready = true;
+    ++st_SensorData.st_RawYOLO.u64_FrameSeq;
+    pthread_mutex_unlock(&st_SensorData.st_MutexYOLO);
+}
+//==========================카메라========================== //  
+
+
+
+
+
+//==========================라이다========================== // 
+void* ParseLiDAR(void* p_NodeHandle)
+{
+    ros::NodeHandle* pst_NodeHandle = static_cast<ros::NodeHandle*>(p_NodeHandle);
+    LiDARParser_Driver_ROS(*pst_NodeHandle);
+    return nullptr;
+}
+
+void LiDARParser_Driver_ROS(ros::NodeHandle &st_NodeHandle)
+{   
+
+    ros::Subscriber st_SubscribeLiDAR = st_NodeHandle.subscribe("/velodyne_points", 1, LiDARParser_Callback);
+    ros::Rate rate(LiDARHZ);
+
+    while (ros::ok())
+    {
+        ros::spinOnce();
+        rate.sleep();
+    }
+}
+
+void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
+{   
+    pcl::PointCloud<pcl::PointXYZI> pcl_Cloud;
+    pcl::fromROSMsg(*msg, pcl_Cloud);
+
+
+    int32 s32_Count = pcl_Cloud.size();
+    int32 s32_bytes = s32_Count * sizeof(pcl::PointXYZI);
+
+
+    // Debugging logs
+    // cout << "pcl_Cloud size: " << count << endl;
+    // cout << "bytes: " << bytes << endl;
+
+
+    pthread_mutex_lock(&st_SensorData.st_MutexLiDAR);
+    // cout << "Before setting st_RawLiDAR.s32_Num: " << st_SensorData.st_RawLiDAR.s32_Num << endl;
+
+    st_SensorData.st_RawLiDAR.u64_Timestamp = GetMillisecond();
+
+    st_SensorData.st_RawLiDAR.s32_Num  = s32_Count;  // Set the number of points (not bytes)
+
+        // cout << "arc_Buffer size: " << sizeof(st_SensorData.st_RawLiDAR.arc_Buffer) << endl;
+
+    // Ensure arc_Buffer is large enough to hold all points
+    memcpy(st_SensorData.st_RawLiDAR.arc_Buffer, pcl_Cloud.points.data(), s32_bytes);
+    pthread_mutex_unlock(&st_SensorData.st_MutexLiDAR);
+        // cout << "After setting st_RawLiDAR.s32_Num: " << st_SensorData.st_RawLiDAR.s32_Num << endl;
+
+}
+
+//==========================라이다========================== // 
+
+
+
+//==========================GPS========================== // 
+void *ParseGPS(void *pst_NodeHandle)
+{
+    ros::NodeHandle *st_NodeHandle = (ros::NodeHandle *)pst_NodeHandle;
+    ros::Subscriber st_SubscribeGPS = st_NodeHandle->subscribe<morai_msgs::GPSMessage>("/gps", 1, GPSParser_Callback);
+    ros::Rate rate(GPSHZ);
+    while (ros::ok())
+    {
+        ros::spinOnce();
+        rate.sleep();
+    }
+    return nullptr;
+}
+
+void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
+{
+    GPS_DATA st_GPSData;
+    float64 f64_X, f64_Y, f64_Z, f64_Dx, f64_Dy, f64_Dz, f64_Latitude, f64_Longitude, f64_Altitude;
+    float64 f64_Phi, f64_Lambda, f64_N;
+
+    st_GPSData.f64_Latitude = st_Msg->latitude;
+    st_GPSData.f64_Longitude = st_Msg->longitude;
+    st_GPSData.f64_Altitude = st_Msg->altitude;
+    st_GPSData.b_isJamming = (st_Msg->status == 0);
+
+    int32 s32_Zone = 52;
+    bool b_North = true;
+    float64 f64_EastOffset = st_Msg->eastOffset;
+    float64 f64_NorthOffset = st_Msg->northOffset;
+
+    float64 f64_East, f64_North;
+    GeographicLib::UTMUPS::Forward(
+        st_GPSData.f64_Latitude,
+        st_GPSData.f64_Longitude,
+        s32_Zone, b_North, f64_East, f64_North
+    );
+    st_GPSData.f64_E = f64_East - f64_EastOffset;
+    st_GPSData.f64_N = f64_North - f64_NorthOffset;
+    st_GPSData.f64_U = 0;
+
+    // cout << st_GPSData.f64_E << " " << st_GPSData.f64_N << endl;
+
+    // f64_Phi = Deg2Rad(st_GPSData.f64_Latitude);
+    // f64_Lambda = Deg2Rad(st_GPSData.f64_Longitude);
+    // f64_N = c_LLA2ENU_A / sqrt(1 - c_LLA2ENU_E2 * sin(f64_Phi) * sin(f64_Phi));
+
+    // f64_X = (f64_N + st_GPSData.f64_Altitude) * cos(f64_Phi) * cos(f64_Lambda);
+    // f64_Y = (f64_N + st_GPSData.f64_Altitude) * cos(f64_Phi) * sin(f64_Lambda);
+    // f64_Z = ((1 - c_LLA2ENU_E2) * f64_N + st_GPSData.f64_Altitude) * sin(f64_Phi);
+
+    // f64_Dx = f64_X - st_GPSRef.f64_RefX;
+    // f64_Dy = f64_Y - st_GPSRef.f64_RefY;
+    // f64_Dz = f64_Z - st_GPSRef.f64_RefZ;
+
+    // st_GPSData.f64_E = -sin(st_GPSRef.f64_RefLon) * f64_Dx + cos(st_GPSRef.f64_RefLon) * f64_Dy;
+    // st_GPSData.f64_N = -sin(st_GPSRef.f64_RefLat) * cos(st_GPSRef.f64_RefLon) * f64_Dx - sin(st_GPSRef.f64_RefLat) * sin(st_GPSRef.f64_RefLon) * f64_Dy + cos(st_GPSRef.f64_RefLat) * f64_Dz;
+
+    pthread_mutex_lock(&st_SensorData.st_MutexGPS);
+    st_SensorData.st_RawGPS.u64_Timestamp = GetMillisecond();
+    st_SensorData.st_RawGPS.s32_Num = sizeof(GPS_DATA);
+    memcpy(st_SensorData.st_RawGPS.arc_Buffer, &st_GPSData, sizeof(GPS_DATA));
+    pthread_mutex_unlock(&st_SensorData.st_MutexGPS);
+}
+//==========================GPS========================== // 
+
+
+//==========================CAN========================== //
+void *ParseCAN(void *pst_NodeHandle)
+{
+    ros::NodeHandle *st_NodeHandle = (ros::NodeHandle *)pst_NodeHandle;
+    ros::Subscriber st_SubscribeCAN = st_NodeHandle->subscribe<morai_msgs::EgoVehicleStatus>("/Competition_topic", 1, CANParser_Callback);
+    ros::Publisher st_PublishCMD = st_NodeHandle->advertise<morai_msgs::CtrlCmd>("/ctrl_cmd_0", 1);
+    ros::Rate rate(CANHZ);
+    auto t_StartTime = std::chrono::steady_clock::now();
+    auto t_EndTime = t_StartTime;
+
+    while (ros::ok())
+    {
+        ros::spinOnce();
+        t_EndTime = std::chrono::steady_clock::now();
+
+        auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(t_EndTime - t_StartTime).count();
+        if (elapsed_time >= 100)
+            pthread_cond_signal(&st_DataTemporalCond);
+        morai_msgs::CtrlCmd ctrl_msg;
+        ctrl_msg.longlCmdType = 1;
+
+        ctrl_msg.accel = st_Control.f32_accelCmd;
+        ctrl_msg.brake = st_Control.f32_brakeCmd;
+        ctrl_msg.steering = st_Control.f32_TargetSteer_Rad;
+
+        st_PublishCMD.publish(ctrl_msg);
+        rate.sleep();
+    }
+    return nullptr;
+}
+
+void CANParser_Callback(const morai_msgs::EgoVehicleStatus::ConstPtr& st_Msg)
+{
+    CAN_DATA st_CANData;
+    st_CANData.f32_CurrentVel_KPH = 3.6 * sqrt(pow(st_Msg->velocity.x, 2) + pow(st_Msg->velocity.y, 2) + pow(st_Msg->velocity.z, 2));
+    st_CANData.f32_CurrentVel_MPS = sqrt(pow(st_Msg->velocity.x, 2) + pow(st_Msg->velocity.y, 2) + pow(st_Msg->velocity.z, 2));
+    st_CANData.f32_Steer_deg = st_Msg->wheel_angle;
+    st_CANData.f32_Steer_rad = Deg2Rad(st_Msg->wheel_angle);
+
+    pthread_mutex_lock(&st_SensorData.st_MutexCAN);
+    st_SensorData.st_RawCAN.u64_Timestamp = GetMillisecond();
+    st_SensorData.st_RawCAN.s32_Num = sizeof(CAN_DATA);
+    memcpy(st_SensorData.st_RawCAN.arc_Buffer, &st_CANData, sizeof(CAN_DATA));
+    pthread_mutex_unlock(&st_SensorData.st_MutexCAN);
+}
+
+//==========================IMU========================== // 
+void *ParseIMU(void *pst_NodeHandle)
+{
+    ros::NodeHandle *st_NodeHandle = (ros::NodeHandle *)pst_NodeHandle;
+    ros::Subscriber st_SubscribeIMU = st_NodeHandle->subscribe<sensor_msgs::Imu>("/imu", 1, IMUParser_Callback);
+    ros::Rate rate(IMUHZ);
+    while (ros::ok())
+    {
+        ros::spinOnce();
+        rate.sleep();
+    }
+    return nullptr;
+}
+
+void IMUParser_Callback(const sensor_msgs::Imu::ConstPtr& st_Msg)
+{
+    IMU_DATA st_IMUData;
+
+    st_IMUData.f32_AccelX = st_Msg->linear_acceleration.x;
+    st_IMUData.f32_AccelY = st_Msg->linear_acceleration.y;
+    st_IMUData.f32_AccelZ = st_Msg->linear_acceleration.z;
+
+    st_IMUData.f32_AngularVelX = st_Msg->angular_velocity.x;
+    st_IMUData.f32_AngularVelY = st_Msg->angular_velocity.y;
+    st_IMUData.f32_AngularVelZ = st_Msg->angular_velocity.z;
+
+    st_IMUData.f32_QuatX = st_Msg->orientation.x;
+    st_IMUData.f32_QuatY = st_Msg->orientation.y;
+    st_IMUData.f32_QuatZ = st_Msg->orientation.z;
+    st_IMUData.f32_QuatW = st_Msg->orientation.w;
+
+    st_IMUData.f32_Roll_rad = atan2(2.0 * (st_IMUData.f32_QuatW * st_IMUData.f32_QuatX + st_IMUData.f32_QuatY * st_IMUData.f32_QuatZ),
+                                    1.0 - 2.0 * (st_IMUData.f32_QuatX * st_IMUData.f32_QuatX + st_IMUData.f32_QuatY * st_IMUData.f32_QuatY));
+    st_IMUData.f32_Pitch_rad = asin(2.0 * (st_IMUData.f32_QuatW * st_IMUData.f32_QuatY - st_IMUData.f32_QuatZ * st_IMUData.f32_QuatX));
+    st_IMUData.f32_Yaw_rad = atan2(2.0 * (st_IMUData.f32_QuatW * st_IMUData.f32_QuatZ + st_IMUData.f32_QuatX * st_IMUData.f32_QuatY), 
+                                    1.0 - 2.0 * (st_IMUData.f32_QuatY * st_IMUData.f32_QuatY + st_IMUData.f32_QuatZ * st_IMUData.f32_QuatZ));
+    
+    st_IMUData.f32_Roll_deg = Rad2Deg(st_IMUData.f32_Roll_rad);
+    st_IMUData.f32_Pitch_deg = Rad2Deg(st_IMUData.f32_Pitch_rad);
+    st_IMUData.f32_Yaw_deg = Rad2Deg(st_IMUData.f32_Yaw_rad);
+    st_IMUData.b_ImuReady=true; //라이다에서 Kalman.cpp에서 사용중
+
+    pthread_mutex_lock(&st_SensorData.st_MutexIMU);
+    st_SensorData.st_RawIMU.u64_Timestamp = GetMillisecond();
+    st_SensorData.st_RawIMU.s32_Num = sizeof(IMU_DATA);
+    memcpy(st_SensorData.st_RawIMU.arc_Buffer, &st_IMUData, sizeof(IMU_DATA));
+    pthread_mutex_unlock(&st_SensorData.st_MutexIMU);
+
+}
+//==========================IMU========================== // 
+
+
+//==========================Viewer========================== // 
+// void *ParseViewer(void *pst_NodeHandle)
+// {
+//     ros::NodeHandle *st_NodeHandle = (ros::NodeHandle *)pst_NodeHandle;
+//     ros::Publisher st_PublishViewer = st_NodeHandle->advertise<visualization_msgs::MarkerArray>("/showAll", 1);
+//     ros::Rate rate(VIEWERHZ);
+
+//     while (ros::ok())
+//     {
+//         ShowAll(st_PublishViewer, st_VehicleSpec, st_GPSIMUTemporal, st_ControlTemporal, st_PlanningTemporal, st_LiDARTemporal);
+//         rate.sleep();
+//     }
+// }
+//==========================Viewer========================== // 

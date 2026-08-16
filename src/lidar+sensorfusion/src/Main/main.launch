@@ -1,0 +1,36 @@
+<launch>
+  <!-- MORAI sends VLP-16 packets (Velodyne product ID 0x22). -->
+  <arg name="lidar_port" default="9299"/>
+  <!-- Keep this false when 2026-ASMC/morai_sensor_bridge publishes
+       /velodyne_points. Set true only for direct raw Velodyne UDP input. -->
+  <arg name="start_velodyne_driver" default="false"/>
+  <arg name="rviz" default="false"/>
+  <!-- Split scans on the azimuth wrap because MORAI's packet timing does not
+       match the physical VLP-16 packet-rate/RPM calculation. -->
+  <arg name="lidar_cut_angle" default="0.0"/>
+  <include if="$(arg start_velodyne_driver)"
+           file="$(find velodyne_pointcloud)/launch/VLP16_points.launch">
+    <arg name="port" value="$(arg lidar_port)"/>
+    <arg name="cut_angle" value="$(arg lidar_cut_angle)"/>
+  </include>
+
+  <!-- 인지 메인 노드: 카메라 UDP 수신, GPS/IMU/CAN 파싱, 라이다 전처리, 센서퓨전 -->
+  <node name="Main" pkg="Main" type="main" output="screen">
+    <!-- Main's legacy parser asks for /Competition_topic. The 2026-ASMC
+         vehicle bridge publishes the same EgoVehicleStatus on /Ego_topic. -->
+    <remap from="/Competition_topic" to="/Ego_topic"/>
+    <!-- Sensor poses and camera intrinsics come from setting.yaml. The C++
+         node still accepts private ROS-parameter overrides for fine tuning. -->
+    <param name="fusion_iou_threshold" value="0.25"/>
+    <param name="fusion_class_lock_frames" value="12"/>
+    <param name="fusion_class_miss_grace" value="8"/>
+  </node>
+
+  <!-- YOLO 검출: /camera/image/compressed 구독 -> /YOLO/BBox 발행 -->
+  <node name="yolo_detection_node" pkg="Main" type="YOLODetection.py" output="screen">
+    <param name="weights" value="$(find Main)/YOLOWeight/yolo11m.pt"/>
+  </node>
+
+  <node if="$(arg rviz)" name="sensor_fusion_rviz" pkg="rviz" type="rviz"
+        args="-f base_link" output="screen"/>
+</launch>

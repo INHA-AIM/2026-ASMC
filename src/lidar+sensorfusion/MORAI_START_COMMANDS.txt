@@ -1,0 +1,81 @@
+2026-ASMC LiDAR + Camera Sensor Fusion (ROS1 Noetic / WSL2)
+================================================================
+
+[Sensor configuration]
+
+Import the outer repository file in MORAI:
+  config/ASMC_sensor_set_v1.json
+
+Front camera: xyz=(1.90, 0.00, 1.20)m, rpy=(0, 2, 0)deg,
+              1280x720, horizontal FOV=90deg
+3D LiDAR   : xyz=(0.80, 0.00, 1.45)m, rpy=(0, 0, 0)deg, VLP-16
+
+The outer morai_sensor_bridge owns UDP ports and publishes:
+  /image_jpeg/compressed
+  /velodyne_points
+  /gps
+  /imu
+
+[First build]
+
+From the outer repository root:
+  git pull --recurse-submodules
+  git submodule update --init --recursive
+  ./scripts/build_ws.sh -j2
+
+Build the nested sensor-fusion workspace:
+  cd src/lidar+sensorfusion
+  source /opt/ros/noetic/setup.bash
+  source ../../devel/setup.bash
+  catkin_make --force-cmake -j2
+
+[Run]
+
+Terminal 1 - MORAI UDP sensor bridge:
+  cd /path/to/2026-ASMC
+  source /opt/ros/noetic/setup.bash
+  source devel/setup.bash
+  ./scripts/udp_bridge.sh
+
+Terminal 2 - LiDAR tracking, YOLO, and camera/LiDAR fusion:
+  cd /path/to/2026-ASMC/src/lidar+sensorfusion
+  source /opt/ros/noetic/setup.bash
+  source ../../devel/setup.bash
+  source devel/setup.bash
+  ./start_main.sh
+
+Terminal 3 - RViz:
+  source /opt/ros/noetic/setup.bash
+  source /path/to/2026-ASMC/devel/setup.bash
+  source /path/to/2026-ASMC/src/lidar+sensorfusion/devel/setup.bash
+  rviz
+
+RViz Fixed Frame: base_link
+
+Add these displays:
+  MarkerArray /lidar_tracking_markers  # fitted OBB, track ID, class, speed, velocity arrow
+  PointCloud2 /lidar/debug_clustered   # clustered points
+  PointCloud2 /lidar/debug_ransac      # non-ground points
+  PointCloud2 /lidar/debug_roi         # ROI-filtered points
+  PointCloud2 /velodyne_points         # raw points
+  MarkerArray /lidar/object_boxes      # fused AABB and class labels (optional)
+  PointCloud2 /lidar/object            # fused object points (optional)
+  Image /fusion/debug_image            # projected LiDAR/fusion overlay on camera image
+
+[CLI verification]
+
+  rostopic hz /image_jpeg/compressed
+  rostopic hz /velodyne_points
+  rostopic hz /Ego_topic
+  rostopic hz /YOLO/BBox
+  rostopic hz /lidar_tracking_markers
+  rostopic hz /fusion/debug_image
+  rostopic echo -n1 /lidar_tracking_markers
+  rosrun rqt_image_view rqt_image_view /camera/image/compressed
+
+[Direct Velodyne mode]
+
+Only when morai_sensor_bridge is NOT running and Main must own UDP 9299:
+  START_VELODYNE_DRIVER=true ./start_main.sh
+
+Never run both UDP receivers on port 9299 at the same time.
