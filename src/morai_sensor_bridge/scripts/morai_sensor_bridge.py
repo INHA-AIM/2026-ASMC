@@ -288,8 +288,10 @@ class SensorBridge(object):
 
         sin_a = np.sin(np.deg2rad(az))
         cos_a = np.cos(np.deg2rad(az))
-        x = (dist * cos_v * sin_a).reshape(-1)
-        y = (dist * cos_v * cos_a).reshape(-1)
+        # Velodyne azimuth is clockwise from the sensor's forward direction.
+        # Publish in the ROS vehicle convention: +X forward and +Y left.
+        x = (dist * cos_v * cos_a).reshape(-1)
+        y = -(dist * cos_v * sin_a).reshape(-1)
         z = (dist * sin_v).reshape(-1)
 
         valid = dist.reshape(-1) > 0.01
