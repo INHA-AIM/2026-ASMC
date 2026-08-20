@@ -68,6 +68,11 @@ class SensorBridge(object):
         self.frame_lidar = p("~lidar_frame", "velodyne")
         self.frame_imu = p("~imu_frame", "imu")
         self.frame_gps = p("~gps_frame", "gps")
+        # NMEA GGA에는 MORAI map 원점 offset이 포함되지 않는다. GPSMessage를
+        # 사용하는 인지/플래닝 모듈이 같은 local-map 좌표를 만들 수 있도록
+        # launch에서 주입받아 메시지에 명시한다.
+        self.gps_east_offset = float(p("~gps_east_offset", 0.0))
+        self.gps_north_offset = float(p("~gps_north_offset", 0.0))
         self.publish_raw = bool(p("~publish_raw_image", False))
 
         self.stats = {}
@@ -350,6 +355,8 @@ class SensorBridge(object):
             g.header.frame_id = self.frame_gps
             g.latitude, g.longitude, g.altitude = lat, lon, alt
             g.status = status
+            g.eastOffset = self.gps_east_offset
+            g.northOffset = self.gps_north_offset
             self.pub_gps.publish(g)
 
             fx = NavSatFix()
