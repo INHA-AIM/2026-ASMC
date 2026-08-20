@@ -3,7 +3,9 @@
 #include <Camera/Camera.hpp>
 #include <Lidar/LidarProcess/LidarProcess.hpp>
 #include <SensorFusion/SensorFusion.hpp>
+#include <PlannerInterface/PlannerObjectSender.hpp>
 #include <ros/package.h>
+#include <memory>
 
 
 // 실행 디렉터리와 무관하게 패키지 기준으로 설정 파일을 찾는다.
@@ -24,6 +26,7 @@ Control st_Control, st_ControlTemporal;
 LiDAR st_LiDAR, st_LiDARTemporal;
 CAMERA st_Camera, st_CameraTemporal;
 GPS_REF st_GPSRef;
+std::unique_ptr<PlannerObjectSender> st_PlannerObjectSender;
 
 int32 GPSHZ, VisionHZ, LiDARHZ, IMUHZ, CANHZ;
 int32 VIEWERHZ; // InitViewer에서, 기준이 되는 센서의 HZ 할당해주기.
@@ -73,6 +76,21 @@ void InitVehicleSpec()
     VisionHZ = config["Vehicle"]["Camera"]["Hz"].as<int32>();
     LiDARHZ = config["Vehicle"]["LiDAR"]["Hz"].as<int32>();
     CANHZ = config["Vehicle"]["CAN"]["Hz"].as<int32>();
+}
+
+void InitPlannerInterface()
+{
+    YAML::Node config = YAML::LoadFile(YamlURL);
+    const YAML::Node planner = config["PlannerInterface"];
+    if (!planner || !planner["Enabled"].as<bool>(false)) {
+        ROS_INFO("Planner object interface disabled");
+        return;
+    }
+
+    st_PlannerObjectSender = std::make_unique<PlannerObjectSender>(
+        planner["IP"].as<string>(),
+        planner["Port"].as<int>(),
+        planner["MaxObjects"].as<std::size_t>(20));
 }
 
 void InitGlobal(ros::NodeHandle &st_NodeHandle, pthread_t *pth_GPS)
@@ -259,6 +277,9 @@ void *TemporalThread(void *p_Arg)
 
         LidarProcess(st_CurrentData.st_RawLiDAR, st_GPSIMU, st_LiDAR);
         FusionProcess(st_CurrentData.st_RawYOLO, st_LiDAR, st_Camera);
+        if (st_PlannerObjectSender) {
+            st_PlannerObjectSender->Send(st_LiDAR, st_GPSIMU, st_VehicleSpec);
+        }
 
         // 인지 전용: PlanningProcess/ControlProcess 호출 제거 (소스 부재)
         pthread_mutex_lock(&st_CopyMutex);
@@ -292,6 +313,7 @@ int main(int argc, char **argv)
 
     InitMutex();
     InitVehicleSpec();
+    InitPlannerInterface();
     InitGlobal(st_NodeHandle, &th_GPS);
     InitIMU(st_NodeHandle, &th_IMU);
     InitializeCamera(st_NodeHandle, &th_Camera);
