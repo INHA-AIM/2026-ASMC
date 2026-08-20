@@ -11,14 +11,6 @@ const double V_SPIKE    = 6.00;  // 속도 스파이크(m/s) 기준(≈ 21.6 km/
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl/sample_consensus/model_types.h>
-#include <pcl/sample_consensus/method_types.h>
-#include <pcl/segmentation/sac_segmentation.h>
-#include <pcl/sample_consensus/sac_model_line.h>
-#include <pcl/sample_consensus/ransac.h>
-#include <cstdlib> // std::rand(), std::srand()
-#include <ctime> 
-//노렌삭
 
 float32 calculateEmaSpeed(float32 previousEmaSpeed, float32 rawSpeed, float32 alpha) {
     // EMA 공식: (1 - alpha) * 이전 EMA 속도 + alpha * 현재 raw 속도
@@ -31,288 +23,232 @@ namespace obb_util {
 struct P2 { double x, y; };
 struct P3 { double x, y, z; };
 
-inline double cross(const P2& o, const P2& a, const P2& b) {
-    return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-}
-
-
-// Monotone chain convex hull (CCW로 반환, 닫히지 않은 형태)
-inline std::vector<P2> convexHull(std::vector<P2> pts) {
-    std::sort(pts.begin(), pts.end(), [](const P2& a, const P2& b){
-        return (a.x == b.x) ? (a.y < b.y) : (a.x < b.x);
-    });
-    pts.erase(std::unique(pts.begin(), pts.end(), [](const P2& a, const P2& b){
-        return a.x == b.x && a.y == b.y;
-    }), pts.end());
-
-    if (pts.size() <= 1) return pts;
-
-    std::vector<P2> lower, upper;
-    for (const auto& p : pts) {
-        while (lower.size() >= 2 && cross(lower[lower.size()-2], lower.back(), p) <= 0) lower.pop_back();
-        lower.push_back(p);
-    }
-    for (int i = (int)pts.size()-1; i >= 0; --i) {
-        const auto& p = pts[i];
-        while (upper.size() >= 2 && cross(upper[upper.size()-2], upper.back(), p) <= 0) upper.pop_back();
-        upper.push_back(p);
-    }
-    lower.pop_back(); upper.pop_back();
-    lower.insert(lower.end(), upper.begin(), upper.end());
-    return lower; // hull (CCW)
-}
-
-// -θ 회전
-inline P2 rotateMinus(const P2& p, double theta) {
-    const double c = std::cos(theta), s = std::sin(theta);
-    return { p.x * c + p.y * s, -p.x * s + p.y * c };
-}
-
-// +θ 회전
-inline P2 rotatePlus(const P2& p, double theta) {
-    const double c = std::cos(theta), s = std::sin(theta);
-    return { p.x * c - p.y * s, p.x * s + p.y * c };
-}
-
-inline double distSq(const pcl::PointXYZI& p1, const pcl::PointXYZI& p2) {
-    return (p1.x - p2.x)*(p1.x - p2.x) + (p1.y - p2.y)*(p1.y - p2.y);
-}
-
 struct OBB2D {
     double cx{0}, cy{0};     // 중심 (XY)
-    double w{0}, h{0};       // 가로/세로 (XY)
-    double yaw{0};           // 라디안, +x 기준 CCW
+    double w{0}, h{0};       // w: yaw 축 길이, h: 수직 축 길이
+    double yaw{0};           // 라디안, +x 기준 CCW, pi 주기의 축 방향
     std::array<P2,4> corners; // z 미포함, 시계/반시계 일관 유지
 };
 
+constexpr double kPi = 3.14159265358979323846;
+constexpr double kHalfPi = 0.5 * kPi;
+constexpr double kLShapeAngleStep = kPi / 180.0;  // 1 deg
+constexpr double kClosenessMinDistance = 0.05;    // voxel leaf(0.1 m)의 절반
+constexpr std::size_t kMinLShapePoints = 10;
+constexpr double kYawFilterAlpha = 0.25;
+constexpr double kMinReliableAspectRatio = 1.20;
 
-inline OBB2D minAreaRectFromHull(const std::vector<P2>& hull) {
-    OBB2D out;
-    if (hull.empty()) return out;
-
-    if (hull.size() == 1) {
-        out.cx = hull[0].x;
-        out.cy = hull[0].y;
-        out.w = 0;
-        out.h = 0;
-        out.yaw = 0;
-        out.corners = {hull[0], hull[0], hull[0], hull[0]};
-        return out;
-    }
-    if (hull.size() == 2) {
-        const auto& a = hull[0];
-        const auto& b = hull[1];
-        out.cx = 0.5 * (a.x + b.x);
-        out.cy = 0.5 * (a.y + b.y);
-        out.w = std::hypot(b.x - a.x, b.y - a.y);
-        out.h = 0.0;
-        out.yaw = std::atan2(b.y - a.y, b.x - a.x);
-        out.corners = {a, b, b, a};
-        return out;
-    }
-
-    double best_area = std::numeric_limits<double>::infinity();
-    double best_angle = 0.0;
-    std::array<P2, 4> best_rect_corners{};
-    double best_w = 0.0, best_h = 0.0;
-    P2 best_center{0, 0};
-
-    const int N = (int)hull.size();
-    for (int i = 0; i < N; ++i) {
-        const P2& p1 = hull[i];
-        const P2& p2 = hull[(i + 1) % N];
-        const double theta = std::atan2(p2.y - p1.y, p2.x - p1.x);
-
-        double minx = 1e18, maxx = -1e18, miny = 1e18, maxy = -1e18;
-        for (const auto& p : hull) {
-            P2 r = rotateMinus(p, theta);
-            minx = std::min(minx, r.x);
-            maxx = std::max(maxx, r.x);
-            miny = std::min(miny, r.y);
-            maxy = std::max(maxy, r.y);
-        }
-
-        const double w = maxx - minx;
-        const double h = maxy - miny;
-        const double area = w * h;
-
-        if (area < best_area) {
-            best_area = area;
-            best_angle = theta;
-            best_w = w;
-            best_h = h;
-            best_center = P2{(minx + maxx) / 2.0, (miny + maxy) / 2.0};
-
-            std::array<P2, 4> rect_r = {
-                P2{minx, miny}, P2{maxx, miny}, P2{maxx, maxy}, P2{minx, maxy}
-            };
-            for (int k = 0; k < 4; ++k) {
-                best_rect_corners[k] = rotatePlus(rect_r[k], theta);
-            }
-        }
-    }
-
-    // 최종 OBB 구조체에 값 할당
-    out.cx = best_center.x;
-    out.cy = best_center.y;
-    out.w = best_w;
-    out.h = best_h;
-    out.yaw = best_angle;
-    out.corners = best_rect_corners;
-
-    return out;
+inline double wrapToPi(double angle) {
+    return std::remainder(angle, 2.0 * kPi);
 }
 
-inline double getYawFromRANSAC(const pcl::PointCloud<pcl::PointXYZI>& cloud) {
-    if (cloud.size() < 3) {
-        return 0.0; // 점이 부족하면 0.0을 반환
-    }
+// 직사각형의 축 방향은 yaw와 yaw+pi가 동일하다.
+inline double normalizeAxisYaw(double yaw) {
+    while (yaw >= kHalfPi) yaw -= kPi;
+    while (yaw < -kHalfPi) yaw += kPi;
+    return yaw;
+}
 
-    // 1. 2D 점군으로 변환
-    std::vector<P2> pts2d;
-    pts2d.reserve(cloud.size());
+inline std::vector<P2> finiteXY(const pcl::PointCloud<pcl::PointXYZI>& cloud) {
+    std::vector<P2> points;
+    points.reserve(cloud.size());
     for (const auto& p : cloud.points) {
-        if (!std::isfinite(p.x) || !std::isfinite(p.y)) continue;
-        pts2d.push_back({p.x, p.y});
-    }
-
-    if (pts2d.empty()) {
-        return 0.0;
-    }
-
-    // 2. RANSAC 직선 피팅
-    const int max_iterations = 500;
-    const double threshold = 0.03; // 미터 단위 오차 허용
-    int best_inlier_count = -1;
-    double best_yaw = 0.0;
-
-    // std::srand(std::time(0)); // 프로그램 시작 시 한 번만 호출
-    for (int i = 0; i < max_iterations; ++i) {
-        int idx1 = std::rand() % pts2d.size();
-        int idx2 = std::rand() % pts2d.size();
-        while (idx1 == idx2) {
-            idx2 = std::rand() % pts2d.size();
-        }
-
-        P2 p1 = pts2d[idx1];
-        P2 p2 = pts2d[idx2];
-        
-        // 두 점을 지나는 직선의 방정식 A*x + B*y + C = 0
-        double A = p2.y - p1.y;
-        double B = p1.x - p2.x;
-        double C = -A * p1.x - B * p1.y;
-        double inv_norm = 1.0 / std::sqrt(A*A + B*B);
-
-        // Inlier 수 계산
-        int current_inlier_count = 0;
-        for (const auto& p : pts2d) {
-            double distance = std::abs(A * p.x + B * p.y + C) * inv_norm;
-            if (distance < threshold) {
-                current_inlier_count++;
-            }
-        }
-        
-        if (current_inlier_count > best_inlier_count) {
-            best_inlier_count = current_inlier_count;
-            best_yaw = std::atan2(A, -B);
+        if (std::isfinite(p.x) && std::isfinite(p.y) && std::isfinite(p.z)) {
+            points.push_back({p.x, p.y});
         }
     }
-    
-    return best_yaw;
+    return points;
 }
 
-inline void computeOBB3D_PCA(
+// 주어진 yaw에서 모든 점을 포함하는 OBB를 다시 계산한다.
+// yaw smoothing 후 기존 박스를 단순 회전시키지 않고 재투영하므로 점유 영역을 과소평가하지 않는다.
+inline bool computeOBBAtYaw(
+    const pcl::PointCloud<pcl::PointXYZI>& cloud,
+    double yaw,
+    OBB2D& obb2d,
+    double& zMin, double& zMax,
+    std::array<P3,8>& corners3d
+) {
+    const double c = std::cos(yaw);
+    const double s = std::sin(yaw);
+    double uMin = std::numeric_limits<double>::infinity();
+    double uMax = -std::numeric_limits<double>::infinity();
+    double vMin = std::numeric_limits<double>::infinity();
+    double vMax = -std::numeric_limits<double>::infinity();
+    zMin = std::numeric_limits<double>::infinity();
+    zMax = -std::numeric_limits<double>::infinity();
+    std::size_t validCount = 0;
+
+    for (const auto& p : cloud.points) {
+        if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) continue;
+        const double u =  p.x * c + p.y * s;
+        const double v = -p.x * s + p.y * c;
+        uMin = std::min(uMin, u);
+        uMax = std::max(uMax, u);
+        vMin = std::min(vMin, v);
+        vMax = std::max(vMax, v);
+        zMin = std::min(zMin, static_cast<double>(p.z));
+        zMax = std::max(zMax, static_cast<double>(p.z));
+        ++validCount;
+    }
+
+    if (validCount == 0) {
+        obb2d = {};
+        zMin = 0.0;
+        zMax = 0.0;
+        corners3d.fill({0.0, 0.0, 0.0});
+        return false;
+    }
+
+    const double centerU = 0.5 * (uMin + uMax);
+    const double centerV = 0.5 * (vMin + vMax);
+    obb2d.cx = centerU * c - centerV * s;
+    obb2d.cy = centerU * s + centerV * c;
+    obb2d.w = uMax - uMin;
+    obb2d.h = vMax - vMin;
+    obb2d.yaw = normalizeAxisYaw(yaw);
+
+    const double halfW = 0.5 * obb2d.w;
+    const double halfH = 0.5 * obb2d.h;
+    const P2 axisU{c, s};
+    const P2 axisV{-s, c};
+    const std::array<std::pair<double,double>,4> signs{{
+        {-1.0, -1.0}, {1.0, -1.0}, {1.0, 1.0}, {-1.0, 1.0}
+    }};
+
+    for (int i = 0; i < 4; ++i) {
+        const double su = signs[i].first;
+        const double sv = signs[i].second;
+        obb2d.corners[i] = {
+            obb2d.cx + su * halfW * axisU.x + sv * halfH * axisV.x,
+            obb2d.cy + su * halfW * axisU.y + sv * halfH * axisV.y
+        };
+        corners3d[i] = {obb2d.corners[i].x, obb2d.corners[i].y, zMin};
+        corners3d[i + 4] = {obb2d.corners[i].x, obb2d.corners[i].y, zMax};
+    }
+    return true;
+}
+
+// Zhang et al.의 search-based L-Shape fitting 중 closeness criterion.
+// 점이 10개 미만이면 방향 신뢰도가 낮으므로 결정론적인 AABB(yaw=0)를 사용한다.
+inline void computeOBB3D_LShape(
     const pcl::PointCloud<pcl::PointXYZI>& cloud,
     OBB2D& obb2d,
     double& zMin, double& zMax,
     std::array<P3,8>& corners3d
-){
-    zMin = std::numeric_limits<double>::infinity();
-    zMax = -std::numeric_limits<double>::infinity();
-
-    std::vector<P2> pts2d;
-    pts2d.reserve(cloud.size());
-
-    double mean_x = 0, mean_y = 0;
-    for (const auto& p : cloud.points) {
-        if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) continue;
-        pts2d.push_back({p.x, p.y});
-        mean_x += p.x;
-        mean_y += p.y;
-        zMin = std::min(zMin, (double)p.z);
-        zMax = std::max(zMax, (double)p.z);
-    }
-
-    if (pts2d.empty()) {
-        obb2d = {}; zMin = 0; zMax = 0; corners3d.fill({0,0,0});
+) {
+    const std::vector<P2> points = finiteXY(cloud);
+    if (points.size() < kMinLShapePoints) {
+        computeOBBAtYaw(cloud, 0.0, obb2d, zMin, zMax, corners3d);
+        if (obb2d.w < obb2d.h) {
+            computeOBBAtYaw(cloud, kHalfPi, obb2d, zMin, zMax, corners3d);
+        }
         return;
     }
 
-    mean_x /= pts2d.size();
-    mean_y /= pts2d.size();
+    double bestScore = -std::numeric_limits<double>::infinity();
+    double bestYaw = 0.0;
 
-    // PCA - 주성분 벡터 구하기
-    Eigen::MatrixXd data(pts2d.size(), 2);
-    for (size_t i = 0; i < pts2d.size(); ++i) {
-        data(i, 0) = pts2d[i].x - mean_x;
-        data(i, 1) = pts2d[i].y - mean_y;
+    for (double theta = 0.0; theta < kHalfPi; theta += kLShapeAngleStep) {
+        const double c = std::cos(theta);
+        const double s = std::sin(theta);
+        double uMin = std::numeric_limits<double>::infinity();
+        double uMax = -std::numeric_limits<double>::infinity();
+        double vMin = std::numeric_limits<double>::infinity();
+        double vMax = -std::numeric_limits<double>::infinity();
+
+        for (const auto& p : points) {
+            const double u =  p.x * c + p.y * s;
+            const double v = -p.x * s + p.y * c;
+            uMin = std::min(uMin, u);
+            uMax = std::max(uMax, u);
+            vMin = std::min(vMin, v);
+            vMax = std::max(vMax, v);
+        }
+
+        double score = 0.0;
+        for (const auto& p : points) {
+            const double u =  p.x * c + p.y * s;
+            const double v = -p.x * s + p.y * c;
+            const double distanceToU = std::min(u - uMin, uMax - u);
+            const double distanceToV = std::min(v - vMin, vMax - v);
+            const double distanceToEdge = std::max(
+                std::min(distanceToU, distanceToV), kClosenessMinDistance);
+            score += 1.0 / distanceToEdge;
+        }
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestYaw = theta;
+        }
     }
 
-    Eigen::MatrixXd cov = (data.transpose() * data) / pts2d.size();
-    Eigen::EigenSolver<Eigen::MatrixXd> solver(cov);
-    Eigen::VectorXd eigenvalues = solver.eigenvalues().real();
-    Eigen::MatrixXd eigenvectors = solver.eigenvectors().real();
+    computeOBBAtYaw(cloud, bestYaw, obb2d, zMin, zMax, corners3d);
 
-    // 주성분 벡터 (x, y)
-    Eigen::Vector2d axis1(eigenvectors(0,0), eigenvectors(1,0));
-    Eigen::Vector2d axis2(eigenvectors(0,1), eigenvectors(1,1));
-
-    // 회전 각도 (yaw)
-    // double yaw = atan2(axis1.y(), axis1.x());
-    double yaw = getYawFromRANSAC(cloud);
-
-    // 회전
-    double c = cos(-yaw), s = sin(-yaw);
-    std::vector<P2> rotated;
-    rotated.reserve(pts2d.size());
-
-    for (auto& p : pts2d) {
-        rotated.push_back({p.x * c - p.y * s, p.x * s + p.y * c});
+    // 긴 축이 항상 yaw 축이 되도록 정규화하여 90도 축 전환을 제거한다.
+    if (obb2d.w < obb2d.h) {
+        bestYaw += kHalfPi;
+        computeOBBAtYaw(cloud, bestYaw, obb2d, zMin, zMax, corners3d);
     }
+}
 
-    // Convex Hull을 사용하여 회전된 점들의 경계를 구합니다.
-    auto hull = convexHull(rotated);
+inline void writeOBBToObject(
+    LiDARObjectInfo& object,
+    const OBB2D& obb2d,
+    double zMin, double zMax,
+    const std::array<P3,8>& corners3d
+) {
+    object.f32_OBB_CenterX = static_cast<float>(obb2d.cx);
+    object.f32_OBB_CenterY = static_cast<float>(obb2d.cy);
+    object.f32_OBB_CenterZ = static_cast<float>(0.5 * (zMin + zMax));
+    object.f32_OBB_Width = static_cast<float>(obb2d.w);
+    object.f32_OBB_Height = static_cast<float>(obb2d.h);
+    object.f32_OBB_ZMin = static_cast<float>(zMin);
+    object.f32_OBB_ZMax = static_cast<float>(zMax);
+    object.f32_OBB_YawRad = static_cast<float>(obb2d.yaw);
 
-    double minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
-    for (auto& p : hull) {
-        minx = std::min(minx, p.x);
-        maxx = std::max(maxx, p.x);
-        miny = std::min(miny, p.y);
-        maxy = std::max(maxy, p.y);
+    for (int i = 0; i < 8; ++i) {
+        object.OBB_Corners_Body[i].x = static_cast<float>(corners3d[i].x);
+        object.OBB_Corners_Body[i].y = static_cast<float>(corners3d[i].y);
+        object.OBB_Corners_Body[i].z = static_cast<float>(corners3d[i].z);
     }
+}
 
-    // OBB 계산
-    obb2d.cx = (minx + maxx) / 2.0;
-    obb2d.cy = (miny + maxy) / 2.0;
-    obb2d.w = maxx - minx;
-    obb2d.h = maxy - miny;
-    obb2d.yaw = yaw;
+// 같은 트랙으로 매칭된 객체에만 적용한다. 이전 OBB를 현재 body 좌표계로 회전 보정한 뒤
+// pi 주기의 축 각도 오차를 EMA하고, 필터 yaw에서 OBB 전체를 다시 계산한다.
+inline void stabilizeMatchedOBB(
+    const LiDARObjectInfo& previous,
+    LiDARObjectInfo& current,
+    double egoYawNowDeg
+) {
+    // miss 동안에는 Kalman의 ego yaw 기준만 갱신되고 OBB 자체는 갱신되지 않으므로,
+    // 재검출 첫 프레임은 raw L-Shape를 채택하고 다음 연속 프레임부터 smoothing한다.
+    if (current.pcl_ClusterPoints.empty() || previous.s32_MissCount > 0) return;
 
-    // 꼭짓점 계산 (회전된 좌표계에서 원래 좌표계로 변환)
-    std::array<P2,4> rect = {
-        P2{minx, miny}, P2{maxx, miny}, P2{maxx, maxy}, P2{minx, maxy}
-    };
+    const double egoYawNow = egoYawNowDeg * kPi / 180.0;
+    const double egoYawDelta = wrapToPi(egoYawNow - previous.f32_PrevYaw);
+    const double predictedYaw = normalizeAxisYaw(
+        static_cast<double>(previous.f32_OBB_YawRad) - egoYawDelta);
+    const double rawYaw = current.f32_OBB_YawRad;
+    const double aspectRatio = current.f32_OBB_Height > 1e-6f
+        ? current.f32_OBB_Width / current.f32_OBB_Height
+        : std::numeric_limits<double>::infinity();
 
-    for (int k = 0; k < 4; ++k) {
-        double X = rect[k].x * cos(yaw) - rect[k].y * sin(yaw);
-        double Y = rect[k].x * sin(yaw) + rect[k].y * cos(yaw);
-        obb2d.corners[k] = {X, Y};
+    double filteredYaw = predictedYaw;
+    if (aspectRatio >= kMinReliableAspectRatio) {
+        const double yawError = std::remainder(rawYaw - predictedYaw, kPi);
+        filteredYaw = predictedYaw + kYawFilterAlpha * yawError;
     }
+    filteredYaw = normalizeAxisYaw(filteredYaw);
 
-    // 3D 코너 8개
-    for (int k = 0; k < 4; ++k) {
-        corners3d[k] = {obb2d.corners[k].x, obb2d.corners[k].y, zMin};
-        corners3d[k+4] = {obb2d.corners[k].x, obb2d.corners[k].y, zMax};
+    OBB2D filteredObb;
+    double zMin = 0.0;
+    double zMax = 0.0;
+    std::array<P3,8> corners3d{};
+    if (computeOBBAtYaw(
+            current.pcl_ClusterPoints, filteredYaw,
+            filteredObb, zMin, zMax, corners3d)) {
+        writeOBBToObject(current, filteredObb, zMin, zMax, corners3d);
     }
 }
 
@@ -321,9 +257,6 @@ inline void computeOBB3D_PCA(
 } // namespace obb_util
 
 
-
-
-//렌삭기법 
 
 
 void Objectinfo_for_km(vector<LiDARObjectInfo> &vec_NowObject,
@@ -407,46 +340,16 @@ void Objectinfo_for_km(vector<LiDARObjectInfo> &vec_NowObject,
             st_CurrentObj.str_ObjectClass = "지면노이즈";
             // cout<<"나왔다:"<<st_CurrentObj.str_ObjectClass<<endl;
         }
-        //obb
-        // obb_util::OBB2D obb2d;
-        // double zMinD=0, zMaxD=0;
-        // std::array<obb_util::P3,8> corners3d{};
-
-        // // computeOBB3D_fromClusterXY 오버로드(참조 버전)를 쓰는 걸 추천
-        // // (복사 없이 const 참조로 동작)
-        // obb_util::computeOBB3D_PCA(
-        //     st_CurrentObj.pcl_ClusterPoints,
-        //     obb2d, zMinD, zMaxD, corners3d
-        // );
-
-        // obb_util::computeOBB3D_RotatingCalipersPercentile(
-        //     st_CurrentObj.pcl_ClusterPoints,
-        //     obb2d, zMinD, zMaxD, corners3d,
-        //     0.01, 0.99   // 필요시 0.1, 0.9 로 조정 가능
-        // );
+        // L-Shape fitting 기반 OBB
         obb_util::OBB2D obb2d;
         double zMinD, zMaxD;
 
         std::array<obb_util::P3,8> corners3d;
         // cout<<"되고 있슈"<<endl;
-        obb_util::computeOBB3D_PCA(st_CurrentObj.pcl_ClusterPoints, obb2d, zMinD, zMaxD, corners3d);
+        obb_util::computeOBB3D_LShape(st_CurrentObj.pcl_ClusterPoints, obb2d, zMinD, zMaxD, corners3d);
 
         // cout<<"되고 있슈"<<endl;
-        // 결과 저장
-        st_CurrentObj.f32_OBB_CenterX = static_cast<float>(obb2d.cx);
-        st_CurrentObj.f32_OBB_CenterY = static_cast<float>(obb2d.cy);
-        st_CurrentObj.f32_OBB_CenterZ = static_cast<float>(0.5*(zMinD + zMaxD));
-        st_CurrentObj.f32_OBB_Width   = static_cast<float>(obb2d.w);
-        st_CurrentObj.f32_OBB_Height  = static_cast<float>(obb2d.h);
-        st_CurrentObj.f32_OBB_ZMin    = static_cast<float>(zMinD);
-        st_CurrentObj.f32_OBB_ZMax    = static_cast<float>(zMaxD);
-        st_CurrentObj.f32_OBB_YawRad  = static_cast<float>(obb2d.yaw);
-
-        for (int k=0;k<8;++k) {
-            st_CurrentObj.OBB_Corners_Body[k].x = static_cast<float>(corners3d[k].x);
-            st_CurrentObj.OBB_Corners_Body[k].y = static_cast<float>(corners3d[k].y);
-            st_CurrentObj.OBB_Corners_Body[k].z = static_cast<float>(corners3d[k].z);
-        }
+        obb_util::writeOBBToObject(st_CurrentObj, obb2d, zMinD, zMaxD, corners3d);
         st_CurrentObj.f32_PrevE = numeric_limits<float32>::quiet_NaN();
         st_CurrentObj.f32_PrevN = numeric_limits<float32>::quiet_NaN();
         st_CurrentObj.f32_Dist= std::hypot(st_CurrentObj.f32_CoreX, st_CurrentObj.f32_CoreY);
@@ -625,6 +528,9 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             vec_NowObject[j].is_class_locked      = vec_Compare[i].is_class_locked;
 
             float32 f32_PrevYYY=vec_NowObject[j].f32_PrevYaw;
+            obb_util::stabilizeMatchedOBB(
+                vec_Compare[i], vec_NowObject[j],
+                st_GPSIMU.st_IMU.f32_Yaw_deg);
             // 칼만 업데이트
             kalman_filter_update(vec_NowObject[j], f32_Det_x, f32_Det_y,vec_NowObject[j].f32_PredCoreX,
             vec_NowObject[j].f32_PredCoreY ,f64_Time,st_GPSIMU.st_IMU.f32_Yaw_deg);
@@ -889,4 +795,3 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
         }
     }
 }
-
