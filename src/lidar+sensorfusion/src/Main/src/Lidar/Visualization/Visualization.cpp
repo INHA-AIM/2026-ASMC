@@ -72,7 +72,7 @@ visualization_msgs::Marker createBoxMarker(
     //     marker.color.b = 0.0f;
     // }
     marker.color.a = 0.4f;
-    marker.lifetime = ros::Duration(0.1);
+    marker.lifetime = ros::Duration(0.0);
     return marker;
 }
 
@@ -109,7 +109,7 @@ visualization_msgs::Marker createOBBMarker(
         marker.points.push_back(p1);
         marker.points.push_back(p2);
     }
-    marker.lifetime = ros::Duration(0.1);
+    marker.lifetime = ros::Duration(0.0);
     return marker;
 }
 
@@ -161,7 +161,7 @@ visualization_msgs::Marker createTextMarker(
     const int safe_len = std::max(0, std::min(len, static_cast<int>(sizeof(buf) - 1)));
     marker.text = string(buf, safe_len);
 
-    marker.lifetime = ros::Duration(0.1);
+    marker.lifetime = ros::Duration(0.0);
     return marker;
     return marker;
 }
@@ -212,7 +212,7 @@ visualization_msgs::Marker createArrowMarker(
         marker.color.b = 0.0f;
     }
     marker.color.a = 1.0f;
-    marker.lifetime = ros::Duration(0.2);
+    marker.lifetime = ros::Duration(0.0);
 
     return marker;
 }

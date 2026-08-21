@@ -100,25 +100,25 @@ int main() {
         last_vehicle_state = vs;
         has_last_vehicle_state = true;
 
-        // Ego UDP도 수신 중이면 GPS/IMU localization과 1Hz로 비교한다.
-        static int localization_log_tick = 0;
-        if (++localization_log_tick % 20 == 0) {
-            if (udp.has_gps_imu_pose() && udp.has_ego_vehicle_state()) {
-                const VehicleState sensor = udp.get_gps_imu_pose();
-                const VehicleState truth = udp.get_ego_vehicle_state();
-                const double dx = sensor.x - truth.x;
-                const double dy = sensor.y - truth.y;
-                const double dyaw = NormalizeAngle(sensor.yaw - truth.yaw);
-                std::printf("[LOCALIZATION-CHECK] ego=(%.3f,%.3f yaw=%.4f v=%.3f) "
-                            "gps_imu=(%.3f,%.3f yaw=%.4f v=%.3f) "
-                            "error=(dx=%.3f dy=%.3f pos=%.3f dyaw=%.4f dv=%.3f)\n",
-                            truth.x, truth.y, truth.yaw, truth.v,
-                            sensor.x, sensor.y, sensor.yaw, sensor.v,
-                            dx, dy, std::hypot(dx, dy), dyaw, sensor.v - truth.v);
-            } else {
-                std::printf("[LOCALIZATION-CHECK] waiting for valid GPS position and IMU data\n");
-            }
-        }
+        // // Ego UDP도 수신 중이면 GPS/IMU localization과 1Hz로 비교한다.
+        // static int localization_log_tick = 0;
+        // if (++localization_log_tick % 20 == 0) {
+        //     if (udp.has_gps_imu_pose() && udp.has_ego_vehicle_state()) {
+        //         const VehicleState sensor = udp.get_gps_imu_pose();
+        //         const VehicleState truth = udp.get_ego_vehicle_state();
+        //         const double dx = sensor.x - truth.x;
+        //         const double dy = sensor.y - truth.y;
+        //         const double dyaw = NormalizeAngle(sensor.yaw - truth.yaw);
+        //         std::printf("[LOCALIZATION-CHECK] ego=(%.3f,%.3f yaw=%.4f v=%.3f) "
+        //                     "gps_imu=(%.3f,%.3f yaw=%.4f v=%.3f) "
+        //                     "error=(dx=%.3f dy=%.3f pos=%.3f dyaw=%.4f dv=%.3f)\n",
+        //                     truth.x, truth.y, truth.yaw, truth.v,
+        //                     sensor.x, sensor.y, sensor.yaw, sensor.v,
+        //                     dx, dy, std::hypot(dx, dy), dyaw, sensor.v - truth.v);
+        //     } else {
+        //         std::printf("[LOCALIZATION-CHECK] waiting for valid GPS position and IMU data\n");
+        //     }
+        // }
 
         // 조향 센서를 상태추정에 사용하지 않으므로 순간 곡률은 0으로 둔다.
         CartesianState ego_cs;
