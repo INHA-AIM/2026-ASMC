@@ -11,6 +11,17 @@ find_package(yaml-cpp REQUIRED)
 find_package(Threads REQUIRED)
 
 # ========================================
+# Geometry foundation
+# ========================================
+add_library(frenet_geometry STATIC
+  src/frenet_planner/geometry/polygon_utils.cpp
+)
+
+target_include_directories(frenet_geometry PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+# ========================================
 # include 경로
 # ========================================
 include_directories(
@@ -55,6 +66,26 @@ target_link_libraries(frenet_planner_node
 target_compile_definitions(frenet_planner_node PRIVATE
   FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
+
+# ========================================
+# Offline geometry tests
+# ========================================
+include(CTest)
+
+if(BUILD_TESTING)
+  add_executable(geometry_foundation_test
+    tests/geometry_foundation_test.cpp
+  )
+
+  target_link_libraries(geometry_foundation_test PRIVATE
+    frenet_geometry
+  )
+
+  add_test(
+    NAME geometry_foundation_test
+    COMMAND geometry_foundation_test
+  )
+endif()
 
 # ========================================
 # Install
