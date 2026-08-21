@@ -2,8 +2,10 @@
 #define FRENET_COLLISION_CHECKER_HPP
 
 #include "frenet_planner/frenet/ref_line.hpp"
+#include "frenet_planner/geometry/polygon_utils.hpp"
 #include "frenet_planner/global/global.hpp"
 #include "frenet_planner/math/frenet_converter.hpp"
+#include "frenet_planner/obstacle/tracked_obstacle.hpp"
 
 // =========================================================
 // 아래 두 구조체는 논문 Sec.VI의 개념(안전마진, zero/one 판정,
@@ -23,29 +25,35 @@ struct CollisionCheckConfig {
     double reactive_lookahead;  // [s], 논문 기본값 3.0
 };
 
-// =========================================================
-// 방향 있는 사각형(Oriented Bounding Box) — 자차/장애물 공통 표현
-// =========================================================
-
-struct OrientedBox {
-    double cx, cy;      // 중심
-    double heading;     // 진행방향 [rad]
-    double half_length;
-    double half_width;
+// Highway gap/TTC의 기존 운동 예측만 유지하기 위한 중심 pose다. 충돌 형상은
+// 이 값으로 재생성하지 않고 아래 TrackedObstacle corner만 사용한다.
+struct PredictedObjectPose {
+    double x = 0.0;
+    double y = 0.0;
+    double heading = 0.0;
 };
 
-OrientedBox MakeEgoBox(const CartesianState& cs, const VehicleShape& shape, double margin);
+PredictedObjectPose PredictLegacyObjectPose(const ObjectInfo& obj, double t);
 
-OrientedBox MakeObstacleBox(const ObjectInfo& obj, double t, double margin);
+geometry::Polygon2D MakeEgoFootprint(const CartesianState& cs,
+                                     const VehicleShape& shape,
+                                     double margin);
 
-// SAT(분리축 정리) 기반 OBB-OBB 겹침 판정.
-bool CheckOBBOverlap(const OrientedBox& a, const OrientedBox& b);
+geometry::Polygon2D PredictObstacleFootprint(
+    const TrackedObstacle& obstacle, double prediction_time);
 
-// 후보 실제 구간과 reactive coast 구간을 CTRV OBB로 검사한다.
+// Invalid geometry/Z is handled conservatively. ego_z may be invalid when the
+// Planner has no trustworthy map-frame height; in that case XY SAT still runs.
+bool CheckObstacleOverlap(const geometry::Polygon2D& ego_footprint,
+                          const geometry::ZRange& ego_z,
+                          const TrackedObstacle& obstacle,
+                          double prediction_time);
+
+// 후보 실제 구간과 reactive coast 구간을 평행이동 polygon으로 검사한다.
 // exempt ID는 실제 후보 구간에는 적용되지 않고 coast 연장에서만 제외된다.
 void FilterByCollision(std::vector<FrenetPath>& combined,
                         const RefLine& ref,
-                        const std::vector<ObjectInfo>& obstacles,
+                        const std::vector<TrackedObstacle>& obstacles,
                         const VehicleShape& ego_shape,
                         const CollisionCheckConfig& cfg,
                         int reactive_coast_exempt_object_id = -1);

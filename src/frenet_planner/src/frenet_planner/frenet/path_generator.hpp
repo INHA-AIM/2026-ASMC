@@ -2,6 +2,7 @@
 #define FRENET_PATH_GENERATOR_HPP
 
 #include "frenet_planner/frenet/collision_checker.hpp"
+#include "frenet_planner/obstacle/tracked_obstacle.hpp"
 #include "frenet_planner/frenet/ref_line.hpp"
 #include "frenet_planner/global/global.hpp"
 
@@ -199,7 +200,7 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                                          const PathGeneratorConfig& cfg,
                                          const KinematicLimits& limits,
                                          double lane_width,
-                                         const std::vector<ObjectInfo>& obstacles,
+                                         const std::vector<TrackedObstacle>& obstacles,
                                          const VehicleShape& vehicle_shape,
                                          const CollisionCheckConfig& collision_cfg,
                                          PlannerDebugStats* stats = nullptr);

@@ -7,6 +7,7 @@
 #include "frenet_planner/frenet/path_generator.hpp"
 #include "frenet_planner/frenet/ref_line.hpp"
 #include "frenet_planner/global/global.hpp"
+#include "frenet_planner/obstacle/tracked_obstacle.hpp"
 
 struct PlannerVisualizationConfig {
     bool enabled = false;
@@ -24,7 +25,7 @@ public:
                  BehaviorState mode,
                  const char* phase,
                  double target_speed,
-                 const std::vector<ObjectInfo>& obstacles,
+                 const std::vector<TrackedObstacle>& obstacles,
                  const std::vector<FrenetPath>& candidates,
                  int selected_index,
                  const PlannerDebugStats& stats,
