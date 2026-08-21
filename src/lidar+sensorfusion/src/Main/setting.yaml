@@ -149,6 +149,7 @@ LiDAR: # 라이다
   # The outer bridge publishes /velodyne_points; Main consumes that ROS topic.
   LiDARMode: 1
   UDP:
+    # MORAI raw LiDAR input. Planner tracked-object output(7510)과 별도 경로다.
     # Bind all WSL interfaces so a WSL IP change after reboot does not break the receiver.
     # The active Velodyne driver port is passed by main.launch; keep this value in sync.
     ip: "0.0.0.0"
@@ -170,9 +171,10 @@ LiDAR: # 라이다
     MinPoints: 5
     Threshold: 300
 
-# LiDAR tracked OBB를 기존 Frenet planner ObjectInfo UDP 입력으로 전달한다.
+# LiDAR tracked OBB를 Frenet planner의 전용 객체 포트로 전달한다.
+# MORAI 기본 ObjectInfo(7505)와 raw LiDAR input(9299)은 사용하지 않는다.
 PlannerInterface:
   Enabled: true
   IP: "127.0.0.1"
-  Port: 7510
+  Port: 7510  # tracked-object output
   MaxObjects: 20

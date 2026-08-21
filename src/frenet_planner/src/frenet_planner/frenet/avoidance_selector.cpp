@@ -1,7 +1,6 @@
 #include "frenet_planner/frenet/avoidance_selector.hpp"
 
 #include <cmath>
-#include <iostream>
 #include <limits>
 
 #include "frenet_planner/frenet/leader_selector.hpp"
@@ -53,22 +52,6 @@ bool FindStaticAvoidanceTarget(const RefLine& ref, const FrenetState& ego,
         const bool condition_b_front = gap > 0.0;
         const bool in_detection_range = gap <= cfg.detection_distance;
         const bool in_ego_lane = std::fabs(d) <= half_lane;
-
-        std::cout << "[AVOID-CHECK] id=" << obj.id
-                  << " map_pos=(" << obj.x << ", " << obj.y << ")"
-                  << " raw_speed=" << obj.speed
-                  << " frenet=(s=" << s << ", d=" << d
-                  << ", s_dot=" << s_dot << ")"
-                  << " ego_frenet=(s=" << ego.s << ", d=" << ego.d << ")"
-                  << " gap=" << gap
-                  << " condition_A_speed="
-                  << (condition_a_speed ? "PASS" : "FAIL")
-                  << " (limit=" << cfg.trigger_max_speed << ")"
-                  << " condition_B_front="
-                  << (condition_b_front ? "PASS" : "FAIL")
-                  << " range=" << (in_detection_range ? "PASS" : "FAIL")
-                  << " lane=" << (in_ego_lane ? "PASS" : "FAIL")
-                  << std::endl;
 
         if (!condition_a_speed) {
             // TODO(dynamic avoidance): 상대속도/TTC/미래 위치를 이용한 동적

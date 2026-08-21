@@ -5,11 +5,11 @@ network:
   # ego_udp는 개발 진단 전용이다. 본선 기본 localization은 GPS/IMU다.
   ego_vehicle_dst_port: 909
 
-  # 센서 기반 객체 입력 연동 전까지 대회 경로 Planner 검증에 임시 사용한다.
-  # perception 객체 인터페이스가 들어오면 이 수신 경로 자체를 제거한다.
+  # LiDAR가 추적한 객체를 받는 전용 입력이다. MORAI 기본 ObjectInfo 포트
+  # 7505와 raw LiDAR 입력 포트 9299는 이 경로에서 사용하지 않는다.
   object_info:
     enabled: true
-    dst_port: 7510
+    dst_port: 7510  # LiDAR tracked-object output
 
   # morai_sensor_bridge가 MORAI 원본(9301/9303)을 복제하는 planner 전용 포트.
   # 센서 브릿지와 standalone planner의 UDP bind 충돌을 피한다.
