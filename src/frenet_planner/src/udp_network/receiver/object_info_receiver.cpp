@@ -67,19 +67,19 @@ void ObjectInfoReceiver::parse_data(const uint8_t* raw_data, size_t size) {
         objects.push_back(obj);
     }
 
-    // 운용 중 ObjectInfo 연결 및 크기값 확인용 저주기 로그.
-    {
-        static int tick = 0;
-        if (++tick % 20 == 0) {
-            std::printf("[ObjectInfo parsed] count=%zu\n", objects.size());
-            for (const auto& obj : objects) {
-                std::printf("  id=%d type=%d pos=(%.3f, %.3f) heading_deg=%.2f "
-                            "speed=%.2f m/s size(w=%.2f, l=%.2f)\n",
-                            obj.id, obj.type, obj.x, obj.y, rad2deg(obj.heading),
-                            obj.speed, obj.width, obj.length);
-            }
-        }
-    }
+    // // 운용 중 ObjectInfo 연결 및 크기값 확인용 저주기 로그.
+    // {
+    //     static int tick = 0;
+    //     if (++tick % 20 == 0) {
+    //         std::printf("[ObjectInfo parsed] count=%zu\n", objects.size());
+    //         for (const auto& obj : objects) {
+    //             std::printf("  id=%d type=%d pos=(%.3f, %.3f) heading_deg=%.2f "
+    //                         "speed=%.2f m/s size(w=%.2f, l=%.2f)\n",
+    //                         obj.id, obj.type, obj.x, obj.y, rad2deg(obj.heading),
+    //                         obj.speed, obj.width, obj.length);
+    //         }
+    //     }
+    // }
 
     std::lock_guard<std::mutex> lock(mutex_);
     objects_ = std::move(objects);

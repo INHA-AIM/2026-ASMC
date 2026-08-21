@@ -68,7 +68,27 @@ class SensorBridge(object):
         self.frame_lidar = p("~lidar_frame", "velodyne")
         self.frame_imu = p("~imu_frame", "imu")
         self.frame_gps = p("~gps_frame", "gps")
+        # NMEA GGA에는 MORAI map 원점 offset이 포함되지 않는다. GPSMessage를
+        # 사용하는 인지/플래닝 모듈이 같은 local-map 좌표를 만들 수 있도록
+        # launch에서 주입받아 메시지에 명시한다.
+        self.gps_east_offset = float(p("~gps_east_offset", 0.0))
+        self.gps_north_offset = float(p("~gps_north_offset", 0.0))
         self.publish_raw = bool(p("~publish_raw_image", False))
+
+        # MORAI의 단일 GPS/IMU UDP 스트림을 ROS 변환과 standalone planner가
+        # 동시에 사용할 수 있도록 원본 datagram을 planner 전용 포트로 복제한다.
+        self.planner_forward_ip = str(p("~planner_forward_ip", "127.0.0.1"))
+        self.planner_forward_ports = {
+            "gps": int(p("~planner_gps_port", 0)),
+            "imu": int(p("~planner_imu_port", 0)),
+        }
+        self.planner_forward_sockets = {}
+        for name, port in self.planner_forward_ports.items():
+            if port > 0:
+                self.planner_forward_sockets[name] = socket.socket(
+                    socket.AF_INET, socket.SOCK_DGRAM)
+                rospy.loginfo("forward %-5s raw UDP -> %s:%d",
+                              name, self.planner_forward_ip, port)
 
         self.stats = {}
         self._start_all(p)
@@ -288,8 +308,10 @@ class SensorBridge(object):
 
         sin_a = np.sin(np.deg2rad(az))
         cos_a = np.cos(np.deg2rad(az))
-        x = (dist * cos_v * sin_a).reshape(-1)
-        y = (dist * cos_v * cos_a).reshape(-1)
+        # Velodyne azimuth is clockwise from the sensor's forward direction.
+        # Publish in the ROS vehicle convention: +X forward and +Y left.
+        x = (dist * cos_v * cos_a).reshape(-1)
+        y = -(dist * cos_v * sin_a).reshape(-1)
         z = (dist * sin_v).reshape(-1)
 
         valid = dist.reshape(-1) > 0.01
@@ -327,6 +349,7 @@ class SensorBridge(object):
                 raw, _ = sock.recvfrom(8196)
             except socket.timeout:
                 continue
+            self._forward_to_planner(name, raw)
             try:
                 line = raw.decode("ascii", "ignore").split("\r\n")[0]
             except Exception:
@@ -348,6 +371,8 @@ class SensorBridge(object):
             g.header.frame_id = self.frame_gps
             g.latitude, g.longitude, g.altitude = lat, lon, alt
             g.status = status
+            g.eastOffset = self.gps_east_offset
+            g.northOffset = self.gps_north_offset
             self.pub_gps.publish(g)
 
             fx = NavSatFix()
@@ -374,6 +399,7 @@ class SensorBridge(object):
                 raw, _ = sock.recvfrom(65535)
             except socket.timeout:
                 continue
+            self._forward_to_planner(name, raw)
             if raw[0:9] != b"#IMUData$" or len(raw) < 113:
                 continue
             d = struct.unpack("<10d", raw[33:113])
@@ -389,6 +415,17 @@ class SensorBridge(object):
                 m.linear_acceleration.z = d[7], d[8], d[9]
             self.pub_imu.publish(m)
             self.stats[name] += 1
+
+    def _forward_to_planner(self, name, raw):
+        forward_sock = self.planner_forward_sockets.get(name)
+        port = self.planner_forward_ports.get(name, 0)
+        if forward_sock is None or port <= 0:
+            return
+        try:
+            forward_sock.sendto(raw, (self.planner_forward_ip, port))
+        except OSError as e:
+            rospy.logwarn_throttle(
+                5.0, "%s planner UDP forward failed: %s", name, e)
 
     def _report(self, _):
         rospy.loginfo("rx " + "  ".join("%s=%d" % kv

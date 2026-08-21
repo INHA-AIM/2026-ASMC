@@ -50,6 +50,7 @@ LINK_LEN = 38
 
 # total_len -> (rear_steer_off, link_off, ext_off, ext_count)
 EGO_VARIANTS = {
+    181: (None, 114, 152, 0),         # beta: 공통부 + link_id, 확장 필드 없음
     229: (None, 114, 152, 12),        # rear_steer 없음, 확장 12개
     245: (114,  118, 156, 15),        # 공식 예제 기준
 }
@@ -171,7 +172,7 @@ class MoraiUdpBridge(object):
         if var is None:
             if "egolen" not in self.warned:
                 self.warned.add("egolen")
-                rospy.logerr("Ego %dB 는 미지의 버전입니다 (229/245 만 지원). "
+                rospy.logerr("Ego %dB 는 미지의 버전입니다 (181/229/245 만 지원). "
                              "morai_ego_probe.py 로 구조를 확인하세요.",
                              len(data))
             return

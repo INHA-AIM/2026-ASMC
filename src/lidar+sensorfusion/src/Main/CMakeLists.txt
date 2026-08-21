@@ -59,6 +59,8 @@ add_library(myHeader
   src/SensorFusion/SensorFusion.cpp
   src/SensorFusion/FusionCamera.cpp
   src/SensorFusion/FusionLiDAR.cpp
+  src/PlannerInterface/PlannerObjectAdapter.cpp
+  src/PlannerInterface/PlannerObjectSender.cpp
 )
 add_dependencies(myHeader ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 

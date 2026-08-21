@@ -9,11 +9,12 @@ network:
   # perception 객체 인터페이스가 들어오면 이 수신 경로 자체를 제거한다.
   object_info:
     enabled: true
-    dst_port: 7505
+    dst_port: 7510
 
-  # MORAI Sensor UDP의 GPS/IMU Destination Port와 일치해야 한다.
-  gps_dst_port: 9301
-  imu_dst_port: 9303
+  # morai_sensor_bridge가 MORAI 원본(9301/9303)을 복제하는 planner 전용 포트.
+  # 센서 브릿지와 standalone planner의 UDP bind 충돌을 피한다.
+  gps_dst_port: 9401
+  imu_dst_port: 9403
 
   # MORAI GPS Info 창에 표시되는 UTM52N map offset. global path 좌표는
   # UTM Easting/Northing에서 이 값을 뺀 로컬 좌표다.

@@ -5,8 +5,9 @@
 #include <cstdio>
 #include <iterator>
 #include <limits>
-
+#include <iostream>
 #include "global/utils.hpp"
+using namespace std;
 
 namespace {
 
@@ -460,12 +461,32 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
     // 조기 반환하면 WAIT/COMMIT 잠금보다 먼저 매 cycle 전체 도로가 빌 때까지
     // 검사하게 되어 conflict point 앞에서 두 번째 정지와 데드락이 발생한다.
     if (std::fabs(ego.v) < kLowSpeedFallbackV && !near_any_merge) {
-        static int low_speed_log_tick = 0;
-        if (++low_speed_log_tick % 5 == 0) {
-            std::printf("[FrenetPlanner-STATE] mode=LOW_SPEED_FALLBACK "
-                        "s=%.2f d=%.3f speed=%.2f candidates=N/A\n",
-                        s, d, ego.v);
+        // LOW_SPEED_FALLBACK은 아래의 FindStaticAvoidanceTarget()에 도달하지
+        // 않으므로, 조기 반환 전에 동일한 Frenet 투영값을 출력한다.
+        for (const auto& obj : obstacles) {
+            double obj_s, obj_d, obj_s_dot;
+            ProjectObjectToFrenet(ref_, obj, obj_s, obj_d, obj_s_dot);
+            const double gap = obj_s - s;
+            std::cout << "[AVOID-CHECK][LOW-SPEED-PRECHECK] id=" << obj.id
+                      << " map_pos=(" << obj.x << ", " << obj.y << ")"
+                      << " raw_speed=" << obj.speed
+                      << " frenet=(s=" << obj_s << ", d=" << obj_d
+                      << ", s_dot=" << obj_s_dot << ")"
+                      << " ego_frenet=(s=" << s << ", d=" << d << ")"
+                      << " gap=" << gap
+                      << " condition_A_speed="
+                      << (std::fabs(obj_s_dot) <= avoid_cfg_.trigger_max_speed
+                              ? "PASS" : "FAIL")
+                      << " condition_B_front=" << (gap > 0.0 ? "PASS" : "FAIL")
+                      << " selector_gate=BLOCKED_BY_LOW_SPEED"
+                      << std::endl;
         }
+        // static int low_speed_log_tick = 0;
+        // if (++low_speed_log_tick % 5 == 0) {
+        //     std::printf("[FrenetPlanner-STATE] mode=LOW_SPEED_FALLBACK "
+        //                 "s=%.2f d=%.3f speed=%.2f candidates=N/A\n",
+        //                 s, d, ego.v);
+        // }
         // TRACKING 근거리에서 한 점짜리 v=0 경로를 무기한 보내던 분기는
         // ego.v==0 -> 같은 조기 return이라는 자기잠금을 만들었다. 정적 장애물을
         // 등록할 때 검증한 1차 회피 방향을 저속 경로의 목표로 사용해 재출발한다.
@@ -512,6 +533,7 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
     // 활성 context의 장애물 위치를 새 UDP 프레임으로 갱신한다. 일시적
     // packet dropout이 있어도 저장된 위치/길이로 회피를 계속한다.
     if (avoidance_.active) {
+        bool tracked_object_updated = false;
         for (const auto& obj : obstacles) {
             if (obj.id != avoidance_.obstacle_id) continue;
             double obj_s, obj_d, obj_s_dot;
@@ -520,16 +542,41 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
             avoidance_.obstacle_d = obj_d;
             avoidance_.obstacle_width = obj.width;
             avoidance_.obstacle_length = obj.length;
+            tracked_object_updated = true;
             break;
+
+
+
+
+
+
+
+            
         }
 
         const double gap = avoidance_.obstacle_s - s;
         const double clear_distance = 0.5 * (vehicle_shape_.length + avoidance_.obstacle_length)
                                     + avoid_cfg_.pass_clearance;
+        std::cout << "[AVOID-TRIGGER-CHECK] id=" << avoidance_.obstacle_id
+                  << " udp_position_updated="
+                  << (tracked_object_updated ? "YES" : "NO_USING_CACHED_POSITION")
+                  << " obstacle_frenet=(s=" << avoidance_.obstacle_s
+                  << ", d=" << avoidance_.obstacle_d << ")"
+                  << " ego_frenet=(s=" << s << ", d=" << d << ")"
+                  << " gap=" << gap
+                  << " phase_TRACKING="
+                  << (avoidance_.phase == AvoidPhase::TRACKING ? "PASS" : "FAIL")
+                  << " gap_le_" << avoid_cfg_.shift_start_distance << "="
+                  << (gap <= avoid_cfg_.shift_start_distance ? "PASS" : "FAIL")
+                  << std::endl;
         if (avoidance_.phase == AvoidPhase::TRACKING && gap <= avoid_cfg_.shift_start_distance) {
             // 이 사이클에서 좌/우 전체 후보를 비교한 뒤, 유효 경로가
             // 있는 방향만 SHIFT로 잠그다.
             begin_avoidance = true;
+            if(begin_avoidance==true){
+                std::cout<<"플래그확인됨"<<endl;
+            }
+
         } else if (avoidance_.phase == AvoidPhase::SHIFT &&
                    std::fabs(d - avoidance_.target_d) <= avoid_cfg_.lateral_tolerance) {
             avoidance_.phase = AvoidPhase::PASS;

@@ -5,6 +5,13 @@
   <arg name="lidar_host_port" default="0"/>
   <arg name="gps_port"        default="9301"/>
   <arg name="imu_port"        default="9303"/>
+  <!-- standalone Frenet planner 전용 raw UDP 복제 포트 -->
+  <arg name="planner_forward_ip" default="127.0.0.1"/>
+  <arg name="planner_gps_port"   default="9401"/>
+  <arg name="planner_imu_port"   default="9403"/>
+  <!-- KATRI map local origin: UTM52N - offset = planner/map coordinates. -->
+  <arg name="gps_east_offset"  default="302595.0"/>
+  <arg name="gps_north_offset" default="4124145.0"/>
   <arg name="enable_lidar" default="true"/>
   <arg name="enable_semantic_camera" default="false"/>
   <arg name="lidar_model"  default="VLP-16"/>
@@ -29,6 +36,11 @@
 
     <param name="gps_port"   value="$(arg gps_port)"/>
     <param name="imu_port"   value="$(arg imu_port)"/>
+    <param name="planner_forward_ip" value="$(arg planner_forward_ip)"/>
+    <param name="planner_gps_port"   value="$(arg planner_gps_port)"/>
+    <param name="planner_imu_port"   value="$(arg planner_imu_port)"/>
+    <param name="gps_east_offset"  value="$(arg gps_east_offset)"/>
+    <param name="gps_north_offset" value="$(arg gps_north_offset)"/>
     <param name="lidar_port" value="$(arg lidar_port)"/>
     <param name="lidar_host_port" value="$(arg lidar_host_port)"/>
     <param name="lidar_model" value="$(arg lidar_model)"/>

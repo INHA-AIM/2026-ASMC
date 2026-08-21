@@ -13,7 +13,7 @@
         "roll": "0.000",
         "pitch": "2.000",
         "yaw": "0.000"
-      },
+      }
       "cc": {
         "sensorName": "DefaultSensor",
         "sensorType": 1,

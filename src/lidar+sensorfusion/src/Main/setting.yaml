@@ -169,3 +169,10 @@ LiDAR: # 라이다
     Eps: 0.5
     MinPoints: 5
     Threshold: 300
+
+# LiDAR tracked OBB를 기존 Frenet planner ObjectInfo UDP 입력으로 전달한다.
+PlannerInterface:
+  Enabled: true
+  IP: "127.0.0.1"
+  Port: 7510
+  MaxObjects: 20

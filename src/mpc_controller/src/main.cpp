@@ -144,10 +144,10 @@ int main() {
             last_control = MPCControl{};
             recovery_cycles_left = recovery_duration_cycles;
             stuck_cycles = 0;
-            std::printf("[MPC-STUCK] recovery start: ego_v=%.2f max_ref_v=%.2f "
-                        "path_progress=%.2f duration=%.2fs\n",
-                        ego_snap.vx, max_ref_speed, path_progress,
-                        mpc_params.stuck_recovery_duration);
+            // std::printf("[MPC-STUCK] recovery start: ego_v=%.2f max_ref_v=%.2f "
+            //             "path_progress=%.2f duration=%.2fs\n",
+            //             ego_snap.vx, max_ref_speed, path_progress,
+            //             mpc_params.stuck_recovery_duration);
         }
 
         // 3) MPC 풀기
@@ -190,7 +190,7 @@ int main() {
             last_control.accel = accel_raw;
             --recovery_cycles_left;
             if (recovery_cycles_left == 0) {
-                std::printf("[MPC-STUCK] recovery pulse complete; normal MPC resumed\n");
+                // std::printf("[MPC-STUCK] recovery pulse complete; normal MPC resumed\n");
             }
         }
         double accel_norm = 0.0, brake_norm = 0.0;
