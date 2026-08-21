@@ -7,6 +7,7 @@
 #include <sstream>
 #include <utility>
 
+#include "frenet_planner/geometry/polygon_utils.hpp"
 #include "frenet_planner/math/frenet_converter.hpp"
 
 namespace {
@@ -67,7 +68,7 @@ void PlannerDebugWriter::Publish(const RefLine& ref,
                                  BehaviorState mode,
                                  const char* phase,
                                  double target_speed,
-                                 const std::vector<ObjectInfo>& obstacles,
+                                 const std::vector<TrackedObstacle>& obstacles,
                                  const std::vector<FrenetPath>& candidates,
                                  int selected_index,
                                  const PlannerDebugStats& stats,
@@ -137,12 +138,39 @@ void PlannerDebugWriter::Publish(const RefLine& ref,
         if (i) out << ',';
         const auto& obj = obstacles[i];
         out << "{\"id\":" << obj.id << ",\"type\":" << obj.type;
-        out << ",\"x\":"; WriteNumber(out, obj.x);
-        out << ",\"y\":"; WriteNumber(out, obj.y);
-        out << ",\"heading\":"; WriteNumber(out, obj.heading);
-        out << ",\"speed\":"; WriteNumber(out, obj.speed);
-        out << ",\"width\":"; WriteNumber(out, obj.width);
-        out << ",\"length\":"; WriteNumber(out, obj.length);
+        out << ",\"vx\":"; WriteNumber(out, obj.vx);
+        out << ",\"vy\":"; WriteNumber(out, obj.vy);
+        out << ",\"geometry_valid\":" << (obj.geometry_valid ? "true" : "false");
+        out << ",\"z_valid\":" << (obj.z_valid ? "true" : "false");
+        out << ",\"geometry_source\":\""
+            << (obj.geometry_source == ObstacleGeometrySource::LIDAR_CORNERS
+                    ? "LIDAR_CORNERS" : "LEGACY_DERIVED") << "\"";
+        out << ",\"corners\":[";
+        for (size_t corner_index = 0; corner_index < obj.corners.size(); ++corner_index) {
+            if (corner_index) out << ',';
+            const auto& corner = obj.corners[corner_index];
+            out << '[';
+            WriteNumber(out, corner.x);
+            out << ',';
+            WriteNumber(out, corner.y);
+            out << ',';
+            WriteNumber(out, corner.z);
+            out << ']';
+        }
+        out << ']';
+        const geometry::Polygon2D hull = obj.geometry_valid
+            ? geometry::ComputeConvexHull(geometry::ProjectCornersToXY(obj.corners))
+            : geometry::Polygon2D{};
+        out << ",\"hull\":[";
+        for (size_t hull_index = 0; hull_index < hull.size(); ++hull_index) {
+            if (hull_index) out << ',';
+            out << '[';
+            WriteNumber(out, hull[hull_index].x);
+            out << ',';
+            WriteNumber(out, hull[hull_index].y);
+            out << ']';
+        }
+        out << ']';
         out << '}';
     }
     out << ']';

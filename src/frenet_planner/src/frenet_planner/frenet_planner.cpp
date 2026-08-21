@@ -7,6 +7,7 @@
 #include <limits>
 
 #include "global/utils.hpp"
+#include "frenet_planner/obstacle/legacy_object_adapter.hpp"
 
 namespace {
 
@@ -150,7 +151,7 @@ CartesianPath RemainingPath(const CartesianPath& path, double ego_x, double ego_
 }
 
 bool CartesianTrajectoryClear(const CartesianPath& path,
-                              const std::vector<ObjectInfo>& obstacles,
+                              const std::vector<TrackedObstacle>& obstacles,
                               const VehicleShape& ego_shape,
                               const CollisionCheckConfig& collision_cfg,
                               double dt, int* blocking_id = nullptr) {
@@ -164,9 +165,13 @@ bool CartesianTrajectoryClear(const CartesianPath& path,
         const double t = static_cast<double>(i) * dt;
         const double margin = collision_cfg.safety_margin +
                               collision_cfg.margin_growth_rate * t;
-        const OrientedBox ego_box = MakeEgoBox(ego, ego_shape, margin);
+        // 기존 구현은 ego와 obstacle 양쪽에 margin을 적용했다. 장애물 원본
+        // corner를 변경하지 않으면서 총 여유를 보수적으로 유지하도록 ego에
+        // 두 배 margin을 적용한다.
+        const geometry::Polygon2D ego_footprint =
+            MakeEgoFootprint(ego, ego_shape, 2.0 * margin);
         for (const auto& obj : obstacles) {
-            if (CheckOBBOverlap(ego_box, MakeObstacleBox(obj, t, margin))) {
+            if (CheckObstacleOverlap(ego_footprint, {}, obj, t)) {
                 if (blocking_id) *blocking_id = obj.id;
                 return false;
             }
@@ -359,6 +364,8 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
         const auto it = object_yaw_rates.find(obj.id);
         obj.yaw_rate = it == object_yaw_rates.end() ? 0.0 : it->second;
     }
+    const std::vector<TrackedObstacle> predicted_collision_obstacles =
+        MakeLegacyTrackedObstacles(predicted_obstacles);
 
     // 저속(정지 근처)에서는 quintic 후보/곡률필터 파이프라인 전체를 건너뛰고
     // fallback으로 직접 경로를 만든다 (클래스 헤더 주석 참고 - 나누기 없는 안전한
@@ -419,7 +426,7 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
                 merge_.locked_path, ego.x, ego.y, merge_.locked_path_index);
             int blocking_id = -1;
             const bool clear = CartesianTrajectoryClear(
-                remaining, predicted_obstacles, vehicle_shape_, collision_cfg_,
+                remaining, predicted_collision_obstacles, vehicle_shape_, collision_cfg_,
                 path_cfg_.dt, &blocking_id);
             if (!clear) {
                 if (s < context_conflict_s - context_stop_buffer) {
@@ -771,7 +778,8 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
         } else {
             const RoundaboutGap gap = highway
                 ? FindHighwayMergeGap(
-                    ref_, start, predicted_obstacles, highway_merge_cfg_,
+                    ref_, start, predicted_obstacles, predicted_collision_obstacles,
+                    highway_merge_cfg_,
                     *active_highway_checkpoint,
                     vehicle_shape_, collision_cfg_,
                     std::max(active_cross_speed, ego.v),
@@ -887,14 +895,16 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
     // 먼 정적 장애물까지 미리 중앙 경로를 전부 제거하면 stop/go가 발생하므로,
     // 잠금된 해당 장애물만 이 구간의 충돌 필터에서 제외한다. 다른
     // 장애물은 계속 필터링되고, 25m 진입 시 잠금 장애물도 즉시 다시 포함된다.
-    std::vector<ObjectInfo> planning_obstacles = predicted_obstacles;
+    std::vector<TrackedObstacle> planning_collision_obstacles =
+        predicted_collision_obstacles;
     if (avoidance_.active && avoidance_.phase == AvoidPhase::TRACKING && !begin_avoidance) {
-        planning_obstacles.erase(
-            std::remove_if(planning_obstacles.begin(), planning_obstacles.end(),
-                           [this](const ObjectInfo& obj) {
+        planning_collision_obstacles.erase(
+            std::remove_if(planning_collision_obstacles.begin(),
+                           planning_collision_obstacles.end(),
+                           [this](const TrackedObstacle& obj) {
                                return obj.id == avoidance_.obstacle_id;
                            }),
-            planning_obstacles.end());
+            planning_collision_obstacles.end());
     }
 
     std::vector<FrenetPath> candidates;
@@ -906,7 +916,8 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
         auto generate_once = [&](PlannerDebugStats& generated_stats) {
             generated_stats = PlannerDebugStats{};
             auto generated = ResolveManeuver(start, avoid_cmd, ref_, path_cfg_, limits_,
-                                             lane_width_, planning_obstacles, vehicle_shape_,
+                                             lane_width_, planning_collision_obstacles,
+                                             vehicle_shape_,
                                              collision_cfg_, &generated_stats);
             EvaluateCosts(generated, cost_weights_, target_d);
             return generated;
@@ -1015,7 +1026,8 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
             candidates = generate_adaptive_avoid(cmd, cmd.avoidance_d_offset, stats);
         } else {
             candidates = ResolveManeuver(start, cmd, ref_, path_cfg_, limits_, lane_width_,
-                                         planning_obstacles, vehicle_shape_, collision_cfg_, &stats);
+                                         planning_collision_obstacles, vehicle_shape_,
+                                         collision_cfg_, &stats);
             // 회전교차로 MERGE도 횡방향으로는 global path(d=0)를 추종한다.
             EvaluateCosts(candidates, cost_weights_, 0.0);
         }
@@ -1081,7 +1093,7 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
                 candidate.s.empty() ? cmd.merge_conflict_s : candidate.s.back(),
                 std::max(cmd.target_speed, active_merge_cross_speed), path_cfg_.dt);
             int blocking_id = -1;
-            if (!CartesianTrajectoryClear(full, predicted_obstacles, vehicle_shape_,
+            if (!CartesianTrajectoryClear(full, predicted_collision_obstacles, vehicle_shape_,
                                           collision_cfg_, path_cfg_.dt, &blocking_id)) {
                 candidate.valid = false;
                 candidate.rejection_reason = RejectionReason::COLLISION;
@@ -1105,7 +1117,7 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
                                    : (cmd.mode == MERGE
                                       ? MergePhaseName(static_cast<int>(merge_.phase)) : "NONE"),
                                cmd.target_speed,
-                               obstacles, candidates,
+                               predicted_collision_obstacles, candidates,
                                selected_index, stats, cmd);
     }
 

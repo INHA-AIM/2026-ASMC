@@ -35,6 +35,7 @@ include_directories(
 add_executable(frenet_planner_node
   src/main.cpp
   src/frenet_planner/frenet_planner.cpp
+  src/frenet_planner/obstacle/legacy_object_adapter.cpp
   src/frenet_planner/global/data_logger.cpp
   src/frenet_planner/visualization/planner_debug_writer.cpp
   src/frenet_planner/frenet/ref_line.cpp
@@ -58,6 +59,7 @@ add_executable(frenet_planner_node
 )
 
 target_link_libraries(frenet_planner_node
+  frenet_geometry
   yaml-cpp
   Threads::Threads
 )
@@ -84,6 +86,33 @@ if(BUILD_TESTING)
   add_test(
     NAME geometry_foundation_test
     COMMAND geometry_foundation_test
+  )
+
+  add_executable(legacy_object_adapter_test
+    tests/legacy_object_adapter_test.cpp
+    src/frenet_planner/obstacle/legacy_object_adapter.cpp
+  )
+  target_link_libraries(legacy_object_adapter_test PRIVATE
+    frenet_geometry
+  )
+  add_test(
+    NAME legacy_object_adapter_test
+    COMMAND legacy_object_adapter_test
+  )
+
+  add_executable(polygon_collision_test
+    tests/polygon_collision_test.cpp
+    src/frenet_planner/obstacle/legacy_object_adapter.cpp
+    src/frenet_planner/frenet/collision_checker.cpp
+    src/frenet_planner/frenet/ref_line.cpp
+    src/frenet_planner/math/frenet_converter.cpp
+  )
+  target_link_libraries(polygon_collision_test PRIVATE
+    frenet_geometry
+  )
+  add_test(
+    NAME polygon_collision_test
+    COMMAND polygon_collision_test
   )
 endif()
 

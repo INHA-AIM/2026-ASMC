@@ -1,70 +1,72 @@
 #include "frenet_planner/frenet/collision_checker.hpp"
 #include "frenet_planner/math/frenet_converter.hpp"
 
-OrientedBox MakeEgoBox(const CartesianState& cs, const VehicleShape& shape, double margin) {
-    OrientedBox box;
-    box.cx = cs.x;
-    box.cy = cs.y;
-    box.heading = cs.yaw;
-    box.half_length = shape.length / 2.0 + margin;
-    box.half_width  = shape.width  / 2.0 + margin;
-    return box;
-}
-
-OrientedBox MakeObstacleBox(const ObjectInfo& obj, double t, double margin) {
-    OrientedBox box;
+PredictedObjectPose PredictLegacyObjectPose(const ObjectInfo& obj, double t) {
+    PredictedObjectPose pose;
     if (std::fabs(obj.yaw_rate) > 1e-3) {
-        box.cx = obj.x + obj.speed / obj.yaw_rate *
+        pose.x = obj.x + obj.speed / obj.yaw_rate *
             (std::sin(obj.heading + obj.yaw_rate * t) - std::sin(obj.heading));
-        box.cy = obj.y - obj.speed / obj.yaw_rate *
+        pose.y = obj.y - obj.speed / obj.yaw_rate *
             (std::cos(obj.heading + obj.yaw_rate * t) - std::cos(obj.heading));
     } else {
-        box.cx = obj.x + obj.speed * std::cos(obj.heading) * t;
-        box.cy = obj.y + obj.speed * std::sin(obj.heading) * t;
+        pose.x = obj.x + obj.speed * std::cos(obj.heading) * t;
+        pose.y = obj.y + obj.speed * std::sin(obj.heading) * t;
     }
-    box.heading = obj.heading + obj.yaw_rate * t;
-    box.half_length = obj.length / 2.0 + margin;
-    box.half_width  = obj.width  / 2.0 + margin;
-    return box;
+    pose.heading = obj.heading + obj.yaw_rate * t;
+    return pose;
 }
 
-// =========================================================
-// SAT(분리축 정리): 두 OBB의 4개 축(각 박스의 길이/폭 방향) 중 하나라도
-// 두 박스를 분리시키면 겹치지 않음. 전부 분리 못 시키면 겹침.
-// 축 L 위로의 박스 반경 = half_length*|axis_length·L| + half_width*|axis_width·L|
-// =========================================================
-
-namespace {
-
-double ProjectedRadius(const OrientedBox& box, double lx, double ly) {
-    const double al_x = std::cos(box.heading), al_y = std::sin(box.heading);   // 길이축
-    const double aw_x = -std::sin(box.heading), aw_y = std::cos(box.heading);  // 폭축
-    return box.half_length * std::abs(al_x * lx + al_y * ly)
-         + box.half_width  * std::abs(aw_x * lx + aw_y * ly);
-}
-
-bool SeparatedAlongAxis(const OrientedBox& a, const OrientedBox& b, double lx, double ly) {
-    const double center_dist = std::abs((b.cx - a.cx) * lx + (b.cy - a.cy) * ly);
-    return center_dist > ProjectedRadius(a, lx, ly) + ProjectedRadius(b, lx, ly);
-}
-
-}  // namespace
-
-bool CheckOBBOverlap(const OrientedBox& a, const OrientedBox& b) {
-    // a의 길이축/폭축, b의 길이축/폭축 — 총 4개 후보 분리축
-    const double axes[4][2] = {
-        {std::cos(a.heading), std::sin(a.heading)},
-        {-std::sin(a.heading), std::cos(a.heading)},
-        {std::cos(b.heading), std::sin(b.heading)},
-        {-std::sin(b.heading), std::cos(b.heading)},
+geometry::Polygon2D MakeEgoFootprint(const CartesianState& cs,
+                                     const VehicleShape& shape,
+                                     double margin) {
+    const double safe_margin = std::max(0.0, margin);
+    const double half_length = shape.length * 0.5 + safe_margin;
+    const double half_width = shape.width * 0.5 + safe_margin;
+    const double cosine = std::cos(cs.yaw);
+    const double sine = std::sin(cs.yaw);
+    const double local_xy[4][2] = {
+        {-half_length, -half_width},
+        { half_length, -half_width},
+        { half_length,  half_width},
+        {-half_length,  half_width},
     };
 
-    for (const auto& axis : axes) {
-        if (SeparatedAlongAxis(a, b, axis[0], axis[1])) {
-            return false;  // 분리축 하나라도 찾으면 겹치지 않음
-        }
+    geometry::Polygon2D polygon;
+    polygon.reserve(4);
+    for (const auto& point : local_xy) {
+        polygon.push_back({
+            cs.x + cosine * point[0] - sine * point[1],
+            cs.y + sine * point[0] + cosine * point[1],
+        });
     }
-    return true;  // 4개 축 전부 분리 실패 -> 겹침
+    geometry::EnsureCounterClockwise(polygon);
+    return polygon;
+}
+
+geometry::Polygon2D PredictObstacleFootprint(
+    const TrackedObstacle& obstacle, double prediction_time) {
+    if (!obstacle.geometry_valid || !std::isfinite(obstacle.vx) ||
+        !std::isfinite(obstacle.vy) || !std::isfinite(prediction_time)) return {};
+    const geometry::Corners8 predicted = geometry::TranslateCorners(
+        obstacle.corners, obstacle.vx, obstacle.vy, prediction_time);
+    return geometry::ComputeConvexHull(
+        geometry::ProjectCornersToXY(predicted));
+}
+
+bool CheckObstacleOverlap(const geometry::Polygon2D& ego_footprint,
+                          const geometry::ZRange& ego_z,
+                          const TrackedObstacle& obstacle,
+                          double prediction_time) {
+    if (!obstacle.geometry_valid || !std::isfinite(obstacle.vx) ||
+        !std::isfinite(obstacle.vy) || !std::isfinite(prediction_time)) return true;
+    const geometry::Corners8 predicted = geometry::TranslateCorners(
+        obstacle.corners, obstacle.vx, obstacle.vy, prediction_time);
+    geometry::ZRange obstacle_z;
+    if (obstacle.z_valid) obstacle_z = geometry::ComputeZRange(predicted);
+    if (!geometry::CheckZOverlap(ego_z, obstacle_z)) return false;
+    const geometry::Polygon2D footprint = geometry::ComputeConvexHull(
+        geometry::ProjectCornersToXY(predicted));
+    return geometry::CheckConvexPolygonOverlapSAT(ego_footprint, footprint);
 }
 
 // =========================================================
@@ -73,7 +75,7 @@ bool CheckOBBOverlap(const OrientedBox& a, const OrientedBox& b) {
 
 void FilterByCollision(std::vector<FrenetPath>& combined,
                         const RefLine& ref,
-                        const std::vector<ObjectInfo>& obstacles,
+                        const std::vector<TrackedObstacle>& obstacles,
                         const VehicleShape& ego_shape,
                         const CollisionCheckConfig& cfg,
                         int reactive_coast_exempt_object_id) {
@@ -96,11 +98,11 @@ void FilterByCollision(std::vector<FrenetPath>& combined,
             cs.yaw = geo.yaw[i];
 
             const double margin = cfg.safety_margin + cfg.margin_growth_rate * path.t[i];
-            OrientedBox ego_box = MakeEgoBox(cs, ego_shape, margin);
+            const geometry::Polygon2D ego_footprint =
+                MakeEgoFootprint(cs, ego_shape, margin);
 
             for (const auto& obj : obstacles) {
-                OrientedBox obs_box = MakeObstacleBox(obj, path.t[i], 0.0);
-                if (CheckOBBOverlap(ego_box, obs_box)) {
+                if (CheckObstacleOverlap(ego_footprint, {}, obj, path.t[i])) {
                     collided = true;
                     path.collision_object_id = obj.id;
                     path.collision_sample_index = static_cast<int>(i);
@@ -126,12 +128,12 @@ void FilterByCollision(std::vector<FrenetPath>& combined,
                     CartesianState cs = FrenetToCartesian(rp, s_coast, last_s_dot, 0.0,
                                                            last_d, 0.0, 0.0);
 
-                    OrientedBox ego_box = MakeEgoBox(cs, ego_shape, coast_margin);
+                    const geometry::Polygon2D ego_footprint =
+                        MakeEgoFootprint(cs, ego_shape, coast_margin);
 
                     for (const auto& obj : obstacles) {
                         if (obj.id == reactive_coast_exempt_object_id) continue;
-                        OrientedBox obs_box = MakeObstacleBox(obj, t, 0.0);
-                        if (CheckOBBOverlap(ego_box, obs_box)) {
+                        if (CheckObstacleOverlap(ego_footprint, {}, obj, t)) {
                             collided = true;
                             path.collision_object_id = obj.id;
                             path.collision_sample_index = static_cast<int>(path.t.size()) - 1;

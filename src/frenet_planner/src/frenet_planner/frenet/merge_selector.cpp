@@ -140,6 +140,7 @@ RoundaboutGap FindRoundaboutGap(const RefLine& ref, const FrenetState& ego,
 
 RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
                                   const std::vector<ObjectInfo>& obstacles,
+                                  const std::vector<TrackedObstacle>& collision_obstacles,
                                   const HighwayMergeConfig& cfg,
                                   const HighwayMergeCheckpoint& checkpoint,
                                   const VehicleShape& ego_shape,
@@ -198,10 +199,10 @@ RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
                                   desired_speed, 0.0};
             const double margin = collision_cfg.safety_margin +
                 collision_cfg.margin_growth_rate * t;
-            const OrientedBox ego_box = MakeEgoBox(ego_cs, ego_shape, margin);
-            for (const auto& obj : obstacles) {
-                const OrientedBox obj_box = MakeObstacleBox(obj, t, 0.0);
-                if (CheckOBBOverlap(ego_box, obj_box)) {
+            const geometry::Polygon2D ego_footprint =
+                MakeEgoFootprint(ego_cs, ego_shape, margin);
+            for (const auto& obj : collision_obstacles) {
+                if (CheckObstacleOverlap(ego_footprint, {}, obj, t)) {
                     collision_free = false;
                     break;
                 }
@@ -214,13 +215,14 @@ RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
         const double clear_absolute_t = entry + clear_time;
         const double s_hint = checkpoint.clear_s;
         for (const auto& obj : obstacles) {
-            const OrientedBox predicted = MakeObstacleBox(obj, clear_absolute_t, 0.0);
+            const PredictedObjectPose predicted =
+                PredictLegacyObjectPose(obj, clear_absolute_t);
             const double obj_s = FindClosestS(
-                ref, predicted.cx, predicted.cy, &s_hint, cfg.object_search_distance);
+                ref, predicted.x, predicted.y, &s_hint, cfg.object_search_distance);
             if (std::fabs(obj_s - checkpoint.clear_s) > cfg.object_search_distance) continue;
             const RefPoint rp = Interpolate(ref, obj_s);
-            const double dx = predicted.cx - rp.x;
-            const double dy = predicted.cy - rp.y;
+            const double dx = predicted.x - rp.x;
+            const double dy = predicted.y - rp.y;
             const double obj_d = -dx * std::sin(rp.theta) + dy * std::cos(rp.theta);
             const double alignment = std::cos(predicted.heading - rp.theta);
             if (std::fabs(obj_d) > cfg.target_corridor_half_width ||

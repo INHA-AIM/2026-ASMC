@@ -14,9 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
-from matplotlib.patches import Polygon, Rectangle
-from matplotlib.transforms import Affine2D
+from matplotlib.patches import Patch, Polygon
 
 
 COLORS = {
@@ -145,10 +143,10 @@ class PlannerVisualizer:
         self.obstacle_labels = []
         for ax in (self.ax_global, self.ax_local):
             for _ in range(20):
-                rect = Rectangle((0.0, 0.0), 0.0, 0.0, visible=False,
-                                 facecolor="#d62828", edgecolor="#780000", alpha=0.65)
-                ax.add_patch(rect)
-                self.obstacle_patches[ax].append(rect)
+                polygon = Polygon([(0.0, 0.0)] * 3, closed=True, visible=False,
+                                  facecolor="#d62828", edgecolor="#780000", alpha=0.65)
+                ax.add_patch(polygon)
+                self.obstacle_patches[ax].append(polygon)
         for _ in range(20):
             label = self.ax_local.text(0.0, 0.0, "", fontsize=7,
                                        color="#590000", visible=False)
@@ -195,15 +193,15 @@ class PlannerVisualizer:
                     self.obstacle_labels[index].set_visible(False)
                 continue
             obj = obstacles[index]
-            width = max(float(obj.get("width", 0.0)), 0.3)
-            length = max(float(obj.get("length", 0.0)), 0.3)
-            patch.set_xy((-length / 2.0, -width / 2.0))
-            patch.set_width(length)
-            patch.set_height(width)
-            patch.set_transform(
-                Affine2D().rotate(float(obj.get("heading", 0.0)))
-                .translate(float(obj["x"]) - origin_x,
-                           float(obj["y"]) - origin_y) + ax.transData)
+            hull = obj.get("hull", [])
+            if len(hull) < 3:
+                patch.set_visible(False)
+                if labels:
+                    self.obstacle_labels[index].set_visible(False)
+                continue
+            vertices = [(float(point[0]) - origin_x,
+                         float(point[1]) - origin_y) for point in hull]
+            patch.set_xy(vertices)
             obj_id = int(obj.get("id", -1))
             if merge and merge.get("active") and obj_id == int(merge.get("sa_id", -2)):
                 patch.set_facecolor("#ffb703")
@@ -217,8 +215,9 @@ class PlannerVisualizer:
             patch.set_visible(True)
             if labels:
                 label = self.obstacle_labels[index]
-                label.set_position((float(obj["x"]) - origin_x,
-                                    float(obj["y"]) - origin_y))
+                center_x = sum(point[0] for point in vertices) / len(vertices)
+                center_y = sum(point[1] for point in vertices) / len(vertices)
+                label.set_position((center_x, center_y))
                 role = ""
                 if merge and merge.get("active"):
                     if obj_id == int(merge.get("sa_id", -2)):
