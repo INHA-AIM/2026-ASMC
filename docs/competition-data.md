@@ -1,6 +1,6 @@
 # 본선 공개 데이터
 
-> **v1.0** (2026.07.11) · 로컬 `$ASMC_DATA` 또는 `$AIM_PROJECT/data/R_KR_PG_K-city_2025/`  
+> **v1.1** (2026.08.28) · 로컬 `$ASMC_DATA` 또는 `$AIM_PROJECT/data/R_KR_PG_K-city_2025/`
 > 규정: [competition-environment.md](./competition-environment.md)
 
 본 repo에는 **대용량·주최 배포 파일을 포함하지 않습니다.** 각자 동일 경로에 배치하세요.
@@ -12,11 +12,13 @@
 | `2026_molit_comp_cam_set.json` | 고정 카메라 3대 + UDP/ROS 설정 |
 | `2026_molit_comp_global_path.txt` | 본선 전역 경로 (x y z, **4429점**) |
 | `2026_molit_comp_sample_scene.json` | 본선 샘플 시나리오 (Ego spawn 등) |
+| `2026_molit_comp_checkpoints.json` | 체크포인트 pose (START/END + 1~15, yaw, **반경 3 m**) |
 
 기존 HD Map: `link_set.json`, `node_set.json`, `global_info.json`
 
 - 당일 **새 맵 제시 없음** (시나리오만 변동 가능)
 - **MGeo**로 별도 경로 생성·주행 **허용** — 미션 순서·체크포인트 통과에 유의
+- 전역경로 수정 시에도 **체크포인트 필수 경유** (2026-08-03 공지)
 - 확정 해석 전문: 로컬 `docs/competition/faq-official.md`
 
 ## 로컬 배치
@@ -62,11 +64,19 @@ with open("2026_molit_comp_global_path.txt") as f:
 - Ego 초기 pose ≈ (−131.49, −427.96, 28.88), yaw ≈ 62.5º
 - **실제 본선** 시나리오는 당일 운영 요원 Load (2회 동일)
 
-## 4. 통합 체크리스트
+## 4. 체크포인트
+
+- 파일: `2026_molit_comp_checkpoints.json`
+- START/END + 1~15, 각 포인트 **반경 3 m** 이내 통과
+- 소환 시 pose가 일부 틀어질 수 있음 — 재소환·경로 검증에 유의
+- 표·주의사항: 로컬 `docs/competition/regulations/02-competition-environment.md`
+
+## 5. 통합 체크리스트
 
 - [ ] perception: cam_set UDP 포트 ↔ 노드 구독
 - [ ] planning: global_path → `path_route` 또는 Frenet 입력
+- [ ] planning: checkpoints → 경유 검증·재소환 pose
 - [ ] integration: sample_scene Load 후 Ego topic·Ctrl_cmd E2E
-- [ ] 60kph·15분·GPS blackout 구간 시뮬 테스트
+- [ ] 60kph 및 예외 링크 `A2256W000411`→`A2256W000153`·15분·GPS blackout 구간 시뮬 테스트
 
 상세 (로컬 전용): `docs/competition/regulations/07-finals-data.md`
