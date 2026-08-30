@@ -1,0 +1,27 @@
+name: dry_run
+description: "Ego only — first E2E dry-run without sensors"
+collect_hz: 10
+mode: latest_timer
+max_frames: 0
+require_ego: true
+map: R_KR_PG_K-City_2025
+vehicle: 2023_Hyundai_ioniq5
+bridge_type: ros_topics
+notes: "Start here after rosbridge/UDP bridge brings up /Ego_topic"
+
+channels:
+  ego: true
+  competition_ego: false
+  objects: false
+  collision: false
+  tl_status: false
+  lidar: false
+  gps: false
+  imu: false
+  cam_front: false
+  cam_left: false
+  cam_right: false
+  cam_extra: false
+
+topics:
+  ego: /Ego_topic
