@@ -1,6 +1,6 @@
 # UDP ↔ ROS 네트워크 가이드
 
-> **최종 수정:** 2026-08-08  
+> **최종 수정:** 2026-08-30
 > **지위:** 팀 공식 권장  
 > **개발 SIM (현재):** **MORAI 26.R1.h3** — 대회 배포 SIM 아님  
 > **msg:** `src/MORAI-ROS_morai_msgs` submodule **`beta_drive`**  
@@ -24,8 +24,10 @@
 
 ## 1. 규정 요약 (당일)
 
-시뮬↔팀 PC는 **허용 UDP만**. 내부 ROS는 실격 대상이 아님.  
-당일 **rosbridge로 시뮬 연결 금지**.
+시뮬↔팀 PC는 **v1.1에 열거된 UDP만** 허용된다. 내부 ROS는 팀 PC 내부 처리에만 쓴다.
+Ego Ctrl Cmd는 **cmd type 1 (accel/brake) + ctrl mode 2**로 고정하고, 당일
+**rosbridge로 시뮬 연결하지 않는다**. 수신 상태는 Competition Vehicle Status의
+자세·x방향 속도·각속도·제어 입력 범위에 맞춘다.
 
 ---
 
@@ -97,6 +99,7 @@ Protocol:       UDP
 | 타입 | **Ego Ctrl Cmd** | TrajectoryTrackingCmd 아님 |
 | Host PORT | **9111** | 브릿지 기본 `cmd_port` |
 | Dest PORT | **9112** | 페어 |
+| 명령 설정 | **cmd type 1 + ctrl mode 2** | v1.1 허용값 |
 
 팀원이 서로 다른 숫자(9093/9094, 9097/9098 …)를 쓰던 것은 **각자 UI에서 임의 배정**한 결과다.  
 PC마다 MORAI를 단독 실행하므로 포트 숫자가 같아도 **충돌하지 않는다** — 문서·launch를 맞추려면 **9111/9112로 통일**한다.

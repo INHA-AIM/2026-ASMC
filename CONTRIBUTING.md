@@ -2,7 +2,7 @@
 
 ## 빠른 링크
 
-- [docs/collaboration.md](docs/collaboration.md) ← **★ 브랜치·PR·충돌 방지**
+- [docs/collaboration.md](docs/collaboration.md) ← **★ Trunk-based · 모듈 소유 · 언제 PR인가 (필독)**
 - [docs/getting-started.md](docs/getting-started.md)
 - [docs/team-dev-guide.md](docs/team-dev-guide.md) ← **팀원별 개발·검증**
 - [docs/git-workflow.md](docs/git-workflow.md)
@@ -13,24 +13,30 @@
 
 ## 필수 규칙
 
-1. **`main`에 직접 push 하지 않습니다.** PR로 merge합니다.
-2. **담당 파트 외 `src/`·`tools/` 패키지를 수정하지 않습니다.** (합의·통합 PR 예외) — 경로는 [team-dev-guide.md](docs/team-dev-guide.md)
-3. **대용량 파일·데이터·체크포인트를 커밋하지 않습니다.**
-4. **privileged 정보(ObjectStatus 등)를 배포/추론 경로에 넣지 않습니다.**
-5. **Python 3.8 / ROS Noetic / Ubuntu 20.04** 기준으로 코드·의존성을 맞춥니다.
-6. **morai_msgs는 `beta_drive`만** — [morai-msgs-beta-policy.md](docs/morai-msgs-beta-policy.md)
-7. **새 작업은 ASMC에서만.** 개인 `aim_ws`/`mpc_ws`에 기능을 쌓지 않습니다.
+1. **기본은 trunk (Phase 1).** Phase 0에는 개인 레포 병행 — [collaboration.md §0.5](docs/collaboration.md).  
+   소유 모듈 + **빌드 통과** 시에만 `main` 푸시. WIP·미완성은 Draft PR 또는 개인 레포 (§2.5).
+2. **담당 파트 외 수정 금지** (합의·공동 PR 예외) — [team-dev-guide.md](docs/team-dev-guide.md)
+3. **대용량·체크포인트 커밋 금지.**
+4. **privileged를 배포 경로에 넣지 않는다.**
+5. **Python 3.8 / ROS Noetic** 기준.
+6. **morai_msgs는 `beta_drive`만.**
+7. Phase 1에서 새 기능은 ASMC; Phase 0 기능 완성은 개인 레포 OK.
+8. **`main`을 빨간 채로 방치하지 않는다.**
 
-## PR 전 체크리스트
+## Path A (`main` 직푸시) 전
 
-- [ ] `git checkout main && git pull` 후 `feature/<이름>-…` 생성
-- [ ] 담당 경로만 변경 ([team-dev-guide.md](docs/team-dev-guide.md))
-- [ ] `./scripts/build_ws.sh` (해당 패키지) 통과
-- [ ] ROS/msg 변경 시 [morai-msgs-beta-policy.md](docs/morai-msgs-beta-policy.md)
-- [ ] 절대경로(`/home/…`) 없음
-- [ ] 커밋 메시지 `feat(scope): …`
-- [ ] breaking change 시 `src/interfaces/`·팀 공지
+- [ ] 빌드 성공 (WIP 아님)
+- [ ] ownership 경로만
+- [ ] interfaces/docker/UDP 경계 아님
+- [ ] `git push origin main`
+
+## Path B (PR) 전
+
+- [ ] Path B 사유에 해당 ([collaboration.md §3.2](docs/collaboration.md#32-path-b--브랜치--pr-필수-게이트))
+- [ ] `feature/<이름>-…` 수명 짧게 (목표 1~2일 merge)
+- [ ] 빌드·(가능 시) 시뮬
 - [ ] [.github/pull_request_template.md](.github/pull_request_template.md) 작성
+- [ ] CODEOWNERS 리뷰 후 merge · 브랜치 삭제
 
 ## 리뷰어
 
@@ -40,10 +46,10 @@
 | Frenet (`planner`) | 이강태 · 정윤태 | @kante2 · @yuntae12-sudo |
 | perception (`morai_3d_detection`) | 손재호 | @sonshiny |
 | scenario / gRPC (`tools/`) | 장원태 | @wkddnjsxo |
-| learning·bridge·docs·docker | 안승현 | @ahnsh03 |
+| learning·bridge·docs·docker·interfaces | 안승현 | @ahnsh03 |
 
-전체 계정표: [docs/collaboration.md §0](docs/collaboration.md#0-팀-github-계정)
+전체: [docs/collaboration.md §0](docs/collaboration.md#0-팀-github-계정)
 
 ## 통합 문의
 
-공통 인터페이스(τ·BEV)·레거시 추가 이식은 **통합 리드(안승현)** 에게 먼저 공유하세요.
+공통 인터페이스(τ·tracks·TL)·UDP 경계·레거시 이식은 **통합 리드(안승현)** 에게 먼저 공유하세요.

@@ -1,8 +1,8 @@
 # 저장소 레이아웃·파트 격리
 
-> **최종 수정:** 2026-07-09  
+> **최종 수정:** 2026-07-25  
 > 팀원별 상세 경로·검증: [team-dev-guide.md](./team-dev-guide.md)  
-> GitHub 계정·PR 규약: [collaboration.md §0](./collaboration.md#0-팀-github-계정)
+> Git 규약 (trunk · ownership · Path A/B): [collaboration.md](./collaboration.md)
 
 ## 1. 최상위 구조
 
@@ -15,7 +15,7 @@
 ├── src/                  # catkin 패키지 + 논리 README
 ├── tools/                # scenario runner, grpc (non-catkin)
 ├── scripts/              # bridge, build, docker 헬퍼
-├── config/               # morai_bridge.env
+├── config/               # morai_rosbridge.env (WebSocket; UDP는 launch)
 ├── mgeo_toolkit/         # HD map bake
 ├── R_KR_PG_KATRI/        # 맵 JSON
 ├── CONTRIBUTING.md
@@ -44,7 +44,8 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | 경로 | 담당 | GitHub |
 |------|------|--------|
 | `src/learning_by_cheating/` | 안승현 | @ahnsh03 |
-| `scripts/bridge.sh`, `config/morai_bridge.env` | 안승현 | @ahnsh03 |
+| `scripts/rosbridge.sh`, `config/morai_rosbridge.env` | 안승현 | @ahnsh03 |
+| `scripts/udp_bridge.sh`, `src/morai_*_bridge/` | 이강태·안승현 | @kante2 · @ahnsh03 |
 | `mgeo_toolkit/`, `R_KR_PG_KATRI/` | 안승현 | @ahnsh03 |
 
 ### perception · scenario (✅ PR #3)
@@ -76,7 +77,8 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `src/frenet_planner/` | 👀 | 👀 | ✅ | 👀 | — | — |
 | `src/integration_launch/` | ✅ | 👀 | 👀 | 👀 | — | — |
 | `src/learning_by_cheating/` | — | — | — | ✅ | — | — |
-| `scripts/bridge*` | — | — | — | ✅ | — | — |
+| `scripts/rosbridge.sh` | 👀 | 👀 | 👀 | ✅ | — | — |
+| `scripts/udp_bridge.sh` · `src/morai_*_bridge/` | 👀 | 👀 | ✅ | ✅ | — | — |
 | `tools/aim_scenario_runner/` | — | — | — | 👀 | ✅ | 👀 |
 | `tools/grpc_inha_univ/` | — | — | — | 👀 | ✅ | — |
 | `src/perception/morai_3d_detection/` | — | — | — | 👀 | 👀 | ✅ |
@@ -110,6 +112,6 @@ CODEOWNERS 자동 리뷰: [.github/CODEOWNERS](../.github/CODEOWNERS)
 | SA_perc | `src/perception/morai_3d_detection/` |
 | SA_plan / LBC | `src/learning_by_cheating/` |
 | Scenario / gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` |
-| Bridge | `scripts/bridge.sh` (UDP 확장 예정) |
+| Bridge | `scripts/udp_bridge.sh` (UDP) · `scripts/rosbridge.sh` (WebSocket 개발용) |
 
 상세 파일명: [team-dev-guide.md](./team-dev-guide.md)

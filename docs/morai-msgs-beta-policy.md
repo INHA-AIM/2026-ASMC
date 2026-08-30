@@ -1,8 +1,8 @@
 # morai_msgs beta_drive 정렬 규약
 
+> **최종 수정:** 2026-07-25  
 > **상태:** 통합 **시작 전** 확정 규칙  
-> **최종 수정:** 2026-07-07  
-> **관련:** [morai-msgs-versions.md](./morai-msgs-versions.md) · [integration-plan.md](./integration-plan.md)
+> **관련:** [morai-msgs-versions.md](./morai-msgs-versions.md) · [integration-plan.md](./integration-plan.md) · [대회 ROS 실측](../../docs/competition/morai-competition-ros-topics.md)
 
 ## 1. 원칙 (한 줄)
 
@@ -65,7 +65,7 @@ diff -ru <26.R1-clone>/msg <beta_drive-clone>/msg
 
 - [ ] `src/MORAI-ROS_morai_msgs`가 submodule `beta_drive`인가
 - [ ] `grep -r front_steer` / `rear_steer_angle` 등 26.R1 전용 필드가 없는가
-- [ ] `CtrlCmd` publish 시 `steering` 사용 (`longlCmdType` 1)
+- [ ] `CtrlCmd` publish 시 `steering` 사용 (`longlCmdType` 1), UDP 송신 패킷 `ctrl_mode` 2 확인
 - [ ] `./scripts/build_ws.sh` 통과
 
 ---
@@ -94,12 +94,12 @@ diff -ru <26.R1-clone>/msg <beta_drive-clone>/msg
 
 ## 5. 신호등·토픽 (beta 정렬과 별개)
 
-- **msg:** `beta_drive`에도 `IntscnTL`, `TrafficLight` 등 **정의 있음**
-- **런타임:** 맵·시뮬에 따라 토픽이 비을 수 있음
-- **팀 표준:** `IntscnTL` 등 가용 토픽 구독 + `/Service_MoraiEventCmd` turnSignal 폴백 (LBC 기존 방식 유지)
-- `/Lamps_topic`은 KATRI에서 비어 있으므로 **사용하지 않음**
-
-대회 전: **beta_drive 빌드 + 실제 대회 맵**에서 토픽 목록(`rostopic list`)을 한 번 더 기록한다.
+- **msg:** `beta_drive`에도 `IntscnTL`, `TrafficLight`, **`GetTrafficLightStatus`** 등 **정의 있음**
+- **대회 런타임:** Set만 · Get 안 나옴 → [실측](../../docs/competition/morai-competition-ros-topics.md)
+- **26.R1.h3:** Get 발행 → **GT 라벨 세션에만** 사용 (일상 1순위 아님)
+- **노이즈:** 대회 SIM (1순위)
+- collector: 기본=대회 토픽 · TL Get은 26 profile optional
+- `/Lamps_topic` 사용 안 함
 
 ---
 

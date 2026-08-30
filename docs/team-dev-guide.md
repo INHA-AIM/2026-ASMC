@@ -4,13 +4,25 @@
 > 현재 작업 경로는 `src/frenet_planner/`, `src/mpc_controller/`이며 빌드·실행·포트는
 > [planning-control-udp.md](./planning-control-udp.md)를 우선 적용한다. Behavior Planner는 미연동이다.
 
-> **최종 수정:** 2026-07-08  
-> **대상:** 팀원 전원 (통합 코드 이식 완료 후)  
-> **원칙:** 새 작업은 **항상 `2026-ASMC` `main`에서 `feature/<이름>-…` 브랜치**로 한다. 개인 GitHub(`aim_ws`, `mpc_ws` 등)에는 **새 기능을 올리지 않는다.**
+> **최종 수정:** 2026-08-30  
+> **Git:** [collaboration.md](./collaboration.md) — 현재는 Phase 1이며 최신 `main` 기반의 짧은 feature 브랜치와 PR을 사용한다.  
+> **네트워크:** [network-udp-ros.md](./network-udp-ros.md) · **인지 eval:** [perception-agentic-loop.md](./perception-agentic-loop.md)  
+> **아키텍처:** 안승현 인지 후보(차선·BEV·bake·Loc-Aid·sync)는 **동등 선택지**. hybrid modular.  
+> 로컬 현황: [`docs/competition/team-status.md`](../../docs/competition/team-status.md)
 
-관련: [collaboration.md](./collaboration.md) · [sim-verification-checklist.md](./sim-verification-checklist.md) · [repository-layout.md](./repository-layout.md) · [git-workflow.md](./git-workflow.md) · [morai-msgs-beta-policy.md](./morai-msgs-beta-policy.md)
+관련: [sim-verification-checklist.md](./sim-verification-checklist.md) · [repository-layout.md](./repository-layout.md) · [git-workflow.md](./git-workflow.md) · [morai-msgs-beta-policy.md](./morai-msgs-beta-policy.md)
 
-### GitHub 계정 (PR·CODEOWNERS)
+### Phase 0 개발 위치 기록 (참고)
+
+| 팀원 | Phase 0 작업 위치 | ASMC 이식 시기 |
+|------|-------------------|----------------|
+| 안승현 | **ASMC** `drivable_bev/`, `tools/perception_eval/`, VIP2 차선 이식 | 지금~ (후보 실험) |
+| 장원태 | `external/team/traffic_runner/` | Wave 2 |
+| 이강태 | `external/team/aim_ws-va/` (bridge·판단) | Wave 2 |
+| 손재호 | `external/team/morai-3d-detection/` (+ ASMC 기존 패키지) | 지속·Wave 2 |
+| 정윤태·양서준 | `external/team/mpc_ws/` | Wave 2 |
+
+### GitHub 계정 (CODEOWNERS · Path B 리뷰)
 
 | GitHub | 이름 | § |
 |--------|------|---|
@@ -30,27 +42,33 @@
 | 항목 | 값 |
 |------|-----|
 | 레포 | https://github.com/INHAautonav/2026-ASMC |
-| 베이스 | `main` (현재 planning-v2까지 merge 완료) |
-| 브랜치 | `feature/<이름>-<기능>` — 예: `feature/yuntae-mpc-udp` |
-| 금지 | `main` 직접 push, 개인 upstream에만 새 코드 누적 |
+| 베이스 | **`main` (trunk)** — 일상 합류점 |
+| Path A (기본) | 소유 모듈만 수정 → `main`에 커밋·푸시 |
+| Path B | `feature/<이름>-<기능>` + PR — interfaces/UDP/docker/교차/대형 |
+| 금지 | 장기 개인 브랜치 누적, 개인 upstream에만 새 코드 |
 
-### 공통으로 손대면 안 되는 / 합의 필요한 것
+결정 트리·ownership: [collaboration.md §2~§4](./collaboration.md#2-한-장-요약-외울-것)
+
+### 공통으로 손대면 안 되는 / Path B 필수
 
 | 경로 | 규칙 |
 |------|------|
-| `src/MORAI-ROS_morai_msgs/` | submodule — **직접 커밋 금지**. 브랜치·핀 변경은 통합 리드 |
-| `docker/` | Dockerfile 변경 시 안승현 리뷰 |
-| `src/interfaces/README.md` | τ·BEV 스펙 — 3파트 합의 후 |
-| `src/integration_launch/` | ROS bridge launch 전용. Planning/Control 실행 추가 금지 |
-| `docs/` (공용 규약) | 내용 변경은 통합 리드 또는 PR 리뷰 |
+| `src/MORAI-ROS_morai_msgs/` | submodule — **Path B + 통합 리드만** 핀 변경 |
+| `docker/`, `.github/` | **Path B** · 안승현 리뷰 |
+| `src/interfaces/` | **항상 Path B** · 3파트 합의 (BEV는 Phase C) |
+| `src/integration_launch/` | 타 파트 연결·토픽 → **Path B** |
+| UDP / `scripts/udp_bridge.sh` · rosbridge `scripts/rosbridge.sh` | 시뮬 경계 → **Path B** |
+| `docs/` 규약 | 통합 리드 또는 Path B |
 
 ### 공통 시작 명령
 
 ```bash
 cd "$ASMC"   # 또는 clone 경로
-git checkout main && git pull
+git checkout main && git pull --rebase origin main
 git submodule update --init --recursive
-git checkout -b feature/<이름>-<기능>
+
+# Path A: 이대로 소유 경로만 수정 후 commit → push origin main
+# Path B: git checkout -b feature/<이름>-<기능>
 
 ./scripts/docker_ros_up.sh up
 docker exec -it asmc-ros-noetic bash
@@ -65,7 +83,7 @@ source devel/setup.bash
 |---|------|-----------|
 | C1 | submodule | `src/MORAI-ROS_morai_msgs` @ `beta_drive` |
 | C2 | build | `./scripts/build_ws.sh` |
-| C3 | bridge | `./scripts/bridge.sh` + `./scripts/diagnose_morai_bridge.sh` |
+| C3 | bridge | `./scripts/rosbridge.sh` 또는 `./scripts/udp_bridge.sh` + 진단 |
 | C4 | ego | `rostopic echo /Ego_topic -n1` → `wheel_angle` 필드 존재 |
 
 시뮬 항목 상세: [sim-verification-checklist.md](./sim-verification-checklist.md)
@@ -118,12 +136,15 @@ rostopic echo /behavior/context -n1
 | `behavior_params.yaml`에 `/home/...` 절대경로 금지 | clone/컨테이너 깨짐 → `$(find behavior_planner)/…` |
 | `EgoVehicleStatus`는 **`wheel_angle`** (beta) | `front_steer` / `angular_velocity` 금지 |
 | planner 메시지 스키마 바꾸면 `PlanFeedback.msg`·bridge와 **동시** 수정 | 계약 문서 §1–2 |
-| UDP `Ctrl_cmd` 전환은 `feature/yuntae-*` | ROS 토픽 경로와 분리 검증 |
+| UDP `Ctrl_cmd` 전환은 **Path B** (`feature/yuntae-udp-…`) | 시뮬 경계 · ROS 토픽 경로와 분리 검증 |
 | `link_set.json`(대용량)은 함부로 포맷 변경하지 말 것 | behavior·맵 로더 의존 |
 
-### 브랜치 예
+### Git Path 안내
 
-`feature/yuntae-mpc-udp`, `feature/yuntae-behavior-tl`
+| Path | 예 |
+|------|-----|
+| **A** (`main`) | MPC cost·behavior 룰 튜닝 (소유 경로만) |
+| **B** (PR) | `feature/yuntae-udp-ctrl-cmd` (UDP), `feature/yuntae-behavior-tl` (TL↔FSM 최초 연결) |
 
 ---
 
@@ -160,9 +181,12 @@ checklist **§1.7, 1.9** (MPC tracking, 저속·곡률)
 | trajectory 레이아웃 `[n, x[], y[], yaw[], kappa[], v[], a[]]` 깨지 말 것 | planner↔mpc 계약 |
 | planner/`behavior_bridge` 단독 수정 금지 | 이강태·정윤태 합의 |
 
-### 브랜치 예
+### Git Path 안내
 
-`feature/yang-mpc-cost`, `feature/yang-curve-vel`
+| Path | 예 |
+|------|-----|
+| **A** (`main`) | cost·curve velocity 튜닝 |
+| **B** (PR) | msg/토픽 계약이 바뀌는 변경, launch 연동 |
 
 ---
 
@@ -208,9 +232,12 @@ rostopic hz /frenet_planner/trajectory
 | `behavior_planner` 메시지 필드 변경 시 bridge·msg **동시** | handoff 문서 |
 | 절대경로 waypoint 금지 — launch `$(find …)`만 |
 
-### 브랜치 예
+### Git Path 안내
 
-`feature/kangtae-frenet-cost`, `feature/kangtae-lane-change`
+| Path | 예 |
+|------|-----|
+| **A** (`main`) | Frenet cost·lane change 로직 (planner만) |
+| **B** (PR) | `behavior_planner` msg와 동시 변경, `feature/kangtae-…` |
 
 ---
 
@@ -221,9 +248,10 @@ rostopic hz /frenet_planner/trajectory
 | 경로 | 역할 |
 |------|------|
 | `src/learning_by_cheating/` | LBC BEV·학습·자율주행 |
-| `scripts/bridge.sh` | rosbridge |
-| `scripts/diagnose_morai_bridge.sh`, `wait_morai_topic.sh` | 진단 |
-| `config/morai_bridge.env` | bridge 설정 |
+| `scripts/rosbridge.sh` | WebSocket rosbridge (개발) |
+| `scripts/udp_bridge.sh` | UDP bridges (대회 경로) |
+| `scripts/diagnose_morai_rosbridge.sh`, `wait_morai_topic.sh` | 진단 |
+| `config/morai_rosbridge.env` | rosbridge 설정 |
 | `mgeo_toolkit/` | HD map bake |
 | `R_KR_PG_KATRI/` | 맵 JSON 자산 |
 | `docker/`, `docs/` | 환경·문서 |
@@ -243,14 +271,14 @@ rostopic hz /frenet_planner/trajectory
 | `src/learning_by_cheating/scripts/verify_lbc_spec.py` | 스펙 단위 테스트 |
 | `src/learning_by_cheating/autonomous_driving.py` | SA 추론 → `/ctrl_cmd` |
 | `src/learning_by_cheating/train.py`, `train_v2.py` | 학습 |
-| `scripts/bridge.sh` | 포트 9090 |
+| `scripts/rosbridge.sh` | 포트 9090 (WebSocket) |
 
 ### 검증
 
 checklist **§2, §3**
 
 ```bash
-./scripts/bridge.sh
+./scripts/rosbridge.sh   # 또는 대회 경로: ./scripts/udp_bridge.sh
 python3 src/learning_by_cheating/scripts/verify_lbc_spec.py
 ./src/learning_by_cheating/scripts/start_lbc_imshow.sh
 ```
@@ -265,9 +293,12 @@ python3 src/learning_by_cheating/scripts/verify_lbc_spec.py
 | NPZ·체크포인트 git 커밋 금지 | `$ASMC_DATA` / NAS |
 | τ·BEV 확정 전 planner 토픽과 이름 맞출 것 | `integrate/interfaces` |
 
-### 브랜치 예
+### Git Path 안내
 
-`feature/seunghyun-lbc-train`, `feature/seunghyun-sync-logger`
+| Path | 예 |
+|------|-----|
+| **A** (`main`) | LBC/logger 내부, docs 소수정정 |
+| **B** (PR) | `feature/seunghyun-udp-bridge`, interfaces, docker, submodule |
 
 ---
 
@@ -315,9 +346,12 @@ checklist **§4**
 | D-10: `/dataset_control` publisher는 손재호와 **공동 PR** | perception live 연동 |
 | Camera/LiDAR 레거시 `aim_ws/src/main` 통째 복사 금지 | 필요 시 파일 단위·합의 |
 
-### 브랜치 예
+### Git Path 안내
 
-`feature/jang-scenario-dataset-ctrl`, `feature/jang-grpc-host`
+| Path | 예 |
+|------|-----|
+| **A** (`main`) | scenario runner·gRPC 도구 내부 |
+| **B** (PR) | perception live와 토픽 계약 (`feature/jang-scenario-dataset-ctrl`) |
 
 ---
 
@@ -365,9 +399,12 @@ checklist **§5**
 | ROS live는 `docker/ros-noetic`, 학습은 `perception-train` 분리 | 이미지 목적 다름 |
 | beta msg 쓰는 노드면 [morai-msgs-beta-policy.md](./morai-msgs-beta-policy.md) | |
 
-### 브랜치 예
+### Git Path 안내
 
-`feature/jaeho-inference-node`, `feature/jaeho-dataset-ctrl`
+| Path | 예 |
+|------|-----|
+| **A** (`main`) | Det3D 모델·NMS·추론 노드 내부 |
+| **B** (PR) | planner가 구독하는 출력 토픽 변경, `feature/jaeho-…` |
 
 ---
 
@@ -393,9 +430,9 @@ checklist **§5**
 | 논리 README (문서만) | 실제 코드 |
 |----------------------|-----------|
 | `src/planning_control/README.md` | `behavior_planner/`, `planner/`, `mpc_controller/`, `integration_launch/` |
-| `src/learning/README.md` | `learning_by_cheating/` (+ `mgeo_toolkit/`, `scripts/bridge.sh`) |
+| `src/learning/README.md` | `learning_by_cheating/` (+ `mgeo_toolkit/`, `scripts/rosbridge.sh`) |
 | `src/perception/README.md` | `perception/morai_3d_detection/` (+ `tools/` 시나리오) |
-| `src/integration/README.md` | `scripts/bridge.sh`, `tools/grpc_inha_univ/` (확장 예정) |
+| `src/integration/README.md` | `scripts/rosbridge.sh`, `scripts/udp_bridge.sh`, `tools/grpc_inha_univ/` |
 | `src/interfaces/README.md` | 스펙 초안만 (코드 패키지 아님) |
 
 **코드는 README 폴더가 아니라 위 실제 경로에서 수정한다.**

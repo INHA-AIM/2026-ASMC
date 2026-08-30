@@ -15,12 +15,19 @@
 # Frenet planner — 이강태
 /src/planner/                     @kante2 @yuntae12-sudo
 
-# Learning · bridge — 안승현
+# Learning · rosbridge (WebSocket, NOT UDP) — 안승현
 /src/learning_by_cheating/        @ahnsh03
+/scripts/rosbridge.sh             @ahnsh03
 /scripts/bridge.sh                @ahnsh03
+/scripts/diagnose_morai_rosbridge.sh @ahnsh03
 /scripts/diagnose_morai_bridge.sh @ahnsh03
 /config/                          @ahnsh03
 /mgeo_toolkit/                    @ahnsh03
+
+# UDP bridges (competition path) — 이강태 · 안승현
+/src/morai_udp_bridge/            @kante2 @ahnsh03
+/src/morai_sensor_bridge/         @kante2 @ahnsh03
+/scripts/udp_bridge.sh            @kante2 @ahnsh03
 
 # Perception — 손재호
 /src/perception/                  @sonshiny

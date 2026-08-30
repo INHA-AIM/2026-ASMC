@@ -16,14 +16,15 @@
 | 0.3 | `git submodule update --init` | 전원 | `src/MORAI-ROS_morai_msgs` @ `45c6baf` |
 | 0.4 | catkin build | 전원 | `./scripts/build_ws.sh` green |
 | 0.5 | MORAI SIM 실행 | 전원 | Windows에서 KATRI 맵 로드 |
-| 0.6 | Bridge IP/PORT | 전원 | MORAI UI ↔ `127.0.0.1:9090` (또는 `config/morai_bridge.env`) |
+| 0.6 | Bridge IP/PORT | 전원 | rosbridge: `127.0.0.1:9090` (`config/morai_rosbridge.env`) · UDP: Network/Sensor Dest 포트 |
 | 0.7 | `rostopic list` | 전원 | `/Ego_topic`, `/Object_topic` publish |
 
 **공통 명령**
 
 ```bash
-./scripts/bridge.sh                          # 터미널 1 유지
-./scripts/diagnose_morai_bridge.sh           # 연결 확인
+./scripts/rosbridge.sh                       # 개발용 WebSocket (당일 금지)
+# 또는: ./scripts/udp_bridge.sh              # 대회 UDP 경로
+./scripts/diagnose_morai_rosbridge.sh        # rosbridge 연결 확인 (UDP면 rostopic hz)
 docker exec -it asmc-ros-noetic bash         # 또는 네이티브 Noetic
 cd /root/ws && source devel/setup.bash
 ```
