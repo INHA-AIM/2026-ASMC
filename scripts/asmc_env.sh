@@ -9,4 +9,7 @@ else
   export ASMC_WS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fi
 
-export MORAI_BRIDGE_ENV="${ASMC_WS_ROOT}/config/morai_bridge.env"
+# Rosbridge (WebSocket) env — NOT the UDP bridge.
+export MORAI_ROSBRIDGE_ENV="${ASMC_WS_ROOT}/config/morai_rosbridge.env"
+# Backward-compatible alias (old name = rosbridge, not UDP).
+export MORAI_BRIDGE_ENV="${MORAI_ROSBRIDGE_ENV}"

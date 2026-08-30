@@ -7,14 +7,14 @@
 | `src/learning_by_cheating/` | 안승현 | ✅ PR #2 |
 | `mgeo_toolkit/` | 안승현 | ✅ |
 | `R_KR_PG_KATRI/` | — | 맵 JSON |
-| `scripts/bridge.sh` | 안승현 | ✅ |
+| `scripts/rosbridge.sh` (WebSocket; UDP는 `udp_bridge.sh`) | 안승현 | ✅ |
 
 상세: [docs/team-dev-guide.md](../../docs/team-dev-guide.md) §4
 
 ## 빠른 시작
 
 ```bash
-./scripts/bridge.sh
+./scripts/rosbridge.sh
 source devel/setup.bash
 ./src/learning_by_cheating/scripts/start_lbc_morai.sh
 ```
