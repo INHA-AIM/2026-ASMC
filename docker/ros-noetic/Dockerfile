@@ -29,8 +29,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements-lbc.txt requirements-mgeo.txt requirements-grpc.txt /tmp/
-RUN pip3 install --no-cache-dir --upgrade "pip<24.1" && \
-    pip3 install --no-cache-dir \
+RUN pip3 install --no-cache-dir --upgrade "pip<24.1"
+
+# ROS 컨테이너에서도 신호등 추론이 RTX 40(Ada) GPU를 사용하도록 CUDA wheel을
+# 명시한다. ultralytics보다 먼저 설치해 CPU용 torch가 간접 설치되지 않게 한다.
+RUN pip3 install --no-cache-dir \
+      torch==2.1.2 \
+      torchvision==0.16.2 \
+      --index-url https://download.pytorch.org/whl/cu118
+
+RUN pip3 install --no-cache-dir \
       -r /tmp/requirements-lbc.txt \
       -r /tmp/requirements-mgeo.txt \
       -r /tmp/requirements-grpc.txt \
