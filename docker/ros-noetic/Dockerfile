@@ -25,12 +25,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-noetic-rosbridge-suite \
     ros-noetic-tf2-sensor-msgs \
     ros-noetic-cv-bridge \
-    dmz-cursor-theme xcursors-all \
+    dmz-cursor-theme xcursor-themes \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements-lbc.txt requirements-mgeo.txt requirements-grpc.txt /tmp/
-RUN pip3 install --no-cache-dir --upgrade "pip<24.1" && \
-    pip3 install --no-cache-dir \
+RUN pip3 install --no-cache-dir --upgrade "pip<24.1"
+
+# ROS 컨테이너에서도 신호등 추론이 RTX 40(Ada) GPU를 사용하도록 CUDA wheel을
+# 명시한다. ultralytics보다 먼저 설치해 CPU용 torch가 간접 설치되지 않게 한다.
+RUN pip3 install --no-cache-dir \
+      torch==2.1.2 \
+      torchvision==0.16.2 \
+      --index-url https://download.pytorch.org/whl/cu118
+
+# Ubuntu/ROS가 distutils로 설치한 Python 패키지는 pip가 제거할 수 없으므로,
+# 추론 의존성에 필요한 버전을 /usr/local에 overlay한다.
+RUN pip3 install --no-cache-dir --ignore-installed \
+      "PyYAML>=5.4" \
+      "numpy==1.24.4" \
+      "scipy==1.10.1" \
+      "matplotlib==3.7.5" \
+      "pillow==10.4.0" \
+      "psutil>=5.8" \
+      "protobuf==3.20.3"
+
+RUN pip3 install --no-cache-dir \
       -r /tmp/requirements-lbc.txt \
       -r /tmp/requirements-mgeo.txt \
       -r /tmp/requirements-grpc.txt \

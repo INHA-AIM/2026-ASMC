@@ -69,7 +69,16 @@ def select_device(requested):
     major, minor = torch.cuda.get_device_capability(0)
     gpu_arch = "sm_%d%d" % (major, minor)
     built_arches = torch.cuda.get_arch_list()
-    if gpu_arch not in built_arches:
+    # CUDA cubin은 같은 major compute capability 안에서 상위 minor GPU와
+    # 호환된다. 따라서 sm_86 wheel은 RTX 40의 sm_89에서도 실행 가능하다.
+    built_majors = set()
+    for arch in built_arches:
+        if arch.startswith("sm_") and len(arch) >= 5:
+            try:
+                built_majors.add(int(arch[3:-1]))
+            except ValueError:
+                pass
+    if major not in built_majors:
         message = ("현재 PyTorch가 GPU 아키텍처 %s를 지원하지 않는다 "
                    "(지원 목록: %s). GPU에 맞는 PyTorch를 설치할 것."
                    % (gpu_arch, ", ".join(built_arches) or "없음"))
