@@ -1,0 +1,8 @@
+topics:
+  trajectory: /planning/trajectory
+
+publish_topics:
+  control: /ctrl_cmd
+
+timeouts:
+  trajectory: 0.25

@@ -10,6 +10,8 @@
 #include "global/global.hpp"
 #include "global/parameter_loader.hpp"
 #include "global/utils.hpp"
+#include "runtime/control_adapter.hpp"
+#include "runtime/path_resampler.hpp"
 #include "solver/mpc_solver.hpp"
 #include "udp_network/udp_manager.hpp"
 
@@ -18,47 +20,6 @@ namespace {
 // MPC_PACKAGE_SRC_DIR은 CMakeLists.txt에서 절대경로로 주입 (실행 위치와 무관하게 동작).
 constexpr const char* kMpcParamsPath = MPC_PACKAGE_SRC_DIR "/config/mpc_params.yaml";
 constexpr const char* kNetworkConfigPath = MPC_PACKAGE_SRC_DIR "/udp_network/network.yaml";
-
-CtrlCmd makeStopCommand() {
-    CtrlCmd cmd;
-    cmd.ctrl_mode = 2;
-    cmd.gear = 4;
-    cmd.cmd_type = 1;
-    cmd.accel = 0.0f;
-    cmd.brake = 0.3f;
-    cmd.steer = 0.0f;
-    return cmd;
-}
-
-// Planner 경로를 MPC 시간 간격에 맞춰 선형보간한다. 위치 최근접점이 아니라
-// 시간 인덱스를 유지해야 Planner가 설계한 속도 프로파일도 함께 추종된다.
-ReferencePath ToReferencePath(const PlannedPath& pp, double dst_dt, int steps) {
-    ReferencePath ref;
-    const size_t n = pp.size();
-    if (n == 0 || pp.dt <= 0.0) return ref;
-
-    ref.x_ref.reserve(steps);
-    ref.y_ref.reserve(steps);
-    ref.yaw_ref.reserve(steps);
-    ref.v_ref.reserve(steps);
-    ref.k_ref.reserve(steps);
-
-    for (int i = 0; i < steps; ++i) {
-        const double t = i * dst_dt;
-        double idx_f = t / pp.dt;
-        idx_f = clip(idx_f, 0.0, static_cast<double>(n - 1));
-        const size_t i0 = static_cast<size_t>(idx_f);
-        const size_t i1 = std::min(i0 + 1, n - 1);
-        const double frac = idx_f - static_cast<double>(i0);
-
-        ref.x_ref.push_back(pp.x[i0] + frac * (pp.x[i1] - pp.x[i0]));
-        ref.y_ref.push_back(pp.y[i0] + frac * (pp.y[i1] - pp.y[i0]));
-        ref.yaw_ref.push_back(pp.yaw[i0] + frac * angleDiff(pp.yaw[i1], pp.yaw[i0]));
-        ref.v_ref.push_back(pp.v[i0] + frac * (pp.v[i1] - pp.v[i0]));
-        ref.k_ref.push_back(pp.kappa[i0] + frac * (pp.kappa[i1] - pp.kappa[i0]));
-    }
-    return ref;
-}
 
 }  // namespace
 
@@ -103,7 +64,7 @@ int main() {
         // Planner 경로를 받기 전에는 정지 명령을 유지한다.
         if (!udp.has_planned_path()) {
             std::printf("[MPC] Waiting for planned path...\n");
-            udp.send_ctrl_cmd(makeStopCommand());
+            udp.send_ctrl_cmd(MakeStopCommand());
             std::this_thread::sleep_until(t0 + period);
             continue;
         }
@@ -200,10 +161,7 @@ int main() {
             brake_norm = clip(-accel_raw / std::fabs(mpc_params.accel_min), 0.0, 1.0);
         }
 
-        CtrlCmd cmd;
-        cmd.ctrl_mode = 2;
-        cmd.gear = 4;
-        cmd.cmd_type = 1;
+        CtrlCmd cmd = ToControlCommand(res.control, mpc_params);
         cmd.accel = static_cast<float>(accel_norm);
         cmd.brake = static_cast<float>(brake_norm);
         cmd.steer = static_cast<float>(steer_norm);
