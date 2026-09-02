@@ -82,8 +82,19 @@ target_link_libraries(frenet_planner_udp_legacy
   Threads::Threads
 )
 
-# Minimal ROS lifecycle target. Subscribers, converters, the 20 Hz timer, and
-# publishers are intentionally added in the next approved implementation step.
+# ROS runtime shell.
+# Message conversion, Plan() invocation, fail-safe handling, and actual
+# trajectory/feedback publication are added in the next implementation step.
+add_library(frenet_planner_message_converter
+  src/ros/message_converter.cpp
+)
+add_dependencies(frenet_planner_message_converter
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(frenet_planner_message_converter
+  ${catkin_LIBRARIES}
+)
+
 add_executable(frenet_planner_node
   src/ros/main.cpp
   src/ros/frenet_planner_node.cpp
@@ -120,11 +131,24 @@ if(CATKIN_ENABLE_TESTING)
     frenet_planner_core
   )
   add_test(NAME polygon_collision_test COMMAND polygon_collision_test)
+
+  add_executable(message_converter_test
+    tests/message_converter_test.cpp
+  )
+  add_dependencies(message_converter_test
+    ${catkin_EXPORTED_TARGETS}
+  )
+  target_link_libraries(message_converter_test
+    frenet_planner_message_converter
+    ${catkin_LIBRARIES}
+  )
+  add_test(NAME message_converter_test COMMAND message_converter_test)
 endif()
 
 install(TARGETS
     frenet_geometry
     frenet_planner_core
+    frenet_planner_message_converter
     frenet_planner_udp_legacy
     frenet_planner_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
