@@ -85,6 +85,7 @@ target_link_libraries(frenet_planner_udp_legacy
 # Minimal ROS lifecycle target. Subscribers, converters, the 20 Hz timer, and
 # publishers are intentionally added in the next approved implementation step.
 add_executable(frenet_planner_node
+  src/ros/main.cpp
   src/ros/frenet_planner_node.cpp
 )
 add_dependencies(frenet_planner_node
@@ -140,9 +141,13 @@ install(PROGRAMS tools/planner_visualizer.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-install(DIRECTORY
-    src/frenet_planner/config
-    src/udp_network
+install(DIRECTORY config launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
+
+install(DIRECTORY
+    src/frenet_planner/config/
+    src/udp_network/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/legacy
   FILES_MATCHING PATTERN "*.yaml"
 )

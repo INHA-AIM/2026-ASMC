@@ -1,0 +1,12 @@
+planning:
+  frequency: 20.0
+
+topics:
+  vehicle_state: /vehicle/state
+  objects: /perception/objects
+  behavior: /behavior/context
+
+publish_topics:
+  trajectory: /planning/trajectory
+  feedback: /planning/feedback
+
