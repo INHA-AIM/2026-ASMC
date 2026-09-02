@@ -35,6 +35,14 @@ class FrenetPlannerNode {
     InputSnapshot takeSnapshot() const;
     bool isFresh(const ros::Time& stamp, double timeout_seconds,
                  const ros::Time& now, double& age_seconds) const;
+    void publishStop(const InputSnapshot& snapshot, uint8_t failure_reason,
+                     const ros::Time& now);
+    void publishResult(const asmc_msgs::Trajectory& trajectory,
+                       const InputSnapshot& snapshot,
+                       bool previous_plan_still_valid);
+    asmc_msgs::VehicleState stopReferenceVehicle(
+        const InputSnapshot& snapshot) const;
+    double trajectoryDt() const;
 
     ros::NodeHandle nh_;
     ros::NodeHandle pnh_;
@@ -56,10 +64,17 @@ class FrenetPlannerNode {
     bool has_objects_ = false;
     bool has_behavior_ = false;
 
+    asmc_msgs::VehicleState last_stop_reference_vehicle_;
+    bool has_stop_reference_vehicle_ = false;
+    asmc_msgs::Trajectory last_valid_trajectory_;
+    bool has_last_valid_trajectory_ = false;
+    int plan_fail_streak_ = 0;
+
     double planning_frequency_hz_ = 20.0;
     double vehicle_timeout_seconds_ = 0.20;
     double objects_timeout_seconds_ = 0.30;
     double behavior_timeout_seconds_ = 0.50;
+    static constexpr int kMaxTransientFailCycles = 5;
 };
 
 }  // namespace frenet_planner_ros

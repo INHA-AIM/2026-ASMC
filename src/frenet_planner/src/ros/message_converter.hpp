@@ -1,9 +1,11 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 #include <asmc_msgs/BehaviorContext.h>
 #include <asmc_msgs/DetectedObjectArray.h>
+#include <asmc_msgs/Trajectory.h>
 #include <asmc_msgs/VehicleState.h>
 
 #include "frenet_planner/global/global.hpp"
@@ -19,6 +21,7 @@ enum class ConversionStatus {
     NON_FINITE_VALUE,
     UNSUPPORTED_BEHAVIOR,
     NON_EMPTY_OBJECTS_UNSUPPORTED,
+    INVALID_PATH,
 };
 
 const char* ConversionStatusName(ConversionStatus status);
@@ -30,5 +33,13 @@ ConversionStatus ConvertBehaviorContext(
 ConversionStatus ConvertDetectedObjects(
     const asmc_msgs::DetectedObjectArray& message,
     std::vector<ObjectInfo>& objects);
+ConversionStatus ConvertCartesianPath(
+    const CartesianPath& path, double dt,
+    const asmc_msgs::VehicleState& ego_at_plan,
+    const ros::Time& plan_stamp,
+    asmc_msgs::Trajectory& trajectory);
+asmc_msgs::Trajectory MakeStopTrajectory(
+    const asmc_msgs::VehicleState& ego_at_plan, double dt,
+    uint8_t failure_reason, const ros::Time& plan_stamp);
 
 }  // namespace frenet_planner_ros

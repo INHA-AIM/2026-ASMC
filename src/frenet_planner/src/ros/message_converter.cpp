@@ -1,6 +1,7 @@
 #include "ros/message_converter.hpp"
 
 #include <cmath>
+#include <utility>
 
 namespace frenet_planner_ros {
 namespace {
@@ -22,6 +23,7 @@ const char* ConversionStatusName(ConversionStatus status) {
             return "UNSUPPORTED_BEHAVIOR";
         case ConversionStatus::NON_EMPTY_OBJECTS_UNSUPPORTED:
             return "NON_EMPTY_OBJECTS_UNSUPPORTED";
+        case ConversionStatus::INVALID_PATH: return "INVALID_PATH";
     }
     return "UNKNOWN_CONVERSION_STATUS";
 }
@@ -98,6 +100,64 @@ ConversionStatus ConvertDetectedObjects(
 
     objects.clear();
     return ConversionStatus::OK;
+}
+
+ConversionStatus ConvertCartesianPath(
+    const CartesianPath& path, double dt,
+    const asmc_msgs::VehicleState& ego_at_plan, const ros::Time& plan_stamp,
+    asmc_msgs::Trajectory& trajectory) {
+    const std::size_t count = path.x.size();
+    if (count == 0 || path.y.size() != count || path.yaw.size() != count ||
+        path.kappa.size() != count || path.v.size() != count ||
+        path.a.size() != count || !std::isfinite(dt) || dt <= 0.0) {
+        return ConversionStatus::INVALID_PATH;
+    }
+    asmc_msgs::Trajectory converted;
+    converted.header.stamp = plan_stamp;
+    converted.header.frame_id = "map";
+    converted.valid = true;
+    converted.failure_reason = asmc_msgs::Trajectory::FAILURE_NONE;
+    converted.dt = dt;
+    converted.ego_at_plan = ego_at_plan;
+    converted.points.reserve(count);
+    for (std::size_t i = 0; i < count; ++i) {
+        if (!std::isfinite(path.x[i]) || !std::isfinite(path.y[i]) ||
+            !std::isfinite(path.yaw[i]) || !std::isfinite(path.kappa[i]) ||
+            !std::isfinite(path.v[i]) || !std::isfinite(path.a[i])) {
+            return ConversionStatus::NON_FINITE_VALUE;
+        }
+        asmc_msgs::TrajectoryPoint point;
+        point.x = path.x[i];
+        point.y = path.y[i];
+        point.yaw = path.yaw[i];
+        point.curvature = path.kappa[i];
+        point.velocity = path.v[i];
+        point.acceleration = path.a[i];
+        converted.points.push_back(point);
+    }
+    trajectory = std::move(converted);
+    return ConversionStatus::OK;
+}
+
+asmc_msgs::Trajectory MakeStopTrajectory(
+    const asmc_msgs::VehicleState& ego_at_plan, double dt,
+    uint8_t failure_reason, const ros::Time& plan_stamp) {
+    asmc_msgs::Trajectory trajectory;
+    trajectory.header.stamp = plan_stamp;
+    trajectory.header.frame_id = "map";
+    trajectory.valid = true;
+    trajectory.failure_reason = failure_reason;
+    trajectory.dt = dt;
+    trajectory.ego_at_plan = ego_at_plan;
+    asmc_msgs::TrajectoryPoint point;
+    point.x = std::isfinite(ego_at_plan.x) ? ego_at_plan.x : 0.0;
+    point.y = std::isfinite(ego_at_plan.y) ? ego_at_plan.y : 0.0;
+    point.yaw = std::isfinite(ego_at_plan.yaw) ? ego_at_plan.yaw : 0.0;
+    point.curvature = 0.0;
+    point.velocity = 0.0;
+    point.acceleration = 0.0;
+    trajectory.points.push_back(point);
+    return trajectory;
 }
 
 }  // namespace frenet_planner_ros

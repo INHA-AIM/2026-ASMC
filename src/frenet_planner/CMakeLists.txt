@@ -82,9 +82,8 @@ target_link_libraries(frenet_planner_udp_legacy
   Threads::Threads
 )
 
-# ROS runtime with input validation and command-based Plan() invocation.
-# Fail-safe handling and actual trajectory/feedback publication are added in
-# the next ROS node implementation step.
+# ROS runtime with input validation, command-based Plan() invocation,
+# fail-safe handling, and trajectory/feedback publication.
 add_library(frenet_planner_message_converter
   src/ros/message_converter.cpp
 )

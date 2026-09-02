@@ -134,6 +134,48 @@ int main() {
                "UNSUPPORTED_BEHAVIOR",
            "conversion status has a stable diagnostic name");
 
+    CartesianPath path;
+    path.x = {1.0, 2.0};
+    path.y = {3.0, 4.0};
+    path.yaw = {0.1, 0.2};
+    path.kappa = {0.01, 0.02};
+    path.v = {5.0, 6.0};
+    path.a = {0.3, 0.4};
+    asmc_msgs::Trajectory trajectory;
+    const auto ego_at_plan = MakeVehicle();
+    const ros::Time plan_stamp(20, 0);
+    Expect(frenet_planner_ros::ConvertCartesianPath(
+               path, 0.1, ego_at_plan, plan_stamp, trajectory) ==
+               ConversionStatus::OK && trajectory.valid &&
+               trajectory.failure_reason == asmc_msgs::Trajectory::FAILURE_NONE &&
+               trajectory.header.frame_id == "map" &&
+               trajectory.header.stamp == plan_stamp && trajectory.dt == 0.1 &&
+               trajectory.ego_at_plan.x == ego_at_plan.x &&
+               trajectory.points.size() == 2 &&
+               trajectory.points[1].x == 2.0 &&
+               trajectory.points[1].curvature == 0.02 &&
+               trajectory.points[1].velocity == 6.0,
+           "CartesianPath maps to valid map-frame Trajectory");
+
+    path.a.pop_back();
+    Expect(frenet_planner_ros::ConvertCartesianPath(
+               path, 0.1, ego_at_plan, plan_stamp, trajectory) ==
+               ConversionStatus::INVALID_PATH,
+           "trajectory conversion rejects mismatched vector sizes");
+
+    const asmc_msgs::Trajectory stop = frenet_planner_ros::MakeStopTrajectory(
+        ego_at_plan, 0.1, asmc_msgs::Trajectory::FAILURE_STATE_STALE,
+        plan_stamp);
+    Expect(stop.valid &&
+               stop.failure_reason == asmc_msgs::Trajectory::FAILURE_STATE_STALE &&
+               stop.dt == 0.1 && stop.ego_at_plan.x == ego_at_plan.x &&
+               stop.points.size() == 1 && stop.points[0].x == ego_at_plan.x &&
+               stop.points[0].y == ego_at_plan.y &&
+               stop.points[0].yaw == ego_at_plan.yaw &&
+               stop.points[0].velocity == 0.0 &&
+               stop.points[0].acceleration == 0.0,
+           "STOP trajectory is a valid executable zero-speed command");
+
     if (g_failures == 0) {
         std::cout << "All message converter tests passed\n";
         return 0;

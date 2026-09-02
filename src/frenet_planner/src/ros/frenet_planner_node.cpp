@@ -1,5 +1,6 @@
 #include "ros/frenet_planner_node.hpp"
 
+#include <cmath>
 #include <vector>
 #include <utility>
 
@@ -124,10 +125,61 @@ bool FrenetPlannerNode::isFresh(const ros::Time& stamp, double timeout_seconds,
            age_seconds <= timeout_seconds;
 }
 
+double FrenetPlannerNode::trajectoryDt() const {
+    const double dt = planner_.sample_dt();
+    return planner_initialized_ && std::isfinite(dt) && dt > 0.0 ? dt : 0.1;
+}
+
+asmc_msgs::VehicleState FrenetPlannerNode::stopReferenceVehicle(
+    const InputSnapshot& snapshot) const {
+    if (snapshot.has_vehicle && std::isfinite(snapshot.vehicle.x) &&
+        std::isfinite(snapshot.vehicle.y) && std::isfinite(snapshot.vehicle.yaw)) {
+        return snapshot.vehicle;
+    }
+    if (has_stop_reference_vehicle_) return last_stop_reference_vehicle_;
+
+    asmc_msgs::VehicleState unknown;
+    unknown.header.frame_id = "map";
+    unknown.valid = false;
+    return unknown;
+}
+
+void FrenetPlannerNode::publishResult(
+    const asmc_msgs::Trajectory& trajectory, const InputSnapshot& snapshot,
+    bool previous_plan_still_valid) {
+    trajectory_pub_.publish(trajectory);
+
+    asmc_msgs::PlanFeedback feedback;
+    feedback.header.stamp = ros::Time::now();
+    feedback.header.frame_id = "map";
+    feedback.command_id = snapshot.has_behavior ? snapshot.behavior.command_id : 0;
+    feedback.plan_valid = trajectory.valid;
+    feedback.failure_reason = trajectory.failure_reason;
+    feedback.selected_behavior = snapshot.has_behavior
+        ? snapshot.behavior.selected_behavior
+        : asmc_msgs::BehaviorContext::KEEP;
+    feedback.selected_target_link_id = snapshot.has_behavior
+        ? snapshot.behavior.target_link_id : "";
+    feedback.previous_plan_still_valid = previous_plan_still_valid;
+    feedback_pub_.publish(feedback);
+}
+
+void FrenetPlannerNode::publishStop(const InputSnapshot& snapshot,
+                                    uint8_t failure_reason,
+                                    const ros::Time& now) {
+    has_last_valid_trajectory_ = false;
+    plan_fail_streak_ = 0;
+    const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+        stopReferenceVehicle(snapshot), trajectoryDt(), failure_reason, now);
+    publishResult(stop, snapshot, false);
+}
+
 void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
     if (!planner_initialized_) {
         ROS_ERROR_THROTTLE(
             5.0, "Frenet planning disabled: planner is not initialized");
+        publishStop(takeSnapshot(), asmc_msgs::Trajectory::FAILURE_NOT_INITIALIZED,
+                    ros::Time::now());
         return;
     }
 
@@ -137,6 +189,12 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
             5.0,
             "Frenet input snapshot incomplete: vehicle=%d objects=%d behavior=%d",
             snapshot.has_vehicle, snapshot.has_objects, snapshot.has_behavior);
+        const uint8_t reason = !snapshot.has_vehicle
+            ? asmc_msgs::Trajectory::FAILURE_STATE_STALE
+            : (!snapshot.has_objects
+                ? asmc_msgs::Trajectory::FAILURE_OBJECTS_STALE
+                : asmc_msgs::Trajectory::FAILURE_BEHAVIOR_STALE);
+        publishStop(snapshot, reason, ros::Time::now());
         return;
     }
 
@@ -149,6 +207,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: invalid/stale vehicle state age=%.3f s",
             vehicle_age);
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_STATE_STALE, now);
         return;
     }
     if (!isFresh(snapshot.objects.header.stamp, objects_timeout_seconds_,
@@ -156,6 +215,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: invalid/stale objects age=%.3f s",
             objects_age);
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_OBJECTS_STALE, now);
         return;
     }
     if (!isFresh(snapshot.behavior.header.stamp, behavior_timeout_seconds_,
@@ -163,6 +223,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: invalid/stale behavior age=%.3f s",
             behavior_age);
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_BEHAVIOR_STALE, now);
         return;
     }
 
@@ -170,6 +231,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: behavior force_stop command_id=%u",
             snapshot.behavior.command_id);
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_NONE, now);
         return;
     }
 
@@ -183,8 +245,11 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: vehicle conversion failed (%s)",
             ConversionStatusName(vehicle_status));
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
         return;
     }
+    last_stop_reference_vehicle_ = snapshot.vehicle;
+    has_stop_reference_vehicle_ = true;
 
     const ConversionStatus behavior_status =
         ConvertBehaviorContext(snapshot.behavior, command);
@@ -192,6 +257,12 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: behavior conversion failed (%s)",
             ConversionStatusName(behavior_status));
+        publishStop(
+            snapshot,
+            behavior_status == ConversionStatus::UNSUPPORTED_BEHAVIOR
+                ? asmc_msgs::Trajectory::FAILURE_UNSUPPORTED_BEHAVIOR
+                : asmc_msgs::Trajectory::FAILURE_INVALID_INPUT,
+            now);
         return;
     }
 
@@ -201,25 +272,70 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: objects conversion failed (%s)",
             ConversionStatusName(objects_status));
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
         return;
     }
 
     CartesianPath path;
     if (!planner_.Plan(ego, objects, command, path)) {
+        ++plan_fail_streak_;
+        const bool collision_blocked = planner_.last_failure_reason() ==
+            FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED;
+        if (collision_blocked) {
+            ROS_WARN_THROTTLE(
+                1.0, "Frenet collision blocked: publishing immediate STOP");
+            publishStop(snapshot,
+                        asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED, now);
+            return;
+        }
+        if (has_last_valid_trajectory_ &&
+            plan_fail_streak_ <= kMaxTransientFailCycles) {
+            asmc_msgs::Trajectory reused = last_valid_trajectory_;
+            reused.failure_reason = asmc_msgs::Trajectory::FAILURE_GENERATION;
+            publishResult(reused, snapshot, true);
+            ROS_WARN("Frenet transient failure %d/%d: reusing previous trajectory",
+                     plan_fail_streak_, kMaxTransientFailCycles);
+            return;
+        }
         ROS_WARN_THROTTLE(
             1.0,
             "Frenet Plan(command) failed: reason=%d command_id=%u; "
-            "STOP/reuse publication is pending the fail-safe stage",
+            "publishing STOP after transient reuse window",
             static_cast<int>(planner_.last_failure_reason()),
             snapshot.behavior.command_id);
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_GENERATION, now);
         return;
     }
+
+    asmc_msgs::Trajectory trajectory;
+    const ConversionStatus trajectory_status = ConvertCartesianPath(
+        path, planner_.sample_dt(), snapshot.vehicle, now, trajectory);
+    if (trajectory_status != ConversionStatus::OK) {
+        ++plan_fail_streak_;
+        if (has_last_valid_trajectory_ &&
+            plan_fail_streak_ <= kMaxTransientFailCycles) {
+            asmc_msgs::Trajectory reused = last_valid_trajectory_;
+            reused.failure_reason = asmc_msgs::Trajectory::FAILURE_GENERATION;
+            publishResult(reused, snapshot, true);
+            return;
+        }
+        ROS_WARN_THROTTLE(
+            1.0, "Frenet trajectory conversion failed (%s)",
+            ConversionStatusName(trajectory_status));
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+        return;
+    }
+
+    plan_fail_streak_ = 0;
+    last_valid_trajectory_ = trajectory;
+    has_last_valid_trajectory_ = true;
+    publishResult(trajectory, snapshot, false);
 
     ROS_INFO_THROTTLE(
         1.0,
         "Frenet KEEP plan ready: command_id=%u points=%zu dt=%.3f "
         "vehicle_age=%.3f objects_age=%.3f behavior_age=%.3f; "
-        "trajectory publication pending",
+        "trajectory published",
         snapshot.behavior.command_id, path.x.size(), planner_.sample_dt(),
         vehicle_age, objects_age, behavior_age);
 }
