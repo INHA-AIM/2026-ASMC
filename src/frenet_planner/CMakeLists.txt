@@ -143,6 +143,18 @@ if(CATKIN_ENABLE_TESTING)
     ${catkin_LIBRARIES}
   )
   add_test(NAME message_converter_test COMMAND message_converter_test)
+
+  add_executable(command_keep_plan_test
+    tests/command_keep_plan_test.cpp
+  )
+  target_compile_definitions(command_keep_plan_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(command_keep_plan_test
+    frenet_planner_core
+  )
+  add_test(NAME command_keep_plan_test COMMAND command_keep_plan_test)
 endif()
 
 install(TARGETS
