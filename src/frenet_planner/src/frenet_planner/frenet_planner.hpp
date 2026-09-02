@@ -46,6 +46,12 @@ public:
     bool Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
               const PlannerCommand& command, CartesianPath& out_path);
 
+    // ROS/LiDAR 경로: collision_obstacles의 authoritative 8 corners를 SAT에
+    // 직접 사용하며 center/dimension 기반 geometry 재생성을 하지 않는다.
+    bool Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
+              const std::vector<TrackedObstacle>& collision_obstacles,
+              const PlannerCommand& command, CartesianPath& out_path);
+
     // Plan()이 반환하는 CartesianPath의 샘플 간격 [s] (params.yaml의 planner.dt).
     // MPC 쪽에서 이 값을 알아야 시간 기준으로 재샘플링해 궤적 추종(time-aligned
     // tracking)을 할 수 있다 (frenet_planner.cpp의 dt와 mpc_params.dt가 서로
@@ -66,6 +72,7 @@ private:
     bool PlanInternal(const CartesianState& ego,
                       const std::vector<ObjectInfo>& obstacles,
                       const PlannerCommand* external_command,
+                      const std::vector<TrackedObstacle>* collision_obstacles,
                       CartesianPath& out_path);
 
     // TRACKING은 외부 AVOID 모드가 아니다. 정적 장애물 ID/방향만

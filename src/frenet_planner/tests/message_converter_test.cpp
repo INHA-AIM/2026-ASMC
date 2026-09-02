@@ -45,6 +45,38 @@ asmc_msgs::DetectedObjectArray MakeEmptyObjects() {
     return message;
 }
 
+asmc_msgs::DetectedObject MakeObject(double center_x, double center_y) {
+    asmc_msgs::DetectedObject object;
+    object.id = 17;
+    object.type = 2;
+    object.center.x = center_x;
+    object.center.y = center_y;
+    object.center.z = 1.0;
+    object.yaw = 0.0;
+    object.vx = 2.0;
+    object.vy = -0.5;
+    object.yaw_rate = 0.1;
+    object.width = 2.0;
+    object.length = 4.0;
+    object.height = 2.0;
+    const double corners[8][3] = {
+        {center_x - 2.0, center_y - 1.0, 0.0},
+        {center_x + 2.0, center_y + 1.0, 0.0},
+        {center_x + 2.0, center_y - 1.0, 0.0},
+        {center_x - 2.0, center_y + 1.0, 0.0},
+        {center_x + 2.0, center_y - 1.0, 2.0},
+        {center_x - 2.0, center_y + 1.0, 2.0},
+        {center_x - 2.0, center_y - 1.0, 2.0},
+        {center_x + 2.0, center_y + 1.0, 2.0},
+    };
+    for (std::size_t i = 0; i < 8; ++i) {
+        object.obb_corners[i].x = corners[i][0];
+        object.obb_corners[i].y = corners[i][1];
+        object.obb_corners[i].z = corners[i][2];
+    }
+    return object;
+}
+
 }  // namespace
 
 int main() {
@@ -120,14 +152,45 @@ int main() {
            "non-KEEP behavior is rejected");
 
     std::vector<ObjectInfo> objects(1);
+    std::vector<TrackedObstacle> collision_objects(1);
     auto object_message = MakeEmptyObjects();
-    Expect(frenet_planner_ros::ConvertDetectedObjects(object_message, objects) ==
-               ConversionStatus::OK && objects.empty(),
-           "empty object message maps to empty ObjectInfo vector");
-    object_message.objects.emplace_back();
-    Expect(frenet_planner_ros::ConvertDetectedObjects(object_message, objects) ==
-               ConversionStatus::NON_EMPTY_OBJECTS_UNSUPPORTED,
-           "non-empty object message remains unsupported");
+    Expect(frenet_planner_ros::ConvertDetectedObjects(
+               object_message, objects, collision_objects) ==
+               ConversionStatus::OK && objects.empty() &&
+               collision_objects.empty(),
+           "empty object message maps to empty planner obstacle vectors");
+
+    object_message.objects.push_back(MakeObject(10.0, 20.0));
+    Expect(frenet_planner_ros::ConvertDetectedObjects(
+               object_message, objects, collision_objects) ==
+               ConversionStatus::OK && objects.size() == 1 &&
+               collision_objects.size() == 1 && objects[0].id == 17 &&
+               objects[0].vx == 2.0 && objects[0].vy == -0.5 &&
+               collision_objects[0].geometry_valid &&
+               collision_objects[0].z_valid &&
+               collision_objects[0].geometry_source ==
+                   ObstacleGeometrySource::LIDAR_CORNERS &&
+               collision_objects[0].corners[1].x == 12.0 &&
+               collision_objects[0].corners[1].y == 21.0 &&
+               collision_objects[0].corners[1].z == 0.0,
+           "LiDAR OBB corners are copied unchanged to TrackedObstacle");
+
+    auto malformed_message = MakeEmptyObjects();
+    malformed_message.objects.push_back(MakeObject(10.0, 20.0));
+    malformed_message.objects[0].obb_corners[3].x =
+        std::numeric_limits<double>::quiet_NaN();
+    Expect(frenet_planner_ros::ConvertDetectedObjects(
+               malformed_message, objects, collision_objects) ==
+               ConversionStatus::INVALID_OBJECT_GEOMETRY,
+           "non-finite LiDAR corner is rejected without geometry fallback");
+
+    auto duplicate_message = MakeEmptyObjects();
+    duplicate_message.objects.push_back(MakeObject(10.0, 20.0));
+    duplicate_message.objects.push_back(MakeObject(30.0, 40.0));
+    Expect(frenet_planner_ros::ConvertDetectedObjects(
+               duplicate_message, objects, collision_objects) ==
+               ConversionStatus::DUPLICATE_OBJECT_ID,
+           "duplicate object IDs are rejected");
 
     Expect(std::string(frenet_planner_ros::ConversionStatusName(
                ConversionStatus::UNSUPPORTED_BEHAVIOR)) ==

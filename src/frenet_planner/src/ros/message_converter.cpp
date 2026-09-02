@@ -1,7 +1,10 @@
 #include "ros/message_converter.hpp"
 
 #include <cmath>
+#include <unordered_set>
 #include <utility>
+
+#include "frenet_planner/geometry/polygon_utils.hpp"
 
 namespace frenet_planner_ros {
 namespace {
@@ -21,8 +24,10 @@ const char* ConversionStatusName(ConversionStatus status) {
         case ConversionStatus::NON_FINITE_VALUE: return "NON_FINITE_VALUE";
         case ConversionStatus::UNSUPPORTED_BEHAVIOR:
             return "UNSUPPORTED_BEHAVIOR";
-        case ConversionStatus::NON_EMPTY_OBJECTS_UNSUPPORTED:
-            return "NON_EMPTY_OBJECTS_UNSUPPORTED";
+        case ConversionStatus::DUPLICATE_OBJECT_ID:
+            return "DUPLICATE_OBJECT_ID";
+        case ConversionStatus::INVALID_OBJECT_GEOMETRY:
+            return "INVALID_OBJECT_GEOMETRY";
         case ConversionStatus::INVALID_PATH: return "INVALID_PATH";
     }
     return "UNKNOWN_CONVERSION_STATUS";
@@ -87,18 +92,78 @@ ConversionStatus ConvertBehaviorContext(
 
 ConversionStatus ConvertDetectedObjects(
     const asmc_msgs::DetectedObjectArray& message,
-    std::vector<ObjectInfo>& objects) {
+    std::vector<ObjectInfo>& objects,
+    std::vector<TrackedObstacle>& collision_objects) {
     if (!IsMapFrame(message.header.frame_id)) {
         return ConversionStatus::INVALID_FRAME;
     }
     if (message.header.stamp.isZero()) {
         return ConversionStatus::INVALID_TIMESTAMP;
     }
-    if (!message.objects.empty()) {
-        return ConversionStatus::NON_EMPTY_OBJECTS_UNSUPPORTED;
+    std::vector<ObjectInfo> converted_objects;
+    std::vector<TrackedObstacle> converted_collision_objects;
+    converted_objects.reserve(message.objects.size());
+    converted_collision_objects.reserve(message.objects.size());
+    std::unordered_set<int32_t> object_ids;
+
+    for (const auto& message_object : message.objects) {
+        if (!object_ids.insert(message_object.id).second) {
+            return ConversionStatus::DUPLICATE_OBJECT_ID;
+        }
+        if (!std::isfinite(message_object.center.x) ||
+            !std::isfinite(message_object.center.y) ||
+            !std::isfinite(message_object.center.z) ||
+            !std::isfinite(message_object.yaw) ||
+            !std::isfinite(message_object.vx) ||
+            !std::isfinite(message_object.vy) ||
+            !std::isfinite(message_object.yaw_rate) ||
+            !std::isfinite(message_object.width) || message_object.width <= 0.0 ||
+            !std::isfinite(message_object.length) || message_object.length <= 0.0 ||
+            !std::isfinite(message_object.height) || message_object.height <= 0.0) {
+            return ConversionStatus::NON_FINITE_VALUE;
+        }
+
+        ObjectInfo object;
+        object.id = message_object.id;
+        object.type = message_object.type;
+        object.x = message_object.center.x;
+        object.y = message_object.center.y;
+        object.z = message_object.center.z;
+        object.heading = message_object.yaw;
+        object.vx = message_object.vx;
+        object.vy = message_object.vy;
+        object.speed = std::hypot(message_object.vx, message_object.vy);
+        object.yaw_rate = message_object.yaw_rate;
+        object.width = message_object.width;
+        object.length = message_object.length;
+        object.height = message_object.height;
+
+        TrackedObstacle collision_object;
+        collision_object.id = message_object.id;
+        collision_object.type = message_object.type;
+        collision_object.vx = message_object.vx;
+        collision_object.vy = message_object.vy;
+        collision_object.geometry_source = ObstacleGeometrySource::LIDAR_CORNERS;
+        for (std::size_t i = 0; i < collision_object.corners.size(); ++i) {
+            const auto& corner = message_object.obb_corners[i];
+            collision_object.corners[i] = {corner.x, corner.y, corner.z};
+        }
+        const geometry::CornerValidationResult validation =
+            geometry::ValidateCorners8(collision_object.corners);
+        const geometry::ZRange z_range =
+            geometry::ComputeZRange(collision_object.corners);
+        if (!validation.valid || !z_range.valid ||
+            z_range.max - z_range.min <= 1e-6) {
+            return ConversionStatus::INVALID_OBJECT_GEOMETRY;
+        }
+        collision_object.geometry_valid = true;
+        collision_object.z_valid = true;
+        converted_objects.push_back(object);
+        converted_collision_objects.push_back(collision_object);
     }
 
-    objects.clear();
+    objects = std::move(converted_objects);
+    collision_objects = std::move(converted_collision_objects);
     return ConversionStatus::OK;
 }
 

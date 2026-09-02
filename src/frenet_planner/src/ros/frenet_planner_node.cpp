@@ -238,6 +238,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
     CartesianState ego{};
     PlannerCommand command{};
     std::vector<ObjectInfo> objects;
+    std::vector<TrackedObstacle> collision_objects;
 
     const ConversionStatus vehicle_status =
         ConvertVehicleState(snapshot.vehicle, ego);
@@ -267,7 +268,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
     }
 
     const ConversionStatus objects_status =
-        ConvertDetectedObjects(snapshot.objects, objects);
+        ConvertDetectedObjects(snapshot.objects, objects, collision_objects);
     if (objects_status != ConversionStatus::OK) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: objects conversion failed (%s)",
@@ -277,7 +278,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
     }
 
     CartesianPath path;
-    if (!planner_.Plan(ego, objects, command, path)) {
+    if (!planner_.Plan(ego, objects, collision_objects, command, path)) {
         ++plan_fail_streak_;
         const bool collision_blocked = planner_.last_failure_reason() ==
             FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED;

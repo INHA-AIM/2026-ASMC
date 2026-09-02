@@ -10,6 +10,7 @@
 
 #include "frenet_planner/global/global.hpp"
 #include "frenet_planner/math/frenet_converter.hpp"
+#include "frenet_planner/obstacle/tracked_obstacle.hpp"
 
 namespace frenet_planner_ros {
 
@@ -20,7 +21,8 @@ enum class ConversionStatus {
     INVALID_TIMESTAMP,
     NON_FINITE_VALUE,
     UNSUPPORTED_BEHAVIOR,
-    NON_EMPTY_OBJECTS_UNSUPPORTED,
+    DUPLICATE_OBJECT_ID,
+    INVALID_OBJECT_GEOMETRY,
     INVALID_PATH,
 };
 
@@ -32,7 +34,8 @@ ConversionStatus ConvertBehaviorContext(
     const asmc_msgs::BehaviorContext& message, PlannerCommand& command);
 ConversionStatus ConvertDetectedObjects(
     const asmc_msgs::DetectedObjectArray& message,
-    std::vector<ObjectInfo>& objects);
+    std::vector<ObjectInfo>& objects,
+    std::vector<TrackedObstacle>& collision_objects);
 ConversionStatus ConvertCartesianPath(
     const CartesianPath& path, double dt,
     const asmc_msgs::VehicleState& ego_at_plan,

@@ -47,6 +47,35 @@ CartesianState LoadPoseNearArcLength(const std::string& path,
     return pose;
 }
 
+ObjectInfo MakeObjectInfo(int id, double x, double y) {
+    ObjectInfo object;
+    object.id = id;
+    object.x = x;
+    object.y = y;
+    object.z = 1.0;
+    object.width = 2.0;
+    object.length = 4.0;
+    object.height = 2.0;
+    return object;
+}
+
+TrackedObstacle MakeAuthoritativeBox(int id, double x, double y) {
+    TrackedObstacle obstacle;
+    obstacle.id = id;
+    obstacle.geometry_source = ObstacleGeometrySource::LIDAR_CORNERS;
+    obstacle.geometry_valid = true;
+    obstacle.z_valid = true;
+    const double xy[4][2] = {
+        {x - 2.0, y - 1.0}, {x + 2.0, y - 1.0},
+        {x + 2.0, y + 1.0}, {x - 2.0, y + 1.0},
+    };
+    for (std::size_t i = 0; i < 4; ++i) {
+        obstacle.corners[i] = {xy[i][0], xy[i][1], 0.0};
+        obstacle.corners[i + 4] = {xy[i][0], xy[i][1], 2.0};
+    }
+    return obstacle;
+}
+
 }  // namespace
 
 int main() {
@@ -75,6 +104,24 @@ int main() {
     const bool keep_ok = planner.Plan(ego, no_objects, keep, path);
     Expect(keep_ok && planner.last_mode() == LANE_KEEPING && !path.x.empty(),
            "external KEEP ignores legacy merge-zone behavior selection");
+
+    const std::vector<ObjectInfo> outside_objects = {
+        MakeObjectInfo(31, ego.x + 100.0, ego.y + 100.0)};
+    const std::vector<TrackedObstacle> outside_collision_objects = {
+        MakeAuthoritativeBox(31, ego.x + 100.0, ego.y + 100.0)};
+    Expect(planner.Plan(ego, outside_objects, outside_collision_objects,
+                        keep, path) && !path.x.empty(),
+           "authoritative OBB outside path preserves KEEP trajectory");
+
+    const std::vector<ObjectInfo> blocking_objects = {
+        MakeObjectInfo(32, ego.x, ego.y)};
+    const std::vector<TrackedObstacle> blocking_collision_objects = {
+        MakeAuthoritativeBox(32, ego.x, ego.y)};
+    Expect(!planner.Plan(ego, blocking_objects, blocking_collision_objects,
+                         keep, path) &&
+               planner.last_failure_reason() ==
+                   FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED,
+           "authoritative OBB on ego path blocks all candidates through SAT");
 
     keep.has_target_speed = true;
     keep.target_speed = 15.0;

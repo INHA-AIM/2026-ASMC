@@ -91,6 +91,7 @@ add_dependencies(frenet_planner_message_converter
   ${catkin_EXPORTED_TARGETS}
 )
 target_link_libraries(frenet_planner_message_converter
+  frenet_geometry
   ${catkin_LIBRARIES}
 )
 

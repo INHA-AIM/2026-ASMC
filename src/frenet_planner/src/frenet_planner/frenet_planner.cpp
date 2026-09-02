@@ -328,7 +328,7 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
 bool FrenetPlanner::Plan(const CartesianState& ego,
                          const std::vector<ObjectInfo>& obstacles,
                          CartesianPath& out_path) {
-    return PlanInternal(ego, obstacles, nullptr, out_path);
+    return PlanInternal(ego, obstacles, nullptr, nullptr, out_path);
 }
 
 bool FrenetPlanner::Plan(const CartesianState& ego,
@@ -343,12 +343,30 @@ bool FrenetPlanner::Plan(const CartesianState& ego,
         last_failure_reason_ = PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
         return false;
     }
-    return PlanInternal(ego, obstacles, &command, out_path);
+    return PlanInternal(ego, obstacles, &command, nullptr, out_path);
+}
+
+bool FrenetPlanner::Plan(
+    const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
+    const std::vector<TrackedObstacle>& collision_obstacles,
+    const PlannerCommand& command, CartesianPath& out_path) {
+    if (command.mode != LANE_KEEPING ||
+        collision_obstacles.size() != obstacles.size() ||
+        (command.has_target_speed &&
+         (!std::isfinite(command.target_speed) || command.target_speed < 0.0)) ||
+        (command.has_max_speed &&
+         (!std::isfinite(command.max_speed) || command.max_speed < 0.0))) {
+        last_failure_reason_ = PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+        return false;
+    }
+    return PlanInternal(ego, obstacles, &command, &collision_obstacles, out_path);
 }
 
 bool FrenetPlanner::PlanInternal(
     const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
-    const PlannerCommand* external_command, CartesianPath& out_path) {
+    const PlannerCommand* external_command,
+    const std::vector<TrackedObstacle>* collision_obstacles,
+    CartesianPath& out_path) {
     const bool use_legacy_behavior = external_command == nullptr;
     last_failure_reason_ = PlanFailureReason::NONE;
     if (!ref_loaded_) {
@@ -390,8 +408,11 @@ bool FrenetPlanner::PlanInternal(
         const auto it = object_yaw_rates.find(obj.id);
         obj.yaw_rate = it == object_yaw_rates.end() ? 0.0 : it->second;
     }
+    // ROS/LiDAR 경로는 perception이 준 corners를 그대로 사용한다. Legacy API만
+    // ObjectInfo의 center/dimension/yaw로 기존 adapter geometry를 생성한다.
     const std::vector<TrackedObstacle> predicted_collision_obstacles =
-        MakeLegacyTrackedObstacles(predicted_obstacles);
+        collision_obstacles ? *collision_obstacles
+                            : MakeLegacyTrackedObstacles(predicted_obstacles);
 
     double resolved_target_speed = LookaheadTargetSpeed(
         ref_, s, ego.v, curve_speed_cfg_, limits_.max_longitudinal_accel,
