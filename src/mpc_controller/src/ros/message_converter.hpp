@@ -5,7 +5,6 @@
 #include <ros/time.h>
 
 #include "global/global.hpp"
-#include "udp_network/datatypes.hpp"
 
 namespace mpc_controller_ros {
 
@@ -25,6 +24,8 @@ bool IsTrajectoryFresh(const asmc_msgs::Trajectory& message,
                        const ros::Time& now, double timeout_seconds);
 TrajectoryStatus ConvertTrajectory(const asmc_msgs::Trajectory& message,
                                    PlannedPath& path, MPCState& ego_state);
-morai_msgs::CtrlCmd ToRosControlCommand(const CtrlCmd& command);
+morai_msgs::CtrlCmd MakeRosStopCommand();
+morai_msgs::CtrlCmd ToRosControlCommand(const MPCControl& control,
+                                        const MPCParams& params);
 
 }  // namespace mpc_controller_ros

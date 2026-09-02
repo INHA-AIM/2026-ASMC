@@ -7,7 +7,6 @@
 
 #include "global/parameter_loader.hpp"
 #include "ros/message_converter.hpp"
-#include "runtime/control_adapter.hpp"
 #include "runtime/path_resampler.hpp"
 #include "solver/mpc_solver.hpp"
 
@@ -31,6 +30,19 @@ MpcRosNode::MpcRosNode(ros::NodeHandle nh, ros::NodeHandle private_nh)
     private_nh_.param("mpc/config_path", params_path, params_path);
 
     loadMPCParameters(params_path);
+    double bridge_max_steer_degrees = 36.25;
+    private_nh_.param("vehicle/max_steer_deg", bridge_max_steer_degrees,
+                      bridge_max_steer_degrees);
+    constexpr double kRadiansToDegrees =
+        180.0 / 3.14159265358979323846;
+    const double mpc_max_steer_degrees =
+        mpc_params.steering_max * kRadiansToDegrees;
+    if (std::fabs(mpc_max_steer_degrees - bridge_max_steer_degrees) > 0.1) {
+        ROS_WARN(
+            "MPC max steering %.2f deg differs from MORAI bridge %.2f deg; "
+            "align both to the physical vehicle limit before driving",
+            mpc_max_steer_degrees, bridge_max_steer_degrees);
+    }
     ego = MPCState{};
     last_control = MPCControl{};
 
@@ -58,7 +70,7 @@ void MpcRosNode::trajectoryCallback(
 void MpcRosNode::publishStop(const char* reason) {
     warm_start_.clear();
     last_control = MPCControl{};
-    control_pub_.publish(ToRosControlCommand(MakeStopCommand()));
+    control_pub_.publish(MakeRosStopCommand());
     ROS_WARN_THROTTLE(1.0, "MPC fail-safe STOP: %s", reason);
 }
 
@@ -107,8 +119,7 @@ void MpcRosNode::controlTimerCallback(const ros::TimerEvent&) {
 
     warm_start_ = result.controls;
     last_control = result.control;
-    control_pub_.publish(
-        ToRosControlCommand(ToControlCommand(result.control, mpc_params)));
+    control_pub_.publish(ToRosControlCommand(result.control, mpc_params));
 }
 
 }  // namespace mpc_controller_ros

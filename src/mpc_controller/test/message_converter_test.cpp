@@ -3,7 +3,6 @@
 #include <limits>
 
 #include "ros/message_converter.hpp"
-#include "runtime/control_adapter.hpp"
 #include "runtime/path_resampler.hpp"
 
 namespace mpc_controller_ros {
@@ -63,12 +62,28 @@ TEST(TrajectoryConverterTest, RecognizesValidSinglePointStop) {
     EXPECT_EQ(TrajectoryStatus::STOP_TRAJECTORY,
               ConvertTrajectory(message, path, state));
 
-    const morai_msgs::CtrlCmd stop =
-        ToRosControlCommand(MakeStopCommand());
+    const morai_msgs::CtrlCmd stop = MakeRosStopCommand();
     EXPECT_EQ(1, stop.longlCmdType);
     EXPECT_DOUBLE_EQ(0.0, stop.accel);
     EXPECT_NEAR(0.3, stop.brake, 1e-6);
     EXPECT_DOUBLE_EQ(0.0, stop.steering);
+}
+
+TEST(TrajectoryConverterTest, PublishesRosSteeringInRadians) {
+    MPCParams params;
+    params.steering_max = 0.6981;
+    params.accel_max = 3.0;
+    params.accel_min = -5.0;
+    MPCControl control;
+    control.delta = params.steering_max * 0.5;
+    control.accel = 1.5;
+
+    const morai_msgs::CtrlCmd message =
+        ToRosControlCommand(control, params);
+
+    EXPECT_DOUBLE_EQ(params.steering_max * 0.5, message.steering);
+    EXPECT_DOUBLE_EQ(0.5, message.accel);
+    EXPECT_DOUBLE_EQ(0.0, message.brake);
 }
 
 TEST(TrajectoryConverterTest, RejectsInvalidInputs) {

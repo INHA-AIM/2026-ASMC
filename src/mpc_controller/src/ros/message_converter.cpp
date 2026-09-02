@@ -3,6 +3,8 @@
 #include <cmath>
 #include <utility>
 
+#include "global/utils.hpp"
+
 namespace mpc_controller_ros {
 namespace {
 
@@ -102,14 +104,31 @@ TrajectoryStatus ConvertTrajectory(const asmc_msgs::Trajectory& message,
                            : TrajectoryStatus::OK;
 }
 
-morai_msgs::CtrlCmd ToRosControlCommand(const CtrlCmd& command) {
+morai_msgs::CtrlCmd MakeRosStopCommand() {
     morai_msgs::CtrlCmd message;
-    message.longlCmdType = command.cmd_type;
-    message.accel = command.accel;
-    message.brake = command.brake;
-    message.steering = command.steer;
-    message.velocity = command.velocity;
-    message.acceleration = command.acceleration;
+    message.longlCmdType = 1;
+    message.accel = 0.0;
+    message.brake = 0.3;
+    message.steering = 0.0;
+    return message;
+}
+
+morai_msgs::CtrlCmd ToRosControlCommand(const MPCControl& control,
+                                        const MPCParams& params) {
+    morai_msgs::CtrlCmd message;
+    message.longlCmdType = 1;
+    if (control.accel >= 0.0) {
+        message.accel = clip(control.accel / params.accel_max, 0.0, 1.0);
+        message.brake = 0.0;
+    } else {
+        message.accel = 0.0;
+        message.brake =
+            clip(-control.accel / std::fabs(params.accel_min), 0.0, 1.0);
+    }
+    // morai_msgs/CtrlCmd.steering is radians. The MORAI bridge owns the
+    // transport-specific conversion from radians to normalized UDP steering.
+    message.steering =
+        clip(control.delta, -params.steering_max, params.steering_max);
     return message;
 }
 

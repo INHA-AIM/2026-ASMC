@@ -6,3 +6,7 @@ publish_topics:
 
 timeouts:
   trajectory: 0.25
+
+# Must match morai_udp_bridge max_steer_deg and the physical vehicle limit.
+vehicle:
+  max_steer_deg: 36.25
