@@ -41,6 +41,11 @@ public:
     bool Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
               CartesianPath& out_path);
 
+    // 외부 FSM command 기반 진입점. 첫 통합 단계에서는 LANE_KEEPING만 지원하며,
+    // 기존 3인자 Plan()은 legacy UDP 회귀 경로로 유지한다.
+    bool Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
+              const PlannerCommand& command, CartesianPath& out_path);
+
     // Plan()이 반환하는 CartesianPath의 샘플 간격 [s] (params.yaml의 planner.dt).
     // MPC 쪽에서 이 값을 알아야 시간 기준으로 재샘플링해 궤적 추종(time-aligned
     // tracking)을 할 수 있다 (frenet_planner.cpp의 dt와 mpc_params.dt가 서로
@@ -56,6 +61,11 @@ public:
     PlanFailureReason last_failure_reason() const { return last_failure_reason_; }
 
 private:
+    bool PlanInternal(const CartesianState& ego,
+                      const std::vector<ObjectInfo>& obstacles,
+                      const PlannerCommand* external_command,
+                      CartesianPath& out_path);
+
     // TRACKING은 외부 AVOID 모드가 아니다. 정적 장애물 ID/방향만
     // 미리 잠그고 주행은 LANE_KEEPING을 계속하는 내부 상태다.
     enum class AvoidPhase { TRACKING, SHIFT, PASS };

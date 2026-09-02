@@ -322,8 +322,30 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
     return true;
 }
 
-bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
-                          CartesianPath& out_path) {
+bool FrenetPlanner::Plan(const CartesianState& ego,
+                         const std::vector<ObjectInfo>& obstacles,
+                         CartesianPath& out_path) {
+    return PlanInternal(ego, obstacles, nullptr, out_path);
+}
+
+bool FrenetPlanner::Plan(const CartesianState& ego,
+                         const std::vector<ObjectInfo>& obstacles,
+                         const PlannerCommand& command,
+                         CartesianPath& out_path) {
+    if (command.mode != LANE_KEEPING ||
+        (command.has_target_speed &&
+         (!std::isfinite(command.target_speed) || command.target_speed < 0.0)) ||
+        (command.has_max_speed &&
+         (!std::isfinite(command.max_speed) || command.max_speed < 0.0))) {
+        last_failure_reason_ = PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+        return false;
+    }
+    return PlanInternal(ego, obstacles, &command, out_path);
+}
+
+bool FrenetPlanner::PlanInternal(
+    const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
+    const PlannerCommand* external_command, CartesianPath& out_path) {
     last_failure_reason_ = PlanFailureReason::NONE;
     if (!ref_loaded_) {
         last_failure_reason_ = PlanFailureReason::NOT_INITIALIZED;
@@ -881,9 +903,23 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
         cmd.mode = LANE_KEEPING;
     }
 
+    // 외부 command 경로에서는 내부 장애물 기반 행동 선택 결과를 사용하지 않는다.
+    // 첫 통합 버전은 검증된 LANE_KEEPING만 여기까지 들어온다.
+    if (external_command) {
+        cmd.mode = LANE_KEEPING;
+        cmd.target_lane = 0;
+        cmd.avoidance_d_offset = 0.0;
+    }
+
     cmd.target_speed = LookaheadTargetSpeed(ref_, s, ego.v, curve_speed_cfg_,
                                              limits_.max_longitudinal_accel,
                                              limits_.max_lateral_accel, limits_.max_curvature);
+    if (external_command && external_command->has_target_speed) {
+        cmd.target_speed = external_command->target_speed;
+    }
+    if (external_command && external_command->has_max_speed) {
+        cmd.target_speed = std::min(cmd.target_speed, external_command->max_speed);
+    }
     if (cmd.mode == MERGE && merge_.phase == MergePhase::CROSS) {
         const double floor = merge_.type == MergeType::HIGHWAY
             ? highway_merge_cfg_.cross_speed_floor : merge_cfg_.cross_speed_floor;

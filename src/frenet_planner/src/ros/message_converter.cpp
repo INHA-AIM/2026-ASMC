@@ -1,6 +1,5 @@
 #include "ros/message_converter.hpp"
 
-#include <algorithm>
 #include <cmath>
 
 namespace frenet_planner_ros {
@@ -76,13 +75,10 @@ ConversionStatus ConvertBehaviorContext(
 
     converted.target_lane = 0;
     converted.leader_id = -1;
-    if (message.has_desired_speed) {
-        converted.target_speed = message.desired_speed;
-    }
-    if (message.has_max_speed) {
-        converted.target_speed = std::min(converted.target_speed,
-                                          message.max_speed);
-    }
+    converted.has_target_speed = message.has_desired_speed;
+    converted.target_speed = message.desired_speed;
+    converted.has_max_speed = message.has_max_speed;
+    converted.max_speed = message.max_speed;
     command = converted;
     return ConversionStatus::OK;
 }

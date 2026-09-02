@@ -83,8 +83,8 @@ target_link_libraries(frenet_planner_udp_legacy
 )
 
 # ROS runtime shell.
-# Message conversion, Plan() invocation, fail-safe handling, and actual
-# trajectory/feedback publication are added in the next implementation step.
+# Plan() invocation, fail-safe handling, and actual trajectory/feedback
+# publication are added in the next ROS node implementation step.
 add_library(frenet_planner_message_converter
   src/ros/message_converter.cpp
 )

@@ -83,8 +83,37 @@ int main() {
     Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
                ConversionStatus::OK &&
                command.mode == LANE_KEEPING && command.target_lane == 0 &&
-               command.target_speed == 8.0,
+               command.has_target_speed && command.target_speed == 8.0 &&
+               !command.has_max_speed,
            "KEEP explicitly maps to LANE_KEEPING");
+
+    behavior = MakeKeepBehavior();
+    behavior.has_desired_speed = false;
+    behavior.has_max_speed = true;
+    behavior.max_speed = 6.0;
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::OK &&
+               !command.has_target_speed && command.has_max_speed &&
+               command.max_speed == 6.0,
+           "max-only behavior preserves planner-default semantics");
+
+    behavior = MakeKeepBehavior();
+    behavior.has_max_speed = true;
+    behavior.max_speed = 6.0;
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::OK &&
+               command.has_target_speed && command.target_speed == 8.0 &&
+               command.has_max_speed && command.max_speed == 6.0,
+           "desired and max speeds remain separate");
+
+    behavior = MakeKeepBehavior();
+    behavior.has_desired_speed = false;
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::OK &&
+               !command.has_target_speed && !command.has_max_speed,
+           "missing speed fields preserve planner-default semantics");
+
+    behavior = MakeKeepBehavior();
     behavior.selected_behavior = asmc_msgs::BehaviorContext::FOLLOW;
     Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
                ConversionStatus::UNSUPPORTED_BEHAVIOR,
