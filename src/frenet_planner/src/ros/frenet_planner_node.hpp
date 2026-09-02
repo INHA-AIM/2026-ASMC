@@ -10,6 +10,8 @@
 #include <asmc_msgs/VehicleState.h>
 #include <ros/ros.h>
 
+#include "frenet_planner/frenet_planner.hpp"
+
 namespace frenet_planner_ros {
 
 class FrenetPlannerNode {
@@ -31,6 +33,8 @@ class FrenetPlannerNode {
     void behaviorCallback(const asmc_msgs::BehaviorContext::ConstPtr& message);
     void planningTimerCallback(const ros::TimerEvent& event);
     InputSnapshot takeSnapshot() const;
+    bool isFresh(const ros::Time& stamp, double timeout_seconds,
+                 const ros::Time& now, double& age_seconds) const;
 
     ros::NodeHandle nh_;
     ros::NodeHandle pnh_;
@@ -41,6 +45,9 @@ class FrenetPlannerNode {
     ros::Publisher feedback_pub_;
     ros::Timer planning_timer_;
 
+    FrenetPlanner planner_;
+    bool planner_initialized_ = false;
+
     mutable std::mutex input_mutex_;
     asmc_msgs::VehicleState latest_vehicle_;
     asmc_msgs::DetectedObjectArray latest_objects_;
@@ -50,7 +57,9 @@ class FrenetPlannerNode {
     bool has_behavior_ = false;
 
     double planning_frequency_hz_ = 20.0;
+    double vehicle_timeout_seconds_ = 0.20;
+    double objects_timeout_seconds_ = 0.30;
+    double behavior_timeout_seconds_ = 0.50;
 };
 
 }  // namespace frenet_planner_ros
-

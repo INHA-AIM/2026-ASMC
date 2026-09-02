@@ -1,6 +1,11 @@
 planning:
   frequency: 20.0
 
+timeouts:
+  vehicle_state: 0.20
+  objects: 0.30
+  behavior: 0.50
+
 topics:
   vehicle_state: /vehicle/state
   objects: /perception/objects
@@ -9,4 +14,3 @@ topics:
 publish_topics:
   trajectory: /planning/trajectory
   feedback: /planning/feedback
-
