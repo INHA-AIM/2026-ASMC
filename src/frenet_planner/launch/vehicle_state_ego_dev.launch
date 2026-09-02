@@ -1,0 +1,5 @@
+<launch>
+  <!-- Development only. Never launch together with the GPS/IMU adapter. -->
+  <node pkg="frenet_planner" type="ego_vehicle_state_dev_node"
+        name="ego_vehicle_state_dev_adapter" output="screen"/>
+</launch>

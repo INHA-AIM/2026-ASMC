@@ -1,0 +1,16 @@
+topics:
+  gps: /gps
+  imu: /imu
+publish_topic: /vehicle/state
+publish_frequency: 50.0
+
+timeouts:
+  gps: 0.20
+  imu: 0.20
+
+# GPSMessage has no velocity. Derive speed from consecutive UTM positions.
+speed:
+  minimum_dt: 0.02
+  maximum_dt: 1.0
+  maximum_mps: 60.0
+  filter_alpha: 0.35

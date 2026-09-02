@@ -5,7 +5,9 @@ add_compile_options(-std=c++17 -O2)
 
 find_package(catkin REQUIRED COMPONENTS
   asmc_msgs
+  morai_msgs
   roscpp
+  sensor_msgs
 )
 find_package(Threads REQUIRED)
 find_package(yaml-cpp REQUIRED)
@@ -13,7 +15,7 @@ find_package(yaml-cpp REQUIRED)
 catkin_package(
   INCLUDE_DIRS src
   LIBRARIES frenet_planner_core
-  CATKIN_DEPENDS asmc_msgs roscpp
+  CATKIN_DEPENDS asmc_msgs morai_msgs roscpp sensor_msgs
 )
 
 include_directories(
@@ -108,6 +110,32 @@ target_link_libraries(frenet_planner_node
   ${catkin_LIBRARIES}
 )
 
+# Canonical vehicle-state boundary. GPS/IMU is the competition source and
+# EgoVehicleStatus is development-only. No runtime fallback connects them.
+add_library(frenet_vehicle_state_adapter
+  src/ros/state/vehicle_state_adapter.cpp
+  src/udp_network/gps_transform.cpp
+)
+add_dependencies(frenet_vehicle_state_adapter ${catkin_EXPORTED_TARGETS})
+target_link_libraries(frenet_vehicle_state_adapter ${catkin_LIBRARIES})
+
+add_executable(gps_imu_vehicle_state_node
+  src/ros/state/gps_imu_vehicle_state_node.cpp)
+add_dependencies(gps_imu_vehicle_state_node ${catkin_EXPORTED_TARGETS})
+target_link_libraries(gps_imu_vehicle_state_node
+  frenet_vehicle_state_adapter ${catkin_LIBRARIES})
+
+add_executable(ego_vehicle_state_dev_node
+  src/ros/state/ego_vehicle_state_dev_node.cpp)
+add_dependencies(ego_vehicle_state_dev_node ${catkin_EXPORTED_TARGETS})
+target_link_libraries(ego_vehicle_state_dev_node
+  frenet_vehicle_state_adapter ${catkin_LIBRARIES})
+
+add_executable(empty_objects_test_publisher
+  src/ros/state/empty_objects_test_publisher.cpp)
+add_dependencies(empty_objects_test_publisher ${catkin_EXPORTED_TARGETS})
+target_link_libraries(empty_objects_test_publisher ${catkin_LIBRARIES})
+
 if(CATKIN_ENABLE_TESTING)
   add_executable(geometry_foundation_test
     tests/geometry_foundation_test.cpp
@@ -156,14 +184,24 @@ if(CATKIN_ENABLE_TESTING)
     frenet_planner_core
   )
   add_test(NAME command_keep_plan_test COMMAND command_keep_plan_test)
+
+  add_executable(vehicle_state_adapter_test tests/vehicle_state_adapter_test.cpp)
+  add_dependencies(vehicle_state_adapter_test ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(vehicle_state_adapter_test
+    frenet_vehicle_state_adapter ${catkin_LIBRARIES})
+  add_test(NAME vehicle_state_adapter_test COMMAND vehicle_state_adapter_test)
 endif()
 
 install(TARGETS
     frenet_geometry
     frenet_planner_core
     frenet_planner_message_converter
+    frenet_vehicle_state_adapter
     frenet_planner_udp_legacy
     frenet_planner_node
+    gps_imu_vehicle_state_node
+    ego_vehicle_state_dev_node
+    empty_objects_test_publisher
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
