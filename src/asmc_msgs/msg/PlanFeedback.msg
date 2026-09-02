@@ -1,0 +1,27 @@
+std_msgs/Header header
+
+uint8 FAILURE_NONE=0
+uint8 FAILURE_COLLISION_BLOCKED=1
+uint8 FAILURE_GENERATION=2
+uint8 FAILURE_STATE_STALE=3
+uint8 FAILURE_BEHAVIOR_STALE=4
+uint8 FAILURE_OBJECTS_STALE=5
+uint8 FAILURE_INVALID_INPUT=6
+uint8 FAILURE_UNSUPPORTED_BEHAVIOR=7
+uint8 FAILURE_NOT_INITIALIZED=8
+
+uint32 command_id
+bool plan_valid
+uint8 failure_reason
+uint8 selected_behavior
+string selected_target_link_id
+
+bool previous_plan_still_valid
+bool behavior_completed
+float64 behavior_progress
+
+bool lane_change_completed
+float64 lane_change_progress
+
+float64 selected_cost
+float64 min_collision_margin
