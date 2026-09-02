@@ -26,4 +26,3 @@
 ### Open before LiDAR integration
 
 - 실제 LiDAR/Perception 출력과 대조해 `obb_corners[0..7]` 순서를 확정해야 한다.
-

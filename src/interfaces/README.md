@@ -182,4 +182,3 @@ ROS:    ROS Frenet + ROS MPC + MORAI UDP Bridge
 - 이 문서가 사람이 읽는 specification이다.
 - Breaking change는 Planning, Behavior, Perception/Integration 담당 합의 후 반영한다.
 - 변경 시 `CHANGELOG.md`를 함께 갱신한다.
-
