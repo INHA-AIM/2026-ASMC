@@ -4,6 +4,40 @@
 #include <ros/ros.h>
 
 namespace behavior_planner {
+namespace {
+
+constexpr double kCommandValueTolerance = 1e-3;
+
+bool NearlyEqual(double lhs, double rhs) {
+  return std::abs(lhs - rhs) <= kCommandValueTolerance;
+}
+
+}  // namespace
+
+bool SameCommandIdentity(const asmc_msgs::BehaviorContext& lhs,
+                         const asmc_msgs::BehaviorContext& rhs) {
+  return lhs.valid == rhs.valid &&
+         lhs.selected_behavior == rhs.selected_behavior &&
+         lhs.force_stop == rhs.force_stop &&
+         lhs.has_desired_speed == rhs.has_desired_speed &&
+         (!lhs.has_desired_speed ||
+          NearlyEqual(lhs.desired_speed, rhs.desired_speed)) &&
+         lhs.has_max_speed == rhs.has_max_speed &&
+         (!lhs.has_max_speed || NearlyEqual(lhs.max_speed, rhs.max_speed)) &&
+         lhs.has_target_lane == rhs.has_target_lane &&
+         (!lhs.has_target_lane ||
+          lhs.target_lane_offset == rhs.target_lane_offset) &&
+         lhs.has_target_d == rhs.has_target_d &&
+         (!lhs.has_target_d || NearlyEqual(lhs.target_d, rhs.target_d)) &&
+         lhs.has_stop_target == rhs.has_stop_target &&
+         (!lhs.has_stop_target ||
+          (NearlyEqual(lhs.stop_x, rhs.stop_x) &&
+           NearlyEqual(lhs.stop_y, rhs.stop_y))) &&
+         lhs.has_lead_vehicle == rhs.has_lead_vehicle &&
+         (!lhs.has_lead_vehicle ||
+          lhs.lead_vehicle_id == rhs.lead_vehicle_id) &&
+         lhs.target_link_id == rhs.target_link_id;
+}
 
 asmc_msgs::BehaviorContext MsgConverter::toMsg(
     const BehaviorContextData& context, uint32_t command_id) {

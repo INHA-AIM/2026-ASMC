@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <asmc_msgs/BehaviorContext.h>
 #include <asmc_msgs/PlanFeedback.h>
 #include <morai_msgs/EgoVehicleStatus.h>
 #include <morai_msgs/ObjectStatusList.h>
@@ -45,7 +46,9 @@ class BehaviorNode {
   EgoState ego_;
   PerceptionObjects objects_;
   asmc_msgs::PlanFeedback feedback_;
-  uint32_t next_command_id_ = 1;
+  asmc_msgs::BehaviorContext last_command_;
+  uint32_t current_command_id_ = 0;
+  bool has_last_command_ = false;
   bool ego_received_ = false;
   double rate_ = 10.0;
 };

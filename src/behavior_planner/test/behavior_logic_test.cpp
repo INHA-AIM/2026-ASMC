@@ -100,6 +100,35 @@ TEST(MsgConverterTest, PreservesFollowWithoutForcingKeep) {
   EXPECT_EQ(17, message.lead_vehicle_id);
 }
 
+TEST(MsgConverterTest, CommandIdentityIgnoresPublishMetadataAndTinyNoise) {
+  BehaviorContextData context;
+  context.timestamp = 1.0;
+  context.target.desired_speed = 8.0;
+  const asmc_msgs::BehaviorContext first = MsgConverter::toMsg(context, 1);
+
+  context.timestamp = 2.0;
+  context.target.desired_speed += 0.0005;
+  const asmc_msgs::BehaviorContext repeated = MsgConverter::toMsg(context, 2);
+
+  EXPECT_TRUE(SameCommandIdentity(first, repeated));
+}
+
+TEST(MsgConverterTest, CommandIdentityChangesWithExecutionMeaning) {
+  BehaviorContextData context;
+  context.timestamp = 1.0;
+  context.target.desired_speed = 8.0;
+  const asmc_msgs::BehaviorContext keep = MsgConverter::toMsg(context, 1);
+
+  context.target.desired_speed = 8.1;
+  const asmc_msgs::BehaviorContext faster = MsgConverter::toMsg(context, 1);
+  EXPECT_FALSE(SameCommandIdentity(keep, faster));
+
+  context.target.desired_speed = 8.0;
+  context.selected_behavior = BehaviorType::FOLLOW;
+  const asmc_msgs::BehaviorContext follow = MsgConverter::toMsg(context, 1);
+  EXPECT_FALSE(SameCommandIdentity(keep, follow));
+}
+
 }  // namespace behavior_planner
 
 int main(int argc, char** argv) {

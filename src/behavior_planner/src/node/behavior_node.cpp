@@ -13,7 +13,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     : nh_(std::move(nh)), pnh_(std::move(pnh)) {
   std::string ego_topic = "/Ego_topic";
   std::string objects_topic = "/Object_topic";
-  std::string feedback_topic = "/planner/plan_feedback";
+  std::string feedback_topic = "/planning/feedback";
   std::string context_topic = "/behavior/context";
   std::string debug_topic = "/behavior/feature_debug";
   std::string marker_topic = "/behavior/markers";
@@ -81,7 +81,15 @@ void BehaviorNode::runOnce() {
   const UrbanFeature feature =
       builder_.build(ego_, objects_, route_, *lights_);
   const BehaviorContextData context = decision_.decide(feature, feedback_);
-  context_pub_.publish(MsgConverter::toMsg(context, next_command_id_++));
+  asmc_msgs::BehaviorContext command = MsgConverter::toMsg(context, 0);
+  if (!has_last_command_ || !SameCommandIdentity(command, last_command_)) {
+    ++current_command_id_;
+    if (current_command_id_ == 0) ++current_command_id_;
+  }
+  command.command_id = current_command_id_;
+  last_command_ = command;
+  has_last_command_ = true;
+  context_pub_.publish(command);
   debug_pub_.publish(MsgConverter::toDebugMsg(feature));
   visualization_.publish(feature, context, route_, map_, *lights_);
   logger_.write(feature, context);
