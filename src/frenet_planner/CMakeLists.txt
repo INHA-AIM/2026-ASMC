@@ -1,39 +1,41 @@
-cmake_minimum_required(VERSION 3.10)
-project(frenet_planner_node)
+cmake_minimum_required(VERSION 3.0.2)
+project(frenet_planner)
 
-# ROS/catkin 의존성이 없는 standalone CMake 프로젝트다.
+add_compile_options(-std=c++17 -O2)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-add_compile_options(-O2)
-
-find_package(yaml-cpp REQUIRED)
+find_package(catkin REQUIRED COMPONENTS
+  asmc_msgs
+  morai_msgs
+  roscpp
+  sensor_msgs
+)
 find_package(Threads REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
-# ========================================
-# Geometry foundation
-# ========================================
-add_library(frenet_geometry STATIC
-  src/frenet_planner/geometry/polygon_utils.cpp
+catkin_package(
+  INCLUDE_DIRS src
+  LIBRARIES frenet_planner_core
+  CATKIN_DEPENDS asmc_msgs morai_msgs roscpp sensor_msgs
 )
 
+include_directories(
+  src
+  ${catkin_INCLUDE_DIRS}
+  ${YAML_CPP_INCLUDE_DIRS}
+)
+
+# Geometry primitives are kept separate so the existing foundation test can
+# exercise them without pulling in the complete planner.
+add_library(frenet_geometry
+  src/frenet_planner/geometry/polygon_utils.cpp
+)
 target_include_directories(frenet_geometry PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-# ========================================
-# include 경로
-# ========================================
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/src
-  ${YAML_CPP_INCLUDE_DIR}
-)
-
-# ========================================
-# 단일 실행 파일로 빌드
-# ========================================
-add_executable(frenet_planner_node
-  src/main.cpp
+# Transport-independent planner implementation shared by the ROS and legacy
+# UDP runtimes. Networking and ROS callback code must not be added here.
+add_library(frenet_planner_core
   src/frenet_planner/frenet_planner.cpp
   src/frenet_planner/obstacle/legacy_object_adapter.cpp
   src/frenet_planner/global/data_logger.cpp
@@ -47,6 +49,23 @@ add_executable(frenet_planner_node
   src/frenet_planner/frenet/merge_selector.cpp
   src/frenet_planner/math/polynomial.cpp
   src/frenet_planner/math/frenet_converter.cpp
+)
+add_dependencies(frenet_planner_core
+  ${catkin_EXPORTED_TARGETS}
+)
+target_compile_definitions(frenet_planner_core PRIVATE
+  FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+target_link_libraries(frenet_planner_core
+  frenet_geometry
+  yaml-cpp
+)
+
+# Existing verified UDP runtime. It remains buildable as a regression baseline
+# while the ROS runtime is introduced, but the two runtimes must not be launched
+# simultaneously.
+add_executable(frenet_planner_udp_legacy
+  src/main.cpp
   src/udp_network/udp_manager.cpp
   src/udp_network/gps_transform.cpp
   src/udp_network/sender/sender.cpp
@@ -57,81 +76,153 @@ add_executable(frenet_planner_node
   src/udp_network/receiver/gps_receiver.cpp
   src/udp_network/receiver/imu_receiver.cpp
 )
-
-target_link_libraries(frenet_planner_node
-  frenet_geometry
-  yaml-cpp
+target_compile_definitions(frenet_planner_udp_legacy PRIVATE
+  FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+target_link_libraries(frenet_planner_udp_legacy
+  frenet_planner_core
   Threads::Threads
 )
 
-# 실행 위치(cwd)와 무관하게 config를 찾도록 절대경로를 컴파일 타임에 주입
-target_compile_definitions(frenet_planner_node PRIVATE
-  FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+# ROS runtime with input validation, command-based Plan() invocation,
+# fail-safe handling, and trajectory/feedback publication.
+add_library(frenet_planner_message_converter
+  src/ros/message_converter.cpp
+)
+add_dependencies(frenet_planner_message_converter
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(frenet_planner_message_converter
+  frenet_geometry
+  ${catkin_LIBRARIES}
 )
 
-# ========================================
-# Offline geometry tests
-# ========================================
-include(CTest)
+add_executable(frenet_planner_node
+  src/ros/main.cpp
+  src/ros/frenet_planner_node.cpp
+)
+add_dependencies(frenet_planner_node
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(frenet_planner_node
+  frenet_planner_message_converter
+  frenet_planner_core
+  ${catkin_LIBRARIES}
+)
 
-if(BUILD_TESTING)
+# Canonical vehicle-state boundary. GPS/IMU is the competition source and
+# EgoVehicleStatus is development-only. No runtime fallback connects them.
+add_library(frenet_vehicle_state_adapter
+  src/ros/state/vehicle_state_adapter.cpp
+  src/udp_network/gps_transform.cpp
+)
+add_dependencies(frenet_vehicle_state_adapter ${catkin_EXPORTED_TARGETS})
+target_link_libraries(frenet_vehicle_state_adapter ${catkin_LIBRARIES})
+
+add_executable(gps_imu_vehicle_state_node
+  src/ros/state/gps_imu_vehicle_state_node.cpp)
+add_dependencies(gps_imu_vehicle_state_node ${catkin_EXPORTED_TARGETS})
+target_link_libraries(gps_imu_vehicle_state_node
+  frenet_vehicle_state_adapter ${catkin_LIBRARIES})
+
+add_executable(ego_vehicle_state_dev_node
+  src/ros/state/ego_vehicle_state_dev_node.cpp)
+add_dependencies(ego_vehicle_state_dev_node ${catkin_EXPORTED_TARGETS})
+target_link_libraries(ego_vehicle_state_dev_node
+  frenet_vehicle_state_adapter ${catkin_LIBRARIES})
+
+add_executable(empty_objects_test_publisher
+  src/ros/state/empty_objects_test_publisher.cpp)
+add_dependencies(empty_objects_test_publisher ${catkin_EXPORTED_TARGETS})
+target_link_libraries(empty_objects_test_publisher ${catkin_LIBRARIES})
+
+if(CATKIN_ENABLE_TESTING)
   add_executable(geometry_foundation_test
     tests/geometry_foundation_test.cpp
   )
-
-  target_link_libraries(geometry_foundation_test PRIVATE
+  target_link_libraries(geometry_foundation_test
     frenet_geometry
   )
-
-  add_test(
-    NAME geometry_foundation_test
-    COMMAND geometry_foundation_test
-  )
+  add_test(NAME geometry_foundation_test COMMAND geometry_foundation_test)
 
   add_executable(legacy_object_adapter_test
     tests/legacy_object_adapter_test.cpp
-    src/frenet_planner/obstacle/legacy_object_adapter.cpp
   )
-  target_link_libraries(legacy_object_adapter_test PRIVATE
-    frenet_geometry
+  target_link_libraries(legacy_object_adapter_test
+    frenet_planner_core
   )
-  add_test(
-    NAME legacy_object_adapter_test
-    COMMAND legacy_object_adapter_test
-  )
+  add_test(NAME legacy_object_adapter_test COMMAND legacy_object_adapter_test)
 
   add_executable(polygon_collision_test
     tests/polygon_collision_test.cpp
-    src/frenet_planner/obstacle/legacy_object_adapter.cpp
-    src/frenet_planner/frenet/collision_checker.cpp
-    src/frenet_planner/frenet/ref_line.cpp
-    src/frenet_planner/math/frenet_converter.cpp
   )
-  target_link_libraries(polygon_collision_test PRIVATE
-    frenet_geometry
+  target_link_libraries(polygon_collision_test
+    frenet_planner_core
   )
-  add_test(
-    NAME polygon_collision_test
-    COMMAND polygon_collision_test
+  add_test(NAME polygon_collision_test COMMAND polygon_collision_test)
+
+  add_executable(message_converter_test
+    tests/message_converter_test.cpp
   )
+  add_dependencies(message_converter_test
+    ${catkin_EXPORTED_TARGETS}
+  )
+  target_link_libraries(message_converter_test
+    frenet_planner_message_converter
+    ${catkin_LIBRARIES}
+  )
+  add_test(NAME message_converter_test COMMAND message_converter_test)
+
+  add_executable(command_keep_plan_test
+    tests/command_keep_plan_test.cpp
+  )
+  target_compile_definitions(command_keep_plan_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(command_keep_plan_test
+    frenet_planner_core
+  )
+  add_test(NAME command_keep_plan_test COMMAND command_keep_plan_test)
+
+  add_executable(vehicle_state_adapter_test tests/vehicle_state_adapter_test.cpp)
+  add_dependencies(vehicle_state_adapter_test ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(vehicle_state_adapter_test
+    frenet_vehicle_state_adapter ${catkin_LIBRARIES})
+  add_test(NAME vehicle_state_adapter_test COMMAND vehicle_state_adapter_test)
 endif()
 
-# ========================================
-# Install
-# ========================================
-install(TARGETS frenet_planner_node
-  RUNTIME DESTINATION bin
+install(TARGETS
+    frenet_geometry
+    frenet_planner_core
+    frenet_planner_message_converter
+    frenet_vehicle_state_adapter
+    frenet_planner_udp_legacy
+    frenet_planner_node
+    gps_imu_vehicle_state_node
+    ego_vehicle_state_dev_node
+    empty_objects_test_publisher
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(DIRECTORY src/frenet_planner/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.hpp"
 )
 
 install(PROGRAMS tools/planner_visualizer.py
-  DESTINATION bin
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-install(DIRECTORY src/frenet_planner/config/
-  DESTINATION share/${PROJECT_NAME}/frenet_planner/config
+install(DIRECTORY config launch
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
-install(DIRECTORY src/udp_network/
-  DESTINATION share/${PROJECT_NAME}/udp_network
+install(DIRECTORY
+    src/frenet_planner/config/
+    src/udp_network/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/legacy
   FILES_MATCHING PATTERN "*.yaml"
 )

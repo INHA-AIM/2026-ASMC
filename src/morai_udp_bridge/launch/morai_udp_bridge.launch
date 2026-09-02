@@ -15,8 +15,8 @@
     <param name="cmd_ip"             value="$(arg cmd_ip)"/>
     <param name="cmd_port"           value="$(arg cmd_port)"/>
     <param name="max_steer_deg"      value="$(arg max_steer_deg)"/>
-    <param name="cmd_payload_bytes"  value="27"/>
-    <param name="invert_steer"       value="true"/>
+    <param name="cmd_payload_bytes"  value="23"/>
+    <param name="invert_steer"       value="false"/>
     <param name="ego_velocity_in_ms" value="true"/>
     <param name="frame_id"           value="base_link"/>
   </node>

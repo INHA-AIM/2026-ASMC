@@ -1,0 +1,228 @@
+#include "ros/message_converter.hpp"
+
+#include <cmath>
+#include <unordered_set>
+#include <utility>
+
+#include "frenet_planner/geometry/polygon_utils.hpp"
+
+namespace frenet_planner_ros {
+namespace {
+
+bool IsMapFrame(const std::string& frame_id) {
+    return frame_id == "map";
+}
+
+}  // namespace
+
+const char* ConversionStatusName(ConversionStatus status) {
+    switch (status) {
+        case ConversionStatus::OK: return "OK";
+        case ConversionStatus::INVALID_FLAG: return "INVALID_FLAG";
+        case ConversionStatus::INVALID_FRAME: return "INVALID_FRAME";
+        case ConversionStatus::INVALID_TIMESTAMP: return "INVALID_TIMESTAMP";
+        case ConversionStatus::NON_FINITE_VALUE: return "NON_FINITE_VALUE";
+        case ConversionStatus::UNSUPPORTED_BEHAVIOR:
+            return "UNSUPPORTED_BEHAVIOR";
+        case ConversionStatus::DUPLICATE_OBJECT_ID:
+            return "DUPLICATE_OBJECT_ID";
+        case ConversionStatus::INVALID_OBJECT_GEOMETRY:
+            return "INVALID_OBJECT_GEOMETRY";
+        case ConversionStatus::INVALID_PATH: return "INVALID_PATH";
+    }
+    return "UNKNOWN_CONVERSION_STATUS";
+}
+
+ConversionStatus ConvertVehicleState(const asmc_msgs::VehicleState& message,
+                                     CartesianState& state) {
+    if (!message.valid) return ConversionStatus::INVALID_FLAG;
+    if (!IsMapFrame(message.header.frame_id)) {
+        return ConversionStatus::INVALID_FRAME;
+    }
+    if (message.header.stamp.isZero()) {
+        return ConversionStatus::INVALID_TIMESTAMP;
+    }
+    if (!std::isfinite(message.x) || !std::isfinite(message.y) ||
+        !std::isfinite(message.yaw) || !std::isfinite(message.speed) ||
+        !std::isfinite(message.acceleration) ||
+        !std::isfinite(message.yaw_rate)) {
+        return ConversionStatus::NON_FINITE_VALUE;
+    }
+
+    CartesianState converted{};
+    converted.x = message.x;
+    converted.y = message.y;
+    converted.yaw = message.yaw;
+    converted.kappa = 0.0;
+    converted.v = message.speed;
+    converted.a = message.acceleration;
+    state = converted;
+    return ConversionStatus::OK;
+}
+
+ConversionStatus ConvertBehaviorContext(
+    const asmc_msgs::BehaviorContext& message, PlannerCommand& command) {
+    if (!message.valid) return ConversionStatus::INVALID_FLAG;
+    if (message.header.stamp.isZero()) {
+        return ConversionStatus::INVALID_TIMESTAMP;
+    }
+    if ((message.has_desired_speed && !std::isfinite(message.desired_speed)) ||
+        (message.has_max_speed && !std::isfinite(message.max_speed))) {
+        return ConversionStatus::NON_FINITE_VALUE;
+    }
+
+    PlannerCommand converted{};
+    switch (message.selected_behavior) {
+        case asmc_msgs::BehaviorContext::KEEP:
+            converted.mode = LANE_KEEPING;
+            break;
+        default:
+            return ConversionStatus::UNSUPPORTED_BEHAVIOR;
+    }
+
+    converted.target_lane = 0;
+    converted.leader_id = -1;
+    converted.has_target_speed = message.has_desired_speed;
+    converted.target_speed = message.desired_speed;
+    converted.has_max_speed = message.has_max_speed;
+    converted.max_speed = message.max_speed;
+    command = converted;
+    return ConversionStatus::OK;
+}
+
+ConversionStatus ConvertDetectedObjects(
+    const asmc_msgs::DetectedObjectArray& message,
+    std::vector<ObjectInfo>& objects,
+    std::vector<TrackedObstacle>& collision_objects) {
+    if (!IsMapFrame(message.header.frame_id)) {
+        return ConversionStatus::INVALID_FRAME;
+    }
+    if (message.header.stamp.isZero()) {
+        return ConversionStatus::INVALID_TIMESTAMP;
+    }
+    std::vector<ObjectInfo> converted_objects;
+    std::vector<TrackedObstacle> converted_collision_objects;
+    converted_objects.reserve(message.objects.size());
+    converted_collision_objects.reserve(message.objects.size());
+    std::unordered_set<int32_t> object_ids;
+
+    for (const auto& message_object : message.objects) {
+        if (!object_ids.insert(message_object.id).second) {
+            return ConversionStatus::DUPLICATE_OBJECT_ID;
+        }
+        if (!std::isfinite(message_object.center.x) ||
+            !std::isfinite(message_object.center.y) ||
+            !std::isfinite(message_object.center.z) ||
+            !std::isfinite(message_object.yaw) ||
+            !std::isfinite(message_object.vx) ||
+            !std::isfinite(message_object.vy) ||
+            !std::isfinite(message_object.yaw_rate) ||
+            !std::isfinite(message_object.width) || message_object.width <= 0.0 ||
+            !std::isfinite(message_object.length) || message_object.length <= 0.0 ||
+            !std::isfinite(message_object.height) || message_object.height <= 0.0) {
+            return ConversionStatus::NON_FINITE_VALUE;
+        }
+
+        ObjectInfo object;
+        object.id = message_object.id;
+        object.type = message_object.type;
+        object.x = message_object.center.x;
+        object.y = message_object.center.y;
+        object.z = message_object.center.z;
+        object.heading = message_object.yaw;
+        object.vx = message_object.vx;
+        object.vy = message_object.vy;
+        object.speed = std::hypot(message_object.vx, message_object.vy);
+        object.yaw_rate = message_object.yaw_rate;
+        object.width = message_object.width;
+        object.length = message_object.length;
+        object.height = message_object.height;
+
+        TrackedObstacle collision_object;
+        collision_object.id = message_object.id;
+        collision_object.type = message_object.type;
+        collision_object.vx = message_object.vx;
+        collision_object.vy = message_object.vy;
+        collision_object.geometry_source = ObstacleGeometrySource::LIDAR_CORNERS;
+        for (std::size_t i = 0; i < collision_object.corners.size(); ++i) {
+            const auto& corner = message_object.obb_corners[i];
+            collision_object.corners[i] = {corner.x, corner.y, corner.z};
+        }
+        const geometry::CornerValidationResult validation =
+            geometry::ValidateCorners8(collision_object.corners);
+        const geometry::ZRange z_range =
+            geometry::ComputeZRange(collision_object.corners);
+        if (!validation.valid || !z_range.valid ||
+            z_range.max - z_range.min <= 1e-6) {
+            return ConversionStatus::INVALID_OBJECT_GEOMETRY;
+        }
+        collision_object.geometry_valid = true;
+        collision_object.z_valid = true;
+        converted_objects.push_back(object);
+        converted_collision_objects.push_back(collision_object);
+    }
+
+    objects = std::move(converted_objects);
+    collision_objects = std::move(converted_collision_objects);
+    return ConversionStatus::OK;
+}
+
+ConversionStatus ConvertCartesianPath(
+    const CartesianPath& path, double dt,
+    const asmc_msgs::VehicleState& ego_at_plan, const ros::Time& plan_stamp,
+    asmc_msgs::Trajectory& trajectory) {
+    const std::size_t count = path.x.size();
+    if (count == 0 || path.y.size() != count || path.yaw.size() != count ||
+        path.kappa.size() != count || path.v.size() != count ||
+        path.a.size() != count || !std::isfinite(dt) || dt <= 0.0) {
+        return ConversionStatus::INVALID_PATH;
+    }
+    asmc_msgs::Trajectory converted;
+    converted.header.stamp = plan_stamp;
+    converted.header.frame_id = "map";
+    converted.valid = true;
+    converted.failure_reason = asmc_msgs::Trajectory::FAILURE_NONE;
+    converted.dt = dt;
+    converted.ego_at_plan = ego_at_plan;
+    converted.points.reserve(count);
+    for (std::size_t i = 0; i < count; ++i) {
+        if (!std::isfinite(path.x[i]) || !std::isfinite(path.y[i]) ||
+            !std::isfinite(path.yaw[i]) || !std::isfinite(path.kappa[i]) ||
+            !std::isfinite(path.v[i]) || !std::isfinite(path.a[i])) {
+            return ConversionStatus::NON_FINITE_VALUE;
+        }
+        asmc_msgs::TrajectoryPoint point;
+        point.x = path.x[i];
+        point.y = path.y[i];
+        point.yaw = path.yaw[i];
+        point.curvature = path.kappa[i];
+        point.velocity = path.v[i];
+        point.acceleration = path.a[i];
+        converted.points.push_back(point);
+    }
+    trajectory = std::move(converted);
+    return ConversionStatus::OK;
+}
+
+asmc_msgs::Trajectory MakeStopTrajectory(
+    const asmc_msgs::VehicleState& ego_at_plan, double dt,
+    uint8_t failure_reason, const ros::Time& plan_stamp) {
+    asmc_msgs::Trajectory trajectory;
+    trajectory.header.stamp = plan_stamp;
+    trajectory.header.frame_id = "map";
+    trajectory.valid = true;
+    trajectory.failure_reason = failure_reason;
+    trajectory.dt = dt;
+    trajectory.ego_at_plan = ego_at_plan;
+    asmc_msgs::TrajectoryPoint point;
+    point.x = std::isfinite(ego_at_plan.x) ? ego_at_plan.x : 0.0;
+    point.y = std::isfinite(ego_at_plan.y) ? ego_at_plan.y : 0.0;
+    point.yaw = std::isfinite(ego_at_plan.yaw) ? ego_at_plan.yaw : 0.0;
+    point.curvature = 0.0;
+    point.velocity = 0.0;
+    point.acceleration = 0.0;
+    trajectory.points.push_back(point);
+    return trajectory;
+}
+
+}  // namespace frenet_planner_ros

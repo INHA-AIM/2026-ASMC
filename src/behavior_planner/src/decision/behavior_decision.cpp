@@ -6,7 +6,7 @@
 namespace behavior_planner {
 
 BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
-                                             const PlanFeedback&) const {
+                                             const asmc_msgs::PlanFeedback&) const {
   BehaviorContextData context;
   context.timestamp = feature.timestamp;
   context.hard =

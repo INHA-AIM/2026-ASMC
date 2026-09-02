@@ -100,7 +100,7 @@ class MoraiUdpBridge(object):
         self.cmd_port = p("~cmd_port", 9093)          # MORAI 의 Host PORT
         self.max_steer_deg = float(p("~max_steer_deg", 36.25))
         self.cmd_bytes = int(p("~cmd_payload_bytes", 27))
-        self.invert_steer = bool(p("~invert_steer", True))
+        self.invert_steer = bool(p("~invert_steer", False))
         self.frame_id = p("~frame_id", "base_link")
         self.ego_vel_ms = bool(p("~ego_velocity_in_ms", True))
 
@@ -186,8 +186,9 @@ class MoraiUdpBridge(object):
                             body[ext_off:ext_off + ext_n * 4])
 
         m = EgoVehicleStatus()
-        m.header.stamp = (rospy.Time(sec, nsec) if 1e9 < sec < 4e9
-                          else rospy.Time.now())
+        # Normalize MORAI packet time to the ROS clock at the UDP ingress.
+        # Downstream freshness checks must compare timestamps from one clock.
+        m.header.stamp = rospy.Time.now()
         m.header.frame_id = self.frame_id
         m.unique_id = -1
 
@@ -228,8 +229,8 @@ class MoraiUdpBridge(object):
         off = 8
 
         msg = ObjectStatusList()
-        msg.header.stamp = (rospy.Time(sec, nsec) if 1e9 < sec < 4e9
-                            else rospy.Time.now())
+        # Keep object and ego timestamps on the same ROS clock basis.
+        msg.header.stamp = rospy.Time.now()
         msg.header.frame_id = self.frame_id
 
         for _ in range(OBJ_N):

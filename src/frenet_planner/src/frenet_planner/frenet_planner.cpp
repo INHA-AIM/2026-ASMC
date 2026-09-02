@@ -283,7 +283,8 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
 // 양 끝의 d'가 0이므로 정지 근처에서도 급격한 횡이동과 곡률 spike가 생기지 않는다.
 bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, double d,
                                           double target_d,
-                                          CartesianPath& out_path, double duration_s) const {
+                                          CartesianPath& out_path, double duration_s,
+                                          double speed_cap) const {
     constexpr double kRecenterDistM = 15.0;   // [m] d를 0으로 되돌리는 데 쓰는 이동거리
     const int n = static_cast<int>(duration_s / path_cfg_.dt) + 1;
     out_path.x.resize(n); out_path.y.resize(n); out_path.yaw.resize(n);
@@ -293,7 +294,9 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
     double v_prev = std::max(ego.v, kMinCreepSpeed);
     for (int i = 0; i < n; ++i) {
         const double t = i * path_cfg_.dt;
-        const double v_i = clip(ego.v + kCrawlAccel * t, kMinCreepSpeed, kCrawlSpeedCap);
+        const double crawl_speed = clip(
+            ego.v + kCrawlAccel * t, kMinCreepSpeed, kCrawlSpeedCap);
+        const double v_i = std::min(crawl_speed, speed_cap);
         if (i > 0) s_i += 0.5 * (v_i + v_prev) * path_cfg_.dt;
         v_prev = v_i;
 
@@ -322,8 +325,49 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
     return true;
 }
 
-bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
-                          CartesianPath& out_path) {
+bool FrenetPlanner::Plan(const CartesianState& ego,
+                         const std::vector<ObjectInfo>& obstacles,
+                         CartesianPath& out_path) {
+    return PlanInternal(ego, obstacles, nullptr, nullptr, out_path);
+}
+
+bool FrenetPlanner::Plan(const CartesianState& ego,
+                         const std::vector<ObjectInfo>& obstacles,
+                         const PlannerCommand& command,
+                         CartesianPath& out_path) {
+    if (command.mode != LANE_KEEPING ||
+        (command.has_target_speed &&
+         (!std::isfinite(command.target_speed) || command.target_speed < 0.0)) ||
+        (command.has_max_speed &&
+         (!std::isfinite(command.max_speed) || command.max_speed < 0.0))) {
+        last_failure_reason_ = PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+        return false;
+    }
+    return PlanInternal(ego, obstacles, &command, nullptr, out_path);
+}
+
+bool FrenetPlanner::Plan(
+    const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
+    const std::vector<TrackedObstacle>& collision_obstacles,
+    const PlannerCommand& command, CartesianPath& out_path) {
+    if (command.mode != LANE_KEEPING ||
+        collision_obstacles.size() != obstacles.size() ||
+        (command.has_target_speed &&
+         (!std::isfinite(command.target_speed) || command.target_speed < 0.0)) ||
+        (command.has_max_speed &&
+         (!std::isfinite(command.max_speed) || command.max_speed < 0.0))) {
+        last_failure_reason_ = PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+        return false;
+    }
+    return PlanInternal(ego, obstacles, &command, &collision_obstacles, out_path);
+}
+
+bool FrenetPlanner::PlanInternal(
+    const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
+    const PlannerCommand* external_command,
+    const std::vector<TrackedObstacle>* collision_obstacles,
+    CartesianPath& out_path) {
+    const bool use_legacy_behavior = external_command == nullptr;
     last_failure_reason_ = PlanFailureReason::NONE;
     if (!ref_loaded_) {
         last_failure_reason_ = PlanFailureReason::NOT_INITIALIZED;
@@ -364,8 +408,23 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
         const auto it = object_yaw_rates.find(obj.id);
         obj.yaw_rate = it == object_yaw_rates.end() ? 0.0 : it->second;
     }
+    // ROS/LiDAR 경로는 perception이 준 corners를 그대로 사용한다. Legacy API만
+    // ObjectInfo의 center/dimension/yaw로 기존 adapter geometry를 생성한다.
     const std::vector<TrackedObstacle> predicted_collision_obstacles =
-        MakeLegacyTrackedObstacles(predicted_obstacles);
+        collision_obstacles ? *collision_obstacles
+                            : MakeLegacyTrackedObstacles(predicted_obstacles);
+
+    double resolved_target_speed = LookaheadTargetSpeed(
+        ref_, s, ego.v, curve_speed_cfg_, limits_.max_longitudinal_accel,
+        limits_.max_lateral_accel, limits_.max_curvature);
+    if (external_command && external_command->has_target_speed) {
+        resolved_target_speed = std::min(resolved_target_speed,
+                                         external_command->target_speed);
+    }
+    if (external_command && external_command->has_max_speed) {
+        resolved_target_speed = std::min(resolved_target_speed,
+                                         external_command->max_speed);
+    }
 
     // 저속(정지 근처)에서는 quintic 후보/곡률필터 파이프라인 전체를 건너뛰고
     // fallback으로 직접 경로를 만든다 (클래스 헤더 주석 참고 - 나누기 없는 안전한
@@ -375,27 +434,32 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
     last_d_ = d;
 
     constexpr double kLowSpeedFallbackV = 0.5;  // [m/s]
-    const HighwayMergeZone* context_highway_zone = HighwayZoneAt(
-        highway_merge_cfg_, merge_.highway_zone_index);
-    const HighwayMergeCheckpoint* context_highway_checkpoint = HighwayCheckpointAt(
-        highway_merge_cfg_, merge_.highway_zone_index, merge_.highway_conflict_index);
-    const double context_conflict_s = merge_.type == MergeType::HIGHWAY
+    const HighwayMergeZone* context_highway_zone = use_legacy_behavior
+        ? HighwayZoneAt(highway_merge_cfg_, merge_.highway_zone_index) : nullptr;
+    const HighwayMergeCheckpoint* context_highway_checkpoint = use_legacy_behavior
+        ? HighwayCheckpointAt(highway_merge_cfg_, merge_.highway_zone_index,
+                              merge_.highway_conflict_index) : nullptr;
+    const double context_conflict_s = use_legacy_behavior &&
+        merge_.type == MergeType::HIGHWAY
         && context_highway_checkpoint
             ? context_highway_checkpoint->conflict_s : merge_cfg_.conflict_s;
-    const double context_stop_buffer = merge_.type == MergeType::HIGHWAY
+    const double context_stop_buffer = use_legacy_behavior &&
+        merge_.type == MergeType::HIGHWAY
         ? highway_merge_cfg_.stop_buffer : merge_cfg_.stop_buffer;
     const double low_speed_conflict_gap = merge_cfg_.conflict_s - s;
     const bool near_roundabout = merge_cfg_.conflict_s >= 0.0 &&
         low_speed_conflict_gap >= -merge_cfg_.completion_distance &&
         low_speed_conflict_gap <= merge_cfg_.approach_distance;
     const bool near_highway_merge = FindHighwayMergeZone(highway_merge_cfg_, s) >= 0;
-    const bool near_any_merge = near_roundabout || near_highway_merge || merge_.active;
+    const bool near_any_merge = use_legacy_behavior &&
+        (near_roundabout || near_highway_merge || merge_.active);
 
     // COMMIT 이후에는 noisy localization 상태로 exact-arrival 다항식을 매 cycle
     // 재생성하지 않는다. 최초 COMMIT 때 conflict zone 이탈까지 OBB 검증한 시간
     // 궤적을 시간에 맞춰 잘라 그대로 추종한다. 실제 동적 충돌이 새로 예측될 때만
     // 정지선 전에는 WAIT로 취소하고, 정지선 이후에는 비상정지를 요청한다.
-    if (merge_.active && merge_.gap_locked && merge_.phase == MergePhase::COMMIT) {
+    if (use_legacy_behavior && merge_.active && merge_.gap_locked &&
+        merge_.phase == MergePhase::COMMIT) {
         if (s >= context_conflict_s) {
             const HighwayMergeCheckpoint* next_checkpoint =
                 merge_.type == MergeType::HIGHWAY
@@ -477,15 +541,22 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
         // ego.v==0 -> 같은 조기 return이라는 자기잠금을 만들었다. 정적 장애물을
         // 등록할 때 검증한 1차 회피 방향을 저속 경로의 목표로 사용해 재출발한다.
         // 정상 속도로 회복되면 기존 좌/우 전체 후보 비교가 방향을 다시 확정한다.
-        const bool tracking_near = avoidance_.active &&
+        const bool tracking_near = use_legacy_behavior && avoidance_.active &&
             avoidance_.phase == AvoidPhase::TRACKING &&
             avoidance_.obstacle_s - s <= avoid_cfg_.shift_start_distance;
-        const bool hold_avoid_target = avoidance_.active &&
+        const bool hold_avoid_target = use_legacy_behavior && avoidance_.active &&
             (tracking_near || avoidance_.phase == AvoidPhase::SHIFT ||
              avoidance_.phase == AvoidPhase::PASS);
         const double fallback_target_d = hold_avoid_target ? avoidance_.target_d : 0.0;
+        if (!use_legacy_behavior) {
+            last_mode_ = external_command->mode;
+            last_target_speed_ = resolved_target_speed;
+        }
         const bool fallback_ok = PlanLowSpeedFallback(
-            ego, s, d, fallback_target_d, out_path, 2.0);
+            ego, s, d, fallback_target_d, out_path, 2.0,
+            use_legacy_behavior
+                ? std::numeric_limits<double>::infinity()
+                : resolved_target_speed);
         return fallback_ok;
     }
 
@@ -516,6 +587,7 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
     double leader_s = 0.0, leader_speed = 0.0, leader_accel = 0.0;
     bool begin_avoidance = false;
 
+    if (use_legacy_behavior) {
     // 활성 context의 장애물 위치를 새 UDP 프레임으로 갱신한다. 일시적
     // packet dropout이 있어도 저장된 위치/길이로 회피를 계속한다.
     if (avoidance_.active) {
@@ -880,15 +952,20 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
     } else {
         cmd.mode = LANE_KEEPING;
     }
+    } else {
+        // 외부 command 경로는 legacy AVOID/FOLLOW/MERGE context를 읽거나
+        // 갱신하지 않는다. 첫 통합 버전은 검증된 LANE_KEEPING만 진입한다.
+        cmd = *external_command;
+    }
 
-    cmd.target_speed = LookaheadTargetSpeed(ref_, s, ego.v, curve_speed_cfg_,
-                                             limits_.max_longitudinal_accel,
-                                             limits_.max_lateral_accel, limits_.max_curvature);
+    cmd.target_speed = resolved_target_speed;
     if (cmd.mode == MERGE && merge_.phase == MergePhase::CROSS) {
         const double floor = merge_.type == MergeType::HIGHWAY
             ? highway_merge_cfg_.cross_speed_floor : merge_cfg_.cross_speed_floor;
         cmd.target_speed = std::max(cmd.target_speed, floor);
     }
+    last_mode_ = cmd.mode;
+    last_target_speed_ = cmd.target_speed;
 
     PlannerDebugStats stats;
     // TRACKING은 아직 회피를 시작하지 않는 구간이다. 8초 충돌 lookahead가
@@ -897,7 +974,8 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
     // 장애물은 계속 필터링되고, 25m 진입 시 잠금 장애물도 즉시 다시 포함된다.
     std::vector<TrackedObstacle> planning_collision_obstacles =
         predicted_collision_obstacles;
-    if (avoidance_.active && avoidance_.phase == AvoidPhase::TRACKING && !begin_avoidance) {
+    if (use_legacy_behavior && avoidance_.active &&
+        avoidance_.phase == AvoidPhase::TRACKING && !begin_avoidance) {
         planning_collision_obstacles.erase(
             std::remove_if(planning_collision_obstacles.begin(),
                            planning_collision_obstacles.end(),
@@ -1033,15 +1111,19 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
         }
     }
 
-    const double active_merge_conflict_gap = cmd.mode == MERGE
+    const bool legacy_merge = use_legacy_behavior && cmd.mode == MERGE;
+    const double active_merge_conflict_gap = legacy_merge
         ? cmd.merge_conflict_s - s : 0.0;
-    const HighwayMergeCheckpoint* output_highway_checkpoint = HighwayCheckpointAt(
-        highway_merge_cfg_, merge_.highway_zone_index, merge_.highway_conflict_index);
+    const HighwayMergeCheckpoint* output_highway_checkpoint = legacy_merge
+        ? HighwayCheckpointAt(highway_merge_cfg_, merge_.highway_zone_index,
+                              merge_.highway_conflict_index)
+        : nullptr;
     const double active_merge_completion_distance =
-        merge_.type == MergeType::HIGHWAY && output_highway_checkpoint
+        legacy_merge && merge_.type == MergeType::HIGHWAY && output_highway_checkpoint
             ? output_highway_checkpoint->clear_s - output_highway_checkpoint->conflict_s
             : merge_cfg_.completion_distance;
-    const double active_merge_cross_speed = merge_.type == MergeType::HIGHWAY
+    const double active_merge_cross_speed = legacy_merge &&
+        merge_.type == MergeType::HIGHWAY
         ? highway_merge_cfg_.cross_speed_floor : merge_cfg_.cross_speed_floor;
 
     if (cmd.mode != prev_mode_) {
@@ -1194,7 +1276,8 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
                     std::printf("[FrenetPlanner-COLLISION] rank=%zu blocking_id=%d "
                                 "paths=%d object=missing leader_id=%d\n",
                                 rank + 1, blocker_id, blocked_paths,
-                                following_.active ? following_.leader_id : -1);
+                                use_legacy_behavior && following_.active
+                                    ? following_.leader_id : -1);
                     continue;
                 }
                 double obj_s, obj_d, obj_s_dot;
@@ -1211,8 +1294,10 @@ bool FrenetPlanner::Plan(const CartesianState& ego, const std::vector<ObjectInfo
                             rank + 1, blocker_id, blocked_paths, first_t,
                             obj_s, obj_d, obj_gap, obj_s_dot,
                             std::fabs(obj_d) <= lane_width_ * 0.5 ? 1 : 0,
-                            following_.active ? following_.leader_id : -1,
-                            following_.active && following_.leader_id == blocker_id ? 1 : 0);
+                            use_legacy_behavior && following_.active
+                                ? following_.leader_id : -1,
+                            use_legacy_behavior && following_.active &&
+                                following_.leader_id == blocker_id ? 1 : 0);
             }
         }
         return false;

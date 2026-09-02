@@ -1,0 +1,11 @@
+<launch>
+  <node pkg="frenet_planner" type="frenet_planner_node"
+        name="frenet_planner" output="screen">
+    <rosparam command="load"
+              file="$(find frenet_planner)/config/ros_runtime.yaml"/>
+    <!-- TODO: Install planner params under config/ and use
+         $(find frenet_planner)/config/params.yaml in devel/install spaces. -->
+    <param name="planner/config_path"
+           value="$(find frenet_planner)/src/frenet_planner/config/params.yaml"/>
+  </node>
+</launch>

@@ -55,7 +55,10 @@ struct PlannerCommand {
     double avoidance_d_offset;         // AVOID 모드 전용 연속값 [m]
 
     // 3. 종방향 목표
+    bool has_target_speed = false;      // false이면 planner 기본 목표속도 사용
     double target_speed;               // Velocity_keep, Lane_change [m/s]
+    bool has_max_speed = false;         // true이면 최종 목표속도의 상한 적용
+    double max_speed = 0.0;             // 외부 command가 지정한 속도 상한 [m/s]
     double stop_position;              // STOP 모드: 정지 목표 s 좌표 [m]
 
     // 4. FOLLOWING 전용

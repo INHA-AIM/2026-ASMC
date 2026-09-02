@@ -1,11 +1,13 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
+#include <asmc_msgs/BehaviorContext.h>
+#include <asmc_msgs/PlanFeedback.h>
 #include <morai_msgs/EgoVehicleStatus.h>
 #include <morai_msgs/ObjectStatusList.h>
 #include <ros/ros.h>
 
-#include "behavior_planner/PlanFeedback.h"
 #include "behavior_planner/decision/behavior_decision.hpp"
 #include "behavior_planner/feature/feature_builder.hpp"
 #include "behavior_planner/global/data_logger.hpp"
@@ -24,7 +26,7 @@ class BehaviorNode {
   void runOnce();
   void egoCallback(const morai_msgs::EgoVehicleStatus::ConstPtr& message);
   void objectsCallback(const morai_msgs::ObjectStatusList::ConstPtr& message);
-  void feedbackCallback(const PlanFeedback::ConstPtr& message);
+  void feedbackCallback(const asmc_msgs::PlanFeedback::ConstPtr& message);
 
   ros::NodeHandle nh_;
   ros::NodeHandle pnh_;
@@ -43,7 +45,10 @@ class BehaviorNode {
   DataLogger logger_;
   EgoState ego_;
   PerceptionObjects objects_;
-  PlanFeedback feedback_;
+  asmc_msgs::PlanFeedback feedback_;
+  asmc_msgs::BehaviorContext last_command_;
+  uint32_t current_command_id_ = 0;
+  bool has_last_command_ = false;
   bool ego_received_ = false;
   double rate_ = 10.0;
 };

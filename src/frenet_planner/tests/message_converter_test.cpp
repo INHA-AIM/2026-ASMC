@@ -1,0 +1,247 @@
+#include "ros/message_converter.hpp"
+
+#include <iostream>
+#include <limits>
+#include <string>
+#include <vector>
+
+namespace {
+
+int g_failures = 0;
+
+void Expect(bool condition, const std::string& name) {
+    if (condition) std::cout << "[PASS] " << name << '\n';
+    else { std::cerr << "[FAIL] " << name << '\n'; ++g_failures; }
+}
+
+asmc_msgs::VehicleState MakeVehicle() {
+    asmc_msgs::VehicleState message;
+    message.header.stamp = ros::Time(10, 0);
+    message.header.frame_id = "map";
+    message.valid = true;
+    message.x = 1.0;
+    message.y = 2.0;
+    message.yaw = 0.3;
+    message.speed = 4.0;
+    message.acceleration = 0.5;
+    message.yaw_rate = 0.1;
+    return message;
+}
+
+asmc_msgs::BehaviorContext MakeKeepBehavior() {
+    asmc_msgs::BehaviorContext message;
+    message.header.stamp = ros::Time(10, 0);
+    message.valid = true;
+    message.selected_behavior = asmc_msgs::BehaviorContext::KEEP;
+    message.has_desired_speed = true;
+    message.desired_speed = 8.0;
+    return message;
+}
+
+asmc_msgs::DetectedObjectArray MakeEmptyObjects() {
+    asmc_msgs::DetectedObjectArray message;
+    message.header.stamp = ros::Time(10, 0);
+    message.header.frame_id = "map";
+    return message;
+}
+
+asmc_msgs::DetectedObject MakeObject(double center_x, double center_y) {
+    asmc_msgs::DetectedObject object;
+    object.id = 17;
+    object.type = 2;
+    object.center.x = center_x;
+    object.center.y = center_y;
+    object.center.z = 1.0;
+    object.yaw = 0.0;
+    object.vx = 2.0;
+    object.vy = -0.5;
+    object.yaw_rate = 0.1;
+    object.width = 2.0;
+    object.length = 4.0;
+    object.height = 2.0;
+    const double corners[8][3] = {
+        {center_x - 2.0, center_y - 1.0, 0.0},
+        {center_x + 2.0, center_y + 1.0, 0.0},
+        {center_x + 2.0, center_y - 1.0, 0.0},
+        {center_x - 2.0, center_y + 1.0, 0.0},
+        {center_x + 2.0, center_y - 1.0, 2.0},
+        {center_x - 2.0, center_y + 1.0, 2.0},
+        {center_x - 2.0, center_y - 1.0, 2.0},
+        {center_x + 2.0, center_y + 1.0, 2.0},
+    };
+    for (std::size_t i = 0; i < 8; ++i) {
+        object.obb_corners[i].x = corners[i][0];
+        object.obb_corners[i].y = corners[i][1];
+        object.obb_corners[i].z = corners[i][2];
+    }
+    return object;
+}
+
+}  // namespace
+
+int main() {
+    using frenet_planner_ros::ConversionStatus;
+
+    CartesianState state{};
+    auto vehicle = MakeVehicle();
+    Expect(frenet_planner_ros::ConvertVehicleState(vehicle, state) ==
+               ConversionStatus::OK &&
+               state.x == 1.0 && state.y == 2.0 && state.yaw == 0.3 &&
+               state.v == 4.0 && state.a == 0.5 && state.kappa == 0.0,
+           "vehicle fields map to CartesianState");
+
+    vehicle.valid = false;
+    Expect(frenet_planner_ros::ConvertVehicleState(vehicle, state) ==
+               ConversionStatus::INVALID_FLAG,
+           "invalid vehicle flag is rejected");
+    vehicle = MakeVehicle();
+    vehicle.header.frame_id = "odom";
+    Expect(frenet_planner_ros::ConvertVehicleState(vehicle, state) ==
+               ConversionStatus::INVALID_FRAME,
+           "non-map vehicle frame is rejected");
+    vehicle = MakeVehicle();
+    vehicle.header.stamp = ros::Time();
+    Expect(frenet_planner_ros::ConvertVehicleState(vehicle, state) ==
+               ConversionStatus::INVALID_TIMESTAMP,
+           "zero vehicle timestamp is rejected");
+    vehicle = MakeVehicle();
+    vehicle.speed = std::numeric_limits<double>::quiet_NaN();
+    Expect(frenet_planner_ros::ConvertVehicleState(vehicle, state) ==
+               ConversionStatus::NON_FINITE_VALUE,
+           "non-finite vehicle value is rejected");
+
+    PlannerCommand command{};
+    auto behavior = MakeKeepBehavior();
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::OK &&
+               command.mode == LANE_KEEPING && command.target_lane == 0 &&
+               command.has_target_speed && command.target_speed == 8.0 &&
+               !command.has_max_speed,
+           "KEEP explicitly maps to LANE_KEEPING");
+
+    behavior = MakeKeepBehavior();
+    behavior.has_desired_speed = false;
+    behavior.has_max_speed = true;
+    behavior.max_speed = 6.0;
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::OK &&
+               !command.has_target_speed && command.has_max_speed &&
+               command.max_speed == 6.0,
+           "max-only behavior preserves planner-default semantics");
+
+    behavior = MakeKeepBehavior();
+    behavior.has_max_speed = true;
+    behavior.max_speed = 6.0;
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::OK &&
+               command.has_target_speed && command.target_speed == 8.0 &&
+               command.has_max_speed && command.max_speed == 6.0,
+           "desired and max speeds remain separate");
+
+    behavior = MakeKeepBehavior();
+    behavior.has_desired_speed = false;
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::OK &&
+               !command.has_target_speed && !command.has_max_speed,
+           "missing speed fields preserve planner-default semantics");
+
+    behavior = MakeKeepBehavior();
+    behavior.selected_behavior = asmc_msgs::BehaviorContext::FOLLOW;
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::UNSUPPORTED_BEHAVIOR,
+           "non-KEEP behavior is rejected");
+
+    std::vector<ObjectInfo> objects(1);
+    std::vector<TrackedObstacle> collision_objects(1);
+    auto object_message = MakeEmptyObjects();
+    Expect(frenet_planner_ros::ConvertDetectedObjects(
+               object_message, objects, collision_objects) ==
+               ConversionStatus::OK && objects.empty() &&
+               collision_objects.empty(),
+           "empty object message maps to empty planner obstacle vectors");
+
+    object_message.objects.push_back(MakeObject(10.0, 20.0));
+    Expect(frenet_planner_ros::ConvertDetectedObjects(
+               object_message, objects, collision_objects) ==
+               ConversionStatus::OK && objects.size() == 1 &&
+               collision_objects.size() == 1 && objects[0].id == 17 &&
+               objects[0].vx == 2.0 && objects[0].vy == -0.5 &&
+               collision_objects[0].geometry_valid &&
+               collision_objects[0].z_valid &&
+               collision_objects[0].geometry_source ==
+                   ObstacleGeometrySource::LIDAR_CORNERS &&
+               collision_objects[0].corners[1].x == 12.0 &&
+               collision_objects[0].corners[1].y == 21.0 &&
+               collision_objects[0].corners[1].z == 0.0,
+           "LiDAR OBB corners are copied unchanged to TrackedObstacle");
+
+    auto malformed_message = MakeEmptyObjects();
+    malformed_message.objects.push_back(MakeObject(10.0, 20.0));
+    malformed_message.objects[0].obb_corners[3].x =
+        std::numeric_limits<double>::quiet_NaN();
+    Expect(frenet_planner_ros::ConvertDetectedObjects(
+               malformed_message, objects, collision_objects) ==
+               ConversionStatus::INVALID_OBJECT_GEOMETRY,
+           "non-finite LiDAR corner is rejected without geometry fallback");
+
+    auto duplicate_message = MakeEmptyObjects();
+    duplicate_message.objects.push_back(MakeObject(10.0, 20.0));
+    duplicate_message.objects.push_back(MakeObject(30.0, 40.0));
+    Expect(frenet_planner_ros::ConvertDetectedObjects(
+               duplicate_message, objects, collision_objects) ==
+               ConversionStatus::DUPLICATE_OBJECT_ID,
+           "duplicate object IDs are rejected");
+
+    Expect(std::string(frenet_planner_ros::ConversionStatusName(
+               ConversionStatus::UNSUPPORTED_BEHAVIOR)) ==
+               "UNSUPPORTED_BEHAVIOR",
+           "conversion status has a stable diagnostic name");
+
+    CartesianPath path;
+    path.x = {1.0, 2.0};
+    path.y = {3.0, 4.0};
+    path.yaw = {0.1, 0.2};
+    path.kappa = {0.01, 0.02};
+    path.v = {5.0, 6.0};
+    path.a = {0.3, 0.4};
+    asmc_msgs::Trajectory trajectory;
+    const auto ego_at_plan = MakeVehicle();
+    const ros::Time plan_stamp(20, 0);
+    Expect(frenet_planner_ros::ConvertCartesianPath(
+               path, 0.1, ego_at_plan, plan_stamp, trajectory) ==
+               ConversionStatus::OK && trajectory.valid &&
+               trajectory.failure_reason == asmc_msgs::Trajectory::FAILURE_NONE &&
+               trajectory.header.frame_id == "map" &&
+               trajectory.header.stamp == plan_stamp && trajectory.dt == 0.1 &&
+               trajectory.ego_at_plan.x == ego_at_plan.x &&
+               trajectory.points.size() == 2 &&
+               trajectory.points[1].x == 2.0 &&
+               trajectory.points[1].curvature == 0.02 &&
+               trajectory.points[1].velocity == 6.0,
+           "CartesianPath maps to valid map-frame Trajectory");
+
+    path.a.pop_back();
+    Expect(frenet_planner_ros::ConvertCartesianPath(
+               path, 0.1, ego_at_plan, plan_stamp, trajectory) ==
+               ConversionStatus::INVALID_PATH,
+           "trajectory conversion rejects mismatched vector sizes");
+
+    const asmc_msgs::Trajectory stop = frenet_planner_ros::MakeStopTrajectory(
+        ego_at_plan, 0.1, asmc_msgs::Trajectory::FAILURE_STATE_STALE,
+        plan_stamp);
+    Expect(stop.valid &&
+               stop.failure_reason == asmc_msgs::Trajectory::FAILURE_STATE_STALE &&
+               stop.dt == 0.1 && stop.ego_at_plan.x == ego_at_plan.x &&
+               stop.points.size() == 1 && stop.points[0].x == ego_at_plan.x &&
+               stop.points[0].y == ego_at_plan.y &&
+               stop.points[0].yaw == ego_at_plan.yaw &&
+               stop.points[0].velocity == 0.0 &&
+               stop.points[0].acceleration == 0.0,
+           "STOP trajectory is a valid executable zero-speed command");
+
+    if (g_failures == 0) {
+        std::cout << "All message converter tests passed\n";
+        return 0;
+    }
+    return 1;
+}

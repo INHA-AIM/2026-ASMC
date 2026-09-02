@@ -7,7 +7,8 @@ import json
 import threading
 
 import rospy
-from behavior_planner.msg import BehaviorContext, UrbanFeatureDebug
+from asmc_msgs.msg import BehaviorContext
+from behavior_planner.msg import UrbanFeatureDebug
 
 
 def ros_to_dict(value):
