@@ -2,7 +2,7 @@ planning:
   frequency: 20.0
 
 timeouts:
-  vehicle_state: 0.20
+  vehicle_state: 0.50
   objects: 0.30
   behavior: 0.50
 

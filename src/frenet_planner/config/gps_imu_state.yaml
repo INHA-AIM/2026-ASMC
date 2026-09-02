@@ -5,8 +5,8 @@ publish_topic: /vehicle/state
 publish_frequency: 50.0
 
 timeouts:
-  gps: 0.20
-  imu: 0.20
+  gps: 0.50
+  imu: 0.30
 
 # GPSMessage has no velocity. Derive speed from consecutive UTM positions.
 speed:
