@@ -1,56 +1,42 @@
 #include "behavior_planner/context/msg_converter.hpp"
 
+#include <cmath>
 #include <ros/ros.h>
 
 namespace behavior_planner {
 
-behavior_planner::BehaviorContext MsgConverter::toMsg(
-    const BehaviorContextData& context) {
-  behavior_planner::BehaviorContext message;
+asmc_msgs::BehaviorContext MsgConverter::toMsg(
+    const BehaviorContextData& context, uint32_t command_id) {
+  asmc_msgs::BehaviorContext message;
   message.header.stamp = ros::Time(context.timestamp);
   message.header.frame_id = "map";
-  message.selected_behavior = static_cast<uint8_t>(context.selected_behavior);
-  message.behavior_state = static_cast<uint8_t>(context.state);
-  message.enable_keep = context.enable.keep;
-  message.enable_follow = context.enable.follow;
-  message.enable_left_change = context.enable.left_change;
-  message.enable_right_change = context.enable.right_change;
-  message.enable_stop = context.enable.stop;
-  message.enable_emergency_stop = context.enable.emergency_stop;
+  message.command_id = command_id;
+  message.valid = std::isfinite(context.timestamp) && context.timestamp > 0.0;
+  switch (context.selected_behavior) {
+    case BehaviorType::KEEP: message.selected_behavior = asmc_msgs::BehaviorContext::KEEP; break;
+    case BehaviorType::FOLLOW: message.selected_behavior = asmc_msgs::BehaviorContext::FOLLOW; break;
+    case BehaviorType::LEFT_CHANGE: message.selected_behavior = asmc_msgs::BehaviorContext::LEFT_CHANGE; break;
+    case BehaviorType::RIGHT_CHANGE: message.selected_behavior = asmc_msgs::BehaviorContext::RIGHT_CHANGE; break;
+    case BehaviorType::STOP: message.selected_behavior = asmc_msgs::BehaviorContext::STOP; break;
+    case BehaviorType::YIELD: message.selected_behavior = asmc_msgs::BehaviorContext::YIELD; break;
+    case BehaviorType::EMERGENCY_STOP: message.selected_behavior = asmc_msgs::BehaviorContext::EMERGENCY_STOP; break;
+    default:
+      message.valid = false;
+      message.selected_behavior = asmc_msgs::BehaviorContext::KEEP;
+      break;
+  }
   message.force_stop = context.hard.force_stop;
-  message.emergency_stop = context.hard.emergency_stop;
-  message.forbid_left_change = context.hard.forbid_left_change;
-  message.forbid_right_change = context.hard.forbid_right_change;
-  message.forbid_lane_change = context.hard.forbid_lane_change;
+  message.has_desired_speed = std::isfinite(context.target.desired_speed) && context.target.desired_speed >= 0.0;
   message.desired_speed = context.target.desired_speed;
-  message.stop_before_s = context.target.stop_before_s;
+  message.has_max_speed = std::isfinite(context.hard.max_speed) && context.hard.max_speed >= 0.0 && context.hard.max_speed < 1e9;
   message.max_speed = context.hard.max_speed;
-  message.current_link_id = context.target.current_link_id;
-  message.route_required_link_id = context.target.route_required_link_id;
-  message.target_link_id = context.target.target_link_id;
-  message.candidate_link_ids = context.target.candidate_link_ids;
-  message.keep_score = context.score.keep;
-  message.follow_score = context.score.follow;
-  message.left_change_score = context.score.left_change;
-  message.right_change_score = context.score.right_change;
-  message.stop_score = context.score.stop;
-  message.emergency_stop_score = context.score.emergency_stop;
+  // stop_before_s cannot be represented as a Cartesian stop point yet.
+  message.has_target_lane = false;
+  message.has_target_d = false;
+  message.has_stop_target = false;
   message.has_lead_vehicle = context.target.lead_vehicle_id >= 0;
   message.lead_vehicle_id = context.target.lead_vehicle_id;
-  message.front_gap = context.extra_values.count("front_gap")
-                          ? context.extra_values.at("front_gap")
-                          : 1e9;
-  message.front_relative_speed =
-      context.extra_values.count("front_relative_speed")
-          ? context.extra_values.at("front_relative_speed")
-          : 0.0;
-  message.front_ttc = context.extra_values.count("front_ttc")
-                          ? context.extra_values.at("front_ttc")
-                          : 1e9;
-  message.follow_time_gap = context.target.follow_time_gap;
-  message.follow_min_gap = context.target.follow_min_gap;
-  message.decision_reason = context.debug.selected_reason;
-  message.hard_rule_reason = context.debug.hard_rule_reason;
+  message.target_link_id = context.target.target_link_id;
   return message;
 }
 

@@ -13,4 +13,4 @@ topics:
 
 publish_topics:
   trajectory: /planning/trajectory
-  feedback: /planning/feedback
+  feedback: /planner/plan_feedback

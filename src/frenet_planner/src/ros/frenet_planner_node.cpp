@@ -14,7 +14,7 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     std::string objects_topic = "/perception/objects";
     std::string behavior_topic = "/behavior/context";
     std::string trajectory_topic = "/planning/trajectory";
-    std::string feedback_topic = "/planning/feedback";
+    std::string feedback_topic = "/planner/plan_feedback";
     std::string planner_config_path;
 
     pnh_.param("planning/frequency", planning_frequency_hz_, planning_frequency_hz_);

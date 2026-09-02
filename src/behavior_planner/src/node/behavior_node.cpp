@@ -1,5 +1,6 @@
 #include "behavior_planner/node/behavior_node.hpp"
 
+#include <asmc_msgs/BehaviorContext.h>
 #include <visualization_msgs/MarkerArray.h>
 
 #include "behavior_planner/context/msg_converter.hpp"
@@ -47,7 +48,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   lights_ = mock;
 
   context_pub_ =
-      nh_.advertise<behavior_planner::BehaviorContext>(context_topic, 10);
+      nh_.advertise<asmc_msgs::BehaviorContext>(context_topic, 10);
   debug_pub_ = nh_.advertise<UrbanFeatureDebug>(debug_topic, 10);
   marker_pub_ =
       nh_.advertise<visualization_msgs::MarkerArray>(marker_topic, 2);
@@ -80,7 +81,7 @@ void BehaviorNode::runOnce() {
   const UrbanFeature feature =
       builder_.build(ego_, objects_, route_, *lights_);
   const BehaviorContextData context = decision_.decide(feature, feedback_);
-  context_pub_.publish(MsgConverter::toMsg(context));
+  context_pub_.publish(MsgConverter::toMsg(context, next_command_id_++));
   debug_pub_.publish(MsgConverter::toDebugMsg(feature));
   visualization_.publish(feature, context, route_, map_, *lights_);
   logger_.write(feature, context);
@@ -99,7 +100,8 @@ void BehaviorNode::objectsCallback(
   objects_ = MoraiMsgConverter::toPerceptionObjects(*message);
 }
 
-void BehaviorNode::feedbackCallback(const PlanFeedback::ConstPtr& message) {
+void BehaviorNode::feedbackCallback(
+    const asmc_msgs::PlanFeedback::ConstPtr& message) {
   if (message) feedback_ = *message;
 }
 

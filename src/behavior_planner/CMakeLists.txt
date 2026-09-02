@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.0.2)
 project(behavior_planner)
 
 add_compile_options(-std=c++17 -Wall -Wextra)
-find_package(catkin REQUIRED COMPONENTS roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_generation)
+find_package(catkin REQUIRED COMPONENTS asmc_msgs roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_generation)
 find_package(yaml-cpp REQUIRED)
 
-add_message_files(FILES BehaviorContext.msg UrbanFeatureDebug.msg PlanFeedback.msg)
+add_message_files(FILES UrbanFeatureDebug.msg)
 generate_messages(DEPENDENCIES std_msgs)
 
-catkin_package(CATKIN_DEPENDS roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_runtime)
+catkin_package(CATKIN_DEPENDS asmc_msgs roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_runtime)
 # Preserve the requested src/<area> layout while exposing conventional
 # behavior_planner/<area>/... include paths to this target.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -49,6 +49,7 @@ install(DIRECTORY launch src/config web DESTINATION ${CATKIN_PACKAGE_SHARE_DESTI
 if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(behavior_logic_test
     test/behavior_logic_test.cpp
+    src/context/msg_converter.cpp
     src/rule/hard_rule_filter.cpp
     src/decision/behavior_scorer.cpp
     src/decision/behavior_decision.cpp)
