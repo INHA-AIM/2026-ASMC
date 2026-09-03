@@ -222,7 +222,7 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
     std::string waypoint_file;
     LoadParams(yaml_path, path_cfg_, limits_, cost_weights_, vehicle_shape_,
                collision_cfg_, curve_speed_cfg_, following_cfg_, avoid_cfg_,
-               merge_cfg_, highway_merge_cfg_, visualization_cfg_,
+               stop_cfg_, merge_cfg_, highway_merge_cfg_, visualization_cfg_,
                wheelbase_, lane_width_, waypoint_file);
 
     if (!waypoint_file.empty() && waypoint_file.front() != '/') {
@@ -325,6 +325,112 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
     return true;
 }
 
+// Cartesian 정지 목표 -> reference line 종방향 좌표.
+bool FrenetPlanner::ProjectPointToS(double x, double y, double s_hint,
+                                    double& out_s) const {
+    if (!ref_loaded_ || ref_.points.empty()) return false;
+    if (!std::isfinite(x) || !std::isfinite(y)) return false;
+
+    // 탐색창은 ego localization용 기본값(30m)이 아니라 STOP 전용 값을 쓴다.
+    // 정지 목표는 ego보다 앞에 있어 기본 창을 벗어나고, 그러면 잘린 초기
+    // 추정값에서 출발한 Newton이 트랙의 다른 구간으로 발산한다.
+    const double* hint = std::isfinite(s_hint) ? &s_hint : nullptr;
+    const double s = FindClosestS(ref_, x, y, hint,
+                                  stop_cfg_.projection_search_window);
+    if (!std::isfinite(s)) return false;
+
+    // 최근접 투영은 목표가 경로에서 아무리 멀어도 어떤 s든 돌려준다. 실제로
+    // 그 s가 목표를 대표하는지 확인하지 않으면, 다른 도로 위의 정지 지점이
+    // 엉뚱한 위치의 정지 명령으로 둔갑한다.
+    const RefPoint rp = Interpolate(ref_, s);
+    const double lateral_error = std::hypot(x - rp.x, y - rp.y);
+    if (!std::isfinite(lateral_error) ||
+        lateral_error > stop_cfg_.max_lateral_offset) {
+        return false;
+    }
+
+    out_s = s;
+    return true;
+}
+
+bool FrenetPlanner::ProjectEgoToS(const CartesianState& ego, double& out_s) const {
+    if (!ref_loaded_ || ref_.points.empty()) return false;
+    if (!std::isfinite(ego.x) || !std::isfinite(ego.y)) return false;
+    const double s = FindClosestS(ref_, ego.x, ego.y,
+                                  has_last_s_ ? &last_s_ : nullptr);
+    if (!std::isfinite(s)) return false;
+    out_s = s;
+    return true;
+}
+
+namespace {
+
+// 폐루프 트랙에서 current_s -> target_s의 전방 호길이.
+// 단순 (target - current)는 finish line 이음새에서 음수로 크게 튄다
+// (예: ego_s=2200, target_s=20이면 실제로는 전방 30m인데 -2180m).
+double ForwardArcDistance(double current_s, double target_s, double s_max) {
+    double ds = target_s - current_s;
+    if (!std::isfinite(ds)) return ds;
+    if (s_max > 0.0) {
+        // 이음새를 갓 지난 목표(작은 음수)는 "뒤"가 아니라 한 바퀴 앞이 아니다.
+        // 절반 이상 뒤로 떨어진 경우만 wrap으로 간주해 전방 거리로 되돌린다.
+        if (ds < -0.5 * s_max) ds += s_max;
+        else if (ds > 0.5 * s_max) ds -= s_max;
+    }
+    return ds;
+}
+
+// 외부 command로 실제 열려 있는 모드. core에는 FOLLOWING/AVOID/MERGE/LANE_CHANGE
+// 구현이 이미 있지만, ROS 계약(leader binding, target_d, merge decision)이 FSM과
+// 확정되기 전까지 production 진입점에서는 KEEP/STOP만 허용한다. 확정된 모드부터
+// 여기에 case를 추가하고 ValidateExternalCommand에 필드 검증을 같이 넣는다.
+bool IsSupportedExternalMode(BehaviorState mode) {
+    switch (mode) {
+        case LANE_KEEPING:
+        case STOP:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+bool IsValidOptionalSpeed(bool has_value, double value) {
+    if (!has_value) return true;
+    return std::isfinite(value) && value >= 0.0;
+}
+
+// 모드 whitelist + 모드별 필수 필드 검증. 실패 시 reason으로 원인을 구분해
+// 호출자가 "즉시 정지"와 "이전 궤적 재사용"을 나눌 수 있게 한다.
+bool ValidateExternalCommand(const PlannerCommand& command,
+                             FrenetPlanner::PlanFailureReason& reason) {
+    if (!IsSupportedExternalMode(command.mode)) {
+        reason = FrenetPlanner::PlanFailureReason::UNSUPPORTED_BEHAVIOR;
+        return false;
+    }
+
+    // 전 모드 공통: 외부가 지정한 속도는 유한하고 음수가 아니어야 한다.
+    if (!IsValidOptionalSpeed(command.has_target_speed, command.target_speed) ||
+        !IsValidOptionalSpeed(command.has_max_speed, command.max_speed)) {
+        reason = FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
+        return false;
+    }
+
+    // STOP: 정지 목표 s가 실제로 지정되어야 한다. 기본값 NaN이 그대로 오면
+    // GenerateStoppingCandidates가 NaN 경계조건으로 후보를 만들게 된다.
+    if (command.mode == STOP) {
+        if (!std::isfinite(command.stop_position) || command.stop_position < 0.0) {
+            reason = FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
+            return false;
+        }
+    }
+
+    reason = FrenetPlanner::PlanFailureReason::NONE;
+    return true;
+}
+
+}  // namespace
+
 bool FrenetPlanner::Plan(const CartesianState& ego,
                          const std::vector<ObjectInfo>& obstacles,
                          CartesianPath& out_path) {
@@ -335,12 +441,9 @@ bool FrenetPlanner::Plan(const CartesianState& ego,
                          const std::vector<ObjectInfo>& obstacles,
                          const PlannerCommand& command,
                          CartesianPath& out_path) {
-    if (command.mode != LANE_KEEPING ||
-        (command.has_target_speed &&
-         (!std::isfinite(command.target_speed) || command.target_speed < 0.0)) ||
-        (command.has_max_speed &&
-         (!std::isfinite(command.max_speed) || command.max_speed < 0.0))) {
-        last_failure_reason_ = PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+    PlanFailureReason reason = PlanFailureReason::NONE;
+    if (!ValidateExternalCommand(command, reason)) {
+        last_failure_reason_ = reason;
         return false;
     }
     return PlanInternal(ego, obstacles, &command, nullptr, out_path);
@@ -350,13 +453,15 @@ bool FrenetPlanner::Plan(
     const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
     const std::vector<TrackedObstacle>& collision_obstacles,
     const PlannerCommand& command, CartesianPath& out_path) {
-    if (command.mode != LANE_KEEPING ||
-        collision_obstacles.size() != obstacles.size() ||
-        (command.has_target_speed &&
-         (!std::isfinite(command.target_speed) || command.target_speed < 0.0)) ||
-        (command.has_max_speed &&
-         (!std::isfinite(command.max_speed) || command.max_speed < 0.0))) {
-        last_failure_reason_ = PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+    PlanFailureReason reason = PlanFailureReason::NONE;
+    if (!ValidateExternalCommand(command, reason)) {
+        last_failure_reason_ = reason;
+        return false;
+    }
+    // collision geometry는 ObjectInfo와 1:1로 대응해야 한다. 어긋나면 command가
+    // 아니라 호출자의 입력 조립이 잘못된 것이므로 역시 즉시 거부한다.
+    if (collision_obstacles.size() != obstacles.size()) {
+        last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
         return false;
     }
     return PlanInternal(ego, obstacles, &command, &collision_obstacles, out_path);
@@ -530,7 +635,11 @@ bool FrenetPlanner::PlanInternal(
     // 회전교차로에서는 저속이어도 아래의 MERGE FSM을 반드시 거친다. 여기서
     // 조기 반환하면 WAIT/COMMIT 잠금보다 먼저 매 cycle 전체 도로가 빌 때까지
     // 검사하게 되어 conflict point 앞에서 두 번째 정지와 데드락이 발생한다.
-    if (std::fabs(ego.v) < kLowSpeedFallbackV && !near_any_merge) {
+    // 저속 fallback은 kMinCreepSpeed로 "기어서 전진"하는 경로다. 외부 STOP
+    // 명령에서 이 분기를 타면 정지 목표를 넘어 계속 기어나가게 되므로, STOP은
+    // 저속에서도 정상 stopping 후보 생성기(GenerateStoppingCandidates)로 보낸다.
+    const bool external_stop = !use_legacy_behavior && external_command->mode == STOP;
+    if (std::fabs(ego.v) < kLowSpeedFallbackV && !near_any_merge && !external_stop) {
         static int low_speed_log_tick = 0;
         if (++low_speed_log_tick % 5 == 0) {
             std::printf("[FrenetPlanner-STATE] mode=LOW_SPEED_FALLBACK "
@@ -954,7 +1063,8 @@ bool FrenetPlanner::PlanInternal(
     }
     } else {
         // 외부 command 경로는 legacy AVOID/FOLLOW/MERGE context를 읽거나
-        // 갱신하지 않는다. 첫 통합 버전은 검증된 LANE_KEEPING만 진입한다.
+        // 갱신하지 않는다. 진입 가능한 모드는 ValidateExternalCommand의
+        // whitelist(현재 LANE_KEEPING/STOP)가 이미 걸러낸 상태다.
         cmd = *external_command;
     }
 
@@ -964,8 +1074,97 @@ bool FrenetPlanner::PlanInternal(
             ? highway_merge_cfg_.cross_speed_floor : merge_cfg_.cross_speed_floor;
         cmd.target_speed = std::max(cmd.target_speed, floor);
     }
-    last_mode_ = cmd.mode;
+
+    // =====================================================================
+    // 외부 STOP 실행 (APPROACH / BRAKING / HOLD)
+    //
+    // GenerateStoppingCandidates는 종료조건을 s(T)=stop_s, v(T)=0, a(T)=0으로
+    // 강제한다. time_horizon 상한이 5초이므로 정지 목표가 멀면(예: 5m/s에서
+    // 30m) 그 안에 도달하려는 후보가 전부 비현실적 가감속이 되어 가속도
+    // 필터에서 탈락한다. horizon을 늘리는 대신, receding horizon 구조에 맞게
+    // 먼 구간은 속도만 낮추며 접근하고(APPROACH) 제동거리 안에 들어왔을 때
+    // 정지 다항식을 만든다(BRAKING).
+    // =====================================================================
+    const bool external_stop_mode = !use_legacy_behavior && cmd.mode == STOP;
+    double stop_distance = 0.0;
+    if (external_stop_mode) {
+        const double s_max = ref_.points.empty() ? 0.0 : ref_.points.back().s;
+        stop_distance = ForwardArcDistance(s, cmd.stop_position, s_max);
+
+        // 목표가 바뀌면 새 STOP 명령으로 보고 실행 단계를 리셋한다. command_id는
+        // publish마다 증가할 수 있어 phase 유지 판단 기준으로 쓸 수 없다.
+        if (!stop_.target_valid ||
+            !std::isfinite(stop_.target_s) ||
+            std::fabs(cmd.stop_position - stop_.target_s) >
+                stop_cfg_.target_change_tolerance) {
+            stop_.phase = StopExecutionPhase::APPROACH;
+            stop_.target_s = cmd.stop_position;
+            stop_.target_valid = true;
+        }
+
+        const double decel = std::max(0.1, stop_cfg_.comfortable_decel);
+        const double speed = std::max(0.0, s_dot);
+        const double braking_distance = speed * speed / (2.0 * decel);
+        const double trigger_distance = braking_distance + stop_cfg_.braking_margin;
+
+        // APPROACH -> BRAKING은 단방향(latch). 경계에서 측정 노이즈로 왕복하면
+        // 후보 생성기가 매 사이클 바뀌어 속도 프로파일이 흔들린다.
+        if (stop_.phase == StopExecutionPhase::APPROACH &&
+            stop_distance <= trigger_distance) {
+            stop_.phase = StopExecutionPhase::BRAKING;
+        }
+
+        // 목표에 도달했고 충분히 느리면 HOLD. 목표를 지나쳤어도(음수 거리)
+        // 후진하지 않고 그 자리에서 정지를 유지한다.
+        const bool at_target = stop_distance <= stop_cfg_.position_tolerance;
+        if (at_target && std::fabs(s_dot) <= stop_cfg_.speed_tolerance) {
+            stop_.phase = StopExecutionPhase::HOLD;
+        }
+
+        if (stop_.phase == StopExecutionPhase::APPROACH) {
+            // 목표점이 아니라 buffer만큼 앞을 향해 감속한다.
+            const double effective =
+                std::max(0.0, stop_distance - stop_cfg_.stop_buffer);
+            const double v_safe = std::sqrt(2.0 * decel * effective);
+            // 순항 목표속도와 비교해 더 낮은 쪽. 멀면 기존 속도 유지, 가까워질
+            // 수록 자연스럽게 낮아진다.
+            cmd.target_speed = std::min(cmd.target_speed, v_safe);
+            // 후보 생성만 velocity keeping으로 위임한다. 외부에 보고되는
+            // last_mode_는 아래에서 STOP으로 유지한다.
+            cmd.mode = LANE_KEEPING;
+        } else if (stop_.phase == StopExecutionPhase::BRAKING) {
+            // 목표를 이미 지나쳤다면 되돌아가는 정지 다항식을 만들지 않는다.
+            if (stop_distance < 0.0) {
+                cmd.stop_position = s;
+            }
+            // BRAKING의 종방향 프로파일은 stopping quintic이 정하므로
+            // cmd.target_speed는 후보 생성에 쓰이지 않는다. 다만 진단값
+            // (last_target_speed_)이 순항속도로 남으면 실제로는 0을 향해
+            // 감속 중인데 10m/s를 지령한 것처럼 보이므로 정지 목표에 맞춘
+            // 감속 프로파일 값으로 보고한다.
+            const double effective =
+                std::max(0.0, stop_distance - stop_cfg_.stop_buffer);
+            cmd.target_speed = std::min(cmd.target_speed,
+                                        std::sqrt(2.0 * decel * effective));
+        }
+    }
+
+    last_mode_ = external_stop_mode ? STOP : cmd.mode;
     last_target_speed_ = cmd.target_speed;
+
+    // HOLD는 후보 생성/충돌 필터 파이프라인을 거치지 않는다. 이미 정지한
+    // 상태이므로 0속도 궤적을 그대로 유지한다.
+    if (external_stop_mode && stop_.phase == StopExecutionPhase::HOLD) {
+        const RefPoint rp = Interpolate(ref_, s);
+        out_path.x.assign(1, ego.x);
+        out_path.y.assign(1, ego.y);
+        out_path.yaw.assign(1, std::isfinite(ego.yaw) ? ego.yaw : rp.theta);
+        out_path.kappa.assign(1, 0.0);
+        out_path.v.assign(1, 0.0);
+        out_path.a.assign(1, 0.0);
+        last_failure_reason_ = PlanFailureReason::NONE;
+        return true;
+    }
 
     PlannerDebugStats stats;
     // TRACKING은 아직 회피를 시작하지 않는 구간이다. 8초 충돌 lookahead가
@@ -1300,10 +1499,73 @@ bool FrenetPlanner::PlanInternal(
                                 following_.leader_id == blocker_id ? 1 : 0);
             }
         }
+        // STOP BRAKING에서 후보가 0개인 것은 흔한 상황이다. 정지 목표가
+        // 아주 가까우면(예: 5m/s에서 3m 앞) exact-stop quintic이 가속도
+        // 한계를 넘어 전부 탈락한다. 여기서 false를 반환하면 노드가 이전
+        // 궤적을 재사용해 정지 목표를 지나쳐 계속 주행하게 된다 - STOP에서
+        // 가장 위험한 실패 방향이다. 충돌 차단이 아닌 경우에 한해 그 자리에서
+        // 감속해 정지하는 fail-safe 궤적을 직접 만들어 반환한다.
+        if (external_stop_mode &&
+            stop_.phase == StopExecutionPhase::BRAKING &&
+            last_failure_reason_ != PlanFailureReason::COLLISION_BLOCKED) {
+            const double decel = std::max(0.1, stop_cfg_.comfortable_decel);
+            const double v0 = std::max(0.0, s_dot);
+            const int n = static_cast<int>(std::ceil(v0 / decel / path_cfg_.dt)) + 1;
+            out_path.x.assign(n, 0.0); out_path.y.assign(n, 0.0);
+            out_path.yaw.assign(n, 0.0); out_path.kappa.assign(n, 0.0);
+            out_path.v.assign(n, 0.0); out_path.a.assign(n, 0.0);
+            double s_i = s;
+            double v_prev = v0;
+            for (int i = 0; i < n; ++i) {
+                const double t = i * path_cfg_.dt;
+                const double v_i = std::max(0.0, v0 - decel * t);
+                if (i > 0) s_i += 0.5 * (v_i + v_prev) * path_cfg_.dt;
+                v_prev = v_i;
+                const RefPoint rp = Interpolate(ref_, s_i);
+                // 정지 직전 구간이라 횡방향은 현재 오프셋을 그대로 유지한다.
+                const CartesianState cs =
+                    FrenetToCartesian(rp, s_i, v_i, v_i > 0.0 ? -decel : 0.0,
+                                      d, 0.0, 0.0);
+                out_path.x[i] = cs.x;
+                out_path.y[i] = cs.y;
+                out_path.yaw[i] = cs.yaw;
+                out_path.kappa[i] = cs.kappa;
+                out_path.v[i] = v_i;
+                out_path.a[i] = v_i > 0.0 ? -decel : 0.0;
+            }
+            std::printf("[FrenetPlanner-STOP] BRAKING fail-safe: no candidate, "
+                        "emitting decel-to-zero path (s=%.2f v=%.2f dist=%.2f)\n",
+                        s, v0, stop_distance);
+            last_failure_reason_ = PlanFailureReason::NONE;
+            return true;
+        }
         return false;
     }
 
     CartesianPath selected_cartesian = ConvertToCartesianPath(*best, ref_);
+
+    // STOP은 절대 후진하지 않는다. 정지 목표를 이미 지나쳤거나 아주 가까울 때
+    // stopping quintic은 목표 s에 "도달"하려고 0을 지나 음수 속도로 내려가
+    // 후진 궤적을 만든다(실측: v가 0 이후 -0.15m/s까지 내려감). 속도가 0에
+    // 닿는 시점에서 궤적을 잘라 그 자리에 정지시킨다.
+    if (external_stop_mode) {
+        std::size_t stop_index = selected_cartesian.v.size();
+        for (std::size_t i = 0; i < selected_cartesian.v.size(); ++i) {
+            if (selected_cartesian.v[i] < 0.0) { stop_index = i; break; }
+        }
+        if (stop_index < selected_cartesian.v.size()) {
+            // 최소 한 점은 남겨 MPC가 추종할 자세 정보를 잃지 않게 한다.
+            const std::size_t keep = std::max<std::size_t>(1, stop_index);
+            selected_cartesian.x.resize(keep);
+            selected_cartesian.y.resize(keep);
+            selected_cartesian.yaw.resize(keep);
+            selected_cartesian.kappa.resize(keep);
+            selected_cartesian.v.resize(keep);
+            selected_cartesian.a.resize(keep);
+            selected_cartesian.v.back() = 0.0;
+            selected_cartesian.a.back() = 0.0;
+        }
+    }
 
     if (cmd.mode == MERGE && merge_.commit_pending) {
         ExtendMergePathThroughConflict(

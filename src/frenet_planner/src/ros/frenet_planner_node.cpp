@@ -115,14 +115,33 @@ FrenetPlannerNode::InputSnapshot FrenetPlannerNode::takeSnapshot() const {
 bool FrenetPlannerNode::isFresh(const ros::Time& stamp, double timeout_seconds,
                                 const ros::Time& now,
                                 double& age_seconds) const {
+    // 정상적인 전송/스케줄링 지터로 stamp가 아주 조금 미래인 경우.
     constexpr double kFutureToleranceSeconds = 0.01;
     if (stamp.isZero()) {
         age_seconds = 0.0;
         return false;
     }
     age_seconds = (now - stamp).toSec();
-    return age_seconds >= -kFutureToleranceSeconds &&
-           age_seconds <= timeout_seconds;
+
+    // 시계가 뒤로 점프하면 age가 크게 음수가 된다. 이건 데이터가 오래된 것이
+    // 아니라 시각 기준 자체가 흔들린 것이므로 stale로 처리하면 안 된다.
+    // stale로 보면 멀쩡한 입력에 대해 즉시 정지를 반복하게 된다(실측: WSL2/Docker
+    // 환경에서 약 28초 주기로 wall clock이 -1.2초 점프, 그때마다 급정지).
+    // 이 사이클은 판정을 보류하고 다음 사이클에서 정상 비교한다.
+    if (age_seconds < -kFutureToleranceSeconds) {
+        if (age_seconds >= -kMaxClockJumpSeconds) {
+            ROS_WARN_THROTTLE(
+                1.0,
+                "Clock moved backwards (age=%.3f s); treating input as fresh "
+                "for this cycle instead of forcing a stop",
+                age_seconds);
+            return true;
+        }
+        // 관용 범위를 넘는 미래 stamp는 시계 점프로 설명되지 않는다.
+        // 잘못된 타임스탬프를 가진 입력이므로 그대로 거부한다.
+        return false;
+    }
+    return age_seconds <= timeout_seconds;
 }
 
 double FrenetPlannerNode::trajectoryDt() const {
@@ -267,6 +286,35 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
         return;
     }
 
+    // STOP 목표는 BehaviorContext가 map 좌표(stop_x/y)로 준다. message_converter는
+    // RefLine을 모르므로 유효성만 검사하고 stop_position을 NaN으로 남긴다.
+    // RefLine을 가진 planner가 여기서 Frenet s로 투영해 명령을 완성한다.
+    if (command.mode == STOP) {
+        double ego_s = 0.0;
+        if (!planner_.ProjectEgoToS(ego, ego_s)) {
+            ROS_WARN_THROTTLE(
+                1.0, "Frenet STOP required: cannot project ego onto reference line");
+            publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            return;
+        }
+        double stop_s = 0.0;
+        // ego_s를 hint로 넘겨 트랙이 자기 자신과 가까워지는 구간에서 최근접점이
+        // 다른 구간으로 튀지 않게 한다. 목표가 경로에서 너무 멀면 false.
+        if (!planner_.ProjectPointToS(snapshot.behavior.stop_x,
+                                      snapshot.behavior.stop_y,
+                                      ego_s, stop_s)) {
+            ROS_WARN_THROTTLE(
+                1.0,
+                "Frenet STOP required: stop target (%.2f, %.2f) is not on the "
+                "reference line (command_id=%u)",
+                snapshot.behavior.stop_x, snapshot.behavior.stop_y,
+                snapshot.behavior.command_id);
+            publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            return;
+        }
+        command.stop_position = stop_s;
+    }
+
     const ConversionStatus objects_status =
         ConvertDetectedObjects(snapshot.objects, objects, collision_objects);
     if (objects_status != ConversionStatus::OK) {
@@ -280,15 +328,54 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
     CartesianPath path;
     if (!planner_.Plan(ego, objects, collision_objects, command, path)) {
         ++plan_fail_streak_;
-        const bool collision_blocked = planner_.last_failure_reason() ==
-            FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED;
-        if (collision_blocked) {
+        // 이전 궤적 재사용은 "이번 사이클만 후보를 못 만든" 일시적 실패에만
+        // 허용된다. 명령 자체가 잘못됐거나(INVALID_COMMAND) 지원하지 않는
+        // 모드(UNSUPPORTED_BEHAVIOR)인데 이전 궤적을 계속 내보내면, 예를 들어
+        // STOP 명령을 받고도 직전 KEEP 궤적을 따라 계속 주행하게 된다.
+        // 이런 실패는 재사용 없이 즉시 정지한다.
+        const FrenetPlanner::PlanFailureReason reason =
+            planner_.last_failure_reason();
+        bool immediate_stop = true;
+        uint8_t failure_code = asmc_msgs::Trajectory::FAILURE_GENERATION;
+        const char* reason_name = "UNKNOWN";
+        switch (reason) {
+            case FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED:
+                failure_code = asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED;
+                reason_name = "COLLISION_BLOCKED";
+                break;
+            case FrenetPlanner::PlanFailureReason::INVALID_COMMAND:
+                failure_code = asmc_msgs::Trajectory::FAILURE_INVALID_INPUT;
+                reason_name = "INVALID_COMMAND";
+                break;
+            case FrenetPlanner::PlanFailureReason::UNSUPPORTED_BEHAVIOR:
+                failure_code =
+                    asmc_msgs::Trajectory::FAILURE_UNSUPPORTED_BEHAVIOR;
+                reason_name = "UNSUPPORTED_BEHAVIOR";
+                break;
+            case FrenetPlanner::PlanFailureReason::NOT_INITIALIZED:
+                failure_code = asmc_msgs::Trajectory::FAILURE_NOT_INITIALIZED;
+                reason_name = "NOT_INITIALIZED";
+                break;
+            case FrenetPlanner::PlanFailureReason::TRANSIENT_GENERATION_FAILURE:
+                immediate_stop = false;
+                reason_name = "TRANSIENT_GENERATION_FAILURE";
+                break;
+            case FrenetPlanner::PlanFailureReason::NONE:
+                // Plan()이 false를 반환했는데 NONE이면 planner 내부 계약 위반이다.
+                // 재사용 대상으로 삼지 않고 안전하게 정지한다.
+                reason_name = "NONE";
+                break;
+        }
+
+        if (immediate_stop) {
             ROS_WARN_THROTTLE(
-                1.0, "Frenet collision blocked: publishing immediate STOP");
-            publishStop(snapshot,
-                        asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED, now);
+                1.0,
+                "Frenet immediate STOP: reason=%s command_id=%u",
+                reason_name, snapshot.behavior.command_id);
+            publishStop(snapshot, failure_code, now);
             return;
         }
+
         if (has_last_valid_trajectory_ &&
             plan_fail_streak_ <= kMaxTransientFailCycles) {
             asmc_msgs::Trajectory reused = last_valid_trajectory_;
@@ -300,10 +387,9 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
         }
         ROS_WARN_THROTTLE(
             1.0,
-            "Frenet Plan(command) failed: reason=%d command_id=%u; "
+            "Frenet Plan(command) failed: reason=%s command_id=%u; "
             "publishing STOP after transient reuse window",
-            static_cast<int>(planner_.last_failure_reason()),
-            snapshot.behavior.command_id);
+            reason_name, snapshot.behavior.command_id);
         publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_GENERATION, now);
         return;
     }

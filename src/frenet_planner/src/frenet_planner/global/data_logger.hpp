@@ -78,6 +78,44 @@ struct MergeConfig {
     double cross_speed_floor = 3.0;     // [m/s] COMMIT/CROSS 중 교차구역 이탈 최저 목표속도
 };
 
+// =========================================================
+// 외부 STOP 명령의 실행 파라미터.
+// AVOID/MERGE와 감속 특성이 달라(정지선 정확도가 중요) comfortable_decel을
+// avoid_cfg와 공유하지 않고 별도로 둔다.
+// =========================================================
+struct StopConfig {
+    // [m/s^2] APPROACH 감속 프로파일과 BRAKING 진입거리 계산에 쓰는 감속도.
+    double comfortable_decel = 2.0;
+    // [m] 제동거리에 더해 BRAKING으로 전환할 여유. 이 값이 있어야 정확히
+    // 제동한계에서 전환하지 않고 한 박자 일찍 정지 다항식을 만들 수 있다.
+    double braking_margin = 3.0;
+    // [m] 정지 목표 앞에 남길 여유. APPROACH 속도 프로파일이 목표점이 아니라
+    // 이 buffer만큼 앞을 향하도록 해 오버슈트를 줄인다.
+    double stop_buffer = 0.5;
+    // [m] 목표 도달 판정. 이 안에 들어오고 속도도 낮으면 HOLD.
+    double position_tolerance = 0.5;
+    // [m/s] HOLD 진입 속도 판정.
+    double speed_tolerance = 0.2;
+    // [m] Cartesian 정지 목표가 reference line에서 이만큼 넘게 떨어져 있으면
+    // 그 명령은 이 경로에 대한 정지 지점이 아니라고 보고 거부한다.
+    double max_lateral_offset = 5.0;
+    // [m] 이만큼 넘게 목표가 바뀌면 새 STOP 명령으로 보고 실행 phase를 리셋한다.
+    double target_change_tolerance = 2.0;
+    // [m] 정지 목표를 s로 투영할 때 FindClosestS에 넘길 탐색창 반경.
+    //
+    // FindClosestS의 기본 창(30m)은 ego localization용이다 - 한 틱에 몇 m만
+    // 움직이는 ego의 최근접점이 평행/헤어핀 구간에서 엉뚱한 s로 튀는 것을
+    // 막으려고 좁게 잡혀 있다. 정지 목표는 ego보다 훨씬 앞에 있으므로 같은
+    // 창을 쓰면 목표가 창 밖으로 나가고, 잘린 초기 추정값에서 시작한 Newton이
+    // 창 경계에 머무는 게 아니라 트랙의 다른 구간으로 발산한다
+    // (실측: ego_s=100에서 전방 100m 목표가 s=1640으로, 오차 735m).
+    //
+    // 반드시 실제 사용할 최대 stop lookahead보다 크게 잡아야 한다. 이 값보다
+    // 먼 정지 목표는 투영이 틀어져 max_lateral_offset 검사에서 거부되고,
+    // 정상 명령이 INVALID_COMMAND로 즉시 정지하게 된다.
+    double projection_search_window = 100.0;
+};
+
 // 고주로/본선 합류 구간. Global Path가 이미 램프에서 본선으로 이어지는 형상을
 // 가지므로 횡경로는 d=0을 유지하고, 본선 corridor의 선행/후행 차량 사이 시간·
 // 거리 gap에 맞춰 종방향 진입 시점만 결정한다.
@@ -124,6 +162,7 @@ void LoadParams(const std::string& yaml_path,
                 CurveSpeedConfig& curve_speed_cfg,
                 FollowingConfig& following_cfg,
                 AvoidConfig& avoid_cfg,
+                StopConfig& stop_cfg,
                 MergeConfig& merge_cfg,
                 HighwayMergeConfig& highway_merge_cfg,
                 PlannerVisualizationConfig& visualization_cfg,

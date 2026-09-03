@@ -1,5 +1,6 @@
 #include "ros/message_converter.hpp"
 
+#include <cmath>
 #include <iostream>
 #include <limits>
 #include <string>
@@ -35,6 +36,17 @@ asmc_msgs::BehaviorContext MakeKeepBehavior() {
     message.selected_behavior = asmc_msgs::BehaviorContext::KEEP;
     message.has_desired_speed = true;
     message.desired_speed = 8.0;
+    return message;
+}
+
+asmc_msgs::BehaviorContext MakeStopBehavior() {
+    asmc_msgs::BehaviorContext message;
+    message.header.stamp = ros::Time(10, 0);
+    message.valid = true;
+    message.selected_behavior = asmc_msgs::BehaviorContext::STOP;
+    message.has_stop_target = true;
+    message.stop_x = 120.0;
+    message.stop_y = -35.0;
     return message;
 }
 
@@ -145,11 +157,88 @@ int main() {
                !command.has_target_speed && !command.has_max_speed,
            "missing speed fields preserve planner-default semantics");
 
+    // --- STOP (C3) ---------------------------------------------------------
+    // converter는 mode만 변환한다. stop_x/y -> Frenet s 투영은 RefLine을 가진
+    // 노드의 책임이므로(C4), 여기서 나온 command의 stop_position은 아직 NaN이다.
+    behavior = MakeStopBehavior();
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::OK &&
+               command.mode == STOP,
+           "STOP explicitly maps to STOP mode");
+
+    behavior = MakeStopBehavior();
+    frenet_planner_ros::ConvertBehaviorContext(behavior, command);
+    Expect(!std::isfinite(command.stop_position),
+           "converter leaves stop_position unresolved for the node to project");
+
+    behavior = MakeStopBehavior();
+    behavior.has_desired_speed = true;
+    behavior.desired_speed = 5.0;
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::OK &&
+               command.mode == STOP && command.has_target_speed &&
+               command.target_speed == 5.0,
+           "STOP still carries optional speed fields");
+
+    // 정지 지점 없는 STOP은 어디에 서야 할지 모르는 명령이다.
+    behavior = MakeStopBehavior();
+    behavior.has_stop_target = false;
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::INVALID_FLAG,
+           "STOP without has_stop_target is rejected");
+
+    behavior = MakeStopBehavior();
+    behavior.stop_x = std::numeric_limits<double>::quiet_NaN();
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::NON_FINITE_VALUE,
+           "STOP with non-finite stop_x is rejected");
+
+    behavior = MakeStopBehavior();
+    behavior.stop_y = std::numeric_limits<double>::infinity();
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::NON_FINITE_VALUE,
+           "STOP with non-finite stop_y is rejected");
+
+    // KEEP은 stop_x/y를 보지 않는다. FSM이 이전 STOP 값을 남겨둔 채
+    // KEEP으로 전환해도 주행이 막히면 안 된다.
+    behavior = MakeKeepBehavior();
+    behavior.has_stop_target = false;
+    behavior.stop_x = std::numeric_limits<double>::quiet_NaN();
+    behavior.stop_y = std::numeric_limits<double>::quiet_NaN();
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::OK && command.mode == LANE_KEEPING,
+           "KEEP ignores stop target fields");
+
+    behavior = MakeStopBehavior();
+    behavior.valid = false;
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::INVALID_FLAG,
+           "invalid STOP behavior is rejected");
+
+    // --- 아직 열지 않은 모드 ------------------------------------------------
     behavior = MakeKeepBehavior();
     behavior.selected_behavior = asmc_msgs::BehaviorContext::FOLLOW;
     Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
                ConversionStatus::UNSUPPORTED_BEHAVIOR,
-           "non-KEEP behavior is rejected");
+           "FOLLOW behavior remains unsupported");
+
+    behavior = MakeKeepBehavior();
+    behavior.selected_behavior = asmc_msgs::BehaviorContext::EMERGENCY_STOP;
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::UNSUPPORTED_BEHAVIOR,
+           "EMERGENCY_STOP is not silently treated as STOP");
+
+    behavior = MakeKeepBehavior();
+    behavior.selected_behavior = asmc_msgs::BehaviorContext::AVOID;
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::UNSUPPORTED_BEHAVIOR,
+           "AVOID behavior remains unsupported");
+
+    behavior = MakeKeepBehavior();
+    behavior.selected_behavior = asmc_msgs::BehaviorContext::MERGE;
+    Expect(frenet_planner_ros::ConvertBehaviorContext(behavior, command) ==
+               ConversionStatus::UNSUPPORTED_BEHAVIOR,
+           "MERGE behavior remains unsupported");
 
     std::vector<ObjectInfo> objects(1);
     std::vector<TrackedObstacle> collision_objects(1);

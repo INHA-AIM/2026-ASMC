@@ -46,47 +46,54 @@ struct ObjectInfo {
     double yaw_rate = 0.0;  // [rad/s] planner가 연속 heading 관측으로 추정
 };
 
+// 외부(FSM) 또는 planner 내부 legacy 로직이 채우는 주행 명령.
+// aggregate 구조를 유지하되(생성자 없음) 모든 필드에 안전한 기본값을 준다.
+// PlannerCommand cmd; / PlannerCommand cmd{}; 두 형태 모두 미초기화 필드가
+// 없도록 하는 것이 목적이다 (mode 미초기화로 인한 임의 모드 진입 방지).
 struct PlannerCommand {
     // 1. 모드
-    BehaviorState mode;
+    BehaviorState mode = LANE_KEEPING;
 
     // 2. 횡방향 목표
-    int target_lane;                   // Frenet d 기준: -1 우, 0 유지, 1 좌
-    double avoidance_d_offset;         // AVOID 모드 전용 연속값 [m]
+    int target_lane = 0;                    // Frenet d 기준: -1 우, 0 유지, 1 좌
+    double avoidance_d_offset = 0.0;        // AVOID 모드 전용 연속값 [m]
 
     // 3. 종방향 목표
-    bool has_target_speed = false;      // false이면 planner 기본 목표속도 사용
-    double target_speed;               // Velocity_keep, Lane_change [m/s]
-    bool has_max_speed = false;         // true이면 최종 목표속도의 상한 적용
-    double max_speed = 0.0;             // 외부 command가 지정한 속도 상한 [m/s]
-    double stop_position;              // STOP 모드: 정지 목표 s 좌표 [m]
+    bool has_target_speed = false;          // false이면 planner 기본 목표속도 사용
+    double target_speed = 0.0;              // Velocity_keep, Lane_change [m/s]
+    bool has_max_speed = false;             // true이면 최종 목표속도의 상한 적용
+    double max_speed = 0.0;                 // 외부 command가 지정한 속도 상한 [m/s]
+    // STOP 모드: 정지 목표 s 좌표 [m].
+    // 0.0은 실제로 유효한 Frenet s이므로 "미지정"을 0으로 표현할 수 없다.
+    // 기본값을 NaN으로 두어 std::isfinite(stop_position)로 지정 여부를 판별한다.
+    double stop_position = std::numeric_limits<double>::quiet_NaN();
 
     // 4. FOLLOWING 전용
-    int leader_id;                      // coast 연장 충돌검사에서 제어 대상 식별
-    double leader_s;                   // 선두 차량 위치 [m]
-    double leader_speed;               // 선두 차량 속도 [m/s]
-    double leader_accel;               // 선두 차량 가속도
-    double time_gap;                   // taw
-    double min_gap;                    // D0 [m]
-    double gap_gain;                   // 간격 오차를 접근 속도로 변환하는 이득 [1/s]
+    int leader_id = -1;                     // coast 연장 충돌검사에서 제어 대상 식별
+    double leader_s = 0.0;                  // 선두 차량 위치 [m]
+    double leader_speed = 0.0;              // 선두 차량 속도 [m/s]
+    double leader_accel = 0.0;              // 선두 차량 가속도
+    double time_gap = 0.0;                  // taw
+    double min_gap = 0.0;                   // D0 [m]
+    double gap_gain = 0.0;                  // 간격 오차를 접근 속도로 변환하는 이득 [1/s]
 
     // 5. MERGE 전용(Sec.V-A) - 대상 차선의 두 차량 sa(앞)/sb(뒤) 등가속 예측
-    double merge_sa_s;
-    int merge_sa_id;
-    double merge_sa_speed;
-    double merge_sa_accel;
-    double merge_sb_s;
-    int merge_sb_id;
-    double merge_sb_speed;
-    double merge_sb_accel;
-    double merge_target_d;
-    bool merge_gap_safe;
-    double merge_conflict_s;
-    double merge_stop_s;
-    double merge_entry_time;
-    bool merge_committed;
-    bool merge_crossing;
-    MergeType merge_type;
+    double merge_sa_s = 0.0;
+    int merge_sa_id = -1;
+    double merge_sa_speed = 0.0;
+    double merge_sa_accel = 0.0;
+    double merge_sb_s = 0.0;
+    int merge_sb_id = -1;
+    double merge_sb_speed = 0.0;
+    double merge_sb_accel = 0.0;
+    double merge_target_d = 0.0;
+    bool merge_gap_safe = false;
+    double merge_conflict_s = 0.0;
+    double merge_stop_s = 0.0;
+    double merge_entry_time = 0.0;
+    bool merge_committed = false;
+    bool merge_crossing = false;
+    MergeType merge_type = MergeType::NONE;
 };
 
 // =========================================================

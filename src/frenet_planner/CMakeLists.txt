@@ -173,6 +173,15 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME message_converter_test COMMAND message_converter_test)
 
+  add_executable(planner_command_defaults_test
+    tests/planner_command_defaults_test.cpp
+  )
+  target_include_directories(planner_command_defaults_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+  )
+  add_test(NAME planner_command_defaults_test
+           COMMAND planner_command_defaults_test)
+
   add_executable(command_keep_plan_test
     tests/command_keep_plan_test.cpp
   )
@@ -184,6 +193,30 @@ if(CATKIN_ENABLE_TESTING)
     frenet_planner_core
   )
   add_test(NAME command_keep_plan_test COMMAND command_keep_plan_test)
+
+  add_executable(command_validation_test
+    tests/command_validation_test.cpp
+  )
+  target_compile_definitions(command_validation_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(command_validation_test
+    frenet_planner_core
+  )
+  add_test(NAME command_validation_test COMMAND command_validation_test)
+
+  add_executable(command_stop_plan_test
+    tests/command_stop_plan_test.cpp
+  )
+  target_compile_definitions(command_stop_plan_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(command_stop_plan_test
+    frenet_planner_core
+  )
+  add_test(NAME command_stop_plan_test COMMAND command_stop_plan_test)
 
   add_executable(vehicle_state_adapter_test tests/vehicle_state_adapter_test.cpp)
   add_dependencies(vehicle_state_adapter_test ${catkin_EXPORTED_TARGETS})

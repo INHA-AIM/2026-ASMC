@@ -1,0 +1,280 @@
+// C1 regression: 외부 command 진입점의 mode whitelist와 필드 검증.
+//
+// 검증 대상은 "무엇을 거부하는가"가 아니라 "왜 거부했는가"까지다. ROS node가
+// 이전 궤적 재사용(TRANSIENT_GENERATION_FAILURE)과 즉시 정지(INVALID_COMMAND /
+// UNSUPPORTED_BEHAVIOR)를 구분하려면 reason이 정확해야 한다.
+
+#include "frenet_planner/frenet_planner.hpp"
+
+#include <cmath>
+#include <fstream>
+#include <iostream>
+#include <limits>
+#include <string>
+#include <vector>
+
+namespace {
+
+using Reason = FrenetPlanner::PlanFailureReason;
+
+int g_failures = 0;
+
+void Expect(bool condition, const std::string& name) {
+    if (condition) std::cout << "[PASS] " << name << '\n';
+    else { std::cerr << "[FAIL] " << name << '\n'; ++g_failures; }
+}
+
+CartesianState LoadPoseNearArcLength(const std::string& path,
+                                     double target_s,
+                                     double speed) {
+    std::ifstream input(path);
+    std::vector<double> xs;
+    std::vector<double> ys;
+    double x = 0.0;
+    double y = 0.0;
+    double ignored = 0.0;
+    while (input >> x >> y >> ignored) {
+        xs.push_back(x);
+        ys.push_back(y);
+    }
+
+    std::size_t index = 1;
+    double s = 0.0;
+    for (; index < xs.size(); ++index) {
+        s += std::hypot(xs[index] - xs[index - 1],
+                        ys[index] - ys[index - 1]);
+        if (s >= target_s) break;
+    }
+    if (index >= xs.size()) index = xs.size() - 1;
+
+    CartesianState pose{};
+    pose.x = xs[index];
+    pose.y = ys[index];
+    pose.yaw = std::atan2(ys[index] - ys[index - 1],
+                          xs[index] - xs[index - 1]);
+    pose.v = speed;
+    return pose;
+}
+
+ObjectInfo MakeObjectInfo(int id, double x, double y) {
+    ObjectInfo object;
+    object.id = id;
+    object.x = x;
+    object.y = y;
+    object.z = 1.0;
+    object.width = 2.0;
+    object.length = 4.0;
+    object.height = 2.0;
+    return object;
+}
+
+TrackedObstacle MakeAuthoritativeBox(int id, double x, double y) {
+    TrackedObstacle obstacle;
+    obstacle.id = id;
+    obstacle.geometry_source = ObstacleGeometrySource::LIDAR_CORNERS;
+    obstacle.geometry_valid = true;
+    obstacle.z_valid = true;
+    const double xy[4][2] = {
+        {x - 2.0, y - 1.0}, {x + 2.0, y - 1.0},
+        {x + 2.0, y + 1.0}, {x - 2.0, y + 1.0},
+    };
+    for (std::size_t i = 0; i < 4; ++i) {
+        obstacle.corners[i] = {xy[i][0], xy[i][1], 0.0};
+        obstacle.corners[i + 4] = {xy[i][0], xy[i][1], 2.0};
+    }
+    return obstacle;
+}
+
+constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
+constexpr double kInf = std::numeric_limits<double>::infinity();
+
+}  // namespace
+
+int main() {
+    const std::string package_src = FRENET_PACKAGE_SRC_DIR;
+    const std::string config = package_src + "/frenet_planner/config/params.yaml";
+    const std::string waypoints = FRENET_TEST_WAYPOINT_FILE;
+
+    FrenetPlanner planner;
+    if (!planner.Init(config)) {
+        std::cerr << "[FAIL] planner initialization\n";
+        return 1;
+    }
+
+    // MERGE approach window 밖의 평범한 구간에서 검증한다. 여기서는 legacy
+    // behavior가 개입할 여지가 없어 command 검증 결과만 관찰된다.
+    const CartesianState ego = LoadPoseNearArcLength(waypoints, 200.0, 5.0);
+    const std::vector<ObjectInfo> no_objects;
+    CartesianPath path;
+
+    // --- 허용된 모드 -------------------------------------------------------
+    PlannerCommand keep{};
+    keep.mode = LANE_KEEPING;
+    Expect(planner.Plan(ego, no_objects, keep, path) &&
+               planner.last_failure_reason() == Reason::NONE,
+           "KEEP command passes validation");
+
+    // 유효한 STOP은 validation을 통과해 PlanInternal까지 진입해야 한다.
+    // (실제 정지 궤적 품질은 C4의 command_stop_plan_test가 담당한다.)
+    PlannerCommand stop{};
+    stop.mode = STOP;
+    stop.stop_position = 230.0;  // ego(s=200m) 기준 전방
+    planner.Plan(ego, no_objects, stop, path);
+    Expect(planner.last_failure_reason() != Reason::UNSUPPORTED_BEHAVIOR &&
+               planner.last_failure_reason() != Reason::INVALID_COMMAND,
+           "valid STOP command is accepted by the external gate");
+
+    // --- STOP 필드 검증 ----------------------------------------------------
+    PlannerCommand stop_unset{};
+    stop_unset.mode = STOP;  // stop_position은 기본값 NaN 그대로
+    Expect(!planner.Plan(ego, no_objects, stop_unset, path) &&
+               planner.last_failure_reason() == Reason::INVALID_COMMAND,
+           "STOP without stop_position is INVALID_COMMAND");
+
+    PlannerCommand stop_nan{};
+    stop_nan.mode = STOP;
+    stop_nan.stop_position = kNaN;
+    Expect(!planner.Plan(ego, no_objects, stop_nan, path) &&
+               planner.last_failure_reason() == Reason::INVALID_COMMAND,
+           "STOP with NaN stop_position is INVALID_COMMAND");
+
+    PlannerCommand stop_inf{};
+    stop_inf.mode = STOP;
+    stop_inf.stop_position = kInf;
+    Expect(!planner.Plan(ego, no_objects, stop_inf, path) &&
+               planner.last_failure_reason() == Reason::INVALID_COMMAND,
+           "STOP with infinite stop_position is INVALID_COMMAND");
+
+    PlannerCommand stop_negative{};
+    stop_negative.mode = STOP;
+    stop_negative.stop_position = -1.0;
+    Expect(!planner.Plan(ego, no_objects, stop_negative, path) &&
+               planner.last_failure_reason() == Reason::INVALID_COMMAND,
+           "STOP with negative stop_position is INVALID_COMMAND");
+
+    // --- 공통 속도 검증 ----------------------------------------------------
+    PlannerCommand negative_speed{};
+    negative_speed.mode = LANE_KEEPING;
+    negative_speed.has_target_speed = true;
+    negative_speed.target_speed = -1.0;
+    Expect(!planner.Plan(ego, no_objects, negative_speed, path) &&
+               planner.last_failure_reason() == Reason::INVALID_COMMAND,
+           "negative target speed is INVALID_COMMAND");
+
+    PlannerCommand nan_speed{};
+    nan_speed.mode = LANE_KEEPING;
+    nan_speed.has_target_speed = true;
+    nan_speed.target_speed = kNaN;
+    Expect(!planner.Plan(ego, no_objects, nan_speed, path) &&
+               planner.last_failure_reason() == Reason::INVALID_COMMAND,
+           "NaN target speed is INVALID_COMMAND");
+
+    PlannerCommand negative_max{};
+    negative_max.mode = LANE_KEEPING;
+    negative_max.has_max_speed = true;
+    negative_max.max_speed = -0.1;
+    Expect(!planner.Plan(ego, no_objects, negative_max, path) &&
+               planner.last_failure_reason() == Reason::INVALID_COMMAND,
+           "negative max speed is INVALID_COMMAND");
+
+    // has_*_speed가 false면 값은 사용되지 않으므로 검증 대상이 아니다.
+    PlannerCommand unused_speed{};
+    unused_speed.mode = LANE_KEEPING;
+    unused_speed.has_target_speed = false;
+    unused_speed.target_speed = kNaN;
+    Expect(planner.Plan(ego, no_objects, unused_speed, path) &&
+               planner.last_failure_reason() == Reason::NONE,
+           "unused target_speed value is not validated");
+
+    // --- 아직 열지 않은 모드 -----------------------------------------------
+    PlannerCommand follow{};
+    follow.mode = FOLLOWING;
+    follow.leader_id = 7;
+    follow.leader_s = 260.0;
+    follow.leader_speed = 3.0;
+    Expect(!planner.Plan(ego, no_objects, follow, path) &&
+               planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
+           "external FOLLOWING is UNSUPPORTED_BEHAVIOR");
+
+    PlannerCommand merge{};
+    merge.mode = MERGE;
+    merge.merge_type = MergeType::ROUNDABOUT;
+    Expect(!planner.Plan(ego, no_objects, merge, path) &&
+               planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
+           "external MERGE is UNSUPPORTED_BEHAVIOR");
+
+    PlannerCommand avoid{};
+    avoid.mode = AVOID;
+    avoid.avoidance_d_offset = 1.5;
+    Expect(!planner.Plan(ego, no_objects, avoid, path) &&
+               planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
+           "external AVOID is UNSUPPORTED_BEHAVIOR");
+
+    PlannerCommand lane_change{};
+    lane_change.mode = LANE_CHANGE_LEFT;
+    Expect(!planner.Plan(ego, no_objects, lane_change, path) &&
+               planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
+           "external LANE_CHANGE_LEFT is UNSUPPORTED_BEHAVIOR");
+
+    PlannerCommand emergency{};
+    emergency.mode = EMERGENCY;
+    emergency.stop_position = 210.0;
+    Expect(!planner.Plan(ego, no_objects, emergency, path) &&
+               planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
+           "external EMERGENCY is UNSUPPORTED_BEHAVIOR");
+
+    // 모드 whitelist는 필드 검증보다 먼저다. 지원하지 않는 모드는 필드가
+    // 무엇이든 UNSUPPORTED_BEHAVIOR로 보고돼야 한다.
+    PlannerCommand unsupported_and_invalid{};
+    unsupported_and_invalid.mode = FOLLOWING;
+    unsupported_and_invalid.has_target_speed = true;
+    unsupported_and_invalid.target_speed = -5.0;
+    Expect(!planner.Plan(ego, no_objects, unsupported_and_invalid, path) &&
+               planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
+           "mode whitelist is checked before field validation");
+
+    // --- collision-object overload ----------------------------------------
+    const std::vector<ObjectInfo> objects = {
+        MakeObjectInfo(31, ego.x + 100.0, ego.y + 100.0)};
+    const std::vector<TrackedObstacle> boxes = {
+        MakeAuthoritativeBox(31, ego.x + 100.0, ego.y + 100.0)};
+
+    Expect(planner.Plan(ego, objects, boxes, keep, path) &&
+               planner.last_failure_reason() == Reason::NONE,
+           "collision overload accepts a matched KEEP command");
+
+    Expect(!planner.Plan(ego, objects, boxes, follow, path) &&
+               planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
+           "collision overload rejects unsupported mode identically");
+
+    Expect(!planner.Plan(ego, objects, boxes, stop_unset, path) &&
+               planner.last_failure_reason() == Reason::INVALID_COMMAND,
+           "collision overload rejects invalid STOP identically");
+
+    const std::vector<TrackedObstacle> no_boxes;
+    Expect(!planner.Plan(ego, objects, no_boxes, keep, path) &&
+               planner.last_failure_reason() == Reason::INVALID_COMMAND,
+           "mismatched collision geometry count is INVALID_COMMAND");
+
+    // --- 실패 reason이 재사용 정책과 섞이지 않는지 ------------------------
+    // 어떤 command 결함도 TRANSIENT_GENERATION_FAILURE로 보고되면 안 된다.
+    // 그 값은 ROS node에서 이전 궤적 재사용을 뜻하기 때문이다.
+    const PlannerCommand rejected[] = {
+        stop_unset, stop_nan, stop_negative, negative_speed,
+        nan_speed, negative_max, follow, merge, avoid, lane_change,
+    };
+    bool never_transient = true;
+    for (const PlannerCommand& command : rejected) {
+        planner.Plan(ego, no_objects, command, path);
+        never_transient = never_transient &&
+            planner.last_failure_reason() != Reason::TRANSIENT_GENERATION_FAILURE;
+    }
+    Expect(never_transient,
+           "command rejections are never reported as transient failures");
+
+    if (g_failures == 0) {
+        std::cout << "All command validation tests passed\n";
+        return 0;
+    }
+    return 1;
+}

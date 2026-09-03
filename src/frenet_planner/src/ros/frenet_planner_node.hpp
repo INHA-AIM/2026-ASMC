@@ -75,6 +75,11 @@ class FrenetPlannerNode {
     double objects_timeout_seconds_ = 0.30;
     double behavior_timeout_seconds_ = 0.50;
     static constexpr int kMaxTransientFailCycles = 5;
+
+    // 시계가 뒤로 점프했다고 볼 수 있는 age 하한 [s]. 이보다 더 미래인 stamp는
+    // 시계 점프로 설명되지 않는 잘못된 입력으로 보고 거부한다.
+    // 실측 기준: WSL2/Docker 환경에서 약 28초 주기로 wall clock이 -1.2초 점프.
+    static constexpr double kMaxClockJumpSeconds = 5.0;
 };
 
 }  // namespace frenet_planner_ros

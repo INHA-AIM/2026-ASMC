@@ -26,10 +26,19 @@
 // 연동 시 이 조건문들을 걷어내고 FSM이 준 mode를 그대로 쓰도록 교체한다.
 class FrenetPlanner {
 public:
+    // Plan() 실패 원인. 호출자(ROS node)가 "이전 궤적 재사용"과 "즉시 정지"를
+    // 구분하려면 일시적 생성 실패와 명령 자체의 결함이 분리되어야 한다.
+    // TRANSIENT_GENERATION_FAILURE만 재사용 대상이다.
     enum class PlanFailureReason {
         NONE,
         COLLISION_BLOCKED,
+        // 이번 사이클에서만 유효 후보를 못 만든 경우(수치적/일시적).
         TRANSIENT_GENERATION_FAILURE,
+        // 모드 자체는 지원하지만 필드 값이 잘못된 경우
+        // (STOP인데 stop_position 미지정, 음수/NaN 속도 등).
+        INVALID_COMMAND,
+        // 외부 command로 아직 열지 않은 모드.
+        UNSUPPORTED_BEHAVIOR,
         NOT_INITIALIZED,
     };
 
@@ -41,8 +50,10 @@ public:
     bool Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
               CartesianPath& out_path);
 
-    // 외부 FSM command 기반 진입점. 첫 통합 단계에서는 LANE_KEEPING만 지원하며,
-    // 기존 3인자 Plan()은 legacy UDP 회귀 경로로 유지한다.
+    // 외부 FSM command 기반 진입점. 현재 external whitelist는 LANE_KEEPING과
+    // STOP이며(ValidateExternalCommand 참고), 나머지 모드는 core 구현이 있어도
+    // UNSUPPORTED_BEHAVIOR로 거부한다. FSM canonical migration 시점에 whitelist를
+    // 확장한다. 기존 3인자 Plan()은 legacy UDP 회귀 경로로 유지한다.
     bool Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
               const PlannerCommand& command, CartesianPath& out_path);
 
@@ -51,6 +62,19 @@ public:
     bool Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
               const std::vector<TrackedObstacle>& collision_obstacles,
               const PlannerCommand& command, CartesianPath& out_path);
+
+    // Cartesian 점을 reference line의 종방향 좌표 s로 투영한다.
+    // 외부 STOP 명령의 (stop_x, stop_y)를 PlannerCommand.stop_position으로
+    // 바꾸는 데 쓴다 - message_converter는 RefLine을 모르므로 이 변환을 할 수
+    // 없다. s_hint는 FindClosestS의 탐색창 힌트로 그대로 전달된다: 트랙이
+    // 자기 자신과 가까워지는 구간에서 최근접점이 다른 구간으로 튀는 것을
+    // 막으려면 현재 위치 근방으로 탐색을 제한해야 한다(ref_line.hpp 주석 참고).
+    // 투영점이 실제 목표점에서 stop_cfg_.max_lateral_offset보다 멀면 이 경로에
+    // 대한 정지 지점이 아니라고 보고 false를 반환한다.
+    bool ProjectPointToS(double x, double y, double s_hint, double& out_s) const;
+
+    // Ego Cartesian 위치의 s. 노드가 ProjectPointToS의 s_hint를 얻는 용도.
+    bool ProjectEgoToS(const CartesianState& ego, double& out_s) const;
 
     // Plan()이 반환하는 CartesianPath의 샘플 간격 [s] (params.yaml의 planner.dt).
     // MPC 쪽에서 이 값을 알아야 시간 기준으로 재샘플링해 궤적 추종(time-aligned
@@ -98,6 +122,22 @@ private:
         double leader_speed = 0.0;
         double leader_accel = 0.0;
         int missing_cycles = 0;
+    };
+
+    // 외부 STOP 명령의 내부 실행 단계. 외부 BehaviorState::STOP과는 다른
+    // 개념이다 - mode는 계속 STOP이고, 그 안에서 어떤 종방향 후보 생성기를
+    // 쓸지가 이 phase로 갈린다.
+    //   APPROACH: 정지 목표가 제동거리 밖. 속도만 낮추며 접근(velocity keeping).
+    //   BRAKING : 제동거리 안. exact-stop quintic 생성.
+    //   HOLD    : 목표 도달 + 저속. 0속도 유지.
+    enum class StopExecutionPhase { APPROACH, BRAKING, HOLD };
+
+    struct StopContext {
+        StopExecutionPhase phase = StopExecutionPhase::APPROACH;
+        // 이 context가 추종 중인 정지 목표 s. 목표가 크게 바뀌면 새 명령으로
+        // 보고 phase를 리셋한다.
+        double target_s = std::numeric_limits<double>::quiet_NaN();
+        bool target_valid = false;
     };
 
     enum class MergePhase { APPROACH, WAIT, COMMIT, CROSS, CLEAR };
@@ -158,6 +198,7 @@ private:
     CurveSpeedConfig curve_speed_cfg_{};
     FollowingConfig following_cfg_{};
     AvoidConfig avoid_cfg_{};
+    StopConfig stop_cfg_{};
     MergeConfig merge_cfg_{};
     HighwayMergeConfig highway_merge_cfg_{};
     PlannerVisualizationConfig visualization_cfg_{};
@@ -180,6 +221,7 @@ private:
     BehaviorState prev_mode_ = LANE_KEEPING;
     MergePhase prev_merge_phase_ = MergePhase::CLEAR;
     AvoidanceContext avoidance_{};
+    StopContext stop_{};
     FollowingContext following_{};
     MergeContext merge_{};
     std::unordered_map<int, ObjectTrack> object_tracks_{};
