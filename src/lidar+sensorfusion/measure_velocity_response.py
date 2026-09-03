@@ -45,8 +45,8 @@ class VelocityResponseProbe:
 
     @staticmethod
     def object_speed_kmh(obj):
-        # MORAI ObjectStatus velocity.x is the object's forward speed in m/s.
-        return abs(float(obj.velocity.x)) * 3.6
+        # morai_udp_bridge keeps ObjectStatus velocity components in km/h.
+        return math.hypot(float(obj.velocity.x), float(obj.velocity.y))
 
     def object_callback(self, message):
         now = time.monotonic()

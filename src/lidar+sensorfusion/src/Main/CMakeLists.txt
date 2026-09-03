@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   tf2_ros
   tf2_geometry_msgs
+  visualization_msgs
 )
 
 find_package(OpenCV REQUIRED)
@@ -23,7 +24,7 @@ find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
 
 catkin_package(
-  CATKIN_DEPENDS roscpp roslib std_msgs geometry_msgs tf2 tf2_ros tf2_geometry_msgs morai_msgs Msg
+  CATKIN_DEPENDS roscpp roslib std_msgs geometry_msgs tf2 tf2_ros tf2_geometry_msgs visualization_msgs morai_msgs Msg
 )
 
 include_directories(
@@ -61,6 +62,7 @@ add_library(myHeader
   src/SensorFusion/FusionLiDAR.cpp
   src/PlannerInterface/PlannerObjectAdapter.cpp
   src/PlannerInterface/PlannerObjectSender.cpp
+  src/PlannerInterface/PlannerObjectRosPublisher.cpp
 )
 add_dependencies(myHeader ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 

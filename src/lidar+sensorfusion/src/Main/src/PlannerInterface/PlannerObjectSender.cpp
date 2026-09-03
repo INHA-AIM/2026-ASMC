@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 
@@ -22,6 +23,7 @@ namespace {
 constexpr std::size_t kDataOffset = 38;
 constexpr std::size_t kSlotSize = 106;
 constexpr std::size_t kProtocolMaxObjects = 20;
+constexpr double kRadToDeg = 180.0 / 3.14159265358979323846;
 
 template <typename T>
 void WriteAt(std::vector<std::uint8_t>& packet, std::size_t offset, T value) {
@@ -69,20 +71,29 @@ void PlannerObjectSender::Send(const LiDAR& lidar, const GPS_IMU& gps_imu,
     for (std::size_t i = 0; i < objects.size(); ++i) {
         const PlannerObject& object = objects[i];
         const std::size_t base = kDataOffset + i * kSlotSize;
-        WriteAt(packet, base + 0, object.id);
+        // Legacy receiver treats id==0 as an empty slot; keep the original
+        // tracker ID everywhere else and apply the wire-only offset here.
+        if (object.id < 0 ||
+            object.id >= std::numeric_limits<std::int16_t>::max()) {
+            continue;
+        }
+        WriteAt(packet, base + 0,
+                static_cast<std::int16_t>(object.id + 1));
         WriteAt(packet, base + 2, object.type);
-        WriteAt(packet, base + 4, object.x);
-        WriteAt(packet, base + 8, object.y);
-        WriteAt(packet, base + 12, object.z);
-        WriteAt(packet, base + 16, object.heading_deg);
-        WriteAt(packet, base + 20, object.length);
-        WriteAt(packet, base + 24, object.width);
-        WriteAt(packet, base + 28, object.height);
+        WriteAt(packet, base + 4, static_cast<float>(object.obb_center_map.x));
+        WriteAt(packet, base + 8, static_cast<float>(object.obb_center_map.y));
+        WriteAt(packet, base + 12, static_cast<float>(object.obb_center_map.z));
+        WriteAt(packet, base + 16,
+                static_cast<float>(object.obb_yaw_map_rad * kRadToDeg));
+        WriteAt(packet, base + 20, static_cast<float>(object.length));
+        WriteAt(packet, base + 24, static_cast<float>(object.width));
+        WriteAt(packet, base + 28, static_cast<float>(object.height));
 
         // Existing receiver consumes velocity XYZ at offsets 44/48 in km/h.
-        const double heading_rad = object.heading_deg * 3.14159265358979323846 / 180.0;
-        const float velocity_x = static_cast<float>(object.speed_kph * std::cos(heading_rad));
-        const float velocity_y = static_cast<float>(object.speed_kph * std::sin(heading_rad));
+        const float velocity_x =
+            static_cast<float>(object.velocity_map_mps.x * 3.6);
+        const float velocity_y =
+            static_cast<float>(object.velocity_map_mps.y * 3.6);
         WriteAt(packet, base + 44, velocity_x);
         WriteAt(packet, base + 48, velocity_y);
     }

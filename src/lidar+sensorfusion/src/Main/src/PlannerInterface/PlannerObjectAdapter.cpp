@@ -1,16 +1,17 @@
 #include <PlannerInterface/PlannerObjectAdapter.hpp>
 
+#include <Eigen/Geometry>
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <string>
+#include <utility>
 
 namespace {
 
 constexpr double kPi = 3.14159265358979323846;
-constexpr double kRadToDeg = 180.0 / kPi;
 constexpr double kMpsToKph = 3.6;
-constexpr double kMinDirectionSpeedMps = 0.5;
 constexpr float kMinBoxSide = 0.05f;
 
 double NormalizeAngle(double angle) {
@@ -32,59 +33,112 @@ std::int16_t MapObjectType(const std::string& object_class) {
     return 3;
 }
 
-struct Pose2D {
-    double x;
-    double y;
-    double yaw;
-};
-
-Pose2D TransformObbToMap(const LiDARObjectInfo& object,
-                         const GPS_IMU& gps_imu,
-                         const VehicleSpec& vehicle) {
-    const double mount_yaw = Deg2Rad(vehicle.st_LiDARRotationDeg.f32_Z);
-    const double mount_cos = std::cos(mount_yaw);
-    const double mount_sin = std::sin(mount_yaw);
-
-    // velodyne 원점에서 GPS 안테나 원점으로 옮긴 vehicle-frame 좌표.
-    const double body_x =
-        mount_cos * object.f32_OBB_CenterX -
-        mount_sin * object.f32_OBB_CenterY +
-        vehicle.st_LiDARPos.f32_X - vehicle.st_GPSPos.f32_X;
-    const double body_y =
-        mount_sin * object.f32_OBB_CenterX +
-        mount_cos * object.f32_OBB_CenterY +
-        vehicle.st_LiDARPos.f32_Y - vehicle.st_GPSPos.f32_Y;
-
-    const double ego_yaw = gps_imu.st_IMU.f32_Yaw_rad;
-    const double ego_cos = std::cos(ego_yaw);
-    const double ego_sin = std::sin(ego_yaw);
-
-    Pose2D result{};
-    result.x = gps_imu.st_GPS.f64_E + ego_cos * body_x - ego_sin * body_y;
-    result.y = gps_imu.st_GPS.f64_N + ego_sin * body_x + ego_cos * body_y;
-    result.yaw = NormalizeAngle(
-        ego_yaw + mount_yaw + object.f32_OBB_YawRad);
-    return result;
+Eigen::Matrix3d RotationFromRpy(double roll, double pitch, double yaw) {
+    return (Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()) *
+            Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY()) *
+            Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX()))
+        .toRotationMatrix();
 }
 
-double MotionHeadingInMap(const LiDARObjectInfo& object,
-                          const GPS_IMU& gps_imu,
-                          const VehicleSpec& vehicle,
-                          double fallback_heading) {
-    const double direction_norm = std::hypot(object.f32_DirX, object.f32_DirY);
-    if (!std::isfinite(direction_norm) || direction_norm < 1e-3 ||
-        !std::isfinite(object.f32_Velocity) ||
-        object.f32_Velocity < kMinDirectionSpeedMps) {
-        return fallback_heading;
+Eigen::Matrix3d VehicleFromLidarRotation(const VehicleSpec& vehicle) {
+    return RotationFromRpy(
+        Deg2Rad(vehicle.st_LiDARRotationDeg.f32_X),
+        Deg2Rad(vehicle.st_LiDARRotationDeg.f32_Y),
+        Deg2Rad(vehicle.st_LiDARRotationDeg.f32_Z));
+}
+
+Eigen::Matrix3d MapFromVehicleRotation(const GPS_IMU& gps_imu) {
+    return RotationFromRpy(
+        gps_imu.st_IMU.f32_Roll_rad,
+        gps_imu.st_IMU.f32_Pitch_rad,
+        gps_imu.st_IMU.f32_Yaw_rad);
+}
+
+Eigen::Matrix3d RawLidarFromPreprocessedRotation(const GPS_IMU& gps_imu) {
+    // ImuFusion::CorrectingPoints()가 모든 후단 cloud/OBB/KF 좌표에
+    // Ry(+imu_pitch)를 미리 적용한다. map 변환에서 pitch를 중복 적용하지
+    // 않도록 정확한 역회전을 먼저 수행한다.
+    return Eigen::AngleAxisd(
+        -gps_imu.st_IMU.f32_Pitch_rad,
+        Eigen::Vector3d::UnitY()).toRotationMatrix();
+}
+
+Eigen::Vector3d LidarLeverArmVelocityPreprocessed(
+    const GPS_IMU& gps_imu,
+    const VehicleSpec& vehicle) {
+    // EgoVehicleStatus/CAN speed is the translational speed of the vehicle
+    // reference point (the rear-axle origin in setting.yaml), whereas the
+    // relative object velocity is measured at the LiDAR origin.  A rotating
+    // rigid body therefore needs v_lidar = v_reference + omega x r.
+    const Eigen::Vector3d angular_velocity_vehicle(
+        gps_imu.st_IMU.f32_AngularVelX,
+        gps_imu.st_IMU.f32_AngularVelY,
+        gps_imu.st_IMU.f32_AngularVelZ);
+    const Eigen::Vector3d reference_to_lidar_vehicle(
+        vehicle.st_LiDARPos.f32_X,
+        vehicle.st_LiDARPos.f32_Y,
+        vehicle.st_LiDARPos.f32_Z);
+    if (!angular_velocity_vehicle.allFinite() ||
+        !reference_to_lidar_vehicle.allFinite()) {
+        return Eigen::Vector3d::Zero();
     }
 
-    const double sensor_heading = std::atan2(object.f32_DirY, object.f32_DirX);
-    return NormalizeAngle(
-        gps_imu.st_IMU.f32_Yaw_rad +
-        Deg2Rad(vehicle.st_LiDARRotationDeg.f32_Z) + sensor_heading);
+    const Eigen::Vector3d lever_velocity_vehicle =
+        angular_velocity_vehicle.cross(reference_to_lidar_vehicle);
+
+    // Tracking operates on the LiDAR cloud after CorrectingPoints() applies
+    // Ry(+imu_pitch).  Convert the vehicle-frame lever velocity into that
+    // exact frame; RotateLidarVectorToMap() later applies the inverse chain.
+    return RawLidarFromPreprocessedRotation(gps_imu).transpose() *
+           VehicleFromLidarRotation(vehicle).transpose() *
+           lever_velocity_vehicle;
+}
+
+Eigen::Vector3d ToEigen(const PlannerPoint3D& point) {
+    return {point.x, point.y, point.z};
+}
+
+PlannerPoint3D FromEigen(const Eigen::Vector3d& point) {
+    return {point.x(), point.y(), point.z()};
+}
+
+bool IsFinite(const PlannerPoint3D& point) {
+    return std::isfinite(point.x) && std::isfinite(point.y) &&
+           std::isfinite(point.z);
 }
 
 }  // namespace
+
+PlannerPoint3D TransformLidarPointToMap(
+    const PlannerPoint3D& point_lidar,
+    const GPS_IMU& gps_imu,
+    const VehicleSpec& vehicle) {
+    const Eigen::Vector3d lidar_in_gps_vehicle(
+        vehicle.st_LiDARPos.f32_X - vehicle.st_GPSPos.f32_X,
+        vehicle.st_LiDARPos.f32_Y - vehicle.st_GPSPos.f32_Y,
+        vehicle.st_LiDARPos.f32_Z - vehicle.st_GPSPos.f32_Z);
+    const Eigen::Vector3d gps_map(
+        gps_imu.st_GPS.f64_E,
+        gps_imu.st_GPS.f64_N,
+        gps_imu.st_GPS.f64_U);
+
+    const Eigen::Vector3d point_vehicle =
+        VehicleFromLidarRotation(vehicle) *
+            RawLidarFromPreprocessedRotation(gps_imu) * ToEigen(point_lidar) +
+        lidar_in_gps_vehicle;
+    return FromEigen(
+        gps_map + MapFromVehicleRotation(gps_imu) * point_vehicle);
+}
+
+PlannerPoint3D RotateLidarVectorToMap(
+    const PlannerPoint3D& vector_lidar,
+    const GPS_IMU& gps_imu,
+    const VehicleSpec& vehicle) {
+    return FromEigen(MapFromVehicleRotation(gps_imu) *
+                     VehicleFromLidarRotation(vehicle) *
+                     RawLidarFromPreprocessedRotation(gps_imu) *
+                     ToEigen(vector_lidar));
+}
 
 std::vector<PlannerObject> MakePlannerObjects(
     const LiDAR& lidar,
@@ -97,45 +151,97 @@ std::vector<PlannerObject> MakePlannerObjects(
     for (const auto& object : lidar.vec_Objects) {
         if (result.size() >= max_objects) break;
 
-        // miss 객체는 Kalman 중심만 예측되고 OBB 중심/꼭짓점은 함께 이동하지
-        // 않으므로, 현재 1차 인터페이스에서는 실측 OBB만 내보낸다.
+        // miss 객체는 KF 중심만 이동하고 OBB 꼭짓점은 실측 시각에 남으므로,
+        // 서로 다른 시각의 geometry를 섞지 않고 실측 객체만 내보낸다.
         if (object.s32_Id < 0 || object.s32_MissCount != 0 ||
             object.pcl_ClusterPoints.empty() || IsNoise(object.str_ObjectClass)) {
             continue;
         }
+        if (object.s32_Id >= std::numeric_limits<std::int16_t>::max()) continue;
         if (!IsFinitePositive(object.f32_OBB_Width) ||
             !IsFinitePositive(object.f32_OBB_Height)) {
             continue;
         }
 
-        const Pose2D map_pose = TransformObbToMap(object, gps_imu, vehicle);
-        if (!std::isfinite(map_pose.x) || !std::isfinite(map_pose.y) ||
-            !std::isfinite(map_pose.yaw)) {
-            continue;
+        PlannerObject planner_object;
+        planner_object.id = object.s32_Id;
+        planner_object.type = MapObjectType(object.str_ObjectClass);
+        planner_object.classification = object.str_ObjectClass;
+        planner_object.is_dynamic = object.b_IsDynamic;
+        planner_object.age = object.s32_Age;
+        planner_object.miss_count = object.s32_MissCount;
+
+        planner_object.cluster_center_map = TransformLidarPointToMap(
+            {object.f32_CoreX, object.f32_CoreY, object.f32_CoreZ},
+            gps_imu, vehicle);
+        planner_object.obb_center_map = TransformLidarPointToMap(
+            {object.f32_OBB_CenterX, object.f32_OBB_CenterY,
+             object.f32_OBB_CenterZ},
+            gps_imu, vehicle);
+        for (std::size_t i = 0; i < planner_object.obb_corners_map.size(); ++i) {
+            const auto& corner = object.OBB_Corners_Body[i];
+            planner_object.obb_corners_map[i] = TransformLidarPointToMap(
+                {corner.x, corner.y, corner.z}, gps_imu, vehicle);
         }
 
-        // ObjectInfoReceiver에서 id==0은 빈 슬롯이므로 tracker ID에 1을 더한다.
-        if (object.s32_Id >= std::numeric_limits<std::int16_t>::max()) continue;
+        // OBB의 긴 축(+x)을 회전시켜 map XY에 투영한다. 위치 translation과
+        // 속도 방향을 OBB heading에 섞지 않는다.
+        const PlannerPoint3D long_axis_map = RotateLidarVectorToMap(
+            {std::cos(object.f32_OBB_YawRad),
+             std::sin(object.f32_OBB_YawRad), 0.0},
+            gps_imu, vehicle);
+        planner_object.obb_yaw_map_rad = NormalizeAngle(
+            std::atan2(long_axis_map.y, long_axis_map.x));
 
-        PlannerObject planner_object;
-        planner_object.id = static_cast<std::int16_t>(object.s32_Id + 1);
-        planner_object.type = MapObjectType(object.str_ObjectClass);
-        planner_object.x = static_cast<float>(map_pose.x);
-        planner_object.y = static_cast<float>(map_pose.y);
-        planner_object.z = object.f32_OBB_CenterZ;
-        planner_object.heading_deg = static_cast<float>(
-            MotionHeadingInMap(object, gps_imu, vehicle, map_pose.yaw) * kRadToDeg);
-
-        // L-shape 구현은 긴 축을 w/yaw 축으로 정규화한다.
         planner_object.length = object.f32_OBB_Width;
         planner_object.width = object.f32_OBB_Height;
         planner_object.height = std::max(
             kMinBoxSide, object.f32_OBB_ZMax - object.f32_OBB_ZMin);
+
         const double speed_mps = std::isfinite(object.f32_Velocity)
             ? std::max(0.0, static_cast<double>(object.f32_Velocity))
             : 0.0;
-        planner_object.speed_kph = static_cast<float>(speed_mps * kMpsToKph);
-        result.push_back(planner_object);
+        const double direction_norm = std::hypot(
+            object.f32_DirX, object.f32_DirY);
+        PlannerPoint3D velocity_lidar{};
+        if (speed_mps > 0.0 && std::isfinite(direction_norm) &&
+            direction_norm > 1e-6) {
+            velocity_lidar.x = speed_mps * object.f32_DirX / direction_norm;
+            velocity_lidar.y = speed_mps * object.f32_DirY / direction_norm;
+
+            // Tracking.cpp already adds the CAN translational speed, so do not
+            // add it again here.  It does not include the LiDAR lever-arm
+            // velocity, however; add omega x r exactly once before the map
+            // rotation.  Leave an uninitialized/zero tracker velocity at zero
+            // instead of publishing omega x r alone as a false object speed.
+            const Eigen::Vector3d lever_velocity_lidar =
+                LidarLeverArmVelocityPreprocessed(gps_imu, vehicle);
+            velocity_lidar.x += lever_velocity_lidar.x();
+            velocity_lidar.y += lever_velocity_lidar.y();
+            velocity_lidar.z += lever_velocity_lidar.z();
+        }
+        planner_object.velocity_map_mps = RotateLidarVectorToMap(
+            velocity_lidar, gps_imu, vehicle);
+        planner_object.speed_kph = kMpsToKph * std::sqrt(
+            planner_object.velocity_map_mps.x *
+                planner_object.velocity_map_mps.x +
+            planner_object.velocity_map_mps.y *
+                planner_object.velocity_map_mps.y +
+            planner_object.velocity_map_mps.z *
+                planner_object.velocity_map_mps.z);
+
+        if (!IsFinite(planner_object.cluster_center_map) ||
+            !IsFinite(planner_object.obb_center_map) ||
+            !IsFinite(planner_object.velocity_map_mps) ||
+            !std::isfinite(planner_object.obb_yaw_map_rad)) {
+            continue;
+        }
+        const bool finite_corners = std::all_of(
+            planner_object.obb_corners_map.begin(),
+            planner_object.obb_corners_map.end(), IsFinite);
+        if (!finite_corners) continue;
+
+        result.push_back(std::move(planner_object));
     }
 
     return result;

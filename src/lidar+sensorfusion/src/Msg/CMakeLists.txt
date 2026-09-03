@@ -12,6 +12,8 @@ add_message_files(
   FILES
   Yolo_bbox.msg
   Yolo_bbox_arr.msg
+  TrackedObject.msg
+  TrackedObjectArray.msg
 )
 
 generate_messages(

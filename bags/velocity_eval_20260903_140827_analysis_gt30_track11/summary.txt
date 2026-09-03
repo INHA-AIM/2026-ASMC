@@ -1,0 +1,19 @@
+LiDAR velocity vector vs MORAI GT
+GT velocity unit: kmh
+GT velocity frame: heading
+Time source: bag
+Selected plot pair (gt, track): (30, 11)
+
+samples: 33
+e_mae_mps: 0.177309
+e_rmse_mps: 0.364301
+e_bias_mps: 0.087908
+n_mae_mps: 1.985984
+n_rmse_mps: 2.733057
+n_bias_mps: 1.750360
+vector_mae_mps: 2.022175
+vector_p95_mps: 4.677683
+speed_mae_kph: 7.086269
+speed_rmse_kph: 9.712478
+speed_bias_kph: -6.241362
+direction_mae_deg: 1.730886

@@ -4,6 +4,7 @@
 #include <Lidar/LidarProcess/LidarProcess.hpp>
 #include <SensorFusion/SensorFusion.hpp>
 #include <PlannerInterface/PlannerObjectSender.hpp>
+#include <PlannerInterface/PlannerObjectRosPublisher.hpp>
 #include <ros/package.h>
 #include <memory>
 
@@ -27,6 +28,7 @@ LiDAR st_LiDAR, st_LiDARTemporal;
 CAMERA st_Camera, st_CameraTemporal;
 GPS_REF st_GPSRef;
 std::unique_ptr<PlannerObjectSender> st_PlannerObjectSender;
+std::unique_ptr<PlannerObjectRosPublisher> st_PlannerObjectRosPublisher;
 
 int32 GPSHZ, VisionHZ, LiDARHZ, IMUHZ, CANHZ;
 int32 VIEWERHZ; // InitViewer에서, 기준이 되는 센서의 HZ 할당해주기.
@@ -277,6 +279,10 @@ void *TemporalThread(void *p_Arg)
 
         LidarProcess(st_CurrentData.st_RawLiDAR, st_GPSIMU, st_LiDAR);
         FusionProcess(st_CurrentData.st_RawYOLO, st_LiDAR, st_Camera);
+        if (st_PlannerObjectRosPublisher) {
+            st_PlannerObjectRosPublisher->Publish(
+                st_LiDAR, st_GPSIMU, st_VehicleSpec, ts_CurrTime);
+        }
         if (st_PlannerObjectSender) {
             st_PlannerObjectSender->Send(st_LiDAR, st_GPSIMU, st_VehicleSpec);
         }
@@ -313,6 +319,8 @@ int main(int argc, char **argv)
 
     InitMutex();
     InitVehicleSpec();
+    st_PlannerObjectRosPublisher =
+        std::make_unique<PlannerObjectRosPublisher>(st_NodeHandle);
     InitPlannerInterface();
     InitGlobal(st_NodeHandle, &th_GPS);
     InitIMU(st_NodeHandle, &th_IMU);

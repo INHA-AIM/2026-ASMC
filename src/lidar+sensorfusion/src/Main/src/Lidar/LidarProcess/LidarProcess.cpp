@@ -1,4 +1,5 @@
 #include <Lidar/LidarProcess/LidarProcess.hpp>
+#include <PlannerInterface/PlannerObjectAdapter.hpp>
 
 
 ros::Publisher marker_pub;
@@ -71,6 +72,43 @@ static ros::Publisher& ClusterPub()
     static ros::NodeHandle nh;
     static ros::Publisher pub = nh.advertise<sensor_msgs::PointCloud2>("/lidar/debug_clustered", 1);
     return pub;
+}
+
+static ros::Publisher& MapClusterPub()
+{
+    static ros::NodeHandle nh;
+    static ros::Publisher pub = nh.advertise<sensor_msgs::PointCloud2>(
+        "/lidar/debug_clustered_map", 1);
+    return pub;
+}
+
+static pcl::PointCloud<pcl::PointXYZI>::Ptr TransformCloudToMap(
+    const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud,
+    const GPS_IMU& gps_imu,
+    const VehicleSpec& vehicle)
+{
+    pcl::PointCloud<pcl::PointXYZI>::Ptr transformed(
+        new pcl::PointCloud<pcl::PointXYZI>);
+    if (!cloud) return transformed;
+    transformed->points.reserve(cloud->points.size());
+    for (const auto& point : cloud->points) {
+        if (!std::isfinite(point.x) || !std::isfinite(point.y) ||
+            !std::isfinite(point.z)) {
+            continue;
+        }
+        const PlannerPoint3D map_point = TransformLidarPointToMap(
+            {point.x, point.y, point.z}, gps_imu, vehicle);
+        pcl::PointXYZI output;
+        output.x = static_cast<float>(map_point.x);
+        output.y = static_cast<float>(map_point.y);
+        output.z = static_cast<float>(map_point.z);
+        output.intensity = point.intensity;
+        transformed->points.push_back(output);
+    }
+    transformed->width = static_cast<std::uint32_t>(transformed->points.size());
+    transformed->height = 1;
+    transformed->is_dense = false;
+    return transformed;
 }
 
 static inline void PublishCloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud,
@@ -179,6 +217,9 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR, const GPS_IMU& st_GPSIMU, L
     // inout_cloud->is_dense = false;
     Clustering(ransac_cloud,clustering_cloud,all_cluster_indices,st_GPSIMU);
     PublishCloudWithPub(clustering_cloud, st_RawLiDAR, "velodyne", ClusterPub());
+    PublishCloudWithPub(
+        TransformCloudToMap(clustering_cloud, st_GPSIMU, st_VehicleSpec),
+        st_RawLiDAR, "map", MapClusterPub());
 
     Objectinfo_for_km(object,ransac_cloud,clustering_cloud,all_cluster_indices, st_GPSIMU, st_VehicleSpec);
     FrameFilter(prev_objects_queue,object,st_GPSIMU, st_VehicleSpec);

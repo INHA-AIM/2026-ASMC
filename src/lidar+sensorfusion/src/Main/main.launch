@@ -32,5 +32,5 @@
   </node>
 
   <node if="$(arg rviz)" name="sensor_fusion_rviz" pkg="rviz" type="rviz"
-        args="-f base_link" output="screen"/>
+        args="-f map" output="screen"/>
 </launch>

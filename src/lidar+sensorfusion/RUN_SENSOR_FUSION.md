@@ -54,7 +54,7 @@ stop the outer bridge and run `START_VELODYNE_DRIVER=true ./start_main.sh`.
 
 ## RViz
 
-Run `rviz`, set **Fixed Frame** to `base_link`, and add:
+Run `rviz`, set **Fixed Frame** to `map`, and add:
 
 | Display | Topic | Contents |
 |---|---|---|
@@ -63,6 +63,9 @@ Run `rviz`, set **Fixed Frame** to `base_link`, and add:
 | PointCloud2 | `/lidar/debug_ransac` | non-ground points |
 | PointCloud2 | `/lidar/debug_roi` | range/ROI-filtered points |
 | PointCloud2 | `/velodyne_points` | raw LiDAR cloud |
+| PointCloud2 | `/lidar/debug_clustered_map` | preprocessed clustered points transformed to map ENU |
+| Msg/TrackedObjectArray | `/lidar/tracked_objects_map` | numeric map ENU OBB centers/corners and absolute velocity vectors |
+| MarkerArray | `/lidar/tracking_markers_map` | map ENU OBB, center, km/h text and one-second velocity vector |
 | MarkerArray | `/lidar/object_boxes` | optional fused AABB and class label |
 | PointCloud2 | `/lidar/object` | optional fused object-only cloud |
 | Image | `/fusion/debug_image` | camera image with projected LiDAR/fusion debug overlay |
@@ -84,5 +87,25 @@ rosrun rqt_image_view rqt_image_view /camera/image/compressed
 ```
 
 `/lidar_tracking_markers` is a visualization message, not a stable downstream
-tracked-object API. Consumers can inspect it with `rostopic echo`; add a typed
-tracked-object message before using this output as a planning interface.
+tracked-object API. Consumers can inspect it with `rostopic echo`.
+
+The typed downstream and validation API is now `/lidar/tracked_objects_map`.
+Its velocity components use m/s; `speed_kph` is display-only. To record one
+validation scenario after rebuilding:
+
+```bash
+rosbag record --lz4 -O lidar_velocity_test.bag \
+  /velodyne_points /gps /imu /Ego_topic /Object_topic \
+  /lidar/tracked_objects_map /lidar/tracking_markers_map \
+  /lidar/debug_clustered_map
+```
+
+After recording, generate the synchronized samples, summary and plots:
+
+```bash
+./analyze_velocity_bag.py lidar_velocity_test.bag
+```
+
+To lock the comparison to known IDs, add `--gt-id 101 --track-id 7`.
+
+Outputs are written below `lidar_velocity_test_velocity_analysis/`.
