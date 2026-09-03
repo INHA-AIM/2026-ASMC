@@ -173,6 +173,15 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME message_converter_test COMMAND message_converter_test)
 
+  add_executable(planner_command_defaults_test
+    tests/planner_command_defaults_test.cpp
+  )
+  target_include_directories(planner_command_defaults_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+  )
+  add_test(NAME planner_command_defaults_test
+           COMMAND planner_command_defaults_test)
+
   add_executable(command_keep_plan_test
     tests/command_keep_plan_test.cpp
   )
