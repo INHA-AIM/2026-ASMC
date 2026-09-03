@@ -12,8 +12,19 @@ constexpr double kDegreesToRadians = M_PI / 180.0;
 bool IsFinite(double value) { return std::isfinite(value); }
 bool ValidStamp(const ros::Time& stamp) { return !stamp.isZero(); }
 
+// 시계가 뒤로 점프했다고 볼 수 있는 미래 stamp의 한계 [s]. 이보다 더 미래면
+// 시계 점프로 설명되지 않는 잘못된 stamp로 보고 거부한다.
+constexpr double kMaxClockJumpSeconds = 5.0;
+
 bool Fresh(const ros::Time& now, const ros::Time& stamp, double timeout_s) {
-    if (!ValidStamp(stamp) || now < stamp) return false;
+    if (!ValidStamp(stamp)) return false;
+    if (now < stamp) {
+        // stamp가 미래인 경우. 센서가 앞서간 게 아니라 시계가 뒤로 점프한
+        // 것이므로(실측: WSL2/Docker 환경에서 약 28초 주기로 -1.2초 점프)
+        // 데이터를 stale로 버리지 않는다. 버리면 VehicleState가 invalid로
+        // 나가고 Frenet/MPC가 매번 급정지한다.
+        return (stamp - now).toSec() <= kMaxClockJumpSeconds;
+    }
     return (now - stamp).toSec() <= timeout_s;
 }
 

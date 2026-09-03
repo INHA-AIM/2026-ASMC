@@ -115,14 +115,33 @@ FrenetPlannerNode::InputSnapshot FrenetPlannerNode::takeSnapshot() const {
 bool FrenetPlannerNode::isFresh(const ros::Time& stamp, double timeout_seconds,
                                 const ros::Time& now,
                                 double& age_seconds) const {
+    // 정상적인 전송/스케줄링 지터로 stamp가 아주 조금 미래인 경우.
     constexpr double kFutureToleranceSeconds = 0.01;
     if (stamp.isZero()) {
         age_seconds = 0.0;
         return false;
     }
     age_seconds = (now - stamp).toSec();
-    return age_seconds >= -kFutureToleranceSeconds &&
-           age_seconds <= timeout_seconds;
+
+    // 시계가 뒤로 점프하면 age가 크게 음수가 된다. 이건 데이터가 오래된 것이
+    // 아니라 시각 기준 자체가 흔들린 것이므로 stale로 처리하면 안 된다.
+    // stale로 보면 멀쩡한 입력에 대해 즉시 정지를 반복하게 된다(실측: WSL2/Docker
+    // 환경에서 약 28초 주기로 wall clock이 -1.2초 점프, 그때마다 급정지).
+    // 이 사이클은 판정을 보류하고 다음 사이클에서 정상 비교한다.
+    if (age_seconds < -kFutureToleranceSeconds) {
+        if (age_seconds >= -kMaxClockJumpSeconds) {
+            ROS_WARN_THROTTLE(
+                1.0,
+                "Clock moved backwards (age=%.3f s); treating input as fresh "
+                "for this cycle instead of forcing a stop",
+                age_seconds);
+            return true;
+        }
+        // 관용 범위를 넘는 미래 stamp는 시계 점프로 설명되지 않는다.
+        // 잘못된 타임스탬프를 가진 입력이므로 그대로 거부한다.
+        return false;
+    }
+    return age_seconds <= timeout_seconds;
 }
 
 double FrenetPlannerNode::trajectoryDt() const {

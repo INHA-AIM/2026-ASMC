@@ -12,6 +12,14 @@ bool IsFinite(double value) {
     return std::isfinite(value);
 }
 
+// 정상적인 전송/스케줄링 지터로 stamp가 조금 미래인 경우의 관용치 [s].
+constexpr double kFutureToleranceSeconds = 0.05;
+
+// 시계가 뒤로 점프했다고 볼 수 있는 미래 stamp의 한계 [s]. 이보다 더 미래인
+// stamp는 시계 점프로 설명되지 않는 잘못된 입력으로 보고 거부한다.
+// 실측 기준: WSL2/Docker 환경에서 약 28초 주기로 wall clock이 -1.2초 점프.
+constexpr double kMaxClockJumpSeconds = 5.0;
+
 }  // namespace
 
 const char* TrajectoryStatusName(TrajectoryStatus status) {
@@ -35,7 +43,16 @@ bool IsTrajectoryFresh(const asmc_msgs::Trajectory& message,
         return false;
     }
     const double age = (now - message.header.stamp).toSec();
-    return IsFinite(age) && age >= -0.05 && age <= timeout_seconds;
+    if (!IsFinite(age)) return false;
+
+    // 시계가 뒤로 점프하면 age가 크게 음수가 된다. 이건 궤적이 오래된 것이
+    // 아니라 시각 기준 자체가 흔들린 것이므로 stale로 처리하면 안 된다.
+    // stale로 보면 멀쩡한 궤적에 대해 매 점프마다 급정지하게 된다
+    // (실측: 시계 점프 9회에 MPC fail-safe STOP 20회).
+    if (age < -kFutureToleranceSeconds) {
+        return age >= -kMaxClockJumpSeconds;
+    }
+    return age <= timeout_seconds;
 }
 
 TrajectoryStatus ConvertTrajectory(const asmc_msgs::Trajectory& message,

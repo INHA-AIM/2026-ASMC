@@ -61,6 +61,19 @@ int main() {
     Expect(!estimator.makeState(ros::Time(10.5)).valid,
            "stale source data must produce invalid state");
 
+    // 시계가 뒤로 점프하면 now < stamp가 되어 데이터가 미래처럼 보인다.
+    // 이때 stale로 처리해 VehicleState를 invalid로 내보내면 Frenet/MPC가
+    // 매 점프마다 급정지한다(실측: WSL2/Docker 환경에서 약 28초 주기로
+    // wall clock -1.2초 점프). 데이터 자체는 멀쩡하므로 유효해야 한다.
+    Expect(estimator.makeState(ros::Time(8.9)).valid,
+           "backward clock jump must not invalidate otherwise good state");
+    Expect(estimator.makeState(ros::Time(10.1)).valid,
+           "state stays valid right after the clock jump recovers");
+
+    // 시계 점프로 설명되지 않는 먼 미래 stamp는 잘못된 입력이므로 거부한다.
+    Expect(!estimator.makeState(ros::Time(0.0)).valid,
+           "implausibly far future stamp is still rejected");
+
     morai_msgs::EgoVehicleStatus ego;
     ego.header.stamp = ros::Time(20.0);
     ego.position.x = 1.0;
