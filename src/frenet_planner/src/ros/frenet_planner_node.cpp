@@ -267,6 +267,35 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
         return;
     }
 
+    // STOP 목표는 BehaviorContext가 map 좌표(stop_x/y)로 준다. message_converter는
+    // RefLine을 모르므로 유효성만 검사하고 stop_position을 NaN으로 남긴다.
+    // RefLine을 가진 planner가 여기서 Frenet s로 투영해 명령을 완성한다.
+    if (command.mode == STOP) {
+        double ego_s = 0.0;
+        if (!planner_.ProjectEgoToS(ego, ego_s)) {
+            ROS_WARN_THROTTLE(
+                1.0, "Frenet STOP required: cannot project ego onto reference line");
+            publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            return;
+        }
+        double stop_s = 0.0;
+        // ego_s를 hint로 넘겨 트랙이 자기 자신과 가까워지는 구간에서 최근접점이
+        // 다른 구간으로 튀지 않게 한다. 목표가 경로에서 너무 멀면 false.
+        if (!planner_.ProjectPointToS(snapshot.behavior.stop_x,
+                                      snapshot.behavior.stop_y,
+                                      ego_s, stop_s)) {
+            ROS_WARN_THROTTLE(
+                1.0,
+                "Frenet STOP required: stop target (%.2f, %.2f) is not on the "
+                "reference line (command_id=%u)",
+                snapshot.behavior.stop_x, snapshot.behavior.stop_y,
+                snapshot.behavior.command_id);
+            publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            return;
+        }
+        command.stop_position = stop_s;
+    }
+
     const ConversionStatus objects_status =
         ConvertDetectedObjects(snapshot.objects, objects, collision_objects);
     if (objects_status != ConversionStatus::OK) {

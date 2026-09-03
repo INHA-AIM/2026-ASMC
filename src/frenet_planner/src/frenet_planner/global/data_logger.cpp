@@ -84,6 +84,7 @@ void LoadParams(const std::string& yaml_path,
                  CurveSpeedConfig& curve_speed_cfg,
                  FollowingConfig& following_cfg,
                 AvoidConfig& avoid_cfg,
+                StopConfig& stop_cfg,
                 MergeConfig& merge_cfg,
                 HighwayMergeConfig& highway_merge_cfg,
                 PlannerVisualizationConfig& visualization_cfg,
@@ -160,6 +161,15 @@ void LoadParams(const std::string& yaml_path,
     loadInto(root, "planner/avoid/lateral_tolerance", avoid_cfg.lateral_tolerance);
     loadInto(root, "planner/avoid/pass_clearance",    avoid_cfg.pass_clearance);
     loadInto(root, "planner/avoid/prefer_right_when_equal", avoid_cfg.prefer_right_when_equal);
+
+    loadInto(root, "planner/stop/comfortable_decel",  stop_cfg.comfortable_decel);
+    loadInto(root, "planner/stop/braking_margin",     stop_cfg.braking_margin);
+    loadInto(root, "planner/stop/stop_buffer",        stop_cfg.stop_buffer);
+    loadInto(root, "planner/stop/position_tolerance", stop_cfg.position_tolerance);
+    loadInto(root, "planner/stop/speed_tolerance",    stop_cfg.speed_tolerance);
+    loadInto(root, "planner/stop/max_lateral_offset", stop_cfg.max_lateral_offset);
+    loadInto(root, "planner/stop/target_change_tolerance",
+             stop_cfg.target_change_tolerance);
 
     loadInto(root, "planner/merge/conflict_s",             merge_cfg.conflict_s);
     loadInto(root, "planner/merge/approach_distance",      merge_cfg.approach_distance);

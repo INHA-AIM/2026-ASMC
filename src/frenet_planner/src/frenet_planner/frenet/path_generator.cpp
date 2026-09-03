@@ -503,9 +503,18 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
             break;
 
         case STOP:
-        case INTERSECTION_WAIT:
-            longitudinal_set = GenerateStoppingCandidates(start, cmd.stop_position, cfg);
+        case INTERSECTION_WAIT: {
+            // 공용 delta_s는 [-3, +3]m이라 +쪽 후보는 정지 목표를 지나쳐서
+            // 멈춘다. 정지선/정지 지점 semantics에서는 오버슈트가 곧 위반이므로
+            // STOP 계열은 목표 앞에서만 멈추도록 delta 범위를 제한한다.
+            PathGeneratorConfig stop_cfg = cfg;
+            stop_cfg.delta_s.min = -1.0;
+            stop_cfg.delta_s.max = 0.0;
+            stop_cfg.delta_s.step = 0.25;
+            longitudinal_set =
+                GenerateStoppingCandidates(start, cmd.stop_position, stop_cfg);
             break;
+        }
 
         case EMERGENCY:
             // FSM이 emergency 상황에 맞는 stop_position(예: 현재 위치 바로 앞)을
