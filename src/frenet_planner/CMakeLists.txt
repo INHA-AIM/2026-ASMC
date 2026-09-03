@@ -194,6 +194,18 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME command_keep_plan_test COMMAND command_keep_plan_test)
 
+  add_executable(command_validation_test
+    tests/command_validation_test.cpp
+  )
+  target_compile_definitions(command_validation_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(command_validation_test
+    frenet_planner_core
+  )
+  add_test(NAME command_validation_test COMMAND command_validation_test)
+
   add_executable(vehicle_state_adapter_test tests/vehicle_state_adapter_test.cpp)
   add_dependencies(vehicle_state_adapter_test ${catkin_EXPORTED_TARGETS})
   target_link_libraries(vehicle_state_adapter_test

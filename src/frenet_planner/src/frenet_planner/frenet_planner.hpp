@@ -26,10 +26,19 @@
 // 연동 시 이 조건문들을 걷어내고 FSM이 준 mode를 그대로 쓰도록 교체한다.
 class FrenetPlanner {
 public:
+    // Plan() 실패 원인. 호출자(ROS node)가 "이전 궤적 재사용"과 "즉시 정지"를
+    // 구분하려면 일시적 생성 실패와 명령 자체의 결함이 분리되어야 한다.
+    // TRANSIENT_GENERATION_FAILURE만 재사용 대상이다.
     enum class PlanFailureReason {
         NONE,
         COLLISION_BLOCKED,
+        // 이번 사이클에서만 유효 후보를 못 만든 경우(수치적/일시적).
         TRANSIENT_GENERATION_FAILURE,
+        // 모드 자체는 지원하지만 필드 값이 잘못된 경우
+        // (STOP인데 stop_position 미지정, 음수/NaN 속도 등).
+        INVALID_COMMAND,
+        // 외부 command로 아직 열지 않은 모드.
+        UNSUPPORTED_BEHAVIOR,
         NOT_INITIALIZED,
     };
 
@@ -41,8 +50,10 @@ public:
     bool Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
               CartesianPath& out_path);
 
-    // 외부 FSM command 기반 진입점. 첫 통합 단계에서는 LANE_KEEPING만 지원하며,
-    // 기존 3인자 Plan()은 legacy UDP 회귀 경로로 유지한다.
+    // 외부 FSM command 기반 진입점. 현재 external whitelist는 LANE_KEEPING과
+    // STOP이며(ValidateExternalCommand 참고), 나머지 모드는 core 구현이 있어도
+    // UNSUPPORTED_BEHAVIOR로 거부한다. FSM canonical migration 시점에 whitelist를
+    // 확장한다. 기존 3인자 Plan()은 legacy UDP 회귀 경로로 유지한다.
     bool Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
               const PlannerCommand& command, CartesianPath& out_path);
 

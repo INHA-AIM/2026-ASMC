@@ -325,6 +325,59 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
     return true;
 }
 
+namespace {
+
+// 외부 command로 실제 열려 있는 모드. core에는 FOLLOWING/AVOID/MERGE/LANE_CHANGE
+// 구현이 이미 있지만, ROS 계약(leader binding, target_d, merge decision)이 FSM과
+// 확정되기 전까지 production 진입점에서는 KEEP/STOP만 허용한다. 확정된 모드부터
+// 여기에 case를 추가하고 ValidateExternalCommand에 필드 검증을 같이 넣는다.
+bool IsSupportedExternalMode(BehaviorState mode) {
+    switch (mode) {
+        case LANE_KEEPING:
+        case STOP:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+bool IsValidOptionalSpeed(bool has_value, double value) {
+    if (!has_value) return true;
+    return std::isfinite(value) && value >= 0.0;
+}
+
+// 모드 whitelist + 모드별 필수 필드 검증. 실패 시 reason으로 원인을 구분해
+// 호출자가 "즉시 정지"와 "이전 궤적 재사용"을 나눌 수 있게 한다.
+bool ValidateExternalCommand(const PlannerCommand& command,
+                             FrenetPlanner::PlanFailureReason& reason) {
+    if (!IsSupportedExternalMode(command.mode)) {
+        reason = FrenetPlanner::PlanFailureReason::UNSUPPORTED_BEHAVIOR;
+        return false;
+    }
+
+    // 전 모드 공통: 외부가 지정한 속도는 유한하고 음수가 아니어야 한다.
+    if (!IsValidOptionalSpeed(command.has_target_speed, command.target_speed) ||
+        !IsValidOptionalSpeed(command.has_max_speed, command.max_speed)) {
+        reason = FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
+        return false;
+    }
+
+    // STOP: 정지 목표 s가 실제로 지정되어야 한다. 기본값 NaN이 그대로 오면
+    // GenerateStoppingCandidates가 NaN 경계조건으로 후보를 만들게 된다.
+    if (command.mode == STOP) {
+        if (!std::isfinite(command.stop_position) || command.stop_position < 0.0) {
+            reason = FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
+            return false;
+        }
+    }
+
+    reason = FrenetPlanner::PlanFailureReason::NONE;
+    return true;
+}
+
+}  // namespace
+
 bool FrenetPlanner::Plan(const CartesianState& ego,
                          const std::vector<ObjectInfo>& obstacles,
                          CartesianPath& out_path) {
@@ -335,12 +388,9 @@ bool FrenetPlanner::Plan(const CartesianState& ego,
                          const std::vector<ObjectInfo>& obstacles,
                          const PlannerCommand& command,
                          CartesianPath& out_path) {
-    if (command.mode != LANE_KEEPING ||
-        (command.has_target_speed &&
-         (!std::isfinite(command.target_speed) || command.target_speed < 0.0)) ||
-        (command.has_max_speed &&
-         (!std::isfinite(command.max_speed) || command.max_speed < 0.0))) {
-        last_failure_reason_ = PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+    PlanFailureReason reason = PlanFailureReason::NONE;
+    if (!ValidateExternalCommand(command, reason)) {
+        last_failure_reason_ = reason;
         return false;
     }
     return PlanInternal(ego, obstacles, &command, nullptr, out_path);
@@ -350,13 +400,15 @@ bool FrenetPlanner::Plan(
     const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
     const std::vector<TrackedObstacle>& collision_obstacles,
     const PlannerCommand& command, CartesianPath& out_path) {
-    if (command.mode != LANE_KEEPING ||
-        collision_obstacles.size() != obstacles.size() ||
-        (command.has_target_speed &&
-         (!std::isfinite(command.target_speed) || command.target_speed < 0.0)) ||
-        (command.has_max_speed &&
-         (!std::isfinite(command.max_speed) || command.max_speed < 0.0))) {
-        last_failure_reason_ = PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+    PlanFailureReason reason = PlanFailureReason::NONE;
+    if (!ValidateExternalCommand(command, reason)) {
+        last_failure_reason_ = reason;
+        return false;
+    }
+    // collision geometry는 ObjectInfo와 1:1로 대응해야 한다. 어긋나면 command가
+    // 아니라 호출자의 입력 조립이 잘못된 것이므로 역시 즉시 거부한다.
+    if (collision_obstacles.size() != obstacles.size()) {
+        last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
         return false;
     }
     return PlanInternal(ego, obstacles, &command, &collision_obstacles, out_path);
@@ -530,7 +582,11 @@ bool FrenetPlanner::PlanInternal(
     // 회전교차로에서는 저속이어도 아래의 MERGE FSM을 반드시 거친다. 여기서
     // 조기 반환하면 WAIT/COMMIT 잠금보다 먼저 매 cycle 전체 도로가 빌 때까지
     // 검사하게 되어 conflict point 앞에서 두 번째 정지와 데드락이 발생한다.
-    if (std::fabs(ego.v) < kLowSpeedFallbackV && !near_any_merge) {
+    // 저속 fallback은 kMinCreepSpeed로 "기어서 전진"하는 경로다. 외부 STOP
+    // 명령에서 이 분기를 타면 정지 목표를 넘어 계속 기어나가게 되므로, STOP은
+    // 저속에서도 정상 stopping 후보 생성기(GenerateStoppingCandidates)로 보낸다.
+    const bool external_stop = !use_legacy_behavior && external_command->mode == STOP;
+    if (std::fabs(ego.v) < kLowSpeedFallbackV && !near_any_merge && !external_stop) {
         static int low_speed_log_tick = 0;
         if (++low_speed_log_tick % 5 == 0) {
             std::printf("[FrenetPlanner-STATE] mode=LOW_SPEED_FALLBACK "
@@ -954,7 +1010,8 @@ bool FrenetPlanner::PlanInternal(
     }
     } else {
         // 외부 command 경로는 legacy AVOID/FOLLOW/MERGE context를 읽거나
-        // 갱신하지 않는다. 첫 통합 버전은 검증된 LANE_KEEPING만 진입한다.
+        // 갱신하지 않는다. 진입 가능한 모드는 ValidateExternalCommand의
+        // whitelist(현재 LANE_KEEPING/STOP)가 이미 걸러낸 상태다.
         cmd = *external_command;
     }
 
