@@ -170,6 +170,8 @@ void LoadParams(const std::string& yaml_path,
     loadInto(root, "planner/stop/max_lateral_offset", stop_cfg.max_lateral_offset);
     loadInto(root, "planner/stop/target_change_tolerance",
              stop_cfg.target_change_tolerance);
+    loadInto(root, "planner/stop/projection_search_window",
+             stop_cfg.projection_search_window);
 
     loadInto(root, "planner/merge/conflict_s",             merge_cfg.conflict_s);
     loadInto(root, "planner/merge/approach_distance",      merge_cfg.approach_distance);

@@ -101,6 +101,19 @@ struct StopConfig {
     double max_lateral_offset = 5.0;
     // [m] 이만큼 넘게 목표가 바뀌면 새 STOP 명령으로 보고 실행 phase를 리셋한다.
     double target_change_tolerance = 2.0;
+    // [m] 정지 목표를 s로 투영할 때 FindClosestS에 넘길 탐색창 반경.
+    //
+    // FindClosestS의 기본 창(30m)은 ego localization용이다 - 한 틱에 몇 m만
+    // 움직이는 ego의 최근접점이 평행/헤어핀 구간에서 엉뚱한 s로 튀는 것을
+    // 막으려고 좁게 잡혀 있다. 정지 목표는 ego보다 훨씬 앞에 있으므로 같은
+    // 창을 쓰면 목표가 창 밖으로 나가고, 잘린 초기 추정값에서 시작한 Newton이
+    // 창 경계에 머무는 게 아니라 트랙의 다른 구간으로 발산한다
+    // (실측: ego_s=100에서 전방 100m 목표가 s=1640으로, 오차 735m).
+    //
+    // 반드시 실제 사용할 최대 stop lookahead보다 크게 잡아야 한다. 이 값보다
+    // 먼 정지 목표는 투영이 틀어져 max_lateral_offset 검사에서 거부되고,
+    // 정상 명령이 INVALID_COMMAND로 즉시 정지하게 된다.
+    double projection_search_window = 100.0;
 };
 
 // 고주로/본선 합류 구간. Global Path가 이미 램프에서 본선으로 이어지는 형상을

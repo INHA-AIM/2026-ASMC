@@ -53,6 +53,10 @@ planner:
     speed_tolerance: 0.2       # [m/s] HOLD 진입 속도 판정
     max_lateral_offset: 5.0    # [m] 정지 목표가 경로에서 이보다 멀면 거부
     target_change_tolerance: 2.0 # [m] 이만큼 바뀌면 새 STOP으로 보고 phase 리셋
+    # [m] 정지 목표 투영의 탐색창. FindClosestS 기본값 30m는 ego localization용
+    # 이라 정지 목표에 쓰면 목표가 창 밖으로 나가 Newton이 다른 구간으로 발산한다.
+    # 반드시 실제 최대 stop lookahead보다 크게 유지할 것.
+    projection_search_window: 100.0
 
   # --- 회전교차로 MERGE: global path상의 conflict_s에서 순환 차량의
   # 도착 시간 gap을 확인하고, gap이 없으면 진입점 전에 정지한다. ---

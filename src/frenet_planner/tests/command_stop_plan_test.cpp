@@ -8,6 +8,9 @@
 
 #include "frenet_planner/frenet_planner.hpp"
 
+#include "frenet_planner/frenet/ref_line.hpp"
+#include "frenet_planner/global/data_logger.hpp"
+
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -108,6 +111,17 @@ int main() {
     }
     const double track_length = wp.s.back();
 
+    // planner가 내부적으로 쓰는 RefLine. BuildRefLine이 균일 재샘플링을 하므로
+    // 호길이 파라미터화가 waypoint 파일의 누적 s와 다르다. 투영 검증은 반드시
+    // 이 좌표계에서 해야 한다.
+    RefLine reference;
+    if (!LoadReferenceLine(waypoint_file, reference, 0.2) ||
+        reference.points.empty()) {
+        std::cerr << "[FAIL] reference line load\n";
+        return 1;
+    }
+    const double reference_length = reference.points.back().s;
+
     const std::vector<ObjectInfo> no_objects;
     CartesianPath path;
 
@@ -158,6 +172,66 @@ int main() {
                                          wp.y[target_index] + 500.0,
                                          kEgoS, unused),
                "stop target far from the reference line is rejected");
+    }
+
+    // --- 원거리 정지 목표 투영: 탐색창 회귀 --------------------------------
+    // FindClosestS의 기본 탐색창은 30m(ego localization용)다. 정지 목표에 그
+    // 창을 쓰면 목표가 창 밖으로 나가고, 잘린 초기 추정값에서 출발한 Newton이
+    // 창 경계에 머무는 게 아니라 트랙의 다른 구간으로 발산한다. 실측 기준
+    // 전방 80m에서 트랙의 2.7%, 100m에서 4.0% 지점이 이 문제로 정상 STOP을
+    // INVALID_COMMAND로 거부했다(최악 오차 735m).
+    //
+    // 특정 지점 하나만 검사하면 그 소수 구간을 그대로 놓치므로 트랙 전체를
+    // 훑는다. ego/목표 모두 planner가 실제로 쓰는 RefLine 좌표에서 만든다 -
+    // waypoint 파일의 누적 s는 RefLine 재샘플링 때문에 값이 다르다.
+    {
+        if (!fresh(planner)) return 1;
+        const double lookaheads[] = {50.0, 80.0, 100.0};
+        int failures = 0;
+        int checked = 0;
+        for (double lookahead : lookaheads) {
+            for (double sample_s = 0.0; sample_s < reference_length; sample_s += 2.0) {
+                const RefPoint target = Interpolate(
+                    reference, std::fmod(sample_s + lookahead, reference_length));
+                double projected = 0.0;
+                ++checked;
+                if (!planner->ProjectPointToS(target.x, target.y,
+                                              sample_s, projected)) {
+                    ++failures;
+                    continue;
+                }
+                double forward = projected - sample_s;
+                if (forward < -0.5 * reference_length) forward += reference_length;
+                if (forward > 0.5 * reference_length) forward -= reference_length;
+                if (std::fabs(forward - lookahead) > 1.0) ++failures;
+            }
+        }
+        Expect(checked > 1500, "projection sweep covered the whole track");
+        Expect(failures == 0,
+               "StopTargetProjectionSurvivesTheDefaultSearchWindowAcrossTheTrack");
+    }
+
+    // --- 80m STOP은 정상 명령으로 계획되어야 한다 --------------------------
+    {
+        if (!fresh(planner)) return 1;
+        const CartesianState ego = PoseAtArcLength(wp, kEgoS, 5.0);
+        double ego_s = 0.0;
+        planner->ProjectEgoToS(ego, ego_s);
+        const std::size_t target_index = IndexAtArcLength(wp, kEgoS + 80.0);
+        double stop_s = 0.0;
+        const bool projected = planner->ProjectPointToS(
+            wp.x[target_index], wp.y[target_index], ego_s, stop_s);
+        Expect(projected && std::fabs((stop_s - ego_s) - 80.0) < 5.0,
+               "80m stop target projects to the matching forward distance");
+
+        PlannerCommand stop{};
+        stop.mode = STOP;
+        stop.stop_position = stop_s;
+        const bool ok = planner->Plan(ego, no_objects, stop, path);
+        Expect(ok && !path.x.empty() && AllFinite(path),
+               "80m STOP produces a valid trajectory");
+        Expect(ok || planner->last_failure_reason() != Reason::INVALID_COMMAND,
+               "80m STOP is never rejected as INVALID_COMMAND");
     }
 
     // --- 30m STOP: 짧은 horizon 때문에 실패하면 안 된다 --------------------

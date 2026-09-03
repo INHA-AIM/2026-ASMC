@@ -331,8 +331,12 @@ bool FrenetPlanner::ProjectPointToS(double x, double y, double s_hint,
     if (!ref_loaded_ || ref_.points.empty()) return false;
     if (!std::isfinite(x) || !std::isfinite(y)) return false;
 
+    // 탐색창은 ego localization용 기본값(30m)이 아니라 STOP 전용 값을 쓴다.
+    // 정지 목표는 ego보다 앞에 있어 기본 창을 벗어나고, 그러면 잘린 초기
+    // 추정값에서 출발한 Newton이 트랙의 다른 구간으로 발산한다.
     const double* hint = std::isfinite(s_hint) ? &s_hint : nullptr;
-    const double s = FindClosestS(ref_, x, y, hint);
+    const double s = FindClosestS(ref_, x, y, hint,
+                                  stop_cfg_.projection_search_window);
     if (!std::isfinite(s)) return false;
 
     // 최근접 투영은 목표가 경로에서 아무리 멀어도 어떤 s든 돌려준다. 실제로
