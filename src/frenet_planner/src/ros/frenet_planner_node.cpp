@@ -280,15 +280,54 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
     CartesianPath path;
     if (!planner_.Plan(ego, objects, collision_objects, command, path)) {
         ++plan_fail_streak_;
-        const bool collision_blocked = planner_.last_failure_reason() ==
-            FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED;
-        if (collision_blocked) {
+        // 이전 궤적 재사용은 "이번 사이클만 후보를 못 만든" 일시적 실패에만
+        // 허용된다. 명령 자체가 잘못됐거나(INVALID_COMMAND) 지원하지 않는
+        // 모드(UNSUPPORTED_BEHAVIOR)인데 이전 궤적을 계속 내보내면, 예를 들어
+        // STOP 명령을 받고도 직전 KEEP 궤적을 따라 계속 주행하게 된다.
+        // 이런 실패는 재사용 없이 즉시 정지한다.
+        const FrenetPlanner::PlanFailureReason reason =
+            planner_.last_failure_reason();
+        bool immediate_stop = true;
+        uint8_t failure_code = asmc_msgs::Trajectory::FAILURE_GENERATION;
+        const char* reason_name = "UNKNOWN";
+        switch (reason) {
+            case FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED:
+                failure_code = asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED;
+                reason_name = "COLLISION_BLOCKED";
+                break;
+            case FrenetPlanner::PlanFailureReason::INVALID_COMMAND:
+                failure_code = asmc_msgs::Trajectory::FAILURE_INVALID_INPUT;
+                reason_name = "INVALID_COMMAND";
+                break;
+            case FrenetPlanner::PlanFailureReason::UNSUPPORTED_BEHAVIOR:
+                failure_code =
+                    asmc_msgs::Trajectory::FAILURE_UNSUPPORTED_BEHAVIOR;
+                reason_name = "UNSUPPORTED_BEHAVIOR";
+                break;
+            case FrenetPlanner::PlanFailureReason::NOT_INITIALIZED:
+                failure_code = asmc_msgs::Trajectory::FAILURE_NOT_INITIALIZED;
+                reason_name = "NOT_INITIALIZED";
+                break;
+            case FrenetPlanner::PlanFailureReason::TRANSIENT_GENERATION_FAILURE:
+                immediate_stop = false;
+                reason_name = "TRANSIENT_GENERATION_FAILURE";
+                break;
+            case FrenetPlanner::PlanFailureReason::NONE:
+                // Plan()이 false를 반환했는데 NONE이면 planner 내부 계약 위반이다.
+                // 재사용 대상으로 삼지 않고 안전하게 정지한다.
+                reason_name = "NONE";
+                break;
+        }
+
+        if (immediate_stop) {
             ROS_WARN_THROTTLE(
-                1.0, "Frenet collision blocked: publishing immediate STOP");
-            publishStop(snapshot,
-                        asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED, now);
+                1.0,
+                "Frenet immediate STOP: reason=%s command_id=%u",
+                reason_name, snapshot.behavior.command_id);
+            publishStop(snapshot, failure_code, now);
             return;
         }
+
         if (has_last_valid_trajectory_ &&
             plan_fail_streak_ <= kMaxTransientFailCycles) {
             asmc_msgs::Trajectory reused = last_valid_trajectory_;
@@ -300,10 +339,9 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
         }
         ROS_WARN_THROTTLE(
             1.0,
-            "Frenet Plan(command) failed: reason=%d command_id=%u; "
+            "Frenet Plan(command) failed: reason=%s command_id=%u; "
             "publishing STOP after transient reuse window",
-            static_cast<int>(planner_.last_failure_reason()),
-            snapshot.behavior.command_id);
+            reason_name, snapshot.behavior.command_id);
         publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_GENERATION, now);
         return;
     }

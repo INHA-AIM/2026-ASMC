@@ -76,8 +76,31 @@ ConversionStatus ConvertBehaviorContext(
         case asmc_msgs::BehaviorContext::KEEP:
             converted.mode = LANE_KEEPING;
             break;
+        case asmc_msgs::BehaviorContext::STOP:
+            converted.mode = STOP;
+            break;
         default:
             return ConversionStatus::UNSUPPORTED_BEHAVIOR;
+    }
+
+    // STOP은 정지 지점이 반드시 지정되어야 한다. BehaviorContext는 이를
+    // Cartesian (stop_x, stop_y)로 준다.
+    //
+    // 여기서 converted.stop_position에 stop_x를 넣으면 안 된다:
+    // PlannerCommand.stop_position은 Frenet 종방향 좌표 s이고 stop_x/y는 map
+    // 좌표라 단위계가 다르다. converter는 reference line을 모르므로 투영을
+    // 할 수 없다. 따라서 이 단계에서는 Cartesian 목표의 유효성만 검증하고,
+    // stop_x/y -> s 투영은 RefLine을 가진 노드가 수행한다(C4).
+    // 그때까지 converted.stop_position은 기본값 NaN으로 남고, 그 상태로
+    // Plan()에 들어가면 INVALID_COMMAND로 거부되어 즉시 정지한다 - 잘못된
+    // 값으로 주행하는 것보다 안전한 실패 방향이다.
+    if (converted.mode == STOP) {
+        if (!message.has_stop_target) {
+            return ConversionStatus::INVALID_FLAG;
+        }
+        if (!std::isfinite(message.stop_x) || !std::isfinite(message.stop_y)) {
+            return ConversionStatus::NON_FINITE_VALUE;
+        }
     }
 
     converted.target_lane = 0;
