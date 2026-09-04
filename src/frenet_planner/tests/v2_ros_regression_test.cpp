@@ -150,6 +150,18 @@ class Harness {
     bool WaitForConnections(double timeout_seconds) {
         const ros::Time deadline = ros::Time::now() + ros::Duration(timeout_seconds);
         while (ros::ok() && ros::Time::now() < deadline) {
+            // 노드가 두 개 이상 떠 있으면 두 인스턴스가 같은 topic에 피드백을
+            // 발행해 검증 결과가 뒤섞인다. 실측에서 이 상황으로 34/34가
+            // 33/34로 보인 적이 있어 환경 오류로 먼저 잡는다.
+            if (command_pub_.getNumSubscribers() > 1 ||
+                feedback_sub_.getNumPublishers() > 1) {
+                std::printf("[FAIL] more than one frenet_planner_node is "
+                            "running (command subscribers=%u, feedback "
+                            "publishers=%u); results would be mixed\n",
+                            command_pub_.getNumSubscribers(),
+                            feedback_sub_.getNumPublishers());
+                return false;
+            }
             if (command_pub_.getNumSubscribers() > 0 &&
                 feedback_sub_.getNumPublishers() > 0) {
                 // 노드가 구독을 등록한 직후에는 아직 큐가 준비되지 않을 수
@@ -220,6 +232,22 @@ class Harness {
         // 받기 위한 것이며, 입력을 끊으면 freshness 검사가 먼저 걸린다.
         for (int cycle = 0; cycle < 4 && ros::ok(); ++cycle) {
             PublishInputs(pose, current_speed);
+            SpinFor(0.05);
+        }
+    }
+
+    // 명령은 계속 보내면서 vehicle/object 발행만 멈춘다.
+    //
+    // BehaviorCommand.valid_until 만료(STALE_COMMAND)와 완전히 다른 축이다.
+    // 명령은 정상이고 Ego/Object 입력만 오래된 상태이며, transaction을
+    // 버리지 않고 이 사이클의 planning만 막아야 한다(계약 11.3절).
+    void RunWithoutInputs(const Command& command, int cycles) {
+        begin_index_ = static_cast<int>(feedback_.size());
+        for (int cycle = 0; cycle < cycles && ros::ok(); ++cycle) {
+            Command stamped = command;
+            stamped.header.stamp = ros::Time::now();
+            stamped.valid_until = ros::Time::now() + ros::Duration(2.0);
+            command_pub_.publish(stamped);
             SpinFor(0.05);
         }
     }
@@ -427,8 +455,12 @@ int main(int argc, char** argv) {
         Command command = harness.MakeCommand(id, Command::KEEP);
         command.desired_speed_mps = 5.0;
         harness.Run(command, ego, kCruiseSpeed, 14, false);
+        // 이 명령의 마지막 피드백으로 확인한다. FirstNew()는 창 안의 첫
+        // TRAJECTORY_NEW를 돌려주는데, 노드가 막 뜬 직후에는 직전 케이스의
+        // 잔여 피드백이 먼저 잡혀 값이 어긋난다(실측: 첫 실행만 실패).
         Feedback feedback;
-        Expect(harness.FirstNew(feedback) &&
+        Expect(harness.LastFor(id, feedback) &&
+                   feedback.trajectory_source == Feedback::TRAJECTORY_NEW &&
                    std::fabs(feedback.applied_speed_mps - 5.0) < 1e-6,
                "desired_speed_mps is applied");
     }
@@ -611,6 +643,62 @@ int main(int argc, char** argv) {
         Expect(harness.LastFor(id, feedback) &&
                    feedback.result_code == Feedback::STALE_COMMAND,
                "expired valid_until is STALE_COMMAND (not INVALID)");
+    }
+
+    std::printf("\n=== input stale -> same-command recovery ===\n");
+    {
+        // 이것은 STALE_COMMAND와 완전히 다른 축이다.
+        //   STALE_COMMAND    명령 자체가 만료됨 (FSM이 재발행해야 함)
+        //   입력 stale        명령은 정상, Ego/Object 입력만 오래됨
+        //
+        // 후자에서 transaction을 버리면 입력이 회복될 때 FSM이 새 command_id를
+        // 보내야 한다. 계약 11.3절은 같은 transaction으로 계속하도록 한다.
+        // 반드시 **같은 command_id**로 회복되어야 검증 의미가 있다.
+        const uint32_t id = ++command_id;
+        const Command keep = harness.MakeCommand(id, Command::KEEP);
+
+        // 1. 정상 주행 확인.
+        harness.Run(keep, ego, kCruiseSpeed, 14, false);
+        Feedback before;
+        Expect(harness.LastFor(id, before) && before.plan_valid &&
+                   before.execution_state == Feedback::EXECUTING,
+               "input stale: baseline KEEP is planning");
+
+        // 2. 명령은 계속 보내면서 입력 발행만 멈춘다. vehicle timeout이
+        //    0.20 s이므로 넉넉히 넘긴다.
+        harness.RunWithoutInputs(keep, 20);
+        Feedback stale;
+        const bool got_stale = harness.LastFor(id, stale);
+        Expect(got_stale && stale.command_id == id,
+               "input stale: command_id is preserved");
+        Expect(got_stale && stale.command_accepted,
+               "input stale: the command stays accepted");
+        Expect(got_stale && stale.active_maneuver == Command::KEEP,
+               "input stale: active_maneuver stays KEEP");
+        Expect(got_stale && !stale.plan_valid &&
+                   stale.trajectory_source == Feedback::TRAJECTORY_SAFE_STOP,
+               "input stale: planning is skipped with a safe stop");
+        // 명령은 정상이므로 명령 결함으로 보고하면 안 된다. INPUT_DATA_STALE이
+        // 원본 msg에 없어 result_code는 RESULT_NONE으로 남고 사유는 detail에만
+        // 담긴다 - 기존 코드로 거짓 매핑하지 않는다(계약 11.1절).
+        Expect(got_stale &&
+                   stale.result_code != Feedback::INVALID_COMMAND &&
+                   stale.result_code != Feedback::STALE_COMMAND,
+               "input stale: not reported as a command defect");
+        Expect(got_stale && !stale.result_detail.empty(),
+               "input stale: the reason is carried in result_detail");
+
+        // 3. 입력을 되살린다. 새 command_id를 쓰지 않는 것이 핵심이다.
+        harness.Run(keep, ego, kCruiseSpeed, 14, false);
+        Feedback recovered;
+        Expect(harness.LastFor(id, recovered) && recovered.command_id == id &&
+                   recovered.plan_valid &&
+                   recovered.execution_state == Feedback::EXECUTING &&
+                   recovered.trajectory_source == Feedback::TRAJECTORY_NEW,
+               "input stale: the same command_id resumes planning after recovery");
+        Expect(harness.LastFor(id, recovered) &&
+                   recovered.result_code == Feedback::RESULT_NONE,
+               "input stale: the error clears after recovery");
     }
 
     std::printf("\n=== unimplemented maneuver ===\n");
