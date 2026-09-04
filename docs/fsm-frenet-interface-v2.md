@@ -1680,6 +1680,109 @@ tracking update가 일어나 yaw-rate가 0 방향으로 한 번 더 필터링된
 결과로 덮인다. AVOID 후보 평가와 유지 궤적은 **한 번의 전처리(Cartesian→Frenet,
 object tracking/prediction) 위에서 두 결과를 만들어** 분리 반환한다(D6-2).
 
+#### 12.7.3 D6-2b PREPARE dual-output 구조 (D6-2b에서 확정)
+
+##### 두 축을 타입으로 분리한다
+
+`AvoidPrepareResult*`가 nullptr인지로 mode를 암묵적으로 표현하지 않는다.
+그러면 나중에 진단용으로 포인터만 넘겨도 동작이 바뀐다.
+
+| | 역할 |
+|---|---|
+| `ExternalPlanningPurpose` | 이번 호출이 **무슨 계산**을 하는가 (입력/제어축) |
+| `AvoidPrepareResult*` | 그 계산 **결과**가 무엇인가 (출력축) |
+| `out_path` | 실제 **MPC로 보낼** 궤적 |
+
+public API는 `PrepareAvoid()`로 감싸 enum/pointer 조합을 외부에 노출하지
+않는다. 기존 `Plan()`은 `NORMAL`로 들어간다.
+
+##### 반환값의 의미
+
+PREPARE에는 성공이 둘 있다. 두 값을 다시 묶으면 D6-0에서 분리한
+`plan_valid` / `trajectory_source`를 되돌리는 셈이다(8.3.1절).
+
+| | 의미 |
+|---|---|
+| `PrepareAvoid()` 반환값 | **`out_path`(maintenance)를 유효하게 만들었는가** |
+| `result.candidate_valid` | AVOID 후보가 안전한가 = `plan_valid` |
+
+```
+maintenance 성공 + 후보 성공  -> true,  candidate_valid=true   READY
+maintenance 성공 + 후보 막힘  -> true,  candidate_valid=false  WAITING
+maintenance 실패             -> false                         안전정지
+```
+
+##### maintenance 우선순위
+
+단순 KEEP이면 안 된다. AVOID 대상은 **같은 corridor**에 있으므로 중앙 KEEP
+후보가 그 장애물 때문에 전부 탈락할 수 있다. 즉
+
+```
+AVOID candidate valid = true      (옆으로 비켜가면 안전)
+maintenance KEEP      = 없음      (직진하면 부딪힌다)
+```
+
+가 정상적으로 발생한다. 그렇다고 candidate를 발행하면 5.2절 위반이므로
+종방향으로 물러나는 대안이 필요하다.
+
+```
+1. 충돌 검사를 통과한 KEEP/crawl
+     ↓ 막히면
+2. GenerateDecelToZeroPath (종방향 감속)
+     ↓ 그것도 막히면
+3. 현재 위치 0속도 hold
+```
+
+실측(저속 0.3 m/s, `AVOID target=21`, maintenance 점 개수):
+
+| 장애물 거리 | 점 개수 | 선택된 tier |
+|---|---|---|
+| 30 ~ 9 m | 21 | crawl (충돌 clear) |
+| 7 m | 3 | 감속 |
+| 5 m 이하 | 1 | 0속도 hold |
+
+##### 저속 crawl은 반드시 충돌 검사를 통과해야 한다
+
+`PlanLowSpeedFallback()`은 **충돌 필터를 타지 않는다.** 그 결과를 그대로
+maintenance로 쓰면 장애물 쪽으로 기어간다.
+
+그리고 저속 fallback 분기에서 `AVOID_PREPARE`를 제외해야 한다. 제외하지
+않으면 PREPARE 블록에 **도달하지도 못한다** — 그 분기가 먼저 return하기
+때문이다. 실측으로 확인했다: `v=0.3`에서 `low_speed_waiting`이 0으로 나오고
+maintenance가 미검사 crawl이었다.
+
+무조건 정지시키지 않는 이유는 자기잠금이다.
+
+```
+0.3 m/s -> WAITING -> stop -> 0 m/s -> WAITING -> stop ...
+```
+
+crawl이 clear면 속도가 회복되어 다음 사이클에 후보가 생길 수 있다.
+
+##### 저속이라고 후보 생성을 건너뛰지 않는다
+
+"저속에서는 어차피 안 될 것"이라고 가정하면 실제로 가능한 상황에서도 READY에
+도달하지 못한다. 생성을 **시도하고 결과로 판단**한다. 저속에서 후보가 0개면
+`low_speed_waiting`이 사유를 설명한다.
+
+##### `selected_target_d`는 선택된 후보의 실제 종단 d다
+
+`ResolveManeuver`의 lateral 격자는 `target_d ± lateral_target_tolerance`
+(0.5 m)이므로 선택된 후보는 요청 목표에서 그 범위 안으로 벗어난다.
+
+실측: 요청 `+2.50` → 실제 종단 `+3.00`.
+
+요청값을 그대로 `FrenetFeedback.target_d`로 내보내면 FSM이 실제 회피 폭을
+0.5 m까지 잘못 안다(9.2절의 "지정했다 vs 확보했다"와 같은 원칙).
+
+##### PREPARE는 `target_d`를 lock하지 않는다
+
+`v2_avoid_targets_`는 "평가할 목표"이고, `result.selected_target_d`는 "이번
+사이클에 고른 목표"다. `v2_avoidance_.target_d`에 쓰지 않는다.
+
+`NONE`이면 사이클마다 좌/우가 바뀔 수 있고, FSM이 EXECUTE를 주지 않았으므로
+그것이 정상이다. lock은 D6-3의 COMMIT에서 한다.
+
 #### 12.7.2 저속 AVOID resolver 우회 — **D6-2a에서 해결**
 
 **D6-1에서 실측 확인한 문제다.** `ego.v`가 `kLowSpeedFallbackV`(0.5 m/s)

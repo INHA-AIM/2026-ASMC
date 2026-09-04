@@ -210,12 +210,125 @@ public:
 
     PlanFailureReason last_failure_reason() const { return last_failure_reason_; }
 
+    // 이번 PlanInternal 호출이 무엇을 하려는지 (D6-2b).
+    //
+    // AvoidPrepareResult* 가 nullptr인지로 mode를 암묵적으로 표현하지 않는다.
+    // 그러면 나중에 진단용으로 포인터만 넘겨도 동작이 바뀐다. 입력/제어축과
+    // 출력축을 명시적으로 분리한다:
+    //
+    //   purpose               무슨 계산을 할지
+    //   AvoidPrepareResult*   그 계산 결과를 내보냄
+    //   out_path              실제 MPC로 보낼 궤적
+    //
+    // ROS의 execution_request enum을 core로 가져오지 않는다 - core는
+    // handshake를 모르고, "준비만 하는 계산"이라는 것만 안다.
+    enum class ExternalPlanningPurpose {
+        NORMAL,
+        AVOID_PREPARE,
+    };
+
+    // AVOID PREPARE 한 사이클의 결과 (계약 5.2절).
+    //
+    // ===== candidate_path와 maintenance path는 다른 것이다 =====
+    //
+    // candidate_path      "AVOID를 실행해도 되는가"의 근거. MPC로 보내지 않는다.
+    // out_path(별도 인자)  "지금 MPC가 실제로 따라갈 것". 유지 궤적이다.
+    //
+    // 타입 수준에서 분리해 두는 이유는, 실수로 candidate를 발행하면 FSM이
+    // EXECUTE를 보내기 전에 횡이동이 시작되기 때문이다.
+    struct AvoidPrepareResult {
+        // 요청한 AVOID용 새 유효 후보를 만들었는가. FrenetFeedback.plan_valid로
+        // 나가는 값이다. **PrepareAvoid()의 반환값과 다른 축이다**(아래 주석).
+        bool candidate_valid = false;
+
+        // 저속 때문에 후보를 만들지 못했는가. terminal 실패가 아니라 WAITING의
+        // 사유이며, 속도가 회복되면 해소된다.
+        bool low_speed_waiting = false;
+
+        // 요청 방향과 target pose가 모순인가. 이 경우에도 candidate_valid는
+        // false여야 한다 - 충돌 검사에만 맡기면 안 된다(헤더 아래 주석).
+        bool direction_conflict = false;
+
+        // target pose가 ego 후방이라 회피 목표로 쓸 수 없는가.
+        bool target_behind_ego = false;
+
+        // 이번 사이클에 선택된 목표 d. candidate_valid일 때만 의미가 있다.
+        // **여기까지가 PREPARE의 범위다** - v2_avoidance_.target_d에 lock하지
+        // 않는다. NONE이면 사이클마다 좌/우가 바뀔 수 있고, FSM이 EXECUTE를
+        // 주지 않았으므로 그것이 정상이다. lock은 D6-3의 COMMIT에서 한다.
+        double selected_target_d = 0.0;
+
+        // 평가한 AVOID 후보. 진단·검증용이며 MPC로 보내지 않는다.
+        CartesianPath candidate_path;
+
+        // FrenetFeedback 진단 필드용.
+        std::size_t generated_candidate_count = 0;
+        std::size_t valid_candidate_count = 0;
+        double selected_cost = -1.0;
+        int blocking_object_id = -1;
+    };
+
+    // AVOID PREPARE 한 사이클을 수행한다 (계약 5.2절).
+    //
+    // ===== 반환값의 의미 =====
+    //
+    // **"실제로 내보낼 maintenance_path를 유효하게 만들었는가"**다.
+    // AVOID 후보의 성공 여부는 result.candidate_valid이며 별개 축이다.
+    // 두 값을 다시 묶으면 D6-0에서 분리한 plan_valid / trajectory_source를
+    // 되돌리는 셈이다(계약 8.3.1절).
+    //
+    //   maintenance 성공 + 후보 성공  -> true,  candidate_valid=true   READY
+    //   maintenance 성공 + 후보 막힘  -> true,  candidate_valid=false  WAITING
+    //   maintenance 실패             -> false                        안전정지
+    bool PrepareAvoid(const CartesianState& ego,
+                      const std::vector<ObjectInfo>& obstacles,
+                      const std::vector<TrackedObstacle>& collision_obstacles,
+                      const PlannerCommand& command,
+                      CartesianPath& maintenance_path,
+                      AvoidPrepareResult& result);
+
 private:
     bool PlanInternal(const CartesianState& ego,
                       const std::vector<ObjectInfo>& obstacles,
                       const PlannerCommand* external_command,
                       const std::vector<TrackedObstacle>* collision_obstacles,
-                      CartesianPath& out_path);
+                      ExternalPlanningPurpose purpose,
+                      CartesianPath& out_path,
+                      AvoidPrepareResult* avoid_prepare_result);
+
+    // AVOID PREPARE의 유지 궤적을 만든다 (D6-2b).
+    //
+    // ===== 왜 단순 KEEP이면 안 되는가 =====
+    //
+    // AVOID 대상은 같은 corridor에 있다. 그래서 중앙 KEEP 후보가 그 장애물
+    // 때문에 충돌 검사에서 전부 탈락할 수 있다. 즉
+    //
+    //   AVOID candidate valid = true      (옆으로 비켜가면 안전)
+    //   maintenance KEEP      = 없음      (직진하면 부딪힌다)
+    //
+    // 가 정상적으로 발생한다. 그렇다고 AVOID candidate를 발행하면 계약 5.2절
+    // 위반이므로, 종방향으로 물러나는 대안이 필요하다.
+    //
+    // 우선순위:
+    //   1. 충돌 검사를 통과한 KEEP/유지 궤적
+    //   2. GenerateDecelToZeroPath (종방향 감속)
+    //   3. 현재 위치 0속도 hold
+    //
+    // 저속(ego.v < kLowSpeedFallbackV)에서는 1번 대신 crawl을 쓴다. 무조건
+    // 정지시키면
+    //   0.3 m/s -> WAITING -> stop -> 0 m/s -> WAITING -> stop ...
+    // 로 자기잠금이 되어 영원히 READY에 도달하지 못한다. crawl도 반드시
+    // 충돌 검사를 통과해야 하며(PlanLowSpeedFallback 자체는 충돌 필터를
+    // 타지 않는다), 막히면 2번/3번으로 내려간다.
+    bool BuildAvoidMaintenancePath(
+        const CartesianState& ego, const FrenetState& start,
+        const PlannerCommand& base_command,
+        const std::vector<TrackedObstacle>& collision_obstacles,
+        CartesianPath& out_path) const;
+
+    // 현재 위치에서 0속도로 정지 유지하는 한 점 궤적. STOP HOLD와 같은 형태다.
+    void BuildZeroSpeedHoldPath(const CartesianState& ego, double s,
+                                CartesianPath& out_path) const;
 
     // ===== D1-2: legacy 행동 선택권의 유일한 경계 =====
     //
@@ -452,13 +565,20 @@ private:
         // 목표가 FSM의 target pose에서 왔는지. 진단·피드백용이다.
         bool from_target_pose = false;
         // 방향 요청과 target pose가 모순되는지 (예: LEFT인데 pose가 장애물
-        // 오른쪽). 이 경우에도 후보를 만들어 충돌 검사에 맡긴다 - 명령
-        // 결함이 아니라 "그 목표로는 회피가 안 된다"이므로 WAITING이 맞다
-        // (계약 3.3.4절).
+        // 오른쪽).
+        //
+        // **충돌 검사에만 맡기면 안 된다** (D6-2b). LEFT 요청에 오른쪽 -4 m
+        // pose는 물리적으로 아주 안전할 수 있어 충돌 검사가 CLEAR를 준다.
+        // 그대로 READY로 올라가면 FSM은 LEFT를 명령했는데 Frenet은 RIGHT
+        // 후보를 준비한 계약 위반이 된다.
+        //
+        // 그래서 D6-2b가 이 값을 후보 차단 사유로 쓴다. 다만 명령 결함이
+        // 아니므로 INVALID_COMMAND가 아니라 WAITING이다(계약 3.3.4절).
         bool direction_conflict = false;
     };
     AvoidTargetPlan DecideAvoidTargets(const AvoidanceContext& context,
                                        LateralDirection direction) const;
+
 
     // 현재 상태에서 그 자리에 정지하는 감속 궤적을 직접 만든다.
     //

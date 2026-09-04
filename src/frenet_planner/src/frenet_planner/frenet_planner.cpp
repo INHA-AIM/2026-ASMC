@@ -804,7 +804,8 @@ bool ValidateExternalCommand(const PlannerCommand& command,
 bool FrenetPlanner::Plan(const CartesianState& ego,
                          const std::vector<ObjectInfo>& obstacles,
                          CartesianPath& out_path) {
-    return PlanInternal(ego, obstacles, nullptr, nullptr, out_path);
+    return PlanInternal(ego, obstacles, nullptr, nullptr,
+                        ExternalPlanningPurpose::NORMAL, out_path, nullptr);
 }
 
 bool FrenetPlanner::Plan(const CartesianState& ego,
@@ -816,7 +817,8 @@ bool FrenetPlanner::Plan(const CartesianState& ego,
         last_failure_reason_ = reason;
         return false;
     }
-    return PlanInternal(ego, obstacles, &command, nullptr, out_path);
+    return PlanInternal(ego, obstacles, &command, nullptr,
+                        ExternalPlanningPurpose::NORMAL, out_path, nullptr);
 }
 
 bool FrenetPlanner::Plan(
@@ -834,7 +836,8 @@ bool FrenetPlanner::Plan(
         last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
         return false;
     }
-    return PlanInternal(ego, obstacles, &command, &collision_obstacles, out_path);
+    return PlanInternal(ego, obstacles, &command, &collision_obstacles,
+                        ExternalPlanningPurpose::NORMAL, out_path, nullptr);
 }
 
 void FrenetPlanner::SelectLegacyBehavior(
@@ -906,12 +909,128 @@ void FrenetPlanner::SelectLegacyBehavior(
     }
 }
 
+bool FrenetPlanner::PrepareAvoid(
+    const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
+    const std::vector<TrackedObstacle>& collision_obstacles,
+    const PlannerCommand& command, CartesianPath& maintenance_path,
+    AvoidPrepareResult& result) {
+    result = AvoidPrepareResult{};
+    PlanFailureReason reason = PlanFailureReason::NONE;
+    if (!ValidateExternalCommand(command, reason)) {
+        last_failure_reason_ = reason;
+        return false;
+    }
+    // PREPARE는 AVOID 전용이다. 다른 모드로 호출되면 호출자의 실수다.
+    if (command.mode != AVOID) {
+        last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
+        return false;
+    }
+    if (collision_obstacles.size() != obstacles.size()) {
+        last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
+        return false;
+    }
+    return PlanInternal(ego, obstacles, &command, &collision_obstacles,
+                        ExternalPlanningPurpose::AVOID_PREPARE,
+                        maintenance_path, &result);
+}
+
+void FrenetPlanner::BuildZeroSpeedHoldPath(const CartesianState& ego, double s,
+                                           CartesianPath& out_path) const {
+    // STOP HOLD와 같은 형태다. 한 점 0속도 궤적.
+    const RefPoint rp = Interpolate(ref_, s);
+    out_path.x.assign(1, ego.x);
+    out_path.y.assign(1, ego.y);
+    out_path.yaw.assign(1, std::isfinite(ego.yaw) ? ego.yaw : rp.theta);
+    out_path.kappa.assign(1, 0.0);
+    out_path.v.assign(1, 0.0);
+    out_path.a.assign(1, 0.0);
+}
+
+bool FrenetPlanner::BuildAvoidMaintenancePath(
+    const CartesianState& ego, const FrenetState& start,
+    const PlannerCommand& base_command,
+    const std::vector<TrackedObstacle>& collision_obstacles,
+    CartesianPath& out_path) const {
+    const double s = start.s;
+    const double d = start.d;
+
+    // ---- 1순위: 충돌 검사를 통과한 유지 궤적 --------------------------
+    //
+    // 저속에서는 정상 후보 파이프라인이 lateral candidate를 제한하므로
+    // crawl을 쓴다. 정상 속도에서는 중앙 유지(KEEP) 후보를 만든다.
+    constexpr double kLowSpeedFallbackV = 0.5;  // [m/s] (PlanInternal과 동일)
+    const bool low_speed = std::fabs(ego.v) < kLowSpeedFallbackV;
+
+    if (low_speed) {
+        // crawl은 현재 d를 유지한다. PREPARE 중에 횡이동을 시작하면 안 된다.
+        CartesianPath crawl;
+        if (PlanLowSpeedFallback(ego, s, d, d, crawl, 2.0,
+                                 base_command.target_speed) &&
+            crawl.x.size() >= 2) {
+            // PlanLowSpeedFallback은 충돌 필터를 타지 않는다. 그대로 쓰면
+            // 장애물 쪽으로 기어간다.
+            int blocking_id = -1;
+            if (CartesianTrajectoryClear(crawl, collision_obstacles,
+                                         vehicle_shape_, collision_cfg_,
+                                         path_cfg_.dt, &blocking_id)) {
+                out_path = std::move(crawl);
+                return true;
+            }
+        }
+    } else {
+        PlannerCommand keep_cmd = base_command;
+        keep_cmd.mode = LANE_KEEPING;
+        keep_cmd.avoidance_d_offset = 0.0;
+        PlannerDebugStats keep_stats;
+        auto keep_candidates =
+            ResolveManeuver(start, keep_cmd, ref_, path_cfg_, limits_,
+                            lane_width_, collision_obstacles, vehicle_shape_,
+                            collision_cfg_, &keep_stats);
+        EvaluateCosts(keep_candidates, cost_weights_, 0.0);
+        FilterByCartesianLateralAcceleration(keep_candidates, ref_,
+                                             limits_.max_lateral_accel);
+        const FrenetPath* keep_best = SelectBestPath(keep_candidates);
+        if (keep_best) {
+            out_path = ConvertToCartesianPath(*keep_best, ref_);
+            if (out_path.x.size() >= 2) return true;
+        }
+    }
+
+    // ---- 2순위: 종방향 감속 -------------------------------------------
+    //
+    // 여기 오는 것은 정상이다 - AVOID 대상이 같은 corridor에 있으므로 직진
+    // 후보가 그 장애물 때문에 전부 막힐 수 있다.
+    CartesianPath decel;
+    if (GenerateDecelToZeroPath(s, d, start.s_d, decel) &&
+        decel.x.size() >= 2) {
+        int blocking_id = -1;
+        if (CartesianTrajectoryClear(decel, collision_obstacles, vehicle_shape_,
+                                     collision_cfg_, path_cfg_.dt,
+                                     &blocking_id)) {
+            out_path = std::move(decel);
+            return true;
+        }
+    }
+
+    // ---- 3순위: 0속도 hold --------------------------------------------
+    //
+    // 감속 궤적조차 충돌로 막히면 그 자리에 멈추는 것이 마지막 수단이다.
+    // 이 경로는 이동하지 않으므로 새 충돌을 만들지 않는다.
+    BuildZeroSpeedHoldPath(ego, s, out_path);
+    return !out_path.x.empty();
+}
+
 bool FrenetPlanner::PlanInternal(
     const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
     const PlannerCommand* external_command,
     const std::vector<TrackedObstacle>* collision_obstacles,
-    CartesianPath& out_path) {
+    ExternalPlanningPurpose purpose, CartesianPath& out_path,
+    AvoidPrepareResult* avoid_prepare_result) {
     const bool use_legacy_behavior = external_command == nullptr;
+    // purpose가 계산 내용을 정한다. 포인터 유무로 판단하지 않는다 - 진단용
+    // 으로 포인터만 넘겨도 동작이 바뀌면 안 된다(헤더 주석 참고).
+    const bool avoid_prepare =
+        purpose == ExternalPlanningPurpose::AVOID_PREPARE;
     last_failure_reason_ = PlanFailureReason::NONE;
     if (!ref_loaded_) {
         last_failure_reason_ = PlanFailureReason::NOT_INITIALIZED;
@@ -1209,18 +1328,25 @@ bool FrenetPlanner::PlanInternal(
         v2_avoid_targets_ =
             DecideAvoidTargets(v2_avoidance_, external_command->requested_direction);
 
-        // D6-2a는 **확보와 목표 결정까지만**이다. 좌/우 후보 생성과 안전성
-        // 판정은 D6-2b(PREPARE dual-output)에서 붙인다.
+        // 후보 생성과 안전성 판정은 아래 AVOID PREPARE 블록에서 한다
+        // (D6-2b). 그 블록은 FrenetState start가 만들어진 뒤에 있다.
         //
-        // 여기서 그대로 내려보내면 ResolveManeuver의 AVOID 분기가
-        // avoidance_d_offset=0으로 중앙 유지 궤적을 만들어, FSM 입장에서는
-        // "회피 성공"으로 보이면서 실제로는 장애물 쪽으로 직진한다.
-        // 그래서 명시적으로 거부한다(계약 11.4절과 같은 원칙).
-        //
-        // **저속에서도 같은 실패를 반환한다.** 저속만 다르게 성공시키면
-        // 위 실측 표의 위험한 세 행이 그대로 남는다.
-        last_mode_ = AVOID;
-        last_failure_reason_ = PlanFailureReason::UNSUPPORTED_BEHAVIOR;
+        // NORMAL purpose로 AVOID가 들어오면 아직 실행 경로가 없다. 그대로
+        // 내려보내면 ResolveManeuver의 AVOID 분기가 avoidance_d_offset=0으로
+        // 중앙 유지 궤적을 만들어, FSM 입장에서는 "회피 성공"으로 보이면서
+        // 실제로는 장애물 쪽으로 직진한다(계약 11.4절과 같은 원칙).
+        // 실제 실행은 D6-3에서 붙인다.
+        if (!avoid_prepare) {
+            last_mode_ = AVOID;
+            last_failure_reason_ = PlanFailureReason::UNSUPPORTED_BEHAVIOR;
+            return false;
+        }
+    }
+    // PREPARE인데 AVOID가 아니면 호출자의 실수다. PrepareAvoid()가 이미
+    // 막지만, PlanInternal 내부에서도 조용히 다른 모드를 준비하지 않는다.
+    if (avoid_prepare &&
+        (use_legacy_behavior || external_command->mode != AVOID)) {
+        last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
         return false;
     }
 
@@ -1232,8 +1358,17 @@ bool FrenetPlanner::PlanInternal(
     // 멈춰 있으면 min_gap을 유지하는 정지 목표를 만든다.
     const bool external_follow =
         !use_legacy_behavior && external_command->mode == FOLLOWING;
+    // AVOID PREPARE도 이 fallback을 타지 않는다 (D6-2b).
+    //
+    // 이 경로는 충돌 필터를 거치지 않은 crawl을 그대로 반환하므로, PREPARE의
+    // 유지 궤적으로 쓰면 장애물 쪽으로 기어간다. 저속 PREPARE의 유지 궤적은
+    // BuildAvoidMaintenancePath가 **충돌 검사를 통과시킨 뒤** 만든다.
+    //
+    // 여기서 제외하지 않으면 PREPARE 블록에 도달하지도 못한다 - 이 분기가
+    // 먼저 return하기 때문이다(실측으로 확인: v=0.3에서 low_speed_waiting이
+    // 0으로 나오고 maintenance가 미검사 crawl이었다).
     if (std::fabs(ego.v) < kLowSpeedFallbackV && !near_any_merge &&
-        !external_stop && !external_follow) {
+        !external_stop && !external_follow && !avoid_prepare) {
         static int low_speed_log_tick = 0;
         if (++low_speed_log_tick % 5 == 0) {
             std::printf("[FrenetPlanner-STATE] mode=LOW_SPEED_FALLBACK "
@@ -1280,6 +1415,179 @@ bool FrenetPlanner::PlanInternal(
     d_dot = clip(d_dot, -kMaxDDot, kMaxDDot);
 
     FrenetState start{s, s_dot, s_ddot, d, d_dot, d_ddot};
+
+    // =====================================================================
+    // AVOID PREPARE: 후보 평가와 유지 궤적을 한 사이클에서 만든다 (D6-2b)
+    //
+    // 계약 5.2절. 두 결과를 절대 같은 것으로 취급하지 않는다:
+    //   candidate  "AVOID를 실행해도 되는가"     -> result.candidate_valid
+    //   out_path   "지금 MPC가 따라갈 것"        -> maintenance
+    //
+    // 위쪽 전처리(Cartesian->Frenet, object tracking/prediction)를 **한 번만**
+    // 통과했다. PlanInternal을 두 번 부르면 last_s_ / missing_cycles /
+    // yaw-rate 재추정이 중복된다(계약 12.7.1절).
+    // =====================================================================
+    if (avoid_prepare) {
+        AvoidPrepareResult& result = *avoid_prepare_result;
+        last_mode_ = AVOID;
+        last_target_speed_ = resolved_target_speed;
+        result.direction_conflict = v2_avoid_targets_.direction_conflict;
+
+        constexpr double kLowSpeedFallbackV = 0.5;  // [m/s]
+        result.low_speed_waiting = std::fabs(ego.v) < kLowSpeedFallbackV;
+
+        // ---- target pose sanity: ego 전방이어야 한다 -------------------
+        //
+        // 뒤에 있는 목표 pose의 d를 그대로 lateral goal로 쓰면, 이미 지나간
+        // 지점의 횡위치로 회피하게 된다. 다만 "장애물보다 반드시 앞/뒤"
+        // 같은 강한 규칙은 넣지 않는다 - AVOID 목표점은 shift 완료점일 수도,
+        // 통과 후 점일 수도 있어 FSM 계약이 더 명확해지기 전에는 과하다
+        // (계약 3.3.4절).
+        if (v2_avoidance_.has_requested_target_d) {
+            const double track_length =
+                ref_.points.empty() ? 0.0 : ref_.points.back().s;
+            double target_gap = v2_avoidance_.requested_target_s - s;
+            if (target_gap <= 0.0 && track_length > 0.0) {
+                target_gap += track_length;
+            }
+            // 폐루프에서 감아 올린 gap이 트랙 절반을 넘으면 실제로는 후방이다.
+            const bool behind =
+                !(target_gap > 0.0) ||
+                (track_length > 0.0 && target_gap > track_length * 0.5);
+            result.target_behind_ego = behind;
+        }
+
+        // ---- AVOID 후보 평가 -------------------------------------------
+        //
+        // 방향 모순이나 후방 목표이면 후보를 만들지 않는다.
+        //
+        // ===== 방향 모순을 충돌 검사에만 맡기면 안 되는 이유 =====
+        //
+        // FSM이 LEFT를 지시했고 pose가 장애물 오른쪽 -4 m라면, 그 오른쪽
+        // 경로는 물리적으로 아주 안전할 수 있다. 충돌 검사는 CLEAR를
+        // 돌려주고, 그대로 READY까지 올라가면
+        //   FSM은 LEFT를 명령 / Frenet은 RIGHT 후보를 READY
+        // 라는 계약 위반이 된다. 그래서 feasibility를 여기서 false로 만든다.
+        //
+        // 단 terminal 실패가 아니다. "현재 요청으로 실행 가능한 후보가
+        // 없다"이므로 결과는 WAITING이다(계약 3.3.4절).
+        const bool blocked_by_request =
+            result.direction_conflict || result.target_behind_ego;
+
+        // 저속이라고 후보 생성을 건너뛰지 않는다. "저속에서는 어차피 안 될
+        // 것"이라고 가정하면, 실제로 가능한 상황에서도 READY에 도달하지
+        // 못한다. 생성을 시도하고 결과로 판단한다 - 저속에서 후보가 0개면
+        // low_speed_waiting이 그 사유를 설명한다.
+        if (!blocked_by_request && v2_avoid_targets_.count > 0) {
+            const FrenetPath* best_candidate = nullptr;
+            std::vector<FrenetPath> best_set;
+            double best_target_d = 0.0;
+            int first_blocking_id = -1;
+
+            for (int index = 0; index < v2_avoid_targets_.count; ++index) {
+                const double target_d = v2_avoid_targets_.candidates[index];
+                PlannerCommand side_cmd = *external_command;
+                side_cmd.mode = AVOID;
+                side_cmd.avoidance_d_offset = target_d;
+                side_cmd.target_speed = resolved_target_speed;
+
+                PlannerDebugStats side_stats;
+                auto generated = ResolveManeuver(
+                    start, side_cmd, ref_, path_cfg_, limits_, lane_width_,
+                    predicted_collision_obstacles, vehicle_shape_,
+                    collision_cfg_, &side_stats);
+                EvaluateCosts(generated, cost_weights_, target_d);
+                FilterByCartesianLateralAcceleration(generated, ref_,
+                                                     limits_.max_lateral_accel);
+
+                result.generated_candidate_count += generated.size();
+                for (const auto& path : generated) {
+                    if (path.valid) ++result.valid_candidate_count;
+                    else if (first_blocking_id < 0 &&
+                             path.rejection_reason == RejectionReason::COLLISION &&
+                             path.collision_object_id >= 0) {
+                        first_blocking_id = path.collision_object_id;
+                    }
+                }
+
+                const FrenetPath* side_best = SelectBestPath(generated);
+                if (!side_best) continue;
+                // NONE이면 cost로 좌/우를 고른다. LEFT/RIGHT는 count가 1이라
+                // 이 비교가 일어나지 않는다.
+                if (!best_candidate ||
+                    side_best->cost_total < best_candidate->cost_total) {
+                    best_set = std::move(generated);
+                    best_candidate = SelectBestPath(best_set);
+                    best_target_d = target_d;
+                }
+            }
+
+            if (best_candidate) {
+                result.candidate_valid = true;
+                // **요청 목표가 아니라 선택된 후보의 실제 종단 d를 보고한다.**
+                //
+                // ResolveManeuver의 lateral 격자는 target_d 주변
+                // ±lateral_target_tolerance(0.5 m)이므로, 선택된 후보는 요청
+                // 목표에서 그 범위 안으로 벗어날 수 있다. 실측: 요청 +2.50 ->
+                // 실제 종단 +3.00.
+                //
+                // 요청값을 그대로 FrenetFeedback.target_d로 내보내면 FSM이
+                // 실제 회피 폭을 0.5 m까지 잘못 알게 된다(계약 9.2절의
+                // "지정했다 vs 확보했다"와 같은 원칙).
+                result.selected_target_d = best_candidate->d.empty()
+                    ? best_target_d : best_candidate->d.back();
+                result.selected_cost = best_candidate->cost_total;
+                result.candidate_path =
+                    ConvertToCartesianPath(*best_candidate, ref_);
+            } else {
+                result.blocking_object_id = first_blocking_id;
+            }
+        } else if (blocked_by_request) {
+            // 요청 자체로 후보를 만들지 않았다. 충돌이 아니므로 blocking
+            // object는 없다.
+            result.blocking_object_id = -1;
+        }
+
+        // ---- 유지 궤적 --------------------------------------------------
+        //
+        // **AVOID 후보를 여기 넣지 않는다.** PREPARE 중 횡이동 발행은 계약
+        // 5.2절이 금지한다 - FSM이 EXECUTE를 주기 전에 차가 움직인다.
+        PlannerCommand maintenance_base = *external_command;
+        maintenance_base.target_speed = resolved_target_speed;
+        if (!BuildAvoidMaintenancePath(ego, start, maintenance_base,
+                                       predicted_collision_obstacles,
+                                       out_path)) {
+            last_failure_reason_ =
+                PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+            return false;
+        }
+
+        // PREPARE 중에는 target_d를 lock하지 않는다. NONE이면 사이클마다
+        // 좌/우가 바뀔 수 있고, FSM이 EXECUTE를 주지 않았으므로 그것이
+        // 정상이다. lock은 D6-3의 COMMIT에서 한다(헤더 주석 참고).
+
+        static int prepare_log_tick = 0;
+        if (++prepare_log_tick % 5 == 0) {
+            std::printf("[FrenetPlanner-STATE] mode=AVOID phase=PREPARE "
+                        "s=%.2f d=%.3f speed=%.2f target_id=%d "
+                        "candidate=%d target_d=%.3f evaluated=%d "
+                        "low_speed=%d conflict=%d behind=%d "
+                        "candidates=%zu/%zu maintenance=%zu\n",
+                        s, d, ego.v, v2_avoidance_.obstacle_id,
+                        result.candidate_valid ? 1 : 0, result.selected_target_d,
+                        v2_avoid_targets_.count,
+                        result.low_speed_waiting ? 1 : 0,
+                        result.direction_conflict ? 1 : 0,
+                        result.target_behind_ego ? 1 : 0,
+                        result.valid_candidate_count,
+                        result.generated_candidate_count, out_path.x.size());
+        }
+
+        // 반환값은 **maintenance가 유효한가**다. 후보 성공 여부는
+        // result.candidate_valid로 따로 나간다(계약 8.3.1절).
+        last_failure_reason_ = PlanFailureReason::NONE;
+        return true;
+    }
 
     // Behavior Planner 연동 전의 정적 장애물 AVOID context. 장애물 ID와
     // 회피 방향을 최초 1회만 고정한다. TRACKING 동안은 LANE_KEEPING을
