@@ -252,6 +252,32 @@ class Harness {
         }
     }
 
+    // 사이클 단위로 명령을 보낸다. Run()과 달리 창을 새로 열지 않아서
+    // 여러 구간(정상 -> dropout -> 재등장)을 한 transaction으로 이어붙일 수
+    // 있다. dropout grace를 사이클 수로 정확히 세려면 이 제어가 필요하다.
+    void BeginWindow() { begin_index_ = static_cast<int>(feedback_.size()); }
+
+    void RunCycles(const Command& command, const Pose2D& pose, double speed,
+                   int cycles) {
+        for (int cycle = 0; cycle < cycles && ros::ok(); ++cycle) {
+            PublishInputs(pose, speed);
+            Command stamped = command;
+            stamped.header.stamp = ros::Time::now();
+            stamped.valid_until = ros::Time::now() + ros::Duration(2.0);
+            command_pub_.publish(stamped);
+            SpinFor(0.05);
+        }
+    }
+
+    // 명령 발행을 멈추고 입력만 유지한다. 마지막 사이클의 피드백을 받기
+    // 위한 것이며, 입력을 끊으면 freshness 검사가 먼저 걸린다.
+    void Settle(const Pose2D& pose, double speed, int cycles = 4) {
+        for (int cycle = 0; cycle < cycles && ros::ok(); ++cycle) {
+            PublishInputs(pose, speed);
+            SpinFor(0.05);
+        }
+    }
+
     // 만료된 명령을 한 번 보낸다(stale 검증용).
     void RunExpired(const Command& command, const Pose2D& start, double speed) {
         begin_index_ = static_cast<int>(feedback_.size());
@@ -687,6 +713,186 @@ int main(int argc, char** argv) {
         Expect(harness.LastFor(id, feedback) && feedback.plan_valid &&
                    feedback.active_leader_id == 15,
                "a new command_id recovers FOLLOW after a lost target");
+        harness.SetObjects({});
+    }
+
+    std::printf("\n=== FOLLOW dropout grace ===\n");
+    {
+        // dropout_grace_cycles=5. 1~5 사이클은 유예, 6번째에 LOST.
+        //
+        // 노드가 20 Hz timer로 planning하므로 harness의 사이클 수와 노드의
+        // 사이클 수가 정확히 1:1이 아니다. 그래서 "정확히 6번째"를 세는 대신
+        // 짧은 dropout은 유지되고 긴 dropout은 LOST가 되는 것을 본다.
+        const uint32_t id = ++command_id;
+        Command follow = harness.MakeCommand(id, Command::FOLLOW);
+        follow.primary_object_id = 15;
+
+        // 1. 정상 확보.
+        harness.SetObjects({harness.MakeVehicle(15, 240.0, 6.0)});
+        harness.BeginWindow();
+        harness.RunCycles(follow, ego, kCruiseSpeed, 14);
+        harness.Settle(ego, kCruiseSpeed);
+        Feedback acquired;
+        Expect(harness.LastFor(id, acquired) && acquired.plan_valid &&
+                   acquired.active_leader_id == 15 &&
+                   acquired.execution_state == Feedback::EXECUTING,
+               "grace: FOLLOW is acquired and EXECUTING");
+
+        // 2. 짧은 dropout(유예 이내). 객체만 끊고 명령은 계속 보낸다.
+        harness.SetObjects({});
+        harness.BeginWindow();
+        harness.RunCycles(follow, ego, kCruiseSpeed, 3);
+        harness.Settle(ego, kCruiseSpeed, 1);
+        Feedback in_grace;
+        const bool got_grace = harness.LastFor(id, in_grace);
+        Expect(got_grace && in_grace.execution_state == Feedback::EXECUTING,
+               "grace: a short dropout stays EXECUTING");
+        Expect(got_grace && in_grace.active_leader_id == 15,
+               "grace: a short dropout keeps active_leader_id");
+        Expect(got_grace && in_grace.result_code == Feedback::RESULT_NONE,
+               "grace: a short dropout reports no error");
+
+        // 3. 재관측하면 정상으로 돌아온다.
+        harness.SetObjects({harness.MakeVehicle(15, 240.0, 6.0)});
+        harness.BeginWindow();
+        harness.RunCycles(follow, ego, kCruiseSpeed, 10);
+        harness.Settle(ego, kCruiseSpeed);
+        Feedback recovered;
+        Expect(harness.LastFor(id, recovered) && recovered.plan_valid &&
+                   recovered.active_leader_id == 15,
+               "grace: re-observation resumes planning");
+    }
+
+    std::printf("\n=== FOLLOW target lost latch ===\n");
+    {
+        // 유예를 초과하면 FAILED로 latch된다. 같은 command_id로는 대상이
+        // 다시 보여도 FAILED가 유지되고, 새 command_id로만 복귀한다.
+        const uint32_t lost_id = ++command_id;
+        Command follow = harness.MakeCommand(lost_id, Command::FOLLOW);
+        follow.primary_object_id = 15;
+
+        harness.SetObjects({harness.MakeVehicle(15, 240.0, 6.0)});
+        harness.BeginWindow();
+        harness.RunCycles(follow, ego, kCruiseSpeed, 14);
+        harness.Settle(ego, kCruiseSpeed);
+        Feedback acquired;
+        Expect(harness.LastFor(lost_id, acquired) &&
+                   acquired.active_leader_id == 15,
+               "latch: leader acquired before the loss");
+
+        // 유예를 충분히 넘기는 긴 dropout.
+        harness.SetObjects({});
+        harness.BeginWindow();
+        harness.RunCycles(follow, ego, kCruiseSpeed, 20);
+        harness.Settle(ego, kCruiseSpeed);
+        Feedback lost;
+        const bool got_lost = harness.LastFor(lost_id, lost);
+        Expect(got_lost && lost.result_code == Feedback::TARGET_OBJECT_LOST,
+               "latch: a long dropout is TARGET_OBJECT_LOST");
+        Expect(got_lost && lost.execution_state == Feedback::FAILED,
+               "latch: a lost target reaches FAILED");
+        Expect(got_lost && lost.active_leader_id == -1,
+               "latch: a lost target reports no active leader");
+        // KEEP으로 자동 전환하지 않는다 - 다음 행동은 FSM이 정한다.
+        Expect(got_lost && lost.active_maneuver == Command::FOLLOW,
+               "latch: a lost target still reports FOLLOW (no automatic KEEP)");
+        Expect(got_lost && lost.command_accepted,
+               "latch: the command itself stays accepted");
+
+        // **핵심**: 대상이 다시 보여도 같은 command_id면 FAILED가 유지된다.
+        // FSM이 종료 피드백을 놓치지 않도록 새 command_id까지 latch한다
+        // (계약 6절).
+        harness.SetObjects({harness.MakeVehicle(15, 240.0, 6.0)});
+        harness.BeginWindow();
+        harness.RunCycles(follow, ego, kCruiseSpeed, 12);
+        harness.Settle(ego, kCruiseSpeed);
+        Feedback still_failed;
+        const bool got_still = harness.LastFor(lost_id, still_failed);
+        Expect(got_still && still_failed.execution_state == Feedback::FAILED,
+               "latch: the same command_id stays FAILED after the target returns");
+        Expect(got_still &&
+                   still_failed.result_code == Feedback::TARGET_OBJECT_LOST,
+               "latch: the loss reason is preserved across cycles");
+        Expect(got_still && !still_failed.plan_valid,
+               "latch: no planning happens while latched");
+
+        // 새 command_id로만 복귀한다.
+        const uint32_t new_id = ++command_id;
+        Command retry = harness.MakeCommand(new_id, Command::FOLLOW);
+        retry.primary_object_id = 15;
+        harness.BeginWindow();
+        harness.RunCycles(retry, ego, kCruiseSpeed, 14);
+        harness.Settle(ego, kCruiseSpeed);
+        Feedback retried;
+        Expect(harness.LastFor(new_id, retried) &&
+                   retried.execution_state == Feedback::EXECUTING &&
+                   retried.plan_valid && retried.active_leader_id == 15,
+               "latch: a new command_id recovers FOLLOW");
+    }
+
+    std::printf("\n=== FOLLOW with a stopped leader ===\n");
+    {
+        // min_leader_speed를 v2 validity에서 제거했으므로 정지한 앞차도
+        // FOLLOW 대상이다(D5-2 정책). 실제 도로에서 앞차가 신호에 멈추면
+        // 그 뒤에 같이 멈추는 것이 FOLLOW다.
+        const uint32_t id = ++command_id;
+        Command follow = harness.MakeCommand(id, Command::FOLLOW);
+        follow.primary_object_id = 15;
+        harness.SetObjects({harness.MakeVehicle(15, 250.0, 0.0)});
+        harness.BeginWindow();
+        harness.RunCycles(follow, ego, kCruiseSpeed, 16);
+        harness.Settle(ego, kCruiseSpeed);
+        Feedback feedback;
+        const bool got = harness.LastFor(id, feedback);
+        Expect(got && feedback.result_code != Feedback::TARGET_OBJECT_LOST,
+               "stopped leader: not reported as a lost target");
+        Expect(got && feedback.active_leader_id == 15,
+               "stopped leader: stays the active leader");
+    }
+
+    std::printf("\n=== FOLLOW custom gap ===\n");
+    {
+        // custom gap이 실제 궤적에 반영되는지. 더 큰 gap을 요구하면 더
+        // 보수적인 궤적이 나와야 한다(계약 11.8절).
+        const uint32_t default_id = ++command_id;
+        Command default_gap = harness.MakeCommand(default_id, Command::FOLLOW);
+        default_gap.primary_object_id = 15;
+        harness.SetObjects({harness.MakeVehicle(15, 235.0, 5.0)});
+        harness.BeginWindow();
+        harness.RunCycles(default_gap, ego, kCruiseSpeed, 16);
+        harness.Settle(ego, kCruiseSpeed);
+        const asmc_msgs::Trajectory* default_trajectory = harness.LastTrajectory();
+        double default_end_speed = -1.0;
+        if (default_trajectory && !default_trajectory->points.empty()) {
+            default_end_speed = default_trajectory->points.back().velocity;
+        }
+
+        const uint32_t custom_id = ++command_id;
+        Command custom_gap = harness.MakeCommand(custom_id, Command::FOLLOW);
+        custom_gap.primary_object_id = 15;
+        custom_gap.use_custom_follow_gap = true;
+        custom_gap.desired_time_gap_s = 3.0;   // config 기본값 1.0보다 크게
+        custom_gap.minimum_gap_m = 25.0;       // config 기본값 5.0보다 크게
+        harness.BeginWindow();
+        harness.RunCycles(custom_gap, ego, kCruiseSpeed, 16);
+        harness.Settle(ego, kCruiseSpeed);
+        const asmc_msgs::Trajectory* custom_trajectory = harness.LastTrajectory();
+        double custom_end_speed = -1.0;
+        if (custom_trajectory && !custom_trajectory->points.empty()) {
+            custom_end_speed = custom_trajectory->points.back().velocity;
+        }
+
+        Feedback feedback;
+        Expect(harness.LastFor(custom_id, feedback) &&
+                   feedback.command_accepted,
+               "custom gap: the command is accepted");
+        Expect(default_end_speed >= 0.0 && custom_end_speed >= 0.0,
+               "custom gap: both variants produce trajectories");
+        // 25 m 최소 간격을 요구하면 현재 gap(약 35 m)에서 훨씬 조심스럽게
+        // 접근한다. 기본값(5 m)보다 종단 속도가 낮아야 한다.
+        Expect(custom_end_speed <= default_end_speed + 1e-6,
+               "custom gap: a larger gap yields a slower trajectory");
+
         harness.SetObjects({});
     }
 
