@@ -67,12 +67,14 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     feedback_v2_pub_ =
         nh_.advertise<asmc_msgs::FrenetFeedback>(feedback_v2_topic, 1);
 
-    // D3-3 시점의 구현 상태. 아직 어떤 maneuver도 v2 궤적 생성에 연결되지
-    // 않았으므로 전부 닫아둔다. D4에서 KEEP/STOP/EMERGENCY_STOP을 열고,
-    // 이후 단계마다 하나씩 추가한다(계약 11.4절).
+    // v2 구현 상태. 열린 maneuver만 planner를 호출한다(계약 11.4절).
+    // 닫혀 있는 maneuver는 FAILED로 회신한다 - 조용히 velocity keeping
+    // 궤적을 만드는 것보다 안전하다.
     //
-    // 닫혀 있는 maneuver는 planner를 호출하지 않고 FAILED로 회신한다.
-    // 조용히 velocity keeping 궤적을 만드는 것보다 안전하다.
+    // D4-1: KEEP만 개방. STOP은 D4-2(target pose 투영), EMERGENCY_STOP은
+    // D4-3(직접 감속)에서 각각 연다.
+    command_manager_.SetImplementedManeuver(
+        asmc_msgs::BehaviorCommand::KEEP, true);
 
     vehicle_sub_ = nh_.subscribe(
         vehicle_topic, 1, &FrenetPlannerNode::vehicleCallback, this);
@@ -217,6 +219,14 @@ void FrenetPlannerNode::publishStop(const InputSnapshot& snapshot,
 }
 
 void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
+    // v2 명령이 하나라도 도착했으면 v2가 이 사이클을 소유한다. v1 경로는
+    // v2 명령이 없을 때만 동작하므로, FSM이 v2로 전환하기 전까지 기존
+    // KEEP/STOP 주행이 그대로 유지된다(계약 10.6절).
+    //
+    // 두 계통이 같은 사이클에 궤적을 발행하면 MPC가 어느 것을 따를지 알 수
+    // 없으므로 반드시 하나만 처리한다.
+    if (runV2PlanningCycle(ros::Time::now())) return;
+
     if (!planner_initialized_) {
         ROS_ERROR_THROTTLE(
             5.0, "Frenet planning disabled: planner is not initialized");
@@ -453,11 +463,26 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
 void FrenetPlannerNode::behaviorCommandV2Callback(
     const asmc_msgs::BehaviorCommand::ConstPtr& message) {
     if (!message) return;
+    // 저장만 한다. validation/transaction/planning은 20 Hz timer가 수행한다
+    // (runV2PlanningCycle 주석 참고).
+    std::lock_guard<std::mutex> lock(input_mutex_);
+    latest_v2_command_ = *message;
+    has_v2_command_ = true;
+}
 
-    // 1. 명령 자체의 형식 검증. Ego/Object 입력의 freshness는 여기서 보지
-    //    않는다 - 그것은 명령의 내용과 무관한 runtime 상태다(계약 11.2절).
+bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
+    asmc_msgs::BehaviorCommand command;
+    {
+        std::lock_guard<std::mutex> lock(input_mutex_);
+        if (!has_v2_command_) return false;
+        command = latest_v2_command_;
+    }
+
+    // ---- 1. 명령 자체의 형식 검증 -------------------------------------
+    // Ego/Object 입력의 freshness는 여기서 보지 않는다. 명령의 내용과 무관한
+    // runtime 상태이며 아래 3단계에서 별도로 검사한다(계약 11.2절).
     const CommandValidationResult validation =
-        ValidateBehaviorCommand(*message, ros::Time::now());
+        ValidateBehaviorCommand(command, now);
     if (!validation.ok()) {
         CommandAcceptance acceptance;
         acceptance.command_accepted = false;
@@ -473,57 +498,291 @@ void FrenetPlannerNode::behaviorCommandV2Callback(
         ROS_WARN_THROTTLE(1.0, "v2 command rejected (%s): %s",
                           CommandValidationCodeName(validation.code),
                           validation.detail.c_str());
-        publishFeedbackV2(*message, acceptance);
-        return;
+        // 명령이 유효하지 않으면 궤적을 내보내지 않는다. 캐시도 무효화해
+        // 이전 명령의 궤적이 새 사이클에 새는 것을 막는다.
+        has_last_v2_trajectory_ = false;
+        v2_plan_fail_streak_ = 0;
+        const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+            stopReferenceVehicle(takeSnapshot()), trajectoryDt(),
+            asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+        trajectory_pub_.publish(stop);
+        publishFeedbackV2(command.command_id, acceptance, &stop,
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+        return true;
     }
 
-    // 2. transaction 규칙 적용 (새 ID / payload 변경 / CANCEL / preemption /
-    //    terminal latch / 구현 상태).
-    const CommandAcceptance acceptance = command_manager_.Accept(*message);
+    // ---- 2. transaction 규칙 ------------------------------------------
+    const CommandAcceptance acceptance = command_manager_.Accept(command);
+    if (!acceptance.should_plan) {
+        // 미구현 maneuver, terminal latch, CANCEL 완료 등. planner를 호출하지
+        // 않는다(계약 11.4절).
+        has_last_v2_trajectory_ = false;
+        v2_plan_fail_streak_ = 0;
+        const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+            stopReferenceVehicle(takeSnapshot()), trajectoryDt(),
+            asmc_msgs::Trajectory::FAILURE_NONE, now);
+        trajectory_pub_.publish(stop);
+        publishFeedbackV2(command.command_id, acceptance, &stop,
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+        return true;
+    }
 
-    // 3. D3-3에서는 여기서 planner를 호출하지 않는다. 명령 관리 인프라까지가
-    //    이 단계의 범위이며, 궤적 생성 연결은 D4부터다(계약 12.4절).
-    //    acceptance.should_plan은 D4가 소비할 값으로 이미 계산되어 있다.
-    publishFeedbackV2(*message, acceptance);
+    // ---- 3. 입력 freshness ---------------------------------------------
+    const InputSnapshot snapshot = takeSnapshot();
+    double vehicle_age = 0.0;
+    double objects_age = 0.0;
+    const bool inputs_ready =
+        planner_initialized_ && snapshot.has_vehicle && snapshot.has_objects &&
+        isFresh(snapshot.vehicle.header.stamp, vehicle_timeout_seconds_, now,
+                vehicle_age) &&
+        isFresh(snapshot.objects.header.stamp, objects_timeout_seconds_, now,
+                objects_age);
+    if (!inputs_ready) {
+        // 명령은 정상이므로 transaction을 버리지 않는다. 이 사이클의 planning
+        // 만 막고, 입력이 회복되면 같은 transaction으로 계속한다(계약 11.3절).
+        command_manager_.NotifyInputDataStale();
+        CommandAcceptance stale = acceptance;
+        stale.should_plan = false;
+        // result_code는 RESULT_NONE으로 남는다 - FrenetFeedback.msg에
+        // INPUT_DATA_STALE이 없고 기존 코드로 거짓 매핑하지 않는다.
+        stale.detail = "ego/object input is not fresh";
+        ROS_WARN_THROTTLE(1.0,
+                          "v2 planning skipped: input not fresh "
+                          "(vehicle_age=%.3f objects_age=%.3f)",
+                          vehicle_age, objects_age);
+        has_last_v2_trajectory_ = false;
+        v2_plan_fail_streak_ = 0;
+        const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+            stopReferenceVehicle(snapshot), trajectoryDt(),
+            asmc_msgs::Trajectory::FAILURE_STATE_STALE, now);
+        trajectory_pub_.publish(stop);
+        publishFeedbackV2(command.command_id, stale, &stop,
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+        return true;
+    }
+
+    // ---- 4. 입력 변환 ---------------------------------------------------
+    CartesianState ego{};
+    if (ConvertVehicleState(snapshot.vehicle, ego) != ConversionStatus::OK) {
+        CommandAcceptance failed = acceptance;
+        failed.should_plan = false;
+        failed.detail = "vehicle state conversion failed";
+        const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+            stopReferenceVehicle(snapshot), trajectoryDt(),
+            asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+        trajectory_pub_.publish(stop);
+        publishFeedbackV2(command.command_id, failed, &stop,
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+        return true;
+    }
+    last_stop_reference_vehicle_ = snapshot.vehicle;
+    has_stop_reference_vehicle_ = true;
+
+    std::vector<ObjectInfo> objects;
+    std::vector<TrackedObstacle> collision_objects;
+    if (ConvertDetectedObjects(snapshot.objects, objects, collision_objects) !=
+        ConversionStatus::OK) {
+        CommandAcceptance failed = acceptance;
+        failed.should_plan = false;
+        failed.detail = "object conversion failed";
+        const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+            stopReferenceVehicle(snapshot), trajectoryDt(),
+            asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+        trajectory_pub_.publish(stop);
+        publishFeedbackV2(command.command_id, failed, &stop,
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+        return true;
+    }
+
+    PlannerCommand planner_command{};
+    if (!ConvertBehaviorCommand(command, planner_command)) {
+        CommandAcceptance failed = acceptance;
+        failed.should_plan = false;
+        failed.result_code = asmc_msgs::FrenetFeedback::INVALID_COMMAND;
+        failed.detail = "command could not be mapped to a planner mode";
+        const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+            stopReferenceVehicle(snapshot), trajectoryDt(),
+            asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+        trajectory_pub_.publish(stop);
+        publishFeedbackV2(command.command_id, failed, &stop,
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+        return true;
+    }
+
+    // ---- 5. planning ----------------------------------------------------
+    CartesianPath path;
+    const bool plan_ok = planner_.Plan(ego, objects, collision_objects,
+                                       planner_command, path);
+    const CommandFingerprint fingerprint = MakeCommandFingerprint(command);
+
+    if (!plan_ok) {
+        ++v2_plan_fail_streak_;
+        const FrenetPlanner::PlanFailureReason reason =
+            planner_.last_failure_reason();
+
+        // 재사용은 "이번 사이클만 후보를 못 만든" 일시적 실패에만 허용한다.
+        // 그리고 반드시 **같은 command_id + 같은 fingerprint**여야 한다 -
+        // 다른 명령의 궤적을 재사용하면 STOP 중 KEEP 궤적을 따라가는 사고가
+        // 난다(계약 8.4절).
+        const bool transient =
+            reason == FrenetPlanner::PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+        const bool cache_matches =
+            has_last_v2_trajectory_ &&
+            last_v2_trajectory_command_id_ == command.command_id &&
+            SameCommandFingerprint(last_v2_trajectory_fingerprint_, fingerprint);
+
+        if (transient && cache_matches &&
+            v2_plan_fail_streak_ <= kMaxTransientFailCycles) {
+            asmc_msgs::Trajectory reused = last_v2_trajectory_;
+            reused.failure_reason = asmc_msgs::Trajectory::FAILURE_GENERATION;
+            trajectory_pub_.publish(reused);
+            CommandAcceptance transient_acceptance = acceptance;
+            transient_acceptance.detail = "reusing previous trajectory";
+            publishFeedbackV2(command.command_id, transient_acceptance, &reused,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_REUSED);
+            ROS_WARN_THROTTLE(1.0,
+                              "v2 transient failure %d/%d: reusing previous "
+                              "trajectory (command_id=%u)",
+                              v2_plan_fail_streak_, kMaxTransientFailCycles,
+                              command.command_id);
+            return true;
+        }
+
+        // 재사용 불가. 안전 정지로 회신하고 실패를 manager에 알린다.
+        const bool terminal =
+            reason == FrenetPlanner::PlanFailureReason::INVALID_COMMAND ||
+            reason == FrenetPlanner::PlanFailureReason::UNSUPPORTED_BEHAVIOR ||
+            reason == FrenetPlanner::PlanFailureReason::NOT_INITIALIZED;
+        command_manager_.NotifyPlanFailed(terminal);
+        has_last_v2_trajectory_ = false;
+
+        CommandAcceptance failed = acceptance;
+        failed.execution_state = command_manager_.execution_state();
+        switch (reason) {
+            case FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED:
+                failed.result_code =
+                    asmc_msgs::FrenetFeedback::COLLISION_BLOCKED;
+                failed.detail = "all candidates blocked by collision";
+                break;
+            case FrenetPlanner::PlanFailureReason::INVALID_COMMAND:
+                failed.result_code = asmc_msgs::FrenetFeedback::INVALID_COMMAND;
+                failed.detail = "planner rejected the command fields";
+                break;
+            case FrenetPlanner::PlanFailureReason::UNSUPPORTED_BEHAVIOR:
+                // planner core가 아직 열지 않은 모드. manager의 구현 게이트를
+                // 통과했는데 여기서 걸리면 두 목록이 어긋난 것이다.
+                failed.detail = "planner core does not accept this mode yet";
+                break;
+            case FrenetPlanner::PlanFailureReason::NOT_INITIALIZED:
+                failed.result_code =
+                    asmc_msgs::FrenetFeedback::NOT_INITIALIZED;
+                failed.detail = "planner is not initialized";
+                break;
+            case FrenetPlanner::PlanFailureReason::TRANSIENT_GENERATION_FAILURE:
+                failed.result_code =
+                    asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
+                failed.detail = "no valid candidate this cycle";
+                break;
+            case FrenetPlanner::PlanFailureReason::NONE:
+                failed.detail = "planner reported failure without a reason";
+                break;
+        }
+        const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+            stopReferenceVehicle(snapshot), trajectoryDt(),
+            asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+        trajectory_pub_.publish(stop);
+        publishFeedbackV2(command.command_id, failed, &stop,
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+        return true;
+    }
+
+    // ---- 6. 궤적 변환 및 발행 -------------------------------------------
+    asmc_msgs::Trajectory trajectory;
+    if (ConvertCartesianPath(path, planner_.sample_dt(), snapshot.vehicle, now,
+                             trajectory) != ConversionStatus::OK) {
+        ++v2_plan_fail_streak_;
+        command_manager_.NotifyPlanFailed(/*terminal=*/false);
+        has_last_v2_trajectory_ = false;
+        CommandAcceptance failed = acceptance;
+        failed.execution_state = command_manager_.execution_state();
+        failed.result_code =
+            asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
+        failed.detail = "trajectory conversion failed";
+        const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+            stopReferenceVehicle(snapshot), trajectoryDt(),
+            asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+        trajectory_pub_.publish(stop);
+        publishFeedbackV2(command.command_id, failed, &stop,
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+        return true;
+    }
+
+    v2_plan_fail_streak_ = 0;
+    last_v2_trajectory_ = trajectory;
+    has_last_v2_trajectory_ = true;
+    last_v2_trajectory_command_id_ = command.command_id;
+    last_v2_trajectory_fingerprint_ = fingerprint;
+    command_manager_.NotifyPlanSucceeded();
+
+    trajectory_pub_.publish(trajectory);
+    CommandAcceptance succeeded = acceptance;
+    succeeded.execution_state = command_manager_.execution_state();
+    publishFeedbackV2(command.command_id, succeeded, &trajectory,
+                      asmc_msgs::FrenetFeedback::TRAJECTORY_NEW);
+
+    ROS_INFO_THROTTLE(1.0,
+                      "v2 plan ready: command_id=%u maneuver=%u points=%zu "
+                      "dt=%.3f vehicle_age=%.3f objects_age=%.3f",
+                      command.command_id, command.maneuver_type, path.x.size(),
+                      planner_.sample_dt(), vehicle_age, objects_age);
+    return true;
 }
 
 void FrenetPlannerNode::publishFeedbackV2(
-    const asmc_msgs::BehaviorCommand& message,
-    const CommandAcceptance& acceptance) {
+    uint32_t command_id, const CommandAcceptance& acceptance,
+    const asmc_msgs::Trajectory* trajectory, uint8_t trajectory_source) {
     asmc_msgs::FrenetFeedback feedback;
     feedback.header.stamp = ros::Time::now();
     feedback.header.frame_id = "map";
 
     // command_id echo가 틀리면 FSM이 피드백 전체를 무시한다(계약 1.5절).
-    // 거부된 명령에도 그 명령의 ID를 그대로 되돌려 보내야 FSM이 어느 명령에
-    // 대한 응답인지 알 수 있다.
-    feedback.command_id = message.command_id;
-
+    feedback.command_id = command_id;
     feedback.command_accepted = acceptance.command_accepted;
     feedback.execution_state = acceptance.execution_state;
     feedback.result_code = acceptance.result_code;
     feedback.result_detail = acceptance.detail;
 
     // active_maneuver는 **활성 transaction**의 maneuver다. 방금 들어온 명령이
-    // 아니다 - 거부된 명령의 필드를 쓰면 실제로 수행 중인 기동을 잘못
-    // 보고한다.
-    //
-    //   활성: id=30 LANE_CHANGE LEFT (COMMITTED)
-    //   수신: id=31 KEEP direction=NONE  -> 거부되어 30이 계속 수행됨
-    //   이때 incoming direction(NONE)으로 LANE_CHANGE를 변환하면 실패해
-    //   MANEUVER_NONE이 나간다. 실제로는 LANE_CHANGE 중이다.
-    //
-    // manager의 maneuver_type_은 이미 BehaviorCommand.maneuver_type 체계이므로
-    // 내부 enum을 경유할 필요가 없다. 그대로 echo한다(계약 1.5절).
+    // 아니다 - 거부된 명령의 필드를 쓰면 실제 수행 중인 기동을 잘못 보고한다.
+    // manager의 maneuver_type_은 이미 BehaviorCommand 체계이므로 그대로 echo.
     feedback.active_maneuver = command_manager_.has_active_command()
         ? command_manager_.maneuver_type()
         : asmc_msgs::FrenetFeedback::MANEUVER_NONE;
 
-    // D3-3은 궤적을 만들지 않는다. 아직 채우지 않는 필드는 메시지가 정의한
-    // sentinel을 정확히 사용한다 - 임의의 0이나 추측값을 넣지 않는다
-    // (계약 9.4절).
-    feedback.plan_valid = false;
-    feedback.trajectory_source = asmc_msgs::FrenetFeedback::TRAJECTORY_NONE;
+    feedback.trajectory_source = trajectory_source;
+    // plan_valid는 "이번 사이클에 요청 maneuver용 새 유효 후보를 만들었는가"다.
+    // 실제로 MPC에 무엇을 보냈는지(trajectory_source)와는 별개 축이다
+    // (계약 8.3절).
+    feedback.plan_valid =
+        trajectory_source == asmc_msgs::FrenetFeedback::TRAJECTORY_NEW;
+
+    // Frenet 상태. planner가 매 Plan()마다 갱신한다.
+    if (trajectory_source == asmc_msgs::FrenetFeedback::TRAJECTORY_NEW) {
+        feedback.applied_speed_mps = planner_.last_target_speed();
+        // current_s는 planner가 외부에 노출하지 않는다. D4-2에서 STOP 투영을
+        // 붙일 때 함께 확장한다.
+        feedback.frenet_state_valid = false;
+        feedback.current_s = 0.0;
+        feedback.current_d = planner_.last_d();
+    } else {
+        feedback.applied_speed_mps = -1.0;
+        feedback.frenet_state_valid = false;
+        feedback.current_s = 0.0;
+        feedback.current_d = 0.0;
+    }
+
+    // D4-1은 KEEP만 다룬다. 아직 채우지 않는 필드는 메시지가 정의한 sentinel을
+    // 정확히 사용한다 - 임의의 0이나 추측값을 넣지 않는다(계약 9.4절).
     feedback.maneuver_progress = -1.0;
     feedback.active_leader_id = -1;
     feedback.selected_front_object_id = -1;
@@ -531,17 +790,14 @@ void FrenetPlannerNode::publishFeedbackV2(
     feedback.gap_evaluated = false;
     feedback.gap_safe = false;
     feedback.estimated_entry_time_s = -1.0;
-    feedback.frenet_state_valid = false;
-    feedback.current_s = 0.0;
-    feedback.current_d = 0.0;
     feedback.target_d_valid = false;
     feedback.target_d = 0.0;
-    feedback.applied_speed_mps = -1.0;
     feedback.generated_candidate_count = 0;
     feedback.valid_candidate_count = 0;
     feedback.selected_cost = -1.0;
     feedback.blocking_object_id = -1;
 
+    (void)trajectory;
     feedback_v2_pub_.publish(feedback);
 }
 
