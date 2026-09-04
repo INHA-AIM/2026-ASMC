@@ -1169,6 +1169,14 @@ KEEP  →  STOP / EMERGENCY_STOP  →  FOLLOW  →  AVOID  →  LANE_CHANGE  →
 
 **D4 — KEEP / STOP / EMERGENCY_STOP**
 
+> **D4-2 체크리스트 (D4-1 검토에서 추가):**
+> - `should_plan=false`의 안전정지 일괄 처리를 분기한다. 미구현 maneuver는
+>   `SAFE_STOP`이 맞지만, **terminal latch 중에는 궤적 출력이 멈추면 안 된다**
+>   (6.2절). STOP이 `HOLD`에 도달해 `COMPLETED`로 latch되면 0속도 유지 궤적을
+>   계속 보내야 한다.
+> - `frenet_state_valid` / `current_s`를 채운다. STOP target pose 투영을 붙일 때
+>   planner가 `s`를 노출하도록 함께 확장한다(D4-1에서는 `false`로 남겼다).
+
 ```
 BehaviorCommand(maneuver=KEEP, command_id=10)
   → KEEP trajectory

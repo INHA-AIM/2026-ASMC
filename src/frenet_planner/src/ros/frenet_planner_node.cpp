@@ -516,6 +516,14 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     if (!acceptance.should_plan) {
         // 미구현 maneuver, terminal latch, CANCEL 완료 등. planner를 호출하지
         // 않는다(계약 11.4절).
+        //
+        // TODO(D4-2): terminal latch를 여기서 안전정지로 묶으면 안 된다.
+        // 계약 6.2절은 latch 중에도 궤적 출력이 멈추면 안 된다고 명시한다.
+        //   미구현 maneuver          -> SAFE_STOP (현재 동작, 올바름)
+        //   STOP COMPLETED latch     -> HOLD 궤적 유지
+        //   LC/AVOID/MERGE COMPLETED -> 각 모드의 maintenance 궤적
+        // 현재 KEEP에는 COMPLETED로 올리는 경로가 없어 발동하지 않지만,
+        // D4-2에서 STOP HOLD가 생기면 반드시 분기해야 한다.
         has_last_v2_trajectory_ = false;
         v2_plan_fail_streak_ = 0;
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
@@ -531,8 +539,38 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     const InputSnapshot snapshot = takeSnapshot();
     double vehicle_age = 0.0;
     double objects_age = 0.0;
+    // planner 초기화 실패는 입력 stale과 다른 문제다. reference line 로드나
+    // Planner 초기화가 실패한 것이며, 입력이 회복되어도 해결되지 않는다.
+    // FrenetFeedback.msg의 NOT_INITIALIZED가 정확히 이 경우를 위한 코드다.
+    //
+    // freshness 검사보다 먼저 분리해야 한다. 묶어두면 초기화 실패가
+    // "ego/object input is not fresh"로 보고되어 FSM이 센서 복구를 기다리며
+    // 원인을 찾지 못한다.
+    if (!planner_initialized_) {
+        // 입력이 회복되어도 복구되지 않으므로 terminal 실패다.
+        command_manager_.NotifyPlanFailed(/*terminal=*/true);
+        CommandAcceptance failed = acceptance;
+        failed.should_plan = false;
+        failed.execution_state = command_manager_.execution_state();
+        failed.result_code = asmc_msgs::FrenetFeedback::NOT_INITIALIZED;
+        failed.detail = "planner is not initialized";
+        ROS_ERROR_THROTTLE(5.0,
+                           "v2 planning disabled: planner is not initialized "
+                           "(command_id=%u)",
+                           command.command_id);
+        has_last_v2_trajectory_ = false;
+        v2_plan_fail_streak_ = 0;
+        const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+            stopReferenceVehicle(snapshot), trajectoryDt(),
+            asmc_msgs::Trajectory::FAILURE_NOT_INITIALIZED, now);
+        trajectory_pub_.publish(stop);
+        publishFeedbackV2(command.command_id, failed, &stop,
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+        return true;
+    }
+
     const bool inputs_ready =
-        planner_initialized_ && snapshot.has_vehicle && snapshot.has_objects &&
+        snapshot.has_vehicle && snapshot.has_objects &&
         isFresh(snapshot.vehicle.header.stamp, vehicle_timeout_seconds_, now,
                 vehicle_age) &&
         isFresh(snapshot.objects.header.stamp, objects_timeout_seconds_, now,
