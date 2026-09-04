@@ -235,6 +235,25 @@ private:
                               double speed_cap =
                                   std::numeric_limits<double>::infinity()) const;
 
+    // 현재 상태에서 그 자리에 정지하는 감속 궤적을 직접 만든다.
+    //
+    // 후보 생성 -> 곡률 필터 -> 충돌 필터 파이프라인을 타지 않는다. 두 곳에서
+    // 공유한다:
+    //   1. STOP BRAKING에서 후보가 0개인 경우의 fail-safe. 정지 목표가 아주
+    //      가까우면 exact-stop quintic이 가속도 한계를 넘어 전부 탈락한다.
+    //      여기서 실패를 반환하면 노드가 이전 궤적을 재사용해 정지 목표를
+    //      지나쳐 계속 주행한다 - STOP에서 가장 위험한 실패 방향이다.
+    //   2. 외부 EMERGENCY_STOP. BehaviorCommand는 목표점 없이
+    //      (has_target_pose=false) 즉시 긴급정지를 지시하므로 정지 목표
+    //      계산 소유권이 Frenet에 있다(계약 8.1절). 긴급정지에서 "후보가
+    //      없어서 못 멈춤"이라는 실패 방향 자체를 제거하는 것이 목적이다.
+    //
+    // 프로파일: v(t) = max(0, v0 - decel*t), s는 사다리꼴 적분, d는 현재
+    // 오프셋 유지(정지 직전이라 횡방향 기동을 하지 않는다).
+    // 모든 샘플에서 v >= 0이고 마지막 샘플은 v = 0이다.
+    bool GenerateDecelToZeroPath(double s, double d, double s_dot,
+                                 CartesianPath& out_path) const;
+
     // 일반 저속 fallback의 크롤링 가속 프로파일 상수. 회전교차로 MERGE는
     // 이 고정 2 m/s 프로파일을 쓰지 않고 정상 MERGE 후보 생성기로 처리한다.
     static constexpr double kCrawlAccel = 0.5;       // [m/s^2] 완만한 가속

@@ -247,6 +247,21 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME command_stop_plan_test COMMAND command_stop_plan_test)
 
+  # D4-3: 외부 EMERGENCY_STOP의 직접 감속 궤적 회귀. EMERGENCY 전용 분기를
+  # 제거하면(후보 파이프라인으로 흘려보내면) 10건이 실패한다.
+  add_executable(command_emergency_plan_test
+    tests/command_emergency_plan_test.cpp
+  )
+  target_compile_definitions(command_emergency_plan_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(command_emergency_plan_test
+    frenet_planner_core
+  )
+  add_test(NAME command_emergency_plan_test
+           COMMAND command_emergency_plan_test)
+
   # D3-1: BehaviorCommand <-> 내부 BehaviorState enum 매핑 회귀.
   # static_cast가 실제로 틀린다는 것까지 negative case로 고정한다.
   add_executable(v2_enum_mapping_test

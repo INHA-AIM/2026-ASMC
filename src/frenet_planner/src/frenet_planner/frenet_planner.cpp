@@ -281,6 +281,39 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
 
 // 저속 fallback은 시간 대신 이동거리 기준 cosine smoothstep으로 d를 복귀시킨다.
 // 양 끝의 d'가 0이므로 정지 근처에서도 급격한 횡이동과 곡률 spike가 생기지 않는다.
+bool FrenetPlanner::GenerateDecelToZeroPath(double s, double d, double s_dot,
+                                            CartesianPath& out_path) const {
+    // D4-3에서 STOP BRAKING fail-safe에서 추출했다. 두 경로가 정확히 같은
+    // 감속 프로파일을 쓰도록 공유한다 - 복사해두면 한쪽만 고쳐지는 문제가
+    // 생긴다.
+    const double decel = std::max(0.1, stop_cfg_.comfortable_decel);
+    const double v0 = std::max(0.0, s_dot);
+    const int n = static_cast<int>(std::ceil(v0 / decel / path_cfg_.dt)) + 1;
+    out_path.x.assign(n, 0.0); out_path.y.assign(n, 0.0);
+    out_path.yaw.assign(n, 0.0); out_path.kappa.assign(n, 0.0);
+    out_path.v.assign(n, 0.0); out_path.a.assign(n, 0.0);
+    double s_i = s;
+    double v_prev = v0;
+    for (int i = 0; i < n; ++i) {
+        const double t = i * path_cfg_.dt;
+        const double v_i = std::max(0.0, v0 - decel * t);
+        if (i > 0) s_i += 0.5 * (v_i + v_prev) * path_cfg_.dt;
+        v_prev = v_i;
+        const RefPoint rp = Interpolate(ref_, s_i);
+        // 정지 직전 구간이라 횡방향은 현재 오프셋을 그대로 유지한다.
+        const CartesianState cs =
+            FrenetToCartesian(rp, s_i, v_i, v_i > 0.0 ? -decel : 0.0,
+                              d, 0.0, 0.0);
+        out_path.x[i] = cs.x;
+        out_path.y[i] = cs.y;
+        out_path.yaw[i] = cs.yaw;
+        out_path.kappa[i] = cs.kappa;
+        out_path.v[i] = v_i;
+        out_path.a[i] = v_i > 0.0 ? -decel : 0.0;
+    }
+    return n > 0;
+}
+
 bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, double d,
                                           double target_d,
                                           CartesianPath& out_path, double duration_s,
@@ -404,6 +437,7 @@ bool IsSupportedExternalMode(BehaviorState mode) {
     switch (mode) {
         case LANE_KEEPING:
         case STOP:
+        case EMERGENCY:
             return true;
 
         default:
@@ -431,6 +465,11 @@ bool ValidateExternalCommand(const PlannerCommand& command,
         reason = FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
         return false;
     }
+
+    // EMERGENCY는 stop_position을 요구하지 않는다. BehaviorCommand가 목표점
+    // 없이(has_target_pose=false) 즉시 긴급정지를 지시하므로 정지 위치 계산
+    // 소유권이 Frenet에 있다(계약 8.1절). 아래 STOP 검증을 EMERGENCY에
+    // 적용하면 정상 긴급정지가 INVALID_COMMAND로 거부된다.
 
     // STOP: 정지 목표 s가 실제로 지정되어야 한다. 기본값 NaN이 그대로 오면
     // GenerateStoppingCandidates가 NaN 경계조건으로 후보를 만들게 된다.
@@ -723,6 +762,41 @@ bool FrenetPlanner::PlanInternal(
     // 저속 fallback은 kMinCreepSpeed로 "기어서 전진"하는 경로다. 외부 STOP
     // 명령에서 이 분기를 타면 정지 목표를 넘어 계속 기어나가게 되므로, STOP은
     // 저속에서도 정상 stopping 후보 생성기(GenerateStoppingCandidates)로 보낸다.
+    // =====================================================================
+    // 외부 EMERGENCY_STOP: 후보 파이프라인을 건너뛰고 직접 감속한다.
+    //
+    // BehaviorCommand는 목표점 없이(has_target_pose=false) 즉시 긴급정지를
+    // 지시하므로 정지 위치 계산 소유권이 Frenet에 있다(계약 8.1절).
+    //
+    // ResolveManeuver / 곡률 필터 / 충돌 필터로 내려보내지 않는 이유:
+    //   1. stop_position이 NaN이므로 GenerateStoppingCandidates가 NaN
+    //      경계조건으로 후보를 만든다.
+    //   2. 후보가 전부 탈락하면 "긴급정지인데 아무 궤적도 못 보냄"이 된다.
+    //      긴급정지에서 그 실패 방향 자체를 제거하는 것이 목적이다.
+    //
+    // 저속 fallback보다 먼저 처리한다. 그 fallback은 kMinCreepSpeed로 기어서
+    // 전진하는 경로라 긴급정지 중에 차량이 계속 움직이게 된다.
+    //
+    // 차량이 이미 멈춰 있으면(v0 ~= 0) 0속도 궤적이 나온다. 새 정상 명령이
+    // 올 때까지 긴급정지 상태를 계속 강제하는 것이 E-stop의 의미이므로,
+    // 여기서 COMPLETED로 올리지 않는다 - ROS 계층이 EXECUTING을 유지한다.
+    if (!use_legacy_behavior && external_command->mode == EMERGENCY) {
+        last_mode_ = EMERGENCY;
+        last_target_speed_ = 0.0;
+        if (!GenerateDecelToZeroPath(s, d, s_dot, out_path)) {
+            last_failure_reason_ = PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+            return false;
+        }
+        static int emergency_log_tick = 0;
+        if (++emergency_log_tick % 5 == 0) {
+            std::printf("[FrenetPlanner-STATE] mode=EMERGENCY_STOP s=%.2f d=%.3f "
+                        "speed=%.2f samples=%zu\n",
+                        s, d, ego.v, out_path.v.size());
+        }
+        last_failure_reason_ = PlanFailureReason::NONE;
+        return true;
+    }
+
     const bool external_stop = !use_legacy_behavior && external_command->mode == STOP;
     if (std::fabs(ego.v) < kLowSpeedFallbackV && !near_any_merge && !external_stop) {
         static int low_speed_log_tick = 0;
@@ -1541,31 +1615,8 @@ bool FrenetPlanner::PlanInternal(
         if (external_stop_mode &&
             stop_.phase == StopExecutionPhase::BRAKING &&
             last_failure_reason_ != PlanFailureReason::COLLISION_BLOCKED) {
-            const double decel = std::max(0.1, stop_cfg_.comfortable_decel);
+            GenerateDecelToZeroPath(s, d, s_dot, out_path);
             const double v0 = std::max(0.0, s_dot);
-            const int n = static_cast<int>(std::ceil(v0 / decel / path_cfg_.dt)) + 1;
-            out_path.x.assign(n, 0.0); out_path.y.assign(n, 0.0);
-            out_path.yaw.assign(n, 0.0); out_path.kappa.assign(n, 0.0);
-            out_path.v.assign(n, 0.0); out_path.a.assign(n, 0.0);
-            double s_i = s;
-            double v_prev = v0;
-            for (int i = 0; i < n; ++i) {
-                const double t = i * path_cfg_.dt;
-                const double v_i = std::max(0.0, v0 - decel * t);
-                if (i > 0) s_i += 0.5 * (v_i + v_prev) * path_cfg_.dt;
-                v_prev = v_i;
-                const RefPoint rp = Interpolate(ref_, s_i);
-                // 정지 직전 구간이라 횡방향은 현재 오프셋을 그대로 유지한다.
-                const CartesianState cs =
-                    FrenetToCartesian(rp, s_i, v_i, v_i > 0.0 ? -decel : 0.0,
-                                      d, 0.0, 0.0);
-                out_path.x[i] = cs.x;
-                out_path.y[i] = cs.y;
-                out_path.yaw[i] = cs.yaw;
-                out_path.kappa[i] = cs.kappa;
-                out_path.v[i] = v_i;
-                out_path.a[i] = v_i > 0.0 ? -decel : 0.0;
-            }
             std::printf("[FrenetPlanner-STOP] BRAKING fail-safe: no candidate, "
                         "emitting decel-to-zero path (s=%.2f v=%.2f dist=%.2f)\n",
                         s, v0, stop_distance);

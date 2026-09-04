@@ -216,12 +216,26 @@ int main() {
                planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
            "external LANE_CHANGE_LEFT is UNSUPPORTED_BEHAVIOR");
 
+    // D4-3에서 EMERGENCY를 external whitelist에 추가했다. 이제 거부되지
+    // 않으며, 목표점 없이도(stop_position=NaN) 동작해야 한다 - 정지 위치
+    // 계산 소유권이 Frenet에 있다(계약 8.1절).
+    //
+    // 감속 궤적의 성질(단조 감소, v>=0, 마지막 v=0)은
+    // command_emergency_plan_test가 검증한다. 여기서는 whitelist와 필드
+    // 검증만 본다.
     PlannerCommand emergency{};
     emergency.mode = EMERGENCY;
-    emergency.stop_position = 210.0;
-    Expect(!planner.Plan(ego, no_objects, emergency, path) &&
-               planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
-           "external EMERGENCY is UNSUPPORTED_BEHAVIOR");
+    // stop_position을 일부러 지정하지 않는다.
+    Expect(planner.Plan(ego, no_objects, emergency, path) &&
+               planner.last_failure_reason() == Reason::NONE,
+           "external EMERGENCY is accepted without a stop target");
+
+    PlannerCommand emergency_with_target{};
+    emergency_with_target.mode = EMERGENCY;
+    emergency_with_target.stop_position = 210.0;
+    Expect(planner.Plan(ego, no_objects, emergency_with_target, path) &&
+               planner.last_failure_reason() == Reason::NONE,
+           "external EMERGENCY ignores a stop target if one is given");
 
     // 모드 whitelist는 필드 검증보다 먼저다. 지원하지 않는 모드는 필드가
     // 무엇이든 UNSUPPORTED_BEHAVIOR로 보고돼야 한다.

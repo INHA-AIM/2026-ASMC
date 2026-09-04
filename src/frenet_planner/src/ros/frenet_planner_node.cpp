@@ -101,11 +101,13 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     // 궤적을 만드는 것보다 안전하다.
     //
     // D4-1: KEEP. D4-2: STOP(target pose 투영 + StopContext).
-    // EMERGENCY_STOP은 D4-3(직접 감속)에서 연다.
+    // D4-3: EMERGENCY_STOP(직접 감속, 목표점 불필요).
     command_manager_.SetImplementedManeuver(
         asmc_msgs::BehaviorCommand::KEEP, true);
     command_manager_.SetImplementedManeuver(
         asmc_msgs::BehaviorCommand::STOP, true);
+    command_manager_.SetImplementedManeuver(
+        asmc_msgs::BehaviorCommand::EMERGENCY_STOP, true);
 
     vehicle_sub_ = nh_.subscribe(
         vehicle_topic, 1, &FrenetPlannerNode::vehicleCallback, this);
