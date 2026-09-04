@@ -97,6 +97,19 @@ target_link_libraries(frenet_planner_message_converter
   ${catkin_LIBRARIES}
 )
 
+# v2 인터페이스 어댑터. D3-1은 enum 매핑만 담고, D3-2에서 validation과
+# fingerprint가 여기에 추가된다. FSM 계약 경계이므로 planner core가 아니라
+# ROS 계층에 둔다 (docs/fsm-frenet-interface-v2.md 12.8절).
+add_library(frenet_behavior_command_adapter
+  src/ros/behavior_command_adapter.cpp
+)
+add_dependencies(frenet_behavior_command_adapter
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(frenet_behavior_command_adapter
+  ${catkin_LIBRARIES}
+)
+
 add_executable(frenet_planner_node
   src/ros/main.cpp
   src/ros/frenet_planner_node.cpp
@@ -218,6 +231,20 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME command_stop_plan_test COMMAND command_stop_plan_test)
 
+  # D3-1: BehaviorCommand <-> 내부 BehaviorState enum 매핑 회귀.
+  # static_cast가 실제로 틀린다는 것까지 negative case로 고정한다.
+  add_executable(v2_enum_mapping_test
+    tests/v2_enum_mapping_test.cpp
+  )
+  add_dependencies(v2_enum_mapping_test
+    ${catkin_EXPORTED_TARGETS}
+  )
+  target_link_libraries(v2_enum_mapping_test
+    frenet_behavior_command_adapter
+    ${catkin_LIBRARIES}
+  )
+  add_test(NAME v2_enum_mapping_test COMMAND v2_enum_mapping_test)
+
   # D1-3: legacy(간이 FSM) 행동 결정의 회귀 커버리지. D5/D6/D8에서 모드별로
   # legacy 조각을 제거할 때 검증된 회전교차로/고속도로 주행이 깨지지 않았는지
   # 확인하는 안전망이다 (docs/d1-legacy-behavior-boundary.md).
@@ -245,6 +272,7 @@ install(TARGETS
     frenet_geometry
     frenet_planner_core
     frenet_planner_message_converter
+    frenet_behavior_command_adapter
     frenet_vehicle_state_adapter
     frenet_planner_udp_legacy
     frenet_planner_node
