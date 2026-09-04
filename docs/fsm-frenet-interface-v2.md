@@ -42,10 +42,15 @@ v2의 핵심 전환은 두 가지다.
 
 ### 1.1 소유권
 
-| 메시지 | 소유 패키지 | 경로 |
+| 메시지 | 소유 패키지 | D3 이후 production 경로 |
 |---|---|---|
 | `BehaviorCommand` | `asmc_msgs` | `src/asmc_msgs/msg/BehaviorCommand.msg` |
 | `FrenetFeedback` | `asmc_msgs` | `src/asmc_msgs/msg/FrenetFeedback.msg` |
+
+> **현재 상태(D0~D2):** 두 메시지는 **production 경로에 아직 추가되지 않았다.**
+> FSM 개발자가 전달한 원본을 `docs/asmc_msg/`에 reference copy로만 보관하고 있다.
+> 실제 `asmc_msgs` 등록(`add_message_files`, 빌드 연결)은 **D3에서 수행**한다.
+> 위 표의 경로는 D3 이후의 목표 위치다.
 
 **두 메시지를 다른 패키지에 복사하지 않는다.** ROS에서 `asmc_msgs/BehaviorCommand`와
 `behavior_planner/BehaviorCommand`는 내용이 같아도 서로 다른 타입이며, 같은 토픽에
@@ -797,6 +802,21 @@ D3은 FSM 개발자가 준 원문을 그대로 추가하고, Frenet 측에서 �
 | **Q5** | preemption 정책 (7절) 동의 여부 | `COMMITTED` 중 일반 새 command 금지, `EMERGENCY_STOP`만 preempt | FSM 발행측 정책 |
 | **Q6** | `EMERGENCY_STOP` 정지 목표를 Frenet이 자체 계산 (8.1절) 동의 여부 | 메시지 변경이 아니라 책임 분계 확인 | 없음 (내부 구현) |
 
+### 11.1 확정 기한
+
+각 항목이 어느 단계의 설계에 들어가는지에 따라 확정 기한이 다르다. 기한 전까지
+합의되지 않으면 해당 단계를 시작하지 않는다.
+
+| 확정 기한 | 항목 | 이유 |
+|---|---|---|
+| D1~D2 중 | (없음) | D1/D2는 내부 분류·정리 단계라 영향 없음 |
+| **D3 시작 전** | Q2, Q3, Q4, Q5 | Q2/Q3는 adapter의 `result_code` 분기, Q4/Q5는 `CommandExecutionManager`의 latch·preemption 설계에 직접 들어간다 |
+| **D4 시작 전** | Q6 | EMERGENCY_STOP 정지 목표 계산 책임이 확정되어야 8.1절 구현을 시작할 수 있다 |
+| **D8 시작 전** | Q1 | MERGE의 `has_target_pose` 필수 여부가 validation matrix를 바꾼다 |
+
+Q4/Q5가 특히 중요하다. 나중에 뒤집으면 execution manager의 상태 관리 전체를
+다시 써야 하므로, **D3 착수 전에 FSM 담당자와 반드시 맞춘다.**
+
 Q2/Q3가 승인되지 않을 경우의 대안은 **v2 인터페이스를 해당 maneuver가 모두 구현될
 때까지 production cutover하지 않는 것**이다. 개발 중 v2 토픽에서는 미구현
 maneuver를 거부하되, FSM과 실제 연결 전에 전부 구현한다.
@@ -854,7 +874,43 @@ FOLLOW command 수신
 | **D9** | 공통 예외 처리 | 통합 정리 | 인터페이스 안정화 | |
 | **D10** | MORAI E2E 통합 검증 | 전체 검증 | 전체 통합 | cutover |
 
-### 12.3 모드 개발 순서의 근거
+### 12.3 D1 / D2의 엄격한 범위
+
+D1과 D2는 기능을 추가하지 않는 정리 단계다. 범위를 넘으면
+`frenet_planner.cpp`의 MERGE/AVOID/FOLLOW 상태가 서로 얽혀 있어 이후 디버깅이
+급격히 어려워진다.
+
+**D1 — 행동 선택권과 계산 자산의 분류 (10절)**
+
+| 하지 않는다 | 한다 |
+|---|---|
+| legacy FSM 삭제 | 자동 행동 전환 지점 5개를 정확히 분리 (10.2절) |
+| `PlannerCommand` 개편 | 각 transition이 쓰는 계산 자산 추적 (10.3절) |
+| `BehaviorCommand` 연결 | D2 이후 외부 command가 채워야 할 입력 목록 확정 |
+| Feedback 구현 | legacy path가 그대로 동작함을 보존 |
+| FOLLOW/AVOID 로직 수정 | |
+
+**D2 — `PlannerCommand`를 canonical planning input으로 정리**
+
+> **주의:** D2는 새 `PlannerCommand`를 하나 더 만드는 작업이 **아니다.** 이미
+> legacy/external 양쪽이 함께 쓰는 기존 구조체를 planning input으로 **정리**하는
+> 작업이다.
+
+현재 `PlannerCommand`에는 성격이 다른 값이 섞여 있다.
+
+| 성격 | 예시 |
+|---|---|
+| 외부 명령 입력 | `mode`, `target_lane`, `has_target_speed`, `target_speed`, `stop_position` |
+| planner가 계산해서 되써넣는 결과 | `merge_gap_safe`, `merge_committed`, `merge_crossing`, `merge_entry_time`, `leader_s`, `leader_speed` |
+
+실제로 `frenet_planner.cpp`는 자신이 계산한 결과를 `cmd`에 다시 써넣는다
+(예: `cmd.merge_gap_safe = merge_.gap_safe;`, `cmd.merge_committed = ...`,
+`cmd.leader_s = nearest_leader.s;`). 즉 이 구조체는 지금 **입력 명령이면서 동시에
+내부 scratch buffer**로 쓰이고 있다.
+
+D2에서 이 두 성격을 분리한다. **D1에서는 건드리지 않는다.**
+
+### 12.4 모드 개발 순서의 근거
 
 enum 선언 순서(KEEP/FOLLOW/MERGE/LANE_CHANGE/AVOID/STOP/EMERGENCY_STOP)와 **개발
 순서는 별개다.** 개발은 의존성이 적은 것부터 간다.
@@ -879,7 +935,7 @@ KEEP  →  STOP / EMERGENCY_STOP  →  FOLLOW  →  AVOID  →  LANE_CHANGE  →
   | lateral transition + PREPARE/EXECUTE | D7 LANE_CHANGE |
   | conflict zone / TTC | D8 (MERGE 고유) |
 
-### 12.4 단계별 완료 기준
+### 12.5 단계별 완료 기준
 
 각 단계는 아래를 만족해야 다음으로 넘어간다.
 
@@ -958,7 +1014,7 @@ Feedback을 처음 만드는 단계가 아니다. D4~D8에서 모드별로 이�
 FSM + Frenet + MPC + MORAI 전체 통합. 이 시점에 legacy atomic removal을 수행한다
 (10.5절).
 
-### 12.5 execution_state 사용 진도
+### 12.6 execution_state 사용 진도
 
 `FrenetFeedback.msg`가 정의한 8개 상태(`IDLE`~`FAILED`)는 **원본 그대로 유지**한다.
 단계별로 Frenet이 실제로 보고하는 부분집합만 늘어난다.
@@ -974,7 +1030,7 @@ FSM + Frenet + MPC + MORAI 전체 통합. 이 시점에 legacy atomic removal을
 아직 보고하지 않는 상태를 FSM이 기다리게 하지 않도록, 각 단계 완료 시 "이 모드에서
 나올 수 있는 상태 목록"을 FSM 담당자에게 함께 전달한다.
 
-### 12.6 파일 배치
+### 12.7 파일 배치
 
 ```
 src/frenet_planner/src/ros/
