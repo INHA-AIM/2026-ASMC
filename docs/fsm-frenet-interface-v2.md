@@ -1665,7 +1665,9 @@ handshake 골격을 모드마다 다시 만들지 않는다.
 | D6-2a | 저속 AVOID binding 우회 제거 + 평가 목표 d 결정 | 닫힘 |
 | D6-2b | PREPARE dual-output — 한 cycle에서 avoid candidate + maintenance path | 닫힘 |
 | D6-2c | PREPARE READY / WAITING 상태 연결 + core 회귀 | 닫힘 |
-| D6-3 | EXECUTE / COMMIT / EXECUTING / completion, `target_d` lock, CANCEL, preemption | 닫힘 |
+| D6-3a | EXECUTE 재검증 + COMMIT target lock + CANCEL context 정리 | 닫힘 |
+| D6-3b | COMMITTED → EXECUTING, post-COMMIT 보호 | 닫힘 |
+| D6-3c | SHIFT → PASS → COMPLETED, terminal latch | 닫힘 |
 | D6-4 | Feedback 필드 연결 + ROS 회귀 + `SetImplementedManeuver(AVOID, true)` | **열림** |
 
 gate를 마지막에 여는 이유는 11.4절과 같다. 절반만 구현된 AVOID가 열려 있으면
@@ -1867,6 +1869,113 @@ node 배선은 **ROS 경로로 실행되지 않는다** — ROS 로그에 `AVOID
 배선을 먼저 넣는 이유는 D6-3의 EXECUTE가 같은 구조를 확장하기 때문이다.
 실제 ROS AVOID 경로는 **D6-4에서 처음 검증된다** — 그때 D6-0a 재결속,
 D6-1a heading 경계, D6-2c READY/WAITING을 한꺼번에 덮는다.
+
+#### 12.7.5 D6-3a COMMIT의 원자성과 target lock (D6-3a에서 확정)
+
+##### EXECUTE는 준비된 후보를 재사용하지 않는다
+
+`PrepareAvoid()`를 **같은 함수로** 다시 호출한다(계약 5.3절). 재검증이 준비와
+같은 계산이어야 두 판정이 어긋나지 않는다.
+
+##### COMMIT 순서가 계약이다
+
+```
+1. PrepareAvoid()로 현재 snapshot 재평가
+2. candidate_valid 확인
+3. candidate_path -> ROS Trajectory 변환 성공 확인
+4. NotifyCommitted() 성공        (READY에서만)
+5. CommitAvoid()                 (core target_d lock)
+6. 캐시 저장 + publish
+```
+
+**2·3번을 4번보다 먼저** 해야 한다. COMMIT을 먼저 올리고 변환이 실패하면
+
+```
+Feedback = COMMITTED AVOID
+MPC      = 직전 PREPARE의 중앙 maintenance
+```
+
+라는 불일치가 생긴다 — D6-0a에서 막은 것과 같은 종류다. 그래서 변환 실패
+시에는 READY에 머물고 maintenance를 계속 발행한다.
+
+##### `target_d`는 COMMIT에서 처음 lock된다
+
+| | `avoid_committed()` | `avoid_locked_target_d()` | phase |
+|---|---|---|---|
+| PREPARE (반복) | false | 0.0 | `TRACKING` |
+| COMMIT 직후 | true | 선택된 후보의 종단 d | `SHIFT` |
+
+`CommitAvoid()`는 세 가지를 독립적으로 방어한다.
+
+| guard | 거부 조건 |
+|---|---|
+| `candidate_valid` | 후보가 안전하지 않은 결과로 잠그려 함 |
+| `v2_avoidance_.active` | 대상을 확보하지 않은 상태 |
+| `isfinite(selected_target_d)` | NaN/inf 목표 |
+
+##### 구현 중 실측으로 찾은 버그 — lock이 생성에 반영되지 않았다
+
+`DecideAvoidTargets`는 매 사이클 **요청**(target pose 또는 geometry)에서
+목표를 다시 계산한다. COMMIT 이후에도 그것을 쓰면 잠근 값이 생성에 쓰이지
+않는다.
+
+```
+PREPARE  요청 2.8 -> 격자 탐색으로 +3.30 선택
+COMMIT   locked = +3.30
+post     생성 목표가 다시 +2.80 (요청값)   <- lock이 무의미
+```
+
+그래서 `committed`이면 목표 목록을 **잠긴 값 하나로 대체**한다. 수정 후:
+
+```
+post     생성 목표 = +3.30 = locked      (5 사이클 모두 drift 0)
+```
+
+잠긴 목표가 막히면 후보는 무효가 되지만 **lock은 풀리지 않고**, 격자로
+우회해 다른 목표를 고르지도 않는다.
+
+##### 관측되지 않는 방어 계층 하나 (정직한 기록)
+
+committed 생성에서 `lateral_target_tolerance = 0.0`도 함께 넣었다. 그런데
+목표 목록이 이미 잠긴 값 하나이므로 격자 중심이 잠긴 목표이고, cost가 중심을
+선호해 tolerance를 0으로 하지 않아도 같은 값이 선택된다.
+
+관측 조건을 찾으려 했지만 실패했다 — 잠긴 `d`만 막고 이웃 ±0.5는 남기는
+장애물 배치를 시도했으나, 충돌 마진(0.3)과 차폭 때문에 잠긴 `d` 근처를 막으면
+이웃도 함께 막힌다. 즉 **이 줄을 제거해도 현재 geometry에서는 동작이 같다**
+(돌연변이가 통과했다).
+
+그래도 남겨둔다. 위쪽 목표 목록 대체가 깨지면(예: D7에서 목표 목록 로직을
+고칠 때) 이 줄이 마지막 방어선이 된다.
+
+##### CANCEL 성공 시 core context를 비운다
+
+`CANCEL`이 성공하면 manager는 `planning_target=NONE`으로 끝내고 planner를
+호출하지 않는다. 그런데 v2 AVOID context reset은 `PlanInternal`에서 "다른
+mode가 들어왔을 때"만 일어난다. 즉
+
+```
+AVOID id=20 PREPARE   -> 21 확보
+AVOID id=20 CANCEL    -> manager만 IDLE, planner 호출 없음
+AVOID id=22 target=21 -> 21이 없어도 stale context로 GRACE
+```
+
+가 된다. 첫 binding 실패인데 유예를 받는 D5-2와 같은 구조다. 실측으로도
+확인했다 — reset 없이 같은 순서를 밟으면 `missing_cycles=1`로 유예가 붙는다.
+
+`planning_target=NONE`만으로는 구분할 수 없다. terminal latch와 미구현
+maneuver도 `NONE`이고, 그때 context를 비우면 진행 중이던 기동의 상태가
+사라진다. 그래서 `CommandAcceptance.transaction_cancelled`를 따로 둔다.
+
+| 상황 | `transaction_cancelled` |
+|---|---|
+| `PREPARING`/`WAITING`/`READY`에서 CANCEL 성공 | **true** |
+| `COMMITTED`/`EXECUTING`에서 CANCEL 거부 | **false** |
+| terminal latch / 미구현 maneuver / 정상 명령 | false |
+
+두 번째 행이 중요하다. 거부된 CANCEL에서 context를 비우면 진행 중인 회피의
+잠긴 목표가 사라진다. 그때 `planning_target`은 `ACTIVE_TRANSACTION`이므로
+node는 계획을 계속한다.
 
 #### 12.7.2 저속 AVOID resolver 우회 — **D6-2a에서 해결**
 

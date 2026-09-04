@@ -301,6 +301,69 @@ public:
                       CartesianPath& maintenance_path,
                       AvoidPrepareResult& result);
 
+    // 재검증을 통과한 AVOID 후보를 확정한다 (D6-3a).
+    //
+    // ===== 호출 시점이 계약이다 =====
+    //
+    // **실제로 내보낼 AVOID 궤적이 준비된 뒤에만** 호출해야 한다. 호출자
+    // 순서는 다음이어야 한다:
+    //
+    //   1. PrepareAvoid()로 현재 snapshot 재평가
+    //   2. result.candidate_valid 확인
+    //   3. candidate_path -> ROS Trajectory 변환 성공 확인
+    //   4. NotifyCommitted() 성공
+    //   5. CommitAvoid()          <- 여기
+    //   6. 궤적 캐시 저장 + publish
+    //
+    // 4번보다 먼저 3번을 확인해야 하는 이유는 D6-0a와 같다. COMMIT을 먼저
+    // 올리고 변환이 실패하면
+    //   Feedback = COMMITTED AVOID
+    //   MPC      = 직전 PREPARE의 중앙 maintenance
+    // 라는 불일치가 생긴다.
+    //
+    // 이 시점에 target_d를 처음 lock한다. PREPARE에서는 사이클마다 좌/우가
+    // 바뀔 수 있으므로 lock하지 않았다(계약 12.7.3절).
+    //
+    // 반환값은 실제로 lock했는지다. candidate_valid가 false인 결과를 넘기면
+    // false를 돌려주고 아무것도 바꾸지 않는다 - 확보하지 않은 목표를
+    // 잠그지 않는다.
+    bool CommitAvoid(const AvoidPrepareResult& result);
+
+    // v2 AVOID가 COMMIT되었는지. COMMIT 이후에는 target resolver 대신 잠긴
+    // context로 기동을 완주한다(계약 8.2.1절).
+    bool avoid_committed() const { return v2_avoidance_.committed; }
+
+    // COMMIT 시점에 잠근 목표 d [m]. avoid_committed()가 false이면 의미가
+    // 없다. d는 음수가 유효하므로 sentinel을 쓸 수 없다.
+    double avoid_locked_target_d() const { return v2_avoidance_.target_d; }
+
+    // COMMIT 시점의 ego d [m]. maneuver_progress를 (start_d -> target_d)
+    // 구간의 진행률로 계산하는 데 쓴다(D6-4).
+    double avoid_start_d() const { return v2_avoidance_.start_d; }
+
+    // v2 AVOID의 내부 실행 단계 이름. 진단·검증용 문자열이다. 내부 enum을
+    // 공개하지 않기 위해 이름으로 돌려준다.
+    const char* avoid_phase_name() const;
+
+    // 외부 AVOID 상태를 전부 비운다 (D6-3a).
+    //
+    // ===== 왜 별도 API가 필요한가 =====
+    //
+    // v2 AVOID context reset은 PlanInternal에서 "다른 mode가 들어왔을 때"만
+    // 일어난다. 그런데 CANCEL이 성공하면 manager는 planner를 아예 호출하지
+    // 않는다(planning_target=NONE). 그래서
+    //
+    //   AVOID id=20 PREPARE   -> 21 확보
+    //   AVOID id=20 CANCEL    -> manager만 IDLE, planner 호출 없음
+    //   AVOID id=22 target=21 -> 21이 없어도 stale context로 GRACE
+    //
+    // 가 된다. 첫 binding 실패인데 유예를 받는 D5-2와 같은 구조다.
+    //
+    // COMMITTED/EXECUTING에서 CANCEL이 거부되면(TOO_LATE_TO_CANCEL) 이
+    // 함수를 **절대 호출하면 안 된다** - 진행 중인 기동의 잠긴 목표가
+    // 사라진다.
+    void ResetExternalAvoidance();
+
 private:
     bool PlanInternal(const CartesianState& ego,
                       const std::vector<ObjectInfo>& obstacles,
@@ -404,6 +467,13 @@ private:
         bool has_requested_target_d = false;
         double requested_target_d = 0.0;
         double requested_target_s = 0.0;
+
+        // EXECUTE 재검증을 통과해 목표를 확정했는가 (D6-3a).
+        //
+        // true이면 target_d / start_d가 잠긴 값이며, 후보 생성은 그 목표를
+        // **정확히** 겨냥한다(lateral tolerance 0). PREPARE에서는 항상
+        // false다.
+        bool committed = false;
     };
 
     struct FollowingContext {

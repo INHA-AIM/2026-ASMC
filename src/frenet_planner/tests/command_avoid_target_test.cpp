@@ -1859,6 +1859,334 @@ int main() {
                "round trip: no failure state is latched in core");
     }
 
+    // ===== D6-3a: EXECUTE 재검증과 COMMIT target lock ==================
+
+    {
+        // ---- PREPARE는 lock하지 않는다 (드디어 직접 검증) --------------
+        //
+        // D6-2b/D6-2c에서 getter가 없어 간접 확인만 했던 항목이다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const auto boxes = boxes_for(objects);
+        CartesianPath maintenance;
+        Prepare result;
+        planner.PrepareAvoid(ego, objects, boxes,
+                             MakeAvoidCommand(21, LateralDirection::LEFT),
+                             maintenance, result);
+        Expect(result.candidate_valid, "no-lock: PREPARE found a candidate");
+        Expect(!planner.avoid_committed(),
+               "no-lock: PREPARE does not commit");
+        Expect(planner.avoid_locked_target_d() == 0.0,
+               "no-lock: no target is locked after PREPARE");
+        Expect(std::string(planner.avoid_phase_name()) == "TRACKING",
+               "no-lock: the phase stays TRACKING before commit");
+        // 여러 사이클을 돌려도 lock되지 않는다.
+        for (int cycle = 0; cycle < 3; ++cycle) {
+            planner.PrepareAvoid(ego, objects, boxes,
+                                 MakeAvoidCommand(21, LateralDirection::LEFT),
+                                 maintenance, result);
+        }
+        Expect(!planner.avoid_committed(),
+               "no-lock: repeated PREPARE never commits by itself");
+    }
+    {
+        // ---- CommitAvoid가 목표를 확정한다 -----------------------------
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const auto boxes = boxes_for(objects);
+        CartesianPath maintenance;
+        Prepare result;
+        planner.PrepareAvoid(ego, objects, boxes,
+                             MakeAvoidCommand(21, LateralDirection::LEFT),
+                             maintenance, result);
+        const double selected = result.selected_target_d;
+
+        Expect(planner.CommitAvoid(result), "commit: CommitAvoid succeeds");
+        Expect(planner.avoid_committed(), "commit: the maneuver is committed");
+        Expect(std::fabs(planner.avoid_locked_target_d() - selected) < 1e-9,
+               "commit: the locked target equals the selected candidate d");
+        Expect(std::string(planner.avoid_phase_name()) == "SHIFT",
+               "commit: the phase advances to SHIFT");
+        // start_d는 COMMIT 시점의 ego d다. 진행률 기준점이다.
+        Expect(std::fabs(planner.avoid_start_d()) < 0.5,
+               "commit: start_d records the ego lateral position at commit");
+        Expect(std::fabs(planner.avoid_start_d() -
+                         planner.avoid_locked_target_d()) > 1.5,
+               "commit: start_d and target_d are far apart (a real shift)");
+    }
+    {
+        // ---- CommitAvoid 입력 방어 --------------------------------------
+        //
+        // 확보하지 않은 목표를 잠그지 않는다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        Prepare invalid;   // candidate_valid=false
+        Expect(!planner.CommitAvoid(invalid),
+               "commit guard: an invalid result is rejected");
+        Expect(!planner.avoid_committed(),
+               "commit guard: nothing is locked on rejection");
+
+        // ***** candidate_valid guard를 단독으로 검증한다 *****
+        //
+        // 위 검사는 대상도 확보되지 않은 상태라 active guard가 먼저 막는다.
+        // 그러면 candidate_valid guard를 제거해도 통과한다(돌연변이로 확인).
+        // 그래서 **대상은 확보하고 후보만 무효인** 상태를 만든다.
+        const std::vector<ObjectInfo> blocked_objects{
+            MakeObstacle(waypoints, 21, kEgoS + 8.0, 0.0)};   // 너무 가깝다
+        CartesianPath blocked_maintenance;
+        Prepare blocked_result;
+        planner.PrepareAvoid(ego, blocked_objects,
+                             boxes_for(blocked_objects),
+                             MakeAvoidCommand(21, LateralDirection::NONE),
+                             blocked_maintenance, blocked_result);
+        Expect(planner.active_avoid_target_id() == 21,
+               "commit guard: the target is acquired for the blocked case");
+        Expect(!blocked_result.candidate_valid,
+               "commit guard: the candidate is blocked (target still bound)");
+        Expect(!planner.CommitAvoid(blocked_result),
+               "commit guard: an acquired target with no safe candidate "
+               "cannot be committed");
+        Expect(!planner.avoid_committed(),
+               "commit guard: a blocked candidate locks nothing");
+        Expect(planner.avoid_locked_target_d() == 0.0,
+               "commit guard: no target d is locked from a blocked candidate");
+
+    }
+    {
+        // active guard: 대상을 확보하지 않은 planner는 잠글 수 없다.
+        // **fresh planner여야 한다** - 위 블록에서 대상을 확보했으므로
+        // 같은 인스턴스를 쓰면 이 guard가 아니라 다른 경로로 통과한다.
+        FrenetPlanner fresh;
+        fresh.Init(config);
+        Prepare fabricated;
+        fabricated.candidate_valid = true;
+        fabricated.selected_target_d = 2.0;
+        Expect(!fresh.CommitAvoid(fabricated),
+               "commit guard: committing without an acquired target fails");
+        Expect(!fresh.avoid_committed(),
+               "commit guard: a fabricated result locks nothing");
+    }
+    {
+        // 대상을 확보한 뒤라도 비유한 목표는 거부한다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const auto boxes = boxes_for(objects);
+        CartesianPath maintenance;
+        Prepare result;
+        planner.PrepareAvoid(ego, objects, boxes,
+                             MakeAvoidCommand(21, LateralDirection::LEFT),
+                             maintenance, result);
+        Expect(result.candidate_valid,
+               "commit guard: the baseline candidate is valid");
+        Prepare nan_target = result;
+        nan_target.selected_target_d = std::nan("");
+        Expect(!planner.CommitAvoid(nan_target),
+               "commit guard: a non-finite target is rejected");
+        Expect(!planner.avoid_committed(),
+               "commit guard: a NaN target locks nothing");
+    }
+
+    {
+        // ---- **핵심**: COMMIT 이후 target_d가 흔들리지 않는다 -----------
+        //
+        // ResolveManeuver의 lateral 격자는 target_d ± 0.5 m다. COMMIT에서
+        // 목표를 잠갔는데 이후 사이클이 격자 주변을 다시 탐색해 다른 값을
+        // 고르면 "lock했다"는 의미가 사라진다.
+        //
+        // ===== 구현 중 실측으로 찾은 버그 =====
+        //
+        // DecideAvoidTargets는 매 사이클 **요청**(pose 또는 geometry)에서
+        // 목표를 다시 계산한다. COMMIT 이후에도 그것을 쓰면 잠근 값이 생성에
+        // 반영되지 않았다:
+        //
+        //   PREPARE  요청 2.8 -> 격자 탐색으로 +3.30 선택
+        //   COMMIT   locked = +3.30
+        //   post     생성 목표가 다시 +2.80 (요청값)   <- lock이 무의미
+        //
+        // 그래서 committed이면 목표 목록을 잠긴 값 하나로 대체한다.
+        //
+        // 관측 조건도 실측으로 찾았다. 기하 목표(2.55)는 우연히 격자 중심과
+        // 일치해 drift가 보이지 않는다. **target pose 2.8**을 쓰면 갈린다.
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const auto boxes = boxes_for(objects);
+        const PlannerCommand pose_cmd = MakeAvoidCommandWithTargetD(
+            21, kEgoS + 30.0, 2.8, LateralDirection::LEFT);
+
+        // (a) 요청값과 실제 선택이 다르다는 것을 먼저 확인한다. 이것이
+        //     없으면 아래 exact-lock 검사가 무의미하다(요청과 lock이 같으면
+        //     tolerance를 무시해도 통과한다).
+        FrenetPlanner uncommitted;
+        uncommitted.Init(config);
+        CartesianPath m_unc;
+        Prepare r_unc;
+        uncommitted.PrepareAvoid(ego, objects, boxes, pose_cmd, m_unc, r_unc);
+        Expect(r_unc.candidate_valid,
+               "exact lock: the uncommitted cycle finds a candidate");
+        Expect(std::fabs(r_unc.selected_target_d - 2.8) > 0.2,
+               "exact lock: the selected candidate drifts off the request "
+               "(so request != locked value)");
+
+        // (b) COMMIT하면 이후 사이클이 잠긴 목표를 정확히 겨냥한다.
+        FrenetPlanner committed;
+        committed.Init(config);
+        CartesianPath m_pre;
+        Prepare r_pre;
+        committed.PrepareAvoid(ego, objects, boxes, pose_cmd, m_pre, r_pre);
+        Expect(committed.CommitAvoid(r_pre),
+               "exact lock: the commit succeeds");
+        const double locked = committed.avoid_locked_target_d();
+        Expect(std::fabs(locked - r_pre.selected_target_d) < 1e-9,
+               "exact lock: the locked value is the selected candidate d");
+        Expect(std::fabs(locked - 2.8) > 0.2,
+               "exact lock: the locked value differs from the raw request");
+
+        bool all_exact = true;
+        for (int cycle = 0; cycle < 5; ++cycle) {
+            CartesianPath m_post;
+            Prepare r_post;
+            committed.PrepareAvoid(ego, objects, boxes, pose_cmd, m_post,
+                                   r_post);
+            if (!r_post.candidate_valid ||
+                std::fabs(r_post.selected_target_d - locked) > 1e-6) {
+                all_exact = false;
+            }
+            // 생성 목표 목록 자체도 잠긴 값 하나여야 한다.
+            if (committed.avoid_target_count() != 1 ||
+                std::fabs(committed.avoid_target_candidate(0) - locked) >
+                    1e-9) {
+                all_exact = false;
+            }
+        }
+        Expect(all_exact,
+               "exact lock: every post-commit cycle targets the locked d");
+    }
+    {
+        // 잠긴 목표가 이후 사이클에 막히면 후보가 무효가 되지만, **lock은
+        // 풀리지 않는다.** 격자로 우회해 다른 목표를 고르지도 않는다 -
+        // 그것이 lock의 의미다.
+        //
+        // 장면을 바꿔 막는다: COMMIT 후 잠긴 목표 경로에 새 장애물을 놓는다.
+        const std::vector<ObjectInfo> clear_scene{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        FrenetPlanner committed;
+        committed.Init(config);
+        CartesianPath m1;
+        Prepare r1;
+        committed.PrepareAvoid(ego, clear_scene, boxes_for(clear_scene),
+                               MakeAvoidCommand(21, LateralDirection::LEFT),
+                               m1, r1);
+        Expect(r1.candidate_valid, "blocked lock: the commit cycle is valid");
+        Expect(committed.CommitAvoid(r1), "blocked lock: the commit succeeds");
+        const double locked = committed.avoid_locked_target_d();
+
+        // 잠긴 목표(약 +2.55) 쪽에 장애물을 추가한다.
+        const std::vector<ObjectInfo> blocked_scene{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0),
+            // 4번째 인자는 speed, 5번째가 lateral_d다.
+            MakeObstacle(waypoints, 31, kEgoS + 18.0, 0.0, locked),
+        };
+        CartesianPath m2;
+        Prepare r2;
+        const bool ok = committed.PrepareAvoid(
+            ego, blocked_scene, boxes_for(blocked_scene),
+            MakeAvoidCommand(21, LateralDirection::LEFT), m2, r2);
+        Expect(!r2.candidate_valid,
+               "blocked lock: a blocker on the locked path invalidates the "
+               "candidate");
+        Expect(ok && !m2.x.empty(),
+               "blocked lock: maintenance is still produced");
+        Expect(committed.avoid_committed(),
+               "blocked lock: a blocked cycle does not un-commit");
+        Expect(std::fabs(committed.avoid_locked_target_d() - locked) < 1e-9,
+               "blocked lock: the locked target survives a blocked cycle");
+        Expect(committed.avoid_target_count() == 1 &&
+                   std::fabs(committed.avoid_target_candidate(0) - locked) <
+                       1e-9,
+               "blocked lock: generation does not wander to another target");
+        Expect(committed.active_avoid_target_id() == 21,
+               "blocked lock: the designated target is unchanged");
+    }
+
+    {
+        // ---- ResetExternalAvoidance -------------------------------------
+        //
+        // CANCEL이 성공하면 manager가 planner를 호출하지 않으므로
+        // PlanInternal의 context reset이 일어나지 않는다. 그러면 다음 AVOID가
+        // stale context로 유예를 받는다(D5-2와 같은 구조).
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> with_target{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const std::vector<ObjectInfo> without_target{
+            MakeObstacle(waypoints, 17, kEgoS + 60.0, 0.0)};
+        const auto boxes = boxes_for(with_target);
+        CartesianPath maintenance;
+        Prepare result;
+
+        planner.PrepareAvoid(ego, with_target, boxes,
+                             MakeAvoidCommand(21, LateralDirection::LEFT),
+                             maintenance, result);
+        planner.CommitAvoid(result);
+        Expect(planner.active_avoid_target_id() == 21 &&
+                   planner.avoid_committed(),
+               "reset api: the maneuver is bound and committed first");
+
+        planner.ResetExternalAvoidance();
+        Expect(planner.active_avoid_target_id() == -1,
+               "reset api: the bound target is cleared");
+        Expect(!planner.avoid_committed(),
+               "reset api: the commit is cleared");
+        Expect(planner.avoid_locked_target_d() == 0.0,
+               "reset api: the locked target is cleared");
+        Expect(planner.avoid_target_count() == 0,
+               "reset api: the evaluated target list is cleared");
+        Expect(std::string(planner.avoid_phase_name()) == "NONE",
+               "reset api: the phase reports NONE");
+
+        // 이제 21이 관측되지 않으면 유예 없이 즉시 LOST여야 한다.
+        CartesianPath m2;
+        Prepare r2;
+        const bool ok = planner.PrepareAvoid(
+            ego, without_target, boxes_for(without_target),
+            MakeAvoidCommand(21), m2, r2);
+        Expect(!ok && planner.last_failure_reason() ==
+                          Reason::TARGET_OBJECT_LOST,
+               "reset api: a fresh AVOID gets no grace after the reset");
+    }
+    {
+        // reset 없이 같은 순서를 재현하면 stale context가 유예를 준다.
+        // 이것이 ResetExternalAvoidance가 필요한 이유의 증거다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> with_target{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const std::vector<ObjectInfo> without_target{
+            MakeObstacle(waypoints, 17, kEgoS + 60.0, 0.0)};
+        CartesianPath maintenance;
+        Prepare result;
+        planner.PrepareAvoid(ego, with_target, boxes_for(with_target),
+                             MakeAvoidCommand(21, LateralDirection::LEFT),
+                             maintenance, result);
+        Expect(planner.active_avoid_target_id() == 21,
+               "stale evidence: the target is bound");
+
+        // reset을 하지 않고 대상이 사라진 상태로 넘어간다.
+        CartesianPath m2;
+        Prepare r2;
+        planner.PrepareAvoid(ego, without_target, boxes_for(without_target),
+                             MakeAvoidCommand(21), m2, r2);
+        Expect(planner.active_avoid_target_id() == 21 &&
+                   planner.avoid_missing_cycles() == 1,
+               "stale evidence: without a reset the context grants grace");
+    }
+
     if (g_failures != 0) {
         std::cerr << g_failures << " AVOID target check(s) failed\n";
         return 1;

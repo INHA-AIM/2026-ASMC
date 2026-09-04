@@ -934,6 +934,39 @@ bool FrenetPlanner::PrepareAvoid(
                         maintenance_path, &result);
 }
 
+bool FrenetPlanner::CommitAvoid(const AvoidPrepareResult& result) {
+    // 확보하지 않은 목표를 잠그지 않는다. 호출자가 candidate_valid를 먼저
+    // 확인해야 하지만, 여기서도 막는다.
+    if (!result.candidate_valid) return false;
+    if (!v2_avoidance_.active) return false;
+    if (!std::isfinite(result.selected_target_d)) return false;
+
+    v2_avoidance_.committed = true;
+    // 이 시점에 처음 lock한다. PREPARE에서는 사이클마다 좌/우가 바뀔 수
+    // 있으므로 잠그지 않았다(계약 12.7.3절).
+    v2_avoidance_.target_d = result.selected_target_d;
+    // 진행률 기준점. maneuver_progress를 (start_d -> target_d) 구간으로
+    // 계산한다(D6-4).
+    v2_avoidance_.start_d = last_d_;
+    v2_avoidance_.phase = AvoidPhase::SHIFT;
+    return true;
+}
+
+const char* FrenetPlanner::avoid_phase_name() const {
+    if (!v2_avoidance_.active) return "NONE";
+    switch (v2_avoidance_.phase) {
+        case AvoidPhase::TRACKING: return "TRACKING";
+        case AvoidPhase::SHIFT: return "SHIFT";
+        case AvoidPhase::PASS: return "PASS";
+    }
+    return "UNKNOWN";
+}
+
+void FrenetPlanner::ResetExternalAvoidance() {
+    v2_avoidance_ = AvoidanceContext{};
+    v2_avoid_targets_ = AvoidTargetPlan{};
+}
+
 void FrenetPlanner::BuildZeroSpeedHoldPath(const CartesianState& ego, double s,
                                            CartesianPath& out_path) const {
     // STOP HOLD와 같은 형태다. 한 점 0속도 궤적.
@@ -1323,10 +1356,33 @@ bool FrenetPlanner::PlanInternal(
             return false;
         }
 
-        // 확보 성공. 평가할 목표 d까지 정해 둔다 - 저속이든 정상속도든
-        // 같은 결정 규칙을 쓴다.
-        v2_avoid_targets_ =
-            DecideAvoidTargets(v2_avoidance_, external_command->requested_direction);
+        // 확보 성공. 평가할 목표 d를 정한다.
+        //
+        // ===== COMMIT 이후에는 잠긴 목표만 쓴다 (D6-3a) =====
+        //
+        // DecideAvoidTargets는 매 사이클 요청(target pose 또는 geometry)에서
+        // 목표를 다시 계산한다. COMMIT 이후에도 그것을 쓰면 잠근 값이 생성에
+        // 반영되지 않는다. 실측으로 확인한 문제:
+        //
+        //   PREPARE  요청 2.8 -> 격자 탐색으로 선택 +3.30
+        //   COMMIT   locked = +3.30
+        //   post     생성 목표가 다시 +2.80 (요청값)   <- lock이 무의미
+        //
+        // COMMIT의 의미는 "이 궤적을 실행한다"이므로, 잠근 목표를 그대로
+        // 겨냥해야 한다. 아래 생성부의 tolerance 0과 함께 동작한다.
+        if (v2_avoidance_.committed) {
+            v2_avoid_targets_ = AvoidTargetPlan{};
+            v2_avoid_targets_.candidates[0] = v2_avoidance_.target_d;
+            v2_avoid_targets_.count = 1;
+            // 진단 값은 보존한다. 이 목표가 pose에서 왔는지는 여전히 사실이다.
+            v2_avoid_targets_.from_target_pose =
+                v2_avoidance_.has_requested_target_d;
+            // COMMIT된 목표에는 방향 모순이 없다 - COMMIT 전에 이미 걸렀다.
+            v2_avoid_targets_.direction_conflict = false;
+        } else {
+            v2_avoid_targets_ = DecideAvoidTargets(
+                v2_avoidance_, external_command->requested_direction);
+        }
 
         // 후보 생성과 안전성 판정은 아래 AVOID PREPARE 블록에서 한다
         // (D6-2b). 그 블록은 FrenetState start가 만들어진 뒤에 있다.
@@ -1486,6 +1542,36 @@ bool FrenetPlanner::PlanInternal(
             double best_target_d = 0.0;
             int first_blocking_id = -1;
 
+            // ===== COMMIT 이후에는 목표를 정확히 겨냥한다 (D6-3a) =====
+            //
+            // ResolveManeuver의 lateral 격자는
+            //   target_d ± path_cfg_.lateral_target_tolerance (0.5 m)
+            // 이다. COMMIT에서 +2.55를 잠갔는데 이후 사이클이 +2.05/+3.05를
+            // 만들어 +3.05를 고르면 "목표를 lock했다"는 의미가 흐려진다.
+            //
+            // 그래서 committed AVOID는 tolerance를 0으로 해서 잠긴 목표만
+            // 생성한다. PREPARE는 기존 격자를 그대로 쓴다 - 아직 목표를
+            // 확정하지 않았으므로 주변 탐색이 맞다.
+            //
+            // ===== 현재 이 줄은 회귀로 덮이지 않는다 (정직한 기록) =====
+            //
+            // 위쪽에서 committed일 때 목표 목록을 잠긴 값 하나로 바꾸므로,
+            // 격자 중심이 이미 잠긴 목표다. cost가 중심을 선호하기 때문에
+            // tolerance를 0으로 하지 않아도 같은 값이 선택된다.
+            //
+            // 관측 조건을 찾으려 했지만(잠긴 d만 막고 이웃 ±0.5는 남기는
+            // 장애물 배치) 실패했다 - 충돌 마진(0.3)과 차폭 때문에 잠긴 d
+            // 근처를 막으면 이웃도 함께 막힌다. 즉 이 줄을 제거해도 현재
+            // geometry에서는 동작이 같다(돌연변이 MUT-2가 통과했다).
+            //
+            // 그래도 남겨두는 이유는 방어 계층이기 때문이다. 위쪽 목표 목록
+            // 대체가 깨지면(예: D7에서 목표 목록 로직을 고칠 때) 이 줄이
+            // 마지막 방어선이 된다. 두 방어를 동시에 잃는 것보다 낫다.
+            PathGeneratorConfig generation_cfg = path_cfg_;
+            if (v2_avoidance_.committed) {
+                generation_cfg.lateral_target_tolerance = 0.0;
+            }
+
             for (int index = 0; index < v2_avoid_targets_.count; ++index) {
                 const double target_d = v2_avoid_targets_.candidates[index];
                 PlannerCommand side_cmd = *external_command;
@@ -1495,7 +1581,7 @@ bool FrenetPlanner::PlanInternal(
 
                 PlannerDebugStats side_stats;
                 auto generated = ResolveManeuver(
-                    start, side_cmd, ref_, path_cfg_, limits_, lane_width_,
+                    start, side_cmd, ref_, generation_cfg, limits_, lane_width_,
                     predicted_collision_obstacles, vehicle_shape_,
                     collision_cfg_, &side_stats);
                 EvaluateCosts(generated, cost_weights_, target_d);

@@ -174,6 +174,9 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
             acceptance.planning_target = PlanningTarget::NONE;
             acceptance.execution_state = Feedback::IDLE;
             acceptance.detail = "command cancelled";
+            // 호출자가 core의 maneuver context도 비울 수 있게 알린다
+            // (CommandAcceptance::transaction_cancelled 주석 참고).
+            acceptance.transaction_cancelled = true;
             return acceptance;
         }
 

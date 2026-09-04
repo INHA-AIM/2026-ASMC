@@ -631,6 +631,20 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     }
 
     if (!acceptance.should_plan()) {
+        // ---- 취소된 transaction의 core context 정리 (D6-3a) -------------
+        //
+        // CANCEL이 성공하면 planner를 호출하지 않으므로, PlanInternal 안의
+        // context reset이 일어나지 않는다. 그러면 다음 AVOID가 사라진 대상에
+        // 대해 stale context로 유예를 받는다
+        // (CommandAcceptance::transaction_cancelled 주석 참고).
+        //
+        // 거부된 CANCEL(TOO_LATE_TO_CANCEL)에서는 이 분기로 오지 않는다 -
+        // 그때 planning_target은 ACTIVE_TRANSACTION이므로 위에서 계획을
+        // 계속한다. 잠긴 목표가 사라지지 않는다.
+        if (acceptance.transaction_cancelled) {
+            planner_.ResetExternalAvoidance();
+        }
+
         // planner를 호출하지 않는 사이클이다. 다만 **궤적 출력을 멈추면 안
         // 된다**(계약 6.2절) - 기동은 끝났어도 차량은 계속 주행하거나 정지를
         // 유지해야 한다. 그래서 latch 성격에 따라 출력을 나눈다.
@@ -1069,7 +1083,14 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     // 블록은 D6-4에서 gate를 열 때 처음 실행된다. 배선을 먼저 넣는 이유는
     // D6-3의 EXECUTE가 같은 구조를 확장하기 때문이다.
     if (planner_command.mode == AVOID &&
-        command.execution_request == asmc_msgs::BehaviorCommand::PREPARE) {
+        (command.execution_request == asmc_msgs::BehaviorCommand::PREPARE ||
+         command.execution_request == asmc_msgs::BehaviorCommand::EXECUTE)) {
+        // EXECUTE는 COMMIT 허가다. 준비된 후보를 그대로 실행하지 않고
+        // **현재 snapshot으로 다시 평가**한다(계약 5.3절). PREPARE와 같은
+        // PrepareAvoid()를 쓰는 이유가 그것이다 - 재검증이 준비와 같은
+        // 계산이어야 두 판정이 어긋나지 않는다.
+        const bool execute_requested =
+            command.execution_request == asmc_msgs::BehaviorCommand::EXECUTE;
         CartesianPath maintenance;
         FrenetPlanner::AvoidPrepareResult prepare;
         const bool prepare_ok = planner_.PrepareAvoid(
@@ -1173,8 +1194,66 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             command_manager_.NotifyPlanFailed(/*terminal=*/false);
         }
 
+        // ---- COMMIT (D6-3a) ---------------------------------------------
+        //
+        // ===== COMMIT은 원자적이어야 한다 =====
+        //
+        // 순서가 계약이다:
+        //   1. 재검증 통과 (candidate_valid)
+        //   2. candidate -> ROS Trajectory 변환 성공
+        //   3. NotifyCommitted() 성공
+        //   4. core target_d lock
+        //   5. 캐시 저장 + publish
+        //
+        // 2번을 3번보다 먼저 확인해야 한다. COMMIT을 먼저 올리고 변환이
+        // 실패하면
+        //   Feedback = COMMITTED AVOID
+        //   MPC      = 직전 PREPARE의 중앙 maintenance
+        // 라는 불일치가 생긴다 - D6-0a에서 막은 것과 같은 종류다.
+        bool committed_now = false;
+        asmc_msgs::Trajectory avoid_trajectory;
+        if (execute_requested && prepare.candidate_valid) {
+            // 2번: 변환을 **먼저** 시도한다.
+            const ConversionStatus convert_status = ConvertCartesianPath(
+                prepare.candidate_path, planner_.sample_dt(), snapshot.vehicle,
+                now, avoid_trajectory);
+            if (convert_status == ConversionStatus::OK &&
+                !avoid_trajectory.points.empty()) {
+                // 3번: manager 승격. READY에서만 성공한다(계약 5.6절).
+                if (command_manager_.NotifyCommitted()) {
+                    // 4번: core lock. 이 시점에 target_d가 처음 확정된다.
+                    if (planner_.CommitAvoid(prepare)) {
+                        committed_now = true;
+                    } else {
+                        // core가 거부했다. manager만 COMMITTED가 되면 위
+                        // 불일치가 그대로 생기므로, 이 사이클을 COMMIT하지
+                        // 않고 maintenance로 계속한다. 다음 사이클에 다시
+                        // 시도한다 - manager 상태는 이미 COMMITTED이므로
+                        // 로그로 드러낸다.
+                        ROS_ERROR_THROTTLE(
+                            1.0,
+                            "v2 AVOID commit rejected by the planner core "
+                            "(command_id=%u target_d=%.3f)",
+                            command.command_id, prepare.selected_target_d);
+                    }
+                }
+            } else {
+                ROS_WARN_THROTTLE(1.0,
+                                  "v2 AVOID candidate conversion failed; "
+                                  "staying in READY (command_id=%u)",
+                                  command.command_id);
+            }
+        }
+
+        // 5번: 발행 대상 결정.
+        //
+        //   COMMIT 성공  -> AVOID candidate를 **처음** MPC로 보낸다
+        //   그 외        -> maintenance만 보낸다 (계약 5.2절)
+        const asmc_msgs::Trajectory& published =
+            committed_now ? avoid_trajectory : trajectory;
+
         v2_plan_fail_streak_ = 0;
-        last_v2_trajectory_ = trajectory;
+        last_v2_trajectory_ = published;
         has_last_v2_trajectory_ = true;
         last_v2_trajectory_command_id_ = command.command_id;
         last_v2_trajectory_fingerprint_ = fingerprint;
@@ -1183,8 +1262,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // 실제 발행한 궤적의 목표속도. last_target_speed_는 maintenance 결정
         // 전의 순항 목표속도이므로 감속/정지 maintenance에서 거짓 보고가 된다.
         avoid_fields.applied_speed_mps =
-            trajectory.points.empty() ? -1.0
-                                      : trajectory.points.back().velocity;
+            published.points.empty() ? -1.0
+                                     : published.points.back().velocity;
         avoid_fields.target_d_valid = prepare.candidate_valid;
         avoid_fields.target_d =
             prepare.candidate_valid ? prepare.selected_target_d : 0.0;
@@ -1205,30 +1284,36 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // COLLISION_BLOCKED(8)를 내보내면 FSM이 terminal 성격으로 오해할
         // 여지가 있다. 차단 정보는 blocking_object_id로 전달한다.
         prepared.result_code = asmc_msgs::FrenetFeedback::RESULT_NONE;
-        prepared.detail = prepare.candidate_valid
-            ? std::string("avoid candidate is ready")
-            : std::string("no safe avoid candidate this cycle");
+        prepared.detail = committed_now
+            ? std::string("avoid maneuver committed")
+            : (prepare.candidate_valid
+                   ? std::string("avoid candidate is ready")
+                   : std::string("no safe avoid candidate this cycle"));
 
-        // **maintenance만 발행한다.** candidate는 진단으로만 나간다.
-        trajectory_pub_.publish(trajectory);
-        publishFeedbackV2(feedback_command_id, prepared, &trajectory,
+        trajectory_pub_.publish(published);
+        publishFeedbackV2(feedback_command_id, prepared, &published,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_NEW,
                           prepare.candidate_valid, ego_s_valid, ego_s,
                           &avoid_fields);
 
         ROS_INFO_THROTTLE(1.0,
-                          "v2 AVOID PREPARE: command_id=%u candidate=%d "
-                          "target_d=%.3f low_speed=%d conflict=%d behind=%d "
-                          "candidates=%zu/%zu maintenance=%zu applied=%.2f",
+                          "v2 AVOID %s: command_id=%u candidate=%d "
+                          "committed=%d target_d=%.3f locked=%.3f phase=%s "
+                          "low_speed=%d conflict=%d behind=%d "
+                          "candidates=%zu/%zu points=%zu applied=%.2f",
+                          execute_requested ? "EXECUTE" : "PREPARE",
                           command.command_id,
                           prepare.candidate_valid ? 1 : 0,
+                          committed_now ? 1 : 0,
                           prepare.selected_target_d,
+                          planner_.avoid_locked_target_d(),
+                          planner_.avoid_phase_name(),
                           prepare.low_speed_context ? 1 : 0,
                           prepare.direction_conflict ? 1 : 0,
                           prepare.target_behind_ego ? 1 : 0,
                           prepare.valid_candidate_count,
                           prepare.generated_candidate_count,
-                          trajectory.points.size(),
+                          published.points.size(),
                           avoid_fields.applied_speed_mps);
         return true;
     }

@@ -124,6 +124,28 @@ struct CommandAcceptance {
 
     // 사람이 읽는 사유. FrenetFeedback.result_detail로 전달한다.
     std::string detail;
+
+    // 이 사이클에 transaction이 취소로 종료되었는가 (D6-3a).
+    //
+    // ===== 왜 별도 플래그가 필요한가 =====
+    //
+    // CANCEL이 성공하면 planning_target=NONE이므로 호출자는 planner를
+    // 호출하지 않는다. 그런데 planner의 v2 AVOID context reset은
+    // PlanInternal에서 "다른 mode가 들어왔을 때"만 일어난다. 즉
+    //
+    //   AVOID id=20 PREPARE   -> 21 확보
+    //   AVOID id=20 CANCEL    -> manager만 IDLE, planner 호출 없음
+    //   AVOID id=22 target=21 -> 21이 없어도 stale context로 GRACE
+    //
+    // 가 된다. 첫 binding 실패인데 유예를 받는 D5-2와 같은 구조다.
+    //
+    // planning_target=NONE만으로는 구분할 수 없다 - terminal latch와 미구현
+    // maneuver도 NONE이고, 그때는 context를 비우면 안 된다(진행 중이던
+    // 기동의 상태가 사라진다). 그래서 "취소로 끝났다"만 따로 알린다.
+    //
+    // COMMITTED/EXECUTING에서 거부된 CANCEL(TOO_LATE_TO_CANCEL)에서는
+    // **false다** - 잠긴 목표를 비우면 진행 중인 회피가 무너진다.
+    bool transaction_cancelled = false;
 };
 
 class CommandExecutionManager {

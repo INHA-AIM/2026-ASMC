@@ -1093,6 +1093,133 @@ int main() {
                "prepare switch: a WAITING AVOID can still be replaced");
     }
 
+    // ============ D6-3a: transaction_cancelled 플래그 ==================
+    //
+    // CANCEL이 성공하면 planner를 호출하지 않으므로, 호출자가 core의
+    // maneuver context를 비울 기회가 없다. 그래서 "취소로 끝났다"만 따로
+    // 알린다(CommandAcceptance::transaction_cancelled 주석 참고).
+    {
+        // PRE-COMMIT CANCEL: 플래그가 선다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeLaneChange(600, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        manager.Accept(avoid);
+        manager.NotifyPlanSucceeded();
+        Expect(manager.execution_state() == Feedback::READY,
+               "cancel flag: READY before the cancel");
+
+        Command cancel = avoid;
+        cancel.execution_request = Command::CANCEL;
+        const auto result = manager.Accept(cancel);
+        Expect(result.command_accepted && !manager.has_active_command(),
+               "cancel flag: the cancel succeeds");
+        Expect(result.transaction_cancelled,
+               "cancel flag: a successful cancel sets transaction_cancelled");
+        Expect(result.planning_target == frenet_planner_ros::PlanningTarget::NONE,
+               "cancel flag: a successful cancel plans nothing");
+    }
+    {
+        // PREPARING에서의 CANCEL도 같다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeLaneChange(601, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        manager.Accept(avoid);
+        Command cancel = avoid;
+        cancel.execution_request = Command::CANCEL;
+        Expect(manager.Accept(cancel).transaction_cancelled,
+               "cancel flag: cancel from PREPARING also sets the flag");
+    }
+    {
+        // WAITING에서의 CANCEL도 같다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeLaneChange(602, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        manager.Accept(avoid);
+        manager.NotifyPlanFailed(/*terminal=*/false);
+        Command cancel = avoid;
+        cancel.execution_request = Command::CANCEL;
+        Expect(manager.Accept(cancel).transaction_cancelled,
+               "cancel flag: cancel from WAITING also sets the flag");
+    }
+    {
+        // ***** POST-COMMIT CANCEL: 플래그가 서면 안 된다 *****
+        //
+        // 거부된 CANCEL에서 core context를 비우면 진행 중인 회피의 잠긴
+        // 목표가 사라진다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeLaneChange(603, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        manager.Accept(avoid);
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+
+        Command cancel = avoid;
+        cancel.execution_request = Command::CANCEL;
+        const auto rejected = manager.Accept(cancel);
+        Expect(rejected.result_code == Feedback::TOO_LATE_TO_CANCEL,
+               "cancel flag: a committed maneuver rejects the cancel");
+        Expect(!rejected.transaction_cancelled,
+               "cancel flag: a REJECTED cancel does not set the flag");
+        Expect(rejected.planning_target ==
+                   frenet_planner_ros::PlanningTarget::ACTIVE_TRANSACTION,
+               "cancel flag: a rejected cancel keeps planning the maneuver");
+        Expect(manager.execution_state() == Feedback::COMMITTED,
+               "cancel flag: the maneuver stays COMMITTED");
+    }
+    {
+        // EXECUTING에서도 같다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeLaneChange(604, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        manager.Accept(avoid);
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        manager.NotifyExecutionStarted();
+        Command cancel = avoid;
+        cancel.execution_request = Command::CANCEL;
+        Expect(!manager.Accept(cancel).transaction_cancelled,
+               "cancel flag: a cancel during EXECUTING does not set the flag");
+    }
+    {
+        // 다른 종료 경로에서는 플래그가 서지 않는다. terminal latch와
+        // 미구현 maneuver도 planning_target=NONE이지만, 그때 context를
+        // 비우면 진행 중이던 기동의 상태가 사라진다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeLaneChange(605, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        manager.Accept(avoid);
+        manager.NotifyPlanFailed(/*terminal=*/true,
+                                 Feedback::TARGET_OBJECT_LOST, "lost");
+        const auto latched = manager.Accept(avoid);
+        Expect(latched.planning_target == frenet_planner_ros::PlanningTarget::NONE,
+               "cancel flag: a terminal latch plans nothing");
+        Expect(!latched.transaction_cancelled,
+               "cancel flag: a terminal latch is not a cancel");
+
+        CommandExecutionManager closed = MakeD4Manager();
+        Command unimplemented = MakeLaneChange(606, Command::PREPARE);
+        unimplemented.maneuver_type = Command::AVOID;
+        unimplemented.primary_object_id = 21;
+        const auto not_impl = closed.Accept(unimplemented);
+        Expect(not_impl.planning_target ==
+                   frenet_planner_ros::PlanningTarget::NONE,
+               "cancel flag: an unimplemented maneuver plans nothing");
+        Expect(!not_impl.transaction_cancelled,
+               "cancel flag: an unimplemented maneuver is not a cancel");
+    }
+    {
+        // 정상 명령에서도 플래그는 false다.
+        CommandExecutionManager manager = MakeFullManager();
+        Expect(!manager.Accept(MakeKeep(607)).transaction_cancelled,
+               "cancel flag: a normal command is not a cancel");
+    }
+
     if (g_failures != 0) {
         std::cerr << g_failures << " execution manager check(s) failed\n";
         return 1;
