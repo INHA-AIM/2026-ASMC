@@ -116,6 +116,14 @@ class CommandExecutionManager {
     void NotifyPlanSucceeded();
     void NotifyPlanFailed(bool terminal);
 
+    // EXECUTE 허가를 받은 뒤 planner가 현재 상황으로 재검증에 성공해 궤적을
+    // COMMIT했다. READY -> COMMITTED 전이다.
+    //
+    // 이 시점부터 일반 명령으로는 전환할 수 없다(IsNonPreemptible). 실제
+    // COMMIT 판정은 planner의 재검증 결과이므로(계약 5.3절) manager가 스스로
+    // 올리지 않고 호출자가 알려준다. D6~D8에서 planner 결과에 연결한다.
+    void NotifyCommitted();
+
     // maneuver를 기하학적으로 완료했다. terminal latch가 걸린다.
     void NotifyManeuverCompleted();
 
@@ -129,8 +137,20 @@ class CommandExecutionManager {
     const CommandFingerprint& fingerprint() const { return fingerprint_; }
 
  private:
-    // 현재 상태가 취소·전환을 거부해야 하는 시점인지.
-    bool InCommittedPhase() const;
+    // 지금 다른 명령으로 전환하면 위험한 시점인지.
+    //
+    // 보호 대상은 **handshake maneuver가 실제로 COMMIT된 이후**다.
+    // KEEP/FOLLOW/STOP은 transaction 시작과 동시에 EXECUTING이 되지만, 이들
+    // 사이의 전환은 정상 주행의 일부다(KEEP -> STOP, FOLLOW -> AVOID 등).
+    // 모든 EXECUTING을 잠그면 FSM이 어떤 모드 전환도 할 수 없게 된다.
+    //
+    // 계약 7.2절이 막으려는 것은 "교차로 한가운데서 기동을 바꾸는 것",
+    // 즉 횡이동·합류가 이미 시작된 상태의 중단이다.
+    bool IsNonPreemptible() const;
+
+    // CANCEL을 거부해야 하는 시점인지. CANCEL은 handshake maneuver만 보내므로
+    // IsNonPreemptible()과 같은 판정을 쓴다.
+    bool CancelRejected() const { return IsNonPreemptible(); }
     // 새 transaction을 시작한다.
     void BeginTransaction(const asmc_msgs::BehaviorCommand& message);
 

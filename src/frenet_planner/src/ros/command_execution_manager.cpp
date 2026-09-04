@@ -40,7 +40,13 @@ bool CommandExecutionManager::IsManeuverImplemented(uint8_t maneuver_type) const
     return (implemented_mask_ & static_cast<uint8_t>(1u << maneuver_type)) != 0;
 }
 
-bool CommandExecutionManager::InCommittedPhase() const {
+bool CommandExecutionManager::IsNonPreemptible() const {
+    // KEEP / FOLLOW / STOP / EMERGENCY_STOP은 준비 단계가 없어 transaction
+    // 시작과 동시에 EXECUTING이다. 이 상태를 잠그면 FSM이 정상적인 모드
+    // 전환(KEEP -> STOP, FOLLOW -> AVOID 등)조차 할 수 없다.
+    //
+    // 실제로 보호해야 하는 것은 횡이동·합류가 COMMIT된 이후다.
+    if (!UsesHandshake(maneuver_type_)) return false;
     return execution_state_ == Feedback::COMMITTED ||
            execution_state_ == Feedback::EXECUTING;
 }
@@ -76,7 +82,7 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
         acceptance.command_accepted = true;
     } else if (!same_id) {
         // ---- 다른 command_id ---------------------------------------------
-        if (InCommittedPhase()) {
+        if (IsNonPreemptible()) {
             // 교차로 한가운데서 기동을 바꾸는 것이 가장 위험하다. 기존
             // transaction을 그대로 유지한다(계약 7.2절).
             acceptance.command_accepted = true;
@@ -97,7 +103,7 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
             // 같은 ID로 목표가 바뀌면 이 transaction이 무엇이었는지가
             // 무너진다. 거부하되 기존 상태는 보존한다(계약 4.1절).
             acceptance.command_accepted = false;
-            acceptance.should_plan = InCommittedPhase();
+            acceptance.should_plan = IsNonPreemptible();
             acceptance.execution_state = execution_state_;
             acceptance.result_code = Feedback::INVALID_COMMAND;
             acceptance.detail =
@@ -116,7 +122,7 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
 
         // CANCEL 처리 (계약 7.1절).
         if (message.execution_request == Command::CANCEL) {
-            if (InCommittedPhase()) {
+            if (IsNonPreemptible()) {
                 acceptance.command_accepted = true;
                 acceptance.should_plan = true;
                 acceptance.execution_state = execution_state_;
@@ -194,9 +200,17 @@ void CommandExecutionManager::NotifyPlanFailed(bool terminal) {
     }
     // 일시적 실패는 준비 단계로 되돌린다. COMMITTED 이후에는 잠긴 궤적을
     // 계속 실행해야 하므로 상태를 낮추지 않는다.
-    if (!InCommittedPhase() && UsesHandshake(maneuver_type_)) {
+    if (!IsNonPreemptible() && UsesHandshake(maneuver_type_)) {
         execution_state_ = Feedback::WAITING;
     }
+}
+
+void CommandExecutionManager::NotifyCommitted() {
+    if (!has_active_command_ || terminal_latched_) return;
+    // handshake를 쓰지 않는 maneuver는 COMMIT 개념이 없다. 이미 EXECUTING이다.
+    if (!UsesHandshake(maneuver_type_)) return;
+    execution_state_ = Feedback::COMMITTED;
+    runtime_failure_ = RuntimeFailure::NONE;
 }
 
 void CommandExecutionManager::NotifyManeuverCompleted() {

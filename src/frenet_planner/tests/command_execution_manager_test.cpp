@@ -160,32 +160,115 @@ int main() {
                "CANCEL in READY returns to IDLE");
     }
     {
-        // EXECUTING(=COMMITTED phase)에서는 거부한다.
-        CommandExecutionManager manager = MakeD4Manager();
-        manager.Accept(MakeKeep(16));
-        Expect(manager.execution_state() == Feedback::EXECUTING,
-               "non-handshake maneuver is EXECUTING");
-        Command cancel = MakeKeep(16);
-        cancel.execution_request = Command::CANCEL;
-        // KEEP은 CANCEL을 쓰지 않지만 manager 규칙 자체를 검증한다.
-        const auto result = manager.Accept(cancel);
+        // COMMIT된 handshake maneuver의 CANCEL은 거부한다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(16, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        const auto result =
+            manager.Accept(MakeLaneChange(16, Command::CANCEL));
         Expect(result.command_accepted &&
                    result.result_code == Feedback::TOO_LATE_TO_CANCEL &&
                    result.should_plan &&
-                   manager.execution_state() == Feedback::EXECUTING,
-               "CANCEL while EXECUTING is TOO_LATE_TO_CANCEL");
+                   manager.execution_state() == Feedback::COMMITTED,
+               "CANCEL after commit is TOO_LATE_TO_CANCEL");
     }
 
-    // ================= COMMITTED 중 새 일반 명령 =================
+    // ================= 일반 모드 사이의 전환은 허용된다 =================
+    // KEEP/FOLLOW/STOP은 준비 단계가 없어 transaction 시작과 동시에
+    // EXECUTING이다. 이 상태를 잠그면 FSM이 정상 주행 중 어떤 모드 전환도
+    // 할 수 없다. 계약 7.2절이 막으려는 것은 횡이동·합류가 COMMIT된
+    // 이후의 중단이지, 모든 EXECUTING이 아니다.
     {
         CommandExecutionManager manager = MakeD4Manager();
-        manager.Accept(MakeKeep(20));  // -> EXECUTING
-        const auto acceptance = manager.Accept(MakeKeep(21));
+        manager.Accept(MakeKeep(20));
+        Expect(manager.execution_state() == Feedback::EXECUTING,
+               "KEEP is EXECUTING right away");
+        Command stop = MakeKeep(21);
+        stop.maneuver_type = Command::STOP;
+        stop.has_target_pose = true;
+        stop.target_pose_map.orientation.w = 1.0;
+        const auto acceptance = manager.Accept(stop);
+        Expect(acceptance.command_accepted && acceptance.should_plan &&
+                   acceptance.result_code == Feedback::RESULT_NONE &&
+                   manager.command_id() == 21 &&
+                   manager.maneuver_type() == Command::STOP,
+               "KEEP -> STOP transition is allowed");
+    }
+    {
+        // 역방향도 허용된다.
+        CommandExecutionManager manager = MakeD4Manager();
+        Command stop = MakeKeep(22);
+        stop.maneuver_type = Command::STOP;
+        stop.has_target_pose = true;
+        stop.target_pose_map.orientation.w = 1.0;
+        manager.Accept(stop);
+        const auto acceptance = manager.Accept(MakeKeep(23));
+        Expect(acceptance.command_accepted && acceptance.should_plan &&
+                   manager.command_id() == 23 &&
+                   manager.maneuver_type() == Command::KEEP,
+               "STOP -> KEEP transition is allowed");
+    }
+    {
+        // FOLLOW -> AVOID 도 정상 전환이다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command follow = MakeKeep(24);
+        follow.maneuver_type = Command::FOLLOW;
+        follow.primary_object_id = 7;
+        manager.Accept(follow);
+        Expect(manager.execution_state() == Feedback::EXECUTING,
+               "FOLLOW is EXECUTING right away");
+        Command avoid = MakeKeep(25);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.execution_request = Command::PREPARE;
+        avoid.primary_object_id = 21;
+        const auto acceptance = manager.Accept(avoid);
+        Expect(acceptance.command_accepted && acceptance.should_plan &&
+                   manager.command_id() == 25 &&
+                   manager.execution_state() == Feedback::PREPARING,
+               "FOLLOW -> AVOID transition is allowed");
+    }
+
+    // ================= COMMIT된 handshake maneuver는 보호된다 ============
+    {
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(26, Command::PREPARE));
+        manager.NotifyPlanSucceeded();               // -> READY
+        // READY에서는 아직 전환이 허용된다.
+        Expect(manager.execution_state() == Feedback::READY,
+               "LANE_CHANGE reaches READY");
+        const auto switch_at_ready = manager.Accept(MakeKeep(27));
+        Expect(switch_at_ready.command_accepted && switch_at_ready.should_plan &&
+                   manager.command_id() == 27,
+               "LANE_CHANGE in READY can still be replaced");
+    }
+    {
+        // COMMITTED 이후에는 일반 명령을 거부한다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(28, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        Expect(manager.execution_state() == Feedback::COMMITTED,
+               "EXECUTE approval commits the maneuver");
+        const auto acceptance = manager.Accept(MakeKeep(29));
         Expect(acceptance.command_accepted &&
                    acceptance.result_code == Feedback::TOO_LATE_TO_CANCEL &&
                    acceptance.should_plan &&
-                   manager.command_id() == 20,
-               "new normal command during EXECUTING is rejected, current preserved");
+                   manager.command_id() == 28 &&
+                   manager.maneuver_type() == Command::LANE_CHANGE,
+               "committed LANE_CHANGE rejects a normal new command");
+    }
+    {
+        // COMMITTED 중에도 EMERGENCY_STOP은 통과한다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(30, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        const auto acceptance = manager.Accept(MakeEmergencyStop(31));
+        Expect(acceptance.command_accepted && acceptance.should_plan &&
+                   manager.command_id() == 31 &&
+                   manager.maneuver_type() == Command::EMERGENCY_STOP,
+               "committed LANE_CHANGE yields to EMERGENCY_STOP");
     }
 
     // ================= EMERGENCY_STOP preemption =================
@@ -312,6 +395,30 @@ int main() {
         Expect(acceptance.should_plan &&
                    manager.runtime_failure() == RuntimeFailure::NONE,
                "transaction resumes after input recovers");
+    }
+
+    // ================= active_maneuver 소유권 =============================
+    // 피드백의 active_maneuver는 **활성 transaction**의 maneuver여야 한다.
+    // 방금 들어온(거부된) 명령의 것이 아니다. node의 publishFeedbackV2가
+    // manager.maneuver_type()을 그대로 echo하므로, 여기서는 거부 후에도
+    // 그 값이 유지되는지를 검증한다.
+    {
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(80, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+
+        // 일반 KEEP이 오면 거부되고 LANE_CHANGE가 계속된다.
+        const auto rejected = manager.Accept(MakeKeep(81));
+        Expect(rejected.result_code == Feedback::TOO_LATE_TO_CANCEL,
+               "normal command is rejected during committed LANE_CHANGE");
+        Expect(manager.maneuver_type() == Command::LANE_CHANGE &&
+                   manager.has_active_command(),
+               "active maneuver stays LANE_CHANGE after rejecting KEEP");
+        // 거부된 명령의 direction(NONE)을 쓰면 LANE_CHANGE 변환이 실패해
+        // MANEUVER_NONE이 나간다. manager 값을 쓰면 그 문제가 없다.
+        Expect(manager.maneuver_type() != Command::KEEP,
+               "rejected command's maneuver does not leak into active state");
     }
 
     // ================= 거부된 명령이 상태를 오염시키지 않는가 =============

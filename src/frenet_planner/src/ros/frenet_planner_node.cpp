@@ -504,19 +504,20 @@ void FrenetPlannerNode::publishFeedbackV2(
     feedback.result_code = acceptance.result_code;
     feedback.result_detail = acceptance.detail;
 
-    // active_maneuver는 내부 모드에서 역매핑한다. 활성 transaction이 없으면
-    // MANEUVER_NONE이다(계약 2.3절).
-    if (command_manager_.has_active_command()) {
-        BehaviorState mode = LANE_KEEPING;
-        if (ConvertManeuverType(command_manager_.maneuver_type(),
-                                message.direction, mode)) {
-            feedback.active_maneuver = ConvertToFeedbackManeuver(mode);
-        } else {
-            feedback.active_maneuver = asmc_msgs::FrenetFeedback::MANEUVER_NONE;
-        }
-    } else {
-        feedback.active_maneuver = asmc_msgs::FrenetFeedback::MANEUVER_NONE;
-    }
+    // active_maneuver는 **활성 transaction**의 maneuver다. 방금 들어온 명령이
+    // 아니다 - 거부된 명령의 필드를 쓰면 실제로 수행 중인 기동을 잘못
+    // 보고한다.
+    //
+    //   활성: id=30 LANE_CHANGE LEFT (COMMITTED)
+    //   수신: id=31 KEEP direction=NONE  -> 거부되어 30이 계속 수행됨
+    //   이때 incoming direction(NONE)으로 LANE_CHANGE를 변환하면 실패해
+    //   MANEUVER_NONE이 나간다. 실제로는 LANE_CHANGE 중이다.
+    //
+    // manager의 maneuver_type_은 이미 BehaviorCommand.maneuver_type 체계이므로
+    // 내부 enum을 경유할 필요가 없다. 그대로 echo한다(계약 1.5절).
+    feedback.active_maneuver = command_manager_.has_active_command()
+        ? command_manager_.maneuver_type()
+        : asmc_msgs::FrenetFeedback::MANEUVER_NONE;
 
     // D3-3은 궤적을 만들지 않는다. 아직 채우지 않는 필드는 메시지가 정의한
     // sentinel을 정확히 사용한다 - 임의의 0이나 추측값을 넣지 않는다
