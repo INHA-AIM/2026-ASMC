@@ -563,29 +563,61 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
 }
 
 // Cartesian 정지 목표 -> reference line 종방향 좌표.
-bool FrenetPlanner::ProjectPointToS(double x, double y, double s_hint,
-                                    double& out_s) const {
+bool FrenetPlanner::ProjectPointToFrenet(double x, double y, double s_hint,
+                                         double search_window,
+                                         double max_lateral_distance,
+                                         double& out_s, double& out_d) const {
     if (!ref_loaded_ || ref_.points.empty()) return false;
     if (!std::isfinite(x) || !std::isfinite(y)) return false;
-
-    // 탐색창은 ego localization용 기본값(30m)이 아니라 STOP 전용 값을 쓴다.
-    // 정지 목표는 ego보다 앞에 있어 기본 창을 벗어나고, 그러면 잘린 초기
-    // 추정값에서 출발한 Newton이 트랙의 다른 구간으로 발산한다.
-    const double* hint = std::isfinite(s_hint) ? &s_hint : nullptr;
-    const double s = FindClosestS(ref_, x, y, hint,
-                                  stop_cfg_.projection_search_window);
-    if (!std::isfinite(s)) return false;
-
-    // 최근접 투영은 목표가 경로에서 아무리 멀어도 어떤 s든 돌려준다. 실제로
-    // 그 s가 목표를 대표하는지 확인하지 않으면, 다른 도로 위의 정지 지점이
-    // 엉뚱한 위치의 정지 명령으로 둔갑한다.
-    const RefPoint rp = Interpolate(ref_, s);
-    const double lateral_error = std::hypot(x - rp.x, y - rp.y);
-    if (!std::isfinite(lateral_error) ||
-        lateral_error > stop_cfg_.max_lateral_offset) {
+    // 창과 허용 거리는 호출자가 정한다. 잘못된 값으로 조용히 통과시키면
+    // 투영 방어가 사실상 사라진다.
+    if (!std::isfinite(search_window) || search_window <= 0.0) return false;
+    if (!std::isfinite(max_lateral_distance) || max_lateral_distance <= 0.0) {
         return false;
     }
 
+    // 탐색창은 ego localization용 기본값(30m)이 아니라 호출자가 준 값을 쓴다.
+    // 목표점은 ego보다 앞에 있어 기본 창을 벗어나고, 그러면 잘린 초기
+    // 추정값에서 출발한 Newton이 트랙의 다른 구간으로 발산한다.
+    const double* hint = std::isfinite(s_hint) ? &s_hint : nullptr;
+    const double s = FindClosestS(ref_, x, y, hint, search_window);
+    if (!std::isfinite(s)) return false;
+
+    // 최근접 투영은 목표가 경로에서 아무리 멀어도 어떤 s든 돌려준다. 실제로
+    // 그 s가 목표를 대표하는지 확인하지 않으면, 다른 도로 위의 목표점이
+    // 엉뚱한 위치의 명령으로 둔갑한다.
+    const RefPoint rp = Interpolate(ref_, s);
+    const double lateral_error = std::hypot(x - rp.x, y - rp.y);
+    if (!std::isfinite(lateral_error) ||
+        lateral_error > max_lateral_distance) {
+        return false;
+    }
+
+    // d의 부호 규약은 CartesianToFrenet 식 (4)와 같아야 한다. 다른 식을 쓰면
+    // 같은 점이 경로에 따라 좌/우가 반대로 나온다.
+    //   d = (x - r(s))^T n_r(s),  n_r = (-sin(theta_r), cos(theta_r))
+    // 즉 진행 방향 기준 좌측이 양수다.
+    const double d = (x - rp.x) * (-std::sin(rp.theta)) +
+                     (y - rp.y) * std::cos(rp.theta);
+    if (!std::isfinite(d)) return false;
+
+    out_s = s;
+    out_d = d;
+    return true;
+}
+
+bool FrenetPlanner::ProjectPointToS(double x, double y, double s_hint,
+                                    double& out_s) const {
+    // STOP 전용 wrapper. 탐색창과 허용 횡거리를 STOP config로 고정하고 d는
+    // 버린다. v1 STOP도 이 함수를 쓰고 있으므로 동작을 바꾸지 않는다
+    // (ProjectPointToFrenet 헤더 주석 참고).
+    double s = 0.0;
+    double ignored_d = 0.0;
+    if (!ProjectPointToFrenet(x, y, s_hint,
+                              stop_cfg_.projection_search_window,
+                              stop_cfg_.max_lateral_offset, s, ignored_d)) {
+        return false;
+    }
     out_s = s;
     return true;
 }
@@ -1470,6 +1502,19 @@ bool FrenetPlanner::PlanInternal(
             // 요청 방향을 context에 보존한다. mode=AVOID 하나로는
             // LEFT/RIGHT/NONE을 구분할 수 없다(계약 3.3절).
             v2_avoidance_.requested_direction = cmd.requested_direction;
+
+            // target pose 투영 결과도 보존한다 (D6-1a). node가 이미 Frenet
+            // (s, d)로 바꿔서 [A] 필드에 넣어 보냈다 - core는 그 값을 그대로
+            // 들고 있다가 D6-2에서 목표 d를 정할 때 쓴다.
+            //
+            // 여기서 avoidance_d_offset([B])에 옮기지 않는다. 그러면
+            // "FSM이 지정한 목표"와 "planner가 후보 비교로 정한 목표"를
+            // 구분할 수 없게 된다(PlannerCommand 주석 참고).
+            v2_avoidance_.has_requested_target_d = cmd.has_avoid_target_d;
+            v2_avoidance_.requested_target_d =
+                cmd.has_avoid_target_d ? cmd.avoid_target_d : 0.0;
+            v2_avoidance_.requested_target_s =
+                cmd.has_avoid_target_d ? cmd.avoid_target_s : 0.0;
 
             const AvoidTargetStatus status = ResolveExternalAvoidTarget(
                 s, cmd.target_object_id, obstacles, v2_avoidance_);

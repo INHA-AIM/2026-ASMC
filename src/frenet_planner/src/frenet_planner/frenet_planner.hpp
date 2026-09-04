@@ -78,6 +78,31 @@ public:
     // 대한 정지 지점이 아니라고 보고 false를 반환한다.
     bool ProjectPointToS(double x, double y, double s_hint, double& out_s) const;
 
+    // Cartesian 점을 reference line의 (s, d)로 투영한다 (D6-1a).
+    //
+    // ===== 왜 ProjectPointToS를 재사용하지 않는가 =====
+    //
+    // 그 함수는 이름과 달리 **STOP 전용**이다:
+    //   - 탐색창이 stop_cfg_.projection_search_window에 묶여 있다
+    //   - 허용 횡거리가 stop_cfg_.max_lateral_offset에 묶여 있다
+    //   - d를 반환하지 않는다
+    //
+    // AVOID target pose는 d가 핵심이다(어느 쪽으로 얼마나 비켜갈지). 그리고
+    // AVOID의 허용 횡거리는 STOP의 것과 같을 이유가 없다 - STOP은 "정지선이
+    // 이 경로 위에 있는가"를 묻고, AVOID는 "회피 목표점이 이 경로 근방인가"를
+    // 묻는다.
+    //
+    // 그래서 STOP config를 AVOID에 끌어오거나 ProjectPointToS에 d 출력을
+    // 덧붙이는 대신, 두 용도의 공통 primitive를 아래에 두고 ProjectPointToS는
+    // 그 wrapper로 남긴다. D4에서 MORAI로 검증한 STOP 투영 동작은 바뀌지
+    // 않는다.
+    //
+    // search_window / max_lateral_distance는 호출자가 정한다. 어느 쪽이든
+    // 유한하지 않거나 0 이하면 false다.
+    bool ProjectPointToFrenet(double x, double y, double s_hint,
+                              double search_window, double max_lateral_distance,
+                              double& out_s, double& out_d) const;
+
     // Ego Cartesian 위치의 s. 노드가 ProjectPointToS의 s_hint를 얻는 용도.
     bool ProjectEgoToS(const CartesianState& ego, double& out_s) const;
 
@@ -150,6 +175,23 @@ public:
         return v2_avoidance_.requested_direction;
     }
 
+    // FSM이 target pose로 지정한 회피 목표의 Frenet 값 (D6-1a).
+    //
+    // has_...가 false이면 pose가 없었거나 투영이 실패한 것이다. 그때는
+    // 장애물 geometry와 요청 방향으로 목표를 계산한다(D6-2).
+    //
+    // d는 음수가 유효하므로 -1.0 sentinel을 쓸 수 없다 - 유효성은 플래그로만
+    // 판단한다(계약 1.3절과 같은 이유).
+    bool avoid_has_requested_target_d() const {
+        return v2_avoidance_.has_requested_target_d;
+    }
+    double avoid_requested_target_d() const {
+        return v2_avoidance_.requested_target_d;
+    }
+    double avoid_requested_target_s() const {
+        return v2_avoidance_.requested_target_s;
+    }
+
     PlanFailureReason last_failure_reason() const { return last_failure_reason_; }
 
 private:
@@ -212,6 +254,13 @@ private:
 
         // FSM이 요청한 방향. NONE이면 Frenet이 좌/우를 고른다.
         LateralDirection requested_direction = LateralDirection::NONE;
+
+        // FSM이 target pose로 준 회피 목표를 Frenet으로 투영한 값 (D6-1a).
+        // AVOID의 target pose는 선택 사항이므로 없을 수 있다.
+        // 0.0은 유효한 d이므로 유효성은 플래그로만 판단한다.
+        bool has_requested_target_d = false;
+        double requested_target_d = 0.0;
+        double requested_target_s = 0.0;
     };
 
     struct FollowingContext {

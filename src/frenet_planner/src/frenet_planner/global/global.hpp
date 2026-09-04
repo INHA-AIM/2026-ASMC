@@ -141,6 +141,34 @@ struct PlannerCommand {
     // 평가해야 한다(계약 3.3절).
     LateralDirection requested_direction = LateralDirection::NONE;
 
+    // FSM이 준 AVOID 목표점을 Frenet으로 투영한 결과 (D6-1a).
+    //
+    // ===== 왜 avoidance_d_offset에 바로 넣지 않는가 =====
+    //
+    // avoidance_d_offset은 [B] planner 계산 결과다. 외부에서 온 의도를 그
+    // 필드에 넣으면 D2에서 만든 command/result 경계가 다시 흐려진다 -
+    // "FSM이 지정한 목표"와 "planner가 후보 비교로 정한 목표"를 구분할 수
+    // 없게 된다.
+    //
+    // 그래서 투영 결과는 여기 [A]에 두고, D6-2가 최종 목표를 정할 때
+    //   has_avoid_target_d=true  -> pose에서 온 avoid_target_d 사용
+    //   has_avoid_target_d=false -> 장애물 geometry + requested_direction으로 계산
+    // 하여 결과를 avoidance_d_offset에 쓴다.
+    //
+    // BehaviorCommand.has_target_pose가 false이거나 투영이 실패하면 false다.
+    // AVOID에서 target pose는 선택 사항이다(원본 메시지: "AVOID: 필요하면
+    // 회피 목표점").
+    //
+    // 0.0은 유효한 d(차선 중앙)이므로 "미지정"을 0으로 표현할 수 없다.
+    // 그래서 별도 유효성 플래그를 둔다(계약 1.3절과 같은 이유 - d는 음수가
+    // 유효하므로 -1.0 sentinel도 쓸 수 없다).
+    bool has_avoid_target_d = false;
+    double avoid_target_d = 0.0;            // [m]
+
+    // 위 투영의 종방향 좌표 [m]. has_avoid_target_d가 true일 때만 유효하다.
+    // 회피 목표점이 장애물보다 앞/뒤인지 판단하는 데 쓴다(D6-2).
+    double avoid_target_s = 0.0;
+
     // =====================================================================
     // [B] Planner 계산 결과 - planner가 채워 후보 생성기에 전달한다
     //

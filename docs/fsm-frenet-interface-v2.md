@@ -314,6 +314,96 @@ config가 결합되면 FOLLOW 튜닝이 AVOID 동작을 바꾼다.
 보관하지도 않는다. 없는 속도를 추정해 위치를 밀면 실제보다 멀리 있다고 판단해
 회피 시작이 늦어진다.
 
+#### 3.3.3 AVOID target pose 투영 (D6-1a에서 확정)
+
+AVOID의 `has_target_pose`는 **선택 사항**이다(원본 메시지: "AVOID: 필요하면
+회피 목표점"). D6-1까지는 그 pose가 validation만 통과하고 버려졌다.
+
+| `has_target_pose` | 목표 d 결정 |
+|---|---|
+| `false` | 장애물 geometry + `direction`으로 계산 (D6-2) |
+| `true` | pose를 Frenet으로 투영해 그 d를 사용 |
+
+##### `ProjectPointToS`를 재사용하지 않는 이유
+
+그 함수는 이름과 달리 **STOP 전용**이다.
+
+```cpp
+FindClosestS(..., stop_cfg_.projection_search_window);
+if (lateral_error > stop_cfg_.max_lateral_offset) return false;
+// out_s만 반환 — d가 없다
+```
+
+AVOID는 d가 핵심이고, 허용 횡거리도 STOP과 같을 이유가 없다.
+
+| | 묻는 것 | 허용 횡거리 |
+|---|---|---|
+| STOP | 정지선이 이 **경로 위**에 있는가 | 5.0 m (`stop_cfg_`) |
+| AVOID | 회피 목표점이 이 경로 **근방**인가 | 4.0 m (node param) |
+
+그래서 공용 primitive를 아래에 두고 STOP은 wrapper로 남긴다.
+
+```
+ProjectPointToFrenet(x, y, s_hint, search_window,
+                     max_lateral_distance, out_s, out_d)
+      ↑                              ↑
+ProjectPointToS(STOP config)    AVOID (node param)
+```
+
+D4에서 MORAI로 검증한 STOP 투영 동작은 바뀌지 않는다.
+
+`d`의 부호 규약은 `CartesianToFrenet` 식 (4)와 **반드시** 같아야 한다.
+
+```
+d = (x - r(s))^T n_r(s),   n_r = (-sin θ_r, cos θ_r)
+```
+
+즉 진행 방향 좌측이 양수다. 다른 식을 쓰면 같은 점이 경로에 따라 좌/우가
+반대로 나온다.
+
+##### 투영 결과를 `avoidance_d_offset`에 바로 넣지 않는다
+
+`avoidance_d_offset`은 **[B] planner 계산 결과** 필드다. 외부에서 온 의도를
+거기 넣으면 D2에서 만든 command/result 경계가 다시 흐려진다 — "FSM이 지정한
+목표"와 "planner가 후보 비교로 정한 목표"를 구분할 수 없게 된다.
+
+그래서 투영 결과는 **[A]** 에 둔다.
+
+```cpp
+bool   has_avoid_target_d = false;   // 0.0은 유효한 d이므로 플래그 필요
+double avoid_target_d     = 0.0;
+double avoid_target_s     = 0.0;
+```
+
+D6-2가 최종 목표를 정할 때 이 값을 읽고, 결과를 `avoidance_d_offset`에 쓴다.
+
+##### 탐색창의 실제 효과 (실측)
+
+`search_window`는 Newton 반복의 **초기 추정값** 탐색 범위다(`FindClosestS`).
+현재 테스트 트랙(길이 2184.6 m)은 **자기 자신과 62 m 이내로 접근하지
+않으므로**, 정상적인 목표점(ego 앞 수십 m)에서는 창 값이 결과를 바꾸지
+않는다 — 어느 초기값에서 출발해도 같은 근으로 수렴한다.
+
+창이 관측 가능해지는 조건은 hint가 목표에서 아주 멀 때다. 실측
+(hint `s=200`, 목표 `s≈900`, 허용 횡거리를 무한대로 열어 근만 관찰):
+
+| `search_window` | 수렴한 `s` | `d` | |
+|---|---|---|---|
+| 100 | 1156.67 | -152.63 | 엉뚱한 국소 근 |
+| 500 | 611.98 | 244.32 | 엉뚱한 국소 근 |
+| 700 | 895.42 | -0.13 | 정답 |
+
+**이것이 횡거리 검사가 필요한 이유다.** Newton은 국소 수렴이므로 초기값이
+나쁘면 다른 근으로 간다. 그 근은 목표점에서 수백 m 떨어져 있으므로 횡거리
+검사가 잡아낸다. 검사를 제거하면 엉뚱한 `s`가 회피 목표로 통과한다.
+
+##### heading 검증은 node 책임이다
+
+`ProjectPointToFrenet`은 `(s, d)`만 돌려준다. "이 heading 차이가 허용
+가능한가"는 v2 계약 판단이므로 ROS 계층이 한다 — `ReferenceHeadingAt`과
+같은 분담이다(3.4절 4항). AVOID의 임계값은 STOP과 별도 param
+(`v2/avoid/max_target_heading_error_rad`, 기본 45°)이다.
+
 ### 3.4 target pose 검증 (`has_target_pose=true`일 때)
 
 1. `position.x/y/z` 모두 `isfinite`
@@ -1508,6 +1598,73 @@ tracking update가 일어나 yaw-rate가 0 방향으로 한 번 더 필터링된
 `last_mode_` / `last_target_speed_` / `last_failure_reason_`도 두 번째 호출
 결과로 덮인다. AVOID 후보 평가와 유지 궤적은 **한 번의 전처리(Cartesian→Frenet,
 object tracking/prediction) 위에서 두 결과를 만들어** 분리 반환한다(D6-2).
+
+#### 12.7.2 D6-2 착수 전 필수 처리 — 저속 AVOID resolver 우회
+
+**D6-1에서 실측 확인한 문제다.** `ego.v`가 `kLowSpeedFallbackV`(0.5 m/s)
+미만이면 external AVOID가 resolver에 도달하지 않는다.
+
+현재 `PlanInternal`의 순서는 다음과 같다.
+
+```
+context reset
+  ↓
+EMERGENCY 분기
+  ↓
+low-speed fallback       ← 여기서 return
+  ↓
+FrenetState 생성
+  ↓
+external AVOID resolver  ← 도달하지 않는다
+```
+
+fallback 제외 조건에 `external_stop`과 `external_follow`만 있고 AVOID가
+없기 때문이다. 실측 결과(`AVOID target=21`, 장애물 25 m 전방):
+
+| `ego.v` | `Plan()` | `active_avoid_target_id()` | `last_failure_reason()` |
+|---|---|---|---|
+| 6.00 | false | 21 | `UNSUPPORTED_BEHAVIOR` (D6-1 정상) |
+| 2.00 | false | 21 | `UNSUPPORTED_BEHAVIOR` |
+| 1.00 | false | 21 | `UNSUPPORTED_BEHAVIOR` |
+| 0.60 | false | 21 | `UNSUPPORTED_BEHAVIOR` |
+| 0.40 | **true** | **-1** | **`NONE`** |
+| 0.30 | **true** | **-1** | **`NONE`** |
+| 0.00 | **true** | **-1** | **`NONE`** |
+
+저속 세 행이 위험하다. `Plan()`이 **성공을 반환**하면서 대상을 확보하지도
+않았고, 나오는 궤적은 `fallback_target_d = 0.0`의 중앙 크롤링 경로다.
+D6-4에서 gate를 열면 FSM 입장에서 이것이 "회피 성공"으로 보인다.
+
+MORAI에서 나타날 시나리오는 명확하다.
+
+```
+장애물 앞에서 감속 (ego → 0.3 m/s)
+  ↓
+FSM: AVOID object=21
+  ↓
+Frenet: 중앙 크롤링 경로 + plan_valid=true
+  ↓
+장애물 쪽으로 기어간다
+```
+
+**`external_avoid`를 fallback 제외 조건에 추가하는 것만으로는 끝나지
+않는다.** 저속에서는 path generator 자체가 lateral candidate를 현재 d와 0
+주변으로 제한하므로, 제외만 하면 후보가 0개가 되어 실패로 바뀔 뿐이다.
+
+그래서 D6-2는 다음 정책까지 함께 정한다.
+
+| 저속 AVOID PREPARE에서 | 동작 |
+|---|---|
+| 대상 확보 | **반드시 수행**한다 (resolver를 우회하지 않는다) |
+| maintenance trajectory | 안전하게 유지한다 (정지 또는 크롤링) |
+| AVOID lateral candidate가 물리적으로 불가 | `WAITING` (terminal 실패가 아니다) |
+| 속도 회복 + candidate valid | `READY` |
+
+`WAITING`이 정답인 이유는 5.2절이다. PREPARE에서 후보가 막힌 것은 terminal
+`FAILED`가 아니라 "지금은 안 되지만 조건이 바뀌면 된다"이다. 저속은 정확히
+그런 조건이다 — 차가 다시 움직이면 후보가 생긴다.
+
+D6-1a(target pose 투영)는 이 문제와 독립적이므로 먼저 진행해도 된다.
 
 ### 12.8 파일 배치
 

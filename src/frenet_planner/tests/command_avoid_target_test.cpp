@@ -18,7 +18,21 @@
 // UNSUPPORTED_BEHAVIOR로 실패한다 - 확보만 하고 중앙 유지 궤적을 내보내면
 // FSM 입장에서 "회피 성공"으로 보이면서 실제로는 장애물 쪽으로 직진한다.
 //
-// 계약: docs/fsm-frenet-interface-v2.md 12.7.1절(D6-1), 3.3절, 8.2절
+// ===== D6-1a에서 추가한 범위 =====
+//
+// optional target pose의 Frenet 투영이다. AVOID에서 has_target_pose=true는
+// 합법인데(원본 메시지: "AVOID: 필요하면 회피 목표점") D6-1까지는 그 pose가
+// 그냥 버려졌다.
+//
+// 공용 primitive ProjectPointToFrenet()을 새로 두고, 기존 STOP 전용
+// ProjectPointToS()는 그 wrapper로 남긴다 - STOP config에 묶인 탐색창과
+// 허용 횡거리를 AVOID가 끌어다 쓰면 STOP 튜닝이 AVOID 동작을 바꾼다.
+//
+// heading 검증(계약 3.4절 4항)은 node 책임이므로 여기서 다루지 않는다.
+// ProjectPointToFrenet은 s/d만 돌려주고, "이 heading 차이가 허용 가능한가"는
+// ROS 계층이 판단한다(ReferenceHeadingAt과 같은 분담).
+//
+// 계약: docs/fsm-frenet-interface-v2.md 12.7.1절(D6-1/D6-1a), 3.3절, 8.2절
 
 #include "frenet_planner/frenet_planner.hpp"
 
@@ -134,6 +148,27 @@ PlannerCommand MakeAvoidCommand(
     command.target_object_id = target_object_id;
     command.requested_direction = direction;
     return command;
+}
+
+// D6-1a: node가 target pose를 투영해 [A] 필드에 넣어 보낸 상태를 흉내낸다.
+// core는 투영 자체를 하지 않는다 - 그것은 node 책임이다(계약 3.4절).
+PlannerCommand MakeAvoidCommandWithTargetD(
+    int target_object_id, double target_s, double target_d,
+    LateralDirection direction = LateralDirection::NONE) {
+    PlannerCommand command = MakeAvoidCommand(target_object_id, direction);
+    command.has_avoid_target_d = true;
+    command.avoid_target_s = target_s;
+    command.avoid_target_d = target_d;
+    return command;
+}
+
+// 경로 위 target_s에서 횡으로 lateral_d 만큼 벗어난 map 좌표.
+// MakeObstacle과 같은 부호 규약을 쓴다(진행 방향 좌측이 양수).
+void MapPointAt(const Waypoints& waypoints, double target_s, double lateral_d,
+                double& out_x, double& out_y) {
+    const Pose2D pose = PoseAt(waypoints, target_s);
+    out_x = pose.x - lateral_d * std::sin(pose.yaw);
+    out_y = pose.y + lateral_d * std::cos(pose.yaw);
 }
 
 // D6-1은 확보까지만 구현했으므로 성공 확보의 관측 가능한 결과는
@@ -511,6 +546,308 @@ int main() {
         // 확인한다 - byte 단위 동일성은 legacy_fingerprint가 담당한다.
         const bool legacy_ok = planner.Plan(ego, with_target, path);
         Expect(legacy_ok, "isolation: the legacy path still plans normally");
+    }
+
+    // ===== D6-1a: optional target pose 투영 =============================
+
+    // ---- 14. 공용 primitive가 s와 d를 모두 돌려준다 --------------------
+    {
+        FrenetPlanner planner;
+        planner.Init(config);
+        // 경로 위 정확히 그 지점: d는 0에 가까워야 한다.
+        double x = 0.0, y = 0.0;
+        MapPointAt(waypoints, kEgoS + 30.0, 0.0, x, y);
+        double s = 0.0, d = 0.0;
+        Expect(planner.ProjectPointToFrenet(x, y, kEgoS, 100.0, 4.0, s, d),
+               "projection of an on-path point succeeds");
+        Expect(std::fabs(s - (kEgoS + 30.0)) < 3.0,
+               "projection recovers the longitudinal coordinate");
+        Expect(std::fabs(d) < 0.5,
+               "an on-path point projects to d near zero");
+    }
+    {
+        // 좌측으로 2 m 벗어난 점 -> d > 0. 부호 규약은 CartesianToFrenet
+        // 식 (4)와 같아야 한다(진행 방향 좌측이 양수).
+        FrenetPlanner planner;
+        planner.Init(config);
+        double x = 0.0, y = 0.0;
+        MapPointAt(waypoints, kEgoS + 30.0, 2.0, x, y);
+        double s = 0.0, d = 0.0;
+        Expect(planner.ProjectPointToFrenet(x, y, kEgoS, 100.0, 4.0, s, d),
+               "projection of a left-offset point succeeds");
+        Expect(d > 1.0, "a point left of the path has positive d");
+        Expect(std::fabs(d - 2.0) < 0.5, "the left offset magnitude is kept");
+    }
+    {
+        // 우측으로 2 m -> d < 0.
+        FrenetPlanner planner;
+        planner.Init(config);
+        double x = 0.0, y = 0.0;
+        MapPointAt(waypoints, kEgoS + 30.0, -2.0, x, y);
+        double s = 0.0, d = 0.0;
+        Expect(planner.ProjectPointToFrenet(x, y, kEgoS, 100.0, 4.0, s, d),
+               "projection of a right-offset point succeeds");
+        Expect(d < -1.0, "a point right of the path has negative d");
+        Expect(std::fabs(d + 2.0) < 0.5, "the right offset magnitude is kept");
+    }
+    {
+        // 허용 횡거리를 넘는 점은 거부한다. 이것이 없으면 옆 도로의 점이
+        // 이 경로의 회피 목표로 둔갑한다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        double x = 0.0, y = 0.0;
+        MapPointAt(waypoints, kEgoS + 30.0, 12.0, x, y);
+        double s = 0.0, d = 0.0;
+        Expect(!planner.ProjectPointToFrenet(x, y, kEgoS, 100.0, 4.0, s, d),
+               "a point far from the path is rejected");
+        // 같은 점이라도 허용 거리를 넓히면 통과해야 한다 - 거부 이유가
+        // 거리 검사임을 확인한다(다른 이유로 실패한 것이 아니다).
+        Expect(planner.ProjectPointToFrenet(x, y, kEgoS, 100.0, 20.0, s, d),
+               "the same point passes with a wider lateral allowance");
+        Expect(d > 10.0, "the wide-allowance projection reports the large d");
+    }
+    {
+        // 파라미터 방어. 창이나 허용 거리가 잘못되면 조용히 통과시키지
+        // 않는다 - 그러면 투영 방어가 사실상 사라진다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        double x = 0.0, y = 0.0;
+        MapPointAt(waypoints, kEgoS + 30.0, 0.0, x, y);
+        double s = 0.0, d = 0.0;
+        Expect(!planner.ProjectPointToFrenet(x, y, kEgoS, 0.0, 4.0, s, d),
+               "a non-positive search window is rejected");
+        Expect(!planner.ProjectPointToFrenet(x, y, kEgoS, -10.0, 4.0, s, d),
+               "a negative search window is rejected");
+        Expect(!planner.ProjectPointToFrenet(x, y, kEgoS, 100.0, 0.0, s, d),
+               "a non-positive lateral allowance is rejected");
+        const double nan_value = std::nan("");
+        Expect(!planner.ProjectPointToFrenet(x, y, kEgoS, nan_value, 4.0, s, d),
+               "a NaN search window is rejected");
+        Expect(!planner.ProjectPointToFrenet(x, y, kEgoS, 100.0, nan_value,
+                                             s, d),
+               "a NaN lateral allowance is rejected");
+        Expect(!planner.ProjectPointToFrenet(nan_value, y, kEgoS, 100.0, 4.0,
+                                             s, d),
+               "a NaN coordinate is rejected");
+    }
+
+    // ---- 15. STOP wrapper 동작이 보존된다 ------------------------------
+    //
+    // ProjectPointToS()는 이제 ProjectPointToFrenet()의 wrapper다. STOP은
+    // D4에서 MORAI로 검증했으므로 동작이 바뀌면 안 된다.
+    //
+    // 검증 방법: **STOP과 AVOID의 허용 횡거리 사이에 있는 점**을 쓴다.
+    //   STOP  max_lateral_offset          = 5.0 m (params.yaml)
+    //   AVOID max_target_lateral_offset   = 4.0 m (node 기본값)
+    // 4.0과 5.0 사이의 점은 STOP에서는 통과하고 AVOID에서는 거부된다.
+    //
+    // 이 구분이 없으면 wrapper가 AVOID 값을 쓰도록 바꿔도 테스트가 통과한다
+    // (돌연변이 MUT-D로 실제 확인했다 - 처음에는 1.0 m 점을 써서 두 값
+    // 모두 통과했고, 그래서 config 결합 회귀를 놓쳤다).
+    {
+        FrenetPlanner planner;
+        planner.Init(config);
+        double x = 0.0, y = 0.0;
+        MapPointAt(waypoints, kEgoS + 40.0, 4.5, x, y);
+
+        double wrapper_s = 0.0;
+        const bool wrapper_ok = planner.ProjectPointToS(x, y, kEgoS, wrapper_s);
+        Expect(wrapper_ok,
+               "the STOP wrapper accepts a target 4.5 m off the path "
+               "(within its own 5 m allowance)");
+
+        // 같은 점을 AVOID 기본 허용거리로 투영하면 거부되어야 한다. 즉 두
+        // 용도의 임계값이 실제로 다르다.
+        double avoid_s = 0.0, avoid_d = 0.0;
+        Expect(!planner.ProjectPointToFrenet(x, y, kEgoS, 100.0, 4.0,
+                                             avoid_s, avoid_d),
+               "the same target is rejected under the AVOID allowance");
+
+        // wrapper가 STOP 값을 쓰고 있음을 s 일치로 확인한다.
+        double direct_s = 0.0, direct_d = 0.0;
+        const bool direct_ok = planner.ProjectPointToFrenet(
+            x, y, kEgoS, 100.0, 5.0, direct_s, direct_d);
+        Expect(direct_ok && wrapper_ok &&
+                   std::fabs(wrapper_s - direct_s) < 1e-9,
+               "the STOP wrapper matches the primitive with STOP parameters");
+        Expect(direct_ok && std::fabs(direct_d - 4.5) < 0.5,
+               "the boundary point really is ~4.5 m off the path");
+    }
+    {
+        // STOP의 허용 횡거리(5 m)를 넘는 점은 wrapper가 거부해야 한다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        double x = 0.0, y = 0.0;
+        MapPointAt(waypoints, kEgoS + 40.0, 12.0, x, y);
+        double s = 0.0;
+        Expect(!planner.ProjectPointToS(x, y, kEgoS, s),
+               "the STOP wrapper still rejects a far target");
+    }
+
+    // ---- 15b. 탐색창이 실제로 결과를 바꾼다 ----------------------------
+    //
+    // 탐색창은 Newton 반복의 **초기 추정값** 탐색 범위다(FindClosestS).
+    // 이 테스트 트랙은 자기 자신과 62 m 이내로 접근하지 않으므로, 정상적인
+    // 목표점(ego 앞 수십 m)에서는 창 값이 결과를 바꾸지 않는다 - 어느 초기값
+    // 에서 출발해도 같은 근으로 수렴한다.
+    //
+    // 창이 관측 가능해지는 조건은 hint가 목표에서 아주 멀 때다. 그때 창 값에
+    // 따라 초기 추정값이 달라지고, Newton이 **다른 국소 근**으로 수렴할 수
+    // 있다. 실측(hint=200, 목표 s≈900):
+    //
+    //   window=100  -> s=1156.67, d=-152.63   (엉뚱한 근)
+    //   window=500  -> s= 611.98, d= 244.32   (엉뚱한 근)
+    //   window=700  -> s= 895.42, d=  -0.13   (정답)
+    //
+    // 두 가지를 함께 고정한다:
+    //   1. 창 값이 실제로 전달된다(무시하면 아래 차이가 사라진다)
+    //   2. 횡거리 검사가 엉뚱한 근을 잡아낸다 - Newton의 국소 수렴이 이
+    //      방어를 필요하게 만드는 이유다
+    {
+        FrenetPlanner planner;
+        planner.Init(config);
+        // 목표는 s≈900. hint는 200으로 700 m 떨어뜨린다.
+        const Pose2D far_target = PoseAt(waypoints, 900.0);
+        constexpr double kFarHint = 200.0;
+
+        // 넉넉한 허용치로는 어떤 창이든 "성공"하지만 s가 달라진다.
+        double s_narrow = 0.0, d_narrow = 0.0;
+        double s_wide = 0.0, d_wide = 0.0;
+        const bool narrow_ok = planner.ProjectPointToFrenet(
+            far_target.x, far_target.y, kFarHint, 100.0, 1e9,
+            s_narrow, d_narrow);
+        const bool wide_ok = planner.ProjectPointToFrenet(
+            far_target.x, far_target.y, kFarHint, 700.0, 1e9,
+            s_wide, d_wide);
+        Expect(narrow_ok && wide_ok,
+               "window probe: both windows return a root");
+        Expect(std::fabs(s_narrow - s_wide) > 100.0,
+               "the search window actually changes the projection result");
+
+        // 넓은 창은 정답으로 수렴한다.
+        Expect(std::fabs(s_wide - 900.0) < 10.0 && std::fabs(d_wide) < 1.0,
+               "a window that reaches the target converges to the true root");
+
+        // 좁은 창은 엉뚱한 근으로 갔고, 횡거리 검사가 그것을 잡아낸다.
+        Expect(std::fabs(d_narrow) > 50.0,
+               "a too-narrow window converges to a distant wrong root");
+        double rejected_s = 0.0, rejected_d = 0.0;
+        Expect(!planner.ProjectPointToFrenet(far_target.x, far_target.y,
+                                             kFarHint, 100.0, 5.0,
+                                             rejected_s, rejected_d),
+               "the lateral gate rejects the wrong root");
+    }
+
+    // ---- 16. 투영 결과가 core까지 보존된다 -----------------------------
+    //
+    // node가 투영해서 [A] 필드로 넣어 보낸 값을 core가 그대로 들고 있어야
+    // D6-2가 쓸 수 있다.
+    {
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath path;
+
+        // pose 없음: 기존 D6-1 동작 그대로.
+        planner.Plan(ego, objects, MakeAvoidCommand(21), path);
+        Expect(planner.active_avoid_target_id() == 21,
+               "pose-less AVOID still binds its target");
+        Expect(!planner.avoid_has_requested_target_d(),
+               "pose-less AVOID reports no requested target_d");
+    }
+    {
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath path;
+
+        // 좌측 회피 목표.
+        const bool ok = planner.Plan(
+            ego, objects,
+            MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, 2.5,
+                                        LateralDirection::LEFT),
+            path);
+        Expect(BoundButNotPlanned(planner, ok, 21),
+               "AVOID with a target pose still binds its target");
+        Expect(planner.avoid_has_requested_target_d(),
+               "the projected target_d reaches the planner core");
+        Expect(std::fabs(planner.avoid_requested_target_d() - 2.5) < 1e-9,
+               "the projected target_d value is preserved exactly");
+        Expect(std::fabs(planner.avoid_requested_target_s() -
+                         (kEgoS + 30.0)) < 1e-9,
+               "the projected target_s value is preserved exactly");
+        Expect(planner.avoid_requested_direction() == LateralDirection::LEFT,
+               "the requested direction survives alongside the target pose");
+    }
+    {
+        // 우측 목표. 음수 d가 그대로 보존되어야 한다 - d는 음수가 유효하므로
+        // 어딘가에서 -1.0 sentinel이나 fabs를 쓰면 여기서 깨진다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath path;
+        planner.Plan(ego, objects,
+                     MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, -2.5,
+                                                 LateralDirection::RIGHT),
+                     path);
+        Expect(planner.avoid_has_requested_target_d(),
+               "a right-side target pose is preserved");
+        Expect(planner.avoid_requested_target_d() < 0.0,
+               "a right-side target keeps its negative sign");
+        Expect(std::fabs(planner.avoid_requested_target_d() + 2.5) < 1e-9,
+               "the right-side target_d value is exact");
+    }
+    {
+        // target_d = 0.0도 유효한 값이다(차선 중앙). 플래그로만 구분한다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath path;
+        planner.Plan(ego, objects,
+                     MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, 0.0), path);
+        Expect(planner.avoid_has_requested_target_d(),
+               "target_d = 0.0 is a valid requested target, not 'unset'");
+        Expect(planner.avoid_requested_target_d() == 0.0,
+               "target_d = 0.0 is preserved");
+    }
+    {
+        // 다른 모드로 넘어가면 투영 결과도 함께 비워진다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath path;
+        planner.Plan(ego, objects,
+                     MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, 2.5), path);
+        Expect(planner.avoid_has_requested_target_d(),
+               "reset: the target pose is present first");
+        PlannerCommand keep{};
+        keep.mode = LANE_KEEPING;
+        planner.Plan(ego, objects, keep, path);
+        Expect(!planner.avoid_has_requested_target_d(),
+               "reset: KEEP clears the projected target too");
+    }
+    {
+        // 같은 대상에 pose가 사라진 명령이 오면 투영 결과도 사라진다.
+        // 남아 있으면 FSM이 목표를 거둬들였는데 예전 목표로 회피한다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath path;
+        planner.Plan(ego, objects,
+                     MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, 2.5), path);
+        Expect(planner.avoid_has_requested_target_d(),
+               "handover: the target pose is present first");
+        planner.Plan(ego, objects, MakeAvoidCommand(21), path);
+        Expect(!planner.avoid_has_requested_target_d(),
+               "handover: dropping the pose clears the projected target");
+        Expect(planner.active_avoid_target_id() == 21,
+               "handover: the object binding itself is unaffected");
     }
 
     if (g_failures != 0) {

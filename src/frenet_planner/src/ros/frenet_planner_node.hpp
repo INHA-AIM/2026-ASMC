@@ -161,6 +161,38 @@ class FrenetPlannerNode {
     // params.yaml이 아닌 ROS param으로 둔다(검증이 node 책임이기 때문).
     double stop_max_target_heading_error_rad_ = 0.785398;
 
+    // ===== v2 AVOID target pose 투영 파라미터 (D6-1a) =====
+    //
+    // AVOID의 target pose는 선택 사항이다(원본 메시지: "AVOID: 필요하면
+    // 회피 목표점"). 주어졌으면 Frenet (s, d)로 투영해 D6-2의 목표 d로 쓴다.
+    //
+    // STOP의 값을 그대로 쓰지 않는 이유:
+    //   STOP  "정지선이 이 경로 위에 있는가"  -> 경로에 붙어 있어야 한다
+    //   AVOID "회피 목표점이 이 경로 근방인가" -> 옆으로 비켜난 점이 정상이다
+    // 두 질문의 허용 횡거리가 같을 이유가 없다. 그리고 STOP config를
+    // AVOID가 끌어다 쓰면 STOP 튜닝이 AVOID 동작을 바꾼다(AvoidConfig에
+    // dropout_grace_cycles를 따로 둔 것과 같은 판단).
+    //
+    // planning 알고리즘 파라미터가 아니라 v2 계약 검증 임계값이므로
+    // params.yaml이 아닌 ROS param으로 둔다 - 검증이 node 책임이기 때문이다.
+
+    // [m] 투영 탐색창. 회피 목표점은 보통 장애물 근방(수십 m 앞)이므로
+    // STOP과 같은 100 m로 시작한다.
+    double avoid_projection_search_window_ = 100.0;
+
+    // [m] 목표점이 경로에서 이보다 멀면 이 경로에 대한 회피 목표가 아니라고
+    // 보고 TARGET_PROJECTION_FAILED로 거부한다.
+    //
+    // 기본값 4.0. 회피 오프셋(avoid_offset=3.0)보다는 커야 정상 목표가
+    // 거부되지 않고, 차선 폭(3.5) 한 개 남짓으로 제한해 옆 도로의 점이
+    // 통과하지 않게 한다. MORAI 검증 후 조인다.
+    double avoid_max_target_lateral_offset_ = 4.0;
+
+    // [rad] 목표 pose의 heading 허용 오차. STOP과 같은 이유로 필요하다
+    // (왕복 구간이 나란히 지나가면 반대 방향 구간에 목표가 붙는다).
+    // 계약 3.4절 4항.
+    double avoid_max_target_heading_error_rad_ = 0.785398;
+
     double planning_frequency_hz_ = 20.0;
     double vehicle_timeout_seconds_ = 0.20;
     double objects_timeout_seconds_ = 0.30;

@@ -68,6 +68,38 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
         stop_max_target_heading_error_rad_ = 0.785398;
     }
 
+    // v2 AVOID target pose 투영 (D6-1a). STOP과 값을 공유하지 않는다 -
+    // 두 질문의 허용 횡거리가 다르다(헤더 주석 참고).
+    pnh_.param("v2/avoid/projection_search_window",
+               avoid_projection_search_window_,
+               avoid_projection_search_window_);
+    pnh_.param("v2/avoid/max_target_lateral_offset",
+               avoid_max_target_lateral_offset_,
+               avoid_max_target_lateral_offset_);
+    pnh_.param("v2/avoid/max_target_heading_error_rad",
+               avoid_max_target_heading_error_rad_,
+               avoid_max_target_heading_error_rad_);
+
+    if (!std::isfinite(avoid_projection_search_window_) ||
+        avoid_projection_search_window_ <= 0.0) {
+        ROS_WARN("Invalid v2/avoid/projection_search_window %.3f; using 100 m",
+                 avoid_projection_search_window_);
+        avoid_projection_search_window_ = 100.0;
+    }
+    if (!std::isfinite(avoid_max_target_lateral_offset_) ||
+        avoid_max_target_lateral_offset_ <= 0.0) {
+        ROS_WARN("Invalid v2/avoid/max_target_lateral_offset %.3f; using 4 m",
+                 avoid_max_target_lateral_offset_);
+        avoid_max_target_lateral_offset_ = 4.0;
+    }
+    if (!std::isfinite(avoid_max_target_heading_error_rad_) ||
+        avoid_max_target_heading_error_rad_ <= 0.0 ||
+        avoid_max_target_heading_error_rad_ > M_PI) {
+        ROS_WARN("Invalid v2/avoid/max_target_heading_error_rad %.3f; "
+                 "using 45 deg", avoid_max_target_heading_error_rad_);
+        avoid_max_target_heading_error_rad_ = 0.785398;
+    }
+
     if (planning_frequency_hz_ <= 0.0) {
         ROS_WARN("Invalid planning frequency %.3f Hz; using 20 Hz",
                  planning_frequency_hz_);
@@ -879,6 +911,144 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         }
 
         planner_command.stop_position = stop_s;
+    }
+
+    // ---- 4c. AVOID 목표점 투영 (D6-1a) ----------------------------------
+    //
+    // AVOID의 target pose는 **선택 사항**이다(원본 메시지: "AVOID: 필요하면
+    // 회피 목표점"). 그래서 STOP과 달리:
+    //   has_target_pose=false -> 정상. 장애물 geometry + 방향으로 목표를
+    //                            계산한다(D6-2). 여기서 아무것도 하지 않는다.
+    //   has_target_pose=true  -> 투영해서 [A] 필드에 보존한다. 합법적인
+    //                            명령의 pose를 조용히 버리지 않는다.
+    //
+    // 투영 결과를 avoidance_d_offset([B])에 바로 넣지 않는 이유는
+    // PlannerCommand의 has_avoid_target_d 주석에 있다 - command/result 경계.
+    if (planner_command.mode == AVOID && command.has_target_pose) {
+        if (!ego_s_valid) {
+            // 투영 기준점이 없으면 목표점도 만들 수 없다. STOP과 달리
+            // pose는 선택 사항이지만, **주어진 pose를 해석하지 못하는 것**은
+            // 조용히 넘길 일이 아니다 - FSM은 그 목표로 회피할 것을
+            // 기대하고 있다.
+            command_manager_.NotifyPlanFailed(
+                /*terminal=*/true,
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
+                "cannot project ego onto the reference line");
+            CommandAcceptance failed = acceptance;
+            failed.planning_target = PlanningTarget::NONE;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
+            failed.detail = "cannot project ego onto the reference line";
+            has_last_v2_trajectory_ = false;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+
+        double avoid_s = 0.0;
+        double avoid_d = 0.0;
+        if (!planner_.ProjectPointToFrenet(
+                command.target_pose_map.position.x,
+                command.target_pose_map.position.y, ego_s,
+                avoid_projection_search_window_,
+                avoid_max_target_lateral_offset_, avoid_s, avoid_d)) {
+            command_manager_.NotifyPlanFailed(
+                /*terminal=*/true,
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
+                "avoid target is not near the reference line");
+            CommandAcceptance failed = acceptance;
+            failed.planning_target = PlanningTarget::NONE;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
+            failed.detail = "avoid target is not near the reference line";
+            ROS_WARN_THROTTLE(1.0,
+                              "v2 AVOID target (%.2f, %.2f) is not near the "
+                              "reference line (command_id=%u)",
+                              command.target_pose_map.position.x,
+                              command.target_pose_map.position.y,
+                              command.command_id);
+            has_last_v2_trajectory_ = false;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+
+        // heading 검증. STOP과 같은 이유다 - 왕복 구간이 허용 횡거리 이내로
+        // 나란히 지나가면 Cartesian 거리는 가깝지만 진행 방향이 반대인
+        // 지점에 목표가 붙을 수 있다(계약 3.4절 4항).
+        double reference_heading = 0.0;
+        if (!planner_.ReferenceHeadingAt(avoid_s, reference_heading)) {
+            command_manager_.NotifyPlanFailed(
+                /*terminal=*/true,
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
+                "cannot read reference heading at the avoid target");
+            CommandAcceptance failed = acceptance;
+            failed.planning_target = PlanningTarget::NONE;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
+            failed.detail = "cannot read reference heading at the avoid target";
+            has_last_v2_trajectory_ = false;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+
+        const double target_yaw =
+            YawFromQuaternion(command.target_pose_map.orientation);
+        // 정규화해서 비교한다. 179도와 -179도는 실제로 2도 차이인데 단순
+        // 뺄셈만 하면 358도가 된다.
+        const double heading_error =
+            std::fabs(NormalizeAngle(target_yaw - reference_heading));
+        if (heading_error > avoid_max_target_heading_error_rad_) {
+            command_manager_.NotifyPlanFailed(
+                /*terminal=*/true,
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
+                "avoid target heading disagrees with the reference line");
+            CommandAcceptance failed = acceptance;
+            failed.planning_target = PlanningTarget::NONE;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
+            failed.detail =
+                "avoid target heading disagrees with the reference line";
+            ROS_WARN_THROTTLE(
+                1.0,
+                "v2 AVOID target heading rejected: target=%.3f ref=%.3f "
+                "error=%.3f rad > %.3f (command_id=%u)",
+                target_yaw, reference_heading, heading_error,
+                avoid_max_target_heading_error_rad_, command.command_id);
+            has_last_v2_trajectory_ = false;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+
+        planner_command.has_avoid_target_d = true;
+        planner_command.avoid_target_d = avoid_d;
+        planner_command.avoid_target_s = avoid_s;
     }
 
     // ---- 5. planning ----------------------------------------------------
