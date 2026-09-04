@@ -525,7 +525,7 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
 
         case MERGE:
             if (cmd.merge_crossing) {
-                if (cmd.leader_id >= 0) {
+                if (cmd.target_object_id >= 0) {
                     longitudinal_set = GenerateFollowingCandidates(
                         start, cmd.leader_s, cmd.leader_speed, cmd.leader_accel,
                         cmd.time_gap, cmd.min_gap, cmd.target_speed, cmd.gap_gain, cfg);
@@ -565,7 +565,7 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                     longitudinal_set = GenerateVelocityKeepingCandidates(
                         start, cmd.target_speed, cfg);
                 } else {
-                    if (cmd.leader_id >= 0) {
+                    if (cmd.target_object_id >= 0) {
                         longitudinal_set = GenerateFollowingCandidates(
                             start, cmd.leader_s, cmd.leader_speed, cmd.leader_accel,
                             cmd.time_gap, cmd.min_gap,
@@ -610,7 +610,7 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
     // 실제 후보 구간에서는 검사하고 reactive coast 연장에서만 제외한다.
     if (!obstacles.empty()) {
         const int coast_exempt_id =
-            (cmd.mode == FOLLOWING || cmd.mode == MERGE) ? cmd.leader_id : -1;
+            (cmd.mode == FOLLOWING || cmd.mode == MERGE) ? cmd.target_object_id : -1;
         FilterByCollision(combined, ref, obstacles, vehicle_shape, collision_cfg,
                           coast_exempt_id);
     }

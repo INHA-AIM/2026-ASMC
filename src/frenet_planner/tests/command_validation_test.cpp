@@ -189,7 +189,7 @@ int main() {
     // --- 아직 열지 않은 모드 -----------------------------------------------
     PlannerCommand follow{};
     follow.mode = FOLLOWING;
-    follow.leader_id = 7;
+    follow.target_object_id = 7;
     follow.leader_s = 260.0;
     follow.leader_speed = 3.0;
     Expect(!planner.Plan(ego, no_objects, follow, path) &&

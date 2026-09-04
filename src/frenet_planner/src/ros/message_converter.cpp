@@ -104,7 +104,7 @@ ConversionStatus ConvertBehaviorContext(
     }
 
     converted.target_lane = 0;
-    converted.leader_id = -1;
+    converted.target_object_id = -1;
     converted.has_target_speed = message.has_desired_speed;
     converted.target_speed = message.desired_speed;
     converted.has_max_speed = message.has_max_speed;

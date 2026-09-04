@@ -509,7 +509,7 @@ void FrenetPlanner::SelectLegacyBehavior(
         // 합류 후 같은 corridor에 들어온 선행차는 일반 장애물이 아니라
         // FOLLOWING과 동일한 종방향 gap 제어 대상으로 전달한다.
         if (nearest_found) {
-            cmd.leader_id = nearest_leader.id;
+            cmd.target_object_id = nearest_leader.id;
             cmd.leader_s = nearest_leader.s;
             cmd.leader_speed = nearest_leader.speed;
             cmd.leader_accel = nearest_leader.accel;
@@ -517,14 +517,14 @@ void FrenetPlanner::SelectLegacyBehavior(
             cmd.min_gap = following_cfg_.min_gap;
             cmd.gap_gain = following_cfg_.gap_gain;
         } else {
-            cmd.leader_id = -1;
+            cmd.target_object_id = -1;
         }
     } else if (following_.active) {
         leader_s = following_.leader_s;
         leader_speed = following_.leader_speed;
         leader_accel = following_.leader_accel;
         cmd.mode = FOLLOWING;
-        cmd.leader_id = following_.leader_id;
+        cmd.target_object_id = following_.leader_id;
         cmd.leader_s = leader_s;
         cmd.leader_speed = leader_speed;
         cmd.leader_accel = leader_accel;
