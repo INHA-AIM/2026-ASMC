@@ -222,12 +222,24 @@ void CommandExecutionManager::NotifyPlanFailed(bool terminal,
     }
 }
 
-void CommandExecutionManager::NotifyCommitted() {
-    if (!has_active_command_ || terminal_latched_) return;
+bool CommandExecutionManager::NotifyCommitted() {
+    if (!has_active_command_ || terminal_latched_) return false;
     // handshake를 쓰지 않는 maneuver는 COMMIT 개념이 없다. 이미 EXECUTING이다.
-    if (!UsesHandshake(maneuver_type_)) return;
+    if (!UsesHandshake(maneuver_type_)) return false;
+    // 계약 5절의 정상 경로는 READY -> COMMITTED뿐이다(헤더 주석 참고).
+    if (execution_state_ != Feedback::READY) return false;
     execution_state_ = Feedback::COMMITTED;
     runtime_failure_ = RuntimeFailure::NONE;
+    return true;
+}
+
+bool CommandExecutionManager::NotifyExecutionStarted() {
+    if (!has_active_command_ || terminal_latched_) return false;
+    if (!UsesHandshake(maneuver_type_)) return false;
+    if (execution_state_ != Feedback::COMMITTED) return false;
+    execution_state_ = Feedback::EXECUTING;
+    runtime_failure_ = RuntimeFailure::NONE;
+    return true;
 }
 
 void CommandExecutionManager::NotifyManeuverCompleted() {

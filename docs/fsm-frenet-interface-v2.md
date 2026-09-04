@@ -452,6 +452,38 @@ IDLE
          (어느 단계에서든 CANCEL → 7절, 명령 결함 → FAILED)
 ```
 
+### 5.6 전이는 강제된다 (D6-0에서 확정)
+
+위 그림은 D5까지 문서에만 있었다. `NotifyCommitted()`가 현재 상태를 보지 않고
+handshake maneuver이면 곧바로 `COMMITTED`로 올렸고, `COMMITTED → EXECUTING`
+전이 API 자체가 없었다. D6에서 handshake가 실제로 동작하므로 전이 조건을
+코드에서 강제한다.
+
+| 전이 | 허용 조건 | 위반 시 |
+|---|---|---|
+| `→ COMMITTED` | 현재 `READY`인 handshake maneuver | 상태 불변, `false` 반환 |
+| `→ EXECUTING` | 현재 `COMMITTED`인 handshake maneuver | 상태 불변, `false` 반환 |
+
+강제하지 않으면 다음이 가능하다.
+
+| 잘못된 전이 | 결과 |
+|---|---|
+| `PREPARING → COMMITTED` | 충돌 검사를 통과하지 않은 후보를 잠근다 |
+| `WAITING → COMMITTED` | "안전 후보 없음"으로 판단한 직후 잠근다 |
+| `EXECUTING → COMMITTED` | 진행 중인 기동의 상태만 뒤로 되돌린다 |
+| `READY → EXECUTING` | EXECUTE 재검증을 건너뛴 기동이 실행 중으로 보고된다 |
+
+앞의 두 개는 **잠긴 궤적이 검증되지 않았다는 뜻이므로 그대로 MPC로 나간다.**
+계약 5.2절이 금지하는 미검증 횡이동 발행이다. 그래서 두 API는 반환값으로
+성공 여부를 알리고, 호출자는 `false`를 무시한 채 궤적을 발행해서는 안 된다.
+
+`COMMITTED`와 `EXECUTING`을 나누는 이유는 FSM이 "잠갔다"와 "실제로 움직이기
+시작했다"를 구분해야 하기 때문이다. COMMIT은 궤적을 잠근 사이클에 일어나고,
+그 궤적을 처음 발행한 **다음** 사이클부터 `EXECUTING`이다.
+
+`EMERGENCY_STOP` preemption은 이 강제와 무관하게 `EXECUTING`에서도 통과한다
+(7.3절). 강제가 preemption을 막으면 회피 중 급정지가 불가능해진다.
+
 ---
 
 ## 6. Terminal latch
@@ -568,7 +600,48 @@ perception dropout과 실제 소실을 구분해야 한다.
 `TARGET_OBJECT_LOST`는 명령 결함이 아니므로 `command_accepted = true`다. FSM이
 새 `command_id`로 다른 maneuver를 지시하는 것이 정상 회복 경로다.
 
-이 정책은 F3(FOLLOW dropout) / A0~A2(AVOID)에서 구현한다.
+#### 8.2.1 COMMIT 경계 — 8.2절과 7.2절의 충돌 해소 (D6-0에서 확정)
+
+위 표를 handshake maneuver에 그대로 적용하면 7.2절과 충돌한다.
+
+- 8.2절: 대상 소실 유예 초과 → `FAILED`
+- 7.2절: `COMMITTED` / `EXECUTING` 기동은 중간에 끊지 않는다
+
+node의 terminal `FAILED`는 다음 사이클부터 안전정지로 이어진다. 그래서 위
+표를 `EXECUTING`인 AVOID에 적용하면:
+
+```
+AVOID 횡이동 중 (EXECUTING)
+  → LiDAR가 장애물을 유예 초과만큼 놓침
+  → TARGET_OBJECT_LOST / FAILED
+  → SAFE_STOP
+  → 차선 사이에 정지
+```
+
+**차선 사이 정지가 대상 소실보다 위험하다.** 그래서 COMMIT 시점을 경계로
+정책을 나눈다.
+
+| 시점 | 대상 소실 유예 초과 시 |
+|---|---|
+| COMMIT **이전** (`PREPARING`/`WAITING`/`READY`) | `TARGET_OBJECT_LOST` / `FAILED` |
+| COMMIT **이후** (`COMMITTED`/`EXECUTING`) | maneuver를 중단하지 않는다 |
+
+COMMIT 이후의 근거는, 그 시점에 기동이 이미 **기하학적으로 확정**되었다는
+것이다. `target_d`와 회피 context는 COMMIT 시점에 잠기므로 대상을 다시
+관측하지 않아도 남은 기동을 완주할 수 있다. 따라서 COMMIT 이후에는:
+
+- 잠긴 `target_d` / context로 회피를 계속한다
+- **collision checker는 계속 동작한다** — 대상 ID를 잃은 것이 충돌 검사를
+  멈출 이유는 아니다. 다른 객체나 재관측된 객체로 실제 충돌이 잡히면 그것은
+  `COLLISION_BLOCKED`로 정상 처리된다
+- `EMERGENCY_STOP`만 즉시 preempt한다 (7.3절)
+
+정리하면 **대상 ID는 기동을 시작하기 전까지 authoritative target이고, COMMIT
+이후에는 이미 확정된 기하학적 기동을 안전하게 끝내는 것이 우선**이다.
+
+이 정책은 F3(FOLLOW dropout) / A0~A2(AVOID)에서 구현한다. FOLLOW는 handshake를
+쓰지 않아 COMMIT 개념이 없으므로 8.2절 본표가 그대로 적용된다(D5에서 구현
+완료). 경계 정책은 AVOID / LANE_CHANGE / MERGE에만 해당한다.
 
 ### 8.3 `plan_valid`와 `trajectory_source`는 별개의 축
 
@@ -587,6 +660,23 @@ perception dropout과 실제 소실을 구분해야 한다.
 
 이 구분은 C2에서 만든 fail-safe 정책(`immediate_stop` vs 재사용)을 메시지 수준에서
 명시화한 것이다.
+
+#### 8.3.1 `plan_valid`를 `trajectory_source`에서 유도하지 않는다 (D6-0에서 확정)
+
+D5까지 node는 `plan_valid = (trajectory_source == TRAJECTORY_NEW)`로 유도했다.
+두 값이 항상 함께 움직였기 때문에 우연히 맞았다 — 후보를 만들면 그것을 그대로
+발행했다.
+
+D6 PREPARE부터 어긋난다(5.2절).
+
+| 상황 | `plan_valid` | `trajectory_source` | 유도식 결과 |
+|---|---|---|---|
+| AVOID 후보 성공 + MPC에 유지 궤적 | `true` | `TRAJECTORY_NEW` | 우연히 맞음 |
+| AVOID 후보 **실패** + MPC에 유지 궤적 | `false` | `TRAJECTORY_NEW` | **`true` — 틀림** |
+
+두 번째가 위험하다. FSM은 `plan_valid = true`를 "EXECUTE를 보내도 된다"로 읽으므로
+**막힌 회피에 EXECUTE 허가가 나간다.** 따라서 `plan_valid`는 유도하지 않고
+호출자가 명시한다.
 
 ### 8.4 Trajectory reuse ownership — **D4에서 반드시 수정**
 
@@ -1265,6 +1355,32 @@ FSM + Frenet + MPC + MORAI 전체 통합. 이 시점에 legacy atomic removal을
 
 아직 보고하지 않는 상태를 FSM이 기다리게 하지 않도록, 각 단계 완료 시 "이 모드에서
 나올 수 있는 상태 목록"을 FSM 담당자에게 함께 전달한다.
+
+D6-0에서 `READY → COMMITTED → EXECUTING` 전이를 코드에서 강제했다(5.6절).
+D6 이후 LANE_CHANGE(D7)와 MERGE(D8)는 같은 전이 기반을 그대로 재사용한다 —
+handshake 골격을 모드마다 다시 만들지 않는다.
+
+### 12.7.1 D6 하위 단계
+
+| 단계 | 범위 | AVOID gate |
+|---|---|---|
+| D6-0 | handshake 전이 강제, `plan_valid`/`trajectory_source` 축 분리 | 닫힘 |
+| D6-1 | authoritative AVOID target resolve (`v2_avoidance_`, LEFT/RIGHT/NONE, optional target pose) | core만 (ROS 닫힘) |
+| D6-2 | PREPARE dual-output — 한 cycle에서 avoid candidate + maintenance path | 닫힘 |
+| D6-3 | EXECUTE / COMMIT / EXECUTING / completion, `target_d` lock, CANCEL, preemption | 닫힘 |
+| D6-4 | Feedback 필드 연결 + ROS 회귀 + `SetImplementedManeuver(AVOID, true)` | **열림** |
+
+gate를 마지막에 여는 이유는 11.4절과 같다. 절반만 구현된 AVOID가 열려 있으면
+FSM 요청이 조용히 velocity keeping으로 처리된다.
+
+**한 planning cycle 안에서 `PlanInternal()`을 두 번 호출하는 구조는 금지한다.**
+`PlanInternal()`은 stateful이다 — 호출마다 `last_s_`를 갱신하고 object track의
+`missing_cycles`를 증가시키며 yaw-rate를 0.05초 기준으로 재추정한다. 같은
+snapshot으로 연속 호출하면 두 번째 호출에서 heading 변화가 0인데 또
+tracking update가 일어나 yaw-rate가 0 방향으로 한 번 더 필터링된다.
+`last_mode_` / `last_target_speed_` / `last_failure_reason_`도 두 번째 호출
+결과로 덮인다. AVOID 후보 평가와 유지 궤적은 **한 번의 전처리(Cartesian→Frenet,
+object tracking/prediction) 위에서 두 결과를 만들어** 분리 반환한다(D6-2).
 
 ### 12.8 파일 배치
 

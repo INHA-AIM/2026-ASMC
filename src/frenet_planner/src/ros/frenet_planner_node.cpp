@@ -543,7 +543,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(command.command_id, acceptance, &stop,
-                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                          /*plan_valid=*/false);
         return true;
     }
 
@@ -567,7 +568,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             held.header.stamp = now;
             trajectory_pub_.publish(held);
             publishFeedbackV2(command.command_id, acceptance, &held,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED);
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED,
+                              /*plan_valid=*/false);
             return true;
         }
         has_last_v2_trajectory_ = false;
@@ -577,7 +579,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             asmc_msgs::Trajectory::FAILURE_NONE, now);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(command.command_id, acceptance, &stop,
-                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                          /*plan_valid=*/false);
         return true;
     }
 
@@ -611,7 +614,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             asmc_msgs::Trajectory::FAILURE_NOT_INITIALIZED, now);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(command.command_id, failed, &stop,
-                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                          /*plan_valid=*/false);
         return true;
     }
 
@@ -641,7 +645,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             asmc_msgs::Trajectory::FAILURE_STATE_STALE, now);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(command.command_id, stale, &stop,
-                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                          /*plan_valid=*/false);
         return true;
     }
 
@@ -656,7 +661,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(command.command_id, failed, &stop,
-                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                          /*plan_valid=*/false);
         return true;
     }
     last_stop_reference_vehicle_ = snapshot.vehicle;
@@ -674,7 +680,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(command.command_id, failed, &stop,
-                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                          /*plan_valid=*/false);
         return true;
     }
 
@@ -696,7 +703,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(command.command_id, failed, &stop,
-                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                          /*plan_valid=*/false);
         return true;
     }
 
@@ -723,7 +731,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(command.command_id, failed, &stop,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
             return true;
         }
         double stop_s = 0.0;
@@ -754,7 +763,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(command.command_id, failed, &stop,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
             return true;
         }
 
@@ -780,7 +790,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(command.command_id, failed, &stop,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
             return true;
         }
 
@@ -814,7 +825,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(command.command_id, failed, &stop,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
             return true;
         }
 
@@ -851,7 +863,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             CommandAcceptance transient_acceptance = acceptance;
             transient_acceptance.detail = "reusing previous trajectory";
             publishFeedbackV2(command.command_id, transient_acceptance, &reused,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_REUSED);
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_REUSED,
+                              /*plan_valid=*/false);
             ROS_WARN_THROTTLE(1.0,
                               "v2 transient failure %d/%d: reusing previous "
                               "trajectory (command_id=%u)",
@@ -923,7 +936,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             asmc_msgs::Trajectory::FAILURE_GENERATION, now);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(command.command_id, failed, &stop,
-                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                          /*plan_valid=*/false);
         return true;
     }
 
@@ -944,7 +958,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             asmc_msgs::Trajectory::FAILURE_GENERATION, now);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(command.command_id, failed, &stop,
-                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                          /*plan_valid=*/false);
         return true;
     }
 
@@ -970,7 +985,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     succeeded.execution_state = command_manager_.execution_state();
     publishFeedbackV2(command.command_id, succeeded, &trajectory,
                       asmc_msgs::FrenetFeedback::TRAJECTORY_NEW,
-                      ego_s_valid, ego_s);
+                      /*plan_valid=*/true, ego_s_valid, ego_s);
 
     ROS_INFO_THROTTLE(1.0,
                       "v2 plan ready: command_id=%u maneuver=%u points=%zu "
@@ -983,7 +998,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 void FrenetPlannerNode::publishFeedbackV2(
     uint32_t command_id, const CommandAcceptance& acceptance,
     const asmc_msgs::Trajectory* trajectory, uint8_t trajectory_source,
-    bool frenet_state_valid, double current_s) {
+    bool plan_valid, bool frenet_state_valid, double current_s) {
     asmc_msgs::FrenetFeedback feedback;
     feedback.header.stamp = ros::Time::now();
     feedback.header.frame_id = "map";
@@ -1004,10 +1019,9 @@ void FrenetPlannerNode::publishFeedbackV2(
 
     feedback.trajectory_source = trajectory_source;
     // plan_valid는 "이번 사이클에 요청 maneuver용 새 유효 후보를 만들었는가"다.
-    // 실제로 MPC에 무엇을 보냈는지(trajectory_source)와는 별개 축이다
-    // (계약 8.3절).
-    feedback.plan_valid =
-        trajectory_source == asmc_msgs::FrenetFeedback::TRAJECTORY_NEW;
+    // 실제로 MPC에 무엇을 보냈는지(trajectory_source)와는 별개 축이므로
+    // 유도하지 않고 호출자가 정한다(계약 8.3절, 헤더 D6-0 주석 참고).
+    feedback.plan_valid = plan_valid;
 
     // Frenet 상태. current_s는 호출자가 ProjectEgoToS로 얻은 값이고,
     // current_d는 planner가 매 Plan()마다 갱신한 값이다.

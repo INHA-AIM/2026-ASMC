@@ -134,8 +134,34 @@ class CommandExecutionManager {
     //
     // 이 시점부터 일반 명령으로는 전환할 수 없다(IsNonPreemptible). 실제
     // COMMIT 판정은 planner의 재검증 결과이므로(계약 5.3절) manager가 스스로
-    // 올리지 않고 호출자가 알려준다. D6~D8에서 planner 결과에 연결한다.
-    void NotifyCommitted();
+    // 올리지 않고 호출자가 알려준다.
+    //
+    // ===== 왜 READY만 허용하는가 (D6-0) =====
+    //
+    // D6부터 handshake가 실제로 동작한다. 계약 5절의 유일한 정상 경로는
+    //   PREPARING/WAITING -> (후보 안전) -> READY -> (EXECUTE 재검증) -> COMMITTED
+    // 이다. READY가 아닌 상태에서 COMMIT을 허용하면 다음이 가능해진다:
+    //   PREPARING -> COMMITTED   준비 중인 후보를 검증 없이 잠근다
+    //   WAITING   -> COMMITTED   gap이 없다고 판단한 직후 잠근다
+    //   EXECUTING -> COMMITTED   진행 중인 기동을 상태만 뒤로 되돌린다
+    // 어느 것도 계약에 없고, 첫 두 개는 잠긴 궤적이 검증되지 않았다는 뜻이라
+    // 그대로 MPC에 나간다. 그래서 전이 조건을 여기서 강제한다.
+    //
+    // 반환값은 "실제로 COMMIT되었는지"다. false를 무시하고 궤적을 발행하면
+    // 계약 5.2절이 금지하는 미검증 횡이동 발행이 되므로 호출자가 반드시
+    // 확인해야 한다.
+    bool NotifyCommitted();
+
+    // COMMIT된 궤적의 실행이 시작되었다. COMMITTED -> EXECUTING 전이다.
+    //
+    // COMMITTED와 EXECUTING을 나누는 이유는 FSM이 "잠갔다"와 "실제로 움직이기
+    // 시작했다"를 구분해야 하기 때문이다(FrenetFeedback.msg의 두 상수 설명).
+    // COMMIT은 궤적을 잠근 사이클에 일어나고, 그 궤적을 처음 발행한 다음
+    // 사이클부터 EXECUTING이다.
+    //
+    // COMMITTED에서만 허용한다. NotifyCommitted()와 같은 이유로, 임의 상태에서
+    // EXECUTING으로 올리면 준비 단계를 건너뛴 기동이 실행 중으로 보고된다.
+    bool NotifyExecutionStarted();
 
     // maneuver를 기하학적으로 완료했다. terminal latch가 걸린다.
     void NotifyManeuverCompleted();

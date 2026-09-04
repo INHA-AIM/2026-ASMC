@@ -6,6 +6,10 @@
 //   6절  COMPLETED / FAILED는 새 command_id까지 유지 (terminal latch)
 //   7절  CANCEL은 COMMITTED 이후 거부, EMERGENCY_STOP만 언제든 preempt
 //   11.4절 미구현 maneuver는 planner를 호출하지 않는다
+//
+// D6-0에서 handshake 상태 전이 강제를 추가했다:
+//   PREPARING/WAITING -> READY -> COMMITTED -> EXECUTING만 허용하고,
+//   그 밖의 승격 시도는 상태를 바꾸지 않고 false를 반환한다.
 
 #include "ros/command_execution_manager.hpp"
 
@@ -527,6 +531,180 @@ int main() {
                    manager.execution_state() == Feedback::EXECUTING &&
                    !manager.terminal_latched(),
                "new command_id recovers from an unimplemented-maneuver latch");
+    }
+
+    // ============ D6-0: handshake 상태 전이 강제 ========================
+    //
+    // D6부터 handshake가 실제로 동작한다. 계약 5절의 정상 경로는 단 하나다:
+    //   PREPARING/WAITING -> READY -> COMMITTED -> EXECUTING
+    // 그 밖의 전이를 허용하면 검증되지 않은 궤적이 COMMIT되어 MPC로 나간다.
+    {
+        // PREPARING에서 바로 COMMIT하려는 시도는 거부한다. 준비 중인 후보는
+        // 아직 충돌 검사를 통과했다는 보장이 없다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(200, Command::PREPARE));
+        Expect(manager.execution_state() == Feedback::PREPARING,
+               "handshake maneuver starts in PREPARING");
+        Expect(!manager.NotifyCommitted(),
+               "COMMIT from PREPARING is rejected");
+        Expect(manager.execution_state() == Feedback::PREPARING,
+               "rejected COMMIT leaves PREPARING untouched");
+    }
+    {
+        // WAITING에서의 COMMIT도 거부한다. WAITING은 "안전 후보가 없다"는
+        // 뜻이므로 잠글 궤적 자체가 없다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(201, Command::PREPARE));
+        manager.NotifyPlanFailed(/*terminal=*/false);
+        Expect(manager.execution_state() == Feedback::WAITING,
+               "blocked PREPARE moves to WAITING");
+        Expect(!manager.NotifyCommitted(), "COMMIT from WAITING is rejected");
+        Expect(manager.execution_state() == Feedback::WAITING,
+               "rejected COMMIT leaves WAITING untouched");
+    }
+    {
+        // 정상 경로: READY -> COMMITTED -> EXECUTING.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(202, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        Expect(manager.execution_state() == Feedback::READY,
+               "safe candidate reaches READY");
+
+        Expect(manager.NotifyCommitted(), "COMMIT from READY succeeds");
+        Expect(manager.execution_state() == Feedback::COMMITTED,
+               "successful COMMIT reaches COMMITTED");
+
+        Expect(manager.NotifyExecutionStarted(),
+               "execution start from COMMITTED succeeds");
+        Expect(manager.execution_state() == Feedback::EXECUTING,
+               "committed maneuver becomes EXECUTING");
+
+        // 이미 EXECUTING이면 더 올릴 것이 없다. 반복 호출이 상태를 되돌리거나
+        // 중복 전이를 만들지 않아야 한다.
+        Expect(!manager.NotifyExecutionStarted(),
+               "execution start is not repeatable");
+        Expect(manager.execution_state() == Feedback::EXECUTING,
+               "repeated execution start leaves EXECUTING untouched");
+        Expect(!manager.NotifyCommitted(),
+               "COMMIT from EXECUTING is rejected (no going backwards)");
+        Expect(manager.execution_state() == Feedback::EXECUTING,
+               "rejected COMMIT does not roll EXECUTING back to COMMITTED");
+    }
+    {
+        // COMMITTED를 건너뛴 EXECUTING 승격은 없다. READY에서 바로
+        // EXECUTING으로 가면 EXECUTE 재검증을 통과하지 않은 기동이
+        // "실행 중"으로 보고된다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(203, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        Expect(!manager.NotifyExecutionStarted(),
+               "execution start from READY is rejected");
+        Expect(manager.execution_state() == Feedback::READY,
+               "rejected execution start leaves READY untouched");
+    }
+    {
+        // handshake를 쓰지 않는 maneuver에는 COMMIT/EXECUTING 승격 개념이
+        // 없다. KEEP은 transaction 시작과 동시에 EXECUTING이며, 두 API는
+        // 아무 일도 하지 않아야 한다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeKeep(204));
+        Expect(manager.execution_state() == Feedback::EXECUTING,
+               "KEEP starts in EXECUTING without a handshake");
+        Expect(!manager.NotifyCommitted(),
+               "KEEP does not go through COMMIT");
+        Expect(!manager.NotifyExecutionStarted(),
+               "KEEP does not need an execution-start transition");
+        Expect(manager.execution_state() == Feedback::EXECUTING,
+               "KEEP stays EXECUTING after the no-op transitions");
+    }
+    {
+        // terminal latch 중에는 어떤 승격도 통과하지 않는다. FAILED로 끝난
+        // transaction이 COMMITTED로 살아나면 계약 6절이 무너진다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(205, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        manager.NotifyPlanFailed(/*terminal=*/true,
+                                 Feedback::COLLISION_BLOCKED, "blocked");
+        Expect(manager.terminal_latched() &&
+                   manager.execution_state() == Feedback::FAILED,
+               "terminal failure latches FAILED");
+        Expect(!manager.NotifyCommitted(),
+               "COMMIT is rejected while a terminal state is latched");
+        Expect(!manager.NotifyExecutionStarted(),
+               "execution start is rejected while latched");
+        Expect(manager.execution_state() == Feedback::FAILED,
+               "latched FAILED survives the rejected transitions");
+    }
+    {
+        // 활성 transaction이 없으면 아무 승격도 없다.
+        CommandExecutionManager manager = MakeFullManager();
+        Expect(!manager.NotifyCommitted(),
+               "COMMIT without an active command is rejected");
+        Expect(!manager.NotifyExecutionStarted(),
+               "execution start without an active command is rejected");
+        Expect(manager.execution_state() == Feedback::IDLE,
+               "idle manager stays IDLE");
+    }
+    {
+        // COMMIT 이후 EXECUTING까지 갔어도 EMERGENCY_STOP은 통과한다.
+        // D6-0에서 새로 생긴 EXECUTING 상태가 preemption을 막지 않는지
+        // 확인한다 - 막히면 회피 중 급정지가 불가능해진다(계약 7.3절).
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(206, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        manager.NotifyExecutionStarted();
+        Expect(manager.execution_state() == Feedback::EXECUTING,
+               "maneuver is EXECUTING before the emergency");
+        const auto emergency = manager.Accept(MakeEmergencyStop(207));
+        Expect(emergency.command_accepted && emergency.should_plan &&
+                   manager.command_id() == 207 &&
+                   manager.maneuver_type() == Command::EMERGENCY_STOP,
+               "EXECUTING maneuver still yields to EMERGENCY_STOP");
+    }
+    {
+        // EXECUTING 중 일반 명령은 계속 거부된다(계약 7.2절).
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(208, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        manager.NotifyExecutionStarted();
+        const auto rejected = manager.Accept(MakeKeep(209));
+        Expect(rejected.command_accepted && rejected.should_plan &&
+                   rejected.result_code == Feedback::TOO_LATE_TO_CANCEL &&
+                   manager.command_id() == 208,
+               "EXECUTING maneuver rejects a normal new command");
+        const auto cancel =
+            manager.Accept(MakeLaneChange(208, Command::CANCEL));
+        Expect(cancel.result_code == Feedback::TOO_LATE_TO_CANCEL &&
+                   manager.execution_state() == Feedback::EXECUTING,
+               "CANCEL during EXECUTING is TOO_LATE_TO_CANCEL");
+    }
+    {
+        // EXECUTING에서 정상 완료하면 COMPLETED로 latch된다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(210, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        manager.NotifyExecutionStarted();
+        manager.NotifyManeuverCompleted();
+        Expect(manager.execution_state() == Feedback::COMPLETED &&
+                   manager.terminal_latched() && manager.completed_normally(),
+               "EXECUTING maneuver completes normally");
+    }
+    {
+        // COMMITTED 이후의 일시적 실패는 상태를 낮추지 않는다. 이미 잠긴
+        // 궤적을 계속 실행해야 하기 때문이다. D6-0에서 EXECUTING이 실제로
+        // 쓰이기 시작하므로 EXECUTING에서도 같은지 확인한다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(211, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        manager.NotifyExecutionStarted();
+        manager.NotifyPlanFailed(/*terminal=*/false);
+        Expect(!manager.terminal_latched() &&
+                   manager.execution_state() == Feedback::EXECUTING,
+               "transient failure during EXECUTING does not drop to WAITING");
     }
 
     if (g_failures != 0) {

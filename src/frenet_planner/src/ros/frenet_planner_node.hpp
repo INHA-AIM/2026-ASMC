@@ -65,10 +65,30 @@ class FrenetPlannerNode {
     // frenet_state_valid / current_s는 호출자가 ProjectEgoToS로 얻은 값을
     // 넘긴다. 별도 core API를 만들지 않고 STOP 투영에 쓰는 그 결과를
     // 재사용한다.
+    //
+    // ===== plan_valid와 trajectory_source는 별개 축이다 (D6-0) =====
+    //
+    // plan_valid        요청한 maneuver용 새 유효 후보를 만들었는가
+    // trajectory_source 실제로 MPC에 무엇을 보냈는가
+    //
+    // D5까지는 두 값이 항상 함께 움직였다 - 후보를 만들면 그것을 그대로
+    // 발행했기 때문이다. 그래서 trajectory_source == TRAJECTORY_NEW로
+    // plan_valid를 유도해도 우연히 맞았다.
+    //
+    // D6 PREPARE부터는 어긋난다(계약 5.2절):
+    //   AVOID 후보 성공 + MPC에는 KEEP 유지 궤적
+    //     -> plan_valid=true,  trajectory_source=NEW
+    //   AVOID 후보 실패 + MPC에는 KEEP 유지 궤적
+    //     -> plan_valid=false, trajectory_source=NEW   <- 유도식이면 틀린다
+    //
+    // 두 번째가 위험하다. FSM은 plan_valid=true를 "EXECUTE를 보내도 된다"로
+    // 읽으므로, 막힌 회피에 EXECUTE 허가가 나간다. 그래서 유도하지 않고
+    // 호출자가 명시한다.
     void publishFeedbackV2(uint32_t command_id,
                            const CommandAcceptance& acceptance,
                            const asmc_msgs::Trajectory* trajectory,
                            uint8_t trajectory_source,
+                           bool plan_valid,
                            bool frenet_state_valid = false,
                            double current_s = 0.0);
     InputSnapshot takeSnapshot() const;
