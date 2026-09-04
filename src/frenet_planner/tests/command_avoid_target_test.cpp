@@ -48,6 +48,7 @@
 
 #include "frenet_planner/frenet_planner.hpp"
 #include "frenet_planner/obstacle/legacy_object_adapter.hpp"
+#include "ros/avoid_commit_coordinator.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -161,6 +162,35 @@ PlannerCommand MakeAvoidCommand(
     command.target_object_id = target_object_id;
     command.requested_direction = direction;
     return command;
+}
+
+asmc_msgs::BehaviorCommand MakeAvoidTransactionCommand(uint32_t id) {
+    asmc_msgs::BehaviorCommand command;
+    command.header.frame_id = "map";
+    command.command_id = id;
+    command.maneuver_type = asmc_msgs::BehaviorCommand::AVOID;
+    command.execution_request = asmc_msgs::BehaviorCommand::PREPARE;
+    command.direction = asmc_msgs::BehaviorCommand::DIRECTION_LEFT;
+    command.merge_type = asmc_msgs::BehaviorCommand::MERGE_NONE;
+    command.desired_speed_mps = -1.0;
+    command.primary_object_id = 21;
+    command.preferred_front_object_id = -1;
+    command.preferred_rear_object_id = -1;
+    command.desired_time_gap_s = -1.0;
+    command.minimum_gap_m = -1.0;
+    command.valid_until = ros::Time(1001.0);
+    return command;
+}
+
+frenet_planner_ros::CommandExecutionManager MakeAvoidManagerReady(
+    uint32_t command_id) {
+    frenet_planner_ros::CommandExecutionManager manager;
+    // Test harness에서 handshake 전이를 직접 검증하기 위한 설정이다. runtime의
+    // production gate를 여는 SetImplementedManeuver 호출과는 무관하다.
+    manager.SetImplementedManeuver(asmc_msgs::BehaviorCommand::AVOID, true);
+    manager.Accept(MakeAvoidTransactionCommand(command_id));
+    manager.NotifyPlanSucceeded();
+    return manager;
 }
 
 // D6-1a: node가 target pose를 투영해 [A] 필드에 넣어 보낸 상태를 흉내낸다.
@@ -1990,6 +2020,59 @@ int main() {
                "commit guard: a non-finite target is rejected");
         Expect(!planner.avoid_committed(),
                "commit guard: a NaN target locks nothing");
+    }
+
+    {
+        // ---- D6-3a1: manager/core COMMIT atomicity ----------------------
+        //
+        // 기존 node 순서(NotifyCommitted -> CommitAvoid)는 이 입력에서 manager
+        // 만 COMMITTED로 남겼다. coordinator는 동일한 core precondition을
+        // mutation 전에 검사하므로 manager를 전혀 바꾸지 않는다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> blocked_objects{
+            MakeObstacle(waypoints, 21, kEgoS + 8.0, 0.0)};
+        CartesianPath maintenance;
+        Prepare blocked;
+        planner.PrepareAvoid(ego, blocked_objects, boxes_for(blocked_objects),
+                             MakeAvoidCommand(21, LateralDirection::LEFT),
+                             maintenance, blocked);
+        auto manager = MakeAvoidManagerReady(3001);
+        Expect(
+            manager.execution_state() == asmc_msgs::FrenetFeedback::READY &&
+                !blocked.candidate_valid,
+            "atomic commit: vulnerable READY plus invalid core input is reproduced");
+        Expect(!frenet_planner_ros::CommitAvoidAtomically(manager, planner,
+                                                          blocked),
+               "atomic commit: core preflight rejects before manager mutation");
+        Expect(manager.execution_state() == asmc_msgs::FrenetFeedback::READY &&
+                   !planner.avoid_committed(),
+               "atomic commit: manager COMMITTED/core unlocked is impossible");
+    }
+    {
+        // 정상 READY + valid candidate는 두 상태와 target lock을 함께 올린다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath maintenance;
+        Prepare valid;
+        planner.PrepareAvoid(ego, objects, boxes_for(objects),
+                             MakeAvoidCommand(21, LateralDirection::LEFT),
+                             maintenance, valid);
+        auto manager = MakeAvoidManagerReady(3002);
+        const double selected = valid.selected_target_d;
+        Expect(valid.candidate_valid && planner.CanCommitAvoid(valid),
+               "atomic commit: normal candidate passes pure preflight");
+        Expect(frenet_planner_ros::CommitAvoidAtomically(manager, planner,
+                                                         valid),
+               "atomic commit: normal READY transaction commits");
+        Expect(manager.execution_state() ==
+                       asmc_msgs::FrenetFeedback::COMMITTED &&
+                   planner.avoid_committed(),
+               "atomic commit: manager and core become committed together");
+        Expect(std::fabs(planner.avoid_locked_target_d() - selected) < 1e-9,
+               "atomic commit: normal path locks the selected target d");
     }
 
     {

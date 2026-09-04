@@ -292,6 +292,8 @@ if(CATKIN_ENABLE_TESTING)
   )
   target_link_libraries(command_avoid_target_test
     frenet_planner_core
+    frenet_command_execution_manager
+    ${catkin_LIBRARIES}
   )
   add_test(NAME command_avoid_target_test COMMAND command_avoid_target_test)
 

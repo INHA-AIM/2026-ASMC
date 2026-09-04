@@ -934,13 +934,23 @@ bool FrenetPlanner::PrepareAvoid(
                         maintenance_path, &result);
 }
 
-bool FrenetPlanner::CommitAvoid(const AvoidPrepareResult& result) {
+bool FrenetPlanner::CanCommitAvoid(const AvoidPrepareResult& result) const {
     // 확보하지 않은 목표를 잠그지 않는다. 호출자가 candidate_valid를 먼저
     // 확인해야 하지만, 여기서도 막는다.
     if (!result.candidate_valid) return false;
     if (!v2_avoidance_.active) return false;
     if (!std::isfinite(result.selected_target_d)) return false;
+    return true;
+}
 
+bool FrenetPlanner::CommitAvoid(const AvoidPrepareResult& result) {
+    if (!CanCommitAvoid(result)) return false;
+
+    ApplyAvoidCommit(result);
+    return true;
+}
+
+void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     v2_avoidance_.committed = true;
     // 이 시점에 처음 lock한다. PREPARE에서는 사이클마다 좌/우가 바뀔 수
     // 있으므로 잠그지 않았다(계약 12.7.3절).
@@ -949,7 +959,6 @@ bool FrenetPlanner::CommitAvoid(const AvoidPrepareResult& result) {
     // 계산한다(D6-4).
     v2_avoidance_.start_d = last_d_;
     v2_avoidance_.phase = AvoidPhase::SHIFT;
-    return true;
 }
 
 const char* FrenetPlanner::avoid_phase_name() const {

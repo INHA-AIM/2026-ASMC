@@ -301,21 +301,35 @@ public:
                       CartesianPath& maintenance_path,
                       AvoidPrepareResult& result);
 
-    // 재검증을 통과한 AVOID 후보를 확정한다 (D6-3a).
+    // AVOID COMMIT의 core precondition을 mutation 없이 검사한다 (D6-3a1).
+    //
+    // node는 candidate 변환을 끝낸 뒤 이 검사를 통과해야 manager를
+    // COMMITTED로 올릴 수 있다. single-threaded planning tick 안에서는 이
+    // 검사와 ApplyAvoidCommit() 사이에 core 상태를 바꾸는 호출이 없으므로,
+    // preflight 뒤의 apply는 같은 조건으로 실패하지 않는다.
+    bool CanCommitAvoid(const AvoidPrepareResult& result) const;
+
+    // CanCommitAvoid()가 성공한 결과를 적용한다. 이 단계에는 실패 반환이
+    // 없다. ROS coordinator가 manager를 COMMITTED로 올린 뒤 core apply가
+    // 거부되어 두 상태가 갈라지는 경로를 타입 수준에서 없앤다.
+    void ApplyAvoidCommit(const AvoidPrepareResult& result);
+
+    // 재검증을 통과한 AVOID 후보를 core 단독으로 확정하는 호환 API다.
     //
     // ===== 호출 시점이 계약이다 =====
     //
-    // **실제로 내보낼 AVOID 궤적이 준비된 뒤에만** 호출해야 한다. 호출자
-    // 순서는 다음이어야 한다:
+    // ROS node는 이 함수를 manager 승격 뒤 호출하지 않고 위의 preflight와
+    // 실패 없는 apply를 분리해 쓴다. 전체 호출 순서는 다음이어야 한다:
     //
     //   1. PrepareAvoid()로 현재 snapshot 재평가
     //   2. result.candidate_valid 확인
     //   3. candidate_path -> ROS Trajectory 변환 성공 확인
-    //   4. NotifyCommitted() 성공
-    //   5. CommitAvoid()          <- 여기
-    //   6. 궤적 캐시 저장 + publish
+    //   4. CanCommitAvoid() 성공
+    //   5. NotifyCommitted() 성공
+    //   6. ApplyAvoidCommit()
+    //   7. 궤적 캐시 저장 + publish
     //
-    // 4번보다 먼저 3번을 확인해야 하는 이유는 D6-0a와 같다. COMMIT을 먼저
+    // 5번보다 먼저 3·4번을 확인해야 하는 이유는 D6-0a와 같다. COMMIT을 먼저
     // 올리고 변환이 실패하면
     //   Feedback = COMMITTED AVOID
     //   MPC      = 직전 PREPARE의 중앙 maintenance

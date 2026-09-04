@@ -1883,20 +1883,28 @@ D6-1a heading 경계, D6-2c READY/WAITING을 한꺼번에 덮는다.
 1. PrepareAvoid()로 현재 snapshot 재평가
 2. candidate_valid 확인
 3. candidate_path -> ROS Trajectory 변환 성공 확인
-4. NotifyCommitted() 성공        (READY에서만)
-5. CommitAvoid()                 (core target_d lock)
-6. 캐시 저장 + publish
+4. CanCommitAvoid() 성공         (core read-only preflight)
+5. NotifyCommitted() 성공        (READY에서만)
+6. ApplyAvoidCommit()            (core target_d lock; 실패 없는 apply)
+7. 캐시 저장 + publish
 ```
 
-**2·3번을 4번보다 먼저** 해야 한다. COMMIT을 먼저 올리고 변환이 실패하면
+**2·3·4번을 5번보다 먼저** 해야 한다. COMMIT을 먼저 올리고 변환 또는 core
+precondition 검사가 실패하면
 
 ```
 Feedback = COMMITTED AVOID
 MPC      = 직전 PREPARE의 중앙 maintenance
 ```
 
-라는 불일치가 생긴다 — D6-0a에서 막은 것과 같은 종류다. 그래서 변환 실패
-시에는 READY에 머물고 maintenance를 계속 발행한다.
+라는 불일치가 생긴다 — D6-0a에서 막은 것과 같은 종류다. 그래서 변환 또는
+preflight 실패 시에는 READY에 머물고 maintenance를 계속 발행한다.
+
+`CanCommitAvoid()`는 `candidate_valid`, active target, finite target_d를 mutation
+없이 확인한다. single-threaded planning tick 안에서 preflight와 apply 사이에는
+core mutation이 없고 `ApplyAvoidCommit()`에는 실패 반환이 없으므로, manager
+`COMMITTED`와 core `committed`는 함께 성립한다. 기존 `CommitAvoid()`는 core
+단독 호출용 호환 API로서 preflight와 apply를 묶어 `bool`을 반환한다.
 
 ##### `target_d`는 COMMIT에서 처음 lock된다
 

@@ -4,6 +4,7 @@
 #include <vector>
 #include <utility>
 
+#include "ros/avoid_commit_coordinator.hpp"
 #include "ros/message_converter.hpp"
 
 namespace frenet_planner_ros {
@@ -1201,8 +1202,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // 순서가 계약이다:
         //   1. 재검증 통과 (candidate_valid)
         //   2. candidate -> ROS Trajectory 변환 성공
-        //   3. NotifyCommitted() 성공
-        //   4. core target_d lock
+        //   3. core COMMIT preflight 성공
+        //   4. manager + core COMMIT 동시 적용
         //   5. 캐시 저장 + publish
         //
         // 2번을 3번보다 먼저 확인해야 한다. COMMIT을 먼저 올리고 변환이
@@ -1219,24 +1220,11 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 now, avoid_trajectory);
             if (convert_status == ConversionStatus::OK &&
                 !avoid_trajectory.points.empty()) {
-                // 3번: manager 승격. READY에서만 성공한다(계약 5.6절).
-                if (command_manager_.NotifyCommitted()) {
-                    // 4번: core lock. 이 시점에 target_d가 처음 확정된다.
-                    if (planner_.CommitAvoid(prepare)) {
-                        committed_now = true;
-                    } else {
-                        // core가 거부했다. manager만 COMMITTED가 되면 위
-                        // 불일치가 그대로 생기므로, 이 사이클을 COMMIT하지
-                        // 않고 maintenance로 계속한다. 다음 사이클에 다시
-                        // 시도한다 - manager 상태는 이미 COMMITTED이므로
-                        // 로그로 드러낸다.
-                        ROS_ERROR_THROTTLE(
-                            1.0,
-                            "v2 AVOID commit rejected by the planner core "
-                            "(command_id=%u target_d=%.3f)",
-                            command.command_id, prepare.selected_target_d);
-                    }
-                }
+                // 3~4번: pure core preflight 뒤 manager와 core를 연속 적용한다.
+                // preflight가 실패하면 manager는 READY 그대로이므로
+                // COMMITTED/core-unlocked 분리 상태가 남지 않는다.
+                committed_now = CommitAvoidAtomically(
+                    command_manager_, planner_, prepare);
             } else {
                 ROS_WARN_THROTTLE(1.0,
                                   "v2 AVOID candidate conversion failed; "
