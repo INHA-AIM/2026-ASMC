@@ -467,6 +467,75 @@ bool FrenetPlanner::Plan(
     return PlanInternal(ego, obstacles, &command, &collision_obstacles, out_path);
 }
 
+void FrenetPlanner::SelectLegacyBehavior(
+    bool begin_avoidance, bool nearest_found, const LeaderTarget& nearest_leader,
+    PlannerCommand& cmd, double& out_avoid_offset, double& out_leader_s,
+    double& out_leader_speed, double& out_leader_accel) const {
+    // D1-2 순수 추출: 아래 본문은 PlanInternal의 legacy 분기에서 그대로 옮겨온
+    // 것이며 동작을 바꾸지 않았다. 지역변수 avoid_offset/leader_* 만 출력
+    // 파라미터로 이름이 바뀌었다.
+    double& avoid_offset = out_avoid_offset;
+    double& leader_s = out_leader_s;
+    double& leader_speed = out_leader_speed;
+    double& leader_accel = out_leader_accel;
+    if (begin_avoidance || (avoidance_.active && avoidance_.phase != AvoidPhase::TRACKING)) {
+        cmd.mode = AVOID;
+        avoid_offset = (avoidance_.phase == AvoidPhase::SHIFT || avoidance_.phase == AvoidPhase::PASS)
+                     ? avoidance_.target_d : 0.0;
+        cmd.avoidance_d_offset = avoid_offset;
+    } else if (merge_.active) {
+        const bool highway = merge_.type == MergeType::HIGHWAY;
+        const HighwayMergeZone* active_highway_zone = HighwayZoneAt(
+            highway_merge_cfg_, merge_.highway_zone_index);
+        const HighwayMergeCheckpoint* active_highway_checkpoint = HighwayCheckpointAt(
+            highway_merge_cfg_, merge_.highway_zone_index, merge_.highway_conflict_index);
+        const double active_conflict_s = highway
+            && active_highway_checkpoint
+                ? active_highway_checkpoint->conflict_s : merge_cfg_.conflict_s;
+        const double active_stop_buffer = highway
+            ? highway_merge_cfg_.stop_buffer : merge_cfg_.stop_buffer;
+        cmd.mode = MERGE;
+        cmd.target_lane = 0;
+        cmd.merge_target_d = 0.0;
+        cmd.merge_gap_safe = merge_.gap_safe;
+        cmd.merge_conflict_s = active_conflict_s;
+        cmd.merge_stop_s = active_conflict_s - active_stop_buffer;
+        cmd.merge_entry_time = merge_.entry_time;
+        cmd.merge_sa_id = merge_.preceding_id;
+        cmd.merge_sb_id = merge_.following_id;
+        cmd.merge_committed = merge_.gap_locked || merge_.commit_pending;
+        cmd.merge_crossing = merge_.phase == MergePhase::CROSS;
+        cmd.merge_type = merge_.type;
+        // 합류 후 같은 corridor에 들어온 선행차는 일반 장애물이 아니라
+        // FOLLOWING과 동일한 종방향 gap 제어 대상으로 전달한다.
+        if (nearest_found) {
+            cmd.leader_id = nearest_leader.id;
+            cmd.leader_s = nearest_leader.s;
+            cmd.leader_speed = nearest_leader.speed;
+            cmd.leader_accel = nearest_leader.accel;
+            cmd.time_gap = following_cfg_.time_gap;
+            cmd.min_gap = following_cfg_.min_gap;
+            cmd.gap_gain = following_cfg_.gap_gain;
+        } else {
+            cmd.leader_id = -1;
+        }
+    } else if (following_.active) {
+        leader_s = following_.leader_s;
+        leader_speed = following_.leader_speed;
+        leader_accel = following_.leader_accel;
+        cmd.mode = FOLLOWING;
+        cmd.leader_id = following_.leader_id;
+        cmd.leader_s = leader_s;
+        cmd.leader_speed = leader_speed;
+        cmd.leader_accel = leader_accel;
+        cmd.time_gap = following_cfg_.time_gap;
+        cmd.min_gap = following_cfg_.min_gap;
+        cmd.gap_gain = following_cfg_.gap_gain;
+    } else {
+        cmd.mode = LANE_KEEPING;
+    }
+}
+
 bool FrenetPlanner::PlanInternal(
     const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
     const PlannerCommand* external_command,
@@ -1005,62 +1074,10 @@ bool FrenetPlanner::PlanInternal(
         merge_ = MergeContext{};
     }
 
-    if (begin_avoidance || (avoidance_.active && avoidance_.phase != AvoidPhase::TRACKING)) {
-        cmd.mode = AVOID;
-        avoid_offset = (avoidance_.phase == AvoidPhase::SHIFT || avoidance_.phase == AvoidPhase::PASS)
-                     ? avoidance_.target_d : 0.0;
-        cmd.avoidance_d_offset = avoid_offset;
-    } else if (merge_.active) {
-        const bool highway = merge_.type == MergeType::HIGHWAY;
-        const HighwayMergeZone* active_highway_zone = HighwayZoneAt(
-            highway_merge_cfg_, merge_.highway_zone_index);
-        const HighwayMergeCheckpoint* active_highway_checkpoint = HighwayCheckpointAt(
-            highway_merge_cfg_, merge_.highway_zone_index, merge_.highway_conflict_index);
-        const double active_conflict_s = highway
-            && active_highway_checkpoint
-                ? active_highway_checkpoint->conflict_s : merge_cfg_.conflict_s;
-        const double active_stop_buffer = highway
-            ? highway_merge_cfg_.stop_buffer : merge_cfg_.stop_buffer;
-        cmd.mode = MERGE;
-        cmd.target_lane = 0;
-        cmd.merge_target_d = 0.0;
-        cmd.merge_gap_safe = merge_.gap_safe;
-        cmd.merge_conflict_s = active_conflict_s;
-        cmd.merge_stop_s = active_conflict_s - active_stop_buffer;
-        cmd.merge_entry_time = merge_.entry_time;
-        cmd.merge_sa_id = merge_.preceding_id;
-        cmd.merge_sb_id = merge_.following_id;
-        cmd.merge_committed = merge_.gap_locked || merge_.commit_pending;
-        cmd.merge_crossing = merge_.phase == MergePhase::CROSS;
-        cmd.merge_type = merge_.type;
-        // 합류 후 같은 corridor에 들어온 선행차는 일반 장애물이 아니라
-        // FOLLOWING과 동일한 종방향 gap 제어 대상으로 전달한다.
-        if (nearest_found) {
-            cmd.leader_id = nearest_leader.id;
-            cmd.leader_s = nearest_leader.s;
-            cmd.leader_speed = nearest_leader.speed;
-            cmd.leader_accel = nearest_leader.accel;
-            cmd.time_gap = following_cfg_.time_gap;
-            cmd.min_gap = following_cfg_.min_gap;
-            cmd.gap_gain = following_cfg_.gap_gain;
-        } else {
-            cmd.leader_id = -1;
-        }
-    } else if (following_.active) {
-        leader_s = following_.leader_s;
-        leader_speed = following_.leader_speed;
-        leader_accel = following_.leader_accel;
-        cmd.mode = FOLLOWING;
-        cmd.leader_id = following_.leader_id;
-        cmd.leader_s = leader_s;
-        cmd.leader_speed = leader_speed;
-        cmd.leader_accel = leader_accel;
-        cmd.time_gap = following_cfg_.time_gap;
-        cmd.min_gap = following_cfg_.min_gap;
-        cmd.gap_gain = following_cfg_.gap_gain;
-    } else {
-        cmd.mode = LANE_KEEPING;
-    }
+    // 행동 결정(AVOID > MERGE > FOLLOW > KEEP)은 SelectLegacyBehavior 한 곳에만
+    // 있다. v2에서는 이 호출이 FSM의 maneuver_type으로 대체된다.
+    SelectLegacyBehavior(begin_avoidance, nearest_found, nearest_leader, cmd,
+                         avoid_offset, leader_s, leader_speed, leader_accel);
     } else {
         // 외부 command 경로는 legacy AVOID/FOLLOW/MERGE context를 읽거나
         // 갱신하지 않는다. 진입 가능한 모드는 ValidateExternalCommand의

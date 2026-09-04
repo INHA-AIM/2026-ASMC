@@ -99,6 +99,32 @@ private:
                       const std::vector<TrackedObstacle>* collision_obstacles,
                       CartesianPath& out_path);
 
+    // ===== D1-2: legacy 행동 선택권의 유일한 경계 =====
+    //
+    // Legacy(간이 FSM) 경로에서 "지금 어떤 maneuver를 할지"를 결정하는 지점을
+    // 한 함수로 모았다. v2에서는 이 결정 권한이 FSM으로 넘어가며(BehaviorCommand
+    // .maneuver_type), 이 함수는 호출되지 않는다 - 외부 command 경로는
+    // PlanInternal에서 `cmd = *external_command`로 이 결정 전체를 건너뛴다.
+    //
+    // 우선순위: AVOID > MERGE > FOLLOW > KEEP (아래 if-else 순서가 곧 우선순위).
+    //
+    // 이 함수는 planner 상태(avoidance_/following_/merge_)를 **읽기만** 한다.
+    // 상태를 갱신하는 acquisition/orchestration 코드는 호출자에 남아 있다 -
+    // 그쪽은 legacy 전용 policy이므로 v2에서 재사용하지 않는다
+    // (docs/d1-legacy-behavior-boundary.md 0.1절 B 분류).
+    //
+    // 유일한 예외: MERGE COMMIT 자동 승격(merge_.commit_pending = true)은 gap
+    // 평가 코드와 물리적으로 얽혀 있어 이 함수 밖(호출자)에 남아 있다. v2에서는
+    // 그 trigger가 FSM의 EXECUTE로 이동한다(계약 문서 5.4절).
+    //
+    // out_avoid_offset / out_leader_* 는 아래 진단 로그가 쓰는 값이라 그대로
+    // 돌려준다(동작에는 영향 없음).
+    void SelectLegacyBehavior(bool begin_avoidance, bool nearest_found,
+                              const LeaderTarget& nearest_leader,
+                              PlannerCommand& cmd, double& out_avoid_offset,
+                              double& out_leader_s, double& out_leader_speed,
+                              double& out_leader_accel) const;
+
     // TRACKING은 외부 AVOID 모드가 아니다. 정적 장애물 ID/방향만
     // 미리 잠그고 주행은 LANE_KEEPING을 계속하는 내부 상태다.
     enum class AvoidPhase { TRACKING, SHIFT, PASS };
