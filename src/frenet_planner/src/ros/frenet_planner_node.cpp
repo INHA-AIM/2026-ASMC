@@ -8,6 +8,24 @@
 
 namespace frenet_planner_ros {
 
+namespace {
+
+// quaternion -> yaw. D3-2 validation이 단위 quaternion을 이미 보장하므로
+// 정규화는 하지 않는다.
+double YawFromQuaternion(const geometry_msgs::Quaternion& q) {
+    const double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
+    const double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
+    return std::atan2(siny_cosp, cosy_cosp);
+}
+
+// 각도를 (-pi, pi]로 정규화. 단순 뺄셈으로 비교하면 179도와 -179도의 차이가
+// 358도로 계산되어 실제 2도 차이를 큰 오차로 오판한다.
+double NormalizeAngle(double angle) {
+    return std::atan2(std::sin(angle), std::cos(angle));
+}
+
+}  // namespace
+
 FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     : nh_(std::move(nh)), pnh_(std::move(pnh)) {
     std::string vehicle_topic = "/vehicle/state";
@@ -38,6 +56,17 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
                behavior_command_v2_topic);
     pnh_.param("publish_topics/feedback_v2", feedback_v2_topic,
                feedback_v2_topic);
+    pnh_.param("v2/stop/max_target_heading_error_rad",
+               stop_max_target_heading_error_rad_,
+               stop_max_target_heading_error_rad_);
+
+    if (!std::isfinite(stop_max_target_heading_error_rad_) ||
+        stop_max_target_heading_error_rad_ <= 0.0 ||
+        stop_max_target_heading_error_rad_ > M_PI) {
+        ROS_WARN("Invalid v2/stop/max_target_heading_error_rad %.3f; using 45 deg",
+                 stop_max_target_heading_error_rad_);
+        stop_max_target_heading_error_rad_ = 0.785398;
+    }
 
     if (planning_frequency_hz_ <= 0.0) {
         ROS_WARN("Invalid planning frequency %.3f Hz; using 20 Hz",
@@ -723,6 +752,67 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
             return true;
         }
+
+        // 투영이 성공해도 방향이 맞는지는 별개다. 왕복 구간이
+        // max_lateral_offset(5m) 이내로 나란히 지나가면 Cartesian 거리는
+        // 가깝지만 진행 방향이 반대인 지점에 목표가 붙을 수 있다.
+        // 계약 3.4절 4항의 heading 검증이다.
+        double reference_heading = 0.0;
+        if (!planner_.ReferenceHeadingAt(stop_s, reference_heading)) {
+            command_manager_.NotifyPlanFailed(
+                /*terminal=*/true,
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
+                "cannot read reference heading at the stop target");
+            CommandAcceptance failed = acceptance;
+            failed.should_plan = false;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
+            failed.detail = "cannot read reference heading at the stop target";
+            has_last_v2_trajectory_ = false;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(command.command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+            return true;
+        }
+
+        const double target_yaw =
+            YawFromQuaternion(command.target_pose_map.orientation);
+        // 단순 뺄셈이 아니라 정규화해서 비교한다. 179도와 -179도는 실제로
+        // 2도 차이인데 뺄셈만 하면 358도가 된다.
+        const double heading_error =
+            std::fabs(NormalizeAngle(target_yaw - reference_heading));
+        if (heading_error > stop_max_target_heading_error_rad_) {
+            command_manager_.NotifyPlanFailed(
+                /*terminal=*/true,
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
+                "stop target heading disagrees with the reference line");
+            CommandAcceptance failed = acceptance;
+            failed.should_plan = false;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
+            failed.detail =
+                "stop target heading disagrees with the reference line";
+            ROS_WARN_THROTTLE(
+                1.0,
+                "v2 STOP target heading rejected: target=%.3f ref=%.3f "
+                "error=%.3f rad > %.3f (command_id=%u)",
+                target_yaw, reference_heading, heading_error,
+                stop_max_target_heading_error_rad_, command.command_id);
+            has_last_v2_trajectory_ = false;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(command.command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+            return true;
+        }
+
         planner_command.stop_position = stop_s;
     }
 

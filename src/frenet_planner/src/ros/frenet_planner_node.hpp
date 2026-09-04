@@ -129,6 +129,18 @@ class FrenetPlannerNode {
     bool has_last_valid_trajectory_ = false;
     int plan_fail_streak_ = 0;
 
+    // v2 STOP target pose의 허용 heading 오차 [rad] (계약 3.4절 4항).
+    //
+    // 투영점의 reference yaw와 목표 pose의 yaw 차이가 이 값을 넘으면
+    // TARGET_PROJECTION_FAILED로 거부한다. 왕복 구간이 max_lateral_offset
+    // 이내로 나란히 지나갈 때 반대 방향 구간에 목표가 붙는 것을 막는다.
+    //
+    // 기본값 45도. 초기 개발값이며 MORAI 검증 후 조인다 - 너무 좁게 잡으면
+    // 정상 STOP이 거부되고, 너무 넓으면 반대 방향을 통과시킨다.
+    // 이 값은 planning 알고리즘 파라미터가 아니라 v2 계약 검증 임계값이므로
+    // params.yaml이 아닌 ROS param으로 둔다(검증이 node 책임이기 때문).
+    double stop_max_target_heading_error_rad_ = 0.785398;
+
     double planning_frequency_hz_ = 20.0;
     double vehicle_timeout_seconds_ = 0.20;
     double objects_timeout_seconds_ = 0.30;

@@ -76,6 +76,21 @@ public:
     // Ego Cartesian 위치의 s. 노드가 ProjectPointToS의 s_hint를 얻는 용도.
     bool ProjectEgoToS(const CartesianState& ego, double& out_s) const;
 
+    // reference line의 s 지점 진행방향(yaw). 읽기 전용 조회다.
+    //
+    // 용도: v2 STOP의 target pose heading 검증(계약 3.4절 4항). 현재 투영
+    // 방어는 s_hint + projection_search_window + max_lateral_offset뿐이라,
+    // 왕복 구간이 max_lateral_offset 이내로 나란히 지나가면 **진행 방향이
+    // 반대인 구간에 목표가 붙을 수 있다.**
+    //
+    // 이 검증을 ProjectPointToS 안에 넣지 않은 이유: 그 함수는 v1 STOP도
+    // 쓰고 있어서, v2 보강을 하려다 C4에서 검증한 v1 동작까지 바뀐다.
+    // core는 "s -> reference yaw" 조회만 제공하고, "이 heading 차이가 허용
+    // 가능한가"라는 v2 계약 판단은 ROS 계층이 한다.
+    //
+    // s가 reference line 범위를 벗어나거나 결과가 유한하지 않으면 false.
+    bool ReferenceHeadingAt(double s, double& out_heading) const;
+
     // Plan()이 반환하는 CartesianPath의 샘플 간격 [s] (params.yaml의 planner.dt).
     // MPC 쪽에서 이 값을 알아야 시간 기준으로 재샘플링해 궤적 추종(time-aligned
     // tracking)을 할 수 있다 (frenet_planner.cpp의 dt와 mpc_params.dt가 서로
