@@ -312,7 +312,7 @@ legacy/internal 경로를 위해 `PlannerCommand`에 그대로 남긴다.
 
 ### 4.2 Immutable 필드 (fingerprint 구성)
 
-같은 `command_id` 안에서 바뀌면 안 되는 필드 — 총 13개.
+같은 `command_id` 안에서 바뀌면 안 되는 필드 — 총 14개.
 
 ```
 maneuver_type

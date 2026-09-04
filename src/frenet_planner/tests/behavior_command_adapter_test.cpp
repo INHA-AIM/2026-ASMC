@@ -204,6 +204,30 @@ int main() {
         message.primary_object_id = -2;
         ExpectInvalid(message, "object id < -1 is INVALID");
     }
+    // sentinel은 정확히 비교한다. 계약이 "== -1.0 또는 >= 0.0"이므로
+    // -1 < value < 0 구간은 전부 거부되어야 한다. 허용오차 비교(1e-6)를
+    // 쓰면 -0.9999995가 통과하므로 그것을 막는다.
+    {
+        Command message = MakeValidKeep();
+        message.desired_speed_mps = -0.9999995;
+        ExpectInvalid(message, "near-sentinel desired_speed (-0.9999995) is INVALID");
+    }
+    {
+        Command message = MakeValidKeep();
+        message.desired_speed_mps = -0.5;
+        ExpectInvalid(message, "desired_speed -0.5 is INVALID");
+    }
+    {
+        Command message = MakeValidFollow();
+        message.desired_time_gap_s = -0.9999995;  // custom gap off
+        ExpectInvalid(message, "near-sentinel time_gap is INVALID when custom is off");
+    }
+    {
+        Command message = MakeValidFollow();
+        message.minimum_gap_m = -0.9999995;
+        ExpectInvalid(message, "near-sentinel min_gap is INVALID when custom is off");
+    }
+
     // desired_speed_mps = 0.0은 "정지 요청"으로 유효하다.
     {
         Command message = MakeValidKeep();

@@ -9,7 +9,9 @@ namespace {
 using Command = asmc_msgs::BehaviorCommand;
 using Feedback = asmc_msgs::FrenetFeedback;
 
-// 계약 4.4절의 허용오차.
+// 계약 4.4절의 허용오차. **fingerprint 비교 전용**이다.
+// validation의 sentinel 검사(-1.0)에는 쓰지 않는다 - 허용오차를 쓰면
+// -0.9999995가 -1.0으로 인정되어 계약이 금지한 구간이 통과한다.
 constexpr double kScalarTolerance = 1e-6;      // 속도, gap
 constexpr double kPositionTolerance = 1e-3;    // [m]
 constexpr double kOrientationTolerance = 1e-3;
@@ -41,9 +43,13 @@ bool IsValidMergeType(uint8_t value) {
 }
 
 // -1.0(기본값 사용) 또는 0 이상의 유한값.
+//
+// sentinel은 정확히 비교한다. 4.4절의 허용오차는 fingerprint 비교용이며
+// validation에 쓰면 -0.9999995 같은 값이 -1.0으로 인정된다. 계약은
+// "== -1.0 또는 >= 0.0"이므로 그 사이 구간(-1 < value < 0)은 거부해야 한다.
 bool IsValidDesiredSpeed(double value) {
     if (!std::isfinite(value)) return false;
-    return NearlyEqual(value, -1.0, kScalarTolerance) || value >= 0.0;
+    return value == -1.0 || value >= 0.0;
 }
 
 bool IsValidObjectId(int32_t value) {
@@ -174,10 +180,11 @@ CommandValidationResult ValidateBehaviorCommand(
             return Invalid("minimum_gap_m must be > 0 when custom gap is on");
         }
     } else {
-        if (!NearlyEqual(message.desired_time_gap_s, -1.0, kScalarTolerance)) {
+        // sentinel 정확 비교 (IsValidDesiredSpeed 주석 참고).
+        if (message.desired_time_gap_s != -1.0) {
             return Invalid("desired_time_gap_s must be -1.0 when custom gap is off");
         }
-        if (!NearlyEqual(message.minimum_gap_m, -1.0, kScalarTolerance)) {
+        if (message.minimum_gap_m != -1.0) {
             return Invalid("minimum_gap_m must be -1.0 when custom gap is off");
         }
     }
