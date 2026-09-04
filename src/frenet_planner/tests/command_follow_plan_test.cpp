@@ -275,12 +275,44 @@ int main() {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
         CartesianPath path;
-        // 정지한 차량은 FOLLOW 대상이 아니다(min_leader_speed 미달).
-        const std::vector<ObjectInfo> stopped{
-            MakeVehicle(waypoints, 15, kEgoS + 30.0, 0.0)};
-        Expect(!planner.Plan(ego, stopped, MakeFollowCommand(15), path) &&
+        // 역방향으로 움직이는 객체는 거부한다. 마주 오는 차량을 추종하면
+        // gap이 음수로 발산한다.
+        const std::vector<ObjectInfo> oncoming{
+            MakeVehicle(waypoints, 15, kEgoS + 30.0, -3.0)};
+        Expect(!planner.Plan(ego, oncoming, MakeFollowCommand(15), path) &&
                    planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
-               "a stopped target is TARGET_OBJECT_LOST");
+               "an oncoming target is TARGET_OBJECT_LOST");
+    }
+
+    // --- 정지/저속 leader도 FOLLOW 대상이다 (D5-2 정책) -------------------
+    // min_leader_speed(0.5 m/s)는 legacy에서 "움직이는 차량은 FOLLOW, 정지
+    // 객체는 AVOID"를 planner가 스스로 분류하기 위한 policy였다. v2에서 그
+    // 권한은 FSM에 있으므로 속도로 대상을 걸러내지 않는다.
+    for (double leader_speed : {6.0, 2.0, 0.3, 0.0}) {
+        FrenetPlanner planner;
+        if (!planner.Init(config)) return 1;
+        CartesianPath path;
+        const std::vector<ObjectInfo> objects{
+            MakeVehicle(waypoints, 15, kEgoS + 40.0, leader_speed)};
+        planner.Plan(ego, objects, MakeFollowCommand(15), path);
+        Expect(planner.last_failure_reason() != Reason::TARGET_OBJECT_LOST &&
+                   planner.active_leader_id() == 15,
+               "a leader at " + std::to_string(leader_speed) +
+                   " m/s stays the FOLLOW target");
+    }
+    {
+        // 감속하다 완전히 멈추는 앞차. 확보 후 속도가 0이 되어도 유지한다.
+        FrenetPlanner planner;
+        if (!planner.Init(config)) return 1;
+        CartesianPath path;
+        for (double leader_speed : {6.0, 4.0, 2.0, 0.5, 0.0, 0.0}) {
+            const std::vector<ObjectInfo> objects{
+                MakeVehicle(waypoints, 15, kEgoS + 40.0, leader_speed)};
+            planner.Plan(ego, objects, MakeFollowCommand(15), path);
+        }
+        Expect(planner.active_leader_id() == 15 &&
+                   planner.last_failure_reason() != Reason::TARGET_OBJECT_LOST,
+               "a leader decelerating to a stop keeps being followed");
     }
     {
         FrenetPlanner planner;
@@ -372,6 +404,144 @@ int main() {
         planner.Plan(ego, objects, keep, path);
         Expect(planner.active_leader_id() == -1,
                "switching to KEEP clears the v2 follow state");
+    }
+
+    // --- dropout grace: 1~5 cycle 유지, 6번째 LOST ------------------------
+    // dropout_grace_cycles=5 (20Hz 기준 0.25초)
+    {
+        FrenetPlanner planner;
+        if (!planner.Init(config)) return 1;
+        CartesianPath path;
+        const std::vector<ObjectInfo> objects{
+            MakeVehicle(waypoints, 15, kEgoS + 40.0, 6.0)};
+        const std::vector<ObjectInfo> no_objects;
+
+        planner.Plan(ego, objects, MakeFollowCommand(15), path);
+        Expect(planner.active_leader_id() == 15, "grace: leader acquired");
+
+        // 1~5번째 미관측은 유예 대상이다.
+        bool grace_held = true;
+        for (int cycle = 1; cycle <= 5; ++cycle) {
+            planner.Plan(ego, no_objects, MakeFollowCommand(15), path);
+            if (planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST ||
+                planner.active_leader_id() != 15) {
+                grace_held = false;
+            }
+        }
+        Expect(grace_held, "grace: cycles 1-5 keep the leader");
+
+        // 6번째에서 유예가 끝난다.
+        const bool ok = planner.Plan(ego, no_objects, MakeFollowCommand(15), path);
+        Expect(!ok && planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
+               "grace: cycle 6 is TARGET_OBJECT_LOST");
+        Expect(planner.active_leader_id() == -1,
+               "grace: no active leader after the grace window");
+    }
+
+    // --- grace 중 leader_s가 실제로 전진한다 -------------------------------
+    // 예측이 없으면 leader가 제자리에 멈춘 것처럼 보여 gap이 잘못 계산된다.
+    {
+        FrenetPlanner planner;
+        if (!planner.Init(config)) return 1;
+        CartesianPath path;
+        constexpr double kLeaderSpeed = 6.0;
+        const std::vector<ObjectInfo> objects{
+            MakeVehicle(waypoints, 15, kEgoS + 40.0, kLeaderSpeed)};
+        const std::vector<ObjectInfo> no_objects;
+        planner.Plan(ego, objects, MakeFollowCommand(15), path);
+
+        // 유예 중 궤적이 계속 생성되는지 본다. leader_s가 전진하지 않으면
+        // gap이 줄어든 것으로 계산되어 궤적이 급격히 보수적으로 바뀐다.
+        double first_end_speed = -1.0;
+        double last_end_speed = -1.0;
+        for (int cycle = 1; cycle <= 4; ++cycle) {
+            const bool ok =
+                planner.Plan(ego, no_objects, MakeFollowCommand(15), path);
+            if (ok && !path.v.empty()) {
+                if (first_end_speed < 0.0) first_end_speed = path.v.back();
+                last_end_speed = path.v.back();
+            }
+        }
+        Expect(first_end_speed >= 0.0 && last_end_speed >= 0.0,
+               "grace: trajectories keep being generated during the grace window");
+        // leader가 전진하므로 gap이 유지되고, 목표속도가 급락하지 않는다.
+        Expect(last_end_speed >= first_end_speed - 1.0,
+               "grace: predicted leader motion keeps the speed target stable");
+    }
+
+    // --- grace 중 재관측하면 유예가 초기화된다 -----------------------------
+    {
+        FrenetPlanner planner;
+        if (!planner.Init(config)) return 1;
+        CartesianPath path;
+        const std::vector<ObjectInfo> objects{
+            MakeVehicle(waypoints, 15, kEgoS + 40.0, 6.0)};
+        const std::vector<ObjectInfo> no_objects;
+        planner.Plan(ego, objects, MakeFollowCommand(15), path);
+
+        // 3 cycle 미관측 후 재관측.
+        for (int cycle = 1; cycle <= 3; ++cycle) {
+            planner.Plan(ego, no_objects, MakeFollowCommand(15), path);
+        }
+        planner.Plan(ego, objects, MakeFollowCommand(15), path);
+        Expect(planner.active_leader_id() == 15,
+               "grace: re-observation keeps the leader");
+
+        // 유예가 초기화되었으므로 다시 5 cycle을 버틸 수 있어야 한다.
+        bool held = true;
+        for (int cycle = 1; cycle <= 5; ++cycle) {
+            planner.Plan(ego, no_objects, MakeFollowCommand(15), path);
+            if (planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST) {
+                held = false;
+            }
+        }
+        Expect(held, "grace: the window resets after re-observation");
+    }
+
+    // --- 다른 maneuver로 넘어가면 context가 즉시 비워진다 ------------------
+    // 이 reset이 early-return보다 앞에 있어야 한다. EMERGENCY와 저속
+    // fallback은 명령 조립 지점에 도달하기 전에 return하므로, 그곳에서만
+    // reset하면 context가 살아남아 첫 binding 실패가 GRACE를 받는다.
+    {
+        FrenetPlanner planner;
+        if (!planner.Init(config)) return 1;
+        CartesianPath path;
+        const std::vector<ObjectInfo> objects{
+            MakeVehicle(waypoints, 15, kEgoS + 40.0, 6.0)};
+        planner.Plan(ego, objects, MakeFollowCommand(15), path);
+        Expect(planner.active_leader_id() == 15, "stale: leader acquired");
+
+        // EMERGENCY는 후보 파이프라인 전에 return한다.
+        PlannerCommand emergency{};
+        emergency.mode = EMERGENCY;
+        planner.Plan(ego, objects, emergency, path);
+        Expect(planner.active_leader_id() == -1,
+               "stale: EMERGENCY clears the v2 follow context");
+
+        // 객체 없이 FOLLOW를 다시 보내면 첫 binding 실패여야 한다.
+        const bool ok = planner.Plan(ego, {}, MakeFollowCommand(15), path);
+        Expect(!ok && planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
+               "stale: a fresh FOLLOW after EMERGENCY has no grace");
+    }
+    {
+        // 저속 KEEP도 fallback으로 조기 return한다.
+        FrenetPlanner planner;
+        if (!planner.Init(config)) return 1;
+        CartesianPath path;
+        const std::vector<ObjectInfo> objects{
+            MakeVehicle(waypoints, 15, kEgoS + 40.0, 6.0)};
+        planner.Plan(ego, objects, MakeFollowCommand(15), path);
+
+        const CartesianState slow_ego = MakeEgo(PoseAt(waypoints, kEgoS), 0.2);
+        PlannerCommand keep{};
+        keep.mode = LANE_KEEPING;
+        planner.Plan(slow_ego, objects, keep, path);
+        Expect(planner.active_leader_id() == -1,
+               "stale: the low-speed KEEP fallback clears the follow context");
+
+        const bool ok = planner.Plan(ego, {}, MakeFollowCommand(15), path);
+        Expect(!ok && planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
+               "stale: a fresh FOLLOW after low-speed KEEP has no grace");
     }
 
     std::remove(config.c_str());

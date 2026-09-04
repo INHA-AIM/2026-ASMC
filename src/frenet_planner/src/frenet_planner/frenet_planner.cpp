@@ -325,7 +325,21 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
             std::max(following_cfg_.max_leader_search_s, collision_horizon);
         const double search_limit =
             effective_search_s + following_cfg_.exit_search_margin;
-        const bool same_direction = object_s_dot > following_cfg_.min_leader_speed;
+        // 속도 하한(min_leader_speed)을 적용하지 않는다.
+        //
+        // 그 값(0.5 m/s)은 legacy에서 "움직이는 차량은 FOLLOW, 정지 객체는
+        // AVOID"를 planner가 스스로 분류하기 위한 policy였다. v2에서 그
+        // 분류 권한은 FSM에 있으므로, FSM이 FOLLOW id=15를 지정했는데
+        // Frenet이 "15가 0 m/s니까 FOLLOW하지 않겠다"고 하면 행동 선택에
+        // 다시 개입하는 셈이다.
+        //
+        // 실제 도로에서도 앞차가 신호에 멈추면 그 뒤에 같이 멈추는 것이
+        // FOLLOW다. GenerateFollowingCandidates는 정지 leader에 대해
+        // min_gap을 유지하는 종방향 계획을 이미 할 수 있다.
+        //
+        // 역방향으로 움직이는 객체만 거부한다 - 마주 오는 차량을 추종하면
+        // gap이 음수로 발산한다.
+        const bool same_direction = object_s_dot >= 0.0;
         const bool same_lane = std::fabs(object_d) <= lane_width_ * 0.5;
         const bool in_range = gap > 0.0 && gap <= search_limit;
 
@@ -858,6 +872,22 @@ bool FrenetPlanner::PlanInternal(
     // 저속 fallback은 kMinCreepSpeed로 "기어서 전진"하는 경로다. 외부 STOP
     // 명령에서 이 분기를 타면 정지 목표를 넘어 계속 기어나가게 되므로, STOP은
     // 저속에서도 정상 stopping 후보 생성기(GenerateStoppingCandidates)로 보낸다.
+    // FOLLOW가 아닌 외부 명령으로 넘어가면 v2 FOLLOW 상태를 즉시 비운다.
+    //
+    // **모든 early-return보다 앞에서** 해야 한다. 아래 EMERGENCY 분기와 저속
+    // fallback은 명령 조립 지점에 도달하기 전에 return하므로, 그곳에서만
+    // reset하면 context가 살아남는다. 그러면
+    //
+    //   FOLLOW id=10 target=15   -> 15 확보
+    //   E-STOP id=11             -> context가 남는다
+    //   FOLLOW id=12 target=15   -> 15가 관측되지 않아도 GRACE
+    //
+    // 가 되어, 첫 binding 실패인데 유예를 받아 존재하지 않는 leader를
+    // 예측 추종한다(실측으로 재현 확인). legacy following_에는 영향이 없다.
+    if (!use_legacy_behavior && external_command->mode != FOLLOWING) {
+        v2_following_ = FollowingContext{};
+    }
+
     // =====================================================================
     // 외부 EMERGENCY_STOP: 후보 파이프라인을 건너뛰고 직접 감속한다.
     //
@@ -1301,11 +1331,9 @@ bool FrenetPlanner::PlanInternal(
             if (!(cmd.time_gap > 0.0)) cmd.time_gap = following_cfg_.time_gap;
             if (!(cmd.min_gap > 0.0)) cmd.min_gap = following_cfg_.min_gap;
             cmd.gap_gain = following_cfg_.gap_gain;
-        } else {
-            // FOLLOW가 아닌 명령으로 넘어가면 v2 FOLLOW 상태를 비운다.
-            // 남겨두면 다음 FOLLOW가 낡은 leader 예측으로 시작한다.
-            v2_following_ = FollowingContext{};
         }
+        // FOLLOW가 아닌 명령의 context reset은 위쪽(early-return 이전)에서
+        // 이미 처리했다.
     }
 
     cmd.target_speed = resolved_target_speed;
