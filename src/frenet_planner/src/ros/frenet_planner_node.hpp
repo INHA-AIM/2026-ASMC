@@ -62,10 +62,15 @@ class FrenetPlannerNode {
 
     // 피드백 발행. planning 결과가 있으면 관련 필드를 채운다.
     // report가 nullptr이면 궤적을 만들지 않은 사이클이다(계약 9.4절).
+    // frenet_state_valid / current_s는 호출자가 ProjectEgoToS로 얻은 값을
+    // 넘긴다. 별도 core API를 만들지 않고 STOP 투영에 쓰는 그 결과를
+    // 재사용한다.
     void publishFeedbackV2(uint32_t command_id,
                            const CommandAcceptance& acceptance,
                            const asmc_msgs::Trajectory* trajectory,
-                           uint8_t trajectory_source);
+                           uint8_t trajectory_source,
+                           bool frenet_state_valid = false,
+                           double current_s = 0.0);
     InputSnapshot takeSnapshot() const;
     bool isFresh(const ros::Time& stamp, double timeout_seconds,
                  const ros::Time& now, double& age_seconds) const;

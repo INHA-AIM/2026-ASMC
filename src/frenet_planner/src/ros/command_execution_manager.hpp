@@ -114,7 +114,20 @@ class CommandExecutionManager {
     // planner 실행 결과를 반영한다. D3-3에서는 상태 전이만 다루고,
     // 궤적 캐시 소유권은 D4에서 추가한다(계약 8.4절).
     void NotifyPlanSucceeded();
-    void NotifyPlanFailed(bool terminal);
+
+    // planner 실행 실패를 알린다.
+    //
+    // terminal=true이면 상태와 함께 **실패 사유도 latch**한다. 사유를 latch
+    // 하지 않으면 다음 사이클에 같은 command_id가 다시 들어올 때 latch
+    // 분기가 result_code 기본값(RESULT_NONE)으로 회신해, FSM 입장에서는
+    //   cycle 1: FAILED + NOT_INITIALIZED
+    //   cycle 2: FAILED + RESULT_NONE   <- 사유가 사라진다
+    // 가 된다. 계약 6절은 새 command_id까지 terminal 상태를 유지하라고
+    // 하므로 사유도 함께 유지해야 한다.
+    void NotifyPlanFailed(bool terminal,
+                          uint8_t result_code =
+                              asmc_msgs::FrenetFeedback::RESULT_NONE,
+                          const std::string& detail = std::string());
 
     // EXECUTE 허가를 받은 뒤 planner가 현재 상황으로 재검증에 성공해 궤적을
     // COMMIT했다. READY -> COMMITTED 전이다.
@@ -135,6 +148,21 @@ class CommandExecutionManager {
     RuntimeFailure runtime_failure() const { return runtime_failure_; }
     bool terminal_latched() const { return terminal_latched_; }
     const CommandFingerprint& fingerprint() const { return fingerprint_; }
+
+    // latch된 실패 사유. terminal_latched()가 false이면 RESULT_NONE / "".
+    uint8_t terminal_result_code() const { return terminal_result_code_; }
+    const std::string& terminal_result_detail() const {
+        return terminal_result_detail_;
+    }
+
+    // 이 transaction이 정상 완료(COMPLETED)로 끝났는지. 실패 latch와 구분해야
+    // 하는 이유는 궤적 출력 정책이 다르기 때문이다 - 계약 6.2절에 따라 latch
+    // 중에도 궤적은 계속 나가야 하고, STOP COMPLETED이면 HOLD 궤적을
+    // 유지해야 한다(미구현 maneuver의 SAFE_STOP과 다르다).
+    bool completed_normally() const {
+        return terminal_latched_ &&
+               execution_state_ == asmc_msgs::FrenetFeedback::COMPLETED;
+    }
 
  private:
     // 지금 다른 명령으로 전환하면 위험한 시점인지.
@@ -165,6 +193,10 @@ class CommandExecutionManager {
     bool terminal_latched_ = false;
 
     RuntimeFailure runtime_failure_ = RuntimeFailure::NONE;
+
+    // terminal 상태와 함께 latch되는 실패 사유(위 NotifyPlanFailed 주석 참고).
+    uint8_t terminal_result_code_ = asmc_msgs::FrenetFeedback::RESULT_NONE;
+    std::string terminal_result_detail_;
 
     // 구현된 maneuver 비트마스크. maneuver_type은 0~6이다.
     uint8_t implemented_mask_ = 0;

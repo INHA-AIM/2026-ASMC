@@ -57,6 +57,8 @@ void CommandExecutionManager::BeginTransaction(const Command& message) {
     fingerprint_ = MakeCommandFingerprint(message);
     maneuver_type_ = message.maneuver_type;
     terminal_latched_ = false;
+    terminal_result_code_ = Feedback::RESULT_NONE;
+    terminal_result_detail_.clear();
     runtime_failure_ = RuntimeFailure::NONE;
     // handshake를 쓰는 maneuver는 준비 단계에서 시작한다. 나머지는 바로
     // 실행으로 들어간다(계약 5.5절).
@@ -116,7 +118,12 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
             acceptance.command_accepted = true;
             acceptance.should_plan = false;
             acceptance.execution_state = execution_state_;
-            acceptance.detail = "terminal state latched until a new command_id";
+            // 상태와 함께 사유도 유지한다. 그러지 않으면 두 번째 사이클부터
+            // result_code가 RESULT_NONE으로 떨어져 FSM이 원인을 잃는다.
+            acceptance.result_code = terminal_result_code_;
+            acceptance.detail = terminal_result_detail_.empty()
+                ? std::string("terminal state latched until a new command_id")
+                : terminal_result_detail_;
             return acceptance;
         }
 
@@ -137,6 +144,8 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
             maneuver_type_ = 0;
             execution_state_ = Feedback::IDLE;
             terminal_latched_ = false;
+            terminal_result_code_ = Feedback::RESULT_NONE;
+            terminal_result_detail_.clear();
             runtime_failure_ = RuntimeFailure::NONE;
             acceptance.command_accepted = true;
             acceptance.should_plan = false;
@@ -158,6 +167,10 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
         runtime_failure_ = RuntimeFailure::MANEUVER_NOT_IMPLEMENTED;
         execution_state_ = Feedback::FAILED;
         terminal_latched_ = true;
+        // FrenetFeedback.msg에 MANEUVER_NOT_IMPLEMENTED가 없으므로
+        // result_code는 RESULT_NONE으로 두고 사유는 detail로만 남긴다.
+        terminal_result_code_ = Feedback::RESULT_NONE;
+        terminal_result_detail_ = "maneuver not implemented yet";
         acceptance.command_accepted = true;
         acceptance.should_plan = false;
         acceptance.execution_state = Feedback::FAILED;
@@ -191,11 +204,15 @@ void CommandExecutionManager::NotifyPlanSucceeded() {
     }
 }
 
-void CommandExecutionManager::NotifyPlanFailed(bool terminal) {
+void CommandExecutionManager::NotifyPlanFailed(bool terminal,
+                                               uint8_t result_code,
+                                               const std::string& detail) {
     if (!has_active_command_ || terminal_latched_) return;
     if (terminal) {
         execution_state_ = Feedback::FAILED;
         terminal_latched_ = true;
+        terminal_result_code_ = result_code;
+        terminal_result_detail_ = detail;
         return;
     }
     // 일시적 실패는 준비 단계로 되돌린다. COMMITTED 이후에는 잠긴 궤적을
@@ -217,6 +234,10 @@ void CommandExecutionManager::NotifyManeuverCompleted() {
     if (!has_active_command_) return;
     execution_state_ = Feedback::COMPLETED;
     terminal_latched_ = true;
+    // 정상 완료는 오류가 아니므로 사유를 남기지 않는다. completed_normally()가
+    // true가 되어 호출자가 궤적 출력 정책을 구분할 수 있다(계약 6.2절).
+    terminal_result_code_ = Feedback::RESULT_NONE;
+    terminal_result_detail_.clear();
     runtime_failure_ = RuntimeFailure::NONE;
 }
 

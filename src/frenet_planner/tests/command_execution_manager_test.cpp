@@ -397,6 +397,79 @@ int main() {
                "transaction resumes after input recovers");
     }
 
+    // ================= terminal 실패 사유도 latch되는가 ===================
+    // 실측에서 발견된 문제: 상태만 latch하고 사유를 버리면 두 번째 사이클부터
+    // result_code가 RESULT_NONE으로 떨어져 FSM이 원인을 잃는다.
+    //   cycle 1: FAILED + NOT_INITIALIZED
+    //   cycle 2: FAILED + RESULT_NONE     <- 사유 소실
+    // 계약 6절은 새 command_id까지 terminal 상태를 유지하라고 하므로 사유도
+    // 함께 유지해야 한다.
+    {
+        CommandExecutionManager manager = MakeD4Manager();
+        manager.Accept(MakeKeep(90));
+        manager.NotifyPlanFailed(/*terminal=*/true,
+                                 Feedback::NOT_INITIALIZED,
+                                 "planner is not initialized");
+        Expect(manager.terminal_latched() &&
+                   manager.terminal_result_code() == Feedback::NOT_INITIALIZED,
+               "terminal failure latches its result_code");
+
+        // 같은 ID가 여러 사이클 반복되어도 사유가 유지된다.
+        for (int i = 0; i < 3; ++i) {
+            const auto again = manager.Accept(MakeKeep(90));
+            Expect(again.result_code == Feedback::NOT_INITIALIZED &&
+                       again.detail == "planner is not initialized",
+                   "latched result_code survives same-id refresh");
+        }
+
+        // 새 command_id에서 초기화된다.
+        manager.Accept(MakeKeep(91));
+        Expect(manager.terminal_result_code() == Feedback::RESULT_NONE &&
+                   manager.terminal_result_detail().empty(),
+               "new command_id clears the latched result_code");
+    }
+    {
+        // TARGET_PROJECTION_FAILED도 같은 방식으로 유지된다(D4-2 STOP 경로).
+        CommandExecutionManager manager = MakeD4Manager();
+        manager.Accept(MakeKeep(92));
+        manager.NotifyPlanFailed(/*terminal=*/true,
+                                 Feedback::TARGET_PROJECTION_FAILED,
+                                 "stop target is not on the reference line");
+        const auto again = manager.Accept(MakeKeep(92));
+        Expect(again.result_code == Feedback::TARGET_PROJECTION_FAILED,
+               "projection failure reason is latched too");
+    }
+    {
+        // 정상 완료는 오류가 아니므로 사유가 없고, completed_normally()로
+        // 실패 latch와 구분된다. 호출자가 궤적 출력 정책을 나누는 근거다.
+        CommandExecutionManager manager = MakeD4Manager();
+        manager.Accept(MakeKeep(93));
+        manager.NotifyManeuverCompleted();
+        Expect(manager.completed_normally() &&
+                   manager.terminal_result_code() == Feedback::RESULT_NONE,
+               "normal completion latches without a failure reason");
+
+        CommandExecutionManager failed_manager = MakeD4Manager();
+        failed_manager.Accept(MakeKeep(94));
+        failed_manager.NotifyPlanFailed(/*terminal=*/true,
+                                        Feedback::COLLISION_BLOCKED, "blocked");
+        Expect(failed_manager.terminal_latched() &&
+                   !failed_manager.completed_normally(),
+               "failure latch is not reported as normal completion");
+    }
+    {
+        // 미구현 maneuver도 사유를 유지한다(detail 기반).
+        CommandExecutionManager manager = MakeD4Manager();
+        Command follow = MakeKeep(95);
+        follow.maneuver_type = Command::FOLLOW;
+        follow.primary_object_id = 7;
+        manager.Accept(follow);
+        const auto again = manager.Accept(follow);
+        Expect(again.detail == "maneuver not implemented yet" &&
+                   again.result_code == Feedback::RESULT_NONE,
+               "unimplemented reason survives same-id refresh");
+    }
+
     // ================= active_maneuver 소유권 =============================
     // 피드백의 active_maneuver는 **활성 transaction**의 maneuver여야 한다.
     // 방금 들어온(거부된) 명령의 것이 아니다. node의 publishFeedbackV2가

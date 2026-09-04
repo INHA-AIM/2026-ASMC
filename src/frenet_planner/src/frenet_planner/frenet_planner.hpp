@@ -90,6 +90,17 @@ public:
     double last_d_dot() const { return last_d_dot_; }
     BehaviorState last_mode() const { return last_mode_; }
     double last_target_speed() const { return last_target_speed_; }
+
+    // 외부 STOP이 HOLD 단계에 도달했는지. ROS 계층이 "정지 완료"를 판단하는
+    // 데 쓴다.
+    //
+    // 이 getter가 필요한 이유: HOLD 진입 조건은 stop_cfg_의 position/speed
+    // tolerance로 core 안에서 결정된다. node가 그 조건을 다시 구현해 "아마
+    // HOLD일 것"이라고 추측하면 두 곳의 판정이 어긋난다. 이미 계산된 실행
+    // 상태를 읽기만 한다 - planner 동작은 바뀌지 않는다.
+    bool stop_holding() const {
+        return stop_.phase == StopExecutionPhase::HOLD;
+    }
     PlanFailureReason last_failure_reason() const { return last_failure_reason_; }
 
 private:

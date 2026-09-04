@@ -71,10 +71,12 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     // 닫혀 있는 maneuver는 FAILED로 회신한다 - 조용히 velocity keeping
     // 궤적을 만드는 것보다 안전하다.
     //
-    // D4-1: KEEP만 개방. STOP은 D4-2(target pose 투영), EMERGENCY_STOP은
-    // D4-3(직접 감속)에서 각각 연다.
+    // D4-1: KEEP. D4-2: STOP(target pose 투영 + StopContext).
+    // EMERGENCY_STOP은 D4-3(직접 감속)에서 연다.
     command_manager_.SetImplementedManeuver(
         asmc_msgs::BehaviorCommand::KEEP, true);
+    command_manager_.SetImplementedManeuver(
+        asmc_msgs::BehaviorCommand::STOP, true);
 
     vehicle_sub_ = nh_.subscribe(
         vehicle_topic, 1, &FrenetPlannerNode::vehicleCallback, this);
@@ -514,20 +516,30 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     // ---- 2. transaction 규칙 ------------------------------------------
     const CommandAcceptance acceptance = command_manager_.Accept(command);
     if (!acceptance.should_plan) {
-        // 미구현 maneuver, terminal latch, CANCEL 완료 등. planner를 호출하지
-        // 않는다(계약 11.4절).
+        // planner를 호출하지 않는 사이클이다. 다만 **궤적 출력을 멈추면 안
+        // 된다**(계약 6.2절) - 기동은 끝났어도 차량은 계속 주행하거나 정지를
+        // 유지해야 한다. 그래서 latch 성격에 따라 출력을 나눈다.
         //
-        // TODO(D4-2): terminal latch를 여기서 안전정지로 묶으면 안 된다.
-        // 계약 6.2절은 latch 중에도 궤적 출력이 멈추면 안 된다고 명시한다.
-        //   미구현 maneuver          -> SAFE_STOP (현재 동작, 올바름)
-        //   STOP COMPLETED latch     -> HOLD 궤적 유지
-        //   LC/AVOID/MERGE COMPLETED -> 각 모드의 maintenance 궤적
-        // 현재 KEEP에는 COMPLETED로 올리는 경로가 없어 발동하지 않지만,
-        // D4-2에서 STOP HOLD가 생기면 반드시 분기해야 한다.
+        //   정상 완료 latch (COMPLETED) -> 완료 상태를 유지하는 궤적
+        //   그 외 (미구현/실패/CANCEL)   -> 안전정지
+        //
+        // STOP이 HOLD에 도달해 COMPLETED로 latch된 경우, 마지막으로 만든
+        // 0속도 HOLD 궤적을 계속 보낸다. 여기서 일괄 안전정지로 빠지면 정지
+        // 유지 궤적이 매 사이클 교체되어 MPC 입장에서 불필요한 흔들림이 된다.
+        const InputSnapshot latch_snapshot = takeSnapshot();
+        if (command_manager_.completed_normally() && has_last_v2_trajectory_ &&
+            last_v2_trajectory_command_id_ == command.command_id) {
+            asmc_msgs::Trajectory held = last_v2_trajectory_;
+            held.header.stamp = now;
+            trajectory_pub_.publish(held);
+            publishFeedbackV2(command.command_id, acceptance, &held,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED);
+            return true;
+        }
         has_last_v2_trajectory_ = false;
         v2_plan_fail_streak_ = 0;
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
-            stopReferenceVehicle(takeSnapshot()), trajectoryDt(),
+            stopReferenceVehicle(latch_snapshot), trajectoryDt(),
             asmc_msgs::Trajectory::FAILURE_NONE, now);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(command.command_id, acceptance, &stop,
@@ -632,6 +644,13 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         return true;
     }
 
+    // ego의 Frenet s. 두 곳에서 쓴다:
+    //   1. STOP target pose 투영의 s_hint
+    //   2. FrenetFeedback.current_s
+    // 새 core API를 만들지 않고 기존 public ProjectEgoToS 결과를 재사용한다.
+    double ego_s = 0.0;
+    const bool ego_s_valid = planner_.ProjectEgoToS(ego, ego_s);
+
     PlannerCommand planner_command{};
     if (!ConvertBehaviorCommand(command, planner_command)) {
         CommandAcceptance failed = acceptance;
@@ -645,6 +664,66 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         publishFeedbackV2(command.command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
         return true;
+    }
+
+    // ---- 4b. STOP 목표 투영 ---------------------------------------------
+    // ConvertBehaviorCommand는 RefLine을 모르므로 stop_position을 NaN으로
+    // 남긴다. RefLine을 가진 이 계층에서 map 좌표 -> Frenet s로 투영한다.
+    // (v1과 동일한 방식. ProjectPointToS가 이 용도로 만들어진 함수다.)
+    if (planner_command.mode == STOP) {
+        if (!ego_s_valid) {
+            // 투영 기준점을 얻지 못하면 정지 목표도 만들 수 없다.
+            command_manager_.NotifyPlanFailed(
+                /*terminal=*/true,
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
+                "cannot project ego onto the reference line");
+            CommandAcceptance failed = acceptance;
+            failed.should_plan = false;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
+            failed.detail = "cannot project ego onto the reference line";
+            has_last_v2_trajectory_ = false;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(command.command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+            return true;
+        }
+        double stop_s = 0.0;
+        // ego_s를 hint로 넘겨 트랙이 자기 자신과 가까워지는 구간에서 최근접점이
+        // 다른 구간으로 튀지 않게 한다. 목표가 경로에서 너무 멀면 false다.
+        if (!planner_.ProjectPointToS(command.target_pose_map.position.x,
+                                      command.target_pose_map.position.y,
+                                      ego_s, stop_s)) {
+            command_manager_.NotifyPlanFailed(
+                /*terminal=*/true,
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
+                "stop target is not on the reference line");
+            CommandAcceptance failed = acceptance;
+            failed.should_plan = false;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
+            failed.detail = "stop target is not on the reference line";
+            ROS_WARN_THROTTLE(1.0,
+                              "v2 STOP target (%.2f, %.2f) is not on the "
+                              "reference line (command_id=%u)",
+                              command.target_pose_map.position.x,
+                              command.target_pose_map.position.y,
+                              command.command_id);
+            has_last_v2_trajectory_ = false;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(command.command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP);
+            return true;
+        }
+        planner_command.stop_position = stop_s;
     }
 
     // ---- 5. planning ----------------------------------------------------
@@ -762,11 +841,22 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     last_v2_trajectory_fingerprint_ = fingerprint;
     command_manager_.NotifyPlanSucceeded();
 
+    // STOP이 HOLD에 도달하면 기하학적으로 완료다. HOLD 판정은 stop_cfg_의
+    // position/speed tolerance로 core가 이미 계산했으므로 그 결과를 읽는다 -
+    // node가 조건을 다시 구현하면 두 판정이 어긋난다.
+    //
+    // COMPLETED로 latch되면 다음 사이클부터 위 latch 분기가 이 궤적을 계속
+    // 보낸다(TRAJECTORY_LOCKED).
+    if (planner_command.mode == STOP && planner_.stop_holding()) {
+        command_manager_.NotifyManeuverCompleted();
+    }
+
     trajectory_pub_.publish(trajectory);
     CommandAcceptance succeeded = acceptance;
     succeeded.execution_state = command_manager_.execution_state();
     publishFeedbackV2(command.command_id, succeeded, &trajectory,
-                      asmc_msgs::FrenetFeedback::TRAJECTORY_NEW);
+                      asmc_msgs::FrenetFeedback::TRAJECTORY_NEW,
+                      ego_s_valid, ego_s);
 
     ROS_INFO_THROTTLE(1.0,
                       "v2 plan ready: command_id=%u maneuver=%u points=%zu "
@@ -778,7 +868,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 
 void FrenetPlannerNode::publishFeedbackV2(
     uint32_t command_id, const CommandAcceptance& acceptance,
-    const asmc_msgs::Trajectory* trajectory, uint8_t trajectory_source) {
+    const asmc_msgs::Trajectory* trajectory, uint8_t trajectory_source,
+    bool frenet_state_valid, double current_s) {
     asmc_msgs::FrenetFeedback feedback;
     feedback.header.stamp = ros::Time::now();
     feedback.header.frame_id = "map";
@@ -804,13 +895,15 @@ void FrenetPlannerNode::publishFeedbackV2(
     feedback.plan_valid =
         trajectory_source == asmc_msgs::FrenetFeedback::TRAJECTORY_NEW;
 
-    // Frenet 상태. planner가 매 Plan()마다 갱신한다.
+    // Frenet 상태. current_s는 호출자가 ProjectEgoToS로 얻은 값이고,
+    // current_d는 planner가 매 Plan()마다 갱신한 값이다.
+    //
+    // current_d는 음수가 유효하므로 -1.0을 무효값으로 쓸 수 없다. 유효성은
+    // frenet_state_valid로만 판단한다(계약 1.3절).
     if (trajectory_source == asmc_msgs::FrenetFeedback::TRAJECTORY_NEW) {
         feedback.applied_speed_mps = planner_.last_target_speed();
-        // current_s는 planner가 외부에 노출하지 않는다. D4-2에서 STOP 투영을
-        // 붙일 때 함께 확장한다.
-        feedback.frenet_state_valid = false;
-        feedback.current_s = 0.0;
+        feedback.frenet_state_valid = frenet_state_valid;
+        feedback.current_s = current_s;
         feedback.current_d = planner_.last_d();
     } else {
         feedback.applied_speed_mps = -1.0;
