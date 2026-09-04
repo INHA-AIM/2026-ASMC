@@ -241,9 +241,23 @@ public:
         // 나가는 값이다. **PrepareAvoid()의 반환값과 다른 축이다**(아래 주석).
         bool candidate_valid = false;
 
-        // 저속 때문에 후보를 만들지 못했는가. terminal 실패가 아니라 WAITING의
-        // 사유이며, 속도가 회복되면 해소된다.
-        bool low_speed_waiting = false;
+        // ego가 저속 구간(< kLowSpeedFallbackV)인가. **후보 성공 여부와
+        // 무관한 순수 상황 정보다.**
+        //
+        // ===== 이름을 low_speed_waiting에서 바꾼 이유 (D6-2c) =====
+        //
+        // 이전 이름은 "저속 때문에 후보를 만들지 못했다"로 읽힌다. 그런데
+        // 값은 candidate 평가 전에 ego.v만 보고 정해지므로,
+        //   ego = 0.4 m/s + candidate_valid = true
+        // 인 상황에서 "waiting인데 후보는 유효"라는 모순이 나온다.
+        //
+        // 현재 테스트 환경에서는 저속 후보가 실제로 막혀 드러나지 않았지만,
+        // 이름이 상태 판단에 쓰이도록 유혹한다. 그래서 상황 정보로 이름을
+        // 바꾸고, **execution_state는 candidate_valid만으로 정한다**:
+        //   candidate_valid=true  -> READY
+        //   candidate_valid=false -> WAITING
+        // 이 필드는 진단·로그에만 쓴다.
+        bool low_speed_context = false;
 
         // 요청 방향과 target pose가 모순인가. 이 경우에도 candidate_valid는
         // false여야 한다 - 충돌 검사에만 맡기면 안 된다(헤더 아래 주석).

@@ -1051,11 +1051,192 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         planner_command.avoid_target_s = avoid_s;
     }
 
+    const CommandFingerprint fingerprint = MakeCommandFingerprint(command);
+
+    // ---- 4d. AVOID PREPARE (D6-2c) --------------------------------------
+    //
+    // 계약 5.2절. PREPARE는 일반 planning과 다른 경로다:
+    //   후보 평가 결과  -> plan_valid / 진단 필드
+    //   maintenance     -> MPC로 발행
+    //
+    // **AVOID candidate는 절대 발행하지 않는다.** FSM이 EXECUTE를 주기 전에
+    // 차가 횡이동을 시작하면 안 된다.
+    //
+    // ===== production gate는 아직 닫혀 있다 =====
+    //
+    // node의 SetImplementedManeuver(AVOID)가 열리지 않았으므로
+    // command_manager_.Accept()가 planner 호출 전에 FAILED로 끝낸다. 즉 이
+    // 블록은 D6-4에서 gate를 열 때 처음 실행된다. 배선을 먼저 넣는 이유는
+    // D6-3의 EXECUTE가 같은 구조를 확장하기 때문이다.
+    if (planner_command.mode == AVOID &&
+        command.execution_request == asmc_msgs::BehaviorCommand::PREPARE) {
+        CartesianPath maintenance;
+        FrenetPlanner::AvoidPrepareResult prepare;
+        const bool prepare_ok = planner_.PrepareAvoid(
+            ego, objects, collision_objects, planner_command, maintenance,
+            prepare);
+
+        if (!prepare_ok) {
+            // maintenance조차 만들지 못했다. 실패 종류를 구분해야 한다 -
+            // 전부 WAITING으로 만들면 대상 소실이 조용히 묻힌다.
+            ++v2_plan_fail_streak_;
+            const FrenetPlanner::PlanFailureReason reason =
+                planner_.last_failure_reason();
+            const bool terminal =
+                reason == FrenetPlanner::PlanFailureReason::TARGET_OBJECT_LOST ||
+                reason == FrenetPlanner::PlanFailureReason::INVALID_COMMAND ||
+                reason == FrenetPlanner::PlanFailureReason::UNSUPPORTED_BEHAVIOR ||
+                reason == FrenetPlanner::PlanFailureReason::NOT_INITIALIZED;
+            uint8_t code = asmc_msgs::FrenetFeedback::RESULT_NONE;
+            std::string detail;
+            switch (reason) {
+                case FrenetPlanner::PlanFailureReason::TARGET_OBJECT_LOST:
+                    code = asmc_msgs::FrenetFeedback::TARGET_OBJECT_LOST;
+                    detail = "the designated avoid target is not usable";
+                    break;
+                case FrenetPlanner::PlanFailureReason::INVALID_COMMAND:
+                    code = asmc_msgs::FrenetFeedback::INVALID_COMMAND;
+                    detail = "planner rejected the avoid command fields";
+                    break;
+                case FrenetPlanner::PlanFailureReason::NOT_INITIALIZED:
+                    code = asmc_msgs::FrenetFeedback::NOT_INITIALIZED;
+                    detail = "planner is not initialized";
+                    break;
+                case FrenetPlanner::PlanFailureReason::UNSUPPORTED_BEHAVIOR:
+                    detail = "planner core does not accept AVOID PREPARE yet";
+                    break;
+                default:
+                    // maintenance 생성의 일시 실패. 대상은 정상이므로
+                    // transaction을 버리지 않는다.
+                    code = asmc_msgs::FrenetFeedback::
+                        TRANSIENT_GENERATION_FAILURE;
+                    detail = "could not build an avoid maintenance path";
+                    break;
+            }
+            command_manager_.NotifyPlanFailed(terminal, terminal ? code
+                                                                 : asmc_msgs::
+                                                       FrenetFeedback::
+                                                           RESULT_NONE,
+                                              terminal ? detail
+                                                       : std::string());
+            has_last_v2_trajectory_ = false;
+            CommandAcceptance failed = acceptance;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code = code;
+            failed.detail = detail;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+
+        // maintenance를 ROS 궤적으로 변환한다.
+        asmc_msgs::Trajectory trajectory;
+        if (ConvertCartesianPath(maintenance, planner_.sample_dt(),
+                                 snapshot.vehicle, now, trajectory) !=
+            ConversionStatus::OK) {
+            ++v2_plan_fail_streak_;
+            command_manager_.NotifyPlanFailed(/*terminal=*/false);
+            has_last_v2_trajectory_ = false;
+            CommandAcceptance failed = acceptance;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
+            failed.detail = "avoid maintenance conversion failed";
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+
+        // ---- 상태 전이 --------------------------------------------------
+        //
+        // **candidate_valid만으로 정한다.** low_speed_context는 상황 정보이며
+        // 상태 판단에 쓰지 않는다(AvoidPrepareResult 주석 참고).
+        //
+        //   candidate 유효  -> READY   (EXECUTE를 받을 준비가 됐다)
+        //   candidate 무효  -> WAITING (조건이 바뀌면 가능하다)
+        //
+        // WAITING은 terminal 실패가 아니다. 후보가 막힌 것은 "지금은 안 되지만
+        // 조건이 바뀌면 된다"이므로 같은 command_id로 계속 재평가된다.
+        if (prepare.candidate_valid) {
+            command_manager_.NotifyPlanSucceeded();
+        } else {
+            command_manager_.NotifyPlanFailed(/*terminal=*/false);
+        }
+
+        v2_plan_fail_streak_ = 0;
+        last_v2_trajectory_ = trajectory;
+        has_last_v2_trajectory_ = true;
+        last_v2_trajectory_command_id_ = command.command_id;
+        last_v2_trajectory_fingerprint_ = fingerprint;
+
+        AvoidFeedbackFields avoid_fields;
+        // 실제 발행한 궤적의 목표속도. last_target_speed_는 maintenance 결정
+        // 전의 순항 목표속도이므로 감속/정지 maintenance에서 거짓 보고가 된다.
+        avoid_fields.applied_speed_mps =
+            trajectory.points.empty() ? -1.0
+                                      : trajectory.points.back().velocity;
+        avoid_fields.target_d_valid = prepare.candidate_valid;
+        avoid_fields.target_d =
+            prepare.candidate_valid ? prepare.selected_target_d : 0.0;
+        avoid_fields.generated_candidate_count =
+            static_cast<uint32_t>(prepare.generated_candidate_count);
+        avoid_fields.valid_candidate_count =
+            static_cast<uint32_t>(prepare.valid_candidate_count);
+        avoid_fields.selected_cost =
+            prepare.candidate_valid ? prepare.selected_cost : -1.0;
+        avoid_fields.blocking_object_id =
+            static_cast<int32_t>(prepare.blocking_object_id);
+
+        CommandAcceptance prepared = acceptance;
+        prepared.execution_state = command_manager_.execution_state();
+        // ===== 후보가 충돌로 막혀도 COLLISION_BLOCKED를 쓰지 않는다 =====
+        //
+        // PREPARE에서 안전 후보가 없는 것은 실패가 아니라 WAITING이다.
+        // COLLISION_BLOCKED(8)를 내보내면 FSM이 terminal 성격으로 오해할
+        // 여지가 있다. 차단 정보는 blocking_object_id로 전달한다.
+        prepared.result_code = asmc_msgs::FrenetFeedback::RESULT_NONE;
+        prepared.detail = prepare.candidate_valid
+            ? std::string("avoid candidate is ready")
+            : std::string("no safe avoid candidate this cycle");
+
+        // **maintenance만 발행한다.** candidate는 진단으로만 나간다.
+        trajectory_pub_.publish(trajectory);
+        publishFeedbackV2(feedback_command_id, prepared, &trajectory,
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_NEW,
+                          prepare.candidate_valid, ego_s_valid, ego_s,
+                          &avoid_fields);
+
+        ROS_INFO_THROTTLE(1.0,
+                          "v2 AVOID PREPARE: command_id=%u candidate=%d "
+                          "target_d=%.3f low_speed=%d conflict=%d behind=%d "
+                          "candidates=%zu/%zu maintenance=%zu applied=%.2f",
+                          command.command_id,
+                          prepare.candidate_valid ? 1 : 0,
+                          prepare.selected_target_d,
+                          prepare.low_speed_context ? 1 : 0,
+                          prepare.direction_conflict ? 1 : 0,
+                          prepare.target_behind_ego ? 1 : 0,
+                          prepare.valid_candidate_count,
+                          prepare.generated_candidate_count,
+                          trajectory.points.size(),
+                          avoid_fields.applied_speed_mps);
+        return true;
+    }
+
     // ---- 5. planning ----------------------------------------------------
     CartesianPath path;
     const bool plan_ok = planner_.Plan(ego, objects, collision_objects,
                                        planner_command, path);
-    const CommandFingerprint fingerprint = MakeCommandFingerprint(command);
 
     if (!plan_ok) {
         ++v2_plan_fail_streak_;
@@ -1216,7 +1397,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 void FrenetPlannerNode::publishFeedbackV2(
     uint32_t command_id, const CommandAcceptance& acceptance,
     const asmc_msgs::Trajectory* trajectory, uint8_t trajectory_source,
-    bool plan_valid, bool frenet_state_valid, double current_s) {
+    bool plan_valid, bool frenet_state_valid, double current_s,
+    const AvoidFeedbackFields* avoid_fields) {
     asmc_msgs::FrenetFeedback feedback;
     feedback.header.stamp = ros::Time::now();
     feedback.header.frame_id = "map";
@@ -1247,7 +1429,12 @@ void FrenetPlannerNode::publishFeedbackV2(
     // current_d는 음수가 유효하므로 -1.0을 무효값으로 쓸 수 없다. 유효성은
     // frenet_state_valid로만 판단한다(계약 1.3절).
     if (trajectory_source == asmc_msgs::FrenetFeedback::TRAJECTORY_NEW) {
-        feedback.applied_speed_mps = planner_.last_target_speed();
+        // AVOID PREPARE는 발행한 maintenance의 실제 목표속도를 넘긴다.
+        // last_target_speed_는 maintenance 결정 전에 계산된 순항 목표속도라
+        // 감속/정지 maintenance에서 거짓 보고가 된다(헤더 주석 참고).
+        feedback.applied_speed_mps = avoid_fields
+            ? avoid_fields->applied_speed_mps
+            : planner_.last_target_speed();
         feedback.frenet_state_valid = frenet_state_valid;
         feedback.current_s = current_s;
         feedback.current_d = planner_.last_d();
@@ -1270,12 +1457,27 @@ void FrenetPlannerNode::publishFeedbackV2(
     feedback.gap_evaluated = false;
     feedback.gap_safe = false;
     feedback.estimated_entry_time_s = -1.0;
-    feedback.target_d_valid = false;
-    feedback.target_d = 0.0;
-    feedback.generated_candidate_count = 0;
-    feedback.valid_candidate_count = 0;
-    feedback.selected_cost = -1.0;
-    feedback.blocking_object_id = -1;
+    // AVOID PREPARE는 후보 진단을 채운다. 그 외 모드는 메시지가 정의한
+    // sentinel을 정확히 사용한다 - 임의의 0이나 추측값을 넣지 않는다
+    // (계약 9.4절).
+    if (avoid_fields) {
+        // target_d는 음수가 유효하므로 -1.0 sentinel을 쓸 수 없다. 유효성은
+        // 플래그로만 판단한다(계약 1.3절).
+        feedback.target_d_valid = avoid_fields->target_d_valid;
+        feedback.target_d = avoid_fields->target_d;
+        feedback.generated_candidate_count =
+            avoid_fields->generated_candidate_count;
+        feedback.valid_candidate_count = avoid_fields->valid_candidate_count;
+        feedback.selected_cost = avoid_fields->selected_cost;
+        feedback.blocking_object_id = avoid_fields->blocking_object_id;
+    } else {
+        feedback.target_d_valid = false;
+        feedback.target_d = 0.0;
+        feedback.generated_candidate_count = 0;
+        feedback.valid_candidate_count = 0;
+        feedback.selected_cost = -1.0;
+        feedback.blocking_object_id = -1;
+    }
 
     (void)trajectory;
     feedback_v2_pub_.publish(feedback);

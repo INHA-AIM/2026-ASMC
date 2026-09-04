@@ -1783,6 +1783,91 @@ crawl이 clear면 속도가 회복되어 다음 사이클에 후보가 생길 �
 `NONE`이면 사이클마다 좌/우가 바뀔 수 있고, FSM이 EXECUTE를 주지 않았으므로
 그것이 정상이다. lock은 D6-3의 COMMIT에서 한다.
 
+#### 12.7.4 D6-2c PREPARE 상태 전이와 Feedback (D6-2c에서 확정)
+
+##### 상태는 `candidate_valid`만으로 정한다
+
+```
+candidate_valid=true  -> NotifyPlanSucceeded()  -> READY
+candidate_valid=false -> NotifyPlanFailed(false) -> WAITING
+```
+
+`low_speed_context`는 **상태 판단에 쓰지 않는다.** 이전 이름
+(`low_speed_waiting`)이 위험했던 이유는 실측으로 확인했다.
+
+| 조건 | `low_speed_context` | `candidate_valid` |
+|---|---|---|
+| `ego=0.3`, 장애물 25 m | true | false |
+| `ego=0.3`, 장애물 **60 m** | true | **true** |
+
+두 번째 행이 정상이다. 저속이어도 장애물이 멀면 후보가 나온다. 이름을
+"waiting"으로 읽어 상태를 정하면 유효한 후보를 두고 WAITING을 보고한다.
+
+##### 실패는 세 종류를 분리한다
+
+`PrepareAvoid()`가 false라고 전부 WAITING으로 만들면 대상 소실이 묻힌다.
+
+| 사유 | `execution_state` | `result_code` |
+|---|---|---|
+| `TARGET_OBJECT_LOST` | `FAILED` (terminal) | `TARGET_OBJECT_LOST` |
+| `INVALID_COMMAND` / `NOT_INITIALIZED` / `UNSUPPORTED_BEHAVIOR` | `FAILED` (terminal) | 각 코드 |
+| maintenance 생성 일시 실패 | 유지 (non-terminal) | `TRANSIENT_GENERATION_FAILURE` |
+| **후보 없음 + maintenance 있음** | `WAITING` | **`RESULT_NONE`** |
+
+마지막 행이 중요하다. **후보가 충돌로 막혀도 `COLLISION_BLOCKED`(8)를 쓰지
+않는다.** PREPARE에서 안전 후보가 없는 것은 실패가 아니라 WAITING이고,
+그 코드를 내보내면 FSM이 terminal 성격으로 오해할 여지가 있다. 차단 정보는
+`blocking_object_id`로 전달한다.
+
+##### Feedback 값
+
+| 필드 | 후보 성공 | 후보 대기 |
+|---|---|---|
+| `active_maneuver` | `AVOID` | `AVOID` |
+| `command_accepted` | true | true |
+| `execution_state` | `READY` | `WAITING` |
+| `plan_valid` | true | **false** |
+| `trajectory_source` | `TRAJECTORY_NEW` | **`TRAJECTORY_NEW`** |
+| `target_d_valid` | true | false |
+| `target_d` | 선택된 후보의 실제 종단 d | 0.0 |
+| `selected_cost` | 실제 cost | `-1.0` |
+| `blocking_object_id` | `-1` | 실제 차단 ID 가능 |
+| `result_code` | `RESULT_NONE` | `RESULT_NONE` |
+
+**WAITING이라고 `trajectory_source=SAFE_STOP`인 것은 아니다.** maintenance가
+crawl/감속/정지 중 무엇이냐와 후보 유효성은 별개 축이다(8.3.1절).
+
+##### `applied_speed_mps`는 발행한 궤적에서 가져온다
+
+기존 경로는 `planner_.last_target_speed()`를 쓴다. KEEP/FOLLOW에서는 그 값이
+실제 발행 궤적의 목표속도와 일치한다.
+
+PREPARE는 다르다. maintenance가 crawl/감속/정지 중 무엇이 될지는 후보 결과와
+충돌 검사에 달려 있고, `last_target_speed_`는 그 이전에 계산된 순항
+목표속도로 남는다.
+
+실측(저속 0.3, 장애물 4 m → 정지 tier):
+
+```
+maintenance 종단 속도    = 0.00 m/s
+last_target_speed_       > 0.5 m/s   <- 이것을 보고하면 거짓
+```
+
+`FrenetFeedback.msg`는 이 필드를 "실제 적용한 목표속도"로 정의하므로,
+PREPARE는 발행한 궤적의 종단 속도를 넘긴다
+(`publishFeedbackV2`의 `AvoidFeedbackFields`).
+
+##### production gate는 여전히 닫혀 있다
+
+node의 `SetImplementedManeuver(AVOID)`가 열리지 않았으므로
+`command_manager_.Accept()`가 planner 호출 전에 `FAILED`로 끝낸다. 즉 D6-2c의
+node 배선은 **ROS 경로로 실행되지 않는다** — ROS 로그에 `AVOID PREPARE`가 한
+번도 찍히지 않는 것으로 확인했다.
+
+배선을 먼저 넣는 이유는 D6-3의 EXECUTE가 같은 구조를 확장하기 때문이다.
+실제 ROS AVOID 경로는 **D6-4에서 처음 검증된다** — 그때 D6-0a 재결속,
+D6-1a heading 경계, D6-2c READY/WAITING을 한꺼번에 덮는다.
+
 #### 12.7.2 저속 AVOID resolver 우회 — **D6-2a에서 해결**
 
 **D6-1에서 실측 확인한 문제다.** `ego.v`가 `kLowSpeedFallbackV`(0.5 m/s)

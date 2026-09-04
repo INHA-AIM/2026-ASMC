@@ -1487,10 +1487,59 @@ int main() {
         Expect(ok, "low speed: PREPARE produces a maintenance path");
         Expect(planner.active_avoid_target_id() == 21,
                "low speed: the target is still bound");
-        Expect(result.low_speed_waiting,
-               "low speed: the low-speed reason is reported");
+        Expect(result.low_speed_context,
+               "low speed: the low-speed context is reported");
         Expect(!result.candidate_valid,
                "low speed: no AVOID candidate yet");
+        // low_speed_context는 상황 정보이지 상태가 아니다. 정상 속도에서는
+        // false여야 하고, 상태 판단은 candidate_valid만으로 한다.
+        FrenetPlanner fast;
+        fast.Init(config);
+        CartesianPath fast_maintenance;
+        Prepare fast_result;
+        fast.PrepareAvoid(ego, objects, boxes,
+                          MakeAvoidCommand(21, LateralDirection::NONE),
+                          fast_maintenance, fast_result);
+        Expect(!fast_result.low_speed_context,
+               "low speed: the context flag is false at normal speed");
+        Expect(fast_result.candidate_valid,
+               "low speed: normal speed finds a candidate (same scene)");
+    }
+    {
+        // ***** low_speed_context가 상태 판단에 쓰이지 않는다는 증거 *****
+        //
+        // 이전 이름(low_speed_waiting)이 위험했던 이유가 여기 있다. 저속에서
+        // **후보가 실제로 성공하는** 상황이 존재한다.
+        //
+        // 실측: ego 0.3 m/s + 장애물 60 m 전방 -> candidate_valid=true 이면서
+        // low_speed_context=true. 이 값을 "waiting"으로 읽어 상태를 정하면
+        // 유효한 후보를 두고 WAITING을 보고하게 된다.
+        //
+        // 장애물이 25 m일 때는 후보가 막히므로 이 조합이 드러나지 않았다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> far_objects{
+            MakeObstacle(waypoints, 21, kEgoS + 60.0, 0.0)};
+        const auto far_boxes = boxes_for(far_objects);
+        const CartesianState slow_ego = MakeEgo(PoseAt(waypoints, kEgoS), 0.3);
+        CartesianPath maintenance;
+        Prepare result;
+        const bool ok = planner.PrepareAvoid(
+            slow_ego, far_objects, far_boxes,
+            MakeAvoidCommand(21, LateralDirection::NONE), maintenance, result);
+
+        Expect(ok, "low-speed valid: PREPARE succeeds");
+        Expect(result.low_speed_context,
+               "low-speed valid: the low-speed context is set");
+        Expect(result.candidate_valid,
+               "low-speed valid: a candidate IS found at 0.3 m/s with a far "
+               "obstacle");
+        // 이 두 값이 동시에 true인 것이 정상이다. low_speed_context를 후보
+        // 차단이나 상태 판단에 쓰면 이 케이스가 깨진다.
+        Expect(result.low_speed_context && result.candidate_valid,
+               "low-speed valid: low speed and a valid candidate coexist");
+        Expect(result.selected_target_d != 0.0,
+               "low-speed valid: a lateral target was selected");
         Expect(result.generated_candidate_count > 0,
                "low speed: candidates are still attempted, not skipped");
         Expect(planner.last_failure_reason() == Reason::NONE,
@@ -1627,6 +1676,187 @@ int main() {
                "NORMAL AVOID is still unsupported (execution is D6-3)");
         Expect(planner.active_avoid_target_id() == 21,
                "NORMAL AVOID still binds its target");
+    }
+
+    // ===== D6-2c: Feedback 매핑 =========================================
+    //
+    // node의 AVOID PREPARE 배선이 AvoidPrepareResult를 FrenetFeedback으로
+    // 어떻게 옮기는지 고정한다.
+    //
+    // ===== 왜 여기서 검증하는가 =====
+    //
+    // node의 SetImplementedManeuver(AVOID)가 아직 열리지 않았으므로
+    // command_manager_.Accept()가 planner 호출 전에 FAILED로 끝낸다. 즉
+    // ROS 경로로는 PREPARE 블록이 실행되지 않는다 - 그것은 D6-4에서 gate를
+    // 열 때 처음 검증된다.
+    //
+    // 그래서 여기서는 node가 쓰는 것과 **같은 매핑 규칙**을 core 결과에
+    // 적용해 값이 맞는지 본다. ROS 왕복은 D6-4에서 덮는다.
+    {
+        // 매핑 규칙(node의 avoid_fields 조립과 동일):
+        //   plan_valid       = candidate_valid
+        //   target_d_valid   = candidate_valid
+        //   target_d         = candidate_valid ? selected_target_d : 0.0
+        //   selected_cost    = candidate_valid ? selected_cost : -1.0
+        //   applied_speed    = maintenance 종단 속도
+        //   result_code      = 항상 RESULT_NONE (COLLISION_BLOCKED 아님)
+        auto map_feedback = [](const Prepare& r, const CartesianPath& maint,
+                               bool& plan_valid, bool& target_d_valid,
+                               double& target_d, double& selected_cost,
+                               double& applied_speed) {
+            plan_valid = r.candidate_valid;
+            target_d_valid = r.candidate_valid;
+            target_d = r.candidate_valid ? r.selected_target_d : 0.0;
+            selected_cost = r.candidate_valid ? r.selected_cost : -1.0;
+            applied_speed = maint.v.empty() ? -1.0 : maint.v.back();
+        };
+
+        // --- 후보 성공 ---------------------------------------------------
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const auto boxes = boxes_for(objects);
+        CartesianPath maintenance;
+        Prepare result;
+        planner.PrepareAvoid(ego, objects, boxes,
+                             MakeAvoidCommand(21, LateralDirection::LEFT),
+                             maintenance, result);
+
+        bool plan_valid = false, target_d_valid = false;
+        double target_d = 0.0, selected_cost = 0.0, applied_speed = 0.0;
+        map_feedback(result, maintenance, plan_valid, target_d_valid, target_d,
+                     selected_cost, applied_speed);
+
+        Expect(plan_valid, "feedback: a valid candidate reports plan_valid");
+        Expect(target_d_valid,
+               "feedback: a valid candidate reports target_d_valid");
+        Expect(target_d > 2.0,
+               "feedback: target_d carries the selected lateral goal");
+        Expect(selected_cost > 0.0,
+               "feedback: a valid candidate reports a real cost");
+        Expect(result.blocking_object_id == -1,
+               "feedback: a valid candidate blames no blocking object");
+        // applied_speed는 maintenance의 실제 속도다. last_target_speed_가
+        // 아니다 - 그것은 maintenance 결정 전의 순항 목표속도다.
+        Expect(applied_speed >= 0.0,
+               "feedback: applied speed comes from the published trajectory");
+        Expect(std::fabs(applied_speed - maintenance.v.back()) < 1e-9,
+               "feedback: applied speed equals the maintenance endpoint speed");
+    }
+    {
+        // --- 후보 막힘 (충돌) --------------------------------------------
+        //
+        // plan_valid=false지만 maintenance는 계속 존재한다. WAITING이
+        // trajectory_source=SAFE_STOP을 뜻하지 않는다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 8.0, 0.0)};
+        const auto boxes = boxes_for(objects);
+        CartesianPath maintenance;
+        Prepare result;
+        const bool ok = planner.PrepareAvoid(
+            ego, objects, boxes,
+            MakeAvoidCommand(21, LateralDirection::NONE), maintenance, result);
+
+        Expect(ok, "feedback: a blocked candidate still yields maintenance");
+        Expect(!result.candidate_valid,
+               "feedback: plan_valid is false when the candidate is blocked");
+        Expect(result.selected_cost == -1.0,
+               "feedback: a blocked candidate reports the -1.0 cost sentinel");
+        Expect(result.blocking_object_id == 21,
+               "feedback: the blocking object id is preserved for diagnostics");
+        Expect(result.generated_candidate_count > 0 &&
+                   result.valid_candidate_count == 0,
+               "feedback: candidate counts show generated-but-all-rejected");
+        // 계약: PREPARE에서 후보 없음은 terminal이 아니다. core도 실패로
+        // 보고하지 않아야 node가 RESULT_NONE을 쓸 수 있다.
+        Expect(planner.last_failure_reason() == Reason::NONE,
+               "feedback: a blocked candidate is not a planner failure");
+    }
+    {
+        // --- 감속/정지 maintenance의 applied_speed ------------------------
+        //
+        // **이것이 D6-2c에서 고쳐야 했던 문제다.** last_target_speed_를 쓰면
+        // 실제 궤적은 0 m/s를 향하는데 순항 목표속도(예: 10)가 나간다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        // 장애물이 아주 가까우면 maintenance가 정지 계열로 내려간다(실측).
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 4.0, 0.0)};
+        const auto boxes = boxes_for(objects);
+        const CartesianState slow_ego = MakeEgo(PoseAt(waypoints, kEgoS), 0.3);
+        CartesianPath maintenance;
+        Prepare result;
+        planner.PrepareAvoid(slow_ego, objects, boxes, MakeAvoidCommand(21),
+                             maintenance, result);
+
+        Expect(!maintenance.v.empty(),
+               "applied speed: the stop-tier maintenance has samples");
+        const double endpoint_speed = maintenance.v.back();
+        Expect(std::fabs(endpoint_speed) < 1e-6,
+               "applied speed: the stop-tier maintenance ends at zero");
+        // planner의 순항 목표속도는 0이 아니다. 그것을 보고하면 거짓이다.
+        Expect(planner.last_target_speed() > 0.5,
+               "applied speed: last_target_speed is a cruise value, not zero");
+        Expect(std::fabs(planner.last_target_speed() - endpoint_speed) > 0.5,
+               "applied speed: the cruise value would misreport the stop");
+    }
+    {
+        // --- 방향 모순 / 후방 목표의 진단 값 -----------------------------
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const auto boxes = boxes_for(objects);
+        CartesianPath maintenance;
+        Prepare result;
+        planner.PrepareAvoid(
+            ego, objects, boxes,
+            MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, -2.5,
+                                        LateralDirection::LEFT),
+            maintenance, result);
+        Expect(!result.candidate_valid && result.selected_cost == -1.0,
+               "feedback: a direction conflict reports no cost");
+        Expect(result.blocking_object_id == -1,
+               "feedback: a direction conflict blames no collision object");
+        Expect(result.generated_candidate_count == 0,
+               "feedback: a direction conflict generates no candidates");
+        Expect(planner.last_failure_reason() == Reason::NONE,
+               "feedback: a direction conflict is WAITING, not FAILED");
+    }
+    {
+        // --- 같은 PREPARE를 반복해도 상태가 왕복 가능하다 -----------------
+        //
+        // core 쪽에서 latch 성격의 상태가 남지 않는지 확인한다. manager의
+        // 전이는 command_execution_manager_test가 담당한다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> clear_scene{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const std::vector<ObjectInfo> blocked_scene{
+            MakeObstacle(waypoints, 21, kEgoS + 8.0, 0.0)};
+        CartesianPath maintenance;
+        Prepare result;
+
+        planner.PrepareAvoid(ego, clear_scene, boxes_for(clear_scene),
+                             MakeAvoidCommand(21, LateralDirection::LEFT),
+                             maintenance, result);
+        Expect(result.candidate_valid, "round trip: first cycle is valid");
+
+        planner.PrepareAvoid(ego, blocked_scene, boxes_for(blocked_scene),
+                             MakeAvoidCommand(21, LateralDirection::LEFT),
+                             maintenance, result);
+        Expect(!result.candidate_valid, "round trip: blocked cycle is invalid");
+
+        planner.PrepareAvoid(ego, clear_scene, boxes_for(clear_scene),
+                             MakeAvoidCommand(21, LateralDirection::LEFT),
+                             maintenance, result);
+        Expect(result.candidate_valid,
+               "round trip: the candidate recovers when the scene clears");
+        Expect(planner.last_failure_reason() == Reason::NONE,
+               "round trip: no failure state is latched in core");
     }
 
     if (g_failures != 0) {

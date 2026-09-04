@@ -1365,7 +1365,7 @@ bool FrenetPlanner::PlanInternal(
     // BuildAvoidMaintenancePath가 **충돌 검사를 통과시킨 뒤** 만든다.
     //
     // 여기서 제외하지 않으면 PREPARE 블록에 도달하지도 못한다 - 이 분기가
-    // 먼저 return하기 때문이다(실측으로 확인: v=0.3에서 low_speed_waiting이
+    // 먼저 return하기 때문이다(실측으로 확인: v=0.3에서 low_speed_context이
     // 0으로 나오고 maintenance가 미검사 crawl이었다).
     if (std::fabs(ego.v) < kLowSpeedFallbackV && !near_any_merge &&
         !external_stop && !external_follow && !avoid_prepare) {
@@ -1434,7 +1434,9 @@ bool FrenetPlanner::PlanInternal(
         result.direction_conflict = v2_avoid_targets_.direction_conflict;
 
         constexpr double kLowSpeedFallbackV = 0.5;  // [m/s]
-        result.low_speed_waiting = std::fabs(ego.v) < kLowSpeedFallbackV;
+        // 상황 정보다. 상태 판단(READY/WAITING)에는 쓰지 않는다 - 그것은
+        // candidate_valid만으로 정한다(헤더 주석 참고).
+        result.low_speed_context = std::fabs(ego.v) < kLowSpeedFallbackV;
 
         // ---- target pose sanity: ego 전방이어야 한다 -------------------
         //
@@ -1477,7 +1479,7 @@ bool FrenetPlanner::PlanInternal(
         // 저속이라고 후보 생성을 건너뛰지 않는다. "저속에서는 어차피 안 될
         // 것"이라고 가정하면, 실제로 가능한 상황에서도 READY에 도달하지
         // 못한다. 생성을 시도하고 결과로 판단한다 - 저속에서 후보가 0개면
-        // low_speed_waiting이 그 사유를 설명한다.
+        // low_speed_context이 그 사유를 설명한다.
         if (!blocked_by_request && v2_avoid_targets_.count > 0) {
             const FrenetPath* best_candidate = nullptr;
             std::vector<FrenetPath> best_set;
@@ -1576,7 +1578,7 @@ bool FrenetPlanner::PlanInternal(
                         s, d, ego.v, v2_avoidance_.obstacle_id,
                         result.candidate_valid ? 1 : 0, result.selected_target_d,
                         v2_avoid_targets_.count,
-                        result.low_speed_waiting ? 1 : 0,
+                        result.low_speed_context ? 1 : 0,
                         result.direction_conflict ? 1 : 0,
                         result.target_behind_ego ? 1 : 0,
                         result.valid_candidate_count,

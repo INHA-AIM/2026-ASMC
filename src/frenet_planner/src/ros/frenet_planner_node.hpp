@@ -60,6 +60,25 @@ class FrenetPlannerNode {
     // 기존 v1 경로를 계속 수행한다 - cutover 전까지 두 계통이 병행한다.
     bool runV2PlanningCycle(const ros::Time& now);
 
+    // AVOID PREPARE가 채우는 피드백 필드 (D6-2c).
+    //
+    // publishFeedbackV2의 인자를 계속 늘리는 대신 한 묶음으로 넘긴다.
+    // nullptr이면 기존 D4/D5 동작 그대로다 - sentinel로 채워진다.
+    struct AvoidFeedbackFields {
+        // 발행한 maintenance 궤적의 실제 목표속도 [m/s]. 위 주석 참고.
+        double applied_speed_mps = -1.0;
+
+        // 계약 1.3절: target_d는 음수가 유효하므로 유효성은 플래그로만
+        // 판단한다. candidate_valid일 때만 true다.
+        bool target_d_valid = false;
+        double target_d = 0.0;
+
+        uint32_t generated_candidate_count = 0;
+        uint32_t valid_candidate_count = 0;
+        double selected_cost = -1.0;
+        int32_t blocking_object_id = -1;
+    };
+
     // 피드백 발행. planning 결과가 있으면 관련 필드를 채운다.
     // report가 nullptr이면 궤적을 만들지 않은 사이클이다(계약 9.4절).
     // frenet_state_valid / current_s는 호출자가 ProjectEgoToS로 얻은 값을
@@ -84,13 +103,31 @@ class FrenetPlannerNode {
     // 두 번째가 위험하다. FSM은 plan_valid=true를 "EXECUTE를 보내도 된다"로
     // 읽으므로, 막힌 회피에 EXECUTE 허가가 나간다. 그래서 유도하지 않고
     // 호출자가 명시한다.
+    //
+    // ===== applied_speed_override (D6-2c) =====
+    //
+    // 기본값(nullopt)이면 planner_.last_target_speed()를 쓴다. KEEP/FOLLOW는
+    // 그 값이 실제로 발행한 궤적의 목표속도와 일치한다.
+    //
+    // AVOID PREPARE는 다르다. maintenance가 crawl/감속/정지 중 무엇이 될지는
+    // 후보 결과와 충돌 검사에 달려 있고, last_target_speed_는 그 이전에
+    // 계산된 순항 목표속도(예: 10 m/s)로 남는다. 그대로 내보내면
+    //   실제 MPC 궤적 목표 = 0 m/s (감속/정지 maintenance)
+    //   applied_speed_mps  = 10 m/s
+    // 라는 거짓 보고가 된다. FrenetFeedback.msg는 이 필드를 "실제 적용한
+    // 목표속도"로 정의한다.
+    //
+    // 그래서 PREPARE는 발행한 궤적의 실제 종단 속도를 넘긴다.
     void publishFeedbackV2(uint32_t command_id,
                            const CommandAcceptance& acceptance,
                            const asmc_msgs::Trajectory* trajectory,
                            uint8_t trajectory_source,
                            bool plan_valid,
                            bool frenet_state_valid = false,
-                           double current_s = 0.0);
+                           double current_s = 0.0,
+                           const AvoidFeedbackFields* avoid_fields = nullptr);
+
+
     InputSnapshot takeSnapshot() const;
     bool isFresh(const ros::Time& stamp, double timeout_seconds,
                  const ros::Time& now, double& age_seconds) const;

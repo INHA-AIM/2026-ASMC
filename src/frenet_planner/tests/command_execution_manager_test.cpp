@@ -996,6 +996,103 @@ int main() {
                "ownership: an unimplemented maneuver plans nothing");
     }
 
+    // ============ D6-2c: PREPARE READY <-> WAITING 왕복 ================
+    //
+    // AVOID PREPARE는 같은 command_id로 매 사이클 재평가된다. 후보가
+    // 생겼다 막혔다 하면 상태도 그에 따라 움직여야 하고, **어느 쪽도
+    // terminal latch가 아니다.**
+    //
+    // node는 candidate_valid만 보고
+    //   true  -> NotifyPlanSucceeded()
+    //   false -> NotifyPlanFailed(false)
+    // 를 호출한다. 그 두 호출이 만드는 전이를 여기서 고정한다.
+    {
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeLaneChange(500, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        manager.Accept(avoid);
+        Expect(manager.execution_state() == Feedback::PREPARING,
+               "prepare cycle: AVOID starts in PREPARING");
+
+        // PREPARING + 후보 유효 -> READY
+        manager.NotifyPlanSucceeded();
+        Expect(manager.execution_state() == Feedback::READY,
+               "prepare cycle: PREPARING + valid candidate -> READY");
+        Expect(!manager.terminal_latched(),
+               "prepare cycle: READY is not a terminal state");
+
+        // READY + 후보 무효 -> WAITING
+        manager.NotifyPlanFailed(/*terminal=*/false);
+        Expect(manager.execution_state() == Feedback::WAITING,
+               "prepare cycle: READY + blocked candidate -> WAITING");
+        Expect(!manager.terminal_latched(),
+               "prepare cycle: WAITING is not a terminal state");
+
+        // WAITING + 후보 유효 -> READY (회복)
+        manager.NotifyPlanSucceeded();
+        Expect(manager.execution_state() == Feedback::READY,
+               "prepare cycle: WAITING + valid candidate -> READY");
+
+        // WAITING + 후보 무효 -> WAITING (유지)
+        manager.NotifyPlanFailed(/*terminal=*/false);
+        manager.NotifyPlanFailed(/*terminal=*/false);
+        Expect(manager.execution_state() == Feedback::WAITING,
+               "prepare cycle: repeated blocking keeps WAITING");
+
+        // 같은 ID를 여러 번 재발행해도 latch되지 않는다.
+        for (int cycle = 0; cycle < 5; ++cycle) {
+            const auto again = manager.Accept(avoid);
+            Expect(again.command_accepted && again.should_plan() &&
+                       again.planning_target ==
+                           frenet_planner_ros::PlanningTarget::INCOMING_COMMAND,
+                   "prepare cycle: the same PREPARE keeps being planned");
+        }
+        Expect(!manager.terminal_latched() && manager.command_id() == 500,
+               "prepare cycle: repeated PREPARE never latches");
+    }
+    {
+        // PREPARE 중 대상 소실은 terminal이다. WAITING과 구분해야 한다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeLaneChange(501, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        manager.Accept(avoid);
+        manager.NotifyPlanSucceeded();
+        Expect(manager.execution_state() == Feedback::READY,
+               "prepare lost: reaches READY first");
+
+        manager.NotifyPlanFailed(/*terminal=*/true,
+                                 Feedback::TARGET_OBJECT_LOST,
+                                 "the designated avoid target is not usable");
+        Expect(manager.execution_state() == Feedback::FAILED &&
+                   manager.terminal_latched() &&
+                   manager.terminal_result_code() ==
+                       Feedback::TARGET_OBJECT_LOST,
+               "prepare lost: a lost target is a terminal failure");
+        // latch 중에는 후보가 다시 생겨도 READY로 돌아가지 않는다.
+        manager.NotifyPlanSucceeded();
+        Expect(manager.execution_state() == Feedback::FAILED,
+               "prepare lost: a latched failure is not undone by a candidate");
+    }
+    {
+        // PREPARE 중에는 다른 명령으로 전환할 수 있다. COMMIT 전이므로
+        // 계약 7.2절의 보호 대상이 아니다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeLaneChange(502, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        manager.Accept(avoid);
+        manager.NotifyPlanFailed(/*terminal=*/false);
+        Expect(manager.execution_state() == Feedback::WAITING,
+               "prepare switch: WAITING before the switch");
+        const auto keep = manager.Accept(MakeKeep(503));
+        Expect(keep.command_accepted && keep.should_plan() &&
+                   manager.command_id() == 503 &&
+                   manager.maneuver_type() == Command::KEEP,
+               "prepare switch: a WAITING AVOID can still be replaced");
+    }
+
     if (g_failures != 0) {
         std::cerr << g_failures << " execution manager check(s) failed\n";
         return 1;
