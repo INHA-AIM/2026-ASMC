@@ -192,6 +192,22 @@ public:
         return v2_avoidance_.requested_target_s;
     }
 
+    // 이번 사이클에 평가할 회피 목표 d 목록 (D6-2a). 확보에 실패했으면
+    // count()가 0이다. D6-2b가 이 목록으로 후보를 만든다.
+    int avoid_target_count() const { return v2_avoid_targets_.count; }
+    double avoid_target_candidate(int index) const {
+        if (index < 0 || index >= v2_avoid_targets_.count) return 0.0;
+        return v2_avoid_targets_.candidates[index];
+    }
+    bool avoid_target_from_pose() const {
+        return v2_avoid_targets_.from_target_pose;
+    }
+    // 방향 요청과 target pose가 모순인지. 명령 결함이 아니므로 여기서
+    // 거부하지 않고, 후보 생성 결과(WAITING)로 드러난다(계약 3.3.4절).
+    bool avoid_direction_conflict() const {
+        return v2_avoid_targets_.direction_conflict;
+    }
+
     PlanFailureReason last_failure_reason() const { return last_failure_reason_; }
 
 private:
@@ -401,6 +417,49 @@ private:
     // v2 AVOID 대상의 유효 탐색거리 [m]. resolver와 진단 출력이 공유한다.
     double EffectiveAvoidDetectionDistance() const;
 
+    // 확보한 대상에 대해 평가할 회피 목표 d를 정한다 (D6-2a).
+    //
+    // ===== 두 갈래 =====
+    //
+    //   target pose 있음 (has_avoid_target_d)
+    //     -> 그 d가 authoritative lateral goal이다. FSM이 목표점을 준 것을
+    //        Frenet이 geometry로 덮어쓰면 계약 3.3.3절 위반이다.
+    //
+    //   target pose 없음
+    //     -> legacy의 검증된 geometry 계산을 재사용한다:
+    //          clearance = 0.5*(자차폭 + 장애물폭) + safety_margin + 0.3
+    //          left  = obstacle_d + clearance
+    //          right = obstacle_d - clearance
+    //        legacy가 begin_avoidance에서 쓰는 식과 동일하다. 고정 ±5 m
+    //        (avoid_offset)가 아니라 장애물의 실제 횡위치를 반영하므로
+    //        불필요하게 멀리 이동하지 않는다.
+    //
+    // ===== 방향 =====
+    //
+    //   LEFT   왼쪽 후보만 평가
+    //   RIGHT  오른쪽 후보만 평가
+    //   NONE   양쪽 평가 후 valid/cost로 Frenet이 선택
+    //
+    // legacy처럼 항상 양쪽을 만든 뒤 방향을 고르면, LEFT를 받았는데 RIGHT로
+    // 가는 계약 위반이 된다(계약 3.3.1절).
+    //
+    // 이 함수는 **평가할 후보 목록만** 돌려준다. 어느 쪽이 실제로 안전한지는
+    // D6-2b의 후보 생성/충돌 검사가 판정한다.
+    struct AvoidTargetPlan {
+        // 평가할 목표 d. count가 1이면 [0]만, 2이면 [0]=left, [1]=right.
+        double candidates[2] = {0.0, 0.0};
+        int count = 0;
+        // 목표가 FSM의 target pose에서 왔는지. 진단·피드백용이다.
+        bool from_target_pose = false;
+        // 방향 요청과 target pose가 모순되는지 (예: LEFT인데 pose가 장애물
+        // 오른쪽). 이 경우에도 후보를 만들어 충돌 검사에 맡긴다 - 명령
+        // 결함이 아니라 "그 목표로는 회피가 안 된다"이므로 WAITING이 맞다
+        // (계약 3.3.4절).
+        bool direction_conflict = false;
+    };
+    AvoidTargetPlan DecideAvoidTargets(const AvoidanceContext& context,
+                                       LateralDirection direction) const;
+
     // 현재 상태에서 그 자리에 정지하는 감속 궤적을 직접 만든다.
     //
     // 후보 생성 -> 곡률 필터 -> 충돌 필터 파이프라인을 타지 않는다. 두 곳에서
@@ -469,6 +528,10 @@ private:
     // legacy avoidance_와 분리한다 - legacy fingerprint를 유지하려면 v2가
     // legacy context를 건드리지 않는 것이 가장 안전하다.
     AvoidanceContext v2_avoidance_{};
+
+    // 이번 사이클에 평가할 v2 AVOID 목표 d 목록 (D6-2a). D6-2b의 후보
+    // 생성기가 소비한다. 확보에 실패하면 count=0으로 비워진다.
+    AvoidTargetPlan v2_avoid_targets_{};
     MergeContext merge_{};
     std::unordered_map<int, ObjectTrack> object_tracks_{};
 };

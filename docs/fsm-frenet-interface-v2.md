@@ -404,11 +404,90 @@ D6-2가 최종 목표를 정할 때 이 값을 읽고, 결과를 `avoidance_d_of
 같은 분담이다(3.4절 4항). AVOID의 임계값은 STOP과 별도 param
 (`v2/avoid/max_target_heading_error_rad`, 기본 45°)이다.
 
+#### 3.3.4 AVOID 목표 d 결정과 방향 (D6-2a에서 확정)
+
+확보한 대상에 대해 **평가할** 목표 d를 정하는 규칙이다. 어느 쪽이 실제로
+안전한지는 후보 생성/충돌 검사가 판정한다(D6-2b).
+
+##### target pose가 있으면 그 d가 authoritative
+
+FSM이 목표점을 준 것을 Frenet이 geometry로 덮어쓰면 3.3.3절 위반이다.
+
+##### 없으면 legacy geometry 계산을 재사용
+
+```cpp
+clearance = 0.5 * (vehicle_width + obstacle_width)
+          + safety_margin + 0.3
+left_target  = obstacle_d + clearance
+right_target = obstacle_d - clearance
+```
+
+legacy가 `begin_avoidance`에서 쓰는 식과 **동일**하다. 현재 config 기준
+(자차폭 1.9, safety_margin 0.3, 장애물폭 2.0):
+
+```
+clearance = 0.5*(1.9 + 2.0) + 0.3 + 0.3 = 2.55 m
+```
+
+**고정 `±avoid_offset`(params.yaml에서 5.0)이 아니다.** `avoid_offset`은 후보
+생성 시 lateral 격자를 밀어낼 크기이고, 실제 목표는 장애물의 실제 횡위치와
+실제 폭을 반영한다 — 그래야 불필요하게 멀리 이동하지 않는다. legacy
+`avoidance_selector`가 초기 방향 판정에 `±avoid_offset`를 쓰지만, 실제 회피
+시작 시점의 `avoidance_.target_d`는 위 geometry 식으로 덮어쓴다.
+
+##### 방향
+
+| `direction` | 평가 대상 |
+|---|---|
+| `LEFT` | 왼쪽 목표만 |
+| `RIGHT` | 오른쪽 목표만 |
+| `NONE` | 양쪽. valid/cost로 Frenet이 선택 |
+
+legacy처럼 항상 양쪽을 만든 뒤 방향을 고르면 `LEFT`를 받았는데 `RIGHT`로
+가는 계약 위반이 된다(3.3.1절).
+
+##### 방향과 target pose가 모순일 때
+
+```
+LEFT  이면 avoid_target_d > obstacle_d 여야 한다
+RIGHT 이면 avoid_target_d < obstacle_d 여야 한다
+```
+
+어긋나면 **표시만 하고 거부하지 않는다**(`direction_conflict`). 명령 결함이
+아니라 "그 목표로는 회피가 안 된다"이므로, 결과는 `INVALID_COMMAND`가 아니라
+`WAITING`이 맞다.
+
+예를 들어 `obstacle_d = 0`, `LEFT`, pose `d = +0.2`는 방향은 맞지만 회피 폭이
+부족하다. 이것은 충돌 검사가 판정할 일이고, clearance 임계값을 여기서 다시
+구현하면 두 곳의 판정이 어긋난다.
+
+##### `avoid_target_s`는 exact endpoint가 아니다
+
+현재 AVOID 후보 생성기는 **목표 d + time horizon** 기반이고, "정확히
+`s=X, d=Y`에 도착"하는 generator가 아니다. `ResolveManeuver`도
+`avoidance_d_offset`만 lateral target으로 쓴다.
+
+그래서 초기 계약은 이렇게 둔다.
+
+| 필드 | 용도 |
+|---|---|
+| `avoid_target_d` | lateral goal (실제 사용) |
+| `avoid_target_s` | sanity / relevance 검증 |
+
+`avoid_target_s`를 exact terminal s로 만들려면 path generator를 크게 뜯어야
+한다. 그리고 AVOID 목표점은 장애물 옆에서 shift가 끝나는 점일 수도, 통과 후
+점일 수도 있어서 "장애물보다 앞/뒤여야 한다"는 규칙은 FSM 계약이 더
+명확해지기 전에는 너무 강하다.
+
 ### 3.4 target pose 검증 (`has_target_pose=true`일 때)
 
 1. `position.x/y/z` 모두 `isfinite`
 2. quaternion 4성분 모두 `isfinite`, 노름이 1에서 허용오차 이내
-3. reference line 투영 성공 (`ProjectPointToS`) — 실패 시 `TARGET_PROJECTION_FAILED`
+3. reference line 투영 성공 — 실패 시 `TARGET_PROJECTION_FAILED`
+   | maneuver | 사용 함수 | 허용 횡거리 |
+   |---|---|---|
+   | STOP / LANE_CHANGE | `ProjectPointToS` | `stop_cfg_.max_lateral_offset` |
+   | AVOID | `ProjectPointToFrenet` | `v2/avoid/max_target_lateral_offset` |
 4. **heading 검증**: 목표 pose의 yaw와 투영점의 reference yaw 차이가 임계값 이내
 
 heading 검증(4)은 신규 항목이다. 현재 투영 방어는 `s_hint` +
@@ -1583,7 +1662,9 @@ handshake 골격을 모드마다 다시 만들지 않는다.
 | D6-0a | 완료 전이 강제, 계획 대상 소유권 분리(`PlanningTarget`) | 닫힘 |
 | D6-1 | authoritative AVOID target resolve (`v2_avoidance_`, LEFT/RIGHT/NONE 보존) | core만 (ROS 닫힘) |
 | D6-1a | optional `target_pose_map` → Frenet `target_d` 투영 | core만 (ROS 닫힘) |
-| D6-2 | PREPARE dual-output — 한 cycle에서 avoid candidate + maintenance path | 닫힘 |
+| D6-2a | 저속 AVOID binding 우회 제거 + 평가 목표 d 결정 | 닫힘 |
+| D6-2b | PREPARE dual-output — 한 cycle에서 avoid candidate + maintenance path | 닫힘 |
+| D6-2c | PREPARE READY / WAITING 상태 연결 + core 회귀 | 닫힘 |
 | D6-3 | EXECUTE / COMMIT / EXECUTING / completion, `target_d` lock, CANCEL, preemption | 닫힘 |
 | D6-4 | Feedback 필드 연결 + ROS 회귀 + `SetImplementedManeuver(AVOID, true)` | **열림** |
 
@@ -1599,7 +1680,7 @@ tracking update가 일어나 yaw-rate가 0 방향으로 한 번 더 필터링된
 결과로 덮인다. AVOID 후보 평가와 유지 궤적은 **한 번의 전처리(Cartesian→Frenet,
 object tracking/prediction) 위에서 두 결과를 만들어** 분리 반환한다(D6-2).
 
-#### 12.7.2 D6-2 착수 전 필수 처리 — 저속 AVOID resolver 우회
+#### 12.7.2 저속 AVOID resolver 우회 — **D6-2a에서 해결**
 
 **D6-1에서 실측 확인한 문제다.** `ego.v`가 `kLowSpeedFallbackV`(0.5 m/s)
 미만이면 external AVOID가 resolver에 도달하지 않는다.
@@ -1664,7 +1745,51 @@ Frenet: 중앙 크롤링 경로 + plan_valid=true
 `FAILED`가 아니라 "지금은 안 되지만 조건이 바뀌면 된다"이다. 저속은 정확히
 그런 조건이다 — 차가 다시 움직이면 후보가 생긴다.
 
-D6-1a(target pose 투영)는 이 문제와 독립적이므로 먼저 진행해도 된다.
+##### D6-2a의 해결 방식
+
+**`external_avoid`를 fallback 제외 조건에 추가하지 않았다.** 그 방식은
+"저속이면 AVOID를 정상 파이프라인으로 보낸다"는 뜻인데, 저속에서는 path
+generator가 lateral candidate를 제한하므로 후보가 0개가 되어 실패로 바뀔
+뿐이다.
+
+대신 **대상 확보 자체를 저속 판단보다 위로 올렸다.**
+
+```
+Cartesian → Frenet (s, d)
+  ↓
+object tracking / yaw-rate
+  ↓
+v2 context reset
+  ↓
+EMERGENCY
+  ↓
+외부 AVOID?  ──→ exact target resolver      ← D6-2a에서 여기로 이동
+                 target pose intent 보존
+                 평가 목표 d 결정
+  ↓
+저속 여부 판단
+  ↓
+normal pipeline
+```
+
+장애물 앞에서 감속한 뒤 AVOID 명령을 받는 것은 **정상 시나리오**다. 그때
+대상조차 확보하지 못하는 구조는 맞지 않다.
+
+D6-2a 이후 실측(같은 조건):
+
+| `ego.v` | `Plan()` | `active_avoid_target_id()` | `last_failure_reason()` |
+|---|---|---|---|
+| 6.00 | false | 21 | `UNSUPPORTED_BEHAVIOR` |
+| 0.60 | false | 21 | `UNSUPPORTED_BEHAVIOR` |
+| 0.40 | false | **21** | `UNSUPPORTED_BEHAVIOR` |
+| 0.30 | false | **21** | `UNSUPPORTED_BEHAVIOR` |
+| 0.00 | false | **21** | `UNSUPPORTED_BEHAVIOR` |
+
+**저속에서도 성공을 반환하지 않는다.** 저속만 다르게 성공시키면 "회피 성공"
+오보가 그대로 남는다. 후보 생성이 붙는 D6-2b까지는 모든 속도에서 같은
+실패를 반환한다.
+
+저속 maintenance 정책(crawl + 충돌 검사)은 D6-2b에서 구현한다.
 
 ### 12.8 파일 배치
 

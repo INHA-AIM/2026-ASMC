@@ -183,9 +183,15 @@ class FrenetPlannerNode {
     // [m] 목표점이 경로에서 이보다 멀면 이 경로에 대한 회피 목표가 아니라고
     // 보고 TARGET_PROJECTION_FAILED로 거부한다.
     //
-    // 기본값 4.0. 회피 오프셋(avoid_offset=3.0)보다는 커야 정상 목표가
-    // 거부되지 않고, 차선 폭(3.5) 한 개 남짓으로 제한해 옆 도로의 점이
-    // 통과하지 않게 한다. MORAI 검증 후 조인다.
+    // 기본값 4.0. 이 값은 avoid_cfg_.avoid_offset(params.yaml에서 5.0)과
+    // 무관하게 정한 **target pose의 spatial validity bound**다. 두 값을
+    // 비교해서 정하지 않는 이유:
+    //   avoid_offset  후보 생성 시 lateral_d 격자를 밀어낼 크기
+    //   이 값         FSM이 준 목표점이 이 경로의 것인지 판별하는 임계값
+    // 실제 회피 목표 d는 격자 크기가 아니라 차량/장애물 폭 + safety margin
+    // 으로 계산되므로(legacy도 동일), avoid_offset보다 커야 할 이유가 없다.
+    //
+    // MORAI에서 실제 FSM target pose 분포를 보고 조정한다.
     double avoid_max_target_lateral_offset_ = 4.0;
 
     // [rad] 목표 pose의 heading 허용 오차. STOP과 같은 이유로 필요하다

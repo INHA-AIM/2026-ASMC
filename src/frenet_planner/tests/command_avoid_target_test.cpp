@@ -32,7 +32,19 @@
 // ProjectPointToFrenet은 s/d만 돌려주고, "이 heading 차이가 허용 가능한가"는
 // ROS 계층이 판단한다(ReferenceHeadingAt과 같은 분담).
 //
-// 계약: docs/fsm-frenet-interface-v2.md 12.7.1절(D6-1/D6-1a), 3.3절, 8.2절
+// ===== D6-2a에서 추가한 범위 =====
+//
+// 1. 저속 AVOID resolver 우회 제거. D6-1에서는 확보가 명령 조립 지점에
+//    있었고 그곳은 저속 fallback보다 아래여서, ego < 0.5 m/s이면 확보 자체가
+//    일어나지 않고 Plan()이 성공을 반환했다(계약 12.7.2절 실측 표).
+// 2. 평가할 목표 d 결정. target pose가 있으면 그 d, 없으면 legacy geometry
+//    계산(clearance = 0.5*(자차폭+장애물폭) + safety_margin + 0.3).
+//    LEFT/RIGHT는 한쪽만, NONE은 양쪽.
+//
+// 후보 생성과 안전성 판정은 여전히 D6-2b다.
+//
+// 계약: docs/fsm-frenet-interface-v2.md 12.7.1절(D6-1/D6-1a/D6-2a),
+//       12.7.2절, 3.3절, 8.2절
 
 #include "frenet_planner/frenet_planner.hpp"
 
@@ -848,6 +860,322 @@ int main() {
                "handover: dropping the pose clears the projected target");
         Expect(planner.active_avoid_target_id() == 21,
                "handover: the object binding itself is unaffected");
+    }
+
+    // ===== D6-2a: 저속에서도 대상을 확보한다 ===========================
+    //
+    // 계약 12.7.2절의 실측 표를 회귀로 고정한다. D6-1 배치(확보가 저속
+    // fallback 아래)로 되돌리면 0.4 / 0.3 / 0.0 행이 깨진다.
+    {
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+
+        // kLowSpeedFallbackV = 0.5 m/s. 그 위/아래를 모두 훑는다.
+        const double speeds[] = {6.0, 2.0, 1.0, 0.6, 0.49, 0.4, 0.3, 0.1, 0.0};
+        bool all_bound = true;
+        bool none_faked_success = true;
+        for (double v : speeds) {
+            FrenetPlanner low;
+            low.Init(config);
+            const CartesianState slow_ego =
+                MakeEgo(PoseAt(waypoints, kEgoS), v);
+            CartesianPath path;
+            const bool ok = low.Plan(slow_ego, objects, MakeAvoidCommand(21),
+                                     path);
+            if (low.active_avoid_target_id() != 21) all_bound = false;
+            // 후보 생성이 아직 없으므로 성공을 반환하면 안 된다. 저속만
+            // 다르게 성공시키면 "회피 성공" 오보가 그대로 남는다.
+            if (ok) none_faked_success = false;
+        }
+        Expect(all_bound,
+               "the AVOID target is bound at every speed including 0 m/s");
+        Expect(none_faked_success,
+               "low speed never reports AVOID success before candidates exist");
+    }
+    {
+        // 저속에서 확보에 실패하면 여전히 TARGET_OBJECT_LOST다. 저속이라고
+        // 조용히 통과시키지 않는다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 17, kEgoS + 25.0, 0.0)};
+        const CartesianState slow_ego = MakeEgo(PoseAt(waypoints, kEgoS), 0.2);
+        CartesianPath path;
+        const bool ok = planner.Plan(slow_ego, objects, MakeAvoidCommand(21),
+                                     path);
+        Expect(!ok && planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
+               "an unobserved target still fails at low speed");
+        Expect(planner.active_avoid_target_id() == -1,
+               "a failed low-speed binding reports no target");
+    }
+    {
+        // 저속 dropout 유예도 정상속도와 같게 동작해야 한다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> with_target{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const std::vector<ObjectInfo> without_target{
+            MakeObstacle(waypoints, 17, kEgoS + 60.0, 0.0)};
+        const CartesianState slow_ego = MakeEgo(PoseAt(waypoints, kEgoS), 0.3);
+        CartesianPath path;
+        planner.Plan(slow_ego, with_target, MakeAvoidCommand(21), path);
+        Expect(planner.active_avoid_target_id() == 21,
+               "low speed: the target is acquired");
+        planner.Plan(slow_ego, without_target, MakeAvoidCommand(21), path);
+        Expect(planner.active_avoid_target_id() == 21 &&
+                   planner.avoid_missing_cycles() == 1,
+               "low speed: dropout grace works the same way");
+    }
+    {
+        // E-STOP은 여전히 AVOID보다 먼저 처리된다. 확보를 위로 올렸어도
+        // 긴급정지가 회피 확보에 가려지면 안 된다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath path;
+        planner.Plan(ego, objects, MakeAvoidCommand(21), path);
+        Expect(planner.active_avoid_target_id() == 21,
+               "estop order: AVOID bound first");
+
+        PlannerCommand estop{};
+        estop.mode = EMERGENCY;
+        const bool ok = planner.Plan(ego, objects, estop, path);
+        Expect(ok && planner.last_mode() == EMERGENCY,
+               "estop order: EMERGENCY still plans its decel path");
+        Expect(planner.active_avoid_target_id() == -1,
+               "estop order: EMERGENCY clears the AVOID context");
+    }
+
+    // ===== D6-2a: 평가할 목표 d 결정 ===================================
+    {
+        // NONE: 양쪽을 평가한다. 목표는 legacy geometry 식과 같아야 한다.
+        //   clearance = 0.5*(vehicle_width + obstacle_width)
+        //               + safety_margin + 0.3
+        // params.yaml: vehicle width 1.9, safety_margin 0.3
+        // 장애물 폭 2.0 -> clearance = 0.5*(1.9+2.0) + 0.3 + 0.3 = 2.55
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath path;
+        planner.Plan(ego, objects,
+                     MakeAvoidCommand(21, LateralDirection::NONE), path);
+        Expect(planner.avoid_target_count() == 2,
+               "DIRECTION_NONE evaluates both sides");
+        const double left = planner.avoid_target_candidate(0);
+        const double right = planner.avoid_target_candidate(1);
+        Expect(left > 0.0 && right < 0.0,
+               "the two candidates straddle the obstacle");
+        // 장애물이 d~0에 있으므로 목표는 대략 +-2.55다.
+        Expect(std::fabs(left - 2.55) < 0.4,
+               "the left target matches the legacy clearance formula");
+        Expect(std::fabs(right + 2.55) < 0.4,
+               "the right target matches the legacy clearance formula");
+        Expect(!planner.avoid_target_from_pose(),
+               "a pose-less AVOID computes its target from geometry");
+    }
+    {
+        // LEFT: 왼쪽만.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath path;
+        planner.Plan(ego, objects,
+                     MakeAvoidCommand(21, LateralDirection::LEFT), path);
+        Expect(planner.avoid_target_count() == 1,
+               "DIRECTION_LEFT evaluates exactly one side");
+        Expect(planner.avoid_target_candidate(0) > 0.0,
+               "DIRECTION_LEFT targets the left side");
+    }
+    {
+        // RIGHT: 오른쪽만. legacy처럼 양쪽을 만들고 고르면 이 검사가 깨진다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath path;
+        planner.Plan(ego, objects,
+                     MakeAvoidCommand(21, LateralDirection::RIGHT), path);
+        Expect(planner.avoid_target_count() == 1,
+               "DIRECTION_RIGHT evaluates exactly one side");
+        Expect(planner.avoid_target_candidate(0) < 0.0,
+               "DIRECTION_RIGHT targets the right side");
+    }
+    {
+        // 목표는 장애물의 실제 횡위치를 반영한다. 고정 ±avoid_offset(5.0)이
+        // 아니다 - 그러면 불필요하게 멀리 이동한다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> shifted{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0, 1.0)};
+        CartesianPath path;
+        planner.Plan(ego, shifted,
+                     MakeAvoidCommand(21, LateralDirection::LEFT), path);
+        const double target = planner.avoid_target_candidate(0);
+        // 장애물이 d=+1.0에 있으므로 왼쪽 목표는 대략 1.0 + 2.55 = 3.55다.
+        Expect(std::fabs(target - 3.55) < 0.5,
+               "the target follows the obstacle's actual lateral position");
+        Expect(std::fabs(target - 5.0) > 1.0,
+               "the target is not the fixed avoid_offset");
+    }
+    {
+        // 장애물 폭이 크면 clearance도 커진다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        ObjectInfo wide = MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0);
+        wide.width = 3.0;
+        CartesianPath path;
+        planner.Plan(ego, {wide},
+                     MakeAvoidCommand(21, LateralDirection::LEFT), path);
+        const double wide_target = planner.avoid_target_candidate(0);
+
+        FrenetPlanner narrow_planner;
+        narrow_planner.Init(config);
+        const std::vector<ObjectInfo> narrow{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};   // width 2.0
+        narrow_planner.Plan(ego, narrow,
+                            MakeAvoidCommand(21, LateralDirection::LEFT),
+                            path);
+        const double narrow_target = narrow_planner.avoid_target_candidate(0);
+        Expect(wide_target > narrow_target + 0.4,
+               "a wider obstacle needs a larger lateral target");
+    }
+
+    // ===== D6-2a: target pose가 목표를 대신한다 =========================
+    {
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath path;
+        planner.Plan(ego, objects,
+                     MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, 1.8,
+                                                 LateralDirection::LEFT),
+                     path);
+        Expect(planner.avoid_target_count() == 1,
+               "a target pose yields exactly one evaluated target");
+        Expect(planner.avoid_target_from_pose(),
+               "the target is reported as coming from the pose");
+        Expect(std::fabs(planner.avoid_target_candidate(0) - 1.8) < 1e-9,
+               "the pose d is used verbatim, not recomputed from geometry");
+        Expect(!planner.avoid_direction_conflict(),
+               "a left pose with DIRECTION_LEFT is consistent");
+    }
+    {
+        // 방향 요청과 pose가 모순이면 표시하되 거부하지 않는다. clearance
+        // 부족은 후보 생성/충돌 검사가 판정하고 결과는 WAITING이다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath path;
+        planner.Plan(ego, objects,
+                     MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, -2.0,
+                                                 LateralDirection::LEFT),
+                     path);
+        Expect(planner.avoid_direction_conflict(),
+               "a right-side pose with DIRECTION_LEFT is flagged as a conflict");
+        Expect(planner.last_failure_reason() != Reason::INVALID_COMMAND,
+               "a direction conflict is not a command defect");
+        Expect(planner.avoid_target_count() == 1 &&
+                   std::fabs(planner.avoid_target_candidate(0) + 2.0) < 1e-9,
+               "the conflicting pose is still evaluated (collision decides)");
+    }
+    {
+        // NONE + pose: pose를 그대로 쓰고 모순 판정은 하지 않는다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath path;
+        planner.Plan(ego, objects,
+                     MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, -2.2,
+                                                 LateralDirection::NONE),
+                     path);
+        Expect(planner.avoid_target_count() == 1 &&
+                   std::fabs(planner.avoid_target_candidate(0) + 2.2) < 1e-9,
+               "DIRECTION_NONE with a pose uses the pose d as-is");
+        Expect(!planner.avoid_direction_conflict(),
+               "DIRECTION_NONE never reports a direction conflict");
+    }
+    {
+        // 지정 대상 geometry가 목표 계산에 쓰인다. 더 가까운 장애물의
+        // 위치로 계산하면 엉뚱한 곳을 비켜간다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 17, kEgoS + 12.0, 0.0, -1.5),  // 더 가깝다
+            MakeObstacle(waypoints, 21, kEgoS + 30.0, 0.0, 1.0),   // FSM 지정
+        };
+        CartesianPath path;
+        planner.Plan(ego, objects,
+                     MakeAvoidCommand(21, LateralDirection::LEFT), path);
+        const double target = planner.avoid_target_candidate(0);
+        // 21이 d=+1.0이므로 목표는 ~3.55. 17(d=-1.5)로 계산하면 ~1.05다.
+        Expect(std::fabs(target - 3.55) < 0.5,
+               "the target uses the designated obstacle's geometry");
+        Expect(target > 2.0,
+               "the nearer obstacle's position does not drive the target");
+    }
+    {
+        // 확보 실패 시 목표 목록도 비워진다.
+        //
+        // **먼저 확보에 성공해야 이 검사가 유효하다.** 처음부터 없는 대상으로
+        // 시작하면 목록이 원래 비어 있어 "비웠는지"를 구분할 수 없다
+        // (돌연변이 MUT-8로 실제 확인 - reset을 제거해도 통과했다).
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> with_target{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const std::vector<ObjectInfo> without_target{
+            MakeObstacle(waypoints, 17, kEgoS + 20.0, 0.0)};
+        CartesianPath path;
+
+        planner.Plan(ego, with_target,
+                     MakeAvoidCommand(21, LateralDirection::LEFT), path);
+        const int bound_count = planner.avoid_target_count();
+        Expect(bound_count == 1,
+               "lost-clears: a target is evaluated while bound");
+
+        // 유예를 모두 소진시켜 LOST로 만든다.
+        for (int cycle = 0; cycle < 7; ++cycle) {
+            planner.Plan(ego, without_target, MakeAvoidCommand(21), path);
+        }
+        Expect(planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
+               "lost-clears: the target is lost after the grace window");
+        Expect(planner.avoid_target_count() == 0,
+               "lost-clears: losing the target clears the evaluated targets");
+    }
+    {
+        // 한 번도 확보하지 못한 경우에도 목록은 비어 있다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 17, kEgoS + 20.0, 0.0)};
+        CartesianPath path;
+        planner.Plan(ego, objects, MakeAvoidCommand(21), path);
+        Expect(planner.avoid_target_count() == 0,
+               "a never-bound target leaves no evaluated targets");
+    }
+    {
+        // 다른 모드로 넘어가면 목표 목록도 비워진다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        CartesianPath path;
+        planner.Plan(ego, objects, MakeAvoidCommand(21), path);
+        Expect(planner.avoid_target_count() > 0,
+               "reset: targets exist while AVOID is active");
+        PlannerCommand keep{};
+        keep.mode = LANE_KEEPING;
+        planner.Plan(ego, objects, keep, path);
+        Expect(planner.avoid_target_count() == 0,
+               "reset: KEEP clears the evaluated targets");
     }
 
     if (g_failures != 0) {

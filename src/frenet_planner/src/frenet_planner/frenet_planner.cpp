@@ -485,6 +485,60 @@ FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
     return AvoidTargetStatus::GRACE;
 }
 
+FrenetPlanner::AvoidTargetPlan FrenetPlanner::DecideAvoidTargets(
+    const AvoidanceContext& context, LateralDirection direction) const {
+    AvoidTargetPlan plan;
+    if (!context.active) return plan;
+
+    // ---- target pose가 있으면 그 d가 authoritative ----------------------
+    if (context.has_requested_target_d) {
+        plan.candidates[0] = context.requested_target_d;
+        plan.count = 1;
+        plan.from_target_pose = true;
+        // 방향 요청과의 정합성만 표시한다. 여기서 거부하지 않는 이유는
+        // 헤더 AvoidTargetPlan 주석에 있다 - clearance 부족은 충돌 검사가
+        // 판정할 일이고, 그 결과는 WAITING이다.
+        if (direction == LateralDirection::LEFT) {
+            plan.direction_conflict =
+                context.requested_target_d <= context.obstacle_d;
+        } else if (direction == LateralDirection::RIGHT) {
+            plan.direction_conflict =
+                context.requested_target_d >= context.obstacle_d;
+        }
+        return plan;
+    }
+
+    // ---- pose가 없으면 legacy geometry 계산을 재사용 --------------------
+    //
+    // legacy begin_avoidance 분기와 **같은 식**이다. 고정 ±avoid_offset(5.0)이
+    // 아니라 장애물의 실제 횡위치 + 실제 폭을 반영한다.
+    constexpr double kDirectionExtraMargin = 0.3;
+    const double clearance =
+        0.5 * (vehicle_shape_.width + context.obstacle_width) +
+        collision_cfg_.safety_margin + kDirectionExtraMargin;
+    const double left_target = context.obstacle_d + clearance;
+    const double right_target = context.obstacle_d - clearance;
+
+    switch (direction) {
+        case LateralDirection::LEFT:
+            plan.candidates[0] = left_target;
+            plan.count = 1;
+            break;
+        case LateralDirection::RIGHT:
+            plan.candidates[0] = right_target;
+            plan.count = 1;
+            break;
+        case LateralDirection::NONE:
+            // 방향 미지정이면 Frenet이 고른다 - 그것이 DIRECTION_NONE의
+            // 의미다(BehaviorCommand.msg). 순서는 legacy와 같이 left 먼저.
+            plan.candidates[0] = left_target;
+            plan.candidates[1] = right_target;
+            plan.count = 2;
+            break;
+    }
+    return plan;
+}
+
 bool FrenetPlanner::GenerateDecelToZeroPath(double s, double d, double s_dot,
                                             CartesianPath& out_path) const {
     // D4-3에서 STOP BRAKING fail-safe에서 추출했다. 두 경로가 정확히 같은
@@ -1047,6 +1101,9 @@ bool FrenetPlanner::PlanInternal(
     // 것과 같은 구조). legacy avoidance_에는 영향이 없다.
     if (!use_legacy_behavior && external_command->mode != AVOID) {
         v2_avoidance_ = AvoidanceContext{};
+        // 목표 목록도 함께 비운다(D6-2a). 남겨두면 다음 AVOID가 확보에
+        // 실패했는데 이전 사이클의 목표로 후보를 만들 수 있다.
+        v2_avoid_targets_ = AvoidTargetPlan{};
     }
 
     // =====================================================================
@@ -1082,6 +1139,89 @@ bool FrenetPlanner::PlanInternal(
         }
         last_failure_reason_ = PlanFailureReason::NONE;
         return true;
+    }
+
+    // =====================================================================
+    // 외부 AVOID 대상 확보 (D6-2a)
+    //
+    // ===== 왜 여기인가 =====
+    //
+    // D6-1에서는 이 처리가 명령 조립 지점(아래 external_command 분기)에
+    // 있었다. 그런데 그 지점은 저속 fallback보다 **아래**다. 그래서
+    // ego.v < kLowSpeedFallbackV(0.5 m/s)이면 fallback이 먼저 return해
+    // resolver에 도달하지 않았다. 실측(AVOID target=21, 장애물 25 m 전방):
+    //
+    //   ego_v  Plan()  active_avoid_target_id  failure_reason
+    //   0.60   false   21                      UNSUPPORTED_BEHAVIOR
+    //   0.40   true    -1                      NONE        <- 확보 없이 성공
+    //   0.00   true    -1                      NONE
+    //
+    // 저속 세 행은 Plan()이 성공을 반환하면서 대상을 확보하지 않았고, 나오는
+    // 궤적은 fallback_target_d=0.0의 중앙 크롤링 경로다. gate를 열면 FSM
+    // 입장에서 "회피 성공"으로 보이면서 장애물 쪽으로 기어간다.
+    //
+    // 그래서 확보를 저속 판단보다 위로 올린다. 장애물 앞에서 감속한 뒤
+    // AVOID 명령을 받는 것은 오히려 **정상적인 시나리오**이므로, 그때
+    // 대상조차 확보하지 못하는 구조는 맞지 않다(계약 12.7.2절).
+    //
+    // 확보만 여기서 하고, "그 목표로 실제 후보가 나오는가"는 D6-2b다.
+    if (!use_legacy_behavior && external_command->mode == AVOID) {
+        // 요청 방향을 context에 보존한다. mode=AVOID 하나로는
+        // LEFT/RIGHT/NONE을 구분할 수 없다(계약 3.3.1절).
+        v2_avoidance_.requested_direction =
+            external_command->requested_direction;
+
+        // target pose 투영 결과도 보존한다 (D6-1a). node가 이미 Frenet
+        // (s, d)로 바꿔서 [A] 필드에 넣어 보냈다.
+        //
+        // avoidance_d_offset([B])에 옮기지 않는다. 그러면 "FSM이 지정한
+        // 목표"와 "planner가 후보 비교로 정한 목표"를 구분할 수 없게 된다
+        // (계약 3.3.3절).
+        v2_avoidance_.has_requested_target_d =
+            external_command->has_avoid_target_d;
+        v2_avoidance_.requested_target_d =
+            external_command->has_avoid_target_d
+                ? external_command->avoid_target_d : 0.0;
+        v2_avoidance_.requested_target_s =
+            external_command->has_avoid_target_d
+                ? external_command->avoid_target_s : 0.0;
+
+        // FindStaticAvoidanceTarget()을 타지 않는다 - 그 함수는 가장 가까운
+        // 정적 장애물과 회피 방향까지 자동 결정하는 legacy policy다
+        // (계약 D1 0.1절 B 분류, 6.4절).
+        const AvoidTargetStatus status = ResolveExternalAvoidTarget(
+            s, external_command->target_object_id, obstacles, v2_avoidance_);
+        if (status == AvoidTargetStatus::LOST) {
+            // 대상을 쓸 수 없다. KEEP으로 자동 전환하지 않는다 - 다음 행동은
+            // FSM이 새 command_id로 결정한다(계약 8.2절).
+            //
+            // D6-3에서 COMMIT 경계가 들어오면 COMMITTED/EXECUTING 중에는 이
+            // 분기로 오지 않는다(계약 8.2.1절).
+            // 목표 목록도 비운다 - 확보하지 못한 대상의 목표는 없다.
+            v2_avoid_targets_ = AvoidTargetPlan{};
+            last_mode_ = AVOID;
+            last_failure_reason_ = PlanFailureReason::TARGET_OBJECT_LOST;
+            return false;
+        }
+
+        // 확보 성공. 평가할 목표 d까지 정해 둔다 - 저속이든 정상속도든
+        // 같은 결정 규칙을 쓴다.
+        v2_avoid_targets_ =
+            DecideAvoidTargets(v2_avoidance_, external_command->requested_direction);
+
+        // D6-2a는 **확보와 목표 결정까지만**이다. 좌/우 후보 생성과 안전성
+        // 판정은 D6-2b(PREPARE dual-output)에서 붙인다.
+        //
+        // 여기서 그대로 내려보내면 ResolveManeuver의 AVOID 분기가
+        // avoidance_d_offset=0으로 중앙 유지 궤적을 만들어, FSM 입장에서는
+        // "회피 성공"으로 보이면서 실제로는 장애물 쪽으로 직진한다.
+        // 그래서 명시적으로 거부한다(계약 11.4절과 같은 원칙).
+        //
+        // **저속에서도 같은 실패를 반환한다.** 저속만 다르게 성공시키면
+        // 위 실측 표의 위험한 세 행이 그대로 남는다.
+        last_mode_ = AVOID;
+        last_failure_reason_ = PlanFailureReason::UNSUPPORTED_BEHAVIOR;
+        return false;
     }
 
     const bool external_stop = !use_legacy_behavior && external_command->mode == STOP;
@@ -1494,54 +1634,9 @@ bool FrenetPlanner::PlanInternal(
             cmd.gap_gain = following_cfg_.gap_gain;
         }
 
-        // 외부 AVOID: FSM이 지정한 장애물만 확보한다(D6-1).
-        // FindStaticAvoidanceTarget()을 타지 않는다 - 그 함수는 가장 가까운
-        // 정적 장애물과 회피 방향까지 자동 결정하는 legacy policy다
-        // (계약 D1 0.1절 B 분류, 6.4절).
-        if (cmd.mode == AVOID) {
-            // 요청 방향을 context에 보존한다. mode=AVOID 하나로는
-            // LEFT/RIGHT/NONE을 구분할 수 없다(계약 3.3절).
-            v2_avoidance_.requested_direction = cmd.requested_direction;
-
-            // target pose 투영 결과도 보존한다 (D6-1a). node가 이미 Frenet
-            // (s, d)로 바꿔서 [A] 필드에 넣어 보냈다 - core는 그 값을 그대로
-            // 들고 있다가 D6-2에서 목표 d를 정할 때 쓴다.
-            //
-            // 여기서 avoidance_d_offset([B])에 옮기지 않는다. 그러면
-            // "FSM이 지정한 목표"와 "planner가 후보 비교로 정한 목표"를
-            // 구분할 수 없게 된다(PlannerCommand 주석 참고).
-            v2_avoidance_.has_requested_target_d = cmd.has_avoid_target_d;
-            v2_avoidance_.requested_target_d =
-                cmd.has_avoid_target_d ? cmd.avoid_target_d : 0.0;
-            v2_avoidance_.requested_target_s =
-                cmd.has_avoid_target_d ? cmd.avoid_target_s : 0.0;
-
-            const AvoidTargetStatus status = ResolveExternalAvoidTarget(
-                s, cmd.target_object_id, obstacles, v2_avoidance_);
-            if (status == AvoidTargetStatus::LOST) {
-                // 대상을 쓸 수 없다. KEEP으로 자동 전환하지 않는다 - 다음
-                // 행동은 FSM이 새 command_id로 결정한다(계약 8.2절).
-                //
-                // D6-3에서 COMMIT 경계가 들어오면 COMMITTED/EXECUTING 중에는
-                // 이 분기로 오지 않는다(계약 8.2.1절).
-                last_mode_ = AVOID;
-                last_failure_reason_ = PlanFailureReason::TARGET_OBJECT_LOST;
-                return false;
-            }
-
-            // 확보 성공. 다만 D6-1은 **binding까지만**이다. 좌/우 후보 생성과
-            // 안전성 판정은 D6-2(PREPARE dual-output)에서 붙인다.
-            //
-            // 여기서 그대로 내려보내면 ResolveManeuver의 AVOID 분기가
-            // avoidance_d_offset=0으로 중앙 유지 궤적을 만들어, FSM 입장에서는
-            // "회피 성공"으로 보이면서 실제로는 장애물 쪽으로 직진한다.
-            // 그래서 명시적으로 거부한다(계약 11.4절과 같은 원칙).
-            last_mode_ = AVOID;
-            last_failure_reason_ = PlanFailureReason::UNSUPPORTED_BEHAVIOR;
-            return false;
-        }
-        // AVOID/FOLLOW가 아닌 명령의 context reset은 위쪽(early-return 이전)
-        // 에서 이미 처리했다.
+        // 외부 AVOID의 대상 확보는 **저속 fallback보다 위**에서 이미 끝났다
+        // (D6-2a). 여기서 하면 ego < 0.5 m/s일 때 도달하지 않는다.
+        // AVOID/FOLLOW가 아닌 명령의 context reset도 위쪽에서 처리했다.
     }
 
     cmd.target_speed = resolved_target_speed;
