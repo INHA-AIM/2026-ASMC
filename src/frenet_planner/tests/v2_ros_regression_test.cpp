@@ -255,7 +255,10 @@ class Harness {
     // 사이클 단위로 명령을 보낸다. Run()과 달리 창을 새로 열지 않아서
     // 여러 구간(정상 -> dropout -> 재등장)을 한 transaction으로 이어붙일 수
     // 있다. dropout grace를 사이클 수로 정확히 세려면 이 제어가 필요하다.
-    void BeginWindow() { begin_index_ = static_cast<int>(feedback_.size()); }
+    void BeginWindow() {
+        begin_index_ = static_cast<int>(feedback_.size());
+        trajectory_begin_index_ = static_cast<int>(trajectory_.size());
+    }
 
     void RunCycles(const Command& command, const Pose2D& pose, double speed,
                    int cycles) {
@@ -344,6 +347,31 @@ class Harness {
 
     const asmc_msgs::Trajectory* LastTrajectory() const {
         return trajectory_.empty() ? nullptr : &trajectory_.back();
+    }
+
+    // **이번 window에서 새로 받은** 궤적만 반환한다.
+    //
+    // LastTrajectory()는 실행 전체의 마지막 궤적을 주므로, 이번 명령이 궤적을
+    // 만들지 못했을 때 직전 명령의 것을 그대로 돌려준다. 그러면 두 명령을
+    // 비교하는 검증이 "값이 같다"는 이유로 통과해버린다(false PASS).
+    //
+    // 예: default FOLLOW가 궤적 A를 만들고, custom FOLLOW가 planning에
+    // 실패하면 두 조회 모두 A를 반환해 "custom <= default"가 성립한다.
+    const asmc_msgs::Trajectory* LastTrajectoryInWindow() const {
+        if (trajectory_begin_index_ < 0 ||
+            trajectory_begin_index_ >= static_cast<int>(trajectory_.size())) {
+            return nullptr;
+        }
+        return &trajectory_.back();
+    }
+
+    // 이번 window에서 받은 궤적 개수. 0이면 이 명령은 궤적을 만들지 못했다.
+    std::size_t TrajectoryCountInWindow() const {
+        if (trajectory_begin_index_ < 0) return 0;
+        const int total = static_cast<int>(trajectory_.size());
+        return total > trajectory_begin_index_
+                   ? static_cast<std::size_t>(total - trajectory_begin_index_)
+                   : 0;
     }
 
     void PrintSummary(const std::string& label) const {
@@ -451,6 +479,7 @@ class Harness {
     std::vector<Feedback> feedback_;
     std::vector<asmc_msgs::Trajectory> trajectory_;
     int begin_index_ = -1;
+    int trajectory_begin_index_ = -1;
     int first_new_index_ = -1;
 };
 
@@ -848,6 +877,14 @@ int main(int argc, char** argv) {
                "stopped leader: not reported as a lost target");
         Expect(got && feedback.active_leader_id == 15,
                "stopped leader: stays the active leader");
+        // 대상으로 인정하는 것과 실제로 궤적을 만드는 것은 다르다.
+        // GenerateFollowingCandidates가 정지 leader에 대해 min_gap을 유지하는
+        // 종방향 계획을 실제로 하는지 확인한다.
+        Expect(got && feedback.execution_state == Feedback::EXECUTING &&
+                   feedback.plan_valid,
+               "stopped leader: a FOLLOW trajectory is actually planned");
+        Expect(harness.TrajectoryCountInWindow() > 0,
+               "stopped leader: a trajectory is published in this window");
     }
 
     std::printf("\n=== FOLLOW custom gap ===\n");
@@ -861,7 +898,12 @@ int main(int argc, char** argv) {
         harness.BeginWindow();
         harness.RunCycles(default_gap, ego, kCruiseSpeed, 16);
         harness.Settle(ego, kCruiseSpeed);
-        const asmc_msgs::Trajectory* default_trajectory = harness.LastTrajectory();
+        // 이번 명령이 실제로 만든 궤적만 본다. LastTrajectory()를 쓰면
+        // planning 실패 시 직전 명령의 궤적을 그대로 돌려받아 비교가
+        // 무의미해진다.
+        const asmc_msgs::Trajectory* default_trajectory =
+            harness.LastTrajectoryInWindow();
+        const std::size_t default_count = harness.TrajectoryCountInWindow();
         double default_end_speed = -1.0;
         if (default_trajectory && !default_trajectory->points.empty()) {
             default_end_speed = default_trajectory->points.back().velocity;
@@ -876,7 +918,9 @@ int main(int argc, char** argv) {
         harness.BeginWindow();
         harness.RunCycles(custom_gap, ego, kCruiseSpeed, 16);
         harness.Settle(ego, kCruiseSpeed);
-        const asmc_msgs::Trajectory* custom_trajectory = harness.LastTrajectory();
+        const asmc_msgs::Trajectory* custom_trajectory =
+            harness.LastTrajectoryInWindow();
+        const std::size_t custom_count = harness.TrajectoryCountInWindow();
         double custom_end_speed = -1.0;
         if (custom_trajectory && !custom_trajectory->points.empty()) {
             custom_end_speed = custom_trajectory->points.back().velocity;
@@ -886,12 +930,17 @@ int main(int argc, char** argv) {
         Expect(harness.LastFor(custom_id, feedback) &&
                    feedback.command_accepted,
                "custom gap: the command is accepted");
+        // 두 명령이 각자 새 궤적을 만들었는지 먼저 확인한다. 이 검사가 없으면
+        // custom이 planning에 실패해도 값이 같아서 아래 비교가 통과한다.
+        Expect(default_count > 0 && custom_count > 0,
+               "custom gap: each variant produces its own trajectory");
         Expect(default_end_speed >= 0.0 && custom_end_speed >= 0.0,
                "custom gap: both variants produce trajectories");
         // 25 m 최소 간격을 요구하면 현재 gap(약 35 m)에서 훨씬 조심스럽게
-        // 접근한다. 기본값(5 m)보다 종단 속도가 낮아야 한다.
-        Expect(custom_end_speed <= default_end_speed + 1e-6,
-               "custom gap: a larger gap yields a slower trajectory");
+        // 접근한다. 기본값(5 m)보다 **확실히** 낮아야 한다 - 같은 값이면
+        // custom gap이 소비되지 않았다는 뜻이다.
+        Expect(custom_end_speed < default_end_speed - 1e-3,
+               "custom gap: a larger gap yields a strictly slower trajectory");
 
         harness.SetObjects({});
     }
