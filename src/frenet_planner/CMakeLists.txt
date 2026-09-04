@@ -267,6 +267,20 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME command_stop_plan_test COMMAND command_stop_plan_test)
 
+  # D5-1: 외부 FOLLOW의 authoritative 대상 확보 회귀. resolver를 legacy
+  # nearest selector로 바꾸면 2건이 실패한다.
+  add_executable(command_follow_plan_test
+    tests/command_follow_plan_test.cpp
+  )
+  target_compile_definitions(command_follow_plan_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(command_follow_plan_test
+    frenet_planner_core
+  )
+  add_test(NAME command_follow_plan_test COMMAND command_follow_plan_test)
+
   # D4-3: 외부 EMERGENCY_STOP의 직접 감속 궤적 회귀. EMERGENCY 전용 분기를
   # 제거하면(후보 파이프라인으로 흘려보내면) 10건이 실패한다.
   add_executable(command_emergency_plan_test

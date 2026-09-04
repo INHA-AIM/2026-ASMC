@@ -40,6 +40,11 @@ public:
         // 외부 command로 아직 열지 않은 모드.
         UNSUPPORTED_BEHAVIOR,
         NOT_INITIALIZED,
+        // FSM이 지정한 대상 객체를 유효하게 확보할 수 없다(FOLLOW leader,
+        // AVOID 장애물). node가 "FOLLOW인데 실패했으니 아마 leader가
+        // 사라졌겠지"라고 추측하면 계약 9.2절의 원칙을 깬다 - core가 정확한
+        // 사유를 준다.
+        TARGET_OBJECT_LOST,
     };
 
     // yaml_path: frenet_planner/config/params.yaml
@@ -115,6 +120,14 @@ public:
     // 상태를 읽기만 한다 - planner 동작은 바뀌지 않는다.
     bool stop_holding() const {
         return stop_.phase == StopExecutionPhase::HOLD;
+    }
+
+    // v2 FOLLOW가 실제로 추종 중인 leader ID. FrenetFeedback.active_leader_id
+    // 용이다. node가 command.primary_object_id를 그대로 되돌려 보내면
+    // "지정했다"와 "실제로 추종 중이다"를 구분할 수 없다 - 확보에 실패한
+    // 사이클에도 ID가 나가게 된다(계약 9.2절).
+    int active_leader_id() const {
+        return v2_following_.active ? v2_following_.leader_id : -1;
     }
     PlanFailureReason last_failure_reason() const { return last_failure_reason_; }
 
@@ -235,6 +248,38 @@ private:
                               double speed_cap =
                                   std::numeric_limits<double>::infinity()) const;
 
+    // FSM이 지정한 FOLLOW 대상의 확보 결과.
+    enum class FollowTargetStatus {
+        // 이번 사이클에 대상을 관측하고 검증까지 통과했다.
+        VALID,
+        // 관측되지 않았지만 직전에 확보한 상태가 있어 유예 중이다.
+        GRACE,
+        // 대상을 쓸 수 없다. 관측 자체가 없거나(첫 binding 실패), 관측되었지만
+        // 차선/방향/범위를 벗어났거나, 유예를 초과했다.
+        LOST,
+    };
+
+    // FSM이 지정한 대상 객체를 확보한다. **selector가 아니라 resolver다.**
+    //
+    //   selector: "누구를 따라갈까?"                  -> v2에서 금지
+    //   resolver: "FSM이 15번을 지정했다. 유효한가?"   -> 이 함수
+    //
+    // FindLeader()를 호출하지 않는다. 그 함수는 같은 차선의 가장 가까운
+    // 차량을 스스로 고르는 policy이며, v2에서는 대상 선택 권한이 FSM에 있다
+    // (docs/d1-legacy-behavior-boundary.md 0.1절 B 분류).
+    //
+    // 더 가까운 차량이 나타나도 무시한다. 자동 handoff는 FSM이 지시한 대상을
+    // 추종 중이라고 오인하게 만든다. 그 차량과 충돌 위험이 있으면 충돌
+    // 필터가 COLLISION_BLOCKED로 막고, 대상 변경은 FSM이 새 command_id로
+    // 결정한다.
+    //
+    // 검증 기준은 legacy와 동일하다(진행 방향, 같은 차선, 전방, 탐색 범위).
+    // 유예 중에는 직전 속도로 leader_s를 예측한다.
+    FollowTargetStatus ResolveExternalFollowTarget(
+        double ego_s, int target_object_id,
+        const std::vector<ObjectInfo>& obstacles,
+        FollowingContext& context) const;
+
     // 현재 상태에서 그 자리에 정지하는 감속 궤적을 직접 만든다.
     //
     // 후보 생성 -> 곡률 필터 -> 충돌 필터 파이프라인을 타지 않는다. 두 곳에서
@@ -293,7 +338,12 @@ private:
     MergePhase prev_merge_phase_ = MergePhase::CLEAR;
     AvoidanceContext avoidance_{};
     StopContext stop_{};
+    // legacy(간이 FSM) 전용 FOLLOW 상태.
     FollowingContext following_{};
+    // 외부 command(v2) 전용 FOLLOW 상태. struct와 dropout 로직은 재사용하되
+    // 상태 인스턴스는 분리한다 - v2가 following_를 바꿔놓은 뒤 legacy 경로가
+    // 다시 쓰이는 상황을 구조적으로 차단한다. D10 cutover에서 하나로 정리한다.
+    FollowingContext v2_following_{};
     MergeContext merge_{};
     std::unordered_map<int, ObjectTrack> object_tracks_{};
 };

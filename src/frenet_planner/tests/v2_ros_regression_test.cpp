@@ -342,6 +342,51 @@ class Harness {
         std::printf("\n");
     }
 
+    // FOLLOW 검증용 객체 목록을 설정한다. 다음 PublishInputs부터 반영된다.
+    void SetObjects(const std::vector<asmc_msgs::DetectedObject>& objects) {
+        objects_ = objects;
+    }
+
+    // 경로 위 target_s 지점의 차량. FOLLOW 대상 검증(진행 방향/같은 차선/
+    // 전방/범위)을 통과하도록 heading과 속도를 맞춘다.
+    asmc_msgs::DetectedObject MakeVehicle(int id, double target_s,
+                                          double speed) const {
+        const Pose2D pose = PoseAt(waypoints_, target_s);
+        asmc_msgs::DetectedObject object;
+        object.id = id;
+        object.center.x = pose.x;
+        object.center.y = pose.y;
+        object.yaw = pose.yaw;
+        object.vx = speed * std::cos(pose.yaw);
+        object.vy = speed * std::sin(pose.yaw);
+        object.width = 2.0;
+        object.length = 4.5;
+        object.height = 1.5;
+        // perception이 주는 authoritative OBB. 8 corners가 유효하지 않으면
+        // message_converter가 INVALID_OBJECT_GEOMETRY로 거부한다.
+        const double half_length = object.length * 0.5;
+        const double half_width = object.width * 0.5;
+        const double cos_yaw = std::cos(pose.yaw);
+        const double sin_yaw = std::sin(pose.yaw);
+        const double offsets[4][2] = {
+            {-half_length, -half_width}, {half_length, -half_width},
+            {half_length, half_width}, {-half_length, half_width},
+        };
+        for (std::size_t i = 0; i < 4; ++i) {
+            const double x = pose.x + offsets[i][0] * cos_yaw -
+                             offsets[i][1] * sin_yaw;
+            const double y = pose.y + offsets[i][0] * sin_yaw +
+                             offsets[i][1] * cos_yaw;
+            object.obb_corners[i].x = x;
+            object.obb_corners[i].y = y;
+            object.obb_corners[i].z = 0.0;
+            object.obb_corners[i + 4].x = x;
+            object.obb_corners[i + 4].y = y;
+            object.obb_corners[i + 4].z = object.height;
+        }
+        return object;
+    }
+
  private:
     void PublishInputs(const Pose2D& pose, double speed) {
         const ros::Time stamp = ros::Time::now();
@@ -358,6 +403,7 @@ class Harness {
         asmc_msgs::DetectedObjectArray objects;
         objects.header.stamp = stamp;
         objects.header.frame_id = "map";
+        objects.objects = objects_;
         objects_pub_.publish(objects);
     }
 
@@ -375,6 +421,7 @@ class Harness {
     ros::Publisher command_pub_;
     ros::Publisher vehicle_pub_;
     ros::Publisher objects_pub_;
+    std::vector<asmc_msgs::DetectedObject> objects_;
     std::vector<Feedback> feedback_;
     std::vector<asmc_msgs::Trajectory> trajectory_;
     int begin_index_ = -1;
@@ -569,6 +616,80 @@ int main(int argc, char** argv) {
                "EMERGENCY_STOP at standstill never creeps forward");
     }
 
+    std::printf("\n=== FOLLOW ===\n");
+    {
+        // FSM이 지정한 대상만 추종한다. 더 가까운 차량이 있어도 바꾸지
+        // 않는다(계약 D1 0.1절 B 분류).
+        const uint32_t id = ++command_id;
+        Command follow = harness.MakeCommand(id, Command::FOLLOW);
+        follow.primary_object_id = 15;
+        harness.SetObjects({harness.MakeVehicle(15, 230.0, 6.0)});
+        harness.Run(follow, ego, kCruiseSpeed, 16, false);
+        harness.PrintSummary("FOLLOW");
+        Feedback feedback;
+        Expect(harness.LastFor(id, feedback) &&
+                   feedback.active_maneuver == Command::FOLLOW,
+               "FOLLOW reports active_maneuver=FOLLOW");
+        Expect(harness.LastFor(id, feedback) && feedback.plan_valid &&
+                   feedback.execution_state == Feedback::EXECUTING,
+               "FOLLOW plans a trajectory for the designated target");
+        Expect(harness.LastFor(id, feedback) && feedback.active_leader_id == 15,
+               "FOLLOW reports the designated leader in active_leader_id");
+    }
+
+    std::printf("\n=== FOLLOW keeps its target ===\n");
+    {
+        // 지정 대상(15)보다 가까운 차량(17)이 있어도 leader는 15다.
+        const uint32_t id = ++command_id;
+        Command follow = harness.MakeCommand(id, Command::FOLLOW);
+        follow.primary_object_id = 15;
+        harness.SetObjects({harness.MakeVehicle(15, 245.0, 6.0),
+                            harness.MakeVehicle(17, 260.0, 6.0)});
+        harness.Run(follow, ego, kCruiseSpeed, 16, false);
+        Feedback feedback;
+        Expect(harness.LastFor(id, feedback) && feedback.active_leader_id == 15,
+               "a nearer vehicle does not become the leader");
+    }
+
+    std::printf("\n=== FOLLOW target lost ===\n");
+    {
+        // 지정 대상이 관측되지 않으면 다른 차량으로 대체하지 않는다.
+        // KEEP으로 자동 전환하지도 않는다 - FSM이 결정한다.
+        const uint32_t id = ++command_id;
+        Command follow = harness.MakeCommand(id, Command::FOLLOW);
+        follow.primary_object_id = 99;  // 존재하지 않는 ID
+        harness.SetObjects({harness.MakeVehicle(15, 230.0, 6.0)});
+        harness.Run(follow, ego, kCruiseSpeed, 14, false);
+        Feedback feedback;
+        Expect(harness.LastFor(id, feedback) &&
+                   feedback.result_code == Feedback::TARGET_OBJECT_LOST,
+               "a missing FOLLOW target is TARGET_OBJECT_LOST");
+        Expect(harness.LastFor(id, feedback) &&
+                   feedback.active_maneuver == Command::FOLLOW,
+               "a lost target still reports FOLLOW (no automatic KEEP)");
+        Expect(harness.LastFor(id, feedback) &&
+                   feedback.active_leader_id == -1,
+               "a lost target reports no active leader");
+        Expect(harness.LastFor(id, feedback) &&
+                   feedback.execution_state == Feedback::FAILED,
+               "a lost target latches FAILED");
+    }
+
+    std::printf("\n=== FOLLOW recovery with a new command ===\n");
+    {
+        // 대상 소실 후 복귀는 새 command_id로만 이루어진다.
+        const uint32_t id = ++command_id;
+        Command follow = harness.MakeCommand(id, Command::FOLLOW);
+        follow.primary_object_id = 15;
+        harness.SetObjects({harness.MakeVehicle(15, 230.0, 6.0)});
+        harness.Run(follow, ego, kCruiseSpeed, 16, false);
+        Feedback feedback;
+        Expect(harness.LastFor(id, feedback) && feedback.plan_valid &&
+                   feedback.active_leader_id == 15,
+               "a new command_id recovers FOLLOW after a lost target");
+        harness.SetObjects({});
+    }
+
     std::printf("\n=== mode transitions ===\n");
     {
         // KEEP -> STOP. 계약 7.2절이 막는 것은 COMMIT된 handshake maneuver의
@@ -703,12 +824,17 @@ int main(int argc, char** argv) {
 
     std::printf("\n=== unimplemented maneuver ===\n");
     {
-        // D4 시점에 FOLLOW는 아직 열려 있지 않다. planner를 호출하지 않고
+        // AVOID는 아직 열려 있지 않다(D6에서 연다). planner를 호출하지 않고
         // 거짓 result_code를 쓰지도 않는다.
+        //
+        // D5-1에서 FOLLOW가 열렸으므로 이 케이스의 예시를 AVOID로 바꿨다.
+        // 모드가 열릴 때마다 여기를 갱신해야 한다 - D6에서는 LANE_CHANGE,
+        // D7에서는 MERGE가 남는다.
         const uint32_t id = ++command_id;
-        Command follow = harness.MakeCommand(id, Command::FOLLOW);
-        follow.primary_object_id = 7;
-        harness.Run(follow, ego, kCruiseSpeed, 12, false);
+        Command avoid = harness.MakeCommand(id, Command::AVOID);
+        avoid.execution_request = Command::PREPARE;
+        avoid.primary_object_id = 7;
+        harness.Run(avoid, ego, kCruiseSpeed, 12, false);
         Feedback feedback;
         Expect(harness.LastFor(id, feedback) &&
                    feedback.command_accepted &&

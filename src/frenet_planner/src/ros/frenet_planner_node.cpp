@@ -102,12 +102,15 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     //
     // D4-1: KEEP. D4-2: STOP(target pose 투영 + StopContext).
     // D4-3: EMERGENCY_STOP(직접 감속, 목표점 불필요).
+    // D5-1: FOLLOW(primary_object_id로 지정된 대상만 추종).
     command_manager_.SetImplementedManeuver(
         asmc_msgs::BehaviorCommand::KEEP, true);
     command_manager_.SetImplementedManeuver(
         asmc_msgs::BehaviorCommand::STOP, true);
     command_manager_.SetImplementedManeuver(
         asmc_msgs::BehaviorCommand::EMERGENCY_STOP, true);
+    command_manager_.SetImplementedManeuver(
+        asmc_msgs::BehaviorCommand::FOLLOW, true);
 
     vehicle_sub_ = nh_.subscribe(
         vehicle_topic, 1, &FrenetPlannerNode::vehicleCallback, this);
@@ -861,8 +864,20 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         const bool terminal =
             reason == FrenetPlanner::PlanFailureReason::INVALID_COMMAND ||
             reason == FrenetPlanner::PlanFailureReason::UNSUPPORTED_BEHAVIOR ||
-            reason == FrenetPlanner::PlanFailureReason::NOT_INITIALIZED;
-        command_manager_.NotifyPlanFailed(terminal);
+            reason == FrenetPlanner::PlanFailureReason::NOT_INITIALIZED ||
+            reason == FrenetPlanner::PlanFailureReason::TARGET_OBJECT_LOST;
+        // 사유를 함께 latch한다. 그러지 않으면 다음 사이클에 같은
+        // command_id가 들어올 때 result_code가 RESULT_NONE으로 떨어진다.
+        const uint8_t latched_code =
+            reason == FrenetPlanner::PlanFailureReason::TARGET_OBJECT_LOST
+                ? asmc_msgs::FrenetFeedback::TARGET_OBJECT_LOST
+                : (reason == FrenetPlanner::PlanFailureReason::NOT_INITIALIZED
+                       ? asmc_msgs::FrenetFeedback::NOT_INITIALIZED
+                       : asmc_msgs::FrenetFeedback::INVALID_COMMAND);
+        command_manager_.NotifyPlanFailed(
+            terminal, terminal ? latched_code
+                               : asmc_msgs::FrenetFeedback::RESULT_NONE,
+            terminal ? "planner rejected the maneuver" : std::string());
         has_last_v2_trajectory_ = false;
 
         CommandAcceptance failed = acceptance;
@@ -891,6 +906,13 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 failed.result_code =
                     asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
                 failed.detail = "no valid candidate this cycle";
+                break;
+            case FrenetPlanner::PlanFailureReason::TARGET_OBJECT_LOST:
+                // 대상 소실은 terminal이다. KEEP으로 자동 전환하지 않고
+                // FSM이 새 command_id로 다음 행동을 정한다(계약 8.2절).
+                failed.result_code =
+                    asmc_msgs::FrenetFeedback::TARGET_OBJECT_LOST;
+                failed.detail = "the designated target object is not usable";
                 break;
             case FrenetPlanner::PlanFailureReason::NONE:
                 failed.detail = "planner reported failure without a reason";
@@ -1007,7 +1029,10 @@ void FrenetPlannerNode::publishFeedbackV2(
     // D4-1은 KEEP만 다룬다. 아직 채우지 않는 필드는 메시지가 정의한 sentinel을
     // 정확히 사용한다 - 임의의 0이나 추측값을 넣지 않는다(계약 9.4절).
     feedback.maneuver_progress = -1.0;
-    feedback.active_leader_id = -1;
+    // 실제로 추종 중인 leader. command.primary_object_id를 그대로 되돌려
+    // 보내면 "지정했다"와 "확보했다"를 구분할 수 없어, 확보에 실패한
+    // 사이클에도 ID가 나간다(계약 9.2절).
+    feedback.active_leader_id = planner_.active_leader_id();
     feedback.selected_front_object_id = -1;
     feedback.selected_rear_object_id = -1;
     feedback.gap_evaluated = false;

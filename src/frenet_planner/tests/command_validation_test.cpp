@@ -187,14 +187,23 @@ int main() {
            "unused target_speed value is not validated");
 
     // --- 아직 열지 않은 모드 -----------------------------------------------
+    // D5-1에서 FOLLOWING을 external whitelist에 추가했다. 이제 거부되지
+    // 않으며, 대상 객체가 관측되지 않으면 TARGET_OBJECT_LOST가 된다
+    // (whitelist 거부가 아니다). 실제 확보 규칙은
+    // command_follow_plan_test가 검증한다.
     PlannerCommand follow{};
     follow.mode = FOLLOWING;
     follow.target_object_id = 7;
-    follow.leader_s = 260.0;
-    follow.leader_speed = 3.0;
     Expect(!planner.Plan(ego, no_objects, follow, path) &&
-               planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
-           "external FOLLOWING is UNSUPPORTED_BEHAVIOR");
+               planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
+           "external FOLLOWING with no visible target is TARGET_OBJECT_LOST");
+
+    // FOLLOW는 대상 ID가 필수다.
+    PlannerCommand follow_no_target{};
+    follow_no_target.mode = FOLLOWING;
+    Expect(!planner.Plan(ego, no_objects, follow_no_target, path) &&
+               planner.last_failure_reason() == Reason::INVALID_COMMAND,
+           "external FOLLOWING without a target id is INVALID_COMMAND");
 
     PlannerCommand merge{};
     merge.mode = MERGE;
@@ -239,8 +248,9 @@ int main() {
 
     // 모드 whitelist는 필드 검증보다 먼저다. 지원하지 않는 모드는 필드가
     // 무엇이든 UNSUPPORTED_BEHAVIOR로 보고돼야 한다.
+    // AVOID는 아직 열지 않은 모드다(D6에서 연다).
     PlannerCommand unsupported_and_invalid{};
-    unsupported_and_invalid.mode = FOLLOWING;
+    unsupported_and_invalid.mode = AVOID;
     unsupported_and_invalid.has_target_speed = true;
     unsupported_and_invalid.target_speed = -5.0;
     Expect(!planner.Plan(ego, no_objects, unsupported_and_invalid, path) &&
@@ -257,7 +267,9 @@ int main() {
                planner.last_failure_reason() == Reason::NONE,
            "collision overload accepts a matched KEEP command");
 
-    Expect(!planner.Plan(ego, objects, boxes, follow, path) &&
+    PlannerCommand still_closed{};
+    still_closed.mode = AVOID;
+    Expect(!planner.Plan(ego, objects, boxes, still_closed, path) &&
                planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
            "collision overload rejects unsupported mode identically");
 
