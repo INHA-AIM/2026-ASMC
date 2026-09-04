@@ -1,5 +1,8 @@
 # 개발 환경 규약
 
+> **문서 역할:** Active Reference — 개발 OS·언어·데이터 경로 기준
+> **정본 연결:** 대회 제약은 [competition-environment.md](./competition-environment.md), Docker 실행은 [docker-guide.md](./docker-guide.md)
+> **문서 허브:** [README.md](./README.md)
 > **기준:** 대회 본선 v1.1 (참가 PC **OS 자유**, 통신 **UDP**) · 팀 개발 **Ubuntu 20.04 + ROS1 Noetic**
 > **최종 수정:** 2026-08-30
 
@@ -95,13 +98,14 @@
 
 ```bash
 # ~/.bashrc 예시 (선택)
-export ASMC_DATA="$HOME/asmc-data"   # R_KR_PG_K-city_2025 등
+export ASMC_DATA="$(dirname "$ASMC")/data"   # R_KR_PG_K-city_2025, datasets 등
 ```
 
-미설정 시 Docker는 compose 파일 기준 `../data`(repo 형제 `data/`)를 사용합니다.  
+미설정 시 실행 스크립트는 `2026-ASMC` 레포와 나란한 워크스페이스 `data/`를 사용합니다.
 다른 위치를 쓰면 반드시 `ASMC_DATA`를 export한 뒤 `./scripts/docker_ros_up.sh up` 하세요.
 
-Docker 컨테이너 안에서는 **`/data`**로 읽기 전용 마운트됩니다.
+Docker 컨테이너 안에서는 **`/data`**로 보입니다. ROS 수집 컨테이너는 쓰기 가능(`rw`),
+학습 컨테이너는 원본 보호를 위해 읽기 전용(`ro`)으로 마운트됩니다.
 
 ## 6. IDE·도구
 

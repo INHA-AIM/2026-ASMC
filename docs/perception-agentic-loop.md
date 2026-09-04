@@ -1,5 +1,8 @@
 # 인지 에이전틱 평가 루프 (Loc-Aid · MGeo bake · BEV)
 
+> **문서 역할:** Research Reference — 2026-07 초기 반복 평가 아이디어
+> **현재 로드맵:** 우선순위와 인터페이스는 [perception-map-fusion-roadmap.md](./perception-map-fusion-roadmap.md)를 따른다.
+> **문서 허브:** [README.md](./README.md)
 > **최종 수정:** 2026-07-25  
 > **담당:** 안승현  
 > **후보 모듈:** Loc-Aid, MGeo bake, 3캠 BEV, 차선 이식, sync 수집 — **동등 선택지** (팀 합의·최종 채택 전)  

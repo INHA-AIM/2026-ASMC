@@ -1,5 +1,7 @@
 # 협업 가이드 (Phase 0/1 · Trunk · WIP · Path A/B)
 
+> **문서 역할:** Canonical — Git workflow와 경로 ownership 정책
+> **문서 허브:** [README.md](./README.md)
 > **최종 수정:** 2026-07-25  
 > **목표:** Phase 0에는 개인 레포+안전한 ASMC 문서/인프라; Phase 1에는 모듈 ownership으로 `main`에 자주 합류.  
 > **필독:** §0.5 Phase · §2.5 WIP · §3 Path  

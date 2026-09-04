@@ -1,24 +1,51 @@
-# perception (논리 그룹)
+# perception
 
-인지 파트. **3D detection은 `morai_3d_detection/`**, 시나리오는 `tools/` (이 README는 인덱스).
+> **역할:** 인지 파트 코드·문서 진입점
+> **현재 전략:** [카메라·MGeo·LiDAR 인지 융합 로드맵](../../docs/perception-map-fusion-roadmap.md)
+> **팀 문서 허브:** [docs/README.md](../../docs/README.md)
 
-| 경로 | 담당 | 상태 |
-|------|------|------|
-| `src/perception/morai_3d_detection/` | 손재호 | ✅ PR #3 |
-| `tools/aim_scenario_runner/` | 장원태 | ✅ PR #3 |
-| `tools/grpc_inha_univ/` | 장원태 | ✅ |
-| Camera/LiDAR ROS 레거시 | — | **미이식** |
+## 현재 상태
 
-상세: [docs/team-dev-guide.md](../../docs/team-dev-guide.md) §5–6  
-검증: [docs/sim-verification-checklist.md](../../docs/sim-verification-checklist.md) §4–5
+- 안승현: Capture GT 기반 lane/drivable 2-head 학습·18 epoch 평가 완료
+- 다음 구현: 모델 독립 카메라 live 추론, 시각화와 runtime 계측
+- 장원태: 제공 MGeo의 bake/local crop 방향 pilot 제안
+- 손재호: LiDAR/3D 장애물 인지 코드 유지
+- 공통 BEV와 planning 메시지는 camera/map pilot 이후 합의
 
-## Docker
+## 코드 지도
 
-| 용도 | 이미지 |
-|------|--------|
-| 학습·추론 | `docker/perception-train/` + `scripts/docker_perception_up.sh` |
-| ROS live | `docker/ros-noetic/` + `morai_3d_live.py` |
+| 경로 | 역할 | 상태 |
+|---|---|---|
+| `twinlite_morai/` | MORAI dataset, 2-head loss, TwinLiteNet+ loader | 구현·학습 완료 |
+| `camera_semantic_perception/` | 모델 독립 ROS live 추론·시각화·계측 | 다음 구현 후보, 아직 없음 |
+| `drivable_bev/` | camera/map/LiDAR 공통 ego-BEV | 설계 후보·placeholder |
+| `map_prior/` | MGeo bake 결과와 local crop | 장원태 중심 후보, 아직 없음 |
+| `morai_3d_detection/` | 카메라 3D 인지 연구 | 손재호 |
+| `../lidar+sensorfusion/` | LiDAR perception/fusion | LiDAR 파트 |
+| `../data_collection/` | Capture Mode, mask, dataset 생성 | 구현됨 |
 
-## 데이터
+제안 경로와 토픽은 아직 확정 계약이 아니다. live 처리율과 출력 신뢰도를 확인한 뒤
+[`src/interfaces/`](../interfaces/README.md)에서 팀 합의 항목만 승격한다.
 
-`dataset/`, `*.pth` → `$ASMC_DATA` / NAS. 노트: `morai_3d_detection/SETUP_NOTES.md`
+## 문서 지도
+
+| 문서 | 내용 |
+|---|---|
+| [융합 로드맵](../../docs/perception-map-fusion-roadmap.md) | 전체 우선순위, 코드 후보, topic과 대회판 이식 |
+| [데이터 계약](../../docs/perception-dataset-labeling-split.md) | 원본, mask, ignore, manifest와 split 정본 |
+| [BEV/lane 설계 노트](../../docs/perception-bev-lane-interface-plan.md) | 정책 선택 근거와 상세 후보 |
+| [v4 학습 평가](../../docs/perception-v4-training-evaluation.md) | 현재 18 epoch 후보 성능 |
+| [시뮬 체크리스트](../../docs/sim-verification-checklist.md) | live 및 full-stack 검증 항목 |
+
+## 실행 환경과 데이터
+
+| 용도 | 환경 |
+|---|---|
+| ROS sensor bridge | `docker/ros-noetic/`, `scripts/udp_bridge.sh` |
+| PyTorch 학습·GPU 추론 | `docker/perception-train/`, `scripts/docker_perception_up.sh` |
+| 외부 TwinLiteNet+ | `/opt/baselines/TwinLiteNetPlus` read-only mount |
+| 원본·파생 데이터 | `$ASMC_DATA` (`/data`) |
+| checkpoint·평가 artifact | `artifacts/perception_eval/`, Git 제외 |
+
+MORAI와의 본선 경계는 허용 UDP만 사용한다. ROS는 팀 PC 내부 모듈 연결에 사용하며
+GT/gRPC/Object oracle은 배포 추론 입력에 포함하지 않는다.

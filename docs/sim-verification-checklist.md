@@ -1,9 +1,13 @@
 # MORAI 시뮬 검증 체크리스트
 
+> **문서 역할:** Active Checklist — 공통/파트별 시뮬 검증
+> **주의:** `Legacy/개발 전용`으로 표시된 rosbridge·gRPC 항목은 본선 gate가 아니다.
+> **정본 연결:** 허용 통신과 포트는 [network-udp-ros.md](./network-udp-ros.md), Planning은 [planning-control-udp.md](./planning-control-udp.md)
+> **문서 허브:** [README.md](./README.md)
 > **목적:** 코드 통합(catkin build) 이후, **실제 MORAI 시뮬**에서 담당 파트별로 확인할 항목을 기록합니다.  
 > **원칙:** 통합 PR은 build green으로 merge 가능. 아래 항목은 **merge 후·대회 전** 팀원이 로컬에서 수행하고 결과를 PR 코멘트·노션·이슈에 남깁니다.
 
-**최종 수정:** 2026-07-08
+**최종 수정:** 2026-09-05
 
 ---
 
@@ -15,18 +19,17 @@
 | 0.2 | Docker WSL 연동 | 전원 | `docker ps` 동작 |
 | 0.3 | `git submodule update --init` | 전원 | `src/MORAI-ROS_morai_msgs` @ `45c6baf` |
 | 0.4 | catkin build | 전원 | `./scripts/build_ws.sh` green |
-| 0.5 | MORAI SIM 실행 | 전원 | Windows에서 KATRI 맵 로드 |
-| 0.6 | Bridge IP/PORT | 전원 | rosbridge: `127.0.0.1:9090` (`config/morai_rosbridge.env`) · UDP: Network/Sensor Dest 포트 |
-| 0.7 | `rostopic list` | 전원 | `/Ego_topic`, `/Object_topic` publish |
+| 0.5 | MORAI SIM 실행 | 전원 | Windows 26.R1.h3에서 K-City 2025와 대회 sensor set 로드 |
+| 0.6 | UDP Bridge IP/PORT | 전원 | Network/Sensor Host·Dest와 [UDP 치트시트](../config/morai_udp_sim_cheat_sheet.md) 일치 |
+| 0.7 | 허용 센서 ROS 변환 | 전원 | Ego, camera, LiDAR, GPS, IMU 핵심 토픽 수신 |
 
 **공통 명령**
 
 ```bash
-./scripts/rosbridge.sh                       # 개발용 WebSocket (당일 금지)
-# 또는: ./scripts/udp_bridge.sh              # 대회 UDP 경로
-./scripts/diagnose_morai_rosbridge.sh        # rosbridge 연결 확인 (UDP면 rostopic hz)
+./scripts/udp_bridge.sh                      # 기본 개발·대회 경로
 docker exec -it asmc-ros-noetic bash         # 또는 네이티브 Noetic
 cd /root/ws && source devel/setup.bash
+rostopic hz /Ego_topic /image_jpeg/compressed /velodyne_points /gps /imu
 ```
 
 ---
@@ -49,7 +52,10 @@ cd /root/ws && source devel/setup.bash
 
 ---
 
-## 2. Learning / LBC / Bridge
+## 2. Learning / LBC (Legacy/선택)
+
+이 절은 기존 LBC 실험 재현용이다. 현재 카메라 lane/drivable 우선순위는
+[인지 융합 로드맵](./perception-map-fusion-roadmap.md) §7을 따른다.
 
 | # | 확인 | 담당 | 통과 기준 |
 |---|------|------|-----------|
@@ -68,13 +74,17 @@ cd /root/ws && source devel/setup.bash
 
 | # | 확인 | 담당 | 통과 기준 |
 |---|------|------|-----------|
-| 3.1 | rosbridge | 안승현 | 포트 9090 listen |
-| 3.2 | connected_clients | 안승현 | MORAI WebSocket client ≥ 1 |
-| 3.3 | 토픽 지연 | 안승현 | `/Ego_topic` echo 1회 < 2s |
+| 3.1 | UDP bridge | 안승현 | `morai_udp_bridge`, `morai_sensor_bridge` 모두 실행 |
+| 3.2 | UDP 수신 | 안승현 | bridge의 Ego/camera/LiDAR/GPS/IMU rx 증가 |
+| 3.3 | 토픽 rate·age | 안승현 | 핵심 토픽이 설정 Hz 부근이고 장시간 정지하지 않음 |
+
+`rosbridge.sh`와 WebSocket 9090 검증은 레거시 개발 편의 항목이며 본선 경로가 아니다.
 
 ---
 
 ## 4. Scenario runner (gRPC)
+
+이 절은 26.R1.h3의 개발·데이터 수집 자동화 검증용이다. 본선 실행 profile에는 포함하지 않는다.
 
 | # | 확인 | 담당 | 통과 기준 |
 |---|------|------|-----------|
@@ -94,7 +104,21 @@ ip route | grep default | awk '{print $3}'   # WSL → Windows
 
 ---
 
-## 5. Perception (3D detection)
+## 5. Perception
+
+### 5.1 Camera lane/drivable
+
+| # | 확인 | 담당 | 통과 기준 |
+|---|---|---|---|
+| 5.C1 | frozen checkpoint | 안승현 | EMA/checkpoint SHA와 model source commit 일치 |
+| 5.C2 | front live | 안승현 | drivable/lane probability와 overlay 정상 |
+| 5.C3 | three-view live | 안승현 | front/left/right batch, timestamp skew와 stale 기록 |
+| 5.C4 | runtime profile | 안승현 | FPS, p50/p95 latency, drop과 VRAM 기록 |
+| 5.C5 | condition matrix | 안승현 | Sunny/Foggy × 11am/1pm/3pm 육안·독립 test 기록 |
+
+현재 5.C1~C5는 다음 구현/실증 gate이며 완료 표시가 아니다.
+
+### 5.2 3D detection
 
 | # | 확인 | 담당 | 통과 기준 |
 |---|------|------|-----------|

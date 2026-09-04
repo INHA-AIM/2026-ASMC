@@ -1,5 +1,8 @@
 # MORAI morai_msgs 버전 매핑
 
+> **문서 역할:** Version Reference — 조사 시점의 26.R1/대회 msg 차이 기록
+> **주의:** 실제 대회판 이식 시 재실측하고 [morai-msgs-beta-policy.md](./morai-msgs-beta-policy.md)를 갱신한다.
+> **문서 허브:** [README.md](./README.md)
 > **최종 수정:** 2026-07-26  
 > 통합 시 **단일 submodule** 기준을 정하고, 레거시 코드는 필드 차이를 인지해야 합니다.  
 > **대회 ROS UI 실측:** [docs/competition/morai-competition-ros-topics.md](../../docs/competition/morai-competition-ros-topics.md)

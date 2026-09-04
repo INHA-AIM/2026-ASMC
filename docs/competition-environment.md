@@ -1,5 +1,7 @@
 # 대회 환경·규정 (본선 v1.1)
 
+> **문서 역할:** Canonical Summary — 팀 개발용 규정 요약. 주최 측 최신 원문·공지가 최우선
+> **문서 허브:** [README.md](./README.md)
 > **규정집 v1.1** (2026.08.28) · 팀원 전원 **필독**
 > 본선 데이터: [competition-data.md](./competition-data.md)
 

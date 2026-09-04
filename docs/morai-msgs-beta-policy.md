@@ -1,5 +1,8 @@
 # morai_msgs beta_drive 정렬 규약
 
+> **문서 역할:** Canonical until competition port — 현재 submodule과 msg 정렬 규칙
+> **버전 조사:** [morai-msgs-versions.md](./morai-msgs-versions.md)
+> **문서 허브:** [README.md](./README.md)
 > **최종 수정:** 2026-07-25  
 > **상태:** 통합 **시작 전** 확정 규칙  
 > **관련:** [morai-msgs-versions.md](./morai-msgs-versions.md) · [integration-plan.md](./integration-plan.md) · [대회 ROS 실측](../../docs/competition/morai-competition-ros-topics.md)

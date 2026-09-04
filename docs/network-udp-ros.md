@@ -1,6 +1,8 @@
 # UDP ↔ ROS 네트워크 가이드
 
-> **최종 수정:** 2026-08-30
+> **문서 역할:** Canonical — 시뮬 UDP 경계, 포트, bridge와 Docker 네트워크 정본
+> **문서 허브:** [README.md](./README.md)
+> **최종 수정:** 2026-09-03
 > **지위:** 팀 공식 권장  
 > **개발 SIM (현재):** **MORAI 26.R1.h3** — 대회 배포 SIM 아님  
 > **msg:** `src/MORAI-ROS_morai_msgs` submodule **`beta_drive`**  
@@ -242,6 +244,47 @@ Docker Desktop 내부 포워딩 상태가 깨지면 컨테이너를 몇 번 재�
 `db854dd`에서 되돌림). 포트 번호 문제가 아니라서 옮겨도 같은 증상이 재발하고,
 센서셋 JSON·launch·compose·문서를 전부 갈아야 하며 팀 포트 표만 어긋난다.
 compose의 `0.0.0.0:9299:9299/udp` 명시 bind도 이 증상에 효과가 없다 (축약형과 동일하게 0 수신).
+
+### 6.2 Docker Desktop host networking 전환 계획 (수집 후 검증)
+
+**결정일:** 2026-09-03
+**현재 상태:** Docker Desktop의 `Enable host networking`은 활성화했지만,
+`asmc-ros-noetic`은 아직 `ros-noetic_default` bridge network와 `ports:` 매핑을 사용한다.
+현재 센서 수집이 정상인 동안에는 이 구성을 변경하지 않는다.
+
+**전환 시점:** 현재 데이터 수집을 끝낸 뒤 학습을 실행해 둔 개발 시간에 별도 검증한다.
+단, Docker Desktop 재시작이 추가로 필요해지면 실행 중인 학습·ERC GUI 컨테이너를 먼저
+정상 종료한 뒤 진행한다.
+
+**목적:** MORAI와 컨테이너 사이의 `com.docker.backend` 개별 UDP 포워딩을 제거하여
+특히 LiDAR Dest `9299`만 사라지는 장애를 구조적으로 우회할 수 있는지 확인한다.
+Host mode에서도 MORAI Sensor Setting과 브릿지의 포트 번호는 그대로 필요하다.
+없어지는 것은 compose의 `host:container/udp` 포트 매핑뿐이다.
+
+```text
+기존: MORAI :9299 -> com.docker.backend 9299:9299/udp -> bridge :9299
+후보: MORAI :9299 -> host-network bridge :9299
+```
+
+**개발 운용 방침:** 컨테이너 생성과 브릿지 실행은 분리한다.
+`docker_ros_up.sh`는 컨테이너 lifecycle과 마운트만 담당하고, `udp_bridge.sh`는 별도
+터미널의 foreground에서 수동 실행하여 `rx ... lidar=...` 로그를 직접 확인한다.
+대회용 전체 스택 자동 실행은 인터페이스가 안정화된 뒤 별도 wrapper로 검토한다.
+
+**검증 순서와 통과 조건:**
+
+1. 미사용 임시 UDP 포트로 Windows `127.0.0.1` -> host-network 컨테이너 수신을 시험한다.
+2. 시험 성공 후에만 ROS compose를 `network_mode: host`로 바꾸고 `ports:`를 제거한다.
+3. MORAI/launch의 Camera·LiDAR·GPS·IMU Host/Dest 번호는 변경하지 않는다.
+4. Camera 4대, `/velodyne_points`, `/gps`, `/imu`, Ego status가 연속 수신되는지 확인한다.
+5. Ctrl UDP와 Capture Mode gRPC까지 양방향으로 확인한다. Host mode에서는
+   `host.docker.internal` 대신 `127.0.0.1` 사용 가능 여부도 함께 검증한다.
+6. 브리지를 의도적으로 종료·재실행한 뒤 `9299`가 Docker Desktop 재시작 없이 다시
+   수신되는지 확인한다. 이것이 기존 장애에 대한 핵심 합격 조건이다.
+7. 하나라도 실패하면 compose만 기존 bridge network + `ports:` 구성으로 되돌린다.
+
+Host mode 전환 전후 모두 실제 합격 판정은 포트 표시가 아니라 ROS 토픽 Hz와 브릿지
+수신 카운터로 한다.
 
 ---
 

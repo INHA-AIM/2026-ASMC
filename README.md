@@ -7,16 +7,18 @@
 | 조직 | [INHAautonav](https://github.com/INHAautonav) |
 | 팀원 | 정윤태, 양서준, 이강태, 안승현, 장원태, 손재호 |
 | 통합 리드 | 안승현 |
-| 상태 | **Phase 0 (~8/7):** 개인 레포 병행 · ASMC=문서/인프라/안승현 인지. **Phase 1:** module-owned trunk |
+| 상태 | 기능별 통합 개발 중 — 현재 정본과 작업 순서는 [문서 허브](docs/README.md) 참고 |
 
 ## 문서 (팀원 필독)
 
 | 문서 | 내용 |
 |------|------|
+| [docs/README.md](docs/README.md) | **★ 정본·가이드·설계안·기록을 구분한 전체 문서 허브** |
 | [docs/collaboration.md](docs/collaboration.md) | **★ Phase0/1 · WIP · Path A/B (필독)** |
 | [docs/network-udp-ros.md](docs/network-udp-ros.md) | **UDP↔ROS (26.R1.h3 · Docker `127.0.0.1`)** |
 | [docs/planning-control-udp.md](docs/planning-control-udp.md) | **Planning/Control UDP-only 정본** |
 | [docs/perception-agentic-loop.md](docs/perception-agentic-loop.md) | Loc-Aid/bake 에이전틱 eval |
+| [docs/perception-map-fusion-roadmap.md](docs/perception-map-fusion-roadmap.md) | **카메라·MGeo·LiDAR 인지 융합 및 대회판 이식 제안** |
 | [docs/getting-started.md](docs/getting-started.md) | 클론·첫 빌드 |
 | [docs/team-dev-guide.md](docs/team-dev-guide.md) | 팀원별 경로 |
 | [docs/integration-plan.md](docs/integration-plan.md) | Wave 1/2 |
@@ -56,6 +58,8 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 │   ├── mpc_controller/        # standalone UDP control ✅
 │   ├── integration_launch/    # ROS bridge launch only
 │   ├── learning_by_cheating/  # learning ✅
+│   ├── data_collection/        # Capture GT · mask · dataset ✅
+│   ├── perception/twinlite_morai/        # camera 2-head 학습·평가 ✅
 │   ├── perception/morai_3d_detection/  # perception ✅
 │   ├── morai_udp_bridge/      # UDP↔ROS (Ego/Ctrl) ✅
 │   ├── morai_sensor_bridge/   # UDP↔ROS (sensors) ✅

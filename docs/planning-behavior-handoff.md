@@ -1,5 +1,7 @@
 # Planner 3-패키지 통합 아키텍처 (v4 — 열린 결정사항 코드로 검증 완료)
 
+> **문서 역할:** Legacy Reference — 이전 ROS 3-package 통합 설계 기록
+> **문서 허브:** [README.md](./README.md)
 > **상태:** Legacy reference. 현재 Planning/Control 실행 규약은
 > [planning-control-udp.md](./planning-control-udp.md)이며 Behavior Planner는 미연동이다.
 > 이 문서의 ROS topic·integration launch 절차를 현재 파이프라인에 적용하지 않는다.

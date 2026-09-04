@@ -1,5 +1,7 @@
 # 본선 공개 데이터
 
+> **문서 역할:** Active Reference — 주최 배포 map/path/scenario/checkpoint 자산
+> **문서 허브:** [README.md](./README.md)
 > **v1.1** (2026.08.28) · 로컬 `$ASMC_DATA` 또는 `$AIM_PROJECT/data/R_KR_PG_K-city_2025/`
 > 규정: [competition-environment.md](./competition-environment.md)
 

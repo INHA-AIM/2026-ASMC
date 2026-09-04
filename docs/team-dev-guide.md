@@ -1,13 +1,15 @@
 # 팀원별 개발·검증 가이드
 
+> **문서 역할:** Active Guide — 팀원별 담당 경로와 검증 책임
+> **정본 연결:** ownership 정책은 [collaboration.md](./collaboration.md), 전체 문서 지도는 [README.md](./README.md)
 > **Planning/Control 변경:** §1–3의 ROS topic·launch 기반 설명은 이전 구현 참고용이다.
 > 현재 작업 경로는 `src/frenet_planner/`, `src/mpc_controller/`이며 빌드·실행·포트는
 > [planning-control-udp.md](./planning-control-udp.md)를 우선 적용한다. Behavior Planner는 미연동이다.
 
-> **최종 수정:** 2026-08-30  
+> **최종 수정:** 2026-09-05
 > **Git:** [collaboration.md](./collaboration.md) — 현재는 Phase 1이며 최신 `main` 기반의 짧은 feature 브랜치와 PR을 사용한다.  
 > **네트워크:** [network-udp-ros.md](./network-udp-ros.md) · **인지 eval:** [perception-agentic-loop.md](./perception-agentic-loop.md)  
-> **아키텍처:** 안승현 인지 후보(차선·BEV·bake·Loc-Aid·sync)는 **동등 선택지**. hybrid modular.  
+> **인지 아키텍처:** camera/MGeo/LiDAR Working Proposal은 [perception-map-fusion-roadmap.md](./perception-map-fusion-roadmap.md)를 우선한다.
 > 로컬 현황: [`docs/competition/team-status.md`](../../docs/competition/team-status.md)
 
 관련: [sim-verification-checklist.md](./sim-verification-checklist.md) · [repository-layout.md](./repository-layout.md) · [git-workflow.md](./git-workflow.md) · [morai-msgs-beta-policy.md](./morai-msgs-beta-policy.md)
@@ -241,12 +243,16 @@ rostopic hz /frenet_planner/trajectory
 
 ---
 
-## 4. 안승현 (learning · bridge · 통합 리드)
+## 4. 안승현 (카메라 인지 · learning · bridge · 통합 리드)
 
 ### 개발 위치 (주 소유)
 
 | 경로 | 역할 |
 |------|------|
+| `src/perception/twinlite_morai/` | TwinLiteNet+ MORAI 데이터·학습·평가 adapter |
+| `src/perception/camera_semantic_perception/` | **제안:** 모델 독립 live 추론·시각화·성능계측 |
+| `src/perception/drivable_bev/` | **후보:** camera/map/LiDAR 공통 BEV 공동 작업 |
+| `src/data_collection/` | Capture GT·mask·dataset 파이프라인, 추후 최소 bag profile |
 | `src/learning_by_cheating/` | LBC BEV·학습·자율주행 |
 | `scripts/rosbridge.sh` | WebSocket rosbridge (개발) |
 | `scripts/udp_bridge.sh` | UDP bridges (대회 경로) |
@@ -261,6 +267,9 @@ rostopic hz /frenet_planner/trajectory
 
 | 파일 | 용도 |
 |------|------|
+| `scripts/train_twinlite.py`, `evaluate_twinlite.py` | 2-head 학습·고정 평가 |
+| `scripts/render_twinlite_predictions.py` | 동일 frame offline overlay |
+| `scripts/bake_perception_masks.py`, `build_perception_dataset.py` | GT mask·versioned dataset 생성 |
 | `src/learning_by_cheating/lbc_bev/morai_adapters.py` | ROS msg → BEV |
 | `src/learning_by_cheating/lbc_bev/renderer.py` | BEV 렌더 |
 | `src/learning_by_cheating/lbc_bev/spec.py` | 채널·해상도 |
@@ -287,6 +296,9 @@ python3 src/learning_by_cheating/scripts/verify_lbc_spec.py
 
 | 주의 | 이유 |
 |------|------|
+| camera live 전에는 공용 BEV 메시지를 확정하지 않음 | 실제 head 범위·신뢰도·처리율 확인 후 합의 |
+| 추론과 시각화/기록을 별도 프로세스로 유지 | 모델 교체와 성능계측 오염 방지 |
+| 26.R1.h3 model/backend와 MORAI adapter 분리 | 10월 대회판 호환 이식 범위 축소 |
 | LBC GT는 **va ROS visualizer** 기준 유지 | jang gRPC multi-TL은 D-09 전까지 미통합 |
 | `CtrlCmd.steering` / ego `wheel_angle` | beta 정책 |
 | privileged(`Object_topic`)는 **학습·로깅만**, 배포 추론 경로 금지 | 대회 규정 |
@@ -443,8 +455,10 @@ checklist **§5**
 
 | 순위 | 작업 | 담당 |
 |------|------|------|
-| 1 | 시뮬 검증 §1–5 수행·기록 | 각자 |
-| 2 | `integrate/interfaces` τ·BEV 확정 | 안승현 주관 + 전 파트 |
-| 3 | MPC UDP / perception 추론 노드 | 정윤태, 손재호 |
-| 4 | D-10 scenario↔collector | 장원태 + 손재호 |
-| 5 | D-09 TL gRPC (선택) | 장원태 + 안승현 |
+| 1 | 카메라 model-independent live 추론·시각화·성능계측 | 안승현 |
+| 2 | MGeo bake/local crop pilot | 장원태 중심 협의 |
+| 3 | 카메라 독립 test와 full-stack 시뮬 검증 | 인지 파트 |
+| 4 | camera/map/LiDAR 공통 BEV pilot와 interface 합의 | 안승현 주관 + 전 파트 |
+| 5 | GPS blackout lane/localization/control 실험 | 인지·planning/control |
+| 6 | 10월 대회판 호환·안정화 이식 | 전원 |
+| 7 | 최소 공용 rosbag profile, 영상 stop-line head | 필요성 확인 후 |
