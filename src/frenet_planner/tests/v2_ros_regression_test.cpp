@@ -1,0 +1,650 @@
+// D4-4: v2 ROS 인터페이스 통합 회귀.
+//
+// 지금까지 D4-1 ~ D4-3을 각 단계마다 손으로 확인했다. 그 검증을 실행 가능한
+// 자산으로 고정한다. D5 이후 모드를 추가할 때마다 케이스를 늘려 재사용한다.
+//
+// ===== 실행 방법 =====
+//
+//   터미널 1:  roscore
+//   터미널 2:  rosrun frenet_planner frenet_planner_node \
+//                _planner/config_path:=<params.yaml 경로>
+//   터미널 3:  rosrun frenet_planner v2_ros_regression_test
+//
+// add_test()에 등록하지 않았다. 실행 중인 roscore와 노드가 필요하므로
+// catkin_make run_tests가 자동으로 돌릴 수 없다. D10에서 환경 경로 문제
+// (params.yaml의 배포 절대경로)가 정리되면 rostest로 편입한다.
+//
+// ===== 검증 범위 =====
+//
+//   KEEP        궤적 생성, desired_speed 반영
+//   STOP        target pose 투영, APPROACH->BRAKING->HOLD, COMPLETED latch,
+//               HOLD 궤적 유지(LOCKED), heading 검증
+//   E-STOP      직접 감속, 단조 감소, v>=0, 마지막 v=0, preemption
+//   실패 경로    invalid command, stale command, 미구현 maneuver
+//   transaction command_id echo, terminal 사유 latch, 모드 전환
+//
+// 계약: docs/fsm-frenet-interface-v2.md
+
+#include <asmc_msgs/BehaviorCommand.h>
+#include <asmc_msgs/DetectedObjectArray.h>
+#include <asmc_msgs/FrenetFeedback.h>
+#include <asmc_msgs/Trajectory.h>
+#include <asmc_msgs/VehicleState.h>
+#include <ros/ros.h>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <fstream>
+#include <string>
+#include <vector>
+
+namespace {
+
+using Command = asmc_msgs::BehaviorCommand;
+using Feedback = asmc_msgs::FrenetFeedback;
+
+int g_failures = 0;
+int g_checks = 0;
+
+void Expect(bool condition, const std::string& name) {
+    ++g_checks;
+    if (condition) {
+        std::printf("[PASS] %s\n", name.c_str());
+    } else {
+        std::printf("[FAIL] %s\n", name.c_str());
+        ++g_failures;
+    }
+}
+
+const char* StateName(uint8_t state) {
+    switch (state) {
+        case Feedback::IDLE: return "IDLE";
+        case Feedback::PREPARING: return "PREPARING";
+        case Feedback::WAITING: return "WAITING";
+        case Feedback::READY: return "READY";
+        case Feedback::COMMITTED: return "COMMITTED";
+        case Feedback::EXECUTING: return "EXECUTING";
+        case Feedback::COMPLETED: return "COMPLETED";
+        case Feedback::FAILED: return "FAILED";
+        default: return "?";
+    }
+}
+
+const char* SourceName(uint8_t source) {
+    switch (source) {
+        case Feedback::TRAJECTORY_NONE: return "NONE";
+        case Feedback::TRAJECTORY_NEW: return "NEW";
+        case Feedback::TRAJECTORY_REUSED: return "REUSED";
+        case Feedback::TRAJECTORY_LOCKED: return "LOCKED";
+        case Feedback::TRAJECTORY_SAFE_STOP: return "SAFE_STOP";
+        default: return "?";
+    }
+}
+
+// reference line waypoint. ego/목표 pose를 실제 경로 위에 놓기 위해 읽는다.
+struct Waypoints {
+    std::vector<double> x;
+    std::vector<double> y;
+};
+
+Waypoints LoadWaypoints(const std::string& path) {
+    std::ifstream input(path);
+    Waypoints waypoints;
+    double x = 0.0, y = 0.0, ignored = 0.0;
+    while (input >> x >> y >> ignored) {
+        waypoints.x.push_back(x);
+        waypoints.y.push_back(y);
+    }
+    return waypoints;
+}
+
+struct Pose2D {
+    double x = 0.0;
+    double y = 0.0;
+    double yaw = 0.0;
+};
+
+// 누적 호길이가 target_s에 도달하는 waypoint의 pose.
+Pose2D PoseAt(const Waypoints& waypoints, double target_s) {
+    double s = 0.0;
+    std::size_t index = 1;
+    for (; index < waypoints.x.size(); ++index) {
+        s += std::hypot(waypoints.x[index] - waypoints.x[index - 1],
+                        waypoints.y[index] - waypoints.y[index - 1]);
+        if (s >= target_s) break;
+    }
+    if (index >= waypoints.x.size()) index = waypoints.x.size() - 1;
+    Pose2D pose;
+    pose.x = waypoints.x[index];
+    pose.y = waypoints.y[index];
+    pose.yaw = std::atan2(waypoints.y[index] - waypoints.y[index - 1],
+                          waypoints.x[index] - waypoints.x[index - 1]);
+    return pose;
+}
+
+// 노드와 주고받는 한 사이클을 담당한다. 명령/입력을 20 Hz로 발행하고
+// 피드백과 궤적을 모은다.
+class Harness {
+ public:
+    Harness(ros::NodeHandle& nh, const Waypoints& waypoints)
+        : waypoints_(waypoints) {
+        feedback_sub_ = nh.subscribe<Feedback>(
+            "/planning/frenet_feedback_v2", 32,
+            [this](const Feedback::ConstPtr& message) {
+                if (message) feedback_.push_back(*message);
+            });
+        trajectory_sub_ = nh.subscribe<asmc_msgs::Trajectory>(
+            "/planning/trajectory", 32,
+            [this](const asmc_msgs::Trajectory::ConstPtr& message) {
+                if (message) trajectory_.push_back(*message);
+            });
+        command_pub_ = nh.advertise<Command>("/behavior/command_v2", 1);
+        vehicle_pub_ = nh.advertise<asmc_msgs::VehicleState>("/vehicle/state", 1);
+        objects_pub_ =
+            nh.advertise<asmc_msgs::DetectedObjectArray>("/perception/objects", 1);
+    }
+
+    // 연결이 성립할 때까지 기다린다. latch 없는 topic이라 이 대기가 없으면
+    // 첫 명령이 유실된다.
+    bool WaitForConnections(double timeout_seconds) {
+        const ros::Time deadline = ros::Time::now() + ros::Duration(timeout_seconds);
+        while (ros::ok() && ros::Time::now() < deadline) {
+            if (command_pub_.getNumSubscribers() > 0 &&
+                feedback_sub_.getNumPublishers() > 0) {
+                // 노드가 구독을 등록한 직후에는 아직 큐가 준비되지 않을 수
+                // 있어 한 박자 더 기다린다.
+                ros::Duration(0.5).sleep();
+                return true;
+            }
+            ros::spinOnce();
+            ros::Duration(0.05).sleep();
+        }
+        return false;
+    }
+
+    Command MakeCommand(uint32_t command_id, uint8_t maneuver) const {
+        Command command;
+        command.header.frame_id = "map";
+        command.command_id = command_id;
+        command.maneuver_type = maneuver;
+        command.execution_request = Command::EXECUTE;
+        command.direction = Command::DIRECTION_NONE;
+        command.merge_type = Command::MERGE_NONE;
+        command.desired_speed_mps = -1.0;
+        command.primary_object_id = -1;
+        command.preferred_front_object_id = -1;
+        command.preferred_rear_object_id = -1;
+        command.use_custom_follow_gap = false;
+        command.desired_time_gap_s = -1.0;
+        command.minimum_gap_m = -1.0;
+        return command;
+    }
+
+    // 목표 pose를 reference line 위에 놓고 heading도 맞춘다. heading을 맞추지
+    // 않으면 D4-2a 검증이 정상 목표를 거부한다.
+    void SetTargetOnPath(Command& command, double target_s) const {
+        const Pose2D pose = PoseAt(waypoints_, target_s);
+        command.has_target_pose = true;
+        command.target_pose_map.position.x = pose.x;
+        command.target_pose_map.position.y = pose.y;
+        command.target_pose_map.orientation.z = std::sin(pose.yaw * 0.5);
+        command.target_pose_map.orientation.w = std::cos(pose.yaw * 0.5);
+    }
+
+    // 명령을 cycles회 발행한다. advance=true이면 직전 궤적을 따라 ego를
+    // 전진시켜 실제 주행에 가깝게 만든다(STOP 단계 전이 관찰용).
+    void Run(const Command& command, const Pose2D& start, double speed,
+             int cycles, bool advance) {
+        first_new_index_ = -1;
+        begin_index_ = static_cast<int>(feedback_.size());
+        Pose2D pose = start;
+        double current_speed = speed;
+        for (int cycle = 0; cycle < cycles && ros::ok(); ++cycle) {
+            PublishInputs(pose, current_speed);
+            Command stamped = command;
+            stamped.header.stamp = ros::Time::now();
+            stamped.valid_until = ros::Time::now() + ros::Duration(2.0);
+            command_pub_.publish(stamped);
+            SpinFor(0.05);
+            if (advance && !trajectory_.empty() &&
+                trajectory_.back().points.size() > 2) {
+                const auto& point = trajectory_.back().points[2];
+                pose.x = point.x;
+                pose.y = point.y;
+                pose.yaw = point.yaw;
+                current_speed = point.velocity;
+            }
+        }
+        // 명령 발행을 멈춘 뒤에도 입력은 유지한다. 마지막 사이클의 피드백을
+        // 받기 위한 것이며, 입력을 끊으면 freshness 검사가 먼저 걸린다.
+        for (int cycle = 0; cycle < 4 && ros::ok(); ++cycle) {
+            PublishInputs(pose, current_speed);
+            SpinFor(0.05);
+        }
+    }
+
+    // 만료된 명령을 한 번 보낸다(stale 검증용).
+    void RunExpired(const Command& command, const Pose2D& start, double speed) {
+        begin_index_ = static_cast<int>(feedback_.size());
+        for (int cycle = 0; cycle < 10 && ros::ok(); ++cycle) {
+            PublishInputs(start, speed);
+            Command stamped = command;
+            stamped.header.stamp = ros::Time::now();
+            stamped.valid_until = ros::Time::now() - ros::Duration(1.0);
+            command_pub_.publish(stamped);
+            SpinFor(0.05);
+        }
+        for (int cycle = 0; cycle < 4 && ros::ok(); ++cycle) {
+            PublishInputs(start, speed);
+            SpinFor(0.05);
+        }
+    }
+
+    // 이번 Run에서 받은 피드백.
+    std::vector<Feedback> Collected() const {
+        if (begin_index_ < 0 ||
+            begin_index_ >= static_cast<int>(feedback_.size())) {
+            return {};
+        }
+        return std::vector<Feedback>(feedback_.begin() + begin_index_,
+                                     feedback_.end());
+    }
+
+    bool HasFeedback() const { return !Collected().empty(); }
+    Feedback Last() const { return Collected().back(); }
+
+    // 이번 Run에서 특정 command_id에 대한 마지막 피드백.
+    bool LastFor(uint32_t command_id, Feedback& out) const {
+        const auto collected = Collected();
+        for (auto it = collected.rbegin(); it != collected.rend(); ++it) {
+            if (it->command_id == command_id) { out = *it; return true; }
+        }
+        return false;
+    }
+
+    // 이번 Run에서 TRAJECTORY_NEW를 처음 받은 피드백.
+    bool FirstNew(Feedback& out) const {
+        for (const auto& feedback : Collected()) {
+            if (feedback.trajectory_source == Feedback::TRAJECTORY_NEW) {
+                out = feedback;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool SawState(uint8_t state) const {
+        for (const auto& feedback : Collected()) {
+            if (feedback.execution_state == state) return true;
+        }
+        return false;
+    }
+
+    bool SawSource(uint8_t source) const {
+        for (const auto& feedback : Collected()) {
+            if (feedback.trajectory_source == source) return true;
+        }
+        return false;
+    }
+
+    const asmc_msgs::Trajectory* LastTrajectory() const {
+        return trajectory_.empty() ? nullptr : &trajectory_.back();
+    }
+
+    void PrintSummary(const std::string& label) const {
+        const auto collected = Collected();
+        if (collected.empty()) {
+            std::printf("  %-30s (no feedback)\n", label.c_str());
+            return;
+        }
+        // 상태 전이를 압축해서 출력한다.
+        std::printf("  %-30s", label.c_str());
+        std::string previous;
+        int repeat = 0;
+        for (const auto& feedback : collected) {
+            std::string key = std::string(StateName(feedback.execution_state)) +
+                              "/" + SourceName(feedback.trajectory_source);
+            if (key == previous) { ++repeat; continue; }
+            if (!previous.empty()) std::printf(" %s x%d", previous.c_str(), repeat);
+            previous = key;
+            repeat = 1;
+        }
+        if (!previous.empty()) std::printf(" %s x%d", previous.c_str(), repeat);
+        std::printf("\n");
+    }
+
+ private:
+    void PublishInputs(const Pose2D& pose, double speed) {
+        const ros::Time stamp = ros::Time::now();
+        asmc_msgs::VehicleState vehicle;
+        vehicle.header.stamp = stamp;
+        vehicle.header.frame_id = "map";
+        vehicle.valid = true;
+        vehicle.x = pose.x;
+        vehicle.y = pose.y;
+        vehicle.yaw = pose.yaw;
+        vehicle.speed = speed;
+        vehicle_pub_.publish(vehicle);
+
+        asmc_msgs::DetectedObjectArray objects;
+        objects.header.stamp = stamp;
+        objects.header.frame_id = "map";
+        objects_pub_.publish(objects);
+    }
+
+    void SpinFor(double seconds) {
+        const ros::Time deadline = ros::Time::now() + ros::Duration(seconds);
+        while (ros::ok() && ros::Time::now() < deadline) {
+            ros::spinOnce();
+            ros::Duration(0.005).sleep();
+        }
+    }
+
+    Waypoints waypoints_;
+    ros::Subscriber feedback_sub_;
+    ros::Subscriber trajectory_sub_;
+    ros::Publisher command_pub_;
+    ros::Publisher vehicle_pub_;
+    ros::Publisher objects_pub_;
+    std::vector<Feedback> feedback_;
+    std::vector<asmc_msgs::Trajectory> trajectory_;
+    int begin_index_ = -1;
+    int first_new_index_ = -1;
+};
+
+// 궤적이 정지 계약(모든 v>=0, 단조 감소, 마지막 v=0)을 만족하는지.
+bool IsDecelToZero(const asmc_msgs::Trajectory& trajectory) {
+    if (trajectory.points.empty()) return false;
+    for (std::size_t i = 0; i < trajectory.points.size(); ++i) {
+        const double v = trajectory.points[i].velocity;
+        if (!std::isfinite(v) || v < 0.0) return false;
+        if (i > 0 && v > trajectory.points[i - 1].velocity + 1e-9) return false;
+    }
+    return trajectory.points.back().velocity == 0.0;
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+    ros::init(argc, argv, "v2_ros_regression_test");
+    ros::NodeHandle nh;
+
+    std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
+    ros::NodeHandle pnh("~");
+    pnh.param<std::string>("waypoint_file", waypoint_file, waypoint_file);
+
+    const Waypoints waypoints = LoadWaypoints(waypoint_file);
+    if (waypoints.x.size() < 100) {
+        std::printf("[FAIL] waypoint load: %s\n", waypoint_file.c_str());
+        return 1;
+    }
+
+    Harness harness(nh, waypoints);
+    if (!harness.WaitForConnections(20.0)) {
+        std::printf("[FAIL] frenet_planner_node is not running "
+                    "(no connection on /behavior/command_v2 or "
+                    "/planning/frenet_feedback_v2)\n");
+        return 1;
+    }
+
+    // ego는 회전교차로/저속 fallback과 무관한 평범한 구간에 둔다.
+    const Pose2D ego = PoseAt(waypoints, 200.0);
+    constexpr double kCruiseSpeed = 8.0;
+    uint32_t command_id = 7000;
+
+    std::printf("\n=== KEEP ===\n");
+    {
+        const uint32_t id = ++command_id;
+        harness.Run(harness.MakeCommand(id, Command::KEEP), ego, kCruiseSpeed,
+                    14, false);
+        harness.PrintSummary("KEEP");
+        Feedback feedback;
+        Expect(harness.FirstNew(feedback), "KEEP produces a new trajectory");
+        if (harness.HasFeedback()) {
+            const Feedback last = harness.Last();
+            Expect(last.command_id == id, "KEEP echoes the command_id");
+            Expect(last.command_accepted, "KEEP is accepted");
+            Expect(last.execution_state == Feedback::EXECUTING,
+                   "KEEP reports EXECUTING");
+            Expect(last.active_maneuver == Command::KEEP,
+                   "KEEP reports active_maneuver=KEEP");
+            Expect(last.plan_valid, "KEEP reports plan_valid");
+            Expect(last.result_code == Feedback::RESULT_NONE,
+                   "KEEP reports no error");
+            Expect(last.frenet_state_valid && last.current_s > 0.0,
+                   "KEEP reports a valid frenet state");
+        }
+        const auto* trajectory = harness.LastTrajectory();
+        Expect(trajectory != nullptr && trajectory->points.size() > 1 &&
+                   trajectory->dt > 0.0,
+               "KEEP trajectory has samples and a positive dt");
+    }
+
+    std::printf("\n=== KEEP with desired_speed ===\n");
+    {
+        const uint32_t id = ++command_id;
+        Command command = harness.MakeCommand(id, Command::KEEP);
+        command.desired_speed_mps = 5.0;
+        harness.Run(command, ego, kCruiseSpeed, 14, false);
+        Feedback feedback;
+        Expect(harness.FirstNew(feedback) &&
+                   std::fabs(feedback.applied_speed_mps - 5.0) < 1e-6,
+               "desired_speed_mps is applied");
+    }
+
+    std::printf("\n=== STOP ===\n");
+    {
+        const uint32_t id = ++command_id;
+        Command command = harness.MakeCommand(id, Command::STOP);
+        harness.SetTargetOnPath(command, 230.0);
+        // ego를 궤적에 따라 전진시켜 APPROACH -> BRAKING -> HOLD를 관찰한다.
+        harness.Run(command, ego, kCruiseSpeed, 90, true);
+        harness.PrintSummary("STOP");
+        Expect(harness.SawState(Feedback::EXECUTING),
+               "STOP passes through EXECUTING");
+        Expect(harness.SawState(Feedback::COMPLETED),
+               "STOP reaches COMPLETED at HOLD");
+        // 계약 6.2절: terminal latch 중에도 궤적 출력이 멈추면 안 된다.
+        // 일괄 안전정지로 빠지면 이 검사가 실패한다.
+        Expect(harness.SawSource(Feedback::TRAJECTORY_LOCKED),
+               "STOP holds its trajectory after completion (not SAFE_STOP)");
+        if (harness.HasFeedback()) {
+            const Feedback last = harness.Last();
+            Expect(last.command_id == id, "STOP echoes the command_id");
+            Expect(last.active_maneuver == Command::STOP,
+                   "STOP reports active_maneuver=STOP");
+        }
+    }
+
+    std::printf("\n=== STOP with a bad target heading ===\n");
+    {
+        const uint32_t id = ++command_id;
+        Command command = harness.MakeCommand(id, Command::STOP);
+        harness.SetTargetOnPath(command, 230.0);
+        // 목표 위치는 경로 위에 있지만 방향을 반대로 돌린다. 왕복 구간이
+        // 가까이 지나갈 때 반대 차선 정지선에 붙는 상황을 재현한다.
+        const Pose2D target = PoseAt(waypoints, 230.0);
+        const double opposite = target.yaw + M_PI;
+        command.target_pose_map.orientation.z = std::sin(opposite * 0.5);
+        command.target_pose_map.orientation.w = std::cos(opposite * 0.5);
+        harness.Run(command, ego, kCruiseSpeed, 12, false);
+        Feedback feedback;
+        Expect(harness.LastFor(id, feedback) &&
+                   feedback.result_code == Feedback::TARGET_PROJECTION_FAILED,
+               "opposite target heading is TARGET_PROJECTION_FAILED");
+        // 사유가 latch되어 다음 사이클에도 유지되는지(계약 6절).
+        Expect(harness.LastFor(id, feedback) &&
+                   feedback.execution_state == Feedback::FAILED,
+               "heading failure latches FAILED");
+    }
+
+    std::printf("\n=== STOP with an off-path target ===\n");
+    {
+        const uint32_t id = ++command_id;
+        Command command = harness.MakeCommand(id, Command::STOP);
+        command.has_target_pose = true;
+        command.target_pose_map.position.x = ego.x + 500.0;
+        command.target_pose_map.position.y = ego.y + 500.0;
+        command.target_pose_map.orientation.w = 1.0;
+        harness.Run(command, ego, kCruiseSpeed, 12, false);
+        Feedback feedback;
+        Expect(harness.LastFor(id, feedback) &&
+                   feedback.result_code == Feedback::TARGET_PROJECTION_FAILED,
+               "off-path target is TARGET_PROJECTION_FAILED");
+    }
+
+    std::printf("\n=== EMERGENCY_STOP ===\n");
+    {
+        const uint32_t id = ++command_id;
+        // has_target_pose=false로 보낸다. 정지 위치 계산은 Frenet 책임이다.
+        harness.Run(harness.MakeCommand(id, Command::EMERGENCY_STOP), ego,
+                    kCruiseSpeed, 14, false);
+        harness.PrintSummary("E-STOP");
+        Feedback feedback;
+        Expect(harness.FirstNew(feedback),
+               "EMERGENCY_STOP produces a new trajectory without a target pose");
+        if (harness.HasFeedback()) {
+            const Feedback last = harness.Last();
+            Expect(last.active_maneuver == Command::EMERGENCY_STOP,
+                   "EMERGENCY_STOP reports active_maneuver=EMERGENCY_STOP");
+            // E-stop은 한 번 멈추고 끝나는 maneuver가 아니다. 새 정상 명령이
+            // 올 때까지 긴급정지 상태를 계속 강제한다.
+            Expect(last.execution_state == Feedback::EXECUTING,
+                   "EMERGENCY_STOP stays EXECUTING (not COMPLETED)");
+            Expect(std::fabs(last.applied_speed_mps) < 1e-9,
+                   "EMERGENCY_STOP reports a zero applied speed");
+        }
+        const auto* trajectory = harness.LastTrajectory();
+        Expect(trajectory != nullptr && IsDecelToZero(*trajectory),
+               "EMERGENCY_STOP trajectory decelerates monotonically to zero");
+    }
+
+    std::printf("\n=== EMERGENCY_STOP at standstill ===\n");
+    {
+        const uint32_t id = ++command_id;
+        harness.Run(harness.MakeCommand(id, Command::EMERGENCY_STOP), ego, 0.0,
+                    12, false);
+        const auto* trajectory = harness.LastTrajectory();
+        bool any_motion = false;
+        if (trajectory) {
+            for (const auto& point : trajectory->points) {
+                if (point.velocity > 1e-6) any_motion = true;
+            }
+        }
+        // 저속 fallback으로 새면 크롤링 속도로 전진한다.
+        Expect(trajectory != nullptr && !any_motion,
+               "EMERGENCY_STOP at standstill never creeps forward");
+    }
+
+    std::printf("\n=== mode transitions ===\n");
+    {
+        // KEEP -> STOP. 계약 7.2절이 막는 것은 COMMIT된 handshake maneuver의
+        // 중단이며, 일반 모드 사이의 전환은 정상 주행의 일부다.
+        const uint32_t keep_id = ++command_id;
+        harness.Run(harness.MakeCommand(keep_id, Command::KEEP), ego,
+                    kCruiseSpeed, 10, false);
+        const uint32_t stop_id = ++command_id;
+        Command stop = harness.MakeCommand(stop_id, Command::STOP);
+        harness.SetTargetOnPath(stop, 240.0);
+        harness.Run(stop, ego, kCruiseSpeed, 12, false);
+        Feedback feedback;
+        Expect(harness.LastFor(stop_id, feedback) &&
+                   feedback.command_id == stop_id &&
+                   feedback.active_maneuver == Command::STOP,
+               "KEEP -> STOP transition is accepted");
+
+        // STOP -> E-STOP preemption.
+        const uint32_t estop_id = ++command_id;
+        harness.Run(harness.MakeCommand(estop_id, Command::EMERGENCY_STOP), ego,
+                    kCruiseSpeed, 12, false);
+        Expect(harness.LastFor(estop_id, feedback) &&
+                   feedback.active_maneuver == Command::EMERGENCY_STOP,
+               "STOP -> EMERGENCY_STOP preemption is accepted");
+
+        // E-STOP -> KEEP 복귀.
+        const uint32_t back_id = ++command_id;
+        harness.Run(harness.MakeCommand(back_id, Command::KEEP), ego,
+                    kCruiseSpeed, 12, false);
+        Expect(harness.LastFor(back_id, feedback) &&
+                   feedback.active_maneuver == Command::KEEP &&
+                   feedback.plan_valid,
+               "EMERGENCY_STOP -> KEEP recovery is accepted");
+    }
+
+    std::printf("\n=== invalid commands ===\n");
+    {
+        // command_id=0은 "처리 중인 명령 없음"을 뜻하는 값이라 명령 ID로
+        // 쓸 수 없다.
+        Command zero_id = harness.MakeCommand(0, Command::KEEP);
+        harness.Run(zero_id, ego, kCruiseSpeed, 10, false);
+        Feedback feedback;
+        Expect(harness.LastFor(0, feedback) &&
+                   !feedback.command_accepted &&
+                   feedback.result_code == Feedback::INVALID_COMMAND,
+               "command_id=0 is INVALID_COMMAND");
+
+        const uint32_t id = ++command_id;
+        Command bad_frame = harness.MakeCommand(id, Command::KEEP);
+        bad_frame.header.frame_id = "odom";
+        harness.Run(bad_frame, ego, kCruiseSpeed, 10, false);
+        Expect(harness.LastFor(id, feedback) &&
+                   feedback.result_code == Feedback::INVALID_COMMAND,
+               "non-map frame_id is INVALID_COMMAND");
+
+        // STOP은 목표 pose가 필수다.
+        const uint32_t no_target_id = ++command_id;
+        Command no_target = harness.MakeCommand(no_target_id, Command::STOP);
+        harness.Run(no_target, ego, kCruiseSpeed, 10, false);
+        Expect(harness.LastFor(no_target_id, feedback) &&
+                   feedback.result_code == Feedback::INVALID_COMMAND,
+               "STOP without a target pose is INVALID_COMMAND");
+    }
+
+    std::printf("\n=== stale command ===\n");
+    {
+        const uint32_t id = ++command_id;
+        harness.RunExpired(harness.MakeCommand(id, Command::KEEP), ego,
+                           kCruiseSpeed);
+        Feedback feedback;
+        // 형식은 정상이고 전달이 늦은 것이므로 INVALID과 구분되어야 한다.
+        Expect(harness.LastFor(id, feedback) &&
+                   feedback.result_code == Feedback::STALE_COMMAND,
+               "expired valid_until is STALE_COMMAND (not INVALID)");
+    }
+
+    std::printf("\n=== unimplemented maneuver ===\n");
+    {
+        // D4 시점에 FOLLOW는 아직 열려 있지 않다. planner를 호출하지 않고
+        // 거짓 result_code를 쓰지도 않는다.
+        const uint32_t id = ++command_id;
+        Command follow = harness.MakeCommand(id, Command::FOLLOW);
+        follow.primary_object_id = 7;
+        harness.Run(follow, ego, kCruiseSpeed, 12, false);
+        Feedback feedback;
+        Expect(harness.LastFor(id, feedback) &&
+                   feedback.command_accepted &&
+                   feedback.execution_state == Feedback::FAILED &&
+                   !feedback.plan_valid,
+               "unimplemented maneuver is accepted but not planned");
+        Expect(harness.LastFor(id, feedback) &&
+                   feedback.result_code == Feedback::RESULT_NONE &&
+                   !feedback.result_detail.empty(),
+               "unimplemented maneuver does not fake a result_code");
+
+        // 새 command_id로 정상 복귀.
+        const uint32_t keep_id = ++command_id;
+        harness.Run(harness.MakeCommand(keep_id, Command::KEEP), ego,
+                    kCruiseSpeed, 12, false);
+        Expect(harness.LastFor(keep_id, feedback) && feedback.plan_valid,
+               "new command_id recovers after an unimplemented maneuver");
+    }
+
+    std::printf("\n%d/%d checks passed\n", g_checks - g_failures, g_checks);
+    if (g_failures != 0) {
+        std::printf("%d v2 ROS regression check(s) failed\n", g_failures);
+        return 1;
+    }
+    std::printf("all v2 ROS regression checks passed\n");
+    return 0;
+}

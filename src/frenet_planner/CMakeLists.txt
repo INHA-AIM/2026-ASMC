@@ -160,6 +160,26 @@ add_dependencies(ego_vehicle_state_dev_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(ego_vehicle_state_dev_node
   frenet_vehicle_state_adapter ${catkin_LIBRARIES})
 
+# D4-4: v2 ROS 인터페이스 통합 회귀. 실행 중인 roscore와 frenet_planner_node가
+# 필요하므로 add_test()에 등록하지 않는다(catkin_make run_tests가 자동으로
+# 돌릴 수 없다). 수동 실행:
+#
+#   rosrun frenet_planner v2_ros_regression_test
+#
+# D10에서 params.yaml의 배포 절대경로 문제가 정리되면 rostest로 편입한다.
+add_executable(v2_ros_regression_test
+  tests/v2_ros_regression_test.cpp
+)
+add_dependencies(v2_ros_regression_test
+  ${catkin_EXPORTED_TARGETS}
+)
+target_compile_definitions(v2_ros_regression_test PRIVATE
+  FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+)
+target_link_libraries(v2_ros_regression_test
+  ${catkin_LIBRARIES}
+)
+
 add_executable(empty_objects_test_publisher
   src/ros/state/empty_objects_test_publisher.cpp)
 add_dependencies(empty_objects_test_publisher ${catkin_EXPORTED_TARGETS})
@@ -341,6 +361,7 @@ install(TARGETS
     gps_imu_vehicle_state_node
     ego_vehicle_state_dev_node
     empty_objects_test_publisher
+    v2_ros_regression_test
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
