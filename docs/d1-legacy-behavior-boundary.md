@@ -347,35 +347,39 @@ legacy 경로가 계산해서 `cmd`에 채우던 값 중 v2에서 **누가 채�
 
 ---
 
-### 6.4 AVOID 대상 ID를 받을 필드가 현재 없다 — D2에서 추가 필요
+### 6.4 AVOID 대상 ID를 받을 필드가 없었다 — D2에서 해소됨
 
 `BehaviorCommand`는 AVOID의 회피 대상을 `primary_object_id`로 준다(계약 3.3절).
-그런데 **현재 `PlannerCommand`에는 이를 받을 canonical 필드가 없다.**
+그런데 **D1 시점의 `PlannerCommand`에는 이를 받을 canonical 필드가 없었다.**
 
 ```cpp
-// global.hpp의 현재 필드
+// D1 시점 global.hpp
 double avoidance_d_offset = 0.0;  // AVOID 전용이지만 "계산된 횡offset"이지 대상 ID가 아니다
 int leader_id = -1;               // FOLLOWING 전용으로 문서화되어 있음
 ```
 
-즉 지금은 AVOID 대상을 **외부에서 지정할 방법이 없고**, `FindStaticAvoidanceTarget`이
-자동 선택하는 경로밖에 없다(0.1절 B 분류).
+즉 AVOID 대상을 **외부에서 지정할 방법이 없고**, `FindStaticAvoidanceTarget`이
+자동 선택하는 경로밖에 없었다(0.1절 B 분류).
 
-**D2에서 결정할 것** — 두 방식 중 하나:
+**D2의 결정: (a) 공통 필드**
 
-| 방식 | 형태 | 장단점 |
-|---|---|---|
-| (a) 공통 필드 | `int target_object_id = -1;` | `primary_object_id`와 1:1 대응. FOLLOW/AVOID가 같은 필드 사용 |
-| (b) 분리 필드 | `int leader_id = -1;`<br>`int avoidance_object_id = -1;` | 모드별 의미가 명확. 기존 `leader_id` 유지 |
+```cpp
+int target_object_id = -1;   // FOLLOW 선행차 / AVOID 회피 장애물 공용
+```
 
-어느 쪽을 쓸지는 D2에서 정한다. **D1에서 기록해야 하는 사실은 이것이다:**
+`BehaviorCommand`가 둘 다 `primary_object_id` 하나로 주므로 1:1 대응이
+자연스럽고 변환 계층의 분기가 줄어든다. 기존 `leader_id`는 이 필드로 대체되었다
+(커밋 `e64faf5`).
+
+**D1에서 기록해야 했던 사실은 이것이다:**
 
 > AVOID 대상 identity는 v2에서 FSM이 소유한다. D6에서
 > `FindStaticAvoidanceTarget`의 **자동 선택 로직을 그대로 재사용하면 계약 위반**이며,
 > 반드시 `primary_object_id`로 지정된 장애물에 한정해야 한다.
 
 이 사실을 D1에 남기지 않으면, D6에서 기존 자동 선택 경로를 무심코 이어붙일 위험이
-크다.
+크다. 필드는 D2에서 생겼지만, **그 필드를 authoritative로 취급하는 것**은 D6의
+책임이다.
 
 ---
 

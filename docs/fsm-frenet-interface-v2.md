@@ -10,8 +10,9 @@
 > **수정 대상 경계:** 이 프로젝트에서 수정하는 것은 **Frenet Planner와 MPC 코드뿐이다.**
 > `BehaviorCommand.msg` / `FrenetFeedback.msg`는 **FSM 개발자가 정의한 원본을 그대로
 > 사용하며 Frenet 측에서 수정하지 않는다.** FSM 패키지 코드도 수정하지 않는다.
-> 11절의 논의 항목은 FSM 개발자에게 확인을 요청하는 목록이며, 합의되지 않으면
-> 메시지는 원본 그대로 유지하고 Frenet 측 구현으로 흡수한다.
+> 11절은 확정된 command lifecycle 정책이며, 11.9절에 남은 논의 항목이 있다.
+> 논의 항목이 합의되지 않으면 메시지는 원본 그대로 유지하고 Frenet 측 구현으로
+> 흡수한다.
 >
 > **선행 문서:** [planning-behavior-handoff.md](./planning-behavior-handoff.md)는
 > `BehaviorContext`/`PlanFeedback` 기반 v1 규약이며 legacy reference다. 두 규약은
@@ -59,8 +60,11 @@ v2의 핵심 전환은 두 가지다.
 현재 저장소에 남아 있는 `src/behavior_planner/msg/BehaviorContext.msg`,
 `src/behavior_planner/msg/PlanFeedback.msg`는 **빌드되지 않는 죽은 파일**이다
 (`src/behavior_planner/CMakeLists.txt`는 `UrbanFeatureDebug.msg`만 등록하고,
-`behavior_node.cpp`는 `asmc_msgs::BehaviorContext`를 publish한다). 혼동을 막기 위해
-D3에서 함께 삭제한다.
+`behavior_node.cpp`는 `asmc_msgs::BehaviorContext`를 publish한다).
+
+> **이 파일들을 Frenet 측에서 삭제하지 않는다.** 아래 1.4절의 수정 범위 원칙에
+> 따라 `behavior_planner` 패키지는 건드리지 않는다. 혼동을 줄이는 정리는 FSM
+> 담당자에게 요청할 사항으로 남긴다.
 
 ### 1.2 토픽 (D3에서 개설)
 
@@ -82,7 +86,28 @@ ROS1은 한 토픽에 두 메시지 타입을 실을 수 없다. cutover 전까�
 
 ---
 
-### 1.4 모든 모드가 공통으로 채우는 최소 필드
+### 1.4 수정 범위 원칙 (D3-0에서 확정)
+
+이 작업에서 **수정하는 것과 하지 않는 것**을 명확히 구분한다. 문서 여러 곳이
+이 원칙을 전제하므로 여기에 한 번만 정의하고 나머지는 이 절을 참조한다.
+
+| 대상 | 수정 여부 |
+|---|---|
+| `src/frenet_planner/**` | **수정한다** — 이 작업의 본체 |
+| `src/mpc_controller/**` | **수정한다** — 필요한 경우 (D10) |
+| `src/asmc_msgs/msg/*.msg` (신규 2개 추가) | **추가만 한다** — 원본 그대로, 내용 수정 없음 |
+| `src/asmc_msgs/CMakeLists.txt` | **수정한다** — 신규 메시지 등록 |
+| `src/behavior_planner/**` | **수정하지 않는다** — 죽은 msg 파일 포함 |
+| `BehaviorCommand.msg` / `FrenetFeedback.msg` 내용 | **수정하지 않는다** — FSM 담당자 소유 |
+
+`BehaviorCommand` / `FrenetFeedback`의 필드·상수는 FSM 담당자가 정의한 원본을
+그대로 사용한다. Frenet 구현이 불편하다는 이유로 메시지를 고치지 않고, 변환
+계층에서 흡수한다. 11.9절의 남은 논의 항목도 **요청**이며, 합의되지 않으면 원본을
+유지하고 Frenet 쪽에서 처리한다.
+
+---
+
+### 1.5 모든 모드가 공통으로 채우는 최소 필드
 
 D0에서 확정한다. 어떤 모드든, 성공이든 실패든 **이 세 필드는 항상 유효한 값이어야
 한다.** FSM이 피드백을 신뢰할 수 있는 최소 계약이다.
@@ -219,7 +244,7 @@ v2 adapter의 첫 관문. 통과하지 못하면 planner를 호출하지 않는�
 | `EMERGENCY_STOP` | `EXECUTE` | `NONE` | `false` | 전부 `-1` | `MERGE_NONE` |
 | `LANE_CHANGE` | `PREPARE`/`EXECUTE`/`CANCEL` | **`LEFT` 또는 `RIGHT`** | `true` | 전부 `-1` | `MERGE_NONE` |
 | `AVOID` | `PREPARE`/`EXECUTE`/`CANCEL` | `NONE`/`LEFT`/`RIGHT` | 선택 | `primary >= 0`, 나머지 `-1` | `MERGE_NONE` |
-| `MERGE` | `PREPARE`/`EXECUTE`/`CANCEL` | `NONE`/`LEFT`/`RIGHT` | **미정 — 11절 Q1** | `primary=-1`, front/rear 선택 | `ROUNDABOUT`/`HIGHWAY` |
+| `MERGE` | `PREPARE`/`EXECUTE`/`CANCEL` | `NONE`/`LEFT`/`RIGHT` | **미정 — 11.9절 Q1** | `primary=-1`, front/rear 선택 | `ROUNDABOUT`/`HIGHWAY` |
 
 - `LANE_CHANGE`에서 `DIRECTION_NONE`은 거부한다. 어느 쪽으로 갈지가 없으면
   내부 enum을 결정할 수 없다(2.2절).
@@ -795,41 +820,183 @@ D10에서 한 커밋으로 (atomic cutover):
 
 ---
 
-## 11. Pending decisions (FSM 개발자 합의 필요)
+## 11. Command lifecycle 정책 (D3-0에서 확정)
 
-아래 항목은 **논의용 제안이며, 합의되지 않으면 원본 `.msg`를 그대로 유지한다.**
-D3은 FSM 개발자가 준 원문을 그대로 추가하고, Frenet 측에서 메시지를 수정하지 않는다.
+### 11.1 확정된 정책
 
-제안하는 enum 값은 원본 `FrenetFeedback.msg`에서 현재 마지막으로 사용된
-`TOO_LATE_TO_CANCEL=9` 다음 번호를 이어받은 것이다.
+Q2~Q5는 **결정되었다.** 아래 정책을 D3 이후 구현의 기준으로 삼는다.
 
-| # | 항목 | 제안 | 영향 |
-|---|---|---|---|
-| **Q1** | `MERGE`에서 `has_target_pose=true`가 필수인가 권장인가 | 문서는 "일반적으로 true". 필수면 3.3절 표를 확정, 권장이면 `target_link_id` + 기존 merge zone 설정으로 대체 가능한지 확인 필요 | 3.3절 validation matrix |
-| **Q2** | `result_code`에 `INPUT_DATA_STALE=10` 추가 | 현재 node는 vehicle / objects / behavior stale을 각각 구분해 fail-safe 처리하는데, `FrenetFeedback`에는 `STALE_COMMAND`(= `valid_until` 만료)밖에 없다. 입력 데이터 stale을 명령 만료로 보고하면 FSM이 잘못된 회복 동작을 한다 | `FrenetFeedback` enum 1개 추가 |
-| **Q3** | `result_code`에 `MANEUVER_NOT_IMPLEMENTED=11` 추가 | 개발 기간 중 v2가 아직 열지 않은 maneuver를 받았을 때 필요. `INVALID_COMMAND`는 명령이 정상인데 거짓말이 되고, 조용한 KEEP 폴백은 더 위험하다. **cutover 후에는 발생 금지**임을 문서에 명시 | `FrenetFeedback` enum 1개 추가 |
-| **Q4** | terminal latch 정책 (6절) 동의 여부 | `COMPLETED`/`FAILED`를 새 `command_id`까지 유지 | FSM 수신측 해석 |
-| **Q5** | preemption 정책 (7절) 동의 여부 | `COMMITTED` 중 일반 새 command 금지, `EMERGENCY_STOP`만 preempt | FSM 발행측 정책 |
-| **Q6** | `EMERGENCY_STOP` 정지 목표를 Frenet이 자체 계산 (8.1절) 동의 여부 | 메시지 변경이 아니라 책임 분계 확인 | 없음 (내부 구현) |
-
-### 11.1 확정 기한
-
-각 항목이 어느 단계의 설계에 들어가는지에 따라 확정 기한이 다르다. 기한 전까지
-합의되지 않으면 해당 단계를 시작하지 않는다.
-
-| 확정 기한 | 항목 | 이유 |
+| # | 항목 | 결정 |
 |---|---|---|
-| D1~D2 중 | (없음) | D1/D2는 내부 분류·정리 단계라 영향 없음 |
-| **D3 시작 전** | Q2, Q3, Q4, Q5 | Q2/Q3는 adapter의 `result_code` 분기, Q4/Q5는 `CommandExecutionManager`의 latch·preemption 설계에 직접 들어간다 |
-| **D4 시작 전** | Q6 | EMERGENCY_STOP 정지 목표 계산 책임이 확정되어야 8.1절 구현을 시작할 수 있다 |
-| **D8 시작 전** | Q1 | MERGE의 `has_target_pose` 필수 여부가 validation matrix를 바꾼다 |
+| **Q2** | 입력 데이터 stale 구분 | **`INPUT_DATA_STALE` 사용** |
+| **Q3** | 미구현 maneuver 보고 | **`MANEUVER_NOT_IMPLEMENTED` 사용** |
+| **Q4** | terminal latch | **`COMPLETED`/`FAILED`를 새 `command_id`까지 유지** |
+| **Q5** | preemption | **`COMMITTED`/`EXECUTING` 중 일반 명령 금지, `EMERGENCY_STOP`만 허용** |
 
-Q4/Q5가 특히 중요하다. 나중에 뒤집으면 execution manager의 상태 관리 전체를
-다시 써야 하므로, **D3 착수 전에 FSM 담당자와 반드시 맞춘다.**
+두 result code는 원본 `FrenetFeedback.msg`의 마지막 값 `TOO_LATE_TO_CANCEL=9`
+다음 번호를 이어받는다.
 
-Q2/Q3가 승인되지 않을 경우의 대안은 **v2 인터페이스를 해당 maneuver가 모두 구현될
-때까지 production cutover하지 않는 것**이다. 개발 중 v2 토픽에서는 미구현
-maneuver를 거부하되, FSM과 실제 연결 전에 전부 구현한다.
+```
+uint8 INPUT_DATA_STALE=10
+uint8 MANEUVER_NOT_IMPLEMENTED=11
+```
+
+> **메시지 파일 자체는 FSM 담당자 소유다**(1.4절). 두 상수를 원본에 반영하는
+> 것은 FSM 담당자에게 요청할 사항이며, 반영 전까지 Frenet은 이 정책을 내부
+> `CommandValidationCode`로 구현하고 회신 시 가장 가까운 기존 코드로 대체한다
+> (11.3절).
+
+### 11.2 result_code 의미 (D3 이후 사용 기준)
+
+네 실패 유형을 반드시 구분한다. 혼동하면 FSM이 잘못된 회복 동작을 한다.
+
+| result_code | 의미 | 원인 주체 | FSM의 정상 대응 |
+|---|---|---|---|
+| `INVALID_COMMAND` | 명령의 형식·필수 필드가 잘못됨 | **FSM** | 명령 수정 후 새 `command_id`로 재발행 |
+| `STALE_COMMAND` | `BehaviorCommand.valid_until` 만료 | 전달 지연 | 같은 명령 재발행 (내용은 정상) |
+| `INPUT_DATA_STALE` | 명령은 정상, Ego/Object 입력이 오래됨 | **Frenet 입력단** | 명령 유지, 센서 복구 대기 |
+| `MANEUVER_NOT_IMPLEMENTED` | 명령 정상, 해당 maneuver가 아직 구현 안 됨 | **개발 진행 단계** | 다른 maneuver로 대체 (개발 중 한정) |
+
+`MANEUVER_NOT_IMPLEMENTED`는 **개발 기간 한정**이다. D10 cutover 이후 이 코드가
+나오면 그 자체가 버그다.
+
+### 11.3 stale input 처리
+
+```
+FSM command 형식·내용 정상
+  + Ego / Object 입력이 freshness 검사 실패
+      ↓
+  명령 자체는 INVALID이 아니다
+      ↓
+  result_code = INPUT_DATA_STALE
+  command_accepted = true      (명령은 받아들였다)
+  plan_valid = false
+  trajectory_source = TRAJECTORY_SAFE_STOP
+```
+
+현재 node는 vehicle / objects / behavior stale을 각각 구분해 fail-safe 처리한다.
+v2에서 이 세 가지는 모두 `INPUT_DATA_STALE`로 합쳐 보고한다. 어느 입력이
+문제인지는 `result_detail` 문자열에 남긴다(사람이 읽는 용도, 판단 로직에는
+쓰지 않는다).
+
+### 11.4 미구현 maneuver 처리
+
+D4 시점에 FSM이 `AVOID`를 보내는 경우:
+
+```
+BehaviorCommand(maneuver_type=AVOID)
+  → 공통 validation 통과 (형식 정상)
+  → maneuver별 validation 통과 (AVOID 자체는 정상 maneuver)
+  → implementation status 확인 → 아직 열리지 않음
+      ↓
+  planner를 호출하지 않는다
+      ↓
+  command_accepted = true
+  result_code = MANEUVER_NOT_IMPLEMENTED
+  execution_state = FAILED
+  trajectory_source = TRAJECTORY_SAFE_STOP
+```
+
+**planner를 억지로 호출하지 않는 것**이 핵심이다. 구현되지 않은 모드를
+`ResolveManeuver`에 넣으면 `default:` 분기로 떨어져 velocity keeping 궤적이
+나오는데, 이는 FSM이 요청한 기동이 아니면서 성공처럼 보인다.
+
+구현 상태는 단계 진행에 따라 열린다.
+
+| 단계 | 열리는 maneuver |
+|---|---|
+| D4 | `KEEP`, `STOP`, `EMERGENCY_STOP` |
+| D5 | + `FOLLOW` |
+| D6 | + `AVOID` |
+| D7 | + `LANE_CHANGE` |
+| D8 | + `MERGE` (전체 완료) |
+
+### 11.5 terminal latch
+
+```
+command_id = 42
+  EXECUTING
+  COMPLETED     ← 도달
+  COMPLETED     ← 같은 ID 재발행에도 유지
+  COMPLETED
+      ↓
+FSM이 command_id = 43 발행
+      ↓
+  새 transaction 시작 (latch 해제)
+```
+
+`FAILED`도 동일하다. 해제 조건은 새 `command_id` 수신 뿐이며(예외:
+`EMERGENCY_STOP` preemption), 같은 ID 재발행이나 `execution_request` 변경으로는
+해제되지 않는다. 상세는 6절.
+
+### 11.6 preemption
+
+```
+PREPARING / WAITING / READY
+  + CANCEL 또는 다른 command_id  → 허용 (전환)
+
+COMMITTED / EXECUTING
+  + CANCEL                       → TOO_LATE_TO_CANCEL
+  + 다른 command_id (일반)        → 거부, 기존 기동 계속
+  + EMERGENCY_STOP               → 즉시 preempt (항상 허용)
+```
+
+상세는 7절.
+
+### 11.7 실행 주기와 freshness
+
+FSM과 Frenet 모두 **20 Hz**를 전제한다. 다만 주기 동기화만으로는 부족하므로
+세 가지를 함께 쓴다.
+
+| 장치 | 막는 문제 |
+|---|---|
+| 20 Hz 주기 정렬 | 명령·피드백의 왕복 지연 |
+| input freshness 검사 | 센서 dropout 중 오래된 데이터로 주행 |
+| terminal latch | FSM이 종료 피드백 한 프레임을 놓치는 것 |
+
+주기가 어긋나거나 한쪽이 느려져도 `valid_until`과 freshness 검사가 안전 방향으로
+동작해야 한다. 주기 정렬을 신뢰의 근거로 삼지 않는다.
+
+### 11.8 FOLLOW gap 기본값 매핑 (D3-0에서 확정)
+
+`BehaviorCommand`의 gap 필드를 내부 `PlannerCommand`로 옮기는 규칙이다.
+
+```
+use_custom_follow_gap = false
+  (desired_time_gap_s = -1, minimum_gap_m = -1)
+      ↓
+  PlannerCommand.time_gap = 0.0
+  PlannerCommand.min_gap  = 0.0
+
+use_custom_follow_gap = true
+  (desired_time_gap_s > 0, minimum_gap_m > 0)
+      ↓
+  PlannerCommand.time_gap = desired_time_gap_s
+  PlannerCommand.min_gap  = minimum_gap_m
+```
+
+**0.0을 sentinel로 쓰는 것이 안전한 이유:** custom 값은 계약상 `> 0`이므로
+(3.2절) 0.0은 유효한 custom 값이 될 수 없다. `-1.0`을 그대로 옮기면 내부
+계산식에 음수 gap이 흘러들어 갈 위험이 있다.
+
+config 기본값 적용은 **D5(FOLLOW)에서** 소비 지점에서 수행한다.
+
+```cpp
+const double time_gap = cmd.time_gap > 0.0
+    ? cmd.time_gap : following_cfg_.time_gap;
+const double min_gap = cmd.min_gap > 0.0
+    ? cmd.min_gap : following_cfg_.min_gap;
+```
+
+변환 계층에서 config 기본값을 채우지 않는 이유는, 변환이 config에 의존하면
+"FSM이 준 값"과 "Frenet 기본값"을 피드백에서 구분할 수 없게 되기 때문이다.
+
+### 11.9 남은 논의 항목
+
+| # | 항목 | 확정 기한 | 현재 처리 |
+|---|---|---|---|
+| **Q1** | `MERGE`에서 `has_target_pose=true`가 필수인가 권장인가 | **D8 시작 전** | 3.3절 표에 "미정"으로 표시. D8 전까지 validation에서 강제하지 않는다 |
+| **Q6** | `EMERGENCY_STOP` 정지 목표를 Frenet이 자체 계산 | **D4 시작 전** | 8.1절 정책대로 구현 예정. 메시지 변경이 아니라 책임 분계 확인이므로 구현을 막지 않는다 |
 
 ---
 
@@ -875,7 +1042,10 @@ FOLLOW command 수신
 | **D0** | 인터페이스/enum 계약 확정 (본 문서) | 기본 계약 확정 | 메시지 계약 확인 | 없음 |
 | **D1** | Legacy 간이 FSM 분리 준비 (10절) | — | — | 없음 |
 | **D2** | Canonical `PlannerCommand` 구축 | — | — | 없음 |
-| **D3** | `BehaviorCommand` → `PlannerCommand` 변환 | `command_id` 보존 경로 확보 | Command 수신 테스트 | 없음 |
+| **D3-0** | command lifecycle 정책 확정 (11절) | result_code 의미 확정 | 정책 합의 | 없음 |
+| **D3-1** | v2 메시지 등록 + enum 매핑 | — | `rosmsg show` 확인 | 없음 |
+| **D3-2** | validation + fingerprint + transaction | result_code 분기 | — | 없음 |
+| **D3-3** | ROS adapter + 토픽 연결 + 기본 Feedback | 최소 5필드 발행 | Command 수신 테스트 | 없음 (v1 유지) |
 | **D4** | KEEP / STOP / EMERGENCY_STOP | 동시 구현 | 기본 E2E | KEEP baseline 유지 |
 | **D5** | FOLLOW | 동시 구현 | FOLLOW 연동 | |
 | **D6** | AVOID | 동시 구현 | PREPARE/EXECUTE handshake 검증 | |
@@ -920,7 +1090,55 @@ D1과 D2는 기능을 추가하지 않는 정리 단계다. 범위를 넘으면
 
 D2에서 이 두 성격을 분리한다. **D1에서는 건드리지 않는다.**
 
-### 12.4 모드 개발 순서의 근거
+### 12.4 D3의 엄격한 범위
+
+D3은 **통신 계약과 명령 관리 인프라만** 만든다. 경로 생성은 D4부터다.
+
+| D3에서 하지 않는다 | D3에서 한다 |
+|---|---|
+| FOLLOW / AVOID / LANE_CHANGE / MERGE 궤적 생성 | 메시지 등록 + enum 매핑 (D3-1) |
+| handshake(PREPARE→EXECUTE) 실제 동작 | validation + fingerprint (D3-2) |
+| MPC 수정 | transaction / terminal latch / preemption 규칙 (D3-3) |
+| FSM 패키지 수정 (1.4절) | 토픽 연결 + 최소 Feedback (D3-3) |
+| legacy 간이 FSM 삭제 (10.4절) | 미구현 maneuver를 `MANEUVER_NOT_IMPLEMENTED`로 회신 |
+
+D3-3이 끝나면 FSM 담당자가 `/behavior/command_v2`로 명령을 쏘고
+`/planning/frenet_feedback_v2`에서 `command_id` echo와 `result_code`를 확인할 수
+있다. 이 시점에 실제로 주행하는 maneuver는 아직 없다(D4부터).
+
+**단계별 완료 조건**
+
+D3-0
+- [ ] Q2~Q5 정책 문서 반영 (11절)
+- [ ] FSM 패키지 미수정 원칙 명확화 (1.4절)
+- [ ] FOLLOW gap 기본값 매핑 확정 (11.8절)
+- [ ] result_code 의미 확정 (11.2절)
+
+D3-1
+- [ ] `BehaviorCommand.msg` / `FrenetFeedback.msg` 빌드
+- [ ] 정방향 enum 매핑 (`maneuver_type` + `direction` → `BehaviorState`)
+- [ ] 역방향 enum 매핑 (`BehaviorState` → `active_maneuver`)
+- [ ] `static_cast` 사용 없음
+- [ ] 매핑 회귀 테스트 (negative 포함) PASS
+
+D3-2
+- [ ] 공통 validation
+- [ ] maneuver별 validation
+- [ ] `INVALID_COMMAND` / `STALE_COMMAND` / `INPUT_DATA_STALE` / `MANEUVER_NOT_IMPLEMENTED` 구분
+- [ ] fingerprint 구현 (immutable 필드만, `execution_request` 제외)
+- [ ] `PREPARE`→`EXECUTE` 동일 transaction 확인
+- [ ] 동일 ID + payload 변경 거부
+
+D3-3
+- [ ] `/behavior/command_v2` subscriber
+- [ ] `/planning/frenet_feedback_v2` publisher
+- [ ] v1 경로 동작 유지
+- [ ] `command_id` echo
+- [ ] terminal latch
+- [ ] `EMERGENCY_STOP` preemption 규칙
+- [ ] invalid / stale / not-implemented 토픽 확인
+
+### 12.5 모드 개발 순서의 근거
 
 enum 선언 순서(KEEP/FOLLOW/MERGE/LANE_CHANGE/AVOID/STOP/EMERGENCY_STOP)와 **개발
 순서는 별개다.** 개발은 의존성이 적은 것부터 간다.
@@ -945,7 +1163,7 @@ KEEP  →  STOP / EMERGENCY_STOP  →  FOLLOW  →  AVOID  →  LANE_CHANGE  →
   | lateral transition + PREPARE/EXECUTE | D7 LANE_CHANGE |
   | conflict zone / TTC | D8 (MERGE 고유) |
 
-### 12.5 단계별 완료 기준
+### 12.6 단계별 완료 기준
 
 각 단계는 아래를 만족해야 다음으로 넘어간다.
 
@@ -1024,7 +1242,7 @@ Feedback을 처음 만드는 단계가 아니다. D4~D8에서 모드별로 이�
 FSM + Frenet + MPC + MORAI 전체 통합. 이 시점에 legacy atomic removal을 수행한다
 (10.5절).
 
-### 12.6 execution_state 사용 진도
+### 12.7 execution_state 사용 진도
 
 `FrenetFeedback.msg`가 정의한 8개 상태(`IDLE`~`FAILED`)는 **원본 그대로 유지**한다.
 단계별로 Frenet이 실제로 보고하는 부분집합만 늘어난다.
@@ -1040,17 +1258,23 @@ FSM + Frenet + MPC + MORAI 전체 통합. 이 시점에 legacy atomic removal을
 아직 보고하지 않는 상태를 FSM이 기다리게 하지 않도록, 각 단계 완료 시 "이 모드에서
 나올 수 있는 상태 목록"을 FSM 담당자에게 함께 전달한다.
 
-### 12.7 파일 배치
+### 12.8 파일 배치
 
 ```
+src/asmc_msgs/msg/
+├─ BehaviorCommand.msg                      (D3-1: 원본 그대로 등록)
+└─ FrenetFeedback.msg                       (D3-1: 원본 그대로 등록)
+
 src/frenet_planner/src/ros/
-├─ behavior_command_adapter.hpp / .cpp      (D3: 변환 + validation + enum mapping)
-└─ command_execution_manager.hpp / .cpp     (D3~D4: transaction + 캐시 소유권)
+├─ behavior_command_adapter.hpp / .cpp      (D3-1: enum 매핑
+│                                            D3-2: validation + fingerprint)
+└─ command_execution_manager.hpp / .cpp     (D3-3: transaction + latch + preemption
+                                             D4:   캐시 소유권 8.4절)
 
 src/frenet_planner/tests/
-├─ maneuver_enum_mapping_test.cpp           (D3: 2.4절 회귀)
-├─ behavior_command_adapter_test.cpp        (D3: 3절/4절 회귀)
-└─ command_execution_manager_test.cpp       (D4: 6절/7절/8.4절 회귀)
+├─ v2_enum_mapping_test.cpp                 (D3-1: 2.4절 회귀 + negative)
+├─ behavior_command_adapter_test.cpp        (D3-2: 3절/4절 회귀)
+└─ command_execution_manager_test.cpp       (D3-3: 6절/7절 회귀)
 ```
 
 execution/handshake는 planning 수학이 아니라 **transaction 상태**이므로 planner
