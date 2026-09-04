@@ -245,6 +245,22 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME v2_enum_mapping_test COMMAND v2_enum_mapping_test)
 
+  # D3-2: BehaviorCommand validation + transaction fingerprint 회귀.
+  # PREPARE -> EXECUTE가 같은 transaction으로 인정되는지, 형식 오류가 STALE로
+  # 가려지지 않는지를 중점적으로 검증한다.
+  add_executable(behavior_command_adapter_test
+    tests/behavior_command_adapter_test.cpp
+  )
+  add_dependencies(behavior_command_adapter_test
+    ${catkin_EXPORTED_TARGETS}
+  )
+  target_link_libraries(behavior_command_adapter_test
+    frenet_behavior_command_adapter
+    ${catkin_LIBRARIES}
+  )
+  add_test(NAME behavior_command_adapter_test
+           COMMAND behavior_command_adapter_test)
+
   # D1-3: legacy(간이 FSM) 행동 결정의 회귀 커버리지. D5/D6/D8에서 모드별로
   # legacy 조각을 제거할 때 검증된 회전교차로/고속도로 주행이 깨지지 않았는지
   # 확인하는 안전망이다 (docs/d1-legacy-behavior-boundary.md).
