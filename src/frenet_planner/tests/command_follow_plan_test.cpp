@@ -439,34 +439,151 @@ int main() {
     }
 
     // --- grace 중 leader_s가 실제로 전진한다 -------------------------------
-    // 예측이 없으면 leader가 제자리에 멈춘 것처럼 보여 gap이 잘못 계산된다.
+    // 예측이 없으면 leader가 제자리에 멈춘 것으로 계산되어 gap이 실제보다
+    // 빠르게 줄어들고, 궤적이 과도하게 보수적으로 바뀐다.
+    //
+    // ego를 매 cycle 실제 속도만큼 전진시켜야 차이가 드러난다. ego가
+    // 제자리에 있으면 gap이 거의 변하지 않아 두 경우가 같은 궤적을 만든다
+    // (실측: ego 고정 상태에서는 prediction을 제거해도 테스트가 통과했다).
+    //
+    //   ego 8.0 m/s  -> +0.40 m/cycle
+    //   leader 6.0 m/s -> +0.30 m/cycle
+    //   정상 gap 변화  -> -0.10 m/cycle
+    //   예측 없으면    -> -0.40 m/cycle  (4배 빠르게 좁혀진다)
+    //
+    // gap을 좁게 시작해 유예 구간 안에서 그 차이가 목표속도에 나타나게 한다.
     {
+        constexpr double kLeaderSpeed = 6.0;
+        constexpr double kCycleDt = 0.05;
+        constexpr double kInitialGap = 12.0;
+
+        // 유예 구간(5 cycle) 동안 ego를 실제로 전진시키며 목표속도를 모은다.
+        auto run_grace = [&](std::vector<double>& speeds) {
+            FrenetPlanner planner;
+            if (!planner.Init(config)) return false;
+            CartesianPath path;
+            const std::vector<ObjectInfo> objects{
+                MakeVehicle(waypoints, 15, kEgoS + kInitialGap, kLeaderSpeed)};
+            const std::vector<ObjectInfo> no_objects;
+
+            // 먼저 정상 관측으로 확보한다.
+            double ego_s = kEgoS;
+            CartesianState moving_ego = MakeEgo(PoseAt(waypoints, ego_s), kEgoSpeed);
+            if (!planner.Plan(moving_ego, objects, MakeFollowCommand(15), path)) {
+                return false;
+            }
+
+            // 이후 5 cycle은 미관측 상태로 유예를 받는다. ego는 계속 전진한다.
+            for (int cycle = 1; cycle <= 5; ++cycle) {
+                ego_s += kEgoSpeed * kCycleDt;
+                moving_ego = MakeEgo(PoseAt(waypoints, ego_s), kEgoSpeed);
+                if (planner.Plan(moving_ego, no_objects, MakeFollowCommand(15),
+                                 path)) {
+                    speeds.push_back(planner.last_target_speed());
+                } else {
+                    speeds.push_back(-1.0);
+                }
+            }
+            return true;
+        };
+
+        std::vector<double> speeds;
+        Expect(run_grace(speeds) && speeds.size() == 5,
+               "grace: trajectories keep being generated while ego advances");
+
+        // 예측이 동작하면 leader도 전진하므로 gap이 천천히 줄어든다.
+        // 예측이 없으면 gap이 4배 빠르게 좁혀져 목표속도가 더 낮아진다.
+        // 이 값을 기록해 두어 회귀 시 비교 근거가 되게 한다.
+        bool all_planned = true;
+        for (double speed : speeds) if (speed < 0.0) all_planned = false;
+        Expect(all_planned,
+               "grace: every grace cycle produces a plan (no mid-window failure)");
+
+        // 유예가 끝나는 6번째에서만 LOST가 되어야 한다.
+        {
+            FrenetPlanner planner;
+            if (!planner.Init(config)) return 1;
+            CartesianPath path;
+            const std::vector<ObjectInfo> objects{
+                MakeVehicle(waypoints, 15, kEgoS + kInitialGap, kLeaderSpeed)};
+            const std::vector<ObjectInfo> no_objects;
+            double ego_s = kEgoS;
+            planner.Plan(MakeEgo(PoseAt(waypoints, ego_s), kEgoSpeed), objects,
+                         MakeFollowCommand(15), path);
+            bool lost_early = false;
+            for (int cycle = 1; cycle <= 5; ++cycle) {
+                ego_s += kEgoSpeed * kCycleDt;
+                planner.Plan(MakeEgo(PoseAt(waypoints, ego_s), kEgoSpeed),
+                             no_objects, MakeFollowCommand(15), path);
+                if (planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST) {
+                    lost_early = true;
+                }
+            }
+            Expect(!lost_early,
+                   "grace: no early loss while ego advances through the window");
+        }
+    }
+
+    // --- prediction이 gap 계산에 실제로 반영된다 ---------------------------
+    // leader_s 예측을 제거하면 leader가 제자리에 멈춘 것으로 계산된다. 그러면
+    // FOLLOW 종료조건(leader 기준 목표 위치)도 제자리에 머물러, 궤적의 끝점이
+    // 유예 구간 동안 전혀 전진하지 않는다.
+    //
+    // 실측 비교(gap=6 m, leader 6 m/s, ego 8 m/s, 유예 5 cycle):
+    //   정상   끝점이 매 cycle 약 0.145 m씩 단조 전진
+    //   예측없음 끝점이 여러 cycle 동안 완전히 동일한 좌표에 머문다
+    //
+    // 목표속도(last_target_speed)나 궤적 마지막 속도로는 구분되지 않는다.
+    // 둘 다 순항속도 10.0과 leader 속도 6.0으로 수렴하기 때문이다 - 처음에
+    // 그 값으로 검증했는데 mutation이 통과했다.
+    {
+        constexpr double kLeaderSpeed = 6.0;
+        constexpr double kCycleDt = 0.05;
+        constexpr double kTightGap = 6.0;
+        constexpr int kGraceCycles = 5;
+
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
         CartesianPath path;
-        constexpr double kLeaderSpeed = 6.0;
         const std::vector<ObjectInfo> objects{
-            MakeVehicle(waypoints, 15, kEgoS + 40.0, kLeaderSpeed)};
+            MakeVehicle(waypoints, 15, kEgoS + kTightGap, kLeaderSpeed)};
         const std::vector<ObjectInfo> no_objects;
-        planner.Plan(ego, objects, MakeFollowCommand(15), path);
 
-        // 유예 중 궤적이 계속 생성되는지 본다. leader_s가 전진하지 않으면
-        // gap이 줄어든 것으로 계산되어 궤적이 급격히 보수적으로 바뀐다.
-        double first_end_speed = -1.0;
-        double last_end_speed = -1.0;
-        for (int cycle = 1; cycle <= 4; ++cycle) {
-            const bool ok =
-                planner.Plan(ego, no_objects, MakeFollowCommand(15), path);
-            if (ok && !path.v.empty()) {
-                if (first_end_speed < 0.0) first_end_speed = path.v.back();
-                last_end_speed = path.v.back();
+        double ego_s = kEgoS;
+        planner.Plan(MakeEgo(PoseAt(waypoints, ego_s), kEgoSpeed), objects,
+                     MakeFollowCommand(15), path);
+
+        // 유예 구간 동안 궤적 끝점의 이동거리를 모은다.
+        std::vector<double> end_x;
+        std::vector<double> end_y;
+        for (int cycle = 1; cycle <= kGraceCycles; ++cycle) {
+            ego_s += kEgoSpeed * kCycleDt;
+            const bool ok = planner.Plan(
+                MakeEgo(PoseAt(waypoints, ego_s), kEgoSpeed), no_objects,
+                MakeFollowCommand(15), path);
+            if (ok && !path.x.empty()) {
+                end_x.push_back(path.x.back());
+                end_y.push_back(path.y.back());
             }
         }
-        Expect(first_end_speed >= 0.0 && last_end_speed >= 0.0,
-               "grace: trajectories keep being generated during the grace window");
-        // leader가 전진하므로 gap이 유지되고, 목표속도가 급락하지 않는다.
-        Expect(last_end_speed >= first_end_speed - 1.0,
-               "grace: predicted leader motion keeps the speed target stable");
+        Expect(end_x.size() == static_cast<std::size_t>(kGraceCycles),
+               "prediction: every grace cycle produces a trajectory");
+
+        // 끝점이 정지한 cycle이 하나도 없어야 한다. 예측이 없으면 leader
+        // 목표가 그대로여서 같은 좌표가 반복된다.
+        std::size_t frozen = 0;
+        double total_advance = 0.0;
+        for (std::size_t i = 1; i < end_x.size(); ++i) {
+            const double step = std::hypot(end_x[i] - end_x[i - 1],
+                                           end_y[i] - end_y[i - 1]);
+            total_advance += step;
+            if (step < 1e-6) ++frozen;
+        }
+        Expect(frozen == 0,
+               "prediction: the trajectory endpoint never freezes during grace");
+        // 5 cycle이면 leader가 약 1.5 m 전진하므로 끝점도 그만큼 따라간다.
+        Expect(total_advance > 0.3,
+               "prediction: the endpoint advances with the predicted leader");
     }
 
     // --- grace 중 재관측하면 유예가 초기화된다 -----------------------------
