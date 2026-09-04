@@ -25,13 +25,86 @@
 
 | 그룹 | 지점 수 | 성격 | D1에서의 취급 |
 |---|---|---|---|
-| **A** | 6 | 행동 결정 (`cmd.mode` 확정) | 분리 대상 — FSM으로 이관 |
+| **A** | 5 | 행동 결정 (`cmd.mode` 확정 + COMMIT 승격) | 분리 대상 — FSM으로 이관 |
 | **B** | 7 | MERGE 실행 컨텍스트 | **보존** — v2 MERGE가 재사용 |
 | **C** | 3 | AVOID 실행 컨텍스트 | **보존** — v2 AVOID가 재사용 |
 | **D** | 3 | 진단 로그 전용 | 보존 (무해) |
 
+(A의 5개 = `cmd.mode` 대입 4곳 + `merge_.commit_pending` 승격 1곳. 1.1/1.2절에
+전부 열거한다. `use_legacy_behavior` 참조 19곳 중 나머지는 선언 1곳,
+블록 진입 1곳, 외부 STOP 경로 4곳이다.)
+
 즉 `use_legacy_behavior`를 기계적으로 제거하면 **B/C 그룹의 검증된 실행 로직이
 함께 사라진다.** 계약 문서 10.5절이 "모드 단위로 자동 전환만 제거"라고 한 이유다.
+
+### 0.1 "행동 결정 / 계산 자산" 2분류로는 부족하다
+
+D1-1 초안은 700~1006행을 통째로 "계산 자산"으로 분류했다. **이 분류는 위험하다.**
+그 구간에는 순수 계산만 있는 것이 아니라, **Frenet이 스스로 대상을 고르는 policy**가
+함께 들어 있다.
+
+```cpp
+// AVOID: planner가 회피할 장애물을 스스로 선택하고 context를 활성화 (737~769행)
+if (FindStaticAvoidanceTarget(...)) {
+    avoidance_.active = true;
+    avoidance_.obstacle_id = target.id;      // ← 대상 선택 권한
+    avoidance_.phase = AvoidPhase::TRACKING;
+}
+
+// FOLLOW: planner가 leader를 스스로 획득하고, 더 가까운 차로 자동 handoff (828~858행)
+if (nearest_gap + leader_switch_margin < current_gap) {
+    following_.leader_id = nearest_leader.id;  // ← 주행 중 대상 교체
+}
+if (!following_.active && nearest_found) {
+    following_.active = true;
+    following_.leader_id = leader.id;          // ← 대상 선택 권한
+}
+
+// MERGE: zone 진입을 감지해 스스로 활성화 (888~900행)
+merge_.active = true;
+```
+
+참고로 코드 자신이 이것을 policy라고 부른다 — MERGE 활성화 로그가
+`"[FrenetPlanner-MERGE] policy activated: ..."`다(896행). 즉 이 구간이 계산이 아니라
+정책이라는 것은 원저자도 인지하고 있었다.
+
+**v2 계약과 정면으로 충돌한다.** 6.1절대로 FOLLOW/AVOID의 대상은
+`BehaviorCommand.primary_object_id`가 authoritative다. FSM이
+`FOLLOW object_id = 15`를 줬는데 Frenet이 내부에서 17번으로 바꾸면 command
+contract가 깨지고, FSM은 자기가 지시한 대상을 추종 중이라고 오인한다.
+
+따라서 분류를 **4단계**로 세분한다.
+
+| 분류 | 의미 | v2에서 |
+|---|---|---|
+| **A. Behavior selection** | 어떤 maneuver를 할지 결정 | **FSM으로 이관** |
+| **B. Legacy acquisition / orchestration** | 어떤 대상을 고를지, 언제 활성화할지 결정 (v1 전용 policy) | **v2에서 사용 금지** — FSM command가 authoritative |
+| **C. Reusable planning computation** | 주어진 대상/모드로 수치를 계산 | **재사용** |
+| **D. Execution context** | 이미 확정된 기동을 수행 | **재사용** |
+
+구체 예시:
+
+| 코드 | 분류 |
+|---|---|
+| `cmd.mode = AVOID/MERGE/FOLLOWING/LANE_KEEPING` | **A** |
+| `merge_.commit_pending = true` (내부 EXECUTE 승격) | **A** |
+| `FindStaticAvoidanceTarget` → `obstacle_id` 자동 선택 | **B** |
+| `FindLeader` → nearest leader 자동 획득 / handoff | **B** |
+| merge zone 감지 → `merge_.active = true` | **B** |
+| 지정된 object ID를 Frenet s,d로 투영 | **C** |
+| 장애물 폭으로 avoid offset 계산 | **C** |
+| gap / TTC 계산 (`FindRoundaboutGap` 등) | **C** |
+| OBB collision (SAT) | **C** |
+| candidate generation / cost / selection | **C** |
+| COMMIT 잠금 궤적 실행 (566~638행) | **D** |
+| 저속 fallback 우회 (`near_any_merge`) | **D** |
+| TRACKING 충돌 필터 예외 (1176~1185행) | **D** |
+
+> **B에 대한 주의:** `FindLeader` / `FindStaticAvoidanceTarget`의 **탐색 수학 자체를
+> 버린다는 뜻이 아니다.** 함수 안의 차선 판정·거리 계산·투영은 C로 재사용할 수 있다.
+> 금지되는 것은 **"Frenet이 알아서 누구를 따라갈지/피할지 고르는 policy"**를 v2
+> 경로에서 그대로 쓰는 것이다. D5/D6에서 이 함수들을 호출할 때는 반드시
+> `primary_object_id`로 지정된 대상에 한정해야 한다.
 
 전체 참조 위치: 475, 542, 544, 547, 551, 559, 566, 641, 653, 656, 660, 666, 699,
 1088, 1176, 1313, 1478, 1496, 1498행.
@@ -78,12 +151,16 @@ merge_.commit_pending = true;
 
 legacy 블록(699~1063행)은 실제로 네 구획으로 나뉜다.
 
-| 행 범위 | 구획 | 성격 |
+| 행 범위 | 구획 | 분류 |
 |---|---|---|
-| 700~769 | AVOID context 갱신 + 신규 장애물 획득 (`FindStaticAvoidanceTarget`) | 계산 자산 |
-| 770~860 | FOLLOW leader 유지 / handoff / dropout / 신규 획득 (`FindLeader`) | 계산 자산 |
-| 861~1006 | MERGE zone 판정 + gap 평가 + phase 전이 (`FindRoundaboutGap` / `FindHighwayMergeGap`) | 계산 자산 (단 997행 COMMIT 승격만 행동 결정) |
-| **1008~1063** | **우선순위 체인 — `cmd.mode` 확정** | **행동 결정** |
+| 700~736 | AVOID context 갱신 (저장된 장애물 위치 추적, phase 전이) | **C/D** |
+| **737~769** | **AVOID 신규 대상 자동 획득** (`FindStaticAvoidanceTarget` → `obstacle_id` 선택) | **B** |
+| 770~829 | FOLLOW leader 유지 / dropout grace | **C/D** |
+| **826~858** | **FOLLOW leader 자동 handoff + 신규 획득** (`FindLeader` → `leader_id` 선택) | **B** |
+| 861~887 | MERGE zone window 판정 (`roundabout_window` / `highway_window`) | **C** |
+| **888~900** | **MERGE 자동 활성화** (`merge_.active = true`, 900행) | **B** |
+| 901~1006 | gap 평가 + phase 전이 (`FindRoundaboutGap` / `FindHighwayMergeGap`) | **C** (단 **997행 COMMIT 승격은 A**) |
+| **1008~1063** | **우선순위 체인 — `cmd.mode` 확정** | **A** |
 
 | 전환 | 조건 변수 | 조건을 채우는 구획 |
 |---|---|---|
@@ -241,6 +318,7 @@ legacy 경로가 계산해서 `cmd`에 채우던 값 중 v2에서 **누가 채�
 | `has_target_speed` / `target_speed` | `desired_speed_mps` (계약 3.5절) |
 | `stop_position` | `target_pose_map` → RefLine 투영 |
 | `leader_id` | `primary_object_id` (FOLLOW) |
+| **(AVOID 대상 ID — 필드 없음)** | `primary_object_id` (AVOID) — **6.4절 참고** |
 | `time_gap` / `min_gap` | `desired_time_gap_s` / `minimum_gap_m` (`use_custom_follow_gap=true`) |
 | `merge_type` | `merge_type` |
 | `merge_sa_id` / `merge_sb_id` | `preferred_front_object_id` / `preferred_rear_object_id` (선택) |
@@ -269,6 +347,38 @@ legacy 경로가 계산해서 `cmd`에 채우던 값 중 v2에서 **누가 채�
 
 ---
 
+### 6.4 AVOID 대상 ID를 받을 필드가 현재 없다 — D2에서 추가 필요
+
+`BehaviorCommand`는 AVOID의 회피 대상을 `primary_object_id`로 준다(계약 3.3절).
+그런데 **현재 `PlannerCommand`에는 이를 받을 canonical 필드가 없다.**
+
+```cpp
+// global.hpp의 현재 필드
+double avoidance_d_offset = 0.0;  // AVOID 전용이지만 "계산된 횡offset"이지 대상 ID가 아니다
+int leader_id = -1;               // FOLLOWING 전용으로 문서화되어 있음
+```
+
+즉 지금은 AVOID 대상을 **외부에서 지정할 방법이 없고**, `FindStaticAvoidanceTarget`이
+자동 선택하는 경로밖에 없다(0.1절 B 분류).
+
+**D2에서 결정할 것** — 두 방식 중 하나:
+
+| 방식 | 형태 | 장단점 |
+|---|---|---|
+| (a) 공통 필드 | `int target_object_id = -1;` | `primary_object_id`와 1:1 대응. FOLLOW/AVOID가 같은 필드 사용 |
+| (b) 분리 필드 | `int leader_id = -1;`<br>`int avoidance_object_id = -1;` | 모드별 의미가 명확. 기존 `leader_id` 유지 |
+
+어느 쪽을 쓸지는 D2에서 정한다. **D1에서 기록해야 하는 사실은 이것이다:**
+
+> AVOID 대상 identity는 v2에서 FSM이 소유한다. D6에서
+> `FindStaticAvoidanceTarget`의 **자동 선택 로직을 그대로 재사용하면 계약 위반**이며,
+> 반드시 `primary_object_id`로 지정된 장애물에 한정해야 한다.
+
+이 사실을 D1에 남기지 않으면, D6에서 기존 자동 선택 경로를 무심코 이어붙일 위험이
+크다.
+
+---
+
 ## 7. D1-2 이후 작업 (이 문서 범위 밖)
 
 D1-1은 분류까지다. 다음 조각:
@@ -289,5 +399,22 @@ legacy 경로(3인자 Plan)의 동작이 리팩터링 전후로 동일하다
   → 특히 command_keep_plan_test / command_stop_plan_test 회귀 없음
 ```
 
-그룹 B/C는 D1-2에서도 **건드리지 않는다.** 이 문서의 목적은 그 경계를 다음
+B/C/D 분류(0.1절)는 D1-2에서도 **건드리지 않는다.** 이 문서의 목적은 그 경계를 다음
 작업자(및 나중의 나)가 실수로 넘지 않게 하는 것이다.
+
+### 7.2 B 분류(legacy acquisition policy)의 처리 시점
+
+B는 D1-2에서 **제거하지도, 사용하지도 않는다.** legacy 경로에서는 그대로 동작해야
+하고(불변식 7.1), v2 경로는 애초에 이 코드를 타지 않는다(`cmd = *external_command`).
+
+실제 처리는 각 모드 구현 시점이다.
+
+| 단계 | B 처리 |
+|---|---|
+| D5 FOLLOW | `primary_object_id`로 지정된 대상만 사용. 자동 handoff/획득 경로를 v2에서 호출하지 않음 |
+| D6 AVOID | `primary_object_id`로 지정된 장애물만 사용 (6.4절). 자동 선택 금지 |
+| D8 MERGE | `maneuver_type=MERGE` 수신 시에만 활성화. zone 자동 감지로 활성화하지 않음 |
+| D10 | legacy 경로 삭제와 함께 B 코드 제거 |
+
+각 단계에서 B를 우회할 때, 그 안의 **C 성분(탐색 수학·투영·거리 계산)은 재사용
+가능**하다는 점을 잊지 말아야 한다. 버리는 것은 "누구를 고를지 정하는 권한"뿐이다.

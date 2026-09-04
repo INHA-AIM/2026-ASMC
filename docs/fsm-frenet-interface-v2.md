@@ -746,6 +746,16 @@ planner가 스스로 결정하는" 부분이다.
 | gap check (`FindRoundaboutGap` / `FindHighwayMergeGap`) | D8 |
 | cost calculation (`EvaluateCosts`, `SelectBestPath`) | D4~D8 |
 
+> **주의 — "보존"이 "v2에서 그대로 호출"을 뜻하지는 않는다.**
+> 위 자산 중 `FollowingContext` / `AvoidanceContext` / `MergeContext`에는 **대상을
+> 스스로 고르는 policy**가 함께 들어 있다(`FindStaticAvoidanceTarget`의 장애물 자동
+> 선택, `FindLeader`의 leader 자동 handoff, merge zone 자동 활성화). v2에서는 대상과
+> maneuver를 FSM이 지정하므로(`primary_object_id`, `maneuver_type`), 이 policy 부분은
+> **v2 경로에서 호출하지 않는다.** 함수 안의 탐색 수학·투영·거리 계산만 재사용한다.
+>
+> 상세 분류는 [d1-legacy-behavior-boundary.md](./d1-legacy-behavior-boundary.md)
+> 0.1절(A/B/C/D 4분류)과 6.4절(AVOID 대상 필드 부재)을 참고한다.
+
 ### 10.4 지금 지우지 않는 것
 
 다음은 **D8이 MORAI 검증을 통과할 때까지 그대로 둔다.**
