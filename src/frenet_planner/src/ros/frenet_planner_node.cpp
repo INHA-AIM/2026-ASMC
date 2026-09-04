@@ -15,6 +15,10 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     std::string behavior_topic = "/behavior/context";
     std::string trajectory_topic = "/planning/trajectory";
     std::string feedback_topic = "/planning/feedback";
+    // v2 인터페이스. v1과 병행 운영하며 D10 cutover까지 두 계통을 모두
+    // 유지한다(계약 1.2절, 10.6절).
+    std::string behavior_command_v2_topic = "/behavior/command_v2";
+    std::string feedback_v2_topic = "/planning/frenet_feedback_v2";
     std::string planner_config_path;
 
     pnh_.param("planning/frequency", planning_frequency_hz_, planning_frequency_hz_);
@@ -30,6 +34,10 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     pnh_.param("topics/behavior", behavior_topic, behavior_topic);
     pnh_.param("publish_topics/trajectory", trajectory_topic, trajectory_topic);
     pnh_.param("publish_topics/feedback", feedback_topic, feedback_topic);
+    pnh_.param("topics/behavior_command_v2", behavior_command_v2_topic,
+               behavior_command_v2_topic);
+    pnh_.param("publish_topics/feedback_v2", feedback_v2_topic,
+               feedback_v2_topic);
 
     if (planning_frequency_hz_ <= 0.0) {
         ROS_WARN("Invalid planning frequency %.3f Hz; using 20 Hz",
@@ -56,6 +64,15 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
 
     trajectory_pub_ = nh_.advertise<asmc_msgs::Trajectory>(trajectory_topic, 1);
     feedback_pub_ = nh_.advertise<asmc_msgs::PlanFeedback>(feedback_topic, 1);
+    feedback_v2_pub_ =
+        nh_.advertise<asmc_msgs::FrenetFeedback>(feedback_v2_topic, 1);
+
+    // D3-3 시점의 구현 상태. 아직 어떤 maneuver도 v2 궤적 생성에 연결되지
+    // 않았으므로 전부 닫아둔다. D4에서 KEEP/STOP/EMERGENCY_STOP을 열고,
+    // 이후 단계마다 하나씩 추가한다(계약 11.4절).
+    //
+    // 닫혀 있는 maneuver는 planner를 호출하지 않고 FAILED로 회신한다.
+    // 조용히 velocity keeping 궤적을 만드는 것보다 안전하다.
 
     vehicle_sub_ = nh_.subscribe(
         vehicle_topic, 1, &FrenetPlannerNode::vehicleCallback, this);
@@ -63,6 +80,9 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
         objects_topic, 1, &FrenetPlannerNode::objectsCallback, this);
     behavior_sub_ = nh_.subscribe(
         behavior_topic, 1, &FrenetPlannerNode::behaviorCallback, this);
+    behavior_command_v2_sub_ = nh_.subscribe(
+        behavior_command_v2_topic, 1,
+        &FrenetPlannerNode::behaviorCommandV2Callback, this);
 
     planning_timer_ = nh_.createTimer(
         ros::Duration(1.0 / planning_frequency_hz_),
@@ -72,7 +92,10 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
                     << " Hz; inputs: " << vehicle_topic << ", "
                     << objects_topic << ", " << behavior_topic
                     << "; outputs: " << trajectory_topic << ", "
-                    << feedback_topic << "; planner_initialized="
+                    << feedback_topic << "; v2: " << behavior_command_v2_topic
+                    << " -> " << feedback_v2_topic
+                    << " (command handling only, no trajectory yet)"
+                    << "; planner_initialized="
                     << (planner_initialized_ ? "true" : "false"));
 }
 
@@ -425,6 +448,100 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
         "trajectory published",
         snapshot.behavior.command_id, path.x.size(), planner_.sample_dt(),
         vehicle_age, objects_age, behavior_age);
+}
+
+void FrenetPlannerNode::behaviorCommandV2Callback(
+    const asmc_msgs::BehaviorCommand::ConstPtr& message) {
+    if (!message) return;
+
+    // 1. 명령 자체의 형식 검증. Ego/Object 입력의 freshness는 여기서 보지
+    //    않는다 - 그것은 명령의 내용과 무관한 runtime 상태다(계약 11.2절).
+    const CommandValidationResult validation =
+        ValidateBehaviorCommand(*message, ros::Time::now());
+    if (!validation.ok()) {
+        CommandAcceptance acceptance;
+        acceptance.command_accepted = false;
+        acceptance.should_plan = false;
+        acceptance.execution_state = command_manager_.has_active_command()
+            ? command_manager_.execution_state()
+            : asmc_msgs::FrenetFeedback::IDLE;
+        acceptance.result_code =
+            validation.code == CommandValidationCode::STALE_COMMAND
+                ? asmc_msgs::FrenetFeedback::STALE_COMMAND
+                : asmc_msgs::FrenetFeedback::INVALID_COMMAND;
+        acceptance.detail = validation.detail;
+        ROS_WARN_THROTTLE(1.0, "v2 command rejected (%s): %s",
+                          CommandValidationCodeName(validation.code),
+                          validation.detail.c_str());
+        publishFeedbackV2(*message, acceptance);
+        return;
+    }
+
+    // 2. transaction 규칙 적용 (새 ID / payload 변경 / CANCEL / preemption /
+    //    terminal latch / 구현 상태).
+    const CommandAcceptance acceptance = command_manager_.Accept(*message);
+
+    // 3. D3-3에서는 여기서 planner를 호출하지 않는다. 명령 관리 인프라까지가
+    //    이 단계의 범위이며, 궤적 생성 연결은 D4부터다(계약 12.4절).
+    //    acceptance.should_plan은 D4가 소비할 값으로 이미 계산되어 있다.
+    publishFeedbackV2(*message, acceptance);
+}
+
+void FrenetPlannerNode::publishFeedbackV2(
+    const asmc_msgs::BehaviorCommand& message,
+    const CommandAcceptance& acceptance) {
+    asmc_msgs::FrenetFeedback feedback;
+    feedback.header.stamp = ros::Time::now();
+    feedback.header.frame_id = "map";
+
+    // command_id echo가 틀리면 FSM이 피드백 전체를 무시한다(계약 1.5절).
+    // 거부된 명령에도 그 명령의 ID를 그대로 되돌려 보내야 FSM이 어느 명령에
+    // 대한 응답인지 알 수 있다.
+    feedback.command_id = message.command_id;
+
+    feedback.command_accepted = acceptance.command_accepted;
+    feedback.execution_state = acceptance.execution_state;
+    feedback.result_code = acceptance.result_code;
+    feedback.result_detail = acceptance.detail;
+
+    // active_maneuver는 내부 모드에서 역매핑한다. 활성 transaction이 없으면
+    // MANEUVER_NONE이다(계약 2.3절).
+    if (command_manager_.has_active_command()) {
+        BehaviorState mode = LANE_KEEPING;
+        if (ConvertManeuverType(command_manager_.maneuver_type(),
+                                message.direction, mode)) {
+            feedback.active_maneuver = ConvertToFeedbackManeuver(mode);
+        } else {
+            feedback.active_maneuver = asmc_msgs::FrenetFeedback::MANEUVER_NONE;
+        }
+    } else {
+        feedback.active_maneuver = asmc_msgs::FrenetFeedback::MANEUVER_NONE;
+    }
+
+    // D3-3은 궤적을 만들지 않는다. 아직 채우지 않는 필드는 메시지가 정의한
+    // sentinel을 정확히 사용한다 - 임의의 0이나 추측값을 넣지 않는다
+    // (계약 9.4절).
+    feedback.plan_valid = false;
+    feedback.trajectory_source = asmc_msgs::FrenetFeedback::TRAJECTORY_NONE;
+    feedback.maneuver_progress = -1.0;
+    feedback.active_leader_id = -1;
+    feedback.selected_front_object_id = -1;
+    feedback.selected_rear_object_id = -1;
+    feedback.gap_evaluated = false;
+    feedback.gap_safe = false;
+    feedback.estimated_entry_time_s = -1.0;
+    feedback.frenet_state_valid = false;
+    feedback.current_s = 0.0;
+    feedback.current_d = 0.0;
+    feedback.target_d_valid = false;
+    feedback.target_d = 0.0;
+    feedback.applied_speed_mps = -1.0;
+    feedback.generated_candidate_count = 0;
+    feedback.valid_candidate_count = 0;
+    feedback.selected_cost = -1.0;
+    feedback.blocking_object_id = -1;
+
+    feedback_v2_pub_.publish(feedback);
 }
 
 }  // namespace frenet_planner_ros

@@ -110,6 +110,20 @@ target_link_libraries(frenet_behavior_command_adapter
   ${catkin_LIBRARIES}
 )
 
+# v2 transaction 관리. adapter가 stateless인 것과 달리 이쪽은 명령들 사이의
+# 관계(transaction / terminal latch / preemption)를 갖는 stateful 계층이다
+# (docs/fsm-frenet-interface-v2.md 12.8절).
+add_library(frenet_command_execution_manager
+  src/ros/command_execution_manager.cpp
+)
+add_dependencies(frenet_command_execution_manager
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(frenet_command_execution_manager
+  frenet_behavior_command_adapter
+  ${catkin_LIBRARIES}
+)
+
 add_executable(frenet_planner_node
   src/ros/main.cpp
   src/ros/frenet_planner_node.cpp
@@ -119,6 +133,8 @@ add_dependencies(frenet_planner_node
 )
 target_link_libraries(frenet_planner_node
   frenet_planner_message_converter
+  frenet_command_execution_manager
+  frenet_behavior_command_adapter
   frenet_planner_core
   ${catkin_LIBRARIES}
 )
@@ -261,6 +277,20 @@ if(CATKIN_ENABLE_TESTING)
   add_test(NAME behavior_command_adapter_test
            COMMAND behavior_command_adapter_test)
 
+  # D3-3: transaction / terminal latch / preemption 회귀.
+  add_executable(command_execution_manager_test
+    tests/command_execution_manager_test.cpp
+  )
+  add_dependencies(command_execution_manager_test
+    ${catkin_EXPORTED_TARGETS}
+  )
+  target_link_libraries(command_execution_manager_test
+    frenet_command_execution_manager
+    ${catkin_LIBRARIES}
+  )
+  add_test(NAME command_execution_manager_test
+           COMMAND command_execution_manager_test)
+
   # D1-3: legacy(간이 FSM) 행동 결정의 회귀 커버리지. D5/D6/D8에서 모드별로
   # legacy 조각을 제거할 때 검증된 회전교차로/고속도로 주행이 깨지지 않았는지
   # 확인하는 안전망이다 (docs/d1-legacy-behavior-boundary.md).
@@ -289,6 +319,7 @@ install(TARGETS
     frenet_planner_core
     frenet_planner_message_converter
     frenet_behavior_command_adapter
+    frenet_command_execution_manager
     frenet_vehicle_state_adapter
     frenet_planner_udp_legacy
     frenet_planner_node

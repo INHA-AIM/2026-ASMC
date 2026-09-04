@@ -3,14 +3,18 @@
 #include <mutex>
 #include <string>
 
+#include <asmc_msgs/BehaviorCommand.h>
 #include <asmc_msgs/BehaviorContext.h>
 #include <asmc_msgs/DetectedObjectArray.h>
+#include <asmc_msgs/FrenetFeedback.h>
 #include <asmc_msgs/PlanFeedback.h>
 #include <asmc_msgs/Trajectory.h>
 #include <asmc_msgs/VehicleState.h>
 #include <ros/ros.h>
 
 #include "frenet_planner/frenet_planner.hpp"
+#include "ros/behavior_command_adapter.hpp"
+#include "ros/command_execution_manager.hpp"
 
 namespace frenet_planner_ros {
 
@@ -32,6 +36,19 @@ class FrenetPlannerNode {
     void objectsCallback(const asmc_msgs::DetectedObjectArray::ConstPtr& message);
     void behaviorCallback(const asmc_msgs::BehaviorContext::ConstPtr& message);
     void planningTimerCallback(const ros::TimerEvent& event);
+
+    // ===== v2 인터페이스 (D3-3) =====
+    //
+    // v1(/behavior/context -> /planning/feedback)과 병행 운영한다. v2 경로는
+    // 추가될 뿐 v1의 코드 경로를 바꾸지 않는다 - 현재 MORAI에서 검증된
+    // KEEP/STOP 주행을 깨지 않기 위함이다(계약 10.6절).
+    //
+    // D3-3 범위는 명령 수신 -> validation -> transaction -> 최소 피드백까지다.
+    // 실제 궤적 생성 연결은 D4부터다(계약 12.4절).
+    void behaviorCommandV2Callback(
+        const asmc_msgs::BehaviorCommand::ConstPtr& message);
+    void publishFeedbackV2(const asmc_msgs::BehaviorCommand& message,
+                           const CommandAcceptance& acceptance);
     InputSnapshot takeSnapshot() const;
     bool isFresh(const ros::Time& stamp, double timeout_seconds,
                  const ros::Time& now, double& age_seconds) const;
@@ -49,9 +66,15 @@ class FrenetPlannerNode {
     ros::Subscriber vehicle_sub_;
     ros::Subscriber objects_sub_;
     ros::Subscriber behavior_sub_;
+    ros::Subscriber behavior_command_v2_sub_;
     ros::Publisher trajectory_pub_;
     ros::Publisher feedback_pub_;
+    ros::Publisher feedback_v2_pub_;
     ros::Timer planning_timer_;
+
+    // v2 명령 처리. adapter는 stateless이므로 멤버가 필요 없고, transaction
+    // 상태만 manager가 갖는다(계약 12.8절).
+    CommandExecutionManager command_manager_;
 
     FrenetPlanner planner_;
     bool planner_initialized_ = false;
