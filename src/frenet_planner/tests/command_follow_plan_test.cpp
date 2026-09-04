@@ -294,6 +294,24 @@ int main() {
                "a target beyond the search range is TARGET_OBJECT_LOST");
     }
 
+    // --- 탐색거리는 legacy와 동일하게 확장된다 -----------------------------
+    // config의 max_leader_search_s(60m)만 쓰면 유지 한계가 70m가 되어,
+    // legacy(충돌 horizon 84.8m로 확장 -> 94.8m)에서는 유효한 80m 앞의
+    // leader가 v2에서만 TARGET_OBJECT_LOST가 된다.
+    {
+        FrenetPlanner planner;
+        if (!planner.Init(config)) return 1;
+        CartesianPath path;
+        const std::vector<ObjectInfo> objects{
+            MakeVehicle(waypoints, 15, kEgoS + 80.0, 5.0)};
+        planner.Plan(ego, objects, MakeFollowCommand(15), path);
+        // 궤적 생성은 후보 문제로 실패할 수도 있으므로 확보 자체를 본다.
+        Expect(planner.last_failure_reason() != Reason::TARGET_OBJECT_LOST,
+               "a target at 80 m is not lost (search range matches legacy)");
+        Expect(planner.active_leader_id() == 15,
+               "a target at 80 m stays the active leader");
+    }
+
     // --- 명령 검증: 대상 미지정 --------------------------------------------
     {
         FrenetPlanner planner;

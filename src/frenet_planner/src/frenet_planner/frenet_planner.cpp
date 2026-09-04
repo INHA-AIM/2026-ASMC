@@ -307,8 +307,24 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
 
         // 검증 기준은 legacy와 동일하다. 다만 "이 조건을 만족하는 차량을
         // 찾는다"가 아니라 "지정된 차량이 이 조건을 만족하는가"를 본다.
-        const double search_limit = following_cfg_.max_leader_search_s +
-                                    following_cfg_.exit_search_margin;
+        //
+        // 탐색거리도 legacy와 같은 방식으로 확장한다. config 값을 그대로 쓰면
+        // 충돌 lookahead보다 짧아져, leader를 FOLLOW 대상이 아니라 충돌물로만
+        // 먼저 보고 정지하는 현상이 생긴다(legacy가 이 문제로 확장을 넣었다).
+        //
+        // 현재 config 기준:
+        //   config 값        60.0 m
+        //   충돌 horizon     10.0 * 8.0 + 4.5 + 0.3 = 84.8 m
+        //   유지 한계        84.8 + 10.0 = 94.8 m
+        // 확장하지 않으면 70 m가 되어 80 m 앞의 leader가 v2에서만
+        // TARGET_OBJECT_LOST가 된다.
+        const double collision_horizon =
+            curve_speed_cfg_.target_vel * collision_cfg_.reactive_lookahead +
+            vehicle_shape_.length + collision_cfg_.safety_margin;
+        const double effective_search_s =
+            std::max(following_cfg_.max_leader_search_s, collision_horizon);
+        const double search_limit =
+            effective_search_s + following_cfg_.exit_search_margin;
         const bool same_direction = object_s_dot > following_cfg_.min_leader_speed;
         const bool same_lane = std::fabs(object_d) <= lane_width_ * 0.5;
         const bool in_range = gap > 0.0 && gap <= search_limit;
