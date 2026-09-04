@@ -18,8 +18,8 @@ def default_asmc_data_root():
         return os.path.expanduser(os.environ["ASMC_DATA"])
     aim = os.environ.get("AIM_PROJECT")
     if aim:
-        return os.path.join(os.path.expanduser(aim), "data", "asmc_datasets")
-    return os.path.expanduser("~/projects/2026-ai-sw-mobility-competition/data/asmc_datasets")
+        return os.path.join(os.path.expanduser(aim), "data")
+    return os.path.expanduser("~/projects/2026-ai-sw-mobility-competition/data")
 
 
 def _git_sha(cwd=None):

@@ -3,8 +3,13 @@
 set -euo pipefail
 COMPOSE_DIR="$(dirname "$(readlink -f "$0")")/../docker/perception-train"
 export ASMC="${ASMC:-$(dirname "$(readlink -f "$0")")/..}"
+export ASMC_DATA="${ASMC_DATA:-$(dirname "$(readlink -f "$ASMC")")/data}"
+export TWINLITE_SOURCE="${TWINLITE_SOURCE:-$(dirname "$(readlink -f "$ASMC")")/external/baselines/TwinLiteNetPlus}"
+mkdir -p "$ASMC_DATA"
 
 cmd="${1:-up}"
+echo "[DATA] $ASMC_DATA -> /data (ro)"
+echo "[TWINLITE] $TWINLITE_SOURCE -> /opt/baselines/TwinLiteNetPlus (ro)"
 case "$cmd" in
   build)
     docker compose -f "$COMPOSE_DIR/docker-compose.yaml" build

@@ -1,0 +1,186 @@
+{
+  "amp": true,
+  "batch_size": 12,
+  "checkpoint": "/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v1_uniform_b12_e10_20260902/best_mean.pt",
+  "checkpoint_epoch": 10,
+  "checkpoint_sha256": "a88794304c149160be239e9dafe0f54d00808ab9358224e3c4c933c1ccc0d94d",
+  "completed_at_utc": "2026-09-04T07:20:52+00:00",
+  "dataset_metadata_sha256": "f0561f06ca96d068614ca5edeb6bfe3b515800f09a4c54564cf23cf7ffa34202",
+  "dataset_split_manifest_sha256": {
+    "val": "755fcbd607e2c561da05dc841f86c789bb4e76c71c2ef4b614f154469bb085c1"
+  },
+  "dataset_target_policy_ids": [
+    "kcity_static_surface_actor_ignore_v2"
+  ],
+  "dataset_version": "twinlite_morai_v3_comp8_train_val_drive003",
+  "device": "cuda",
+  "elapsed_seconds": 20.6168157979846,
+  "gpu": "NVIDIA GeForce RTX 4060 Ti",
+  "num_workers": 6,
+  "peak_cuda_memory_bytes": 625484288,
+  "results": {
+    "val": {
+      "by_run": {
+        "kcity_drive_003": {
+          "drivable": {
+            "intersection": 58448527,
+            "iou": 0.9776524429398719,
+            "prediction_positive": 58677270,
+            "target_positive": 59555823,
+            "union": 59784566,
+            "valid_pixels": 190826496
+          },
+          "lane": {
+            "intersection": 3523952,
+            "iou": 0.8596761972325075,
+            "prediction_positive": 3544216,
+            "target_positive": 4078898,
+            "union": 4099162,
+            "valid_pixels": 190826496
+          },
+          "mean_head_iou": 0.9186643200861897
+        }
+      },
+      "by_sim_time": {
+        "legacy": {
+          "drivable": {
+            "intersection": 58448527,
+            "iou": 0.9776524429398719,
+            "prediction_positive": 58677270,
+            "target_positive": 59555823,
+            "union": 59784566,
+            "valid_pixels": 190826496
+          },
+          "lane": {
+            "intersection": 3523952,
+            "iou": 0.8596761972325075,
+            "prediction_positive": 3544216,
+            "target_positive": 4078898,
+            "union": 4099162,
+            "valid_pixels": 190826496
+          },
+          "mean_head_iou": 0.9186643200861897
+        }
+      },
+      "by_view": {
+        "front": {
+          "drivable": {
+            "intersection": 19400124,
+            "iou": 0.9691535387166371,
+            "prediction_positive": 19499992,
+            "target_positive": 19917728,
+            "union": 20017596,
+            "valid_pixels": 70502400
+          },
+          "lane": {
+            "intersection": 737467,
+            "iou": 0.7592444073356073,
+            "prediction_positive": 745360,
+            "target_positive": 963424,
+            "union": 971317,
+            "valid_pixels": 70502400
+          },
+          "mean_head_iou": 0.8641989730261221
+        },
+        "left": {
+          "drivable": {
+            "intersection": 20490271,
+            "iou": 0.981008519915191,
+            "prediction_positive": 20552408,
+            "target_positive": 20824808,
+            "union": 20886945,
+            "valid_pixels": 60162048
+          },
+          "lane": {
+            "intersection": 1488305,
+            "iou": 0.8905857213552559,
+            "prediction_positive": 1494944,
+            "target_positive": 1664514,
+            "union": 1671153,
+            "valid_pixels": 60162048
+          },
+          "mean_head_iou": 0.9357971206352235
+        },
+        "right": {
+          "drivable": {
+            "intersection": 18558132,
+            "iou": 0.982950605203118,
+            "prediction_positive": 18624870,
+            "target_positive": 18813287,
+            "union": 18880025,
+            "valid_pixels": 60162048
+          },
+          "lane": {
+            "intersection": 1298180,
+            "iou": 0.8911835858232214,
+            "prediction_positive": 1303912,
+            "target_positive": 1450960,
+            "union": 1456692,
+            "valid_pixels": 60162048
+          },
+          "mean_head_iou": 0.9370670955131697
+        }
+      },
+      "by_weather": {
+        "legacy": {
+          "drivable": {
+            "intersection": 58448527,
+            "iou": 0.9776524429398719,
+            "prediction_positive": 58677270,
+            "target_positive": 59555823,
+            "union": 59784566,
+            "valid_pixels": 190826496
+          },
+          "lane": {
+            "intersection": 3523952,
+            "iou": 0.8596761972325075,
+            "prediction_positive": 3544216,
+            "target_positive": 4078898,
+            "union": 4099162,
+            "valid_pixels": 190826496
+          },
+          "mean_head_iou": 0.9186643200861897
+        }
+      },
+      "elapsed_seconds": 20.381762112956494,
+      "losses": {
+        "drivable_focal": 0.00264581047254158,
+        "drivable_loss": 0.006144181599998786,
+        "drivable_tversky": 0.0034983711685449663,
+        "lane_focal": 0.0031596226237251674,
+        "lane_loss": 0.009234767632400678,
+        "lane_tversky": 0.006075145026936737,
+        "loss": 0.01537894920805116
+      },
+      "overall": {
+        "drivable": {
+          "intersection": 58448527,
+          "iou": 0.9776524429398719,
+          "prediction_positive": 58677270,
+          "target_positive": 59555823,
+          "union": 59784566,
+          "valid_pixels": 190826496
+        },
+        "lane": {
+          "intersection": 3523952,
+          "iou": 0.8596761972325075,
+          "prediction_positive": 3544216,
+          "target_positive": 4078898,
+          "union": 4099162,
+          "valid_pixels": 190826496
+        },
+        "mean_head_iou": 0.9186643200861897
+      },
+      "per_sample_manifest": "/root/ws/artifacts/perception_eval/baselines/twinlite_medium_morai_v1_on_v3_comp8_val_drive003_20260904/val_per_sample.jsonl",
+      "sample_count": 918,
+      "samples_per_second": 45.0402666321199
+    }
+  },
+  "schema_version": "twinlite-frozen-baseline-eval-1.0.0",
+  "splits": [
+    "val"
+  ],
+  "training_performed": false,
+  "upstream_commit": "90f1b8695ae311d5123b05f8534b2e11e42499d2",
+  "weights": "ema_state_dict"
+}
