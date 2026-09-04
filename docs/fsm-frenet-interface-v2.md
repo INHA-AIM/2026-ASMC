@@ -251,6 +251,69 @@ v2 adapter의 첫 관문. 통과하지 못하면 planner를 호출하지 않는�
 - `MERGE`가 아닌 모든 maneuver는 `merge_type == MERGE_NONE`이어야 한다.
 - `MERGE`는 `merge_type != MERGE_NONE`이어야 한다.
 
+#### 3.3.1 AVOID 방향도 authoritative다 (D6-1에서 확정)
+
+`BehaviorCommand.msg`가 이미 세 값의 의미를 정의하고 있다.
+
+| `direction` | 의미 |
+|---|---|
+| `DIRECTION_NONE` | Frenet이 회피 방향을 고른다 |
+| `DIRECTION_LEFT` | 왼쪽으로 회피 |
+| `DIRECTION_RIGHT` | 오른쪽으로 회피 |
+
+문제는 `mode=AVOID` 하나로는 세 값을 구분할 수 없다는 것이다. D6-1 이전
+`ConvertBehaviorCommand`는 `AVOID → mode=AVOID`만 채우고 `direction`을
+버렸으므로, 세 명령이 core에서 **전부 같은 `PlannerCommand`**가 되었다.
+
+그러면 FSM이 `LEFT`를 지정했는데 Frenet이 우측으로 회피하는 계약 위반이
+조용히 일어난다. legacy는 항상 양쪽 후보를 만들어 비교하므로 그 결과가
+`RIGHT`가 될 수 있다.
+
+그래서 ROS 비의존 `LateralDirection { NONE, LEFT, RIGHT }`를 도입하고
+`PlannerCommand.requested_direction`으로 보존한다. `static_cast`는 쓰지
+않는다 — 두 enum의 번호가 우연히 같아도 2절이 명시적 매핑을 요구한다.
+
+`LANE_CHANGE`는 방향이 mode로 갈라지므로(`LANE_CHANGE_LEFT` /
+`LANE_CHANGE_RIGHT`) 이 필드를 실행에 쓰지 않지만, D7이 같은 필드를 재사용할
+수 있도록 변환에서 함께 채운다.
+
+#### 3.3.2 AVOID 대상 확보에서 쓰지 않는 조건 (D6-1에서 확정)
+
+`ResolveExternalAvoidTarget`이 검증하는 것은 다음뿐이다.
+
+```
+ID 일치 / 전방 / 같은 corridor / 탐색 범위 / geometry 정상
+```
+
+`avoid_cfg_.trigger_max_speed`(0.5 m/s)는 **쓰지 않는다.** 그 config의 설명
+자체가 "이 속도 이하만 정지 장애물로 간주(그 이상은 Following이 처리)"이므로,
+이것은 **AVOID인가 FOLLOW인가를 planner가 분류하는 policy**다.
+
+FSM이 `AVOID object=15`를 지정했는데 Frenet이 "15가 0.7 m/s니까 나는 FOLLOW로
+보겠다"고 하면 행동 선택에 다시 개입하는 셈이다. D5에서
+`following_cfg_.min_leader_speed`를 제거한 것과 정확히 같은 이유다.
+
+탐색거리는 legacy AVOID와 같은 방식으로 확장한다.
+
+```
+effective_detection = max(
+    avoid.detection_distance,                                    // 60.0 m
+    target_vel * reactive_lookahead + vehicle_length + margin)    // 84.8 m
+```
+
+확장하지 않으면 80 m 앞의 장애물이 v2에서만 `TARGET_OBJECT_LOST`가 되고,
+회피 대상으로 등록하기 전에 충돌 필터가 중앙 후보를 전부 제거해 속도가
+급락한다(legacy가 이 문제로 확장을 넣었다).
+
+dropout 유예는 `AvoidConfig.dropout_grace_cycles`(기본 5)를 새로 둔다.
+`FollowingConfig`의 같은 이름 값을 가져다 쓰지 않는다 — 서로 다른 행동의
+config가 결합되면 FOLLOW 튜닝이 AVOID 동작을 바꾼다.
+
+유예 중에는 **마지막 관측 위치를 그대로 유지**한다. FOLLOW는 `leader_speed`로
+`leader_s`를 전진시키지만, AVOID 대상은 정적 장애물이 주 대상이고 관측 속도를
+보관하지도 않는다. 없는 속도를 추정해 위치를 밀면 실제보다 멀리 있다고 판단해
+회피 시작이 늦어진다.
+
 ### 3.4 target pose 검증 (`has_target_pose=true`일 때)
 
 1. `position.x/y/z` 모두 `isfinite`
@@ -1428,7 +1491,8 @@ handshake 골격을 모드마다 다시 만들지 않는다.
 |---|---|---|
 | D6-0 | handshake 전이 강제, `plan_valid`/`trajectory_source` 축 분리 | 닫힘 |
 | D6-0a | 완료 전이 강제, 계획 대상 소유권 분리(`PlanningTarget`) | 닫힘 |
-| D6-1 | authoritative AVOID target resolve (`v2_avoidance_`, LEFT/RIGHT/NONE, optional target pose) | core만 (ROS 닫힘) |
+| D6-1 | authoritative AVOID target resolve (`v2_avoidance_`, LEFT/RIGHT/NONE 보존) | core만 (ROS 닫힘) |
+| D6-1a | optional `target_pose_map` → Frenet `target_d` 투영 | core만 (ROS 닫힘) |
 | D6-2 | PREPARE dual-output — 한 cycle에서 avoid candidate + maintenance path | 닫힘 |
 | D6-3 | EXECUTE / COMMIT / EXECUTING / completion, `target_d` lock, CANCEL, preemption | 닫힘 |
 | D6-4 | Feedback 필드 연결 + ROS 회귀 + `SetImplementedManeuver(AVOID, true)` | **열림** |

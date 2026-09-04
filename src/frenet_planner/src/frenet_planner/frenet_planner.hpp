@@ -129,6 +129,27 @@ public:
     int active_leader_id() const {
         return v2_following_.active ? v2_following_.leader_id : -1;
     }
+
+    // v2 AVOID가 실제로 확보한 회피 대상 ID (D6-1). active_leader_id()와 같은
+    // 이유로 존재한다 - 지정만 된 ID와 확보된 ID를 구분해야 한다.
+    int active_avoid_target_id() const {
+        return v2_avoidance_.active ? v2_avoidance_.obstacle_id : -1;
+    }
+
+    // v2 AVOID 대상이 유예(미관측) 중인 사이클 수. 진단·회귀 검증용이다.
+    int avoid_missing_cycles() const { return v2_avoidance_.missing_cycles; }
+
+    // v2 AVOID가 확보한 대상의 Frenet 위치. active_avoid_target_id()가 -1이면
+    // 의미가 없다.
+    double avoid_target_s() const { return v2_avoidance_.obstacle_s; }
+    double avoid_target_d() const { return v2_avoidance_.obstacle_d; }
+
+    // v2 AVOID에 대해 FSM이 요청한 방향. mode=AVOID 하나로는 구분할 수 없어
+    // 별도 필드로 보존한다(계약 3.3절).
+    LateralDirection avoid_requested_direction() const {
+        return v2_avoidance_.requested_direction;
+    }
+
     PlanFailureReason last_failure_reason() const { return last_failure_reason_; }
 
 private:
@@ -177,6 +198,20 @@ private:
         double obstacle_width = 0.0;
         double obstacle_length = 0.0;
         double target_d = 0.0;
+
+        // ---- 아래는 v2 경로(v2_avoidance_)만 사용한다 (D6-1) ----
+        // legacy 경로는 읽지도 쓰지도 않으므로 legacy 동작은 불변이다.
+
+        // 대상의 일시적 미관측 누적. avoid_cfg_.dropout_grace_cycles를 넘으면
+        // 대상 소실로 판정한다(계약 8.2절).
+        int missing_cycles = 0;
+
+        // 기동 시작 시점의 ego d. maneuver_progress를 (start_d -> target_d)
+        // 구간의 진행률로 계산하기 위해 필요하다(D6-4에서 사용).
+        double start_d = 0.0;
+
+        // FSM이 요청한 방향. NONE이면 Frenet이 좌/우를 고른다.
+        LateralDirection requested_direction = LateralDirection::NONE;
     };
 
     struct FollowingContext {
@@ -280,6 +315,43 @@ private:
         const std::vector<ObjectInfo>& obstacles,
         FollowingContext& context) const;
 
+    // FSM이 지정한 AVOID 대상의 확보 결과. FollowTargetStatus와 같은 세 값을
+    // 쓰지만, 두 행동의 판정 기준이 앞으로 갈릴 수 있으므로 타입을 나눈다.
+    enum class AvoidTargetStatus { VALID, GRACE, LOST };
+
+    // FSM이 지정한 회피 대상을 확보한다. **selector가 아니라 resolver다.**
+    //
+    // FindStaticAvoidanceTarget()을 호출하지 않는다. 그 함수는
+    //   모든 객체 탐색 -> 같은 차선 -> 저속/정지 -> 가장 가까운 것 ->
+    //   좌/우 방향까지 자동 결정
+    // 을 하는 legacy acquisition policy이며, v2에서 그 권한은 전부 FSM에 있다
+    // (docs/d1-legacy-behavior-boundary.md 0.1절 B 분류, 6.4절).
+    //
+    // ===== 속도 조건을 쓰지 않는 이유 =====
+    //
+    // legacy에는 fabs(s_dot) <= avoid_cfg_.trigger_max_speed(0.5 m/s) 조건이
+    // 있다. 그 config의 설명 자체가 "이 속도 이하만 정지 장애물로 간주(그
+    // 이상은 Following이 처리)"이므로, 이것은 **AVOID인가 FOLLOW인가를
+    // planner가 분류하는 policy**다.
+    //
+    // FSM이 AVOID object=15를 지정했는데 Frenet이 "15가 0.7 m/s니까 나는
+    // FOLLOW로 보겠다"고 하면 행동 선택에 다시 개입하는 셈이다. D5에서
+    // min_leader_speed를 제거한 것과 정확히 같은 이유다.
+    //
+    // 따라서 여기서 검증하는 것은 다음뿐이다:
+    //   ID 일치 / 전방 / 같은 corridor / 탐색 범위 / geometry 정상
+    //
+    // 탐색거리는 legacy AVOID와 같은 방식으로 확장한다. config 값을 그대로
+    // 쓰면 충돌 lookahead보다 짧아져, 장애물을 회피 대상으로 등록하기 전에
+    // 충돌 필터가 중앙 후보를 모두 제거해 속도가 급락한다.
+    AvoidTargetStatus ResolveExternalAvoidTarget(
+        double ego_s, int target_object_id,
+        const std::vector<ObjectInfo>& obstacles,
+        AvoidanceContext& context) const;
+
+    // v2 AVOID 대상의 유효 탐색거리 [m]. resolver와 진단 출력이 공유한다.
+    double EffectiveAvoidDetectionDistance() const;
+
     // 현재 상태에서 그 자리에 정지하는 감속 궤적을 직접 만든다.
     //
     // 후보 생성 -> 곡률 필터 -> 충돌 필터 파이프라인을 타지 않는다. 두 곳에서
@@ -344,6 +416,10 @@ private:
     // 상태 인스턴스는 분리한다 - v2가 following_를 바꿔놓은 뒤 legacy 경로가
     // 다시 쓰이는 상황을 구조적으로 차단한다. D10 cutover에서 하나로 정리한다.
     FollowingContext v2_following_{};
+    // 외부 command(v2) 전용 AVOID 상태 (D6-1). v2_following_와 같은 이유로
+    // legacy avoidance_와 분리한다 - legacy fingerprint를 유지하려면 v2가
+    // legacy context를 건드리지 않는 것이 가장 안전하다.
+    AvoidanceContext v2_avoidance_{};
     MergeContext merge_{};
     std::unordered_map<int, ObjectTrack> object_tracks_{};
 };

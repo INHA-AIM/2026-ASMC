@@ -57,6 +57,13 @@ struct AvoidConfig {
     double lateral_tolerance = 0.4;   // [m] SHIFT 완료 판정
     double pass_clearance    = 1.0;   // [m] 자차 뒤가 장애물을 통과한 뒤 추가 여유
     bool prefer_right_when_equal = true; // 좌/우 후보 품질이 같을 때 우측 우선
+
+    // [cycles] v2 AVOID 대상의 일시적 미관측 유예 (D6-1).
+    //
+    // FollowingConfig.dropout_grace_cycles를 가져다 쓰지 않는다 - 서로 다른
+    // 행동의 config가 강하게 결합되면 FOLLOW 튜닝이 AVOID 동작을 바꾼다.
+    // legacy AVOID 경로는 이 값을 읽지 않으므로 legacy 동작은 불변이다.
+    int dropout_grace_cycles = 5;
 };
 
 // =========================================================

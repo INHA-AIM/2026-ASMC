@@ -212,12 +212,18 @@ int main() {
                planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
            "external MERGE is UNSUPPORTED_BEHAVIOR");
 
-    PlannerCommand avoid{};
-    avoid.mode = AVOID;
-    avoid.avoidance_d_offset = 1.5;
-    Expect(!planner.Plan(ego, no_objects, avoid, path) &&
-               planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
-           "external AVOID is UNSUPPORTED_BEHAVIOR");
+    // D6-1에서 AVOID를 core whitelist에 추가했다. 이제 UNSUPPORTED_BEHAVIOR로
+    // 거부되지 않고 필드 검증으로 넘어간다 - 대상이 없으면 INVALID_COMMAND다.
+    // (FOLLOWING과 같은 이유: 대상 선택 권한이 FSM에 있으므로 planner가
+    // FindStaticAvoidanceTarget()으로 스스로 고르지 않는다.)
+    //
+    // 대상 확보에 성공한 뒤의 동작은 command_avoid_target_test가 담당한다.
+    PlannerCommand avoid_without_target{};
+    avoid_without_target.mode = AVOID;
+    avoid_without_target.avoidance_d_offset = 1.5;
+    Expect(!planner.Plan(ego, no_objects, avoid_without_target, path) &&
+               planner.last_failure_reason() == Reason::INVALID_COMMAND,
+           "external AVOID without a target is INVALID_COMMAND");
 
     PlannerCommand lane_change{};
     lane_change.mode = LANE_CHANGE_LEFT;
@@ -248,9 +254,12 @@ int main() {
 
     // 모드 whitelist는 필드 검증보다 먼저다. 지원하지 않는 모드는 필드가
     // 무엇이든 UNSUPPORTED_BEHAVIOR로 보고돼야 한다.
-    // AVOID는 아직 열지 않은 모드다(D6에서 연다).
+    //
+    // 닫힌 모드 예시는 단계가 진행되며 교체된다. D5까지는 AVOID를 썼지만
+    // D6-1에서 열렸으므로 LANE_CHANGE_LEFT로 바꾼다. D7에서 LANE_CHANGE가
+    // 열리면 MERGE가 남는다.
     PlannerCommand unsupported_and_invalid{};
-    unsupported_and_invalid.mode = AVOID;
+    unsupported_and_invalid.mode = LANE_CHANGE_LEFT;
     unsupported_and_invalid.has_target_speed = true;
     unsupported_and_invalid.target_speed = -5.0;
     Expect(!planner.Plan(ego, no_objects, unsupported_and_invalid, path) &&
@@ -268,7 +277,8 @@ int main() {
            "collision overload accepts a matched KEEP command");
 
     PlannerCommand still_closed{};
-    still_closed.mode = AVOID;
+    // D6-1에서 AVOID가 열렸으므로 여기도 아직 닫힌 모드로 바꾼다(위와 동일).
+    still_closed.mode = LANE_CHANGE_LEFT;
     Expect(!planner.Plan(ego, objects, boxes, still_closed, path) &&
                planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
            "collision overload rejects unsupported mode identically");
@@ -287,7 +297,8 @@ int main() {
     // 그 값은 ROS node에서 이전 궤적 재사용을 뜻하기 때문이다.
     const PlannerCommand rejected[] = {
         stop_unset, stop_nan, stop_negative, negative_speed,
-        nan_speed, negative_max, follow, merge, avoid, lane_change,
+        nan_speed, negative_max, follow, merge, avoid_without_target,
+        lane_change,
     };
     bool never_transient = true;
     for (const PlannerCommand& command : rejected) {

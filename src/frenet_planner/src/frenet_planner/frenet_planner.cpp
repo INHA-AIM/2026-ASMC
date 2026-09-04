@@ -382,6 +382,109 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
     return FollowTargetStatus::GRACE;
 }
 
+double FrenetPlanner::EffectiveAvoidDetectionDistance() const {
+    // legacy AVOID 등록거리와 같은 식이다(frenet_planner.cpp의 acquisition_cfg).
+    // config 값을 그대로 쓰면 충돌 lookahead보다 짧아져, 장애물을 회피 대상으로
+    // 등록하기 전에 충돌 필터가 중앙 후보를 전부 제거한다 -> 속도 급락 후
+    // 등록되면 다시 가속하는 진동이 생긴다.
+    //
+    // 현재 config 기준:
+    //   config 값     60.0 m
+    //   충돌 horizon  10.0 * 8.0 + 4.5 + 0.3 = 84.8 m
+    const double collision_horizon =
+        curve_speed_cfg_.target_vel * collision_cfg_.reactive_lookahead +
+        vehicle_shape_.length + collision_cfg_.safety_margin;
+    return std::max(avoid_cfg_.detection_distance, collision_horizon);
+}
+
+FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
+    double ego_s, int target_object_id,
+    const std::vector<ObjectInfo>& obstacles,
+    AvoidanceContext& context) const {
+    if (target_object_id < 0) return AvoidTargetStatus::LOST;
+
+    // 지정된 ID만 찾는다. FindStaticAvoidanceTarget()처럼 "가장 가까운 정적
+    // 장애물"을 고르지 않는다 - 대상 선택 권한은 FSM에 있다(헤더 주석 참고).
+    const auto it = std::find_if(
+        obstacles.begin(), obstacles.end(),
+        [target_object_id](const ObjectInfo& object) {
+            return object.id == target_object_id;
+        });
+
+    if (it != obstacles.end()) {
+        double object_s = 0.0, object_d = 0.0, object_s_dot = 0.0;
+        ProjectObjectToFrenet(ref_, *it, object_s, object_d, object_s_dot);
+
+        // 폐루프 트랙에서 gap이 음수로 크게 튀지 않도록 감아준다(FOLLOW와 동일).
+        const double track_length =
+            ref_.points.empty() ? 0.0 : ref_.points.back().s;
+        double gap = object_s - ego_s;
+        if (gap <= 0.0 && track_length > 0.0) gap += track_length;
+
+        const double search_limit = EffectiveAvoidDetectionDistance();
+
+        // 속도 조건(trigger_max_speed)을 적용하지 않는다 - 헤더 주석 참고.
+        // 정지/저속/주행 중 어느 쪽이든 FSM이 AVOID를 지정했으면 대상이다.
+        const bool in_front = gap > 0.0;
+        const bool in_range = gap <= search_limit;
+        // 회피는 같은 corridor의 장애물을 대상으로 한다. 옆 차선 객체를
+        // 회피하려고 횡이동하면 오히려 그쪽으로 들어간다.
+        const bool same_corridor = std::fabs(object_d) <= lane_width_ * 0.5;
+        // geometry가 0이면 회피 오프셋을 계산할 수 없다. 후보 생성 단계에서
+        // 0 폭 장애물을 비켜가는 target_d는 의미가 없다.
+        const bool geometry_ok = it->width > 0.0 && it->length > 0.0;
+
+        if (in_front && in_range && same_corridor && geometry_ok) {
+            context.active = true;
+            // 요청 ID가 아니라 **실제로 찾은 객체의 ID**를 기록한다. 둘은
+            // 항상 같아야 하지만, 같다고 가정해 요청 ID를 그대로 넣으면
+            // 조회가 잘못되어도(예: nearest selection으로 회귀) 확보 ID는
+            // 정상으로 보인다 - 진단과 회귀 검증이 그 오류를 놓친다.
+            context.obstacle_id = it->id;
+            context.obstacle_s = ego_s + gap;
+            context.obstacle_d = object_d;
+            context.obstacle_width = it->width;
+            context.obstacle_length = it->length;
+            context.missing_cycles = 0;
+            return AvoidTargetStatus::VALID;
+        }
+
+        // 관측되었지만 쓸 수 없는 상태다. dropout이 아니므로 유예를 주지
+        // 않는다 - 예측으로 메꿀 대상이 아니라 조건 자체가 틀렸다
+        // (계약 8.2절). phase/target_d/start_d는 호출자가 관리하므로
+        // 여기서는 확보 상태만 해제한다.
+        context.active = false;
+        context.obstacle_id = -1;
+        context.missing_cycles = 0;
+        return AvoidTargetStatus::LOST;
+    }
+
+    // 관측되지 않았다. 직전에 확보한 상태가 있으면 유예한다.
+    //
+    // 한 번도 확보하지 못한 대상에는 유예를 주지 않는다. FSM이 존재하지 않는
+    // ID를 보낸 경우를 조용히 넘기게 된다(FOLLOW와 동일한 판단).
+    if (!context.active || context.obstacle_id != target_object_id) {
+        context.active = false;
+        context.obstacle_id = -1;
+        context.missing_cycles = 0;
+        return AvoidTargetStatus::LOST;
+    }
+
+    if (++context.missing_cycles > avoid_cfg_.dropout_grace_cycles) {
+        context.active = false;
+        context.obstacle_id = -1;
+        context.missing_cycles = 0;
+        return AvoidTargetStatus::LOST;
+    }
+
+    // 유예 중에는 마지막으로 관측한 위치를 그대로 유지한다.
+    //
+    // FOLLOW는 leader_speed로 leader_s를 전진시키지만, AVOID 대상은 정적
+    // 장애물이 주 대상이고 관측된 속도를 보관하지도 않는다. 없는 속도를
+    // 추정해 위치를 밀면 실제보다 멀리 있다고 판단해 회피 시작이 늦어진다.
+    return AvoidTargetStatus::GRACE;
+}
+
 bool FrenetPlanner::GenerateDecelToZeroPath(double s, double d, double s_dot,
                                             CartesianPath& out_path) const {
     // D4-3에서 STOP BRAKING fail-safe에서 추출했다. 두 경로가 정확히 같은
@@ -540,6 +643,14 @@ bool IsSupportedExternalMode(BehaviorState mode) {
         case STOP:
         case EMERGENCY:
         case FOLLOWING:
+        // D6-1: AVOID는 대상 확보(resolver)까지만 열렸다. 후보 생성은 D6-2다.
+        // 여기서 열지 않으면 resolver를 검증할 수 없고, 열어도 아래
+        // ResolveManeuver 직전에서 UNSUPPORTED_BEHAVIOR로 막으므로
+        // 조용히 velocity keeping 궤적이 나가지는 않는다.
+        //
+        // node의 SetImplementedManeuver(AVOID)는 계속 닫혀 있으므로 ROS
+        // 경로로는 여기까지 도달하지 않는다(계약 12.7.1절).
+        case AVOID:
             return true;
 
         default:
@@ -577,6 +688,14 @@ bool ValidateExternalCommand(const PlannerCommand& command,
     // 있으므로(BehaviorCommand.primary_object_id) planner가 스스로 고르지
     // 않는다. -1이면 무엇을 따라갈지 알 수 없다.
     if (command.mode == FOLLOWING && command.target_object_id < 0) {
+        reason = FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
+        return false;
+    }
+
+    // AVOID: 회피 대상이 지정되어야 한다. FOLLOWING과 같은 이유다 - v2에서
+    // 대상 선택 권한은 FSM에 있고(primary_object_id), planner가
+    // FindStaticAvoidanceTarget()으로 스스로 고르지 않는다(D6-1).
+    if (command.mode == AVOID && command.target_object_id < 0) {
         reason = FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
         return false;
     }
@@ -886,6 +1005,16 @@ bool FrenetPlanner::PlanInternal(
     // 예측 추종한다(실측으로 재현 확인). legacy following_에는 영향이 없다.
     if (!use_legacy_behavior && external_command->mode != FOLLOWING) {
         v2_following_ = FollowingContext{};
+    }
+    // v2 AVOID 상태도 같은 이유로 같은 위치에서 비운다(D6-1). 여기서
+    // reset하지 않으면
+    //   AVOID id=20 target=21   -> 21 확보
+    //   E-STOP id=21            -> context가 남는다
+    //   AVOID id=22 target=21   -> 21이 관측되지 않아도 GRACE
+    // 가 되어 첫 binding 실패인데 유예를 받는다(D5-2에서 FOLLOW로 실측 확인한
+    // 것과 같은 구조). legacy avoidance_에는 영향이 없다.
+    if (!use_legacy_behavior && external_command->mode != AVOID) {
+        v2_avoidance_ = AvoidanceContext{};
     }
 
     // =====================================================================
@@ -1332,8 +1461,42 @@ bool FrenetPlanner::PlanInternal(
             if (!(cmd.min_gap > 0.0)) cmd.min_gap = following_cfg_.min_gap;
             cmd.gap_gain = following_cfg_.gap_gain;
         }
-        // FOLLOW가 아닌 명령의 context reset은 위쪽(early-return 이전)에서
-        // 이미 처리했다.
+
+        // 외부 AVOID: FSM이 지정한 장애물만 확보한다(D6-1).
+        // FindStaticAvoidanceTarget()을 타지 않는다 - 그 함수는 가장 가까운
+        // 정적 장애물과 회피 방향까지 자동 결정하는 legacy policy다
+        // (계약 D1 0.1절 B 분류, 6.4절).
+        if (cmd.mode == AVOID) {
+            // 요청 방향을 context에 보존한다. mode=AVOID 하나로는
+            // LEFT/RIGHT/NONE을 구분할 수 없다(계약 3.3절).
+            v2_avoidance_.requested_direction = cmd.requested_direction;
+
+            const AvoidTargetStatus status = ResolveExternalAvoidTarget(
+                s, cmd.target_object_id, obstacles, v2_avoidance_);
+            if (status == AvoidTargetStatus::LOST) {
+                // 대상을 쓸 수 없다. KEEP으로 자동 전환하지 않는다 - 다음
+                // 행동은 FSM이 새 command_id로 결정한다(계약 8.2절).
+                //
+                // D6-3에서 COMMIT 경계가 들어오면 COMMITTED/EXECUTING 중에는
+                // 이 분기로 오지 않는다(계약 8.2.1절).
+                last_mode_ = AVOID;
+                last_failure_reason_ = PlanFailureReason::TARGET_OBJECT_LOST;
+                return false;
+            }
+
+            // 확보 성공. 다만 D6-1은 **binding까지만**이다. 좌/우 후보 생성과
+            // 안전성 판정은 D6-2(PREPARE dual-output)에서 붙인다.
+            //
+            // 여기서 그대로 내려보내면 ResolveManeuver의 AVOID 분기가
+            // avoidance_d_offset=0으로 중앙 유지 궤적을 만들어, FSM 입장에서는
+            // "회피 성공"으로 보이면서 실제로는 장애물 쪽으로 직진한다.
+            // 그래서 명시적으로 거부한다(계약 11.4절과 같은 원칙).
+            last_mode_ = AVOID;
+            last_failure_reason_ = PlanFailureReason::UNSUPPORTED_BEHAVIOR;
+            return false;
+        }
+        // AVOID/FOLLOW가 아닌 명령의 context reset은 위쪽(early-return 이전)
+        // 에서 이미 처리했다.
     }
 
     cmd.target_speed = resolved_target_speed;

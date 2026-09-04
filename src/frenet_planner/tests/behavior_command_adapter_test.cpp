@@ -13,6 +13,7 @@
 
 #include "ros/behavior_command_adapter.hpp"
 
+#include <cstdio>
 #include <iostream>
 #include <string>
 
@@ -558,6 +559,64 @@ int main() {
         PlannerCommand command{};
         Expect(!ConvertBehaviorCommand(message, command),
                "LANE_CHANGE without direction fails conversion");
+    }
+
+    // ---- D6-1: AVOID 요청 방향이 변환에서 살아남는다 -------------------
+    //
+    // D6-1 이전에는 mode=AVOID 하나만 채워서 LEFT/RIGHT/NONE이 구분되지
+    // 않았다. 그러면 FSM이 LEFT를 지정했는데 Frenet이 우측으로 회피하는
+    // 계약 위반이 조용히 일어난다(계약 3.3절).
+    {
+        struct Case {
+            uint8_t direction;
+            LateralDirection expected;
+            const char* name;
+        };
+        const Case cases[] = {
+            {Command::DIRECTION_NONE, LateralDirection::NONE, "NONE"},
+            {Command::DIRECTION_LEFT, LateralDirection::LEFT, "LEFT"},
+            {Command::DIRECTION_RIGHT, LateralDirection::RIGHT, "RIGHT"},
+        };
+        for (const Case& c : cases) {
+            Command message = MakeValidAvoid();
+            message.direction = c.direction;
+            PlannerCommand command{};
+            const bool ok = ConvertBehaviorCommand(message, command);
+            char name[160];
+            std::snprintf(name, sizeof(name),
+                          "AVOID %s converts to the matching "
+                          "requested_direction", c.name);
+            Expect(ok && command.mode == AVOID &&
+                       command.requested_direction == c.expected, name);
+        }
+    }
+    {
+        // 방향을 쓰지 않는 maneuver는 NONE으로 남는다. validation이
+        // DIRECTION_NONE을 강제하므로 자연히 그렇게 되어야 한다.
+        PlannerCommand keep{};
+        Expect(ConvertBehaviorCommand(MakeValidKeep(), keep) &&
+                   keep.requested_direction == LateralDirection::NONE,
+               "KEEP carries no requested direction");
+        PlannerCommand follow{};
+        Expect(ConvertBehaviorCommand(MakeValidFollow(), follow) &&
+                   follow.requested_direction == LateralDirection::NONE,
+               "FOLLOW carries no requested direction");
+    }
+    {
+        // LANE_CHANGE는 방향이 mode로 갈라지지만, 필드도 함께 채워둔다.
+        // D7에서 같은 필드를 재사용할 수 있게 하는 것이 목적이다.
+        PlannerCommand left{};
+        Expect(ConvertBehaviorCommand(
+                   MakeValidLaneChange(Command::DIRECTION_LEFT), left) &&
+                   left.mode == LANE_CHANGE_LEFT &&
+                   left.requested_direction == LateralDirection::LEFT,
+               "LANE_CHANGE LEFT fills both the mode and the direction");
+        PlannerCommand right{};
+        Expect(ConvertBehaviorCommand(
+                   MakeValidLaneChange(Command::DIRECTION_RIGHT), right) &&
+                   right.mode == LANE_CHANGE_RIGHT &&
+                   right.requested_direction == LateralDirection::RIGHT,
+               "LANE_CHANGE RIGHT fills both the mode and the direction");
     }
 
     if (g_failures != 0) {

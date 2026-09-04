@@ -62,6 +62,11 @@ void CheckDefaults(const PlannerCommand& cmd, const std::string& prefix) {
     Expect(!cmd.merge_committed, prefix + ": merge_committed is false");
     Expect(!cmd.merge_crossing, prefix + ": merge_crossing is false");
     Expect(cmd.merge_type == MergeType::NONE, prefix + ": merge_type is NONE");
+
+    // D6-1: 요청 방향의 기본값은 "미지정"이다. LEFT/RIGHT가 기본값이 되면
+    // 방향을 주지 않은 AVOID가 한쪽으로만 회피하게 된다.
+    Expect(cmd.requested_direction == LateralDirection::NONE,
+           prefix + ": requested_direction defaults to NONE");
 }
 
 }  // namespace

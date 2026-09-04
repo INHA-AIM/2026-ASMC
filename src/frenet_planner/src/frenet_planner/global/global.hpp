@@ -29,6 +29,22 @@ enum class MergeType {
     HIGHWAY,
 };
 
+// FSM이 요청한 횡방향 기동 방향 (D6-1).
+//
+// BehaviorCommand.direction의 ROS 비의존 대응물이다. AVOID는 세 값을 모두
+// 허용하고(NONE = Frenet이 방향을 고른다), LANE_CHANGE는 LEFT/RIGHT만
+// 허용한다. LANE_CHANGE는 방향이 mode 자체로 갈라지므로
+// (LANE_CHANGE_LEFT / LANE_CHANGE_RIGHT) 이 필드는 AVOID가 주 사용자다.
+//
+// AVOID에 별도 필드가 필요한 이유는, mode=AVOID 하나로는 LEFT/RIGHT/NONE을
+// 구분할 수 없기 때문이다. 구분하지 않으면 FSM이 LEFT를 지정했는데 Frenet이
+// 우측으로 회피하는 계약 위반이 조용히 일어난다.
+enum class LateralDirection {
+    NONE = 0,
+    LEFT,
+    RIGHT,
+};
+
 // --- ObjectStatus 한 오브젝트 -------------
 struct ObjectInfo {
     int id = -1;
@@ -111,6 +127,19 @@ struct PlannerCommand {
     // gap selector가 자동 선택한다(계약 문서 3.3절).
     int merge_sa_id = -1;                   // Gap 앞 차량
     int merge_sb_id = -1;                   // Gap 뒤 차량
+
+    // FSM이 요청한 횡방향 기동 방향 (D6-1).
+    //
+    // AVOID에서만 의미가 있다. mode=AVOID 하나로는 BehaviorCommand의
+    // DIRECTION_LEFT / RIGHT / NONE을 구분할 수 없어, 변환 과정에서 방향이
+    // 사라지고 있었다. LANE_CHANGE는 방향이 mode로 갈라지므로 이 필드를
+    // 쓰지 않는다(LANE_CHANGE_LEFT / LANE_CHANGE_RIGHT).
+    //
+    // NONE은 "방향 미지정"이며 Frenet이 좌/우를 고른다 - 그것이
+    // BehaviorCommand.msg가 정의한 의미다. legacy가 항상 양쪽을 만들어
+    // 비교하던 동작은 NONE에 해당하고, LEFT/RIGHT가 오면 그 방향만
+    // 평가해야 한다(계약 3.3절).
+    LateralDirection requested_direction = LateralDirection::NONE;
 
     // =====================================================================
     // [B] Planner 계산 결과 - planner가 채워 후보 생성기에 전달한다

@@ -1079,12 +1079,20 @@ int main(int argc, char** argv) {
 
     std::printf("\n=== unimplemented maneuver ===\n");
     {
-        // AVOID는 아직 열려 있지 않다(D6에서 연다). planner를 호출하지 않고
-        // 거짓 result_code를 쓰지도 않는다.
+        // AVOID는 node gate가 아직 닫혀 있다(D6-4에서 연다). planner를
+        // 호출하지 않고 거짓 result_code를 쓰지도 않는다.
         //
         // D5-1에서 FOLLOW가 열렸으므로 이 케이스의 예시를 AVOID로 바꿨다.
-        // 모드가 열릴 때마다 여기를 갱신해야 한다 - D6에서는 LANE_CHANGE,
+        // 모드가 열릴 때마다 여기를 갱신해야 한다 - D6-4에서는 LANE_CHANGE,
         // D7에서는 MERGE가 남는다.
+        //
+        // ===== D6-1에서 이 케이스가 갖는 추가 의미 =====
+        //
+        // D6-1은 planner **core**의 whitelist에 AVOID를 추가했다(resolver를
+        // 검증하기 위해). 이 케이스가 계속 통과한다는 것은 core가 열려도
+        // node gate가 독립적으로 AVOID를 막고 있다는 증거다. 두 게이트를
+        // 분리해 둔 이유가 정확히 이것이다 - core는 단계적으로 열면서 ROS
+        // 경로는 완성될 때까지 닫아둔다(계약 12.7.1절).
         const uint32_t id = ++command_id;
         Command avoid = harness.MakeCommand(id, Command::AVOID);
         avoid.execution_request = Command::PREPARE;

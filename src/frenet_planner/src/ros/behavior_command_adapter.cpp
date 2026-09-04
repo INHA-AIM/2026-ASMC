@@ -435,6 +435,24 @@ bool ConvertBehaviorCommand(const asmc_msgs::BehaviorCommand& message,
     converted.merge_sa_id = message.preferred_front_object_id;
     converted.merge_sb_id = message.preferred_rear_object_id;
 
+    // 요청 방향 (D6-1). static_cast로 넘기지 않는다 - 두 enum의 번호가
+    // 우연히 같아도 계약 2절이 명시적 매핑을 요구한다.
+    //
+    // AVOID만 세 값을 모두 쓴다. LANE_CHANGE는 이미 mode로 갈라졌고
+    // (LANE_CHANGE_LEFT/RIGHT), 나머지 maneuver는 validation이
+    // DIRECTION_NONE을 강제하므로 자연히 NONE이 된다.
+    switch (message.direction) {
+        case Command::DIRECTION_LEFT:
+            converted.requested_direction = LateralDirection::LEFT;
+            break;
+        case Command::DIRECTION_RIGHT:
+            converted.requested_direction = LateralDirection::RIGHT;
+            break;
+        default:
+            converted.requested_direction = LateralDirection::NONE;
+            break;
+    }
+
     // stop_position은 채우지 않는다 - target_pose_map을 RefLine에 투영해야
     // 하므로 planner를 가진 호출자의 책임이다. 기본값 NaN이 유지되며, 그
     // 상태로 STOP을 실행하면 ValidateExternalCommand가 INVALID_COMMAND로
