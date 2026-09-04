@@ -507,12 +507,19 @@ void FrenetPlannerNode::behaviorCommandV2Callback(
 }
 
 bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
+    // 방금 수신한 명령. 아래 2단계에서 transaction 소유권에 따라 실제 계획
+    // 대상으로 다시 묶는다(PlanningTarget).
     asmc_msgs::BehaviorCommand command;
     {
         std::lock_guard<std::mutex> lock(input_mutex_);
         if (!has_v2_command_) return false;
         command = latest_v2_command_;
     }
+    // 피드백의 command_id는 **방금 들어온 명령**의 것이다. 계약 1.5절에 따라
+    // FSM은 자기가 보낸 ID와 일치하는 피드백만 반영하므로, 거부 회신도 그
+    // ID로 나가야 한다. 계획 대상이 활성 transaction으로 바뀌어도 이 값은
+    // 유지한다.
+    const uint32_t feedback_command_id = command.command_id;
 
     // ---- 1. 명령 자체의 형식 검증 -------------------------------------
     // Ego/Object 입력의 freshness는 여기서 보지 않는다. 명령의 내용과 무관한
@@ -522,7 +529,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     if (!validation.ok()) {
         CommandAcceptance acceptance;
         acceptance.command_accepted = false;
-        acceptance.should_plan = false;
+        acceptance.planning_target = PlanningTarget::NONE;
         acceptance.execution_state = command_manager_.has_active_command()
             ? command_manager_.execution_state()
             : asmc_msgs::FrenetFeedback::IDLE;
@@ -542,7 +549,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             stopReferenceVehicle(takeSnapshot()), trajectoryDt(),
             asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
         trajectory_pub_.publish(stop);
-        publishFeedbackV2(command.command_id, acceptance, &stop,
+        publishFeedbackV2(feedback_command_id, acceptance, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                           /*plan_valid=*/false);
         return true;
@@ -550,7 +557,48 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 
     // ---- 2. transaction 규칙 ------------------------------------------
     const CommandAcceptance acceptance = command_manager_.Accept(command);
-    if (!acceptance.should_plan) {
+
+    // ===== 계획 대상 재결속 (D6-0a) =====
+    //
+    // COMMITTED/EXECUTING인 handshake maneuver 중에 다른 명령이 오면 manager는
+    // 그것을 거부하고 기존 transaction을 유지한다(계약 7.2절). 이때 아래로
+    // 내려가는 command가 **거부된 새 명령**이면, 피드백은 회피 중이라고
+    // 말하면서 MPC로는 차선 복귀 궤적이 나간다.
+    //
+    // 그래서 planner에 넘길 명령을 여기서 활성 transaction의 것으로 바꾼다.
+    // 이후 코드는 STOP 목표 투영·fingerprint·궤적 캐시까지 모두 이 command를
+    // 쓰므로, 캐시가 다른 명령의 궤적으로 오염되지도 않는다(계약 8.4절).
+    if (acceptance.planning_target == PlanningTarget::ACTIVE_TRANSACTION) {
+        if (!command_manager_.has_active_command()) {
+            // manager가 ACTIVE_TRANSACTION을 돌려주면서 활성 명령이 없는
+            // 것은 manager 내부 모순이다. 조용히 새 명령을 계획하지 않고
+            // 안전정지로 빠진다.
+            ROS_ERROR_THROTTLE(
+                1.0,
+                "v2 planning target is ACTIVE_TRANSACTION but no active "
+                "command exists (command_id=%u)", feedback_command_id);
+            CommandAcceptance failed = acceptance;
+            failed.planning_target = PlanningTarget::NONE;
+            failed.detail = "no active transaction to plan";
+            has_last_v2_trajectory_ = false;
+            v2_plan_fail_streak_ = 0;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(takeSnapshot()), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_NONE, now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+        command = command_manager_.active_command();
+        ROS_WARN_THROTTLE(1.0,
+                          "v2 keeping the committed maneuver: planning "
+                          "active command_id=%u (incoming id=%u rejected)",
+                          command.command_id, feedback_command_id);
+    }
+
+    if (!acceptance.should_plan()) {
         // planner를 호출하지 않는 사이클이다. 다만 **궤적 출력을 멈추면 안
         // 된다**(계약 6.2절) - 기동은 끝났어도 차량은 계속 주행하거나 정지를
         // 유지해야 한다. 그래서 latch 성격에 따라 출력을 나눈다.
@@ -567,7 +615,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             asmc_msgs::Trajectory held = last_v2_trajectory_;
             held.header.stamp = now;
             trajectory_pub_.publish(held);
-            publishFeedbackV2(command.command_id, acceptance, &held,
+            publishFeedbackV2(feedback_command_id, acceptance, &held,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED,
                               /*plan_valid=*/false);
             return true;
@@ -578,7 +626,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             stopReferenceVehicle(latch_snapshot), trajectoryDt(),
             asmc_msgs::Trajectory::FAILURE_NONE, now);
         trajectory_pub_.publish(stop);
-        publishFeedbackV2(command.command_id, acceptance, &stop,
+        publishFeedbackV2(feedback_command_id, acceptance, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                           /*plan_valid=*/false);
         return true;
@@ -599,7 +647,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // 입력이 회복되어도 복구되지 않으므로 terminal 실패다.
         command_manager_.NotifyPlanFailed(/*terminal=*/true);
         CommandAcceptance failed = acceptance;
-        failed.should_plan = false;
+        failed.planning_target = PlanningTarget::NONE;
         failed.execution_state = command_manager_.execution_state();
         failed.result_code = asmc_msgs::FrenetFeedback::NOT_INITIALIZED;
         failed.detail = "planner is not initialized";
@@ -613,7 +661,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             stopReferenceVehicle(snapshot), trajectoryDt(),
             asmc_msgs::Trajectory::FAILURE_NOT_INITIALIZED, now);
         trajectory_pub_.publish(stop);
-        publishFeedbackV2(command.command_id, failed, &stop,
+        publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                           /*plan_valid=*/false);
         return true;
@@ -630,7 +678,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // 만 막고, 입력이 회복되면 같은 transaction으로 계속한다(계약 11.3절).
         command_manager_.NotifyInputDataStale();
         CommandAcceptance stale = acceptance;
-        stale.should_plan = false;
+        stale.planning_target = PlanningTarget::NONE;
         // result_code는 RESULT_NONE으로 남는다 - FrenetFeedback.msg에
         // INPUT_DATA_STALE이 없고 기존 코드로 거짓 매핑하지 않는다.
         stale.detail = "ego/object input is not fresh";
@@ -644,7 +692,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             stopReferenceVehicle(snapshot), trajectoryDt(),
             asmc_msgs::Trajectory::FAILURE_STATE_STALE, now);
         trajectory_pub_.publish(stop);
-        publishFeedbackV2(command.command_id, stale, &stop,
+        publishFeedbackV2(feedback_command_id, stale, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                           /*plan_valid=*/false);
         return true;
@@ -654,13 +702,13 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     CartesianState ego{};
     if (ConvertVehicleState(snapshot.vehicle, ego) != ConversionStatus::OK) {
         CommandAcceptance failed = acceptance;
-        failed.should_plan = false;
+        failed.planning_target = PlanningTarget::NONE;
         failed.detail = "vehicle state conversion failed";
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
             stopReferenceVehicle(snapshot), trajectoryDt(),
             asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
         trajectory_pub_.publish(stop);
-        publishFeedbackV2(command.command_id, failed, &stop,
+        publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                           /*plan_valid=*/false);
         return true;
@@ -673,13 +721,13 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     if (ConvertDetectedObjects(snapshot.objects, objects, collision_objects) !=
         ConversionStatus::OK) {
         CommandAcceptance failed = acceptance;
-        failed.should_plan = false;
+        failed.planning_target = PlanningTarget::NONE;
         failed.detail = "object conversion failed";
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
             stopReferenceVehicle(snapshot), trajectoryDt(),
             asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
         trajectory_pub_.publish(stop);
-        publishFeedbackV2(command.command_id, failed, &stop,
+        publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                           /*plan_valid=*/false);
         return true;
@@ -695,14 +743,14 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     PlannerCommand planner_command{};
     if (!ConvertBehaviorCommand(command, planner_command)) {
         CommandAcceptance failed = acceptance;
-        failed.should_plan = false;
+        failed.planning_target = PlanningTarget::NONE;
         failed.result_code = asmc_msgs::FrenetFeedback::INVALID_COMMAND;
         failed.detail = "command could not be mapped to a planner mode";
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
             stopReferenceVehicle(snapshot), trajectoryDt(),
             asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
         trajectory_pub_.publish(stop);
-        publishFeedbackV2(command.command_id, failed, &stop,
+        publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                           /*plan_valid=*/false);
         return true;
@@ -720,7 +768,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
                 "cannot project ego onto the reference line");
             CommandAcceptance failed = acceptance;
-            failed.should_plan = false;
+            failed.planning_target = PlanningTarget::NONE;
             failed.execution_state = command_manager_.execution_state();
             failed.result_code =
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
@@ -730,7 +778,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 stopReferenceVehicle(snapshot), trajectoryDt(),
                 asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
             trajectory_pub_.publish(stop);
-            publishFeedbackV2(command.command_id, failed, &stop,
+            publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                               /*plan_valid=*/false);
             return true;
@@ -746,7 +794,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
                 "stop target is not on the reference line");
             CommandAcceptance failed = acceptance;
-            failed.should_plan = false;
+            failed.planning_target = PlanningTarget::NONE;
             failed.execution_state = command_manager_.execution_state();
             failed.result_code =
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
@@ -762,7 +810,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 stopReferenceVehicle(snapshot), trajectoryDt(),
                 asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
             trajectory_pub_.publish(stop);
-            publishFeedbackV2(command.command_id, failed, &stop,
+            publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                               /*plan_valid=*/false);
             return true;
@@ -779,7 +827,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
                 "cannot read reference heading at the stop target");
             CommandAcceptance failed = acceptance;
-            failed.should_plan = false;
+            failed.planning_target = PlanningTarget::NONE;
             failed.execution_state = command_manager_.execution_state();
             failed.result_code =
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
@@ -789,7 +837,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 stopReferenceVehicle(snapshot), trajectoryDt(),
                 asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
             trajectory_pub_.publish(stop);
-            publishFeedbackV2(command.command_id, failed, &stop,
+            publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                               /*plan_valid=*/false);
             return true;
@@ -807,7 +855,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
                 "stop target heading disagrees with the reference line");
             CommandAcceptance failed = acceptance;
-            failed.should_plan = false;
+            failed.planning_target = PlanningTarget::NONE;
             failed.execution_state = command_manager_.execution_state();
             failed.result_code =
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
@@ -824,7 +872,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 stopReferenceVehicle(snapshot), trajectoryDt(),
                 asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
             trajectory_pub_.publish(stop);
-            publishFeedbackV2(command.command_id, failed, &stop,
+            publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                               /*plan_valid=*/false);
             return true;
@@ -862,7 +910,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             trajectory_pub_.publish(reused);
             CommandAcceptance transient_acceptance = acceptance;
             transient_acceptance.detail = "reusing previous trajectory";
-            publishFeedbackV2(command.command_id, transient_acceptance, &reused,
+            publishFeedbackV2(feedback_command_id, transient_acceptance, &reused,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_REUSED,
                               /*plan_valid=*/false);
             ROS_WARN_THROTTLE(1.0,
@@ -935,7 +983,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             stopReferenceVehicle(snapshot), trajectoryDt(),
             asmc_msgs::Trajectory::FAILURE_GENERATION, now);
         trajectory_pub_.publish(stop);
-        publishFeedbackV2(command.command_id, failed, &stop,
+        publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                           /*plan_valid=*/false);
         return true;
@@ -957,7 +1005,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             stopReferenceVehicle(snapshot), trajectoryDt(),
             asmc_msgs::Trajectory::FAILURE_GENERATION, now);
         trajectory_pub_.publish(stop);
-        publishFeedbackV2(command.command_id, failed, &stop,
+        publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                           /*plan_valid=*/false);
         return true;
@@ -983,7 +1031,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     trajectory_pub_.publish(trajectory);
     CommandAcceptance succeeded = acceptance;
     succeeded.execution_state = command_manager_.execution_state();
-    publishFeedbackV2(command.command_id, succeeded, &trajectory,
+    publishFeedbackV2(feedback_command_id, succeeded, &trajectory,
                       asmc_msgs::FrenetFeedback::TRAJECTORY_NEW,
                       /*plan_valid=*/true, ego_s_valid, ego_s);
 

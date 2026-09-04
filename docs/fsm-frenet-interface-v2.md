@@ -463,6 +463,14 @@ handshake maneuver이면 곧바로 `COMMITTED`로 올렸고, `COMMITTED → EXEC
 |---|---|---|
 | `→ COMMITTED` | 현재 `READY`인 handshake maneuver | 상태 불변, `false` 반환 |
 | `→ EXECUTING` | 현재 `COMMITTED`인 handshake maneuver | 상태 불변, `false` 반환 |
+| `→ COMPLETED` | 현재 `EXECUTING` (D6-0a) | 상태 불변, `false` 반환 |
+
+`COMPLETED`의 직전 상태는 handshake 여부와 무관하게 `EXECUTING`이다.
+
+```
+handshake:     COMMITTED → EXECUTING → COMPLETED
+non-handshake: EXECUTING → COMPLETED          (STOP이 HOLD에 도달)
+```
 
 강제하지 않으면 다음이 가능하다.
 
@@ -472,6 +480,12 @@ handshake maneuver이면 곧바로 `COMMITTED`로 올렸고, `COMMITTED → EXEC
 | `WAITING → COMMITTED` | "안전 후보 없음"으로 판단한 직후 잠근다 |
 | `EXECUTING → COMMITTED` | 진행 중인 기동의 상태만 뒤로 되돌린다 |
 | `READY → EXECUTING` | EXECUTE 재검증을 건너뛴 기동이 실행 중으로 보고된다 |
+| `PREPARING → COMPLETED` | 준비 중인 기동을 완료라고 보고한다 |
+| `READY → COMPLETED` | 실행하지도 않은 기동을 완료라고 보고한다 |
+| `COMMITTED → COMPLETED` | 잠그기만 하고 움직이지 않았는데 완료가 된다 |
+
+완료 오보가 특히 위험한 이유는, FSM이 `COMPLETED`를 **"다음 행동으로 넘어가도
+된다"**로 읽기 때문이다. 실제로 회피하지 않은 채 다음 명령이 나간다.
 
 앞의 두 개는 **잠긴 궤적이 검증되지 않았다는 뜻이므로 그대로 MPC로 나간다.**
 계약 5.2절이 금지하는 미검증 횡이동 발행이다. 그래서 두 API는 반환값으로
@@ -537,6 +551,54 @@ latch 중에도 `trajectory_source`는 계속 실제 값을 보고한다. 기동
 `COMMITTED` / `EXECUTING` 상태에서 **다른** `command_id`의 일반 maneuver가 오면
 `TOO_LATE_TO_CANCEL`과 동일하게 처리한다. 교차로 한가운데서 기동을 바꾸는 것이
 가장 위험하기 때문이다.
+
+#### 7.2.1 거부한 명령을 계획해서는 안 된다 (D6-0a에서 확정)
+
+"명령을 거부했다"와 "그 명령을 계획하지 않는다"는 서로 다른 문제다. 거부
+회신을 만드는 것과 planner에 무엇을 넘기는지는 별개의 결정이다.
+
+거부 사이클에도 **궤적 출력은 멈추지 않는다**(6.2절). 그래서 planner는
+호출된다. 이때 호출자가 "무엇을" 계획할지 모르면 방금 거부한 명령을 계획한다.
+
+```
+AVOID id=100  EXECUTING
+  + KEEP id=101 수신
+      ↓
+manager:  거부, active transaction = AVOID id=100
+      ↓
+node:     incoming KEEP id=101을 계획          ← 버그
+      ↓
+feedback: active_maneuver = AVOID
+          result_code     = TOO_LATE_TO_CANCEL
+MPC:      KEEP 궤적                            ← 사고
+```
+
+피드백은 "회피를 계속한다"고 말하면서 실제로는 횡이동을 중단하고 차선 중앙으로
+복귀하는 궤적이 나간다. **회피 중 차선 복귀는 회피하지 않는 것보다 위험하다** —
+장애물 옆에서 조향이 반대로 꺾인다.
+
+그래서 acceptance는 "계획할지"(`bool`)가 아니라 **"무엇을 계획할지"**를 돌려준다.
+
+| `planning_target` | 계획 대상 | 발생 조건 |
+|---|---|---|
+| `INCOMING_COMMAND` | 방금 들어온 명령 | 정상 새 명령, 같은 ID의 정상 refresh, E-STOP preempt |
+| `ACTIVE_TRANSACTION` | `active_command()` | COMMITTED 중 거부된 새 ID, 거부된 CANCEL, COMMITTED 중 payload mismatch |
+| `NONE` | 계획하지 않음 | CANCEL 성공, terminal latch, 미구현 maneuver, 진행 중 기동 없는 payload mismatch |
+
+manager는 활성 transaction의 `BehaviorCommand` 원본을 보관한다. 갱신 시점은
+**새 transaction 시작**과 **같은 ID의 정상 refresh**뿐이다. 거부된 새 ID /
+거부된 CANCEL / payload mismatch에서는 건드리지 않으므로, 이 값은 항상 "지금
+수행 중인 기동"을 가리킨다.
+
+`ACTIVE_TRANSACTION` 사이클에 node는 계획 대상을 활성 명령으로 다시 묶는다.
+그 결과 STOP 목표 투영 · fingerprint · 궤적 캐시까지 모두 같은 명령을 쓰게
+되므로, 캐시가 다른 명령의 궤적으로 오염되는 문제(8.4절)도 함께 막힌다.
+
+단, **피드백의 `command_id`는 방금 들어온 명령의 것**이다. FSM은 자기가 보낸
+ID와 일치하는 피드백만 반영하므로(1.5절) 거부 회신도 그 ID로 나가야 한다.
+계획 대상과 피드백 ID는 이 한 경우에만 서로 다르다.
+
+이 구조는 D7 LANE_CHANGE와 D8 MERGE에서 그대로 필요하다.
 
 ### 7.3 EMERGENCY_STOP만 preempt 가능
 
@@ -1365,6 +1427,7 @@ handshake 골격을 모드마다 다시 만들지 않는다.
 | 단계 | 범위 | AVOID gate |
 |---|---|---|
 | D6-0 | handshake 전이 강제, `plan_valid`/`trajectory_source` 축 분리 | 닫힘 |
+| D6-0a | 완료 전이 강제, 계획 대상 소유권 분리(`PlanningTarget`) | 닫힘 |
 | D6-1 | authoritative AVOID target resolve (`v2_avoidance_`, LEFT/RIGHT/NONE, optional target pose) | core만 (ROS 닫힘) |
 | D6-2 | PREPARE dual-output — 한 cycle에서 avoid candidate + maintenance path | 닫힘 |
 | D6-3 | EXECUTE / COMMIT / EXECUTING / completion, `target_d` lock, CANCEL, preemption | 닫힘 |

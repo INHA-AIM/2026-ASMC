@@ -17,6 +17,15 @@ bool UsesHandshake(uint8_t maneuver_type) {
 
 }  // namespace
 
+const char* PlanningTargetName(PlanningTarget target) {
+    switch (target) {
+        case PlanningTarget::NONE: return "NONE";
+        case PlanningTarget::INCOMING_COMMAND: return "INCOMING_COMMAND";
+        case PlanningTarget::ACTIVE_TRANSACTION: return "ACTIVE_TRANSACTION";
+    }
+    return "UNKNOWN_PLANNING_TARGET";
+}
+
 const char* RuntimeFailureName(RuntimeFailure failure) {
     switch (failure) {
         case RuntimeFailure::NONE: return "NONE";
@@ -53,6 +62,9 @@ bool CommandExecutionManager::IsNonPreemptible() const {
 
 void CommandExecutionManager::BeginTransaction(const Command& message) {
     has_active_command_ = true;
+    // 이 명령이 이 transaction의 원본이다. 거부된 명령으로는 갱신하지 않으므로
+    // planning_target == ACTIVE_TRANSACTION인 사이클에 호출자가 그대로 쓴다.
+    active_command_ = message;
     command_id_ = message.command_id;
     fingerprint_ = MakeCommandFingerprint(message);
     maneuver_type_ = message.maneuver_type;
@@ -87,8 +99,12 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
         if (IsNonPreemptible()) {
             // 교차로 한가운데서 기동을 바꾸는 것이 가장 위험하다. 기존
             // transaction을 그대로 유지한다(계약 7.2절).
+            //
+            // 계획 대상은 **거부한 새 명령이 아니라 활성 transaction**이다.
+            // 여기서 새 명령을 계획하면 피드백은 회피 중이라고 하면서 MPC로는
+            // 차선 복귀 궤적이 나간다(PlanningTarget 주석 참고).
             acceptance.command_accepted = true;
-            acceptance.should_plan = true;
+            acceptance.planning_target = PlanningTarget::ACTIVE_TRANSACTION;
             acceptance.execution_state = execution_state_;
             acceptance.result_code = Feedback::TOO_LATE_TO_CANCEL;
             acceptance.detail =
@@ -105,7 +121,10 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
             // 같은 ID로 목표가 바뀌면 이 transaction이 무엇이었는지가
             // 무너진다. 거부하되 기존 상태는 보존한다(계약 4.1절).
             acceptance.command_accepted = false;
-            acceptance.should_plan = IsNonPreemptible();
+            // 거부했으므로 이 명령을 계획하지 않는다. 진행 중인 기동이
+            // 있으면 그것을 계속하고, 없으면 planner를 호출하지 않는다.
+            acceptance.planning_target = IsNonPreemptible()
+                ? PlanningTarget::ACTIVE_TRANSACTION : PlanningTarget::NONE;
             acceptance.execution_state = execution_state_;
             acceptance.result_code = Feedback::INVALID_COMMAND;
             acceptance.detail =
@@ -116,7 +135,7 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
         // terminal latch 중이면 같은 ID 재발행에도 상태를 유지한다.
         if (terminal_latched_) {
             acceptance.command_accepted = true;
-            acceptance.should_plan = false;
+            acceptance.planning_target = PlanningTarget::NONE;
             acceptance.execution_state = execution_state_;
             // 상태와 함께 사유도 유지한다. 그러지 않으면 두 번째 사이클부터
             // result_code가 RESULT_NONE으로 떨어져 FSM이 원인을 잃는다.
@@ -130,8 +149,11 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
         // CANCEL 처리 (계약 7.1절).
         if (message.execution_request == Command::CANCEL) {
             if (IsNonPreemptible()) {
+                // 취소를 거부했으므로 잠긴 기동을 계속한다. CANCEL 메시지
+                // 자체를 계획 대상으로 쓰면 안 된다.
                 acceptance.command_accepted = true;
-                acceptance.should_plan = true;
+                acceptance.planning_target =
+                    PlanningTarget::ACTIVE_TRANSACTION;
                 acceptance.execution_state = execution_state_;
                 acceptance.result_code = Feedback::TOO_LATE_TO_CANCEL;
                 acceptance.detail = "cancel rejected after commit";
@@ -139,6 +161,7 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
             }
             // PREPARING / WAITING / READY에서는 취소가 성립한다.
             has_active_command_ = false;
+            active_command_ = Command{};
             command_id_ = 0;
             fingerprint_ = CommandFingerprint{};
             maneuver_type_ = 0;
@@ -148,7 +171,7 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
             terminal_result_detail_.clear();
             runtime_failure_ = RuntimeFailure::NONE;
             acceptance.command_accepted = true;
-            acceptance.should_plan = false;
+            acceptance.planning_target = PlanningTarget::NONE;
             acceptance.execution_state = Feedback::IDLE;
             acceptance.detail = "command cancelled";
             return acceptance;
@@ -157,6 +180,11 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
         // EXECUTE는 COMMIT 허가다. 실제 COMMIT 승격은 planner의 재검증
         // 결과에 달려 있으므로(계약 5.3절) 여기서 상태를 바꾸지 않는다.
         // D6~D8에서 planner 결과를 받아 READY -> COMMITTED로 올린다.
+        //
+        // 정상 refresh이므로 active_command_를 갱신한다. fingerprint가 같아도
+        // execution_request(PREPARE -> EXECUTE)와 valid_until은 mutable
+        // 필드이므로 최신 값을 들고 있어야 한다(계약 4.3절).
+        active_command_ = message;
         acceptance.command_accepted = true;
     }
 
@@ -172,7 +200,7 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
         terminal_result_code_ = Feedback::RESULT_NONE;
         terminal_result_detail_ = "maneuver not implemented yet";
         acceptance.command_accepted = true;
-        acceptance.should_plan = false;
+        acceptance.planning_target = PlanningTarget::NONE;
         acceptance.execution_state = Feedback::FAILED;
         // result_code는 RESULT_NONE으로 남는다. FrenetFeedback.msg에
         // MANEUVER_NOT_IMPLEMENTED가 없고, 기존 코드로 거짓 매핑하지
@@ -182,7 +210,7 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
     }
 
     runtime_failure_ = RuntimeFailure::NONE;
-    acceptance.should_plan = true;
+    acceptance.planning_target = PlanningTarget::INCOMING_COMMAND;
     acceptance.execution_state = execution_state_;
     return acceptance;
 }
@@ -242,8 +270,10 @@ bool CommandExecutionManager::NotifyExecutionStarted() {
     return true;
 }
 
-void CommandExecutionManager::NotifyManeuverCompleted() {
-    if (!has_active_command_) return;
+bool CommandExecutionManager::NotifyManeuverCompleted() {
+    if (!has_active_command_ || terminal_latched_) return false;
+    // handshake든 아니든 완료 직전 상태는 EXECUTING이다(헤더 주석 참고).
+    if (execution_state_ != Feedback::EXECUTING) return false;
     execution_state_ = Feedback::COMPLETED;
     terminal_latched_ = true;
     // 정상 완료는 오류가 아니므로 사유를 남기지 않는다. completed_normally()가
@@ -251,6 +281,7 @@ void CommandExecutionManager::NotifyManeuverCompleted() {
     terminal_result_code_ = Feedback::RESULT_NONE;
     terminal_result_detail_.clear();
     runtime_failure_ = RuntimeFailure::NONE;
+    return true;
 }
 
 }  // namespace frenet_planner_ros

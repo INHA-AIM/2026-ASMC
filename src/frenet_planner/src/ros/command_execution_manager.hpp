@@ -60,6 +60,40 @@ enum class RuntimeFailure {
 
 const char* RuntimeFailureName(RuntimeFailure failure);
 
+// 이 사이클에 planner가 **무엇을** 계획해야 하는지 (D6-0a).
+//
+// ===== 왜 bool should_plan으로는 부족한가 =====
+//
+// COMMITTED/EXECUTING인 handshake maneuver 중에 다른 command_id가 오면
+// manager는 기존 transaction을 유지하며 TOO_LATE_TO_CANCEL을 회신한다
+// (계약 7.2절). 그런데 should_plan=true이므로 호출자는 planner를 호출한다.
+// 이때 호출자가 "무엇을" 계획할지 알 방법이 없어 **방금 거부한 명령**을
+// 계획하게 된다:
+//
+//   AVOID id=100 EXECUTING
+//     + KEEP id=101 수신
+//     -> manager: 거부, active transaction = AVOID id=100
+//     -> node:    incoming KEEP id=101을 PlannerCommand로 변환해 planning
+//     -> feedback: active_maneuver=AVOID, result=TOO_LATE_TO_CANCEL
+//        그런데 MPC로 나가는 궤적은 KEEP                        <- 사고
+//
+// 피드백은 "회피를 계속한다"고 말하면서 실제로는 횡이동을 중단하고 차선
+// 중앙으로 복귀하는 궤적이 나간다. handshake gate가 닫혀 있어 D5까지는
+// 발현하지 않았지만, D6에서 AVOID를 열기 전에 반드시 막아야 한다.
+//
+// 그래서 "계획할지"와 "무엇을 계획할지"를 분리한다.
+enum class PlanningTarget {
+    // planner를 호출하지 않는다 (terminal latch / CANCEL 성공 / 미구현).
+    NONE,
+    // 방금 들어온 명령을 계획한다 (정상 경로).
+    INCOMING_COMMAND,
+    // 활성 transaction의 명령을 계획한다. 방금 들어온 명령은 거부되었으므로
+    // 호출자는 active_command()를 써야 한다.
+    ACTIVE_TRANSACTION,
+};
+
+const char* PlanningTargetName(PlanningTarget target);
+
 // 명령 하나를 받아들인 결과.
 struct CommandAcceptance {
     // 명령의 형식과 필수 필드가 정상인지. 궤적 생성 성공 여부와 무관하다.
@@ -67,11 +101,19 @@ struct CommandAcceptance {
     // 수신·해석되었고 취소가 불가능한 시점이라는 뜻이다(계약 7.1절).
     bool command_accepted = false;
 
-    // planner를 호출해도 되는지. false이면 이 사이클에 planner를 호출하지
-    // 않는다. 미구현 maneuver를 ResolveManeuver에 넣으면 default 분기로
-    // velocity keeping 궤적이 나오는데, 이는 FSM이 요청하지 않은 기동이
-    // 성공처럼 보이는 위험한 상태다(계약 11.4절).
-    bool should_plan = false;
+    // 이 사이클에 무엇을 계획할지. NONE이면 planner를 호출하지 않는다.
+    // 미구현 maneuver를 ResolveManeuver에 넣으면 default 분기로 velocity
+    // keeping 궤적이 나오는데, 이는 FSM이 요청하지 않은 기동이 성공처럼
+    // 보이는 위험한 상태다(계약 11.4절).
+    //
+    // ACTIVE_TRANSACTION이면 **방금 들어온 명령이 아니라** manager의
+    // active_command()를 계획해야 한다(PlanningTarget 주석 참고).
+    PlanningTarget planning_target = PlanningTarget::NONE;
+
+    // 편의 조회. planner를 호출하는 사이클인지만 묻는 곳에서 쓴다.
+    bool should_plan() const {
+        return planning_target != PlanningTarget::NONE;
+    }
 
     // FrenetFeedback.execution_state로 그대로 보고할 값.
     uint8_t execution_state = asmc_msgs::FrenetFeedback::IDLE;
@@ -105,6 +147,13 @@ class CommandExecutionManager {
     //   CANCEL                   -> 상태에 따라 수락 또는 TOO_LATE_TO_CANCEL
     //   COMMITTED 중 다른 ID     -> 거부 (EMERGENCY_STOP만 예외)
     //   terminal latch 중        -> 새 ID까지 유지
+    //
+    // 반환된 planning_target이 계획 대상을 정한다:
+    //   INCOMING_COMMAND    정상 새 명령 / 같은 ID의 정상 refresh
+    //   ACTIVE_TRANSACTION  COMMITTED 중 거부된 새 ID, 거부된 CANCEL,
+    //                       COMMITTED 중 payload mismatch
+    //   NONE                CANCEL 성공, terminal latch, 미구현 maneuver,
+    //                       진행 중 기동이 없을 때의 payload mismatch
     CommandAcceptance Accept(const asmc_msgs::BehaviorCommand& message);
 
     // 입력 데이터 stale을 기록한다. 명령 자체는 정상이므로 transaction을
@@ -164,7 +213,30 @@ class CommandExecutionManager {
     bool NotifyExecutionStarted();
 
     // maneuver를 기하학적으로 완료했다. terminal latch가 걸린다.
-    void NotifyManeuverCompleted();
+    //
+    // EXECUTING에서만 허용한다(D6-0a). 계약상 완료 경로는 단 하나다:
+    //   handshake:     COMMITTED -> EXECUTING -> COMPLETED
+    //   non-handshake: EXECUTING -> COMPLETED   (STOP이 HOLD에 도달)
+    // 즉 어느 쪽이든 직전 상태는 EXECUTING이다. 잠그지 않으면
+    //   PREPARING -> COMPLETED   준비 중인 기동을 완료라고 보고
+    //   READY     -> COMPLETED   실행하지도 않은 기동을 완료라고 보고
+    //   COMMITTED -> COMPLETED   잠그기만 하고 움직이지 않았는데 완료
+    // 가 가능하다. FSM은 COMPLETED를 "다음 행동으로 넘어가도 된다"로 읽으므로
+    // 실제로 회피하지 않은 채 다음 명령이 나간다.
+    //
+    // 반환값은 "실제로 완료 처리되었는지"다.
+    bool NotifyManeuverCompleted();
+
+    // 활성 transaction의 명령 원본 (D6-0a).
+    //
+    // planning_target == ACTIVE_TRANSACTION인 사이클에 호출자가 계획할
+    // 대상이다. 거부된 새 ID / 거부된 CANCEL / payload mismatch에서는
+    // 갱신하지 않으므로, 이 값은 항상 "지금 수행 중인 기동"을 가리킨다.
+    //
+    // has_active_command()가 false일 때의 내용은 의미가 없다.
+    const asmc_msgs::BehaviorCommand& active_command() const {
+        return active_command_;
+    }
 
     // 현재 상태 조회 (피드백 작성용).
     bool has_active_command() const { return has_active_command_; }
@@ -209,6 +281,11 @@ class CommandExecutionManager {
     void BeginTransaction(const asmc_msgs::BehaviorCommand& message);
 
     bool has_active_command_ = false;
+
+    // 활성 transaction의 명령 원본. BeginTransaction과 같은 ID의 정상
+    // refresh에서만 갱신한다(active_command() 주석 참고).
+    asmc_msgs::BehaviorCommand active_command_;
+
     uint32_t command_id_ = 0;
     CommandFingerprint fingerprint_;
     uint8_t maneuver_type_ = 0;

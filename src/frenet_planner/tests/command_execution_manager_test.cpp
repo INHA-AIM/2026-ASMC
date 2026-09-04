@@ -10,6 +10,10 @@
 // D6-0에서 handshake 상태 전이 강제를 추가했다:
 //   PREPARING/WAITING -> READY -> COMMITTED -> EXECUTING만 허용하고,
 //   그 밖의 승격 시도는 상태를 바꾸지 않고 false를 반환한다.
+//
+// D6-0a에서 두 가지를 더 잠갔다:
+//   COMPLETED는 EXECUTING에서만 도달 가능 (계약 5.6절)
+//   거부된 명령을 계획 대상으로 쓰지 않는다 (계약 7.2.1절, PlanningTarget)
 
 #include "ros/command_execution_manager.hpp"
 
@@ -92,7 +96,7 @@ int main() {
     {
         CommandExecutionManager manager = MakeD4Manager();
         const auto acceptance = manager.Accept(MakeKeep(10));
-        Expect(acceptance.command_accepted && acceptance.should_plan &&
+        Expect(acceptance.command_accepted && acceptance.should_plan() &&
                    manager.command_id() == 10 &&
                    manager.execution_state() == Feedback::EXECUTING,
                "new command_id starts a transaction");
@@ -110,7 +114,7 @@ int main() {
         CommandExecutionManager manager = MakeD4Manager();
         manager.Accept(MakeKeep(10));
         const auto again = manager.Accept(MakeKeep(10));
-        Expect(again.command_accepted && again.should_plan &&
+        Expect(again.command_accepted && again.should_plan() &&
                    manager.command_id() == 10,
                "same id with same payload continues the transaction");
     }
@@ -135,7 +139,7 @@ int main() {
         CommandExecutionManager manager = MakeFullManager();
         manager.Accept(MakeLaneChange(13, Command::PREPARE));
         const auto execute = manager.Accept(MakeLaneChange(13, Command::EXECUTE));
-        Expect(execute.command_accepted && execute.should_plan &&
+        Expect(execute.command_accepted && execute.should_plan() &&
                    manager.command_id() == 13,
                "PREPARE -> EXECUTE stays in the same transaction");
     }
@@ -146,7 +150,7 @@ int main() {
         CommandExecutionManager manager = MakeFullManager();
         manager.Accept(MakeLaneChange(14, Command::PREPARE));
         const auto cancel = manager.Accept(MakeLaneChange(14, Command::CANCEL));
-        Expect(cancel.command_accepted && !cancel.should_plan &&
+        Expect(cancel.command_accepted && !cancel.should_plan() &&
                    cancel.execution_state == Feedback::IDLE &&
                    !manager.has_active_command(),
                "CANCEL in PREPARING returns to IDLE");
@@ -173,7 +177,7 @@ int main() {
             manager.Accept(MakeLaneChange(16, Command::CANCEL));
         Expect(result.command_accepted &&
                    result.result_code == Feedback::TOO_LATE_TO_CANCEL &&
-                   result.should_plan &&
+                   result.should_plan() &&
                    manager.execution_state() == Feedback::COMMITTED,
                "CANCEL after commit is TOO_LATE_TO_CANCEL");
     }
@@ -193,7 +197,7 @@ int main() {
         stop.has_target_pose = true;
         stop.target_pose_map.orientation.w = 1.0;
         const auto acceptance = manager.Accept(stop);
-        Expect(acceptance.command_accepted && acceptance.should_plan &&
+        Expect(acceptance.command_accepted && acceptance.should_plan() &&
                    acceptance.result_code == Feedback::RESULT_NONE &&
                    manager.command_id() == 21 &&
                    manager.maneuver_type() == Command::STOP,
@@ -208,7 +212,7 @@ int main() {
         stop.target_pose_map.orientation.w = 1.0;
         manager.Accept(stop);
         const auto acceptance = manager.Accept(MakeKeep(23));
-        Expect(acceptance.command_accepted && acceptance.should_plan &&
+        Expect(acceptance.command_accepted && acceptance.should_plan() &&
                    manager.command_id() == 23 &&
                    manager.maneuver_type() == Command::KEEP,
                "STOP -> KEEP transition is allowed");
@@ -227,7 +231,7 @@ int main() {
         avoid.execution_request = Command::PREPARE;
         avoid.primary_object_id = 21;
         const auto acceptance = manager.Accept(avoid);
-        Expect(acceptance.command_accepted && acceptance.should_plan &&
+        Expect(acceptance.command_accepted && acceptance.should_plan() &&
                    manager.command_id() == 25 &&
                    manager.execution_state() == Feedback::PREPARING,
                "FOLLOW -> AVOID transition is allowed");
@@ -242,7 +246,7 @@ int main() {
         Expect(manager.execution_state() == Feedback::READY,
                "LANE_CHANGE reaches READY");
         const auto switch_at_ready = manager.Accept(MakeKeep(27));
-        Expect(switch_at_ready.command_accepted && switch_at_ready.should_plan &&
+        Expect(switch_at_ready.command_accepted && switch_at_ready.should_plan() &&
                    manager.command_id() == 27,
                "LANE_CHANGE in READY can still be replaced");
     }
@@ -257,7 +261,7 @@ int main() {
         const auto acceptance = manager.Accept(MakeKeep(29));
         Expect(acceptance.command_accepted &&
                    acceptance.result_code == Feedback::TOO_LATE_TO_CANCEL &&
-                   acceptance.should_plan &&
+                   acceptance.should_plan() &&
                    manager.command_id() == 28 &&
                    manager.maneuver_type() == Command::LANE_CHANGE,
                "committed LANE_CHANGE rejects a normal new command");
@@ -269,7 +273,7 @@ int main() {
         manager.NotifyPlanSucceeded();
         manager.NotifyCommitted();
         const auto acceptance = manager.Accept(MakeEmergencyStop(31));
-        Expect(acceptance.command_accepted && acceptance.should_plan &&
+        Expect(acceptance.command_accepted && acceptance.should_plan() &&
                    manager.command_id() == 31 &&
                    manager.maneuver_type() == Command::EMERGENCY_STOP,
                "committed LANE_CHANGE yields to EMERGENCY_STOP");
@@ -280,7 +284,7 @@ int main() {
         CommandExecutionManager manager = MakeD4Manager();
         manager.Accept(MakeKeep(30));  // -> EXECUTING
         const auto acceptance = manager.Accept(MakeEmergencyStop(31));
-        Expect(acceptance.command_accepted && acceptance.should_plan &&
+        Expect(acceptance.command_accepted && acceptance.should_plan() &&
                    manager.command_id() == 31 &&
                    manager.maneuver_type() == Command::EMERGENCY_STOP,
                "EMERGENCY_STOP preempts an executing command");
@@ -307,13 +311,13 @@ int main() {
         // 같은 ID 재발행에도 유지된다.
         for (int i = 0; i < 3; ++i) {
             const auto acceptance = manager.Accept(MakeKeep(40));
-            Expect(acceptance.command_accepted && !acceptance.should_plan &&
+            Expect(acceptance.command_accepted && !acceptance.should_plan() &&
                        acceptance.execution_state == Feedback::COMPLETED,
                    "COMPLETED is latched on same-id refresh");
         }
         // 새 ID에서만 해제된다.
         const auto next = manager.Accept(MakeKeep(41));
-        Expect(next.command_accepted && next.should_plan &&
+        Expect(next.command_accepted && next.should_plan() &&
                    manager.command_id() == 41 &&
                    manager.execution_state() == Feedback::EXECUTING &&
                    !manager.terminal_latched(),
@@ -327,11 +331,11 @@ int main() {
                    manager.terminal_latched(),
                "terminal plan failure sets FAILED and latches");
         const auto again = manager.Accept(MakeKeep(42));
-        Expect(again.command_accepted && !again.should_plan &&
+        Expect(again.command_accepted && !again.should_plan() &&
                    again.execution_state == Feedback::FAILED,
                "FAILED is latched on same-id refresh");
         const auto next = manager.Accept(MakeKeep(43));
-        Expect(next.should_plan && manager.execution_state() == Feedback::EXECUTING,
+        Expect(next.should_plan() && manager.execution_state() == Feedback::EXECUTING,
                "new command_id clears the FAILED latch");
     }
     {
@@ -355,7 +359,7 @@ int main() {
         follow.maneuver_type = Command::FOLLOW;
         follow.primary_object_id = 7;
         const auto acceptance = manager.Accept(follow);
-        Expect(acceptance.command_accepted && !acceptance.should_plan &&
+        Expect(acceptance.command_accepted && !acceptance.should_plan() &&
                    acceptance.execution_state == Feedback::FAILED &&
                    manager.runtime_failure() ==
                        RuntimeFailure::MANEUVER_NOT_IMPLEMENTED,
@@ -374,7 +378,7 @@ int main() {
         follow.maneuver_type = Command::FOLLOW;
         follow.primary_object_id = 7;
         const auto acceptance = manager.Accept(follow);
-        Expect(acceptance.should_plan &&
+        Expect(acceptance.should_plan() &&
                    manager.runtime_failure() == RuntimeFailure::NONE,
                "implemented maneuver is planned");
     }
@@ -396,7 +400,7 @@ int main() {
                "input stale keeps the transaction alive");
         // 입력이 회복되면 같은 transaction으로 계속한다.
         const auto acceptance = manager.Accept(MakeKeep(60));
-        Expect(acceptance.should_plan &&
+        Expect(acceptance.should_plan() &&
                    manager.runtime_failure() == RuntimeFailure::NONE,
                "transaction resumes after input recovers");
     }
@@ -527,7 +531,7 @@ int main() {
 
         // 새 ID로 구현된 maneuver가 오면 정상 복귀한다.
         const auto recovered = manager.Accept(MakeKeep(71));
-        Expect(recovered.should_plan &&
+        Expect(recovered.should_plan() &&
                    manager.execution_state() == Feedback::EXECUTING &&
                    !manager.terminal_latched(),
                "new command_id recovers from an unimplemented-maneuver latch");
@@ -657,7 +661,7 @@ int main() {
         Expect(manager.execution_state() == Feedback::EXECUTING,
                "maneuver is EXECUTING before the emergency");
         const auto emergency = manager.Accept(MakeEmergencyStop(207));
-        Expect(emergency.command_accepted && emergency.should_plan &&
+        Expect(emergency.command_accepted && emergency.should_plan() &&
                    manager.command_id() == 207 &&
                    manager.maneuver_type() == Command::EMERGENCY_STOP,
                "EXECUTING maneuver still yields to EMERGENCY_STOP");
@@ -670,7 +674,7 @@ int main() {
         manager.NotifyCommitted();
         manager.NotifyExecutionStarted();
         const auto rejected = manager.Accept(MakeKeep(209));
-        Expect(rejected.command_accepted && rejected.should_plan &&
+        Expect(rejected.command_accepted && rejected.should_plan() &&
                    rejected.result_code == Feedback::TOO_LATE_TO_CANCEL &&
                    manager.command_id() == 208,
                "EXECUTING maneuver rejects a normal new command");
@@ -705,6 +709,291 @@ int main() {
         Expect(!manager.terminal_latched() &&
                    manager.execution_state() == Feedback::EXECUTING,
                "transient failure during EXECUTING does not drop to WAITING");
+    }
+
+    // ============ D6-0a: 완료 전이 강제 ================================
+    //
+    // 완료 직전 상태는 handshake든 아니든 EXECUTING이다:
+    //   handshake:     COMMITTED -> EXECUTING -> COMPLETED
+    //   non-handshake: EXECUTING -> COMPLETED   (STOP이 HOLD에 도달)
+    // 그 밖의 상태에서 COMPLETED가 되면 FSM은 실제로 수행하지 않은 기동을
+    // 완료로 읽고 다음 행동으로 넘어간다.
+    {
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(300, Command::PREPARE));
+        Expect(manager.execution_state() == Feedback::PREPARING,
+               "completion guard: starts in PREPARING");
+        Expect(!manager.NotifyManeuverCompleted(),
+               "PREPARING -> COMPLETED is rejected");
+        Expect(manager.execution_state() == Feedback::PREPARING &&
+                   !manager.terminal_latched(),
+               "rejected completion leaves PREPARING unlatched");
+    }
+    {
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(301, Command::PREPARE));
+        manager.NotifyPlanFailed(/*terminal=*/false);
+        Expect(manager.execution_state() == Feedback::WAITING,
+               "completion guard: reaches WAITING");
+        Expect(!manager.NotifyManeuverCompleted(),
+               "WAITING -> COMPLETED is rejected");
+        Expect(manager.execution_state() == Feedback::WAITING &&
+                   !manager.terminal_latched(),
+               "rejected completion leaves WAITING unlatched");
+    }
+    {
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(302, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        Expect(manager.execution_state() == Feedback::READY,
+               "completion guard: reaches READY");
+        Expect(!manager.NotifyManeuverCompleted(),
+               "READY -> COMPLETED is rejected");
+        Expect(manager.execution_state() == Feedback::READY &&
+                   !manager.terminal_latched(),
+               "rejected completion leaves READY unlatched");
+    }
+    {
+        // COMMITTED는 "잠갔다"이지 "움직였다"가 아니다. 여기서 완료로
+        // 올리면 잠그기만 하고 회피하지 않은 기동이 완료로 보고된다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(303, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        Expect(manager.execution_state() == Feedback::COMMITTED,
+               "completion guard: reaches COMMITTED");
+        Expect(!manager.NotifyManeuverCompleted(),
+               "COMMITTED -> COMPLETED is rejected");
+        Expect(manager.execution_state() == Feedback::COMMITTED &&
+                   !manager.terminal_latched(),
+               "rejected completion leaves COMMITTED unlatched");
+    }
+    {
+        // 정상 경로.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(304, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        manager.NotifyExecutionStarted();
+        Expect(manager.NotifyManeuverCompleted(),
+               "EXECUTING -> COMPLETED is allowed");
+        Expect(manager.execution_state() == Feedback::COMPLETED &&
+                   manager.terminal_latched() && manager.completed_normally(),
+               "completion latches COMPLETED");
+        // 반복 호출은 이미 latch된 상태를 다시 건드리지 않는다.
+        Expect(!manager.NotifyManeuverCompleted(),
+               "completion is not repeatable while latched");
+    }
+    {
+        // handshake를 쓰지 않는 STOP도 EXECUTING -> COMPLETED다. D4에서
+        // 구현한 HOLD 완료 경로가 이 guard로 막히지 않아야 한다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command stop = MakeKeep(305);
+        stop.maneuver_type = Command::STOP;
+        stop.has_target_pose = true;
+        stop.target_pose_map.position.x = 250.0;
+        stop.target_pose_map.orientation.w = 1.0;
+        manager.Accept(stop);
+        Expect(manager.execution_state() == Feedback::EXECUTING,
+               "STOP starts in EXECUTING");
+        Expect(manager.NotifyManeuverCompleted(),
+               "STOP completes from EXECUTING (HOLD reached)");
+        Expect(manager.completed_normally(),
+               "STOP completion is a normal completion");
+    }
+    {
+        // FAILED로 latch된 뒤에는 완료로 덮을 수 없다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(306, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        manager.NotifyExecutionStarted();
+        manager.NotifyPlanFailed(/*terminal=*/true,
+                                 Feedback::COLLISION_BLOCKED, "blocked");
+        Expect(manager.execution_state() == Feedback::FAILED,
+               "terminal failure during EXECUTING latches FAILED");
+        Expect(!manager.NotifyManeuverCompleted(),
+               "a latched FAILED cannot be overwritten by completion");
+        Expect(manager.execution_state() == Feedback::FAILED &&
+                   !manager.completed_normally(),
+               "FAILED stays FAILED");
+    }
+
+    // ============ D6-0a: 계획 대상 소유권 ==============================
+    //
+    // COMMITTED/EXECUTING 중 거부된 명령을 실제로 계획하면, 피드백은 회피
+    // 중이라고 하면서 MPC로는 다른 궤적이 나간다. 계획 대상을 명시적으로
+    // 분리해 그것을 막는다.
+    using frenet_planner_ros::PlanningTarget;
+    {
+        // 정상 새 명령은 들어온 명령을 계획한다.
+        CommandExecutionManager manager = MakeFullManager();
+        const auto keep = manager.Accept(MakeKeep(400));
+        Expect(keep.planning_target == PlanningTarget::INCOMING_COMMAND,
+               "a normal new command plans the incoming command");
+        Expect(manager.active_command().command_id == 400,
+               "the active command is the accepted command");
+    }
+    {
+        // 같은 ID의 정상 refresh도 들어온 명령을 계획하고, active_command_는
+        // 최신 값으로 갱신된다 - PREPARE -> EXECUTE는 mutable 필드만
+        // 바뀌므로 fingerprint는 같지만 execution_request는 달라진다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(401, Command::PREPARE));
+        Expect(manager.active_command().execution_request == Command::PREPARE,
+               "the active command starts as PREPARE");
+        manager.NotifyPlanSucceeded();
+        const auto execute =
+            manager.Accept(MakeLaneChange(401, Command::EXECUTE));
+        Expect(execute.planning_target == PlanningTarget::INCOMING_COMMAND,
+               "a same-id refresh plans the incoming command");
+        Expect(manager.active_command().execution_request == Command::EXECUTE,
+               "the active command is refreshed to EXECUTE");
+        Expect(manager.active_command().command_id == 401,
+               "the refresh keeps the same transaction id");
+    }
+    {
+        // ***** 핵심 케이스 *****
+        // EXECUTING인 AVOID 중 새 KEEP이 오면 거부하고, 계획 대상은 활성
+        // transaction(AVOID)이다. 여기서 INCOMING_COMMAND가 나오면 피드백은
+        // AVOID인데 MPC로는 KEEP 궤적이 나간다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeLaneChange(402, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        manager.Accept(avoid);
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        manager.NotifyExecutionStarted();
+        Expect(manager.execution_state() == Feedback::EXECUTING,
+               "ownership: AVOID is EXECUTING");
+
+        const auto rejected = manager.Accept(MakeKeep(403));
+        Expect(rejected.command_accepted &&
+                   rejected.result_code == Feedback::TOO_LATE_TO_CANCEL,
+               "ownership: the new KEEP is reported TOO_LATE_TO_CANCEL");
+        Expect(rejected.planning_target == PlanningTarget::ACTIVE_TRANSACTION,
+               "ownership: the planning target is the active transaction");
+        Expect(rejected.should_plan(),
+               "ownership: the cycle still plans (the maneuver continues)");
+        Expect(manager.active_command().command_id == 402 &&
+                   manager.active_command().maneuver_type == Command::AVOID &&
+                   manager.active_command().primary_object_id == 21,
+               "ownership: the active command is still the AVOID");
+        Expect(manager.command_id() == 402 &&
+                   manager.maneuver_type() == Command::AVOID,
+               "ownership: the transaction identity is unchanged");
+    }
+    {
+        // 거부된 CANCEL도 같다. CANCEL 메시지를 계획 대상으로 쓰면 안 된다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeLaneChange(404, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        manager.Accept(avoid);
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        manager.NotifyExecutionStarted();
+
+        Command cancel = avoid;
+        cancel.execution_request = Command::CANCEL;
+        const auto result = manager.Accept(cancel);
+        Expect(result.result_code == Feedback::TOO_LATE_TO_CANCEL,
+               "ownership: CANCEL after commit is TOO_LATE_TO_CANCEL");
+        Expect(result.planning_target == PlanningTarget::ACTIVE_TRANSACTION,
+               "ownership: a rejected CANCEL plans the active transaction");
+        Expect(manager.active_command().execution_request == Command::PREPARE,
+               "ownership: the rejected CANCEL did not overwrite the active "
+               "command");
+        Expect(manager.execution_state() == Feedback::EXECUTING,
+               "ownership: the maneuver stays EXECUTING");
+    }
+    {
+        // E-STOP은 정상 preempt이므로 들어온 명령을 계획한다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeLaneChange(405, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        manager.Accept(avoid);
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        manager.NotifyExecutionStarted();
+
+        const auto emergency = manager.Accept(MakeEmergencyStop(406));
+        Expect(emergency.planning_target == PlanningTarget::INCOMING_COMMAND,
+               "ownership: EMERGENCY_STOP plans the incoming command");
+        Expect(manager.active_command().command_id == 406 &&
+                   manager.active_command().maneuver_type ==
+                       Command::EMERGENCY_STOP,
+               "ownership: EMERGENCY_STOP becomes the active command");
+    }
+    {
+        // 성공한 CANCEL과 terminal latch는 계획하지 않는다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(407, Command::PREPARE));
+        manager.NotifyPlanSucceeded();
+        const auto cancel =
+            manager.Accept(MakeLaneChange(407, Command::CANCEL));
+        Expect(cancel.planning_target == PlanningTarget::NONE,
+               "ownership: a successful CANCEL plans nothing");
+        Expect(!manager.has_active_command(),
+               "ownership: a successful CANCEL clears the transaction");
+    }
+    {
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeLaneChange(408, Command::PREPARE));
+        manager.NotifyPlanFailed(/*terminal=*/true,
+                                 Feedback::COLLISION_BLOCKED, "blocked");
+        const auto latched =
+            manager.Accept(MakeLaneChange(408, Command::PREPARE));
+        Expect(latched.planning_target == PlanningTarget::NONE,
+               "ownership: a terminal latch plans nothing");
+    }
+    {
+        // payload mismatch: 진행 중 기동이 없으면 아무것도 계획하지 않는다.
+        CommandExecutionManager manager = MakeFullManager();
+        manager.Accept(MakeKeep(409));
+        Command changed = MakeKeep(409);
+        changed.desired_speed_mps = 7.0;
+        const auto mismatch = manager.Accept(changed);
+        Expect(!mismatch.command_accepted &&
+                   mismatch.result_code == Feedback::INVALID_COMMAND,
+               "ownership: a payload change without a new id is rejected");
+        Expect(mismatch.planning_target == PlanningTarget::NONE,
+               "ownership: a rejected payload change plans nothing for KEEP");
+        Expect(manager.active_command().desired_speed_mps == -1.0,
+               "ownership: the rejected payload did not reach the active "
+               "command");
+    }
+    {
+        // payload mismatch: COMMITTED 중이면 잠긴 기동을 계속한다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeLaneChange(410, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        manager.Accept(avoid);
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+
+        Command changed = avoid;
+        changed.primary_object_id = 22;   // fingerprint 변경
+        const auto mismatch = manager.Accept(changed);
+        Expect(!mismatch.command_accepted,
+               "ownership: a committed maneuver rejects a payload change");
+        Expect(mismatch.planning_target == PlanningTarget::ACTIVE_TRANSACTION,
+               "ownership: the committed maneuver keeps being planned");
+        Expect(manager.active_command().primary_object_id == 21,
+               "ownership: the committed maneuver keeps its own target");
+    }
+    {
+        // 미구현 maneuver는 계획하지 않는다.
+        CommandExecutionManager manager = MakeD4Manager();
+        Command avoid = MakeLaneChange(411, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        const auto acceptance = manager.Accept(avoid);
+        Expect(acceptance.planning_target == PlanningTarget::NONE,
+               "ownership: an unimplemented maneuver plans nothing");
     }
 
     if (g_failures != 0) {
