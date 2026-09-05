@@ -21,6 +21,7 @@
 #include "frenet_planner/Evaluation/Cost.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
 #include "frenet_planner/Generator/CandidateCombiner.hpp"
+#include "frenet_planner/Maneuver/ManeuverUtils.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
 #include "frenet_planner/Math/Utils.hpp"
 
@@ -42,7 +43,7 @@ double CandidateCurvatureSpeedLimit(const FrenetPath& path, const RefLine& ref,
 }  // namespace
 
 double FrenetPlanner::EffectiveAvoidDetectionDistance() const {
-    // legacy AVOID 등록거리와 같은 식이다(frenet_planner.cpp의 acquisition_cfg).
+    // legacy AVOID 등록거리와 같은 식이다(UpdateLegacyAvoidContext의 acquisition_cfg).
     // config 값을 그대로 쓰면 충돌 lookahead보다 짧아져, 장애물을 회피 대상으로
     // 등록하기 전에 충돌 필터가 중앙 후보를 전부 제거한다 -> 속도 급락 후
     // 등록되면 다시 가속하는 진동이 생긴다.

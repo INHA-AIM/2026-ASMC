@@ -8,7 +8,7 @@
  * no-valid-candidate failure 분류는 이 파일로 옮기지 않는다 - PlanInternal이
  * 계속 소유하며, 이 파일의 함수들이 갱신/판정한 merge_ 상태와 candidates를
  * 그대로 읽는다. CartesianTrajectoryClear는 AVOID에서도 쓰므로
- * frenet_planner.cpp에 남아 있다.
+ * Maneuver/ManeuverUtils.hpp의 공유 helper다.
  */
 
 #include "frenet_planner/frenet_planner.hpp"
@@ -17,6 +17,7 @@
 #include <cstdio>
 #include <limits>
 
+#include "frenet_planner/Maneuver/ManeuverUtils.hpp"
 #include "frenet_planner/Maneuver/MergeInternal.hpp"
 
 namespace {

@@ -18,26 +18,18 @@
 #include "frenet_planner/Math/FrenetConverter.hpp"
 #include "frenet_planner/visualization/planner_debug_writer.hpp"
 
-// 폐루프 트랙에서 current_s -> target_s의 전방 호길이(frenet_planner.cpp 정의).
-// STOP stop_distance 계산에 쓰이며 Maneuver/Stop.cpp에서도 호출한다.
-double ForwardArcDistance(double current_s, double target_s, double s_max);
-
-// fresh Cartesian collision recheck(frenet_planner.cpp 정의). AVOID(저속
-// crawl/PREPARE)와 MERGE(M2: locked replay/commit_pending candidate 검증)가
-// 모두 쓰며 Maneuver/Merge.cpp에서도 호출한다.
-bool CartesianTrajectoryClear(const CartesianPath& path,
-                              const std::vector<TrackedObstacle>& obstacles,
-                              const VehicleShape& ego_shape,
-                              const CollisionCheckConfig& collision_cfg,
-                              double dt, int* blocking_id = nullptr);
-
 // Frenet Frame Path Planner: 전역 경로(RefLine)를 기준으로 한 Local Planner.
-// FSM(behavior_planner)이 아직 연동되지 않아서, 모드 전환 조건을 지금은
-// Plan() 안에 직접 하드코딩해뒀다(내 차선을 막는 정지/저속 장애물이 있으면
-// AVOID, 그 다음 대상 차선에 sa/sb(앞/뒤 차량)가 모두 있으면 MERGE, 그
-// 다음 선두 차량이 있으면 FOLLOWING, 다 없으면 LANE_KEEPING). MERGE는
-// 설정된 회전교차로 conflict_s 접근구간에서 시간 gap을 판단한다. behavior_planner
-// 연동 시 이 조건문들을 걷어내고 FSM이 준 mode를 그대로 쓰도록 교체한다.
+// 두 진입점이 공존한다:
+//   - 3인자 Plan(ego, obstacles, out_path): legacy UDP 회귀 경로. 내 차선을
+//     막는 정지/저속 장애물이 있으면 AVOID, 대상 차선에 sa/sb(앞/뒤 차량)가
+//     모두 있으면 MERGE, 선두 차량이 있으면 FOLLOWING, 다 없으면
+//     LANE_KEEPING을 PlanInternal 내부(SelectLegacyBehavior)에서 직접
+//     판단한다. MERGE는 설정된 회전교차로 conflict_s 접근구간에서 시간
+//     gap을 판단한다.
+//   - PlannerCommand 인자를 받는 Plan() 오버로드: 외부 FSM이 이미 결정한
+//     mode를 그대로 받는 external command 경로다(IsSupportedExternalMode의
+//     whitelist가 진입 가능 모드를 제한한다).
+// 두 경로 모두 PlanInternal이 공유하며, use_legacy_behavior로 분기한다.
 class FrenetPlanner {
 public:
     // Plan() 실패 원인. 호출자(ROS node)가 "이전 궤적 재사용"과 "즉시 정지"를

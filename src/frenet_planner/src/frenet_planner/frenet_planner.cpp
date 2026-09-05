@@ -14,40 +14,6 @@
 #include "frenet_planner/Generator/LongitudinalGenerator.hpp"
 #include "frenet_planner/Maneuver/MergeInternal.hpp"
 
-// AVOID(PREPARE/저속 crawl)와 MERGE(M2: locked replay/commit_pending
-// candidate 검증)가 모두 쓰는 fresh Cartesian collision recheck이므로
-// 익명 namespace 밖에 둔다 - frenet_planner.hpp에 선언을 추가해 Maneuver/
-// Merge.cpp에서도 링크된다. 로직 자체는 그대로다.
-bool CartesianTrajectoryClear(const CartesianPath& path,
-                              const std::vector<TrackedObstacle>& obstacles,
-                              const VehicleShape& ego_shape,
-                              const CollisionCheckConfig& collision_cfg,
-                              double dt, int* blocking_id) {
-    if (blocking_id) *blocking_id = -1;
-    const size_t count = std::min({path.x.size(), path.y.size(), path.yaw.size()});
-    for (size_t i = 0; i < count; ++i) {
-        CartesianState ego{};
-        ego.x = path.x[i];
-        ego.y = path.y[i];
-        ego.yaw = path.yaw[i];
-        const double t = static_cast<double>(i) * dt;
-        const double margin = collision_cfg.safety_margin +
-                              collision_cfg.margin_growth_rate * t;
-        // 기존 구현은 ego와 obstacle 양쪽에 margin을 적용했다. 장애물 원본
-        // corner를 변경하지 않으면서 총 여유를 보수적으로 유지하도록 ego에
-        // 두 배 margin을 적용한다.
-        const geometry::Polygon2D ego_footprint =
-            MakeEgoFootprint(ego, ego_shape, 2.0 * margin);
-        for (const auto& obj : obstacles) {
-            if (CheckObstacleOverlap(ego_footprint, {}, obj, t)) {
-                if (blocking_id) *blocking_id = obj.id;
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
 namespace {
 
 const char* ModeName(BehaviorState mode) {
@@ -305,25 +271,6 @@ bool FrenetPlanner::ProjectEgoToS(const CartesianState& ego, double& out_s) cons
     if (!std::isfinite(s)) return false;
     out_s = s;
     return true;
-}
-
-// 폐루프 트랙에서 current_s -> target_s의 전방 호길이.
-// 단순 (target - current)는 finish line 이음새에서 음수로 크게 튄다
-// (예: ego_s=2200, target_s=20이면 실제로는 전방 30m인데 -2180m).
-//
-// Maneuver/Stop.cpp의 UpdateExternalStopExecution도 이 함수를 쓰므로(STOP
-// stop_distance 계산) 익명 namespace 밖에 둔다 - frenet_planner.hpp에 선언을
-// 추가해 다른 translation unit에서도 링크된다. 로직 자체는 그대로다.
-double ForwardArcDistance(double current_s, double target_s, double s_max) {
-    double ds = target_s - current_s;
-    if (!std::isfinite(ds)) return ds;
-    if (s_max > 0.0) {
-        // 이음새를 갓 지난 목표(작은 음수)는 "뒤"가 아니라 한 바퀴 앞이 아니다.
-        // 절반 이상 뒤로 떨어진 경우만 wrap으로 간주해 전방 거리로 되돌린다.
-        if (ds < -0.5 * s_max) ds += s_max;
-        else if (ds > 0.5 * s_max) ds -= s_max;
-    }
-    return ds;
 }
 
 namespace {
@@ -987,10 +934,12 @@ bool FrenetPlanner::PlanInternal(
                 start, cmd, cmd.avoidance_d_offset, planning_collision_obstacles, stats);
         } else {
             // braking-memory 완화(fix/yuntae-frenet-speed-continuity Phase A):
-            // external KEEP/LANE_KEEPING에서만, 그리고 cmd.mode가 STOP-APPROACH의
-            // 위임(2230행)이 아니라 실제로 external_command->mode==LANE_KEEPING일
-            // 때만 적용한다 - STOP/FOLLOW/AVOID/MERGE의 경계조건 semantics는
-            // start.s_dd(raw/진단용, 위 1549행)를 그대로 유지해야 한다.
+            // external KEEP/LANE_KEEPING에서만, 그리고 cmd.mode가
+            // UpdateExternalStopExecution의 STOP-APPROACH 위임(Maneuver/Stop.cpp)이
+            // 아니라 실제로 external_command->mode==LANE_KEEPING일 때만 적용한다 -
+            // STOP/FOLLOW/AVOID/MERGE의 경계조건 semantics는 start.s_dd(raw/진단용,
+            // 이 함수 앞부분의 Frenet boundary-state 구성 지점)를 그대로 유지해야
+            // 한다.
             FrenetState maneuver_start = start;
             const bool external_keep_candidates =
                 !use_legacy_behavior && external_command->mode == LANE_KEEPING;
