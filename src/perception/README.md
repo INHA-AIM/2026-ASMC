@@ -17,7 +17,7 @@
 | 경로 | 역할 | 상태 |
 |---|---|---|
 | `twinlite_morai/` | MORAI dataset, 2-head loss, TwinLiteNet+ loader | 구현·학습 완료 |
-| `camera_semantic_perception/` | 모델 독립 ROS live 추론·시각화·계측 | 다음 구현 후보, 아직 없음 |
+| `camera_semantic_perception/` | 모델 독립 ROS live 추론·시각화·계측 | Stage C1 구현·1차 live 검증 완료 |
 | `drivable_bev/` | camera/map/LiDAR 공통 ego-BEV | 설계 후보·placeholder |
 | `map_prior/` | MGeo bake 결과와 local crop | 장원태 중심 후보, 아직 없음 |
 | `morai_3d_detection/` | 카메라 3D 인지 연구 | 손재호 |

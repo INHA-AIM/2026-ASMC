@@ -250,6 +250,11 @@ custom message를 검토한다.
 - 학습과 동일한 `384x640` letterbox 및 원본 좌표 복원
 - checkpoint SHA, upstream commit, head와 전처리 설정 기록
 
+**2026-09-05 1차 구현 완료:** `camera_semantic_perception` 패키지에서 front-only 약
+20 Hz, three-view 각 약 18.5~19 Hz를 확인했다. 현재 출력은 원본 1280×720 `mono8`
+probability이며, 정밀 percentile·frame age·VRAM과 full-stack 동시 부하는 Stage C3에서
+다시 측정한다.
+
 ### Stage C2 — 독립 시각화
 
 - view별 원본, drivable/lane mask와 overlay
@@ -336,7 +341,7 @@ adapter에 국한한다. 장기적으로 두 구현이 갈라지는 것을 막�
 
 | 순서 | 산출물 | 다음 단계 진입 조건 | 상태 |
 |---:|---|---|---|
-| 1 | 카메라 model-independent live inference | front/3-view 정상 출력, checkpoint provenance 확인 | 다음 구현 |
+| 1 | 카메라 model-independent live inference | front/3-view 정상 출력, checkpoint provenance 확인 | 1차 구현·live 검증 완료 |
 | 2 | 독립 visualizer와 runtime diagnostics | 조건별 화면, p50/p95/drop/VRAM 기록 | 다음 구현 |
 | 3 | 독립 camera test와 full-stack profile | 품질·지연으로 현 모델/센서 profile 판단 가능 | 예정 |
 | 4 | MGeo bake/local crop pilot | map/route hash, pose/covariance와 local layer 확인 | 장원태 제안 |

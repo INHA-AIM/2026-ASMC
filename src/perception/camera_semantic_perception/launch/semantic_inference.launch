@@ -1,0 +1,16 @@
+<launch>
+  <arg name="views" default="front"/>
+  <arg name="checkpoint" default="/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v4_comp8_init_ema_b12_e18_20260904/best_mean.pt"/>
+  <arg name="device" default="cuda"/>
+  <arg name="amp" default="true"/>
+
+  <node pkg="camera_semantic_perception" type="semantic_inference_node.py"
+        name="camera_semantic_inference" output="screen" required="true">
+    <rosparam command="load" file="$(find camera_semantic_perception)/config/cameras.yaml"/>
+    <rosparam command="load" file="$(find camera_semantic_perception)/config/twinlite_medium.yaml"/>
+    <rosparam param="views" subst_value="true">[$(arg views)]</rosparam>
+    <param name="checkpoint" value="$(arg checkpoint)"/>
+    <param name="device" value="$(arg device)"/>
+    <param name="amp" value="$(arg amp)"/>
+  </node>
+</launch>
