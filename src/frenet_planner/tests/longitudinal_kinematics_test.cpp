@@ -5,9 +5,12 @@
 //      (reverse)가 나오면 invalid 처리되어야 한다.
 //   B. |s_dd|가 accel limit 안에 있어도 jerk(|s_ddd|)가
 //      max_longitudinal_jerk를 넘으면 invalid 처리되어야 한다.
-//   C. 정상 velocity keeping candidate는 새 filter 이후에도 최소 하나
+//   C. 정상 FOLLOW 경계 후보(peak jerk가 5.0 근처, 6.0 미만)는
+//      max_longitudinal_jerk=6.0에서 valid로 남아야 한다
+//      (fix/yuntae-frenet-speed-continuity: FOLLOW candidate starvation 해소).
+//   D. 정상 velocity keeping candidate는 새 filter 이후에도 최소 하나
 //      살아남아야 한다.
-//   D. STOP의 정확한 s_d = 0은 reverse-velocity reject 때문에 죽으면 안
+//   E. STOP의 정확한 s_d = 0은 reverse-velocity reject 때문에 죽으면 안
 //      된다.
 //
 // 이 테스트는 실제 MakeQuintic / GenerateStoppingCandidates /
@@ -35,7 +38,10 @@ KinematicLimits MakeLimits() {
     limits.max_lateral_accel = 3.0;
     limits.max_longitudinal_accel = 3.0;
     limits.max_curvature = 0.1704;
-    limits.max_longitudinal_jerk = 5.0;
+    // params.yaml과 동일 값(fix/yuntae-frenet-speed-continuity: 5.0 -> 6.0).
+    // 정상 FOLLOW 경계 후보(peak jerk 약 5.28)를 통과시키면서 excessive jerk
+    // reproducer(약 10.67)는 계속 reject하기 위한 초기 safety limit 조정.
+    limits.max_longitudinal_jerk = 6.0;
     return limits;
 }
 
@@ -158,6 +164,81 @@ void TestExcessiveJerkReproducer() {
            "rejects the high-jerk candidate");
 }
 
+// CASE 2b - feasible FOLLOW boundary candidate
+//
+// command_follow_plan_test의 "large custom gap" 시나리오(time_gap=3.0,
+// min_gap=20.0, leader ego+30m@5m/s, ego s_d=8.0, target_speed=10.0)에서
+// 실제로 관측된 경계 후보(T=5.0, delta_s=+3.0)를 GenerateFollowingCandidates로
+// 그대로 재현한다. 이 후보는 min_s_d>0, max|s_dd|<3.0이고 peak jerk가 약
+// 5.28로 5.0 한도만 근소하게 넘던 candidate다. limit=6.0에서는 valid여야
+// FOLLOW candidate starvation이 해소된다.
+void TestFeasibleFollowBoundaryCandidate() {
+    FrenetState start{};
+    start.s = 196.84;
+    start.s_d = 8.0;
+    start.s_dd = -0.00;
+    start.d = 0.007;
+    start.d_d = 0.023;
+    start.d_dd = 0.022;
+
+    const double leader_s = start.s + 30.0;
+    const double leader_speed = 5.0;
+    const double leader_accel = 0.0;
+    const double time_gap = 3.0;
+    const double min_gap = 20.0;
+    const double cruise_target_speed = 10.0;
+    const double gap_gain = 0.3;
+
+    PathGeneratorConfig cfg;
+    cfg.delta_s = {-3.0, 3.0, 1.0};
+    cfg.time_horizon = {1.5, 5.0, 0.5};
+    cfg.dt = 0.1;
+
+    std::vector<FrenetPath> candidates = GenerateFollowingCandidates(
+        start, leader_s, leader_speed, leader_accel, time_gap, min_gap,
+        cruise_target_speed, gap_gain, cfg);
+    Expect(!candidates.empty(), "feasible FOLLOW boundary: candidates generated");
+
+    KinematicLimits limits = MakeLimits();
+    int reject_accel = 0, reject_negvel = 0, reject_jerk = 0, valid = 0;
+    for (const auto& path : candidates) {
+        bool bad_accel = false, bad_negvel = false, bad_jerk = false;
+        for (double a : path.s_dd) if (std::fabs(a) > limits.max_longitudinal_accel) bad_accel = true;
+        for (double sd : path.s_d) if (sd < -1e-6) bad_negvel = true;
+        for (double j : path.s_ddd) if (std::fabs(j) > limits.max_longitudinal_jerk) bad_jerk = true;
+        if (bad_accel) ++reject_accel;
+        else if (bad_negvel) ++reject_negvel;
+        else if (bad_jerk) ++reject_jerk;
+        else ++valid;
+    }
+    std::cout << "  FOLLOW starvation scenario: total=" << candidates.size()
+              << " reject_accel=" << reject_accel
+              << " reject_negvel=" << reject_negvel
+              << " reject_jerk=" << reject_jerk
+              << " valid=" << valid << '\n';
+
+    FilterLongitudinalByKinematicLimits(candidates, limits);
+    bool boundary_candidate_survives = false;
+    for (const auto& path : candidates) {
+        if (!path.valid) continue;
+        double max_abs_accel = 0.0, max_abs_jerk = 0.0, min_s_d = std::numeric_limits<double>::infinity();
+        for (double a : path.s_dd) max_abs_accel = std::max(max_abs_accel, std::fabs(a));
+        for (double j : path.s_ddd) max_abs_jerk = std::max(max_abs_jerk, std::fabs(j));
+        for (double sd : path.s_d) min_s_d = std::min(min_s_d, sd);
+        std::cout << "  surviving candidate: T=" << path.t.back()
+                  << " delta_s=" << path.delta_s
+                  << " min_s_d=" << min_s_d
+                  << " max|s_dd|=" << max_abs_accel
+                  << " max|s_ddd|=" << max_abs_jerk << '\n';
+        if (min_s_d > 0.0 && max_abs_accel < limits.max_longitudinal_accel) {
+            boundary_candidate_survives = true;
+        }
+    }
+    Expect(boundary_candidate_survives,
+           "feasible FOLLOW boundary: at least one FOLLOW candidate survives "
+           "at limit=6.0 (resolves the starvation)");
+}
+
 // CASE 3 - 정상 KEEP candidate
 void TestNormalKeepCandidateSurvives() {
     FrenetState start{};
@@ -221,6 +302,7 @@ void TestExactStopVelocityIsValid() {
 int main() {
     TestNegativeVelocityReproducer();
     TestExcessiveJerkReproducer();
+    TestFeasibleFollowBoundaryCandidate();
     TestNormalKeepCandidateSurvives();
     TestExactStopVelocityIsValid();
 
