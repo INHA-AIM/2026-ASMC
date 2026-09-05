@@ -458,6 +458,23 @@ private:
     void BuildZeroSpeedHoldPath(const CartesianState& ego, double s,
                                 CartesianPath& out_path) const;
 
+    // 외부(v2) AVOID target 확보 + 이번 cycle 후보 생성에 쓸 target list
+    // 준비 (D6-2a, AVOID A2). PlanInternal의 external EMERGENCY 분기
+    // 다음, purpose/mode 일치 guard보다 앞에서 호출된다 - 순서를 바꾸면
+    // 안 된다(저속 fallback보다 반드시 위여야 한다는 계약 12.7.2절 근거는
+    // 호출부 주석 참고).
+    //
+    // avoid_committed(purpose==AVOID_COMMITTED)와 v2_avoidance_.committed
+    // (core context가 이미 COMMIT되어 target_d가 잠겼는가)는 서로 다른
+    // 축이다 - 이 함수 안에서도 하나로 합치지 않는다.
+    //
+    // 반환값: PlanInternal이 그대로 return해야 하는 상태만 false로
+    // 전달한다(TARGET_OBJECT_LOST, NORMAL purpose에서의
+    // UNSUPPORTED_BEHAVIOR). 그 외엔 true.
+    bool PrepareExternalAvoidTargets(
+        double ego_s, const std::vector<ObjectInfo>& obstacles,
+        const PlannerCommand& command, bool avoid_prepare, bool avoid_committed);
+
     // ===== D1-2: legacy 행동 선택권의 유일한 경계 =====
     //
     // Legacy(간이 FSM) 경로에서 "지금 어떤 maneuver를 할지"를 결정하는 지점을

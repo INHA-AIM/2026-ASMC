@@ -1,12 +1,12 @@
 /**
  * @file Avoid.cpp
- * @brief External/v2 AVOID target resolution, commit state and lifecycle
- *        helpers.
+ * @brief External/v2 AVOID target resolution, commit state, lifecycle,
+ *        target-preparation helpers.
  *
- * PlanInternal의 PREPARE/EXECUTE/legacy candidate orchestration은 후속
- * AVOID refactor 단계까지 남겨둔다. PrepareAvoid/PlanCommittedAvoid(내부
- * anonymous-namespace ValidateExternalCommand 의존)와
- * BuildAvoidMaintenancePath(내부 anonymous-namespace
+ * PlanInternal의 PREPARE/EXECUTE candidate orchestration, legacy AVOID
+ * acquisition은 후속 AVOID refactor 단계까지 남겨둔다. PrepareAvoid/
+ * PlanCommittedAvoid(내부 anonymous-namespace ValidateExternalCommand
+ * 의존)와 BuildAvoidMaintenancePath(내부 anonymous-namespace
  * FilterByCartesianLateralAcceleration 의존)도 이 파일로 옮기지 않는다 -
  * 옮기려면 그 helper들의 linkage를 새로 공개해야 하며, 이번 단계의 범위를
  * 넘어선다.
@@ -300,4 +300,100 @@ void FrenetPlanner::BuildZeroSpeedHoldPath(const CartesianState& ego, double s,
     out_path.kappa.assign(1, 0.0);
     out_path.v.assign(1, 0.0);
     out_path.a.assign(1, 0.0);
+}
+
+bool FrenetPlanner::PrepareExternalAvoidTargets(
+    double ego_s, const std::vector<ObjectInfo>& obstacles,
+    const PlannerCommand& command, bool avoid_prepare, bool avoid_committed) {
+    if (avoid_committed) {
+        // COMMIT 이후 geometry의 소유권은 잠긴 context에 있다. request
+        // direction/pose를 다시 읽거나 target identity를 재검증하지 않는다.
+        v2_avoid_targets_ = AvoidTargetPlan{};
+        v2_avoid_targets_.candidates[0] = v2_avoidance_.target_d;
+        v2_avoid_targets_.count = 1;
+        v2_avoid_targets_.from_target_pose =
+            v2_avoidance_.has_requested_target_d;
+        v2_avoid_targets_.direction_conflict = false;
+    } else {
+    // 요청 방향을 context에 보존한다. mode=AVOID 하나로는
+    // LEFT/RIGHT/NONE을 구분할 수 없다(계약 3.3.1절).
+    v2_avoidance_.requested_direction =
+        command.requested_direction;
+
+    // target pose 투영 결과도 보존한다 (D6-1a). node가 이미 Frenet
+    // (s, d)로 바꿔서 [A] 필드에 넣어 보냈다.
+    //
+    // avoidance_d_offset([B])에 옮기지 않는다. 그러면 "FSM이 지정한
+    // 목표"와 "planner가 후보 비교로 정한 목표"를 구분할 수 없게 된다
+    // (계약 3.3.3절).
+    v2_avoidance_.has_requested_target_d =
+        command.has_avoid_target_d;
+    v2_avoidance_.requested_target_d =
+        command.has_avoid_target_d
+            ? command.avoid_target_d : 0.0;
+    v2_avoidance_.requested_target_s =
+        command.has_avoid_target_d
+            ? command.avoid_target_s : 0.0;
+
+    // FindStaticAvoidanceTarget()을 타지 않는다 - 그 함수는 가장 가까운
+    // 정적 장애물과 회피 방향까지 자동 결정하는 legacy policy다
+    // (계약 D1 0.1절 B 분류, 6.4절).
+    const AvoidTargetStatus status = ResolveExternalAvoidTarget(
+        ego_s, command.target_object_id, obstacles, v2_avoidance_);
+    if (status == AvoidTargetStatus::LOST) {
+        // 대상을 쓸 수 없다. KEEP으로 자동 전환하지 않는다 - 다음 행동은
+        // FSM이 새 command_id로 결정한다(계약 8.2절).
+        //
+        // D6-3에서 COMMIT 경계가 들어오면 COMMITTED/EXECUTING 중에는 이
+        // 분기로 오지 않는다(계약 8.2.1절).
+        // 목표 목록도 비운다 - 확보하지 못한 대상의 목표는 없다.
+        v2_avoid_targets_ = AvoidTargetPlan{};
+        last_mode_ = AVOID;
+        last_failure_reason_ = PlanFailureReason::TARGET_OBJECT_LOST;
+        return false;
+    }
+
+    // 확보 성공. 평가할 목표 d를 정한다.
+    //
+    // ===== COMMIT 이후에는 잠긴 목표만 쓴다 (D6-3a) =====
+    //
+    // DecideAvoidTargets는 매 사이클 요청(target pose 또는 geometry)에서
+    // 목표를 다시 계산한다. COMMIT 이후에도 그것을 쓰면 잠근 값이 생성에
+    // 반영되지 않는다. 실측으로 확인한 문제:
+    //
+    //   PREPARE  요청 2.8 -> 격자 탐색으로 선택 +3.30
+    //   COMMIT   locked = +3.30
+    //   post     생성 목표가 다시 +2.80 (요청값)   <- lock이 무의미
+    //
+    // COMMIT의 의미는 "이 궤적을 실행한다"이므로, 잠근 목표를 그대로
+    // 겨냥해야 한다. 아래 생성부의 tolerance 0과 함께 동작한다.
+    if (v2_avoidance_.committed) {
+        v2_avoid_targets_ = AvoidTargetPlan{};
+        v2_avoid_targets_.candidates[0] = v2_avoidance_.target_d;
+        v2_avoid_targets_.count = 1;
+        // 진단 값은 보존한다. 이 목표가 pose에서 왔는지는 여전히 사실이다.
+        v2_avoid_targets_.from_target_pose =
+            v2_avoidance_.has_requested_target_d;
+        // COMMIT된 목표에는 방향 모순이 없다 - COMMIT 전에 이미 걸렀다.
+        v2_avoid_targets_.direction_conflict = false;
+    } else {
+        v2_avoid_targets_ = DecideAvoidTargets(
+            v2_avoidance_, command.requested_direction);
+    }
+    }
+
+    // 후보 생성과 안전성 판정은 아래 AVOID PREPARE 블록에서 한다
+    // (D6-2b). 그 블록은 FrenetState start가 만들어진 뒤에 있다.
+    //
+    // NORMAL purpose로 AVOID가 들어오면 아직 실행 경로가 없다. 그대로
+    // 내려보내면 ResolveManeuver의 AVOID 분기가 avoidance_d_offset=0으로
+    // 중앙 유지 궤적을 만들어, FSM 입장에서는 "회피 성공"으로 보이면서
+    // 실제로는 장애물 쪽으로 직진한다(계약 11.4절과 같은 원칙).
+    // 실제 실행은 D6-3에서 붙인다.
+    if (!avoid_prepare && !avoid_committed) {
+        last_mode_ = AVOID;
+        last_failure_reason_ = PlanFailureReason::UNSUPPORTED_BEHAVIOR;
+        return false;
+    }
+    return true;
 }
