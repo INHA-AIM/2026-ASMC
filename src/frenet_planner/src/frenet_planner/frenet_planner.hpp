@@ -620,6 +620,25 @@ private:
         const std::vector<ObjectInfo>& obstacles,
         FollowingContext& context) const;
 
+    // Legacy(내부 간이 FSM) FOLLOW의 leader 확보/유지/handoff 갱신.
+    //
+    // ResolveExternalFollowTarget과 달리 이쪽은 "FSM이 지정한 대상이
+    // 유효한가"가 아니라 "어떤 차량을 따라갈지 스스로 고르는" legacy
+    // policy다(FindLeader 사용). external(v2) 경로에서는 호출하지 않는다
+    // (docs/d1-legacy-behavior-boundary.md 0.1절 B 분류).
+    //
+    // following_ 멤버를 직접 갱신한다: 기존 leader 유지 시도 -> dropout
+    // 유예/해제 -> 인접 차량 hysteresis handoff -> 최초 획득 순서.
+    //
+    // out_nearest_found/out_nearest_leader: 이번 cycle에 FindLeader가 찾은
+    // 최인접 차량(SelectLegacyBehavior가 KEEP->FOLLOWING 최초 전환 판단에
+    // 그대로 사용한다 - following_이 아직 active=false일 수 있으므로 별도로
+    // 전달해야 한다).
+    void UpdateLegacyFollowContext(double ego_s, const FrenetState& start,
+                                    const std::vector<ObjectInfo>& obstacles,
+                                    bool& out_nearest_found,
+                                    LeaderTarget& out_nearest_leader);
+
     // FSM이 지정한 AVOID 대상의 확보 결과. FollowTargetStatus와 같은 세 값을
     // 쓰지만, 두 행동의 판정 기준이 앞으로 갈릴 수 있으므로 타입을 나눈다.
     enum class AvoidTargetStatus { VALID, GRACE, LOST };
