@@ -1,4 +1,4 @@
-#include "frenet_planner/math/frenet_converter.hpp"
+#include "frenet_planner/Math/FrenetConverter.hpp"
 
 namespace {
 

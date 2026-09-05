@@ -1,4 +1,4 @@
-#include "frenet_planner/frenet/ref_line.hpp"
+#include "frenet_planner/Reference/Reference.hpp"
 #include <algorithm>
 
 namespace {

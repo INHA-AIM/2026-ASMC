@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "frenet_planner/frenet/path_generator.hpp"
-#include "frenet_planner/frenet/ref_line.hpp"
+#include "frenet_planner/Generator/CandidateCombiner.hpp"
+#include "frenet_planner/Reference/Reference.hpp"
 #include "frenet_planner/global/global.hpp"
 #include "frenet_planner/obstacle/tracked_obstacle.hpp"
 

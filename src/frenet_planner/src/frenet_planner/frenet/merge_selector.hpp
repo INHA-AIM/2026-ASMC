@@ -4,8 +4,8 @@
 #include <vector>
 #include <unordered_map>
 
-#include "frenet_planner/frenet/ref_line.hpp"
-#include "frenet_planner/frenet/collision_checker.hpp"
+#include "frenet_planner/Reference/Reference.hpp"
+#include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/global/data_logger.hpp"
 #include "frenet_planner/global/global.hpp"
 

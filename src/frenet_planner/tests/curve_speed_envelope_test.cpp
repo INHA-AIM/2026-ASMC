@@ -18,7 +18,7 @@
 // RefLine은 waypoint smoothing/resampling을 우회해 s/kappa를 직접
 // 통제하기 위해 손으로 구성한다.
 
-#include "frenet_planner/frenet/curve_speed.hpp"
+#include "frenet_planner/Speed/CurveSpeed.hpp"
 
 #include <cmath>
 #include <functional>

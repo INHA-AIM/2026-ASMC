@@ -1,5 +1,5 @@
-#include "frenet_planner/frenet/collision_checker.hpp"
-#include "frenet_planner/math/frenet_converter.hpp"
+#include "frenet_planner/Evaluation/CollisionChecker.hpp"
+#include "frenet_planner/Math/FrenetConverter.hpp"
 
 PredictedObjectPose PredictLegacyObjectPose(const ObjectInfo& obj, double t) {
     PredictedObjectPose pose;

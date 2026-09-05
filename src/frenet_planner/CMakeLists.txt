@@ -27,7 +27,7 @@ include_directories(
 # Geometry primitives are kept separate so the existing foundation test can
 # exercise them without pulling in the complete planner.
 add_library(frenet_geometry
-  src/frenet_planner/geometry/polygon_utils.cpp
+  src/frenet_planner/Geometry/PolygonUtils.cpp
 )
 target_include_directories(frenet_geometry PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -37,19 +37,30 @@ target_include_directories(frenet_geometry PUBLIC
 # UDP runtimes. Networking and ROS callback code must not be added here.
 add_library(frenet_planner_core
   src/frenet_planner/frenet_planner.cpp
+  src/frenet_planner/Maneuver/ManeuverUtils.cpp
+  src/frenet_planner/Maneuver/Follow.cpp
+  src/frenet_planner/Maneuver/Keep.cpp
+  src/frenet_planner/Maneuver/Stop.cpp
+  src/frenet_planner/Maneuver/Merge.cpp
+  src/frenet_planner/Maneuver/Avoid.cpp
   src/frenet_planner/obstacle/legacy_object_adapter.cpp
   src/frenet_planner/global/data_logger.cpp
   src/frenet_planner/visualization/planner_debug_writer.cpp
-  src/frenet_planner/frenet/ref_line.cpp
-  src/frenet_planner/frenet/path_generator.cpp
-  src/frenet_planner/frenet/curve_speed.cpp
-  src/frenet_planner/frenet/cost.cpp
-  src/frenet_planner/frenet/collision_checker.cpp
+  src/frenet_planner/Reference/Reference.cpp
+  src/frenet_planner/Generator/SamplingUtils.cpp
+  src/frenet_planner/Generator/LateralGenerator.cpp
+  src/frenet_planner/Generator/LongitudinalGenerator.cpp
+  src/frenet_planner/Generator/CandidateCombiner.cpp
+  src/frenet_planner/Evaluation/KinematicFilter.cpp
+  src/frenet_planner/Speed/CurveSpeed.cpp
+  src/frenet_planner/Speed/SpeedPolicy.cpp
+  src/frenet_planner/Evaluation/Cost.cpp
+  src/frenet_planner/Evaluation/CollisionChecker.cpp
   src/frenet_planner/frenet/leader_selector.cpp
   src/frenet_planner/frenet/avoidance_selector.cpp
   src/frenet_planner/frenet/merge_selector.cpp
-  src/frenet_planner/math/polynomial.cpp
-  src/frenet_planner/math/frenet_converter.cpp
+  src/frenet_planner/Math/Polynomial.cpp
+  src/frenet_planner/Math/FrenetConverter.cpp
 )
 add_dependencies(frenet_planner_core
   ${catkin_EXPORTED_TARGETS}
@@ -370,7 +381,7 @@ if(CATKIN_ENABLE_TESTING)
 
   # fix/yuntae-frenet-speed-continuity Phase 1: distance-aware curve speed
   # envelope 회귀. 실제 LookaheadTargetSpeed/VelocityFromCurvature
-  # (frenet/curve_speed.hpp)를 손으로 구성한 RefLine으로 직접 호출한다.
+  # (Speed/CurveSpeed.hpp)를 손으로 구성한 RefLine으로 직접 호출한다.
   add_executable(curve_speed_envelope_test
     tests/curve_speed_envelope_test.cpp
   )
@@ -380,7 +391,7 @@ if(CATKIN_ENABLE_TESTING)
   add_test(NAME curve_speed_envelope_test COMMAND curve_speed_envelope_test)
 
   # fix/yuntae-frenet-speed-continuity Phase 2: target speed recovery rate
-  # limit 회귀. 실제 ApplyTargetSpeedRateLimit(frenet/curve_speed.hpp)를
+  # limit 회귀. 실제 ApplyTargetSpeedRateLimit(Speed/SpeedPolicy.hpp)를
   # 직접 호출한다.
   add_executable(target_speed_rate_limit_test
     tests/target_speed_rate_limit_test.cpp

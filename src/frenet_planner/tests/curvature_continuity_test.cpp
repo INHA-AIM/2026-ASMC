@@ -13,9 +13,13 @@
 // 로직을 복사하지 않는다.
 
 #include "frenet_planner/frenet_planner.hpp"
-#include "frenet_planner/frenet/path_generator.hpp"
+#include "frenet_planner/Generator/GeneratorConfig.hpp"
+#include "frenet_planner/Generator/LateralGenerator.hpp"
+#include "frenet_planner/Generator/LongitudinalGenerator.hpp"
+#include "frenet_planner/Generator/CandidateCombiner.hpp"
+#include "frenet_planner/Evaluation/KinematicFilter.hpp"
 #include "frenet_planner/global/data_logger.hpp"
-#include "frenet_planner/math/frenet_converter.hpp"
+#include "frenet_planner/Math/FrenetConverter.hpp"
 
 #include <cmath>
 #include <fstream>

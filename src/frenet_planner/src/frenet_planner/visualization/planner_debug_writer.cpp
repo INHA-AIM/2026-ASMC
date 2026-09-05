@@ -7,8 +7,8 @@
 #include <sstream>
 #include <utility>
 
-#include "frenet_planner/geometry/polygon_utils.hpp"
-#include "frenet_planner/math/frenet_converter.hpp"
+#include "frenet_planner/Geometry/PolygonUtils.hpp"
+#include "frenet_planner/Math/FrenetConverter.hpp"
 
 namespace {
 

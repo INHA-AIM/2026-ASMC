@@ -10,10 +10,10 @@
 //   - 첫 cycle(has_history=false)에는 rate limit이 적용되지 않는다
 //     (초기 ego 속도와 무관하게 0 근처로 묶이지 않아야 한다).
 //
-// 실제 production ApplyTargetSpeedRateLimit(frenet/curve_speed.hpp)를
+// 실제 production ApplyTargetSpeedRateLimit(Speed/SpeedPolicy.hpp)를
 // 그대로 호출한다 - 로직을 복사하지 않는다.
 
-#include "frenet_planner/frenet/curve_speed.hpp"
+#include "frenet_planner/Speed/SpeedPolicy.hpp"
 
 #include <cmath>
 #include <iostream>

@@ -1,4 +1,4 @@
-#include "polynomial.hpp"
+#include "frenet_planner/Math/Polynomial.hpp"
 
 QuinticPolynomial MakeQuintic(double xs, double vs, double as,
                               double xe, double ve, double ae,

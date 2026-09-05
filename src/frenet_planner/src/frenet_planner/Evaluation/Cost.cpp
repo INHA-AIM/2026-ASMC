@@ -1,4 +1,4 @@
-#include "frenet_planner/frenet/cost.hpp"
+#include "frenet_planner/Evaluation/Cost.hpp"
 
 double ComputeLateralCost(const FrenetPath& path, const CostWeights& w, double target_d) {
     const double T  = path.t.empty() ? 0.0 : path.t.back();

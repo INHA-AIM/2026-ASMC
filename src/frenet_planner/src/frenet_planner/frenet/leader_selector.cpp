@@ -3,7 +3,7 @@
 #include <cmath>
 #include <limits>
 
-#include "frenet_planner/math/frenet_converter.hpp"
+#include "frenet_planner/Math/FrenetConverter.hpp"
 
 void ProjectObjectToFrenet(const RefLine& ref, const ObjectInfo& obj,
                            double& out_s, double& out_d, double& out_s_dot) {
