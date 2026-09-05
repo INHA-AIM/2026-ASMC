@@ -747,6 +747,15 @@ private:
     std::unique_ptr<PlannerDebugWriter> debug_writer_;
     double wheelbase_ = 3.0;
     double lane_width_ = 3.5;
+    // [s] 이 값은 caller(ROS node의 planning/frequency, legacy UDP loop)의
+    // 실제 replanning 주기를 나타낸다. path_cfg_.dt(trajectory 샘플 간격)와는
+    // 다른 개념이다 - 절대 섞어 쓰지 않는다
+    // (fix/yuntae-frenet-speed-continuity Phase 2).
+    double replanning_period_s_ = 0.05;
+    // [m/s^2] target speed가 이전 cycle보다 증가하는 방향에만 적용하는
+    // rate limit. 감속 방향은 curve braking envelope(Phase 1)가 이미
+    // 안전하게 처리하므로 여기서 추가로 막지 않는다.
+    double max_target_speed_accel_ = 2.0;
     bool ref_loaded_ = false;
 
     // 직전 사이클의 s (FindClosestS 탐색범위 힌트용 - ref_line.hpp 주석 참고,
@@ -757,6 +766,11 @@ private:
     double last_d_dot_ = 0.0;
     BehaviorState last_mode_ = LANE_KEEPING;
     double last_target_speed_ = 0.0;
+    // 첫 cycle에는 last_target_speed_(초기값 0.0)를 기준으로 rate limit을
+    // 걸면 안 된다 - 실제 ego 속도와 무관하게 0 근처로 묶인다. false인 동안은
+    // resolved_target_speed의 raw 값을 그대로 쓴다
+    // (fix/yuntae-frenet-speed-continuity Phase 2).
+    bool has_target_speed_history_ = false;
     PlanFailureReason last_failure_reason_ = PlanFailureReason::NONE;
 
     // 모드 전환(LANE_KEEPING/FOLLOWING/AVOID) 시점만 로그로 찍기 위한 이전 사이클 값.

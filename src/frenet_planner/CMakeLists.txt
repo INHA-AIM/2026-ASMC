@@ -379,6 +379,17 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME curve_speed_envelope_test COMMAND curve_speed_envelope_test)
 
+  # fix/yuntae-frenet-speed-continuity Phase 2: target speed recovery rate
+  # limit 회귀. 실제 ApplyTargetSpeedRateLimit(frenet/curve_speed.hpp)를
+  # 직접 호출한다.
+  add_executable(target_speed_rate_limit_test
+    tests/target_speed_rate_limit_test.cpp
+  )
+  target_link_libraries(target_speed_rate_limit_test
+    frenet_planner_core
+  )
+  add_test(NAME target_speed_rate_limit_test COMMAND target_speed_rate_limit_test)
+
   # D1-3: legacy(간이 FSM) 행동 결정의 회귀 커버리지. D5/D6/D8에서 모드별로
   # legacy 조각을 제거할 때 검증된 회전교차로/고속도로 주행이 깨지지 않았는지
   # 확인하는 안전망이다 (docs/d1-legacy-behavior-boundary.md).

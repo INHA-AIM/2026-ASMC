@@ -183,7 +183,8 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
     LoadParams(yaml_path, path_cfg_, limits_, cost_weights_, vehicle_shape_,
                collision_cfg_, curve_speed_cfg_, following_cfg_, avoid_cfg_,
                stop_cfg_, merge_cfg_, highway_merge_cfg_, visualization_cfg_,
-               wheelbase_, lane_width_, waypoint_file);
+               wheelbase_, lane_width_, replanning_period_s_,
+               max_target_speed_accel_, waypoint_file);
 
     if (!waypoint_file.empty() && waypoint_file.front() != '/') {
         waypoint_file = std::string(FRENET_PACKAGE_SRC_DIR) + "/" + waypoint_file;
@@ -1186,6 +1187,13 @@ bool FrenetPlanner::PlanInternal(
         resolved_target_speed = std::min(resolved_target_speed,
                                          external_command->max_speed);
     }
+
+    // Cycle-to-cycle target speed recovery continuity
+    // (fix/yuntae-frenet-speed-continuity Phase 2).
+    resolved_target_speed = ApplyTargetSpeedRateLimit(
+        resolved_target_speed, last_target_speed_, has_target_speed_history_,
+        max_target_speed_accel_, replanning_period_s_);
+    has_target_speed_history_ = true;
 
     // 저속(정지 근처)에서는 quintic 후보/곡률필터 파이프라인 전체를 건너뛰고
     // fallback으로 직접 경로를 만든다 (클래스 헤더 주석 참고 - 나누기 없는 안전한
