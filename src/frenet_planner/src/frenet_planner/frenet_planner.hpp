@@ -475,6 +475,27 @@ private:
         double ego_s, const std::vector<ObjectInfo>& obstacles,
         const PlannerCommand& command, bool avoid_prepare, bool avoid_committed);
 
+    // 외부(v2) AVOID PREPARE/COMMITTED 실행 전체 (D6-2b/D6-3, AVOID A3b).
+    // PlanInternal이 FrenetState start를 만든 직후, avoid_prepare ||
+    // avoid_committed일 때 그대로 호출하고 이 함수의 반환값을 그대로
+    // return한다 - 이 분기의 모든 경로가 결국 true/false를 반환하므로
+    // PlanInternal은 그 뒤 legacy AVOID 이하로 내려가지 않는다.
+    //
+    // 계약 5.2절: candidate("AVOID를 실행해도 되는가", result.candidate_valid)와
+    // maintenance(out_path, "지금 MPC가 따라갈 것")는 절대 같은 것으로
+    // 취급하지 않는다 - PREPARE의 반환값은 candidate_valid가 아니라
+    // maintenance 성공 여부다.
+    //
+    // avoid_prepare(purpose==AVOID_PREPARE), avoid_committed
+    // (purpose==AVOID_COMMITTED), v2_avoidance_.committed(core context
+    // lock 여부)는 서로 다른 세 축이며 이 함수 안에서도 합치지 않는다.
+    bool PlanExternalAvoidCycle(
+        const CartesianState& ego, const FrenetState& start,
+        double s, double d, double resolved_target_speed,
+        const std::vector<TrackedObstacle>& predicted_collision_obstacles,
+        const PlannerCommand& command, bool avoid_prepare, bool avoid_committed,
+        CartesianPath& out_path, AvoidPrepareResult& result);
+
     // ===== D1-2: legacy 행동 선택권의 유일한 경계 =====
     //
     // Legacy(간이 FSM) 경로에서 "지금 어떤 maneuver를 할지"를 결정하는 지점을
