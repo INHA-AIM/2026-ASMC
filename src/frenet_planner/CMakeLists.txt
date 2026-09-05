@@ -40,6 +40,7 @@ add_library(frenet_planner_core
   src/frenet_planner/Maneuver/Follow.cpp
   src/frenet_planner/Maneuver/Keep.cpp
   src/frenet_planner/Maneuver/Stop.cpp
+  src/frenet_planner/Maneuver/Merge.cpp
   src/frenet_planner/obstacle/legacy_object_adapter.cpp
   src/frenet_planner/global/data_logger.cpp
   src/frenet_planner/visualization/planner_debug_writer.cpp

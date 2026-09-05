@@ -702,6 +702,29 @@ private:
     // 호출 gate(external_stop_mode)는 PlanInternal에 유지한다.
     void TrimExternalStopReverseTrajectory(CartesianPath& selected_cartesian) const;
 
+    // legacy MERGE의 approach/window/gap 판단과 phase/context 갱신
+    // (MERGE M1). 이번 cycle에 roundabout/highway 중 어느 정책이 활성인지
+    // 결정하고, gap_locked 여부에 따라 timer decrement 또는
+    // FindRoundaboutGap/FindHighwayMergeGap 판단으로 merge_ phase를
+    // 갱신한다. locked COMMIT trajectory replay, commit_pending candidate
+    // 검증, 최종 selected path commit(MERGE M2)은 여기 포함하지 않고
+    // PlanInternal에 그대로 남아 있다 - 그 코드들은 이 함수 호출 앞뒤의
+    // 별도 위치에서 이미 계산된 context_highway_zone 등을 그대로 쓴다.
+    //
+    // 반환값: 기존 "active highway zone missing; reset" 조기 실패 경로만
+    // false로 전달한다(그 외엔 true) - PlanInternal이 그대로 return한다.
+    //
+    // context_highway_zone은 이 함수 호출 전에 PlanInternal이 이미
+    // 계산해둔 값을 그대로 받는다 - 함수 안에서 재계산하면 그 값을 쓰는
+    // locked-path replay 블록(M2, 이 함수보다 앞에서 실행됨)과 미세하게
+    // 다른 시점의 값을 만들 substitution correctness 위험이 있다.
+    bool UpdateLegacyMergeContext(
+        double s, const CartesianState& ego, const FrenetState& start,
+        const std::vector<ObjectInfo>& predicted_obstacles,
+        const std::vector<TrackedObstacle>& predicted_collision_obstacles,
+        const std::unordered_map<int, double>& object_yaw_rates,
+        const HighwayMergeZone* context_highway_zone);
+
     // FSM이 지정한 AVOID 대상의 확보 결과. FollowTargetStatus와 같은 세 값을
     // 쓰지만, 두 행동의 판정 기준이 앞으로 갈릴 수 있으므로 타입을 나눈다.
     enum class AvoidTargetStatus { VALID, GRACE, LOST };
