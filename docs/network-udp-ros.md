@@ -2,7 +2,7 @@
 
 > **문서 역할:** Canonical — 시뮬 UDP 경계, 포트, bridge와 Docker 네트워크 정본
 > **문서 허브:** [README.md](./README.md)
-> **최종 수정:** 2026-09-03
+> **최종 수정:** 2026-09-05
 > **지위:** 팀 공식 권장  
 > **개발 SIM (현재):** **MORAI 26.R1.h3** — 대회 배포 SIM 아님  
 > **msg:** `src/MORAI-ROS_morai_msgs` submodule **`beta_drive`**  
@@ -45,16 +45,13 @@ MORAI (Windows)  --UDP-->  morai_udp_bridge / morai_sensor_bridge  --> ROS topic
 
 ---
 
-## 3. Windows + WSL + Docker: IP를 `127.0.0.1`로 쓰는 방법
+## 3. Windows + WSL + Docker host networking
 
-### 왜 개인 Windows/WSL IP를 안 넣나?
+### 팀 표준
 
-Docker Desktop의 `network_mode: host`는 **WSL eth0과 다른 netns**라, Dest를 WSL IP로 넣어도 컨테이너에 UDP가 안 들어온다.
-
-### 팀 표준 (권장)
-
-`docker/ros-noetic/docker-compose.yaml`이 **UDP Destination 포트를 publish**한다.  
-Windows localhost → Docker 포워딩 → 컨테이너.
+`docker/ros-noetic/docker-compose.yaml`은 Docker Desktop의 `network_mode: host`를 사용한다.
+개별 `ports:` 포워딩을 두지 않으므로 브릿지를 늦게 켜거나 재시작해도 LiDAR `9299/udp`
+포워딩만 사라지는 문제가 발생하지 않는다.
 
 | MORAI 필드 (Network · Sensor 공통) | 값 |
 |--------------------------------------|-----|
@@ -63,10 +60,11 @@ Windows localhost → Docker 포워딩 → 컨테이너.
 
 | 브릿지 (컨테이너) | 값 |
 |-------------------|-----|
-| Ctrl 송신 `cmd_ip` | `host.docker.internal` (`udp_bridge.sh` 기본) |
+| Ctrl 송신 `cmd_ip` | `127.0.0.1` (`udp_bridge.sh` 기본) |
 
-**각자 PC에서 할 일:** Docker Desktop + WSL Integration ON → compose `up` → 시뮬에 위 IP만 넣으면 됨.  
-이더넷/WSL IP(`172.24.x` 등)를 일일이 맞출 필요 없음.
+각자 PC에서는 Docker Desktop의 **Settings → Resources → Network → Enable host
+networking**과 WSL Integration을 활성화한다. MORAI의 기존 Host/Destination IP와 센서 포트는
+바꾸지 않는다.
 
 ```bash
 cd "$ASMC"
@@ -78,7 +76,9 @@ source devel/setup.bash
 ./scripts/udp_bridge.sh
 ```
 
-포트 목록을 본인 UI와 다르게 쓰면: launch arg로 덮거나 `docker-compose.yaml`의 `ports:` / 센서 `cameras` rosparam을 맞춘 뒤 `docker_ros_up.sh up`으로 재생성.
+Host mode는 포트 번호 자체를 없애는 기능이 아니다. MORAI와 브릿지는 기존 Camera·LiDAR·
+GPS·IMU·Ego·Ctrl 포트 번호를 동일하게 사용하되, Compose의 host↔container 포트 변환만
+사용하지 않는다.
 
 ---
 
@@ -142,7 +142,7 @@ Dest는 이 순서대로 홀수로 배정하고 Host는 Dest−1이다.
 
 **LiDAR 2368 금지.** semantic 8–10은 GT 센서셋에서만 쓰고 기본 OFF (§6).
 
-cam/gps/imu는 되는데 **lidar만 0**인 경우가 자주 나온다 → [§6.1](#61-lidar만-0일-때-9299-포워딩) 참고.
+cam/gps/imu는 되는데 **lidar만 0**이면 [§6.1](#61-host-network-검사와-lidar-장애-대응)을 참고한다.
 포트 배정 자체는 문제가 아니므로 **9299를 다른 번호로 옮기지 말 것.**
 
 ---
@@ -188,143 +188,44 @@ LiDAR Dest **2368 쓰지 말 것.**
 시맨틱(개발용): `./scripts/udp_bridge.sh enable_semantic_camera:=true`  
 (기본 OFF — 팀 공용 주행 브릿지와 분리)
 
-### 6.1 lidar만 0일 때 (9299 포워딩)
+### 6.1 host network 검사와 LiDAR 장애 대응
 
-`rostopic hz /velodyne_points`가 `no new messages`이고 브릿지 로그가 이렇게 나오는 증상:
-
-```
-rx cam1=3797  cam2=3800  cam3=3800  cam4=1900  gps=950  imu=8853  lidar=0
-lidar 수신 0건 - MORAI Sensor Destination Port 확인.
-```
-
-**포트 배정·MORAI 설정·브릿지 코드 문제가 아니다.** Docker Desktop의 9299 UDP 포워딩이
-끊긴 것이고, 컨테이너 안에서는 정상적으로 `0.0.0.0:9299`에 bind되어 있다 (`ss -lunp`로 확인 가능).
-
-**원인.** MORAI가 스트림을 쏘는 동안 컨테이너 쪽 9299에 리스너가 없으면
-Docker Desktop이 약 30초 후 이 포워딩을 스스로 철거한다. 한 번 철거되면 되살아나지 않는다.
-컨테이너를 먼저 띄우고 브릿지를 늦게 실행하면 그 사이에 죽는다. cam/gps/imu가 멀쩡한데
-lidar만 죽는 이유는 LiDAR 패킷 레이트가 훨씬 높아서다.
-
-**확인.** 브릿지 로그의 `rx ... lidar=` 카운터를 본다.
-`docker_ros_up.sh`가 찍는 `[OK] Windows UDP Dest open`은 **판단 근거가 못 된다** —
-`up` 2초 뒤 검사인데 포워딩은 죽기까지 30초쯤 살아 있어서 깨진 상태에서도 통과한다.
-Windows에서 직접 보려면:
-
-```powershell
-netstat -ano -p UDP | Select-String ':929[0-9]|:930[0-9]'
-```
-
-9291·9293·…·9309는 `com.docker.backend` PID로 떠 있는데 **9299만 없으면** 이 증상이다.
-
-**해결 1 — 컨테이너 재생성 (대부분).** 재생성한 뒤 **곧바로** 브릿지를 실행한다.
-컨테이너만 띄워두고 몇 분 뒤에 브릿지를 올리면 같은 증상이 재발한다.
+컨테이너 생성과 브릿지 실행은 분리한다. `docker_ros_up.sh`는 이미지·컨테이너·마운트와
+host 네트워크 검사를 담당하고, `udp_bridge.sh`는 별도 터미널의 foreground에서 실행해
+`rx ... lidar=...` 로그를 직접 확인한다.
 
 ```bash
+# Compose에 ports가 없고 host mode인지 정적 검사
+./scripts/docker_ros_up.sh config
+
+# 컨테이너 생성 후 실제 network mode 검사
 ./scripts/docker_ros_up.sh up
-docker exec -it asmc-ros-noetic bash
-source devel/setup.bash && ./scripts/udp_bridge.sh   # 지체 없이
-```
 
-**해결 2 — Docker Desktop 재시작 (재생성으로도 안 될 때).**
-Docker Desktop 내부 포워딩 상태가 깨지면 컨테이너를 몇 번 재생성해도 9299가 살아나지 않는다
-(측정: 300패킷 송신 → 0 수신, 같은 조건에서 9305는 정상 수신). 이때는 재시작해야 한다.
+# 실제 Windows <-> 컨테이너 양방향 UDP 검사(임시 39199/39200 사용)
+./scripts/docker_ros_up.sh check
 
-**WSL 안에서 `docker desktop restart`를 쓰지 말 것** —
-`fork/exec /opt/docker-desktop/bin/com.docker.backend: no such file or directory`로 실패하면서
-아무것도 재시작하지 않는데 `docker ps`는 계속 동작해서 성공한 것처럼 보인다. Windows CLI를 쓴다:
-
-```bash
-"/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe" desktop restart
-```
-
-재시작 후 컨테이너는 restart policy가 `no`라 자동으로 안 올라온다.
-`./scripts/docker_ros_up.sh up`으로 다시 띄우고, 다른 컨테이너(`hmobility-sim` 등)도 `docker start`한다.
-
-**하지 말 것.** LiDAR Dest를 9299 외의 번호로 옮기는 것 (과거 `f47340a`에서 9311로 옮겼다가
-`db854dd`에서 되돌림). 포트 번호 문제가 아니라서 옮겨도 같은 증상이 재발하고,
-센서셋 JSON·launch·compose·문서를 전부 갈아야 하며 팀 포트 표만 어긋난다.
-compose의 `0.0.0.0:9299:9299/udp` 명시 bind도 이 증상에 효과가 없다 (축약형과 동일하게 0 수신).
-
-### 6.2 Docker Desktop host networking 전환 계획 (수집 후 검증)
-
-**결정일:** 2026-09-03
-**현재 상태:** Docker Desktop의 `Enable host networking`은 활성화했지만,
-`asmc-ros-noetic`은 아직 `ros-noetic_default` bridge network와 `ports:` 매핑을 사용한다.
-현재 센서 수집이 정상인 동안에는 이 구성을 변경하지 않는다.
-
-**전환 시점:** 현재 데이터 수집을 끝낸 뒤 학습을 실행해 둔 개발 시간에 별도 검증한다.
-단, Docker Desktop 재시작이 추가로 필요해지면 실행 중인 학습·ERC GUI 컨테이너를 먼저
-정상 종료한 뒤 진행한다.
-
-**목적:** MORAI와 컨테이너 사이의 `com.docker.backend` 개별 UDP 포워딩을 제거하여
-특히 LiDAR Dest `9299`만 사라지는 장애를 구조적으로 우회할 수 있는지 확인한다.
-Host mode에서도 MORAI Sensor Setting과 브릿지의 포트 번호는 그대로 필요하다.
-없어지는 것은 compose의 `host:container/udp` 포트 매핑뿐이다.
-
-```text
-기존: MORAI :9299 -> com.docker.backend 9299:9299/udp -> bridge :9299
-후보: MORAI :9299 -> host-network bridge :9299
-```
-
-**개발 운용 방침:** 컨테이너 생성과 브릿지 실행은 분리한다.
-`docker_ros_up.sh`는 컨테이너 lifecycle과 마운트만 담당하고, `udp_bridge.sh`는 별도
-터미널의 foreground에서 수동 실행하여 `rx ... lidar=...` 로그를 직접 확인한다.
-대회용 전체 스택 자동 실행은 인터페이스가 안정화된 뒤 별도 wrapper로 검토한다.
-
-**검증 순서와 통과 조건:**
-
-1. 미사용 임시 UDP 포트로 Windows `127.0.0.1` -> host-network 컨테이너 수신을 시험한다.
-2. 시험 성공 후에만 ROS compose를 `network_mode: host`로 바꾸고 `ports:`를 제거한다.
-3. MORAI/launch의 Camera·LiDAR·GPS·IMU Host/Dest 번호는 변경하지 않는다.
-4. Camera 4대, `/velodyne_points`, `/gps`, `/imu`, Ego status가 연속 수신되는지 확인한다.
-5. Ctrl UDP와 Capture Mode gRPC까지 양방향으로 확인한다. Host mode에서는
-   `host.docker.internal` 대신 `127.0.0.1` 사용 가능 여부도 함께 검증한다.
-6. 브리지를 의도적으로 종료·재실행한 뒤 `9299`가 Docker Desktop 재시작 없이 다시
-   수신되는지 확인한다. 이것이 기존 장애에 대한 핵심 합격 조건이다.
-7. 하나라도 실패하면 compose만 기존 bridge network + `ports:` 구성으로 되돌린다.
-
-Host mode 전환 전후 모두 실제 합격 판정은 포트 표시가 아니라 ROS 토픽 Hz와 브릿지
-수신 카운터로 한다.
-
-#### Host mode A/B 시험 도구
-
-기본 `docker-compose.yaml`은 수정하지 않고 전용 override를 겹쳐 사용한다. 따라서 시험이
-실패해도 MORAI 설정을 바꾸거나 Git에서 파일을 되돌릴 필요가 없다.
-
-```bash
-# 1) 합성된 Compose가 host mode이며 ports가 제거됐는지 확인
-./scripts/docker_ros_host_test.sh config
-
-# 2) ROS 컨테이너만 host mode로 재생성
-./scripts/docker_ros_host_test.sh up
-
-# 3) Windows <-> host-network 컨테이너 양방향 임시 UDP 검사
-./scripts/docker_ros_host_test.sh loopback
-
-# 4) 별도 foreground 터미널에서 브리지 실행
+# 별도 foreground 터미널에서 브릿지 실행
 docker exec -it asmc-ros-noetic bash
 source devel/setup.bash
-MORAI_CMD_IP=127.0.0.1 ./scripts/udp_bridge.sh
+./scripts/udp_bridge.sh
 
-# 5) 다른 WSL 터미널에서 필수 MORAI 토픽 8초 검사
-./scripts/docker_ros_host_test.sh verify 8
+# 다른 WSL 터미널에서 필수 MORAI 토픽 검사
+./scripts/docker_ros_up.sh verify 8
 ```
 
-핵심 복구 시험은 브리지를 `Ctrl-C`로 종료하고 MORAI가 계속 송신하는 상태로 40초 이상
-기다린 뒤 같은 foreground 명령으로 브리지만 다시 실행하는 것이다. 컨테이너나 Docker
-Desktop을 재시작하지 않고 `verify`에서 `/velodyne_points`가 즉시 `OK`가 되어야 한다.
+`verify`는 Ego·카메라 4대·LiDAR·GPS·IMU의 메시지 수와 수신률을 한 번에 출력한다.
+LiDAR만 `MISSING`이면 다음을 순서대로 확인한다.
 
-시험 실패 시 기존 bridge network와 `ports:` 구성으로 복구한다.
+1. Docker Desktop의 `Enable host networking`이 켜졌는지 확인한다.
+2. `docker_ros_up.sh status`가 `mode=host`, `published={}`를 출력하는지 확인한다.
+3. MORAI LiDAR Connect와 Dest `127.0.0.1:9299`를 확인한다.
+4. 다른 프로세스가 UDP 9299를 먼저 bind하지 않았는지 `ss -lunp`로 확인한다.
 
-```bash
-./scripts/docker_ros_host_test.sh restore
-```
+Bridge-mode 시절 사용하던 Windows 포트 리스너 검사, 컨테이너 반복 재생성, Docker Desktop
+재시작 우회는 기본 운용에서 제거했다. Host mode에서도 MORAI 포트 번호는 그대로 필요하며,
+LiDAR Dest를 다른 번호로 옮기지 않는다.
 
-시험 도구는 MORAI Host/Destination IP나 Camera/LiDAR/GPS/IMU 포트를 변경하지 않는다.
-`probe_host_udp.py`는 실제 센서 포트와 겹치지 않는 기본 `39199/udp`, `39200/udp`만
-잠깐 사용한다.
-
-#### 2026-09-05 host mode 1차 실측
+### 6.2 2026-09-05 host mode 실측
 
 26.R1.H3 MORAI가 실행 중인 상태에서 시뮬레이터 네트워크·센서 설정을 변경하지 않고
 시험했다.
@@ -338,13 +239,12 @@ Desktop을 재시작하지 않고 `verify`에서 `/velodyne_points`가 즉시 `O
 | LiDAR 수신률 | 최초 약 8.23 Hz, 브릿지 재시작 후 약 8.27 Hz |
 | 브릿지 42초 중단 후 재실행 | Docker Desktop/컨테이너 재시작 없이 즉시 복구 |
 
-이 실측으로 host mode가 목표로 한 **브릿지 재시작 뒤 LiDAR `9299/udp` 수신 단절 회피**는
-확인했다. 실제 차량 제어 UDP와 Capture Mode gRPC는 안전한 운용 조건 및 Capture Mode가
-준비됐을 때 별도로 확인한 뒤 기본 구성 승격 여부를 결정한다.
+이 실측으로 host mode가 목표로 한 **브릿지 재시작 뒤 LiDAR `9299/udp` 수신 단절 회피**를
+확인해 로컬 기본 구성으로 승격했다. 실제 차량 제어 UDP와 Capture Mode gRPC는 안전한
+운용 조건 및 Capture Mode가 준비됐을 때 각각 추가 확인한다.
 
 시험 중 `udp_bridge.sh`가 전달한 `cmd_ip`가 통합 launch에서 누락되는 문제도 발견해
-수정했다. 기본 bridge mode의 `host.docker.internal` 동작은 유지하고, host mode에서는
-`MORAI_CMD_IP=127.0.0.1`이 실제 송신 노드까지 전달된다.
+수정했다. 현재 기본값 `127.0.0.1`이 실제 송신 노드까지 전달된다.
 
 ---
 

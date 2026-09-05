@@ -38,6 +38,7 @@ git submodule update --init --recursive
 xhost +local:docker
 ./scripts/docker_ros_up.sh build
 ./scripts/docker_ros_up.sh up
+./scripts/docker_ros_up.sh check
 docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 
 # ROS 없는 Planning/Control

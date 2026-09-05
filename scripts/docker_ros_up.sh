@@ -1,77 +1,176 @@
 #!/usr/bin/env bash
-# ROS Noetic 개발 컨테이너 제어
+# Build, run, and validate the ROS Noetic development container.
 set -euo pipefail
-COMPOSE_DIR="$(dirname "$(readlink -f "$0")")/../docker/ros-noetic"
-export ASMC="${ASMC:-$(dirname "$(readlink -f "$0")")/..}"
-export ASMC_DATA="${ASMC_DATA:-$(dirname "$(readlink -f "$ASMC")")/data}"
+
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+COMPOSE_FILE="$REPO_ROOT/docker/ros-noetic/docker-compose.yaml"
+CONTAINER="asmc-ros-noetic"
+
+export ASMC="${ASMC:-$REPO_ROOT}"
+export ASMC_DATA="${ASMC_DATA:-$(dirname "$REPO_ROOT")/data}"
 mkdir -p "$ASMC_DATA"
 
-# Docker Desktop+Windows: Dest UDP가 compose에 있어도 Windows 리스너가 빠지는 경우가 있음 (특히 9299).
-#
-# 주의 — 이 검사는 "지금 리스너가 있다"만 본다. 컨테이너 쪽 9299에 리스너가 없는 동안
-# MORAI가 스트림을 쏘면 Docker Desktop이 ~30s 후 포워딩을 철거하므로, 깨질 예정인 상태도
-# 여기서는 통과한다. lidar 수신 여부는 반드시 브릿지 로그의 `rx ... lidar=` 로 확인할 것.
-# 상세: docs/network-udp-ros.md §6.1
-_check_win_udp() {
-  local port="$1"
-  command -v powershell.exe >/dev/null 2>&1 || return 0
-  powershell.exe -NoProfile -Command \
-    "if (Get-NetUDPEndpoint -LocalPort $port -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }" \
-    >/dev/null 2>&1
+COMPOSE=(docker compose -f "$COMPOSE_FILE")
+
+die() {
+  echo "[FAIL] $*" >&2
+  exit 1
 }
 
-_verify_sensor_udp() {
-  local missing=()
-  local p
-  for p in 9291 9299 9301 9303; do
-    if ! _check_win_udp "$p"; then
-      missing+=("$p")
-    fi
-  done
-  if ((${#missing[@]})); then
-    echo "[WARN] Windows UDP Dest not listening: ${missing[*]}"
-    echo "       (cam/gps/imu OK but lidar=0 often means 9299 missing)"
-    return 1
+require_running_container() {
+  docker inspect "$CONTAINER" >/dev/null 2>&1 \
+    || die "$CONTAINER does not exist. Run: $0 up"
+  [ "$(docker inspect "$CONTAINER" --format '{{.State.Running}}')" = "true" ] \
+    || die "$CONTAINER exists but is stopped. Run: $0 up"
+}
+
+assert_host_mode() {
+  require_running_container
+  local mode
+  mode="$(docker inspect "$CONTAINER" --format '{{.HostConfig.NetworkMode}}')"
+  [ "$mode" = "host" ] || die "expected host network mode, got: $mode"
+  echo "[OK] container network mode: host"
+}
+
+render_config() {
+  local rendered
+  rendered="$("${COMPOSE[@]}" config)"
+  grep -q '^    network_mode: host$' <<<"$rendered" \
+    || die "compose does not contain network_mode: host"
+  if grep -q '^    ports:$' <<<"$rendered"; then
+    die "host-mode compose must not publish ports"
   fi
-  # "open" ≠ "동작함". 위 _check_win_udp 주석 참고.
-  echo "[OK] Windows UDP Dest listening (preliminary): 9291 9299 9301 9303"
-  return 0
+  echo "[OK] compose uses host mode without published ports"
+  if [ "${1:-}" = "show" ]; then
+    printf '%s\n' "$rendered"
+  fi
+}
+
+inspect_mode() {
+  assert_host_mode
+  docker inspect "$CONTAINER" --format \
+    'mode={{.HostConfig.NetworkMode}} networks={{json .NetworkSettings.Networks}} published={{json .NetworkSettings.Ports}}'
+}
+
+check_udp_loopback() {
+  assert_host_mode
+  command -v powershell.exe >/dev/null 2>&1 \
+    || die "powershell.exe is required for the Windows/container UDP check"
+
+  local port="${1:-39199}"
+  [[ "$port" =~ ^[0-9]+$ ]] && ((port >= 1024 && port < 65535)) \
+    || die "check port must be an integer in 1024..65534"
+
+  local token="asmc-host-${port}-$$-$(date +%s)"
+  local result_file="/tmp/asmc-host-udp-check-${port}.json"
+  docker exec "$CONTAINER" rm -f "$result_file"
+  docker exec -d "$CONTAINER" python3 /root/ws/scripts/probe_host_udp.py \
+    listen --port "$port" --token "$token" --timeout 8 \
+    --result-file "$result_file"
+  sleep 1
+
+  powershell.exe -NoProfile -Command \
+    "\$c=New-Object System.Net.Sockets.UdpClient; \$b=[Text.Encoding]::UTF8.GetBytes('$token'); 1..3 | ForEach-Object { [void]\$c.Send(\$b,\$b.Length,'127.0.0.1',$port); Start-Sleep -Milliseconds 50 }; \$c.Close()" \
+    >/dev/null
+
+  local i
+  for i in $(seq 1 50); do
+    if docker exec "$CONTAINER" test -s "$result_file"; then
+      docker exec "$CONTAINER" cat "$result_file"
+      break
+    fi
+    sleep 0.1
+  done
+  docker exec "$CONTAINER" test -s "$result_file" \
+    || die "no Windows -> container UDP result; enable Docker Desktop host networking"
+  docker exec "$CONTAINER" grep -q '"received": true' "$result_file" \
+    || die "Windows -> container UDP payload mismatch or timeout"
+  docker exec "$CONTAINER" rm -f "$result_file"
+  echo "[OK] Windows -> container UDP on 127.0.0.1:$port"
+
+  local reverse_port=$((port + 1))
+  local reverse_token="${token}-reverse"
+  local reverse_output
+  reverse_output="$(mktemp /tmp/asmc-host-reverse.XXXXXX)"
+  powershell.exe -NoProfile -Command \
+    "\$c=New-Object System.Net.Sockets.UdpClient($reverse_port); \$c.Client.ReceiveTimeout=8000; \$ep=New-Object System.Net.IPEndPoint([System.Net.IPAddress]::Any,0); try { \$b=\$c.Receive([ref]\$ep); [Console]::Out.Write([Text.Encoding]::UTF8.GetString(\$b)) } catch { exit 3 } finally { \$c.Close() }" \
+    >"$reverse_output" 2>&1 &
+  local receiver_pid=$!
+  sleep 1
+  docker exec "$CONTAINER" python3 /root/ws/scripts/probe_host_udp.py \
+    send --host 127.0.0.1 --port "$reverse_port" --token "$reverse_token"
+  if ! wait "$receiver_pid"; then
+    cat "$reverse_output" >&2
+    rm -f "$reverse_output"
+    die "container -> Windows UDP check timed out"
+  fi
+  if ! grep -Fq "$reverse_token" "$reverse_output"; then
+    cat "$reverse_output" >&2
+    rm -f "$reverse_output"
+    die "container -> Windows UDP payload mismatch"
+  fi
+  rm -f "$reverse_output"
+  echo "[OK] container -> Windows UDP on 127.0.0.1:$reverse_port"
+}
+
+verify_topics() {
+  assert_host_mode
+  local duration="${1:-8}"
+  [[ "$duration" =~ ^[0-9]+([.][0-9]+)?$ ]] \
+    || die "duration must be a positive number"
+  docker exec "$CONTAINER" bash -lc \
+    "cd /root/ws && source /opt/ros/noetic/setup.bash && source devel/setup.bash && python3 scripts/verify_morai_topics.py --duration $duration"
+}
+
+print_next() {
+  cat <<'EOF'
+[NEXT] Start the UDP bridge in a separate foreground terminal:
+  docker exec -it asmc-ros-noetic bash
+  source devel/setup.bash
+  ./scripts/udp_bridge.sh
+
+Keep MORAI Host/Destination IP at 127.0.0.1 and keep every port unchanged.
+EOF
 }
 
 cmd="${1:-up}"
 echo "[DATA] $ASMC_DATA -> /data (rw)"
 case "$cmd" in
+  config)
+    render_config "${2:-}"
+    ;;
   build)
-    docker compose -f "$COMPOSE_DIR/docker-compose.yaml" build
+    render_config
+    "${COMPOSE[@]}" build
     ;;
   up)
-    docker compose -f "$COMPOSE_DIR/docker-compose.yaml" up -d --force-recreate
-    docker ps --filter name=asmc-ros-noetic
-    sleep 2
-    if ! _verify_sensor_udp; then
-      echo "[INFO] Recreating once to re-bind UDP..."
-      docker compose -f "$COMPOSE_DIR/docker-compose.yaml" up -d --force-recreate
-      sleep 2
-      if ! _verify_sensor_udp; then
-        echo "[WARN] Still missing — Docker Desktop 재시작이 필요하다:"
-        echo "       \"/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe\" desktop restart"
-        echo "       (WSL 안의 'docker desktop restart' 는 실패하면서 성공처럼 보인다)"
-        echo "       상세: docs/network-udp-ros.md §6.1"
-      fi
-    fi
-    echo "[NEXT] 지체 없이 브릿지를 실행할 것 — 리스너 없이 방치하면 9299 포워딩이 ~30s 후 죽는다."
-    echo "       docker exec -it asmc-ros-noetic bash"
-    echo "       source devel/setup.bash && ./scripts/udp_bridge.sh"
+    render_config
+    "${COMPOSE[@]}" up -d --force-recreate
+    inspect_mode
+    print_next
+    ;;
+  status)
+    inspect_mode
+    ;;
+  check)
+    check_udp_loopback "${2:-39199}"
+    ;;
+  verify)
+    verify_topics "${2:-8}"
     ;;
   down)
-    docker compose -f "$COMPOSE_DIR/docker-compose.yaml" down
+    "${COMPOSE[@]}" down
     ;;
   rebuild)
-    docker compose -f "$COMPOSE_DIR/docker-compose.yaml" build --no-cache
-    docker compose -f "$COMPOSE_DIR/docker-compose.yaml" up -d --force-recreate
+    render_config
+    "${COMPOSE[@]}" build --no-cache
+    "${COMPOSE[@]}" up -d --force-recreate
+    inspect_mode
+    print_next
     ;;
   *)
-    echo "Usage: $0 {build|up|down|rebuild}"
-    exit 1
+    echo "Usage: $0 {config [show]|build|up|status|check [port]|verify [seconds]|down|rebuild}"
+    exit 2
     ;;
 esac

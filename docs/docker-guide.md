@@ -35,6 +35,7 @@ xhost +local:docker
 
 ```bash
 ./scripts/docker_ros_up.sh up
+./scripts/docker_ros_up.sh check   # Windows↔컨테이너 host UDP 검사
 docker exec -it asmc-ros-noetic bash
 ./scripts/build_ws.sh
 ```
@@ -110,8 +111,9 @@ Docker Desktop → WSL Integration 활성화, NVIDIA Container Toolkit 확인.
 | 항목 | 내용 |
 |------|------|
 | 실행 | `./scripts/udp_bridge.sh` (rosbridge 아님) |
-| MORAI IP | Host/Dest 모두 **`127.0.0.1`** (compose UDP publish) |
-| Ctrl | `cmd_ip=host.docker.internal` · `cmd_port` **9111** (팀 표준 Host) |
+| Docker 네트워크 | Docker Desktop **host networking** (`ports:` 포워딩 없음) |
+| MORAI IP | Host/Dest 모두 **`127.0.0.1`** |
+| Ctrl | `cmd_ip=127.0.0.1` · `cmd_port` **9111** (팀 표준 Host) |
 | rosbridge | `./scripts/rosbridge.sh` — 개발 편의 · **당일 금지** |
 
 ```bash
@@ -119,6 +121,12 @@ Docker Desktop → WSL Integration 활성화, NVIDIA Container Toolkit 확인.
 docker exec -it asmc-ros-noetic bash
 source devel/setup.bash
 ./scripts/udp_bridge.sh
+```
+
+다른 WSL 터미널에서 전체 센서 수신을 한 번에 검사할 수 있습니다.
+
+```bash
+./scripts/docker_ros_up.sh verify 8
 ```
 
 **주의:** `aim-noetic-pc`와 `asmc-ros-noetic` **동시 실행 금지** (11311 충돌).
