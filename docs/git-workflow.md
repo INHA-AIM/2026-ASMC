@@ -3,8 +3,8 @@
 > **문서 역할:** Command Reference — 협업 정책을 실행하는 명령 예시
 > **정본:** 정책이 충돌하면 [collaboration.md](./collaboration.md)를 따른다.
 > **문서 허브:** [README.md](./README.md)
-> **필독 통합본:** [collaboration.md](./collaboration.md)  
-> PR 템플릿: [.github/pull_request_template.md](../.github/pull_request_template.md)  
+> **필독 통합본:** [collaboration.md](./collaboration.md)
+> PR 템플릿: [.github/pull_request_template.md](../.github/pull_request_template.md)
 > **최종 수정:** 2026-07-25
 
 ---

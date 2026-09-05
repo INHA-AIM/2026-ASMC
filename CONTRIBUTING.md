@@ -13,7 +13,7 @@
 
 ## 필수 규칙
 
-1. **기본은 trunk (Phase 1).** Phase 0에는 개인 레포 병행 — [collaboration.md §0.5](docs/collaboration.md).  
+1. **기본은 trunk (Phase 1).** Phase 0에는 개인 레포 병행 — [collaboration.md §0.5](docs/collaboration.md).
    소유 모듈 + **빌드 통과** 시에만 `main` 푸시. WIP·미완성은 Draft PR 또는 개인 레포 (§2.5).
 2. **담당 파트 외 수정 금지** (합의·공동 PR 예외) — [team-dev-guide.md](docs/team-dev-guide.md)
 3. **대용량·체크포인트 커밋 금지.**

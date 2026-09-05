@@ -2,10 +2,10 @@
 
 > **문서 역할:** Canonical — Git workflow와 경로 ownership 정책
 > **문서 허브:** [README.md](./README.md)
-> **최종 수정:** 2026-07-25  
-> **목표:** Phase 0에는 개인 레포+안전한 ASMC 문서/인프라; Phase 1에는 모듈 ownership으로 `main`에 자주 합류.  
-> **필독:** §0.5 Phase · §2.5 WIP · §3 Path  
-> [team-dev-guide.md](./team-dev-guide.md) · [git-workflow.md](./git-workflow.md) · [network-udp-ros.md](./network-udp-ros.md)  
+> **최종 수정:** 2026-07-25
+> **목표:** Phase 0에는 개인 레포+안전한 ASMC 문서/인프라; Phase 1에는 모듈 ownership으로 `main`에 자주 합류.
+> **필독:** §0.5 Phase · §2.5 WIP · §3 Path
+> [team-dev-guide.md](./team-dev-guide.md) · [git-workflow.md](./git-workflow.md) · [network-udp-ros.md](./network-udp-ros.md)
 > 로컬 현황: [`docs/competition/team-status.md`](../../docs/competition/team-status.md)
 
 ---
@@ -42,7 +42,7 @@
 | hybrid modular (룰+선택 학습) | 파트가 디렉터리로 이미 갈라짐 → ownership이 통한다 |
 | 일정 촉박 | “매 커밋마다 checkout+PR”은 오버헤드가 큼 |
 
-**채택 모델 이름:** *Module-owned trunk-based development*  
+**채택 모델 이름:** *Module-owned trunk-based development*
 (현업의 trunk-based + 모듈 소유. “모든 작업마다 PR”도, “아무 파일이나 main에 던져넣기”도 아님.)
 
 ```mermaid
@@ -76,7 +76,7 @@ flowchart TD
 | 5 | 새 기능은 **ASMC에서만**. 개인 `aim_ws`/`mpc_ws`에 쌓지 않는다. |
 | 6 | **개인 장기 브랜치 금지** (`va_seunghyun`, `jang`식 누적). |
 
-> **요약 (Phase 1):** 소유 모듈 + 빌드 통과 → Path A (`main` 푸시). 공유·위험·WIP 공유 → Path B/Draft.  
+> **요약 (Phase 1):** 소유 모듈 + 빌드 통과 → Path A (`main` 푸시). 공유·위험·WIP 공유 → Path B/Draft.
 > **요약 (Phase 0):** 개인 레포에서 기능 완성. ASMC `main`에는 **초록(빌드·문서)만**.
 
 ---
@@ -91,11 +91,11 @@ flowchart TD
 
 **체크리스트 — “실행은 안 되는데 팀에 보여주고 싶다”**
 
-1. [ ] `main`에 푸시하지 않는다  
-2. [ ] `git checkout -b feature/<이름>-wip-…` 후 push  
-3. [ ] `gh pr create --draft` 제목에 `[WIP]`  
-4. [ ] PR 본문에 “안 되는 점 / 보고 싶은 점” 3줄  
-5. [ ] 빌드가 깨지면 Draft에 **알고 있음**이라고 적는다  
+1. [ ] `main`에 푸시하지 않는다
+2. [ ] `git checkout -b feature/<이름>-wip-…` 후 push
+3. [ ] `gh pr create --draft` 제목에 `[WIP]`
+4. [ ] PR 본문에 “안 되는 점 / 보고 싶은 점” 3줄
+5. [ ] 빌드가 깨지면 Draft에 **알고 있음**이라고 적는다
 
 **한 줄:** 커밋 = 내 히스토리. **`main` 푸시 = 팀 공용 상태** → 남이 pull 해도 빌드되게.
 
@@ -105,7 +105,7 @@ flowchart TD
 
 ### 3.1 Path A — Trunk (`main`에서 일상 개발) ← **기본**
 
-**언제:** 담당 패키지 안의 버그픽스, 튜닝, 로그, 소규모 기능 추가.  
+**언제:** 담당 패키지 안의 버그픽스, 튜닝, 로그, 소규모 기능 추가.
 **조건:** 아래를 **모두** 만족.
 
 - [ ] 변경 파일이 **내 ownership 경로만** ([§4](#4-모듈-소유권-ownership))
@@ -171,14 +171,14 @@ gh pr create --title "feat(udp): Ctrl_cmd path for finals" --body "..."
 
 ### 3.3 Path C — 선택적 짧은 PR
 
-소유 모듈이어도 **리뷰를 받고 싶을 때** (알고리즘 리뷰, 첫 대규모 커밋).  
+소유 모듈이어도 **리뷰를 받고 싶을 때** (알고리즘 리뷰, 첫 대규모 커밋).
 강제 아님. Path A로 가도 되고, 짧은 PR로 눈을 빌려도 됨.
 
 ---
 
 ## 4. 모듈 소유권 (ownership)
 
-> **핵심:** “main에서 같이 일한다” = **같은 파일을 동시에 막 고친다**가 아니다.  
+> **핵심:** “main에서 같이 일한다” = **같은 파일을 동시에 막 고친다**가 아니다.
 > **디렉터리를 나눠 각자 main에 자주 올린다.**
 
 | 경로 | Owner | Path A 직푸시 | Path B 필수 |
@@ -199,8 +199,8 @@ gh pr create --title "feat(udp): Ctrl_cmd path for finals" --body "..."
 
 ### 남 영역이 필요할 때
 
-1. 카톡/노션으로 **Owner에게 먼저** 알린다.  
-2. 가능하면 Owner가 고친다.  
+1. 카톡/노션으로 **Owner에게 먼저** 알린다.
+2. 가능하면 Owner가 고친다.
 3. 같이 고쳐야 하면 **Path B 공동 PR** (둘 다 리뷰어).
 
 ---
@@ -229,8 +229,8 @@ refactor(planner): 동작 변경 없는 리팩터
 
 ### 5.3 `main`이 깨졌을 때
 
-1. CI/빌드 실패 발견자 → 채널에 알림  
-2. 원인 커밋 작성자가 **fix 커밋** 또는 `git revert`  
+1. CI/빌드 실패 발견자 → 채널에 알림
+2. 원인 커밋 작성자가 **fix 커밋** 또는 `git revert`
 3. 30분 이상 방치 금지 (대회 리허설·타인 작업 차단)
 
 ---

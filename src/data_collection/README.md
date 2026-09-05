@@ -361,7 +361,7 @@ state를 기록한다.
 
 ### 모드
 
-현재: `latest_timer` (최신 메시지 래치 후 `collect_hz` 스냅샷).  
+현재: `latest_timer` (최신 메시지 래치 후 `collect_hz` 스냅샷).
 다음: Time Manager sync tick ([mentoring](../../../docs/competition/mentoring-morai.md) §6).
 
 ### lane/drivable 수집 구현 상태

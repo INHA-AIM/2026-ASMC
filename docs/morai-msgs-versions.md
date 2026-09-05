@@ -3,8 +3,8 @@
 > **문서 역할:** Version Reference — 조사 시점의 26.R1/대회 msg 차이 기록
 > **주의:** 실제 대회판 이식 시 재실측하고 [morai-msgs-beta-policy.md](./morai-msgs-beta-policy.md)를 갱신한다.
 > **문서 허브:** [README.md](./README.md)
-> **최종 수정:** 2026-07-26  
-> 통합 시 **단일 submodule** 기준을 정하고, 레거시 코드는 필드 차이를 인지해야 합니다.  
+> **최종 수정:** 2026-07-26
+> 통합 시 **단일 submodule** 기준을 정하고, 레거시 코드는 필드 차이를 인지해야 합니다.
 > **대회 ROS UI 실측:** [docs/competition/morai-competition-ros-topics.md](../../docs/competition/morai-competition-ros-topics.md)
 
 ## 1. upstream 브랜치·태그 정리
@@ -45,7 +45,7 @@
 | `NpcGhostInfo` | brake/steer/speed/signal | 축소 | 낮음 |
 | `RobotOutput` | — | `is_active_manipulator_brake` 추가 | 낮음 |
 
-**동일(수집·인지에 중요):** `ObjectStatus`/`ObjectStatusList`, `GetTrafficLightStatus`, `SetTrafficLight`, `IntscnTL`, `GPSMessage`, `CollisionData` 필드 동일.  
+**동일(수집·인지에 중요):** `ObjectStatus`/`ObjectStatusList`, `GetTrafficLightStatus`, `SetTrafficLight`, `IntscnTL`, `GPSMessage`, `CollisionData` 필드 동일.
 단 `SyncModeCtrlCmd`·`WaitForTickResponse`는 **중첩 `CtrlCmd`/`EgoVehicleStatus`** 를 품으므로 sync 제어·tick 응답은 간접적으로 깨질 수 있음.
 
 `mpc_ws`는 `cmd.steering` → **beta_drive와 일치**.
@@ -70,7 +70,7 @@
 
 - `IntscnTL`, `TrafficLight`, `GetTrafficLightStatus`, `MoraiTLInfo`, `MoraiTLIndex`, `Lamps`, `SetTrafficLight`
 
-→ “대회 브랜치에 신호등 **msg가 없다**”는 말은 **사실이 아님**.  
+→ “대회 브랜치에 신호등 **msg가 없다**”는 말은 **사실이 아님**.
 → 이슈는 **런타임에 토픽이 비거나 맵별로 다름** 쪽에 가깝습니다.
 
 ### 런타임 (팀 검증)
@@ -97,11 +97,11 @@
 | ← | `/SetTrafficLight` | `SetTrafficLight` |
 | srv | `/Service_MoraiEventCmd` | `MoraiEventCmdSrv` |
 
-Bridge: `127.0.0.1:9090` · Target Frame **50 Hz**.  
+Bridge: `127.0.0.1:9090` · Target Frame **50 Hz**.
 **없음:** GetTrafficLight / IntscnTL / Lamps / Camera·LiDAR·GPS·IMU ROS · `/ctrl_cmd`(이 패널 기준).
 
-→ “대회에 Get이 없다” = **런타임 사실**. `.msg` 부재가 아님.  
-→ **기본 SIM = 대회**. **GT 라벨 세션만 26.R1.h3**.  
+→ “대회에 Get이 없다” = **런타임 사실**. `.msg` 부재가 아님.
+→ **기본 SIM = 대회**. **GT 라벨 세션만 26.R1.h3**.
 → `rostopic list` 대기: [morai-competition-ros-topics.md](../../docs/competition/morai-competition-ros-topics.md) §7.
 
 **통합 시:** 코드·일상 = `beta_drive` + **대회 SIM**. 26은 privileged 수집 전용.

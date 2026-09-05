@@ -4,8 +4,8 @@
 > **현재 우선순위:** [architecture-overview.md](./architecture-overview.md) · [perception-map-fusion-roadmap.md](./perception-map-fusion-roadmap.md)
 > **주의:** 이 문서의 날짜·다음 작업을 현재 일정으로 사용하지 않는다.
 > **문서 허브:** [README.md](./README.md)
-> **통합 리드:** 안승현  
-> **최종 수정:** 2026-07-25  
+> **통합 리드:** 안승현
+> **최종 수정:** 2026-07-25
 > 현황: [로컬 team-status](../../docs/competition/team-status.md) · Git: [collaboration.md](./collaboration.md)
 
 ## 1. 전략 (Phase 0 / 1)
@@ -64,8 +64,8 @@
 
 ## 5. Wave 1 요약 (유지)
 
-planning-v2 · LBC · scenario · Det3D v1 — 이전 문서 §5–§9 내용 유효.  
-UDP 권장: [network-udp-ros.md](./network-udp-ros.md)  
+planning-v2 · LBC · scenario · Det3D v1 — 이전 문서 §5–§9 내용 유효.
+UDP 권장: [network-udp-ros.md](./network-udp-ros.md)
 인지 eval: [perception-agentic-loop.md](./perception-agentic-loop.md)
 
 > 이 절은 ROS 기반 이전 구현 기록이다. 현재 정본은
@@ -75,6 +75,6 @@ UDP 권장: [network-udp-ros.md](./network-udp-ros.md)
 
 ## 6. 다음 작업
 
-1. Phase 0: 각자 개인 레포 기능 완성 + 안승현 Loc-Aid/bake  
-2. 회의: UDP-only vs bridge+ROS  
+1. Phase 0: 각자 개인 레포 기능 완성 + 안승현 Loc-Aid/bake
+2. 회의: UDP-only vs bridge+ROS
 3. 8/7~ Wave 2 이식 순서: **bridge → interfaces → Det3D/TL → Loc-Aid/bake → mpc 정렬**

@@ -3,13 +3,13 @@
 > **문서 역할:** Canonical until competition port — 현재 submodule과 msg 정렬 규칙
 > **버전 조사:** [morai-msgs-versions.md](./morai-msgs-versions.md)
 > **문서 허브:** [README.md](./README.md)
-> **최종 수정:** 2026-07-25  
-> **상태:** 통합 **시작 전** 확정 규칙  
+> **최종 수정:** 2026-07-25
+> **상태:** 통합 **시작 전** 확정 규칙
 > **관련:** [morai-msgs-versions.md](./morai-msgs-versions.md) · [integration-plan.md](./integration-plan.md) · [대회 ROS 실측](../../docs/competition/morai-competition-ros-topics.md)
 
 ## 1. 원칙 (한 줄)
 
-**`2026-ASMC`의 catkin 빌드·런타임·대회 당일 PC는 항상 `beta_drive` msg 기준.**  
+**`2026-ASMC`의 catkin 빌드·런타임·대회 당일 PC는 항상 `beta_drive` msg 기준.**
 레거시 코드를 이식한 직후에도, **그 PR을 merge하기 전에** beta 필드로 맞춘다.
 
 시뮬레이터는 26.R1 h3를 쓸 수 있지만, **코드가 참조하는 msg 정의는 beta_drive 단일**이다.
@@ -137,7 +137,7 @@ git submodule update --init --recursive
 | ROS msg 정의 (빌드) | **`beta_drive` only** |
 | 로컬 diff 참고 | upstream `26.R1` 브랜치 clone |
 
-시뮬이 26.R1이어도, **대회와 동일한 msg로 빌드**하면 당일 PC와 정합성이 높아진다.  
+시뮬이 26.R1이어도, **대회와 동일한 msg로 빌드**하면 당일 PC와 정합성이 높아진다.
 필드 불일치로 런타임 오류가 나면 **코드를 beta에 맞추고**, msg를 26.R1로 내리지 않는다.
 
 ---

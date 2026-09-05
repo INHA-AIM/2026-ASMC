@@ -7,8 +7,8 @@
 > [planning-control-udp.md](./planning-control-udp.md)를 우선 적용한다. Behavior Planner는 미연동이다.
 
 > **최종 수정:** 2026-09-05
-> **Git:** [collaboration.md](./collaboration.md) — 현재는 Phase 1이며 최신 `main` 기반의 짧은 feature 브랜치와 PR을 사용한다.  
-> **네트워크:** [network-udp-ros.md](./network-udp-ros.md) · **인지 eval:** [perception-agentic-loop.md](./perception-agentic-loop.md)  
+> **Git:** [collaboration.md](./collaboration.md) — 현재는 Phase 1이며 최신 `main` 기반의 짧은 feature 브랜치와 PR을 사용한다.
+> **네트워크:** [network-udp-ros.md](./network-udp-ros.md) · **인지 eval:** [perception-agentic-loop.md](./perception-agentic-loop.md)
 > **인지 아키텍처:** camera/MGeo/LiDAR Working Proposal은 [perception-map-fusion-roadmap.md](./perception-map-fusion-roadmap.md)를 우선한다.
 > 로컬 현황: [`docs/competition/team-status.md`](../../docs/competition/team-status.md)
 
