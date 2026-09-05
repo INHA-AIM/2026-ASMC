@@ -118,6 +118,7 @@ void LoadParams(const std::string& yaml_path,
     loadInto(root, "planner/kinematic_limits/max_lateral_accel",      limits.max_lateral_accel);
     loadInto(root, "planner/kinematic_limits/max_longitudinal_accel", limits.max_longitudinal_accel);
     loadInto(root, "planner/kinematic_limits/max_curvature",          limits.max_curvature);
+    loadInto(root, "planner/kinematic_limits/max_longitudinal_jerk",  limits.max_longitudinal_jerk);
 
     loadInto(root, "planner/cost_weights/kj",     cost_weights.kj);
     loadInto(root, "planner/cost_weights/kt",     cost_weights.kt);

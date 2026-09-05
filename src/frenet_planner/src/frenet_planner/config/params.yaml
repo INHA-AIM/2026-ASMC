@@ -127,6 +127,9 @@ planner:
     max_lateral_accel: 3.0
     max_longitudinal_accel: 3.0
     max_curvature: 0.1704
+    # [m/s^3] longitudinal jerk hard limit. 초기 safety limit이며 최종 MORAI
+    # tuning 값이 아니다 (fix/yuntae-frenet-speed-continuity).
+    max_longitudinal_jerk: 5.0
 
   # --- CostWeights (cost.hpp) ---------------------------------
   cost_weights:

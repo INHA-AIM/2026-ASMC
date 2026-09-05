@@ -48,6 +48,9 @@ struct KinematicLimits {
     double max_lateral_accel;      // |d̈| 허용치 [m/s^2]
     double max_longitudinal_accel; // |s̈| 허용치 [m/s^2]
     double max_curvature;          // |kappa_x| 허용치 [1/m] (차량 최소 회전반경 역수)
+    // |s⃛| 허용치 [m/s^3]. 초기 safety limit이며 최종 MORAI tuning 값이 아니다
+    // (fix/yuntae-frenet-speed-continuity).
+    double max_longitudinal_jerk;
 };
 
 // =========================================================
@@ -140,8 +143,14 @@ std::vector<FrenetPath> GenerateVelocityKeepingCandidates(const FrenetState& sta
 void FilterLateralByAcceleration(std::vector<FrenetPath>& candidates,
                                   const KinematicLimits& limits);
 
-void FilterLongitudinalByAcceleration(std::vector<FrenetPath>& candidates,
-                                       const KinematicLimits& limits);
+// [fix/yuntae-frenet-speed-continuity] 세 invariant를 모두 확인한다:
+//   |s̈| <= max_longitudinal_accel
+//   s_d >= 0 (forward-only invariant, numerical epsilon만 예외)
+//   |s⃛| <= max_longitudinal_jerk
+// 이름을 FilterLongitudinalByAcceleration에서 바꾼 이유는 책임 범위가
+// accel 단일 체크에서 kinematic validity 전체로 늘었기 때문이다.
+void FilterLongitudinalByKinematicLimits(std::vector<FrenetPath>& candidates,
+                                          const KinematicLimits& limits);
 
 // =========================================================
 // [Sec.VI 2단] Tlat × Tlon 조합

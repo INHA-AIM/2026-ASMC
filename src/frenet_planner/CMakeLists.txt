@@ -356,6 +356,17 @@ if(CATKIN_ENABLE_TESTING)
   add_test(NAME command_execution_manager_test
            COMMAND command_execution_manager_test)
 
+  # fix/yuntae-frenet-speed-continuity: longitudinal candidate validity 회귀.
+  # negative s_d(reverse) candidate와 excessive jerk candidate가 accel-only
+  # 필터를 통과해 valid로 남는지(수정 전) / 걸러지는지(수정 후) 확인한다.
+  add_executable(longitudinal_kinematics_test
+    tests/longitudinal_kinematics_test.cpp
+  )
+  target_link_libraries(longitudinal_kinematics_test
+    frenet_planner_core
+  )
+  add_test(NAME longitudinal_kinematics_test COMMAND longitudinal_kinematics_test)
+
   # D1-3: legacy(간이 FSM) 행동 결정의 회귀 커버리지. D5/D6/D8에서 모드별로
   # legacy 조각을 제거할 때 검증된 회전교차로/고속도로 주행이 깨지지 않았는지
   # 확인하는 안전망이다 (docs/d1-legacy-behavior-boundary.md).
