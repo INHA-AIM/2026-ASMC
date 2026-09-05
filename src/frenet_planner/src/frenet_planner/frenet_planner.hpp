@@ -639,6 +639,26 @@ private:
                                     bool& out_nearest_found,
                                     LeaderTarget& out_nearest_leader);
 
+    // moderate-speed curvature starvation 완화(fix/yuntae-frenet-speed-continuity
+    // Phase B). external KEEP에서 결합 후보가 전부 곡률 필터에 탈락하는 사례를
+    // 막기 위해, 현재 오프셋을 유지하는 continuity candidate를 candidates에
+    // 추가로 얹는다(대체가 아니라 추가) - 자세한 배경은 PlanInternal의 호출부
+    // 주석 참고. maneuver_start.d가 차선 폭 안일 때만 호출된다(호출부에서 보장).
+    void AppendExternalKeepContinuityCandidates(
+        const FrenetState& maneuver_start, const PlannerCommand& cmd,
+        const std::vector<TrackedObstacle>& planning_collision_obstacles,
+        std::vector<FrenetPath>& candidates) const;
+
+    // external KEEP의 no-valid-candidate 분기에서 저속 근방일 때만 호출되는
+    // crawl fallback 실행부(fix/yuntae-frenet-speed-continuity Phase 5). 호출
+    // 여부 판단(external_keep/속도 문턱/COLLISION_BLOCKED 제외)은 PlanInternal이
+    // 그대로 유지한다 - STOP fail-safe 등 같은 분기의 다른 공용 실패 처리와
+    // 뒤섞이지 않게 하기 위함이며, 이 함수는 "이미 호출하기로 결정된 뒤" 실제
+    // crawl 경로 생성과 last_failure_reason_ 갱신만 담당한다.
+    bool PlanExternalKeepLowSpeedFallback(const CartesianState& ego, double s,
+                                          double d, double resolved_target_speed,
+                                          CartesianPath& out_path);
+
     // FSM이 지정한 AVOID 대상의 확보 결과. FollowTargetStatus와 같은 세 값을
     // 쓰지만, 두 행동의 판정 기준이 앞으로 갈릴 수 있으므로 타입을 나눈다.
     enum class AvoidTargetStatus { VALID, GRACE, LOST };
