@@ -290,6 +290,19 @@ class CommandExecutionManager {
                execution_state_ == asmc_msgs::FrenetFeedback::COMPLETED;
     }
 
+    // 지금 진행 중인 기동을 다른 일반 명령으로 끊으면 안 되는 시점인지
+    // (계약 7.2절). COMMIT된 handshake maneuver에서만 true다.
+    //
+    // ===== 왜 공개하는가 (D6-4b) =====
+    //
+    // command validation은 Accept()보다 **먼저** 수행된다. 그래서 형식이
+    // 잘못되었거나 만료된 새 명령은 manager에 도달하지 못하고, 호출자는
+    // "지금 잠긴 기동이 있는가"를 알 방법이 없어 안전정지로 빠진다.
+    // 그러면 FSM의 잘못된 메시지 하나가 COMMIT된 회피의 횡이동을 중단시킨다
+    // (계약 7.2절이 막으려는 것과 같은 사고). 판정 규칙을 node에 다시
+    // 구현하면 두 곳이 어긋나므로 조회만 열어준다.
+    bool is_non_preemptible() const { return IsNonPreemptible(); }
+
  private:
     // 지금 다른 명령으로 전환하면 위험한 시점인지.
     //

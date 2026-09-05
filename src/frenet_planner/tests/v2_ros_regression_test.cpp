@@ -22,6 +22,19 @@
 //   E-STOP      직접 감속, 단조 감소, v>=0, 마지막 v=0, preemption
 //   실패 경로    invalid command, stale command, 미구현 maneuver
 //   transaction command_id echo, terminal 사유 latch, 모드 전환
+//   AVOID       PREPARE->READY->EXECUTE->COMMIT->EXECUTING->COMPLETED (D6-4a)
+//
+// D6-4b에서 AVOID edge를 추가했다:
+//   handshake   첫 명령부터 EXECUTE여도 READY를 건너뛰지 않는다,
+//               WAITING 회복 cycle은 COMMIT하지 않는다
+//   target pose heading 44/45/46도 경계, ±pi wrap(NormalizeAngle)
+//   대상 소유권  authoritative primary_object_id, LEFT/RIGHT/NONE,
+//               optional target pose가 목표 d를 바꾼다
+//   WAITING     direction conflict와 실제 collision blocking을 구분한다
+//   dropout     COMMIT 이전(즉시/유예/LOST)과 이후(중단하지 않음)
+//   소유권      CANCEL 전후, 거부된 새 KEEP, 잘못된/만료된 명령,
+//               E-STOP preemption, COMPLETED 뒤 새 transaction
+//   Feedback    post-COMMIT collision SAFE_STOP에서 잠긴 진단 유지
 //
 // 계약: docs/fsm-frenet-interface-v2.md
 
@@ -323,6 +336,38 @@ class Harness {
         }
     }
 
+    // 특정 command_id가 요구한 progress 이상에 도달할 때까지 돌린다 (D6-4b).
+    //
+    // RunUntilState(EXECUTING)은 **첫** EXECUTING 피드백에서 멈추므로, ego를
+    // 잠긴 offset으로 옮긴 직후에는 아직 SHIFT 단계(progress<0.5)인 프레임이
+    // 잡힐 수 있다. 실측에서 6회 중 1회 그렇게 어긋났다. 어느 프레임이
+    // 잡히느냐는 20 Hz timer와의 위상 문제일 뿐이므로, 판정 자체를 약하게
+    // 만들지 않고 "PASS에 도달한 프레임"을 기다린다.
+    bool RunUntilProgress(const Command& command, const Pose2D& pose,
+                          double speed, uint8_t expected_state,
+                          double minimum_progress, int max_cycles,
+                          Feedback& out) {
+        BeginWindow();
+        for (int cycle = 0; cycle < max_cycles && ros::ok(); ++cycle) {
+            PublishInputs(pose, speed);
+            Command stamped = command;
+            stamped.header.stamp = ros::Time::now();
+            stamped.valid_until = ros::Time::now() + ros::Duration(2.0);
+            command_pub_.publish(stamped);
+            SpinFor(0.06);
+            for (std::size_t i = static_cast<std::size_t>(begin_index_);
+                 i < feedback_.size(); ++i) {
+                if (feedback_[i].command_id == command.command_id &&
+                    feedback_[i].execution_state == expected_state &&
+                    feedback_[i].maneuver_progress >= minimum_progress) {
+                    out = feedback_[i];
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     bool RunUntilState(const Command& command, const Pose2D& pose,
                        double speed, uint8_t expected_state, int max_cycles,
                        Feedback& out) {
@@ -473,6 +518,222 @@ class Harness {
     // FOLLOW 검증용 객체 목록을 설정한다. 다음 PublishInputs부터 반영된다.
     void SetObjects(const std::vector<asmc_msgs::DetectedObject>& objects) {
         objects_ = objects;
+    }
+
+    // 목표 pose를 경로에서 lateral_d 만큼 비켜난 곳에 놓는다 (D6-4b).
+    //
+    // SetTargetOnPath는 항상 중앙선 위에 놓으므로 AVOID의 optional target
+    // pose가 목표 d를 실제로 바꾸는지 검증할 수 없다. heading은 투영점의
+    // reference yaw를 그대로 써서 heading 검증(계약 3.4절 4항)과 분리한다.
+    void SetTargetOffPath(Command& command, double target_s,
+                          double lateral_d) const {
+        const Pose2D reference = PoseAt(waypoints_, target_s);
+        const Pose2D pose = PoseAtOffset(waypoints_, target_s, lateral_d);
+        command.has_target_pose = true;
+        command.target_pose_map.position.x = pose.x;
+        command.target_pose_map.position.y = pose.y;
+        command.target_pose_map.orientation.z = std::sin(reference.yaw * 0.5);
+        command.target_pose_map.orientation.w = std::cos(reference.yaw * 0.5);
+    }
+
+    // 목표 pose를 경로 위에 놓되 heading만 지정한 오차만큼 틀어 놓는다.
+    // heading 임계값(기본 45도) 경계 검증용이다 (D6-4b).
+    void SetTargetWithHeadingError(Command& command, double target_s,
+                                   double heading_error_rad) const {
+        const Pose2D pose = PoseAt(waypoints_, target_s);
+        const double yaw = pose.yaw + heading_error_rad;
+        command.has_target_pose = true;
+        command.target_pose_map.position.x = pose.x;
+        command.target_pose_map.position.y = pose.y;
+        command.target_pose_map.orientation.z = std::sin(yaw * 0.5);
+        command.target_pose_map.orientation.w = std::cos(yaw * 0.5);
+    }
+
+    // 목표 pose를 map 좌표와 절대 yaw로 직접 지정한다. ±pi wrap fixture는
+    // reference yaw를 그대로 쓰지 않고 부호가 반대인 값을 넣어야 한다.
+    void SetTargetPoseRaw(Command& command, const Pose2D& position,
+                          double yaw) const {
+        command.has_target_pose = true;
+        command.target_pose_map.position.x = position.x;
+        command.target_pose_map.position.y = position.y;
+        command.target_pose_map.orientation.z = std::sin(yaw * 0.5);
+        command.target_pose_map.orientation.w = std::cos(yaw * 0.5);
+    }
+
+    // reference yaw가 ±pi에 가장 먼저 근접하는 지점의 호길이 [m] (D6-4b).
+    //
+    // NormalizeAngle 경로를 실제 트랙으로 통과시키기 위한 fixture다. 임계값을
+    // 억지로 바꾸지 않고 waypoint yaw 분포에서 실제 wrap 구간을 찾는다.
+    // 현재 트랙에는 s≈2020 부근에 -179.7deg -> +179.5deg 전이가 있다.
+    double FindPoseWithHeadingNearPi(double tolerance_rad) const {
+        double s = 0.0;
+        for (std::size_t i = 1; i < waypoints_.x.size(); ++i) {
+            s += std::hypot(waypoints_.x[i] - waypoints_.x[i - 1],
+                            waypoints_.y[i] - waypoints_.y[i - 1]);
+            const double yaw = std::atan2(
+                waypoints_.y[i] - waypoints_.y[i - 1],
+                waypoints_.x[i] - waypoints_.x[i - 1]);
+            if (std::fabs(std::fabs(yaw) - M_PI) < tolerance_rad) return s;
+        }
+        return -1.0;
+    }
+
+    // 경로에서 lateral_d 만큼 비켜난 정적 장애물 (D6-4b).
+    //
+    // MakeVehicle은 항상 중앙선/고정 폭이므로 두 객체를 만들면 목표 d가
+    // 같아져 authoritative target 검증이 약해진다. 실측 기준(D6-4b):
+    //   d=-0.8 w=2.0 -> target_d 약 +1.73
+    //   d=+0.8 w=2.0 -> target_d 약 +3.82
+    // 이 차이가 nearest-selector 돌연변이를 잡는다.
+    asmc_msgs::DetectedObject MakeStaticObjectAtOffset(
+        int id, double target_s, double lateral_d, double width,
+        double length) const {
+        const Pose2D pose = PoseAtOffset(waypoints_, target_s, lateral_d);
+        const Pose2D reference = PoseAt(waypoints_, target_s);
+        asmc_msgs::DetectedObject object;
+        object.id = id;
+        object.center.x = pose.x;
+        object.center.y = pose.y;
+        object.yaw = reference.yaw;
+        object.vx = 0.0;
+        object.vy = 0.0;
+        object.width = width;
+        object.length = length;
+        object.height = 1.5;
+        const double half_length = length * 0.5;
+        const double half_width = width * 0.5;
+        const double cos_yaw = std::cos(reference.yaw);
+        const double sin_yaw = std::sin(reference.yaw);
+        const double offsets[4][2] = {
+            {-half_length, -half_width}, {half_length, -half_width},
+            {half_length, half_width}, {-half_length, half_width},
+        };
+        for (std::size_t i = 0; i < 4; ++i) {
+            const double x = pose.x + offsets[i][0] * cos_yaw -
+                             offsets[i][1] * sin_yaw;
+            const double y = pose.y + offsets[i][0] * sin_yaw +
+                             offsets[i][1] * cos_yaw;
+            object.obb_corners[i].x = x;
+            object.obb_corners[i].y = y;
+            object.obb_corners[i].z = 0.0;
+            object.obb_corners[i + 4].x = x;
+            object.obb_corners[i + 4].y = y;
+            object.obb_corners[i + 4].z = object.height;
+        }
+        return object;
+    }
+
+    // 명령은 계속 보내면서 vehicle/object 발행만 멈춘 채 한 window를 돈다.
+    // RunWithoutInputs와 달리 명령 payload를 그대로 두고 창만 새로 연다.
+    void RunCyclesWithoutInputs(const Command& command, int cycles) {
+        for (int cycle = 0; cycle < cycles && ros::ok(); ++cycle) {
+            Command stamped = command;
+            stamped.header.stamp = ros::Time::now();
+            stamped.valid_until = ros::Time::now() + ros::Duration(2.0);
+            command_pub_.publish(stamped);
+            SpinFor(0.06);
+        }
+    }
+
+    // valid_until이 이미 지난 명령을 cycles회 보낸다. 입력은 정상 유지한다.
+    // 잠긴 기동이 stale 명령에 끊기지 않는지 확인하는 데 쓴다 (D6-4b).
+    void RunExpiredCycles(const Command& command, const Pose2D& pose,
+                          double speed, int cycles) {
+        for (int cycle = 0; cycle < cycles && ros::ok(); ++cycle) {
+            PublishInputs(pose, speed);
+            Command stamped = command;
+            stamped.header.stamp = ros::Time::now();
+            stamped.valid_until = ros::Time::now() - ros::Duration(1.0);
+            command_pub_.publish(stamped);
+            SpinFor(0.06);
+        }
+    }
+
+    // 이번 window에서 해당 command_id의 **첫** 피드백.
+    bool FirstFor(uint32_t command_id, Feedback& out) const {
+        for (const auto& feedback : Collected()) {
+            if (feedback.command_id == command_id) { out = feedback; return true; }
+        }
+        return false;
+    }
+
+    // 해당 command_id의 첫 피드백이 도착할 때까지만 명령을 보낸다 (D6-4b).
+    //
+    // "한 cycle 돌리고 첫 피드백을 본다"로는 20 Hz timer와 어긋나 window가
+    // 비는 경우가 있다. 반대로 여러 cycle을 돌린 뒤 첫 피드백을 고르면 그
+    // window에 이미 다음 상태들이 섞여 들어와, "같은 cycle에 COMMIT하지
+    // 않았다"를 window 전체로 판정할 수 없다.
+    //
+    // 그래서 첫 피드백이 나오면 즉시 멈추고, **그 시점까지 이 id로 관측한
+    // 상태 수**도 함께 돌려준다. 호출자는 그 개수로 "첫 결과만 보았다"를
+    // 확인한다.
+    bool RunUntilFirstFeedback(const Command& command, const Pose2D& pose,
+                               double speed, int max_cycles, Feedback& out,
+                               std::size_t& observed_count) {
+        BeginWindow();
+        for (int cycle = 0; cycle < max_cycles && ros::ok(); ++cycle) {
+            PublishInputs(pose, speed);
+            Command stamped = command;
+            stamped.header.stamp = ros::Time::now();
+            stamped.valid_until = ros::Time::now() + ros::Duration(2.0);
+            command_pub_.publish(stamped);
+            SpinFor(0.06);
+            if (FirstFor(command.command_id, out)) {
+                observed_count = CountFor(command.command_id);
+                return true;
+            }
+        }
+        observed_count = 0;
+        return false;
+    }
+
+    // 이번 window에서 해당 command_id의 피드백 개수.
+    std::size_t CountFor(uint32_t command_id) const {
+        std::size_t count = 0;
+        for (const auto& feedback : Collected()) {
+            if (feedback.command_id == command_id) ++count;
+        }
+        return count;
+    }
+
+    // 이번 window에서 해당 command_id가 특정 상태였던 마지막 피드백.
+    bool LastForState(uint32_t command_id, uint8_t state, Feedback& out) const {
+        const auto collected = Collected();
+        for (auto it = collected.rbegin(); it != collected.rend(); ++it) {
+            if (it->command_id == command_id && it->execution_state == state) {
+                out = *it;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 이번 window에서 first가 second보다 먼저 관측되었는지 (D6-4b).
+    //
+    // "READY를 거치지 않고 COMMIT하지 않는다"처럼 **순서**가 계약인 검증에
+    // 쓴다. 단순히 "COMMITTED를 보지 못했다"로 판정하면, 한 spin에 여러
+    // 피드백이 쌓여 READY 다음 cycle의 정상 COMMIT까지 같은 window에 들어올
+    // 때 거짓 실패가 난다. 순서를 보면 그 위상 문제와 실제 계약 위반
+    // (READY 없이 곧바로 COMMITTED)이 구분된다.
+    bool SawStateBefore(uint32_t command_id, uint8_t first,
+                        uint8_t second) const {
+        for (const auto& feedback : Collected()) {
+            if (feedback.command_id != command_id) continue;
+            if (feedback.execution_state == first) return true;
+            if (feedback.execution_state == second) return false;
+        }
+        return false;
+    }
+
+    // 이번 window에서 해당 command_id가 특정 상태를 관측했는지.
+    bool SawStateFor(uint32_t command_id, uint8_t state) const {
+        for (const auto& feedback : Collected()) {
+            if (feedback.command_id == command_id &&
+                feedback.execution_state == state) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // 경로 위 target_s 지점의 차량. FOLLOW 대상 검증(진행 방향/같은 차선/
@@ -1121,8 +1382,10 @@ int main(int argc, char** argv) {
         const Pose2D pass_ego =
             PoseAtOffset(waypoints, kAvoidEgoS, locked_target_d);
         Feedback pass;
-        const bool got_pass = harness.RunUntilState(
-            avoid, pass_ego, kCruiseSpeed, Feedback::EXECUTING, 30, pass);
+        // PASS 진입 프레임을 기다린다. 첫 EXECUTING 프레임은 아직 SHIFT일 수
+        // 있고, 그것은 계약 위반이 아니라 관측 위상 문제다(RunUntilProgress).
+        const bool got_pass = harness.RunUntilProgress(
+            avoid, pass_ego, kCruiseSpeed, Feedback::EXECUTING, 0.5, 30, pass);
         Expect(got_pass && pass.maneuver_progress >= 0.5 &&
                    pass.maneuver_progress < 1.0 && pass.target_d_valid &&
                    std::fabs(pass.target_d - locked_target_d) < 1e-9,
@@ -1336,6 +1599,899 @@ int main(int argc, char** argv) {
                     kCruiseSpeed, 12, false);
         Expect(harness.LastFor(keep_id, feedback) && feedback.plan_valid,
                "new command_id recovers after an unimplemented maneuver");
+    }
+
+    // ================================================================
+    // D6-4b: AVOID ROS edge regression
+    //
+    // D6-4a는 PREPARE -> READY -> EXECUTE -> COMMIT -> EXECUTING ->
+    // COMPLETED의 정상 경로를 고정했다. 여기서는 그 경로를 벗어나는 edge를
+    // 실제 ROS로 고정한다. 아래 fixture 상수는 전부 D6-4b 실측으로 고른
+    // 값이며, 임의의 좌표를 하드코딩하지 않았다.
+    // ================================================================
+
+    // AVOID edge 공통 fixture. ego는 회전교차로/저속 fallback과 무관한
+    // 구간이고, 장애물은 그 25 m 앞 중앙선이다(D6-4a와 같은 배치).
+    constexpr double kAvoidEgoS = 200.0;
+    constexpr double kAvoidObstacleS = 225.0;
+    const Pose2D avoid_ego = PoseAt(waypoints, kAvoidEgoS);
+
+    // AVOID edge 블록 사이의 상태 정리.
+    //
+    // KEEP으로 정리하면 안 된다 - COMMITTED/EXECUTING인 AVOID는 KEEP을
+    // 거부하므로(계약 7.2절, 아래 "rejected KEEP" 검증이 증명한다) 이전
+    // transaction이 그대로 남는다. E-STOP만이 preempt할 수 있다(7.3절).
+    const auto reset_avoid_state = [&]() {
+        harness.SetObjects({});
+        harness.BeginWindow();
+        harness.RunCycles(harness.MakeCommand(++command_id,
+                                              Command::EMERGENCY_STOP),
+                          avoid_ego, kCruiseSpeed, 4);
+        harness.BeginWindow();
+        harness.RunCycles(harness.MakeCommand(++command_id, Command::KEEP),
+                          avoid_ego, kCruiseSpeed, 4);
+        harness.Settle(avoid_ego, kCruiseSpeed, 2);
+    };
+
+    // LEFT AVOID 명령 하나. 대상은 kAvoidObstacleS의 정지 차량이다.
+    const auto make_avoid = [&](uint32_t id, uint8_t request) {
+        Command avoid = harness.MakeCommand(id, Command::AVOID);
+        avoid.execution_request = request;
+        avoid.direction = Command::DIRECTION_LEFT;
+        avoid.primary_object_id = 21;
+        return avoid;
+    };
+
+    // PREPARE -> READY -> EXECUTE -> COMMITTED -> EXECUTING까지 진행시킨다.
+    // 실패하면 false. locked_target_d에 잠긴 목표를 돌려준다.
+    const auto drive_to_executing = [&](uint32_t id, double& locked_target_d) {
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        Command avoid = make_avoid(id, Command::PREPARE);
+        Feedback feedback;
+        if (!harness.RunUntilState(avoid, avoid_ego, kCruiseSpeed,
+                                   Feedback::READY, 40, feedback)) {
+            return false;
+        }
+        locked_target_d = feedback.target_d;
+        avoid.execution_request = Command::EXECUTE;
+        if (!harness.RunUntilState(avoid, avoid_ego, kCruiseSpeed,
+                                   Feedback::COMMITTED, 40, feedback)) {
+            return false;
+        }
+        return harness.RunUntilState(avoid, avoid_ego, kCruiseSpeed,
+                                     Feedback::EXECUTING, 40, feedback);
+    };
+
+    std::printf("\n=== AVOID direct EXECUTE handshake ===\n");
+    {
+        // ===== 첫 명령부터 EXECUTE여도 READY를 건너뛰지 않는다 =====
+        //
+        // 계약 5.5절의 정상 순서는 PREPARING -> READY -> EXECUTE -> 재검증 ->
+        // COMMITTED이고, 5.3절의 EXECUTE는 "이미 준비된 후보를 현재 snapshot
+        // 으로 다시 검증"하는 단계다. D6-4b 이전에는 새 transaction의 첫
+        // 명령이 EXECUTE이면 한 cycle 안에서
+        //   PREPARING -> (PrepareAvoid) -> READY -> (Commit) -> COMMITTED
+        // 가 끝나 FSM이 READY를 한 번도 관측하지 못했다. 실측 첫 feedback이
+        // 곧바로 COMMITTED/LOCKED였다.
+        //
+        // same-cycle COMMIT을 되돌리는 돌연변이는 A가 잡는다.
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        const uint32_t id = ++command_id;
+        Command direct = make_avoid(id, Command::EXECUTE);
+
+        Feedback first;
+        std::size_t first_count = 0;
+        const bool got_first = harness.RunUntilFirstFeedback(
+            direct, avoid_ego, kCruiseSpeed, 20, first, first_count);
+        const asmc_msgs::Trajectory* first_ptr =
+            harness.LastTrajectoryInWindow();
+        const double first_d = TrajectoryEndpointD(waypoints, first_ptr);
+        // A. 첫 planning 결과는 READY이며 maintenance NEW다.
+        Expect(got_first && first.execution_state == Feedback::READY &&
+                   first.trajectory_source == Feedback::TRAJECTORY_NEW &&
+                   first.plan_valid && first.command_accepted,
+               "brand-new direct EXECUTE reports READY with maintenance NEW");
+        // 첫 피드백에서 멈췄으므로 이 window에는 그 하나만 있다. 같은 cycle에
+        // COMMIT했다면 그 하나가 COMMITTED였을 것이다.
+        Expect(got_first && first_count == 1 &&
+                   first.execution_state != Feedback::COMMITTED,
+               "brand-new direct EXECUTE does not COMMIT in the same cycle");
+        Expect(std::isfinite(first_d) && std::fabs(first_d) < 0.75,
+               "brand-new direct EXECUTE publishes center maintenance");
+
+        // B. 같은 EXECUTE가 다음 cycle에 현재 snapshot 재검증으로 COMMIT된다.
+        Feedback committed;
+        const bool got_committed = harness.RunUntilState(
+            direct, avoid_ego, kCruiseSpeed, Feedback::COMMITTED, 30,
+            committed);
+        const asmc_msgs::Trajectory* committed_ptr =
+            harness.LastTrajectoryInWindow();
+        const double committed_d =
+            TrajectoryEndpointD(waypoints, committed_ptr);
+        Expect(got_committed &&
+                   committed.trajectory_source == Feedback::TRAJECTORY_LOCKED &&
+                   committed.plan_valid && committed.target_d_valid,
+               "same direct EXECUTE commits on the next cycle");
+        Expect(got_committed && std::isfinite(committed_d) &&
+                   std::fabs(committed_d - committed.target_d) < 0.75 &&
+                   std::fabs(committed_d) > 1.5,
+               "direct EXECUTE COMMIT publishes the locked lateral trajectory");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID WAITING then EXECUTE recovery ===\n");
+    {
+        // C. WAITING에서 EXECUTE를 계속 재발행하는 경우.
+        //    후보가 회복된 cycle은 READY까지만 가고, 그 다음 EXECUTE cycle에
+        //    재검증을 거쳐 COMMIT되어야 한다.
+        //
+        // WAITING fixture는 direction conflict를 쓴다 - 아래 별도 블록이
+        // 증명하듯 안정적으로 WAITING을 만들고, 명령을 바꾸지 않고 objects만
+        // 바꿔 회복시킬 수 있다.
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0),
+                            harness.MakeStaticObjectAtOffset(
+                                37, kAvoidObstacleS + 7.0, 2.55, 2.4, 4.5)});
+        const uint32_t id = ++command_id;
+        Command execute = make_avoid(id, Command::EXECUTE);
+
+        Feedback waiting;
+        const bool got_waiting = harness.RunUntilState(
+            execute, avoid_ego, kCruiseSpeed, Feedback::WAITING, 30, waiting);
+        Expect(got_waiting && !waiting.plan_valid &&
+                   waiting.trajectory_source == Feedback::TRAJECTORY_NEW &&
+                   !harness.SawStateFor(id, Feedback::COMMITTED),
+               "blocked EXECUTE waits instead of committing");
+
+        // 차단 객체를 제거해 후보를 회복시킨다.
+        //
+        // 여기서 고정하려는 성질은 "후보가 처음 유효해진 cycle은 COMMIT하지
+        // 않는다"이다. objects를 바꾼 직후 몇 프레임은 아직 WAITING일 수
+        // 있으므로(발행/처리 위상), 첫 피드백이 아니라 **첫 READY**를 찾아
+        // 그것이 COMMITTED가 아니었는지를 본다. 같은 cycle에 COMMIT한다면
+        // READY를 관측하기 전에 COMMITTED가 먼저 나온다.
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        Feedback recovered;
+        const bool got_recovered = harness.RunUntilState(
+            execute, avoid_ego, kCruiseSpeed, Feedback::READY, 30, recovered);
+        Expect(got_recovered &&
+                   recovered.trajectory_source == Feedback::TRAJECTORY_NEW &&
+                   recovered.plan_valid,
+               "candidate recovery cycle reaches READY only");
+        // 회복 cycle이 곧바로 잠그면 READY를 관측하기 전에 COMMITTED가 먼저
+        // 나온다. 순서로 판정해야 "READY 다음 cycle의 정상 COMMIT"과
+        // 구분된다(SawStateBefore).
+        Expect(got_recovered &&
+                   harness.SawStateBefore(id, Feedback::READY,
+                                          Feedback::COMMITTED),
+               "candidate recovery cycle does not COMMIT");
+
+        // 위 window가 READY 직후의 정상 COMMIT까지 이미 담았을 수 있다. 새
+        // window를 열기 **전에** 꺼내 둔다 - RunUntilState는 BeginWindow()로
+        // 창을 새로 열기 때문이다.
+        Feedback committed;
+        const bool already_committed =
+            harness.LastForState(id, Feedback::COMMITTED, committed);
+        const bool got_committed =
+            already_committed ||
+            harness.RunUntilState(execute, avoid_ego, kCruiseSpeed,
+                                  Feedback::COMMITTED, 30, committed);
+        Expect(got_committed &&
+                   committed.trajectory_source == Feedback::TRAJECTORY_LOCKED &&
+                   committed.target_d_valid,
+               "the following EXECUTE cycle commits after revalidation");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID target heading threshold ===\n");
+    {
+        // 계약 3.4절 4항. 기본 임계값 45도이고 비교는 '>'이므로 정확히 45도는
+        // 통과한다. 임계값을 바꾸지 않고 경계 동작만 고정한다.
+        //
+        // 같은 target position을 쓰고 quaternion yaw만 조절한다.
+        constexpr double kDeg = M_PI / 180.0;
+        const auto heading_trial = [&](double error_deg, const char* name,
+                                       bool expect_rejected) {
+            harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+            const uint32_t id = ++command_id;
+            Command avoid = make_avoid(id, Command::PREPARE);
+            harness.SetTargetWithHeadingError(avoid, kAvoidObstacleS + 10.0,
+                                              error_deg * kDeg);
+            harness.BeginWindow();
+            harness.RunCycles(avoid, avoid_ego, kCruiseSpeed, 8);
+            harness.Settle(avoid_ego, kCruiseSpeed, 2);
+            Feedback feedback;
+            const bool got = harness.LastFor(id, feedback);
+            const bool rejected =
+                got && feedback.execution_state == Feedback::FAILED &&
+                feedback.result_code == Feedback::TARGET_PROJECTION_FAILED;
+            Expect(got && rejected == expect_rejected, name);
+            reset_avoid_state();
+        };
+        heading_trial(44.0, "44 deg heading error is accepted", false);
+        heading_trial(45.0, "exactly 45 deg heading error is accepted", false);
+        heading_trial(46.0, "46 deg heading error is TARGET_PROJECTION_FAILED",
+                      true);
+    }
+
+    std::printf("\n=== AVOID target heading wrap at +-pi ===\n");
+    {
+        // NormalizeAngle 경로를 실제 트랙으로 통과시킨다. 단순 뺄셈으로
+        // 바꾸면 358도 차이로 읽혀 TARGET_PROJECTION_FAILED가 된다.
+        const double wrap_s = harness.FindPoseWithHeadingNearPi(1.0 * M_PI / 180.0);
+        Expect(wrap_s > 0.0,
+               "the track provides a reference heading near +-pi");
+        if (wrap_s > 0.0) {
+            const Pose2D wrap_pose = PoseAt(waypoints, wrap_s);
+            // reference가 -179도대이면 목표는 +178도대로 준다. 표현상 358도
+            // 차이지만 실제 각거리는 2도다.
+            const double target_yaw =
+                wrap_pose.yaw > 0.0
+                    ? wrap_pose.yaw - 2.0 * M_PI + 2.0 * M_PI / 180.0
+                    : wrap_pose.yaw + 2.0 * M_PI - 2.0 * M_PI / 180.0;
+            const double raw_difference = std::fabs(target_yaw - wrap_pose.yaw);
+            Expect(raw_difference > 6.0,
+                   "the wrap fixture really differs by ~2pi before normalizing");
+
+            const Pose2D wrap_ego = PoseAt(waypoints, wrap_s - 30.0);
+            harness.SetObjects({harness.MakeVehicle(41, wrap_s - 5.0, 0.0)});
+            const uint32_t id = ++command_id;
+            Command avoid = make_avoid(id, Command::PREPARE);
+            avoid.primary_object_id = 41;
+            harness.SetTargetPoseRaw(avoid, wrap_pose, target_yaw);
+            harness.BeginWindow();
+            harness.RunCycles(avoid, wrap_ego, 6.0, 10);
+            harness.Settle(wrap_ego, 6.0, 2);
+            Feedback feedback;
+            Expect(harness.LastFor(id, feedback) &&
+                       feedback.result_code != Feedback::TARGET_PROJECTION_FAILED,
+                   "a +-pi wrapped target heading is not rejected");
+            reset_avoid_state();
+        }
+    }
+
+    std::printf("\n=== AVOID authoritative target id ===\n");
+    {
+        // FSM이 지정한 primary_object_id만 쓴다. 두 객체의 lateral offset을
+        // 다르게 두어 목표 d가 실제로 달라지게 만든다 - 같은 폭/중앙선으로
+        // 두면 nearest-selector 돌연변이가 통과한다.
+        //
+        // 실측(D6-4b): d=-0.8 -> 약 +1.73, d=+0.8 -> 약 +3.82.
+        const std::vector<asmc_msgs::DetectedObject> both = {
+            harness.MakeStaticObjectAtOffset(17, 240.0, -0.8, 2.0, 4.5),
+            harness.MakeStaticObjectAtOffset(21, 255.0, 0.8, 2.0, 4.5),
+        };
+
+        // 각각 단독으로 두었을 때의 기준 목표 d.
+        harness.SetObjects({both[1]});
+        const uint32_t only_21_id = ++command_id;
+        Command only_21 = make_avoid(only_21_id, Command::PREPARE);
+        Feedback reference_21;
+        const bool got_21 = harness.RunUntilState(
+            only_21, avoid_ego, kCruiseSpeed, Feedback::READY, 30,
+            reference_21);
+        reset_avoid_state();
+
+        harness.SetObjects({both[0]});
+        const uint32_t only_17_id = ++command_id;
+        Command only_17 = make_avoid(only_17_id, Command::PREPARE);
+        only_17.primary_object_id = 17;
+        Feedback reference_17;
+        const bool got_17 = harness.RunUntilState(
+            only_17, avoid_ego, kCruiseSpeed, Feedback::READY, 30,
+            reference_17);
+        reset_avoid_state();
+
+        Expect(got_21 && got_17 &&
+                   std::fabs(reference_21.target_d - reference_17.target_d) >
+                       1.0,
+               "the two obstacles really produce different target_d");
+
+        // 둘 다 있을 때 지정 대상 21의 geometry를 써야 한다. 17이 더 가깝다.
+        harness.SetObjects(both);
+        const uint32_t id = ++command_id;
+        Command avoid = make_avoid(id, Command::PREPARE);
+        Feedback selected;
+        const bool got_selected = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::READY, 30, selected);
+        Expect(got_selected && got_21 &&
+                   std::fabs(selected.target_d - reference_21.target_d) < 0.2,
+               "AVOID uses the FSM designated target, not the nearest one");
+        Expect(got_selected && got_17 &&
+                   std::fabs(selected.target_d - reference_17.target_d) > 1.0,
+               "AVOID does not fall back to the nearer object geometry");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID LEFT / RIGHT / NONE ===\n");
+    {
+        // target pose 없는 geometry 경로. NONE에서 특정 방향을 무조건
+        // 기대하지 않고, 허용된 후보 중 하나를 골랐는지만 본다.
+        const auto direction_trial = [&](uint8_t direction, Feedback& out) {
+            harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+            const uint32_t id = ++command_id;
+            Command avoid = make_avoid(id, Command::PREPARE);
+            avoid.direction = direction;
+            const bool got = harness.RunUntilState(
+                avoid, avoid_ego, kCruiseSpeed, Feedback::READY, 30, out);
+            reset_avoid_state();
+            return got;
+        };
+
+        Feedback left;
+        Feedback right;
+        Feedback none;
+        const bool got_left = direction_trial(Command::DIRECTION_LEFT, left);
+        const bool got_right = direction_trial(Command::DIRECTION_RIGHT, right);
+        const bool got_none = direction_trial(Command::DIRECTION_NONE, none);
+
+        Expect(got_left && left.target_d_valid && left.target_d > 1.0,
+               "AVOID LEFT evaluates only the left target");
+        Expect(got_right && right.target_d_valid && right.target_d < -1.0,
+               "AVOID RIGHT evaluates only the right target");
+        // NONE은 양쪽이 모두 후보이므로 어느 쪽이든 허용한다. 다만 방향이
+        // 결정되어 있어야 하고, 후보 수는 한쪽만 볼 때보다 많아야 한다.
+        Expect(got_none && none.target_d_valid &&
+                   std::fabs(none.target_d) > 1.0,
+               "AVOID NONE selects one of the allowed candidates");
+        Expect(got_none && got_left && got_right &&
+                   none.generated_candidate_count >
+                       std::max(left.generated_candidate_count,
+                                right.generated_candidate_count),
+               "AVOID NONE evaluates both sides");
+
+        // NONE이 고른 방향은 lock 이후 drift하지 않아야 한다.
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        const uint32_t id = ++command_id;
+        Command avoid = make_avoid(id, Command::PREPARE);
+        avoid.direction = Command::DIRECTION_NONE;
+        Feedback ready;
+        const bool got_ready = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::READY, 30, ready);
+        avoid.execution_request = Command::EXECUTE;
+        Feedback committed;
+        const bool got_committed = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::COMMITTED, 30, committed);
+        Feedback executing;
+        const bool got_executing = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::EXECUTING, 30, executing);
+        Expect(got_ready && got_committed && got_executing &&
+                   std::fabs(committed.target_d - executing.target_d) < 1e-9 &&
+                   (committed.target_d > 0.0) == (ready.target_d > 0.0),
+               "AVOID NONE does not drift direction after the lock");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID optional target pose ===\n");
+    {
+        // has_target_pose=true이면 투영된 목표 의도가 후보 선택에 반영되어야
+        // 한다. target pose 없이 geometry가 정하는 d와 명확히 달라야 한다.
+        //
+        // 실측(D6-4b): geometry 기본값 +2.55, pose d=+3.8 -> 목표 +3.80.
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        const uint32_t geometry_id = ++command_id;
+        Command geometry = make_avoid(geometry_id, Command::PREPARE);
+        Feedback geometry_feedback;
+        const bool got_geometry = harness.RunUntilState(
+            geometry, avoid_ego, kCruiseSpeed, Feedback::READY, 30,
+            geometry_feedback);
+        reset_avoid_state();
+
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        const uint32_t pose_id = ++command_id;
+        Command with_pose = make_avoid(pose_id, Command::PREPARE);
+        harness.SetTargetOffPath(with_pose, kAvoidObstacleS + 10.0, 3.8);
+        Feedback pose_feedback;
+        const bool got_pose = harness.RunUntilState(
+            with_pose, avoid_ego, kCruiseSpeed, Feedback::READY, 30,
+            pose_feedback);
+
+        Expect(got_geometry && geometry_feedback.target_d_valid &&
+                   geometry_feedback.target_d > 1.0,
+               "AVOID without a target pose uses obstacle geometry");
+        Expect(got_pose && pose_feedback.target_d_valid &&
+                   pose_feedback.target_d > 3.0,
+               "AVOID consumes the projected target pose intent");
+        Expect(got_geometry && got_pose &&
+                   pose_feedback.target_d - geometry_feedback.target_d > 0.8,
+               "the target pose actually changes the selected target_d");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID direction conflict ===\n");
+    {
+        // direction=LEFT인데 target pose가 장애물 오른쪽이면, 그 오른쪽 경로가
+        // 물리적으로 비어 있어도 candidate를 만들지 않는다(계약 3.3.4절).
+        // 명령 결함이 아니므로 INVALID_COMMAND/FAILED가 아니라 WAITING이다.
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        const uint32_t id = ++command_id;
+        Command avoid = make_avoid(id, Command::PREPARE);
+        harness.SetTargetOffPath(avoid, kAvoidObstacleS + 10.0, -2.55);
+        harness.BeginWindow();
+        harness.RunCycles(avoid, avoid_ego, kCruiseSpeed, 10);
+        harness.Settle(avoid_ego, kCruiseSpeed, 2);
+        const asmc_msgs::Trajectory* maintenance_ptr =
+            harness.LastTrajectoryInWindow();
+        const double maintenance_d =
+            TrajectoryEndpointD(waypoints, maintenance_ptr);
+        Feedback feedback;
+        const bool got = harness.LastFor(id, feedback);
+        Expect(got && feedback.command_accepted &&
+                   feedback.execution_state == Feedback::WAITING &&
+                   !feedback.plan_valid &&
+                   feedback.result_code == Feedback::RESULT_NONE,
+               "direction conflict waits instead of failing");
+        Expect(got && feedback.trajectory_source == Feedback::TRAJECTORY_NEW &&
+                   std::isfinite(maintenance_d) &&
+                   std::fabs(maintenance_d) < 0.75,
+               "direction conflict keeps publishing center maintenance");
+        Expect(got && feedback.result_code != Feedback::INVALID_COMMAND &&
+                   feedback.execution_state != Feedback::FAILED,
+               "direction conflict is not an INVALID_COMMAND");
+        // 후보를 아예 만들지 않았으므로 차단 객체도 없다. 아래 실제
+        // collision-blocked WAITING과 구분되는 지점이다.
+        Expect(got && feedback.blocking_object_id == -1 &&
+                   feedback.generated_candidate_count == 0,
+               "direction conflict generates no candidate at all");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID collision-blocked WAITING ===\n");
+    {
+        // direction conflict와 달리 요청 방향의 후보를 실제로 만들었지만
+        // 다른 장애물이 전부 막은 경우다. blocking_object_id가 실제 차단
+        // 객체를 가리켜야 한다.
+        //
+        // blocker의 s/d는 D6-4b probe로 고른 값이다(228~236 m / +2.55 부근이
+        // 모두 안정적으로 WAITING을 만들었다).
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0),
+                            harness.MakeStaticObjectAtOffset(
+                                37, kAvoidObstacleS + 7.0, 2.55, 2.4, 4.5)});
+        const uint32_t id = ++command_id;
+        Command avoid = make_avoid(id, Command::PREPARE);
+        harness.BeginWindow();
+        harness.RunCycles(avoid, avoid_ego, kCruiseSpeed, 10);
+        harness.Settle(avoid_ego, kCruiseSpeed, 2);
+        const asmc_msgs::Trajectory* maintenance_ptr =
+            harness.LastTrajectoryInWindow();
+        const double maintenance_d =
+            TrajectoryEndpointD(waypoints, maintenance_ptr);
+        Feedback feedback;
+        const bool got = harness.LastFor(id, feedback);
+        Expect(got && feedback.command_accepted &&
+                   feedback.execution_state == Feedback::WAITING &&
+                   !feedback.plan_valid &&
+                   feedback.result_code == Feedback::RESULT_NONE,
+               "collision-blocked AVOID PREPARE waits");
+        Expect(got && feedback.trajectory_source == Feedback::TRAJECTORY_NEW &&
+                   std::isfinite(maintenance_d) &&
+                   std::fabs(maintenance_d) < 0.75,
+               "collision-blocked AVOID publishes NEW maintenance");
+        Expect(got && feedback.blocking_object_id >= 0 &&
+                   feedback.generated_candidate_count > 0 &&
+                   feedback.valid_candidate_count == 0,
+               "collision-blocked AVOID reports the blocking object");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID pre-COMMIT target dropout ===\n");
+    {
+        // A. 첫 binding부터 대상이 없으면 유예를 주지 않는다.
+        harness.SetObjects({harness.MakeVehicle(17, kAvoidObstacleS, 0.0)});
+        const uint32_t missing_id = ++command_id;
+        Command missing = make_avoid(missing_id, Command::PREPARE);
+        harness.BeginWindow();
+        harness.RunCycles(missing, avoid_ego, kCruiseSpeed, 3);
+        Feedback first;
+        Expect(harness.FirstFor(missing_id, first) &&
+                   first.execution_state == Feedback::FAILED &&
+                   first.result_code == Feedback::TARGET_OBJECT_LOST,
+               "a never-observed AVOID target fails immediately");
+        Expect(harness.FirstFor(missing_id, first) && first.command_accepted,
+               "TARGET_OBJECT_LOST is not a command defect");
+        reset_avoid_state();
+
+        // B. 확보한 뒤의 dropout은 유예를 받고, 유예를 넘기면 LOST다.
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        const uint32_t id = ++command_id;
+        Command avoid = make_avoid(id, Command::PREPARE);
+        Feedback ready;
+        const bool got_ready = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::READY, 30, ready);
+        Expect(got_ready, "AVOID acquires its target before the dropout");
+
+        // 짧은 dropout: 유예 안이므로 상태가 유지된다.
+        harness.SetObjects({});
+        harness.BeginWindow();
+        harness.RunCycles(avoid, avoid_ego, kCruiseSpeed, 2);
+        Feedback during;
+        Expect(harness.LastFor(id, during) &&
+                   during.execution_state != Feedback::FAILED &&
+                   during.result_code != Feedback::TARGET_OBJECT_LOST,
+               "a short pre-COMMIT dropout keeps the transaction");
+
+        // 대상 복귀: 같은 대상으로 계속한다.
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        harness.BeginWindow();
+        harness.RunCycles(avoid, avoid_ego, kCruiseSpeed, 4);
+        Feedback recovered;
+        Expect(harness.LastFor(id, recovered) &&
+                   recovered.execution_state == Feedback::READY &&
+                   recovered.target_d_valid &&
+                   std::fabs(recovered.target_d - ready.target_d) < 0.2,
+               "the reacquired AVOID target keeps the same geometry");
+
+        // 긴 dropout: 유예를 넘기면 terminal LOST다.
+        harness.SetObjects({});
+        harness.BeginWindow();
+        harness.RunCycles(avoid, avoid_ego, kCruiseSpeed, 15);
+        harness.Settle(avoid_ego, kCruiseSpeed, 2);
+        Feedback lost;
+        Expect(harness.LastFor(id, lost) &&
+                   lost.execution_state == Feedback::FAILED &&
+                   lost.result_code == Feedback::TARGET_OBJECT_LOST,
+               "a long pre-COMMIT dropout ends in TARGET_OBJECT_LOST");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID post-COMMIT long dropout ===\n");
+    {
+        // 계약 8.2.1절. COMMIT 이후에는 대상 소실이 실패 조건이 아니다.
+        // 잠긴 target_d와 context로 기동을 완주한다.
+        const uint32_t id = ++command_id;
+        double locked_target_d = 0.0;
+        const bool executing = drive_to_executing(id, locked_target_d);
+        Expect(executing, "AVOID reaches EXECUTING before the dropout");
+
+        // 대상을 제거하고 유예보다 훨씬 오래 유지한다. ego는 clearance
+        // 이전에 고정해 completion이 먼저 일어나지 않게 한다.
+        harness.SetObjects({});
+        Command avoid = make_avoid(id, Command::EXECUTE);
+        harness.BeginWindow();
+        harness.RunCycles(avoid, avoid_ego, kCruiseSpeed, 25);
+        const asmc_msgs::Trajectory* locked_ptr =
+            harness.LastTrajectoryInWindow();
+        const double locked_d = TrajectoryEndpointD(waypoints, locked_ptr);
+        Feedback feedback;
+        const bool got = harness.LastFor(id, feedback);
+        Expect(got && feedback.execution_state == Feedback::EXECUTING &&
+                   feedback.result_code != Feedback::TARGET_OBJECT_LOST,
+               "post-COMMIT dropout does not report TARGET_OBJECT_LOST");
+        Expect(got && feedback.execution_state != Feedback::FAILED &&
+                   feedback.trajectory_source == Feedback::TRAJECTORY_LOCKED &&
+                   feedback.plan_valid,
+               "post-COMMIT dropout keeps executing the locked trajectory");
+        Expect(got && feedback.target_d_valid &&
+                   std::fabs(feedback.target_d - locked_target_d) < 1e-9,
+               "post-COMMIT dropout does not unlock target_d");
+        Expect(std::isfinite(locked_d) &&
+                   std::fabs(locked_d - locked_target_d) < 0.75,
+               "post-COMMIT dropout keeps the lateral trajectory");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID CANCEL before COMMIT ===\n");
+    {
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        const uint32_t id = ++command_id;
+        Command avoid = make_avoid(id, Command::PREPARE);
+        Feedback ready;
+        const bool got_ready = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::READY, 30, ready);
+        Expect(got_ready, "AVOID reaches READY before the cancel");
+
+        // 한 cycle만 돌면 20 Hz timer와 어긋나 이 window에 피드백이 없을 수
+        // 있다. CANCEL은 성공 후에도 IDLE을 유지하므로(아래 검증) 몇 cycle을
+        // 돌고 마지막을 보는 편이 안정적이고 더 강한 검증이다.
+        Command cancel = make_avoid(id, Command::CANCEL);
+        harness.BeginWindow();
+        harness.RunCycles(cancel, avoid_ego, kCruiseSpeed, 4);
+        Feedback cancelled;
+        Expect(harness.LastFor(id, cancelled) &&
+                   cancelled.command_accepted &&
+                   cancelled.execution_state == Feedback::IDLE &&
+                   cancelled.active_maneuver == Feedback::MANEUVER_NONE,
+               "CANCEL before COMMIT returns to IDLE");
+        Expect(!harness.SawStateFor(id, Feedback::COMMITTED) &&
+                   !harness.SawStateFor(id, Feedback::EXECUTING),
+               "CANCEL before COMMIT never starts the maneuver");
+
+        // 같은 ID의 CANCEL을 다시 보내도 terminal 실패로 latch되지 않는다.
+        // 취소할 transaction이 없는 CANCEL은 새 기동을 열지 않는다.
+        harness.BeginWindow();
+        harness.RunCycles(cancel, avoid_ego, kCruiseSpeed, 4);
+        Feedback repeated;
+        Expect(harness.LastFor(id, repeated) &&
+                   repeated.execution_state == Feedback::IDLE &&
+                   repeated.result_code != Feedback::INVALID_COMMAND,
+               "a repeated CANCEL stays IDLE instead of failing");
+
+        // 다음 새 AVOID는 이전 target/missing grace를 상속하지 않는다.
+        harness.SetObjects({});
+        const uint32_t next_id = ++command_id;
+        Command next = make_avoid(next_id, Command::PREPARE);
+        harness.BeginWindow();
+        harness.RunCycles(next, avoid_ego, kCruiseSpeed, 3);
+        Feedback inherited;
+        Expect(harness.FirstFor(next_id, inherited) &&
+                   inherited.execution_state == Feedback::FAILED &&
+                   inherited.result_code == Feedback::TARGET_OBJECT_LOST,
+               "a new AVOID after CANCEL does not inherit the dropout grace");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID CANCEL after COMMIT ===\n");
+    {
+        // 계약 7.1절. COMMITTED/EXECUTING의 CANCEL은 거부하고 잠긴 궤적을
+        // 계속 실행한다. ResetExternalAvoidance가 불리면 안 된다.
+        const uint32_t id = ++command_id;
+        double locked_target_d = 0.0;
+        const bool executing = drive_to_executing(id, locked_target_d);
+        Expect(executing, "AVOID reaches EXECUTING before the late cancel");
+
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        Command cancel = make_avoid(id, Command::CANCEL);
+        harness.BeginWindow();
+        harness.RunCycles(cancel, avoid_ego, kCruiseSpeed, 6);
+        const asmc_msgs::Trajectory* locked_ptr =
+            harness.LastTrajectoryInWindow();
+        const double locked_d = TrajectoryEndpointD(waypoints, locked_ptr);
+        Feedback feedback;
+        const bool got = harness.LastFor(id, feedback);
+        Expect(got && feedback.command_accepted &&
+                   feedback.result_code == Feedback::TOO_LATE_TO_CANCEL,
+               "CANCEL after COMMIT is rejected with TOO_LATE_TO_CANCEL");
+        Expect(got && feedback.active_maneuver == Command::AVOID &&
+                   feedback.execution_state == Feedback::EXECUTING &&
+                   feedback.trajectory_source == Feedback::TRAJECTORY_LOCKED,
+               "CANCEL after COMMIT keeps the AVOID execution state");
+        Expect(got && feedback.target_d_valid &&
+                   std::fabs(feedback.target_d - locked_target_d) < 1e-9,
+               "CANCEL after COMMIT keeps the target lock");
+        Expect(std::isfinite(locked_d) &&
+                   std::fabs(locked_d - locked_target_d) < 0.75,
+               "CANCEL after COMMIT keeps publishing the AVOID trajectory");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID rejected new command ownership ===\n");
+    {
+        // 계약 7.2.1절. D6-0a의 manager-only 회귀를 실제 ROS로 완성한다.
+        // 가장 중요한 것은 MPC 궤적이 KEEP 중앙 경로로 바뀌지 않는 것이다.
+        const uint32_t id = ++command_id;
+        double locked_target_d = 0.0;
+        const bool executing = drive_to_executing(id, locked_target_d);
+        Expect(executing, "AVOID reaches EXECUTING before the new KEEP");
+
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        const uint32_t keep_id = ++command_id;
+        Command keep = harness.MakeCommand(keep_id, Command::KEEP);
+        harness.BeginWindow();
+        harness.RunCycles(keep, avoid_ego, kCruiseSpeed, 8);
+        const asmc_msgs::Trajectory* locked_ptr =
+            harness.LastTrajectoryInWindow();
+        const double locked_d = TrajectoryEndpointD(waypoints, locked_ptr);
+        Feedback feedback;
+        const bool got = harness.LastFor(keep_id, feedback);
+        Expect(got && feedback.command_id == keep_id &&
+                   feedback.command_accepted &&
+                   feedback.result_code == Feedback::TOO_LATE_TO_CANCEL,
+               "a new KEEP during AVOID EXECUTING is answered on its own id");
+        Expect(got && feedback.active_maneuver == Command::AVOID &&
+                   feedback.execution_state == Feedback::EXECUTING &&
+                   feedback.trajectory_source == Feedback::TRAJECTORY_LOCKED,
+               "the rejected KEEP does not become the active maneuver");
+        Expect(got && feedback.target_d_valid &&
+                   std::fabs(feedback.target_d - locked_target_d) < 1e-9,
+               "the rejected KEEP does not release the AVOID target lock");
+        // 이 검증이 핵심이다. 궤적이 중앙으로 돌아오면 장애물 옆에서 조향이
+        // 반대로 꺾인다.
+        Expect(std::isfinite(locked_d) &&
+                   std::fabs(locked_d - locked_target_d) < 0.75 &&
+                   std::fabs(locked_d) > 1.5,
+               "the MPC trajectory stays on the committed AVOID, not KEEP");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID survives an invalid or stale new command ===\n");
+    {
+        // validation은 Accept()보다 먼저 수행되므로, 형식이 잘못되었거나
+        // 만료된 새 명령은 manager에 도달하지 못한다. 그렇다고 잠긴 회피를
+        // 끊으면 계약 7.2절이 막으려던 사고가 그대로 일어난다 - 장애물 옆
+        // 차선 사이 정지다(8.2.1절).
+        //
+        // 거부 회신 자체는 유지하고, 계획 대상만 활성 transaction으로 둔다.
+        const uint32_t id = ++command_id;
+        double locked_target_d = 0.0;
+        const bool executing = drive_to_executing(id, locked_target_d);
+        Expect(executing, "AVOID reaches EXECUTING before the bad command");
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+
+        // (a) frame_id가 잘못된 새 KEEP.
+        const uint32_t invalid_id = ++command_id;
+        Command invalid = harness.MakeCommand(invalid_id, Command::KEEP);
+        invalid.header.frame_id = "base_link";
+        harness.BeginWindow();
+        harness.RunCycles(invalid, avoid_ego, kCruiseSpeed, 6);
+        const asmc_msgs::Trajectory* invalid_ptr =
+            harness.LastTrajectoryInWindow();
+        const double invalid_d = TrajectoryEndpointD(waypoints, invalid_ptr);
+        Feedback invalid_feedback;
+        const bool got_invalid = harness.LastFor(invalid_id, invalid_feedback);
+        Expect(got_invalid && !invalid_feedback.command_accepted &&
+                   invalid_feedback.result_code == Feedback::INVALID_COMMAND,
+               "an invalid new command is still rejected on its own id");
+        Expect(got_invalid &&
+                   invalid_feedback.active_maneuver == Command::AVOID &&
+                   invalid_feedback.execution_state == Feedback::EXECUTING &&
+                   invalid_feedback.trajectory_source ==
+                       Feedback::TRAJECTORY_LOCKED &&
+                   invalid_feedback.target_d_valid &&
+                   std::fabs(invalid_feedback.target_d - locked_target_d) < 1e-9,
+               "an invalid new command does not interrupt the committed AVOID");
+        Expect(std::isfinite(invalid_d) &&
+                   std::fabs(invalid_d - locked_target_d) < 0.75,
+               "an invalid new command does not force a SAFE_STOP trajectory");
+
+        // (b) valid_until이 지난 새 KEEP.
+        const uint32_t stale_id = ++command_id;
+        Command stale = harness.MakeCommand(stale_id, Command::KEEP);
+        harness.BeginWindow();
+        harness.RunExpiredCycles(stale, avoid_ego, kCruiseSpeed, 6);
+        const asmc_msgs::Trajectory* stale_ptr =
+            harness.LastTrajectoryInWindow();
+        const double stale_d = TrajectoryEndpointD(waypoints, stale_ptr);
+        Feedback stale_feedback;
+        const bool got_stale = harness.LastFor(stale_id, stale_feedback);
+        Expect(got_stale && !stale_feedback.command_accepted &&
+                   stale_feedback.result_code == Feedback::STALE_COMMAND,
+               "an expired new command is still rejected on its own id");
+        Expect(got_stale && stale_feedback.active_maneuver == Command::AVOID &&
+                   stale_feedback.execution_state == Feedback::EXECUTING &&
+                   stale_feedback.trajectory_source ==
+                       Feedback::TRAJECTORY_LOCKED &&
+                   stale_feedback.target_d_valid &&
+                   std::fabs(stale_feedback.target_d - locked_target_d) < 1e-9,
+               "an expired new command does not interrupt the committed AVOID");
+        Expect(std::isfinite(stale_d) &&
+                   std::fabs(stale_d - locked_target_d) < 0.75,
+               "an expired new command does not force a SAFE_STOP trajectory");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID E-STOP preemption ===\n");
+    {
+        // 계약 7.3절. E-STOP만 COMMITTED/EXECUTING을 preempt한다.
+        const uint32_t id = ++command_id;
+        double locked_target_d = 0.0;
+        const bool executing = drive_to_executing(id, locked_target_d);
+        Expect(executing, "AVOID reaches EXECUTING before the emergency stop");
+
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        const uint32_t estop_id = ++command_id;
+        Command estop = harness.MakeCommand(estop_id, Command::EMERGENCY_STOP);
+        harness.BeginWindow();
+        harness.RunCycles(estop, avoid_ego, kCruiseSpeed, 8);
+        const asmc_msgs::Trajectory* estop_ptr =
+            harness.LastTrajectoryInWindow();
+        Feedback feedback;
+        const bool got = harness.LastFor(estop_id, feedback);
+        Expect(got && feedback.command_accepted &&
+                   feedback.active_maneuver == Command::EMERGENCY_STOP,
+               "E-STOP preempts the committed AVOID");
+        Expect(got && !feedback.target_d_valid,
+               "E-STOP releases the AVOID target lock");
+        Expect(estop_ptr && IsDecelToZero(*estop_ptr),
+               "E-STOP publishes a decel-to-zero trajectory");
+
+        // 이후 새 AVOID의 대상이 미관측이면 old grace를 상속하지 않는다.
+        harness.SetObjects({});
+        const uint32_t next_id = ++command_id;
+        Command next = make_avoid(next_id, Command::PREPARE);
+        harness.BeginWindow();
+        harness.RunCycles(next, avoid_ego, kCruiseSpeed, 3);
+        Feedback inherited;
+        Expect(harness.FirstFor(next_id, inherited) &&
+                   inherited.execution_state == Feedback::FAILED &&
+                   inherited.result_code == Feedback::TARGET_OBJECT_LOST,
+               "a new AVOID after E-STOP does not inherit the dropout grace");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID post-COMMIT collision SAFE_STOP ===\n");
+    {
+        // 계약 8.2.1절. committed path가 새 장애물로 막히면 **출력 궤적만**
+        // SAFE_STOP이 되고 transaction과 lock은 유지된다. 그래서 잠긴 진단이
+        // 사라지면 안 된다 - FSM 입장에서는 "회피 중인데 목표도 진행률도
+        // 없고 무엇이 막았는지도 모른다"가 된다.
+        //
+        // D6-4b 이전에는 이 분기가 avoid_fields 없이 발행해
+        // target_d_valid=false / target_d=0 / progress=-1 / blocking=-1이
+        // 나갔다.
+        const uint32_t id = ++command_id;
+        double locked_target_d = 0.0;
+        const bool executing = drive_to_executing(id, locked_target_d);
+        Expect(executing, "AVOID reaches EXECUTING before the new blocker");
+
+        Feedback before;
+        Command avoid = make_avoid(id, Command::EXECUTE);
+        harness.BeginWindow();
+        harness.RunCycles(avoid, avoid_ego, kCruiseSpeed, 2);
+        const bool got_before = harness.LastFor(id, before);
+
+        // 잠긴 경로 위에 새 blocker를 놓는다. probe에서 212~222 m / 잠긴 d
+        // 부근이 모두 안정적으로 COLLISION_BLOCKED를 만들었다.
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0),
+                            harness.MakeStaticObjectAtOffset(
+                                31, kAvoidEgoS + 15.0, locked_target_d,
+                                2.4, 4.5)});
+        harness.BeginWindow();
+        harness.RunCycles(avoid, avoid_ego, kCruiseSpeed, 6);
+        Feedback blocked;
+        const bool got = harness.LastFor(id, blocked);
+        Expect(got && blocked.execution_state == Feedback::EXECUTING &&
+                   blocked.active_maneuver == Command::AVOID,
+               "a blocked committed AVOID stays EXECUTING");
+        Expect(got && blocked.trajectory_source == Feedback::TRAJECTORY_SAFE_STOP &&
+                   !blocked.plan_valid &&
+                   blocked.result_code == Feedback::COLLISION_BLOCKED,
+               "a blocked committed AVOID reports COLLISION_BLOCKED SAFE_STOP");
+        Expect(got && blocked.target_d_valid &&
+                   std::fabs(blocked.target_d - locked_target_d) < 1e-9,
+               "a blocked committed AVOID retains the locked target_d");
+        Expect(got && got_before && blocked.maneuver_progress >= 0.0 &&
+                   std::fabs(blocked.maneuver_progress -
+                             before.maneuver_progress) < 1e-9,
+               "a blocked committed AVOID retains the last committed progress");
+        Expect(got && blocked.blocking_object_id >= 0,
+               "a blocked committed AVOID reports the blocking object");
+        Expect(got && blocked.applied_speed_mps >= 0.0,
+               "a blocked committed AVOID reports the SAFE_STOP speed");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID new transaction after COMPLETED ===\n");
+    {
+        // 완료 직후 중간 KEEP 없이 바로 새 AVOID를 보낸다. 이전 committed
+        // 상태/목표/유예를 전혀 상속하지 않아야 한다(계약 12.7.6절).
+        const uint32_t id = ++command_id;
+        double locked_target_d = 0.0;
+        const bool executing = drive_to_executing(id, locked_target_d);
+        Expect(executing, "AVOID reaches EXECUTING before completing");
+
+        Command avoid = make_avoid(id, Command::EXECUTE);
+        const Pose2D pass_ego =
+            PoseAtOffset(waypoints, kAvoidEgoS, locked_target_d);
+        Feedback pass;
+        harness.RunUntilProgress(avoid, pass_ego, kCruiseSpeed,
+                                 Feedback::EXECUTING, 0.5, 30, pass);
+        const Pose2D clear_ego =
+            PoseAtOffset(waypoints, kAvoidObstacleS + 20.0, locked_target_d);
+        Feedback completed;
+        const bool got_completed = harness.RunUntilState(
+            avoid, clear_ego, kCruiseSpeed, Feedback::COMPLETED, 40, completed);
+        Expect(got_completed && completed.maneuver_progress == 1.0,
+               "AVOID completes before the next transaction");
+
+        // 중간 KEEP 없이 새 AVOID id. 새 대상은 ego 앞 중앙선이다.
+        harness.SetObjects({harness.MakeStaticObjectAtOffset(
+            41, kAvoidObstacleS + 50.0, 0.0, 2.0, 4.5)});
+        const uint32_t next_id = ++command_id;
+        Command next = make_avoid(next_id, Command::PREPARE);
+        next.primary_object_id = 41;
+        Feedback ready;
+        const bool got_ready = harness.RunUntilState(
+            next, clear_ego, kCruiseSpeed, Feedback::READY, 30, ready);
+        Expect(got_ready && ready.command_accepted &&
+                   ready.active_maneuver == Command::AVOID &&
+                   ready.plan_valid &&
+                   ready.trajectory_source == Feedback::TRAJECTORY_NEW,
+               "a new AVOID id right after COMPLETED reaches READY");
+        Expect(got_ready && ready.maneuver_progress < 0.0,
+               "the new AVOID does not inherit the completed progress");
+        Expect(got_ready && ready.target_d_valid &&
+                   std::fabs(ready.target_d - completed.target_d) > 1e-9,
+               "the new AVOID binds its own target instead of the old lock");
+        reset_avoid_state();
     }
 
     std::printf("\n%d/%d checks passed\n", g_checks - g_failures, g_checks);

@@ -92,6 +92,32 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
         acceptance.command_accepted = true;
         acceptance.detail = "emergency stop preempted the active command";
         // 아래 구현 상태 확인으로 이어진다.
+    } else if (!has_active_command_ &&
+               message.execution_request == Command::CANCEL) {
+        // ---- 취소할 transaction이 없다 (D6-4b) --------------------------
+        //
+        // CANCEL은 **기존 transaction을 끝내는 요청**이지 새 기동을 여는
+        // 요청이 아니다. 그런데 여기서 BeginTransaction을 하면 CANCEL이
+        // handshake maneuver의 PREPARING을 새로 만들고, node의 AVOID 경로는
+        // PREPARE/EXECUTE만 받으므로 그 명령이 일반 Plan()으로 흘러
+        // INVALID_COMMAND + FAILED latch가 된다.
+        //
+        // 실측(D6-4b): READY에서 CANCEL이 성공해 IDLE이 된 뒤 FSM이 같은 ID의
+        // CANCEL을 한 번 더 발행하자
+        //   cycle 1 : IDLE      (정상 취소)
+        //   cycle 2+: FAILED / INVALID_COMMAND
+        // 가 나왔다. 이미 취소된 것을 다시 취소했을 뿐인데 terminal 실패가
+        // latch되어, FSM은 새 command_id를 쓰기 전까지 회복할 수 없다.
+        //
+        // 계약 7.1절은 COMPLETED/FAILED의 CANCEL을 "무시(이미 종료)"로 두고
+        // 있다. 활성 transaction이 아예 없는 경우도 같은 성격이므로 상태를
+        // 만들지 않고 그대로 IDLE을 회신한다. 명령 자체는 정상이므로
+        // command_accepted=true다(7.1절 마지막 문단과 같은 이유).
+        acceptance.command_accepted = true;
+        acceptance.planning_target = PlanningTarget::NONE;
+        acceptance.execution_state = Feedback::IDLE;
+        acceptance.detail = "no active transaction to cancel";
+        return acceptance;
     } else if (!has_active_command_) {
         BeginTransaction(message);
         acceptance.transaction_started = true;

@@ -65,6 +65,15 @@ struct FeedbackKinematics {
 // post-COMMIT AVOID는 새로 계산한 실제 궤적을 LOCKED로 발행하므로 속도와
 // current s/d가 유효하다. terminal latch caller는 state_valid=false를 넘겨
 // fresh state를 가장하지 않는다.
+//
+// ===== SAFE_STOP도 실제 발행 속도를 보고한다 (D6-4b) =====
+//
+// post-COMMIT AVOID가 충돌로 막히면 출력만 SAFE_STOP으로 바뀌고 transaction과
+// lock은 유지된다(계약 8.2.1절). 그 cycle에도 MPC로는 실제 감속 궤적이
+// 나가므로 applied_speed_mps("실제 적용한 목표속도")를 -1.0 sentinel로
+// 두면 거짓 보고가 된다. avoid_fields를 넘긴 caller만 이 경로를 타므로
+// KEEP/FOLLOW/STOP의 기존 semantics는 바뀌지 않는다 - 그쪽은
+// has_avoid_fields=false이고, SAFE_STOP에서 여전히 sentinel이다.
 inline FeedbackKinematics ResolveFeedbackKinematics(
     uint8_t trajectory_source, bool has_avoid_fields,
     double avoid_applied_speed_mps, double normal_applied_speed_mps,
@@ -72,7 +81,9 @@ inline FeedbackKinematics ResolveFeedbackKinematics(
     FeedbackKinematics result;
     if (has_avoid_fields &&
         (trajectory_source == asmc_msgs::FrenetFeedback::TRAJECTORY_NEW ||
-         trajectory_source == asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED)) {
+         trajectory_source == asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED ||
+         trajectory_source ==
+             asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP)) {
         result.applied_speed_mps = avoid_applied_speed_mps;
     } else if (trajectory_source ==
                asmc_msgs::FrenetFeedback::TRAJECTORY_NEW) {

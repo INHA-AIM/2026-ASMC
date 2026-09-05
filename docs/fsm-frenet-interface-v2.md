@@ -655,6 +655,48 @@ EXECUTE 수신
 EXECUTE가 안전하지 않다고 판단되어도 이는 **실패가 아니다.** FSM은 계속 EXECUTE를
 재발행할 수 있고, 조건이 회복되면 COMMIT된다. `FAILED`로 보고하지 않는다.
 
+#### 5.3.1 첫 명령부터 EXECUTE인 경우 (D6-4b에서 확정)
+
+`READY`를 한 번도 관측하지 못한 채로 COMMIT되면 안 된다. 그런데
+`PREPARING`/`WAITING`에서 `EXECUTE`가 들어오고 그 사이클의 재검증이 성공하면,
+"재검증 성공 → READY" 전이와 "READY + EXECUTE → COMMIT" 전이가 **같은
+planning cycle** 안에서 연쇄적으로 일어날 수 있다.
+
+```
+새 AVOID transaction의 첫 command가 EXECUTE
+  cycle N   PREPARING → candidate 확보 → READY
+              └→ (같은 cycle) EXECUTE 재검증 통과 → COMMITTED
+```
+
+이러면 FSM은 `READY`를 한 번도 보지 못하고 곧바로 `COMMITTED`를 받는다.
+`EXECUTE`는 5.3절이 정의하듯 "**이미 준비된** 후보를 현재 상황으로 재검증"하는
+것인데, 준비와 재검증이 구분되지 않으면 그 사이의 상황 변화를 검사할 기회
+자체가 없어진다.
+
+**정책: COMMIT은 이 planning cycle이 시작하기 전부터 이미 `READY`였던 경우에만
+허용한다.**
+
+```
+COMMIT 조건 = execute_requested
+            ∧ (planning 시작 시점 execution_state == READY)
+            ∧ candidate_valid
+```
+
+```
+첫 명령부터 EXECUTE
+  cycle N    PREPARING → candidate 확보 → READY (COMMIT 안 함, maintenance NEW)
+  cycle N+1  이미 READY → 현재 snapshot 재검증 → COMMITTED
+
+WAITING에서 EXECUTE 재발행
+  후보 회복 cycle  WAITING → READY (COMMIT 안 함)
+  다음 EXECUTE     재검증 → COMMITTED
+```
+
+`PREPARE`로 `READY`에 도달한 뒤의 정상 `EXECUTE`에는 추가 지연이 없다 - 그
+경우 planning 시작 시점에 이미 `READY`이기 때문이다. 지연은 "이번 cycle에
+처음 READY가 된" 경우에만 발생하며, 그 비용(한 cycle, 20 Hz 기준 0.05초)은
+미관측 READY로 COMMIT하는 위험보다 작다.
+
 ### 5.4 MERGE의 COMMIT 소유권 이전
 
 기존 MERGE 자산(`MergeContext`, APPROACH/WAIT/COMMIT/CROSS/CLEAR, gap/TTC/locked
@@ -831,6 +873,54 @@ ID와 일치하는 피드백만 반영하므로(1.5절) 거부 회신도 그 ID�
 계획 대상과 피드백 ID는 이 한 경우에만 서로 다르다.
 
 이 구조는 D7 LANE_CHANGE와 D8 MERGE에서 그대로 필요하다.
+
+#### 7.2.2 형식이 잘못된/만료된 새 명령도 같은 방식으로 막는다 (D6-4b에서 확정)
+
+`command_execution_manager_.Accept()`는 명령들 사이의 관계만 판단한다.
+BehaviorCommand 자체의 형식 검증(`ValidateBehaviorCommand`)은 그보다 **먼저**
+node에서 수행된다(4절, 11.2절). 그 검증이 실패하면 명령은 `Accept()`에
+도달하지 못한다.
+
+7.2.1절의 논리("거부한 명령을 계획해서는 안 된다")는 여기에도 그대로
+적용되어야 한다. 그런데 검증 실패는 `Accept()`를 거치지 않으므로,
+`PlanningTarget`이 그 경로를 보호하지 못한다. 실제로 이렇게 재현된다.
+
+```
+AVOID id=100  EXECUTING (locked target_d)
+  + KEEP id=101, frame_id가 잘못됨
+      ↓
+validation: 형식 오류 → 즉시 거부
+      ↓
+(수정 전) node: 안전정지 발행, 캐시 무효화
+      ↓
+feedback: active_maneuver=AVOID, EXECUTING  (transaction은 살아 있다)
+MPC:      SAFE_STOP, 횡이동 중단                      ← 사고
+```
+
+**형식이 잘못된 명령 하나가 COMMIT된 회피의 횡이동을 중단시킨다.** 7.2절이
+막으려는 것과 정확히 같은 사고이며, 8.2.1절이 지적한 "차선 사이 정지"가
+장애물 바로 옆에서 일어난다는 점에서 더 위험하다.
+
+**정책: `COMMITTED`/`EXECUTING`인 handshake maneuver가 있으면, 형식이
+잘못되었거나 만료된 새 명령도 그 활성 transaction의 계획을 중단시키지
+않는다.**
+
+```
+검증 실패
+  ∧ 활성 transaction이 non-preemptible (COMMITTED/EXECUTING handshake)
+    → 거부 회신은 그대로 (INVALID_COMMAND/STALE_COMMAND, 자기 command_id로)
+    → 계획 대상은 ACTIVE_TRANSACTION
+  ∧ 그 외 (IDLE/KEEP/FOLLOW/PREPARING 등)
+    → 기존과 동일하게 안전정지
+```
+
+거부 회신 자체는 바뀌지 않는다 - 명령은 정말로 잘못되었고, FSM은 자기 ID로
+정확한 오류를 받아야 한다(1.5절). 바뀌는 것은 **그 사이클에 무엇을
+계획하는가**뿐이며, 7.2.1절의 `ACTIVE_TRANSACTION` 경로를 그대로 재사용한다 -
+검증 실패 전용의 새 정책을 만들지 않는다.
+
+활성 transaction이 없거나 preemptible한 상태(잠긴 횡이동이 없음)에서는 잘못된
+명령으로 주행을 계속하는 것이 더 위험하므로 기존대로 안전정지한다.
 
 ### 7.3 EMERGENCY_STOP만 preempt 가능
 
@@ -1670,7 +1760,7 @@ handshake 골격을 모드마다 다시 만들지 않는다.
 | D6-3c | SHIFT → PASS → COMPLETED, terminal latch | 닫힘 |
 | D6-3c1 | closed-loop completion + transaction boundary hardening | 닫힘 |
 | D6-4a | LOCKED Feedback 의미 수정 + 기본 ROS handshake + `SetImplementedManeuver(AVOID, true)` | **열림** |
-| D6-4b | AVOID ROS edge regression 확장 | 열림 유지 |
+| D6-4b | AVOID ROS edge regression 확장 + direct EXECUTE 정책(5.3.1) + validation-before-manager ownership(7.2.2) | 열림 유지 |
 
 gate를 마지막에 여는 이유는 11.4절과 같다. 절반만 구현된 AVOID가 열려 있으면
 FSM 요청이 조용히 velocity keeping으로 처리된다.

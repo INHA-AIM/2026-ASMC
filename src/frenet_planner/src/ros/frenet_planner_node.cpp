@@ -557,6 +557,12 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     // 유지한다.
     const uint32_t feedback_command_id = command.command_id;
 
+    // 거부된 명령의 회신을 보관한다 (D6-4b). validation이 실패했지만 잠긴
+    // 기동이 있어 계획을 계속하는 경우에만 채워진다 - 아래 1단계 주석 참고.
+    // 이 사이클의 모든 피드백은 planning 결과가 아니라 이 값을 써야 한다.
+    CommandAcceptance rejected_acceptance;
+    bool has_rejected_acceptance = false;
+
     // ---- 1. 명령 자체의 형식 검증 -------------------------------------
     // Ego/Object 입력의 freshness는 여기서 보지 않는다. 명령의 내용과 무관한
     // runtime 상태이며 아래 3단계에서 별도로 검사한다(계약 11.2절).
@@ -577,22 +583,68 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         ROS_WARN_THROTTLE(1.0, "v2 command rejected (%s): %s",
                           CommandValidationCodeName(validation.code),
                           validation.detail.c_str());
-        // 명령이 유효하지 않으면 궤적을 내보내지 않는다. 캐시도 무효화해
-        // 이전 명령의 궤적이 새 사이클에 새는 것을 막는다.
-        has_last_v2_trajectory_ = false;
-        v2_plan_fail_streak_ = 0;
-        const asmc_msgs::Trajectory stop = MakeStopTrajectory(
-            stopReferenceVehicle(takeSnapshot()), trajectoryDt(),
-            asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
-        trajectory_pub_.publish(stop);
-        publishFeedbackV2(feedback_command_id, acceptance, &stop,
-                          asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
-                          /*plan_valid=*/false);
-        return true;
+
+        // ===== 잘못된 명령이 잠긴 기동을 끊지 못하게 한다 (D6-4b) =====
+        //
+        // validation은 Accept()보다 먼저 일어나므로, 여기서 곧바로 안전정지로
+        // 빠지면 **FSM의 잘못된 메시지 하나가 COMMIT된 회피를 중단시킨다.**
+        // 실측(D6-4b): AVOID id=300이 EXECUTING(locked d=+2.55)인 상태에서
+        // frame_id가 틀린 KEEP id=301 하나를 보내자
+        //   feedback : active_maneuver=AVOID, EXECUTING  (transaction은 살아 있다)
+        //   MPC      : SAFE_STOP, 종단 d = 0.000          (횡이동 중단)
+        // 이 되었다. 계약 7.2절이 막으려는 것과 같은 사고이며, 장애물 옆에서
+        // 차선 사이에 서는 것이므로 8.2.1절이 지적한 위험과도 같다.
+        //
+        // 거부 자체는 그대로 유지한다 - 명령은 정말로 잘못되었고, FSM은 자기
+        // ID로 INVALID_COMMAND/STALE_COMMAND를 받아야 한다(계약 1.5절).
+        // 바꾸는 것은 **그 사이클에 무엇을 계획하는가**뿐이다. 이미 있는
+        // ACTIVE_TRANSACTION 경로를 그대로 쓰므로 새 정책을 만들지 않는다
+        // (계약 7.2.1절).
+        //
+        // 잠긴 기동이 없을 때(IDLE/KEEP/FOLLOW/PREPARING 등)는 기존대로
+        // 안전정지다. 그때는 중단할 횡이동이 없고, 잘못된 명령으로 주행을
+        // 계속하는 것이 오히려 위험하다.
+        if (command_manager_.is_non_preemptible() &&
+            command_manager_.has_active_command()) {
+            acceptance.planning_target = PlanningTarget::ACTIVE_TRANSACTION;
+            ROS_WARN_THROTTLE(1.0,
+                              "v2 keeping the committed maneuver: rejected "
+                              "command_id=%u (%s) does not interrupt active "
+                              "command_id=%u",
+                              feedback_command_id,
+                              CommandValidationCodeName(validation.code),
+                              command_manager_.command_id());
+        } else {
+            // 명령이 유효하지 않으면 궤적을 내보내지 않는다. 캐시도 무효화해
+            // 이전 명령의 궤적이 새 사이클에 새는 것을 막는다.
+            has_last_v2_trajectory_ = false;
+            v2_plan_fail_streak_ = 0;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(takeSnapshot()), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, acceptance, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+        // 잠긴 기동을 계속 계획한다. 아래 3단계부터는 활성 명령을 쓰므로
+        // 여기서 command를 바꾸고, 피드백 ID는 방금 들어온 명령의 것을
+        // 유지한다(계약 7.2.1절 마지막 문단).
+        command = command_manager_.active_command();
+        rejected_acceptance = acceptance;
+        has_rejected_acceptance = true;
     }
 
     // ---- 2. transaction 규칙 ------------------------------------------
-    const CommandAcceptance acceptance = command_manager_.Accept(command);
+    //
+    // 거부된 명령(has_rejected_acceptance)은 Accept()에 넣지 않는다. 형식이
+    // 잘못된 명령을 transaction 규칙에 태우면 그 자체가 새 transaction을
+    // 열거나 fingerprint를 흔들 수 있다. 여기서 필요한 것은 "잠긴 기동을 그대로
+    // 계속한다"뿐이므로, 이미 만들어 둔 ACTIVE_TRANSACTION 회신을 쓴다.
+    const CommandAcceptance acceptance = has_rejected_acceptance
+        ? rejected_acceptance
+        : command_manager_.Accept(command);
 
     // manager와 core의 transaction boundary를 맞춘다. 새 AVOID뿐 아니라 새
     // KEEP/FOLLOW/STOP/E-STOP도 freshness/conversion 조기 반환 전에 이전 AVOID
@@ -1130,9 +1182,48 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                     : asmc_msgs::Trajectory::FAILURE_GENERATION,
                 now);
             trajectory_pub_.publish(stop);
+
+            // ===== 잠긴 진단은 SAFE_STOP에서도 유지한다 (D6-4b) =====
+            //
+            // 여기서 바뀐 것은 **이번 cycle에 MPC로 보낸 궤적**뿐이다. AVOID
+            // transaction과 COMMIT lock은 그대로 살아 있다(계약 8.2.1절):
+            // manager는 EXECUTING이고 core의 v2_avoidance_도 committed다.
+            //
+            // 그런데 avoid_fields 없이 발행하면 publishFeedbackV2가 전부
+            // sentinel로 채워
+            //   target_d_valid=false / target_d=0 / progress=-1 / blocking=-1
+            // 이 나간다. FSM 입장에서는 "회피 중인데 목표도 진행률도 없고
+            // 무엇이 막았는지도 모른다"가 되어, 잠긴 기동이 사라진 것처럼
+            // 보인다. 실측(D6-4b)에서 정확히 이 값들이 관측되었다.
+            //
+            // plan_valid=false와 SAFE_STOP은 그대로 둔다 - 새 유효 후보를
+            // 만들지 못했고 실제로 안전정지를 보냈다는 것은 사실이다
+            // (계약 8.3절의 두 축). 잃으면 안 되는 것은 **진단**이다.
+            AvoidFeedbackFields blocked_fields;
+            // 실제로 발행한 SAFE_STOP 궤적의 종단 속도. maintenance와 같은
+            // 이유로 last_target_speed_를 쓰지 않는다.
+            blocked_fields.applied_speed_mps =
+                stop.points.empty() ? -1.0 : stop.points.back().velocity;
+            blocked_fields.target_d_valid = planner_.avoid_committed();
+            blocked_fields.target_d = planner_.avoid_locked_target_d();
+            blocked_fields.generated_candidate_count =
+                static_cast<uint32_t>(committed.generated_candidate_count);
+            blocked_fields.valid_candidate_count =
+                static_cast<uint32_t>(committed.valid_candidate_count);
+            // 새 후보를 선택하지 못했으므로 cost는 sentinel이다.
+            blocked_fields.selected_cost = -1.0;
+            blocked_fields.blocking_object_id = committed.blocking_object_id;
+            // core가 마지막 committed cycle의 진행률을 보관한다. 실패 cycle에
+            // UpdateCommittedAvoidLifecycle가 호출되지 않아 result 쪽은
+            // sentinel이므로 core 값을 읽는다.
+            blocked_fields.maneuver_progress =
+                planner_.avoid_committed() ? planner_.avoid_maneuver_progress()
+                                           : -1.0;
+
             publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
-                              /*plan_valid=*/false, ego_s_valid, ego_s);
+                              /*plan_valid=*/false, ego_s_valid, ego_s,
+                              &blocked_fields);
             return true;
         }
 
@@ -1203,10 +1294,25 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 
         CommandAcceptance executing = acceptance;
         executing.execution_state = command_manager_.execution_state();
-        executing.result_code = asmc_msgs::FrenetFeedback::RESULT_NONE;
-        executing.detail = committed.maneuver_completed
-            ? "avoid maneuver completed"
-            : "executing committed avoid trajectory";
+        // ===== 거부 회신을 planning 결과로 덮지 않는다 (D6-4b) =====
+        //
+        // acceptance.result_code는 **방금 들어온 명령에 대한 manager의 답**이다.
+        // COMMITTED/EXECUTING 중에 다른 ID나 CANCEL이 오면 TOO_LATE_TO_CANCEL이
+        // 들어 있고(계약 7.1/7.2절), 그 cycle의 planning 대상은
+        // ACTIVE_TRANSACTION이므로 여기까지 내려온다.
+        //
+        // 무조건 RESULT_NONE으로 덮으면 FSM은 "취소도 교체도 정상 처리됐다"로
+        // 읽는다. 실측(D6-4b)에서 AVOID EXECUTING 중 KEEP id=101과 same-id
+        // CANCEL 모두 result_code=0으로 나갔다. active_maneuver=AVOID와
+        // 잠긴 궤적은 맞았지만, 거부 사유만 사라진 것이다.
+        //
+        // 계획이 성공했다는 사실은 plan_valid=true와 LOCKED source가 이미
+        // 전달한다. result_code는 명령 수용 축이므로 acceptance 값을 남긴다.
+        if (acceptance.result_code == asmc_msgs::FrenetFeedback::RESULT_NONE) {
+            executing.detail = committed.maneuver_completed
+                ? "avoid maneuver completed"
+                : "executing committed avoid trajectory";
+        }
         trajectory_pub_.publish(trajectory);
         publishFeedbackV2(feedback_command_id, executing, &trajectory,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED,
@@ -1237,6 +1343,46 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // 계산이어야 두 판정이 어긋나지 않는다.
         const bool execute_requested =
             command.execution_request == asmc_msgs::BehaviorCommand::EXECUTE;
+
+        // ===== EXECUTE는 이미 관측된 READY에만 허가된다 (D6-4b) =====
+        //
+        // 계약 5.5절의 정상 순서는
+        //   PREPARING -> READY -> EXECUTE -> 재검증 -> COMMITTED
+        // 이고, 5.3절의 EXECUTE는 "**이미 준비된** 후보를 현재 snapshot으로
+        // 다시 검증하는" 단계다. 그런데 아래 NotifyPlanSucceeded()가
+        // PREPARING/WAITING을 READY로 올린 직후 같은 cycle에서 COMMIT까지
+        // 진행하면 다음이 가능하다.
+        //
+        //   새 AVOID transaction의 첫 command가 EXECUTE
+        //     -> BeginTransaction: PREPARING
+        //     -> PrepareAvoid(): candidate_valid
+        //     -> NotifyPlanSucceeded(): PREPARING -> READY
+        //     -> CommitAvoidAtomically(): READY -> COMMITTED
+        //
+        // 한 cycle 안에서 PREPARING -> READY -> COMMITTED가 끝나므로 FSM은
+        // READY를 **한 번도 관측하지 못한다.** 실측(D6-4b)에서도 첫 feedback이
+        // 곧바로 COMMITTED/LOCKED였다. 그러면 EXECUTE가 "재검증"이 아니라
+        // 최초 준비 결과를 그대로 잠그는 것이 되어, 5.3절이 막으려던
+        // "준비와 실행 사이의 상황 변화"를 검사할 기회 자체가 없어진다.
+        //
+        // 그래서 COMMIT 조건에 "planning 이전부터 READY였는가"를 넣는다.
+        // 보수적인 쪽으로 판단한다 - 한 cycle 늦게 COMMIT하는 비용은 작고,
+        // 미관측 READY로 잠그는 위험은 크다.
+        //
+        //   첫 command부터 EXECUTE
+        //     cycle N   : PREPARING -> candidate valid -> READY, maintenance NEW
+        //     cycle N+1 : 이미 READY -> 현재 snapshot 재검증 -> COMMITTED
+        //
+        //   WAITING에서 EXECUTE 재발행
+        //     후보 회복 cycle : WAITING -> READY (COMMIT 안 함)
+        //     다음 EXECUTE    : 재검증 -> COMMITTED
+        //
+        // PREPARE로 READY에 도달한 뒤의 정상 EXECUTE에는 추가 지연이 없다 -
+        // 그때는 planning 이전 상태가 이미 READY다.
+        const bool was_ready_before_planning =
+            command_manager_.execution_state() ==
+            asmc_msgs::FrenetFeedback::READY;
+
         CartesianPath maintenance;
         FrenetPlanner::AvoidPrepareResult prepare;
         const bool prepare_ok = planner_.PrepareAvoid(
@@ -1358,7 +1504,10 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // 라는 불일치가 생긴다 - D6-0a에서 막은 것과 같은 종류다.
         bool committed_now = false;
         asmc_msgs::Trajectory avoid_trajectory;
-        if (execute_requested && prepare.candidate_valid) {
+        // was_ready_before_planning: 위 direct EXECUTE 주석 참고. 이번 cycle에
+        // 처음 READY가 된 후보는 잠그지 않고 다음 EXECUTE cycle에서 재검증한다.
+        if (execute_requested && was_ready_before_planning &&
+            prepare.candidate_valid) {
             // 2번: 변환을 **먼저** 시도한다.
             const ConversionStatus convert_status = ConvertCartesianPath(
                 prepare.candidate_path, planner_.sample_dt(), snapshot.vehicle,
