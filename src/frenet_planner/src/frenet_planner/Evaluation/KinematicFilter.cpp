@@ -68,3 +68,26 @@ void FilterByCurvature(std::vector<FrenetPath>& combined,
         }
     }
 }
+
+// 재생성된 후보의 실제 샘플별 속도²×곡률을 검증한다. 단순히
+// 기하 곡률만 작은 경로가 아니라, 해당 속도에서 실제로 횡가속도
+// 한계를 만족하는 경로만 남긴다.
+void FilterByCartesianLateralAcceleration(std::vector<FrenetPath>& candidates,
+                                          const RefLine& ref,
+                                          double max_lateral_accel) {
+    constexpr double kLateralAccelMargin = 0.8;
+    const double limit = max_lateral_accel * kLateralAccelMargin;
+    for (auto& path : candidates) {
+        if (!path.valid) continue;
+        const GeometricPath geo = ComputeGeometricPath(path.s, path.d, ref);
+        const size_t count = std::min(geo.kappa.size(), path.s_d.size());
+        for (size_t i = 0; i < count; ++i) {
+            const double lateral_accel = path.s_d[i] * path.s_d[i] * std::fabs(geo.kappa[i]);
+            if (lateral_accel > limit) {
+                path.valid = false;
+                path.rejection_reason = RejectionReason::CURVATURE;
+                break;
+            }
+        }
+    }
+}

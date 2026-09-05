@@ -49,4 +49,13 @@ void FilterByCurvature(std::vector<FrenetPath>& combined,
                         const RefLine& ref,
                         const KinematicLimits& limits);
 
+// FilterByCurvature와 달리 기하 곡률 한계 자체가 아니라, 재생성된 후보의
+// 실제 샘플별 속도²×곡률(a_lat = s_d^2 * |kappa|)이 max_lateral_accel을
+// 만족하는지 검증한다. 단순히 기하 곡률만 작은 경로가 아니라, 해당 속도에서
+// 실제로 횡가속도 한계를 만족하는 경로만 남긴다(AVOID 재생성 후보 등에서
+// 목표 속도가 곡률 한계 계산에 이미 반영되지 않은 경우를 잡는다).
+void FilterByCartesianLateralAcceleration(std::vector<FrenetPath>& candidates,
+                                          const RefLine& ref,
+                                          double max_lateral_accel);
+
 #endif  // FRENET_EVALUATION_KINEMATIC_FILTER_HPP
