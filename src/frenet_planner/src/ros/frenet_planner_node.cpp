@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "ros/message_converter.hpp"
+#include "ros/steady_freshness.hpp"
 
 namespace frenet_planner_ros {
 
@@ -64,8 +65,8 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     behavior_sub_ = nh_.subscribe(
         behavior_topic, 1, &FrenetPlannerNode::behaviorCallback, this);
 
-    planning_timer_ = nh_.createTimer(
-        ros::Duration(1.0 / planning_frequency_hz_),
+    planning_timer_ = nh_.createSteadyTimer(
+        ros::WallDuration(1.0 / planning_frequency_hz_),
         &FrenetPlannerNode::planningTimerCallback, this);
 
     ROS_INFO_STREAM("Frenet ROS runtime initialized at " << planning_frequency_hz_
@@ -81,6 +82,7 @@ void FrenetPlannerNode::vehicleCallback(
     if (!message) return;
     std::lock_guard<std::mutex> lock(input_mutex_);
     latest_vehicle_ = *message;
+    vehicle_received_at_ = ros::SteadyTime::now();
     has_vehicle_ = true;
 }
 
@@ -89,6 +91,7 @@ void FrenetPlannerNode::objectsCallback(
     if (!message) return;
     std::lock_guard<std::mutex> lock(input_mutex_);
     latest_objects_ = *message;
+    objects_received_at_ = ros::SteadyTime::now();
     has_objects_ = true;
 }
 
@@ -97,6 +100,7 @@ void FrenetPlannerNode::behaviorCallback(
     if (!message) return;
     std::lock_guard<std::mutex> lock(input_mutex_);
     latest_behavior_ = *message;
+    behavior_received_at_ = ros::SteadyTime::now();
     has_behavior_ = true;
 }
 
@@ -106,42 +110,13 @@ FrenetPlannerNode::InputSnapshot FrenetPlannerNode::takeSnapshot() const {
     snapshot.vehicle = latest_vehicle_;
     snapshot.objects = latest_objects_;
     snapshot.behavior = latest_behavior_;
+    snapshot.vehicle_received_at = vehicle_received_at_;
+    snapshot.objects_received_at = objects_received_at_;
+    snapshot.behavior_received_at = behavior_received_at_;
     snapshot.has_vehicle = has_vehicle_;
     snapshot.has_objects = has_objects_;
     snapshot.has_behavior = has_behavior_;
     return snapshot;
-}
-
-bool FrenetPlannerNode::isFresh(const ros::Time& stamp, double timeout_seconds,
-                                const ros::Time& now,
-                                double& age_seconds) const {
-    // 정상적인 전송/스케줄링 지터로 stamp가 아주 조금 미래인 경우.
-    constexpr double kFutureToleranceSeconds = 0.01;
-    if (stamp.isZero()) {
-        age_seconds = 0.0;
-        return false;
-    }
-    age_seconds = (now - stamp).toSec();
-
-    // 시계가 뒤로 점프하면 age가 크게 음수가 된다. 이건 데이터가 오래된 것이
-    // 아니라 시각 기준 자체가 흔들린 것이므로 stale로 처리하면 안 된다.
-    // stale로 보면 멀쩡한 입력에 대해 즉시 정지를 반복하게 된다(실측: WSL2/Docker
-    // 환경에서 약 28초 주기로 wall clock이 -1.2초 점프, 그때마다 급정지).
-    // 이 사이클은 판정을 보류하고 다음 사이클에서 정상 비교한다.
-    if (age_seconds < -kFutureToleranceSeconds) {
-        if (age_seconds >= -kMaxClockJumpSeconds) {
-            ROS_WARN_THROTTLE(
-                1.0,
-                "Clock moved backwards (age=%.3f s); treating input as fresh "
-                "for this cycle instead of forcing a stop",
-                age_seconds);
-            return true;
-        }
-        // 관용 범위를 넘는 미래 stamp는 시계 점프로 설명되지 않는다.
-        // 잘못된 타임스탬프를 가진 입력이므로 그대로 거부한다.
-        return false;
-    }
-    return age_seconds <= timeout_seconds;
 }
 
 double FrenetPlannerNode::trajectoryDt() const {
@@ -193,7 +168,7 @@ void FrenetPlannerNode::publishStop(const InputSnapshot& snapshot,
     publishResult(stop, snapshot, false);
 }
 
-void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
+void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
     if (!planner_initialized_) {
         ROS_ERROR_THROTTLE(
             5.0, "Frenet planning disabled: planner is not initialized");
@@ -218,27 +193,28 @@ void FrenetPlannerNode::planningTimerCallback(const ros::TimerEvent&) {
     }
 
     const ros::Time now = ros::Time::now();
+    const ros::SteadyTime steady_now = ros::SteadyTime::now();
     double vehicle_age = 0.0;
     double objects_age = 0.0;
     double behavior_age = 0.0;
-    if (!isFresh(snapshot.vehicle.header.stamp, vehicle_timeout_seconds_,
-                 now, vehicle_age)) {
+    if (!IsSteadyFresh(snapshot.vehicle_received_at, steady_now,
+                       vehicle_timeout_seconds_, &vehicle_age)) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: invalid/stale vehicle state age=%.3f s",
             vehicle_age);
         publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_STATE_STALE, now);
         return;
     }
-    if (!isFresh(snapshot.objects.header.stamp, objects_timeout_seconds_,
-                 now, objects_age)) {
+    if (!IsSteadyFresh(snapshot.objects_received_at, steady_now,
+                       objects_timeout_seconds_, &objects_age)) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: invalid/stale objects age=%.3f s",
             objects_age);
         publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_OBJECTS_STALE, now);
         return;
     }
-    if (!isFresh(snapshot.behavior.header.stamp, behavior_timeout_seconds_,
-                 now, behavior_age)) {
+    if (!IsSteadyFresh(snapshot.behavior_received_at, steady_now,
+                       behavior_timeout_seconds_, &behavior_age)) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: invalid/stale behavior age=%.3f s",
             behavior_age);

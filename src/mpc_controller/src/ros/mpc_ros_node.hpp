@@ -16,17 +16,18 @@ class MpcRosNode {
 
  private:
     void trajectoryCallback(const asmc_msgs::Trajectory::ConstPtr& message);
-    void controlTimerCallback(const ros::TimerEvent&);
+    void controlTimerCallback(const ros::SteadyTimerEvent&);
     void publishStop(const char* reason);
 
     ros::NodeHandle nh_;
     ros::NodeHandle private_nh_;
     ros::Subscriber trajectory_sub_;
     ros::Publisher control_pub_;
-    ros::Timer control_timer_;
+    ros::SteadyTimer control_timer_;
 
     asmc_msgs::Trajectory latest_trajectory_;
     bool has_trajectory_ = false;
+    ros::SteadyTime trajectory_received_at_;
     double trajectory_timeout_ = 0.25;
     std::vector<MPCControl> warm_start_;
 };

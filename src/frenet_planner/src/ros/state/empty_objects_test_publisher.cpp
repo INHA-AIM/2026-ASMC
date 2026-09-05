@@ -15,15 +15,15 @@ int main(int argc, char** argv) {
     private_nh.param("publish_frequency", frequency, 20.0);
     auto publisher =
         nh.advertise<asmc_msgs::DetectedObjectArray>(topic, 1);
-    ros::Rate rate(std::max(1.0, frequency));
     ROS_WARN("Publishing empty objects for obstacle-free KEEP verification only");
-    while (ros::ok()) {
+    ros::SteadyTimer timer = nh.createSteadyTimer(
+        ros::WallDuration(1.0 / std::max(1.0, frequency)),
+        [publisher](const ros::SteadyTimerEvent&) mutable {
         asmc_msgs::DetectedObjectArray message;
         message.header.stamp = ros::Time::now();
         message.header.frame_id = "map";
         publisher.publish(message);
-        ros::spinOnce();
-        rate.sleep();
-    }
+        });
+    ros::spin();
     return 0;
 }

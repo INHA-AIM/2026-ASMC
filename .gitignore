@@ -63,3 +63,7 @@ src/perception/morai_3d_detection/verify_output/
 
 # OS
 .DS_Store
+
+# Local runtime diagnostics
+/keep_stop_diagnosis.log
+/src/behavior_planner/logs/
