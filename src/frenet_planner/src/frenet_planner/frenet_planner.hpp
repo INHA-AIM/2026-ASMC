@@ -22,6 +22,15 @@
 // STOP stop_distance 계산에 쓰이며 Maneuver/Stop.cpp에서도 호출한다.
 double ForwardArcDistance(double current_s, double target_s, double s_max);
 
+// fresh Cartesian collision recheck(frenet_planner.cpp 정의). AVOID(저속
+// crawl/PREPARE)와 MERGE(M2: locked replay/commit_pending candidate 검증)가
+// 모두 쓰며 Maneuver/Merge.cpp에서도 호출한다.
+bool CartesianTrajectoryClear(const CartesianPath& path,
+                              const std::vector<TrackedObstacle>& obstacles,
+                              const VehicleShape& ego_shape,
+                              const CollisionCheckConfig& collision_cfg,
+                              double dt, int* blocking_id = nullptr);
+
 // Frenet Frame Path Planner: 전역 경로(RefLine)를 기준으로 한 Local Planner.
 // FSM(behavior_planner)이 아직 연동되지 않아서, 모드 전환 조건을 지금은
 // Plan() 안에 직접 하드코딩해뒀다(내 차선을 막는 정지/저속 장애물이 있으면
@@ -724,6 +733,55 @@ private:
         const std::vector<TrackedObstacle>& predicted_collision_obstacles,
         const std::unordered_map<int, double>& object_yaw_rates,
         const HighwayMergeZone* context_highway_zone);
+
+    // legacy MERGE COMMIT locked trajectory의 replay/emergency-recheck
+    // (MERGE M2). 결과가 "성공 경로 반환"/"실패"/"처리할 것 없음(정상
+    // planning 계속)" 세 갈래이므로 bool 하나로 뭉개지 않는다 - PlanInternal이
+    // SUCCESS/FAILURE면 그 자리에서 즉시 return하고, CONTINUE면 원래처럼
+    // 아래 정상 pipeline으로 흘러간다. 호출 위치(merge context locals 계산
+    // 직후, v2 FOLLOW/AVOID context reset보다 앞)는 PlanInternal이 그대로
+    // 유지한다 - 이미 잠긴 궤적이 있으면 매 cycle gap 판단을 다시 하지 않고
+    // 그 경로부터 재검증하기 위함이다.
+    enum class LockedMergeResult { CONTINUE, SUCCESS, FAILURE };
+    LockedMergeResult HandleLockedMergeTrajectory(
+        const CartesianState& ego, double s, double d,
+        double context_conflict_s, double context_stop_buffer,
+        const HighwayMergeZone* context_highway_zone,
+        const std::vector<TrackedObstacle>& predicted_collision_obstacles,
+        CartesianPath& out_path);
+
+    // MERGE COMMIT 대기 중(commit_pending) candidate 각각을 conflict zone
+    // 이탈점까지 연장한 뒤 fresh CTRV+OBB 충돌검사로 재검증한다(MERGE M2).
+    // SelectBestPath보다 반드시 먼저 호출해야 한다 - best는 이 함수가 걸러낸
+    // 뒤의 candidates를 가리키므로, 순서를 바꾸면 아직 검증되지 않은 후보가
+    // 선택될 수 있다. 호출 gate(cmd.mode==MERGE && commit_pending)는
+    // PlanInternal에 유지한다.
+    void ValidatePendingMergeCommitCandidates(
+        const PlannerCommand& cmd, double active_merge_completion_distance,
+        double active_merge_cross_speed,
+        const std::vector<TrackedObstacle>& predicted_collision_obstacles,
+        std::vector<FrenetPath>& candidates, PlannerDebugStats& stats) const;
+
+    // no-best-candidate 분기에서 대기 중이던 MERGE COMMIT을 되돌린다(MERGE
+    // M2) - gap 판단은 통과했지만 실제 ego 궤적이 충돌검사에 실패한 경우다.
+    // 호출 gate(cmd.mode==MERGE && commit_pending && s < cmd.merge_stop_s)는
+    // PlanInternal에 유지한다 - COLLISION_BLOCKED/TRANSIENT_GENERATION_FAILURE
+    // 공용 실패 분류나 diagnostics 로그와 섞이지 않게 하기 위함이며, 이
+    // 함수는 rollback 로그와 merge_ 상태 리셋만 담당한다.
+    void RollbackPendingMergeCommit(double s, const PlannerDebugStats& stats);
+
+    // 선택된 best candidate의 Cartesian 궤적을 MERGE COMMIT으로 최종
+    // 확정한다(MERGE M2) - conflict 이탈점까지 연장하고 gap_locked=true로
+    // 전환, locked_path/locked_elapsed/locked_path_index를 저장한다. 이미
+    // ConvertToCartesianPath로 변환되고(STOP reverse-trim까지 끝난)
+    // selected_cartesian을 받는다 - 여기서 다시 변환하지 않는다.
+    // merge_.locked_path에는 값을 복사한다(std::move 아님) - 호출부가 이후
+    // 같은 selected_cartesian을 out_path로도 move해야 하기 때문이다. 호출
+    // gate(cmd.mode==MERGE && commit_pending)는 PlanInternal에 유지한다.
+    void CommitSelectedMergeTrajectory(
+        const PlannerCommand& cmd, const FrenetPath& best, double s,
+        double active_merge_completion_distance, double active_merge_cross_speed,
+        CartesianPath& selected_cartesian);
 
     // FSM이 지정한 AVOID 대상의 확보 결과. FollowTargetStatus와 같은 세 값을
     // 쓰지만, 두 행동의 판정 기준이 앞으로 갈릴 수 있으므로 타입을 나눈다.

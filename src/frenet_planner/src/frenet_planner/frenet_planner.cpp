@@ -14,6 +14,40 @@
 #include "frenet_planner/Generator/LongitudinalGenerator.hpp"
 #include "frenet_planner/Maneuver/MergeInternal.hpp"
 
+// AVOID(PREPARE/저속 crawl)와 MERGE(M2: locked replay/commit_pending
+// candidate 검증)가 모두 쓰는 fresh Cartesian collision recheck이므로
+// 익명 namespace 밖에 둔다 - frenet_planner.hpp에 선언을 추가해 Maneuver/
+// Merge.cpp에서도 링크된다. 로직 자체는 그대로다.
+bool CartesianTrajectoryClear(const CartesianPath& path,
+                              const std::vector<TrackedObstacle>& obstacles,
+                              const VehicleShape& ego_shape,
+                              const CollisionCheckConfig& collision_cfg,
+                              double dt, int* blocking_id) {
+    if (blocking_id) *blocking_id = -1;
+    const size_t count = std::min({path.x.size(), path.y.size(), path.yaw.size()});
+    for (size_t i = 0; i < count; ++i) {
+        CartesianState ego{};
+        ego.x = path.x[i];
+        ego.y = path.y[i];
+        ego.yaw = path.yaw[i];
+        const double t = static_cast<double>(i) * dt;
+        const double margin = collision_cfg.safety_margin +
+                              collision_cfg.margin_growth_rate * t;
+        // 기존 구현은 ego와 obstacle 양쪽에 margin을 적용했다. 장애물 원본
+        // corner를 변경하지 않으면서 총 여유를 보수적으로 유지하도록 ego에
+        // 두 배 margin을 적용한다.
+        const geometry::Polygon2D ego_footprint =
+            MakeEgoFootprint(ego, ego_shape, 2.0 * margin);
+        for (const auto& obj : obstacles) {
+            if (CheckObstacleOverlap(ego_footprint, {}, obj, t)) {
+                if (blocking_id) *blocking_id = obj.id;
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 namespace {
 
 const char* ModeName(BehaviorState mode) {
@@ -44,81 +78,6 @@ const char* MergePhaseName(int phase) {
         case 4: return "CLEAR";
         default: return "NONE";
     }
-}
-
-void ExtendMergePathThroughConflict(CartesianPath& path, const RefLine& ref,
-                                    double conflict_s, double completion_distance,
-                                    double path_end_s, double target_speed, double dt) {
-    if (path.x.empty()) return;
-    const double speed = std::max(target_speed, 0.5);
-    for (double s = std::max(conflict_s, path_end_s) + speed * dt;
-         s <= conflict_s + completion_distance + 1e-6; s += speed * dt) {
-        const RefPoint rp = Interpolate(ref, s);
-        path.x.push_back(rp.x);
-        path.y.push_back(rp.y);
-        path.yaw.push_back(rp.theta);
-        path.kappa.push_back(rp.kappa);
-        path.v.push_back(speed);
-        path.a.push_back(0.0);
-    }
-}
-
-CartesianPath RemainingPath(const CartesianPath& path, double ego_x, double ego_y,
-                            size_t& progress_index) {
-    CartesianPath result;
-    if (path.x.empty()) return result;
-    const size_t count = std::min({path.x.size(), path.y.size(), path.yaw.size(),
-                                   path.kappa.size(), path.v.size(), path.a.size()});
-    const size_t search_begin = std::min(progress_index, count - 1);
-    size_t first = search_begin;
-    double best_dist2 = std::numeric_limits<double>::infinity();
-    for (size_t i = search_begin; i < count; ++i) {
-        const double dx = path.x[i] - ego_x;
-        const double dy = path.y[i] - ego_y;
-        const double dist2 = dx * dx + dy * dy;
-        if (dist2 < best_dist2) {
-            best_dist2 = dist2;
-            first = i;
-        }
-    }
-    progress_index = first;
-    result.x.assign(path.x.begin() + first, path.x.begin() + count);
-    result.y.assign(path.y.begin() + first, path.y.begin() + count);
-    result.yaw.assign(path.yaw.begin() + first, path.yaw.begin() + count);
-    result.kappa.assign(path.kappa.begin() + first, path.kappa.begin() + count);
-    result.v.assign(path.v.begin() + first, path.v.begin() + count);
-    result.a.assign(path.a.begin() + first, path.a.begin() + count);
-    return result;
-}
-
-bool CartesianTrajectoryClear(const CartesianPath& path,
-                              const std::vector<TrackedObstacle>& obstacles,
-                              const VehicleShape& ego_shape,
-                              const CollisionCheckConfig& collision_cfg,
-                              double dt, int* blocking_id = nullptr) {
-    if (blocking_id) *blocking_id = -1;
-    const size_t count = std::min({path.x.size(), path.y.size(), path.yaw.size()});
-    for (size_t i = 0; i < count; ++i) {
-        CartesianState ego{};
-        ego.x = path.x[i];
-        ego.y = path.y[i];
-        ego.yaw = path.yaw[i];
-        const double t = static_cast<double>(i) * dt;
-        const double margin = collision_cfg.safety_margin +
-                              collision_cfg.margin_growth_rate * t;
-        // 기존 구현은 ego와 obstacle 양쪽에 margin을 적용했다. 장애물 원본
-        // corner를 변경하지 않으면서 총 여유를 보수적으로 유지하도록 ego에
-        // 두 배 margin을 적용한다.
-        const geometry::Polygon2D ego_footprint =
-            MakeEgoFootprint(ego, ego_shape, 2.0 * margin);
-        for (const auto& obj : obstacles) {
-            if (CheckObstacleOverlap(ego_footprint, {}, obj, t)) {
-                if (blocking_id) *blocking_id = obj.id;
-                return false;
-            }
-        }
-    }
-    return true;
 }
 
 // 후보 경로의 최대 기하 곡률에서 a_lat=v^2*|kappa| 한계를
@@ -1111,72 +1070,11 @@ bool FrenetPlanner::PlanInternal(
     // 정지선 전에는 WAIT로 취소하고, 정지선 이후에는 비상정지를 요청한다.
     if (use_legacy_behavior && merge_.active && merge_.gap_locked &&
         merge_.phase == MergePhase::COMMIT) {
-        if (s >= context_conflict_s) {
-            const HighwayMergeCheckpoint* next_checkpoint =
-                merge_.type == MergeType::HIGHWAY
-                    ? HighwayCheckpointAt(highway_merge_cfg_, merge_.highway_zone_index,
-                                          merge_.highway_conflict_index + 1)
-                    : nullptr;
-            if (next_checkpoint) {
-                ++merge_.highway_conflict_index;
-                merge_.gap_locked = false;
-                merge_.commit_pending = false;
-                merge_.gap_safe = false;
-                merge_.safe_cycles = 0;
-                merge_.phase = MergePhase::APPROACH;
-                merge_.locked_path = CartesianPath{};
-                merge_.locked_elapsed = 0.0;
-                merge_.locked_path_index = 0;
-                std::printf("[FrenetPlanner-MERGE] highway checkpoint advanced: "
-                            "zone=%s index=%d next_conflict=%.2f s=%.2f\n",
-                            context_highway_zone ? context_highway_zone->name.c_str() : "-",
-                            merge_.highway_conflict_index,
-                            next_checkpoint->conflict_s, s);
-            } else {
-                merge_.phase = MergePhase::CROSS;
-                merge_.locked_path = CartesianPath{};
-            }
-        } else if (!merge_.locked_path.x.empty()) {
-            CartesianPath remaining = RemainingPath(
-                merge_.locked_path, ego.x, ego.y, merge_.locked_path_index);
-            int blocking_id = -1;
-            const bool clear = CartesianTrajectoryClear(
-                remaining, predicted_collision_obstacles, vehicle_shape_, collision_cfg_,
-                path_cfg_.dt, &blocking_id);
-            if (!clear) {
-                if (s < context_conflict_s - context_stop_buffer) {
-                    std::printf("[FrenetPlanner-MERGE] locked trajectory emergency recheck "
-                                "blocked before yield: object_id=%d; returning to WAIT\n",
-                                blocking_id);
-                    merge_.gap_locked = false;
-                    merge_.gap_safe = false;
-                    merge_.safe_cycles = 0;
-                    merge_.phase = MergePhase::WAIT;
-                    merge_.locked_path = CartesianPath{};
-                    merge_.locked_elapsed = 0.0;
-                    merge_.locked_path_index = 0;
-                } else {
-                    std::printf("[FrenetPlanner-MERGE] EMERGENCY: locked trajectory blocked "
-                                "after yield by object_id=%d\n", blocking_id);
-                    last_failure_reason_ = PlanFailureReason::COLLISION_BLOCKED;
-                    return false;
-                }
-            } else if (remaining.x.size() >= 2) {
-                out_path = std::move(remaining);
-                static int locked_log_tick = 0;
-                if (++locked_log_tick % 5 == 0) {
-                    std::printf("[FrenetPlanner-STATE] mode=MERGE phase=COMMIT_LOCKED "
-                                "s=%.2f d=%.3f speed=%.2f progress=%zu remaining=%zu\n",
-                                s, d, ego.v, merge_.locked_path_index, out_path.x.size());
-                }
-                return true;
-            } else {
-                std::printf("[FrenetPlanner-MERGE] locked trajectory exhausted before conflict "
-                            "(s=%.2f); requesting safe stop\n", s);
-                last_failure_reason_ = PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
-                return false;
-            }
-        }
+        const LockedMergeResult locked_result = HandleLockedMergeTrajectory(
+            ego, s, d, context_conflict_s, context_stop_buffer, context_highway_zone,
+            predicted_collision_obstacles, out_path);
+        if (locked_result == LockedMergeResult::SUCCESS) return true;
+        if (locked_result == LockedMergeResult::FAILURE) return false;
     }
     // 회전교차로에서는 저속이어도 아래의 MERGE FSM을 반드시 거친다. 여기서
     // 조기 반환하면 WAIT/COMMIT 잠금보다 먼저 매 cycle 전체 도로가 빌 때까지
@@ -2070,24 +1968,9 @@ bool FrenetPlanner::PlanInternal(
     // conflict zone 이탈점까지 연장한 뒤, 동일 CTRV+OBB 검사로 전체 시간 궤적이
     // 안전한 후보만 남긴다. 이 검사를 통과한 경로 자체가 아래에서 잠긴다.
     if (cmd.mode == MERGE && merge_.commit_pending) {
-        for (auto& candidate : candidates) {
-            if (!candidate.valid) continue;
-            CartesianPath full = ConvertToCartesianPath(candidate, ref_);
-            ExtendMergePathThroughConflict(
-                full, ref_, cmd.merge_conflict_s, active_merge_completion_distance,
-                candidate.s.empty() ? cmd.merge_conflict_s : candidate.s.back(),
-                std::max(cmd.target_speed, active_merge_cross_speed), path_cfg_.dt);
-            int blocking_id = -1;
-            if (!CartesianTrajectoryClear(full, predicted_collision_obstacles, vehicle_shape_,
-                                          collision_cfg_, path_cfg_.dt, &blocking_id)) {
-                candidate.valid = false;
-                candidate.rejection_reason = RejectionReason::COLLISION;
-                candidate.collision_object_id = blocking_id;
-            }
-        }
-        stats.combined_valid_after_collision = 0;
-        for (const auto& candidate : candidates)
-            if (candidate.valid) ++stats.combined_valid_after_collision;
+        ValidatePendingMergeCommitCandidates(
+            cmd, active_merge_completion_distance, active_merge_cross_speed,
+            predicted_collision_obstacles, candidates, stats);
     }
 
     const FrenetPath* best = SelectBestPath(candidates);
@@ -2111,15 +1994,7 @@ bool FrenetPlanner::PlanInternal(
         // 성립하지 않는다. 정지선 통과 전에는 잠금을 즉시 풀고 WAIT로 되돌린다.
         if (cmd.mode == MERGE && merge_.commit_pending &&
             s < cmd.merge_stop_s) {
-            std::printf("[FrenetPlanner-MERGE] commit trajectory rejected "
-                        "(curvature=%zu collision=%zu); returning to WAIT (s=%.2f)\n",
-                        stats.combined_valid_after_curvature,
-                        stats.combined_valid_after_collision, s);
-            merge_.gap_locked = false;
-            merge_.commit_pending = false;
-            merge_.gap_safe = false;
-            merge_.safe_cycles = 0;
-            merge_.phase = MergePhase::WAIT;
+            RollbackPendingMergeCommit(s, stats);
         }
         // 후보가 곡률 단계까지는 살아 있었는데 충돌 검사에서 전부 제거된 것은
         // 일시적인 생성 실패가 아니라 명시적인 안전 차단이다. main.cpp가 이
@@ -2252,22 +2127,9 @@ bool FrenetPlanner::PlanInternal(
     }
 
     if (cmd.mode == MERGE && merge_.commit_pending) {
-        ExtendMergePathThroughConflict(
-            selected_cartesian, ref_, cmd.merge_conflict_s,
-            active_merge_completion_distance,
-            best->s.empty() ? cmd.merge_conflict_s : best->s.back(),
-            std::max(cmd.target_speed, active_merge_cross_speed), path_cfg_.dt);
-        merge_.commit_pending = false;
-        merge_.gap_locked = true;
-        merge_.phase = MergePhase::COMMIT;
-        merge_.locked_path = selected_cartesian;
-        merge_.locked_elapsed = 0.0;
-        merge_.locked_path_index = 0;
-        std::printf("[FrenetPlanner-MERGE] gap committed after trajectory validation: "
-                    "front=%d(%.2fs) rear=%d(%.2fs) entry=%.2fs s=%.2f samples=%zu\n",
-                    merge_.preceding_id, merge_.preceding_time,
-                    merge_.following_id, merge_.following_time,
-                    merge_.entry_time, s, merge_.locked_path.x.size());
+        CommitSelectedMergeTrajectory(
+            cmd, *best, s, active_merge_completion_distance,
+            active_merge_cross_speed, selected_cartesian);
     }
 
     // 모든 모드의 현재 상태를 20Hz 기준 약 4Hz로 출력한다. 모드 전환 로그만으로는
