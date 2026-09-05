@@ -9,6 +9,7 @@
 #include "frenet_planner/Math/Utils.hpp"
 #include "frenet_planner/obstacle/legacy_object_adapter.hpp"
 #include "frenet_planner/Speed/CurveSpeed.hpp"
+#include "frenet_planner/Speed/SpeedPolicy.hpp"
 #include "frenet_planner/Generator/LateralGenerator.hpp"
 #include "frenet_planner/Generator/LongitudinalGenerator.hpp"
 
