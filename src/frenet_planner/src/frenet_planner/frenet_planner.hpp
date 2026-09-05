@@ -18,6 +18,10 @@
 #include "frenet_planner/Math/FrenetConverter.hpp"
 #include "frenet_planner/visualization/planner_debug_writer.hpp"
 
+// 폐루프 트랙에서 current_s -> target_s의 전방 호길이(frenet_planner.cpp 정의).
+// STOP stop_distance 계산에 쓰이며 Maneuver/Stop.cpp에서도 호출한다.
+double ForwardArcDistance(double current_s, double target_s, double s_max);
+
 // Frenet Frame Path Planner: 전역 경로(RefLine)를 기준으로 한 Local Planner.
 // FSM(behavior_planner)이 아직 연동되지 않아서, 모드 전환 조건을 지금은
 // Plan() 안에 직접 하드코딩해뒀다(내 차선을 막는 정지/저속 장애물이 있으면
@@ -658,6 +662,45 @@ private:
     bool PlanExternalKeepLowSpeedFallback(const CartesianState& ego, double s,
                                           double d, double resolved_target_speed,
                                           CartesianPath& out_path);
+
+    // 외부 EMERGENCY_STOP 실행부. 후보 파이프라인을 건너뛰고 직접 감속한다.
+    // 호출 위치(v2 FOLLOW/AVOID context reset 다음, 저속 fallback/AVOID 대상
+    // 확보보다 먼저)는 PlanInternal이 그대로 유지한다 - 이 함수는 gate 판단
+    // 없이, 이미 EMERGENCY로 확정된 뒤의 실행(감속 경로 생성/state 갱신/
+    // 5-cycle 로그)만 담당한다. 자세한 배경은 PlanInternal 호출부 주석 참고.
+    bool PlanExternalEmergencyStop(const CartesianState& ego, double s, double d,
+                                    double s_dot, CartesianPath& out_path);
+
+    // 외부 STOP의 APPROACH/BRAKING/HOLD phase 전이와 그에 따른 cmd 조정
+    // (target 변경 감지 -> phase reset, braking 진입거리 latch, HOLD 진입
+    // 판정, APPROACH/BRAKING 각각의 target_speed/mode 조정)을 그대로
+    // 옮긴 것이다. stop_.phase/target_s/target_valid를 직접 갱신한다.
+    //
+    // 주의: APPROACH에서 cmd.mode를 LANE_KEEPING으로 바꾸지만(candidate
+    // 생성만 velocity keeping에 위임하기 위함) 이 함수 반환 이후
+    // PlanInternal이 last_mode_ = STOP으로 별도 유지한다 - 그 진단용
+    // ordering은 이 함수가 아니라 호출부 책임이므로 여기서 last_mode_를
+    // 건드리지 않는다.
+    void UpdateExternalStopExecution(double s, double s_dot, PlannerCommand& cmd,
+                                      double& out_stop_distance);
+
+    // 외부 STOP이 HOLD phase에 도달했을 때의 0속도 1-point 궤적 출력부.
+    // 호출 gate(external_stop_mode && phase==HOLD)는 PlanInternal에 유지한다.
+    void PlanExternalStopHold(const CartesianState& ego, double s,
+                              CartesianPath& out_path) const;
+
+    // 외부 STOP BRAKING에서 후보가 0개일 때의 fail-safe 실행부(그 자리에서
+    // 감속해 정지하는 decel-to-zero 궤적). 호출 gate(phase==BRAKING &&
+    // COLLISION_BLOCKED 아님)는 common no-valid 분기에 강하게 결합되어
+    // 있으므로 PlanInternal에 유지한다.
+    void PlanExternalStopBrakingFallback(double s, double d, double s_dot,
+                                         double stop_distance,
+                                         CartesianPath& out_path);
+
+    // 외부 STOP은 절대 후진하지 않는다 - 선택된 Cartesian 궤적에서 속도가
+    // 처음 음수가 되는 지점 이후를 잘라내고 마지막 점의 v/a를 0으로 만든다.
+    // 호출 gate(external_stop_mode)는 PlanInternal에 유지한다.
+    void TrimExternalStopReverseTrajectory(CartesianPath& selected_cartesian) const;
 
     // FSM이 지정한 AVOID 대상의 확보 결과. FollowTargetStatus와 같은 세 값을
     // 쓰지만, 두 행동의 판정 기준이 앞으로 갈릴 수 있으므로 타입을 나눈다.
