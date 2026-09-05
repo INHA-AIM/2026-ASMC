@@ -262,6 +262,12 @@ probability이며, 정밀 percentile·frame age·VRAM과 full-stack 동시 부�
 - `rqt_image_view`에서 확인 가능한 compressed debug topic
 - 날씨·시간·시나리오 condition marker 표시
 
+**2026-09-05 1차 구현 완료:** RGB와 drivable/lane probability를 입력 stamp로 exact sync해
+view별 2×2 panel을 만들고, 전·좌·우 최신 panel을 순서대로 묶은 mosaic를 발행한다. 실제
+MORAI 1280×720 입력에서 front panel과 1920×360 3-view mosaic를 확인했다. debug JPEG는
+추론과 분리해 최대 10 Hz로 제한했으며 현재 실측 약 7.8 Hz다. condition label과 두 head
+threshold는 runtime ROS parameter로 조정할 수 있다.
+
 ### Stage C3 — 성능계측
 
 - input/output FPS, drop/stale count와 camera timestamp skew
@@ -342,15 +348,16 @@ adapter에 국한한다. 장기적으로 두 구현이 갈라지는 것을 막�
 | 순서 | 산출물 | 다음 단계 진입 조건 | 상태 |
 |---:|---|---|---|
 | 1 | 카메라 model-independent live inference | front/3-view 정상 출력, checkpoint provenance 확인 | 1차 구현·live 검증 완료 |
-| 2 | 독립 visualizer와 runtime diagnostics | 조건별 화면, p50/p95/drop/VRAM 기록 | 다음 구현 |
-| 3 | 독립 camera test와 full-stack profile | 품질·지연으로 현 모델/센서 profile 판단 가능 | 예정 |
-| 4 | MGeo bake/local crop pilot | map/route hash, pose/covariance와 local layer 확인 | 장원태 제안 |
-| 5 | 공통 BEV grid pilot | map과 camera가 같은 `base_link` grid에 정렬 | 공동 |
-| 6 | lane topology + LiDAR association | ego/adjacent/unknown과 safe area 출력 | 공동 |
-| 7 | GPS blackout localization/control 실험 | drift, lateral error와 복귀 안정성 기준 충족 | 공동 |
-| 8 | 최소 rosbag profile | 필요한 raw/derived 재현과 metadata 확인 | 후순위 |
-| 9 | 대회판 이식·보강 | competition-legal audit와 full rehearsal 통과 | 10월 후보 |
-| 10 | 영상 stop-line head | map 기반 방식의 실제 실패가 확인될 때 재평가 | 후순위 |
+| 2 | 독립 visualizer | timestamp 정합 panel/mosaic를 live로 확인 | 구현·live 검증 완료 |
+| 3 | runtime diagnostics와 독립 camera test | 조건별 p50/p95/drop/VRAM과 품질 기록 | 다음 구현 |
+| 4 | full-stack profile | 품질·지연으로 현 모델/센서 profile 판단 가능 | 예정 |
+| 5 | MGeo bake/local crop pilot | map/route hash, pose/covariance와 local layer 확인 | 장원태 제안 |
+| 6 | 공통 BEV grid pilot | map과 camera가 같은 `base_link` grid에 정렬 | 공동 |
+| 7 | lane topology + LiDAR association | ego/adjacent/unknown과 safe area 출력 | 공동 |
+| 8 | GPS blackout localization/control 실험 | drift, lateral error와 복귀 안정성 기준 충족 | 공동 |
+| 9 | 최소 rosbag profile | 필요한 raw/derived 재현과 metadata 확인 | 후순위 |
+| 10 | 대회판 이식·보강 | competition-legal audit와 full rehearsal 통과 | 10월 후보 |
+| 11 | 영상 stop-line head | map 기반 방식의 실제 실패가 확인될 때 재평가 | 후순위 |
 
 ## 11. 팀 합의가 필요한 열린 질문
 

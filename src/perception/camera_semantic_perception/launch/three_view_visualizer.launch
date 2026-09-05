@@ -1,0 +1,5 @@
+<launch>
+  <include file="$(find camera_semantic_perception)/launch/semantic_visualizer.launch">
+    <arg name="views" value="front, left, right"/>
+  </include>
+</launch>

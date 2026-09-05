@@ -1,6 +1,6 @@
 # Camera semantic perception
 
-> 상태: Stage C1 — 모델 독립 live inference 기반 구현
+> 상태: Stage C1·C2 — 모델 독립 live inference와 debug visualizer 구현
 
 MORAI의 전방 또는 전·좌·우 JPEG 카메라를 latest-only 방식으로 받아 TwinLiteNet+ 2-head
 추론 결과를 표준 ROS probability 토픽으로 발행한다. 모델 로딩은 backend에 격리되어 이후
@@ -16,6 +16,9 @@ MORAI의 전방 또는 전·좌·우 JPEG 카메라를 latest-only 방식으로 
 - 원본 카메라 크기로 복원한 `mono8` 확률 출력
 - latest-only buffer와 최대 4 ms 3-view batch coalescing
 - 2초 단위 FPS와 단계별 평균 지연 로그(정밀 percentile 계측은 Stage C3)
+- RGB와 두 확률 맵을 원본 timestamp로 exact sync한 독립 visualizer
+- view별 2×2 panel과 전·좌·우 mosaic compressed debug topic
+- 실행 중 바꿀 수 있는 head threshold와 날씨·시간 condition label
 
 ## 실행 컨테이너
 
@@ -56,6 +59,54 @@ roslaunch camera_semantic_perception three_view.launch \
 
 CPU 배관 시험은 `device:=cpu`로 덮을 수 있지만 실시간 성능 기준으로 사용하지 않는다.
 
+## 실시간 화면 확인
+
+시각화 노드는 모델·CUDA를 직접 사용하지 않는다. GPU 추론은 학습 컨테이너에서 실행하고,
+시각화와 `rqt_image_view`는 ROS 컨테이너에서 별도로 실행한다. 원본과 예측의 timestamp가
+완전히 같은 경우만 패널을 만들기 때문에 서로 다른 장면이 겹치지 않는다.
+
+전방 단독 모드에서는 추론을 실행한 다음 다른 터미널에서 다음을 실행한다.
+
+```bash
+# 터미널 1: GPU 추론 컨테이너
+docker exec -it asmc-perception-train bash
+source /root/ws/devel/setup.bash
+roslaunch camera_semantic_perception front.launch
+
+# 터미널 2: ROS 컨테이너
+docker exec -it asmc-ros-noetic bash
+source /root/ws/devel/setup.bash
+roslaunch camera_semantic_perception front_visualizer.launch
+
+# 터미널 3: ROS 컨테이너(X11/WSLg 화면)
+docker exec -it asmc-ros-noetic bash
+source /root/ws/devel/setup.bash
+rqt_image_view /perception/camera/front/debug/panel/compressed
+```
+
+전·좌·우 모드는 각각 `three_view.launch`, `three_view_visualizer.launch`로 바꾸고 다음
+모자이크를 연다.
+
+```bash
+rqt_image_view /perception/camera/debug/mosaic/compressed
+```
+
+패널은 좌상단 원본, 우상단 overlay, 좌하단 drivable mask, 우하단 lane mask다. drivable은
+녹색, lane은 노란색이며 lane 표시를 위에 그린다. 기본 1280×720 패널과 1920×360 3-view
+mosaic를 최대 10 Hz로 JPEG 발행하므로 원본 확률 토픽의 처리율을 불필요하게 따라가지 않는다.
+화면이 열리지 않으면 [Docker GUI 설정](../../../docs/docker-guide.md)을 먼저 확인한다.
+
+날씨·시간 표기와 threshold는 노드를 재시작하지 않고 바꿀 수 있다.
+
+```bash
+rosparam set /camera_semantic_visualizer/condition_label "Foggy 1pm"
+rosparam set /camera_semantic_visualizer/drivable_threshold 0.55
+rosparam set /camera_semantic_visualizer/lane_threshold 0.45
+```
+
+설정을 기본값으로 고정할 때는 `config/visualization.yaml`을 수정한다. condition label은 화면
+검토용 메타데이터일 뿐 추론 입력으로 사용되지 않는다.
+
 ## 2026-09-05 1차 live 실측
 
 환경은 26.R1.H3, RTX GPU, 입력 1280×720, TwinLiteNet+ Medium epoch 18 EMA이다.
@@ -86,6 +137,13 @@ confidence 0~1에 대응하며 입력 메시지의 stamp와 frame ID를 보존�
 /perception/camera/{view}/lane/probability
 ```
 
+시각화 노드는 다음 `sensor_msgs/CompressedImage` 디버그 토픽을 발행한다.
+
+```text
+/perception/camera/{view}/debug/panel/compressed
+/perception/camera/debug/mosaic/compressed
+```
+
 ## 검증
 
 ```bash
@@ -96,11 +154,15 @@ python3 -m unittest discover \
 rostopic hz /perception/camera/front/drivable/probability
 rostopic hz /perception/camera/front/lane/probability
 rostopic echo /perception/camera/front/lane/probability -n1
+rostopic hz /perception/camera/front/debug/panel/compressed
 ```
+
+2026-09-05 실제 MORAI 입력으로 front panel 1280×720과 three-view mosaic 1920×360을
+확인했다. 현재 JPEG 렌더링을 포함한 debug 출력은 약 7.8 Hz이며 이는 최대 10 Hz로 제한한
+관찰용 토픽이다. 추론 처리율 평가는 probability 토픽과 Stage C3 diagnostics를 사용한다.
 
 ## 다음 단계
 
-1. 독립 visualizer에서 원본·drivable·lane·overlay panel과 3-view mosaic 발행
-2. decode/preprocess/infer/postprocess/publish의 p50/p95, frame age, drop/stale와 VRAM 계측
-3. 조건별 live gate로 front-only/3-view와 현 센서 해상도·추론 Hz 결정
-4. 확률 마스크를 camera calibration으로 공통 ego-BEV에 투영
+1. decode/preprocess/infer/postprocess/publish의 p50/p95, frame age, drop/stale와 VRAM 계측
+2. 조건별 live gate로 front-only/3-view와 현 센서 해상도·추론 Hz 결정
+3. 확률 마스크를 camera calibration으로 공통 ego-BEV에 투영
