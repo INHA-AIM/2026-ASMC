@@ -2076,6 +2076,56 @@ int main() {
     }
 
     {
+        // D6-3b: 첫 COMMIT 다음 tick은 maintenance로 돌아가지 않고 manager
+        // state를 한 번만 EXECUTING으로 올린 뒤 committed core path를 쓴다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<ObjectInfo> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const auto boxes = boxes_for(objects);
+        auto manager = MakeAvoidManagerReady(3003);
+        const PlannerCommand command =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+
+        CartesianPath first_maintenance;
+        Prepare first;
+        planner.PrepareAvoid(ego, objects, boxes, command,
+                             first_maintenance, first);
+        Expect(frenet_planner_ros::CommitAvoidAtomically(manager, planner,
+                                                          first),
+               "D6-3b probe: first EXECUTE commits the candidate");
+
+        Expect(!planner.CommitAvoid(first),
+               "D6-3b duplicate commit: second commit is rejected");
+        const double locked = planner.avoid_locked_target_d();
+        const double start_d = planner.avoid_start_d();
+        Expect(std::fabs(locked - first.selected_target_d) < 1e-9 &&
+                   std::fabs(planner.avoid_start_d() - start_d) < 1e-9 &&
+                   std::string(planner.avoid_phase_name()) == "SHIFT",
+               "D6-3b duplicate commit: lock/start/phase stay unchanged");
+
+        Expect(frenet_planner_ros::RouteAvoidPlanning(manager) ==
+                   frenet_planner_ros::AvoidPlanningRoute::POST_COMMIT &&
+                   manager.execution_state() ==
+                       asmc_msgs::FrenetFeedback::EXECUTING,
+               "D6-3b route: COMMITTED advances once to EXECUTING");
+        CartesianPath next_output;
+        Prepare next;
+        const bool next_ok = planner.PlanCommittedAvoid(
+            ego, objects, boxes, command, next_output, next);
+        Expect(next_ok && next.candidate_valid &&
+                   std::fabs(next.selected_target_d - locked) < 1e-9 &&
+                   std::fabs(EndpointD(planner, next_output,
+                                       kEgoS + 20.0) - locked) < 1e-6,
+               "D6-3b continuity: next tick publishes committed AVOID");
+        Expect(frenet_planner_ros::RouteAvoidPlanning(manager) ==
+                   frenet_planner_ros::AvoidPlanningRoute::POST_COMMIT &&
+                   manager.execution_state() ==
+                       asmc_msgs::FrenetFeedback::EXECUTING,
+               "D6-3b route: EXECUTING stays post-COMMIT without retransition");
+    }
+
+    {
         // ---- **핵심**: COMMIT 이후 target_d가 흔들리지 않는다 -----------
         //
         // ResolveManeuver의 lateral 격자는 target_d ± 0.5 m다. COMMIT에서
@@ -2134,8 +2184,8 @@ int main() {
         for (int cycle = 0; cycle < 5; ++cycle) {
             CartesianPath m_post;
             Prepare r_post;
-            committed.PrepareAvoid(ego, objects, boxes, pose_cmd, m_post,
-                                   r_post);
+            committed.PlanCommittedAvoid(ego, objects, boxes, pose_cmd,
+                                         m_post, r_post);
             if (!r_post.candidate_valid ||
                 std::fabs(r_post.selected_target_d - locked) > 1e-6) {
                 all_exact = false;
@@ -2166,7 +2216,11 @@ int main() {
                                MakeAvoidCommand(21, LateralDirection::LEFT),
                                m1, r1);
         Expect(r1.candidate_valid, "blocked lock: the commit cycle is valid");
-        Expect(committed.CommitAvoid(r1), "blocked lock: the commit succeeds");
+        auto manager = MakeAvoidManagerReady(3004);
+        Expect(frenet_planner_ros::CommitAvoidAtomically(manager, committed,
+                                                          r1),
+               "blocked lock: the commit succeeds");
+        frenet_planner_ros::RouteAvoidPlanning(manager);
         const double locked = committed.avoid_locked_target_d();
 
         // 잠긴 목표(약 +2.55) 쪽에 장애물을 추가한다.
@@ -2177,14 +2231,18 @@ int main() {
         };
         CartesianPath m2;
         Prepare r2;
-        const bool ok = committed.PrepareAvoid(
+        const bool ok = committed.PlanCommittedAvoid(
             ego, blocked_scene, boxes_for(blocked_scene),
             MakeAvoidCommand(21, LateralDirection::LEFT), m2, r2);
-        Expect(!r2.candidate_valid,
+        Expect(!ok && !r2.candidate_valid &&
+                   committed.last_failure_reason() ==
+                       Reason::COLLISION_BLOCKED,
                "blocked lock: a blocker on the locked path invalidates the "
                "candidate");
-        Expect(ok && !m2.x.empty(),
-               "blocked lock: maintenance is still produced");
+        manager.NotifyPlanFailed(/*terminal=*/false);
+        Expect(manager.execution_state() ==
+                   asmc_msgs::FrenetFeedback::EXECUTING,
+               "blocked lock: collision does not downgrade execution state");
         Expect(committed.avoid_committed(),
                "blocked lock: a blocked cycle does not un-commit");
         Expect(std::fabs(committed.avoid_locked_target_d() - locked) < 1e-9,
@@ -2195,6 +2253,163 @@ int main() {
                "blocked lock: generation does not wander to another target");
         Expect(committed.active_avoid_target_id() == 21,
                "blocked lock: the designated target is unchanged");
+    }
+
+    {
+        // COMMIT 이후 target observation은 지속 조건이 아니다. grace보다 긴
+        // dropout과 더 가까운 다른 객체 모두 locked geometry를 바꾸지 않는다.
+        const std::vector<ObjectInfo> initial{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        const PlannerCommand command =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+        planner.PrepareAvoid(ego, initial, boxes_for(initial), command,
+                             maintenance, prepared);
+        Expect(planner.CommitAvoid(prepared),
+               "post-commit dropout: initial commit succeeds");
+        const double locked = planner.avoid_locked_target_d();
+
+        bool continuous = true;
+        for (int cycle = 0; cycle < 8; ++cycle) {
+            CartesianPath path;
+            Prepare result;
+            if (!planner.PlanCommittedAvoid(ego, {}, {}, command, path,
+                                            result) ||
+                planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST ||
+                std::fabs(result.selected_target_d - locked) > 1e-9 ||
+                !planner.avoid_committed()) {
+                continuous = false;
+            }
+        }
+        Expect(continuous,
+               "post-commit dropout: execution survives beyond grace");
+
+        const std::vector<ObjectInfo> closer_other{
+            MakeObstacle(waypoints, 17, kEgoS + 12.0, 0.0, -4.0)};
+        CartesianPath path;
+        Prepare result;
+        const bool ok = planner.PlanCommittedAvoid(
+            ego, closer_other, boxes_for(closer_other), command, path, result);
+        Expect(ok && planner.active_avoid_target_id() == 21 &&
+                   std::fabs(planner.avoid_locked_target_d() - locked) < 1e-9,
+               "post-commit ownership: a closer object cannot hand off target");
+    }
+
+    {
+        // 저속에서도 중앙 fallback이 아니라 locked target 방향의 crawl을 쓰며,
+        // 그 crawl은 fresh collision geometry로 검사한다.
+        const std::vector<ObjectInfo> initial{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        const PlannerCommand command =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+        planner.PrepareAvoid(ego, initial, boxes_for(initial), command,
+                             maintenance, prepared);
+        planner.CommitAvoid(prepared);
+        const double locked = planner.avoid_locked_target_d();
+
+        CartesianState slow_ego = ego;
+        slow_ego.v = 0.3;
+        CartesianPath crawl;
+        Prepare clear;
+        const bool clear_ok = planner.PlanCommittedAvoid(
+            slow_ego, initial, boxes_for(initial), command, crawl, clear);
+        Expect(clear_ok && clear.low_speed_context &&
+                   std::fabs(clear.selected_target_d - locked) < 1e-9 &&
+                   EndpointD(planner, crawl, kEgoS + 1.0) >
+                       EndpointD(planner, CartesianPath{{ego.x}, {ego.y}},
+                                 kEgoS),
+               "post-commit low speed: crawl keeps the locked direction");
+
+        const std::vector<ObjectInfo> blocked{
+            MakeObstacle(waypoints, 31, kEgoS + 0.5, 0.0, 0.0)};
+        CartesianPath rejected;
+        Prepare blocked_result;
+        const bool blocked_ok = planner.PlanCommittedAvoid(
+            slow_ego, blocked, boxes_for(blocked), command, rejected,
+            blocked_result);
+        Expect(!blocked_ok && planner.last_failure_reason() ==
+                                  Reason::COLLISION_BLOCKED &&
+                   planner.avoid_committed() &&
+                   std::fabs(planner.avoid_locked_target_d() - locked) < 1e-9,
+               "post-commit low speed: blocked crawl is rejected without unlock");
+    }
+
+    {
+        // manager ownership과 core context를 함께 확인한다: 거부된 KEEP/CANCEL은
+        // active AVOID를 계속 계획하고, E-STOP만 preempt/reset한다.
+        const std::vector<ObjectInfo> initial{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        const PlannerCommand avoid =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+        planner.PrepareAvoid(ego, initial, boxes_for(initial), avoid,
+                             maintenance, prepared);
+        auto manager = MakeAvoidManagerReady(100);
+        frenet_planner_ros::CommitAvoidAtomically(manager, planner, prepared);
+        frenet_planner_ros::RouteAvoidPlanning(manager);
+        const double locked = planner.avoid_locked_target_d();
+
+        auto keep = MakeAvoidTransactionCommand(101);
+        keep.maneuver_type = asmc_msgs::BehaviorCommand::KEEP;
+        keep.execution_request = asmc_msgs::BehaviorCommand::EXECUTE;
+        keep.direction = asmc_msgs::BehaviorCommand::DIRECTION_NONE;
+        keep.primary_object_id = -1;
+        const auto keep_result = manager.Accept(keep);
+        CartesianPath keep_cycle;
+        Prepare keep_diag;
+        const bool keep_plan = planner.PlanCommittedAvoid(
+            ego, initial, boxes_for(initial), avoid, keep_cycle, keep_diag);
+        Expect(keep_result.planning_target ==
+                   frenet_planner_ros::PlanningTarget::ACTIVE_TRANSACTION &&
+                   keep_result.result_code ==
+                       asmc_msgs::FrenetFeedback::TOO_LATE_TO_CANCEL &&
+                   manager.maneuver_type() ==
+                       asmc_msgs::BehaviorCommand::AVOID && keep_plan &&
+                   std::fabs(keep_diag.selected_target_d - locked) < 1e-9,
+               "post-commit ownership: rejected KEEP continues active AVOID");
+
+        auto cancel = manager.active_command();
+        cancel.execution_request = asmc_msgs::BehaviorCommand::CANCEL;
+        const auto cancel_result = manager.Accept(cancel);
+        Expect(cancel_result.planning_target ==
+                   frenet_planner_ros::PlanningTarget::ACTIVE_TRANSACTION &&
+                   cancel_result.result_code ==
+                       asmc_msgs::FrenetFeedback::TOO_LATE_TO_CANCEL &&
+                   !cancel_result.transaction_cancelled &&
+                   !frenet_planner_ros::ShouldResetAvoidContext(cancel_result) &&
+                   planner.avoid_committed(),
+               "post-commit ownership: rejected CANCEL does not reset AVOID");
+
+        manager.SetImplementedManeuver(
+            asmc_msgs::BehaviorCommand::EMERGENCY_STOP, true);
+        auto emergency = MakeAvoidTransactionCommand(102);
+        emergency.maneuver_type =
+            asmc_msgs::BehaviorCommand::EMERGENCY_STOP;
+        emergency.execution_request = asmc_msgs::BehaviorCommand::EXECUTE;
+        emergency.direction = asmc_msgs::BehaviorCommand::DIRECTION_NONE;
+        emergency.primary_object_id = -1;
+        const auto emergency_result = manager.Accept(emergency);
+        PlannerCommand emergency_plan{};
+        emergency_plan.mode = EMERGENCY;
+        CartesianPath stop;
+        const bool stop_ok = planner.Plan(ego, {}, emergency_plan, stop);
+        Expect(emergency_result.planning_target ==
+                   frenet_planner_ros::PlanningTarget::INCOMING_COMMAND &&
+                   manager.maneuver_type() ==
+                       asmc_msgs::BehaviorCommand::EMERGENCY_STOP && stop_ok &&
+                   !planner.avoid_committed() &&
+                   planner.active_avoid_target_id() == -1,
+               "post-commit ownership: E-STOP preempts and clears AVOID");
     }
 
     {

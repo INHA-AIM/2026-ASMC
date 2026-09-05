@@ -8,6 +8,38 @@
 
 namespace frenet_planner_ros {
 
+enum class AvoidPlanningRoute {
+    PRE_COMMIT,
+    POST_COMMIT,
+    INVALID,
+};
+
+// AVOID planning의 경계는 execution_request가 아니라 manager state다.
+// COMMITTED를 관측한 첫 planning tick에만 EXECUTING으로 올리고, 이후에는
+// NotifyExecutionStarted()를 다시 호출하지 않는다.
+inline AvoidPlanningRoute RouteAvoidPlanning(
+    CommandExecutionManager& manager) {
+    using Feedback = asmc_msgs::FrenetFeedback;
+    switch (manager.execution_state()) {
+        case Feedback::PREPARING:
+        case Feedback::WAITING:
+        case Feedback::READY:
+            return AvoidPlanningRoute::PRE_COMMIT;
+        case Feedback::COMMITTED:
+            return manager.NotifyExecutionStarted()
+                ? AvoidPlanningRoute::POST_COMMIT
+                : AvoidPlanningRoute::INVALID;
+        case Feedback::EXECUTING:
+            return AvoidPlanningRoute::POST_COMMIT;
+        default:
+            return AvoidPlanningRoute::INVALID;
+    }
+}
+
+inline bool ShouldResetAvoidContext(const CommandAcceptance& acceptance) {
+    return !acceptance.should_plan() && acceptance.transaction_cancelled;
+}
+
 inline bool CommitAvoidAtomically(
     CommandExecutionManager& manager, FrenetPlanner& planner,
     const FrenetPlanner::AvoidPrepareResult& result) {

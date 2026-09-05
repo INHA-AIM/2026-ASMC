@@ -642,7 +642,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // 거부된 CANCEL(TOO_LATE_TO_CANCEL)에서는 이 분기로 오지 않는다 -
         // 그때 planning_target은 ACTIVE_TRANSACTION이므로 위에서 계획을
         // 계속한다. 잠긴 목표가 사라지지 않는다.
-        if (acceptance.transaction_cancelled) {
+        if (ShouldResetAvoidContext(acceptance)) {
             planner_.ResetExternalAvoidance();
         }
 
@@ -803,6 +803,14 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         return true;
     }
 
+    // AVOID는 execution_request가 아니라 transaction state로 경로를 고른다.
+    // READY의 첫 EXECUTE는 아래 pre-COMMIT 재검증/원자 COMMIT을 그대로 타고,
+    // 다음 tick의 COMMITTED에서만 한 번 EXECUTING으로 전이한다.
+    AvoidPlanningRoute avoid_route = AvoidPlanningRoute::INVALID;
+    if (planner_command.mode == AVOID) {
+        avoid_route = RouteAvoidPlanning(command_manager_);
+    }
+
     // ---- 4b. STOP 목표 투영 ---------------------------------------------
     // ConvertBehaviorCommand는 RefLine을 모르므로 stop_position을 NaN으로
     // 남긴다. RefLine을 가진 이 계층에서 map 좌표 -> Frenet s로 투영한다.
@@ -939,7 +947,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     //
     // 투영 결과를 avoidance_d_offset([B])에 바로 넣지 않는 이유는
     // PlannerCommand의 has_avoid_target_d 주석에 있다 - command/result 경계.
-    if (planner_command.mode == AVOID && command.has_target_pose) {
+    if (planner_command.mode == AVOID && command.has_target_pose &&
+        avoid_route == AvoidPlanningRoute::PRE_COMMIT) {
         if (!ego_s_valid) {
             // 투영 기준점이 없으면 목표점도 만들 수 없다. STOP과 달리
             // pose는 선택 사항이지만, **주어진 pose를 해석하지 못하는 것**은
@@ -1068,7 +1077,100 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 
     const CommandFingerprint fingerprint = MakeCommandFingerprint(command);
 
-    // ---- 4d. AVOID PREPARE (D6-2c) --------------------------------------
+    // ---- 4d. AVOID post-COMMIT (D6-3b) --------------------------------
+    // target observation/pose는 더 이상 실행 조건이 아니다. core의 잠긴
+    // target_d/context만 사용하되 collision geometry는 매 cycle 새로 쓴다.
+    if (planner_command.mode == AVOID &&
+        avoid_route == AvoidPlanningRoute::POST_COMMIT) {
+        CartesianPath committed_path;
+        FrenetPlanner::AvoidPrepareResult committed;
+        const bool plan_ok = planner_.PlanCommittedAvoid(
+            ego, objects, collision_objects, planner_command, committed_path,
+            committed);
+
+        if (!plan_ok) {
+            ++v2_plan_fail_streak_;
+            const FrenetPlanner::PlanFailureReason reason =
+                planner_.last_failure_reason();
+            // COMMITTED/EXECUTING에서는 이 통지가 상태를 WAITING으로 낮추지
+            // 않는다. lock/context도 그대로 둔다.
+            command_manager_.NotifyPlanFailed(/*terminal=*/false);
+            has_last_v2_trajectory_ = false;
+            CommandAcceptance failed = acceptance;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
+                    ? asmc_msgs::FrenetFeedback::COLLISION_BLOCKED
+                    : asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
+            failed.detail =
+                reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
+                    ? "committed avoid path blocked by collision"
+                    : "could not generate the committed avoid path";
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
+                    ? asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED
+                    : asmc_msgs::Trajectory::FAILURE_GENERATION,
+                now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false, ego_s_valid, ego_s);
+            return true;
+        }
+
+        asmc_msgs::Trajectory trajectory;
+        if (ConvertCartesianPath(committed_path, planner_.sample_dt(),
+                                 snapshot.vehicle, now, trajectory) !=
+                ConversionStatus::OK || trajectory.points.empty()) {
+            ++v2_plan_fail_streak_;
+            command_manager_.NotifyPlanFailed(/*terminal=*/false);
+            has_last_v2_trajectory_ = false;
+            CommandAcceptance failed = acceptance;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
+            failed.detail = "committed avoid trajectory conversion failed";
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false, ego_s_valid, ego_s);
+            return true;
+        }
+
+        v2_plan_fail_streak_ = 0;
+        last_v2_trajectory_ = trajectory;
+        has_last_v2_trajectory_ = true;
+        last_v2_trajectory_command_id_ = command.command_id;
+        last_v2_trajectory_fingerprint_ = fingerprint;
+
+        AvoidFeedbackFields avoid_fields;
+        avoid_fields.applied_speed_mps = trajectory.points.back().velocity;
+        avoid_fields.target_d_valid = true;
+        avoid_fields.target_d = planner_.avoid_locked_target_d();
+        avoid_fields.generated_candidate_count =
+            static_cast<uint32_t>(committed.generated_candidate_count);
+        avoid_fields.valid_candidate_count =
+            static_cast<uint32_t>(committed.valid_candidate_count);
+        avoid_fields.selected_cost = committed.selected_cost;
+        avoid_fields.blocking_object_id = committed.blocking_object_id;
+
+        CommandAcceptance executing = acceptance;
+        executing.execution_state = command_manager_.execution_state();
+        executing.result_code = asmc_msgs::FrenetFeedback::RESULT_NONE;
+        executing.detail = "executing committed avoid trajectory";
+        trajectory_pub_.publish(trajectory);
+        publishFeedbackV2(feedback_command_id, executing, &trajectory,
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED,
+                          /*plan_valid=*/true, ego_s_valid, ego_s,
+                          &avoid_fields);
+        return true;
+    }
+
+    // ---- 4e. AVOID PREPARE (D6-2c) --------------------------------------
     //
     // 계약 5.2절. PREPARE는 일반 planning과 다른 경로다:
     //   후보 평가 결과  -> plan_valid / 진단 필드
@@ -1084,6 +1186,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     // 블록은 D6-4에서 gate를 열 때 처음 실행된다. 배선을 먼저 넣는 이유는
     // D6-3의 EXECUTE가 같은 구조를 확장하기 때문이다.
     if (planner_command.mode == AVOID &&
+        avoid_route == AvoidPlanningRoute::PRE_COMMIT &&
         (command.execution_request == asmc_msgs::BehaviorCommand::PREPARE ||
          command.execution_request == asmc_msgs::BehaviorCommand::EXECUTE)) {
         // EXECUTE는 COMMIT 허가다. 준비된 후보를 그대로 실행하지 않고

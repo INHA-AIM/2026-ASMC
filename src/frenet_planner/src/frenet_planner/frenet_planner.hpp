@@ -225,6 +225,7 @@ public:
     enum class ExternalPlanningPurpose {
         NORMAL,
         AVOID_PREPARE,
+        AVOID_COMMITTED,
     };
 
     // AVOID PREPARE 한 사이클의 결과 (계약 5.2절).
@@ -300,6 +301,15 @@ public:
                       const PlannerCommand& command,
                       CartesianPath& maintenance_path,
                       AvoidPrepareResult& result);
+
+    // COMMIT 이후 잠긴 AVOID geometry를 새 collision snapshot으로 실행한다.
+    // target observation/request pose는 더 이상 기동 지속 조건이 아니다.
+    bool PlanCommittedAvoid(
+        const CartesianState& ego,
+        const std::vector<ObjectInfo>& obstacles,
+        const std::vector<TrackedObstacle>& collision_obstacles,
+        const PlannerCommand& command, CartesianPath& out_path,
+        AvoidPrepareResult& result);
 
     // AVOID COMMIT의 core precondition을 mutation 없이 검사한다 (D6-3a1).
     //

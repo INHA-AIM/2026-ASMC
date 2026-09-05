@@ -934,11 +934,34 @@ bool FrenetPlanner::PrepareAvoid(
                         maintenance_path, &result);
 }
 
+bool FrenetPlanner::PlanCommittedAvoid(
+    const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
+    const std::vector<TrackedObstacle>& collision_obstacles,
+    const PlannerCommand& command, CartesianPath& out_path,
+    AvoidPrepareResult& result) {
+    result = AvoidPrepareResult{};
+    PlanFailureReason reason = PlanFailureReason::NONE;
+    if (!ValidateExternalCommand(command, reason)) {
+        last_failure_reason_ = reason;
+        return false;
+    }
+    if (command.mode != AVOID ||
+        collision_obstacles.size() != obstacles.size() ||
+        !v2_avoidance_.active || !v2_avoidance_.committed) {
+        last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
+        return false;
+    }
+    return PlanInternal(ego, obstacles, &command, &collision_obstacles,
+                        ExternalPlanningPurpose::AVOID_COMMITTED,
+                        out_path, &result);
+}
+
 bool FrenetPlanner::CanCommitAvoid(const AvoidPrepareResult& result) const {
     // 확보하지 않은 목표를 잠그지 않는다. 호출자가 candidate_valid를 먼저
     // 확인해야 하지만, 여기서도 막는다.
     if (!result.candidate_valid) return false;
     if (!v2_avoidance_.active) return false;
+    if (v2_avoidance_.committed) return false;
     if (!std::isfinite(result.selected_target_d)) return false;
     return true;
 }
@@ -1073,6 +1096,8 @@ bool FrenetPlanner::PlanInternal(
     // 으로 포인터만 넘겨도 동작이 바뀌면 안 된다(헤더 주석 참고).
     const bool avoid_prepare =
         purpose == ExternalPlanningPurpose::AVOID_PREPARE;
+    const bool avoid_committed =
+        purpose == ExternalPlanningPurpose::AVOID_COMMITTED;
     last_failure_reason_ = PlanFailureReason::NONE;
     if (!ref_loaded_) {
         last_failure_reason_ = PlanFailureReason::NOT_INITIALIZED;
@@ -1327,6 +1352,16 @@ bool FrenetPlanner::PlanInternal(
     //
     // 확보만 여기서 하고, "그 목표로 실제 후보가 나오는가"는 D6-2b다.
     if (!use_legacy_behavior && external_command->mode == AVOID) {
+        if (avoid_committed) {
+            // COMMIT 이후 geometry의 소유권은 잠긴 context에 있다. request
+            // direction/pose를 다시 읽거나 target identity를 재검증하지 않는다.
+            v2_avoid_targets_ = AvoidTargetPlan{};
+            v2_avoid_targets_.candidates[0] = v2_avoidance_.target_d;
+            v2_avoid_targets_.count = 1;
+            v2_avoid_targets_.from_target_pose =
+                v2_avoidance_.has_requested_target_d;
+            v2_avoid_targets_.direction_conflict = false;
+        } else {
         // 요청 방향을 context에 보존한다. mode=AVOID 하나로는
         // LEFT/RIGHT/NONE을 구분할 수 없다(계약 3.3.1절).
         v2_avoidance_.requested_direction =
@@ -1392,6 +1427,7 @@ bool FrenetPlanner::PlanInternal(
             v2_avoid_targets_ = DecideAvoidTargets(
                 v2_avoidance_, external_command->requested_direction);
         }
+        }
 
         // 후보 생성과 안전성 판정은 아래 AVOID PREPARE 블록에서 한다
         // (D6-2b). 그 블록은 FrenetState start가 만들어진 뒤에 있다.
@@ -1401,7 +1437,7 @@ bool FrenetPlanner::PlanInternal(
         // 중앙 유지 궤적을 만들어, FSM 입장에서는 "회피 성공"으로 보이면서
         // 실제로는 장애물 쪽으로 직진한다(계약 11.4절과 같은 원칙).
         // 실제 실행은 D6-3에서 붙인다.
-        if (!avoid_prepare) {
+        if (!avoid_prepare && !avoid_committed) {
             last_mode_ = AVOID;
             last_failure_reason_ = PlanFailureReason::UNSUPPORTED_BEHAVIOR;
             return false;
@@ -1409,7 +1445,7 @@ bool FrenetPlanner::PlanInternal(
     }
     // PREPARE인데 AVOID가 아니면 호출자의 실수다. PrepareAvoid()가 이미
     // 막지만, PlanInternal 내부에서도 조용히 다른 모드를 준비하지 않는다.
-    if (avoid_prepare &&
+    if ((avoid_prepare || avoid_committed) &&
         (use_legacy_behavior || external_command->mode != AVOID)) {
         last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
         return false;
@@ -1433,7 +1469,8 @@ bool FrenetPlanner::PlanInternal(
     // 먼저 return하기 때문이다(실측으로 확인: v=0.3에서 low_speed_context이
     // 0으로 나오고 maintenance가 미검사 crawl이었다).
     if (std::fabs(ego.v) < kLowSpeedFallbackV && !near_any_merge &&
-        !external_stop && !external_follow && !avoid_prepare) {
+        !external_stop && !external_follow && !avoid_prepare &&
+        !avoid_committed) {
         static int low_speed_log_tick = 0;
         if (++low_speed_log_tick % 5 == 0) {
             std::printf("[FrenetPlanner-STATE] mode=LOW_SPEED_FALLBACK "
@@ -1492,7 +1529,7 @@ bool FrenetPlanner::PlanInternal(
     // 통과했다. PlanInternal을 두 번 부르면 last_s_ / missing_cycles /
     // yaw-rate 재추정이 중복된다(계약 12.7.1절).
     // =====================================================================
-    if (avoid_prepare) {
+    if (avoid_prepare || avoid_committed) {
         AvoidPrepareResult& result = *avoid_prepare_result;
         last_mode_ = AVOID;
         last_target_speed_ = resolved_target_speed;
@@ -1510,7 +1547,7 @@ bool FrenetPlanner::PlanInternal(
         // 같은 강한 규칙은 넣지 않는다 - AVOID 목표점은 shift 완료점일 수도,
         // 통과 후 점일 수도 있어 FSM 계약이 더 명확해지기 전에는 과하다
         // (계약 3.3.4절).
-        if (v2_avoidance_.has_requested_target_d) {
+        if (avoid_prepare && v2_avoidance_.has_requested_target_d) {
             const double track_length =
                 ref_.points.empty() ? 0.0 : ref_.points.back().s;
             double target_gap = v2_avoidance_.requested_target_s - s;
@@ -1538,8 +1575,38 @@ bool FrenetPlanner::PlanInternal(
         //
         // 단 terminal 실패가 아니다. "현재 요청으로 실행 가능한 후보가
         // 없다"이므로 결과는 WAITING이다(계약 3.3.4절).
-        const bool blocked_by_request =
-            result.direction_conflict || result.target_behind_ego;
+        const bool blocked_by_request = avoid_prepare &&
+            (result.direction_conflict || result.target_behind_ego);
+
+        // 정상 후보 생성기는 정지 근처에서 횡 후보를 만들지 못할 수 있다.
+        // COMMIT 이후에는 중앙 fallback 대신 잠긴 target_d를 향하는 crawl을
+        // 만들고, fresh Cartesian collision checker를 반드시 통과시킨다.
+        if (avoid_committed && result.low_speed_context) {
+            result.generated_candidate_count = 1;
+            CartesianPath crawl;
+            PlanLowSpeedFallback(ego, s, d, v2_avoidance_.target_d, crawl,
+                                 2.0, resolved_target_speed);
+            int blocking_id = -1;
+            if (crawl.x.size() < 2 ||
+                !CartesianTrajectoryClear(crawl,
+                    predicted_collision_obstacles, vehicle_shape_,
+                    collision_cfg_, path_cfg_.dt, &blocking_id)) {
+                result.blocking_object_id = blocking_id;
+                last_mode_ = AVOID;
+                last_failure_reason_ = blocking_id >= 0
+                    ? PlanFailureReason::COLLISION_BLOCKED
+                    : PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+                return false;
+            }
+            result.candidate_valid = true;
+            result.valid_candidate_count = 1;
+            result.selected_target_d = v2_avoidance_.target_d;
+            result.selected_cost = 0.0;
+            result.candidate_path = crawl;
+            out_path = std::move(crawl);
+            last_failure_reason_ = PlanFailureReason::NONE;
+            return true;
+        }
 
         // 저속이라고 후보 생성을 건너뛰지 않는다. "저속에서는 어차피 안 될
         // 것"이라고 가정하면, 실제로 가능한 상황에서도 READY에 도달하지
@@ -1643,6 +1710,18 @@ bool FrenetPlanner::PlanInternal(
             // 요청 자체로 후보를 만들지 않았다. 충돌이 아니므로 blocking
             // object는 없다.
             result.blocking_object_id = -1;
+        }
+
+        if (avoid_committed) {
+            if (!result.candidate_valid) {
+                last_failure_reason_ = result.blocking_object_id >= 0
+                    ? PlanFailureReason::COLLISION_BLOCKED
+                    : PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+                return false;
+            }
+            out_path = result.candidate_path;
+            last_failure_reason_ = PlanFailureReason::NONE;
+            return true;
         }
 
         // ---- 유지 궤적 --------------------------------------------------
