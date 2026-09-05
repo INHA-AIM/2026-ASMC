@@ -498,7 +498,8 @@ private:
 
     // legacy AVOID의 active context 갱신 + static 장애물 최초 acquisition
     // (AVOID A4a). adaptive candidate generation, 좌/우 비교, direction
-    // lock은 여기 없다 - 그건 A4b 대상으로 PlanInternal에 남아 있다.
+    // lock은 GenerateAdaptiveLegacyAvoidCandidates/
+    // GenerateLegacyAvoidDirectionCandidates(A4b)의 책임이다.
     //
     // 호출 위치는 PlanInternal의 `if (use_legacy_behavior) { ... }` 안,
     // UpdateLegacyFollowContext보다 먼저다 - 이 순서를 바꾸지 않는다.
@@ -515,6 +516,28 @@ private:
     void UpdateLegacyAvoidContext(
         double s, double d, const FrenetState& start,
         const std::vector<ObjectInfo>& obstacles, bool& begin_avoidance);
+
+    // legacy AVOID의 adaptive candidate generation (AVOID A4b). 1차 일반
+    // 목표속도로 생성 -> 최적 후보 곡률의 허용속도 계산 -> 필요할 때만
+    // 낮은 목표속도로 2차 재생성 -> Cartesian 횡가속도 필터 순서를 그대로
+    // 옮긴 것이다. avoid_cmd를 참조로 받는다 - 속도 재조정 결과
+    // (avoid_cmd.target_speed)를 호출자가 이어서 읽어야 하기 때문이다
+    // (예: 좌/우 비교에서 각 방향의 실제 채택 속도로 쓴다).
+    std::vector<FrenetPath> GenerateAdaptiveLegacyAvoidCandidates(
+        const FrenetState& start, PlannerCommand& avoid_cmd, double target_d,
+        const std::vector<TrackedObstacle>& planning_collision_obstacles,
+        PlannerDebugStats& avoid_stats) const;
+
+    // legacy AVOID의 begin_avoidance 시점 좌/우 후보 비교 + direction lock
+    // (AVOID A4b). cmd/avoid_offset/stats/candidates를 모두 참조로 받아
+    // PlanInternal의 기존 local들을 그대로 갱신한다 - 새 result struct를
+    // 만들지 않는다. 호출 gate(if (begin_avoidance))는 PlanInternal에
+    // 유지한다.
+    void GenerateLegacyAvoidDirectionCandidates(
+        double s, const FrenetState& start,
+        const std::vector<TrackedObstacle>& planning_collision_obstacles,
+        PlannerCommand& cmd, double& avoid_offset, PlannerDebugStats& stats,
+        std::vector<FrenetPath>& candidates);
 
     // ===== D1-2: legacy 행동 선택권의 유일한 경계 =====
     //
