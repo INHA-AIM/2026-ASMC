@@ -36,6 +36,7 @@
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -121,6 +122,56 @@ Pose2D PoseAt(const Waypoints& waypoints, double target_s) {
     pose.yaw = std::atan2(waypoints.y[index] - waypoints.y[index - 1],
                           waypoints.x[index] - waypoints.x[index - 1]);
     return pose;
+}
+
+Pose2D PoseAtOffset(const Waypoints& waypoints, double target_s,
+                    double lateral_d) {
+    Pose2D pose = PoseAt(waypoints, target_s);
+    pose.x -= lateral_d * std::sin(pose.yaw);
+    pose.y += lateral_d * std::cos(pose.yaw);
+    return pose;
+}
+
+double LateralOffsetAt(const Waypoints& waypoints, double x, double y) {
+    if (waypoints.x.size() < 2) return std::nan("");
+    std::size_t best = 1;
+    double best_distance = std::numeric_limits<double>::infinity();
+    for (std::size_t i = 1; i < waypoints.x.size(); ++i) {
+        const double dx = x - waypoints.x[i];
+        const double dy = y - waypoints.y[i];
+        const double distance = dx * dx + dy * dy;
+        if (distance < best_distance) {
+            best_distance = distance;
+            best = i;
+        }
+    }
+    const double yaw = std::atan2(
+        waypoints.y[best] - waypoints.y[best - 1],
+        waypoints.x[best] - waypoints.x[best - 1]);
+    const double dx = x - waypoints.x[best];
+    const double dy = y - waypoints.y[best];
+    return -dx * std::sin(yaw) + dy * std::cos(yaw);
+}
+
+double TrajectoryEndpointD(const Waypoints& waypoints,
+                           const asmc_msgs::Trajectory* trajectory) {
+    if (!trajectory || trajectory->points.empty()) return std::nan("");
+    const auto& point = trajectory->points.back();
+    return LateralOffsetAt(waypoints, point.x, point.y);
+}
+
+bool SameTrajectoryGeometry(const asmc_msgs::Trajectory& lhs,
+                            const asmc_msgs::Trajectory& rhs) {
+    if (lhs.points.size() != rhs.points.size()) return false;
+    for (std::size_t i = 0; i < lhs.points.size(); ++i) {
+        if (std::fabs(lhs.points[i].x - rhs.points[i].x) > 1e-9 ||
+            std::fabs(lhs.points[i].y - rhs.points[i].y) > 1e-9 ||
+            std::fabs(lhs.points[i].yaw - rhs.points[i].yaw) > 1e-9 ||
+            std::fabs(lhs.points[i].velocity - rhs.points[i].velocity) > 1e-9) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // 노드와 주고받는 한 사이클을 담당한다. 명령/입력을 20 Hz로 발행하고
@@ -270,6 +321,29 @@ class Harness {
             command_pub_.publish(stamped);
             SpinFor(0.05);
         }
+    }
+
+    bool RunUntilState(const Command& command, const Pose2D& pose,
+                       double speed, uint8_t expected_state, int max_cycles,
+                       Feedback& out) {
+        BeginWindow();
+        for (int cycle = 0; cycle < max_cycles && ros::ok(); ++cycle) {
+            PublishInputs(pose, speed);
+            Command stamped = command;
+            stamped.header.stamp = ros::Time::now();
+            stamped.valid_until = ros::Time::now() + ros::Duration(2.0);
+            command_pub_.publish(stamped);
+            SpinFor(0.06);
+            for (std::size_t i = static_cast<std::size_t>(begin_index_);
+                 i < feedback_.size(); ++i) {
+                if (feedback_[i].command_id == command.command_id &&
+                    feedback_[i].execution_state == expected_state) {
+                    out = feedback_[i];
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     // 명령 발행을 멈추고 입력만 유지한다. 마지막 사이클의 피드백을 받기
@@ -945,6 +1019,162 @@ int main(int argc, char** argv) {
         harness.SetObjects({});
     }
 
+    std::printf("\n=== AVOID basic handshake lifecycle ===\n");
+    {
+        constexpr double kAvoidEgoS = 200.0;
+        constexpr double kAvoidObstacleS = 225.0;
+        const Pose2D avoid_ego = PoseAt(waypoints, kAvoidEgoS);
+        harness.SetObjects(
+            {harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+
+        const uint32_t id = ++command_id;
+        Command avoid = harness.MakeCommand(id, Command::AVOID);
+        avoid.execution_request = Command::PREPARE;
+        avoid.direction = Command::DIRECTION_LEFT;
+        avoid.primary_object_id = 21;
+
+        Feedback ready;
+        const bool got_ready = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::READY, 30, ready);
+        const asmc_msgs::Trajectory* maintenance_ptr =
+            harness.LastTrajectoryInWindow();
+        const bool has_maintenance = maintenance_ptr != nullptr;
+        const double maintenance_d =
+            TrajectoryEndpointD(waypoints, maintenance_ptr);
+        const double locked_target_d = ready.target_d;
+        Expect(got_ready && ready.command_accepted &&
+                   ready.active_maneuver == Command::AVOID &&
+                   ready.execution_state == Feedback::READY &&
+                   ready.plan_valid &&
+                   ready.trajectory_source == Feedback::TRAJECTORY_NEW &&
+                   ready.result_code == Feedback::RESULT_NONE,
+               "AVOID PREPARE reaches READY with maintenance NEW");
+        Expect(got_ready && ready.target_d_valid &&
+                   std::fabs(locked_target_d) > 1.0 &&
+                   ready.generated_candidate_count > 0 &&
+                   ready.valid_candidate_count > 0 &&
+                   ready.selected_cost >= 0.0 &&
+                   ready.blocking_object_id == -1,
+               "AVOID PREPARE reports a valid lateral candidate");
+        Expect(has_maintenance && std::isfinite(maintenance_d) &&
+                   std::fabs(maintenance_d) < 0.75 &&
+                   std::fabs(locked_target_d - maintenance_d) > 1.5,
+               "AVOID PREPARE publishes center maintenance, not its candidate");
+
+        avoid.execution_request = Command::EXECUTE;
+        Feedback committed;
+        const bool got_committed = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::COMMITTED, 30,
+            committed);
+        const asmc_msgs::Trajectory* committed_ptr =
+            harness.LastTrajectoryInWindow();
+        const bool has_committed = committed_ptr != nullptr;
+        const double committed_d =
+            TrajectoryEndpointD(waypoints, committed_ptr);
+        Expect(got_committed && committed.command_accepted &&
+                   committed.active_maneuver == Command::AVOID &&
+                   committed.execution_state == Feedback::COMMITTED,
+               "same-ID AVOID EXECUTE revalidates and reaches COMMITTED");
+        Expect(got_committed &&
+                   committed.trajectory_source == Feedback::TRAJECTORY_LOCKED &&
+                   committed.plan_valid && committed.target_d_valid,
+               "AVOID COMMITTED reports a valid LOCKED trajectory");
+        Expect(got_committed &&
+                   std::fabs(committed.target_d - locked_target_d) < 1e-9,
+               "AVOID COMMITTED locks the PREPARE target_d");
+        Expect(has_committed && std::isfinite(committed_d) &&
+                   std::fabs(committed_d - locked_target_d) < 0.75 &&
+                   std::fabs(committed_d - maintenance_d) > 1.5,
+               "first COMMIT publishes the lateral locked trajectory");
+
+        Feedback executing;
+        const bool got_executing = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::EXECUTING, 30,
+            executing);
+        const asmc_msgs::Trajectory* executing_ptr =
+            harness.LastTrajectoryInWindow();
+        const bool has_executing = executing_ptr != nullptr &&
+            !executing_ptr->points.empty();
+        const double executing_d =
+            TrajectoryEndpointD(waypoints, executing_ptr);
+        const double executing_speed = has_executing
+            ? executing_ptr->points.back().velocity : -1.0;
+        Expect(got_executing && executing.execution_state == Feedback::EXECUTING &&
+                   executing.trajectory_source == Feedback::TRAJECTORY_LOCKED &&
+                   executing.plan_valid && executing.target_d_valid &&
+                   std::fabs(executing.target_d - locked_target_d) < 1e-9 &&
+                   executing.maneuver_progress >= 0.0 &&
+                   executing.maneuver_progress < 1.0,
+               "COMMITTED next cycle continues as EXECUTING LOCKED");
+        Expect(has_executing && std::isfinite(executing_d) &&
+                   std::fabs(executing_d - locked_target_d) < 0.75 &&
+                   std::fabs(executing_d - maintenance_d) > 1.5,
+               "EXECUTING does not fall back to PREPARE maintenance");
+        Expect(executing.applied_speed_mps >= 0.0 &&
+                   std::fabs(executing.applied_speed_mps - executing_speed) <
+                       1e-9 &&
+                   executing.frenet_state_valid &&
+                   std::isfinite(executing.current_s) &&
+                   std::isfinite(executing.current_d),
+               "EXECUTING LOCKED reports actual speed and Frenet state");
+
+        const Pose2D pass_ego =
+            PoseAtOffset(waypoints, kAvoidEgoS, locked_target_d);
+        Feedback pass;
+        const bool got_pass = harness.RunUntilState(
+            avoid, pass_ego, kCruiseSpeed, Feedback::EXECUTING, 30, pass);
+        Expect(got_pass && pass.maneuver_progress >= 0.5 &&
+                   pass.maneuver_progress < 1.0 && pass.target_d_valid &&
+                   std::fabs(pass.target_d - locked_target_d) < 1e-9,
+               "controlled lateral pose advances AVOID SHIFT to PASS only");
+
+        const Pose2D clear_ego =
+            PoseAtOffset(waypoints, kAvoidObstacleS + 20.0,
+                         locked_target_d);
+        Feedback completed;
+        const bool got_completed = harness.RunUntilState(
+            avoid, clear_ego, kCruiseSpeed, Feedback::COMPLETED, 30,
+            completed);
+        const asmc_msgs::Trajectory* final_ptr =
+            harness.LastTrajectoryInWindow();
+        const bool has_final = final_ptr != nullptr;
+        const asmc_msgs::Trajectory final_trajectory = has_final
+            ? *final_ptr : asmc_msgs::Trajectory{};
+        Expect(got_completed && completed.execution_state == Feedback::COMPLETED &&
+                   completed.trajectory_source == Feedback::TRAJECTORY_LOCKED &&
+                   completed.plan_valid && completed.maneuver_progress == 1.0 &&
+                   completed.target_d_valid &&
+                   std::fabs(completed.target_d - locked_target_d) < 1e-9,
+               "PASS plus longitudinal clearance publishes final COMPLETED AVOID");
+        Expect(has_final && !final_trajectory.points.empty(),
+               "first COMPLETED cycle still publishes a final trajectory");
+
+        Feedback latched;
+        const bool got_latched = harness.RunUntilState(
+            avoid, clear_ego, kCruiseSpeed, Feedback::COMPLETED, 20, latched);
+        const asmc_msgs::Trajectory* latch_ptr =
+            harness.LastTrajectoryInWindow();
+        Expect(got_latched && latched.execution_state == Feedback::COMPLETED &&
+                   latched.trajectory_source == Feedback::TRAJECTORY_LOCKED &&
+                   !latched.plan_valid && latched.maneuver_progress == 1.0 &&
+                   latched.target_d_valid &&
+                   std::fabs(latched.target_d - locked_target_d) < 1e-9 &&
+                   !latched.frenet_state_valid,
+               "same-ID COMPLETED latch preserves diagnostics without fake state");
+        Expect(latch_ptr && SameTrajectoryGeometry(final_trajectory, *latch_ptr),
+               "same-ID COMPLETED latch republishes the cached final trajectory");
+
+        harness.SetObjects({});
+        const uint32_t keep_id = ++command_id;
+        harness.Run(harness.MakeCommand(keep_id, Command::KEEP), ego,
+                    kCruiseSpeed, 12, false);
+        Feedback recovered;
+        Expect(harness.LastFor(keep_id, recovered) && recovered.plan_valid &&
+                   recovered.active_maneuver == Command::KEEP &&
+                   recovered.execution_state == Feedback::EXECUTING,
+               "new KEEP owns recovery after completed AVOID");
+    }
+
     std::printf("\n=== mode transitions ===\n");
     {
         // KEEP -> STOP. 계약 7.2절이 막는 것은 COMMIT된 handshake maneuver의
@@ -1079,30 +1309,21 @@ int main(int argc, char** argv) {
 
     std::printf("\n=== unimplemented maneuver ===\n");
     {
-        // AVOID는 node gate가 아직 닫혀 있다(D6-4에서 연다). planner를
-        // 호출하지 않고 거짓 result_code를 쓰지도 않는다.
-        //
-        // D5-1에서 FOLLOW가 열렸으므로 이 케이스의 예시를 AVOID로 바꿨다.
-        // 모드가 열릴 때마다 여기를 갱신해야 한다 - D6-4에서는 LANE_CHANGE,
-        // D7에서는 MERGE가 남는다.
-        //
-        // ===== D6-1에서 이 케이스가 갖는 추가 의미 =====
-        //
-        // D6-1은 planner **core**의 whitelist에 AVOID를 추가했다(resolver를
-        // 검증하기 위해). 이 케이스가 계속 통과한다는 것은 core가 열려도
-        // node gate가 독립적으로 AVOID를 막고 있다는 증거다. 두 게이트를
-        // 분리해 둔 이유가 정확히 이것이다 - core는 단계적으로 열면서 ROS
-        // 경로는 완성될 때까지 닫아둔다(계약 12.7.1절).
+        // D6-4a에서 AVOID gate를 여므로 아직 닫혀 있는 LANE_CHANGE를
+        // unimplemented 예시로 쓴다. validation을 먼저 통과해야 node gate의
+        // MANEUVER_NOT_IMPLEMENTED 경로를 실제로 검증할 수 있다.
         const uint32_t id = ++command_id;
-        Command avoid = harness.MakeCommand(id, Command::AVOID);
-        avoid.execution_request = Command::PREPARE;
-        avoid.primary_object_id = 7;
-        harness.Run(avoid, ego, kCruiseSpeed, 12, false);
+        Command lane_change = harness.MakeCommand(id, Command::LANE_CHANGE);
+        lane_change.execution_request = Command::PREPARE;
+        lane_change.direction = Command::DIRECTION_LEFT;
+        harness.SetTargetOnPath(lane_change, 230.0);
+        harness.Run(lane_change, ego, kCruiseSpeed, 12, false);
         Feedback feedback;
         Expect(harness.LastFor(id, feedback) &&
                    feedback.command_accepted &&
                    feedback.execution_state == Feedback::FAILED &&
-                   !feedback.plan_valid,
+                   !feedback.plan_valid &&
+                   feedback.trajectory_source == Feedback::TRAJECTORY_SAFE_STOP,
                "unimplemented maneuver is accepted but not planned");
         Expect(harness.LastFor(id, feedback) &&
                    feedback.result_code == Feedback::RESULT_NONE &&

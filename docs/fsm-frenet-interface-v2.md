@@ -1669,7 +1669,8 @@ handshake 골격을 모드마다 다시 만들지 않는다.
 | D6-3b | COMMITTED → EXECUTING, post-COMMIT 보호 | 닫힘 |
 | D6-3c | SHIFT → PASS → COMPLETED, terminal latch | 닫힘 |
 | D6-3c1 | closed-loop completion + transaction boundary hardening | 닫힘 |
-| D6-4 | Feedback 필드 연결 + ROS 회귀 + `SetImplementedManeuver(AVOID, true)` | **열림** |
+| D6-4a | LOCKED Feedback 의미 수정 + 기본 ROS handshake + `SetImplementedManeuver(AVOID, true)` | **열림** |
+| D6-4b | AVOID ROS edge regression 확장 | 열림 유지 |
 
 gate를 마지막에 여는 이유는 11.4절과 같다. 절반만 구현된 AVOID가 열려 있으면
 FSM 요청이 조용히 velocity keeping으로 처리된다.
@@ -1860,16 +1861,13 @@ last_target_speed_       > 0.5 m/s   <- 이것을 보고하면 거짓
 PREPARE는 발행한 궤적의 종단 속도를 넘긴다
 (`publishFeedbackV2`의 `AvoidFeedbackFields`).
 
-##### production gate는 여전히 닫혀 있다
+##### D6-4a에서 production gate OPEN
 
-node의 `SetImplementedManeuver(AVOID)`가 열리지 않았으므로
-`command_manager_.Accept()`가 planner 호출 전에 `FAILED`로 끝낸다. 즉 D6-2c의
-node 배선은 **ROS 경로로 실행되지 않는다** — ROS 로그에 `AVOID PREPARE`가 한
-번도 찍히지 않는 것으로 확인했다.
-
-배선을 먼저 넣는 이유는 D6-3의 EXECUTE가 같은 구조를 확장하기 때문이다.
-실제 ROS AVOID 경로는 **D6-4에서 처음 검증된다** — 그때 D6-0a 재결속,
-D6-1a heading 경계, D6-2c READY/WAITING을 한꺼번에 덮는다.
+D6-4a에서 node의 `SetImplementedManeuver(AVOID, true)`를 열었다. 실제 ROS
+경로에서 PREPARE의 maintenance 발행과 READY 진단, same-ID EXECUTE의 COMMIT,
+post-COMMIT LOCKED 실행, PASS/COMPLETED와 terminal latch까지 검증한다.
+heading 경계, dropout/CANCEL/preemption 및 blocking 진단의 exhaustive 회귀는
+D6-4b에서 확장한다.
 
 #### 12.7.5 D6-3a COMMIT의 원자성과 target lock (D6-3a에서 확정)
 

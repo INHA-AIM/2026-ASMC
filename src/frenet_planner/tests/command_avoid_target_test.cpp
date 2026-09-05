@@ -2749,6 +2749,42 @@ int main() {
     }
 
     {
+        // D6-4a: LOCKED는 궤적 소유권이고 Frenet state validity와 독립이다.
+        // 실제 post-COMMIT planning은 AVOID trajectory의 속도와 current s/d를
+        // 그대로 보고하고, planner를 호출하지 않는 terminal latch만 caller가
+        // state_valid=false로 표시한다.
+        const auto executing =
+            frenet_planner_ros::ResolveFeedbackKinematics(
+                asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED,
+                /*has_avoid_fields=*/true, 4.25, 9.0,
+                /*caller_frenet_state_valid=*/true, 123.0, -2.5);
+        Expect(executing.applied_speed_mps == 4.25 &&
+                   executing.frenet_state_valid &&
+                   executing.current_s == 123.0 && executing.current_d == -2.5,
+               "feedback: executing LOCKED AVOID keeps speed and Frenet state");
+
+        const auto latched =
+            frenet_planner_ros::ResolveFeedbackKinematics(
+                asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED,
+                /*has_avoid_fields=*/true, 4.25, 9.0,
+                /*caller_frenet_state_valid=*/false, 123.0, -2.5);
+        Expect(latched.applied_speed_mps == 4.25 &&
+                   !latched.frenet_state_valid && latched.current_s == 0.0 &&
+                   latched.current_d == 0.0,
+               "feedback: terminal LOCKED AVOID does not invent fresh state");
+
+        const auto keep_new =
+            frenet_planner_ros::ResolveFeedbackKinematics(
+                asmc_msgs::FrenetFeedback::TRAJECTORY_NEW,
+                /*has_avoid_fields=*/false, -1.0, 8.0,
+                /*caller_frenet_state_valid=*/true, 200.0, 0.1);
+        Expect(keep_new.applied_speed_mps == 8.0 &&
+                   keep_new.frenet_state_valid &&
+                   keep_new.current_s == 200.0 && keep_new.current_d == 0.1,
+               "feedback: normal NEW trajectory semantics remain unchanged");
+    }
+
+    {
         // manager ownership과 core context를 함께 확인한다: 거부된 KEEP/CANCEL은
         // active AVOID를 계속 계획하고, E-STOP만 preempt/reset한다.
         const std::vector<ObjectInfo> initial{

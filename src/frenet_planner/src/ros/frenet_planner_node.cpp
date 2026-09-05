@@ -136,6 +136,7 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     // D4-1: KEEP. D4-2: STOP(target pose 투영 + StopContext).
     // D4-3: EMERGENCY_STOP(직접 감속, 목표점 불필요).
     // D5-1: FOLLOW(primary_object_id로 지정된 대상만 추종).
+    // D6-4a: AVOID(PREPARE/EXECUTE transaction + post-COMMIT 실행).
     command_manager_.SetImplementedManeuver(
         asmc_msgs::BehaviorCommand::KEEP, true);
     command_manager_.SetImplementedManeuver(
@@ -144,6 +145,8 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
         asmc_msgs::BehaviorCommand::EMERGENCY_STOP, true);
     command_manager_.SetImplementedManeuver(
         asmc_msgs::BehaviorCommand::FOLLOW, true);
+    command_manager_.SetImplementedManeuver(
+        asmc_msgs::BehaviorCommand::AVOID, true);
 
     vehicle_sub_ = nh_.subscribe(
         vehicle_topic, 1, &FrenetPlannerNode::vehicleCallback, this);
@@ -165,7 +168,7 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
                     << "; outputs: " << trajectory_topic << ", "
                     << feedback_topic << "; v2: " << behavior_command_v2_topic
                     << " -> " << feedback_v2_topic
-                    << " (command handling only, no trajectory yet)"
+                    << " (KEEP/STOP/E-STOP/FOLLOW/AVOID enabled)"
                     << "; planner_initialized="
                     << (planner_initialized_ ? "true" : "false"));
 }
@@ -1221,12 +1224,9 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     // **AVOID candidate는 절대 발행하지 않는다.** FSM이 EXECUTE를 주기 전에
     // 차가 횡이동을 시작하면 안 된다.
     //
-    // ===== production gate는 아직 닫혀 있다 =====
-    //
-    // node의 SetImplementedManeuver(AVOID)가 열리지 않았으므로
-    // command_manager_.Accept()가 planner 호출 전에 FAILED로 끝낸다. 즉 이
-    // 블록은 D6-4에서 gate를 열 때 처음 실행된다. 배선을 먼저 넣는 이유는
-    // D6-3의 EXECUTE가 같은 구조를 확장하기 때문이다.
+    // D6-4a에서 production gate가 열렸다. PREPARE에는 maintenance를,
+    // EXECUTE가 현재 snapshot 재검증에 성공한 최초 COMMIT cycle에는
+    // locked candidate를 발행한다.
     if (planner_command.mode == AVOID &&
         avoid_route == AvoidPlanningRoute::PRE_COMMIT &&
         (command.execution_request == asmc_msgs::BehaviorCommand::PREPARE ||
@@ -1424,8 +1424,12 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                    : std::string("no safe avoid candidate this cycle"));
 
         trajectory_pub_.publish(published);
+        const uint8_t trajectory_source =
+            committed_now
+                ? asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED
+                : asmc_msgs::FrenetFeedback::TRAJECTORY_NEW;
         publishFeedbackV2(feedback_command_id, prepared, &published,
-                          asmc_msgs::FrenetFeedback::TRAJECTORY_NEW,
+                          trajectory_source,
                           prepare.candidate_valid, ego_s_valid, ego_s,
                           &avoid_fields);
 
@@ -1641,27 +1645,18 @@ void FrenetPlannerNode::publishFeedbackV2(
     // 유도하지 않고 호출자가 정한다(계약 8.3절, 헤더 D6-0 주석 참고).
     feedback.plan_valid = plan_valid;
 
-    // Frenet 상태. current_s는 호출자가 ProjectEgoToS로 얻은 값이고,
-    // current_d는 planner가 매 Plan()마다 갱신한 값이다.
-    //
-    // current_d는 음수가 유효하므로 -1.0을 무효값으로 쓸 수 없다. 유효성은
-    // frenet_state_valid로만 판단한다(계약 1.3절).
-    if (trajectory_source == asmc_msgs::FrenetFeedback::TRAJECTORY_NEW) {
-        // AVOID PREPARE는 발행한 maintenance의 실제 목표속도를 넘긴다.
-        // last_target_speed_는 maintenance 결정 전에 계산된 순항 목표속도라
-        // 감속/정지 maintenance에서 거짓 보고가 된다(헤더 주석 참고).
-        feedback.applied_speed_mps = avoid_fields
-            ? avoid_fields->applied_speed_mps
-            : planner_.last_target_speed();
-        feedback.frenet_state_valid = frenet_state_valid;
-        feedback.current_s = current_s;
-        feedback.current_d = planner_.last_d();
-    } else {
-        feedback.applied_speed_mps = -1.0;
-        feedback.frenet_state_valid = false;
-        feedback.current_s = 0.0;
-        feedback.current_d = 0.0;
-    }
+    // Frenet 상태와 trajectory source는 독립 축이다. post-COMMIT AVOID는
+    // LOCKED source여도 이번 cycle에 실제 planning을 했으므로 유효한 속도와
+    // s/d를 보낸다. terminal latch는 caller가 state_valid=false로 구분한다.
+    const FeedbackKinematics kinematics = ResolveFeedbackKinematics(
+        trajectory_source, avoid_fields != nullptr,
+        avoid_fields ? avoid_fields->applied_speed_mps : -1.0,
+        planner_.last_target_speed(), frenet_state_valid, current_s,
+        planner_.last_d());
+    feedback.applied_speed_mps = kinematics.applied_speed_mps;
+    feedback.frenet_state_valid = kinematics.frenet_state_valid;
+    feedback.current_s = kinematics.current_s;
+    feedback.current_d = kinematics.current_d;
 
     // D4-1은 KEEP만 다룬다. 아직 채우지 않는 필드는 메시지가 정의한 sentinel을
     // 정확히 사용한다 - 임의의 0이나 추측값을 넣지 않는다(계약 9.4절).

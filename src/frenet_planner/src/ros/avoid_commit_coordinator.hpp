@@ -54,6 +54,39 @@ inline bool CompleteAvoidAtomically(
     return manager.NotifyManeuverCompleted();
 }
 
+struct FeedbackKinematics {
+    double applied_speed_mps = -1.0;
+    bool frenet_state_valid = false;
+    double current_s = 0.0;
+    double current_d = 0.0;
+};
+
+// trajectory source와 현재 Frenet state validity는 독립 축이다. 특히
+// post-COMMIT AVOID는 새로 계산한 실제 궤적을 LOCKED로 발행하므로 속도와
+// current s/d가 유효하다. terminal latch caller는 state_valid=false를 넘겨
+// fresh state를 가장하지 않는다.
+inline FeedbackKinematics ResolveFeedbackKinematics(
+    uint8_t trajectory_source, bool has_avoid_fields,
+    double avoid_applied_speed_mps, double normal_applied_speed_mps,
+    bool caller_frenet_state_valid, double current_s, double current_d) {
+    FeedbackKinematics result;
+    if (has_avoid_fields &&
+        (trajectory_source == asmc_msgs::FrenetFeedback::TRAJECTORY_NEW ||
+         trajectory_source == asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED)) {
+        result.applied_speed_mps = avoid_applied_speed_mps;
+    } else if (trajectory_source ==
+               asmc_msgs::FrenetFeedback::TRAJECTORY_NEW) {
+        result.applied_speed_mps = normal_applied_speed_mps;
+    }
+
+    result.frenet_state_valid = caller_frenet_state_valid;
+    if (caller_frenet_state_valid) {
+        result.current_s = current_s;
+        result.current_d = current_d;
+    }
+    return result;
+}
+
 inline bool CommitAvoidAtomically(
     CommandExecutionManager& manager, FrenetPlanner& planner,
     const FrenetPlanner::AvoidPrepareResult& result) {
