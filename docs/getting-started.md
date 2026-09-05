@@ -97,15 +97,39 @@ git submodule update --init --recursive
 
 ## 4. Docker로 ROS 환경 실행
 
+### 4.1 Windows Docker Desktop 최초 설정
+
+이 저장소의 ROS 컨테이너는 Docker Desktop host networking을 기본으로 사용합니다.
+팀원마다 최초 한 번 다음을 적용합니다.
+
+1. Docker Desktop **4.34 이상**을 설치하고 Linux containers/WSL 2 모드로 실행합니다.
+2. **Settings → Resources → Network**로 이동합니다.
+3. **Enable host networking**을 체크합니다.
+4. **Apply and restart**를 눌러 재시작이 끝날 때까지 기다립니다.
+5. **Settings → Resources → WSL Integration**에서 레포를 실행할 WSL 배포판을 켭니다.
+
+`Network` 메뉴가 없으면 Windows containers 모드인지 확인하고 Linux containers로
+전환합니다. `Enable host networking` 항목이 없으면 Docker Desktop 버전을 업데이트합니다.
+공식 기준과 제약은 [Docker host network driver 문서](https://docs.docker.com/engine/network/drivers/host/)를
+참고합니다.
+
+### 4.2 빌드·실행·검사
+
 ```bash
 cd "$ASMC"
 xhost +local:docker
 ./scripts/docker_ros_up.sh build
 ./scripts/docker_ros_up.sh up
+./scripts/docker_ros_up.sh status
+./scripts/docker_ros_up.sh check
 docker exec -it asmc-ros-noetic bash
 # 컨테이너 안
 ./scripts/build_ws.sh
 ```
+
+정상 상태에서는 `status`에 `mode=host`, `published={}`가 나오고 `check`의 두 방향 UDP가
+모두 `[OK]`여야 합니다. MORAI의 Host/Destination IP `127.0.0.1`과 센서 포트는 바꾸지
+않습니다.
 
 ### MORAI UDP (26.R1.h3 개발)
 

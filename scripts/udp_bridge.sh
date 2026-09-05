@@ -46,7 +46,7 @@ echo "=========================================="
 echo "  ASMC_WS_ROOT   : $ASMC_WS_ROOT"
 echo "  ROS_MASTER_URI : $ROS_MASTER_URI"
 echo "  Launch         : integration_launch/morai_udp_bridges.launch"
-CMD_IP="${MORAI_CMD_IP:-host.docker.internal}"
+CMD_IP="${MORAI_CMD_IP:-127.0.0.1}"
 # If caller already passed cmd_ip:=..., do not override.
 has_cmd_ip=0
 for a in "$@"; do

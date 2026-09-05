@@ -3,7 +3,7 @@
   <arg name="ego_port"       default="909"/>    <!-- Ego Vehicle Status Dest -->
   <arg name="object_port"    default="7505"/>   <!-- Object Info Dest -->
   <arg name="collision_port" default="9092"/>   <!-- Collision Data Dest -->
-  <arg name="cmd_ip"         default="host.docker.internal"/>
+  <arg name="cmd_ip"         default="127.0.0.1"/>
   <arg name="cmd_port"       default="9111"/>   <!-- Ego Ctrl Cmd Host (SIM listen) -->
   <arg name="max_steer_deg"  default="36.25"/>
 

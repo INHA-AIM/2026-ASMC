@@ -34,7 +34,7 @@ MORAI GPS/IMU ─UDP─> frenet_planner_node
 | GPS 수신 | `0.0.0.0:9301` |
 | IMU 수신 | `0.0.0.0:9303` |
 | Planner → MPC | `127.0.0.1:9300` |
-| MPC → MORAI CtrlCmd | `host.docker.internal:9111` |
+| MPC → MORAI CtrlCmd | `127.0.0.1:9111` (Docker Desktop host mode) |
 
 대회 SIM에서는 현장 제공 포트를 다시 확인한다. 포트·IP는 알고리즘 소스가 아니라 각 모듈의 `src/udp_network/network.yaml`에서 관리한다.
 
