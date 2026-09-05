@@ -591,6 +591,13 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     // ---- 2. transaction 규칙 ------------------------------------------
     const CommandAcceptance acceptance = command_manager_.Accept(command);
 
+    // E-STOP preemption은 planner 호출보다 먼저 core AVOID 소유권도 끊는다.
+    // 그러면 같은 cycle의 stale/conversion 조기 반환에서도 이전 committed
+    // context가 다음 AVOID에 grace를 제공하지 않는다.
+    if (ShouldResetAvoidForEmergencyPreemption(command, acceptance)) {
+        planner_.ResetExternalAvoidance();
+    }
+
     // ===== 계획 대상 재결속 (D6-0a) =====
     //
     // COMMITTED/EXECUTING인 handshake maneuver 중에 다른 명령이 오면 manager는
@@ -662,9 +669,15 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             asmc_msgs::Trajectory held = last_v2_trajectory_;
             held.header.stamp = now;
             trajectory_pub_.publish(held);
+            const AvoidFeedbackFields* avoid_fields =
+                command_manager_.maneuver_type() ==
+                            asmc_msgs::BehaviorCommand::AVOID &&
+                        has_last_v2_avoid_feedback_
+                    ? &last_v2_avoid_feedback_
+                    : nullptr;
             publishFeedbackV2(feedback_command_id, acceptance, &held,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED,
-                              /*plan_valid=*/false);
+                              /*plan_valid=*/false, false, 0.0, avoid_fields);
             return true;
         }
         has_last_v2_trajectory_ = false;
@@ -1141,12 +1154,6 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             return true;
         }
 
-        v2_plan_fail_streak_ = 0;
-        last_v2_trajectory_ = trajectory;
-        has_last_v2_trajectory_ = true;
-        last_v2_trajectory_command_id_ = command.command_id;
-        last_v2_trajectory_fingerprint_ = fingerprint;
-
         AvoidFeedbackFields avoid_fields;
         avoid_fields.applied_speed_mps = trajectory.points.back().velocity;
         avoid_fields.target_d_valid = true;
@@ -1157,11 +1164,45 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             static_cast<uint32_t>(committed.valid_candidate_count);
         avoid_fields.selected_cost = committed.selected_cost;
         avoid_fields.blocking_object_id = committed.blocking_object_id;
+        avoid_fields.maneuver_progress = committed.maneuver_progress;
+
+        // trajectory와 feedback payload가 모두 준비된 뒤에만 manager를
+        // COMPLETED로 올린다. 변환 실패 뒤 COMPLETED만 남는 상태를 막는다.
+        if (committed.maneuver_completed &&
+            !CompleteAvoidAtomically(command_manager_, committed,
+                                     /*trajectory_ready=*/true)) {
+            command_manager_.NotifyPlanFailed(/*terminal=*/false);
+            has_last_v2_trajectory_ = false;
+            CommandAcceptance failed = acceptance;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
+            failed.detail = "avoid completion state transition rejected";
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false, ego_s_valid, ego_s,
+                              &avoid_fields);
+            return true;
+        }
+
+        v2_plan_fail_streak_ = 0;
+        last_v2_trajectory_ = trajectory;
+        has_last_v2_trajectory_ = true;
+        last_v2_trajectory_command_id_ = command.command_id;
+        last_v2_trajectory_fingerprint_ = fingerprint;
+        last_v2_avoid_feedback_ = avoid_fields;
+        has_last_v2_avoid_feedback_ = true;
 
         CommandAcceptance executing = acceptance;
         executing.execution_state = command_manager_.execution_state();
         executing.result_code = asmc_msgs::FrenetFeedback::RESULT_NONE;
-        executing.detail = "executing committed avoid trajectory";
+        executing.detail = committed.maneuver_completed
+            ? "avoid maneuver completed"
+            : "executing committed avoid trajectory";
         trajectory_pub_.publish(trajectory);
         publishFeedbackV2(feedback_command_id, executing, &trajectory,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED,
@@ -1623,7 +1664,8 @@ void FrenetPlannerNode::publishFeedbackV2(
 
     // D4-1은 KEEP만 다룬다. 아직 채우지 않는 필드는 메시지가 정의한 sentinel을
     // 정확히 사용한다 - 임의의 0이나 추측값을 넣지 않는다(계약 9.4절).
-    feedback.maneuver_progress = -1.0;
+    feedback.maneuver_progress = avoid_fields
+        ? avoid_fields->maneuver_progress : -1.0;
     // 실제로 추종 중인 leader. command.primary_object_id를 그대로 되돌려
     // 보내면 "지정했다"와 "확보했다"를 구분할 수 없어, 확보에 실패한
     // 사이클에도 ID가 나간다(계약 9.2절).

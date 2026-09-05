@@ -975,13 +975,78 @@ bool FrenetPlanner::CommitAvoid(const AvoidPrepareResult& result) {
 
 void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     v2_avoidance_.committed = true;
+    v2_avoidance_.completed = false;
+    v2_avoidance_.maneuver_progress = 0.0;
     // 이 시점에 처음 lock한다. PREPARE에서는 사이클마다 좌/우가 바뀔 수
     // 있으므로 잠그지 않았다(계약 12.7.3절).
     v2_avoidance_.target_d = result.selected_target_d;
     // 진행률 기준점. maneuver_progress를 (start_d -> target_d) 구간으로
-    // 계산한다(D6-4).
+    // 계산한다(D6-3c).
     v2_avoidance_.start_d = last_d_;
     v2_avoidance_.phase = AvoidPhase::SHIFT;
+}
+
+void FrenetPlanner::UpdateCommittedAvoidLifecycle(
+    double ego_s, double ego_d, AvoidPrepareResult& result) {
+    if (!v2_avoidance_.active || !v2_avoidance_.committed) return;
+
+    constexpr double kProgressEpsilon = 1e-6;
+    bool entered_pass_this_cycle = false;
+    if (!v2_avoidance_.completed &&
+        v2_avoidance_.phase == AvoidPhase::SHIFT &&
+        std::isfinite(ego_d) && std::isfinite(v2_avoidance_.target_d) &&
+        std::fabs(ego_d - v2_avoidance_.target_d) <=
+            avoid_cfg_.lateral_tolerance) {
+        v2_avoidance_.phase = AvoidPhase::PASS;
+        entered_pass_this_cycle = true;
+    }
+
+    const double clear_distance =
+        0.5 * (vehicle_shape_.length + v2_avoidance_.obstacle_length) +
+        avoid_cfg_.pass_clearance;
+    const double gap = v2_avoidance_.obstacle_s - ego_s;
+
+    // SHIFT -> PASS가 관측된 다음 cycle부터 완료를 허용한다. ego가 이미 멀리
+    // 지나간 pathological snapshot에서도 lifecycle이 SHIFT에서 곧바로
+    // COMPLETED로 건너뛰지 않는다.
+    if (!v2_avoidance_.completed && !entered_pass_this_cycle &&
+        v2_avoidance_.phase == AvoidPhase::PASS &&
+        std::isfinite(gap) && std::isfinite(clear_distance) &&
+        clear_distance > kProgressEpsilon && gap < -clear_distance) {
+        v2_avoidance_.completed = true;
+    }
+
+    double progress = 0.0;
+    if (v2_avoidance_.completed) {
+        progress = 1.0;
+    } else if (v2_avoidance_.phase == AvoidPhase::SHIFT) {
+        const double denominator = std::max(
+            std::fabs(v2_avoidance_.target_d - v2_avoidance_.start_d),
+            kProgressEpsilon);
+        const double lateral_ratio =
+            std::isfinite(ego_d) && std::isfinite(v2_avoidance_.start_d)
+                ? clip(std::fabs(ego_d - v2_avoidance_.start_d) /
+                           denominator,
+                       0.0, 1.0)
+                : 0.0;
+        progress = 0.5 * lateral_ratio;
+    } else {
+        const double pass_ratio =
+            std::isfinite(gap) && std::isfinite(clear_distance) &&
+                    clear_distance > kProgressEpsilon
+                ? clip(-gap / clear_distance, 0.0, 1.0)
+                : 0.0;
+        progress = 0.5 + 0.5 * pass_ratio;
+    }
+
+    if (!std::isfinite(progress)) progress = 0.0;
+    progress = clip(progress, 0.0, 1.0);
+    // localization jitter로 current d/s가 잠시 역행해도 FSM progress는
+    // 되돌아가지 않는다.
+    v2_avoidance_.maneuver_progress = std::max(
+        v2_avoidance_.maneuver_progress, progress);
+    result.maneuver_completed = v2_avoidance_.completed;
+    result.maneuver_progress = v2_avoidance_.maneuver_progress;
 }
 
 const char* FrenetPlanner::avoid_phase_name() const {
@@ -1604,6 +1669,7 @@ bool FrenetPlanner::PlanInternal(
             result.selected_cost = 0.0;
             result.candidate_path = crawl;
             out_path = std::move(crawl);
+            UpdateCommittedAvoidLifecycle(s, d, result);
             last_failure_reason_ = PlanFailureReason::NONE;
             return true;
         }
@@ -1720,6 +1786,7 @@ bool FrenetPlanner::PlanInternal(
                 return false;
             }
             out_path = result.candidate_path;
+            UpdateCommittedAvoidLifecycle(s, d, result);
             last_failure_reason_ = PlanFailureReason::NONE;
             return true;
         }

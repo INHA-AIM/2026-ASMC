@@ -60,7 +60,7 @@ class FrenetPlannerNode {
     // 기존 v1 경로를 계속 수행한다 - cutover 전까지 두 계통이 병행한다.
     bool runV2PlanningCycle(const ros::Time& now);
 
-    // AVOID PREPARE가 채우는 피드백 필드 (D6-2c).
+    // AVOID PREPARE/post-COMMIT이 채우는 피드백 필드 (D6-2c/D6-3c).
     //
     // publishFeedbackV2의 인자를 계속 늘리는 대신 한 묶음으로 넘긴다.
     // nullptr이면 기존 D4/D5 동작 그대로다 - sentinel로 채워진다.
@@ -77,6 +77,7 @@ class FrenetPlannerNode {
         uint32_t valid_candidate_count = 0;
         double selected_cost = -1.0;
         int32_t blocking_object_id = -1;
+        double maneuver_progress = -1.0;
     };
 
     // 피드백 발행. planning 결과가 있으면 관련 필드를 채운다.
@@ -167,6 +168,8 @@ class FrenetPlannerNode {
     bool has_last_v2_trajectory_ = false;
     uint32_t last_v2_trajectory_command_id_ = 0;
     CommandFingerprint last_v2_trajectory_fingerprint_;
+    AvoidFeedbackFields last_v2_avoid_feedback_;
+    bool has_last_v2_avoid_feedback_ = false;
     int v2_plan_fail_streak_ = 0;
 
     FrenetPlanner planner_;

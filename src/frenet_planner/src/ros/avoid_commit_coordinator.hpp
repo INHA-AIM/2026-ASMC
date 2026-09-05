@@ -3,6 +3,8 @@
 // AVOID core와 command manager의 COMMIT을 한 planning tick에서 함께 적용한다.
 // 계약: docs/fsm-frenet-interface-v2.md 12.7.5절
 
+#include <cmath>
+
 #include "frenet_planner/frenet_planner.hpp"
 #include "ros/command_execution_manager.hpp"
 
@@ -38,6 +40,26 @@ inline AvoidPlanningRoute RouteAvoidPlanning(
 
 inline bool ShouldResetAvoidContext(const CommandAcceptance& acceptance) {
     return !acceptance.should_plan() && acceptance.transaction_cancelled;
+}
+
+inline bool ShouldResetAvoidForEmergencyPreemption(
+    const asmc_msgs::BehaviorCommand& command,
+    const CommandAcceptance& acceptance) {
+    return command.maneuver_type ==
+               asmc_msgs::BehaviorCommand::EMERGENCY_STOP &&
+           acceptance.planning_target == PlanningTarget::INCOMING_COMMAND;
+}
+
+inline bool CompleteAvoidAtomically(
+    CommandExecutionManager& manager,
+    const FrenetPlanner::AvoidPrepareResult& result,
+    bool trajectory_ready) {
+    if (!trajectory_ready || !result.maneuver_completed ||
+        !std::isfinite(result.maneuver_progress) ||
+        result.maneuver_progress < 1.0) {
+        return false;
+    }
+    return manager.NotifyManeuverCompleted();
 }
 
 inline bool CommitAvoidAtomically(

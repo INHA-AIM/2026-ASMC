@@ -281,6 +281,10 @@ public:
         std::size_t valid_candidate_count = 0;
         double selected_cost = -1.0;
         int blocking_object_id = -1;
+
+        // post-COMMIT lifecycle 결과. PREPARE에서는 sentinel/false다.
+        bool maneuver_completed = false;
+        double maneuver_progress = -1.0;
     };
 
     // AVOID PREPARE 한 사이클을 수행한다 (계약 5.2절).
@@ -362,8 +366,13 @@ public:
     double avoid_locked_target_d() const { return v2_avoidance_.target_d; }
 
     // COMMIT 시점의 ego d [m]. maneuver_progress를 (start_d -> target_d)
-    // 구간의 진행률로 계산하는 데 쓴다(D6-4).
+    // 구간의 진행률로 계산하는 데 쓴다(D6-3c).
     double avoid_start_d() const { return v2_avoidance_.start_d; }
+
+    bool avoid_completed() const { return v2_avoidance_.completed; }
+    double avoid_maneuver_progress() const {
+        return v2_avoidance_.maneuver_progress;
+    }
 
     // v2 AVOID의 내부 실행 단계 이름. 진단·검증용 문자열이다. 내부 enum을
     // 공개하지 않기 위해 이름으로 돌려준다.
@@ -396,6 +405,9 @@ private:
                       ExternalPlanningPurpose purpose,
                       CartesianPath& out_path,
                       AvoidPrepareResult* avoid_prepare_result);
+
+    void UpdateCommittedAvoidLifecycle(double ego_s, double ego_d,
+                                       AvoidPrepareResult& result);
 
     // AVOID PREPARE의 유지 궤적을 만든다 (D6-2b).
     //
@@ -498,6 +510,11 @@ private:
         // **정확히** 겨냥한다(lateral tolerance 0). PREPARE에서는 항상
         // false다.
         bool committed = false;
+
+        // v2-only terminal lifecycle. 완료 후에도 새 command_id가 올 때까지
+        // context를 보존한다. legacy avoidance_는 이 필드를 읽거나 쓰지 않는다.
+        bool completed = false;
+        double maneuver_progress = 0.0;
     };
 
     struct FollowingContext {

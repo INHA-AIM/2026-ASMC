@@ -117,6 +117,15 @@ CartesianState MakeEgo(const Pose2D& pose, double speed) {
     return ego;
 }
 
+CartesianState MakeEgoAt(const Waypoints& waypoints, double target_s,
+                         double lateral_d, double speed) {
+    const Pose2D pose = PoseAt(waypoints, target_s);
+    CartesianState ego = MakeEgo(pose, speed);
+    ego.x -= lateral_d * std::sin(pose.yaw);
+    ego.y += lateral_d * std::cos(pose.yaw);
+    return ego;
+}
+
 // 경로 위 target_s, 횡오프셋 lateral_d 지점에 놓인 객체.
 ObjectInfo MakeObstacle(const Waypoints& waypoints, int id, double target_s,
                         double speed, double lateral_d = 0.0) {
@@ -2342,6 +2351,210 @@ int main() {
     }
 
     {
+        // D6-3c lifecycle: SHIFT -> PASS -> COMPLETED. 대상 observation 없이도
+        // COMMIT 때 저장한 geometry로 진행하며 progress는 유한/단조/범위 내다.
+        const std::vector<ObjectInfo> initial{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const PlannerCommand command =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        planner.PrepareAvoid(ego, initial, boxes_for(initial), command,
+                             maintenance, prepared);
+        auto manager = MakeAvoidManagerReady(3100);
+        Expect(frenet_planner_ros::CommitAvoidAtomically(manager, planner,
+                                                          prepared) &&
+                   std::string(planner.avoid_phase_name()) == "SHIFT",
+               "lifecycle: COMMIT starts in SHIFT");
+        frenet_planner_ros::RouteAvoidPlanning(manager);
+        const double locked = planner.avoid_locked_target_d();
+        const double start_d = planner.avoid_start_d();
+
+        CartesianPath shift_path;
+        Prepare shift;
+        const bool shift_ok = planner.PlanCommittedAvoid(
+            ego, {}, {}, command, shift_path, shift);
+        Expect(shift_ok && !shift.maneuver_completed &&
+                   std::string(planner.avoid_phase_name()) == "SHIFT" &&
+                   std::isfinite(shift.maneuver_progress) &&
+                   shift.maneuver_progress >= 0.0 &&
+                   shift.maneuver_progress < 0.5,
+               "lifecycle: outside tolerance remains SHIFT with bounded progress");
+
+        const double sign = locked >= start_d ? 1.0 : -1.0;
+        const CartesianState approaching = MakeEgoAt(
+            waypoints, kEgoS, locked - sign * 0.6, kEgoSpeed);
+        CartesianPath approaching_path;
+        Prepare approaching_result;
+        planner.PlanCommittedAvoid(approaching, {}, {}, command,
+                                   approaching_path, approaching_result);
+        Expect(std::string(planner.avoid_phase_name()) == "SHIFT" &&
+                   approaching_result.maneuver_progress >=
+                       shift.maneuver_progress &&
+                   approaching_result.maneuver_progress < 0.5,
+               "lifecycle: approaching target advances SHIFT progress");
+
+        CartesianPath jitter_path;
+        Prepare jitter;
+        planner.PlanCommittedAvoid(ego, {}, {}, command, jitter_path, jitter);
+        Expect(jitter.maneuver_progress >=
+                   approaching_result.maneuver_progress,
+               "lifecycle: localization regression cannot decrease progress");
+
+        const CartesianState at_target =
+            MakeEgoAt(waypoints, kEgoS, locked, kEgoSpeed);
+        CartesianPath pass_path;
+        Prepare pass;
+        const bool pass_ok = planner.PlanCommittedAvoid(
+            at_target, {}, {}, command, pass_path, pass);
+        Expect(pass_ok && !pass.maneuver_completed &&
+                   std::string(planner.avoid_phase_name()) == "PASS" &&
+                   pass.maneuver_progress >= 0.5 &&
+                   pass.maneuver_progress < 1.0,
+               "lifecycle: entering tolerance advances SHIFT to PASS only");
+
+        const CartesianState before_clear = MakeEgoAt(
+            waypoints, planner.avoid_target_s(), locked, kEgoSpeed);
+        CartesianPath before_clear_path;
+        Prepare before_clear_result;
+        planner.PlanCommittedAvoid(before_clear, {}, {}, command,
+                                   before_clear_path, before_clear_result);
+        Expect(!before_clear_result.maneuver_completed &&
+                   manager.execution_state() ==
+                       asmc_msgs::FrenetFeedback::EXECUTING &&
+                   before_clear_result.maneuver_progress >= 0.5 &&
+                   before_clear_result.maneuver_progress < 1.0,
+               "lifecycle: PASS before longitudinal clearance keeps EXECUTING");
+
+        const CartesianState after_clear = MakeEgoAt(
+            waypoints, planner.avoid_target_s() + 20.0, locked, kEgoSpeed);
+        CartesianPath final_path;
+        Prepare completed;
+        const bool final_ok = planner.PlanCommittedAvoid(
+            after_clear, {}, {}, command, final_path, completed);
+        Expect(final_ok && completed.maneuver_completed &&
+                   completed.maneuver_progress == 1.0 &&
+                   planner.avoid_completed(),
+               "lifecycle: PASS plus longitudinal clearance completes");
+        Expect(planner.avoid_committed() &&
+                   planner.active_avoid_target_id() == 21 &&
+                   std::fabs(planner.avoid_locked_target_d() - locked) < 1e-9 &&
+                   std::string(planner.avoid_phase_name()) == "PASS",
+               "lifecycle: completion retains committed context and lock");
+        Expect(std::fabs(EndpointD(planner, final_path,
+                                   planner.avoid_target_s() + 25.0) - locked) <
+                   1e-6,
+               "lifecycle: completion cycle still publishes final AVOID path");
+
+        Expect(!frenet_planner_ros::CompleteAvoidAtomically(
+                   manager, completed, /*trajectory_ready=*/false) &&
+                   manager.execution_state() ==
+                       asmc_msgs::FrenetFeedback::EXECUTING,
+               "completion atomicity: unprepared trajectory cannot complete manager");
+        Expect(frenet_planner_ros::CompleteAvoidAtomically(
+                   manager, completed, /*trajectory_ready=*/true) &&
+                   manager.execution_state() ==
+                       asmc_msgs::FrenetFeedback::COMPLETED,
+               "completion atomicity: prepared final trajectory completes manager");
+
+        auto same = manager.active_command();
+        same.execution_request = asmc_msgs::BehaviorCommand::EXECUTE;
+        const auto latched = manager.Accept(same);
+        Expect(latched.planning_target ==
+                   frenet_planner_ros::PlanningTarget::NONE &&
+                   latched.execution_state ==
+                       asmc_msgs::FrenetFeedback::COMPLETED &&
+                   manager.completed_normally() && planner.avoid_completed(),
+               "completion latch: same id reuses final path without core reset");
+
+        manager.SetImplementedManeuver(asmc_msgs::BehaviorCommand::KEEP, true);
+        auto keep = MakeAvoidTransactionCommand(3101);
+        keep.maneuver_type = asmc_msgs::BehaviorCommand::KEEP;
+        keep.execution_request = asmc_msgs::BehaviorCommand::EXECUTE;
+        keep.direction = asmc_msgs::BehaviorCommand::DIRECTION_NONE;
+        keep.primary_object_id = -1;
+        const auto new_keep = manager.Accept(keep);
+        PlannerCommand keep_plan{};
+        keep_plan.mode = LANE_KEEPING;
+        CartesianPath center_path;
+        planner.Plan(after_clear, {}, keep_plan, center_path);
+        Expect(new_keep.planning_target ==
+                   frenet_planner_ros::PlanningTarget::INCOMING_COMMAND &&
+                   !planner.avoid_committed() &&
+                   planner.active_avoid_target_id() == -1,
+               "completion latch: new KEEP owns center return and resets AVOID");
+    }
+
+    {
+        // completion geometry를 충족해도 현재 committed path가 막히면 collision이
+        // 우선하며 manager/core 모두 완료되지 않는다.
+        const std::vector<ObjectInfo> initial{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const PlannerCommand command =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        planner.PrepareAvoid(ego, initial, boxes_for(initial), command,
+                             maintenance, prepared);
+        auto manager = MakeAvoidManagerReady(3102);
+        frenet_planner_ros::CommitAvoidAtomically(manager, planner, prepared);
+        frenet_planner_ros::RouteAvoidPlanning(manager);
+        const double locked = planner.avoid_locked_target_d();
+        const CartesianState at_target =
+            MakeEgoAt(waypoints, kEgoS, locked, kEgoSpeed);
+        CartesianPath pass_path;
+        Prepare pass;
+        planner.PlanCommittedAvoid(at_target, {}, {}, command, pass_path, pass);
+
+        const double clear_s = planner.avoid_target_s() + 20.0;
+        const CartesianState clear_ego =
+            MakeEgoAt(waypoints, clear_s, locked, kEgoSpeed);
+        const std::vector<ObjectInfo> blocked{
+            MakeObstacle(waypoints, 31, clear_s + 0.5, 0.0, locked)};
+        CartesianPath blocked_path;
+        Prepare blocked_result;
+        const bool blocked_ok = planner.PlanCommittedAvoid(
+            clear_ego, blocked, boxes_for(blocked), command, blocked_path,
+            blocked_result);
+        manager.NotifyPlanFailed(/*terminal=*/false);
+        Expect(!blocked_ok && planner.last_failure_reason() ==
+                                  Reason::COLLISION_BLOCKED &&
+                   !blocked_result.maneuver_completed &&
+                   !planner.avoid_completed() &&
+                   manager.execution_state() ==
+                       asmc_msgs::FrenetFeedback::EXECUTING,
+               "completion priority: collision blocks completion without state drop");
+    }
+
+    {
+        // 방어적 zero-span COMMIT에서도 progress 계산은 0으로 나누지 않는다.
+        const std::vector<ObjectInfo> initial{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        const PlannerCommand command =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        planner.PrepareAvoid(ego, initial, boxes_for(initial), command,
+                             maintenance, prepared);
+        prepared.selected_target_d = planner.last_d();
+        planner.CommitAvoid(prepared);
+        CartesianPath path;
+        Prepare result;
+        const bool ok = planner.PlanCommittedAvoid(
+            ego, {}, {}, command, path, result);
+        Expect(ok && std::isfinite(result.maneuver_progress) &&
+                   result.maneuver_progress >= 0.0 &&
+                   result.maneuver_progress <= 1.0,
+               "progress defense: zero lateral span remains finite and bounded");
+    }
+
+    {
         // manager ownership과 core context를 함께 확인한다: 거부된 KEEP/CANCEL은
         // active AVOID를 계속 계획하고, E-STOP만 preempt/reset한다.
         const std::vector<ObjectInfo> initial{
@@ -2410,6 +2623,47 @@ int main() {
                    !planner.avoid_committed() &&
                    planner.active_avoid_target_id() == -1,
                "post-commit ownership: E-STOP preempts and clears AVOID");
+    }
+
+    {
+        // D6-3c 착수 probe: node가 manager에서 E-STOP을 accept한 직후 입력
+        // stale로 return하면 PlanInternal(EMERGENCY)에 도달하지 못한다.
+        const std::vector<ObjectInfo> initial{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        const PlannerCommand avoid =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+        planner.PrepareAvoid(ego, initial, boxes_for(initial), avoid,
+                             maintenance, prepared);
+        auto manager = MakeAvoidManagerReady(103);
+        frenet_planner_ros::CommitAvoidAtomically(manager, planner, prepared);
+        manager.SetImplementedManeuver(
+            asmc_msgs::BehaviorCommand::EMERGENCY_STOP, true);
+        auto emergency = MakeAvoidTransactionCommand(104);
+        emergency.maneuver_type =
+            asmc_msgs::BehaviorCommand::EMERGENCY_STOP;
+        emergency.execution_request = asmc_msgs::BehaviorCommand::EXECUTE;
+        emergency.direction = asmc_msgs::BehaviorCommand::DIRECTION_NONE;
+        emergency.primary_object_id = -1;
+        const auto accepted = manager.Accept(emergency);
+        if (frenet_planner_ros::ShouldResetAvoidForEmergencyPreemption(
+                emergency, accepted)) {
+            planner.ResetExternalAvoidance();
+        }
+
+        Expect(!planner.avoid_committed() &&
+                   planner.active_avoid_target_id() == -1,
+               "D6-3c stale E-STOP hardening: preemption clears core before inputs");
+        CartesianPath next_maintenance;
+        Prepare next;
+        const bool next_ok = planner.PrepareAvoid(
+            ego, {}, {}, avoid, next_maintenance, next);
+        Expect(!next_ok && planner.avoid_missing_cycles() == 0 &&
+                   planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
+               "D6-3c stale E-STOP hardening: next AVOID gets no stale grace");
     }
 
     {
