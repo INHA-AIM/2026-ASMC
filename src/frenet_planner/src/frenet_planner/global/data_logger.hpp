@@ -4,7 +4,8 @@
 #include <vector>
 
 #include "frenet_planner/Reference/Reference.hpp"
-#include "frenet_planner/frenet/path_generator.hpp"
+#include "frenet_planner/Generator/GeneratorConfig.hpp"
+#include "frenet_planner/Evaluation/KinematicFilter.hpp"
 #include "frenet_planner/Evaluation/Cost.hpp"
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/visualization/planner_debug_writer.hpp"

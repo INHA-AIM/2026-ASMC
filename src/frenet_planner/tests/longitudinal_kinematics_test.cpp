@@ -16,7 +16,9 @@
 // 이 테스트는 실제 MakeQuintic / GenerateStoppingCandidates /
 // GenerateVelocityKeepingCandidates 결과를 사용한다 (숫자 blind hard-code 금지).
 
-#include "frenet_planner/frenet/path_generator.hpp"
+#include "frenet_planner/Generator/GeneratorConfig.hpp"
+#include "frenet_planner/Generator/LongitudinalGenerator.hpp"
+#include "frenet_planner/Evaluation/KinematicFilter.hpp"
 #include "frenet_planner/Math/Polynomial.hpp"
 
 #include <cmath>

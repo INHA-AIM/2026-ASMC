@@ -41,7 +41,11 @@ add_library(frenet_planner_core
   src/frenet_planner/global/data_logger.cpp
   src/frenet_planner/visualization/planner_debug_writer.cpp
   src/frenet_planner/Reference/Reference.cpp
-  src/frenet_planner/frenet/path_generator.cpp
+  src/frenet_planner/Generator/SamplingUtils.cpp
+  src/frenet_planner/Generator/LateralGenerator.cpp
+  src/frenet_planner/Generator/LongitudinalGenerator.cpp
+  src/frenet_planner/Generator/CandidateCombiner.cpp
+  src/frenet_planner/Evaluation/KinematicFilter.cpp
   src/frenet_planner/Speed/CurveSpeed.cpp
   src/frenet_planner/Evaluation/Cost.cpp
   src/frenet_planner/Evaluation/CollisionChecker.cpp
