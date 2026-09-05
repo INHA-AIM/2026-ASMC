@@ -97,6 +97,33 @@ target_link_libraries(frenet_planner_message_converter
   ${catkin_LIBRARIES}
 )
 
+# v2 인터페이스 어댑터. D3-1은 enum 매핑만 담고, D3-2에서 validation과
+# fingerprint가 여기에 추가된다. FSM 계약 경계이므로 planner core가 아니라
+# ROS 계층에 둔다 (docs/fsm-frenet-interface-v2.md 12.8절).
+add_library(frenet_behavior_command_adapter
+  src/ros/behavior_command_adapter.cpp
+)
+add_dependencies(frenet_behavior_command_adapter
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(frenet_behavior_command_adapter
+  ${catkin_LIBRARIES}
+)
+
+# v2 transaction 관리. adapter가 stateless인 것과 달리 이쪽은 명령들 사이의
+# 관계(transaction / terminal latch / preemption)를 갖는 stateful 계층이다
+# (docs/fsm-frenet-interface-v2.md 12.8절).
+add_library(frenet_command_execution_manager
+  src/ros/command_execution_manager.cpp
+)
+add_dependencies(frenet_command_execution_manager
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(frenet_command_execution_manager
+  frenet_behavior_command_adapter
+  ${catkin_LIBRARIES}
+)
+
 add_executable(frenet_planner_node
   src/ros/main.cpp
   src/ros/frenet_planner_node.cpp
@@ -106,6 +133,8 @@ add_dependencies(frenet_planner_node
 )
 target_link_libraries(frenet_planner_node
   frenet_planner_message_converter
+  frenet_command_execution_manager
+  frenet_behavior_command_adapter
   frenet_planner_core
   ${catkin_LIBRARIES}
 )
@@ -130,6 +159,26 @@ add_executable(ego_vehicle_state_dev_node
 add_dependencies(ego_vehicle_state_dev_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(ego_vehicle_state_dev_node
   frenet_vehicle_state_adapter ${catkin_LIBRARIES})
+
+# D4-4: v2 ROS 인터페이스 통합 회귀. 실행 중인 roscore와 frenet_planner_node가
+# 필요하므로 add_test()에 등록하지 않는다(catkin_make run_tests가 자동으로
+# 돌릴 수 없다). 수동 실행:
+#
+#   rosrun frenet_planner v2_ros_regression_test
+#
+# D10에서 params.yaml의 배포 절대경로 문제가 정리되면 rostest로 편입한다.
+add_executable(v2_ros_regression_test
+  tests/v2_ros_regression_test.cpp
+)
+add_dependencies(v2_ros_regression_test
+  ${catkin_EXPORTED_TARGETS}
+)
+target_compile_definitions(v2_ros_regression_test PRIVATE
+  FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+)
+target_link_libraries(v2_ros_regression_test
+  ${catkin_LIBRARIES}
+)
 
 add_executable(empty_objects_test_publisher
   src/ros/state/empty_objects_test_publisher.cpp)
@@ -218,6 +267,111 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME command_stop_plan_test COMMAND command_stop_plan_test)
 
+  # D5-1: 외부 FOLLOW의 authoritative 대상 확보 회귀. resolver를 legacy
+  # nearest selector로 바꾸면 2건이 실패한다.
+  add_executable(command_follow_plan_test
+    tests/command_follow_plan_test.cpp
+  )
+  target_compile_definitions(command_follow_plan_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(command_follow_plan_test
+    frenet_planner_core
+  )
+  add_test(NAME command_follow_plan_test COMMAND command_follow_plan_test)
+
+  # D6-1: 외부 AVOID의 authoritative 대상 확보 회귀. resolver를 legacy
+  # FindStaticAvoidanceTarget()으로 바꾸면 nearest-object 검사가 실패한다.
+  add_executable(command_avoid_target_test
+    tests/command_avoid_target_test.cpp
+  )
+  target_compile_definitions(command_avoid_target_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(command_avoid_target_test
+    frenet_planner_core
+    frenet_command_execution_manager
+    ${catkin_LIBRARIES}
+  )
+  add_test(NAME command_avoid_target_test COMMAND command_avoid_target_test)
+
+  # D4-3: 외부 EMERGENCY_STOP의 직접 감속 궤적 회귀. EMERGENCY 전용 분기를
+  # 제거하면(후보 파이프라인으로 흘려보내면) 10건이 실패한다.
+  add_executable(command_emergency_plan_test
+    tests/command_emergency_plan_test.cpp
+  )
+  target_compile_definitions(command_emergency_plan_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(command_emergency_plan_test
+    frenet_planner_core
+  )
+  add_test(NAME command_emergency_plan_test
+           COMMAND command_emergency_plan_test)
+
+  # D3-1: BehaviorCommand <-> 내부 BehaviorState enum 매핑 회귀.
+  # static_cast가 실제로 틀린다는 것까지 negative case로 고정한다.
+  add_executable(v2_enum_mapping_test
+    tests/v2_enum_mapping_test.cpp
+  )
+  add_dependencies(v2_enum_mapping_test
+    ${catkin_EXPORTED_TARGETS}
+  )
+  target_link_libraries(v2_enum_mapping_test
+    frenet_behavior_command_adapter
+    ${catkin_LIBRARIES}
+  )
+  add_test(NAME v2_enum_mapping_test COMMAND v2_enum_mapping_test)
+
+  # D3-2: BehaviorCommand validation + transaction fingerprint 회귀.
+  # PREPARE -> EXECUTE가 같은 transaction으로 인정되는지, 형식 오류가 STALE로
+  # 가려지지 않는지를 중점적으로 검증한다.
+  add_executable(behavior_command_adapter_test
+    tests/behavior_command_adapter_test.cpp
+  )
+  add_dependencies(behavior_command_adapter_test
+    ${catkin_EXPORTED_TARGETS}
+  )
+  target_link_libraries(behavior_command_adapter_test
+    frenet_behavior_command_adapter
+    ${catkin_LIBRARIES}
+  )
+  add_test(NAME behavior_command_adapter_test
+           COMMAND behavior_command_adapter_test)
+
+  # D3-3: transaction / terminal latch / preemption 회귀.
+  add_executable(command_execution_manager_test
+    tests/command_execution_manager_test.cpp
+  )
+  add_dependencies(command_execution_manager_test
+    ${catkin_EXPORTED_TARGETS}
+  )
+  target_link_libraries(command_execution_manager_test
+    frenet_command_execution_manager
+    ${catkin_LIBRARIES}
+  )
+  add_test(NAME command_execution_manager_test
+           COMMAND command_execution_manager_test)
+
+  # D1-3: legacy(간이 FSM) 행동 결정의 회귀 커버리지. D5/D6/D8에서 모드별로
+  # legacy 조각을 제거할 때 검증된 회전교차로/고속도로 주행이 깨지지 않았는지
+  # 확인하는 안전망이다 (docs/d1-legacy-behavior-boundary.md).
+  add_executable(legacy_behavior_regression_test
+    tests/legacy_behavior_regression_test.cpp
+  )
+  target_compile_definitions(legacy_behavior_regression_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(legacy_behavior_regression_test
+    frenet_planner_core
+  )
+  add_test(NAME legacy_behavior_regression_test
+           COMMAND legacy_behavior_regression_test)
+
   add_executable(vehicle_state_adapter_test tests/vehicle_state_adapter_test.cpp)
   add_dependencies(vehicle_state_adapter_test ${catkin_EXPORTED_TARGETS})
   target_link_libraries(vehicle_state_adapter_test
@@ -229,12 +383,15 @@ install(TARGETS
     frenet_geometry
     frenet_planner_core
     frenet_planner_message_converter
+    frenet_behavior_command_adapter
+    frenet_command_execution_manager
     frenet_vehicle_state_adapter
     frenet_planner_udp_legacy
     frenet_planner_node
     gps_imu_vehicle_state_node
     ego_vehicle_state_dev_node
     empty_objects_test_publisher
+    v2_ros_regression_test
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

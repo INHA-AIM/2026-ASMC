@@ -150,4 +150,8 @@ planner:
     margin_growth_rate: 0.1
     reactive_lookahead: 8.0
 
-waypoint_file: "/root/ws/R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+# FrenetPlanner::Init()은 '/'로 시작하지 않는 값을 FRENET_PACKAGE_SRC_DIR
+# (frenet_planner 패키지의 src/) 기준 상대경로로 취급한다. 그 디렉터리에서
+# repository 루트의 R_KR_PG_KATRI까지는 항상 3단계 위다
+# (src/frenet_planner/src -> src/frenet_planner -> src -> repo root).
+waypoint_file: "../../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"

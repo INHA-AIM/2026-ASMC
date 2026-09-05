@@ -187,14 +187,23 @@ int main() {
            "unused target_speed value is not validated");
 
     // --- 아직 열지 않은 모드 -----------------------------------------------
+    // D5-1에서 FOLLOWING을 external whitelist에 추가했다. 이제 거부되지
+    // 않으며, 대상 객체가 관측되지 않으면 TARGET_OBJECT_LOST가 된다
+    // (whitelist 거부가 아니다). 실제 확보 규칙은
+    // command_follow_plan_test가 검증한다.
     PlannerCommand follow{};
     follow.mode = FOLLOWING;
-    follow.leader_id = 7;
-    follow.leader_s = 260.0;
-    follow.leader_speed = 3.0;
+    follow.target_object_id = 7;
     Expect(!planner.Plan(ego, no_objects, follow, path) &&
-               planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
-           "external FOLLOWING is UNSUPPORTED_BEHAVIOR");
+               planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
+           "external FOLLOWING with no visible target is TARGET_OBJECT_LOST");
+
+    // FOLLOW는 대상 ID가 필수다.
+    PlannerCommand follow_no_target{};
+    follow_no_target.mode = FOLLOWING;
+    Expect(!planner.Plan(ego, no_objects, follow_no_target, path) &&
+               planner.last_failure_reason() == Reason::INVALID_COMMAND,
+           "external FOLLOWING without a target id is INVALID_COMMAND");
 
     PlannerCommand merge{};
     merge.mode = MERGE;
@@ -203,12 +212,18 @@ int main() {
                planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
            "external MERGE is UNSUPPORTED_BEHAVIOR");
 
-    PlannerCommand avoid{};
-    avoid.mode = AVOID;
-    avoid.avoidance_d_offset = 1.5;
-    Expect(!planner.Plan(ego, no_objects, avoid, path) &&
-               planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
-           "external AVOID is UNSUPPORTED_BEHAVIOR");
+    // D6-1에서 AVOID를 core whitelist에 추가했다. 이제 UNSUPPORTED_BEHAVIOR로
+    // 거부되지 않고 필드 검증으로 넘어간다 - 대상이 없으면 INVALID_COMMAND다.
+    // (FOLLOWING과 같은 이유: 대상 선택 권한이 FSM에 있으므로 planner가
+    // FindStaticAvoidanceTarget()으로 스스로 고르지 않는다.)
+    //
+    // 대상 확보에 성공한 뒤의 동작은 command_avoid_target_test가 담당한다.
+    PlannerCommand avoid_without_target{};
+    avoid_without_target.mode = AVOID;
+    avoid_without_target.avoidance_d_offset = 1.5;
+    Expect(!planner.Plan(ego, no_objects, avoid_without_target, path) &&
+               planner.last_failure_reason() == Reason::INVALID_COMMAND,
+           "external AVOID without a target is INVALID_COMMAND");
 
     PlannerCommand lane_change{};
     lane_change.mode = LANE_CHANGE_LEFT;
@@ -216,17 +231,35 @@ int main() {
                planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
            "external LANE_CHANGE_LEFT is UNSUPPORTED_BEHAVIOR");
 
+    // D4-3에서 EMERGENCY를 external whitelist에 추가했다. 이제 거부되지
+    // 않으며, 목표점 없이도(stop_position=NaN) 동작해야 한다 - 정지 위치
+    // 계산 소유권이 Frenet에 있다(계약 8.1절).
+    //
+    // 감속 궤적의 성질(단조 감소, v>=0, 마지막 v=0)은
+    // command_emergency_plan_test가 검증한다. 여기서는 whitelist와 필드
+    // 검증만 본다.
     PlannerCommand emergency{};
     emergency.mode = EMERGENCY;
-    emergency.stop_position = 210.0;
-    Expect(!planner.Plan(ego, no_objects, emergency, path) &&
-               planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
-           "external EMERGENCY is UNSUPPORTED_BEHAVIOR");
+    // stop_position을 일부러 지정하지 않는다.
+    Expect(planner.Plan(ego, no_objects, emergency, path) &&
+               planner.last_failure_reason() == Reason::NONE,
+           "external EMERGENCY is accepted without a stop target");
+
+    PlannerCommand emergency_with_target{};
+    emergency_with_target.mode = EMERGENCY;
+    emergency_with_target.stop_position = 210.0;
+    Expect(planner.Plan(ego, no_objects, emergency_with_target, path) &&
+               planner.last_failure_reason() == Reason::NONE,
+           "external EMERGENCY ignores a stop target if one is given");
 
     // 모드 whitelist는 필드 검증보다 먼저다. 지원하지 않는 모드는 필드가
     // 무엇이든 UNSUPPORTED_BEHAVIOR로 보고돼야 한다.
+    //
+    // 닫힌 모드 예시는 단계가 진행되며 교체된다. D5까지는 AVOID를 썼지만
+    // D6-1에서 열렸으므로 LANE_CHANGE_LEFT로 바꾼다. D7에서 LANE_CHANGE가
+    // 열리면 MERGE가 남는다.
     PlannerCommand unsupported_and_invalid{};
-    unsupported_and_invalid.mode = FOLLOWING;
+    unsupported_and_invalid.mode = LANE_CHANGE_LEFT;
     unsupported_and_invalid.has_target_speed = true;
     unsupported_and_invalid.target_speed = -5.0;
     Expect(!planner.Plan(ego, no_objects, unsupported_and_invalid, path) &&
@@ -243,7 +276,10 @@ int main() {
                planner.last_failure_reason() == Reason::NONE,
            "collision overload accepts a matched KEEP command");
 
-    Expect(!planner.Plan(ego, objects, boxes, follow, path) &&
+    PlannerCommand still_closed{};
+    // D6-1에서 AVOID가 열렸으므로 여기도 아직 닫힌 모드로 바꾼다(위와 동일).
+    still_closed.mode = LANE_CHANGE_LEFT;
+    Expect(!planner.Plan(ego, objects, boxes, still_closed, path) &&
                planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
            "collision overload rejects unsupported mode identically");
 
@@ -261,7 +297,8 @@ int main() {
     // 그 값은 ROS node에서 이전 궤적 재사용을 뜻하기 때문이다.
     const PlannerCommand rejected[] = {
         stop_unset, stop_nan, stop_negative, negative_speed,
-        nan_speed, negative_max, follow, merge, avoid, lane_change,
+        nan_speed, negative_max, follow, merge, avoid_without_target,
+        lane_change,
     };
     bool never_transient = true;
     for (const PlannerCommand& command : rejected) {
