@@ -42,6 +42,7 @@ add_library(frenet_planner_core
   src/frenet_planner/visualization/planner_debug_writer.cpp
   src/frenet_planner/frenet/ref_line.cpp
   src/frenet_planner/frenet/path_generator.cpp
+  src/frenet_planner/frenet/curve_speed.cpp
   src/frenet_planner/frenet/cost.cpp
   src/frenet_planner/frenet/collision_checker.cpp
   src/frenet_planner/frenet/leader_selector.cpp
@@ -366,6 +367,17 @@ if(CATKIN_ENABLE_TESTING)
     frenet_planner_core
   )
   add_test(NAME longitudinal_kinematics_test COMMAND longitudinal_kinematics_test)
+
+  # fix/yuntae-frenet-speed-continuity Phase 1: distance-aware curve speed
+  # envelope 회귀. 실제 LookaheadTargetSpeed/VelocityFromCurvature
+  # (frenet/curve_speed.hpp)를 손으로 구성한 RefLine으로 직접 호출한다.
+  add_executable(curve_speed_envelope_test
+    tests/curve_speed_envelope_test.cpp
+  )
+  target_link_libraries(curve_speed_envelope_test
+    frenet_planner_core
+  )
+  add_test(NAME curve_speed_envelope_test COMMAND curve_speed_envelope_test)
 
   # D1-3: legacy(간이 FSM) 행동 결정의 회귀 커버리지. D5/D6/D8에서 모드별로
   # legacy 조각을 제거할 때 검증된 회전교차로/고속도로 주행이 깨지지 않았는지

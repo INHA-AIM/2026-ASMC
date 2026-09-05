@@ -8,6 +8,7 @@
 
 #include "global/utils.hpp"
 #include "frenet_planner/obstacle/legacy_object_adapter.hpp"
+#include "frenet_planner/frenet/curve_speed.hpp"
 
 namespace {
 
@@ -32,47 +33,6 @@ int FindHighwayMergeZone(const HighwayMergeConfig& cfg, double s) {
             return static_cast<int>(i);
     }
     return -1;
-}
-
-// 횡가속도 한계에서 곡률별 연속 목표속도를 계산한다.
-double VelocityFromCurvature(double k, const CurveSpeedConfig& cfg, double max_lateral_accel) {
-    constexpr double kSafetyMargin = 0.8;         // 한계의 80%만 사용 (여유폭 확보)
-    constexpr double kMinKappaForCalc = 1e-4;      // 0 나누기 방지 (거의 직선)
-    const double v_curve = std::sqrt(max_lateral_accel * kSafetyMargin / std::max(k, kMinKappaForCalc));
-    return clip(v_curve, 0.0, cfg.target_vel);
-}
-
-// 현재 속도의 제동거리와 기본 lookahead 중 큰 범위의 최대 곡률을 사용한다.
-double LookaheadTargetSpeed(const RefLine& ref, double s_start, double ego_speed,
-                             const CurveSpeedConfig& cfg, double max_longitudinal_accel,
-                             double max_lateral_accel, double max_curvature) {
-    constexpr double kComfortableDecelFactor = 0.5;  // 실제 평균 감속도는 max의 절반 정도로 가정
-    constexpr double kReactionMargin = 5.0;          // [m] 추가 여유거리
-    const double usable_decel = std::max(0.5, max_longitudinal_accel * kComfortableDecelFactor);
-    const double v_floor = VelocityFromCurvature(max_curvature, cfg, max_lateral_accel);
-    const double speed_drop = std::max(0.0, ego_speed * ego_speed - v_floor * v_floor);
-    const double required_dist = speed_drop / (2.0 * usable_decel);
-    const double lookahead_m = std::max(cfg.curve_lookahead_m, required_dist + kReactionMargin);
-
-    // 폐루프 wrap-around: s_start+lookahead_m이 s_max를 넘으면(피니시라인
-    // 근처) 원래 코드는 뒤가 안 나와 break만 되고 이음새 너머(실제로는 바로
-    // 이어지는 트랙 시작 구간)의 곡률을 놓쳤다 - 그 구간에 급커브가 있으면
-    // 감속 없이 그대로 진입하게 된다. s_max로 감아서 [s_start, s_max]와
-    // [0, 넘친 만큼] 두 구간을 모두 본다.
-    const double s_max = ref.points.back().s;
-    double s_start_w = std::fmod(s_start, s_max);
-    if (s_start_w < 0.0) s_start_w += s_max;
-    const double s_end_w = s_start_w + lookahead_m;
-    const double wrapped_end = s_end_w - s_max;  // s_end_w > s_max일 때만 유효
-
-    double max_k = 0.0;
-    for (const auto& p : ref.points) {
-        const bool in_range = (s_end_w <= s_max)
-            ? (p.s >= s_start_w && p.s <= s_end_w)
-            : (p.s >= s_start_w || p.s <= wrapped_end);
-        if (in_range) max_k = std::max(max_k, std::fabs(p.kappa));
-    }
-    return VelocityFromCurvature(max_k, cfg, max_lateral_accel);
 }
 
 const char* ModeName(BehaviorState mode) {
