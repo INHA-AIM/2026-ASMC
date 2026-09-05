@@ -15,7 +15,7 @@
 // 자체의 단위 계약은 curve_speed.hpp에서 직접 검증한다.
 
 #include "frenet_planner/frenet_planner.hpp"
-#include "frenet_planner/frenet/curve_speed.hpp"
+#include "frenet_planner/Speed/CurveSpeed.hpp"
 
 #include <cmath>
 #include <fstream>

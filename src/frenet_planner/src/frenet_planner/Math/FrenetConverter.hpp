@@ -1,21 +1,9 @@
 #ifndef PLANNER_MATH_FRENET_CONVERTER_HPP
 #define PLANNER_MATH_FRENET_CONVERTER_HPP
 
-#include "frenet_planner/frenet/ref_line.hpp"
+#include "frenet_planner/Reference/Reference.hpp"
 #include "frenet_planner/global/global.hpp"
-
-// =========================================================
-// 한 시점(instant)의 Cartesian 상태.
-// 필드명은 CartesianPath와 맞춰 x, y, yaw, kappa, v, a로 통일.
-// =========================================================
-
-struct CartesianState {
-    double x, y;
-    double yaw;     // theta_x
-    double kappa;   // kappa_x
-    double v;       // v_x
-    double a;       // a_x
-};
+#include "frenet_planner/Common/CartesianTypes.hpp"
 
 // =========================================================
 // [핵심 변환] Frenet -> Cartesian

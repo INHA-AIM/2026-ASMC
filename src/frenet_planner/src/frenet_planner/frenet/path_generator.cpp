@@ -1,6 +1,6 @@
 #include "frenet_planner/frenet/path_generator.hpp"
-#include "frenet_planner/math/polynomial.hpp"
-#include "frenet_planner/math/frenet_converter.hpp"
+#include "frenet_planner/Math/Polynomial.hpp"
+#include "frenet_planner/Math/FrenetConverter.hpp"
 
 #include <algorithm>
 #include <cmath>

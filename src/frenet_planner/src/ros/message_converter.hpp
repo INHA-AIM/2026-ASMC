@@ -9,7 +9,7 @@
 #include <asmc_msgs/VehicleState.h>
 
 #include "frenet_planner/global/global.hpp"
-#include "frenet_planner/math/frenet_converter.hpp"
+#include "frenet_planner/Math/FrenetConverter.hpp"
 #include "frenet_planner/obstacle/tracked_obstacle.hpp"
 
 namespace frenet_planner_ros {

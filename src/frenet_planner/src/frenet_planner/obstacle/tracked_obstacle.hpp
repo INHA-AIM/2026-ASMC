@@ -1,7 +1,7 @@
 #ifndef FRENET_TRACKED_OBSTACLE_HPP
 #define FRENET_TRACKED_OBSTACLE_HPP
 
-#include "frenet_planner/geometry/geometry_types.hpp"
+#include "frenet_planner/Geometry/GeometryTypes.hpp"
 
 enum class ObstacleGeometrySource {
     LEGACY_DERIVED = 0,

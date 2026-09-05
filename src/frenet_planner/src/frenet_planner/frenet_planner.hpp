@@ -5,16 +5,16 @@
 #include <memory>
 #include <unordered_map>
 
-#include "frenet_planner/frenet/ref_line.hpp"
+#include "frenet_planner/Reference/Reference.hpp"
 #include "frenet_planner/frenet/path_generator.hpp"
-#include "frenet_planner/frenet/cost.hpp"
+#include "frenet_planner/Evaluation/Cost.hpp"
 #include "frenet_planner/frenet/avoidance_selector.hpp"
-#include "frenet_planner/frenet/collision_checker.hpp"
+#include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/frenet/leader_selector.hpp"
 #include "frenet_planner/frenet/merge_selector.hpp"
 #include "frenet_planner/global/data_logger.hpp"
 #include "frenet_planner/global/global.hpp"
-#include "frenet_planner/math/frenet_converter.hpp"
+#include "frenet_planner/Math/FrenetConverter.hpp"
 #include "frenet_planner/visualization/planner_debug_writer.hpp"
 
 // Frenet Frame Path Planner: 전역 경로(RefLine)를 기준으로 한 Local Planner.

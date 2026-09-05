@@ -1,7 +1,7 @@
 #ifndef FRENET_POLYGON_UTILS_HPP
 #define FRENET_POLYGON_UTILS_HPP
 
-#include "frenet_planner/geometry/geometry_types.hpp"
+#include "frenet_planner/Geometry/GeometryTypes.hpp"
 
 namespace geometry {
 

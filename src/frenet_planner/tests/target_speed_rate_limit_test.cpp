@@ -13,7 +13,7 @@
 // 실제 production ApplyTargetSpeedRateLimit(frenet/curve_speed.hpp)를
 // 그대로 호출한다 - 로직을 복사하지 않는다.
 
-#include "frenet_planner/frenet/curve_speed.hpp"
+#include "frenet_planner/Speed/CurveSpeed.hpp"
 
 #include <cmath>
 #include <iostream>

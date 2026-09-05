@@ -1,9 +1,9 @@
 #ifndef FRENET_PATH_GENERATOR_HPP
 #define FRENET_PATH_GENERATOR_HPP
 
-#include "frenet_planner/frenet/collision_checker.hpp"
+#include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/obstacle/tracked_obstacle.hpp"
-#include "frenet_planner/frenet/ref_line.hpp"
+#include "frenet_planner/Reference/Reference.hpp"
 #include "frenet_planner/global/global.hpp"
 
 // =========================================================

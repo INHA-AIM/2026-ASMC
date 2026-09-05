@@ -6,9 +6,9 @@
 #include <iterator>
 #include <limits>
 
-#include "global/utils.hpp"
+#include "frenet_planner/Math/Utils.hpp"
 #include "frenet_planner/obstacle/legacy_object_adapter.hpp"
-#include "frenet_planner/frenet/curve_speed.hpp"
+#include "frenet_planner/Speed/CurveSpeed.hpp"
 
 namespace {
 

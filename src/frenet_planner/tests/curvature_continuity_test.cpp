@@ -15,7 +15,7 @@
 #include "frenet_planner/frenet_planner.hpp"
 #include "frenet_planner/frenet/path_generator.hpp"
 #include "frenet_planner/global/data_logger.hpp"
-#include "frenet_planner/math/frenet_converter.hpp"
+#include "frenet_planner/Math/FrenetConverter.hpp"
 
 #include <cmath>
 #include <fstream>
