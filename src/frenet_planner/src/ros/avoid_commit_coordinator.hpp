@@ -42,14 +42,6 @@ inline bool ShouldResetAvoidContext(const CommandAcceptance& acceptance) {
     return !acceptance.should_plan() && acceptance.transaction_cancelled;
 }
 
-inline bool ShouldResetAvoidForEmergencyPreemption(
-    const asmc_msgs::BehaviorCommand& command,
-    const CommandAcceptance& acceptance) {
-    return command.maneuver_type ==
-               asmc_msgs::BehaviorCommand::EMERGENCY_STOP &&
-           acceptance.planning_target == PlanningTarget::INCOMING_COMMAND;
-}
-
 inline bool CompleteAvoidAtomically(
     CommandExecutionManager& manager,
     const FrenetPlanner::AvoidPrepareResult& result,

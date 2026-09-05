@@ -125,6 +125,12 @@ struct CommandAcceptance {
     // 사람이 읽는 사유. FrenetFeedback.result_detail로 전달한다.
     std::string detail;
 
+    // 이 Accept() 호출에서 새 command transaction을 시작했는가 (D6-3c1).
+    // planner core의 maneuver context도 manager와 같은 transaction boundary에서
+    // 끊기도록 호출자가 freshness/conversion 검사 전에 사용한다.
+    // same-ID refresh와 거부된 교체/CANCEL에서는 false다.
+    bool transaction_started = false;
+
     // 이 사이클에 transaction이 취소로 종료되었는가 (D6-3a).
     //
     // ===== 왜 별도 플래그가 필요한가 =====

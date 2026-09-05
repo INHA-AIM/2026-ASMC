@@ -591,10 +591,11 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     // ---- 2. transaction 규칙 ------------------------------------------
     const CommandAcceptance acceptance = command_manager_.Accept(command);
 
-    // E-STOP preemption은 planner 호출보다 먼저 core AVOID 소유권도 끊는다.
-    // 그러면 같은 cycle의 stale/conversion 조기 반환에서도 이전 committed
-    // context가 다음 AVOID에 grace를 제공하지 않는다.
-    if (ShouldResetAvoidForEmergencyPreemption(command, acceptance)) {
+    // manager와 core의 transaction boundary를 맞춘다. 새 AVOID뿐 아니라 새
+    // KEEP/FOLLOW/STOP/E-STOP도 freshness/conversion 조기 반환 전에 이전 AVOID
+    // context를 끊는다. same-ID refresh와 거부된 교체에는 플래그가 서지 않아
+    // 실행 중인 lock을 보존한다.
+    if (acceptance.transaction_started) {
         planner_.ResetExternalAvoidance();
     }
 

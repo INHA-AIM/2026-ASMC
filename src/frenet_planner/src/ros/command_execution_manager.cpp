@@ -88,11 +88,13 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
     // execution_state와 무관하다. COMMITTED된 MERGE 궤적도 폐기한다.
     if (is_emergency && !same_id) {
         BeginTransaction(message);
+        acceptance.transaction_started = true;
         acceptance.command_accepted = true;
         acceptance.detail = "emergency stop preempted the active command";
         // 아래 구현 상태 확인으로 이어진다.
     } else if (!has_active_command_) {
         BeginTransaction(message);
+        acceptance.transaction_started = true;
         acceptance.command_accepted = true;
     } else if (!same_id) {
         // ---- 다른 command_id ---------------------------------------------
@@ -113,6 +115,7 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
         }
         // terminal latch는 새 ID에서만 해제된다(계약 6.3절).
         BeginTransaction(message);
+        acceptance.transaction_started = true;
         acceptance.command_accepted = true;
     } else {
         // ---- 같은 command_id --------------------------------------------

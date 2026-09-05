@@ -91,6 +91,15 @@ struct Pose2D {
     double yaw = 0.0;
 };
 
+double TrackLength(const Waypoints& waypoints) {
+    double length = 0.0;
+    for (std::size_t i = 1; i < waypoints.x.size(); ++i) {
+        length += std::hypot(waypoints.x[i] - waypoints.x[i - 1],
+                             waypoints.y[i] - waypoints.y[i - 1]);
+    }
+    return length;
+}
+
 Pose2D PoseAt(const Waypoints& waypoints, double target_s) {
     double s = 0.0;
     std::size_t index = 1;
@@ -2531,6 +2540,191 @@ int main() {
     }
 
     {
+        // D6-3c1 probe: target은 seam 너머 전방에서 확보되어 obstacle_s가
+        // unwrapped 값으로 저장된다. ego가 seam을 지난 뒤 raw subtraction을
+        // 쓰면 gap이 거의 한 바퀴 양수가 되어 완료되지 않는다.
+        const double track_length = TrackLength(waypoints);
+        const double ego_before_s = track_length - 30.0;
+        const double obstacle_after_s = 10.0;
+        const CartesianState ego_before = MakeEgoAt(
+            waypoints, ego_before_s, 0.0, kEgoSpeed);
+        const std::vector<ObjectInfo> initial{
+            MakeObstacle(waypoints, 21, obstacle_after_s, 0.0)};
+        const PlannerCommand command =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        const bool prepare_ok = planner.PrepareAvoid(
+            ego_before, initial, boxes_for(initial), command, maintenance,
+            prepared);
+        const bool commit_ok = prepare_ok && prepared.candidate_valid &&
+            planner.CommitAvoid(prepared);
+        const double locked = planner.avoid_locked_target_d();
+        Expect(commit_ok && planner.avoid_target_s() > ego_before_s,
+               "closed-loop lifecycle: seam-forward target stores unwrapped s");
+
+        CartesianPath pass_path;
+        Prepare pass;
+        const bool pass_ok = commit_ok && planner.PlanCommittedAvoid(
+            MakeEgoAt(waypoints, ego_before_s, locked, kEgoSpeed), {}, {},
+            command, pass_path, pass);
+        Expect(pass_ok && !pass.maneuver_completed &&
+                   std::string(planner.avoid_phase_name()) == "PASS",
+               "closed-loop lifecycle: both actors before seam enter PASS");
+        CartesianPath center_path;
+        Prepare center;
+        const bool center_ok = pass_ok && planner.PlanCommittedAvoid(
+            MakeEgoAt(waypoints, obstacle_after_s, locked, kEgoSpeed), {}, {},
+            command, center_path, center);
+        Expect(center_ok && !center.maneuver_completed &&
+                   std::isfinite(center.maneuver_progress) &&
+                   center.maneuver_progress >= pass.maneuver_progress,
+               "closed-loop lifecycle: passing seam reaches obstacle center");
+        CartesianPath clear_path;
+        Prepare clear;
+        const bool clear_ok = center_ok && planner.PlanCommittedAvoid(
+            MakeEgoAt(waypoints, obstacle_after_s + 20.0, locked, kEgoSpeed),
+            {}, {}, command, clear_path, clear);
+        Expect(clear_ok && !center.maneuver_completed &&
+                   clear.maneuver_completed &&
+                   clear.maneuver_progress == 1.0 &&
+                   clear.maneuver_progress >= center.maneuver_progress,
+               "closed-loop lifecycle: seam crossing completes with monotonic progress");
+    }
+
+    {
+        // D6-3c1 probe: terminal latch 뒤 새 AVOID ID는 manager에서는 새
+        // transaction이지만, core reset이 없으면 old committed context를 쓴다.
+        const std::vector<ObjectInfo> initial{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        const PlannerCommand old_command =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+        planner.PrepareAvoid(ego, initial, boxes_for(initial), old_command,
+                             maintenance, prepared);
+        auto manager = MakeAvoidManagerReady(3200);
+        frenet_planner_ros::CommitAvoidAtomically(manager, planner, prepared);
+        frenet_planner_ros::RouteAvoidPlanning(manager);
+        const double locked = planner.avoid_locked_target_d();
+        CartesianPath pass_path;
+        Prepare pass;
+        planner.PlanCommittedAvoid(
+            MakeEgoAt(waypoints, kEgoS, locked, kEgoSpeed), {}, {},
+            old_command, pass_path, pass);
+        CartesianPath completed_path;
+        Prepare completed;
+        planner.PlanCommittedAvoid(
+            MakeEgoAt(waypoints, planner.avoid_target_s() + 20.0, locked,
+                      kEgoSpeed),
+            {}, {}, old_command, completed_path, completed);
+        manager.NotifyManeuverCompleted();
+
+        auto next_command = MakeAvoidTransactionCommand(3201);
+        next_command.primary_object_id = 31;
+        const auto started = manager.Accept(next_command);
+        if (started.transaction_started) planner.ResetExternalAvoidance();
+        CartesianPath next_maintenance;
+        Prepare next;
+        const bool next_ok = planner.PrepareAvoid(
+            ego, {}, {}, MakeAvoidCommand(31, LateralDirection::LEFT),
+            next_maintenance, next);
+        Expect(started.planning_target ==
+                   frenet_planner_ros::PlanningTarget::INCOMING_COMMAND &&
+                   started.transaction_started &&
+                   completed.maneuver_completed &&
+                   !next_ok && !planner.avoid_committed() &&
+                   planner.avoid_missing_cycles() == 0 &&
+                   planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
+               "transaction boundary: new AVOID cannot inherit completed context");
+
+        const std::vector<ObjectInfo> replacement{
+            MakeObstacle(waypoints, 31, kEgoS + 25.0, 0.0)};
+        CartesianPath replacement_maintenance;
+        Prepare replacement_result;
+        const bool replacement_ok = planner.PrepareAvoid(
+            ego, replacement, boxes_for(replacement),
+            MakeAvoidCommand(31, LateralDirection::LEFT),
+            replacement_maintenance, replacement_result);
+        manager.NotifyPlanSucceeded();
+        auto execute = next_command;
+        execute.execution_request = asmc_msgs::BehaviorCommand::EXECUTE;
+        manager.Accept(execute);
+        Expect(replacement_ok && replacement_result.candidate_valid &&
+                   frenet_planner_ros::CommitAvoidAtomically(
+                       manager, planner, replacement_result) &&
+                   planner.active_avoid_target_id() == 31,
+               "transaction boundary: replacement AVOID can prepare and commit");
+    }
+
+    {
+        // PRE_COMMIT(READY)에서도 새 AVOID ID는 old binding/dropout grace를
+        // 상속하지 않는다.
+        const std::vector<ObjectInfo> initial{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        planner.PrepareAvoid(
+            ego, initial, boxes_for(initial),
+            MakeAvoidCommand(21, LateralDirection::LEFT), maintenance,
+            prepared);
+        auto manager = MakeAvoidManagerReady(3300);
+        auto next_command = MakeAvoidTransactionCommand(3301);
+        next_command.primary_object_id = 31;
+        const auto started = manager.Accept(next_command);
+        if (started.transaction_started) planner.ResetExternalAvoidance();
+
+        CartesianPath next_maintenance;
+        Prepare next;
+        const bool next_ok = planner.PrepareAvoid(
+            ego, {}, {}, MakeAvoidCommand(31, LateralDirection::LEFT),
+            next_maintenance, next);
+        Expect(started.transaction_started && !next_ok &&
+                   !planner.avoid_committed() &&
+                   planner.avoid_missing_cycles() == 0 &&
+                   planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
+               "transaction boundary: pre-commit AVOID replacement is fresh");
+    }
+
+    {
+        // 새 KEEP transaction이 input stale로 planner에 도달하지 않는 cycle도
+        // manager boundary에서 이전 AVOID context를 즉시 끊는다.
+        const std::vector<ObjectInfo> initial{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        planner.PrepareAvoid(
+            ego, initial, boxes_for(initial),
+            MakeAvoidCommand(21, LateralDirection::LEFT), maintenance,
+            prepared);
+        auto manager = MakeAvoidManagerReady(3400);
+        frenet_planner_ros::CommitAvoidAtomically(manager, planner, prepared);
+        frenet_planner_ros::RouteAvoidPlanning(manager);
+        manager.NotifyManeuverCompleted();
+        manager.SetImplementedManeuver(
+            asmc_msgs::BehaviorCommand::KEEP, true);
+        auto keep = MakeAvoidTransactionCommand(3401);
+        keep.maneuver_type = asmc_msgs::BehaviorCommand::KEEP;
+        keep.execution_request = asmc_msgs::BehaviorCommand::EXECUTE;
+        keep.direction = asmc_msgs::BehaviorCommand::DIRECTION_NONE;
+        keep.primary_object_id = -1;
+        const auto started = manager.Accept(keep);
+        if (started.transaction_started) planner.ResetExternalAvoidance();
+        // stale-input 조기 반환을 흉내 내어 Plan()은 호출하지 않는다.
+        Expect(started.transaction_started && !planner.avoid_committed() &&
+                   planner.active_avoid_target_id() == -1,
+               "transaction boundary: stale-cycle KEEP clears completed AVOID");
+    }
+
+    {
         // 방어적 zero-span COMMIT에서도 progress 계산은 0으로 나누지 않는다.
         const std::vector<ObjectInfo> initial{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
@@ -2578,6 +2772,7 @@ int main() {
         keep.direction = asmc_msgs::BehaviorCommand::DIRECTION_NONE;
         keep.primary_object_id = -1;
         const auto keep_result = manager.Accept(keep);
+        if (keep_result.transaction_started) planner.ResetExternalAvoidance();
         CartesianPath keep_cycle;
         Prepare keep_diag;
         const bool keep_plan = planner.PlanCommittedAvoid(
@@ -2586,6 +2781,7 @@ int main() {
                    frenet_planner_ros::PlanningTarget::ACTIVE_TRANSACTION &&
                    keep_result.result_code ==
                        asmc_msgs::FrenetFeedback::TOO_LATE_TO_CANCEL &&
+                   !keep_result.transaction_started &&
                    manager.maneuver_type() ==
                        asmc_msgs::BehaviorCommand::AVOID && keep_plan &&
                    std::fabs(keep_diag.selected_target_d - locked) < 1e-9,
@@ -2594,11 +2790,13 @@ int main() {
         auto cancel = manager.active_command();
         cancel.execution_request = asmc_msgs::BehaviorCommand::CANCEL;
         const auto cancel_result = manager.Accept(cancel);
+        if (cancel_result.transaction_started) planner.ResetExternalAvoidance();
         Expect(cancel_result.planning_target ==
                    frenet_planner_ros::PlanningTarget::ACTIVE_TRANSACTION &&
                    cancel_result.result_code ==
                        asmc_msgs::FrenetFeedback::TOO_LATE_TO_CANCEL &&
                    !cancel_result.transaction_cancelled &&
+                   !cancel_result.transaction_started &&
                    !frenet_planner_ros::ShouldResetAvoidContext(cancel_result) &&
                    planner.avoid_committed(),
                "post-commit ownership: rejected CANCEL does not reset AVOID");
@@ -2649,10 +2847,7 @@ int main() {
         emergency.direction = asmc_msgs::BehaviorCommand::DIRECTION_NONE;
         emergency.primary_object_id = -1;
         const auto accepted = manager.Accept(emergency);
-        if (frenet_planner_ros::ShouldResetAvoidForEmergencyPreemption(
-                emergency, accepted)) {
-            planner.ResetExternalAvoidance();
-        }
+        if (accepted.transaction_started) planner.ResetExternalAvoidance();
 
         Expect(!planner.avoid_committed() &&
                    planner.active_avoid_target_id() == -1,

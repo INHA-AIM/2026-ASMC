@@ -1004,7 +1004,13 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     const double clear_distance =
         0.5 * (vehicle_shape_.length + v2_avoidance_.obstacle_length) +
         avoid_cfg_.pass_clearance;
-    const double gap = v2_avoidance_.obstacle_s - ego_s;
+    const double track_length =
+        ref_.points.empty() ? 0.0 : ref_.points.back().s;
+    // Resolver는 seam 너머 전방 target을 ego_s + forward gap의 unwrapped
+    // obstacle_s로 저장한다. raw subtraction은 ego가 seam을 지난 순간 거의
+    // 한 바퀴 양수가 되므로, 기존 signed arc helper로 앞/뒤 의미를 보존한다.
+    const double gap = ForwardArcDistance(
+        ego_s, v2_avoidance_.obstacle_s, track_length);
 
     // SHIFT -> PASS가 관측된 다음 cycle부터 완료를 허용한다. ego가 이미 멀리
     // 지나간 pathological snapshot에서도 lifecycle이 SHIFT에서 곧바로

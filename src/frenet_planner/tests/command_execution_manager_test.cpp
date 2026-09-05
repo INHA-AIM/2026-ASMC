@@ -100,6 +100,8 @@ int main() {
                    manager.command_id() == 10 &&
                    manager.execution_state() == Feedback::EXECUTING,
                "new command_id starts a transaction");
+        Expect(acceptance.transaction_started,
+               "first command reports a new transaction boundary");
     }
     {
         // handshake maneuver는 PREPARING으로 시작한다.
@@ -117,6 +119,8 @@ int main() {
         Expect(again.command_accepted && again.should_plan() &&
                    manager.command_id() == 10,
                "same id with same payload continues the transaction");
+        Expect(!again.transaction_started,
+               "same-id refresh is not a new transaction boundary");
     }
 
     // ================= 같은 ID + payload 변경 =================
@@ -132,6 +136,8 @@ int main() {
                    manager.command_id() == 12 &&
                    manager.execution_state() == Feedback::PREPARING,
                "same id with changed payload is rejected and state preserved");
+        Expect(!acceptance.transaction_started,
+               "same-id payload mismatch cannot start a transaction");
     }
 
     // ================= PREPARE -> EXECUTE =================
@@ -142,6 +148,8 @@ int main() {
         Expect(execute.command_accepted && execute.should_plan() &&
                    manager.command_id() == 13,
                "PREPARE -> EXECUTE stays in the same transaction");
+        Expect(!execute.transaction_started,
+               "PREPARE -> EXECUTE does not cross a transaction boundary");
     }
 
     // ================= CANCEL =================
@@ -265,6 +273,8 @@ int main() {
                    manager.command_id() == 28 &&
                    manager.maneuver_type() == Command::LANE_CHANGE,
                "committed LANE_CHANGE rejects a normal new command");
+        Expect(!acceptance.transaction_started,
+               "rejected replacement cannot start a transaction");
     }
     {
         // COMMITTED 중에도 EMERGENCY_STOP은 통과한다.
@@ -277,6 +287,8 @@ int main() {
                    manager.command_id() == 31 &&
                    manager.maneuver_type() == Command::EMERGENCY_STOP,
                "committed LANE_CHANGE yields to EMERGENCY_STOP");
+        Expect(acceptance.transaction_started,
+               "EMERGENCY_STOP preemption starts a new transaction");
     }
 
     // ================= EMERGENCY_STOP preemption =================
@@ -322,6 +334,8 @@ int main() {
                    manager.execution_state() == Feedback::EXECUTING &&
                    !manager.terminal_latched(),
                "new command_id clears the COMPLETED latch");
+        Expect(next.transaction_started,
+               "new id after terminal latch reports a transaction boundary");
     }
     {
         CommandExecutionManager manager = MakeD4Manager();
@@ -876,6 +890,8 @@ int main() {
                "ownership: the planning target is the active transaction");
         Expect(rejected.should_plan(),
                "ownership: the cycle still plans (the maneuver continues)");
+        Expect(!rejected.transaction_started,
+               "ownership: rejected KEEP does not reset the transaction");
         Expect(manager.active_command().command_id == 402 &&
                    manager.active_command().maneuver_type == Command::AVOID &&
                    manager.active_command().primary_object_id == 21,
@@ -902,6 +918,8 @@ int main() {
                "ownership: CANCEL after commit is TOO_LATE_TO_CANCEL");
         Expect(result.planning_target == PlanningTarget::ACTIVE_TRANSACTION,
                "ownership: a rejected CANCEL plans the active transaction");
+        Expect(!result.transaction_started,
+               "ownership: rejected CANCEL does not reset the transaction");
         Expect(manager.active_command().execution_request == Command::PREPARE,
                "ownership: the rejected CANCEL did not overwrite the active "
                "command");
@@ -922,6 +940,8 @@ int main() {
         const auto emergency = manager.Accept(MakeEmergencyStop(406));
         Expect(emergency.planning_target == PlanningTarget::INCOMING_COMMAND,
                "ownership: EMERGENCY_STOP plans the incoming command");
+        Expect(emergency.transaction_started,
+               "ownership: EMERGENCY_STOP starts a transaction boundary");
         Expect(manager.active_command().command_id == 406 &&
                    manager.active_command().maneuver_type ==
                        Command::EMERGENCY_STOP,

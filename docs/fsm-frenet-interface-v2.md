@@ -1668,6 +1668,7 @@ handshake 골격을 모드마다 다시 만들지 않는다.
 | D6-3a | EXECUTE 재검증 + COMMIT target lock + CANCEL context 정리 | 닫힘 |
 | D6-3b | COMMITTED → EXECUTING, post-COMMIT 보호 | 닫힘 |
 | D6-3c | SHIFT → PASS → COMPLETED, terminal latch | 닫힘 |
+| D6-3c1 | closed-loop completion + transaction boundary hardening | 닫힘 |
 | D6-4 | Feedback 필드 연결 + ROS 회귀 + `SetImplementedManeuver(AVOID, true)` | **열림** |
 
 gate를 마지막에 여는 이유는 11.4절과 같다. 절반만 구현된 AVOID가 열려 있으면
@@ -1750,7 +1751,7 @@ maintenance로 쓰면 장애물 쪽으로 기어간다.
 
 그리고 저속 fallback 분기에서 `AVOID_PREPARE`를 제외해야 한다. 제외하지
 않으면 PREPARE 블록에 **도달하지도 못한다** — 그 분기가 먼저 return하기
-때문이다. 실측으로 확인했다: `v=0.3`에서 `low_speed_waiting`이 0으로 나오고
+때문이다. 실측으로 확인했다: `v=0.3`에서 `low_speed_context`가 0으로 나오고
 maintenance가 미검사 crawl이었다.
 
 무조건 정지시키지 않는 이유는 자기잠금이다.
@@ -1765,7 +1766,7 @@ crawl이 clear면 속도가 회복되어 다음 사이클에 후보가 생길 �
 
 "저속에서는 어차피 안 될 것"이라고 가정하면 실제로 가능한 상황에서도 READY에
 도달하지 못한다. 생성을 **시도하고 결과로 판단**한다. 저속에서 후보가 0개면
-`low_speed_waiting`이 사유를 설명한다.
+`low_speed_context`가 사유를 설명한다.
 
 ##### `selected_target_d`는 선택된 후보의 실제 종단 d다
 
@@ -1794,8 +1795,8 @@ candidate_valid=true  -> NotifyPlanSucceeded()  -> READY
 candidate_valid=false -> NotifyPlanFailed(false) -> WAITING
 ```
 
-`low_speed_context`는 **상태 판단에 쓰지 않는다.** 이전 이름
-(`low_speed_waiting`)이 위험했던 이유는 실측으로 확인했다.
+`low_speed_context`는 **상태 판단에 쓰지 않는다.** 이 값을 이름만 보고
+WAITING 상태로 해석하는 것이 위험한 이유는 실측으로 확인했다.
 
 | 조건 | `low_speed_context` | `candidate_valid` |
 |---|---|---|
@@ -1984,6 +1985,94 @@ maneuver도 `NONE`이고, 그때 context를 비우면 진행 중이던 기동의
 두 번째 행이 중요하다. 거부된 CANCEL에서 context를 비우면 진행 중인 회피의
 잠긴 목표가 사라진다. 그때 `planning_target`은 `ACTIVE_TRANSACTION`이므로
 node는 계획을 계속한다.
+
+#### 12.7.6 D6-3b/D6-3c post-COMMIT lifecycle (D6-3c1에서 보강)
+
+##### COMMITTED 이후에도 잠긴 회피를 매 tick 재검증한다
+
+COMMIT한 첫 cycle에는 검증된 AVOID candidate를 발행하고, 다음 planning tick에
+manager가 `COMMITTED → EXECUTING`으로 전이한다. 그 뒤 core는 매 tick 잠긴
+`target_d` 하나만 사용해 committed AVOID trajectory를 다시 만들고, fresh
+collision geometry로 검사한다.
+
+```
+READY
+  -> 현재 snapshot으로 후보 재검증
+  -> COMMITTED + locked target_d 발행
+다음 tick
+  -> EXECUTING + locked target_d 재생성
+```
+
+COMMIT 이후 대상 observation dropout은 실패 조건이 아니다. 대상 ID를 다시
+resolve하거나 다른 대상으로 handoff하지 않고 COMMIT 시 저장한 obstacle
+geometry와 잠긴 `target_d`를 사용한다. 반면 현재 locked path가 새 장애물로
+막히면 `COLLISION_BLOCKED`이며, 다른 d로 우회하거나 completion으로 충돌을
+숨기지 않는다.
+
+##### SHIFT → PASS → COMPLETED
+
+```
+COMMIT -> SHIFT
+
+SHIFT -> PASS
+  abs(current_d - locked_target_d) <= lateral_tolerance
+
+PASS -> COMPLETED
+  signed_gap < -clear_distance
+
+clear_distance =
+  0.5 * (vehicle_length + committed_obstacle_length) + pass_clearance
+```
+
+SHIFT에서 곧바로 COMPLETED로 건너뛰지 않는다. PASS 진입은 한 cycle 동안
+관찰 가능하며, 완료 판정은 그 다음 안전한 committed trajectory부터 적용한다.
+
+폐루프 finish-line에서는 `obstacle_s - ego_s` raw subtraction을 쓰지 않는다.
+resolver가 seam 너머 전방 target을 `ego_s + wrapped_forward_gap`으로 저장할 수
+있으므로, 기존 `ForwardArcDistance(ego_s, obstacle_s, track_length)`로 signed
+gap을 계산한다. 따라서 target이 앞이면 양수, center이면 0 부근, 완전히 뒤면
+음수라는 뜻이 seam 전후에서 같다.
+
+##### maneuver_progress
+
+| phase | progress |
+|---|---|
+| SHIFT | `0.5 * clamp(abs(d-start_d) / max(abs(target_d-start_d), epsilon))` |
+| PASS | `0.5 + 0.5 * clamp(-signed_gap / clear_distance)` |
+| COMPLETED | `1.0` |
+
+모든 값은 `[0.0, 1.0]`으로 제한하고 finite/zero-division을 방어한다. 마지막
+값을 v2 context에 보관해 localization jitter나 seam 통과에도 감소하지 않는다.
+
+완료 후 core context를 즉시 비우거나 KEEP/중앙 복귀/다음 장애물을 자동
+선택하지 않는다. 같은 command ID의 terminal latch 동안 final AVOID trajectory와
+진단을 유지하고, 복귀 행동은 새 FSM command가 소유한다.
+
+##### 새 transaction은 이전 AVOID context를 소유하지 않는다
+
+manager의 `CommandAcceptance.transaction_started`는 이 `Accept()` 호출에서
+실제로 `BeginTransaction()`이 수행됐음을 뜻한다.
+
+| 상황 | `transaction_started` |
+|---|---|
+| 첫 command / preempt 가능한 새 ID / terminal 뒤 새 ID | **true** |
+| 새 ID E-STOP preemption | **true** |
+| same-ID refresh 또는 PREPARE→EXECUTE | false |
+| COMMITTED/EXECUTING 중 거부된 새 명령·CANCEL | false |
+| same-ID payload mismatch | false |
+
+node는 `Accept()` 직후, input freshness와 message conversion보다 먼저 true를
+확인해 이전 v2 AVOID context를 reset한다. 그래서 새 AVOID도 old committed
+상태·target·dropout grace를 상속하지 않고, 새 KEEP/FOLLOW/STOP/E-STOP cycle이
+stale input으로 조기 반환해도 old AVOID가 남지 않는다. D6-3c의 E-STOP 전용
+reset은 이 일반 transaction-boundary 규칙으로 대체되었다.
+
+##### 현재 운영 범위
+
+D6 AVOID completion은 COMMIT 시 저장한 obstacle geometry를 사용한다. 현재
+MORAI 검증 범위는 static/slow obstacle이며, 동적 AVOID tracking과 completion은
+후속 확장 항목이다. 이를 이유로 planner가 `trigger_max_speed`를 적용해
+FOLLOW/AVOID를 자동 분류하지 않는다. 행동 선택 권한은 계속 FSM에 있다.
 
 #### 12.7.2 저속 AVOID resolver 우회 — **D6-2a에서 해결**
 
