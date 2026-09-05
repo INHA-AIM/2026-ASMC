@@ -15,10 +15,31 @@ public:
         frenet_planner_ros::StateAdapterConfig config;
         private_nh_.param("timeouts/gps", config.gps_timeout_s, 0.20);
         private_nh_.param("timeouts/imu", config.imu_timeout_s, 0.20);
-        private_nh_.param("speed/minimum_dt", config.minimum_speed_dt_s, 0.02);
-        private_nh_.param("speed/maximum_dt", config.maximum_speed_dt_s, 1.0);
+        private_nh_.param("speed/window_duration", config.speed_window_duration_s, 0.18);
+        private_nh_.param("speed/minimum_baseline", config.minimum_speed_baseline_s, 0.12);
         private_nh_.param("speed/maximum_mps", config.maximum_speed_mps, 60.0);
-        private_nh_.param("speed/filter_alpha", config.speed_filter_alpha, 0.35);
+        private_nh_.param("speed/gps_correction_gain",
+                          config.gps_correction_gain, 0.35);
+        private_nh_.param("speed/gps_innovation_limit_mps",
+                          config.gps_innovation_limit_mps, 3.0);
+        private_nh_.param("speed/imu_acceleration_filter_alpha",
+                          config.imu_acceleration_filter_alpha, 0.50);
+        private_nh_.param("speed/imu_acceleration_deadband_mps2",
+                          config.imu_acceleration_deadband_mps2, 0.10);
+        private_nh_.param("speed/imu_acceleration_min_mps2",
+                          config.imu_acceleration_min_mps2, -12.0);
+        private_nh_.param("speed/imu_acceleration_max_mps2",
+                          config.imu_acceleration_max_mps2, 8.0);
+        private_nh_.param("speed/imu_maximum_dt",
+                          config.imu_maximum_dt_s, 0.10);
+        private_nh_.param("speed/stationary_duration",
+                          config.stationary_duration_s, 0.25);
+        private_nh_.param("speed/stationary_distance",
+                          config.stationary_distance_m, 0.05);
+        private_nh_.param("speed/stationary_speed_threshold_mps",
+                          config.stationary_speed_threshold_mps, 0.50);
+        private_nh_.param("speed/stationary_acceleration_threshold_mps2",
+                          config.stationary_acceleration_threshold_mps2, 0.20);
         estimator_ = std::make_unique<frenet_planner_ros::GpsImuStateEstimator>(
             config);
 
@@ -34,21 +55,21 @@ public:
             gps_topic, 1, &GpsImuVehicleStateNode::gpsCallback, this);
         imu_subscriber_ = nh_.subscribe(
             imu_topic, 1, &GpsImuVehicleStateNode::imuCallback, this);
-        timer_ = nh_.createTimer(
-            ros::Duration(1.0 / std::max(1.0, frequency)),
+        timer_ = nh_.createSteadyTimer(
+            ros::WallDuration(1.0 / std::max(1.0, frequency)),
             &GpsImuVehicleStateNode::timerCallback, this);
         ROS_INFO("GPS/IMU state source enabled; EgoStatus fallback is disabled");
     }
 
 private:
     void gpsCallback(const morai_msgs::GPSMessage::ConstPtr& message) {
-        estimator_->updateGps(*message);
+        estimator_->updateGps(*message, ros::SteadyTime::now());
     }
     void imuCallback(const sensor_msgs::Imu::ConstPtr& message) {
-        estimator_->updateImu(*message);
+        estimator_->updateImu(*message, ros::SteadyTime::now());
     }
-    void timerCallback(const ros::TimerEvent&) {
-        const auto state = estimator_->makeState(ros::Time::now());
+    void timerCallback(const ros::SteadyTimerEvent&) {
+        const auto state = estimator_->makeState(ros::SteadyTime::now());
         publisher_.publish(state);
         if (!state.valid) {
             ROS_WARN_THROTTLE(
@@ -62,7 +83,7 @@ private:
     ros::Subscriber gps_subscriber_;
     ros::Subscriber imu_subscriber_;
     ros::Publisher publisher_;
-    ros::Timer timer_;
+    ros::SteadyTimer timer_;
 };
 }  // namespace
 

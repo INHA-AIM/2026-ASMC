@@ -1,17 +1,24 @@
 # Docker 가이드
 
+> **문서 역할:** Active Guide — 컨테이너 build/up/down과 장애 대응
+> **정본 연결:** UDP·포트·Docker 네트워크의 상세 기준은 [network-udp-ros.md](./network-udp-ros.md)
+> **문서 허브:** [README.md](./README.md)
+
 ## 1. 이미지 요약
 
 | 컨테이너 | 이미지 | 베이스 | 마운트 |
 |----------|--------|--------|--------|
-| `asmc-ros-noetic` | `asmc/ros-noetic:dev` | `ros:noetic` (20.04) | `$ASMC` → `/root/ws` |
-| `asmc-perception-train` | `asmc/perception-train:dev` | CUDA 11.8 + 20.04 | `$ASMC` → `/root/ws` |
+| `asmc-ros-noetic` | `asmc/ros-noetic:dev` | `ros:noetic` (20.04) | `$ASMC` → `/root/ws`, `$ASMC_DATA` → `/data` (`rw`) |
+| `asmc-perception-train` | `asmc/perception-train:dev` | CUDA 11.8 + 20.04 | `$ASMC` → `/root/ws`, `$ASMC_DATA` → `/data` (`ro`), TwinLite external → `/opt/baselines/TwinLiteNetPlus` (`ro`) |
 
-맵·대용량 데이터 (읽기 전용): `$ASMC_DATA` → `/data`  
-미설정 시 `../data` (repo 형제 폴더)를 사용합니다.
+맵·대용량 데이터: `$ASMC_DATA` → `/data`. ROS 수집기는 쓰기 가능하고 학습 컨테이너는 읽기 전용입니다.
+TwinLiteNet+ 공식 소스는 팀 레포로 복사하지 않고
+`$AIM_PROJECT/external/baselines/TwinLiteNetPlus`를 학습 컨테이너에 읽기 전용으로
+마운트합니다. 실제 loader가 고정 upstream commit을 검사합니다.
+미설정 시 실행 스크립트가 `2026-ASMC`와 나란한 워크스페이스 `data/`를 사용합니다.
 
 ```bash
-export ASMC_DATA="$HOME/asmc-data"
+export ASMC_DATA="$(dirname "$ASMC")/data"
 ```
 
 ## 2. ROS 개발 컨테이너

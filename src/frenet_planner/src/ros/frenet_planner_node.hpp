@@ -27,6 +27,9 @@ class FrenetPlannerNode {
         asmc_msgs::VehicleState vehicle;
         asmc_msgs::DetectedObjectArray objects;
         asmc_msgs::BehaviorContext behavior;
+        ros::SteadyTime vehicle_received_at;
+        ros::SteadyTime objects_received_at;
+        ros::SteadyTime behavior_received_at;
         bool has_vehicle = false;
         bool has_objects = false;
         bool has_behavior = false;
@@ -35,7 +38,7 @@ class FrenetPlannerNode {
     void vehicleCallback(const asmc_msgs::VehicleState::ConstPtr& message);
     void objectsCallback(const asmc_msgs::DetectedObjectArray::ConstPtr& message);
     void behaviorCallback(const asmc_msgs::BehaviorContext::ConstPtr& message);
-    void planningTimerCallback(const ros::TimerEvent& event);
+    void planningTimerCallback(const ros::SteadyTimerEvent& event);
 
     // ===== v2 인터페이스 (D3-3) =====
     //
@@ -128,10 +131,7 @@ class FrenetPlannerNode {
                            double current_s = 0.0,
                            const AvoidFeedbackFields* avoid_fields = nullptr);
 
-
     InputSnapshot takeSnapshot() const;
-    bool isFresh(const ros::Time& stamp, double timeout_seconds,
-                 const ros::Time& now, double& age_seconds) const;
     void publishStop(const InputSnapshot& snapshot, uint8_t failure_reason,
                      const ros::Time& now);
     void publishResult(const asmc_msgs::Trajectory& trajectory,
@@ -150,7 +150,7 @@ class FrenetPlannerNode {
     ros::Publisher trajectory_pub_;
     ros::Publisher feedback_pub_;
     ros::Publisher feedback_v2_pub_;
-    ros::Timer planning_timer_;
+    ros::SteadyTimer planning_timer_;
 
     // v2 명령 처리. adapter는 stateless이므로 멤버가 필요 없고, transaction
     // 상태만 manager가 갖는다(계약 12.8절).
@@ -179,6 +179,9 @@ class FrenetPlannerNode {
     asmc_msgs::VehicleState latest_vehicle_;
     asmc_msgs::DetectedObjectArray latest_objects_;
     asmc_msgs::BehaviorContext latest_behavior_;
+    ros::SteadyTime vehicle_received_at_;
+    ros::SteadyTime objects_received_at_;
+    ros::SteadyTime behavior_received_at_;
     bool has_vehicle_ = false;
     bool has_objects_ = false;
     bool has_behavior_ = false;
@@ -245,10 +248,6 @@ class FrenetPlannerNode {
     double behavior_timeout_seconds_ = 0.50;
     static constexpr int kMaxTransientFailCycles = 5;
 
-    // 시계가 뒤로 점프했다고 볼 수 있는 age 하한 [s]. 이보다 더 미래인 stamp는
-    // 시계 점프로 설명되지 않는 잘못된 입력으로 보고 거부한다.
-    // 실측 기준: WSL2/Docker 환경에서 약 28초 주기로 wall clock이 -1.2초 점프.
-    static constexpr double kMaxClockJumpSeconds = 5.0;
 };
 
 }  // namespace frenet_planner_ros

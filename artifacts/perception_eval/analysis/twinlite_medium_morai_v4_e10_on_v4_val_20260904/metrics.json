@@ -1,0 +1,338 @@
+{
+  "amp": true,
+  "batch_size": 12,
+  "checkpoint": "/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v4_comp8_init_ema_b12_e10_20260904/best_mean.pt",
+  "checkpoint_epoch": 10,
+  "checkpoint_sha256": "a834a76d69dc6246c196b683c3f0b6be8d66ab27af4259746404268d5f9d9a0a",
+  "completed_at_utc": "2026-09-04T11:39:22+00:00",
+  "dataset_metadata_sha256": "2ea01a3f754aec7014105de4f8fca84e0ebe14de9a3d2ef04ff005233e773560",
+  "dataset_split_manifest_sha256": {
+    "val": "6cd2d3dd6581cf4d55b74134fc8ef19f969b1f21b6b5d2a5af3b46d4122129c7"
+  },
+  "dataset_target_policy_ids": [
+    "kcity_static_surface_actor_ignore_v2"
+  ],
+  "dataset_version": "twinlite_morai_v4_comp8_train_val_sample_b",
+  "device": "cuda",
+  "elapsed_seconds": 18.927656447980553,
+  "gpu": "NVIDIA GeForce RTX 4060 Ti",
+  "num_workers": 6,
+  "peak_cuda_memory_bytes": 625484288,
+  "results": {
+    "val": {
+      "by_run": {
+        "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel": {
+          "drivable": {
+            "intersection": 12115603,
+            "iou": 0.9818796901871946,
+            "prediction_positive": 12153162,
+            "target_positive": 12301634,
+            "union": 12339193,
+            "valid_pixels": 42404766
+          },
+          "lane": {
+            "intersection": 950162,
+            "iou": 0.9132660515186467,
+            "prediction_positive": 952630,
+            "target_positive": 1037932,
+            "union": 1040400,
+            "valid_pixels": 42405888
+          },
+          "mean_head_iou": 0.9475728708529206
+        },
+        "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel": {
+          "drivable": {
+            "intersection": 8059663,
+            "iou": 0.981367484401571,
+            "prediction_positive": 8075401,
+            "target_positive": 8196948,
+            "union": 8212686,
+            "valid_pixels": 27998111
+          },
+          "lane": {
+            "intersection": 461834,
+            "iou": 0.9116776159944411,
+            "prediction_positive": 464301,
+            "target_positive": 504109,
+            "union": 506576,
+            "valid_pixels": 28062720
+          },
+          "mean_head_iou": 0.946522550198006
+        },
+        "20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel": {
+          "drivable": {
+            "intersection": 15022826,
+            "iou": 0.9822987364404359,
+            "prediction_positive": 15081430,
+            "target_positive": 15234937,
+            "union": 15293541,
+            "valid_pixels": 44257161
+          },
+          "lane": {
+            "intersection": 586749,
+            "iou": 0.8618585624159989,
+            "prediction_positive": 590650,
+            "target_positive": 676894,
+            "union": 680795,
+            "valid_pixels": 44276736
+          },
+          "mean_head_iou": 0.9220786494282174
+        },
+        "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel": {
+          "drivable": {
+            "intersection": 11441365,
+            "iou": 0.9786623179554557,
+            "prediction_positive": 11493654,
+            "target_positive": 11638531,
+            "union": 11690820,
+            "valid_pixels": 38034882
+          },
+          "lane": {
+            "intersection": 622779,
+            "iou": 0.873536342469212,
+            "prediction_positive": 627175,
+            "target_positive": 708544,
+            "union": 712940,
+            "valid_pixels": 38040576
+          },
+          "mean_head_iou": 0.9260993302123338
+        },
+        "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel": {
+          "drivable": {
+            "intersection": 13687116,
+            "iou": 0.9855130734001929,
+            "prediction_positive": 13726071,
+            "target_positive": 13849360,
+            "union": 13888315,
+            "valid_pixels": 49094562
+          },
+          "lane": {
+            "intersection": 1142545,
+            "iou": 0.8897750379064282,
+            "prediction_positive": 1148230,
+            "target_positive": 1278398,
+            "union": 1284083,
+            "valid_pixels": 49265664
+          },
+          "mean_head_iou": 0.9376440556533105
+        },
+        "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel": {
+          "drivable": {
+            "intersection": 29041493,
+            "iou": 0.982345280876943,
+            "prediction_positive": 29135170,
+            "target_positive": 29469750,
+            "union": 29563427,
+            "valid_pixels": 89473214
+          },
+          "lane": {
+            "intersection": 1814746,
+            "iou": 0.8652987152687712,
+            "prediction_positive": 1823860,
+            "target_positive": 2088134,
+            "union": 2097248,
+            "valid_pixels": 89800704
+          },
+          "mean_head_iou": 0.923821998072857
+        }
+      },
+      "by_sim_time": {
+        "11am": {
+          "drivable": {
+            "intersection": 23556968,
+            "iou": 0.9803144093180474,
+            "prediction_positive": 23646816,
+            "target_positive": 23940165,
+            "union": 24030013,
+            "valid_pixels": 80439648
+          },
+          "lane": {
+            "intersection": 1572941,
+            "iou": 0.897111227713963,
+            "prediction_positive": 1579805,
+            "target_positive": 1746476,
+            "union": 1753340,
+            "valid_pixels": 80446464
+          },
+          "mean_head_iou": 0.9387128185160052
+        },
+        "1pm": {
+          "drivable": {
+            "intersection": 21746779,
+            "iou": 0.9839725811514148,
+            "prediction_positive": 21801472,
+            "target_positive": 22046308,
+            "union": 22101001,
+            "valid_pixels": 77092673
+          },
+          "lane": {
+            "intersection": 1604379,
+            "iou": 0.8959712597429215,
+            "prediction_positive": 1612531,
+            "target_positive": 1782507,
+            "union": 1790659,
+            "valid_pixels": 77328384
+          },
+          "mean_head_iou": 0.9399719204471682
+        },
+        "3pm": {
+          "drivable": {
+            "intersection": 44064319,
+            "iou": 0.9823294120101921,
+            "prediction_positive": 44216600,
+            "target_positive": 44704687,
+            "union": 44856968,
+            "valid_pixels": 133730375
+          },
+          "lane": {
+            "intersection": 2401495,
+            "iou": 0.8644556617734138,
+            "prediction_positive": 2414510,
+            "target_positive": 2765028,
+            "union": 2778043,
+            "valid_pixels": 134077440
+          },
+          "mean_head_iou": 0.923392536891803
+        }
+      },
+      "by_view": {
+        "front": {
+          "drivable": {
+            "intersection": 29815379,
+            "iou": 0.9760009283593655,
+            "prediction_positive": 29959165,
+            "target_positive": 30404729,
+            "union": 30548515,
+            "valid_pixels": 107509512
+          },
+          "lane": {
+            "intersection": 1185328,
+            "iou": 0.78821974140247,
+            "prediction_positive": 1195898,
+            "target_positive": 1493234,
+            "union": 1503804,
+            "valid_pixels": 107827200
+          },
+          "mean_head_iou": 0.8821103348809177
+        },
+        "left": {
+          "drivable": {
+            "intersection": 31543293,
+            "iou": 0.984852649234638,
+            "prediction_positive": 31624116,
+            "target_positive": 31947616,
+            "union": 32028439,
+            "valid_pixels": 91837575
+          },
+          "lane": {
+            "intersection": 2228235,
+            "iou": 0.9036138715243631,
+            "prediction_positive": 2237684,
+            "target_positive": 2456466,
+            "union": 2465915,
+            "valid_pixels": 92012544
+          },
+          "mean_head_iou": 0.9442332603795005
+        },
+        "right": {
+          "drivable": {
+            "intersection": 28009394,
+            "iou": 0.9858634471093408,
+            "prediction_positive": 28081607,
+            "target_positive": 28338815,
+            "union": 28411028,
+            "valid_pixels": 91915609
+          },
+          "lane": {
+            "intersection": 2165252,
+            "iou": 0.920473931513657,
+            "prediction_positive": 2173264,
+            "target_positive": 2344311,
+            "union": 2352323,
+            "valid_pixels": 92012544
+          },
+          "mean_head_iou": 0.9531686893114989
+        }
+      },
+      "by_weather": {
+        "foggy": {
+          "drivable": {
+            "intersection": 48542521,
+            "iou": 0.9813125264911815,
+            "prediction_positive": 48704225,
+            "target_positive": 49305229,
+            "union": 49466933,
+            "valid_pixels": 155506207
+          },
+          "lane": {
+            "intersection": 2899359,
+            "iou": 0.8741529394313252,
+            "prediction_positive": 2915336,
+            "target_positive": 3300787,
+            "union": 3316764,
+            "valid_pixels": 155904000
+          },
+          "mean_head_iou": 0.9277327329612534
+        },
+        "sunny": {
+          "drivable": {
+            "intersection": 40825545,
+            "iou": 0.9832493634734517,
+            "prediction_positive": 40960663,
+            "target_positive": 41385931,
+            "union": 41521049,
+            "valid_pixels": 135756489
+          },
+          "lane": {
+            "intersection": 2679456,
+            "iou": 0.8915834075915772,
+            "prediction_positive": 2691510,
+            "target_positive": 2993224,
+            "union": 3005278,
+            "valid_pixels": 135948288
+          },
+          "mean_head_iou": 0.9374163855325144
+        }
+      },
+      "elapsed_seconds": 18.635420509963296,
+      "losses": {
+        "drivable_focal": 0.001927312709287637,
+        "drivable_loss": 0.004107063402358092,
+        "drivable_tversky": 0.0021797506801354196,
+        "lane_focal": 0.002609016891154978,
+        "lane_loss": 0.00665624363001627,
+        "lane_tversky": 0.004047226746323813,
+        "loss": 0.010763306986604236
+      },
+      "overall": {
+        "drivable": {
+          "intersection": 89368066,
+          "iou": 0.9821963740222308,
+          "prediction_positive": 89664888,
+          "target_positive": 90691160,
+          "union": 90987982,
+          "valid_pixels": 291262696
+        },
+        "lane": {
+          "intersection": 5578815,
+          "iou": 0.8824387753197463,
+          "prediction_positive": 5606846,
+          "target_positive": 6294011,
+          "union": 6322042,
+          "valid_pixels": 291852288
+        },
+        "mean_head_iou": 0.9323175746709886
+      },
+      "per_sample_manifest": "/root/ws/artifacts/perception_eval/analysis/twinlite_medium_morai_v4_e10_on_v4_val_20260904/val_per_sample.jsonl",
+      "sample_count": 1404,
+      "samples_per_second": 75.3403981009906
+    }
+  },
+  "schema_version": "twinlite-frozen-baseline-eval-1.0.0",
+  "splits": [
+    "val"
+  ],
+  "training_performed": false,
+  "upstream_commit": "90f1b8695ae311d5123b05f8534b2e11e42499d2",
+  "weights": "ema_state_dict"
+}

@@ -8,9 +8,21 @@ timeouts:
   gps: 0.50
   imu: 0.30
 
-# GPSMessage has no velocity. Derive speed from consecutive UTM positions.
+# GPS provides absolute velocity correction; IMU acceleration predicts between
+# GPS callbacks. All estimator dt values use steady receive time. The old
+# filter_alpha, minimum_dt, and maximum_dt parameters are intentionally unused.
 speed:
-  minimum_dt: 0.02
-  maximum_dt: 1.0
+  window_duration: 0.18
+  minimum_baseline: 0.12
   maximum_mps: 60.0
-  filter_alpha: 0.35
+  gps_correction_gain: 0.35
+  gps_innovation_limit_mps: 3.0
+  imu_acceleration_filter_alpha: 0.50
+  imu_acceleration_deadband_mps2: 0.10
+  imu_acceleration_min_mps2: -12.0
+  imu_acceleration_max_mps2: 8.0
+  imu_maximum_dt: 0.10
+  stationary_duration: 0.25
+  stationary_distance: 0.05
+  stationary_speed_threshold_mps: 0.50
+  stationary_acceleration_threshold_mps2: 0.20

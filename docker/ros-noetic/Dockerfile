@@ -49,11 +49,10 @@ RUN pip3 install --no-cache-dir --ignore-installed \
       "psutil>=5.8" \
       "protobuf==3.20.3"
 
-RUN pip3 install --no-cache-dir \
-      -r /tmp/requirements-lbc.txt \
-      -r /tmp/requirements-mgeo.txt \
-      -r /tmp/requirements-grpc.txt \
-      tqdm ultralytics && \
+RUN pip3 install --no-cache-dir -r /tmp/requirements-lbc.txt && \
+    pip3 install --no-cache-dir -r /tmp/requirements-mgeo.txt && \
+    pip3 install --no-cache-dir -r /tmp/requirements-grpc.txt && \
+    pip3 install --no-cache-dir tqdm ultralytics && \
     rm -f /tmp/requirements-*.txt && \
     python3 -c "from scipy.spatial import cKDTree; import cv2; import numpy"
 

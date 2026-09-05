@@ -106,28 +106,24 @@ TEST(TrajectoryConverterTest, RejectsInvalidInputs) {
 }
 
 TEST(TrajectoryConverterTest, RejectsStaleTrajectory) {
-    const asmc_msgs::Trajectory message = MakeTrajectory();
-    EXPECT_TRUE(IsTrajectoryFresh(message, ros::Time(10.2), 0.25));
-    EXPECT_FALSE(IsTrajectoryFresh(message, ros::Time(10.3), 0.25));
+    EXPECT_TRUE(IsTrajectoryFresh(ros::SteadyTime(10, 0),
+                                  ros::SteadyTime(10, 200000000), 0.25));
+    EXPECT_FALSE(IsTrajectoryFresh(ros::SteadyTime(10, 0),
+                                   ros::SteadyTime(10, 300000000), 0.25));
 }
 
-// 시계가 뒤로 점프하면 now < stamp가 되어 궤적이 미래처럼 보인다. 이때
-// stale로 처리해 fail-safe STOP을 내면 멀쩡한 궤적을 두고 매 점프마다
-// 급정지한다(실측: WSL2/Docker 환경에서 약 28초 주기로 wall clock -1.2초
-// 점프, 점프 9회에 MPC fail-safe STOP 20회). 궤적 자체는 유효하다.
-TEST(TrajectoryConverterTest, ToleratesBackwardClockJump) {
-    const asmc_msgs::Trajectory message = MakeTrajectory();
-    EXPECT_TRUE(IsTrajectoryFresh(message, ros::Time(8.8), 0.25));
-    EXPECT_TRUE(IsTrajectoryFresh(message, ros::Time(9.5), 0.25));
-    // 점프에서 회복된 뒤에는 평소대로 판정한다.
-    EXPECT_TRUE(IsTrajectoryFresh(message, ros::Time(10.2), 0.25));
-    EXPECT_FALSE(IsTrajectoryFresh(message, ros::Time(10.3), 0.25));
-}
-
-// 시계 점프로 설명되지 않는 먼 미래 stamp는 잘못된 입력이므로 계속 거부한다.
-TEST(TrajectoryConverterTest, RejectsImplausiblyFutureTrajectory) {
-    const asmc_msgs::Trajectory message = MakeTrajectory();
-    EXPECT_FALSE(IsTrajectoryFresh(message, ros::Time(4.0), 0.25));
+TEST(TrajectoryConverterTest, HeaderClockJumpDoesNotAffectFreshness) {
+    PlannedPath path;
+    MPCState state;
+    asmc_msgs::Trajectory message = MakeTrajectory();
+    message.header.stamp = ros::Time(1.0);
+    EXPECT_EQ(TrajectoryStatus::OK, ConvertTrajectory(message, path, state));
+    EXPECT_TRUE(IsTrajectoryFresh(ros::SteadyTime(50, 0),
+                                  ros::SteadyTime(50, 100000000), 0.25));
+    message.header.stamp = ros::Time(1000.0);
+    EXPECT_EQ(TrajectoryStatus::OK, ConvertTrajectory(message, path, state));
+    EXPECT_TRUE(IsTrajectoryFresh(ros::SteadyTime(50, 100000000),
+                                  ros::SteadyTime(50, 200000000), 0.25));
 }
 
 }  // namespace

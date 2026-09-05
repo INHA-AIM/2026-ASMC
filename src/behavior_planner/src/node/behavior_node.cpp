@@ -60,18 +60,22 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   feedback_sub_ =
       nh_.subscribe(feedback_topic, 5, &BehaviorNode::feedbackCallback, this);
 
+  if (rate_ <= 0.0) {
+    ROS_WARN("Invalid behavior update rate %.3f Hz; using 10 Hz", rate_);
+    rate_ = 10.0;
+  }
+  update_timer_ = nh_.createSteadyTimer(
+      ros::WallDuration(1.0 / rate_), &BehaviorNode::timerCallback, this);
+
   ROS_INFO_STREAM("Behavior planner input: ego=" << ego_topic
                   << ", objects=" << objects_topic);
 }
 
 void BehaviorNode::spin() {
-  ros::Rate loop_rate(rate_);
-  while (ros::ok()) {
-    ros::spinOnce();
-    runOnce();
-    loop_rate.sleep();
-  }
+  ros::spin();
 }
+
+void BehaviorNode::timerCallback(const ros::SteadyTimerEvent&) { runOnce(); }
 
 void BehaviorNode::runOnce() {
   if (!ego_received_) {
@@ -82,6 +86,7 @@ void BehaviorNode::runOnce() {
       builder_.build(ego_, objects_, route_, *lights_);
   const BehaviorContextData context = decision_.decide(feature, feedback_);
   asmc_msgs::BehaviorContext command = MsgConverter::toMsg(context, 0);
+  command.header.stamp = ros::Time::now();
   if (!has_last_command_ || !SameCommandIdentity(command, last_command_)) {
     ++current_command_id_;
     if (current_command_id_ == 0) ++current_command_id_;

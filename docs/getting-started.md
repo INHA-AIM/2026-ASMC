@@ -1,5 +1,9 @@
 # 시작 가이드
 
+> **문서 역할:** Active Guide — 처음 clone하고 실행하는 최소 절차
+> **정본 연결:** 환경 기준은 [development-environment.md](./development-environment.md), UDP 값은 [network-udp-ros.md](./network-udp-ros.md)
+> **문서 허브:** [README.md](./README.md)
+
 ## 1. 사전 준비
 
 | 항목 | 요구 |

@@ -1,86 +1,73 @@
 # 팀 아키텍처 개요
 
-> **상태:** Draft v0.2 — 상세 스펙은 [interfaces](../src/interfaces/README.md) 참고
+> **문서 역할:** Working Overview — 현재 전체 구조를 짧게 연결하는 문서
+> **문서 허브:** [README.md](./README.md)
+> **상태:** Draft v0.3 — 상세: 상위 [architecture.md](../../docs/competition/architecture.md) · [network-udp-ros.md](./network-udp-ros.md) · [인지 융합 로드맵](./perception-map-fusion-roadmap.md)
 
 ## 1. 한 줄 요약
 
-**Semi-E2E:** 시뮬 privileged 정보로 Expert·GT BEV를 만들고 LBC식 Teacher–Student로 학습한 뒤, **대회 허용 센서만**으로 궤적을 예측하고 **MPC**가 최종 제어를 수행한다.
+**Hybrid modular (rule-first):** 룰+MPC 뼈대에 camera lane/drivable, MGeo map prior와 LiDAR occupancy를 출처가 분리된 ego-BEV에서 결합한다. 시뮬 경계는 허용 **UDP**, 모듈 내부는 **ROS**다. 세부 인터페이스는 camera live와 map pilot 결과를 확인한 뒤 확정하며 Semi-E2E는 후속 연구로 둔다.
 
-## 2. 배포 파이프라인
+## 2. 배포 파이프라인 (Phase B 목표)
 
+```text
+[Camera ×3] ── UDP bridge ─ camera segmentation ─ camera probability ─┐
+[MGeo bake] ─ localization/crop ─ map road/lane/route/stopline ───────┼─ ego-BEV
+[LiDAR VLP16] ─ UDP bridge ─ detection/tracking/occupancy ────────────┘
+[GPS/IMU/status] ─ localization + blackout dead reckoning ────────────┘
+
+ego-BEV → lane/topology + safe drivable + object/lane context
+        → Behavior + Frenet → trajectory → MPC → Ctrl UDP
 ```
-[Camera × N] ─┐
-[LiDAR × 1~2]─┼─► SA_perc ─► BEV̂ ─► SA_plan ─► τ ─► MPC ─► UDP Ctrl_cmd
-[GPS, IMU] ───┘
-```
 
-- **E2E 아님:** 센서에서 조향·가속을 직접 출력하지 않음
-- **학습 시 privileged 사용:** Expert·GT BEV는 학습·로깅 전용. **추론 시 금지**
+## 3. 현재 개발 단계
 
-## 3. 모듈·담당
+| 순서 | 현재 방향 |
+|---:|---|
+| 1 | 26.R1.h3에서 카메라 live 추론·시각화·지연 계측 |
+| 2 | MGeo bake/local crop pilot과 독립 camera test |
+| 3 | 실증 결과를 바탕으로 공통 BEV/interface 합의 |
+| 4 | lane topology, LiDAR occupancy와 GPS blackout 대응 연결 |
+| 5 | 10월 대회판 호환·안정화 이식과 필요 시 camera domain 보강 |
+
+과거 Phase 0/Wave 1/2 이식 과정은 [integration-plan.md](./integration-plan.md)에 기록으로
+보존한다. 현재 세부 gate는 [인지 융합 로드맵](./perception-map-fusion-roadmap.md) §10을 따른다.
+
+## 4. 모듈·담당
 
 | 모듈 | 역할 | ASMC 경로 | 담당 |
 |------|------|-----------|------|
 | Expert / Behavior | rule + route, τ* 로깅 | `src/behavior_planner/` (+ LBC 학습 경로) | 정윤태·양서준 / 안승현 |
 | PA | GT BEV → τ (teacher) | `src/learning_by_cheating/` | 안승현 |
-| SA_perc | 센서 → BEV̂ | `src/perception/morai_3d_detection/` | 손재호, 장원태 |
+| 차선·주행가능영역·eval | 카메라 학습·live 추론·평가 | `src/perception/twinlite_morai/`, `camera_semantic_perception/`(제안) | 안승현 |
+| MGeo map prior | offline bake, pose 기반 local crop | `src/perception/map_prior/`(후보) | 장원태 중심 협의 |
+| 공통 BEV·차로 문맥 | map/camera/LiDAR layer와 object association | `src/perception/drivable_bev/` | 인지·맵·LiDAR 공동 |
+| Camera Det3D | SparseDrive식 카메라 3D 검출 연구 | `src/perception/morai_3d_detection/` | 손재호 |
+| LiDAR 장애물 | clustering·OBB·tracking·카메라 보조 분류 | `src/lidar+sensorfusion/` | 손재호, 정윤태 |
 | SA_plan | BEV̂ → τ | `src/learning_by_cheating/` | 안승현 |
 | Frenet + MPC | UDP 경로 생성·추종 → UDP CtrlCmd | `src/frenet_planner/`, `src/mpc_controller/` | 이강태 / 정윤태·양서준 |
 | Scenario / gRPC | 시나리오·시뮬 API | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |
-| Bridge | ROS / UDP | `scripts/bridge.sh` (UDP 확장 예정) | 안승현, 정윤태 |
+| Bridge | MORAI UDP 경계·내부 ROS 변환 | `src/morai_*_bridge/`, `scripts/udp_bridge.sh` | 이강태, 안승현 |
 
-팀원별 파일 단위 가이드: [team-dev-guide.md](./team-dev-guide.md)
+## 5. Planning/Control
 
-### PA 정의 (팀 합의)
-
-> **"PA를 없앤다" = 배포 그래프에서 GT BEV 경로 제거.**  
-> **"SA_plan ≡ PA weight successor"** 로 정의하면 설계와 구현이 일치한다.
-
-## 4. Planning/Control 요구사항
+- Bicycle 3.0 m, δ_max 40°, UDP Ctrl_cmd **cmd type 1 + ctrl mode 2**
 
 Planning/Control은 ROS/catkin/topic 없이 standalone C++17 + UDP로 실행한다. Behavior Planner는 현재 미연동이다. 상세 정본은 [planning-control-udp.md](./planning-control-udp.md)를 따른다.
 
-- Kinematic bicycle model (휠베이스 **3.0 m**, δ_max **40°**)
-- 횡방향 오차 e_y soft constraint (차선 이탈 방지)
-- 조향각·조향각속도 hard constraint
-- 출력: UDP `Ctrl_cmd`, longi type **1**
-- 완료 기준: Expert / PA / SA 세 소스의 τ에 대해 **동일 MPC**로 추종 성공
+## 6. 인터페이스
 
-## 5. 인터페이스 스펙 (초안)
+현재 확정 계약과 초안을 섞지 않는다. 작업 중 camera/BEV 이름은
+[인지 융합 로드맵](./perception-map-fusion-roadmap.md) §6, 합의된 계약은
+`src/interfaces/README.md`에서 관리한다. 공용 interface 변경은 **Path B**다.
 
-### 궤적 τ
-
-| 필드 | 제안 | 확정 |
-|------|------|------|
-| 좌표계 | ego-centric 또는 map frame (하나로 통일) | ☐ |
-| 표현 | waypoint `(x, y)` × N | ☐ |
-| N | 5~10 (LBC: N_STEP=5) | ☐ |
-| 시간 간격 | 0.1s (10Hz) | ☐ |
-
-### BEV 텐서
-
-| 필드 | 제안 | 확정 |
-|------|------|------|
-| 크기 | 192×192 (LBC 기본) 또는 팀 합의 | ☐ |
-| pixels_per_meter | morai-roach 설정과 동일 | ☐ |
-| 채널 | road, lane, vehicle, pedestrian, … (GT·pred 동일) | ☐ |
-| 원점 | ego vehicle center | ☐ |
-
-### MPC ↔ UDP
-
-| 필드 | 값 |
-|------|-----|
-| 입력 | τ, current speed, yaw rate |
-| 출력 | steering, accel, brake |
-| UDP | `Ctrl_cmd`, longi type **1** |
-
-인터페이스 변경은 **planning + perception + integration 3파트 합의 후** PR.
-
-## 6. 1차 기술 선택
+## 7. 기술 선택
 
 | 항목 | 결정 |
 |------|------|
-| 골격 | Semi-E2E + LBC curriculum + MPC |
-| SA_perc 1차 | TransFuser 계열 |
-| Expert / 맵 | MapService (K-city 2025) |
-| 배포 | RuleGuard + MPC + UDP |
+| 골격 | Hybrid modular + MPC |
+| 네트워크 | **UDP 경계 + ROS 내부** (권장; mpc 이견 회의 후) |
+| camera/map/LiDAR | 출처별 layer를 보존하고 실증 후 fusion 규칙 확정 |
+| 인터페이스 | provisional topic만 문서화, camera live/map pilot 뒤 합의 |
+| 개발판→대회판 | 9월 26.R1.h3 기능 완성, 10월 한시적 호환·안정화 브랜치 후보 |
+| Semi-E2E | Phase C |

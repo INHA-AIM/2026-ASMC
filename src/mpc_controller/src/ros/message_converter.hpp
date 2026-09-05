@@ -20,8 +20,8 @@ enum class TrajectoryStatus {
 };
 
 const char* TrajectoryStatusName(TrajectoryStatus status);
-bool IsTrajectoryFresh(const asmc_msgs::Trajectory& message,
-                       const ros::Time& now, double timeout_seconds);
+bool IsTrajectoryFresh(const ros::SteadyTime& received_at,
+                       const ros::SteadyTime& now, double timeout_seconds);
 TrajectoryStatus ConvertTrajectory(const asmc_msgs::Trajectory& message,
                                    PlannedPath& path, MPCState& ego_state);
 morai_msgs::CtrlCmd MakeRosStopCommand();

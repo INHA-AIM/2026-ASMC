@@ -9,9 +9,14 @@ services:
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - ASMC_DATA=/data
+      - TWINLITE_ROOT=/opt/baselines/TwinLiteNetPlus
     volumes:
       - ../..:/root/ws:rw
-      - ${ASMC_DATA:-../data}:/data:ro
+      # Training consumes the external dataset but must not mutate the source.
+      - ${ASMC_DATA:-../../../data}:/data:ro
+      # Official baseline stays outside the team repo and is pinned by the loader.
+      - ${TWINLITE_SOURCE:-../../../external/baselines/TwinLiteNetPlus}:/opt/baselines/TwinLiteNetPlus:ro
     shm_size: "8gb"
     stdin_open: true
     tty: true
