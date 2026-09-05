@@ -29,6 +29,18 @@
 
 ## 빠른 시작
 
+Windows 팀원은 최초 한 번 Docker Desktop **4.34 이상**에서 다음 설정을 적용해야 합니다.
+
+1. Docker Desktop을 Linux containers/WSL 2 모드로 실행합니다.
+2. **Settings → Resources → Network → Enable host networking**을 켭니다.
+3. **Apply and restart**를 눌러 Docker Desktop 재시작까지 완료합니다.
+4. **Settings → Resources → WSL Integration**에서 사용하는 WSL 배포판을 활성화합니다.
+
+`Network` 또는 `Enable host networking`이 보이지 않으면 Docker Desktop을 업데이트하고
+Windows containers 모드가 아닌지 확인합니다. 상세 확인법은
+[UDP↔ROS 네트워크 가이드](docs/network-udp-ros.md#31-docker-desktop-최초-설정팀원별-1회)를
+따릅니다. MORAI의 기존 `127.0.0.1`과 센서 포트는 변경하지 않습니다.
+
 ```bash
 git clone --recurse-submodules https://github.com/INHAautonav/2026-ASMC.git
 cd 2026-ASMC

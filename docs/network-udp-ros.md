@@ -47,6 +47,38 @@ MORAI (Windows)  --UDP-->  morai_udp_bridge / morai_sensor_bridge  --> ROS topic
 
 ## 3. Windows + WSL + Docker host networking
 
+### 3.1 Docker Desktop 최초 설정(팀원별 1회)
+
+Host networking은 Docker Desktop **4.34 이상**에서 지원됩니다. 팀원 PC마다 다음 순서로
+설정합니다.
+
+1. Docker Desktop을 Linux containers/WSL 2 모드로 실행합니다.
+2. **Settings → Resources → Network**를 엽니다.
+3. **Enable host networking**을 체크합니다.
+4. **Apply and restart**를 눌러 Docker Desktop 재시작을 완료합니다.
+5. **Settings → Resources → WSL Integration**에서 개발에 사용하는 WSL 배포판을 켭니다.
+
+`Network` 메뉴가 보이지 않으면 Windows containers 모드인지 확인하고 Linux containers로
+전환합니다. `Enable host networking`이 없으면 Docker Desktop을 업데이트합니다. Docker의
+[공식 host network driver 문서](https://docs.docker.com/engine/network/drivers/host/)에도 같은
+활성화 절차와 TCP/UDP 양방향 지원이 명시되어 있습니다.
+
+설정 적용 후 WSL에서 다음 합격 조건을 확인합니다.
+
+```bash
+cd "$ASMC"
+./scripts/docker_ros_up.sh up
+./scripts/docker_ros_up.sh status
+./scripts/docker_ros_up.sh check
+```
+
+- `status`: `mode=host`, `published={}`
+- `check`: Windows → 컨테이너와 컨테이너 → Windows가 모두 `[OK]`
+
+`check` 실패 시 MORAI 설정부터 바꾸지 않습니다. Docker Desktop에서 host networking 체크와
+**Apply and restart** 완료 여부, WSL Integration 대상 배포판, Linux containers 모드를 먼저
+확인한 뒤 `docker_ros_up.sh up`을 다시 실행합니다.
+
 ### 팀 표준
 
 `docker/ros-noetic/docker-compose.yaml`은 Docker Desktop의 `network_mode: host`를 사용한다.
@@ -62,9 +94,7 @@ MORAI (Windows)  --UDP-->  morai_udp_bridge / morai_sensor_bridge  --> ROS topic
 |-------------------|-----|
 | Ctrl 송신 `cmd_ip` | `127.0.0.1` (`udp_bridge.sh` 기본) |
 
-각자 PC에서는 Docker Desktop의 **Settings → Resources → Network → Enable host
-networking**과 WSL Integration을 활성화한다. MORAI의 기존 Host/Destination IP와 센서 포트는
-바꾸지 않는다.
+MORAI의 기존 Host/Destination IP와 센서 포트는 바꾸지 않는다.
 
 ```bash
 cd "$ASMC"

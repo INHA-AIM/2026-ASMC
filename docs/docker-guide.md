@@ -23,6 +23,17 @@ export ASMC_DATA="$(dirname "$ASMC")/data"
 
 ## 2. ROS 개발 컨테이너
 
+### Docker Desktop 선행 설정 — 팀원별 최초 1회
+
+1. Docker Desktop **4.34 이상**, Linux containers/WSL 2 모드를 사용합니다.
+2. **Settings → Resources → Network → Enable host networking**을 켭니다.
+3. **Apply and restart**로 Docker Desktop 재시작을 완료합니다.
+4. **Settings → Resources → WSL Integration**에서 사용하는 배포판을 켭니다.
+
+`Network` 메뉴가 없으면 Windows containers 모드인지 확인합니다. 설정 근거와 상세
+트러블슈팅은 [network-udp-ros §3.1](./network-udp-ros.md#31-docker-desktop-최초-설정팀원별-1회)을
+따릅니다.
+
 ### 최초 빌드
 
 ```bash
@@ -35,6 +46,7 @@ xhost +local:docker
 
 ```bash
 ./scripts/docker_ros_up.sh up
+./scripts/docker_ros_up.sh status  # mode=host, published={}
 ./scripts/docker_ros_up.sh check   # Windows↔컨테이너 host UDP 검사
 docker exec -it asmc-ros-noetic bash
 ./scripts/build_ws.sh
