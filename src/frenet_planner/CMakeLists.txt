@@ -390,6 +390,20 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME target_speed_rate_limit_test COMMAND target_speed_rate_limit_test)
 
+  # fix/yuntae-frenet-speed-continuity Phase 5: low-speed KEEP candidate
+  # starvation handoff 회귀.
+  add_executable(low_speed_keep_handoff_test
+    tests/low_speed_keep_handoff_test.cpp
+  )
+  target_compile_definitions(low_speed_keep_handoff_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(low_speed_keep_handoff_test
+    frenet_planner_core
+  )
+  add_test(NAME low_speed_keep_handoff_test COMMAND low_speed_keep_handoff_test)
+
   # D1-3: legacy(간이 FSM) 행동 결정의 회귀 커버리지. D5/D6/D8에서 모드별로
   # legacy 조각을 제거할 때 검증된 회전교차로/고속도로 주행이 깨지지 않았는지
   # 확인하는 안전망이다 (docs/d1-legacy-behavior-boundary.md).

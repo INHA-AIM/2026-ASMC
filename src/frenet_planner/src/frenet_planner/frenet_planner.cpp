@@ -2612,6 +2612,35 @@ bool FrenetPlanner::PlanInternal(
             last_failure_reason_ = PlanFailureReason::NONE;
             return true;
         }
+
+        // 외부 KEEP의 low-speed boundary candidate starvation
+        // (fix/yuntae-frenet-speed-continuity Phase 5). kLowSpeedFallbackV
+        // (0.5 m/s) 문턱을 살짝 넘은 직후, 강한 감속 중이던 s_ddot 경계조건이
+        // 그대로 남아 있으면(예: ego.v=0.6, s_ddot=-2.4) 정상 velocity
+        // keeping 후보가 전부 accel/jerk 한계를 넘어 탈락할 수 있다(실측
+        // 재현: longitudinal 0/40 valid). 이 경계에서만, 그리고 실제로 후보가
+        // 전부 탈락했을 때만(=이 분기), 이미 검증된 저속 fallback 경로로
+        // 안전하게 이어간다. 정상 후보가 하나라도 있으면 이 분기 자체에
+        // 도달하지 않으므로 정상 pipeline을 절대 우회하지 않는다.
+        //
+        // STOP/FOLLOW/AVOID/MERGE는 각자 별도 정책(위 STOP fail-safe,
+        // GenerateFollowingCandidates의 정지-리더 목표, AVOID/MERGE의 전용
+        // 저속 처리)이 있으므로 여기서는 건드리지 않는다 - 순수 외부 KEEP만
+        // 대상이다.
+        constexpr double kNearLowSpeedFallbackV = 1.5;  // [m/s] kLowSpeedFallbackV보다 넉넉히 위
+        const bool external_keep = !use_legacy_behavior && cmd.mode == LANE_KEEPING;
+        if (external_keep &&
+            std::fabs(ego.v) < kNearLowSpeedFallbackV &&
+            last_failure_reason_ != PlanFailureReason::COLLISION_BLOCKED) {
+            const bool fallback_ok = PlanLowSpeedFallback(
+                ego, s, d, /*target_d=*/0.0, out_path, /*duration_s=*/2.0,
+                resolved_target_speed);
+            std::printf("[FrenetPlanner-KEEP] near-low-speed fail-safe: no "
+                        "candidate (v=%.2f), emitting crawl fallback path\n",
+                        ego.v);
+            last_failure_reason_ = PlanFailureReason::NONE;
+            return fallback_ok;
+        }
         return false;
     }
 
