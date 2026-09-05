@@ -107,7 +107,7 @@ Docker 안에서 MORAI가 Windows host에 있으면 다음처럼 주소를 덮�
 
 ```bash
 roslaunch data_collection capture_mode_collector.launch \
-  grpc_address:=host.docker.internal capture_hz:=1.0
+  grpc_address:=127.0.0.1 capture_hz:=1.0
 ```
 
 ### `run_id` 규칙

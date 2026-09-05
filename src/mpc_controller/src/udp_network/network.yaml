@@ -1,6 +1,6 @@
 network:
   host_ip: "127.0.0.1"       # 이 프로세스가 bind할 IP (수신용)
-  user_ip: "host.docker.internal" # Docker에서 Windows MORAI로 송신
+  user_ip: "127.0.0.1"       # Docker Desktop host mode에서 Windows MORAI로 송신
 
   ctrl_cmd_host_port: 9111      # MORAI Cmd Control Host PORT
   ctrl_cmd_dst_port: 9112       # MORAI UI 페어 포트(송신 코드는 host_port 사용)
