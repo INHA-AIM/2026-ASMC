@@ -55,10 +55,11 @@ public:
     bool Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
               CartesianPath& out_path);
 
-    // 외부 FSM command 기반 진입점. 현재 external whitelist는 LANE_KEEPING과
-    // STOP이며(ValidateExternalCommand 참고), 나머지 모드는 core 구현이 있어도
-    // UNSUPPORTED_BEHAVIOR로 거부한다. FSM canonical migration 시점에 whitelist를
-    // 확장한다. 기존 3인자 Plan()은 legacy UDP 회귀 경로로 유지한다.
+    // 외부 FSM command 기반 진입점. 현재 external whitelist는 LANE_KEEPING /
+    // STOP / EMERGENCY / FOLLOWING / AVOID이며(IsSupportedExternalMode 참고),
+    // MERGE/LANE_CHANGE는 core 구현이 있어도 UNSUPPORTED_BEHAVIOR로 거부한다.
+    // ROS 계약이 확정되는 모드부터 whitelist를 확장한다(D7/D8). 기존 3인자
+    // Plan()은 legacy UDP 회귀 경로로 유지한다.
     bool Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
               const PlannerCommand& command, CartesianPath& out_path);
 
