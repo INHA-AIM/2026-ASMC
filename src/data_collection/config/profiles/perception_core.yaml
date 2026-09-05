@@ -1,0 +1,38 @@
+name: perception_core
+description: "Default collect — fixed 3 cams + lidar + ego + GT objects/TL (TL optional on competition SIM)"
+collect_hz: 10
+mode: latest_timer
+max_frames: 0
+require_ego: true
+map: R_KR_PG_K-City_2025
+vehicle: 2023_Hyundai_ioniq5
+bridge_type: ros_topics
+lidar_format: bin_xyzi
+notes: |
+  Mount competition sensors in SIM (cam×3+1, VLP16@≤10Hz, GPS≤30, IMU≤50).
+  Remap cam topics if sensor bridge uses one JPEG port per camera.
+  tl_status often missing on competition ROS UI — leave enabled; frames record missing[].
+
+channels:
+  ego: true
+  competition_ego: false
+  objects: true
+  collision: false
+  tl_status: true
+  lidar: true
+  gps: false
+  imu: false
+  cam_front: true
+  cam_left: true
+  cam_right: true
+  cam_extra: false
+
+topics:
+  ego: /Ego_topic
+  objects: /Object_topic
+  tl_status: /GetTrafficLightStatus
+  lidar: /velodyne_points
+  # Official cam set uses separate UDP ports; bridge topic names may differ — edit here.
+  cam_front: /image_jpeg/compressed
+  cam_left: /cam_left/image_jpeg/compressed
+  cam_right: /cam_right/image_jpeg/compressed

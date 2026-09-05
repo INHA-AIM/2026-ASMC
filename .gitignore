@@ -60,6 +60,10 @@ src/perception/morai_3d_detection/_tmp_verify_out/
 src/perception/morai_3d_detection/gt_vis/
 src/perception/morai_3d_detection/verify_output/
 
+# Perception eval artifacts (bake · runs · galleries)
+artifacts/perception_eval/runs/
+artifacts/perception_eval/bake/
+artifacts/perception_eval/poses_noisy/
 
 # OS
 .DS_Store

@@ -1,0 +1,95 @@
+{
+  "schema_version": "morai-perception-target-policy-1.0.0",
+  "policy_id": "kcity_static_surface_actor_ignore_v2",
+  "status": "frozen_not_baked",
+  "frozen_at_utc": "2026-09-04T05:26:49Z",
+  "evidence": {
+    "audit_report": "data/capture_batches/20260903_20260904_kcity_comp_sample_semantic_audit.json",
+    "audit_report_sha256": "faa1e81267f65db26ff6dbdab55af9a4969600b6332099d89152b8b0fa9b28f7",
+    "samples": 14529,
+    "pixels": 7438848000,
+    "unknown_semantic_pixels": 0,
+    "actor_positive_samples": 9384,
+    "actor_pixels": 28072796,
+    "actor_instance_nonzero_ratio": 1.0
+  },
+  "views": [
+    "front",
+    "left",
+    "right"
+  ],
+  "targets": {
+    "lane": {
+      "positive_classes": [
+        "white_lane",
+        "yellow_lane",
+        "blue_lane"
+      ],
+      "occlusion_policy": "visible_only",
+      "valid_policy": "geometric_valid"
+    },
+    "drivable": {
+      "positive_classes": [
+        "asphalt",
+        "white_lane",
+        "yellow_lane",
+        "blue_lane",
+        "crosswalk",
+        "stopline",
+        "road_sign"
+      ],
+      "ignore_classes": [
+        "vehicle",
+        "sedan",
+        "suv",
+        "truck",
+        "bus",
+        "van",
+        "wagon",
+        "mpv",
+        "pedestrian",
+        "obstacle"
+      ],
+      "valid_policy": "geometric_valid AND NOT drivable_ignore"
+    },
+    "stopline": {
+      "positive_classes": [
+        "stopline"
+      ],
+      "occlusion_policy": "visible_only",
+      "valid_policy": "geometric_valid AND view_is_front"
+    },
+    "actor_occupancy_gt": {
+      "positive_classes": [
+        "vehicle",
+        "sedan",
+        "suv",
+        "truck",
+        "bus",
+        "van",
+        "wagon",
+        "mpv",
+        "pedestrian",
+        "obstacle"
+      ],
+      "training_target": false,
+      "purpose": "LiDAR occupancy and camera-LiDAR fusion evaluation"
+    }
+  },
+  "explicit_background_classes": [
+    "sidewalk",
+    "standing_object",
+    "building",
+    "road_edge",
+    "sky",
+    "etc",
+    "ego_vehicle"
+  ],
+  "class_notes": {
+    "standing_object": "Observed as tunnel frames, guardrails, poles, and other permanent roadside structures; keep as background, not transient actor ignore.",
+    "obstacle": "Observed on spawned cones and hazard/fire props; exclude from drivable supervision and include in actor occupancy GT.",
+    "ego_vehicle": "Fixed visible ego hood/body is non-road background; do not discard a large fixed image region with actor ignore.",
+    "instance": "All audited Semantic actor pixels had nonzero Instance values; Instance is retained for future identity-aware evaluation but v2 binary masks are derived from Semantic classes."
+  },
+  "palette_source": "MORAI 26.R1 Semantic camera official RGB palette encoded in data_collection.mask_baker.OFFICIAL_PALETTE_RGB"
+}

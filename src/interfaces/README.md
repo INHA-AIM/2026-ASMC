@@ -1,5 +1,9 @@
 # ASMC ROS Interface Specification
 
+> **문서 역할:** Canonical — 현재 구현된 팀 내부 ROS 계약
+> **인지 확장 작업안:** [인지 융합 로드맵 §6](../../docs/perception-map-fusion-roadmap.md#6-working-topicinterface-proposal)
+> **문서 허브:** [docs/README.md](../../docs/README.md)
+
 이 문서는 `2026-ASMC` 내부 ROS 모듈 사이의 사람이 읽는 인터페이스 정본이다.
 실제 실행 계약은 `asmc_msgs`가 제공하며, 두 정의는 함께 변경한다.
 
@@ -182,3 +186,84 @@ ROS:    ROS Frenet + ROS MPC + MORAI UDP Bridge
 - 이 문서가 사람이 읽는 specification이다.
 - Breaking change는 Planning, Behavior, Perception/Integration 담당 합의 후 반영한다.
 - 변경 시 `CHANGELOG.md`를 함께 갱신한다.
+
+## Appendix A. Camera·BEV interface working proposal
+
+아래 항목은 camera live와 MGeo local-crop pilot 전 단계의 **비정본 후보**다. 아직
+`asmc_msgs`나 다른 custom message로 구현되지 않았으며, 카메라 출력 범위·신뢰도·처리율과
+Planning/LiDAR 소비 요구를 측정한 뒤 별도 Path B PR에서 승격한다.
+
+### A.1 Camera image-plane
+
+```text
+/perception/camera/{view}/drivable/probability
+/perception/camera/{view}/lane/probability
+/perception/camera/{view}/debug/panel/compressed
+/perception/camera/debug/mosaic/compressed
+/perception/diagnostics
+```
+
+- `{view}` 후보: `front`, `left`, `right`
+- probability 초기 후보: `sensor_msgs/Image`, `mono8` 0~255
+- hard mask와 overlay는 독립 visualizer가 threshold로 파생한다.
+- bbox/object detection은 segmentation과 다른 계약으로 분리한다.
+
+### A.2 Common ego-BEV
+
+```text
+/perception/bev/map/{drivable,lane,route_corridor,stopline}
+/perception/bev/camera/{drivable_probability,lane_probability}
+/perception/bev/lidar/occupancy
+/perception/bev/fused/{safe_drivable,lanes}
+```
+
+좌표계는 REP-103 `base_link`의 x-forward, y-left, z-up을 우선 후보로 한다. BEV 범위,
+meter/pixel, ego origin, probability bit depth와 custom lane message는 아직 확정하지 않는다.
+모든 최종 메시지는 timestamp, frame ID, source, age/validity를 표현해야 한다.
+
+## Appendix B. Existing research drafts
+
+다음 값은 LBC 또는 후속 학습 연계를 위해 남긴 연구 초안이며 현재 Planning/MPC나 공통
+BEV 계약이 아니다.
+
+### B.1 Trajectory τ draft
+
+| 필드 | 기존 제안 | 확정 |
+|---|---|---|
+| 좌표계 | ego-centric 또는 map frame 중 하나 | ☐ |
+| 표현 | waypoint `(x, y)` × N | ☐ |
+| N | 5~10 (LBC: N_STEP=5) | ☐ |
+| 시간 간격 | 0.1 s (10 Hz) | ☐ |
+| 속도 프로파일 | MPC에 별도 전달 여부 | ☐ |
+
+현재 Planning/Control 계약은 위 초안이 아니라 이 문서의 `asmc_msgs/Trajectory` 정의와
+[planning-control-udp.md](../../docs/planning-control-udp.md)를 따른다.
+
+### B.2 LBC BEV tensor draft
+
+| 필드 | 기존 제안 | 확정 |
+|---|---|---|
+| 크기 | 192×192 (LBC 기본) 또는 팀 합의 | ☐ |
+| pixels_per_meter | morai-roach 설정과 동일 | ☐ |
+| 채널 | road, lane, vehicle, pedestrian 등 | ☐ |
+| 원점 | ego vehicle center | ☐ |
+
+`192×192`는 기존 LBC 실험값이며 새 camera/map/LiDAR 공통 BEV 크기로 확정하지 않는다.
+
+### B.3 Common log record candidate
+
+```yaml
+timestamp:
+scenario_id:
+ego: {x, y, yaw, speed}
+sensors: {cameras, lidar, gps, imu}
+gt_bev: ...
+tau_expert: ...
+tau_pa: ...      # optional
+command: ...
+mpc_cmd: ...
+weather: ...
+```
+
+첫 versioned perception message를 추가할 때 관련 파트 합의와 함께
+`interfaces/CHANGELOG.md`를 만들고 이후 breaking change를 기록한다.

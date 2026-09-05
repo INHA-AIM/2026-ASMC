@@ -1,11 +1,14 @@
 # 개발 환경 규약
 
-> **기준:** 대회 본선 v1.0 (참가 PC **OS 자유**, 통신 **UDP**) · 팀 개발 **Ubuntu 20.04 + ROS1 Noetic**  
-> **최종 수정:** 2026-07-20
+> **문서 역할:** Active Reference — 개발 OS·언어·데이터 경로 기준
+> **정본 연결:** 대회 제약은 [competition-environment.md](./competition-environment.md), Docker 실행은 [docker-guide.md](./docker-guide.md)
+> **문서 허브:** [README.md](./README.md)
+> **기준:** 대회 본선 v1.1 (참가 PC **OS 자유**, 통신 **UDP**) · 팀 개발 **Ubuntu 20.04 + ROS1 Noetic**
+> **최종 수정:** 2026-08-30
 
 ## 1. 대회 규정 vs 팀 개발 환경
 
-| 구분 | 대회 당일 (v1.0) | 팀 일상 개발 |
+| 구분 | 대회 당일 (v1.1) | 팀 일상 개발 |
 |------|------------------|--------------|
 | OS | **자유** (데스크톱·노트북) | WSL2 + Docker **또는** 네이티브 20.04 |
 | ROS | 팀 선택 (UDP 출력 필수) | ROS1 **Noetic** (컨테이너) |
@@ -18,7 +21,7 @@
 |--------|---------------|----------------|
 | LAN/UDP 재현 | NAT·브리지 편차 | 규정과 동일 |
 | 지연 측정 | 호스트-게스트 영향 | 신뢰 가능 |
-| HDMI 2포트 | 해당 없음 (v1.0 미명시) | — |
+| 현장 장비 | 휴대용 모니터·LAN선 제공, 키보드·마우스 지참 | 동일 조건 리허설 |
 | 당일 트러블슈팅 | WSL+Windows 이중 이슈 | 단일 환경 |
 
 **팀 정책**
@@ -95,13 +98,14 @@
 
 ```bash
 # ~/.bashrc 예시 (선택)
-export ASMC_DATA="$HOME/asmc-data"   # R_KR_PG_K-city_2025 등
+export ASMC_DATA="$(dirname "$ASMC")/data"   # R_KR_PG_K-city_2025, datasets 등
 ```
 
-미설정 시 Docker는 compose 파일 기준 `../data`(repo 형제 `data/`)를 사용합니다.  
+미설정 시 실행 스크립트는 `2026-ASMC` 레포와 나란한 워크스페이스 `data/`를 사용합니다.
 다른 위치를 쓰면 반드시 `ASMC_DATA`를 export한 뒤 `./scripts/docker_ros_up.sh up` 하세요.
 
-Docker 컨테이너 안에서는 **`/data`**로 읽기 전용 마운트됩니다.
+Docker 컨테이너 안에서는 **`/data`**로 보입니다. ROS 수집 컨테이너는 쓰기 가능(`rw`),
+학습 컨테이너는 원본 보호를 위해 읽기 전용(`ro`)으로 마운트됩니다.
 
 ## 6. IDE·도구
 

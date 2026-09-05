@@ -1,5 +1,7 @@
 # Planning/Control UDP-only 규약
 
+> **문서 역할:** Canonical — 현재 standalone Frenet/MPC 실행 규약
+> **문서 허브:** [README.md](./README.md)
 > **상태:** Active — Planning/Control의 정본
 > **기준 upstream:** `yuntae12-sudo/mpc_ws` `465833e`
 

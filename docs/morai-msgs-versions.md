@@ -1,7 +1,11 @@
 # MORAI morai_msgs 버전 매핑
 
-> **최종 수정:** 2026-07-07  
+> **문서 역할:** Version Reference — 조사 시점의 26.R1/대회 msg 차이 기록
+> **주의:** 실제 대회판 이식 시 재실측하고 [morai-msgs-beta-policy.md](./morai-msgs-beta-policy.md)를 갱신한다.
+> **문서 허브:** [README.md](./README.md)
+> **최종 수정:** 2026-07-26
 > 통합 시 **단일 submodule** 기준을 정하고, 레거시 코드는 필드 차이를 인지해야 합니다.
+> **대회 ROS UI 실측:** [docs/competition/morai-competition-ros-topics.md](../../docs/competition/morai-competition-ros-topics.md)
 
 ## 1. upstream 브랜치·태그 정리
 
@@ -30,14 +34,31 @@
 
 `Competition`, `EgoNoisyStatus`, `EgoDetailStatus`, `AttachmentDeviceState`, `GripperState`, `MSITCustomMessage`, `ENU`, `RPY`, `RobotPose`, `XYZ`
 
-**필드가 바뀌는 대표 msg (통합 시 주의)**
+**필드가 실제로 다른 shared msg (2026-07-26 재검증: 6종)**
 
-| msg | `26.R1` | `beta_drive` (대회) |
-|-----|---------|---------------------|
-| `CtrlCmd` | `front_steer`, `rear_steer` | **`steering`** (단일) |
-| `EgoVehicleStatus` | `front_steer_angle`, `rear_steer_angle`, `angular_velocity` | **`wheel_angle`** 등 단순화 |
+| msg | `26.R1` (h3 일반) | `beta_drive` (대회) | 팀 영향 |
+|-----|-------------------|---------------------|---------|
+| **`CtrlCmd`** | `front_steer`, `rear_steer` (rad) | **`steering`** 단일 | **제어 필수** — `mpc_ws`는 beta(`steering`) |
+| **`EgoVehicleStatus`** | `front_steer_angle`, `rear_steer_angle`, **`angular_velocity`**, lane CTE 필드 | **`wheel_angle`** (lane CTE·angular_velocity **없음**) | **ego/수집/LBC** |
+| `ManipulatorControl` | `GripperStatus` 등 | 일부 필드 축소 | 대회 무관 |
+| `MultiEgoSetting` | turn_signal·speed 배열 등 | 축소 | 낮음 |
+| `NpcGhostInfo` | brake/steer/speed/signal | 축소 | 낮음 |
+| `RobotOutput` | — | `is_active_manipulator_brake` 추가 | 낮음 |
 
-`mpc_ws`는 `cmd.steering`을 쓰므로 **beta_drive와 일치**합니다.
+**동일(수집·인지에 중요):** `ObjectStatus`/`ObjectStatusList`, `GetTrafficLightStatus`, `SetTrafficLight`, `IntscnTL`, `GPSMessage`, `CollisionData` 필드 동일.
+단 `SyncModeCtrlCmd`·`WaitForTickResponse`는 **중첩 `CtrlCmd`/`EgoVehicleStatus`** 를 품으므로 sync 제어·tick 응답은 간접적으로 깨질 수 있음.
+
+`mpc_ws`는 `cmd.steering` → **beta_drive와 일치**.
+
+### 시뮬 선택 (2026-08-03)
+
+| 순위 | SIM | 권장 역할 |
+|------|-----|-----------|
+| **Phase 0 기본** | **26.R1.h3** | 차선·drivable·수집·GT (대회 제약으로 일상은 여기) |
+| **게이트** | **대회 beta** | 노이즈·토픽 공백·당일 |
+| — | 24.R2 | 비권장 |
+
+스택·저장 스키마는 **`beta_drive`**. 26 ego/ctrl만 정규화. 토픽 완전 정합 포기.
 
 ---
 
@@ -49,7 +70,7 @@
 
 - `IntscnTL`, `TrafficLight`, `GetTrafficLightStatus`, `MoraiTLInfo`, `MoraiTLIndex`, `Lamps`, `SetTrafficLight`
 
-→ “대회 브랜치에 신호등 **msg가 없다**”는 말은 **사실이 아님**.  
+→ “대회 브랜치에 신호등 **msg가 없다**”는 말은 **사실이 아님**.
 → 이슈는 **런타임에 토픽이 비거나 맵별로 다름** 쪽에 가깝습니다.
 
 ### 런타임 (팀 검증)
@@ -60,7 +81,30 @@
 | `/IntscnTL_topic`, `/GetTrafficLightStatus` 등 | 맵·시뮬 설정에 따라 가변 | LBC가 가용 토픽 자동 구독 |
 | `/Service_MoraiEventCmd` | **turnSignal** 폴링 | 좌회전 의도 → BEV 신호등 색 보정 |
 
-**통합 시:** 학습·개발은 `26.R1` sim(h3) + `IntscnTL` 구독 가능. 대회 당일은 **beta_drive + 실제 배포 토픽**으로 재검증 필요.
+### 대회 MORAI ROS UI 실측 (2026-07-25)
+
+**정본:** [docs/competition/morai-competition-ros-topics.md](../../docs/competition/morai-competition-ros-topics.md)
+
+대회 버전 ROS Topic 패널에 **노출된 전부:**
+
+| 방향 | Topic / Service | Type |
+|------|-----------------|------|
+| → | `/Ego_topic`, `/Competition_topic` | `EgoVehicleStatus` |
+| → | `/Object_topic` | `ObjectStatusList` |
+| → | `/CollisionData` | `CollisionData` |
+| → | `/tf` | `tf2_msgs/TFMessage` |
+| ← | `/ScenarioLoad` | `ScenarioLoad` |
+| ← | `/SetTrafficLight` | `SetTrafficLight` |
+| srv | `/Service_MoraiEventCmd` | `MoraiEventCmdSrv` |
+
+Bridge: `127.0.0.1:9090` · Target Frame **50 Hz**.
+**없음:** GetTrafficLight / IntscnTL / Lamps / Camera·LiDAR·GPS·IMU ROS · `/ctrl_cmd`(이 패널 기준).
+
+→ “대회에 Get이 없다” = **런타임 사실**. `.msg` 부재가 아님.
+→ **기본 SIM = 대회**. **GT 라벨 세션만 26.R1.h3**.
+→ `rostopic list` 대기: [morai-competition-ros-topics.md](../../docs/competition/morai-competition-ros-topics.md) §7.
+
+**통합 시:** 코드·일상 = `beta_drive` + **대회 SIM**. 26은 privileged 수집 전용.
 
 ---
 
@@ -106,9 +150,10 @@ diff -ru <26.R1-clone>/msg <beta_drive-clone>/msg
 
 ## 5. 버전 선택 요약
 
-| 용도 | 권장 ref |
-|------|----------|
-| **대회·ASMC submodule** | `beta_drive` |
-| **26.R1 h3 시뮬 일상 개발** | sim은 h3, **코드는 beta 필드로 맞추는 중** |
-| **신호등 BEV / Expert** | msg는 양쪽 다 있음. 런타임 토픽은 **맵별 검증** + `MoraiEventCmd` |
-| **레거시 참고만** | upstream `26.R1` clone, `ochang` 브랜치 |
+| 용도 | 권장 |
+|------|------|
+| **일상·ASMC·당일** | 시뮬 **대회 beta** + submodule `beta_drive` |
+| **GT 라벨만** | 시뮬 **26.R1.h3** (필요할 때만) + ego/ctrl 정규화 |
+| **24.R2** | 비권장 |
+| **신호등** | 대회=Set/TL-Net · Get 라벨은 26 세션 |
+| **레거시** | upstream `26.R1` clone |

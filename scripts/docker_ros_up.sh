@@ -3,6 +3,8 @@
 set -euo pipefail
 COMPOSE_DIR="$(dirname "$(readlink -f "$0")")/../docker/ros-noetic"
 export ASMC="${ASMC:-$(dirname "$(readlink -f "$0")")/..}"
+export ASMC_DATA="${ASMC_DATA:-$(dirname "$(readlink -f "$ASMC")")/data}"
+mkdir -p "$ASMC_DATA"
 
 # Docker Desktop+Windows: Dest UDP가 compose에 있어도 Windows 리스너가 빠지는 경우가 있음 (특히 9299).
 #
@@ -37,6 +39,7 @@ _verify_sensor_udp() {
 }
 
 cmd="${1:-up}"
+echo "[DATA] $ASMC_DATA -> /data (rw)"
 case "$cmd" in
   build)
     docker compose -f "$COMPOSE_DIR/docker-compose.yaml" build

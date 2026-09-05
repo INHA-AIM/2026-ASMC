@@ -32,6 +32,9 @@ services:
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=graphics,utility,compute
+      # Host $ASMC_DATA is mounted here. Collectors use this instead of a
+      # container-local fallback, so manifests survive container recreation.
+      - ASMC_DATA=/data
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
       - __NV_PRIME_RENDER_OFFLOAD=1
@@ -44,7 +47,9 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ../..:/root/ws:rw
       - /etc/localtime:/etc/localtime:ro
-      - ${ASMC_DATA:-../data}:/data:ro
+      # Default is the data directory next to the 2026-ASMC repository.
+      # ROS owns collection/writer processes, so this mount must be writable.
+      - ${ASMC_DATA:-../../../data}:/data:rw
     shm_size: "2gb"
     stdin_open: true
     tty: true
