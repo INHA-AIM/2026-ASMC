@@ -2398,9 +2398,22 @@ bool FrenetPlanner::PlanInternal(
         if (cmd.mode == AVOID) {
             candidates = generate_adaptive_avoid(cmd, cmd.avoidance_d_offset, stats);
         } else {
-            candidates = ResolveManeuver(start, cmd, ref_, path_cfg_, limits_, lane_width_,
-                                         planning_collision_obstacles, vehicle_shape_,
-                                         collision_cfg_, &stats);
+            // braking-memory 완화(fix/yuntae-frenet-speed-continuity Phase A):
+            // external KEEP/LANE_KEEPING에서만, 그리고 cmd.mode가 STOP-APPROACH의
+            // 위임(2230행)이 아니라 실제로 external_command->mode==LANE_KEEPING일
+            // 때만 적용한다 - STOP/FOLLOW/AVOID/MERGE의 경계조건 semantics는
+            // start.s_dd(raw/진단용, 위 1549행)를 그대로 유지해야 한다.
+            FrenetState maneuver_start = start;
+            const bool external_keep_candidates =
+                !use_legacy_behavior && external_command->mode == LANE_KEEPING;
+            if (external_keep_candidates) {
+                constexpr double kAccelIntentDeadband = 0.3;  // [m/s]
+                maneuver_start.s_dd = ResolveVelocityKeepingBoundaryAcceleration(
+                    start.s_dd, s_dot, resolved_target_speed, kAccelIntentDeadband);
+            }
+            candidates = ResolveManeuver(maneuver_start, cmd, ref_, path_cfg_, limits_,
+                                         lane_width_, planning_collision_obstacles,
+                                         vehicle_shape_, collision_cfg_, &stats);
             // 회전교차로 MERGE도 횡방향으로는 global path(d=0)를 추종한다.
             EvaluateCosts(candidates, cost_weights_, 0.0);
         }
