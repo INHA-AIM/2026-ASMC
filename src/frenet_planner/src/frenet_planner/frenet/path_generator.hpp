@@ -48,6 +48,9 @@ struct KinematicLimits {
     double max_lateral_accel;      // |d̈| 허용치 [m/s^2]
     double max_longitudinal_accel; // |s̈| 허용치 [m/s^2]
     double max_curvature;          // |kappa_x| 허용치 [1/m] (차량 최소 회전반경 역수)
+    // |s⃛| 허용치 [m/s^3]. 초기 safety limit이며 최종 MORAI tuning 값이 아니다
+    // (fix/yuntae-frenet-speed-continuity).
+    double max_longitudinal_jerk;
 };
 
 // =========================================================
@@ -63,6 +66,24 @@ struct KinematicLimits {
 
 std::vector<FrenetPath> GenerateLateralCandidates(const FrenetState& start,
                                                    const PathGeneratorConfig& cfg);
+
+// =========================================================
+// Lateral continuity candidate (fix/yuntae-frenet-speed-continuity Phase B)
+//
+// MORAI 실측: 중간 속도로 급커브에 근접할 때, 차선 중앙(d1=0) 복귀 후보들이
+// 전부 사후 곡률 필터(FilterByCurvature)에서 탈락하는 경우가 있었다(유효
+// 결합 후보는 있으나 곡률 필터 이후 0개). GenerateLateralCandidates는 이미
+// d1 목표를 cfg.lateral_d1 격자로 순회하므로, 여기서는 그 격자를 start.d
+// 하나로 좁힌 config로 같은 함수를 재사용해 "현재 횡오프셋을 유지"하는
+// candidate 집합만 만든다(로직 복제 없음).
+//
+// 이 candidate는 안전 대안이다 - 중앙 복귀가 곡률 한계 안에서 가능하면
+// EvaluateCosts의 기존 kd/kd_path 항이 여전히 d1=0 후보를 더 낮은 비용으로
+// 선호하므로 SelectBestPath가 그것을 그대로 선택한다. 중앙 복귀 후보가 전부
+// 곡률 필터에서 탈락했을 때만 이 candidate가 유일한 valid 후보로 남아
+// 선택된다.
+std::vector<FrenetPath> GenerateLateralContinuityCandidates(const FrenetState& start,
+                                                             const PathGeneratorConfig& cfg);
 
 // =========================================================
 // [Sec.V-A] Following — 선두 차량과의 constant-time-gap 추종
@@ -140,8 +161,14 @@ std::vector<FrenetPath> GenerateVelocityKeepingCandidates(const FrenetState& sta
 void FilterLateralByAcceleration(std::vector<FrenetPath>& candidates,
                                   const KinematicLimits& limits);
 
-void FilterLongitudinalByAcceleration(std::vector<FrenetPath>& candidates,
-                                       const KinematicLimits& limits);
+// [fix/yuntae-frenet-speed-continuity] 세 invariant를 모두 확인한다:
+//   |s̈| <= max_longitudinal_accel
+//   s_d >= 0 (forward-only invariant, numerical epsilon만 예외)
+//   |s⃛| <= max_longitudinal_jerk
+// 이름을 FilterLongitudinalByAcceleration에서 바꾼 이유는 책임 범위가
+// accel 단일 체크에서 kinematic validity 전체로 늘었기 때문이다.
+void FilterLongitudinalByKinematicLimits(std::vector<FrenetPath>& candidates,
+                                          const KinematicLimits& limits);
 
 // =========================================================
 // [Sec.VI 2단] Tlat × Tlon 조합

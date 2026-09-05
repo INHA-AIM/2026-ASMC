@@ -64,10 +64,12 @@ FrenetPath SampleLongitudinalQuintic(const QuinticPolynomial& poly, const std::v
     path.s.reserve(times.size());
     path.s_d.reserve(times.size());
     path.s_dd.reserve(times.size());
+    path.s_ddd.reserve(times.size());
     for (double t : times) {
         path.s.push_back(EvalPos(poly, t));
         path.s_d.push_back(EvalVel(poly, t));
         path.s_dd.push_back(EvalAcc(poly, t));
+        path.s_ddd.push_back(EvalJerk(poly, t));
     }
     return path;
 }
@@ -85,10 +87,12 @@ FrenetPath SampleLongitudinalQuartic(const QuarticPolynomial& poly, const std::v
     path.s.reserve(times.size());
     path.s_d.reserve(times.size());
     path.s_dd.reserve(times.size());
+    path.s_ddd.reserve(times.size());
     for (double t : times) {
         path.s.push_back(EvalPos(poly, t));
         path.s_d.push_back(EvalVel(poly, t));
         path.s_dd.push_back(EvalAcc(poly, t));
+        path.s_ddd.push_back(EvalJerk(poly, t));
     }
     return path;
 }
@@ -133,6 +137,15 @@ std::vector<FrenetPath> GenerateLateralCandidates(const FrenetState& start,
     }
 
     return result;
+}
+
+std::vector<FrenetPath> GenerateLateralContinuityCandidates(const FrenetState& start,
+                                                             const PathGeneratorConfig& cfg) {
+    PathGeneratorConfig continuity_cfg = cfg;
+    continuity_cfg.lateral_d1.min = start.d;
+    continuity_cfg.lateral_d1.max = start.d;
+    continuity_cfg.lateral_d1.step = 0.0;
+    return GenerateLateralCandidates(start, continuity_cfg);
 }
 
 // =========================================================
@@ -351,12 +364,30 @@ void FilterLateralByAcceleration(std::vector<FrenetPath>& candidates,
     }
 }
 
-void FilterLongitudinalByAcceleration(std::vector<FrenetPath>& candidates,
-                                       const KinematicLimits& limits) {
+void FilterLongitudinalByKinematicLimits(std::vector<FrenetPath>& candidates,
+                                          const KinematicLimits& limits) {
+    // 부동소수점 연산으로 발생하는 -0 수준의 오차를 실제 reverse로 오인하지
+    // 않기 위한 허용폭. 실제 reverse 판정에는 영향을 주지 않을 만큼 작다.
+    constexpr double kReverseVelocityEpsilon = 1e-6;
+
     for (auto& path : candidates) {
         if (!path.valid) continue;
         for (double sdd : path.s_dd) {
             if (std::abs(sdd) > limits.max_longitudinal_accel) {
+                path.valid = false;
+                break;
+            }
+        }
+        if (!path.valid) continue;
+        for (double sd : path.s_d) {
+            if (sd < -kReverseVelocityEpsilon) {
+                path.valid = false;
+                break;
+            }
+        }
+        if (!path.valid) continue;
+        for (double sddd : path.s_ddd) {
+            if (std::abs(sddd) > limits.max_longitudinal_jerk) {
                 path.valid = false;
                 break;
             }
@@ -391,6 +422,7 @@ std::vector<FrenetPath> CombineLateralLongitudinal(const std::vector<FrenetPath>
             combined.s     = lon.s;
             combined.s_d   = lon.s_d;
             combined.s_dd  = lon.s_dd;
+            combined.s_ddd = lon.s_ddd;
             combined.valid = true;
             combined.rejection_reason = RejectionReason::NONE;
             combined.cost_lat = combined.cost_lon = combined.cost_total = 0.0;
@@ -592,7 +624,7 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
             break;
     }
 
-    FilterLongitudinalByAcceleration(longitudinal_set, limits);
+    FilterLongitudinalByKinematicLimits(longitudinal_set, limits);
     if (stats) {
         stats->longitudinal_total = longitudinal_set.size();
         for (const auto& p : longitudinal_set) if (p.valid) stats->longitudinal_valid++;

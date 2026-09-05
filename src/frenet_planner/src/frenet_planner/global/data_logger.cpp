@@ -90,6 +90,8 @@ void LoadParams(const std::string& yaml_path,
                 PlannerVisualizationConfig& visualization_cfg,
                  double& wheelbase,
                  double& lane_width,
+                 double& replanning_period_s,
+                 double& max_target_speed_accel,
                  std::string& waypoint_file) {
     YAML::Node root;
     try {
@@ -118,6 +120,7 @@ void LoadParams(const std::string& yaml_path,
     loadInto(root, "planner/kinematic_limits/max_lateral_accel",      limits.max_lateral_accel);
     loadInto(root, "planner/kinematic_limits/max_longitudinal_accel", limits.max_longitudinal_accel);
     loadInto(root, "planner/kinematic_limits/max_curvature",          limits.max_curvature);
+    loadInto(root, "planner/kinematic_limits/max_longitudinal_jerk",  limits.max_longitudinal_jerk);
 
     loadInto(root, "planner/cost_weights/kj",     cost_weights.kj);
     loadInto(root, "planner/cost_weights/kt",     cost_weights.kt);
@@ -231,5 +234,7 @@ void LoadParams(const std::string& yaml_path,
 
     loadInto(root, "planner/wheelbase",   wheelbase);
     loadInto(root, "planner/lane_width",  lane_width);
+    loadInto(root, "planner/replanning_period_s",    replanning_period_s);
+    loadInto(root, "planner/max_target_speed_accel", max_target_speed_accel);
     loadInto(root, "waypoint_file",       waypoint_file);
 }

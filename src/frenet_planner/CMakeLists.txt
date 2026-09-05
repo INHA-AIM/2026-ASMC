@@ -42,6 +42,7 @@ add_library(frenet_planner_core
   src/frenet_planner/visualization/planner_debug_writer.cpp
   src/frenet_planner/frenet/ref_line.cpp
   src/frenet_planner/frenet/path_generator.cpp
+  src/frenet_planner/frenet/curve_speed.cpp
   src/frenet_planner/frenet/cost.cpp
   src/frenet_planner/frenet/collision_checker.cpp
   src/frenet_planner/frenet/leader_selector.cpp
@@ -355,6 +356,81 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME command_execution_manager_test
            COMMAND command_execution_manager_test)
+
+  # fix/yuntae-frenet-speed-continuity: longitudinal candidate validity 회귀.
+  # negative s_d(reverse) candidate와 excessive jerk candidate가 accel-only
+  # 필터를 통과해 valid로 남는지(수정 전) / 걸러지는지(수정 후) 확인한다.
+  add_executable(longitudinal_kinematics_test
+    tests/longitudinal_kinematics_test.cpp
+  )
+  target_link_libraries(longitudinal_kinematics_test
+    frenet_planner_core
+  )
+  add_test(NAME longitudinal_kinematics_test COMMAND longitudinal_kinematics_test)
+
+  # fix/yuntae-frenet-speed-continuity Phase 1: distance-aware curve speed
+  # envelope 회귀. 실제 LookaheadTargetSpeed/VelocityFromCurvature
+  # (frenet/curve_speed.hpp)를 손으로 구성한 RefLine으로 직접 호출한다.
+  add_executable(curve_speed_envelope_test
+    tests/curve_speed_envelope_test.cpp
+  )
+  target_link_libraries(curve_speed_envelope_test
+    frenet_planner_core
+  )
+  add_test(NAME curve_speed_envelope_test COMMAND curve_speed_envelope_test)
+
+  # fix/yuntae-frenet-speed-continuity Phase 2: target speed recovery rate
+  # limit 회귀. 실제 ApplyTargetSpeedRateLimit(frenet/curve_speed.hpp)를
+  # 직접 호출한다.
+  add_executable(target_speed_rate_limit_test
+    tests/target_speed_rate_limit_test.cpp
+  )
+  target_link_libraries(target_speed_rate_limit_test
+    frenet_planner_core
+  )
+  add_test(NAME target_speed_rate_limit_test COMMAND target_speed_rate_limit_test)
+
+  # fix/yuntae-frenet-speed-continuity Phase 5: low-speed KEEP candidate
+  # starvation handoff 회귀.
+  add_executable(low_speed_keep_handoff_test
+    tests/low_speed_keep_handoff_test.cpp
+  )
+  target_compile_definitions(low_speed_keep_handoff_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(low_speed_keep_handoff_test
+    frenet_planner_core
+  )
+  add_test(NAME low_speed_keep_handoff_test COMMAND low_speed_keep_handoff_test)
+
+  # fix/yuntae-frenet-speed-continuity Phase A: KEEP replanning
+  # braking-memory 회귀.
+  add_executable(braking_memory_test
+    tests/braking_memory_test.cpp
+  )
+  target_compile_definitions(braking_memory_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(braking_memory_test
+    frenet_planner_core
+  )
+  add_test(NAME braking_memory_test COMMAND braking_memory_test)
+
+  # fix/yuntae-frenet-speed-continuity Phase B: moderate-speed KEEP
+  # curvature starvation 회귀.
+  add_executable(curvature_continuity_test
+    tests/curvature_continuity_test.cpp
+  )
+  target_compile_definitions(curvature_continuity_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(curvature_continuity_test
+    frenet_planner_core
+  )
+  add_test(NAME curvature_continuity_test COMMAND curvature_continuity_test)
 
   # D1-3: legacy(간이 FSM) 행동 결정의 회귀 커버리지. D5/D6/D8에서 모드별로
   # legacy 조각을 제거할 때 검증된 회전교차로/고속도로 주행이 깨지지 않았는지

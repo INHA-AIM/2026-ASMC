@@ -8,6 +8,7 @@
 
 #include "global/utils.hpp"
 #include "frenet_planner/obstacle/legacy_object_adapter.hpp"
+#include "frenet_planner/frenet/curve_speed.hpp"
 
 namespace {
 
@@ -32,47 +33,6 @@ int FindHighwayMergeZone(const HighwayMergeConfig& cfg, double s) {
             return static_cast<int>(i);
     }
     return -1;
-}
-
-// 횡가속도 한계에서 곡률별 연속 목표속도를 계산한다.
-double VelocityFromCurvature(double k, const CurveSpeedConfig& cfg, double max_lateral_accel) {
-    constexpr double kSafetyMargin = 0.8;         // 한계의 80%만 사용 (여유폭 확보)
-    constexpr double kMinKappaForCalc = 1e-4;      // 0 나누기 방지 (거의 직선)
-    const double v_curve = std::sqrt(max_lateral_accel * kSafetyMargin / std::max(k, kMinKappaForCalc));
-    return clip(v_curve, 0.0, cfg.target_vel);
-}
-
-// 현재 속도의 제동거리와 기본 lookahead 중 큰 범위의 최대 곡률을 사용한다.
-double LookaheadTargetSpeed(const RefLine& ref, double s_start, double ego_speed,
-                             const CurveSpeedConfig& cfg, double max_longitudinal_accel,
-                             double max_lateral_accel, double max_curvature) {
-    constexpr double kComfortableDecelFactor = 0.5;  // 실제 평균 감속도는 max의 절반 정도로 가정
-    constexpr double kReactionMargin = 5.0;          // [m] 추가 여유거리
-    const double usable_decel = std::max(0.5, max_longitudinal_accel * kComfortableDecelFactor);
-    const double v_floor = VelocityFromCurvature(max_curvature, cfg, max_lateral_accel);
-    const double speed_drop = std::max(0.0, ego_speed * ego_speed - v_floor * v_floor);
-    const double required_dist = speed_drop / (2.0 * usable_decel);
-    const double lookahead_m = std::max(cfg.curve_lookahead_m, required_dist + kReactionMargin);
-
-    // 폐루프 wrap-around: s_start+lookahead_m이 s_max를 넘으면(피니시라인
-    // 근처) 원래 코드는 뒤가 안 나와 break만 되고 이음새 너머(실제로는 바로
-    // 이어지는 트랙 시작 구간)의 곡률을 놓쳤다 - 그 구간에 급커브가 있으면
-    // 감속 없이 그대로 진입하게 된다. s_max로 감아서 [s_start, s_max]와
-    // [0, 넘친 만큼] 두 구간을 모두 본다.
-    const double s_max = ref.points.back().s;
-    double s_start_w = std::fmod(s_start, s_max);
-    if (s_start_w < 0.0) s_start_w += s_max;
-    const double s_end_w = s_start_w + lookahead_m;
-    const double wrapped_end = s_end_w - s_max;  // s_end_w > s_max일 때만 유효
-
-    double max_k = 0.0;
-    for (const auto& p : ref.points) {
-        const bool in_range = (s_end_w <= s_max)
-            ? (p.s >= s_start_w && p.s <= s_end_w)
-            : (p.s >= s_start_w || p.s <= wrapped_end);
-        if (in_range) max_k = std::max(max_k, std::fabs(p.kappa));
-    }
-    return VelocityFromCurvature(max_k, cfg, max_lateral_accel);
 }
 
 const char* ModeName(BehaviorState mode) {
@@ -223,7 +183,8 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
     LoadParams(yaml_path, path_cfg_, limits_, cost_weights_, vehicle_shape_,
                collision_cfg_, curve_speed_cfg_, following_cfg_, avoid_cfg_,
                stop_cfg_, merge_cfg_, highway_merge_cfg_, visualization_cfg_,
-               wheelbase_, lane_width_, waypoint_file);
+               wheelbase_, lane_width_, replanning_period_s_,
+               max_target_speed_accel_, waypoint_file);
 
     if (!waypoint_file.empty() && waypoint_file.front() != '/') {
         waypoint_file = std::string(FRENET_PACKAGE_SRC_DIR) + "/" + waypoint_file;
@@ -1226,6 +1187,13 @@ bool FrenetPlanner::PlanInternal(
         resolved_target_speed = std::min(resolved_target_speed,
                                          external_command->max_speed);
     }
+
+    // Cycle-to-cycle target speed recovery continuity
+    // (fix/yuntae-frenet-speed-continuity Phase 2).
+    resolved_target_speed = ApplyTargetSpeedRateLimit(
+        resolved_target_speed, last_target_speed_, has_target_speed_history_,
+        max_target_speed_accel_, replanning_period_s_);
+    has_target_speed_history_ = true;
 
     // 저속(정지 근처)에서는 quintic 후보/곡률필터 파이프라인 전체를 건너뛰고
     // fallback으로 직접 경로를 만든다 (클래스 헤더 주석 참고 - 나누기 없는 안전한
@@ -2430,9 +2398,58 @@ bool FrenetPlanner::PlanInternal(
         if (cmd.mode == AVOID) {
             candidates = generate_adaptive_avoid(cmd, cmd.avoidance_d_offset, stats);
         } else {
-            candidates = ResolveManeuver(start, cmd, ref_, path_cfg_, limits_, lane_width_,
-                                         planning_collision_obstacles, vehicle_shape_,
-                                         collision_cfg_, &stats);
+            // braking-memory 완화(fix/yuntae-frenet-speed-continuity Phase A):
+            // external KEEP/LANE_KEEPING에서만, 그리고 cmd.mode가 STOP-APPROACH의
+            // 위임(2230행)이 아니라 실제로 external_command->mode==LANE_KEEPING일
+            // 때만 적용한다 - STOP/FOLLOW/AVOID/MERGE의 경계조건 semantics는
+            // start.s_dd(raw/진단용, 위 1549행)를 그대로 유지해야 한다.
+            FrenetState maneuver_start = start;
+            const bool external_keep_candidates =
+                !use_legacy_behavior && external_command->mode == LANE_KEEPING;
+            if (external_keep_candidates) {
+                constexpr double kAccelIntentDeadband = 0.3;  // [m/s]
+                maneuver_start.s_dd = ResolveVelocityKeepingBoundaryAcceleration(
+                    start.s_dd, s_dot, resolved_target_speed, kAccelIntentDeadband);
+            }
+            candidates = ResolveManeuver(maneuver_start, cmd, ref_, path_cfg_, limits_,
+                                         lane_width_, planning_collision_obstacles,
+                                         vehicle_shape_, collision_cfg_, &stats);
+
+            // moderate-speed curvature starvation 완화(Phase B): 실측
+            // MORAI에서 급커브 근접 중 유효한 결합 후보가 있는데도 전부
+            // 중앙(d1=0) 복귀였던 탓에 사후 곡률 필터에서 통째로 탈락하는
+            // 사례가 있었다(예: combined=78, after_curvature=0). external
+            // KEEP에만, 현재 d가 차선 폭 안일 때만, 현재 오프셋을 유지하는
+            // continuity candidate를 추가한다 - d=0 강제 클램프가 아니라
+            // 대안 후보 하나를 더 얹는 것뿐이며, 아래 EvaluateCosts가 여전히
+            // target_d=0을 기준으로 비용을 매기므로 중앙 복귀 후보가 곡률을
+            // 통과하면 그쪽이 그대로 선택된다(kd/kd_path 항이 더 낮은 비용을
+            // 준다). 중앙 복귀가 전부 곡률에서 탈락했을 때만 이 candidate가
+            // 유일하게 남아 선택된다.
+            if (external_keep_candidates &&
+                std::fabs(maneuver_start.d) <= lane_width_ * 0.5) {
+                std::vector<FrenetPath> continuity_lateral =
+                    GenerateLateralContinuityCandidates(maneuver_start, path_cfg_);
+                FilterLateralByAcceleration(continuity_lateral, limits_);
+
+                std::vector<FrenetPath> longitudinal_for_continuity =
+                    GenerateVelocityKeepingCandidates(maneuver_start, cmd.target_speed,
+                                                      path_cfg_);
+                FilterLongitudinalByKinematicLimits(longitudinal_for_continuity, limits_);
+
+                std::vector<FrenetPath> continuity_combined = CombineLateralLongitudinal(
+                    continuity_lateral, longitudinal_for_continuity);
+                FilterByCurvature(continuity_combined, ref_, limits_);
+                if (!planning_collision_obstacles.empty()) {
+                    FilterByCollision(continuity_combined, ref_,
+                                      planning_collision_obstacles, vehicle_shape_,
+                                      collision_cfg_, /*coast_exempt_id=*/-1);
+                }
+                candidates.insert(candidates.end(),
+                                  std::make_move_iterator(continuity_combined.begin()),
+                                  std::make_move_iterator(continuity_combined.end()));
+            }
+
             // 회전교차로 MERGE도 횡방향으로는 global path(d=0)를 추종한다.
             EvaluateCosts(candidates, cost_weights_, 0.0);
         }
@@ -2643,6 +2660,35 @@ bool FrenetPlanner::PlanInternal(
                         s, v0, stop_distance);
             last_failure_reason_ = PlanFailureReason::NONE;
             return true;
+        }
+
+        // 외부 KEEP의 low-speed boundary candidate starvation
+        // (fix/yuntae-frenet-speed-continuity Phase 5). kLowSpeedFallbackV
+        // (0.5 m/s) 문턱을 살짝 넘은 직후, 강한 감속 중이던 s_ddot 경계조건이
+        // 그대로 남아 있으면(예: ego.v=0.6, s_ddot=-2.4) 정상 velocity
+        // keeping 후보가 전부 accel/jerk 한계를 넘어 탈락할 수 있다(실측
+        // 재현: longitudinal 0/40 valid). 이 경계에서만, 그리고 실제로 후보가
+        // 전부 탈락했을 때만(=이 분기), 이미 검증된 저속 fallback 경로로
+        // 안전하게 이어간다. 정상 후보가 하나라도 있으면 이 분기 자체에
+        // 도달하지 않으므로 정상 pipeline을 절대 우회하지 않는다.
+        //
+        // STOP/FOLLOW/AVOID/MERGE는 각자 별도 정책(위 STOP fail-safe,
+        // GenerateFollowingCandidates의 정지-리더 목표, AVOID/MERGE의 전용
+        // 저속 처리)이 있으므로 여기서는 건드리지 않는다 - 순수 외부 KEEP만
+        // 대상이다.
+        constexpr double kNearLowSpeedFallbackV = 1.5;  // [m/s] kLowSpeedFallbackV보다 넉넉히 위
+        const bool external_keep = !use_legacy_behavior && cmd.mode == LANE_KEEPING;
+        if (external_keep &&
+            std::fabs(ego.v) < kNearLowSpeedFallbackV &&
+            last_failure_reason_ != PlanFailureReason::COLLISION_BLOCKED) {
+            const bool fallback_ok = PlanLowSpeedFallback(
+                ego, s, d, /*target_d=*/0.0, out_path, /*duration_s=*/2.0,
+                resolved_target_speed);
+            std::printf("[FrenetPlanner-KEEP] near-low-speed fail-safe: no "
+                        "candidate (v=%.2f), emitting crawl fallback path\n",
+                        ego.v);
+            last_failure_reason_ = PlanFailureReason::NONE;
+            return fallback_ok;
         }
         return false;
     }

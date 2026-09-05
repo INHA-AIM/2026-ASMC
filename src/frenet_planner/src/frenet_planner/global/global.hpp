@@ -250,6 +250,7 @@ struct FrenetPath {
     std::vector<double> s;
     std::vector<double> s_d;
     std::vector<double> s_dd;
+    std::vector<double> s_ddd;  // Jerk (EvalJerk 결과, finite difference 아님)
 
     // Cost (우선 논문 기반 식으로 작성, C_tot = k_lat * C_lat + k_lon * C_lon)
     double cost_lat;

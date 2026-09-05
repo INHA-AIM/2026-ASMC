@@ -7,6 +7,15 @@ planner:
   wheelbase: 3.0    # [m] mpc_controller/src/config/mpc_params.yaml과 동일 값 유지
   lane_width: 3.5   # [m] LANE_CHANGE 오프셋, FindLeader의 "내 차선" 판정(|d|<=lane_width/2)에 사용
 
+  # [s] frenet_planner_node의 planning/frequency 기본값(20Hz)과 동일하게
+  # 유지한다. target speed recovery rate limiter(Phase 2)가 사용하는
+  # replanning 주기이며, path_generator/dt(trajectory 샘플 간격, 아래)와는
+  # 다른 값이다 - 절대 섞어 쓰지 않는다 (fix/yuntae-frenet-speed-continuity).
+  replanning_period_s: 0.05
+  # [m/s^2] target speed가 이전 cycle보다 증가하는 방향에만 적용하는 초기
+  # safety rate limit. 최종 MORAI tuning 값이 아니다.
+  max_target_speed_accel: 2.0
+
   # --- 곡률 기반 사전 감속 (mpc_controller 옛 path_planner.cpp에서 이식) ---
   curve_speed:
     target_vel: 10.0
@@ -127,6 +136,12 @@ planner:
     max_lateral_accel: 3.0
     max_longitudinal_accel: 3.0
     max_curvature: 0.1704
+    # [m/s^3] longitudinal jerk hard limit. initial safety limit; final value
+    # requires MORAI validation (fix/yuntae-frenet-speed-continuity).
+    # 5.0 -> 6.0: 정상 FOLLOW(큰 time_gap/min_gap) 경계 후보의 실측 peak
+    # jerk가 5.28로 5.0을 근소하게 초과해 candidate starvation을 유발했다.
+    # excessive jerk reproducer(약 10.67)는 6.0에서도 계속 reject된다.
+    max_longitudinal_jerk: 6.0
 
   # --- CostWeights (cost.hpp) ---------------------------------
   cost_weights:

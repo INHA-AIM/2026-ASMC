@@ -175,4 +175,6 @@ void LoadParams(const std::string& yaml_path,
                 PlannerVisualizationConfig& visualization_cfg,
                 double& wheelbase,
                 double& lane_width,
+                double& replanning_period_s,
+                double& max_target_speed_accel,
                 std::string& waypoint_file);
