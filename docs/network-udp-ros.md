@@ -286,6 +286,66 @@ Host mode에서도 MORAI Sensor Setting과 브릿지의 포트 번호는 그대�
 Host mode 전환 전후 모두 실제 합격 판정은 포트 표시가 아니라 ROS 토픽 Hz와 브릿지
 수신 카운터로 한다.
 
+#### Host mode A/B 시험 도구
+
+기본 `docker-compose.yaml`은 수정하지 않고 전용 override를 겹쳐 사용한다. 따라서 시험이
+실패해도 MORAI 설정을 바꾸거나 Git에서 파일을 되돌릴 필요가 없다.
+
+```bash
+# 1) 합성된 Compose가 host mode이며 ports가 제거됐는지 확인
+./scripts/docker_ros_host_test.sh config
+
+# 2) ROS 컨테이너만 host mode로 재생성
+./scripts/docker_ros_host_test.sh up
+
+# 3) Windows <-> host-network 컨테이너 양방향 임시 UDP 검사
+./scripts/docker_ros_host_test.sh loopback
+
+# 4) 별도 foreground 터미널에서 브리지 실행
+docker exec -it asmc-ros-noetic bash
+source devel/setup.bash
+MORAI_CMD_IP=127.0.0.1 ./scripts/udp_bridge.sh
+
+# 5) 다른 WSL 터미널에서 필수 MORAI 토픽 8초 검사
+./scripts/docker_ros_host_test.sh verify 8
+```
+
+핵심 복구 시험은 브리지를 `Ctrl-C`로 종료하고 MORAI가 계속 송신하는 상태로 40초 이상
+기다린 뒤 같은 foreground 명령으로 브리지만 다시 실행하는 것이다. 컨테이너나 Docker
+Desktop을 재시작하지 않고 `verify`에서 `/velodyne_points`가 즉시 `OK`가 되어야 한다.
+
+시험 실패 시 기존 bridge network와 `ports:` 구성으로 복구한다.
+
+```bash
+./scripts/docker_ros_host_test.sh restore
+```
+
+시험 도구는 MORAI Host/Destination IP나 Camera/LiDAR/GPS/IMU 포트를 변경하지 않는다.
+`probe_host_udp.py`는 실제 센서 포트와 겹치지 않는 기본 `39199/udp`, `39200/udp`만
+잠깐 사용한다.
+
+#### 2026-09-05 host mode 1차 실측
+
+26.R1.H3 MORAI가 실행 중인 상태에서 시뮬레이터 네트워크·센서 설정을 변경하지 않고
+시험했다.
+
+| 항목 | 결과 |
+|---|---|
+| 합성 Compose 설정 | `network_mode: host`, published port 없음 |
+| Windows → 컨테이너 UDP (`39199`) | 통과 |
+| 컨테이너 → Windows UDP (`39200`) | 통과 |
+| Ego·카메라 4대·LiDAR·GPS·IMU | 모두 수신 |
+| LiDAR 수신률 | 최초 약 8.23 Hz, 브릿지 재시작 후 약 8.27 Hz |
+| 브릿지 42초 중단 후 재실행 | Docker Desktop/컨테이너 재시작 없이 즉시 복구 |
+
+이 실측으로 host mode가 목표로 한 **브릿지 재시작 뒤 LiDAR `9299/udp` 수신 단절 회피**는
+확인했다. 실제 차량 제어 UDP와 Capture Mode gRPC는 안전한 운용 조건 및 Capture Mode가
+준비됐을 때 별도로 확인한 뒤 기본 구성 승격 여부를 결정한다.
+
+시험 중 `udp_bridge.sh`가 전달한 `cmd_ip`가 통합 launch에서 누락되는 문제도 발견해
+수정했다. 기본 bridge mode의 `host.docker.internal` 동작은 유지하고, host mode에서는
+`MORAI_CMD_IP=127.0.0.1`이 실제 송신 노드까지 전달된다.
+
 ---
 
 ## 7. FAQ (요약)

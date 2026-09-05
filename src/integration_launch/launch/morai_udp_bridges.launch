@@ -9,7 +9,12 @@
 -->
 <launch>
   <arg name="enable_semantic_camera" default="false"/>
-  <include file="$(find morai_udp_bridge)/launch/morai_udp_bridge.launch" />
+  <arg name="cmd_ip" default="$(optenv MORAI_CMD_IP host.docker.internal)"/>
+  <arg name="cmd_port" default="9111"/>
+  <include file="$(find morai_udp_bridge)/launch/morai_udp_bridge.launch">
+    <arg name="cmd_ip" value="$(arg cmd_ip)"/>
+    <arg name="cmd_port" value="$(arg cmd_port)"/>
+  </include>
   <include file="$(find morai_sensor_bridge)/launch/morai_sensor_bridge.launch">
     <arg name="enable_semantic_camera" value="$(arg enable_semantic_camera)"/>
   </include>
