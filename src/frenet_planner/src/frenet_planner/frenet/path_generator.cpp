@@ -139,6 +139,15 @@ std::vector<FrenetPath> GenerateLateralCandidates(const FrenetState& start,
     return result;
 }
 
+std::vector<FrenetPath> GenerateLateralContinuityCandidates(const FrenetState& start,
+                                                             const PathGeneratorConfig& cfg) {
+    PathGeneratorConfig continuity_cfg = cfg;
+    continuity_cfg.lateral_d1.min = start.d;
+    continuity_cfg.lateral_d1.max = start.d;
+    continuity_cfg.lateral_d1.step = 0.0;
+    return GenerateLateralCandidates(start, continuity_cfg);
+}
+
 // =========================================================
 // [Sec.V-A] Following
 // =========================================================

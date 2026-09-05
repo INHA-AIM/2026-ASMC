@@ -2414,6 +2414,42 @@ bool FrenetPlanner::PlanInternal(
             candidates = ResolveManeuver(maneuver_start, cmd, ref_, path_cfg_, limits_,
                                          lane_width_, planning_collision_obstacles,
                                          vehicle_shape_, collision_cfg_, &stats);
+
+            // moderate-speed curvature starvation 완화(Phase B): 실측
+            // MORAI에서 급커브 근접 중 유효한 결합 후보가 있는데도 전부
+            // 중앙(d1=0) 복귀였던 탓에 사후 곡률 필터에서 통째로 탈락하는
+            // 사례가 있었다(예: combined=78, after_curvature=0). external
+            // KEEP에만, 현재 d가 차선 폭 안일 때만, 현재 오프셋을 유지하는
+            // continuity candidate를 추가한다 - d=0 강제 클램프가 아니라
+            // 대안 후보 하나를 더 얹는 것뿐이며, 아래 EvaluateCosts가 여전히
+            // target_d=0을 기준으로 비용을 매기므로 중앙 복귀 후보가 곡률을
+            // 통과하면 그쪽이 그대로 선택된다(kd/kd_path 항이 더 낮은 비용을
+            // 준다). 중앙 복귀가 전부 곡률에서 탈락했을 때만 이 candidate가
+            // 유일하게 남아 선택된다.
+            if (external_keep_candidates &&
+                std::fabs(maneuver_start.d) <= lane_width_ * 0.5) {
+                std::vector<FrenetPath> continuity_lateral =
+                    GenerateLateralContinuityCandidates(maneuver_start, path_cfg_);
+                FilterLateralByAcceleration(continuity_lateral, limits_);
+
+                std::vector<FrenetPath> longitudinal_for_continuity =
+                    GenerateVelocityKeepingCandidates(maneuver_start, cmd.target_speed,
+                                                      path_cfg_);
+                FilterLongitudinalByKinematicLimits(longitudinal_for_continuity, limits_);
+
+                std::vector<FrenetPath> continuity_combined = CombineLateralLongitudinal(
+                    continuity_lateral, longitudinal_for_continuity);
+                FilterByCurvature(continuity_combined, ref_, limits_);
+                if (!planning_collision_obstacles.empty()) {
+                    FilterByCollision(continuity_combined, ref_,
+                                      planning_collision_obstacles, vehicle_shape_,
+                                      collision_cfg_, /*coast_exempt_id=*/-1);
+                }
+                candidates.insert(candidates.end(),
+                                  std::make_move_iterator(continuity_combined.begin()),
+                                  std::make_move_iterator(continuity_combined.end()));
+            }
+
             // 회전교차로 MERGE도 횡방향으로는 global path(d=0)를 추종한다.
             EvaluateCosts(candidates, cost_weights_, 0.0);
         }
