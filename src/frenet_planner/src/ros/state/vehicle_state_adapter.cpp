@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "udp_network/gps_transform.hpp"
+#include "ros/steady_freshness.hpp"
 
 namespace frenet_planner_ros {
 namespace {
@@ -11,22 +12,6 @@ namespace {
 constexpr double kDegreesToRadians = M_PI / 180.0;
 bool IsFinite(double value) { return std::isfinite(value); }
 bool ValidStamp(const ros::Time& stamp) { return !stamp.isZero(); }
-
-// 시계가 뒤로 점프했다고 볼 수 있는 미래 stamp의 한계 [s]. 이보다 더 미래면
-// 시계 점프로 설명되지 않는 잘못된 stamp로 보고 거부한다.
-constexpr double kMaxClockJumpSeconds = 5.0;
-
-bool Fresh(const ros::Time& now, const ros::Time& stamp, double timeout_s) {
-    if (!ValidStamp(stamp)) return false;
-    if (now < stamp) {
-        // stamp가 미래인 경우. 센서가 앞서간 게 아니라 시계가 뒤로 점프한
-        // 것이므로(실측: WSL2/Docker 환경에서 약 28초 주기로 -1.2초 점프)
-        // 데이터를 stale로 버리지 않는다. 버리면 VehicleState가 invalid로
-        // 나가고 Frenet/MPC가 매번 급정지한다.
-        return (stamp - now).toSec() <= kMaxClockJumpSeconds;
-    }
-    return (now - stamp).toSec() <= timeout_s;
-}
 
 bool ValidGps(const morai_msgs::GPSMessage& gps) {
     return gps.status > 0 && ValidStamp(gps.header.stamp) &&
@@ -52,13 +37,20 @@ ros::Time Older(const ros::Time& lhs, const ros::Time& rhs) {
 
 GpsImuStateEstimator::GpsImuStateEstimator(const StateAdapterConfig& config)
     : config_(config) {
-    config_.speed_filter_alpha =
-        std::clamp(config_.speed_filter_alpha, 0.0, 1.0);
+    config_.gps_correction_gain =
+        std::clamp(config_.gps_correction_gain, 0.0, 1.0);
+    config_.imu_acceleration_filter_alpha =
+        std::clamp(config_.imu_acceleration_filter_alpha, 0.0, 1.0);
+    config_.speed_window_duration_s =
+        std::max(config_.speed_window_duration_s,
+                 config_.minimum_speed_baseline_s);
 }
 
-void GpsImuStateEstimator::updateGps(const morai_msgs::GPSMessage& gps) {
+void GpsImuStateEstimator::updateGps(
+    const morai_msgs::GPSMessage& gps, const ros::SteadyTime& received_at) {
     gps_ = gps;
     has_gps_ = true;
+    gps_received_at_ = received_at;
     if (!ValidGps(gps)) return;
 
     double easting = 0.0;
@@ -67,34 +59,119 @@ void GpsImuStateEstimator::updateGps(const morai_msgs::GPSMessage& gps) {
     const double x = easting - gps.eastOffset;
     const double y = northing - gps.northOffset;
 
-    if (has_previous_fix_ && gps.header.stamp > previous_gps_stamp_) {
-        const double dt = (gps.header.stamp - previous_gps_stamp_).toSec();
-        if (dt >= config_.minimum_speed_dt_s && dt <= config_.maximum_speed_dt_s) {
-            const double measured_speed =
-                std::hypot(x - previous_x_, y - previous_y_) / dt;
-            if (IsFinite(measured_speed) &&
-                measured_speed <= config_.maximum_speed_mps) {
-                speed_mps_ = has_speed_
-                    ? config_.speed_filter_alpha * measured_speed +
-                          (1.0 - config_.speed_filter_alpha) * speed_mps_
-                    : measured_speed;
-                has_speed_ = true;
-            }
-        }
+    if (!position_window_.empty() &&
+        received_at <= position_window_.back().received_at) {
+        position_window_.clear();
+        has_stationary_anchor_ = false;
     }
-    previous_x_ = x;
-    previous_y_ = y;
-    previous_gps_stamp_ = gps.header.stamp;
-    has_previous_fix_ = true;
+    position_window_.push_back({x, y, received_at});
+    while (position_window_.size() > 2 &&
+           (received_at - position_window_.front().received_at).toSec() >
+               config_.speed_window_duration_s &&
+           (received_at - position_window_[1].received_at).toSec() >=
+               config_.minimum_speed_baseline_s) {
+        position_window_.pop_front();
+    }
+
+    if (!has_stationary_anchor_) {
+        stationary_anchor_ = {x, y, received_at};
+        has_stationary_anchor_ = true;
+    } else if (std::hypot(x - stationary_anchor_.x,
+                          y - stationary_anchor_.y) >=
+               config_.stationary_distance_m) {
+        stationary_anchor_ = {x, y, received_at};
+    }
+
+    const bool stationary =
+        has_stationary_anchor_ &&
+        (received_at - stationary_anchor_.received_at).toSec() >=
+            config_.stationary_duration_s &&
+        std::hypot(x - stationary_anchor_.x, y - stationary_anchor_.y) <
+            config_.stationary_distance_m;
+
+    const PositionSample& oldest = position_window_.front();
+    const double dt = (received_at - oldest.received_at).toSec();
+    if (dt < config_.minimum_speed_baseline_s) return;
+
+    const double dx = x - oldest.x;
+    const double dy = y - oldest.y;
+    double distance = std::hypot(dx, dy);
+    if (has_imu_ && ValidImu(imu_)) {
+        const auto& q = imu_.orientation;
+        const double norm = std::sqrt(q.w * q.w + q.x * q.x +
+                                      q.y * q.y + q.z * q.z);
+        const double yaw = QuaternionToYaw(
+            q.w / norm, q.x / norm, q.y / norm, q.z / norm);
+        distance = std::max(0.0, dx * std::cos(yaw) + dy * std::sin(yaw));
+    }
+    double gps_speed = distance / dt;
+    if (!IsFinite(gps_speed) || gps_speed > config_.maximum_speed_mps) return;
+
+    // Position differencing estimates the average velocity over the baseline.
+    // Advance it from the baseline midpoint to this GPS receive time using the
+    // latest filtered longitudinal acceleration.
+    if (has_filtered_acceleration_) {
+        gps_speed += filtered_acceleration_mps2_ * 0.5 * dt;
+    }
+    gps_speed = std::clamp(gps_speed, 0.0, config_.maximum_speed_mps);
+
+    if (!has_speed_) {
+        speed_mps_ = gps_speed;
+    } else {
+        const double innovation = gps_speed - speed_mps_;
+        const double limited_innovation = std::clamp(
+            innovation, -config_.gps_innovation_limit_mps,
+            config_.gps_innovation_limit_mps);
+        speed_mps_ += config_.gps_correction_gain * limited_innovation;
+    }
+
+    if (stationary &&
+        speed_mps_ <= config_.stationary_speed_threshold_mps &&
+        std::abs(filtered_acceleration_mps2_) <=
+            config_.stationary_acceleration_threshold_mps2) {
+        speed_mps_ = 0.0;
+    }
+    speed_mps_ = std::clamp(
+        speed_mps_, 0.0, config_.maximum_speed_mps);
+    has_speed_ = true;
 }
 
-void GpsImuStateEstimator::updateImu(const sensor_msgs::Imu& imu) {
+void GpsImuStateEstimator::updateImu(
+    const sensor_msgs::Imu& imu, const ros::SteadyTime& received_at) {
     imu_ = imu;
     has_imu_ = true;
+    imu_received_at_ = received_at;
+    if (!ValidImu(imu)) {
+        previous_imu_received_at_ = received_at;
+        return;
+    }
+
+    double acceleration = std::clamp(
+        imu.linear_acceleration.x, config_.imu_acceleration_min_mps2,
+        config_.imu_acceleration_max_mps2);
+    if (std::abs(acceleration) < config_.imu_acceleration_deadband_mps2) {
+        acceleration = 0.0;
+    }
+    filtered_acceleration_mps2_ = has_filtered_acceleration_
+        ? config_.imu_acceleration_filter_alpha * acceleration +
+              (1.0 - config_.imu_acceleration_filter_alpha) *
+                  filtered_acceleration_mps2_
+        : acceleration;
+    has_filtered_acceleration_ = true;
+
+    if (has_speed_ && !previous_imu_received_at_.isZero()) {
+        const double dt = (received_at - previous_imu_received_at_).toSec();
+        if (dt > 0.0 && dt <= config_.imu_maximum_dt_s) {
+            speed_mps_ = std::clamp(
+                speed_mps_ + filtered_acceleration_mps2_ * dt,
+                0.0, config_.maximum_speed_mps);
+        }
+    }
+    previous_imu_received_at_ = received_at;
 }
 
 asmc_msgs::VehicleState GpsImuStateEstimator::makeState(
-    const ros::Time& now) const {
+    const ros::SteadyTime& now) const {
     asmc_msgs::VehicleState state;
     state.header.frame_id = "map";
     state.source = asmc_msgs::VehicleState::SOURCE_GPS_IMU;
@@ -102,8 +179,8 @@ asmc_msgs::VehicleState GpsImuStateEstimator::makeState(
 
     state.header.stamp = Older(gps_.header.stamp, imu_.header.stamp);
     if (!ValidGps(gps_) || !ValidImu(imu_) || !has_speed_ ||
-        !Fresh(now, gps_.header.stamp, config_.gps_timeout_s) ||
-        !Fresh(now, imu_.header.stamp, config_.imu_timeout_s)) {
+        !IsSteadyFresh(gps_received_at_, now, config_.gps_timeout_s) ||
+        !IsSteadyFresh(imu_received_at_, now, config_.imu_timeout_s)) {
         return state;
     }
 
@@ -118,7 +195,7 @@ asmc_msgs::VehicleState GpsImuStateEstimator::makeState(
     state.yaw =
         QuaternionToYaw(q.w / norm, q.x / norm, q.y / norm, q.z / norm);
     state.speed = speed_mps_;
-    state.acceleration = imu_.linear_acceleration.x;
+    state.acceleration = filtered_acceleration_mps2_;
     state.yaw_rate = imu_.angular_velocity.z;
     state.valid = IsFinite(state.x) && IsFinite(state.y) &&
                   IsFinite(state.yaw) && IsFinite(state.speed) &&

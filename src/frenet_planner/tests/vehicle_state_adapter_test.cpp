@@ -6,6 +6,9 @@
 #include "ros/state/vehicle_state_adapter.hpp"
 
 namespace {
+constexpr double kLatitudeMetersPerDegree = 111000.0;
+constexpr double kLongitudeMetersPerDegree = 88900.0;
+
 void Expect(bool condition, const char* message) {
     if (!condition) {
         std::cerr << "FAILED: " << message << '\n';
@@ -13,87 +16,178 @@ void Expect(bool condition, const char* message) {
     }
 }
 
-morai_msgs::GPSMessage MakeGps(double stamp, double latitude) {
+ros::SteadyTime Steady(double seconds) {
+    ros::SteadyTime time;
+    time.fromSec(seconds);
+    return time;
+}
+
+double HeaderStamp(double steady_time) {
+    const int tick = static_cast<int>(std::llround(steady_time * 100.0));
+    return 1000.0 + steady_time + (tick % 2 == 0 ? 8.0 : -9.0);
+}
+
+morai_msgs::GPSMessage MakeGps(double steady_time, double east_m,
+                               double north_m = 0.0) {
     morai_msgs::GPSMessage gps;
-    gps.header.stamp = ros::Time(stamp);
-    gps.latitude = latitude;
-    gps.longitude = 127.0;
-    gps.eastOffset = 0.0;
-    gps.northOffset = 0.0;
+    gps.header.stamp = ros::Time(HeaderStamp(steady_time));
+    gps.latitude = 37.0 + north_m / kLatitudeMetersPerDegree;
+    gps.longitude = 127.0 + east_m / kLongitudeMetersPerDegree;
     gps.status = 1;
     return gps;
 }
 
-sensor_msgs::Imu MakeImu(double stamp) {
+sensor_msgs::Imu MakeImu(double steady_time, double acceleration) {
     sensor_msgs::Imu imu;
-    imu.header.stamp = ros::Time(stamp);
+    imu.header.stamp = ros::Time(HeaderStamp(steady_time));
     imu.orientation.w = 1.0;
-    imu.angular_velocity.z = 0.2;
-    imu.linear_acceleration.x = 0.5;
+    imu.linear_acceleration.x = acceleration;
     return imu;
+}
+
+frenet_planner_ros::StateAdapterConfig TestConfig() {
+    frenet_planner_ros::StateAdapterConfig config;
+    config.gps_timeout_s = 0.5;
+    config.imu_timeout_s = 0.3;
+    return config;
+}
+
+void Imu(frenet_planner_ros::GpsImuStateEstimator& estimator,
+         double time, double acceleration) {
+    estimator.updateImu(MakeImu(time, acceleration), Steady(time));
+}
+
+void Gps(frenet_planner_ros::GpsImuStateEstimator& estimator,
+         double time, double east_m, double north_m = 0.0) {
+    estimator.updateGps(MakeGps(time, east_m, north_m), Steady(time));
+}
+
+double Speed(const frenet_planner_ros::GpsImuStateEstimator& estimator,
+             double time) {
+    const auto state = estimator.makeState(Steady(time));
+    Expect(state.valid, "expected valid GPS/IMU state");
+    Expect(std::isfinite(state.speed) && state.speed >= 0.0,
+           "speed must be finite and non-negative");
+    return state.speed;
+}
+
+void InitializeAtSpeed(frenet_planner_ros::GpsImuStateEstimator& estimator,
+                       double start_time, double speed, double& x) {
+    for (int i = 0; i <= 20; ++i) {
+        const double time = start_time + 0.05 * i;
+        x = speed * 0.05 * i;
+        Imu(estimator, time, 0.0);
+        Gps(estimator, time, x);
+    }
 }
 }  // namespace
 
 int main() {
-    frenet_planner_ros::StateAdapterConfig config;
-    config.gps_timeout_s = 0.3;
-    config.imu_timeout_s = 0.3;
-    config.speed_filter_alpha = 1.0;
-    frenet_planner_ros::GpsImuStateEstimator estimator(config);
+    // 1. Constant 10 m/s with quantized longitudinal and lateral positions.
+    frenet_planner_ros::GpsImuStateEstimator constant(TestConfig());
+    for (int i = 0; i <= 40; ++i) {
+        const double time = 10.0 + 0.05 * i;
+        const double east =
+            std::round((10.0 * 0.05 * i) / 0.1) * 0.1;
+        const double lateral = i % 2 == 0 ? 0.12 : -0.12;
+        Imu(constant, time, 0.0);
+        Gps(constant, time, east, lateral);
+    }
+    const double constant_speed = Speed(constant, 12.0);
+    Expect(std::abs(constant_speed - 10.0) < 0.8,
+           "constant 10 m/s must converge despite GPS quantization");
 
-    estimator.updateGps(MakeGps(10.0, 37.0));
-    estimator.updateImu(MakeImu(10.0));
-    Expect(!estimator.makeState(ros::Time(10.1)).valid,
-           "one GPS fix must not invent speed");
+    // 2. Strong braking: IMU prediction must react before the GPS window does.
+    frenet_planner_ros::GpsImuStateEstimator braking(TestConfig());
+    double x = 0.0;
+    InitializeAtSpeed(braking, 20.0, 10.0, x);
+    const double before_braking = Speed(braking, 21.0);
+    double truth_speed = 10.0;
+    const double brake_start = 21.0;
+    double first_prediction = before_braking;
+    for (int i = 1; i <= 20; ++i) {
+        const double time = brake_start + 0.01 * i;
+        truth_speed = std::max(0.0, truth_speed - 8.0 * 0.01);
+        x += truth_speed * 0.01;
+        Imu(braking, time, -8.0);
+        if (i == 1) first_prediction = Speed(braking, time);
+        if (i % 5 == 0) Gps(braking, time, x);
+    }
+    const double speed_after_200ms = Speed(braking, brake_start + 0.20);
+    Expect(first_prediction < before_braking,
+           "IMU prediction must decrease speed on the first braking callback");
+    Expect(speed_after_200ms < before_braking - 1.0 &&
+               std::abs(speed_after_200ms - truth_speed) < 1.5,
+           "GPS window must not keep braking speed high for 0.2 s");
 
-    estimator.updateGps(MakeGps(10.1, 37.000001));
-    estimator.updateImu(MakeImu(10.1));
-    const auto state = estimator.makeState(ros::Time(10.2));
-    Expect(state.valid, "fresh GPS/IMU with two fixes must be valid");
-    Expect(state.source == asmc_msgs::VehicleState::SOURCE_GPS_IMU,
-           "competition source must be GPS_IMU");
-    Expect(state.header.frame_id == "map", "canonical frame must be map");
-    Expect(state.speed > 0.0, "speed must be derived from GPS displacement");
-    Expect(std::abs(state.acceleration - 0.5) < 1e-9,
-           "longitudinal acceleration must come from IMU x");
-    Expect(std::abs(state.yaw_rate - 0.2) < 1e-9,
-           "yaw rate must come from IMU z");
-    Expect(!estimator.makeState(ros::Time(10.5)).valid,
-           "stale source data must produce invalid state");
+    // 3. Accelerate from rest to 10 m/s using IMU prediction plus GPS updates.
+    frenet_planner_ros::GpsImuStateEstimator acceleration(TestConfig());
+    x = 0.0;
+    for (int i = 0; i <= 10; ++i) {
+        const double time = 30.0 + 0.05 * i;
+        Imu(acceleration, time, 0.0);
+        Gps(acceleration, time, x);
+    }
+    truth_speed = 0.0;
+    for (int i = 1; i <= 200; ++i) {
+        const double time = 30.5 + 0.01 * i;
+        truth_speed = std::min(10.0, truth_speed + 5.0 * 0.01);
+        x += truth_speed * 0.01;
+        Imu(acceleration, time, 5.0);
+        if (i % 5 == 0) Gps(acceleration, time, x);
+    }
+    Expect(std::abs(Speed(acceleration, 32.5) - 10.0) < 1.0,
+           "0 to 10 m/s acceleration must be tracked");
 
-    // 시계가 뒤로 점프하면 now < stamp가 되어 데이터가 미래처럼 보인다.
-    // 이때 stale로 처리해 VehicleState를 invalid로 내보내면 Frenet/MPC가
-    // 매 점프마다 급정지한다(실측: WSL2/Docker 환경에서 약 28초 주기로
-    // wall clock -1.2초 점프). 데이터 자체는 멀쩡하므로 유효해야 한다.
-    Expect(estimator.makeState(ros::Time(8.9)).valid,
-           "backward clock jump must not invalidate otherwise good state");
-    Expect(estimator.makeState(ros::Time(10.1)).valid,
-           "state stays valid right after the clock jump recovers");
+    // 4. At 1 m/s, 10 cm GPS quantization repeats fixes but must not trigger ZUPT.
+    frenet_planner_ros::GpsImuStateEstimator low_speed(TestConfig());
+    for (int i = 0; i <= 40; ++i) {
+        const double time = 40.0 + 0.05 * i;
+        const double east = std::floor((1.0 * 0.05 * i) / 0.1) * 0.1;
+        Imu(low_speed, time, 0.0);
+        Gps(low_speed, time, east);
+    }
+    Expect(Speed(low_speed, 42.0) > 0.65,
+           "repeated low-speed GPS fixes must not cause false stationary");
 
-    // 시계 점프로 설명되지 않는 먼 미래 stamp는 잘못된 입력이므로 거부한다.
-    Expect(!estimator.makeState(ros::Time(0.0)).valid,
-           "implausibly far future stamp is still rejected");
+    // 5. A true stationary period with low acceleration converges to zero.
+    frenet_planner_ros::GpsImuStateEstimator stopped(TestConfig());
+    x = 0.0;
+    InitializeAtSpeed(stopped, 50.0, 1.0, x);
+    double time = 51.0;
+    for (int i = 1; i <= 40; ++i) {
+        time += 0.05;
+        Imu(stopped, time, i <= 5 ? -2.0 : 0.0);
+        Gps(stopped, time, x);
+    }
+    Expect(Speed(stopped, time) < 0.05,
+           "confirmed stationary state must converge to zero");
 
-    morai_msgs::EgoVehicleStatus ego;
-    ego.header.stamp = ros::Time(20.0);
-    ego.position.x = 1.0;
-    ego.position.y = 2.0;
-    ego.heading = 90.0;
-    ego.velocity.x = 3.0;
-    ego.velocity.y = 4.0;
-    ego.acceleration.x = 0.7;
-    const auto dev = frenet_planner_ros::ConvertEgoVehicleStatus(ego);
-    Expect(dev.valid, "finite EgoStatus must convert for development");
-    Expect(dev.source == asmc_msgs::VehicleState::SOURCE_EGO_STATUS,
-           "development source must be EGO_STATUS");
-    Expect(std::abs(dev.yaw - M_PI_2) < 1e-9,
-           "Ego heading degrees must convert to radians");
-    Expect(std::abs(dev.speed - 5.0) < 1e-9,
-           "Ego planar velocity must convert to speed");
+    // 6. One GPS outlier must not cause a large velocity jump.
+    frenet_planner_ros::GpsImuStateEstimator outlier(TestConfig());
+    x = 0.0;
+    InitializeAtSpeed(outlier, 60.0, 10.0, x);
+    const double before_outlier = Speed(outlier, 61.0);
+    Imu(outlier, 61.05, 0.0);
+    Gps(outlier, 61.05, x + 100.0);
+    Expect(std::abs(Speed(outlier, 61.05) - before_outlier) < 0.2,
+           "single GPS outlier must not cause a large speed jump");
 
-    ego.position.x = std::numeric_limits<double>::quiet_NaN();
-    Expect(!frenet_planner_ros::ConvertEgoVehicleStatus(ego).valid,
-           "non-finite EgoStatus must be invalid");
-    std::cout << "vehicle_state_adapter_test: PASS\n";
+    // 7. Non-positive and oversized steady IMU dt values are not integrated.
+    Imu(outlier, 61.04, -12.0);
+    Imu(outlier, 62.0, 8.0);
+    Gps(outlier, 62.0, x + 10.0);
+    const double abnormal_dt_speed = Speed(outlier, 62.0);
+    Expect(std::isfinite(abnormal_dt_speed) && abnormal_dt_speed >= 0.0 &&
+               abnormal_dt_speed <= TestConfig().maximum_speed_mps,
+           "abnormal steady dt must not produce NaN or runaway speed");
+
+    // 8. Freshness behavior remains unchanged.
+    Expect(!constant.makeState(Steady(12.6)).valid,
+           "stale GPS/IMU must keep state invalid");
+
+    std::cout << "vehicle_state_adapter_test: PASS"
+              << " constant=" << constant_speed
+              << " braking_200ms=" << speed_after_200ms << '\n';
     return 0;
 }

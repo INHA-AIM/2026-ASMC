@@ -24,6 +24,7 @@ class BehaviorNode {
 
  private:
   void runOnce();
+  void timerCallback(const ros::SteadyTimerEvent&);
   void egoCallback(const morai_msgs::EgoVehicleStatus::ConstPtr& message);
   void objectsCallback(const morai_msgs::ObjectStatusList::ConstPtr& message);
   void feedbackCallback(const asmc_msgs::PlanFeedback::ConstPtr& message);
@@ -36,6 +37,7 @@ class BehaviorNode {
   ros::Publisher context_pub_;
   ros::Publisher debug_pub_;
   ros::Publisher marker_pub_;
+  ros::SteadyTimer update_timer_;
   MGeoLoader map_;
   RouteManager route_;
   FeatureBuilder builder_;

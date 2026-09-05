@@ -51,8 +51,8 @@ MpcRosNode::MpcRosNode(ros::NodeHandle nh, ros::NodeHandle private_nh)
     control_pub_ = nh_.advertise<morai_msgs::CtrlCmd>(control_topic, 1);
     const double frequency = mpc_params.control_frequency > 0.0
         ? mpc_params.control_frequency : 20.0;
-    control_timer_ = nh_.createTimer(
-        ros::Duration(1.0 / frequency),
+    control_timer_ = nh_.createSteadyTimer(
+        ros::WallDuration(1.0 / frequency),
         &MpcRosNode::controlTimerCallback, this);
 
     ROS_INFO("MPC ROS runtime @ %.1f Hz: %s -> %s, stale timeout %.3f s",
@@ -64,6 +64,7 @@ void MpcRosNode::trajectoryCallback(
     const asmc_msgs::Trajectory::ConstPtr& message) {
     if (!message) return;
     latest_trajectory_ = *message;
+    trajectory_received_at_ = ros::SteadyTime::now();
     has_trajectory_ = true;
 }
 
@@ -74,12 +75,12 @@ void MpcRosNode::publishStop(const char* reason) {
     ROS_WARN_THROTTLE(1.0, "MPC fail-safe STOP: %s", reason);
 }
 
-void MpcRosNode::controlTimerCallback(const ros::TimerEvent&) {
+void MpcRosNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
     if (!has_trajectory_) {
         publishStop("trajectory missing");
         return;
     }
-    if (!IsTrajectoryFresh(latest_trajectory_, ros::Time::now(),
+    if (!IsTrajectoryFresh(trajectory_received_at_, ros::SteadyTime::now(),
                            trajectory_timeout_)) {
         publishStop("trajectory stale");
         return;
