@@ -717,3 +717,77 @@ bool FrenetPlanner::PlanExternalAvoidCycle(
     last_failure_reason_ = PlanFailureReason::NONE;
     return true;
 }
+
+void FrenetPlanner::UpdateLegacyAvoidContext(
+    double s, double d, const FrenetState& start,
+    const std::vector<ObjectInfo>& obstacles, bool& begin_avoidance) {
+    // 활성 context의 장애물 위치를 새 UDP 프레임으로 갱신한다. 일시적
+    // packet dropout이 있어도 저장된 위치/길이로 회피를 계속한다.
+    if (avoidance_.active) {
+        for (const auto& obj : obstacles) {
+            if (obj.id != avoidance_.obstacle_id) continue;
+            double obj_s, obj_d, obj_s_dot;
+            ProjectObjectToFrenet(ref_, obj, obj_s, obj_d, obj_s_dot);
+            avoidance_.obstacle_s = obj_s;
+            avoidance_.obstacle_d = obj_d;
+            avoidance_.obstacle_width = obj.width;
+            avoidance_.obstacle_length = obj.length;
+            break;
+        }
+
+        const double gap = avoidance_.obstacle_s - s;
+        const double clear_distance = 0.5 * (vehicle_shape_.length + avoidance_.obstacle_length)
+                                    + avoid_cfg_.pass_clearance;
+        if (avoidance_.phase == AvoidPhase::TRACKING && gap <= avoid_cfg_.shift_start_distance) {
+            // 이 사이클에서 좌/우 전체 후보를 비교한 뒤, 유효 경로가
+            // 있는 방향만 SHIFT로 잠그다.
+            begin_avoidance = true;
+        } else if (avoidance_.phase == AvoidPhase::SHIFT &&
+                   std::fabs(d - avoidance_.target_d) <= avoid_cfg_.lateral_tolerance) {
+            avoidance_.phase = AvoidPhase::PASS;
+            std::printf("[FrenetPlanner] avoid phase: SHIFT -> PASS (id=%d gap=%.2f)\n",
+                        avoidance_.obstacle_id, gap);
+        } else if ((avoidance_.phase == AvoidPhase::SHIFT || avoidance_.phase == AvoidPhase::PASS) &&
+                   gap < -clear_distance) {
+            // 자차 뒤가 장애물을 완전히 통과했으므로 AVOID를 즉시 종료한다.
+            // 이 아래의 !avoidance_.active 탐색이 같은 사이클에서 다음 정적
+            // 장애물을 TRACKING으로 등록하고, 중앙 복귀는 LANE_KEEPING이 수행한다.
+            std::printf("[FrenetPlanner] avoid complete after PASS: id=%d gap=%.2f\n",
+                        avoidance_.obstacle_id, gap);
+            avoidance_ = AvoidanceContext{};
+        }
+    }
+
+    if (!avoidance_.active) {
+        StaticObstacleTarget target;
+        // LANE_KEEPING 충돌 필터는 reactive_lookahead 시간까지 미리 본다.
+        // 정적 장애물 추적 거리가 그보다 짧으면, 장애물을 TRACKING으로
+        // 등록하기 전에 충돌 필터가 중앙 후보를 전부 제거 -> stop path ->
+        // 등록 후 다시 가속하는 속도 급락/반등이 생긴다. 설정값은 최소
+        // 탐지거리로 쓰고, 실제 등록 거리는 "최고속도×충돌 lookahead +
+        // 차량 길이/마진"보다 항상 길게 잡는다.
+        AvoidConfig acquisition_cfg = avoid_cfg_;
+        const double collision_horizon_distance =
+            curve_speed_cfg_.target_vel * collision_cfg_.reactive_lookahead
+            + vehicle_shape_.length + collision_cfg_.safety_margin;
+        acquisition_cfg.detection_distance =
+            std::max(avoid_cfg_.detection_distance, collision_horizon_distance);
+        if (FindStaticAvoidanceTarget(ref_, start, obstacles, lane_width_, vehicle_shape_,
+                                      acquisition_cfg, target)) {
+            avoidance_.active = true;
+            avoidance_.obstacle_id = target.id;
+            avoidance_.phase = AvoidPhase::TRACKING;
+            avoidance_.obstacle_s = target.s;
+            avoidance_.obstacle_d = target.d;
+            avoidance_.obstacle_width = target.width;
+            avoidance_.obstacle_length = target.length;
+            // 저속/정지 상태에서도 영구 정지하지 않도록 selector가 확인한
+            // 1차 방향을 보관한다. 정상 속도에서는 회피 시작 직전 양쪽의
+            // 전체 후보를 비교해 더 정확한 target_d로 덮어쓴다.
+            avoidance_.target_d = target.avoidance_offset;
+            std::printf("[FrenetPlanner] static obstacle tracked: id=%d gap=%.2f "
+                        "effective_detection=%.2f\n",
+                        target.id, target.s - s, acquisition_cfg.detection_distance);
+        }
+    }
+}

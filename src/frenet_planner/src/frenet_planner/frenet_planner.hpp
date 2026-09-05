@@ -496,6 +496,26 @@ private:
         const PlannerCommand& command, bool avoid_prepare, bool avoid_committed,
         CartesianPath& out_path, AvoidPrepareResult& result);
 
+    // legacy AVOID의 active context 갱신 + static 장애물 최초 acquisition
+    // (AVOID A4a). adaptive candidate generation, 좌/우 비교, direction
+    // lock은 여기 없다 - 그건 A4b 대상으로 PlanInternal에 남아 있다.
+    //
+    // 호출 위치는 PlanInternal의 `if (use_legacy_behavior) { ... }` 안,
+    // UpdateLegacyFollowContext보다 먼저다 - 이 순서를 바꾸지 않는다.
+    // low-speed fallback은 이 호출보다 훨씬 앞(FrenetState start 생성보다도
+    // 앞)에 있으므로 이 함수가 low-speed fallback에 영향을 줄 일은 없다.
+    //
+    // active context가 같은 cycle에 reset되면 바로 이어서 acquisition을
+    // 시도한다(다음 정적 장애물을 놓치지 않기 위함) - 이 순서를 두 함수로
+    // 쪼개거나 early return을 넣지 않는다.
+    //
+    // begin_avoidance는 참조로 받아 그대로 쓴다 - "이번 cycle에 TRACKING
+    // 거리 안에 들어왔다"만 표시할 뿐, phase를 여기서 SHIFT로 바꾸지
+    // 않는다(direction lock은 A4b의 좌/우 비교 결과로만 일어난다).
+    void UpdateLegacyAvoidContext(
+        double s, double d, const FrenetState& start,
+        const std::vector<ObjectInfo>& obstacles, bool& begin_avoidance);
+
     // ===== D1-2: legacy 행동 선택권의 유일한 경계 =====
     //
     // Legacy(간이 FSM) 경로에서 "지금 어떤 maneuver를 할지"를 결정하는 지점을
