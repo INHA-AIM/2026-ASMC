@@ -113,6 +113,7 @@ target_link_libraries(frenet_command_execution_manager
 add_executable(frenet_planner_node
   src/ros/main.cpp
   src/ros/frenet_planner_node.cpp
+  src/ros/feedback_builder.cpp
 )
 add_dependencies(frenet_planner_node
   ${catkin_EXPORTED_TARGETS}
