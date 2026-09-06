@@ -100,7 +100,6 @@ TrackedObject MakeVehicle(const Waypoints& waypoints, int id, double target_s,
     object.width = 2.0;
     object.length = 4.5;
     object.height = 1.5;
-    object.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
     object.geometry_valid = true;
     object.z_valid = true;
     const double half_length = object.length * 0.5;

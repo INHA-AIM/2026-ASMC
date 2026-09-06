@@ -173,7 +173,6 @@ TrackedObject MakeObstacle(const Waypoints& waypoints, int id, double target_s,
         object.corners[i] = {corner_x, corner_y, 0.0};
         object.corners[i + 4] = {corner_x, corner_y, object.height};
     }
-    object.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
     object.geometry_valid = geometry::ValidateCorners8(object.corners).valid;
     object.z_valid = true;
     return object;

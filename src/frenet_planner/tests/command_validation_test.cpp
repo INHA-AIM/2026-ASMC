@@ -67,7 +67,6 @@ TrackedObject MakeAuthoritativeBox(int id, double x, double y) {
     obstacle.width = 2.0;
     obstacle.length = 4.0;
     obstacle.height = 2.0;
-    obstacle.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
     obstacle.geometry_valid = true;
     obstacle.z_valid = true;
     const double xy[4][2] = {

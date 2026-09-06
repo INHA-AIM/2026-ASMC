@@ -22,32 +22,31 @@ struct CurveSpeedConfig {
 
 // =========================================================
 // Following(Sec.V-A) 모드 파라미터. ResolveExternalFollowTarget이 FSM이
-// 지정한 대상을 검증할 때(탐색 범위)와 GenerateFollowingCandidates가
+// 지정한 FOLLOW 대상(target_object_id)의 유효성을 검증할 때(탐색 범위 -
+// FSM이 지정한 대상이라도 진행방향/같은 차선/탐색거리 조건을 벗어나면
+// TARGET_OBJECT_LOST다)와 GenerateFollowingCandidates가
 // constant-time-gap-law target을 만들 때(time_gap=tau, min_gap=D0) 쓴다.
 // =========================================================
 struct FollowingConfig {
     double time_gap = 1.0;              // [s] tau
     double min_gap  = 5.0;              // [m] D0
     double gap_gain = 0.3;              // [1/s] v_cmd = v_leader + gain * gap_error
-    double max_leader_search_s = 60.0;  // [m] 이 거리 안의 선두 차량만 후보로 봄
-    double min_leader_speed = 0.5;      // [m/s] 이보다 느리면 정적 장애물로 보고 FOLLOWING에서 제외
-    double exit_search_margin = 10.0;   // [m] 진입 후 탐색거리 hysteresis
-    double leader_switch_margin = 3.0;  // [m] 새 차량이 이만큼 더 가까울 때만 leader 인계
+    double max_leader_search_s = 60.0;  // [m] FSM이 지정한 대상까지 이 거리 안이어야 유효
+    double exit_search_margin = 10.0;   // [m] 확보 후 유지용 탐색거리 hysteresis
     int dropout_grace_cycles = 5;       // [cycle] TrackedObject 일시 누락 허용(20Hz)
 };
 
 // =========================================================
-// 내 차선 정적 장애물의 AVOID 트리거와 횡오프셋 파라미터.
+// FSM이 지정한 AVOID 대상(target_object_id)의 유효성 검증 범위와 횡오프셋
+// 파라미터. 어떤 장애물을 회피할지 planner가 스스로 고르지 않는다 -
+// FSM이 지정한 대상이 이 범위/조건을 만족하는지만 검증한다.
 // =========================================================
 struct AvoidConfig {
-    double detection_distance = 60.0; // [m] 최소 등록거리(실제값은 충돌 lookahead와 자동 조정)
-    double shift_start_distance = 25.0; // [m] 횟이동을 시작할 장애물과의 종방향 거리
-    double trigger_max_speed = 0.5;   // [m/s] 이 속도 이하만 "정지 장애물"로 간주(그 이상은 Following이 처리)
+    double detection_distance = 60.0; // [m] FSM이 지정한 대상까지 이 거리 안이어야 유효(실제값은 충돌 lookahead와 자동 조정)
     // [m] 회피 시 lateral_d1 격자를 밀어낼 크기. 자차 폭(1.9m 기준) + 장애물
     // 폭 절반씩 + 여유(0.3m)를 감안한 최소 이격(~2.2m)보다 확실히 크게 잡아야
     // 좌/우 클리어 판정이 "장애물 자신" 때문에 항상 막힌 것으로 나오지 않는다.
     double avoid_offset      = 3.0;
-    double comfortable_decel = 3.0;   // [m/s^2] 추후 동적 시작거리 계산용(현재 미사용)
     double lateral_tolerance = 0.4;   // [m] SHIFT 완료 판정
     double pass_clearance    = 1.0;   // [m] 자차 뒤가 장애물을 통과한 뒤 추가 여유
     bool prefer_right_when_equal = true; // 좌/우 후보 품질이 같을 때 우측 우선

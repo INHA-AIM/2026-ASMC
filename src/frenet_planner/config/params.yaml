@@ -29,23 +29,22 @@ planner:
     curve_lookahead_m: 15.0
 
   # --- Following(Sec.V-A, constant-time-gap-law) ---
+  # FSM이 BehaviorCommand.primary_object_id로 지정한 FOLLOW 대상의 유효성
+  # 검증 범위(max_leader_search_s/exit_search_margin)와 constant-time-gap-law
+  # 종방향 목표 계산(time_gap/min_gap/gap_gain)에 쓴다. planner가 스스로
+  # leader를 고르지 않는다 - FSM이 지정한 대상만 검증한다.
   following:
     time_gap: 1.0              # [s] tau - 목표 gap = min_gap + time_gap*leader_speed
     min_gap: 5.0               # [m] D0 - 정지 시에도 유지할 최소 거리
     gap_gain: 0.3              # [1/s] 간격 오차를 접근 속도로 변환하는 폐루프 이득
-    max_leader_search_s: 60.0  # [m] 이 거리 안의 선두 차량만 후보로 봄
-    min_leader_speed: 0.5      # [m/s] 이 이하는 정적 장애물로 보고 FOLLOWING에서 제외
-    exit_search_margin: 10.0   # [m] 진입 후 선두차량 유지용 탐색거리 hysteresis
-    leader_switch_margin: 3.0  # [m] 더 가까운 동일차선 차량으로 leader를 넘길 최소 거리차
-    dropout_grace_cycles: 5    # [cycle] ObjectInfo 일시 누락 허용(20Hz 기준 0.25s)
+    max_leader_search_s: 60.0  # [m] FSM이 지정한 대상까지 이 거리 안이어야 유효
+    exit_search_margin: 10.0   # [m] 확보 후 유지용 탐색거리 hysteresis
+    dropout_grace_cycles: 5    # [cycle] TrackedObject 일시 누락 허용(20Hz 기준 0.25s)
 
-  # --- AVOID: 내 차선의 정적 장애물 감지와 lateral 회피 ---
+  # --- AVOID: FSM이 지정한 대상의 유효성 검증 범위와 lateral 회피 ---
   avoid:
-    detection_distance: 60.0  # [m] 최소 등록거리(충돌 lookahead가 더 길면 자동 확장)
-    shift_start_distance: 25.0 # [m] 이 거리부터 횡이동 시작
-    trigger_max_speed: 0.5    # [m/s] 이 속도 이하만 "정지 장애물"로 간주(그 이상은 Following)
+    detection_distance: 60.0  # [m] FSM이 지정한 대상까지 이 거리 안이어야 유효(충돌 lookahead가 더 길면 자동 확장)
     avoid_offset: 5.0         # [m] 회피 시 lateral_d1 격자를 밀어낼 크기
-    comfortable_decel: 3.0    # [m/s^2] 추후 동적 시작거리 계산용(현재 미사용)
     lateral_tolerance: 0.4    # [m] SHIFT 횟이동 완료 판정
     pass_clearance: 1.0       # [m] 자차/장애물 길이 외 추가 통과 여유
     prefer_right_when_equal: true # 좌/우 valid 품질이 거의 같으면 우측 우선

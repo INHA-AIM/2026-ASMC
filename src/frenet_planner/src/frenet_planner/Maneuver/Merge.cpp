@@ -139,8 +139,7 @@ RoundaboutGap FindRoundaboutGap(const RefLine& ref, const FrenetState& ego,
 }
 
 RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
-                                  const std::vector<TrackedObject>& obstacles,
-                                  const std::vector<TrackedObject>& collision_obstacles,
+                                  const std::vector<TrackedObject>& objects,
                                   const HighwayMergeConfig& cfg,
                                   const HighwayMergeCheckpoint& checkpoint,
                                   const VehicleShape& ego_shape,
@@ -201,7 +200,7 @@ RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
                 collision_cfg.margin_growth_rate * t;
             const geometry::Polygon2D ego_footprint =
                 MakeEgoFootprint(ego_cs, ego_shape, margin);
-            for (const auto& obj : collision_obstacles) {
+            for (const auto& obj : objects) {
                 if (CheckObstacleOverlap(ego_footprint, {}, obj, t)) {
                     collision_free = false;
                     break;
@@ -214,9 +213,9 @@ RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
         // 가장 가까운 두 대만 고르는 방식과 달리 빠른 원거리 후행차도 포함된다.
         const double clear_absolute_t = entry + clear_time;
         const double s_hint = checkpoint.clear_s;
-        for (const auto& obj : obstacles) {
+        for (const auto& obj : objects) {
             const PredictedObjectPose predicted =
-                PredictLegacyObjectPose(obj, clear_absolute_t);
+                PredictTrackedObjectPose(obj, clear_absolute_t);
             const double obj_s = FindClosestS(
                 ref, predicted.x, predicted.y, &s_hint, cfg.object_search_distance);
             if (std::fabs(obj_s - checkpoint.clear_s) > cfg.object_search_distance) continue;

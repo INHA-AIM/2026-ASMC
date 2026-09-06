@@ -48,7 +48,6 @@ TrackedObject MakeObstacle(double x, double y, double vx = 0.0,
         object.corners[i] = {corner_x, corner_y, 0.0};
         object.corners[i + 4] = {corner_x, corner_y, object.height};
     }
-    object.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
     object.geometry_valid = geometry::ValidateCorners8(object.corners).valid;
     object.z_valid = false;
     return object;

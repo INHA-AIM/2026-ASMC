@@ -96,7 +96,6 @@ TrackedObject MakeVehicleAt(int id, double x, double y, double heading,
         obj.corners[i] = {corner_x, corner_y, 0.0};
         obj.corners[i + 4] = {corner_x, corner_y, obj.height};
     }
-    obj.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
     obj.geometry_valid = geometry::ValidateCorners8(obj.corners).valid;
     obj.z_valid = true;
     return obj;
@@ -245,7 +244,7 @@ void TestHighwayGapSafeWhenCorridorEmpty() {
     ego.s_d = 8.0;
 
     const RoundaboutGap gap = FindHighwayMergeGap(
-        ref, ego, /*obstacles=*/{}, /*collision_obstacles=*/{}, cfg,
+        ref, ego, /*objects=*/{}, cfg,
         checkpoint, MakeEgoShape(), MakeCollisionCfg(),
         /*desired_speed=*/8.0, /*max_ego_accel=*/2.0);
 
@@ -278,7 +277,7 @@ void TestHighwayGapRejectsInsufficientFrontGap() {
                      /*heading=*/0.0, /*speed=*/0.3);
 
     const RoundaboutGap blocked = FindHighwayMergeGap(
-        ref, ego, {leader}, {leader}, cfg, checkpoint, MakeEgoShape(),
+        ref, ego, {leader}, cfg, checkpoint, MakeEgoShape(),
         MakeCollisionCfg(), /*desired_speed=*/8.0, /*max_ego_accel=*/2.0);
 
     std::cout << "  blocked: safe=" << blocked.safe
@@ -293,7 +292,7 @@ void TestHighwayGapRejectsInsufficientFrontGap() {
         MakeVehicleAt(/*id=*/9, /*x=*/200.0, /*y=*/0.0, /*heading=*/0.0,
                      /*speed=*/8.0);
     const RoundaboutGap clear = FindHighwayMergeGap(
-        ref, ego, {far_leader}, {far_leader}, cfg, checkpoint, MakeEgoShape(),
+        ref, ego, {far_leader}, cfg, checkpoint, MakeEgoShape(),
         MakeCollisionCfg(), /*desired_speed=*/8.0, /*max_ego_accel=*/2.0);
     std::cout << "  clear: safe=" << clear.safe
               << " confirmed=" << clear.confirmed << '\n';
@@ -315,7 +314,7 @@ void TestHighwayGapDisabledConfigIsNeverSafe() {
     ego.s_d = 8.0;
 
     const RoundaboutGap gap = FindHighwayMergeGap(
-        ref, ego, /*obstacles=*/{}, /*collision_obstacles=*/{}, cfg,
+        ref, ego, /*objects=*/{}, cfg,
         checkpoint, MakeEgoShape(), MakeCollisionCfg(),
         /*desired_speed=*/8.0, /*max_ego_accel=*/2.0);
 

@@ -142,9 +142,6 @@ void PlannerDebugWriter::Publish(const RefLine& ref,
         out << ",\"vy\":"; WriteNumber(out, obj.vy);
         out << ",\"geometry_valid\":" << (obj.geometry_valid ? "true" : "false");
         out << ",\"z_valid\":" << (obj.z_valid ? "true" : "false");
-        out << ",\"geometry_source\":\""
-            << (obj.geometry_source == ObjectGeometrySource::LIDAR_CORNERS
-                    ? "LIDAR_CORNERS" : "LEGACY_DERIVED") << "\"";
         out << ",\"corners\":[";
         for (size_t corner_index = 0; corner_index < obj.corners.size(); ++corner_index) {
             if (corner_index) out << ',';

@@ -255,8 +255,6 @@ int main() {
                objects[0].vx == 2.0 && objects[0].vy == -0.5 &&
                objects[0].geometry_valid &&
                objects[0].z_valid &&
-               objects[0].geometry_source ==
-                   ObjectGeometrySource::LIDAR_CORNERS &&
                objects[0].corners[1].x == 12.0 &&
                objects[0].corners[1].y == 21.0 &&
                objects[0].corners[1].z == 0.0,

@@ -160,7 +160,6 @@ ConversionStatus ConvertDetectedObjects(
 
         // authoritative geometry: perception이 제공하는 obb_corners만
         // 사용한다. center/width/length/yaw로 geometry를 재생성하지 않는다.
-        object.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
         for (std::size_t i = 0; i < object.corners.size(); ++i) {
             const auto& corner = message_object.obb_corners[i];
             object.corners[i] = {corner.x, corner.y, corner.z};

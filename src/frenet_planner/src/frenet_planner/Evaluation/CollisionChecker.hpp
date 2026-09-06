@@ -36,7 +36,7 @@ struct PredictedObjectPose {
     double heading = 0.0;
 };
 
-PredictedObjectPose PredictLegacyObjectPose(const TrackedObject& obj, double t);
+PredictedObjectPose PredictTrackedObjectPose(const TrackedObject& obj, double t);
 
 geometry::Polygon2D MakeEgoFootprint(const CartesianState& cs,
                                      const VehicleShape& shape,

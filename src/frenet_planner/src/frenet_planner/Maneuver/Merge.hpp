@@ -37,9 +37,11 @@ RoundaboutGap FindRoundaboutGap(const RefLine& ref, const FrenetState& ego,
 
 // Global Path가 램프에서 본선으로 이어지는 고주로 합류용. 목표 corridor에 투영된
 // 차량의 합류 완료시점 앞/뒤 거리와 TTC를 함께 만족하는 첫 진입시간을 찾는다.
+// objects의 각 TrackedObject는 motion 예측(gap/TTC)과 collision 재검사
+// (CheckObstacleOverlap) 양쪽에 그대로 쓰인다 - 같은 객체를 두 개의 병렬
+// vector로 나눠 받지 않는다(authoritative corners를 이미 갖고 있으므로).
 RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
-                                  const std::vector<TrackedObject>& obstacles,
-                                  const std::vector<TrackedObject>& collision_obstacles,
+                                  const std::vector<TrackedObject>& objects,
                                   const HighwayMergeConfig& cfg,
                                   const HighwayMergeCheckpoint& checkpoint,
                                   const VehicleShape& ego_shape,

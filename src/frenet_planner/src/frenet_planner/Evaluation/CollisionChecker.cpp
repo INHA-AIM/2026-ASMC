@@ -3,7 +3,7 @@
 
 #include <cmath>
 
-PredictedObjectPose PredictLegacyObjectPose(const TrackedObject& obj, double t) {
+PredictedObjectPose PredictTrackedObjectPose(const TrackedObject& obj, double t) {
     PredictedObjectPose pose;
     if (std::fabs(obj.yaw_rate) > 1e-3) {
         pose.x = obj.x + obj.speed / obj.yaw_rate *
