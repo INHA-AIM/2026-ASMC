@@ -402,13 +402,48 @@ private:
                       CartesianPath& out_path,
                       AvoidPrepareResult* avoid_prepare_result);
 
+    // PlanInternal의 모든 모드가 공유하는 준비 단계의 결과 (§3).
+    // Cartesian->Frenet 변환, object tracking/yaw-rate 추정, target speed
+    // 해석/연속성까지만 담는다 - 모드별 dispatch(EMERGENCY/AVOID prepare/
+    // 저속 fallback/KEEP-FOLLOW-STOP switch)는 이 구조체가 만들어진 뒤
+    // PlanInternal이 담당한다.
+    struct PlanningContext {
+        double s = 0.0;
+        double s_dot = 0.0;
+        double s_ddot = 0.0;
+        double d = 0.0;
+        double d_prime = 0.0;
+        double d_pprime = 0.0;
+        // obstacles와 같은 객체 집합이지만 yaw_rate만 연속 관측으로 갱신한
+        // 사본이다 - motion 예측과 collision geometry 양쪽에 그대로 쓴다
+        // (병렬 vector로 나누지 않는다).
+        std::vector<TrackedObject> predicted_obstacles;
+        double resolved_target_speed = 0.0;
+    };
+
+    // Plan()이 validation -> 공용 준비 -> switch(mode) -> Process() -> 공용
+    // 후처리로 읽히게 하는 "공용 준비" 단계 (§3). ref_loaded_ 확인 이후,
+    // 그리고 EMERGENCY/AVOID 대상 확보/저속 fallback 등 모드별 분기보다
+    // 먼저 PlanInternal이 호출한다 - 이 함수 자체는 실패하지 않는다(입력이
+    // 이미 유효하다고 가정). 외부 command가 바뀔 때의 v2 FOLLOW/AVOID
+    // context reset도 여기서 처리한다 - 아래 모드별 early-return(EMERGENCY
+    // 등)보다 반드시 먼저 실행되어야 하므로(호출부 주석이 아니라 여기
+    // 순서 자체가 계약이다).
+    PlanningContext PreparePlanningContext(
+        const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
+        const PlannerCommand& external_command);
+
     // KEEP/FOLLOW/STOP이 공유하는 candidate 생성 -> 곡률/충돌 필터 ->
-    // cost 평가 -> 최적 후보 선택 -> Cartesian 변환 pipeline. AVOID/
-    // EMERGENCY는 각자 전용 Process(AvoidProcess/EmergencyStopProcess)로
-    // 분리되어 있고, KEEP/FOLLOW/STOP은 이 공용 pipeline 위에 각자의 얇은
-    // Process(KeepProcess/FollowProcess/StopProcess)가 모드별 준비 작업만
-    // 하고 이 함수로 위임하는 구조다 - candidate 생성/필터/비용/로깅 자체는
-    // 세 모드가 정말로 동일하므로 pipeline 자체를 셋으로 쪼개지 않는다.
+    // cost 평가 -> 최적 후보 선택 -> Cartesian 변환 pipeline. 정의는
+    // Maneuver/Keep.cpp에 있다(파일이 KEEP 전용이라서가 아니라, KEEP이
+    // 이 pipeline을 그대로 위임하는 가장 단순한 모드라서 그 진입점 옆에
+    // 본체를 뒀다 - Follow.cpp/Stop.cpp의 FollowProcess/StopProcess도
+    // 이 함수를 그대로 호출한다). AVOID/EMERGENCY는 각자 전용 Process
+    // (AvoidProcess/EmergencyStopProcess)로 분리되어 있고, KEEP/FOLLOW/
+    // STOP은 이 공용 pipeline 위에 각자의 얇은 Process(KeepProcess/
+    // FollowProcess/StopProcess)가 모드별 준비 작업만 하고 이 함수로
+    // 위임하는 구조다 - candidate 생성/필터/비용/로깅 자체는 세 모드가
+    // 정말로 동일하므로 pipeline 자체를 셋으로 쪼개지 않는다.
     //
     // PlanInternal이 EMERGENCY/AVOID PREPARE-COMMITTED/저속 fallback을
     // 모두 걸러낸 뒤, FrenetState start까지 만든 시점에만 호출한다 -

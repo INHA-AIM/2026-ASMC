@@ -1,12 +1,14 @@
 /**
  * @file Follow.cpp
- * @brief 외부 FSM이 지정한 FOLLOW 대상의 확보/유지.
+ * @brief 외부 FSM이 지정한 FOLLOW 대상의 확보/유지와 FollowProcess 진입점.
  *
  * 외부 FSM이 지정한 대상 객체(target_object_id)가 유효한지 검증하고
  * (ResolveExternalFollowTarget) FrenetPlanner::v2_following_ 상태를
- * 갱신하는 역할까지만 담당한다 - 어떤 종방향 후보 생성기를 쓸지
- * (Generator/CandidateCombiner의 ResolveManeuver)나 gap 계산은 이 파일의
- * 책임이 아니다.
+ * 갱신한다. FollowProcess는 이 확보 결과로 leader_s/leader_speed/
+ * leader_accel/time_gap/min_gap/gap_gain을 채운 뒤, KEEP/FOLLOW/STOP이
+ * 공유하는 candidate 파이프라인(Keep.cpp의 ExecuteManeuverPipeline)에
+ * 위임한다 - 어떤 종방향 후보 생성기를 쓸지(Generator/CandidateCombiner의
+ * ResolveManeuver)나 gap 계산 자체는 이 파일의 책임이 아니다.
  */
 
 #include "frenet_planner/frenet_planner.hpp"
@@ -119,4 +121,42 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
     context.leader_s += context.leader_speed * kPlannerCycleDt;
 
     return FollowTargetStatus::GRACE;
+}
+
+bool FrenetPlanner::FollowProcess(
+    const CartesianState& ego, const FrenetState& start,
+    double s, double d, double s_dot, double s_ddot,
+    double d_dot, double d_ddot,
+    const std::vector<TrackedObject>& obstacles,
+    const std::vector<TrackedObject>& predicted_obstacles,
+    double resolved_target_speed, const PlannerCommand& external_command,
+    CartesianPath& out_path) {
+    // 외부 FOLLOW: FSM이 지정한 대상만 확보한다. 자동 선택/handoff를 타지
+    // 않는다(계약 D1 0.1절 B 분류). 확보에 실패하면 공용 pipeline을 부르지
+    // 않고 여기서 바로 실패를 보고한다.
+    PlannerCommand cmd = external_command;
+    const FollowTargetStatus status = ResolveExternalFollowTarget(
+        s, cmd.target_object_id, obstacles, v2_following_);
+    if (status == FollowTargetStatus::LOST) {
+        // 대상을 쓸 수 없다. KEEP으로 자동 전환하지 않는다 - 다음
+        // 행동은 FSM이 새 command_id로 결정한다(계약 12.5절 D5).
+        last_mode_ = FOLLOWING;
+        last_failure_reason_ = PlanFailureReason::TARGET_OBJECT_LOST;
+        return false;
+    }
+    // VALID / GRACE 모두 확보된 상태를 후보 생성기에 전달한다.
+    cmd.leader_s = v2_following_.leader_s;
+    cmd.leader_speed = v2_following_.leader_speed;
+    cmd.leader_accel = v2_following_.leader_accel;
+    // 계약 11.8절: adapter는 custom gap이 꺼져 있으면 0.0 sentinel을
+    // 넘긴다. config 기본값 적용은 이 소비 지점에서 한다 - 변환이
+    // config에 의존하면 "FSM이 준 값"과 "Frenet 기본값"을 피드백에서
+    // 구분할 수 없다.
+    if (!(cmd.time_gap > 0.0)) cmd.time_gap = following_cfg_.time_gap;
+    if (!(cmd.min_gap > 0.0)) cmd.min_gap = following_cfg_.min_gap;
+    cmd.gap_gain = following_cfg_.gap_gain;
+
+    return ExecuteManeuverPipeline(
+        ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
+        predicted_obstacles, resolved_target_speed, cmd, out_path);
 }
