@@ -1,6 +1,7 @@
 #include "mpc_controller_node.hpp"
 
 #include <cmath>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -11,12 +12,13 @@
 namespace mpc_controller_ros {
 namespace {
 
-constexpr const char* kDefaultParamsPath =
-    MPC_PACKAGE_SRC_DIR "/config/mpc_params.yaml";
-
 MPCParams LoadParamsForNode(ros::NodeHandle& private_nh) {
-    std::string params_path = kDefaultParamsPath;
-    private_nh.param("mpc/config_path", params_path, params_path);
+    std::string params_path;
+    if (!private_nh.getParam("mpc/config_path", params_path) ||
+        params_path.empty()) {
+        throw std::runtime_error(
+            "required private parameter '~mpc/config_path' is missing");
+    }
     MPCParams params;
     loadMPCParameters(params_path, params);
     return params;
@@ -24,7 +26,8 @@ MPCParams LoadParamsForNode(ros::NodeHandle& private_nh) {
 
 }  // namespace
 
-MpcRosNode::MpcRosNode(ros::NodeHandle nh, ros::NodeHandle private_nh)
+MpcControllerNode::MpcControllerNode(ros::NodeHandle nh,
+                                     ros::NodeHandle private_nh)
     : nh_(std::move(nh)), private_nh_(std::move(private_nh)),
       controller_(LoadParamsForNode(private_nh_)) {
     std::string trajectory_topic = "/planning/trajectory";
@@ -49,20 +52,20 @@ MpcRosNode::MpcRosNode(ros::NodeHandle nh, ros::NodeHandle private_nh)
     }
 
     trajectory_sub_ = nh_.subscribe(
-        trajectory_topic, 1, &MpcRosNode::trajectoryCallback, this);
+        trajectory_topic, 1, &MpcControllerNode::trajectoryCallback, this);
     control_pub_ = nh_.advertise<morai_msgs::CtrlCmd>(control_topic, 1);
     const double frequency = controller_.params().control_frequency > 0.0
         ? controller_.params().control_frequency : 20.0;
     control_timer_ = nh_.createSteadyTimer(
         ros::WallDuration(1.0 / frequency),
-        &MpcRosNode::controlTimerCallback, this);
+        &MpcControllerNode::controlTimerCallback, this);
 
     ROS_INFO("MPC ROS runtime @ %.1f Hz: %s -> %s, stale timeout %.3f s",
              frequency, trajectory_topic.c_str(), control_topic.c_str(),
              trajectory_timeout_);
 }
 
-void MpcRosNode::trajectoryCallback(
+void MpcControllerNode::trajectoryCallback(
     const asmc_msgs::Trajectory::ConstPtr& message) {
     if (!message) return;
     latest_trajectory_ = *message;
@@ -70,13 +73,13 @@ void MpcRosNode::trajectoryCallback(
     has_trajectory_ = true;
 }
 
-void MpcRosNode::publishStop(const char* reason) {
+void MpcControllerNode::publishStop(const char* reason) {
     controller_.ResetOnFailSafe();
     control_pub_.publish(MakeRosStopCommand());
     ROS_WARN_THROTTLE(1.0, "MPC fail-safe STOP: %s", reason);
 }
 
-void MpcRosNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
+void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
     if (!has_trajectory_) {
         publishStop("trajectory missing");
         return;

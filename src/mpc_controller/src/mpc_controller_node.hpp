@@ -8,9 +8,9 @@
 
 namespace mpc_controller_ros {
 
-class MpcRosNode {
+class MpcControllerNode {
  public:
-    MpcRosNode(ros::NodeHandle nh, ros::NodeHandle private_nh);
+    MpcControllerNode(ros::NodeHandle nh, ros::NodeHandle private_nh);
 
  private:
     void trajectoryCallback(const asmc_msgs::Trajectory::ConstPtr& message);

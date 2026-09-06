@@ -5,7 +5,7 @@
 # =========================================================
 
 planner:
-  wheelbase: 3.0    # [m] mpc_controller/src/config/mpc_params.yaml과 동일 값 유지
+  wheelbase: 3.0    # [m] mpc_controller/config/mpc_params.yaml과 동일 값 유지
   lane_width: 3.5   # [m] LANE_CHANGE 오프셋, "내 차선" 판정(|d|<=lane_width/2)에 사용
 
   # [s] frenet_planner_node의 planning/frequency 기본값(20Hz)과 동일하게

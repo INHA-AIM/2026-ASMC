@@ -21,8 +21,6 @@ set(MPC_CORE_SOURCES
 
 add_library(mpc_core ${MPC_CORE_SOURCES})
 target_link_libraries(mpc_core yaml-cpp)
-target_compile_definitions(mpc_core PRIVATE
-  MPC_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 add_library(mpc_ros_converter src/message_converter.cpp)
 add_dependencies(mpc_ros_converter ${catkin_EXPORTED_TARGETS})
@@ -32,14 +30,12 @@ add_executable(mpc_controller_node src/main.cpp src/mpc_controller_node.cpp)
 add_dependencies(mpc_controller_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(mpc_controller_node
   mpc_core mpc_ros_converter yaml-cpp ${catkin_LIBRARIES})
-target_compile_definitions(mpc_controller_node PRIVATE
-  MPC_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 install(TARGETS mpc_core mpc_ros_converter mpc_controller_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-install(DIRECTORY launch config src/config
+install(DIRECTORY launch config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)

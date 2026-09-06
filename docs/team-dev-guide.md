@@ -114,7 +114,7 @@ source devel/setup.bash
 | `src/behavior_planner/launch/behavior_node.launch` | 노드·대시보드 |
 | `src/mpc_controller/src/node/mpc_node.cpp` | 제어 루프, trajectory 구독 |
 | `src/mpc_controller/src/planner/path_planner.cpp` | ref path / external trajectory |
-| `src/mpc_controller/src/config/mpc_params.yaml` | horizon, cost, curve_* |
+| `src/mpc_controller/config/mpc_params.yaml` | horizon, cost, curve_* |
 | `src/mpc_controller/src/config/path_route1.txt` | CSV fallback waypoint |
 | `src/mpc_controller/launch/mpc_node.launch` | `waypoint_file`/`ref_file` 주입 |
 | `src/integration_launch/launch/integration.launch` | behavior → planner → mpc |
@@ -167,7 +167,7 @@ rostopic echo /behavior/context -n1
 | `src/mpc_controller/src/cost/cost_function.cpp` | cost |
 | `src/mpc_controller/src/constraints/constraints.cpp` | steer/accel 제약 |
 | `src/mpc_controller/src/model/vehicle_model.cpp` | bicycle model |
-| `src/mpc_controller/src/config/mpc_params.yaml` | `curve_lookahead_m` 등 |
+| `src/mpc_controller/config/mpc_params.yaml` | `curve_lookahead_m` 등 |
 | `src/behavior_planner/src/decision/behavior_scorer.cpp` | 점수 |
 | `src/behavior_planner/src/feature/feature_builder.cpp` | urban feature |
 
