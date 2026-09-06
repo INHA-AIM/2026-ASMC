@@ -240,8 +240,8 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME command_follow_plan_test COMMAND command_follow_plan_test)
 
-  # D6-1: 외부 AVOID의 authoritative 대상 확보 회귀. resolver를 legacy
-  # FindStaticAvoidanceTarget()으로 바꾸면 nearest-object 검사가 실패한다.
+  # D6-1: 외부 AVOID의 authoritative 대상 확보 회귀. resolver를
+  # nearest-object selection으로 되돌리면 이 검사가 실패한다.
   add_executable(command_avoid_target_test
     tests/command_avoid_target_test.cpp
   )

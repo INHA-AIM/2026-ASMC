@@ -30,8 +30,8 @@ MPCParams MakeTestParams() {
 
 }  // namespace
 
-// D15: MpcController가 이전 global(ego/last_control/mpc_params)을 대체한
-// 뒤에도 실제 solve 경로가 살아있는지 확인하는 smoke test.
+// D15: MpcController가 이전 process-global controller state를 대체한 뒤에도
+// 실제 solve 경로가 살아있는지 확인하는 smoke test.
 TEST(MpcControllerTest, ControlProcessProducesForwardAccelFromStandstill) {
     MpcController controller(MakeTestParams());
     MPCState ego;  // 정지 상태(vx=0)에서 출발
@@ -47,9 +47,8 @@ TEST(MpcControllerTest, ControlProcessProducesForwardAccelFromStandstill) {
 }
 
 // D15: 두 MpcController 인스턴스가 완전히 독립적인 상태를 갖는지 확인한다.
-// 이전 구조(extern MPCState ego/extern MPCControl last_control/
-// extern MPCParams mpc_params)에서는 프로세스 전역이라 인스턴스 개념이
-// 아예 없었다 - 이 테스트는 그 전역이 실제로 사라졌다는 것의 회귀다.
+// 이전 구조의 process-global state에서는 인스턴스 개념이 아예 없었다.
+// 이 테스트는 controller state가 실제로 분리됐다는 것의 회귀다.
 TEST(MpcControllerTest, TwoInstancesDoNotShareWarmStartOrParams) {
     MPCParams params_a = MakeTestParams();
     params_a.horizon = 10;

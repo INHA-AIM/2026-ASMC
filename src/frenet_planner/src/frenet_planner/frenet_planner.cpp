@@ -237,9 +237,8 @@ bool FrenetPlanner::ProjectEgoToS(const CartesianState& ego, double& out_s) cons
 
 namespace {
 
-// 외부 command로 실제 열려 있는 모드. core에는 FOLLOWING/AVOID/MERGE/LANE_CHANGE
-// 구현이 이미 있지만, ROS 계약(leader binding, target_d, merge decision)이 FSM과
-// 확정되기 전까지 production 진입점에서는 KEEP/STOP만 허용한다. 확정된 모드부터
+// 외부 command로 실제 열려 있는 모드. MERGE/LANE_CHANGE는 FSM 계약이
+// 확정될 때까지 production 진입점에서 허용하지 않는다. 새 모드를 열 때는
 // 여기에 case를 추가하고 ValidateExternalCommand에 필드 검증을 같이 넣는다.
 bool IsSupportedExternalMode(BehaviorState mode) {
     switch (mode) {
