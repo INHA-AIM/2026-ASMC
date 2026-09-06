@@ -2,8 +2,8 @@
 
 #include <limits>
 
-#include "ros/message_converter.hpp"
-#include "runtime/path_resampler.hpp"
+#include "message_converter.hpp"
+#include "reference/path_resampler.hpp"
 
 namespace mpc_controller_ros {
 namespace {

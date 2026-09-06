@@ -1,4 +1,4 @@
-#include "ros/mpc_ros_node.hpp"
+#include "mpc_controller_node.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -6,8 +6,8 @@
 #include <utility>
 
 #include "global/parameter_loader.hpp"
-#include "ros/message_converter.hpp"
-#include "runtime/path_resampler.hpp"
+#include "message_converter.hpp"
+#include "reference/path_resampler.hpp"
 #include "solver/mpc_solver.hpp"
 
 namespace mpc_controller_ros {

@@ -22,5 +22,5 @@
     <arg name="dashboard" value="$(arg dashboard)"/>
   </include>
   <include file="$(find frenet_planner)/launch/frenet_planner.launch"/>
-  <include file="$(find mpc_controller)/launch/mpc_ros.launch"/>
+  <include file="$(find mpc_controller)/launch/mpc_controller.launch"/>
 </launch>

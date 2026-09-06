@@ -1,4 +1,4 @@
-#include "runtime/path_resampler.hpp"
+#include "reference/path_resampler.hpp"
 
 #include <algorithm>
 #include <cstddef>

@@ -1,6 +1,6 @@
 #include <ros/ros.h>
 
-#include "ros/mpc_ros_node.hpp"
+#include "mpc_controller_node.hpp"
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "mpc_controller");
