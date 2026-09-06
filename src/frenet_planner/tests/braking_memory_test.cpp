@@ -88,7 +88,7 @@ void TestCaseA_NoUnwarrantedDecelerationWhenAccelerating() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "braking_memory_test_case_a_params.yaml");
 
     for (double target : {9.0, 10.0}) {
@@ -124,7 +124,7 @@ void TestCaseB_RepeatedReplanningDoesNotCollapse() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "braking_memory_test_case_b_params.yaml");
 
     FrenetPlanner planner;
@@ -173,7 +173,7 @@ void TestCaseC_RealDecelerationBoundaryPreserved() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "braking_memory_test_case_c_params.yaml");
 
     FrenetPlanner planner;
@@ -202,7 +202,7 @@ void TestCaseD_NegativeVelocityGuardPreserved() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "braking_memory_test_case_d_params.yaml");
 
     FrenetPlanner planner;
@@ -228,7 +228,7 @@ void TestCaseEF_JerkAndAccelLimitsPreserved() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "braking_memory_test_case_ef_params.yaml");
 
     FrenetPlanner planner;
@@ -261,7 +261,7 @@ void TestCaseG_NoNormalKeepStarvation() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "braking_memory_test_case_g_params.yaml");
 
     FrenetPlanner planner;

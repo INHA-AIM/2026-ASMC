@@ -93,7 +93,7 @@ int main() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoints = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoints,
+        package_src + "/../config/params.yaml", waypoints,
         "command_emergency_plan_test_params.yaml");
     if (config.empty()) {
         std::cerr << "[FAIL] could not prepare test config\n";

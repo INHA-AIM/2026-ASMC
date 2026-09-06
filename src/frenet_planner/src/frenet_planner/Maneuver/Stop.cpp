@@ -81,8 +81,12 @@ void FrenetPlanner::UpdateExternalStopExecution(double s, double s_dot,
         // 순항 목표속도와 비교해 더 낮은 쪽. 멀면 기존 속도 유지, 가까워질
         // 수록 자연스럽게 낮아진다.
         cmd.target_speed = std::min(cmd.target_speed, v_safe);
-        // 후보 생성만 velocity keeping으로 위임한다. 외부에 보고되는
-        // last_mode_는 아래에서 STOP으로 유지한다.
+        // cmd.mode는 여기서부터 "외부 behavior mode"가 아니라 후보 생성기
+        // 선택용 내부 scratch 값이다(PlannerCommand.hpp 알려진 예외 참고).
+        // LANE_KEEPING으로 바꾸는 것은 ResolveManeuver에 velocity keeping
+        // 생성기를 쓰라고 지시하는 것뿐이고, 실제 STOP 여부는 last_mode_와
+        // stop_.phase가 그대로 STOP으로 보고한다 - 외부에서 관측 가능한 어떤
+        // 값도 STOP에서 KEEP으로 바뀌지 않는다.
         cmd.mode = LANE_KEEPING;
     } else if (stop_.phase == StopExecutionPhase::BRAKING) {
         // 목표를 이미 지나쳤다면 되돌아가는 정지 다항식을 만들지 않는다.

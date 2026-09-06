@@ -100,7 +100,7 @@ constexpr double kEgoS = 400.0;  // MERGE 구간과 무관한 평범한 주행 �
 
 int main() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
-    const std::string config = package_src + "/frenet_planner/config/params.yaml";
+    const std::string config = package_src + "/../config/params.yaml";
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
 
     const Waypoints wp = LoadWaypoints(waypoint_file);

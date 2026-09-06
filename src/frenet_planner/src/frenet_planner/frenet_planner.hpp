@@ -47,7 +47,7 @@ public:
         TARGET_OBJECT_LOST,
     };
 
-    // yaml_path: frenet_planner/config/params.yaml
+    // yaml_path: config/params.yaml
     bool Init(const std::string& yaml_path);
 
     // 외부 FSM command 기반 진입점. 현재 external whitelist는 LANE_KEEPING /
@@ -403,13 +403,59 @@ private:
                       AvoidPrepareResult* avoid_prepare_result);
 
     // KEEP/FOLLOW/STOP이 공유하는 candidate 생성 -> 곡률/충돌 필터 ->
-    // cost 평가 -> 최적 후보 선택 -> Cartesian 변환 pipeline (D6-0 이후
-    // AVOID/EMERGENCY/MERGE는 각자 전용 Process로 이미 분리되어 있다).
+    // cost 평가 -> 최적 후보 선택 -> Cartesian 변환 pipeline. AVOID/
+    // EMERGENCY는 각자 전용 Process(AvoidProcess/EmergencyStopProcess)로
+    // 분리되어 있고, KEEP/FOLLOW/STOP은 이 공용 pipeline 위에 각자의 얇은
+    // Process(KeepProcess/FollowProcess/StopProcess)가 모드별 준비 작업만
+    // 하고 이 함수로 위임하는 구조다 - candidate 생성/필터/비용/로깅 자체는
+    // 세 모드가 정말로 동일하므로 pipeline 자체를 셋으로 쪼개지 않는다.
+    //
     // PlanInternal이 EMERGENCY/AVOID PREPARE-COMMITTED/저속 fallback을
     // 모두 걸러낸 뒤, FrenetState start까지 만든 시점에만 호출한다 -
     // Cartesian->Frenet 변환과 object tracking/prediction을 중복
-    // 수행하지 않기 위해서다(계약 12.7.1절과 같은 이유).
-    bool ResolveAndExecuteManeuver(
+    // 수행하지 않기 위해서다(계약 12.7.1절과 같은 이유). 직접 호출하지 말고
+    // KeepProcess/FollowProcess/StopProcess를 통해서만 들어온다.
+    bool ExecuteManeuverPipeline(
+        const CartesianState& ego, const FrenetState& start,
+        double s, double d, double s_dot, double s_ddot,
+        double d_dot, double d_ddot,
+        const std::vector<TrackedObject>& obstacles,
+        const std::vector<TrackedObject>& predicted_obstacles,
+        double resolved_target_speed, const PlannerCommand& external_command,
+        CartesianPath& out_path);
+
+    // 외부 LANE_KEEPING 전용 진입점. 모드별 준비 작업이 없으므로 공용
+    // pipeline을 그대로 위임한다 - PlanInternal의 switch(mode)가 KEEP일 때
+    // 부르는 자리를 명확히 하기 위한 이름이다(§6, Plan()이 validation ->
+    // 공용 준비 -> switch(mode) -> Process() -> 공용 후처리로 읽히게 한다).
+    bool KeepProcess(
+        const CartesianState& ego, const FrenetState& start,
+        double s, double d, double s_dot, double s_ddot,
+        double d_dot, double d_ddot,
+        const std::vector<TrackedObject>& obstacles,
+        const std::vector<TrackedObject>& predicted_obstacles,
+        double resolved_target_speed, const PlannerCommand& external_command,
+        CartesianPath& out_path);
+
+    // 외부 FOLLOWING 전용 진입점. FSM이 지정한 대상(target_object_id)만
+    // 확보한다 - nearest-object 자동 선택/handoff는 하지 않는다(계약 D1
+    // 0.1절 B 분류). 대상을 확보하지 못하면(TARGET_OBJECT_LOST) 공용
+    // pipeline을 부르지 않고 바로 실패를 보고한다.
+    bool FollowProcess(
+        const CartesianState& ego, const FrenetState& start,
+        double s, double d, double s_dot, double s_ddot,
+        double d_dot, double d_ddot,
+        const std::vector<TrackedObject>& obstacles,
+        const std::vector<TrackedObject>& predicted_obstacles,
+        double resolved_target_speed, const PlannerCommand& external_command,
+        CartesianPath& out_path);
+
+    // 외부 STOP 전용 진입점. UpdateExternalStopExecution으로 APPROACH/
+    // BRAKING/HOLD phase를 갱신한 뒤, HOLD면 공용 pipeline을 거치지 않고
+    // 0속도 유지 궤적을 직접 반환한다. APPROACH/BRAKING은 공용 pipeline에
+    // 위임한다(Stop.cpp의 cmd.mode 내부 전환 주석 참고 - 외부에 보고되는
+    // last_mode_/stop_.phase는 항상 STOP으로 유지된다).
+    bool StopProcess(
         const CartesianState& ego, const FrenetState& start,
         double s, double d, double s_dot, double s_ddot,
         double d_dot, double d_ddot,
@@ -797,10 +843,9 @@ private:
     std::unique_ptr<PlannerDebugWriter> debug_writer_;
     double wheelbase_ = 3.0;
     double lane_width_ = 3.5;
-    // [s] 이 값은 caller(ROS node의 planning/frequency, legacy UDP loop)의
-    // 실제 replanning 주기를 나타낸다. path_cfg_.dt(trajectory 샘플 간격)와는
-    // 다른 개념이다 - 절대 섞어 쓰지 않는다
-    // (fix/yuntae-frenet-speed-continuity Phase 2).
+    // [s] 이 값은 caller(ROS node의 planning/frequency)의 실제 replanning
+    // 주기를 나타낸다. path_cfg_.dt(trajectory 샘플 간격)와는 다른 개념이다
+    // - 절대 섞어 쓰지 않는다(fix/yuntae-frenet-speed-continuity Phase 2).
     double replanning_period_s_ = 0.05;
     // [m/s^2] target speed가 이전 cycle보다 증가하는 방향에만 적용하는
     // rate limit. 감속 방향은 curve braking envelope(Phase 1)가 이미

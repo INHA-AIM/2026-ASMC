@@ -634,13 +634,105 @@ bool FrenetPlanner::PlanInternal(
             avoid_prepare, avoid_committed, out_path, *avoid_prepare_result);
     }
 
-    return ResolveAndExecuteManeuver(
-        ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
-        predicted_obstacles,
-        resolved_target_speed, *external_command, out_path);
+    // 여기 도달하면 external_command->mode는 IsSupportedExternalMode의
+    // whitelist와 위쪽 EMERGENCY/AVOID 분기에 의해 반드시
+    // {LANE_KEEPING, STOP, FOLLOWING} 중 하나다. Plan()이 validation ->
+    // 공용 준비(위) -> switch(mode) -> Process() -> 공용 후처리
+    // (ExecuteManeuverPipeline 내부)로 읽히도록 각 모드의 명시적 진입점으로
+    // 보낸다(§6).
+    switch (external_command->mode) {
+        case FOLLOWING:
+            return FollowProcess(
+                ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
+                predicted_obstacles, resolved_target_speed,
+                *external_command, out_path);
+        case STOP:
+            return StopProcess(
+                ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
+                predicted_obstacles, resolved_target_speed,
+                *external_command, out_path);
+        default:
+            return KeepProcess(
+                ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
+                predicted_obstacles, resolved_target_speed,
+                *external_command, out_path);
+    }
 }
 
-bool FrenetPlanner::ResolveAndExecuteManeuver(
+bool FrenetPlanner::KeepProcess(
+    const CartesianState& ego, const FrenetState& start,
+    double s, double d, double s_dot, double s_ddot,
+    double d_dot, double d_ddot,
+    const std::vector<TrackedObject>& obstacles,
+    const std::vector<TrackedObject>& predicted_obstacles,
+    double resolved_target_speed, const PlannerCommand& external_command,
+    CartesianPath& out_path) {
+    // KEEP은 모드별 준비 작업이 없다 - 공용 pipeline을 그대로 위임한다.
+    return ExecuteManeuverPipeline(
+        ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
+        predicted_obstacles, resolved_target_speed, external_command,
+        out_path);
+}
+
+bool FrenetPlanner::FollowProcess(
+    const CartesianState& ego, const FrenetState& start,
+    double s, double d, double s_dot, double s_ddot,
+    double d_dot, double d_ddot,
+    const std::vector<TrackedObject>& obstacles,
+    const std::vector<TrackedObject>& predicted_obstacles,
+    double resolved_target_speed, const PlannerCommand& external_command,
+    CartesianPath& out_path) {
+    // 외부 FOLLOW: FSM이 지정한 대상만 확보한다. 자동 선택/handoff를 타지
+    // 않는다(계약 D1 0.1절 B 분류). 확보에 실패하면 공용 pipeline을 부르지
+    // 않고 여기서 바로 실패를 보고한다.
+    PlannerCommand cmd = external_command;
+    const FollowTargetStatus status = ResolveExternalFollowTarget(
+        s, cmd.target_object_id, obstacles, v2_following_);
+    if (status == FollowTargetStatus::LOST) {
+        // 대상을 쓸 수 없다. KEEP으로 자동 전환하지 않는다 - 다음
+        // 행동은 FSM이 새 command_id로 결정한다(계약 12.5절 D5).
+        last_mode_ = FOLLOWING;
+        last_failure_reason_ = PlanFailureReason::TARGET_OBJECT_LOST;
+        return false;
+    }
+    // VALID / GRACE 모두 확보된 상태를 후보 생성기에 전달한다.
+    cmd.leader_s = v2_following_.leader_s;
+    cmd.leader_speed = v2_following_.leader_speed;
+    cmd.leader_accel = v2_following_.leader_accel;
+    // 계약 11.8절: adapter는 custom gap이 꺼져 있으면 0.0 sentinel을
+    // 넘긴다. config 기본값 적용은 이 소비 지점에서 한다 - 변환이
+    // config에 의존하면 "FSM이 준 값"과 "Frenet 기본값"을 피드백에서
+    // 구분할 수 없다.
+    if (!(cmd.time_gap > 0.0)) cmd.time_gap = following_cfg_.time_gap;
+    if (!(cmd.min_gap > 0.0)) cmd.min_gap = following_cfg_.min_gap;
+    cmd.gap_gain = following_cfg_.gap_gain;
+
+    return ExecuteManeuverPipeline(
+        ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
+        predicted_obstacles, resolved_target_speed, cmd, out_path);
+}
+
+bool FrenetPlanner::StopProcess(
+    const CartesianState& ego, const FrenetState& start,
+    double s, double d, double s_dot, double s_ddot,
+    double d_dot, double d_ddot,
+    const std::vector<TrackedObject>& obstacles,
+    const std::vector<TrackedObject>& predicted_obstacles,
+    double resolved_target_speed, const PlannerCommand& external_command,
+    CartesianPath& out_path) {
+    // STOP의 APPROACH/BRAKING/HOLD phase 갱신과 HOLD 조기반환은 공용
+    // pipeline(ExecuteManeuverPipeline) 안에서 external_stop_mode 분기로
+    // 처리한다 - SelectBestStoppingPath/TrimExternalStopReverseTrajectory/
+    // BRAKING fail-safe 등 STOP 전용 로직이 파이프라인 뒷부분 전체에 걸쳐
+    // 있어서, 그 부분만 분리하면 같은 조건을 두 곳에서 유지해야 한다.
+    // 여기서는 그 진입점만 명확히 이름 붙인다.
+    return ExecuteManeuverPipeline(
+        ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
+        predicted_obstacles, resolved_target_speed, external_command,
+        out_path);
+}
+
+bool FrenetPlanner::ExecuteManeuverPipeline(
     const CartesianState& ego, const FrenetState& start,
     double s, double d, double s_dot, double s_ddot,
     double d_dot, double d_ddot,
@@ -651,36 +743,13 @@ bool FrenetPlanner::ResolveAndExecuteManeuver(
     const PlannerCommand* external_command = &command;
     // 외부 command 경로는 FSM이 지정한 mode를 그대로 받아 실행한다. 진입
     // 가능한 모드는 ValidateExternalCommand의 whitelist가 이미 걸러낸 상태다.
+    // FOLLOWING의 leader_s/leader_speed/leader_accel/time_gap/min_gap/
+    // gap_gain은 FollowProcess가 이미 채운 뒤 이 함수를 불렀다 - 여기서
+    // 다시 ResolveExternalFollowTarget을 부르면 v2_following_ 상태(grace
+    // 창/missing_cycles)가 사이클당 두 번 갱신되므로 절대 다시 부르지 않는다.
     PlannerCommand cmd = *external_command;
-    double leader_s = 0.0, leader_speed = 0.0, leader_accel = 0.0;
-
-    // 외부 FOLLOW: FSM이 지정한 대상만 확보한다. 자동 선택/handoff를 타지
-    // 않는다(계약 D1 0.1절 B 분류).
-    if (cmd.mode == FOLLOWING) {
-        const FollowTargetStatus status = ResolveExternalFollowTarget(
-            s, cmd.target_object_id, obstacles, v2_following_);
-        if (status == FollowTargetStatus::LOST) {
-            // 대상을 쓸 수 없다. KEEP으로 자동 전환하지 않는다 - 다음
-            // 행동은 FSM이 새 command_id로 결정한다(계약 12.5절 D5).
-            last_mode_ = FOLLOWING;
-            last_failure_reason_ = PlanFailureReason::TARGET_OBJECT_LOST;
-            return false;
-        }
-        // VALID / GRACE 모두 확보된 상태를 후보 생성기에 전달한다.
-        leader_s = v2_following_.leader_s;
-        leader_speed = v2_following_.leader_speed;
-        leader_accel = v2_following_.leader_accel;
-        cmd.leader_s = leader_s;
-        cmd.leader_speed = leader_speed;
-        cmd.leader_accel = leader_accel;
-        // 계약 11.8절: adapter는 custom gap이 꺼져 있으면 0.0 sentinel을
-        // 넘긴다. config 기본값 적용은 이 소비 지점에서 한다 - 변환이
-        // config에 의존하면 "FSM이 준 값"과 "Frenet 기본값"을 피드백에서
-        // 구분할 수 없다.
-        if (!(cmd.time_gap > 0.0)) cmd.time_gap = following_cfg_.time_gap;
-        if (!(cmd.min_gap > 0.0)) cmd.min_gap = following_cfg_.min_gap;
-        cmd.gap_gain = following_cfg_.gap_gain;
-    }
+    const double leader_s = cmd.leader_s;
+    const double leader_speed = cmd.leader_speed;
 
     // 외부 AVOID의 대상 확보는 **저속 fallback보다 위**에서 이미 끝났다
     // (D6-2a). 여기서 하면 ego < 0.5 m/s일 때 도달하지 않는다.

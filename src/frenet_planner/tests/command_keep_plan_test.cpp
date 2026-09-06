@@ -77,7 +77,7 @@ TrackedObject MakeAuthoritativeBox(int id, double x, double y) {
 
 int main() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
-    const std::string config = package_src + "/frenet_planner/config/params.yaml";
+    const std::string config = package_src + "/../config/params.yaml";
     const std::string waypoints = FRENET_TEST_WAYPOINT_FILE;
 
     FrenetPlanner planner;

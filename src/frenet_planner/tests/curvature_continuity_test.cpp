@@ -72,7 +72,7 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "curvature_continuity_test_params.yaml");
 
     RefLine ref;
@@ -172,7 +172,7 @@ void TestNormalKeepStillRecentersToCenter() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "curvature_continuity_test_normal_params.yaml");
 
     RefLine ref;

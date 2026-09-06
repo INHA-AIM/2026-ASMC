@@ -33,8 +33,10 @@ target_include_directories(frenet_geometry PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-# Transport-independent planner implementation shared by the ROS and legacy
-# UDP runtimes. Networking and ROS callback code must not be added here.
+# Transport-independent planner core (candidate generation, maneuver
+# processes, cost/collision evaluation). ROS callback and networking code
+# must not be added here - that lives in frenet_planner_message_converter
+# and the frenet_planner_node executable below.
 add_library(frenet_planner_core
   src/frenet_planner/frenet_planner.cpp
   src/frenet_planner/Maneuver/ManeuverUtils.cpp
@@ -426,10 +428,4 @@ install(PROGRAMS tools/planner_visualizer.py
 
 install(DIRECTORY config launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
-
-install(DIRECTORY
-    src/frenet_planner/config/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/legacy
-  FILES_MATCHING PATTERN "*.yaml"
 )
