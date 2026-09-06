@@ -27,6 +27,10 @@ class RouteManager {
                           LinkInfo* out) const;
   double getSpeedLimit(const std::string& current_link_id) const;
   bool getRoutePoint(double route_s, Point2D* out) const;
+  bool getRoutePose(double route_s, Point2D* out, double* out_yaw) const;
+  bool getLinkTargetPose(const std::string& link_id, double ego_x,
+                         double ego_y, double lookahead_m, Point2D* out,
+                         double* out_yaw) const;
   bool matchMapLink(double x, double y, double yaw,
                     LinkProjection* out,
                     double max_distance = 12.0) const;

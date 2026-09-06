@@ -32,8 +32,11 @@ MpcControllerNode::MpcControllerNode(ros::NodeHandle nh,
       controller_(LoadParamsForNode(private_nh_)) {
     std::string trajectory_topic = "/planning/trajectory";
     std::string control_topic = "/ctrl_cmd";
+    std::string behavior_command_topic = "/behavior/command_v2";
     private_nh_.param("topics/trajectory", trajectory_topic, trajectory_topic);
     private_nh_.param("publish_topics/control", control_topic, control_topic);
+    private_nh_.param("topics/behavior_command_v2", behavior_command_topic,
+                      behavior_command_topic);
     private_nh_.param("timeouts/trajectory", trajectory_timeout_,
                       trajectory_timeout_);
 
@@ -53,6 +56,9 @@ MpcControllerNode::MpcControllerNode(ros::NodeHandle nh,
 
     trajectory_sub_ = nh_.subscribe(
         trajectory_topic, 1, &MpcControllerNode::trajectoryCallback, this);
+    behavior_command_sub_ = nh_.subscribe(
+        behavior_command_topic, 1,
+        &MpcControllerNode::behaviorCommandCallback, this);
     control_pub_ = nh_.advertise<morai_msgs::CtrlCmd>(control_topic, 1);
     const double frequency = controller_.params().control_frequency > 0.0
         ? controller_.params().control_frequency : 20.0;
@@ -63,6 +69,18 @@ MpcControllerNode::MpcControllerNode(ros::NodeHandle nh,
     ROS_INFO("MPC ROS runtime @ %.1f Hz: %s -> %s, stale timeout %.3f s",
              frequency, trajectory_topic.c_str(), control_topic.c_str(),
              trajectory_timeout_);
+}
+
+void MpcControllerNode::behaviorCommandCallback(
+    const asmc_msgs::BehaviorCommand::ConstPtr& message) {
+    if (!message) return;
+    const bool emergency =
+        message->maneuver_type == asmc_msgs::BehaviorCommand::EMERGENCY_STOP;
+    if (emergency != emergency_stop_active_) {
+        ROS_WARN("MPC emergency brake override %s (command_id=%u)",
+                 emergency ? "ACTIVE" : "RELEASED", message->command_id);
+    }
+    emergency_stop_active_ = emergency;
 }
 
 void MpcControllerNode::trajectoryCallback(
@@ -80,6 +98,11 @@ void MpcControllerNode::publishStop(const char* reason) {
 }
 
 void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
+    if (emergency_stop_active_) {
+        controller_.ResetOnFailSafe();
+        control_pub_.publish(MakeRosEmergencyStopCommand());
+        return;
+    }
     if (!has_trajectory_) {
         publishStop("trajectory missing");
         return;

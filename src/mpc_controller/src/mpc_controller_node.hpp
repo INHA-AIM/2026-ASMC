@@ -1,6 +1,7 @@
 #pragma once
 
 #include <asmc_msgs/Trajectory.h>
+#include <asmc_msgs/BehaviorCommand.h>
 #include <morai_msgs/CtrlCmd.h>
 #include <ros/ros.h>
 
@@ -14,12 +15,15 @@ class MpcControllerNode {
 
  private:
     void trajectoryCallback(const asmc_msgs::Trajectory::ConstPtr& message);
+    void behaviorCommandCallback(
+        const asmc_msgs::BehaviorCommand::ConstPtr& message);
     void controlTimerCallback(const ros::SteadyTimerEvent&);
     void publishStop(const char* reason);
 
     ros::NodeHandle nh_;
     ros::NodeHandle private_nh_;
     ros::Subscriber trajectory_sub_;
+    ros::Subscriber behavior_command_sub_;
     ros::Publisher control_pub_;
     ros::SteadyTimer control_timer_;
 
@@ -29,6 +33,7 @@ class MpcControllerNode {
     double trajectory_timeout_ = 0.25;
 
     MpcController controller_;
+    bool emergency_stop_active_ = false;
 };
 
 }  // namespace mpc_controller_ros

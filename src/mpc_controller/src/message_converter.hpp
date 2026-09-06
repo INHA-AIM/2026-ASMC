@@ -28,6 +28,7 @@ bool IsTrajectoryFresh(const ros::SteadyTime& received_at,
 TrajectoryStatus ConvertTrajectory(const asmc_msgs::Trajectory& message,
                                    PlannedPath& path, MPCState& ego_state);
 morai_msgs::CtrlCmd MakeRosStopCommand();
+morai_msgs::CtrlCmd MakeRosEmergencyStopCommand();
 morai_msgs::CtrlCmd ToRosControlCommand(const MPCControl& control,
                                         const MPCParams& params);
 

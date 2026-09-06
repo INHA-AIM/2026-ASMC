@@ -7,7 +7,8 @@ import json
 import threading
 
 import rospy
-from asmc_msgs.msg import BehaviorContext, Trajectory, VehicleState
+from asmc_msgs.msg import (BehaviorCommand, BehaviorContext, FrenetFeedback,
+                           Trajectory, VehicleState)
 from behavior_planner.msg import UrbanFeatureDebug
 from morai_msgs.msg import ObjectStatusList
 from visualization_msgs.msg import MarkerArray
@@ -24,7 +25,8 @@ def ros_to_dict(value):
 
 
 class DashboardHandler(http.server.SimpleHTTPRequestHandler):
-    snapshot = {"context": None, "feature": None, "trajectory": None,
+    snapshot = {"interface_version": "v1", "context": None, "command": None,
+                "feedback": None, "feature": None, "trajectory": None,
                 "ego": None, "objects": None, "planning_markers": None}
     snapshot_lock = threading.Lock()
 
@@ -81,9 +83,22 @@ def main():
     rospy.init_node("behavior_dashboard_server")
     port = int(rospy.get_param("~port", 8088))
     package_path = rospy.get_param("~package_path")
-    rospy.Subscriber(
-        "/behavior/context", BehaviorContext,
-        lambda message: set_snapshot("context", message), queue_size=1)
+    interface_version = rospy.get_param("~interface_version", "v1")
+    DashboardHandler.snapshot["interface_version"] = interface_version
+    if interface_version == "v2":
+        rospy.Subscriber(
+            rospy.get_param("~command_topic", "/behavior/command_v2"),
+            BehaviorCommand,
+            lambda message: set_snapshot("command", message), queue_size=1)
+        rospy.Subscriber(
+            rospy.get_param("~feedback_topic", "/planning/frenet_feedback_v2"),
+            FrenetFeedback,
+            lambda message: set_snapshot("feedback", message), queue_size=1)
+    else:
+        rospy.Subscriber(
+            rospy.get_param("~context_topic", "/behavior/context"),
+            BehaviorContext,
+            lambda message: set_snapshot("context", message), queue_size=1)
     rospy.Subscriber(
         "/behavior/feature_debug", UrbanFeatureDebug,
         lambda message: set_snapshot("feature", message), queue_size=1)
@@ -103,7 +118,9 @@ def main():
     server = http.server.ThreadingHTTPServer(("0.0.0.0", port), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
-    rospy.loginfo("Behavior dashboard: http://localhost:%d/web/index.html", port)
+    page = "index_v2.html" if interface_version == "v2" else "index.html"
+    rospy.loginfo("Behavior dashboard (%s): http://localhost:%d/web/%s",
+                  interface_version, port, page)
     rospy.on_shutdown(server.shutdown)
     rospy.spin()
 

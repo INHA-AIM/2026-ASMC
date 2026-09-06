@@ -372,6 +372,27 @@ void FrenetPlannerNode::publishDebugMarkers(
     marker_pub_.publish(markers);
 }
 
+void FrenetPlannerNode::publishDebugMarkersV2(
+    const asmc_msgs::Trajectory& trajectory,
+    const asmc_msgs::BehaviorCommand& command) {
+    // Reuse the established candidate/selected-path renderer.  InputSnapshot
+    // is only used here for debug labels and the STOP marker, so adapt the v2
+    // command without feeding it back into the v1 planning path.
+    InputSnapshot snapshot;
+    snapshot.has_behavior = true;
+    snapshot.behavior.command_id = command.command_id;
+    snapshot.behavior.selected_behavior = command.maneuver_type;
+    snapshot.behavior.target_link_id = command.target_link_id;
+    snapshot.behavior.has_stop_target =
+        command.maneuver_type == asmc_msgs::BehaviorCommand::STOP &&
+        command.has_target_pose;
+    if (snapshot.behavior.has_stop_target) {
+        snapshot.behavior.stop_x = command.target_pose_map.position.x;
+        snapshot.behavior.stop_y = command.target_pose_map.position.y;
+    }
+    publishDebugMarkers(trajectory, snapshot);
+}
+
 void FrenetPlannerNode::publishStop(const InputSnapshot& snapshot,
                                     uint8_t failure_reason,
                                     const ros::Time& now) {
@@ -1411,6 +1432,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 : "executing committed avoid trajectory";
         }
         trajectory_pub_.publish(trajectory);
+        publishDebugMarkersV2(trajectory, command);
         publishFeedbackV2(feedback_command_id, executing, &trajectory,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED,
                           /*plan_valid=*/true, ego_s_valid, ego_s,
@@ -1670,6 +1692,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                    : std::string("no safe avoid candidate this cycle"));
 
         trajectory_pub_.publish(published);
+        publishDebugMarkersV2(published, command);
         const uint8_t trajectory_source =
             committed_now
                 ? asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED
@@ -1848,6 +1871,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     }
 
     trajectory_pub_.publish(trajectory);
+    publishDebugMarkersV2(trajectory, command);
     CommandAcceptance succeeded = acceptance;
     succeeded.execution_state = command_manager_.execution_state();
     publishFeedbackV2(feedback_command_id, succeeded, &trajectory,

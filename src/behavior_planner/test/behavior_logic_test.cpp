@@ -2,6 +2,7 @@
 
 #include "asmc_msgs/PlanFeedback.h"
 #include "behavior_planner/context/msg_converter.hpp"
+#include "behavior_planner/context/v2_command_manager.hpp"
 #include "behavior_planner/decision/behavior_decision.hpp"
 #include "behavior_planner/rule/hard_rule_filter.hpp"
 #include "behavior_planner/signal/ros_traffic_light_provider.hpp"
@@ -21,6 +22,92 @@ TEST(TrafficLightLabelTest, SelectsAspectForRouteMovement) {
             InterpretTrafficLightLabel("green", SignalMovement::LEFT));
   EXPECT_EQ(TrafficLightState::UNKNOWN,
             InterpretTrafficLightLabel("not_detected", SignalMovement::LEFT));
+}
+
+TEST(V2CommandManagerTest, KeepFreezesDerivedSpeedUntilIntentChanges) {
+  behavior_planner::V2CommandManager manager;
+  behavior_planner::BehaviorContextData context;
+  context.timestamp = 1.0;
+  context.selected_behavior = behavior_planner::BehaviorType::KEEP;
+  context.target.current_link_id = "link_1";
+  context.target.desired_speed = 8.0;
+
+  const auto first = manager.update(context, nullptr, ros::Time(10.0), 0.5);
+  const auto refresh = manager.update(context, nullptr, ros::Time(10.1), 0.5);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::KEEP, first.maneuver_type);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::EXECUTE, first.execution_request);
+  EXPECT_NE(0u, first.command_id);
+  EXPECT_EQ(first.command_id, refresh.command_id);
+  EXPECT_GT(refresh.valid_until, first.valid_until);
+
+  context.target.desired_speed = 7.0;
+  const auto speed_refresh =
+      manager.update(context, nullptr, ros::Time(10.2), 0.5);
+  EXPECT_EQ(first.command_id, speed_refresh.command_id);
+  EXPECT_DOUBLE_EQ(first.desired_speed_mps, speed_refresh.desired_speed_mps);
+
+  context.selected_behavior = behavior_planner::BehaviorType::STOP;
+  context.target.has_target_pose = true;
+  context.target.target_x = 20.0;
+  context.target.target_y = 0.0;
+  const auto changed = manager.update(context, nullptr, ros::Time(10.3), 0.5);
+  EXPECT_NE(first.command_id, changed.command_id);
+}
+
+TEST(V2CommandManagerTest, LaneChangeUsesReadyExecuteHandshake) {
+  behavior_planner::V2CommandManager manager;
+  behavior_planner::BehaviorContextData context;
+  context.timestamp = 1.0;
+  context.selected_behavior = behavior_planner::BehaviorType::LEFT_CHANGE;
+  context.target.current_link_id = "source";
+  context.target.target_link_id = "left";
+  context.target.desired_speed = 6.0;
+  context.target.has_target_pose = true;
+  context.target.target_x = 12.0;
+  context.target.target_y = 3.5;
+  context.target.target_yaw = 0.2;
+
+  const auto prepare = manager.update(context, nullptr, ros::Time(20.0), 0.5);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::LANE_CHANGE, prepare.maneuver_type);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::DIRECTION_LEFT, prepare.direction);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::PREPARE, prepare.execution_request);
+  EXPECT_TRUE(prepare.has_target_pose);
+
+  asmc_msgs::FrenetFeedback feedback;
+  feedback.command_id = prepare.command_id;
+  feedback.execution_state = asmc_msgs::FrenetFeedback::READY;
+  const auto execute =
+      manager.update(context, &feedback, ros::Time(20.1), 0.5);
+  EXPECT_EQ(prepare.command_id, execute.command_id);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::EXECUTE, execute.execution_request);
+}
+
+TEST(V2CommandManagerTest, StopCarriesPoseAndForceStopMapsToEmergency) {
+  behavior_planner::V2CommandManager manager;
+  behavior_planner::BehaviorContextData context;
+  context.timestamp = 1.0;
+  context.selected_behavior = behavior_planner::BehaviorType::STOP;
+  context.target.current_link_id = "link";
+  context.target.desired_speed = 5.0;
+  context.target.has_target_pose = true;
+  context.target.target_x = 30.0;
+  context.target.target_y = 4.0;
+  context.target.target_yaw = 0.5;
+
+  const auto stop = manager.update(context, nullptr, ros::Time(30.0), 0.5);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::STOP, stop.maneuver_type);
+  EXPECT_TRUE(stop.has_target_pose);
+  EXPECT_DOUBLE_EQ(30.0, stop.target_pose_map.position.x);
+  EXPECT_NEAR(1.0, std::hypot(stop.target_pose_map.orientation.z,
+                             stop.target_pose_map.orientation.w), 1e-9);
+
+  context.hard.force_stop = true;
+  const auto emergency =
+      manager.update(context, nullptr, ros::Time(30.1), 0.5);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::EMERGENCY_STOP,
+            emergency.maneuver_type);
+  EXPECT_FALSE(emergency.has_target_pose);
+  EXPECT_DOUBLE_EQ(0.0, emergency.desired_speed_mps);
 }
 
 TEST(HardRuleFilterTest, GreenLightDoesNotForceStop) {
@@ -129,7 +216,19 @@ TEST(BehaviorDecisionTest, EmptyRoadSelectsKeep) {
   EXPECT_FALSE(context.enable.follow);
 }
 
-TEST(BehaviorDecisionTest, FollowReducesTargetSpeed) {
+TEST(FsmTest, EmergencyReleaseRequiresSafeTtcHoldTime) {
+  behavior_planner::Fsm fsm;
+  fsm.setEmergencyRelease(3.0, 0.5);
+
+  EXPECT_TRUE(fsm.updateEmergency(true, 0.8, 10.0));
+  EXPECT_TRUE(fsm.emergencyLatched());
+  EXPECT_TRUE(fsm.updateEmergency(false, 10.0, 10.1));
+  EXPECT_TRUE(fsm.updateEmergency(false, 10.0, 10.59));
+  EXPECT_FALSE(fsm.updateEmergency(false, 10.0, 10.60));
+  EXPECT_FALSE(fsm.emergencyLatched());
+}
+
+TEST(BehaviorDecisionTest, FollowKeepsCruiseSpeedCeilingForFrenetGapControl) {
   UrbanFeature feature;
   feature.ego.speed = 12.0;
   feature.route.speed_limit = 13.9;
@@ -142,8 +241,8 @@ TEST(BehaviorDecisionTest, FollowReducesTargetSpeed) {
   asmc_msgs::PlanFeedback feedback;
   const BehaviorContextData context = BehaviorDecision().decide(feature, feedback);
   EXPECT_EQ(BehaviorType::FOLLOW, context.selected_behavior);
-  EXPECT_LT(context.target.desired_speed, feature.route.speed_limit);
-  EXPECT_GE(context.target.desired_speed, 0.0);
+  EXPECT_DOUBLE_EQ(feature.route.speed_limit, context.target.desired_speed);
+  EXPECT_EQ(7, context.target.lead_vehicle_id);
 }
 
 TEST(MsgConverterTest, MapsKeepContractAndCommandId) {

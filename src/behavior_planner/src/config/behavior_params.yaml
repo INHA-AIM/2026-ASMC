@@ -1,4 +1,6 @@
 behavior: {update_rate: 10.0}
+interface_version: "v1"
+v2: {command_validity_seconds: 0.5, feedback_stale_seconds: 1.0}
 map:
   link_set_path: "$(find behavior_planner)/src/config/link_set.json"
   node_set_path: "$(find behavior_planner)/src/config/node_set.json"
@@ -10,10 +12,20 @@ traffic_light:
   mock_path: "$(find behavior_planner)/src/config/traffic_light_mock.yaml"
 vehicle: {length: 4.7, width: 1.85, wheelbase: 3.0}
 lane: {default_width: 3.5}
-safety: {front_min_gap: 8.0, follow_time_gap: 1.5, lane_change_front_gap: 12.0, lane_change_rear_gap: 15.0, emergency_ttc: 1.0, warning_ttc: 3.0, pedestrian_stop_distance: 15.0}
+safety:
+  front_min_gap: 8.0
+  follow_time_gap: 1.5
+  lane_change_front_gap: 12.0
+  lane_change_rear_gap: 15.0
+  emergency_ttc_enter: 2.0
+  emergency_predicted_ttc: 2.0
+  emergency_ttc_exit: 3.0
+  emergency_release_hold_s: 0.5
+  emergency_required_decel: 5.0
+  pedestrian_stop_distance: 15.0
 # VehicleState is referenced at the rear axle. IONIQ 5 length (~4.7 m) plus
 # 0.3 m clearance keeps the complete vehicle conservatively before the line.
 stop: {target_offset_m: 5.0, red_light_stop_distance: 27.0}
 score_weight: {safety: 1.0, route: 0.8, efficiency: 0.5, comfort: 0.2}
-topics: {ego: "/vehicle/state", objects: "/Object_topic", plan_feedback: "/planning/feedback"}
-publish_topics: {behavior_context: "/behavior/context", feature_debug: "/behavior/feature_debug", marker: "/behavior/markers"}
+topics: {ego: "/vehicle/state", objects: "/Object_topic", plan_feedback: "/planning/feedback", frenet_feedback_v2: "/planning/frenet_feedback_v2"}
+publish_topics: {behavior_context: "/behavior/context", behavior_command_v2: "/behavior/command_v2", feature_debug: "/behavior/feature_debug", marker: "/behavior/markers"}

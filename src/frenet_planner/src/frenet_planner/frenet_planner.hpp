@@ -872,6 +872,7 @@ private:
     FollowingConfig following_cfg_{};
     AvoidConfig avoid_cfg_{};
     StopConfig stop_cfg_{};
+    EmergencyStopConfig emergency_stop_cfg_{};
     MergeConfig merge_cfg_{};
     HighwayMergeConfig highway_merge_cfg_{};
     PlannerVisualizationConfig visualization_cfg_{};

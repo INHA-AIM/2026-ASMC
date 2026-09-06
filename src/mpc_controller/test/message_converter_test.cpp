@@ -69,6 +69,14 @@ TEST(TrajectoryConverterTest, RecognizesValidSinglePointStop) {
     EXPECT_DOUBLE_EQ(0.0, stop.steering);
 }
 
+TEST(MpcRosConverterTest, EmergencyStopUsesFullBrake) {
+    const morai_msgs::CtrlCmd stop = MakeRosEmergencyStopCommand();
+    EXPECT_EQ(1, stop.longlCmdType);
+    EXPECT_DOUBLE_EQ(0.0, stop.accel);
+    EXPECT_DOUBLE_EQ(1.0, stop.brake);
+    EXPECT_DOUBLE_EQ(0.0, stop.steering);
+}
+
 TEST(TrajectoryConverterTest, PublishesRosSteeringInRadians) {
     MPCParams params;
     params.steering_max = 0.6981;

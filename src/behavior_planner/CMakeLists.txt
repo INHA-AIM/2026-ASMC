@@ -25,6 +25,7 @@ set(BEHAVIOR_NODE_SOURCES
   src/decision/behavior_decision.cpp src/decision/behavior_scorer.cpp
   src/decision/fsm.cpp src/decision/transition_condition.cpp
   src/context/msg_converter.cpp
+  src/context/v2_command_manager.cpp
   src/signal/mock_traffic_light_provider.cpp
   src/signal/ros_traffic_light_provider.cpp
   src/global/utils.cpp src/global/data_logger.cpp
@@ -43,6 +44,7 @@ target_link_libraries(behavior_node ${catkin_LIBRARIES} yaml-cpp)
 install(TARGETS behavior_node RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 catkin_install_python(PROGRAMS
   scripts/behavior_dashboard_server.py
+  scripts/morai_objects_adapter.py
   scripts/open_dashboard.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 install(DIRECTORY launch src/config web DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
@@ -51,7 +53,9 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(behavior_logic_test
     test/behavior_logic_test.cpp
     src/context/msg_converter.cpp
+    src/context/v2_command_manager.cpp
     src/rule/hard_rule_filter.cpp
+    src/decision/fsm.cpp
     src/signal/ros_traffic_light_provider.cpp
     src/decision/behavior_scorer.cpp
     src/decision/behavior_decision.cpp)
