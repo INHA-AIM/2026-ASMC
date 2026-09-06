@@ -1,2 +1,52 @@
 #include "behavior_planner/rule/hard_rule_filter.hpp"
-namespace behavior_planner { HardConstraint HardRuleFilter::apply(const UrbanFeature&f,std::string*reason)const{HardConstraint h;std::string r;h.forbid_left_change=!f.route.lane_change_left_allowed;h.forbid_right_change=!f.route.lane_change_right_allowed;h.forbid_lane_change=h.forbid_left_change&&h.forbid_right_change;h.max_speed=f.route.speed_limit>0?f.route.speed_limit:1e9;if(f.signal.has_stop_line&&f.signal.distance_to_stop_line>=0&&f.signal.distance_to_stop_line<=30){h.stop_line_constraint=true;h.stop_before_s=f.signal.stop_line_s-6.0;if(f.signal.light_state==TrafficLightState::RED||f.signal.light_state==TrafficLightState::YELLOW){h.force_stop=true;r+="traffic_light;";}}if(f.risk.pedestrian_risk){h.force_stop=true;r+="pedestrian_risk;";}if(f.risk.emergency_risk||f.risk.min_ttc<1.0){h.emergency_stop=true;h.force_stop=true;r+="emergency_ttc;";}if(r.empty())r="no_hard_constraint";if(reason)*reason=r;return h;} }
+
+namespace behavior_planner {
+
+HardConstraint HardRuleFilter::apply(const UrbanFeature& feature,
+                                     std::string* reason) const {
+  HardConstraint hard;
+  std::string result;
+
+  hard.forbid_left_change = !feature.route.lane_change_left_allowed;
+  hard.forbid_right_change = !feature.route.lane_change_right_allowed;
+  hard.forbid_lane_change =
+      hard.forbid_left_change && hard.forbid_right_change;
+  hard.max_speed =
+      feature.route.speed_limit > 0.0 ? feature.route.speed_limit : 1e9;
+
+  if (feature.signal.has_stop_line &&
+      feature.signal.distance_to_stop_line >= 0.0 &&
+      feature.signal.distance_to_stop_line <= 30.0) {
+    hard.stop_line_constraint = true;
+    hard.stop_before_s = feature.signal.stop_line_s;
+
+    // MGeo right_unprotected is a route turn, not a RIGHT_CHANGE maneuver.
+    // Ignore only the vehicle signal; pedestrian/collision stops remain below.
+    const bool unprotected_right =
+        feature.signal.has_required_movement &&
+        feature.signal.required_movement == SignalMovement::RIGHT_UNPROTECTED;
+    const bool stop_aspect =
+        feature.signal.light_state == TrafficLightState::RED ||
+        feature.signal.light_state == TrafficLightState::YELLOW;
+    if (stop_aspect && !unprotected_right) {
+      hard.planned_stop = true;
+      result += "traffic_light;";
+    }
+  }
+
+  if (feature.risk.pedestrian_risk) {
+    hard.force_stop = true;
+    result += "pedestrian_risk;";
+  }
+  if (feature.risk.emergency_risk || feature.risk.min_ttc < 1.0) {
+    hard.emergency_stop = true;
+    hard.force_stop = true;
+    result += "emergency_ttc;";
+  }
+
+  if (result.empty()) result = "no_hard_constraint";
+  if (reason) *reason = result;
+  return hard;
+}
+
+}  // namespace behavior_planner

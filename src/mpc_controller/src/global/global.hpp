@@ -95,6 +95,9 @@ struct MPCParams {
     double steering_rate_max= 1.0;     // [rad/s]
     double accel_min        = -5.0;    // [m/s²]
     double accel_max        = 3.0;     // [m/s²]
+    // MORAI longlCmdType=1의 brake=1.0에 대응하는 차량 최대 감속도.
+    // MPC 제약(accel_min)과 페달 변환 캘리브레이션을 분리한다.
+    double brake_full_decel = 8.9;     // [m/s²]
     double vel_min          = 0.0;     // [m/s]
     double vel_max          = 30.0;    // [m/s]
 

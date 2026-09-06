@@ -1,5 +1,7 @@
 #include "frenet_planner/Evaluation/Cost.hpp"
 
+#include <cmath>
+
 double ComputeLateralCost(const FrenetPath& path, const CostWeights& w, double target_d) {
     const double T  = path.t.empty() ? 0.0 : path.t.back();
     const double d1 = path.d.empty() ? 0.0 : path.d.back();
@@ -49,5 +51,26 @@ const FrenetPath* SelectBestPath(const std::vector<FrenetPath>& candidates) {
         }
     }
 
+    return best;
+}
+
+const FrenetPath* SelectBestStoppingPath(
+    const std::vector<FrenetPath>& candidates) {
+    const FrenetPath* best = nullptr;
+    constexpr double kPositionEpsilon = 1e-6;
+    for (const auto& path : candidates) {
+        if (!path.valid) continue;
+        if (best == nullptr) {
+            best = &path;
+            continue;
+        }
+        const double error = std::fabs(path.delta_s);
+        const double best_error = std::fabs(best->delta_s);
+        if (error + kPositionEpsilon < best_error ||
+            (std::fabs(error - best_error) <= kPositionEpsilon &&
+             path.cost_total < best->cost_total)) {
+            best = &path;
+        }
+    }
     return best;
 }

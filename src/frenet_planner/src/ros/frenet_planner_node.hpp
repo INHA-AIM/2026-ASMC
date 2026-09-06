@@ -11,6 +11,7 @@
 #include <asmc_msgs/Trajectory.h>
 #include <asmc_msgs/VehicleState.h>
 #include <ros/ros.h>
+#include <visualization_msgs/MarkerArray.h>
 
 #include "frenet_planner/frenet_planner.hpp"
 #include "ros/behavior_command_adapter.hpp"
@@ -137,6 +138,8 @@ class FrenetPlannerNode {
     void publishResult(const asmc_msgs::Trajectory& trajectory,
                        const InputSnapshot& snapshot,
                        bool previous_plan_still_valid);
+    void publishDebugMarkers(const asmc_msgs::Trajectory& trajectory,
+                             const InputSnapshot& snapshot);
     asmc_msgs::VehicleState stopReferenceVehicle(
         const InputSnapshot& snapshot) const;
     double trajectoryDt() const;
@@ -150,6 +153,7 @@ class FrenetPlannerNode {
     ros::Publisher trajectory_pub_;
     ros::Publisher feedback_pub_;
     ros::Publisher feedback_v2_pub_;
+    ros::Publisher marker_pub_;
     ros::SteadyTimer planning_timer_;
 
     // v2 명령 처리. adapter는 stateless이므로 멤버가 필요 없고, transaction

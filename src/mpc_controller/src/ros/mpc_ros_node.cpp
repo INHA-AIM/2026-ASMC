@@ -51,6 +51,11 @@ MpcRosNode::MpcRosNode(ros::NodeHandle nh, ros::NodeHandle private_nh)
     control_pub_ = nh_.advertise<morai_msgs::CtrlCmd>(control_topic, 1);
     const double frequency = mpc_params.control_frequency > 0.0
         ? mpc_params.control_frequency : 20.0;
+    stuck_timeout_cycles_ = std::max(
+        1, static_cast<int>(std::ceil(mpc_params.stuck_timeout * frequency)));
+    recovery_duration_cycles_ = std::max(
+        1, static_cast<int>(std::ceil(
+               mpc_params.stuck_recovery_duration * frequency)));
     control_timer_ = nh_.createSteadyTimer(
         ros::WallDuration(1.0 / frequency),
         &MpcRosNode::controlTimerCallback, this);
@@ -71,6 +76,8 @@ void MpcRosNode::trajectoryCallback(
 void MpcRosNode::publishStop(const char* reason) {
     warm_start_.clear();
     last_control = MPCControl{};
+    stuck_cycles_ = 0;
+    recovery_cycles_left_ = 0;
     control_pub_.publish(MakeRosStopCommand());
     ROS_WARN_THROTTLE(1.0, "MPC fail-safe STOP: %s", reason);
 }
@@ -106,6 +113,40 @@ void MpcRosNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
         return;
     }
 
+    // UDP MPC와 같은 정지 데드락 복구. 정상 STOP은 위에서 이미 반환되며,
+    // 전진 속도와 실제 경로 진행량이 함께 확인될 때만 launch assist를 허용한다.
+    double max_reference_speed = 0.0;
+    for (double speed : reference.v_ref) {
+        max_reference_speed = std::max(max_reference_speed, speed);
+    }
+    double path_progress = 0.0;
+    if (reference.size() >= 2) {
+        path_progress = std::hypot(
+            reference.x_ref.back() - reference.x_ref.front(),
+            reference.y_ref.back() - reference.y_ref.front());
+    }
+    const bool forward_intent =
+        max_reference_speed > mpc_params.stuck_target_speed &&
+        path_progress > mpc_params.stuck_min_path_progress;
+    const bool ego_stopped =
+        std::fabs(ego_snapshot.vx) < mpc_params.stuck_ego_speed;
+
+    if (!forward_intent || !ego_stopped) {
+        stuck_cycles_ = 0;
+        recovery_cycles_left_ = 0;
+    } else if (recovery_cycles_left_ == 0 &&
+               ++stuck_cycles_ >= stuck_timeout_cycles_) {
+        warm_start_.clear();
+        last_control = MPCControl{};
+        recovery_cycles_left_ = recovery_duration_cycles_;
+        stuck_cycles_ = 0;
+        ROS_WARN("MPC stuck recovery start: ego_v=%.2f max_ref_v=%.2f "
+                 "path_progress=%.2f duration=%.2fs launch_accel=%.2f",
+                 ego_snapshot.vx, max_reference_speed, path_progress,
+                 mpc_params.stuck_recovery_duration,
+                 mpc_params.stuck_launch_accel);
+    }
+
     ego = ego_snapshot;
     const MPCResult result = solveMPC(
         ego_snapshot, reference, last_control, warm_start_, mpc_params);
@@ -120,7 +161,18 @@ void MpcRosNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
 
     warm_start_ = result.controls;
     last_control = result.control;
-    control_pub_.publish(ToRosControlCommand(result.control, mpc_params));
+    MPCControl output_control = result.control;
+    if (recovery_cycles_left_ > 0 && forward_intent && ego_stopped) {
+        output_control.accel = std::max(
+            output_control.accel, mpc_params.stuck_launch_accel);
+        // 다음 cycle의 rate cost가 실제 출력한 가속과 이어지도록 동기화한다.
+        last_control.accel = output_control.accel;
+        --recovery_cycles_left_;
+        if (recovery_cycles_left_ == 0) {
+            ROS_INFO("MPC stuck recovery pulse complete; normal MPC resumed");
+        }
+    }
+    control_pub_.publish(ToRosControlCommand(output_control, mpc_params));
 }
 
 }  // namespace mpc_controller_ros

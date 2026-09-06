@@ -53,6 +53,7 @@ void loadMPCParameters(const std::string& yaml_path)
     loadInto(root, "constraints/steering/max_rate",  p.steering_rate_max);
     loadInto(root, "constraints/acceleration/max_forward", p.accel_max);
     loadInto(root, "constraints/acceleration/max_reverse", p.accel_min);
+    loadInto(root, "control_mapping/brake_full_decel", p.brake_full_decel);
     loadInto(root, "constraints/velocity/min",       p.vel_min);
     loadInto(root, "constraints/velocity/max",       p.vel_max);
 
@@ -78,9 +79,17 @@ void loadMPCParameters(const std::string& yaml_path)
     loadInto(root, "solver/convergence_eps",  p.convergence_eps);
     loadInto(root, "solver/line_search_steps",p.line_search_steps);
 
+    if (p.brake_full_decel <= 0.0) {
+        std::printf("[MPC] Invalid brake_full_decel %.3f; using 8.9 m/s^2\n",
+                    p.brake_full_decel);
+        p.brake_full_decel = 8.9;
+    }
+
     std::printf("[MPC] Params: horizon=%d dt=%.2f max_iter=%d wheelbase=%.2f freq=%.1fHz\n",
                 p.horizon, p.dt, p.max_iterations, p.wheelbase, p.control_frequency);
     std::printf("[MPC] Weights: path=%.2f head=%.2f speed=%.2f term=%.2f\n",
                 p.weight_path_error, p.weight_heading_error, p.weight_speed_error,
                 p.weight_terminal);
+    std::printf("[MPC] MORAI brake mapping: brake=1.0 <-> %.2f m/s^2\n",
+                p.brake_full_decel);
 }

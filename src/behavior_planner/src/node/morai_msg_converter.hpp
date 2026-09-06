@@ -1,6 +1,5 @@
 #pragma once
 
-#include <morai_msgs/EgoVehicleStatus.h>
 #include <morai_msgs/ObjectStatus.h>
 #include <morai_msgs/ObjectStatusList.h>
 
@@ -13,7 +12,6 @@ namespace behavior_planner {
 // rule, or decision code.
 class MoraiMsgConverter {
  public:
-  static EgoState toEgoState(const morai_msgs::EgoVehicleStatus& message);
   static PerceptionObjects toPerceptionObjects(
       const morai_msgs::ObjectStatusList& message);
 

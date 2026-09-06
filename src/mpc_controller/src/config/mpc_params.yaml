@@ -36,6 +36,12 @@ constraints:
     min: 0.0
     max: 60.0
 
+# MORAI longlCmdType=1 pedal mapping. Official IONIQ 5 100-0 km/h data
+# (3.08 s, 43.73 m) gives approximately 8.9 m/s^2 full-brake deceleration.
+# This is deliberately separate from the MPC acceleration constraint above.
+control_mapping:
+  brake_full_decel: 8.9
+
 # 목표 경로가 실제로 전진하는데 차량만 정지한 경우의 공통 복구 계층.
 # STOP/WAIT처럼 경로 목표속도가 0인 정상 정지에는 작동하지 않는다.
 stuck_recovery:

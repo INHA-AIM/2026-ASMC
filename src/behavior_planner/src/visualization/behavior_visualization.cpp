@@ -1,19 +1,90 @@
 #include "behavior_planner/visualization/behavior_visualization.hpp"
 
 #include <cmath>
+#include <sstream>
 #include <geometry_msgs/Point.h>
 #include <visualization_msgs/MarkerArray.h>
 
 namespace behavior_planner {
+namespace {
+
+const char* BehaviorName(BehaviorType behavior) {
+  switch (behavior) {
+    case BehaviorType::KEEP: return "KEEP";
+    case BehaviorType::FOLLOW: return "FOLLOW";
+    case BehaviorType::LEFT_CHANGE: return "LEFT_CHANGE";
+    case BehaviorType::RIGHT_CHANGE: return "RIGHT_CHANGE";
+    case BehaviorType::STOP: return "STOP";
+    case BehaviorType::YIELD: return "YIELD";
+    case BehaviorType::EMERGENCY_STOP: return "EMERGENCY_STOP";
+  }
+  return "UNKNOWN";
+}
+
+const char* MovementName(SignalMovement movement) {
+  switch (movement) {
+    case SignalMovement::STRAIGHT: return "STRAIGHT";
+    case SignalMovement::LEFT: return "LEFT";
+    case SignalMovement::LEFT_UNPROTECTED: return "LEFT_UNPROTECTED";
+    case SignalMovement::RIGHT_UNPROTECTED: return "RIGHT_UNPROTECTED";
+    case SignalMovement::UTURN: return "UTURN";
+    default: return "UNKNOWN";
+  }
+}
+
+const char* LightName(TrafficLightState state) {
+  switch (state) {
+    case TrafficLightState::RED: return "RED";
+    case TrafficLightState::YELLOW: return "YELLOW";
+    case TrafficLightState::GREEN: return "GREEN";
+    default: return "UNKNOWN";
+  }
+}
+
+const char* VehicleStateSourceName(uint8_t source) {
+  switch (source) {
+    case 1: return "GPS_IMU";
+    case 2: return "EGO_STATUS";
+    default: return "UNKNOWN";
+  }
+}
+
+void SetLightColor(TrafficLightState state,
+                   std_msgs::ColorRGBA* color) {
+  color->a = 1.0;
+  if (state == TrafficLightState::RED) color->r = 1.0;
+  else if (state == TrafficLightState::YELLOW) {
+    color->r = 1.0;
+    color->g = 0.85;
+  } else if (state == TrafficLightState::GREEN) color->g = 1.0;
+  else color->r = color->g = color->b = 0.55;
+}
+
+void AppendLinkPoints(const LinkInfo& link, double z,
+                      visualization_msgs::Marker* marker) {
+  for (const Point2D& point : link.centerline) {
+    geometry_msgs::Point p;
+    p.x = point.x;
+    p.y = point.y;
+    p.z = z;
+    marker->points.push_back(p);
+  }
+}
+
+}  // namespace
 
 void BehaviorVisualization::publish(const UrbanFeature& feature,
                                     const BehaviorContextData& context,
                                     const RouteManager& route,
                                     const MGeoLoader& map,
-                                    const TrafficLightProvider& traffic_lights) const {
+                                    const TrafficLightProvider&) const {
   if (!publisher_) return;
   const ros::Time stamp = ros::Time::now();
   visualization_msgs::MarkerArray array;
+
+  visualization_msgs::Marker clear;
+  clear.action = visualization_msgs::Marker::DELETEALL;
+  array.markers.push_back(clear);
 
   visualization_msgs::Marker route_line;
   route_line.header.frame_id = "map";
@@ -52,6 +123,7 @@ void BehaviorVisualization::publish(const UrbanFeature& feature,
   ego.scale.y = 1.0;
   ego.scale.z = 1.0;
   ego.color.g = 1.0;
+  ego.color.r = feature.ego.state_valid ? 0.0 : 1.0;
   ego.color.a = 1.0;
   array.markers.push_back(ego);
 
@@ -69,10 +141,25 @@ void BehaviorVisualization::publish(const UrbanFeature& feature,
   text.color.r = 1.0;
   text.color.g = 1.0;
   text.color.a = 1.0;
-  text.text = "behavior=" +
-              std::to_string(static_cast<int>(context.selected_behavior)) +
-              " current=" + feature.route.current_link_id +
-              " route=" + feature.route.route_required_link_id;
+  std::ostringstream summary;
+  summary << BehaviorName(context.selected_behavior)
+          << "  v=" << feature.ego.speed
+          << " -> " << context.target.desired_speed << " m/s\n"
+          << "state=/vehicle/state "
+          << VehicleStateSourceName(feature.ego.source)
+          << " valid=" << (feature.ego.state_valid ? "true" : "false") << "\n"
+          << "link=" << feature.route.current_link_id;
+  if (feature.signal.has_required_movement) {
+    summary << "\nsignal=" << LightName(feature.signal.light_state)
+            << " for " << MovementName(feature.signal.required_movement)
+            << " (" << feature.signal.related_signal << ")";
+  }
+  if (feature.signal.has_stop_line) {
+    summary << "  stop=" << feature.signal.distance_to_stop_line << "m";
+  }
+  if (context.hard.planned_stop) summary << "  PLANNED_STOP";
+  if (context.hard.force_stop) summary << "  FORCE_STOP";
+  text.text = summary.str();
   array.markers.push_back(text);
 
   int signal_marker_id = 0;
@@ -91,25 +178,13 @@ void BehaviorVisualization::publish(const UrbanFeature& feature,
     signal.scale.x = 0.8;
     signal.scale.y = 0.8;
     signal.scale.z = 0.8;
-    switch (traffic_lights.getState(map_stop.traffic_light_id)) {
-      case TrafficLightState::RED:
-        signal.color.r = 1.0;
-        break;
-      case TrafficLightState::YELLOW:
-        signal.color.r = 1.0;
-        signal.color.g = 0.85;
-        break;
-      case TrafficLightState::GREEN:
-        signal.color.g = 1.0;
-        break;
-      case TrafficLightState::UNKNOWN:
-      default:
-        signal.color.r = 0.55;
-        signal.color.g = 0.55;
-        signal.color.b = 0.55;
-        break;
-    }
-    signal.color.a = 0.9;
+    // The camera topic has no signal ID. Only the active route signal can be
+    // assigned its observed state; all other map signals stay gray.
+    const bool active = map_stop.traffic_light_id == feature.signal.traffic_light_id;
+    SetLightColor(active ? feature.signal.light_state
+                         : TrafficLightState::UNKNOWN,
+                  &signal.color);
+    signal.color.a = active ? 1.0 : 0.35;
     array.markers.push_back(signal);
   }
 
@@ -127,26 +202,92 @@ void BehaviorVisualization::publish(const UrbanFeature& feature,
     stop.scale.x = 1.4;
     stop.scale.y = 1.4;
     stop.scale.z = 1.4;
-    switch (feature.signal.light_state) {
-      case TrafficLightState::RED:
-        stop.color.r = 1.0;
-        break;
-      case TrafficLightState::YELLOW:
-        stop.color.r = 1.0;
-        stop.color.g = 0.85;
-        break;
-      case TrafficLightState::GREEN:
-        stop.color.g = 1.0;
-        break;
-      case TrafficLightState::UNKNOWN:
-      default:
-        stop.color.r = 0.55;
-        stop.color.g = 0.55;
-        stop.color.b = 0.55;
-        break;
-    }
-    stop.color.a = 1.0;
+    SetLightColor(feature.signal.light_state, &stop.color);
     array.markers.push_back(stop);
+
+    visualization_msgs::Marker stop_text = text;
+    stop_text.ns = "behavior_next_stop_text";
+    stop_text.pose.position.x = feature.signal.stop_line_x;
+    stop_text.pose.position.y = feature.signal.stop_line_y;
+    stop_text.pose.position.z = 2.0;
+    stop_text.scale.z = 0.8;
+    stop_text.text = std::string("STOP LINE  ") +
+                     LightName(feature.signal.light_state) + " / " +
+                     MovementName(feature.signal.required_movement) + "\n" +
+                     feature.signal.traffic_light_id;
+    array.markers.push_back(stop_text);
+
+    visualization_msgs::Marker connector;
+    connector.header = route_line.header;
+    connector.ns = "behavior_stop_distance";
+    connector.id = 0;
+    connector.type = visualization_msgs::Marker::LINE_STRIP;
+    connector.action = visualization_msgs::Marker::ADD;
+    connector.pose.orientation.w = 1.0;
+    connector.scale.x = 0.12;
+    connector.color = stop.color;
+    geometry_msgs::Point ego_point;
+    ego_point.x = feature.ego.x;
+    ego_point.y = feature.ego.y;
+    ego_point.z = 0.25;
+    geometry_msgs::Point stop_point = ego_point;
+    stop_point.x = feature.signal.stop_line_x;
+    stop_point.y = feature.signal.stop_line_y;
+    connector.points = {ego_point, stop_point};
+    array.markers.push_back(connector);
+  }
+
+  LinkInfo controlled_link;
+  if (feature.signal.has_required_movement &&
+      map.getLink(feature.signal.controlled_link_id, &controlled_link)) {
+    visualization_msgs::Marker link = route_line;
+    link.ns = "behavior_signal_controlled_link";
+    link.id = 0;
+    link.points.clear();
+    link.scale.x = 0.75;
+    link.color.r = 1.0;
+    link.color.g = 0.5;
+    link.color.b = 0.0;
+    link.color.a = 0.9;
+    AppendLinkPoints(controlled_link, 0.3, &link);
+    array.markers.push_back(link);
+  }
+
+  LinkInfo target_link;
+  if (!context.target.target_link_id.empty() &&
+      map.getLink(context.target.target_link_id, &target_link)) {
+    visualization_msgs::Marker link = route_line;
+    link.ns = "behavior_target_link";
+    link.id = 0;
+    link.points.clear();
+    link.scale.x = 0.65;
+    link.color.r = 1.0;
+    link.color.b = 0.85;
+    link.color.a = 0.9;
+    AppendLinkPoints(target_link, 0.35, &link);
+    array.markers.push_back(link);
+  }
+
+  if (feature.surrounding.has_front_vehicle) {
+    const ObjectFeature& front = feature.surrounding.front_vehicle;
+    visualization_msgs::Marker lead;
+    lead.header = route_line.header;
+    lead.ns = "behavior_lead_vehicle";
+    lead.id = 0;
+    lead.type = visualization_msgs::Marker::CUBE;
+    lead.action = visualization_msgs::Marker::ADD;
+    lead.pose.position.x = front.x;
+    lead.pose.position.y = front.y;
+    lead.pose.position.z = 0.8;
+    lead.pose.orientation.z = std::sin(front.yaw * 0.5);
+    lead.pose.orientation.w = std::cos(front.yaw * 0.5);
+    lead.scale.x = front.length > 0.0 ? front.length : 4.5;
+    lead.scale.y = front.width > 0.0 ? front.width : 1.8;
+    lead.scale.z = 1.5;
+    lead.color.r = 1.0;
+    lead.color.g = 0.55;
+    lead.color.a = 0.75;
+    array.markers.push_back(lead);
   }
 
   publisher_.publish(array);

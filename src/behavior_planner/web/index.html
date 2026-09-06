@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Behavior Planner Console</title>
   <link rel="stylesheet" href="dashboard.css">
+  <style>.legend .trajectory{background:#ffd447}.legend .stop{height:9px;background:#ff9b4a;transform:rotate(45deg)}.legend .candidate-valid{background:#75bfff}.legend .candidate-rejected{background:#ff5263}</style>
 </head>
 <body>
   <header>
@@ -19,11 +20,14 @@
         <label><input id="showNodes" type="checkbox">노드</label>
         <label><input id="showObjects" type="checkbox" checked>객체</label>
         <label><input id="showSignals" type="checkbox" checked>신호</label>
+        <label><input id="showTrajectory" type="checkbox" checked>Frenet 경로</label>
       </div>
       <div class="legend">
-        <span><i class="route"></i>글로벌 경로</span><span><i class="current"></i>현재 링크</span>
+        <span><i class="route"></i>글로벌 경로</span>
         <span><i class="required"></i>요구 링크</span><span><i class="target"></i>목표 링크</span>
         <span><i class="ego"></i>Ego</span><span><i class="npc"></i>차량</span>
+        <span><i class="candidate-valid"></i>유효 후보</span><span><i class="candidate-rejected"></i>탈락 후보</span>
+        <span><i class="trajectory"></i>Frenet 선택 궤적</span><span><i class="stop"></i>정지 목표(주황 마름모)</span>
       </div>
       <div id="cursor" class="cursor"></div>
     </section>
@@ -41,6 +45,6 @@
       <section><h2>Topic Health</h2><div id="health" class="kv"></div></section>
     </aside>
   </main>
-  <script src="dashboard.js?v=signal-overlay-2"></script>
+  <script src="dashboard.js?v=planning-debug-5"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
 #include <memory>
 #include <asmc_msgs/BehaviorContext.h>
 #include <asmc_msgs/PlanFeedback.h>
-#include <morai_msgs/EgoVehicleStatus.h>
+#include <asmc_msgs/VehicleState.h>
 #include <morai_msgs/ObjectStatusList.h>
 #include <ros/ros.h>
 
@@ -13,6 +13,7 @@
 #include "behavior_planner/global/data_logger.hpp"
 #include "behavior_planner/map/mgeo_loader.hpp"
 #include "behavior_planner/signal/mock_traffic_light_provider.hpp"
+#include "behavior_planner/signal/ros_traffic_light_provider.hpp"
 #include "behavior_planner/visualization/behavior_visualization.hpp"
 
 namespace behavior_planner {
@@ -25,7 +26,7 @@ class BehaviorNode {
  private:
   void runOnce();
   void timerCallback(const ros::SteadyTimerEvent&);
-  void egoCallback(const morai_msgs::EgoVehicleStatus::ConstPtr& message);
+  void egoCallback(const asmc_msgs::VehicleState::ConstPtr& message);
   void objectsCallback(const morai_msgs::ObjectStatusList::ConstPtr& message);
   void feedbackCallback(const asmc_msgs::PlanFeedback::ConstPtr& message);
 

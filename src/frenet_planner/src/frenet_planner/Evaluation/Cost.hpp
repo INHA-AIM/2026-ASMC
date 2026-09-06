@@ -21,4 +21,9 @@ void EvaluateCosts(std::vector<FrenetPath>& candidates, const CostWeights& w, do
 
 const FrenetPath* SelectBestPath(const std::vector<FrenetPath>& candidates);
 
+// STOP 후보는 충돌/곡률/동역학 필터를 통과한(valid) 후보 중 목표 위치 오차가
+// 가장 작은 것을 먼저 고르고, 같은 위치 후보끼리는 기존 총비용으로 비교한다.
+const FrenetPath* SelectBestStoppingPath(
+    const std::vector<FrenetPath>& candidates);
+
 #endif

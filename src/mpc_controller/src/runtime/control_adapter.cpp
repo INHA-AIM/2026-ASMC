@@ -26,8 +26,7 @@ CtrlCmd ToControlCommand(const MPCControl& control, const MPCParams& params) {
     if (control.accel >= 0.0) {
         accel = clip(control.accel / params.accel_max, 0.0, 1.0);
     } else {
-        brake =
-            clip(-control.accel / std::fabs(params.accel_min), 0.0, 1.0);
+        brake = clip(-control.accel / params.brake_full_decel, 0.0, 1.0);
     }
 
     CtrlCmd command;

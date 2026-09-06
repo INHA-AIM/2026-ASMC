@@ -10,5 +10,9 @@
   <depend>rospy</depend>
   <depend>visualization_msgs</depend><depend>morai_msgs</depend><depend>yaml-cpp</depend>
   <exec_depend>message_runtime</exec_depend>
+  <exec_depend>rviz</exec_depend>
+  <exec_depend>traffic_light</exec_depend>
+  <exec_depend>frenet_planner</exec_depend>
+  <exec_depend>mpc_controller</exec_depend>
   <export/>
 </package>

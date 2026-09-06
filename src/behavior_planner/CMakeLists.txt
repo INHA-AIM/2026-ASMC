@@ -26,6 +26,7 @@ set(BEHAVIOR_NODE_SOURCES
   src/decision/fsm.cpp src/decision/transition_condition.cpp
   src/context/msg_converter.cpp
   src/signal/mock_traffic_light_provider.cpp
+  src/signal/ros_traffic_light_provider.cpp
   src/global/utils.cpp src/global/data_logger.cpp
   src/visualization/behavior_visualization.cpp)
 file(GLOB_RECURSE BEHAVIOR_INTERNAL_HEADERS CONFIGURE_DEPENDS
@@ -51,6 +52,7 @@ if(CATKIN_ENABLE_TESTING)
     test/behavior_logic_test.cpp
     src/context/msg_converter.cpp
     src/rule/hard_rule_filter.cpp
+    src/signal/ros_traffic_light_provider.cpp
     src/decision/behavior_scorer.cpp
     src/decision/behavior_decision.cpp)
   if(TARGET behavior_logic_test)
@@ -59,5 +61,21 @@ if(CATKIN_ENABLE_TESTING)
     target_include_directories(behavior_logic_test PRIVATE
       ${CMAKE_CURRENT_BINARY_DIR}/include ${catkin_INCLUDE_DIRS})
     target_link_libraries(behavior_logic_test ${catkin_LIBRARIES})
+  endif()
+
+  catkin_add_gtest(route_signal_movement_test
+    test/route_signal_movement_test.cpp
+    src/map/mgeo_loader.cpp
+    src/map/route_manager.cpp
+    src/global/utils.cpp)
+  if(TARGET route_signal_movement_test)
+    add_dependencies(route_signal_movement_test
+      ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+    target_include_directories(route_signal_movement_test PRIVATE
+      ${CMAKE_CURRENT_BINARY_DIR}/include ${catkin_INCLUDE_DIRS})
+    target_compile_definitions(route_signal_movement_test PRIVATE
+      BEHAVIOR_PLANNER_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(route_signal_movement_test
+      ${catkin_LIBRARIES} yaml-cpp)
   endif()
 endif()

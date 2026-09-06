@@ -1,10 +1,12 @@
 #include "ros/frenet_planner_node.hpp"
 
 #include <cmath>
+#include <sstream>
 #include <vector>
 #include <utility>
 
 #include "ros/avoid_commit_coordinator.hpp"
+#include <geometry_msgs/Point.h>
 #include "ros/message_converter.hpp"
 #include "ros/steady_freshness.hpp"
 
@@ -39,6 +41,7 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     // 유지한다(계약 1.2절, 10.6절).
     std::string behavior_command_v2_topic = "/behavior/command_v2";
     std::string feedback_v2_topic = "/planning/frenet_feedback_v2";
+    std::string marker_topic = "/planning/markers";
     std::string planner_config_path;
 
     pnh_.param("planning/frequency", planning_frequency_hz_, planning_frequency_hz_);
@@ -101,6 +104,7 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
                  "using 45 deg", avoid_max_target_heading_error_rad_);
         avoid_max_target_heading_error_rad_ = 0.785398;
     }
+    pnh_.param("publish_topics/markers", marker_topic, marker_topic);
 
     if (planning_frequency_hz_ <= 0.0) {
         ROS_WARN("Invalid planning frequency %.3f Hz; using 20 Hz",
@@ -148,6 +152,8 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
         asmc_msgs::BehaviorCommand::FOLLOW, true);
     command_manager_.SetImplementedManeuver(
         asmc_msgs::BehaviorCommand::AVOID, true);
+    marker_pub_ =
+        nh_.advertise<visualization_msgs::MarkerArray>(marker_topic, 1);
 
     vehicle_sub_ = nh_.subscribe(
         vehicle_topic, 1, &FrenetPlannerNode::vehicleCallback, this);
@@ -239,6 +245,7 @@ void FrenetPlannerNode::publishResult(
     const asmc_msgs::Trajectory& trajectory, const InputSnapshot& snapshot,
     bool previous_plan_still_valid) {
     trajectory_pub_.publish(trajectory);
+    publishDebugMarkers(trajectory, snapshot);
 
     asmc_msgs::PlanFeedback feedback;
     feedback.header.stamp = ros::Time::now();
@@ -253,6 +260,116 @@ void FrenetPlannerNode::publishResult(
         ? snapshot.behavior.target_link_id : "";
     feedback.previous_plan_still_valid = previous_plan_still_valid;
     feedback_pub_.publish(feedback);
+}
+
+void FrenetPlannerNode::publishDebugMarkers(
+    const asmc_msgs::Trajectory& trajectory,
+    const InputSnapshot& snapshot) {
+    visualization_msgs::MarkerArray markers;
+    visualization_msgs::Marker clear;
+    clear.action = visualization_msgs::Marker::DELETEALL;
+    markers.markers.push_back(clear);
+
+    {
+        int candidate_id = 0;
+        const auto& candidate_paths = planner_.last_candidate_paths();
+        const auto& candidate_validity = planner_.last_candidate_validity();
+        for (std::size_t candidate_index = 0;
+             candidate_index < candidate_paths.size(); ++candidate_index) {
+            const CartesianPath& candidate = candidate_paths[candidate_index];
+            const bool valid = candidate_index < candidate_validity.size()
+                && candidate_validity[candidate_index];
+            visualization_msgs::Marker marker;
+            marker.header = trajectory.header;
+            marker.header.frame_id = "map";
+            marker.ns = valid ? "frenet_candidates_valid"
+                              : "frenet_candidates_rejected";
+            marker.id = candidate_id++;
+            marker.type = visualization_msgs::Marker::LINE_STRIP;
+            marker.action = visualization_msgs::Marker::ADD;
+            marker.pose.orientation.w = 1.0;
+            marker.scale.x = 0.08;
+            marker.color.r = valid ? 0.35 : 1.0;
+            marker.color.g = valid ? 0.65 : 0.20;
+            marker.color.b = valid ? 1.0 : 0.25;
+            marker.color.a = valid ? 0.50 : 0.40;
+            for (std::size_t i = 0; i < candidate.x.size(); ++i) {
+                geometry_msgs::Point point;
+                point.x = candidate.x[i];
+                point.y = candidate.y[i];
+                point.z = 0.25;
+                marker.points.push_back(point);
+            }
+            markers.markers.push_back(std::move(marker));
+        }
+    }
+
+    visualization_msgs::Marker selected;
+    selected.header = trajectory.header;
+    selected.header.frame_id = "map";
+    selected.ns = "frenet_selected_trajectory";
+    selected.id = 0;
+    selected.type = visualization_msgs::Marker::LINE_STRIP;
+    selected.action = visualization_msgs::Marker::ADD;
+    selected.pose.orientation.w = 1.0;
+    selected.scale.x = 0.35;
+    selected.color.r = 1.0;
+    selected.color.g = 0.82;
+    selected.color.a = trajectory.valid ? 1.0 : 0.45;
+    for (const auto& point : trajectory.points) {
+        geometry_msgs::Point p;
+        p.x = point.x;
+        p.y = point.y;
+        p.z = 0.45;
+        selected.points.push_back(p);
+    }
+    markers.markers.push_back(selected);
+
+    if (snapshot.has_behavior && snapshot.behavior.has_stop_target) {
+        visualization_msgs::Marker stop;
+        stop.header = selected.header;
+        stop.ns = "frenet_stop_target";
+        stop.id = 0;
+        stop.type = visualization_msgs::Marker::CYLINDER;
+        stop.action = visualization_msgs::Marker::ADD;
+        stop.pose.position.x = snapshot.behavior.stop_x;
+        stop.pose.position.y = snapshot.behavior.stop_y;
+        stop.pose.position.z = 0.15;
+        stop.pose.orientation.w = 1.0;
+        stop.scale.x = 1.3;
+        stop.scale.y = 1.3;
+        stop.scale.z = 0.3;
+        stop.color.r = 1.0;
+        stop.color.a = 0.9;
+        markers.markers.push_back(stop);
+    }
+
+    visualization_msgs::Marker status;
+    status.header = selected.header;
+    status.ns = "frenet_status";
+    status.id = 0;
+    status.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+    status.action = visualization_msgs::Marker::ADD;
+    status.pose.position.x = trajectory.ego_at_plan.x;
+    status.pose.position.y = trajectory.ego_at_plan.y;
+    status.pose.position.z = 4.7;
+    status.pose.orientation.w = 1.0;
+    status.scale.z = 0.7;
+    status.color.r = 1.0;
+    status.color.g = 0.82;
+    status.color.a = 1.0;
+    std::ostringstream text;
+    text << "Frenet selected: " << trajectory.points.size() << " points"
+         << "  valid=" << trajectory.valid
+         << "  failure=" << static_cast<int>(trajectory.failure_reason);
+    if (snapshot.has_behavior) {
+        text << "  command=" << snapshot.behavior.command_id
+             << "  behavior="
+             << static_cast<int>(snapshot.behavior.selected_behavior);
+    }
+    status.text = text.str();
+    markers.markers.push_back(status);
+    marker_pub_.publish(markers);
 }
 
 void FrenetPlannerNode::publishStop(const InputSnapshot& snapshot,

@@ -5,6 +5,24 @@
 #include <unordered_set>
 
 namespace behavior_planner {
+namespace {
+
+SignalMovement ParseSignalMovement(const std::string& related_signal) {
+  if (related_signal == "straight") return SignalMovement::STRAIGHT;
+  if (related_signal == "left") return SignalMovement::LEFT;
+  if (related_signal == "left_unprotected") {
+    return SignalMovement::LEFT_UNPROTECTED;
+  }
+  if (related_signal == "right_unprotected") {
+    return SignalMovement::RIGHT_UNPROTECTED;
+  }
+  if (related_signal == "uturn_normal" || related_signal == "uturn") {
+    return SignalMovement::UTURN;
+  }
+  return SignalMovement::UNKNOWN;
+}
+
+}  // namespace
 
 bool RouteManager::initialize(const MGeoLoader& map,
                               const std::vector<std::string>& ids) {
@@ -13,6 +31,7 @@ bool RouteManager::initialize(const MGeoLoader& map,
   reference_.clear();
   cumulative_.clear();
   segment_link_.clear();
+  link_spans_.clear();
   stops_.clear();
   std::unordered_set<std::string> route_end_nodes;
   double total = 0.0;
@@ -20,6 +39,7 @@ bool RouteManager::initialize(const MGeoLoader& map,
   for (const std::string& id : ids) {
     LinkInfo link;
     if (!map.getLink(id, &link)) continue;
+    const double link_start_s = total;
     route_end_nodes.insert(link.to_node_id);
     for (const Point2D& point : link.centerline) {
       if (reference_.empty()) {
@@ -36,6 +56,7 @@ bool RouteManager::initialize(const MGeoLoader& map,
       cumulative_.push_back(total);
       segment_link_.push_back(id);
     }
+    link_spans_.push_back({id, link_start_s, total});
   }
 
   // Only accept a stop line whose node is the actual end node of a route link.
@@ -168,6 +189,33 @@ bool RouteManager::findNextMapStopLine(const std::string& current_link_id,
   return map_ && map_->findNextStopLine(current_link_id, current_link_s,
                                        max_distance, out_stop_line,
                                        out_distance);
+}
+
+bool RouteManager::findNextSignalMovement(
+    double ego_route_s, double max_distance, RouteSignalMovement* out) const {
+  if (!out || !map_ || !std::isfinite(ego_route_s) || max_distance < 0.0) {
+    return false;
+  }
+
+  for (const RouteLinkSpan& span : link_spans_) {
+    if (span.end_s + 1e-6 < ego_route_s) continue;
+    LinkInfo link;
+    if (!map_->getLink(span.link_id, &link) || link.related_signal.empty()) {
+      continue;
+    }
+    const SignalMovement movement = ParseSignalMovement(link.related_signal);
+    if (movement == SignalMovement::UNKNOWN) continue;
+
+    const double distance = std::max(0.0, span.start_s - ego_route_s);
+    if (distance > max_distance) return false;
+    out->movement = movement;
+    out->related_signal = link.related_signal;
+    out->link_id = link.id;
+    out->route_s = span.start_s;
+    out->distance = distance;
+    return true;
+  }
+  return false;
 }
 
 }  // namespace behavior_planner

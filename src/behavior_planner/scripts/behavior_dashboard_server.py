@@ -7,8 +7,10 @@ import json
 import threading
 
 import rospy
-from asmc_msgs.msg import BehaviorContext
+from asmc_msgs.msg import BehaviorContext, Trajectory, VehicleState
 from behavior_planner.msg import UrbanFeatureDebug
+from morai_msgs.msg import ObjectStatusList
+from visualization_msgs.msg import MarkerArray
 
 
 def ros_to_dict(value):
@@ -22,7 +24,8 @@ def ros_to_dict(value):
 
 
 class DashboardHandler(http.server.SimpleHTTPRequestHandler):
-    snapshot = {"context": None, "feature": None}
+    snapshot = {"context": None, "feature": None, "trajectory": None,
+                "ego": None, "objects": None, "planning_markers": None}
     snapshot_lock = threading.Lock()
 
     def end_headers(self):
@@ -34,7 +37,9 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path.split("?", 1)[0] == "/api/snapshot":
             with self.snapshot_lock:
-                body = json.dumps(self.snapshot, separators=(",", ":")).encode()
+                # Encoding candidate paths must not block high-rate ROS callbacks.
+                snapshot = dict(self.snapshot)
+            body = json.dumps(snapshot, separators=(",", ":")).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Cache-Control", "no-store")
@@ -55,6 +60,23 @@ def set_snapshot(key, message):
         DashboardHandler.snapshot[key] = ros_to_dict(message)
 
 
+def set_planning_markers(message):
+    """Store only browser-relevant paths, not the full MarkerArray payload."""
+    paths = {"valid": [], "rejected": [], "selected": []}
+    for marker in message.markers:
+        if marker.action != marker.ADD or marker.type != marker.LINE_STRIP:
+            continue
+        points = [[point.x, point.y] for point in marker.points]
+        if marker.ns == "frenet_candidates_valid":
+            paths["valid"].append(points)
+        elif marker.ns == "frenet_candidates_rejected":
+            paths["rejected"].append(points)
+        elif marker.ns == "frenet_selected_trajectory":
+            paths["selected"] = points
+    with DashboardHandler.snapshot_lock:
+        DashboardHandler.snapshot["planning_markers"] = paths
+
+
 def main():
     rospy.init_node("behavior_dashboard_server")
     port = int(rospy.get_param("~port", 8088))
@@ -65,6 +87,18 @@ def main():
     rospy.Subscriber(
         "/behavior/feature_debug", UrbanFeatureDebug,
         lambda message: set_snapshot("feature", message), queue_size=1)
+    rospy.Subscriber(
+        "/planning/trajectory", Trajectory,
+        lambda message: set_snapshot("trajectory", message), queue_size=1)
+    rospy.Subscriber(
+        "/vehicle/state", VehicleState,
+        lambda message: set_snapshot("ego", message), queue_size=1)
+    rospy.Subscriber(
+        "/Object_topic", ObjectStatusList,
+        lambda message: set_snapshot("objects", message), queue_size=1)
+    rospy.Subscriber(
+        "/planning/markers", MarkerArray,
+        set_planning_markers, queue_size=1)
     handler = functools.partial(DashboardHandler, directory=package_path)
     server = http.server.ThreadingHTTPServer(("0.0.0.0", port), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)

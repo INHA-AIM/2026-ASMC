@@ -30,6 +30,10 @@ class MpcRosNode {
     ros::SteadyTime trajectory_received_at_;
     double trajectory_timeout_ = 0.25;
     std::vector<MPCControl> warm_start_;
+    int stuck_cycles_ = 0;
+    int recovery_cycles_left_ = 0;
+    int stuck_timeout_cycles_ = 1;
+    int recovery_duration_cycles_ = 1;
 };
 
 }  // namespace mpc_controller_ros

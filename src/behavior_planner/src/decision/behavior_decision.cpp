@@ -18,7 +18,7 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
                                feature.surrounding.left_lane_safe;
   context.enable.right_change = !context.hard.forbid_right_change &&
                                 feature.surrounding.right_lane_safe;
-  context.enable.stop = context.hard.force_stop;
+  context.enable.stop = context.hard.planned_stop || context.hard.force_stop;
   context.enable.emergency_stop = context.hard.emergency_stop;
 
   context.target.current_link_id = feature.route.current_link_id;
@@ -29,6 +29,11 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
                                                : 13.9,
                context.hard.max_speed);
   context.target.stop_before_s = context.hard.stop_before_s;
+  if (context.hard.planned_stop && feature.signal.stop_line_valid) {
+    context.target.has_stop_target = true;
+    context.target.stop_x = feature.signal.stop_line_x;
+    context.target.stop_y = feature.signal.stop_line_y;
+  }
   if (feature.surrounding.has_front_vehicle) {
     const ObjectFeature& lead = feature.surrounding.front_vehicle;
     context.target.lead_vehicle_id = lead.id;
@@ -91,7 +96,9 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
       break;
     case BehaviorType::STOP:
       context.state = BehaviorState::STOP;
-      context.target.desired_speed = 0.0;
+      // A planned stop retains the cruise target: Frenet lowers it according
+      // to remaining braking distance. force_stop bypasses planning anyway.
+      if (!context.hard.planned_stop) context.target.desired_speed = 0.0;
       break;
     case BehaviorType::EMERGENCY_STOP:
       context.state = BehaviorState::EMERGENCY_STOP;

@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   morai_msgs
   roscpp
   sensor_msgs
+  visualization_msgs
 )
 find_package(Threads REQUIRED)
 find_package(yaml-cpp REQUIRED)
@@ -15,7 +16,7 @@ find_package(yaml-cpp REQUIRED)
 catkin_package(
   INCLUDE_DIRS src
   LIBRARIES frenet_planner_core
-  CATKIN_DEPENDS asmc_msgs morai_msgs roscpp sensor_msgs
+  CATKIN_DEPENDS asmc_msgs morai_msgs roscpp sensor_msgs visualization_msgs
 )
 
 include_directories(
