@@ -3,6 +3,26 @@
 #include <algorithm>
 #include <cmath>
 
+#include "frenet_planner/Math/FrenetConverter.hpp"
+
+void ProjectObjectToFrenet(const RefLine& ref, const TrackedObject& obj,
+                           double& out_s, double& out_d, double& out_s_dot) {
+    CartesianState cs{};
+    cs.x = obj.x;
+    cs.y = obj.y;
+    cs.yaw = obj.heading;
+    cs.kappa = 0.0;   // CartesianToFrenet의 s_dot/d 계산에는 안 쓰임(FrenetToCartesian 역방향 전용 필드)
+    cs.v = obj.speed;
+    cs.a = 0.0;       // 가속도 정보 없음 - s_ddot은 안 쓰므로 무관
+
+    double s, s_dot, s_ddot, d, d_prime, d_pprime;
+    CartesianToFrenet(ref, cs, s, s_dot, s_ddot, d, d_prime, d_pprime, nullptr);
+
+    out_s = s;
+    out_d = d;
+    out_s_dot = s_dot;
+}
+
 // 폐루프 트랙에서 current_s -> target_s의 전방 호길이.
 // 단순 (target - current)는 finish line 이음새에서 음수로 크게 튄다
 // (예: ego_s=2200, target_s=20이면 실제로는 전방 30m인데 -2180m).

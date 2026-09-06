@@ -1,5 +1,7 @@
 #include "frenet_planner/Math/FrenetConverter.hpp"
 
+#include <cmath>
+
 namespace {
 
 double NormalizeAngle(double theta) {

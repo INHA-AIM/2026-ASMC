@@ -1,9 +1,13 @@
 #ifndef FRENET_COLLISION_CHECKER_HPP
 #define FRENET_COLLISION_CHECKER_HPP
 
+#include <vector>
+
 #include "frenet_planner/Reference/Reference.hpp"
 #include "frenet_planner/Geometry/PolygonUtils.hpp"
-#include "frenet_planner/global/global.hpp"
+#include "frenet_planner/Common/CartesianTypes.hpp"
+#include "frenet_planner/Common/FrenetTypes.hpp"
+#include "frenet_planner/Common/ObjectTypes.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
 
 // =========================================================

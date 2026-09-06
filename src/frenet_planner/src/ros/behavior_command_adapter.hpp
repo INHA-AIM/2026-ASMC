@@ -36,7 +36,8 @@
 #include <asmc_msgs/FrenetFeedback.h>
 #include <ros/time.h>
 
-#include "frenet_planner/global/global.hpp"
+#include "frenet_planner/Common/BehaviorTypes.hpp"
+#include "frenet_planner/Common/PlannerCommand.hpp"
 
 namespace frenet_planner_ros {
 
@@ -167,7 +168,7 @@ bool SameCommandFingerprint(const CommandFingerprint& lhs,
 // =====================================================================
 
 // 검증을 통과한 BehaviorCommand의 **외부 입력 필드**만 PlannerCommand로
-// 옮긴다(PlannerCommand의 [A] 그룹, global.hpp 참고).
+// 옮긴다(PlannerCommand의 [A] 그룹, Common/PlannerCommand.hpp 참고).
 //
 // planner 계산이 필요한 것은 여기서 하지 않는다:
 //   target_pose_map -> stop_position   RefLine 투영 필요

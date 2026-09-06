@@ -1,59 +1,8 @@
-#include "frenet_planner/global/data_logger.hpp"
+#include "frenet_planner/Common/ParameterLoader.hpp"
 
 #include <cstdio>
-#include <fstream>
-#include <sstream>
 
 #include <yaml-cpp/yaml.h>
-
-bool LoadReferenceLine(const std::string& path, RefLine& out_ref, double max_curvature) {
-    std::ifstream file(path);
-    if (!file.is_open()) {
-        std::printf("[FrenetPlanner] Failed to open waypoint file: %s\n", path.c_str());
-        return false;
-    }
-
-    std::vector<double> wx, wy;
-    std::string line;
-    while (std::getline(file, line)) {
-        if (line.empty()) continue;
-
-        // 공백 우선
-        {
-            std::stringstream ss(line);
-            double x, y;
-            if (ss >> x >> y) {
-                wx.push_back(x);
-                wy.push_back(y);
-                continue;
-            }
-        }
-
-        // CSV (콤마 구분)
-        std::stringstream ss(line);
-        std::string val;
-        std::vector<double> row;
-        while (std::getline(ss, val, ',')) {
-            val.erase(0, val.find_first_not_of(" \t\r\n"));
-            if (!val.empty()) val.erase(val.find_last_not_of(" \t\r\n") + 1);
-            if (val.empty()) continue;
-            try { row.push_back(std::stod(val)); } catch (...) { /* 헤더 라인 등 skip */ }
-        }
-        if (row.size() >= 2) {
-            wx.push_back(row[0]);
-            wy.push_back(row[1]);
-        }
-    }
-
-    if (wx.size() < 2) {
-        std::printf("[FrenetPlanner] Waypoint file has fewer than 2 valid points: %s\n", path.c_str());
-        return false;
-    }
-
-    out_ref = BuildRefLine(wx, wy, max_curvature);
-    std::printf("[FrenetPlanner] Loaded %zu waypoints from %s\n", wx.size(), path.c_str());
-    return true;
-}
 
 namespace {
 

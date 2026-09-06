@@ -42,8 +42,9 @@ add_library(frenet_planner_core
   src/frenet_planner/Maneuver/Keep.cpp
   src/frenet_planner/Maneuver/Stop.cpp
   src/frenet_planner/Maneuver/Avoid.cpp
-  src/frenet_planner/obstacle/legacy_object_adapter.cpp
-  src/frenet_planner/global/data_logger.cpp
+  src/frenet_planner/Maneuver/Merge.cpp
+  src/frenet_planner/Geometry/ObjectGeometrySynthesis.cpp
+  src/frenet_planner/Common/ParameterLoader.cpp
   src/frenet_planner/visualization/planner_debug_writer.cpp
   src/frenet_planner/Reference/Reference.cpp
   src/frenet_planner/Generator/SamplingUtils.cpp
@@ -55,8 +56,6 @@ add_library(frenet_planner_core
   src/frenet_planner/Speed/SpeedPolicy.cpp
   src/frenet_planner/Evaluation/Cost.cpp
   src/frenet_planner/Evaluation/CollisionChecker.cpp
-  src/frenet_planner/frenet/leader_selector.cpp
-  src/frenet_planner/frenet/merge_selector.cpp
   src/frenet_planner/Math/Polynomial.cpp
   src/frenet_planner/Math/FrenetConverter.cpp
 )
@@ -160,13 +159,13 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME geometry_foundation_test COMMAND geometry_foundation_test)
 
-  add_executable(legacy_object_adapter_test
-    tests/legacy_object_adapter_test.cpp
+  add_executable(object_geometry_synthesis_test
+    tests/object_geometry_synthesis_test.cpp
   )
-  target_link_libraries(legacy_object_adapter_test
+  target_link_libraries(object_geometry_synthesis_test
     frenet_planner_core
   )
-  add_test(NAME legacy_object_adapter_test COMMAND legacy_object_adapter_test)
+  add_test(NAME object_geometry_synthesis_test COMMAND object_geometry_synthesis_test)
 
   add_executable(polygon_collision_test
     tests/polygon_collision_test.cpp

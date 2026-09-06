@@ -1,4 +1,4 @@
-#include "frenet_planner/obstacle/legacy_object_adapter.hpp"
+#include "frenet_planner/Geometry/ObjectGeometrySynthesis.hpp"
 
 #include <cmath>
 #include <iostream>

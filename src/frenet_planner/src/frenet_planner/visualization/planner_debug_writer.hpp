@@ -6,7 +6,11 @@
 
 #include "frenet_planner/Generator/CandidateCombiner.hpp"
 #include "frenet_planner/Reference/Reference.hpp"
-#include "frenet_planner/global/global.hpp"
+#include "frenet_planner/Common/BehaviorTypes.hpp"
+#include "frenet_planner/Common/CartesianTypes.hpp"
+#include "frenet_planner/Common/FrenetTypes.hpp"
+#include "frenet_planner/Common/ObjectTypes.hpp"
+#include "frenet_planner/Common/PlannerCommand.hpp"
 
 struct PlannerVisualizationConfig {
     bool enabled = false;

@@ -1,13 +1,18 @@
-#ifndef FRENET_MERGE_SELECTOR_HPP
-#define FRENET_MERGE_SELECTOR_HPP
+#ifndef FRENET_MANEUVER_MERGE_HPP
+#define FRENET_MANEUVER_MERGE_HPP
 
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
-#include "frenet_planner/Reference/Reference.hpp"
+#include "frenet_planner/Common/ObjectTypes.hpp"
+#include "frenet_planner/Common/PlannerConfig.hpp"
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
-#include "frenet_planner/global/data_logger.hpp"
-#include "frenet_planner/global/global.hpp"
+#include "frenet_planner/Reference/Reference.hpp"
+
+// package-internal MERGE gap/TTC 순수 계산. FrenetPlanner public API가
+// 아니므로 frenet_planner.hpp에는 선언하지 않는다. "지금 이 gap이 안전한가"
+// 만 답한다 - MERGE를 자동 활성화할지, 언제 COMMIT할지는 이 파일의 책임이
+// 아니다(FSM이 지정한 MERGE 실행을 다루는 별도 호출자의 책임).
 
 struct RoundaboutGap {
     bool safe = false;
@@ -41,4 +46,4 @@ RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
                                   const CollisionCheckConfig& collision_cfg,
                                   double desired_speed, double max_ego_accel);
 
-#endif
+#endif  // FRENET_MANEUVER_MERGE_HPP

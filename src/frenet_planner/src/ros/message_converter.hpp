@@ -8,9 +8,9 @@
 #include <asmc_msgs/Trajectory.h>
 #include <asmc_msgs/VehicleState.h>
 
-#include "frenet_planner/global/global.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
 #include "frenet_planner/Common/ObjectTypes.hpp"
+#include "frenet_planner/Common/PlannerCommand.hpp"
 
 namespace frenet_planner_ros {
 

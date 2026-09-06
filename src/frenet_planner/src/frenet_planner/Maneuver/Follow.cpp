@@ -15,6 +15,8 @@
 #include <cmath>
 #include <cstdio>
 
+#include "frenet_planner/Maneuver/ManeuverUtils.hpp"
+
 // 저속 fallback은 시간 대신 이동거리 기준 cosine smoothstep으로 d를 복귀시킨다.
 // 양 끝의 d'가 0이므로 정지 근처에서도 급격한 횡이동과 곡률 spike가 생기지 않는다.
 FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(

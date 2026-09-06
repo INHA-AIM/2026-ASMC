@@ -1,6 +1,8 @@
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
 
+#include <cmath>
+
 PredictedObjectPose PredictLegacyObjectPose(const TrackedObject& obj, double t) {
     PredictedObjectPose pose;
     if (std::fabs(obj.yaw_rate) > 1e-3) {

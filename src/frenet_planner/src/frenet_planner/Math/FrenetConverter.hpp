@@ -1,9 +1,11 @@
 #ifndef PLANNER_MATH_FRENET_CONVERTER_HPP
 #define PLANNER_MATH_FRENET_CONVERTER_HPP
 
+#include <vector>
+
 #include "frenet_planner/Reference/Reference.hpp"
-#include "frenet_planner/global/global.hpp"
 #include "frenet_planner/Common/CartesianTypes.hpp"
+#include "frenet_planner/Common/FrenetTypes.hpp"
 
 // =========================================================
 // [핵심 변환] Frenet -> Cartesian

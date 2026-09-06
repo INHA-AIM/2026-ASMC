@@ -1,14 +1,8 @@
-#pragma once
+#ifndef PLANNER_COMMON_PLANNER_CONFIG_HPP
+#define PLANNER_COMMON_PLANNER_CONFIG_HPP
 
 #include <string>
 #include <vector>
-
-#include "frenet_planner/Reference/Reference.hpp"
-#include "frenet_planner/Generator/GeneratorConfig.hpp"
-#include "frenet_planner/Evaluation/KinematicFilter.hpp"
-#include "frenet_planner/Evaluation/Cost.hpp"
-#include "frenet_planner/Evaluation/CollisionChecker.hpp"
-#include "frenet_planner/visualization/planner_debug_writer.hpp"
 
 // =========================================================
 // 곡률 기반 사전 감속 (mpc_controller의 옛 planner/path_planner.cpp 로직을
@@ -27,8 +21,8 @@ struct CurveSpeedConfig {
 };
 
 // =========================================================
-// Following(Sec.V-A) 모드 파라미터. leader_selector.cpp가 obstacles에서
-// 선두 차량을 고를 때(탐색 범위)와 GenerateFollowingCandidates가
+// Following(Sec.V-A) 모드 파라미터. ResolveExternalFollowTarget이 FSM이
+// 지정한 대상을 검증할 때(탐색 범위)와 GenerateFollowingCandidates가
 // constant-time-gap-law target을 만들 때(time_gap=tau, min_gap=D0) 쓴다.
 // =========================================================
 struct FollowingConfig {
@@ -51,8 +45,7 @@ struct AvoidConfig {
     double trigger_max_speed = 0.5;   // [m/s] 이 속도 이하만 "정지 장애물"로 간주(그 이상은 Following이 처리)
     // [m] 회피 시 lateral_d1 격자를 밀어낼 크기. 자차 폭(1.9m 기준) + 장애물
     // 폭 절반씩 + 여유(0.3m)를 감안한 최소 이격(~2.2m)보다 확실히 크게 잡아야
-    // avoidance_selector.cpp의 좌/우 클리어 판정이 "장애물 자신" 때문에 항상
-    // 막힌 것으로 나오지 않는다.
+    // 좌/우 클리어 판정이 "장애물 자신" 때문에 항상 막힌 것으로 나오지 않는다.
     double avoid_offset      = 3.0;
     double comfortable_decel = 3.0;   // [m/s^2] 추후 동적 시작거리 계산용(현재 미사용)
     double lateral_tolerance = 0.4;   // [m] SHIFT 완료 판정
@@ -63,7 +56,6 @@ struct AvoidConfig {
     //
     // FollowingConfig.dropout_grace_cycles를 가져다 쓰지 않는다 - 서로 다른
     // 행동의 config가 강하게 결합되면 FOLLOW 튜닝이 AVOID 동작을 바꾼다.
-    // legacy AVOID 경로는 이 값을 읽지 않으므로 legacy 동작은 불변이다.
     int dropout_grace_cycles = 5;
 };
 
@@ -157,25 +149,4 @@ struct HighwayMergeConfig {
     double cross_speed_floor = 4.0;     // [m/s]
 };
 
-// waypoint 파일("x y" 또는 "x,y") -> RefLine
-bool LoadReferenceLine(const std::string& path, RefLine& out_ref, double max_curvature);
-
-// params.yaml -> 각 config struct 로드 (yaml-cpp 기반, ROS 의존성 없음)
-void LoadParams(const std::string& yaml_path,
-                PathGeneratorConfig& path_cfg,
-                KinematicLimits& limits,
-                CostWeights& cost_weights,
-                VehicleShape& vehicle_shape,
-                CollisionCheckConfig& collision_cfg,
-                CurveSpeedConfig& curve_speed_cfg,
-                FollowingConfig& following_cfg,
-                AvoidConfig& avoid_cfg,
-                StopConfig& stop_cfg,
-                MergeConfig& merge_cfg,
-                HighwayMergeConfig& highway_merge_cfg,
-                PlannerVisualizationConfig& visualization_cfg,
-                double& wheelbase,
-                double& lane_width,
-                double& replanning_period_s,
-                double& max_target_speed_accel,
-                std::string& waypoint_file);
+#endif  // PLANNER_COMMON_PLANNER_CONFIG_HPP

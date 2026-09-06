@@ -2,7 +2,7 @@
 #define FRENET_CURVE_SPEED_HPP
 
 #include "frenet_planner/Reference/Reference.hpp"
-#include "frenet_planner/global/data_logger.hpp"
+#include "frenet_planner/Common/PlannerConfig.hpp"
 
 // frenet_planner.cpp의 익명 namespace에 있던 곡률 기반 목표속도 계산을 분리한
 // 것이다 (fix/yuntae-frenet-speed-continuity Phase 1) - longitudinal_kinematics_test류

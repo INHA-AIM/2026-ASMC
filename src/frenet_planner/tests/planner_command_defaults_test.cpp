@@ -3,7 +3,7 @@
 // 특히 mode가 미초기화 쓰레기 값이 되어 임의 모드로 진입하는 것을 막고,
 // stop_position은 "미지정"을 0.0(유효한 s)이 아니라 NaN으로 구분한다.
 
-#include "frenet_planner/global/global.hpp"
+#include "frenet_planner/Common/PlannerCommand.hpp"
 
 #include <cmath>
 #include <iostream>

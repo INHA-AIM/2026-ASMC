@@ -47,7 +47,7 @@
 //       12.7.2절, 3.3절, 8.2절
 
 #include "frenet_planner/frenet_planner.hpp"
-#include "frenet_planner/obstacle/legacy_object_adapter.hpp"
+#include "frenet_planner/Geometry/ObjectGeometrySynthesis.hpp"
 #include "ros/avoid_commit_coordinator.hpp"
 
 #include <algorithm>

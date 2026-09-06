@@ -1,7 +1,8 @@
 #ifndef FRENET_REF_LINE_HPP
 #define FRENET_REF_LINE_HPP
 
-#include "frenet_planner/global/global.hpp"
+#include <string>
+#include <vector>
 
 // =========================================================
 // Center line 한 점의 정보
@@ -59,5 +60,10 @@ double FindClosestS(const RefLine& ref, double x, double y,
 // =========================================================
 
 RefPoint Interpolate(const RefLine& ref, double s);
+
+// =========================================================
+// waypoint 파일("x y" 또는 "x,y") -> RefLine
+// =========================================================
+bool LoadReferenceLine(const std::string& path, RefLine& out_ref, double max_curvature);
 
 #endif

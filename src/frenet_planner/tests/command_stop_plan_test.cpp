@@ -9,7 +9,6 @@
 #include "frenet_planner/frenet_planner.hpp"
 
 #include "frenet_planner/Reference/Reference.hpp"
-#include "frenet_planner/global/data_logger.hpp"
 
 #include <cmath>
 #include <fstream>
