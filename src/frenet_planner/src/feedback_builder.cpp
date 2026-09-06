@@ -12,9 +12,9 @@
  * 이름에 드러나도록 정의만 이 파일로 옮긴다.
  */
 
-#include "ros/frenet_planner_node.hpp"
+#include "frenet_planner_node.hpp"
 
-#include "ros/avoid_commit_coordinator.hpp"
+#include "avoid_commit_coordinator.hpp"
 
 namespace frenet_planner_ros {
 

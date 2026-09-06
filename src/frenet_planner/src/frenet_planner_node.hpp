@@ -14,8 +14,8 @@
 #include <visualization_msgs/MarkerArray.h>
 
 #include "frenet_planner/frenet_planner.hpp"
-#include "ros/behavior_command_adapter.hpp"
-#include "ros/command_execution_manager.hpp"
+#include "behavior_command_adapter.hpp"
+#include "command_execution_manager.hpp"
 
 namespace frenet_planner_ros {
 

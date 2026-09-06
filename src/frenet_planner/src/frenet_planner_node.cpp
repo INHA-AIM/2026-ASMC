@@ -1,14 +1,14 @@
-#include "ros/frenet_planner_node.hpp"
+#include "frenet_planner_node.hpp"
 
 #include <cmath>
 #include <sstream>
 #include <vector>
 #include <utility>
 
-#include "ros/avoid_commit_coordinator.hpp"
+#include "avoid_commit_coordinator.hpp"
 #include <geometry_msgs/Point.h>
-#include "ros/message_converter.hpp"
-#include "ros/steady_freshness.hpp"
+#include "message_converter.hpp"
+#include "steady_freshness.hpp"
 
 namespace frenet_planner_ros {
 

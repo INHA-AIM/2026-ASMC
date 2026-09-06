@@ -6,7 +6,7 @@
 #include <cmath>
 
 #include "frenet_planner/frenet_planner.hpp"
-#include "ros/command_execution_manager.hpp"
+#include "command_execution_manager.hpp"
 
 namespace frenet_planner_ros {
 

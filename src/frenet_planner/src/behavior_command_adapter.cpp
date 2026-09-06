@@ -1,4 +1,4 @@
-#include "ros/behavior_command_adapter.hpp"
+#include "behavior_command_adapter.hpp"
 
 #include <cmath>
 

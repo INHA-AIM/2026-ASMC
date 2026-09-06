@@ -26,7 +26,7 @@
 #include <asmc_msgs/FrenetFeedback.h>
 #include <ros/time.h>
 
-#include "ros/behavior_command_adapter.hpp"
+#include "behavior_command_adapter.hpp"
 
 namespace frenet_planner_ros {
 

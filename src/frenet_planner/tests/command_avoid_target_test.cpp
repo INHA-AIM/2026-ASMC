@@ -48,7 +48,7 @@
 
 #include "frenet_planner/frenet_planner.hpp"
 #include "frenet_planner/Geometry/ObjectGeometrySynthesis.hpp"
-#include "ros/avoid_commit_coordinator.hpp"
+#include "avoid_commit_coordinator.hpp"
 
 #include <algorithm>
 #include <cmath>

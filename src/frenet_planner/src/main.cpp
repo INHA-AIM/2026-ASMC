@@ -1,6 +1,6 @@
 #include <ros/ros.h>
 
-#include "ros/frenet_planner_node.hpp"
+#include "frenet_planner_node.hpp"
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "frenet_planner");
