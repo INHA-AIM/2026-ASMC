@@ -407,6 +407,23 @@ private:
                       CartesianPath& out_path,
                       AvoidPrepareResult* avoid_prepare_result);
 
+    // KEEP/FOLLOW/STOP이 공유하는 candidate 생성 -> 곡률/충돌 필터 ->
+    // cost 평가 -> 최적 후보 선택 -> Cartesian 변환 pipeline (D6-0 이후
+    // AVOID/EMERGENCY/MERGE는 각자 전용 Process로 이미 분리되어 있다).
+    // PlanInternal이 EMERGENCY/AVOID PREPARE-COMMITTED/저속 fallback을
+    // 모두 걸러낸 뒤, FrenetState start까지 만든 시점에만 호출한다 -
+    // Cartesian->Frenet 변환과 object tracking/prediction을 중복
+    // 수행하지 않기 위해서다(계약 12.7.1절과 같은 이유).
+    bool ResolveAndExecuteManeuver(
+        const CartesianState& ego, const FrenetState& start,
+        double s, double d, double s_dot, double s_ddot,
+        double d_dot, double d_ddot,
+        const std::vector<TrackedObject>& obstacles,
+        const std::vector<TrackedObject>& predicted_obstacles,
+        const std::vector<TrackedObject>& predicted_collision_obstacles,
+        double resolved_target_speed, const PlannerCommand& external_command,
+        CartesianPath& out_path);
+
     void UpdateCommittedAvoidLifecycle(double ego_s, double ego_d,
                                        AvoidPrepareResult& result);
 
@@ -474,7 +491,7 @@ private:
     // avoid_prepare(purpose==AVOID_PREPARE), avoid_committed
     // (purpose==AVOID_COMMITTED), v2_avoidance_.committed(core context
     // lock 여부)는 서로 다른 세 축이며 이 함수 안에서도 합치지 않는다.
-    bool PlanExternalAvoidCycle(
+    bool AvoidProcess(
         const CartesianState& ego, const FrenetState& start,
         double s, double d, double resolved_target_speed,
         const std::vector<TrackedObject>& predicted_collision_obstacles,
@@ -626,7 +643,7 @@ private:
     // 확보보다 먼저)는 PlanInternal이 그대로 유지한다 - 이 함수는 gate 판단
     // 없이, 이미 EMERGENCY로 확정된 뒤의 실행(감속 경로 생성/state 갱신/
     // 5-cycle 로그)만 담당한다. 자세한 배경은 PlanInternal 호출부 주석 참고.
-    bool PlanExternalEmergencyStop(const CartesianState& ego, double s, double d,
+    bool EmergencyStopProcess(const CartesianState& ego, double s, double d,
                                     double s_dot, CartesianPath& out_path);
 
     // 외부 STOP의 APPROACH/BRAKING/HOLD phase 전이와 그에 따른 cmd 조정

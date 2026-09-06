@@ -551,7 +551,7 @@ bool FrenetPlanner::PlanInternal(
     // 올 때까지 긴급정지 상태를 계속 강제하는 것이 E-stop의 의미이므로,
     // 여기서 COMPLETED로 올리지 않는다 - ROS 계층이 EXECUTING을 유지한다.
     if (external_command->mode == EMERGENCY) {
-        return PlanExternalEmergencyStop(ego, s, d, s_dot, out_path);
+        return EmergencyStopProcess(ego, s, d, s_dot, out_path);
     }
 
     // =====================================================================
@@ -657,12 +657,28 @@ bool FrenetPlanner::PlanInternal(
     // yaw-rate 재추정이 중복된다(계약 12.7.1절).
     // =====================================================================
     if (avoid_prepare || avoid_committed) {
-        return PlanExternalAvoidCycle(
+        return AvoidProcess(
             ego, start, s, d, resolved_target_speed,
             predicted_collision_obstacles, *external_command,
             avoid_prepare, avoid_committed, out_path, *avoid_prepare_result);
     }
 
+    return ResolveAndExecuteManeuver(
+        ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
+        predicted_obstacles, predicted_collision_obstacles,
+        resolved_target_speed, *external_command, out_path);
+}
+
+bool FrenetPlanner::ResolveAndExecuteManeuver(
+    const CartesianState& ego, const FrenetState& start,
+    double s, double d, double s_dot, double s_ddot,
+    double d_dot, double d_ddot,
+    const std::vector<TrackedObject>& obstacles,
+    const std::vector<TrackedObject>& predicted_obstacles,
+    const std::vector<TrackedObject>& predicted_collision_obstacles,
+    double resolved_target_speed, const PlannerCommand& command,
+    CartesianPath& out_path) {
+    const PlannerCommand* external_command = &command;
     // 외부 command 경로는 FSM이 지정한 mode를 그대로 받아 실행한다. 진입
     // 가능한 모드는 ValidateExternalCommand의 whitelist가 이미 걸러낸 상태다.
     PlannerCommand cmd = *external_command;

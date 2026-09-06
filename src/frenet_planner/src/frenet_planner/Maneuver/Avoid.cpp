@@ -475,7 +475,7 @@ bool FrenetPlanner::BuildAvoidMaintenancePath(
     return !out_path.x.empty();
 }
 
-bool FrenetPlanner::PlanExternalAvoidCycle(
+bool FrenetPlanner::AvoidProcess(
     const CartesianState& ego, const FrenetState& start,
     double s, double d, double resolved_target_speed,
     const std::vector<TrackedObject>& predicted_collision_obstacles,

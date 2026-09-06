@@ -17,7 +17,7 @@
 
 #include "frenet_planner/Maneuver/ManeuverUtils.hpp"
 
-bool FrenetPlanner::PlanExternalEmergencyStop(const CartesianState& ego, double s,
+bool FrenetPlanner::EmergencyStopProcess(const CartesianState& ego, double s,
                                                double d, double s_dot,
                                                CartesianPath& out_path) {
     last_mode_ = EMERGENCY;
