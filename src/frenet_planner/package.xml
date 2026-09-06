@@ -2,7 +2,7 @@
 <package format="2">
   <name>frenet_planner</name>
   <version>0.1.0</version>
-  <description>Frenet trajectory planner core with ROS and legacy UDP runtimes.</description>
+  <description>Frenet trajectory planner core with a ROS runtime.</description>
 
   <maintainer email="autonav@todo.todo">autonav</maintainer>
   <license>MIT</license>
@@ -21,6 +21,7 @@
   <exec_depend>morai_sensor_bridge</exec_depend>
   <exec_depend>morai_udp_bridge</exec_depend>
   <exec_depend>mpc_controller</exec_depend>
+  <exec_depend>vehicle_state</exec_depend>
 
   <export/>
 </package>

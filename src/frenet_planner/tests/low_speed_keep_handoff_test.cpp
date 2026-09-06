@@ -77,7 +77,7 @@ int main() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "low_speed_keep_handoff_test_params.yaml");
     if (config.empty()) {
         std::cerr << "[FAIL] could not prepare test config\n";
@@ -90,7 +90,7 @@ int main() {
 
     PlannerCommand keep{};
     keep.mode = LANE_KEEPING;
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
 
     // speed 0.49 / 0.50 / 0.51 / 0.6 / 0.8 근방에서 discontinuous하게
     // trajectory availability가 깨지지 않는지 확인한다. 강한 감속 경계조건

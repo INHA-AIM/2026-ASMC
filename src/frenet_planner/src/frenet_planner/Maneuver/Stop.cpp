@@ -1,12 +1,15 @@
 /**
  * @file Stop.cpp
- * @brief 외부 STOP(APPROACH/BRAKING/HOLD)과 EMERGENCY_STOP 실행부.
+ * @brief 외부 STOP(APPROACH/BRAKING/HOLD)과 EMERGENCY_STOP 실행부, 그리고
+ *        StopProcess/EmergencyStopProcess 진입점.
  *
- * PlanInternal의 공용 candidate 파이프라인(ResolveManeuver/EvaluateCosts),
- * GenerateDecelToZeroPath/BuildZeroSpeedHoldPath 자체(AVOID와 공유),
- * common no-valid failure 분류는 이 파일로 옮기지 않는다. 이 파일은 STOP/
- * EMERGENCY 전용 gate가 이미 참으로 확정된 뒤의 실행부와, STOP phase
- * lifecycle 갱신만 담당한다 - 호출 순서/gate 자체는 PlanInternal이 소유한다.
+ * KEEP/FOLLOW/STOP이 공유하는 candidate 파이프라인 본체(ResolveManeuver/
+ * EvaluateCosts를 포함한 ExecuteManeuverPipeline)는 Keep.cpp에 있다 -
+ * STOP 전용 분기(external_stop_mode)가 그 파이프라인 뒷부분 전체에 걸쳐
+ * 있어서 여기로 옮기면 같은 조건을 두 곳에서 유지해야 한다. 이 파일은
+ * STOP/EMERGENCY 전용 gate가 이미 참으로 확정된 뒤의 실행부(APPROACH/
+ * BRAKING/HOLD phase 전이, EMERGENCY 직접 감속)와 그 진입점만 담당한다 -
+ * 호출 순서/gate 자체는 PlanInternal이 소유한다.
  */
 
 #include "frenet_planner/frenet_planner.hpp"
@@ -17,7 +20,7 @@
 
 #include "frenet_planner/Maneuver/ManeuverUtils.hpp"
 
-bool FrenetPlanner::PlanExternalEmergencyStop(const CartesianState& ego, double s,
+bool FrenetPlanner::EmergencyStopProcess(const CartesianState& ego, double s,
                                                double d, double s_dot,
                                                CartesianPath& out_path) {
     last_mode_ = EMERGENCY;
@@ -81,8 +84,12 @@ void FrenetPlanner::UpdateExternalStopExecution(double s, double s_dot,
         // 순항 목표속도와 비교해 더 낮은 쪽. 멀면 기존 속도 유지, 가까워질
         // 수록 자연스럽게 낮아진다.
         cmd.target_speed = std::min(cmd.target_speed, v_safe);
-        // 후보 생성만 velocity keeping으로 위임한다. 외부에 보고되는
-        // last_mode_는 아래에서 STOP으로 유지한다.
+        // cmd.mode는 여기서부터 "외부 behavior mode"가 아니라 후보 생성기
+        // 선택용 내부 scratch 값이다(PlannerCommand.hpp 알려진 예외 참고).
+        // LANE_KEEPING으로 바꾸는 것은 ResolveManeuver에 velocity keeping
+        // 생성기를 쓰라고 지시하는 것뿐이고, 실제 STOP 여부는 last_mode_와
+        // stop_.phase가 그대로 STOP으로 보고한다 - 외부에서 관측 가능한 어떤
+        // 값도 STOP에서 KEEP으로 바뀌지 않는다.
         cmd.mode = LANE_KEEPING;
     } else if (stop_.phase == StopExecutionPhase::BRAKING) {
         // 목표를 이미 지나쳤다면 되돌아가는 정지 다항식을 만들지 않는다.
@@ -142,4 +149,25 @@ void FrenetPlanner::TrimExternalStopReverseTrajectory(
         selected_cartesian.v.back() = 0.0;
         selected_cartesian.a.back() = 0.0;
     }
+}
+
+bool FrenetPlanner::StopProcess(
+    const CartesianState& ego, const FrenetState& start,
+    double s, double d, double s_dot, double s_ddot,
+    double d_dot, double d_ddot,
+    const std::vector<TrackedObject>& obstacles,
+    const std::vector<TrackedObject>& predicted_obstacles,
+    double resolved_target_speed, const PlannerCommand& external_command,
+    CartesianPath& out_path) {
+    // STOP의 APPROACH/BRAKING/HOLD phase 갱신과 HOLD 조기반환은 공용
+    // pipeline(Keep.cpp의 ExecuteManeuverPipeline) 안에서
+    // external_stop_mode 분기로 처리한다 - SelectBestStoppingPath/
+    // TrimExternalStopReverseTrajectory/BRAKING fail-safe 등 STOP 전용
+    // 로직이 파이프라인 뒷부분 전체에 걸쳐 있어서, 그 부분만 분리하면
+    // 같은 조건을 두 곳에서 유지해야 한다. 여기서는 그 진입점만 명확히
+    // 이름 붙인다.
+    return ExecuteManeuverPipeline(
+        ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
+        predicted_obstacles, resolved_target_speed, external_command,
+        out_path);
 }

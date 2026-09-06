@@ -2,10 +2,10 @@
 //
 // D5-1의 FOLLOW와 완전히 같은 원칙을 AVOID에 적용한다.
 //
-// legacy는 FindStaticAvoidanceTarget()으로
+// planner가
 //   모든 객체 탐색 -> 같은 차선 -> 저속/정지 -> 가장 가까운 것 ->
 //   좌/우 방향까지 자동 결정
-// 을 한다. v2에서 그 권한은 전부 FSM에 있다
+// 하는 acquisition은 v2에서 금지된다 - 그 권한은 전부 FSM에 있다
 // (docs/d1-legacy-behavior-boundary.md 0.1절 B 분류, 6.4절).
 //
 //   selector: "무엇을 피할까?"                     -> 금지
@@ -47,8 +47,8 @@
 //       12.7.2절, 3.3절, 8.2절
 
 #include "frenet_planner/frenet_planner.hpp"
-#include "frenet_planner/obstacle/legacy_object_adapter.hpp"
-#include "ros/avoid_commit_coordinator.hpp"
+#include "frenet_planner/Geometry/PolygonUtils.hpp"
+#include "avoid_commit_coordinator.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -135,11 +135,14 @@ CartesianState MakeEgoAt(const Waypoints& waypoints, double target_s,
     return ego;
 }
 
-// 경로 위 target_s, 횡오프셋 lateral_d 지점에 놓인 객체.
-ObjectInfo MakeObstacle(const Waypoints& waypoints, int id, double target_s,
+// 경로 위 target_s, 횡오프셋 lateral_d 지점에 놓인 객체. authoritative
+// 8-corner OBB를 직접 채운다 - production에 더 이상 legacy geometry
+// synthesizer가 없으므로, 이 fixture가 회전된 직사각형을 두 z 층에
+// 명시적으로 구성한다(실제 perception obb_corners와 같은 형태).
+TrackedObject MakeObstacle(const Waypoints& waypoints, int id, double target_s,
                         double speed, double lateral_d = 0.0) {
     const Pose2D pose = PoseAt(waypoints, target_s);
-    ObjectInfo object;
+    TrackedObject object;
     object.id = id;
     // Frenet d는 진행 방향 좌측이 양수다. 경로 접선에 수직으로 밀어낸다.
     object.x = pose.x - lateral_d * std::sin(pose.yaw);
@@ -151,6 +154,27 @@ ObjectInfo MakeObstacle(const Waypoints& waypoints, int id, double target_s,
     object.width = 2.0;
     object.length = 4.5;
     object.height = 1.5;
+
+    const double half_length = object.length * 0.5;
+    const double half_width = object.width * 0.5;
+    const double cosine = std::cos(object.heading);
+    const double sine = std::sin(object.heading);
+    const double local_xy[4][2] = {
+        {-half_length, -half_width},
+        { half_length, -half_width},
+        { half_length,  half_width},
+        {-half_length,  half_width},
+    };
+    for (std::size_t i = 0; i < 4; ++i) {
+        const double corner_x =
+            object.x + cosine * local_xy[i][0] - sine * local_xy[i][1];
+        const double corner_y =
+            object.y + sine * local_xy[i][0] + cosine * local_xy[i][1];
+        object.corners[i] = {corner_x, corner_y, 0.0};
+        object.corners[i + 4] = {corner_x, corner_y, object.height};
+    }
+    object.geometry_valid = geometry::ValidateCorners8(object.corners).valid;
+    object.z_valid = true;
     return object;
 }
 
@@ -260,7 +284,7 @@ int main() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "command_avoid_target_test_params.yaml");
     if (config.empty()) {
         std::cerr << "[FAIL] could not prepare test config\n";
@@ -285,7 +309,7 @@ int main() {
             std::cerr << "[FAIL] planner initialization\n";
             return 1;
         }
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         const bool ok = planner.Plan(ego, objects, MakeAvoidCommand(21), path);
@@ -299,12 +323,12 @@ int main() {
 
     // ===== 2. 핵심: 더 가까운 장애물이 있어도 지정 대상을 유지 ==========
     //
-    // legacy FindStaticAvoidanceTarget()은 가장 가까운 정적 장애물을 고른다.
-    // resolver를 그 함수로 바꾸면 이 검사가 깨진다.
+    // resolver를 "가장 가까운 정적 장애물을 스스로 고르는" 함수로 바꾸면
+    // 이 검사가 깨진다.
     {
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 17, kEgoS + 12.0, 0.0),  // 더 가깝다
             MakeObstacle(waypoints, 21, kEgoS + 30.0, 0.0),  // FSM 지정
         };
@@ -328,7 +352,7 @@ int main() {
     {
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 17, kEgoS + 20.0, 0.0)};
         CartesianPath path;
         const bool ok = planner.Plan(ego, objects, MakeAvoidCommand(21), path);
@@ -344,9 +368,9 @@ int main() {
     {
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> with_target{
+        const std::vector<TrackedObject> with_target{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const std::vector<ObjectInfo> without_target{
+        const std::vector<TrackedObject> without_target{
             MakeObstacle(waypoints, 17, kEgoS + 60.0, 0.0)};
         CartesianPath path;
 
@@ -371,9 +395,9 @@ int main() {
     {
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> with_target{
+        const std::vector<TrackedObject> with_target{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const std::vector<ObjectInfo> without_target{
+        const std::vector<TrackedObject> without_target{
             MakeObstacle(waypoints, 17, kEgoS + 60.0, 0.0)};
         CartesianPath path;
 
@@ -393,9 +417,9 @@ int main() {
     {
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> with_target{
+        const std::vector<TrackedObject> with_target{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const std::vector<ObjectInfo> without_target{
+        const std::vector<TrackedObject> without_target{
             MakeObstacle(waypoints, 17, kEgoS + 60.0, 0.0)};
         CartesianPath path;
 
@@ -419,7 +443,7 @@ int main() {
         // 7a. 후방 객체
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> behind{
+        const std::vector<TrackedObject> behind{
             MakeObstacle(waypoints, 21, kEgoS - 20.0, 0.0)};
         CartesianPath path;
         const bool ok = planner.Plan(ego, behind, MakeAvoidCommand(21), path);
@@ -430,7 +454,7 @@ int main() {
         // 7b. 다른 corridor. lane_width의 절반을 넘는 횡오프셋.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> other_lane{
+        const std::vector<TrackedObject> other_lane{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0, 3.5)};
         CartesianPath path;
         const bool ok =
@@ -442,7 +466,7 @@ int main() {
         // 7c. 탐색 범위 밖. 유효 탐색거리는 84.8 m다(아래 8번 참고).
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> far_away{
+        const std::vector<TrackedObject> far_away{
             MakeObstacle(waypoints, 21, kEgoS + 150.0, 0.0)};
         CartesianPath path;
         const bool ok = planner.Plan(ego, far_away, MakeAvoidCommand(21), path);
@@ -453,7 +477,7 @@ int main() {
         // 7d. geometry가 0이면 회피 오프셋을 계산할 수 없다.
         FrenetPlanner planner;
         planner.Init(config);
-        ObjectInfo degenerate = MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0);
+        TrackedObject degenerate = MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0);
         degenerate.width = 0.0;
         degenerate.length = 0.0;
         CartesianPath path;
@@ -474,7 +498,7 @@ int main() {
         for (double speed : {0.0, 0.3, 2.0, 6.0}) {
             FrenetPlanner planner;
             planner.Init(config);
-            const std::vector<ObjectInfo> objects{
+            const std::vector<TrackedObject> objects{
                 MakeObstacle(waypoints, 21, kEgoS + 30.0, speed)};
             CartesianPath path;
             const bool ok =
@@ -494,7 +518,7 @@ int main() {
     {
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 80.0, 0.0)};
         CartesianPath path;
         const bool ok = planner.Plan(ego, objects, MakeAvoidCommand(21), path);
@@ -520,7 +544,7 @@ int main() {
         for (const Case& c : cases) {
             FrenetPlanner planner;
             planner.Init(config);
-            const std::vector<ObjectInfo> objects{
+            const std::vector<TrackedObject> objects{
                 MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
             CartesianPath path;
             planner.Plan(ego, objects, MakeAvoidCommand(21, c.requested), path);
@@ -542,7 +566,7 @@ int main() {
     {
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         PlannerCommand no_target = MakeAvoidCommand(-1);
@@ -561,9 +585,9 @@ int main() {
     {
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> with_target{
+        const std::vector<TrackedObject> with_target{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const std::vector<ObjectInfo> without_target{
+        const std::vector<TrackedObject> without_target{
             MakeObstacle(waypoints, 17, kEgoS + 60.0, 0.0)};
         CartesianPath path;
 
@@ -587,7 +611,7 @@ int main() {
         // KEEP으로 넘어가도 같다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> with_target{
+        const std::vector<TrackedObject> with_target{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         planner.Plan(ego, with_target, MakeAvoidCommand(21), path);
@@ -596,30 +620,6 @@ int main() {
         planner.Plan(ego, with_target, keep, path);
         Expect(planner.active_avoid_target_id() == -1,
                "reset: KEEP clears the v2 AVOID context");
-    }
-
-    // ===== 13. legacy AVOID context는 건드리지 않는다 ==================
-    //
-    // v2_avoidance_와 avoidance_는 별도 인스턴스다. legacy fingerprint를
-    // 유지하려면 v2 경로가 legacy context를 갱신하지 않아야 한다.
-    {
-        FrenetPlanner planner;
-        planner.Init(config);
-        const std::vector<ObjectInfo> with_target{
-            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        CartesianPath path;
-
-        // v2 AVOID로 대상을 확보한다.
-        planner.Plan(ego, with_target, MakeAvoidCommand(21), path);
-        Expect(planner.active_avoid_target_id() == 21,
-               "isolation: v2 AVOID acquired its target");
-
-        // 곧바로 legacy 경로(3인자 Plan)를 돌린다. legacy는 자기 자신의
-        // FindStaticAvoidanceTarget()으로 대상을 고르며, v2 context를
-        // 읽지 않아야 한다. 여기서는 legacy가 정상적으로 궤적을 만드는지만
-        // 확인한다 - byte 단위 동일성은 legacy_fingerprint가 담당한다.
-        const bool legacy_ok = planner.Plan(ego, with_target, path);
-        Expect(legacy_ok, "isolation: the legacy path still plans normally");
     }
 
     // ===== D6-1a: optional target pose 투영 =============================
@@ -819,7 +819,7 @@ int main() {
     {
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
 
@@ -833,7 +833,7 @@ int main() {
     {
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
 
@@ -860,7 +860,7 @@ int main() {
         // 어딘가에서 -1.0 sentinel이나 fabs를 쓰면 여기서 깨진다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         planner.Plan(ego, objects,
@@ -878,7 +878,7 @@ int main() {
         // target_d = 0.0도 유효한 값이다(차선 중앙). 플래그로만 구분한다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         planner.Plan(ego, objects,
@@ -892,7 +892,7 @@ int main() {
         // 다른 모드로 넘어가면 투영 결과도 함께 비워진다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         planner.Plan(ego, objects,
@@ -910,7 +910,7 @@ int main() {
         // 남아 있으면 FSM이 목표를 거둬들였는데 예전 목표로 회피한다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         planner.Plan(ego, objects,
@@ -931,7 +931,7 @@ int main() {
     {
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
 
         // kLowSpeedFallbackV = 0.5 m/s. 그 위/아래를 모두 훑는다.
@@ -961,7 +961,7 @@ int main() {
         // 조용히 통과시키지 않는다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 17, kEgoS + 25.0, 0.0)};
         const CartesianState slow_ego = MakeEgo(PoseAt(waypoints, kEgoS), 0.2);
         CartesianPath path;
@@ -976,9 +976,9 @@ int main() {
         // 저속 dropout 유예도 정상속도와 같게 동작해야 한다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> with_target{
+        const std::vector<TrackedObject> with_target{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const std::vector<ObjectInfo> without_target{
+        const std::vector<TrackedObject> without_target{
             MakeObstacle(waypoints, 17, kEgoS + 60.0, 0.0)};
         const CartesianState slow_ego = MakeEgo(PoseAt(waypoints, kEgoS), 0.3);
         CartesianPath path;
@@ -995,7 +995,7 @@ int main() {
         // 긴급정지가 회피 확보에 가려지면 안 된다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         planner.Plan(ego, objects, MakeAvoidCommand(21), path);
@@ -1020,7 +1020,7 @@ int main() {
         // 장애물 폭 2.0 -> clearance = 0.5*(1.9+2.0) + 0.3 + 0.3 = 2.55
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         planner.Plan(ego, objects,
@@ -1043,7 +1043,7 @@ int main() {
         // LEFT: 왼쪽만.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         planner.Plan(ego, objects,
@@ -1057,7 +1057,7 @@ int main() {
         // RIGHT: 오른쪽만. legacy처럼 양쪽을 만들고 고르면 이 검사가 깨진다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         planner.Plan(ego, objects,
@@ -1072,7 +1072,7 @@ int main() {
         // 아니다 - 그러면 불필요하게 멀리 이동한다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> shifted{
+        const std::vector<TrackedObject> shifted{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0, 1.0)};
         CartesianPath path;
         planner.Plan(ego, shifted,
@@ -1088,7 +1088,7 @@ int main() {
         // 장애물 폭이 크면 clearance도 커진다.
         FrenetPlanner planner;
         planner.Init(config);
-        ObjectInfo wide = MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0);
+        TrackedObject wide = MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0);
         wide.width = 3.0;
         CartesianPath path;
         planner.Plan(ego, {wide},
@@ -1097,7 +1097,7 @@ int main() {
 
         FrenetPlanner narrow_planner;
         narrow_planner.Init(config);
-        const std::vector<ObjectInfo> narrow{
+        const std::vector<TrackedObject> narrow{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};   // width 2.0
         narrow_planner.Plan(ego, narrow,
                             MakeAvoidCommand(21, LateralDirection::LEFT),
@@ -1111,7 +1111,7 @@ int main() {
     {
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         planner.Plan(ego, objects,
@@ -1132,7 +1132,7 @@ int main() {
         // 부족은 후보 생성/충돌 검사가 판정하고 결과는 WAITING이다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         planner.Plan(ego, objects,
@@ -1154,7 +1154,7 @@ int main() {
         // NONE + pose: pose를 그대로 쓰고 모순 판정은 하지 않는다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         planner.Plan(ego, objects,
@@ -1172,7 +1172,7 @@ int main() {
         // 위치로 계산하면 엉뚱한 곳을 비켜간다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 17, kEgoS + 12.0, 0.0, -1.5),  // 더 가깝다
             MakeObstacle(waypoints, 21, kEgoS + 30.0, 0.0, 1.0),   // FSM 지정
         };
@@ -1194,9 +1194,9 @@ int main() {
         // (돌연변이 MUT-8로 실제 확인 - reset을 제거해도 통과했다).
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> with_target{
+        const std::vector<TrackedObject> with_target{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const std::vector<ObjectInfo> without_target{
+        const std::vector<TrackedObject> without_target{
             MakeObstacle(waypoints, 17, kEgoS + 20.0, 0.0)};
         CartesianPath path;
 
@@ -1219,7 +1219,7 @@ int main() {
         // 한 번도 확보하지 못한 경우에도 목록은 비어 있다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 17, kEgoS + 20.0, 0.0)};
         CartesianPath path;
         planner.Plan(ego, objects, MakeAvoidCommand(21), path);
@@ -1230,7 +1230,7 @@ int main() {
         // 다른 모드로 넘어가면 목표 목록도 비워진다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         planner.Plan(ego, objects, MakeAvoidCommand(21), path);
@@ -1249,24 +1249,18 @@ int main() {
     // 전처리에서 만들고, 두 결과를 절대 같은 것으로 취급하지 않는다.
     using Prepare = FrenetPlanner::AvoidPrepareResult;
 
-    // PrepareAvoid는 collision geometry가 obstacles와 1:1이어야 한다.
-    auto boxes_for = [](const std::vector<ObjectInfo>& objects) {
-        return MakeLegacyTrackedObstacles(objects);
-    };
-
     {
         // ---- 방향별 평가 대상 ------------------------------------------
         // LEFT/RIGHT는 한쪽만, NONE은 양쪽. 실측 clearance는 2.55 m다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
 
         CartesianPath maintenance;
         Prepare result;
         const bool ok = planner.PrepareAvoid(
-            ego, objects, boxes,
+            ego, objects,
             MakeAvoidCommand(21, LateralDirection::LEFT), maintenance, result);
         Expect(ok, "PREPARE LEFT produces a maintenance trajectory");
         Expect(result.candidate_valid, "PREPARE LEFT finds a safe candidate");
@@ -1278,13 +1272,12 @@ int main() {
     {
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
         const bool ok = planner.PrepareAvoid(
-            ego, objects, boxes,
+            ego, objects,
             MakeAvoidCommand(21, LateralDirection::RIGHT), maintenance, result);
         Expect(ok && result.candidate_valid,
                "PREPARE RIGHT finds a safe candidate");
@@ -1297,16 +1290,15 @@ int main() {
         both.Init(config);
         FrenetPlanner one_side;
         one_side.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
 
         CartesianPath m1, m2;
         Prepare r_both, r_left;
-        both.PrepareAvoid(ego, objects, boxes,
+        both.PrepareAvoid(ego, objects,
                           MakeAvoidCommand(21, LateralDirection::NONE), m1,
                           r_both);
-        one_side.PrepareAvoid(ego, objects, boxes,
+        one_side.PrepareAvoid(ego, objects,
                               MakeAvoidCommand(21, LateralDirection::LEFT), m2,
                               r_left);
         Expect(r_both.candidate_valid && r_left.candidate_valid,
@@ -1323,13 +1315,12 @@ int main() {
         // 실수로 out_path = result.candidate_path를 하면 이 검사가 깨진다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
         const bool ok = planner.PrepareAvoid(
-            ego, objects, boxes,
+            ego, objects,
             MakeAvoidCommand(21, LateralDirection::LEFT), maintenance, result);
         Expect(ok && result.candidate_valid,
                "dual-output: PREPARE succeeded with a candidate");
@@ -1360,13 +1351,12 @@ int main() {
         // 실측: 요청 +2.50 -> 실제 종단 +3.00.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
         planner.PrepareAvoid(
-            ego, objects, boxes,
+            ego, objects,
             MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, 2.5,
                                         LateralDirection::LEFT),
             maintenance, result);
@@ -1389,13 +1379,12 @@ int main() {
         // 계약 위반이 된다(계약 3.3.4절).
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
         const bool ok = planner.PrepareAvoid(
-            ego, objects, boxes,
+            ego, objects,
             MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, -2.5,
                                         LateralDirection::LEFT),
             maintenance, result);
@@ -1415,13 +1404,12 @@ int main() {
         // 반대 방향도 같다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
         planner.PrepareAvoid(
-            ego, objects, boxes,
+            ego, objects,
             MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, 2.5,
                                         LateralDirection::RIGHT),
             maintenance, result);
@@ -1432,13 +1420,12 @@ int main() {
         // NONE + pose는 모순이 없다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
         planner.PrepareAvoid(
-            ego, objects, boxes,
+            ego, objects,
             MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, -2.5,
                                         LateralDirection::NONE),
             maintenance, result);
@@ -1452,13 +1439,12 @@ int main() {
         // ---- target pose가 ego 후방이면 후보를 만들지 않는다 -----------
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
         const bool ok = planner.PrepareAvoid(
-            ego, objects, boxes,
+            ego, objects,
             MakeAvoidCommandWithTargetD(21, kEgoS - 40.0, 2.5,
                                         LateralDirection::LEFT),
             maintenance, result);
@@ -1473,13 +1459,12 @@ int main() {
         // 전방 목표는 정상이다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
         planner.PrepareAvoid(
-            ego, objects, boxes,
+            ego, objects,
             MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, 2.5,
                                         LateralDirection::LEFT),
             maintenance, result);
@@ -1493,13 +1478,12 @@ int main() {
         // 장애물이 8 m 앞이면 회피 후보가 전부 충돌로 탈락한다(실측).
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 8.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
         const bool ok = planner.PrepareAvoid(
-            ego, objects, boxes,
+            ego, objects,
             MakeAvoidCommand(21, LateralDirection::NONE), maintenance, result);
         Expect(!result.candidate_valid,
                "blocked: a very close obstacle blocks every candidate");
@@ -1523,14 +1507,13 @@ int main() {
         // 자기잠금이 된다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         const CartesianState slow_ego = MakeEgo(PoseAt(waypoints, kEgoS), 0.3);
         CartesianPath maintenance;
         Prepare result;
         const bool ok = planner.PrepareAvoid(
-            slow_ego, objects, boxes,
+            slow_ego, objects,
             MakeAvoidCommand(21, LateralDirection::NONE), maintenance, result);
         Expect(ok, "low speed: PREPARE produces a maintenance path");
         Expect(planner.active_avoid_target_id() == 21,
@@ -1545,7 +1528,7 @@ int main() {
         fast.Init(config);
         CartesianPath fast_maintenance;
         Prepare fast_result;
-        fast.PrepareAvoid(ego, objects, boxes,
+        fast.PrepareAvoid(ego, objects,
                           MakeAvoidCommand(21, LateralDirection::NONE),
                           fast_maintenance, fast_result);
         Expect(!fast_result.low_speed_context,
@@ -1566,14 +1549,13 @@ int main() {
         // 장애물이 25 m일 때는 후보가 막히므로 이 조합이 드러나지 않았다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> far_objects{
+        const std::vector<TrackedObject> far_objects{
             MakeObstacle(waypoints, 21, kEgoS + 60.0, 0.0)};
-        const auto far_boxes = boxes_for(far_objects);
         const CartesianState slow_ego = MakeEgo(PoseAt(waypoints, kEgoS), 0.3);
         CartesianPath maintenance;
         Prepare result;
         const bool ok = planner.PrepareAvoid(
-            slow_ego, far_objects, far_boxes,
+            slow_ego, far_objects,
             MakeAvoidCommand(21, LateralDirection::NONE), maintenance, result);
 
         Expect(ok, "low-speed valid: PREPARE succeeds");
@@ -1604,24 +1586,23 @@ int main() {
         // 실측: 30~9 m -> 21점 crawl / 7 m -> 3점 감속 / 5 m 이하 -> 1점 hold.
         FrenetPlanner far_planner;
         far_planner.Init(config);
-        const std::vector<ObjectInfo> far_objects{
+        const std::vector<TrackedObject> far_objects{
             MakeObstacle(waypoints, 21, kEgoS + 30.0, 0.0)};
         const CartesianState slow_ego = MakeEgo(PoseAt(waypoints, kEgoS), 0.3);
         CartesianPath far_maintenance;
         Prepare far_result;
         far_planner.PrepareAvoid(slow_ego, far_objects,
-                                 boxes_for(far_objects),
                                  MakeAvoidCommand(21), far_maintenance,
                                  far_result);
 
         FrenetPlanner near_planner;
         near_planner.Init(config);
-        const std::vector<ObjectInfo> near_objects{
+        const std::vector<TrackedObject> near_objects{
             MakeObstacle(waypoints, 21, kEgoS + 4.0, 0.0)};
         CartesianPath near_maintenance;
         Prepare near_result;
         const bool near_ok = near_planner.PrepareAvoid(
-            slow_ego, near_objects, boxes_for(near_objects),
+            slow_ego, near_objects,
             MakeAvoidCommand(21), near_maintenance, near_result);
 
         Expect(far_maintenance.x.size() > near_maintenance.x.size(),
@@ -1641,12 +1622,11 @@ int main() {
         // 않았으므로 그것이 정상이다. lock은 D6-3의 COMMIT에서 한다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
-        planner.PrepareAvoid(ego, objects, boxes,
+        planner.PrepareAvoid(ego, objects,
                              MakeAvoidCommand(21, LateralDirection::LEFT),
                              maintenance, result);
         Expect(result.candidate_valid && result.selected_target_d > 2.0,
@@ -1664,44 +1644,35 @@ int main() {
         // ---- PrepareAvoid의 입력 방어 -----------------------------------
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
 
         // AVOID가 아닌 모드로 PREPARE를 호출하면 거부한다.
         PlannerCommand keep{};
         keep.mode = LANE_KEEPING;
-        Expect(!planner.PrepareAvoid(ego, objects, boxes, keep, maintenance,
+        Expect(!planner.PrepareAvoid(ego, objects, keep, maintenance,
                                      result),
                "PrepareAvoid rejects a non-AVOID command");
         Expect(planner.last_failure_reason() == Reason::INVALID_COMMAND,
                "a non-AVOID PREPARE is INVALID_COMMAND");
 
         // 대상 없는 AVOID도 거부한다.
-        Expect(!planner.PrepareAvoid(ego, objects, boxes,
+        Expect(!planner.PrepareAvoid(ego, objects,
                                      MakeAvoidCommand(-1), maintenance,
                                      result),
                "PrepareAvoid rejects AVOID without a target");
-
-        // collision geometry 개수가 어긋나면 거부한다.
-        const std::vector<TrackedObstacle> empty_boxes;
-        Expect(!planner.PrepareAvoid(ego, objects, empty_boxes,
-                                     MakeAvoidCommand(21), maintenance,
-                                     result),
-               "PrepareAvoid rejects mismatched collision geometry");
     }
     {
         // 확보 실패는 PREPARE에서도 TARGET_OBJECT_LOST다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 17, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
-        Expect(!planner.PrepareAvoid(ego, objects, boxes,
+        Expect(!planner.PrepareAvoid(ego, objects,
                                      MakeAvoidCommand(21), maintenance,
                                      result),
                "PREPARE with an unobserved target fails");
@@ -1715,7 +1686,7 @@ int main() {
         // D6-3에서 열린다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath path;
         const bool ok = planner.Plan(ego, objects, MakeAvoidCommand(21), path);
@@ -1762,12 +1733,11 @@ int main() {
         // --- 후보 성공 ---------------------------------------------------
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
-        planner.PrepareAvoid(ego, objects, boxes,
+        planner.PrepareAvoid(ego, objects,
                              MakeAvoidCommand(21, LateralDirection::LEFT),
                              maintenance, result);
 
@@ -1799,13 +1769,12 @@ int main() {
         // trajectory_source=SAFE_STOP을 뜻하지 않는다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 8.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
         const bool ok = planner.PrepareAvoid(
-            ego, objects, boxes,
+            ego, objects,
             MakeAvoidCommand(21, LateralDirection::NONE), maintenance, result);
 
         Expect(ok, "feedback: a blocked candidate still yields maintenance");
@@ -1831,13 +1800,12 @@ int main() {
         FrenetPlanner planner;
         planner.Init(config);
         // 장애물이 아주 가까우면 maintenance가 정지 계열로 내려간다(실측).
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 4.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         const CartesianState slow_ego = MakeEgo(PoseAt(waypoints, kEgoS), 0.3);
         CartesianPath maintenance;
         Prepare result;
-        planner.PrepareAvoid(slow_ego, objects, boxes, MakeAvoidCommand(21),
+        planner.PrepareAvoid(slow_ego, objects, MakeAvoidCommand(21),
                              maintenance, result);
 
         Expect(!maintenance.v.empty(),
@@ -1855,13 +1823,12 @@ int main() {
         // --- 방향 모순 / 후방 목표의 진단 값 -----------------------------
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
         planner.PrepareAvoid(
-            ego, objects, boxes,
+            ego, objects,
             MakeAvoidCommandWithTargetD(21, kEgoS + 30.0, -2.5,
                                         LateralDirection::LEFT),
             maintenance, result);
@@ -1881,24 +1848,24 @@ int main() {
         // 전이는 command_execution_manager_test가 담당한다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> clear_scene{
+        const std::vector<TrackedObject> clear_scene{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const std::vector<ObjectInfo> blocked_scene{
+        const std::vector<TrackedObject> blocked_scene{
             MakeObstacle(waypoints, 21, kEgoS + 8.0, 0.0)};
         CartesianPath maintenance;
         Prepare result;
 
-        planner.PrepareAvoid(ego, clear_scene, boxes_for(clear_scene),
+        planner.PrepareAvoid(ego, clear_scene,
                              MakeAvoidCommand(21, LateralDirection::LEFT),
                              maintenance, result);
         Expect(result.candidate_valid, "round trip: first cycle is valid");
 
-        planner.PrepareAvoid(ego, blocked_scene, boxes_for(blocked_scene),
+        planner.PrepareAvoid(ego, blocked_scene,
                              MakeAvoidCommand(21, LateralDirection::LEFT),
                              maintenance, result);
         Expect(!result.candidate_valid, "round trip: blocked cycle is invalid");
 
-        planner.PrepareAvoid(ego, clear_scene, boxes_for(clear_scene),
+        planner.PrepareAvoid(ego, clear_scene,
                              MakeAvoidCommand(21, LateralDirection::LEFT),
                              maintenance, result);
         Expect(result.candidate_valid,
@@ -1915,12 +1882,11 @@ int main() {
         // D6-2b/D6-2c에서 getter가 없어 간접 확인만 했던 항목이다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
-        planner.PrepareAvoid(ego, objects, boxes,
+        planner.PrepareAvoid(ego, objects,
                              MakeAvoidCommand(21, LateralDirection::LEFT),
                              maintenance, result);
         Expect(result.candidate_valid, "no-lock: PREPARE found a candidate");
@@ -1932,7 +1898,7 @@ int main() {
                "no-lock: the phase stays TRACKING before commit");
         // 여러 사이클을 돌려도 lock되지 않는다.
         for (int cycle = 0; cycle < 3; ++cycle) {
-            planner.PrepareAvoid(ego, objects, boxes,
+            planner.PrepareAvoid(ego, objects,
                                  MakeAvoidCommand(21, LateralDirection::LEFT),
                                  maintenance, result);
         }
@@ -1943,12 +1909,11 @@ int main() {
         // ---- CommitAvoid가 목표를 확정한다 -----------------------------
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
-        planner.PrepareAvoid(ego, objects, boxes,
+        planner.PrepareAvoid(ego, objects,
                              MakeAvoidCommand(21, LateralDirection::LEFT),
                              maintenance, result);
         const double selected = result.selected_target_d;
@@ -1983,12 +1948,11 @@ int main() {
         // 위 검사는 대상도 확보되지 않은 상태라 active guard가 먼저 막는다.
         // 그러면 candidate_valid guard를 제거해도 통과한다(돌연변이로 확인).
         // 그래서 **대상은 확보하고 후보만 무효인** 상태를 만든다.
-        const std::vector<ObjectInfo> blocked_objects{
+        const std::vector<TrackedObject> blocked_objects{
             MakeObstacle(waypoints, 21, kEgoS + 8.0, 0.0)};   // 너무 가깝다
         CartesianPath blocked_maintenance;
         Prepare blocked_result;
         planner.PrepareAvoid(ego, blocked_objects,
-                             boxes_for(blocked_objects),
                              MakeAvoidCommand(21, LateralDirection::NONE),
                              blocked_maintenance, blocked_result);
         Expect(planner.active_avoid_target_id() == 21,
@@ -2022,12 +1986,11 @@ int main() {
         // 대상을 확보한 뒤라도 비유한 목표는 거부한다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         CartesianPath maintenance;
         Prepare result;
-        planner.PrepareAvoid(ego, objects, boxes,
+        planner.PrepareAvoid(ego, objects,
                              MakeAvoidCommand(21, LateralDirection::LEFT),
                              maintenance, result);
         Expect(result.candidate_valid,
@@ -2048,11 +2011,11 @@ int main() {
         // mutation 전에 검사하므로 manager를 전혀 바꾸지 않는다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> blocked_objects{
+        const std::vector<TrackedObject> blocked_objects{
             MakeObstacle(waypoints, 21, kEgoS + 8.0, 0.0)};
         CartesianPath maintenance;
         Prepare blocked;
-        planner.PrepareAvoid(ego, blocked_objects, boxes_for(blocked_objects),
+        planner.PrepareAvoid(ego, blocked_objects,
                              MakeAvoidCommand(21, LateralDirection::LEFT),
                              maintenance, blocked);
         auto manager = MakeAvoidManagerReady(3001);
@@ -2071,11 +2034,11 @@ int main() {
         // 정상 READY + valid candidate는 두 상태와 target lock을 함께 올린다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         CartesianPath maintenance;
         Prepare valid;
-        planner.PrepareAvoid(ego, objects, boxes_for(objects),
+        planner.PrepareAvoid(ego, objects,
                              MakeAvoidCommand(21, LateralDirection::LEFT),
                              maintenance, valid);
         auto manager = MakeAvoidManagerReady(3002);
@@ -2098,16 +2061,15 @@ int main() {
         // state를 한 번만 EXECUTING으로 올린 뒤 committed core path를 쓴다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         auto manager = MakeAvoidManagerReady(3003);
         const PlannerCommand command =
             MakeAvoidCommand(21, LateralDirection::LEFT);
 
         CartesianPath first_maintenance;
         Prepare first;
-        planner.PrepareAvoid(ego, objects, boxes, command,
+        planner.PrepareAvoid(ego, objects, command,
                              first_maintenance, first);
         Expect(frenet_planner_ros::CommitAvoidAtomically(manager, planner,
                                                           first),
@@ -2130,7 +2092,7 @@ int main() {
         CartesianPath next_output;
         Prepare next;
         const bool next_ok = planner.PlanCommittedAvoid(
-            ego, objects, boxes, command, next_output, next);
+            ego, objects, command, next_output, next);
         Expect(next_ok && next.candidate_valid &&
                    std::fabs(next.selected_target_d - locked) < 1e-9 &&
                    std::fabs(EndpointD(planner, next_output,
@@ -2164,9 +2126,8 @@ int main() {
         //
         // 관측 조건도 실측으로 찾았다. 기하 목표(2.55)는 우연히 격자 중심과
         // 일치해 drift가 보이지 않는다. **target pose 2.8**을 쓰면 갈린다.
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const auto boxes = boxes_for(objects);
         const PlannerCommand pose_cmd = MakeAvoidCommandWithTargetD(
             21, kEgoS + 30.0, 2.8, LateralDirection::LEFT);
 
@@ -2177,7 +2138,7 @@ int main() {
         uncommitted.Init(config);
         CartesianPath m_unc;
         Prepare r_unc;
-        uncommitted.PrepareAvoid(ego, objects, boxes, pose_cmd, m_unc, r_unc);
+        uncommitted.PrepareAvoid(ego, objects, pose_cmd, m_unc, r_unc);
         Expect(r_unc.candidate_valid,
                "exact lock: the uncommitted cycle finds a candidate");
         Expect(std::fabs(r_unc.selected_target_d - 2.8) > 0.2,
@@ -2189,7 +2150,7 @@ int main() {
         committed.Init(config);
         CartesianPath m_pre;
         Prepare r_pre;
-        committed.PrepareAvoid(ego, objects, boxes, pose_cmd, m_pre, r_pre);
+        committed.PrepareAvoid(ego, objects, pose_cmd, m_pre, r_pre);
         Expect(committed.CommitAvoid(r_pre),
                "exact lock: the commit succeeds");
         const double locked = committed.avoid_locked_target_d();
@@ -2202,7 +2163,7 @@ int main() {
         for (int cycle = 0; cycle < 5; ++cycle) {
             CartesianPath m_post;
             Prepare r_post;
-            committed.PlanCommittedAvoid(ego, objects, boxes, pose_cmd,
+            committed.PlanCommittedAvoid(ego, objects, pose_cmd,
                                          m_post, r_post);
             if (!r_post.candidate_valid ||
                 std::fabs(r_post.selected_target_d - locked) > 1e-6) {
@@ -2224,13 +2185,13 @@ int main() {
         // 그것이 lock의 의미다.
         //
         // 장면을 바꿔 막는다: COMMIT 후 잠긴 목표 경로에 새 장애물을 놓는다.
-        const std::vector<ObjectInfo> clear_scene{
+        const std::vector<TrackedObject> clear_scene{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         FrenetPlanner committed;
         committed.Init(config);
         CartesianPath m1;
         Prepare r1;
-        committed.PrepareAvoid(ego, clear_scene, boxes_for(clear_scene),
+        committed.PrepareAvoid(ego, clear_scene,
                                MakeAvoidCommand(21, LateralDirection::LEFT),
                                m1, r1);
         Expect(r1.candidate_valid, "blocked lock: the commit cycle is valid");
@@ -2242,7 +2203,7 @@ int main() {
         const double locked = committed.avoid_locked_target_d();
 
         // 잠긴 목표(약 +2.55) 쪽에 장애물을 추가한다.
-        const std::vector<ObjectInfo> blocked_scene{
+        const std::vector<TrackedObject> blocked_scene{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0),
             // 4번째 인자는 speed, 5번째가 lateral_d다.
             MakeObstacle(waypoints, 31, kEgoS + 18.0, 0.0, locked),
@@ -2250,7 +2211,7 @@ int main() {
         CartesianPath m2;
         Prepare r2;
         const bool ok = committed.PlanCommittedAvoid(
-            ego, blocked_scene, boxes_for(blocked_scene),
+            ego, blocked_scene,
             MakeAvoidCommand(21, LateralDirection::LEFT), m2, r2);
         Expect(!ok && !r2.candidate_valid &&
                    committed.last_failure_reason() ==
@@ -2276,7 +2237,7 @@ int main() {
     {
         // COMMIT 이후 target observation은 지속 조건이 아니다. grace보다 긴
         // dropout과 더 가까운 다른 객체 모두 locked geometry를 바꾸지 않는다.
-        const std::vector<ObjectInfo> initial{
+        const std::vector<TrackedObject> initial{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         FrenetPlanner planner;
         planner.Init(config);
@@ -2284,7 +2245,7 @@ int main() {
         Prepare prepared;
         const PlannerCommand command =
             MakeAvoidCommand(21, LateralDirection::LEFT);
-        planner.PrepareAvoid(ego, initial, boxes_for(initial), command,
+        planner.PrepareAvoid(ego, initial, command,
                              maintenance, prepared);
         Expect(planner.CommitAvoid(prepared),
                "post-commit dropout: initial commit succeeds");
@@ -2294,7 +2255,7 @@ int main() {
         for (int cycle = 0; cycle < 8; ++cycle) {
             CartesianPath path;
             Prepare result;
-            if (!planner.PlanCommittedAvoid(ego, {}, {}, command, path,
+            if (!planner.PlanCommittedAvoid(ego, {}, command, path,
                                             result) ||
                 planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST ||
                 std::fabs(result.selected_target_d - locked) > 1e-9 ||
@@ -2305,12 +2266,12 @@ int main() {
         Expect(continuous,
                "post-commit dropout: execution survives beyond grace");
 
-        const std::vector<ObjectInfo> closer_other{
+        const std::vector<TrackedObject> closer_other{
             MakeObstacle(waypoints, 17, kEgoS + 12.0, 0.0, -4.0)};
         CartesianPath path;
         Prepare result;
         const bool ok = planner.PlanCommittedAvoid(
-            ego, closer_other, boxes_for(closer_other), command, path, result);
+            ego, closer_other, command, path, result);
         Expect(ok && planner.active_avoid_target_id() == 21 &&
                    std::fabs(planner.avoid_locked_target_d() - locked) < 1e-9,
                "post-commit ownership: a closer object cannot hand off target");
@@ -2319,7 +2280,7 @@ int main() {
     {
         // 저속에서도 중앙 fallback이 아니라 locked target 방향의 crawl을 쓰며,
         // 그 crawl은 fresh collision geometry로 검사한다.
-        const std::vector<ObjectInfo> initial{
+        const std::vector<TrackedObject> initial{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         FrenetPlanner planner;
         planner.Init(config);
@@ -2327,7 +2288,7 @@ int main() {
         Prepare prepared;
         const PlannerCommand command =
             MakeAvoidCommand(21, LateralDirection::LEFT);
-        planner.PrepareAvoid(ego, initial, boxes_for(initial), command,
+        planner.PrepareAvoid(ego, initial, command,
                              maintenance, prepared);
         planner.CommitAvoid(prepared);
         const double locked = planner.avoid_locked_target_d();
@@ -2337,7 +2298,7 @@ int main() {
         CartesianPath crawl;
         Prepare clear;
         const bool clear_ok = planner.PlanCommittedAvoid(
-            slow_ego, initial, boxes_for(initial), command, crawl, clear);
+            slow_ego, initial, command, crawl, clear);
         Expect(clear_ok && clear.low_speed_context &&
                    std::fabs(clear.selected_target_d - locked) < 1e-9 &&
                    EndpointD(planner, crawl, kEgoS + 1.0) >
@@ -2345,12 +2306,12 @@ int main() {
                                  kEgoS),
                "post-commit low speed: crawl keeps the locked direction");
 
-        const std::vector<ObjectInfo> blocked{
+        const std::vector<TrackedObject> blocked{
             MakeObstacle(waypoints, 31, kEgoS + 0.5, 0.0, 0.0)};
         CartesianPath rejected;
         Prepare blocked_result;
         const bool blocked_ok = planner.PlanCommittedAvoid(
-            slow_ego, blocked, boxes_for(blocked), command, rejected,
+            slow_ego, blocked, command, rejected,
             blocked_result);
         Expect(!blocked_ok && planner.last_failure_reason() ==
                                   Reason::COLLISION_BLOCKED &&
@@ -2362,7 +2323,7 @@ int main() {
     {
         // D6-3c lifecycle: SHIFT -> PASS -> COMPLETED. 대상 observation 없이도
         // COMMIT 때 저장한 geometry로 진행하며 progress는 유한/단조/범위 내다.
-        const std::vector<ObjectInfo> initial{
+        const std::vector<TrackedObject> initial{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         const PlannerCommand command =
             MakeAvoidCommand(21, LateralDirection::LEFT);
@@ -2370,7 +2331,7 @@ int main() {
         planner.Init(config);
         CartesianPath maintenance;
         Prepare prepared;
-        planner.PrepareAvoid(ego, initial, boxes_for(initial), command,
+        planner.PrepareAvoid(ego, initial, command,
                              maintenance, prepared);
         auto manager = MakeAvoidManagerReady(3100);
         Expect(frenet_planner_ros::CommitAvoidAtomically(manager, planner,
@@ -2384,7 +2345,7 @@ int main() {
         CartesianPath shift_path;
         Prepare shift;
         const bool shift_ok = planner.PlanCommittedAvoid(
-            ego, {}, {}, command, shift_path, shift);
+            ego, {}, command, shift_path, shift);
         Expect(shift_ok && !shift.maneuver_completed &&
                    std::string(planner.avoid_phase_name()) == "SHIFT" &&
                    std::isfinite(shift.maneuver_progress) &&
@@ -2397,7 +2358,7 @@ int main() {
             waypoints, kEgoS, locked - sign * 0.6, kEgoSpeed);
         CartesianPath approaching_path;
         Prepare approaching_result;
-        planner.PlanCommittedAvoid(approaching, {}, {}, command,
+        planner.PlanCommittedAvoid(approaching, {}, command,
                                    approaching_path, approaching_result);
         Expect(std::string(planner.avoid_phase_name()) == "SHIFT" &&
                    approaching_result.maneuver_progress >=
@@ -2407,7 +2368,7 @@ int main() {
 
         CartesianPath jitter_path;
         Prepare jitter;
-        planner.PlanCommittedAvoid(ego, {}, {}, command, jitter_path, jitter);
+        planner.PlanCommittedAvoid(ego, {}, command, jitter_path, jitter);
         Expect(jitter.maneuver_progress >=
                    approaching_result.maneuver_progress,
                "lifecycle: localization regression cannot decrease progress");
@@ -2417,7 +2378,7 @@ int main() {
         CartesianPath pass_path;
         Prepare pass;
         const bool pass_ok = planner.PlanCommittedAvoid(
-            at_target, {}, {}, command, pass_path, pass);
+            at_target, {}, command, pass_path, pass);
         Expect(pass_ok && !pass.maneuver_completed &&
                    std::string(planner.avoid_phase_name()) == "PASS" &&
                    pass.maneuver_progress >= 0.5 &&
@@ -2428,7 +2389,7 @@ int main() {
             waypoints, planner.avoid_target_s(), locked, kEgoSpeed);
         CartesianPath before_clear_path;
         Prepare before_clear_result;
-        planner.PlanCommittedAvoid(before_clear, {}, {}, command,
+        planner.PlanCommittedAvoid(before_clear, {}, command,
                                    before_clear_path, before_clear_result);
         Expect(!before_clear_result.maneuver_completed &&
                    manager.execution_state() ==
@@ -2442,7 +2403,7 @@ int main() {
         CartesianPath final_path;
         Prepare completed;
         const bool final_ok = planner.PlanCommittedAvoid(
-            after_clear, {}, {}, command, final_path, completed);
+            after_clear, {}, command, final_path, completed);
         Expect(final_ok && completed.maneuver_completed &&
                    completed.maneuver_progress == 1.0 &&
                    planner.avoid_completed(),
@@ -2499,7 +2460,7 @@ int main() {
     {
         // completion geometry를 충족해도 현재 committed path가 막히면 collision이
         // 우선하며 manager/core 모두 완료되지 않는다.
-        const std::vector<ObjectInfo> initial{
+        const std::vector<TrackedObject> initial{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         const PlannerCommand command =
             MakeAvoidCommand(21, LateralDirection::LEFT);
@@ -2507,7 +2468,7 @@ int main() {
         planner.Init(config);
         CartesianPath maintenance;
         Prepare prepared;
-        planner.PrepareAvoid(ego, initial, boxes_for(initial), command,
+        planner.PrepareAvoid(ego, initial, command,
                              maintenance, prepared);
         auto manager = MakeAvoidManagerReady(3102);
         frenet_planner_ros::CommitAvoidAtomically(manager, planner, prepared);
@@ -2517,17 +2478,17 @@ int main() {
             MakeEgoAt(waypoints, kEgoS, locked, kEgoSpeed);
         CartesianPath pass_path;
         Prepare pass;
-        planner.PlanCommittedAvoid(at_target, {}, {}, command, pass_path, pass);
+        planner.PlanCommittedAvoid(at_target, {}, command, pass_path, pass);
 
         const double clear_s = planner.avoid_target_s() + 20.0;
         const CartesianState clear_ego =
             MakeEgoAt(waypoints, clear_s, locked, kEgoSpeed);
-        const std::vector<ObjectInfo> blocked{
+        const std::vector<TrackedObject> blocked{
             MakeObstacle(waypoints, 31, clear_s + 0.5, 0.0, locked)};
         CartesianPath blocked_path;
         Prepare blocked_result;
         const bool blocked_ok = planner.PlanCommittedAvoid(
-            clear_ego, blocked, boxes_for(blocked), command, blocked_path,
+            clear_ego, blocked, command, blocked_path,
             blocked_result);
         manager.NotifyPlanFailed(/*terminal=*/false);
         Expect(!blocked_ok && planner.last_failure_reason() ==
@@ -2548,7 +2509,7 @@ int main() {
         const double obstacle_after_s = 10.0;
         const CartesianState ego_before = MakeEgoAt(
             waypoints, ego_before_s, 0.0, kEgoSpeed);
-        const std::vector<ObjectInfo> initial{
+        const std::vector<TrackedObject> initial{
             MakeObstacle(waypoints, 21, obstacle_after_s, 0.0)};
         const PlannerCommand command =
             MakeAvoidCommand(21, LateralDirection::LEFT);
@@ -2557,7 +2518,7 @@ int main() {
         CartesianPath maintenance;
         Prepare prepared;
         const bool prepare_ok = planner.PrepareAvoid(
-            ego_before, initial, boxes_for(initial), command, maintenance,
+            ego_before, initial, command, maintenance,
             prepared);
         const bool commit_ok = prepare_ok && prepared.candidate_valid &&
             planner.CommitAvoid(prepared);
@@ -2568,7 +2529,7 @@ int main() {
         CartesianPath pass_path;
         Prepare pass;
         const bool pass_ok = commit_ok && planner.PlanCommittedAvoid(
-            MakeEgoAt(waypoints, ego_before_s, locked, kEgoSpeed), {}, {},
+            MakeEgoAt(waypoints, ego_before_s, locked, kEgoSpeed), {},
             command, pass_path, pass);
         Expect(pass_ok && !pass.maneuver_completed &&
                    std::string(planner.avoid_phase_name()) == "PASS",
@@ -2576,7 +2537,7 @@ int main() {
         CartesianPath center_path;
         Prepare center;
         const bool center_ok = pass_ok && planner.PlanCommittedAvoid(
-            MakeEgoAt(waypoints, obstacle_after_s, locked, kEgoSpeed), {}, {},
+            MakeEgoAt(waypoints, obstacle_after_s, locked, kEgoSpeed), {},
             command, center_path, center);
         Expect(center_ok && !center.maneuver_completed &&
                    std::isfinite(center.maneuver_progress) &&
@@ -2586,7 +2547,7 @@ int main() {
         Prepare clear;
         const bool clear_ok = center_ok && planner.PlanCommittedAvoid(
             MakeEgoAt(waypoints, obstacle_after_s + 20.0, locked, kEgoSpeed),
-            {}, {}, command, clear_path, clear);
+            {}, command, clear_path, clear);
         Expect(clear_ok && !center.maneuver_completed &&
                    clear.maneuver_completed &&
                    clear.maneuver_progress == 1.0 &&
@@ -2597,7 +2558,7 @@ int main() {
     {
         // D6-3c1 probe: terminal latch 뒤 새 AVOID ID는 manager에서는 새
         // transaction이지만, core reset이 없으면 old committed context를 쓴다.
-        const std::vector<ObjectInfo> initial{
+        const std::vector<TrackedObject> initial{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         FrenetPlanner planner;
         planner.Init(config);
@@ -2605,7 +2566,7 @@ int main() {
         Prepare prepared;
         const PlannerCommand old_command =
             MakeAvoidCommand(21, LateralDirection::LEFT);
-        planner.PrepareAvoid(ego, initial, boxes_for(initial), old_command,
+        planner.PrepareAvoid(ego, initial, old_command,
                              maintenance, prepared);
         auto manager = MakeAvoidManagerReady(3200);
         frenet_planner_ros::CommitAvoidAtomically(manager, planner, prepared);
@@ -2614,14 +2575,14 @@ int main() {
         CartesianPath pass_path;
         Prepare pass;
         planner.PlanCommittedAvoid(
-            MakeEgoAt(waypoints, kEgoS, locked, kEgoSpeed), {}, {},
+            MakeEgoAt(waypoints, kEgoS, locked, kEgoSpeed), {},
             old_command, pass_path, pass);
         CartesianPath completed_path;
         Prepare completed;
         planner.PlanCommittedAvoid(
             MakeEgoAt(waypoints, planner.avoid_target_s() + 20.0, locked,
                       kEgoSpeed),
-            {}, {}, old_command, completed_path, completed);
+            {}, old_command, completed_path, completed);
         manager.NotifyManeuverCompleted();
 
         auto next_command = MakeAvoidTransactionCommand(3201);
@@ -2631,7 +2592,7 @@ int main() {
         CartesianPath next_maintenance;
         Prepare next;
         const bool next_ok = planner.PrepareAvoid(
-            ego, {}, {}, MakeAvoidCommand(31, LateralDirection::LEFT),
+            ego, {}, MakeAvoidCommand(31, LateralDirection::LEFT),
             next_maintenance, next);
         Expect(started.planning_target ==
                    frenet_planner_ros::PlanningTarget::INCOMING_COMMAND &&
@@ -2642,12 +2603,12 @@ int main() {
                    planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
                "transaction boundary: new AVOID cannot inherit completed context");
 
-        const std::vector<ObjectInfo> replacement{
+        const std::vector<TrackedObject> replacement{
             MakeObstacle(waypoints, 31, kEgoS + 25.0, 0.0)};
         CartesianPath replacement_maintenance;
         Prepare replacement_result;
         const bool replacement_ok = planner.PrepareAvoid(
-            ego, replacement, boxes_for(replacement),
+            ego, replacement,
             MakeAvoidCommand(31, LateralDirection::LEFT),
             replacement_maintenance, replacement_result);
         manager.NotifyPlanSucceeded();
@@ -2664,14 +2625,14 @@ int main() {
     {
         // PRE_COMMIT(READY)에서도 새 AVOID ID는 old binding/dropout grace를
         // 상속하지 않는다.
-        const std::vector<ObjectInfo> initial{
+        const std::vector<TrackedObject> initial{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         FrenetPlanner planner;
         planner.Init(config);
         CartesianPath maintenance;
         Prepare prepared;
         planner.PrepareAvoid(
-            ego, initial, boxes_for(initial),
+            ego, initial,
             MakeAvoidCommand(21, LateralDirection::LEFT), maintenance,
             prepared);
         auto manager = MakeAvoidManagerReady(3300);
@@ -2683,7 +2644,7 @@ int main() {
         CartesianPath next_maintenance;
         Prepare next;
         const bool next_ok = planner.PrepareAvoid(
-            ego, {}, {}, MakeAvoidCommand(31, LateralDirection::LEFT),
+            ego, {}, MakeAvoidCommand(31, LateralDirection::LEFT),
             next_maintenance, next);
         Expect(started.transaction_started && !next_ok &&
                    !planner.avoid_committed() &&
@@ -2695,14 +2656,14 @@ int main() {
     {
         // 새 KEEP transaction이 input stale로 planner에 도달하지 않는 cycle도
         // manager boundary에서 이전 AVOID context를 즉시 끊는다.
-        const std::vector<ObjectInfo> initial{
+        const std::vector<TrackedObject> initial{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         FrenetPlanner planner;
         planner.Init(config);
         CartesianPath maintenance;
         Prepare prepared;
         planner.PrepareAvoid(
-            ego, initial, boxes_for(initial),
+            ego, initial,
             MakeAvoidCommand(21, LateralDirection::LEFT), maintenance,
             prepared);
         auto manager = MakeAvoidManagerReady(3400);
@@ -2726,7 +2687,7 @@ int main() {
 
     {
         // 방어적 zero-span COMMIT에서도 progress 계산은 0으로 나누지 않는다.
-        const std::vector<ObjectInfo> initial{
+        const std::vector<TrackedObject> initial{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         const PlannerCommand command =
             MakeAvoidCommand(21, LateralDirection::LEFT);
@@ -2734,14 +2695,14 @@ int main() {
         planner.Init(config);
         CartesianPath maintenance;
         Prepare prepared;
-        planner.PrepareAvoid(ego, initial, boxes_for(initial), command,
+        planner.PrepareAvoid(ego, initial, command,
                              maintenance, prepared);
         prepared.selected_target_d = planner.last_d();
         planner.CommitAvoid(prepared);
         CartesianPath path;
         Prepare result;
         const bool ok = planner.PlanCommittedAvoid(
-            ego, {}, {}, command, path, result);
+            ego, {}, command, path, result);
         Expect(ok && std::isfinite(result.maneuver_progress) &&
                    result.maneuver_progress >= 0.0 &&
                    result.maneuver_progress <= 1.0,
@@ -2787,7 +2748,7 @@ int main() {
     {
         // manager ownership과 core context를 함께 확인한다: 거부된 KEEP/CANCEL은
         // active AVOID를 계속 계획하고, E-STOP만 preempt/reset한다.
-        const std::vector<ObjectInfo> initial{
+        const std::vector<TrackedObject> initial{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         FrenetPlanner planner;
         planner.Init(config);
@@ -2795,7 +2756,7 @@ int main() {
         Prepare prepared;
         const PlannerCommand avoid =
             MakeAvoidCommand(21, LateralDirection::LEFT);
-        planner.PrepareAvoid(ego, initial, boxes_for(initial), avoid,
+        planner.PrepareAvoid(ego, initial, avoid,
                              maintenance, prepared);
         auto manager = MakeAvoidManagerReady(100);
         frenet_planner_ros::CommitAvoidAtomically(manager, planner, prepared);
@@ -2812,7 +2773,7 @@ int main() {
         CartesianPath keep_cycle;
         Prepare keep_diag;
         const bool keep_plan = planner.PlanCommittedAvoid(
-            ego, initial, boxes_for(initial), avoid, keep_cycle, keep_diag);
+            ego, initial, avoid, keep_cycle, keep_diag);
         Expect(keep_result.planning_target ==
                    frenet_planner_ros::PlanningTarget::ACTIVE_TRANSACTION &&
                    keep_result.result_code ==
@@ -2862,7 +2823,7 @@ int main() {
     {
         // D6-3c 착수 probe: node가 manager에서 E-STOP을 accept한 직후 입력
         // stale로 return하면 PlanInternal(EMERGENCY)에 도달하지 못한다.
-        const std::vector<ObjectInfo> initial{
+        const std::vector<TrackedObject> initial{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
         FrenetPlanner planner;
         planner.Init(config);
@@ -2870,7 +2831,7 @@ int main() {
         Prepare prepared;
         const PlannerCommand avoid =
             MakeAvoidCommand(21, LateralDirection::LEFT);
-        planner.PrepareAvoid(ego, initial, boxes_for(initial), avoid,
+        planner.PrepareAvoid(ego, initial, avoid,
                              maintenance, prepared);
         auto manager = MakeAvoidManagerReady(103);
         frenet_planner_ros::CommitAvoidAtomically(manager, planner, prepared);
@@ -2891,7 +2852,7 @@ int main() {
         CartesianPath next_maintenance;
         Prepare next;
         const bool next_ok = planner.PrepareAvoid(
-            ego, {}, {}, avoid, next_maintenance, next);
+            ego, {}, avoid, next_maintenance, next);
         Expect(!next_ok && planner.avoid_missing_cycles() == 0 &&
                    planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
                "D6-3c stale E-STOP hardening: next AVOID gets no stale grace");
@@ -2905,15 +2866,14 @@ int main() {
         // stale context로 유예를 받는다(D5-2와 같은 구조).
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> with_target{
+        const std::vector<TrackedObject> with_target{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const std::vector<ObjectInfo> without_target{
+        const std::vector<TrackedObject> without_target{
             MakeObstacle(waypoints, 17, kEgoS + 60.0, 0.0)};
-        const auto boxes = boxes_for(with_target);
         CartesianPath maintenance;
         Prepare result;
 
-        planner.PrepareAvoid(ego, with_target, boxes,
+        planner.PrepareAvoid(ego, with_target,
                              MakeAvoidCommand(21, LateralDirection::LEFT),
                              maintenance, result);
         planner.CommitAvoid(result);
@@ -2937,7 +2897,7 @@ int main() {
         CartesianPath m2;
         Prepare r2;
         const bool ok = planner.PrepareAvoid(
-            ego, without_target, boxes_for(without_target),
+            ego, without_target,
             MakeAvoidCommand(21), m2, r2);
         Expect(!ok && planner.last_failure_reason() ==
                           Reason::TARGET_OBJECT_LOST,
@@ -2948,13 +2908,13 @@ int main() {
         // 이것이 ResetExternalAvoidance가 필요한 이유의 증거다.
         FrenetPlanner planner;
         planner.Init(config);
-        const std::vector<ObjectInfo> with_target{
+        const std::vector<TrackedObject> with_target{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const std::vector<ObjectInfo> without_target{
+        const std::vector<TrackedObject> without_target{
             MakeObstacle(waypoints, 17, kEgoS + 60.0, 0.0)};
         CartesianPath maintenance;
         Prepare result;
-        planner.PrepareAvoid(ego, with_target, boxes_for(with_target),
+        planner.PrepareAvoid(ego, with_target,
                              MakeAvoidCommand(21, LateralDirection::LEFT),
                              maintenance, result);
         Expect(planner.active_avoid_target_id() == 21,
@@ -2963,7 +2923,7 @@ int main() {
         // reset을 하지 않고 대상이 사라진 상태로 넘어간다.
         CartesianPath m2;
         Prepare r2;
-        planner.PrepareAvoid(ego, without_target, boxes_for(without_target),
+        planner.PrepareAvoid(ego, without_target,
                              MakeAvoidCommand(21), m2, r2);
         Expect(planner.active_avoid_target_id() == 21 &&
                    planner.avoid_missing_cycles() == 1,

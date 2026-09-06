@@ -11,7 +11,7 @@
 //      payload가 바뀌면 다른 명령이다. execution_request를 fingerprint에
 //      넣으면 정상 handshake가 깨지므로 그것을 명시적으로 검증한다.
 
-#include "ros/behavior_command_adapter.hpp"
+#include "behavior_command_adapter.hpp"
 
 #include <cstdio>
 #include <iostream>

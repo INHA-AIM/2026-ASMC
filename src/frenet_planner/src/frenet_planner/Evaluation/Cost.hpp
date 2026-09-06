@@ -1,7 +1,9 @@
 #ifndef FRENET_COST_HPP
 #define FRENET_COST_HPP
 
-#include "frenet_planner/global/global.hpp"
+#include <vector>
+
+#include "frenet_planner/Common/FrenetTypes.hpp"
 
 struct CostWeights {
     double kj;      // jerk 적분항 가중치 (공통)

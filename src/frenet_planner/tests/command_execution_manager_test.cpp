@@ -15,7 +15,7 @@
 //   COMPLETED는 EXECUTING에서만 도달 가능 (계약 5.6절)
 //   거부된 명령을 계획 대상으로 쓰지 않는다 (계약 7.2.1절, PlanningTarget)
 
-#include "ros/command_execution_manager.hpp"
+#include "command_execution_manager.hpp"
 
 #include <iostream>
 #include <string>

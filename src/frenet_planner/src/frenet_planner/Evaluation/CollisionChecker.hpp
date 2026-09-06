@@ -1,11 +1,14 @@
 #ifndef FRENET_COLLISION_CHECKER_HPP
 #define FRENET_COLLISION_CHECKER_HPP
 
+#include <vector>
+
 #include "frenet_planner/Reference/Reference.hpp"
 #include "frenet_planner/Geometry/PolygonUtils.hpp"
-#include "frenet_planner/global/global.hpp"
+#include "frenet_planner/Common/CartesianTypes.hpp"
+#include "frenet_planner/Common/FrenetTypes.hpp"
+#include "frenet_planner/Common/ObjectTypes.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
-#include "frenet_planner/obstacle/tracked_obstacle.hpp"
 
 // =========================================================
 // 아래 두 구조체는 논문 Sec.VI의 개념(안전마진, zero/one 판정,
@@ -26,34 +29,34 @@ struct CollisionCheckConfig {
 };
 
 // Highway gap/TTC의 기존 운동 예측만 유지하기 위한 중심 pose다. 충돌 형상은
-// 이 값으로 재생성하지 않고 아래 TrackedObstacle corner만 사용한다.
+// 이 값으로 재생성하지 않고 아래 TrackedObject corner만 사용한다.
 struct PredictedObjectPose {
     double x = 0.0;
     double y = 0.0;
     double heading = 0.0;
 };
 
-PredictedObjectPose PredictLegacyObjectPose(const ObjectInfo& obj, double t);
+PredictedObjectPose PredictTrackedObjectPose(const TrackedObject& obj, double t);
 
 geometry::Polygon2D MakeEgoFootprint(const CartesianState& cs,
                                      const VehicleShape& shape,
                                      double margin);
 
 geometry::Polygon2D PredictObstacleFootprint(
-    const TrackedObstacle& obstacle, double prediction_time);
+    const TrackedObject& obstacle, double prediction_time);
 
 // Invalid geometry/Z is handled conservatively. ego_z may be invalid when the
 // Planner has no trustworthy map-frame height; in that case XY SAT still runs.
 bool CheckObstacleOverlap(const geometry::Polygon2D& ego_footprint,
                           const geometry::ZRange& ego_z,
-                          const TrackedObstacle& obstacle,
+                          const TrackedObject& obstacle,
                           double prediction_time);
 
 // 후보 실제 구간과 reactive coast 구간을 평행이동 polygon으로 검사한다.
 // exempt ID는 실제 후보 구간에는 적용되지 않고 coast 연장에서만 제외된다.
 void FilterByCollision(std::vector<FrenetPath>& combined,
                         const RefLine& ref,
-                        const std::vector<TrackedObstacle>& obstacles,
+                        const std::vector<TrackedObject>& obstacles,
                         const VehicleShape& ego_shape,
                         const CollisionCheckConfig& cfg,
                         int reactive_coast_exempt_object_id = -1);

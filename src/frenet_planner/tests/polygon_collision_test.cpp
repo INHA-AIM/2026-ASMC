@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 
-#include "frenet_planner/obstacle/legacy_object_adapter.hpp"
+#include "frenet_planner/Geometry/PolygonUtils.hpp"
 
 namespace {
 
@@ -15,9 +15,13 @@ void Expect(bool condition, const std::string& name) {
     else { std::cerr << "[FAIL] " << name << '\n'; ++g_failures; }
 }
 
-TrackedObstacle MakeObstacle(double x, double y, double vx = 0.0,
+// authoritative 8-corner OBB를 직접 구성한다(production은 이제 이런
+// center/width/length/yaw 기반 geometry 합성을 하지 않는다 - 테스트만
+// 자체 fixture로 명시적 corners를 만든다). length=width=2.0, height=1.0
+// 직사각형을 yaw만큼 회전해 두 z 층(0, height)에 배치한다.
+TrackedObject MakeObstacle(double x, double y, double vx = 0.0,
                              double vy = 0.0, double yaw = 0.0) {
-    ObjectInfo object;
+    TrackedObject object;
     object.id = 1;
     object.x = x;
     object.y = y;
@@ -27,7 +31,26 @@ TrackedObstacle MakeObstacle(double x, double y, double vx = 0.0,
     object.height = 1.0;
     object.vx = vx;
     object.vy = vy;
-    return MakeLegacyTrackedObstacle(object);
+
+    const double half_length = object.length * 0.5;
+    const double half_width = object.width * 0.5;
+    const double cosine = std::cos(yaw);
+    const double sine = std::sin(yaw);
+    const double local_xy[4][2] = {
+        {-half_length, -half_width},
+        { half_length, -half_width},
+        { half_length,  half_width},
+        {-half_length,  half_width},
+    };
+    for (std::size_t i = 0; i < 4; ++i) {
+        const double corner_x = x + cosine * local_xy[i][0] - sine * local_xy[i][1];
+        const double corner_y = y + sine * local_xy[i][0] + cosine * local_xy[i][1];
+        object.corners[i] = {corner_x, corner_y, 0.0};
+        object.corners[i + 4] = {corner_x, corner_y, object.height};
+    }
+    object.geometry_valid = geometry::ValidateCorners8(object.corners).valid;
+    object.z_valid = false;
+    return object;
 }
 
 }  // namespace
@@ -41,10 +64,10 @@ int main() {
     const geometry::Polygon2D ego_footprint =
         MakeEgoFootprint(ego, ego_shape, 0.0);
 
-    const TrackedObstacle separated = MakeObstacle(3.1, 0.0);
-    const TrackedObstacle overlapping = MakeObstacle(1.5, 0.0);
-    const TrackedObstacle touching = MakeObstacle(2.0, 0.0);
-    const TrackedObstacle rotated = MakeObstacle(1.8, 0.0, 0.0, 0.0, 0.7);
+    const TrackedObject separated = MakeObstacle(3.1, 0.0);
+    const TrackedObject overlapping = MakeObstacle(1.5, 0.0);
+    const TrackedObject touching = MakeObstacle(2.0, 0.0);
+    const TrackedObject rotated = MakeObstacle(1.8, 0.0, 0.0, 0.0, 0.7);
     Expect(!CheckObstacleOverlap(ego_footprint, {}, separated, 0.0),
            "polygon collision rejects separated obstacle");
     Expect(CheckObstacleOverlap(ego_footprint, {}, overlapping, 0.0),
@@ -54,7 +77,7 @@ int main() {
     Expect(CheckObstacleOverlap(ego_footprint, {}, rotated, 0.0),
            "polygon collision detects rotated obstacle");
 
-    const TrackedObstacle moving = MakeObstacle(5.0, 0.0, -1.5, 0.0);
+    const TrackedObject moving = MakeObstacle(5.0, 0.0, -1.5, 0.0);
     Expect(!CheckObstacleOverlap(ego_footprint, {}, moving, 0.0),
            "moving obstacle starts separated");
     Expect(CheckObstacleOverlap(ego_footprint, {}, moving, 2.0),
@@ -64,12 +87,12 @@ int main() {
     Expect(std::abs(geometry::PolygonArea(current) - geometry::PolygonArea(future)) < 1e-9,
            "future obstacle translation preserves footprint area");
 
-    TrackedObstacle invalid = moving;
+    TrackedObject invalid = moving;
     invalid.geometry_valid = false;
     Expect(CheckObstacleOverlap(ego_footprint, {}, invalid, 0.0),
            "invalid obstacle geometry is conservatively colliding");
 
-    TrackedObstacle elevated = overlapping;
+    TrackedObject elevated = overlapping;
     elevated.z_valid = true;
     for (auto& corner : elevated.corners) corner.z += 10.0;
     const geometry::ZRange ego_z{0.0, 2.0, true};
@@ -78,7 +101,7 @@ int main() {
     Expect(CheckObstacleOverlap(ego_footprint, {}, elevated, 0.0),
            "invalid ego Z conservatively keeps XY collision active");
 
-    const TrackedObstacle near_margin = MakeObstacle(2.4, 0.0);
+    const TrackedObject near_margin = MakeObstacle(2.4, 0.0);
     Expect(!CheckObstacleOverlap(ego_footprint, {}, near_margin, 0.0),
            "near-margin obstacle is separated without safety contour");
     const geometry::Polygon2D expanded = MakeEgoFootprint(ego, ego_shape, 0.5);

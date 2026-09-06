@@ -1,0 +1,9 @@
+<launch>
+  <node pkg="mpc_controller" type="mpc_controller_node"
+        name="mpc_controller" output="screen">
+    <rosparam command="load"
+              file="$(find mpc_controller)/config/runtime.yaml"/>
+    <param name="mpc/config_path"
+           value="$(find mpc_controller)/config/mpc_params.yaml"/>
+  </node>
+</launch>

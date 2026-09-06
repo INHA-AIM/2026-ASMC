@@ -10,7 +10,6 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   visualization_msgs
 )
-find_package(Threads REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
 catkin_package(
@@ -34,18 +33,19 @@ target_include_directories(frenet_geometry PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-# Transport-independent planner implementation shared by the ROS and legacy
-# UDP runtimes. Networking and ROS callback code must not be added here.
+# Transport-independent planner core (candidate generation, maneuver
+# processes, cost/collision evaluation). ROS callback and networking code
+# must not be added here - that lives in frenet_planner_message_converter
+# and the frenet_planner_node executable below.
 add_library(frenet_planner_core
   src/frenet_planner/frenet_planner.cpp
   src/frenet_planner/Maneuver/ManeuverUtils.cpp
   src/frenet_planner/Maneuver/Follow.cpp
   src/frenet_planner/Maneuver/Keep.cpp
   src/frenet_planner/Maneuver/Stop.cpp
-  src/frenet_planner/Maneuver/Merge.cpp
   src/frenet_planner/Maneuver/Avoid.cpp
-  src/frenet_planner/obstacle/legacy_object_adapter.cpp
-  src/frenet_planner/global/data_logger.cpp
+  src/frenet_planner/Maneuver/Merge.cpp
+  src/frenet_planner/Common/ParameterLoader.cpp
   src/frenet_planner/visualization/planner_debug_writer.cpp
   src/frenet_planner/Reference/Reference.cpp
   src/frenet_planner/Generator/SamplingUtils.cpp
@@ -57,9 +57,6 @@ add_library(frenet_planner_core
   src/frenet_planner/Speed/SpeedPolicy.cpp
   src/frenet_planner/Evaluation/Cost.cpp
   src/frenet_planner/Evaluation/CollisionChecker.cpp
-  src/frenet_planner/frenet/leader_selector.cpp
-  src/frenet_planner/frenet/avoidance_selector.cpp
-  src/frenet_planner/frenet/merge_selector.cpp
   src/frenet_planner/Math/Polynomial.cpp
   src/frenet_planner/Math/FrenetConverter.cpp
 )
@@ -74,33 +71,10 @@ target_link_libraries(frenet_planner_core
   yaml-cpp
 )
 
-# Existing verified UDP runtime. It remains buildable as a regression baseline
-# while the ROS runtime is introduced, but the two runtimes must not be launched
-# simultaneously.
-add_executable(frenet_planner_udp_legacy
-  src/main.cpp
-  src/udp_network/udp_manager.cpp
-  src/udp_network/gps_transform.cpp
-  src/udp_network/sender/sender.cpp
-  src/udp_network/sender/planned_path_sender.cpp
-  src/udp_network/receiver/receiver.cpp
-  src/udp_network/receiver/ego_info_receiver.cpp
-  src/udp_network/receiver/object_info_receiver.cpp
-  src/udp_network/receiver/gps_receiver.cpp
-  src/udp_network/receiver/imu_receiver.cpp
-)
-target_compile_definitions(frenet_planner_udp_legacy PRIVATE
-  FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
-)
-target_link_libraries(frenet_planner_udp_legacy
-  frenet_planner_core
-  Threads::Threads
-)
-
 # ROS runtime with input validation, command-based Plan() invocation,
 # fail-safe handling, and trajectory/feedback publication.
 add_library(frenet_planner_message_converter
-  src/ros/message_converter.cpp
+  src/message_converter.cpp
 )
 add_dependencies(frenet_planner_message_converter
   ${catkin_EXPORTED_TARGETS}
@@ -114,7 +88,7 @@ target_link_libraries(frenet_planner_message_converter
 # fingerprint가 여기에 추가된다. FSM 계약 경계이므로 planner core가 아니라
 # ROS 계층에 둔다 (docs/fsm-frenet-interface-v2.md 12.8절).
 add_library(frenet_behavior_command_adapter
-  src/ros/behavior_command_adapter.cpp
+  src/behavior_command_adapter.cpp
 )
 add_dependencies(frenet_behavior_command_adapter
   ${catkin_EXPORTED_TARGETS}
@@ -127,7 +101,7 @@ target_link_libraries(frenet_behavior_command_adapter
 # 관계(transaction / terminal latch / preemption)를 갖는 stateful 계층이다
 # (docs/fsm-frenet-interface-v2.md 12.8절).
 add_library(frenet_command_execution_manager
-  src/ros/command_execution_manager.cpp
+  src/command_execution_manager.cpp
 )
 add_dependencies(frenet_command_execution_manager
   ${catkin_EXPORTED_TARGETS}
@@ -138,8 +112,9 @@ target_link_libraries(frenet_command_execution_manager
 )
 
 add_executable(frenet_planner_node
-  src/ros/main.cpp
-  src/ros/frenet_planner_node.cpp
+  src/main.cpp
+  src/frenet_planner_node.cpp
+  src/feedback_builder.cpp
 )
 add_dependencies(frenet_planner_node
   ${catkin_EXPORTED_TARGETS}
@@ -151,27 +126,6 @@ target_link_libraries(frenet_planner_node
   frenet_planner_core
   ${catkin_LIBRARIES}
 )
-
-# Canonical vehicle-state boundary. GPS/IMU is the competition source and
-# EgoVehicleStatus is development-only. No runtime fallback connects them.
-add_library(frenet_vehicle_state_adapter
-  src/ros/state/vehicle_state_adapter.cpp
-  src/udp_network/gps_transform.cpp
-)
-add_dependencies(frenet_vehicle_state_adapter ${catkin_EXPORTED_TARGETS})
-target_link_libraries(frenet_vehicle_state_adapter ${catkin_LIBRARIES})
-
-add_executable(gps_imu_vehicle_state_node
-  src/ros/state/gps_imu_vehicle_state_node.cpp)
-add_dependencies(gps_imu_vehicle_state_node ${catkin_EXPORTED_TARGETS})
-target_link_libraries(gps_imu_vehicle_state_node
-  frenet_vehicle_state_adapter ${catkin_LIBRARIES})
-
-add_executable(ego_vehicle_state_dev_node
-  src/ros/state/ego_vehicle_state_dev_node.cpp)
-add_dependencies(ego_vehicle_state_dev_node ${catkin_EXPORTED_TARGETS})
-target_link_libraries(ego_vehicle_state_dev_node
-  frenet_vehicle_state_adapter ${catkin_LIBRARIES})
 
 # D4-4: v2 ROS 인터페이스 통합 회귀. 실행 중인 roscore와 frenet_planner_node가
 # 필요하므로 add_test()에 등록하지 않는다(catkin_make run_tests가 자동으로
@@ -194,7 +148,7 @@ target_link_libraries(v2_ros_regression_test
 )
 
 add_executable(empty_objects_test_publisher
-  src/ros/state/empty_objects_test_publisher.cpp)
+  src/tools/empty_objects_test_publisher.cpp)
 add_dependencies(empty_objects_test_publisher ${catkin_EXPORTED_TARGETS})
 target_link_libraries(empty_objects_test_publisher ${catkin_LIBRARIES})
 
@@ -206,14 +160,6 @@ if(CATKIN_ENABLE_TESTING)
     frenet_geometry
   )
   add_test(NAME geometry_foundation_test COMMAND geometry_foundation_test)
-
-  add_executable(legacy_object_adapter_test
-    tests/legacy_object_adapter_test.cpp
-  )
-  target_link_libraries(legacy_object_adapter_test
-    frenet_planner_core
-  )
-  add_test(NAME legacy_object_adapter_test COMMAND legacy_object_adapter_test)
 
   add_executable(polygon_collision_test
     tests/polygon_collision_test.cpp
@@ -294,8 +240,8 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME command_follow_plan_test COMMAND command_follow_plan_test)
 
-  # D6-1: 외부 AVOID의 authoritative 대상 확보 회귀. resolver를 legacy
-  # FindStaticAvoidanceTarget()으로 바꾸면 nearest-object 검사가 실패한다.
+  # D6-1: 외부 AVOID의 authoritative 대상 확보 회귀. resolver를
+  # nearest-object selection으로 되돌리면 이 검사가 실패한다.
   add_executable(command_avoid_target_test
     tests/command_avoid_target_test.cpp
   )
@@ -444,27 +390,17 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME curvature_continuity_test COMMAND curvature_continuity_test)
 
-  # D1-3: legacy(간이 FSM) 행동 결정의 회귀 커버리지. D5/D6/D8에서 모드별로
-  # legacy 조각을 제거할 때 검증된 회전교차로/고속도로 주행이 깨지지 않았는지
-  # 확인하는 안전망이다 (docs/d1-legacy-behavior-boundary.md).
-  add_executable(legacy_behavior_regression_test
-    tests/legacy_behavior_regression_test.cpp
+  # MERGE gap/TTC 순수 계산 회귀. legacy_behavior_regression_test 삭제로
+  # 없어진 MERGE 안전망을 대체한다 - behavior auto-selection이 아니라
+  # FindRoundaboutGap/FindHighwayMergeGap 자체의 gap/TTC 판단만 검증한다.
+  add_executable(merge_gap_test
+    tests/merge_gap_test.cpp
   )
-  target_compile_definitions(legacy_behavior_regression_test PRIVATE
-    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
-    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
-  )
-  target_link_libraries(legacy_behavior_regression_test
+  target_link_libraries(merge_gap_test
     frenet_planner_core
   )
-  add_test(NAME legacy_behavior_regression_test
-           COMMAND legacy_behavior_regression_test)
+  add_test(NAME merge_gap_test COMMAND merge_gap_test)
 
-  add_executable(vehicle_state_adapter_test tests/vehicle_state_adapter_test.cpp)
-  add_dependencies(vehicle_state_adapter_test ${catkin_EXPORTED_TARGETS})
-  target_link_libraries(vehicle_state_adapter_test
-    frenet_vehicle_state_adapter ${catkin_LIBRARIES})
-  add_test(NAME vehicle_state_adapter_test COMMAND vehicle_state_adapter_test)
 endif()
 
 install(TARGETS
@@ -473,11 +409,7 @@ install(TARGETS
     frenet_planner_message_converter
     frenet_behavior_command_adapter
     frenet_command_execution_manager
-    frenet_vehicle_state_adapter
-    frenet_planner_udp_legacy
     frenet_planner_node
-    gps_imu_vehicle_state_node
-    ego_vehicle_state_dev_node
     empty_objects_test_publisher
     v2_ros_regression_test
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -496,11 +428,4 @@ install(PROGRAMS tools/planner_visualizer.py
 
 install(DIRECTORY config launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
-
-install(DIRECTORY
-    src/frenet_planner/config/
-    src/udp_network/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/legacy
-  FILES_MATCHING PATTERN "*.yaml"
 )

@@ -10,7 +10,7 @@
 //
 // 계약: docs/fsm-frenet-interface-v2.md 2절
 
-#include "ros/behavior_command_adapter.hpp"
+#include "behavior_command_adapter.hpp"
 
 #include <iostream>
 #include <string>

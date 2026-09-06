@@ -18,7 +18,6 @@
 #include "frenet_planner/Generator/LongitudinalGenerator.hpp"
 #include "frenet_planner/Generator/CandidateCombiner.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
-#include "frenet_planner/global/data_logger.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
 
 #include <cmath>
@@ -73,7 +72,7 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "curvature_continuity_test_params.yaml");
 
     RefLine ref;
@@ -105,7 +104,7 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
         keep.mode = LANE_KEEPING;
         keep.has_target_speed = true;
         keep.target_speed = snap.target_speed;
-        const std::vector<ObjectInfo> no_objects;
+        const std::vector<TrackedObject> no_objects;
         CartesianPath path;
         const bool ok = planner.Plan(ego, no_objects, keep, path);
         std::printf("  %s: Plan() = %s, path.x.size()=%zu\n", snap.label,
@@ -139,7 +138,7 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
         KinematicLimits direct_limits{3.0, 3.0, kMaxCurvature, 6.0};
         VehicleShape vehicle_shape{2.0, 4.5};
         CollisionCheckConfig collision_cfg{0.3, 0.1, 3.0};
-        std::vector<TrackedObstacle> no_obstacles;
+        std::vector<TrackedObject> no_obstacles;
         PlannerDebugStats direct_stats{};
         auto direct_candidates = ResolveManeuver(direct_start, direct_cmd, ref, direct_cfg,
                                                  direct_limits, /*lane_width=*/3.5,
@@ -173,7 +172,7 @@ void TestNormalKeepStillRecentersToCenter() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "curvature_continuity_test_normal_params.yaml");
 
     RefLine ref;
@@ -191,7 +190,7 @@ void TestNormalKeepStillRecentersToCenter() {
     keep.mode = LANE_KEEPING;
     keep.has_target_speed = true;
     keep.target_speed = 8.0;
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
     const bool ok = planner.Plan(ego, no_objects, keep, path);
     Expect(ok && !path.x.empty(), "normal KEEP: plan succeeds away from any tight curve");

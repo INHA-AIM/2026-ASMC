@@ -56,22 +56,17 @@ CartesianState LoadPoseNearArcLength(const std::string& path,
     return pose;
 }
 
-ObjectInfo MakeObjectInfo(int id, double x, double y) {
-    ObjectInfo object;
-    object.id = id;
-    object.x = x;
-    object.y = y;
-    object.z = 1.0;
-    object.width = 2.0;
-    object.length = 4.0;
-    object.height = 2.0;
-    return object;
-}
-
-TrackedObstacle MakeAuthoritativeBox(int id, double x, double y) {
-    TrackedObstacle obstacle;
+// authoritative 8-corner OBB(perception의 obb_corners와 같은 형태)를
+// 직접 채운 객체.
+TrackedObject MakeAuthoritativeBox(int id, double x, double y) {
+    TrackedObject obstacle;
     obstacle.id = id;
-    obstacle.geometry_source = ObstacleGeometrySource::LIDAR_CORNERS;
+    obstacle.x = x;
+    obstacle.y = y;
+    obstacle.z = 1.0;
+    obstacle.width = 2.0;
+    obstacle.length = 4.0;
+    obstacle.height = 2.0;
     obstacle.geometry_valid = true;
     obstacle.z_valid = true;
     const double xy[4][2] = {
@@ -92,7 +87,7 @@ constexpr double kInf = std::numeric_limits<double>::infinity();
 
 int main() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
-    const std::string config = package_src + "/frenet_planner/config/params.yaml";
+    const std::string config = package_src + "/../config/params.yaml";
     const std::string waypoints = FRENET_TEST_WAYPOINT_FILE;
 
     FrenetPlanner planner;
@@ -104,7 +99,7 @@ int main() {
     // MERGE approach window 밖의 평범한 구간에서 검증한다. 여기서는 legacy
     // behavior가 개입할 여지가 없어 command 검증 결과만 관찰된다.
     const CartesianState ego = LoadPoseNearArcLength(waypoints, 200.0, 5.0);
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
 
     // --- 허용된 모드 -------------------------------------------------------
@@ -215,7 +210,7 @@ int main() {
     // D6-1에서 AVOID를 core whitelist에 추가했다. 이제 UNSUPPORTED_BEHAVIOR로
     // 거부되지 않고 필드 검증으로 넘어간다 - 대상이 없으면 INVALID_COMMAND다.
     // (FOLLOWING과 같은 이유: 대상 선택 권한이 FSM에 있으므로 planner가
-    // FindStaticAvoidanceTarget()으로 스스로 고르지 않는다.)
+    // 스스로 고르지 않는다.)
     //
     // 대상 확보에 성공한 뒤의 동작은 command_avoid_target_test가 담당한다.
     PlannerCommand avoid_without_target{};
@@ -266,31 +261,27 @@ int main() {
                planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
            "mode whitelist is checked before field validation");
 
-    // --- collision-object overload ----------------------------------------
-    const std::vector<ObjectInfo> objects = {
-        MakeObjectInfo(31, ego.x + 100.0, ego.y + 100.0)};
-    const std::vector<TrackedObstacle> boxes = {
+    // --- authoritative OBB objects ------------------------------------------
+    // 단일 objects collection이 authoritative corners를 이미 갖고 있을 때도
+    // command validation 자체는 장애물 유무와 무관하게 동일하게 동작해야
+    // 한다.
+    const std::vector<TrackedObject> objects = {
         MakeAuthoritativeBox(31, ego.x + 100.0, ego.y + 100.0)};
 
-    Expect(planner.Plan(ego, objects, boxes, keep, path) &&
+    Expect(planner.Plan(ego, objects, keep, path) &&
                planner.last_failure_reason() == Reason::NONE,
-           "collision overload accepts a matched KEEP command");
+           "authoritative OBB object accepts a matched KEEP command");
 
     PlannerCommand still_closed{};
     // D6-1에서 AVOID가 열렸으므로 여기도 아직 닫힌 모드로 바꾼다(위와 동일).
     still_closed.mode = LANE_CHANGE_LEFT;
-    Expect(!planner.Plan(ego, objects, boxes, still_closed, path) &&
+    Expect(!planner.Plan(ego, objects, still_closed, path) &&
                planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
-           "collision overload rejects unsupported mode identically");
+           "authoritative OBB object rejects unsupported mode identically");
 
-    Expect(!planner.Plan(ego, objects, boxes, stop_unset, path) &&
+    Expect(!planner.Plan(ego, objects, stop_unset, path) &&
                planner.last_failure_reason() == Reason::INVALID_COMMAND,
-           "collision overload rejects invalid STOP identically");
-
-    const std::vector<TrackedObstacle> no_boxes;
-    Expect(!planner.Plan(ego, objects, no_boxes, keep, path) &&
-               planner.last_failure_reason() == Reason::INVALID_COMMAND,
-           "mismatched collision geometry count is INVALID_COMMAND");
+           "authoritative OBB object rejects invalid STOP identically");
 
     // --- 실패 reason이 재사용 정책과 섞이지 않는지 ------------------------
     // 어떤 command 결함도 TRANSIENT_GENERATION_FAILURE로 보고되면 안 된다.

@@ -1,7 +1,8 @@
 #ifndef MPC_CONSTRAINTS_HPP
 #define MPC_CONSTRAINTS_HPP
 
-#include "../global/global.hpp"
+#include "common/mpc_control.hpp"
+#include "common/mpc_params.hpp"
 
 // box constraint 클리핑
 void clipSteering(MPCControl& u, double max_steering);

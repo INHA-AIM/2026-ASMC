@@ -1,4 +1,4 @@
-#include "ros/message_converter.hpp"
+#include "message_converter.hpp"
 
 #include <cmath>
 #include <iostream>
@@ -240,44 +240,53 @@ int main() {
                ConversionStatus::UNSUPPORTED_BEHAVIOR,
            "MERGE behavior remains unsupported");
 
-    std::vector<ObjectInfo> objects(1);
-    std::vector<TrackedObstacle> collision_objects(1);
+    std::vector<TrackedObject> objects(1);
     auto object_message = MakeEmptyObjects();
     Expect(frenet_planner_ros::ConvertDetectedObjects(
-               object_message, objects, collision_objects) ==
-               ConversionStatus::OK && objects.empty() &&
-               collision_objects.empty(),
-           "empty object message maps to empty planner obstacle vectors");
+               object_message, objects) ==
+               ConversionStatus::OK && objects.empty(),
+           "empty object message maps to an empty planner obstacle vector");
 
     object_message.objects.push_back(MakeObject(10.0, 20.0));
     Expect(frenet_planner_ros::ConvertDetectedObjects(
-               object_message, objects, collision_objects) ==
+               object_message, objects) ==
                ConversionStatus::OK && objects.size() == 1 &&
-               collision_objects.size() == 1 && objects[0].id == 17 &&
+               objects[0].id == 17 &&
                objects[0].vx == 2.0 && objects[0].vy == -0.5 &&
-               collision_objects[0].geometry_valid &&
-               collision_objects[0].z_valid &&
-               collision_objects[0].geometry_source ==
-                   ObstacleGeometrySource::LIDAR_CORNERS &&
-               collision_objects[0].corners[1].x == 12.0 &&
-               collision_objects[0].corners[1].y == 21.0 &&
-               collision_objects[0].corners[1].z == 0.0,
-           "LiDAR OBB corners are copied unchanged to TrackedObstacle");
+               objects[0].geometry_valid &&
+               objects[0].z_valid &&
+               objects[0].corners[1].x == 12.0 &&
+               objects[0].corners[1].y == 21.0 &&
+               objects[0].corners[1].z == 0.0,
+           "LiDAR OBB corners are copied unchanged to TrackedObject");
 
     auto malformed_message = MakeEmptyObjects();
     malformed_message.objects.push_back(MakeObject(10.0, 20.0));
     malformed_message.objects[0].obb_corners[3].x =
         std::numeric_limits<double>::quiet_NaN();
     Expect(frenet_planner_ros::ConvertDetectedObjects(
-               malformed_message, objects, collision_objects) ==
+               malformed_message, objects) ==
                ConversionStatus::INVALID_OBJECT_GEOMETRY,
            "non-finite LiDAR corner is rejected without geometry fallback");
+
+    auto zero_corners_message = MakeEmptyObjects();
+    zero_corners_message.objects.push_back(MakeObject(10.0, 20.0));
+    for (auto& corner : zero_corners_message.objects[0].obb_corners) {
+        corner.x = 0.0;
+        corner.y = 0.0;
+        corner.z = 0.0;
+    }
+    Expect(frenet_planner_ros::ConvertDetectedObjects(
+               zero_corners_message, objects) ==
+               ConversionStatus::INVALID_OBJECT_GEOMETRY,
+           "an object with no populated OBB corners is rejected, not "
+           "synthesized from center/width/length/yaw");
 
     auto duplicate_message = MakeEmptyObjects();
     duplicate_message.objects.push_back(MakeObject(10.0, 20.0));
     duplicate_message.objects.push_back(MakeObject(30.0, 40.0));
     Expect(frenet_planner_ros::ConvertDetectedObjects(
-               duplicate_message, objects, collision_objects) ==
+               duplicate_message, objects) ==
                ConversionStatus::DUPLICATE_OBJECT_ID,
            "duplicate object IDs are rejected");
 

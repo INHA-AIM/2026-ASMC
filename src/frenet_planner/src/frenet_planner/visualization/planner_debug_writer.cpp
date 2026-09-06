@@ -68,7 +68,7 @@ void PlannerDebugWriter::Publish(const RefLine& ref,
                                  BehaviorState mode,
                                  const char* phase,
                                  double target_speed,
-                                 const std::vector<TrackedObstacle>& obstacles,
+                                 const std::vector<TrackedObject>& obstacles,
                                  const std::vector<FrenetPath>& candidates,
                                  int selected_index,
                                  const PlannerDebugStats& stats,
@@ -142,9 +142,6 @@ void PlannerDebugWriter::Publish(const RefLine& ref,
         out << ",\"vy\":"; WriteNumber(out, obj.vy);
         out << ",\"geometry_valid\":" << (obj.geometry_valid ? "true" : "false");
         out << ",\"z_valid\":" << (obj.z_valid ? "true" : "false");
-        out << ",\"geometry_source\":\""
-            << (obj.geometry_source == ObstacleGeometrySource::LIDAR_CORNERS
-                    ? "LIDAR_CORNERS" : "LEGACY_DERIVED") << "\"";
         out << ",\"corners\":[";
         for (size_t corner_index = 0; corner_index < obj.corners.size(); ++corner_index) {
             if (corner_index) out << ',';

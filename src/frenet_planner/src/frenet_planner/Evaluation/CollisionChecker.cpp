@@ -1,7 +1,9 @@
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
 
-PredictedObjectPose PredictLegacyObjectPose(const ObjectInfo& obj, double t) {
+#include <cmath>
+
+PredictedObjectPose PredictTrackedObjectPose(const TrackedObject& obj, double t) {
     PredictedObjectPose pose;
     if (std::fabs(obj.yaw_rate) > 1e-3) {
         pose.x = obj.x + obj.speed / obj.yaw_rate *
@@ -44,7 +46,7 @@ geometry::Polygon2D MakeEgoFootprint(const CartesianState& cs,
 }
 
 geometry::Polygon2D PredictObstacleFootprint(
-    const TrackedObstacle& obstacle, double prediction_time) {
+    const TrackedObject& obstacle, double prediction_time) {
     if (!obstacle.geometry_valid || !std::isfinite(obstacle.vx) ||
         !std::isfinite(obstacle.vy) || !std::isfinite(prediction_time)) return {};
     const geometry::Corners8 predicted = geometry::TranslateCorners(
@@ -55,7 +57,7 @@ geometry::Polygon2D PredictObstacleFootprint(
 
 bool CheckObstacleOverlap(const geometry::Polygon2D& ego_footprint,
                           const geometry::ZRange& ego_z,
-                          const TrackedObstacle& obstacle,
+                          const TrackedObject& obstacle,
                           double prediction_time) {
     if (!obstacle.geometry_valid || !std::isfinite(obstacle.vx) ||
         !std::isfinite(obstacle.vy) || !std::isfinite(prediction_time)) return true;
@@ -75,7 +77,7 @@ bool CheckObstacleOverlap(const geometry::Polygon2D& ego_footprint,
 
 void FilterByCollision(std::vector<FrenetPath>& combined,
                         const RefLine& ref,
-                        const std::vector<TrackedObstacle>& obstacles,
+                        const std::vector<TrackedObject>& obstacles,
                         const VehicleShape& ego_shape,
                         const CollisionCheckConfig& cfg,
                         int reactive_coast_exempt_object_id) {

@@ -27,7 +27,6 @@
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
 #include "frenet_planner/Reference/Reference.hpp"
-#include "frenet_planner/obstacle/tracked_obstacle.hpp"
 
 // [Sec.VI 2단] Tlat x Tlon 결합 — 같은 T(종료시간)를 가진 후보끼리만 결합.
 //
@@ -57,7 +56,7 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                                          const PathGeneratorConfig& cfg,
                                          const KinematicLimits& limits,
                                          double lane_width,
-                                         const std::vector<TrackedObstacle>& obstacles,
+                                         const std::vector<TrackedObject>& obstacles,
                                          const VehicleShape& vehicle_shape,
                                          const CollisionCheckConfig& collision_cfg,
                                          PlannerDebugStats* stats = nullptr);

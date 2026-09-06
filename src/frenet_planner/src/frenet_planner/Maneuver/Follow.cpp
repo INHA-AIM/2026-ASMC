@@ -1,14 +1,14 @@
 /**
  * @file Follow.cpp
- * @brief FOLLOW 대상 확보/유지 - external(v2)와 legacy 두 경로.
+ * @brief 외부 FSM이 지정한 FOLLOW 대상의 확보/유지와 FollowProcess 진입점.
  *
  * 외부 FSM이 지정한 대상 객체(target_object_id)가 유효한지 검증하고
- * (ResolveExternalFollowTarget), legacy 간이 FSM 경로에서는 같은 차선
- * 최인접 차량을 직접 골라 following_ 컨텍스트를 유지한다
- * (UpdateLegacyFollowContext). 이 파일은 FrenetPlanner::following_ /
- * v2_following_ 상태를 갱신하는 역할까지만 담당한다 - 어떤 종방향 후보
- * 생성기를 쓸지(Generator/CandidateCombiner의 ResolveManeuver)나 gap 계산은
- * 이 파일의 책임이 아니다.
+ * (ResolveExternalFollowTarget) FrenetPlanner::v2_following_ 상태를
+ * 갱신한다. FollowProcess는 이 확보 결과로 leader_s/leader_speed/
+ * leader_accel/time_gap/min_gap/gap_gain을 채운 뒤, KEEP/FOLLOW/STOP이
+ * 공유하는 candidate 파이프라인(Keep.cpp의 ExecuteManeuverPipeline)에
+ * 위임한다 - 어떤 종방향 후보 생성기를 쓸지(Generator/CandidateCombiner의
+ * ResolveManeuver)나 gap 계산 자체는 이 파일의 책임이 아니다.
  */
 
 #include "frenet_planner/frenet_planner.hpp"
@@ -17,19 +17,21 @@
 #include <cmath>
 #include <cstdio>
 
+#include "frenet_planner/Maneuver/ManeuverUtils.hpp"
+
 // 저속 fallback은 시간 대신 이동거리 기준 cosine smoothstep으로 d를 복귀시킨다.
 // 양 끝의 d'가 0이므로 정지 근처에서도 급격한 횡이동과 곡률 spike가 생기지 않는다.
 FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
     double ego_s, int target_object_id,
-    const std::vector<ObjectInfo>& obstacles,
+    const std::vector<TrackedObject>& obstacles,
     FollowingContext& context) const {
     if (target_object_id < 0) return FollowTargetStatus::LOST;
 
-    // 지정된 ID만 찾는다. FindLeader()처럼 "가장 가까운" 차량을 고르지
-    // 않는다 - 대상 선택 권한은 FSM에 있다.
+    // 지정된 ID만 찾는다. "가장 가까운" 차량을 스스로 고르지 않는다 -
+    // 대상 선택 권한은 FSM에 있다.
     const auto it = std::find_if(
         obstacles.begin(), obstacles.end(),
-        [target_object_id](const ObjectInfo& object) {
+        [target_object_id](const TrackedObject& object) {
             return object.id == target_object_id;
         });
 
@@ -121,99 +123,40 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
     return FollowTargetStatus::GRACE;
 }
 
-void FrenetPlanner::UpdateLegacyFollowContext(double ego_s, const FrenetState& start,
-                                               const std::vector<ObjectInfo>& obstacles,
-                                               bool& out_nearest_found,
-                                               LeaderTarget& out_nearest_leader) {
-    // FOLLOWING 탐색거리도 충돌 lookahead보다 항상 길게 잡아,
-    // leader를 모드 전환 전에 충돌물로만 먼저 보고 정지하는 현상을 막는다.
-    FollowingConfig effective_following_cfg = following_cfg_;
-    const double following_collision_horizon =
-        curve_speed_cfg_.target_vel * collision_cfg_.reactive_lookahead
-        + vehicle_shape_.length + collision_cfg_.safety_margin;
-    effective_following_cfg.max_leader_search_s =
-        std::max(following_cfg_.max_leader_search_s, following_collision_horizon);
-
-    // 직전 leader ID를 유지해 탐색거리 경계/패킷 누락에서 모드가
-    // FOLLOWING<->LANE_KEEPING으로 번복되지 않게 한다.
-    if (following_.active) {
-        bool id_seen = false;
-        bool leader_valid = false;
-        const double track_length = ref_.points.empty() ? 0.0 : ref_.points.back().s;
-        for (const auto& obj : obstacles) {
-            if (obj.id != following_.leader_id) continue;
-            id_seen = true;
-            double obj_s, obj_d, obj_s_dot;
-            ProjectObjectToFrenet(ref_, obj, obj_s, obj_d, obj_s_dot);
-            double gap = obj_s - ego_s;
-            if (gap <= 0.0 && track_length > 0.0) gap += track_length;
-            const bool same_direction = obj_s_dot > following_cfg_.min_leader_speed;
-            const bool same_lane = std::fabs(obj_d) <= lane_width_ * 0.5;
-            const bool in_range = gap > 0.0 &&
-                gap <= effective_following_cfg.max_leader_search_s
-                     + following_cfg_.exit_search_margin;
-            if (same_direction && same_lane && in_range) {
-                following_.leader_s = ego_s + gap;
-                following_.leader_d = obj_d;
-                following_.leader_speed = obj_s_dot;
-                following_.leader_accel = 0.0;
-                following_.missing_cycles = 0;
-                leader_valid = true;
-            }
-            break;
-        }
-
-        if (!leader_valid) {
-            if (id_seen) {
-                // 관측됐지만 차선/방향/범위가 바뀐 것은 dropout이 아니므로 즉시 해제.
-                following_ = FollowingContext{};
-            } else if (++following_.missing_cycles <= following_cfg_.dropout_grace_cycles) {
-                // ObjectInfo 일시 누락 동안은 직전 속도로 leader s를 예측.
-                constexpr double kPlannerCycleDt = 0.05;  // main.cpp 20Hz
-                following_.leader_s += following_.leader_speed * kPlannerCycleDt;
-            } else {
-                following_ = FollowingContext{};
-            }
-        }
+bool FrenetPlanner::FollowProcess(
+    const CartesianState& ego, const FrenetState& start,
+    double s, double d, double s_dot, double s_ddot,
+    double d_dot, double d_ddot,
+    const std::vector<TrackedObject>& obstacles,
+    const std::vector<TrackedObject>& predicted_obstacles,
+    double resolved_target_speed, const PlannerCommand& external_command,
+    CartesianPath& out_path) {
+    // 외부 FOLLOW: FSM이 지정한 대상만 확보한다. 자동 선택/handoff를 타지
+    // 않는다(계약 D1 0.1절 B 분류). 확보에 실패하면 공용 pipeline을 부르지
+    // 않고 여기서 바로 실패를 보고한다.
+    PlannerCommand cmd = external_command;
+    const FollowTargetStatus status = ResolveExternalFollowTarget(
+        s, cmd.target_object_id, obstacles, v2_following_);
+    if (status == FollowTargetStatus::LOST) {
+        // 대상을 쓸 수 없다. KEEP으로 자동 전환하지 않는다 - 다음
+        // 행동은 FSM이 새 command_id로 결정한다(계약 12.5절 D5).
+        last_mode_ = FOLLOWING;
+        last_failure_reason_ = PlanFailureReason::TARGET_OBJECT_LOST;
+        return false;
     }
+    // VALID / GRACE 모두 확보된 상태를 후보 생성기에 전달한다.
+    cmd.leader_s = v2_following_.leader_s;
+    cmd.leader_speed = v2_following_.leader_speed;
+    cmd.leader_accel = v2_following_.leader_accel;
+    // 계약 11.8절: adapter는 custom gap이 꺼져 있으면 0.0 sentinel을
+    // 넘긴다. config 기본값 적용은 이 소비 지점에서 한다 - 변환이
+    // config에 의존하면 "FSM이 준 값"과 "Frenet 기본값"을 피드백에서
+    // 구분할 수 없다.
+    if (!(cmd.time_gap > 0.0)) cmd.time_gap = following_cfg_.time_gap;
+    if (!(cmd.min_gap > 0.0)) cmd.min_gap = following_cfg_.min_gap;
+    cmd.gap_gain = following_cfg_.gap_gain;
 
-    // 유지 중인 ID만 보는 것으로 끝내면 합류 직후 실제로 더 가까워진 본선 차량을
-    // 놓칠 수 있다. 매 cycle 동일차선 최인접 차량도 찾되, 작은 투영 흔들림으로
-    // ID가 왕복하지 않도록 거리 hysteresis를 만족할 때만 인계한다.
-    LeaderTarget& nearest_leader = out_nearest_leader;
-    const bool nearest_found = FindLeader(
-        ref_, start, obstacles, lane_width_, effective_following_cfg, nearest_leader);
-    out_nearest_found = nearest_found;
-    if (following_.active && nearest_found &&
-        nearest_leader.id != following_.leader_id) {
-        const double current_gap = following_.leader_s - ego_s;
-        const double nearest_gap = nearest_leader.s - ego_s;
-        if (nearest_gap + following_cfg_.leader_switch_margin < current_gap) {
-            const int old_id = following_.leader_id;
-            following_.leader_id = nearest_leader.id;
-            following_.leader_s = nearest_leader.s;
-            following_.leader_d = nearest_leader.d;
-            following_.leader_speed = nearest_leader.speed;
-            following_.leader_accel = nearest_leader.accel;
-            following_.missing_cycles = 0;
-            std::printf("[FrenetPlanner] leader handoff: old=%d new=%d "
-                        "old_gap=%.2f new_gap=%.2f\n",
-                        old_id, nearest_leader.id, current_gap, nearest_gap);
-        }
-    }
-
-    if (!following_.active && nearest_found) {
-            const LeaderTarget& leader = nearest_leader;
-            following_.active = true;
-            following_.leader_id = leader.id;
-            following_.leader_s = leader.s;
-            following_.leader_d = leader.d;
-            following_.leader_speed = leader.speed;
-            following_.leader_accel = leader.accel;
-            following_.missing_cycles = 0;
-            std::printf("[FrenetPlanner] leader acquired: id=%d gap=%.2f speed=%.2f "
-                        "effective_search=%.2f\n",
-                        leader.id, leader.s - ego_s, leader.speed,
-                        effective_following_cfg.max_leader_search_s);
-    }
+    return ExecuteManeuverPipeline(
+        ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
+        predicted_obstacles, resolved_target_speed, cmd, out_path);
 }

@@ -93,15 +93,14 @@ int main() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoints = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoints,
+        package_src + "/../config/params.yaml", waypoints,
         "command_emergency_plan_test_params.yaml");
     if (config.empty()) {
         std::cerr << "[FAIL] could not prepare test config\n";
         return 1;
     }
 
-    const std::vector<ObjectInfo> no_objects;
-    const std::vector<TrackedObstacle> no_collision_objects;
+    const std::vector<TrackedObject> no_objects;
 
     // --- 주행 중 긴급정지 ------------------------------------------------
     {
@@ -112,7 +111,7 @@ int main() {
         }
         const CartesianState ego = LoadPoseNearArcLength(waypoints, 200.0, 8.0);
         CartesianPath path;
-        const bool ok = planner.Plan(ego, no_objects, no_collision_objects,
+        const bool ok = planner.Plan(ego, no_objects,
                                      MakeEmergencyCommand(), path);
         Expect(ok, "EMERGENCY with NaN stop_position still produces a path");
         Expect(planner.last_failure_reason() ==
@@ -134,7 +133,7 @@ int main() {
         if (!planner.Init(config)) return 1;
         const CartesianState ego = LoadPoseNearArcLength(waypoints, 200.0, 0.0);
         CartesianPath path;
-        const bool ok = planner.Plan(ego, no_objects, no_collision_objects,
+        const bool ok = planner.Plan(ego, no_objects,
                                      MakeEmergencyCommand(), path);
         Expect(ok && !path.v.empty(),
                "EMERGENCY at standstill still emits a path");
@@ -153,7 +152,7 @@ int main() {
         if (!planner.Init(config)) return 1;
         const CartesianState ego = LoadPoseNearArcLength(waypoints, 200.0, speed);
         CartesianPath path;
-        const bool ok = planner.Plan(ego, no_objects, no_collision_objects,
+        const bool ok = planner.Plan(ego, no_objects,
                                      MakeEmergencyCommand(), path);
         Expect(ok && IsValidStopPath(path),
                "EMERGENCY from " + std::to_string(static_cast<int>(speed)) +
@@ -168,7 +167,7 @@ int main() {
         if (!planner.Init(config)) return 1;
         const CartesianState ego = LoadPoseNearArcLength(waypoints, 200.0, 8.0);
         const CartesianState blocker = LoadPoseNearArcLength(waypoints, 210.0, 0.0);
-        ObjectInfo object;
+        TrackedObject object;
         object.id = 1;
         object.x = blocker.x;
         object.y = blocker.y;
@@ -176,7 +175,7 @@ int main() {
         object.width = 2.0;
         object.length = 4.5;
         object.height = 1.5;
-        const std::vector<ObjectInfo> objects{object};
+        const std::vector<TrackedObject> objects{object};
         CartesianPath path;
         const bool ok = planner.Plan(ego, objects, MakeEmergencyCommand(), path);
         Expect(ok && IsValidStopPath(path),
@@ -193,7 +192,7 @@ int main() {
         PlannerCommand stop{};
         stop.mode = STOP;  // stop_position은 NaN
         CartesianPath path;
-        const bool ok = planner.Plan(ego, no_objects, no_collision_objects,
+        const bool ok = planner.Plan(ego, no_objects,
                                      stop, path);
         Expect(!ok && planner.last_failure_reason() ==
                           FrenetPlanner::PlanFailureReason::INVALID_COMMAND,

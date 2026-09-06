@@ -47,22 +47,18 @@ CartesianState LoadPoseNearArcLength(const std::string& path,
     return pose;
 }
 
-ObjectInfo MakeObjectInfo(int id, double x, double y) {
-    ObjectInfo object;
-    object.id = id;
-    object.x = x;
-    object.y = y;
-    object.z = 1.0;
-    object.width = 2.0;
-    object.length = 4.0;
-    object.height = 2.0;
-    return object;
-}
-
-TrackedObstacle MakeAuthoritativeBox(int id, double x, double y) {
-    TrackedObstacle obstacle;
+// authoritative 8-corner OBB(perception의 obb_corners와 같은 형태)를
+// 직접 채운 객체. production은 더 이상 center/width/length로 geometry를
+// 재생성하지 않으므로, corners 없는 객체는 애초에 유효하지 않다.
+TrackedObject MakeAuthoritativeBox(int id, double x, double y) {
+    TrackedObject obstacle;
     obstacle.id = id;
-    obstacle.geometry_source = ObstacleGeometrySource::LIDAR_CORNERS;
+    obstacle.x = x;
+    obstacle.y = y;
+    obstacle.z = 1.0;
+    obstacle.width = 2.0;
+    obstacle.length = 4.0;
+    obstacle.height = 2.0;
     obstacle.geometry_valid = true;
     obstacle.z_valid = true;
     const double xy[4][2] = {
@@ -80,7 +76,7 @@ TrackedObstacle MakeAuthoritativeBox(int id, double x, double y) {
 
 int main() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
-    const std::string config = package_src + "/frenet_planner/config/params.yaml";
+    const std::string config = package_src + "/../config/params.yaml";
     const std::string waypoints = FRENET_TEST_WAYPOINT_FILE;
 
     FrenetPlanner planner;
@@ -91,34 +87,23 @@ int main() {
 
     // Roundabout MERGE conflict_s(885.76m)의 approach window 안쪽이다.
     const CartesianState ego = LoadPoseNearArcLength(waypoints, 870.0, 5.0);
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
-
-    // 먼저 legacy 호출로 내부 MERGE context가 활성화될 수 있는 조건을 만든다.
-    planner.Plan(ego, no_objects, path);
-    Expect(planner.last_mode() == MERGE,
-           "legacy planner activates MERGE inside merge zone");
 
     PlannerCommand keep{};
     keep.mode = LANE_KEEPING;
     const bool keep_ok = planner.Plan(ego, no_objects, keep, path);
     Expect(keep_ok && planner.last_mode() == LANE_KEEPING && !path.x.empty(),
-           "external KEEP ignores legacy merge-zone behavior selection");
+           "external KEEP plans normally inside the roundabout merge-zone window");
 
-    const std::vector<ObjectInfo> outside_objects = {
-        MakeObjectInfo(31, ego.x + 100.0, ego.y + 100.0)};
-    const std::vector<TrackedObstacle> outside_collision_objects = {
+    const std::vector<TrackedObject> outside_objects = {
         MakeAuthoritativeBox(31, ego.x + 100.0, ego.y + 100.0)};
-    Expect(planner.Plan(ego, outside_objects, outside_collision_objects,
-                        keep, path) && !path.x.empty(),
+    Expect(planner.Plan(ego, outside_objects, keep, path) && !path.x.empty(),
            "authoritative OBB outside path preserves KEEP trajectory");
 
-    const std::vector<ObjectInfo> blocking_objects = {
-        MakeObjectInfo(32, ego.x, ego.y)};
-    const std::vector<TrackedObstacle> blocking_collision_objects = {
+    const std::vector<TrackedObject> blocking_objects = {
         MakeAuthoritativeBox(32, ego.x, ego.y)};
-    Expect(!planner.Plan(ego, blocking_objects, blocking_collision_objects,
-                         keep, path) &&
+    Expect(!planner.Plan(ego, blocking_objects, keep, path) &&
                planner.last_failure_reason() ==
                    FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED,
            "authoritative OBB on ego path blocks all candidates through SAT");
@@ -144,11 +129,7 @@ int main() {
     bool low_speed_capped = low_speed_ok && planner.last_mode() == LANE_KEEPING;
     for (double speed : path.v) low_speed_capped = low_speed_capped && speed <= 0.2 + 1e-9;
     Expect(low_speed_capped,
-           "external KEEP low-speed fallback ignores merge state and honors speed cap");
-
-    planner.Plan(ego, no_objects, path);
-    Expect(planner.last_mode() == MERGE,
-           "external KEEP does not erase legacy merge context");
+           "external KEEP low-speed fallback honors speed cap");
 
     PlannerCommand unsupported{};
     unsupported.mode = FOLLOWING;

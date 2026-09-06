@@ -88,7 +88,7 @@ void TestCaseA_NoUnwarrantedDecelerationWhenAccelerating() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "braking_memory_test_case_a_params.yaml");
 
     for (double target : {9.0, 10.0}) {
@@ -100,7 +100,7 @@ void TestCaseA_NoUnwarrantedDecelerationWhenAccelerating() {
         keep.mode = LANE_KEEPING;
         keep.has_target_speed = true;
         keep.target_speed = target;
-        const std::vector<ObjectInfo> no_objects;
+        const std::vector<TrackedObject> no_objects;
         CartesianPath path;
         const bool ok = planner.Plan(ego, no_objects, keep, path);
         Expect(ok && !path.v.empty(),
@@ -124,12 +124,12 @@ void TestCaseB_RepeatedReplanningDoesNotCollapse() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "braking_memory_test_case_b_params.yaml");
 
     FrenetPlanner planner;
     planner.Init(config);
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     PlannerCommand keep{};
     keep.mode = LANE_KEEPING;
     keep.has_target_speed = true;
@@ -173,7 +173,7 @@ void TestCaseC_RealDecelerationBoundaryPreserved() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "braking_memory_test_case_c_params.yaml");
 
     FrenetPlanner planner;
@@ -184,7 +184,7 @@ void TestCaseC_RealDecelerationBoundaryPreserved() {
     keep.mode = LANE_KEEPING;
     keep.has_target_speed = true;
     keep.target_speed = 5.0;  // target < current: real deceleration intent
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
     const bool ok = planner.Plan(ego, no_objects, keep, path);
     Expect(ok && !path.v.empty(), "CASE C: external KEEP produces a trajectory");
@@ -202,7 +202,7 @@ void TestCaseD_NegativeVelocityGuardPreserved() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "braking_memory_test_case_d_params.yaml");
 
     FrenetPlanner planner;
@@ -213,7 +213,7 @@ void TestCaseD_NegativeVelocityGuardPreserved() {
     keep.mode = LANE_KEEPING;
     keep.has_target_speed = true;
     keep.target_speed = 10.0;
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
     const bool ok = planner.Plan(ego, no_objects, keep, path);
     Expect(ok, "CASE D: plan succeeds");
@@ -228,7 +228,7 @@ void TestCaseEF_JerkAndAccelLimitsPreserved() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "braking_memory_test_case_ef_params.yaml");
 
     FrenetPlanner planner;
@@ -239,7 +239,7 @@ void TestCaseEF_JerkAndAccelLimitsPreserved() {
     keep.mode = LANE_KEEPING;
     keep.has_target_speed = true;
     keep.target_speed = 9.0;
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
     const bool ok = planner.Plan(ego, no_objects, keep, path);
     Expect(ok, "CASE E/F: plan succeeds");
@@ -261,7 +261,7 @@ void TestCaseG_NoNormalKeepStarvation() {
     const std::string package_src = FRENET_PACKAGE_SRC_DIR;
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     const std::string config = MakeLocalConfig(
-        package_src + "/frenet_planner/config/params.yaml", waypoint_file,
+        package_src + "/../config/params.yaml", waypoint_file,
         "braking_memory_test_case_g_params.yaml");
 
     FrenetPlanner planner;
@@ -272,7 +272,7 @@ void TestCaseG_NoNormalKeepStarvation() {
     keep.mode = LANE_KEEPING;
     keep.has_target_speed = true;
     keep.target_speed = 8.0;
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
     const bool ok = planner.Plan(ego, no_objects, keep, path);
     Expect(ok && !path.v.empty(),
