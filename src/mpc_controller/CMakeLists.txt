@@ -49,4 +49,9 @@ if(CATKIN_ENABLE_TESTING)
     target_link_libraries(mpc_ros_converter_test
       mpc_ros_converter mpc_core ${catkin_LIBRARIES})
   endif()
+
+  catkin_add_gtest(mpc_controller_test test/mpc_controller_test.cpp)
+  if(TARGET mpc_controller_test)
+    target_link_libraries(mpc_controller_test mpc_core)
+  endif()
 endif()
