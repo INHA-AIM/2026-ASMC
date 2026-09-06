@@ -1,5 +1,5 @@
 #include "cost_function.hpp"
-#include "../global/utils.hpp"
+#include "math/utils.hpp"
 
 // ========================================
 // 경로 추종 오차 (수직 거리 ≈ closest point 까지 거리)

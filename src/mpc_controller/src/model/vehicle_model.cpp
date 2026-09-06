@@ -1,5 +1,5 @@
 #include "vehicle_model.hpp"
-#include "../global/utils.hpp"
+#include "math/utils.hpp"
 
 // ========================================
 // Kinematic Bicycle Model 한 스텝 적분 (Euler)

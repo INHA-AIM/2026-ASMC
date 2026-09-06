@@ -4,7 +4,10 @@
 #include <morai_msgs/CtrlCmd.h>
 #include <ros/time.h>
 
-#include "global/global.hpp"
+#include "common/mpc_control.hpp"
+#include "common/mpc_params.hpp"
+#include "common/mpc_state.hpp"
+#include "reference/path_resampler.hpp"
 
 namespace mpc_controller_ros {
 

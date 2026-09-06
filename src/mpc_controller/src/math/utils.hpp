@@ -1,7 +1,7 @@
-#ifndef UTILS_HPP
-#define UTILS_HPP
+#pragma once
 
-#include "global.hpp"
+#include <algorithm>
+#include <cmath>
 
 // ============================= math utils =================================
 constexpr double PI       = M_PI;
@@ -26,6 +26,3 @@ inline T clip(const T& v, const T& lo, const T& hi) {
 
 inline double deg2rad(double d) { return d * PI / 180.0; }
 inline double rad2deg(double r) { return r * 180.0 / PI; }
-
-
-#endif // MPC_COORD_UTILS_HPP

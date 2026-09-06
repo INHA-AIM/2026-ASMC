@@ -1,7 +1,13 @@
 #ifndef MPC_SOLVER_HPP
 #define MPC_SOLVER_HPP
 
-#include "../global/global.hpp"
+#include <vector>
+
+#include "common/mpc_control.hpp"
+#include "common/mpc_params.hpp"
+#include "common/mpc_result.hpp"
+#include "common/mpc_state.hpp"
+#include "common/reference_path.hpp"
 
 /**
  * @brief MPC 최적화 솔버

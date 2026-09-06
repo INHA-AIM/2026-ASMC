@@ -11,13 +11,13 @@ catkin_package(CATKIN_DEPENDS asmc_msgs morai_msgs roscpp)
 include_directories(src ${catkin_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIRS})
 
 set(MPC_CORE_SOURCES
-  src/global/global.cpp
-  src/global/parameter_loader.cpp
+  src/config/parameter_loader.cpp
   src/model/vehicle_model.cpp
   src/cost/cost_function.cpp
   src/constraints/constraints.cpp
   src/solver/mpc_solver.cpp
-  src/reference/path_resampler.cpp)
+  src/reference/path_resampler.cpp
+  src/control/mpc_controller.cpp)
 
 add_library(mpc_core ${MPC_CORE_SOURCES})
 target_link_libraries(mpc_core yaml-cpp)

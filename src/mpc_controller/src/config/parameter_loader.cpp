@@ -1,6 +1,4 @@
-#include "parameter_loader.hpp"
-#include "global.hpp"
-#include "utils.hpp"
+#include "config/parameter_loader.hpp"
 
 #include <cstdio>
 
@@ -27,11 +25,10 @@ void loadInto(const YAML::Node& root, const std::string& dotted_key, T& out) {
 }  // namespace
 
 // ========================================
-// yaml 파일 → mpc_params (mpc_params.yaml 구조/키 이름과 일치)
+// yaml 파일 → MPCParams (mpc_params.yaml 구조/키 이름과 일치)
 // ========================================
-void loadMPCParameters(const std::string& yaml_path)
-{
-    auto& p = mpc_params;
+void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
+    auto& p = params;
 
     YAML::Node root;
     try {

@@ -3,7 +3,7 @@
 #include <cmath>
 #include <utility>
 
-#include "global/utils.hpp"
+#include "math/utils.hpp"
 
 namespace mpc_controller_ros {
 namespace {

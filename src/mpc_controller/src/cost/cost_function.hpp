@@ -1,7 +1,13 @@
 #ifndef MPC_COST_FUNCTION_HPP
 #define MPC_COST_FUNCTION_HPP
 
-#include "../global/global.hpp"
+#include <cstddef>
+#include <vector>
+
+#include "common/mpc_control.hpp"
+#include "common/mpc_params.hpp"
+#include "common/mpc_state.hpp"
+#include "common/reference_path.hpp"
 
 
 // 단일 스텝 비용 (참조 인덱스를 외부에서 결정하여 캐싱)

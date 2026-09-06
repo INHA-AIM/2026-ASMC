@@ -1,7 +1,11 @@
 #ifndef MPC_VEHICLE_MODEL_HPP
 #define MPC_VEHICLE_MODEL_HPP
 
-#include "../global/global.hpp"
+#include <array>
+#include <vector>
+
+#include "common/mpc_control.hpp"
+#include "common/mpc_state.hpp"
 
 // ========================================
 // 1차 Taylor 선형화 결과 구조체

@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 
-#include "global/utils.hpp"
+#include "math/utils.hpp"
 
 ReferencePath ToReferencePath(const PlannedPath& path, double destination_dt,
                               int steps) {
