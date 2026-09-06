@@ -94,16 +94,11 @@ int main() {
     const std::vector<TrackedObject> no_objects;
     CartesianPath path;
 
-    // 먼저 legacy 호출로 내부 MERGE context가 활성화될 수 있는 조건을 만든다.
-    planner.Plan(ego, no_objects, path);
-    Expect(planner.last_mode() == MERGE,
-           "legacy planner activates MERGE inside merge zone");
-
     PlannerCommand keep{};
     keep.mode = LANE_KEEPING;
     const bool keep_ok = planner.Plan(ego, no_objects, keep, path);
     Expect(keep_ok && planner.last_mode() == LANE_KEEPING && !path.x.empty(),
-           "external KEEP ignores legacy merge-zone behavior selection");
+           "external KEEP plans normally inside the roundabout merge-zone window");
 
     const std::vector<TrackedObject> outside_objects = {
         MakeObjectInfo(31, ego.x + 100.0, ego.y + 100.0)};
@@ -144,11 +139,7 @@ int main() {
     bool low_speed_capped = low_speed_ok && planner.last_mode() == LANE_KEEPING;
     for (double speed : path.v) low_speed_capped = low_speed_capped && speed <= 0.2 + 1e-9;
     Expect(low_speed_capped,
-           "external KEEP low-speed fallback ignores merge state and honors speed cap");
-
-    planner.Plan(ego, no_objects, path);
-    Expect(planner.last_mode() == MERGE,
-           "external KEEP does not erase legacy merge context");
+           "external KEEP low-speed fallback honors speed cap");
 
     PlannerCommand unsupported{};
     unsupported.mode = FOLLOWING;

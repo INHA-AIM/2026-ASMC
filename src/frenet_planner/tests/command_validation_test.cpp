@@ -215,7 +215,7 @@ int main() {
     // D6-1에서 AVOID를 core whitelist에 추가했다. 이제 UNSUPPORTED_BEHAVIOR로
     // 거부되지 않고 필드 검증으로 넘어간다 - 대상이 없으면 INVALID_COMMAND다.
     // (FOLLOWING과 같은 이유: 대상 선택 권한이 FSM에 있으므로 planner가
-    // FindStaticAvoidanceTarget()으로 스스로 고르지 않는다.)
+    // 스스로 고르지 않는다.)
     //
     // 대상 확보에 성공한 뒤의 동작은 command_avoid_target_test가 담당한다.
     PlannerCommand avoid_without_target{};

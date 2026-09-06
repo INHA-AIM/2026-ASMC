@@ -2,8 +2,7 @@
  * @file Avoid.cpp
  * @brief External/v2 AVOID target resolution, commit state, lifecycle,
  *        target-preparation, maintenance path, PREPARE/COMMITTED
- *        execution, and legacy AVOID context/acquisition/adaptive
- *        candidate planning.
+ *        execution.
  *
  * PrepareAvoid/PlanCommittedAvoid stay in frenet_planner.cpp - they
  * depend on the anonymous-namespace ValidateExternalCommand, whose
@@ -25,25 +24,7 @@
 #include "frenet_planner/Math/FrenetConverter.hpp"
 #include "frenet_planner/Math/Utils.hpp"
 
-namespace {
-
-// 후보 경로의 최대 기하 곡률에서 a_lat=v^2*|kappa| 한계를
-// 만족하는 속도를 계산한다. 제어/모델 오차 여유로 한계의 80%를 쓴다.
-double CandidateCurvatureSpeedLimit(const FrenetPath& path, const RefLine& ref,
-                                    double max_lateral_accel) {
-    constexpr double kLateralAccelMargin = 0.8;
-    constexpr double kMinCurvature = 1e-4;
-    const GeometricPath geo = ComputeGeometricPath(path.s, path.d, ref);
-    double max_kappa = 0.0;
-    for (double kappa : geo.kappa) max_kappa = std::max(max_kappa, std::fabs(kappa));
-    if (max_kappa < kMinCurvature) return std::numeric_limits<double>::infinity();
-    return std::sqrt(max_lateral_accel * kLateralAccelMargin / max_kappa);
-}
-
-}  // namespace
-
 double FrenetPlanner::EffectiveAvoidDetectionDistance() const {
-    // legacy AVOID 등록거리와 같은 식이다(UpdateLegacyAvoidContext의 acquisition_cfg).
     // config 값을 그대로 쓰면 충돌 lookahead보다 짧아져, 장애물을 회피 대상으로
     // 등록하기 전에 충돌 필터가 중앙 후보를 전부 제거한다 -> 속도 급락 후
     // 등록되면 다시 가속하는 진동이 생긴다.
@@ -63,8 +44,8 @@ FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
     AvoidanceContext& context) const {
     if (target_object_id < 0) return AvoidTargetStatus::LOST;
 
-    // 지정된 ID만 찾는다. FindStaticAvoidanceTarget()처럼 "가장 가까운 정적
-    // 장애물"을 고르지 않는다 - 대상 선택 권한은 FSM에 있다(헤더 주석 참고).
+    // 지정된 ID만 찾는다. "가장 가까운 정적 장애물"을 스스로 고르지 않는다
+    // - 대상 선택 권한은 FSM에 있다(헤더 주석 참고).
     const auto it = std::find_if(
         obstacles.begin(), obstacles.end(),
         [target_object_id](const TrackedObject& object) {
@@ -358,8 +339,7 @@ bool FrenetPlanner::PrepareExternalAvoidTargets(
         command.has_avoid_target_d
             ? command.avoid_target_s : 0.0;
 
-    // FindStaticAvoidanceTarget()을 타지 않는다 - 그 함수는 가장 가까운
-    // 정적 장애물과 회피 방향까지 자동 결정하는 legacy policy다
+    // 가장 가까운 정적 장애물과 회피 방향을 스스로 자동 결정하지 않는다
     // (계약 D1 0.1절 B 분류, 6.4절).
     const AvoidTargetStatus status = ResolveExternalAvoidTarget(
         ego_s, command.target_object_id, obstacles, v2_avoidance_);
@@ -735,200 +715,4 @@ bool FrenetPlanner::PlanExternalAvoidCycle(
     // result.candidate_valid로 따로 나간다(계약 8.3.1절).
     last_failure_reason_ = PlanFailureReason::NONE;
     return true;
-}
-
-void FrenetPlanner::UpdateLegacyAvoidContext(
-    double s, double d, const FrenetState& start,
-    const std::vector<TrackedObject>& obstacles, bool& begin_avoidance) {
-    // 활성 context의 장애물 위치를 새 UDP 프레임으로 갱신한다. 일시적
-    // packet dropout이 있어도 저장된 위치/길이로 회피를 계속한다.
-    if (avoidance_.active) {
-        for (const auto& obj : obstacles) {
-            if (obj.id != avoidance_.obstacle_id) continue;
-            double obj_s, obj_d, obj_s_dot;
-            ProjectObjectToFrenet(ref_, obj, obj_s, obj_d, obj_s_dot);
-            avoidance_.obstacle_s = obj_s;
-            avoidance_.obstacle_d = obj_d;
-            avoidance_.obstacle_width = obj.width;
-            avoidance_.obstacle_length = obj.length;
-            break;
-        }
-
-        const double gap = avoidance_.obstacle_s - s;
-        const double clear_distance = 0.5 * (vehicle_shape_.length + avoidance_.obstacle_length)
-                                    + avoid_cfg_.pass_clearance;
-        if (avoidance_.phase == AvoidPhase::TRACKING && gap <= avoid_cfg_.shift_start_distance) {
-            // 이 사이클에서 좌/우 전체 후보를 비교한 뒤, 유효 경로가
-            // 있는 방향만 SHIFT로 잠그다.
-            begin_avoidance = true;
-        } else if (avoidance_.phase == AvoidPhase::SHIFT &&
-                   std::fabs(d - avoidance_.target_d) <= avoid_cfg_.lateral_tolerance) {
-            avoidance_.phase = AvoidPhase::PASS;
-            std::printf("[FrenetPlanner] avoid phase: SHIFT -> PASS (id=%d gap=%.2f)\n",
-                        avoidance_.obstacle_id, gap);
-        } else if ((avoidance_.phase == AvoidPhase::SHIFT || avoidance_.phase == AvoidPhase::PASS) &&
-                   gap < -clear_distance) {
-            // 자차 뒤가 장애물을 완전히 통과했으므로 AVOID를 즉시 종료한다.
-            // 이 아래의 !avoidance_.active 탐색이 같은 사이클에서 다음 정적
-            // 장애물을 TRACKING으로 등록하고, 중앙 복귀는 LANE_KEEPING이 수행한다.
-            std::printf("[FrenetPlanner] avoid complete after PASS: id=%d gap=%.2f\n",
-                        avoidance_.obstacle_id, gap);
-            avoidance_ = AvoidanceContext{};
-        }
-    }
-
-    if (!avoidance_.active) {
-        StaticObstacleTarget target;
-        // LANE_KEEPING 충돌 필터는 reactive_lookahead 시간까지 미리 본다.
-        // 정적 장애물 추적 거리가 그보다 짧으면, 장애물을 TRACKING으로
-        // 등록하기 전에 충돌 필터가 중앙 후보를 전부 제거 -> stop path ->
-        // 등록 후 다시 가속하는 속도 급락/반등이 생긴다. 설정값은 최소
-        // 탐지거리로 쓰고, 실제 등록 거리는 "최고속도×충돌 lookahead +
-        // 차량 길이/마진"보다 항상 길게 잡는다.
-        AvoidConfig acquisition_cfg = avoid_cfg_;
-        const double collision_horizon_distance =
-            curve_speed_cfg_.target_vel * collision_cfg_.reactive_lookahead
-            + vehicle_shape_.length + collision_cfg_.safety_margin;
-        acquisition_cfg.detection_distance =
-            std::max(avoid_cfg_.detection_distance, collision_horizon_distance);
-        if (FindStaticAvoidanceTarget(ref_, start, obstacles, lane_width_, vehicle_shape_,
-                                      acquisition_cfg, target)) {
-            avoidance_.active = true;
-            avoidance_.obstacle_id = target.id;
-            avoidance_.phase = AvoidPhase::TRACKING;
-            avoidance_.obstacle_s = target.s;
-            avoidance_.obstacle_d = target.d;
-            avoidance_.obstacle_width = target.width;
-            avoidance_.obstacle_length = target.length;
-            // 저속/정지 상태에서도 영구 정지하지 않도록 selector가 확인한
-            // 1차 방향을 보관한다. 정상 속도에서는 회피 시작 직전 양쪽의
-            // 전체 후보를 비교해 더 정확한 target_d로 덮어쓴다.
-            avoidance_.target_d = target.avoidance_offset;
-            std::printf("[FrenetPlanner] static obstacle tracked: id=%d gap=%.2f "
-                        "effective_detection=%.2f\n",
-                        target.id, target.s - s, acquisition_cfg.detection_distance);
-        }
-    }
-}
-
-std::vector<FrenetPath> FrenetPlanner::GenerateAdaptiveLegacyAvoidCandidates(
-    const FrenetState& start, PlannerCommand& avoid_cmd, double target_d,
-    const std::vector<TrackedObject>& planning_collision_obstacles,
-    PlannerDebugStats& avoid_stats) const {
-    // AVOID의 고정 속도 대신 후보 곡률로 속도를 자동 결정한다.
-    // 1차 일반 목표속도 생성 -> 최적 후보 곡률의 허용속도 계산 ->
-    // 필요할 때만 낮은 목표속도로 2차 재생성 순서다.
-    auto generate_once = [&](PlannerDebugStats& generated_stats) {
-        generated_stats = PlannerDebugStats{};
-        auto generated = ResolveManeuver(start, avoid_cmd, ref_, path_cfg_, limits_,
-                                         lane_width_, planning_collision_obstacles,
-                                         vehicle_shape_,
-                                         collision_cfg_, &generated_stats);
-        EvaluateCosts(generated, cost_weights_, target_d);
-        return generated;
-    };
-
-    std::vector<FrenetPath> generated = generate_once(avoid_stats);
-    const FrenetPath* initial_best = SelectBestPath(generated);
-    if (initial_best) {
-        const double speed_limit = CandidateCurvatureSpeedLimit(
-            *initial_best, ref_, limits_.max_lateral_accel);
-        if (std::isfinite(speed_limit) && speed_limit + 0.1 < avoid_cmd.target_speed) {
-            avoid_cmd.target_speed = speed_limit;
-            generated = generate_once(avoid_stats);
-        }
-    }
-
-    FilterByCartesianLateralAcceleration(generated, ref_, limits_.max_lateral_accel);
-    // 추가 횡가속도 필터를 반영해 시각화 통계를 재계산한다.
-    avoid_stats.combined_valid_after_curvature = 0;
-    avoid_stats.combined_valid_after_collision = 0;
-    for (const auto& path : generated) {
-        if (path.valid || path.rejection_reason == RejectionReason::COLLISION) {
-            ++avoid_stats.combined_valid_after_curvature;
-        }
-        if (path.valid) ++avoid_stats.combined_valid_after_collision;
-    }
-    return generated;
-}
-
-void FrenetPlanner::GenerateLegacyAvoidDirectionCandidates(
-    double s, const FrenetState& start,
-    const std::vector<TrackedObject>& planning_collision_obstacles,
-    PlannerCommand& cmd, double& avoid_offset, PlannerDebugStats& stats,
-    std::vector<FrenetPath>& candidates) {
-    // 장애물 d에서 자차/장애물 반폭과 SAT 안전 마진을 더한 지점을
-    // 양쪽 목표로 삼는다. 기존 ±3m 절대값보다 장애물의 실제
-    // 횡위치를 반영하므로 불필요하게 멀리 이동하지 않는다.
-    constexpr double kDirectionExtraMargin = 0.3;
-    const double clearance = 0.5 * (vehicle_shape_.width + avoidance_.obstacle_width)
-                           + collision_cfg_.safety_margin + kDirectionExtraMargin;
-    const double left_target = avoidance_.obstacle_d + clearance;
-    const double right_target = avoidance_.obstacle_d - clearance;
-
-    auto generate_side = [&](double target_d, PlannerDebugStats& side_stats,
-                             double& used_target_speed) {
-        PlannerCommand side_cmd = cmd;
-        side_cmd.avoidance_d_offset = target_d;
-        auto side = GenerateAdaptiveLegacyAvoidCandidates(
-            start, side_cmd, target_d, planning_collision_obstacles, side_stats);
-        used_target_speed = side_cmd.target_speed;
-        return side;
-    };
-
-    PlannerDebugStats left_stats, right_stats;
-    double left_target_speed = cmd.target_speed;
-    double right_target_speed = cmd.target_speed;
-    std::vector<FrenetPath> left_candidates =
-        generate_side(left_target, left_stats, left_target_speed);
-    std::vector<FrenetPath> right_candidates =
-        generate_side(right_target, right_stats, right_target_speed);
-    const FrenetPath* left_best = SelectBestPath(left_candidates);
-    const FrenetPath* right_best = SelectBestPath(right_candidates);
-
-    bool choose_right = false;
-    bool direction_found = left_best || right_best;
-    if (!left_best && right_best) {
-        choose_right = true;
-    } else if (left_best && right_best) {
-        const double tie_margin = std::max(1.0, std::fabs(left_best->cost_total)) * 0.05;
-        choose_right = right_best->cost_total < left_best->cost_total ||
-            (avoid_cfg_.prefer_right_when_equal &&
-             right_best->cost_total <= left_best->cost_total + tie_margin);
-    }
-
-    if (direction_found) {
-        avoidance_.target_d = choose_right ? right_target : left_target;
-        avoidance_.phase = AvoidPhase::SHIFT;
-        cmd.avoidance_d_offset = avoidance_.target_d;
-        cmd.target_speed = choose_right ? right_target_speed : left_target_speed;
-        avoid_offset = avoidance_.target_d;
-        candidates = choose_right ? std::move(right_candidates) : std::move(left_candidates);
-        stats = choose_right ? right_stats : left_stats;
-        std::printf("[FrenetPlanner] avoid direction locked: %s id=%d gap=%.2f "
-                    "target_d=%.2f target_speed=%.2f valid(left=%zu right=%zu)\n",
-                    choose_right ? "RIGHT" : "LEFT", avoidance_.obstacle_id,
-                    avoidance_.obstacle_s - s, avoidance_.target_d, cmd.target_speed,
-                    left_stats.combined_valid_after_collision,
-                    right_stats.combined_valid_after_collision);
-    } else {
-        // 양쪽 모두 실패한 경우 방향을 잠그지 않고 두 집합을 모두
-        // 시각화한다. 상위의 no-valid 처리가 안전 정지를 보낸 뒤
-        // 다음 사이클에서 좌/우를 다시 평가한다.
-        candidates = std::move(left_candidates);
-        candidates.insert(candidates.end(),
-                          std::make_move_iterator(right_candidates.begin()),
-                          std::make_move_iterator(right_candidates.end()));
-        stats.lateral_total = left_stats.lateral_total + right_stats.lateral_total;
-        stats.lateral_valid = left_stats.lateral_valid + right_stats.lateral_valid;
-        stats.longitudinal_total = left_stats.longitudinal_total + right_stats.longitudinal_total;
-        stats.longitudinal_valid = left_stats.longitudinal_valid + right_stats.longitudinal_valid;
-        stats.combined_total = left_stats.combined_total + right_stats.combined_total;
-        stats.combined_valid_after_curvature = left_stats.combined_valid_after_curvature
-                                             + right_stats.combined_valid_after_curvature;
-        stats.combined_valid_after_collision = 0;
-        std::printf("[FrenetPlanner] avoid direction unavailable: id=%d gap=%.2f "
-                    "valid(left=0 right=0)\n",
-                    avoidance_.obstacle_id, avoidance_.obstacle_s - s);
-    }
 }

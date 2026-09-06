@@ -2,9 +2,9 @@
 //
 // 이 테스트의 핵심은 "FSM이 지정한 대상만 따라간다"를 고정하는 것이다.
 //
-// legacy는 FindLeader()로 같은 차선의 가장 가까운 차량을 스스로 고르고,
-// 주행 중 더 가까운 차량이 나타나면 자동으로 handoff한다. v2에서 그 policy를
-// 쓰면 FSM은 자기가 지시한 대상을 추종 중이라고 오인한다
+// planner가 같은 차선의 가장 가까운 차량을 스스로 고르고, 주행 중 더
+// 가까운 차량이 나타나면 자동으로 handoff하는 정책은 v2에서 금지된다 -
+// 그러면 FSM은 자기가 지시한 대상을 추종 중이라고 오인한다
 // (docs/d1-legacy-behavior-boundary.md 0.1절 B 분류).
 //
 //   selector: "누구를 따라갈까?"                  -> 금지
@@ -173,8 +173,8 @@ int main() {
     }
 
     // --- 핵심: 더 가까운 차량이 있어도 지정 대상을 유지한다 ---------------
-    // legacy FindLeader()는 가장 가까운 차량을 고른다. 그 policy를 타면
-    // active_leader_id가 17이 되어 FSM은 15를 추종 중이라고 오인한다.
+    // 가장 가까운 차량을 자동으로 고르는 정책을 타면 active_leader_id가
+    // 17이 되어 FSM은 15를 추종 중이라고 오인한다.
     {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;

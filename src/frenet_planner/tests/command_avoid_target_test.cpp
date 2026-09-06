@@ -2,10 +2,10 @@
 //
 // D5-1의 FOLLOW와 완전히 같은 원칙을 AVOID에 적용한다.
 //
-// legacy는 FindStaticAvoidanceTarget()으로
+// planner가
 //   모든 객체 탐색 -> 같은 차선 -> 저속/정지 -> 가장 가까운 것 ->
 //   좌/우 방향까지 자동 결정
-// 을 한다. v2에서 그 권한은 전부 FSM에 있다
+// 하는 acquisition은 v2에서 금지된다 - 그 권한은 전부 FSM에 있다
 // (docs/d1-legacy-behavior-boundary.md 0.1절 B 분류, 6.4절).
 //
 //   selector: "무엇을 피할까?"                     -> 금지
@@ -299,8 +299,8 @@ int main() {
 
     // ===== 2. 핵심: 더 가까운 장애물이 있어도 지정 대상을 유지 ==========
     //
-    // legacy FindStaticAvoidanceTarget()은 가장 가까운 정적 장애물을 고른다.
-    // resolver를 그 함수로 바꾸면 이 검사가 깨진다.
+    // resolver를 "가장 가까운 정적 장애물을 스스로 고르는" 함수로 바꾸면
+    // 이 검사가 깨진다.
     {
         FrenetPlanner planner;
         planner.Init(config);
@@ -596,30 +596,6 @@ int main() {
         planner.Plan(ego, with_target, keep, path);
         Expect(planner.active_avoid_target_id() == -1,
                "reset: KEEP clears the v2 AVOID context");
-    }
-
-    // ===== 13. legacy AVOID context는 건드리지 않는다 ==================
-    //
-    // v2_avoidance_와 avoidance_는 별도 인스턴스다. legacy fingerprint를
-    // 유지하려면 v2 경로가 legacy context를 갱신하지 않아야 한다.
-    {
-        FrenetPlanner planner;
-        planner.Init(config);
-        const std::vector<TrackedObject> with_target{
-            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        CartesianPath path;
-
-        // v2 AVOID로 대상을 확보한다.
-        planner.Plan(ego, with_target, MakeAvoidCommand(21), path);
-        Expect(planner.active_avoid_target_id() == 21,
-               "isolation: v2 AVOID acquired its target");
-
-        // 곧바로 legacy 경로(3인자 Plan)를 돌린다. legacy는 자기 자신의
-        // FindStaticAvoidanceTarget()으로 대상을 고르며, v2 context를
-        // 읽지 않아야 한다. 여기서는 legacy가 정상적으로 궤적을 만드는지만
-        // 확인한다 - byte 단위 동일성은 legacy_fingerprint가 담당한다.
-        const bool legacy_ok = planner.Plan(ego, with_target, path);
-        Expect(legacy_ok, "isolation: the legacy path still plans normally");
     }
 
     // ===== D6-1a: optional target pose 투영 =============================

@@ -12,7 +12,6 @@
 #include "frenet_planner/Speed/SpeedPolicy.hpp"
 #include "frenet_planner/Generator/LateralGenerator.hpp"
 #include "frenet_planner/Generator/LongitudinalGenerator.hpp"
-#include "frenet_planner/Maneuver/MergeInternal.hpp"
 
 namespace {
 
@@ -23,26 +22,6 @@ const char* ModeName(BehaviorState mode) {
         case AVOID: return "AVOID";
         case MERGE: return "MERGE";
         default: return "OTHER";
-    }
-}
-
-const char* AvoidPhaseName(int phase) {
-    switch (phase) {
-        case 0: return "TRACKING";
-        case 1: return "SHIFT";
-        case 2: return "PASS";
-        default: return "NONE";
-    }
-}
-
-const char* MergePhaseName(int phase) {
-    switch (phase) {
-        case 0: return "APPROACH";
-        case 1: return "WAIT";
-        case 2: return "COMMIT";
-        case 3: return "CROSS";
-        case 4: return "CLEAR";
-        default: return "NONE";
     }
 }
 
@@ -335,8 +314,8 @@ bool ValidateExternalCommand(const PlannerCommand& command,
     }
 
     // AVOID: 회피 대상이 지정되어야 한다. FOLLOWING과 같은 이유다 - v2에서
-    // 대상 선택 권한은 FSM에 있고(primary_object_id), planner가
-    // FindStaticAvoidanceTarget()으로 스스로 고르지 않는다(D6-1).
+    // 대상 선택 권한은 FSM에 있고(primary_object_id), planner가 스스로
+    // 고르지 않는다(D6-1).
     if (command.mode == AVOID && command.target_object_id < 0) {
         reason = FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
         return false;
@@ -356,13 +335,6 @@ bool ValidateExternalCommand(const PlannerCommand& command,
 }
 
 }  // namespace
-
-bool FrenetPlanner::Plan(const CartesianState& ego,
-                         const std::vector<TrackedObject>& obstacles,
-                         CartesianPath& out_path) {
-    return PlanInternal(ego, obstacles, nullptr, nullptr,
-                        ExternalPlanningPurpose::NORMAL, out_path, nullptr);
-}
 
 bool FrenetPlanner::Plan(const CartesianState& ego,
                          const std::vector<TrackedObject>& obstacles,
@@ -394,75 +366,6 @@ bool FrenetPlanner::Plan(
     }
     return PlanInternal(ego, obstacles, &command, &collision_obstacles,
                         ExternalPlanningPurpose::NORMAL, out_path, nullptr);
-}
-
-void FrenetPlanner::SelectLegacyBehavior(
-    bool begin_avoidance, bool nearest_found, const LeaderTarget& nearest_leader,
-    PlannerCommand& cmd, double& out_avoid_offset, double& out_leader_s,
-    double& out_leader_speed, double& out_leader_accel) const {
-    // D1-2 순수 추출: 아래 본문은 PlanInternal의 legacy 분기에서 그대로 옮겨온
-    // 것이며 동작을 바꾸지 않았다. 지역변수 avoid_offset/leader_* 만 출력
-    // 파라미터로 이름이 바뀌었다.
-    double& avoid_offset = out_avoid_offset;
-    double& leader_s = out_leader_s;
-    double& leader_speed = out_leader_speed;
-    double& leader_accel = out_leader_accel;
-    if (begin_avoidance || (avoidance_.active && avoidance_.phase != AvoidPhase::TRACKING)) {
-        cmd.mode = AVOID;
-        avoid_offset = (avoidance_.phase == AvoidPhase::SHIFT || avoidance_.phase == AvoidPhase::PASS)
-                     ? avoidance_.target_d : 0.0;
-        cmd.avoidance_d_offset = avoid_offset;
-    } else if (merge_.active) {
-        const bool highway = merge_.type == MergeType::HIGHWAY;
-        const HighwayMergeZone* active_highway_zone = HighwayZoneAt(
-            highway_merge_cfg_, merge_.highway_zone_index);
-        const HighwayMergeCheckpoint* active_highway_checkpoint = HighwayCheckpointAt(
-            highway_merge_cfg_, merge_.highway_zone_index, merge_.highway_conflict_index);
-        const double active_conflict_s = highway
-            && active_highway_checkpoint
-                ? active_highway_checkpoint->conflict_s : merge_cfg_.conflict_s;
-        const double active_stop_buffer = highway
-            ? highway_merge_cfg_.stop_buffer : merge_cfg_.stop_buffer;
-        cmd.mode = MERGE;
-        cmd.target_lane = 0;
-        cmd.merge_target_d = 0.0;
-        cmd.merge_gap_safe = merge_.gap_safe;
-        cmd.merge_conflict_s = active_conflict_s;
-        cmd.merge_stop_s = active_conflict_s - active_stop_buffer;
-        cmd.merge_entry_time = merge_.entry_time;
-        cmd.merge_sa_id = merge_.preceding_id;
-        cmd.merge_sb_id = merge_.following_id;
-        cmd.merge_committed = merge_.gap_locked || merge_.commit_pending;
-        cmd.merge_crossing = merge_.phase == MergePhase::CROSS;
-        cmd.merge_type = merge_.type;
-        // 합류 후 같은 corridor에 들어온 선행차는 일반 장애물이 아니라
-        // FOLLOWING과 동일한 종방향 gap 제어 대상으로 전달한다.
-        if (nearest_found) {
-            cmd.target_object_id = nearest_leader.id;
-            cmd.leader_s = nearest_leader.s;
-            cmd.leader_speed = nearest_leader.speed;
-            cmd.leader_accel = nearest_leader.accel;
-            cmd.time_gap = following_cfg_.time_gap;
-            cmd.min_gap = following_cfg_.min_gap;
-            cmd.gap_gain = following_cfg_.gap_gain;
-        } else {
-            cmd.target_object_id = -1;
-        }
-    } else if (following_.active) {
-        leader_s = following_.leader_s;
-        leader_speed = following_.leader_speed;
-        leader_accel = following_.leader_accel;
-        cmd.mode = FOLLOWING;
-        cmd.target_object_id = following_.leader_id;
-        cmd.leader_s = leader_s;
-        cmd.leader_speed = leader_speed;
-        cmd.leader_accel = leader_accel;
-        cmd.time_gap = following_cfg_.time_gap;
-        cmd.min_gap = following_cfg_.min_gap;
-        cmd.gap_gain = following_cfg_.gap_gain;
-    } else {
-        cmd.mode = LANE_KEEPING;
-    }
 }
 
 bool FrenetPlanner::PrepareAvoid(
@@ -518,7 +421,6 @@ bool FrenetPlanner::PlanInternal(
     const std::vector<TrackedObject>* collision_obstacles,
     ExternalPlanningPurpose purpose, CartesianPath& out_path,
     AvoidPrepareResult* avoid_prepare_result) {
-    const bool use_legacy_behavior = external_command == nullptr;
     // purpose가 계산 내용을 정한다. 포인터 유무로 판단하지 않는다 - 진단용
     // 으로 포인터만 넘겨도 동작이 바뀌면 안 된다(헤더 주석 참고).
     const bool avoid_prepare =
@@ -576,11 +478,11 @@ bool FrenetPlanner::PlanInternal(
     double resolved_target_speed = LookaheadTargetSpeed(
         ref_, s, ego.v, curve_speed_cfg_, limits_.max_longitudinal_accel,
         limits_.max_lateral_accel, limits_.max_curvature);
-    if (external_command && external_command->has_target_speed) {
+    if (external_command->has_target_speed) {
         resolved_target_speed = std::min(resolved_target_speed,
                                          external_command->target_speed);
     }
-    if (external_command && external_command->has_max_speed) {
+    if (external_command->has_max_speed) {
         resolved_target_speed = std::min(resolved_target_speed,
                                          external_command->max_speed);
     }
@@ -600,44 +502,6 @@ bool FrenetPlanner::PlanInternal(
     last_d_ = d;
 
     constexpr double kLowSpeedFallbackV = 0.5;  // [m/s]
-    const HighwayMergeZone* context_highway_zone = use_legacy_behavior
-        ? HighwayZoneAt(highway_merge_cfg_, merge_.highway_zone_index) : nullptr;
-    const HighwayMergeCheckpoint* context_highway_checkpoint = use_legacy_behavior
-        ? HighwayCheckpointAt(highway_merge_cfg_, merge_.highway_zone_index,
-                              merge_.highway_conflict_index) : nullptr;
-    const double context_conflict_s = use_legacy_behavior &&
-        merge_.type == MergeType::HIGHWAY
-        && context_highway_checkpoint
-            ? context_highway_checkpoint->conflict_s : merge_cfg_.conflict_s;
-    const double context_stop_buffer = use_legacy_behavior &&
-        merge_.type == MergeType::HIGHWAY
-        ? highway_merge_cfg_.stop_buffer : merge_cfg_.stop_buffer;
-    const double low_speed_conflict_gap = merge_cfg_.conflict_s - s;
-    const bool near_roundabout = merge_cfg_.conflict_s >= 0.0 &&
-        low_speed_conflict_gap >= -merge_cfg_.completion_distance &&
-        low_speed_conflict_gap <= merge_cfg_.approach_distance;
-    const bool near_highway_merge = FindHighwayMergeZone(highway_merge_cfg_, s) >= 0;
-    const bool near_any_merge = use_legacy_behavior &&
-        (near_roundabout || near_highway_merge || merge_.active);
-
-    // COMMIT 이후에는 noisy localization 상태로 exact-arrival 다항식을 매 cycle
-    // 재생성하지 않는다. 최초 COMMIT 때 conflict zone 이탈까지 OBB 검증한 시간
-    // 궤적을 시간에 맞춰 잘라 그대로 추종한다. 실제 동적 충돌이 새로 예측될 때만
-    // 정지선 전에는 WAIT로 취소하고, 정지선 이후에는 비상정지를 요청한다.
-    if (use_legacy_behavior && merge_.active && merge_.gap_locked &&
-        merge_.phase == MergePhase::COMMIT) {
-        const LockedMergeResult locked_result = HandleLockedMergeTrajectory(
-            ego, s, d, context_conflict_s, context_stop_buffer, context_highway_zone,
-            predicted_collision_obstacles, out_path);
-        if (locked_result == LockedMergeResult::SUCCESS) return true;
-        if (locked_result == LockedMergeResult::FAILURE) return false;
-    }
-    // 회전교차로에서는 저속이어도 아래의 MERGE FSM을 반드시 거친다. 여기서
-    // 조기 반환하면 WAIT/COMMIT 잠금보다 먼저 매 cycle 전체 도로가 빌 때까지
-    // 검사하게 되어 conflict point 앞에서 두 번째 정지와 데드락이 발생한다.
-    // 저속 fallback은 kMinCreepSpeed로 "기어서 전진"하는 경로다. 외부 STOP
-    // 명령에서 이 분기를 타면 정지 목표를 넘어 계속 기어나가게 되므로, STOP은
-    // 저속에서도 정상 stopping 후보 생성기(GenerateStoppingCandidates)로 보낸다.
     // FOLLOW가 아닌 외부 명령으로 넘어가면 v2 FOLLOW 상태를 즉시 비운다.
     //
     // **모든 early-return보다 앞에서** 해야 한다. 아래 EMERGENCY 분기와 저속
@@ -649,8 +513,8 @@ bool FrenetPlanner::PlanInternal(
     //   FOLLOW id=12 target=15   -> 15가 관측되지 않아도 GRACE
     //
     // 가 되어, 첫 binding 실패인데 유예를 받아 존재하지 않는 leader를
-    // 예측 추종한다(실측으로 재현 확인). legacy following_에는 영향이 없다.
-    if (!use_legacy_behavior && external_command->mode != FOLLOWING) {
+    // 예측 추종한다(실측으로 재현 확인).
+    if (external_command->mode != FOLLOWING) {
         v2_following_ = FollowingContext{};
     }
     // v2 AVOID 상태도 같은 이유로 같은 위치에서 비운다(D6-1). 여기서
@@ -659,8 +523,8 @@ bool FrenetPlanner::PlanInternal(
     //   E-STOP id=21            -> context가 남는다
     //   AVOID id=22 target=21   -> 21이 관측되지 않아도 GRACE
     // 가 되어 첫 binding 실패인데 유예를 받는다(D5-2에서 FOLLOW로 실측 확인한
-    // 것과 같은 구조). legacy avoidance_에는 영향이 없다.
-    if (!use_legacy_behavior && external_command->mode != AVOID) {
+    // 것과 같은 구조).
+    if (external_command->mode != AVOID) {
         v2_avoidance_ = AvoidanceContext{};
         // 목표 목록도 함께 비운다(D6-2a). 남겨두면 다음 AVOID가 확보에
         // 실패했는데 이전 사이클의 목표로 후보를 만들 수 있다.
@@ -685,7 +549,7 @@ bool FrenetPlanner::PlanInternal(
     // 차량이 이미 멈춰 있으면(v0 ~= 0) 0속도 궤적이 나온다. 새 정상 명령이
     // 올 때까지 긴급정지 상태를 계속 강제하는 것이 E-stop의 의미이므로,
     // 여기서 COMPLETED로 올리지 않는다 - ROS 계층이 EXECUTING을 유지한다.
-    if (!use_legacy_behavior && external_command->mode == EMERGENCY) {
+    if (external_command->mode == EMERGENCY) {
         return PlanExternalEmergencyStop(ego, s, d, s_dot, out_path);
     }
 
@@ -713,7 +577,7 @@ bool FrenetPlanner::PlanInternal(
     // 대상조차 확보하지 못하는 구조는 맞지 않다(계약 12.7.2절).
     //
     // 확보만 여기서 하고, "그 목표로 실제 후보가 나오는가"는 D6-2b다.
-    if (!use_legacy_behavior && external_command->mode == AVOID) {
+    if (external_command->mode == AVOID) {
         if (!PrepareExternalAvoidTargets(s, obstacles, *external_command,
                                          avoid_prepare, avoid_committed)) {
             return false;
@@ -721,20 +585,18 @@ bool FrenetPlanner::PlanInternal(
     }
     // PREPARE인데 AVOID가 아니면 호출자의 실수다. PrepareAvoid()가 이미
     // 막지만, PlanInternal 내부에서도 조용히 다른 모드를 준비하지 않는다.
-    if ((avoid_prepare || avoid_committed) &&
-        (use_legacy_behavior || external_command->mode != AVOID)) {
+    if ((avoid_prepare || avoid_committed) && external_command->mode != AVOID) {
         last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
         return false;
     }
 
-    const bool external_stop = !use_legacy_behavior && external_command->mode == STOP;
+    const bool external_stop = external_command->mode == STOP;
     // 외부 FOLLOW도 저속 fallback을 타지 않는다. 그 경로는 kMinCreepSpeed로
     // 기어서 전진하는데, 앞차가 정지해 있으면 그대로 다가가 붙는다. FOLLOW의
     // 종방향 목표는 선행차와의 gap이므로 정상 following 후보 생성기
     // (GenerateFollowingCandidates)로 보내야 한다 - 그 생성기는 leader가
     // 멈춰 있으면 min_gap을 유지하는 정지 목표를 만든다.
-    const bool external_follow =
-        !use_legacy_behavior && external_command->mode == FOLLOWING;
+    const bool external_follow = external_command->mode == FOLLOWING;
     // AVOID PREPARE도 이 fallback을 타지 않는다 (D6-2b).
     //
     // 이 경로는 충돌 필터를 거치지 않은 crawl을 그대로 반환하므로, PREPARE의
@@ -744,7 +606,7 @@ bool FrenetPlanner::PlanInternal(
     // 여기서 제외하지 않으면 PREPARE 블록에 도달하지도 못한다 - 이 분기가
     // 먼저 return하기 때문이다(실측으로 확인: v=0.3에서 low_speed_context이
     // 0으로 나오고 maintenance가 미검사 crawl이었다).
-    if (std::fabs(ego.v) < kLowSpeedFallbackV && !near_any_merge &&
+    if (std::fabs(ego.v) < kLowSpeedFallbackV &&
         !external_stop && !external_follow && !avoid_prepare &&
         !avoid_committed) {
         static int low_speed_log_tick = 0;
@@ -753,26 +615,10 @@ bool FrenetPlanner::PlanInternal(
                         "s=%.2f d=%.3f speed=%.2f candidates=N/A\n",
                         s, d, ego.v);
         }
-        // TRACKING 근거리에서 한 점짜리 v=0 경로를 무기한 보내던 분기는
-        // ego.v==0 -> 같은 조기 return이라는 자기잠금을 만들었다. 정적 장애물을
-        // 등록할 때 검증한 1차 회피 방향을 저속 경로의 목표로 사용해 재출발한다.
-        // 정상 속도로 회복되면 기존 좌/우 전체 후보 비교가 방향을 다시 확정한다.
-        const bool tracking_near = use_legacy_behavior && avoidance_.active &&
-            avoidance_.phase == AvoidPhase::TRACKING &&
-            avoidance_.obstacle_s - s <= avoid_cfg_.shift_start_distance;
-        const bool hold_avoid_target = use_legacy_behavior && avoidance_.active &&
-            (tracking_near || avoidance_.phase == AvoidPhase::SHIFT ||
-             avoidance_.phase == AvoidPhase::PASS);
-        const double fallback_target_d = hold_avoid_target ? avoidance_.target_d : 0.0;
-        if (!use_legacy_behavior) {
-            last_mode_ = external_command->mode;
-            last_target_speed_ = resolved_target_speed;
-        }
+        last_mode_ = external_command->mode;
+        last_target_speed_ = resolved_target_speed;
         const bool fallback_ok = PlanLowSpeedFallback(
-            ego, s, d, fallback_target_d, out_path, 2.0,
-            use_legacy_behavior
-                ? std::numeric_limits<double>::infinity()
-                : resolved_target_speed);
+            ego, s, d, 0.0, out_path, 2.0, resolved_target_speed);
         if (fallback_ok) {
             last_candidate_paths_.push_back(out_path);
             last_candidate_validity_.push_back(true);
@@ -816,74 +662,44 @@ bool FrenetPlanner::PlanInternal(
             avoid_prepare, avoid_committed, out_path, *avoid_prepare_result);
     }
 
-    // Behavior Planner 연동 전의 정적 장애물 AVOID context. 장애물 ID와
-    // 회피 방향을 최초 1회만 고정한다. TRACKING 동안은 LANE_KEEPING을
-    // 유지하고, 실제 기동 거리에서 SHIFT->PASS를 AVOID 안에서 수행한다.
-    // 장애물 통과 후 중앙 복귀는 중복된 RETURN 단계 대신 LANE_KEEPING이 담당한다.
-    PlannerCommand cmd{};
-    double avoid_offset = 0.0;
+    // 외부 command 경로는 FSM이 지정한 mode를 그대로 받아 실행한다. 진입
+    // 가능한 모드는 ValidateExternalCommand의 whitelist가 이미 걸러낸 상태다.
+    PlannerCommand cmd = *external_command;
     double leader_s = 0.0, leader_speed = 0.0, leader_accel = 0.0;
-    bool begin_avoidance = false;
 
-    if (use_legacy_behavior) {
-    UpdateLegacyAvoidContext(s, d, start, obstacles, begin_avoidance);
-
-    bool nearest_found = false;
-    LeaderTarget nearest_leader;
-    UpdateLegacyFollowContext(s, start, obstacles, nearest_found, nearest_leader);
-
-    if (!UpdateLegacyMergeContext(s, ego, start, predicted_obstacles,
-                                  predicted_collision_obstacles, object_yaw_rates,
-                                  context_highway_zone)) {
-        return false;
-    }
-
-    // 행동 결정(AVOID > MERGE > FOLLOW > KEEP)은 SelectLegacyBehavior 한 곳에만
-    // 있다. v2에서는 이 호출이 FSM의 maneuver_type으로 대체된다.
-    SelectLegacyBehavior(begin_avoidance, nearest_found, nearest_leader, cmd,
-                         avoid_offset, leader_s, leader_speed, leader_accel);
-    } else {
-        // 외부 command 경로는 legacy AVOID/FOLLOW/MERGE context를 읽거나
-        // 갱신하지 않는다. 진입 가능한 모드는 ValidateExternalCommand의
-        // whitelist(현재 LANE_KEEPING/STOP)가 이미 걸러낸 상태다.
-        cmd = *external_command;
-
-        // 외부 FOLLOW: FSM이 지정한 대상만 확보한다. FindLeader()나 자동
-        // handoff를 타지 않는다(계약 D1 0.1절 B 분류).
-        if (cmd.mode == FOLLOWING) {
-            const FollowTargetStatus status = ResolveExternalFollowTarget(
-                s, cmd.target_object_id, obstacles, v2_following_);
-            if (status == FollowTargetStatus::LOST) {
-                // 대상을 쓸 수 없다. KEEP으로 자동 전환하지 않는다 - 다음
-                // 행동은 FSM이 새 command_id로 결정한다(계약 12.5절 D5).
-                last_mode_ = FOLLOWING;
-                last_failure_reason_ = PlanFailureReason::TARGET_OBJECT_LOST;
-                return false;
-            }
-            // VALID / GRACE 모두 확보된 상태를 후보 생성기에 전달한다.
-            cmd.leader_s = v2_following_.leader_s;
-            cmd.leader_speed = v2_following_.leader_speed;
-            cmd.leader_accel = v2_following_.leader_accel;
-            // 계약 11.8절: adapter는 custom gap이 꺼져 있으면 0.0 sentinel을
-            // 넘긴다. config 기본값 적용은 이 소비 지점에서 한다 - 변환이
-            // config에 의존하면 "FSM이 준 값"과 "Frenet 기본값"을 피드백에서
-            // 구분할 수 없다.
-            if (!(cmd.time_gap > 0.0)) cmd.time_gap = following_cfg_.time_gap;
-            if (!(cmd.min_gap > 0.0)) cmd.min_gap = following_cfg_.min_gap;
-            cmd.gap_gain = following_cfg_.gap_gain;
+    // 외부 FOLLOW: FSM이 지정한 대상만 확보한다. 자동 선택/handoff를 타지
+    // 않는다(계약 D1 0.1절 B 분류).
+    if (cmd.mode == FOLLOWING) {
+        const FollowTargetStatus status = ResolveExternalFollowTarget(
+            s, cmd.target_object_id, obstacles, v2_following_);
+        if (status == FollowTargetStatus::LOST) {
+            // 대상을 쓸 수 없다. KEEP으로 자동 전환하지 않는다 - 다음
+            // 행동은 FSM이 새 command_id로 결정한다(계약 12.5절 D5).
+            last_mode_ = FOLLOWING;
+            last_failure_reason_ = PlanFailureReason::TARGET_OBJECT_LOST;
+            return false;
         }
-
-        // 외부 AVOID의 대상 확보는 **저속 fallback보다 위**에서 이미 끝났다
-        // (D6-2a). 여기서 하면 ego < 0.5 m/s일 때 도달하지 않는다.
-        // AVOID/FOLLOW가 아닌 명령의 context reset도 위쪽에서 처리했다.
+        // VALID / GRACE 모두 확보된 상태를 후보 생성기에 전달한다.
+        leader_s = v2_following_.leader_s;
+        leader_speed = v2_following_.leader_speed;
+        leader_accel = v2_following_.leader_accel;
+        cmd.leader_s = leader_s;
+        cmd.leader_speed = leader_speed;
+        cmd.leader_accel = leader_accel;
+        // 계약 11.8절: adapter는 custom gap이 꺼져 있으면 0.0 sentinel을
+        // 넘긴다. config 기본값 적용은 이 소비 지점에서 한다 - 변환이
+        // config에 의존하면 "FSM이 준 값"과 "Frenet 기본값"을 피드백에서
+        // 구분할 수 없다.
+        if (!(cmd.time_gap > 0.0)) cmd.time_gap = following_cfg_.time_gap;
+        if (!(cmd.min_gap > 0.0)) cmd.min_gap = following_cfg_.min_gap;
+        cmd.gap_gain = following_cfg_.gap_gain;
     }
+
+    // 외부 AVOID의 대상 확보는 **저속 fallback보다 위**에서 이미 끝났다
+    // (D6-2a). 여기서 하면 ego < 0.5 m/s일 때 도달하지 않는다.
+    // AVOID/FOLLOW가 아닌 명령의 context reset도 위쪽에서 처리했다.
 
     cmd.target_speed = resolved_target_speed;
-    if (cmd.mode == MERGE && merge_.phase == MergePhase::CROSS) {
-        const double floor = merge_.type == MergeType::HIGHWAY
-            ? highway_merge_cfg_.cross_speed_floor : merge_cfg_.cross_speed_floor;
-        cmd.target_speed = std::max(cmd.target_speed, floor);
-    }
 
     // =====================================================================
     // 외부 STOP 실행 (APPROACH / BRAKING / HOLD)
@@ -895,7 +711,7 @@ bool FrenetPlanner::PlanInternal(
     // 먼 구간은 속도만 낮추며 접근하고(APPROACH) 제동거리 안에 들어왔을 때
     // 정지 다항식을 만든다(BRAKING).
     // =====================================================================
-    const bool external_stop_mode = !use_legacy_behavior && cmd.mode == STOP;
+    const bool external_stop_mode = cmd.mode == STOP;
     double stop_distance = 0.0;
     if (external_stop_mode) {
         UpdateExternalStopExecution(s, s_dot, cmd, stop_distance);
@@ -913,132 +729,56 @@ bool FrenetPlanner::PlanInternal(
     }
 
     PlannerDebugStats stats;
-    // TRACKING은 아직 회피를 시작하지 않는 구간이다. 8초 충돌 lookahead가
-    // 먼 정적 장애물까지 미리 중앙 경로를 전부 제거하면 stop/go가 발생하므로,
-    // 잠금된 해당 장애물만 이 구간의 충돌 필터에서 제외한다. 다른
-    // 장애물은 계속 필터링되고, 25m 진입 시 잠금 장애물도 즉시 다시 포함된다.
-    std::vector<TrackedObject> planning_collision_obstacles =
+    const std::vector<TrackedObject>& planning_collision_obstacles =
         predicted_collision_obstacles;
-    if (use_legacy_behavior && avoidance_.active &&
-        avoidance_.phase == AvoidPhase::TRACKING && !begin_avoidance) {
-        planning_collision_obstacles.erase(
-            std::remove_if(planning_collision_obstacles.begin(),
-                           planning_collision_obstacles.end(),
-                           [this](const TrackedObject& obj) {
-                               return obj.id == avoidance_.obstacle_id;
-                           }),
-            planning_collision_obstacles.end());
+
+    // braking-memory 완화(fix/yuntae-frenet-speed-continuity Phase A):
+    // external KEEP/LANE_KEEPING에서만, 그리고 cmd.mode가
+    // UpdateExternalStopExecution의 STOP-APPROACH 위임(Maneuver/Stop.cpp)이
+    // 아니라 실제로 external_command->mode==LANE_KEEPING일 때만 적용한다 -
+    // STOP/FOLLOW의 경계조건 semantics는 start.s_dd(raw/진단용, 이 함수
+    // 앞부분의 Frenet boundary-state 구성 지점)를 그대로 유지해야 한다.
+    FrenetState maneuver_start = start;
+    const bool external_keep_candidates = external_command->mode == LANE_KEEPING;
+    if (external_keep_candidates) {
+        constexpr double kAccelIntentDeadband = 0.3;  // [m/s]
+        maneuver_start.s_dd = ResolveVelocityKeepingBoundaryAcceleration(
+            start.s_dd, s_dot, resolved_target_speed, kAccelIntentDeadband);
+    }
+    std::vector<FrenetPath> candidates = ResolveManeuver(
+        maneuver_start, cmd, ref_, path_cfg_, limits_, lane_width_,
+        planning_collision_obstacles, vehicle_shape_, collision_cfg_, &stats);
+
+    // moderate-speed curvature starvation 완화(Phase B): 실측 MORAI에서
+    // 급커브 근접 중 유효한 결합 후보가 있는데도 전부 중앙(d1=0) 복귀였던
+    // 탓에 사후 곡률 필터에서 통째로 탈락하는 사례가 있었다(예:
+    // combined=78, after_curvature=0). external KEEP에만, 현재 d가 차선
+    // 폭 안일 때만, 현재 오프셋을 유지하는 continuity candidate를
+    // 추가한다 - d=0 강제 클램프가 아니라 대안 후보 하나를 더 얹는
+    // 것뿐이며, 아래 EvaluateCosts가 여전히 target_d=0을 기준으로 비용을
+    // 매기므로 중앙 복귀 후보가 곡률을 통과하면 그쪽이 그대로 선택된다
+    // (kd/kd_path 항이 더 낮은 비용을 준다). 중앙 복귀가 전부 곡률에서
+    // 탈락했을 때만 이 candidate가 유일하게 남아 선택된다.
+    if (external_keep_candidates &&
+        std::fabs(maneuver_start.d) <= lane_width_ * 0.5) {
+        AppendExternalKeepContinuityCandidates(
+            maneuver_start, cmd, planning_collision_obstacles, candidates);
     }
 
-    std::vector<FrenetPath> candidates;
-    if (begin_avoidance) {
-        GenerateLegacyAvoidDirectionCandidates(
-            s, start, planning_collision_obstacles, cmd, avoid_offset, stats, candidates);
-    } else {
-        if (cmd.mode == AVOID) {
-            candidates = GenerateAdaptiveLegacyAvoidCandidates(
-                start, cmd, cmd.avoidance_d_offset, planning_collision_obstacles, stats);
-        } else {
-            // braking-memory 완화(fix/yuntae-frenet-speed-continuity Phase A):
-            // external KEEP/LANE_KEEPING에서만, 그리고 cmd.mode가
-            // UpdateExternalStopExecution의 STOP-APPROACH 위임(Maneuver/Stop.cpp)이
-            // 아니라 실제로 external_command->mode==LANE_KEEPING일 때만 적용한다 -
-            // STOP/FOLLOW/AVOID/MERGE의 경계조건 semantics는 start.s_dd(raw/진단용,
-            // 이 함수 앞부분의 Frenet boundary-state 구성 지점)를 그대로 유지해야
-            // 한다.
-            FrenetState maneuver_start = start;
-            const bool external_keep_candidates =
-                !use_legacy_behavior && external_command->mode == LANE_KEEPING;
-            if (external_keep_candidates) {
-                constexpr double kAccelIntentDeadband = 0.3;  // [m/s]
-                maneuver_start.s_dd = ResolveVelocityKeepingBoundaryAcceleration(
-                    start.s_dd, s_dot, resolved_target_speed, kAccelIntentDeadband);
-            }
-            candidates = ResolveManeuver(maneuver_start, cmd, ref_, path_cfg_, limits_,
-                                         lane_width_, planning_collision_obstacles,
-                                         vehicle_shape_, collision_cfg_, &stats);
-
-            // moderate-speed curvature starvation 완화(Phase B): 실측
-            // MORAI에서 급커브 근접 중 유효한 결합 후보가 있는데도 전부
-            // 중앙(d1=0) 복귀였던 탓에 사후 곡률 필터에서 통째로 탈락하는
-            // 사례가 있었다(예: combined=78, after_curvature=0). external
-            // KEEP에만, 현재 d가 차선 폭 안일 때만, 현재 오프셋을 유지하는
-            // continuity candidate를 추가한다 - d=0 강제 클램프가 아니라
-            // 대안 후보 하나를 더 얹는 것뿐이며, 아래 EvaluateCosts가 여전히
-            // target_d=0을 기준으로 비용을 매기므로 중앙 복귀 후보가 곡률을
-            // 통과하면 그쪽이 그대로 선택된다(kd/kd_path 항이 더 낮은 비용을
-            // 준다). 중앙 복귀가 전부 곡률에서 탈락했을 때만 이 candidate가
-            // 유일하게 남아 선택된다.
-            if (external_keep_candidates &&
-                std::fabs(maneuver_start.d) <= lane_width_ * 0.5) {
-                AppendExternalKeepContinuityCandidates(
-                    maneuver_start, cmd, planning_collision_obstacles, candidates);
-            }
-
-            // 회전교차로 MERGE도 횡방향으로는 global path(d=0)를 추종한다.
-            EvaluateCosts(candidates, cost_weights_, 0.0);
-        }
-    }
-
-    const bool legacy_merge = use_legacy_behavior && cmd.mode == MERGE;
-    const double active_merge_conflict_gap = legacy_merge
-        ? cmd.merge_conflict_s - s : 0.0;
-    const HighwayMergeCheckpoint* output_highway_checkpoint = legacy_merge
-        ? HighwayCheckpointAt(highway_merge_cfg_, merge_.highway_zone_index,
-                              merge_.highway_conflict_index)
-        : nullptr;
-    const double active_merge_completion_distance =
-        legacy_merge && merge_.type == MergeType::HIGHWAY && output_highway_checkpoint
-            ? output_highway_checkpoint->clear_s - output_highway_checkpoint->conflict_s
-            : merge_cfg_.completion_distance;
-    const double active_merge_cross_speed = legacy_merge &&
-        merge_.type == MergeType::HIGHWAY
-        ? highway_merge_cfg_.cross_speed_floor : merge_cfg_.cross_speed_floor;
+    EvaluateCosts(candidates, cost_weights_, 0.0);
 
     if (cmd.mode != prev_mode_) {
         std::printf("[FrenetPlanner] mode: %s -> %s (s=%.2f d=%.3f)\n",
                     ModeName(prev_mode_), ModeName(cmd.mode), s, d);
-        if (cmd.mode == AVOID) {
-            std::printf("[FrenetPlanner]   avoid_id=%d phase=%s target_d=%.3f\n",
-                        avoidance_.obstacle_id,
-                        AvoidPhaseName(static_cast<int>(avoidance_.phase)), avoid_offset);
-        } else if (cmd.mode == FOLLOWING) {
+        if (cmd.mode == FOLLOWING) {
             const double gap = leader_s - s;
             const double desired_gap = following_cfg_.min_gap
                                      + following_cfg_.time_gap * leader_speed;
             std::printf("[FrenetPlanner]   leader_id=%d leader_s=%.2f leader_speed=%.2f "
                         "gap=%.2f desired_gap=%.2f\n",
-                        following_.leader_id, leader_s, leader_speed, gap, desired_gap);
-        } else if (cmd.mode == MERGE) {
-            std::printf("[FrenetPlanner]   %s conflict_gap=%.2f safe=%d "
-                        "entry_time=%.2f preceding_id=%d following_id=%d crossing=%zu\n",
-                        merge_.type == MergeType::HIGHWAY ? "highway" : "roundabout",
-                        active_merge_conflict_gap, merge_.gap_safe ? 1 : 0,
-                        merge_.entry_time, merge_.preceding_id, merge_.following_id,
-                        merge_.crossing_vehicle_count);
+                        cmd.target_object_id, leader_s, leader_speed, gap, desired_gap);
         }
         prev_mode_ = cmd.mode;
-    }
-    if (cmd.mode == MERGE && merge_.phase != prev_merge_phase_) {
-        std::printf("[FrenetPlanner-MERGE] phase: %s -> %s s=%.2f gap=%.2f "
-                    "safe=%d locked=%d front=%d rear=%d entry=%.2f\n",
-                    MergePhaseName(static_cast<int>(prev_merge_phase_)),
-                    MergePhaseName(static_cast<int>(merge_.phase)),
-                    s, active_merge_conflict_gap, merge_.gap_safe ? 1 : 0,
-                    merge_.gap_locked ? 1 : 0, merge_.preceding_id,
-                    merge_.following_id, merge_.entry_time);
-        prev_merge_phase_ = merge_.phase;
-    } else if (cmd.mode != MERGE) {
-        prev_merge_phase_ = MergePhase::CLEAR;
-    }
-
-    // gap selector의 point-arrival 판정만으로 COMMIT하지 않는다. 실제 후보를
-    // conflict zone 이탈점까지 연장한 뒤, 동일 CTRV+OBB 검사로 전체 시간 궤적이
-    // 안전한 후보만 남긴다. 이 검사를 통과한 경로 자체가 아래에서 잠긴다.
-    if (cmd.mode == MERGE && merge_.commit_pending) {
-        ValidatePendingMergeCommitCandidates(
-            cmd, active_merge_completion_distance, active_merge_cross_speed,
-            predicted_collision_obstacles, candidates, stats);
     }
 
     // 안전성 필터를 통과한 후보만 valid로 남아 있다. 외부 STOP에서는 그
@@ -1061,23 +801,13 @@ bool FrenetPlanner::PlanInternal(
     }
 
     if (debug_writer_) {
-        debug_writer_->Publish(ref_, ego, start, cmd.mode,
-                               cmd.mode == AVOID
-                                   ? AvoidPhaseName(static_cast<int>(avoidance_.phase))
-                                   : (cmd.mode == MERGE
-                                      ? MergePhaseName(static_cast<int>(merge_.phase)) : "NONE"),
+        debug_writer_->Publish(ref_, ego, start, cmd.mode, "NONE",
                                cmd.target_speed,
                                predicted_collision_obstacles, candidates,
                                selected_index, stats, cmd);
     }
 
     if (!best) {
-        // Gap 계산만 통과하고 실제 ego 궤적이 충돌 검사를 실패했다면 COMMIT은
-        // 성립하지 않는다. 정지선 통과 전에는 잠금을 즉시 풀고 WAIT로 되돌린다.
-        if (cmd.mode == MERGE && merge_.commit_pending &&
-            s < cmd.merge_stop_s) {
-            RollbackPendingMergeCommit(s, stats);
-        }
         // 후보가 곡률 단계까지는 살아 있었는데 충돌 검사에서 전부 제거된 것은
         // 일시적인 생성 실패가 아니라 명시적인 안전 차단이다. main.cpp가 이
         // 값을 보고 과거 경로 재전송을 금지한다.
@@ -1136,8 +866,7 @@ bool FrenetPlanner::PlanInternal(
                     std::printf("[FrenetPlanner-COLLISION] rank=%zu blocking_id=%d "
                                 "paths=%d object=missing leader_id=%d\n",
                                 rank + 1, blocker_id, blocked_paths,
-                                use_legacy_behavior && following_.active
-                                    ? following_.leader_id : -1);
+                                cmd.mode == FOLLOWING ? cmd.target_object_id : -1);
                     continue;
                 }
                 double obj_s, obj_d, obj_s_dot;
@@ -1154,10 +883,9 @@ bool FrenetPlanner::PlanInternal(
                             rank + 1, blocker_id, blocked_paths, first_t,
                             obj_s, obj_d, obj_gap, obj_s_dot,
                             std::fabs(obj_d) <= lane_width_ * 0.5 ? 1 : 0,
-                            use_legacy_behavior && following_.active
-                                ? following_.leader_id : -1,
-                            use_legacy_behavior && following_.active &&
-                                following_.leader_id == blocker_id ? 1 : 0);
+                            cmd.mode == FOLLOWING ? cmd.target_object_id : -1,
+                            cmd.mode == FOLLOWING &&
+                                cmd.target_object_id == blocker_id ? 1 : 0);
             }
         }
         // STOP BRAKING에서 후보가 0개인 것은 흔한 상황이다. 정지 목표가
@@ -1183,12 +911,12 @@ bool FrenetPlanner::PlanInternal(
         // 안전하게 이어간다. 정상 후보가 하나라도 있으면 이 분기 자체에
         // 도달하지 않으므로 정상 pipeline을 절대 우회하지 않는다.
         //
-        // STOP/FOLLOW/AVOID/MERGE는 각자 별도 정책(위 STOP fail-safe,
-        // GenerateFollowingCandidates의 정지-리더 목표, AVOID/MERGE의 전용
-        // 저속 처리)이 있으므로 여기서는 건드리지 않는다 - 순수 외부 KEEP만
+        // STOP/FOLLOW/AVOID는 각자 별도 정책(위 STOP fail-safe,
+        // GenerateFollowingCandidates의 정지-리더 목표, AVOID의 전용 저속
+        // 처리)이 있으므로 여기서는 건드리지 않는다 - 순수 외부 KEEP만
         // 대상이다.
         constexpr double kNearLowSpeedFallbackV = 1.5;  // [m/s] kLowSpeedFallbackV보다 넉넉히 위
-        const bool external_keep = !use_legacy_behavior && cmd.mode == LANE_KEEPING;
+        const bool external_keep = cmd.mode == LANE_KEEPING;
         if (external_keep &&
             std::fabs(ego.v) < kNearLowSpeedFallbackV &&
             last_failure_reason_ != PlanFailureReason::COLLISION_BLOCKED) {
@@ -1208,15 +936,9 @@ bool FrenetPlanner::PlanInternal(
         TrimExternalStopReverseTrajectory(selected_cartesian);
     }
 
-    if (cmd.mode == MERGE && merge_.commit_pending) {
-        CommitSelectedMergeTrajectory(
-            cmd, *best, s, active_merge_completion_distance,
-            active_merge_cross_speed, selected_cartesian);
-    }
-
     // 모든 모드의 현재 상태를 20Hz 기준 약 4Hz로 출력한다. 모드 전환 로그만으로는
-    // 후보가 사라지는 바로 그 순간이 LANE_KEEPING/AVOID 중 어느 상태였는지 알 수
-    // 없으므로, s/d/속도와 필터 후 후보 수를 같은 줄에 남긴다.
+    // 후보가 사라지는 바로 그 순간이 어느 상태였는지 알 수 없으므로, s/d/속도와
+    // 필터 후 후보 수를 같은 줄에 남긴다.
     static int state_log_tick = 0;
     if (++state_log_tick % 5 == 0) {
         if (cmd.mode == FOLLOWING) {
@@ -1230,32 +952,16 @@ bool FrenetPlanner::PlanInternal(
                         "ego_speed=%.2f leader_speed=%.2f relative_speed=%.2f "
                         "gap=%.2f desired_gap=%.2f gap_error=%.2f approach_speed=%.2f chosen_d=%.3f "
                         "cost=%.2f candidates=%zu/%zu missing=%d\n",
-                        following_.leader_id, s, d, ego.v, leader_speed,
+                        cmd.target_object_id, s, d, ego.v, leader_speed,
                         ego.v - leader_speed, gap, desired_gap, gap - desired_gap,
                         approach_speed, best->d.empty() ? d : best->d.back(), best->cost_total,
                         stats.combined_valid_after_collision, stats.combined_total,
-                        following_.missing_cycles);
-        } else if (cmd.mode == MERGE) {
-            std::printf("[FrenetPlanner-STATE] mode=MERGE phase=%s s=%.2f d=%.3f "
-                        "speed=%.2f target_speed=%.2f conflict_gap=%.2f "
-                        "entry=%.2f clear=%.2f front=%d(%.2f) rear=%d(%.2f) "
-                        "locked=%d candidates=%zu/%zu\n",
-                        MergePhaseName(static_cast<int>(merge_.phase)),
-                        s, d, ego.v, cmd.target_speed, active_merge_conflict_gap,
-                        merge_.entry_time, merge_.clear_time,
-                        merge_.preceding_id, merge_.preceding_time,
-                        merge_.following_id, merge_.following_time,
-                        merge_.gap_locked ? 1 : 0,
-                        stats.combined_valid_after_collision, stats.combined_total);
+                        v2_following_.missing_cycles);
         } else {
-            std::printf("[FrenetPlanner-STATE] mode=%s phase=%s s=%.2f d=%.3f speed=%.2f target_speed=%.2f "
-                        "target_d=%.3f chosen_d=%.3f cost=%.2f candidates=%zu/%zu\n",
-                        ModeName(cmd.mode), cmd.mode == AVOID
-                            ? AvoidPhaseName(static_cast<int>(avoidance_.phase))
-                            : (cmd.mode == MERGE
-                               ? MergePhaseName(static_cast<int>(merge_.phase)) : "NONE"),
+            std::printf("[FrenetPlanner-STATE] mode=%s s=%.2f d=%.3f speed=%.2f target_speed=%.2f "
+                        "chosen_d=%.3f cost=%.2f candidates=%zu/%zu\n",
+                        ModeName(cmd.mode),
                         s, d, ego.v, cmd.target_speed,
-                        cmd.mode == AVOID ? avoid_offset : 0.0,
                         best->d.empty() ? d : best->d.back(), best->cost_total,
                         stats.combined_valid_after_collision, stats.combined_total);
         }
