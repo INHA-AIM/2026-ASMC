@@ -115,8 +115,7 @@ ConversionStatus ConvertBehaviorContext(
 
 ConversionStatus ConvertDetectedObjects(
     const asmc_msgs::DetectedObjectArray& message,
-    std::vector<TrackedObject>& objects,
-    std::vector<TrackedObject>& collision_objects) {
+    std::vector<TrackedObject>& objects) {
     if (!IsMapFrame(message.header.frame_id)) {
         return ConversionStatus::INVALID_FRAME;
     }
@@ -124,9 +123,7 @@ ConversionStatus ConvertDetectedObjects(
         return ConversionStatus::INVALID_TIMESTAMP;
     }
     std::vector<TrackedObject> converted_objects;
-    std::vector<TrackedObject> converted_collision_objects;
     converted_objects.reserve(message.objects.size());
-    converted_collision_objects.reserve(message.objects.size());
     std::unordered_set<int32_t> object_ids;
 
     for (const auto& message_object : message.objects) {
@@ -161,28 +158,27 @@ ConversionStatus ConvertDetectedObjects(
         object.length = message_object.length;
         object.height = message_object.height;
 
-        TrackedObject collision_object = object;
-        collision_object.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
-        for (std::size_t i = 0; i < collision_object.corners.size(); ++i) {
+        // authoritative geometry: perception이 제공하는 obb_corners만
+        // 사용한다. center/width/length/yaw로 geometry를 재생성하지 않는다.
+        object.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
+        for (std::size_t i = 0; i < object.corners.size(); ++i) {
             const auto& corner = message_object.obb_corners[i];
-            collision_object.corners[i] = {corner.x, corner.y, corner.z};
+            object.corners[i] = {corner.x, corner.y, corner.z};
         }
         const geometry::CornerValidationResult validation =
-            geometry::ValidateCorners8(collision_object.corners);
+            geometry::ValidateCorners8(object.corners);
         const geometry::ZRange z_range =
-            geometry::ComputeZRange(collision_object.corners);
+            geometry::ComputeZRange(object.corners);
         if (!validation.valid || !z_range.valid ||
             z_range.max - z_range.min <= 1e-6) {
             return ConversionStatus::INVALID_OBJECT_GEOMETRY;
         }
-        collision_object.geometry_valid = true;
-        collision_object.z_valid = true;
+        object.geometry_valid = true;
+        object.z_valid = true;
         converted_objects.push_back(object);
-        converted_collision_objects.push_back(collision_object);
     }
 
     objects = std::move(converted_objects);
-    collision_objects = std::move(converted_collision_objects);
     return ConversionStatus::OK;
 }
 

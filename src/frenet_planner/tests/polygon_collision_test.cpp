@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 
-#include "frenet_planner/Geometry/ObjectGeometrySynthesis.hpp"
+#include "frenet_planner/Geometry/PolygonUtils.hpp"
 
 namespace {
 
@@ -15,6 +15,10 @@ void Expect(bool condition, const std::string& name) {
     else { std::cerr << "[FAIL] " << name << '\n'; ++g_failures; }
 }
 
+// authoritative 8-corner OBB를 직접 구성한다(production은 이제 이런
+// center/width/length/yaw 기반 geometry 합성을 하지 않는다 - 테스트만
+// 자체 fixture로 명시적 corners를 만든다). length=width=2.0, height=1.0
+// 직사각형을 yaw만큼 회전해 두 z 층(0, height)에 배치한다.
 TrackedObject MakeObstacle(double x, double y, double vx = 0.0,
                              double vy = 0.0, double yaw = 0.0) {
     TrackedObject object;
@@ -27,7 +31,27 @@ TrackedObject MakeObstacle(double x, double y, double vx = 0.0,
     object.height = 1.0;
     object.vx = vx;
     object.vy = vy;
-    return MakeLegacyTrackedObject(object);
+
+    const double half_length = object.length * 0.5;
+    const double half_width = object.width * 0.5;
+    const double cosine = std::cos(yaw);
+    const double sine = std::sin(yaw);
+    const double local_xy[4][2] = {
+        {-half_length, -half_width},
+        { half_length, -half_width},
+        { half_length,  half_width},
+        {-half_length,  half_width},
+    };
+    for (std::size_t i = 0; i < 4; ++i) {
+        const double corner_x = x + cosine * local_xy[i][0] - sine * local_xy[i][1];
+        const double corner_y = y + sine * local_xy[i][0] + cosine * local_xy[i][1];
+        object.corners[i] = {corner_x, corner_y, 0.0};
+        object.corners[i + 4] = {corner_x, corner_y, object.height};
+    }
+    object.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
+    object.geometry_valid = geometry::ValidateCorners8(object.corners).valid;
+    object.z_valid = false;
+    return object;
 }
 
 }  // namespace

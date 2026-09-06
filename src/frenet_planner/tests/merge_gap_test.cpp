@@ -26,7 +26,7 @@
 
 #include "frenet_planner/Maneuver/Merge.hpp"
 
-#include "frenet_planner/Geometry/ObjectGeometrySynthesis.hpp"
+#include "frenet_planner/Geometry/PolygonUtils.hpp"
 
 #include <cmath>
 #include <iostream>
@@ -58,6 +58,11 @@ RefLine MakeStraightRefLine(double total_s, double step = 1.0) {
     return ref;
 }
 
+// authoritative 8-corner OBB를 직접 구성한다. FindHighwayMergeGap의 충돌
+// 재검사(CheckObstacleOverlap)는 geometry_valid인 corners를 요구하므로,
+// production 합성기 없이 이 fixture가 직접 회전된 직사각형을 두 z 층에
+// 채워 넣는다(실제 perception obb_corners 경로와 동일한 authoritative
+// geometry 형태).
 TrackedObject MakeVehicleAt(int id, double x, double y, double heading,
                             double speed) {
     TrackedObject obj;
@@ -74,10 +79,27 @@ TrackedObject MakeVehicleAt(int id, double x, double y, double heading,
     obj.length = 4.5;
     obj.height = 1.6;
     obj.yaw_rate = 0.0;
-    // FindHighwayMergeGap의 충돌 재검사(CheckObstacleOverlap)는
-    // geometry_valid인 authoritative OBB corners를 요구한다 - 합성해서
-    // 채운다(실제 perception 경로와 동일하게).
-    return MakeLegacyTrackedObject(obj);
+
+    const double half_length = obj.length * 0.5;
+    const double half_width = obj.width * 0.5;
+    const double cosine = std::cos(heading);
+    const double sine = std::sin(heading);
+    const double local_xy[4][2] = {
+        {-half_length, -half_width},
+        { half_length, -half_width},
+        { half_length,  half_width},
+        {-half_length,  half_width},
+    };
+    for (std::size_t i = 0; i < 4; ++i) {
+        const double corner_x = x + cosine * local_xy[i][0] - sine * local_xy[i][1];
+        const double corner_y = y + sine * local_xy[i][0] + cosine * local_xy[i][1];
+        obj.corners[i] = {corner_x, corner_y, 0.0};
+        obj.corners[i + 4] = {corner_x, corner_y, obj.height};
+    }
+    obj.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
+    obj.geometry_valid = geometry::ValidateCorners8(obj.corners).valid;
+    obj.z_valid = true;
+    return obj;
 }
 
 MergeConfig MakeRoundaboutCfg(double conflict_s) {

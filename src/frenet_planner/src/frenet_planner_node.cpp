@@ -455,7 +455,6 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
     CartesianState ego{};
     PlannerCommand command{};
     std::vector<TrackedObject> objects;
-    std::vector<TrackedObject> collision_objects;
 
     const ConversionStatus vehicle_status =
         ConvertVehicleState(snapshot.vehicle, ego);
@@ -514,7 +513,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
     }
 
     const ConversionStatus objects_status =
-        ConvertDetectedObjects(snapshot.objects, objects, collision_objects);
+        ConvertDetectedObjects(snapshot.objects, objects);
     if (objects_status != ConversionStatus::OK) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: objects conversion failed (%s)",
@@ -524,7 +523,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
     }
 
     CartesianPath path;
-    if (!planner_.Plan(ego, objects, collision_objects, command, path)) {
+    if (!planner_.Plan(ego, objects, command, path)) {
         ++plan_fail_streak_;
         // 이전 궤적 재사용은 "이번 사이클만 후보를 못 만든" 일시적 실패에만
         // 허용된다. 명령 자체가 잘못됐거나(INVALID_COMMAND) 지원하지 않는
@@ -932,8 +931,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     has_stop_reference_vehicle_ = true;
 
     std::vector<TrackedObject> objects;
-    std::vector<TrackedObject> collision_objects;
-    if (ConvertDetectedObjects(snapshot.objects, objects, collision_objects) !=
+    if (ConvertDetectedObjects(snapshot.objects, objects) !=
         ConversionStatus::OK) {
         CommandAcceptance failed = acceptance;
         failed.planning_target = PlanningTarget::NONE;
@@ -1253,7 +1251,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         CartesianPath committed_path;
         FrenetPlanner::AvoidPrepareResult committed;
         const bool plan_ok = planner_.PlanCommittedAvoid(
-            ego, objects, collision_objects, planner_command, committed_path,
+            ego, objects, planner_command, committed_path,
             committed);
 
         if (!plan_ok) {
@@ -1485,7 +1483,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         CartesianPath maintenance;
         FrenetPlanner::AvoidPrepareResult prepare;
         const bool prepare_ok = planner_.PrepareAvoid(
-            ego, objects, collision_objects, planner_command, maintenance,
+            ego, objects, planner_command, maintenance,
             prepare);
 
         if (!prepare_ok) {
@@ -1705,7 +1703,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 
     // ---- 5. planning ----------------------------------------------------
     CartesianPath path;
-    const bool plan_ok = planner_.Plan(ego, objects, collision_objects,
+    const bool plan_ok = planner_.Plan(ego, objects,
                                        planner_command, path);
 
     if (!plan_ok) {

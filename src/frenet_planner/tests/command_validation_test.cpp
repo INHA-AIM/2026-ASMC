@@ -56,21 +56,17 @@ CartesianState LoadPoseNearArcLength(const std::string& path,
     return pose;
 }
 
-TrackedObject MakeObjectInfo(int id, double x, double y) {
-    TrackedObject object;
-    object.id = id;
-    object.x = x;
-    object.y = y;
-    object.z = 1.0;
-    object.width = 2.0;
-    object.length = 4.0;
-    object.height = 2.0;
-    return object;
-}
-
+// authoritative 8-corner OBB(perception의 obb_corners와 같은 형태)를
+// 직접 채운 객체.
 TrackedObject MakeAuthoritativeBox(int id, double x, double y) {
     TrackedObject obstacle;
     obstacle.id = id;
+    obstacle.x = x;
+    obstacle.y = y;
+    obstacle.z = 1.0;
+    obstacle.width = 2.0;
+    obstacle.length = 4.0;
+    obstacle.height = 2.0;
     obstacle.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
     obstacle.geometry_valid = true;
     obstacle.z_valid = true;
@@ -266,31 +262,27 @@ int main() {
                planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
            "mode whitelist is checked before field validation");
 
-    // --- collision-object overload ----------------------------------------
+    // --- authoritative OBB objects ------------------------------------------
+    // 단일 objects collection이 authoritative corners를 이미 갖고 있을 때도
+    // command validation 자체는 장애물 유무와 무관하게 동일하게 동작해야
+    // 한다.
     const std::vector<TrackedObject> objects = {
-        MakeObjectInfo(31, ego.x + 100.0, ego.y + 100.0)};
-    const std::vector<TrackedObject> boxes = {
         MakeAuthoritativeBox(31, ego.x + 100.0, ego.y + 100.0)};
 
-    Expect(planner.Plan(ego, objects, boxes, keep, path) &&
+    Expect(planner.Plan(ego, objects, keep, path) &&
                planner.last_failure_reason() == Reason::NONE,
-           "collision overload accepts a matched KEEP command");
+           "authoritative OBB object accepts a matched KEEP command");
 
     PlannerCommand still_closed{};
     // D6-1에서 AVOID가 열렸으므로 여기도 아직 닫힌 모드로 바꾼다(위와 동일).
     still_closed.mode = LANE_CHANGE_LEFT;
-    Expect(!planner.Plan(ego, objects, boxes, still_closed, path) &&
+    Expect(!planner.Plan(ego, objects, still_closed, path) &&
                planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,
-           "collision overload rejects unsupported mode identically");
+           "authoritative OBB object rejects unsupported mode identically");
 
-    Expect(!planner.Plan(ego, objects, boxes, stop_unset, path) &&
+    Expect(!planner.Plan(ego, objects, stop_unset, path) &&
                planner.last_failure_reason() == Reason::INVALID_COMMAND,
-           "collision overload rejects invalid STOP identically");
-
-    const std::vector<TrackedObject> no_boxes;
-    Expect(!planner.Plan(ego, objects, no_boxes, keep, path) &&
-               planner.last_failure_reason() == Reason::INVALID_COMMAND,
-           "mismatched collision geometry count is INVALID_COMMAND");
+           "authoritative OBB object rejects invalid STOP identically");
 
     // --- 실패 reason이 재사용 정책과 섞이지 않는지 ------------------------
     // 어떤 command 결함도 TRANSIENT_GENERATION_FAILURE로 보고되면 안 된다.

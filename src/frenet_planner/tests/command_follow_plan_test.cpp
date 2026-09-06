@@ -82,6 +82,10 @@ CartesianState MakeEgo(const Pose2D& pose, double speed) {
 }
 
 // 경로 위 target_s 지점에 놓인 차량. speed는 진행 방향 속도다.
+// authoritative 8-corner OBB(perception의 obb_corners와 같은 형태)를 heading
+// 방향으로 직접 채운다. production은 center/width/length/yaw로 geometry를
+// 재생성하지 않으므로, corners 없는 객체는 충돌검사에서 무조건 겹침으로
+// 취급된다(CollisionChecker.cpp의 안전측 fallback).
 TrackedObject MakeVehicle(const Waypoints& waypoints, int id, double target_s,
                        double speed) {
     const Pose2D pose = PoseAt(waypoints, target_s);
@@ -96,6 +100,25 @@ TrackedObject MakeVehicle(const Waypoints& waypoints, int id, double target_s,
     object.width = 2.0;
     object.length = 4.5;
     object.height = 1.5;
+    object.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
+    object.geometry_valid = true;
+    object.z_valid = true;
+    const double half_length = object.length * 0.5;
+    const double half_width = object.width * 0.5;
+    const double cosine = std::cos(pose.yaw);
+    const double sine = std::sin(pose.yaw);
+    const double local_xy[4][2] = {
+        {-half_length, -half_width}, {half_length, -half_width},
+        {half_length, half_width}, {-half_length, half_width},
+    };
+    for (std::size_t i = 0; i < 4; ++i) {
+        const double x = object.x + cosine * local_xy[i][0] -
+                          sine * local_xy[i][1];
+        const double y = object.y + sine * local_xy[i][0] +
+                          cosine * local_xy[i][1];
+        object.corners[i] = {x, y, 0.0};
+        object.corners[i + 4] = {x, y, object.height};
+    }
     return object;
 }
 
@@ -150,7 +173,6 @@ int main() {
     constexpr double kEgoS = 200.0;
     constexpr double kEgoSpeed = 8.0;
     const CartesianState ego = MakeEgo(PoseAt(waypoints, kEgoS), kEgoSpeed);
-    const std::vector<TrackedObject> no_collision_objects;
 
     // --- 지정 대상만 있는 경우 --------------------------------------------
     {

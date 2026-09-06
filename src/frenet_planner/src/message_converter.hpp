@@ -32,10 +32,12 @@ ConversionStatus ConvertVehicleState(const asmc_msgs::VehicleState& message,
                                      CartesianState& state);
 ConversionStatus ConvertBehaviorContext(
     const asmc_msgs::BehaviorContext& message, PlannerCommand& command);
+// obb_corners[8](perception이 제공하는 authoritative geometry)이 유효한
+// 8-corner OBB로 검증되지 않는 object는 INVALID_OBJECT_GEOMETRY로 거부한다
+// - Planner는 center/width/length/yaw로 geometry를 재생성하지 않는다.
 ConversionStatus ConvertDetectedObjects(
     const asmc_msgs::DetectedObjectArray& message,
-    std::vector<TrackedObject>& objects,
-    std::vector<TrackedObject>& collision_objects);
+    std::vector<TrackedObject>& objects);
 ConversionStatus ConvertCartesianPath(
     const CartesianPath& path, double dt,
     const asmc_msgs::VehicleState& ego_at_plan,

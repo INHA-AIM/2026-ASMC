@@ -54,13 +54,11 @@ public:
     // STOP / EMERGENCY / FOLLOWING / AVOID이며(IsSupportedExternalMode 참고),
     // MERGE/LANE_CHANGE는 core 구현이 있어도 UNSUPPORTED_BEHAVIOR로 거부한다.
     // ROS 계약이 확정되는 모드부터 whitelist를 확장한다(D7/D8).
+    // obstacles의 각 TrackedObject는 authoritative 8 corners(perception의
+    // obb_corners)를 이미 채운 상태여야 한다 - Planner는 center/dimension
+    // 으로 geometry를 재생성하지 않는다. corners 없이 들어온 객체를 걸러
+    // 내는 책임은 message_converter의 ConvertDetectedObjects에 있다.
     bool Plan(const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
-              const PlannerCommand& command, CartesianPath& out_path);
-
-    // ROS/LiDAR 경로: collision_obstacles의 authoritative 8 corners를 SAT에
-    // 직접 사용하며 center/dimension 기반 geometry 재생성을 하지 않는다.
-    bool Plan(const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
-              const std::vector<TrackedObject>& collision_obstacles,
               const PlannerCommand& command, CartesianPath& out_path);
 
     // Cartesian 점을 reference line의 종방향 좌표 s로 투영한다.
@@ -302,7 +300,6 @@ public:
     //   maintenance 실패             -> false                        안전정지
     bool PrepareAvoid(const CartesianState& ego,
                       const std::vector<TrackedObject>& obstacles,
-                      const std::vector<TrackedObject>& collision_obstacles,
                       const PlannerCommand& command,
                       CartesianPath& maintenance_path,
                       AvoidPrepareResult& result);
@@ -312,7 +309,6 @@ public:
     bool PlanCommittedAvoid(
         const CartesianState& ego,
         const std::vector<TrackedObject>& obstacles,
-        const std::vector<TrackedObject>& collision_obstacles,
         const PlannerCommand& command, CartesianPath& out_path,
         AvoidPrepareResult& result);
 
@@ -402,7 +398,6 @@ private:
     bool PlanInternal(const CartesianState& ego,
                       const std::vector<TrackedObject>& obstacles,
                       const PlannerCommand* external_command,
-                      const std::vector<TrackedObject>* collision_obstacles,
                       ExternalPlanningPurpose purpose,
                       CartesianPath& out_path,
                       AvoidPrepareResult* avoid_prepare_result);
@@ -420,7 +415,6 @@ private:
         double d_dot, double d_ddot,
         const std::vector<TrackedObject>& obstacles,
         const std::vector<TrackedObject>& predicted_obstacles,
-        const std::vector<TrackedObject>& predicted_collision_obstacles,
         double resolved_target_speed, const PlannerCommand& external_command,
         CartesianPath& out_path);
 

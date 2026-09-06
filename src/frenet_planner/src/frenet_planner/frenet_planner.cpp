@@ -7,7 +7,6 @@
 #include <limits>
 
 #include "frenet_planner/Math/Utils.hpp"
-#include "frenet_planner/Geometry/ObjectGeometrySynthesis.hpp"
 #include "frenet_planner/Maneuver/ManeuverUtils.hpp"
 #include "frenet_planner/Speed/CurveSpeed.hpp"
 #include "frenet_planner/Speed/SpeedPolicy.hpp"
@@ -346,32 +345,12 @@ bool FrenetPlanner::Plan(const CartesianState& ego,
         last_failure_reason_ = reason;
         return false;
     }
-    return PlanInternal(ego, obstacles, &command, nullptr,
-                        ExternalPlanningPurpose::NORMAL, out_path, nullptr);
-}
-
-bool FrenetPlanner::Plan(
-    const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
-    const std::vector<TrackedObject>& collision_obstacles,
-    const PlannerCommand& command, CartesianPath& out_path) {
-    PlanFailureReason reason = PlanFailureReason::NONE;
-    if (!ValidateExternalCommand(command, reason)) {
-        last_failure_reason_ = reason;
-        return false;
-    }
-    // collision geometry는 ObjectInfo와 1:1로 대응해야 한다. 어긋나면 command가
-    // 아니라 호출자의 입력 조립이 잘못된 것이므로 역시 즉시 거부한다.
-    if (collision_obstacles.size() != obstacles.size()) {
-        last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
-        return false;
-    }
-    return PlanInternal(ego, obstacles, &command, &collision_obstacles,
+    return PlanInternal(ego, obstacles, &command,
                         ExternalPlanningPurpose::NORMAL, out_path, nullptr);
 }
 
 bool FrenetPlanner::PrepareAvoid(
     const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
-    const std::vector<TrackedObject>& collision_obstacles,
     const PlannerCommand& command, CartesianPath& maintenance_path,
     AvoidPrepareResult& result) {
     result = AvoidPrepareResult{};
@@ -385,18 +364,13 @@ bool FrenetPlanner::PrepareAvoid(
         last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
         return false;
     }
-    if (collision_obstacles.size() != obstacles.size()) {
-        last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
-        return false;
-    }
-    return PlanInternal(ego, obstacles, &command, &collision_obstacles,
+    return PlanInternal(ego, obstacles, &command,
                         ExternalPlanningPurpose::AVOID_PREPARE,
                         maintenance_path, &result);
 }
 
 bool FrenetPlanner::PlanCommittedAvoid(
     const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
-    const std::vector<TrackedObject>& collision_obstacles,
     const PlannerCommand& command, CartesianPath& out_path,
     AvoidPrepareResult& result) {
     result = AvoidPrepareResult{};
@@ -406,12 +380,11 @@ bool FrenetPlanner::PlanCommittedAvoid(
         return false;
     }
     if (command.mode != AVOID ||
-        collision_obstacles.size() != obstacles.size() ||
         !v2_avoidance_.active || !v2_avoidance_.committed) {
         last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
         return false;
     }
-    return PlanInternal(ego, obstacles, &command, &collision_obstacles,
+    return PlanInternal(ego, obstacles, &command,
                         ExternalPlanningPurpose::AVOID_COMMITTED,
                         out_path, &result);
 }
@@ -419,7 +392,6 @@ bool FrenetPlanner::PlanCommittedAvoid(
 bool FrenetPlanner::PlanInternal(
     const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
     const PlannerCommand* external_command,
-    const std::vector<TrackedObject>* collision_obstacles,
     ExternalPlanningPurpose purpose, CartesianPath& out_path,
     AvoidPrepareResult* avoid_prepare_result) {
     // purpose가 계산 내용을 정한다. 포인터 유무로 판단하지 않는다 - 진단용
@@ -465,16 +437,15 @@ bool FrenetPlanner::PlanInternal(
         if (it->second.missing_cycles > 20) it = object_tracks_.erase(it);
         else ++it;
     }
+    // obstacles의 각 TrackedObject는 이미 authoritative corners(perception의
+    // obb_corners)를 갖고 있다 - 여기서 다시 만들지 않는다. yaw_rate만
+    // 연속 관측으로 갱신한 사본을 만들어 motion과 collision geometry 양쪽에
+    // 그대로 쓴다(더 이상 두 개의 병렬 vector로 나누지 않는다).
     std::vector<TrackedObject> predicted_obstacles = obstacles;
     for (auto& obj : predicted_obstacles) {
         const auto it = object_yaw_rates.find(obj.id);
         obj.yaw_rate = it == object_yaw_rates.end() ? 0.0 : it->second;
     }
-    // ROS/LiDAR 경로는 perception이 준 corners를 그대로 사용한다. Legacy API만
-    // ObjectInfo의 center/dimension/yaw로 기존 adapter geometry를 생성한다.
-    const std::vector<TrackedObject> predicted_collision_obstacles =
-        collision_obstacles ? *collision_obstacles
-                            : MakeLegacyTrackedObjects(predicted_obstacles);
 
     double resolved_target_speed = LookaheadTargetSpeed(
         ref_, s, ego.v, curve_speed_cfg_, limits_.max_longitudinal_accel,
@@ -659,13 +630,13 @@ bool FrenetPlanner::PlanInternal(
     if (avoid_prepare || avoid_committed) {
         return AvoidProcess(
             ego, start, s, d, resolved_target_speed,
-            predicted_collision_obstacles, *external_command,
+            predicted_obstacles, *external_command,
             avoid_prepare, avoid_committed, out_path, *avoid_prepare_result);
     }
 
     return ResolveAndExecuteManeuver(
         ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
-        predicted_obstacles, predicted_collision_obstacles,
+        predicted_obstacles,
         resolved_target_speed, *external_command, out_path);
 }
 
@@ -675,7 +646,6 @@ bool FrenetPlanner::ResolveAndExecuteManeuver(
     double d_dot, double d_ddot,
     const std::vector<TrackedObject>& obstacles,
     const std::vector<TrackedObject>& predicted_obstacles,
-    const std::vector<TrackedObject>& predicted_collision_obstacles,
     double resolved_target_speed, const PlannerCommand& command,
     CartesianPath& out_path) {
     const PlannerCommand* external_command = &command;
@@ -747,7 +717,7 @@ bool FrenetPlanner::ResolveAndExecuteManeuver(
 
     PlannerDebugStats stats;
     const std::vector<TrackedObject>& planning_collision_obstacles =
-        predicted_collision_obstacles;
+        predicted_obstacles;
 
     // braking-memory 완화(fix/yuntae-frenet-speed-continuity Phase A):
     // external KEEP/LANE_KEEPING에서만, 그리고 cmd.mode가
@@ -820,7 +790,7 @@ bool FrenetPlanner::ResolveAndExecuteManeuver(
     if (debug_writer_) {
         debug_writer_->Publish(ref_, ego, start, cmd.mode, "NONE",
                                cmd.target_speed,
-                               predicted_collision_obstacles, candidates,
+                               predicted_obstacles, candidates,
                                selected_index, stats, cmd);
     }
 

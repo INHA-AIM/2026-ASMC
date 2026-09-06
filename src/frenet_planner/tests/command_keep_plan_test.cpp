@@ -47,21 +47,18 @@ CartesianState LoadPoseNearArcLength(const std::string& path,
     return pose;
 }
 
-TrackedObject MakeObjectInfo(int id, double x, double y) {
-    TrackedObject object;
-    object.id = id;
-    object.x = x;
-    object.y = y;
-    object.z = 1.0;
-    object.width = 2.0;
-    object.length = 4.0;
-    object.height = 2.0;
-    return object;
-}
-
+// authoritative 8-corner OBB(perception의 obb_corners와 같은 형태)를
+// 직접 채운 객체. production은 더 이상 center/width/length로 geometry를
+// 재생성하지 않으므로, corners 없는 객체는 애초에 유효하지 않다.
 TrackedObject MakeAuthoritativeBox(int id, double x, double y) {
     TrackedObject obstacle;
     obstacle.id = id;
+    obstacle.x = x;
+    obstacle.y = y;
+    obstacle.z = 1.0;
+    obstacle.width = 2.0;
+    obstacle.length = 4.0;
+    obstacle.height = 2.0;
     obstacle.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
     obstacle.geometry_valid = true;
     obstacle.z_valid = true;
@@ -101,19 +98,13 @@ int main() {
            "external KEEP plans normally inside the roundabout merge-zone window");
 
     const std::vector<TrackedObject> outside_objects = {
-        MakeObjectInfo(31, ego.x + 100.0, ego.y + 100.0)};
-    const std::vector<TrackedObject> outside_collision_objects = {
         MakeAuthoritativeBox(31, ego.x + 100.0, ego.y + 100.0)};
-    Expect(planner.Plan(ego, outside_objects, outside_collision_objects,
-                        keep, path) && !path.x.empty(),
+    Expect(planner.Plan(ego, outside_objects, keep, path) && !path.x.empty(),
            "authoritative OBB outside path preserves KEEP trajectory");
 
     const std::vector<TrackedObject> blocking_objects = {
-        MakeObjectInfo(32, ego.x, ego.y)};
-    const std::vector<TrackedObject> blocking_collision_objects = {
         MakeAuthoritativeBox(32, ego.x, ego.y)};
-    Expect(!planner.Plan(ego, blocking_objects, blocking_collision_objects,
-                         keep, path) &&
+    Expect(!planner.Plan(ego, blocking_objects, keep, path) &&
                planner.last_failure_reason() ==
                    FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED,
            "authoritative OBB on ego path blocks all candidates through SAT");

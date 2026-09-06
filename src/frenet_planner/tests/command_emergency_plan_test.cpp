@@ -101,7 +101,6 @@ int main() {
     }
 
     const std::vector<TrackedObject> no_objects;
-    const std::vector<TrackedObject> no_collision_objects;
 
     // --- 주행 중 긴급정지 ------------------------------------------------
     {
@@ -112,7 +111,7 @@ int main() {
         }
         const CartesianState ego = LoadPoseNearArcLength(waypoints, 200.0, 8.0);
         CartesianPath path;
-        const bool ok = planner.Plan(ego, no_objects, no_collision_objects,
+        const bool ok = planner.Plan(ego, no_objects,
                                      MakeEmergencyCommand(), path);
         Expect(ok, "EMERGENCY with NaN stop_position still produces a path");
         Expect(planner.last_failure_reason() ==
@@ -134,7 +133,7 @@ int main() {
         if (!planner.Init(config)) return 1;
         const CartesianState ego = LoadPoseNearArcLength(waypoints, 200.0, 0.0);
         CartesianPath path;
-        const bool ok = planner.Plan(ego, no_objects, no_collision_objects,
+        const bool ok = planner.Plan(ego, no_objects,
                                      MakeEmergencyCommand(), path);
         Expect(ok && !path.v.empty(),
                "EMERGENCY at standstill still emits a path");
@@ -153,7 +152,7 @@ int main() {
         if (!planner.Init(config)) return 1;
         const CartesianState ego = LoadPoseNearArcLength(waypoints, 200.0, speed);
         CartesianPath path;
-        const bool ok = planner.Plan(ego, no_objects, no_collision_objects,
+        const bool ok = planner.Plan(ego, no_objects,
                                      MakeEmergencyCommand(), path);
         Expect(ok && IsValidStopPath(path),
                "EMERGENCY from " + std::to_string(static_cast<int>(speed)) +
@@ -193,7 +192,7 @@ int main() {
         PlannerCommand stop{};
         stop.mode = STOP;  // stop_position은 NaN
         CartesianPath path;
-        const bool ok = planner.Plan(ego, no_objects, no_collision_objects,
+        const bool ok = planner.Plan(ego, no_objects,
                                      stop, path);
         Expect(!ok && planner.last_failure_reason() ==
                           FrenetPlanner::PlanFailureReason::INVALID_COMMAND,

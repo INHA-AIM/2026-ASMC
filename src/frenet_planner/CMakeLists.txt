@@ -43,7 +43,6 @@ add_library(frenet_planner_core
   src/frenet_planner/Maneuver/Stop.cpp
   src/frenet_planner/Maneuver/Avoid.cpp
   src/frenet_planner/Maneuver/Merge.cpp
-  src/frenet_planner/Geometry/ObjectGeometrySynthesis.cpp
   src/frenet_planner/Common/ParameterLoader.cpp
   src/frenet_planner/visualization/planner_debug_writer.cpp
   src/frenet_planner/Reference/Reference.cpp
@@ -159,14 +158,6 @@ if(CATKIN_ENABLE_TESTING)
     frenet_geometry
   )
   add_test(NAME geometry_foundation_test COMMAND geometry_foundation_test)
-
-  add_executable(object_geometry_synthesis_test
-    tests/object_geometry_synthesis_test.cpp
-  )
-  target_link_libraries(object_geometry_synthesis_test
-    frenet_planner_core
-  )
-  add_test(NAME object_geometry_synthesis_test COMMAND object_geometry_synthesis_test)
 
   add_executable(polygon_collision_test
     tests/polygon_collision_test.cpp
