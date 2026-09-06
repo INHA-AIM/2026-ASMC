@@ -121,7 +121,7 @@ morai_msgs::CtrlCmd ToRosControlCommand(const MPCControl& control,
     } else {
         message.accel = 0.0;
         message.brake =
-            clip(-control.accel / std::fabs(params.accel_min), 0.0, 1.0);
+            clip(-control.accel / params.brake_full_decel, 0.0, 1.0);
     }
     // morai_msgs/CtrlCmd.steering is radians. The MORAI bridge owns the
     // transport-specific conversion from radians to normalized UDP steering.

@@ -158,7 +158,8 @@ int main() {
         if (accel_raw >= 0.0) {
             accel_norm = clip(accel_raw / mpc_params.accel_max, 0.0, 1.0);
         } else {
-            brake_norm = clip(-accel_raw / std::fabs(mpc_params.accel_min), 0.0, 1.0);
+            brake_norm =
+                clip(-accel_raw / mpc_params.brake_full_decel, 0.0, 1.0);
         }
 
         CtrlCmd cmd = ToControlCommand(res.control, mpc_params);

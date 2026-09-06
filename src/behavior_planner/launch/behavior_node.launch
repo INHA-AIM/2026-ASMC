@@ -2,6 +2,7 @@
   <arg name="dashboard" default="true"/>
   <arg name="open_dashboard" default="false"/>
   <arg name="dashboard_port" default="8088"/>
+  <arg name="rviz" default="false"/>
 
   <node pkg="behavior_planner" type="behavior_node" name="behavior_planner" output="screen">
     <rosparam command="load" file="$(find behavior_planner)/src/config/behavior_params.yaml" subst_value="true"/>
@@ -18,4 +19,8 @@
       <param name="url" value="http://localhost:$(arg dashboard_port)/web/index.html"/>
     </node>
   </group>
+
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="behavior_debug_rviz"
+        args="-d $(find behavior_planner)/src/config/behavior_debug.rviz"
+        output="screen"/>
 </launch>

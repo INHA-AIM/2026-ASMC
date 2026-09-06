@@ -4,8 +4,24 @@
 #include "behavior_planner/context/msg_converter.hpp"
 #include "behavior_planner/decision/behavior_decision.hpp"
 #include "behavior_planner/rule/hard_rule_filter.hpp"
+#include "behavior_planner/signal/ros_traffic_light_provider.hpp"
 
 namespace behavior_planner {
+
+TEST(TrafficLightLabelTest, SelectsAspectForRouteMovement) {
+  EXPECT_EQ(TrafficLightState::RED,
+            InterpretTrafficLightLabel("red_left", SignalMovement::STRAIGHT));
+  EXPECT_EQ(TrafficLightState::GREEN,
+            InterpretTrafficLightLabel("red_left", SignalMovement::LEFT));
+  EXPECT_EQ(TrafficLightState::GREEN,
+            InterpretTrafficLightLabel("green_left", SignalMovement::STRAIGHT));
+  EXPECT_EQ(TrafficLightState::GREEN,
+            InterpretTrafficLightLabel("green_left", SignalMovement::LEFT));
+  EXPECT_EQ(TrafficLightState::RED,
+            InterpretTrafficLightLabel("green", SignalMovement::LEFT));
+  EXPECT_EQ(TrafficLightState::UNKNOWN,
+            InterpretTrafficLightLabel("not_detected", SignalMovement::LEFT));
+}
 
 TEST(HardRuleFilterTest, GreenLightDoesNotForceStop) {
   UrbanFeature feature;
@@ -20,7 +36,7 @@ TEST(HardRuleFilterTest, GreenLightDoesNotForceStop) {
   EXPECT_EQ("no_hard_constraint", reason);
 }
 
-TEST(HardRuleFilterTest, RedLightForcesStop) {
+TEST(HardRuleFilterTest, RedLightRequestsPlannedStop) {
   UrbanFeature feature;
   feature.signal.has_stop_line = true;
   feature.signal.distance_to_stop_line = 10.0;
@@ -28,9 +44,80 @@ TEST(HardRuleFilterTest, RedLightForcesStop) {
   feature.signal.light_state = TrafficLightState::RED;
   std::string reason;
   const HardConstraint hard = HardRuleFilter().apply(feature, &reason);
-  EXPECT_TRUE(hard.force_stop);
-  EXPECT_DOUBLE_EQ(44.0, hard.stop_before_s);
+  EXPECT_TRUE(hard.planned_stop);
+  EXPECT_FALSE(hard.force_stop);
+  EXPECT_DOUBLE_EQ(50.0, hard.stop_before_s);
   EXPECT_NE(std::string::npos, reason.find("traffic_light"));
+}
+
+TEST(HardRuleFilterTest, UnprotectedRightIgnoresVehicleRedLight) {
+  UrbanFeature feature;
+  feature.signal.has_stop_line = true;
+  feature.signal.distance_to_stop_line = 10.0;
+  feature.signal.stop_line_s = 50.0;
+  feature.signal.has_required_movement = true;
+  feature.signal.required_movement = SignalMovement::RIGHT_UNPROTECTED;
+  feature.signal.light_state = TrafficLightState::RED;
+
+  std::string reason;
+  const HardConstraint hard = HardRuleFilter().apply(feature, &reason);
+  EXPECT_TRUE(hard.stop_line_constraint);
+  EXPECT_FALSE(hard.planned_stop);
+  EXPECT_FALSE(hard.force_stop);
+  EXPECT_EQ("no_hard_constraint", reason);
+}
+
+TEST(HardRuleFilterTest, UnprotectedRightStillStopsForPedestrianRisk) {
+  UrbanFeature feature;
+  feature.signal.has_stop_line = true;
+  feature.signal.distance_to_stop_line = 10.0;
+  feature.signal.stop_line_s = 50.0;
+  feature.signal.has_required_movement = true;
+  feature.signal.required_movement = SignalMovement::RIGHT_UNPROTECTED;
+  feature.signal.light_state = TrafficLightState::RED;
+  feature.risk.pedestrian_risk = true;
+
+  std::string reason;
+  const HardConstraint hard = HardRuleFilter().apply(feature, &reason);
+  EXPECT_FALSE(hard.planned_stop);
+  EXPECT_TRUE(hard.force_stop);
+  EXPECT_NE(std::string::npos, reason.find("pedestrian_risk"));
+}
+
+TEST(BehaviorDecisionTest, RedLightPublishesPlannedStopTarget) {
+  UrbanFeature feature;
+  feature.timestamp = 1.0;
+  feature.route.speed_limit = 10.0;
+  feature.signal.has_stop_line = true;
+  feature.signal.stop_line_valid = true;
+  feature.signal.distance_to_stop_line = 10.0;
+  feature.signal.stop_line_s = 50.0;
+  feature.signal.stop_line_x = 123.4;
+  feature.signal.stop_line_y = 567.8;
+  feature.signal.light_state = TrafficLightState::RED;
+
+  const BehaviorContextData context =
+      BehaviorDecision().decide(feature, asmc_msgs::PlanFeedback{});
+  ASSERT_EQ(BehaviorType::STOP, context.selected_behavior);
+  EXPECT_FALSE(context.hard.force_stop);
+  EXPECT_TRUE(context.target.has_stop_target);
+  EXPECT_DOUBLE_EQ(10.0, context.target.desired_speed);
+
+  const asmc_msgs::BehaviorContext message = MsgConverter::toMsg(context, 1);
+  EXPECT_EQ(asmc_msgs::BehaviorContext::STOP, message.selected_behavior);
+  EXPECT_FALSE(message.force_stop);
+  EXPECT_TRUE(message.has_stop_target);
+  EXPECT_DOUBLE_EQ(123.4, message.stop_x);
+  EXPECT_DOUBLE_EQ(567.8, message.stop_y);
+
+  const UrbanFeatureDebug debug = MsgConverter::toDebugMsg(feature, context);
+  EXPECT_EQ(static_cast<uint8_t>(BehaviorType::STOP), debug.selected_behavior);
+  EXPECT_TRUE(debug.planned_stop);
+  EXPECT_FALSE(debug.force_stop);
+  EXPECT_TRUE(debug.has_stop_target);
+  EXPECT_DOUBLE_EQ(123.4, debug.stop_x);
+  EXPECT_DOUBLE_EQ(567.8, debug.stop_y);
+  EXPECT_NE(std::string::npos, debug.hard_rule_reason.find("traffic_light"));
 }
 
 TEST(BehaviorDecisionTest, EmptyRoadSelectsKeep) {

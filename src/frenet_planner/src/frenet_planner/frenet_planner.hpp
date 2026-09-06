@@ -216,6 +216,12 @@ public:
     }
 
     PlanFailureReason last_failure_reason() const { return last_failure_reason_; }
+    const std::vector<CartesianPath>& last_candidate_paths() const {
+        return last_candidate_paths_;
+    }
+    const std::vector<bool>& last_candidate_validity() const {
+        return last_candidate_validity_;
+    }
 
     // 이번 PlanInternal 호출이 무엇을 하려는지 (D6-2b).
     //
@@ -1009,6 +1015,8 @@ private:
     // (fix/yuntae-frenet-speed-continuity Phase 2).
     bool has_target_speed_history_ = false;
     PlanFailureReason last_failure_reason_ = PlanFailureReason::NONE;
+    std::vector<CartesianPath> last_candidate_paths_;
+    std::vector<bool> last_candidate_validity_;
 
     // 모드 전환(LANE_KEEPING/FOLLOWING/AVOID) 시점만 로그로 찍기 위한 이전 사이클 값.
     BehaviorState prev_mode_ = LANE_KEEPING;

@@ -10,12 +10,15 @@ UrbanFeature FeatureBuilder::build(
     const RouteManager& route_manager,
     const TrafficLightProvider& traffic_light_provider) {
   UrbanFeature feature;
+  feature.signal.raw_label = traffic_light_provider.getRawLabel();
   feature.timestamp = ego.stamp;
   feature.frame_count = ++frame_;
   feature.ego.x = ego.x;
   feature.ego.y = ego.y;
   feature.ego.yaw = ego.yaw;
   feature.ego.speed = ego.speed;
+  feature.ego.source = ego.source;
+  feature.ego.state_valid = ego.valid;
 
   const bool route_projection_valid = route_manager.projectEgo(
       ego.x, ego.y, &feature.ego.s, &feature.ego.d,
@@ -42,6 +45,17 @@ UrbanFeature FeatureBuilder::build(
         current_link.can_move_right && !current_link.right_dst_link_id.empty();
   }
 
+  RouteSignalMovement signal_movement;
+  if (route_manager.findNextSignalMovement(feature.ego.s, 200.0,
+                                           &signal_movement)) {
+    feature.signal.has_required_movement = true;
+    feature.signal.required_movement = signal_movement.movement;
+    feature.signal.related_signal = signal_movement.related_signal;
+    feature.signal.controlled_link_id = signal_movement.link_id;
+    feature.signal.movement_link_s = signal_movement.route_s;
+    feature.signal.distance_to_movement = signal_movement.distance;
+  }
+
   StopLineInfo stop_line;
   double stop_distance = 1e9;
   if (route_manager.findNextMapStopLine(
@@ -53,9 +67,21 @@ UrbanFeature FeatureBuilder::build(
     feature.signal.distance_to_stop_line = stop_distance;
     feature.signal.stop_line_x = stop_line.point.x;
     feature.signal.stop_line_y = stop_line.point.y;
+    // VehicleState x/y is the rear-axle GPS reference.  Move the commanded
+    // stop target backward along the route so the vehicle front, plus a small
+    // safety clearance, remains before the physical stop line.  Converting
+    // route s back to x/y also keeps the offset correct on curved approaches.
+    Point2D adjusted_stop;
+    if (stop_target_offset_m_ > 0.0 &&
+        route_manager.getRoutePoint(
+            std::max(0.0, feature.signal.stop_line_s - stop_target_offset_m_),
+            &adjusted_stop)) {
+      feature.signal.stop_line_x = adjusted_stop.x;
+      feature.signal.stop_line_y = adjusted_stop.y;
+    }
     feature.signal.traffic_light_id = stop_line.traffic_light_id;
-    feature.signal.light_state =
-        traffic_light_provider.getState(stop_line.traffic_light_id);
+    feature.signal.light_state = traffic_light_provider.getState(
+        stop_line.traffic_light_id, feature.signal.required_movement);
   }
 
   std::vector<ObjectFeature> projected_objects;

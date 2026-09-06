@@ -1,26 +1,9 @@
 #include "behavior_planner/node/morai_msg_converter.hpp"
 
 #include <cmath>
-#include <ros/ros.h>
-
 namespace behavior_planner {
 namespace {
 constexpr double kDegreesToRadians = 3.14159265358979323846 / 180.0;
-}
-
-EgoState MoraiMsgConverter::toEgoState(
-    const morai_msgs::EgoVehicleStatus& message) {
-  EgoState ego;
-  // MGeo and EgoVehicleStatus use the same MORAI local map coordinate system.
-  ego.x = message.position.x;
-  ego.y = message.position.y;
-  ego.yaw = message.heading * kDegreesToRadians;
-  // MORAI reports longitudinal ego speed in velocity.x in this workspace.
-  ego.speed = std::abs(message.velocity.x);
-  ego.stamp = message.header.stamp.isZero()
-                  ? ros::Time::now().toSec()
-                  : message.header.stamp.toSec();
-  return ego;
 }
 
 TrackedObject MoraiMsgConverter::toTrackedObject(

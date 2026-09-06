@@ -3,9 +3,18 @@
 #include <string>
 #include <vector>
 
+#include "behavior_planner/context/behavior_types.hpp"
 #include "behavior_planner/map/mgeo_loader.hpp"
 
 namespace behavior_planner {
+
+struct RouteSignalMovement {
+  SignalMovement movement = SignalMovement::UNKNOWN;
+  std::string related_signal;
+  std::string link_id;
+  double route_s = 1e9;
+  double distance = 1e9;
+};
 
 class RouteManager {
  public:
@@ -32,6 +41,8 @@ class RouteManager {
                            double max_distance,
                            StopLineInfo* out_stop_line,
                            double* out_distance) const;
+  bool findNextSignalMovement(double ego_route_s, double max_distance,
+                              RouteSignalMovement* out) const;
   const std::vector<Point2D>& referenceLine() const { return reference_; }
 
  private:
@@ -40,6 +51,12 @@ class RouteManager {
   std::vector<Point2D> reference_;
   std::vector<double> cumulative_;
   std::vector<std::string> segment_link_;
+  struct RouteLinkSpan {
+    std::string link_id;
+    double start_s = 0.0;
+    double end_s = 0.0;
+  };
+  std::vector<RouteLinkSpan> link_spans_;
   std::vector<StopLineInfo> stops_;
 };
 

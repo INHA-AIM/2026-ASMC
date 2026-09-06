@@ -1,5 +1,7 @@
 #include "behavior_planner/node/behavior_node.hpp"
 
+#include <cmath>
+
 #include <asmc_msgs/BehaviorContext.h>
 #include <visualization_msgs/MarkerArray.h>
 
@@ -11,7 +13,7 @@ namespace behavior_planner {
 
 BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     : nh_(std::move(nh)), pnh_(std::move(pnh)) {
-  std::string ego_topic = "/Ego_topic";
+  std::string ego_topic = "/vehicle/state";
   std::string objects_topic = "/Object_topic";
   std::string feedback_topic = "/planning/feedback";
   std::string context_topic = "/behavior/context";
@@ -21,6 +23,10 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   std::string node_path;
   std::string route_path;
   std::string traffic_light_path;
+  std::string traffic_light_topic = "/traffic_light/state";
+  bool use_traffic_light_mock = false;
+  double traffic_light_stale_seconds = 1.0;
+  double stop_target_offset_m = 5.0;
 
   pnh_.param("behavior/update_rate", rate_, rate_);
   pnh_.param("topics/ego", ego_topic, ego_topic);
@@ -33,6 +39,13 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   pnh_.param("map/node_set_path", node_path, std::string());
   pnh_.param("route/route_links_path", route_path, std::string());
   pnh_.param("traffic_light/mock_path", traffic_light_path, std::string());
+  pnh_.param("traffic_light/use_mock", use_traffic_light_mock,
+             use_traffic_light_mock);
+  pnh_.param("traffic_light/topic", traffic_light_topic, traffic_light_topic);
+  pnh_.param("traffic_light/stale_seconds", traffic_light_stale_seconds,
+             traffic_light_stale_seconds);
+  pnh_.param("stop/target_offset_m", stop_target_offset_m,
+             stop_target_offset_m);
 
   if (!map_.load(link_path, node_path)) {
     ROS_ERROR("MGeo loading failed; check map paths");
@@ -40,12 +53,24 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   if (!route_.initialize(map_, loadRouteLinks(route_path))) {
     ROS_ERROR("Route initialization failed; check route_links.yaml");
   }
+  builder_.setStopTargetOffset(stop_target_offset_m);
+  ROS_INFO("Behavior stop target offset: %.2f m behind physical stop line",
+           stop_target_offset_m);
 
-  auto mock = std::make_shared<MockTrafficLightProvider>();
-  if (!mock->load(traffic_light_path)) {
-    ROS_WARN("Traffic-light mock loading failed; default GREEN is used");
+  if (use_traffic_light_mock) {
+    auto mock = std::make_shared<MockTrafficLightProvider>();
+    if (!mock->load(traffic_light_path)) {
+      ROS_WARN("Traffic-light mock loading failed; default GREEN is used");
+    }
+    lights_ = mock;
+    ROS_WARN("Behavior traffic-light source: YAML mock %s",
+             traffic_light_path.c_str());
+  } else {
+    lights_ = std::make_shared<RosTrafficLightProvider>(
+        nh_, traffic_light_topic, traffic_light_stale_seconds);
+    ROS_INFO("Behavior traffic-light source: %s (stale after %.2f s)",
+             traffic_light_topic.c_str(), traffic_light_stale_seconds);
   }
-  lights_ = mock;
 
   context_pub_ =
       nh_.advertise<asmc_msgs::BehaviorContext>(context_topic, 10);
@@ -79,7 +104,7 @@ void BehaviorNode::timerCallback(const ros::SteadyTimerEvent&) { runOnce(); }
 
 void BehaviorNode::runOnce() {
   if (!ego_received_) {
-    ROS_WARN_THROTTLE(5.0, "Waiting for morai_msgs/EgoVehicleStatus");
+    ROS_WARN_THROTTLE(5.0, "Waiting for valid asmc_msgs/VehicleState");
     return;
   }
   const UrbanFeature feature =
@@ -95,15 +120,28 @@ void BehaviorNode::runOnce() {
   last_command_ = command;
   has_last_command_ = true;
   context_pub_.publish(command);
-  debug_pub_.publish(MsgConverter::toDebugMsg(feature));
+  debug_pub_.publish(MsgConverter::toDebugMsg(feature, context));
   visualization_.publish(feature, context, route_, map_, *lights_);
   logger_.write(feature, context);
 }
 
 void BehaviorNode::egoCallback(
-    const morai_msgs::EgoVehicleStatus::ConstPtr& message) {
+    const asmc_msgs::VehicleState::ConstPtr& message) {
   if (!message) return;
-  ego_ = MoraiMsgConverter::toEgoState(*message);
+  if (!message->valid || !std::isfinite(message->x) ||
+      !std::isfinite(message->y) || !std::isfinite(message->yaw) ||
+      !std::isfinite(message->speed) || message->header.stamp.isZero()) {
+    ego_received_ = false;
+    ROS_WARN_THROTTLE(2.0, "Behavior received invalid /vehicle/state");
+    return;
+  }
+  ego_.x = message->x;
+  ego_.y = message->y;
+  ego_.yaw = message->yaw;
+  ego_.speed = std::abs(message->speed);
+  ego_.stamp = message->header.stamp.toSec();
+  ego_.source = message->source;
+  ego_.valid = true;
   ego_received_ = true;
 }
 

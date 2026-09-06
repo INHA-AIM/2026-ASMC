@@ -526,6 +526,8 @@ bool FrenetPlanner::PlanInternal(
     const bool avoid_committed =
         purpose == ExternalPlanningPurpose::AVOID_COMMITTED;
     last_failure_reason_ = PlanFailureReason::NONE;
+    last_candidate_paths_.clear();
+    last_candidate_validity_.clear();
     if (!ref_loaded_) {
         last_failure_reason_ = PlanFailureReason::NOT_INITIALIZED;
         return false;
@@ -771,6 +773,10 @@ bool FrenetPlanner::PlanInternal(
             use_legacy_behavior
                 ? std::numeric_limits<double>::infinity()
                 : resolved_target_speed);
+        if (fallback_ok) {
+            last_candidate_paths_.push_back(out_path);
+            last_candidate_validity_.push_back(true);
+        }
         return fallback_ok;
     }
 
@@ -1035,10 +1041,24 @@ bool FrenetPlanner::PlanInternal(
             predicted_collision_obstacles, candidates, stats);
     }
 
-    const FrenetPath* best = SelectBestPath(candidates);
+    // 안전성 필터를 통과한 후보만 valid로 남아 있다. 외부 STOP에서는 그
+    // 안전 집합 안에서 목표점에 가장 가까운 종점을 우선하고, 같은 종점의
+    // 시간/jerk 조합은 기존 cost로 결정한다.
+    const FrenetPath* best = external_stop_mode
+        ? SelectBestStoppingPath(candidates)
+        : SelectBestPath(candidates);
     const int selected_index = best
         ? static_cast<int>(best - candidates.data())
         : -1;
+
+    last_candidate_paths_.reserve(candidates.size());
+    last_candidate_validity_.reserve(candidates.size());
+    for (const FrenetPath& candidate : candidates) {
+        if (!candidate.s.empty() && candidate.s.size() == candidate.d.size()) {
+            last_candidate_paths_.push_back(ConvertToCartesianPath(candidate, ref_));
+            last_candidate_validity_.push_back(candidate.valid);
+        }
+    }
 
     if (debug_writer_) {
         debug_writer_->Publish(ref_, ego, start, cmd.mode,

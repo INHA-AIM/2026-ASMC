@@ -74,6 +74,7 @@ TEST(TrajectoryConverterTest, PublishesRosSteeringInRadians) {
     params.steering_max = 0.6981;
     params.accel_max = 3.0;
     params.accel_min = -5.0;
+    params.brake_full_decel = 8.9;
     MPCControl control;
     control.delta = params.steering_max * 0.5;
     control.accel = 1.5;
@@ -84,6 +85,12 @@ TEST(TrajectoryConverterTest, PublishesRosSteeringInRadians) {
     EXPECT_DOUBLE_EQ(params.steering_max * 0.5, message.steering);
     EXPECT_DOUBLE_EQ(0.5, message.accel);
     EXPECT_DOUBLE_EQ(0.0, message.brake);
+
+    control.accel = -1.78;
+    const morai_msgs::CtrlCmd braking_message =
+        ToRosControlCommand(control, params);
+    EXPECT_DOUBLE_EQ(0.0, braking_message.accel);
+    EXPECT_NEAR(0.2, braking_message.brake, 1e-6);
 }
 
 TEST(TrajectoryConverterTest, RejectsInvalidInputs) {

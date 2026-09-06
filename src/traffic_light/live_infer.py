@@ -90,6 +90,15 @@ def select_device(requested):
 
 
 def main(argv=None):
+    try:
+        import rospy
+        from sensor_msgs.msg import CompressedImage
+        from std_msgs.msg import String
+    except ImportError as exc:
+        print("ROS Python 모듈을 불러올 수 없다: %s" % exc)
+        print("먼저 ROS 환경을 source 하거나 ./run.sh 를 사용할 것.")
+        return 1
+
     ap = argparse.ArgumentParser(description="ROS 신호등 인지 노드")
     ap.add_argument("--ckpt", default=os.path.join(HERE, "best.pt"),
                     help="체크포인트 경로 (기본: traffic_light/best.pt)")
@@ -111,16 +120,9 @@ def main(argv=None):
                     help="이 시간 동안 새 결과가 없으면 not_detected 발행")
     ap.add_argument("--print-topk", action="store_true",
                     help="터미널에 2, 3순위 후보도 표시")
-    args = ap.parse_args(argv)
-
-    try:
-        import rospy
-        from sensor_msgs.msg import CompressedImage
-        from std_msgs.msg import String
-    except ImportError as exc:
-        print("ROS Python 모듈을 불러올 수 없다: %s" % exc)
-        print("먼저 ROS 환경을 source 하거나 ./run.sh 를 사용할 것.")
-        return 1
+    # roslaunch appends __name:=... and __log:=... remapping arguments.
+    # rospy.myargv removes them before argparse validates application options.
+    args = ap.parse_args(rospy.myargv(argv=argv)[1:])
 
     rospy.init_node("traffic_light_infer", anonymous=False)
 
