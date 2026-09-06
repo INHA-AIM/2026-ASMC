@@ -10,7 +10,6 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   visualization_msgs
 )
-find_package(Threads REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
 catkin_package(
@@ -72,29 +71,6 @@ target_compile_definitions(frenet_planner_core PRIVATE
 target_link_libraries(frenet_planner_core
   frenet_geometry
   yaml-cpp
-)
-
-# Existing verified UDP runtime. It remains buildable as a regression baseline
-# while the ROS runtime is introduced, but the two runtimes must not be launched
-# simultaneously.
-add_executable(frenet_planner_udp_legacy
-  src/main.cpp
-  src/udp_network/udp_manager.cpp
-  src/udp_network/gps_transform.cpp
-  src/udp_network/sender/sender.cpp
-  src/udp_network/sender/planned_path_sender.cpp
-  src/udp_network/receiver/receiver.cpp
-  src/udp_network/receiver/ego_info_receiver.cpp
-  src/udp_network/receiver/object_info_receiver.cpp
-  src/udp_network/receiver/gps_receiver.cpp
-  src/udp_network/receiver/imu_receiver.cpp
-)
-target_compile_definitions(frenet_planner_udp_legacy PRIVATE
-  FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
-)
-target_link_libraries(frenet_planner_udp_legacy
-  frenet_planner_core
-  Threads::Threads
 )
 
 # ROS runtime with input validation, command-based Plan() invocation,
@@ -447,7 +423,6 @@ install(TARGETS
     frenet_planner_message_converter
     frenet_behavior_command_adapter
     frenet_command_execution_manager
-    frenet_planner_udp_legacy
     frenet_planner_node
     empty_objects_test_publisher
     v2_ros_regression_test
@@ -471,7 +446,6 @@ install(DIRECTORY config launch
 
 install(DIRECTORY
     src/frenet_planner/config/
-    src/udp_network/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/legacy
   FILES_MATCHING PATTERN "*.yaml"
 )

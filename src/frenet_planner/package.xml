@@ -2,7 +2,7 @@
 <package format="2">
   <name>frenet_planner</name>
   <version>0.1.0</version>
-  <description>Frenet trajectory planner core with ROS and legacy UDP runtimes.</description>
+  <description>Frenet trajectory planner core with a ROS runtime.</description>
 
   <maintainer email="autonav@todo.todo">autonav</maintainer>
   <license>MIT</license>
