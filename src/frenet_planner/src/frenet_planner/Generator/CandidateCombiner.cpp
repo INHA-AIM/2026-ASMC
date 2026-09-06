@@ -51,7 +51,7 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                                          const PathGeneratorConfig& cfg,
                                          const KinematicLimits& limits,
                                          double lane_width,
-                                         const std::vector<TrackedObstacle>& obstacles,
+                                         const std::vector<TrackedObject>& obstacles,
                                          const VehicleShape& vehicle_shape,
                                          const CollisionCheckConfig& collision_cfg,
                                          PlannerDebugStats* stats) {

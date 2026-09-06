@@ -454,8 +454,8 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
 
     CartesianState ego{};
     PlannerCommand command{};
-    std::vector<ObjectInfo> objects;
-    std::vector<TrackedObstacle> collision_objects;
+    std::vector<TrackedObject> objects;
+    std::vector<TrackedObject> collision_objects;
 
     const ConversionStatus vehicle_status =
         ConvertVehicleState(snapshot.vehicle, ego);
@@ -931,8 +931,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     last_stop_reference_vehicle_ = snapshot.vehicle;
     has_stop_reference_vehicle_ = true;
 
-    std::vector<ObjectInfo> objects;
-    std::vector<TrackedObstacle> collision_objects;
+    std::vector<TrackedObject> objects;
+    std::vector<TrackedObject> collision_objects;
     if (ConvertDetectedObjects(snapshot.objects, objects, collision_objects) !=
         ConversionStatus::OK) {
         CommandAcceptance failed = acceptance;

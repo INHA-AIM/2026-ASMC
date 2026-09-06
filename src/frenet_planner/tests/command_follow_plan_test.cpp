@@ -82,10 +82,10 @@ CartesianState MakeEgo(const Pose2D& pose, double speed) {
 }
 
 // 경로 위 target_s 지점에 놓인 차량. speed는 진행 방향 속도다.
-ObjectInfo MakeVehicle(const Waypoints& waypoints, int id, double target_s,
+TrackedObject MakeVehicle(const Waypoints& waypoints, int id, double target_s,
                        double speed) {
     const Pose2D pose = PoseAt(waypoints, target_s);
-    ObjectInfo object;
+    TrackedObject object;
     object.id = id;
     object.x = pose.x;
     object.y = pose.y;
@@ -150,7 +150,7 @@ int main() {
     constexpr double kEgoS = 200.0;
     constexpr double kEgoSpeed = 8.0;
     const CartesianState ego = MakeEgo(PoseAt(waypoints, kEgoS), kEgoSpeed);
-    const std::vector<TrackedObstacle> no_collision_objects;
+    const std::vector<TrackedObject> no_collision_objects;
 
     // --- 지정 대상만 있는 경우 --------------------------------------------
     {
@@ -159,7 +159,7 @@ int main() {
             std::cerr << "[FAIL] planner initialization\n";
             return 1;
         }
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeVehicle(waypoints, 15, kEgoS + 30.0, 5.0)};
         CartesianPath path;
         const bool ok = planner.Plan(ego, objects, MakeFollowCommand(15), path);
@@ -178,7 +178,7 @@ int main() {
     {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeVehicle(waypoints, 15, kEgoS + 40.0, 5.0),
             MakeVehicle(waypoints, 17, kEgoS + 15.0, 5.0),  // 더 가까움
         };
@@ -203,13 +203,13 @@ int main() {
         if (!planner.Init(config)) return 1;
         CartesianPath path;
         // 먼저 15만 있는 상태로 확보한다.
-        const std::vector<ObjectInfo> initial{
+        const std::vector<TrackedObject> initial{
             MakeVehicle(waypoints, 15, kEgoS + 40.0, 5.0)};
         planner.Plan(ego, initial, MakeFollowCommand(15), path);
         Expect(planner.active_leader_id() == 15, "leader 15 is acquired first");
 
         // 이후 더 가까운 17이 등장한다.
-        const std::vector<ObjectInfo> with_closer{
+        const std::vector<TrackedObject> with_closer{
             MakeVehicle(waypoints, 15, kEgoS + 40.0, 5.0),
             MakeVehicle(waypoints, 17, kEgoS + 12.0, 5.0),
         };
@@ -228,7 +228,7 @@ int main() {
     {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeVehicle(waypoints, 15, kEgoS + 40.0, 5.0),
             MakeVehicle(waypoints, 17, kEgoS + 20.0, 5.0),
         };
@@ -246,7 +246,7 @@ int main() {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
         // 지정한 15는 없고 다른 차량만 있다. 그 차량으로 대체하지 않는다.
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeVehicle(waypoints, 17, kEgoS + 20.0, 5.0)};
         CartesianPath path;
         const bool ok = planner.Plan(ego, objects, MakeFollowCommand(15), path);
@@ -265,7 +265,7 @@ int main() {
         if (!planner.Init(config)) return 1;
         CartesianPath path;
         // ego 뒤에 있는 차량.
-        const std::vector<ObjectInfo> behind{
+        const std::vector<TrackedObject> behind{
             MakeVehicle(waypoints, 15, kEgoS - 20.0, 5.0)};
         Expect(!planner.Plan(ego, behind, MakeFollowCommand(15), path) &&
                    planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
@@ -277,7 +277,7 @@ int main() {
         CartesianPath path;
         // 역방향으로 움직이는 객체는 거부한다. 마주 오는 차량을 추종하면
         // gap이 음수로 발산한다.
-        const std::vector<ObjectInfo> oncoming{
+        const std::vector<TrackedObject> oncoming{
             MakeVehicle(waypoints, 15, kEgoS + 30.0, -3.0)};
         Expect(!planner.Plan(ego, oncoming, MakeFollowCommand(15), path) &&
                    planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
@@ -292,7 +292,7 @@ int main() {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
         CartesianPath path;
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeVehicle(waypoints, 15, kEgoS + 40.0, leader_speed)};
         planner.Plan(ego, objects, MakeFollowCommand(15), path);
         Expect(planner.last_failure_reason() != Reason::TARGET_OBJECT_LOST &&
@@ -306,7 +306,7 @@ int main() {
         if (!planner.Init(config)) return 1;
         CartesianPath path;
         for (double leader_speed : {6.0, 4.0, 2.0, 0.5, 0.0, 0.0}) {
-            const std::vector<ObjectInfo> objects{
+            const std::vector<TrackedObject> objects{
                 MakeVehicle(waypoints, 15, kEgoS + 40.0, leader_speed)};
             planner.Plan(ego, objects, MakeFollowCommand(15), path);
         }
@@ -319,7 +319,7 @@ int main() {
         if (!planner.Init(config)) return 1;
         CartesianPath path;
         // 탐색 범위를 크게 벗어난 차량.
-        const std::vector<ObjectInfo> far{
+        const std::vector<TrackedObject> far{
             MakeVehicle(waypoints, 15, kEgoS + 300.0, 5.0)};
         Expect(!planner.Plan(ego, far, MakeFollowCommand(15), path) &&
                    planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
@@ -334,7 +334,7 @@ int main() {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
         CartesianPath path;
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeVehicle(waypoints, 15, kEgoS + 80.0, 5.0)};
         planner.Plan(ego, objects, MakeFollowCommand(15), path);
         // 궤적 생성은 후보 문제로 실패할 수도 있으므로 확보 자체를 본다.
@@ -350,7 +350,7 @@ int main() {
         if (!planner.Init(config)) return 1;
         PlannerCommand command = MakeFollowCommand(-1);
         CartesianPath path;
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeVehicle(waypoints, 15, kEgoS + 30.0, 5.0)};
         Expect(!planner.Plan(ego, objects, command, path) &&
                    planner.last_failure_reason() == Reason::INVALID_COMMAND,
@@ -364,7 +364,7 @@ int main() {
     {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeVehicle(waypoints, 15, kEgoS + 30.0, 5.0)};
 
         CartesianPath default_path;
@@ -394,7 +394,7 @@ int main() {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
         CartesianPath path;
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeVehicle(waypoints, 15, kEgoS + 30.0, 5.0)};
         planner.Plan(ego, objects, MakeFollowCommand(15), path);
         Expect(planner.active_leader_id() == 15, "leader is active before KEEP");
@@ -412,9 +412,9 @@ int main() {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
         CartesianPath path;
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeVehicle(waypoints, 15, kEgoS + 40.0, 6.0)};
-        const std::vector<ObjectInfo> no_objects;
+        const std::vector<TrackedObject> no_objects;
 
         planner.Plan(ego, objects, MakeFollowCommand(15), path);
         Expect(planner.active_leader_id() == 15, "grace: leader acquired");
@@ -462,9 +462,9 @@ int main() {
             FrenetPlanner planner;
             if (!planner.Init(config)) return false;
             CartesianPath path;
-            const std::vector<ObjectInfo> objects{
+            const std::vector<TrackedObject> objects{
                 MakeVehicle(waypoints, 15, kEgoS + kInitialGap, kLeaderSpeed)};
-            const std::vector<ObjectInfo> no_objects;
+            const std::vector<TrackedObject> no_objects;
 
             // 먼저 정상 관측으로 확보한다.
             double ego_s = kEgoS;
@@ -504,9 +504,9 @@ int main() {
             FrenetPlanner planner;
             if (!planner.Init(config)) return 1;
             CartesianPath path;
-            const std::vector<ObjectInfo> objects{
+            const std::vector<TrackedObject> objects{
                 MakeVehicle(waypoints, 15, kEgoS + kInitialGap, kLeaderSpeed)};
-            const std::vector<ObjectInfo> no_objects;
+            const std::vector<TrackedObject> no_objects;
             double ego_s = kEgoS;
             planner.Plan(MakeEgo(PoseAt(waypoints, ego_s), kEgoSpeed), objects,
                          MakeFollowCommand(15), path);
@@ -545,9 +545,9 @@ int main() {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
         CartesianPath path;
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeVehicle(waypoints, 15, kEgoS + kTightGap, kLeaderSpeed)};
-        const std::vector<ObjectInfo> no_objects;
+        const std::vector<TrackedObject> no_objects;
 
         double ego_s = kEgoS;
         planner.Plan(MakeEgo(PoseAt(waypoints, ego_s), kEgoSpeed), objects,
@@ -591,9 +591,9 @@ int main() {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
         CartesianPath path;
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeVehicle(waypoints, 15, kEgoS + 40.0, 6.0)};
-        const std::vector<ObjectInfo> no_objects;
+        const std::vector<TrackedObject> no_objects;
         planner.Plan(ego, objects, MakeFollowCommand(15), path);
 
         // 3 cycle 미관측 후 재관측.
@@ -623,7 +623,7 @@ int main() {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
         CartesianPath path;
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeVehicle(waypoints, 15, kEgoS + 40.0, 6.0)};
         planner.Plan(ego, objects, MakeFollowCommand(15), path);
         Expect(planner.active_leader_id() == 15, "stale: leader acquired");
@@ -645,7 +645,7 @@ int main() {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
         CartesianPath path;
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeVehicle(waypoints, 15, kEgoS + 40.0, 6.0)};
         planner.Plan(ego, objects, MakeFollowCommand(15), path);
 

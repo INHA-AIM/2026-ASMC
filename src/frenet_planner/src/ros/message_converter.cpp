@@ -115,16 +115,16 @@ ConversionStatus ConvertBehaviorContext(
 
 ConversionStatus ConvertDetectedObjects(
     const asmc_msgs::DetectedObjectArray& message,
-    std::vector<ObjectInfo>& objects,
-    std::vector<TrackedObstacle>& collision_objects) {
+    std::vector<TrackedObject>& objects,
+    std::vector<TrackedObject>& collision_objects) {
     if (!IsMapFrame(message.header.frame_id)) {
         return ConversionStatus::INVALID_FRAME;
     }
     if (message.header.stamp.isZero()) {
         return ConversionStatus::INVALID_TIMESTAMP;
     }
-    std::vector<ObjectInfo> converted_objects;
-    std::vector<TrackedObstacle> converted_collision_objects;
+    std::vector<TrackedObject> converted_objects;
+    std::vector<TrackedObject> converted_collision_objects;
     converted_objects.reserve(message.objects.size());
     converted_collision_objects.reserve(message.objects.size());
     std::unordered_set<int32_t> object_ids;
@@ -146,7 +146,7 @@ ConversionStatus ConvertDetectedObjects(
             return ConversionStatus::NON_FINITE_VALUE;
         }
 
-        ObjectInfo object;
+        TrackedObject object;
         object.id = message_object.id;
         object.type = message_object.type;
         object.x = message_object.center.x;
@@ -161,12 +161,8 @@ ConversionStatus ConvertDetectedObjects(
         object.length = message_object.length;
         object.height = message_object.height;
 
-        TrackedObstacle collision_object;
-        collision_object.id = message_object.id;
-        collision_object.type = message_object.type;
-        collision_object.vx = message_object.vx;
-        collision_object.vy = message_object.vy;
-        collision_object.geometry_source = ObstacleGeometrySource::LIDAR_CORNERS;
+        TrackedObject collision_object = object;
+        collision_object.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
         for (std::size_t i = 0; i < collision_object.corners.size(); ++i) {
             const auto& corner = message_object.obb_corners[i];
             collision_object.corners[i] = {corner.x, corner.y, corner.z};

@@ -129,7 +129,7 @@ int main() {
         ego_cs.v = vs.v;
         ego_cs.a = vs.accel;
 
-        const std::vector<ObjectInfo> obstacles = udp.get_objects();
+        const std::vector<TrackedObject> obstacles = udp.get_objects();
 
         CartesianPath cp;
         const bool plan_ok = frenet_planner.Plan(ego_cs, obstacles, cp);

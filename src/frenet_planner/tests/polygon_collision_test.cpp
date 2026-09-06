@@ -15,9 +15,9 @@ void Expect(bool condition, const std::string& name) {
     else { std::cerr << "[FAIL] " << name << '\n'; ++g_failures; }
 }
 
-TrackedObstacle MakeObstacle(double x, double y, double vx = 0.0,
+TrackedObject MakeObstacle(double x, double y, double vx = 0.0,
                              double vy = 0.0, double yaw = 0.0) {
-    ObjectInfo object;
+    TrackedObject object;
     object.id = 1;
     object.x = x;
     object.y = y;
@@ -27,7 +27,7 @@ TrackedObstacle MakeObstacle(double x, double y, double vx = 0.0,
     object.height = 1.0;
     object.vx = vx;
     object.vy = vy;
-    return MakeLegacyTrackedObstacle(object);
+    return MakeLegacyTrackedObject(object);
 }
 
 }  // namespace
@@ -41,10 +41,10 @@ int main() {
     const geometry::Polygon2D ego_footprint =
         MakeEgoFootprint(ego, ego_shape, 0.0);
 
-    const TrackedObstacle separated = MakeObstacle(3.1, 0.0);
-    const TrackedObstacle overlapping = MakeObstacle(1.5, 0.0);
-    const TrackedObstacle touching = MakeObstacle(2.0, 0.0);
-    const TrackedObstacle rotated = MakeObstacle(1.8, 0.0, 0.0, 0.0, 0.7);
+    const TrackedObject separated = MakeObstacle(3.1, 0.0);
+    const TrackedObject overlapping = MakeObstacle(1.5, 0.0);
+    const TrackedObject touching = MakeObstacle(2.0, 0.0);
+    const TrackedObject rotated = MakeObstacle(1.8, 0.0, 0.0, 0.0, 0.7);
     Expect(!CheckObstacleOverlap(ego_footprint, {}, separated, 0.0),
            "polygon collision rejects separated obstacle");
     Expect(CheckObstacleOverlap(ego_footprint, {}, overlapping, 0.0),
@@ -54,7 +54,7 @@ int main() {
     Expect(CheckObstacleOverlap(ego_footprint, {}, rotated, 0.0),
            "polygon collision detects rotated obstacle");
 
-    const TrackedObstacle moving = MakeObstacle(5.0, 0.0, -1.5, 0.0);
+    const TrackedObject moving = MakeObstacle(5.0, 0.0, -1.5, 0.0);
     Expect(!CheckObstacleOverlap(ego_footprint, {}, moving, 0.0),
            "moving obstacle starts separated");
     Expect(CheckObstacleOverlap(ego_footprint, {}, moving, 2.0),
@@ -64,12 +64,12 @@ int main() {
     Expect(std::abs(geometry::PolygonArea(current) - geometry::PolygonArea(future)) < 1e-9,
            "future obstacle translation preserves footprint area");
 
-    TrackedObstacle invalid = moving;
+    TrackedObject invalid = moving;
     invalid.geometry_valid = false;
     Expect(CheckObstacleOverlap(ego_footprint, {}, invalid, 0.0),
            "invalid obstacle geometry is conservatively colliding");
 
-    TrackedObstacle elevated = overlapping;
+    TrackedObject elevated = overlapping;
     elevated.z_valid = true;
     for (auto& corner : elevated.corners) corner.z += 10.0;
     const geometry::ZRange ego_z{0.0, 2.0, true};
@@ -78,7 +78,7 @@ int main() {
     Expect(CheckObstacleOverlap(ego_footprint, {}, elevated, 0.0),
            "invalid ego Z conservatively keeps XY collision active");
 
-    const TrackedObstacle near_margin = MakeObstacle(2.4, 0.0);
+    const TrackedObject near_margin = MakeObstacle(2.4, 0.0);
     Expect(!CheckObstacleOverlap(ego_footprint, {}, near_margin, 0.0),
            "near-margin obstacle is separated without safety contour");
     const geometry::Polygon2D expanded = MakeEgoFootprint(ego, ego_shape, 0.5);

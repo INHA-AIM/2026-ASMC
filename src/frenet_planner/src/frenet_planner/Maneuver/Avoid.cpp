@@ -59,7 +59,7 @@ double FrenetPlanner::EffectiveAvoidDetectionDistance() const {
 
 FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
     double ego_s, int target_object_id,
-    const std::vector<ObjectInfo>& obstacles,
+    const std::vector<TrackedObject>& obstacles,
     AvoidanceContext& context) const {
     if (target_object_id < 0) return AvoidTargetStatus::LOST;
 
@@ -67,7 +67,7 @@ FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
     // 장애물"을 고르지 않는다 - 대상 선택 권한은 FSM에 있다(헤더 주석 참고).
     const auto it = std::find_if(
         obstacles.begin(), obstacles.end(),
-        [target_object_id](const ObjectInfo& object) {
+        [target_object_id](const TrackedObject& object) {
             return object.id == target_object_id;
         });
 
@@ -326,7 +326,7 @@ void FrenetPlanner::BuildZeroSpeedHoldPath(const CartesianState& ego, double s,
 }
 
 bool FrenetPlanner::PrepareExternalAvoidTargets(
-    double ego_s, const std::vector<ObjectInfo>& obstacles,
+    double ego_s, const std::vector<TrackedObject>& obstacles,
     const PlannerCommand& command, bool avoid_prepare, bool avoid_committed) {
     if (avoid_committed) {
         // COMMIT 이후 geometry의 소유권은 잠긴 context에 있다. request
@@ -424,7 +424,7 @@ bool FrenetPlanner::PrepareExternalAvoidTargets(
 bool FrenetPlanner::BuildAvoidMaintenancePath(
     const CartesianState& ego, const FrenetState& start,
     const PlannerCommand& base_command,
-    const std::vector<TrackedObstacle>& collision_obstacles,
+    const std::vector<TrackedObject>& collision_obstacles,
     CartesianPath& out_path) const {
     const double s = start.s;
     const double d = start.d;
@@ -498,7 +498,7 @@ bool FrenetPlanner::BuildAvoidMaintenancePath(
 bool FrenetPlanner::PlanExternalAvoidCycle(
     const CartesianState& ego, const FrenetState& start,
     double s, double d, double resolved_target_speed,
-    const std::vector<TrackedObstacle>& predicted_collision_obstacles,
+    const std::vector<TrackedObject>& predicted_collision_obstacles,
     const PlannerCommand& command, bool avoid_prepare, bool avoid_committed,
     CartesianPath& out_path, AvoidPrepareResult& result) {
     last_mode_ = AVOID;
@@ -739,7 +739,7 @@ bool FrenetPlanner::PlanExternalAvoidCycle(
 
 void FrenetPlanner::UpdateLegacyAvoidContext(
     double s, double d, const FrenetState& start,
-    const std::vector<ObjectInfo>& obstacles, bool& begin_avoidance) {
+    const std::vector<TrackedObject>& obstacles, bool& begin_avoidance) {
     // 활성 context의 장애물 위치를 새 UDP 프레임으로 갱신한다. 일시적
     // packet dropout이 있어도 저장된 위치/길이로 회피를 계속한다.
     if (avoidance_.active) {
@@ -813,7 +813,7 @@ void FrenetPlanner::UpdateLegacyAvoidContext(
 
 std::vector<FrenetPath> FrenetPlanner::GenerateAdaptiveLegacyAvoidCandidates(
     const FrenetState& start, PlannerCommand& avoid_cmd, double target_d,
-    const std::vector<TrackedObstacle>& planning_collision_obstacles,
+    const std::vector<TrackedObject>& planning_collision_obstacles,
     PlannerDebugStats& avoid_stats) const {
     // AVOID의 고정 속도 대신 후보 곡률로 속도를 자동 결정한다.
     // 1차 일반 목표속도 생성 -> 최적 후보 곡률의 허용속도 계산 ->
@@ -854,7 +854,7 @@ std::vector<FrenetPath> FrenetPlanner::GenerateAdaptiveLegacyAvoidCandidates(
 
 void FrenetPlanner::GenerateLegacyAvoidDirectionCandidates(
     double s, const FrenetState& start,
-    const std::vector<TrackedObstacle>& planning_collision_obstacles,
+    const std::vector<TrackedObject>& planning_collision_obstacles,
     PlannerCommand& cmd, double& avoid_offset, PlannerDebugStats& stats,
     std::vector<FrenetPath>& candidates) {
     // 장애물 d에서 자차/장애물 반폭과 SAT 안전 마진을 더한 지점을

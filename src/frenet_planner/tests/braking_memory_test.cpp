@@ -100,7 +100,7 @@ void TestCaseA_NoUnwarrantedDecelerationWhenAccelerating() {
         keep.mode = LANE_KEEPING;
         keep.has_target_speed = true;
         keep.target_speed = target;
-        const std::vector<ObjectInfo> no_objects;
+        const std::vector<TrackedObject> no_objects;
         CartesianPath path;
         const bool ok = planner.Plan(ego, no_objects, keep, path);
         Expect(ok && !path.v.empty(),
@@ -129,7 +129,7 @@ void TestCaseB_RepeatedReplanningDoesNotCollapse() {
 
     FrenetPlanner planner;
     planner.Init(config);
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     PlannerCommand keep{};
     keep.mode = LANE_KEEPING;
     keep.has_target_speed = true;
@@ -184,7 +184,7 @@ void TestCaseC_RealDecelerationBoundaryPreserved() {
     keep.mode = LANE_KEEPING;
     keep.has_target_speed = true;
     keep.target_speed = 5.0;  // target < current: real deceleration intent
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
     const bool ok = planner.Plan(ego, no_objects, keep, path);
     Expect(ok && !path.v.empty(), "CASE C: external KEEP produces a trajectory");
@@ -213,7 +213,7 @@ void TestCaseD_NegativeVelocityGuardPreserved() {
     keep.mode = LANE_KEEPING;
     keep.has_target_speed = true;
     keep.target_speed = 10.0;
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
     const bool ok = planner.Plan(ego, no_objects, keep, path);
     Expect(ok, "CASE D: plan succeeds");
@@ -239,7 +239,7 @@ void TestCaseEF_JerkAndAccelLimitsPreserved() {
     keep.mode = LANE_KEEPING;
     keep.has_target_speed = true;
     keep.target_speed = 9.0;
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
     const bool ok = planner.Plan(ego, no_objects, keep, path);
     Expect(ok, "CASE E/F: plan succeeds");
@@ -272,7 +272,7 @@ void TestCaseG_NoNormalKeepStarvation() {
     keep.mode = LANE_KEEPING;
     keep.has_target_speed = true;
     keep.target_speed = 8.0;
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
     const bool ok = planner.Plan(ego, no_objects, keep, path);
     Expect(ok && !path.v.empty(),

@@ -240,8 +240,8 @@ int main() {
                ConversionStatus::UNSUPPORTED_BEHAVIOR,
            "MERGE behavior remains unsupported");
 
-    std::vector<ObjectInfo> objects(1);
-    std::vector<TrackedObstacle> collision_objects(1);
+    std::vector<TrackedObject> objects(1);
+    std::vector<TrackedObject> collision_objects(1);
     auto object_message = MakeEmptyObjects();
     Expect(frenet_planner_ros::ConvertDetectedObjects(
                object_message, objects, collision_objects) ==
@@ -258,11 +258,11 @@ int main() {
                collision_objects[0].geometry_valid &&
                collision_objects[0].z_valid &&
                collision_objects[0].geometry_source ==
-                   ObstacleGeometrySource::LIDAR_CORNERS &&
+                   ObjectGeometrySource::LIDAR_CORNERS &&
                collision_objects[0].corners[1].x == 12.0 &&
                collision_objects[0].corners[1].y == 21.0 &&
                collision_objects[0].corners[1].z == 0.0,
-           "LiDAR OBB corners are copied unchanged to TrackedObstacle");
+           "LiDAR OBB corners are copied unchanged to TrackedObject");
 
     auto malformed_message = MakeEmptyObjects();
     malformed_message.objects.push_back(MakeObject(10.0, 20.0));

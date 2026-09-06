@@ -19,7 +19,7 @@ double ForwardArcDistance(double current_s, double target_s, double s_max) {
 }
 
 bool CartesianTrajectoryClear(const CartesianPath& path,
-                              const std::vector<TrackedObstacle>& obstacles,
+                              const std::vector<TrackedObject>& obstacles,
                               const VehicleShape& ego_shape,
                               const CollisionCheckConfig& collision_cfg,
                               double dt, int* blocking_id) {

@@ -21,7 +21,7 @@
 // 양 끝의 d'가 0이므로 정지 근처에서도 급격한 횡이동과 곡률 spike가 생기지 않는다.
 FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
     double ego_s, int target_object_id,
-    const std::vector<ObjectInfo>& obstacles,
+    const std::vector<TrackedObject>& obstacles,
     FollowingContext& context) const {
     if (target_object_id < 0) return FollowTargetStatus::LOST;
 
@@ -29,7 +29,7 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
     // 않는다 - 대상 선택 권한은 FSM에 있다.
     const auto it = std::find_if(
         obstacles.begin(), obstacles.end(),
-        [target_object_id](const ObjectInfo& object) {
+        [target_object_id](const TrackedObject& object) {
             return object.id == target_object_id;
         });
 
@@ -122,7 +122,7 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
 }
 
 void FrenetPlanner::UpdateLegacyFollowContext(double ego_s, const FrenetState& start,
-                                               const std::vector<ObjectInfo>& obstacles,
+                                               const std::vector<TrackedObject>& obstacles,
                                                bool& out_nearest_found,
                                                LeaderTarget& out_nearest_leader) {
     // FOLLOWING 탐색거리도 충돌 lookahead보다 항상 길게 잡아,
@@ -168,7 +168,7 @@ void FrenetPlanner::UpdateLegacyFollowContext(double ego_s, const FrenetState& s
                 // 관측됐지만 차선/방향/범위가 바뀐 것은 dropout이 아니므로 즉시 해제.
                 following_ = FollowingContext{};
             } else if (++following_.missing_cycles <= following_cfg_.dropout_grace_cycles) {
-                // ObjectInfo 일시 누락 동안은 직전 속도로 leader s를 예측.
+                // TrackedObject 일시 누락 동안은 직전 속도로 leader s를 예측.
                 constexpr double kPlannerCycleDt = 0.05;  // main.cpp 20Hz
                 following_.leader_s += following_.leader_speed * kPlannerCycleDt;
             } else {

@@ -5,7 +5,6 @@
 
 #include "frenet_planner/Common/CartesianTypes.hpp"
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
-#include "frenet_planner/obstacle/tracked_obstacle.hpp"
 
 // 여러 Maneuver/*.cpp가 공유하는 package-internal helper. FrenetPlanner
 // public API가 아니므로 frenet_planner.hpp에는 선언하지 않는다.
@@ -19,7 +18,7 @@ double ForwardArcDistance(double current_s, double target_s, double s_max);
 // Maneuver/Avoid.cpp)와 MERGE(M2: locked replay/commit_pending candidate
 // 검증, Maneuver/Merge.cpp)가 쓴다.
 bool CartesianTrajectoryClear(const CartesianPath& path,
-                              const std::vector<TrackedObstacle>& obstacles,
+                              const std::vector<TrackedObject>& obstacles,
                               const VehicleShape& ego_shape,
                               const CollisionCheckConfig& collision_cfg,
                               double dt, int* blocking_id = nullptr);

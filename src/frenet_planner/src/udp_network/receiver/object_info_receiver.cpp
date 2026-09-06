@@ -10,7 +10,7 @@
 namespace {
 
 constexpr size_t kDataOffset = 38;
-// 공식 ObjectInfo 정의(NetworkModule) 기준 슬롯 stride는 106바이트
+// 공식 TrackedObject 정의(NetworkModule) 기준 슬롯 stride는 106바이트
 // (obj_id~accel_z 68바이트 + link_id[38] 38바이트). 이전에 68로 잘못 잡아서
 // 두 번째 객체부터 오프셋이 밀리는 버그가 있었음 - link_id는 안 쓰지만
 // stride 계산에는 반드시 포함해야 한다.
@@ -37,7 +37,7 @@ void ObjectInfoReceiver::parse_data(const uint8_t* raw_data, size_t size) {
 
     const size_t max_slots = std::min(kMaxSlots, (size - kDataOffset) / kSlotSize);
 
-    std::vector<ObjectInfo> objects;
+    std::vector<TrackedObject> objects;
     objects.reserve(max_slots);
 
     for (size_t i = 0; i < max_slots; ++i) {
@@ -56,7 +56,7 @@ void ObjectInfoReceiver::parse_data(const uint8_t* raw_data, size_t size) {
         const float vel_x = read_at<float>(raw_data, base + 44);
         const float vel_y = read_at<float>(raw_data, base + 48);
 
-        ObjectInfo obj;
+        TrackedObject obj;
         obj.id = obj_id;
         obj.type = obj_type;
         obj.x = pose_x;
@@ -73,11 +73,11 @@ void ObjectInfoReceiver::parse_data(const uint8_t* raw_data, size_t size) {
         objects.push_back(obj);
     }
 
-    // // 운용 중 ObjectInfo 연결 및 크기값 확인용 저주기 로그.
+    // // 운용 중 TrackedObject 연결 및 크기값 확인용 저주기 로그.
     // {
     //     static int tick = 0;
     //     if (++tick % 20 == 0) {
-    //         std::printf("[ObjectInfo parsed] count=%zu\n", objects.size());
+    //         std::printf("[TrackedObject parsed] count=%zu\n", objects.size());
     //         for (const auto& obj : objects) {
     //             std::printf("  id=%d type=%d pos=(%.3f, %.3f) heading_deg=%.2f "
     //                         "speed=%.2f m/s size(w=%.2f, l=%.2f)\n",
@@ -92,7 +92,7 @@ void ObjectInfoReceiver::parse_data(const uint8_t* raw_data, size_t size) {
     has_data_ = true;
 }
 
-std::vector<ObjectInfo> ObjectInfoReceiver::get_objects() const {
+std::vector<TrackedObject> ObjectInfoReceiver::get_objects() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return objects_;
 }

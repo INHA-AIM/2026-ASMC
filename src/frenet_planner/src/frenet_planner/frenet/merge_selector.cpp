@@ -28,7 +28,7 @@ double MinimumTravelTime(double distance, double initial_speed,
 }
 
 RoundaboutGap FindRoundaboutGap(const RefLine& ref, const FrenetState& ego,
-                                const std::vector<ObjectInfo>& obstacles,
+                                const std::vector<TrackedObject>& obstacles,
                                 const MergeConfig& cfg, double desired_speed,
                                 double max_ego_accel,
                                 const std::unordered_map<int, double>* yaw_rates) {
@@ -139,8 +139,8 @@ RoundaboutGap FindRoundaboutGap(const RefLine& ref, const FrenetState& ego,
 }
 
 RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
-                                  const std::vector<ObjectInfo>& obstacles,
-                                  const std::vector<TrackedObstacle>& collision_obstacles,
+                                  const std::vector<TrackedObject>& obstacles,
+                                  const std::vector<TrackedObject>& collision_obstacles,
                                   const HighwayMergeConfig& cfg,
                                   const HighwayMergeCheckpoint& checkpoint,
                                   const VehicleShape& ego_shape,

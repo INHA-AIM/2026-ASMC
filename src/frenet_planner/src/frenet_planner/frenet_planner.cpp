@@ -358,14 +358,14 @@ bool ValidateExternalCommand(const PlannerCommand& command,
 }  // namespace
 
 bool FrenetPlanner::Plan(const CartesianState& ego,
-                         const std::vector<ObjectInfo>& obstacles,
+                         const std::vector<TrackedObject>& obstacles,
                          CartesianPath& out_path) {
     return PlanInternal(ego, obstacles, nullptr, nullptr,
                         ExternalPlanningPurpose::NORMAL, out_path, nullptr);
 }
 
 bool FrenetPlanner::Plan(const CartesianState& ego,
-                         const std::vector<ObjectInfo>& obstacles,
+                         const std::vector<TrackedObject>& obstacles,
                          const PlannerCommand& command,
                          CartesianPath& out_path) {
     PlanFailureReason reason = PlanFailureReason::NONE;
@@ -378,8 +378,8 @@ bool FrenetPlanner::Plan(const CartesianState& ego,
 }
 
 bool FrenetPlanner::Plan(
-    const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
-    const std::vector<TrackedObstacle>& collision_obstacles,
+    const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
+    const std::vector<TrackedObject>& collision_obstacles,
     const PlannerCommand& command, CartesianPath& out_path) {
     PlanFailureReason reason = PlanFailureReason::NONE;
     if (!ValidateExternalCommand(command, reason)) {
@@ -466,8 +466,8 @@ void FrenetPlanner::SelectLegacyBehavior(
 }
 
 bool FrenetPlanner::PrepareAvoid(
-    const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
-    const std::vector<TrackedObstacle>& collision_obstacles,
+    const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
+    const std::vector<TrackedObject>& collision_obstacles,
     const PlannerCommand& command, CartesianPath& maintenance_path,
     AvoidPrepareResult& result) {
     result = AvoidPrepareResult{};
@@ -491,8 +491,8 @@ bool FrenetPlanner::PrepareAvoid(
 }
 
 bool FrenetPlanner::PlanCommittedAvoid(
-    const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
-    const std::vector<TrackedObstacle>& collision_obstacles,
+    const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
+    const std::vector<TrackedObject>& collision_obstacles,
     const PlannerCommand& command, CartesianPath& out_path,
     AvoidPrepareResult& result) {
     result = AvoidPrepareResult{};
@@ -513,9 +513,9 @@ bool FrenetPlanner::PlanCommittedAvoid(
 }
 
 bool FrenetPlanner::PlanInternal(
-    const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
+    const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
     const PlannerCommand* external_command,
-    const std::vector<TrackedObstacle>* collision_obstacles,
+    const std::vector<TrackedObject>* collision_obstacles,
     ExternalPlanningPurpose purpose, CartesianPath& out_path,
     AvoidPrepareResult* avoid_prepare_result) {
     const bool use_legacy_behavior = external_command == nullptr;
@@ -562,16 +562,16 @@ bool FrenetPlanner::PlanInternal(
         if (it->second.missing_cycles > 20) it = object_tracks_.erase(it);
         else ++it;
     }
-    std::vector<ObjectInfo> predicted_obstacles = obstacles;
+    std::vector<TrackedObject> predicted_obstacles = obstacles;
     for (auto& obj : predicted_obstacles) {
         const auto it = object_yaw_rates.find(obj.id);
         obj.yaw_rate = it == object_yaw_rates.end() ? 0.0 : it->second;
     }
     // ROS/LiDAR 경로는 perception이 준 corners를 그대로 사용한다. Legacy API만
     // ObjectInfo의 center/dimension/yaw로 기존 adapter geometry를 생성한다.
-    const std::vector<TrackedObstacle> predicted_collision_obstacles =
+    const std::vector<TrackedObject> predicted_collision_obstacles =
         collision_obstacles ? *collision_obstacles
-                            : MakeLegacyTrackedObstacles(predicted_obstacles);
+                            : MakeLegacyTrackedObjects(predicted_obstacles);
 
     double resolved_target_speed = LookaheadTargetSpeed(
         ref_, s, ego.v, curve_speed_cfg_, limits_.max_longitudinal_accel,
@@ -917,14 +917,14 @@ bool FrenetPlanner::PlanInternal(
     // 먼 정적 장애물까지 미리 중앙 경로를 전부 제거하면 stop/go가 발생하므로,
     // 잠금된 해당 장애물만 이 구간의 충돌 필터에서 제외한다. 다른
     // 장애물은 계속 필터링되고, 25m 진입 시 잠금 장애물도 즉시 다시 포함된다.
-    std::vector<TrackedObstacle> planning_collision_obstacles =
+    std::vector<TrackedObject> planning_collision_obstacles =
         predicted_collision_obstacles;
     if (use_legacy_behavior && avoidance_.active &&
         avoidance_.phase == AvoidPhase::TRACKING && !begin_avoidance) {
         planning_collision_obstacles.erase(
             std::remove_if(planning_collision_obstacles.begin(),
                            planning_collision_obstacles.end(),
-                           [this](const TrackedObstacle& obj) {
+                           [this](const TrackedObject& obj) {
                                return obj.id == avoidance_.obstacle_id;
                            }),
             planning_collision_obstacles.end());
@@ -1131,7 +1131,7 @@ bool FrenetPlanner::PlanInternal(
                 const int blocked_paths = ranked_blockers[rank].second;
                 const auto obj_it = std::find_if(
                     predicted_obstacles.begin(), predicted_obstacles.end(),
-                    [blocker_id](const ObjectInfo& obj) { return obj.id == blocker_id; });
+                    [blocker_id](const TrackedObject& obj) { return obj.id == blocker_id; });
                 if (obj_it == predicted_obstacles.end()) {
                     std::printf("[FrenetPlanner-COLLISION] rank=%zu blocking_id=%d "
                                 "paths=%d object=missing leader_id=%d\n",

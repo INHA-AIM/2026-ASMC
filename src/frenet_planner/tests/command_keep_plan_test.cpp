@@ -47,8 +47,8 @@ CartesianState LoadPoseNearArcLength(const std::string& path,
     return pose;
 }
 
-ObjectInfo MakeObjectInfo(int id, double x, double y) {
-    ObjectInfo object;
+TrackedObject MakeObjectInfo(int id, double x, double y) {
+    TrackedObject object;
     object.id = id;
     object.x = x;
     object.y = y;
@@ -59,10 +59,10 @@ ObjectInfo MakeObjectInfo(int id, double x, double y) {
     return object;
 }
 
-TrackedObstacle MakeAuthoritativeBox(int id, double x, double y) {
-    TrackedObstacle obstacle;
+TrackedObject MakeAuthoritativeBox(int id, double x, double y) {
+    TrackedObject obstacle;
     obstacle.id = id;
-    obstacle.geometry_source = ObstacleGeometrySource::LIDAR_CORNERS;
+    obstacle.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
     obstacle.geometry_valid = true;
     obstacle.z_valid = true;
     const double xy[4][2] = {
@@ -91,7 +91,7 @@ int main() {
 
     // Roundabout MERGE conflict_s(885.76m)의 approach window 안쪽이다.
     const CartesianState ego = LoadPoseNearArcLength(waypoints, 870.0, 5.0);
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
 
     // 먼저 legacy 호출로 내부 MERGE context가 활성화될 수 있는 조건을 만든다.
@@ -105,17 +105,17 @@ int main() {
     Expect(keep_ok && planner.last_mode() == LANE_KEEPING && !path.x.empty(),
            "external KEEP ignores legacy merge-zone behavior selection");
 
-    const std::vector<ObjectInfo> outside_objects = {
+    const std::vector<TrackedObject> outside_objects = {
         MakeObjectInfo(31, ego.x + 100.0, ego.y + 100.0)};
-    const std::vector<TrackedObstacle> outside_collision_objects = {
+    const std::vector<TrackedObject> outside_collision_objects = {
         MakeAuthoritativeBox(31, ego.x + 100.0, ego.y + 100.0)};
     Expect(planner.Plan(ego, outside_objects, outside_collision_objects,
                         keep, path) && !path.x.empty(),
            "authoritative OBB outside path preserves KEEP trajectory");
 
-    const std::vector<ObjectInfo> blocking_objects = {
+    const std::vector<TrackedObject> blocking_objects = {
         MakeObjectInfo(32, ego.x, ego.y)};
-    const std::vector<TrackedObstacle> blocking_collision_objects = {
+    const std::vector<TrackedObject> blocking_collision_objects = {
         MakeAuthoritativeBox(32, ego.x, ego.y)};
     Expect(!planner.Plan(ego, blocking_objects, blocking_collision_objects,
                          keep, path) &&

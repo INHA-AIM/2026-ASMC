@@ -56,8 +56,8 @@ CartesianState LoadPoseNearArcLength(const std::string& path,
     return pose;
 }
 
-ObjectInfo MakeObjectInfo(int id, double x, double y) {
-    ObjectInfo object;
+TrackedObject MakeObjectInfo(int id, double x, double y) {
+    TrackedObject object;
     object.id = id;
     object.x = x;
     object.y = y;
@@ -68,10 +68,10 @@ ObjectInfo MakeObjectInfo(int id, double x, double y) {
     return object;
 }
 
-TrackedObstacle MakeAuthoritativeBox(int id, double x, double y) {
-    TrackedObstacle obstacle;
+TrackedObject MakeAuthoritativeBox(int id, double x, double y) {
+    TrackedObject obstacle;
     obstacle.id = id;
-    obstacle.geometry_source = ObstacleGeometrySource::LIDAR_CORNERS;
+    obstacle.geometry_source = ObjectGeometrySource::LIDAR_CORNERS;
     obstacle.geometry_valid = true;
     obstacle.z_valid = true;
     const double xy[4][2] = {
@@ -104,7 +104,7 @@ int main() {
     // MERGE approach window 밖의 평범한 구간에서 검증한다. 여기서는 legacy
     // behavior가 개입할 여지가 없어 command 검증 결과만 관찰된다.
     const CartesianState ego = LoadPoseNearArcLength(waypoints, 200.0, 5.0);
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
 
     // --- 허용된 모드 -------------------------------------------------------
@@ -267,9 +267,9 @@ int main() {
            "mode whitelist is checked before field validation");
 
     // --- collision-object overload ----------------------------------------
-    const std::vector<ObjectInfo> objects = {
+    const std::vector<TrackedObject> objects = {
         MakeObjectInfo(31, ego.x + 100.0, ego.y + 100.0)};
-    const std::vector<TrackedObstacle> boxes = {
+    const std::vector<TrackedObject> boxes = {
         MakeAuthoritativeBox(31, ego.x + 100.0, ego.y + 100.0)};
 
     Expect(planner.Plan(ego, objects, boxes, keep, path) &&
@@ -287,7 +287,7 @@ int main() {
                planner.last_failure_reason() == Reason::INVALID_COMMAND,
            "collision overload rejects invalid STOP identically");
 
-    const std::vector<TrackedObstacle> no_boxes;
+    const std::vector<TrackedObject> no_boxes;
     Expect(!planner.Plan(ego, objects, no_boxes, keep, path) &&
                planner.last_failure_reason() == Reason::INVALID_COMMAND,
            "mismatched collision geometry count is INVALID_COMMAND");

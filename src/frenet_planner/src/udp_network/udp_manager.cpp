@@ -94,9 +94,9 @@ bool UdpManager::has_object_info() const {
     return object_info_receiver_ && object_info_receiver_->has_data();
 }
 
-std::vector<ObjectInfo> UdpManager::get_objects() const {
+std::vector<TrackedObject> UdpManager::get_objects() const {
     return object_info_receiver_ ? object_info_receiver_->get_objects()
-                                 : std::vector<ObjectInfo>{};
+                                 : std::vector<TrackedObject>{};
 }
 
 bool UdpManager::has_gps_imu_pose() const {

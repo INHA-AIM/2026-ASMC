@@ -88,8 +88,8 @@ CartesianState PoseAt(const Waypoints& wp, double target_s, double speed) {
     return c;
 }
 
-ObjectInfo MakeObject(int id, const CartesianState& pose, double speed) {
-    ObjectInfo o;
+TrackedObject MakeObject(int id, const CartesianState& pose, double speed) {
+    TrackedObject o;
     o.id = id;
     o.x = pose.x;
     o.y = pose.y;
@@ -120,7 +120,7 @@ const char* ModeName(BehaviorState mode) {
 std::vector<BehaviorState> RunScenario(const std::string& config,
                                        const Waypoints& wp,
                                        double start_s, double start_v,
-                                       const std::vector<ObjectInfo>& objects,
+                                       const std::vector<TrackedObject>& objects,
                                        int cycles,
                                        bool* all_paths_valid = nullptr) {
     std::vector<BehaviorState> modes;
@@ -213,7 +213,7 @@ int main() {
     // --- 2. 같은 차선 전방 저속 차량: FOLLOW를 획득해야 한다 --------------
     {
         const CartesianState leader_pose = PoseAt(wp, kPlainS + 35.0, 4.0);
-        const std::vector<ObjectInfo> objects{MakeObject(11, leader_pose, 4.0)};
+        const std::vector<TrackedObject> objects{MakeObject(11, leader_pose, 4.0)};
         bool paths_ok = false;
         const auto modes = RunScenario(config, wp, kPlainS, 8.0, objects, 5, &paths_ok);
         Expect(Contains(modes, FOLLOWING),
@@ -226,7 +226,7 @@ int main() {
     // --- 3. 같은 차선 전방 정지 장애물: AVOID로 전환해야 한다 -------------
     {
         const CartesianState obstacle_pose = PoseAt(wp, kPlainS + 25.0, 0.0);
-        const std::vector<ObjectInfo> objects{MakeObject(21, obstacle_pose, 0.0)};
+        const std::vector<TrackedObject> objects{MakeObject(21, obstacle_pose, 0.0)};
         const auto modes = RunScenario(config, wp, kPlainS, 6.0, objects, 8);
         Expect(Contains(modes, AVOID),
                "static obstacle ahead triggers AVOID (observed: " + Describe(modes) + ")");
@@ -239,7 +239,7 @@ int main() {
     {
         const CartesianState obstacle_pose = PoseAt(wp, kPlainS + 25.0, 0.0);
         const CartesianState leader_pose = PoseAt(wp, kPlainS + 50.0, 4.0);
-        const std::vector<ObjectInfo> objects{
+        const std::vector<TrackedObject> objects{
             MakeObject(21, obstacle_pose, 0.0),
             MakeObject(11, leader_pose, 4.0)};
         const auto modes = RunScenario(config, wp, kPlainS, 6.0, objects, 8);

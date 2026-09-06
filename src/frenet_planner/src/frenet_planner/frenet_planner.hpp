@@ -58,7 +58,7 @@ public:
 
     // ego: 현재 차량 상태(Cartesian), obstacles: 장애물 목록.
     // 반환: 성공 시 true + out_path에 결과. 유효 후보가 없으면 false.
-    bool Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
+    bool Plan(const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
               CartesianPath& out_path);
 
     // 외부 FSM command 기반 진입점. 현재 external whitelist는 LANE_KEEPING /
@@ -66,13 +66,13 @@ public:
     // MERGE/LANE_CHANGE는 core 구현이 있어도 UNSUPPORTED_BEHAVIOR로 거부한다.
     // ROS 계약이 확정되는 모드부터 whitelist를 확장한다(D7/D8). 기존 3인자
     // Plan()은 legacy UDP 회귀 경로로 유지한다.
-    bool Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
+    bool Plan(const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
               const PlannerCommand& command, CartesianPath& out_path);
 
     // ROS/LiDAR 경로: collision_obstacles의 authoritative 8 corners를 SAT에
     // 직접 사용하며 center/dimension 기반 geometry 재생성을 하지 않는다.
-    bool Plan(const CartesianState& ego, const std::vector<ObjectInfo>& obstacles,
-              const std::vector<TrackedObstacle>& collision_obstacles,
+    bool Plan(const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
+              const std::vector<TrackedObject>& collision_obstacles,
               const PlannerCommand& command, CartesianPath& out_path);
 
     // Cartesian 점을 reference line의 종방향 좌표 s로 투영한다.
@@ -313,8 +313,8 @@ public:
     //   maintenance 성공 + 후보 막힘  -> true,  candidate_valid=false  WAITING
     //   maintenance 실패             -> false                        안전정지
     bool PrepareAvoid(const CartesianState& ego,
-                      const std::vector<ObjectInfo>& obstacles,
-                      const std::vector<TrackedObstacle>& collision_obstacles,
+                      const std::vector<TrackedObject>& obstacles,
+                      const std::vector<TrackedObject>& collision_obstacles,
                       const PlannerCommand& command,
                       CartesianPath& maintenance_path,
                       AvoidPrepareResult& result);
@@ -323,8 +323,8 @@ public:
     // target observation/request pose는 더 이상 기동 지속 조건이 아니다.
     bool PlanCommittedAvoid(
         const CartesianState& ego,
-        const std::vector<ObjectInfo>& obstacles,
-        const std::vector<TrackedObstacle>& collision_obstacles,
+        const std::vector<TrackedObject>& obstacles,
+        const std::vector<TrackedObject>& collision_obstacles,
         const PlannerCommand& command, CartesianPath& out_path,
         AvoidPrepareResult& result);
 
@@ -412,9 +412,9 @@ public:
 
 private:
     bool PlanInternal(const CartesianState& ego,
-                      const std::vector<ObjectInfo>& obstacles,
+                      const std::vector<TrackedObject>& obstacles,
                       const PlannerCommand* external_command,
-                      const std::vector<TrackedObstacle>* collision_obstacles,
+                      const std::vector<TrackedObject>* collision_obstacles,
                       ExternalPlanningPurpose purpose,
                       CartesianPath& out_path,
                       AvoidPrepareResult* avoid_prepare_result);
@@ -449,7 +449,7 @@ private:
     bool BuildAvoidMaintenancePath(
         const CartesianState& ego, const FrenetState& start,
         const PlannerCommand& base_command,
-        const std::vector<TrackedObstacle>& collision_obstacles,
+        const std::vector<TrackedObject>& collision_obstacles,
         CartesianPath& out_path) const;
 
     // 현재 위치에서 0속도로 정지 유지하는 한 점 궤적. STOP HOLD와 같은 형태다.
@@ -470,7 +470,7 @@ private:
     // 전달한다(TARGET_OBJECT_LOST, NORMAL purpose에서의
     // UNSUPPORTED_BEHAVIOR). 그 외엔 true.
     bool PrepareExternalAvoidTargets(
-        double ego_s, const std::vector<ObjectInfo>& obstacles,
+        double ego_s, const std::vector<TrackedObject>& obstacles,
         const PlannerCommand& command, bool avoid_prepare, bool avoid_committed);
 
     // 외부(v2) AVOID PREPARE/COMMITTED 실행 전체 (D6-2b/D6-3, AVOID A3b).
@@ -490,7 +490,7 @@ private:
     bool PlanExternalAvoidCycle(
         const CartesianState& ego, const FrenetState& start,
         double s, double d, double resolved_target_speed,
-        const std::vector<TrackedObstacle>& predicted_collision_obstacles,
+        const std::vector<TrackedObject>& predicted_collision_obstacles,
         const PlannerCommand& command, bool avoid_prepare, bool avoid_committed,
         CartesianPath& out_path, AvoidPrepareResult& result);
 
@@ -513,7 +513,7 @@ private:
     // 않는다(direction lock은 A4b의 좌/우 비교 결과로만 일어난다).
     void UpdateLegacyAvoidContext(
         double s, double d, const FrenetState& start,
-        const std::vector<ObjectInfo>& obstacles, bool& begin_avoidance);
+        const std::vector<TrackedObject>& obstacles, bool& begin_avoidance);
 
     // legacy AVOID의 adaptive candidate generation (AVOID A4b). 1차 일반
     // 목표속도로 생성 -> 최적 후보 곡률의 허용속도 계산 -> 필요할 때만
@@ -523,7 +523,7 @@ private:
     // (예: 좌/우 비교에서 각 방향의 실제 채택 속도로 쓴다).
     std::vector<FrenetPath> GenerateAdaptiveLegacyAvoidCandidates(
         const FrenetState& start, PlannerCommand& avoid_cmd, double target_d,
-        const std::vector<TrackedObstacle>& planning_collision_obstacles,
+        const std::vector<TrackedObject>& planning_collision_obstacles,
         PlannerDebugStats& avoid_stats) const;
 
     // legacy AVOID의 begin_avoidance 시점 좌/우 후보 비교 + direction lock
@@ -533,7 +533,7 @@ private:
     // 유지한다.
     void GenerateLegacyAvoidDirectionCandidates(
         double s, const FrenetState& start,
-        const std::vector<TrackedObstacle>& planning_collision_obstacles,
+        const std::vector<TrackedObject>& planning_collision_obstacles,
         PlannerCommand& cmd, double& avoid_offset, PlannerDebugStats& stats,
         std::vector<FrenetPath>& candidates);
 
@@ -709,7 +709,7 @@ private:
     // 유예 중에는 직전 속도로 leader_s를 예측한다.
     FollowTargetStatus ResolveExternalFollowTarget(
         double ego_s, int target_object_id,
-        const std::vector<ObjectInfo>& obstacles,
+        const std::vector<TrackedObject>& obstacles,
         FollowingContext& context) const;
 
     // Legacy(내부 간이 FSM) FOLLOW의 leader 확보/유지/handoff 갱신.
@@ -727,7 +727,7 @@ private:
     // 그대로 사용한다 - following_이 아직 active=false일 수 있으므로 별도로
     // 전달해야 한다).
     void UpdateLegacyFollowContext(double ego_s, const FrenetState& start,
-                                    const std::vector<ObjectInfo>& obstacles,
+                                    const std::vector<TrackedObject>& obstacles,
                                     bool& out_nearest_found,
                                     LeaderTarget& out_nearest_leader);
 
@@ -738,7 +738,7 @@ private:
     // 주석 참고. maneuver_start.d가 차선 폭 안일 때만 호출된다(호출부에서 보장).
     void AppendExternalKeepContinuityCandidates(
         const FrenetState& maneuver_start, const PlannerCommand& cmd,
-        const std::vector<TrackedObstacle>& planning_collision_obstacles,
+        const std::vector<TrackedObject>& planning_collision_obstacles,
         std::vector<FrenetPath>& candidates) const;
 
     // external KEEP의 no-valid-candidate 분기에서 저속 근방일 때만 호출되는
@@ -808,8 +808,8 @@ private:
     // 다른 시점의 값을 만들 substitution correctness 위험이 있다.
     bool UpdateLegacyMergeContext(
         double s, const CartesianState& ego, const FrenetState& start,
-        const std::vector<ObjectInfo>& predicted_obstacles,
-        const std::vector<TrackedObstacle>& predicted_collision_obstacles,
+        const std::vector<TrackedObject>& predicted_obstacles,
+        const std::vector<TrackedObject>& predicted_collision_obstacles,
         const std::unordered_map<int, double>& object_yaw_rates,
         const HighwayMergeZone* context_highway_zone);
 
@@ -826,7 +826,7 @@ private:
         const CartesianState& ego, double s, double d,
         double context_conflict_s, double context_stop_buffer,
         const HighwayMergeZone* context_highway_zone,
-        const std::vector<TrackedObstacle>& predicted_collision_obstacles,
+        const std::vector<TrackedObject>& predicted_collision_obstacles,
         CartesianPath& out_path);
 
     // MERGE COMMIT 대기 중(commit_pending) candidate 각각을 conflict zone
@@ -838,7 +838,7 @@ private:
     void ValidatePendingMergeCommitCandidates(
         const PlannerCommand& cmd, double active_merge_completion_distance,
         double active_merge_cross_speed,
-        const std::vector<TrackedObstacle>& predicted_collision_obstacles,
+        const std::vector<TrackedObject>& predicted_collision_obstacles,
         std::vector<FrenetPath>& candidates, PlannerDebugStats& stats) const;
 
     // no-best-candidate 분기에서 대기 중이던 MERGE COMMIT을 되돌린다(MERGE
@@ -893,7 +893,7 @@ private:
     // 충돌 필터가 중앙 후보를 모두 제거해 속도가 급락한다.
     AvoidTargetStatus ResolveExternalAvoidTarget(
         double ego_s, int target_object_id,
-        const std::vector<ObjectInfo>& obstacles,
+        const std::vector<TrackedObject>& obstacles,
         AvoidanceContext& context) const;
 
     // v2 AVOID 대상의 유효 탐색거리 [m]. resolver와 진단 출력이 공유한다.

@@ -19,7 +19,7 @@ struct StaticObstacleTarget {
 };
 // 내 차선 전방에서 가장 가까운 정적 장애물과 초기 회피 방향을 반환한다.
 bool FindStaticAvoidanceTarget(const RefLine& ref, const FrenetState& ego,
-                               const std::vector<ObjectInfo>& obstacles,
+                               const std::vector<TrackedObject>& obstacles,
                                double lane_width, const VehicleShape& vehicle_shape,
                                const AvoidConfig& cfg, StaticObstacleTarget& out_target);
 

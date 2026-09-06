@@ -25,7 +25,7 @@ struct RoundaboutGap {
 // 구하고, Ego가 들어갈 수 있는 첫 시간 gap을 반환한다. 횡경로는 global path가
 // 담당하며 이 함수는 회전교차로 진입 타이밍만 판단한다.
 RoundaboutGap FindRoundaboutGap(const RefLine& ref, const FrenetState& ego,
-                                const std::vector<ObjectInfo>& obstacles,
+                                const std::vector<TrackedObject>& obstacles,
                                 const MergeConfig& cfg, double desired_speed,
                                 double max_ego_accel,
                                 const std::unordered_map<int, double>* yaw_rates = nullptr);
@@ -33,8 +33,8 @@ RoundaboutGap FindRoundaboutGap(const RefLine& ref, const FrenetState& ego,
 // Global Path가 램프에서 본선으로 이어지는 고주로 합류용. 목표 corridor에 투영된
 // 차량의 합류 완료시점 앞/뒤 거리와 TTC를 함께 만족하는 첫 진입시간을 찾는다.
 RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
-                                  const std::vector<ObjectInfo>& obstacles,
-                                  const std::vector<TrackedObstacle>& collision_obstacles,
+                                  const std::vector<TrackedObject>& obstacles,
+                                  const std::vector<TrackedObject>& collision_obstacles,
                                   const HighwayMergeConfig& cfg,
                                   const HighwayMergeCheckpoint& checkpoint,
                                   const VehicleShape& ego_shape,

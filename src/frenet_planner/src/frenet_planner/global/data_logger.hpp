@@ -39,7 +39,7 @@ struct FollowingConfig {
     double min_leader_speed = 0.5;      // [m/s] 이보다 느리면 정적 장애물로 보고 FOLLOWING에서 제외
     double exit_search_margin = 10.0;   // [m] 진입 후 탐색거리 hysteresis
     double leader_switch_margin = 3.0;  // [m] 새 차량이 이만큼 더 가까울 때만 leader 인계
-    int dropout_grace_cycles = 5;       // [cycle] ObjectInfo 일시 누락 허용(20Hz)
+    int dropout_grace_cycles = 5;       // [cycle] TrackedObject 일시 누락 허용(20Hz)
 };
 
 // =========================================================

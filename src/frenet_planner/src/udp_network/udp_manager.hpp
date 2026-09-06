@@ -27,7 +27,7 @@ public:
     bool using_gps_imu() const { return use_gps_imu_; }
 
     bool has_object_info() const;
-    std::vector<ObjectInfo> get_objects() const;
+    std::vector<TrackedObject> get_objects() const;
 
     // GPS 위치·속도와 IMU yaw를 결합한 VehicleState를 반환한다.
     // localization.source가 gps_imu이면 Planner의 실제 상태 입력으로 사용된다.

@@ -5,7 +5,7 @@
 
 #include "frenet_planner/Math/FrenetConverter.hpp"
 
-void ProjectObjectToFrenet(const RefLine& ref, const ObjectInfo& obj,
+void ProjectObjectToFrenet(const RefLine& ref, const TrackedObject& obj,
                            double& out_s, double& out_d, double& out_s_dot) {
     CartesianState cs{};
     cs.x = obj.x;
@@ -24,7 +24,7 @@ void ProjectObjectToFrenet(const RefLine& ref, const ObjectInfo& obj,
 }
 
 bool FindLeader(const RefLine& ref, const FrenetState& ego,
-                const std::vector<ObjectInfo>& obstacles,
+                const std::vector<TrackedObject>& obstacles,
                 double lane_width, const FollowingConfig& cfg,
                 LeaderTarget& out_leader) {
     const double half_lane = lane_width * 0.5;

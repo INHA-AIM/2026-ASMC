@@ -100,8 +100,8 @@ int main() {
         return 1;
     }
 
-    const std::vector<ObjectInfo> no_objects;
-    const std::vector<TrackedObstacle> no_collision_objects;
+    const std::vector<TrackedObject> no_objects;
+    const std::vector<TrackedObject> no_collision_objects;
 
     // --- 주행 중 긴급정지 ------------------------------------------------
     {
@@ -168,7 +168,7 @@ int main() {
         if (!planner.Init(config)) return 1;
         const CartesianState ego = LoadPoseNearArcLength(waypoints, 200.0, 8.0);
         const CartesianState blocker = LoadPoseNearArcLength(waypoints, 210.0, 0.0);
-        ObjectInfo object;
+        TrackedObject object;
         object.id = 1;
         object.x = blocker.x;
         object.y = blocker.y;
@@ -176,7 +176,7 @@ int main() {
         object.width = 2.0;
         object.length = 4.5;
         object.height = 1.5;
-        const std::vector<ObjectInfo> objects{object};
+        const std::vector<TrackedObject> objects{object};
         CartesianPath path;
         const bool ok = planner.Plan(ego, objects, MakeEmergencyCommand(), path);
         Expect(ok && IsValidStopPath(path),

@@ -19,8 +19,8 @@ void Expect(bool condition, const std::string& name) {
 
 bool Near(double a, double b) { return std::abs(a - b) <= kTolerance; }
 
-ObjectInfo MakeObject() {
-    ObjectInfo object;
+TrackedObject MakeObject() {
+    TrackedObject object;
     object.id = 17;
     object.type = 2;
     object.x = 10.0;
@@ -38,13 +38,13 @@ ObjectInfo MakeObject() {
 }  // namespace
 
 int main() {
-    const ObjectInfo object = MakeObject();
-    const TrackedObstacle tracked = MakeLegacyTrackedObstacle(object);
+    const TrackedObject object = MakeObject();
+    const TrackedObject tracked = MakeLegacyTrackedObject(object);
     Expect(tracked.id == object.id && tracked.type == object.type,
            "adapter preserves object identity");
     Expect(Near(tracked.vx, object.vx) && Near(tracked.vy, object.vy),
            "adapter preserves map velocity components");
-    Expect(tracked.geometry_source == ObstacleGeometrySource::LEGACY_DERIVED,
+    Expect(tracked.geometry_source == ObjectGeometrySource::LEGACY_DERIVED,
            "adapter marks legacy-derived geometry");
     Expect(tracked.geometry_valid, "valid legacy box produces valid corners");
     Expect(!tracked.z_valid, "legacy Z is not trusted as map-frame height");
@@ -74,13 +74,13 @@ int main() {
     }
     Expect(vertical_pairs_match, "top and bottom corners share XY coordinates");
 
-    ObjectInfo invalid = object;
+    TrackedObject invalid = object;
     invalid.length = 0.0;
-    const TrackedObstacle invalid_tracked = MakeLegacyTrackedObstacle(invalid);
+    const TrackedObject invalid_tracked = MakeLegacyTrackedObject(invalid);
     Expect(!invalid_tracked.geometry_valid, "zero-length legacy box is rejected");
 
-    const std::vector<TrackedObstacle> batch =
-        MakeLegacyTrackedObstacles({object, invalid});
+    const std::vector<TrackedObject> batch =
+        MakeLegacyTrackedObjects({object, invalid});
     Expect(batch.size() == 2 && batch[0].id == object.id,
            "batch adapter preserves input count and order");
 

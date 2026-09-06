@@ -5,13 +5,11 @@
 
 #include "frenet_planner/Geometry/PolygonUtils.hpp"
 
-TrackedObstacle MakeLegacyTrackedObstacle(const ObjectInfo& object) {
-    TrackedObstacle tracked;
-    tracked.id = object.id;
-    tracked.type = object.type;
+TrackedObject MakeLegacyTrackedObject(const TrackedObject& object) {
+    TrackedObject tracked = object;
     tracked.vx = std::isfinite(object.vx) ? object.vx : 0.0;
     tracked.vy = std::isfinite(object.vy) ? object.vy : 0.0;
-    tracked.geometry_source = ObstacleGeometrySource::LEGACY_DERIVED;
+    tracked.geometry_source = ObjectGeometrySource::LEGACY_DERIVED;
 
     const double half_length = object.length * 0.5;
     const double half_width = object.width * 0.5;
@@ -42,12 +40,12 @@ TrackedObstacle MakeLegacyTrackedObstacle(const ObjectInfo& object) {
     return tracked;
 }
 
-std::vector<TrackedObstacle> MakeLegacyTrackedObstacles(
-    const std::vector<ObjectInfo>& objects) {
-    std::vector<TrackedObstacle> tracked;
+std::vector<TrackedObject> MakeLegacyTrackedObjects(
+    const std::vector<TrackedObject>& objects) {
+    std::vector<TrackedObject> tracked;
     tracked.reserve(objects.size());
-    for (const ObjectInfo& object : objects) {
-        tracked.push_back(MakeLegacyTrackedObstacle(object));
+    for (const TrackedObject& object : objects) {
+        tracked.push_back(MakeLegacyTrackedObject(object));
     }
     return tracked;
 }

@@ -105,7 +105,7 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
         keep.mode = LANE_KEEPING;
         keep.has_target_speed = true;
         keep.target_speed = snap.target_speed;
-        const std::vector<ObjectInfo> no_objects;
+        const std::vector<TrackedObject> no_objects;
         CartesianPath path;
         const bool ok = planner.Plan(ego, no_objects, keep, path);
         std::printf("  %s: Plan() = %s, path.x.size()=%zu\n", snap.label,
@@ -139,7 +139,7 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
         KinematicLimits direct_limits{3.0, 3.0, kMaxCurvature, 6.0};
         VehicleShape vehicle_shape{2.0, 4.5};
         CollisionCheckConfig collision_cfg{0.3, 0.1, 3.0};
-        std::vector<TrackedObstacle> no_obstacles;
+        std::vector<TrackedObject> no_obstacles;
         PlannerDebugStats direct_stats{};
         auto direct_candidates = ResolveManeuver(direct_start, direct_cmd, ref, direct_cfg,
                                                  direct_limits, /*lane_width=*/3.5,
@@ -191,7 +191,7 @@ void TestNormalKeepStillRecentersToCenter() {
     keep.mode = LANE_KEEPING;
     keep.has_target_speed = true;
     keep.target_speed = 8.0;
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
     const bool ok = planner.Plan(ego, no_objects, keep, path);
     Expect(ok && !path.x.empty(), "normal KEEP: plan succeeds away from any tight curve");

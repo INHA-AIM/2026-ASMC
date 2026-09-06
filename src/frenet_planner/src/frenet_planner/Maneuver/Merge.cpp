@@ -71,8 +71,8 @@ CartesianPath RemainingPath(const CartesianPath& path, double ego_x, double ego_
 
 bool FrenetPlanner::UpdateLegacyMergeContext(
     double s, const CartesianState& ego, const FrenetState& start,
-    const std::vector<ObjectInfo>& predicted_obstacles,
-    const std::vector<TrackedObstacle>& predicted_collision_obstacles,
+    const std::vector<TrackedObject>& predicted_obstacles,
+    const std::vector<TrackedObject>& predicted_collision_obstacles,
     const std::unordered_map<int, double>& object_yaw_rates,
     const HighwayMergeZone* context_highway_zone) {
     // 두 MERGE 모두 Global Path(d=0)를 그대로 따른다. 회전교차로는 conflict
@@ -228,7 +228,7 @@ FrenetPlanner::LockedMergeResult FrenetPlanner::HandleLockedMergeTrajectory(
     const CartesianState& ego, double s, double d,
     double context_conflict_s, double context_stop_buffer,
     const HighwayMergeZone* context_highway_zone,
-    const std::vector<TrackedObstacle>& predicted_collision_obstacles,
+    const std::vector<TrackedObject>& predicted_collision_obstacles,
     CartesianPath& out_path) {
     if (s >= context_conflict_s) {
         const HighwayMergeCheckpoint* next_checkpoint =
@@ -302,7 +302,7 @@ FrenetPlanner::LockedMergeResult FrenetPlanner::HandleLockedMergeTrajectory(
 void FrenetPlanner::ValidatePendingMergeCommitCandidates(
     const PlannerCommand& cmd, double active_merge_completion_distance,
     double active_merge_cross_speed,
-    const std::vector<TrackedObstacle>& predicted_collision_obstacles,
+    const std::vector<TrackedObject>& predicted_collision_obstacles,
     std::vector<FrenetPath>& candidates, PlannerDebugStats& stats) const {
     for (auto& candidate : candidates) {
         if (!candidate.valid) continue;

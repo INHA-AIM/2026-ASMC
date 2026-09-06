@@ -10,7 +10,7 @@
 
 #include "frenet_planner/global/global.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
-#include "frenet_planner/obstacle/tracked_obstacle.hpp"
+#include "frenet_planner/Common/ObjectTypes.hpp"
 
 namespace frenet_planner_ros {
 
@@ -34,8 +34,8 @@ ConversionStatus ConvertBehaviorContext(
     const asmc_msgs::BehaviorContext& message, PlannerCommand& command);
 ConversionStatus ConvertDetectedObjects(
     const asmc_msgs::DetectedObjectArray& message,
-    std::vector<ObjectInfo>& objects,
-    std::vector<TrackedObstacle>& collision_objects);
+    std::vector<TrackedObject>& objects,
+    std::vector<TrackedObject>& collision_objects);
 ConversionStatus ConvertCartesianPath(
     const CartesianPath& path, double dt,
     const asmc_msgs::VehicleState& ego_at_plan,

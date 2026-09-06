@@ -8,7 +8,7 @@
 #include "frenet_planner/global/global.hpp"
 
 // =========================================================
-// obstacles(ObjectInfo) -> Frenet 투영/선두 차량 선택.
+// obstacles(TrackedObject) -> Frenet 투영/선두 차량 선택.
 // Following 전용으로 만들었지만, "장애물 하나를 Frenet으로 투영한다"는
 // ProjectObjectToFrenet 자체는 AVOID/Merge에서도 그대로 재사용 가능
 // (계획서 참고: 전방/후방 두 차량을 다뤄야 하는 Merge에서 이걸 두 번 씀).
@@ -22,7 +22,7 @@
 // ego처럼 매 사이클 위치가 조금씩만 바뀐다는 연속성 가정을 할 수 없고,
 // Following 탐색 거리(수십 m)가 FindClosestS의 기본 hint window(30m)보다
 // 클 수 있어 hint를 안 쓰는 게 안전하다).
-void ProjectObjectToFrenet(const RefLine& ref, const ObjectInfo& obj,
+void ProjectObjectToFrenet(const RefLine& ref, const TrackedObject& obj,
                            double& out_s, double& out_d, double& out_s_dot);
 
 struct LeaderTarget {
@@ -40,7 +40,7 @@ struct LeaderTarget {
 // 속도) 가정으로 둔다(GenerateFollowingCandidates도 "등가속 예측"에서
 // accel=0이면 등속 예측으로 자연히 축소됨, 별도 처리 불필요).
 bool FindLeader(const RefLine& ref, const FrenetState& ego,
-                const std::vector<ObjectInfo>& obstacles,
+                const std::vector<TrackedObject>& obstacles,
                 double lane_width, const FollowingConfig& cfg,
                 LeaderTarget& out_leader);
 

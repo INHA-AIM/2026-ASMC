@@ -122,7 +122,7 @@ int main() {
     }
     const double reference_length = reference.points.back().s;
 
-    const std::vector<ObjectInfo> no_objects;
+    const std::vector<TrackedObject> no_objects;
     CartesianPath path;
 
     // planner를 매번 새로 만들어 StopContext(phase latch)가 케이스 사이에

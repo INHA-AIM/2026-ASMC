@@ -10,7 +10,7 @@ namespace {
 // candidate_offset 쪽으로 피했을 때, trigger_distance 안의 "다른" 장애물과
 // 겹치지 않는지 확인. 자차 폭/장애물 폭을 반영한 최소 이격 거리 + 여유 마진.
 bool IsSideClear(const RefLine& ref, const FrenetState& ego,
-                 const std::vector<ObjectInfo>& obstacles,
+                 const std::vector<TrackedObject>& obstacles,
                  double candidate_offset, const VehicleShape& vehicle_shape,
                  double trigger_distance) {
     constexpr double kMargin = 0.3;  // [m] 폭 계산 여유
@@ -31,7 +31,7 @@ bool IsSideClear(const RefLine& ref, const FrenetState& ego,
 }  // namespace
 
 bool FindStaticAvoidanceTarget(const RefLine& ref, const FrenetState& ego,
-                               const std::vector<ObjectInfo>& obstacles,
+                               const std::vector<TrackedObject>& obstacles,
                                double lane_width, const VehicleShape& vehicle_shape,
                                const AvoidConfig& cfg, StaticObstacleTarget& out_target) {
     const double half_lane = lane_width * 0.5;
@@ -39,7 +39,7 @@ bool FindStaticAvoidanceTarget(const RefLine& ref, const FrenetState& ego,
     // 1. 내 차선을 막고 있는 정지/저속 장애물 중 가장 가까운 것을 찾는다.
     bool found = false;
     double best_gap = std::numeric_limits<double>::max();
-    const ObjectInfo* best_obj = nullptr;
+    const TrackedObject* best_obj = nullptr;
     double best_s = 0.0, best_d = 0.0, best_s_dot = 0.0;
 
     for (const auto& obj : obstacles) {
