@@ -3,7 +3,7 @@
 #include <iostream>
 #include <limits>
 
-#include "ros/state/vehicle_state_adapter.hpp"
+#include "vehicle_state/vehicle_state_adapter.hpp"
 
 namespace {
 constexpr double kLatitudeMetersPerDegree = 111000.0;

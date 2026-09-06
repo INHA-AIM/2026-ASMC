@@ -6,7 +6,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
 
-#include "ros/state/vehicle_state_adapter.hpp"
+#include "vehicle_state/vehicle_state_adapter.hpp"
 
 namespace {
 class GpsImuVehicleStateNode {

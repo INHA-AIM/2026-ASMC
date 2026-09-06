@@ -1,8 +1,8 @@
 <launch>
   <!-- Competition source. There is no EgoVehicleStatus fallback. -->
-  <node pkg="frenet_planner" type="gps_imu_vehicle_state_node"
+  <node pkg="vehicle_state" type="vehicle_state_node"
         name="gps_imu_vehicle_state_adapter" output="screen">
     <rosparam command="load"
-              file="$(find frenet_planner)/config/gps_imu_state.yaml"/>
+              file="$(find vehicle_state)/config/vehicle_state.yaml"/>
   </node>
 </launch>

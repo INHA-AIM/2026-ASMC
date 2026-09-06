@@ -152,27 +152,6 @@ target_link_libraries(frenet_planner_node
   ${catkin_LIBRARIES}
 )
 
-# Canonical vehicle-state boundary. GPS/IMU is the competition source and
-# EgoVehicleStatus is development-only. No runtime fallback connects them.
-add_library(frenet_vehicle_state_adapter
-  src/ros/state/vehicle_state_adapter.cpp
-  src/udp_network/gps_transform.cpp
-)
-add_dependencies(frenet_vehicle_state_adapter ${catkin_EXPORTED_TARGETS})
-target_link_libraries(frenet_vehicle_state_adapter ${catkin_LIBRARIES})
-
-add_executable(gps_imu_vehicle_state_node
-  src/ros/state/gps_imu_vehicle_state_node.cpp)
-add_dependencies(gps_imu_vehicle_state_node ${catkin_EXPORTED_TARGETS})
-target_link_libraries(gps_imu_vehicle_state_node
-  frenet_vehicle_state_adapter ${catkin_LIBRARIES})
-
-add_executable(ego_vehicle_state_dev_node
-  src/ros/state/ego_vehicle_state_dev_node.cpp)
-add_dependencies(ego_vehicle_state_dev_node ${catkin_EXPORTED_TARGETS})
-target_link_libraries(ego_vehicle_state_dev_node
-  frenet_vehicle_state_adapter ${catkin_LIBRARIES})
-
 # D4-4: v2 ROS 인터페이스 통합 회귀. 실행 중인 roscore와 frenet_planner_node가
 # 필요하므로 add_test()에 등록하지 않는다(catkin_make run_tests가 자동으로
 # 돌릴 수 없다). 수동 실행:
@@ -194,7 +173,7 @@ target_link_libraries(v2_ros_regression_test
 )
 
 add_executable(empty_objects_test_publisher
-  src/ros/state/empty_objects_test_publisher.cpp)
+  src/tools/empty_objects_test_publisher.cpp)
 add_dependencies(empty_objects_test_publisher ${catkin_EXPORTED_TARGETS})
 target_link_libraries(empty_objects_test_publisher ${catkin_LIBRARIES})
 
@@ -460,11 +439,6 @@ if(CATKIN_ENABLE_TESTING)
   add_test(NAME legacy_behavior_regression_test
            COMMAND legacy_behavior_regression_test)
 
-  add_executable(vehicle_state_adapter_test tests/vehicle_state_adapter_test.cpp)
-  add_dependencies(vehicle_state_adapter_test ${catkin_EXPORTED_TARGETS})
-  target_link_libraries(vehicle_state_adapter_test
-    frenet_vehicle_state_adapter ${catkin_LIBRARIES})
-  add_test(NAME vehicle_state_adapter_test COMMAND vehicle_state_adapter_test)
 endif()
 
 install(TARGETS
@@ -473,11 +447,8 @@ install(TARGETS
     frenet_planner_message_converter
     frenet_behavior_command_adapter
     frenet_command_execution_manager
-    frenet_vehicle_state_adapter
     frenet_planner_udp_legacy
     frenet_planner_node
-    gps_imu_vehicle_state_node
-    ego_vehicle_state_dev_node
     empty_objects_test_publisher
     v2_ros_regression_test
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

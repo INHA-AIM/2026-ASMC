@@ -21,6 +21,7 @@
   <exec_depend>morai_sensor_bridge</exec_depend>
   <exec_depend>morai_udp_bridge</exec_depend>
   <exec_depend>mpc_controller</exec_depend>
+  <exec_depend>vehicle_state</exec_depend>
 
   <export/>
 </package>

@@ -13,9 +13,9 @@
   </group>
 
   <include if="$(eval arg('state_source') == 'gps_imu')"
-           file="$(find frenet_planner)/launch/vehicle_state_gps_imu.launch"/>
+           file="$(find vehicle_state)/launch/vehicle_state.launch"/>
   <include if="$(eval arg('state_source') == 'ego_dev')"
-           file="$(find frenet_planner)/launch/vehicle_state_ego_dev.launch"/>
+           file="$(find vehicle_state)/launch/vehicle_state_ego_dev.launch"/>
   <node pkg="frenet_planner" type="empty_objects_test_publisher"
         name="empty_objects_test_publisher" output="screen"/>
   <include file="$(find behavior_planner)/launch/behavior_node.launch">

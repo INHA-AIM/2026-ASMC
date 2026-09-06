@@ -1,10 +1,10 @@
-#include "ros/state/vehicle_state_adapter.hpp"
+#include "vehicle_state/vehicle_state_adapter.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-#include "udp_network/gps_transform.hpp"
-#include "ros/steady_freshness.hpp"
+#include "vehicle_state/gps_transform.hpp"
+#include "vehicle_state/steady_freshness.hpp"
 
 namespace frenet_planner_ros {
 namespace {
