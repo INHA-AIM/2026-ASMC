@@ -47,6 +47,12 @@ struct AvoidConfig {
     // 폭 절반씩 + 여유(0.3m)를 감안한 최소 이격(~2.2m)보다 확실히 크게 잡아야
     // 좌/우 클리어 판정이 "장애물 자신" 때문에 항상 막힌 것으로 나오지 않는다.
     double avoid_offset      = 3.0;
+    // 동적 SHIFT 시작거리 = ego_speed * required_lateral_shift_time
+    //                         + vehicle/obstacle clearance.
+    // 아래 값은 지나치게 가깝거나 먼 결과를 막는 안전 경계다.
+    double min_shift_start_distance = 15.0;
+    double max_shift_start_distance = 70.0;
+    double shift_time_margin = 0.5; // [s] 조향/제어 응답 여유
     double lateral_tolerance = 0.4;   // [m] SHIFT 완료 판정
     double pass_clearance    = 1.0;   // [m] 자차 뒤가 장애물을 통과한 뒤 추가 여유
     bool prefer_right_when_equal = true; // 좌/우 후보 품질이 같을 때 우측 우선

@@ -2321,7 +2321,46 @@ int main() {
     }
 
     {
-        // D6-3c lifecycle: SHIFT -> PASS -> COMPLETED. 대상 observation 없이도
+        // 먼 거리에서 AVOID를 미리 확보해도 global path에서 옆으로 흐르지
+        // 않고, shift_start_distance 안에 진입한 뒤에만 SHIFT한다.
+        const std::vector<TrackedObject> initial{
+            MakeObstacle(waypoints, 21, kEgoS + 80.0, 0.0)};
+        const PlannerCommand command =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        planner.PrepareAvoid(ego, initial, command, maintenance, prepared);
+        Expect(prepared.candidate_valid && planner.CommitAvoid(prepared) &&
+                   std::string(planner.avoid_phase_name()) == "TRACKING",
+               "approach: a far committed target starts in TRACKING");
+
+        CartesianPath approach_path;
+        Prepare approach;
+        const bool approach_ok = planner.PlanCommittedAvoid(
+            ego, {}, command, approach_path, approach);
+        Expect(approach_ok && !approach.maneuver_completed &&
+                   std::string(planner.avoid_phase_name()) == "TRACKING" &&
+                   std::fabs(EndpointD(planner, approach_path,
+                                       kEgoS + 30.0)) < 1e-6,
+               "approach: TRACKING keeps the global path");
+        Expect(!planner.last_candidate_paths().empty() &&
+                   planner.last_candidate_paths().size() ==
+                       planner.last_candidate_validity().size(),
+               "debug: committed AVOID exposes candidates to visualization");
+
+        CartesianPath shift_path;
+        Prepare shift;
+        planner.PlanCommittedAvoid(
+            MakeEgoAt(waypoints, kEgoS + 60.0, 0.0, kEgoSpeed), {},
+            command, shift_path, shift);
+        Expect(std::string(planner.avoid_phase_name()) == "SHIFT",
+               "approach: entering the configured distance starts SHIFT");
+    }
+
+    {
+        // D6-3c lifecycle: SHIFT -> PASS -> RETURN -> COMPLETED. 대상 observation 없이도
         // COMMIT 때 저장한 geometry로 진행하며 progress는 유한/단조/범위 내다.
         const std::vector<TrackedObject> initial{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
@@ -2400,23 +2439,34 @@ int main() {
 
         const CartesianState after_clear = MakeEgoAt(
             waypoints, planner.avoid_target_s() + 20.0, locked, kEgoSpeed);
-        CartesianPath final_path;
-        Prepare completed;
-        const bool final_ok = planner.PlanCommittedAvoid(
-            after_clear, {}, command, final_path, completed);
-        Expect(final_ok && completed.maneuver_completed &&
-                   completed.maneuver_progress == 1.0 &&
-                   planner.avoid_completed(),
-               "lifecycle: PASS plus longitudinal clearance completes");
+        CartesianPath return_path;
+        Prepare returning;
+        const bool return_ok = planner.PlanCommittedAvoid(
+            after_clear, {}, command, return_path, returning);
+        Expect(return_ok && !returning.maneuver_completed &&
+                   returning.maneuver_progress >= 0.75 &&
+                   std::string(planner.avoid_phase_name()) == "RETURN",
+               "lifecycle: PASS plus longitudinal clearance starts RETURN");
         Expect(planner.avoid_committed() &&
                    planner.active_avoid_target_id() == 21 &&
                    std::fabs(planner.avoid_locked_target_d() - locked) < 1e-9 &&
-                   std::string(planner.avoid_phase_name()) == "PASS",
-               "lifecycle: completion retains committed context and lock");
-        Expect(std::fabs(EndpointD(planner, final_path,
-                                   planner.avoid_target_s() + 25.0) - locked) <
+                   std::string(planner.avoid_phase_name()) == "RETURN",
+               "lifecycle: RETURN retains committed context and lock");
+        Expect(std::fabs(EndpointD(planner, return_path,
+                                   planner.avoid_target_s() + 25.0)) <
                    1e-6,
-               "lifecycle: completion cycle still publishes final AVOID path");
+               "lifecycle: RETURN path targets the global path");
+
+        const CartesianState centered = MakeEgoAt(
+            waypoints, planner.avoid_target_s() + 25.0, 0.0, kEgoSpeed);
+        CartesianPath final_path;
+        Prepare completed;
+        const bool final_ok = planner.PlanCommittedAvoid(
+            centered, {}, command, final_path, completed);
+        Expect(final_ok && completed.maneuver_completed &&
+                   completed.maneuver_progress == 1.0 &&
+                   planner.avoid_completed(),
+               "lifecycle: centered RETURN completes");
 
         Expect(!frenet_planner_ros::CompleteAvoidAtomically(
                    manager, completed, /*trajectory_ready=*/false) &&
@@ -2454,7 +2504,7 @@ int main() {
                    frenet_planner_ros::PlanningTarget::INCOMING_COMMAND &&
                    !planner.avoid_committed() &&
                    planner.active_avoid_target_id() == -1,
-               "completion latch: new KEEP owns center return and resets AVOID");
+               "completion latch: new KEEP resets the centered AVOID");
     }
 
     {
@@ -2528,31 +2578,39 @@ int main() {
 
         CartesianPath pass_path;
         Prepare pass;
+        const double shift_before_seam_s = track_length - 10.0;
         const bool pass_ok = commit_ok && planner.PlanCommittedAvoid(
-            MakeEgoAt(waypoints, ego_before_s, locked, kEgoSpeed), {},
+            MakeEgoAt(waypoints, shift_before_seam_s, 0.0, kEgoSpeed), {},
             command, pass_path, pass);
         Expect(pass_ok && !pass.maneuver_completed &&
-                   std::string(planner.avoid_phase_name()) == "PASS",
-               "closed-loop lifecycle: both actors before seam enter PASS");
+                   std::string(planner.avoid_phase_name()) == "SHIFT",
+               "closed-loop lifecycle: dynamic approach enters SHIFT before seam");
         CartesianPath center_path;
         Prepare center;
         const bool center_ok = pass_ok && planner.PlanCommittedAvoid(
             MakeEgoAt(waypoints, obstacle_after_s, locked, kEgoSpeed), {},
             command, center_path, center);
         Expect(center_ok && !center.maneuver_completed &&
+                   std::string(planner.avoid_phase_name()) == "PASS" &&
                    std::isfinite(center.maneuver_progress) &&
                    center.maneuver_progress >= pass.maneuver_progress,
-               "closed-loop lifecycle: passing seam reaches obstacle center");
+               "closed-loop lifecycle: crossing seam reaches PASS at obstacle");
         CartesianPath clear_path;
         Prepare clear;
         const bool clear_ok = center_ok && planner.PlanCommittedAvoid(
             MakeEgoAt(waypoints, obstacle_after_s + 20.0, locked, kEgoSpeed),
             {}, command, clear_path, clear);
-        Expect(clear_ok && !center.maneuver_completed &&
-                   clear.maneuver_completed &&
-                   clear.maneuver_progress == 1.0 &&
+        CartesianPath return_path;
+        Prepare returned;
+        const bool returned_ok = clear_ok && planner.PlanCommittedAvoid(
+            MakeEgoAt(waypoints, obstacle_after_s + 25.0, 0.0, kEgoSpeed),
+            {}, command, return_path, returned);
+        Expect(returned_ok && !center.maneuver_completed &&
+                   !clear.maneuver_completed &&
+                   returned.maneuver_completed &&
+                   returned.maneuver_progress == 1.0 &&
                    clear.maneuver_progress >= center.maneuver_progress,
-               "closed-loop lifecycle: seam crossing completes with monotonic progress");
+               "closed-loop lifecycle: seam crossing and RETURN complete monotonically");
     }
 
     {
@@ -2581,6 +2639,10 @@ int main() {
         Prepare completed;
         planner.PlanCommittedAvoid(
             MakeEgoAt(waypoints, planner.avoid_target_s() + 20.0, locked,
+                      kEgoSpeed),
+            {}, old_command, completed_path, completed);
+        planner.PlanCommittedAvoid(
+            MakeEgoAt(waypoints, planner.avoid_target_s() + 25.0, 0.0,
                       kEgoSpeed),
             {}, old_command, completed_path, completed);
         manager.NotifyManeuverCompleted();

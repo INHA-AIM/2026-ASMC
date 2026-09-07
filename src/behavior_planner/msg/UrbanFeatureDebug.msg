@@ -5,6 +5,7 @@ bool enable_keep
 bool enable_follow
 bool enable_left_change
 bool enable_right_change
+bool enable_avoid
 bool enable_stop
 bool enable_emergency_stop
 bool planned_stop
@@ -24,6 +25,7 @@ float64 keep_score
 float64 follow_score
 float64 left_change_score
 float64 right_change_score
+float64 avoid_score
 float64 stop_score
 float64 emergency_stop_score
 string decision_reason
@@ -57,6 +59,7 @@ string signal_controlled_link_id
 float64 distance_to_signal_movement
 bool pedestrian_risk
 bool static_obstacle_ahead
+int32 avoidance_object_id
 bool emergency_risk
 float64 min_ttc
 float64 predicted_front_ttc

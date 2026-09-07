@@ -110,6 +110,41 @@ TEST(V2CommandManagerTest, StopCarriesPoseAndForceStopMapsToEmergency) {
   EXPECT_DOUBLE_EQ(0.0, emergency.desired_speed_mps);
 }
 
+TEST(V2CommandManagerTest, AvoidLetsFrenetChooseDirectionAndUsesHandshake) {
+  V2CommandManager manager;
+  BehaviorContextData context;
+  context.timestamp = 1.0;
+  context.selected_behavior = BehaviorType::AVOID;
+  context.target.current_link_id = "source";
+  context.target.desired_speed = 6.0;
+  context.target.avoidance_object_id = 23;
+
+  const auto prepare = manager.update(context, nullptr, ros::Time(40.0), 0.5);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::AVOID, prepare.maneuver_type);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::PREPARE, prepare.execution_request);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::DIRECTION_NONE, prepare.direction);
+  EXPECT_EQ(23, prepare.primary_object_id);
+  EXPECT_FALSE(prepare.has_target_pose);
+
+  asmc_msgs::FrenetFeedback feedback;
+  feedback.command_id = prepare.command_id;
+  feedback.execution_state = asmc_msgs::FrenetFeedback::READY;
+  const auto execute = manager.update(context, &feedback, ros::Time(40.1), 0.5);
+  EXPECT_EQ(prepare.command_id, execute.command_id);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::EXECUTE, execute.execution_request);
+
+  feedback.execution_state = asmc_msgs::FrenetFeedback::EXECUTING;
+  context.selected_behavior = BehaviorType::KEEP;
+  const auto locked = manager.update(context, &feedback, ros::Time(40.2), 0.5);
+  EXPECT_EQ(prepare.command_id, locked.command_id);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::AVOID, locked.maneuver_type);
+
+  feedback.execution_state = asmc_msgs::FrenetFeedback::COMPLETED;
+  const auto keep = manager.update(context, &feedback, ros::Time(40.3), 0.5);
+  EXPECT_NE(prepare.command_id, keep.command_id);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::KEEP, keep.maneuver_type);
+}
+
 TEST(HardRuleFilterTest, GreenLightDoesNotForceStop) {
   UrbanFeature feature;
   feature.signal.has_stop_line = true;
@@ -214,6 +249,20 @@ TEST(BehaviorDecisionTest, EmptyRoadSelectsKeep) {
   const BehaviorContextData context = BehaviorDecision().decide(feature, feedback);
   EXPECT_EQ(BehaviorType::KEEP, context.selected_behavior);
   EXPECT_FALSE(context.enable.follow);
+}
+
+TEST(BehaviorDecisionTest, StaticObstacleSelectsAvoidTarget) {
+  UrbanFeature feature;
+  feature.timestamp = 1.0;
+  feature.route.speed_limit = 10.0;
+  feature.risk.static_obstacle_ahead = true;
+  feature.risk.avoidance_object_id = 31;
+
+  const BehaviorContextData context =
+      BehaviorDecision().decide(feature, asmc_msgs::PlanFeedback{});
+  EXPECT_EQ(BehaviorType::AVOID, context.selected_behavior);
+  EXPECT_TRUE(context.enable.avoid);
+  EXPECT_EQ(31, context.target.avoidance_object_id);
 }
 
 TEST(FsmTest, EmergencyReleaseRequiresSafeTtcHoldTime) {

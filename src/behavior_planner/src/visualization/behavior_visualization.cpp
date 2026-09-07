@@ -17,6 +17,7 @@ const char* BehaviorName(BehaviorType behavior) {
     case BehaviorType::STOP: return "STOP";
     case BehaviorType::YIELD: return "YIELD";
     case BehaviorType::EMERGENCY_STOP: return "EMERGENCY_STOP";
+    case BehaviorType::AVOID: return "AVOID";
   }
   return "UNKNOWN";
 }

@@ -1,6 +1,12 @@
 behavior: {update_rate: 10.0}
 interface_version: "v1"
 v2: {command_validity_seconds: 0.5, feedback_stale_seconds: 1.0}
+# Match Frenet's configured FOLLOW acquisition gate. Frenet may retain an
+# already-acquired target for its own exit margin, but Behavior must stop
+# selecting it once it leaves this range and issue a new KEEP command.
+follow: {max_target_distance: 60.0, max_lateral_offset: 1.75}
+avoid: {max_target_distance: 120.0, max_lateral_offset: 1.75}
+objects: {stale_seconds: 0.3}
 map:
   link_set_path: "$(find behavior_planner)/src/config/link_set.json"
   node_set_path: "$(find behavior_planner)/src/config/node_set.json"

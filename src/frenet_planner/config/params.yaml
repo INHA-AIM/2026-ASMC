@@ -43,8 +43,11 @@ planner:
 
   # --- AVOID: FSM이 지정한 대상의 유효성 검증 범위와 lateral 회피 ---
   avoid:
-    detection_distance: 60.0  # [m] FSM이 지정한 대상까지 이 거리 안이어야 유효(충돌 lookahead가 더 길면 자동 확장)
+    detection_distance: 120.0 # [m] KEEP의 8 s reactive horizon보다 넓게 확보해 Behavior/AVOID 사이의 blind band를 없앤다
     avoid_offset: 5.0         # [m] 회피 시 lateral_d1 격자를 밀어낼 크기
+    min_shift_start_distance: 15.0 # [m] 저속에서도 확보할 최소 SHIFT 준비거리
+    max_shift_start_distance: 70.0 # [m] 고속에서도 지나치게 일찍 이탈하지 않는 상한
+    shift_time_margin: 0.5     # [s] 횡이동 계산에 더하는 조향/제어 응답 여유
     lateral_tolerance: 0.4    # [m] SHIFT 횟이동 완료 판정
     pass_clearance: 1.0       # [m] 자차/장애물 길이 외 추가 통과 여유
     prefer_right_when_equal: true # 좌/우 valid 품질이 거의 같으면 우측 우선

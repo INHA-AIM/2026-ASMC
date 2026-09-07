@@ -26,6 +26,8 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
                                feature.surrounding.left_lane_safe;
   context.enable.right_change = !context.hard.forbid_right_change &&
                                 feature.surrounding.right_lane_safe;
+  context.enable.avoid = feature.risk.static_obstacle_ahead &&
+                         feature.risk.avoidance_object_id >= 0;
   context.enable.stop = context.hard.planned_stop || context.hard.force_stop;
   context.enable.emergency_stop = context.hard.emergency_stop;
 
@@ -53,6 +55,11 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
     context.extra_values["front_relative_speed"] = lead.relative_speed;
     context.extra_values["front_ttc"] = lead.ttc;
   }
+  if (context.enable.avoid) {
+    context.target.avoidance_object_id = feature.risk.avoidance_object_id;
+    context.extra_values["avoidance_object_id"] =
+        feature.risk.avoidance_object_id;
+  }
   if (context.enable.left_change) {
     context.target.candidate_link_ids.push_back(
         feature.route.left_target_link_id);
@@ -67,13 +74,14 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
     BehaviorType behavior;
     bool enabled;
   };
-  const std::array<Candidate, 6> candidates{{
+  const std::array<Candidate, 7> candidates{{
       {context.score.keep, BehaviorType::KEEP, context.enable.keep},
       {context.score.follow, BehaviorType::FOLLOW, context.enable.follow},
       {context.score.left_change, BehaviorType::LEFT_CHANGE,
        context.enable.left_change},
       {context.score.right_change, BehaviorType::RIGHT_CHANGE,
        context.enable.right_change},
+      {context.score.avoid, BehaviorType::AVOID, context.enable.avoid},
       {context.score.stop, BehaviorType::STOP, context.enable.stop},
       {context.score.emergency_stop, BehaviorType::EMERGENCY_STOP,
        context.enable.emergency_stop},
@@ -113,6 +121,9 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
       // to remaining braking distance. force_stop bypasses planning anyway.
       if (!context.hard.planned_stop) context.target.desired_speed = 0.0;
       break;
+    case BehaviorType::AVOID:
+      context.state = BehaviorState::AVOID_PREPARE;
+      break;
     case BehaviorType::EMERGENCY_STOP:
       context.state = BehaviorState::EMERGENCY_STOP;
       context.target.desired_speed = 0.0;
@@ -128,6 +139,7 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
       {"follow", context.score.follow},
       {"left_change", context.score.left_change},
       {"right_change", context.score.right_change},
+      {"avoid", context.score.avoid},
       {"stop", context.score.stop},
       {"emergency_stop", context.score.emergency_stop},
   };

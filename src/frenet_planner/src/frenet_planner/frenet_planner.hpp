@@ -582,7 +582,10 @@ private:
         double resolved_target_speed, const PlannerCommand& external_command,
         CartesianPath& out_path);
 
+    double EffectiveAvoidShiftStartDistance(double ego_speed,
+                                            double ego_d) const;
     void UpdateCommittedAvoidLifecycle(double ego_s, double ego_d,
+                                       double ego_speed,
                                        AvoidPrepareResult& result);
 
     // ---------------------------------------------------------------------
@@ -741,7 +744,9 @@ private:
 
     // TRACKING은 외부 AVOID 모드가 아니다. 정적 장애물 ID/방향만
     // 미리 잠그고 주행은 LANE_KEEPING을 계속하는 내부 상태다.
-    enum class AvoidPhase { TRACKING, SHIFT, PASS };
+    // TRACKING=global-path approach, SHIFT=회피측 횡이동,
+    // PASS=장애물 옆 통과, RETURN=global path(d=0) 복귀.
+    enum class AvoidPhase { TRACKING, SHIFT, PASS, RETURN };
 
     struct AvoidanceContext {
         bool active = false;
