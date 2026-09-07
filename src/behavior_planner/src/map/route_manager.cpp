@@ -164,6 +164,63 @@ bool RouteManager::getRoutePoint(double s, Point2D* out) const {
   return true;
 }
 
+bool RouteManager::getRoutePose(double s, Point2D* out,
+                                double* out_yaw) const {
+  if (!getRoutePoint(s, out) || !out_yaw || reference_.size() < 2) {
+    return false;
+  }
+  const double clamped = std::clamp(s, 0.0, cumulative_.back());
+  auto it = std::lower_bound(cumulative_.begin(), cumulative_.end(), clamped);
+  size_t i = static_cast<size_t>(std::distance(cumulative_.begin(), it));
+  if (i == 0) i = 1;
+  if (i >= reference_.size()) i = reference_.size() - 1;
+  const Point2D& a = reference_[i - 1];
+  const Point2D& b = reference_[i];
+  *out_yaw = std::atan2(b.y - a.y, b.x - a.x);
+  return true;
+}
+
+bool RouteManager::getLinkTargetPose(const std::string& link_id,
+                                     double ego_x, double ego_y,
+                                     double lookahead_m, Point2D* out,
+                                     double* out_yaw) const {
+  if (!map_ || !out || !out_yaw) return false;
+  LinkInfo link;
+  if (!map_->getLink(link_id, &link) || link.centerline.size() < 2) {
+    return false;
+  }
+  size_t nearest = 0;
+  double best = 1e18;
+  for (size_t i = 0; i < link.centerline.size(); ++i) {
+    const double distance = std::hypot(link.centerline[i].x - ego_x,
+                                       link.centerline[i].y - ego_y);
+    if (distance < best) {
+      best = distance;
+      nearest = i;
+    }
+  }
+  size_t selected = nearest;
+  double accumulated = 0.0;
+  while (selected + 1 < link.centerline.size() &&
+         accumulated < std::max(0.0, lookahead_m)) {
+    accumulated += std::hypot(
+        link.centerline[selected + 1].x - link.centerline[selected].x,
+        link.centerline[selected + 1].y - link.centerline[selected].y);
+    ++selected;
+  }
+  const size_t heading_from = selected > 0 ? selected - 1 : selected;
+  const size_t heading_to = selected + 1 < link.centerline.size()
+                                ? selected + 1
+                                : selected;
+  if (heading_from == heading_to) return false;
+  *out = link.centerline[selected];
+  *out_yaw = std::atan2(link.centerline[heading_to].y -
+                            link.centerline[heading_from].y,
+                        link.centerline[heading_to].x -
+                            link.centerline[heading_from].x);
+  return true;
+}
+
 bool RouteManager::matchMapLink(double x, double y, double yaw,
                                 LinkProjection* out,
                                 double max_distance) const {

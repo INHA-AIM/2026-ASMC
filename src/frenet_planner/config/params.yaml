@@ -58,6 +58,7 @@ planner:
     comfortable_decel: 2.0     # [m/s^2] APPROACH 감속 프로파일과 BRAKING 전환거리
     braking_margin: 3.0        # [m] 제동거리에 더할 BRAKING 전환 여유
     stop_buffer: 0.5           # [m] 정지 목표 앞 여유(오버슈트 축소)
+
     position_tolerance: 0.5    # [m] HOLD 진입 위치 판정
     speed_tolerance: 0.2       # [m/s] HOLD 진입 속도 판정
     max_lateral_offset: 5.0    # [m] 정지 목표가 경로에서 이보다 멀면 거부
@@ -66,6 +67,11 @@ planner:
     # 이라 정지 목표에 쓰면 목표가 창 밖으로 나가 Newton이 다른 구간으로 발산한다.
     # 반드시 실제 최대 stop lookahead보다 크게 유지할 것.
     projection_search_window: 100.0
+
+  # 목표점 없는 AEB/E-STOP 직접 감속 궤적. MPC의 full-brake override와
+  # 동일한 최대감속 가정을 사용해 예상 정지 위치가 실제 제어와 맞게 한다.
+  emergency_stop:
+    decel: 8.9                 # [m/s^2] MORAI IONIQ 5 100-0 평균 최대감속
 
   # --- 회전교차로 MERGE: global path상의 conflict_s에서 순환 차량의
   # 도착 시간 gap을 확인하고, gap이 없으면 진입점 전에 정지한다. ---

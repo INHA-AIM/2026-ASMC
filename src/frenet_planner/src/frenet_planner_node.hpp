@@ -140,6 +140,9 @@ class FrenetPlannerNode {
                        bool previous_plan_still_valid);
     void publishDebugMarkers(const asmc_msgs::Trajectory& trajectory,
                              const InputSnapshot& snapshot);
+    void publishDebugMarkersV2(
+        const asmc_msgs::Trajectory& trajectory,
+        const asmc_msgs::BehaviorCommand& command);
     asmc_msgs::VehicleState stopReferenceVehicle(
         const InputSnapshot& snapshot) const;
     double trajectoryDt() const;

@@ -14,7 +14,8 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
     std::string waypoint_file;
     LoadParams(yaml_path, path_cfg_, limits_, cost_weights_, vehicle_shape_,
                collision_cfg_, curve_speed_cfg_, following_cfg_, avoid_cfg_,
-               stop_cfg_, merge_cfg_, highway_merge_cfg_, visualization_cfg_,
+               stop_cfg_, emergency_stop_cfg_, merge_cfg_, highway_merge_cfg_,
+               visualization_cfg_,
                wheelbase_, lane_width_, replanning_period_s_,
                max_target_speed_accel_, waypoint_file);
 
@@ -77,7 +78,9 @@ bool FrenetPlanner::GenerateDecelToZeroPath(double s, double d, double s_dot,
     // D4-3에서 STOP BRAKING fail-safe에서 추출했다. 두 경로가 정확히 같은
     // 감속 프로파일을 쓰도록 공유한다 - 복사해두면 한쪽만 고쳐지는 문제가
     // 생긴다.
-    const double decel = std::max(0.1, stop_cfg_.comfortable_decel);
+    const double decel = std::max(
+        0.1, last_mode_ == EMERGENCY ? emergency_stop_cfg_.decel
+                                     : stop_cfg_.comfortable_decel);
     const double v0 = std::max(0.0, s_dot);
     const int n = static_cast<int>(std::ceil(v0 / decel / path_cfg_.dt)) + 1;
     out_path.x.assign(n, 0.0); out_path.y.assign(n, 0.0);

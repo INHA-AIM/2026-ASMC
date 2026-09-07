@@ -1,0 +1,17 @@
+<launch>
+  <arg name="dashboard" default="true"/>
+  <arg name="open_dashboard" default="false"/>
+  <arg name="dashboard_port" default="8088"/>
+  <arg name="rviz" default="false"/>
+
+  <!-- Same behavior_node executable; only the ROS boundary is switched to
+       BehaviorCommand/FrenetFeedback v2. -->
+  <include file="$(find behavior_planner)/launch/behavior_node.launch">
+    <arg name="interface_version" value="v2"/>
+    <arg name="dashboard_page" value="index_v2.html"/>
+    <arg name="dashboard" value="$(arg dashboard)"/>
+    <arg name="open_dashboard" value="$(arg open_dashboard)"/>
+    <arg name="dashboard_port" value="$(arg dashboard_port)"/>
+    <arg name="rviz" value="$(arg rviz)"/>
+  </include>
+</launch>

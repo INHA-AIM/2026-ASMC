@@ -31,9 +31,10 @@ void LoadParams(const std::string& yaml_path,
                  VehicleShape& vehicle_shape,
                  CollisionCheckConfig& collision_cfg,
                  CurveSpeedConfig& curve_speed_cfg,
-                 FollowingConfig& following_cfg,
+                FollowingConfig& following_cfg,
                 AvoidConfig& avoid_cfg,
                 StopConfig& stop_cfg,
+                EmergencyStopConfig& emergency_stop_cfg,
                 MergeConfig& merge_cfg,
                 HighwayMergeConfig& highway_merge_cfg,
                 PlannerVisualizationConfig& visualization_cfg,
@@ -121,6 +122,7 @@ void LoadParams(const std::string& yaml_path,
              stop_cfg.target_change_tolerance);
     loadInto(root, "planner/stop/projection_search_window",
              stop_cfg.projection_search_window);
+    loadInto(root, "planner/emergency_stop/decel", emergency_stop_cfg.decel);
 
     loadInto(root, "planner/merge/conflict_s",             merge_cfg.conflict_s);
     loadInto(root, "planner/merge/approach_distance",      merge_cfg.approach_distance);

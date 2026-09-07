@@ -38,7 +38,7 @@ HardConstraint HardRuleFilter::apply(const UrbanFeature& feature,
     hard.force_stop = true;
     result += "pedestrian_risk;";
   }
-  if (feature.risk.emergency_risk || feature.risk.min_ttc < 1.0) {
+  if (feature.risk.emergency_risk) {
     hard.emergency_stop = true;
     hard.force_stop = true;
     result += "emergency_ttc;";

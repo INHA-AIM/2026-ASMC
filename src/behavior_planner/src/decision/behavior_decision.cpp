@@ -6,11 +6,19 @@
 namespace behavior_planner {
 
 BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
-                                             const asmc_msgs::PlanFeedback&) const {
+                                             const asmc_msgs::PlanFeedback&) {
   BehaviorContextData context;
   context.timestamp = feature.timestamp;
   context.hard =
       rules_.apply(feature, &context.debug.hard_rule_reason);
+  const bool raw_emergency = context.hard.emergency_stop ||
+                             context.hard.force_stop;
+  if (fsm_.updateEmergency(raw_emergency, feature.risk.min_ttc,
+                           feature.timestamp)) {
+    context.hard.emergency_stop = true;
+    context.hard.force_stop = true;
+    if (!raw_emergency) context.debug.hard_rule_reason += "emergency_latched;";
+  }
   context.score = scorer_.score(feature, context.hard);
   context.enable.keep = true;
   context.enable.follow = feature.surrounding.has_front_vehicle;
@@ -33,6 +41,10 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
     context.target.has_stop_target = true;
     context.target.stop_x = feature.signal.stop_line_x;
     context.target.stop_y = feature.signal.stop_line_y;
+    context.target.has_target_pose = true;
+    context.target.target_x = feature.signal.stop_line_x;
+    context.target.target_y = feature.signal.stop_line_y;
+    context.target.target_yaw = feature.signal.stop_line_yaw;
   }
   if (feature.surrounding.has_front_vehicle) {
     const ObjectFeature& lead = feature.surrounding.front_vehicle;
@@ -75,24 +87,25 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
   switch (best.behavior) {
     case BehaviorType::FOLLOW:
       context.state = BehaviorState::FOLLOW;
-      {
-        const ObjectFeature& lead = feature.surrounding.front_vehicle;
-        const double desired_gap = context.target.follow_min_gap +
-                                   context.target.follow_time_gap *
-                                       std::max(0.0, feature.ego.speed);
-        const double gap_error = lead.gap - desired_gap;
-        const double acc_target_speed = lead.speed + 0.4 * gap_error;
-        context.target.desired_speed =
-            std::clamp(acc_target_speed, 0.0, context.target.desired_speed);
-      }
+      // Behavior owns the maneuver and its cruise-speed ceiling.  The leader
+      // ID and requested gap are sent to Frenet, which alone owns the
+      // cycle-by-cycle FOLLOW speed and trajectory calculation.
       break;
     case BehaviorType::LEFT_CHANGE:
       context.state = BehaviorState::LEFT_CHANGE_PREPARE;
       context.target.target_link_id = feature.route.left_target_link_id;
+      context.target.has_target_pose = feature.route.left_target_pose_valid;
+      context.target.target_x = feature.route.left_target_x;
+      context.target.target_y = feature.route.left_target_y;
+      context.target.target_yaw = feature.route.left_target_yaw;
       break;
     case BehaviorType::RIGHT_CHANGE:
       context.state = BehaviorState::RIGHT_CHANGE_PREPARE;
       context.target.target_link_id = feature.route.right_target_link_id;
+      context.target.has_target_pose = feature.route.right_target_pose_valid;
+      context.target.target_x = feature.route.right_target_x;
+      context.target.target_y = feature.route.right_target_y;
+      context.target.target_yaw = feature.route.right_target_yaw;
       break;
     case BehaviorType::STOP:
       context.state = BehaviorState::STOP;

@@ -3,9 +3,12 @@
   <arg name="open_dashboard" default="false"/>
   <arg name="dashboard_port" default="8088"/>
   <arg name="rviz" default="false"/>
+  <arg name="interface_version" default="v1"/>
+  <arg name="dashboard_page" default="index.html"/>
 
   <node pkg="behavior_planner" type="behavior_node" name="behavior_planner" output="screen">
     <rosparam command="load" file="$(find behavior_planner)/src/config/behavior_params.yaml" subst_value="true"/>
+    <param name="interface_version" value="$(arg interface_version)"/>
   </node>
 
   <group if="$(arg dashboard)">
@@ -13,10 +16,11 @@
           name="behavior_dashboard_server" output="screen">
       <param name="port" value="$(arg dashboard_port)"/>
       <param name="package_path" value="$(find behavior_planner)"/>
+      <param name="interface_version" value="$(arg interface_version)"/>
     </node>
     <node if="$(arg open_dashboard)" pkg="behavior_planner"
           type="open_dashboard.py" name="behavior_dashboard_opener" output="screen">
-      <param name="url" value="http://localhost:$(arg dashboard_port)/web/index.html"/>
+      <param name="url" value="http://localhost:$(arg dashboard_port)/web/$(arg dashboard_page)"/>
     </node>
   </group>
 

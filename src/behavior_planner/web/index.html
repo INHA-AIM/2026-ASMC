@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Behavior Planner Console</title>
   <link rel="stylesheet" href="dashboard.css">
-  <style>.legend .trajectory{background:#ffd447}.legend .stop{height:9px;background:#ff9b4a;transform:rotate(45deg)}.legend .candidate-valid{background:#75bfff}.legend .candidate-rejected{background:#ff5263}</style>
+  <style>.legend .trajectory{background:#ffd447}.legend .candidate-valid{background:#75bfff}.legend .candidate-rejected{background:#ff5263}.legend .ego{width:0;height:0;background:transparent;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:11px solid #fff;filter:drop-shadow(0 0 1px #39e58c)}.legend .npc{width:9px;height:9px;border-radius:50%;background:#ff9b4a}.legend .signal{width:9px;height:9px;border-radius:50%;background:#39e58c;border:1px solid #fff}.legend .stop{position:relative;width:9px;height:9px;background:#ff9b4a;border:1px solid #fff;transform:rotate(45deg)}.legend .stop:after{content:'+';position:absolute;left:-5px;top:-9px;color:#ff9b4a;font:bold 15px sans-serif;transform:rotate(-45deg)}</style>
 </head>
 <body>
   <header>
@@ -24,10 +24,10 @@
       </div>
       <div class="legend">
         <span><i class="route"></i>글로벌 경로</span>
-        <span><i class="required"></i>요구 링크</span><span><i class="target"></i>목표 링크</span>
-        <span><i class="ego"></i>Ego</span><span><i class="npc"></i>차량</span>
+        <span><i class="required"></i>현재 글로벌패스 구간</span><span><i class="target"></i>기동 목표 링크(있을 때)</span>
+        <span><i class="ego"></i>Ego 차량</span><span><i class="npc"></i>주변 차량(NPC)</span><span><i class="signal"></i>신호등</span>
         <span><i class="candidate-valid"></i>유효 후보</span><span><i class="candidate-rejected"></i>탈락 후보</span>
-        <span><i class="trajectory"></i>Frenet 선택 궤적</span><span><i class="stop"></i>정지 목표(주황 마름모)</span>
+        <span><i class="trajectory"></i>Frenet 선택 궤적</span><span><i class="stop"></i>정지 목표</span>
       </div>
       <div id="cursor" class="cursor"></div>
     </section>
@@ -45,6 +45,6 @@
       <section><h2>Topic Health</h2><div id="health" class="kv"></div></section>
     </aside>
   </main>
-  <script src="dashboard.js?v=planning-debug-5"></script>
+  <script src="dashboard.js?v=planning-debug-6"></script>
 </body>
 </html>

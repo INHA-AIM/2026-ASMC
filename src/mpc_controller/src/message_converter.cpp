@@ -111,6 +111,15 @@ morai_msgs::CtrlCmd MakeRosStopCommand() {
     return message;
 }
 
+morai_msgs::CtrlCmd MakeRosEmergencyStopCommand() {
+    morai_msgs::CtrlCmd message;
+    message.longlCmdType = 1;
+    message.accel = 0.0;
+    message.brake = 1.0;
+    message.steering = 0.0;
+    return message;
+}
+
 morai_msgs::CtrlCmd ToRosControlCommand(const MPCControl& control,
                                         const MPCParams& params) {
     morai_msgs::CtrlCmd message;

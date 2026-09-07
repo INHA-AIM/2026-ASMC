@@ -4,6 +4,7 @@
 namespace behavior_planner {
 namespace {
 constexpr double kDegreesToRadians = 3.14159265358979323846 / 180.0;
+constexpr double kKilometersPerHourToMetersPerSecond = 1.0 / 3.6;
 }
 
 TrackedObject MoraiMsgConverter::toTrackedObject(
@@ -14,7 +15,10 @@ TrackedObject MoraiMsgConverter::toTrackedObject(
   object.x = message.position.x;
   object.y = message.position.y;
   object.yaw = message.heading * kDegreesToRadians;
-  object.speed = std::hypot(message.velocity.x, message.velocity.y);
+  // MORAI ObjectStatus velocity is expressed in km/h in the object's local
+  // frame. Behavior only needs its magnitude, converted to the SI contract.
+  object.speed = std::hypot(message.velocity.x, message.velocity.y) *
+                 kKilometersPerHourToMetersPerSecond;
   object.accel = message.acceleration.x * std::cos(object.yaw) +
                  message.acceleration.y * std::sin(object.yaw);
   // MORAI ObjectStatus.size is treated as (length, width, height).

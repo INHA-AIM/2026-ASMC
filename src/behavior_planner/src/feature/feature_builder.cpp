@@ -43,6 +43,23 @@ UrbanFeature FeatureBuilder::build(
         current_link.can_move_left && !current_link.left_dst_link_id.empty();
     feature.route.lane_change_right_allowed =
         current_link.can_move_right && !current_link.right_dst_link_id.empty();
+    Point2D target;
+    if (feature.route.lane_change_left_allowed &&
+        route_manager.getLinkTargetPose(feature.route.left_target_link_id,
+                                        ego.x, ego.y, 20.0, &target,
+                                        &feature.route.left_target_yaw)) {
+      feature.route.left_target_pose_valid = true;
+      feature.route.left_target_x = target.x;
+      feature.route.left_target_y = target.y;
+    }
+    if (feature.route.lane_change_right_allowed &&
+        route_manager.getLinkTargetPose(feature.route.right_target_link_id,
+                                        ego.x, ego.y, 20.0, &target,
+                                        &feature.route.right_target_yaw)) {
+      feature.route.right_target_pose_valid = true;
+      feature.route.right_target_x = target.x;
+      feature.route.right_target_y = target.y;
+    }
   }
 
   RouteSignalMovement signal_movement;
@@ -72,12 +89,17 @@ UrbanFeature FeatureBuilder::build(
     // safety clearance, remains before the physical stop line.  Converting
     // route s back to x/y also keeps the offset correct on curved approaches.
     Point2D adjusted_stop;
+    const double adjusted_stop_s =
+        std::max(0.0, feature.signal.stop_line_s - stop_target_offset_m_);
     if (stop_target_offset_m_ > 0.0 &&
-        route_manager.getRoutePoint(
-            std::max(0.0, feature.signal.stop_line_s - stop_target_offset_m_),
-            &adjusted_stop)) {
+        route_manager.getRoutePose(adjusted_stop_s, &adjusted_stop,
+                                   &feature.signal.stop_line_yaw)) {
       feature.signal.stop_line_x = adjusted_stop.x;
       feature.signal.stop_line_y = adjusted_stop.y;
+    } else {
+      Point2D stop_pose;
+      route_manager.getRoutePose(feature.signal.stop_line_s, &stop_pose,
+                                 &feature.signal.stop_line_yaw);
     }
     feature.signal.traffic_light_id = stop_line.traffic_light_id;
     feature.signal.light_state = traffic_light_provider.getState(
@@ -170,7 +192,8 @@ UrbanFeature FeatureBuilder::build(
       }
     }
     if (object.type == ObjectType::PEDESTRIAN && object.gap > 0.0 &&
-        object.gap < 15.0 && std::abs(relative_d) < kLaneWidth) {
+        object.gap < safety_.pedestrian_stop_distance &&
+        std::abs(relative_d) < kLaneWidth) {
       feature.risk.pedestrian_risk = true;
       feature.risk.nearest_pedestrian_s =
           std::min(feature.risk.nearest_pedestrian_s, object.s);
@@ -224,7 +247,7 @@ UrbanFeature FeatureBuilder::build(
     const double closing_speed =
         std::max(0.0, feature.ego.speed - lead.speed);
     const double available_braking_distance =
-        std::max(0.5, lead.gap - 8.0);
+        std::max(0.5, lead.gap - safety_.front_min_gap);
     required_deceleration =
         closing_speed * closing_speed / (2.0 * available_braking_distance);
 
@@ -243,8 +266,9 @@ UrbanFeature FeatureBuilder::build(
   feature.extra_values["predicted_front_ttc"] = predicted_front_ttc;
   feature.extra_values["required_deceleration"] = required_deceleration;
   feature.risk.emergency_risk =
-      feature.risk.min_ttc < 1.0 || predicted_front_ttc < 1.2 ||
-      required_deceleration > 6.0;
+      feature.risk.min_ttc < safety_.emergency_ttc_enter ||
+      predicted_front_ttc < safety_.emergency_predicted_ttc ||
+      required_deceleration > safety_.emergency_required_decel;
   return feature;
 }
 

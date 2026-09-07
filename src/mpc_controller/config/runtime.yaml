@@ -1,5 +1,6 @@
 topics:
   trajectory: /planning/trajectory
+  behavior_command_v2: /behavior/command_v2
 
 publish_topics:
   control: /ctrl_cmd

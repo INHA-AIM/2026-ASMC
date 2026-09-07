@@ -115,6 +115,13 @@ struct StopConfig {
     double projection_search_window = 100.0;
 };
 
+// Emergency braking has no fixed stop target.  This deceleration determines
+// the predicted stop point of the direct emergency trajectory and must match
+// the full-brake actuator assumption used by the controller.
+struct EmergencyStopConfig {
+    double decel = 8.9;  // [m/s^2]
+};
+
 // 고주로/본선 합류 구간. Global Path가 이미 램프에서 본선으로 이어지는 형상을
 // 가지므로 횡경로는 d=0을 유지하고, 본선 corridor의 선행/후행 차량 사이 시간·
 // 거리 gap에 맞춰 종방향 진입 시점만 결정한다.

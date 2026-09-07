@@ -1,0 +1,33 @@
+<launch>
+  <!-- Frenet v2 integration variant. MORAI bridges and the web dashboard are
+       opt-in, matching autonomy_no_bridges.launch defaults. -->
+  <arg name="state_source" default="gps_imu" doc="gps_imu or ego_dev"/>
+  <arg name="dashboard" default="false"/>
+  <arg name="traffic_light" default="true"/>
+  <arg name="traffic_light_device" default="auto"/>
+  <arg name="camera_topic" default="/cam_extra/image_jpeg/compressed"/>
+
+  <group if="$(arg traffic_light)">
+    <node pkg="traffic_light" type="live_infer.py"
+          name="traffic_light_infer" output="screen"
+          args="--image-topic $(arg camera_topic) --state-topic /traffic_light/state --detail-topic /traffic_light/detail --device $(arg traffic_light_device)"/>
+  </group>
+
+  <include if="$(eval arg('state_source') == 'gps_imu')"
+           file="$(find vehicle_state)/launch/vehicle_state.launch"/>
+  <include if="$(eval arg('state_source') == 'ego_dev')"
+           file="$(find vehicle_state)/launch/vehicle_state_ego_dev.launch"/>
+
+  <!-- Temporary MORAI boundary adapter. It preserves ObjectStatus.unique_id so
+       BehaviorCommand.primary_object_id resolves to the same Frenet object. -->
+  <node pkg="behavior_planner" type="morai_objects_adapter.py"
+        name="morai_objects_adapter" output="screen">
+    <param name="input_topic" value="/Object_topic"/>
+    <param name="output_topic" value="/perception/objects"/>
+  </node>
+  <include file="$(find behavior_planner)/launch/behavior_node_v2.launch">
+    <arg name="dashboard" value="$(arg dashboard)"/>
+  </include>
+  <include file="$(find frenet_planner)/launch/frenet_planner.launch"/>
+  <include file="$(find mpc_controller)/launch/mpc_controller.launch"/>
+</launch>
