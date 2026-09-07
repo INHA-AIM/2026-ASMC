@@ -1,0 +1,5 @@
+# live_check.py 로 수집 (2026-09-05 23:10:32), 1개
+# config 의 stopline: 아래에 붙여넣으세요.
+stopline:
+  include_nodes:
+    - A1256W000709    # (-99.31, 317.80)  TL=-  통과각 4deg

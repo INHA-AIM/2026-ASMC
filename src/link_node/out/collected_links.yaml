@@ -1,0 +1,13 @@
+# live_check.py 로 수집 (2026-09-06 21:40:44), 9개
+# config 의 drivable.exclude_links / lane.exclude_links 에 붙여넣으세요.
+# (road=O 는 주행가능영역에, lane=O 는 차선에 쓰이고 있다는 뜻)
+exclude_links:
+  - A2256W000010    # (76.10, 275.41)  road=- lane=-
+  - A2256W000429    # (76.61, 255.64)  road=- lane=-
+  - A2256W000433    # (77.44, 89.21)  road=- lane=-
+  - A2256W000421    # (77.85, 6.62)  road=- lane=-
+  - A2256W000425    # (78.61, -144.92)  road=- lane=-
+  - A2256W000424    # (79.00, -220.83)  road=- lane=-
+  - A2256W000426    # (79.61, -369.73)  road=- lane=-
+  - A2256W000447    # (79.99, -410.55)  road=- lane=-
+  - A2256W000546    # (80.53, -506.82)  road=- lane=-

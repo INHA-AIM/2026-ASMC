@@ -28,7 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dmz-cursor-theme xcursor-themes \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements-lbc.txt requirements-mgeo.txt requirements-grpc.txt /tmp/
+COPY requirements-lbc.txt requirements-mgeo.txt requirements-grpc.txt requirements-linknode.txt /tmp/
 RUN pip3 install --no-cache-dir --upgrade "pip<24.1"
 
 # ROS 컨테이너에서도 신호등 추론이 RTX 40(Ada) GPU를 사용하도록 CUDA wheel을
@@ -52,9 +52,10 @@ RUN pip3 install --no-cache-dir --ignore-installed \
 RUN pip3 install --no-cache-dir -r /tmp/requirements-lbc.txt && \
     pip3 install --no-cache-dir -r /tmp/requirements-mgeo.txt && \
     pip3 install --no-cache-dir -r /tmp/requirements-grpc.txt && \
+    pip3 install --no-cache-dir -r /tmp/requirements-linknode.txt && \
     pip3 install --no-cache-dir tqdm ultralytics && \
     rm -f /tmp/requirements-*.txt && \
-    python3 -c "from scipy.spatial import cKDTree; import cv2; import numpy"
+    python3 -c "from scipy.spatial import cKDTree; import cv2; import numpy; import h5py; import pyproj"
 
 RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc && \
     echo "[ -f /root/ws/devel/setup.bash ] && source /root/ws/devel/setup.bash" >> /root/.bashrc && \
