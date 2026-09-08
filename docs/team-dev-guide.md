@@ -455,10 +455,11 @@ checklist **§5**
 
 | 순위 | 작업 | 담당 |
 |------|------|------|
-| 1 | 카메라 model-independent live 추론·시각화·성능계측 | 안승현 |
-| 2 | MGeo bake/local crop pilot | 장원태 중심 협의 |
-| 3 | 카메라 독립 test와 full-stack 시뮬 검증 | 인지 파트 |
-| 4 | camera/map/LiDAR 공통 BEV pilot와 interface 합의 | 안승현 주관 + 전 파트 |
-| 5 | GPS blackout lane/localization/control 실험 | 인지·planning/control |
-| 6 | 10월 대회판 호환·안정화 이식 | 전원 |
-| 7 | 최소 공용 rosbag profile, 영상 stop-line head | 필요성 확인 후 |
+| 1 | 센서셋·규정·수집 모드·차량 좌표계 정본화 | 안승현, 팀 검토 |
+| 2 | raw rosbag wrapper와 모델별 result lineage | 인지 파트 |
+| 3 | Camera/LiDAR Capture 5/10 Hz GT pilot | 안승현·손재호 |
+| 4 | GPS lever arm 검증과 camera/map 공통 BEV 기준 | 안승현·장원태 |
+| 5 | 3-camera BEV, lane/stopline 구조화 | 안승현 |
+| 6 | MGeo crop과 정상 GPS/Blackout source policy 평가 | 안승현·장원태 |
+| 7 | LiDAR association, safe corridor ownership과 판제 interface | 인지·planning/control |
+| 8 | 10월 대회판 데이터 보강·장기 재학습·안정화 이식 | 전원 |

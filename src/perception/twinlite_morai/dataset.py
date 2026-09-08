@@ -12,9 +12,17 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from .tasks import ROAD_MARKING_CLASS_VALUES, task_from_training_heads
 
-SUPPORTED_DATASET_SCHEMA = "morai-perception-dataset-1.0.0"
-SUPPORTED_SAMPLE_SCHEMA = "morai-perception-sample-1.0.0"
+
+SUPPORTED_DATASET_SCHEMAS = {
+    "morai-perception-dataset-1.0.0",
+    "morai-perception-dataset-1.1.0",
+}
+SUPPORTED_SAMPLE_SCHEMAS = {
+    "morai-perception-sample-1.0.0",
+    "morai-perception-sample-1.1.0",
+}
 DEFAULT_DATASET_VERSION = "twinlite_morai_v1"
 
 
@@ -110,13 +118,35 @@ def _read_binary_mask(path: Path, expected_hw: List[int], label: str) -> np.ndar
     return mask.astype(np.uint8, copy=False)
 
 
+def _read_categorical_mask(
+    path: Path, expected_hw: List[int], label: str, class_count: int
+) -> np.ndarray:
+    mask = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+    if mask is None or mask.ndim != 2:
+        raise MoraiDatasetError(f"failed to read {label} mask: {path}")
+    if list(mask.shape) != expected_hw:
+        raise MoraiDatasetError(
+            f"{label} mask shape mismatch: expected={expected_hw} "
+            f"actual={list(mask.shape)} path={path}"
+        )
+    values = set(np.unique(mask).tolist())
+    allowed = set(range(int(class_count)))
+    if not values.issubset(allowed):
+        raise MoraiDatasetError(
+            f"{label} mask class ids must be in {sorted(allowed)}: "
+            f"path={path} values={sorted(values)}"
+        )
+    return mask.astype(np.uint8, copy=False)
+
+
 class MoraiTwinLiteDataset(Dataset):
-    """Load RGB and paired targets referenced by a dataset-version manifest.
+    """Load RGB and paired two-head targets from a version manifest.
 
     RGB is read from the immutable run directory and letterboxed on demand. The
-    pre-baked lane, drivable and valid masks already share the recorded geometry.
-    A single dataset instance pools front/left/right samples without flattening
-    their physical directories or losing run/view metadata.
+    pre-baked targets and valid masks already share the recorded geometry. The
+    supported tasks are binary drivable+lane and binary drivable+4-class road
+    marking. A single dataset instance pools front/left/right samples without
+    flattening their physical directories or losing run/view metadata.
     """
 
     def __init__(
@@ -148,17 +178,18 @@ class MoraiTwinLiteDataset(Dataset):
             )
 
         self.dataset_meta = _load_json(self.version_root / "dataset.json")
-        if self.dataset_meta.get("schema_version") != SUPPORTED_DATASET_SCHEMA:
+        if self.dataset_meta.get("schema_version") not in SUPPORTED_DATASET_SCHEMAS:
             raise MoraiDatasetError(
                 "unsupported dataset schema: "
                 f"{self.dataset_meta.get('schema_version')}"
             )
         self.target_hw = [int(value) for value in self.dataset_meta["target_hw"]]
         self.training_heads = tuple(self.dataset_meta["training_heads"])
-        if self.training_heads != ("lane", "drivable"):
-            raise MoraiDatasetError(
-                f"expected lane/drivable training heads, got {self.training_heads}"
-            )
+        try:
+            self.task_spec = task_from_training_heads(self.training_heads)
+        except ValueError as exc:
+            raise MoraiDatasetError(str(exc)) from exc
+        self.heads = self.task_spec.heads
 
         manifest_path = self.version_root / f"{self.split}.jsonl"
         self.rows = _load_jsonl(manifest_path)
@@ -171,7 +202,7 @@ class MoraiTwinLiteDataset(Dataset):
 
         seen = set()
         for row in self.rows:
-            if row.get("schema_version") != SUPPORTED_SAMPLE_SCHEMA:
+            if row.get("schema_version") not in SUPPORTED_SAMPLE_SCHEMAS:
                 raise MoraiDatasetError(
                     f"unsupported sample schema: {row.get('schema_version')}"
                 )
@@ -188,13 +219,20 @@ class MoraiTwinLiteDataset(Dataset):
                 raise MoraiDatasetError(
                     f"sample target shape differs from dataset: {sample_id}"
                 )
+            if self.task_spec.secondary_head == "road_marking":
+                encoding = (row.get("target_encodings") or {}).get(
+                    "road_marking", {}
+                )
+                if (
+                    encoding.get("type") != "categorical_uint8"
+                    or encoding.get("class_values") != ROAD_MARKING_CLASS_VALUES
+                ):
+                    raise MoraiDatasetError(
+                        f"sample {sample_id} has an invalid road-marking encoding"
+                    )
             if verify_files:
-                relative_paths = [
-                    row["image"],
-                    row["valid_mask"],
-                    row["targets"]["lane"],
-                    row["targets"]["drivable"],
-                ]
+                relative_paths = [row["image"], row["valid_mask"]]
+                relative_paths.extend(row["targets"][head] for head in self.heads)
                 relative_paths.extend((row.get("valid_masks") or {}).values())
                 missing = [
                     str(_resolve_under_root(self.data_root, relative))
@@ -215,18 +253,31 @@ class MoraiTwinLiteDataset(Dataset):
         rgb_path = _resolve_under_root(self.data_root, row["image"])
         rgb = _letterbox_rgb(_read_rgb(rgb_path), geometry)
 
-        lane_path = _resolve_under_root(self.data_root, row["targets"]["lane"])
         drivable_path = _resolve_under_root(
             self.data_root, row["targets"]["drivable"]
         )
         valid_path = _resolve_under_root(self.data_root, row["valid_mask"])
-        lane = _read_binary_mask(lane_path, self.target_hw, "lane")
         drivable = _read_binary_mask(
             drivable_path, self.target_hw, "drivable"
         )
+        secondary_head = self.task_spec.secondary_head
+        secondary_path = _resolve_under_root(
+            self.data_root, row["targets"][secondary_head]
+        )
+        if secondary_head == "road_marking":
+            secondary = _read_categorical_mask(
+                secondary_path,
+                self.target_hw,
+                secondary_head,
+                self.task_spec.class_counts[secondary_head],
+            )
+        else:
+            secondary = _read_binary_mask(
+                secondary_path, self.target_hw, secondary_head
+            )
         valid = _read_binary_mask(valid_path, self.target_hw, "valid")
         valid_masks = {}
-        for head in ("lane", "drivable"):
+        for head in self.heads:
             relative = (row.get("valid_masks") or {}).get(head, row["valid_mask"])
             valid_masks[head] = _read_binary_mask(
                 _resolve_under_root(self.data_root, relative),
@@ -236,7 +287,7 @@ class MoraiTwinLiteDataset(Dataset):
 
         arrays: Dict[str, Any] = {
             "image": rgb,
-            "targets": {"lane": lane, "drivable": drivable},
+            "targets": {"drivable": drivable, secondary_head: secondary},
             "valid_mask": valid,
             "valid_masks": valid_masks,
         }
@@ -244,19 +295,19 @@ class MoraiTwinLiteDataset(Dataset):
             arrays = self.joint_transform(arrays)
 
         image = np.ascontiguousarray(arrays["image"].transpose(2, 0, 1))
-        lane = np.ascontiguousarray(arrays["targets"]["lane"])
         drivable = np.ascontiguousarray(arrays["targets"]["drivable"])
+        secondary = np.ascontiguousarray(arrays["targets"][secondary_head])
         valid = np.ascontiguousarray(arrays["valid_mask"])
         valid_masks = {
             head: np.ascontiguousarray(arrays["valid_masks"][head])
-            for head in ("lane", "drivable")
+            for head in self.heads
         }
 
         return {
             "image": torch.from_numpy(image).float().div_(255.0),
             "targets": {
-                "lane": torch.from_numpy(lane).long(),
                 "drivable": torch.from_numpy(drivable).long(),
+                secondary_head: torch.from_numpy(secondary).long(),
             },
             "valid_mask": torch.from_numpy(valid).bool(),
             "valid_masks": {

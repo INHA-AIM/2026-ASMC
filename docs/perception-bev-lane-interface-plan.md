@@ -3,9 +3,9 @@
 > **문서 역할:** Detailed Design Note — GT 정책 근거와 BEV/lane 후보 상세
 > **우선순위 정본:** [perception-map-fusion-roadmap.md](./perception-map-fusion-roadmap.md)
 > **문서 허브:** [README.md](./README.md)
-> 기준일: 2026-09-05
+> 기준일: 2026-09-08
 > 담당: 안승현
-> 상태: v4 2-head 18 epoch 학습·validation 완료 — live/독립 test 판단 전
+> 상태: v6 drivable+4-class road-marking 본학습·validation·live 시각화 완료
 > 관련: [perception-dataset-labeling-split.md](./perception-dataset-labeling-split.md)
 
 팀 전체 map-camera-LiDAR 구조, provisional topic과 대회판 이식 일정은
@@ -17,14 +17,15 @@
 | 항목 | 현재 방향 | 상태 |
 |---|---|---|
 | 차선 GT | 가려진 차선을 복원하지 않고 보이는 차선만 positive | 합의 |
-| 정지선 | MGeo/전역경로 정지점을 1차 사용; 영상이 필요해지면 lane과 분리한 front 중심 head 검토 | 후순위 후보 |
+| 정지선 | MGeo/전역경로 정지점을 1차 사용; 영상은 all-view road-marking class로 보조 검증 | 적용·평가 중 |
 | 3-camera BEV | RGB를 합쳐 재추론하지 않고 카메라별 segmentation 확률을 공통 ego-BEV로 투영 | 합의 |
 | BEV 구현 시점 | 학습 결과와 live 처리량을 측정하고 센서 주기·해상도를 동결한 뒤 본 구현 | 합의 |
 | 장애물 점유 | LiDAR-primary occupancy/tracking이 담당 | 합의 |
-| drivable의 객체 픽셀 | 차량·보행자·`obstacle`은 drivable head에서 ignore | 2026-09-04 동결 |
+| drivable의 객체 픽셀 | actor-negative(B): 차량·보행자·`obstacle`을 non-drivable로 감독 | 잠정 채택 |
 | 차로 변경 인터페이스 | mask와 별도로 ego/adjacent lane topology를 구조화 | 추가 설계 필요 |
 | 추가 데이터 시나리오 | 주최 측 예제·제밍구간의 통제 변형 사용, 범용 랜덤 생성기는 보류 | 합의 |
 | 정지선 배포 | MGeo/전역경로 정지점 1차, vision head는 보조·연구 확장 | 합의 |
+| 공통 좌표 | 후륜축 중앙 `base_link`, x-forward/y-left/z-up; raster 범위는 overlay 후 결정 | 좌표 정본·범위 보류 |
 
 BEV의 최종 구현은 센서 profile 동결 뒤에 하되, 카메라 calibration과 좌표계,
 letterbox 역변환, 출력 메시지의 timestamp 계약은 데이터 수집 단계부터 보존한다.
@@ -41,9 +42,10 @@ letterbox 역변환, 출력 메시지의 timestamp 계약은 데이터 수집 �
 | amodal road surface | drivable positive | 객체 아래까지 이어지는 도로 지형 | 차로 구조가 연속적이고 BEV topology에 유리 | 현재 visible Semantic만으로 가려진 표면을 직접 알 수 없어 지도·시계열 보간이 필요하며 객체 위도 drivable로 출력 |
 | 분리형 static surface | **ignore, loss 제외** | 보이는 정적 도로 표면만 감독하고 객체 점유는 별도 계층에 위임 | LiDAR occupancy와 책임이 분명하고 transient actor가 road 학습을 오염시키지 않음 | 객체 픽셀 출력은 감독되지 않아 단독 결과가 임의적일 수 있고, 최종 출력에는 occupancy 융합이 필수 |
 
-현재 목표는 카메라로 lane·정적 drivable geometry를 만들고 LiDAR로 장애물 점유를
-처리하는 것이므로 세 번째 정책이 가장 잘 맞는다. 단, 이 결정은 LiDAR가 가용하지 않은
-상태에서 카메라 drivable만으로 안전 판단하지 않는다는 시스템 계약을 전제로 한다.
+초기 목표에는 세 번째 정책이 잘 맞았지만 통제 A/B에서 actor-negative(B)가 actor leak을
+줄이고 전체 drivable/lane 성능도 회귀하지 않아 현재는 첫 번째에 가까운 B를 잠정
+채택했다. 최종 안전 판단은 어느 정책에서도 카메라 drivable만 사용하지 않고 LiDAR
+occupancy와 판제 문맥을 함께 사용한다.
 
 ### 2.1 Background와 ignore의 정확한 차이
 
@@ -67,7 +69,8 @@ ROI/padding만 표현하므로 객체 ignore를 나타내지 못한다. 최종 �
 ```text
 drivable_train_valid = geometric_valid AND NOT drivable_ignore
 lane_train_valid      = geometric_valid
-stopline_train_valid  = geometric_valid AND (view == front)
+stopline_train_valid  = geometric_valid
+road_marking_valid    = geometric_valid
 ```
 
 ignore는 객체를 자동으로 background나 drivable로 만드는 기능이 아니다. 해당 픽셀에
@@ -127,7 +130,7 @@ mask를 사용한다.
   합류·합류 차로 변경 데이터도 수집하지만 localization이 정상일 때는 MGeo link/node를
   1차 기준으로 사용한다.
 
-### P2 — 2-head 재학습 후 정지선 확장
+### P2 — Drivable A/B 후 road-marking 확장
 
 1. 기존 `best_mean.pt`를 신규 hard run에 먼저 추론해 재학습 전 기준치를 남긴다. **완료:**
    v4 독립 val 전체 평균 `0.8210`, front `0.7503`, foggy `0.7582`, foggy 3pm `0.7167`.
@@ -135,9 +138,21 @@ mask를 사용한다.
    이후 별도로 수집한 sample-b val 1,404 samples에서 checkpoint를 선택한다. 첫 sunny 11am의
    날씨 전환 4 frame은 명시적으로 제외했고 원본은 보존했다.
 3. 전체 평균 외에 view, weather, route type, actor density, occlusion bin별 지표를 낸다.
-4. 2-head가 안정화된 뒤 stopline head를 추가하고 loss는 front sample에만 적용한다.
-5. 정지선은 pixel IoU 외에 검출 recall, false positive/frame, IPM 거리 MAE를 평가한다.
-6. 객체 ignore 영역을 제외한 segmentation metric과 LiDAR occupancy를 합친 최종 safe-area
+4. 같은 split/checkpoint에서 actor-ignore(A)와 actor-negative(B)만 바꿔 drivable 정책을
+   먼저 선택한다. **완료:** B의 도로 문맥 actor leak `14.26% → 3.20%`, false-hole
+   `+0.049%p`, 공통 GT drivable/lane IoU 비회귀를 확인해 B를 잠정 채택했다.
+5. 선택 정책을 고정한 뒤 lane classifier를 `background/white/yellow/stopline` 4-class로
+   바꾼다. 세 view 모두 정답/loss를 사용하고 class·view별 IoU와 recall을 낸다.
+   **준비 완료:** v6 active manifest, 2→4 output adapter, multiclass loss/metric과 무학습
+   실제 batch preflight까지 확인했다. **Tiny-overfit 완료:** sunny/foggy×3-view×3 foreground
+   기준의 균형 18장에서 road-marking mIoU `0.0304 → 0.7919`, stopline IoU `0.8876`으로
+   class mapping과 학습 배관을 확인했다. **본학습 완료:** 18 epoch best에서 drivable
+   `0.98343`, road-marking `0.89555`, white/yellow/stopline 각각
+   `0.87861/0.93277/0.87528`이다. Live backend는 task를 자동 감지하고 4-class argmax를
+   `/perception/camera/{view}/road_marking/class_id`로 발행한다.
+6. 정지선은 pixel IoU 외에 검출 recall, false positive/frame, front IPM 및 BEV 거리
+   MAE를 평가한다.
+7. 객체 ignore 영역을 제외한 segmentation metric과 LiDAR occupancy를 합친 최종 safe-area
    metric을 구분한다.
 
 대회 배포에서는 MGeo/전역경로에 정지점을 두고 localization 오차보다 큰 안전 margin을
@@ -151,8 +166,10 @@ sample-b는 model selection용 val이다. 최종 성능 판단에는 재학습 �
 1. 세 카메라 live 입력으로 FPS, p50/p95 latency, UDP drop, GPU/CPU memory를 측정한다.
 2. 센서 해상도·주기·압축률을 동결하고 학습 profile과 차이가 있으면 별도 validation한다.
 3. 모델 확률맵을 원본 카메라 좌표로 복원한 뒤 각 카메라 homography로 ego-BEV에 옮긴다.
-4. threshold 전 확률과 coverage/confidence를 융합하고, 마지막에 LiDAR occupancy를 차감한다.
-5. MGeo GT로 camera-BEV 정합과 차로 topology를 오프라인 평가하되 배포 입력으로 누설하지 않는다.
+4. threshold 전 확률과 coverage/confidence를 융합한다. LiDAR occupancy 차감과
+   `safe_drivable` 생성 책임은 인지·퓨전·판제 인터페이스 협의 후 확정한다.
+5. 제공 MGeo를 map prior와 camera-BEV 정합 평가에 모두 사용한다. 본선에서는 제공·허용된
+   지도와 측위만 사용하고 GT/oracle sensor output을 배포 입력으로 누설하지 않는다.
 
 ## 4. MGeo·시나리오 자동화 활용 범위
 
@@ -188,7 +205,7 @@ controller, sensor-set hash를 저장한다.
 
 ```text
 3-camera RGB
-  -> shared 3-head segmentation
+  -> shared drivable + 4-class road-marking segmentation
   -> camera probabilities + per-view validity
   -> calibrated ego-BEV fusion
   -> lane boundary/vector extraction
@@ -199,9 +216,9 @@ controller, sensor-set hash를 저장한다.
 
 ### 5.1 Raster 계층
 
-- `drivable_probability`, `lane_probability`, `stopline_probability`
+- `drivable_probability`, `road_marking_probability`와 class별 파생 확률
 - camera coverage/validity와 fusion confidence
-- LiDAR occupancy는 별도 layer로 유지하고 최종 `safe_drivable`에서 차감
+- LiDAR occupancy는 별도 layer로 유지하며 `safe_drivable` 차감 소유권은 판제·퓨전과 합의
 - BEV frame ID, resolution, origin, width/height, timestamp
 
 ### 5.2 Vector/topology 계층
@@ -220,7 +237,7 @@ lane centerline으로 ego lane을 유지하고, MGeo lane ID는 유효 pose가 �
 
 ### 5.3 다음 설계 회의에서 확정할 항목
 
-1. ego 좌표축, BEV 범위/해상도와 ROS `frame_id`
+1. 후륜축 중앙 `base_link` 검증과 실제 overlay 기반 BEV 범위/해상도
 2. lane boundary와 lane centerline의 custom message 스키마
 3. confidence, age, occlusion, invalid 상태의 의미와 timeout
 4. 끊긴 차선·교차로에서 topology 유지 규칙
@@ -233,9 +250,10 @@ lane centerline으로 ego lane을 유지하고, MGeo lane ID는 유효 pose가 �
 - BEV 최종 grid와 ROS custom message 확정
 - learned view transform 또는 temporal BEV
 - 카메라 객체 검출 head 추가
-- MGeo GT를 실제 인지 출력으로 직접 사용하는 기능
+- 카메라 패키지 내부에서 MGeo bake/local crop까지 직접 구현하는 기능
 
-이 항목들은 3-head 성능, live profile, 판단 파트 인터페이스 요구가 확보된 뒤 진행한다.
+이 항목들은 4-class live profile, map-camera overlay와 판단 파트 인터페이스 요구가
+확보된 뒤 진행한다.
 
 ## 7. 규정 v1.1 해석 메모
 

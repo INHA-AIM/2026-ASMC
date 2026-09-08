@@ -2,7 +2,7 @@
 
 > **문서 역할:** Active Reference — 주최 배포 map/path/scenario/checkpoint 자산
 > **문서 허브:** [README.md](./README.md)
-> **v1.1** (2026.08.28) · 로컬 `$ASMC_DATA` 또는 `$AIM_PROJECT/data/R_KR_PG_K-city_2025/`
+> **v1.1** (2026.09.08) · 로컬 `$ASMC_DATA` 또는 `$AIM_PROJECT/data/R_KR_PG_K-city_2025/`
 > 규정: [competition-environment.md](./competition-environment.md)
 
 본 repo에는 **대용량·주최 배포 파일을 포함하지 않습니다.** 각자 동일 경로에 배치하세요.
@@ -44,6 +44,19 @@ MORAI **Sensor Setting Load**로 사용.
 
 - 4번째 카메라: 규정 범위 내 **자유** 배치
 - 본선: **UDP** — `udpConfig` 포트를 팀 PC와 맞출 것
+
+### 팀 개발 센서셋
+
+팀 저장소 `config/`의 센서셋은 주최 원본과 목적을 구분한다.
+
+| 파일 | 용도 |
+|---|---|
+| `ASMC_sensor_set_v1.json` | 과거 개발·수집 재현 |
+| `ASMC_sensor_set_v2.json` | **26.R1.H3 현재 개발 기본값** |
+| `ASMC_sensor_set_GT.json` | v2 + Semantic Camera×3 + Instance GT LiDAR, 개발·학습 전용 |
+
+v1→v2의 유효 변경은 후방 카메라 pitch `340°→328°`다. GT 센서셋은 본선 허용 센서셋이
+아니며, 본선에서는 주최 센서 제한과 `2026_molit_comp_cam_set.json`을 우선한다.
 
 ## 2. 전역 경로
 

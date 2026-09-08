@@ -126,7 +126,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | README | 역할 |
 |---|---|
 | [src/perception](../src/perception/README.md) | 인지 파트 상태·코드·문서 지도 |
-| [twinlite_morai](../src/perception/twinlite_morai/README.md) | 2-head 학습/eval adapter와 현재 후보 |
+| [twinlite_morai](../src/perception/twinlite_morai/README.md) | binary/4-class 2-head 학습 adapter와 현재 후보 |
 | [drivable_bev](../src/perception/drivable_bev/README.md) | 공통 BEV placeholder와 구현 전 gate |
 | [data_collection](../src/data_collection/README.md) | Capture, sync, mask/cache와 dataset 실행법 |
 | [interfaces](../src/interfaces/README.md) | provisional topic과 합의된 계약의 승격 위치 |

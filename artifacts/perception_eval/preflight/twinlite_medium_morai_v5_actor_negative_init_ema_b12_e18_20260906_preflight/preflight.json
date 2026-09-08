@@ -1,0 +1,111 @@
+{
+  "completed_at_utc": "2026-09-06T13:18:37+00:00",
+  "dataset_provenance": {
+    "dataset_metadata_sha256": "45d0574b414658bfa374543541804917cedb676573ffb6284a2512caa6b3e20f",
+    "dataset_version": "twinlite_morai_v5_marking_actor_negative",
+    "split_manifest_sha256": {
+      "train": "71dad566676b6df7d1060b2e4aa4c6d96942a7147410338e6e2e80e7582b0c32",
+      "val": "906ef9aacdaad7c525e0286d80b67cd63afac7eda8cd19ef0778aa1f3ce6a7a7"
+    }
+  },
+  "initialization": {
+    "checkpoint_epoch": 10,
+    "ema_reset_from_loaded_model": true,
+    "mode": "checkpoint_weights_only",
+    "optimizer_reset": true,
+    "path": "/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v1_uniform_b12_e10_20260902/best_mean.pt",
+    "scheduler_reset": true,
+    "sha256": "a88794304c149160be239e9dafe0f54d00808ab9358224e3c4c933c1ccc0d94d",
+    "source_dataset_version": "twinlite_morai_v1",
+    "weights": "ema_state_dict"
+  },
+  "schema_version": "twinlite-training-preflight-1.0.0",
+  "train": {
+    "image_shape": [
+      12,
+      3,
+      384,
+      640
+    ],
+    "losses": {
+      "drivable_focal": 0.07232813537120819,
+      "drivable_loss": 0.10105104744434357,
+      "drivable_tversky": 0.028722912073135376,
+      "lane_focal": 0.008302191272377968,
+      "lane_loss": 0.03545738011598587,
+      "lane_tversky": 0.027155190706253052,
+      "loss": 0.13650843501091003
+    },
+    "output_shapes": {
+      "drivable": [
+        12,
+        2,
+        384,
+        640
+      ],
+      "lane": [
+        12,
+        2,
+        384,
+        640
+      ]
+    },
+    "run_ids": [
+      "20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel",
+      "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel",
+      "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+      "20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel",
+      "kcity_auto_sunny_003",
+      "kcity_drive_001",
+      "kcity_drive_002",
+      "kcity_drive_003"
+    ],
+    "sample_count": 12,
+    "views": [
+      "front",
+      "left",
+      "right"
+    ]
+  },
+  "training_performed": false,
+  "val": {
+    "image_shape": [
+      12,
+      3,
+      384,
+      640
+    ],
+    "losses": {
+      "drivable_focal": 0.007977334782481194,
+      "drivable_loss": 0.011305849067866802,
+      "drivable_tversky": 0.0033285145182162523,
+      "lane_focal": 0.005146173760294914,
+      "lane_loss": 0.009930167347192764,
+      "lane_tversky": 0.004783993121236563,
+      "loss": 0.02123601734638214
+    },
+    "output_shapes": {
+      "drivable": [
+        12,
+        2,
+        384,
+        640
+      ],
+      "lane": [
+        12,
+        2,
+        384,
+        640
+      ]
+    },
+    "run_ids": [
+      "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel"
+    ],
+    "sample_count": 12,
+    "views": [
+      "front",
+      "left",
+      "right"
+    ]
+  }
+}

@@ -21,7 +21,8 @@ def write_png(path, image):
 
 
 class PerceptionDatasetTest(unittest.TestCase):
-    def make_cache(self, data_root, run_id, v2=False):
+    def make_cache(self, data_root, run_id, v2=False, v3=False):
+        v2 = v2 or v3
         run_root = data_root / "datasets" / run_id
         cache_root = run_root / "derived/twinlite_384x640_v2"
         rows = []
@@ -46,6 +47,16 @@ class PerceptionDatasetTest(unittest.TestCase):
                     "drivable": drivable_valid,
                     "stopline": outputs["valid"],
                 }
+            if v3:
+                outputs["road_marking"] = (
+                    "road_marking_masks/{}/000000.png".format(view)
+                )
+                marking = np.zeros((4, 6), dtype=np.uint8)
+                marking[1, 1] = 1
+                marking[2, 2] = 2
+                marking[3, 3] = 3
+                write_png(cache_root / outputs["road_marking"], marking)
+                valid_masks["road_marking"] = outputs["valid"]
             rows.append(
                 {
                     "run_id": run_id,
@@ -66,8 +77,24 @@ class PerceptionDatasetTest(unittest.TestCase):
                     "task_valid": {
                         "lane": True,
                         "drivable": True,
-                        "stopline": view == "front",
+                        "stopline": True if v3 else view == "front",
+                        **({"road_marking": True} if v3 else {}),
                     },
+                    "target_encodings": (
+                        {
+                            "road_marking": {
+                                "type": "categorical_uint8",
+                                "class_values": {
+                                    "background": 0,
+                                    "white_lane": 1,
+                                    "yellow_lane": 2,
+                                    "stopline": 3,
+                                },
+                            }
+                        }
+                        if v3
+                        else {}
+                    ),
                 }
             )
         cache_root.mkdir(parents=True, exist_ok=True)
@@ -143,6 +170,72 @@ class PerceptionDatasetTest(unittest.TestCase):
             self.assertIn("drivable", row["valid_masks"])
             self.assertIn("drivable_ignore", row["auxiliary_targets"])
             self.assertEqual(result["target_policy_ids"], ["test_v2"])
+            self.assertEqual(
+                result["head_valid_policy"]["drivable"],
+                "per-sample valid_masks.drivable (policy-specific)",
+            )
+
+    def test_v3_cache_propagates_multiclass_road_marking_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_root = Path(tmp)
+            self.make_cache(data_root, "train_run", v3=True)
+            result = build_dataset_version(
+                data_root,
+                train_runs=["train_run"],
+                dataset_name="v3",
+                training_heads=("drivable", "road_marking"),
+            )
+            row = json.loads(
+                (Path(result["output_root"]) / "train.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()[0]
+            )
+            self.assertIn("road_marking", row["targets"])
+            self.assertIn("road_marking", row["valid_masks"])
+            self.assertEqual(
+                row["target_encodings"]["road_marking"]["class_values"]["stopline"],
+                3,
+            )
+            self.assertEqual(result["training_heads"], ["drivable", "road_marking"])
+            self.assertEqual(
+                result["target_encodings"]["road_marking"]["class_values"],
+                {
+                    "background": 0,
+                    "white_lane": 1,
+                    "yellow_lane": 2,
+                    "stopline": 3,
+                },
+            )
+            self.assertEqual(
+                result["head_valid_policy"]["road_marking"],
+                "geometric_valid AND per-sample task_valid",
+            )
+
+    def test_rejects_training_head_absent_from_cache(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_root = Path(tmp)
+            self.make_cache(data_root, "train_run", v2=True)
+            with self.assertRaisesRegex(
+                PerceptionDatasetError, "training heads are absent"
+            ):
+                build_dataset_version(
+                    data_root,
+                    train_runs=["train_run"],
+                    dataset_name="missing_marking",
+                    training_heads=("drivable", "road_marking"),
+                )
+
+    def test_rejects_duplicate_training_heads(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_root = Path(tmp)
+            self.make_cache(data_root, "train_run", v3=True)
+            with self.assertRaisesRegex(PerceptionDatasetError, "duplicates"):
+                build_dataset_version(
+                    data_root,
+                    train_runs=["train_run"],
+                    dataset_name="duplicate_heads",
+                    training_heads=("drivable", "drivable"),
+                )
 
     def test_excludes_complete_capture_frame_with_provenance(self):
         with tempfile.TemporaryDirectory() as tmp:

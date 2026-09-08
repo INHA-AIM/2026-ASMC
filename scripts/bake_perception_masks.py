@@ -49,7 +49,10 @@ def parse_args():
     parser.add_argument("--output-name", default=DEFAULT_OUTPUT_NAME)
     parser.add_argument(
         "--policy",
-        help="Frozen v2 target-policy JSON; enables ignore/occupancy targets",
+        help=(
+            "Frozen target-policy JSON; enables ignore/occupancy and optional "
+            "categorical road-marking targets"
+        ),
     )
     parser.add_argument(
         "--curation-name",

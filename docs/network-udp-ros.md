@@ -2,7 +2,7 @@
 
 > **문서 역할:** Canonical — 시뮬 UDP 경계, 포트, bridge와 Docker 네트워크 정본
 > **문서 허브:** [README.md](./README.md)
-> **최종 수정:** 2026-09-05
+> **최종 수정:** 2026-09-08
 > **지위:** 팀 공식 권장  
 > **개발 SIM (현재):** **MORAI 26.R1.h3** — 대회 배포 SIM 아님  
 > **msg:** `src/MORAI-ROS_morai_msgs` submodule **`beta_drive`**  
@@ -154,7 +154,8 @@ PC마다 MORAI를 단독 실행하므로 포트 숫자가 같아도 **충돌하�
 
 ### 4.4 Sensor → Destination PORT
 
-MORAI Sensor 목록 순서 = **camera 1–4 → 3D LiDAR → GPS → IMU → semantic camera 8–10.**
+MORAI Sensor 목록 순서 = **camera 1–4 → 3D LiDAR → GPS → IMU → semantic camera 8–10**이며,
+GT 개발셋에는 동일 위치의 instance LiDAR 11이 추가된다.
 Dest는 이 순서대로 홀수로 배정하고 Host는 Dest−1이다.
 
 | # | 센서 | Host | Dest | ROS 토픽 |
@@ -169,6 +170,7 @@ Dest는 이 순서대로 홀수로 배정하고 Host는 Dest−1이다.
 | 8 | semantic camera-8 | 9304 | **9305** | `/sem_front/image_jpeg/compressed` |
 | 9 | semantic camera-9 | 9306 | **9307** | `/sem_left/image_jpeg/compressed` |
 | 10 | semantic camera-10 | 9308 | **9309** | `/sem_right/image_jpeg/compressed` |
+| 11 | instance GT LiDAR | 9310 | **9311** | 기본 bridge 미지원, Capture 파일 정답용 |
 
 **LiDAR 2368 금지.** semantic 8–10은 GT 센서셋에서만 쓰고 기본 OFF (§6).
 
@@ -209,14 +211,20 @@ rostopic echo /Ego_topic -n1   # wheel_angle, position, velocity
 참고 실측(26 + AIM06): Ego ~47 · cam1–3 ~20 · cam4 ~10 · gps ~5 · imu ~50 · lidar `/velodyne_points` ~7 (SIM 10 Hz·Docker UDP).
 
 센서셋 JSON:
-- 주행: [`config/ASMC_sensor_set_v1.json`](../config/ASMC_sensor_set_v1.json) (Camera×4 · LiDAR Dest **9299** · GPS · IMU · Network/Cmd는 별도)
-- GT 수집: [`config/ASMC_sensor_set_GT.json`](../config/ASMC_sensor_set_GT.json) (위 + Semantic Camera×3 Dest **9305/9307/9309** → `/sem_{front,left,right}/image_jpeg/compressed`)
+- 현재 개발: [`config/ASMC_sensor_set_v2.json`](../config/ASMC_sensor_set_v2.json) (Camera×4 · Intensity LiDAR Dest **9299** · GPS · IMU · Network/Cmd는 별도)
+- 과거 재현: [`config/ASMC_sensor_set_v1.json`](../config/ASMC_sensor_set_v1.json) (v2와 rear camera pitch만 다름: `340°→328°`)
+- GT 수집: [`config/ASMC_sensor_set_GT.json`](../config/ASMC_sensor_set_GT.json) (v2 + Semantic Camera×3 Dest **9305/9307/9309** + Instance LiDAR Dest **9311**)
 
-LiDAR TF (`base_link`→`velodyne`, v1 기준): **x=0.80 y=0.0 z=1.45**  
+LiDAR TF (`base_link`→`velodyne`, v2 기준): **x=0.80 y=0.0 z=1.45**
 LiDAR Dest **2368 쓰지 말 것.**
 
 시맨틱(개발용): `./scripts/udp_bridge.sh enable_semantic_camera:=true`  
 (기본 OFF — 팀 공용 주행 브릿지와 분리)
+
+GT LiDAR(ID 11)는 ID 5와 같은 위치·10 Hz에서 `intensityType=2` Instance로 저장한다.
+학습 입력은 ID 5의 실제 Intensity이고 ID 11의 point ID와 3D box 파일은 정답으로만 쓴다.
+기본 bridge는 `9311`을 bind하거나 ROS topic으로 변환하지 않는다. Capture 기반 GT 검증 전에는
+`/velodyne_points`가 Instance 데이터를 제공한다고 가정하지 않는다.
 
 ### 6.1 host network 검사와 LiDAR 장애 대응
 

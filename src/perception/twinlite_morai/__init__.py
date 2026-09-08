@@ -8,6 +8,17 @@ from .external_model import (
 )
 from .losses import MaskedTwinLiteLoss, adapt_twinlite_outputs
 from .training import move_batch_to_device, twinlite_training_step
+from .tasks import (
+    BINARY_LANE_TASK,
+    ROAD_MARKING_CLASS_NAMES,
+    ROAD_MARKING_CLASS_VALUES,
+    ROAD_MARKING_TASK,
+    TwinLiteTaskSpec,
+    configure_twinlite_task,
+    load_task_compatible_state_dict,
+    task_from_checkpoint,
+    task_from_training_heads,
+)
 
 __all__ = [
     "MoraiTwinLiteDataset",
@@ -18,4 +29,13 @@ __all__ = [
     "adapt_twinlite_outputs",
     "move_batch_to_device",
     "twinlite_training_step",
+    "BINARY_LANE_TASK",
+    "ROAD_MARKING_CLASS_NAMES",
+    "ROAD_MARKING_CLASS_VALUES",
+    "ROAD_MARKING_TASK",
+    "TwinLiteTaskSpec",
+    "configure_twinlite_task",
+    "load_task_compatible_state_dict",
+    "task_from_checkpoint",
+    "task_from_training_heads",
 ]

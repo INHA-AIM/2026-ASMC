@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 
 from twinlite_morai.dataset import MoraiTwinLiteDataset
 from twinlite_morai.losses import MaskedTwinLiteLoss, adapt_twinlite_outputs
+from twinlite_morai.tasks import ROAD_MARKING_TASK
 from twinlite_morai.training import twinlite_training_step
 
 
@@ -27,6 +28,16 @@ class TinyTwin(torch.nn.Module):
 
     def forward(self, image):
         return self.drivable(image), self.lane(image)
+
+
+class TinyRoadMarkingTwin(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.drivable = torch.nn.Conv2d(3, 2, 1)
+        self.road_marking = torch.nn.Conv2d(3, 4, 1)
+
+    def forward(self, image):
+        return self.drivable(image), self.road_marking(image)
 
 
 class DatasetAndLossTest(unittest.TestCase):
@@ -125,6 +136,110 @@ class DatasetAndLossTest(unittest.TestCase):
             self.assertTrue(bool(sample["valid_masks"]["lane"][3, 4]))
             self.assertFalse(bool(sample["valid_masks"]["drivable"][3, 4]))
             self.assertEqual(sample["meta"]["view"], "front")
+
+    def test_v11_manifest_ignores_stored_future_road_marking_for_two_head_training(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_root = self.make_dataset(Path(tmp))
+            version_root = data_root / "dataset_versions/twinlite_morai_v1"
+            manifest_path = version_root / "train.jsonl"
+            row = json.loads(manifest_path.read_text(encoding="utf-8"))
+            marking_rel = (
+                "datasets/run_001/derived/twinlite_384x640_v2/"
+                "road_marking_masks/front/000000.png"
+            )
+            marking = np.zeros((8, 10), dtype=np.uint8)
+            marking[2, 2] = 1
+            marking[3, 3] = 2
+            marking[4, 4] = 3
+            write_png(data_root / marking_rel, marking)
+            row["schema_version"] = "morai-perception-sample-1.1.0"
+            row["targets"]["road_marking"] = marking_rel
+            row["valid_masks"]["road_marking"] = row["valid_mask"]
+            row["target_encodings"] = {
+                "road_marking": {
+                    "type": "categorical_uint8",
+                    "class_values": {
+                        "background": 0,
+                        "white_lane": 1,
+                        "yellow_lane": 2,
+                        "stopline": 3,
+                    },
+                }
+            }
+            manifest_path.write_text(json.dumps(row) + "\n", encoding="utf-8")
+            metadata_path = version_root / "dataset.json"
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            metadata["schema_version"] = "morai-perception-dataset-1.1.0"
+            metadata["stored_future_targets"] = ["road_marking", "stopline"]
+            metadata_path.write_text(json.dumps(metadata) + "\n", encoding="utf-8")
+
+            sample = MoraiTwinLiteDataset(data_root, split="train")[0]
+            self.assertEqual(set(sample["targets"]), {"lane", "drivable"})
+
+    def make_road_marking_dataset(self, root):
+        data_root = self.make_dataset(root)
+        version_root = data_root / "dataset_versions/twinlite_morai_v1"
+        manifest_path = version_root / "train.jsonl"
+        row = json.loads(manifest_path.read_text(encoding="utf-8"))
+        marking_rel = (
+            "datasets/run_001/derived/twinlite_384x640_v2/"
+            "road_marking_masks/front/000000.png"
+        )
+        marking = np.zeros((8, 10), dtype=np.uint8)
+        marking[2, 2:4] = 1
+        marking[3, 3:5] = 2
+        marking[4, 4:7] = 3
+        write_png(data_root / marking_rel, marking)
+        row["schema_version"] = "morai-perception-sample-1.1.0"
+        row["targets"]["road_marking"] = marking_rel
+        row["valid_masks"]["road_marking"] = row["valid_mask"]
+        row["task_valid"]["road_marking"] = True
+        row["target_encodings"] = {
+            "road_marking": {
+                "type": "categorical_uint8",
+                "class_values": {
+                    "background": 0,
+                    "white_lane": 1,
+                    "yellow_lane": 2,
+                    "stopline": 3,
+                },
+            }
+        }
+        manifest_path.write_text(json.dumps(row) + "\n", encoding="utf-8")
+        metadata_path = version_root / "dataset.json"
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        metadata["schema_version"] = "morai-perception-dataset-1.1.0"
+        metadata["training_heads"] = ["drivable", "road_marking"]
+        metadata_path.write_text(json.dumps(metadata) + "\n", encoding="utf-8")
+        return data_root
+
+    def test_dataset_loads_four_class_road_marking_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dataset = MoraiTwinLiteDataset(
+                self.make_road_marking_dataset(Path(tmp)), split="train"
+            )
+            sample = dataset[0]
+            self.assertEqual(set(sample["targets"]), {"drivable", "road_marking"})
+            self.assertEqual(sample["targets"]["road_marking"].dtype, torch.int64)
+            self.assertEqual(
+                set(torch.unique(sample["targets"]["road_marking"]).tolist()),
+                {0, 1, 2, 3},
+            )
+            self.assertEqual(dataset.task_spec, ROAD_MARKING_TASK)
+
+    def test_four_class_output_and_loss_reach_backward(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dataset = MoraiTwinLiteDataset(
+                self.make_road_marking_dataset(Path(tmp)), split="train"
+            )
+            batch = next(iter(DataLoader(dataset, batch_size=1)))
+            model = TinyRoadMarkingTwin()
+            criterion = MaskedTwinLiteLoss(task_spec=ROAD_MARKING_TASK)
+            outputs, losses = twinlite_training_step(model, batch, criterion)
+            self.assertEqual(tuple(outputs["road_marking"].shape), (1, 4, 8, 10))
+            losses["loss"].backward()
+            self.assertTrue(torch.isfinite(losses["loss"]))
+            self.assertIsNotNone(model.road_marking.weight.grad)
 
     def test_tuple_output_order_matches_official_twinlite(self):
         drivable = torch.randn(1, 2, 4, 6)

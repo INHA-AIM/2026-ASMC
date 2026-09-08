@@ -1,0 +1,9 @@
+<launch>
+  <arg name="checkpoint" default="/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v5_actor_negative_init_ema_b12_e18_20260906/best_mean.pt"/>
+  <arg name="device" default="cuda"/>
+  <include file="$(find camera_semantic_perception)/launch/semantic_inference.launch">
+    <arg name="views" value="front"/>
+    <arg name="checkpoint" value="$(arg checkpoint)"/>
+    <arg name="device" value="$(arg device)"/>
+  </include>
+</launch>

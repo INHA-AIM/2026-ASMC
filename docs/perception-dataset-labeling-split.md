@@ -2,9 +2,9 @@
 
 > **문서 역할:** Canonical Data Contract — Capture 원본, mask, ignore, manifest와 split
 > **문서 허브:** [README.md](./README.md)
-> 기준일: 2026-09-05<br>
-> 대상 모델: TwinLiteNet+ Medium (차선 + 주행가능영역, 영상 정지선은 후순위 후보)<br>
-> 상태: 독립 sample-b val을 둔 v4 2-head 18 epoch 학습·조건별 평가 완료
+> 기준일: 2026-09-08<br>
+> 대상 모델: TwinLiteNet+ Medium (drivable + 4-class road-marking)<br>
+> 상태: actor-negative(B) 잠정 채택, v6 본학습·validation·live 시각화 완료
 
 ## 1. 현재 데이터와 사용 범위
 
@@ -62,6 +62,26 @@ val에서 제외했다. 나머지 468 frame은 파일 누락 0, Semantic 미등�
 `run_id` 및 sample 중복도 0이다. 현재 학습 버전은
 `twinlite_morai_v4_comp8_train_val_sample_b`를 기준으로 한다.
 
+같은 split과 제외 목록을 그대로 복제한 road-marking 준비 버전
+`twinlite_morai_v5_marking_prep_actor_ignore`도 발행했다. 활성 학습 head는 비교 가능성을
+위해 여전히 `lane,drivable`이고, `road_marking`과 all-view `stopline`은 future target이다.
+27,405 sample의 이미지 경로, mask shape, binary/categorical 값 범위를 전수 검사했다.
+이 버전은 향후 장애물 정책 A/B의 actor-ignore(A) 기준으로 사용한다.
+
+통제 A/B 결과 actor-negative(B)는 도로 문맥 actor leak을 `14.26% → 3.20%`로 낮췄고,
+일반 도로 false-hole은 `1.304% → 1.353%`로 `0.049%p` 증가했다. 같은 공통 GT의
+drivable/lane IoU는 각각 `0.98364/0.89332`로 A보다 소폭 높아 회귀가 없었다. 따라서
+B dataset `twinlite_morai_v5_marking_actor_negative`와 checkpoint
+`twinlite_medium_morai_v5_actor_negative_init_ema_b12_e18_20260906/best_mean.pt`를
+현재 live 및 다음 학습의 잠정 기준으로 채택한다. 독립 test 전까지 최종 확정으로 보지는
+않으며 원본 A checkpoint와 비교 산출물도 유지한다.
+
+4-class 학습용 `twinlite_morai_v6_road_marking_actor_negative`는 B와 같은 12개 train
+run 26,001 sample, 6개 val run 1,404 sample, 4-frame 제외 목록과 cache를 그대로 쓴다.
+활성 head만 `drivable,road_marking`으로 바꿨고 27,405 sample의 파일·shape·binary 및
+categorical 값 범위를 전수 검사했다. `road_marking` encoding은
+`background=0, white_lane=1, yellow_lane=2, stopline=3`이다.
+
 `20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel`은 수집자 확인에 따라 실제
 MORAI 환경 시각을 **sunny 1pm 추정**으로 해석한다. 다만 확정 timestamp가 없는 원본
 lineage를 사후에 단정하지 않기 위해 물리 `run_id`와 manifest는 바꾸지 않고, 조건별 분석과
@@ -99,15 +119,18 @@ Instance/Depth를 한 trigger에 저장한 결과를 사용한다. 별도 Semant
 | Asphalt | `(127,127,127)` | 0 | 1 |
 | White Lane | `(255,255,255)` | 1 | 1 |
 | Yellow Lane | `(255,255,0)` | 1 | 1 |
-| Blue Lane | `(0,178,255)` | 1 | 1 |
+| Blue Lane | `(0,178,255)` | v3: 0 | v3: 0 |
 | Crosswalk | `(76,255,76)` | 0 | 1 |
 | Stop Line | `(255,0,0)` | 0 | 1 |
 | Road Sign | `(204,127,51)` | 0 | 1 |
 | Road Edge | `(178,178,178)` | 0 | 0 |
 | Sidewalk 및 기타 | 공식 팔레트 값 | 0 | 0 |
 
-Lane은 White/Yellow/Blue Lane만 foreground로 한다. Crosswalk, Stop Line,
-Road Edge를 차선에 넣지 않는다.
+기존 binary v1/v2 Lane은 White/Yellow/Blue를 foreground로 했으나, 전체 accepted-run
+감사에서 Blue가 0 pixel임을 확인한 v3부터 대회 학습 target은 White/Yellow만 사용한다.
+Crosswalk, Stop Line, Road Edge는 binary lane에 넣지 않는다. 공식 팔레트의 Blue 항목은
+향후 시뮬·맵 변화 감시를 위해 제거하지 않고, v3 bake 시 Blue가 한 픽셀이라도 나타나면
+실패시키는 감사 조건으로 남긴다.
 
 Drivable은 단순히 Asphalt만 선택하지 않고 표면에 덧그려진 Lane, Crosswalk,
 Stop Line, Road Sign을 합친다. 이들을 제외하면 같은 도로 위에서 페인트 부분만
@@ -123,7 +146,10 @@ background 구멍이 되기 때문이다. 보도와 Road Edge는 제외한다.
 카메라-LiDAR 융합 평가에 쓴다. `standing_object`는 터널 구조물·가드레일·기둥 등
 상시 도로변 구조물이므로 transient actor ignore가 아닌 명시적 background다.
 
-Canonical PNG 마스크 값은 `{0,1}`의 `uint8`로 고정한다. QA용 overlay만 255로
+Binary canonical PNG 마스크 값은 `{0,1}`의 `uint8`로 고정한다. v3
+`road_marking`만 `background=0`, `white_lane=1`, `yellow_lane=2`, `stopline=3`의
+categorical `uint8`이다. 여기서 background는 이 head에서 세 표식 중 어느 것도 아닌
+유효 영상 픽셀이며 drivable과 같은 뜻이 아니다. QA용 overlay만 사람이 보기 좋은 색으로
 시각화한다. 공식 팔레트에 없는 픽셀, 깨진 파일, 기하 불일치는 억지로 background로
 바꾸지 않고 해당 frame을 reject한다.
 
@@ -144,6 +170,42 @@ Canonical PNG 마스크 값은 `{0,1}`의 `uint8`로 고정한다. QA용 overlay
 
 기존 100-frame 감사 수치는 초기 sunny baseline 참고치로만 유지한다. 실제 v2 변환은
 전수 감사에서 검증한 공식 팔레트와 `config/perception_target_policy_v2.json`을 사용한다.
+
+### 3.3 전체 accepted-run road-marking 감사와 v3 정책
+
+2026-09-06에 18개 accepted run의 curation 전 원본 10,030 frame, 세 카메라
+30,090 sample, 15,406,080,000 pixel을 다시 전수 검사했다. 미등록 RGB와 Blue는 모두
+0 pixel이었다. 집계 파일은
+`$ASMC_DATA/capture_batches/20260906_all_accepted_runs_road_marking_audit.json`이며
+SHA-256은 `2ac8fcce949070efb9723787434a0849ad608869b6aa9ee3d1bbe7f4a9959948`이다.
+
+| View | White pixels / 양성 frame | Yellow pixels / 양성 frame | Stopline pixels / 양성 frame |
+|---|---:|---:|---:|
+| Front | 82,640,724 / 10,030 | 36,820,245 / 9,883 | 8,205,761 / 7,245 |
+| Left | 25,481,188 / 10,028 | 54,264,914 / 8,806 | 2,868,453 / 5,680 |
+| Right | 70,218,077 / 10,025 | 1,308,464 / 9,183 | 1,849,170 / 5,730 |
+| 합계 | **178,339,989 / 30,083** | **92,393,623 / 27,872** | **12,923,384 / 18,655** |
+
+Stopline이 좌·우 view에도 각각 5천 frame 이상 존재하므로 향후 3-camera BEV를 위해
+all-view 정답을 보존한다. 좌/우 Yellow 픽셀 수가 크게 비대칭이므로 학습·평가 때 전체
+평균만 보지 않고 view별 class IoU/recall을 필수로 보고한다. 동결 정책은
+`config/perception_target_policy_v3.json`이다.
+
+### 3.4 drivable 장애물 정책 A/B 결과와 채택 상태
+
+- A: v5와 같은 actor-ignore. Actor 픽셀의 drivable valid를 0으로 둔다.
+- B: 같은 actor 픽셀의 drivable target을 0, valid를 1로 두어 non-drivable loss를 준다.
+- 두 실험은 split, 384×640 geometry, augmentation, seed, 초기 checkpoint, epoch와
+  lane target을 동일하게 유지한다. Road-marking classifier 변경을 이 실험에 섞지 않는다.
+- 비교값은 일반 drivable IoU뿐 아니라 actor 영역 carve-out rate, actor 없는 도로의
+  false-hole rate, view/weather별 IoU, lane 성능 회귀와 실시간 지연을 포함한다.
+
+B가 actor 구멍을 분명히 만들면서 actor 없는 도로의 false-hole이나 lane/drivable 전체
+성능을 허용 범위 이상 떨어뜨리지 않는 조건을 충족해 **잠정 채택**했다. 공통 1,404-sample
+평가와 선택 overlay는
+`artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/`에
+보존한다. 어느 쪽이든 최종 safe-area는 카메라 단독 판단값이 아니라 LiDAR occupancy와
+결합한다.
 
 ## 4. 기하 전처리 계약
 
@@ -182,7 +244,7 @@ profile을 만들고, 해당 profile의 live RGB validation run으로 성능을 
 원본 RGB를 다시 복사하지 않고 기존 `frames/intensity`를 참조한다.
 Semantic 해석과 모델 입력 변환은 논리적·물리적으로 두 단계로 분리한다.
 
-1. **Canonical target**: 원본 해상도에서 palette를 binary head mask로 변환한다.
+1. **Canonical target**: 원본 해상도에서 palette를 binary 또는 categorical head mask로 변환한다.
 2. **Model cache**: canonical mask를 특정 모델 입력 규격으로 letterbox하고 valid mask와
    복원 geometry를 만든다.
 
@@ -213,6 +275,10 @@ $ASMC_DATA/datasets/<run_id>/
     drivable_valid_masks/{front,left,right}/
     geometry.jsonl
     qa_summary.json
+  derived/perception_targets_native_v3/     # v2 binary + 4-class road marking
+    road_marking_masks/{front,left,right}/  # 0=background, 1=white, 2=yellow, 3=stopline
+  derived/twinlite_384x640_marking_v1/       # v3의 384×640 nearest cache
+    road_marking_masks/{front,left,right}/
 
 $ASMC_DATA/dataset_versions/twinlite_morai_v4_comp8_train_val_sample_b/
   dataset.json
@@ -257,7 +323,8 @@ v2 split은 5pm 학습 전 OOD 기준, v3 split은 `drive_003` 연속성 기준�
 
 - RGB/Semantic native shape 일치
 - 입력 frame마다 lane/drivable/valid mask 존재
-- mask 고유 값이 정확히 `{0,1}`
+- binary mask 고유 값이 `{0,1}`, road-marking mask가 `{0,1,2,3}`의 부분집합
+- v3 전체 입력에서 Blue Lane 0 pixel; 새 Blue 발견 시 fail-fast
 - RGB와 세 mask의 scale/pad 동일
 - 비공식 Semantic 색상 0개 또는 reject 명단 존재
 - view/run별 lane·drivable pixel 비율 report
@@ -275,13 +342,15 @@ v2 split은 5pm 학습 전 OOD 기준, v3 split은 `drive_003` 연속성 기준�
 
 ## 8. 정지선·3-view 확장 결정
 
-- 정지선은 `Stop Line=(255,0,0)`에서 독립 binary mask를 생성한다. 기존 lane mask에는
-  합치지 않고, drivable mask에는 도로 표면의 구멍을 막기 위해 계속 포함한다.
-- 1순위 모델은 TwinLite의 road-marking decoder feature를 공유하고 마지막 classifier만
-  `lane`과 `stopline`으로 분리한다. 독립 threshold와 loss weight를 사용하며, 전체
-  stopline decoder 추가나 별도 모델은 A/B 결과가 부족할 때만 검토한다.
+- 정지선은 `Stop Line=(255,0,0)`에서 독립 binary mask와 4-class road-marking mask를
+  함께 생성한다. binary lane에는 합치지 않고 drivable에는 도로 표면의 구멍을 막기 위해
+  계속 포함한다.
+- 1순위 확장안은 TwinLite lane decoder의 최종 classifier를
+  `background/white/yellow/stopline` 4-class로 바꾸는 것이다. binary lane은 기존 2-head
+  checkpoint 비교와 presence 파생을 위한 호환 target으로 보존한다.
 - 공유 encoder와 drivable/lane 학습에는 front/left/right를 모두 독립 표본으로 사용한다.
-  정지선 loss와 IPM 거리 평가는 우선 front에만 적용하고, view별 IoU를 따로 보고한다.
+  정지선 정답과 향후 loss도 all-view를 사용하되, 실제 정지 거리 평가는 front와 BEV에서
+  각각 보고하고 view별 class IoU를 따로 계산한다.
 - 배포 출력은 정지선 mask 자체에 더해 `stamp`, `distance_m`, `confidence`, `valid/age`를
   포함한다. 신호 결합·감속·정지는 판단/제어 모듈의 책임으로 둔다.
 
@@ -302,19 +371,49 @@ weather/route/controller를 자기완결 메타데이터로 남긴다. 현재 1 
 4. actor-ignore/occupancy를 포함한 native v2와 TwinLite `384×640` v3 cache
 5. v4 run-based split manifest와 27,405 sample 전체 mask 경로·shape·이진값 검사
 6. 기존 2-head 체크포인트를 고정한 새 val/test 기준 추론
+7. 전체 18개 run의 White/Yellow/Blue/Stopline 감사와 Blue 0-pixel gate
+8. Blue 제외 4-class road-marking 및 all-view stopline native/cache 생성
+9. 동일 split/checkpoint actor-ignore(A) 대 actor-negative(B) 통제 평가 및 B 잠정 채택
+10. B 기반 v6 `drivable+road_marking` manifest 전수 검사와 2→4 출력 preflight
+11. sunny/foggy×3-view×white/yellow/stopline 균형 18장 v6 tiny-overfit 통과
+12. v6 전체 18 epoch 본학습 완료: best mean `0.93949`, road-marking mIoU `0.89555`
+13. checkpoint task 자동 감지 live backend와 `road_marking/class_id` 3-view 시각화 연결
 
 다음 단계:
 
-1. 모델 독립 live 추론과 시각화로 front/3-view 출력 품질을 확인
-2. 실제 센서 스트림의 FPS/p50·p95 latency/drop을 측정해 배포 profile 결정
-3. 규정 시간대의 새 독립 test를 수집해 고정 checkpoint를 평가
-4. camera/map/LiDAR의 공통 BEV pilot과 차로 구조화 진행
-5. 영상 정지선은 MGeo/전역경로 방식의 실제 한계가 확인될 때 재평가
+1. MORAI live에서 4-class 색·경계와 front/3-view 지연을 조건별로 재측정
+2. 특히 희소한 right-view yellow와 stopline false positive/recall을 육안·수치 확인
+3. 문제가 확인될 때만 class weight 또는 sampling을 통제 비교
+4. 규정 시간대의 새 독립 test를 수집해 B binary와 4-class checkpoint를 평가
+5. camera/map/LiDAR 공통 BEV pilot과 차로 구조화 진행
+
+### 9.1 2026-09-07 v6 4-class tiny-overfit 결과
+
+`config/twinlite_v6_tiny_overfit_samples.json`은 sunny/foggy와 front/left/right의 각
+조합에서 white/yellow/stopline 픽셀이 많은 표본을 하나씩 골라 18장으로 구성했다. Medium
+모델을 v5 B EMA에서 초기화하고 batch 3, LR `5e-4`, AMP, class weight 없음으로 80 epoch
+학습했다. 총 137.4초가 걸렸고 overfit contract와 overlay 육안 검사를 모두 통과했다.
+
+| 지표 | 학습 전 | 80 epoch |
+|---|---:|---:|
+| masked eval loss | 1.55734 | 0.82984 |
+| drivable IoU | 0.98441 | 0.99029 |
+| road-marking foreground mIoU | 0.03041 | 0.79188 |
+| white IoU | - | 0.76539 |
+| yellow IoU | - | 0.72264 |
+| stopline IoU | - | 0.88762 |
+
+이는 4-class 인코딩, 2→4 출력 교체, loss, metric과 checkpoint 배관 검증 결과다. 희소
+정지선을 의도적으로 농축한 동일 18장 평가이므로 일반화 지표나 class weight 근거로 쓰지
+않는다. 전체 train에서 road-marking 유효 픽셀 분포는 background `97.8838%`, white
+`1.3265%`, yellow `0.7012%`, stopline `0.0886%`다. Multiclass Tversky가 class별
+겹침을 이미 균등하게 다루므로 첫 본학습에는 공격적인 역빈도 가중치를 적용하지 않고,
+validation의 class별 recall/false positive를 보고 후속 실험을 결정한다.
 
 2026-09-04~05 v4 10/18 epoch 학습 결과와 overlay·수렴 분석은
 [perception-v4-training-evaluation.md](./perception-v4-training-evaluation.md)를 따른다.
 
-### 9.1 2026-09-02 Medium tiny-overfit 결과
+### 9.2 2026-09-02 Medium binary tiny-overfit 결과
 
 공식 external checkout commit `90f1b8695ae311d5123b05f8534b2e11e42499d2`의
 `medium` 모델을 RTX 4060 Ti에서 실제 `twinlite_morai_v1` train 12 sample로 학습했다.
@@ -331,7 +430,7 @@ overfit 수치이므로 일반화 성능으로 해석하지 않는다. Overlay�
 형태가 정답을 따르며 lane은 근거리 굵은 표식부터 학습됐다. Side valid ROI 경계의 가는
 lane 오검출은 본학습에서 별도 확인한다.
 
-### 9.2 2026-09-02 Medium 전체 데이터 10 epoch 결과
+### 9.3 2026-09-02 Medium 전체 데이터 10 epoch 결과
 
 `twinlite_morai_v1`의 train 13,227 sample, validation 918 sample을 모두 사용했다.
 입력은 `384x640`, batch 12, AdamW LR `5e-4` + polynomial decay, AMP와 EMA를
@@ -350,7 +449,7 @@ Epoch 10 카메라별 IoU는 front `DA 0.9692 / lane 0.7592`, left
 독립 test run과 더 먼 얇은 차선·교차로 구간에서 우선 검증한다. 배포 후보는 EMA가 포함된
 `artifacts/perception_eval/runs/twinlite_medium_morai_v1_uniform_b12_e10_20260902/best_mean.pt`다.
 
-### 9.3 2026-09-04 v2 무학습 기준 추론
+### 9.4 2026-09-04 v2 무학습 기준 추론
 
 기존 `twinlite_medium_morai_v1_uniform_b12_e10_20260902/best_mean.pt`의 epoch 10
 EMA 가중치를 고정하고 `twinlite_morai_v2_curated`의 val/test만 추론했다. 체크포인트
@@ -372,7 +471,7 @@ drivable 오검출이 확인됐다. sunny/foggy 대표 12장과 낮은 IoU 4장�
 `artifacts/perception_eval/baselines/twinlite_medium_morai_v1_on_v2_curated_20260904/metrics.json`에
 run/view/weather별로 저장했다.
 
-### 9.4 2026-09-04 v3 재학습 직전 기준
+### 9.5 2026-09-04 v3 재학습 직전 기준
 
 `twinlite_morai_v3_comp8_train_val_drive003`은 train 25,083 samples, val 918 samples,
 test 0 samples다. 모든 신규 comp 8개 run과 5pm을 train에 포함하고 기존
@@ -391,7 +490,7 @@ forward한 결과 두 출력 모두 `[12,2,384,640]`, loss finite, `training_per
 확인했다. 기록은
 `artifacts/perception_eval/preflight/twinlite_medium_morai_v3_init_ema_20260904/`에 둔다.
 
-### 9.5 2026-09-04 v4 독립 validation 기준
+### 9.6 2026-09-04 v4 독립 validation 기준
 
 최종 재학습 버전 `twinlite_morai_v4_comp8_train_val_sample_b`는 train 26,001 sample,
 val 1,404 sample, test 0 sample이다. 기존 12개 run은 모두 train에 두고, 이후 별도로
@@ -430,7 +529,8 @@ foggy `0.7582`, foggy 3pm `0.7167`의 회귀 여부를 함께 본다. 이 val은
    manifest, dataset adapter, loss, IoU를 함께 버전업한다.
 4. 객체가 없는 기존 run과 객체가 있는 신규 run을 함께 보존하고, 기존 v1 모델의
    무학습 기준 성능을 먼저 측정한다.
-5. 정지선 target은 저장하되 독립 head 추가는 2-head 재학습 이후로 미룬다.
+5. 정지선은 독립 head 대신 all-view 4-class road-marking의 한 class로 학습하고,
+   MGeo/전역경로 정지점을 배포 1차 기준으로 둔다.
 
 원본 Intensity/Semantic/Instance/Depth는 정책과 무관하게 보존하므로, 수집을 다시 하지
 않고도 background/ignore 정책을 바꿔 파생 데이터셋을 재생성할 수 있다.
@@ -456,8 +556,9 @@ sequence 521은 애초 manifest에서 실패이므로 성공 정본에 포함되
   고정된 ego hood/body.
 - Lane/stopline: visible-only. actor 뒤를 복원하지 않으며 별도 actor ignore를 적용하지
   않는다.
-- Stopline: drivable positive를 유지하면서 독립 target으로 저장하고 학습 loss는 front에만
-  적용한다.
+- Stopline: drivable positive를 유지하면서 독립 target으로 저장한다. 초기 binary
+  stopline head 구상은 front-only였지만, 현재 4-class road-marking loss는 3-camera BEV
+  확장을 위해 all-view에 적용한다.
 - 같은 actor class로 `actor_occupancy_gt`를 별도 보존하되 TwinLite 학습 target으로 쓰지
   않는다.
 

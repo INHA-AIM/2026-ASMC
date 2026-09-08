@@ -228,6 +228,223 @@ class MaskBakerTest(unittest.TestCase):
             self.assertTrue(np.all(drivable_valid[baked_ignore == 1] == 0))
             self.assertTrue(np.all(geometric[baked_ignore == 1] == 1))
 
+    def test_v3_policy_writes_multiclass_marking_and_all_view_stopline(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_root = self.make_run(root)
+            for view, (height, width) in VIEW_HW.items():
+                semantic_path = run_root / "frames/semantic/{}/000000.png".format(view)
+                semantic = cv2.imread(str(semantic_path), cv2.IMREAD_UNCHANGED)
+                semantic[height // 2 :, width // 2 : width // 2 + 8, :3] = (
+                    0,
+                    255,
+                    255,
+                )  # Yellow lane RGB=(255,255,0)
+                write_png(semantic_path, semantic)
+            policy = {
+                "status": "frozen",
+                "policy_id": "test_v3",
+                "audit_constraints": {"zero_pixel_classes": ["blue_lane"]},
+                "targets": {
+                    "lane": {
+                        "positive_classes": ["white_lane", "yellow_lane"]
+                    },
+                    "drivable": {
+                        "positive_classes": [
+                            "asphalt",
+                            "white_lane",
+                            "yellow_lane",
+                            "stopline",
+                        ],
+                        "ignore_classes": ["obstacle"],
+                    },
+                    "stopline": {
+                        "positive_classes": ["stopline"],
+                        "valid_views": ["front", "left", "right"],
+                    },
+                    "road_marking": {
+                        "class_values": {
+                            "background": 0,
+                            "white_lane": 1,
+                            "yellow_lane": 2,
+                            "stopline": 3,
+                        },
+                        "valid_views": ["front", "left", "right"],
+                    },
+                    "actor_occupancy_gt": {"positive_classes": ["obstacle"]},
+                },
+            }
+            policy_path = root / "policy_v3.json"
+            policy_path.write_text(json.dumps(policy) + "\n", encoding="utf-8")
+
+            summary = bake_native_run(
+                run_root,
+                output_name="perception_targets_native_v3",
+                policy_path=policy_path,
+            )
+            self.assertEqual(
+                summary["schema_version"], "perception-targets-native-3.0.0"
+            )
+            native = run_root / "derived/perception_targets_native_v3"
+            rows = [
+                json.loads(line)
+                for line in (native / "manifest.jsonl").read_text(
+                    encoding="utf-8"
+                ).splitlines()
+            ]
+            self.assertTrue(all(row["task_valid"]["stopline"] for row in rows))
+            self.assertTrue(all(row["task_valid"]["road_marking"] for row in rows))
+            marking = cv2.imread(
+                str(native / "road_marking_masks/front/000000.png"),
+                cv2.IMREAD_UNCHANGED,
+            )
+            self.assertEqual(set(np.unique(marking).tolist()), {0, 1, 2, 3})
+
+            cache_summary = build_model_cache(
+                run_root,
+                native_output_name="perception_targets_native_v3",
+                output_name="twinlite_384x640_marking_v1",
+            )
+            self.assertEqual(
+                cache_summary["schema_version"], "twinlite-mask-cache-3.0.0"
+            )
+            cached = cv2.imread(
+                str(
+                    run_root
+                    / "derived/twinlite_384x640_marking_v1/road_marking_masks/front/000000.png"
+                ),
+                cv2.IMREAD_UNCHANGED,
+            )
+            self.assertEqual(cached.shape, (384, 640))
+            self.assertTrue(set(np.unique(cached).tolist()).issubset({0, 1, 2, 3}))
+
+    def test_v3_policy_rejects_unexpected_blue_lane_pixels(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_root = self.make_run(root)
+            semantic_path = run_root / "frames/semantic/front/000000.png"
+            semantic = cv2.imread(str(semantic_path), cv2.IMREAD_UNCHANGED)
+            semantic[100:110, 100:110, :3] = (255, 178, 0)
+            write_png(semantic_path, semantic)
+            policy = {
+                "status": "frozen",
+                "policy_id": "test_v3_blue_gate",
+                "audit_constraints": {"zero_pixel_classes": ["blue_lane"]},
+                "targets": {
+                    "lane": {"positive_classes": ["white_lane", "yellow_lane"]},
+                    "drivable": {
+                        "positive_classes": ["asphalt", "white_lane", "yellow_lane"],
+                        "ignore_classes": [],
+                    },
+                    "stopline": {"positive_classes": ["stopline"]},
+                    "road_marking": {
+                        "class_values": {
+                            "background": 0,
+                            "white_lane": 1,
+                            "yellow_lane": 2,
+                            "stopline": 3,
+                        }
+                    },
+                    "actor_occupancy_gt": {"positive_classes": []},
+                },
+            }
+            policy_path = root / "policy_v3.json"
+            policy_path.write_text(json.dumps(policy) + "\n", encoding="utf-8")
+            with self.assertRaises(MaskBakeError):
+                bake_native_run(
+                    run_root,
+                    output_name="perception_targets_native_v3",
+                    policy_path=policy_path,
+                )
+            self.assertFalse(
+                (run_root / "derived/perception_targets_native_v3").exists()
+            )
+
+    def test_actor_negative_policy_keeps_actor_pixels_valid_non_drivable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_root = self.make_run(root)
+            semantic_path = run_root / "frames/semantic/front/000000.png"
+            semantic = cv2.imread(str(semantic_path), cv2.IMREAD_UNCHANGED)
+            semantic[400:500, 500:600, :3] = (2, 255, 236)
+            write_png(semantic_path, semantic)
+            policy = {
+                "status": "frozen",
+                "policy_id": "test_actor_negative",
+                "audit_constraints": {"zero_pixel_classes": ["blue_lane"]},
+                "targets": {
+                    "lane": {"positive_classes": ["white_lane", "yellow_lane"]},
+                    "drivable": {
+                        "positive_classes": [
+                            "asphalt",
+                            "white_lane",
+                            "yellow_lane",
+                            "stopline",
+                        ],
+                        "ignore_classes": [],
+                    },
+                    "stopline": {
+                        "positive_classes": ["stopline"],
+                        "valid_views": ["front", "left", "right"],
+                    },
+                    "road_marking": {
+                        "class_values": {
+                            "background": 0,
+                            "white_lane": 1,
+                            "yellow_lane": 2,
+                            "stopline": 3,
+                        },
+                        "valid_views": ["front", "left", "right"],
+                    },
+                    "actor_occupancy_gt": {"positive_classes": ["obstacle"]},
+                },
+            }
+            policy_path = root / "policy_actor_negative.json"
+            policy_path.write_text(json.dumps(policy) + "\n", encoding="utf-8")
+
+            bake_native_run(
+                run_root,
+                output_name="perception_targets_native_actor_negative",
+                policy_path=policy_path,
+            )
+            cache_summary = build_model_cache(
+                run_root,
+                native_output_name="perception_targets_native_actor_negative",
+                output_name="twinlite_actor_negative",
+            )
+            native_root = (
+                run_root / "derived/perception_targets_native_actor_negative"
+            )
+            occupancy = cv2.imread(
+                str(native_root / "actor_occupancy_gt_masks/front/000000.png"),
+                cv2.IMREAD_UNCHANGED,
+            )
+            drivable = cv2.imread(
+                str(native_root / "drivable_masks/front/000000.png"),
+                cv2.IMREAD_UNCHANGED,
+            )
+            ignore = cv2.imread(
+                str(native_root / "drivable_ignore_masks/front/000000.png"),
+                cv2.IMREAD_UNCHANGED,
+            )
+            self.assertGreater(int(occupancy.sum()), 0)
+            self.assertTrue(np.all(drivable[occupancy == 1] == 0))
+            self.assertEqual(int(ignore.sum()), 0)
+
+            cache_root = run_root / "derived/twinlite_actor_negative"
+            geometric = cv2.imread(
+                str(cache_root / "valid_masks/geometric/front/000000.png"),
+                cv2.IMREAD_UNCHANGED,
+            )
+            drivable_valid = cv2.imread(
+                str(cache_root / "valid_masks/drivable/front/000000.png"),
+                cv2.IMREAD_UNCHANGED,
+            )
+            self.assertTrue(np.array_equal(drivable_valid, geometric))
+            self.assertEqual(
+                cache_summary["policy_id"], "test_actor_negative"
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -10,9 +10,9 @@
 
 | 목적 | 사용할 경로 | 지위 |
 |---|---|---|
-| 카메라 lane/drivable 학습 GT | Capture Mode → sync → native mask → model cache → version manifest | 현재 정본 |
+| 카메라 drivable/road-marking 학습 GT | Capture Mode → 파일 동기화 → native mask → model cache → version manifest | 현재 정본 |
 | 일반 ROS 토픽 snapshot | `sync_collector.launch` profile | 보조·레거시 경로 |
-| 팀 공용 재현 bag | ROS `rosbag record` profile/wrapper | 후순위 제안, 아직 미구현 |
+| 팀 공용 재현 bag | ROS `rosbag record` profile/wrapper | 다음 단계 제안, 아직 미구현 |
 
 Capture Mode와 gRPC는 26.R1.h3 개발·학습용이다. 본선 배포 추론은 허용 UDP 센서만
 사용하며 Semantic/Instance GT, Capture gRPC와 oracle 토픽을 사용하지 않는다.
@@ -20,9 +20,44 @@ Capture Mode와 gRPC는 26.R1.h3 개발·학습용이다. 본선 배포 추론�
 이 README에는 실행 절차를 두고, palette/ignore/split 같은 정책과 현재 run 구성은
 데이터 계약 문서에서 관리한다.
 
+## MORAI 모드와 기록 방식 구분
+
+다음 설정은 하나의 mode 선택지가 아니라 서로 독립된 축이다.
+
+| 축 | 선택지 | 의미 |
+|---|---|---|
+| 시간 진행 | Real Time / Simulation Time | wall time 기반 진행 또는 simulation time 기준 진행 |
+| 외부 tick | Sync Off / Sync On | simulator 자체 진행 또는 외부 ROS tick마다 진행 |
+| 센서 주기 동기화 | Off / On | 센서별 주기 유지 또는 활성 센서를 공통 frame rate로 맞춤 |
+| Capture | Off / On | 현재 frame의 센서 파일 저장 기능 |
+| 통신 | UDP / ROS / gRPC | runtime sensor/control 및 개발 API transport |
+| 기록 | Capture files / rosbag | 학습 GT 파일 또는 ROS message stream 기록 |
+
+Capture Mode는 Real/Simulation Time과 별개로 켜는 저장 기능이다. 외부 Sync On은 ROS
+`SyncModeCmd` tick을 기다리며 wheel/keyboard 수동주행에 적합하지 않다. Time mode를
+전환하면 simulation time이 초기화될 수 있으므로 전환 전후를 같은 run으로 기록하지 않는다.
+상세 동작은 MORAI [Time Manager](https://help-morai-sim.scrollhelp.site/ko/morai-sim-drive/24.R2/morai-sim-time-management-function),
+[Synchronous Mode message](https://morai-sim--drive-user-manual--en-22-r2.scrollhelp.site/msdume2/synchronous-mode-ros-message-specifications),
+[Capture Sensor Data](https://morai-sim--drive-user-manual--en-22-r2.scrollhelp.site/msdume2/capture-sensor-data)를
+기준으로 한다.
+
+목적별 기본 선택은 다음과 같다.
+
+| 목적 | 기본 방식 |
+|---|---|
+| 현재 카메라 단일-frame 학습 | Real Time + Capture 1 Hz |
+| 카메라 수집량 확대 | 같은 조건에서 Capture 5/10 Hz pilot 후 선택 |
+| 수동 휠 다양화 | Real Time + Capture |
+| 엄밀한 temporal GT | Simulation Time Sync Off 우선, 필요할 때만 Sync On |
+| 실제 지연·drop·jitter 평가 | Real Time UDP + raw rosbag |
+| 모델 A/B 비교 | 같은 raw bag 재생, result는 모델별 분리 |
+| 기존 LiDAR clustering/OBB 튜닝 | PointCloud·GPS·IMU·Ego·개발용 Object GT raw bag |
+| 학습형 LiDAR 객체 검출 | 실제 Intensity point cloud + Instance/3D box GT Capture |
+
 ## ROS topic snapshot collector (보조 경로)
 
-Capture Mode를 쓰기 전 만든 일반 토픽 수집기다. 상태·LiDAR 등 profile 기반 snapshot이
+Capture Mode를 쓰기 전 만든 일반 토픽 수집기다. 최신 메시지를 래치한 뒤 timer에서
+snapshot할 뿐 **MORAI 외부 Sync 제어기가 아니다**. 상태·LiDAR 등 profile 기반 snapshot이
 필요할 때 사용할 수 있지만 현재 카메라 학습 GT의 정본은 아니다.
 
 ### 방침
@@ -77,13 +112,36 @@ Docker에서는 ROS 컨테이너에 `/data`로 쓰기 가능, 학습 컨테이�
 
 ### 준비
 
-1. MORAI 26.R1.H3에서 K-City 2025와 `sensor_set_v1`을 로드한다.
+1. MORAI 26.R1.H3에서 K-City 2025와 일반 수집은 `config/ASMC_sensor_set_v2.json`,
+   Semantic/Instance GT 수집은 `config/ASMC_sensor_set_GT.json`을 로드한다.
 2. Sensor Capture Mode를 활성화한다.
 3. 아래 둘 중 하나를 연결한다.
    - 권장: MORAI gRPC server `7789` — 성공/실패 응답과 sim time을 받을 수 있다.
    - 폴백: MORAI ROS Network에 `/SaveSensorData` subscriber를 추가한다.
 4. ROS 컨테이너에서 UDP bridge를 실행한다. 휠 주행에서도 `/Ego_topic` 기록을 위해
    bridge는 유지하되 MPC 등 `/ctrl_cmd` 발행 노드는 끈다.
+
+### 센서셋 정본과 LiDAR GT
+
+| 파일 | 용도 |
+|---|---|
+| `config/ASMC_sensor_set_v1.json` | 과거 run 재현용 |
+| `config/ASMC_sensor_set_v2.json` | 현재 26.R1.H3 개발 기본값 |
+| `config/ASMC_sensor_set_GT.json` | v2 + Semantic Camera×3 + Instance LiDAR, 개발·학습 전용 |
+
+v1→v2의 유효 변경은 rear camera pitch `340°→328°`다. GT 센서셋의 LiDAR는 다음처럼
+동일 위치·주기에서 입력과 정답을 분리한다.
+
+| 용도 | Sensor ID | 위치 | 주기 | 타입 | UDP Dest |
+|---|---:|---|---:|---|---:|
+| runtime/학습 입력 | 5 | `(0.8, 0, 1.45)m` | 10 Hz | Intensity (`0`) | 9299 |
+| 학습 정답 | 11 | `(0.8, 0, 1.45)m` | 10 Hz | Instance (`2`) | 9311 |
+
+ID 5의 실제 intensity만 detector 입력으로 사용하고 ID 11의 instance point와
+`_instance.txt`/`_instance_8Points.txt`는 class, 3D box, 상대속도와 unique ID 정답으로만
+사용한다. GT value를 입력 feature로 사용하지 않는다. 현재 bridge는 ID 11/9311을 기본
+구독하지 않으며, 기존 camera 동기화 스크립트도 LiDAR GT dataset adapter를 제공하지 않는다.
+LiDAR GT 수집·정합은 후속 5/10 Hz pilot에서 별도로 검증한다.
 
 ### 실행
 
@@ -220,12 +278,16 @@ TwinLiteNet+ 입력은 `intensity/{front,left,right}`, 라벨 원본은 대응�
 
 객체 포함 run의 Semantic 전수 감사는 `scripts/audit_semantic_capture.py`로 수행한다.
 run/view별 공식 class pixel 수와 양성 sample 수, 미등록 색, actor-Instance 대응률 및
-대표 QA overlay를 함께 기록한다.
+대표 QA overlay를 함께 기록한다. 대회 학습 클래스에서 빠지는 색은
+`--require-zero-class blue_lane`처럼 명시해, 이후 데이터에 다시 나타나면 감사 명령이
+실패하도록 한다.
 
 ### Native target + TwinLite cache bake
 
 동기화가 끝난 run의 Silver PNG는 수정하지 않고, versioned derived 경로에
-원본 해상도의 `lane/drivable/stopline` canonical mask를 먼저 생성한다. 이후
+원본 해상도의 `lane/drivable/stopline` canonical mask를 먼저 생성한다. road-marking
+v3 정책은 여기에 `background=0, white=1, yellow=2, stopline=3` categorical mask도
+추가한다. 이후
 TwinLite cache 단계가 이를 `384×640`으로 letterbox하고 `valid` mask와 복원
 geometry를 만든다. 두 단계 모두 head 아래에서 `front/left/right` 폴더를 분리한다.
 
@@ -280,6 +342,29 @@ v2 native에는 `lane`, `drivable`, `stopline`, `drivable_ignore`,
 actor ignore를 뺀 값이다. 기존 actor 없는 run은 `--curation-name` 없이 같은 v2 정책과
 출력 이름으로 bake해 모든 frame을 유지한다.
 
+2026-09-06 road-marking 준비본은 기존 산출물을 덮지 않고 다음 이름으로 생성한다.
+
+```bash
+python3 scripts/bake_perception_masks.py \
+  --data-root "$AIM_PROJECT/data" \
+  --run-id <run_id> \
+  --stage all \
+  --policy config/perception_target_policy_v3.json \
+  --curation-name curation_v2 \
+  --native-output-name perception_targets_native_v3 \
+  --output-name twinlite_384x640_marking_v1
+```
+
+이 정책은 binary `lane`을 white/yellow presence 호환 target으로 유지하면서 별도
+`road_marking` 4-class target과 all-view stopline valid를 저장한다. Blue는 MORAI 공식
+팔레트 검사에는 남겨 두지만 대회 target에서는 제외하며, 한 픽셀이라도 발견되면 bake를
+중단한다. `curation_v2`가 없는 기존 baseline run에는 해당 옵션만 빼고 실행한다.
+
+Actor 픽셀에 non-drivable loss를 주는 B 파생본은 원본과 A를 덮지 않고
+`config/perception_target_policy_v3_actor_negative.json`,
+`perception_targets_native_v3_actor_negative`,
+`twinlite_384x640_marking_actor_negative_v1` 이름으로 생성한다.
+
 ### Run-based 학습 데이터셋 manifest
 
 각 run과 `front/left/right` 폴더는 물리적으로 합치지 않는다. 완료된 모델 캐시를
@@ -297,10 +382,12 @@ python3 scripts/build_perception_dataset.py \
   --val-run kcity_drive_003
 ```
 
-기본 활성 head는 `lane,drivable`이고 `stopline` target은 이후 확장을 위해 manifest에
-보존한다. 생성기는 run이 두 split에 중복되지 않는지, 모든 RGB/mask가 존재하는지,
-mask 크기가 `384×640`인지, 값이 `{0,1}`인지 전수 검사한다. 기존 dataset version을
-교체할 때만 `--overwrite`를 명시한다.
+기본 활성 head는 하위 호환을 위해 `lane,drivable`이다. 4-class 학습 버전은
+`--training-head drivable --training-head road_marking`을 명시한다. `stopline`과 binary
+`lane` target도 비교·확장을 위해 manifest에 보존할 수 있다. 생성기는 run이 두 split에 중복되지 않는지, 모든
+RGB/mask가 존재하는지, mask 크기가 `384×640`인지, binary 값이 `{0,1}`인지,
+road-marking 값이 `{0,1,2,3}`인지 전수 검사한다. 기존 dataset version을 교체할 때만
+`--overwrite`를 명시한다.
 
 조건 전환 등 명확한 결함 frame은 원본/cache를 삭제하지 않고 capture frame 전체를
 manifest에서 제외한다. 같은 frame의 front/left/right가 함께 빠지며 dataset metadata에
@@ -312,13 +399,27 @@ python3 scripts/build_perception_dataset.py ... \
   --exclude-frame <run_id>:1
 ```
 
-현재 2-head 재학습용 고정 버전은 `twinlite_morai_v4_comp8_train_val_sample_b`이다.
+2-head A 이력 버전은 `twinlite_morai_v4_comp8_train_val_sample_b`이다.
 기존 12개 run 전체를 train 26,001 samples로, 이후 별도 한 바퀴에서 조건별로 나눈
 `comp_sample_b` 6개 run을 val 1,404 samples로 구성한다. 첫 sunny 11am의 실제 날씨 전환
 4 capture(12 samples)는 명시적으로 제외했다. test는 아직 비워 둔다.
 정확한 run 목록과 manifest hash는
 `$AIM_PROJECT/data/dataset_versions/twinlite_morai_v4_comp8_train_val_sample_b/dataset.json`을
 기준으로 한다. 이전 v2/v3 dataset은 학습 전 기준 이력으로 보존한다.
+
+Road-marking/A-B 준비 버전은
+`twinlite_morai_v5_marking_prep_actor_ignore`이다. v4와 같은 train 26,001/val 1,404
+sample 및 4-frame 제외를 유지하고, 활성 head도 아직 `lane,drivable`이다. 차이는
+`road_marking` 4-class와 all-view `stopline`을 future target으로 연결하고 Blue 0-pixel
+정책을 적용했다는 점이다. 이 버전을 actor-ignore(A) 기준으로 삼고, B는 split과 모델
+초기값을 고정한 채 drivable actor 픽셀의 valid 정책만 바꾼
+`twinlite_morai_v5_marking_actor_negative`다. 통제 평가에서 B가 actor leak을 크게 줄이고
+일반 drivable/lane IoU가 회귀하지 않아 현재 live의 잠정 기본으로 채택했다.
+
+다음 4-class 학습 manifest는 `twinlite_morai_v6_road_marking_actor_negative`다. B와
+같은 26,001/1,404 split, 4-frame 제외와 cache를 사용하고 활성 head만
+`drivable,road_marking`으로 바꾼다. dataset metadata의 `target_encodings`와 각 sample의
+encoding은 `background=0, white_lane=1, yellow_lane=2, stopline=3`으로 고정된다.
 
 기존 체크포인트를 학습 없이 새 validation에 평가하는 명령은 다음과 같다.
 

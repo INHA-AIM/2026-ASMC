@@ -1,0 +1,1973 @@
+{
+  "actor_mask_source": "twinlite_morai_v5_marking_prep_actor_ignore:auxiliary_targets.drivable_ignore",
+  "actor_road_margin_px": 8,
+  "amp": true,
+  "common_ground_truth": "twinlite_morai_v5_marking_actor_negative",
+  "completed_at_utc": "2026-09-07T04:44:02+00:00",
+  "dataset_manifests": {
+    "a": {
+      "path": "/data/dataset_versions/twinlite_morai_v5_marking_prep_actor_ignore/val.jsonl",
+      "sha256": "dd3736ac2aa1ce8b75f2e670c57ff77bbb0631f3f8e56d2144a5166d3ae9bc68"
+    },
+    "b": {
+      "path": "/data/dataset_versions/twinlite_morai_v5_marking_actor_negative/val.jsonl",
+      "sha256": "906ef9aacdaad7c525e0286d80b67cd63afac7eda8cd19ef0778aa1f3ce6a7a7"
+    }
+  },
+  "device": "cuda",
+  "elapsed_seconds": 37.427204611994966,
+  "metrics": {
+    "by_sim_time": {
+      "11am": {
+        "actor": {
+          "a": {
+            "leak_pixels": 138,
+            "leak_rate": 0.020246478873239437,
+            "rejection_rate": 0.9797535211267606,
+            "road_context_leak_pixels": 138,
+            "road_context_leak_rate": 0.022222222222222223,
+            "road_context_rejection_rate": 0.9777777777777777
+          },
+          "b": {
+            "leak_pixels": 73,
+            "leak_rate": 0.010710093896713615,
+            "rejection_rate": 0.9892899061032864,
+            "road_context_leak_pixels": 73,
+            "road_context_leak_rate": 0.011755233494363929,
+            "road_context_rejection_rate": 0.9882447665056361
+          },
+          "b_better_samples": 20,
+          "b_worse_samples": 3,
+          "pixels": 6816,
+          "positive_samples": 252,
+          "road_context_pixels": 6210,
+          "road_context_positive_samples": 244,
+          "tie_samples": 221
+        },
+        "delta_b_minus_a": {
+          "actor_leak_rate": -0.009536384976525822,
+          "drivable_false_hole_rate": 0.0007250994301835414,
+          "drivable_iou": -0.0005322556260201061,
+          "lane_iou": 0.0010010678866466671,
+          "road_context_actor_leak_rate": -0.010466988727858294
+        },
+        "models": {
+          "a": {
+            "drivable": {
+              "false_hole_rate": 0.014648854759355252,
+              "fn": 350696,
+              "fp": 74748,
+              "iou": 0.982284174837527,
+              "precision": 0.9968413068558322,
+              "prediction_positive": 23664217,
+              "recall": 0.9853511452406447,
+              "target_positive": 23940165,
+              "tn": 56431551,
+              "tp": 23589469,
+              "valid_pixels": 80446464
+            },
+            "lane": {
+              "fn": 158544,
+              "fp": 5923,
+              "iou": 0.9061475154916203,
+              "precision": 0.9962838526716671,
+              "prediction_positive": 1593855,
+              "recall": 0.9092206248468344,
+              "target_positive": 1746476,
+              "tn": 78694065,
+              "tp": 1587932,
+              "valid_pixels": 80446464
+            },
+            "mean_head_iou": 0.9442158451645737
+          },
+          "b": {
+            "drivable": {
+              "false_hole_rate": 0.015373954189538793,
+              "fn": 368055,
+              "fp": 70086,
+              "iou": 0.9817519192115068,
+              "precision": 0.9970355545652358,
+              "prediction_positive": 23642196,
+              "recall": 0.9846260458104612,
+              "target_positive": 23940165,
+              "tn": 56436213,
+              "tp": 23572110,
+              "valid_pixels": 80446464
+            },
+            "lane": {
+              "fn": 156621,
+              "fp": 6109,
+              "iou": 0.907148583378267,
+              "precision": 0.9961722194234958,
+              "prediction_positive": 1595964,
+              "recall": 0.9103216992389246,
+              "target_positive": 1746476,
+              "tn": 78693879,
+              "tp": 1589855,
+              "valid_pixels": 80446464
+            },
+            "mean_head_iou": 0.9444502512948869
+          }
+        },
+        "samples": 387
+      },
+      "1pm": {
+        "actor": {
+          "a": {
+            "leak_pixels": 18271,
+            "leak_rate": 0.07751441383728379,
+            "rejection_rate": 0.9224855861627163,
+            "road_context_leak_pixels": 18270,
+            "road_context_leak_rate": 0.07775593064528485,
+            "road_context_rejection_rate": 0.9222440693547151
+          },
+          "b": {
+            "leak_pixels": 5298,
+            "leak_rate": 0.022476676947618058,
+            "rejection_rate": 0.977523323052382,
+            "road_context_leak_pixels": 5290,
+            "road_context_leak_rate": 0.02251389562745248,
+            "road_context_rejection_rate": 0.9774861043725476
+          },
+          "b_better_samples": 135,
+          "b_worse_samples": 25,
+          "pixels": 235711,
+          "positive_samples": 303,
+          "road_context_pixels": 234966,
+          "road_context_positive_samples": 298,
+          "tie_samples": 138
+        },
+        "delta_b_minus_a": {
+          "actor_leak_rate": -0.055037736889665734,
+          "drivable_false_hole_rate": 0.00024289781309414643,
+          "drivable_iou": 0.00031422481843357275,
+          "lane_iou": -0.00010221686049860512,
+          "road_context_actor_leak_rate": -0.05524203501783237
+        },
+        "models": {
+          "a": {
+            "drivable": {
+              "false_hole_rate": 0.012216421906107817,
+              "fn": 269327,
+              "fp": 67472,
+              "iou": 0.9847697227701461,
+              "precision": 0.9969112524813507,
+              "prediction_positive": 21844453,
+              "recall": 0.9877835780938922,
+              "target_positive": 22046308,
+              "tn": 55214604,
+              "tp": 21776981,
+              "valid_pixels": 77328384
+            },
+            "lane": {
+              "fn": 165336,
+              "fp": 6753,
+              "iou": 0.9038211327587942,
+              "precision": 0.9958415541614016,
+              "prediction_positive": 1623924,
+              "recall": 0.9072452450397109,
+              "target_positive": 1782507,
+              "tn": 75539124,
+              "tp": 1617171,
+              "valid_pixels": 77328384
+            },
+            "mean_head_iou": 0.9442954277644702
+          },
+          "b": {
+            "drivable": {
+              "false_hole_rate": 0.012459319719201964,
+              "fn": 274682,
+              "fp": 54982,
+              "iou": 0.9850839475885796,
+              "precision": 0.9974809645181697,
+              "prediction_positive": 21826608,
+              "recall": 0.987540680280798,
+              "target_positive": 22046308,
+              "tn": 55227094,
+              "tp": 21771626,
+              "valid_pixels": 77328384
+            },
+            "lane": {
+              "fn": 165302,
+              "fp": 6993,
+              "iou": 0.9037189158982956,
+              "precision": 0.995694490450056,
+              "prediction_positive": 1624198,
+              "recall": 0.9072643192986058,
+              "target_positive": 1782507,
+              "tn": 75538884,
+              "tp": 1617205,
+              "valid_pixels": 77328384
+            },
+            "mean_head_iou": 0.9444014317434376
+          }
+        },
+        "samples": 372
+      },
+      "3pm": {
+        "actor": {
+          "a": {
+            "leak_pixels": 65484,
+            "leak_rate": 0.1886793540114964,
+            "rejection_rate": 0.8113206459885036,
+            "road_context_leak_pixels": 65484,
+            "road_context_leak_rate": 0.18871796054110446,
+            "road_context_rejection_rate": 0.8112820394588955
+          },
+          "b": {
+            "leak_pixels": 13452,
+            "leak_rate": 0.03875931021566565,
+            "rejection_rate": 0.9612406897843343,
+            "road_context_leak_pixels": 13452,
+            "road_context_leak_rate": 0.03876724093211986,
+            "road_context_rejection_rate": 0.9612327590678801
+          },
+          "b_better_samples": 136,
+          "b_worse_samples": 1,
+          "pixels": 347065,
+          "positive_samples": 278,
+          "road_context_pixels": 346994,
+          "road_context_positive_samples": 276,
+          "tie_samples": 139
+        },
+        "delta_b_minus_a": {
+          "actor_leak_rate": -0.14992004379583077,
+          "drivable_false_hole_rate": 0.00048815910510680884,
+          "drivable_iou": 0.0007784211898423932,
+          "lane_iou": 0.00015251144600558764,
+          "road_context_actor_leak_rate": -0.1499507196089846
+        },
+        "models": {
+          "a": {
+            "drivable": {
+              "false_hole_rate": 0.012574565168077343,
+              "fn": 562142,
+              "fp": 193565,
+              "iou": 0.9831684538631927,
+              "precision": 0.9956341456208043,
+              "prediction_positive": 44336110,
+              "recall": 0.9874254348319227,
+              "target_positive": 44704687,
+              "tn": 89179188,
+              "tp": 44142545,
+              "valid_pixels": 134077440
+            },
+            "lane": {
+              "fn": 327539,
+              "fp": 11965,
+              "iou": 0.8777440202405984,
+              "precision": 0.995115237926493,
+              "prediction_positive": 2449454,
+              "recall": 0.8815422483967612,
+              "target_positive": 2765028,
+              "tn": 131300447,
+              "tp": 2437489,
+              "valid_pixels": 134077440
+            },
+            "mean_head_iou": 0.9304562370518956
+          },
+          "b": {
+            "drivable": {
+              "false_hole_rate": 0.013062724273184152,
+              "fn": 583965,
+              "fp": 135866,
+              "iou": 0.9839468750530351,
+              "precision": 0.9969300389808632,
+              "prediction_positive": 44256588,
+              "recall": 0.9869372757268159,
+              "target_positive": 44704687,
+              "tn": 89236887,
+              "tp": 44120722,
+              "valid_pixels": 134077440
+            },
+            "lane": {
+              "fn": 326630,
+              "fp": 12518,
+              "iou": 0.877896531686604,
+              "precision": 0.9948925218163331,
+              "prediction_positive": 2450916,
+              "recall": 0.881870997328056,
+              "target_positive": 2765028,
+              "tn": 131299894,
+              "tp": 2438398,
+              "valid_pixels": 134077440
+            },
+            "mean_head_iou": 0.9309217033698196
+          }
+        },
+        "samples": 645
+      }
+    },
+    "by_view": {
+      "front": {
+        "actor": {
+          "a": {
+            "leak_pixels": 46266,
+            "leak_rate": 0.14563345168844904,
+            "rejection_rate": 0.854366548311551,
+            "road_context_leak_pixels": 46266,
+            "road_context_leak_rate": 0.14566875832386159,
+            "road_context_rejection_rate": 0.8543312416761384
+          },
+          "b": {
+            "leak_pixels": 9842,
+            "leak_rate": 0.030980081085845233,
+            "rejection_rate": 0.9690199189141547,
+            "road_context_leak_pixels": 9842,
+            "road_context_leak_rate": 0.030987591739580808,
+            "road_context_rejection_rate": 0.9690124082604192
+          },
+          "b_better_samples": 147,
+          "b_worse_samples": 7,
+          "pixels": 317688,
+          "positive_samples": 343,
+          "road_context_pixels": 317611,
+          "road_context_positive_samples": 342,
+          "tie_samples": 188
+        },
+        "delta_b_minus_a": {
+          "actor_leak_rate": -0.1146533706026038,
+          "drivable_false_hole_rate": 0.0008263846061578109,
+          "drivable_iou": 0.0005318393922304487,
+          "lane_iou": 0.0005746812457531059,
+          "road_context_actor_leak_rate": -0.11468116658428078
+        },
+        "models": {
+          "a": {
+            "drivable": {
+              "false_hole_rate": 0.017591145114301134,
+              "fn": 534854,
+              "fp": 167707,
+              "iou": 0.9770197899833694,
+              "precision": 0.9944167609762996,
+              "prediction_positive": 30037582,
+              "recall": 0.9824088548856988,
+              "target_positive": 30404729,
+              "tn": 77254764,
+              "tp": 29869875,
+              "valid_pixels": 107827200
+            },
+            "lane": {
+              "fn": 289135,
+              "fp": 9010,
+              "iou": 0.801533572442293,
+              "precision": 0.992572802608834,
+              "prediction_positive": 1213109,
+              "recall": 0.806369932642841,
+              "target_positive": 1493234,
+              "tn": 106324956,
+              "tp": 1204099,
+              "valid_pixels": 107827200
+            },
+            "mean_head_iou": 0.8892766812128312
+          },
+          "b": {
+            "drivable": {
+              "false_hole_rate": 0.018417529720458944,
+              "fn": 559980,
+              "fp": 125371,
+              "iou": 0.9775516293755998,
+              "precision": 0.9958168001996656,
+              "prediction_positive": 29970120,
+              "recall": 0.981582470279541,
+              "target_positive": 30404729,
+              "tn": 77297100,
+              "tp": 29844749,
+              "valid_pixels": 107827200
+            },
+            "lane": {
+              "fn": 288238,
+              "fp": 9052,
+              "iou": 0.8021082536880461,
+              "precision": 0.9925439521336883,
+              "prediction_positive": 1214048,
+              "recall": 0.8069706422436135,
+              "target_positive": 1493234,
+              "tn": 106324914,
+              "tp": 1204996,
+              "valid_pixels": 107827200
+            },
+            "mean_head_iou": 0.8898299415318229
+          }
+        },
+        "samples": 468
+      },
+      "left": {
+        "actor": {
+          "a": {
+            "leak_pixels": 21166,
+            "leak_rate": 0.12097000040007087,
+            "rejection_rate": 0.8790299995999291,
+            "road_context_leak_pixels": 21166,
+            "road_context_leak_rate": 0.12102049217820876,
+            "road_context_rejection_rate": 0.8789795078217912
+          },
+          "b": {
+            "leak_pixels": 5482,
+            "leak_rate": 0.031331264395407184,
+            "rejection_rate": 0.9686687356045928,
+            "road_context_leak_pixels": 5482,
+            "road_context_leak_rate": 0.03134434178025798,
+            "road_context_rejection_rate": 0.968655658219742
+          },
+          "b_better_samples": 83,
+          "b_worse_samples": 11,
+          "pixels": 174969,
+          "positive_samples": 194,
+          "road_context_pixels": 174896,
+          "road_context_positive_samples": 192,
+          "tie_samples": 98
+        },
+        "delta_b_minus_a": {
+          "actor_leak_rate": -0.08963873600466368,
+          "drivable_false_hole_rate": 0.0004977210193086081,
+          "drivable_iou": 6.872661181023254e-05,
+          "lane_iou": 0.0011189568758899204,
+          "road_context_actor_leak_rate": -0.08967615039795078
+        },
+        "models": {
+          "a": {
+            "drivable": {
+              "false_hole_rate": 0.011062985106619537,
+              "fn": 353436,
+              "fp": 90564,
+              "iou": 0.9861415348811948,
+              "precision": 0.997141715899614,
+              "prediction_positive": 31684744,
+              "recall": 0.9889370148933805,
+              "target_positive": 31947616,
+              "tn": 59974364,
+              "tp": 31594180,
+              "valid_pixels": 92012544
+            },
+            "lane": {
+              "fn": 203940,
+              "fp": 8933,
+              "iou": 0.9136557611972748,
+              "precision": 0.996049895222509,
+              "prediction_positive": 2261459,
+              "recall": 0.9169782932065821,
+              "target_positive": 2456466,
+              "tn": 89547145,
+              "tp": 2252526,
+              "valid_pixels": 92012544
+            },
+            "mean_head_iou": 0.9498986480392348
+          },
+          "b": {
+            "drivable": {
+              "false_hole_rate": 0.011560706125928145,
+              "fn": 369337,
+              "fp": 72208,
+              "iou": 0.9862102614930051,
+              "precision": 0.9977185817077633,
+              "prediction_positive": 31650487,
+              "recall": 0.9884392938740718,
+              "target_positive": 31947616,
+              "tn": 59992720,
+              "tp": 31578279,
+              "valid_pixels": 92012544
+            },
+            "lane": {
+              "fn": 200734,
+              "fp": 9422,
+              "iou": 0.9147747180731647,
+              "precision": 0.9958404594124726,
+              "prediction_positive": 2265154,
+              "recall": 0.9182834201653921,
+              "target_positive": 2456466,
+              "tn": 89546656,
+              "tp": 2255732,
+              "valid_pixels": 92012544
+            },
+            "mean_head_iou": 0.9504924897830849
+          }
+        },
+        "samples": 468
+      },
+      "right": {
+        "actor": {
+          "a": {
+            "leak_pixels": 16461,
+            "leak_rate": 0.16981482436684375,
+            "rejection_rate": 0.8301851756331562,
+            "road_context_leak_pixels": 16460,
+            "road_context_leak_rate": 0.17206234385290028,
+            "road_context_rejection_rate": 0.8279376561470997
+          },
+          "b": {
+            "leak_pixels": 3499,
+            "leak_rate": 0.036096353226388815,
+            "rejection_rate": 0.9639036467736112,
+            "road_context_leak_pixels": 3491,
+            "road_context_leak_rate": 0.03649268787305437,
+            "road_context_rejection_rate": 0.9635073121269456
+          },
+          "b_better_samples": 61,
+          "b_worse_samples": 11,
+          "pixels": 96935,
+          "positive_samples": 296,
+          "road_context_pixels": 95663,
+          "road_context_positive_samples": 284,
+          "tie_samples": 212
+        },
+        "delta_b_minus_a": {
+          "actor_leak_rate": -0.13371847114045493,
+          "drivable_false_hole_rate": 0.0001238583899856073,
+          "drivable_iou": 0.00036842072484344346,
+          "lane_iou": -0.0007032023878777993,
+          "road_context_actor_leak_rate": -0.1355696559798459
+        },
+        "models": {
+          "a": {
+            "drivable": {
+              "false_hole_rate": 0.010370052523367685,
+              "fn": 293875,
+              "fp": 77514,
+              "iou": 0.986930437073698,
+              "precision": 0.9972436971538828,
+              "prediction_positive": 28122454,
+              "recall": 0.9896299474766324,
+              "target_positive": 28338815,
+              "tn": 63596215,
+              "tp": 28044940,
+              "valid_pixels": 92012544
+            },
+            "lane": {
+              "fn": 158344,
+              "fp": 6698,
+              "iou": 0.9297995031069639,
+              "precision": 0.9969452697972558,
+              "prediction_positive": 2192665,
+              "recall": 0.932456060650656,
+              "target_positive": 2344311,
+              "tn": 89661535,
+              "tp": 2185967,
+              "valid_pixels": 92012544
+            },
+            "mean_head_iou": 0.958364970090331
+          },
+          "b": {
+            "drivable": {
+              "false_hole_rate": 0.010493910913353293,
+              "fn": 297385,
+              "fp": 63355,
+              "iou": 0.9872988577985414,
+              "precision": 0.9977457575284778,
+              "prediction_positive": 28104785,
+              "recall": 0.9895060890866467,
+              "target_positive": 28338815,
+              "tn": 63610374,
+              "tp": 28041430,
+              "valid_pixels": 92012544
+            },
+            "lane": {
+              "fn": 159581,
+              "fp": 7146,
+              "iou": 0.9290963007190861,
+              "precision": 0.9967397790750937,
+              "prediction_positive": 2191876,
+              "recall": 0.9319284002847745,
+              "target_positive": 2344311,
+              "tn": 89661087,
+              "tp": 2184730,
+              "valid_pixels": 92012544
+            },
+            "mean_head_iou": 0.9581975792588138
+          }
+        },
+        "samples": 468
+      }
+    },
+    "by_weather": {
+      "foggy": {
+        "actor": {
+          "a": {
+            "leak_pixels": 70917,
+            "leak_rate": 0.17827613859469624,
+            "rejection_rate": 0.8217238614053037,
+            "road_context_leak_pixels": 70917,
+            "road_context_leak_rate": 0.1785625259659327,
+            "road_context_rejection_rate": 0.8214374740340673
+          },
+          "b": {
+            "leak_pixels": 12467,
+            "leak_rate": 0.03134042077160734,
+            "rejection_rate": 0.9686595792283926,
+            "road_context_leak_pixels": 12467,
+            "road_context_leak_rate": 0.03139076682907177,
+            "road_context_rejection_rate": 0.9686092331709282
+          },
+          "b_better_samples": 159,
+          "b_worse_samples": 1,
+          "pixels": 397793,
+          "positive_samples": 407,
+          "road_context_pixels": 397155,
+          "road_context_positive_samples": 400,
+          "tie_samples": 240
+        },
+        "delta_b_minus_a": {
+          "actor_leak_rate": -0.1469357178230889,
+          "drivable_false_hole_rate": 0.0008653443228100622,
+          "drivable_iou": 0.0005599926028122537,
+          "lane_iou": 0.00017256546392974137,
+          "road_context_actor_leak_rate": -0.14717175913686092
+        },
+        "models": {
+          "a": {
+            "drivable": {
+              "false_hole_rate": 0.013560285867448257,
+              "fn": 668593,
+              "fp": 205059,
+              "iou": 0.9823541321351231,
+              "precision": 0.9958015584839961,
+              "prediction_positive": 48841695,
+              "recall": 0.9864397141325517,
+              "target_positive": 49305229,
+              "tn": 106393712,
+              "tp": 48636636,
+              "valid_pixels": 155904000
+            },
+            "lane": {
+              "fn": 364630,
+              "fp": 13958,
+              "iou": 0.885786689473851,
+              "precision": 0.9952686590183772,
+              "prediction_positive": 2950115,
+              "recall": 0.8895324054536085,
+              "target_positive": 3300787,
+              "tn": 152589255,
+              "tp": 2936157,
+              "valid_pixels": 155904000
+            },
+            "mean_head_iou": 0.934070410804487
+          },
+          "b": {
+            "drivable": {
+              "false_hole_rate": 0.01442563019025832,
+              "fn": 711259,
+              "fp": 133444,
+              "iou": 0.9829141247379354,
+              "precision": 0.9972614183876042,
+              "prediction_positive": 48727414,
+              "recall": 0.9855743698097417,
+              "target_positive": 49305229,
+              "tn": 106465327,
+              "tp": 48593970,
+              "valid_pixels": 155904000
+            },
+            "lane": {
+              "fn": 363786,
+              "fp": 14265,
+              "iou": 0.8859592549377807,
+              "precision": 0.995166481096587,
+              "prediction_positive": 2951266,
+              "recall": 0.8897881020496021,
+              "target_positive": 3300787,
+              "tn": 152588948,
+              "tp": 2937001,
+              "valid_pixels": 155904000
+            },
+            "mean_head_iou": 0.934436689837858
+          }
+        },
+        "samples": 750
+      },
+      "sunny": {
+        "actor": {
+          "a": {
+            "leak_pixels": 12976,
+            "leak_rate": 0.067654158780807,
+            "rejection_rate": 0.9323458412191931,
+            "road_context_leak_pixels": 12975,
+            "road_context_leak_rate": 0.06792660262283066,
+            "road_context_rejection_rate": 0.9320733973771693
+          },
+          "b": {
+            "leak_pixels": 6356,
+            "leak_rate": 0.03313885890958764,
+            "rejection_rate": 0.9668611410904123,
+            "road_context_leak_pixels": 6348,
+            "road_context_leak_rate": 0.03323299217338953,
+            "road_context_rejection_rate": 0.9667670078266105
+          },
+          "b_better_samples": 132,
+          "b_worse_samples": 28,
+          "pixels": 191799,
+          "positive_samples": 426,
+          "road_context_pixels": 191015,
+          "road_context_positive_samples": 418,
+          "tie_samples": 258
+        },
+        "delta_b_minus_a": {
+          "actor_leak_rate": -0.03451529987121935,
+          "drivable_false_hole_rate": 4.5208599995008245e-05,
+          "drivable_iou": 3.167121394442862e-05,
+          "lane_iou": 0.0004714627445454589,
+          "road_context_actor_leak_rate": -0.03469361044944114
+        },
+        "models": {
+          "a": {
+            "drivable": {
+              "false_hole_rate": 0.012409337849618509,
+              "fn": 513572,
+              "fp": 130726,
+              "iou": 0.9844809759128728,
+              "precision": 0.9968118008681542,
+              "prediction_positive": 41003085,
+              "recall": 0.9875906621503815,
+              "target_positive": 41385931,
+              "tn": 94431631,
+              "tp": 40872359,
+              "valid_pixels": 135948288
+            },
+            "lane": {
+              "fn": 286789,
+              "fp": 10683,
+              "iou": 0.9009716346078623,
+              "precision": 0.9960682605613742,
+              "prediction_positive": 2717118,
+              "recall": 0.9041872576192093,
+              "target_positive": 2993224,
+              "tn": 132944381,
+              "tp": 2706435,
+              "valid_pixels": 135948288
+            },
+            "mean_head_iou": 0.9427263052603676
+          },
+          "b": {
+            "drivable": {
+              "false_hole_rate": 0.012454546449613517,
+              "fn": 515443,
+              "fp": 127490,
+              "iou": 0.9845126471268172,
+              "precision": 0.9968903344452743,
+              "prediction_positive": 40997978,
+              "recall": 0.9875454535503865,
+              "target_positive": 41385931,
+              "tn": 94434867,
+              "tp": 40870488,
+              "valid_pixels": 135948288
+            },
+            "lane": {
+              "fn": 284767,
+              "fp": 11355,
+              "iou": 0.9014430973524078,
+              "precision": 0.9958250790863487,
+              "prediction_positive": 2719812,
+              "recall": 0.9048627834067882,
+              "target_positive": 2993224,
+              "tn": 132943709,
+              "tp": 2708457,
+              "valid_pixels": 135948288
+            },
+            "mean_head_iou": 0.9429778722396125
+          }
+        },
+        "samples": 654
+      }
+    },
+    "by_weather_view": {
+      "foggy/front": {
+        "actor": {
+          "a": {
+            "leak_pixels": 39748,
+            "leak_rate": 0.18894418854489017,
+            "rejection_rate": 0.8110558114551099,
+            "road_context_leak_pixels": 39748,
+            "road_context_leak_rate": 0.1889837156781172,
+            "road_context_rejection_rate": 0.8110162843218828
+          },
+          "b": {
+            "leak_pixels": 6691,
+            "leak_rate": 0.031806017046237804,
+            "rejection_rate": 0.9681939829537622,
+            "road_context_leak_pixels": 6691,
+            "road_context_leak_rate": 0.0318126708665161,
+            "road_context_rejection_rate": 0.9681873291334839
+          },
+          "b_better_samples": 82,
+          "b_worse_samples": 1,
+          "pixels": 210369,
+          "positive_samples": 175,
+          "road_context_pixels": 210325,
+          "road_context_positive_samples": 175,
+          "tie_samples": 92
+        },
+        "delta_b_minus_a": {
+          "actor_leak_rate": -0.15713817149865236,
+          "drivable_false_hole_rate": 0.0014136821524175294,
+          "drivable_iou": 0.0009774281548682318,
+          "lane_iou": 0.0019125373003158197,
+          "road_context_actor_leak_rate": -0.1571710448116011
+        },
+        "models": {
+          "a": {
+            "drivable": {
+              "false_hole_rate": 0.018024720448631442,
+              "fn": 297105,
+              "fp": 107060,
+              "iou": 0.9756384108840755,
+              "precision": 0.9934291408702958,
+              "prediction_positive": 16293151,
+              "recall": 0.9819752795513685,
+              "target_positive": 16483196,
+              "tn": 41009744,
+              "tp": 16186091,
+              "valid_pixels": 57600000
+            },
+            "lane": {
+              "fn": 164923,
+              "fp": 5195,
+              "iou": 0.7847484949172616,
+              "precision": 0.9916933029953677,
+              "prediction_positive": 625399,
+              "recall": 0.7899409904384895,
+              "target_positive": 785127,
+              "tn": 56809678,
+              "tp": 620204,
+              "valid_pixels": 57600000
+            },
+            "mean_head_iou": 0.8801934529006685
+          },
+          "b": {
+            "drivable": {
+              "false_hole_rate": 0.01943840260104897,
+              "fn": 320407,
+              "fp": 66596,
+              "iou": 0.9766158390389438,
+              "precision": 0.995896578952314,
+              "prediction_positive": 16229385,
+              "recall": 0.980561597398951,
+              "target_positive": 16483196,
+              "tn": 41050208,
+              "tp": 16162789,
+              "valid_pixels": 57600000
+            },
+            "lane": {
+              "fn": 163369,
+              "fp": 5249,
+              "iou": 0.7866610322175774,
+              "precision": 0.9916284826166215,
+              "prediction_positive": 627007,
+              "recall": 0.7919202880553082,
+              "target_positive": 785127,
+              "tn": 56809624,
+              "tp": 621758,
+              "valid_pixels": 57600000
+            },
+            "mean_head_iou": 0.8816384356282606
+          }
+        },
+        "samples": 250
+      },
+      "foggy/left": {
+        "actor": {
+          "a": {
+            "leak_pixels": 15251,
+            "leak_rate": 0.1465610855380121,
+            "rejection_rate": 0.8534389144619879,
+            "road_context_leak_pixels": 15251,
+            "road_context_leak_rate": 0.14658644188348824,
+            "road_context_rejection_rate": 0.8534135581165118
+          },
+          "b": {
+            "leak_pixels": 2613,
+            "leak_rate": 0.025110754475826214,
+            "rejection_rate": 0.9748892455241738,
+            "road_context_leak_pixels": 2613,
+            "road_context_leak_rate": 0.025115098855258984,
+            "road_context_rejection_rate": 0.974884901144741
+          },
+          "b_better_samples": 36,
+          "b_worse_samples": 0,
+          "pixels": 104059,
+          "positive_samples": 89,
+          "road_context_pixels": 104041,
+          "road_context_positive_samples": 88,
+          "tie_samples": 52
+        },
+        "delta_b_minus_a": {
+          "actor_leak_rate": -0.12145033106218588,
+          "drivable_false_hole_rate": 0.0009333123210299634,
+          "drivable_iou": 1.976630831346249e-06,
+          "lane_iou": 0.0010189236533113544,
+          "road_context_actor_leak_rate": -0.12147134302822926
+        },
+        "models": {
+          "a": {
+            "drivable": {
+              "false_hole_rate": 0.01128828951531224,
+              "fn": 189962,
+              "fp": 52819,
+              "iou": 0.9856181382028553,
+              "precision": 0.9968354978310887,
+              "prediction_positive": 16691093,
+              "recall": 0.9887117104846878,
+              "target_positive": 16828236,
+              "tn": 32270945,
+              "tp": 16638274,
+              "valid_pixels": 49152000
+            },
+            "lane": {
+              "fn": 111359,
+              "fp": 4663,
+              "iou": 0.9095426141125748,
+              "precision": 0.9960188037457225,
+              "prediction_positive": 1171256,
+              "recall": 0.9128613594250802,
+              "target_positive": 1277952,
+              "tn": 47869385,
+              "tp": 1166593,
+              "valid_pixels": 49152000
+            },
+            "mean_head_iou": 0.9475803761577151
+          },
+          "b": {
+            "drivable": {
+              "false_hole_rate": 0.012221601836342204,
+              "fn": 205668,
+              "fp": 36850,
+              "iou": 0.9856201148336866,
+              "precision": 0.9977880379734754,
+              "prediction_positive": 16659418,
+              "recall": 0.9877783981636578,
+              "target_positive": 16828236,
+              "tn": 32286914,
+              "tp": 16622568,
+              "valid_pixels": 49152000
+            },
+            "lane": {
+              "fn": 109982,
+              "fp": 4740,
+              "iou": 0.9105615377658861,
+              "precision": 0.9959580800027287,
+              "prediction_positive": 1172710,
+              "recall": 0.9139388646834936,
+              "target_positive": 1277952,
+              "tn": 47869308,
+              "tp": 1167970,
+              "valid_pixels": 49152000
+            },
+            "mean_head_iou": 0.9480908262997864
+          }
+        },
+        "samples": 250
+      },
+      "foggy/right": {
+        "actor": {
+          "a": {
+            "leak_pixels": 15918,
+            "leak_rate": 0.19094344149223294,
+            "rejection_rate": 0.809056558507767,
+            "road_context_leak_pixels": 15918,
+            "road_context_leak_rate": 0.19227192018263295,
+            "road_context_rejection_rate": 0.807728079817367
+          },
+          "b": {
+            "leak_pixels": 3163,
+            "leak_rate": 0.03794158219876447,
+            "rejection_rate": 0.9620584178012356,
+            "road_context_leak_pixels": 3163,
+            "road_context_leak_rate": 0.03820555870949039,
+            "road_context_rejection_rate": 0.9617944412905096
+          },
+          "b_better_samples": 41,
+          "b_worse_samples": 0,
+          "pixels": 83365,
+          "positive_samples": 143,
+          "road_context_pixels": 82789,
+          "road_context_positive_samples": 137,
+          "tie_samples": 96
+        },
+        "delta_b_minus_a": {
+          "actor_leak_rate": -0.15300185929346846,
+          "drivable_false_hole_rate": 0.00022871366943071764,
+          "drivable_iou": 0.0007057883045777924,
+          "lane_iou": -0.0018115349736762543,
+          "road_context_actor_leak_rate": -0.15406636147314257
+        },
+        "models": {
+          "a": {
+            "drivable": {
+              "false_hole_rate": 0.011349775165959653,
+              "fn": 181526,
+              "fp": 45180,
+              "iou": 0.985865307993147,
+              "precision": 0.9971508661764114,
+              "prediction_positive": 15857451,
+              "recall": 0.9886502248340403,
+              "target_positive": 15993797,
+              "tn": 33113023,
+              "tp": 15812271,
+              "valid_pixels": 49152000
+            },
+            "lane": {
+              "fn": 88348,
+              "fp": 4100,
+              "iou": 0.9255537087858993,
+              "precision": 0.9964454770863316,
+              "prediction_positive": 1153460,
+              "recall": 0.9286196744304795,
+              "target_positive": 1237708,
+              "tn": 47910192,
+              "tp": 1149360,
+              "valid_pixels": 49152000
+            },
+            "mean_head_iou": 0.9557095083895231
+          },
+          "b": {
+            "drivable": {
+              "false_hole_rate": 0.011578488835390371,
+              "fn": 185184,
+              "fp": 29998,
+              "iou": 0.9865710962977248,
+              "precision": 0.9981060207867976,
+              "prediction_positive": 15838611,
+              "recall": 0.9884215111646096,
+              "target_positive": 15993797,
+              "tn": 33128205,
+              "tp": 15808613,
+              "valid_pixels": 49152000
+            },
+            "lane": {
+              "fn": 90435,
+              "fp": 4276,
+              "iou": 0.923742173812223,
+              "precision": 0.9962867407292264,
+              "prediction_positive": 1151549,
+              "recall": 0.9269334931987189,
+              "target_positive": 1237708,
+              "tn": 47910016,
+              "tp": 1147273,
+              "valid_pixels": 49152000
+            },
+            "mean_head_iou": 0.9551566350549738
+          }
+        },
+        "samples": 250
+      },
+      "sunny/front": {
+        "actor": {
+          "a": {
+            "leak_pixels": 6518,
+            "leak_rate": 0.06073481862484742,
+            "rejection_rate": 0.9392651813751526,
+            "road_context_leak_pixels": 6518,
+            "road_context_leak_rate": 0.06075349999067912,
+            "road_context_rejection_rate": 0.9392465000093209
+          },
+          "b": {
+            "leak_pixels": 3151,
+            "leak_rate": 0.029361063744537313,
+            "rejection_rate": 0.9706389362554627,
+            "road_context_leak_pixels": 3151,
+            "road_context_leak_rate": 0.029370094886564883,
+            "road_context_rejection_rate": 0.9706299051134352
+          },
+          "b_better_samples": 65,
+          "b_worse_samples": 6,
+          "pixels": 107319,
+          "positive_samples": 168,
+          "road_context_pixels": 107286,
+          "road_context_positive_samples": 167,
+          "tie_samples": 96
+        },
+        "delta_b_minus_a": {
+          "actor_leak_rate": -0.031373754880310106,
+          "drivable_false_hole_rate": 0.00013102005361047275,
+          "drivable_iou": 5.757627454805458e-07,
+          "lane_iou": -0.0009090446753614589,
+          "road_context_actor_leak_rate": -0.031383405104114234
+        },
+        "models": {
+          "a": {
+            "drivable": {
+              "false_hole_rate": 0.017077788775129867,
+              "fn": 237749,
+              "fp": 60647,
+              "iou": 0.9786588357466433,
+              "precision": 0.9955875219570748,
+              "prediction_positive": 13744431,
+              "recall": 0.9829222112248701,
+              "target_positive": 13921533,
+              "tn": 36245020,
+              "tp": 13683784,
+              "valid_pixels": 50227200
+            },
+            "lane": {
+              "fn": 124212,
+              "fp": 3815,
+              "iou": 0.820167096957251,
+              "precision": 0.9935087032720219,
+              "prediction_positive": 587710,
+              "recall": 0.8245858323671422,
+              "target_positive": 708107,
+              "tn": 49515278,
+              "tp": 583895,
+              "valid_pixels": 50227200
+            },
+            "mean_head_iou": 0.8994129663519471
+          },
+          "b": {
+            "drivable": {
+              "false_hole_rate": 0.01720880882874034,
+              "fn": 239573,
+              "fp": 58775,
+              "iou": 0.9786594115093887,
+              "precision": 0.9957225723369237,
+              "prediction_positive": 13740735,
+              "recall": 0.9827911911712597,
+              "target_positive": 13921533,
+              "tn": 36246892,
+              "tp": 13681960,
+              "valid_pixels": 50227200
+            },
+            "lane": {
+              "fn": 124869,
+              "fp": 3803,
+              "iou": 0.8192580522818895,
+              "precision": 0.993521747203347,
+              "prediction_positive": 587041,
+              "recall": 0.82365800648772,
+              "target_positive": 708107,
+              "tn": 49515290,
+              "tp": 583238,
+              "valid_pixels": 50227200
+            },
+            "mean_head_iou": 0.8989587318956391
+          }
+        },
+        "samples": 218
+      },
+      "sunny/left": {
+        "actor": {
+          "a": {
+            "leak_pixels": 5915,
+            "leak_rate": 0.08341559723593288,
+            "rejection_rate": 0.9165844027640672,
+            "road_context_leak_pixels": 5915,
+            "road_context_leak_rate": 0.083480347187919,
+            "road_context_rejection_rate": 0.916519652812081
+          },
+          "b": {
+            "leak_pixels": 2869,
+            "leak_rate": 0.040459737695670565,
+            "rejection_rate": 0.9595402623043294,
+            "road_context_leak_pixels": 2869,
+            "road_context_leak_rate": 0.04049114388539976,
+            "road_context_rejection_rate": 0.9595088561146002
+          },
+          "b_better_samples": 47,
+          "b_worse_samples": 11,
+          "pixels": 70910,
+          "positive_samples": 105,
+          "road_context_pixels": 70855,
+          "road_context_positive_samples": 104,
+          "tie_samples": 46
+        },
+        "delta_b_minus_a": {
+          "actor_leak_rate": -0.04295585954026231,
+          "drivable_false_hole_rate": 1.2897354256590637e-05,
+          "drivable_iou": 0.00014255022350417867,
+          "lane_iou": 0.0012261165338391944,
+          "road_context_actor_leak_rate": -0.042989203302519235
+        },
+        "models": {
+          "a": {
+            "drivable": {
+              "false_hole_rate": 0.010812215844829616,
+              "fn": 163474,
+              "fp": 37745,
+              "iou": 0.9867244612682154,
+              "precision": 0.9974826011356407,
+              "prediction_positive": 14993651,
+              "recall": 0.9891877841551704,
+              "target_positive": 15119380,
+              "tn": 27703419,
+              "tp": 14955906,
+              "valid_pixels": 42860544
+            },
+            "lane": {
+              "fn": 92581,
+              "fp": 4270,
+              "iou": 0.9181160719116931,
+              "precision": 0.9960832982481245,
+              "prediction_positive": 1090203,
+              "recall": 0.9214425963543921,
+              "target_positive": 1178514,
+              "tn": 41677760,
+              "tp": 1085933,
+              "valid_pixels": 42860544
+            },
+            "mean_head_iou": 0.9524202665899543
+          },
+          "b": {
+            "drivable": {
+              "false_hole_rate": 0.010825113199086207,
+              "fn": 163669,
+              "fp": 35358,
+              "iou": 0.9868670114917196,
+              "precision": 0.9976413956869921,
+              "prediction_positive": 14991069,
+              "recall": 0.9891748868009138,
+              "target_positive": 15119380,
+              "tn": 27705806,
+              "tp": 14955711,
+              "valid_pixels": 42860544
+            },
+            "lane": {
+              "fn": 90752,
+              "fp": 4682,
+              "iou": 0.9193421884455323,
+              "precision": 0.9957141967917806,
+              "prediction_positive": 1092444,
+              "recall": 0.9229945507647767,
+              "target_positive": 1178514,
+              "tn": 41677348,
+              "tp": 1087762,
+              "valid_pixels": 42860544
+            },
+            "mean_head_iou": 0.953104599968626
+          }
+        },
+        "samples": 218
+      },
+      "sunny/right": {
+        "actor": {
+          "a": {
+            "leak_pixels": 543,
+            "leak_rate": 0.040014738393515104,
+            "rejection_rate": 0.9599852616064849,
+            "road_context_leak_pixels": 542,
+            "road_context_leak_rate": 0.04210035730930558,
+            "road_context_rejection_rate": 0.9578996426906944
+          },
+          "b": {
+            "leak_pixels": 336,
+            "leak_rate": 0.024760501105379515,
+            "rejection_rate": 0.9752394988946205,
+            "road_context_leak_pixels": 328,
+            "road_context_leak_rate": 0.025477707006369428,
+            "road_context_rejection_rate": 0.9745222929936306
+          },
+          "b_better_samples": 20,
+          "b_worse_samples": 11,
+          "pixels": 13570,
+          "positive_samples": 153,
+          "road_context_pixels": 12874,
+          "road_context_positive_samples": 147,
+          "tie_samples": 116
+        },
+        "delta_b_minus_a": {
+          "actor_leak_rate": -0.015254237288135589,
+          "drivable_false_hole_rate": -1.1988641895865557e-05,
+          "drivable_iou": -6.972173742081367e-05,
+          "lane_iou": 0.0005370131710771275,
+          "road_context_actor_leak_rate": -0.01662265030293615
+        },
+        "models": {
+          "a": {
+            "drivable": {
+              "false_hole_rate": 0.009100756272692353,
+              "fn": 112349,
+              "fp": 32334,
+              "iou": 0.9883106661263249,
+              "precision": 0.9973637185412837,
+              "prediction_positive": 12265003,
+              "recall": 0.9908992437273076,
+              "target_positive": 12345018,
+              "tn": 30483192,
+              "tp": 12232669,
+              "valid_pixels": 42860544
+            },
+            "lane": {
+              "fn": 69996,
+              "fp": 2598,
+              "iou": 0.9345528898729807,
+              "precision": 0.9975000120284255,
+              "prediction_positive": 1039205,
+              "recall": 0.9367469634548252,
+              "target_positive": 1106603,
+              "tn": 41751343,
+              "tp": 1036607,
+              "valid_pixels": 42860544
+            },
+            "mean_head_iou": 0.9614317779996528
+          },
+          "b": {
+            "drivable": {
+              "false_hole_rate": 0.009088767630796487,
+              "fn": 112201,
+              "fp": 33357,
+              "iou": 0.9882409443889041,
+              "precision": 0.9972805701272459,
+              "prediction_positive": 12266174,
+              "recall": 0.9909112323692035,
+              "target_positive": 12345018,
+              "tn": 30482169,
+              "tp": 12232817,
+              "valid_pixels": 42860544
+            },
+            "lane": {
+              "fn": 69146,
+              "fp": 2870,
+              "iou": 0.9350899030440578,
+              "precision": 0.9972412520294099,
+              "prediction_positive": 1040327,
+              "recall": 0.9375150799338154,
+              "target_positive": 1106603,
+              "tn": 41751071,
+              "tp": 1037457,
+              "valid_pixels": 42860544
+            },
+            "mean_head_iou": 0.961665423716481
+          }
+        },
+        "samples": 218
+      }
+    },
+    "overall": {
+      "actor": {
+        "a": {
+          "leak_pixels": 83893,
+          "leak_rate": 0.14228992252269365,
+          "rejection_rate": 0.8577100774773063,
+          "road_context_leak_pixels": 83892,
+          "road_context_leak_rate": 0.14263223217777174,
+          "road_context_rejection_rate": 0.8573677678222282
+        },
+        "b": {
+          "leak_pixels": 18823,
+          "leak_rate": 0.03192546710267439,
+          "rejection_rate": 0.9680745328973256,
+          "road_context_leak_pixels": 18815,
+          "road_context_leak_rate": 0.031989050784637096,
+          "road_context_rejection_rate": 0.9680109492153629
+        },
+        "b_better_samples": 291,
+        "b_worse_samples": 29,
+        "pixels": 589592,
+        "positive_samples": 833,
+        "road_context_pixels": 588170,
+        "road_context_positive_samples": 818,
+        "tie_samples": 498
+      },
+      "delta_b_minus_a": {
+        "actor_leak_rate": -0.11036445542001927,
+        "drivable_false_hole_rate": 0.0004910842467997986,
+        "drivable_iou": 0.00031957260196502357,
+        "lane_iou": 0.000315168315807246,
+        "road_context_actor_leak_rate": -0.11064318139313464
+      },
+      "models": {
+        "a": {
+          "drivable": {
+            "false_hole_rate": 0.013035063174845266,
+            "fn": 1182165,
+            "fp": 335785,
+            "iou": 0.9833241684646233,
+            "precision": 0.9962626098032629,
+            "prediction_positive": 89844780,
+            "recall": 0.9869649368251547,
+            "target_positive": 90691160,
+            "tn": 200825343,
+            "tp": 89508995,
+            "valid_pixels": 291852288
+          },
+          "lane": {
+            "fn": 651419,
+            "fp": 24641,
+            "iou": 0.8930056600680019,
+            "precision": 0.9956520227772531,
+            "prediction_positive": 5667233,
+            "recall": 0.8965017696982099,
+            "target_positive": 6294011,
+            "tn": 285533636,
+            "tp": 5642592,
+            "valid_pixels": 291852288
+          },
+          "mean_head_iou": 0.9381649142663127
+        },
+        "b": {
+          "drivable": {
+            "false_hole_rate": 0.013526147421645065,
+            "fn": 1226702,
+            "fp": 260934,
+            "iou": 0.9836437410665884,
+            "precision": 0.997091860016616,
+            "prediction_positive": 89725392,
+            "recall": 0.986473852578355,
+            "target_positive": 90691160,
+            "tn": 200900194,
+            "tp": 89464458,
+            "valid_pixels": 291852288
+          },
+          "lane": {
+            "fn": 648553,
+            "fp": 25620,
+            "iou": 0.8933208283838091,
+            "precision": 0.9954823403945423,
+            "prediction_positive": 5671078,
+            "recall": 0.8969571232080783,
+            "target_positive": 6294011,
+            "tn": 285532657,
+            "tp": 5645458,
+            "valid_pixels": 291852288
+          },
+          "mean_head_iou": 0.9384822847251988
+        }
+      },
+      "samples": 1404
+    }
+  },
+  "model_a": {
+    "checkpoint": "/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v4_comp8_init_ema_b12_e18_20260904/best_mean.pt",
+    "checkpoint_epoch": 18,
+    "checkpoint_sha256": "935cc28b739dcef80e9381888afae899966eda28e1edfe0dc3fe4436d1c9a840",
+    "policy": "actor-ignore",
+    "weights": "ema_state_dict"
+  },
+  "model_b": {
+    "checkpoint": "/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v5_actor_negative_init_ema_b12_e18_20260906/best_mean.pt",
+    "checkpoint_epoch": 18,
+    "checkpoint_sha256": "5d233b525d95d45fc05dbf5469e92419401771a2f4b97b86be7f79fa3b9e762d",
+    "policy": "actor-negative",
+    "weights": "ema_state_dict"
+  },
+  "overlay_selection": [
+    {
+      "actor_leak_rate": {
+        "a": 0.592896174863388,
+        "b": 0.03278688524590164
+      },
+      "actor_pixels": 366,
+      "drivable_false_hole_rate": {
+        "a": 0.020872118542735626,
+        "b": 0.025094976463999757
+      },
+      "drivable_iou": {
+        "a": 0.967558593457874,
+        "b": 0.9683534788622287
+      },
+      "frame_id": 54,
+      "lane_iou": {
+        "a": 0.7623745240567671,
+        "b": 0.7638478902587255
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/01_foggy_front_best_b_actor_rejection_54.jpg",
+      "reason": "best_b_actor_rejection",
+      "road_context_actor_leak_delta_b_minus_a": -0.5601092896174863,
+      "road_context_actor_leak_rate": {
+        "a": 0.592896174863388,
+        "b": 0.03278688524590164
+      },
+      "road_context_actor_pixels": 366,
+      "run_id": "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel",
+      "sample_id": "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel/front/000054",
+      "sim_time": "3pm",
+      "view": "front",
+      "weather": "foggy"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.1269562080007216,
+        "b": 0.023046046994091914
+      },
+      "actor_pixels": 22173,
+      "drivable_false_hole_rate": {
+        "a": 0.017090524047481934,
+        "b": 0.02062008879641842
+      },
+      "drivable_iou": {
+        "a": 0.9329442465705117,
+        "b": 0.9693676797764171
+      },
+      "frame_id": 4,
+      "lane_iou": {
+        "a": 0.8343922066920796,
+        "b": 0.8391489361702128
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/02_foggy_front_actor_rich_4.jpg",
+      "reason": "actor_rich",
+      "road_context_actor_leak_delta_b_minus_a": -0.10391484755547539,
+      "road_context_actor_leak_rate": {
+        "a": 0.12696193397077396,
+        "b": 0.023047086415298575
+      },
+      "road_context_actor_pixels": 22172,
+      "run_id": "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel",
+      "sample_id": "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel/front/000004",
+      "sim_time": "3pm",
+      "view": "front",
+      "weather": "foggy"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.011904761904761904,
+        "b": 0.023809523809523808
+      },
+      "actor_pixels": 84,
+      "drivable_false_hole_rate": {
+        "a": 0.020821125109874012,
+        "b": 0.026736009375915616
+      },
+      "drivable_iou": {
+        "a": 0.9744323358967817,
+        "b": 0.9694117647058823
+      },
+      "frame_id": 22,
+      "lane_iou": {
+        "a": 0.7207565953210553,
+        "b": 0.7217521154803385
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/03_foggy_front_largest_b_regression_22.jpg",
+      "reason": "largest_b_regression",
+      "road_context_actor_leak_delta_b_minus_a": 0.011904761904761904,
+      "road_context_actor_leak_rate": {
+        "a": 0.011904761904761904,
+        "b": 0.023809523809523808
+      },
+      "road_context_actor_pixels": 84,
+      "run_id": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel",
+      "sample_id": "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel/front/000022",
+      "sim_time": "11am",
+      "view": "front",
+      "weather": "foggy"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.9172413793103448,
+        "b": 0.3724137931034483
+      },
+      "actor_pixels": 145,
+      "drivable_false_hole_rate": {
+        "a": 0.009809833956499016,
+        "b": 0.010399496106889667
+      },
+      "drivable_iou": {
+        "a": 0.987516873605004,
+        "b": 0.9878794365142008
+      },
+      "frame_id": 31,
+      "lane_iou": {
+        "a": 0.9240901213171577,
+        "b": 0.9233437391605966
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/04_foggy_left_best_b_actor_rejection_31.jpg",
+      "reason": "best_b_actor_rejection",
+      "road_context_actor_leak_delta_b_minus_a": -0.5448275862068965,
+      "road_context_actor_leak_rate": {
+        "a": 0.9172413793103448,
+        "b": 0.3724137931034483
+      },
+      "road_context_actor_pixels": 145,
+      "run_id": "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel",
+      "sample_id": "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel/left/000031",
+      "sim_time": "1pm",
+      "view": "left",
+      "weather": "foggy"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.18417945690672963,
+        "b": 0.0059031877213695395
+      },
+      "actor_pixels": 22022,
+      "drivable_false_hole_rate": {
+        "a": 0.026766752105455878,
+        "b": 0.03782497253753204
+      },
+      "drivable_iou": {
+        "a": 0.9050943267724579,
+        "b": 0.958769657386799
+      },
+      "frame_id": 35,
+      "lane_iou": {
+        "a": 0.5670356703567035,
+        "b": 0.5698529411764706
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/05_foggy_left_actor_rich_35.jpg",
+      "reason": "actor_rich",
+      "road_context_actor_leak_delta_b_minus_a": -0.17827626918536008,
+      "road_context_actor_leak_rate": {
+        "a": 0.18417945690672963,
+        "b": 0.0059031877213695395
+      },
+      "road_context_actor_pixels": 22022,
+      "run_id": "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel",
+      "sample_id": "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel/left/000035",
+      "sim_time": "1pm",
+      "view": "left",
+      "weather": "foggy"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.6658227848101266,
+        "b": 0.3291139240506329
+      },
+      "actor_pixels": 395,
+      "drivable_false_hole_rate": {
+        "a": 0.009726584550362577,
+        "b": 0.010189755243236984
+      },
+      "drivable_iou": {
+        "a": 0.9856085052437479,
+        "b": 0.9871954036262848
+      },
+      "frame_id": 11,
+      "lane_iou": {
+        "a": 0.5261932479627474,
+        "b": 0.48426573426573427
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/06_foggy_right_best_b_actor_rejection_11.jpg",
+      "reason": "best_b_actor_rejection",
+      "road_context_actor_leak_delta_b_minus_a": -0.3367088607594937,
+      "road_context_actor_leak_rate": {
+        "a": 0.6658227848101266,
+        "b": 0.3291139240506329
+      },
+      "road_context_actor_pixels": 395,
+      "run_id": "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel",
+      "sample_id": "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel/right/000011",
+      "sim_time": "3pm",
+      "view": "right",
+      "weather": "foggy"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.17184171718826807,
+        "b": 0.012944453547435687
+      },
+      "actor_pixels": 24412,
+      "drivable_false_hole_rate": {
+        "a": 0.009827036950378863,
+        "b": 0.013822645380752686
+      },
+      "drivable_iou": {
+        "a": 0.920522044674977,
+        "b": 0.9804247857283447
+      },
+      "frame_id": 25,
+      "lane_iou": {
+        "a": 0.9347826086956522,
+        "b": 0.9406274306455795
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/07_foggy_right_actor_rich_25.jpg",
+      "reason": "actor_rich",
+      "road_context_actor_leak_delta_b_minus_a": -0.1588972636408324,
+      "road_context_actor_leak_rate": {
+        "a": 0.17184171718826807,
+        "b": 0.012944453547435687
+      },
+      "road_context_actor_pixels": 24412,
+      "run_id": "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel",
+      "sample_id": "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel/right/000025",
+      "sim_time": "3pm",
+      "view": "right",
+      "weather": "foggy"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.34025075659316906,
+        "b": 0.14829226113272806
+      },
+      "actor_pixels": 2313,
+      "drivable_false_hole_rate": {
+        "a": 0.03214740762520827,
+        "b": 0.036009016955797314
+      },
+      "drivable_iou": {
+        "a": 0.946534008128211,
+        "b": 0.9504097093382807
+      },
+      "frame_id": 26,
+      "lane_iou": {
+        "a": 0.32558139534883723,
+        "b": 0.32748538011695905
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/08_sunny_front_best_b_actor_rejection_26.jpg",
+      "reason": "best_b_actor_rejection",
+      "road_context_actor_leak_delta_b_minus_a": -0.191958495460441,
+      "road_context_actor_leak_rate": {
+        "a": 0.34025075659316906,
+        "b": 0.14829226113272806
+      },
+      "road_context_actor_pixels": 2313,
+      "run_id": "20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel",
+      "sample_id": "20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel/front/000026",
+      "sim_time": "3pm",
+      "view": "front",
+      "weather": "sunny"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.013350864771922728,
+        "b": 0.00758571862041064
+      },
+      "actor_pixels": 9887,
+      "drivable_false_hole_rate": {
+        "a": 0.02245902323059599,
+        "b": 0.026129207156858656
+      },
+      "drivable_iou": {
+        "a": 0.972168647213754,
+        "b": 0.9696246158956897
+      },
+      "frame_id": 54,
+      "lane_iou": {
+        "a": 0.8793781607042518,
+        "b": 0.8794525684289464
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/09_sunny_front_actor_rich_54.jpg",
+      "reason": "actor_rich",
+      "road_context_actor_leak_delta_b_minus_a": -0.005765146151512087,
+      "road_context_actor_leak_rate": {
+        "a": 0.013350864771922728,
+        "b": 0.00758571862041064
+      },
+      "road_context_actor_pixels": 9887,
+      "run_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel",
+      "sample_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel/front/000054",
+      "sim_time": "1pm",
+      "view": "front",
+      "weather": "sunny"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.05,
+        "b": 0.06470588235294118
+      },
+      "actor_pixels": 340,
+      "drivable_false_hole_rate": {
+        "a": 0.019412848700514712,
+        "b": 0.018523225519476393
+      },
+      "drivable_iou": {
+        "a": 0.970046517475484,
+        "b": 0.9706825037707391
+      },
+      "frame_id": 39,
+      "lane_iou": {
+        "a": 0.9156584860006913,
+        "b": 0.91280276816609
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/10_sunny_front_largest_b_regression_39.jpg",
+      "reason": "largest_b_regression",
+      "road_context_actor_leak_delta_b_minus_a": 0.01470588235294118,
+      "road_context_actor_leak_rate": {
+        "a": 0.05,
+        "b": 0.06470588235294118
+      },
+      "road_context_actor_pixels": 340,
+      "run_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel",
+      "sample_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel/front/000039",
+      "sim_time": "1pm",
+      "view": "front",
+      "weather": "sunny"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.2745241581259151,
+        "b": 0.008784773060029283
+      },
+      "actor_pixels": 1366,
+      "drivable_false_hole_rate": {
+        "a": 0.010571537491569163,
+        "b": 0.013064133016627079
+      },
+      "drivable_iou": {
+        "a": 0.982470699570503,
+        "b": 0.9851159114857745
+      },
+      "frame_id": 8,
+      "lane_iou": {
+        "a": 0.6043338683788122,
+        "b": 0.6048192771084338
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/11_sunny_left_best_b_actor_rejection_8.jpg",
+      "reason": "best_b_actor_rejection",
+      "road_context_actor_leak_delta_b_minus_a": -0.2657393850658858,
+      "road_context_actor_leak_rate": {
+        "a": 0.2745241581259151,
+        "b": 0.008784773060029283
+      },
+      "road_context_actor_pixels": 1366,
+      "run_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel",
+      "sample_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel/left/000008",
+      "sim_time": "1pm",
+      "view": "left",
+      "weather": "sunny"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.037940379403794036,
+        "b": 0.01275306870715766
+      },
+      "actor_pixels": 12546,
+      "drivable_false_hole_rate": {
+        "a": 0.003361392823282673,
+        "b": 0.0048266153359956335
+      },
+      "drivable_iou": {
+        "a": 0.9887416274761294,
+        "b": 0.9917684279844817
+      },
+      "frame_id": 57,
+      "lane_iou": {
+        "a": 0.950936805335027,
+        "b": 0.9515642369382246
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/12_sunny_left_actor_rich_57.jpg",
+      "reason": "actor_rich",
+      "road_context_actor_leak_delta_b_minus_a": -0.025197352683199108,
+      "road_context_actor_leak_rate": {
+        "a": 0.03795550594051511,
+        "b": 0.012758153257316003
+      },
+      "road_context_actor_pixels": 12541,
+      "run_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel",
+      "sample_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel/left/000057",
+      "sim_time": "1pm",
+      "view": "left",
+      "weather": "sunny"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.16,
+        "b": 0.36
+      },
+      "actor_pixels": 50,
+      "drivable_false_hole_rate": {
+        "a": 0.0070032608933534675,
+        "b": 0.007068916464228656
+      },
+      "drivable_iou": {
+        "a": 0.9895749274824976,
+        "b": 0.9893584543591085
+      },
+      "frame_id": 45,
+      "lane_iou": {
+        "a": 0.9577397910731245,
+        "b": 0.9601139601139601
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/13_sunny_left_largest_b_regression_45.jpg",
+      "reason": "largest_b_regression",
+      "road_context_actor_leak_delta_b_minus_a": 0.19999999999999998,
+      "road_context_actor_leak_rate": {
+        "a": 0.16,
+        "b": 0.36
+      },
+      "road_context_actor_pixels": 50,
+      "run_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel",
+      "sample_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel/left/000045",
+      "sim_time": "1pm",
+      "view": "left",
+      "weather": "sunny"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.38095238095238093,
+        "b": 0.19047619047619047
+      },
+      "actor_pixels": 21,
+      "drivable_false_hole_rate": {
+        "a": 0.005997995528486624,
+        "b": 0.006152185644900162
+      },
+      "drivable_iou": {
+        "a": 0.9927926817999815,
+        "b": 0.9932811440547371
+      },
+      "frame_id": 71,
+      "lane_iou": {
+        "a": 0.9025670945157527,
+        "b": 0.9043173862310385
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/14_sunny_right_best_b_actor_rejection_71.jpg",
+      "reason": "best_b_actor_rejection",
+      "road_context_actor_leak_delta_b_minus_a": -0.19047619047619047,
+      "road_context_actor_leak_rate": {
+        "a": 0.38095238095238093,
+        "b": 0.19047619047619047
+      },
+      "road_context_actor_pixels": 21,
+      "run_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel",
+      "sample_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel/right/000071",
+      "sim_time": "1pm",
+      "view": "right",
+      "weather": "sunny"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.006426735218508998,
+        "b": 0.0006426735218508997
+      },
+      "actor_pixels": 1556,
+      "drivable_false_hole_rate": {
+        "a": 0.006413180191013255,
+        "b": 0.006344072645851474
+      },
+      "drivable_iou": {
+        "a": 0.992749820471745,
+        "b": 0.9928874280111039
+      },
+      "frame_id": 0,
+      "lane_iou": {
+        "a": 0.9176179742601615,
+        "b": 0.9193372574667539
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/15_sunny_right_actor_rich_0.jpg",
+      "reason": "actor_rich",
+      "road_context_actor_leak_delta_b_minus_a": -0.005972130059721301,
+      "road_context_actor_leak_rate": {
+        "a": 0.006635700066357001,
+        "b": 0.0006635700066357001
+      },
+      "road_context_actor_pixels": 1507,
+      "run_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel",
+      "sample_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel/right/000000",
+      "sim_time": "1pm",
+      "view": "right",
+      "weather": "sunny"
+    },
+    {
+      "actor_leak_rate": {
+        "a": 0.0782608695652174,
+        "b": 0.12173913043478261
+      },
+      "actor_pixels": 115,
+      "drivable_false_hole_rate": {
+        "a": 0.02265000459432142,
+        "b": 0.021731140310576127
+      },
+      "drivable_iou": {
+        "a": 0.9678784294098912,
+        "b": 0.9675118138858597
+      },
+      "frame_id": 44,
+      "lane_iou": {
+        "a": 0.9626818469323213,
+        "b": 0.9605817875210793
+      },
+      "overlay": "/root/ws/artifacts/perception_eval/analysis/twinlite_actor_policy_ab_on_v5_val_20260907/overlays_selected/16_sunny_right_largest_b_regression_44.jpg",
+      "reason": "largest_b_regression",
+      "road_context_actor_leak_delta_b_minus_a": 0.043478260869565216,
+      "road_context_actor_leak_rate": {
+        "a": 0.0782608695652174,
+        "b": 0.12173913043478261
+      },
+      "road_context_actor_pixels": 115,
+      "run_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel",
+      "sample_id": "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel/right/000044",
+      "sim_time": "1pm",
+      "view": "right",
+      "weather": "sunny"
+    }
+  ],
+  "peak_cuda_memory_bytes": 577905152,
+  "sample_count": 1404,
+  "schema_version": "twinlite-actor-policy-ab-1.0.0",
+  "split": "val",
+  "training_performed": false
+}

@@ -24,6 +24,8 @@ NATIVE_SCHEMA_VERSION = "perception-targets-native-1.0.0"
 MODEL_CACHE_SCHEMA_VERSION = "twinlite-mask-cache-1.0.0"
 NATIVE_V2_SCHEMA_VERSION = "perception-targets-native-2.0.0"
 MODEL_CACHE_V2_SCHEMA_VERSION = "twinlite-mask-cache-2.0.0"
+NATIVE_V3_SCHEMA_VERSION = "perception-targets-native-3.0.0"
+MODEL_CACHE_V3_SCHEMA_VERSION = "twinlite-mask-cache-3.0.0"
 BAKE_SCHEMA_VERSION = MODEL_CACHE_SCHEMA_VERSION  # Backward-compatible import.
 DEFAULT_NATIVE_OUTPUT_NAME = "perception_targets_native_v1"
 DEFAULT_OUTPUT_NAME = "twinlite_384x640_v2"
@@ -91,6 +93,13 @@ V2_MASK_NAMES = (
     "drivable_ignore",
     "actor_occupancy_gt",
 )
+ROAD_MARKING_CLASS_VALUES = {
+    "background": 0,
+    "white_lane": 1,
+    "yellow_lane": 2,
+    "stopline": 3,
+}
+V3_MASK_NAMES = V2_MASK_NAMES + ("road_marking",)
 
 
 class MaskBakeError(RuntimeError):
@@ -211,7 +220,7 @@ def semantic_class_masks(semantic_bgr):
 
 
 def semantic_policy_masks(semantic_bgr, policy):
-    """Build v2 masks from a frozen, explicit class policy."""
+    """Build masks from a frozen, explicit class policy."""
     if semantic_bgr.ndim != 3 or semantic_bgr.shape[2] != 3:
         raise MaskBakeError("semantic image must be HxWx3 BGR")
     targets = policy.get("targets") or {}
@@ -237,21 +246,87 @@ def semantic_policy_masks(semantic_bgr, policy):
             )
         return output.astype(np.uint8)
 
+    def categorical(class_values):
+        expected = dict(ROAD_MARKING_CLASS_VALUES)
+        normalized = {str(name): int(value) for name, value in class_values.items()}
+        if normalized != expected:
+            raise MaskBakeError(
+                "road_marking class_values must be {}: {}".format(
+                    expected, normalized
+                )
+            )
+        output = np.zeros(semantic_bgr.shape[:2], dtype=np.uint8)
+        for name, value in normalized.items():
+            if name == "background":
+                continue
+            output[codes == _rgb_code(OFFICIAL_PALETTE_RGB[name])] = value
+        return output
+
     actor_classes = targets["actor_occupancy_gt"].get("positive_classes", [])
     ignore_classes = targets["drivable"].get("ignore_classes", [])
     actor = union(actor_classes)
-    ignore = actor.copy() if list(ignore_classes) == list(actor_classes) else union(ignore_classes)
-    return {
+    ignore = (
+        actor.copy()
+        if list(ignore_classes) == list(actor_classes)
+        else union(ignore_classes)
+    )
+    masks = {
         "lane": union(targets["lane"].get("positive_classes", [])),
         "drivable": union(targets["drivable"].get("positive_classes", [])),
         "stopline": union(targets["stopline"].get("positive_classes", [])),
         "drivable_ignore": ignore,
         "actor_occupancy_gt": actor,
     }
+    if "road_marking" in targets:
+        masks["road_marking"] = categorical(
+            targets["road_marking"].get("class_values", {})
+        )
+    return masks
+
+
+def _validate_zero_pixel_constraints(semantic_bgr, policy, frame_id, view):
+    constraints = policy.get("audit_constraints") or {}
+    class_names = constraints.get("zero_pixel_classes") or []
+    if not class_names:
+        return
+    codes = _semantic_codes(semantic_bgr)
+    violations = {}
+    for name in class_names:
+        if name not in OFFICIAL_PALETTE_RGB:
+            raise MaskBakeError("policy references unknown audit class: {}".format(name))
+        count = int(np.count_nonzero(codes == _rgb_code(OFFICIAL_PALETTE_RGB[name])))
+        if count:
+            violations[name] = count
+    if violations:
+        raise MaskBakeError(
+            "zero-pixel policy violation frame={} view={}: {}".format(
+                frame_id, view, violations
+            )
+        )
+
+
+def _task_valid_for_view(policy, target_name, view, default=True):
+    if not policy:
+        return bool(default)
+    target = (policy.get("targets") or {}).get(target_name) or {}
+    valid_views = target.get("valid_views")
+    if valid_views is not None:
+        unknown = set(valid_views) - set(TWINLITE_VIEWS)
+        if unknown:
+            raise MaskBakeError(
+                "{} valid_views contains unsupported views: {}".format(
+                    target_name, sorted(unknown)
+                )
+            )
+        return view in valid_views
+    valid_policy = str(target.get("valid_policy") or "")
+    if "view_is_front" in valid_policy:
+        return view == "front"
+    return bool(default)
 
 
 def letterbox_mask(mask, target_hw=TARGET_HW):
-    """Letterbox a binary mask and return it with reversible geometry."""
+    """Letterbox a discrete mask and return it with reversible geometry."""
     if mask.ndim != 2:
         raise MaskBakeError("mask must be HxW, got {}".format(mask.shape))
     source_h, source_w = int(mask.shape[0]), int(mask.shape[1])
@@ -479,7 +554,16 @@ def _update_counters(counters, view, masks, valid_pixels, mask_names=MASK_NAMES)
     stats["samples"] += 1
     stats["valid_pixels"] += int(valid_pixels)
     for name in mask_names:
-        pixel_count = int(masks[name].sum())
+        if name == "road_marking":
+            pixel_count = int(np.count_nonzero(masks[name]))
+            for class_name, class_value in ROAD_MARKING_CLASS_VALUES.items():
+                class_count = int(np.count_nonzero(masks[name] == class_value))
+                stats["road_marking_{}_pixels".format(class_name)] += class_count
+                stats[
+                    "road_marking_{}_positive_samples".format(class_name)
+                ] += int(class_count > 0)
+        else:
+            pixel_count = int(masks[name].sum())
         stats[name + "_pixels"] += pixel_count
         stats[name + "_positive_samples"] += int(pixel_count > 0)
 
@@ -500,14 +584,29 @@ def _summarize_counters(counters, mask_names=MASK_NAMES):
 def render_mask_overlay(image_bgr, masks, title):
     """Render a visible QA overlay; canonical masks themselves stay {0,1}."""
     output = image_bgr[:, :, :3].copy()
-    layers = (
-        ("drivable", np.asarray((40, 180, 40), dtype=np.float32), 0.38),
-        ("lane", np.asarray((0, 230, 255), dtype=np.float32), 0.82),
-        ("stopline", np.asarray((0, 0, 255), dtype=np.float32), 0.90),
-    )
-    for name, color, alpha in layers:
-        selected = masks[name].astype(bool)
+    layers = [(masks["drivable"].astype(bool), (40, 180, 40), 0.38)]
+    if "road_marking" in masks:
+        marking_colors = {
+            ROAD_MARKING_CLASS_VALUES["white_lane"]: (255, 255, 255),
+            ROAD_MARKING_CLASS_VALUES["yellow_lane"]: (0, 230, 255),
+            ROAD_MARKING_CLASS_VALUES["stopline"]: (0, 0, 255),
+        }
+        layers.extend(
+            (masks["road_marking"] == value, color, 0.90)
+            for value, color in marking_colors.items()
+        )
+        legend = "green=drivable white/yellow=lane red=stopline"
+    else:
+        layers.extend(
+            (
+                (masks["lane"].astype(bool), (0, 230, 255), 0.82),
+                (masks["stopline"].astype(bool), (0, 0, 255), 0.90),
+            )
+        )
+        legend = "green=drivable yellow=lane red=stopline"
+    for selected, color, alpha in layers:
         if np.any(selected):
+            color = np.asarray(color, dtype=np.float32)
             blended = (
                 output[selected].astype(np.float32) * (1.0 - alpha) + color * alpha
             )
@@ -517,7 +616,7 @@ def render_mask_overlay(image_bgr, masks, title):
     )
     cv2.putText(
         output,
-        title + " | green=drivable yellow=lane red=stopline",
+        title + " | " + legend,
         (8, 23),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.55,
@@ -553,9 +652,13 @@ def bake_native_run(
         with policy_path.open("r", encoding="utf-8") as stream:
             class_policy = json.load(stream)
         if class_policy.get("status") not in ("frozen", "frozen_not_baked"):
-            raise MaskBakeError("v2 target policy is not frozen: {}".format(policy_path))
-        mask_names = V2_MASK_NAMES
-        native_schema_version = NATIVE_V2_SCHEMA_VERSION
+            raise MaskBakeError("target policy is not frozen: {}".format(policy_path))
+        if "road_marking" in (class_policy.get("targets") or {}):
+            mask_names = V3_MASK_NAMES
+            native_schema_version = NATIVE_V3_SCHEMA_VERSION
+        else:
+            mask_names = V2_MASK_NAMES
+            native_schema_version = NATIVE_V2_SCHEMA_VERSION
         policy_sha256 = _file_hash(policy_path)
     else:
         class_policy = {
@@ -586,6 +689,11 @@ def bake_native_run(
         "sample_count": len(rows) * len(TWINLITE_VIEWS),
         "selected_frame_ids": [int(row["frame_id"]) for row in rows],
         "class_policy": class_policy,
+        "road_marking_class_values": (
+            dict(ROAD_MARKING_CLASS_VALUES)
+            if "road_marking" in mask_names
+            else None
+        ),
         "unknown_semantic_pixels": 0,
         "views": {},
     }
@@ -615,6 +723,9 @@ def bake_native_run(
                             frame_id, view, unknown[:10]
                         )
                     )
+                _validate_zero_pixel_constraints(
+                    semantic, class_policy, frame_id, view
+                )
                 masks = (
                     semantic_policy_masks(semantic, class_policy)
                     if policy_path
@@ -651,10 +762,42 @@ def bake_native_run(
                         },
                         "outputs": output_paths,
                         "native_hw": [int(semantic.shape[0]), int(semantic.shape[1])],
+                        **(
+                            {
+                                "target_encodings": {
+                                    "road_marking": {
+                                        "type": "categorical_uint8",
+                                        "class_values": dict(
+                                            ROAD_MARKING_CLASS_VALUES
+                                        ),
+                                    }
+                                }
+                            }
+                            if "road_marking" in masks
+                            else {}
+                        ),
                         "task_valid": {
-                            "drivable": True,
-                            "lane": True,
-                            "stopline": view == "front",
+                            "drivable": _task_valid_for_view(
+                                class_policy, "drivable", view
+                            ),
+                            "lane": _task_valid_for_view(
+                                class_policy, "lane", view
+                            ),
+                            "stopline": _task_valid_for_view(
+                                class_policy,
+                                "stopline",
+                                view,
+                                default=view == "front",
+                            ),
+                            **(
+                                {
+                                    "road_marking": _task_valid_for_view(
+                                        class_policy, "road_marking", view
+                                    )
+                                }
+                                if "road_marking" in masks
+                                else {}
+                            ),
                         },
                     }
                 )
@@ -674,6 +817,9 @@ def bake_native_run(
                     "mapping_sha256": summary["mapping_sha256"],
                     "policy_id": summary["policy_id"],
                     "policy_sha256": summary["policy_sha256"],
+                    "road_marking_class_values": summary[
+                        "road_marking_class_values"
+                    ],
                     "curation_manifest_sha256": (
                         curation_info["manifest_sha256"] if curation_info else None
                     ),
@@ -696,6 +842,21 @@ def _read_binary_mask(path):
     if not values.issubset({0, 1}):
         raise MaskBakeError(
             "mask must contain only 0/1: {} values={}".format(path, values)
+        )
+    return mask.astype(np.uint8)
+
+
+def _read_road_marking_mask(path):
+    mask = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+    if mask is None or mask.ndim != 2:
+        raise MaskBakeError("failed to read road-marking mask: {}".format(path))
+    values = set(np.unique(mask).tolist())
+    allowed = set(ROAD_MARKING_CLASS_VALUES.values())
+    if not values.issubset(allowed):
+        raise MaskBakeError(
+            "road-marking mask has unsupported values: {} values={} allowed={}".format(
+                path, sorted(values), sorted(allowed)
+            )
         )
     return mask.astype(np.uint8)
 
@@ -724,14 +885,20 @@ def build_model_cache(
     )
     run_id = str(native_rows[0]["run_id"])
     first_outputs = native_rows[0].get("outputs") or {}
+    is_v3 = all(name in first_outputs for name in V3_MASK_NAMES)
     is_v2 = all(name in first_outputs for name in V2_MASK_NAMES)
-    mask_names = V2_MASK_NAMES if is_v2 else MASK_NAMES
-    cached_mask_names = (
-        MASK_NAMES + ("drivable_ignore",) if is_v2 else MASK_NAMES
-    )
-    cache_schema_version = (
-        MODEL_CACHE_V2_SCHEMA_VERSION if is_v2 else MODEL_CACHE_SCHEMA_VERSION
-    )
+    if is_v3:
+        mask_names = V3_MASK_NAMES
+        cached_mask_names = MASK_NAMES + ("drivable_ignore", "road_marking")
+        cache_schema_version = MODEL_CACHE_V3_SCHEMA_VERSION
+    elif is_v2:
+        mask_names = V2_MASK_NAMES
+        cached_mask_names = MASK_NAMES + ("drivable_ignore",)
+        cache_schema_version = MODEL_CACHE_V2_SCHEMA_VERSION
+    else:
+        mask_names = MASK_NAMES
+        cached_mask_names = MASK_NAMES
+        cache_schema_version = MODEL_CACHE_SCHEMA_VERSION
     with (native_root / "_SUCCESS").open("r", encoding="utf-8") as stream:
         native_success = json.load(stream)
     transform_policy = {
@@ -757,6 +924,9 @@ def build_model_cache(
         "policy_id": native_success.get("policy_id"),
         "policy_sha256": native_success.get("policy_sha256"),
         "curation_manifest_sha256": native_success.get("curation_manifest_sha256"),
+        "road_marking_class_values": (
+            dict(ROAD_MARKING_CLASS_VALUES) if is_v3 else None
+        ),
         "views": {},
     }
     counters = _new_counters(mask_names)
@@ -769,7 +939,14 @@ def build_model_cache(
             masks = {}
             geometry = None
             for name in mask_names:
-                native_mask = _read_binary_mask(native_root / row["outputs"][name])
+                if name == "road_marking":
+                    native_mask = _read_road_marking_mask(
+                        native_root / row["outputs"][name]
+                    )
+                else:
+                    native_mask = _read_binary_mask(
+                        native_root / row["outputs"][name]
+                    )
                 baked, current_geometry = letterbox_mask(native_mask, target_hw)
                 if geometry is None:
                     geometry = current_geometry
@@ -795,11 +972,25 @@ def build_model_cache(
                     "stopline": valid.copy()
                     if row["task_valid"].get("stopline", False)
                     else np.zeros_like(valid),
+                    **(
+                        {
+                            "road_marking": valid.copy()
+                            if row["task_valid"].get("road_marking", False)
+                            else np.zeros_like(valid)
+                        }
+                        if is_v3
+                        else {}
+                    ),
                 }
                 valid_paths = {
                     "lane": output_paths["valid"],
                     "drivable": "valid_masks/drivable/{}/{}".format(view, stem),
                     "stopline": output_paths["valid"],
+                    **(
+                        {"road_marking": output_paths["valid"]}
+                        if is_v3
+                        else {}
+                    ),
                 }
             else:
                 output_paths["valid"] = "valid_masks/{}/{}".format(view, stem)
@@ -845,6 +1036,18 @@ def build_model_cache(
                     "valid_masks": valid_paths,
                     "geometry": geometry,
                     "task_valid": row["task_valid"],
+                    **(
+                        {
+                            "target_encodings": {
+                                "road_marking": {
+                                    "type": "categorical_uint8",
+                                    "class_values": dict(ROAD_MARKING_CLASS_VALUES),
+                                }
+                            }
+                        }
+                        if is_v3
+                        else {}
+                    ),
                 }
             )
         summary["views"] = _summarize_counters(counters, mask_names)
@@ -864,6 +1067,9 @@ def build_model_cache(
                     "policy_sha256": summary["policy_sha256"],
                     "curation_manifest_sha256": summary["curation_manifest_sha256"],
                     "native_output_name": native_output_name,
+                    "road_marking_class_values": summary[
+                        "road_marking_class_values"
+                    ],
                 },
             )
             _publish_output(output_root, temporary_root, overwrite)
