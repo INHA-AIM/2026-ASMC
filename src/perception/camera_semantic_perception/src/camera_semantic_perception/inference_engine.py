@@ -9,7 +9,12 @@ from typing import Dict, Mapping
 import numpy as np
 
 from .backend import SemanticBackend, validate_backend_output
-from .geometry import LetterboxGeometry, letterbox_bgr, restore_probability
+from .geometry import (
+    LetterboxGeometry,
+    letterbox_bgr,
+    restore_class_ids,
+    restore_probability,
+)
 
 
 @dataclass(frozen=True)
@@ -51,7 +56,12 @@ class InferenceEngine:
         started = time.perf_counter()
         outputs = dict(self.backend.infer(batch))
         inference_ms = (time.perf_counter() - started) * 1000.0
-        validate_backend_output(outputs, self.backend.info.heads, batch.shape)
+        validate_backend_output(
+            outputs,
+            self.backend.info.heads,
+            batch.shape,
+            self.backend.info.categorical_classes,
+        )
 
         started = time.perf_counter()
         predictions: Dict[str, ViewPrediction] = {}
@@ -59,12 +69,15 @@ class InferenceEngine:
             geometry = geometries[key]
             per_head = {}
             for head in self.backend.info.heads:
-                probability = outputs[head][index]
+                value = outputs[head][index]
                 if self.restore_original:
-                    probability = restore_probability(probability, geometry)
+                    if head in self.backend.info.categorical_classes:
+                        value = restore_class_ids(value, geometry)
+                    else:
+                        value = restore_probability(value, geometry)
                 else:
-                    probability = probability.copy()
-                per_head[head] = probability
+                    value = value.copy()
+                per_head[head] = value
             predictions[key] = ViewPrediction(per_head, geometry)
         postprocess_ms = (time.perf_counter() - started) * 1000.0
         return BatchPrediction(

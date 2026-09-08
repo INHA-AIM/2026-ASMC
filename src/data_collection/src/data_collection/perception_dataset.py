@@ -15,12 +15,18 @@ import cv2
 import numpy as np
 
 
-DATASET_SCHEMA_VERSION = "morai-perception-dataset-1.0.0"
-SAMPLE_SCHEMA_VERSION = "morai-perception-sample-1.0.0"
+DATASET_SCHEMA_VERSION = "morai-perception-dataset-1.1.0"
+SAMPLE_SCHEMA_VERSION = "morai-perception-sample-1.1.0"
 DEFAULT_DATASET_VERSION = "twinlite_morai_v1"
 DEFAULT_CACHE_NAME = "twinlite_384x640_v2"
 DEFAULT_TRAINING_HEADS = ("lane", "drivable")
 EXPECTED_VIEWS = ("front", "left", "right")
+ROAD_MARKING_CLASS_VALUES = {
+    "background": 0,
+    "white_lane": 1,
+    "yellow_lane": 2,
+    "stopline": 3,
+}
 
 
 class PerceptionDatasetError(RuntimeError):
@@ -113,6 +119,26 @@ def _verify_binary_mask(path, expected_hw):
         )
 
 
+def _verify_road_marking_mask(path, expected_hw):
+    mask = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+    if mask is None or mask.ndim != 2:
+        raise PerceptionDatasetError("failed to read road-marking mask: {}".format(path))
+    if list(mask.shape) != list(expected_hw):
+        raise PerceptionDatasetError(
+            "mask shape mismatch: {} expected={} actual={}".format(
+                path, list(expected_hw), list(mask.shape)
+            )
+        )
+    values = set(np.unique(mask).tolist())
+    allowed = set(ROAD_MARKING_CLASS_VALUES.values())
+    if not values.issubset(allowed):
+        raise PerceptionDatasetError(
+            "road-marking values must be {}: {} values={}".format(
+                sorted(allowed), path, sorted(values)
+            )
+        )
+
+
 def _prepare_split_assignments(train_runs, val_runs, test_runs):
     assignments = {
         "train": [str(run_id) for run_id in train_runs],
@@ -187,6 +213,26 @@ def _build_run_rows(
                 run_id, success.get("sample_count"), len(geometry_rows)
             )
         )
+    cache_target_name_sets = {
+        tuple(
+            sorted(
+                {"lane", "drivable", "stopline"}
+                | (
+                    {"road_marking"}
+                    if "road_marking" in (row.get("outputs") or {})
+                    else set()
+                )
+            )
+        )
+        for row in geometry_rows
+    }
+    if len(cache_target_name_sets) != 1:
+        raise PerceptionDatasetError(
+            "cache samples disagree on stored targets for {}: {}".format(
+                run_id, sorted(cache_target_name_sets)
+            )
+        )
+    cache_target_names = list(next(iter(cache_target_name_sets)))
 
     excluded_frame_ids = set(int(frame_id) for frame_id in excluded_frame_ids)
     cached_frame_ids = {int(row["frame_id"]) for row in geometry_rows}
@@ -240,6 +286,8 @@ def _build_run_rows(
             "drivable": cache_root / cache_outputs["drivable"],
             "stopline": cache_root / cache_outputs["stopline"],
         }
+        if "road_marking" in cache_outputs:
+            target_paths["road_marking"] = cache_root / cache_outputs["road_marking"]
         auxiliary_paths = {
             name: cache_root / cache_outputs[name]
             for name in ("drivable_ignore", "actor_occupancy_gt")
@@ -263,19 +311,28 @@ def _build_run_rows(
                 name: valid_path for name in ("lane", "drivable", "stopline")
             }
         required_valid = {"lane", "drivable", "stopline"}
+        if "road_marking" in target_paths:
+            required_valid.add("road_marking")
         if not required_valid.issubset(valid_paths):
             raise PerceptionDatasetError(
                 "cache is missing head-valid masks for {}".format(run_id)
             )
-        for path in (
-            list(target_paths.values())
-            + [valid_path]
-            + list(valid_paths.values())
-        ):
+        binary_paths = [
+            path for name, path in target_paths.items() if name != "road_marking"
+        ] + [valid_path] + list(valid_paths.values())
+        for path in binary_paths:
             if not path.is_file():
                 raise PerceptionDatasetError("derived mask not found: {}".format(path))
             if verify_masks:
                 _verify_binary_mask(path, current_hw)
+        if "road_marking" in target_paths:
+            marking_path = target_paths["road_marking"]
+            if not marking_path.is_file():
+                raise PerceptionDatasetError(
+                    "derived mask not found: {}".format(marking_path)
+                )
+            if verify_masks:
+                _verify_road_marking_mask(marking_path, current_hw)
         for path in auxiliary_paths.values():
             if not path.is_file():
                 raise PerceptionDatasetError("auxiliary target not found: {}".format(path))
@@ -306,6 +363,7 @@ def _build_run_rows(
                 },
                 "geometry": geometry,
                 "task_valid": row["task_valid"],
+                "target_encodings": row.get("target_encodings") or {},
             }
         )
         view_counts[view] += 1
@@ -327,6 +385,7 @@ def _build_run_rows(
         "policy_id": success.get("policy_id"),
         "policy_sha256": success.get("policy_sha256"),
         "curation_manifest_sha256": success.get("curation_manifest_sha256"),
+        "target_names": cache_target_names,
     }
 
 
@@ -351,10 +410,15 @@ def build_dataset_version(
         excluded_frames_by_run, assignments
     )
     training_heads = tuple(str(head) for head in training_heads)
-    if not training_heads or not set(training_heads).issubset({"lane", "drivable"}):
+    supported_heads = {"lane", "drivable", "road_marking", "stopline"}
+    if not training_heads or not set(training_heads).issubset(supported_heads):
         raise PerceptionDatasetError(
-            "initial training heads must be a non-empty subset of lane,drivable"
+            "training heads must be a non-empty subset of {}".format(
+                ",".join(sorted(supported_heads))
+            )
         )
+    if len(training_heads) != len(set(training_heads)):
+        raise PerceptionDatasetError("training heads must not contain duplicates")
 
     version_root = data_root / "dataset_versions" / dataset_name
     temporary_root = version_root.with_name(".{}.{}.tmp".format(dataset_name, os.getpid()))
@@ -419,9 +483,32 @@ def build_dataset_version(
                 "dataset runs disagree on target dimensions: {}".format(target_hws)
             )
         target_hw = list(next(iter(target_hws)))
-        v2_policy_ids = sorted(
+        target_policy_ids = sorted(
             {summary["policy_id"] for summary in run_summaries if summary.get("policy_id")}
         )
+        stored_target_names = sorted(
+            {
+                name
+                for summary in run_summaries
+                for name in summary.get("target_names", [])
+            }
+        )
+        target_name_sets = {
+            tuple(summary.get("target_names", [])) for summary in run_summaries
+        }
+        if len(target_name_sets) != 1:
+            raise PerceptionDatasetError(
+                "dataset runs disagree on stored targets: {}".format(
+                    sorted(target_name_sets)
+                )
+            )
+        missing_training_heads = set(training_heads) - set(stored_target_names)
+        if missing_training_heads:
+            raise PerceptionDatasetError(
+                "training heads are absent from the cache: {}".format(
+                    sorted(missing_training_heads)
+                )
+            )
         metadata = {
             "schema_version": DATASET_SCHEMA_VERSION,
             "dataset_version": dataset_name,
@@ -431,22 +518,31 @@ def build_dataset_version(
             "target_hw": target_hw,
             "views": list(EXPECTED_VIEWS),
             "training_heads": list(training_heads),
-            "stored_future_targets": ["stopline"],
-            "stored_auxiliary_targets": (
-                ["drivable_ignore", "actor_occupancy_gt"] if v2_policy_ids else []
+            "target_encodings": (
+                {
+                    "road_marking": {
+                        "type": "categorical_uint8",
+                        "class_values": ROAD_MARKING_CLASS_VALUES,
+                    }
+                }
+                if "road_marking" in stored_target_names
+                else {}
             ),
-            "target_policy_ids": v2_policy_ids,
+            "stored_future_targets": [
+                name for name in stored_target_names if name not in training_heads
+            ],
+            "stored_auxiliary_targets": (
+                ["drivable_ignore", "actor_occupancy_gt"] if target_policy_ids else []
+            ),
+            "target_policy_ids": target_policy_ids,
             "head_valid_policy": {
                 "lane": "geometric_valid",
-                "drivable": (
-                    "geometric_valid AND NOT drivable_ignore"
-                    if v2_policy_ids
-                    else "geometric_valid"
-                ),
-                "stopline": (
-                    "geometric_valid AND view_is_front"
-                    if v2_policy_ids
-                    else "task_valid controls future use"
+                "drivable": "per-sample valid_masks.drivable (policy-specific)",
+                "stopline": "geometric_valid AND per-sample task_valid",
+                **(
+                    {"road_marking": "geometric_valid AND per-sample task_valid"}
+                    if "road_marking" in stored_target_names
+                    else {}
                 ),
             },
             "rgb_policy": {
@@ -462,7 +558,11 @@ def build_dataset_version(
             "splits": split_summaries,
             "runs": run_summaries,
             "total_sample_count": len(all_sample_ids),
-            "mask_verification": "all files, shapes, and binary values checked"
+            "mask_verification": (
+                "all files, shapes, binary values, and categorical values checked"
+                if "road_marking" in stored_target_names
+                else "all files, shapes, and binary values checked"
+            )
             if verify_masks
             else "file existence checked; pixel audit skipped",
         }

@@ -87,3 +87,24 @@ def restore_probability(
         cropped, (original_w, original_h), interpolation=cv2.INTER_LINEAR
     )
     return np.clip(restored, 0.0, 1.0).astype(np.float32, copy=False)
+
+
+def restore_class_ids(
+    class_ids: np.ndarray, geometry: LetterboxGeometry
+) -> np.ndarray:
+    """Remove letterbox padding and restore a categorical mask losslessly."""
+    if class_ids.ndim != 2 or tuple(class_ids.shape) != geometry.target_hw:
+        raise ValueError(
+            "class ID shape must be {}, got {}".format(
+                geometry.target_hw, class_ids.shape
+            )
+        )
+    if class_ids.dtype != np.uint8:
+        raise ValueError("class IDs must be uint8")
+    left, top, _, _ = geometry.pad_ltrb
+    resized_h, resized_w = geometry.resized_hw
+    cropped = class_ids[top : top + resized_h, left : left + resized_w]
+    original_h, original_w = geometry.original_hw
+    return cv2.resize(
+        cropped, (original_w, original_h), interpolation=cv2.INTER_NEAREST
+    ).astype(np.uint8, copy=False)

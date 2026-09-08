@@ -1,0 +1,33 @@
+{
+  "schema_version": "twinlite-tiny-selection-1.0.0",
+  "dataset_version": "twinlite_morai_v6_road_marking_actor_negative",
+  "split": "train",
+  "purpose": "Balanced plumbing/overfit check across sunny, foggy, front, left, right and all road-marking foreground classes",
+  "selection_policy": "For each weather/view pair, select one high-white, one high-yellow and one high-stopline sample",
+  "target_pixel_counts_within_valid_mask": {
+    "background": 3543340,
+    "white_lane": 100015,
+    "yellow_lane": 48986,
+    "stopline": 49355
+  },
+  "sample_ids": [
+    "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/front/000256",
+    "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/front/000435",
+    "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/front/000163",
+    "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/left/000327",
+    "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/left/000437",
+    "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/left/000032",
+    "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/right/000277",
+    "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/right/000222",
+    "20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/right/000185",
+    "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/front/000283",
+    "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/front/000293",
+    "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/front/000132",
+    "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/left/000240",
+    "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/left/000219",
+    "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/left/000214",
+    "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/right/000283",
+    "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/right/000029",
+    "20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/right/000173"
+  ]
+}

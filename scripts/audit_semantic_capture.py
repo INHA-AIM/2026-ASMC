@@ -23,8 +23,9 @@ sys.path.insert(0, str(PACKAGE_SRC))
 from data_collection.mask_baker import OFFICIAL_PALETTE_RGB  # noqa: E402
 
 
-SCHEMA_VERSION = "morai-semantic-audit-1.0.0"
+SCHEMA_VERSION = "morai-semantic-audit-1.1.0"
 DEFAULT_VIEWS = ("front", "left", "right")
+ROAD_MARKING_CLASSES = ("white_lane", "yellow_lane", "blue_lane", "stopline")
 ACTOR_CLASSES = (
     "vehicle",
     "sedan",
@@ -37,7 +38,7 @@ ACTOR_CLASSES = (
     "pedestrian",
     "obstacle",
 )
-FOCUS_CLASSES = ACTOR_CLASSES + ("standing_object", "stopline")
+FOCUS_CLASSES = ROAD_MARKING_CLASSES + ACTOR_CLASSES + ("standing_object",)
 
 
 def _rgb_code(rgb):
@@ -207,6 +208,18 @@ def _finalize(stats):
     }
 
 
+def _road_marking_summary(stats):
+    class_pixels = stats["class_pixels"]
+    positive_samples = stats["class_positive_samples"]
+    return {
+        name: {
+            "pixels": int(class_pixels.get(name, 0)),
+            "positive_samples": int(positive_samples.get(name, 0)),
+        }
+        for name in ROAD_MARKING_CLASSES
+    }
+
+
 def _render_preview(data_root, sample, selected_class, output_path):
     run_root = data_root / "datasets" / sample["run_id"]
     intensity = _read_color(run_root / sample["paths"]["intensity"], "intensity")
@@ -247,6 +260,12 @@ def parse_args():
     parser.add_argument("--view", action="append", choices=DEFAULT_VIEWS)
     parser.add_argument("--jobs", type=int, default=6)
     parser.add_argument("--preview-count", type=int, default=3)
+    parser.add_argument(
+        "--require-zero-class",
+        action="append",
+        choices=tuple(sorted(OFFICIAL_PALETTE_RGB)),
+        help="Write the report, then fail if this Semantic class has any pixels",
+    )
     parser.add_argument("--output", required=True)
     return parser.parse_args()
 
@@ -304,6 +323,16 @@ def main():
             )
             _render_preview(data_root, sample, class_name, preview_root / class_name / filename)
 
+    total_final = _finalize(total)
+    per_view_final = {view: _finalize(stats) for view, stats in per_view.items()}
+    required_zero_classes = tuple(args.require_zero_class or ())
+    zero_class_assertions = {
+        name: {
+            "pixels": int(total_final["class_pixels"].get(name, 0)),
+            "passed": int(total_final["class_pixels"].get(name, 0)) == 0,
+        }
+        for name in required_zero_classes
+    }
     report = {
         "schema_version": SCHEMA_VERSION,
         "created_at_utc": _utc_now_iso(),
@@ -315,9 +344,23 @@ def main():
             name: list(rgb) for name, rgb in OFFICIAL_PALETTE_RGB.items()
         },
         "actor_classes": list(ACTOR_CLASSES),
-        "total": _finalize(total),
+        "road_marking_classes": list(ROAD_MARKING_CLASSES),
+        "road_marking_summary": {
+            "total": _road_marking_summary(total_final),
+            "per_view": {
+                view: _road_marking_summary(stats)
+                for view, stats in per_view_final.items()
+            },
+        },
+        "assertions": {
+            "zero_pixel_classes": zero_class_assertions,
+            "passed": all(
+                result["passed"] for result in zero_class_assertions.values()
+            ),
+        },
+        "total": total_final,
         "per_run": {run_id: _finalize(stats) for run_id, stats in per_run.items()},
-        "per_view": {view: _finalize(stats) for view, stats in per_view.items()},
+        "per_view": per_view_final,
         "top_samples": top_samples,
         "qa_preview_root": str(preview_root),
     }
@@ -328,8 +371,18 @@ def main():
         json.dump(report, stream, ensure_ascii=False, indent=2, sort_keys=True)
         stream.write("\n")
     os.replace(str(temporary), str(output))
-    print(json.dumps({"output": str(output), "summary": report["total"]}, ensure_ascii=False, indent=2))
-    return 0
+    print(
+        json.dumps(
+            {
+                "output": str(output),
+                "road_marking_summary": report["road_marking_summary"],
+                "assertions": report["assertions"],
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return 0 if report["assertions"]["passed"] else 2
 
 
 if __name__ == "__main__":

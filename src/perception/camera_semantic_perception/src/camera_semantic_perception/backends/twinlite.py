@@ -33,7 +33,12 @@ class TwinLiteBackend(SemanticBackend):
     ) -> None:
         import torch
 
-        from twinlite_morai import adapt_twinlite_outputs, load_external_twinlite
+        from twinlite_morai import (
+            adapt_twinlite_outputs,
+            configure_twinlite_task,
+            load_external_twinlite,
+            task_from_checkpoint,
+        )
 
         if weights not in ("auto", "ema", "model"):
             raise ValueError("weights must be auto, ema, or model")
@@ -47,7 +52,11 @@ class TwinLiteBackend(SemanticBackend):
         if not checkpoint_path.is_file():
             raise RuntimeError("checkpoint not found: {}".format(checkpoint_path))
         state = torch.load(str(checkpoint_path), map_location="cpu")
-        if state.get("schema_version") != "twinlite-morai-checkpoint-1.0.0":
+        supported_schemas = {
+            "twinlite-morai-checkpoint-1.0.0",
+            "twinlite-morai-checkpoint-1.1.0",
+        }
+        if state.get("schema_version") not in supported_schemas:
             raise RuntimeError(
                 "unsupported checkpoint schema: {}".format(
                     state.get("schema_version")
@@ -63,6 +72,8 @@ class TwinLiteBackend(SemanticBackend):
         model, upstream_commit = load_external_twinlite(
             config=model_config, root=twinlite_root
         )
+        task_spec = task_from_checkpoint(state)
+        configure_twinlite_task(model, task_spec)
         if state.get("upstream_commit") != upstream_commit:
             raise RuntimeError("checkpoint and TwinLite source commits differ")
         checkpoint_config = (state.get("args") or {}).get("config")
@@ -78,10 +89,16 @@ class TwinLiteBackend(SemanticBackend):
         if self._channels_last:
             self._model = self._model.to(memory_format=torch.channels_last)
         self._amp = bool(amp) and self._device.type == "cuda"
+        self._secondary_head = task_spec.secondary_head
+        categorical_classes = {}
+        if self._secondary_head == "road_marking":
+            categorical_classes[self._secondary_head] = tuple(
+                task_spec.class_names[self._secondary_head]
+            )
         self._info = BackendInfo(
             name="twinlite_plus",
             model_config=str(model_config),
-            heads=("drivable", "lane"),
+            heads=task_spec.heads,
             input_hw=(int(input_hw[0]), int(input_hw[1])),
             device=str(self._device),
             checkpoint_path=str(checkpoint_path),
@@ -89,6 +106,7 @@ class TwinLiteBackend(SemanticBackend):
             checkpoint_epoch=int(state.get("epoch", -1)),
             weights="ema" if use_ema else "model",
             upstream_commit=str(upstream_commit),
+            categorical_classes=categorical_classes,
         )
 
     @property
@@ -110,14 +128,23 @@ class TwinLiteBackend(SemanticBackend):
             tensor = tensor.contiguous(memory_format=torch.channels_last)
         with torch.no_grad():
             with torch.cuda.amp.autocast(enabled=self._amp):
-                logits_by_head = self._adapt_outputs(self._model(tensor))
+                logits_by_head = self._adapt_outputs(
+                    self._model(tensor), self._secondary_head
+                )
             probabilities = {}
             for head, logits in logits_by_head.items():
-                if logits.shape[1] == 2:
+                if head in self.info.categorical_classes:
+                    value = torch.argmax(logits.float(), dim=1).to(torch.uint8)
+                elif logits.shape[1] == 2:
                     value = torch.softmax(logits.float(), dim=1)[:, 1]
                 else:
                     value = torch.sigmoid(logits[:, 0].float())
                 probabilities[head] = (
-                    value.detach().cpu().numpy().astype(np.float32, copy=False)
+                    value.detach().cpu().numpy().astype(
+                        np.uint8
+                        if head in self.info.categorical_classes
+                        else np.float32,
+                        copy=False,
+                    )
                 )
         return probabilities

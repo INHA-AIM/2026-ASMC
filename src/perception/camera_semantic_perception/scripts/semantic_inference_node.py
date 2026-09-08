@@ -61,10 +61,18 @@ class SemanticInferenceNode:
         self.log_interval = float(rospy.get_param("~log_interval_sec", 2.0))
         if self.log_interval <= 0:
             raise ValueError("log_interval_sec must be positive")
+        self.categorical_heads = frozenset(backend.info.categorical_classes)
+        self.output_topics = {
+            view: {
+                head: self._output_topic(view, head, head in self.categorical_heads)
+                for head in backend.info.heads
+            }
+            for view in self.views
+        }
         self.publishers = {
             view: {
                 head: rospy.Publisher(
-                    "/perception/camera/{}/{}/probability".format(view, head),
+                    self.output_topics[view][head],
                     Image,
                     queue_size=1,
                 )
@@ -106,7 +114,17 @@ class SemanticInferenceNode:
             "camera semantic backend: %s",
             json.dumps(backend.info.__dict__, sort_keys=True),
         )
-        rospy.loginfo("camera semantic views=%s topics=%s", self.views, camera_topics)
+        rospy.loginfo(
+            "camera semantic views=%s inputs=%s outputs=%s",
+            self.views,
+            camera_topics,
+            self.output_topics,
+        )
+
+    @staticmethod
+    def _output_topic(view: str, head: str, categorical: bool) -> str:
+        suffix = "class_id" if categorical else "probability"
+        return "/perception/camera/{}/{}/{}".format(view, head, suffix)
 
     def _callback(self, message: CompressedImage, view: str) -> None:
         self.buffer.push(
@@ -120,8 +138,13 @@ class SemanticInferenceNode:
         )
 
     @staticmethod
-    def _image_message(probability: np.ndarray, frame: EncodedFrame) -> Image:
-        value = np.rint(np.clip(probability, 0.0, 1.0) * 255.0).astype(np.uint8)
+    def _image_message(
+        value: np.ndarray, frame: EncodedFrame, categorical: bool = False
+    ) -> Image:
+        if categorical:
+            value = np.ascontiguousarray(value, dtype=np.uint8)
+        else:
+            value = np.rint(np.clip(value, 0.0, 1.0) * 255.0).astype(np.uint8)
         message = Image()
         message.header.stamp = frame.stamp
         message.header.frame_id = frame.frame_id
@@ -162,9 +185,11 @@ class SemanticInferenceNode:
             started = time.perf_counter()
             for view, value in prediction.views.items():
                 frame = usable_frames[view]
-                for head, probability in value.probabilities.items():
+                for head, output in value.probabilities.items():
                     self.publishers[view][head].publish(
-                        self._image_message(probability, frame)
+                        self._image_message(
+                            output, frame, head in self.categorical_heads
+                        )
                     )
             publish_ms = (time.perf_counter() - started) * 1000.0
             with self._stats_lock:

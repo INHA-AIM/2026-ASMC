@@ -3,8 +3,9 @@
 > 상태: Stage C1·C2 — 모델 독립 live inference와 debug visualizer 구현
 
 MORAI의 전방 또는 전·좌·우 JPEG 카메라를 latest-only 방식으로 받아 TwinLiteNet+ 2-head
-추론 결과를 표준 ROS probability 토픽으로 발행한다. 모델 로딩은 backend에 격리되어 이후
-다른 segmentation 모델로 교체해도 ROS 입력·출력 배관을 유지한다.
+추론 결과를 표준 ROS 토픽으로 발행한다. Binary lane checkpoint와 4-class road-marking
+checkpoint를 메타데이터로 자동 구분한다. 모델 로딩은 backend에 격리되어 이후 다른
+segmentation 모델로 교체해도 ROS 입력·출력 배관을 유지한다.
 
 ## 현재 범위
 
@@ -13,11 +14,11 @@ MORAI의 전방 또는 전·좌·우 JPEG 카메라를 latest-only 방식으로 
 - front 1600×900 기준 상·하 12 px padding과 가변 원본 크기 자동 계산
 - TwinLiteNet+ Medium, EMA 우선 체크포인트 로딩
 - 체크포인트 SHA-256, epoch, upstream commit, weight 종류 시작 로그
-- 원본 카메라 크기로 복원한 `mono8` 확률 출력
+- 원본 카메라 크기로 복원한 `mono8` 확률 또는 categorical class-ID 출력
 - latest-only buffer와 최대 4 ms 3-view batch coalescing
 - 2초 단위 FPS와 단계별 평균 지연 로그(정밀 percentile 계측은 Stage C3)
-- RGB와 두 확률 맵을 원본 timestamp로 exact sync한 독립 visualizer
-- view별 2×2 panel과 전·좌·우 mosaic compressed debug topic
+- RGB와 drivable/secondary 출력을 원본 timestamp로 exact sync한 독립 visualizer
+- view별 원본/drivable/lane 또는 road-marking 세로 panel과 전·좌·우 **3행×3열** mosaic
 - 실행 중 바꿀 수 있는 head threshold와 날씨·시간 condition label
 
 ## 실행 컨테이너
@@ -27,8 +28,10 @@ UDP 브릿지는 `asmc-ros-noetic`, GPU 추론은 `asmc-perception-train`에서 
 학습용 컨테이너에는 공식 TwinLiteNet+ checkout이 `/opt/baselines/TwinLiteNetPlus`로
 읽기 전용 마운트된다.
 
-체크포인트와 학습 run은 Git에 포함되지 않는다. 기본 launch는 현재 로컬 후보 경로를
-가리키므로 다른 PC에서는 공유받은 `best_mean.pt` 경로를 `checkpoint:=...`로 지정해야 한다.
+체크포인트와 학습 run은 Git에 포함되지 않는다. 기본 launch는 actor 픽셀을 non-drivable
+negative로 학습한 B 후보 `twinlite_medium_morai_v5_actor_negative_init_ema_b12_e18_20260906`
+의 `best_mean.pt`를 가리킨다. 다른 PC에서는 공유받은 체크포인트 경로를
+`checkpoint:=...`로 지정해야 한다.
 체크포인트 내부 upstream commit과 외부 checkout commit이 다르면 안전하게 중단한다.
 
 ```bash
@@ -55,6 +58,21 @@ roslaunch camera_semantic_perception front.launch
 ```bash
 roslaunch camera_semantic_perception three_view.launch \
   checkpoint:=/root/ws/artifacts/perception_eval/runs/<run>/best_mean.pt
+```
+
+2026-09-08 4-class 모델을 확인할 때는 다음 checkpoint를 명시한다. Backend가 checkpoint의
+task spec을 읽고 secondary classifier를 4-class로 구성한다.
+
+```bash
+roslaunch camera_semantic_perception three_view.launch \
+  checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+```
+
+기존 actor-ignore A 후보를 다시 확인할 때는 다음처럼 launch 기본값만 덮어쓴다.
+
+```bash
+roslaunch camera_semantic_perception three_view.launch \
+  checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v4_comp8_init_ema_b12_e18_20260904/best_mean.pt
 ```
 
 CPU 배관 시험은 `device:=cpu`로 덮을 수 있지만 실시간 성능 기준으로 사용하지 않는다.
@@ -84,16 +102,24 @@ source /root/ws/devel/setup.bash
 rqt_image_view /perception/camera/front/debug/panel/compressed
 ```
 
-전·좌·우 모드는 각각 `three_view.launch`, `three_view_visualizer.launch`로 바꾸고 다음
-모자이크를 연다.
+전·좌·우 4-class 모드는 추론과 별도의 ROS 컨테이너에서 다음 visualizer를 실행하고
+모자이크를 연다. Binary 모델을 볼 때는 `secondary_mode:=lane`을 사용한다.
 
 ```bash
+roslaunch camera_semantic_perception three_view_visualizer.launch \
+  secondary_mode:=road_marking
+
 rqt_image_view /perception/camera/debug/mosaic/compressed
 ```
 
-패널은 좌상단 원본, 우상단 overlay, 좌하단 drivable mask, 우하단 lane mask다. drivable은
-녹색, lane은 노란색이며 lane 표시를 위에 그린다. 기본 1280×720 패널과 1920×360 3-view
-mosaic를 최대 10 Hz로 JPEG 발행하므로 원본 확률 토픽의 처리율을 불필요하게 따라가지 않는다.
+3-view mosaic는 세로 모니터에서도 각 예측을 충분한 높이로 볼 수 있도록 **3행×3열**로
+구성한다. 열은 `left → front → right`, 행은 `원본 → drivable → secondary` 순서다.
+4-class secondary 행은 white lane=흰색, yellow lane=노란색, stopline=빨간색이고
+background=검은색이다. Binary secondary 행은 기존처럼 lane을 노란색으로 표시한다.
+Overlay는 rqt용 panel/mosaic에서 제외했다. 기본
+front-only panel은 640×1080, 3-view mosaic는 1920×1080이며 최대 10 Hz로 JPEG 발행하므로
+원본 확률 토픽의 처리율을 불필요하게 따라가지 않는다.
+카메라별 종횡비가 다르면 각 타일을 늘이지 않고 검은 여백으로 행 높이를 맞춘다.
 화면이 열리지 않으면 [Docker GUI 설정](../../../docs/docker-guide.md)을 먼저 확인한다.
 
 날씨·시간 표기와 threshold는 노드를 재시작하지 않고 바꿀 수 있다.
@@ -129,12 +155,15 @@ frame age, VRAM과 다른 노드 동시 실행 시 지연은 Stage C3에서 다�
 | left | `/cam_left/image_jpeg/compressed` |
 | right | `/cam_right/image_jpeg/compressed` |
 
-각 선택 view에 다음 `sensor_msgs/Image`, `mono8` 토픽을 발행한다. 값 0~255는 foreground
-confidence 0~1에 대응하며 입력 메시지의 stamp와 frame ID를 보존한다.
+각 선택 view에 다음 `sensor_msgs/Image`, `mono8` 토픽을 발행하며 입력 메시지의 stamp와
+frame ID를 보존한다. Drivable과 binary lane의 값 0~255는 confidence 0~1에 대응한다.
+Road-marking은 argmax class ID `0=background, 1=white, 2=yellow, 3=stopline`이다. 전체
+확률 tensor 대신 class-ID 한 장만 발행해 3-view ROS 대역폭을 기존 수준으로 유지한다.
 
 ```text
 /perception/camera/{view}/drivable/probability
-/perception/camera/{view}/lane/probability
+/perception/camera/{view}/lane/probability              # binary checkpoint
+/perception/camera/{view}/road_marking/class_id         # 4-class checkpoint
 ```
 
 시각화 노드는 다음 `sensor_msgs/CompressedImage` 디버그 토픽을 발행한다.
@@ -154,12 +183,15 @@ python3 -m unittest discover \
 rostopic hz /perception/camera/front/drivable/probability
 rostopic hz /perception/camera/front/lane/probability
 rostopic echo /perception/camera/front/lane/probability -n1
+rostopic hz /perception/camera/front/road_marking/class_id
+rostopic echo /perception/camera/front/road_marking/class_id -n1
 rostopic hz /perception/camera/front/debug/panel/compressed
 ```
 
-2026-09-05 실제 MORAI 입력으로 front panel 1280×720과 three-view mosaic 1920×360을
-확인했다. 현재 JPEG 렌더링을 포함한 debug 출력은 약 7.8 Hz이며 이는 최대 10 Hz로 제한한
-관찰용 토픽이다. 추론 처리율 평가는 probability 토픽과 Stage C3 diagnostics를 사용한다.
+2026-09-05 실제 MORAI 입력으로 구 2×2 panel/가로 mosaic의 연결을 확인했다. 이후 rqt
+레이아웃은 front-only 640×1080, three-view 3×3 mosaic 1920×1080으로 변경했으며 unit
+test를 통과했다. 실제 MORAI 화면과 JPEG debug Hz는 다음 live 실행에서 다시 확인한다.
+추론 처리율 평가는 probability 토픽과 Stage C3 diagnostics를 사용한다.
 
 ## 다음 단계
 

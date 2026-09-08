@@ -10,6 +10,14 @@ import numpy as np
 
 DRIVABLE_COLOR_BGR = (40, 200, 40)
 LANE_COLOR_BGR = (0, 230, 255)
+WHITE_LANE_COLOR_BGR = (255, 255, 255)
+YELLOW_LANE_COLOR_BGR = (0, 230, 255)
+STOPLINE_COLOR_BGR = (0, 0, 255)
+ROAD_MARKING_COLORS_BGR = {
+    1: WHITE_LANE_COLOR_BGR,
+    2: YELLOW_LANE_COLOR_BGR,
+    3: STOPLINE_COLOR_BGR,
+}
 
 
 def normalize_probability(probability: np.ndarray) -> np.ndarray:
@@ -60,39 +68,40 @@ def render_overlay(
 def render_panel(
     image_bgr: np.ndarray,
     drivable_probability: np.ndarray,
-    lane_probability: np.ndarray,
+    secondary_output: np.ndarray,
     view: str,
     stamp_text: str = "",
     condition_label: str = "",
     drivable_threshold: float = 0.5,
     lane_threshold: float = 0.5,
-    alpha: float = 0.45,
-    panel_width: int = 1280,
+    secondary_mode: str = "lane",
+    panel_width: int = 640,
 ) -> np.ndarray:
-    """Render original, overlay, drivable and lane as a 2-by-2 panel."""
+    """Render original, drivable and lane/road-marking as a vertical column."""
     _validate_image(image_bgr)
     if panel_width < 320:
         raise ValueError("panel_width must be at least 320")
+    if secondary_mode not in ("lane", "road_marking"):
+        raise ValueError("secondary_mode must be lane or road_marking")
 
     drivable = hard_mask(drivable_probability, drivable_threshold)
-    lane = hard_mask(lane_probability, lane_threshold)
     _validate_spatial_shape(image_bgr, drivable, "drivable")
-    _validate_spatial_shape(image_bgr, lane, "lane")
-    overlay = render_overlay(
-        image_bgr,
-        drivable_probability,
-        lane_probability,
-        drivable_threshold,
-        lane_threshold,
-        alpha,
-    )
-
     drivable_image = np.zeros_like(image_bgr)
     drivable_image[drivable] = DRIVABLE_COLOR_BGR
-    lane_image = np.zeros_like(image_bgr)
-    lane_image[lane] = LANE_COLOR_BGR
+    secondary_image = np.zeros_like(image_bgr)
+    if secondary_mode == "lane":
+        lane = hard_mask(secondary_output, lane_threshold)
+        _validate_spatial_shape(image_bgr, lane, "lane")
+        secondary_image[lane] = LANE_COLOR_BGR
+        secondary_label = "LANE >= {:.2f}".format(lane_threshold)
+    else:
+        road_marking = normalize_class_ids(secondary_output)
+        _validate_spatial_shape(image_bgr, road_marking, "road_marking")
+        for class_id, color in ROAD_MARKING_COLORS_BGR.items():
+            secondary_image[road_marking == class_id] = color
+        secondary_label = "ROAD MARKING | WHITE / YELLOW / STOP"
 
-    tile_width = panel_width // 2
+    tile_width = panel_width
     tile_height = max(1, int(round(image_bgr.shape[0] * tile_width / image_bgr.shape[1])))
     title_parts = [str(view).upper()]
     if condition_label:
@@ -102,23 +111,34 @@ def render_panel(
     context = " | ".join(title_parts)
     tiles = (
         _label_tile(image_bgr, "ORIGINAL | " + context, tile_width, tile_height),
-        _label_tile(overlay, "OVERLAY | " + context, tile_width, tile_height),
         _label_tile(
             drivable_image,
-            "DRIVABLE >= {:.2f}".format(drivable_threshold),
+            "DRIVABLE >= {:.2f} | {}".format(
+                drivable_threshold, str(view).upper()
+            ),
             tile_width,
             tile_height,
         ),
         _label_tile(
-            lane_image,
-            "LANE >= {:.2f}".format(lane_threshold),
+            secondary_image,
+            "{} | {}".format(secondary_label, str(view).upper()),
             tile_width,
             tile_height,
         ),
     )
-    top = np.concatenate(tiles[:2], axis=1)
-    bottom = np.concatenate(tiles[2:], axis=1)
-    return np.ascontiguousarray(np.concatenate((top, bottom), axis=0))
+    return np.ascontiguousarray(np.concatenate(tiles, axis=0))
+
+
+def normalize_class_ids(class_ids: np.ndarray) -> np.ndarray:
+    """Validate a road-marking class mask encoded as 0..3 uint8."""
+    value = np.asarray(class_ids)
+    if value.ndim != 2:
+        raise ValueError("class IDs must be a two-dimensional array")
+    if value.dtype != np.uint8:
+        raise ValueError("class IDs must be uint8")
+    if value.size and int(value.max()) > 3:
+        raise ValueError("road-marking class ID must be in [0,3]")
+    return np.ascontiguousarray(value)
 
 
 def render_mosaic(
@@ -126,7 +146,7 @@ def render_mosaic(
     views: Sequence[str],
     per_view_width: int = 640,
 ) -> np.ndarray:
-    """Place the latest view panels side by side in the requested view order."""
+    """Place three-row view columns side by side without aspect distortion."""
     if per_view_width < 160:
         raise ValueError("per_view_width must be at least 160")
     if not views:
@@ -135,22 +155,43 @@ def render_mosaic(
     if missing:
         raise ValueError("missing panels for views: {}".format(missing))
 
-    resized = []
+    columns = []
     for view in views:
         panel = panels[view]
         _validate_image(panel)
-        height = max(1, int(round(panel.shape[0] * per_view_width / panel.shape[1])))
-        resized.append(
-            cv2.resize(panel, (per_view_width, height), interpolation=cv2.INTER_AREA)
+        if panel.shape[0] % 3:
+            raise ValueError("panel height must contain three equal rows")
+        columns.append(np.split(panel, 3, axis=0))
+
+    mosaic_rows = []
+    for row_index in range(3):
+        row_tiles = [
+            _resize_to_width(column[row_index], per_view_width) for column in columns
+        ]
+        target_height = max(tile.shape[0] for tile in row_tiles)
+        mosaic_rows.append(
+            np.concatenate(
+                [_pad_to_height(tile, target_height) for tile in row_tiles], axis=1
+            )
         )
-    target_height = min(panel.shape[0] for panel in resized)
-    aligned = [
-        panel
-        if panel.shape[0] == target_height
-        else cv2.resize(panel, (per_view_width, target_height), interpolation=cv2.INTER_AREA)
-        for panel in resized
-    ]
-    return np.ascontiguousarray(np.concatenate(aligned, axis=1))
+    return np.ascontiguousarray(np.concatenate(mosaic_rows, axis=0))
+
+
+def _resize_to_width(image: np.ndarray, width: int) -> np.ndarray:
+    height = max(1, int(round(image.shape[0] * width / image.shape[1])))
+    interpolation = cv2.INTER_AREA if width < image.shape[1] else cv2.INTER_LINEAR
+    return cv2.resize(image, (width, height), interpolation=interpolation)
+
+
+def _pad_to_height(image: np.ndarray, height: int) -> np.ndarray:
+    if image.shape[0] > height:
+        raise ValueError("target height must not be smaller than image height")
+    missing = height - image.shape[0]
+    top = missing // 2
+    bottom = missing - top
+    return cv2.copyMakeBorder(
+        image, top, bottom, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0)
+    )
 
 
 def _label_tile(

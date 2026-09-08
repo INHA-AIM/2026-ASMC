@@ -7,6 +7,9 @@ import numpy as np
 from camera_semantic_perception.visualization import (
     DRIVABLE_COLOR_BGR,
     LANE_COLOR_BGR,
+    STOPLINE_COLOR_BGR,
+    WHITE_LANE_COLOR_BGR,
+    YELLOW_LANE_COLOR_BGR,
     hard_mask,
     render_mosaic,
     render_overlay,
@@ -30,25 +33,67 @@ class VisualizationTest(unittest.TestCase):
         self.assertEqual(tuple(overlay[0, 0]), DRIVABLE_COLOR_BGR)
         self.assertEqual(tuple(overlay[1, 2]), LANE_COLOR_BGR)
 
-    def test_panel_preserves_source_aspect_ratio(self):
-        image = np.zeros((720, 1280, 3), dtype=np.uint8)
-        probability = np.zeros((720, 1280), dtype=np.float32)
-        panel = render_panel(image, probability, probability, "front", panel_width=1280)
-        self.assertEqual(panel.shape, (720, 1280, 3))
+    def test_panel_places_original_drivable_lane_in_three_rows(self):
+        image = np.full((720, 1280, 3), 7, dtype=np.uint8)
+        drivable = np.ones((720, 1280), dtype=np.float32)
+        lane = np.ones((720, 1280), dtype=np.float32)
+        panel = render_panel(image, drivable, lane, "front", panel_width=640)
+        self.assertEqual(panel.shape, (1080, 640, 3))
+        self.assertEqual(tuple(panel[100, 100]), (7, 7, 7))
+        self.assertEqual(tuple(panel[460, 100]), DRIVABLE_COLOR_BGR)
+        self.assertEqual(tuple(panel[820, 100]), LANE_COLOR_BGR)
+
+    def test_panel_colors_four_class_road_marking(self):
+        image = np.full((720, 1280, 3), 7, dtype=np.uint8)
+        drivable = np.ones((720, 1280), dtype=np.float32)
+        marking = np.zeros((720, 1280), dtype=np.uint8)
+        marking[:, :400] = 1
+        marking[:, 400:800] = 2
+        marking[:, 800:] = 3
+        panel = render_panel(
+            image,
+            drivable,
+            marking,
+            "front",
+            secondary_mode="road_marking",
+            panel_width=640,
+        )
+        self.assertEqual(panel.shape, (1080, 640, 3))
+        self.assertEqual(tuple(panel[820, 100]), WHITE_LANE_COLOR_BGR)
+        self.assertEqual(tuple(panel[820, 300]), YELLOW_LANE_COLOR_BGR)
+        self.assertEqual(tuple(panel[820, 500]), STOPLINE_COLOR_BGR)
 
     def test_three_view_mosaic_order_and_shape(self):
-        panels = {
-            "front": np.full((720, 1280, 3), 10, dtype=np.uint8),
-            "left": np.full((720, 1280, 3), 20, dtype=np.uint8),
-            "right": np.full((720, 1280, 3), 30, dtype=np.uint8),
-        }
+        view_values = {"left": 10, "front": 20, "right": 30}
+        panels = {}
+        for view, base_value in view_values.items():
+            rows = [
+                np.full((100, 200, 3), base_value + row, dtype=np.uint8)
+                for row in (1, 2, 3)
+            ]
+            panels[view] = np.concatenate(rows, axis=0)
         mosaic = render_mosaic(
-            panels, ("front", "left", "right"), per_view_width=640
+            panels, ("left", "front", "right"), per_view_width=200
         )
-        self.assertEqual(mosaic.shape, (360, 1920, 3))
-        self.assertEqual(int(mosaic[200, 100, 0]), 10)
-        self.assertEqual(int(mosaic[200, 700, 0]), 20)
-        self.assertEqual(int(mosaic[200, 1400, 0]), 30)
+        self.assertEqual(mosaic.shape, (300, 600, 3))
+        for row_index, y in enumerate((50, 150, 250), start=1):
+            for column_index, x in enumerate((100, 300, 500), start=1):
+                self.assertEqual(
+                    int(mosaic[y, x, 0]), column_index * 10 + row_index
+                )
+
+    def test_mosaic_letterboxes_views_with_different_aspect_ratios(self):
+        front = np.full((300, 200, 3), 10, dtype=np.uint8)
+        side = np.full((450, 200, 3), 20, dtype=np.uint8)
+        mosaic = render_mosaic(
+            {"front": front, "left": side},
+            ("front", "left"),
+            per_view_width=200,
+        )
+        self.assertEqual(mosaic.shape, (450, 400, 3))
+        self.assertEqual(tuple(mosaic[10, 100]), (0, 0, 0))
+        self.assertEqual(tuple(mosaic[30, 100]), (10, 10, 10))
+        self.assertEqual(tuple(mosaic[10, 300]), (20, 20, 20))
 
     def test_shape_mismatch_is_rejected(self):
         image = np.zeros((10, 20, 3), dtype=np.uint8)

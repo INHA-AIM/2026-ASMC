@@ -1,10 +1,9 @@
 publish_hz: 10.0
 jpeg_quality: 80
-panel_width: 1280
+panel_width: 640
 mosaic_view_width: 640
 sync_queue_size: 30
 
 drivable_threshold: 0.5
 lane_threshold: 0.5
-overlay_alpha: 0.45
 condition_label: ""

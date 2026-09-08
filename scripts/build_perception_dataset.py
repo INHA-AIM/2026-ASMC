@@ -49,7 +49,7 @@ def parse_args():
     parser.add_argument(
         "--training-head",
         action="append",
-        choices=("lane", "drivable"),
+        choices=("lane", "drivable", "road_marking", "stopline"),
         help="Active loss heads; default: lane and drivable",
     )
     parser.add_argument("--overwrite", action="store_true")

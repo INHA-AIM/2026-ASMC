@@ -12,6 +12,7 @@ from camera_semantic_perception.frame_buffer import EncodedFrame, LatestFrameBuf
 from camera_semantic_perception.geometry import (
     compute_letterbox_geometry,
     letterbox_bgr,
+    restore_class_ids,
     restore_probability,
 )
 from camera_semantic_perception.inference_engine import InferenceEngine
@@ -39,6 +40,42 @@ class DummyBackend(SemanticBackend):
     def infer(self, batch):
         base = batch[:, 0].astype(np.float32, copy=False)
         return {"drivable": base, "lane": 1.0 - base}
+
+
+class CategoricalDummyBackend(SemanticBackend):
+    def __init__(self):
+        self._info = BackendInfo(
+            name="categorical-dummy",
+            model_config="test",
+            heads=("drivable", "road_marking"),
+            input_hw=(384, 640),
+            device="cpu",
+            checkpoint_path="dummy.pt",
+            checkpoint_sha256="0" * 64,
+            checkpoint_epoch=0,
+            weights="model",
+            upstream_commit="dummy",
+            categorical_classes={
+                "road_marking": (
+                    "background",
+                    "white_lane",
+                    "yellow_lane",
+                    "stopline",
+                )
+            },
+        )
+
+    @property
+    def info(self):
+        return self._info
+
+    def infer(self, batch):
+        drivable = batch[:, 0].astype(np.float32, copy=False)
+        marking = np.zeros(drivable.shape, dtype=np.uint8)
+        marking[:, 100:200, 100:200] = 1
+        marking[:, 200:300, 200:300] = 2
+        marking[:, 300:350, 300:400] = 3
+        return {"drivable": drivable, "road_marking": marking}
 
 
 class GeometryTest(unittest.TestCase):
@@ -70,6 +107,15 @@ class GeometryTest(unittest.TestCase):
         self.assertEqual(restored.shape, (900, 1600))
         self.assertTrue(np.allclose(restored, 0.75))
 
+    def test_restore_class_ids_uses_nearest_neighbor(self):
+        geometry = compute_letterbox_geometry((900, 1600), (384, 640))
+        class_ids = np.zeros((384, 640), dtype=np.uint8)
+        class_ids[12:192] = 3
+        restored = restore_class_ids(class_ids, geometry)
+        self.assertEqual(restored.shape, (900, 1600))
+        self.assertEqual(restored.dtype, np.uint8)
+        self.assertEqual(set(np.unique(restored)), {0, 3})
+
 
 class InferenceEngineTest(unittest.TestCase):
     def test_backend_registry_rejects_unknown_model(self):
@@ -92,6 +138,16 @@ class InferenceEngineTest(unittest.TestCase):
             (600, 800),
         )
         self.assertGreaterEqual(prediction.inference_ms, 0.0)
+
+    def test_categorical_output_restores_uint8_class_ids(self):
+        image = np.full((900, 1600, 3), (0, 0, 255), dtype=np.uint8)
+        prediction = InferenceEngine(CategoricalDummyBackend()).infer(
+            {"front": image}
+        )
+        marking = prediction.views["front"].probabilities["road_marking"]
+        self.assertEqual(marking.shape, (900, 1600))
+        self.assertEqual(marking.dtype, np.uint8)
+        self.assertEqual(set(np.unique(marking)), {0, 1, 2, 3})
 
 
 class LatestFrameBufferTest(unittest.TestCase):

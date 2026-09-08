@@ -32,10 +32,20 @@ class SemanticVisualizerNode:
         missing = [view for view in self.views if view not in camera_topics]
         if missing:
             raise ValueError("camera_topics missing views: {}".format(missing))
+        self.secondary_mode = str(
+            rospy.get_param("~secondary_mode", "lane")
+        ).strip()
+        if self.secondary_mode not in ("lane", "road_marking"):
+            raise ValueError("secondary_mode must be lane or road_marking")
+        secondary_topic_suffix = (
+            "lane/probability"
+            if self.secondary_mode == "lane"
+            else "road_marking/class_id"
+        )
 
         self.publish_hz = float(rospy.get_param("~publish_hz", 10.0))
         self.jpeg_quality = int(rospy.get_param("~jpeg_quality", 80))
-        self.panel_width = int(rospy.get_param("~panel_width", 1280))
+        self.panel_width = int(rospy.get_param("~panel_width", 640))
         self.mosaic_view_width = int(rospy.get_param("~mosaic_view_width", 640))
         sync_queue_size = int(rospy.get_param("~sync_queue_size", 30))
         if self.publish_hz <= 0.0:
@@ -85,23 +95,25 @@ class SemanticVisualizerNode:
                 queue_size=1,
                 buff_size=buffer_bytes,
             )
-            lane = message_filters.Subscriber(
-                "/perception/camera/{}/lane/probability".format(view),
+            secondary = message_filters.Subscriber(
+                "/perception/camera/{}/{}".format(view, secondary_topic_suffix),
                 Image,
                 queue_size=1,
                 buff_size=buffer_bytes,
             )
             synchronizer = message_filters.TimeSynchronizer(
-                (rgb, drivable, lane), sync_queue_size
+                (rgb, drivable, secondary), sync_queue_size
             )
             synchronizer.registerCallback(self._callback, view)
-            self.subscribers.extend((rgb, drivable, lane))
+            self.subscribers.extend((rgb, drivable, secondary))
             self.synchronizers.append(synchronizer)
 
         rospy.loginfo(
-            "camera semantic visualizer views=%s publish_hz=%.2f panel_width=%d "
+            "camera semantic visualizer views=%s secondary_mode=%s "
+            "publish_hz=%.2f panel_width=%d "
             "mosaic_view_width=%d jpeg_quality=%d",
             self.views,
+            self.secondary_mode,
             self.publish_hz,
             self.panel_width,
             self.mosaic_view_width,
@@ -112,7 +124,7 @@ class SemanticVisualizerNode:
         self,
         rgb_message: CompressedImage,
         drivable_message: Image,
-        lane_message: Image,
+        secondary_message: Image,
         view: str,
     ) -> None:
         self.callback_counts[view] += 1
@@ -130,17 +142,21 @@ class SemanticVisualizerNode:
             return
         try:
             drivable = self._probability_array(drivable_message)
-            lane = self._probability_array(lane_message)
-            if drivable.shape != image.shape[:2] or lane.shape != image.shape[:2]:
+            secondary = (
+                self._probability_array(secondary_message)
+                if self.secondary_mode == "lane"
+                else self._class_id_array(secondary_message)
+            )
+            if drivable.shape != image.shape[:2] or secondary.shape != image.shape[:2]:
                 raise ValueError(
-                    "RGB {} drivable {} lane {}".format(
-                        image.shape[:2], drivable.shape, lane.shape
+                    "RGB {} drivable {} secondary {}".format(
+                        image.shape[:2], drivable.shape, secondary.shape
                     )
                 )
             panel = render_panel(
                 image,
                 drivable,
-                lane,
+                secondary,
                 view=view,
                 stamp_text="{:.3f}".format(rgb_message.header.stamp.to_sec()),
                 condition_label=str(rospy.get_param_cached("~condition_label", "")),
@@ -150,7 +166,7 @@ class SemanticVisualizerNode:
                 lane_threshold=float(
                     rospy.get_param_cached("~lane_threshold", 0.5)
                 ),
-                alpha=float(rospy.get_param_cached("~overlay_alpha", 0.45)),
+                secondary_mode=self.secondary_mode,
                 panel_width=self.panel_width,
             )
         except (TypeError, ValueError) as exc:
@@ -202,6 +218,20 @@ class SemanticVisualizerNode:
             )
             return np.ascontiguousarray(row[:, : message.width])
         raise ValueError("unsupported probability encoding: {}".format(message.encoding))
+
+    @staticmethod
+    def _class_id_array(message: Image) -> np.ndarray:
+        if message.encoding not in ("mono8", "8UC1"):
+            raise ValueError(
+                "unsupported class ID encoding: {}".format(message.encoding)
+            )
+        row = np.frombuffer(message.data, dtype=np.uint8).reshape(
+            message.height, message.step
+        )
+        value = np.ascontiguousarray(row[:, : message.width])
+        if value.size and int(value.max()) > 3:
+            raise ValueError("road-marking class ID must be in [0,3]")
+        return value
 
     def _compressed_message(self, image: np.ndarray, header, frame_id=None):
         ok, encoded = cv2.imencode(

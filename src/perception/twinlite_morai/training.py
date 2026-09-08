@@ -37,7 +37,7 @@ def twinlite_training_step(
 ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
     """Forward an already device-placed batch and compute named 2-head loss."""
     raw_outputs = model(batch["image"])
-    outputs = adapt_twinlite_outputs(raw_outputs)
+    outputs = adapt_twinlite_outputs(raw_outputs, criterion.secondary_head)
     valid = batch.get("valid_masks") or batch["valid_mask"]
     losses = criterion(outputs, batch["targets"], valid)
     return outputs, losses

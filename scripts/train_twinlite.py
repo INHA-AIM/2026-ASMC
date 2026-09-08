@@ -29,8 +29,13 @@ sys.path.insert(0, str(PERCEPTION_SRC))
 from twinlite_morai import (  # noqa: E402
     MaskedTwinLiteLoss,
     MoraiTwinLiteDataset,
+    ROAD_MARKING_TASK,
+    TwinLiteTaskSpec,
+    configure_twinlite_task,
+    load_task_compatible_state_dict,
     load_external_twinlite,
     move_batch_to_device,
+    task_from_checkpoint,
     twinlite_training_step,
 )
 
@@ -78,6 +83,16 @@ def parse_args():
     parser.add_argument("--skip-file-check", action="store_true")
     parser.add_argument("--channels-last", action="store_true")
     parser.add_argument("--log-interval", type=int, default=50)
+    parser.add_argument(
+        "--road-marking-class-weights",
+        type=float,
+        nargs=4,
+        metavar=("BACKGROUND", "WHITE", "YELLOW", "STOPLINE"),
+        help=(
+            "Optional positive loss weights for the four road-marking classes; "
+            "omit for uniform weighting"
+        ),
+    )
     parser.add_argument(
         "--preflight-only",
         action="store_true",
@@ -133,44 +148,112 @@ def _append_jsonl(path: Path, row: Dict[str, Any]) -> None:
         stream.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
 
 
-def _new_confusion():
-    return {head: defaultdict(lambda: [0, 0]) for head in ("drivable", "lane")}
+def _new_confusion(task_spec: TwinLiteTaskSpec):
+    return {
+        head: {
+            view: {
+                "intersection": [0] * task_spec.class_counts[head],
+                "union": [0] * task_spec.class_counts[head],
+                "foreground": [0, 0],
+            }
+            for view in ("all", "front", "left", "right")
+        }
+        for head in task_spec.heads
+    }
 
 
-def _update_confusion(confusion, outputs, batch):
+def _update_confusion(confusion, outputs, batch, task_spec: TwinLiteTaskSpec):
     views = batch["meta"]["view"]
-    for head in ("drivable", "lane"):
+    for head in task_spec.heads:
         valid = batch.get("valid_masks", {}).get(head, batch["valid_mask"]).bool()
         logits = outputs[head]
         prediction = (
             logits.argmax(dim=1)
-            if logits.shape[1] == 2
+            if logits.shape[1] > 1
             else (logits[:, 0] > 0).long()
-        ).bool()
-        target = batch["targets"][head].bool()
+        ).long()
+        target = batch["targets"][head].long()
         for index, view in enumerate(views):
-            selected_prediction = prediction[index] & valid[index]
-            selected_target = target[index] & valid[index]
-            intersection = int((selected_prediction & selected_target).sum().item())
-            union = int((selected_prediction | selected_target).sum().item())
-            confusion[head]["all"][0] += intersection
-            confusion[head]["all"][1] += union
-            confusion[head][str(view)][0] += intersection
-            confusion[head][str(view)][1] += union
+            view = str(view)
+            selected_valid = valid[index]
+            for class_index in range(task_spec.class_counts[head]):
+                predicted_class = (prediction[index] == class_index) & selected_valid
+                target_class = (target[index] == class_index) & selected_valid
+                intersection = int((predicted_class & target_class).sum().item())
+                union = int((predicted_class | target_class).sum().item())
+                for group in ("all", view):
+                    confusion[head][group]["intersection"][class_index] += intersection
+                    confusion[head][group]["union"][class_index] += union
+
+            predicted_foreground = (prediction[index] > 0) & selected_valid
+            target_foreground = (target[index] > 0) & selected_valid
+            foreground_intersection = int(
+                (predicted_foreground & target_foreground).sum().item()
+            )
+            foreground_union = int(
+                (predicted_foreground | target_foreground).sum().item()
+            )
+            for group in ("all", view):
+                confusion[head][group]["foreground"][0] += foreground_intersection
+                confusion[head][group]["foreground"][1] += foreground_union
 
 
-def _confusion_to_metrics(confusion):
+def _confusion_to_metrics(confusion, task_spec: TwinLiteTaskSpec):
     result = {}
-    for head in ("drivable", "lane"):
+    for head in task_spec.heads:
         result[head] = {}
+        class_names = task_spec.class_names[head]
         for view in ("all", "front", "left", "right"):
-            intersection, union = confusion[head][view]
-            result[head][view] = {
-                "intersection": intersection,
-                "union": union,
-                "iou": intersection / max(1, union),
+            entry = confusion[head][view]
+            intersections = entry["intersection"]
+            unions = entry["union"]
+            class_iou = {
+                name: intersections[index] / max(1, unions[index])
+                for index, name in enumerate(class_names)
             }
+            foreground_scores = [
+                intersections[index] / unions[index]
+                for index in range(1, len(class_names))
+                if unions[index] > 0
+            ]
+            foreground_intersection, foreground_union = entry["foreground"]
+            view_metrics = {
+                "class_intersection": dict(zip(class_names, intersections)),
+                "class_union": dict(zip(class_names, unions)),
+                "class_iou": class_iou,
+                "present_foreground_classes": [
+                    class_names[index]
+                    for index in range(1, len(class_names))
+                    if unions[index] > 0
+                ],
+                "mean_foreground_iou": (
+                    sum(foreground_scores) / len(foreground_scores)
+                    if foreground_scores
+                    else 0.0
+                ),
+                "foreground_intersection": foreground_intersection,
+                "foreground_union": foreground_union,
+                "foreground_union_iou": foreground_intersection
+                / max(1, foreground_union),
+            }
+            if len(class_names) == 2:
+                # Retain the legacy scalar fields consumed by existing reports.
+                view_metrics.update(
+                    {
+                        "intersection": intersections[1],
+                        "union": unions[1],
+                        "iou": class_iou[class_names[1]],
+                    }
+                )
+            result[head][view] = view_metrics
     return result
+
+
+def _head_score(metrics, task_spec: TwinLiteTaskSpec, head: str) -> float:
+    view_metrics = metrics[head]["all"]
+    if task_spec.class_counts[head] == 2:
+        return float(view_metrics["iou"])
+    return float(view_metrics["mean_foreground_iou"])
 
 
 def _prepare_batch(host_batch, device, channels_last):
@@ -187,13 +270,14 @@ def validate(
     model,
     loader,
     criterion,
+    task_spec,
     device,
     amp_enabled,
     channels_last=False,
     log_interval=0,
 ):
     model.eval()
-    confusion = _new_confusion()
+    confusion = _new_confusion(task_spec)
     totals = defaultdict(float)
     sample_count = 0
     started = time.perf_counter()
@@ -205,7 +289,7 @@ def validate(
         sample_count += batch_size
         for name, value in losses.items():
             totals[name] += float(value.item()) * batch_size
-        _update_confusion(confusion, outputs, batch)
+        _update_confusion(confusion, outputs, batch, task_spec)
         if log_interval > 0 and (
             batch_index % log_interval == 0 or batch_index == len(loader)
         ):
@@ -218,14 +302,16 @@ def validate(
     averaged_losses = {
         name: value / max(1, sample_count) for name, value in totals.items()
     }
-    metrics = _confusion_to_metrics(confusion)
-    mean_iou = 0.5 * (
-        metrics["drivable"]["all"]["iou"] + metrics["lane"]["all"]["iou"]
-    )
+    metrics = _confusion_to_metrics(confusion, task_spec)
+    head_scores = {
+        head: _head_score(metrics, task_spec, head) for head in task_spec.heads
+    }
+    mean_iou = sum(head_scores.values()) / len(head_scores)
     return {
         "sample_count": sample_count,
         "losses": averaged_losses,
         "metrics": metrics,
+        "head_scores": head_scores,
         "mean_head_iou": mean_iou,
     }
 
@@ -289,11 +375,13 @@ def _checkpoint_state(
     validation,
     initialization,
     dataset_provenance,
+    task_spec,
 ):
     return {
-        "schema_version": "twinlite-morai-checkpoint-1.0.0",
+        "schema_version": "twinlite-morai-checkpoint-1.1.0",
         "epoch": epoch,
         "args": vars(args),
+        "task_spec": task_spec.as_dict(),
         "upstream_commit": upstream_commit,
         "model_state_dict": model.state_dict(),
         "ema_state_dict": ema.model.state_dict() if ema is not None else None,
@@ -383,6 +471,19 @@ def main():
         verify_files=not args.skip_file_check,
         max_samples=args.max_val_samples,
     )
+    if train_dataset.task_spec != val_dataset.task_spec:
+        raise RuntimeError(
+            "train/val task mismatch: "
+            f"{train_dataset.task_spec.name} != {val_dataset.task_spec.name}"
+        )
+    task_spec = train_dataset.task_spec
+    if (
+        task_spec != ROAD_MARKING_TASK
+        and args.road_marking_class_weights is not None
+    ):
+        raise ValueError(
+            "--road-marking-class-weights requires a road-marking dataset task"
+        )
     generator = torch.Generator().manual_seed(args.seed)
     loader_options = {
         "batch_size": args.batch_size,
@@ -398,10 +499,14 @@ def main():
     model, upstream_commit = load_external_twinlite(
         config=args.config, root=args.twinlite_root
     )
+    reset_modules = configure_twinlite_task(model, task_spec)
     model = model.to(device)
     if args.channels_last:
         model = model.to(memory_format=torch.channels_last)
-    criterion = MaskedTwinLiteLoss().to(device)
+    criterion = MaskedTwinLiteLoss(
+        task_spec=task_spec,
+        road_marking_class_weights=args.road_marking_class_weights,
+    ).to(device)
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay
     )
@@ -413,13 +518,23 @@ def main():
     scaler = torch.cuda.amp.GradScaler(enabled=amp_enabled)
     ema = None if args.no_ema else ModelEMA(model, decay=args.ema_decay)
     start_epoch = 1
-    best = {"mean": -1.0, "drivable": -1.0, "lane": -1.0}
-    initialization = {"mode": "random"}
+    best = {"mean": -1.0, **{head: -1.0 for head in task_spec.heads}}
+    initialization = {
+        "mode": "random",
+        "task": task_spec.as_dict(),
+        "configured_reset_modules": list(reset_modules),
+    }
 
     if args.resume:
         checkpoint = torch.load(args.resume, map_location=device)
         if checkpoint["upstream_commit"] != upstream_commit:
             raise RuntimeError("resume checkpoint uses a different upstream commit")
+        checkpoint_task = task_from_checkpoint(checkpoint)
+        if checkpoint_task != task_spec:
+            raise RuntimeError(
+                "resume checkpoint task differs from the dataset task: "
+                f"{checkpoint_task.name} != {task_spec.name}"
+            )
         model.load_state_dict(checkpoint["model_state_dict"])
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
@@ -451,7 +566,14 @@ def main():
             raise RuntimeError(
                 f"initialization checkpoint has no {state_key}"
             )
-        model.load_state_dict(checkpoint[state_key])
+        source_task = task_from_checkpoint(checkpoint)
+        transfer = load_task_compatible_state_dict(
+            model,
+            checkpoint[state_key],
+            source_task,
+            task_spec,
+            reset_modules,
+        )
         if ema is not None:
             ema.model.load_state_dict(model.state_dict())
             ema.updates = 0
@@ -463,6 +585,9 @@ def main():
             "checkpoint_epoch": checkpoint.get("epoch"),
             "weights": state_key,
             "source_dataset_version": source_args.get("dataset_version"),
+            "source_task": source_task.as_dict(),
+            "target_task": task_spec.as_dict(),
+            **transfer,
             "optimizer_reset": True,
             "scheduler_reset": True,
             "ema_reset_from_loaded_model": ema is not None,
@@ -476,6 +601,7 @@ def main():
         "torch_version": torch.__version__,
         "upstream_commit": upstream_commit,
         "model_parameters": sum(parameter.numel() for parameter in model.parameters()),
+        "task_spec": task_spec.as_dict(),
         "train_samples": len(train_dataset),
         "val_samples": len(val_dataset),
         "spatial_weighting": "uniform within valid_mask; padding weight zero",
@@ -494,6 +620,7 @@ def main():
             "completed_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "training_performed": False,
             "initialization": initialization,
+            "task_spec": task_spec.as_dict(),
             "dataset_provenance": dataset_provenance,
             "train": _preflight_split(
                 model,
@@ -542,14 +669,16 @@ def main():
             evaluation_model,
             val_loader,
             criterion,
+            task_spec,
             device,
             amp_enabled,
             channels_last=args.channels_last,
             log_interval=args.log_interval,
         )
         scheduler.step()
-        da_iou = validation["metrics"]["drivable"]["all"]["iou"]
-        lane_iou = validation["metrics"]["lane"]["all"]["iou"]
+        head_scores = validation["head_scores"]
+        da_iou = head_scores["drivable"]
+        secondary_iou = head_scores[task_spec.secondary_head]
         mean_iou = validation["mean_head_iou"]
         row = {
             "epoch": epoch,
@@ -561,8 +690,7 @@ def main():
         _append_jsonl(history_path, row)
         candidates = {
             "mean": mean_iou,
-            "drivable": da_iou,
-            "lane": lane_iou,
+            **head_scores,
         }
         improved = []
         for name, score in candidates.items():
@@ -582,6 +710,7 @@ def main():
             validation,
             initialization,
             dataset_provenance,
+            task_spec,
         )
         _atomic_torch_save(state, output_dir / "latest.pt")
         for name in improved:
@@ -589,7 +718,8 @@ def main():
         print(
             f"epoch={epoch:03d}/{args.epochs} lr={row['lr']:.7f} "
             f"train={train_losses['loss']:.5f} val={validation['losses']['loss']:.5f} "
-            f"DA={da_iou:.4f} lane={lane_iou:.4f} mean={mean_iou:.4f} "
+            f"DA={da_iou:.4f} {task_spec.secondary_head}={secondary_iou:.4f} "
+            f"mean={mean_iou:.4f} "
             f"sec={row['epoch_seconds']:.1f}",
             flush=True,
         )

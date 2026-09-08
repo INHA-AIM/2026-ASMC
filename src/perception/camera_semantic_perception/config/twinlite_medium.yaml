@@ -1,7 +1,7 @@
 backend: twinlite
 model_config: medium
 twinlite_root: /opt/baselines/TwinLiteNetPlus
-checkpoint: /root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v4_comp8_init_ema_b12_e18_20260904/best_mean.pt
+checkpoint: /root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v5_actor_negative_init_ema_b12_e18_20260906/best_mean.pt
 weights: auto
 device: cuda
 amp: true

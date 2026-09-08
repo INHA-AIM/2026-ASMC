@@ -64,6 +64,7 @@ src/perception/morai_3d_detection/verify_output/
 artifacts/perception_eval/runs/
 artifacts/perception_eval/bake/
 artifacts/perception_eval/poses_noisy/
+artifacts/perception_eval/jobs/
 
 # OS
 .DS_Store

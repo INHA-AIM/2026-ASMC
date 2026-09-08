@@ -72,7 +72,7 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 │   ├── integration_launch/    # ROS bridge launch only
 │   ├── learning_by_cheating/  # learning ✅
 │   ├── data_collection/        # Capture GT · mask · dataset ✅
-│   ├── perception/twinlite_morai/        # camera 2-head 학습·평가 ✅
+│   ├── perception/twinlite_morai/        # camera 2-head binary/4-class 학습·평가 ✅
 │   ├── perception/morai_3d_detection/  # perception ✅
 │   ├── morai_udp_bridge/      # UDP↔ROS (Ego/Ctrl) ✅
 │   ├── morai_sensor_bridge/   # UDP↔ROS (sensors) ✅

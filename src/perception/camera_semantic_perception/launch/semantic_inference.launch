@@ -1,6 +1,6 @@
 <launch>
   <arg name="views" default="front"/>
-  <arg name="checkpoint" default="/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v4_comp8_init_ema_b12_e18_20260904/best_mean.pt"/>
+  <arg name="checkpoint" default="/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v5_actor_negative_init_ema_b12_e18_20260906/best_mean.pt"/>
   <arg name="device" default="cuda"/>
   <arg name="amp" default="true"/>
 

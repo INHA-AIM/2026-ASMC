@@ -1,0 +1,190 @@
+{
+  "completed_at_utc": "2026-09-07T05:16:37+00:00",
+  "dataset_provenance": {
+    "dataset_metadata_sha256": "1debe749d4a7eb7e5c0faf979f0e2a383bd46654956b52813fe11ded6647a9cc",
+    "dataset_version": "twinlite_morai_v6_road_marking_actor_negative",
+    "split_manifest_sha256": {
+      "train": "277f9161f39a0df0c99aaf9f23b07043b8d62af368bda1d425a5ea52c7ac8d85",
+      "val": "4add24d993fabacb4a99f9d36caaee7c7d4ffc7c391e33d4c5d087a4d64092d4"
+    }
+  },
+  "initialization": {
+    "checkpoint_epoch": 18,
+    "ema_reset_from_loaded_model": true,
+    "loaded_parameter_tensors": 322,
+    "mode": "checkpoint_weights_only",
+    "optimizer_reset": true,
+    "path": "/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v5_actor_negative_init_ema_b12_e18_20260906/best_mean.pt",
+    "reset_modules": [
+      "out_ll"
+    ],
+    "reset_parameter_tensors": [
+      "out_ll.conv2.act.weight",
+      "out_ll.conv2.bn.bias",
+      "out_ll.conv2.bn.num_batches_tracked",
+      "out_ll.conv2.bn.running_mean",
+      "out_ll.conv2.bn.running_var",
+      "out_ll.conv2.bn.weight",
+      "out_ll.conv2.conv.weight",
+      "out_ll.up_conv.act.weight",
+      "out_ll.up_conv.bn.bias",
+      "out_ll.up_conv.bn.num_batches_tracked",
+      "out_ll.up_conv.bn.running_mean",
+      "out_ll.up_conv.bn.running_var",
+      "out_ll.up_conv.bn.weight",
+      "out_ll.up_conv.deconv.weight"
+    ],
+    "scheduler_reset": true,
+    "sha256": "5d233b525d95d45fc05dbf5469e92419401771a2f4b97b86be7f79fa3b9e762d",
+    "source_dataset_version": "twinlite_morai_v5_marking_actor_negative",
+    "source_task": {
+      "class_counts": {
+        "drivable": 2,
+        "lane": 2
+      },
+      "class_names": {
+        "drivable": [
+          "background",
+          "drivable"
+        ],
+        "lane": [
+          "background",
+          "lane"
+        ]
+      },
+      "heads": [
+        "drivable",
+        "lane"
+      ],
+      "name": "drivable_lane_binary"
+    },
+    "target_task": {
+      "class_counts": {
+        "drivable": 2,
+        "road_marking": 4
+      },
+      "class_names": {
+        "drivable": [
+          "background",
+          "drivable"
+        ],
+        "road_marking": [
+          "background",
+          "white_lane",
+          "yellow_lane",
+          "stopline"
+        ]
+      },
+      "heads": [
+        "drivable",
+        "road_marking"
+      ],
+      "name": "drivable_road_marking_4class"
+    },
+    "transfer": "binary_lane_to_road_marking",
+    "weights": "ema_state_dict"
+  },
+  "schema_version": "twinlite-training-preflight-1.0.0",
+  "task_spec": {
+    "class_counts": {
+      "drivable": 2,
+      "road_marking": 4
+    },
+    "class_names": {
+      "drivable": [
+        "background",
+        "drivable"
+      ],
+      "road_marking": [
+        "background",
+        "white_lane",
+        "yellow_lane",
+        "stopline"
+      ]
+    },
+    "heads": [
+      "drivable",
+      "road_marking"
+    ],
+    "name": "drivable_road_marking_4class"
+  },
+  "train": {
+    "image_shape": [
+      2,
+      3,
+      384,
+      640
+    ],
+    "losses": {
+      "drivable_focal": 0.0016465053195133805,
+      "drivable_loss": 0.0047854105941951275,
+      "drivable_tversky": 0.003138905391097069,
+      "loss": 1.5710080862045288,
+      "road_marking_focal": 0.7860047221183777,
+      "road_marking_loss": 1.5662226676940918,
+      "road_marking_tversky": 0.7802178859710693
+    },
+    "output_shapes": {
+      "drivable": [
+        2,
+        2,
+        384,
+        640
+      ],
+      "road_marking": [
+        2,
+        4,
+        384,
+        640
+      ]
+    },
+    "run_ids": [
+      "20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel",
+      "kcity_drive_003"
+    ],
+    "sample_count": 2,
+    "views": [
+      "right"
+    ]
+  },
+  "training_performed": false,
+  "val": {
+    "image_shape": [
+      2,
+      3,
+      384,
+      640
+    ],
+    "losses": {
+      "drivable_focal": 0.001245951745659113,
+      "drivable_loss": 0.0025546120014041662,
+      "drivable_tversky": 0.0013086602557450533,
+      "loss": 1.5589278936386108,
+      "road_marking_focal": 0.780678391456604,
+      "road_marking_loss": 1.5563732385635376,
+      "road_marking_tversky": 0.7756948471069336
+    },
+    "output_shapes": {
+      "drivable": [
+        2,
+        2,
+        384,
+        640
+      ],
+      "road_marking": [
+        2,
+        4,
+        384,
+        640
+      ]
+    },
+    "run_ids": [
+      "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel"
+    ],
+    "sample_count": 2,
+    "views": [
+      "front",
+      "left"
+    ]
+  }
+}
