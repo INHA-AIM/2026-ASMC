@@ -23,30 +23,40 @@ double LookaheadTargetSpeed(const RefLine& ref, double s_start, double ego_speed
     const double required_dist = speed_drop / (2.0 * usable_decel);
     const double lookahead_m = std::max(cfg.curve_lookahead_m, required_dist + kReactionMargin);
 
-    // 폐루프 wrap-around: s_start+lookahead_m이 s_max를 넘으면(피니시라인
-    // 근처) 원래 코드는 뒤가 안 나와 break만 되고 이음새 너머(실제로는 바로
-    // 이어지는 트랙 시작 구간)의 곡률을 놓쳤다 - 그 구간에 급커브가 있으면
-    // 감속 없이 그대로 진입하게 된다. s_max로 감아서 [s_start, s_max]와
-    // [0, 넘친 만큼] 두 구간을 모두 본다.
-    const double s_max = ref.points.back().s;
-    double s_start_w = std::fmod(s_start, s_max);
-    if (s_start_w < 0.0) s_start_w += s_max;
+    // ref.closed_loop이 Reference 계층의 topology 계약이다(F-11) - 이 함수가
+    // 별도로 폐루프 여부를 추정하지 않는다. 닫힌 트랙만 이음새 너머(실제로는
+    // 바로 이어지는 트랙 시작 구간)까지 lookahead가 감아 넘어간다. 열린
+    // 경로는 끝에서 lookahead를 멈춘다 - 반대쪽(트랙 시작)이 물리적으로
+    // 이어지지 않기 때문이다.
+    const double length = ref.length;
+    const bool closed = ref.closed_loop;
+
+    double s_start_w = s_start;
+    if (closed && length > 0.0) {
+        s_start_w = std::fmod(s_start, length);
+        if (s_start_w < 0.0) s_start_w += length;
+    }
     const double s_end_w = s_start_w + lookahead_m;
-    const double wrapped_end = s_end_w - s_max;  // s_end_w > s_max일 때만 유효
+    // wrap 여부는 폐루프에서만 의미가 있다. 열린 경로는 s_end_w가 length를
+    // 넘어도 그 너머 구간(존재하지 않음)을 보지 않는다.
+    const bool wraps = closed && length > 0.0 && s_end_w > length;
+    const double wrapped_end = wraps ? (s_end_w - length) : 0.0;
 
     // straight road(장애물 없음) 기본값 - lookahead 안에 커브가 전혀 없으면
     // 이 값이 그대로 남는다(cfg.target_vel과 동일, VelocityFromCurvature(0, ...)).
     double envelope_speed = cfg.target_vel;
     for (const auto& p : ref.points) {
-        const bool in_range = (s_end_w <= s_max)
-            ? (p.s >= s_start_w && p.s <= s_end_w)
-            : (p.s >= s_start_w || p.s <= wrapped_end);
+        bool in_range;
+        double forward_dist;
+        if (wraps) {
+            in_range = (p.s >= s_start_w || p.s <= wrapped_end);
+            forward_dist = (p.s >= s_start_w) ? (p.s - s_start_w)
+                                              : (length - s_start_w + p.s);
+        } else {
+            in_range = (p.s >= s_start_w && p.s <= s_end_w);
+            forward_dist = p.s - s_start_w;
+        }
         if (!in_range) continue;
-
-        // 이 지점까지의 전진 호길이(wrap-around 포함).
-        const double forward_dist = (p.s >= s_start_w)
-            ? (p.s - s_start_w)
-            : (s_max - s_start_w + p.s);
 
         const double local_curve_speed =
             VelocityFromCurvature(std::fabs(p.kappa), cfg, max_lateral_accel);

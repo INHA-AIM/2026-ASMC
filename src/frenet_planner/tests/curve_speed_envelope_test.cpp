@@ -44,8 +44,12 @@ CurveSpeedConfig MakeCurveCfg() {
 }
 
 // s=0..total_s, dt=1m 간격 균일 점. kappa는 kappa_fn(s)로 지정.
+// closed=true면 ref.closed_loop/length를 채워 폐루프 topology로 만든다
+// (Commit F: LookaheadTargetSpeed가 wrap 여부를 ref.closed_loop로 판단하므로,
+// wrap-around를 검증하는 TEST5는 이 topology를 명시적으로 선언해야 한다).
 RefLine MakeRefLine(double total_s, double step,
-                     const std::function<double(double)>& kappa_fn) {
+                     const std::function<double(double)>& kappa_fn,
+                     bool closed = false) {
     RefLine ref;
     for (double s = 0.0; s <= total_s + 1e-9; s += step) {
         RefPoint p{};
@@ -57,6 +61,8 @@ RefLine MakeRefLine(double total_s, double step,
         p.d_kappa = 0.0;
         ref.points.push_back(p);
     }
+    ref.closed_loop = closed;
+    ref.length = ref.points.empty() ? 0.0 : ref.points.back().s;
     return ref;
 }
 
@@ -156,7 +162,7 @@ void TestClosedLoopSeamWrapsCorrectly() {
     // 감아 이어짐) 바로 너머(s=5~10)에 있다.
     const double total_s = 100.0;
     auto kappa_fn = [](double s) { return (s >= 5.0 && s <= 10.0) ? 0.15 : 0.0; };
-    RefLine ref = MakeRefLine(total_s, 1.0, kappa_fn);
+    RefLine ref = MakeRefLine(total_s, 1.0, kappa_fn, /*closed=*/true);
 
     const double corner_speed = VelocityFromCurvature(0.15, cfg, max_lateral_accel);
 

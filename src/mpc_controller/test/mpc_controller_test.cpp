@@ -3,6 +3,8 @@
 #include <cmath>
 
 #include "control/mpc_controller.hpp"
+#include "model/vehicle_model.hpp"
+#include "solver/mpc_solver.hpp"
 
 namespace {
 
@@ -16,6 +18,26 @@ ReferencePath MakeStraightReference(double target_speed, int steps, double dt) {
         reference.yaw_ref.push_back(0.0);
         reference.v_ref.push_back(target_speed);
         reference.k_ref.push_back(0.0);
+    }
+    return reference;
+}
+
+// 일정 곡률(kappa)의 원호 reference. Commit C의 curvature feed-forward
+// 초기 guess가 실제로 곡률 방향을 향하는지 확인하는 데 쓴다.
+ReferencePath MakeCurvedReference(double target_speed, double kappa,
+                                  int steps, double dt) {
+    ReferencePath reference;
+    double x = 0.0, y = 0.0, yaw = 0.0;
+    for (int i = 0; i < steps; ++i) {
+        reference.x_ref.push_back(x);
+        reference.y_ref.push_back(y);
+        reference.yaw_ref.push_back(yaw);
+        reference.v_ref.push_back(target_speed);
+        reference.k_ref.push_back(kappa);
+        const double ds = target_speed * dt;
+        x += ds * std::cos(yaw);
+        y += ds * std::sin(yaw);
+        yaw += ds * kappa;
     }
     return reference;
 }
@@ -133,6 +155,47 @@ TEST(MpcControllerTest, StuckRecoveryTriggersAfterTimeout) {
     EXPECT_TRUE(saw_recovery_started)
         << "ego가 멈춰있는데 참조가 전진하면 stuck_timeout 이후 복구가 "
            "시작되어야 한다";
+}
+
+// Test C-6: warm-start가 없는 curved reference 첫 solve에서 초기
+// sequence가 curvature 방향의 steering을 갖되(post-hoc이 아니라
+// solveMPC 내부에서 사용된 초기 guess를 통해), physical steering-rate
+// constraint(clipSteeringRate가 이미 투영)를 만족하는지 확인한다.
+// solveMPC를 직접 호출해 controller wrapper 없이도 testable하게 한다.
+TEST(SteeringFeedforwardWarmStartTest,
+    NoWarmStartCurvedSolveRespectsRateLimitAndCurvatureSign) {
+    MPCParams params;
+    params.horizon = 10;
+    params.dt = 0.1;
+    params.max_iterations = 25;
+    params.wheelbase = 3.0;
+    params.steering_max = 0.6981;
+    params.steering_rate_max = 1.0;
+
+    const double kappa = 0.05;  // 좌회전 원호
+    const ReferencePath reference = MakeCurvedReference(3.0, kappa, 10, 0.1);
+    const MPCState x0;  // x=y=yaw=0, vx=0
+    const MPCControl prev_control;  // 이전 사이클 실제 steering: 0
+    const std::vector<MPCControl> empty_warm_start;  // 첫 solve/fail-safe 직후
+
+    const MPCResult result =
+        solveMPC(x0, reference, prev_control, empty_warm_start, params);
+    ASSERT_TRUE(result.success);
+    ASSERT_EQ(static_cast<std::size_t>(params.horizon), result.controls.size());
+
+    // 첫 horizon point가 이전 steering(0)에서 순간이동하지 않는다.
+    EXPECT_LE(std::fabs(result.controls[0].delta - prev_control.delta),
+             params.steering_rate_max * params.dt + 1e-9);
+    // 전체 시퀀스가 이전 스텝 대비 rate 제한을 넘지 않는다.
+    double prev_delta = prev_control.delta;
+    for (const auto& u : result.controls) {
+        EXPECT_LE(std::fabs(u.delta - prev_delta),
+                 params.steering_rate_max * params.dt + 1e-9);
+        prev_delta = u.delta;
+    }
+    // 최종 steering이 좌회전(양의 curvature) 방향을 향한다 - solver가 곡선을
+    // 따라가려면 결국 양의 delta로 수렴해야 한다.
+    EXPECT_GT(result.control.delta, 0.0);
 }
 
 int main(int argc, char** argv) {

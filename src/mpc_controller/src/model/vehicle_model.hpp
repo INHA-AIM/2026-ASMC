@@ -81,4 +81,21 @@ std::vector<LinearizedModel> buildLTVModels(
     double v_min,
     double v_max);
 
+// ----------------------------------------
+// Curvature-aware steering feed-forward.
+//
+//   yaw_dot = vx/L * tan(delta)  (위 kinematic bicycle model)
+//   경로를 정확히 따라가는 정상상태(steady-state)라면
+//   yaw_dot = vx * kappa_ref 이므로 tan(delta) = L * kappa_ref
+//   -> delta_ff = atan(L * kappa_ref)
+//
+//   frenet_planner의 부호 규약과 동일: kappa_ref > 0 (좌회전, CCW)이면
+//   delta_ff > 0 (좌측 조향). cost/warm-start 양쪽에서 재사용하도록 여기
+//   하나로 둔다 - 복붙 금지.
+//
+//   결과는 steering_max 물리 한계 안으로 clip한다.
+// ----------------------------------------
+double SteeringFeedforward(double curvature, double wheelbase,
+                           double steering_max);
+
 #endif // MPC_VEHICLE_MODEL_HPP

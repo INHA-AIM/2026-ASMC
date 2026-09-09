@@ -1,5 +1,6 @@
 #include "cost_function.hpp"
 #include "math/utils.hpp"
+#include "model/vehicle_model.hpp"
 
 // ========================================
 // 경로 추종 오차 (수직 거리 ≈ closest point 까지 거리)
@@ -37,11 +38,15 @@ double computeSpeedErrorCost(const MPCState& state, double v_ref, double weight)
 
 // ========================================
 // 제어 입력 크기
-//   steer/accel 을 분리해서 weight 적용
+//   steer/accel 을 분리해서 weight 적용.
+//   steer는 delta_ff(curvature feed-forward) 대비 잔차를 벌한다 -
+//   delta_ff=0.0(기본값, 직선)이면 기존 delta^2와 동일하다.
 // ========================================
-double computeControlEffortCost(const MPCControl& u, double w_steer, double w_accel)
+double computeControlEffortCost(const MPCControl& u, double w_steer,
+                                double w_accel, double delta_ff)
 {
-    return w_steer * u.delta * u.delta + w_accel * u.accel * u.accel;
+    const double steer_residual = u.delta - delta_ff;
+    return w_steer * steer_residual * steer_residual + w_accel * u.accel * u.accel;
 }
 
 // ========================================
@@ -105,9 +110,18 @@ CostBreakdown computeCostBreakdown(
         const MPCControl& u_cur = controls[i];
         // steer effort: weight_control / accel effort: weight_control * 0.5
         // accel은 속도 추종을 위해 어느 정도 자유롭게 두어야 급정거 방지
+        //
+        // steer effort는 절대 delta가 아니라 이 stage의 참조 curvature가
+        // 요구하는 delta_ff 대비 잔차를 벌한다 - 코너에서 필요한 조향
+        // 자체를 벌하지 않기 위함(Commit C). 직선(k_ref=0)에서는
+        // delta_ff=0이라 기존 delta^2와 동일하게 동작한다.
+        const double k_ref_i = (R > 0) ? ref.k_ref[ref_idx] : 0.0;
+        const double delta_ff = SteeringFeedforward(
+            k_ref_i, params.wheelbase, params.steering_max);
         bd.control += dt_scale * computeControlEffortCost(u_cur,
                                           params.weight_control,
-                                          params.weight_control * 0.5);
+                                          params.weight_control * 0.5,
+                                          delta_ff);
 
         const MPCControl& u_prev = (i == 0) ? prev_control : controls[i-1];
         bd.control_rate += rate_scale * computeControlRateCost(u_prev, u_cur,

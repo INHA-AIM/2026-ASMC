@@ -133,8 +133,7 @@ class FrenetPlannerNode {
                            const AvoidFeedbackFields* avoid_fields = nullptr);
 
     InputSnapshot takeSnapshot() const;
-    void publishStop(const InputSnapshot& snapshot, uint8_t failure_reason,
-                     const ros::Time& now);
+    void publishStop(const InputSnapshot& snapshot, uint8_t failure_reason);
     void publishResult(const asmc_msgs::Trajectory& trajectory,
                        const InputSnapshot& snapshot,
                        bool previous_plan_still_valid);

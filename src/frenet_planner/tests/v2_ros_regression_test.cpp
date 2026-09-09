@@ -1426,6 +1426,13 @@ int main(int argc, char** argv) {
                "same-ID COMPLETED latch preserves diagnostics without fake state");
         Expect(latch_ptr && SameTrajectoryGeometry(final_trajectory, *latch_ptr),
                "same-ID COMPLETED latch republishes the cached final trajectory");
+        // Commit E / Test 11.3: latch은 재발행일 뿐 content가 바뀌지 않았다.
+        // header.stamp(source/reference time)도 원래 생성 시점 그대로여야
+        // 한다 - 재발행 수신 시각으로 덮어쓰면 안 된다(interfaces/README.md
+        // 8절, provenance 규칙).
+        Expect(latch_ptr && latch_ptr->header.stamp == final_trajectory.header.stamp,
+               "same-ID COMPLETED latch keeps the original source timestamp, "
+               "not the republish receive time");
 
         harness.SetObjects({});
         const uint32_t keep_id = ++command_id;

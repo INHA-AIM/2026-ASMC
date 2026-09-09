@@ -19,11 +19,30 @@ struct RefPoint {
 
 // =========================================================
 // Center line 전체
+//
+// closed_loop / length는 Reference 계층이 소유하는 topology 계약이다.
+// FindClosestS/Interpolate/CurveSpeed 등 참조선을 조회하는 모든 코드는
+// points.back().s를 직접 재추정하지 않고 이 두 필드를 통해 topology를
+// 판단한다("one policy, one authoritative owner").
+//
+// closed_loop == true (닫힌 트랙):
+//   points.front() = 물리적 loop 시작점, s = 0
+//   points.back()  = 그 시작점의 복제(닫힘점), s = length
+//   조회(Interpolate/FindClosestS/CurveSpeed lookahead)는 [0, length)로
+//   순환(wrap)한다.
+//
+// closed_loop == false (열린 경로):
+//   points.back()에 points.front()를 복제하지 않는다.
+//   조회는 [points.front().s, points.back().s] 범위로 clamp된다 - wrap하지
+//   않는다.
 // =========================================================
 
 struct RefLine {
 
     std::vector<RefPoint> points;
+
+    bool closed_loop = false;
+    double length = 0.0;  // 사용 가능한 arc length. closed_loop이면 닫힘 구간 포함.
 
 };
 

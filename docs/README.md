@@ -79,6 +79,7 @@ MORAI 화면에 입력할 값만 필요하면
 | 문서 | 역할 | 상태 |
 |---|---|---|
 | [planning-control-udp.md](./planning-control-udp.md) | 현재 standalone Frenet/MPC 실행 규약 | Canonical |
+| [planning-control-refactoring-guidelines.md](./planning-control-refactoring-guidelines.md) | Frenet/MPC 아키텍처 경계, ownership, dependency 방향, refactoring 체크리스트 | Active Reference |
 | [planning-behavior-handoff.md](./planning-behavior-handoff.md) | 이전 ROS 3-package 통합 설계와 검증 기록 | Legacy Reference |
 
 Behavior Planner가 다시 연결되기 전에는 handoff 문서의 토픽과 launch를 현재 실행 경로에
@@ -129,6 +130,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | [twinlite_morai](../src/perception/twinlite_morai/README.md) | binary/4-class 2-head 학습 adapter와 현재 후보 |
 | [drivable_bev](../src/perception/drivable_bev/README.md) | 공통 BEV placeholder와 구현 전 gate |
 | [data_collection](../src/data_collection/README.md) | Capture, sync, mask/cache와 dataset 실행법 |
+| [frenet_planner](../src/frenet_planner/README.md) | Frenet Planner 책임, runtime I/O, core 폴더 지도, 빌드/테스트 |
 | [interfaces](../src/interfaces/README.md) | provisional topic과 합의된 계약의 승격 위치 |
 | [integration](../src/integration/README.md) | UDP bridge와 내부 ROS 진입점 |
 | [learning](../src/learning/README.md) | 기존 LBC 연구 경로와 현재 인지 경로 구분 |

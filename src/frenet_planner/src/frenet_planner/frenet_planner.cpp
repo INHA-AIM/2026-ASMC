@@ -215,14 +215,10 @@ bool FrenetPlanner::ProjectPointToS(double x, double y, double s_hint,
 bool FrenetPlanner::ReferenceHeadingAt(double s, double& out_heading) const {
     if (!ref_loaded_ || ref_.points.empty()) return false;
     if (!std::isfinite(s)) return false;
-    // 폐루프 트랙이라 s는 [0, s_max]로 감아서 조회한다. Interpolate가 범위
-    // 밖 s에 대해 무엇을 반환하는지에 의존하지 않도록 여기서 정규화한다.
-    const double s_max = ref_.points.back().s;
-    if (!(s_max > 0.0)) return false;
-    double s_wrapped = std::fmod(s, s_max);
-    if (s_wrapped < 0.0) s_wrapped += s_max;
-
-    const RefPoint rp = Interpolate(ref_, s_wrapped);
+    // topology(wrap 폐루프 vs clamp 열린 경로) 정규화는 Interpolate가 유일한
+    // owner다(Commit F, "one policy, one authoritative owner") - 여기서
+    // s_max로 다시 fmod하지 않는다.
+    const RefPoint rp = Interpolate(ref_, s);
     if (!std::isfinite(rp.theta)) return false;
     out_heading = rp.theta;
     return true;

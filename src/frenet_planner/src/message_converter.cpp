@@ -183,7 +183,7 @@ ConversionStatus ConvertDetectedObjects(
 
 ConversionStatus ConvertCartesianPath(
     const CartesianPath& path, double dt,
-    const asmc_msgs::VehicleState& ego_at_plan, const ros::Time& plan_stamp,
+    const asmc_msgs::VehicleState& ego_at_plan,
     asmc_msgs::Trajectory& trajectory) {
     const std::size_t count = path.x.size();
     if (count == 0 || path.y.size() != count || path.yaw.size() != count ||
@@ -192,7 +192,12 @@ ConversionStatus ConvertCartesianPath(
         return ConversionStatus::INVALID_PATH;
     }
     asmc_msgs::Trajectory converted;
-    converted.header.stamp = plan_stamp;
+    // provenance, not freshness: 이 trajectory는 ego_at_plan 스냅샷으로부터
+    // 생성됐으므로 source time도 그 스냅샷의 것이다. ego_at_plan이 무효/미측정
+    // (header.stamp가 0)이면 그 사실을 그대로 반영한다 - now()로 대체해
+    // "방금 측정한 것"처럼 보이게 하지 않는다. 소비자(MPC ConvertTrajectory)가
+    // 이미 header.stamp.isZero()를 INVALID_TIMESTAMP로 거부한다.
+    converted.header.stamp = ego_at_plan.header.stamp;
     converted.header.frame_id = "map";
     converted.valid = true;
     converted.failure_reason = asmc_msgs::Trajectory::FAILURE_NONE;
@@ -220,9 +225,15 @@ ConversionStatus ConvertCartesianPath(
 
 asmc_msgs::Trajectory MakeStopTrajectory(
     const asmc_msgs::VehicleState& ego_at_plan, double dt,
-    uint8_t failure_reason, const ros::Time& plan_stamp) {
+    uint8_t failure_reason) {
     asmc_msgs::Trajectory trajectory;
-    trajectory.header.stamp = plan_stamp;
+    // ConvertCartesianPath와 같은 provenance 규칙: STOP도 ego_at_plan 스냅샷
+    // 기준 trajectory이므로 그 소스 시각을 그대로 쓴다. ego_at_plan이 알 수
+    // 없는 상태(zero stamp, valid=false)라면 이 STOP 자체가 그 사실을 그대로
+    // 전달해야 한다 - MPC의 ConvertTrajectory가 ego_at_plan.valid/timestamp를
+    // 검사해 독립적으로 fail-safe STOP을 낼 수 있어야 하기 때문이다(계약
+    // 9절). now()로 유효성을 위장하지 않는다.
+    trajectory.header.stamp = ego_at_plan.header.stamp;
     trajectory.header.frame_id = "map";
     trajectory.valid = true;
     trajectory.failure_reason = failure_reason;

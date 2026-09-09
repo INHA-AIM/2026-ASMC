@@ -1,17 +1,20 @@
 #include "reference/path_resampler.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 
 #include "math/utils.hpp"
 
 ReferencePath ToReferencePath(const PlannedPath& path, double destination_dt,
-                              int steps) {
+                              int steps, double start_time_offset) {
     ReferencePath reference;
     const std::size_t size = path.size();
-    if (size == 0 || path.dt <= 0.0 || destination_dt <= 0.0 || steps <= 0) {
+    if (size == 0 || path.dt <= 0.0 || destination_dt <= 0.0 || steps <= 0 ||
+        !std::isfinite(start_time_offset)) {
         return reference;
     }
+    const double offset = std::max(0.0, start_time_offset);
 
     reference.x_ref.reserve(steps);
     reference.y_ref.reserve(steps);
@@ -20,7 +23,7 @@ ReferencePath ToReferencePath(const PlannedPath& path, double destination_dt,
     reference.k_ref.reserve(steps);
 
     for (int i = 0; i < steps; ++i) {
-        const double time = i * destination_dt;
+        const double time = offset + i * destination_dt;
         double index = time / path.dt;
         index = clip(index, 0.0, static_cast<double>(size - 1));
         const std::size_t first = static_cast<std::size_t>(index);

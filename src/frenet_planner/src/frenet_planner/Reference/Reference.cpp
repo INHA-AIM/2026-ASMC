@@ -25,9 +25,24 @@ std::vector<double> CumulativeArcLength(const std::vector<double>& x, const std:
     return s;
 }
 
+// 원본 waypoint의 물리적 첫점/끝점 거리로 폐루프 여부를 판정한다. 대회
+// global path처럼 마지막 점이 첫점을 그대로 복제해 명시적으로 닫혀 있는
+// 입력을 감지하는 것이 목적이므로, 허용 오차는 원본 waypoint 간격(대회
+// 경로 기준 약 0.4~0.5m)보다 훨씬 작게 잡아 우연히 가까운 open path를
+// closed로 오判정하지 않는다.
+constexpr double kClosureToleranceM = 0.05;  // [m]
+
+bool DetectClosedLoop(const std::vector<double>& x, const std::vector<double>& y) {
+    const int n = static_cast<int>(x.size());
+    if (n < 4) return false;  // 닫힌 삼각형 이상은 되어야 폐루프로 취급
+    const double dx = x.back() - x.front();
+    const double dy = y.back() - y.front();
+    return std::sqrt(dx * dx + dy * dy) <= kClosureToleranceM;
+}
+
 // (아래 3단계 스무딩 파이프라인에서 사용, 정의는 이 파일 뒤쪽에 있음)
 void ComputeThetaKappa(const std::vector<double>& x, const std::vector<double>& y,
-                        std::vector<double>& theta, std::vector<double>& kappa);
+                        bool closed, std::vector<double>& theta, std::vector<double>& kappa);
 
 // MGeo 링크를 이어붙인 원본 waypoint에는 국소적으로 물리적 회전반경(1~2m대)을
 // 넘는 급격한 꺾임이 다수 섞여있어(링크 이어붙임 이음매, 원본 좌표 노이즈 등),
@@ -41,8 +56,21 @@ constexpr double kResampleDs       = 0.5;   // [m] 재샘플링 간격 (원본 w
 constexpr int    kRelaxMaxIter     = 300;
 constexpr double kRelaxStep        = 0.3;   // 초과 지점을 양옆 중점 쪽으로 당기는 비율
 
-void SmoothWaypoints(const std::vector<double>& x, const std::vector<double>& y,
-                      double window_m, std::vector<double>& out_x, std::vector<double>& out_y) {
+// 폐루프 총 물리 길이(닫힘 구간 포함). 열린 경로는 그냥 누적 s의 마지막 값.
+double TotalArcLength(const std::vector<double>& x, const std::vector<double>& y, bool closed) {
+    const int n = static_cast<int>(x.size());
+    std::vector<double> s = CumulativeArcLength(x, y);
+    double total = s.empty() ? 0.0 : s.back();
+    if (closed && n > 0) {
+        const double dx = x.front() - x[n - 1];
+        const double dy = y.front() - y[n - 1];
+        total += std::sqrt(dx * dx + dy * dy);
+    }
+    return total;
+}
+
+void SmoothWaypointsOpen(const std::vector<double>& x, const std::vector<double>& y,
+                         double window_m, std::vector<double>& out_x, std::vector<double>& out_y) {
     const int n = static_cast<int>(x.size());
     std::vector<double> s = CumulativeArcLength(x, y);
     out_x.resize(n);
@@ -63,9 +91,64 @@ void SmoothWaypoints(const std::vector<double>& x, const std::vector<double>& y,
     }
 }
 
-// 스무딩으로 흐트러진 점 간격을 균일 arc-length 간격으로 재조정.
-void ResampleUniform(const std::vector<double>& x, const std::vector<double>& y, double ds_target,
+// 폐루프(unique circular sequence, 마지막 점이 첫점의 복제가 아님) 이동평균.
+// 이음새 근방 점의 윈도우가 반대편(트랙 끝/시작)까지 원형으로 이어지도록
+// 순환 인덱스로 확장한다 - 일반 내부 점과 동일한 방식으로 처리된다.
+void SmoothWaypointsClosed(const std::vector<double>& x, const std::vector<double>& y,
+                           double window_m, std::vector<double>& out_x, std::vector<double>& out_y) {
+    const int n = static_cast<int>(x.size());
+    out_x.resize(n);
+    out_y.resize(n);
+    if (n == 0) return;
+
+    // 세그먼트 길이(닫힘 구간 포함, 순환): seg[i] = i번째 점 -> (i+1)%n 점 거리.
+    std::vector<double> seg(n);
+    for (int i = 0; i < n; i++) {
+        const int j = (i + 1) % n;
+        const double dx = x[j] - x[i];
+        const double dy = y[j] - y[i];
+        seg[i] = std::sqrt(dx * dx + dy * dy);
+    }
+
+    const double half = window_m / 2.0;
+    for (int i = 0; i < n; i++) {
+        double sum_x = x[i], sum_y = y[i];
+        int cnt = 1;
+
+        // 전방으로 half만큼 순환 누적.
+        double acc = 0.0;
+        for (int k = 1; k < n; k++) {
+            const int idx_prev_seg = (i + k - 1) % n;
+            acc += seg[idx_prev_seg];
+            if (acc > half) break;
+            const int j = (i + k) % n;
+            sum_x += x[j]; sum_y += y[j]; cnt++;
+        }
+        // 후방으로 half만큼 순환 누적.
+        acc = 0.0;
+        for (int k = 1; k < n; k++) {
+            const int idx_prev_seg = (i - k + n) % n;
+            acc += seg[idx_prev_seg];
+            if (acc > half) break;
+            const int j = (i - k + n) % n;
+            sum_x += x[j]; sum_y += y[j]; cnt++;
+        }
+
+        out_x[i] = sum_x / cnt;
+        out_y[i] = sum_y / cnt;
+    }
+}
+
+void SmoothWaypoints(const std::vector<double>& x, const std::vector<double>& y,
+                      double window_m, bool closed,
                       std::vector<double>& out_x, std::vector<double>& out_y) {
+    if (closed) SmoothWaypointsClosed(x, y, window_m, out_x, out_y);
+    else SmoothWaypointsOpen(x, y, window_m, out_x, out_y);
+}
+
+// 스무딩으로 흐트러진 점 간격을 균일 arc-length 간격으로 재조정 (열린 경로).
+void ResampleUniformOpen(const std::vector<double>& x, const std::vector<double>& y, double ds_target,
+                         std::vector<double>& out_x, std::vector<double>& out_y) {
     std::vector<double> s = CumulativeArcLength(x, y);
     const double total = s.back();
     const int n_out = static_cast<int>(total / ds_target) + 1;
@@ -83,52 +166,128 @@ void ResampleUniform(const std::vector<double>& x, const std::vector<double>& y,
     }
 }
 
+// 폐루프 균일 재샘플링. 닫힘 구간(마지막 unique점 -> 첫 unique점)을 포함한
+// 전체 원형 길이를 ds_target 간격으로 샘플링한다. k=0(target_s=0)만 뽑고
+// target_s가 total에 도달하는 마지막 샘플은 만들지 않는다 - 그 위치는
+// BuildRefLine이 나중에 "첫 점의 복제"로 s=length에 명시적으로 추가하므로,
+// 여기서 만들면 같은 위치가 두 번 샘플링(seam 근처 0거리 이중 포인트)된다.
+void ResampleUniformClosed(const std::vector<double>& x, const std::vector<double>& y, double ds_target,
+                           std::vector<double>& out_x, std::vector<double>& out_y) {
+    const int n = static_cast<int>(x.size());
+    out_x.clear();
+    out_y.clear();
+    if (n == 0) return;
+
+    // 순환 누적 s: s_ext[0..n]으로 확장하되 s_ext[n] = total(닫힘 구간 포함).
+    std::vector<double> s_ext(n + 1);
+    s_ext[0] = 0.0;
+    for (int i = 0; i < n; i++) {
+        const int j = (i + 1) % n;
+        const double dx = x[j] - x[i];
+        const double dy = y[j] - y[i];
+        s_ext[i + 1] = s_ext[i] + std::sqrt(dx * dx + dy * dy);
+    }
+    const double total = s_ext[n];
+    const int n_out = std::max(1, static_cast<int>(std::round(total / ds_target)));
+    const double actual_ds = total / n_out;  // 정확히 한 바퀴를 n_out개로 균등 분할
+
+    out_x.resize(n_out);
+    out_y.resize(n_out);
+
+    int j = 0;
+    for (int k = 0; k < n_out; k++) {
+        const double target_s = k * actual_ds;
+        while (j < n - 1 && s_ext[j + 1] < target_s) j++;
+        const double seg_len = s_ext[j + 1] - s_ext[j];
+        const double ratio = (seg_len > 1e-9) ? (target_s - s_ext[j]) / seg_len : 0.0;
+        const int j_next = (j + 1) % n;
+        out_x[k] = x[j] + ratio * (x[j_next] - x[j]);
+        out_y[k] = y[j] + ratio * (y[j_next] - y[j]);
+    }
+}
+
+void ResampleUniform(const std::vector<double>& x, const std::vector<double>& y, double ds_target,
+                      bool closed, std::vector<double>& out_x, std::vector<double>& out_y) {
+    if (closed) ResampleUniformClosed(x, y, ds_target, out_x, out_y);
+    else ResampleUniformOpen(x, y, ds_target, out_x, out_y);
+}
+
 // 스무딩+재샘플링 이후에도 남아있는 국소 곡률 초과 지점을, 양옆 점의 중점
 // 쪽으로 조금씩 당겨서(라플라시안 완화) 반복적으로 줄인다.
-void FixInfeasibleCurvature(std::vector<double>& x, std::vector<double>& y, double max_curvature) {
+// closed==true면 순환 시퀀스 전체(이음새 포함)를 내부 점으로 취급한다 -
+// 열린 경로처럼 양 끝(i=0, i=n-1)을 예외 처리하지 않는다.
+void FixInfeasibleCurvature(std::vector<double>& x, std::vector<double>& y,
+                            bool closed, double max_curvature) {
     const int n = static_cast<int>(x.size());
     if (n < 3) return;
 
     std::vector<double> theta, kappa;
     for (int iter = 0; iter < kRelaxMaxIter; iter++) {
-        ComputeThetaKappa(x, y, theta, kappa);
+        ComputeThetaKappa(x, y, closed, theta, kappa);
 
         std::vector<int> bad;
-        for (int i = 1; i < n - 1; i++) {
+        const int begin = closed ? 0 : 1;
+        const int end = closed ? n : n - 1;  // exclusive
+        for (int i = begin; i < end; i++) {
             if (std::abs(kappa[i]) > max_curvature) bad.push_back(i);
         }
         if (bad.empty()) break;
 
         for (int i : bad) {
-            const double mx = 0.5 * (x[i - 1] + x[i + 1]);
-            const double my = 0.5 * (y[i - 1] + y[i + 1]);
+            const int prev = closed ? (i - 1 + n) % n : std::max(i - 1, 0);
+            const int next = closed ? (i + 1) % n : std::min(i + 1, n - 1);
+            const double mx = 0.5 * (x[prev] + x[next]);
+            const double my = 0.5 * (y[prev] + y[next]);
             x[i] = x[i] * (1.0 - kRelaxStep) + mx * kRelaxStep;
             y[i] = y[i] * (1.0 - kRelaxStep) + my * kRelaxStep;
         }
     }
 }
 
-// theta(중앙차분) + kappa(중앙차분, wrap-around 보정) 계산.
+// theta(중앙차분) + kappa(중앙차분) 계산.
+// closed==true: 모든 점이 순환 이웃(prev=(i-1+n)%n, next=(i+1)%n)을 쓴다 -
+// 이음새 양쪽 점을 하나의 연속된 기하로 다룬다.
+// closed==false: 기존과 동일하게 양 끝점은 한쪽 차분만 쓴다.
 void ComputeThetaKappa(const std::vector<double>& x, const std::vector<double>& y,
-                        std::vector<double>& theta, std::vector<double>& kappa) {
+                        bool closed, std::vector<double>& theta, std::vector<double>& kappa) {
     const int n = static_cast<int>(x.size());
     std::vector<double> s = CumulativeArcLength(x, y);
 
     theta.resize(n);
     for (int i = 0; i < n; i++) {
         double dx, dy;
-        if (i == 0)          { dx = x[1] - x[0];         dy = y[1] - y[0]; }
-        else if (i == n - 1) { dx = x[n-1] - x[n-2];      dy = y[n-1] - y[n-2]; }
-        else                 { dx = x[i+1] - x[i-1];      dy = y[i+1] - y[i-1]; }
+        if (closed) {
+            const int prev = (i - 1 + n) % n;
+            const int next = (i + 1) % n;
+            dx = x[next] - x[prev];
+            dy = y[next] - y[prev];
+        } else if (i == 0) {
+            dx = x[1] - x[0];         dy = y[1] - y[0];
+        } else if (i == n - 1) {
+            dx = x[n-1] - x[n-2];     dy = y[n-1] - y[n-2];
+        } else {
+            dx = x[i+1] - x[i-1];     dy = y[i+1] - y[i-1];
+        }
         theta[i] = std::atan2(dy, dx);
     }
 
     kappa.resize(n);
     for (int i = 0; i < n; i++) {
-        const int a = (i == 0) ? 0 : i - 1;
-        const int b = (i == n - 1) ? n - 1 : i + 1;
+        int a, b;
+        double ds;
+        if (closed) {
+            a = (i - 1 + n) % n;
+            b = (i + 1) % n;
+            // 순환 구간 길이: a->i->b를 따라간 실제 호길이(닫힘 구간 포함).
+            const double seg_a = std::hypot(x[i] - x[a], y[i] - y[a]);
+            const double seg_b = std::hypot(x[b] - x[i], y[b] - y[i]);
+            ds = seg_a + seg_b;
+        } else {
+            a = (i == 0) ? 0 : i - 1;
+            b = (i == n - 1) ? n - 1 : i + 1;
+            ds = s[b] - s[a];
+        }
         const double d_theta = NormalizeAngleDiff(theta[b] - theta[a]);
-        const double ds = s[b] - s[a];
         kappa[i] = (ds > 1e-9) ? d_theta / ds : 0.0;
     }
 }
@@ -144,27 +303,45 @@ RefLine BuildRefLine(const std::vector<double>& wx, const std::vector<double>& w
     if (wx.size() < 2 || wx.size() != wy.size())
         throw std::invalid_argument("Waypoints must have at least 2 points and matching sizes");
 
+    const bool closed = DetectClosedLoop(wx, wy);
+
+    // 폐루프 입력은 마지막 점이 첫점의 물리적 복제다(대회 global path 계약).
+    // 모든 순환 전처리(smoothing/resampling/derivative)는 이 복제를 제거한
+    // unique 시퀀스에서 수행한다 - 복제점이 이동평균/미분 창에 끼어들면
+    // 이음새 근방 결과가 왜곡된다.
+    std::vector<double> unique_x = wx;
+    std::vector<double> unique_y = wy;
+    if (closed && unique_x.size() > 1) {
+        unique_x.pop_back();
+        unique_y.pop_back();
+    }
+
     // 0. 국소 급커브 완화: 스무딩 -> 균일 재샘플링 -> 잔여 초과분 국소 이완.
     std::vector<double> smoothed_x, smoothed_y;
-    SmoothWaypoints(wx, wy, kSmoothingWindowM, smoothed_x, smoothed_y);
+    SmoothWaypoints(unique_x, unique_y, kSmoothingWindowM, closed, smoothed_x, smoothed_y);
 
     std::vector<double> sx, sy;
-    ResampleUniform(smoothed_x, smoothed_y, kResampleDs, sx, sy);
+    ResampleUniform(smoothed_x, smoothed_y, kResampleDs, closed, sx, sy);
 
-    FixInfeasibleCurvature(sx, sy, max_curvature);
+    FixInfeasibleCurvature(sx, sy, closed, max_curvature);
+
+    const int n_unique = static_cast<int>(sx.size());
+    const int n = closed ? n_unique + 1 : n_unique;
 
     RefLine ref;
-    int n = static_cast<int>(sx.size());
+    ref.closed_loop = closed;
     ref.points.resize(n);
 
-    // 1. arc length s 누적 계산
+    // 1. arc length s 누적 계산 (닫힘 구간은 아래에서 마지막 점에 별도 반영).
     std::vector<double> s = CumulativeArcLength(sx, sy);
+    const double loop_length = closed ? TotalArcLength(sx, sy, /*closed=*/true) : (s.empty() ? 0.0 : s.back());
+    ref.length = loop_length;
 
-    // 2~3. theta/kappa: 중앙 차분 (wrap-around 보정 포함)
+    // 2~3. theta/kappa: 순환 또는 편측 중앙 차분.
     std::vector<double> theta, kappa;
-    ComputeThetaKappa(sx, sy, theta, kappa);
+    ComputeThetaKappa(sx, sy, closed, theta, kappa);
 
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n_unique; i++) {
         ref.points[i].x = sx[i];
         ref.points[i].y = sy[i];
         ref.points[i].s = s[i];
@@ -172,26 +349,37 @@ RefLine BuildRefLine(const std::vector<double>& wx, const std::vector<double>& w
         ref.points[i].kappa = kappa[i];
     }
 
-    // 4. d_kappa: d_kappa/ds (중앙 차분)
-    for (int i = 0; i < n; i++) {
-        if (i == 0) {
-            double dk = ref.points[1].kappa - ref.points[0].kappa;
-            double ds = ref.points[1].s - ref.points[0].s;
-
-            ref.points[0].d_kappa = (ds > 1e-9) ? dk / ds : 0.0;
-
-        } else if (i == n - 1) {
-            double dk = ref.points[n - 1].kappa - ref.points[n - 2].kappa;
-            double ds = ref.points[n - 1].s - ref.points[n - 2].s;
-
-            ref.points[n - 1].d_kappa = (ds > 1e-9) ? dk / ds : 0.0;
-
+    // 4. d_kappa: d_kappa/ds. closed는 순환 이웃, open은 기존 편측 처리.
+    for (int i = 0; i < n_unique; i++) {
+        int a, b;
+        double ds;
+        if (closed) {
+            a = (i - 1 + n_unique) % n_unique;
+            b = (i + 1) % n_unique;
+            const double seg_a = std::hypot(sx[i] - sx[a], sy[i] - sy[a]);
+            const double seg_b = std::hypot(sx[b] - sx[i], sy[b] - sy[i]);
+            ds = seg_a + seg_b;
+        } else if (i == 0) {
+            a = 0; b = 1;
+            ds = ref.points[1].s - ref.points[0].s;
+        } else if (i == n_unique - 1) {
+            a = n_unique - 2; b = n_unique - 1;
+            ds = ref.points[n_unique - 1].s - ref.points[n_unique - 2].s;
         } else {
-            double dk = ref.points[i + 1].kappa - ref.points[i - 1].kappa;
-            double ds = ref.points[i + 1].s - ref.points[i - 1].s;
-
-            ref.points[i].d_kappa = (ds > 1e-9) ? dk / ds : 0.0;
+            a = i - 1; b = i + 1;
+            ds = ref.points[i + 1].s - ref.points[i - 1].s;
         }
+        const double dk = kappa[b] - kappa[a];
+        ref.points[i].d_kappa = (ds > 1e-9) ? dk / ds : 0.0;
+    }
+
+    // 5. 폐루프: 첫 점을 s=length에 복제해 닫음점을 명시적으로 추가한다.
+    // theta/kappa/d_kappa도 그대로 복제되므로 이음새 양쪽에서 항상 같은
+    // 가운데 point 값과 만난다(Interpolate가 s=length 근방에서 보간할 때
+    // 자연스럽게 연속) - F-7 요구사항.
+    if (closed) {
+        ref.points[n_unique] = ref.points[0];
+        ref.points[n_unique].s = loop_length;
     }
 
     return ref;
@@ -201,21 +389,31 @@ RefLine BuildRefLine(const std::vector<double>& wx, const std::vector<double>& w
 // Interpolate — 선형 보간
 // FindClosestS가 각 Newton 반복마다 임의의 실수 s에서 RefPoint를
 // 필요로 하기 때문에, Newton 함수보다 먼저 정의되어야 한다.
+//
+// topology(ref.closed_loop)를 이 함수가 유일하게 판단한다 - 호출자는
+// s를 미리 감거나 클램핑하지 않는다("one policy, one authoritative owner",
+// F-9).
 // =========================================================
 
 RefPoint Interpolate(const RefLine& ref, double s) {
     const auto& pts = ref.points;
     int n = static_cast<int>(pts.size());
 
-    // 폐루프(닫힌 트랙) wrap-around: 이전엔 s를 [front().s, back().s]로
-    // 클램핑했는데, 이러면 이음새(피니시라인) 근처에서 s가 끝점에 얼어붙어
-    // 실제 위치와 무관한 d/heading이 나오는 문제가 있었다(실측: 마지막 구간
-    // 경로추종 불안정). front()==back() 위치가 물리적으로 같은 점(폐루프
-    // 폐합점)이므로, 범위를 벗어나면 클램핑 대신 [0, s_max)로 감아준다.
-    const double s_max = pts.back().s;
-    double s_wrapped = std::fmod(s, s_max);
-    if (s_wrapped < 0.0) s_wrapped += s_max;
-    s = s_wrapped;
+    if (ref.closed_loop) {
+        // 폐루프(닫힌 트랙) wrap-around: front()==back() 위치가 물리적으로
+        // 같은 점(폐루프 폐합점)이므로, 범위를 벗어나면 클램핑 대신
+        // [0, length)로 감아준다. 이전엔 s를 [front().s, back().s]로
+        // 클램핑했는데, 이러면 이음새(피니시라인) 근처에서 s가 끝점에
+        // 얼어붙어 실제 위치와 무관한 d/heading이 나오는 문제가 있었다.
+        const double length = ref.length;
+        double s_wrapped = std::fmod(s, length);
+        if (s_wrapped < 0.0) s_wrapped += length;
+        s = s_wrapped;
+    } else {
+        // 열린 경로: wrap하지 않는다 - 범위를 벗어나면 끝점으로 클램핑한다.
+        if (s <= pts.front().s) return pts.front();
+        if (s >= pts.back().s)  return pts.back();
+    }
 
     // 부동소수 오차로 경계값을 살짝 벗어나는 경우만 클램핑.
     if (s <= pts.front().s) return pts.front();
@@ -268,6 +466,9 @@ RefPoint Interpolate(const RefLine& ref, double s) {
 //
 // 이는 근사식이 아니라 정확한 해석적 도함수다 (App.I 식(7) 분모에
 // 등장하는 1 - kappa_r*d 항과 동일한 표현).
+//
+// topology(ref.closed_loop)를 이 함수가 유일하게 판단한다(F-10) - hint
+// 원형 거리 비교와 Newton wrap 여부가 모두 여기 안에서 결정된다.
 // =========================================================
 
 double FindClosestS(const RefLine& ref, double x, double y,
@@ -280,20 +481,20 @@ double FindClosestS(const RefLine& ref, double x, double y,
     // 참고 - 트랙이 자기 자신과 가까운 구간에서 전체 탐색이 엉뚱하게 먼 s로
     // 튀는 문제 방지). 범위 안에 점이 하나도 없으면(비정상 상황) 안전하게
     // 전체 탐색으로 폴백한다.
-    const double s_max_for_wrap = ref.points.back().s;
+    const double length = ref.length;
 
     double best_s = ref.points[0].s;
     double best_d2 = std::numeric_limits<double>::max();
     bool found = false;
     if (s_hint) {
-        // 폐루프 wrap-around: 단순 [hint-window, hint+window] 범위 체크는
-        // hint가 이음새(s≈0 또는 s≈s_max) 근처일 때 반대편(물리적으로는
-        // 바로 붙어있는) 구간의 점들을 전부 놓친다. s축 위의 최短 원형
-        // 거리(circular distance)로 비교해 이음새를 넘어서도 창이 정상
-        // 동작하게 한다.
         for (const auto& pt : ref.points) {
             double diff = std::fabs(pt.s - *s_hint);
-            double circ_dist = std::min(diff, s_max_for_wrap - diff);
+            // 폐루프만 이음새 건너편을 원형 거리로 가깝다고 본다. 열린
+            // 경로는 끝점 너머가 물리적으로 이어지지 않으므로 선형 거리만
+            // 쓴다(F-10: 열린 경로에서 반대쪽 끝으로 wrap하지 않는다).
+            double circ_dist = ref.closed_loop
+                ? std::min(diff, length - diff)
+                : diff;
             if (circ_dist > window) continue;
             double dx = x - pt.x;
             double dy = y - pt.y;
@@ -311,7 +512,6 @@ double FindClosestS(const RefLine& ref, double x, double y,
     }
 
     double s = best_s;
-    const double s_max = s_max_for_wrap;
 
     for (int iter = 0; iter < 20; iter++) {
         RefPoint rp = Interpolate(ref, s);
@@ -333,12 +533,17 @@ double FindClosestS(const RefLine& ref, double x, double y,
         double ds = -f / fp;
         s += ds;
 
-        // 폐루프 wrap-around: 이음새 근처에서 Newton 스텝이 s=0 또는
-        // s=s_max를 자연스럽게 넘나들 수 있어야 한다(클램핑하면 반대편으로
-        // 못 건너가고 끝점에 갇힌다). Interpolate도 동일하게 wrap하므로
-        // f(s)/f'(s) 계산 자체는 항상 유효하다.
-        s = std::fmod(s, s_max);
-        if (s < 0.0) s += s_max;
+        if (ref.closed_loop) {
+            // 폐루프 wrap-around: 이음새 근처에서 Newton 스텝이 s=0 또는
+            // s=length를 자연스럽게 넘나들 수 있어야 한다(클램핑하면 반대편
+            // 으로 못 건너가고 끝점에 갇힌다). Interpolate도 동일하게
+            // wrap하므로 f(s)/f'(s) 계산 자체는 항상 유효하다.
+            s = std::fmod(s, length);
+            if (s < 0.0) s += length;
+        } else {
+            // 열린 경로: 반대쪽 끝으로 넘어가지 않는다. 유효 범위로 clamp.
+            s = std::max(ref.points.front().s, std::min(ref.points.back().s, s));
+        }
 
         if (std::abs(ds) < 1e-6) break;  // 수렴
     }
@@ -391,6 +596,7 @@ bool LoadReferenceLine(const std::string& path, RefLine& out_ref, double max_cur
     }
 
     out_ref = BuildRefLine(wx, wy, max_curvature);
-    std::printf("[FrenetPlanner] Loaded %zu waypoints from %s\n", wx.size(), path.c_str());
+    std::printf("[FrenetPlanner] Loaded %zu waypoints from %s (closed_loop=%s, length=%.2f)\n",
+               wx.size(), path.c_str(), out_ref.closed_loop ? "true" : "false", out_ref.length);
     return true;
 }

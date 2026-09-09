@@ -28,8 +28,19 @@ const char* TrajectoryStatusName(TrajectoryStatus status) {
     return "UNKNOWN";
 }
 
-bool IsTrajectoryFresh(const ros::SteadyTime& received_at,
-                       const ros::SteadyTime& now, double timeout_seconds) {
+const char* VehicleStateStatusName(VehicleStateStatus status) {
+    switch (status) {
+        case VehicleStateStatus::OK: return "OK";
+        case VehicleStateStatus::INVALID_MESSAGE: return "INVALID_MESSAGE";
+        case VehicleStateStatus::INVALID_FRAME: return "INVALID_FRAME";
+        case VehicleStateStatus::INVALID_TIMESTAMP: return "INVALID_TIMESTAMP";
+        case VehicleStateStatus::NON_FINITE_VALUE: return "NON_FINITE_VALUE";
+    }
+    return "UNKNOWN";
+}
+
+bool IsMessageFresh(const ros::SteadyTime& received_at,
+                    const ros::SteadyTime& now, double timeout_seconds) {
     if (received_at.isZero() || !IsFinite(timeout_seconds) ||
         timeout_seconds <= 0.0) return false;
     const double age = (now - received_at).toSec();
@@ -37,7 +48,7 @@ bool IsTrajectoryFresh(const ros::SteadyTime& received_at,
 }
 
 TrajectoryStatus ConvertTrajectory(const asmc_msgs::Trajectory& message,
-                                   PlannedPath& path, MPCState& ego_state) {
+                                   PlannedPath& path) {
     if (!message.valid || message.points.empty()) {
         return TrajectoryStatus::INVALID_MESSAGE;
     }
@@ -50,6 +61,9 @@ TrajectoryStatus ConvertTrajectory(const asmc_msgs::Trajectory& message,
     if (!IsFinite(message.dt) || message.dt <= 0.0) {
         return TrajectoryStatus::INVALID_DT;
     }
+    // ego_at_plan은 provenance 계약이다 - trajectory가 어떤 Ego snapshot에서
+    // 계획됐는지 검증한다. 이 값 자체를 MPCState로 변환해 반환하지는 않는다
+    // (ControlProcess의 x0는 ConvertVehicleState/최신 /vehicle/state 전용).
     if (!message.ego_at_plan.valid ||
         message.ego_at_plan.header.frame_id != "map" ||
         !IsFinite(message.ego_at_plan.x) ||
@@ -61,11 +75,6 @@ TrajectoryStatus ConvertTrajectory(const asmc_msgs::Trajectory& message,
 
     PlannedPath converted;
     converted.dt = message.dt;
-    converted.ego_x = message.ego_at_plan.x;
-    converted.ego_y = message.ego_at_plan.y;
-    converted.ego_yaw = message.ego_at_plan.yaw;
-    converted.ego_v = message.ego_at_plan.speed;
-    converted.ego_accel = message.ego_at_plan.acceleration;
     converted.x.reserve(message.points.size());
     converted.y.reserve(message.points.size());
     converted.yaw.reserve(message.points.size());
@@ -88,18 +97,34 @@ TrajectoryStatus ConvertTrajectory(const asmc_msgs::Trajectory& message,
         converted.a.push_back(point.acceleration);
     }
 
-    MPCState converted_ego;
-    converted_ego.x = converted.ego_x;
-    converted_ego.y = converted.ego_y;
-    converted_ego.yaw = converted.ego_yaw;
-    converted_ego.vx = converted.ego_v;
-
     const bool stop_trajectory =
         converted.size() == 1 && converted.v.front() <= 1e-6;
     path = std::move(converted);
-    ego_state = converted_ego;
     return stop_trajectory ? TrajectoryStatus::STOP_TRAJECTORY
                            : TrajectoryStatus::OK;
+}
+
+VehicleStateStatus ConvertVehicleState(const asmc_msgs::VehicleState& message,
+                                       MPCState& ego_state) {
+    if (!message.valid) return VehicleStateStatus::INVALID_MESSAGE;
+    if (message.header.frame_id != "map") {
+        return VehicleStateStatus::INVALID_FRAME;
+    }
+    if (message.header.stamp.isZero()) {
+        return VehicleStateStatus::INVALID_TIMESTAMP;
+    }
+    if (!IsFinite(message.x) || !IsFinite(message.y) ||
+        !IsFinite(message.yaw) || !IsFinite(message.speed)) {
+        return VehicleStateStatus::NON_FINITE_VALUE;
+    }
+
+    MPCState converted;
+    converted.x = message.x;
+    converted.y = message.y;
+    converted.yaw = message.yaw;
+    converted.vx = message.speed;
+    ego_state = converted;
+    return VehicleStateStatus::OK;
 }
 
 morai_msgs::CtrlCmd MakeRosStopCommand() {
