@@ -70,6 +70,15 @@ Command MakeEmergencyStop(uint32_t id) {
     return message;
 }
 
+Command MakeStop(uint32_t id) {
+    Command message = MakeKeep(id);
+    message.maneuver_type = Command::STOP;
+    message.has_target_pose = true;
+    message.target_pose_map.position.x = 80.0;
+    message.target_pose_map.orientation.w = 1.0;
+    return message;
+}
+
 // D4 시점의 구현 상태: KEEP / STOP / EMERGENCY_STOP만 열려 있다.
 CommandExecutionManager MakeD4Manager() {
     CommandExecutionManager manager;
@@ -109,6 +118,27 @@ int main() {
         manager.Accept(MakeLaneChange(11, Command::PREPARE));
         Expect(manager.execution_state() == Feedback::PREPARING,
                "handshake maneuver starts in PREPARING");
+    }
+    {
+        // Behavior가 정지선이 장애물보다 앞이라고 판정한 경우 새 STOP ID를
+        // 보낸다. COMMITTED AVOID 잠금 때문에 이를 거부하면 정지선을 넘는다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeKeep(12);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.execution_request = Command::PREPARE;
+        avoid.primary_object_id = 7;
+        manager.Accept(avoid);
+        manager.NotifyPlanSucceeded();
+        avoid.execution_request = Command::EXECUTE;
+        manager.Accept(avoid);
+        manager.NotifyCommitted();
+
+        const auto stop = manager.Accept(MakeStop(13));
+        Expect(stop.command_accepted && stop.transaction_started &&
+                   stop.should_plan() && manager.command_id() == 13 &&
+                   manager.maneuver_type() == Command::STOP &&
+                   manager.execution_state() == Feedback::EXECUTING,
+               "planned STOP preempts a committed AVOID transaction");
     }
 
     // ================= 같은 ID + 같은 payload =================

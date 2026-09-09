@@ -91,6 +91,7 @@ UrbanFeature FeatureBuilder::build(
     Point2D adjusted_stop;
     const double adjusted_stop_s =
         std::max(0.0, feature.signal.stop_line_s - stop_target_offset_m_);
+    feature.signal.stop_target_s = adjusted_stop_s;
     if (stop_target_offset_m_ > 0.0 &&
         route_manager.getRoutePose(adjusted_stop_s, &adjusted_stop,
                                    &feature.signal.stop_line_yaw)) {
@@ -219,6 +220,7 @@ UrbanFeature FeatureBuilder::build(
         feature.risk.static_obstacle_ahead = true;
         feature.risk.avoidance_object_id = object.id;
         feature.risk.nearest_obstacle_s = object.s;
+        feature.risk.nearest_obstacle_length = object.length;
         best_static_obstacle_gap = object.gap;
       }
     }

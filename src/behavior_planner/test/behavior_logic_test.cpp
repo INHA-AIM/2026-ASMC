@@ -145,6 +145,29 @@ TEST(V2CommandManagerTest, AvoidLetsFrenetChooseDirectionAndUsesHandshake) {
   EXPECT_EQ(asmc_msgs::BehaviorCommand::KEEP, keep.maneuver_type);
 }
 
+TEST(V2CommandManagerTest, EarlierPlannedStopPreemptsCommittedAvoid) {
+  V2CommandManager manager;
+  BehaviorContextData context;
+  context.selected_behavior = BehaviorType::AVOID;
+  context.target.current_link_id = "source";
+  context.target.avoidance_object_id = 23;
+  context.target.desired_speed = 6.0;
+
+  const auto prepare = manager.update(context, nullptr, ros::Time(45.0), 0.5);
+  asmc_msgs::FrenetFeedback feedback;
+  feedback.command_id = prepare.command_id;
+  feedback.execution_state = asmc_msgs::FrenetFeedback::EXECUTING;
+
+  context.selected_behavior = BehaviorType::STOP;
+  context.target.has_target_pose = true;
+  context.target.target_x = 10.0;
+  context.target.target_y = 0.0;
+  context.extra_flags["stop_preempts_avoid"] = true;
+  const auto stop = manager.update(context, &feedback, ros::Time(45.1), 0.5);
+  EXPECT_NE(prepare.command_id, stop.command_id);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::STOP, stop.maneuver_type);
+}
+
 TEST(HardRuleFilterTest, GreenLightDoesNotForceStop) {
   UrbanFeature feature;
   feature.signal.has_stop_line = true;
@@ -263,6 +286,35 @@ TEST(BehaviorDecisionTest, StaticObstacleSelectsAvoidTarget) {
   EXPECT_EQ(BehaviorType::AVOID, context.selected_behavior);
   EXPECT_TRUE(context.enable.avoid);
   EXPECT_EQ(31, context.target.avoidance_object_id);
+}
+
+TEST(BehaviorDecisionTest, ChoosesFirstLongitudinalConstraint) {
+  UrbanFeature feature;
+  feature.route.speed_limit = 10.0;
+  feature.signal.has_stop_line = true;
+  feature.signal.stop_line_valid = true;
+  feature.signal.distance_to_stop_line = 20.0;
+  feature.signal.stop_line_s = 120.0;
+  feature.signal.stop_target_s = 115.0;
+  feature.signal.stop_line_x = 115.0;
+  feature.signal.light_state = TrafficLightState::RED;
+  feature.risk.static_obstacle_ahead = true;
+  feature.risk.avoidance_object_id = 31;
+  feature.risk.nearest_obstacle_length = 4.0;
+
+  feature.risk.nearest_obstacle_s = 130.0;
+  BehaviorContextData stop_first =
+      BehaviorDecision().decide(feature, asmc_msgs::PlanFeedback{});
+  EXPECT_EQ(BehaviorType::STOP, stop_first.selected_behavior);
+  EXPECT_TRUE(stop_first.extra_flags["stop_preempts_avoid"]);
+  EXPECT_EQ("stop_before_avoid", stop_first.debug.selected_reason);
+
+  feature.risk.nearest_obstacle_s = 110.0;
+  BehaviorContextData avoid_first =
+      BehaviorDecision().decide(feature, asmc_msgs::PlanFeedback{});
+  EXPECT_EQ(BehaviorType::AVOID, avoid_first.selected_behavior);
+  EXPECT_TRUE(avoid_first.extra_flags["avoid_precedes_stop"]);
+  EXPECT_EQ("avoid_before_stop", avoid_first.debug.selected_reason);
 }
 
 TEST(FsmTest, EmergencyReleaseRequiresSafeTtcHoldTime) {

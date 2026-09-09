@@ -238,11 +238,26 @@ double FrenetPlanner::EffectiveAvoidShiftStartDistance(
     const double shift_time =
         std::sqrt(5.77 * lateral_distance / usable_lateral_accel) +
         std::max(0.0, avoid_cfg_.shift_time_margin);
+    // VehicleState x/y는 후륜축 GPS 기준이다. 접근 중 필요한 자차 길이는
+    // length/2가 아니라 후륜축에서 앞 범퍼까지의 거리다.
+    const double rear_overhang = clip(
+        avoid_cfg_.rear_overhang, 0.0, vehicle_shape_.length);
+    const double front_extent = vehicle_shape_.length - rear_overhang;
     const double geometry_clearance =
-        0.5 * (vehicle_shape_.length + v2_avoidance_.obstacle_length) +
+        front_extent + 0.5 * v2_avoidance_.obstacle_length +
         collision_cfg_.safety_margin;
-    const double dynamic_distance =
+    double dynamic_distance =
         std::max(0.0, ego_speed) * shift_time + geometry_clearance;
+    // 0.5 m/s 미만에서는 시간 기반 quintic 대신 거리 기반 fallback을
+    // 실행한다. 그 거리는 고정값이 아니라 목표 횡이동량과 max_curvature로
+    // 계산하며, 차량/장애물 형상 여유를 별도로 합쳐 SHIFT를 시작한다.
+    constexpr double kLowSpeedFallbackV = 0.5;
+    if (std::fabs(ego_speed) < kLowSpeedFallbackV) {
+        dynamic_distance = std::max(
+            dynamic_distance,
+            LowSpeedLateralTransitionDistance(
+                ego_d, v2_avoidance_.target_d) + geometry_clearance);
+    }
     return clip(dynamic_distance, min_distance, max_distance);
 }
 
@@ -276,8 +291,12 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
         entered_pass_this_cycle = true;
     }
 
+    // ego_s는 후륜축 위치다. 장애물을 완전히 통과했는지는 차량 반길이가
+    // 아니라 후륜축에서 뒤 범퍼까지의 실제 거리로 판정해야 한다.
+    const double rear_overhang = clip(
+        avoid_cfg_.rear_overhang, 0.0, vehicle_shape_.length);
     const double clear_distance =
-        0.5 * (vehicle_shape_.length + v2_avoidance_.obstacle_length) +
+        rear_overhang + 0.5 * v2_avoidance_.obstacle_length +
         avoid_cfg_.pass_clearance;
     // Resolver는 seam 너머 전방 target을 ego_s + forward gap의 unwrapped
     // obstacle_s로 저장한다. raw subtraction은 ego가 seam을 지난 순간 거의
@@ -569,8 +588,11 @@ bool FrenetPlanner::AvoidProcess(
 
     const bool approach_phase = avoid_committed &&
         v2_avoidance_.phase == AvoidPhase::TRACKING;
+    const bool shift_phase = avoid_committed &&
+        v2_avoidance_.phase == AvoidPhase::SHIFT;
     const bool return_phase = avoid_committed &&
         v2_avoidance_.phase == AvoidPhase::RETURN;
+    const bool shortest_lateral_phase = shift_phase || return_phase;
     const double execution_target_d =
         (approach_phase || return_phase) ? 0.0 : v2_avoidance_.target_d;
 
@@ -720,6 +742,8 @@ bool FrenetPlanner::AvoidProcess(
                 phase_collision_obstacles, vehicle_shape_,
                 collision_cfg_, &side_stats);
             EvaluateCosts(generated, cost_weights_, target_d);
+            // 공용 횡가속도 생성 필터와 같은 설정 한계(3.0 m/s^2)를 사용한다.
+            // 과거 AVOID에만 중복 적용되던 80% 축소는 제거한다.
             FilterByCartesianLateralAcceleration(generated, ref_,
                                                  limits_.max_lateral_accel);
 
@@ -741,20 +765,40 @@ bool FrenetPlanner::AvoidProcess(
                 }
             }
 
-            const FrenetPath* side_best = SelectBestPath(generated);
+            const FrenetPath* side_best = nullptr;
+            if (shortest_lateral_phase) {
+                // 실제 횡이동 단계는 안전 집합 안에서 완료시간을 우선하고,
+                // 같은 시간에서만 기존 비용으로 부드러운 후보를 고른다.
+                side_best = SelectShortestValidPath(generated);
+            } else {
+                side_best = SelectBestPath(generated);
+            }
             if (!side_best) continue;
             // NONE이면 cost로 좌/우를 고른다. LEFT/RIGHT는 count가 1이라
             // 이 비교가 일어나지 않는다.
             if (!best_candidate ||
                 side_best->cost_total < best_candidate->cost_total) {
                 best_set = std::move(generated);
-                best_candidate = SelectBestPath(best_set);
+                // side_best는 move 전 vector를 가리키므로 저장 후 반드시 다시
+                // 찾는다. 여기서 공용 cost selector를 호출하면 위에서 고른
+                // RETURN 최단시간 후보가 조용히 긴 후보로 덮어써진다.
+                best_candidate = shortest_lateral_phase
+                    ? SelectShortestValidPath(best_set)
+                    : SelectBestPath(best_set);
                 best_target_d = target_d;
             }
         }
 
         if (best_candidate) {
-            result.candidate_valid = true;
+            const double endpoint_d = best_candidate->d.empty()
+                ? best_target_d : best_candidate->d.back();
+            // 저속 공용 generator는 물리적으로 불가능한 제자리 횡이동을
+            // 피하려고 current d 유지 후보만 만든다. 그 후보를 실제 AVOID
+            // 목표로 오인해 d=0을 COMMIT하지 않도록 목표 도달 여부를 확인한다.
+            const bool reaches_avoid_target =
+                std::fabs(endpoint_d - best_target_d) <=
+                path_cfg_.lateral_target_tolerance + 1e-6;
+            result.candidate_valid = reaches_avoid_target;
             // **요청 목표가 아니라 선택된 후보의 실제 종단 d를 보고한다.**
             //
             // ResolveManeuver의 lateral 격자는 target_d 주변
@@ -765,11 +809,14 @@ bool FrenetPlanner::AvoidProcess(
             // 요청값을 그대로 FrenetFeedback.target_d로 내보내면 FSM이
             // 실제 회피 폭을 0.5 m까지 잘못 알게 된다(계약 9.2절의
             // "지정했다 vs 확보했다"와 같은 원칙).
-            result.selected_target_d = best_candidate->d.empty()
-                ? best_target_d : best_candidate->d.back();
+            result.selected_target_d = endpoint_d;
             result.selected_cost = best_candidate->cost_total;
             result.candidate_path =
                 ConvertToCartesianPath(*best_candidate, ref_);
+            if (!reaches_avoid_target) {
+                result.selected_cost = -1.0;
+                result.candidate_path = CartesianPath{};
+            }
         } else {
             result.blocking_object_id = first_blocking_id;
         }

@@ -83,14 +83,25 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
 
     const bool is_emergency = message.maneuver_type == Command::EMERGENCY_STOP;
     const bool same_id = has_active_command_ && command_id_ == message.command_id;
+    // Behavior는 STOP과 AVOID가 동시에 활성화되면 global-path s를 비교해
+    // 더 앞선 제약만 새 command_id로 보낸다. 그 STOP까지 COMMITTED AVOID
+    // 잠금으로 거부하면 빨간불 정지선을 지나칠 수 있으므로, 횡기동 중에도
+    // 계획 정지는 새 transaction으로 전환할 수 있게 한다. EMERGENCY_STOP의
+    // 무조건 선점과 달리 이 경로는 upstream 거리 중재를 거친 STOP에 한한다.
+    const bool planned_stop_preemption =
+        !same_id && has_active_command_ &&
+        message.maneuver_type == Command::STOP &&
+        maneuver_type_ == Command::AVOID;
 
     // ---- EMERGENCY_STOP은 언제든 preempt한다 (계약 7.3절) ----------------
     // execution_state와 무관하다. COMMITTED된 MERGE 궤적도 폐기한다.
-    if (is_emergency && !same_id) {
+    if ((is_emergency && !same_id) || planned_stop_preemption) {
         BeginTransaction(message);
         acceptance.transaction_started = true;
         acceptance.command_accepted = true;
-        acceptance.detail = "emergency stop preempted the active command";
+        acceptance.detail = is_emergency
+            ? "emergency stop preempted the active command"
+            : "planned stop preempted the committed avoid command";
         // 아래 구현 상태 확인으로 이어진다.
     } else if (!has_active_command_ &&
                message.execution_request == Command::CANCEL) {

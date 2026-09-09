@@ -56,6 +56,7 @@ void FilterByCurvature(std::vector<FrenetPath>& combined,
 // 목표 속도가 곡률 한계 계산에 이미 반영되지 않은 경우를 잡는다).
 void FilterByCartesianLateralAcceleration(std::vector<FrenetPath>& candidates,
                                           const RefLine& ref,
-                                          double max_lateral_accel);
+                                          double max_lateral_accel,
+                                          double utilization = 1.0);
 
 #endif  // FRENET_EVALUATION_KINEMATIC_FILTER_HPP

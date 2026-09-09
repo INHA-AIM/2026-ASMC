@@ -114,6 +114,7 @@ void LoadParams(const std::string& yaml_path,
     loadInto(root, "planner/avoid/shift_time_margin",
              avoid_cfg.shift_time_margin);
     loadInto(root, "planner/avoid/lateral_tolerance", avoid_cfg.lateral_tolerance);
+    loadInto(root, "planner/avoid/rear_overhang",     avoid_cfg.rear_overhang);
     loadInto(root, "planner/avoid/pass_clearance",    avoid_cfg.pass_clearance);
     loadInto(root, "planner/avoid/prefer_right_when_equal", avoid_cfg.prefer_right_when_equal);
     // D6-1. 키가 없으면 기본값(5)이 유지되므로 기존 params.yaml도 그대로 쓴다.

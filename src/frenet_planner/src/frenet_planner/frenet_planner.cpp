@@ -113,7 +113,8 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
                                           double target_d,
                                           CartesianPath& out_path, double duration_s,
                                           double speed_cap) const {
-    constexpr double kRecenterDistM = 15.0;   // [m] d를 0으로 되돌리는 데 쓰는 이동거리
+    const double transition_distance =
+        LowSpeedLateralTransitionDistance(d, target_d);
     const int n = static_cast<int>(duration_s / path_cfg_.dt) + 1;
     out_path.x.resize(n); out_path.y.resize(n); out_path.yaw.resize(n);
     out_path.kappa.resize(n); out_path.v.resize(n); out_path.a.resize(n);
@@ -129,14 +130,15 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
         v_prev = v_i;
 
         const double ds = s_i - s;
-        const double frac = clip(ds / kRecenterDistM, 0.0, 1.0);
+        const double frac = clip(ds / transition_distance, 0.0, 1.0);
         // smoothstep(frac) = 0.5*(1+cos(pi*frac)): frac=0 -> d, frac=1 -> 0, 양끝 기울기 0.
         const double d_error = d - target_d;
         const double d_i      = target_d + d_error * 0.5 * (1.0 + std::cos(M_PI * frac));
-        const double d_prime  = (ds >= kRecenterDistM) ? 0.0
-                               : d_error * (-0.5 * M_PI / kRecenterDistM) * std::sin(M_PI * frac);
-        const double d_pprime = (ds >= kRecenterDistM) ? 0.0
-                               : d_error * (-0.5 * M_PI * M_PI / (kRecenterDistM * kRecenterDistM))
+        const double d_prime  = (ds >= transition_distance) ? 0.0
+                               : d_error * (-0.5 * M_PI / transition_distance) * std::sin(M_PI * frac);
+        const double d_pprime = (ds >= transition_distance) ? 0.0
+                               : d_error * (-0.5 * M_PI * M_PI /
+                                     (transition_distance * transition_distance))
                                      * std::cos(M_PI * frac);
 
         RefPoint rp = Interpolate(ref_, s_i);
@@ -151,6 +153,26 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
         out_path.a[i] = a_i;
     }
     return true;
+}
+
+double FrenetPlanner::LowSpeedLateralTransitionDistance(
+    double from_d, double to_d) const {
+    const double lateral_distance = std::fabs(to_d - from_d);
+    if (!std::isfinite(lateral_distance) || lateral_distance < 1e-3) {
+        return 1.0;
+    }
+
+    // 대칭인 두 원호로 횡이동하는 S-curve는 작은 각도 영역에서
+    // longitudinal distance ~= 2*sqrt(D/kappa)다. 차량 한계값을 그대로
+    // 쓰면 이산 샘플/MPC 오차에 취약하므로 곡률의 80%와 거리 10% 여유를
+    // 사용한다. D=2.75m, max_curvature=0.28이면 약 7.7m다.
+    const double usable_curvature =
+        std::max(1e-3, limits_.max_curvature * 0.8);
+    constexpr double kDistanceMargin = 1.1;
+    return std::max(
+        1.0,
+        kDistanceMargin * 2.0 *
+            std::sqrt(lateral_distance / usable_curvature));
 }
 
 // Cartesian 정지 목표 -> reference line 종방향 좌표.

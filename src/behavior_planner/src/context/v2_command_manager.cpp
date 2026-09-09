@@ -175,9 +175,15 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
     active_transaction_locked_ = true;
   }
   const bool emergency = candidate.maneuver_type == Command::EMERGENCY_STOP;
+  const auto preempt_it = context.extra_flags.find("stop_preempts_avoid");
+  const bool planned_stop_preempts_avoid =
+      candidate.maneuver_type == Command::STOP &&
+      active_command_.maneuver_type == Command::AVOID &&
+      preempt_it != context.extra_flags.end() && preempt_it->second;
 
   if (!has_active_command_ || !sameIdentity(active_command_, candidate)) {
-    if (!active_transaction_locked_ || emergency) {
+    if (!active_transaction_locked_ || emergency ||
+        planned_stop_preempts_avoid) {
       ++next_command_id_;
       if (next_command_id_ == 0) ++next_command_id_;
       candidate.command_id = next_command_id_;

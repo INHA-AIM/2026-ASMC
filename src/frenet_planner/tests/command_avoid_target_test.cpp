@@ -1540,13 +1540,10 @@ int main() {
         // ***** low_speed_context가 상태 판단에 쓰이지 않는다는 증거 *****
         //
         // 이전 이름(low_speed_waiting)이 위험했던 이유가 여기 있다. 저속에서
-        // **후보가 실제로 성공하는** 상황이 존재한다.
-        //
-        // 실측: ego 0.3 m/s + 장애물 60 m 전방 -> candidate_valid=true 이면서
-        // low_speed_context=true. 이 값을 "waiting"으로 읽어 상태를 정하면
-        // 유효한 후보를 두고 WAITING을 보고하게 된다.
-        //
-        // 장애물이 25 m일 때는 후보가 막히므로 이 조합이 드러나지 않았다.
+        // 공용 저속 generator는 요청한 lateral target 대신 현재 d 유지 경로를
+        // 만들 수 있다. 이를 유효 AVOID로 인정하면 d=0 부근을 COMMIT하고
+        // 장애물 앞에서 멈춘다. 충분히 먼 장애물이어도 실제 목표 d에 닿지
+        // 못한 후보는 WAITING으로 두고 maintenance crawl로 속도를 회복한다.
         FrenetPlanner planner;
         planner.Init(config);
         const std::vector<TrackedObject> far_objects{
@@ -1561,13 +1558,12 @@ int main() {
         Expect(ok, "low-speed valid: PREPARE succeeds");
         Expect(result.low_speed_context,
                "low-speed valid: the low-speed context is set");
-        Expect(result.candidate_valid,
-               "low-speed valid: a candidate IS found at 0.3 m/s with a far "
-               "obstacle");
-        // 이 두 값이 동시에 true인 것이 정상이다. low_speed_context를 후보
-        // 차단이나 상태 판단에 쓰면 이 케이스가 깨진다.
-        Expect(result.low_speed_context && result.candidate_valid,
-               "low-speed valid: low speed and a valid candidate coexist");
+        Expect(!result.candidate_valid,
+               "low-speed valid: a current-d fallback is not an AVOID "
+               "candidate");
+        Expect(result.low_speed_context && !result.candidate_valid,
+               "low-speed valid: low speed waits for a reachable lateral "
+               "candidate");
         Expect(result.selected_target_d != 0.0,
                "low-speed valid: a lateral target was selected");
         Expect(result.generated_candidate_count > 0,
@@ -2131,9 +2127,9 @@ int main() {
         const PlannerCommand pose_cmd = MakeAvoidCommandWithTargetD(
             21, kEgoS + 30.0, 2.8, LateralDirection::LEFT);
 
-        // (a) 요청값과 실제 선택이 다르다는 것을 먼저 확인한다. 이것이
-        //     없으면 아래 exact-lock 검사가 무의미하다(요청과 lock이 같으면
-        //     tolerance를 무시해도 통과한다).
+        // (a) PREPARE에서 실제 유효 후보의 종단 d를 확보한다. 횡가속도
+        //     한계를 온전히 사용하면 raw 요청 d 자체가 valid일 수도 있으므로
+        //     인위적인 request/selected 차이를 테스트 전제로 두지 않는다.
         FrenetPlanner uncommitted;
         uncommitted.Init(config);
         CartesianPath m_unc;
@@ -2141,9 +2137,6 @@ int main() {
         uncommitted.PrepareAvoid(ego, objects, pose_cmd, m_unc, r_unc);
         Expect(r_unc.candidate_valid,
                "exact lock: the uncommitted cycle finds a candidate");
-        Expect(std::fabs(r_unc.selected_target_d - 2.8) > 0.2,
-               "exact lock: the selected candidate drifts off the request "
-               "(so request != locked value)");
 
         // (b) COMMIT하면 이후 사이클이 잠긴 목표를 정확히 겨냥한다.
         FrenetPlanner committed;
@@ -2156,8 +2149,6 @@ int main() {
         const double locked = committed.avoid_locked_target_d();
         Expect(std::fabs(locked - r_pre.selected_target_d) < 1e-9,
                "exact lock: the locked value is the selected candidate d");
-        Expect(std::fabs(locked - 2.8) > 0.2,
-               "exact lock: the locked value differs from the raw request");
 
         bool all_exact = true;
         for (int cycle = 0; cycle < 5; ++cycle) {
@@ -2447,6 +2438,11 @@ int main() {
                    returning.maneuver_progress >= 0.75 &&
                    std::string(planner.avoid_phase_name()) == "RETURN",
                "lifecycle: PASS plus longitudinal clearance starts RETURN");
+        // RETURN 전용 횡가속도 한계를 온전히 쓰면 이 상태에서는 3.0초가
+        // 최초 valid다(dt=0.1 -> 31 samples). 최단 후보를 찾은 뒤 최종 저장
+        // 단계에서 공용 cost selector로 다시 덮어쓰는 회귀를 잡는다.
+        Expect(return_path.x.size() == 31,
+               "lifecycle: RETURN publishes the shortest valid horizon");
         Expect(planner.avoid_committed() &&
                    planner.active_avoid_target_id() == 21 &&
                    std::fabs(planner.avoid_locked_target_d() - locked) < 1e-9 &&
@@ -2456,6 +2452,22 @@ int main() {
                                    planner.avoid_target_s() + 25.0)) <
                    1e-6,
                "lifecycle: RETURN path targets the global path");
+
+        // RETURN은 경로나 종점을 고정하지 않고 현재 상태에서 매 cycle
+        // 유효한 최단시간 후보를 다시 선택한다.
+        const CartesianState return_progress = MakeEgoAt(
+            waypoints, planner.avoid_target_s() + 25.0,
+            locked * 0.6, kEgoSpeed);
+        CartesianPath shorter_return_path;
+        Prepare shorter_return;
+        const bool shorter_ok = planner.PlanCommittedAvoid(
+            return_progress, {}, command, shorter_return_path,
+            shorter_return);
+        Expect(shorter_ok && !shorter_return.maneuver_completed &&
+                   std::fabs(EndpointD(planner, shorter_return_path,
+                                       planner.avoid_target_s() + 30.0)) <
+                       1e-6,
+               "lifecycle: RETURN replans a valid path to the global path");
 
         const CartesianState centered = MakeEgoAt(
             waypoints, planner.avoid_target_s() + 25.0, 0.0, kEgoSpeed);
@@ -2578,7 +2590,9 @@ int main() {
 
         CartesianPath pass_path;
         Prepare pass;
-        const double shift_before_seam_s = track_length - 10.0;
+        // 동적 시작 거리는 후륜축->앞 범퍼 길이를 포함한다. seam 직전에도
+        // 그 거리 안으로 충분히 진입시켜 SHIFT 전환과 wrap 처리를 함께 본다.
+        const double shift_before_seam_s = track_length - 5.0;
         const bool pass_ok = commit_ok && planner.PlanCommittedAvoid(
             MakeEgoAt(waypoints, shift_before_seam_s, 0.0, kEgoSpeed), {},
             command, pass_path, pass);

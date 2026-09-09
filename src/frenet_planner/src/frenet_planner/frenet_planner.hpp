@@ -1032,6 +1032,10 @@ private:
     static constexpr double kCrawlAccel = 0.5;       // [m/s^2] 완만한 가속
     static constexpr double kMinCreepSpeed = 0.3;    // [m/s] 최소 전진속도 (0 근처에 갇히지 않도록)
     static constexpr double kCrawlSpeedCap = 2.0;    // [m/s] 이 fallback 안에서의 속도 상한
+    // max_curvature로 만들 수 있는 대칭 S-curve의 종방향 길이를 보수적으로
+    // 근사한다. 저속 fallback과 AVOID SHIFT 시작거리가 같은 값을 사용한다.
+    double LowSpeedLateralTransitionDistance(double from_d,
+                                              double to_d) const;
 
     RefLine ref_;
     PathGeneratorConfig path_cfg_{};

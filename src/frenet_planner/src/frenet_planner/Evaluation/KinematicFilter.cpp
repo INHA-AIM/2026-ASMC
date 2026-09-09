@@ -74,9 +74,10 @@ void FilterByCurvature(std::vector<FrenetPath>& combined,
 // 한계를 만족하는 경로만 남긴다.
 void FilterByCartesianLateralAcceleration(std::vector<FrenetPath>& candidates,
                                           const RefLine& ref,
-                                          double max_lateral_accel) {
-    constexpr double kLateralAccelMargin = 0.8;
-    const double limit = max_lateral_accel * kLateralAccelMargin;
+                                          double max_lateral_accel,
+                                          double utilization) {
+    const double limit = max_lateral_accel *
+        std::max(0.0, std::min(utilization, 1.0));
     for (auto& path : candidates) {
         if (!path.valid) continue;
         const GeometricPath geo = ComputeGeometricPath(path.s, path.d, ref);
