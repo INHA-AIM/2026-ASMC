@@ -136,6 +136,22 @@ void LogCurveTrackingDiagnostics(const MPCState& ego, const ReferencePath& refer
         steer_near_limit ? 1 : 0);
 }
 
+// curvature-aware warm-start 진단 전용 - MpcController::Output이 이미 계산해
+// 돌려준 값을 그대로 출력만 한다(rebase 로직을 여기서 재현하지 않는다).
+// used_curvature_rebase=false면 이번 cycle은 rebase 대신 기존 폴백
+// 경로(첫 solve/fail-safe 직후 등)를 탔다는 뜻이고, 그 경우 나머지 값은
+// 의미가 없다 - 로그에 그 사실을 그대로 남긴다.
+void LogWarmStartDiagnostics(const MpcController::Output& output) {
+    ROS_INFO_THROTTLE(
+        0.1,
+        "[MPC-WARM] used_rebase=%d warm_raw0=%.3f prev_ff_shift0=%.3f "
+        "warm_residual0=%.3f current_ff0=%.3f warm_rebased0=%.3f "
+        "warm_projected0=%.3f",
+        output.used_curvature_rebase ? 1 : 0, output.warm_raw0,
+        output.prev_ff_shift0, output.warm_residual0, output.current_ff0,
+        output.warm_rebased0, output.warm_projected0);
+}
+
 }  // namespace
 
 MpcControllerNode::MpcControllerNode(ros::NodeHandle nh,
@@ -316,6 +332,7 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
     LogCurveTrackingDiagnostics(current_state, reference, output.control,
                                latest_vehicle_state_.yaw_rate,
                                controller_.params());
+    LogWarmStartDiagnostics(output);
 
     control_pub_.publish(ToRosControlCommand(output.control,
                                              controller_.params()));
