@@ -13,3 +13,15 @@ timeouts:
 # Must match morai_udp_bridge max_steer_deg and the physical vehicle limit.
 vehicle:
   max_steer_deg: 36.25
+
+# MPC-D1: temporary development instrumentation for the curve-tracking
+# stability investigation (diagnostic-only, does not affect control).
+# detailed_tracking=false keeps normal operation exactly as before (only
+# the existing throttled [MPC-TRACK]/[MPC-WARM] console logs run).
+# csv_logging=true additionally records every control cycle (~20Hz) to
+# csv_path for offline analysis. csv_path may be left empty to fall back
+# to a package-relative default (see mpc_controller_node.cpp).
+debug:
+  detailed_tracking: false
+  csv_logging: false
+  csv_path: ""

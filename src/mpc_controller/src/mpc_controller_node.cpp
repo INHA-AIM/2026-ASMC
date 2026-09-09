@@ -30,19 +30,6 @@ MPCParams LoadParamsForNode(ros::NodeHandle& private_nh) {
     return params;
 }
 
-// reference[round(time/params.dt)]의 곡률(clamp된 유효 인덱스)을 읽는다.
-// horizon 밖 시간은 마지막 유효 인덱스로 클램핑한다 - reference.size()는
-// 항상 horizon과 같다(ToReferencePath가 steps=horizon으로 채운다).
-std::size_t ReferenceIndexAtTime(double time, const MPCParams& params,
-                                 std::size_t ref_size) {
-    if (ref_size == 0) return 0;
-    const double raw_index = (params.dt > 0.0) ? std::round(time / params.dt) : 0.0;
-    const long clamped = std::max<long>(
-        0, std::min<long>(static_cast<long>(ref_size) - 1,
-                          static_cast<long>(raw_index)));
-    return static_cast<std::size_t>(clamped);
-}
-
 // curve-tracking 진단 전용 - solver 입력/warm-start/reference/constraints/
 // 발행되는 CtrlCmd 중 어느 것도 바꾸지 않는다. output.control은 이미 결정된
 // 값을 읽기만 한다.
@@ -204,6 +191,41 @@ MpcControllerNode::MpcControllerNode(ros::NodeHandle nh,
     ROS_INFO("MPC ROS runtime @ %.1f Hz: %s -> %s, stale timeout %.3f s",
              frequency, trajectory_topic.c_str(), control_topic.c_str(),
              trajectory_timeout_);
+
+    // MPC-D1: 개발용 상세 추종 진단(기본 꺼짐, 제어 로직에 영향 없음).
+    private_nh_.param("debug/detailed_tracking", detailed_tracking_,
+                      detailed_tracking_);
+    private_nh_.param("debug/csv_logging", csv_logging_, csv_logging_);
+    if (csv_logging_) {
+        std::string csv_path;
+        private_nh_.param("debug/csv_path", csv_path, csv_path);
+        if (csv_path.empty()) {
+            // 기본 위치: roslaunch 프로세스의 현재 작업 디렉터리(보통
+            // ~/.ros/) 아래 상대 경로. 개발자별 절대 경로를 하드코딩하지
+            // 않고, 여러 번 실행해도 덮어쓰지 않도록 시작 시각을 파일명에
+            // 넣는다. 이 디렉터리가 없으면 fopen 자체가 실패하므로 아래
+            // csv_writer_.Open 실패 시 경고만 남기고 진단 없이 계속
+            // 동작한다(§12: 컨트롤러를 막지 않는다).
+            csv_path = "mpc_debug_logs/tracking_" +
+                std::to_string(static_cast<long long>(ros::Time::now().toSec())) +
+                ".csv";
+        }
+        if (!csv_writer_.Open(csv_path)) {
+            ROS_WARN("MPC-D1: failed to open CSV diagnostic log '%s'; "
+                    "continuing without CSV logging (control unaffected)",
+                    csv_path.c_str());
+            csv_logging_ = false;
+        } else {
+            ROS_INFO("MPC-D1: writing detailed tracking CSV to '%s'",
+                    csv_path.c_str());
+        }
+    }
+    if (detailed_tracking_ || csv_logging_) {
+        ROS_WARN("MPC-D1 detailed tracking diagnostics ENABLED "
+                "(detailed_tracking=%d csv_logging=%d) - development "
+                "instrumentation only, does not change control behavior",
+                detailed_tracking_ ? 1 : 0, csv_logging_ ? 1 : 0);
+    }
 }
 
 void MpcControllerNode::behaviorCommandCallback(
@@ -333,6 +355,56 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
                                latest_vehicle_state_.yaw_rate,
                                controller_.params());
     LogWarmStartDiagnostics(output);
+
+    // MPC-D1: 개발용 상세 추종 진단(디버그 전용). 여기서 만드는
+    // TrackingDiagnosticSample은 순전히 이미 계산된 값(output/reference/
+    // current_state/latest_vehicle_state_)을 정리해 읽기만 한다 - solver
+    // 입력/warm-start/reference/constraints/발행되는 CtrlCmd 어느 것도
+    // 바꾸지 않는다. detailed_tracking_/csv_logging_이 모두 꺼져 있으면
+    // (기본값) 이 블록 전체를 건너뛰어 20Hz 루프에 추가 비용이 없다.
+    if (detailed_tracking_ || csv_logging_) {
+        TrackingDiagnosticInputs diag_in;
+        diag_in.ros_time_now_s = ros::Time::now().toSec();
+        diag_in.vehicle_state_stamp_s =
+            latest_vehicle_state_.header.stamp.toSec();
+        diag_in.trajectory_stamp_s = latest_trajectory_.header.stamp.toSec();
+        diag_in.trajectory_vehicle_time_delta_s = start_time_offset;
+        diag_in.ego = current_state;
+        diag_in.measured_yaw_rate = latest_vehicle_state_.yaw_rate;
+        diag_in.measured_accel = latest_vehicle_state_.acceleration;
+        diag_in.reference = reference;
+        diag_in.published_control = output.control;
+        diag_in.mpc_output = output;
+        diag_in.params = controller_.params();
+
+        const TrackingDiagnosticSample sample =
+            BuildTrackingDiagnosticSample(diag_in);
+
+        if (detailed_tracking_) {
+            ROS_INFO_THROTTLE(
+                0.1,
+                "[MPC-D1] veh_age=%.3f traj_age=%.3f traj_veh_dt=%.3f "
+                "k02=%.4f k05=%.4f ff02=%.3f ff05=%.3f "
+                "warm_res0=%.3f warm_rebased0=%.3f warm_proj0=%.3f "
+                "opt_proj_delta0=%.3f pub_steer=%.3f "
+                "d_delta=%.3f max_d_delta=%.3f rate_limit_active=%d "
+                "near_angle_limit=%d yaw_model=%.3f yaw_meas=%.3f",
+                sample.vehicle_state_age_s, sample.trajectory_age_s,
+                sample.trajectory_vehicle_time_delta_s,
+                sample.kappa_ref_02s, sample.kappa_ref_05s,
+                sample.ff_02s, sample.ff_05s,
+                sample.warm_residual0, sample.warm_rebased_delta0,
+                sample.warm_projected_delta0,
+                sample.optimized_projected_delta0, sample.published_steer_cmd,
+                sample.delta0_minus_prev_delta, sample.max_allowed_delta_change,
+                sample.steer_rate_limit_active ? 1 : 0,
+                sample.steer_near_angle_limit ? 1 : 0,
+                sample.yaw_rate_cmd_model, sample.yaw_rate_meas_echo);
+        }
+        if (csv_logging_) {
+            csv_writer_.WriteRow(sample);
+        }
+    }
 
     control_pub_.publish(ToRosControlCommand(output.control,
                                              controller_.params()));

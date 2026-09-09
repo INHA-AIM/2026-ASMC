@@ -88,6 +88,14 @@ MpcController::Output MpcController::ControlProcess(
             std::isfinite(output.warm_raw0) && std::isfinite(output.prev_ff_shift0);
     }
 
+    // MPC-D1 진단: solveMPC가 이번 cycle의 clipSteeringRate 기준(u_prev)으로
+    // 실제 쓸 값을 그대로 스냅샷한다 - stuck-recovery reset(위 68행)이 이번
+    // cycle에 발생했다면 그 이후 값(reset된 0)을 반영해야 하므로 반드시
+    // solveMPC 호출 직전에 찍는다. last_control_은 private이라 node가 직접
+    // 읽을 수 없으므로 여기서 한 번만 복사해 둔다 - 새 getter를 추가하지
+    // 않는다.
+    output.prev_applied_delta = last_control_.delta;
+
     const MPCResult result = solveMPC(
         ego_state, reference, last_control_, warm_start_,
         previous_steering_feedforward_, params_);

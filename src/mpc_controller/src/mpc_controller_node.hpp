@@ -7,6 +7,7 @@
 #include <ros/ros.h>
 
 #include "control/mpc_controller.hpp"
+#include "diagnostics/tracking_diagnostics.hpp"
 
 namespace mpc_controller_ros {
 
@@ -44,6 +45,15 @@ class MpcControllerNode {
 
     MpcController controller_;
     bool emergency_stop_active_ = false;
+
+    // MPC-D1: 개발용 상세 추종 진단(디버그 전용, 기본 false). 제어 로직에는
+    // 영향을 주지 않는다 - detailed_tracking_이 꺼져 있으면 이번 cycle의
+    // 진단 계산 자체를 건너뛴다(20Hz 루프에 불필요한 연산을 남기지 않기
+    // 위함). csv_logging_이 켜져 있으면 detailed_tracking_ 계산 결과를 매
+    // cycle csv_writer_에 append한다.
+    bool detailed_tracking_ = false;
+    bool csv_logging_ = false;
+    TrackingDiagnosticCsvWriter csv_writer_;
 };
 
 }  // namespace mpc_controller_ros
