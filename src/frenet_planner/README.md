@@ -68,6 +68,18 @@ fail-safe 표는 `../interfaces/README.md` 9절, v2 세부 계약은
 `frenet_planner.hpp/.cpp`가 이 폴더들을 오케스트레이션하는 `FrenetPlanner`
 클래스다.
 
+### Reference topology
+
+`RefLine`은 자신이 열린 경로인지 닫힌 트랙(폐루프)인지를 `closed_loop`/
+`length` 필드로 명시한다 - 대회 global path는 첫점/끝점이 물리적으로 같은
+폐루프다. `BuildRefLine`이 이 topology를 원본 waypoint의 첫점/끝점 거리로
+판정하고, smoothing/균일 재샘플링/theta·kappa·d_kappa 미분을 모두 그
+topology에 맞게(폐루프면 순환 이웃, 열린 경로면 기존 편측 처리) 수행한다.
+`Interpolate`/`FindClosestS`(둘 다 `Reference.cpp`)와 `LookaheadTargetSpeed`
+(`Speed/CurveSpeed.cpp`)는 이 `ref.closed_loop`/`ref.length`만 보고 wrap
+여부를 정한다 - topology 판정을 여러 곳에서 각자 다시 하지 않는다("one
+policy, one authoritative owner").
+
 ## Runtime Boundary Files
 
 `src/frenet_planner/src/`(ROS 경계, Core를 호출):
@@ -101,7 +113,7 @@ bash scripts/build_planning_control.sh
 # 또는 catkin 워크스페이스에서 이 패키지만
 catkin_make --pkg frenet_planner
 
-# 등록된 회귀 테스트 전체 실행(현재 21개)
+# 등록된 회귀 테스트 전체 실행(현재 22개)
 cd <catkin build dir>/frenet_planner   # 또는 워크스페이스 build/frenet_planner
 ctest --output-on-failure
 ```

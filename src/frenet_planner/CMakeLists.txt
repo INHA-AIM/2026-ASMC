@@ -399,6 +399,19 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME keep_candidate_target_test COMMAND keep_candidate_target_test)
 
+  # fix/yuntae-planner Commit F: 폐루프 reference topology(전처리/조회) 연속성 회귀.
+  add_executable(closed_loop_reference_test
+    tests/closed_loop_reference_test.cpp
+  )
+  target_compile_definitions(closed_loop_reference_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(closed_loop_reference_test
+    frenet_planner_core
+  )
+  add_test(NAME closed_loop_reference_test COMMAND closed_loop_reference_test)
+
   # MERGE gap/TTC 순수 계산 회귀. legacy_behavior_regression_test 삭제로
   # 없어진 MERGE 안전망을 대체한다 - behavior auto-selection이 아니라
   # FindRoundaboutGap/FindHighwayMergeGap 자체의 gap/TTC 판단만 검증한다.
