@@ -299,7 +299,7 @@ bool FrenetPlanner::LaneChangeProcess(
 
     // LANE_CHANGE는 PREPARE 단계부터 항상 정확한 목표를 겨냥한다 - AVOID와
     // 달리 좌/우 후보 경쟁이 없고(mode가 이미 방향을 정한다), 목표 자체가
-    // Behavor/MGeo가 이미 확정한 인접 차로 중심이다(target_pose_projection_d).
+    // Behavior/MGeo가 이미 확정한 인접 차로 중심이다(target_pose_projection_d).
     // 전역 lateral_target_tolerance(기본 0.5m)를 그대로 두면 PREPARE candidate가
     // target_d 주변 ±tolerance 범위에서 cost로 하나를 고르게 되어, "어디로 갈지"
     // 를 Frenet이 다시 정하는 셈이 된다(Behavior가 이미 정한 값을 core가
@@ -321,29 +321,36 @@ bool FrenetPlanner::LaneChangeProcess(
     FilterByCartesianLateralAcceleration(generated, ref_,
                                          limits_.max_lateral_accel);
 
+    // 저속(ego.v < kLowSpeedFallbackV)에서는 GenerateLateralCandidates가
+    // lateral_d1 격자 자체를 무시하고 현재 d/차선 중앙 후보만 만든다(수학적
+    // 특이점 회피, 헤더 주석 참고) - 위에서 겨냥한 target_d와 무관한 후보가
+    // 나올 수 있다는 뜻이다. LANE_CHANGE candidate_valid는 "요청한 target_d에
+    // 실제로 도달하는 후보가 있다"를 뜻해야 하므로, 종단 d가 target_d와
+    // 정확히 일치하는지가 유효성의 일부다 - 카운팅(valid_candidate_count)과
+    // 최종 선택(best_candidate 채택)이 서로 다른 기준을 쓰면 "valid=0인데
+    // candidate_valid=true" 같은 모순된 진단이 나올 수 있으므로 같은 술어를
+    // 공유한다.
+    constexpr double kExactTargetEpsilon = 1e-6;
+    const auto is_exact_lane_change_candidate = [target_d](
+        const FrenetPath& path) {
+        return path.valid && !path.d.empty() &&
+               std::fabs(path.d.back() - target_d) <= kExactTargetEpsilon;
+    };
+
     result.generated_candidate_count = generated.size();
     int first_blocking_id = -1;
     for (const auto& path : generated) {
-        if (path.valid) {
+        if (is_exact_lane_change_candidate(path)) {
             ++result.valid_candidate_count;
-        } else if (first_blocking_id < 0 &&
+        } else if (!path.valid && first_blocking_id < 0 &&
                    path.rejection_reason == RejectionReason::COLLISION &&
                    path.collision_object_id >= 0) {
             first_blocking_id = path.collision_object_id;
         }
     }
 
-    // 저속(ego.v < kLowSpeedFallbackV)에서는 GenerateLateralCandidates가
-    // lateral_d1 격자 자체를 무시하고 현재 d/차선 중앙 후보만 만든다(수학적
-    // 특이점 회피, 헤더 주석 참고) - 위에서 겨냥한 target_d와 무관한 후보가
-    // 나올 수 있다는 뜻이다. candidate_valid=true는 "요청한 target_d에 실제로
-    // 도달하는 후보가 있다"를 뜻해야 하므로(§5), 종단 d가 target_d와 정확히
-    // 일치하지 않는 후보는 LC candidate로 인정하지 않는다 - PREPARE는
-    // WAITING으로 내려가고 현재 차선 유지 궤적은 그대로 안전하게 published된다.
-    constexpr double kExactTargetEpsilon = 1e-6;
     const FrenetPath* best_candidate = SelectBestPath(generated);
-    if (best_candidate && !best_candidate->d.empty() &&
-        std::fabs(best_candidate->d.back() - target_d) > kExactTargetEpsilon) {
+    if (best_candidate && !is_exact_lane_change_candidate(*best_candidate)) {
         best_candidate = nullptr;
     }
     if (best_candidate) {

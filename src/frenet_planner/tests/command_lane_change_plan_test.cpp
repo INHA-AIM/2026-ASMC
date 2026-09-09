@@ -247,7 +247,7 @@ int main() {
     // target_d 일치 검증에 쓰는 허용오차. 종단 d는 quintic 경계조건 자체이므로
     // (MakeQuintic(..., d1=target_d, ..., T)) 부동소수점 오차 이상으로 벌어질
     // 이유가 없다 - 느슨한 ±0.5m 허용은 PREPARE가 target_d ± tolerance 범위에서
-    // 값을 골라도 테스트를 통과시켜, 정확히 이 회귀(§2)를 놓친다.
+    // 값을 골라도 테스트를 통과시켜, 정확히 이 exact-target 회귀를 놓친다.
     constexpr double kExactTargetEpsilon = 1e-6;
 
     // ===== [A] AUTHORITATIVE TARGET GEOMETRY ============================
@@ -395,9 +395,10 @@ int main() {
 
     // 10. 여러 time horizon(T) 후보가 평가돼도 모든 유효 LC candidate의 종단
     //     target d는 같은 authoritative target_d다 - Frenet은 duration만
-    //     최적화하고 lateral 목적지 자체를 흔들지 않는다는 계약(§4)의 직접
-    //     검증이다. path_cfg_.time_horizon이 여러 T를 만든다는 전제이므로,
-    //     생성된 후보가 1개뿐이면(단일 T 설정) 이 확인은 자명하게 통과한다.
+    //     최적화하고 lateral 목적지 자체를 흔들지 않는다는 exact-target
+    //     ownership contract의 직접 검증이다. path_cfg_.time_horizon이 여러
+    //     T를 만든다는 전제이므로, 생성된 후보가 1개뿐이면(단일 T 설정) 이
+    //     확인은 자명하게 통과한다.
     {
         FrenetPlanner planner;
         planner.Init(config);
@@ -462,8 +463,12 @@ int main() {
                "12b: low-speed PREPARE does not report candidate_valid=true "
                "from a centerline/current-lane candidate that never reaches "
                "target_d");
+        Expect(result.valid_candidate_count == 0,
+               "12c: valid_candidate_count only counts candidates that "
+               "exactly reach target_d, not generic-valid current-lane/"
+               "centerline candidates that never reach it");
         Expect(maintenance.x.size() >= 2,
-               "12c: maintenance behavior remains safe (non-empty rolling "
+               "12d: maintenance behavior remains safe (non-empty rolling "
                "path) even while the LC candidate is rejected");
     }
 
