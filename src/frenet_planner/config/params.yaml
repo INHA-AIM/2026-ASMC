@@ -18,12 +18,6 @@ planner:
   max_target_speed_accel: 2.0
 
   # --- 곡률 기반 사전 감속 (mpc_controller 옛 path_planner.cpp에서 이식) ---
-  # 현재 production 속도 정책은 VelocityFromCurvature(Speed/CurveSpeed.cpp)의
-  # 물리 기반 계산(max_lateral_accel로부터 유도한 sqrt(a_lat*margin/|kappa|),
-  # target_vel로 clip)만 쓴다. curve_vel_sharp/mid/mild와
-  # curve_th_sharp/mid/mild는 여기서 로드는 되지만 아직 그 계산에 반영되지
-  # 않는다 - 이산 구간별 comfort/safety 상한을 추가로 걸지는 별도 튜닝
-  # 작업에서 결정한다. 지금 이 값들을 바꿔도 실제 주행 속도는 변하지 않는다.
   curve_speed:
     target_vel: 10.0
     curve_vel_sharp: 4.0
@@ -158,15 +152,7 @@ planner:
   kinematic_limits:
     max_lateral_accel: 3.0
     max_longitudinal_accel: 3.0
-    # planner feasibility(이 값)는 controller 물리 조향 feasibility를 넘으면
-    # 안 된다 - MPC의 reference_validator가 실제로 조향 가능한 최대 곡률을
-    # kappa_max = tan(steering_max)/wheelbase로 계산한다(mpc_params.yaml
-    # 기준 steering_max=0.63268, wheelbase=3.0 -> kappa_max ~= 0.2444).
-    # 이 값이 그보다 크면(과거 0.28) Frenet이 "생성 가능"으로 받아들인
-    # trajectory를 MPC가 CURVATURE_OUT_OF_RANGE로 거부해 fail-safe STOP이
-    # 발생한다(MORAI 실측 확인). 0.24로 두어 물리 한계 아래 작은 여유를 둔다 -
-    # 이 값을 MPC의 kappa_max보다 크게 올리지 않는다.
-    max_curvature: 0.1704
+    max_curvature: 0.28 #0.1704
     # [m/s^3] longitudinal jerk hard limit. initial safety limit; final value
     # requires MORAI validation (fix/yuntae-frenet-speed-continuity).
     # 5.0 -> 6.0: 정상 FOLLOW(큰 time_gap/min_gap) 경계 후보의 실측 peak

@@ -43,17 +43,6 @@ struct PlannerDebugStats {
     size_t longitudinal_total = 0, longitudinal_valid = 0;
     size_t combined_total = 0, combined_valid_after_curvature = 0;
     size_t combined_valid_after_collision = 0;
-
-    // external KEEP 전용(ResolveManeuver 밖, Maneuver/Keep.cpp에서 채움):
-    // ResolveManeuver가 반환한 후보(이미 기하 곡률+충돌 필터 통과)에
-    // FilterByCartesianLateralAcceleration을 추가로 적용한 결과. 이 필터가
-    // 없으면 기하 곡률은 통과하지만 해당 속도에서 v^2*|kappa|가
-    // max_lateral_accel을 넘는 후보가 그대로 선택될 수 있다(§5 근거).
-    size_t normal_keep_valid_before_lateral_accel = 0;
-    size_t normal_keep_valid_after_lateral_accel = 0;
-    // 위 필터로 정상 KEEP 후보가 0개가 됐고(진짜 starvation), 그래서
-    // continuity fallback을 생성했는지 여부.
-    bool continuity_fallback_used = false;
 };
 
 // obstacles/vehicle_shape/collision_cfg: Sec.VI 충돌 필터(FilterByCollision,

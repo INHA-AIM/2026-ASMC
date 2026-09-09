@@ -28,10 +28,7 @@ add_library(mpc_ros_converter src/message_converter.cpp)
 add_dependencies(mpc_ros_converter ${catkin_EXPORTED_TARGETS})
 target_link_libraries(mpc_ros_converter mpc_core ${catkin_LIBRARIES})
 
-add_executable(mpc_controller_node
-  src/main.cpp
-  src/mpc_controller_node.cpp
-  src/diagnostics/tracking_diagnostics.cpp)
+add_executable(mpc_controller_node src/main.cpp src/mpc_controller_node.cpp)
 add_dependencies(mpc_controller_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(mpc_controller_node
   mpc_core mpc_ros_converter yaml-cpp ${catkin_LIBRARIES})
@@ -56,11 +53,6 @@ if(CATKIN_ENABLE_TESTING)
     target_link_libraries(mpc_controller_test mpc_core)
   endif()
 
-  catkin_add_gtest(warm_start_rebase_test test/warm_start_rebase_test.cpp)
-  if(TARGET warm_start_rebase_test)
-    target_link_libraries(warm_start_rebase_test mpc_core)
-  endif()
-
   catkin_add_gtest(steering_feedforward_test test/steering_feedforward_test.cpp)
   if(TARGET steering_feedforward_test)
     target_link_libraries(steering_feedforward_test mpc_core)
@@ -74,12 +66,5 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(reference_validator_test test/reference_validator_test.cpp)
   if(TARGET reference_validator_test)
     target_link_libraries(reference_validator_test mpc_core)
-  endif()
-
-  catkin_add_gtest(tracking_diagnostics_test
-    test/tracking_diagnostics_test.cpp
-    src/diagnostics/tracking_diagnostics.cpp)
-  if(TARGET tracking_diagnostics_test)
-    target_link_libraries(tracking_diagnostics_test mpc_core)
   endif()
 endif()

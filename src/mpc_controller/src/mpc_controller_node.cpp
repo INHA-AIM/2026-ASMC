@@ -1,16 +1,12 @@
 #include "mpc_controller_node.hpp"
 
-#include <algorithm>
 #include <cmath>
-#include <cstddef>
 #include <stdexcept>
 #include <string>
 #include <utility>
 
 #include "config/parameter_loader.hpp"
-#include "math/utils.hpp"
 #include "message_converter.hpp"
-#include "model/vehicle_model.hpp"
 #include "reference/path_resampler.hpp"
 #include "reference/reference_validator.hpp"
 #include "reference/trajectory_timing.hpp"
@@ -28,115 +24,6 @@ MPCParams LoadParamsForNode(ros::NodeHandle& private_nh) {
     MPCParams params;
     loadMPCParameters(params_path, params);
     return params;
-}
-
-// curve-tracking 진단 전용 - solver 입력/warm-start/reference/constraints/
-// 발행되는 CtrlCmd 중 어느 것도 바꾸지 않는다. output.control은 이미 결정된
-// 값을 읽기만 한다.
-//
-// traj_e_lat/e_yaw는 reference[0](MPC가 이번 사이클에 실제로 추종하는
-// time-aligned 지점)과 ego의 차이다 - Frenet 차선 중심 d와는 다른 값이다.
-// Frenet은 매 사이클 "현재 ego 위치"에서 새로 replanning하므로, 이미 차선
-// 중심에서 1m 이상 벗어난 ego라도 그 지점에서 시작하는 새 trajectory의
-// reference[0]은 ego와 가깝다 - trajectory-local 추종 오차(traj_e_lat)가
-// 작아도 Frenet 차선 중심 오차(d)는 클 수 있다(MORAI 실측으로 확인). 차선
-// 중심 기준 authoritative 값은 이 로그가 아니라 frenet_planner_node의
-// [FrenetPlanner-STATE] ... d=... 로그다 - 여기서 그 값을 재현하지 않는다
-// (MPC를 Frenet 내부에 결합하지 않기 위해).
-// dsteer_cmd(이전 사이클 대비 steer_cmd 변화량)는 이 로그에 넣지 않는다 -
-// MpcController::last_control_이 private이라 node가 "이전에 실제로 발행한
-// steer_cmd"에 깨끗하게 접근할 방법이 없다. 그것만을 위해 새 getter나 node
-// 레벨의 중복 상태를 추가하지 않는다 - solver API를 건드리지 않는 선에서
-// 얻을 수 있는 정보만 보고한다.
-void LogCurveTrackingDiagnostics(const MPCState& ego, const ReferencePath& reference,
-                                 const MPCControl& control,
-                                 double measured_yaw_rate,
-                                 const MPCParams& params) {
-    if (reference.empty()) return;
-
-    const double ref_x = reference.x_ref[0];
-    const double ref_y = reference.y_ref[0];
-    const double ref_yaw = reference.yaw_ref[0];
-    const double ref_v = reference.v_ref[0];
-
-    // 참조선 진행방향 기준 좌표계로 투영한 lateral error. dx/dy는 global
-    // frame 차이이고, -sin(ref_yaw)*dx + cos(ref_yaw)*dy가 그 지점의 진행
-    // 방향에 수직인(왼쪽 양수) 성분이다 - frenet_planner의 d와 같은 부호
-    // 규약(FrenetConverter.hpp 참고)이지만 위 주석대로 같은 값은 아니다.
-    const double dx = ego.x - ref_x;
-    const double dy = ego.y - ref_y;
-    const double traj_e_lat = -std::sin(ref_yaw) * dx + std::cos(ref_yaw) * dy;
-    const double e_yaw = angleDiff(ego.yaw, ref_yaw);
-
-    // curve-entry lag 진단: reference[0]뿐 아니라 MPC가 실제로 최적화하는
-    // horizon(0~horizon*dt) 안의 미래 곡률/feed-forward도 함께 본다 -
-    // reference[0]은 아직 거의 직선인데 0.5~1.0s 앞은 이미 급커브인 경우를
-    // 놓치지 않기 위함이다.
-    const std::size_t idx0 = ReferenceIndexAtTime(0.0, params, reference.size());
-    const std::size_t idx05 = ReferenceIndexAtTime(0.5, params, reference.size());
-    const std::size_t idx10 = ReferenceIndexAtTime(1.0, params, reference.size());
-    const double k0 = reference.k_ref[idx0];
-    const double k05 = reference.k_ref[idx05];
-    const double k10 = reference.k_ref[idx10];
-
-    // |kappa|가 최대인 지점의 부호 있는 값. std::max_element를 절대값
-    // 비교자로 써서 부호를 그대로 보존한다(단순 std::max는 부호를 잃는다).
-    const auto peak_it = std::max_element(
-        reference.k_ref.begin(), reference.k_ref.end(),
-        [](double a, double b) { return std::fabs(a) < std::fabs(b); });
-    const double kpeak = (peak_it != reference.k_ref.end()) ? *peak_it : 0.0;
-
-    // 이미 존재하는 공식을 그대로 재사용한다 - cost/solver가 warm-start에
-    // 쓰는 것과 같은 SteeringFeedforward(model/vehicle_model.hpp)이며, 여기서
-    // atan(wheelbase*curvature)를 다시 구현하지 않는다.
-    const double ff0 = SteeringFeedforward(k0, params.wheelbase, params.steering_max);
-    const double ff05 = SteeringFeedforward(k05, params.wheelbase, params.steering_max);
-    const double ff10 = SteeringFeedforward(k10, params.wheelbase, params.steering_max);
-    const double ffpeak = SteeringFeedforward(kpeak, params.wheelbase, params.steering_max);
-
-    // 실측 yaw_rate(VehicleState, MORAI/GPS-IMU 소스)와 "실제로 발행한
-    // steer_cmd가 현재 속도에서 정상상태로 만들어낼 모델상 yaw_rate"를
-    // 나란히 둔다 - vehicle_model.cpp의 kinematic bicycle 항
-    // (yaw_dot = vx/L * tan(delta))과 동일한 공식이며 새 헬퍼를 추가하지
-    // 않는다. steer_cmd가 빠르게 반응하는데 실측 yaw_rate가 못 따라오면
-    // MORAI 액추에이션/모델 불일치 쪽을, steer_cmd 자체가 늦으면 MPC
-    // 튜닝/최적화 쪽을 본다.
-    const double yaw_rate_cmd_model =
-        (ego.vx / params.wheelbase) * std::tan(control.delta);
-
-    constexpr double kNearLimitFraction = 0.95;
-    const bool steer_near_limit =
-        std::fabs(control.delta) >= kNearLimitFraction * params.steering_max;
-
-    // curve 진입 전환은 ~0.2s 안에 일어날 수 있어 5Hz로는 중간 사이클을
-    // 놓칠 수 있다 - 이번 튜닝 실험 동안만 10Hz로 올린다(제어 루프 자체는
-    // 20Hz 그대로).
-    ROS_INFO_THROTTLE(
-        0.1,
-        "[MPC-TRACK] traj_e_lat=%.3f e_yaw=%.3f ego_v=%.2f ref_v=%.2f "
-        "k0=%.4f k05=%.4f k10=%.4f kpeak=%.4f "
-        "ff0=%.3f ff05=%.3f ff10=%.3f ffpeak=%.3f "
-        "steer_cmd=%.3f yaw_rate_meas=%.3f yaw_rate_cmd_model=%.3f "
-        "steer_near_limit=%d",
-        traj_e_lat, e_yaw, ego.vx, ref_v, k0, k05, k10, kpeak, ff0, ff05,
-        ff10, ffpeak, control.delta, measured_yaw_rate, yaw_rate_cmd_model,
-        steer_near_limit ? 1 : 0);
-}
-
-// curvature-aware warm-start 진단 전용 - MpcController::Output이 이미 계산해
-// 돌려준 값을 그대로 출력만 한다(rebase 로직을 여기서 재현하지 않는다).
-// used_curvature_rebase=false면 이번 cycle은 rebase 대신 기존 폴백
-// 경로(첫 solve/fail-safe 직후 등)를 탔다는 뜻이고, 그 경우 나머지 값은
-// 의미가 없다 - 로그에 그 사실을 그대로 남긴다.
-void LogWarmStartDiagnostics(const MpcController::Output& output) {
-    ROS_INFO_THROTTLE(
-        0.1,
-        "[MPC-WARM] used_rebase=%d warm_raw0=%.3f prev_ff_shift0=%.3f "
-        "warm_residual0=%.3f current_ff0=%.3f warm_rebased0=%.3f "
-        "warm_projected0=%.3f",
-        output.used_curvature_rebase ? 1 : 0, output.warm_raw0,
-        output.prev_ff_shift0, output.warm_residual0, output.current_ff0,
-        output.warm_rebased0, output.warm_projected0);
 }
 
 }  // namespace
@@ -191,41 +78,6 @@ MpcControllerNode::MpcControllerNode(ros::NodeHandle nh,
     ROS_INFO("MPC ROS runtime @ %.1f Hz: %s -> %s, stale timeout %.3f s",
              frequency, trajectory_topic.c_str(), control_topic.c_str(),
              trajectory_timeout_);
-
-    // MPC-D1: 개발용 상세 추종 진단(기본 꺼짐, 제어 로직에 영향 없음).
-    private_nh_.param("debug/detailed_tracking", detailed_tracking_,
-                      detailed_tracking_);
-    private_nh_.param("debug/csv_logging", csv_logging_, csv_logging_);
-    if (csv_logging_) {
-        std::string csv_path;
-        private_nh_.param("debug/csv_path", csv_path, csv_path);
-        if (csv_path.empty()) {
-            // 기본 위치: roslaunch 프로세스의 현재 작업 디렉터리(보통
-            // ~/.ros/) 아래 상대 경로. 개발자별 절대 경로를 하드코딩하지
-            // 않고, 여러 번 실행해도 덮어쓰지 않도록 시작 시각을 파일명에
-            // 넣는다. 이 디렉터리가 없으면 fopen 자체가 실패하므로 아래
-            // csv_writer_.Open 실패 시 경고만 남기고 진단 없이 계속
-            // 동작한다(§12: 컨트롤러를 막지 않는다).
-            csv_path = "mpc_debug_logs/tracking_" +
-                std::to_string(static_cast<long long>(ros::Time::now().toSec())) +
-                ".csv";
-        }
-        if (!csv_writer_.Open(csv_path)) {
-            ROS_WARN("MPC-D1: failed to open CSV diagnostic log '%s'; "
-                    "continuing without CSV logging (control unaffected)",
-                    csv_path.c_str());
-            csv_logging_ = false;
-        } else {
-            ROS_INFO("MPC-D1: writing detailed tracking CSV to '%s'",
-                    csv_path.c_str());
-        }
-    }
-    if (detailed_tracking_ || csv_logging_) {
-        ROS_WARN("MPC-D1 detailed tracking diagnostics ENABLED "
-                "(detailed_tracking=%d csv_logging=%d) - development "
-                "instrumentation only, does not change control behavior",
-                detailed_tracking_ ? 1 : 0, csv_logging_ ? 1 : 0);
-    }
 }
 
 void MpcControllerNode::behaviorCommandCallback(
@@ -349,61 +201,6 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
         publishStop(output.failure_reason ? output.failure_reason
                                           : "solver failure");
         return;
-    }
-
-    LogCurveTrackingDiagnostics(current_state, reference, output.control,
-                               latest_vehicle_state_.yaw_rate,
-                               controller_.params());
-    LogWarmStartDiagnostics(output);
-
-    // MPC-D1: 개발용 상세 추종 진단(디버그 전용). 여기서 만드는
-    // TrackingDiagnosticSample은 순전히 이미 계산된 값(output/reference/
-    // current_state/latest_vehicle_state_)을 정리해 읽기만 한다 - solver
-    // 입력/warm-start/reference/constraints/발행되는 CtrlCmd 어느 것도
-    // 바꾸지 않는다. detailed_tracking_/csv_logging_이 모두 꺼져 있으면
-    // (기본값) 이 블록 전체를 건너뛰어 20Hz 루프에 추가 비용이 없다.
-    if (detailed_tracking_ || csv_logging_) {
-        TrackingDiagnosticInputs diag_in;
-        diag_in.ros_time_now_s = ros::Time::now().toSec();
-        diag_in.vehicle_state_stamp_s =
-            latest_vehicle_state_.header.stamp.toSec();
-        diag_in.trajectory_stamp_s = latest_trajectory_.header.stamp.toSec();
-        diag_in.trajectory_vehicle_time_delta_s = start_time_offset;
-        diag_in.ego = current_state;
-        diag_in.measured_yaw_rate = latest_vehicle_state_.yaw_rate;
-        diag_in.measured_accel = latest_vehicle_state_.acceleration;
-        diag_in.reference = reference;
-        diag_in.published_control = output.control;
-        diag_in.mpc_output = output;
-        diag_in.params = controller_.params();
-
-        const TrackingDiagnosticSample sample =
-            BuildTrackingDiagnosticSample(diag_in);
-
-        if (detailed_tracking_) {
-            ROS_INFO_THROTTLE(
-                0.1,
-                "[MPC-D1] veh_age=%.3f traj_age=%.3f traj_veh_dt=%.3f "
-                "k02=%.4f k05=%.4f ff02=%.3f ff05=%.3f "
-                "warm_res0=%.3f warm_rebased0=%.3f warm_proj0=%.3f "
-                "opt_proj_delta0=%.3f pub_steer=%.3f "
-                "d_delta=%.3f max_d_delta=%.3f rate_limit_active=%d "
-                "near_angle_limit=%d yaw_model=%.3f yaw_meas=%.3f",
-                sample.vehicle_state_age_s, sample.trajectory_age_s,
-                sample.trajectory_vehicle_time_delta_s,
-                sample.kappa_ref_02s, sample.kappa_ref_05s,
-                sample.ff_02s, sample.ff_05s,
-                sample.warm_residual0, sample.warm_rebased_delta0,
-                sample.warm_projected_delta0,
-                sample.optimized_projected_delta0, sample.published_steer_cmd,
-                sample.delta0_minus_prev_delta, sample.max_allowed_delta_change,
-                sample.steer_rate_limit_active ? 1 : 0,
-                sample.steer_near_angle_limit ? 1 : 0,
-                sample.yaw_rate_cmd_model, sample.yaw_rate_meas_echo);
-        }
-        if (csv_logging_) {
-            csv_writer_.WriteRow(sample);
-        }
     }
 
     control_pub_.publish(ToRosControlCommand(output.control,

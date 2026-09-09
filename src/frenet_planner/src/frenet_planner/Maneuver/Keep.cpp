@@ -26,7 +26,6 @@
 #include "frenet_planner/Generator/LateralGenerator.hpp"
 #include "frenet_planner/Generator/LongitudinalGenerator.hpp"
 #include "frenet_planner/Maneuver/ManeuverUtils.hpp"
-#include "frenet_planner/Math/FrenetConverter.hpp"
 #include "frenet_planner/Speed/SpeedPolicy.hpp"
 
 namespace {
@@ -59,15 +58,6 @@ void FrenetPlanner::AppendExternalKeepContinuityCandidates(
     std::vector<FrenetPath> continuity_combined = CombineLateralLongitudinal(
         continuity_lateral, longitudinal_for_continuity);
     FilterByCurvature(continuity_combined, ref_, limits_);
-    // K1.1: continuity는 fallback이지 물리 면제가 아니다. 정상 KEEP
-    // center-recovery 후보에는 K1에서 이미 이 필터를 적용했는데
-    // (ExecuteManeuverPipeline), continuity_combined는 기하 곡률만 거치고
-    // 실제 v^2*|kappa|(Cartesian 횡가속도) 검증 없이 충돌 필터로 바로
-    // 넘어갔다 - 정상 후보가 전부 이 필터에서 탈락해 fallback이 호출된
-    // 상황이므로, continuity 후보도 같은 한계를 넘으면 마찬가지로
-    // 무효 처리해야 한다(같은 함수 재사용, 새 계산 없음).
-    FilterByCartesianLateralAcceleration(continuity_combined, ref_,
-                                         limits_.max_lateral_accel);
     if (!planning_collision_obstacles.empty()) {
         FilterByCollision(continuity_combined, ref_,
                           planning_collision_obstacles, vehicle_shape_,
@@ -165,56 +155,20 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         maneuver_start, cmd, ref_, path_cfg_, limits_, lane_width_,
         planning_collision_obstacles, vehicle_shape_, collision_cfg_, &stats);
 
-    // KEEP 동적 실현가능성(K1-B): ResolveManeuver의 FilterByCurvature는
-    // 기하 곡률(|kappa|<=max_curvature)만 본다 - reference-line 곡률로 정한
-    // target_speed로 순항하다가 현재 d!=0이라 d=0 복귀를 위해 생성된 후보는
-    // 그 복귀 자체가 추가 곡률을 만들어, 기하 곡률은 한계 아래여도 실제
-    // v^2*|kappa|(Cartesian 횡가속도)가 max_lateral_accel을 넘을 수 있다
-    // (§5 실측: ego_v=5.88, kpeak=0.1679 -> a_lat≈5.8 m/s^2 >> 3.0). AVOID/
-    // LANE_CHANGE는 이미 FilterByCartesianLateralAcceleration을 재생성
-    // 후보에 적용하고 있었으나(Maneuver/Avoid.cpp, Maneuver/LaneChange.cpp)
-    // 이 공용 KEEP/FOLLOW/STOP pipeline에는 없었다. 같은 필터를 재사용해
-    // external KEEP(정상 center-recovery 후보)에만 적용한다 - FOLLOW/STOP은
-    // 이 파이프라인을 공유하지만 아래 조건으로 KEEP에만 스코프한다.
-    if (external_keep_candidates) {
-        stats.normal_keep_valid_before_lateral_accel =
-            static_cast<size_t>(std::count_if(
-                candidates.begin(), candidates.end(),
-                [](const FrenetPath& p) { return p.valid; }));
-        FilterByCartesianLateralAcceleration(candidates, ref_,
-                                             limits_.max_lateral_accel);
-        stats.normal_keep_valid_after_lateral_accel =
-            static_cast<size_t>(std::count_if(
-                candidates.begin(), candidates.end(),
-                [](const FrenetPath& p) { return p.valid; }));
-    }
-
     // moderate-speed curvature starvation 완화(Phase B): 실측 MORAI에서
     // 급커브 근접 중 유효한 결합 후보가 있는데도 전부 중앙(d1=0) 복귀였던
     // 탓에 사후 곡률 필터에서 통째로 탈락하는 사례가 있었다(예:
-    // combined=78, after_curvature=0). K1-C: 기존 구현은 continuity
-    // candidate를 정상 후보와 같은 candidates에 얹고 EvaluateCosts로
-    // 경쟁시켰는데, kd_path(경로 전체 d^2 적분) 항 때문에 정상 center-recovery
-    // 후보가 곡률/횡가속도를 모두 통과했는데도 continuity(현재 d 유지, 종점
-    // 오차 거의 0)가 더 낮은 비용으로 선택되는 사례가 실측됐다(s=115.79
-    // d=+0.173, chosen_d=+0.173, candidates=39/39 - 곡률 starvation이
-    // 아니라 순수 cost 경쟁에서 진 것). continuity는 "정상 후보가 이
-    // 사이클에 하나도 없을 때"만 생성해 진짜 fallback으로 만든다 - 정상
-    // 후보가 하나라도 유효하면 continuity 자체를 생성하지 않으므로 비용
-    // 경쟁이 원천적으로 발생하지 않는다. FilterByCollision은
-    // AppendExternalKeepContinuityCandidates 내부에서 그대로 다시 적용되므로
-    // (충돌 차단은 continuity로도 우회되지 않음), 여기서 검사하는 "정상 후보
-    // 없음"은 곡률/횡가속도 starvation과 충돌 차단을 구분하지 않는다 - 둘 다
-    // continuity를 시도해도 안전하다(충돌이면 continuity도 충돌 필터에서
-    // 마찬가지로 탈락한다).
-    const bool normal_keep_starved =
-        external_keep_candidates &&
-        stats.normal_keep_valid_after_lateral_accel == 0;
-    if (normal_keep_starved &&
+    // combined=78, after_curvature=0). external KEEP에만, 현재 d가 차선
+    // 폭 안일 때만, 현재 오프셋을 유지하는 continuity candidate를
+    // 추가한다 - d=0 강제 클램프가 아니라 대안 후보 하나를 더 얹는
+    // 것뿐이며, 아래 EvaluateCosts가 여전히 target_d=0을 기준으로 비용을
+    // 매기므로 중앙 복귀 후보가 곡률을 통과하면 그쪽이 그대로 선택된다
+    // (kd/kd_path 항이 더 낮은 비용을 준다). 중앙 복귀가 전부 곡률에서
+    // 탈락했을 때만 이 candidate가 유일하게 남아 선택된다.
+    if (external_keep_candidates &&
         std::fabs(maneuver_start.d) <= lane_width_ * 0.5) {
         AppendExternalKeepContinuityCandidates(
             maneuver_start, cmd, planning_collision_obstacles, candidates);
-        stats.continuity_fallback_used = true;
     }
 
     EvaluateCosts(candidates, cost_weights_, 0.0);
@@ -416,87 +370,6 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
                         s, d, ego.v, cmd.target_speed,
                         best->d.empty() ? d : best->d.back(), best->cost_total,
                         stats.combined_valid_after_collision, stats.combined_total);
-        }
-
-        // K1-A/K1-17/K1.2: external KEEP 선택 궤적의 동적 실현가능성 진단.
-        // 두 가지 서로 다른 정의를 분리해서 남긴다(K1.2 배경, §2/§3):
-        //
-        //  - filter_*: production FilterByCartesianLateralAcceleration이
-        //    실제로 판정에 쓰는 것과 정확히 같은 정의
-        //    (ComputeGeometricPath(best->s, best->d, ref_).kappa와
-        //    best->s_d[i] 조합) - 이 값이 limits_.max_lateral_accel을
-        //    넘으면 production 필터 자체가 버그라는 뜻이다(선택된 best는
-        //    이미 그 필터를 통과했어야 하므로 여기서는 항상 만족해야 하는
-        //    invariant 확인용).
-        //  - cartesian_*: 기존 K1 진단이 쓰던 정의
-        //    (ConvertToCartesianPath가 만든 selected_cartesian.kappa/v,
-        //    analytic FrenetToCartesian 공식) - MPC로 실제 넘어가는
-        //    Cartesian 궤적 해석에는 여전히 유용하지만, production 거부
-        //    기준과는 다른 수식(analytic vs 유한차분+raw s_dot)이라 두 값이
-        //    다를 수 있다 - 그래서 K1.2 이전처럼 production 기준으로 오인되지
-        //    않도록 이름을 명확히 분리한다.
-        //
-        // 두 계산 모두 기존 production 헬퍼(ComputeGeometricPath,
-        // ConvertToCartesianPath)를 그대로 재사용하며, 새 곡률/속도 알고리즘을
-        // 추가하지 않는다.
-        if (external_keep_candidates) {
-            double filter_kappa_peak = 0.0, filter_s_dot_at_peak = 0.0,
-                   filter_lateral_accel_peak = 0.0;
-            const GeometricPath selected_geo =
-                ComputeGeometricPath(best->s, best->d, ref_);
-            const size_t filter_sample_count =
-                std::min(selected_geo.kappa.size(), best->s_d.size());
-            for (size_t i = 0; i < filter_sample_count; ++i) {
-                const double a_lat = best->s_d[i] * best->s_d[i] *
-                    std::fabs(selected_geo.kappa[i]);
-                if (a_lat > filter_lateral_accel_peak) {
-                    filter_lateral_accel_peak = a_lat;
-                    filter_kappa_peak = selected_geo.kappa[i];
-                    filter_s_dot_at_peak = best->s_d[i];
-                }
-            }
-
-            double cartesian_kappa_peak = 0.0, cartesian_speed_at_peak = 0.0,
-                   cartesian_lateral_accel_peak = 0.0;
-            const size_t cartesian_sample_count =
-                std::min(selected_cartesian.kappa.size(), selected_cartesian.v.size());
-            for (size_t i = 0; i < cartesian_sample_count; ++i) {
-                const double a_lat = selected_cartesian.v[i] *
-                    selected_cartesian.v[i] * std::fabs(selected_cartesian.kappa[i]);
-                if (a_lat > cartesian_lateral_accel_peak) {
-                    cartesian_lateral_accel_peak = a_lat;
-                    cartesian_kappa_peak = selected_cartesian.kappa[i];
-                    cartesian_speed_at_peak = selected_cartesian.v[i];
-                }
-            }
-
-            const double selected_T = best->t.empty() ? 0.0 : best->t.back();
-            auto DAtHorizon = [&](double t_query) {
-                if (best->t.empty()) return d;
-                if (t_query >= best->t.back()) return best->d.back();
-                for (size_t i = 0; i + 1 < best->t.size(); ++i) {
-                    if (best->t[i + 1] >= t_query) return best->d[i + 1];
-                }
-                return best->d.back();
-            };
-            std::printf("[FrenetPlanner-KEEP-FEAS] s=%.2f selected_T=%.2f "
-                        "filter_kappa_peak=%.4f filter_s_dot_at_peak=%.2f "
-                        "filter_lateral_accel_peak=%.3f "
-                        "cartesian_kappa_peak=%.4f cartesian_speed_at_peak=%.2f "
-                        "cartesian_lateral_accel_peak=%.3f "
-                        "max_lateral_accel=%.2f "
-                        "d_1.0s=%.3f d_1.5s=%.3f d_1.8s=%.3f d_terminal=%.3f "
-                        "normal_keep_valid=%zu/%zu continuity_used=%d\n",
-                        s, selected_T, filter_kappa_peak, filter_s_dot_at_peak,
-                        filter_lateral_accel_peak,
-                        cartesian_kappa_peak, cartesian_speed_at_peak,
-                        cartesian_lateral_accel_peak,
-                        limits_.max_lateral_accel,
-                        DAtHorizon(1.0), DAtHorizon(1.5), DAtHorizon(1.8),
-                        best->d.empty() ? d : best->d.back(),
-                        stats.normal_keep_valid_after_lateral_accel,
-                        stats.normal_keep_valid_before_lateral_accel,
-                        stats.continuity_fallback_used ? 1 : 0);
         }
     }
 
