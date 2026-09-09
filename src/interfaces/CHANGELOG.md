@@ -2,6 +2,14 @@
 
 공용 ROS 계약의 breaking change와 합의 사항을 기록한다.
 
+## Unreleased - fix/yuntae-planner Commit G
+
+### Added
+
+- MPC가 `ToReferencePath`로 만든 `ReferencePath`를 `ControlProcess` 호출 직전에 `ValidateReference`로 검증한다(defense-in-depth) - Commit F가 Frenet 쪽 폐루프 seam 불연속을 근본 수정했지만, 향후 Planner/interface 버그가 다시 물리적으로 불가능한 참조(배열 크기 불일치, NaN/Inf, 속도/곡률 초과, 위치 텔레포트)를 보내는 경우에도 MPC가 그것을 그대로 따라가지 않는다.
+- 검증 실패는 기존 fail-safe STOP 경로(`publishStop` -> `ResetOnFailSafe` + `MakeRosStopCommand`)로 수렴한다 - 새 fail-safe 구현을 만들지 않았고, 외부에 노출되는 `/ctrl_cmd` 계약도 바뀌지 않는다.
+- 이 검증은 순수(ROS 비의존) `src/mpc_controller/src/reference/reference_validator.{hpp,cpp}`에 있으며 `MPCParams`(steering_max/wheelbase/vel_min/vel_max/dt)가 이미 소유한 물리 한계만 사용한다 - Frenet의 `max_curvature`(0.1704) 같은 planner 쪽 값을 복사하지 않았다.
+
 ## Unreleased - fix/yuntae-planner Commit E
 
 ### Fixed

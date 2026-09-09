@@ -18,6 +18,7 @@ set(MPC_CORE_SOURCES
   src/solver/mpc_solver.cpp
   src/reference/path_resampler.cpp
   src/reference/trajectory_timing.cpp
+  src/reference/reference_validator.cpp
   src/control/mpc_controller.cpp)
 
 add_library(mpc_core ${MPC_CORE_SOURCES})
@@ -60,5 +61,10 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(trajectory_timing_test test/trajectory_timing_test.cpp)
   if(TARGET trajectory_timing_test)
     target_link_libraries(trajectory_timing_test mpc_core)
+  endif()
+
+  catkin_add_gtest(reference_validator_test test/reference_validator_test.cpp)
+  if(TARGET reference_validator_test)
+    target_link_libraries(reference_validator_test mpc_core)
   endif()
 endif()

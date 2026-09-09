@@ -8,6 +8,7 @@
 #include "config/parameter_loader.hpp"
 #include "message_converter.hpp"
 #include "reference/path_resampler.hpp"
+#include "reference/reference_validator.hpp"
 #include "reference/trajectory_timing.hpp"
 
 namespace mpc_controller_ros {
@@ -168,6 +169,17 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
         start_time_offset);
     if (reference.empty()) {
         publishStop("reference interpolation failed");
+        return;
+    }
+
+    // 물리적으로 말이 되는 참조인지 검증한다(방어적 defense-in-depth) -
+    // 예를 들어 Planner/interface 쪽 미래 버그가 다시 불연속 참조를 보내도
+    // solver가 그대로 따라가지 않는다. 여기서 거부하면 이 사이클은 ControlProcess를
+    // 호출하지 않고 기존 fail-safe STOP 경로를 그대로 재사용한다.
+    const ReferenceValidationResult validation =
+        ValidateReference(reference, controller_.params());
+    if (!validation.ok()) {
+        publishStop(ReferenceValidationStatusName(validation.status));
         return;
     }
 
