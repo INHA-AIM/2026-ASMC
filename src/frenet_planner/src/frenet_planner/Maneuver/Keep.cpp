@@ -155,20 +155,56 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         maneuver_start, cmd, ref_, path_cfg_, limits_, lane_width_,
         planning_collision_obstacles, vehicle_shape_, collision_cfg_, &stats);
 
+    // KEEP 동적 실현가능성(K1-B): ResolveManeuver의 FilterByCurvature는
+    // 기하 곡률(|kappa|<=max_curvature)만 본다 - reference-line 곡률로 정한
+    // target_speed로 순항하다가 현재 d!=0이라 d=0 복귀를 위해 생성된 후보는
+    // 그 복귀 자체가 추가 곡률을 만들어, 기하 곡률은 한계 아래여도 실제
+    // v^2*|kappa|(Cartesian 횡가속도)가 max_lateral_accel을 넘을 수 있다
+    // (§5 실측: ego_v=5.88, kpeak=0.1679 -> a_lat≈5.8 m/s^2 >> 3.0). AVOID/
+    // LANE_CHANGE는 이미 FilterByCartesianLateralAcceleration을 재생성
+    // 후보에 적용하고 있었으나(Maneuver/Avoid.cpp, Maneuver/LaneChange.cpp)
+    // 이 공용 KEEP/FOLLOW/STOP pipeline에는 없었다. 같은 필터를 재사용해
+    // external KEEP(정상 center-recovery 후보)에만 적용한다 - FOLLOW/STOP은
+    // 이 파이프라인을 공유하지만 아래 조건으로 KEEP에만 스코프한다.
+    if (external_keep_candidates) {
+        stats.normal_keep_valid_before_lateral_accel =
+            static_cast<size_t>(std::count_if(
+                candidates.begin(), candidates.end(),
+                [](const FrenetPath& p) { return p.valid; }));
+        FilterByCartesianLateralAcceleration(candidates, ref_,
+                                             limits_.max_lateral_accel);
+        stats.normal_keep_valid_after_lateral_accel =
+            static_cast<size_t>(std::count_if(
+                candidates.begin(), candidates.end(),
+                [](const FrenetPath& p) { return p.valid; }));
+    }
+
     // moderate-speed curvature starvation 완화(Phase B): 실측 MORAI에서
     // 급커브 근접 중 유효한 결합 후보가 있는데도 전부 중앙(d1=0) 복귀였던
     // 탓에 사후 곡률 필터에서 통째로 탈락하는 사례가 있었다(예:
-    // combined=78, after_curvature=0). external KEEP에만, 현재 d가 차선
-    // 폭 안일 때만, 현재 오프셋을 유지하는 continuity candidate를
-    // 추가한다 - d=0 강제 클램프가 아니라 대안 후보 하나를 더 얹는
-    // 것뿐이며, 아래 EvaluateCosts가 여전히 target_d=0을 기준으로 비용을
-    // 매기므로 중앙 복귀 후보가 곡률을 통과하면 그쪽이 그대로 선택된다
-    // (kd/kd_path 항이 더 낮은 비용을 준다). 중앙 복귀가 전부 곡률에서
-    // 탈락했을 때만 이 candidate가 유일하게 남아 선택된다.
-    if (external_keep_candidates &&
+    // combined=78, after_curvature=0). K1-C: 기존 구현은 continuity
+    // candidate를 정상 후보와 같은 candidates에 얹고 EvaluateCosts로
+    // 경쟁시켰는데, kd_path(경로 전체 d^2 적분) 항 때문에 정상 center-recovery
+    // 후보가 곡률/횡가속도를 모두 통과했는데도 continuity(현재 d 유지, 종점
+    // 오차 거의 0)가 더 낮은 비용으로 선택되는 사례가 실측됐다(s=115.79
+    // d=+0.173, chosen_d=+0.173, candidates=39/39 - 곡률 starvation이
+    // 아니라 순수 cost 경쟁에서 진 것). continuity는 "정상 후보가 이
+    // 사이클에 하나도 없을 때"만 생성해 진짜 fallback으로 만든다 - 정상
+    // 후보가 하나라도 유효하면 continuity 자체를 생성하지 않으므로 비용
+    // 경쟁이 원천적으로 발생하지 않는다. FilterByCollision은
+    // AppendExternalKeepContinuityCandidates 내부에서 그대로 다시 적용되므로
+    // (충돌 차단은 continuity로도 우회되지 않음), 여기서 검사하는 "정상 후보
+    // 없음"은 곡률/횡가속도 starvation과 충돌 차단을 구분하지 않는다 - 둘 다
+    // continuity를 시도해도 안전하다(충돌이면 continuity도 충돌 필터에서
+    // 마찬가지로 탈락한다).
+    const bool normal_keep_starved =
+        external_keep_candidates &&
+        stats.normal_keep_valid_after_lateral_accel == 0;
+    if (normal_keep_starved &&
         std::fabs(maneuver_start.d) <= lane_width_ * 0.5) {
         AppendExternalKeepContinuityCandidates(
             maneuver_start, cmd, planning_collision_obstacles, candidates);
+        stats.continuity_fallback_used = true;
     }
 
     EvaluateCosts(candidates, cost_weights_, 0.0);
@@ -370,6 +406,48 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
                         s, d, ego.v, cmd.target_speed,
                         best->d.empty() ? d : best->d.back(), best->cost_total,
                         stats.combined_valid_after_collision, stats.combined_total);
+        }
+
+        // K1-A/K1-17: external KEEP 선택 궤적의 동적 실현가능성 진단.
+        // selected_cartesian.kappa/v는 ConvertToCartesianPath가 이미 계산한
+        // 값을 그대로 재사용한다(별도 곡률/속도 재계산 없음). 다음 MORAI
+        // 실측에서 이 필드로 코너별 selected_lateral_accel_peak을 baseline
+        // (max_lateral_accel=3.0)과 직접 비교한다(§17/§18-E).
+        if (external_keep_candidates) {
+            double kappa_peak = 0.0, speed_at_kappa_peak = 0.0,
+                   lateral_accel_peak = 0.0;
+            const size_t sample_count = std::min(selected_cartesian.kappa.size(),
+                                                  selected_cartesian.v.size());
+            for (size_t i = 0; i < sample_count; ++i) {
+                const double lateral_accel = selected_cartesian.v[i] *
+                    selected_cartesian.v[i] * std::fabs(selected_cartesian.kappa[i]);
+                if (lateral_accel > lateral_accel_peak) {
+                    lateral_accel_peak = lateral_accel;
+                    kappa_peak = selected_cartesian.kappa[i];
+                    speed_at_kappa_peak = selected_cartesian.v[i];
+                }
+            }
+            const double selected_T = best->t.empty() ? 0.0 : best->t.back();
+            auto DAtHorizon = [&](double t_query) {
+                if (best->t.empty()) return d;
+                if (t_query >= best->t.back()) return best->d.back();
+                for (size_t i = 0; i + 1 < best->t.size(); ++i) {
+                    if (best->t[i + 1] >= t_query) return best->d[i + 1];
+                }
+                return best->d.back();
+            };
+            std::printf("[FrenetPlanner-KEEP-FEAS] s=%.2f selected_T=%.2f "
+                        "selected_kappa_peak=%.4f selected_speed_at_kappa_peak=%.2f "
+                        "selected_lateral_accel_peak=%.3f max_lateral_accel=%.2f "
+                        "d_1.0s=%.3f d_1.5s=%.3f d_1.8s=%.3f d_terminal=%.3f "
+                        "normal_keep_valid=%zu/%zu continuity_used=%d\n",
+                        s, selected_T, kappa_peak, speed_at_kappa_peak,
+                        lateral_accel_peak, limits_.max_lateral_accel,
+                        DAtHorizon(1.0), DAtHorizon(1.5), DAtHorizon(1.8),
+                        best->d.empty() ? d : best->d.back(),
+                        stats.normal_keep_valid_after_lateral_accel,
+                        stats.normal_keep_valid_before_lateral_accel,
+                        stats.continuity_fallback_used ? 1 : 0);
         }
     }
 
