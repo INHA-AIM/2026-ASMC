@@ -2,8 +2,8 @@
 
 > **문서 역할:** Current Working Proposal — 인지 융합 방향과 단계별 결정 gate
 > **문서 허브:** [README.md](./README.md)
-> **상태:** Working Proposal v0.2 — 팀 검토와 실증 결과에 따라 변경 가능<br>
-> **기준일:** 2026-09-08<br>
+> **상태:** Working Proposal v0.3 — 팀 검토와 실증 결과에 따라 변경 가능<br>
+> **기준일:** 2026-09-09<br>
 > **주요 참여:** 안승현(카메라 인지), 장원태(MGeo map prior 제안), 손재호(LiDAR 인지), planning/control 팀<br>
 > **상세 문서:** [인지 GT·BEV·차로 구조화 계획](./perception-bev-lane-interface-plan.md) · [UDP↔ROS 네트워크](./network-udp-ros.md) · [v4 학습 평가](./perception-v4-training-evaluation.md)
 
@@ -24,8 +24,8 @@
 | Camera perception | 현재 보이는 drivable·white/yellow/stopline 관측 | TwinLiteNet+ 4-class road-marking 모델을 live 검증, 모델 교체 가능한 adapter 사용 |
 | LiDAR perception | 동·정적 장애물의 위치·점유·추적 | 장애물 검출을 도로/차로 문맥과 연결하고 최종 safe area에서 우선 반영 |
 
-현재 작업 순서는 **설정·문서 정본화 → 재현 가능한 raw bag 평가 기반 → Capture 주기
-pilot → 좌표·BEV 기준 확정 → 카메라 결과 구조화 → MGeo 결합 → LiDAR/판제 연계**다.
+현재 작업 순서는 **설정·문서 정본화 → 재현 가능한 raw bag 평가 기반 → Streaming GT
+transport gate → 좌표·BEV 기준 확정 → 카메라 결과 구조화 → MGeo 결합 → LiDAR/판제 연계**다.
 정지선은 MGeo/전역경로 정지점을 1차 후보로 두고 현재 영상 stopline class를 보조 검증과
 GPS Blackout 대응 후보로 평가한다.
 
@@ -328,6 +328,11 @@ RGB/drivable/road-marking 3행으로 표시하며 road-marking class를 서로 �
 프레임마다 상세 로그를 출력하면 I/O가 측정값을 교란하므로 기본은 집계 로그로 하고
 per-frame 로그와 CUDA 강제 동기화는 별도 profile mode에서만 사용한다.
 
+**2026-09-09 기반 구현 완료:** `/perception/camera/diagnostics`에 backend/checkpoint, view별
+input/output/replaced frame, 오류 수, stage별 평균, processing FPS, queue/e2e p50·p95와
+source/receive/result stamp를 발행한다. upstream bridge fallback도 view별로 전달한다. 동일
+raw bag replay와 model별 result bag으로 조건별 수치를 채우는 실증은 Stage C4에서 수행한다.
+
 ### Stage C4 — 조건별 live gate
 
 - 규정 조건 Sunny/Foggy × 11am/1pm/3pm
@@ -342,47 +347,55 @@ per-frame 로그와 CUDA 강제 동기화는 별도 profile mode에서만 사용
 
 ## 8. 공용 rosbag의 범위
 
-공용 recorder는 새 직렬화 포맷을 만들지 않고 ROS1의 검증된 `rosbag record`를 작은
-profile/manifest wrapper로 감싼다. recorder는 추론 노드와 별도 프로세스로 실행하며
-기록 중 resample이나 timestamp 정렬을 하지 않는다. message header stamp, bag 기록 시각과
-`/clock`을 보존하고 정렬은 offline evaluator가 담당한다.
+**2026-09-09 구현 완료:** 공용 recorder는 새 직렬화 포맷을 만들지 않고 ROS1의 검증된
+`rosbag record`를 allowlist profile과 metadata lifecycle로 감싼다. recorder는 추론 노드와
+별도 프로세스로 실행하며 기록 중 resample이나 timestamp 정렬을 하지 않는다. message
+header stamp와 bag 기록 시각을 보존하고 정렬은 offline auditor/evaluator가 담당한다.
+실행법과 profile 계약은
+[rosbag 평가·Streaming GT 가이드](./rosbag-evaluation-streaming-gt.md)를 정본으로 삼는다.
 
 Raw 입력과 모델 결과는 다음처럼 분리한다.
 
 ```text
 data/rosbags/raw/<run_id>/
-  chunks/  manifest.*  info.*  checksums.*
+  metadata.yaml  environment_timeline.jsonl  bags/*.bag
 
-data/rosbags/results/<raw_run_id>/<model_run_id>/
-  predictions/  metrics.*  manifest.*
+data/rosbags/results/<raw_run_id>/<model_id>/
+  metadata.yaml  bags/*.bag
+
+data/rosbags/audits/<run_or_comparison>/
+  audit.json
 ```
 
 - raw bag은 생성 후 불변으로 취급한다.
 - 모델/checkpoint/threshold가 달라지면 result run을 새로 만든다.
 - `full_raw`도 `rosbag record -a`가 아니라 원천 센서·상태 topic의 명시적 allowlist를 쓴다.
 - 대용량 debug image와 중간 결과의 중복 기록은 기본 profile에서 제외한다.
-- bag과 함께 git commit, sensor/map/path hash, 시나리오, 날씨/시간, topic/rate와 특이사항을 남긴다.
+- bag과 함께 git commit/dirty, sensor/transport/timestamp provenance, 시나리오, 날씨/시간,
+  topic/type/rate, bridge diagnostics와 bag SHA-256을 남긴다.
 - GT/oracle bag은 경로와 profile을 분리하고 competition-legal launch가 구독하지 않게 한다.
 
 목적별 후보 profile은 다음과 같다.
 
 | Profile | 기록 목적 |
 |---|---|
-| `camera_raw` | RGB×3, GPS/IMU/Ego와 시나리오 조건 |
-| `lidar_raw` | Intensity point cloud, GPS/IMU/Ego와 개발용 Object GT |
+| `camera_raw` | RGB×3, Ego와 선택적 GPS/IMU |
+| `lidar_raw` | Intensity point cloud, GPS/IMU/Ego |
 | `full_raw` | 통합 재현에 필요한 원천 입력 allowlist |
-| `competition_legal` | 허용 UDP에서 파생된 입력과 내부 결과만 정적·실행 검사 |
+| `lidar_dev_gt_udp` | ID 5/11, Object와 차량 상태의 privileged source-time stream |
+| `dev_oracle_udp/ros` | transport A/B를 위한 전체 privileged oracle |
+| `camera_semantic_result` | replay 추론 결과와 구조화 diagnostics |
 
 Real Time UDP bag은 실제 비동기 지연·drop·jitter 분석 기준이다. 같은 bag을 재생하면 모델
 A/B 입력은 통제할 수 있지만 MORAI→UDP bridge 이전의 packet 손실까지 재현하지는 못하므로
 최종 선택 후 live Real Time 검증을 다시 수행한다.
 
-### 8.1 학습용 Capture와 LiDAR GT
+### 8.1 학습용 Capture와 Streaming GT
 
-카메라 단일-frame 학습은 Real Time + Capture 1 Hz를 현 기준으로 두고, 5 Hz와 10 Hz를
-각각 짧게 시험해 실제 저장률, 중복률, RGB–GT 대응과 I/O 부하를 확인한다. 수동 휠은
-외부 Sync On에서 사용할 수 없으므로 Real Time + Capture를 유지한다. 엄밀한 temporal GT가
-필요해질 때 Simulation Time Sync Off를 먼저 시험하고 필요할 때만 외부 Sync On으로 간다.
+카메라 단일-frame 학습은 Real Time + Capture 1 Hz를 기준으로 둔다. 2026-09-09에
+2/5/10 Hz 요청을 시험했지만 실제 저장은 약 1.4~1.7 Hz에 포화됐고 요청마다 시뮬레이션이
+약 0.5초 정지했다. 따라서 Capture는 학습 GT, Real Time Connect+rosbag은 temporal 평가로
+분리한다. 수동 휠 주행의 지연·drop 측정에도 Capture를 함께 켜지 않는다.
 
 LiDAR GT 센서셋은 동일 위치의 두 센서를 사용한다.
 
@@ -398,9 +411,16 @@ LiDAR GT 센서셋은 동일 위치의 두 센서를 사용한다.
 road/lane point segmentation 연구가 필요할 때 별도 sensor profile로 만든다.
 
 기존 clustering/OBB/tracking의 파라미터 평가에는 raw bag이 우선이고, 학습형 3D detector를
-도입할 때 Capture의 Intensity–Instance/3D box pair를 사용한다. LiDAR 자체가 10 Hz이므로
-Capture도 5/10 Hz까지만 우선 검증한다. train/val/test는 인접 frame이 아니라
-scenario/run/object seed 단위로 분리한다.
+도입할 때 Capture의 Intensity–Instance/3D box pair를 사용한다. UDP source-time 실측에서
+ID 5/11은 최신 20초에서 8.03/7.43 Hz로 수신됐지만 nearest gap p95가 약 102 ms여서
+Streaming GT를 자동 학습 pair로 사용하지 않는다. RGB–Semantic도 구간에 따라 p95가
+3 ms에서 31~35 ms까지 달라졌다. 허용 gap을 넘는 frame은 offline에서 제외하며 train/val/test는
+인접 frame이 아니라 scenario/run/object seed 단위로 분리한다.
+
+현재 UDP GT bridge는 source timestamp와 독립 ID 11 stream을 구현했다. ROS GT는 현
+`ASMC_sensor_set_GT.json`을 바꾸지 않고 MORAI UI export 별도 파일로 5분 A/B한 뒤, rate·pairing·
+simulator/추론 부하가 모두 명확히 나을 때만 개발 oracle 후보로 승격한다. 대회 경로는 이
+결과와 관계없이 UDP로 유지한다.
 
 ## 9. 26.R1.h3 개발판과 대회판 이식 전략
 
@@ -445,9 +465,9 @@ adapter에 국한한다. 장기적으로 두 구현이 갈라지는 것을 막�
 
 | 순서 | 산출물 | 다음 단계 진입 조건 | 상태 |
 |---:|---|---|---|
-| 1 | 센서셋·규정·수집 모드·차량 좌표계 정본 | JSON/문서 검증과 변경 범위 확인 | **이번 단계** |
-| 2 | raw rosbag wrapper와 result lineage | 동일 raw 입력으로 모델별 재생·평가 가능 | 다음 구현 |
-| 3 | Camera/LiDAR Capture 5/10 Hz pilot | 파일 완전성·중복률·GT 정합·부하 기준 통과 | 예정 |
+| 1 | 센서셋·규정·수집 모드·차량 좌표계 정본 | JSON/문서 검증과 변경 범위 확인 | 완료 |
+| 2 | transport-aware raw/result bag과 source-time GT bridge | UDP smoke, lifecycle와 replay/audit 검증 | **구현 완료** |
+| 3 | actor GT와 UDP↔ROS 5분 gate | Object ID 대응 및 transport 선정 근거 | UI 실증 남음 |
 | 4 | 센서 calibration과 공통 BEV 기준 | GPS lever arm 검증, map-camera overlay로 범위·해상도 확정 | 공동 |
 | 5 | 3-camera BEV와 lane 구조화 | drivable/white/yellow/stopline vector·거리 출력 | 안승현 |
 | 6 | MGeo crop과 source policy 평가 | 정상 GPS·Blackout의 map/camera 정합 지표 확보 | 장원태·안승현 |

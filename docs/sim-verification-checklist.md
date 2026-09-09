@@ -26,7 +26,8 @@
 **공통 명령**
 
 ```bash
-./scripts/udp_bridge.sh                      # 기본 개발·대회 경로
+./scripts/udp_bridge.sh --simulator 26r1        # 26.R1.H3 개발
+# 또는: ./scripts/udp_bridge.sh --simulator competition
 docker exec -it asmc-ros-noetic bash         # 또는 네이티브 Noetic
 cd /root/ws && source devel/setup.bash
 rostopic hz /Ego_topic /image_jpeg/compressed /velodyne_points /gps /imu
