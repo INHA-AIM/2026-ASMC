@@ -67,8 +67,16 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
     // MERGE는 차선 변경 모드가 아니라 회전교차로 global path의 종방향 진입
     // 타이밍만 조절한다. ±0.5m 후보가 충돌 회피처럼 번갈아 선택되며 조향이
     // 흔들리지 않도록 종단 d를 차선 중심 하나로 고정한다.
+    //
+    // LANE_KEEPING도 동일한 문제가 있다: 전역 tolerance를 그대로 쓰면 코너에서
+    // d=-0.5/0/+0.5 후보가 cost 경쟁을 하며 cycle마다 선택된 terminal d가 바뀐다
+    // (조향 방향 반전/oscillation의 원인). KEEP nominal target은 차선 중앙
+    // d=0 하나로 고정하고, 급커브에서 중앙 후보가 전부 곡률 필터에 걸리면
+    // AppendExternalKeepContinuityCandidates()가 별도로 현재 d 유지 후보를
+    // 추가하므로 recovery 경로는 그대로 유지된다. AVOID/LANE_CHANGE 등 다른
+    // maneuver는 목표 d 주변 탐색이 필요하므로 전역 tolerance를 유지한다.
     const double lateral_tolerance =
-        cmd.mode == MERGE ? 0.0 : cfg.lateral_target_tolerance;
+        (cmd.mode == MERGE || cmd.mode == LANE_KEEPING) ? 0.0 : cfg.lateral_target_tolerance;
     lateral_cfg.lateral_d1.min = d_offset - lateral_tolerance;
     lateral_cfg.lateral_d1.max = d_offset + lateral_tolerance;
 

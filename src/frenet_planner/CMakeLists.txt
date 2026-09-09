@@ -390,6 +390,15 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME curvature_continuity_test COMMAND curvature_continuity_test)
 
+  # fix/yuntae-planner Commit A: KEEP centerline candidate 안정화 회귀.
+  add_executable(keep_candidate_target_test
+    tests/keep_candidate_target_test.cpp
+  )
+  target_link_libraries(keep_candidate_target_test
+    frenet_planner_core
+  )
+  add_test(NAME keep_candidate_target_test COMMAND keep_candidate_target_test)
+
   # MERGE gap/TTC 순수 계산 회귀. legacy_behavior_regression_test 삭제로
   # 없어진 MERGE 안전망을 대체한다 - behavior auto-selection이 아니라
   # FindRoundaboutGap/FindHighwayMergeGap 자체의 gap/TTC 판단만 검증한다.
