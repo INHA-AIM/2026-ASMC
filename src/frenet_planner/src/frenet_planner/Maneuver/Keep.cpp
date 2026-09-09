@@ -58,6 +58,15 @@ void FrenetPlanner::AppendExternalKeepContinuityCandidates(
     std::vector<FrenetPath> continuity_combined = CombineLateralLongitudinal(
         continuity_lateral, longitudinal_for_continuity);
     FilterByCurvature(continuity_combined, ref_, limits_);
+    // K1.1: continuity는 fallback이지 물리 면제가 아니다. 정상 KEEP
+    // center-recovery 후보에는 K1에서 이미 이 필터를 적용했는데
+    // (ExecuteManeuverPipeline), continuity_combined는 기하 곡률만 거치고
+    // 실제 v^2*|kappa|(Cartesian 횡가속도) 검증 없이 충돌 필터로 바로
+    // 넘어갔다 - 정상 후보가 전부 이 필터에서 탈락해 fallback이 호출된
+    // 상황이므로, continuity 후보도 같은 한계를 넘으면 마찬가지로
+    // 무효 처리해야 한다(같은 함수 재사용, 새 계산 없음).
+    FilterByCartesianLateralAcceleration(continuity_combined, ref_,
+                                         limits_.max_lateral_accel);
     if (!planning_collision_obstacles.empty()) {
         FilterByCollision(continuity_combined, ref_,
                           planning_collision_obstacles, vehicle_shape_,

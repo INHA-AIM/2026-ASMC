@@ -164,6 +164,17 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
                                                  direct_limits, /*lane_width=*/3.5,
                                                  no_obstacles, vehicle_shape, collision_cfg,
                                                  &direct_stats);
+        // K1.1 회귀: normal 후보의 starvation 판정 자체를 K1과 동일하게(곡률
+        // + Cartesian 횡가속도 둘 다 거친 뒤) 다시 확인한다 - K1 이전에는
+        // after_curvature만 보면 충분했지만, 지금 production 코드
+        // (Maneuver/Keep.cpp)는 그 다음에 FilterByCartesianLateralAcceleration도
+        // 적용하므로 "정상 후보가 진짜로 0개인가"는 이 필터까지 통과해야
+        // 판정된다.
+        FilterByCartesianLateralAcceleration(direct_candidates, ref,
+                                             direct_limits.max_lateral_accel);
+        std::size_t normal_valid_after_lateral_accel = 0;
+        for (const auto& p : direct_candidates) if (p.valid) ++normal_valid_after_lateral_accel;
+
         std::vector<FrenetPath> continuity =
             GenerateLateralContinuityCandidates(direct_start, direct_cfg);
         FilterLateralByAcceleration(continuity, direct_limits);
@@ -172,12 +183,70 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
         FilterLongitudinalByKinematicLimits(continuity_lon, direct_limits);
         auto continuity_combined = CombineLateralLongitudinal(continuity, continuity_lon);
         FilterByCurvature(continuity_combined, ref, direct_limits);
-        std::size_t continuity_valid = 0;
-        for (const auto& p : continuity_combined) if (p.valid) ++continuity_valid;
+        std::size_t continuity_valid_after_curvature = 0;
+        for (const auto& p : continuity_combined) if (p.valid) ++continuity_valid_after_curvature;
 
-        std::printf("  %s: ResolveManeuver after_curvature=%zu, continuity candidates "
-                    "valid after curvature=%zu\n",
-                    snap.label, direct_stats.combined_valid_after_curvature, continuity_valid);
+        // K1.1 핵심 회귀: continuity_combined에도 production
+        // FilterByCartesianLateralAcceleration을 그대로 적용한다(K1.1이
+        // Maneuver/Keep.cpp의 AppendExternalKeepContinuityCandidates 안에
+        // 추가한 것과 같은 호출) - continuity가 곡률은 통과했지만 실제
+        // v^2*|kappa|는 넘는 경우를 여기서 잡아야 한다.
+        FilterByCartesianLateralAcceleration(continuity_combined, ref,
+                                             direct_limits.max_lateral_accel);
+        std::size_t continuity_valid = 0;
+        double continuity_lateral_accel_peak = 0.0;
+        for (const auto& p : continuity_combined) {
+            if (!p.valid) continue;
+            ++continuity_valid;
+            const GeometricPath geo = ComputeGeometricPath(p.s, p.d, ref);
+            const std::size_t n = std::min(geo.kappa.size(), p.s_d.size());
+            for (std::size_t i = 0; i < n; ++i) {
+                continuity_lateral_accel_peak = std::max(
+                    continuity_lateral_accel_peak,
+                    p.s_d[i] * p.s_d[i] * std::fabs(geo.kappa[i]));
+            }
+        }
+
+        std::printf("  %s: ResolveManeuver after_curvature=%zu, normal valid "
+                    "after lateral-accel=%zu, continuity valid after "
+                    "curvature=%zu, continuity valid after lateral-accel=%zu "
+                    "(peak=%.3f)\n",
+                    snap.label, direct_stats.combined_valid_after_curvature,
+                    normal_valid_after_lateral_accel, continuity_valid_after_curvature,
+                    continuity_valid, continuity_lateral_accel_peak);
+
+        // B1/B4는 이 스위트가 이미 curvature 단계에서 0 valid로 확인한
+        // 진짜 starvation 스냅샷이다(direct_stats.combined_valid_after_curvature
+        // == 0이면 lateral-accel 필터를 더 적용해도 여전히 0이어야 한다).
+        // B3는 위 주석(88행)의 원래 claim과 달리 현재 waypoint/설정 조합에서
+        // 실제로는 after_curvature=1(정상 후보 하나가 곡률+횡가속도를 모두
+        // 통과)이다 - starvation 스냅샷이 아니므로 이 케이스에서는 그
+        // precondition을 강제하지 않는다(정직하게 건너뜀, 파일 상단 B2
+        // 제외 관례와 동일).
+        if (direct_stats.combined_valid_after_curvature == 0) {
+            Expect(normal_valid_after_lateral_accel == 0,
+                   std::string(snap.label) +
+                       ": setup precondition - normal KEEP candidates are "
+                       "genuinely starved (0 valid) after curvature+lateral-accel "
+                       "filters at this snapshot, so continuity fallback is "
+                       "actually required (not a cost-competition scenario)");
+        } else {
+            std::printf("  %s: skipping starvation precondition (normal "
+                        "candidates already valid after curvature alone, not "
+                        "a starvation snapshot at this config)\n",
+                        snap.label);
+        }
+        Expect(continuity_valid >= 1,
+               std::string(snap.label) +
+                   ": continuity fallback has at least one candidate that "
+                   "survives production FilterByCartesianLateralAcceleration "
+                   "(K1.1 - not just geometric curvature)");
+        if (continuity_valid >= 1) {
+            Expect(continuity_lateral_accel_peak <= direct_limits.max_lateral_accel + 1e-6,
+                   std::string(snap.label) +
+                       ": surviving continuity candidate(s) satisfy "
+                       "v^2*|kappa| <= max_lateral_accel exactly (peak <= limit)");
+        }
         Expect(direct_stats.combined_valid_after_curvature + continuity_valid >= 1,
                std::string(snap.label) +
                    ": at least one candidate (normal recenter or continuity) "
@@ -337,10 +406,96 @@ void TestContinuityNotGeneratedWhenNormalCandidatesValid() {
            "cost competitor)");
 }
 
+// CASE (K1.1 §9, rejection path): 반지름은 max_curvature 한계 안이지만
+// (기하 곡률 필터는 통과) 시험 속도에서 v^2*|kappa|가 max_lateral_accel을
+// 넘도록 만든 합성 원형 참조선에서, continuity 후보(현재 d 유지) 자체가
+// FilterByCartesianLateralAcceleration에서 무효 처리되는지 확인한다 -
+// production GenerateLateralContinuityCandidates/FilterByCurvature/
+// FilterByCartesianLateralAcceleration을 그대로 호출한다(로직 복제 없음).
+// MakeCircleRef는 curvature_contract_test.cpp의 관례를 그대로 따른
+// 파일-지역 합성 참조선 헬퍼다(패키지 간 공유 코드를 새로 만들지 않는다).
+void TestContinuityCandidateRejectedWhenDynamicallyInfeasible() {
+    auto MakeCircleRef = [](double radius, int n_points) {
+        RefLine ref;
+        const double step = 2.0 * M_PI * radius / n_points;
+        for (int i = 0; i <= n_points; ++i) {
+            const double theta = static_cast<double>(i) / n_points * 2.0 * M_PI;
+            RefPoint p{};
+            p.x = radius * std::cos(theta);
+            p.y = radius * std::sin(theta);
+            p.s = step * i;
+            p.theta = theta + M_PI / 2.0;
+            p.kappa = 1.0 / radius;
+            p.d_kappa = 0.0;
+            ref.points.push_back(p);
+        }
+        ref.closed_loop = true;
+        ref.length = ref.points.empty() ? 0.0 : ref.points.back().s;
+        return ref;
+    };
+
+    const double max_lateral_accel = 3.0;
+    // v^2*kappa = max_lateral_accel*1.3(한계보다 30% 위) 이 되도록 속도를
+    // 고른다 - kappa = 1/radius는 max_curvature(0.1704)의 절반 정도로
+    // 여유를 둬서 기하 곡률 필터는 확실히 통과하게 한다(이 테스트가 검증할
+    // 것은 lateral-accel 필터이지 curvature 필터가 아니다).
+    const double kappa = kMaxCurvature * 0.5;
+    const double radius = 1.0 / kappa;
+    const double speed = std::sqrt(max_lateral_accel * 1.3 / kappa);
+
+    RefLine ref = MakeCircleRef(radius, 200);
+
+    FrenetState start{};
+    start.s = 0.0; start.d = 0.5; start.d_d = 0.0; start.d_dd = 0.0;
+    start.s_d = speed; start.s_dd = 0.0;
+
+    PathGeneratorConfig cfg;
+    cfg.lateral_d1 = {-3.0, 3.0, 0.5};
+    cfg.lateral_target_tolerance = 0.5;
+    cfg.time_horizon = {1.5, 5.0, 0.5};
+    cfg.delta_s = {-3.0, 3.0, 1.0};
+    cfg.delta_s_dot = {-2.0, 2.0, 1.0};
+    cfg.dt = 0.1;
+    KinematicLimits limits{max_lateral_accel, 3.0, kMaxCurvature, 6.0};
+
+    std::vector<FrenetPath> continuity_lateral =
+        GenerateLateralContinuityCandidates(start, cfg);
+    FilterLateralByAcceleration(continuity_lateral, limits);
+    std::vector<FrenetPath> continuity_lon =
+        GenerateVelocityKeepingCandidates(start, speed, cfg);
+    FilterLongitudinalByKinematicLimits(continuity_lon, limits);
+    std::vector<FrenetPath> continuity_combined =
+        CombineLateralLongitudinal(continuity_lateral, continuity_lon);
+    FilterByCurvature(continuity_combined, ref, limits);
+
+    std::size_t valid_after_curvature = 0;
+    for (const auto& p : continuity_combined) if (p.valid) ++valid_after_curvature;
+    std::printf("  reject: continuity valid_after_curvature=%zu (kappa=%.4f <= "
+                "max_curvature=%.4f, expected to pass geometric curvature)\n",
+                valid_after_curvature, kappa, kMaxCurvature);
+    Expect(valid_after_curvature >= 1,
+           "reject: setup precondition - continuity candidate(s) pass the "
+           "geometric curvature filter (this test targets the "
+           "lateral-acceleration filter specifically, not curvature)");
+
+    FilterByCartesianLateralAcceleration(continuity_combined, ref, max_lateral_accel);
+    std::size_t valid_after_lateral_accel = 0;
+    for (const auto& p : continuity_combined) if (p.valid) ++valid_after_lateral_accel;
+    std::printf("  reject: continuity valid_after_lateral_accel=%zu (speed=%.2f, "
+                "v^2*kappa=%.3f > limit=%.2f expected)\n",
+                valid_after_lateral_accel, speed, speed * speed * kappa, max_lateral_accel);
+    Expect(valid_after_lateral_accel == 0,
+           "reject: a continuity candidate that geometrically passes "
+           "curvature but exceeds v^2*|kappa| > max_lateral_accel is "
+           "invalidated by FilterByCartesianLateralAcceleration (K1.1 - "
+           "continuity cannot bypass dynamic feasibility)");
+}
+
 int main() {
     TestMoraiSnapshotsProduceValidCurvatureFeasiblePath();
     TestNormalKeepStillRecentersToCenter();
     TestContinuityNotGeneratedWhenNormalCandidatesValid();
+    TestContinuityCandidateRejectedWhenDynamicallyInfeasible();
 
     if (g_failures == 0) {
         std::cout << "All curvature-continuity regression tests passed\n";
