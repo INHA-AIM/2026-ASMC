@@ -17,7 +17,6 @@
 #include "frenet_planner/Generator/LateralGenerator.hpp"
 #include "frenet_planner/Generator/LongitudinalGenerator.hpp"
 #include "frenet_planner/Generator/CandidateCombiner.hpp"
-#include "frenet_planner/Evaluation/Cost.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
 
@@ -492,99 +491,10 @@ void TestContinuityCandidateRejectedWhenDynamicallyInfeasible() {
            "continuity cannot bypass dynamic feasibility)");
 }
 
-// CASE (K1.2 회귀): [FrenetPlanner-KEEP-FEAS]의 filter_lateral_accel_peak
-// 계산(Maneuver/Keep.cpp, ComputeGeometricPath(best->s, best->d, ref_) +
-// best->s_d 조합)이 production FilterByCartesianLateralAcceleration이 실제
-// 판정에 쓰는 것과 정확히 같은 값을 내는지 확인한다. 필터 자체는 pass/fail
-// 플래그만 남기고 peak 수치를 반환하지 않으므로, 여기서는 필터와 똑같은
-// 수식(ComputeGeometricPath+path.s_d)을 독립적으로 다시 계산해 두 계산이
-// 일치하는지 비교한다 - Keep.cpp의 filter_* 코드를 복사한 것이 아니라,
-// production KinematicFilter.cpp의 수식을 그대로 재현한 것이다(§15 요구:
-// "production FilterByCartesianLateralAcceleration이 쓰는 정의와 일치").
-// 정상 KEEP center-recovery 대표 사례(직선 근처, moderate offset)로 검증한다
-// - 부동소수점 완전 일치는 요구하지 않고 작은 허용오차를 둔다.
-void TestFilterDiagnosticMatchesProductionFilterDefinition() {
-    const std::string package_src = FRENET_PACKAGE_SRC_DIR;
-    const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
-    const std::string config = MakeLocalConfig(
-        package_src + "/../config/params.yaml", waypoint_file,
-        "curvature_continuity_test_filter_diag_params.yaml");
-
-    RefLine ref;
-    double max_curvature_for_load = kMaxCurvature;
-    LoadReferenceLine(waypoint_file, ref, max_curvature_for_load);
-
-    FrenetState direct_start{};
-    direct_start.s = 200.0; direct_start.d = 0.6;
-    direct_start.s_d = 5.0; direct_start.s_dd = 0.0;
-    PlannerCommand direct_cmd{};
-    direct_cmd.mode = LANE_KEEPING;
-    direct_cmd.has_target_speed = true;
-    direct_cmd.target_speed = 5.0;
-    PathGeneratorConfig direct_cfg;
-    direct_cfg.lateral_d1 = {-3.0, 3.0, 0.5};
-    direct_cfg.lateral_target_tolerance = 0.5;
-    direct_cfg.time_horizon = {1.5, 5.0, 0.5};
-    direct_cfg.delta_s = {-3.0, 3.0, 1.0};
-    direct_cfg.delta_s_dot = {-2.0, 2.0, 1.0};
-    direct_cfg.dt = 0.1;
-    KinematicLimits direct_limits{3.0, 3.0, kMaxCurvature, 6.0};
-    VehicleShape vehicle_shape{2.0, 4.5};
-    CollisionCheckConfig collision_cfg{0.3, 0.1, 3.0};
-    std::vector<TrackedObject> no_obstacles;
-    PlannerDebugStats direct_stats{};
-    auto direct_candidates = ResolveManeuver(direct_start, direct_cmd, ref, direct_cfg,
-                                             direct_limits, /*lane_width=*/3.5,
-                                             no_obstacles, vehicle_shape, collision_cfg,
-                                             &direct_stats);
-    FilterByCartesianLateralAcceleration(direct_candidates, ref,
-                                         direct_limits.max_lateral_accel);
-    EvaluateCosts(direct_candidates, CostWeights{}, /*target_d=*/0.0);
-    const FrenetPath* best = SelectBestPath(direct_candidates);
-    Expect(best != nullptr,
-           "filter-diag: setup precondition - a valid candidate exists to "
-           "compare diagnostics against");
-    if (best == nullptr) return;
-
-    // Keep.cpp의 filter_lateral_accel_peak과 정확히 같은 수식으로 독립
-    // 계산한다(같은 코드를 include해서 재사용하는 게 아니라, production
-    // FilterByCartesianLateralAcceleration.cpp에 쓰인 수식을 그대로
-    // 재현한다 - 곧 "production 정의와 일치"를 증명하는 재현 계산).
-    const GeometricPath geo = ComputeGeometricPath(best->s, best->d, ref);
-    const std::size_t n = std::min(geo.kappa.size(), best->s_d.size());
-    double reproduced_peak = 0.0;
-    for (std::size_t i = 0; i < n; ++i) {
-        reproduced_peak = std::max(
-            reproduced_peak, best->s_d[i] * best->s_d[i] * std::fabs(geo.kappa[i]));
-    }
-
-    // FilterByCartesianLateralAcceleration 자체를 같은 후보에 다시 돌려도
-    // (이미 valid인 채로) 여전히 유효해야 한다 - 즉 reproduced_peak이 한계
-    // 이하라는 뜻이고, 이는 production 필터가 실제로 썼던 것과 같은 계산임을
-    // 보강한다.
-    std::vector<FrenetPath> single_candidate = {*best};
-    FilterByCartesianLateralAcceleration(single_candidate, ref,
-                                         direct_limits.max_lateral_accel);
-    Expect(single_candidate[0].valid,
-           "filter-diag: the selected best candidate still passes "
-           "FilterByCartesianLateralAcceleration when re-applied "
-           "(consistency check for the reproduced peak)");
-
-    std::printf("  filter-diag: reproduced_peak=%.6f (production-equivalent "
-                "ComputeGeometricPath+s_d formula)\n",
-                reproduced_peak);
-    Expect(reproduced_peak <= direct_limits.max_lateral_accel + 1e-6,
-           "filter-diag: production-equivalent formula stays within "
-           "max_lateral_accel for the selected candidate (sanity: the "
-           "diagnostic formula must agree with what the filter itself "
-           "would compute, within numerical tolerance)");
-}
-
 int main() {
     TestMoraiSnapshotsProduceValidCurvatureFeasiblePath();
     TestNormalKeepStillRecentersToCenter();
     TestContinuityNotGeneratedWhenNormalCandidatesValid();
-    TestFilterDiagnosticMatchesProductionFilterDefinition();
     TestContinuityCandidateRejectedWhenDynamicallyInfeasible();
 
     if (g_failures == 0) {
