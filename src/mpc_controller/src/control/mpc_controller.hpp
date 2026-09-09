@@ -52,14 +52,6 @@ class MpcController {
         double current_ff0 = 0.0;
         double warm_rebased0 = 0.0;
         double warm_projected0 = 0.0;
-
-        // MPC-D1(진단 전용): 이번 solveMPC 호출이 실제로 clipSteeringRate의
-        // 기준(u_prev)으로 쓴 "직전에 실제로 발행한" steering.
-        // last_control_은 private이고 이번 호출 안에서 result.control로
-        // 갱신되므로, node가 rate-limit 여부를 스스로 재구성할 수 있도록
-        // 갱신 직전 값을 여기에 그대로 담아 돌려준다 - 별도 getter나 중복
-        // 상태를 추가하지 않는다.
-        double prev_applied_delta = 0.0;
     };
     Output ControlProcess(const MPCState& ego_state,
                           const ReferencePath& reference);
