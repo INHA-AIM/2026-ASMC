@@ -19,8 +19,13 @@ double computeHeadingErrorCost(const MPCState& state, const ReferencePath& ref,
 
 double computeSpeedErrorCost(const MPCState& state, double v_ref, double weight);
 
+// steer effort는 절대 조향각이 아니라 curvature feed-forward(delta_ff)
+// 대비 잔차 (delta - delta_ff)에 벌점을 준다 - 직선(kappa=0)에서는
+// delta_ff=0이라 기존과 동일하고, 코너에서는 필요한 조향 자체를 벌하지
+// 않는다 (fix/yuntae-planner Commit C). delta_ff=0.0이면 기존 semantics와
+// 완전히 같다.
 double computeControlEffortCost(const MPCControl& u, double weight_steer,
-                                 double weight_accel);
+                                 double weight_accel, double delta_ff = 0.0);
 
 double computeControlRateCost(const MPCControl& u_prev, const MPCControl& u_cur,
                               double weight_steer, double weight_accel);

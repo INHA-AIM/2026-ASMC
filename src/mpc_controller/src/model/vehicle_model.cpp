@@ -183,3 +183,13 @@ std::vector<LinearizedModel> buildLTVModels(
     }
     return models;
 }
+
+// ========================================
+// Curvature-aware steering feed-forward: delta_ff = atan(L * kappa_ref)
+// ========================================
+double SteeringFeedforward(double curvature, double wheelbase,
+                           double steering_max)
+{
+    const double delta_ff = std::atan(wheelbase * curvature);
+    return clip(delta_ff, -steering_max, steering_max);
+}
