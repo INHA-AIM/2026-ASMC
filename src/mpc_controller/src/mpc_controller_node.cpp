@@ -33,12 +33,17 @@ MpcControllerNode::MpcControllerNode(ros::NodeHandle nh,
     std::string trajectory_topic = "/planning/trajectory";
     std::string control_topic = "/ctrl_cmd";
     std::string behavior_command_topic = "/behavior/command_v2";
+    std::string vehicle_state_topic = "/vehicle/state";
     private_nh_.param("topics/trajectory", trajectory_topic, trajectory_topic);
     private_nh_.param("publish_topics/control", control_topic, control_topic);
     private_nh_.param("topics/behavior_command_v2", behavior_command_topic,
                       behavior_command_topic);
+    private_nh_.param("topics/vehicle_state", vehicle_state_topic,
+                      vehicle_state_topic);
     private_nh_.param("timeouts/trajectory", trajectory_timeout_,
                       trajectory_timeout_);
+    private_nh_.param("timeouts/vehicle_state", vehicle_state_timeout_,
+                      vehicle_state_timeout_);
 
     double bridge_max_steer_degrees = 36.25;
     private_nh_.param("vehicle/max_steer_deg", bridge_max_steer_degrees,
@@ -56,6 +61,8 @@ MpcControllerNode::MpcControllerNode(ros::NodeHandle nh,
 
     trajectory_sub_ = nh_.subscribe(
         trajectory_topic, 1, &MpcControllerNode::trajectoryCallback, this);
+    vehicle_state_sub_ = nh_.subscribe(
+        vehicle_state_topic, 1, &MpcControllerNode::vehicleStateCallback, this);
     behavior_command_sub_ = nh_.subscribe(
         behavior_command_topic, 1,
         &MpcControllerNode::behaviorCommandCallback, this);
@@ -91,6 +98,14 @@ void MpcControllerNode::trajectoryCallback(
     has_trajectory_ = true;
 }
 
+void MpcControllerNode::vehicleStateCallback(
+    const asmc_msgs::VehicleState::ConstPtr& message) {
+    if (!message) return;
+    latest_vehicle_state_ = *message;
+    vehicle_state_received_at_ = ros::SteadyTime::now();
+    has_vehicle_state_ = true;
+}
+
 void MpcControllerNode::publishStop(const char* reason) {
     controller_.ResetOnFailSafe();
     control_pub_.publish(MakeRosStopCommand());
@@ -112,6 +127,15 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
         publishStop("trajectory stale");
         return;
     }
+    if (!has_vehicle_state_) {
+        publishStop("vehicle state missing");
+        return;
+    }
+    if (!IsTrajectoryFresh(vehicle_state_received_at_, ros::SteadyTime::now(),
+                           vehicle_state_timeout_)) {
+        publishStop("vehicle state stale");
+        return;
+    }
 
     PlannedPath path;
     MPCState ego_snapshot;
@@ -126,15 +150,30 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
         return;
     }
 
+    // x0는 더 이상 trajectory.ego_at_plan이 아니라 최신 /vehicle/state에서
+    // 만든다 - ego_snapshot(위 ConvertTrajectory 결과)은 provenance 검증에만
+    // 쓰였고 여기서는 버려진다. ego_at_plan validity 자체는 ConvertTrajectory가
+    // 이미 계약대로 검사했다.
+    MPCState current_state;
+    const VehicleStateStatus vehicle_status =
+        ConvertVehicleState(latest_vehicle_state_, current_state);
+    if (vehicle_status != VehicleStateStatus::OK) {
+        publishStop(VehicleStateStatusName(vehicle_status));
+        return;
+    }
+
+    const double trajectory_age = ComputeTrajectoryAge(
+        latest_trajectory_.header.stamp, latest_vehicle_state_.header.stamp);
     const ReferencePath reference = ToReferencePath(
-        path, controller_.params().dt, controller_.params().horizon);
+        path, controller_.params().dt, controller_.params().horizon,
+        trajectory_age);
     if (reference.empty()) {
         publishStop("reference interpolation failed");
         return;
     }
 
     const MpcController::Output output =
-        controller_.ControlProcess(ego_snapshot, reference);
+        controller_.ControlProcess(current_state, reference);
     if (output.stuck_event ==
         MpcController::StuckEvent::RECOVERY_STARTED) {
         ROS_WARN("MPC stuck recovery start: ego_v=%.2f max_ref_v=%.2f "

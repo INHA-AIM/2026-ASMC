@@ -30,7 +30,7 @@ Behavior/FSM → Frenet Planner → MPC Controller
 
 | Topic | Publisher | Subscriber | Message | Purpose |
 |---|---|---|---|---|
-| `/vehicle/state` | State Estimator | FSM, Frenet | `asmc_msgs/VehicleState` | 통합 Ego state |
+| `/vehicle/state` | State Estimator | FSM, Frenet, MPC | `asmc_msgs/VehicleState` | 통합 Ego state |
 | `/perception/objects` | Perception | FSM, Frenet | `asmc_msgs/DetectedObjectArray` | 센서 기반 객체 상태와 형상 |
 | `/behavior/context` | Behavior/FSM | Frenet | `asmc_msgs/BehaviorContext` | 선택된 행동과 실행 target |
 | `/planning/trajectory` | Frenet | MPC | `asmc_msgs/Trajectory` | 최종 추종 trajectory |
@@ -139,8 +139,8 @@ Planner는 corner를 `center + yaw + width + length`로 다시 생성하거나 O
 Trajectory point는 `x`, `y`, `yaw`, `curvature`, `velocity`, `acceleration`을 포함한다.
 
 - `dt`는 Planner source trajectory의 sample time이다.
-- `ego_at_plan`은 Planner가 trajectory 생성에 사용한 Ego snapshot이다.
-- MPC는 `dt`를 사용해 자신의 timestep으로 시간축 보간한다.
+- `ego_at_plan`은 Planner가 trajectory 생성에 사용한 Ego snapshot이다 - **provenance 전용**이다. MPC의 실제 control 초기상태(x0)는 `ego_at_plan`이 아니라 MPC가 독립적으로 구독하는 최신 `/vehicle/state`에서 만든다(코너/선회 구간에서 planning과 control 사이 시간차를 줄이기 위함).
+- MPC는 `dt`를 사용해 자신의 timestep으로 시간축 보간하고, `header.stamp`(trajectory 생성 시각)와 최신 `/vehicle/state.header.stamp`(현재 시각) 사이의 age만큼 reference 시작점을 앞으로 이동시켜 trajectory latency를 보정한다.
 - 안전 STOP trajectory는 Controller가 실행할 수 있는 유효 명령이므로 `valid=true`이고, 원인은 `failure_reason`에 남긴다.
 - `valid=false`는 points 자체를 추종하면 안 되는 경우에 사용한다.
 
@@ -149,6 +149,7 @@ Trajectory point는 `x`, `y`, `yaw`, `curvature`, `velocity`, `acceleration`을 
 | Condition | Required behavior |
 |---|---|
 | Vehicle state missing/invalid/stale | Frenet STOP |
+| Vehicle state missing/invalid/stale (MPC) | MPC STOP |
 | Behavior missing/invalid/stale | Frenet STOP |
 | `force_stop=true` | Frenet STOP |
 | Objects missing/invalid/stale | 기본 STOP; 별도 합의 후에만 degraded mode |

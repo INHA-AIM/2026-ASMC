@@ -2,6 +2,14 @@
 
 공용 ROS 계약의 breaking change와 합의 사항을 기록한다.
 
+## Unreleased - fix/yuntae-planner Commit B
+
+### Changed
+
+- MPC Controller가 `/vehicle/state`(`asmc_msgs/VehicleState`)를 canonical subscriber로 추가했다. Control 초기상태(x0)는 더 이상 `Trajectory.ego_at_plan`이 아니라 이 최신 vehicle state에서 만든다.
+- `Trajectory.ego_at_plan`은 provenance(Planner가 trajectory 생성에 사용한 Ego snapshot) 검증 용도로만 유지된다 - 계약 자체는 바뀌지 않았다.
+- `/vehicle/state` 누락/무효/stale 시 MPC도 Frenet과 동일하게 STOP한다(fail-safe 표에 행 추가).
+
 ## V1 - 2026-09-02
 
 ### Added

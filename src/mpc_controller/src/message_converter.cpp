@@ -1,5 +1,6 @@
 #include "message_converter.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <utility>
 
@@ -24,6 +25,17 @@ const char* TrajectoryStatusName(TrajectoryStatus status) {
         case TrajectoryStatus::INVALID_DT: return "INVALID_DT";
         case TrajectoryStatus::INVALID_EGO: return "INVALID_EGO";
         case TrajectoryStatus::INVALID_POINT: return "INVALID_POINT";
+    }
+    return "UNKNOWN";
+}
+
+const char* VehicleStateStatusName(VehicleStateStatus status) {
+    switch (status) {
+        case VehicleStateStatus::OK: return "OK";
+        case VehicleStateStatus::INVALID_MESSAGE: return "INVALID_MESSAGE";
+        case VehicleStateStatus::INVALID_FRAME: return "INVALID_FRAME";
+        case VehicleStateStatus::INVALID_TIMESTAMP: return "INVALID_TIMESTAMP";
+        case VehicleStateStatus::NON_FINITE_VALUE: return "NON_FINITE_VALUE";
     }
     return "UNKNOWN";
 }
@@ -100,6 +112,35 @@ TrajectoryStatus ConvertTrajectory(const asmc_msgs::Trajectory& message,
     ego_state = converted_ego;
     return stop_trajectory ? TrajectoryStatus::STOP_TRAJECTORY
                            : TrajectoryStatus::OK;
+}
+
+VehicleStateStatus ConvertVehicleState(const asmc_msgs::VehicleState& message,
+                                       MPCState& ego_state) {
+    if (!message.valid) return VehicleStateStatus::INVALID_MESSAGE;
+    if (message.header.frame_id != "map") {
+        return VehicleStateStatus::INVALID_FRAME;
+    }
+    if (message.header.stamp.isZero()) {
+        return VehicleStateStatus::INVALID_TIMESTAMP;
+    }
+    if (!IsFinite(message.x) || !IsFinite(message.y) ||
+        !IsFinite(message.yaw) || !IsFinite(message.speed)) {
+        return VehicleStateStatus::NON_FINITE_VALUE;
+    }
+
+    MPCState converted;
+    converted.x = message.x;
+    converted.y = message.y;
+    converted.yaw = message.yaw;
+    converted.vx = message.speed;
+    ego_state = converted;
+    return VehicleStateStatus::OK;
+}
+
+double ComputeTrajectoryAge(const ros::Time& trajectory_stamp,
+                            const ros::Time& vehicle_stamp) {
+    const double age = (vehicle_stamp - trajectory_stamp).toSec();
+    return std::isfinite(age) ? std::max(0.0, age) : 0.0;
 }
 
 morai_msgs::CtrlCmd MakeRosStopCommand() {

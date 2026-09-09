@@ -1,12 +1,14 @@
 topics:
   trajectory: /planning/trajectory
   behavior_command_v2: /behavior/command_v2
+  vehicle_state: /vehicle/state
 
 publish_topics:
   control: /ctrl_cmd
 
 timeouts:
   trajectory: 0.25
+  vehicle_state: 0.20
 
 # Must match morai_udp_bridge max_steer_deg and the physical vehicle limit.
 vehicle:
