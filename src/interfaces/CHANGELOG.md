@@ -2,6 +2,37 @@
 
 공용 ROS 계약의 breaking change와 합의 사항을 기록한다.
 
+## Unreleased - feature/yuntae-planner-lane-change (exact target preservation fix)
+
+바로 아래 "target geometry source change" 항목이 실행 목표의 **출처**를
+`target_pose_projection_d`로 바꿨지만, PREPARE 단계의 후보 생성이 여전히
+전역 `lateral_target_tolerance`(기본 0.5m)를 쓰고 있어 실제로 선택되는
+`selected_target_d`가 그 투영값 ± tolerance 범위 안에서 흔들릴 수 있었다.
+COMMIT은 그 값을 그대로 잠그므로, 잠긴 목표가 FSM이 지정한 값과 최대
+tolerance만큼 어긋날 수 있는 잠재적 계약 위반이었다(ROS 계약 자체를
+바꾸지 않으므로 breaking change는 아니다).
+
+### Fixed
+
+- `Maneuver/LaneChange.cpp`의 `LaneChangeProcess`가 PREPARE 단계부터
+  `generation_cfg.lateral_target_tolerance = 0.0`을 무조건 적용한다 - 이전에는
+  `lane_change_committed || holding`일 때만 0으로 좁혔다. Behavior가 WHERE를
+  정하고 Frenet은 HOW만 최적화한다는 계약(§3)에 따라, PREPARE도 COMMIT과
+  같은 정확도로 목표를 겨냥해야 두 단계 사이에 값이 갈리지 않는다.
+- 저속(ego.v < 0.5 m/s) PREPARE에서 `GenerateLateralCandidates`가
+  `lateral_d1` 격자 자체를 무시하고 현재 d/차선 중앙 후보만 만드는 기존 동작
+  (수학적 특이점 회피, 변경하지 않음)과 결합하면, 요청한 target_d에 실제로
+  도달하지 않는 후보가 `candidate_valid=true`로 잘못 보고될 수 있었다.
+  `LaneChangeProcess`에 종단 d가 target_d와 정확히 일치하는 후보만 유효로
+  인정하는 가드를 추가했다 - 불일치하면 WAITING으로 내려가고 현재 차선 유지
+  궤적은 그대로 안전하게 publish된다.
+- `command_lane_change_plan_test.cpp`의 target_d 일치 검증을 느슨한
+  `±0.5m`/`±0.6m`에서 `1e-6` tight tolerance로 강화하고, COMMIT locked
+  target_d가 PREPARE가 고른 candidate뿐 아니라 원본
+  `command.target_pose_projection_d`와도 직접 일치하는지 확인하는 항목,
+  그리고 저속 PREPARE가 거짓 READY를 보고하지 않는지 확인하는 항목을
+  추가했다.
+
 ## Unreleased - feature/yuntae-planner-lane-change (target geometry source change)
 
 이 항목은 바로 아래 "D7 follow-up" 항목이 도입한 `start_d ± lane_width`

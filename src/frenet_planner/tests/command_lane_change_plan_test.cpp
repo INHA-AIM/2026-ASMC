@@ -15,6 +15,11 @@
 //     target_pose_projection_*를 직접 채운다 - core는 그 값을 그대로
 //     execution target_d로 신뢰하며, lane_width 기반 근사값으로 대체하지
 //     않는다.
+//   - Behavior가 WHERE(목표 차로 중심)를 정하고 Frenet은 HOW(어떻게 그
+//     목표에 도달할지: duration/충돌회피/kinematic feasibility/cost)만
+//     최적화한다 - PREPARE/COMMIT/SHIFT/HOLD 전 구간에서 종단 lateral
+//     target은 절대 값이 갈리지 않는다. 그래서 target_d 일치 검증은 느슨한
+//     허용오차가 아니라 부동소수점 수준의 정확한 값(1e-6)으로 한다.
 //   - 목표 도달 후 COMPLETED로 latch되지 않는다. HOLD_TARGET_LANE으로
 //     전환해 잠긴 target_d를 유지한 채 계속 전진한다.
 
@@ -239,10 +244,16 @@ int main() {
     constexpr double kEgoSpeed = 6.0;
     const CartesianState ego = MakeEgo(PoseAt(waypoints, kEgoS), kEgoSpeed);
     constexpr double kLaneWidth = 3.5;  // planner.hpp의 lane_width_ 기본값
+    // target_d 일치 검증에 쓰는 허용오차. 종단 d는 quintic 경계조건 자체이므로
+    // (MakeQuintic(..., d1=target_d, ..., T)) 부동소수점 오차 이상으로 벌어질
+    // 이유가 없다 - 느슨한 ±0.5m 허용은 PREPARE가 target_d ± tolerance 범위에서
+    // 값을 골라도 테스트를 통과시켜, 정확히 이 회귀(§2)를 놓친다.
+    constexpr double kExactTargetEpsilon = 1e-6;
 
     // ===== [A] AUTHORITATIVE TARGET GEOMETRY ============================
 
-    // 1. LEFT: projected target이 그대로 쓰인다(고정 lane_width가 아니다).
+    // 1. LEFT: projected target이 그대로, 정확히 쓰인다(고정 lane_width가
+    //    아니고, PREPARE의 전역 lateral_target_tolerance로 흔들리지도 않는다).
     {
         FrenetPlanner planner;
         if (!planner.Init(config)) {
@@ -257,14 +268,16 @@ int main() {
         const bool ok =
             planner.PrepareLaneChange(ego, {}, command, maintenance, result);
         Expect(ok && result.candidate_valid &&
-                   std::fabs(result.selected_target_d - kProjectedD) < 0.6,
-               "1: LEFT locks the projected FSM target_d directly");
+                   std::fabs(result.selected_target_d - kProjectedD) <
+                       kExactTargetEpsilon,
+               "1: LEFT PREPARE selected_target_d exactly equals the "
+               "projected FSM target_d (tight tolerance, not +-0.5m)");
         Expect(std::fabs(result.selected_target_d -
                          (planner.lane_change_start_d() + kLaneWidth)) > 0.05,
                "1: LEFT target is not start_d + nominal lane_width");
     }
 
-    // 2. RIGHT: projected target이 그대로 쓰인다.
+    // 2. RIGHT: projected target이 그대로, 정확히 쓰인다.
     {
         FrenetPlanner planner;
         planner.Init(config);
@@ -276,15 +289,18 @@ int main() {
         const bool ok =
             planner.PrepareLaneChange(ego, {}, command, maintenance, result);
         Expect(ok && result.candidate_valid &&
-                   std::fabs(result.selected_target_d - kProjectedD) < 0.6,
-               "2: RIGHT locks the projected FSM target_d directly");
+                   std::fabs(result.selected_target_d - kProjectedD) <
+                       kExactTargetEpsilon,
+               "2: RIGHT PREPARE selected_target_d exactly equals the "
+               "projected FSM target_d (tight tolerance, not +-0.5m)");
         Expect(std::fabs(result.selected_target_d -
                          (planner.lane_change_start_d() - kLaneWidth)) > 0.05,
                "2: RIGHT target is not start_d - nominal lane_width");
     }
 
-    // ego d가 0이 아닌 경우에도 투영값을 그대로 쓰는지 확인한다(lane_width
-    // 산술로 우연히 같은 값이 나오는 경우를 배제).
+    // 3. ego d가 0이 아닌 경우에도 투영값을 정확히 그대로 쓰는지 확인한다
+    //    (start_d + lane_width로 우연히 근사되는 경우도, target ± tolerance로
+    //    흔들리는 경우도 모두 배제).
     {
         FrenetPlanner planner;
         planner.Init(config);
@@ -297,9 +313,10 @@ int main() {
         Prepare result;
         planner.PrepareLaneChange(offset_ego, {}, command, maintenance,
                                   result);
-        Expect(std::fabs(result.selected_target_d - kProjectedD) < 0.6,
-               "1b: non-zero start_d still uses the projected target_d "
-               "verbatim, not start_d + lane_width");
+        Expect(std::fabs(result.selected_target_d - kProjectedD) <
+                   kExactTargetEpsilon,
+               "3: non-zero start_d still uses the projected target_d "
+               "exactly, not start_d + lane_width and not target +- 0.5m");
     }
 
     // 3. target geometry가 없으면 lane_width로 fallback하지 않고 실패한다.
@@ -312,21 +329,21 @@ int main() {
         CartesianPath path;
         const bool ok = planner.Plan(ego, {}, no_projection, path);
         Expect(!ok && planner.last_failure_reason() == Reason::INVALID_COMMAND,
-               "3: missing target geometry fails safely, no lane_width "
+               "4: missing target geometry fails safely, no lane_width "
                "fallback");
     }
 
     // ===== [B] VALIDATION =================================================
 
-    // 4/5. delta_d 기준 반대쪽 target은 ValidateExternalCommand 이전 단계
+    // 5/6. delta_d 기준 반대쪽 target은 ValidateExternalCommand 이전 단계
     // (node)에서 거부되어야 하지만, core도 델타 부호를 스스로 강제하지
     // 않는다는 것만 여기서 확인한다 - core는 command가 준 값을 신뢰하되,
-    // NaN/Inf 방어는 core 레벨에서 한다(아래 6/7). 실제 "반대쪽 lateral
+    // NaN/Inf 방어는 core 레벨에서 한다(아래 7/8). 실제 "반대쪽 lateral
     // side" 거부는 node의 delta_d sanity 검증(frenet_planner_node.cpp)
-    // 책임이며 이 unit test의 범위 밖이다(§6 참고, node 레벨 테스트는
+    // 책임이며 이 unit test의 범위 밖이다(node 레벨 회귀는
     // v2_ros_regression_test 몫).
 
-    // 6. 투영 실패/NaN target은 안전하게 실패한다.
+    // 7. 투영 실패/NaN target은 안전하게 실패한다.
     {
         FrenetPlanner planner;
         planner.Init(config);
@@ -335,11 +352,11 @@ int main() {
         CartesianPath path;
         const bool ok = planner.Plan(ego, {}, nan_command, path);
         Expect(!ok && planner.last_failure_reason() == Reason::INVALID_COMMAND,
-               "6: NaN target_pose_projection_d is rejected as "
+               "7: NaN target_pose_projection_d is rejected as "
                "INVALID_COMMAND");
     }
 
-    // 7. has_target_pose_projection=false는 명령 실패로 수렴한다(heading
+    // 8. has_target_pose_projection=false는 명령 실패로 수렴한다(heading
     // 검증 자체는 node 책임이므로 core 레벨에서는 이 계약만 확인한다).
     {
         FrenetPlanner planner;
@@ -351,13 +368,13 @@ int main() {
         const bool ok2 = planner.Plan(ego, {}, no_projection, path2);
         Expect(!ok2 &&
                    planner.last_failure_reason() == Reason::INVALID_COMMAND,
-               "7: missing target_pose_projection is rejected as "
+               "8: missing target_pose_projection is rejected as "
                "INVALID_COMMAND");
     }
 
     // ===== [C] PREPARE =====================================================
 
-    // 8. PREPARE candidate evaluates lateral shift feasibility; PREPARE
+    // 9. PREPARE candidate evaluates lateral shift feasibility; PREPARE
     //    maintenance stays in the current lane (candidate not published).
     {
         FrenetPlanner planner;
@@ -369,14 +386,35 @@ int main() {
         const bool ok =
             planner.PrepareLaneChange(ego, {}, command, maintenance, result);
         Expect(ok && result.candidate_valid,
-               "8a: PREPARE candidate evaluates lateral shift feasibility");
+               "9a: PREPARE candidate evaluates lateral shift feasibility");
         const double maintenance_end_d = EndpointD(planner, maintenance, kEgoS);
         Expect(std::isfinite(maintenance_end_d) &&
                    std::fabs(maintenance_end_d) < 1.0,
-               "8b: PREPARE published maintenance stays in the current lane");
+               "9b: PREPARE published maintenance stays in the current lane");
     }
 
-    // 9. WAITING keeps forward motion when the candidate is blocked.
+    // 10. 여러 time horizon(T) 후보가 평가돼도 모든 유효 LC candidate의 종단
+    //     target d는 같은 authoritative target_d다 - Frenet은 duration만
+    //     최적화하고 lateral 목적지 자체를 흔들지 않는다는 계약(§4)의 직접
+    //     검증이다. path_cfg_.time_horizon이 여러 T를 만든다는 전제이므로,
+    //     생성된 후보가 1개뿐이면(단일 T 설정) 이 확인은 자명하게 통과한다.
+    {
+        FrenetPlanner planner;
+        planner.Init(config);
+        const PlannerCommand command =
+            MakeLaneChangeCommand(LANE_CHANGE_LEFT, kEgoS, kLaneWidth);
+        CartesianPath maintenance;
+        Prepare result;
+        const bool ok =
+            planner.PrepareLaneChange(ego, {}, command, maintenance, result);
+        Expect(ok && result.candidate_valid &&
+                   std::fabs(result.selected_target_d - kLaneWidth) <
+                       kExactTargetEpsilon,
+               "10: every evaluated LC candidate's terminal target is the "
+               "same authoritative target_d regardless of time horizon");
+    }
+
+    // 11. WAITING keeps forward motion when the candidate is blocked.
     {
         FrenetPlanner planner;
         planner.Init(config);
@@ -391,38 +429,78 @@ int main() {
         const bool ok = planner.PrepareLaneChange(ego, blockers, command,
                                                    maintenance, result);
         Expect(ok && !result.candidate_valid,
-               "9a: a fully blocked target lane reports candidate_valid=false "
-               "(WAITING)");
+               "11a: a fully blocked target lane reports "
+               "candidate_valid=false (WAITING)");
         Expect(maintenance.x.size() >= 2 && maintenance.v.front() > 0.1,
-               "9b: WAITING still keeps forward motion via rolling "
+               "11b: WAITING still keeps forward motion via rolling "
                "maintenance");
     }
 
-    // ===== [D] COMMIT ======================================================
+    // ===== [D] LOW SPEED ===================================================
 
-    // 10/11. COMMIT locks the projected target_d.
+    // 12. a very-low-speed PREPARE cannot report candidate_valid=true solely
+    //     because a current-lane/centerline candidate exists.
+    //     GenerateLateralCandidates ignores the requested lateral_d1 grid
+    //     below kLowSpeedThreshold and instead offers only start.d/0.0
+    //     candidates(수학적 특이점 회피) - none of those equal the requested
+    //     LC target_d, so the exact-match guard in LaneChangeProcess must
+    //     reject them rather than reporting a false READY.
     {
         FrenetPlanner planner;
         planner.Init(config);
+        CartesianState slow_ego = ego;
+        slow_ego.v = 0.2;  // < kLowSpeedFallbackV(0.5 m/s)
         const PlannerCommand command =
             MakeLaneChangeCommand(LANE_CHANGE_LEFT, kEgoS, kLaneWidth);
+        CartesianPath maintenance;
+        Prepare result;
+        const bool ok = planner.PrepareLaneChange(slow_ego, {}, command,
+                                                   maintenance, result);
+        Expect(ok, "12a: low-speed PREPARE still publishes safe "
+                   "maintenance");
+        Expect(!result.candidate_valid,
+               "12b: low-speed PREPARE does not report candidate_valid=true "
+               "from a centerline/current-lane candidate that never reaches "
+               "target_d");
+        Expect(maintenance.x.size() >= 2,
+               "12c: maintenance behavior remains safe (non-empty rolling "
+               "path) even while the LC candidate is rejected");
+    }
+
+    // ===== [E] COMMIT ======================================================
+
+    // 13/14. COMMIT locks the projected target_d, and the locked value
+    //        equals the ORIGINAL projected target directly (not merely
+    //        prepared.selected_target_d, which would not catch PREPARE
+    //        target drift).
+    {
+        FrenetPlanner planner;
+        planner.Init(config);
+        constexpr double kProjectedD = kLaneWidth;
+        const PlannerCommand command =
+            MakeLaneChangeCommand(LANE_CHANGE_LEFT, kEgoS, kProjectedD);
         CartesianPath maintenance;
         Prepare prepared;
         planner.PrepareLaneChange(ego, {}, command, maintenance, prepared);
         auto manager = MakeLaneChangeManagerReady(4001);
         Expect(prepared.candidate_valid &&
                    planner.CanCommitLaneChange(prepared),
-               "10: valid candidate passes commit preflight (EXECUTE "
+               "13: valid candidate passes commit preflight (EXECUTE "
                "revalidation)");
         Expect(frenet_planner_ros::CommitLaneChangeAtomically(
                    manager, planner, prepared),
-               "11a: COMMIT locks manager and core together");
+               "14a: COMMIT locks manager and core together");
         const double locked = planner.lane_change_locked_target_d();
         Expect(std::fabs(locked - prepared.selected_target_d) < 1e-9,
-               "11b: locked target_d matches the committed candidate");
+               "14b: locked target_d matches the committed candidate");
+        Expect(std::fabs(locked - command.target_pose_projection_d) <
+                   kExactTargetEpsilon,
+               "14c: locked target_d equals the ORIGINAL projected "
+               "command.target_pose_projection_d directly, not just the "
+               "PREPARE-selected candidate");
     }
 
-    // 12. after COMMIT, changing current ego d does not move the locked
+    // 15. after COMMIT, changing current ego d does not move the locked
     //     target.
     {
         FrenetPlanner planner;
@@ -446,10 +524,10 @@ int main() {
                                         step_result);
         Expect(std::fabs(planner.lane_change_locked_target_d() -
                          locked_before) < 1e-9,
-               "12: changing current ego d does not move the locked target");
+               "15: changing current ego d does not move the locked target");
     }
 
-    // 13. after COMMIT, a rejected/alternate incoming target pose does not
+    // 16. after COMMIT, a rejected/alternate incoming target pose does not
     //     mutate the locked active transaction target (PrepareExternalLaneChangeTarget
     //     early-returns true for the committed branch without re-reading
     //     command.target_pose_projection_d).
@@ -474,13 +552,13 @@ int main() {
                                         step_result);
         Expect(std::fabs(planner.lane_change_locked_target_d() -
                          locked_before) < 1e-9,
-               "13: an alternate incoming target pose does not mutate the "
+               "16: an alternate incoming target pose does not mutate the "
                "locked active transaction target");
     }
 
-    // ===== [E] SHIFT / HOLD ================================================
+    // ===== [F] SHIFT / HOLD ================================================
 
-    // 14. post-COMMIT replans every cycle from a fresh snapshot.
+    // 17. post-COMMIT replans every cycle from a fresh snapshot.
     {
         FrenetPlanner planner;
         planner.Init(config);
@@ -507,10 +585,10 @@ int main() {
                 !step_path.x.empty();
         }
         Expect(replanned_each_cycle,
-               "14: post-COMMIT replans a fresh trajectory every cycle");
+               "17: post-COMMIT replans a fresh trajectory every cycle");
     }
 
-    // 15. SHIFT converges toward the locked projected target_d (monotonic
+    // 18. SHIFT converges toward the locked projected target_d (monotonic
     //     progress).
     {
         FrenetPlanner planner;
@@ -540,11 +618,11 @@ int main() {
             }
             last_progress = step_result.maneuver_progress;
         }
-        Expect(monotonic, "15: SHIFT maneuver_progress converges "
+        Expect(monotonic, "18: SHIFT maneuver_progress converges "
                           "monotonically toward the locked target_d");
     }
 
-    // 16. target-lane tolerances cause SHIFT -> HOLD_TARGET_LANE.
+    // 19. target-lane tolerances cause SHIFT -> HOLD_TARGET_LANE.
     {
         FrenetPlanner planner;
         planner.Init(config);
@@ -566,11 +644,11 @@ int main() {
                                         final_result);
         Expect(final_result.reached_target_lane &&
                    planner.lane_change_holding_target_lane(),
-               "16: reaching target_d with a stable heading/rate transitions "
+               "19: reaching target_d with a stable heading/rate transitions "
                "SHIFT -> HOLD_TARGET_LANE");
     }
 
-    // 17. HOLD: progress==1.0, stays EXECUTING(diagnostic-level: phase stays
+    // 20. HOLD: progress==1.0, stays EXECUTING(diagnostic-level: phase stays
     //     HOLD_TARGET_LANE, not re-armed to SHIFT), forward-moving path
     //     continues at locked target_d, no snap back toward d=0.
     {
@@ -593,17 +671,21 @@ int main() {
             arrived, {}, command, final_path, final_result);
         Expect(std::fabs(planner.lane_change_maneuver_progress() - 1.0) <
                    1e-9,
-               "17a: HOLD_TARGET_LANE reports maneuver_progress == 1.0");
+               "20a: HOLD_TARGET_LANE reports maneuver_progress == 1.0");
         Expect(ok && final_path.x.size() >= 2 && final_path.v.front() > 0.5,
-               "17b: HOLD_TARGET_LANE keeps generating a forward-moving "
+               "20b: HOLD_TARGET_LANE keeps generating a forward-moving "
                "trajectory (not a zero-speed hold)");
         const double end_d = EndpointD(planner, final_path, kEgoS);
         Expect(std::isfinite(end_d) && std::fabs(end_d) > kLaneWidth * 0.5,
-               "17c: HOLD_TARGET_LANE trajectory does not fall back toward "
+               "20c: HOLD_TARGET_LANE trajectory does not fall back toward "
                "d=0");
+        Expect(std::isfinite(end_d) &&
+                   std::fabs(end_d - locked) < kExactTargetEpsilon,
+               "20d: HOLD_TARGET_LANE keeps the exact locked target_d, not "
+               "an approximate one");
 
-        // 살짝 벗어난 상태(drift)에서 HOLD가 다시 target_d로 수렴시키는지도
-        // 함께 확인한다.
+        // 살짝 벗어난 상태(drift)에서 HOLD가 다시 정확한 target_d로
+        // 수렴시키는지도 함께 확인한다.
         const CartesianState drifted =
             MakeEgo(OffsetPoseAt(waypoints, kEgoS, locked - 0.2), kEgoSpeed);
         CartesianPath hold_path;
@@ -612,14 +694,14 @@ int main() {
             drifted, {}, command, hold_path, hold_result);
         const double hold_end_d = EndpointD(planner, hold_path, kEgoS);
         Expect(hold_ok && std::isfinite(hold_end_d) &&
-                   std::fabs(hold_end_d - locked) < 1.0,
-               "17d: HOLD_TARGET_LANE keeps d converging back to target_d "
-               "after drift");
+                   std::fabs(hold_end_d - locked) < kExactTargetEpsilon,
+               "20e: HOLD_TARGET_LANE keeps d converging back to the exact "
+               "target_d after drift");
     }
 
-    // ===== [F] RESET / TRANSACTION =========================================
+    // ===== [G] RESET / TRANSACTION =========================================
 
-    // 18. a new LC transaction clears stale LC context.
+    // 21. a new LC transaction clears stale LC context.
     {
         FrenetPlanner planner;
         planner.Init(config);
@@ -649,12 +731,13 @@ int main() {
         planner.PrepareLaneChange(shifted_ego, {}, second_command,
                                   second_maintenance, second_prepared);
         Expect(std::fabs(second_prepared.selected_target_d -
-                         (first_locked + kSecondProjectedD)) < 0.6,
-               "18: a new transaction captures the new command's target_d "
-               "instead of reusing the previous locked one");
+                         (first_locked + kSecondProjectedD)) <
+                   kExactTargetEpsilon,
+               "21: a new transaction captures the new command's exact "
+               "target_d instead of reusing the previous locked one");
     }
 
-    // 19. successful pre-COMMIT CANCEL clears LC context.
+    // 22. successful pre-COMMIT CANCEL clears LC context.
     {
         FrenetPlanner planner;
         planner.Init(config);
@@ -664,20 +747,21 @@ int main() {
         Prepare prepared;
         planner.PrepareLaneChange(ego, {}, command, maintenance, prepared);
         Expect(prepared.candidate_valid,
-               "19: baseline candidate is valid before cancel");
+               "22a: baseline candidate is valid before cancel");
 
         // pre-COMMIT CANCEL: node의 ShouldResetLaneChangeContext 경로를
         // 흉내내 core context를 명시적으로 비운다.
         planner.ResetExternalLaneChange();
 
         Expect(!planner.lane_change_committed(),
-               "19: cancelled transaction is not committed");
+               "22b: cancelled transaction is not committed");
         CartesianPath maintenance_again;
         Prepare fresh;
         planner.PrepareLaneChange(ego, {}, command, maintenance_again, fresh);
-        Expect(std::fabs(fresh.selected_target_d - kLaneWidth) < 0.6,
-               "19: a fresh PREPARE after cancel recaptures the target_d "
-               "from the current command instead of an old one");
+        Expect(std::fabs(fresh.selected_target_d - kLaneWidth) <
+                   kExactTargetEpsilon,
+               "22c: a fresh PREPARE after cancel recaptures the exact "
+               "target_d from the current command instead of an old one");
     }
 
     if (g_failures == 0) {

@@ -48,7 +48,11 @@ LANE_CHANGE를 자동으로 고르지 않는다 - 이 단계의 수동 검증은
   centerline에서 뽑은 실제 목표점)을 현재 RefLine에 투영한 값이다.**
   Frenet은 MGeo/Link/Route를 직접 알지 못하며, `lane_width` 기반 근사값으로
   대체하지 않는다 - node가 투영/heading/방향 sanity 검증을 통과시킨 값만
-  core의 `target_d`로 잠근다.
+  core의 `target_d`로 잠근다. Behavior가 WHERE(목표 차로 중심)를 정하고
+  Frenet은 HOW(duration/충돌회피/kinematic feasibility)만 최적화한다 -
+  PREPARE 단계부터 lateral 후보 tolerance를 0으로 두어, 종단 target d가
+  투영값과 정확히 같은 candidate만 유효로 인정한다(전역 `lateral_target_tolerance`
+  범위 안에서 값을 고르지 않는다).
 - **목표 차선 도달 후 `COMPLETED`로 latch하지 않는다.** 아직 새 참조선으로
   전환할 방법이 없으므로, `HOLD_TARGET_LANE`으로 전환해 잠긴 target_d를
   유지한 채 계속 전진한다 - `CommandExecutionManager`의 execution_state는

@@ -259,7 +259,9 @@ bool FrenetPlanner::LaneChangeProcess(
 
     // HOLD_TARGET_LANE에서도 매 cycle 잠긴 target_d로 계속 replan한다 -
     // 정지 상태가 아니다(frenet_planner.hpp의 LaneChangePhase 주석 참고).
-    const bool holding = v2_lane_change_.phase == LaneChangePhase::HOLD_TARGET_LANE;
+    // PREPARE/SHIFT/HOLD 모두 아래에서 동일하게 tolerance=0으로 정확한
+    // target_d를 겨냥하므로, 이 phase 값 자체로 생성 경로를 분기할 필요가
+    // 없다.
 
     // 정상 후보 생성기가 정지 근처에서 횡 후보를 만들지 못하는 경우
     // COMMIT 이후에는 잠긴 target_d를 향하는 crawl로 대체한다(AVOID와 동일).
@@ -295,13 +297,16 @@ bool FrenetPlanner::LaneChangeProcess(
     // PrepareExternalLaneChangeTarget이 이미 채워 놓았다.
     const double target_d = v2_lane_change_.target_d;
 
+    // LANE_CHANGE는 PREPARE 단계부터 항상 정확한 목표를 겨냥한다 - AVOID와
+    // 달리 좌/우 후보 경쟁이 없고(mode가 이미 방향을 정한다), 목표 자체가
+    // Behavor/MGeo가 이미 확정한 인접 차로 중심이다(target_pose_projection_d).
+    // 전역 lateral_target_tolerance(기본 0.5m)를 그대로 두면 PREPARE candidate가
+    // target_d 주변 ±tolerance 범위에서 cost로 하나를 고르게 되어, "어디로 갈지"
+    // 를 Frenet이 다시 정하는 셈이 된다(Behavior가 이미 정한 값을 core가
+    // 재해석) - PREPARE에서 선택한 값이 COMMIT에서 그대로 잠기므로, PREPARE도
+    // COMMIT/HOLD와 같은 정확도로 겨냥해야 둘 사이에 값이 갈리지 않는다.
     PathGeneratorConfig generation_cfg = path_cfg_;
-    if (lane_change_committed || holding) {
-        // COMMIT 이후(그리고 HOLD 중)에는 목표를 정확히 겨냥한다(AVOID의
-        // tolerance=0과 동일한 이유 - COMMIT의 의미는 "이 궤적을 실행한다"
-        // 이므로 잠근 목표를 그대로 겨냥해야 한다).
-        generation_cfg.lateral_target_tolerance = 0.0;
-    }
+    generation_cfg.lateral_target_tolerance = 0.0;
 
     PlannerCommand side_cmd = command;
     side_cmd.lane_change_d_offset = target_d;
@@ -328,7 +333,19 @@ bool FrenetPlanner::LaneChangeProcess(
         }
     }
 
+    // 저속(ego.v < kLowSpeedFallbackV)에서는 GenerateLateralCandidates가
+    // lateral_d1 격자 자체를 무시하고 현재 d/차선 중앙 후보만 만든다(수학적
+    // 특이점 회피, 헤더 주석 참고) - 위에서 겨냥한 target_d와 무관한 후보가
+    // 나올 수 있다는 뜻이다. candidate_valid=true는 "요청한 target_d에 실제로
+    // 도달하는 후보가 있다"를 뜻해야 하므로(§5), 종단 d가 target_d와 정확히
+    // 일치하지 않는 후보는 LC candidate로 인정하지 않는다 - PREPARE는
+    // WAITING으로 내려가고 현재 차선 유지 궤적은 그대로 안전하게 published된다.
+    constexpr double kExactTargetEpsilon = 1e-6;
     const FrenetPath* best_candidate = SelectBestPath(generated);
+    if (best_candidate && !best_candidate->d.empty() &&
+        std::fabs(best_candidate->d.back() - target_d) > kExactTargetEpsilon) {
+        best_candidate = nullptr;
+    }
     if (best_candidate) {
         result.candidate_valid = true;
         result.selected_target_d = best_candidate->d.empty()
