@@ -122,7 +122,7 @@ Docker Desktop → WSL Integration 활성화, NVIDIA Container Toolkit 확인.
 
 | 항목 | 내용 |
 |------|------|
-| 실행 | `./scripts/udp_bridge.sh` (rosbridge 아님) |
+| 실행 | `./scripts/udp_bridge.sh --simulator 26r1` (rosbridge 아님) |
 | Docker 네트워크 | Docker Desktop **host networking** (`ports:` 포워딩 없음) |
 | MORAI IP | Host/Dest 모두 **`127.0.0.1`** |
 | Ctrl | `cmd_ip=127.0.0.1` · `cmd_port` **9111** (팀 표준 Host) |
@@ -132,7 +132,7 @@ Docker Desktop → WSL Integration 활성화, NVIDIA Container Toolkit 확인.
 ./scripts/docker_ros_up.sh up
 docker exec -it asmc-ros-noetic bash
 source devel/setup.bash
-./scripts/udp_bridge.sh
+./scripts/udp_bridge.sh --simulator 26r1
 ```
 
 다른 WSL 터미널에서 전체 센서 수신을 한 번에 검사할 수 있습니다.

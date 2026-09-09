@@ -85,7 +85,7 @@ source devel/setup.bash
 |---|------|-----------|
 | C1 | submodule | `src/MORAI-ROS_morai_msgs` @ `beta_drive` |
 | C2 | build | `./scripts/build_ws.sh` |
-| C3 | bridge | `./scripts/rosbridge.sh` 또는 `./scripts/udp_bridge.sh` + 진단 |
+| C3 | SIM/bridge profile | `./scripts/udp_bridge.sh --simulator 26r1` 또는 `competition` + 진단 |
 | C4 | ego | `rostopic echo /Ego_topic -n1` → `wheel_angle` 필드 존재 |
 
 시뮬 항목 상세: [sim-verification-checklist.md](./sim-verification-checklist.md)
@@ -255,7 +255,7 @@ rostopic hz /frenet_planner/trajectory
 | `src/data_collection/` | Capture GT·mask·dataset 파이프라인, 추후 최소 bag profile |
 | `src/learning_by_cheating/` | LBC BEV·학습·자율주행 |
 | `scripts/rosbridge.sh` | WebSocket rosbridge (개발) |
-| `scripts/udp_bridge.sh` | UDP bridges (대회 경로) |
+| `scripts/udp_bridge.sh` | 26.R1.H3/대회판 공용 UDP bridge와 실행 profile |
 | `scripts/diagnose_morai_rosbridge.sh`, `wait_morai_topic.sh` | 진단 |
 | `config/morai_rosbridge.env` | rosbridge 설정 |
 | `mgeo_toolkit/` | HD map bake |
@@ -287,7 +287,9 @@ rostopic hz /frenet_planner/trajectory
 checklist **§2, §3**
 
 ```bash
-./scripts/rosbridge.sh   # 또는 대회 경로: ./scripts/udp_bridge.sh
+./scripts/udp_bridge.sh --simulator 26r1
+# 대회판: ./scripts/udp_bridge.sh --simulator competition
+# ROS 비교 실험만: ./scripts/rosbridge.sh
 python3 src/learning_by_cheating/scripts/verify_lbc_spec.py
 ./src/learning_by_cheating/scripts/start_lbc_imshow.sh
 ```
@@ -455,9 +457,9 @@ checklist **§5**
 
 | 순위 | 작업 | 담당 |
 |------|------|------|
-| 1 | 센서셋·규정·수집 모드·차량 좌표계 정본화 | 안승현, 팀 검토 |
-| 2 | raw rosbag wrapper와 모델별 result lineage | 인지 파트 |
-| 3 | Camera/LiDAR Capture 5/10 Hz GT pilot | 안승현·손재호 |
+| 1 | 센서셋·규정·수집 모드·차량 좌표계 정본화 | 완료, 팀 검토 |
+| 2 | transport-aware raw/result bag과 Streaming GT bridge | 구현 완료, actor/ROS pilot 남음 |
+| 3 | Capture/Streaming GT 정합 정책 확정 | Capture 주기 pilot 완료, actor GT 검증 남음 |
 | 4 | GPS lever arm 검증과 camera/map 공통 BEV 기준 | 안승현·장원태 |
 | 5 | 3-camera BEV, lane/stopline 구조화 | 안승현 |
 | 6 | MGeo crop과 정상 GPS/Blackout source policy 평가 | 안승현·장원태 |

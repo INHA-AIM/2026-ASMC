@@ -21,7 +21,7 @@ lane/drivable 학습·live 추론은 `src/perception/twinlite_morai/`와 이후
 ## LBC 재현용 시작
 
 ```bash
-./scripts/udp_bridge.sh
+./scripts/udp_bridge.sh --simulator 26r1
 source devel/setup.bash
 ./src/learning_by_cheating/scripts/start_lbc_morai.sh
 ```

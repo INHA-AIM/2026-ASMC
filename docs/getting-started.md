@@ -138,10 +138,11 @@ docker exec -it asmc-ros-noetic bash
 
 ```bash
 source devel/setup.bash
-./scripts/udp_bridge.sh
+./scripts/udp_bridge.sh --simulator 26r1
 ```
 
 > 대회 배포 SIM이 아니라 **개발용 26.R1.h3** 기준이다.
+> 대회판에서는 `./scripts/udp_bridge.sh --simulator competition`을 사용한다.
 ## 5. 일상 작업 (Git)
 
 ```bash

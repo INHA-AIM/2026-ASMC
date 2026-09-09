@@ -1,7 +1,7 @@
 # 2026-ASMC 문서 허브
 
 > **문서 상태:** Active Index
-> **최종 정리:** 2026-09-05
+> **최종 정리:** 2026-09-09
 > **대상:** 팀원 전원 · 관리: 통합 리드와 각 문서 담당자
 
 문서 파일은 기존 링크와 팀원의 북마크가 깨지지 않도록 현재 경로를 유지한다. 이 페이지에서
@@ -90,6 +90,7 @@ Behavior Planner가 다시 연결되기 전에는 handoff 문서의 토픽과 la
 | 문서 | 역할 | 상태 |
 |---|---|---|
 | [perception-map-fusion-roadmap.md](./perception-map-fusion-roadmap.md) | camera/MGeo/LiDAR 전체 전략, live와 대회판 이식 | Current Working Proposal |
+| [rosbag-evaluation-streaming-gt.md](./rosbag-evaluation-streaming-gt.md) | raw/result bag, source timestamp, Streaming GT와 ROS/UDP gate | Active Guide |
 | [perception-dataset-labeling-split.md](./perception-dataset-labeling-split.md) | Capture 원본, mask, ignore, manifest와 split 계약 | Canonical Data Contract |
 | [perception-bev-lane-interface-plan.md](./perception-bev-lane-interface-plan.md) | GT 정책 근거, BEV/lane topology 상세 후보 | Detailed Design Note |
 | [perception-v4-training-evaluation.md](./perception-v4-training-evaluation.md) | TwinLiteNet+ v4 10/18 epoch 결과 | Experiment Record |
@@ -118,6 +119,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | 본선 허용 여부 판단 | [competition-environment](./competition-environment.md) | [network-udp-ros](./network-udp-ros.md), [competition-data](./competition-data.md) |
 | MPC/Frenet 실행 | [planning-control-udp](./planning-control-udp.md) | [sim checklist](./sim-verification-checklist.md) |
 | Capture/마스크/학습 데이터 | [dataset contract](./perception-dataset-labeling-split.md) | [data_collection README](../src/data_collection/README.md) |
+| raw bag 녹화·재생·모델 A/B | [rosbag/Streaming GT guide](./rosbag-evaluation-streaming-gt.md) | [data_collection README](../src/data_collection/README.md) |
 | 카메라 live 추론 | [fusion roadmap §5~7](./perception-map-fusion-roadmap.md#5-코드-경계-제안) | [v4 evaluation](./perception-v4-training-evaluation.md) |
 | MGeo·카메라·LiDAR BEV | [fusion roadmap](./perception-map-fusion-roadmap.md) | [BEV design note](./perception-bev-lane-interface-plan.md) |
 | 대회판 이식 | [fusion roadmap §9](./perception-map-fusion-roadmap.md#9-26r1h3-개발판과-대회판-이식-전략) | [msg versions](./morai-msgs-versions.md), [network](./network-udp-ros.md) |

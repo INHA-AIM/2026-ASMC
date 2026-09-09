@@ -82,7 +82,7 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 │   └── grpc_inha_univ/        # gRPC ✅
 ├── scripts/
 │   ├── rosbridge.sh           # WebSocket rosbridge (개발)
-│   ├── udp_bridge.sh          # UDP bridges (26 개발 / 대회 경로)
+│   ├── udp_bridge.sh          # UDP bridges (--simulator 26r1|competition)
 │   └── …
 ├── mgeo_toolkit/ · R_KR_PG_KATRI/
 └── config/morai_rosbridge.env
