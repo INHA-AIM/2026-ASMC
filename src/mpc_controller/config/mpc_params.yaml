@@ -15,7 +15,15 @@ cost:
   heading_error: 3.0      # 6.0→3.0: 과도한 heading 보정이 오버슈트 유발
   speed_error: 2.0        # 3.0→2.0: 급정거 방지
   control: 1.25            # 2.0→1.0: steer effort 페널티 완화
-  control_rate: 100.0     # 90~110 사이의 값으로 조절해야함.
+  # 100.0 -> 70.0: MORAI 실측에서 커브 진입 시 steer_cmd가 필요한 방향으로
+  # 바뀌는 시점이 늦어(kappa_ref/steer_ff는 이미 반대 부호인데 steer_cmd가
+  # 여전히 이전 값 근처) Frenet d가 1m 이상 벌어지는 현상이 관찰됐다. 이
+  # cost는 dt 정규화로 rate_scale(=0.1/dt=2.0)이 곱해져 실질 가중치가
+  # 200이라, warm-start(이전 해를 한 스텝 shift)가 새 곡률 방향으로 벗어나는
+  # 것을 강하게 억제한다. steering.max_rate(물리 한계, 아래 constraints)는
+  # 그대로 두고 이 soft penalty만 30% 낮추는 첫 실측 trial이다 - 최종값은
+  # 다음 MORAI 결과로 결정한다.
+  control_rate: 70.0
   control_rate_accel: 4.5
   terminal: 8.0
 
