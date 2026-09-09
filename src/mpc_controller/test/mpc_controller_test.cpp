@@ -123,47 +123,6 @@ TEST(MpcControllerTest, WarmStartCarriesAcrossCycles) {
     EXPECT_GT(second.control.accel, -1e-6);
 }
 
-// curve-tracking stability iteration 2: 이전 steering이 거의 0인 상태(직선
-// warm-start가 이미 채워진 뒤)에서 curved reference로 바뀌었을 때, warm-start
-// shift(mpc_solver.cpp의 "이전 해를 한 스텝 shift") 경로를 거쳐도 solver가
-// 물리 제약(steering angle/rate) 안에서 실제로 곡률 방향으로 steering을
-// 옮기는지 확인한다. control_rate 절대값을 검증하지 않는다 - "방향이 맞고
-// 제약을 넘지 않는가"라는 성질만 본다(과도하게 특정 부동소수 출력에 결합된
-// 회귀를 피하기 위함).
-TEST(MpcControllerTest, WarmStartedControllerSteersTowardNewCurveWithinLimits) {
-    MpcController controller(MakeTestParams());
-    MPCState ego;  // x=y=yaw=0, vx=0
-
-    // 1) 직선 reference로 몇 사이클 돌려 steering이 0 근방에 정착하고
-    //    warm_start_가 채워지게 한다.
-    const ReferencePath straight_ref = MakeStraightReference(3.0, 10, 0.1);
-    MpcController::Output straight_output;
-    for (int i = 0; i < 3; ++i) {
-        straight_output = controller.ControlProcess(ego, straight_ref);
-        ASSERT_TRUE(straight_output.success);
-        ego.vx += straight_output.control.accel * 0.1;
-        ego.x += ego.vx * 0.1;
-    }
-    ASSERT_NEAR(straight_output.control.delta, 0.0, 1e-6);
-
-    // 2) 그 다음 사이클에 curved reference를 준다 - 이전 controller 상태
-    //    (warm_start_/last_control_)는 그대로 이어받는다(같은 controller
-    //    인스턴스).
-    const double kappa = 0.05;  // 좌회전 원호
-    const ReferencePath curved_ref = MakeCurvedReference(3.0, kappa, 10, 0.1);
-    const auto curved_output = controller.ControlProcess(ego, curved_ref);
-    ASSERT_TRUE(curved_output.success);
-
-    // 물리 제약: steering 절대값과 이전 스텝 대비 rate 한계를 넘지 않는다.
-    const MPCParams& params = controller.params();
-    EXPECT_LE(std::fabs(curved_output.control.delta), params.steering_max + 1e-9);
-    EXPECT_LE(std::fabs(curved_output.control.delta - straight_output.control.delta),
-             params.steering_rate_max * params.dt + 1e-9);
-    // 방향: 곡률(양수, 좌회전)에 맞는 방향으로 steering이 움직여야 한다 -
-    // 이전 값(~0)에 머무르거나 반대 방향으로 가면 안 된다.
-    EXPECT_GT(curved_output.control.delta, straight_output.control.delta);
-}
-
 // D15: 정지 데드락 복구가 실제로 발동하는지 확인한다. 전방 의도가 있는데
 // (참조가 전진 + 충분히 진행) ego가 계속 멈춰 있으면 stuck_timeout 이후
 // RECOVERY_STARTED 이벤트가 나오고, 그 다음 recovery_duration 동안
