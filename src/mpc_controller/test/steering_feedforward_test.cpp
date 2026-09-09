@@ -8,7 +8,7 @@
 namespace {
 
 constexpr double kWheelbase = 3.0;
-constexpr double kSteeringMax = 0.6981;  // ~40 deg, matches mpc_params.yaml
+constexpr double kSteeringMax = 0.6981;  // ~40 deg; test-local bound, independent of mpc_params.yaml
 
 }  // namespace
 
