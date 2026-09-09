@@ -6,7 +6,9 @@
 #include <utility>
 
 #include "config/parameter_loader.hpp"
+#include "math/utils.hpp"
 #include "message_converter.hpp"
+#include "model/vehicle_model.hpp"
 #include "reference/path_resampler.hpp"
 #include "reference/reference_validator.hpp"
 #include "reference/trajectory_timing.hpp"
@@ -24,6 +26,54 @@ MPCParams LoadParamsForNode(ros::NodeHandle& private_nh) {
     MPCParams params;
     loadMPCParameters(params_path, params);
     return params;
+}
+
+// curve-tracking 진단 전용 - solver 입력/warm-start/reference/constraints/
+// 발행되는 CtrlCmd 중 어느 것도 바꾸지 않는다. output.control은 이미 결정된
+// 값을 읽기만 한다.
+//
+// reference는 index 0이 현재 MPC가 실제로 추종 중인 time-aligned 지점이다
+// (ToReferencePath가 start_time_offset부터 샘플링하므로 i=0 -> time=offset).
+// 다른 horizon 인덱스나 원본 trajectory의 아무 점이 아니라 이 지점과
+// ego를 비교해야 "지금 얼마나 벗어나 있는가"가 된다.
+void LogCurveTrackingDiagnostics(const MPCState& ego, const ReferencePath& reference,
+                                 const MPCControl& control,
+                                 const MPCParams& params) {
+    if (reference.empty()) return;
+
+    const double ref_x = reference.x_ref[0];
+    const double ref_y = reference.y_ref[0];
+    const double ref_yaw = reference.yaw_ref[0];
+    const double ref_v = reference.v_ref[0];
+    const double kappa_ref = reference.k_ref[0];
+
+    // 참조선 진행방향 기준 좌표계로 투영한 lateral error. dx/dy는 global
+    // frame 차이이고, -sin(ref_yaw)*dx + cos(ref_yaw)*dy가 그 지점의 진행
+    // 방향에 수직인(왼쪽 양수) 성분이다 - frenet_planner의 d와 동일한 부호
+    // 규약(FrenetConverter.hpp 참고)이라 두 로그를 나란히 비교할 수 있다.
+    const double dx = ego.x - ref_x;
+    const double dy = ego.y - ref_y;
+    const double e_lat = -std::sin(ref_yaw) * dx + std::cos(ref_yaw) * dy;
+    const double e_yaw = angleDiff(ego.yaw, ref_yaw);
+
+    // 이미 존재하는 공식을 그대로 재사용한다 - cost/solver가 warm-start에
+    // 쓰는 것과 같은 SteeringFeedforward(model/vehicle_model.hpp)이며, 여기서
+    // atan(wheelbase*curvature)를 다시 구현하지 않는다.
+    const double steer_ff =
+        SteeringFeedforward(kappa_ref, params.wheelbase, params.steering_max);
+
+    constexpr double kNearLimitFraction = 0.95;
+    const bool steer_near_limit =
+        std::fabs(control.delta) >= kNearLimitFraction * params.steering_max;
+
+    // 20Hz 제어 루프를 그대로 로그로 내보내면 터미널이 넘친다 - 약 5Hz로
+    // 줄인다(4개 사이클마다 한 번, control_frequency가 20Hz라는 전제).
+    ROS_INFO_THROTTLE(
+        0.2,
+        "[MPC-TRACK] e_lat=%.3f e_yaw=%.3f ego_v=%.2f ref_v=%.2f "
+        "kappa_ref=%.4f steer_ff=%.3f steer_cmd=%.3f steer_near_limit=%d",
+        e_lat, e_yaw, ego.vx, ref_v, kappa_ref, steer_ff, control.delta,
+        steer_near_limit ? 1 : 0);
 }
 
 }  // namespace
@@ -202,6 +252,9 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
                                           : "solver failure");
         return;
     }
+
+    LogCurveTrackingDiagnostics(current_state, reference, output.control,
+                               controller_.params());
 
     control_pub_.publish(ToRosControlCommand(output.control,
                                              controller_.params()));

@@ -415,6 +415,21 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME curvature_continuity_test COMMAND curvature_continuity_test)
 
+  # curve-tracking stability 작업: Frenet max_curvature가 MPC의 물리 조향
+  # 한계를 넘지 않는지 검증하는 계약 회귀. mpc_controller의 config만
+  # 파일로 읽는다 - 코드 의존성(target_link_libraries 등)은 추가하지 않는다.
+  add_executable(curvature_contract_test
+    tests/curvature_contract_test.cpp
+  )
+  target_compile_definitions(curvature_contract_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    MPC_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../mpc_controller"
+  )
+  target_link_libraries(curvature_contract_test
+    frenet_planner_core
+  )
+  add_test(NAME curvature_contract_test COMMAND curvature_contract_test)
+
   # fix/yuntae-planner Commit A: KEEP centerline candidate 안정화 회귀.
   add_executable(keep_candidate_target_test
     tests/keep_candidate_target_test.cpp

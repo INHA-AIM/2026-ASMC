@@ -165,7 +165,7 @@ double FrenetPlanner::LowSpeedLateralTransitionDistance(
     // 대칭인 두 원호로 횡이동하는 S-curve는 작은 각도 영역에서
     // longitudinal distance ~= 2*sqrt(D/kappa)다. 차량 한계값을 그대로
     // 쓰면 이산 샘플/MPC 오차에 취약하므로 곡률의 80%와 거리 10% 여유를
-    // 사용한다. D=2.75m, max_curvature=0.28이면 약 7.7m다.
+    // 사용한다. D=2.75m, max_curvature=0.24이면 약 8.3m다.
     const double usable_curvature =
         std::max(1e-3, limits_.max_curvature * 0.8);
     constexpr double kDistanceMargin = 1.1;
