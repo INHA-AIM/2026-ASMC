@@ -3,6 +3,7 @@ project(camera_semantic_perception)
 
 find_package(catkin REQUIRED COMPONENTS
   message_filters
+  diagnostic_msgs
   rospy
   sensor_msgs
 )

@@ -88,12 +88,14 @@ class CaptureRunWriter(object):
         self.succeeded = 0
         self.failed = 0
         self.skipped_motion = 0
+        self._successful_completed_ns = []
+        self._rpc_latencies_ms = []
 
         os.makedirs(self.root, exist_ok=False)
         meta = dict(metadata or {})
         meta.update(
             {
-                "schema_version": "capture-mode-0.1.0",
+                "schema_version": "capture-mode-0.2.0",
                 "run_id": self.run_id,
                 "created_at_utc": utc_now_iso(),
                 "manifest": os.path.basename(self.manifest_path),
@@ -115,8 +117,14 @@ class CaptureRunWriter(object):
         self.attempted += 1
         if rec.get("success"):
             self.succeeded += 1
+            completed_ns = rec.get("completed_wall_time_ns")
+            if completed_ns is not None:
+                self._successful_completed_ns.append(int(completed_ns))
         else:
             self.failed += 1
+        latency = rec.get("rpc_latency_ms")
+        if latency is not None:
+            self._rpc_latencies_ms.append(float(latency))
 
     def mark_motion_skip(self):
         self.skipped_motion += 1
@@ -126,6 +134,23 @@ class CaptureRunWriter(object):
             return
         self._manifest.close()
         self._manifest = None
+        effective_hz = None
+        if len(self._successful_completed_ns) > 1:
+            elapsed = (
+                self._successful_completed_ns[-1]
+                - self._successful_completed_ns[0]
+            ) / 1000000000.0
+            if elapsed > 0:
+                effective_hz = (len(self._successful_completed_ns) - 1) / elapsed
+        latency_summary = {}
+        if self._rpc_latencies_ms:
+            values = sorted(self._rpc_latencies_ms)
+            latency_summary = {
+                "count": len(values),
+                "p50_ms": round(_percentile(values, 50), 3),
+                "p95_ms": round(_percentile(values, 95), 3),
+                "max_ms": round(max(values), 3),
+            }
         self._write_json(
             os.path.join(self.root, "summary.json"),
             {
@@ -135,8 +160,24 @@ class CaptureRunWriter(object):
                 "succeeded": self.succeeded,
                 "failed": self.failed,
                 "skipped_motion": self.skipped_motion,
+                "effective_capture_hz": (
+                    None if effective_hz is None else round(effective_hz, 4)
+                ),
+                "rpc_latency": latency_summary,
             },
         )
+
+
+def _percentile(sorted_values, percentile):
+    if not sorted_values:
+        raise ValueError("percentile requires values")
+    position = (len(sorted_values) - 1) * float(percentile) / 100.0
+    lower = int(math.floor(position))
+    upper = int(math.ceil(position))
+    if lower == upper:
+        return sorted_values[lower]
+    fraction = position - lower
+    return sorted_values[lower] * (1.0 - fraction) + sorted_values[upper] * fraction
 
 
 def vector3_to_dict(value):

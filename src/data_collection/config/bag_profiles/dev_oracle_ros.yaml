@@ -1,0 +1,42 @@
+name: dev_oracle_ros
+description: Experimental privileged oracle normalized from MORAI ROS/rosbridge topics.
+kind: raw
+transport: rosbridge
+timestamp_mode: source
+sensor_set: ASMC_sensor_set_GT_ros_experimental
+map: kcity2025
+compression: none
+privileged_gt: true
+deployment_allowed: false
+required_topics:
+  - /image_jpeg/compressed
+  - /cam_left/image_jpeg/compressed
+  - /cam_right/image_jpeg/compressed
+  - /sem_front/image_jpeg/compressed
+  - /sem_left/image_jpeg/compressed
+  - /sem_right/image_jpeg/compressed
+  - /velodyne_points
+  - /velodyne_points_instance
+  - /Object_topic
+  - /gps
+  - /imu
+  - /Ego_topic
+optional_topics:
+  - /cam_extra/image_jpeg/compressed
+  - /tf
+  - /tf_static
+  - /morai_udp_bridge/diagnostics
+expected_types:
+  /image_jpeg/compressed: sensor_msgs/CompressedImage
+  /cam_left/image_jpeg/compressed: sensor_msgs/CompressedImage
+  /cam_right/image_jpeg/compressed: sensor_msgs/CompressedImage
+  /sem_front/image_jpeg/compressed: sensor_msgs/CompressedImage
+  /sem_left/image_jpeg/compressed: sensor_msgs/CompressedImage
+  /sem_right/image_jpeg/compressed: sensor_msgs/CompressedImage
+  /velodyne_points: sensor_msgs/PointCloud2
+  /velodyne_points_instance: sensor_msgs/PointCloud2
+  /Object_topic: morai_msgs/ObjectStatusList
+timestamp_provenance:
+  sensors: morai_ros_message_header
+  object_ego: morai_udp_packet_source_time
+  gps: bridge_receive_time

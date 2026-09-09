@@ -15,6 +15,7 @@ class EncodedFrame:
     frame_id: str
     data: bytes
     received_monotonic: float
+    received_ros_ns: int = 0
 
 
 class LatestFrameBuffer:

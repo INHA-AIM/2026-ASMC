@@ -10,6 +10,7 @@ import time
 import cv2
 import numpy as np
 import rospy
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from sensor_msgs.msg import CompressedImage, Image
 
 from camera_semantic_perception.backends import create_backend
@@ -54,6 +55,24 @@ class SemanticInferenceNode:
             backend,
             restore_original=bool(rospy.get_param("~restore_original", True)),
         )
+        warmup_iterations = int(rospy.get_param("~warmup_iterations", 1))
+        if warmup_iterations < 0:
+            raise ValueError("warmup_iterations must be non-negative")
+        if warmup_iterations:
+            warmup_image = np.zeros(
+                (backend.info.input_hw[0], backend.info.input_hw[1], 3),
+                dtype=np.uint8,
+            )
+            warmup_views = dict((view, warmup_image) for view in self.views)
+            started = time.perf_counter()
+            for _ in range(warmup_iterations):
+                self.engine.infer(warmup_views)
+            rospy.loginfo(
+                "camera semantic warmup complete: iterations=%d views=%d elapsed_ms=%.1f",
+                warmup_iterations,
+                len(self.views),
+                (time.perf_counter() - started) * 1000.0,
+            )
         self.buffer = LatestFrameBuffer(
             self.views,
             batch_wait_ms=float(rospy.get_param("~batch_wait_ms", 4.0)),
@@ -62,6 +81,7 @@ class SemanticInferenceNode:
         if self.log_interval <= 0:
             raise ValueError("log_interval_sec must be positive")
         self.categorical_heads = frozenset(backend.info.categorical_classes)
+        self.backend_info = dict(backend.info.__dict__)
         self.output_topics = {
             view: {
                 head: self._output_topic(view, head, head in self.categorical_heads)
@@ -80,9 +100,15 @@ class SemanticInferenceNode:
             }
             for view in self.views
         }
+        self.diagnostics_publisher = rospy.Publisher(
+            "/perception/camera/diagnostics", DiagnosticArray, queue_size=1
+        )
         self.decode_errors = 0
+        self.inference_errors = 0
         self.output_frames = 0
+        self.output_by_view = {view: 0 for view in self.views}
         self.output_batches = 0
+        self.total_output_batches = 0
         self.timing_totals = {
             "decode_ms": 0.0,
             "preprocess_ms": 0.0,
@@ -93,6 +119,15 @@ class SemanticInferenceNode:
         self._stats_lock = threading.Lock()
         self._last_log_wall = time.monotonic()
         self._last_output_frames = 0
+        self._last_decode_errors = 0
+        self._last_inference_errors = 0
+        self._queue_age_samples = []
+        self._end_to_end_samples = []
+        self._latest_input_stamp_ns = {}
+        self._latest_receive_stamp_ns = {}
+        self._latest_result_stamp_ns = 0
+        self._timestamp_fallbacks_by_view = {view: None for view in self.views}
+        self._timestamp_regressions_by_view = {view: None for view in self.views}
 
         self.subscribers = []
         for view in self.views:
@@ -105,6 +140,14 @@ class SemanticInferenceNode:
                 buff_size=int(rospy.get_param("~subscriber_buffer_bytes", 16 << 20)),
             )
             self.subscribers.append(subscriber)
+        self.subscribers.append(
+            rospy.Subscriber(
+                "/morai_sensor_bridge/diagnostics",
+                DiagnosticArray,
+                self._bridge_diagnostics_callback,
+                queue_size=1,
+            )
+        )
         self.worker = threading.Thread(target=self._worker, name="semantic-inference")
         self.worker.daemon = True
         self.worker.start()
@@ -134,8 +177,27 @@ class SemanticInferenceNode:
                 frame_id=message.header.frame_id,
                 data=bytes(message.data),
                 received_monotonic=time.monotonic(),
+                received_ros_ns=int(rospy.Time.now().to_nsec()),
             )
         )
+
+    def _bridge_diagnostics_callback(self, message: DiagnosticArray) -> None:
+        stream_to_view = {"cam1": "front", "cam2": "left", "cam3": "right"}
+        for status in message.status:
+            stream = status.name.rsplit("/", 1)[-1]
+            view = stream_to_view.get(stream)
+            if view not in self._timestamp_fallbacks_by_view:
+                continue
+            values = dict((item.key, item.value) for item in status.values)
+            try:
+                self._timestamp_fallbacks_by_view[view] = int(
+                    values.get("timestamp_fallbacks", "0")
+                )
+                self._timestamp_regressions_by_view[view] = int(
+                    values.get("timestamp_regressions", "0")
+                )
+            except ValueError:
+                continue
 
     @staticmethod
     def _image_message(
@@ -179,6 +241,8 @@ class SemanticInferenceNode:
             try:
                 prediction = self.engine.infer(decoded)
             except Exception as exc:
+                with self._stats_lock:
+                    self.inference_errors += 1
                 rospy.logerr_throttle(2.0, "semantic inference failed: %s", exc)
                 continue
 
@@ -192,9 +256,25 @@ class SemanticInferenceNode:
                         )
                     )
             publish_ms = (time.perf_counter() - started) * 1000.0
+            completed_ros_ns = int(rospy.Time.now().to_nsec())
+            completed_monotonic = time.monotonic()
             with self._stats_lock:
                 self.output_batches += 1
+                self.total_output_batches += 1
                 self.output_frames += len(prediction.views)
+                for view in prediction.views:
+                    self.output_by_view[view] += 1
+                self._latest_result_stamp_ns = completed_ros_ns
+                for view, frame in usable_frames.items():
+                    stamp_ns = int(frame.stamp.to_nsec())
+                    self._latest_input_stamp_ns[view] = stamp_ns
+                    self._latest_receive_stamp_ns[view] = frame.received_ros_ns
+                    self._queue_age_samples.append(
+                        max(0.0, (completed_monotonic - frame.received_monotonic) * 1000.0)
+                    )
+                    end_to_end_ms = (completed_ros_ns - stamp_ns) / 1000000.0
+                    if 0.0 <= end_to_end_ms <= 60000.0:
+                        self._end_to_end_samples.append(end_to_end_ms)
                 for name, value in (
                     ("decode_ms", decode_ms),
                     ("preprocess_ms", prediction.preprocess_ms),
@@ -216,20 +296,96 @@ class SemanticInferenceNode:
             name: round(value / divisor, 2)
             for name, value in self.timing_totals.items()
         }
+        decode_delta = self.decode_errors - self._last_decode_errors
+        inference_delta = self.inference_errors - self._last_inference_errors
+        fps = frame_delta / elapsed
         rospy.loginfo(
-            "semantic fps=%.2f output=%d batches=%d replaced=%s decode_errors=%d avg_ms=%s",
-            frame_delta / elapsed,
+            "semantic fps=%.2f output=%d batches=%d replaced=%s decode_errors=%d inference_errors=%d avg_ms=%s",
+            fps,
             self.output_frames,
             self.output_batches,
             self.buffer.replaced,
             self.decode_errors,
+            self.inference_errors,
             averages,
+        )
+        self._publish_diagnostics(
+            fps, averages, decode_delta, inference_delta
         )
         self._last_log_wall = now
         self._last_output_frames = self.output_frames
+        self._last_decode_errors = self.decode_errors
+        self._last_inference_errors = self.inference_errors
         self.output_batches = 0
         for name in self.timing_totals:
             self.timing_totals[name] = 0.0
+        self._queue_age_samples = []
+        self._end_to_end_samples = []
+
+    @staticmethod
+    def _percentile(samples, value):
+        if not samples:
+            return None
+        return float(np.percentile(np.asarray(samples, dtype=np.float64), value))
+
+    @staticmethod
+    def _diagnostic_value(key, value):
+        if isinstance(value, (dict, list, tuple)):
+            rendered = json.dumps(value, sort_keys=True)
+        elif value is None:
+            rendered = "unavailable"
+        else:
+            rendered = str(value)
+        return KeyValue(key=str(key), value=rendered)
+
+    def _publish_diagnostics(self, fps, averages, decode_delta, inference_delta):
+        status = DiagnosticStatus()
+        status.name = "camera_semantic_perception/inference"
+        status.hardware_id = str(self.backend_info.get("device", "unknown"))
+        if inference_delta:
+            status.level = DiagnosticStatus.ERROR
+            status.message = "inference errors"
+        elif decode_delta:
+            status.level = DiagnosticStatus.WARN
+            status.message = "decode errors"
+        else:
+            status.level = DiagnosticStatus.OK
+            status.message = "running"
+
+        values = {
+            "backend": self.backend_info.get("name"),
+            "model_config": self.backend_info.get("model_config"),
+            "checkpoint_path": self.backend_info.get("checkpoint_path"),
+            "checkpoint_sha256": self.backend_info.get("checkpoint_sha256"),
+            "weights": self.backend_info.get("weights"),
+            "views": self.views,
+            "input_hw": self.backend_info.get("input_hw"),
+            "received_by_view": self.buffer.received,
+            "replaced_by_view": self.buffer.replaced,
+            "output_frames": self.output_frames,
+            "output_by_view": self.output_by_view,
+            "output_batches": self.total_output_batches,
+            "decode_errors": self.decode_errors,
+            "inference_errors": self.inference_errors,
+            "processing_fps": round(fps, 3),
+            "average_stage_ms": averages,
+            "queue_age_p50_ms": self._percentile(self._queue_age_samples, 50),
+            "queue_age_p95_ms": self._percentile(self._queue_age_samples, 95),
+            "end_to_end_p50_ms": self._percentile(self._end_to_end_samples, 50),
+            "end_to_end_p95_ms": self._percentile(self._end_to_end_samples, 95),
+            "latest_input_stamp_ns": self._latest_input_stamp_ns,
+            "latest_receive_stamp_ns": self._latest_receive_stamp_ns,
+            "latest_result_stamp_ns": self._latest_result_stamp_ns,
+            "input_timestamp_fallbacks_by_view": self._timestamp_fallbacks_by_view,
+            "input_timestamp_regressions_by_view": self._timestamp_regressions_by_view,
+        }
+        status.values = [
+            self._diagnostic_value(key, value) for key, value in values.items()
+        ]
+        message = DiagnosticArray()
+        message.header.stamp = rospy.Time.now()
+        message.status = [status]
+        self.diagnostics_publisher.publish(message)
 
     def _shutdown(self) -> None:
         self.buffer.close()

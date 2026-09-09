@@ -1,0 +1,3 @@
+extends: dev_oracle_udp
+name: dev_oracle_raw
+description: Canonical streaming oracle; defaults to UDP until the ROS A/B gate passes.

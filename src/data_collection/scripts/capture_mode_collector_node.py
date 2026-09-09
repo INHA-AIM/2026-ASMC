@@ -66,7 +66,9 @@ class RosTopicCaptureClient(object):
             "capture_backend": "ros_topic",
             "grpc_status": None,
             "rpc_latency_ms": round((time.monotonic() - started) * 1000.0, 3),
-            "morai_sim_time_ms": None,
+            "morai_sim_time_raw": None,
+            "morai_sim_time_unit": None,
+            "morai_sim_time_ns": None,
             "transport_note": "ROS publish has no application-level save acknowledgement",
         }
 
@@ -288,7 +290,9 @@ class CaptureModeCollector(object):
                         "capture_backend": "dry_run",
                         "grpc_status": None,
                         "rpc_latency_ms": 0.0,
-                        "morai_sim_time_ms": None,
+                        "morai_sim_time_raw": None,
+                        "morai_sim_time_unit": None,
+                        "morai_sim_time_ns": None,
                         "dry_run": True,
                     }
                 else:
@@ -305,9 +309,10 @@ class CaptureModeCollector(object):
             if record.get("success"):
                 consecutive_failures = 0
                 rospy.loginfo(
-                    "capture ok seq=%06d sim_ms=%s rpc=%.1fms source=%s",
+                    "capture ok seq=%06d sim_raw=%s unit=%s rpc=%.1fms source=%s",
                     seq - 1,
-                    record.get("morai_sim_time_ms"),
+                    record.get("morai_sim_time_raw"),
+                    record.get("morai_sim_time_unit"),
                     float(record.get("rpc_latency_ms") or 0.0),
                     snapshot["control_source"],
                 )
