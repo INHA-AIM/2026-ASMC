@@ -15,6 +15,15 @@ source devel/setup.bash 2>/dev/null || true
 
 BRIDGE_PORT="${MORAI_BRIDGE_PORT:-9090}"
 BRIDGE_BIND="${MORAI_BRIDGE_BIND:-0.0.0.0}"
+SIMULATOR_PROFILE="${ASMC_SIMULATOR_PROFILE:-dev_26r1_h3_ros_experimental}"
+
+case "$SIMULATOR_PROFILE" in
+  competition_*)
+    echo "[rosbridge] ERROR: competition simulator transport must be UDP." >&2
+    echo "  Use: ./scripts/udp_bridge.sh --simulator competition" >&2
+    exit 2
+    ;;
+esac
 
 export ROS_MASTER_URI="http://127.0.0.1:11311"
 export ROS_IP="${ROS_IP:-127.0.0.1}"
@@ -22,7 +31,7 @@ export ROS_IP="${ROS_IP:-127.0.0.1}"
 _ensure_morai_msgs() {
   _morai_msgs_is_beta() {
     rosmsg show morai_msgs/EgoVehicleStatus 2>/dev/null \
-      | grep -q 'float64 wheel_angle'
+      | grep -q 'float32 wheel_angle'
   }
 
   if rospack find morai_msgs >/dev/null 2>&1 && _morai_msgs_is_beta; then
@@ -69,12 +78,15 @@ echo "=========================================="
 echo "  ASMC_WS_ROOT     : $ASMC_WS_ROOT"
 echo "  ROS_MASTER_URI   : $ROS_MASTER_URI"
 echo "  Listening        : ${BRIDGE_BIND}:${BRIDGE_PORT}"
+echo "  Simulator        : ${SIMULATOR_PROFILE}"
 echo ""
 if [ -f /.dockerenv ]; then
   echo "  Windows MORAI: Bridge IP = 127.0.0.1  PORT = ${BRIDGE_PORT}"
   echo ""
 fi
 echo "  MORAI UI: Ego + Simulator Network -> same IP/PORT, ROS, Connected"
+echo "  WARNING: ASMC uses beta_drive messages; direct 26.R1 Ego/Control schemas differ."
+echo "           This is an experimental development path, never the competition path."
 echo "  Verify: ./scripts/diagnose_morai_rosbridge.sh"
 echo "=========================================="
 echo ""

@@ -10,6 +10,7 @@
   <depend>rospy</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
+  <depend>diagnostic_msgs</depend>
   <depend>morai_msgs</depend>
   <exec_depend>tf2_ros</exec_depend>
 </package>
