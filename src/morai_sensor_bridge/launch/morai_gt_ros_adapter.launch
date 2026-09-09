@@ -1,0 +1,9 @@
+<launch>
+  <arg name="instance_input_topic" default="/morai/gt/lidar_instance_raw"/>
+  <arg name="instance_output_topic" default="/velodyne_points_instance"/>
+  <node pkg="morai_sensor_bridge" type="ros_instance_lidar_adapter.py"
+        name="morai_ros_instance_lidar_adapter" output="screen" required="true">
+    <param name="input_topic" value="$(arg instance_input_topic)"/>
+    <param name="output_topic" value="$(arg instance_output_topic)"/>
+  </node>
+</launch>

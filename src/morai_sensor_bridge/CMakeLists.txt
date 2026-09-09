@@ -5,15 +5,22 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   sensor_msgs
+  diagnostic_msgs
   morai_msgs
 )
 
 catkin_package(
-  CATKIN_DEPENDS rospy std_msgs sensor_msgs morai_msgs
+  CATKIN_DEPENDS rospy std_msgs sensor_msgs diagnostic_msgs morai_msgs
 )
+
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_nosetests(test/test_sensor_bridge.py)
+  catkin_add_nosetests(test/test_ros_instance_adapter.py)
+endif()
 
 catkin_install_python(PROGRAMS
   scripts/morai_sensor_bridge.py
+  scripts/ros_instance_lidar_adapter.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
