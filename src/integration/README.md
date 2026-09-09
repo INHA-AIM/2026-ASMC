@@ -21,7 +21,8 @@ MORAI UDP → bridge → 팀 PC 내부 ROS다.
 
 ```bash
 # 기본 개발·대회 경로
-./scripts/udp_bridge.sh
+./scripts/udp_bridge.sh --simulator 26r1
+# 대회판은: ./scripts/udp_bridge.sh --simulator competition
 
 # WebSocket 기능을 별도로 재현할 때만 사용 — 본선 금지
 ./scripts/rosbridge.sh

@@ -117,10 +117,11 @@ check_udp_loopback() {
 verify_topics() {
   assert_host_mode
   local duration="${1:-8}"
+  local profile="${2:-runtime}"
   [[ "$duration" =~ ^[0-9]+([.][0-9]+)?$ ]] \
     || die "duration must be a positive number"
   docker exec "$CONTAINER" bash -lc \
-    "cd /root/ws && source /opt/ros/noetic/setup.bash && source devel/setup.bash && python3 scripts/verify_morai_topics.py --duration $duration"
+    "cd /root/ws && source /opt/ros/noetic/setup.bash && source devel/setup.bash && python3 scripts/verify_morai_topics.py --profile $profile --duration $duration"
 }
 
 print_next() {
@@ -128,9 +129,10 @@ print_next() {
 [NEXT] Start the UDP bridge in a separate foreground terminal:
   docker exec -it asmc-ros-noetic bash
   source devel/setup.bash
-  ./scripts/udp_bridge.sh
+  ./scripts/udp_bridge.sh --simulator 26r1
 
 Keep MORAI Host/Destination IP at 127.0.0.1 and keep every port unchanged.
+For the competition simulator, select: ./scripts/udp_bridge.sh --simulator competition
 EOF
 }
 
@@ -157,7 +159,10 @@ case "$cmd" in
     check_udp_loopback "${2:-39199}"
     ;;
   verify)
-    verify_topics "${2:-8}"
+    verify_topics "${2:-8}" runtime
+    ;;
+  verify-gt)
+    verify_topics "${2:-8}" gt
     ;;
   down)
     "${COMPOSE[@]}" down
@@ -170,7 +175,7 @@ case "$cmd" in
     print_next
     ;;
   *)
-    echo "Usage: $0 {config [show]|build|up|status|check [port]|verify [seconds]|down|rebuild}"
+    echo "Usage: $0 {config [show]|build|up|status|check [port]|verify [seconds]|verify-gt [seconds]|down|rebuild}"
     exit 2
     ;;
 esac

@@ -78,7 +78,7 @@ class MoraiCaptureClient(object):
                 )
             )
 
-    def _sim_time_ms(self):
+    def _sim_time_raw(self):
         try:
             response = self._simulator.GetTimestamp(
                 self._empty_type(), timeout=self._timeout
@@ -92,7 +92,7 @@ class MoraiCaptureClient(object):
         request.is_custom_file_name = True
         request.custom_file_name = custom_name
         request.file_dir = file_dir or ""
-        sim_time_ms = self._sim_time_ms()
+        sim_time_raw = self._sim_time_raw()
         started = time.monotonic()
         response = self._sensor.SaveSensorData(request, timeout=self._timeout)
         latency_ms = (time.monotonic() - started) * 1000.0
@@ -103,7 +103,11 @@ class MoraiCaptureClient(object):
             "grpc_description": str(getattr(response, "description", "")),
             "grpc_custom_message": str(getattr(response, "custom_message", "")),
             "rpc_latency_ms": round(latency_ms, 3),
-            "morai_sim_time_ms": sim_time_ms,
+            "morai_sim_time_raw": sim_time_raw,
+            "morai_sim_time_unit": "us" if sim_time_raw is not None else None,
+            "morai_sim_time_ns": (
+                int(sim_time_raw) * 1000 if sim_time_raw is not None else None
+            ),
         }
 
     def close(self):

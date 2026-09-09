@@ -35,7 +35,7 @@ Start the outer sensor bridge first:
 cd /path/to/2026-ASMC
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-./scripts/udp_bridge.sh
+./scripts/udp_bridge.sh --simulator 26r1
 ```
 
 In another terminal, start fusion:

@@ -3,7 +3,7 @@
 > **문서 역할:** Version Reference — 조사 시점의 26.R1/대회 msg 차이 기록
 > **주의:** 실제 대회판 이식 시 재실측하고 [morai-msgs-beta-policy.md](./morai-msgs-beta-policy.md)를 갱신한다.
 > **문서 허브:** [README.md](./README.md)
-> **최종 수정:** 2026-07-26
+> **최종 수정:** 2026-09-09
 > 통합 시 **단일 submodule** 기준을 정하고, 레거시 코드는 필드 차이를 인지해야 합니다.
 > **대회 ROS UI 실측:** [docs/competition/morai-competition-ros-topics.md](../../docs/competition/morai-competition-ros-topics.md)
 
@@ -49,6 +49,33 @@
 단 `SyncModeCtrlCmd`·`WaitForTickResponse`는 **중첩 `CtrlCmd`/`EgoVehicleStatus`** 를 품으므로 sync 제어·tick 응답은 간접적으로 깨질 수 있음.
 
 `mpc_ws`는 `cmd.steering` → **beta_drive와 일치**.
+
+### 2026-09-09 direct ROS 재실측
+
+26.R1.H3가 rosbridge로 보낸 `/Ego_topic`에는 `angular_velocity`가 포함돼 beta_drive
+`EgoVehicleStatus` 변환이 거부됐다. 반면 공통 스키마인 `/Object_topic`은 약 39~40 Hz로
+정상 수신됐고 NPC·보행자 ID도 보존됐다. 즉 같은 ASMC workspace에서 direct ROS를 선택하면
+토픽별로 부분 호환되는 상태가 되므로 팀 기본 경로로 삼지 않는다. 26.R1.H3와 대회판 모두
+UDP bridge가 beta 내부 계약으로 정규화하며, direct ROS는 `rosbridge.sh` 격리
+실험으로만 둔다.
+
+### ROS msg 차이와 UDP bridge 공용 범위
+
+ROS의 `.msg` 필드/토픽 차이는 direct ROS serialization 계약의 차이다. UDP bridge는
+와이어의 binary packet을 직접 해석한 뒤 팀의 `beta_drive` ROS topic으로 바꾸므로,
+포트와 binary layout이 같으면 26.R1.H3와 대회판이 하나의 구현을 공유할 수 있다.
+
+- Camera/GPS/IMU는 센서 UDP 포맷을, 3D LiDAR는 Velodyne protocol을 해석한다.
+- Ego는 현재 181/229/245-byte 패킷 변형을 길이로 구분한다.
+- ROS 출력은 버전과 무관하게 현재 `beta_drive` canonical topic으로 고정한다.
+- `udp_bridge.sh --simulator 26r1|competition`은 구현을 복제하지 않고 provenance와
+  향후 호환 파라미터 분기만 관리한다.
+
+다만 26.R1은 front/rear steer 추가와 UDP 예제 갱신이 공지됐으므로, 대회판에서
+수신 header/패킷 길이와 23-byte CtrlCmd 반응은 실차로 gate한다. 차이가 확인되면
+별도 bridge 복제가 아니라 공용 parser의 패킷 변형과 simulator profile 파라미터로 추가한다.
+공식 근거는 MORAI [26.R1 센서 통신 프로토콜](https://help-morai-sim.scrollhelp.site/ko/morai-sim-drive/26.R1/-35)과
+[26.R1 release note](https://help-morai-sim.scrollhelp.site/ko/morai-sim-drive/26.R1/morai-sim-drive-26-r1-0)를 따른다.
 
 ### 시뮬 선택 (2026-08-03)
 

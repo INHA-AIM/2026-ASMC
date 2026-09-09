@@ -1,9 +1,10 @@
-# data_collection — Capture·동기화·인지 데이터셋
+# data_collection — Capture·rosbag·동기화·인지 데이터셋
 
-> **역할:** Active Module — Capture Mode 기록, Windows→WSL 동기화, mask/cache/dataset lineage
+> **역할:** Active Module — Capture GT, raw/result rosbag, 동기화, mask/cache/dataset lineage
 > **담당:** 안승현
 > **데이터 정본:** [인지 데이터 라벨링·분할 계약](../../docs/perception-dataset-labeling-split.md)
 > **전체 로드맵:** [카메라·MGeo·LiDAR 융합 로드맵](../../docs/perception-map-fusion-roadmap.md)
+> **rosbag 정본:** [rosbag 평가·Streaming GT 가이드](../../docs/rosbag-evaluation-streaming-gt.md)
 > **문서 허브:** [docs/README.md](../../docs/README.md)
 
 ## 수집 경로 선택
@@ -12,7 +13,8 @@
 |---|---|---|
 | 카메라 drivable/road-marking 학습 GT | Capture Mode → 파일 동기화 → native mask → model cache → version manifest | 현재 정본 |
 | 일반 ROS 토픽 snapshot | `sync_collector.launch` profile | 보조·레거시 경로 |
-| 팀 공용 재현 bag | ROS `rosbag record` profile/wrapper | 다음 단계 제안, 아직 미구현 |
+| 팀 공용 재현 bag | allowlist profile + raw/result recorder/replay | `camera_raw`·`full_raw`·paused replay·result smoke 완료 |
+| 고주기 개발 GT | GT UDP bridge source-time + privileged bag | schema·Object ID 보존 검증 완료, p95 정합 미달로 학습 pair는 Capture 우선 |
 
 Capture Mode와 gRPC는 26.R1.h3 개발·학습용이다. 본선 배포 추론은 허용 UDP 센서만
 사용하며 Semantic/Instance GT, Capture gRPC와 oracle 토픽을 사용하지 않는다.
@@ -46,13 +48,69 @@ Capture Mode는 Real/Simulation Time과 별개로 켜는 저장 기능이다. �
 | 목적 | 기본 방식 |
 |---|---|
 | 현재 카메라 단일-frame 학습 | Real Time + Capture 1 Hz |
-| 카메라 수집량 확대 | 같은 조건에서 Capture 5/10 Hz pilot 후 선택 |
+| 카메라 단일-frame 보강 | Capture 1 Hz. 2/5/10 Hz 요청 pilot은 실효 1.4~1.7 Hz로 포화 |
 | 수동 휠 다양화 | Real Time + Capture |
 | 엄밀한 temporal GT | Simulation Time Sync Off 우선, 필요할 때만 Sync On |
 | 실제 지연·drop·jitter 평가 | Real Time UDP + raw rosbag |
 | 모델 A/B 비교 | 같은 raw bag 재생, result는 모델별 분리 |
 | 기존 LiDAR clustering/OBB 튜닝 | PointCloud·GPS·IMU·Ego·개발용 Object GT raw bag |
 | 학습형 LiDAR 객체 검출 | 실제 Intensity point cloud + Instance/3D box GT Capture |
+
+Capture는 요청마다 시뮬레이션이 약 0.5초 멈춰 wheel/MPC temporal 평가에 적합하지 않다.
+실제 비동기 성능과 모델 A/B에는 raw rosbag을 사용한다. GT Connect stream은 Capture를
+대체하는 학습 정답이 아니라 고주기 정합·평가 후보이며, 허용 gap을 넘는 pair는 offline에서
+제외한다.
+
+## 재현 가능한 raw/result rosbag
+
+SIM 버전과 transport가 metadata에서 구분되도록 일반 운용과 GT oracle을 명시적인 profile로
+실행한다.
+
+```bash
+./scripts/udp_bridge.sh --simulator 26r1
+./scripts/udp_bridge.sh --simulator 26r1 timestamp_mode:=source  # GT 정합
+./scripts/udp_bridge.sh --simulator competition
+```
+
+기본 녹화는 scenario와 controller만 입력한다. KST 시작 시각, 초기 날씨·시뮬레이션 시간,
+map, Git 상태, sensor set/transport, topic/type/rate, bridge diagnostics와 bag hash는 자동으로
+기록된다.
+
+```bash
+# 대회 입력 재현용. bridge는 기본 receive mode
+roslaunch data_collection bag_recorder.launch \
+  profile:=full_raw scenario:=comp_sample controller:=wheel
+
+# 개발용 LiDAR oracle. bridge는 위 GT/source mode
+roslaunch data_collection bag_recorder.launch \
+  profile:=lidar_dev_gt_udp scenario:=jamming_modified controller:=morai_auto
+```
+
+저장 위치는 `/data/rosbags/raw/<auto_run_id>/`이며 raw는 덮어쓰지 않는다. 잘못된 closed
+run은 `reject_bag_run.py --run-id ... --reason ...`으로 `/data/rosbags/rejected/`에 옮긴다.
+
+```bash
+# live bridge를 끈 뒤 1) paused replay controller로 sim clock 준비
+roslaunch data_collection bag_replay.launch \
+  bag_path:=/data/rosbags/raw/<run_id> required_profile:=camera_raw
+
+# 2) 추론 노드와 result recorder를 띄운 뒤 재생 시작
+rosservice call /asmc_bag_replay/start
+
+# 외부 audits/에 rate, timestamp, pairing과 Instance schema 기록
+rosrun data_collection audit_rosbag_run.py \
+  /data/rosbags/raw/<run_id> \
+  --json-out /data/rosbags/audits/<run_id>/audit.json
+```
+
+result replay는 실행 순서가 중요하다. 추론과 result recorder를 replay controller보다 먼저
+띄우면 wall clock을 사용해 지연 통계가 깨질 수 있다. result recorder는 이를 막기 위해
+`/use_sim_time=true`가 아닌 상태에서는 시작하지 않는다. 상세한 4터미널 순서와 실제 smoke
+기준선은 [전용 가이드](../../docs/rosbag-evaluation-streaming-gt.md#4-replay와-result-lineage)를
+따른다.
+
+profile 목록, result bag/checkpoint lineage, source timestamp의 센서별 의미와 UDP↔ROS 5분
+선정 gate는 [전용 가이드](../../docs/rosbag-evaluation-streaming-gt.md)를 따른다.
 
 ## ROS topic snapshot collector (보조 경로)
 
@@ -73,6 +131,8 @@ snapshot할 뿐 **MORAI 외부 Sync 제어기가 아니다**. 상태·LiDAR 등 
 | `full` | 전채널 · **짧은 런만** (`max_frames` 기본 300) |
 
 “나중에 뭐 쓸지 몰라서 항상 full” → I/O·디스크로 수집이 죽음.
+기존 snapshot `config/profiles/lidar_gt.yaml`은 ID 11 Streaming rosbag profile이 아니다.
+새 GT bag은 `config/bag_profiles/lidar_dev_gt_udp.yaml`을 사용한다.
 
 ### 환경변수
 
@@ -139,9 +199,11 @@ v1→v2의 유효 변경은 rear camera pitch `340°→328°`다. GT 센서셋�
 
 ID 5의 실제 intensity만 detector 입력으로 사용하고 ID 11의 instance point와
 `_instance.txt`/`_instance_8Points.txt`는 class, 3D box, 상대속도와 unique ID 정답으로만
-사용한다. GT value를 입력 feature로 사용하지 않는다. 현재 bridge는 ID 11/9311을 기본
-구독하지 않으며, 기존 camera 동기화 스크립트도 LiDAR GT dataset adapter를 제공하지 않는다.
-LiDAR GT 수집·정합은 후속 5/10 Hz pilot에서 별도로 검증한다.
+사용한다. GT value를 입력 feature로 사용하지 않는다. 공용 bridge는 9311을
+항상 독립 수신해, GT가 송신할 때 `/velodyne_points_instance`의 `instance_id uint32`로
+발행한다. v2 센서셋에서는 해당 포트가 데이터 없이 대기한다. Streaming GT에는
+5–11 pairing gap이 있으므로 detector 학습 정답은
+Capture 파일을 우선하고 rosbag은 실시간 정합·평가·디버깅에 쓴다.
 
 ### 실행
 

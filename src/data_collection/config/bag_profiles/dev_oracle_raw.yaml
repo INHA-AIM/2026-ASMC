@@ -1,0 +1,3 @@
+extends: dev_oracle_udp
+name: dev_oracle_raw
+description: Canonical privileged streaming oracle using the validated UDP GT path.

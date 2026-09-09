@@ -1,10 +1,10 @@
 # MORAI UDP — 시뮬 UI 치트시트 (26.R1.h3 개발용)
 
 > **개발 SIM: 26.R1.h3** (대회 배포 SIM 아님)  
-> Docker Desktop + `./scripts/docker_ros_up.sh` + `./scripts/udp_bridge.sh` 기준.  
+> Docker Desktop + `./scripts/docker_ros_up.sh` + `./scripts/udp_bridge.sh --simulator 26r1` 기준.
 > 상세: [docs/network-udp-ros.md](../docs/network-udp-ros.md)  
-> 센서셋: [`ASMC_sensor_set_v1.json`](./ASMC_sensor_set_v1.json) (주행용 Camera×4/LiDAR/GPS/IMU)  
-> GT용: [`ASMC_sensor_set_GT.json`](./ASMC_sensor_set_GT.json) (v1 + Semantic Camera×3 · 브릿지 기본 **OFF**)
+> 센서셋: [`ASMC_sensor_set_v2.json`](./ASMC_sensor_set_v2.json) (현재 주행용 Camera×4/LiDAR/GPS/IMU)<br>
+> GT용: [`ASMC_sensor_set_GT.json`](./ASMC_sensor_set_GT.json) (v2 + Semantic Camera×3 + Instance LiDAR)
 
 ---
 
@@ -14,22 +14,16 @@ Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127
 
 1. Docker Desktop + WSL Integration ON → `./scripts/docker_ros_up.sh up`
 2. MORAI **Host/Dest IP 전부 `127.0.0.1`**
-3. **센서셋** `ASMC_sensor_set_v1.json` Import (또는 GT용 `ASMC_sensor_set_GT.json`)
+3. **센서셋** `ASMC_sensor_set_v2.json` Import (또는 개발 GT용 `ASMC_sensor_set_GT.json`)
 4. **Network Settings** (센서셋에 없음): Ego **909** · Object **7505** · Collision **9092**
 5. **Cmd Control**: 타입 **Ego Ctrl Cmd**, Host/Dest **9111 / 9112**
-6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh`
+6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh --simulator 26r1`
 7. 확인: `rostopic hz /Ego_topic` · `/velodyne_points` · `/image_jpeg/compressed`
 
-**LiDAR만 0이고 cam/gps/imu는 될 때:** Docker Desktop의 **9299** 포워딩이 끊긴 것.
-컨테이너 쪽 9299에 리스너가 없는 동안 MORAI가 쏘면 ~30s 후 포워딩이 철거된다.
-
-1. `./scripts/docker_ros_up.sh up` → **곧바로** 브릿지 실행 (늦게 올리면 그 사이에 또 죽는다)
-2. 그래도 0이면 Docker Desktop 재시작 —
-   `"/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe" desktop restart`
-   (WSL 안의 `docker desktop restart` 는 실패하면서 성공처럼 보인다)
-
-판단은 `docker_ros_up.sh`의 `[OK]`가 아니라 브릿지 로그 `rx ... lidar=` 카운터로 한다.
-**9299를 다른 포트로 옮기지 말 것.** 상세: [docs/network-udp-ros.md §6.1](../docs/network-udp-ros.md#61-lidar만-0일-때-9299-포워딩)
+**LiDAR만 0이고 cam/gps/imu는 될 때:** `docker_ros_up.sh status`의 host mode, MORAI
+Connect/Dest 9299와 다른 9299 listener를 순서대로 확인한다. 개별 Docker port forwarding은
+사용하지 않는다. **9299를 다른 포트로 옮기지 말 것.** 상세:
+[docs/network-udp-ros.md §6.1](../docs/network-udp-ros.md#61-host-network-검사와-lidar-장애-대응)
 
 ---
 
@@ -62,7 +56,7 @@ Dest:     9112
 
 ---
 
-## Sensor Setting — Destination PORT (v1)
+## Sensor Setting — Destination PORT (v2)
 
 | 센서 | Host / Dest | ROS 토픽 |
 |------|-------------|----------|
@@ -81,11 +75,11 @@ Dest:     9112
 
 ## GT Semantic Camera (ASMC_sensor_set_GT.json)
 
-팀 공용 브릿지 기본은 **OFF** (`enable_semantic_camera:=false`).  
-개발 시 GT 센서셋 Import 후:
+브릿지는 v2·GT 포트 합집합을 항상 연다. v2에서는 아래 포트가 대기하고,
+GT 센서셋을 로드하면 별도 옵션 없이 자동 수신한다.
 
 ```bash
-./scripts/udp_bridge.sh enable_semantic_camera:=true
+./scripts/udp_bridge.sh --simulator 26r1
 ```
 
 | 센서 | Host / Dest | ROS 토픽 |
@@ -96,6 +90,22 @@ Dest:     9112
 
 Camera-10은 예전 **9090**이 아님 (rosbridge와 충돌).
 
+## GT Instance LiDAR (ASMC_sensor_set_GT.json)
+
+브릿지는 ID 5와 선택 GT ID 11 포트를 항상 독립적으로 연다.
+v2에서 ID 11은 대기하고 GT에서 자동 수신한다. 정합용 source stamp가 필요하면:
+
+```bash
+./scripts/udp_bridge.sh --simulator 26r1 timestamp_mode:=source
+```
+
+| 센서 | Host / Dest | ROS 토픽 | field |
+|---|---|---|---|
+| Instance LiDAR ID 11 | 9310 / **9311** | `/velodyne_points_instance` | `instance_id uint32` |
+
+확인: `./scripts/docker_ros_up.sh verify-gt 20`. Instance/Object/Semantic은 개발 oracle이며
+대회 launch와 일반 raw bag에 포함하지 않는다.
+
 ---
 
 ## 실행 한 줄
@@ -103,5 +113,5 @@ Camera-10은 예전 **9090**이 아님 (rosbridge와 충돌).
 ```bash
 ./scripts/docker_ros_up.sh up && docker exec -it asmc-ros-noetic bash
 # 컨테이너 안
-source devel/setup.bash && ./scripts/udp_bridge.sh
+source devel/setup.bash && ./scripts/udp_bridge.sh --simulator 26r1
 ```

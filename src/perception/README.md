@@ -7,7 +7,7 @@
 ## 현재 상태
 
 - 안승현: Capture GT 기반 lane/drivable 2-head 학습·18 epoch 평가 완료
-- 안승현: 모델 독립 카메라 live 추론과 시각화 구현·실측 완료, runtime 정밀 계측 예정
+- 안승현: 모델 독립 카메라 live 추론·시각화와 구조화 diagnostics 구현, raw bag A/B 실증 예정
 - 장원태: 제공 MGeo의 bake/local crop 방향 pilot 제안
 - 손재호: LiDAR/3D 장애물 인지 코드 유지
 - 공통 BEV와 planning 메시지는 camera/map pilot 이후 합의
@@ -22,7 +22,7 @@
 | `map_prior/` | MGeo bake 결과와 local crop | 장원태 중심 후보, 아직 없음 |
 | `morai_3d_detection/` | 카메라 3D 인지 연구 | 손재호 |
 | `../lidar+sensorfusion/` | LiDAR perception/fusion | LiDAR 파트 |
-| `../data_collection/` | Capture Mode, mask, dataset 생성 | 구현됨 |
+| `../data_collection/` | Capture GT, raw/result rosbag, replay/audit, mask/dataset | 구현·UDP smoke 완료 |
 
 제안 경로와 토픽은 아직 확정 계약이 아니다. live 처리율과 출력 신뢰도를 확인한 뒤
 [`src/interfaces/`](../interfaces/README.md)에서 팀 합의 항목만 승격한다.
@@ -35,6 +35,7 @@
 | [데이터 계약](../../docs/perception-dataset-labeling-split.md) | 원본, mask, ignore, manifest와 split 정본 |
 | [BEV/lane 설계 노트](../../docs/perception-bev-lane-interface-plan.md) | 정책 선택 근거와 상세 후보 |
 | [v4 학습 평가](../../docs/perception-v4-training-evaluation.md) | 현재 18 epoch 후보 성능 |
+| [rosbag/Streaming GT](../../docs/rosbag-evaluation-streaming-gt.md) | 재현 평가, source timestamp와 privileged GT 경계 |
 | [시뮬 체크리스트](../../docs/sim-verification-checklist.md) | live 및 full-stack 검증 항목 |
 
 ## 실행 환경과 데이터

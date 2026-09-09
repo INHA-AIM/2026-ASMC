@@ -20,8 +20,11 @@ import math
 import socket
 import struct
 import threading
+import time
+from collections import deque
 
 import rospy
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from geometry_msgs.msg import Vector3
 from morai_msgs.msg import (CollisionData, CtrlCmd, EgoVehicleStatus,
                             ObjectStatus, ObjectStatusList)
@@ -83,6 +86,31 @@ CMD_FMT_27 = "<BBB" + "ffffff"        # 신버전(rear_steer 포함), 전체 59B
 CMD_FMT_23 = "<BBB" + "fffff"         # 구버전, 전체 55B
 
 
+def latency_summary(samples):
+    """Return a compact rolling latency summary without external dependencies."""
+    values = sorted(float(value) for value in samples)
+    if not values:
+        return {"samples": 0, "mean_ms": 0.0, "p50_ms": 0.0,
+                "p95_ms": 0.0, "max_ms": 0.0}
+
+    def percentile(percent):
+        position = (len(values) - 1) * float(percent) / 100.0
+        low = int(math.floor(position))
+        high = int(math.ceil(position))
+        if low == high:
+            return values[low]
+        return (values[low] * (high - position)
+                + values[high] * (position - low))
+
+    return {
+        "samples": len(values),
+        "mean_ms": sum(values) / len(values),
+        "p50_ms": percentile(50),
+        "p95_ms": percentile(95),
+        "max_ms": values[-1],
+    }
+
+
 def vec3(x, y, z):
     v = Vector3()
     v.x, v.y, v.z = float(x), float(y), float(z)
@@ -103,6 +131,12 @@ class MoraiUdpBridge(object):
         self.invert_steer = bool(p("~invert_steer", False))
         self.frame_id = p("~frame_id", "base_link")
         self.ego_vel_ms = bool(p("~ego_velocity_in_ms", True))
+        self.simulator_profile = str(
+            p("~simulator_profile", "dev_26r1_h3")
+        )
+        self.timestamp_mode = str(p("~timestamp_mode", "receive")).strip().lower()
+        if self.timestamp_mode not in ("receive", "source"):
+            raise ValueError("timestamp_mode must be receive or source")
 
         self.pub_ego = rospy.Publisher("/Ego_topic", EgoVehicleStatus,
                                        queue_size=1)
@@ -110,12 +144,27 @@ class MoraiUdpBridge(object):
                                        queue_size=1)
         self.pub_col = rospy.Publisher("/CollisionData", CollisionData,
                                        queue_size=1)
+        self.pub_diagnostics = rospy.Publisher(
+            "/morai_udp_bridge/diagnostics", DiagnosticArray, queue_size=1
+        )
 
         self.cmd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         rospy.Subscriber("/ctrl_cmd", CtrlCmd, self.on_ctrl_cmd, queue_size=1)
 
         self.last_link_id = ""
         self.stats = {"ego": 0, "obj": 0, "col": 0, "cmd": 0}
+        # Rolling callback wall time. UDP inputs cover validated datagram
+        # parse->ROS publish enqueue; cmd covers ROS callback->UDP sendto.
+        self.processing_ms = {
+            name: deque(maxlen=4096) for name in self.stats
+        }
+        self.last_activity_monotonic = dict((name, None) for name in self.stats)
+        self.timestamp_fallbacks = {"ego": 0, "obj": 0, "col": 0}
+        self.timestamp_regressions = {"ego": 0, "obj": 0, "col": 0}
+        self._last_source_ns = {}
+        self._started_monotonic = time.monotonic()
+        self._last_report_monotonic = self._started_monotonic
+        self._last_report_stats = dict(self.stats)
         self.warned = set()
 
         for port, kind, hdr, cb in (
@@ -156,8 +205,13 @@ class MoraiUdpBridge(object):
                                   port, hdr, data[:16])
                 continue
             try:
+                processing_started = time.perf_counter_ns()
                 cb(data)
+                self.processing_ms[kind].append(
+                    (time.perf_counter_ns() - processing_started) / 1000000.0
+                )
                 self.stats[kind] += 1
+                self.last_activity_monotonic[kind] = time.monotonic()
             except struct.error as e:
                 rospy.logwarn_throttle(5.0, "parse error udp/%d (%dB): %s",
                                        port, len(data), e)
@@ -186,9 +240,7 @@ class MoraiUdpBridge(object):
                             body[ext_off:ext_off + ext_n * 4])
 
         m = EgoVehicleStatus()
-        # Normalize MORAI packet time to the ROS clock at the UDP ingress.
-        # Downstream freshness checks must compare timestamps from one clock.
-        m.header.stamp = rospy.Time.now()
+        m.header.stamp = self.packet_stamp(sec, nsec, "ego")
         m.header.frame_id = self.frame_id
         m.unique_id = -1
 
@@ -229,8 +281,7 @@ class MoraiUdpBridge(object):
         off = 8
 
         msg = ObjectStatusList()
-        # Keep object and ego timestamps on the same ROS clock basis.
-        msg.header.stamp = rospy.Time.now()
+        msg.header.stamp = self.packet_stamp(sec, nsec, "obj")
         msg.header.frame_id = self.frame_id
 
         for _ in range(OBJ_N):
@@ -267,9 +318,10 @@ class MoraiUdpBridge(object):
     # ---------------- Collision ----------------
     def handle_col(self, data):
         body = data[COL_PRE:-TAIL]
+        sec, nsec = struct.unpack("<II", body[0:8])
         off = 8
         msg = CollisionData()
-        msg.header.stamp = rospy.Time.now()
+        msg.header.stamp = self.packet_stamp(sec, nsec, "col")
         msg.header.frame_id = self.frame_id
         hit = False
         for _ in range(COL_N):
@@ -291,6 +343,7 @@ class MoraiUdpBridge(object):
 
     # ---------------- Ctrl Cmd 송신 ----------------
     def on_ctrl_cmd(self, msg):
+        processing_started = time.perf_counter_ns()
         # beta_drive: steering / va: front_steer, rear_steer  [rad]
         if hasattr(msg, "steering"):
             steer_rad = float(msg.steering)
@@ -322,19 +375,115 @@ class MoraiUdpBridge(object):
                + b"\x00" * 12 + payload + b"\r\n")
         try:
             self.cmd_sock.sendto(pkt, (self.cmd_ip, self.cmd_port))
+            self.processing_ms["cmd"].append(
+                (time.perf_counter_ns() - processing_started) / 1000000.0
+            )
             self.stats["cmd"] += 1
+            self.last_activity_monotonic["cmd"] = time.monotonic()
         except Exception as e:
             rospy.logwarn_throttle(5.0, "ctrl_cmd send failed: %s", e)
 
     # ---------------- 상태 ----------------
+    def packet_stamp(self, sec, nsec, kind):
+        if self.timestamp_mode == "receive":
+            return rospy.Time.now()
+        if int(sec) <= 0 or not 0 <= int(nsec) < 1000000000:
+            self.timestamp_fallbacks[kind] += 1
+            return self.fallback_stamp(kind)
+        stamp = rospy.Time(int(sec), int(nsec))
+        value_ns = int(stamp.to_nsec())
+        previous = self._last_source_ns.get(kind)
+        if previous is not None and value_ns < previous:
+            self.timestamp_fallbacks[kind] += 1
+            self.timestamp_regressions[kind] += 1
+            return self.fallback_stamp(kind)
+        self._last_source_ns[kind] = value_ns
+        return stamp
+
+    def fallback_stamp(self, kind):
+        stamp = rospy.Time.now()
+        value_ns = int(stamp.to_nsec())
+        previous = self._last_source_ns.get(kind)
+        if previous is not None and value_ns <= previous:
+            value_ns = previous + 1
+            stamp = rospy.Time(value_ns // 1000000000, value_ns % 1000000000)
+        self._last_source_ns[kind] = value_ns
+        return stamp
+
     def report(self, _):
-        rospy.loginfo("rx ego=%d obj=%d col=%d | tx cmd=%d | link=%s",
-                      self.stats["ego"], self.stats["obj"],
-                      self.stats["col"], self.stats["cmd"],
-                      self.last_link_id or "-")
+        now = time.monotonic()
+        report_elapsed = max(1e-6, now - self._last_report_monotonic)
+        interval_rates = dict(
+            (
+                name,
+                max(0, count - self._last_report_stats.get(name, 0))
+                / report_elapsed,
+            )
+            for name, count in self.stats.items()
+        )
+        rospy.loginfo(
+            "rx ego=%d(%.1fHz) obj=%d(%.1fHz) col=%d(%.1fHz) | "
+            "tx cmd=%d(%.1fHz) | link=%s",
+            self.stats["ego"], interval_rates["ego"],
+            self.stats["obj"], interval_rates["obj"],
+            self.stats["col"], interval_rates["col"],
+            self.stats["cmd"], interval_rates["cmd"],
+            self.last_link_id or "-",
+        )
+        self._last_report_stats = dict(self.stats)
+        self._last_report_monotonic = now
         if self.stats["ego"] == 0:
             rospy.logwarn("Ego 수신 0건. MORAI Destination PORT 와 "
                           "~ego_port 가 같은지 확인하세요.")
+        message = DiagnosticArray()
+        message.header.stamp = rospy.Time.now()
+        elapsed = max(1e-6, now - self._started_monotonic)
+        for kind in ("ego", "obj", "col", "cmd"):
+            metrics = latency_summary(self.processing_ms[kind])
+            last_activity = self.last_activity_monotonic[kind]
+            last_age_sec = (
+                -1.0 if last_activity is None else max(0.0, now - last_activity)
+            )
+            status = DiagnosticStatus()
+            status.name = "morai_udp_bridge/{}".format(kind)
+            status.hardware_id = "morai_udp"
+            status.level = (
+                DiagnosticStatus.OK if self.stats[kind] > 0 or kind == "cmd"
+                else DiagnosticStatus.WARN
+            )
+            if self.stats[kind] > 0:
+                status.message = "active"
+            elif kind == "cmd":
+                status.message = "no control command"
+            else:
+                status.message = "no data"
+            status.values = [
+                KeyValue("simulator_profile", self.simulator_profile),
+                KeyValue("timestamp_mode", self.timestamp_mode),
+                KeyValue(
+                    "direction",
+                    "ros_to_udp" if kind == "cmd" else "udp_to_ros",
+                ),
+                KeyValue("messages", str(self.stats[kind])),
+                KeyValue("average_hz", "{:.3f}".format(self.stats[kind] / elapsed)),
+                KeyValue("interval_hz", "{:.3f}".format(interval_rates[kind])),
+                KeyValue("last_message_age_sec", "{:.6f}".format(last_age_sec)),
+                KeyValue("processing_samples", str(metrics["samples"])),
+                KeyValue("processing_mean_ms", "{:.6f}".format(metrics["mean_ms"])),
+                KeyValue("processing_p50_ms", "{:.6f}".format(metrics["p50_ms"])),
+                KeyValue("processing_p95_ms", "{:.6f}".format(metrics["p95_ms"])),
+                KeyValue("processing_max_ms", "{:.6f}".format(metrics["max_ms"])),
+                KeyValue(
+                    "timestamp_fallbacks",
+                    str(self.timestamp_fallbacks.get(kind, 0)),
+                ),
+                KeyValue(
+                    "timestamp_regressions",
+                    str(self.timestamp_regressions.get(kind, 0)),
+                ),
+            ]
+            message.status.append(status)
+        self.pub_diagnostics.publish(message)
 
 
 def main():

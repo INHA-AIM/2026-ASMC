@@ -274,7 +274,19 @@ def sync_run(
                 "run_id": run_id,
                 "frame_id": sequence,
                 "custom_name": record["custom_name"],
-                "morai_sim_time_ms": record.get("morai_sim_time_ms"),
+                "morai_sim_time_raw": record.get(
+                    "morai_sim_time_raw", record.get("morai_sim_time_ms")
+                ),
+                "morai_sim_time_unit": record.get(
+                    "morai_sim_time_unit",
+                    "us_legacy_mislabeled"
+                    if record.get("morai_sim_time_ms") is not None else None,
+                ),
+                "morai_sim_time_ns": record.get(
+                    "morai_sim_time_ns",
+                    int(record["morai_sim_time_ms"]) * 1000
+                    if record.get("morai_sim_time_ms") is not None else None,
+                ),
                 "ros_time_ns": record.get("ros_time_ns"),
                 "requested_at_utc": record.get("requested_at_utc"),
                 "state_snapshot": record.get("state"),

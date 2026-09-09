@@ -18,9 +18,12 @@ morai_udp_bridge 와 별도 노드로 돌린다.
 import socket
 import struct
 import threading
+import time
+from collections import deque
 
 import numpy as np
 import rospy
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from sensor_msgs.msg import (CompressedImage, Image, Imu, NavSatFix,
                              NavSatStatus, PointCloud2, PointField)
 from morai_msgs.msg import GPSMessage
@@ -61,6 +64,42 @@ DEFAULT_SEMANTIC_CAMERAS = [
 ]
 
 
+def latency_summary(samples):
+    values = sorted(float(value) for value in samples)
+    if not values:
+        return {"samples": 0, "mean_ms": 0.0, "p50_ms": 0.0,
+                "p95_ms": 0.0, "max_ms": 0.0}
+
+    def percentile(percent):
+        position = (len(values) - 1) * float(percent) / 100.0
+        low = int(np.floor(position))
+        high = int(np.ceil(position))
+        if low == high:
+            return values[low]
+        return (values[low] * (high - position)
+                + values[high] * (position - low))
+
+    return {
+        "samples": len(values),
+        "mean_ms": sum(values) / len(values),
+        "p50_ms": percentile(50),
+        "p95_ms": percentile(95),
+        "max_ms": values[-1],
+    }
+
+
+def parse_camera_packet(block):
+    """Return ``(sec, nsec, index, payload, is_final)`` for one MORAI JPEG block."""
+    if len(block) < 21 or block[:3] != b"MOR":
+        raise ValueError("invalid camera packet header or length")
+    sec, nsec, index, size = struct.unpack("<IIii", block[3:19])
+    tail = block[-2:]
+    available = len(block) - 21
+    if index < 0 or size < 0 or size > available or tail not in (b"AI", b"EI"):
+        raise ValueError("invalid camera packet index, size, or tail")
+    return sec, nsec, index, block[19:19 + size], tail == b"EI"
+
+
 class SensorBridge(object):
 
     def __init__(self):
@@ -68,6 +107,12 @@ class SensorBridge(object):
         self.frame_lidar = p("~lidar_frame", "velodyne")
         self.frame_imu = p("~imu_frame", "imu")
         self.frame_gps = p("~gps_frame", "gps")
+        self.simulator_profile = str(
+            p("~simulator_profile", "dev_26r1_h3")
+        )
+        self.timestamp_mode = str(p("~timestamp_mode", "receive")).strip().lower()
+        if self.timestamp_mode not in ("receive", "source"):
+            raise ValueError("timestamp_mode must be receive or source")
         # NMEA GGA에는 MORAI map 원점 offset이 포함되지 않는다. GPSMessage를
         # 사용하는 인지/플래닝 모듈이 같은 local-map 좌표를 만들 수 있도록
         # launch에서 주입받아 메시지에 명시한다.
@@ -91,6 +136,23 @@ class SensorBridge(object):
                               name, self.planner_forward_ip, port)
 
         self.stats = {}
+        self.errors = {}
+        self.timestamp_fallbacks = {}
+        self.timestamp_regressions = {}
+        self.processing_ms = {}
+        self.assembly_ms = {}
+        self.last_received_monotonic = {}
+        # v2 does not transmit these GT-only streams. Their idle sockets are
+        # expected in the union-port bridge; verify-gt promotes them to
+        # required inputs when a GT run is requested.
+        self.optional_streams = set()
+        self._last_source_ns = {}
+        self._started_monotonic = time.monotonic()
+        self._last_report_monotonic = self._started_monotonic
+        self._last_report_stats = {}
+        self.pub_diagnostics = rospy.Publisher(
+            "/morai_sensor_bridge/diagnostics", DiagnosticArray, queue_size=1
+        )
         self._start_all(p)
         rospy.Timer(rospy.Duration(5.0), self._report)
 
@@ -106,6 +168,9 @@ class SensorBridge(object):
             if p("~enable_semantic_camera", False):
                 sem = p("~semantic_cameras", DEFAULT_SEMANTIC_CAMERAS)
                 if sem:
+                    self.optional_streams.update(
+                        str(camera.get("name", "semantic")) for camera in sem
+                    )
                     cams.extend(sem)
             for cam in cams:
                 self._start_camera(cam)
@@ -116,26 +181,49 @@ class SensorBridge(object):
                 rospy.logerr("알 수 없는 lidar_model. 가능: %s",
                              list(VERTICAL_ANGLES))
             else:
-                self.vert = np.array([VERTICAL_ANGLES[model]], dtype=np.float32)
-                self.channel = self.vert.shape[1]
                 n = int(p("~lidar_packets_per_frame", 0))
                 if n <= 0:
                     rate = float(p("~lidar_rotation_rate", 10.0))
-                    per_pkt = 24 if self.channel == 16 else 12
+                    channel = len(VERTICAL_ANGLES[model])
+                    per_pkt = 24 if channel == 16 else 12
                     n = max(1, int(round((36000.0 / (rate * 2.0)) / per_pkt)))
-                self.packets_per_frame = n
-                self.pub_pc = rospy.Publisher("/velodyne_points", PointCloud2,
-                                              queue_size=1)
-                rospy.loginfo("lidar model=%s ch=%d packets_per_frame=%d",
-                              model, self.channel, n)
-                # Dest만 listen. Host 포트는 SIM bind — Docker에서 publish/listen 하지 말 것.
-                ports = [int(p("~lidar_port", 9299))]
+                self._start_lidar({
+                    "name": "lidar",
+                    "port": int(p("~lidar_port", 9299)),
+                    "topic": str(p("~lidar_topic", "/velodyne_points")),
+                    "model": model,
+                    "packets_per_frame": n,
+                    "value_field": "intensity",
+                })
+
+                # Legacy host-port mirror support. It remains an independent
+                # stream so it cannot corrupt the primary frame buffer.
                 host_p = int(p("~lidar_host_port", 0))
-                if host_p > 0 and host_p not in ports:
-                    ports.append(host_p)
-                for i, port in enumerate(ports):
-                    tag = "lidar" if i == 0 else "lidar_h"
-                    self._spawn(tag, port, self._lidar)
+                if host_p > 0 and host_p != int(p("~lidar_port", 9299)):
+                    self._start_lidar({
+                        "name": "lidar_h",
+                        "port": host_p,
+                        "topic": str(p("~lidar_host_topic", "/velodyne_points_host")),
+                        "model": model,
+                        "packets_per_frame": n,
+                        "value_field": "intensity",
+                    })
+
+                if p("~enable_instance_lidar", False):
+                    self.optional_streams.add("lidar_instance")
+                    self._start_lidar({
+                        "name": "lidar_instance",
+                        "port": int(p("~instance_lidar_port", 9311)),
+                        "topic": str(
+                            p(
+                                "~instance_lidar_topic",
+                                "/velodyne_points_instance",
+                            )
+                        ),
+                        "model": model,
+                        "packets_per_frame": n,
+                        "value_field": "instance_id",
+                    })
 
 
         if p("~enable_gps", True):
@@ -167,6 +255,35 @@ class SensorBridge(object):
 
         self._spawn(name, port, loop)
 
+    def _start_lidar(self, config):
+        """Start one fully independent Velodyne stream."""
+        model = config["model"]
+        vertical = np.array([VERTICAL_ANGLES[model]], dtype=np.float32)
+        channel = vertical.shape[1]
+        publisher = rospy.Publisher(config["topic"], PointCloud2, queue_size=1)
+        rospy.loginfo(
+            "%s model=%s ch=%d packets_per_frame=%d udp/%d -> %s field=%s",
+            config["name"],
+            model,
+            channel,
+            config["packets_per_frame"],
+            config["port"],
+            config["topic"],
+            config["value_field"],
+        )
+
+        def loop(sock, stat_name):
+            self._lidar_loop(
+                sock,
+                stat_name,
+                publisher,
+                vertical,
+                int(config["packets_per_frame"]),
+                config["value_field"],
+            )
+
+        self._spawn(config["name"], config["port"], loop)
+
     @staticmethod
     def _norm_model(name):
         key = str(name).upper().replace("_", "").replace("-", "").replace(" ", "")
@@ -176,6 +293,13 @@ class SensorBridge(object):
 
     def _spawn(self, name, port, fn):
         self.stats[name] = 0
+        self.errors[name] = 0
+        self.timestamp_fallbacks[name] = 0
+        self.timestamp_regressions[name] = 0
+        self.processing_ms[name] = deque(maxlen=4096)
+        self.assembly_ms[name] = deque(maxlen=4096)
+        self.last_received_monotonic[name] = None
+        self._last_report_stats[name] = 0
         t = threading.Thread(target=self._guard, args=(name, port, fn))
         t.daemon = True
         t.start()
@@ -199,30 +323,52 @@ class SensorBridge(object):
             sock.close()
 
     def _camera_loop(self, sock, name, pub_c, pub_r, frame_id):
-        buf = b""
+        buf = bytearray()
+        active_stamp = None
+        expected_index = 0
+        assembly_started_ns = None
         while not rospy.is_shutdown():
             try:
                 blk, _ = sock.recvfrom(65000)
             except socket.timeout:
                 continue
-            if len(blk) < 21:
-                continue
-            buf += blk[19:-2]
-            if blk[-2:] != b"EI":
+            try:
+                sec, nsec, index, payload, is_final = parse_camera_packet(blk)
+            except (struct.error, ValueError):
+                self.errors[name] += 1
                 continue
 
-            stamp = rospy.Time.now()
+            stamp_key = (sec, nsec)
+            if index == 0:
+                buf = bytearray()
+                active_stamp = stamp_key
+                expected_index = 0
+                assembly_started_ns = time.perf_counter_ns()
+            if active_stamp != stamp_key or index != expected_index:
+                self.errors[name] += 1
+                buf = bytearray()
+                active_stamp = None
+                expected_index = 0
+                assembly_started_ns = None
+                continue
+            buf.extend(payload)
+            expected_index += 1
+            if not is_final:
+                continue
+
+            processing_started_ns = time.perf_counter_ns()
+            stamp = self._stamp_from_sec_nsec(sec, nsec, name)
             m = CompressedImage()
             m.header.stamp = stamp
             m.header.frame_id = frame_id
             m.format = "jpeg"
-            m.data = buf
+            m.data = bytes(buf)
             pub_c.publish(m)
 
             if pub_r is not None:
                 try:
                     import cv2
-                    img = cv2.imdecode(np.frombuffer(buf, np.uint8),
+                    img = cv2.imdecode(np.frombuffer(bytes(buf), np.uint8),
                                        cv2.IMREAD_COLOR)
                     if img is not None:
                         r = Image()
@@ -237,17 +383,29 @@ class SensorBridge(object):
                 except ImportError:
                     rospy.logwarn_once("cv2 없음 -> publish_raw_image 무시")
 
-            buf = b""
-            self.stats[name] += 1
+            buf = bytearray()
+            active_stamp = None
+            expected_index = 0
+            completed_ns = time.perf_counter_ns()
+            self._record_processing(name, processing_started_ns, completed_ns)
+            if assembly_started_ns is not None:
+                self.assembly_ms[name].append(
+                    (completed_ns - assembly_started_ns) / 1000000.0
+                )
+            assembly_started_ns = None
+            self._mark_message(name)
 
-    def _lidar(self, sock, name):
+    def _lidar_loop(self, sock, name, publisher, vertical,
+                    packets_per_frame, value_field):
         """Velodyne UDP. 패킷을 모으되 타임아웃 시에도 부분 프레임을 살린다."""
-        ch = self.channel
-        cos_v = np.cos(np.deg2rad(self.vert))
-        sin_v = np.sin(np.deg2rad(self.vert))
-        need = self.packets_per_frame
+        ch = vertical.shape[1]
+        cos_v = np.cos(np.deg2rad(vertical))
+        sin_v = np.sin(np.deg2rad(vertical))
+        need = packets_per_frame
         min_pkts = max(12, need // 4)  # 최소 이만큼이면 한 프레임으로 발행
         chunks = []
+        device_times = []
+        assembly_started_ns = None
         raw_seen = 0
 
         while not rospy.is_shutdown():
@@ -255,8 +413,13 @@ class SensorBridge(object):
                 pkt, _ = sock.recvfrom(2048)
             except socket.timeout:
                 if len(chunks) >= min_pkts:
-                    self._lidar_publish(chunks, name, ch, cos_v, sin_v)
+                    self._lidar_publish(
+                        chunks, device_times, name, publisher,
+                        ch, cos_v, sin_v, value_field, assembly_started_ns
+                    )
                     chunks = []
+                    device_times = []
+                    assembly_started_ns = None
                 continue
 
             raw_seen += 1
@@ -275,21 +438,36 @@ class SensorBridge(object):
                         "%s 패킷이 너무 짧음 (%dB). Velodyne raw(~1206B)가 아님.",
                         name, len(pkt))
             if len(pkt) < 100:
+                self.errors[name] += 1
                 continue
             # 1200B 데이터부 (표준 1206 = 1200 + 6 timestamp)
+            if not chunks:
+                assembly_started_ns = time.perf_counter_ns()
             chunks.append(pkt[:1200] if len(pkt) >= 1200 else pkt.ljust(1200, b"\x00")[:1200])
+            if len(pkt) >= 1204:
+                device_times.append(struct.unpack("<I", pkt[1200:1204])[0])
+            else:
+                device_times.append(None)
 
             if len(chunks) >= need:
-                self._lidar_publish(chunks, name, ch, cos_v, sin_v)
+                self._lidar_publish(
+                    chunks, device_times, name, publisher,
+                    ch, cos_v, sin_v, value_field, assembly_started_ns
+                )
                 chunks = []
+                device_times = []
+                assembly_started_ns = None
 
-    def _lidar_publish(self, chunks, name, ch, cos_v, sin_v):
+    def _lidar_publish(self, chunks, device_times, name, publisher,
+                       ch, cos_v, sin_v, value_field,
+                       assembly_started_ns=None):
+        processing_started_ns = time.perf_counter_ns()
         try:
             b = np.frombuffer(b"".join(chunks), dtype=np.uint8).reshape([-1, 100])
         except ValueError as e:
             rospy.logwarn_throttle(5.0, "%s reshape fail (%d pkts): %s",
                                    name, len(chunks), e)
-            return
+            return False
 
         if ch == 16:
             az = np.zeros((b.shape[0] * 2,), dtype=np.float32)
@@ -301,7 +479,7 @@ class SensorBridge(object):
 
         dist = (b[:, 4::3].astype(np.float32)
                 + 256.0 * b[:, 5::3].astype(np.float32)) * 2.0
-        inten = b[:, 6::3].astype(np.float32).reshape(-1)
+        raw_value = b[:, 6::3].reshape(-1)
 
         az = az.reshape([-1, 1]) / 100.0
         dist = dist.reshape([-1, ch]) / 1000.0
@@ -315,18 +493,35 @@ class SensorBridge(object):
         z = (dist * sin_v).reshape(-1)
 
         valid = dist.reshape(-1) > 0.01
-        self.pub_pc.publish(
-            self._make_cloud(x[valid], y[valid], z[valid], inten[valid]))
-        self.stats[name] += 1
+        device_us = next((value for value in reversed(device_times)
+                          if value is not None), None)
+        stamp = self._stamp_from_velodyne(device_us, name)
+        publisher.publish(
+            self._make_cloud(
+                x[valid], y[valid], z[valid], raw_value[valid],
+                stamp, value_field
+            )
+        )
+        completed_ns = time.perf_counter_ns()
+        self._record_processing(name, processing_started_ns, completed_ns)
+        if assembly_started_ns is not None:
+            self.assembly_ms[name].append(
+                (completed_ns - assembly_started_ns) / 1000000.0
+            )
+        self._mark_message(name)
+        return True
 
-    def _make_cloud(self, x, y, z, i):
+    def _make_cloud(self, x, y, z, value, stamp, value_field):
         n = int(x.shape[0])
+        value_dtype = np.uint32 if value_field == "instance_id" else np.float32
         arr = np.zeros(n, dtype=[("x", np.float32), ("y", np.float32),
-                                 ("z", np.float32), ("intensity", np.float32)])
-        arr["x"], arr["y"], arr["z"], arr["intensity"] = x, y, z, i
+                                 ("z", np.float32),
+                                 (value_field, value_dtype)])
+        arr["x"], arr["y"], arr["z"] = x, y, z
+        arr[value_field] = value.astype(value_dtype, copy=False)
 
         m = PointCloud2()
-        m.header.stamp = rospy.Time.now()
+        m.header.stamp = stamp
         m.header.frame_id = self.frame_lidar
         m.height = 1
         m.width = n
@@ -334,7 +529,13 @@ class SensorBridge(object):
             PointField("x", 0, PointField.FLOAT32, 1),
             PointField("y", 4, PointField.FLOAT32, 1),
             PointField("z", 8, PointField.FLOAT32, 1),
-            PointField("intensity", 12, PointField.FLOAT32, 1),
+            PointField(
+                value_field,
+                12,
+                PointField.UINT32 if value_field == "instance_id"
+                else PointField.FLOAT32,
+                1,
+            ),
         ]
         m.is_bigendian = False
         m.point_step = 16
@@ -343,12 +544,63 @@ class SensorBridge(object):
         m.data = arr.tobytes()
         return m
 
+    def _fallback_stamp(self, name, regression=False):
+        self.timestamp_fallbacks[name] = self.timestamp_fallbacks.get(name, 0) + 1
+        if regression:
+            self.timestamp_regressions[name] = \
+                self.timestamp_regressions.get(name, 0) + 1
+        stamp = rospy.Time.now()
+        value_ns = int(stamp.to_nsec())
+        previous = self._last_source_ns.get(name)
+        if previous is not None and value_ns <= previous:
+            value_ns = previous + 1
+            stamp = rospy.Time(value_ns // 1000000000, value_ns % 1000000000)
+        self._last_source_ns[name] = value_ns
+        return stamp
+
+    def _accept_source_stamp(self, stamp, name):
+        value_ns = int(stamp.to_nsec())
+        previous = self._last_source_ns.get(name)
+        if previous is not None and value_ns < previous:
+            return self._fallback_stamp(name, regression=True)
+        self._last_source_ns[name] = value_ns
+        return stamp
+
+    def _stamp_from_sec_nsec(self, sec, nsec, name):
+        if self.timestamp_mode == "receive":
+            return rospy.Time.now()
+        if int(sec) <= 0 or not 0 <= int(nsec) < 1000000000:
+            return self._fallback_stamp(name)
+        try:
+            return self._accept_source_stamp(
+                rospy.Time(int(sec), int(nsec)), name
+            )
+        except (TypeError, ValueError):
+            return self._fallback_stamp(name)
+
+    def _stamp_from_velodyne(self, device_us, name):
+        """Resolve Velodyne microseconds-since-hour to the nearest ROS hour."""
+        if self.timestamp_mode == "receive":
+            return rospy.Time.now()
+        if device_us is None or not 0 <= int(device_us) < 3600 * 1000000:
+            return self._fallback_stamp(name)
+        now = rospy.Time.now().to_sec()
+        hour = int(now // 3600) * 3600
+        offset = float(device_us) / 1000000.0
+        candidates = (hour - 3600 + offset, hour + offset, hour + 3600 + offset)
+        resolved = min(candidates, key=lambda value: abs(value - now))
+        try:
+            return self._accept_source_stamp(rospy.Time.from_sec(resolved), name)
+        except (TypeError, ValueError):
+            return self._fallback_stamp(name)
+
     def _gps(self, sock, name):
         while not rospy.is_shutdown():
             try:
                 raw, _ = sock.recvfrom(8196)
             except socket.timeout:
                 continue
+            processing_started_ns = time.perf_counter_ns()
             self._forward_to_planner(name, raw)
             try:
                 line = raw.decode("ascii", "ignore").split("\r\n")[0]
@@ -382,7 +634,8 @@ class SensorBridge(object):
             fx.status.service = NavSatStatus.SERVICE_GPS
             fx.latitude, fx.longitude, fx.altitude = lat, lon, alt
             self.pub_fix.publish(fx)
-            self.stats[name] += 1
+            self._record_processing(name, processing_started_ns)
+            self._mark_message(name)
 
     @staticmethod
     def _nmea_deg(val, hemi):
@@ -399,13 +652,15 @@ class SensorBridge(object):
                 raw, _ = sock.recvfrom(65535)
             except socket.timeout:
                 continue
+            processing_started_ns = time.perf_counter_ns()
             self._forward_to_planner(name, raw)
             if raw[0:9] != b"#IMUData$" or len(raw) < 113:
                 continue
+            sec, nsec = struct.unpack("<II", raw[25:33])
             d = struct.unpack("<10d", raw[33:113])
 
             m = Imu()
-            m.header.stamp = rospy.Time.now()
+            m.header.stamp = self._stamp_from_sec_nsec(sec, nsec, name)
             m.header.frame_id = self.frame_imu
             m.orientation.w, m.orientation.x = d[0], d[1]
             m.orientation.y, m.orientation.z = d[2], d[3]
@@ -414,7 +669,19 @@ class SensorBridge(object):
             m.linear_acceleration.x, m.linear_acceleration.y, \
                 m.linear_acceleration.z = d[7], d[8], d[9]
             self.pub_imu.publish(m)
-            self.stats[name] += 1
+            self._record_processing(name, processing_started_ns)
+            self._mark_message(name)
+
+    def _record_processing(self, name, started_ns, completed_ns=None):
+        if completed_ns is None:
+            completed_ns = time.perf_counter_ns()
+        self.processing_ms[name].append(
+            (completed_ns - started_ns) / 1000000.0
+        )
+
+    def _mark_message(self, name):
+        self.stats[name] += 1
+        self.last_received_monotonic[name] = time.monotonic()
 
     def _forward_to_planner(self, name, raw):
         forward_sock = self.planner_forward_sockets.get(name)
@@ -428,12 +695,79 @@ class SensorBridge(object):
                 5.0, "%s planner UDP forward failed: %s", name, e)
 
     def _report(self, _):
-        rospy.loginfo("rx " + "  ".join("%s=%d" % kv
-                                        for kv in sorted(self.stats.items())))
+        now = time.monotonic()
+        report_elapsed = max(1e-6, now - self._last_report_monotonic)
+        interval_rates = {}
+        for name, count in self.stats.items():
+            previous = self._last_report_stats.get(name, 0)
+            interval_rates[name] = max(0, count - previous) / report_elapsed
+        rospy.loginfo(
+            "rx " + "  ".join(
+                "%s=%d(%.1fHz)" % (name, count, interval_rates[name])
+                for name, count in sorted(self.stats.items())
+            )
+        )
+        self._last_report_stats = dict(self.stats)
+        self._last_report_monotonic = now
         for k, v in self.stats.items():
-            if v == 0:
+            if v == 0 and k not in self.optional_streams:
                 rospy.logwarn_throttle(
                     30.0, "%s 수신 0건 - MORAI Sensor Destination Port 확인.", k)
+        message = DiagnosticArray()
+        message.header.stamp = rospy.Time.now()
+        elapsed = max(1e-6, time.monotonic() - self._started_monotonic)
+        for name in sorted(self.stats):
+            processing = latency_summary(self.processing_ms[name])
+            assembly = latency_summary(self.assembly_ms[name])
+            last_received = self.last_received_monotonic[name]
+            last_age_sec = (
+                -1.0 if last_received is None else max(0.0, now - last_received)
+            )
+            status = DiagnosticStatus()
+            status.name = "morai_sensor_bridge/{}".format(name)
+            status.hardware_id = "morai_udp"
+            optional_idle = (
+                self.stats[name] == 0 and name in self.optional_streams
+            )
+            status.level = (
+                DiagnosticStatus.OK
+                if self.stats[name] > 0 or optional_idle
+                else DiagnosticStatus.WARN
+            )
+            if self.stats[name] > 0:
+                status.message = "receiving"
+            elif optional_idle:
+                status.message = "optional GT stream idle"
+            else:
+                status.message = "no data"
+            status.values = [
+                KeyValue("simulator_profile", self.simulator_profile),
+                KeyValue("timestamp_mode", self.timestamp_mode),
+                KeyValue("optional_stream", str(name in self.optional_streams).lower()),
+                KeyValue("messages", str(self.stats[name])),
+                KeyValue("average_hz", "{:.3f}".format(self.stats[name] / elapsed)),
+                KeyValue("interval_hz", "{:.3f}".format(interval_rates[name])),
+                KeyValue("last_message_age_sec", "{:.6f}".format(last_age_sec)),
+                KeyValue("processing_samples", str(processing["samples"])),
+                KeyValue("processing_mean_ms", "{:.6f}".format(processing["mean_ms"])),
+                KeyValue("processing_p50_ms", "{:.6f}".format(processing["p50_ms"])),
+                KeyValue("processing_p95_ms", "{:.6f}".format(processing["p95_ms"])),
+                KeyValue("processing_max_ms", "{:.6f}".format(processing["max_ms"])),
+                KeyValue("assembly_samples", str(assembly["samples"])),
+                KeyValue("assembly_p50_ms", "{:.6f}".format(assembly["p50_ms"])),
+                KeyValue("assembly_p95_ms", "{:.6f}".format(assembly["p95_ms"])),
+                KeyValue("parse_errors", str(self.errors.get(name, 0))),
+                KeyValue(
+                    "timestamp_fallbacks",
+                    str(self.timestamp_fallbacks.get(name, 0)),
+                ),
+                KeyValue(
+                    "timestamp_regressions",
+                    str(self.timestamp_regressions.get(name, 0)),
+                ),
+            ]
+            message.status.append(status)
+        self.pub_diagnostics.publish(message)
 
 
 def main():

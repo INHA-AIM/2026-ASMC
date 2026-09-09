@@ -1,6 +1,6 @@
 # Camera semantic perception
 
-> 상태: Stage C1·C2 — 모델 독립 live inference와 debug visualizer 구현
+> 상태: Stage C1·C2 완료, Stage C3 구조화 diagnostics 구현
 
 MORAI의 전방 또는 전·좌·우 JPEG 카메라를 latest-only 방식으로 받아 TwinLiteNet+ 2-head
 추론 결과를 표준 ROS 토픽으로 발행한다. Binary lane checkpoint와 4-class road-marking
@@ -16,7 +16,7 @@ segmentation 모델로 교체해도 ROS 입력·출력 배관을 유지한다.
 - 체크포인트 SHA-256, epoch, upstream commit, weight 종류 시작 로그
 - 원본 카메라 크기로 복원한 `mono8` 확률 또는 categorical class-ID 출력
 - latest-only buffer와 최대 4 ms 3-view batch coalescing
-- 2초 단위 FPS와 단계별 평균 지연 로그(정밀 percentile 계측은 Stage C3)
+- 2초 단위 FPS, stage별 평균과 queue/end-to-end p50·p95 구조화 diagnostics
 - RGB와 drivable/secondary 출력을 원본 timestamp로 exact sync한 독립 visualizer
 - view별 원본/drivable/lane 또는 road-marking 세로 panel과 전·좌·우 **3행×3열** mosaic
 - 실행 중 바꿀 수 있는 head threshold와 날씨·시간 condition label
@@ -45,7 +45,7 @@ docker exec -it asmc-ros-noetic bash -lc './scripts/build_ws.sh'
 # 별도 터미널: UDP 브릿지
 docker exec -it asmc-ros-noetic bash
 source devel/setup.bash
-./scripts/udp_bridge.sh
+./scripts/udp_bridge.sh --simulator 26r1
 
 # 별도 터미널: front-only GPU 추론
 docker exec -it asmc-perception-train bash
@@ -59,6 +59,11 @@ roslaunch camera_semantic_perception front.launch
 roslaunch camera_semantic_perception three_view.launch \
   checkpoint:=/root/ws/artifacts/perception_eval/runs/<run>/best_mean.pt
 ```
+
+노드는 ROS 구독을 열기 전에 기본 1회 GPU warmup을 수행한다. live 주행과 bag replay 모두
+CUDA 첫 호출 지연으로 초반 프레임이 대량 교체되는 것을 줄이기 위한 것이며, 배관만 확인할
+때는 `warmup_iterations:=0`으로 끌 수 있다. bag 기반 A/B 평가는 paused replay controller가
+`/use_sim_time=true`를 준비한 뒤 추론 노드를 시작해야 한다.
 
 2026-09-08 4-class 모델을 확인할 때는 다음 checkpoint를 명시한다. Backend가 checkpoint의
 task spec을 읽고 secondary classifier를 4-class로 구성한다.
@@ -166,6 +171,18 @@ Road-marking은 argmax class ID `0=background, 1=white, 2=yellow, 3=stopline`이
 /perception/camera/{view}/road_marking/class_id         # 4-class checkpoint
 ```
 
+성능 계측은 `diagnostic_msgs/DiagnosticArray`로 함께 발행한다.
+
+```text
+/perception/camera/diagnostics
+```
+
+여기에는 backend/config/checkpoint, view·입력 크기, view별 input/output/replaced frame,
+decode/inference 오류, preprocess/inference/postprocess/publish 평균 시간, processing FPS,
+queue/e2e p50·p95, source/receive/result stamp와 upstream timestamp fallback이 들어간다.
+같은 raw bag으로 모델을 비교할 때 `camera_semantic_result` profile로 별도 result bag에
+기록한다. 절차는 [rosbag 평가 가이드](../../../docs/rosbag-evaluation-streaming-gt.md)를 따른다.
+
 시각화 노드는 다음 `sensor_msgs/CompressedImage` 디버그 토픽을 발행한다.
 
 ```text
@@ -186,6 +203,7 @@ rostopic echo /perception/camera/front/lane/probability -n1
 rostopic hz /perception/camera/front/road_marking/class_id
 rostopic echo /perception/camera/front/road_marking/class_id -n1
 rostopic hz /perception/camera/front/debug/panel/compressed
+rostopic echo /perception/camera/diagnostics -n1
 ```
 
 2026-09-05 실제 MORAI 입력으로 구 2×2 panel/가로 mosaic의 연결을 확인했다. 이후 rqt
@@ -195,6 +213,6 @@ test를 통과했다. 실제 MORAI 화면과 JPEG debug Hz는 다음 live 실행
 
 ## 다음 단계
 
-1. decode/preprocess/infer/postprocess/publish의 p50/p95, frame age, drop/stale와 VRAM 계측
+1. 동일 raw bag과 독립 result bag으로 모델/checkpoint별 FPS·latency·drop 비교
 2. 조건별 live gate로 front-only/3-view와 현 센서 해상도·추론 Hz 결정
 3. 확률 마스크를 camera calibration으로 공통 ego-BEV에 투영
