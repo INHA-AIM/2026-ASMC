@@ -8,10 +8,10 @@
  *   - 회피 대상 객체가 없다.
  *   - 좌/우 후보 경쟁이 없다 - mode(LANE_CHANGE_LEFT/RIGHT)가 이미 방향을
  *     정하므로 평가할 후보는 항상 하나뿐이다.
- *   - 실행 목표(target_d)는 FSM target_pose_map 투영이 아니라 차선 변경을
- *     시작한 시점의 실제 ego d에서 lane_width_ 한 폭만큼 이동한 값이다
- *     (frenet_planner.hpp의 LaneChangeContext 주석 참고) - Route/GlobalPath
- *     연동이 붙기 전까지 신뢰할 수 있는 새 차선 중심 정보가 그것뿐이다.
+ *   - 실행 목표(target_d)는 FSM/MGeo가 만든 target_pose_map을 현재 RefLine에
+ *     투영한 값이다(node가 이미 방향/헤딩 검증까지 끝내고
+ *     command.target_pose_projection_*로 넘긴다) - Behavior가 이미 Link
+ *     centerline에서 뽑은 실제 목표 차선 위치를 core가 다시 근사하지 않는다.
  *   - 목표 도달 후 COMPLETED로 보고하지 않는다. HOLD_TARGET_LANE으로 전환해
  *     잠긴 target_d를 유지한 채 계속 전진한다 - 아직 참조선을 새 차선으로
  *     바꿀 방법이 없으므로 d=0으로 복귀하면 오히려 원래 차선으로 돌아간다.
@@ -51,8 +51,8 @@ void FrenetPlanner::ApplyLaneChangeCommit(
     // 이 시점에 처음 잠근다(AVOID와 동일한 이유 - PREPARE 사이클마다 후보
     // 재평가 결과가 미세하게 흔들릴 수 있으므로 COMMIT 전에는 잠그지
     // 않는다). target_d 자체는 PrepareExternalLaneChangeTarget이 이미
-    // start_d 기준으로 계산해 candidate 생성에 넣었으므로, 여기서는 그
-    // 계산된 값을 그대로 잠근다 - 다시 계산하지 않는다.
+    // target_pose_projection_d를 candidate 생성에 넣었으므로, 여기서는 그
+    // 값을 그대로 잠근다 - 다시 계산하지 않는다.
     v2_lane_change_.target_d = result.selected_target_d;
     v2_lane_change_.phase = LaneChangePhase::SHIFT;
 }
@@ -68,11 +68,11 @@ void FrenetPlanner::UpdateCommittedLaneChangeLifecycle(
     //
     // 단순 |d - target_d| < threshold 하나만으로 전환하지 않는다. 횡방향
     // 위치 + 속도 + heading 정렬 세 조건을 모두 요구한다 - 위치만 보면 옆을
-    // 스치듯 지나가는 순간에도 "도달"로 잘못 판정될 수 있다. heading은 목표
-    // 차선의 orientation을 알 방법이 target_pose_map 투영뿐이지만 그 값은
-    // sanity 용도로만 쓰기로 했으므로(PlannerCommand 주석 참고), 대신 현재
-    // ego 위치의 reference heading(직진 차로라면 목표 차로와 사실상 같은
-    // 방향)과 비교한다.
+    // 스치듯 지나가는 순간에도 "도달"로 잘못 판정될 수 있다. PlannerCommand는
+    // target_pose_map 투영의 d/s만 옮겨싣고 목표 yaw는 옮기지 않으므로
+    // (target_pose_projection_* 주석 참고), heading 정렬은 현재 ego 위치의
+    // reference heading(직진 차로라면 목표 차로와 사실상 같은 방향)과
+    // 비교한다.
     if (v2_lane_change_.phase == LaneChangePhase::SHIFT) {
         const bool position_ok =
             std::isfinite(ego_d) &&
@@ -128,8 +128,10 @@ bool FrenetPlanner::PrepareExternalLaneChangeTarget(
     double ego_s, double ego_d, const PlannerCommand& command,
     bool lane_change_prepare, bool lane_change_committed) {
     if (lane_change_committed) {
-        // COMMIT 이후 geometry의 소유권은 잠긴 context에 있다. start_d를
-        // 다시 캡처하지 않는다(AVOID의 committed 분기와 동일한 이유).
+        // COMMIT 이후 geometry의 소유권은 잠긴 context에 있다. target_d를
+        // 다시 캡처하지 않는다(AVOID의 committed 분기와 동일한 이유) - 새로
+        // 들어오는 target_pose_projection_*이 있어도 이미 진행 중인
+        // transaction의 목표를 바꾸지 않는다.
         return true;
     }
 
@@ -144,23 +146,32 @@ bool FrenetPlanner::PrepareExternalLaneChangeTarget(
         return false;
     }
 
-    // 이 transaction에서 처음 PREPARE를 관측하는 사이클에만 start_d를
+    // has_target_pose_projection=false는 node가 이미 걸러야 정상이지만
+    // (target_pose_map 투영/heading/direction 검증 실패는 PREPARE 진입 전에
+    // 실패로 수렴한다), core도 방어적으로 같은 결과로 수렴시킨다 - 진행
+    // 중이 아닌 target으로 candidate를 만들지 않는다.
+    if (!command.has_target_pose_projection ||
+        !std::isfinite(command.target_pose_projection_d)) {
+        last_mode_ = command.mode;
+        last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
+        return false;
+    }
+
+    // 이 transaction에서 처음 PREPARE를 관측하는 사이클에만 target_d를
     // 캡처한다. active가 이미 true이면(같은 command_id로 반복되는 PREPARE)
-    // 다시 캡처하지 않는다 - PREPARE 도중 maintenance가 현재 d를 유지하므로
-    // 값 자체는 거의 바뀌지 않지만, "차선 변경을 시작한 시점"이라는 의미를
-    // 지키려면 최초 한 번만 기록해야 한다.
+    // 다시 캡처하지 않는다 - PREPARE 동안 매 사이클 재투영된 값으로 흔들리지
+    // 않고, "이 transaction이 겨냥할 차선"이라는 의미를 유지한다.
     if (!v2_lane_change_.active) {
         v2_lane_change_.direction = command.mode == LANE_CHANGE_LEFT
             ? LateralDirection::LEFT
             : LateralDirection::RIGHT;
         v2_lane_change_.start_d = ego_d;
-        // 실제 실행 목표: 시작 시점의 ego d에서 lane_width_ 한 폭만큼
-        // 이동한다. FSM target_pose_map 투영은 command.target_pose_projection_*
-        // 로 별도 보존되어 sanity 검증에만 쓰인다 - 실행 목표와 명령 sanity
-        // 데이터를 같은 필드에 섞지 않는다(PlannerCommand.hpp 주석 참고).
-        v2_lane_change_.target_d = v2_lane_change_.direction == LateralDirection::LEFT
-            ? ego_d + lane_width_
-            : ego_d - lane_width_;
+        // 실행 목표: Behavior/MGeo가 만든 target_pose_map을 node가 현재
+        // RefLine에 투영하고 방향/헤딩 sanity 검증까지 끝낸 값이다
+        // (PlannerCommand.hpp의 target_pose_projection_* 주석 참고) - core는
+        // 그 값을 그대로 신뢰한다. 이 이상 별도로 lane_width_ 기반 근사를
+        // 더하지 않는다.
+        v2_lane_change_.target_d = command.target_pose_projection_d;
         v2_lane_change_.phase = LaneChangePhase::SHIFT;
         v2_lane_change_.active = true;
     }
@@ -279,7 +290,7 @@ bool FrenetPlanner::LaneChangeProcess(
         return true;
     }
 
-    // 목표 d: COMMIT 전에는 이번 사이클에 캡처/유지 중인 start_d 기준 target,
+    // 목표 d: COMMIT 전에는 이번 사이클에 캡처/유지 중인 투영 target,
     // COMMIT 후에는 잠긴 target_d. 둘 다 v2_lane_change_.target_d에 있다 -
     // PrepareExternalLaneChangeTarget이 이미 채워 놓았다.
     const double target_d = v2_lane_change_.target_d;

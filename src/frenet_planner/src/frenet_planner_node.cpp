@@ -1310,15 +1310,16 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         planner_command.avoid_target_s = avoid_s;
     }
 
-    // ---- 4c-2. LANE_CHANGE target_pose_map sanity 검증 -------------------
+    // ---- 4c-2. LANE_CHANGE target_pose_map 투영/검증 ----------------------
     //
     // AVOID와 달리 target pose는 **필수**다(계약 3.3절 검증 matrix -
-    // has_target_pose=true 강제). 이 블록은 STOP/AVOID와 같은 패턴으로
-    // 투영/heading을 검증하지만, **그 결과를 실행 목표로 쓰지 않는다** -
-    // 실제 target_d는 core가 차선 변경 시작 시점의 ego d에서 직접 계산한다
-    // (PlannerCommand.hpp의 target_pose_projection_* 주석 참고). 여기서는
-    // "이 pose가 최소한 방향/헤딩과 모순되지 않는가"만 확인해 명백히 잘못된
-    // 명령(반대 차선을 가리키는 pose 등)을 거른다.
+    // has_target_pose=true 강제). Behavior가 MGeo 목표 Link centerline에서
+    // 뽑은 이 pose를 현재 RefLine에 투영한 값이 core의 authoritative
+    // LANE_CHANGE 실행 목표가 된다(PlannerCommand.hpp의
+    // target_pose_projection_* 주석 참고) - 이 블록은 STOP/AVOID와 같은
+    // 패턴으로 투영/heading/방향을 검증해, 실행 목표로 넘기기 전에 명백히
+    // 잘못된 명령(반대 차선을 가리키는 pose, RefLine과 무관한 좌표 등)을
+    // 거른다.
     if (is_lane_change &&
         lane_change_route == LaneChangePlanningRoute::PRE_COMMIT) {
         if (!ego_s_valid) {
@@ -1491,8 +1492,9 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             return true;
         }
 
-        // sanity 검증을 통과한 투영 결과를 [A] 필드에 보존한다 - 진단용일
-        // 뿐, core의 실행 target_d 계산에는 쓰이지 않는다.
+        // 검증을 통과한 투영 결과를 [A] 필드에 싣는다 - core는 이 값을
+        // LANE_CHANGE의 authoritative target_d로 그대로 사용한다
+        // (Maneuver/LaneChange.cpp의 PrepareExternalLaneChangeTarget).
         planner_command.has_target_pose_projection = true;
         planner_command.target_pose_projection_d = target_pose_d;
         planner_command.target_pose_projection_s = target_pose_s;

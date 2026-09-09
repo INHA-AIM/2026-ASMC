@@ -273,12 +273,12 @@ class FrenetPlannerNode {
     // ===== v2 LANE_CHANGE target_pose_map 투영 파라미터 =====
     //
     // LANE_CHANGE의 target pose는 항상 필수다(계약 3.3절 검증 matrix -
-    // has_target_pose=true 강제). 이 투영은 실행 목표가 아니라 명령 sanity
-    // 검증(방향/heading이 명령과 모순되지 않는지)에만 쓰인다 - 실제 실행
-    // target_d는 core가 차선 변경 시작 시점의 ego d에서 직접 계산한다
-    // (PlannerCommand.hpp의 target_pose_projection_* 주석 참고). 그래도
-    // STOP/AVOID의 허용 오차 값을 그대로 재사용하지 않는다 - "인접 차로
-    // 중심"이라는 질문은 "회피 목표점"과 허용 오차가 같을 이유가 없다.
+    // has_target_pose=true 강제). 이 투영 결과가 core의 authoritative
+    // 실행 target_d가 된다(PlannerCommand.hpp의 target_pose_projection_*
+    // 주석 참고) - 그 전에 방향/heading이 명령과 모순되지 않는지 여기서
+    // 검증한다. STOP/AVOID의 허용 오차 값을 그대로 재사용하지 않는다 -
+    // "인접 차로 중심"이라는 질문은 "회피 목표점"과 허용 오차가 같을
+    // 이유가 없다.
     double lane_change_projection_search_window_ = 100.0;
     double lane_change_max_target_lateral_offset_ = 6.0;
     double lane_change_max_target_heading_error_rad_ = 0.785398;

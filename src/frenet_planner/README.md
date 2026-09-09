@@ -44,10 +44,11 @@ LANE_CHANGE를 자동으로 고르지 않는다 - 이 단계의 수동 검증은
   없다 - `docs/planning-control-refactoring-guidelines.md`의 "one policy, one
   authoritative owner" 원칙에 따라, 아직 검증되지 않은 좌표계 전환 로직을
   넣기보다 이번 단계는 고정 참조선 위의 순수 lateral shift로 좁혔다.
-- **실행 목표는 FSM target_pose_map 투영이 아니라 차선 변경을 시작한 시점의
-  실제 ego d 기준 한 차로 폭(`lane_width`) 이동이다** (`LEFT`: `start_d +
-  lane_width`, `RIGHT`: `start_d - lane_width`). `target_pose_map`은 방향/
-  헤딩이 명령과 모순되지 않는지 확인하는 sanity 검증에만 쓰인다.
+- **실행 목표는 Behavior/FSM이 준 `target_pose_map`(MGeo 목표 Link
+  centerline에서 뽑은 실제 목표점)을 현재 RefLine에 투영한 값이다.**
+  Frenet은 MGeo/Link/Route를 직접 알지 못하며, `lane_width` 기반 근사값으로
+  대체하지 않는다 - node가 투영/heading/방향 sanity 검증을 통과시킨 값만
+  core의 `target_d`로 잠근다.
 - **목표 차선 도달 후 `COMPLETED`로 latch하지 않는다.** 아직 새 참조선으로
   전환할 방법이 없으므로, `HOLD_TARGET_LANE`으로 전환해 잠긴 target_d를
   유지한 채 계속 전진한다 - `CommandExecutionManager`의 execution_state는

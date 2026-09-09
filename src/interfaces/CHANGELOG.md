@@ -2,6 +2,38 @@
 
 공용 ROS 계약의 breaking change와 합의 사항을 기록한다.
 
+## Unreleased - feature/yuntae-planner-lane-change (target geometry source change)
+
+이 항목은 바로 아래 "D7 follow-up" 항목이 도입한 `start_d ± lane_width`
+실행 목표 정책을 되돌린 기록이다. 그 항목 자체는 지우지 않는다 - 실제로 그
+시점에 그 정책이 쓰였다가 이번에 다시 바뀌었다는 사실을 남긴다.
+
+### Changed
+
+- LANE_CHANGE의 실행 목표(target_d) 결정 정책을 다시 바꿨다. 직전에는
+  차선 변경을 시작한 시점의 실제 ego d 기준 `start_d ± lane_width_`를 썼다.
+  이제는 **Behavior/FSM이 MGeo 목표 Link centerline에서 뽑아 넣은
+  `target_pose_map`을 node가 현재 RefLine에 투영한 값**(`command.
+  target_pose_projection_d`)을 그대로 authoritative 실행 목표로 쓴다 -
+  Behavior는 이미 adjacent-lane 허용 여부와 실제 목표 차선 형상을 알고
+  있으므로, core가 nominal lane width로 그 정보를 다시 근사할 이유가 없다.
+  node는 여전히 이 투영값을 RefLine에 넣기 전에 방향(delta_d)/heading이
+  명령과 모순되지 않는지 검증한다 - 그 검증을 통과한 값만 core가 신뢰한다.
+  `PlannerCommand.lane_change_d_offset`은 이 잠긴 target_d를 그대로
+  옮겨싣는다(여전히 Generator가 아니라 core가 채운다).
+- target 투영이 없거나(has_target_pose_projection=false) 값이 유한하지
+  않으면 lane_width 기반 값으로 대체하지 않고 명령 실패로 수렴한다
+  (`Maneuver/LaneChange.cpp`의 `PrepareExternalLaneChangeTarget`) - "새
+  차선 중심을 확실히 모르면 차선을 바꾸지 않는다"는 안전 원칙을 유지한다.
+- COMMIT 이후 `locked_target_d`는 여전히 다시 계산되지 않는다 - 새로
+  들어오는 target pose 갱신이나 ego d 변화가 진행 중인 transaction의 잠긴
+  목표를 바꾸지 않는다. HOLD_TARGET_LANE 상태 기계, PREPARE/COMMIT
+  handshake, `CommandExecutionManager`의 EXECUTING 유지 정책은 이번
+  변경으로 바뀌지 않았다.
+- Runtime GlobalPath/reference handoff는 이번에도 범위 밖이다 - 기존
+  RefLine을 그대로 유지한 채, 그 위에서의 lateral target 산출 방식만
+  바뀌었다.
+
 ## Unreleased - feature/yuntae-planner-lane-change (D7 follow-up)
 
 이 항목은 바로 아래 "D7" 항목이 추가한 것 중 일부를 이번 후속 작업에서 되돌린

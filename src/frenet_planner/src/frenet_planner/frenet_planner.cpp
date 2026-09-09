@@ -313,12 +313,12 @@ bool ValidateExternalCommand(const PlannerCommand& command,
     // LANE_CHANGE: target_pose_map 투영 결과가 있어야 한다. AVOID의
     // target_object_id 검증과 같은 이유다 - v2에서 has_target_pose는 항상
     // true로 강제되므로(계약 3.3절), has_target_pose_projection=false는
-    // 투영 실패를 뜻한다. 이 투영값 자체는 실행 목표가 아니라 명령 sanity
-    // 검증 데이터이지만(PlannerCommand 주석 참고), 투영조차 되지 않는
-    // pose는 애초에 이 참조선 근방의 명령이 아니라는 뜻이므로 거부한다.
-    // 투영 결과 값의 유한성도 확인한다 - node의 ProjectPointToFrenet은
-    // 유한한 값만 반환하지만, 다른 호출자(테스트)가 has_..._projection=true와
-    // 함께 NaN을 넣는 경우까지 방어한다.
+    // 투영 실패를 뜻한다. 이 투영값은 core의 authoritative 실행 목표이므로
+    // (PlannerCommand 주석 참고) 투영조차 되지 않는 pose는 애초에 이
+    // 참조선 근방의 명령이 아니라는 뜻이므로 거부한다. 투영 결과 값의
+    // 유한성도 확인한다 - node의 ProjectPointToFrenet은 유한한 값만
+    // 반환하지만, 다른 호출자(테스트)가 has_..._projection=true와 함께
+    // NaN을 넣는 경우까지 방어한다.
     if ((command.mode == LANE_CHANGE_LEFT ||
          command.mode == LANE_CHANGE_RIGHT) &&
         (!command.has_target_pose_projection ||

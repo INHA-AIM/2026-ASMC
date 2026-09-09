@@ -589,16 +589,13 @@ private:
     // v2 LANE_CHANGE 내부. Avoid.cpp의 대응 함수와 같은 역할 분리를 따른다.
     // ---------------------------------------------------------------------
     //
-    // 이번 validation 단계의 authoritative execution target은 FSM
-    // target_pose_map의 투영값이 아니라 **차선 변경 시작 시점의 실제 d 기준
-    // 한 차선 폭 이동**이다(start_d ± lane_width_). Runtime GlobalPath로
-    // 새 차선 중심선을 받는 기능은 이번 범위에 없으므로, "새 차선 중심"이
-    // 정확히 어디인지 알 방법이 target_pose_map 투영 하나뿐이었다 - 그런데
-    // FSM 좌표계 오차나 목표점의 실제 lane 폭 가정이 이 단계에서는 검증되지
-    // 않았으므로, 그 값을 그대로 실행 목표로 신뢰하는 대신 이미 확실한 값
-    // (현재 차선 중심 근방의 실제 ego d)에서 lane_width_ 하나만큼 이동하는
-    // 것으로 목표를 고정한다. target_pose_map은 방향/헤딩이 명령과
-    // 모순되지 않는지 확인하는 sanity 용도로만 남는다.
+    // authoritative execution target(target_d)은 Behavior/FSM이 MGeo Link
+    // centerline에서 뽑아 넣은 target_pose_map을 node가 현재 RefLine에
+    // 투영한 값이다(command.target_pose_projection_d) - Behavior는 이미
+    // adjacent-lane 허용 여부와 실제 목표 차선 형상을 알고 있으므로, core가
+    // lane_width 같은 근사치로 그 정보를 다시 추정하지 않는다. node는 이
+    // 값을 core에 넘기기 전에 방향/헤딩이 명령과 모순되지 않는지만
+    // 검증한다 - core는 검증을 통과한 값을 그대로 신뢰한다.
 
     enum class LaneChangePhase {
         IDLE,
@@ -617,12 +614,13 @@ private:
         // 판단에는 쓰지 않는다. 진단·피드백용으로만 보존한다.
         LateralDirection direction = LateralDirection::NONE;
 
-        // 차선 변경을 시작한 시점(첫 PREPARE 사이클)의 ego d. COMMIT 이후
-        // target_d = start_d ± lane_width_ 계산의 기준점이다 - COMMIT
-        // 시점이 아니라 시작 시점을 쓰는 이유는, PREPARE 동안 maintenance가
-        // 이미 그 d 근방을 유지하므로 두 시점의 값이 사실상 같고, "시작할
-        // 때의 내 차선"이라는 의미가 더 명확하기 때문이다.
+        // 차선 변경을 시작한 시점(첫 PREPARE 사이클)의 ego d. target_d
+        // 계산에는 더 이상 쓰이지 않는다(target_d는 투영된 target_pose_map
+        // 값) - maneuver_progress가 "시작 d에서 target_d까지 얼마나
+        // 왔는가"를 계산하는 기준점으로만 남는다.
         double start_d = 0.0;
+        // 잠긴 실행 목표. PrepareExternalLaneChangeTarget이 이 transaction의
+        // 첫 PREPARE 사이클에 command.target_pose_projection_d로 채운다.
         double target_d = 0.0;
 
         LaneChangePhase phase = LaneChangePhase::IDLE;
@@ -632,10 +630,11 @@ private:
         double maneuver_progress = 0.0;
     };
 
-    // 새 LANE_CHANGE transaction의 시작 d를 확보한다. FSM target_pose_map
-    // 투영은 이 함수가 아니라 node가 이미 끝낸 뒤 command에 sanity 검증
-    // 결과만 실어 보낸다 - 여기서는 "이 명령이 core에 처음 들어온
-    // 사이클인가"만 보고 start_d를 한 번 기록한다.
+    // 새 LANE_CHANGE transaction의 target_d를 확보한다. target_pose_map
+    // 투영은 이 함수가 아니라 node가 이미 끝내고 방향/헤딩 검증까지 마친
+    // 뒤 command.target_pose_projection_*로 실어 보낸다 - 여기서는 "이
+    // 명령이 core에 처음 들어온 사이클인가"만 보고 그 값을 target_d로 한
+    // 번 잠그고, start_d(진행률 계산용 기준점)를 기록한다.
     //
     // 반환값: PlanInternal이 그대로 return해야 하는 상태만 false로 전달한다.
     bool PrepareExternalLaneChangeTarget(
