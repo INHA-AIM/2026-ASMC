@@ -17,6 +17,7 @@ set(MPC_CORE_SOURCES
   src/constraints/constraints.cpp
   src/solver/mpc_solver.cpp
   src/reference/path_resampler.cpp
+  src/reference/trajectory_timing.cpp
   src/control/mpc_controller.cpp)
 
 add_library(mpc_core ${MPC_CORE_SOURCES})
@@ -54,5 +55,10 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(steering_feedforward_test test/steering_feedforward_test.cpp)
   if(TARGET steering_feedforward_test)
     target_link_libraries(steering_feedforward_test mpc_core)
+  endif()
+
+  catkin_add_gtest(trajectory_timing_test test/trajectory_timing_test.cpp)
+  if(TARGET trajectory_timing_test)
+    target_link_libraries(trajectory_timing_test mpc_core)
   endif()
 endif()

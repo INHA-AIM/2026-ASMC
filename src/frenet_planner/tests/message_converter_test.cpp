@@ -304,38 +304,76 @@ int main() {
     path.a = {0.3, 0.4};
     asmc_msgs::Trajectory trajectory;
     const auto ego_at_plan = MakeVehicle();
-    const ros::Time plan_stamp(20, 0);
+
+    // Commit E / Test 11.1: trajectory.header.stamp는 callback 수신 시각이
+    // 아니라 ego_at_plan(계획에 쓰인 Ego snapshot)의 source time과 항상
+    // 같아야 한다. API에 별도 plan_stamp를 받지 않으므로 호출자가 실수로
+    // 다른 시각(예: ros::Time::now())을 넣을 수 없다.
     Expect(frenet_planner_ros::ConvertCartesianPath(
-               path, 0.1, ego_at_plan, plan_stamp, trajectory) ==
+               path, 0.1, ego_at_plan, trajectory) ==
                ConversionStatus::OK && trajectory.valid &&
                trajectory.failure_reason == asmc_msgs::Trajectory::FAILURE_NONE &&
                trajectory.header.frame_id == "map" &&
-               trajectory.header.stamp == plan_stamp && trajectory.dt == 0.1 &&
+               trajectory.header.stamp == ego_at_plan.header.stamp &&
+               trajectory.dt == 0.1 &&
                trajectory.ego_at_plan.x == ego_at_plan.x &&
                trajectory.points.size() == 2 &&
                trajectory.points[1].x == 2.0 &&
                trajectory.points[1].curvature == 0.02 &&
                trajectory.points[1].velocity == 6.0,
-           "CartesianPath maps to valid map-frame Trajectory");
+           "CartesianPath maps to valid map-frame Trajectory stamped with "
+           "ego_at_plan's source time");
 
     path.a.pop_back();
     Expect(frenet_planner_ros::ConvertCartesianPath(
-               path, 0.1, ego_at_plan, plan_stamp, trajectory) ==
+               path, 0.1, ego_at_plan, trajectory) ==
                ConversionStatus::INVALID_PATH,
            "trajectory conversion rejects mismatched vector sizes");
 
     const asmc_msgs::Trajectory stop = frenet_planner_ros::MakeStopTrajectory(
-        ego_at_plan, 0.1, asmc_msgs::Trajectory::FAILURE_STATE_STALE,
-        plan_stamp);
+        ego_at_plan, 0.1, asmc_msgs::Trajectory::FAILURE_STATE_STALE);
     Expect(stop.valid &&
                stop.failure_reason == asmc_msgs::Trajectory::FAILURE_STATE_STALE &&
+               stop.header.stamp == ego_at_plan.header.stamp &&
                stop.dt == 0.1 && stop.ego_at_plan.x == ego_at_plan.x &&
                stop.points.size() == 1 && stop.points[0].x == ego_at_plan.x &&
                stop.points[0].y == ego_at_plan.y &&
                stop.points[0].yaw == ego_at_plan.yaw &&
                stop.points[0].velocity == 0.0 &&
                stop.points[0].acceleration == 0.0,
-           "STOP trajectory is a valid executable zero-speed command");
+           "STOP trajectory is a valid executable zero-speed command "
+           "stamped with ego_at_plan's source time");
+
+    // Test 11.2: ego_at_plan의 source time이 무효(0)면 trajectory에도 그대로
+    // 반영된다 - now()로 위장해 유효한 것처럼 보이게 하지 않는다. 소비자
+    // (MPC ConvertTrajectory)가 header.stamp.isZero()를 독립적으로 거부해
+    // fail-safe STOP을 낼 수 있어야 하기 때문이다.
+    CartesianPath valid_path;
+    valid_path.x = {1.0, 2.0};
+    valid_path.y = {3.0, 4.0};
+    valid_path.yaw = {0.1, 0.2};
+    valid_path.kappa = {0.01, 0.02};
+    valid_path.v = {5.0, 6.0};
+    valid_path.a = {0.3, 0.4};
+    asmc_msgs::VehicleState unknown_ego = ego_at_plan;
+    unknown_ego.valid = false;
+    unknown_ego.header.stamp = ros::Time();  // zero: 측정된 적 없음
+    asmc_msgs::Trajectory unknown_trajectory;
+    Expect(frenet_planner_ros::ConvertCartesianPath(
+               valid_path, 0.1, unknown_ego, unknown_trajectory) ==
+               ConversionStatus::OK &&
+               unknown_trajectory.header.stamp.isZero() &&
+               unknown_trajectory.ego_at_plan.valid == false,
+           "invalid/unknown ego_at_plan source time is not silently "
+           "replaced with now() when converting a path");
+
+    const asmc_msgs::Trajectory unknown_stop =
+        frenet_planner_ros::MakeStopTrajectory(
+            unknown_ego, 0.1, asmc_msgs::Trajectory::FAILURE_STATE_STALE);
+    Expect(unknown_stop.header.stamp.isZero() &&
+               unknown_stop.ego_at_plan.valid == false,
+           "MakeStopTrajectory does not manufacture a fresh timestamp for "
+           "an unknown/invalid ego_at_plan snapshot");
 
     if (g_failures == 0) {
         std::cout << "All message converter tests passed\n";

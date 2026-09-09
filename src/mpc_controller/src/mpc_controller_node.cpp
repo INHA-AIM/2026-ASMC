@@ -8,6 +8,7 @@
 #include "config/parameter_loader.hpp"
 #include "message_converter.hpp"
 #include "reference/path_resampler.hpp"
+#include "reference/trajectory_timing.hpp"
 
 namespace mpc_controller_ros {
 namespace {
@@ -122,8 +123,8 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
         publishStop("trajectory missing");
         return;
     }
-    if (!IsTrajectoryFresh(trajectory_received_at_, ros::SteadyTime::now(),
-                           trajectory_timeout_)) {
+    if (!IsMessageFresh(trajectory_received_at_, ros::SteadyTime::now(),
+                       trajectory_timeout_)) {
         publishStop("trajectory stale");
         return;
     }
@@ -131,16 +132,17 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
         publishStop("vehicle state missing");
         return;
     }
-    if (!IsTrajectoryFresh(vehicle_state_received_at_, ros::SteadyTime::now(),
-                           vehicle_state_timeout_)) {
+    if (!IsMessageFresh(vehicle_state_received_at_, ros::SteadyTime::now(),
+                       vehicle_state_timeout_)) {
         publishStop("vehicle state stale");
         return;
     }
 
+    // Trajectory -> PlannedPath만 변환한다. ego_at_plan의 provenance는
+    // ConvertTrajectory가 내부적으로 검증하지만 MPCState로는 변환하지 않는다
+    // - x0는 아래에서 최신 /vehicle/state로부터 독립적으로 만든다.
     PlannedPath path;
-    MPCState ego_snapshot;
-    const TrajectoryStatus status =
-        ConvertTrajectory(latest_trajectory_, path, ego_snapshot);
+    const TrajectoryStatus status = ConvertTrajectory(latest_trajectory_, path);
     if (status == TrajectoryStatus::STOP_TRAJECTORY) {
         publishStop("valid planner STOP trajectory");
         return;
@@ -150,10 +152,6 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
         return;
     }
 
-    // x0는 더 이상 trajectory.ego_at_plan이 아니라 최신 /vehicle/state에서
-    // 만든다 - ego_snapshot(위 ConvertTrajectory 결과)은 provenance 검증에만
-    // 쓰였고 여기서는 버려진다. ego_at_plan validity 자체는 ConvertTrajectory가
-    // 이미 계약대로 검사했다.
     MPCState current_state;
     const VehicleStateStatus vehicle_status =
         ConvertVehicleState(latest_vehicle_state_, current_state);
@@ -162,11 +160,12 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
         return;
     }
 
-    const double trajectory_age = ComputeTrajectoryAge(
-        latest_trajectory_.header.stamp, latest_vehicle_state_.header.stamp);
+    const double start_time_offset = ComputeReferenceStartOffset(
+        latest_trajectory_.header.stamp.toSec(),
+        latest_vehicle_state_.header.stamp.toSec());
     const ReferencePath reference = ToReferencePath(
         path, controller_.params().dt, controller_.params().horizon,
-        trajectory_age);
+        start_time_offset);
     if (reference.empty()) {
         publishStop("reference interpolation failed");
         return;

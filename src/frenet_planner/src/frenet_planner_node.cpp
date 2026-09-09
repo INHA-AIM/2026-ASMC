@@ -394,12 +394,11 @@ void FrenetPlannerNode::publishDebugMarkersV2(
 }
 
 void FrenetPlannerNode::publishStop(const InputSnapshot& snapshot,
-                                    uint8_t failure_reason,
-                                    const ros::Time& now) {
+                                    uint8_t failure_reason) {
     has_last_valid_trajectory_ = false;
     plan_fail_streak_ = 0;
     const asmc_msgs::Trajectory stop = MakeStopTrajectory(
-        stopReferenceVehicle(snapshot), trajectoryDt(), failure_reason, now);
+        stopReferenceVehicle(snapshot), trajectoryDt(), failure_reason);
     publishResult(stop, snapshot, false);
 }
 
@@ -415,8 +414,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
     if (!planner_initialized_) {
         ROS_ERROR_THROTTLE(
             5.0, "Frenet planning disabled: planner is not initialized");
-        publishStop(takeSnapshot(), asmc_msgs::Trajectory::FAILURE_NOT_INITIALIZED,
-                    ros::Time::now());
+        publishStop(takeSnapshot(), asmc_msgs::Trajectory::FAILURE_NOT_INITIALIZED);
         return;
     }
 
@@ -431,11 +429,10 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
             : (!snapshot.has_objects
                 ? asmc_msgs::Trajectory::FAILURE_OBJECTS_STALE
                 : asmc_msgs::Trajectory::FAILURE_BEHAVIOR_STALE);
-        publishStop(snapshot, reason, ros::Time::now());
+        publishStop(snapshot, reason);
         return;
     }
 
-    const ros::Time now = ros::Time::now();
     const ros::SteadyTime steady_now = ros::SteadyTime::now();
     double vehicle_age = 0.0;
     double objects_age = 0.0;
@@ -445,7 +442,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: invalid/stale vehicle state age=%.3f s",
             vehicle_age);
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_STATE_STALE, now);
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_STATE_STALE);
         return;
     }
     if (!IsSteadyFresh(snapshot.objects_received_at, steady_now,
@@ -453,7 +450,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: invalid/stale objects age=%.3f s",
             objects_age);
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_OBJECTS_STALE, now);
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_OBJECTS_STALE);
         return;
     }
     if (!IsSteadyFresh(snapshot.behavior_received_at, steady_now,
@@ -461,7 +458,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: invalid/stale behavior age=%.3f s",
             behavior_age);
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_BEHAVIOR_STALE, now);
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_BEHAVIOR_STALE);
         return;
     }
 
@@ -469,7 +466,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: behavior force_stop command_id=%u",
             snapshot.behavior.command_id);
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_NONE, now);
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_NONE);
         return;
     }
 
@@ -483,7 +480,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: vehicle conversion failed (%s)",
             ConversionStatusName(vehicle_status));
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
         return;
     }
     last_stop_reference_vehicle_ = snapshot.vehicle;
@@ -499,8 +496,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
             snapshot,
             behavior_status == ConversionStatus::UNSUPPORTED_BEHAVIOR
                 ? asmc_msgs::Trajectory::FAILURE_UNSUPPORTED_BEHAVIOR
-                : asmc_msgs::Trajectory::FAILURE_INVALID_INPUT,
-            now);
+                : asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
         return;
     }
 
@@ -512,7 +508,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
         if (!planner_.ProjectEgoToS(ego, ego_s)) {
             ROS_WARN_THROTTLE(
                 1.0, "Frenet STOP required: cannot project ego onto reference line");
-            publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
             return;
         }
         double stop_s = 0.0;
@@ -527,7 +523,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
                 "reference line (command_id=%u)",
                 snapshot.behavior.stop_x, snapshot.behavior.stop_y,
                 snapshot.behavior.command_id);
-            publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
             return;
         }
         command.stop_position = stop_s;
@@ -539,7 +535,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: objects conversion failed (%s)",
             ConversionStatusName(objects_status));
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
         return;
     }
 
@@ -590,7 +586,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
                 1.0,
                 "Frenet immediate STOP: reason=%s command_id=%u",
                 reason_name, snapshot.behavior.command_id);
-            publishStop(snapshot, failure_code, now);
+            publishStop(snapshot, failure_code);
             return;
         }
 
@@ -608,13 +604,13 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
             "Frenet Plan(command) failed: reason=%s command_id=%u; "
             "publishing STOP after transient reuse window",
             reason_name, snapshot.behavior.command_id);
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_GENERATION);
         return;
     }
 
     asmc_msgs::Trajectory trajectory;
     const ConversionStatus trajectory_status = ConvertCartesianPath(
-        path, planner_.sample_dt(), snapshot.vehicle, now, trajectory);
+        path, planner_.sample_dt(), snapshot.vehicle, trajectory);
     if (trajectory_status != ConversionStatus::OK) {
         ++plan_fail_streak_;
         if (has_last_valid_trajectory_ &&
@@ -627,7 +623,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet trajectory conversion failed (%s)",
             ConversionStatusName(trajectory_status));
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_GENERATION);
         return;
     }
 
@@ -734,7 +730,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             v2_plan_fail_streak_ = 0;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(takeSnapshot()), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(feedback_command_id, acceptance, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -793,7 +789,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             v2_plan_fail_streak_ = 0;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(takeSnapshot()), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_NONE, now);
+                asmc_msgs::Trajectory::FAILURE_NONE);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -835,8 +831,12 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         const InputSnapshot latch_snapshot = takeSnapshot();
         if (command_manager_.completed_normally() && has_last_v2_trajectory_ &&
             last_v2_trajectory_command_id_ == command.command_id) {
-            asmc_msgs::Trajectory held = last_v2_trajectory_;
-            held.header.stamp = now;
+            // 재발행일 뿐 내용은 바뀌지 않았다 - source/reference time도
+            // 원래 생성 시점 그대로 유지한다. 여기서 header.stamp를 now로
+            // 덮어쓰면 재발행 수신 시각이 새 provenance인 것처럼 보이고,
+            // MPC의 trajectory-age 보정(vehicle_state.stamp - trajectory.stamp)이
+            // 매 latch 사이클마다 0으로 리셋된다.
+            const asmc_msgs::Trajectory& held = last_v2_trajectory_;
             trajectory_pub_.publish(held);
             const AvoidFeedbackFields* avoid_fields =
                 command_manager_.maneuver_type() ==
@@ -853,7 +853,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         v2_plan_fail_streak_ = 0;
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
             stopReferenceVehicle(latch_snapshot), trajectoryDt(),
-            asmc_msgs::Trajectory::FAILURE_NONE, now);
+            asmc_msgs::Trajectory::FAILURE_NONE);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(feedback_command_id, acceptance, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -888,7 +888,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         v2_plan_fail_streak_ = 0;
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
             stopReferenceVehicle(snapshot), trajectoryDt(),
-            asmc_msgs::Trajectory::FAILURE_NOT_INITIALIZED, now);
+            asmc_msgs::Trajectory::FAILURE_NOT_INITIALIZED);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -925,7 +925,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         v2_plan_fail_streak_ = 0;
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
             stopReferenceVehicle(snapshot), trajectoryDt(),
-            asmc_msgs::Trajectory::FAILURE_STATE_STALE, now);
+            asmc_msgs::Trajectory::FAILURE_STATE_STALE);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(feedback_command_id, stale, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -941,7 +941,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         failed.detail = "vehicle state conversion failed";
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
             stopReferenceVehicle(snapshot), trajectoryDt(),
-            asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -959,7 +959,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         failed.detail = "object conversion failed";
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
             stopReferenceVehicle(snapshot), trajectoryDt(),
-            asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -982,7 +982,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         failed.detail = "command could not be mapped to a planner mode";
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
             stopReferenceVehicle(snapshot), trajectoryDt(),
-            asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+            asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1018,7 +1018,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             has_last_v2_trajectory_ = false;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1050,7 +1050,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             has_last_v2_trajectory_ = false;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1077,7 +1077,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             has_last_v2_trajectory_ = false;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1112,7 +1112,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             has_last_v2_trajectory_ = false;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1154,7 +1154,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             has_last_v2_trajectory_ = false;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1188,7 +1188,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             has_last_v2_trajectory_ = false;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1214,7 +1214,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             has_last_v2_trajectory_ = false;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1249,7 +1249,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             has_last_v2_trajectory_ = false;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT, now);
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1297,8 +1297,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 stopReferenceVehicle(snapshot), trajectoryDt(),
                 reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
                     ? asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED
-                    : asmc_msgs::Trajectory::FAILURE_GENERATION,
-                now);
+                    : asmc_msgs::Trajectory::FAILURE_GENERATION);
             trajectory_pub_.publish(stop);
 
             // ===== 잠긴 진단은 SAFE_STOP에서도 유지한다 (D6-4b) =====
@@ -1347,7 +1346,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 
         asmc_msgs::Trajectory trajectory;
         if (ConvertCartesianPath(committed_path, planner_.sample_dt(),
-                                 snapshot.vehicle, now, trajectory) !=
+                                 snapshot.vehicle, trajectory) !=
                 ConversionStatus::OK || trajectory.points.empty()) {
             ++v2_plan_fail_streak_;
             command_manager_.NotifyPlanFailed(/*terminal=*/false);
@@ -1359,7 +1358,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             failed.detail = "committed avoid trajectory conversion failed";
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+                asmc_msgs::Trajectory::FAILURE_GENERATION);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1393,7 +1392,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             failed.detail = "avoid completion state transition rejected";
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+                asmc_msgs::Trajectory::FAILURE_GENERATION);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1558,7 +1557,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             failed.detail = detail;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+                asmc_msgs::Trajectory::FAILURE_GENERATION);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1569,7 +1568,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // maintenance를 ROS 궤적으로 변환한다.
         asmc_msgs::Trajectory trajectory;
         if (ConvertCartesianPath(maintenance, planner_.sample_dt(),
-                                 snapshot.vehicle, now, trajectory) !=
+                                 snapshot.vehicle, trajectory) !=
             ConversionStatus::OK) {
             ++v2_plan_fail_streak_;
             command_manager_.NotifyPlanFailed(/*terminal=*/false);
@@ -1581,7 +1580,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             failed.detail = "avoid maintenance conversion failed";
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+                asmc_msgs::Trajectory::FAILURE_GENERATION);
             trajectory_pub_.publish(stop);
             publishFeedbackV2(feedback_command_id, failed, &stop,
                               asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1630,7 +1629,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             // 2번: 변환을 **먼저** 시도한다.
             const ConversionStatus convert_status = ConvertCartesianPath(
                 prepare.candidate_path, planner_.sample_dt(), snapshot.vehicle,
-                now, avoid_trajectory);
+                avoid_trajectory);
             if (convert_status == ConversionStatus::OK &&
                 !avoid_trajectory.points.empty()) {
                 // 3~4번: pure core preflight 뒤 manager와 core를 연속 적용한다.
@@ -1823,7 +1822,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         }
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
             stopReferenceVehicle(snapshot), trajectoryDt(),
-            asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+            asmc_msgs::Trajectory::FAILURE_GENERATION);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
@@ -1833,7 +1832,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 
     // ---- 6. 궤적 변환 및 발행 -------------------------------------------
     asmc_msgs::Trajectory trajectory;
-    if (ConvertCartesianPath(path, planner_.sample_dt(), snapshot.vehicle, now,
+    if (ConvertCartesianPath(path, planner_.sample_dt(), snapshot.vehicle,
                              trajectory) != ConversionStatus::OK) {
         ++v2_plan_fail_streak_;
         command_manager_.NotifyPlanFailed(/*terminal=*/false);
@@ -1845,7 +1844,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         failed.detail = "trajectory conversion failed";
         const asmc_msgs::Trajectory stop = MakeStopTrajectory(
             stopReferenceVehicle(snapshot), trajectoryDt(),
-            asmc_msgs::Trajectory::FAILURE_GENERATION, now);
+            asmc_msgs::Trajectory::FAILURE_GENERATION);
         trajectory_pub_.publish(stop);
         publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,

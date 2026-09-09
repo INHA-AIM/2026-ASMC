@@ -40,11 +40,7 @@ asmc_msgs::Trajectory MakeTrajectory() {
 TEST(TrajectoryConverterTest, ConvertsAndReusesTimeInterpolation) {
     const asmc_msgs::Trajectory message = MakeTrajectory();
     PlannedPath path;
-    MPCState state;
-    EXPECT_EQ(TrajectoryStatus::OK,
-              ConvertTrajectory(message, path, state));
-    EXPECT_DOUBLE_EQ(1.0, state.x);
-    EXPECT_DOUBLE_EQ(3.0, state.vx);
+    EXPECT_EQ(TrajectoryStatus::OK, ConvertTrajectory(message, path));
 
     const ReferencePath reference = ToReferencePath(path, 0.05, 3);
     ASSERT_EQ(3u, reference.size());
@@ -58,9 +54,8 @@ TEST(TrajectoryConverterTest, RecognizesValidSinglePointStop) {
     message.points.resize(1);
     message.points.front().velocity = 0.0;
     PlannedPath path;
-    MPCState state;
     EXPECT_EQ(TrajectoryStatus::STOP_TRAJECTORY,
-              ConvertTrajectory(message, path, state));
+              ConvertTrajectory(message, path));
 
     const morai_msgs::CtrlCmd stop = MakeRosStopCommand();
     EXPECT_EQ(1, stop.longlCmdType);
@@ -103,42 +98,59 @@ TEST(TrajectoryConverterTest, PublishesRosSteeringInRadians) {
 
 TEST(TrajectoryConverterTest, RejectsInvalidInputs) {
     PlannedPath path;
-    MPCState state;
     asmc_msgs::Trajectory message = MakeTrajectory();
     message.dt = 0.0;
-    EXPECT_EQ(TrajectoryStatus::INVALID_DT,
-              ConvertTrajectory(message, path, state));
+    EXPECT_EQ(TrajectoryStatus::INVALID_DT, ConvertTrajectory(message, path));
 
     message = MakeTrajectory();
     message.points.front().x = std::numeric_limits<double>::quiet_NaN();
     EXPECT_EQ(TrajectoryStatus::INVALID_POINT,
-              ConvertTrajectory(message, path, state));
+              ConvertTrajectory(message, path));
 
     message = MakeTrajectory();
     message.valid = false;
     EXPECT_EQ(TrajectoryStatus::INVALID_MESSAGE,
-              ConvertTrajectory(message, path, state));
+              ConvertTrajectory(message, path));
+}
+
+// Test 11.4 (Commit E): ConvertTrajectory는 ego_at_plan의 provenance 계약을
+// 여전히 검증한다 - Trajectory -> PlannedPath 변환으로 책임이 좁혀졌다고
+// 해서 이 검증까지 사라지면 안 된다. STOP 계열 fail-safe가 ego_at_plan을
+// 통해 독립적으로 작동하는 계약(interfaces/README.md 9절)이 이 검증에
+// 달려있다.
+TEST(TrajectoryConverterTest, StillValidatesEgoAtPlanProvenance) {
+    PlannedPath path;
+    asmc_msgs::Trajectory message = MakeTrajectory();
+    message.ego_at_plan.valid = false;
+    EXPECT_EQ(TrajectoryStatus::INVALID_EGO, ConvertTrajectory(message, path));
+
+    message = MakeTrajectory();
+    message.ego_at_plan.header.frame_id = "odom";
+    EXPECT_EQ(TrajectoryStatus::INVALID_EGO, ConvertTrajectory(message, path));
+
+    message = MakeTrajectory();
+    message.ego_at_plan.x = std::numeric_limits<double>::quiet_NaN();
+    EXPECT_EQ(TrajectoryStatus::INVALID_EGO, ConvertTrajectory(message, path));
 }
 
 TEST(TrajectoryConverterTest, RejectsStaleTrajectory) {
-    EXPECT_TRUE(IsTrajectoryFresh(ros::SteadyTime(10, 0),
-                                  ros::SteadyTime(10, 200000000), 0.25));
-    EXPECT_FALSE(IsTrajectoryFresh(ros::SteadyTime(10, 0),
-                                   ros::SteadyTime(10, 300000000), 0.25));
+    EXPECT_TRUE(IsMessageFresh(ros::SteadyTime(10, 0),
+                               ros::SteadyTime(10, 200000000), 0.25));
+    EXPECT_FALSE(IsMessageFresh(ros::SteadyTime(10, 0),
+                                ros::SteadyTime(10, 300000000), 0.25));
 }
 
 TEST(TrajectoryConverterTest, HeaderClockJumpDoesNotAffectFreshness) {
     PlannedPath path;
-    MPCState state;
     asmc_msgs::Trajectory message = MakeTrajectory();
     message.header.stamp = ros::Time(1.0);
-    EXPECT_EQ(TrajectoryStatus::OK, ConvertTrajectory(message, path, state));
-    EXPECT_TRUE(IsTrajectoryFresh(ros::SteadyTime(50, 0),
-                                  ros::SteadyTime(50, 100000000), 0.25));
+    EXPECT_EQ(TrajectoryStatus::OK, ConvertTrajectory(message, path));
+    EXPECT_TRUE(IsMessageFresh(ros::SteadyTime(50, 0),
+                               ros::SteadyTime(50, 100000000), 0.25));
     message.header.stamp = ros::Time(1000.0);
-    EXPECT_EQ(TrajectoryStatus::OK, ConvertTrajectory(message, path, state));
-    EXPECT_TRUE(IsTrajectoryFresh(ros::SteadyTime(50, 100000000),
-                                  ros::SteadyTime(50, 200000000), 0.25));
+    EXPECT_EQ(TrajectoryStatus::OK, ConvertTrajectory(message, path));
+    EXPECT_TRUE(IsMessageFresh(ros::SteadyTime(50, 100000000),
+                               ros::SteadyTime(50, 200000000), 0.25));
 }
 
 // ===== Commit B: MPC current-state / trajectory latency alignment =====
@@ -257,25 +269,14 @@ TEST(VehicleStateConverterTest, RejectsInvalidOrMissingFields) {
 }
 
 TEST(VehicleStateConverterTest, StaleVehicleStateIsNotFresh) {
-    // MPC node의 fail-safe STOP은 IsTrajectoryFresh를 vehicle-state
-    // timeout에도 그대로 재사용한다(정책 중복 없음) - 같은 SteadyTime
-    // watchdog 계약이 vehicle state에도 적용됨을 확인한다.
-    EXPECT_TRUE(IsTrajectoryFresh(ros::SteadyTime(10, 0),
-                                  ros::SteadyTime(10, 150000000), 0.20));
-    EXPECT_FALSE(IsTrajectoryFresh(ros::SteadyTime(10, 0),
-                                   ros::SteadyTime(10, 250000000), 0.20));
-}
-
-// trajectory와 vehicle state 모두 source timestamp(header.stamp) 기준으로
-// age를 계산한다 - 둘 다 같은 timebase(interfaces/README.md 4절)이므로
-// SteadyTime watchdog과 섞이지 않는다.
-TEST(TrajectoryAgeTest, ComputesNonNegativeAgeFromSourceTimestamps) {
-    EXPECT_DOUBLE_EQ(0.1, ComputeTrajectoryAge(ros::Time(10.0),
-                                               ros::Time(10.1)));
-    // vehicle state가 trajectory보다 과거 timestamp를 갖는 경우는 없어야
-    // 하지만, 있더라도 음수 offset으로 reference를 과거로 되돌리지 않는다.
-    EXPECT_DOUBLE_EQ(0.0, ComputeTrajectoryAge(ros::Time(10.0),
-                                               ros::Time(9.9)));
+    // MPC node의 fail-safe STOP은 IsMessageFresh를 vehicle-state timeout에도
+    // 그대로 재사용한다(정책 중복 없음, Commit E에서 IsTrajectoryFresh를
+    // 일반화된 이름으로 rename) - 같은 SteadyTime watchdog 계약이 vehicle
+    // state에도 적용됨을 확인한다.
+    EXPECT_TRUE(IsMessageFresh(ros::SteadyTime(10, 0),
+                               ros::SteadyTime(10, 150000000), 0.20));
+    EXPECT_FALSE(IsMessageFresh(ros::SteadyTime(10, 0),
+                                ros::SteadyTime(10, 250000000), 0.20));
 }
 
 }  // namespace

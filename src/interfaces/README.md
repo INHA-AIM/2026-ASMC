@@ -139,8 +139,25 @@ Planner는 corner를 `center + yaw + width + length`로 다시 생성하거나 O
 Trajectory point는 `x`, `y`, `yaw`, `curvature`, `velocity`, `acceleration`을 포함한다.
 
 - `dt`는 Planner source trajectory의 sample time이다.
-- `ego_at_plan`은 Planner가 trajectory 생성에 사용한 Ego snapshot이다 - **provenance 전용**이다. MPC의 실제 control 초기상태(x0)는 `ego_at_plan`이 아니라 MPC가 독립적으로 구독하는 최신 `/vehicle/state`에서 만든다(코너/선회 구간에서 planning과 control 사이 시간차를 줄이기 위함).
-- MPC는 `dt`를 사용해 자신의 timestep으로 시간축 보간하고, `header.stamp`(trajectory 생성 시각)와 최신 `/vehicle/state.header.stamp`(현재 시각) 사이의 age만큼 reference 시작점을 앞으로 이동시켜 trajectory latency를 보정한다.
+- `header.stamp`는 **callback 수신 시각이나 publish 시각이 아니라 이 trajectory가
+  대표하는 source/reference time**이다(4절 timestamp 규칙과 동일). 현재 Frenet
+  구현에서는 이 trajectory를 만드는 데 사용한 `ego_at_plan`(VehicleState) 스냅샷의
+  `header.stamp`와 항상 같다 - `ConvertCartesianPath`/`MakeStopTrajectory`는 별도
+  timestamp 인자를 받지 않고 `ego_at_plan.header.stamp`를 그대로 쓴다. `ego_at_plan`이
+  알 수 없는 상태(zero stamp, `valid=false`)라면 `header.stamp`도 그 상태를 그대로
+  반영한다 - `ros::Time::now()`로 유효한 것처럼 위장하지 않는다.
+- **동일 trajectory를 재발행(republish)할 때**(예: 완료 latch가 이전 궤적을 계속
+  내보내는 경우) point content가 바뀌지 않았다면 `header.stamp`도 원래 값 그대로
+  유지한다. 재발행 수신 시각은 새 source time이 아니다.
+- `ego_at_plan`은 Planner가 trajectory 생성에 사용한 Ego snapshot이다 - MPC 관점에서는
+  **provenance 검증 전용**이다. MPC의 실제 control 초기상태(x0)는 `ego_at_plan`이
+  아니라 MPC가 독립적으로 구독하는 최신 `/vehicle/state`에서 만든다(코너/선회 구간에서
+  planning과 control 사이 시간차를 줄이기 위함).
+- MPC는 `dt`를 사용해 자신의 timestep으로 시간축 보간하고,
+  `최신 /vehicle/state.header.stamp - trajectory.header.stamp`만큼 reference 시작점을
+  앞으로 이동시켜 trajectory latency를 보정한다(둘 다 source time이므로 같은
+  timebase). Receive freshness는 이 계산과 분리된 별개의 `SteadyTime` watchdog으로
+  판정한다.
 - 안전 STOP trajectory는 Controller가 실행할 수 있는 유효 명령이므로 `valid=true`이고, 원인은 `failure_reason`에 남긴다.
 - `valid=false`는 points 자체를 추종하면 안 되는 경우에 사용한다.
 
