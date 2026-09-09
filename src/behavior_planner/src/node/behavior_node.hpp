@@ -56,6 +56,7 @@ class BehaviorNode {
   asmc_msgs::PlanFeedback feedback_;
   asmc_msgs::FrenetFeedback feedback_v2_;
   ros::SteadyTime feedback_v2_received_at_;
+  ros::SteadyTime objects_received_at_;
   V2CommandManager v2_command_manager_;
   asmc_msgs::BehaviorContext last_command_;
   uint32_t current_command_id_ = 0;
@@ -63,9 +64,11 @@ class BehaviorNode {
   bool ego_received_ = false;
   bool use_v2_interface_ = false;
   bool feedback_v2_received_ = false;
+  bool objects_received_ = false;
   double rate_ = 10.0;
   double command_validity_seconds_ = 0.5;
   double feedback_v2_stale_seconds_ = 1.0;
+  double objects_stale_seconds_ = 0.3;
 };
 
 }  // namespace behavior_planner

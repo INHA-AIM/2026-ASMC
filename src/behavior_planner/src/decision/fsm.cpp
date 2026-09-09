@@ -5,7 +5,7 @@
 
 namespace behavior_planner {
 
-BehaviorState Fsm::update(BehaviorType b){if(b==BehaviorType::FOLLOW)return BehaviorState::FOLLOW;if(b==BehaviorType::STOP)return BehaviorState::STOP;if(b==BehaviorType::EMERGENCY_STOP)return BehaviorState::EMERGENCY_STOP;if(b==BehaviorType::LEFT_CHANGE)return BehaviorState::LEFT_CHANGE_PREPARE;if(b==BehaviorType::RIGHT_CHANGE)return BehaviorState::RIGHT_CHANGE_PREPARE;return BehaviorState::KEEP_LANE;}
+BehaviorState Fsm::update(BehaviorType b){if(b==BehaviorType::FOLLOW)return BehaviorState::FOLLOW;if(b==BehaviorType::STOP)return BehaviorState::STOP;if(b==BehaviorType::EMERGENCY_STOP)return BehaviorState::EMERGENCY_STOP;if(b==BehaviorType::LEFT_CHANGE)return BehaviorState::LEFT_CHANGE_PREPARE;if(b==BehaviorType::RIGHT_CHANGE)return BehaviorState::RIGHT_CHANGE_PREPARE;if(b==BehaviorType::AVOID)return BehaviorState::AVOID_PREPARE;return BehaviorState::KEEP_LANE;}
 
 void Fsm::setEmergencyRelease(double exit_ttc, double hold_s) {
   emergency_exit_ttc_ = std::max(0.1, exit_ttc);

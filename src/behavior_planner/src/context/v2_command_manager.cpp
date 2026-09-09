@@ -105,6 +105,12 @@ asmc_msgs::BehaviorCommand V2CommandManager::makeCandidate(
                        context.target.target_yaw, &command.target_pose_map);
       }
       break;
+    case BehaviorType::AVOID:
+      command.maneuver_type = Command::AVOID;
+      command.execution_request = Command::PREPARE;
+      command.direction = Command::DIRECTION_NONE;
+      command.primary_object_id = context.target.avoidance_object_id;
+      break;
     case BehaviorType::YIELD:
       // YIELD has no v2 wire value.  It is currently not selected by the
       // scorer, but KEEP is the only structurally valid non-target fallback.
@@ -159,14 +165,25 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
       feedback && has_active_command_ &&
       feedback->command_id == active_command_.command_id;
   if (feedback_matches && usesHandshake(active_command_.maneuver_type) &&
+      (feedback->execution_state == Feedback::COMPLETED ||
+       feedback->execution_state == Feedback::FAILED)) {
+    active_transaction_locked_ = false;
+  }
+  if (feedback_matches && usesHandshake(active_command_.maneuver_type) &&
       (feedback->execution_state == Feedback::COMMITTED ||
        feedback->execution_state == Feedback::EXECUTING)) {
     active_transaction_locked_ = true;
   }
   const bool emergency = candidate.maneuver_type == Command::EMERGENCY_STOP;
+  const auto preempt_it = context.extra_flags.find("stop_preempts_avoid");
+  const bool planned_stop_preempts_avoid =
+      candidate.maneuver_type == Command::STOP &&
+      active_command_.maneuver_type == Command::AVOID &&
+      preempt_it != context.extra_flags.end() && preempt_it->second;
 
   if (!has_active_command_ || !sameIdentity(active_command_, candidate)) {
-    if (!active_transaction_locked_ || emergency) {
+    if (!active_transaction_locked_ || emergency ||
+        planned_stop_preempts_avoid) {
       ++next_command_id_;
       if (next_command_id_ == 0) ++next_command_id_;
       candidate.command_id = next_command_id_;

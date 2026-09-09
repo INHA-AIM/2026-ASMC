@@ -43,10 +43,14 @@ planner:
 
   # --- AVOID: FSM이 지정한 대상의 유효성 검증 범위와 lateral 회피 ---
   avoid:
-    detection_distance: 60.0  # [m] FSM이 지정한 대상까지 이 거리 안이어야 유효(충돌 lookahead가 더 길면 자동 확장)
+    detection_distance: 120.0 # [m] KEEP의 8 s reactive horizon보다 넓게 확보해 Behavior/AVOID 사이의 blind band를 없앤다
     avoid_offset: 5.0         # [m] 회피 시 lateral_d1 격자를 밀어낼 크기
+    min_shift_start_distance: 15.0 # [m] 저속에서도 확보할 최소 SHIFT 준비거리
+    max_shift_start_distance: 70.0 # [m] 고속에서도 지나치게 일찍 이탈하지 않는 상한
+    shift_time_margin: 0.5     # [s] 횡이동 계산에 더하는 조향/제어 응답 여유
     lateral_tolerance: 0.4    # [m] SHIFT 횟이동 완료 판정
-    pass_clearance: 1.0       # [m] 자차/장애물 길이 외 추가 통과 여유
+    rear_overhang: 0.79       # [m] /vehicle/state 후륜축 기준점에서 뒤 범퍼까지 거리
+    pass_clearance: 0.3       # [m] 자차/장애물 길이 외 추가 통과 여유
     prefer_right_when_equal: true # 좌/우 valid 품질이 거의 같으면 우측 우선
 
   # --- LANE_CHANGE: FSM이 target_pose_map으로 지정한 인접 차로 목표로의
@@ -148,7 +152,7 @@ planner:
   kinematic_limits:
     max_lateral_accel: 3.0
     max_longitudinal_accel: 3.0
-    max_curvature: 0.1704
+    max_curvature: 0.28 #0.1704
     # [m/s^3] longitudinal jerk hard limit. initial safety limit; final value
     # requires MORAI validation (fix/yuntae-frenet-speed-continuity).
     # 5.0 -> 6.0: 정상 FOLLOW(큰 time_gap/min_gap) 경계 후보의 실측 peak
@@ -170,11 +174,11 @@ planner:
   # --- VehicleShape (collision_checker.hpp) -------------------
   vehicle_shape:
     width: 1.9
-    length: 4.5
+    length: 4.635
 
   # --- CollisionCheckConfig (collision_checker.hpp) -----------
   collision_check:
-    safety_margin: 0.3
+    safety_margin: 0.5
     margin_growth_rate: 0.1
     reactive_lookahead: 8.0
 

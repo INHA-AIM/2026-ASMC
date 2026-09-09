@@ -54,6 +54,7 @@ asmc_msgs::BehaviorContext MsgConverter::toMsg(
     case BehaviorType::STOP: message.selected_behavior = asmc_msgs::BehaviorContext::STOP; break;
     case BehaviorType::YIELD: message.selected_behavior = asmc_msgs::BehaviorContext::YIELD; break;
     case BehaviorType::EMERGENCY_STOP: message.selected_behavior = asmc_msgs::BehaviorContext::EMERGENCY_STOP; break;
+    case BehaviorType::AVOID: message.selected_behavior = asmc_msgs::BehaviorContext::AVOID; break;
     default:
       message.valid = false;
       message.selected_behavior = asmc_msgs::BehaviorContext::KEEP;
@@ -69,8 +70,11 @@ asmc_msgs::BehaviorContext MsgConverter::toMsg(
   message.has_stop_target = context.target.has_stop_target;
   message.stop_x = context.target.stop_x;
   message.stop_y = context.target.stop_y;
-  message.has_lead_vehicle = context.target.lead_vehicle_id >= 0;
-  message.lead_vehicle_id = context.target.lead_vehicle_id;
+  const int object_id = context.selected_behavior == BehaviorType::AVOID
+                            ? context.target.avoidance_object_id
+                            : context.target.lead_vehicle_id;
+  message.has_lead_vehicle = object_id >= 0;
+  message.lead_vehicle_id = object_id;
   message.target_link_id = context.target.target_link_id;
   return message;
 }
@@ -86,6 +90,7 @@ UrbanFeatureDebug MsgConverter::toDebugMsg(
   message.enable_follow = context.enable.follow;
   message.enable_left_change = context.enable.left_change;
   message.enable_right_change = context.enable.right_change;
+  message.enable_avoid = context.enable.avoid;
   message.enable_stop = context.enable.stop;
   message.enable_emergency_stop = context.enable.emergency_stop;
   message.planned_stop = context.hard.planned_stop;
@@ -106,6 +111,7 @@ UrbanFeatureDebug MsgConverter::toDebugMsg(
   message.follow_score = context.score.follow;
   message.left_change_score = context.score.left_change;
   message.right_change_score = context.score.right_change;
+  message.avoid_score = context.score.avoid;
   message.stop_score = context.score.stop;
   message.emergency_stop_score = context.score.emergency_stop;
   message.decision_reason = context.debug.selected_reason;
@@ -142,6 +148,7 @@ UrbanFeatureDebug MsgConverter::toDebugMsg(
   message.distance_to_signal_movement = feature.signal.distance_to_movement;
   message.pedestrian_risk = feature.risk.pedestrian_risk;
   message.static_obstacle_ahead = feature.risk.static_obstacle_ahead;
+  message.avoidance_object_id = feature.risk.avoidance_object_id;
   message.emergency_risk = feature.risk.emergency_risk;
   message.min_ttc = feature.risk.min_ttc;
   message.predicted_front_ttc =

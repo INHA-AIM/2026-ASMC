@@ -47,8 +47,20 @@ struct AvoidConfig {
     // 폭 절반씩 + 여유(0.3m)를 감안한 최소 이격(~2.2m)보다 확실히 크게 잡아야
     // 좌/우 클리어 판정이 "장애물 자신" 때문에 항상 막힌 것으로 나오지 않는다.
     double avoid_offset      = 3.0;
+    // 동적 SHIFT 시작거리 = ego_speed * required_lateral_shift_time
+    //                         + vehicle/obstacle clearance.
+    // 아래 값은 지나치게 가깝거나 먼 결과를 막는 안전 경계다.
+    double min_shift_start_distance = 3.0;
+    double max_shift_start_distance = 70.0;
+    double shift_time_margin = 0.5; // [s] 조향/제어 응답 여유
     double lateral_tolerance = 0.4;   // [m] SHIFT 완료 판정
-    double pass_clearance    = 1.0;   // [m] 자차 뒤가 장애물을 통과한 뒤 추가 여유
+    // VehicleState의 x/y 기준점(현재 MORAI IONIQ 5는 후륜축 GPS)에서
+    // 뒤 범퍼까지 거리. AVOID의 접근/통과 종방향 여유를 차량 중심 기준
+    // length/2로 계산하지 않도록 사용한다.
+    double rear_overhang     = 0.79;  // [m]
+    // 후륜축에서 뒤 범퍼까지의 거리와 장애물 반길이는 별도로 포함한다.
+    // 기본값 0은 뒤 범퍼가 장애물 후단을 지난 즉시 RETURN한다는 뜻이다.
+    double pass_clearance    = 0.0;   // [m] 차체 형상 외 추가 통과 여유
     bool prefer_right_when_equal = true; // 좌/우 후보 품질이 같을 때 우측 우선
 
     // [cycles] v2 AVOID 대상의 일시적 미관측 유예 (D6-1).

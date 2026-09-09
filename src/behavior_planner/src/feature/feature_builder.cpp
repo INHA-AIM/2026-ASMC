@@ -91,6 +91,7 @@ UrbanFeature FeatureBuilder::build(
     Point2D adjusted_stop;
     const double adjusted_stop_s =
         std::max(0.0, feature.signal.stop_line_s - stop_target_offset_m_);
+    feature.signal.stop_target_s = adjusted_stop_s;
     if (stop_target_offset_m_ > 0.0 &&
         route_manager.getRoutePose(adjusted_stop_s, &adjusted_stop,
                                    &feature.signal.stop_line_yaw)) {
@@ -123,8 +124,9 @@ UrbanFeature FeatureBuilder::build(
   }
 
   constexpr double kLaneWidth = 3.5;
-  constexpr double kFrontLookahead = 120.0;
+  const double front_lookahead = follow_target_.max_distance;
   double best_lead_score = 1e9;
+  double best_static_obstacle_gap = 1e9;
   for (ObjectFeature& object : projected_objects) {
     if (!object.valid) continue;
     const double relative_d = object.d - feature.ego.d;
@@ -157,23 +159,35 @@ UrbanFeature FeatureBuilder::build(
     const double cos_yaw = std::cos(feature.ego.yaw);
     const double sin_yaw = std::sin(feature.ego.yaw);
     const double ego_longitudinal = cos_yaw * dx + sin_yaw * dy;
-    const double ego_lateral = -sin_yaw * dx + cos_yaw * dy;
     const double euclidean_distance = std::hypot(dx, dy);
     const bool same_direction =
         std::cos(object.yaw - feature.ego.yaw) > 0.5;
-    double topology_gap = 1e9;
-    const bool forward_in_topology = route_manager.forwardDistance(
+    double follow_topology_gap = 1e9;
+    const bool follow_forward_in_topology = route_manager.forwardDistance(
         feature.route.current_link_id, feature.ego.map_s, object.link_id,
-        object.link_s, kFrontLookahead, &topology_gap);
-    const double corridor_half_width =
-        std::min(12.0, 2.5 + 0.12 * topology_gap);
-    const bool geometry_front_gate =
-        ego_longitudinal > -2.0 && euclidean_distance <= kFrontLookahead &&
-        std::abs(ego_lateral) <= corridor_half_width && same_direction;
-    const bool current_lane_front = forward_in_topology && geometry_front_gate;
+        object.link_s, front_lookahead, &follow_topology_gap);
+    const bool follow_geometry_front_gate =
+        ego_longitudinal > -2.0 && euclidean_distance <= front_lookahead &&
+        std::abs(object.d) <= follow_target_.max_lateral_offset &&
+        same_direction;
+    const bool current_lane_front =
+        follow_forward_in_topology && follow_geometry_front_gate;
+
+    // A static obstacle has no meaningful travel heading. Applying the
+    // vehicle same-direction gate to MORAI obstacle heading (commonly zero)
+    // makes a real obstacle disappear on north/south roads. Use route
+    // topology and geometry only, with a horizon no shorter than Frenet's
+    // collision lookahead.
+    const double avoid_route_gap = object.s - feature.ego.s;
+    const bool static_obstacle_front =
+        avoid_route_gap > 0.0 &&
+        avoid_route_gap <= avoid_target_.max_distance &&
+        ego_longitudinal > -2.0 &&
+        euclidean_distance <= avoid_target_.max_distance &&
+        std::abs(object.d) <= avoid_target_.max_lateral_offset;
 
     if (current_lane_front) {
-      object.gap = topology_gap;
+      object.gap = follow_topology_gap;
       object.ttc = object.gap > 0.0 && object.relative_speed > 0.0
                        ? object.gap / object.relative_speed
                        : 1e9;
@@ -198,13 +212,27 @@ UrbanFeature FeatureBuilder::build(
       feature.risk.nearest_pedestrian_s =
           std::min(feature.risk.nearest_pedestrian_s, object.s);
     }
-    if (object.type == ObjectType::STATIC_OBSTACLE && current_lane_front &&
-        object.gap > 0.0 && object.gap < 30.0) {
-      feature.risk.static_obstacle_ahead = true;
-      feature.risk.nearest_obstacle_s =
-          std::min(feature.risk.nearest_obstacle_s, object.s);
+    if (object.type == ObjectType::STATIC_OBSTACLE && static_obstacle_front &&
+        avoid_route_gap > 0.0) {
+      object.gap = avoid_route_gap;
+      if (!feature.risk.static_obstacle_ahead ||
+          object.gap < best_static_obstacle_gap) {
+        feature.risk.static_obstacle_ahead = true;
+        feature.risk.avoidance_object_id = object.id;
+        feature.risk.nearest_obstacle_s = object.s;
+        feature.risk.nearest_obstacle_length = object.length;
+        best_static_obstacle_gap = object.gap;
+      }
     }
-    if (current_lane_front && object.gap > 0.0) {
+    // Do not feed the selected static AVOID target into the generic TTC AEB.
+    // Otherwise the same object first selects AVOID, then preempts it with
+    // E-STOP as TTC drops; after stopping TTC becomes infinite, E-STOP
+    // releases, and the cycle repeats. Static-object path safety belongs to
+    // Frenet's candidate collision check and SAFE_STOP fallback. Behavior's
+    // TTC AEB remains reserved for a moving lead vehicle; pedestrian risk is
+    // handled independently by the hard-rule stop above.
+    if (object.type == ObjectType::VEHICLE && current_lane_front &&
+        object.gap > 0.0) {
       feature.risk.min_ttc = std::min(feature.risk.min_ttc, object.ttc);
     }
 

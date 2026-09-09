@@ -32,6 +32,8 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   double traffic_light_stale_seconds = 1.0;
   double stop_target_offset_m = 5.0;
   SafetyConfig safety;
+  FollowTargetConfig follow_target;
+  AvoidTargetConfig avoid_target;
   double emergency_ttc_exit = 3.0;
   double emergency_release_hold_s = 0.5;
 
@@ -49,6 +51,16 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
              command_validity_seconds_);
   pnh_.param("v2/feedback_stale_seconds", feedback_v2_stale_seconds_,
              feedback_v2_stale_seconds_);
+  pnh_.param("objects/stale_seconds", objects_stale_seconds_,
+             objects_stale_seconds_);
+  pnh_.param("follow/max_target_distance", follow_target.max_distance,
+             follow_target.max_distance);
+  pnh_.param("follow/max_lateral_offset", follow_target.max_lateral_offset,
+             follow_target.max_lateral_offset);
+  pnh_.param("avoid/max_target_distance", avoid_target.max_distance,
+             avoid_target.max_distance);
+  pnh_.param("avoid/max_lateral_offset", avoid_target.max_lateral_offset,
+             avoid_target.max_lateral_offset);
   pnh_.param("publish_topics/feature_debug", debug_topic, debug_topic);
   pnh_.param("publish_topics/marker", marker_topic, marker_topic);
   pnh_.param("map/link_set_path", link_path, std::string());
@@ -80,6 +92,23 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   pnh_.param("safety/emergency_release_hold_s", emergency_release_hold_s,
              emergency_release_hold_s);
 
+  if (follow_target.max_distance <= 0.0 ||
+      follow_target.max_lateral_offset <= 0.0) {
+    ROS_WARN("Invalid FOLLOW target limits; using 60.0 m / 1.75 m");
+    follow_target.max_distance = 60.0;
+    follow_target.max_lateral_offset = 1.75;
+  }
+  if (objects_stale_seconds_ <= 0.0) {
+    ROS_WARN("Invalid object timeout; using 0.30 s");
+    objects_stale_seconds_ = 0.30;
+  }
+  if (avoid_target.max_distance <= 0.0 ||
+      avoid_target.max_lateral_offset <= 0.0) {
+    ROS_WARN("Invalid AVOID target limits; using 120.0 m / 1.75 m");
+    avoid_target.max_distance = 120.0;
+    avoid_target.max_lateral_offset = 1.75;
+  }
+
   if (!map_.load(link_path, node_path)) {
     ROS_ERROR("MGeo loading failed; check map paths");
   }
@@ -88,10 +117,18 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   }
   builder_.setStopTargetOffset(stop_target_offset_m);
   builder_.setSafetyConfig(safety);
+  builder_.setFollowTargetConfig(follow_target);
+  builder_.setAvoidTargetConfig(avoid_target);
   decision_.setEmergencyRelease(emergency_ttc_exit,
                                 emergency_release_hold_s);
   ROS_INFO("Behavior stop target offset: %.2f m behind physical stop line",
            stop_target_offset_m);
+  ROS_INFO("Behavior FOLLOW target limits: distance=%.2f m lateral=%.2f m, "
+           "objects stale after %.2f s",
+           follow_target.max_distance, follow_target.max_lateral_offset,
+           objects_stale_seconds_);
+  ROS_INFO("Behavior AVOID target limits: distance=%.2f m lateral=%.2f m",
+           avoid_target.max_distance, avoid_target.max_lateral_offset);
 
   if (use_traffic_light_mock) {
     auto mock = std::make_shared<MockTrafficLightProvider>();
@@ -163,11 +200,18 @@ void BehaviorNode::runOnce() {
     ROS_WARN_THROTTLE(5.0, "Waiting for valid asmc_msgs/VehicleState");
     return;
   }
-  const UrbanFeature feature =
-      builder_.build(ego_, objects_, route_, *lights_);
+  const ros::SteadyTime steady_now = ros::SteadyTime::now();
+  const bool objects_fresh =
+      objects_received_ && objects_stale_seconds_ > 0.0 &&
+      (steady_now - objects_received_at_).toSec() <= objects_stale_seconds_;
+  const PerceptionObjects empty_objects;
+  if (objects_received_ && !objects_fresh) {
+    ROS_WARN_THROTTLE(1.0, "Behavior object input is stale; clearing targets");
+  }
+  const UrbanFeature feature = builder_.build(
+      ego_, objects_fresh ? objects_ : empty_objects, route_, *lights_);
   const BehaviorContextData context = decision_.decide(feature, feedback_);
   if (use_v2_interface_) {
-    const ros::SteadyTime steady_now = ros::SteadyTime::now();
     const bool feedback_fresh =
         feedback_v2_received_ &&
         (steady_now - feedback_v2_received_at_).toSec() <=
@@ -217,6 +261,8 @@ void BehaviorNode::objectsCallback(
     const morai_msgs::ObjectStatusList::ConstPtr& message) {
   if (!message) return;
   objects_ = MoraiMsgConverter::toPerceptionObjects(*message);
+  objects_received_at_ = ros::SteadyTime::now();
+  objects_received_ = true;
 }
 
 void BehaviorNode::feedbackCallback(

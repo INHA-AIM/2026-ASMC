@@ -1540,13 +1540,10 @@ int main() {
         // ***** low_speed_context가 상태 판단에 쓰이지 않는다는 증거 *****
         //
         // 이전 이름(low_speed_waiting)이 위험했던 이유가 여기 있다. 저속에서
-        // **후보가 실제로 성공하는** 상황이 존재한다.
-        //
-        // 실측: ego 0.3 m/s + 장애물 60 m 전방 -> candidate_valid=true 이면서
-        // low_speed_context=true. 이 값을 "waiting"으로 읽어 상태를 정하면
-        // 유효한 후보를 두고 WAITING을 보고하게 된다.
-        //
-        // 장애물이 25 m일 때는 후보가 막히므로 이 조합이 드러나지 않았다.
+        // 공용 저속 generator는 요청한 lateral target 대신 현재 d 유지 경로를
+        // 만들 수 있다. 이를 유효 AVOID로 인정하면 d=0 부근을 COMMIT하고
+        // 장애물 앞에서 멈춘다. 충분히 먼 장애물이어도 실제 목표 d에 닿지
+        // 못한 후보는 WAITING으로 두고 maintenance crawl로 속도를 회복한다.
         FrenetPlanner planner;
         planner.Init(config);
         const std::vector<TrackedObject> far_objects{
@@ -1561,13 +1558,12 @@ int main() {
         Expect(ok, "low-speed valid: PREPARE succeeds");
         Expect(result.low_speed_context,
                "low-speed valid: the low-speed context is set");
-        Expect(result.candidate_valid,
-               "low-speed valid: a candidate IS found at 0.3 m/s with a far "
-               "obstacle");
-        // 이 두 값이 동시에 true인 것이 정상이다. low_speed_context를 후보
-        // 차단이나 상태 판단에 쓰면 이 케이스가 깨진다.
-        Expect(result.low_speed_context && result.candidate_valid,
-               "low-speed valid: low speed and a valid candidate coexist");
+        Expect(!result.candidate_valid,
+               "low-speed valid: a current-d fallback is not an AVOID "
+               "candidate");
+        Expect(result.low_speed_context && !result.candidate_valid,
+               "low-speed valid: low speed waits for a reachable lateral "
+               "candidate");
         Expect(result.selected_target_d != 0.0,
                "low-speed valid: a lateral target was selected");
         Expect(result.generated_candidate_count > 0,
@@ -2131,9 +2127,9 @@ int main() {
         const PlannerCommand pose_cmd = MakeAvoidCommandWithTargetD(
             21, kEgoS + 30.0, 2.8, LateralDirection::LEFT);
 
-        // (a) 요청값과 실제 선택이 다르다는 것을 먼저 확인한다. 이것이
-        //     없으면 아래 exact-lock 검사가 무의미하다(요청과 lock이 같으면
-        //     tolerance를 무시해도 통과한다).
+        // (a) PREPARE에서 실제 유효 후보의 종단 d를 확보한다. 횡가속도
+        //     한계를 온전히 사용하면 raw 요청 d 자체가 valid일 수도 있으므로
+        //     인위적인 request/selected 차이를 테스트 전제로 두지 않는다.
         FrenetPlanner uncommitted;
         uncommitted.Init(config);
         CartesianPath m_unc;
@@ -2141,9 +2137,6 @@ int main() {
         uncommitted.PrepareAvoid(ego, objects, pose_cmd, m_unc, r_unc);
         Expect(r_unc.candidate_valid,
                "exact lock: the uncommitted cycle finds a candidate");
-        Expect(std::fabs(r_unc.selected_target_d - 2.8) > 0.2,
-               "exact lock: the selected candidate drifts off the request "
-               "(so request != locked value)");
 
         // (b) COMMIT하면 이후 사이클이 잠긴 목표를 정확히 겨냥한다.
         FrenetPlanner committed;
@@ -2156,8 +2149,6 @@ int main() {
         const double locked = committed.avoid_locked_target_d();
         Expect(std::fabs(locked - r_pre.selected_target_d) < 1e-9,
                "exact lock: the locked value is the selected candidate d");
-        Expect(std::fabs(locked - 2.8) > 0.2,
-               "exact lock: the locked value differs from the raw request");
 
         bool all_exact = true;
         for (int cycle = 0; cycle < 5; ++cycle) {
@@ -2321,7 +2312,46 @@ int main() {
     }
 
     {
-        // D6-3c lifecycle: SHIFT -> PASS -> COMPLETED. 대상 observation 없이도
+        // 먼 거리에서 AVOID를 미리 확보해도 global path에서 옆으로 흐르지
+        // 않고, shift_start_distance 안에 진입한 뒤에만 SHIFT한다.
+        const std::vector<TrackedObject> initial{
+            MakeObstacle(waypoints, 21, kEgoS + 80.0, 0.0)};
+        const PlannerCommand command =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        planner.PrepareAvoid(ego, initial, command, maintenance, prepared);
+        Expect(prepared.candidate_valid && planner.CommitAvoid(prepared) &&
+                   std::string(planner.avoid_phase_name()) == "TRACKING",
+               "approach: a far committed target starts in TRACKING");
+
+        CartesianPath approach_path;
+        Prepare approach;
+        const bool approach_ok = planner.PlanCommittedAvoid(
+            ego, {}, command, approach_path, approach);
+        Expect(approach_ok && !approach.maneuver_completed &&
+                   std::string(planner.avoid_phase_name()) == "TRACKING" &&
+                   std::fabs(EndpointD(planner, approach_path,
+                                       kEgoS + 30.0)) < 1e-6,
+               "approach: TRACKING keeps the global path");
+        Expect(!planner.last_candidate_paths().empty() &&
+                   planner.last_candidate_paths().size() ==
+                       planner.last_candidate_validity().size(),
+               "debug: committed AVOID exposes candidates to visualization");
+
+        CartesianPath shift_path;
+        Prepare shift;
+        planner.PlanCommittedAvoid(
+            MakeEgoAt(waypoints, kEgoS + 60.0, 0.0, kEgoSpeed), {},
+            command, shift_path, shift);
+        Expect(std::string(planner.avoid_phase_name()) == "SHIFT",
+               "approach: entering the configured distance starts SHIFT");
+    }
+
+    {
+        // D6-3c lifecycle: SHIFT -> PASS -> RETURN -> COMPLETED. 대상 observation 없이도
         // COMMIT 때 저장한 geometry로 진행하며 progress는 유한/단조/범위 내다.
         const std::vector<TrackedObject> initial{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
@@ -2400,23 +2430,55 @@ int main() {
 
         const CartesianState after_clear = MakeEgoAt(
             waypoints, planner.avoid_target_s() + 20.0, locked, kEgoSpeed);
-        CartesianPath final_path;
-        Prepare completed;
-        const bool final_ok = planner.PlanCommittedAvoid(
-            after_clear, {}, command, final_path, completed);
-        Expect(final_ok && completed.maneuver_completed &&
-                   completed.maneuver_progress == 1.0 &&
-                   planner.avoid_completed(),
-               "lifecycle: PASS plus longitudinal clearance completes");
+        CartesianPath return_path;
+        Prepare returning;
+        const bool return_ok = planner.PlanCommittedAvoid(
+            after_clear, {}, command, return_path, returning);
+        Expect(return_ok && !returning.maneuver_completed &&
+                   returning.maneuver_progress >= 0.75 &&
+                   std::string(planner.avoid_phase_name()) == "RETURN",
+               "lifecycle: PASS plus longitudinal clearance starts RETURN");
+        // RETURN 전용 횡가속도 한계를 온전히 쓰면 이 상태에서는 3.0초가
+        // 최초 valid다(dt=0.1 -> 31 samples). 최단 후보를 찾은 뒤 최종 저장
+        // 단계에서 공용 cost selector로 다시 덮어쓰는 회귀를 잡는다.
+        Expect(return_path.x.size() == 31,
+               "lifecycle: RETURN publishes the shortest valid horizon");
         Expect(planner.avoid_committed() &&
                    planner.active_avoid_target_id() == 21 &&
                    std::fabs(planner.avoid_locked_target_d() - locked) < 1e-9 &&
-                   std::string(planner.avoid_phase_name()) == "PASS",
-               "lifecycle: completion retains committed context and lock");
-        Expect(std::fabs(EndpointD(planner, final_path,
-                                   planner.avoid_target_s() + 25.0) - locked) <
+                   std::string(planner.avoid_phase_name()) == "RETURN",
+               "lifecycle: RETURN retains committed context and lock");
+        Expect(std::fabs(EndpointD(planner, return_path,
+                                   planner.avoid_target_s() + 25.0)) <
                    1e-6,
-               "lifecycle: completion cycle still publishes final AVOID path");
+               "lifecycle: RETURN path targets the global path");
+
+        // RETURN은 경로나 종점을 고정하지 않고 현재 상태에서 매 cycle
+        // 유효한 최단시간 후보를 다시 선택한다.
+        const CartesianState return_progress = MakeEgoAt(
+            waypoints, planner.avoid_target_s() + 25.0,
+            locked * 0.6, kEgoSpeed);
+        CartesianPath shorter_return_path;
+        Prepare shorter_return;
+        const bool shorter_ok = planner.PlanCommittedAvoid(
+            return_progress, {}, command, shorter_return_path,
+            shorter_return);
+        Expect(shorter_ok && !shorter_return.maneuver_completed &&
+                   std::fabs(EndpointD(planner, shorter_return_path,
+                                       planner.avoid_target_s() + 30.0)) <
+                       1e-6,
+               "lifecycle: RETURN replans a valid path to the global path");
+
+        const CartesianState centered = MakeEgoAt(
+            waypoints, planner.avoid_target_s() + 25.0, 0.0, kEgoSpeed);
+        CartesianPath final_path;
+        Prepare completed;
+        const bool final_ok = planner.PlanCommittedAvoid(
+            centered, {}, command, final_path, completed);
+        Expect(final_ok && completed.maneuver_completed &&
+                   completed.maneuver_progress == 1.0 &&
+                   planner.avoid_completed(),
+               "lifecycle: centered RETURN completes");
 
         Expect(!frenet_planner_ros::CompleteAvoidAtomically(
                    manager, completed, /*trajectory_ready=*/false) &&
@@ -2454,7 +2516,7 @@ int main() {
                    frenet_planner_ros::PlanningTarget::INCOMING_COMMAND &&
                    !planner.avoid_committed() &&
                    planner.active_avoid_target_id() == -1,
-               "completion latch: new KEEP owns center return and resets AVOID");
+               "completion latch: new KEEP resets the centered AVOID");
     }
 
     {
@@ -2528,31 +2590,41 @@ int main() {
 
         CartesianPath pass_path;
         Prepare pass;
+        // 동적 시작 거리는 후륜축->앞 범퍼 길이를 포함한다. seam 직전에도
+        // 그 거리 안으로 충분히 진입시켜 SHIFT 전환과 wrap 처리를 함께 본다.
+        const double shift_before_seam_s = track_length - 5.0;
         const bool pass_ok = commit_ok && planner.PlanCommittedAvoid(
-            MakeEgoAt(waypoints, ego_before_s, locked, kEgoSpeed), {},
+            MakeEgoAt(waypoints, shift_before_seam_s, 0.0, kEgoSpeed), {},
             command, pass_path, pass);
         Expect(pass_ok && !pass.maneuver_completed &&
-                   std::string(planner.avoid_phase_name()) == "PASS",
-               "closed-loop lifecycle: both actors before seam enter PASS");
+                   std::string(planner.avoid_phase_name()) == "SHIFT",
+               "closed-loop lifecycle: dynamic approach enters SHIFT before seam");
         CartesianPath center_path;
         Prepare center;
         const bool center_ok = pass_ok && planner.PlanCommittedAvoid(
             MakeEgoAt(waypoints, obstacle_after_s, locked, kEgoSpeed), {},
             command, center_path, center);
         Expect(center_ok && !center.maneuver_completed &&
+                   std::string(planner.avoid_phase_name()) == "PASS" &&
                    std::isfinite(center.maneuver_progress) &&
                    center.maneuver_progress >= pass.maneuver_progress,
-               "closed-loop lifecycle: passing seam reaches obstacle center");
+               "closed-loop lifecycle: crossing seam reaches PASS at obstacle");
         CartesianPath clear_path;
         Prepare clear;
         const bool clear_ok = center_ok && planner.PlanCommittedAvoid(
             MakeEgoAt(waypoints, obstacle_after_s + 20.0, locked, kEgoSpeed),
             {}, command, clear_path, clear);
-        Expect(clear_ok && !center.maneuver_completed &&
-                   clear.maneuver_completed &&
-                   clear.maneuver_progress == 1.0 &&
+        CartesianPath return_path;
+        Prepare returned;
+        const bool returned_ok = clear_ok && planner.PlanCommittedAvoid(
+            MakeEgoAt(waypoints, obstacle_after_s + 25.0, 0.0, kEgoSpeed),
+            {}, command, return_path, returned);
+        Expect(returned_ok && !center.maneuver_completed &&
+                   !clear.maneuver_completed &&
+                   returned.maneuver_completed &&
+                   returned.maneuver_progress == 1.0 &&
                    clear.maneuver_progress >= center.maneuver_progress,
-               "closed-loop lifecycle: seam crossing completes with monotonic progress");
+               "closed-loop lifecycle: seam crossing and RETURN complete monotonically");
     }
 
     {
@@ -2581,6 +2653,10 @@ int main() {
         Prepare completed;
         planner.PlanCommittedAvoid(
             MakeEgoAt(waypoints, planner.avoid_target_s() + 20.0, locked,
+                      kEgoSpeed),
+            {}, old_command, completed_path, completed);
+        planner.PlanCommittedAvoid(
+            MakeEgoAt(waypoints, planner.avoid_target_s() + 25.0, 0.0,
                       kEgoSpeed),
             {}, old_command, completed_path, completed);
         manager.NotifyManeuverCompleted();

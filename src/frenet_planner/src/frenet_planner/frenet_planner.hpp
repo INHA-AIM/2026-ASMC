@@ -582,7 +582,10 @@ private:
         double resolved_target_speed, const PlannerCommand& external_command,
         CartesianPath& out_path);
 
+    double EffectiveAvoidShiftStartDistance(double ego_speed,
+                                            double ego_d) const;
     void UpdateCommittedAvoidLifecycle(double ego_s, double ego_d,
+                                       double ego_speed,
                                        AvoidPrepareResult& result);
 
     // ---------------------------------------------------------------------
@@ -740,7 +743,9 @@ private:
 
     // TRACKING은 외부 AVOID 모드가 아니다. 정적 장애물 ID/방향만
     // 미리 잠그고 주행은 LANE_KEEPING을 계속하는 내부 상태다.
-    enum class AvoidPhase { TRACKING, SHIFT, PASS };
+    // TRACKING=global-path approach, SHIFT=회피측 횡이동,
+    // PASS=장애물 옆 통과, RETURN=global path(d=0) 복귀.
+    enum class AvoidPhase { TRACKING, SHIFT, PASS, RETURN };
 
     struct AvoidanceContext {
         bool active = false;
@@ -1026,6 +1031,10 @@ private:
     static constexpr double kCrawlAccel = 0.5;       // [m/s^2] 완만한 가속
     static constexpr double kMinCreepSpeed = 0.3;    // [m/s] 최소 전진속도 (0 근처에 갇히지 않도록)
     static constexpr double kCrawlSpeedCap = 2.0;    // [m/s] 이 fallback 안에서의 속도 상한
+    // max_curvature로 만들 수 있는 대칭 S-curve의 종방향 길이를 보수적으로
+    // 근사한다. 저속 fallback과 AVOID SHIFT 시작거리가 같은 값을 사용한다.
+    double LowSpeedLateralTransitionDistance(double from_d,
+                                              double to_d) const;
 
     RefLine ref_;
     PathGeneratorConfig path_cfg_{};

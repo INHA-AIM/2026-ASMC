@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 namespace behavior_planner {
 
@@ -26,6 +27,8 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
                                feature.surrounding.left_lane_safe;
   context.enable.right_change = !context.hard.forbid_right_change &&
                                 feature.surrounding.right_lane_safe;
+  context.enable.avoid = feature.risk.static_obstacle_ahead &&
+                         feature.risk.avoidance_object_id >= 0;
   context.enable.stop = context.hard.planned_stop || context.hard.force_stop;
   context.enable.emergency_stop = context.hard.emergency_stop;
 
@@ -53,6 +56,32 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
     context.extra_values["front_relative_speed"] = lead.relative_speed;
     context.extra_values["front_ttc"] = lead.ttc;
   }
+  if (context.enable.avoid) {
+    context.target.avoidance_object_id = feature.risk.avoidance_object_id;
+    context.extra_values["avoidance_object_id"] =
+        feature.risk.avoidance_object_id;
+  }
+
+  // STOP과 AVOID가 동시에 필요하면 검출 순서나 고정 score가 아니라
+  // global-path s상의 첫 제약을 우선한다. STOP은 이미 후륜축 기준으로
+  // 보정된 목표 s, 장애물은 OBB 전면 s를 비교한다.
+  bool stop_preempts_avoid = false;
+  bool avoid_precedes_stop = false;
+  if (context.hard.planned_stop && context.enable.avoid &&
+      feature.signal.stop_line_valid &&
+      std::isfinite(feature.signal.stop_target_s) &&
+      std::isfinite(feature.risk.nearest_obstacle_s) &&
+      std::isfinite(feature.risk.nearest_obstacle_length)) {
+    const double obstacle_front_s =
+        feature.risk.nearest_obstacle_s -
+        0.5 * std::max(0.0, feature.risk.nearest_obstacle_length);
+    stop_preempts_avoid = feature.signal.stop_target_s <= obstacle_front_s;
+    avoid_precedes_stop = !stop_preempts_avoid;
+    context.extra_values["stop_target_s"] = feature.signal.stop_target_s;
+    context.extra_values["avoid_obstacle_front_s"] = obstacle_front_s;
+    context.extra_flags["stop_preempts_avoid"] = stop_preempts_avoid;
+    context.extra_flags["avoid_precedes_stop"] = avoid_precedes_stop;
+  }
   if (context.enable.left_change) {
     context.target.candidate_link_ids.push_back(
         feature.route.left_target_link_id);
@@ -67,13 +96,14 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
     BehaviorType behavior;
     bool enabled;
   };
-  const std::array<Candidate, 6> candidates{{
+  const std::array<Candidate, 7> candidates{{
       {context.score.keep, BehaviorType::KEEP, context.enable.keep},
       {context.score.follow, BehaviorType::FOLLOW, context.enable.follow},
       {context.score.left_change, BehaviorType::LEFT_CHANGE,
        context.enable.left_change},
       {context.score.right_change, BehaviorType::RIGHT_CHANGE,
        context.enable.right_change},
+      {context.score.avoid, BehaviorType::AVOID, context.enable.avoid},
       {context.score.stop, BehaviorType::STOP, context.enable.stop},
       {context.score.emergency_stop, BehaviorType::EMERGENCY_STOP,
        context.enable.emergency_stop},
@@ -81,6 +111,11 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
   Candidate best = candidates.front();
   for (const Candidate& candidate : candidates) {
     if (candidate.enabled && candidate.score > best.score) best = candidate;
+  }
+  if (stop_preempts_avoid) {
+    best = {context.score.stop, BehaviorType::STOP, true};
+  } else if (avoid_precedes_stop) {
+    best = {context.score.avoid, BehaviorType::AVOID, true};
   }
   context.selected_behavior = best.behavior;
 
@@ -113,6 +148,9 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
       // to remaining braking distance. force_stop bypasses planning anyway.
       if (!context.hard.planned_stop) context.target.desired_speed = 0.0;
       break;
+    case BehaviorType::AVOID:
+      context.state = BehaviorState::AVOID_PREPARE;
+      break;
     case BehaviorType::EMERGENCY_STOP:
       context.state = BehaviorState::EMERGENCY_STOP;
       context.target.desired_speed = 0.0;
@@ -122,12 +160,16 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
       context.target.target_link_id = feature.route.current_link_id;
       break;
   }
-  context.debug.selected_reason = "highest_enabled_score";
+  context.debug.selected_reason = stop_preempts_avoid
+      ? "stop_before_avoid"
+      : (avoid_precedes_stop ? "avoid_before_stop"
+                             : "highest_enabled_score");
   context.debug.cost_terms = {
       {"keep", context.score.keep},
       {"follow", context.score.follow},
       {"left_change", context.score.left_change},
       {"right_change", context.score.right_change},
+      {"avoid", context.score.avoid},
       {"stop", context.score.stop},
       {"emergency_stop", context.score.emergency_stop},
   };

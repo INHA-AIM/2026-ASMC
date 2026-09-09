@@ -54,6 +54,22 @@ const FrenetPath* SelectBestPath(const std::vector<FrenetPath>& candidates) {
     return best;
 }
 
+const FrenetPath* SelectShortestValidPath(
+    const std::vector<FrenetPath>& candidates) {
+    const FrenetPath* best = nullptr;
+    constexpr double kTimeTieEpsilon = 1e-6;
+    for (const auto& path : candidates) {
+        if (!path.valid || path.t.empty()) continue;
+        if (best == nullptr ||
+            path.t.back() + kTimeTieEpsilon < best->t.back() ||
+            (std::fabs(path.t.back() - best->t.back()) <= kTimeTieEpsilon &&
+             path.cost_total < best->cost_total)) {
+            best = &path;
+        }
+    }
+    return best;
+}
+
 const FrenetPath* SelectBestStoppingPath(
     const std::vector<FrenetPath>& candidates) {
     const FrenetPath* best = nullptr;
