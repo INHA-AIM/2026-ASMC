@@ -225,6 +225,8 @@ public:
         NORMAL,
         AVOID_PREPARE,
         AVOID_COMMITTED,
+        LANE_CHANGE_PREPARE,
+        LANE_CHANGE_COMMITTED,
     };
 
     // AVOID PREPARE 한 사이클의 결과 (계약 5.2절).
@@ -394,13 +396,109 @@ public:
     // 사라진다.
     void ResetExternalAvoidance();
 
+    // =========================================================================
+    // v2 LANE_CHANGE (D7)
+    //
+    // AVOID의 PREPARE/COMMIT/lifecycle 패턴을 그대로 재사용한다. 차이는:
+    //   - 회피 대상 객체가 없다(항상 has_target_pose=true인 고정 목표점).
+    //   - PASS phase가 없다 - 지나쳐야 할 장애물이 없으므로 목표 d 도달 +
+    //     안정된 lateral rate + heading 정렬로 곧바로 완료한다.
+    //   - 좌/우가 mode(LANE_CHANGE_LEFT/RIGHT)로 이미 갈리므로 DecideAvoidTargets
+    //     같은 좌/우 후보 경쟁이 필요 없다 - 후보는 항상 하나뿐이다.
+    // =========================================================================
+
+    // LANE_CHANGE PREPARE 한 사이클의 결과. AvoidPrepareResult와 같은 이유로
+    // candidate/maintenance 두 출력을 분리한다(헤더 AvoidPrepareResult 주석
+    // 참고) - candidate_path는 진단용이며 MPC로 보내지 않는다.
+    struct LaneChangePrepareResult {
+        bool candidate_valid = false;
+        bool low_speed_context = false;
+
+        // 요청 방향(mode가 이미 LEFT/RIGHT를 정하므로 항상 false다. AVOID와
+        // 필드 shape을 맞추기 위해 유지하되, LANE_CHANGE는 방향 모순이라는
+        // 개념 자체가 없다 - mode 자체가 방향이다).
+        bool direction_conflict = false;
+
+        // 목표점이 ego 후방인가. AVOID와 동일한 sanity check.
+        bool target_behind_ego = false;
+
+        double selected_target_d = 0.0;
+        CartesianPath candidate_path;
+
+        std::size_t generated_candidate_count = 0;
+        std::size_t valid_candidate_count = 0;
+        double selected_cost = -1.0;
+        int blocking_object_id = -1;
+
+        bool maneuver_completed = false;
+        double maneuver_progress = -1.0;
+    };
+
+    // LANE_CHANGE PREPARE 한 사이클을 수행한다. AVOID의 PrepareAvoid()와
+    // 동일한 반환값 의미다 - "maintenance_path를 유효하게 만들었는가"이며
+    // candidate 성공 여부는 result.candidate_valid로 별도로 나간다.
+    bool PrepareLaneChange(const CartesianState& ego,
+                           const std::vector<TrackedObject>& obstacles,
+                           const PlannerCommand& command,
+                           CartesianPath& maintenance_path,
+                           LaneChangePrepareResult& result);
+
+    // COMMIT 이후 잠긴 LANE_CHANGE geometry를 새 collision snapshot으로
+    // 실행한다. AVOID의 PlanCommittedAvoid()와 동일한 계약이다.
+    bool PlanCommittedLaneChange(
+        const CartesianState& ego,
+        const std::vector<TrackedObject>& obstacles,
+        const PlannerCommand& command, CartesianPath& out_path,
+        LaneChangePrepareResult& result);
+
+    // COMMIT core precondition을 mutation 없이 검사한다. CanCommitAvoid()와
+    // 동일한 계약 - node는 candidate 변환을 끝낸 뒤 이 검사를 통과해야
+    // manager를 COMMITTED로 올릴 수 있다.
+    bool CanCommitLaneChange(const LaneChangePrepareResult& result) const;
+
+    // CanCommitLaneChange()가 성공한 결과를 적용한다. 실패 반환이 없다
+    // (ApplyAvoidCommit()과 동일한 계약).
+    void ApplyLaneChangeCommit(const LaneChangePrepareResult& result);
+
+    bool lane_change_committed() const { return v2_lane_change_.committed; }
+    double lane_change_locked_target_d() const {
+        return v2_lane_change_.target_d;
+    }
+    double lane_change_start_d() const { return v2_lane_change_.start_d; }
+    bool lane_change_completed() const { return v2_lane_change_.completed; }
+    double lane_change_maneuver_progress() const {
+        return v2_lane_change_.maneuver_progress;
+    }
+
+    // 외부 LANE_CHANGE 상태를 전부 비운다. ResetExternalAvoidance()와 동일한
+    // 이유로 필요하다 - CANCEL 성공 시 manager는 planner를 호출하지 않으므로
+    // 별도 API가 필요하다.
+    void ResetExternalLaneChange();
+
+    // ---------------------------------------------------------------------
+    // Global Path / RefLine 전환 (D7, §19-25)
+    // ---------------------------------------------------------------------
+
+    // 새 reference line을 만들어 검증까지 통과하면 기존 ref_를 교체한다.
+    // 실패하면 기존 ref_는 그대로 남는다(§22) - 잘못된 GlobalPath 때문에
+    // 정상 동작 중인 reference를 파괴하지 않는다.
+    //
+    // 좌표계에 종속된 history(last_s_/last_d_/AVOID/FOLLOW context 등)는
+    // 성공 시에만 reset한다(§23). 물리적 속도 continuity history
+    // (last_target_speed_)는 reset하지 않는다 - reference가 바뀌어도 차량의
+    // 실제 속도는 그대로다.
+    bool ReplaceReferenceLine(const std::vector<double>& x,
+                              const std::vector<double>& y);
+
 private:
     bool PlanInternal(const CartesianState& ego,
                       const std::vector<TrackedObject>& obstacles,
                       const PlannerCommand* external_command,
                       ExternalPlanningPurpose purpose,
                       CartesianPath& out_path,
-                      AvoidPrepareResult* avoid_prepare_result);
+                      AvoidPrepareResult* avoid_prepare_result,
+                      LaneChangePrepareResult* lane_change_prepare_result =
+                          nullptr);
 
     // PlanInternal의 모든 모드가 공유하는 준비 단계의 결과 (§3).
     // Cartesian->Frenet 변환, object tracking/yaw-rate 추정, target speed
@@ -501,6 +599,82 @@ private:
 
     void UpdateCommittedAvoidLifecycle(double ego_s, double ego_d,
                                        AvoidPrepareResult& result);
+
+    // ---------------------------------------------------------------------
+    // v2 LANE_CHANGE 내부 (D7). Avoid.cpp의 대응 함수와 같은 역할 분리다.
+    // ---------------------------------------------------------------------
+
+    // COMMIT 이전(TRACKING)과 이후(SHIFT)만 있다. AVOID의 PASS에 대응하는
+    // 단계가 없다 - 지나쳐야 할 장애물이 없으므로 SHIFT 완료 판정이 곧
+    // maneuver 완료다(§17).
+    enum class LaneChangePhase { TRACKING, SHIFT };
+
+    struct LaneChangeContext {
+        bool active = false;
+
+        // mode(LANE_CHANGE_LEFT/RIGHT)가 이미 방향을 정하므로 좌/우 자체
+        // 판단에는 쓰지 않는다. 진단·피드백용으로만 보존한다.
+        LateralDirection requested_direction = LateralDirection::NONE;
+
+        LaneChangePhase phase = LaneChangePhase::TRACKING;
+
+        // FSM이 target_pose_map으로 준 목표를 Frenet으로 투영한 값.
+        // LANE_CHANGE는 has_target_pose가 항상 true여야 하므로(계약 3.3절)
+        // has_requested_target_d가 false인 것은 투영 실패를 뜻한다 - AVOID처럼
+        // "pose가 선택 사항이라 없다"가 아니다.
+        bool has_requested_target_d = false;
+        double requested_target_d = 0.0;
+        double requested_target_s = 0.0;
+
+        // EXECUTE 재검증을 통과해 확정한 값 (COMMIT 시점에 lock).
+        bool committed = false;
+        double target_d = 0.0;
+        double start_d = 0.0;
+
+        // heading 정렬 판정에 쓰는 목표 heading. requested_target_d와 함께
+        // 투영 시점에 채운다.
+        bool has_target_yaw = false;
+        double target_yaw = 0.0;
+
+        bool completed = false;
+        // localization jitter로 되돌아가지 않도록 이전 값 이상으로만 갱신한다
+        // (AVOID와 동일한 정책, §18).
+        double maneuver_progress = 0.0;
+    };
+
+    // FSM이 지정한 LANE_CHANGE 목표점 확보 + 이번 cycle 후보 생성 준비.
+    // PrepareExternalAvoidTargets와 대응되지만, 확보할 "객체"가 없다 - 목표는
+    // 항상 target_pose_map 투영 결과([A] 필드)이므로 resolver가 아니라 단순
+    // context 갱신이다.
+    //
+    // 반환값: PlanInternal이 그대로 return해야 하는 상태만 false로 전달한다.
+    bool PrepareExternalLaneChangeTarget(
+        double ego_s, const PlannerCommand& command,
+        bool lane_change_prepare, bool lane_change_committed);
+
+    // LANE_CHANGE PREPARE/COMMITTED 실행 전체. AvoidProcess와 동일한 구조다.
+    bool LaneChangeProcess(
+        const CartesianState& ego, const FrenetState& start,
+        double s, double d, double resolved_target_speed,
+        const std::vector<TrackedObject>& predicted_collision_obstacles,
+        const PlannerCommand& command, bool lane_change_prepare,
+        bool lane_change_committed, CartesianPath& out_path,
+        LaneChangePrepareResult& result);
+
+    // LANE_CHANGE PREPARE의 유지 궤적. BuildAvoidMaintenancePath와 동일한
+    // 3단계 우선순위(충돌 검사를 통과한 현재 차선 유지 -> 종방향 감속 ->
+    // 0속도 hold, §9) - 로직을 복제하지 않고 그대로 재사용한다.
+    bool BuildLaneChangeMaintenancePath(
+        const CartesianState& ego, const FrenetState& start,
+        const PlannerCommand& base_command,
+        const std::vector<TrackedObject>& collision_obstacles,
+        CartesianPath& out_path) const;
+
+    // heading 정렬을 포함한 완료 판정 + progress 갱신. UpdateCommittedAvoidLifecycle과
+    // 같은 역할이지만 PASS phase/obstacle clearance가 없다(§17, §18).
+    void UpdateCommittedLaneChangeLifecycle(double ego_d, double ego_d_dot,
+                                            double ego_yaw,
+                                            LaneChangePrepareResult& result);
 
     // AVOID PREPARE의 유지 궤적을 만든다 (D6-2b).
     //
@@ -871,6 +1045,7 @@ private:
     CurveSpeedConfig curve_speed_cfg_{};
     FollowingConfig following_cfg_{};
     AvoidConfig avoid_cfg_{};
+    LaneChangeConfig lane_change_cfg_{};
     StopConfig stop_cfg_{};
     EmergencyStopConfig emergency_stop_cfg_{};
     MergeConfig merge_cfg_{};
@@ -917,5 +1092,8 @@ private:
     // 이번 사이클에 평가할 v2 AVOID 목표 d 목록 (D6-2a). D6-2b의 후보
     // 생성기가 소비한다. 확보에 실패하면 count=0으로 비워진다.
     AvoidTargetPlan v2_avoid_targets_{};
+
+    // 외부 command(v2) 전용 LANE_CHANGE 상태 (D7).
+    LaneChangeContext v2_lane_change_{};
     std::unordered_map<int, ObjectTrack> object_tracks_{};
 };

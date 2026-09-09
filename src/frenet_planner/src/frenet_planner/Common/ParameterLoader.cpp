@@ -33,6 +33,7 @@ void LoadParams(const std::string& yaml_path,
                  CurveSpeedConfig& curve_speed_cfg,
                 FollowingConfig& following_cfg,
                 AvoidConfig& avoid_cfg,
+                LaneChangeConfig& lane_change_cfg,
                 StopConfig& stop_cfg,
                 EmergencyStopConfig& emergency_stop_cfg,
                 MergeConfig& merge_cfg,
@@ -111,6 +112,14 @@ void LoadParams(const std::string& yaml_path,
     loadInto(root, "planner/avoid/prefer_right_when_equal", avoid_cfg.prefer_right_when_equal);
     // D6-1. 키가 없으면 기본값(5)이 유지되므로 기존 params.yaml도 그대로 쓴다.
     loadInto(root, "planner/avoid/dropout_grace_cycles", avoid_cfg.dropout_grace_cycles);
+
+    // D7. 키가 없으면 LaneChangeConfig 기본값이 유지된다.
+    loadInto(root, "planner/lane_change/lateral_position_tolerance",
+             lane_change_cfg.lateral_position_tolerance);
+    loadInto(root, "planner/lane_change/lateral_speed_tolerance",
+             lane_change_cfg.lateral_speed_tolerance);
+    loadInto(root, "planner/lane_change/heading_tolerance",
+             lane_change_cfg.heading_tolerance);
 
     loadInto(root, "planner/stop/comfortable_decel",  stop_cfg.comfortable_decel);
     loadInto(root, "planner/stop/braking_margin",     stop_cfg.braking_margin);

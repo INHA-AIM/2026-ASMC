@@ -14,6 +14,7 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
     std::string waypoint_file;
     LoadParams(yaml_path, path_cfg_, limits_, cost_weights_, vehicle_shape_,
                collision_cfg_, curve_speed_cfg_, following_cfg_, avoid_cfg_,
+               lane_change_cfg_,
                stop_cfg_, emergency_stop_cfg_, merge_cfg_, highway_merge_cfg_,
                visualization_cfg_,
                wheelbase_, lane_width_, replanning_period_s_,
@@ -70,6 +71,56 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
         }
     }
     ref_loaded_ = true;
+    return true;
+}
+
+bool FrenetPlanner::ReplaceReferenceLine(const std::vector<double>& x,
+                                         const std::vector<double>& y) {
+    // 먼저 임시 객체로 Build/Validate한 뒤 성공할 때만 기존 ref_를
+    // 교체한다(§22). 잘못된 GlobalPath 때문에 기존 정상 reference를
+    // 파괴하지 않는다 - BuildRefLine 자체는 실패를 반환하지 않으므로(항상
+    // RefLine을 만든다), 여기서는 결과가 실제로 쓸 수 있는 경로인지
+    // 최소한의 sanity만 확인한다.
+    if (x.size() < 4 || x.size() != y.size()) return false;
+    for (std::size_t i = 0; i < x.size(); ++i) {
+        if (!std::isfinite(x[i]) || !std::isfinite(y[i])) return false;
+    }
+
+    RefLine candidate = BuildRefLine(x, y, limits_.max_curvature);
+    if (candidate.points.size() < 2 || !(candidate.length > 0.0)) {
+        return false;
+    }
+
+    ref_ = std::move(candidate);
+    ref_loaded_ = true;
+
+    // ---- 좌표계에 종속된 history reset (§23) --------------------------
+    //
+    // last_s_/last_d_ 등은 이전 reference의 s 좌표계에서 의미를 갖는다.
+    // 그대로 두면 FindClosestS의 s_hint가 새 reference의 완전히 다른
+    // 구간을 가리켜 최근접점이 튄다(ref_line.hpp의 s_hint window 주석과
+    // 같은 문제). AVOID/FOLLOW/LANE_CHANGE context도 잠긴 target_d/s가
+    // 이전 reference 기준이므로 함께 비운다.
+    has_last_s_ = false;
+    last_s_ = 0.0;
+    last_d_ = 0.0;
+    last_d_dot_ = 0.0;
+    v2_following_ = FollowingContext{};
+    v2_avoidance_ = AvoidanceContext{};
+    v2_avoid_targets_ = AvoidTargetPlan{};
+    v2_lane_change_ = LaneChangeContext{};
+    stop_ = StopContext{};
+    last_candidate_paths_.clear();
+    last_candidate_validity_.clear();
+    object_tracks_.clear();
+
+    // ---- 물리적 속도 continuity history는 유지한다 (§23) ---------------
+    //
+    // last_target_speed_ / has_target_speed_history_는 건드리지 않는다 -
+    // reference가 바뀌었다고 차량의 실제 속도가 0이 된 것이 아니다. 그대로
+    // 두면 target speed rate limiter가 이번 교체 직후에도 정상적으로
+    // 연속성을 유지한다.
+
     return true;
 }
 
@@ -255,6 +306,16 @@ bool IsSupportedExternalMode(BehaviorState mode) {
         case AVOID:
             return true;
 
+        // D7: LANE_CHANGE도 AVOID와 같은 단계로 열렸다 - target 확보까지만
+        // 열고, 후보 생성이 실제로 막히면 아래 ResolveManeuver 직전에서
+        // UNSUPPORTED_BEHAVIOR로 막는다(AVOID와 동일한 이유).
+        //
+        // node의 SetImplementedManeuver(LANE_CHANGE)는 D7 마지막 단계까지
+        // 닫혀 있으므로 ROS 경로로는 여기까지 도달하지 않는다(§28).
+        case LANE_CHANGE_LEFT:
+        case LANE_CHANGE_RIGHT:
+            return true;
+
         default:
             return false;
     }
@@ -298,6 +359,22 @@ bool ValidateExternalCommand(const PlannerCommand& command,
     // 대상 선택 권한은 FSM에 있고(primary_object_id), planner가 스스로
     // 고르지 않는다(D6-1).
     if (command.mode == AVOID && command.target_object_id < 0) {
+        reason = FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
+        return false;
+    }
+
+    // LANE_CHANGE: 목표점 투영 결과가 있어야 한다. AVOID의 target_object_id
+    // 검증과 같은 이유다 - v2에서 has_target_pose는 항상 true로 강제되므로
+    // (계약 3.3절), has_lane_change_target_d=false는 투영 실패를 뜻하며 목표
+    // 없이는 어느 방향으로 얼마나 이동할지 정할 수 없다(D7). 투영 결과 값
+    // 자체의 유한성도 확인한다 - node의 ProjectPointToFrenet은 유한한 값만
+    // 반환하지만, 다른 호출자(테스트, 향후 호출부)가 has_..._d=true와 함께
+    // NaN을 넣는 경우까지 방어한다.
+    if ((command.mode == LANE_CHANGE_LEFT ||
+         command.mode == LANE_CHANGE_RIGHT) &&
+        (!command.has_lane_change_target_d ||
+         !std::isfinite(command.lane_change_target_d) ||
+         !std::isfinite(command.lane_change_target_s))) {
         reason = FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
         return false;
     }
@@ -368,6 +445,46 @@ bool FrenetPlanner::PlanCommittedAvoid(
     return PlanInternal(ego, obstacles, &command,
                         ExternalPlanningPurpose::AVOID_COMMITTED,
                         out_path, &result);
+}
+
+bool FrenetPlanner::PrepareLaneChange(
+    const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
+    const PlannerCommand& command, CartesianPath& maintenance_path,
+    LaneChangePrepareResult& result) {
+    result = LaneChangePrepareResult{};
+    PlanFailureReason reason = PlanFailureReason::NONE;
+    if (!ValidateExternalCommand(command, reason)) {
+        last_failure_reason_ = reason;
+        return false;
+    }
+    if (command.mode != LANE_CHANGE_LEFT && command.mode != LANE_CHANGE_RIGHT) {
+        last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
+        return false;
+    }
+    return PlanInternal(ego, obstacles, &command,
+                        ExternalPlanningPurpose::LANE_CHANGE_PREPARE,
+                        maintenance_path, nullptr, &result);
+}
+
+bool FrenetPlanner::PlanCommittedLaneChange(
+    const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
+    const PlannerCommand& command, CartesianPath& out_path,
+    LaneChangePrepareResult& result) {
+    result = LaneChangePrepareResult{};
+    PlanFailureReason reason = PlanFailureReason::NONE;
+    if (!ValidateExternalCommand(command, reason)) {
+        last_failure_reason_ = reason;
+        return false;
+    }
+    if ((command.mode != LANE_CHANGE_LEFT &&
+         command.mode != LANE_CHANGE_RIGHT) ||
+        !v2_lane_change_.active || !v2_lane_change_.committed) {
+        last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
+        return false;
+    }
+    return PlanInternal(ego, obstacles, &command,
+                        ExternalPlanningPurpose::LANE_CHANGE_COMMITTED,
+                        out_path, nullptr, &result);
 }
 
 FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
@@ -463,6 +580,13 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
         // 실패했는데 이전 사이클의 목표로 후보를 만들 수 있다.
         v2_avoid_targets_ = AvoidTargetPlan{};
     }
+    // v2 LANE_CHANGE 상태도 같은 이유로 같은 위치에서 비운다(D7). AVOID와
+    // 동일한 구조 - 다른 mode로 전환된 뒤에도 context가 남으면 다음
+    // LANE_CHANGE가 stale 목표로 유예를 받는다.
+    if (external_command.mode != LANE_CHANGE_LEFT &&
+        external_command.mode != LANE_CHANGE_RIGHT) {
+        v2_lane_change_ = LaneChangeContext{};
+    }
 
     return ctx;
 }
@@ -471,13 +595,18 @@ bool FrenetPlanner::PlanInternal(
     const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
     const PlannerCommand* external_command,
     ExternalPlanningPurpose purpose, CartesianPath& out_path,
-    AvoidPrepareResult* avoid_prepare_result) {
+    AvoidPrepareResult* avoid_prepare_result,
+    LaneChangePrepareResult* lane_change_prepare_result) {
     // purpose가 계산 내용을 정한다. 포인터 유무로 판단하지 않는다 - 진단용
     // 으로 포인터만 넘겨도 동작이 바뀌면 안 된다(헤더 주석 참고).
     const bool avoid_prepare =
         purpose == ExternalPlanningPurpose::AVOID_PREPARE;
     const bool avoid_committed =
         purpose == ExternalPlanningPurpose::AVOID_COMMITTED;
+    const bool lane_change_prepare =
+        purpose == ExternalPlanningPurpose::LANE_CHANGE_PREPARE;
+    const bool lane_change_committed =
+        purpose == ExternalPlanningPurpose::LANE_CHANGE_COMMITTED;
     last_failure_reason_ = PlanFailureReason::NONE;
     last_candidate_paths_.clear();
     last_candidate_validity_.clear();
@@ -568,6 +697,27 @@ bool FrenetPlanner::PlanInternal(
         return false;
     }
 
+    // =====================================================================
+    // 외부 LANE_CHANGE 목표 준비 (D7)
+    //
+    // AVOID의 대상 확보와 같은 위치다 - 저속 fallback보다 먼저 처리해야
+    // 감속 중에 LANE_CHANGE 명령을 받아도 목표를 정상적으로 준비한다
+    // (AVOID 헤더 주석의 실측 사례와 동일한 이유).
+    if (external_command->mode == LANE_CHANGE_LEFT ||
+        external_command->mode == LANE_CHANGE_RIGHT) {
+        if (!PrepareExternalLaneChangeTarget(
+                s, *external_command, lane_change_prepare,
+                lane_change_committed)) {
+            return false;
+        }
+    }
+    if ((lane_change_prepare || lane_change_committed) &&
+        external_command->mode != LANE_CHANGE_LEFT &&
+        external_command->mode != LANE_CHANGE_RIGHT) {
+        last_failure_reason_ = PlanFailureReason::INVALID_COMMAND;
+        return false;
+    }
+
     const bool external_stop = external_command->mode == STOP;
     // 외부 FOLLOW도 저속 fallback을 타지 않는다. 그 경로는 kMinCreepSpeed로
     // 기어서 전진하는데, 앞차가 정지해 있으면 그대로 다가가 붙는다. FOLLOW의
@@ -586,7 +736,7 @@ bool FrenetPlanner::PlanInternal(
     // 0으로 나오고 maintenance가 미검사 crawl이었다).
     if (std::fabs(ego.v) < kLowSpeedFallbackV &&
         !external_stop && !external_follow && !avoid_prepare &&
-        !avoid_committed) {
+        !avoid_committed && !lane_change_prepare && !lane_change_committed) {
         static int low_speed_log_tick = 0;
         if (++low_speed_log_tick % 5 == 0) {
             std::printf("[FrenetPlanner-STATE] mode=LOW_SPEED_FALLBACK "
@@ -640,8 +790,20 @@ bool FrenetPlanner::PlanInternal(
             avoid_prepare, avoid_committed, out_path, *avoid_prepare_result);
     }
 
+    // =====================================================================
+    // LANE_CHANGE PREPARE/COMMITTED (D7). AVOID와 동일한 구조 - 후보(candidate)와
+    // 유지 궤적(maintenance)을 절대 같은 것으로 취급하지 않는다.
+    // =====================================================================
+    if (lane_change_prepare || lane_change_committed) {
+        return LaneChangeProcess(
+            ego, start, s, d, resolved_target_speed,
+            predicted_obstacles, *external_command,
+            lane_change_prepare, lane_change_committed, out_path,
+            *lane_change_prepare_result);
+    }
+
     // 여기 도달하면 external_command->mode는 IsSupportedExternalMode의
-    // whitelist와 위쪽 EMERGENCY/AVOID 분기에 의해 반드시
+    // whitelist와 위쪽 EMERGENCY/AVOID/LANE_CHANGE 분기에 의해 반드시
     // {LANE_KEEPING, STOP, FOLLOWING} 중 하나다. Plan()이 validation ->
     // 공용 준비(위) -> switch(mode) -> Process() -> 공용 후처리
     // (ExecuteManeuverPipeline 내부)로 읽히도록 각 모드의 명시적 진입점으로

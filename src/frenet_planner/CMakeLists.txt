@@ -44,6 +44,7 @@ add_library(frenet_planner_core
   src/frenet_planner/Maneuver/Keep.cpp
   src/frenet_planner/Maneuver/Stop.cpp
   src/frenet_planner/Maneuver/Avoid.cpp
+  src/frenet_planner/Maneuver/LaneChange.cpp
   src/frenet_planner/Maneuver/Merge.cpp
   src/frenet_planner/Common/ParameterLoader.cpp
   src/frenet_planner/visualization/planner_debug_writer.cpp
@@ -152,6 +153,14 @@ add_executable(empty_objects_test_publisher
 add_dependencies(empty_objects_test_publisher ${catkin_EXPORTED_TARGETS})
 target_link_libraries(empty_objects_test_publisher ${catkin_LIBRARIES})
 
+# D7 §31: LANE_CHANGE FSM wire contract 재현 tool. 실제 FSM scorer의
+# LANE_CHANGE gate는 아직 닫혀 있으므로(§20) 이 tool로 PREPARE/EXECUTE/CANCEL
+# handshake를 손으로 재현해 검증한다.
+add_executable(lane_change_test_publisher
+  src/tools/lane_change_test_publisher.cpp)
+add_dependencies(lane_change_test_publisher ${catkin_EXPORTED_TARGETS})
+target_link_libraries(lane_change_test_publisher ${catkin_LIBRARIES})
+
 if(CATKIN_ENABLE_TESTING)
   add_executable(geometry_foundation_test
     tests/geometry_foundation_test.cpp
@@ -255,6 +264,37 @@ if(CATKIN_ENABLE_TESTING)
     ${catkin_LIBRARIES}
   )
   add_test(NAME command_avoid_target_test COMMAND command_avoid_target_test)
+
+  # D7: 외부 LANE_CHANGE의 PREPARE -> READY -> EXECUTE -> COMMITTED ->
+  # EXECUTING -> COMPLETED 회귀. AVOID(D6)의 transaction/lifecycle 패턴 재사용을
+  # 검증한다.
+  add_executable(command_lane_change_plan_test
+    tests/command_lane_change_plan_test.cpp
+  )
+  target_compile_definitions(command_lane_change_plan_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(command_lane_change_plan_test
+    frenet_planner_core
+    frenet_command_execution_manager
+    ${catkin_LIBRARIES}
+  )
+  add_test(NAME command_lane_change_plan_test COMMAND command_lane_change_plan_test)
+
+  # D7 §21-25: Global Path / RefLine 전환(ReplaceReferenceLine) 회귀.
+  add_executable(lane_change_reference_switch_test
+    tests/lane_change_reference_switch_test.cpp
+  )
+  target_compile_definitions(lane_change_reference_switch_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(lane_change_reference_switch_test
+    frenet_planner_core
+    ${catkin_LIBRARIES}
+  )
+  add_test(NAME lane_change_reference_switch_test COMMAND lane_change_reference_switch_test)
 
   # D4-3: 외부 EMERGENCY_STOP의 직접 감속 궤적 회귀. EMERGENCY 전용 분기를
   # 제거하면(후보 파이프라인으로 흘려보내면) 10건이 실패한다.
@@ -433,6 +473,7 @@ install(TARGETS
     frenet_command_execution_manager
     frenet_planner_node
     empty_objects_test_publisher
+    lane_change_test_publisher
     v2_ros_regression_test
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

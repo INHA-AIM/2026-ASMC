@@ -19,6 +19,7 @@ Canonical topic(현재 production 경로, v2):
 | subscribe | `/vehicle/state` | `asmc_msgs/VehicleState` |
 | subscribe | `/perception/objects` | `asmc_msgs/DetectedObjectArray` |
 | subscribe | `/behavior/command_v2` | `asmc_msgs/BehaviorCommand` |
+| subscribe | `/planning/global_path` | `asmc_msgs/GlobalPath` (D7, §19-25) |
 | publish | `/planning/trajectory` | `asmc_msgs/Trajectory` |
 | publish | `/planning/frenet_feedback_v2` | `asmc_msgs/FrenetFeedback` |
 
@@ -27,9 +28,16 @@ Canonical topic(현재 production 경로, v2):
 그 사이클은 v2가 소유하고, v2 명령이 없을 때만 v1 경로가 동작한다. v1은 D10
 cutover 전까지의 과도기 경로다(`../../docs/fsm-frenet-interface-v2.md` 10절).
 
-현재 v2에서 구현된 maneuver: KEEP, STOP, EMERGENCY_STOP, FOLLOW, AVOID.
-MERGE/LANE_CHANGE 등 나머지는 미구현이며, 미구현 maneuver 명령은 accept는 하되
+현재 v2에서 production gate가 열린 maneuver: KEEP, STOP, EMERGENCY_STOP,
+FOLLOW, AVOID. MERGE는 미구현이며, gate가 닫힌 maneuver 명령은 accept는 하되
 planning하지 않고 안전정지로 응답한다.
+
+LANE_CHANGE(D7)는 core/handshake(PREPARE→READY→EXECUTE→COMMITTED→EXECUTING→
+COMPLETED, AVOID와 동일한 transaction 패턴 재사용)와 ROS wiring까지 전부
+구현되어 있지만, `frenet_planner_node`의 production gate
+(`SetImplementedManeuver`)는 아직 닫혀 있다 - MORAI 실차 검증 전까지는 다른
+gate와 마찬가지로 열지 않는다(§28). `tools/lane_change_test_publisher.cpp`로
+gate 없이 직접 command를 발행해 검증할 수 있다.
 
 ## Runtime Flow
 
@@ -113,7 +121,7 @@ bash scripts/build_planning_control.sh
 # 또는 catkin 워크스페이스에서 이 패키지만
 catkin_make --pkg frenet_planner
 
-# 등록된 회귀 테스트 전체 실행(현재 22개)
+# 등록된 회귀 테스트 전체 실행(현재 24개)
 cd <catkin build dir>/frenet_planner   # 또는 워크스페이스 build/frenet_planner
 ctest --output-on-failure
 ```

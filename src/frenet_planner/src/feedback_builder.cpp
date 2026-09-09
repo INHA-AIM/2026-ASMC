@@ -22,7 +22,8 @@ void FrenetPlannerNode::publishFeedbackV2(
     uint32_t command_id, const CommandAcceptance& acceptance,
     const asmc_msgs::Trajectory* trajectory, uint8_t trajectory_source,
     bool plan_valid, bool frenet_state_valid, double current_s,
-    const AvoidFeedbackFields* avoid_fields) {
+    const AvoidFeedbackFields* avoid_fields,
+    const LaneChangeFeedbackFields* lane_change_fields) {
     asmc_msgs::FrenetFeedback feedback;
     feedback.header.stamp = ros::Time::now();
     feedback.header.frame_id = "map";
@@ -47,12 +48,21 @@ void FrenetPlannerNode::publishFeedbackV2(
     // 유도하지 않고 호출자가 정한다(계약 8.3절, 헤더 D6-0 주석 참고).
     feedback.plan_valid = plan_valid;
 
-    // Frenet 상태와 trajectory source는 독립 축이다. post-COMMIT AVOID는
-    // LOCKED source여도 이번 cycle에 실제 planning을 했으므로 유효한 속도와
-    // s/d를 보낸다. terminal latch는 caller가 state_valid=false로 구분한다.
+    // Frenet 상태와 trajectory source는 독립 축이다. post-COMMIT AVOID/
+    // LANE_CHANGE는 LOCKED source여도 이번 cycle에 실제 planning을 했으므로
+    // 유효한 속도와 s/d를 보낸다. terminal latch는 caller가
+    // state_valid=false로 구분한다.
+    //
+    // 두 fields 포인터는 같은 cycle에 동시에 넘어오지 않는다 - 호출자는
+    // planner_command.mode에 따라 둘 중 하나만 채운다(AVOID 또는
+    // LANE_CHANGE). 있는 쪽의 applied_speed_mps를 쓴다.
+    const bool has_maneuver_fields =
+        avoid_fields != nullptr || lane_change_fields != nullptr;
+    const double maneuver_applied_speed_mps = avoid_fields
+        ? avoid_fields->applied_speed_mps
+        : (lane_change_fields ? lane_change_fields->applied_speed_mps : -1.0);
     const FeedbackKinematics kinematics = ResolveFeedbackKinematics(
-        trajectory_source, avoid_fields != nullptr,
-        avoid_fields ? avoid_fields->applied_speed_mps : -1.0,
+        trajectory_source, has_maneuver_fields, maneuver_applied_speed_mps,
         planner_.last_target_speed(), frenet_state_valid, current_s,
         planner_.last_d());
     feedback.applied_speed_mps = kinematics.applied_speed_mps;
@@ -63,7 +73,8 @@ void FrenetPlannerNode::publishFeedbackV2(
     // D4-1은 KEEP만 다룬다. 아직 채우지 않는 필드는 메시지가 정의한 sentinel을
     // 정확히 사용한다 - 임의의 0이나 추측값을 넣지 않는다(계약 9.4절).
     feedback.maneuver_progress = avoid_fields
-        ? avoid_fields->maneuver_progress : -1.0;
+        ? avoid_fields->maneuver_progress
+        : (lane_change_fields ? lane_change_fields->maneuver_progress : -1.0);
     // 실제로 추종 중인 leader. command.primary_object_id를 그대로 되돌려
     // 보내면 "지정했다"와 "확보했다"를 구분할 수 없어, 확보에 실패한
     // 사이클에도 ID가 나간다(계약 9.2절).
@@ -86,6 +97,18 @@ void FrenetPlannerNode::publishFeedbackV2(
         feedback.valid_candidate_count = avoid_fields->valid_candidate_count;
         feedback.selected_cost = avoid_fields->selected_cost;
         feedback.blocking_object_id = avoid_fields->blocking_object_id;
+    } else if (lane_change_fields) {
+        // LANE_CHANGE(D7)는 AVOID와 같은 필드를 재사용한다(계약 9.4절: "D7
+        // (LANE_CHANGE): D6 필드 재사용"). target_d는 요청값이 아니라 실제
+        // selected/locked된 값이다(호출자가 이미 그렇게 채워 넘긴다).
+        feedback.target_d_valid = lane_change_fields->target_d_valid;
+        feedback.target_d = lane_change_fields->target_d;
+        feedback.generated_candidate_count =
+            lane_change_fields->generated_candidate_count;
+        feedback.valid_candidate_count =
+            lane_change_fields->valid_candidate_count;
+        feedback.selected_cost = lane_change_fields->selected_cost;
+        feedback.blocking_object_id = lane_change_fields->blocking_object_id;
     } else {
         feedback.target_d_valid = false;
         feedback.target_d = 0.0;

@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "avoid_commit_coordinator.hpp"
+#include "lane_change_commit_coordinator.hpp"
 #include <geometry_msgs/Point.h>
 #include "message_converter.hpp"
 #include "steady_freshness.hpp"
@@ -41,6 +42,9 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     // 유지한다(계약 1.2절, 10.6절).
     std::string behavior_command_v2_topic = "/behavior/command_v2";
     std::string feedback_v2_topic = "/planning/frenet_feedback_v2";
+    // D7 §19: Route/FSM -> Frenet 전역 경로. production RouteManager 연결은
+    // 이번 작업 범위가 아니다(§20) - Frenet은 이 topic을 수신만 한다.
+    std::string global_path_topic = "/planning/global_path";
     std::string marker_topic = "/planning/markers";
     std::string planner_config_path;
 
@@ -59,6 +63,7 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     pnh_.param("publish_topics/feedback", feedback_topic, feedback_topic);
     pnh_.param("topics/behavior_command_v2", behavior_command_v2_topic,
                behavior_command_v2_topic);
+    pnh_.param("topics/global_path", global_path_topic, global_path_topic);
     pnh_.param("publish_topics/feedback_v2", feedback_v2_topic,
                feedback_v2_topic);
     pnh_.param("v2/stop/max_target_heading_error_rad",
@@ -103,6 +108,38 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
         ROS_WARN("Invalid v2/avoid/max_target_heading_error_rad %.3f; "
                  "using 45 deg", avoid_max_target_heading_error_rad_);
         avoid_max_target_heading_error_rad_ = 0.785398;
+    }
+
+    // v2 LANE_CHANGE target pose 투영 (D7). AVOID와 값을 공유하지 않는다 -
+    // 헤더 주석 참고.
+    pnh_.param("v2/lane_change/projection_search_window",
+               lane_change_projection_search_window_,
+               lane_change_projection_search_window_);
+    pnh_.param("v2/lane_change/max_target_lateral_offset",
+               lane_change_max_target_lateral_offset_,
+               lane_change_max_target_lateral_offset_);
+    pnh_.param("v2/lane_change/max_target_heading_error_rad",
+               lane_change_max_target_heading_error_rad_,
+               lane_change_max_target_heading_error_rad_);
+
+    if (!std::isfinite(lane_change_projection_search_window_) ||
+        lane_change_projection_search_window_ <= 0.0) {
+        ROS_WARN("Invalid v2/lane_change/projection_search_window %.3f; "
+                 "using 100 m", lane_change_projection_search_window_);
+        lane_change_projection_search_window_ = 100.0;
+    }
+    if (!std::isfinite(lane_change_max_target_lateral_offset_) ||
+        lane_change_max_target_lateral_offset_ <= 0.0) {
+        ROS_WARN("Invalid v2/lane_change/max_target_lateral_offset %.3f; "
+                 "using 6 m", lane_change_max_target_lateral_offset_);
+        lane_change_max_target_lateral_offset_ = 6.0;
+    }
+    if (!std::isfinite(lane_change_max_target_heading_error_rad_) ||
+        lane_change_max_target_heading_error_rad_ <= 0.0 ||
+        lane_change_max_target_heading_error_rad_ > M_PI) {
+        ROS_WARN("Invalid v2/lane_change/max_target_heading_error_rad %.3f; "
+                 "using 45 deg", lane_change_max_target_heading_error_rad_);
+        lane_change_max_target_heading_error_rad_ = 0.785398;
     }
     pnh_.param("publish_topics/markers", marker_topic, marker_topic);
 
@@ -164,6 +201,8 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     behavior_command_v2_sub_ = nh_.subscribe(
         behavior_command_v2_topic, 1,
         &FrenetPlannerNode::behaviorCommandV2Callback, this);
+    global_path_sub_ = nh_.subscribe(
+        global_path_topic, 1, &FrenetPlannerNode::globalPathCallback, this);
 
     planning_timer_ = nh_.createSteadyTimer(
         ros::WallDuration(1.0 / planning_frequency_hz_),
@@ -403,6 +442,12 @@ void FrenetPlannerNode::publishStop(const InputSnapshot& snapshot,
 }
 
 void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
+    // D7 §21/§24: pending GlobalPath는 이 cycle의 command/transaction
+    // dispatch보다 먼저, 안전한 경우에만 적용한다 - runV2PlanningCycle이
+    // 이번 tick에 COMMITTED/EXECUTING LANE_CHANGE를 재평가하기 전에
+    // reference가 확정되어 있어야 그 재평가가 새 좌표계를 일관되게 쓴다.
+    applyPendingGlobalPathIfSafe();
+
     // v2 명령이 하나라도 도착했으면 v2가 이 사이클을 소유한다. v1 경로는
     // v2 명령이 없을 때만 동작하므로, FSM이 v2로 전환하기 전까지 기존
     // KEEP/STOP 주행이 그대로 유지된다(계약 10.6절).
@@ -649,6 +694,87 @@ void FrenetPlannerNode::behaviorCommandV2Callback(
     std::lock_guard<std::mutex> lock(input_mutex_);
     latest_v2_command_ = *message;
     has_v2_command_ = true;
+}
+
+void FrenetPlannerNode::globalPathCallback(
+    const asmc_msgs::GlobalPath::ConstPtr& message) {
+    if (!message) return;
+    // 저장만 한다(§19: 수신 -> validate -> pending 보관 -> 안전한 boundary
+    // 에서 적용). 실제 검증/적용은 20 Hz timer의
+    // applyPendingGlobalPathIfSafe()가 수행한다 - 콜백에서 바로 RefLine을
+    // 바꾸면 그 순간이 마침 LANE_CHANGE COMMITTED 도중일 수 있다.
+    std::lock_guard<std::mutex> lock(input_mutex_);
+    // 과거/중복 revision은 저장하지 않는다 - 오래된 메시지가 나중에
+    // 도착해도 이미 적용된 최신 경로를 되돌리지 않는다.
+    if (has_applied_global_path_revision_ &&
+        message->revision <= applied_global_path_revision_) {
+        return;
+    }
+    if (has_pending_global_path_ &&
+        message->revision <= pending_global_path_.revision) {
+        return;
+    }
+    pending_global_path_ = *message;
+    has_pending_global_path_ = true;
+}
+
+void FrenetPlannerNode::applyPendingGlobalPathIfSafe() {
+    asmc_msgs::GlobalPath pending;
+    {
+        std::lock_guard<std::mutex> lock(input_mutex_);
+        if (!has_pending_global_path_) return;
+        pending = pending_global_path_;
+        // 성공/실패와 무관하게 이번 시도로 pending을 소비한다(클래스 주석
+        // 참고) - 실패했다면 FSM이 새 revision으로 재발행해야 한다.
+        has_pending_global_path_ = false;
+    }
+
+    // ---- 안전한 boundary인지 확인 (§21, §24) --------------------------
+    //
+    // COMMITTED/EXECUTING인 handshake maneuver(LANE_CHANGE/AVOID/MERGE) 중에
+    // reference를 바꾸면 잠긴 target_d/start_d의 좌표계가 흔들린다. 그런
+    // 상태에서는 이번 revision을 적용하지 않고 버린다 - 다음 안전한 cycle에
+    // FSM이 재발행하면 그때 적용된다.
+    if (command_manager_.is_non_preemptible()) {
+        ROS_WARN_THROTTLE(
+            1.0,
+            "GlobalPath revision=%u deferred: an active maneuver transaction "
+            "is non-preemptible right now",
+            pending.revision);
+        return;
+    }
+
+    if (pending.waypoints.size() < 4) {
+        ROS_WARN("GlobalPath revision=%u rejected: only %zu waypoints (need "
+                 ">= 4)",
+                 pending.revision, pending.waypoints.size());
+        return;
+    }
+    std::vector<double> x;
+    std::vector<double> y;
+    x.reserve(pending.waypoints.size());
+    y.reserve(pending.waypoints.size());
+    for (const auto& point : pending.waypoints) {
+        x.push_back(point.x);
+        y.push_back(point.y);
+    }
+
+    if (!planner_.ReplaceReferenceLine(x, y)) {
+        ROS_WARN("GlobalPath revision=%u rejected: ReplaceReferenceLine "
+                 "failed validation; keeping the current reference",
+                 pending.revision);
+        return;
+    }
+
+    has_applied_global_path_revision_ = true;
+    applied_global_path_revision_ = pending.revision;
+    // v2 궤적 캐시도 이전 reference 기준이므로 재사용하면 안 된다
+    // (ReplaceReferenceLine이 core 내부 context는 이미 reset했지만, node가
+    // 들고 있는 v2 trajectory cache는 이 함수의 책임이다).
+    has_last_v2_trajectory_ = false;
+    ROS_INFO("GlobalPath revision=%u applied: active_link_id=%s "
+             "waypoints=%zu",
+             pending.revision, pending.active_link_id.c_str(), x.size());
 }
 
 bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
@@ -998,6 +1124,15 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         avoid_route = RouteAvoidPlanning(command_manager_);
     }
 
+    // LANE_CHANGE(D7)도 execution_request가 아니라 transaction state로
+    // 경로를 고른다(AVOID와 동일한 이유).
+    const bool is_lane_change = planner_command.mode == LANE_CHANGE_LEFT ||
+                                planner_command.mode == LANE_CHANGE_RIGHT;
+    LaneChangePlanningRoute lane_change_route = LaneChangePlanningRoute::INVALID;
+    if (is_lane_change) {
+        lane_change_route = RouteLaneChangePlanning(command_manager_);
+    }
+
     // ---- 4b. STOP 목표 투영 ---------------------------------------------
     // ConvertBehaviorCommand는 RefLine을 모르므로 stop_position을 NaN으로
     // 남긴다. RefLine을 가진 이 계층에서 map 좌표 -> Frenet s로 투영한다.
@@ -1262,6 +1397,189 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         planner_command.avoid_target_s = avoid_s;
     }
 
+    // ---- 4c-2. LANE_CHANGE 목표점 투영 (D7) ------------------------------
+    //
+    // AVOID와 달리 target pose는 **필수**다(계약 3.3절 검증 matrix -
+    // has_target_pose=true 강제). 투영 실패는 has_lane_change_target_d=false로
+    // 표현되고, ValidateExternalCommand가 그것을 INVALID_COMMAND로 거부한다
+    // (frenet_planner.cpp 참고) - 이 블록 자체는 STOP/AVOID와 동일한 패턴으로
+    // 투영/heading 검증만 하고 core 판단에 관여하지 않는다.
+    if (is_lane_change &&
+        lane_change_route == LaneChangePlanningRoute::PRE_COMMIT) {
+        if (!ego_s_valid) {
+            command_manager_.NotifyPlanFailed(
+                /*terminal=*/true,
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
+                "cannot project ego onto the reference line");
+            CommandAcceptance failed = acceptance;
+            failed.planning_target = PlanningTarget::NONE;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
+            failed.detail = "cannot project ego onto the reference line";
+            has_last_v2_trajectory_ = false;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+
+        double lane_change_s = 0.0;
+        double lane_change_d = 0.0;
+        if (!command.has_target_pose ||
+            !planner_.ProjectPointToFrenet(
+                command.target_pose_map.position.x,
+                command.target_pose_map.position.y, ego_s,
+                lane_change_projection_search_window_,
+                lane_change_max_target_lateral_offset_, lane_change_s,
+                lane_change_d)) {
+            // has_target_pose=false는 이미 ValidateBehaviorCommand가
+            // 거부해야 정상이지만(계약 3.3절), 방어적으로 여기서도 같은
+            // 결과로 수렴시킨다 - Frenet이 임의의 기본 목표로 대체하지
+            // 않는다.
+            command_manager_.NotifyPlanFailed(
+                /*terminal=*/true,
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
+                "lane change target is not near the reference line");
+            CommandAcceptance failed = acceptance;
+            failed.planning_target = PlanningTarget::NONE;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
+            failed.detail = "lane change target is not near the reference line";
+            ROS_WARN_THROTTLE(
+                1.0,
+                "v2 LANE_CHANGE target (%.2f, %.2f) is not near the "
+                "reference line (command_id=%u)",
+                command.target_pose_map.position.x,
+                command.target_pose_map.position.y, command.command_id);
+            has_last_v2_trajectory_ = false;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+
+        // heading 검증. STOP/AVOID와 같은 이유다(계약 3.4절 4항).
+        double reference_heading = 0.0;
+        if (!planner_.ReferenceHeadingAt(lane_change_s, reference_heading)) {
+            command_manager_.NotifyPlanFailed(
+                /*terminal=*/true,
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
+                "cannot read reference heading at the lane change target");
+            CommandAcceptance failed = acceptance;
+            failed.planning_target = PlanningTarget::NONE;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
+            failed.detail =
+                "cannot read reference heading at the lane change target";
+            has_last_v2_trajectory_ = false;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+
+        const double lane_change_target_yaw =
+            YawFromQuaternion(command.target_pose_map.orientation);
+        const double lane_change_heading_error = std::fabs(
+            NormalizeAngle(lane_change_target_yaw - reference_heading));
+        if (lane_change_heading_error >
+            lane_change_max_target_heading_error_rad_) {
+            command_manager_.NotifyPlanFailed(
+                /*terminal=*/true,
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
+                "lane change target heading disagrees with the reference "
+                "line");
+            CommandAcceptance failed = acceptance;
+            failed.planning_target = PlanningTarget::NONE;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
+            failed.detail =
+                "lane change target heading disagrees with the reference "
+                "line";
+            ROS_WARN_THROTTLE(
+                1.0,
+                "v2 LANE_CHANGE target heading rejected: target=%.3f "
+                "ref=%.3f error=%.3f rad > %.3f (command_id=%u)",
+                lane_change_target_yaw, reference_heading,
+                lane_change_heading_error,
+                lane_change_max_target_heading_error_rad_,
+                command.command_id);
+            has_last_v2_trajectory_ = false;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+
+        // delta_d 기준 direction consistency 검증(§5). LEFT는 목표 d가
+        // 요청 방향으로 유의미하게 이동해야 하고, RIGHT는 반대 방향이어야
+        // 한다. 단순 target_d 부호가 아니라 delta_d = requested_target_d -
+        // current_d로 판단한다 - 곡선 구간에서는 차선 중앙 d 자체가 0이
+        // 아닐 수 있어 부호만 보면 오판한다.
+        constexpr double kMinimumDirectionDelta = 0.5;  // [m]
+        // 현재 ego d는 매 Plan() 사이클마다 갱신되는 진단 getter
+        // (last_d())를 재사용한다 - 새 core API를 만들지 않는다.
+        const double delta_d = lane_change_d - planner_.last_d();
+        const bool direction_ok =
+            (planner_command.mode == LANE_CHANGE_LEFT &&
+             delta_d > kMinimumDirectionDelta) ||
+            (planner_command.mode == LANE_CHANGE_RIGHT &&
+             delta_d < -kMinimumDirectionDelta);
+        if (!direction_ok) {
+            command_manager_.NotifyPlanFailed(
+                /*terminal=*/true,
+                asmc_msgs::FrenetFeedback::INVALID_COMMAND,
+                "lane change target direction disagrees with the requested "
+                "side");
+            CommandAcceptance failed = acceptance;
+            failed.planning_target = PlanningTarget::NONE;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code = asmc_msgs::FrenetFeedback::INVALID_COMMAND;
+            failed.detail =
+                "lane change target direction disagrees with the requested "
+                "side";
+            ROS_WARN_THROTTLE(
+                1.0,
+                "v2 LANE_CHANGE direction mismatch: mode=%d delta_d=%.3f "
+                "(command_id=%u)",
+                static_cast<int>(planner_command.mode), delta_d,
+                command.command_id);
+            has_last_v2_trajectory_ = false;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+
+        planner_command.has_lane_change_target_d = true;
+        planner_command.lane_change_target_d = lane_change_d;
+        planner_command.lane_change_target_s = lane_change_s;
+    }
+
     const CommandFingerprint fingerprint = MakeCommandFingerprint(command);
 
     // ---- 4d. AVOID post-COMMIT (D6-3b) --------------------------------
@@ -1436,6 +1754,142 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                           asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED,
                           /*plan_valid=*/true, ego_s_valid, ego_s,
                           &avoid_fields);
+        return true;
+    }
+
+    // ---- 4d-2. LANE_CHANGE post-COMMIT (D7) -----------------------------
+    // AVOID의 post-COMMIT 블록과 완전히 동일한 구조다 - target pose는 더
+    // 이상 실행 조건이 아니고 core의 잠긴 target_d/context만 쓰되 collision
+    // geometry는 매 cycle 새로 쓴다.
+    if (is_lane_change &&
+        lane_change_route == LaneChangePlanningRoute::POST_COMMIT) {
+        CartesianPath committed_path;
+        FrenetPlanner::LaneChangePrepareResult committed;
+        const bool plan_ok = planner_.PlanCommittedLaneChange(
+            ego, objects, planner_command, committed_path, committed);
+
+        if (!plan_ok) {
+            ++v2_plan_fail_streak_;
+            const FrenetPlanner::PlanFailureReason reason =
+                planner_.last_failure_reason();
+            command_manager_.NotifyPlanFailed(/*terminal=*/false);
+            has_last_v2_trajectory_ = false;
+            CommandAcceptance failed = acceptance;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
+                    ? asmc_msgs::FrenetFeedback::COLLISION_BLOCKED
+                    : asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
+            failed.detail =
+                reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
+                    ? "committed lane change path blocked by collision"
+                    : "could not generate the committed lane change path";
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
+                    ? asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED
+                    : asmc_msgs::Trajectory::FAILURE_GENERATION);
+            trajectory_pub_.publish(stop);
+
+            LaneChangeFeedbackFields blocked_fields;
+            blocked_fields.applied_speed_mps =
+                stop.points.empty() ? -1.0 : stop.points.back().velocity;
+            blocked_fields.target_d_valid = planner_.lane_change_committed();
+            blocked_fields.target_d = planner_.lane_change_locked_target_d();
+            blocked_fields.generated_candidate_count =
+                static_cast<uint32_t>(committed.generated_candidate_count);
+            blocked_fields.valid_candidate_count =
+                static_cast<uint32_t>(committed.valid_candidate_count);
+            blocked_fields.selected_cost = -1.0;
+            blocked_fields.blocking_object_id = committed.blocking_object_id;
+            blocked_fields.maneuver_progress =
+                planner_.lane_change_committed()
+                    ? planner_.lane_change_maneuver_progress() : -1.0;
+
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false, ego_s_valid, ego_s,
+                              nullptr, &blocked_fields);
+            return true;
+        }
+
+        asmc_msgs::Trajectory trajectory;
+        if (ConvertCartesianPath(committed_path, planner_.sample_dt(),
+                                 snapshot.vehicle, trajectory) !=
+                ConversionStatus::OK || trajectory.points.empty()) {
+            ++v2_plan_fail_streak_;
+            command_manager_.NotifyPlanFailed(/*terminal=*/false);
+            has_last_v2_trajectory_ = false;
+            CommandAcceptance failed = acceptance;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
+            failed.detail = "committed lane change trajectory conversion failed";
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_GENERATION);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false, ego_s_valid, ego_s);
+            return true;
+        }
+
+        LaneChangeFeedbackFields lane_change_fields;
+        lane_change_fields.applied_speed_mps =
+            trajectory.points.back().velocity;
+        lane_change_fields.target_d_valid = true;
+        lane_change_fields.target_d = planner_.lane_change_locked_target_d();
+        lane_change_fields.generated_candidate_count =
+            static_cast<uint32_t>(committed.generated_candidate_count);
+        lane_change_fields.valid_candidate_count =
+            static_cast<uint32_t>(committed.valid_candidate_count);
+        lane_change_fields.selected_cost = committed.selected_cost;
+        lane_change_fields.blocking_object_id = committed.blocking_object_id;
+        lane_change_fields.maneuver_progress = committed.maneuver_progress;
+
+        if (committed.maneuver_completed &&
+            !CompleteLaneChangeAtomically(command_manager_, committed,
+                                          /*trajectory_ready=*/true)) {
+            command_manager_.NotifyPlanFailed(/*terminal=*/false);
+            has_last_v2_trajectory_ = false;
+            CommandAcceptance failed = acceptance;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
+            failed.detail = "lane change completion state transition rejected";
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_GENERATION);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false, ego_s_valid, ego_s,
+                              nullptr, &lane_change_fields);
+            return true;
+        }
+
+        v2_plan_fail_streak_ = 0;
+        last_v2_trajectory_ = trajectory;
+        has_last_v2_trajectory_ = true;
+        last_v2_trajectory_command_id_ = command.command_id;
+        last_v2_trajectory_fingerprint_ = fingerprint;
+        last_v2_lane_change_feedback_ = lane_change_fields;
+        has_last_v2_lane_change_feedback_ = true;
+
+        CommandAcceptance executing = acceptance;
+        executing.execution_state = command_manager_.execution_state();
+        if (acceptance.result_code == asmc_msgs::FrenetFeedback::RESULT_NONE) {
+            executing.detail = committed.maneuver_completed
+                ? "lane change maneuver completed"
+                : "executing committed lane change trajectory";
+        }
+        trajectory_pub_.publish(trajectory);
+        publishDebugMarkersV2(trajectory, command);
+        publishFeedbackV2(feedback_command_id, executing, &trajectory,
+                          asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED,
+                          /*plan_valid=*/true, ego_s_valid, ego_s,
+                          nullptr, &lane_change_fields);
         return true;
     }
 
@@ -1720,6 +2174,189 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                           prepare.generated_candidate_count,
                           published.points.size(),
                           avoid_fields.applied_speed_mps);
+        return true;
+    }
+
+    // ---- 4f. LANE_CHANGE PREPARE (D7) ------------------------------------
+    //
+    // AVOID PREPARE 블록과 완전히 동일한 구조와 계약(5.2절/5.3절/5.5절)이다:
+    // candidate는 절대 발행하지 않고, EXECUTE는 이미 관측된 READY에만
+    // 재검증 후 COMMIT을 허가한다.
+    if (is_lane_change &&
+        lane_change_route == LaneChangePlanningRoute::PRE_COMMIT &&
+        (command.execution_request == asmc_msgs::BehaviorCommand::PREPARE ||
+         command.execution_request == asmc_msgs::BehaviorCommand::EXECUTE)) {
+        const bool execute_requested =
+            command.execution_request == asmc_msgs::BehaviorCommand::EXECUTE;
+        const bool was_ready_before_planning =
+            command_manager_.execution_state() ==
+            asmc_msgs::FrenetFeedback::READY;
+
+        CartesianPath maintenance;
+        FrenetPlanner::LaneChangePrepareResult prepare;
+        const bool prepare_ok = planner_.PrepareLaneChange(
+            ego, objects, planner_command, maintenance, prepare);
+
+        if (!prepare_ok) {
+            ++v2_plan_fail_streak_;
+            const FrenetPlanner::PlanFailureReason reason =
+                planner_.last_failure_reason();
+            const bool terminal =
+                reason == FrenetPlanner::PlanFailureReason::INVALID_COMMAND ||
+                reason == FrenetPlanner::PlanFailureReason::UNSUPPORTED_BEHAVIOR ||
+                reason == FrenetPlanner::PlanFailureReason::NOT_INITIALIZED;
+            uint8_t code = asmc_msgs::FrenetFeedback::RESULT_NONE;
+            std::string detail;
+            switch (reason) {
+                case FrenetPlanner::PlanFailureReason::INVALID_COMMAND:
+                    code = asmc_msgs::FrenetFeedback::INVALID_COMMAND;
+                    detail = "planner rejected the lane change command fields";
+                    break;
+                case FrenetPlanner::PlanFailureReason::NOT_INITIALIZED:
+                    code = asmc_msgs::FrenetFeedback::NOT_INITIALIZED;
+                    detail = "planner is not initialized";
+                    break;
+                case FrenetPlanner::PlanFailureReason::UNSUPPORTED_BEHAVIOR:
+                    detail =
+                        "planner core does not accept LANE_CHANGE PREPARE yet";
+                    break;
+                default:
+                    code = asmc_msgs::FrenetFeedback::
+                        TRANSIENT_GENERATION_FAILURE;
+                    detail = "could not build a lane change maintenance path";
+                    break;
+            }
+            command_manager_.NotifyPlanFailed(
+                terminal, terminal ? code
+                                   : asmc_msgs::FrenetFeedback::RESULT_NONE,
+                terminal ? detail : std::string());
+            has_last_v2_trajectory_ = false;
+            CommandAcceptance failed = acceptance;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code = code;
+            failed.detail = detail;
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_GENERATION);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+
+        asmc_msgs::Trajectory trajectory;
+        if (ConvertCartesianPath(maintenance, planner_.sample_dt(),
+                                 snapshot.vehicle, trajectory) !=
+            ConversionStatus::OK) {
+            ++v2_plan_fail_streak_;
+            command_manager_.NotifyPlanFailed(/*terminal=*/false);
+            has_last_v2_trajectory_ = false;
+            CommandAcceptance failed = acceptance;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code =
+                asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
+            failed.detail = "lane change maintenance conversion failed";
+            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
+                stopReferenceVehicle(snapshot), trajectoryDt(),
+                asmc_msgs::Trajectory::FAILURE_GENERATION);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop,
+                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
+                              /*plan_valid=*/false);
+            return true;
+        }
+
+        if (prepare.candidate_valid) {
+            command_manager_.NotifyPlanSucceeded();
+        } else {
+            command_manager_.NotifyPlanFailed(/*terminal=*/false);
+        }
+
+        bool committed_now = false;
+        asmc_msgs::Trajectory lane_change_trajectory;
+        if (execute_requested && was_ready_before_planning &&
+            prepare.candidate_valid) {
+            const ConversionStatus convert_status = ConvertCartesianPath(
+                prepare.candidate_path, planner_.sample_dt(),
+                snapshot.vehicle, lane_change_trajectory);
+            if (convert_status == ConversionStatus::OK &&
+                !lane_change_trajectory.points.empty()) {
+                committed_now = CommitLaneChangeAtomically(
+                    command_manager_, planner_, prepare);
+            } else {
+                ROS_WARN_THROTTLE(
+                    1.0,
+                    "v2 LANE_CHANGE candidate conversion failed; staying in "
+                    "READY (command_id=%u)",
+                    command.command_id);
+            }
+        }
+
+        const asmc_msgs::Trajectory& published =
+            committed_now ? lane_change_trajectory : trajectory;
+
+        v2_plan_fail_streak_ = 0;
+        last_v2_trajectory_ = published;
+        has_last_v2_trajectory_ = true;
+        last_v2_trajectory_command_id_ = command.command_id;
+        last_v2_trajectory_fingerprint_ = fingerprint;
+
+        LaneChangeFeedbackFields lane_change_fields;
+        lane_change_fields.applied_speed_mps =
+            published.points.empty() ? -1.0
+                                     : published.points.back().velocity;
+        lane_change_fields.target_d_valid = prepare.candidate_valid;
+        lane_change_fields.target_d =
+            prepare.candidate_valid ? prepare.selected_target_d : 0.0;
+        lane_change_fields.generated_candidate_count =
+            static_cast<uint32_t>(prepare.generated_candidate_count);
+        lane_change_fields.valid_candidate_count =
+            static_cast<uint32_t>(prepare.valid_candidate_count);
+        lane_change_fields.selected_cost =
+            prepare.candidate_valid ? prepare.selected_cost : -1.0;
+        lane_change_fields.blocking_object_id =
+            static_cast<int32_t>(prepare.blocking_object_id);
+        lane_change_fields.maneuver_progress = committed_now
+            ? planner_.lane_change_maneuver_progress() : -1.0;
+
+        last_v2_lane_change_feedback_ = lane_change_fields;
+        has_last_v2_lane_change_feedback_ = true;
+
+        CommandAcceptance prepared = acceptance;
+        prepared.execution_state = command_manager_.execution_state();
+        prepared.result_code = asmc_msgs::FrenetFeedback::RESULT_NONE;
+        prepared.detail = committed_now
+            ? std::string("lane change maneuver committed")
+            : (prepare.candidate_valid
+                   ? std::string("lane change candidate is ready")
+                   : std::string("no safe lane change candidate this cycle"));
+
+        trajectory_pub_.publish(published);
+        publishDebugMarkersV2(published, command);
+        const uint8_t trajectory_source =
+            committed_now
+                ? asmc_msgs::FrenetFeedback::TRAJECTORY_LOCKED
+                : asmc_msgs::FrenetFeedback::TRAJECTORY_NEW;
+        publishFeedbackV2(feedback_command_id, prepared, &published,
+                          trajectory_source,
+                          prepare.candidate_valid, ego_s_valid, ego_s,
+                          nullptr, &lane_change_fields);
+
+        ROS_INFO_THROTTLE(1.0,
+                          "v2 LANE_CHANGE %s: command_id=%u candidate=%d "
+                          "committed=%d target_d=%.3f locked=%.3f "
+                          "candidates=%zu/%zu points=%zu applied=%.2f",
+                          execute_requested ? "EXECUTE" : "PREPARE",
+                          command.command_id,
+                          prepare.candidate_valid ? 1 : 0,
+                          committed_now ? 1 : 0,
+                          prepare.selected_target_d,
+                          planner_.lane_change_locked_target_d(),
+                          prepare.valid_candidate_count,
+                          prepare.generated_candidate_count,
+                          published.points.size(),
+                          lane_change_fields.applied_speed_mps);
         return true;
     }
 

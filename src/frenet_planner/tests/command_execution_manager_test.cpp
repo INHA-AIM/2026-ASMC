@@ -1240,6 +1240,77 @@ int main() {
                "cancel flag: a normal command is not a cancel");
     }
 
+    // ================= D7: LANE_CHANGE 전체 lifecycle =================
+    //
+    // §33. 다른 maneuver와 섞이지 않은 순수 LANE_CHANGE 한 transaction으로
+    // PREPARING -> READY -> COMMITTED -> EXECUTING -> COMPLETED 전체를
+    // 확인한다. manager 코드 자체는 D7에서 변경하지 않았으므로(AVOID/MERGE와
+    // 동일하게 이미 handshake로 처리된다) 이 테스트는 "정말 그런지"를
+    // 명시적으로 고정한다.
+    {
+        CommandExecutionManager manager = MakeFullManager();
+        const auto begin = manager.Accept(MakeLaneChange(700, Command::PREPARE));
+        Expect(begin.execution_state == Feedback::PREPARING &&
+                   begin.should_plan(),
+               "D7 lifecycle: PREPARE begins in PREPARING");
+
+        manager.NotifyPlanSucceeded();
+        Expect(manager.execution_state() == Feedback::READY,
+               "D7 lifecycle: successful candidate reaches READY");
+
+        // CANCEL before COMMIT은 허용된다.
+        CommandExecutionManager cancel_before_commit = MakeFullManager();
+        cancel_before_commit.Accept(MakeLaneChange(701, Command::PREPARE));
+        cancel_before_commit.NotifyPlanSucceeded();
+        const auto cancel_ok =
+            cancel_before_commit.Accept(MakeLaneChange(701, Command::CANCEL));
+        Expect(cancel_ok.execution_state == Feedback::IDLE &&
+                   cancel_ok.transaction_cancelled,
+               "D7 lifecycle: CANCEL before COMMIT is allowed");
+
+        // EXECUTE 재검증 후 COMMIT.
+        const auto execute = manager.Accept(MakeLaneChange(700, Command::EXECUTE));
+        Expect(execute.should_plan(),
+               "D7 lifecycle: EXECUTE on the same id keeps planning");
+        Expect(manager.NotifyCommitted(),
+               "D7 lifecycle: READY commits on EXECUTE revalidation");
+        Expect(manager.execution_state() == Feedback::COMMITTED,
+               "D7 lifecycle: manager is COMMITTED");
+
+        // CANCEL after COMMIT은 거부된다.
+        const auto cancel_after_commit =
+            manager.Accept(MakeLaneChange(700, Command::CANCEL));
+        Expect(cancel_after_commit.result_code == Feedback::TOO_LATE_TO_CANCEL &&
+                   !cancel_after_commit.transaction_cancelled,
+               "D7 lifecycle: CANCEL after COMMIT is TOO_LATE_TO_CANCEL");
+
+        Expect(manager.NotifyExecutionStarted(),
+               "D7 lifecycle: COMMITTED advances to EXECUTING");
+        Expect(manager.execution_state() == Feedback::EXECUTING,
+               "D7 lifecycle: manager is EXECUTING");
+
+        // EMERGENCY_STOP은 언제든 preempt한다.
+        const auto emergency =
+            manager.Accept(MakeEmergencyStop(702));
+        Expect(emergency.should_plan() &&
+                   emergency.command_accepted &&
+                   manager.maneuver_type() == Command::EMERGENCY_STOP,
+               "D7 lifecycle: committed LANE_CHANGE yields to EMERGENCY_STOP");
+
+        // 새 LANE_CHANGE transaction으로 완료까지 확인한다.
+        CommandExecutionManager complete_manager = MakeFullManager();
+        complete_manager.Accept(MakeLaneChange(703, Command::PREPARE));
+        complete_manager.NotifyPlanSucceeded();
+        complete_manager.Accept(MakeLaneChange(703, Command::EXECUTE));
+        complete_manager.NotifyCommitted();
+        complete_manager.NotifyExecutionStarted();
+        Expect(complete_manager.NotifyManeuverCompleted(),
+               "D7 lifecycle: EXECUTING completes to COMPLETED");
+        Expect(complete_manager.execution_state() == Feedback::COMPLETED &&
+                   complete_manager.completed_normally(),
+               "D7 lifecycle: manager reports normal completion");
+    }
+
     if (g_failures != 0) {
         std::cerr << g_failures << " execution manager check(s) failed\n";
         return 1;

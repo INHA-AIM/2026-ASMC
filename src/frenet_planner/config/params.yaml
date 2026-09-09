@@ -49,6 +49,13 @@ planner:
     pass_clearance: 1.0       # [m] 자차/장애물 길이 외 추가 통과 여유
     prefer_right_when_equal: true # 좌/우 valid 품질이 거의 같으면 우측 우선
 
+  # --- LANE_CHANGE: FSM이 target_pose_map으로 지정한 인접 차로 목표로의
+  # 횡이동 완료 판정(§17). 초기 개발값이며 MORAI 튜닝 대상이다.
+  lane_change:
+    lateral_position_tolerance: 0.4  # [m] 목표 d와의 허용 오차
+    lateral_speed_tolerance: 0.2     # [m/s] 완료 시점 허용 d_dot
+    heading_tolerance: 0.05          # [rad] 목표/참조 heading과의 허용 오차
+
   # --- 외부 STOP 명령 실행 -----------------------------------
   # STOP은 receding horizon(time_horizon max 5.0s) 안에서 exact-stop 다항식을
   # 항상 만들 수 있는 게 아니다. 멀리 있는 정지 목표는 APPROACH에서 속도만

@@ -59,6 +59,17 @@ struct AvoidConfig {
 };
 
 // =========================================================
+// v2 LANE_CHANGE(D7) 완료 판정 tolerance. 초기 개발값이며 MORAI 튜닝
+// 대상이다(§17) - AVOID/MERGE와 마찬가지로 magic number를 코드에 흩뿌리지
+// 않고 여기 모은다.
+// =========================================================
+struct LaneChangeConfig {
+    double lateral_position_tolerance = 0.4;  // [m] 목표 d와의 허용 오차
+    double lateral_speed_tolerance = 0.2;     // [m/s] 완료 시점 허용 d_dot
+    double heading_tolerance = 0.05;          // [rad] 목표/참조 heading과의 허용 오차
+};
+
+// =========================================================
 // 회전교차로 진입 conflict point와 time-gap 판단 파라미터.
 // =========================================================
 struct MergeConfig {

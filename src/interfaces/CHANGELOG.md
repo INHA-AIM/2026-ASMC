@@ -2,6 +2,18 @@
 
 공용 ROS 계약의 breaking change와 합의 사항을 기록한다.
 
+## Unreleased - feature/yuntae-planner-lane-change (D7)
+
+### Added
+
+- `asmc_msgs/GlobalPath.msg`(신규) - Route/FSM이 Frenet에 새 전역 경로를 전달하는 계약(`header`, `revision`, `active_link_id`, `link_ids`, `waypoints`). Frenet은 `/planning/global_path`로 수신해 검증 후 안전한 시점(비-preemptible transaction이 없는 cycle)에만 `RefLine`을 교체한다 - production Route Manager가 이 topic을 실제로 발행하도록 연결하는 작업은 이번 범위가 아니다.
+- Frenet `frenet_planner_node`가 `LANE_CHANGE_LEFT`/`LANE_CHANGE_RIGHT`의 PREPARE → READY → EXECUTE → COMMITTED → EXECUTING → COMPLETED 전체 lifecycle을 구현했다 - AVOID(D6)의 transaction/commit-atomicity 패턴을 그대로 재사용한다. `FrenetFeedback`의 `target_d`/`maneuver_progress`/후보 진단 필드도 AVOID와 동일하게 채운다.
+- **production gate는 아직 닫혀 있다** - `frenet_planner_node`의 `SetImplementedManeuver(LANE_CHANGE, true)`를 호출하지 않았으므로, 실제 FSM이 LANE_CHANGE를 보내면 여전히 `MANEUVER_NOT_IMPLEMENTED`로 안전정지 응답한다. MORAI 실차 검증 후 별도로 연다.
+
+### Changed
+
+- Frenet `LateralGenerator.cpp`의 `ResolveLateralOffset`이 `LANE_CHANGE_LEFT`/`RIGHT`에서 더 이상 고정 `±lane_width`를 쓰지 않는다 - FSM이 `target_pose_map`으로 지정한 목표를 Frenet d로 투영한 값(`PlannerCommand.lane_change_d_offset`)을 그대로 겨냥한다.
+
 ## Unreleased - fix/yuntae-planner Commit G
 
 ### Added

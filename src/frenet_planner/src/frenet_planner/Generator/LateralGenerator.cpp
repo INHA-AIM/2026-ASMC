@@ -82,11 +82,15 @@ double ResolveLateralOffset(const PlannerCommand& cmd, double lane_width) {
         case AVOID:
             return cmd.avoidance_d_offset;
 
+        // D7: FSM이 target_pose_map으로 준 목표를 Frenet d로 투영한 값을
+        // 그대로 쓴다(LaneChange.cpp가 lane_change_d_offset을 채운다). 예전의
+        // 고정 ±lane_width는 FSM이 실제로 지정한 목표점을 무시하고 항상 한
+        // 차로 폭만큼만 이동한다고 가정했다 - 실제 인접 차로 중심이
+        // lane_width와 다르면(곡선 구간, 차로폭이 다른 도로) 틀린 목표로
+        // 수렴한다.
         case LANE_CHANGE_LEFT:
-            return lane_width;
-
         case LANE_CHANGE_RIGHT:
-            return -lane_width;
+            return cmd.lane_change_d_offset;
 
         case MERGE:
             return 0.0;  // 회전교차로 진입 global path 자체를 횡방향으로 추종

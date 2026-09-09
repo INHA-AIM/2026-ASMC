@@ -44,8 +44,10 @@ std::vector<FrenetPath> GenerateLateralContinuityCandidates(const FrenetState& s
                                                              const PathGeneratorConfig& cfg);
 
 // AVOID 모드는 PlannerCommand.avoidance_d_offset을 그대로 lateral 목표 중심으로 사용.
-// LANE_CHANGE_*는 d 양의 방향이 좌측(FrenetToCartesian의 n_r 정의와 동일)이므로
-// LEFT는 +lane_width, RIGHT는 -lane_width. 회전교차로 MERGE는 global path 유지.
+// LANE_CHANGE_*(D7)는 PlannerCommand.lane_change_d_offset을 그대로 쓴다 - FSM이
+// target_pose_map으로 지정한 인접 차로 목표를 Frenet d로 투영한 값이다(고정
+// ±lane_width가 아니다. d 양의 방향은 좌측 - FrenetToCartesian의 n_r 정의와 동일).
+// 회전교차로 MERGE는 global path 유지.
 double ResolveLateralOffset(const PlannerCommand& cmd, double lane_width);
 
 #endif  // FRENET_GENERATOR_LATERAL_GENERATOR_HPP

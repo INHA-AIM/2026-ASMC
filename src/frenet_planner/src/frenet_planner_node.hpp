@@ -7,6 +7,7 @@
 #include <asmc_msgs/BehaviorContext.h>
 #include <asmc_msgs/DetectedObjectArray.h>
 #include <asmc_msgs/FrenetFeedback.h>
+#include <asmc_msgs/GlobalPath.h>
 #include <asmc_msgs/PlanFeedback.h>
 #include <asmc_msgs/Trajectory.h>
 #include <asmc_msgs/VehicleState.h>
@@ -52,6 +53,19 @@ class FrenetPlannerNode {
     void behaviorCommandV2Callback(
         const asmc_msgs::BehaviorCommand::ConstPtr& message);
 
+    // D7 §19-21: Route/FSM이 새 GlobalPath를 발행하면 저장만 하고 즉시
+    // 적용하지 않는다. 실제 RefLine 교체는 planningTimerCallback이 안전한
+    // boundary(비-preemptible transaction이 없는 cycle)에서 수행한다 -
+    // LANE_CHANGE COMMITTED/EXECUTING 도중 reference가 바뀌면 잠긴
+    // target_d의 좌표계가 흔들린다.
+    void globalPathCallback(const asmc_msgs::GlobalPath::ConstPtr& message);
+
+    // pending GlobalPath를 안전한 시점에 실제로 적용한다. 적용 성공/실패와
+    // 무관하게 pending 상태는 소비된다(재시도는 FSM이 새 revision을 다시
+    // 보내는 것으로 이뤄진다 - 계속 실패하는 경로를 매 cycle 재시도하지
+    // 않는다).
+    void applyPendingGlobalPathIfSafe();
+
     // v2 planning cycle. v1과 동일하게 20 Hz timer가 주도한다.
     //
     // 명령 callback에서 planning하지 않는 이유:
@@ -77,6 +91,27 @@ class FrenetPlannerNode {
         bool target_d_valid = false;
         double target_d = 0.0;
 
+        uint32_t generated_candidate_count = 0;
+        uint32_t valid_candidate_count = 0;
+        double selected_cost = -1.0;
+        int32_t blocking_object_id = -1;
+        double maneuver_progress = -1.0;
+    };
+
+    // LANE_CHANGE PREPARE/post-COMMIT이 채우는 피드백 필드 (D7).
+    //
+    // AvoidFeedbackFields와 shape이 거의 같다 - FrenetFeedback.msg 자체가
+    // AVOID/LANE_CHANGE 공용 필드(target_d/maneuver_progress 등)를 쓰도록
+    // 설계되어 있기 때문이다(계약 9.4절: "D7(LANE_CHANGE): D6 필드
+    // 재사용"). 그렇다고 AvoidFeedbackFields를 그대로 재사용하지 않는 이유는
+    // 두 maneuver의 diagnostic 의미가 겹치지 않기 때문이다 - blocking_object_id는
+    // AVOID에서는 "회피 대상 장애물"이지만 LANE_CHANGE에는 그런 개념이 없고
+    // (충돌로 막은 임의 장애물일 뿐), 타입을 공유하면 이름이 두 의미 중
+    // 하나를 배신한다. 필드 목록만 같고 이름의 의미는 각자 것이다.
+    struct LaneChangeFeedbackFields {
+        double applied_speed_mps = -1.0;
+        bool target_d_valid = false;
+        double target_d = 0.0;
         uint32_t generated_candidate_count = 0;
         uint32_t valid_candidate_count = 0;
         double selected_cost = -1.0;
@@ -130,7 +165,9 @@ class FrenetPlannerNode {
                            bool plan_valid,
                            bool frenet_state_valid = false,
                            double current_s = 0.0,
-                           const AvoidFeedbackFields* avoid_fields = nullptr);
+                           const AvoidFeedbackFields* avoid_fields = nullptr,
+                           const LaneChangeFeedbackFields* lane_change_fields =
+                               nullptr);
 
     InputSnapshot takeSnapshot() const;
     void publishStop(const InputSnapshot& snapshot, uint8_t failure_reason);
@@ -152,6 +189,7 @@ class FrenetPlannerNode {
     ros::Subscriber objects_sub_;
     ros::Subscriber behavior_sub_;
     ros::Subscriber behavior_command_v2_sub_;
+    ros::Subscriber global_path_sub_;
     ros::Publisher trajectory_pub_;
     ros::Publisher feedback_pub_;
     ros::Publisher feedback_v2_pub_;
@@ -167,6 +205,13 @@ class FrenetPlannerNode {
     asmc_msgs::BehaviorCommand latest_v2_command_;
     bool has_v2_command_ = false;
 
+    // D7 §19-21: 아직 적용하지 않은 GlobalPath. revision으로 중복/과거
+    // 메시지를 걸러낸다.
+    asmc_msgs::GlobalPath pending_global_path_;
+    bool has_pending_global_path_ = false;
+    bool has_applied_global_path_revision_ = false;
+    uint32_t applied_global_path_revision_ = 0;
+
     // v2 전용 궤적 캐시. command_id에 묶어 소유한다 - 다른 명령의 궤적을
     // 재사용하면 STOP 명령 중 KEEP 궤적을 따라가는 종류의 사고가 난다
     // (계약 8.4절).
@@ -176,6 +221,8 @@ class FrenetPlannerNode {
     CommandFingerprint last_v2_trajectory_fingerprint_;
     AvoidFeedbackFields last_v2_avoid_feedback_;
     bool has_last_v2_avoid_feedback_ = false;
+    LaneChangeFeedbackFields last_v2_lane_change_feedback_;
+    bool has_last_v2_lane_change_feedback_ = false;
     int v2_plan_fail_streak_ = 0;
 
     FrenetPlanner planner_;
@@ -247,6 +294,16 @@ class FrenetPlannerNode {
     // (왕복 구간이 나란히 지나가면 반대 방향 구간에 목표가 붙는다).
     // 계약 3.4절 4항.
     double avoid_max_target_heading_error_rad_ = 0.785398;
+
+    // ===== v2 LANE_CHANGE target pose 투영 파라미터 (D7) =====
+    //
+    // AVOID와 달리 LANE_CHANGE의 target pose는 항상 필수다(계약 3.3절
+    // 검증 matrix - has_target_pose=true 강제). 그래도 STOP/AVOID의 값을
+    // 그대로 재사용하지 않는다 - "인접 차로 중심"이라는 질문은 "회피
+    // 목표점"과 허용 오차가 같을 이유가 없다.
+    double lane_change_projection_search_window_ = 100.0;
+    double lane_change_max_target_lateral_offset_ = 6.0;
+    double lane_change_max_target_heading_error_rad_ = 0.785398;
 
     double planning_frequency_hz_ = 20.0;
     double vehicle_timeout_seconds_ = 0.20;

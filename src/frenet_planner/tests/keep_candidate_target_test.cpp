@@ -183,8 +183,15 @@ void TestOtherManeuversKeepTargetSpread() {
     }
 
     {
+        // D7: LANE_CHANGE_LEFT/RIGHT의 목표 중심은 더 이상 고정 ±lane_width가
+        // 아니라 PlannerCommand.lane_change_d_offset(FSM target_pose_map을
+        // Frenet으로 투영한 값)이다(LateralGenerator.cpp ResolveLateralOffset
+        // 참고). 이 테스트는 그 목표 주변 스프레드 정책(전역
+        // lateral_target_tolerance, 좁히지 않음)이 유지되는지만 확인한다 -
+        // 목표를 lane_change_d_offset으로 명시해야 한다.
         PlannerCommand lane_change{};
         lane_change.mode = LANE_CHANGE_LEFT;
+        lane_change.lane_change_d_offset = kLaneWidth;
         lane_change.has_target_speed = true;
         lane_change.target_speed = 5.0;
 
@@ -200,7 +207,7 @@ void TestOtherManeuversKeepTargetSpread() {
         }
         Expect(found_spread,
                "LANE_CHANGE_LEFT: candidate set still spreads +-0.5m around "
-               "+lane_width target (tolerance not narrowed)");
+               "lane_change_d_offset target (tolerance not narrowed)");
     }
 }
 
