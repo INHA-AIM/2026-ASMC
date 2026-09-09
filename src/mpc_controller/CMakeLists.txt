@@ -53,11 +53,6 @@ if(CATKIN_ENABLE_TESTING)
     target_link_libraries(mpc_controller_test mpc_core)
   endif()
 
-  catkin_add_gtest(warm_start_rebase_test test/warm_start_rebase_test.cpp)
-  if(TARGET warm_start_rebase_test)
-    target_link_libraries(warm_start_rebase_test mpc_core)
-  endif()
-
   catkin_add_gtest(steering_feedforward_test test/steering_feedforward_test.cpp)
   if(TARGET steering_feedforward_test)
     target_link_libraries(steering_feedforward_test mpc_core)

@@ -24,7 +24,6 @@ MpcController::MpcController(const MPCParams& params) : params_(params) {
 
 void MpcController::ResetOnFailSafe() {
     warm_start_.clear();
-    previous_steering_feedforward_.clear();
     last_control_ = MPCControl{};
     stuck_cycles_ = 0;
     recovery_cycles_left_ = 0;
@@ -59,7 +58,6 @@ MpcController::Output MpcController::ControlProcess(
     } else if (recovery_cycles_left_ == 0 &&
                ++stuck_cycles_ >= stuck_timeout_cycles_) {
         warm_start_.clear();
-        previous_steering_feedforward_.clear();
         last_control_ = MPCControl{};
         recovery_cycles_left_ = recovery_duration_cycles_;
         stuck_cycles_ = 0;
@@ -69,28 +67,8 @@ MpcController::Output MpcController::ControlProcess(
         output.stuck_event_path_progress = path_progress;
     }
 
-    // curve-tracking stability iteration 3의 [MPC-WARM] 진단 - solveMPC
-    // 호출 전 "이번 rebase가 실제로 쓸 이전 상태"를 미리 캡처한다. solveMPC
-    // 내부에서 같은 조건으로 rebase 여부를 다시 판정하므로, 여기서는
-    // 진단만 재현하고 rebase 로직 자체를 중복 구현하지 않는다(단순 stage-0
-    // 스냅샷일 뿐, 결과 delta에 영향을 주지 않는다).
-    const bool warm_start_ready =
-        static_cast<int>(warm_start_.size()) >= params_.horizon;
-    const bool feedforward_ready =
-        previous_steering_feedforward_.size() == warm_start_.size();
-    if (warm_start_ready && feedforward_ready && !warm_start_.empty()) {
-        const std::size_t shifted_index =
-            std::min<std::size_t>(1, warm_start_.size() - 1);
-        output.warm_raw0 = warm_start_[shifted_index].delta;
-        output.prev_ff_shift0 = previous_steering_feedforward_[shifted_index];
-        output.warm_residual0 = output.warm_raw0 - output.prev_ff_shift0;
-        output.used_curvature_rebase =
-            std::isfinite(output.warm_raw0) && std::isfinite(output.prev_ff_shift0);
-    }
-
     const MPCResult result = solveMPC(
-        ego_state, reference, last_control_, warm_start_,
-        previous_steering_feedforward_, params_);
+        ego_state, reference, last_control_, warm_start_, params_);
     if (!result.success ||
         result.controls.size() != static_cast<std::size_t>(params_.horizon) ||
         !std::isfinite(result.control.delta) ||
@@ -100,14 +78,7 @@ MpcController::Output MpcController::ControlProcess(
         return output;
     }
 
-    if (output.used_curvature_rebase && !result.steering_feedforward.empty()) {
-        output.current_ff0 = result.steering_feedforward[0];
-        output.warm_rebased0 = output.current_ff0 + output.warm_residual0;
-    }
-    output.warm_projected0 = result.initial_guess_delta0;
-
     warm_start_ = result.controls;
-    previous_steering_feedforward_ = result.steering_feedforward;
     last_control_ = result.control;
     MPCControl output_control = result.control;
     if (recovery_cycles_left_ > 0 && forward_intent && ego_stopped) {

@@ -1,7 +1,6 @@
 #include "mpc_solver.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <cstddef>
 
 #include "math/utils.hpp"
@@ -22,87 +21,6 @@ static void projectControls(std::vector<MPCControl>& controls,
         clipSteeringRate(u, u_prev, params.steering_rate_max, params.dt);
         u_prev = u;
     }
-}
-
-// ========================================
-// 헬퍼: 현재 reference로 stage별 steering feed-forward를 계산한다.
-//   기존 fallback 분기(warm-start 없을 때)와 curvature-aware rebase(있을
-//   때) 양쪽이 "이번 solve의 feed-forward"를 필요로 하므로 한 곳에서
-//   만든다 - 두 곳에서 atan(wheelbase*curvature)를 각자 계산하지 않는다.
-// ========================================
-std::vector<double> computeCurrentSteeringFeedforward(
-    const ReferencePath& ref, int N, const MPCParams& params)
-{
-    std::vector<double> ff(N, 0.0);
-    for (int i = 0; i < N; ++i) {
-        const double k_ref_i = (ref.size() > 0)
-            ? ref.k_ref[std::min(static_cast<size_t>(i), ref.size() - 1)]
-            : 0.0;
-        ff[i] = SteeringFeedforward(k_ref_i, params.wheelbase, params.steering_max);
-    }
-    return ff;
-}
-
-// ========================================
-// curvature-aware steering warm-start rebase.
-//
-//   과거(fix/yuntae-frenet-speed-continuity 이전부터) warm-start는 "이전
-//   최적 절대 steering을 한 스텝 shift"만 했다. 그 절대값은 이전 reference
-//   기준으로 최적화된 값이라, 새 커브가 나타나면(reference curvature가
-//   바뀌면) 그 절대값이 새 목표와 무관한 "과거 방향"에 갇혀 있다 - MORAI
-//   실측에서 ffpeak가 이미 크게 반대 부호인데 steer_cmd가 여러 cycle 동안
-//   이전 값 근처에 머무르는 curve-entry lag로 나타났다.
-//
-//   그래서 절대값이 아니라 "이전 최적해가 이전 feed-forward 대비 얼마나
-//   보정했는가"(feedback residual)만 이어받는다:
-//
-//     residual_prev[i]  = warm_start[i].delta - warm_start_ff[i]
-//     residual_shift[i] = residual_prev[min(i+1, N-1)]   (기존 shift와 동일 인덱싱)
-//     delta_init[i]     = current_ff[i] + residual_shift[i]
-//
-//   새 tuning 파라미터를 넣지 않는다 - blend factor 없이 100% residual을
-//   그대로 이어받는다. accel은 이 함수가 건드리지 않는다 - 종방향
-//   warm-start는 기존 그대로(호출자가 accel을 별도로 shift한다).
-//
-//   전제(맞지 않으면 호출자가 폴백해야 한다): warm_start.size() == N이고
-//   warm_start_ff.size() == warm_start.size()이며 모든 값이 유한하다.
-//   solveMPC 밖에서도(단위 테스트) 쓸 수 있도록 헤더에 선언한다 - ROS 타입
-//   의존이 없는 순수 함수라 MPC core 경계를 넘지 않는다.
-// ========================================
-std::vector<double> RebaseSteeringWarmStart(
-    const std::vector<MPCControl>& warm_start,
-    const std::vector<double>& warm_start_ff,
-    const std::vector<double>& current_ff,
-    int N)
-{
-    std::vector<double> rebased(N, 0.0);
-    for (int i = 0; i < N; ++i) {
-        const int shifted_index = std::min(i + 1, N - 1);
-        const double residual =
-            warm_start[shifted_index].delta - warm_start_ff[shifted_index];
-        rebased[i] = current_ff[i] + residual;
-    }
-    return rebased;
-}
-
-// warm_start/warm_start_ff가 curvature-aware rebase에 안전하게 쓰일 수
-// 있는 조건. 크기 불일치나 non-finite 값이 하나라도 있으면 기존
-// feed-forward-only fallback으로 안전하게 수렴한다 - 짝이 맞지 않는 값을
-// 섞어 rebase하지 않는다.
-bool WarmStartFeedforwardIsValid(
-    const std::vector<MPCControl>& warm_start,
-    const std::vector<double>& warm_start_ff,
-    int N)
-{
-    if (static_cast<int>(warm_start.size()) < N) return false;
-    if (warm_start_ff.size() != warm_start.size()) return false;
-    for (const auto& u : warm_start) {
-        if (!std::isfinite(u.delta) || !std::isfinite(u.accel)) return false;
-    }
-    for (double ff : warm_start_ff) {
-        if (!std::isfinite(ff)) return false;
-    }
-    return true;
 }
 
 // ========================================
@@ -226,7 +144,6 @@ MPCResult solveMPC(
     const ReferencePath&           ref,
     const MPCControl&              prev_control,
     const std::vector<MPCControl>& warm_start,
-    const std::vector<double>&     warm_start_steering_feedforward,
     const MPCParams&               params)
 {
     MPCResult result;
@@ -245,14 +162,6 @@ MPCResult solveMPC(
         return result;
     }
 
-    // 이번 solve의 reference로 만든 stage별 feed-forward. fallback
-    // 초기화와 curvature-aware rebase 양쪽에 쓰고, 다음 cycle에 이번 해의
-    // "feed-forward 대비 residual"을 계산할 수 있도록 result에도 그대로
-    // 담아 돌려준다(호출자가 다음 solveMPC 호출의
-    // warm_start_steering_feedforward로 넘긴다).
-    const std::vector<double> current_ff =
-        computeCurrentSteeringFeedforward(ref, N, params);
-
     // ====================================
     // 1) Warm-start: 이전 해를 한 스텝 shift, 부족분은 prev_control로
     //
@@ -264,49 +173,22 @@ MPCResult solveMPC(
     //    상태이므로 accel은 그대로 이어받고 delta만 feed-forward로 바꾼다 -
     //    그래야 첫 horizon point가 이전 steering에서 순간이동하지 않는다
     //    (아래 clipSteeringRate가 prev_control 기준으로 투영).
-    //
-    //    curve-tracking stability iteration 3: warm-start가 있을 때도 이전
-    //    "절대" steering을 그대로 이어받지 않는다 - 그 절대값은 이전
-    //    reference 기준으로 최적화된 값이라 새 커브(reference curvature
-    //    변화)와 무관한 과거 방향에 갇힐 수 있다(MORAI curve-entry lag 실측
-    //    확인). 대신 이전 최적해가 "그 solve의 feed-forward 대비 얼마나
-    //    보정했는가"(feedback residual)만 이어받아 이번 reference의
-    //    feed-forward에 얹는다 - RebaseSteeringWarmStart 주석 참고. 이전
-    //    feed-forward를 안전하게 재사용할 수 없으면(크기 불일치/비유한값)
-    //    기존 순수 feed-forward-only 초기화로 그대로 폴백한다. accel
-    //    초기화는 이 변경과 무관하게 그대로다.
     // ====================================
     std::vector<MPCControl> U(N);
-    const bool use_curvature_aware_rebase =
-        static_cast<int>(warm_start.size()) >= N &&
-        WarmStartFeedforwardIsValid(warm_start, warm_start_steering_feedforward, N);
-    if (use_curvature_aware_rebase) {
-        const std::vector<double> rebased_delta = RebaseSteeringWarmStart(
-            warm_start, warm_start_steering_feedforward, current_ff, N);
-        for (int i = 0; i < N; ++i) {
-            U[i].delta = rebased_delta[i];
-            const int shifted_index = std::min(i + 1, N - 1);
-            U[i].accel = warm_start[shifted_index].accel;
-        }
-    } else if (static_cast<int>(warm_start.size()) >= N) {
-        // 이전 controls는 있지만 feed-forward 짝이 없거나(구현 전환 첫
-        // cycle 등) 무효하다 - accel은 그대로 shift하고 steering만 안전한
-        // feed-forward-only로 되돌린다.
-        for (int i = 0; i < N; ++i) {
-            const int shifted_index = std::min(i + 1, N - 1);
-            U[i].delta = current_ff[i];
-            U[i].accel = warm_start[shifted_index].accel;
-        }
+    if (static_cast<int>(warm_start.size()) >= N) {
+        for (int i = 0; i < N - 1; ++i) U[i] = warm_start[i + 1];
+        U[N - 1] = warm_start[N - 1];
     } else {
         for (int i = 0; i < N; ++i) {
-            U[i].delta = current_ff[i];
+            const double k_ref_i = (ref.size() > 0)
+                ? ref.k_ref[std::min(static_cast<size_t>(i), ref.size() - 1)]
+                : 0.0;
+            U[i].delta = SteeringFeedforward(k_ref_i, params.wheelbase,
+                                             params.steering_max);
             U[i].accel = prev_control.accel;
         }
     }
     projectControls(U, prev_control, params);
-    // [MPC-WARM] warm_projected0 진단 전용 스냅샷 - 이후 gradient descent가
-    // U를 계속 갱신하므로 여기서 값을 미리 떼어 둔다.
-    const double initial_guess_delta0 = U.empty() ? 0.0 : U[0].delta;
 
     // ====================================
     // 2) 현재 U 기반으로 LTV 선형화 모델 계산
@@ -386,13 +268,11 @@ MPCResult solveMPC(
     std::vector<MPCState> traj;
     evalCost(x0, U, ref, prev_control, params, nullptr, &traj);
 
-    result.controls             = U;
-    result.steering_feedforward  = current_ff;
-    result.initial_guess_delta0  = initial_guess_delta0;
-    result.predicted_states      = traj;
-    result.cost                  = cost_cur;
-    result.control               = U[0];
-    result.success                = true;
-    result.solver_msg             = "OK";
+    result.controls         = U;
+    result.predicted_states = traj;
+    result.cost             = cost_cur;
+    result.control          = U[0];
+    result.success          = true;
+    result.solver_msg       = "OK";
     return result;
 }
