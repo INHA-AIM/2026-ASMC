@@ -2,6 +2,22 @@
 
 공용 ROS 계약의 breaking change와 합의 사항을 기록한다.
 
+## Unreleased - feature/yuntae-planner-lane-change (D7 follow-up)
+
+이 항목은 바로 아래 "D7" 항목이 추가한 것 중 일부를 이번 후속 작업에서 되돌린
+기록이다. 아래 D7 항목 자체는 지우지 않는다 - 실제로 그 시점에 추가되었다가
+이번에 제거되었다는 사실을 남긴다.
+
+### Removed
+
+- `asmc_msgs/GlobalPath.msg`와 그에 딸린 `frenet_planner_node`의 `/planning/global_path` 구독·`FrenetPlanner::ReplaceReferenceLine`을 제거했다 - 이번 LANE_CHANGE 검증 단계는 runtime GlobalPath/reference handoff를 쓰지 않기로 범위를 좁혔다(premature interface). Route/GlobalPath 연동은 이후 FSM/Route 통합 작업으로 미룬다.
+
+### Changed
+
+- LANE_CHANGE의 실행 목표(target_d) 결정 정책을 바꿨다. 기존에는 FSM `target_pose_map`을 Frenet d로 투영한 값을 그대로 실행 목표로 썼다. 이제는 **차선 변경을 시작한 시점의 실제 ego d**를 기준으로 `LEFT: start_d + lane_width`, `RIGHT: start_d - lane_width`를 실행 목표로 쓴다 - 아직 참조선을 새 차선으로 바꿔줄 GlobalPath 연동이 없는 상태에서, FSM이 가정한 좌표계/차로 폭이 실제 RefLine과 정확히 맞는다는 보장이 없기 때문이다. `target_pose_map` 투영은 방향/헤딩이 명령과 모순되지 않는지 확인하는 sanity 검증에만 남는다(`PlannerCommand.target_pose_projection_*`, 기존 `has_lane_change_target_d`/`lane_change_target_d`/`lane_change_target_s`에서 이름 변경).
+- LANE_CHANGE가 목표 차선에 도달해도 더 이상 `COMPLETED`로 latch하지 않는다. 대신 `HOLD_TARGET_LANE` phase로 전환해 잠긴 target_d를 유지한 채 계속 전진한다 - `CommandExecutionManager`의 execution_state는 `EXECUTING`으로 남는다. `lane_change_commit_coordinator.hpp`의 `CompleteLaneChangeAtomically`(미사용 dead helper였다)를 제거했다.
+- Frenet `frenet_planner_node`의 LANE_CHANGE production gate(`SetImplementedManeuver(LANE_CHANGE, true)`)를 열었다 - fixed-reference 검증을 위해 ROS/MORAI 수동 테스트가 필요하다. Behavior Planner의 scorer/policy는 그대로 두었으므로 실제 FSM이 LANE_CHANGE를 자동으로 고르지는 않는다 - 수동 검증은 `tools/lane_change_test_publisher.cpp`로 수행한다(이 tool에서 GlobalPath 발행 기능은 제거했다).
+
 ## Unreleased - feature/yuntae-planner-lane-change (D7)
 
 ### Added

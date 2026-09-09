@@ -220,9 +220,11 @@ int main() {
                planner.last_failure_reason() == Reason::INVALID_COMMAND,
            "external AVOID without a target is INVALID_COMMAND");
 
-    // D7에서 LANE_CHANGE_LEFT/RIGHT를 core whitelist에 추가했다(AVOID와 동일한
-    // 이유 - 대상 확보/투영까지만 열렸다). has_lane_change_target_d가
-    // false이면(FSM target pose 투영 실패에 대응) INVALID_COMMAND다.
+    // LANE_CHANGE_LEFT/RIGHT는 AVOID와 같은 이유로 core whitelist에 열려
+    // 있다. has_target_pose_projection이 false이면(FSM target_pose_map
+    // 투영 실패에 대응하는 sanity 데이터가 없다는 뜻) INVALID_COMMAND다 -
+    // 실행 목표(start_d ± lane_width)는 별개로 계산되지만, 애초에 유효한
+    // target_pose_map 없이는 명령 자체를 sanity 검증할 수 없다.
     //
     // 목표 투영에 성공한 뒤의 동작은 command_lane_change_plan_test가 담당한다.
     PlannerCommand lane_change{};
@@ -255,9 +257,8 @@ int main() {
     // 모드 whitelist는 필드 검증보다 먼저다. 지원하지 않는 모드는 필드가
     // 무엇이든 UNSUPPORTED_BEHAVIOR로 보고돼야 한다.
     //
-    // 닫힌 모드 예시는 단계가 진행되며 교체된다. D5까지는 AVOID를,
-    // D6-1~D7 사이에는 LANE_CHANGE_LEFT를 썼지만 D7에서 LANE_CHANGE도
-    // 열렸으므로 이제 MERGE가 유일하게 남은 닫힌 예시다.
+    // 닫힌 모드 예시는 단계가 진행되며 교체되었다. AVOID와 LANE_CHANGE가
+    // 차례로 열려 이제 MERGE가 유일하게 남은 닫힌 예시다.
     PlannerCommand unsupported_and_invalid{};
     unsupported_and_invalid.mode = MERGE;
     unsupported_and_invalid.has_target_speed = true;
@@ -278,7 +279,7 @@ int main() {
            "authoritative OBB object accepts a matched KEEP command");
 
     PlannerCommand still_closed{};
-    // D7에서 LANE_CHANGE도 열렸으므로 여기도 아직 닫힌 모드로 바꾼다(위와 동일).
+    // LANE_CHANGE도 열렸으므로 여기도 아직 닫힌 모드로 바꾼다(위와 동일).
     still_closed.mode = MERGE;
     Expect(!planner.Plan(ego, objects, still_closed, path) &&
                planner.last_failure_reason() == Reason::UNSUPPORTED_BEHAVIOR,

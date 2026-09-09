@@ -98,9 +98,9 @@ void FrenetPlannerNode::publishFeedbackV2(
         feedback.selected_cost = avoid_fields->selected_cost;
         feedback.blocking_object_id = avoid_fields->blocking_object_id;
     } else if (lane_change_fields) {
-        // LANE_CHANGE(D7)는 AVOID와 같은 필드를 재사용한다(계약 9.4절: "D7
-        // (LANE_CHANGE): D6 필드 재사용"). target_d는 요청값이 아니라 실제
-        // selected/locked된 값이다(호출자가 이미 그렇게 채워 넘긴다).
+        // LANE_CHANGE는 AVOID와 같은 FrenetFeedback 필드를 재사용한다.
+        // target_d는 요청값이 아니라 실제 selected/locked된 값이다(호출자가
+        // 이미 그렇게 채워 넘긴다).
         feedback.target_d_valid = lane_change_fields->target_d_valid;
         feedback.target_d = lane_change_fields->target_d;
         feedback.generated_candidate_count =

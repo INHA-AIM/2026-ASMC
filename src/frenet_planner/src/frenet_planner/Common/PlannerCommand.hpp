@@ -113,20 +113,24 @@ struct PlannerCommand {
     // 회피 목표점이 장애물보다 앞/뒤인지 판단하는 데 쓴다(D6-2).
     double avoid_target_s = 0.0;
 
-    // FSM이 준 LANE_CHANGE 목표점을 Frenet으로 투영한 결과 (D7).
+    // FSM이 준 LANE_CHANGE target_pose_map을 Frenet으로 투영한 결과.
     //
-    // AVOID의 has_avoid_target_d와 같은 이유로 별도 필드를 둔다 - 이 값은
-    // [A] FSM 의도이지 [B] planner 계산 결과가 아니다. LANE_CHANGE는
-    // BehaviorCommand.has_target_pose가 항상 true이므로(계약 3.3절 검증
-    // matrix) has_lane_change_target_d는 정상 LANE_CHANGE 명령에서 항상
+    // ===== 이 값은 실행 목표가 아니라 명령 sanity validation 데이터다 =====
+    //
+    // 실제 실행 목표(횡오프셋)는 이 필드가 아니라 차선 변경을 시작한 시점의
+    // 실제 ego d를 기준으로 core가 직접 계산한다(LaneChangeContext 참고) -
+    // 새 차선의 실제 중심선을 알려줄 GlobalPath/Route 연동이 아직 없는
+    // 상태에서, FSM이 이 pose를 만들 때 가정한 차선 폭/좌표계가 실제
+    // RefLine과 정확히 맞는다는 보장이 없기 때문이다. 대신 이 값은 node가
+    // "target_pose_map이 direction/heading과 최소한 모순되지 않는가"를
+    // 검증하는 데 쓴다.
+    //
+    // LANE_CHANGE는 BehaviorCommand.has_target_pose가 항상 true이므로(계약
+    // 3.3절 검증 matrix) has_target_pose_projection은 정상 명령에서 항상
     // true이지만, 투영 실패(RefLine 근방이 아님)에서는 false가 될 수 있다.
-    //
-    // AVOID 필드를 그대로 재사용하지 않는 이유: AVOID의 target_d는 장애물
-    // 상대 좌표계 의미(장애물 clearance)를 갖고, LANE_CHANGE의 target_d는
-    // 순수 차선 중심 offset이다. 이름을 공유하면 두 의미가 섞인다.
-    bool has_lane_change_target_d = false;
-    double lane_change_target_d = 0.0;   // [m]
-    double lane_change_target_s = 0.0;   // [m], has_lane_change_target_d일 때만 유효
+    bool has_target_pose_projection = false;
+    double target_pose_projection_d = 0.0;   // [m]
+    double target_pose_projection_s = 0.0;   // [m], has_target_pose_projection일 때만 유효
 
     // =====================================================================
     // [B] Planner 계산 결과 - planner가 채워 후보 생성기에 전달한다
@@ -140,7 +144,9 @@ struct PlannerCommand {
     // 횡방향 목표
     int target_lane = 0;                    // Frenet d 기준: -1 우, 0 유지, 1 좌
     double avoidance_d_offset = 0.0;        // AVOID 목표 횡오프셋 [m]
-    double lane_change_d_offset = 0.0;      // LANE_CHANGE 목표 횡오프셋 [m] (D7)
+    // LANE_CHANGE 목표 횡오프셋 [m]. planner가 start_d ± lane_width로 계산해
+    // 채운다(Maneuver/LaneChange.cpp) - FSM target_pose_map 값이 아니다.
+    double lane_change_d_offset = 0.0;
 
     // 종방향 gap 제어 이득 (config에서 옴)
     double gap_gain = 0.0;                  // 간격 오차를 접근 속도로 변환 [1/s]

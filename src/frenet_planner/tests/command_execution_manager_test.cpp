@@ -1240,13 +1240,21 @@ int main() {
                "cancel flag: a normal command is not a cancel");
     }
 
-    // ================= D7: LANE_CHANGE 전체 lifecycle =================
+    // ================= LANE_CHANGE 전체 lifecycle =================
     //
-    // §33. 다른 maneuver와 섞이지 않은 순수 LANE_CHANGE 한 transaction으로
-    // PREPARING -> READY -> COMMITTED -> EXECUTING -> COMPLETED 전체를
-    // 확인한다. manager 코드 자체는 D7에서 변경하지 않았으므로(AVOID/MERGE와
-    // 동일하게 이미 handshake로 처리된다) 이 테스트는 "정말 그런지"를
+    // 다른 maneuver와 섞이지 않은 순수 LANE_CHANGE 한 transaction으로
+    // PREPARING -> READY -> COMMITTED -> EXECUTING까지 확인한다. manager
+    // 코드는 LANE_CHANGE 전용으로 바뀐 적이 없다 - AVOID/MERGE와 동일하게
+    // 이미 generic handshake로 처리된다. 이 테스트는 "정말 그런지"를
     // 명시적으로 고정한다.
+    //
+    // 마지막의 NotifyManeuverCompleted() 확인은 manager 자체의 generic
+    // 능력(EXECUTING -> COMPLETED 전이가 가능하다는 것) 검증이다 - 현재
+    // fixed-reference LANE_CHANGE core/node는 목표 차선 도달 후에도 이
+    // 전이를 트리거하지 않는다(HOLD_TARGET_LANE으로 남는다,
+    // Maneuver/LaneChange.cpp 참고). manager가 이 기능을 여전히 갖고
+    // 있다는 것만 확인할 뿐, LANE_CHANGE가 실제로 COMPLETED에 도달한다는
+    // 뜻이 아니다.
     {
         CommandExecutionManager manager = MakeFullManager();
         const auto begin = manager.Accept(MakeLaneChange(700, Command::PREPARE));

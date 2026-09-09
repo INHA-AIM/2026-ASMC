@@ -74,56 +74,6 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
     return true;
 }
 
-bool FrenetPlanner::ReplaceReferenceLine(const std::vector<double>& x,
-                                         const std::vector<double>& y) {
-    // 먼저 임시 객체로 Build/Validate한 뒤 성공할 때만 기존 ref_를
-    // 교체한다(§22). 잘못된 GlobalPath 때문에 기존 정상 reference를
-    // 파괴하지 않는다 - BuildRefLine 자체는 실패를 반환하지 않으므로(항상
-    // RefLine을 만든다), 여기서는 결과가 실제로 쓸 수 있는 경로인지
-    // 최소한의 sanity만 확인한다.
-    if (x.size() < 4 || x.size() != y.size()) return false;
-    for (std::size_t i = 0; i < x.size(); ++i) {
-        if (!std::isfinite(x[i]) || !std::isfinite(y[i])) return false;
-    }
-
-    RefLine candidate = BuildRefLine(x, y, limits_.max_curvature);
-    if (candidate.points.size() < 2 || !(candidate.length > 0.0)) {
-        return false;
-    }
-
-    ref_ = std::move(candidate);
-    ref_loaded_ = true;
-
-    // ---- 좌표계에 종속된 history reset (§23) --------------------------
-    //
-    // last_s_/last_d_ 등은 이전 reference의 s 좌표계에서 의미를 갖는다.
-    // 그대로 두면 FindClosestS의 s_hint가 새 reference의 완전히 다른
-    // 구간을 가리켜 최근접점이 튄다(ref_line.hpp의 s_hint window 주석과
-    // 같은 문제). AVOID/FOLLOW/LANE_CHANGE context도 잠긴 target_d/s가
-    // 이전 reference 기준이므로 함께 비운다.
-    has_last_s_ = false;
-    last_s_ = 0.0;
-    last_d_ = 0.0;
-    last_d_dot_ = 0.0;
-    v2_following_ = FollowingContext{};
-    v2_avoidance_ = AvoidanceContext{};
-    v2_avoid_targets_ = AvoidTargetPlan{};
-    v2_lane_change_ = LaneChangeContext{};
-    stop_ = StopContext{};
-    last_candidate_paths_.clear();
-    last_candidate_validity_.clear();
-    object_tracks_.clear();
-
-    // ---- 물리적 속도 continuity history는 유지한다 (§23) ---------------
-    //
-    // last_target_speed_ / has_target_speed_history_는 건드리지 않는다 -
-    // reference가 바뀌었다고 차량의 실제 속도가 0이 된 것이 아니다. 그대로
-    // 두면 target speed rate limiter가 이번 교체 직후에도 정상적으로
-    // 연속성을 유지한다.
-
-    return true;
-}
-
 bool FrenetPlanner::GenerateDecelToZeroPath(double s, double d, double s_dot,
                                             CartesianPath& out_path) const {
     // D4-3에서 STOP BRAKING fail-safe에서 추출했다. 두 경로가 정확히 같은
@@ -306,12 +256,9 @@ bool IsSupportedExternalMode(BehaviorState mode) {
         case AVOID:
             return true;
 
-        // D7: LANE_CHANGE도 AVOID와 같은 단계로 열렸다 - target 확보까지만
-        // 열고, 후보 생성이 실제로 막히면 아래 ResolveManeuver 직전에서
+        // LANE_CHANGE도 AVOID와 같은 단계로 열려 있다 - target 확보까지만
+        // 허용하고, 후보 생성이 실제로 막히면 아래 ResolveManeuver 직전에서
         // UNSUPPORTED_BEHAVIOR로 막는다(AVOID와 동일한 이유).
-        //
-        // node의 SetImplementedManeuver(LANE_CHANGE)는 D7 마지막 단계까지
-        // 닫혀 있으므로 ROS 경로로는 여기까지 도달하지 않는다(§28).
         case LANE_CHANGE_LEFT:
         case LANE_CHANGE_RIGHT:
             return true;
@@ -363,18 +310,20 @@ bool ValidateExternalCommand(const PlannerCommand& command,
         return false;
     }
 
-    // LANE_CHANGE: 목표점 투영 결과가 있어야 한다. AVOID의 target_object_id
-    // 검증과 같은 이유다 - v2에서 has_target_pose는 항상 true로 강제되므로
-    // (계약 3.3절), has_lane_change_target_d=false는 투영 실패를 뜻하며 목표
-    // 없이는 어느 방향으로 얼마나 이동할지 정할 수 없다(D7). 투영 결과 값
-    // 자체의 유한성도 확인한다 - node의 ProjectPointToFrenet은 유한한 값만
-    // 반환하지만, 다른 호출자(테스트, 향후 호출부)가 has_..._d=true와 함께
-    // NaN을 넣는 경우까지 방어한다.
+    // LANE_CHANGE: target_pose_map 투영 결과가 있어야 한다. AVOID의
+    // target_object_id 검증과 같은 이유다 - v2에서 has_target_pose는 항상
+    // true로 강제되므로(계약 3.3절), has_target_pose_projection=false는
+    // 투영 실패를 뜻한다. 이 투영값 자체는 실행 목표가 아니라 명령 sanity
+    // 검증 데이터이지만(PlannerCommand 주석 참고), 투영조차 되지 않는
+    // pose는 애초에 이 참조선 근방의 명령이 아니라는 뜻이므로 거부한다.
+    // 투영 결과 값의 유한성도 확인한다 - node의 ProjectPointToFrenet은
+    // 유한한 값만 반환하지만, 다른 호출자(테스트)가 has_..._projection=true와
+    // 함께 NaN을 넣는 경우까지 방어한다.
     if ((command.mode == LANE_CHANGE_LEFT ||
          command.mode == LANE_CHANGE_RIGHT) &&
-        (!command.has_lane_change_target_d ||
-         !std::isfinite(command.lane_change_target_d) ||
-         !std::isfinite(command.lane_change_target_s))) {
+        (!command.has_target_pose_projection ||
+         !std::isfinite(command.target_pose_projection_d) ||
+         !std::isfinite(command.target_pose_projection_s))) {
         reason = FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
         return false;
     }
@@ -580,7 +529,7 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
         // 실패했는데 이전 사이클의 목표로 후보를 만들 수 있다.
         v2_avoid_targets_ = AvoidTargetPlan{};
     }
-    // v2 LANE_CHANGE 상태도 같은 이유로 같은 위치에서 비운다(D7). AVOID와
+    // v2 LANE_CHANGE 상태도 같은 이유로 같은 위치에서 비운다. AVOID와
     // 동일한 구조 - 다른 mode로 전환된 뒤에도 context가 남으면 다음
     // LANE_CHANGE가 stale 목표로 유예를 받는다.
     if (external_command.mode != LANE_CHANGE_LEFT &&
@@ -698,7 +647,7 @@ bool FrenetPlanner::PlanInternal(
     }
 
     // =====================================================================
-    // 외부 LANE_CHANGE 목표 준비 (D7)
+    // 외부 LANE_CHANGE 목표 준비
     //
     // AVOID의 대상 확보와 같은 위치다 - 저속 fallback보다 먼저 처리해야
     // 감속 중에 LANE_CHANGE 명령을 받아도 목표를 정상적으로 준비한다
@@ -706,7 +655,7 @@ bool FrenetPlanner::PlanInternal(
     if (external_command->mode == LANE_CHANGE_LEFT ||
         external_command->mode == LANE_CHANGE_RIGHT) {
         if (!PrepareExternalLaneChangeTarget(
-                s, *external_command, lane_change_prepare,
+                s, d, *external_command, lane_change_prepare,
                 lane_change_committed)) {
             return false;
         }

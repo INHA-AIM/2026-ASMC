@@ -397,14 +397,17 @@ public:
     void ResetExternalAvoidance();
 
     // =========================================================================
-    // v2 LANE_CHANGE (D7)
+    // v2 LANE_CHANGE
     //
-    // AVOID의 PREPARE/COMMIT/lifecycle 패턴을 그대로 재사용한다. 차이는:
-    //   - 회피 대상 객체가 없다(항상 has_target_pose=true인 고정 목표점).
-    //   - PASS phase가 없다 - 지나쳐야 할 장애물이 없으므로 목표 d 도달 +
-    //     안정된 lateral rate + heading 정렬로 곧바로 완료한다.
-    //   - 좌/우가 mode(LANE_CHANGE_LEFT/RIGHT)로 이미 갈리므로 DecideAvoidTargets
-    //     같은 좌/우 후보 경쟁이 필요 없다 - 후보는 항상 하나뿐이다.
+    // AVOID의 PREPARE/COMMIT/lifecycle 패턴을 재사용한다. 차이는:
+    //   - 회피 대상 객체가 없다.
+    //   - 좌/우가 mode(LANE_CHANGE_LEFT/RIGHT)로 이미 갈리므로 좌/우 후보
+    //     경쟁이 필요 없다 - 후보는 항상 하나뿐이다.
+    //   - 목표 d 도달 후 COMPLETED로 올리지 않는다. 이 검증 단계에는 새
+    //     차선으로 참조선을 바꿔줄 Route/GlobalPath 연동이 없으므로,
+    //     "완료"를 선언해도 FSM이 다음에 뭘 해야 하는지 알려줄 새 기준선이
+    //     없다 - 대신 HOLD_TARGET_LANE으로 전환해 잠긴 target_d를 유지한
+    //     채 계속 전진한다(LaneChangePhase 주석 참고).
     // =========================================================================
 
     // LANE_CHANGE PREPARE 한 사이클의 결과. AvoidPrepareResult와 같은 이유로
@@ -414,14 +417,6 @@ public:
         bool candidate_valid = false;
         bool low_speed_context = false;
 
-        // 요청 방향(mode가 이미 LEFT/RIGHT를 정하므로 항상 false다. AVOID와
-        // 필드 shape을 맞추기 위해 유지하되, LANE_CHANGE는 방향 모순이라는
-        // 개념 자체가 없다 - mode 자체가 방향이다).
-        bool direction_conflict = false;
-
-        // 목표점이 ego 후방인가. AVOID와 동일한 sanity check.
-        bool target_behind_ego = false;
-
         double selected_target_d = 0.0;
         CartesianPath candidate_path;
 
@@ -430,7 +425,10 @@ public:
         double selected_cost = -1.0;
         int blocking_object_id = -1;
 
-        bool maneuver_completed = false;
+        // target d 도달 후 HOLD_TARGET_LANE으로 전환했는가. AVOID의
+        // maneuver_completed와 이름은 비슷하지만 의미가 다르다 - manager를
+        // COMPLETED로 올리는 신호가 아니라 진단/로그용이다.
+        bool reached_target_lane = false;
         double maneuver_progress = -1.0;
     };
 
@@ -465,7 +463,9 @@ public:
         return v2_lane_change_.target_d;
     }
     double lane_change_start_d() const { return v2_lane_change_.start_d; }
-    bool lane_change_completed() const { return v2_lane_change_.completed; }
+    bool lane_change_holding_target_lane() const {
+        return v2_lane_change_.phase == LaneChangePhase::HOLD_TARGET_LANE;
+    }
     double lane_change_maneuver_progress() const {
         return v2_lane_change_.maneuver_progress;
     }
@@ -474,21 +474,6 @@ public:
     // 이유로 필요하다 - CANCEL 성공 시 manager는 planner를 호출하지 않으므로
     // 별도 API가 필요하다.
     void ResetExternalLaneChange();
-
-    // ---------------------------------------------------------------------
-    // Global Path / RefLine 전환 (D7, §19-25)
-    // ---------------------------------------------------------------------
-
-    // 새 reference line을 만들어 검증까지 통과하면 기존 ref_를 교체한다.
-    // 실패하면 기존 ref_는 그대로 남는다(§22) - 잘못된 GlobalPath 때문에
-    // 정상 동작 중인 reference를 파괴하지 않는다.
-    //
-    // 좌표계에 종속된 history(last_s_/last_d_/AVOID/FOLLOW context 등)는
-    // 성공 시에만 reset한다(§23). 물리적 속도 continuity history
-    // (last_target_speed_)는 reset하지 않는다 - reference가 바뀌어도 차량의
-    // 실제 속도는 그대로다.
-    bool ReplaceReferenceLine(const std::vector<double>& x,
-                              const std::vector<double>& y);
 
 private:
     bool PlanInternal(const CartesianState& ego,
@@ -601,55 +586,60 @@ private:
                                        AvoidPrepareResult& result);
 
     // ---------------------------------------------------------------------
-    // v2 LANE_CHANGE 내부 (D7). Avoid.cpp의 대응 함수와 같은 역할 분리다.
+    // v2 LANE_CHANGE 내부. Avoid.cpp의 대응 함수와 같은 역할 분리를 따른다.
     // ---------------------------------------------------------------------
+    //
+    // 이번 validation 단계의 authoritative execution target은 FSM
+    // target_pose_map의 투영값이 아니라 **차선 변경 시작 시점의 실제 d 기준
+    // 한 차선 폭 이동**이다(start_d ± lane_width_). Runtime GlobalPath로
+    // 새 차선 중심선을 받는 기능은 이번 범위에 없으므로, "새 차선 중심"이
+    // 정확히 어디인지 알 방법이 target_pose_map 투영 하나뿐이었다 - 그런데
+    // FSM 좌표계 오차나 목표점의 실제 lane 폭 가정이 이 단계에서는 검증되지
+    // 않았으므로, 그 값을 그대로 실행 목표로 신뢰하는 대신 이미 확실한 값
+    // (현재 차선 중심 근방의 실제 ego d)에서 lane_width_ 하나만큼 이동하는
+    // 것으로 목표를 고정한다. target_pose_map은 방향/헤딩이 명령과
+    // 모순되지 않는지 확인하는 sanity 용도로만 남는다.
 
-    // COMMIT 이전(TRACKING)과 이후(SHIFT)만 있다. AVOID의 PASS에 대응하는
-    // 단계가 없다 - 지나쳐야 할 장애물이 없으므로 SHIFT 완료 판정이 곧
-    // maneuver 완료다(§17).
-    enum class LaneChangePhase { TRACKING, SHIFT };
+    enum class LaneChangePhase {
+        IDLE,
+        SHIFT,
+        // target d 도달 후에도 새 GlobalPath가 없으므로 d=0으로 복귀하지
+        // 않고 이 차선을 유지하며 계속 전진한다. Route/GlobalPath 연동이
+        // 붙기 전까지의 의도된 종료 상태다.
+        HOLD_TARGET_LANE,
+    };
 
     struct LaneChangeContext {
         bool active = false;
+        bool committed = false;
 
         // mode(LANE_CHANGE_LEFT/RIGHT)가 이미 방향을 정하므로 좌/우 자체
         // 판단에는 쓰지 않는다. 진단·피드백용으로만 보존한다.
-        LateralDirection requested_direction = LateralDirection::NONE;
+        LateralDirection direction = LateralDirection::NONE;
 
-        LaneChangePhase phase = LaneChangePhase::TRACKING;
-
-        // FSM이 target_pose_map으로 준 목표를 Frenet으로 투영한 값.
-        // LANE_CHANGE는 has_target_pose가 항상 true여야 하므로(계약 3.3절)
-        // has_requested_target_d가 false인 것은 투영 실패를 뜻한다 - AVOID처럼
-        // "pose가 선택 사항이라 없다"가 아니다.
-        bool has_requested_target_d = false;
-        double requested_target_d = 0.0;
-        double requested_target_s = 0.0;
-
-        // EXECUTE 재검증을 통과해 확정한 값 (COMMIT 시점에 lock).
-        bool committed = false;
-        double target_d = 0.0;
+        // 차선 변경을 시작한 시점(첫 PREPARE 사이클)의 ego d. COMMIT 이후
+        // target_d = start_d ± lane_width_ 계산의 기준점이다 - COMMIT
+        // 시점이 아니라 시작 시점을 쓰는 이유는, PREPARE 동안 maintenance가
+        // 이미 그 d 근방을 유지하므로 두 시점의 값이 사실상 같고, "시작할
+        // 때의 내 차선"이라는 의미가 더 명확하기 때문이다.
         double start_d = 0.0;
+        double target_d = 0.0;
 
-        // heading 정렬 판정에 쓰는 목표 heading. requested_target_d와 함께
-        // 투영 시점에 채운다.
-        bool has_target_yaw = false;
-        double target_yaw = 0.0;
+        LaneChangePhase phase = LaneChangePhase::IDLE;
 
-        bool completed = false;
-        // localization jitter로 되돌아가지 않도록 이전 값 이상으로만 갱신한다
-        // (AVOID와 동일한 정책, §18).
+        // localization jitter로 되돌아가지 않도록 이전 값 이상으로만
+        // 갱신한다(AVOID의 maneuver_progress와 동일한 정책).
         double maneuver_progress = 0.0;
     };
 
-    // FSM이 지정한 LANE_CHANGE 목표점 확보 + 이번 cycle 후보 생성 준비.
-    // PrepareExternalAvoidTargets와 대응되지만, 확보할 "객체"가 없다 - 목표는
-    // 항상 target_pose_map 투영 결과([A] 필드)이므로 resolver가 아니라 단순
-    // context 갱신이다.
+    // 새 LANE_CHANGE transaction의 시작 d를 확보한다. FSM target_pose_map
+    // 투영은 이 함수가 아니라 node가 이미 끝낸 뒤 command에 sanity 검증
+    // 결과만 실어 보낸다 - 여기서는 "이 명령이 core에 처음 들어온
+    // 사이클인가"만 보고 start_d를 한 번 기록한다.
     //
     // 반환값: PlanInternal이 그대로 return해야 하는 상태만 false로 전달한다.
     bool PrepareExternalLaneChangeTarget(
-        double ego_s, const PlannerCommand& command,
+        double ego_s, double ego_d, const PlannerCommand& command,
         bool lane_change_prepare, bool lane_change_committed);
 
     // LANE_CHANGE PREPARE/COMMITTED 실행 전체. AvoidProcess와 동일한 구조다.
@@ -670,10 +660,12 @@ private:
         const std::vector<TrackedObject>& collision_obstacles,
         CartesianPath& out_path) const;
 
-    // heading 정렬을 포함한 완료 판정 + progress 갱신. UpdateCommittedAvoidLifecycle과
-    // 같은 역할이지만 PASS phase/obstacle clearance가 없다(§17, §18).
-    void UpdateCommittedLaneChangeLifecycle(double ego_d, double ego_d_dot,
-                                            double ego_yaw,
+    // 위치+속도+heading 정렬을 모두 만족하면 SHIFT -> HOLD_TARGET_LANE으로
+    // 전환하고 progress를 갱신한다. UpdateCommittedAvoidLifecycle과 같은
+    // 역할 분리이지만 obstacle clearance(PASS)에 대응하는 단계가 없다 -
+    // 지나쳐야 할 장애물이 없으므로 위치 도달이 곧 HOLD 전환 조건이다.
+    void UpdateCommittedLaneChangeLifecycle(double ego_s, double ego_d,
+                                            double ego_d_dot, double ego_yaw,
                                             LaneChangePrepareResult& result);
 
     // AVOID PREPARE의 유지 궤적을 만든다 (D6-2b).
@@ -1093,7 +1085,7 @@ private:
     // 생성기가 소비한다. 확보에 실패하면 count=0으로 비워진다.
     AvoidTargetPlan v2_avoid_targets_{};
 
-    // 외부 command(v2) 전용 LANE_CHANGE 상태 (D7).
+    // 외부 command(v2) 전용 LANE_CHANGE 상태.
     LaneChangeContext v2_lane_change_{};
     std::unordered_map<int, ObjectTrack> object_tracks_{};
 };

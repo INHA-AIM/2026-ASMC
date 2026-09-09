@@ -19,7 +19,6 @@ Canonical topic(현재 production 경로, v2):
 | subscribe | `/vehicle/state` | `asmc_msgs/VehicleState` |
 | subscribe | `/perception/objects` | `asmc_msgs/DetectedObjectArray` |
 | subscribe | `/behavior/command_v2` | `asmc_msgs/BehaviorCommand` |
-| subscribe | `/planning/global_path` | `asmc_msgs/GlobalPath` (D7, §19-25) |
 | publish | `/planning/trajectory` | `asmc_msgs/Trajectory` |
 | publish | `/planning/frenet_feedback_v2` | `asmc_msgs/FrenetFeedback` |
 
@@ -29,15 +28,32 @@ Canonical topic(현재 production 경로, v2):
 cutover 전까지의 과도기 경로다(`../../docs/fsm-frenet-interface-v2.md` 10절).
 
 현재 v2에서 production gate가 열린 maneuver: KEEP, STOP, EMERGENCY_STOP,
-FOLLOW, AVOID. MERGE는 미구현이며, gate가 닫힌 maneuver 명령은 accept는 하되
-planning하지 않고 안전정지로 응답한다.
+FOLLOW, AVOID, LANE_CHANGE. MERGE는 미구현이며, gate가 닫힌 maneuver 명령은
+accept는 하되 planning하지 않고 안전정지로 응답한다.
 
-LANE_CHANGE(D7)는 core/handshake(PREPARE→READY→EXECUTE→COMMITTED→EXECUTING→
-COMPLETED, AVOID와 동일한 transaction 패턴 재사용)와 ROS wiring까지 전부
-구현되어 있지만, `frenet_planner_node`의 production gate
-(`SetImplementedManeuver`)는 아직 닫혀 있다 - MORAI 실차 검증 전까지는 다른
-gate와 마찬가지로 열지 않는다(§28). `tools/lane_change_test_publisher.cpp`로
-gate 없이 직접 command를 발행해 검증할 수 있다.
+### LANE_CHANGE validation scope
+
+`frenet_planner_node`의 gate는 열려 있지만, Behavior Planner의 scorer/policy는
+LANE_CHANGE를 자동으로 고르지 않는다 - 이 단계의 수동 검증은
+`tools/lane_change_test_publisher.cpp`로 직접 command를 발행해 수행한다.
+
+현재 구현의 범위는 다음으로 고정되어 있다:
+
+- **기존 RefLine을 그대로 유지한다.** Route/FSM이 새 전역 경로를 보내 참조선
+  자체를 교체하는 기능(runtime global-path/reference handoff)은 이번 범위에
+  없다 - `docs/planning-control-refactoring-guidelines.md`의 "one policy, one
+  authoritative owner" 원칙에 따라, 아직 검증되지 않은 좌표계 전환 로직을
+  넣기보다 이번 단계는 고정 참조선 위의 순수 lateral shift로 좁혔다.
+- **실행 목표는 FSM target_pose_map 투영이 아니라 차선 변경을 시작한 시점의
+  실제 ego d 기준 한 차로 폭(`lane_width`) 이동이다** (`LEFT`: `start_d +
+  lane_width`, `RIGHT`: `start_d - lane_width`). `target_pose_map`은 방향/
+  헤딩이 명령과 모순되지 않는지 확인하는 sanity 검증에만 쓰인다.
+- **목표 차선 도달 후 `COMPLETED`로 latch하지 않는다.** 아직 새 참조선으로
+  전환할 방법이 없으므로, `HOLD_TARGET_LANE`으로 전환해 잠긴 target_d를
+  유지한 채 계속 전진한다 - `CommandExecutionManager`의 execution_state는
+  `EXECUTING`으로 남는다.
+- Route/GlobalPath 연동, 그리고 그에 따른 새 차선 참조선으로의 전환 및
+  `COMPLETED` latch는 이후 FSM/Route 통합 작업으로 미룬다.
 
 ## Runtime Flow
 
@@ -121,7 +137,7 @@ bash scripts/build_planning_control.sh
 # 또는 catkin 워크스페이스에서 이 패키지만
 catkin_make --pkg frenet_planner
 
-# 등록된 회귀 테스트 전체 실행(현재 24개)
+# 등록된 회귀 테스트 전체 실행(현재 23개)
 cd <catkin build dir>/frenet_planner   # 또는 워크스페이스 build/frenet_planner
 ctest --output-on-failure
 ```

@@ -2,13 +2,14 @@
 
 // LANE_CHANGE core와 command manager의 COMMIT을 한 planning tick에서 함께
 // 적용한다. avoid_commit_coordinator.hpp의 대응 함수를 그대로 재사용하는
-// 대신 별도 파일로 둔 이유는 §12 - AVOID의 generic 대규모 refactor 없이
-// LANE_CHANGE 전용 타입(LaneChangePrepareResult)에 맞춘 얇은 wrapper를
-// 만들기 위해서다. AVOID regression risk를 만들지 않는다.
+// 대신 별도 파일로 둔 이유는 LANE_CHANGE 전용 타입(LaneChangePrepareResult)에
+// 맞춘 얇은 wrapper를 만들어 AVOID의 generic 대규모 refactor와 그에 따른
+// regression risk를 피하기 위해서다.
 //
-// 계약: docs/fsm-frenet-interface-v2.md 12.7.5절과 동일한 원자적 COMMIT 순서.
-
-#include <cmath>
+// 이 검증 단계에서는 목표 차선 도달 후에도 manager를 COMPLETED로 올리지
+// 않는다(잠긴 target_d를 유지한 채 계속 전진하는 HOLD_TARGET_LANE으로
+// 전환할 뿐이다) - 그래서 AVOID의 CompleteAvoidAtomically에 대응하는 함수가
+// 없다.
 
 #include "frenet_planner/frenet_planner.hpp"
 #include "command_execution_manager.hpp"
@@ -44,20 +45,12 @@ inline LaneChangePlanningRoute RouteLaneChangePlanning(
     }
 }
 
+// pre-COMMIT CANCEL이 성공하면 manager는 IDLE로 돌아가지만 planner를 호출하지
+// 않으므로(planning_target=NONE), core의 LaneChangeContext는 이 신호를 보고
+// node가 별도로 비워야 한다 - 그러지 않으면 다음 LANE_CHANGE가 이전
+// transaction의 start_d/target_d를 그대로 이어받는다.
 inline bool ShouldResetLaneChangeContext(const CommandAcceptance& acceptance) {
     return !acceptance.should_plan() && acceptance.transaction_cancelled;
-}
-
-inline bool CompleteLaneChangeAtomically(
-    CommandExecutionManager& manager,
-    const FrenetPlanner::LaneChangePrepareResult& result,
-    bool trajectory_ready) {
-    if (!trajectory_ready || !result.maneuver_completed ||
-        !std::isfinite(result.maneuver_progress) ||
-        result.maneuver_progress < 1.0) {
-        return false;
-    }
-    return manager.NotifyManeuverCompleted();
 }
 
 inline bool CommitLaneChangeAtomically(

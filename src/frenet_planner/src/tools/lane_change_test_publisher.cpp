@@ -1,18 +1,15 @@
-// D7 §31: LANE_CHANGE FSM wire contract를 재현하는 테스트 tool.
+// LANE_CHANGE FSM wire contract를 재현하는 테스트 tool.
 //
-// 실제 FSM scorer는 LANE_CHANGE 선택 gate가 아직 닫혀 있으므로(§20, 마지막
-// 단계에서만 연다) 이 branch에서 열지 않는다. 이 tool은 그 gate 대신
-// PREPARE/EXECUTE/CANCEL handshake를 손으로 재현해 core/node 경로를
-// 확인하는 용도다.
+// Behavior Planner의 scorer/policy는 여전히 LANE_CHANGE를 자동으로 고르지
+// 않으므로, 이 tool이 PREPARE/EXECUTE/CANCEL handshake를 손으로 재현해
+// core/node 경로를 확인한다.
 //
-// MORAI 검증은 이번 작업의 마지막 보고 이후 사용자가 직접 수행한다 - 이
-// tool은 자동으로 반복 주행을 만들지 않고, 사용자가 지정한 한 번의 LANE_CHANGE
-// 명령 lifecycle만 손으로 진행시킨다(PREPARE 발행 -> READY 관측 -> 사용자
-// 입력으로 EXECUTE -> 완료/취소 관측).
+// 실제 MORAI 주행 검증은 사용자가 직접 수행한다 - 이 tool은 자동으로 반복
+// 주행을 만들지 않고, 사용자가 지정한 한 번의 LANE_CHANGE 명령 lifecycle만
+// 손으로 진행시킨다(PREPARE 발행 -> READY 관측 -> 사용자 입력으로 EXECUTE ->
+// 진행 상황 관측).
 
-#include <atomic>
 #include <cmath>
-#include <csignal>
 #include <cstdio>
 #include <iostream>
 #include <mutex>
@@ -20,8 +17,6 @@
 
 #include <asmc_msgs/BehaviorCommand.h>
 #include <asmc_msgs/FrenetFeedback.h>
-#include <asmc_msgs/GlobalPath.h>
-#include <geometry_msgs/Point.h>
 #include <ros/ros.h>
 
 namespace {
@@ -98,7 +93,6 @@ int main(int argc, char** argv) {
 
     std::string command_topic = "/behavior/command_v2";
     std::string feedback_topic = "/planning/frenet_feedback_v2";
-    std::string global_path_topic = "/planning/global_path";
     std::string direction_param = "LEFT";
     std::string source_link_id = "test_source_link";
     std::string target_link_id = "test_target_link";
@@ -107,11 +101,9 @@ int main(int argc, char** argv) {
     double target_yaw = 0.0;
     double desired_speed_mps = -1.0;
     uint32_t command_id = 1;
-    bool publish_global_path = false;
 
     pnh.param("command_topic", command_topic, command_topic);
     pnh.param("feedback_topic", feedback_topic, feedback_topic);
-    pnh.param("global_path_topic", global_path_topic, global_path_topic);
     pnh.param("direction", direction_param, direction_param);
     pnh.param("source_link_id", source_link_id, source_link_id);
     pnh.param("target_link_id", target_link_id, target_link_id);
@@ -122,7 +114,6 @@ int main(int argc, char** argv) {
     int command_id_param = static_cast<int>(command_id);
     pnh.param("command_id", command_id_param, command_id_param);
     command_id = static_cast<uint32_t>(command_id_param);
-    pnh.param("publish_global_path", publish_global_path, publish_global_path);
 
     uint8_t direction = asmc_msgs::BehaviorCommand::DIRECTION_LEFT;
     if (direction_param == "RIGHT" || direction_param == "right") {
@@ -134,33 +125,10 @@ int main(int argc, char** argv) {
 
     auto command_pub =
         nh.advertise<asmc_msgs::BehaviorCommand>(command_topic, 1);
-    auto global_path_pub =
-        nh.advertise<asmc_msgs::GlobalPath>(global_path_topic, 1);
     ros::Subscriber feedback_sub =
         nh.subscribe(feedback_topic, 10, FeedbackCallback);
 
     ros::Duration(0.5).sleep();  // 구독자 연결 대기.
-
-    if (publish_global_path) {
-        asmc_msgs::GlobalPath global_path;
-        global_path.header.stamp = ros::Time::now();
-        global_path.header.frame_id = "map";
-        global_path.revision = 1;
-        global_path.active_link_id = target_link_id;
-        global_path.link_ids = {source_link_id, target_link_id};
-        // 최소 sanity 경로(실제 인접 차로 좌표가 없으므로 CLI로 지정한 목표
-        // 부근의 직선 근사) - 이 tool의 목적은 GlobalPath topic 배선을
-        // 검증하는 것이지 production 경로 생성이 아니다.
-        for (int i = 0; i < 20; ++i) {
-            geometry_msgs::Point point;
-            point.x = target_x + i * 2.0 * std::cos(target_yaw);
-            point.y = target_y + i * 2.0 * std::sin(target_yaw);
-            global_path.waypoints.push_back(point);
-        }
-        global_path_pub.publish(global_path);
-        ROS_INFO("Published test GlobalPath revision=1 on %s",
-                 global_path_topic.c_str());
-    }
 
     ROS_INFO(
         "lane_change_test_publisher ready: direction=%s target=(%.2f, "

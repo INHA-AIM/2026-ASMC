@@ -42,9 +42,6 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     // 유지한다(계약 1.2절, 10.6절).
     std::string behavior_command_v2_topic = "/behavior/command_v2";
     std::string feedback_v2_topic = "/planning/frenet_feedback_v2";
-    // D7 §19: Route/FSM -> Frenet 전역 경로. production RouteManager 연결은
-    // 이번 작업 범위가 아니다(§20) - Frenet은 이 topic을 수신만 한다.
-    std::string global_path_topic = "/planning/global_path";
     std::string marker_topic = "/planning/markers";
     std::string planner_config_path;
 
@@ -63,7 +60,6 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     pnh_.param("publish_topics/feedback", feedback_topic, feedback_topic);
     pnh_.param("topics/behavior_command_v2", behavior_command_v2_topic,
                behavior_command_v2_topic);
-    pnh_.param("topics/global_path", global_path_topic, global_path_topic);
     pnh_.param("publish_topics/feedback_v2", feedback_v2_topic,
                feedback_v2_topic);
     pnh_.param("v2/stop/max_target_heading_error_rad",
@@ -110,8 +106,8 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
         avoid_max_target_heading_error_rad_ = 0.785398;
     }
 
-    // v2 LANE_CHANGE target pose 투영 (D7). AVOID와 값을 공유하지 않는다 -
-    // 헤더 주석 참고.
+    // v2 LANE_CHANGE target_pose_map sanity 투영. AVOID와 값을 공유하지
+    // 않는다 - 헤더 주석 참고.
     pnh_.param("v2/lane_change/projection_search_window",
                lane_change_projection_search_window_,
                lane_change_projection_search_window_);
@@ -175,10 +171,10 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     // 닫혀 있는 maneuver는 FAILED로 회신한다 - 조용히 velocity keeping
     // 궤적을 만드는 것보다 안전하다.
     //
-    // D4-1: KEEP. D4-2: STOP(target pose 투영 + StopContext).
-    // D4-3: EMERGENCY_STOP(직접 감속, 목표점 불필요).
-    // D5-1: FOLLOW(primary_object_id로 지정된 대상만 추종).
-    // D6-4a: AVOID(PREPARE/EXECUTE transaction + post-COMMIT 실행).
+    // LANE_CHANGE는 fixed-reference 검증을 위해 이 gate를 연다 - Behavior
+    // Planner의 scorer/policy는 그대로 닫혀 있으므로 실제 FSM이 자동으로
+    // LANE_CHANGE를 고르지는 않는다. 수동 검증은
+    // tools/lane_change_test_publisher.cpp로 명령을 직접 발행해 수행한다.
     command_manager_.SetImplementedManeuver(
         asmc_msgs::BehaviorCommand::KEEP, true);
     command_manager_.SetImplementedManeuver(
@@ -189,6 +185,8 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
         asmc_msgs::BehaviorCommand::FOLLOW, true);
     command_manager_.SetImplementedManeuver(
         asmc_msgs::BehaviorCommand::AVOID, true);
+    command_manager_.SetImplementedManeuver(
+        asmc_msgs::BehaviorCommand::LANE_CHANGE, true);
     marker_pub_ =
         nh_.advertise<visualization_msgs::MarkerArray>(marker_topic, 1);
 
@@ -201,8 +199,6 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     behavior_command_v2_sub_ = nh_.subscribe(
         behavior_command_v2_topic, 1,
         &FrenetPlannerNode::behaviorCommandV2Callback, this);
-    global_path_sub_ = nh_.subscribe(
-        global_path_topic, 1, &FrenetPlannerNode::globalPathCallback, this);
 
     planning_timer_ = nh_.createSteadyTimer(
         ros::WallDuration(1.0 / planning_frequency_hz_),
@@ -214,7 +210,7 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
                     << "; outputs: " << trajectory_topic << ", "
                     << feedback_topic << "; v2: " << behavior_command_v2_topic
                     << " -> " << feedback_v2_topic
-                    << " (KEEP/STOP/E-STOP/FOLLOW/AVOID enabled)"
+                    << " (KEEP/STOP/E-STOP/FOLLOW/AVOID/LANE_CHANGE enabled)"
                     << "; planner_initialized="
                     << (planner_initialized_ ? "true" : "false"));
 }
@@ -442,12 +438,6 @@ void FrenetPlannerNode::publishStop(const InputSnapshot& snapshot,
 }
 
 void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
-    // D7 §21/§24: pending GlobalPath는 이 cycle의 command/transaction
-    // dispatch보다 먼저, 안전한 경우에만 적용한다 - runV2PlanningCycle이
-    // 이번 tick에 COMMITTED/EXECUTING LANE_CHANGE를 재평가하기 전에
-    // reference가 확정되어 있어야 그 재평가가 새 좌표계를 일관되게 쓴다.
-    applyPendingGlobalPathIfSafe();
-
     // v2 명령이 하나라도 도착했으면 v2가 이 사이클을 소유한다. v1 경로는
     // v2 명령이 없을 때만 동작하므로, FSM이 v2로 전환하기 전까지 기존
     // KEEP/STOP 주행이 그대로 유지된다(계약 10.6절).
@@ -696,87 +686,6 @@ void FrenetPlannerNode::behaviorCommandV2Callback(
     has_v2_command_ = true;
 }
 
-void FrenetPlannerNode::globalPathCallback(
-    const asmc_msgs::GlobalPath::ConstPtr& message) {
-    if (!message) return;
-    // 저장만 한다(§19: 수신 -> validate -> pending 보관 -> 안전한 boundary
-    // 에서 적용). 실제 검증/적용은 20 Hz timer의
-    // applyPendingGlobalPathIfSafe()가 수행한다 - 콜백에서 바로 RefLine을
-    // 바꾸면 그 순간이 마침 LANE_CHANGE COMMITTED 도중일 수 있다.
-    std::lock_guard<std::mutex> lock(input_mutex_);
-    // 과거/중복 revision은 저장하지 않는다 - 오래된 메시지가 나중에
-    // 도착해도 이미 적용된 최신 경로를 되돌리지 않는다.
-    if (has_applied_global_path_revision_ &&
-        message->revision <= applied_global_path_revision_) {
-        return;
-    }
-    if (has_pending_global_path_ &&
-        message->revision <= pending_global_path_.revision) {
-        return;
-    }
-    pending_global_path_ = *message;
-    has_pending_global_path_ = true;
-}
-
-void FrenetPlannerNode::applyPendingGlobalPathIfSafe() {
-    asmc_msgs::GlobalPath pending;
-    {
-        std::lock_guard<std::mutex> lock(input_mutex_);
-        if (!has_pending_global_path_) return;
-        pending = pending_global_path_;
-        // 성공/실패와 무관하게 이번 시도로 pending을 소비한다(클래스 주석
-        // 참고) - 실패했다면 FSM이 새 revision으로 재발행해야 한다.
-        has_pending_global_path_ = false;
-    }
-
-    // ---- 안전한 boundary인지 확인 (§21, §24) --------------------------
-    //
-    // COMMITTED/EXECUTING인 handshake maneuver(LANE_CHANGE/AVOID/MERGE) 중에
-    // reference를 바꾸면 잠긴 target_d/start_d의 좌표계가 흔들린다. 그런
-    // 상태에서는 이번 revision을 적용하지 않고 버린다 - 다음 안전한 cycle에
-    // FSM이 재발행하면 그때 적용된다.
-    if (command_manager_.is_non_preemptible()) {
-        ROS_WARN_THROTTLE(
-            1.0,
-            "GlobalPath revision=%u deferred: an active maneuver transaction "
-            "is non-preemptible right now",
-            pending.revision);
-        return;
-    }
-
-    if (pending.waypoints.size() < 4) {
-        ROS_WARN("GlobalPath revision=%u rejected: only %zu waypoints (need "
-                 ">= 4)",
-                 pending.revision, pending.waypoints.size());
-        return;
-    }
-    std::vector<double> x;
-    std::vector<double> y;
-    x.reserve(pending.waypoints.size());
-    y.reserve(pending.waypoints.size());
-    for (const auto& point : pending.waypoints) {
-        x.push_back(point.x);
-        y.push_back(point.y);
-    }
-
-    if (!planner_.ReplaceReferenceLine(x, y)) {
-        ROS_WARN("GlobalPath revision=%u rejected: ReplaceReferenceLine "
-                 "failed validation; keeping the current reference",
-                 pending.revision);
-        return;
-    }
-
-    has_applied_global_path_revision_ = true;
-    applied_global_path_revision_ = pending.revision;
-    // v2 궤적 캐시도 이전 reference 기준이므로 재사용하면 안 된다
-    // (ReplaceReferenceLine이 core 내부 context는 이미 reset했지만, node가
-    // 들고 있는 v2 trajectory cache는 이 함수의 책임이다).
-    has_last_v2_trajectory_ = false;
-    ROS_INFO("GlobalPath revision=%u applied: active_link_id=%s "
-             "waypoints=%zu",
-             pending.revision, pending.active_link_id.c_str(), x.size());
-}
-
 bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     // 방금 수신한 명령. 아래 2단계에서 transaction 소유권에 따라 실제 계획
     // 대상으로 다시 묶는다(PlanningTarget).
@@ -881,12 +790,13 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         ? rejected_acceptance
         : command_manager_.Accept(command);
 
-    // manager와 core의 transaction boundary를 맞춘다. 새 AVOID뿐 아니라 새
-    // KEEP/FOLLOW/STOP/E-STOP도 freshness/conversion 조기 반환 전에 이전 AVOID
-    // context를 끊는다. same-ID refresh와 거부된 교체에는 플래그가 서지 않아
-    // 실행 중인 lock을 보존한다.
+    // manager와 core의 transaction boundary를 맞춘다. 새 AVOID/LANE_CHANGE뿐
+    // 아니라 새 KEEP/FOLLOW/STOP/E-STOP도 freshness/conversion 조기 반환
+    // 전에 이전 maneuver-specific context를 끊는다. same-ID refresh와 거부된
+    // 교체에는 플래그가 서지 않아 실행 중인 lock을 보존한다.
     if (acceptance.transaction_started) {
         planner_.ResetExternalAvoidance();
+        planner_.ResetExternalLaneChange();
     }
 
     // ===== 계획 대상 재결속 (D6-0a) =====
@@ -942,6 +852,9 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // 계속한다. 잠긴 목표가 사라지지 않는다.
         if (ShouldResetAvoidContext(acceptance)) {
             planner_.ResetExternalAvoidance();
+        }
+        if (ShouldResetLaneChangeContext(acceptance)) {
+            planner_.ResetExternalLaneChange();
         }
 
         // planner를 호출하지 않는 사이클이다. 다만 **궤적 출력을 멈추면 안
@@ -1124,7 +1037,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         avoid_route = RouteAvoidPlanning(command_manager_);
     }
 
-    // LANE_CHANGE(D7)도 execution_request가 아니라 transaction state로
+    // LANE_CHANGE도 execution_request가 아니라 transaction state로
     // 경로를 고른다(AVOID와 동일한 이유).
     const bool is_lane_change = planner_command.mode == LANE_CHANGE_LEFT ||
                                 planner_command.mode == LANE_CHANGE_RIGHT;
@@ -1397,13 +1310,15 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         planner_command.avoid_target_s = avoid_s;
     }
 
-    // ---- 4c-2. LANE_CHANGE 목표점 투영 (D7) ------------------------------
+    // ---- 4c-2. LANE_CHANGE target_pose_map sanity 검증 -------------------
     //
     // AVOID와 달리 target pose는 **필수**다(계약 3.3절 검증 matrix -
-    // has_target_pose=true 강제). 투영 실패는 has_lane_change_target_d=false로
-    // 표현되고, ValidateExternalCommand가 그것을 INVALID_COMMAND로 거부한다
-    // (frenet_planner.cpp 참고) - 이 블록 자체는 STOP/AVOID와 동일한 패턴으로
-    // 투영/heading 검증만 하고 core 판단에 관여하지 않는다.
+    // has_target_pose=true 강제). 이 블록은 STOP/AVOID와 같은 패턴으로
+    // 투영/heading을 검증하지만, **그 결과를 실행 목표로 쓰지 않는다** -
+    // 실제 target_d는 core가 차선 변경 시작 시점의 ego d에서 직접 계산한다
+    // (PlannerCommand.hpp의 target_pose_projection_* 주석 참고). 여기서는
+    // "이 pose가 최소한 방향/헤딩과 모순되지 않는가"만 확인해 명백히 잘못된
+    // 명령(반대 차선을 가리키는 pose 등)을 거른다.
     if (is_lane_change &&
         lane_change_route == LaneChangePlanningRoute::PRE_COMMIT) {
         if (!ego_s_valid) {
@@ -1428,15 +1343,15 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             return true;
         }
 
-        double lane_change_s = 0.0;
-        double lane_change_d = 0.0;
+        double target_pose_s = 0.0;
+        double target_pose_d = 0.0;
         if (!command.has_target_pose ||
             !planner_.ProjectPointToFrenet(
                 command.target_pose_map.position.x,
                 command.target_pose_map.position.y, ego_s,
                 lane_change_projection_search_window_,
-                lane_change_max_target_lateral_offset_, lane_change_s,
-                lane_change_d)) {
+                lane_change_max_target_lateral_offset_, target_pose_s,
+                target_pose_d)) {
             // has_target_pose=false는 이미 ValidateBehaviorCommand가
             // 거부해야 정상이지만(계약 3.3절), 방어적으로 여기서도 같은
             // 결과로 수렴시킨다 - Frenet이 임의의 기본 목표로 대체하지
@@ -1470,7 +1385,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 
         // heading 검증. STOP/AVOID와 같은 이유다(계약 3.4절 4항).
         double reference_heading = 0.0;
-        if (!planner_.ReferenceHeadingAt(lane_change_s, reference_heading)) {
+        if (!planner_.ReferenceHeadingAt(target_pose_s, reference_heading)) {
             command_manager_.NotifyPlanFailed(
                 /*terminal=*/true,
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
@@ -1531,15 +1446,16 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             return true;
         }
 
-        // delta_d 기준 direction consistency 검증(§5). LEFT는 목표 d가
-        // 요청 방향으로 유의미하게 이동해야 하고, RIGHT는 반대 방향이어야
-        // 한다. 단순 target_d 부호가 아니라 delta_d = requested_target_d -
+        // delta_d 기준 direction sanity 검증. LEFT는 pose가 요청 방향으로
+        // 유의미하게 이동해 있어야 하고, RIGHT는 반대 방향이어야 한다.
+        // 단순 target_pose_d 부호가 아니라 delta_d = target_pose_d -
         // current_d로 판단한다 - 곡선 구간에서는 차선 중앙 d 자체가 0이
-        // 아닐 수 있어 부호만 보면 오판한다.
+        // 아닐 수 있어 부호만 보면 오판한다. 이 검증은 실행 목표를
+        // 정하지 않는다 - "이 pose가 명령의 방향과 말이 되는가"만 본다.
         constexpr double kMinimumDirectionDelta = 0.5;  // [m]
         // 현재 ego d는 매 Plan() 사이클마다 갱신되는 진단 getter
         // (last_d())를 재사용한다 - 새 core API를 만들지 않는다.
-        const double delta_d = lane_change_d - planner_.last_d();
+        const double delta_d = target_pose_d - planner_.last_d();
         const bool direction_ok =
             (planner_command.mode == LANE_CHANGE_LEFT &&
              delta_d > kMinimumDirectionDelta) ||
@@ -1575,9 +1491,11 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             return true;
         }
 
-        planner_command.has_lane_change_target_d = true;
-        planner_command.lane_change_target_d = lane_change_d;
-        planner_command.lane_change_target_s = lane_change_s;
+        // sanity 검증을 통과한 투영 결과를 [A] 필드에 보존한다 - 진단용일
+        // 뿐, core의 실행 target_d 계산에는 쓰이지 않는다.
+        planner_command.has_target_pose_projection = true;
+        planner_command.target_pose_projection_d = target_pose_d;
+        planner_command.target_pose_projection_s = target_pose_s;
     }
 
     const CommandFingerprint fingerprint = MakeCommandFingerprint(command);
@@ -1757,7 +1675,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         return true;
     }
 
-    // ---- 4d-2. LANE_CHANGE post-COMMIT (D7) -----------------------------
+    // ---- 4d-2. LANE_CHANGE post-COMMIT ------------------------------------
     // AVOID의 post-COMMIT 블록과 완전히 동일한 구조다 - target pose는 더
     // 이상 실행 조건이 아니고 core의 잠긴 target_d/context만 쓰되 collision
     // geometry는 매 cycle 새로 쓴다.
@@ -1848,40 +1766,20 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         lane_change_fields.blocking_object_id = committed.blocking_object_id;
         lane_change_fields.maneuver_progress = committed.maneuver_progress;
 
-        if (committed.maneuver_completed &&
-            !CompleteLaneChangeAtomically(command_manager_, committed,
-                                          /*trajectory_ready=*/true)) {
-            command_manager_.NotifyPlanFailed(/*terminal=*/false);
-            has_last_v2_trajectory_ = false;
-            CommandAcceptance failed = acceptance;
-            failed.execution_state = command_manager_.execution_state();
-            failed.result_code =
-                asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
-            failed.detail = "lane change completion state transition rejected";
-            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
-                stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_GENERATION);
-            trajectory_pub_.publish(stop);
-            publishFeedbackV2(feedback_command_id, failed, &stop,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
-                              /*plan_valid=*/false, ego_s_valid, ego_s,
-                              nullptr, &lane_change_fields);
-            return true;
-        }
-
+        // target lane 도달 후에도 manager를 COMPLETED로 올리지 않는다 - 이
+        // 검증 단계에는 새 차선 참조선으로의 전환이 없으므로, EXECUTING을
+        // 유지한 채 잠긴 target_d에서 계속 전진한다(HOLD_TARGET_LANE).
         v2_plan_fail_streak_ = 0;
         last_v2_trajectory_ = trajectory;
         has_last_v2_trajectory_ = true;
         last_v2_trajectory_command_id_ = command.command_id;
         last_v2_trajectory_fingerprint_ = fingerprint;
-        last_v2_lane_change_feedback_ = lane_change_fields;
-        has_last_v2_lane_change_feedback_ = true;
 
         CommandAcceptance executing = acceptance;
         executing.execution_state = command_manager_.execution_state();
         if (acceptance.result_code == asmc_msgs::FrenetFeedback::RESULT_NONE) {
-            executing.detail = committed.maneuver_completed
-                ? "lane change maneuver completed"
+            executing.detail = committed.reached_target_lane
+                ? "holding the target lane after the lateral shift"
                 : "executing committed lane change trajectory";
         }
         trajectory_pub_.publish(trajectory);
@@ -2177,7 +2075,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         return true;
     }
 
-    // ---- 4f. LANE_CHANGE PREPARE (D7) ------------------------------------
+    // ---- 4f. LANE_CHANGE PREPARE -------------------------------------------
     //
     // AVOID PREPARE 블록과 완전히 동일한 구조와 계약(5.2절/5.3절/5.5절)이다:
     // candidate는 절대 발행하지 않고, EXECUTE는 이미 관측된 READY에만
@@ -2319,9 +2217,6 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             static_cast<int32_t>(prepare.blocking_object_id);
         lane_change_fields.maneuver_progress = committed_now
             ? planner_.lane_change_maneuver_progress() : -1.0;
-
-        last_v2_lane_change_feedback_ = lane_change_fields;
-        has_last_v2_lane_change_feedback_ = true;
 
         CommandAcceptance prepared = acceptance;
         prepared.execution_state = command_manager_.execution_state();
