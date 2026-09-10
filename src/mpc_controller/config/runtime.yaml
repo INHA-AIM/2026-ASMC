@@ -12,4 +12,4 @@ timeouts:
 
 # Must match morai_udp_bridge max_steer_deg and the physical vehicle limit.
 vehicle:
-  max_steer_deg: 36.25
+  max_steer_deg: 40.0

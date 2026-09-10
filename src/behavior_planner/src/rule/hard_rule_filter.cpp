@@ -1,5 +1,8 @@
 #include "behavior_planner/rule/hard_rule_filter.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 namespace behavior_planner {
 
 HardConstraint HardRuleFilter::apply(const UrbanFeature& feature,
@@ -14,9 +17,25 @@ HardConstraint HardRuleFilter::apply(const UrbanFeature& feature,
   hard.max_speed =
       feature.route.speed_limit > 0.0 ? feature.route.speed_limit : 1e9;
 
+  // distance_to_stop_line은 물리 정지선까지의 거리지만 Frenet에 전달되는
+  // 목표는 target_offset만큼 뒤이고, Frenet도 stop_buffer를 남긴다. 따라서
+  // 현재 속도에서 편안하게 감속하는 데 필요한 거리뿐 아니라 두 여유 거리와
+  // 제동 진입 margin까지 물리 정지선 기준으로 모두 더한다.
+  const double speed = std::max(0.0, feature.ego.speed);
+  const double decel =
+      std::max(0.1, traffic_stop_config_.comfortable_decel);
+  const double dynamic_stop_distance =
+      speed * speed / (2.0 * decel) +
+      std::max(0.0, traffic_stop_config_.braking_margin) +
+      std::max(0.0, traffic_stop_config_.target_offset) +
+      std::max(0.0, traffic_stop_config_.planner_stop_buffer);
+  const double stop_detection_distance = std::max(
+      std::max(0.0, traffic_stop_config_.minimum_detection_distance),
+      dynamic_stop_distance);
+
   if (feature.signal.has_stop_line &&
       feature.signal.distance_to_stop_line >= 0.0 &&
-      feature.signal.distance_to_stop_line <= 30.0) {
+      feature.signal.distance_to_stop_line <= stop_detection_distance) {
     hard.stop_line_constraint = true;
     hard.stop_before_s = feature.signal.stop_line_s;
 

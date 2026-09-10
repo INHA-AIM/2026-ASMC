@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 // MPC 파라미터
 struct MPCParams {
     // 예측 파라미터
@@ -10,13 +12,20 @@ struct MPCParams {
     double control_frequency = 20.0; // 제어 주기 [Hz]
 
     // 제약 조건
-    double steering_max     = 0.6109;  // 35deg [rad]
+    double steering_max     = 0.6981317008;  // 40deg [rad]
     double steering_rate_max= 1.0;     // [rad/s]
     double accel_min        = -5.0;    // [m/s^2]
     double accel_max        = 3.0;     // [m/s^2]
     // MORAI longlCmdType=1의 brake=1.0에 대응하는 차량 최대 감속도.
     // MPC 제약(accel_min)과 페달 변환 캘리브레이션을 분리한다.
     double brake_full_decel = 8.9;     // [m/s^2]
+    // MORAI IONIQ 5 측정 기반 pedal -> 실제 가감속 LUT. 출력 변환에서는
+    // 요구 가감속을 response 축에서 역보간해 pedal 값을 구한다.
+    bool use_calibrated_pedal_mapping = false;
+    std::vector<double> accel_pedal_lut;
+    std::vector<double> accel_response_lut;
+    std::vector<double> brake_pedal_lut;
+    std::vector<double> brake_response_lut;
     double vel_min          = 0.0;     // [m/s]
     double vel_max          = 30.0;    // [m/s]
 

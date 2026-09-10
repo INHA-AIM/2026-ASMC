@@ -46,6 +46,7 @@ catkin_install_python(PROGRAMS
   scripts/behavior_dashboard_server.py
   scripts/morai_objects_adapter.py
   scripts/open_dashboard.py
+  scripts/pedal_calibration_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 install(DIRECTORY launch src/config web DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 

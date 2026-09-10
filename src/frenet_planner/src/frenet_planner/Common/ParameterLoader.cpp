@@ -117,6 +117,10 @@ void LoadParams(const std::string& yaml_path,
     loadInto(root, "planner/avoid/rear_overhang",     avoid_cfg.rear_overhang);
     loadInto(root, "planner/avoid/pass_clearance",    avoid_cfg.pass_clearance);
     loadInto(root, "planner/avoid/prefer_right_when_equal", avoid_cfg.prefer_right_when_equal);
+    loadInto(root, "planner/avoid/committed_recovery_step",
+             avoid_cfg.committed_recovery_step);
+    loadInto(root, "planner/avoid/committed_recovery_max_expansion",
+             avoid_cfg.committed_recovery_max_expansion);
     // D6-1. 키가 없으면 기본값(5)이 유지되므로 기존 params.yaml도 그대로 쓴다.
     loadInto(root, "planner/avoid/dropout_grace_cycles", avoid_cfg.dropout_grace_cycles);
 
@@ -133,6 +137,10 @@ void LoadParams(const std::string& yaml_path,
     loadInto(root, "planner/stop/stop_buffer",        stop_cfg.stop_buffer);
     loadInto(root, "planner/stop/position_tolerance", stop_cfg.position_tolerance);
     loadInto(root, "planner/stop/speed_tolerance",    stop_cfg.speed_tolerance);
+    loadInto(root, "planner/stop/lateral_hold_speed",
+             stop_cfg.lateral_hold_speed);
+    loadInto(root, "planner/stop/lateral_error_tolerance",
+             stop_cfg.lateral_error_tolerance);
     loadInto(root, "planner/stop/max_lateral_offset", stop_cfg.max_lateral_offset);
     loadInto(root, "planner/stop/target_change_tolerance",
              stop_cfg.target_change_tolerance);

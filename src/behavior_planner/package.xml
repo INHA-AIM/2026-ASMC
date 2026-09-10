@@ -8,6 +8,10 @@
   <depend>asmc_msgs</depend>
   <depend>roscpp</depend><depend>std_msgs</depend><depend>geometry_msgs</depend>
   <depend>rospy</depend>
+  <exec_depend>rosbag</exec_depend>
+  <exec_depend>rosgraph</exec_depend>
+  <exec_depend>rospkg</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
   <depend>visualization_msgs</depend><depend>morai_msgs</depend><depend>yaml-cpp</depend>
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>rviz</exec_depend>

@@ -63,6 +63,12 @@ struct AvoidConfig {
     double pass_clearance    = 0.0;   // [m] 차체 형상 외 추가 통과 여유
     bool prefer_right_when_equal = true; // 좌/우 후보 품질이 같을 때 우측 우선
 
+    // COMMIT 때 잠근 횡목표가 최신 장애물 형상과 충돌하면 기존 회피
+    // 방향의 바깥쪽으로만 목표를 확장해 다시 검사한다. 첫 목표가 유효하면
+    // 재탐색하지 않으므로 정상 주행의 lock 의미는 그대로 유지된다.
+    double committed_recovery_step = 0.5;          // [m]
+    double committed_recovery_max_expansion = 2.0; // [m]
+
     // [cycles] v2 AVOID 대상의 일시적 미관측 유예 (D6-1).
     //
     // FollowingConfig.dropout_grace_cycles를 가져다 쓰지 않는다 - 서로 다른
@@ -115,9 +121,14 @@ struct StopConfig {
     // 이 buffer만큼 앞을 향하도록 해 오버슈트를 줄인다.
     double stop_buffer = 0.5;
     // [m] 목표 도달 판정. 이 안에 들어오고 속도도 낮으면 HOLD.
-    double position_tolerance = 0.5;
+    double position_tolerance = 0.7;
     // [m/s] HOLD 진입 속도 판정.
-    double speed_tolerance = 0.2;
+    double speed_tolerance = 0.15;
+    // [m/s] 이 속도 이하이고 이미 차선 중심 허용 범위 안이면 정지 직전의
+    // 불필요한 중앙 복귀 대신 현재 횡위치에서 d_dot=0으로 정렬한다.
+    double lateral_hold_speed = 1.0;
+    // [m] 저속 STOP에서 현재 횡위치를 유지해도 되는 차선 중심 오차.
+    double lateral_error_tolerance = 0.25;
     // [m] Cartesian 정지 목표가 reference line에서 이만큼 넘게 떨어져 있으면
     // 그 명령은 이 경로에 대한 정지 지점이 아니라고 보고 거부한다.
     double max_lateral_offset = 5.0;

@@ -47,7 +47,7 @@ MpcControllerNode::MpcControllerNode(ros::NodeHandle nh,
     private_nh_.param("timeouts/vehicle_state", vehicle_state_timeout_,
                       vehicle_state_timeout_);
 
-    double bridge_max_steer_degrees = 36.25;
+    double bridge_max_steer_degrees = 40.0;
     private_nh_.param("vehicle/max_steer_deg", bridge_max_steer_degrees,
                       bridge_max_steer_degrees);
     constexpr double kRadiansToDegrees =

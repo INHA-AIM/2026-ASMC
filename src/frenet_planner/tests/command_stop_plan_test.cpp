@@ -94,6 +94,22 @@ double MaxSpeed(const CartesianPath& path) {
     return m;
 }
 
+double MaxAbsCurvature(const CartesianPath& path) {
+    double maximum = 0.0;
+    for (double curvature : path.kappa) {
+        maximum = std::max(maximum, std::fabs(curvature));
+    }
+    return maximum;
+}
+
+double LateralOffsetAt(const RefLine& reference, double x, double y,
+                       double near_s) {
+    const double projected_s = FindClosestS(reference, x, y, &near_s);
+    const RefPoint point = Interpolate(reference, projected_s);
+    return -std::sin(point.theta) * (x - point.x) +
+            std::cos(point.theta) * (y - point.y);
+}
+
 constexpr double kEgoS = 400.0;  // MERGE 구간과 무관한 평범한 주행 구간
 
 }  // namespace
@@ -357,6 +373,68 @@ int main() {
                "HOLD never creeps forward");
         Expect(ok && planner->last_mode() == STOP,
                "HOLD still reports STOP mode");
+    }
+
+    // --- stop_buffer 경계의 투영 잡음에도 HOLD를 latch ---------------------
+    // 실측에서는 stop_buffer=0.5m 지점에 정지한 뒤 s 투영이 경계 양쪽으로
+    // 흔들리며 0속도/재출발 궤적을 반복했다. 0.2m의 진입 여유 안에서 한 번
+    // HOLD하면 같은 STOP target 동안 다시 BRAKING으로 내려가지 않아야 한다.
+    {
+        if (!fresh(planner)) return 1;
+        CartesianState ego = PoseAtArcLength(wp, kEgoS, 0.1);
+        double ego_s = 0.0;
+        planner->ProjectEgoToS(ego, ego_s);
+        PlannerCommand stop{};
+        stop.mode = STOP;
+        stop.stop_position = ego_s + 0.65;
+        const bool entered = planner->Plan(ego, no_objects, stop, path);
+        Expect(entered && planner->stop_holding() && MaxSpeed(path) <= 1e-9,
+               "stopped vehicle inside HOLD entry margin never creeps");
+
+        // localization이 뒤로 0.2m 흔들려도 target이 같으면 HOLD 유지.
+        ego = PoseAtArcLength(wp, kEgoS - 0.2, 0.0);
+        const bool held = planner->Plan(ego, no_objects, stop, path);
+        Expect(held && planner->stop_holding() && MaxSpeed(path) <= 1e-9,
+               "HOLD remains latched across stop-distance noise");
+    }
+
+    // --- 저속 STOP 출력 곡률은 후보 필터와 동일한 기하값 사용 ------------
+    // d_dot/s_dot 기반 analytic 변환은 정지 직전 s_dot->0에서 실측
+    // kappa=8.46/m까지 증폭됐다. 위치 기반 곡률로 출력하면 MPC의 차량 한계
+    // (tan(40deg)/3m ~= 0.2797/m)를 넘지 않아야 한다.
+    {
+        if (!fresh(planner)) return 1;
+        const CartesianState ego = PoseAtArcLength(wp, kEgoS, 0.3);
+        double ego_s = 0.0;
+        planner->ProjectEgoToS(ego, ego_s);
+        PlannerCommand stop{};
+        stop.mode = STOP;
+        stop.stop_position = ego_s + 1.0;
+        const bool ok = planner->Plan(ego, no_objects, stop, path);
+        Expect(ok && !path.x.empty() && AllFinite(path),
+               "low-speed STOP produces a finite trajectory");
+        Expect(ok && MaxAbsCurvature(path) <= 0.2797 + 1e-6,
+               "low-speed STOP output respects the MPC curvature limit");
+    }
+
+    // --- 저속 STOP은 안전한 현재 횡위치에서 차체만 정렬 -------------------
+    {
+        if (!fresh(planner)) return 1;
+        CartesianState ego = PoseAtArcLength(wp, kEgoS, 0.5);
+        const double initial_d = 0.20;
+        ego.x += -std::sin(ego.yaw) * initial_d;
+        ego.y +=  std::cos(ego.yaw) * initial_d;
+        double ego_s = 0.0;
+        planner->ProjectEgoToS(ego, ego_s);
+        PlannerCommand stop{};
+        stop.mode = STOP;
+        stop.stop_position = ego_s + 2.0;
+        const bool ok = planner->Plan(ego, no_objects, stop, path);
+        const double end_d = ok && !path.x.empty()
+            ? LateralOffsetAt(reference, path.x.back(), path.y.back(), ego_s)
+            : 1e9;
+        Expect(ok && std::fabs(end_d - initial_d) < 0.05,
+               "low-speed STOP preserves a safe in-lane lateral offset");
     }
 
     // --- 목표를 살짝 지나쳤을 때 후진하지 않는다 ---------------------------

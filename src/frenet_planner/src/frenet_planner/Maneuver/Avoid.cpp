@@ -596,6 +596,42 @@ bool FrenetPlanner::AvoidProcess(
     const double execution_target_d =
         (approach_phase || return_phase) ? 0.0 : v2_avoidance_.target_d;
 
+    // COMMIT 목표가 실제 충돌검사에서 막혔을 때 사용할 단방향 복구 목표.
+    // 원래 목표를 항상 첫 번째로 검사하고, SHIFT/PASS에서만 장애물 반대편
+    // 바깥쪽으로 확장한다. RETURN의 d=0이나 접근 단계에는 적용하지 않는다.
+    std::vector<double> committed_targets{execution_target_d};
+    if (avoid_committed && (shift_phase ||
+                            v2_avoidance_.phase == AvoidPhase::PASS)) {
+        double outward_sign = 0.0;
+        const double side = v2_avoidance_.target_d - v2_avoidance_.obstacle_d;
+        if (std::fabs(side) > 1e-6) {
+            outward_sign = side > 0.0 ? 1.0 : -1.0;
+        } else if (v2_avoidance_.requested_direction ==
+                   LateralDirection::LEFT) {
+            outward_sign = 1.0;
+        } else if (v2_avoidance_.requested_direction ==
+                   LateralDirection::RIGHT) {
+            outward_sign = -1.0;
+        } else {
+            outward_sign = v2_avoidance_.target_d >= 0.0 ? 1.0 : -1.0;
+        }
+
+        const double step = std::max(0.05,
+            avoid_cfg_.committed_recovery_step);
+        const double max_expansion = std::max(0.0,
+            avoid_cfg_.committed_recovery_max_expansion);
+        for (double expansion = step;
+             expansion <= max_expansion + 1e-9; expansion += step) {
+            const double candidate =
+                v2_avoidance_.target_d + outward_sign * expansion;
+            if (candidate < path_cfg_.lateral_d1.min - 1e-9 ||
+                candidate > path_cfg_.lateral_d1.max + 1e-9) {
+                break;
+            }
+            committed_targets.push_back(candidate);
+        }
+    }
+
     // TRACKING에서는 의도적으로 대상 장애물 전까지 global path를 유지한다.
     // 긴 reactive coast가 먼 target까지 닿아 중앙 후보를 미리 제거하지 않도록
     // 이 단계에서만 지정 target을 충돌 목록에서 제외한다. shift 진입거리
@@ -654,31 +690,49 @@ bool FrenetPlanner::AvoidProcess(
     // COMMIT 이후에는 중앙 fallback 대신 잠긴 target_d를 향하는 crawl을
     // 만들고, fresh Cartesian collision checker를 반드시 통과시킨다.
     if (avoid_committed && result.low_speed_context) {
-        result.generated_candidate_count = 1;
         CartesianPath crawl;
-        PlanLowSpeedFallback(ego, s, d, execution_target_d, crawl,
-                             2.0, resolved_target_speed);
-        int blocking_id = -1;
-        if (crawl.x.size() < 2 ||
-            !CartesianTrajectoryClear(crawl,
-                phase_collision_obstacles, vehicle_shape_,
-                collision_cfg_, path_cfg_.dt, &blocking_id)) {
-            if (!crawl.x.empty()) {
-                last_candidate_paths_.push_back(crawl);
-                last_candidate_validity_.push_back(false);
+        double recovered_target = execution_target_d;
+        int first_blocking_id = -1;
+        bool found_clear = false;
+        for (double target_d : committed_targets) {
+            CartesianPath candidate;
+            PlanLowSpeedFallback(ego, s, d, target_d, candidate,
+                                 2.0, resolved_target_speed);
+            ++result.generated_candidate_count;
+            int blocking_id = -1;
+            const bool clear = candidate.x.size() >= 2 &&
+                CartesianTrajectoryClear(candidate,
+                    phase_collision_obstacles, vehicle_shape_,
+                    collision_cfg_, path_cfg_.dt, &blocking_id);
+            if (!candidate.x.empty()) {
+                last_candidate_paths_.push_back(candidate);
+                last_candidate_validity_.push_back(clear);
             }
-            result.blocking_object_id = blocking_id;
+            if (clear) {
+                crawl = std::move(candidate);
+                recovered_target = target_d;
+                found_clear = true;
+                break;
+            }
+            if (first_blocking_id < 0 && blocking_id >= 0) {
+                first_blocking_id = blocking_id;
+            }
+        }
+        if (!found_clear) {
+            result.blocking_object_id = first_blocking_id;
             last_mode_ = AVOID;
-            last_failure_reason_ = blocking_id >= 0
+            last_failure_reason_ = first_blocking_id >= 0
                 ? PlanFailureReason::COLLISION_BLOCKED
                 : PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
             return false;
         }
+        if (std::fabs(recovered_target - v2_avoidance_.target_d) > 1e-9 &&
+            !approach_phase && !return_phase) {
+            v2_avoidance_.target_d = recovered_target;
+        }
         result.candidate_valid = true;
         result.valid_candidate_count = 1;
-        last_candidate_paths_.push_back(crawl);
-        last_candidate_validity_.push_back(true);
-        result.selected_target_d = execution_target_d;
+        result.selected_target_d = recovered_target;
         result.selected_cost = 0.0;
         result.candidate_path = crawl;
         out_path = std::move(crawl);
@@ -727,10 +781,12 @@ bool FrenetPlanner::AvoidProcess(
             generation_cfg.lateral_target_tolerance = 0.0;
         }
 
-        const int target_count = avoid_committed ? 1 : v2_avoid_targets_.count;
+        const int target_count = avoid_committed
+            ? static_cast<int>(committed_targets.size())
+            : v2_avoid_targets_.count;
         for (int index = 0; index < target_count; ++index) {
             const double target_d = avoid_committed
-                ? execution_target_d : v2_avoid_targets_.candidates[index];
+                ? committed_targets[index] : v2_avoid_targets_.candidates[index];
             PlannerCommand side_cmd = command;
             side_cmd.mode = AVOID;
             side_cmd.avoidance_d_offset = target_d;
@@ -787,6 +843,9 @@ bool FrenetPlanner::AvoidProcess(
                     : SelectBestPath(best_set);
                 best_target_d = target_d;
             }
+            // COMMIT 복구는 가장 가까운 바깥쪽 유효 목표를 사용한다.
+            // 더 먼 목표가 비용상 유리하더라도 불필요하게 회피 폭을 키우지 않는다.
+            if (avoid_committed && best_candidate) break;
         }
 
         if (best_candidate) {
@@ -816,6 +875,9 @@ bool FrenetPlanner::AvoidProcess(
             if (!reaches_avoid_target) {
                 result.selected_cost = -1.0;
                 result.candidate_path = CartesianPath{};
+            } else if (avoid_committed && !approach_phase && !return_phase &&
+                       std::fabs(endpoint_d - v2_avoidance_.target_d) > 1e-9) {
+                v2_avoidance_.target_d = endpoint_d;
             }
         } else {
             result.blocking_object_id = first_blocking_id;

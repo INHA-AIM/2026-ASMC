@@ -152,6 +152,11 @@ struct PlannerCommand {
     // 아니다.
     double lane_change_d_offset = 0.0;
 
+    // 외부 STOP 종단부에서만 쓰는 planner 내부 횡목표. 저속이고 이미 차선
+    // 안쪽이면 현재 d를 유지하며 d_dot=0으로 끝내 조향이 남는 것을 막는다.
+    bool has_stop_lateral_hold = false;
+    double stop_lateral_hold_d = 0.0;
+
     // 종방향 gap 제어 이득 (config에서 옴)
     double gap_gain = 0.0;                  // 간격 오차를 접근 속도로 변환 [1/s]
 

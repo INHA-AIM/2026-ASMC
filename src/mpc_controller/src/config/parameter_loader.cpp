@@ -1,6 +1,7 @@
 #include "config/parameter_loader.hpp"
 
 #include <cstdio>
+#include <vector>
 
 #include <yaml-cpp/yaml.h>
 
@@ -51,6 +52,14 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
     loadInto(root, "constraints/acceleration/max_forward", p.accel_max);
     loadInto(root, "constraints/acceleration/max_reverse", p.accel_min);
     loadInto(root, "control_mapping/brake_full_decel", p.brake_full_decel);
+    loadInto(root, "control_mapping/use_calibrated_lut",
+             p.use_calibrated_pedal_mapping);
+    loadInto(root, "control_mapping/accel/pedal", p.accel_pedal_lut);
+    loadInto(root, "control_mapping/accel/response_mps2",
+             p.accel_response_lut);
+    loadInto(root, "control_mapping/brake/pedal", p.brake_pedal_lut);
+    loadInto(root, "control_mapping/brake/response_mps2",
+             p.brake_response_lut);
     loadInto(root, "constraints/velocity/min",       p.vel_min);
     loadInto(root, "constraints/velocity/max",       p.vel_max);
 
@@ -82,6 +91,25 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
         p.brake_full_decel = 8.9;
     }
 
+    const auto valid_lut = [](const std::vector<double>& pedal,
+                              const std::vector<double>& response) {
+        if (pedal.size() < 2 || pedal.size() != response.size()) return false;
+        if (pedal.front() != 0.0 || response.front() != 0.0) return false;
+        for (size_t i = 1; i < pedal.size(); ++i) {
+            if (pedal[i] <= pedal[i - 1] || response[i] <= response[i - 1] ||
+                pedal[i] > 1.0) {
+                return false;
+            }
+        }
+        return true;
+    };
+    if (p.use_calibrated_pedal_mapping &&
+        (!valid_lut(p.accel_pedal_lut, p.accel_response_lut) ||
+         !valid_lut(p.brake_pedal_lut, p.brake_response_lut))) {
+        std::printf("[MPC] Invalid calibrated pedal LUT; using linear mapping\n");
+        p.use_calibrated_pedal_mapping = false;
+    }
+
     std::printf("[MPC] Params: horizon=%d dt=%.2f max_iter=%d wheelbase=%.2f freq=%.1fHz\n",
                 p.horizon, p.dt, p.max_iterations, p.wheelbase, p.control_frequency);
     std::printf("[MPC] Weights: path=%.2f head=%.2f speed=%.2f term=%.2f\n",
@@ -89,4 +117,6 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
                 p.weight_terminal);
     std::printf("[MPC] MORAI brake mapping: brake=1.0 <-> %.2f m/s^2\n",
                 p.brake_full_decel);
+    std::printf("[MPC] Calibrated nonlinear pedal mapping: %s\n",
+                p.use_calibrated_pedal_mapping ? "enabled" : "disabled");
 }
