@@ -195,6 +195,32 @@ TEST(HardRuleFilterTest, RedLightRequestsPlannedStop) {
   EXPECT_NE(std::string::npos, reason.find("traffic_light"));
 }
 
+TEST(HardRuleFilterTest, RedLightDetectionDistanceGrowsWithSpeed) {
+  TrafficStopConfig config;
+  config.minimum_detection_distance = 30.0;
+  config.comfortable_decel = 2.0;
+  config.braking_margin = 3.0;
+  config.target_offset = 5.0;
+  config.planner_stop_buffer = 0.5;
+  HardRuleFilter filter;
+  filter.setTrafficStopConfig(config);
+
+  UrbanFeature feature;
+  feature.ego.speed = 13.9;
+  feature.signal.has_stop_line = true;
+  feature.signal.stop_line_s = 100.0;
+  feature.signal.light_state = TrafficLightState::RED;
+
+  // 50 km/h에서는 동적 검출거리가 약 56.8 m이므로 55 m에서도 STOP한다.
+  feature.signal.distance_to_stop_line = 55.0;
+  std::string reason;
+  EXPECT_TRUE(filter.apply(feature, &reason).planned_stop);
+
+  // 같은 속도에서도 실제 필요 거리 밖의 먼 신호는 아직 구속하지 않는다.
+  feature.signal.distance_to_stop_line = 60.0;
+  EXPECT_FALSE(filter.apply(feature, &reason).planned_stop);
+}
+
 TEST(HardRuleFilterTest, UnprotectedRightIgnoresVehicleRedLight) {
   UrbanFeature feature;
   feature.signal.has_stop_line = true;

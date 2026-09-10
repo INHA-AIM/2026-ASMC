@@ -16,10 +16,12 @@ struct CostWeights {
     double klon;
 };
 
-double ComputeLateralCost(const FrenetPath& path, const CostWeights& w, double target_d = 0.0);
+double ComputeLateralCost(const FrenetPath& path, const CostWeights& w,
+                          double target_d = 0.0);
 double ComputeLongitudinalCost(const FrenetPath& path, const CostWeights& w);
 double ComputeTotalCost(double cost_lat, double cost_lon, const CostWeights& w);
-void EvaluateCosts(std::vector<FrenetPath>& candidates, const CostWeights& w, double target_d = 0.0);
+void EvaluateCosts(std::vector<FrenetPath>& candidates, const CostWeights& w,
+                   double target_d = 0.0);
 
 const FrenetPath* SelectBestPath(const std::vector<FrenetPath>& candidates);
 

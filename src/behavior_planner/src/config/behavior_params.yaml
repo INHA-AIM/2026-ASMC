@@ -31,7 +31,16 @@ safety:
   pedestrian_stop_distance: 15.0
 # VehicleState is referenced at the rear axle. IONIQ 5 length (~4.7 m) plus
 # 0.3 m clearance keeps the complete vehicle conservatively before the line.
-stop: {target_offset_m: 5.0, red_light_stop_distance: 27.0}
+stop:
+  target_offset_m: 5.0
+  # 저속 신호 검출 거리의 하한. 실제 활성화 거리는 아래 식과 이 값 중 큰 값:
+  # v^2/(2*comfortable_decel) + braking_margin + target_offset_m
+  #   + planner_stop_buffer
+  red_light_stop_distance: 30.0
+  # Frenet planner/stop 값과 함께 변경해야 동일한 제동 의도를 유지한다.
+  comfortable_decel: 2.0
+  braking_margin: 3.0
+  planner_stop_buffer: 0.5
 score_weight: {safety: 1.0, route: 0.8, efficiency: 0.5, comfort: 0.2}
 topics: {ego: "/vehicle/state", objects: "/Object_topic", plan_feedback: "/planning/feedback", frenet_feedback_v2: "/planning/frenet_feedback_v2"}
 publish_topics: {behavior_context: "/behavior/context", behavior_command_v2: "/behavior/command_v2", feature_debug: "/behavior/feature_debug", marker: "/behavior/markers"}

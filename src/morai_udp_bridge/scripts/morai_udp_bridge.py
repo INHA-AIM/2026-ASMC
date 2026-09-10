@@ -126,7 +126,7 @@ class MoraiUdpBridge(object):
         self.col_port = p("~collision_port", 9031)
         self.cmd_ip = p("~cmd_ip", "127.0.0.1")
         self.cmd_port = p("~cmd_port", 9093)          # MORAI 의 Host PORT
-        self.max_steer_deg = float(p("~max_steer_deg", 36.25))
+        self.max_steer_deg = float(p("~max_steer_deg", 40.0))
         self.cmd_bytes = int(p("~cmd_payload_bytes", 27))
         self.invert_steer = bool(p("~invert_steer", False))
         self.frame_id = p("~frame_id", "base_link")

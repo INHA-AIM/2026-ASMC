@@ -96,6 +96,30 @@ TEST(TrajectoryConverterTest, PublishesRosSteeringInRadians) {
     EXPECT_NEAR(0.2, braking_message.brake, 1e-6);
 }
 
+TEST(MpcRosConverterTest, InvertsMeasuredNonlinearPedalResponse) {
+    MPCParams params;
+    params.use_calibrated_pedal_mapping = true;
+    params.accel_pedal_lut = {0.0, 0.1, 0.2, 0.4};
+    params.accel_response_lut = {0.0, 0.2, 0.6, 1.2};
+    params.brake_pedal_lut = {0.0, 0.1, 0.2, 0.5};
+    params.brake_response_lut = {0.0, 1.5, 2.7, 9.5};
+
+    MPCControl control;
+    control.accel = 0.4;
+    morai_msgs::CtrlCmd message = ToRosControlCommand(control, params);
+    EXPECT_NEAR(0.15, message.accel, 1e-9);
+    EXPECT_DOUBLE_EQ(0.0, message.brake);
+
+    control.accel = -2.1;
+    message = ToRosControlCommand(control, params);
+    EXPECT_DOUBLE_EQ(0.0, message.accel);
+    EXPECT_NEAR(0.15, message.brake, 1e-9);
+
+    control.accel = -30.0;
+    message = ToRosControlCommand(control, params);
+    EXPECT_DOUBLE_EQ(1.0, message.brake);
+}
+
 TEST(TrajectoryConverterTest, RejectsInvalidInputs) {
     PlannedPath path;
     asmc_msgs::Trajectory message = MakeTrajectory();

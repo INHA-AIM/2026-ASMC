@@ -11,7 +11,7 @@ MPCParams MakeParams() {
     MPCParams params;
     params.dt = 0.1;
     params.wheelbase = 3.0;
-    params.steering_max = 0.63268;  // ~36.25 deg, production value
+    params.steering_max = 0.6981317008;  // 40 deg, production value
     params.vel_min = 0.0;
     params.vel_max = 30.0;
     return params;

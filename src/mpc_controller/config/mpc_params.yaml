@@ -27,7 +27,7 @@ solver:
 
 constraints:
   steering:
-    max_angle: 0.63268    # 36.25 deg [rad]: MORAI bridge/실제 차량 물리 한계와 일치 (config/runtime.yaml vehicle/max_steer_deg)
+    max_angle: 0.6981317008  # 40 deg [rad]: MORAI IONIQ 5 official max wheel angle
     max_rate: 1.0         # 0.4→1.0: 너무 작으면 solver 출력이 매 사이클 잘려서 흔들림
   acceleration:
     max_forward: 2.0
@@ -41,6 +41,19 @@ constraints:
 # This is deliberately separate from the MPC acceleration constraint above.
 control_mapping:
   brake_full_decel: 8.9
+  # 2026-09-10 MORAI IONIQ 5 repeated calibration. The controller computes
+  # desired acceleration in m/s^2 and inversely interpolates these monotonic
+  # pedal->response curves. STOP/E-STOP fixed overrides are intentionally
+  # outside this mapping.
+  # The measured response is strongly speed-dependent. Keep this first-stage
+  # 1-D LUT disabled until a speed-indexed mapping is implemented.
+  use_calibrated_lut: true
+  accel:
+    pedal:         [0.0, 0.10, 0.15, 0.20, 0.30, 0.40, 0.50, 0.60]
+    response_mps2: [0.0, 0.22, 0.38, 0.59, 0.87, 1.18, 1.66, 2.00]
+  brake:
+    pedal:         [0.0, 0.05, 0.10, 0.15, 0.20, 0.30, 0.50, 0.70]
+    response_mps2: [0.0, 0.91, 1.55, 2.05, 2.71, 4.75, 9.50, 10.30]
 
 # 목표 경로가 실제로 전진하는데 차량만 정지한 경우의 공통 복구 계층.
 # STOP/WAIT처럼 경로 목표속도가 0인 정상 정지에는 작동하지 않는다.

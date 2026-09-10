@@ -121,6 +121,15 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     double stop_distance = 0.0;
     if (external_stop_mode) {
         UpdateExternalStopExecution(s, s_dot, cmd, stop_distance);
+        // 정지 직전에 이미 차선 중심 허용 범위 안이라면 d=0까지 억지로
+        // 붙이지 않는다. 현재 d를 종단 목표로 고정하되 lateral quintic의
+        // 종단 d_dot/d_ddot=0 조건은 유지되므로 차체는 경로 방향으로 곧게
+        // 정렬된다. 허용 범위 밖이거나 속도가 높으면 기존 d=0 복귀 그대로다.
+        if (std::fabs(s_dot) <= stop_cfg_.lateral_hold_speed &&
+            std::fabs(d) <= stop_cfg_.lateral_error_tolerance) {
+            cmd.has_stop_lateral_hold = true;
+            cmd.stop_lateral_hold_d = d;
+        }
     }
 
     last_mode_ = external_stop_mode ? STOP : cmd.mode;
@@ -135,8 +144,49 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     }
 
     PlannerDebugStats stats;
+
+    // STOP이 AVOID보다 앞선 목표로 선택됐으면, 차량은 그 정지 목표를 넘어
+    // 진행하지 않는다. 하지만 APPROACH는 내부적으로 velocity-keeping 후보를
+    // 사용하므로 5초 horizon이 정지 목표를 지나 뒤쪽 장애물까지 닿을 수
+    // 있다. 그 장애물이 모든 후보를 제거하면 실제 정지선보다 훨씬 앞에서
+    // SAFE_STOP에 갇힌다.
+    //
+    // 정지 자세에서도 앞범퍼가 닿을 수 있는 장애물은 반드시 유지한다.
+    // 후륜축 기준 stop_position 뒤로 front extent+safety margin보다 더 먼
+    // 객체만 제외하므로, 정지 목표 전/인접 장애물의 안전성은 그대로다.
+    std::vector<TrackedObject> stop_scoped_collision_obstacles;
+    const std::vector<TrackedObject>* planning_collision_obstacles_ptr =
+        &predicted_obstacles;
+    if (external_stop_mode && std::isfinite(stop_distance) &&
+        stop_distance >= 0.0) {
+        const double rear_overhang = std::max(
+            0.0, std::min(avoid_cfg_.rear_overhang, vehicle_shape_.length));
+        const double front_extent = vehicle_shape_.length - rear_overhang;
+        const double protected_distance =
+            stop_distance + front_extent + collision_cfg_.safety_margin;
+        const double track_length =
+            ref_.points.empty() ? 0.0 : ref_.points.back().s;
+        stop_scoped_collision_obstacles.reserve(predicted_obstacles.size());
+        for (const TrackedObject& object : predicted_obstacles) {
+            double object_s = 0.0, object_d = 0.0, object_s_dot = 0.0;
+            ProjectObjectToFrenet(ref_, object, object_s, object_d,
+                                  object_s_dot);
+            double object_gap = object_s - s;
+            if (object_gap <= 0.0 && track_length > 0.0) {
+                object_gap += track_length;
+            }
+            const double object_front_gap =
+                object_gap - 0.5 * std::max(0.0, object.length);
+            if (!std::isfinite(object_front_gap) ||
+                object_front_gap <= protected_distance) {
+                stop_scoped_collision_obstacles.push_back(object);
+            }
+        }
+        planning_collision_obstacles_ptr =
+            &stop_scoped_collision_obstacles;
+    }
     const std::vector<TrackedObject>& planning_collision_obstacles =
-        predicted_obstacles;
+        *planning_collision_obstacles_ptr;
 
     // braking-memory 완화(fix/yuntae-frenet-speed-continuity Phase A):
     // external KEEP/LANE_KEEPING에서만, 그리고 cmd.mode가
@@ -171,7 +221,9 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
             maneuver_start, cmd, planning_collision_obstacles, candidates);
     }
 
-    EvaluateCosts(candidates, cost_weights_, 0.0);
+    const double lateral_cost_target = cmd.has_stop_lateral_hold
+        ? cmd.stop_lateral_hold_d : 0.0;
+    EvaluateCosts(candidates, cost_weights_, lateral_cost_target);
 
     if (cmd.mode != prev_mode_) {
         std::printf("[FrenetPlanner] mode: %s -> %s (s=%.2f d=%.3f)\n",
@@ -209,7 +261,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     if (debug_writer_) {
         debug_writer_->Publish(ref_, ego, start, cmd.mode, "NONE",
                                cmd.target_speed,
-                               predicted_obstacles, candidates,
+                               planning_collision_obstacles, candidates,
                                selected_index, stats, cmd);
     }
 
@@ -333,6 +385,22 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     }
 
     CartesianPath selected_cartesian = ConvertToCartesianPath(*best, ref_);
+
+    // STOP 종단부에서는 s_dot이 0으로 수렴한다. 일반 변환식은 d_dot/s_dot,
+    // d_ddot/s_dot^2를 사용하므로 0.1~0.6 m/s의 아주 낮은 속도에서도 작은
+    // 위치/미분 오차가 kappa를 수 배~수십 배로 증폭할 수 있다. 후보 안전성
+    // 필터는 위치로 계산한 ComputeGeometricPath의 곡률을 이미 사용하므로,
+    // STOP 출력도 동일한 기하 곡률/heading을 사용해야 필터와 MPC 사이의
+    // 계약이 일치한다. x/y와 종방향 v/a는 기존 정지 다항식을 그대로 둔다.
+    if (external_stop_mode) {
+        const GeometricPath stop_geometry =
+            ComputeGeometricPath(best->s, best->d, ref_);
+        if (stop_geometry.yaw.size() == selected_cartesian.yaw.size() &&
+            stop_geometry.kappa.size() == selected_cartesian.kappa.size()) {
+            selected_cartesian.yaw = stop_geometry.yaw;
+            selected_cartesian.kappa = stop_geometry.kappa;
+        }
+    }
 
     // STOP은 절대 후진하지 않는다. 정지 목표를 이미 지나쳤거나 아주 가까울 때
     // stopping quintic은 목표 s에 "도달"하려고 0을 지나 음수 속도로 내려가

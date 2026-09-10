@@ -2,7 +2,8 @@
 
 #include <cmath>
 
-double ComputeLateralCost(const FrenetPath& path, const CostWeights& w, double target_d) {
+double ComputeLateralCost(const FrenetPath& path, const CostWeights& w,
+                          double target_d) {
     const double T  = path.t.empty() ? 0.0 : path.t.back();
     const double d1 = path.d.empty() ? 0.0 : path.d.back();
 
@@ -33,7 +34,8 @@ double ComputeTotalCost(double cost_lat, double cost_lon, const CostWeights& w) 
     return w.klat * cost_lat + w.klon * cost_lon;
 }
 
-void EvaluateCosts(std::vector<FrenetPath>& candidates, const CostWeights& w, double target_d) {
+void EvaluateCosts(std::vector<FrenetPath>& candidates, const CostWeights& w,
+                   double target_d) {
     for (auto& path : candidates) {
         path.cost_lat   = ComputeLateralCost(path, w, target_d);
         path.cost_lon   = ComputeLongitudinalCost(path, w);

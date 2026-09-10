@@ -62,8 +62,10 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
     // COMMIT/CROSS에서는 짧은 종방향 거리 안에 d=0 복귀까지 강제하지 않는다.
     // 현재 횡위치를 유지해 합류 타이밍 궤적과 횡복귀 궤적을 분리하고, CLEAR 후
     // LANE_KEEPING이 차선 중앙 복귀를 담당한다.
-    const double d_offset = (cmd.mode == MERGE && cmd.merge_committed)
-        ? start.d : ResolveLateralOffset(cmd, lane_width);
+    const double d_offset = cmd.has_stop_lateral_hold
+        ? cmd.stop_lateral_hold_d
+        : ((cmd.mode == MERGE && cmd.merge_committed)
+               ? start.d : ResolveLateralOffset(cmd, lane_width));
     // MERGE는 차선 변경 모드가 아니라 회전교차로 global path의 종방향 진입
     // 타이밍만 조절한다. ±0.5m 후보가 충돌 회피처럼 번갈아 선택되며 조향이
     // 흔들리지 않도록 종단 d를 차선 중심 하나로 고정한다.
@@ -76,7 +78,9 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
     // 추가하므로 recovery 경로는 그대로 유지된다. AVOID/LANE_CHANGE 등 다른
     // maneuver는 목표 d 주변 탐색이 필요하므로 전역 tolerance를 유지한다.
     const double lateral_tolerance =
-        (cmd.mode == MERGE || cmd.mode == LANE_KEEPING) ? 0.0 : cfg.lateral_target_tolerance;
+        (cmd.has_stop_lateral_hold || cmd.mode == MERGE ||
+         cmd.mode == LANE_KEEPING)
+            ? 0.0 : cfg.lateral_target_tolerance;
     lateral_cfg.lateral_d1.min = d_offset - lateral_tolerance;
     lateral_cfg.lateral_d1.max = d_offset + lateral_tolerance;
 

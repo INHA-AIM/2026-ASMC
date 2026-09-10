@@ -52,6 +52,10 @@ planner:
     rear_overhang: 0.79       # [m] /vehicle/state 후륜축 기준점에서 뒤 범퍼까지 거리
     pass_clearance: 0.3       # [m] 자차/장애물 길이 외 추가 통과 여유
     prefer_right_when_equal: true # 좌/우 valid 품질이 거의 같으면 우측 우선
+    # COMMIT 목표가 장애물과 충돌할 때 기존 회피 방향 바깥쪽으로만 확장.
+    # 가장 가까운 유효 목표에서 멈추며 반대 방향으로는 전환하지 않는다.
+    committed_recovery_step: 0.5          # [m] 재탐색 횡간격
+    committed_recovery_max_expansion: 2.0 # [m] 잠긴 목표로부터 최대 확장폭
 
   # --- LANE_CHANGE: FSM이 target_pose_map으로 지정한 인접 차로 목표로의
   # 횡이동 완료 판정(§17). 초기 개발값이며 MORAI 튜닝 대상이다.
@@ -70,8 +74,15 @@ planner:
     braking_margin: 3.0        # [m] 제동거리에 더할 BRAKING 전환 여유
     stop_buffer: 0.5           # [m] 정지 목표 앞 여유(오버슈트 축소)
 
-    position_tolerance: 0.5    # [m] HOLD 진입 위치 판정
-    speed_tolerance: 0.2       # [m/s] HOLD 진입 속도 판정
+    # stop_buffer(0.5m) 경계에 정확히 멈춘 뒤 투영 잡음으로 BRAKING과 재출발을
+    # 반복하지 않도록 0.2m의 진입 여유를 둔다. HOLD는 같은 STOP target 동안
+    # latch되므로 진입 후 거리 잡음으로 해제되지 않는다.
+    position_tolerance: 0.7    # [m] HOLD 진입 위치 판정
+    speed_tolerance: 0.15      # [m/s] 충분히 정지한 뒤에만 HOLD 진입
+    # 정지 직전 이미 차선 중심 ±0.25m 안이면 현재 d에서 횡속도를 0으로
+    # 정렬한다. 범위 밖이거나 1m/s보다 빠르면 기존처럼 d=0을 목표로 한다.
+    lateral_hold_speed: 1.0       # [m/s]
+    lateral_error_tolerance: 0.25 # [m]
     max_lateral_offset: 5.0    # [m] 정지 목표가 경로에서 이보다 멀면 거부
     target_change_tolerance: 2.0 # [m] 이만큼 바뀌면 새 STOP으로 보고 phase 리셋
     # [m] 정지 목표 투영의 탐색창. FindClosestS 기본값 30m는 ego localization용
@@ -152,7 +163,8 @@ planner:
   kinematic_limits:
     max_lateral_accel: 3.0
     max_longitudinal_accel: 3.0
-    max_curvature: 0.28 #0.1704
+    # tan(40 deg) / 3.0 m = 0.2797 1/m (MORAI IONIQ 5 official spec).
+    max_curvature: 0.2797
     # [m/s^3] longitudinal jerk hard limit. initial safety limit; final value
     # requires MORAI validation (fix/yuntae-frenet-speed-continuity).
     # 5.0 -> 6.0: 정상 FOLLOW(큰 time_gap/min_gap) 경계 후보의 실측 peak

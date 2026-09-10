@@ -31,6 +31,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   bool use_traffic_light_mock = false;
   double traffic_light_stale_seconds = 1.0;
   double stop_target_offset_m = 5.0;
+  TrafficStopConfig traffic_stop;
   SafetyConfig safety;
   FollowTargetConfig follow_target;
   AvoidTargetConfig avoid_target;
@@ -74,6 +75,15 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
              traffic_light_stale_seconds);
   pnh_.param("stop/target_offset_m", stop_target_offset_m,
              stop_target_offset_m);
+  pnh_.param("stop/red_light_stop_distance",
+             traffic_stop.minimum_detection_distance,
+             traffic_stop.minimum_detection_distance);
+  pnh_.param("stop/comfortable_decel", traffic_stop.comfortable_decel,
+             traffic_stop.comfortable_decel);
+  pnh_.param("stop/braking_margin", traffic_stop.braking_margin,
+             traffic_stop.braking_margin);
+  pnh_.param("stop/planner_stop_buffer", traffic_stop.planner_stop_buffer,
+             traffic_stop.planner_stop_buffer);
   pnh_.param("safety/front_min_gap", safety.front_min_gap,
              safety.front_min_gap);
   pnh_.param("safety/emergency_ttc_enter", safety.emergency_ttc_enter,
@@ -116,6 +126,8 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     ROS_ERROR("Route initialization failed; check route_links.yaml");
   }
   builder_.setStopTargetOffset(stop_target_offset_m);
+  traffic_stop.target_offset = stop_target_offset_m;
+  decision_.setTrafficStopConfig(traffic_stop);
   builder_.setSafetyConfig(safety);
   builder_.setFollowTargetConfig(follow_target);
   builder_.setAvoidTargetConfig(avoid_target);
@@ -123,6 +135,11 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
                                 emergency_release_hold_s);
   ROS_INFO("Behavior stop target offset: %.2f m behind physical stop line",
            stop_target_offset_m);
+  ROS_INFO("Behavior traffic STOP detection: min=%.2f m, dynamic=v^2/(2*%.2f)"
+           "+%.2f margin+%.2f target_offset+%.2f planner_buffer",
+           traffic_stop.minimum_detection_distance,
+           traffic_stop.comfortable_decel, traffic_stop.braking_margin,
+           traffic_stop.target_offset, traffic_stop.planner_stop_buffer);
   ROS_INFO("Behavior FOLLOW target limits: distance=%.2f m lateral=%.2f m, "
            "objects stale after %.2f s",
            follow_target.max_distance, follow_target.max_lateral_offset,

@@ -145,17 +145,48 @@ morai_msgs::CtrlCmd MakeRosEmergencyStopCommand() {
     return message;
 }
 
+namespace {
+
+double InversePedalMap(double requested_response,
+                       const std::vector<double>& pedal,
+                       const std::vector<double>& response) {
+    if (requested_response <= 0.0) return 0.0;
+    for (size_t i = 1; i < response.size(); ++i) {
+        if (requested_response <= response[i]) {
+            const double ratio =
+                (requested_response - response[i - 1]) /
+                (response[i] - response[i - 1]);
+            return clip(pedal[i - 1] + ratio * (pedal[i] - pedal[i - 1]),
+                        0.0, 1.0);
+        }
+    }
+    // 마지막 측정점 밖은 마지막 구간 기울기로 제한적으로 외삽한다.
+    const size_t last = response.size() - 1;
+    const double slope = (pedal[last] - pedal[last - 1]) /
+                         (response[last] - response[last - 1]);
+    return clip(pedal[last] +
+                    (requested_response - response[last]) * slope,
+                0.0, 1.0);
+}
+
+}  // namespace
+
 morai_msgs::CtrlCmd ToRosControlCommand(const MPCControl& control,
                                         const MPCParams& params) {
     morai_msgs::CtrlCmd message;
     message.longlCmdType = 1;
     if (control.accel >= 0.0) {
-        message.accel = clip(control.accel / params.accel_max, 0.0, 1.0);
+        message.accel = params.use_calibrated_pedal_mapping
+            ? InversePedalMap(control.accel, params.accel_pedal_lut,
+                              params.accel_response_lut)
+            : clip(control.accel / params.accel_max, 0.0, 1.0);
         message.brake = 0.0;
     } else {
         message.accel = 0.0;
-        message.brake =
-            clip(-control.accel / params.brake_full_decel, 0.0, 1.0);
+        message.brake = params.use_calibrated_pedal_mapping
+            ? InversePedalMap(-control.accel, params.brake_pedal_lut,
+                              params.brake_response_lut)
+            : clip(-control.accel / params.brake_full_decel, 0.0, 1.0);
     }
     // morai_msgs/CtrlCmd.steering is radians. The MORAI bridge owns the
     // transport-specific conversion from radians to normalized UDP steering.
