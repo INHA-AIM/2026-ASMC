@@ -20,6 +20,9 @@
 struct VehicleShape {
     double width;   // [m]
     double length;  // [m]
+    // CartesianState x/y에서 뒤 범퍼까지 거리. 음수이면 기존처럼 x/y를
+    // 차체 중심으로 취급한다(기존 단위 테스트/다른 차량 설정 호환).
+    double rear_overhang = -1.0; // [m]
 };
 
 struct CollisionCheckConfig {

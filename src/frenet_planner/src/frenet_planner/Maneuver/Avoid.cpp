@@ -705,66 +705,168 @@ bool FrenetPlanner::AvoidProcess(
     const bool blocked_by_request = avoid_prepare &&
         (result.direction_conflict || result.target_behind_ego);
 
-    // 정상 후보 생성기는 정지 근처에서 횡 후보를 만들지 못할 수 있다.
-    // COMMIT 이후에는 중앙 fallback 대신 잠긴 target_d를 향하는 crawl을
-    // 만들고, fresh Cartesian collision checker를 반드시 통과시킨다.
-    if (avoid_committed && result.low_speed_context) {
-        CartesianPath crawl;
-        double recovered_target = execution_target_d;
+    // 저속에서는 d(t)가 아니라 d(s)인 거리 기반 후보를 사용한다. 기존
+    // 구현은 COMMIT 뒤 2초짜리 경로 하나만 만들어, 정지 출발 시 1~2 m
+    // 전진한 지점에서 횡이동이 끝나기도 전에 충돌로 모두 탈락했다.
+    // PREPARE/COMMIT 모두 여러 target_d와 여러 전환거리를 평가해 저속도
+    // 정상적인 후보 탐색 상태로 만든다.
+    if (result.low_speed_context && !blocked_by_request) {
+        std::vector<double> low_speed_targets;
+        if (avoid_committed) {
+            low_speed_targets = committed_targets;
+
+            // 방향을 FSM이 지정하지 않은 회피라면, 잠긴 쪽이 새 장애물로
+            // 완전히 막혔을 때 반대 corridor도 마지막 복구 후보로 평가한다.
+            // 원래 잠긴 목표를 항상 먼저 평가하므로 유효한 실행 중 경로가
+            // 매 cycle 좌우로 바뀌지는 않는다.
+            if ((shift_phase || v2_avoidance_.phase == AvoidPhase::PASS) &&
+                v2_avoidance_.requested_direction == LateralDirection::NONE) {
+                const AvoidTargetPlan alternatives =
+                    DecideAvoidTargets(v2_avoidance_, LateralDirection::NONE);
+                for (int i = 0; i < alternatives.count; ++i) {
+                    const double candidate = alternatives.candidates[i];
+                    const bool duplicate = std::any_of(
+                        low_speed_targets.begin(), low_speed_targets.end(),
+                        [candidate](double value) {
+                            return std::fabs(value - candidate) < 1e-6;
+                        });
+                    if (!duplicate &&
+                        candidate >= path_cfg_.lateral_d1.min - 1e-9 &&
+                        candidate <= path_cfg_.lateral_d1.max + 1e-9) {
+                        low_speed_targets.push_back(candidate);
+                    }
+                }
+            }
+        } else {
+            for (int i = 0; i < v2_avoid_targets_.count; ++i) {
+                const double candidate = v2_avoid_targets_.candidates[i];
+                if (candidate >= path_cfg_.lateral_d1.min - 1e-9 &&
+                    candidate <= path_cfg_.lateral_d1.max + 1e-9) {
+                    low_speed_targets.push_back(candidate);
+                }
+            }
+        }
+
+        const double scale_min = std::max(
+            1.0, avoid_cfg_.low_speed_transition_scale_min);
+        const double scale_max = std::max(
+            scale_min, avoid_cfg_.low_speed_transition_scale_max);
+        const double scale_step = std::max(
+            0.05, avoid_cfg_.low_speed_transition_scale_step);
+        const double path_extension = std::max(
+            0.0, avoid_cfg_.low_speed_path_extension);
+
+        CartesianPath selected;
+        double selected_target = execution_target_d;
+        double selected_cost = std::numeric_limits<double>::infinity();
         int first_blocking_id = -1;
-        bool found_clear = false;
-        for (double target_d : committed_targets) {
-            CartesianPath candidate;
-            PlanLowSpeedFallback(ego, s, d, target_d, candidate,
-                                 2.0, resolved_target_speed);
-            ++result.generated_candidate_count;
-            int blocking_id = -1;
-            const bool clear = candidate.x.size() >= 2 &&
-                CartesianTrajectoryClear(candidate,
-                    phase_collision_obstacles, vehicle_shape_,
-                    collision_cfg_, path_cfg_.dt, &blocking_id);
-            if (!candidate.x.empty()) {
-                last_candidate_paths_.push_back(candidate);
-                last_candidate_validity_.push_back(clear);
-            }
-            if (clear) {
-                crawl = std::move(candidate);
-                recovered_target = target_d;
-                found_clear = true;
-                break;
-            }
-            if (first_blocking_id < 0 && blocking_id >= 0) {
-                first_blocking_id = blocking_id;
+        for (std::size_t target_index = 0;
+             target_index < low_speed_targets.size(); ++target_index) {
+            const double target_d = low_speed_targets[target_index];
+            const double natural_distance =
+                LowSpeedLateralTransitionDistance(d, target_d);
+            for (double scale = scale_min;
+                 scale <= scale_max + 1e-9; scale += scale_step) {
+                const double transition_distance = natural_distance * scale;
+                CartesianPath candidate;
+                const bool generated = PlanLowSpeedFallback(
+                    ego, s, d, target_d, candidate, 0.0,
+                    resolved_target_speed, transition_distance,
+                    transition_distance + path_extension);
+                ++result.generated_candidate_count;
+
+                bool kinematically_valid = generated;
+                if (kinematically_valid) {
+                    for (std::size_t i = 0; i < candidate.kappa.size(); ++i) {
+                        const double kappa = std::fabs(candidate.kappa[i]);
+                        const double speed = i < candidate.v.size()
+                            ? std::fabs(candidate.v[i]) : 0.0;
+                        if (!std::isfinite(kappa) ||
+                            kappa > limits_.max_curvature + 1e-6 ||
+                            speed * speed * kappa >
+                                limits_.max_lateral_accel + 1e-6) {
+                            kinematically_valid = false;
+                            break;
+                        }
+                    }
+                }
+
+                int blocking_id = -1;
+                const int escape_object_id =
+                    (avoid_prepare || shift_phase ||
+                     v2_avoidance_.phase == AvoidPhase::PASS)
+                        ? v2_avoidance_.obstacle_id : -1;
+                const bool clear = kinematically_valid &&
+                    CartesianTrajectoryClear(
+                        candidate, phase_collision_obstacles, vehicle_shape_,
+                        collision_cfg_, path_cfg_.dt, &blocking_id,
+                        escape_object_id);
+                if (!candidate.x.empty()) {
+                    last_candidate_paths_.push_back(candidate);
+                    last_candidate_validity_.push_back(clear);
+                }
+                if (clear) {
+                    ++result.valid_candidate_count;
+                    // 먼저 나열된 target(잠긴 방향), 그 안에서는 가장 짧은
+                    // 물리적으로 유효한 전환거리를 우선한다.
+                    double cost = transition_distance;
+                    if (avoid_committed) {
+                        cost += static_cast<double>(target_index) * 1000.0;
+                    } else {
+                        const bool is_right =
+                            target_d < v2_avoidance_.obstacle_d;
+                        const bool preferred =
+                            avoid_cfg_.prefer_right_when_equal
+                                ? is_right : !is_right;
+                        if (!preferred) cost += 1e-3;
+                    }
+                    if (cost < selected_cost) {
+                        selected = candidate;
+                        selected_target = target_d;
+                        selected_cost = cost;
+                    }
+                } else if (first_blocking_id < 0 && blocking_id >= 0) {
+                    first_blocking_id = blocking_id;
+                }
             }
         }
-        if (!found_clear) {
+
+        if (selected.x.empty()) {
             result.blocking_object_id = first_blocking_id;
-            last_mode_ = AVOID;
-            last_failure_reason_ = first_blocking_id >= 0
-                ? PlanFailureReason::COLLISION_BLOCKED
-                : PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
-            return false;
+            if (avoid_committed) {
+                last_mode_ = AVOID;
+                last_failure_reason_ = first_blocking_id >= 0
+                    ? PlanFailureReason::COLLISION_BLOCKED
+                    : PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+                return false;
+            }
+            // PREPARE 후보 없음은 terminal failure가 아니라 WAITING이다.
+            // 아래 maintenance 생성 결과를 그대로 반환한다.
+        } else {
+            if (avoid_committed &&
+                std::fabs(selected_target - v2_avoidance_.target_d) > 1e-9 &&
+                !approach_phase && !return_phase) {
+                v2_avoidance_.target_d = selected_target;
+            }
+            result.candidate_valid = true;
+            result.selected_target_d = selected_target;
+            result.selected_cost = selected_cost;
+            result.candidate_path = selected;
+            if (avoid_committed) {
+                out_path = std::move(selected);
+                UpdateCommittedAvoidLifecycle(s, d, ego.v, result);
+                last_failure_reason_ = PlanFailureReason::NONE;
+                return true;
+            }
         }
-        if (std::fabs(recovered_target - v2_avoidance_.target_d) > 1e-9 &&
-            !approach_phase && !return_phase) {
-            v2_avoidance_.target_d = recovered_target;
-        }
-        result.candidate_valid = true;
-        result.valid_candidate_count = 1;
-        result.selected_target_d = recovered_target;
-        result.selected_cost = 0.0;
-        result.candidate_path = crawl;
-        out_path = std::move(crawl);
-        UpdateCommittedAvoidLifecycle(s, d, ego.v, result);
-        last_failure_reason_ = PlanFailureReason::NONE;
-        return true;
     }
 
     // 저속이라고 후보 생성을 건너뛰지 않는다. "저속에서는 어차피 안 될
     // 것"이라고 가정하면, 실제로 가능한 상황에서도 READY에 도달하지
     // 못한다. 생성을 시도하고 결과로 판단한다 - 저속에서 후보가 0개면
     // low_speed_context이 그 사유를 설명한다.
-    if (!blocked_by_request && v2_avoid_targets_.count > 0) {
+    if (!result.low_speed_context && !blocked_by_request &&
+        v2_avoid_targets_.count > 0) {
         const FrenetPath* best_candidate = nullptr;
         std::vector<FrenetPath> best_set;
         double best_target_d = 0.0;

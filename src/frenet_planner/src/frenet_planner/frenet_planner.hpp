@@ -838,7 +838,9 @@ private:
     bool PlanLowSpeedFallback(const CartesianState& ego, double s, double d, double target_d,
                               CartesianPath& out_path, double duration_s = 2.0,
                               double speed_cap =
-                                  std::numeric_limits<double>::infinity()) const;
+                                  std::numeric_limits<double>::infinity(),
+                              double transition_distance_override = -1.0,
+                              double minimum_path_distance = -1.0) const;
 
     // FSM이 지정한 FOLLOW 대상의 확보 결과.
     enum class FollowTargetStatus {

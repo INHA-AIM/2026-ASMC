@@ -73,6 +73,14 @@ struct AvoidConfig {
     double committed_recovery_step = 0.5;          // [m]
     double committed_recovery_max_expansion = 2.0; // [m]
 
+    // 정지/저속 AVOID는 시간 기반 d(t) 대신 거리 기반 d(s) 후보를 쓴다.
+    // 최소 물리 전환거리의 배수를 샘플링해 하나의 고정 fallback 경로가
+    // 아니라 곡률/충돌 검사를 통과하는 복수 후보를 만든다.
+    double low_speed_transition_scale_min = 1.0;
+    double low_speed_transition_scale_max = 1.6;
+    double low_speed_transition_scale_step = 0.2;
+    double low_speed_path_extension = 1.0; // [m] 횡이동 완료 뒤 검증 구간
+
     // [cycles] v2 AVOID 대상의 일시적 미관측 유예 (D6-1).
     //
     // FollowingConfig.dropout_grace_cycles를 가져다 쓰지 않는다 - 서로 다른
