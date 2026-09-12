@@ -2,10 +2,13 @@
 namespace behavior_planner {
 
 BehaviorScore BehaviorScorer::score(const UrbanFeature& feature,
-                                    const HardConstraint& hard) const {
+                                    const HardConstraint& hard,
+                                    bool persisted_follow_target) const {
   BehaviorScore score;
   score.keep = 70.0;
-  score.follow = feature.surrounding.has_front_vehicle ? 65.0 : -1e6;
+  score.follow = feature.surrounding.has_front_vehicle
+                     ? 65.0
+                     : (persisted_follow_target ? 75.0 : -1e6);
   if (feature.surrounding.has_front_vehicle) {
     const double ttc = feature.surrounding.front_vehicle.ttc;
     score.keep -= ttc < 3.0 ? 35.0 : 10.0;
