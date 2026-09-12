@@ -94,6 +94,12 @@ double MaxSpeed(const CartesianPath& path) {
     return m;
 }
 
+double MinAcceleration(const CartesianPath& path) {
+    double minimum = std::numeric_limits<double>::infinity();
+    for (double acceleration : path.a) minimum = std::min(minimum, acceleration);
+    return minimum;
+}
+
 double MaxAbsCurvature(const CartesianPath& path) {
     double maximum = 0.0;
     for (double curvature : path.kappa) {
@@ -353,6 +359,26 @@ int main() {
                "BRAKING fail-safe never commands reverse motion");
         Expect(ok && path.v.back() <= 1e-6,
                "BRAKING fail-safe decelerates to zero speed");
+    }
+
+    // --- 늦게 발견한 STOP은 comfortable 감속보다 강하게 제동 -------------
+    // 50km/h에서 15m는 1.5m/s²로 멈출 수 없다. 정상 후보가 없더라도
+    // fallback은 남은 거리 기반으로 서비스 제동 한계까지 강화되어야 한다.
+    {
+        if (!fresh(planner)) return 1;
+        const CartesianState ego = PoseAtArcLength(wp, kEgoS, 13.898889);
+        double ego_s = 0.0;
+        planner->ProjectEgoToS(ego, ego_s);
+        PlannerCommand stop{};
+        stop.mode = STOP;
+        stop.stop_position = ego_s + 15.0;
+        const bool ok = planner->Plan(ego, no_objects, stop, path);
+        Expect(ok && !path.x.empty() && AllFinite(path),
+               "late high-speed STOP produces a finite trajectory");
+        Expect(ok && MinAcceleration(path) < -3.0,
+               "late high-speed STOP escalates beyond comfortable braking");
+        Expect(ok && MinAcceleration(path) >= -5.0 - 1e-6,
+               "normal STOP stays within the configured service brake limit");
     }
 
     // --- 이미 정지해 있으면 HOLD (creep 금지) ------------------------------

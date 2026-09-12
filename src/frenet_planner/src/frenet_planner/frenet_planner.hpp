@@ -261,6 +261,10 @@ public:
         // 이 필드는 진단·로그에만 쓴다.
         bool low_speed_context = false;
 
+        // PREPARE 당시 실제 차량 속도. COMMIT 직후 TRACKING/SHIFT 최초
+        // 판정도 이후 lifecycle과 같은 속도 기준을 쓰기 위해 보존한다.
+        double ego_speed_mps = 0.0;
+
         // 요청 방향과 target pose가 모순인가. 이 경우에도 candidate_valid는
         // false여야 한다 - 충돌 검사에만 맡기면 안 된다(헤더 아래 주석).
         bool direction_conflict = false;
@@ -811,6 +815,10 @@ private:
         // 보고 phase를 리셋한다.
         double target_s = std::numeric_limits<double>::quiet_NaN();
         bool target_valid = false;
+        // 이번 planning cycle의 남은 거리와 속도로 계산한 일반 STOP 감속도.
+        // BRAKING fallback도 같은 값을 사용해 정상 후보와 실패 경로의 제동
+        // 강도가 서로 달라지지 않게 한다.
+        double commanded_decel = 0.0;
     };
 
     struct ObjectTrack {

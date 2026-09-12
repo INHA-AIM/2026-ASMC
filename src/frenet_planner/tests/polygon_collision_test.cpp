@@ -53,6 +53,18 @@ TrackedObject MakeObstacle(double x, double y, double vx = 0.0,
     return object;
 }
 
+FrenetPath MakePath(const std::vector<double>& lateral) {
+    FrenetPath path{};
+    path.valid = true;
+    for (std::size_t i = 0; i < lateral.size(); ++i) {
+        path.t.push_back(0.1 * static_cast<double>(i));
+        path.s.push_back(10.0);
+        path.d.push_back(lateral[i]);
+        path.s_d.push_back(0.0);
+    }
+    return path;
+}
+
 }  // namespace
 
 int main() {
@@ -107,6 +119,38 @@ int main() {
     const geometry::Polygon2D expanded = MakeEgoFootprint(ego, ego_shape, 0.5);
     Expect(CheckObstacleOverlap(expanded, {}, near_margin, 0.0),
            "ego safety margin expands collision contour");
+
+    const RefLine straight_ref =
+        BuildRefLine({-10.0, 10.0}, {0.0, 0.0}, 1.0);
+    const CollisionCheckConfig collision_cfg{0.5, 0.0, 1.0};
+    const TrackedObject lateral_near_margin = MakeObstacle(0.0, 2.4);
+    const TrackedObject lateral_overlapping = MakeObstacle(0.0, 1.5);
+
+    std::vector<FrenetPath> escaping{MakePath({0.0, -0.2, -0.4})};
+    FilterByCollision(escaping, straight_ref, {lateral_near_margin}, ego_shape,
+                      collision_cfg, -1, lateral_near_margin.id);
+    Expect(escaping.front().valid,
+           "avoid target may escape an existing inflated margin");
+
+    std::vector<FrenetPath> approaching{MakePath({0.0, 0.2, 0.4})};
+    FilterByCollision(approaching, straight_ref, {lateral_near_margin}, ego_shape,
+                      collision_cfg, -1, lateral_near_margin.id);
+    Expect(!approaching.front().valid,
+           "avoid target cannot move deeper into inflated margin");
+
+    std::vector<FrenetPath> physical_collision{
+        MakePath({0.0, -0.2, -0.4})};
+    FilterByCollision(physical_collision, straight_ref, {lateral_overlapping},
+                      ego_shape, collision_cfg, -1, lateral_overlapping.id);
+    Expect(!physical_collision.front().valid,
+           "avoid escape never permits physical OBB collision");
+
+    std::vector<FrenetPath> non_target_escape{
+        MakePath({0.0, -0.2, -0.4})};
+    FilterByCollision(non_target_escape, straight_ref, {lateral_near_margin},
+                      ego_shape, collision_cfg, -1, -1);
+    Expect(!non_target_escape.front().valid,
+           "inflated margin remains mandatory for non-target objects");
 
     if (g_failures == 0) {
         std::cout << "All polygon collision tests passed\n";

@@ -9,6 +9,8 @@ struct MPCParams {
     double dt              = 0.1;    // 샘플링 간격 [s]
     int    max_iterations  = 25;     // 솔버 최대 반복
     double wheelbase       = 3.0;    // 축거 [m]
+    // MORAI 실측 kappa = gain * tan(delta) / wheelbase 보정계수.
+    double steering_curvature_gain = 1.0;
     double control_frequency = 20.0; // 제어 주기 [Hz]
 
     // 제약 조건

@@ -28,10 +28,15 @@ class MoraiObjectsAdapter:
         return value if math.isfinite(value) and value > 0.0 else fallback
 
     @classmethod
-    def _convert_object(cls, source: ObjectStatus) -> DetectedObject:
+    def _convert_object(
+        cls, source: ObjectStatus, asmc_type: int
+    ) -> DetectedObject:
         target = DetectedObject()
         target.id = source.unique_id
-        target.type = max(0, min(255, source.type))
+        # MORAI's ObjectStatus.type values are category-local and do not match
+        # the ASMC perception contract. The containing ObjectStatusList field
+        # is authoritative: vehicle=1, pedestrian=2, static obstacle=3.
+        target.type = asmc_type
         target.center.x = source.position.x
         target.center.y = source.position.y
         target.center.z = source.position.z
@@ -79,20 +84,24 @@ class MoraiObjectsAdapter:
         converted.header.frame_id = "map"
 
         seen_ids = set()
-        for source in (
-            list(message.npc_list)
-            + list(message.pedestrian_list)
-            + list(message.obstacle_list)
-        ):
-            if source.unique_id in seen_ids:
-                rospy.logwarn_throttle(
-                    2.0,
-                    "Ignoring duplicate MORAI object id=%d",
-                    source.unique_id,
+        categorized_sources = (
+            (message.npc_list, 1),
+            (message.pedestrian_list, 2),
+            (message.obstacle_list, 3),
+        )
+        for sources, asmc_type in categorized_sources:
+            for source in sources:
+                if source.unique_id in seen_ids:
+                    rospy.logwarn_throttle(
+                        2.0,
+                        "Ignoring duplicate MORAI object id=%d",
+                        source.unique_id,
+                    )
+                    continue
+                seen_ids.add(source.unique_id)
+                converted.objects.append(
+                    self._convert_object(source, asmc_type)
                 )
-                continue
-            seen_ids.add(source.unique_id)
-            converted.objects.append(self._convert_object(source))
 
         self._publisher.publish(converted)
 

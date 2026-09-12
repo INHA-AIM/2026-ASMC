@@ -17,6 +17,7 @@ struct CurveSpeedConfig {
     double curve_th_sharp    = 0.080;
     double curve_th_mid      = 0.035;
     double curve_th_mild     = 0.015;
+    // 속도 기반 제동거리 앞에 추가하는 곡률 preview 거리 [m].
     double curve_lookahead_m = 15.0;
 };
 
@@ -53,6 +54,9 @@ struct AvoidConfig {
     double min_shift_start_distance = 3.0;
     double max_shift_start_distance = 70.0;
     double shift_time_margin = 0.5; // [s] 조향/제어 응답 여유
+    // 동적으로 계산된 SHIFT 시작거리에 직접 더하는 signed 보정 [m].
+    // 음수면 늦게, 양수면 일찍 시작하며 마지막에 min/max 안전경계를 적용한다.
+    double shift_start_distance_offset = 0.0;
     double lateral_tolerance = 0.4;   // [m] SHIFT 완료 판정
     // VehicleState의 x/y 기준점(현재 MORAI IONIQ 5는 후륜축 GPS)에서
     // 뒤 범퍼까지 거리. AVOID의 접근/통과 종방향 여유를 차량 중심 기준
@@ -114,6 +118,10 @@ struct MergeConfig {
 struct StopConfig {
     // [m/s^2] APPROACH 감속 프로파일과 BRAKING 진입거리 계산에 쓰는 감속도.
     double comfortable_decel = 2.0;
+    // [m/s^2] 일반 STOP에서 허용하는 최대 감속도. 남은 거리로 계산한 요구
+    // 감속도가 comfortable_decel보다 크면 이 값까지 연속적으로 강화한다.
+    // MPC constraints.acceleration.max_reverse와 같은 크기로 유지해야 한다.
+    double max_service_decel = 5.0;
     // [m] 제동거리에 더해 BRAKING으로 전환할 여유. 이 값이 있어야 정확히
     // 제동한계에서 전환하지 않고 한 박자 일찍 정지 다항식을 만들 수 있다.
     double braking_margin = 3.0;

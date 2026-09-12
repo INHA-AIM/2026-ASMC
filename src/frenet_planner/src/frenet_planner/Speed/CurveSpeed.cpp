@@ -16,12 +16,17 @@ double LookaheadTargetSpeed(const RefLine& ref, double s_start, double ego_speed
                              const CurveSpeedConfig& cfg, double max_longitudinal_accel,
                              double max_lateral_accel, double max_curvature) {
     constexpr double kComfortableDecelFactor = 0.5;  // 실제 평균 감속도는 max의 절반 정도로 가정
-    constexpr double kReactionMargin = 5.0;          // [m] 추가 여유거리
     const double usable_decel = std::max(0.5, max_longitudinal_accel * kComfortableDecelFactor);
     const double v_floor = VelocityFromCurvature(max_curvature, cfg, max_lateral_accel);
     const double speed_drop = std::max(0.0, ego_speed * ego_speed - v_floor * v_floor);
     const double required_dist = speed_drop / (2.0 * usable_decel);
-    const double lookahead_m = std::max(cfg.curve_lookahead_m, required_dist + kReactionMargin);
+    // curve_lookahead_m은 더 이상 동적 제동거리의 하한이 아니다. 동적
+    // 제동거리 *앞쪽*을 얼마나 추가로 볼지 정하는 명시적인 preview다.
+    // 따라서 15 -> 30 m 변경은 현재 속도와 관계없이 정확히 15 m만큼 더
+    // 먼 곡률을 보게 한다. max(base, dynamic) 구조에서는 고속일수록 설정값이
+    // 동적 거리에 가려져 튜닝해도 아무 변화가 없는 구간이 생겼다.
+    const double lookahead_m =
+        required_dist + std::max(0.0, cfg.curve_lookahead_m);
 
     // ref.closed_loop이 Reference 계층의 topology 계약이다(F-11) - 이 함수가
     // 별도로 폐루프 여부를 추정하지 않는다. 닫힌 트랙만 이음새 너머(실제로는

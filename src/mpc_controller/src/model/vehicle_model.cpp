@@ -1,11 +1,13 @@
 #include "vehicle_model.hpp"
 #include "math/utils.hpp"
 
+#include <algorithm>
+
 // ========================================
 // Kinematic Bicycle Model 한 스텝 적분 (Euler)
 //   x_dot   = vx * cos(yaw)
 //   y_dot   = vx * sin(yaw)
-//   yaw_dot = vx / L * tan(delta)
+//   yaw_dot = vx / L * steering_curvature_gain * tan(delta)
 //   vx_dot  = a
 // ========================================
 MPCState updateVehicleState(
@@ -14,7 +16,8 @@ MPCState updateVehicleState(
     double dt,
     double wheelbase,
     double v_min,
-    double v_max)
+    double v_max,
+    double steering_curvature_gain)
 {
     MPCState next;
     double yaw   = state.yaw;
@@ -26,7 +29,9 @@ MPCState updateVehicleState(
     next.y = state.y + vx * std::sin(yaw) * dt;
 
     if (std::fabs(vx) > 1e-3) {
-        next.yaw = normalizeAngle(yaw + (vx / wheelbase) * std::tan(delta) * dt);
+        next.yaw = normalizeAngle(
+            yaw + (vx / wheelbase) * steering_curvature_gain *
+                      std::tan(delta) * dt);
     } else {
         next.yaw = yaw;
     }
@@ -44,7 +49,8 @@ std::vector<MPCState> predictTrajectory(
     double dt,
     double wheelbase,
     double v_min,
-    double v_max)
+    double v_max,
+    double steering_curvature_gain)
 {
     std::vector<MPCState> traj;
     traj.reserve(control_sequence.size() + 1);
@@ -52,7 +58,8 @@ std::vector<MPCState> predictTrajectory(
 
     MPCState cur = initial_state;
     for (const auto& u : control_sequence) {
-        cur = updateVehicleState(cur, u, dt, wheelbase, v_min, v_max);
+        cur = updateVehicleState(cur, u, dt, wheelbase, v_min, v_max,
+                                 steering_curvature_gain);
         traj.push_back(cur);
     }
     return traj;
@@ -78,7 +85,8 @@ LinearizedModel linearizeBicycle(
     const MPCState&   state,
     const MPCControl& control,
     double dt,
-    double wheelbase)
+    double wheelbase,
+    double steering_curvature_gain)
 {
     LinearizedModel lm;
 
@@ -106,7 +114,7 @@ LinearizedModel linearizeBicycle(
     // f2(yaw') = yaw + vx/L * tan(delta) * dt
     //   ∂f2/∂vx  = tan(delta) / L * dt
     //   (vx 작을 때 보호: 동작점에서만 쓰므로 그냥 계산)
-    lm.A[2][3] = std::tan(delta) / L * dt;    // ∂yaw'/∂vx
+    lm.A[2][3] = steering_curvature_gain * std::tan(delta) / L * dt;
 
     // f3(vx') = vx + a*dt  → 대각 1 이미 설정됨, 추가 항 없음
 
@@ -116,7 +124,7 @@ LinearizedModel linearizeBicycle(
     //   1/cos²(delta) = sec²(delta)
     double cos_d = std::cos(delta);
     double sec2  = 1.0 / (cos_d * cos_d + 1e-6);  // 분모 보호
-    lm.B[2][0] = (vx / L) * sec2 * dt;            // ∂yaw'/∂delta
+    lm.B[2][0] = (vx / L) * steering_curvature_gain * sec2 * dt;
 
     // f3(vx') = vx + a*dt
     //   ∂f3/∂accel = dt
@@ -128,7 +136,8 @@ LinearizedModel linearizeBicycle(
     double fx1 = state.y   + vx * std::sin(yaw) * dt;
     double fx2, fx3;
     if (std::fabs(vx) > 1e-3) {
-        fx2 = state.yaw + (vx / L) * std::tan(delta) * dt;
+        fx2 = state.yaw + (vx / L) * steering_curvature_gain *
+                                  std::tan(delta) * dt;
     } else {
         fx2 = state.yaw;
     }
@@ -169,7 +178,8 @@ std::vector<LinearizedModel> buildLTVModels(
     double dt,
     double wheelbase,
     double v_min,
-    double v_max)
+    double v_max,
+    double steering_curvature_gain)
 {
     std::vector<LinearizedModel> models;
     models.reserve(U.size());
@@ -177,19 +187,24 @@ std::vector<LinearizedModel> buildLTVModels(
     MPCState cur = x0;
     for (size_t k = 0; k < U.size(); ++k) {
         // k번째 동작점 (cur, U[k]) 에서 선형화
-        models.push_back(linearizeBicycle(cur, U[k], dt, wheelbase));
+        models.push_back(linearizeBicycle(
+            cur, U[k], dt, wheelbase, steering_curvature_gain));
         // 다음 동작점: 비선형 모델로 한 스텝 전진
-        cur = updateVehicleState(cur, U[k], dt, wheelbase, v_min, v_max);
+        cur = updateVehicleState(cur, U[k], dt, wheelbase, v_min, v_max,
+                                 steering_curvature_gain);
     }
     return models;
 }
 
 // ========================================
-// Curvature-aware steering feed-forward: delta_ff = atan(L * kappa_ref)
+// Curvature-aware steering feed-forward:
+// delta_ff = atan(L * kappa_ref / steering_curvature_gain)
 // ========================================
 double SteeringFeedforward(double curvature, double wheelbase,
-                           double steering_max)
+                           double steering_max,
+                           double steering_curvature_gain)
 {
-    const double delta_ff = std::atan(wheelbase * curvature);
+    const double gain = std::max(1e-6, steering_curvature_gain);
+    const double delta_ff = std::atan(wheelbase * curvature / gain);
     return clip(delta_ff, -steering_max, steering_max);
 }

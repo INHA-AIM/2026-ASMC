@@ -211,8 +211,10 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
     if (!obstacles.empty()) {
         const int coast_exempt_id =
             (cmd.mode == FOLLOWING || cmd.mode == MERGE) ? cmd.target_object_id : -1;
+        const int avoid_escape_id =
+            cmd.mode == AVOID ? cmd.target_object_id : -1;
         FilterByCollision(combined, ref, obstacles, vehicle_shape, collision_cfg,
-                          coast_exempt_id);
+                          coast_exempt_id, avoid_escape_id);
     }
     if (stats) {
         for (const auto& p : combined) if (p.valid) stats->combined_valid_after_collision++;

@@ -31,7 +31,7 @@ struct LinearizedModel {
 // Kinematic Bicycle Model 한 스텝 적분 (Euler)
 //   x_dot   = vx * cos(yaw)
 //   y_dot   = vx * sin(yaw)
-//   yaw_dot = vx / L * tan(delta)
+//   yaw_dot = vx / L * steering_curvature_gain * tan(delta)
 //   vx_dot  = a
 // ----------------------------------------
 MPCState updateVehicleState(
@@ -40,7 +40,8 @@ MPCState updateVehicleState(
     double dt,
     double wheelbase,
     double v_min,
-    double v_max);
+    double v_max,
+    double steering_curvature_gain = 1.0);
 
 // ----------------------------------------
 // horizon 스텝 비선형 forward sim
@@ -52,7 +53,8 @@ std::vector<MPCState> predictTrajectory(
     double dt,
     double wheelbase,
     double v_min,
-    double v_max);
+    double v_max,
+    double steering_curvature_gain = 1.0);
 
 // ----------------------------------------
 // 동작점 (x̄, ū) 에서 bicycle model 1차 Taylor 선형화
@@ -66,7 +68,8 @@ LinearizedModel linearizeBicycle(
     const MPCState&   state,    // 동작점 x̄
     const MPCControl& control,  // 동작점 ū
     double dt,
-    double wheelbase);
+    double wheelbase,
+    double steering_curvature_gain = 1.0);
 
 // ----------------------------------------
 // horizon N 스텝 전체 선형화 모델 계산
@@ -79,15 +82,16 @@ std::vector<LinearizedModel> buildLTVModels(
     double dt,
     double wheelbase,
     double v_min,
-    double v_max);
+    double v_max,
+    double steering_curvature_gain = 1.0);
 
 // ----------------------------------------
 // Curvature-aware steering feed-forward.
 //
-//   yaw_dot = vx/L * tan(delta)  (위 kinematic bicycle model)
+//   yaw_dot = vx/L * gain * tan(delta)  (실측 보정 bicycle model)
 //   경로를 정확히 따라가는 정상상태(steady-state)라면
-//   yaw_dot = vx * kappa_ref 이므로 tan(delta) = L * kappa_ref
-//   -> delta_ff = atan(L * kappa_ref)
+//   yaw_dot = vx * kappa_ref 이므로 gain*tan(delta) = L*kappa_ref
+//   -> delta_ff = atan(L * kappa_ref / gain)
 //
 //   frenet_planner의 부호 규약과 동일: kappa_ref > 0 (좌회전, CCW)이면
 //   delta_ff > 0 (좌측 조향). cost/warm-start 양쪽에서 재사용하도록 여기
@@ -96,6 +100,7 @@ std::vector<LinearizedModel> buildLTVModels(
 //   결과는 steering_max 물리 한계 안으로 clip한다.
 // ----------------------------------------
 double SteeringFeedforward(double curvature, double wheelbase,
-                           double steering_max);
+                           double steering_max,
+                           double steering_curvature_gain = 1.0);
 
 #endif // MPC_VEHICLE_MODEL_HPP

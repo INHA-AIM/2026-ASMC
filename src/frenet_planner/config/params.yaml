@@ -19,14 +19,15 @@ planner:
 
   # --- 곡률 기반 사전 감속 (mpc_controller 옛 path_planner.cpp에서 이식) ---
   curve_speed:
-    target_vel: 10.0
+    target_vel: 13.0
     curve_vel_sharp: 4.0
     curve_vel_mid:   5.5
     curve_vel_mild:  7.0
     curve_th_sharp:  0.080
     curve_th_mid:    0.035
     curve_th_mild:   0.015
-    curve_lookahead_m: 15.0
+    # [m] 속도 기반 필요 제동거리에 더해지는 추가 곡률 preview 거리.
+    curve_lookahead_m: 27.0
 
   # --- Following(Sec.V-A, constant-time-gap-law) ---
   # FSM이 BehaviorCommand.primary_object_id로 지정한 FOLLOW 대상의 유효성
@@ -39,18 +40,19 @@ planner:
     gap_gain: 0.3              # [1/s] 간격 오차를 접근 속도로 변환하는 폐루프 이득
     max_leader_search_s: 60.0  # [m] FSM이 지정한 대상까지 이 거리 안이어야 유효
     exit_search_margin: 10.0   # [m] 확보 후 유지용 탐색거리 hysteresis
-    dropout_grace_cycles: 5    # [cycle] TrackedObject 일시 누락 허용(20Hz 기준 0.25s)
+    dropout_grace_cycles: 10   # [cycle] Behavior FOLLOW 해제 유예(0.4s)보다 긴 0.5s
 
   # --- AVOID: FSM이 지정한 대상의 유효성 검증 범위와 lateral 회피 ---
   avoid:
     detection_distance: 120.0 # [m] KEEP의 8 s reactive horizon보다 넓게 확보해 Behavior/AVOID 사이의 blind band를 없앤다
     avoid_offset: 5.0         # [m] 회피 시 lateral_d1 격자를 밀어낼 크기
-    min_shift_start_distance: 15.0 # [m] 저속에서도 확보할 최소 SHIFT 준비거리
+    min_shift_start_distance: 10.0 # [m] 저속에서도 확보할 최소 SHIFT 준비거리
     max_shift_start_distance: 70.0 # [m] 고속에서도 지나치게 일찍 이탈하지 않는 상한
     shift_time_margin: 0.5     # [s] 횡이동 계산에 더하는 조향/제어 응답 여유
+    shift_start_distance_offset: -5.0 # [m] 동적 시작거리에 직접 가감(음수=늦게)
     lateral_tolerance: 0.4    # [m] SHIFT 횟이동 완료 판정
     rear_overhang: 0.79       # [m] /vehicle/state 후륜축 기준점에서 뒤 범퍼까지 거리
-    pass_clearance: 0.3       # [m] 자차/장애물 길이 외 추가 통과 여유
+    pass_clearance: 0.5       # [m] 자차/장애물 길이 외 추가 통과 여유
     prefer_right_when_equal: true # 좌/우 valid 품질이 거의 같으면 우측 우선
     # COMMIT 목표가 장애물과 충돌할 때 기존 회피 방향 바깥쪽으로만 확장.
     # 가장 가까운 유효 목표에서 멈추며 반대 방향으로는 전환하지 않는다.
@@ -70,8 +72,12 @@ planner:
   # 낮추고, 제동거리 안에 들어왔을 때 BRAKING에서 정지 다항식을 생성한다.
   # 초기 개발값이며 실차/MORAI 튜닝 대상이다.
   stop:
-    comfortable_decel: 2.0     # [m/s^2] APPROACH 감속 프로파일과 BRAKING 전환거리
-    braking_margin: 3.0        # [m] 제동거리에 더할 BRAKING 전환 여유
+    comfortable_decel: 1.5     # [m/s^2] APPROACH 감속 프로파일과 BRAKING 전환거리
+    # [m/s^2] 늦게 인식한 일반 STOP의 최대 서비스 제동. 현재 MPC의
+    # constraints.acceleration.max_reverse=-5.0과 맞춘 값이다. 이를 넘는
+    # 위험은 Behavior의 EMERGENCY_STOP(brake=1.0) 정책이 담당한다.
+    max_service_decel: 5.0
+    braking_margin: 4.0        # [m] 제동거리에 더할 BRAKING 전환 여유
     stop_buffer: 0.5           # [m] 정지 목표 앞 여유(오버슈트 축소)
 
     # stop_buffer(0.5m) 경계에 정확히 멈춘 뒤 투영 잡음으로 BRAKING과 재출발을
@@ -161,10 +167,12 @@ planner:
 
   # --- KinematicLimits (path_generator.hpp) -------------------
   kinematic_limits:
-    max_lateral_accel: 3.0
+    max_lateral_accel: 2.6
     max_longitudinal_accel: 3.0
-    # tan(40 deg) / 3.0 m = 0.2797 1/m (MORAI IONIQ 5 official spec).
-    max_curvature: 0.2797
+    # 2026-09-11 MORAI IONIQ 5 steering calibration: measured maximum
+    # curvature was about 0.235 1/m. Keep a small feasibility margin and use
+    # the same 0.23 1/m limit as the MPC steering constraint.
+    max_curvature: 0.23
     # [m/s^3] longitudinal jerk hard limit. initial safety limit; final value
     # requires MORAI validation (fix/yuntae-frenet-speed-continuity).
     # 5.0 -> 6.0: 정상 FOLLOW(큰 time_gap/min_gap) 경계 후보의 실측 peak

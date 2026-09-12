@@ -355,6 +355,48 @@ TEST(FsmTest, EmergencyReleaseRequiresSafeTtcHoldTime) {
   EXPECT_FALSE(fsm.emergencyLatched());
 }
 
+TEST(FsmTest, FollowReleaseKeepsLastTargetForConfiguredDelay) {
+  behavior_planner::Fsm fsm;
+  fsm.setFollowReleaseDelay(0.4);
+
+  EXPECT_EQ(7, fsm.updateFollowTarget(true, 7, 10.0));
+  EXPECT_FALSE(fsm.followReleaseGraceActive());
+  EXPECT_EQ(7, fsm.updateFollowTarget(false, -1, 10.2));
+  EXPECT_TRUE(fsm.followReleaseGraceActive());
+  EXPECT_EQ(7, fsm.updateFollowTarget(false, -1, 10.39));
+  EXPECT_EQ(-1, fsm.updateFollowTarget(false, -1, 10.41));
+  EXPECT_FALSE(fsm.followReleaseGraceActive());
+}
+
+TEST(BehaviorDecisionTest, FollowDropoutGraceRetainsTargetThenReturnsKeep) {
+  BehaviorDecision decision;
+  decision.setFollowReleaseDelay(0.4);
+  UrbanFeature feature;
+  feature.timestamp = 10.0;
+  feature.route.speed_limit = 13.9;
+  feature.surrounding.has_front_vehicle = true;
+  feature.surrounding.front_vehicle.id = 7;
+  feature.surrounding.front_vehicle.gap = 10.0;
+  feature.surrounding.front_vehicle.ttc = 2.0;
+
+  EXPECT_EQ(BehaviorType::FOLLOW,
+            decision.decide(feature, asmc_msgs::PlanFeedback{})
+                .selected_behavior);
+
+  feature.timestamp = 10.2;
+  feature.surrounding.has_front_vehicle = false;
+  const BehaviorContextData grace =
+      decision.decide(feature, asmc_msgs::PlanFeedback{});
+  EXPECT_EQ(BehaviorType::FOLLOW, grace.selected_behavior);
+  EXPECT_EQ(7, grace.target.lead_vehicle_id);
+  EXPECT_TRUE(grace.extra_flags.at("follow_release_grace"));
+
+  feature.timestamp = 10.41;
+  EXPECT_EQ(BehaviorType::KEEP,
+            decision.decide(feature, asmc_msgs::PlanFeedback{})
+                .selected_behavior);
+}
+
 TEST(BehaviorDecisionTest, FollowKeepsCruiseSpeedCeilingForFrenetGapControl) {
   UrbanFeature feature;
   feature.ego.speed = 12.0;
