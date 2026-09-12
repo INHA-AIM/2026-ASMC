@@ -66,6 +66,26 @@ artifacts/perception_eval/bake/
 artifacts/perception_eval/poses_noisy/
 artifacts/perception_eval/jobs/
 
+# Large, reproducible BEV/lane debug payloads stay local.  Curated metrics and
+# metadata may still be committed from each analysis directory.
+artifacts/perception_eval/analysis/*/overlays/
+artifacts/perception_eval/analysis/*/range_inputs.npz
+artifacts/perception_eval/analysis/*/metrics.json
+artifacts/perception_eval/analysis/*/metrics_by_bin.csv
+artifacts/perception_eval/analysis/*/frame_metrics.csv
+artifacts/perception_eval/analysis/*/manual_review.csv
+
+# Superseded parameter sweeps are preserved locally but are not PR artifacts.
+artifacts/perception_eval/analysis/twinlite_v6_bev_loss_budget_20260910/
+artifacts/perception_eval/analysis/twinlite_v6_bev_range_20260910/
+artifacts/perception_eval/analysis/twinlite_v6_lane_vector_20260910/
+artifacts/perception_eval/analysis/twinlite_v6_lane_vector_c060_20260910/
+artifacts/perception_eval/analysis/twinlite_v6_lane_vector_ground_smoke_20260911/
+artifacts/perception_eval/analysis/twinlite_v6_lane_vector_observed_20260910/
+artifacts/perception_eval/analysis/twinlite_v6_lane_vector_shape_safe_20260910/
+artifacts/perception_eval/analysis/twinlite_v6_lane_vector_span4_20260910/
+artifacts/perception_eval/analysis/twinlite_v6_lane_vector_x040_20260910/
+
 # OS
 .DS_Store
 

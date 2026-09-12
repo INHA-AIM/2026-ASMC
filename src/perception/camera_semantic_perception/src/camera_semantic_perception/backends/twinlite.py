@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import Mapping, Optional, Tuple
+from typing import Mapping, Optional, Tuple, Union
 
 import numpy as np
 
-from ..backend import BackendInfo, SemanticBackend
+from ..backend import BackendInfo, CategoricalOutput, SemanticBackend
 
 
 def _sha256(path: Path) -> str:
@@ -113,7 +113,9 @@ class TwinLiteBackend(SemanticBackend):
     def info(self) -> BackendInfo:
         return self._info
 
-    def infer(self, batch: np.ndarray) -> Mapping[str, np.ndarray]:
+    def infer(
+        self, batch: np.ndarray
+    ) -> Mapping[str, Union[np.ndarray, CategoricalOutput]]:
         torch = self._torch
         if batch.ndim != 4 or batch.shape[1:] != (
             3,
@@ -134,17 +136,20 @@ class TwinLiteBackend(SemanticBackend):
             probabilities = {}
             for head, logits in logits_by_head.items():
                 if head in self.info.categorical_classes:
-                    value = torch.argmax(logits.float(), dim=1).to(torch.uint8)
+                    softmax = torch.softmax(logits.float(), dim=1)
+                    confidence, class_ids = torch.max(softmax, dim=1)
+                    probabilities[head] = CategoricalOutput(
+                        class_ids=class_ids.to(torch.uint8).detach().cpu().numpy(),
+                        confidence=confidence.detach().cpu().numpy().astype(
+                            np.float32, copy=False
+                        ),
+                    )
+                    continue
                 elif logits.shape[1] == 2:
                     value = torch.softmax(logits.float(), dim=1)[:, 1]
                 else:
                     value = torch.sigmoid(logits[:, 0].float())
                 probabilities[head] = (
-                    value.detach().cpu().numpy().astype(
-                        np.uint8
-                        if head in self.info.categorical_classes
-                        else np.float32,
-                        copy=False,
-                    )
+                    value.detach().cpu().numpy().astype(np.float32, copy=False)
                 )
         return probabilities

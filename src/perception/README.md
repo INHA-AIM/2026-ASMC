@@ -7,7 +7,8 @@
 ## 현재 상태
 
 - 안승현: Capture GT 기반 lane/drivable 2-head 학습·18 epoch 평가 완료
-- 안승현: 모델 독립 카메라 live 추론·시각화와 구조화 diagnostics 구현, raw bag A/B 실증 예정
+- 안승현: 모델 독립 카메라 live 추론·시각화, raw/result bag과 구조화 diagnostics 구현
+- 안승현: 3-camera fused BEV와 model-grid direct metric evidence 구현; 현재 spline은 정확도·지연 gate 미통과로 debug 전용
 - 장원태: 제공 MGeo의 bake/local crop 방향 pilot 제안
 - 손재호: LiDAR/3D 장애물 인지 코드 유지
 - 공통 BEV와 planning 메시지는 camera/map pilot 이후 합의
@@ -18,7 +19,7 @@
 |---|---|---|
 | `twinlite_morai/` | MORAI dataset, 2-head loss, TwinLiteNet+ loader | 구현·학습 완료 |
 | `camera_semantic_perception/` | 모델 독립 ROS live 추론·시각화·계측 | Stage C1·C2 구현·live 검증 완료 |
-| `drivable_bev/` | camera/map/LiDAR 공통 ego-BEV | 설계 후보·placeholder |
+| `drivable_bev/` | 3-camera metric fusion, direct lane evidence와 spline/range evaluator | evidence 구현 완료, spline·범위 provisional |
 | `map_prior/` | MGeo bake 결과와 local crop | 장원태 중심 후보, 아직 없음 |
 | `morai_3d_detection/` | 카메라 3D 인지 연구 | 손재호 |
 | `../lidar+sensorfusion/` | LiDAR perception/fusion | LiDAR 파트 |

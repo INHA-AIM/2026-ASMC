@@ -270,8 +270,16 @@ sensor profile이 바뀌지 않는 연속 수집 단위로 잡는다. 하나라�
 `backend:=grpc` 또는 `backend:=ros_topic`을 지정한다. ROS 방식은 publish 이후의
 저장 완료 응답이 없으므로 100-frame SensorData 파일 QA가 특히 중요하다.
 
-MORAI 이미지·GT는 Windows의 `SensorData`에 저장된다. Linux에는 다음 lineage만
-`$ASMC_DATA/capture_runs/<run_id>/` 아래 기록한다.
+MORAI 이미지·GT는 Windows의 `SensorData`에 저장되는데 **루트가 두 개로 갈린다.**
+`is_custom_file_name = true`인 캡처에서 카메라·GPS·IMU는
+`C:\MoraiLauncher_Win\SensorData`로, 3D LiDAR는
+`C:\MoraiLauncher_Win\MoraiLauncher_Win_Data\SaveFile\SensorData\LIDAR_5`로 간다.
+모라이 자체 동작이며 센서셋에 저장 경로 필드가 없어 설정으로 바꿀 수 없다. 아래
+`sync_capture_mode_data.py`의 `--sensor-root` 기본값은 앞의 루트만 가리키므로
+**LiDAR는 동기화 대상이 아니다.** 형식과 실측은
+[`docs/competition/capture-lidar-data-spec.md`](../../../docs/competition/capture-lidar-data-spec.md)에 있다.
+
+Linux에는 다음 lineage만 `$ASMC_DATA/capture_runs/<run_id>/` 아래 기록한다.
 
 - `meta.json`: Hz, gRPC 대상, motion gate 등 run 설정
 - `capture_manifest.jsonl`: custom filename, wall/ROS/MORAI sim time, Ego snapshot,

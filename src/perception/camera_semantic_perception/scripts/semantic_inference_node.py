@@ -89,6 +89,13 @@ class SemanticInferenceNode:
             }
             for view in self.views
         }
+        self.confidence_topics = {
+            view: {
+                head: "/perception/camera/{}/{}/confidence".format(view, head)
+                for head in self.categorical_heads
+            }
+            for view in self.views
+        }
         self.publishers = {
             view: {
                 head: rospy.Publisher(
@@ -100,6 +107,39 @@ class SemanticInferenceNode:
             }
             for view in self.views
         }
+        self.confidence_publishers = {
+            view: {
+                head: rospy.Publisher(topic, Image, queue_size=1)
+                for head, topic in self.confidence_topics[view].items()
+            }
+            for view in self.views
+        }
+        self.publish_model_grid_road_marking = bool(
+            rospy.get_param("~publish_model_grid_road_marking", False)
+        )
+        self.model_grid_max_hz = float(rospy.get_param("~model_grid_max_hz", 10.0))
+        if self.model_grid_max_hz <= 0.0:
+            raise ValueError("model_grid_max_hz must be positive")
+        self.model_grid_period_ns = int(round(1e9 / self.model_grid_max_hz))
+        self.next_model_grid_stamp_ns = 0
+        self.last_model_grid_stamp_ns = 0
+        self.model_grid_timestamp_resets = 0
+        self.model_grid_publishers = {}
+        self.model_grid_confidence_publishers = {}
+        if (
+            self.publish_model_grid_road_marking
+            and "road_marking" in self.categorical_heads
+        ):
+            for view in self.views:
+                namespace = "/perception/camera/{}/road_marking/model_grid".format(
+                    view
+                )
+                self.model_grid_publishers[view] = rospy.Publisher(
+                    namespace + "/class_id", Image, queue_size=1
+                )
+                self.model_grid_confidence_publishers[view] = rospy.Publisher(
+                    namespace + "/confidence", Image, queue_size=1
+                )
         self.diagnostics_publisher = rospy.Publisher(
             "/perception/camera/diagnostics", DiagnosticArray, queue_size=1
         )
@@ -109,6 +149,9 @@ class SemanticInferenceNode:
         self.output_by_view = {view: 0 for view in self.views}
         self.output_batches = 0
         self.total_output_batches = 0
+        self.model_grid_output_batches = 0
+        self.model_grid_throttled_batches = 0
+        self.model_grid_incomplete_batches = 0
         self.timing_totals = {
             "decode_ms": 0.0,
             "preprocess_ms": 0.0,
@@ -158,10 +201,14 @@ class SemanticInferenceNode:
             json.dumps(backend.info.__dict__, sort_keys=True),
         )
         rospy.loginfo(
-            "camera semantic views=%s inputs=%s outputs=%s",
+            "camera semantic views=%s inputs=%s outputs=%s confidences=%s "
+            "model_grid_road_marking=%s model_grid_max_hz=%.2f",
             self.views,
             camera_topics,
             self.output_topics,
+            self.confidence_topics,
+            bool(self.model_grid_publishers),
+            self.model_grid_max_hz,
         )
 
     @staticmethod
@@ -239,7 +286,15 @@ class SemanticInferenceNode:
             if not decoded:
                 continue
             try:
-                prediction = self.engine.infer(decoded)
+                # Snapshot the lazy-publish decision for the complete batch.
+                # Subscriber connections may change while GPU inference is in
+                # progress; re-checking afterward could request arrays that
+                # were intentionally not copied into this prediction.
+                preserve_model_grid = self._model_grid_has_subscribers()
+                prediction = self.engine.infer(
+                    decoded,
+                    preserve_model_grid=preserve_model_grid,
+                )
             except Exception as exc:
                 with self._stats_lock:
                     self.inference_errors += 1
@@ -247,14 +302,47 @@ class SemanticInferenceNode:
                 continue
 
             started = time.perf_counter()
+            publish_model_grid = preserve_model_grid and self._should_publish_model_grid(
+                prediction.views, usable_frames
+            )
             for view, value in prediction.views.items():
                 frame = usable_frames[view]
                 for head, output in value.probabilities.items():
-                    self.publishers[view][head].publish(
-                        self._image_message(
-                            output, frame, head in self.categorical_heads
+                    if head in self.categorical_heads:
+                        self.publishers[view][head].publish(
+                            self._image_message(output, frame, categorical=True)
                         )
-                    )
+                        self.confidence_publishers[view][head].publish(
+                            self._image_message(
+                                value.categorical_confidences[head], frame
+                            )
+                        )
+                    else:
+                        self.publishers[view][head].publish(
+                            self._image_message(output, frame)
+                        )
+                if publish_model_grid and view in self.model_grid_publishers:
+                    class_publisher = self.model_grid_publishers[view]
+                    confidence_publisher = self.model_grid_confidence_publishers[view]
+                    if (
+                        class_publisher.get_num_connections() > 0
+                        or confidence_publisher.get_num_connections() > 0
+                    ):
+                        class_publisher.publish(
+                            self._image_message(
+                                value.model_grid_probabilities["road_marking"],
+                                frame,
+                                categorical=True,
+                            )
+                        )
+                        confidence_publisher.publish(
+                            self._image_message(
+                                value.model_grid_categorical_confidences[
+                                    "road_marking"
+                                ],
+                                frame,
+                            )
+                        )
             publish_ms = (time.perf_counter() - started) * 1000.0
             completed_ros_ns = int(rospy.Time.now().to_nsec())
             completed_monotonic = time.monotonic()
@@ -284,6 +372,48 @@ class SemanticInferenceNode:
                 ):
                     self.timing_totals[name] += value
                 self._maybe_log()
+
+    def _should_publish_model_grid(self, predictions, usable_frames):
+        if not self.model_grid_publishers:
+            return False
+        if set(predictions) != set(self.views):
+            self.model_grid_incomplete_batches += 1
+            return False
+        if not any(
+            self.model_grid_publishers[view].get_num_connections() > 0
+            or self.model_grid_confidence_publishers[view].get_num_connections() > 0
+            for view in self.views
+        ):
+            return False
+        stamp_ns = max(int(usable_frames[view].stamp.to_nsec()) for view in self.views)
+        if stamp_ns <= 0:
+            self.model_grid_incomplete_batches += 1
+            return False
+        if (
+            self.last_model_grid_stamp_ns
+            and stamp_ns + self.model_grid_period_ns <= self.last_model_grid_stamp_ns
+        ):
+            # Sequential bags and simulator reloads may start a new source-time
+            # epoch. Preserve the header but reset the rate deadline.
+            self.next_model_grid_stamp_ns = 0
+            self.model_grid_timestamp_resets += 1
+        elif self.last_model_grid_stamp_ns and stamp_ns <= self.last_model_grid_stamp_ns:
+            self.model_grid_throttled_batches += 1
+            return False
+        self.last_model_grid_stamp_ns = stamp_ns
+        if self.next_model_grid_stamp_ns and stamp_ns < self.next_model_grid_stamp_ns:
+            self.model_grid_throttled_batches += 1
+            return False
+        self.next_model_grid_stamp_ns = stamp_ns + self.model_grid_period_ns
+        self.model_grid_output_batches += 1
+        return True
+
+    def _model_grid_has_subscribers(self):
+        return bool(self.model_grid_publishers) and any(
+            self.model_grid_publishers[view].get_num_connections() > 0
+            or self.model_grid_confidence_publishers[view].get_num_connections() > 0
+            for view in self.views
+        )
 
     def _maybe_log(self) -> None:
         now = time.monotonic()
@@ -365,6 +495,10 @@ class SemanticInferenceNode:
             "output_frames": self.output_frames,
             "output_by_view": self.output_by_view,
             "output_batches": self.total_output_batches,
+            "model_grid_output_batches": self.model_grid_output_batches,
+            "model_grid_throttled_batches": self.model_grid_throttled_batches,
+            "model_grid_incomplete_batches": self.model_grid_incomplete_batches,
+            "model_grid_timestamp_resets": self.model_grid_timestamp_resets,
             "decode_errors": self.decode_errors,
             "inference_errors": self.inference_errors,
             "processing_fps": round(fps, 3),
