@@ -53,12 +53,15 @@ bool CheckObstacleOverlap(const geometry::Polygon2D& ego_footprint,
                           double prediction_time);
 
 // 후보 실제 구간과 reactive coast 구간을 평행이동 polygon으로 검사한다.
-// exempt ID는 실제 후보 구간에는 적용되지 않고 coast 연장에서만 제외된다.
+// AVOID escape ID는 시작 시 이미 안전마진과 겹친 경우 실제 OBB 비충돌이며
+// 계속 멀어지는 후보만 탈출할 수 있게 한다. coast exempt ID는 실제 후보
+// 구간에는 적용되지 않고 coast 연장에서만 제외된다.
 void FilterByCollision(std::vector<FrenetPath>& combined,
                         const RefLine& ref,
                         const std::vector<TrackedObject>& obstacles,
                         const VehicleShape& ego_shape,
                         const CollisionCheckConfig& cfg,
-                        int reactive_coast_exempt_object_id = -1);
+                        int reactive_coast_exempt_object_id = -1,
+                        int avoid_escape_object_id = -1);
 
 #endif

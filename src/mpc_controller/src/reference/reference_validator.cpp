@@ -51,12 +51,13 @@ ReferenceValidationResult ValidateReference(const ReferencePath& reference,
     //
     // 곡률 한계: kinematic bicycle model의 정상상태 관계
     // (SteeringFeedforward의 역방향, model/vehicle_model.hpp 참고)
-    //   tan(delta) = L * kappa  ->  kappa_max = tan(steering_max) / L
+    //   gain*tan(delta) = L*kappa
+    //   -> kappa_max = gain*tan(steering_max) / L
     // Frenet planner의 0.1704 곡률 한계를 복사하지 않는다 - 그건 planner
     // feasibility 정책이고, 여기는 컨트롤러가 실제로 조향할 수 있는 물리
     // 한계다.
     constexpr double kEps = 1e-6;
-    const double kappa_max =
+    const double kappa_max = params.steering_curvature_gain *
         std::tan(params.steering_max) / std::max(params.wheelbase, kEps);
 
     // 위치 연속성 한계: 인접 ReferencePath 샘플은 항상 정확히 params.dt만큼

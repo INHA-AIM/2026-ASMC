@@ -68,12 +68,25 @@ FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
         // 정지/저속/주행 중 어느 쪽이든 FSM이 AVOID를 지정했으면 대상이다.
         const bool in_front = gap > 0.0;
         const bool in_range = gap <= search_limit;
-        // 회피는 같은 corridor의 장애물을 대상으로 한다. 옆 차선 객체를
-        // 회피하려고 횡이동하면 오히려 그쪽으로 들어간다.
-        const bool same_corridor = std::fabs(object_d) <= lane_width_ * 0.5;
         // geometry가 0이면 회피 오프셋을 계산할 수 없다. 후보 생성 단계에서
         // 0 폭 장애물을 비켜가는 target_d는 의미가 없다.
         const bool geometry_ok = it->width > 0.0 && it->length > 0.0;
+        // 회피는 같은 corridor와 실제로 겹치는 장애물을 대상으로 한다.
+        // 중심 d만 검사하면 폭이 넓은 장애물의 외곽이 차로에 들어와도 중심이
+        // 경계에서 몇 cm 벗어났다는 이유로 Behavior는 AVOID, Frenet은 LOST가
+        // 된다. OBB의 route-normal 반폭을 투영해 가장 가까운 외곽을 검사한다.
+        double nearest_lateral_distance = std::fabs(object_d);
+        if (geometry_ok) {
+            const RefPoint object_ref = Interpolate(ref_, object_s);
+            const double heading_delta = it->heading - object_ref.theta;
+            const double lateral_half_extent =
+                0.5 * std::fabs(it->length * std::sin(heading_delta)) +
+                0.5 * std::fabs(it->width * std::cos(heading_delta));
+            nearest_lateral_distance =
+                std::max(0.0, nearest_lateral_distance - lateral_half_extent);
+        }
+        const bool same_corridor =
+            nearest_lateral_distance <= lane_width_ * 0.5;
 
         if (in_front && in_range && same_corridor && geometry_ok) {
             context.active = true;
@@ -214,8 +227,10 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
         ref_.points.empty() ? 0.0 : ref_.points.back().s;
     const double initial_gap = ForwardArcDistance(
         last_s_, v2_avoidance_.obstacle_s, track_length);
+    // 이후 lifecycle과 동일하게 실제 ego 속도를 사용한다. 과거에는 planner
+    // target speed를 써서 저속 차량도 고속 기준으로 너무 일찍 SHIFT했다.
     const double shift_distance = EffectiveAvoidShiftStartDistance(
-        last_target_speed_, v2_avoidance_.start_d);
+        result.ego_speed_mps, v2_avoidance_.start_d);
     v2_avoidance_.phase = std::isfinite(initial_gap) &&
                                   initial_gap <= shift_distance
                               ? AvoidPhase::SHIFT
@@ -258,6 +273,9 @@ double FrenetPlanner::EffectiveAvoidShiftStartDistance(
             LowSpeedLateralTransitionDistance(
                 ego_d, v2_avoidance_.target_d) + geometry_clearance);
     }
+    // min/max는 안전 경계로만 유지하고, 사용자가 실제 시작거리를 직접
+    // 튜닝할 수 있는 signed offset은 동적 계산에 명시적으로 적용한다.
+    dynamic_distance += avoid_cfg_.shift_start_distance_offset;
     return clip(dynamic_distance, min_distance, max_distance);
 }
 
@@ -579,6 +597,7 @@ bool FrenetPlanner::AvoidProcess(
     // 상황 정보다. 상태 판단(READY/WAITING)에는 쓰지 않는다 - 그것은
     // candidate_valid만으로 정한다(헤더 주석 참고).
     result.low_speed_context = std::fabs(ego.v) < kLowSpeedFallbackV;
+    result.ego_speed_mps = std::max(0.0, ego.v);
 
     // COMMIT 이후의 종방향 위치와 실제 d를 먼저 반영해야 이번 cycle의
     // 생성 목표가 TRACKING/SHIFT/PASS/RETURN 중 올바른 단계에 맞는다.

@@ -113,6 +113,8 @@ void LoadParams(const std::string& yaml_path,
              avoid_cfg.max_shift_start_distance);
     loadInto(root, "planner/avoid/shift_time_margin",
              avoid_cfg.shift_time_margin);
+    loadInto(root, "planner/avoid/shift_start_distance_offset",
+             avoid_cfg.shift_start_distance_offset);
     loadInto(root, "planner/avoid/lateral_tolerance", avoid_cfg.lateral_tolerance);
     loadInto(root, "planner/avoid/rear_overhang",     avoid_cfg.rear_overhang);
     loadInto(root, "planner/avoid/pass_clearance",    avoid_cfg.pass_clearance);
@@ -133,6 +135,7 @@ void LoadParams(const std::string& yaml_path,
              lane_change_cfg.heading_tolerance);
 
     loadInto(root, "planner/stop/comfortable_decel",  stop_cfg.comfortable_decel);
+    loadInto(root, "planner/stop/max_service_decel",  stop_cfg.max_service_decel);
     loadInto(root, "planner/stop/braking_margin",     stop_cfg.braking_margin);
     loadInto(root, "planner/stop/stop_buffer",        stop_cfg.stop_buffer);
     loadInto(root, "planner/stop/position_tolerance", stop_cfg.position_tolerance);

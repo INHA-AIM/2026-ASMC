@@ -84,7 +84,8 @@ static double evalCost(
     } else {
         // fallback: 비선형 forward sim
         traj = predictTrajectory(x0, U, params.dt, params.wheelbase,
-                                 params.vel_min, params.vel_max);
+                                 params.vel_min, params.vel_max,
+                                 params.steering_curvature_gain);
     }
     double c = computeTotalCost(traj, U, ref, prev_control, params);
     if (out_traj) *out_traj = std::move(traj);
@@ -184,7 +185,8 @@ MPCResult solveMPC(
                 ? ref.k_ref[std::min(static_cast<size_t>(i), ref.size() - 1)]
                 : 0.0;
             U[i].delta = SteeringFeedforward(k_ref_i, params.wheelbase,
-                                             params.steering_max);
+                                             params.steering_max,
+                                             params.steering_curvature_gain);
             U[i].accel = prev_control.accel;
         }
     }
@@ -196,7 +198,8 @@ MPCResult solveMPC(
     //    → 이후 gradient/line search에서 비선형 forward sim 대체
     // ====================================
     std::vector<LinearizedModel> models = buildLTVModels(
-        x0, U, params.dt, params.wheelbase, params.vel_min, params.vel_max);
+        x0, U, params.dt, params.wheelbase, params.vel_min, params.vel_max,
+        params.steering_curvature_gain);
 
     // ====================================
     // 3) 최적화 루프
@@ -234,7 +237,8 @@ MPCResult solveMPC(
             // U_new 기준으로 선형화 모델 갱신 후 cost 평가
             // U_old 기준 models로 U_new cost 평가 시 선형화 오차 누적 방지
             std::vector<LinearizedModel> models_new = buildLTVModels(
-                x0, U_new, params.dt, params.wheelbase, params.vel_min, params.vel_max);
+                x0, U_new, params.dt, params.wheelbase, params.vel_min,
+                params.vel_max, params.steering_curvature_gain);
             cost_new = evalCost(x0, U_new, ref, prev_control, params, &models_new);
 
             if (cost_new < cost_cur - 1e-4 * alpha * grad_norm2) {

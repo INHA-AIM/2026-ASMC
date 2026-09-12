@@ -37,6 +37,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   AvoidTargetConfig avoid_target;
   double emergency_ttc_exit = 3.0;
   double emergency_release_hold_s = 0.5;
+  double follow_release_delay_s = 0.4;
 
   pnh_.param("behavior/update_rate", rate_, rate_);
   pnh_.param("topics/ego", ego_topic, ego_topic);
@@ -58,6 +59,8 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
              follow_target.max_distance);
   pnh_.param("follow/max_lateral_offset", follow_target.max_lateral_offset,
              follow_target.max_lateral_offset);
+  pnh_.param("follow/release_delay_s", follow_release_delay_s,
+             follow_release_delay_s);
   pnh_.param("avoid/max_target_distance", avoid_target.max_distance,
              avoid_target.max_distance);
   pnh_.param("avoid/max_lateral_offset", avoid_target.max_lateral_offset,
@@ -133,6 +136,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   builder_.setAvoidTargetConfig(avoid_target);
   decision_.setEmergencyRelease(emergency_ttc_exit,
                                 emergency_release_hold_s);
+  decision_.setFollowReleaseDelay(follow_release_delay_s);
   ROS_INFO("Behavior stop target offset: %.2f m behind physical stop line",
            stop_target_offset_m);
   ROS_INFO("Behavior traffic STOP detection: min=%.2f m, dynamic=v^2/(2*%.2f)"
@@ -141,9 +145,9 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
            traffic_stop.comfortable_decel, traffic_stop.braking_margin,
            traffic_stop.target_offset, traffic_stop.planner_stop_buffer);
   ROS_INFO("Behavior FOLLOW target limits: distance=%.2f m lateral=%.2f m, "
-           "objects stale after %.2f s",
+           "release delay=%.2f s, objects stale after %.2f s",
            follow_target.max_distance, follow_target.max_lateral_offset,
-           objects_stale_seconds_);
+           follow_release_delay_s, objects_stale_seconds_);
   ROS_INFO("Behavior AVOID target limits: distance=%.2f m lateral=%.2f m",
            avoid_target.max_distance, avoid_target.max_lateral_offset);
 

@@ -9,6 +9,9 @@ mpc:
   dt: 0.05             # control_frequency(20Hz=50ms)와 정합.
   max_iterations: 25
   wheelbase: 3.0
+  # 2026-09-11 MORAI IONIQ 5 실측(10/20/30/40deg) 평균:
+  # kappa ~= 0.844 * tan(delta) / wheelbase.
+  steering_curvature_gain: 0.844
 
 cost:
   path_error: 6.0
@@ -27,7 +30,9 @@ solver:
 
 constraints:
   steering:
-    max_angle: 0.6981317008  # 40 deg [rad]: MORAI IONIQ 5 official max wheel angle
+    # 물리 조향 한계는 공식/실측 입력값 40deg다. 실측 최대 곡률은 위 gain을
+    # 적용하면 약 0.236 1/m이며 Frenet 제한 0.23보다 작은 여유를 갖는다.
+    max_angle: 0.6981317008
     max_rate: 1.0         # 0.4→1.0: 너무 작으면 solver 출력이 매 사이클 잘려서 흔들림
   acceleration:
     max_forward: 2.0

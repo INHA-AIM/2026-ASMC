@@ -201,8 +201,17 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         maneuver_start.s_dd = ResolveVelocityKeepingBoundaryAcceleration(
             start.s_dd, s_dot, resolved_target_speed, kAccelIntentDeadband);
     }
+    KinematicLimits maneuver_limits = limits_;
+    if (external_stop_mode) {
+        // 일반 주행의 가속도 한계는 그대로 두고 STOP 후보에만 서비스 제동
+        // 한계를 허용한다. MPC의 accel_min보다 큰 감속 궤적을 보내지 않도록
+        // params.yaml에서 두 값을 같은 크기로 유지한다.
+        maneuver_limits.max_longitudinal_accel = std::max(
+            maneuver_limits.max_longitudinal_accel,
+            stop_cfg_.max_service_decel);
+    }
     std::vector<FrenetPath> candidates = ResolveManeuver(
-        maneuver_start, cmd, ref_, path_cfg_, limits_, lane_width_,
+        maneuver_start, cmd, ref_, path_cfg_, maneuver_limits, lane_width_,
         planning_collision_obstacles, vehicle_shape_, collision_cfg_, &stats);
 
     // moderate-speed curvature starvation 완화(Phase B): 실측 MORAI에서

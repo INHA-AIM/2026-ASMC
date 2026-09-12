@@ -1,6 +1,7 @@
 #include "config/parameter_loader.hpp"
 
 #include <cstdio>
+#include <cmath>
 #include <vector>
 
 #include <yaml-cpp/yaml.h>
@@ -44,6 +45,8 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
     loadInto(root, "mpc/dt",                 p.dt);
     loadInto(root, "mpc/max_iterations",     p.max_iterations);
     loadInto(root, "mpc/wheelbase",          p.wheelbase);
+    loadInto(root, "mpc/steering_curvature_gain",
+             p.steering_curvature_gain);
     loadInto(root, "control_frequency",      p.control_frequency);
 
     // 제약
@@ -90,6 +93,12 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
                     p.brake_full_decel);
         p.brake_full_decel = 8.9;
     }
+    if (p.steering_curvature_gain <= 0.0 ||
+        !std::isfinite(p.steering_curvature_gain)) {
+        std::printf("[MPC] Invalid steering_curvature_gain %.3f; using 1.0\n",
+                    p.steering_curvature_gain);
+        p.steering_curvature_gain = 1.0;
+    }
 
     const auto valid_lut = [](const std::vector<double>& pedal,
                               const std::vector<double>& response) {
@@ -110,8 +119,10 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
         p.use_calibrated_pedal_mapping = false;
     }
 
-    std::printf("[MPC] Params: horizon=%d dt=%.2f max_iter=%d wheelbase=%.2f freq=%.1fHz\n",
-                p.horizon, p.dt, p.max_iterations, p.wheelbase, p.control_frequency);
+    std::printf("[MPC] Params: horizon=%d dt=%.2f max_iter=%d wheelbase=%.2f "
+                "steer_gain=%.3f freq=%.1fHz\n",
+                p.horizon, p.dt, p.max_iterations, p.wheelbase,
+                p.steering_curvature_gain, p.control_frequency);
     std::printf("[MPC] Weights: path=%.2f head=%.2f speed=%.2f term=%.2f\n",
                 p.weight_path_error, p.weight_heading_error, p.weight_speed_error,
                 p.weight_terminal);

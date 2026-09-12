@@ -21,8 +21,21 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
     if (!raw_emergency) context.debug.hard_rule_reason += "emergency_latched;";
   }
   context.score = scorer_.score(feature, context.hard);
+  const int32_t follow_target_id = fsm_.updateFollowTarget(
+      feature.surrounding.has_front_vehicle,
+      feature.surrounding.has_front_vehicle
+          ? feature.surrounding.front_vehicle.id
+          : -1,
+      feature.timestamp);
+  const bool follow_release_grace =
+      fsm_.followReleaseGraceActive() && follow_target_id >= 0;
+  if (follow_release_grace) {
+    // Keep FOLLOW above KEEP while perception is inside its short dropout
+    // window. STOP/AVOID/E-STOP retain their higher safety priorities.
+    context.score.follow = 75.0;
+  }
   context.enable.keep = true;
-  context.enable.follow = feature.surrounding.has_front_vehicle;
+  context.enable.follow = follow_target_id >= 0;
   context.enable.left_change = !context.hard.forbid_left_change &&
                                feature.surrounding.left_lane_safe;
   context.enable.right_change = !context.hard.forbid_right_change &&
@@ -55,6 +68,10 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
     context.extra_values["front_gap"] = lead.gap;
     context.extra_values["front_relative_speed"] = lead.relative_speed;
     context.extra_values["front_ttc"] = lead.ttc;
+  }
+  if (follow_release_grace) {
+    context.target.lead_vehicle_id = follow_target_id;
+    context.extra_flags["follow_release_grace"] = true;
   }
   if (context.enable.avoid) {
     context.target.avoidance_object_id = feature.risk.avoidance_object_id;
@@ -162,8 +179,12 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
   }
   context.debug.selected_reason = stop_preempts_avoid
       ? "stop_before_avoid"
-      : (avoid_precedes_stop ? "avoid_before_stop"
-                             : "highest_enabled_score");
+      : (avoid_precedes_stop
+             ? "avoid_before_stop"
+             : (follow_release_grace &&
+                        best.behavior == BehaviorType::FOLLOW
+                    ? "follow_release_grace"
+                    : "highest_enabled_score"));
   context.debug.cost_terms = {
       {"keep", context.score.keep},
       {"follow", context.score.follow},

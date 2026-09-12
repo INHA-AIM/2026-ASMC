@@ -179,12 +179,24 @@ UrbanFeature FeatureBuilder::build(
     // topology and geometry only, with a horizon no shorter than Frenet's
     // collision lookahead.
     const double avoid_route_gap = object.s - feature.ego.s;
+    // Gate the nearest obstacle footprint, not only its center. A wide object
+    // can overlap the route even when its center is just outside the nominal
+    // lateral acquisition band. Project the oriented box half extents onto
+    // the route normal represented by Frenet d.
+    const double route_yaw = feature.ego.yaw;
+    const double obstacle_yaw_delta = object.yaw - route_yaw;
+    const double obstacle_lateral_half_extent =
+        0.5 * std::abs(object.length * std::sin(obstacle_yaw_delta)) +
+        0.5 * std::abs(object.width * std::cos(obstacle_yaw_delta));
+    const double obstacle_nearest_lateral_distance =
+        std::max(0.0, std::abs(object.d) - obstacle_lateral_half_extent);
     const bool static_obstacle_front =
         avoid_route_gap > 0.0 &&
         avoid_route_gap <= avoid_target_.max_distance &&
         ego_longitudinal > -2.0 &&
         euclidean_distance <= avoid_target_.max_distance &&
-        std::abs(object.d) <= avoid_target_.max_lateral_offset;
+        obstacle_nearest_lateral_distance <=
+            avoid_target_.max_lateral_offset;
 
     if (current_lane_front) {
       object.gap = follow_topology_gap;

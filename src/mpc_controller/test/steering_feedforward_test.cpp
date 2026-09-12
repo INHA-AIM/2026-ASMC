@@ -37,6 +37,20 @@ TEST(SteeringFeedforwardTest, NegativeCurvatureProducesNegativeSteering) {
     EXPECT_DOUBLE_EQ(std::atan(kWheelbase * -0.05), delta_ff);
 }
 
+// 2026-09-11 MORAI steering calibration: the simulator produces only about
+// 84.4% of the ideal bicycle-model curvature at the same wheel angle.
+TEST(SteeringFeedforwardTest, CalibratedGainRequestsMoreSteering) {
+    constexpr double gain = 0.844;
+    constexpr double curvature = 0.20;
+    const double ideal =
+        SteeringFeedforward(curvature, kWheelbase, kSteeringMax);
+    const double calibrated =
+        SteeringFeedforward(curvature, kWheelbase, kSteeringMax, gain);
+    EXPECT_GT(calibrated, ideal);
+    EXPECT_NEAR(curvature,
+                gain * std::tan(calibrated) / kWheelbase, 1e-9);
+}
+
 // Test C-4: 매우 큰 curvature에서 steering_max로 안전하게 clip.
 TEST(SteeringFeedforwardTest, ExtremeCurvatureClipsToSteeringMax) {
     EXPECT_DOUBLE_EQ(kSteeringMax,

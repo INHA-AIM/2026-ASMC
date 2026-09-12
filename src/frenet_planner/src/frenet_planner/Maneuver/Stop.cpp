@@ -57,9 +57,24 @@ void FrenetPlanner::UpdateExternalStopExecution(double s, double s_dot,
         stop_.target_valid = true;
     }
 
-    const double decel = std::max(0.1, stop_cfg_.comfortable_decel);
+    const double comfortable_decel = std::max(0.1, stop_cfg_.comfortable_decel);
+    const double max_service_decel =
+        std::max(comfortable_decel, stop_cfg_.max_service_decel);
     const double speed = std::max(0.0, s_dot);
-    const double braking_distance = speed * speed / (2.0 * decel);
+    const double effective_distance =
+        std::max(0.0, stop_distance - stop_cfg_.stop_buffer);
+    // 늦게 들어온 STOP도 comfortable_decel에 고정하지 않는다. 현재 속도로
+    // 남은 유효거리 안에 정지하는 데 필요한 평균 감속도를 계산하고 일반
+    // 제동 한계까지 올린다. 거리 0은 나눗셈 대신 곧바로 최대 일반 제동이다.
+    const double required_decel =
+        effective_distance > 1e-3
+            ? speed * speed / (2.0 * effective_distance)
+            : max_service_decel;
+    stop_.commanded_decel = std::min(
+        max_service_decel, std::max(comfortable_decel, required_decel));
+
+    const double braking_distance =
+        speed * speed / (2.0 * comfortable_decel);
     const double trigger_distance = braking_distance + stop_cfg_.braking_margin;
 
     // APPROACH -> BRAKING은 단방향(latch). 경계에서 측정 노이즈로 왕복하면
@@ -80,7 +95,7 @@ void FrenetPlanner::UpdateExternalStopExecution(double s, double s_dot,
         // 목표점이 아니라 buffer만큼 앞을 향해 감속한다.
         const double effective =
             std::max(0.0, stop_distance - stop_cfg_.stop_buffer);
-        const double v_safe = std::sqrt(2.0 * decel * effective);
+        const double v_safe = std::sqrt(2.0 * comfortable_decel * effective);
         // 순항 목표속도와 비교해 더 낮은 쪽. 멀면 기존 속도 유지, 가까워질
         // 수록 자연스럽게 낮아진다.
         cmd.target_speed = std::min(cmd.target_speed, v_safe);
@@ -104,7 +119,7 @@ void FrenetPlanner::UpdateExternalStopExecution(double s, double s_dot,
         const double effective =
             std::max(0.0, stop_distance - stop_cfg_.stop_buffer);
         cmd.target_speed = std::min(cmd.target_speed,
-                                    std::sqrt(2.0 * decel * effective));
+                                    std::sqrt(2.0 * stop_.commanded_decel * effective));
     }
 }
 

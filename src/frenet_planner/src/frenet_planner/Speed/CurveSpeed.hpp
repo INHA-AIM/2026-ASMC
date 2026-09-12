@@ -13,7 +13,7 @@
 // 횡가속도 한계에서 곡률별 연속 목표속도를 계산한다.
 double VelocityFromCurvature(double k, const CurveSpeedConfig& cfg, double max_lateral_accel);
 
-// 현재 속도의 제동거리와 기본 lookahead 중 큰 범위를 훑되, 그 범위 안의
+// 현재 속도의 제동거리에 설정된 추가 preview 거리를 더한 범위를 훑되, 그 범위 안의
 // "가장 급한 커브 하나"의 목표속도를 바로 지금 요구하지 않는다. 각 지점마다
 // "그 지점의 커브 안전속도까지, 지금부터 그 지점까지의 거리 동안
 // comfortable_decel로 감속하면 도달 가능한 현재 속도"를 계산하고, 그 중

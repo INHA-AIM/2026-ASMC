@@ -117,7 +117,8 @@ CostBreakdown computeCostBreakdown(
         // delta_ff=0이라 기존 delta^2와 동일하게 동작한다.
         const double k_ref_i = (R > 0) ? ref.k_ref[ref_idx] : 0.0;
         const double delta_ff = SteeringFeedforward(
-            k_ref_i, params.wheelbase, params.steering_max);
+            k_ref_i, params.wheelbase, params.steering_max,
+            params.steering_curvature_gain);
         bd.control += dt_scale * computeControlEffortCost(u_cur,
                                           params.weight_control,
                                           params.weight_control * 0.5,

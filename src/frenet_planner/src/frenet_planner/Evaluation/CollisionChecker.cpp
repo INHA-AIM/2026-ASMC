@@ -80,7 +80,8 @@ void FilterByCollision(std::vector<FrenetPath>& combined,
                         const std::vector<TrackedObject>& obstacles,
                         const VehicleShape& ego_shape,
                         const CollisionCheckConfig& cfg,
-                        int reactive_coast_exempt_object_id) {
+                        int reactive_coast_exempt_object_id,
+                        int avoid_escape_object_id) {
     // 이 값은 나눗셈이 아니라 "정지 상태면 coast 연장 추정을 할 필요가 없다"는
     // 최적화 판단에만 쓰인다 (아래 reactive-lookahead 섹션). 곡률/충돌 본 검사
     // 자체는 더 이상 이 임계값에 의존하지 않는다 (ComputeGeometricPath 참고).
@@ -90,6 +91,9 @@ void FilterByCollision(std::vector<FrenetPath>& combined,
         if (!path.valid) continue;
 
         bool collided = false;
+        bool target_escape_active = false;
+        bool target_margin_exited = false;
+        double target_previous_distance_sq = 0.0;
 
         GeometricPath geo = ComputeGeometricPath(path.s, path.d, ref);
 
@@ -104,7 +108,48 @@ void FilterByCollision(std::vector<FrenetPath>& combined,
                 MakeEgoFootprint(cs, ego_shape, margin);
 
             for (const auto& obj : obstacles) {
-                if (CheckObstacleOverlap(ego_footprint, {}, obj, path.t[i])) {
+                const bool expanded_overlap =
+                    CheckObstacleOverlap(ego_footprint, {}, obj, path.t[i]);
+                if (!expanded_overlap) {
+                    if (obj.id == avoid_escape_object_id &&
+                        target_escape_active) {
+                        target_escape_active = false;
+                        target_margin_exited = true;
+                    }
+                    continue;
+                }
+
+                bool allow_target_escape = false;
+                if (obj.id == avoid_escape_object_id &&
+                    !target_margin_exited) {
+                    const geometry::Polygon2D physical_ego =
+                        MakeEgoFootprint(cs, ego_shape, 0.0);
+                    const bool physical_overlap =
+                        CheckObstacleOverlap(physical_ego, {}, obj, path.t[i]);
+                    const PredictedObjectPose predicted =
+                        PredictTrackedObjectPose(obj, path.t[i]);
+                    const double dx = cs.x - predicted.x;
+                    const double dy = cs.y - predicted.y;
+                    const double distance_sq = dx * dx + dy * dy;
+
+                    if (!physical_overlap) {
+                        if (i == 0) {
+                            // Escape is available only when the current pose
+                            // already lies in the inflated margin. It cannot
+                            // be used to enter that margin later.
+                            target_escape_active = true;
+                            target_previous_distance_sq = distance_sq;
+                            allow_target_escape = true;
+                        } else if (target_escape_active &&
+                                   distance_sq + 1e-4 >=
+                                       target_previous_distance_sq) {
+                            target_previous_distance_sq = distance_sq;
+                            allow_target_escape = true;
+                        }
+                    }
+                }
+
+                if (!allow_target_escape) {
                     collided = true;
                     path.collision_object_id = obj.id;
                     path.collision_sample_index = static_cast<int>(i);
