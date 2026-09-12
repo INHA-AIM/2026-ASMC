@@ -4,6 +4,7 @@
 #include "behavior_planner/context/msg_converter.hpp"
 #include "behavior_planner/context/v2_command_manager.hpp"
 #include "behavior_planner/decision/behavior_decision.hpp"
+#include "behavior_planner/decision/fsm.hpp"
 #include "behavior_planner/rule/hard_rule_filter.hpp"
 #include "behavior_planner/signal/ros_traffic_light_provider.hpp"
 
@@ -66,6 +67,7 @@ TEST(V2CommandManagerTest, LaneChangeUsesReadyExecuteHandshake) {
   context.target.target_x = 12.0;
   context.target.target_y = 3.5;
   context.target.target_yaw = 0.2;
+  context.maneuver_phase = ManeuverPhase::PREPARE;
 
   const auto prepare = manager.update(context, nullptr, ros::Time(20.0), 0.5);
   EXPECT_EQ(asmc_msgs::BehaviorCommand::LANE_CHANGE, prepare.maneuver_type);
@@ -76,6 +78,7 @@ TEST(V2CommandManagerTest, LaneChangeUsesReadyExecuteHandshake) {
   asmc_msgs::FrenetFeedback feedback;
   feedback.command_id = prepare.command_id;
   feedback.execution_state = asmc_msgs::FrenetFeedback::READY;
+  context.maneuver_phase = ManeuverPhase::EXECUTE;
   const auto execute =
       manager.update(context, &feedback, ros::Time(20.1), 0.5);
   EXPECT_EQ(prepare.command_id, execute.command_id);
@@ -118,6 +121,7 @@ TEST(V2CommandManagerTest, AvoidLetsFrenetChooseDirectionAndUsesHandshake) {
   context.target.current_link_id = "source";
   context.target.desired_speed = 6.0;
   context.target.avoidance_object_id = 23;
+  context.maneuver_phase = ManeuverPhase::PREPARE;
 
   const auto prepare = manager.update(context, nullptr, ros::Time(40.0), 0.5);
   EXPECT_EQ(asmc_msgs::BehaviorCommand::AVOID, prepare.maneuver_type);
@@ -129,6 +133,7 @@ TEST(V2CommandManagerTest, AvoidLetsFrenetChooseDirectionAndUsesHandshake) {
   asmc_msgs::FrenetFeedback feedback;
   feedback.command_id = prepare.command_id;
   feedback.execution_state = asmc_msgs::FrenetFeedback::READY;
+  context.maneuver_phase = ManeuverPhase::EXECUTE;
   const auto execute = manager.update(context, &feedback, ros::Time(40.1), 0.5);
   EXPECT_EQ(prepare.command_id, execute.command_id);
   EXPECT_EQ(asmc_msgs::BehaviorCommand::EXECUTE, execute.execution_request);
@@ -143,6 +148,110 @@ TEST(V2CommandManagerTest, AvoidLetsFrenetChooseDirectionAndUsesHandshake) {
   const auto keep = manager.update(context, &feedback, ros::Time(40.3), 0.5);
   EXPECT_NE(prepare.command_id, keep.command_id);
   EXPECT_EQ(asmc_msgs::BehaviorCommand::KEEP, keep.maneuver_type);
+}
+
+TEST(BehaviorFsmTest, KeepFollowKeepUsesCandidateWithoutLateralLifecycle) {
+  Fsm fsm;
+  const PlannerFeedbackData no_feedback;
+
+  auto output = fsm.updateManeuver(BehaviorType::KEEP, no_feedback, 0, false);
+  EXPECT_EQ(BehaviorType::KEEP, output.behavior);
+  EXPECT_EQ(ManeuverPhase::NONE, output.phase);
+
+  output = fsm.updateManeuver(BehaviorType::FOLLOW, no_feedback, 0, false);
+  EXPECT_EQ(BehaviorType::FOLLOW, output.behavior);
+  EXPECT_EQ(BehaviorState::FOLLOW, output.state);
+
+  output = fsm.updateManeuver(BehaviorType::KEEP, no_feedback, 0, false);
+  EXPECT_EQ(BehaviorType::KEEP, output.behavior);
+  EXPECT_EQ(BehaviorState::KEEP_LANE, output.state);
+}
+
+TEST(BehaviorFsmTest, AvoidLifecycleUsesOnlyMatchingFreshFeedback) {
+  Fsm fsm;
+  PlannerFeedbackData feedback;
+
+  auto output = fsm.updateManeuver(BehaviorType::AVOID, feedback, 0, false);
+  EXPECT_EQ(BehaviorType::AVOID, output.behavior);
+  EXPECT_EQ(ManeuverPhase::PREPARE, output.phase);
+
+  output = fsm.updateManeuver(BehaviorType::AVOID, feedback, 42, false);
+  EXPECT_EQ(ManeuverPhase::PREPARE, output.phase);
+
+  feedback.valid = true;
+  feedback.command_id = 99;
+  feedback.execution_state = PlannerExecutionState::READY;
+  output = fsm.updateManeuver(BehaviorType::AVOID, feedback, 42, false);
+  EXPECT_EQ(ManeuverPhase::PREPARE, output.phase);
+
+  feedback.command_id = 42;
+  output = fsm.updateManeuver(BehaviorType::AVOID, feedback, 42, false);
+  EXPECT_EQ(ManeuverPhase::EXECUTE, output.phase);
+  EXPECT_EQ(BehaviorState::AVOID_EXECUTE, output.state);
+
+  feedback.execution_state = PlannerExecutionState::EXECUTING;
+  output = fsm.updateManeuver(BehaviorType::KEEP, feedback, 42, false);
+  EXPECT_EQ(BehaviorType::AVOID, output.behavior);
+  EXPECT_EQ(ManeuverPhase::COMMITTED, output.phase);
+
+  feedback.valid = false;
+  output = fsm.updateManeuver(BehaviorType::KEEP, feedback, 42, false);
+  EXPECT_EQ(BehaviorType::AVOID, output.behavior);
+  EXPECT_EQ(ManeuverPhase::COMMITTED, output.phase);
+
+  feedback.valid = true;
+  feedback.command_id = 99;
+  feedback.execution_state = PlannerExecutionState::COMPLETED;
+  output = fsm.updateManeuver(BehaviorType::KEEP, feedback, 42, false);
+  EXPECT_EQ(BehaviorType::AVOID, output.behavior);
+
+  feedback.command_id = 42;
+  output = fsm.updateManeuver(BehaviorType::KEEP, feedback, 42, false);
+  EXPECT_EQ(BehaviorType::KEEP, output.behavior);
+  EXPECT_EQ(ManeuverPhase::NONE, output.phase);
+}
+
+TEST(BehaviorFsmTest, LaneChangeUsesSameLifecycleWithoutEnablingSelection) {
+  Fsm fsm;
+  PlannerFeedbackData feedback;
+
+  auto output =
+      fsm.updateManeuver(BehaviorType::LEFT_CHANGE, feedback, 0, false);
+  EXPECT_EQ(ManeuverPhase::PREPARE, output.phase);
+  output = fsm.updateManeuver(BehaviorType::LEFT_CHANGE, feedback, 17, false);
+
+  feedback.valid = true;
+  feedback.command_id = 17;
+  feedback.execution_state = PlannerExecutionState::READY;
+  output = fsm.updateManeuver(BehaviorType::LEFT_CHANGE, feedback, 17, false);
+  EXPECT_EQ(ManeuverPhase::EXECUTE, output.phase);
+
+  feedback.execution_state = PlannerExecutionState::COMPLETED;
+  output = fsm.updateManeuver(BehaviorType::KEEP, feedback, 17, false);
+  EXPECT_EQ(BehaviorType::KEEP, output.behavior);
+}
+
+TEST(BehaviorFsmTest, EmergencyAndEarlierStopPreemptCommittedAvoid) {
+  Fsm fsm;
+  PlannerFeedbackData feedback;
+  fsm.updateManeuver(BehaviorType::AVOID, feedback, 0, false);
+  fsm.updateManeuver(BehaviorType::AVOID, feedback, 8, false);
+  feedback.valid = true;
+  feedback.command_id = 8;
+  feedback.execution_state = PlannerExecutionState::COMMITTED;
+  auto output = fsm.updateManeuver(BehaviorType::AVOID, feedback, 8, false);
+  ASSERT_EQ(ManeuverPhase::COMMITTED, output.phase);
+
+  output = fsm.updateManeuver(BehaviorType::STOP, feedback, 8, true);
+  EXPECT_EQ(BehaviorType::STOP, output.behavior);
+  EXPECT_EQ(ManeuverPhase::NONE, output.phase);
+
+  fsm.updateManeuver(BehaviorType::AVOID, PlannerFeedbackData{}, 0, false);
+  output =
+      fsm.updateManeuver(BehaviorType::EMERGENCY_STOP, feedback, 9, false);
+  EXPECT_EQ(BehaviorType::EMERGENCY_STOP, output.behavior);
+  EXPECT_EQ(BehaviorState::EMERGENCY_STOP, output.state);
+  EXPECT_EQ(ManeuverPhase::NONE, output.phase);
 }
 
 TEST(V2CommandManagerTest, EarlierPlannedStopPreemptsCommittedAvoid) {

@@ -11,6 +11,45 @@
 #include "behavior_planner/node/morai_msg_converter.hpp"
 
 namespace behavior_planner {
+namespace {
+
+PlannerFeedbackData NormalizeFeedback(
+    const asmc_msgs::FrenetFeedback* feedback) {
+  PlannerFeedbackData data;
+  if (!feedback) return data;
+  data.valid = true;
+  data.command_id = feedback->command_id;
+  data.result_code = feedback->result_code;
+  switch (feedback->execution_state) {
+    case asmc_msgs::FrenetFeedback::PREPARING:
+      data.execution_state = PlannerExecutionState::PREPARING;
+      break;
+    case asmc_msgs::FrenetFeedback::WAITING:
+      data.execution_state = PlannerExecutionState::WAITING;
+      break;
+    case asmc_msgs::FrenetFeedback::READY:
+      data.execution_state = PlannerExecutionState::READY;
+      break;
+    case asmc_msgs::FrenetFeedback::COMMITTED:
+      data.execution_state = PlannerExecutionState::COMMITTED;
+      break;
+    case asmc_msgs::FrenetFeedback::EXECUTING:
+      data.execution_state = PlannerExecutionState::EXECUTING;
+      break;
+    case asmc_msgs::FrenetFeedback::COMPLETED:
+      data.execution_state = PlannerExecutionState::COMPLETED;
+      break;
+    case asmc_msgs::FrenetFeedback::FAILED:
+      data.execution_state = PlannerExecutionState::FAILED;
+      break;
+    default:
+      data.execution_state = PlannerExecutionState::IDLE;
+      break;
+  }
+  return data;
+}
+
+}  // namespace
 
 BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     : nh_(std::move(nh)), pnh_(std::move(pnh)) {
@@ -231,14 +270,19 @@ void BehaviorNode::runOnce() {
   }
   const UrbanFeature feature = builder_.build(
       ego_, objects_fresh ? objects_ : empty_objects, route_, *lights_);
-  const BehaviorContextData context = decision_.decide(feature, feedback_);
+  const asmc_msgs::FrenetFeedback* feedback = nullptr;
   if (use_v2_interface_) {
     const bool feedback_fresh =
         feedback_v2_received_ &&
         (steady_now - feedback_v2_received_at_).toSec() <=
             feedback_v2_stale_seconds_;
-    const asmc_msgs::FrenetFeedback* feedback =
-        feedback_fresh ? &feedback_v2_ : nullptr;
+    feedback = feedback_fresh ? &feedback_v2_ : nullptr;
+  }
+  const BehaviorContextData context = use_v2_interface_
+      ? decision_.decide(feature, NormalizeFeedback(feedback),
+                         v2_command_manager_.activeCommandId())
+      : decision_.decide(feature, feedback_);
+  if (use_v2_interface_) {
     command_v2_pub_.publish(v2_command_manager_.update(
         context, feedback, ros::Time::now(), command_validity_seconds_));
   } else {

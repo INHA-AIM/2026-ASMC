@@ -7,6 +7,125 @@ namespace behavior_planner {
 
 BehaviorState Fsm::update(BehaviorType b){if(b==BehaviorType::FOLLOW)return BehaviorState::FOLLOW;if(b==BehaviorType::STOP)return BehaviorState::STOP;if(b==BehaviorType::EMERGENCY_STOP)return BehaviorState::EMERGENCY_STOP;if(b==BehaviorType::LEFT_CHANGE)return BehaviorState::LEFT_CHANGE_PREPARE;if(b==BehaviorType::RIGHT_CHANGE)return BehaviorState::RIGHT_CHANGE_PREPARE;if(b==BehaviorType::AVOID)return BehaviorState::AVOID_PREPARE;return BehaviorState::KEEP_LANE;}
 
+namespace {
+
+bool IsLateralManeuver(BehaviorType behavior) {
+  return behavior == BehaviorType::AVOID ||
+         behavior == BehaviorType::LEFT_CHANGE ||
+         behavior == BehaviorType::RIGHT_CHANGE;
+}
+
+BehaviorState StateFor(BehaviorType behavior, ManeuverPhase phase) {
+  if (behavior == BehaviorType::AVOID) {
+    return phase == ManeuverPhase::PREPARE
+               ? BehaviorState::AVOID_PREPARE
+               : BehaviorState::AVOID_EXECUTE;
+  }
+  if (behavior == BehaviorType::LEFT_CHANGE) {
+    return phase == ManeuverPhase::PREPARE
+               ? BehaviorState::LEFT_CHANGE_PREPARE
+               : BehaviorState::LEFT_CHANGE_EXECUTE;
+  }
+  if (behavior == BehaviorType::RIGHT_CHANGE) {
+    return phase == ManeuverPhase::PREPARE
+               ? BehaviorState::RIGHT_CHANGE_PREPARE
+               : BehaviorState::RIGHT_CHANGE_EXECUTE;
+  }
+  if (behavior == BehaviorType::FOLLOW) return BehaviorState::FOLLOW;
+  if (behavior == BehaviorType::STOP) return BehaviorState::STOP;
+  if (behavior == BehaviorType::EMERGENCY_STOP) {
+    return BehaviorState::EMERGENCY_STOP;
+  }
+  return BehaviorState::KEEP_LANE;
+}
+
+}  // namespace
+
+Fsm::ManeuverOutput Fsm::updateManeuver(
+    BehaviorType candidate, const PlannerFeedbackData& feedback,
+    uint32_t active_command_id, bool stop_preempts_committed) {
+  // Emergency is the only unconditional maneuver preemption.
+  if (candidate == BehaviorType::EMERGENCY_STOP) {
+    active_lateral_behavior_ = BehaviorType::KEEP;
+    maneuver_phase_ = ManeuverPhase::NONE;
+    maneuver_command_id_ = 0;
+    return {candidate, StateFor(candidate, ManeuverPhase::NONE),
+            ManeuverPhase::NONE};
+  }
+
+  if (IsLateralManeuver(active_lateral_behavior_)) {
+    if (maneuver_command_id_ == 0 && active_command_id != 0) {
+      maneuver_command_id_ = active_command_id;
+    }
+    const bool feedback_matches =
+        feedback.valid && maneuver_command_id_ != 0 &&
+        feedback.command_id == maneuver_command_id_;
+    if (feedback_matches) {
+      switch (feedback.execution_state) {
+        case PlannerExecutionState::READY:
+          maneuver_phase_ = ManeuverPhase::EXECUTE;
+          break;
+        case PlannerExecutionState::COMMITTED:
+        case PlannerExecutionState::EXECUTING:
+          maneuver_phase_ = ManeuverPhase::COMMITTED;
+          break;
+        case PlannerExecutionState::COMPLETED:
+          maneuver_phase_ = ManeuverPhase::COMPLETE;
+          break;
+        case PlannerExecutionState::FAILED:
+          maneuver_phase_ = ManeuverPhase::FAILED;
+          break;
+        default:
+          break;
+      }
+    }
+
+    const bool terminal = maneuver_phase_ == ManeuverPhase::COMPLETE ||
+                          maneuver_phase_ == ManeuverPhase::FAILED ||
+                          maneuver_phase_ == ManeuverPhase::CANCELLED;
+    if (terminal) {
+      active_lateral_behavior_ = BehaviorType::KEEP;
+      maneuver_phase_ = ManeuverPhase::NONE;
+      maneuver_command_id_ = 0;
+    } else {
+      const bool planned_stop_preemption =
+          candidate == BehaviorType::STOP && stop_preempts_committed;
+      if (planned_stop_preemption) {
+        active_lateral_behavior_ = BehaviorType::KEEP;
+        maneuver_phase_ = ManeuverPhase::NONE;
+        maneuver_command_id_ = 0;
+        return {candidate, StateFor(candidate, ManeuverPhase::NONE),
+                ManeuverPhase::NONE};
+      }
+
+      // Before commitment a changed candidate cancels the preparation. Once
+      // committed, ordinary scorer changes cannot replace the maneuver.
+      if (maneuver_phase_ == ManeuverPhase::COMMITTED ||
+          candidate == active_lateral_behavior_) {
+        return {active_lateral_behavior_,
+                StateFor(active_lateral_behavior_, maneuver_phase_),
+                maneuver_phase_};
+      }
+      active_lateral_behavior_ = BehaviorType::KEEP;
+      maneuver_phase_ = ManeuverPhase::NONE;
+      maneuver_command_id_ = 0;
+    }
+  }
+
+  if (IsLateralManeuver(candidate)) {
+    active_lateral_behavior_ = candidate;
+    maneuver_phase_ = ManeuverPhase::PREPARE;
+    // The wire manager allocates the new command_id after this decision.
+    // Bind it on the next cycle rather than capturing the previous command.
+    maneuver_command_id_ = 0;
+    return {candidate, StateFor(candidate, maneuver_phase_),
+            maneuver_phase_};
+  }
+
+  return {candidate, StateFor(candidate, ManeuverPhase::NONE),
+          ManeuverPhase::NONE};
+}
+
 void Fsm::setFollowReleaseDelay(double delay_s) {
   follow_release_delay_s_ = std::max(0.0, delay_s);
 }

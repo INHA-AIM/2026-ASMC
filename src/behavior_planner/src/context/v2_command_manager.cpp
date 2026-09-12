@@ -86,7 +86,10 @@ asmc_msgs::BehaviorCommand V2CommandManager::makeCandidate(
     case BehaviorType::LEFT_CHANGE:
     case BehaviorType::RIGHT_CHANGE:
       command.maneuver_type = Command::LANE_CHANGE;
-      command.execution_request = Command::PREPARE;
+      command.execution_request =
+          context.maneuver_phase == ManeuverPhase::PREPARE
+              ? Command::PREPARE
+              : Command::EXECUTE;
       command.direction = context.selected_behavior == BehaviorType::LEFT_CHANGE
                               ? Command::DIRECTION_LEFT
                               : Command::DIRECTION_RIGHT;
@@ -107,7 +110,10 @@ asmc_msgs::BehaviorCommand V2CommandManager::makeCandidate(
       break;
     case BehaviorType::AVOID:
       command.maneuver_type = Command::AVOID;
-      command.execution_request = Command::PREPARE;
+      command.execution_request =
+          context.maneuver_phase == ManeuverPhase::PREPARE
+              ? Command::PREPARE
+              : Command::EXECUTE;
       command.direction = Command::DIRECTION_NONE;
       command.primary_object_id = context.target.avoidance_object_id;
       break;
@@ -164,9 +170,11 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
   const bool feedback_matches =
       feedback && has_active_command_ &&
       feedback->command_id == active_command_.command_id;
-  if (feedback_matches && usesHandshake(active_command_.maneuver_type) &&
+  const bool terminal_feedback =
+      feedback_matches && usesHandshake(active_command_.maneuver_type) &&
       (feedback->execution_state == Feedback::COMPLETED ||
-       feedback->execution_state == Feedback::FAILED)) {
+       feedback->execution_state == Feedback::FAILED);
+  if (terminal_feedback) {
     active_transaction_locked_ = false;
   }
   if (feedback_matches && usesHandshake(active_command_.maneuver_type) &&
@@ -181,7 +189,11 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
       active_command_.maneuver_type == Command::AVOID &&
       preempt_it != context.extra_flags.end() && preempt_it->second;
 
-  if (!has_active_command_ || !sameIdentity(active_command_, candidate)) {
+  const bool restart_terminal_identity =
+      terminal_feedback && context.maneuver_phase == ManeuverPhase::PREPARE &&
+      sameIdentity(active_command_, candidate);
+  if (!has_active_command_ || !sameIdentity(active_command_, candidate) ||
+      restart_terminal_identity) {
     if (!active_transaction_locked_ || emergency ||
         planned_stop_preempts_avoid) {
       ++next_command_id_;
@@ -201,10 +213,10 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
   active_command_.reason = candidate.reason;
 
   if (usesHandshake(active_command_.maneuver_type)) {
-    if (feedback_matches && feedback->execution_state == Feedback::READY) {
+    if (candidate.execution_request == Command::EXECUTE) {
       active_command_.execution_request = Command::EXECUTE;
     }
-    // Once execution permission is granted it must not regress to PREPARE.
+    // EXECUTE is monotonic for the lifetime of this command_id.
   } else {
     active_command_.execution_request = Command::EXECUTE;
   }

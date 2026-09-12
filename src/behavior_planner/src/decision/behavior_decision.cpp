@@ -8,6 +8,14 @@ namespace behavior_planner {
 
 BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
                                              const asmc_msgs::PlanFeedback&) {
+  // The v1 feedback contract has no PREPARE/READY/COMMITTED lifecycle.
+  // Preserve legacy behavior selection without synthesizing v2 transitions.
+  return decide(feature, PlannerFeedbackData{}, 0);
+}
+
+BehaviorContextData BehaviorDecision::decide(
+    const UrbanFeature& feature, const PlannerFeedbackData& planner_feedback,
+    uint32_t active_command_id) {
   BehaviorContextData context;
   context.timestamp = feature.timestamp;
   context.hard =
@@ -20,7 +28,6 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
     context.hard.force_stop = true;
     if (!raw_emergency) context.debug.hard_rule_reason += "emergency_latched;";
   }
-  context.score = scorer_.score(feature, context.hard);
   const int32_t follow_target_id = fsm_.updateFollowTarget(
       feature.surrounding.has_front_vehicle,
       feature.surrounding.has_front_vehicle
@@ -29,11 +36,8 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
       feature.timestamp);
   const bool follow_release_grace =
       fsm_.followReleaseGraceActive() && follow_target_id >= 0;
-  if (follow_release_grace) {
-    // Keep FOLLOW above KEEP while perception is inside its short dropout
-    // window. STOP/AVOID/E-STOP retain their higher safety priorities.
-    context.score.follow = 75.0;
-  }
+  context.score =
+      scorer_.score(feature, context.hard, follow_release_grace);
   context.enable.keep = true;
   context.enable.follow = follow_target_id >= 0;
   context.enable.left_change = !context.hard.forbid_left_change &&
@@ -134,17 +138,20 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
   } else if (avoid_precedes_stop) {
     best = {context.score.avoid, BehaviorType::AVOID, true};
   }
-  context.selected_behavior = best.behavior;
+  const Fsm::ManeuverOutput fsm_output = fsm_.updateManeuver(
+      best.behavior, planner_feedback, active_command_id,
+      stop_preempts_avoid);
+  context.selected_behavior = fsm_output.behavior;
+  context.state = fsm_output.state;
+  context.maneuver_phase = fsm_output.phase;
 
-  switch (best.behavior) {
+  switch (context.selected_behavior) {
     case BehaviorType::FOLLOW:
-      context.state = BehaviorState::FOLLOW;
       // Behavior owns the maneuver and its cruise-speed ceiling.  The leader
       // ID and requested gap are sent to Frenet, which alone owns the
       // cycle-by-cycle FOLLOW speed and trajectory calculation.
       break;
     case BehaviorType::LEFT_CHANGE:
-      context.state = BehaviorState::LEFT_CHANGE_PREPARE;
       context.target.target_link_id = feature.route.left_target_link_id;
       context.target.has_target_pose = feature.route.left_target_pose_valid;
       context.target.target_x = feature.route.left_target_x;
@@ -152,7 +159,6 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
       context.target.target_yaw = feature.route.left_target_yaw;
       break;
     case BehaviorType::RIGHT_CHANGE:
-      context.state = BehaviorState::RIGHT_CHANGE_PREPARE;
       context.target.target_link_id = feature.route.right_target_link_id;
       context.target.has_target_pose = feature.route.right_target_pose_valid;
       context.target.target_x = feature.route.right_target_x;
@@ -160,20 +166,16 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
       context.target.target_yaw = feature.route.right_target_yaw;
       break;
     case BehaviorType::STOP:
-      context.state = BehaviorState::STOP;
       // A planned stop retains the cruise target: Frenet lowers it according
       // to remaining braking distance. force_stop bypasses planning anyway.
       if (!context.hard.planned_stop) context.target.desired_speed = 0.0;
       break;
     case BehaviorType::AVOID:
-      context.state = BehaviorState::AVOID_PREPARE;
       break;
     case BehaviorType::EMERGENCY_STOP:
-      context.state = BehaviorState::EMERGENCY_STOP;
       context.target.desired_speed = 0.0;
       break;
     default:
-      context.state = BehaviorState::KEEP_LANE;
       context.target.target_link_id = feature.route.current_link_id;
       break;
   }
@@ -182,7 +184,7 @@ BehaviorContextData BehaviorDecision::decide(const UrbanFeature& feature,
       : (avoid_precedes_stop
              ? "avoid_before_stop"
              : (follow_release_grace &&
-                        best.behavior == BehaviorType::FOLLOW
+                        context.selected_behavior == BehaviorType::FOLLOW
                     ? "follow_release_grace"
                     : "highest_enabled_score"));
   context.debug.cost_terms = {
