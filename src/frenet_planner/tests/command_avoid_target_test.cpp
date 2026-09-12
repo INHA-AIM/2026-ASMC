@@ -1501,15 +1501,13 @@ int main() {
     {
         // ---- 저속 PREPARE -----------------------------------------------
         //
-        // 확보는 하고, 후보는 아직 안 나오며, maintenance는 충돌 검사를
-        // 통과한 crawl이다. 무조건 정지시키면
-        //   0.3 -> WAITING -> stop -> 0 -> WAITING -> ...
-        // 자기잠금이 된다.
+        // 저속에서도 거리 기반 AVOID 후보를 만들고, PREPARE 동안 실제
+        // 출력은 중앙 maintenance crawl을 유지한다.
         FrenetPlanner planner;
         planner.Init(config);
         const std::vector<TrackedObject> objects{
             MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
-        const CartesianState slow_ego = MakeEgo(PoseAt(waypoints, kEgoS), 0.3);
+        const CartesianState slow_ego = MakeEgo(PoseAt(waypoints, kEgoS), 0.0);
         CartesianPath maintenance;
         Prepare result;
         const bool ok = planner.PrepareAvoid(
@@ -1520,8 +1518,12 @@ int main() {
                "low speed: the target is still bound");
         Expect(result.low_speed_context,
                "low speed: the low-speed context is reported");
-        Expect(!result.candidate_valid,
-               "low speed: no AVOID candidate yet");
+        Expect(result.candidate_valid,
+               "low speed: a spatial AVOID candidate is available");
+        Expect(result.generated_candidate_count > 2 &&
+                   result.valid_candidate_count > 0,
+               "low speed: multiple transition-distance candidates are "
+               "evaluated");
         // low_speed_context는 상황 정보이지 상태가 아니다. 정상 속도에서는
         // false여야 하고, 상태 판단은 candidate_valid만으로 한다.
         FrenetPlanner fast;
@@ -1539,11 +1541,8 @@ int main() {
     {
         // ***** low_speed_context가 상태 판단에 쓰이지 않는다는 증거 *****
         //
-        // 이전 이름(low_speed_waiting)이 위험했던 이유가 여기 있다. 저속에서
-        // 공용 저속 generator는 요청한 lateral target 대신 현재 d 유지 경로를
-        // 만들 수 있다. 이를 유효 AVOID로 인정하면 d=0 부근을 COMMIT하고
-        // 장애물 앞에서 멈춘다. 충분히 먼 장애물이어도 실제 목표 d에 닿지
-        // 못한 후보는 WAITING으로 두고 maintenance crawl로 속도를 회복한다.
+        // 시간 기반 공용 generator의 current-d 대체 후보가 아니라, 실제
+        // target_d까지 도달하는 거리 기반 후보가 READY를 만들어야 한다.
         FrenetPlanner planner;
         planner.Init(config);
         const std::vector<TrackedObject> far_objects{
@@ -1558,12 +1557,12 @@ int main() {
         Expect(ok, "low-speed valid: PREPARE succeeds");
         Expect(result.low_speed_context,
                "low-speed valid: the low-speed context is set");
-        Expect(!result.candidate_valid,
-               "low-speed valid: a current-d fallback is not an AVOID "
-               "candidate");
-        Expect(result.low_speed_context && !result.candidate_valid,
-               "low-speed valid: low speed waits for a reachable lateral "
-               "candidate");
+        Expect(result.candidate_valid,
+               "low-speed valid: the spatial candidate reaches the AVOID "
+               "target");
+        Expect(result.low_speed_context && result.valid_candidate_count > 0,
+               "low-speed valid: low speed evaluates a feasible candidate "
+               "set");
         Expect(result.selected_target_d != 0.0,
                "low-speed valid: a lateral target was selected");
         Expect(result.generated_candidate_count > 0,
@@ -1576,6 +1575,32 @@ int main() {
         double max_v = 0.0;
         for (double v : maintenance.v) max_v = std::max(max_v, v);
         Expect(max_v > 0.0, "low speed: the crawl has non-zero speed");
+    }
+    {
+        // 두 정적 장애물을 함께 검사한다. 지정 대상은 중앙에 있지만 더
+        // 가까운 비대상 장애물이 왼쪽 corridor를 막으면, 정지 상태에서도
+        // 고정된 첫 경로에 갇히지 않고 오른쪽 후보를 선택해야 한다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<TrackedObject> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0, 0.0),
+            MakeObstacle(waypoints, 31, kEgoS + 10.0, 0.0, 2.7)};
+        const CartesianState stopped =
+            MakeEgo(PoseAt(waypoints, kEgoS), 0.0);
+        CartesianPath maintenance;
+        Prepare result;
+        const bool ok = planner.PrepareAvoid(
+            stopped, objects, MakeAvoidCommand(21, LateralDirection::NONE),
+            maintenance, result);
+
+        Expect(ok && result.candidate_valid,
+               "low-speed multi-object: at least one corridor remains valid");
+        Expect(result.generated_candidate_count >= 8 &&
+                   result.valid_candidate_count > 0,
+               "low-speed multi-object: all target/distance combinations are "
+               "evaluated");
+        Expect(result.selected_target_d < 0.0,
+               "low-speed multi-object: the blocked left corridor is rejected");
     }
     {
         // 저속 + 장애물이 가까우면 crawl이 충돌로 막혀 감속/정지로 내려간다.

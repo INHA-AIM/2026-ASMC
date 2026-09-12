@@ -119,16 +119,35 @@ bool FrenetPlanner::GenerateDecelToZeroPath(double s, double d, double s_dot,
 bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, double d,
                                           double target_d,
                                           CartesianPath& out_path, double duration_s,
-                                          double speed_cap) const {
-    const double transition_distance =
+                                          double speed_cap,
+                                          double transition_distance_override,
+                                          double minimum_path_distance) const {
+    const double natural_transition_distance =
         LowSpeedLateralTransitionDistance(d, target_d);
-    const int n = static_cast<int>(duration_s / path_cfg_.dt) + 1;
-    out_path.x.resize(n); out_path.y.resize(n); out_path.yaw.resize(n);
-    out_path.kappa.resize(n); out_path.v.resize(n); out_path.a.resize(n);
+    const double transition_distance =
+        std::isfinite(transition_distance_override) &&
+                transition_distance_override > 0.0
+            ? std::max(natural_transition_distance,
+                       transition_distance_override)
+            : natural_transition_distance;
+    const int minimum_samples =
+        std::max(2, static_cast<int>(duration_s / path_cfg_.dt) + 1);
+    const double required_distance =
+        std::isfinite(minimum_path_distance) && minimum_path_distance > 0.0
+            ? std::max(transition_distance, minimum_path_distance)
+            : -1.0;
+
+    out_path = CartesianPath{};
+    out_path.x.reserve(minimum_samples); out_path.y.reserve(minimum_samples);
+    out_path.yaw.reserve(minimum_samples); out_path.kappa.reserve(minimum_samples);
+    out_path.v.reserve(minimum_samples); out_path.a.reserve(minimum_samples);
 
     double s_i = s;
     double v_prev = std::max(ego.v, kMinCreepSpeed);
-    for (int i = 0; i < n; ++i) {
+    // 거리 기반 후보는 목표 횡이동을 실제로 끝낼 때까지 생성한다. 안전을
+    // 위해 비정상 파라미터에도 유한한 상한을 둔다(0.1 s 기준 60 s).
+    constexpr int kMaximumSamples = 600;
+    for (int i = 0; i < kMaximumSamples; ++i) {
         const double t = i * path_cfg_.dt;
         const double crawl_speed = clip(
             ego.v + kCrawlAccel * t, kMinCreepSpeed, kCrawlSpeedCap);
@@ -152,14 +171,20 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
         const double a_i = (v_i < kCrawlSpeedCap) ? kCrawlAccel : 0.0;
         CartesianState cs = FrenetToCartesian(rp, s_i, v_i, a_i, d_i, d_prime, d_pprime);
 
-        out_path.x[i] = cs.x;
-        out_path.y[i] = cs.y;
-        out_path.yaw[i] = cs.yaw;
-        out_path.kappa[i] = cs.kappa;
-        out_path.v[i] = v_i;
-        out_path.a[i] = a_i;
+        out_path.x.push_back(cs.x);
+        out_path.y.push_back(cs.y);
+        out_path.yaw.push_back(cs.yaw);
+        out_path.kappa.push_back(cs.kappa);
+        out_path.v.push_back(v_i);
+        out_path.a.push_back(a_i);
+
+        const bool duration_satisfied = i + 1 >= minimum_samples;
+        const bool distance_satisfied =
+            required_distance <= 0.0 || ds >= required_distance;
+        if (duration_satisfied && distance_satisfied) break;
     }
-    return true;
+    return out_path.x.size() >= 2 &&
+           (required_distance <= 0.0 || s_i - s >= required_distance - 1e-6);
 }
 
 double FrenetPlanner::LowSpeedLateralTransitionDistance(

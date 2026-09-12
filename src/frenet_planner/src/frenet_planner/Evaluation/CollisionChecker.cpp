@@ -3,6 +3,26 @@
 
 #include <cmath>
 
+namespace {
+
+// 현재 reference normal에서 ego와 obstacle 중심의 횡방향 거리다.
+// 실제 충돌은 별도의 authoritative OBB SAT로 판정한다. 여기에는 차체 yaw에
+// 따른 투영 폭을 섞지 않아 곡선에서 정상적인 바깥쪽 이동을 오판하지 않는다.
+double LateralCenterDistance(const FrenetPath& path, size_t index,
+                             const RefLine& ref,
+                             const TrackedObject& obstacle) {
+    const RefPoint local_ref = Interpolate(ref, path.s[index]);
+    const PredictedObjectPose predicted =
+        PredictTrackedObjectPose(obstacle, path.t[index]);
+    const double nx = -std::sin(local_ref.theta);
+    const double ny = std::cos(local_ref.theta);
+    const double object_d = (predicted.x - local_ref.x) * nx +
+                            (predicted.y - local_ref.y) * ny;
+    return std::fabs(path.d[index] - object_d);
+}
+
+}  // namespace
+
 PredictedObjectPose PredictTrackedObjectPose(const TrackedObject& obj, double t) {
     PredictedObjectPose pose;
     if (std::fabs(obj.yaw_rate) > 1e-3) {
@@ -22,15 +42,20 @@ geometry::Polygon2D MakeEgoFootprint(const CartesianState& cs,
                                      const VehicleShape& shape,
                                      double margin) {
     const double safe_margin = std::max(0.0, margin);
-    const double half_length = shape.length * 0.5 + safe_margin;
+    const bool rear_axle_reference =
+        std::isfinite(shape.rear_overhang) && shape.rear_overhang >= 0.0 &&
+        shape.rear_overhang <= shape.length;
+    const double rear_extent = rear_axle_reference
+        ? shape.rear_overhang : shape.length * 0.5;
+    const double front_extent = shape.length - rear_extent;
     const double half_width = shape.width * 0.5 + safe_margin;
     const double cosine = std::cos(cs.yaw);
     const double sine = std::sin(cs.yaw);
     const double local_xy[4][2] = {
-        {-half_length, -half_width},
-        { half_length, -half_width},
-        { half_length,  half_width},
-        {-half_length,  half_width},
+        {-rear_extent - safe_margin, -half_width},
+        { front_extent + safe_margin, -half_width},
+        { front_extent + safe_margin,  half_width},
+        {-rear_extent - safe_margin,  half_width},
     };
 
     geometry::Polygon2D polygon;
@@ -93,7 +118,11 @@ void FilterByCollision(std::vector<FrenetPath>& combined,
         bool collided = false;
         bool target_escape_active = false;
         bool target_margin_exited = false;
-        double target_previous_distance_sq = 0.0;
+        bool target_lateral_progressed = false;
+        double target_initial_lateral_distance = 0.0;
+        double target_previous_lateral_distance = 0.0;
+        const double lateral_backtrack_tolerance =
+            std::max(1e-4, 0.1 * std::max(0.0, cfg.safety_margin));
 
         GeometricPath geo = ComputeGeometricPath(path.s, path.d, ref);
 
@@ -113,6 +142,20 @@ void FilterByCollision(std::vector<FrenetPath>& combined,
                 if (!expanded_overlap) {
                     if (obj.id == avoid_escape_object_id &&
                         target_escape_active) {
+                        const double lateral_distance =
+                            LateralCenterDistance(path, i, ref, obj);
+                        if (std::isfinite(lateral_distance) &&
+                            lateral_distance >
+                                target_initial_lateral_distance + 1e-6) {
+                            target_lateral_progressed = true;
+                        }
+                        if (!target_lateral_progressed) {
+                            collided = true;
+                            path.collision_object_id = obj.id;
+                            path.collision_sample_index =
+                                static_cast<int>(i);
+                            break;
+                        }
                         target_escape_active = false;
                         target_margin_exited = true;
                     }
@@ -126,24 +169,31 @@ void FilterByCollision(std::vector<FrenetPath>& combined,
                         MakeEgoFootprint(cs, ego_shape, 0.0);
                     const bool physical_overlap =
                         CheckObstacleOverlap(physical_ego, {}, obj, path.t[i]);
-                    const PredictedObjectPose predicted =
-                        PredictTrackedObjectPose(obj, path.t[i]);
-                    const double dx = cs.x - predicted.x;
-                    const double dy = cs.y - predicted.y;
-                    const double distance_sq = dx * dx + dy * dy;
+                    const double lateral_distance =
+                        LateralCenterDistance(path, i, ref, obj);
 
-                    if (!physical_overlap) {
+                    if (!physical_overlap &&
+                        std::isfinite(lateral_distance)) {
                         if (i == 0) {
                             // Escape is available only when the current pose
                             // already lies in the inflated margin. It cannot
                             // be used to enter that margin later.
                             target_escape_active = true;
-                            target_previous_distance_sq = distance_sq;
+                            target_initial_lateral_distance =
+                                lateral_distance;
+                            target_previous_lateral_distance =
+                                lateral_distance;
                             allow_target_escape = true;
                         } else if (target_escape_active &&
-                                   distance_sq + 1e-4 >=
-                                       target_previous_distance_sq) {
-                            target_previous_distance_sq = distance_sq;
+                                   lateral_distance +
+                                           lateral_backtrack_tolerance >=
+                                       target_previous_lateral_distance) {
+                            if (lateral_distance >
+                                target_initial_lateral_distance + 1e-6) {
+                                target_lateral_progressed = true;
+                            }
+                            target_previous_lateral_distance =
+                                lateral_distance;
                             allow_target_escape = true;
                         }
                     }
@@ -156,6 +206,17 @@ void FilterByCollision(std::vector<FrenetPath>& combined,
                     break;
                 }
             }
+        }
+
+        // 후보 전체가 margin 안에서 끝난 경우에도 종방향 이동만으로는
+        // escape가 아니다. 실제 OBB 비충돌을 유지하면서 경로 법선 방향의
+        // 중심 간격이 적어도 한 번은 증가해야 한다.
+        if (!collided && target_escape_active &&
+            !target_lateral_progressed) {
+            collided = true;
+            path.collision_object_id = avoid_escape_object_id;
+            path.collision_sample_index =
+                path.t.empty() ? -1 : static_cast<int>(path.t.size() - 1);
         }
 
         if (path.valid && !collided && !path.t.empty()) {

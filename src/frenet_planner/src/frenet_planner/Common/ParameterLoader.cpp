@@ -84,6 +84,8 @@ void LoadParams(const std::string& yaml_path,
 
     loadInto(root, "planner/vehicle_shape/width",  vehicle_shape.width);
     loadInto(root, "planner/vehicle_shape/length", vehicle_shape.length);
+    loadInto(root, "planner/vehicle_shape/rear_overhang",
+             vehicle_shape.rear_overhang);
 
     loadInto(root, "planner/collision_check/safety_margin",      collision_cfg.safety_margin);
     loadInto(root, "planner/collision_check/margin_growth_rate", collision_cfg.margin_growth_rate);
@@ -123,6 +125,14 @@ void LoadParams(const std::string& yaml_path,
              avoid_cfg.committed_recovery_step);
     loadInto(root, "planner/avoid/committed_recovery_max_expansion",
              avoid_cfg.committed_recovery_max_expansion);
+    loadInto(root, "planner/avoid/low_speed_transition_scale_min",
+             avoid_cfg.low_speed_transition_scale_min);
+    loadInto(root, "planner/avoid/low_speed_transition_scale_max",
+             avoid_cfg.low_speed_transition_scale_max);
+    loadInto(root, "planner/avoid/low_speed_transition_scale_step",
+             avoid_cfg.low_speed_transition_scale_step);
+    loadInto(root, "planner/avoid/low_speed_path_extension",
+             avoid_cfg.low_speed_path_extension);
     // D6-1. 키가 없으면 기본값(5)이 유지되므로 기존 params.yaml도 그대로 쓴다.
     loadInto(root, "planner/avoid/dropout_grace_cycles", avoid_cfg.dropout_grace_cycles);
 

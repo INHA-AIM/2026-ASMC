@@ -5,6 +5,7 @@
 #include <string>
 
 #include "frenet_planner/Geometry/PolygonUtils.hpp"
+#include "frenet_planner/Maneuver/ManeuverUtils.hpp"
 
 namespace {
 
@@ -20,14 +21,15 @@ void Expect(bool condition, const std::string& name) {
 // 자체 fixture로 명시적 corners를 만든다). length=width=2.0, height=1.0
 // 직사각형을 yaw만큼 회전해 두 z 층(0, height)에 배치한다.
 TrackedObject MakeObstacle(double x, double y, double vx = 0.0,
-                             double vy = 0.0, double yaw = 0.0) {
+                             double vy = 0.0, double yaw = 0.0,
+                             double length = 2.0, double width = 2.0) {
     TrackedObject object;
     object.id = 1;
     object.x = x;
     object.y = y;
     object.heading = yaw;
-    object.length = 2.0;
-    object.width = 2.0;
+    object.length = length;
+    object.width = width;
     object.height = 1.0;
     object.vx = vx;
     object.vy = vy;
@@ -120,6 +122,34 @@ int main() {
     Expect(CheckObstacleOverlap(expanded, {}, near_margin, 0.0),
            "ego safety margin expands collision contour");
 
+    // production VehicleState는 후륜축 좌표다. 같은 x/y에서도 차체가
+    // 중심 기준으로 앞뒤 대칭 배치되지 않고 전방으로 더 길어야 한다.
+    const VehicleShape rear_axle_shape{2.0, 4.635, 0.79};
+    const geometry::Polygon2D rear_axle_footprint =
+        MakeEgoFootprint(ego, rear_axle_shape, 0.0);
+    double min_x = rear_axle_footprint.front().x;
+    double max_x = rear_axle_footprint.front().x;
+    for (const auto& point : rear_axle_footprint) {
+        min_x = std::min(min_x, point.x);
+        max_x = std::max(max_x, point.x);
+    }
+    Expect(std::fabs(min_x + 0.79) < 1e-9 &&
+               std::fabs(max_x - 3.845) < 1e-9,
+           "rear-axle ego footprint uses physical front/rear extents");
+
+    // 실차 재현값을 ego frame으로 회전한 배치: 객체 중심은 후륜축 거의
+    // 옆이고 두 차량 heading은 거의 반대다.
+    const TrackedObject beside_rear_axle =
+        MakeObstacle(-0.116, -2.581, 0.0, 0.0, 3.027, 4.5, 1.8);
+    const geometry::Polygon2D centered_margin =
+        MakeEgoFootprint(ego, VehicleShape{1.9, 4.635}, 0.5);
+    const geometry::Polygon2D rear_axle_margin =
+        MakeEgoFootprint(ego, VehicleShape{1.9, 4.635, 0.79}, 0.5);
+    Expect(CheckObstacleOverlap(centered_margin, {}, beside_rear_axle, 0.0),
+           "centered footprint reproduces the side false positive");
+    Expect(!CheckObstacleOverlap(rear_axle_margin, {}, beside_rear_axle, 0.0),
+           "rear-axle footprint removes the side false positive");
+
     const RefLine straight_ref =
         BuildRefLine({-10.0, 10.0}, {0.0, 0.0}, 1.0);
     const CollisionCheckConfig collision_cfg{0.5, 0.0, 1.0};
@@ -131,6 +161,14 @@ int main() {
                       collision_cfg, -1, lateral_near_margin.id);
     Expect(escaping.front().valid,
            "avoid target may escape an existing inflated margin");
+
+    std::vector<FrenetPath> longitudinal_only{MakePath({0.0, 0.0, 0.0})};
+    longitudinal_only.front().s = {10.0, 11.0, 12.0};
+    FilterByCollision(longitudinal_only, straight_ref,
+                      {lateral_near_margin}, ego_shape, collision_cfg, -1,
+                      lateral_near_margin.id);
+    Expect(!longitudinal_only.front().valid,
+           "longitudinal center-distance growth is not lateral escape");
 
     std::vector<FrenetPath> approaching{MakePath({0.0, 0.2, 0.4})};
     FilterByCollision(approaching, straight_ref, {lateral_near_margin}, ego_shape,
@@ -151,6 +189,26 @@ int main() {
                       ego_shape, collision_cfg, -1, -1);
     Expect(!non_target_escape.front().valid,
            "inflated margin remains mandatory for non-target objects");
+
+    CartesianPath low_speed_escape;
+    low_speed_escape.x = {0.0, 0.1, 0.2};
+    low_speed_escape.y = {0.0, -0.2, -0.4};
+    low_speed_escape.yaw = {0.0, 0.0, 0.0};
+    int low_speed_blocking_id = -1;
+    Expect(CartesianTrajectoryClear(
+               low_speed_escape, {lateral_near_margin}, ego_shape,
+               collision_cfg, 0.1, &low_speed_blocking_id,
+               lateral_near_margin.id),
+           "low-speed avoid may escape laterally with the standard margin");
+
+    CartesianPath low_speed_longitudinal = low_speed_escape;
+    low_speed_longitudinal.x = {0.0, 0.5, 1.0};
+    low_speed_longitudinal.y = {0.0, 0.0, 0.0};
+    Expect(!CartesianTrajectoryClear(
+               low_speed_longitudinal, {lateral_near_margin}, ego_shape,
+               collision_cfg, 0.1, &low_speed_blocking_id,
+               lateral_near_margin.id),
+           "low-speed longitudinal motion is not an avoid escape");
 
     if (g_failures == 0) {
         std::cout << "All polygon collision tests passed\n";

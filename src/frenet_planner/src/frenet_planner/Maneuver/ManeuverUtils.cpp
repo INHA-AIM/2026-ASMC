@@ -42,9 +42,18 @@ bool CartesianTrajectoryClear(const CartesianPath& path,
                               const std::vector<TrackedObject>& obstacles,
                               const VehicleShape& ego_shape,
                               const CollisionCheckConfig& collision_cfg,
-                              double dt, int* blocking_id) {
+                              double dt, int* blocking_id,
+                              int avoid_escape_object_id) {
     if (blocking_id) *blocking_id = -1;
     const size_t count = std::min({path.x.size(), path.y.size(), path.yaw.size()});
+    bool target_escape_active = false;
+    bool target_margin_exited = false;
+    bool target_lateral_progressed = false;
+    double target_initial_lateral_distance = 0.0;
+    double target_previous_lateral_distance = 0.0;
+    const double lateral_backtrack_tolerance =
+        std::max(1e-4,
+                 0.1 * std::max(0.0, collision_cfg.safety_margin));
     for (size_t i = 0; i < count; ++i) {
         CartesianState ego{};
         ego.x = path.x[i];
@@ -53,17 +62,77 @@ bool CartesianTrajectoryClear(const CartesianPath& path,
         const double t = static_cast<double>(i) * dt;
         const double margin = collision_cfg.safety_margin +
                               collision_cfg.margin_growth_rate * t;
-        // 기존 구현은 ego와 obstacle 양쪽에 margin을 적용했다. 장애물 원본
-        // corner를 변경하지 않으면서 총 여유를 보수적으로 유지하도록 ego에
-        // 두 배 margin을 적용한다.
         const geometry::Polygon2D ego_footprint =
-            MakeEgoFootprint(ego, ego_shape, 2.0 * margin);
+            MakeEgoFootprint(ego, ego_shape, margin);
         for (const auto& obj : obstacles) {
-            if (CheckObstacleOverlap(ego_footprint, {}, obj, t)) {
+            const bool expanded_overlap =
+                CheckObstacleOverlap(ego_footprint, {}, obj, t);
+            if (!expanded_overlap) {
+                if (obj.id == avoid_escape_object_id &&
+                    target_escape_active) {
+                    const PredictedObjectPose predicted =
+                        PredictTrackedObjectPose(obj, t);
+                    const double nx = -std::sin(ego.yaw);
+                    const double ny = std::cos(ego.yaw);
+                    const double lateral_distance = std::fabs(
+                        (predicted.x - ego.x) * nx +
+                        (predicted.y - ego.y) * ny);
+                    if (std::isfinite(lateral_distance) &&
+                        lateral_distance >
+                            target_initial_lateral_distance + 1e-6) {
+                        target_lateral_progressed = true;
+                    }
+                    if (!target_lateral_progressed) {
+                        if (blocking_id) *blocking_id = obj.id;
+                        return false;
+                    }
+                    target_escape_active = false;
+                    target_margin_exited = true;
+                }
+                continue;
+            }
+
+            bool allow_target_escape = false;
+            if (obj.id == avoid_escape_object_id && !target_margin_exited) {
+                const geometry::Polygon2D physical_ego =
+                    MakeEgoFootprint(ego, ego_shape, 0.0);
+                const bool physical_overlap =
+                    CheckObstacleOverlap(physical_ego, {}, obj, t);
+                const PredictedObjectPose predicted =
+                    PredictTrackedObjectPose(obj, t);
+                const double nx = -std::sin(ego.yaw);
+                const double ny = std::cos(ego.yaw);
+                const double lateral_distance = std::fabs(
+                    (predicted.x - ego.x) * nx +
+                    (predicted.y - ego.y) * ny);
+                if (!physical_overlap && std::isfinite(lateral_distance)) {
+                    if (i == 0) {
+                        target_escape_active = true;
+                        target_initial_lateral_distance = lateral_distance;
+                        target_previous_lateral_distance = lateral_distance;
+                        allow_target_escape = true;
+                    } else if (target_escape_active &&
+                               lateral_distance +
+                                       lateral_backtrack_tolerance >=
+                                   target_previous_lateral_distance) {
+                        if (lateral_distance >
+                            target_initial_lateral_distance + 1e-6) {
+                            target_lateral_progressed = true;
+                        }
+                        target_previous_lateral_distance = lateral_distance;
+                        allow_target_escape = true;
+                    }
+                }
+            }
+            if (!allow_target_escape) {
                 if (blocking_id) *blocking_id = obj.id;
                 return false;
             }
         }
+    }
+    if (target_escape_active && !target_lateral_progressed) {
+        if (blocking_id) *blocking_id = avoid_escape_object_id;
+        return false;
     }
     return true;
 }

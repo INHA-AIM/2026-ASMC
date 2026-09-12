@@ -34,6 +34,7 @@ bool CartesianTrajectoryClear(const CartesianPath& path,
                               const std::vector<TrackedObject>& obstacles,
                               const VehicleShape& ego_shape,
                               const CollisionCheckConfig& collision_cfg,
-                              double dt, int* blocking_id = nullptr);
+                              double dt, int* blocking_id = nullptr,
+                              int avoid_escape_object_id = -1);
 
 #endif  // FRENET_MANEUVER_MANEUVER_UTILS_HPP
