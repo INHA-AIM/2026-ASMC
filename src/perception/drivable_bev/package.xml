@@ -10,6 +10,7 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <depend>diagnostic_msgs</depend>
+  <depend>asmc_msgs</depend>
   <depend>camera_semantic_perception</depend>
   <depend>geometry_msgs</depend>
   <depend>message_filters</depend>

@@ -146,6 +146,12 @@ def result_quality_gates(metadata: Mapping) -> dict:
     not be confused with a pipeline or recording failure.
     """
     lane = diagnostic_values(dict(metadata), "drivable_bev/lane_vectorizer")
+    typed_boundary_count = topic_message_count(
+        metadata, "/perception/lane/boundary_observations"
+    )
+    legacy_boundary_count = topic_message_count(
+        metadata, "/perception/lane/boundaries"
+    )
     return {
         "result_complete": metadata.get("status") == "complete",
         "camera_diagnostics_recorded": topic_message_count(
@@ -157,9 +163,9 @@ def result_quality_gates(metadata: Mapping) -> dict:
         "lane_diagnostics_recorded": topic_message_count(
             metadata, "/perception/lane/diagnostics"
         ) > 0,
-        "lane_boundaries_recorded": topic_message_count(
-            metadata, "/perception/lane/boundaries"
-        ) > 0,
+        "lane_boundaries_recorded": (
+            typed_boundary_count > 0 or legacy_boundary_count > 0
+        ),
         "lane_outputs_positive": diagnostic_int(lane, "outputs") > 0,
         "lane_errors_zero": diagnostic_int(lane, "errors") == 0,
     }

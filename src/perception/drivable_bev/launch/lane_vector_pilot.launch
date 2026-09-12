@@ -5,12 +5,16 @@
        default="$(find drivable_bev)/config/bev_grid.yaml"/>
   <arg name="visualization_config"
        default="$(find drivable_bev)/config/visualization.yaml"/>
+  <arg name="operating_domain" default="shadow_two_way_v1"/>
+  <arg name="algorithm_id" default="twinlite_v6_shadow_boundary_contract_v1"/>
 
   <node pkg="drivable_bev" type="lane_vectorizer_node.py"
         name="camera_lane_vectorizer" output="screen" required="true">
     <rosparam command="load" file="$(find drivable_bev)/config/cameras_v2.yaml"/>
     <rosparam command="load" file="$(find drivable_bev)/config/lane_fitting.yaml"/>
     <rosparam param="views" subst_value="true">[$(arg views)]</rosparam>
+    <param name="operating_domain" value="$(arg operating_domain)"/>
+    <param name="algorithm_id" value="$(arg algorithm_id)"/>
   </node>
 
   <node if="$(arg start_visualizer)"

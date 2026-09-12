@@ -29,6 +29,11 @@ from .boundary_candidates import (
     select_shadow_lane_tracks,
     select_shadow_boundaries,
 )
+from .boundary_output import (
+    BoundaryOutputFrame,
+    BoundaryOutputValue,
+    build_shadow_boundary_output,
+)
 from .bag_batch import (
     SelectedBagRun,
     diagnostic_int,
@@ -41,6 +46,7 @@ from .shadow_result_audit import (
     robustness_delta,
     summarize_boundary_frames,
     summarize_boundary_run_groups,
+    typed_boundary_frame,
 )
 
 __all__ = [
@@ -65,6 +71,9 @@ __all__ = [
     "fit_lane_track",
     "fit_lane_tracks",
     "select_shadow_boundaries",
+    "BoundaryOutputFrame",
+    "BoundaryOutputValue",
+    "build_shadow_boundary_output",
     "select_shadow_lane_tracks",
     "load_bag_selection",
     "diagnostic_int",
@@ -74,6 +83,7 @@ __all__ = [
     "robustness_delta",
     "summarize_boundary_frames",
     "summarize_boundary_run_groups",
+    "typed_boundary_frame",
     "calibration_from_dict",
     "calibrations_from_dict",
     "ground_plane_from_dict",

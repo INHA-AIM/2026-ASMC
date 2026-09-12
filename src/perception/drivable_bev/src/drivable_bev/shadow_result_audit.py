@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Iterable, Mapping, Sequence
+from typing import Iterable, Mapping, Optional, Sequence
 
 
 BOUNDARY_ROLES = (
@@ -11,6 +11,67 @@ BOUNDARY_ROLES = (
     "yellow_centre_boundary",
     "right_outer_boundary",
 )
+
+
+def typed_boundary_frame(message) -> Optional[list]:
+    """Convert the general typed contract into shadow-only audit roles.
+
+    The inferred role exists only in this audit. It is not part of the public
+    perception message and must not be used as a home/opposing label.
+    """
+    if not bool(message.valid):
+        return None
+    ordered = sorted(message.boundaries, key=lambda item: int(item.lateral_order))
+    yellow_indices = [
+        index for index, item in enumerate(ordered) if int(item.color) == 2
+    ]
+    yellow_index = yellow_indices[0] if len(yellow_indices) == 1 else None
+    frame_order_valid = all(bool(item.order_valid) for item in ordered)
+    result = []
+    for index, item in enumerate(ordered):
+        color = int(item.color)
+        if frame_order_valid and color == 2 and yellow_index == index:
+            role = "yellow_centre_boundary"
+        elif (
+            frame_order_valid
+            and color == 1
+            and yellow_index is not None
+            and index < yellow_index
+        ):
+            role = "left_outer_boundary"
+        elif (
+            frame_order_valid
+            and color == 1
+            and yellow_index is not None
+            and index > yellow_index
+        ):
+            role = "right_outer_boundary"
+        else:
+            role = "unresolved"
+        result.append(
+            {
+                "status": "provisional_shadow_boundary",
+                "stable_id": int(item.tracking_id),
+                "lateral_order_left_to_right": int(item.lateral_order),
+                "order_valid": bool(item.order_valid),
+                "role": role,
+                "class_id": color,
+                "color": {1: "white", 2: "yellow"}.get(color, "unknown"),
+                "score": float(item.geometric_quality),
+                "confidence": float(item.semantic_score),
+                "reference_x_m": float(item.reference_x_m),
+                "reference_y_m": float(item.reference_y_m),
+                "valid_x": [float(item.valid_x_min_m), float(item.valid_x_max_m)],
+                "source_mask": int(item.source_mask),
+                "observed_length_m": float(item.observed_length_m),
+                "bridged_ratio": float(item.bridged_length_ratio),
+                "track_age_frames": int(item.age_frames),
+                "reacquired_after_missed_frames": int(
+                    item.reacquired_after_missed_frames
+                ),
+            }
+        )
+    return result
 
 
 def _rate(numerator: int, denominator: int) -> float:
@@ -21,7 +82,7 @@ def summarize_boundary_frames(frames: Sequence[Sequence[Mapping]]) -> dict:
     """Summarize decoded boundary marker payloads without ROS dependencies."""
     total = len(frames)
     any_count = yellow_count = complete_count = unresolved_count = 0
-    duplicate_role_frames = lateral_order_error_frames = 0
+    duplicate_role_frames = lateral_order_error_frames = order_invalid_frames = 0
     total_boundaries = reacquired_events = 0
     role_presence = Counter()
     stable_ids = set()
@@ -54,6 +115,7 @@ def summarize_boundary_frames(frames: Sequence[Sequence[Mapping]]) -> dict:
         ]
         if orders and (orders != sorted(orders) or len(orders) != len(set(orders))):
             lateral_order_error_frames += 1
+        order_invalid_frames += any(item.get("order_valid") is False for item in values)
 
         for item in values:
             stable_id = item.get("stable_id")
@@ -95,6 +157,7 @@ def summarize_boundary_frames(frames: Sequence[Sequence[Mapping]]) -> dict:
         "reacquired_events": reacquired_events,
         "duplicate_role_frames": duplicate_role_frames,
         "lateral_order_error_frames": lateral_order_error_frames,
+        "order_invalid_frames": order_invalid_frames,
     }
 
 
@@ -118,6 +181,7 @@ def summarize_boundary_run_groups(
         "reacquired_events",
         "duplicate_role_frames",
         "lateral_order_error_frames",
+        "order_invalid_frames",
     )
     for key in additive:
         result[key] = sum(value[key] for value in per_run)

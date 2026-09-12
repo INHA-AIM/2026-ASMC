@@ -1,7 +1,8 @@
 # drivable_bev
 
 > 상태: 3-camera fused metric BEV + metric lane-vector pilot + GPS 음영구간
-> boundary selector. 12-run provisional gate는 통과했지만 판제용 정본 메시지는 아직 합의 전이다.
+> boundary selector. 12-run provisional gate와 typed provisional handoff 구현을 완료했으며,
+> 전 구간 topology/판제 정본 계약은 아직 합의 전이다.
 
 TwinLiteNet+의 원본 영상 크기 drivable probability와 4-class road-marking 결과를
 카메라별로 `base_link` 지면 격자에 투영한 뒤 하나의 BEV로 융합한다. MGeo, GPS, LiDAR
@@ -109,6 +110,26 @@ BEV 통합 launch는 view 누락을 줄이기 위해 최대 20 ms 동안 batch�
 
 기존 native-resolution 토픽은 하위 호환을 위해 그대로 유지한다.
 
+음영 왕복 2차로 ODD에서 선별한 경계는 다음 typed provisional 토픽으로도 발행한다.
+
+```text
+/perception/lane/boundary_observations
+    asmc_msgs/LaneBoundaryObservationArray
+```
+
+배열은 `base_link`에서 관측된 경계를 `reference_x_m`의 왼쪽(+y)부터 오른쪽(-y) 순서로
+전달한다. 각 원소에는 short-term `tracking_id`, white/yellow 색상, 관측 카메라 bitmask,
+metric polyline, 유효 x 범위, semantic/geometric score와 bridge 비율이 들어간다.
+`order_valid=false`이면 모든 경계가 같은 reference x를 통과하지 않은 것이므로
+`lateral_order`와 `reference_y_m`을 차로 의미로 사용하면 안 된다. score는 calibrated
+probability가 아니다.
+
+이 계약에는 `home_lane`, `opposing_lane`, 절대 차로 번호가 없다. 현재 producer가
+`operating_domain=shadow_two_way_v1`, `expected_boundary_count=3`을 내보내는 것은 첫 ODD의
+완성도 기준일 뿐 메시지 자체는 N개 경계를 표현한다. fresh valid empty와 stale/missing,
+`valid=false`를 구분해야 하며, 판제는 부분 관측을 정상 상태로 처리해야 한다. 기존
+`/perception/lane/boundaries` MarkerArray는 시각화·과거 bag 호환용으로 유지한다.
+
 기본 시각화 `/perception/bev/debug/fused/compressed`는 하나의 fused BEV에 drivable=녹색,
 white=흰색, yellow=노란색, stopline=빨간색과 metric grid를 표시한다. 상단 범례는
 `x[min,max]m`, `y[min,max]m`, 해상도를 표시하며 영상 폭에 맞춰 자동 축소한다. 기존 3×3
@@ -192,6 +213,20 @@ rqt_image_view
 /perception/lane/debug/fitted_bev/compressed
 /perception/lane/debug/camera_reprojection_mosaic/compressed
 ```
+
+판제 handoff와 result bag을 확인할 때는 typed 토픽을 직접 점검한다.
+
+```bash
+rostopic echo /perception/lane/boundary_observations -n1
+rostopic hz /perception/lane/boundary_observations
+```
+
+2026-09-12 기존 Foggy 11시 raw bag 한 개를 새 `shadow_boundary_result` profile로 재생한
+smoke에서는 typed boundary 240 frame이 평균 `10.195 Hz`로 기록됐고 recorder/diagnostics/error
+기술 gate를 모두 통과했다. 이 중 5 frame은 세 경계가 같은 reference x를 통과하지 않아
+`order_valid=false`였다. 따라서 consumer가 partial/invalid/order-invalid를 실제 분기로
+처리해야 한다는 계약도 재현 데이터로 확인했다. 이 smoke는 geometry 정확도 재평가가 아니라
+메시지·녹화·감사 배관 검증이다.
 
 운용 처리량을 잴 때는 시각화 노드 자체도 제외할 수 있다.
 

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(drivable_bev)
 
 find_package(catkin REQUIRED COMPONENTS
+  asmc_msgs
   camera_semantic_perception
   diagnostic_msgs
   geometry_msgs
@@ -14,7 +15,18 @@ find_package(catkin REQUIRED COMPONENTS
 
 catkin_python_setup()
 
-catkin_package()
+catkin_package(
+  CATKIN_DEPENDS
+    asmc_msgs
+    camera_semantic_perception
+    diagnostic_msgs
+    geometry_msgs
+    message_filters
+    rospy
+    sensor_msgs
+    std_msgs
+    visualization_msgs
+)
 
 if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_grid.py)
@@ -29,6 +41,7 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_lane_tracking.py)
   catkin_add_nosetests(test/test_spline_fitting.py)
   catkin_add_nosetests(test/test_boundary_candidates.py)
+  catkin_add_nosetests(test/test_boundary_output.py)
   catkin_add_nosetests(test/test_bag_batch.py)
   catkin_add_nosetests(test/test_shadow_result_audit.py)
 endif()

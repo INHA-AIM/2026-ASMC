@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import threading
 import time
@@ -14,7 +15,8 @@ import message_filters
 import numpy as np
 import rospy
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
-from geometry_msgs.msg import Point
+from asmc_msgs.msg import LaneBoundaryObservation, LaneBoundaryObservationArray
+from geometry_msgs.msg import Point, Point32
 from sensor_msgs import point_cloud2
 from sensor_msgs.msg import Image, PointCloud2, PointField
 from std_msgs.msg import Header
@@ -24,6 +26,11 @@ from drivable_bev.boundary_candidates import (
     TemporalBoundaryTracker,
     select_shadow_lane_tracks,
     select_shadow_boundaries,
+)
+from drivable_bev.boundary_output import (
+    BoundaryOutputFrame,
+    COMPLETENESS_EMPTY,
+    build_shadow_boundary_output,
 )
 from drivable_bev.calibration import calibrations_from_dict
 from drivable_bev.lane_evidence import reduce_evidence_to_nodes
@@ -160,6 +167,46 @@ class LaneVectorizerNode:
                 self.shadow_boundary_parameters.pop("temporal_reset_gap_sec", 0.75)
             ),
         )
+        self.operating_domain = str(
+            rospy.get_param("~operating_domain", "shadow_two_way_v1")
+        ).strip()
+        self.algorithm_id = str(
+            rospy.get_param(
+                "~algorithm_id", "twinlite_v6_shadow_boundary_contract_v1"
+            )
+        ).strip()
+        self.expected_boundary_count = int(
+            rospy.get_param("~expected_boundary_count", 3)
+        )
+        if not self.operating_domain or not self.algorithm_id:
+            raise ValueError("boundary operating_domain and algorithm_id are required")
+        if not 0 < self.expected_boundary_count <= 255:
+            raise ValueError("expected_boundary_count must lie in [1,255]")
+        boundary_contract_config = {
+            "algorithm_id": self.algorithm_id,
+            "operating_domain": self.operating_domain,
+            "expected_boundary_count": self.expected_boundary_count,
+            "model_input_hw": list(model_hw),
+            "source_masks": source_masks,
+            "confidence_by_class": self.confidence_by_class,
+            "node": self.node_parameters,
+            "track": self.track_parameters,
+            "spline": self.spline_parameters,
+            "shadow_boundary": self.shadow_boundary_parameters,
+            "calibration_sha256": self.calibration_sha256,
+            "ground_plane": {
+                "frame_id": self.ground_plane.frame_id,
+                "coefficients": self.ground_plane.coefficients,
+                "source": self.ground_plane.source,
+            },
+        }
+        self.boundary_config_sha256 = hashlib.sha256(
+            json.dumps(
+                boundary_contract_config,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
         self.frame_id = str(rospy.get_param("~frame_id", "base_link"))
         self.max_skew_ns = int(
             round(float(rospy.get_param("~max_timestamp_skew_ms", 35.0)) * 1e6)
@@ -180,6 +227,7 @@ class LaneVectorizerNode:
         self.last_skew_ms = 0.0
         self.last_counts = {}
         self.processing_ms = deque(maxlen=512)
+        self.boundary_publish_ms = deque(maxlen=512)
         self.end_to_end_ms = deque(maxlen=512)
         self.output_times = deque(maxlen=256)
 
@@ -189,8 +237,13 @@ class LaneVectorizerNode:
         self.marker_publisher = rospy.Publisher(
             "/perception/lane/debug/markers", MarkerArray, queue_size=1
         )
-        self.boundary_publisher = rospy.Publisher(
+        self.legacy_boundary_publisher = rospy.Publisher(
             "/perception/lane/boundaries", MarkerArray, queue_size=1
+        )
+        self.boundary_observation_publisher = rospy.Publisher(
+            "/perception/lane/boundary_observations",
+            LaneBoundaryObservationArray,
+            queue_size=1,
         )
         self.diagnostics_publisher = rospy.Publisher(
             "/perception/lane/diagnostics", DiagnosticArray, queue_size=1
@@ -306,6 +359,9 @@ class LaneVectorizerNode:
                 if self.marker_publisher.get_num_connections() > 0:
                     self.marker_publisher.publish(self._markers(lanes, header))
                 tracked_boundaries = ()
+                boundary_output = BoundaryOutputFrame(
+                    COMPLETENESS_EMPTY, self.expected_boundary_count, ()
+                )
                 if self.shadow_boundary_enabled:
                     observations = select_shadow_boundaries(
                         lanes, self.shadow_boundary_parameters
@@ -313,12 +369,48 @@ class LaneVectorizerNode:
                     tracked_boundaries = self.boundary_tracker.update(
                         observations, max(frame.stamp_ns for frame in frames.values())
                     )
-                    self.boundary_publisher.publish(
-                        self._boundary_markers(tracked_boundaries, header)
+                    boundary_output = build_shadow_boundary_output(
+                        tracked_boundaries,
+                        preferred_reference_x_m=float(
+                            self.shadow_boundary_parameters.get("reference_x_m", 5.0)
+                        ),
+                        expected_boundary_count=self.expected_boundary_count,
+                    )
+                    if self.legacy_boundary_publisher.get_num_connections() > 0:
+                        self.legacy_boundary_publisher.publish(
+                            self._boundary_markers(tracked_boundaries, header)
+                        )
+                    publish_started = time.perf_counter()
+                    self.boundary_observation_publisher.publish(
+                        self._boundary_observation_array(
+                            boundary_output, header, valid=True
+                        )
+                    )
+                    self.boundary_publish_ms.append(
+                        (time.perf_counter() - publish_started) * 1000.0
                     )
             except Exception as exc:
                 self.errors += 1
                 rospy.logerr_throttle(2.0, "lane vectorization failed: %s", exc)
+                if self.shadow_boundary_enabled:
+                    newest_header = max(
+                        frames.values(), key=lambda value: value.stamp_ns
+                    ).header
+                    error_header = Header(
+                        stamp=newest_header.stamp,
+                        frame_id=self.frame_id,
+                    )
+                    self.boundary_observation_publisher.publish(
+                        self._boundary_observation_array(
+                            BoundaryOutputFrame(
+                                COMPLETENESS_EMPTY,
+                                self.expected_boundary_count,
+                                (),
+                            ),
+                            error_header,
+                            valid=False,
+                        )
+                    )
                 return
             elapsed_ms = (time.perf_counter() - started) * 1000.0
             self.processing_ms.append(elapsed_ms)
@@ -348,6 +440,7 @@ class LaneVectorizerNode:
                         "right_outer_boundary",
                     }
                 ),
+                "boundary_completeness": int(boundary_output.completeness),
             }
             completed_ns = int(rospy.Time.now().to_nsec())
             source_ns = max(frame.stamp_ns for frame in frames.values())
@@ -499,6 +592,46 @@ class LaneVectorizerNode:
             markers.append(marker)
         return MarkerArray(markers=markers)
 
+    def _boundary_observation_array(self, output, source_header, valid):
+        message = LaneBoundaryObservationArray()
+        message.header.stamp = source_header.stamp
+        message.header.frame_id = self.frame_id
+        message.valid = bool(valid)
+        message.completeness = int(output.completeness)
+        message.expected_boundary_count = int(output.expected_boundary_count)
+        message.operating_domain = self.operating_domain
+        message.algorithm_id = self.algorithm_id
+        message.config_sha256 = self.boundary_config_sha256
+        for value in output.boundaries:
+            boundary = LaneBoundaryObservation()
+            boundary.tracking_id = int(value.tracking_id)
+            boundary.lateral_order = int(value.lateral_order)
+            boundary.order_valid = bool(value.order_valid)
+            boundary.color = int(value.color)
+            boundary.source_mask = int(value.source_mask)
+            boundary.semantic_score = float(value.semantic_score)
+            boundary.geometric_quality = float(value.geometric_quality)
+            boundary.reference_x_m = float(value.reference_x_m)
+            boundary.reference_y_m = float(value.reference_y_m)
+            boundary.valid_x_min_m = float(value.valid_x_min_m)
+            boundary.valid_x_max_m = float(value.valid_x_max_m)
+            boundary.observed_length_m = float(value.observed_length_m)
+            boundary.bridged_length_ratio = float(value.bridged_length_ratio)
+            boundary.age_frames = int(value.age_frames)
+            boundary.reacquired_after_missed_frames = int(
+                value.reacquired_after_missed_frames
+            )
+            boundary.polyline = [
+                Point32(
+                    x=float(x),
+                    y=float(y),
+                    z=float(self.ground_plane.xyz([[x, y]])[0, 2]),
+                )
+                for x, y in value.polyline_xy
+            ]
+            message.boundaries.append(boundary)
+        return message
+
     @staticmethod
     def _mono8(message, expected_shape):
         if message.encoding not in ("mono8", "8UC1"):
@@ -525,6 +658,7 @@ class LaneVectorizerNode:
 
     def _publish_diagnostics(self, _event):
         processing = np.asarray(self.processing_ms, dtype=np.float64)
+        boundary_publish = np.asarray(self.boundary_publish_ms, dtype=np.float64)
         latency = np.asarray(self.end_to_end_ms, dtype=np.float64)
         fps = 0.0
         if len(self.output_times) >= 2:
@@ -547,6 +681,8 @@ class LaneVectorizerNode:
             "processing_fps": round(fps, 3),
             "processing_p50_ms": float(np.percentile(processing, 50)) if len(processing) else None,
             "processing_p95_ms": float(np.percentile(processing, 95)) if len(processing) else None,
+            "boundary_publish_p50_ms": float(np.percentile(boundary_publish, 50)) if len(boundary_publish) else None,
+            "boundary_publish_p95_ms": float(np.percentile(boundary_publish, 95)) if len(boundary_publish) else None,
             "end_to_end_p50_ms": float(np.percentile(latency, 50)) if len(latency) else None,
             "end_to_end_p95_ms": float(np.percentile(latency, 95)) if len(latency) else None,
             "last_timestamp_skew_ms": round(self.last_skew_ms, 4),
@@ -558,6 +694,10 @@ class LaneVectorizerNode:
             "ground_plane_coefficients": self.ground_plane.coefficients,
             "ground_plane_source": self.ground_plane.source,
             "calibration_sha256": self.calibration_sha256,
+            "boundary_operating_domain": self.operating_domain,
+            "boundary_algorithm_id": self.algorithm_id,
+            "boundary_config_sha256": self.boundary_config_sha256,
+            "boundary_expected_count": self.expected_boundary_count,
         }
         status.values = [self._value(key, value) for key, value in values.items()]
         message = DiagnosticArray()

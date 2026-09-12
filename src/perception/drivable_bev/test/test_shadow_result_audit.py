@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
 import unittest
+from types import SimpleNamespace
 
 from drivable_bev.shadow_result_audit import (
     robustness_delta,
     summarize_boundary_frames,
     summarize_boundary_run_groups,
+    typed_boundary_frame,
 )
 
 
@@ -20,6 +22,82 @@ def boundary(role, stable_id, order, reacquired=0):
 
 
 class ShadowResultAuditTest(unittest.TestCase):
+    def test_typed_contract_roles_are_derived_only_for_shadow_audit(self):
+        def value(order, color, tracking_id, y):
+            return SimpleNamespace(
+                lateral_order=order,
+                order_valid=True,
+                color=color,
+                tracking_id=tracking_id,
+                geometric_quality=0.8,
+                semantic_score=0.9,
+                reference_x_m=5.0,
+                reference_y_m=y,
+                valid_x_min_m=0.0,
+                valid_x_max_m=15.0,
+                source_mask=7,
+                observed_length_m=14.0,
+                bridged_length_ratio=0.1,
+                age_frames=4,
+                reacquired_after_missed_frames=0,
+            )
+
+        frame = typed_boundary_frame(
+            SimpleNamespace(
+                valid=True,
+                boundaries=[
+                    value(2, 1, 12, -3.5),
+                    value(0, 1, 10, 3.5),
+                    value(1, 2, 11, 0.0),
+                ],
+            )
+        )
+        self.assertEqual(
+            [
+                "left_outer_boundary",
+                "yellow_centre_boundary",
+                "right_outer_boundary",
+            ],
+            [item["role"] for item in frame],
+        )
+        self.assertEqual([10, 11, 12], [item["stable_id"] for item in frame])
+
+    def test_invalid_typed_frame_is_not_treated_as_fresh_empty_observation(self):
+        self.assertIsNone(
+            typed_boundary_frame(SimpleNamespace(valid=False, boundaries=[]))
+        )
+
+    def test_order_invalid_typed_frame_does_not_reconstruct_shadow_roles(self):
+        def value(order, color):
+            return SimpleNamespace(
+                lateral_order=order,
+                order_valid=False,
+                color=color,
+                tracking_id=order + 1,
+                geometric_quality=0.8,
+                semantic_score=0.9,
+                reference_x_m=5.0,
+                reference_y_m=float(1 - order),
+                valid_x_min_m=0.0,
+                valid_x_max_m=15.0,
+                source_mask=7,
+                observed_length_m=14.0,
+                bridged_length_ratio=0.1,
+                age_frames=4,
+                reacquired_after_missed_frames=0,
+            )
+
+        frame = typed_boundary_frame(
+            SimpleNamespace(
+                valid=True,
+                boundaries=[value(0, 1), value(1, 2), value(2, 1)],
+            )
+        )
+        self.assertEqual(["unresolved"] * 3, [item["role"] for item in frame])
+        summary = summarize_boundary_frames([frame])
+        self.assertEqual(1, summary["order_invalid_frames"])
+        self.assertEqual(0, summary["corridor_complete_frames"])
+
     def test_summarizes_empty_partial_and_complete_frames(self):
         frames = [
             [],

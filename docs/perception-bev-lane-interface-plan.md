@@ -5,7 +5,7 @@
 > **문서 허브:** [README.md](./README.md)
 > 기준일: 2026-09-12
 > 담당: 안승현
-> 상태: v6·3-camera BEV·ground-plane 보정 완료, 음영구간 boundary provisional gate 통과
+> 상태: v6·3-camera BEV·ground-plane 보정 완료, 음영구간 boundary provisional gate 및 typed handoff 구현 완료
 > 관련: [perception-dataset-labeling-split.md](./perception-dataset-labeling-split.md)
 
 팀 전체 map-camera-LiDAR 구조, provisional topic과 대회판 이식 일정은
@@ -271,8 +271,10 @@ controller, sensor-set hash를 저장한다.
 - stopline polyline, ego 경로와의 교점 거리, confidence, age
 - 카메라 source bitmask와 LiDAR track association ID
 
-현재 debug spline은 위 vector/topology 계약이 아니라 `lane candidate`다. 주차칸·안전지대
-표식 분류와 정확도/지연 gate를 통과한 뒤에만 custom message를 설계한다.
+일반 debug spline은 여전히 위 vector/topology 계약이 아니라 `lane candidate`다. 다만 첫
+음영구간 ODD에서 선별한 경계는 `asmc_msgs/LaneBoundaryObservationArray`로 typed provisional
+handoff를 구현했다. 이 메시지는 N개 경계와 색상·순서·metric polyline만 표현하고
+home/opposing/절대 차로 번호는 담지 않는다. 전 구간 표식 분류와 topology 계약은 별도다.
 
 인지 파트는 관측된 차로 구조·경계·신뢰도와 장애물 association을 제공한다. “지금 차선을
 변경한다”는 최종 결정은 route, 규정, gap acceptance, LiDAR TTC를 결합하는 판단 파트가
@@ -282,7 +284,7 @@ lane centerline으로 ego lane을 유지하고, MGeo lane ID는 유효 pose가 �
 ### 5.3 다음 설계 회의에서 확정할 항목
 
 1. 후륜축 중앙 `base_link` 검증과 실제 overlay 기반 BEV 범위/해상도
-2. lane boundary와 lane centerline의 custom message 스키마
+2. provisional boundary observation에서 전 구간 lane centerline/topology 계약으로 승격할 조건
 3. confidence, age, occlusion, invalid 상태의 의미와 timeout
 4. 끊긴 차선·교차로에서 topology 유지 규칙
 5. 카메라 확률 융합과 LiDAR occupancy 우선순위
@@ -291,7 +293,7 @@ lane centerline으로 ego lane을 유지하고, MGeo lane ID는 유효 pose가 �
 
 ## 6. 당장 개발하지 않는 항목
 
-- BEV 최종 grid와 ROS custom message 확정
+- BEV 최종 grid와 전 구간 topology ROS custom message 확정
 - learned view transform 또는 temporal BEV
 - 카메라 객체 검출 head 추가
 - 카메라 패키지 내부에서 MGeo bake/local crop까지 직접 구현하는 기능

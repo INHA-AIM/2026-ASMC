@@ -2,6 +2,23 @@
 
 공용 ROS 계약의 breaking change와 합의 사항을 기록한다.
 
+## Unreleased - feature/ahn-camera-bev-pilot (typed lane-boundary observation)
+
+### Added
+
+- `asmc_msgs/LaneBoundaryObservation`과 `LaneBoundaryObservationArray`를 추가했다. 카메라가
+  관측한 N개 경계를 `base_link` metric polyline, 색상, source bitmask, 유효 범위,
+  short-term tracking ID와 두 종류의 품질 score로 전달한다.
+- provisional canonical topic `/perception/lane/boundary_observations`를 추가했다. 첫 producer는
+  `shadow_two_way_v1` ODD에 제한되며 fresh empty/partial/complete/invalid를 구분한다.
+- 메시지에는 home/opposing 의미나 절대 차로 번호를 넣지 않는다. 그 의미는 route,
+  MGeo/Frenet과 경계 순서를 함께 아는 판제가 결정한다.
+
+### Compatibility
+
+- 기존 `/perception/lane/boundaries` MarkerArray는 debug와 과거 result bag 호환을 위해
+  유지한다. 기존 canonical topic과 메시지는 변경하지 않은 non-breaking addition이다.
+
 ## Unreleased - feature/yuntae-planner-lane-change (exact target preservation fix)
 
 바로 아래 "target geometry source change" 항목이 실행 목표의 **출처**를

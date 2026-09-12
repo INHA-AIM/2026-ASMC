@@ -7,6 +7,9 @@ source_masks:
   right: 4
 
 frame_id: base_link
+operating_domain: shadow_two_way_v1
+algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+expected_boundary_count: 3
 evidence_x_min_m: -5.0
 evidence_x_max_m: 20.0
 evidence_y_min_m: -8.0

@@ -35,7 +35,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--selection", required=True)
     parser.add_argument("--checkpoint", required=True)
-    parser.add_argument("--model-id", default="twinlite_v6_shadow_boundary_v3")
+    parser.add_argument(
+        "--model-id", default="twinlite_v6_shadow_boundary_typed_v1"
+    )
     parser.add_argument("--rosbag-root", default="/data/rosbags")
     parser.add_argument(
         "--scenarios",
@@ -175,7 +177,7 @@ def commands_for(item, args):
     ]
     recorder = [
         "roslaunch", "data_collection", "bag_recorder.launch",
-        "profile:=camera_semantic_result",
+        "profile:=shadow_boundary_result",
         "parent_raw_run_id:={}".format(item.run_id),
         "model_id:={}".format(args.model_id),
         "checkpoint:={}".format(Path(args.checkpoint).expanduser().resolve()),
@@ -289,7 +291,7 @@ def main():
                     return {
                         "/perception/camera/diagnostics",
                         "/perception/bev/diagnostics",
-                        "/perception/lane/boundaries",
+                        "/perception/lane/boundary_observations",
                         "/perception/lane/diagnostics",
                     }.issubset(published)
 

@@ -521,8 +521,11 @@ p95 `43.26~46.21 ms`였다. 장애물 없는 1,572 frame에서 yellow/3-boundary
 `98.03/82.95%`, 정적 장애물 1,201 frame에서는 `96.25/71.27%`였다. resolved role 중복과
 좌우 순서 오류는 0건이지만 정적 장애물에서 right outer 가용성이 `77.52%`까지 낮아졌다.
 따라서 camera boundary는 음영구간 판제 interface 개발용 provisional 관측으로 먼저
-제공하되, 누락을 정상 상태로 처리하고 세 경계를 항상 가정하거나 단독 steering 입력으로
-쓰지 않는다. 정본 수치와 lineage는
+제공한다. `/perception/lane/boundary_observations`
+(`asmc_msgs/LaneBoundaryObservationArray`)에 N개 metric 경계, 색상, 왼쪽→오른쪽 순서,
+short-term ID와 품질을 담았고 home/opposing/절대 차로 번호는 넣지 않았다. 누락과 partial을
+정상 상태로 처리하고 세 경계를 항상 가정하거나 단독 steering 입력으로 쓰지 않는다.
+정본 수치와 lineage는
 [`drivable_bev` README](../src/perception/drivable_bev/README.md#2026-09-12-음영구간-replay-결과)를
 따른다.
 
@@ -604,7 +607,7 @@ adapter에 국한한다. 장기적으로 두 구현이 갈라지는 것을 막�
 | 2 | transport-aware raw/result bag과 source-time GT bridge | UDP smoke, lifecycle와 replay/audit 검증 | **구현 완료** |
 | 3 | actor GT와 UDP↔ROS 5분 gate | Object ID 대응 및 transport 선정 근거 | UI 실증 남음 |
 | 4 | 센서 calibration과 공통 BEV 기준 | camera-only fused pilot 완료; provisional debug ROI를 vector 재평가·GPS lever arm·map overlay 후 확정 | camera 부분 진행 중 |
-| 5 | 3-camera BEV와 lane 구조화 | direct metric evidence 구현; association/spline 정확도·지연 gate, 수동 bridge 검수와 범위 재평가 후 vector 승격 | 진행 중, spline 미채택 |
+| 5 | 3-camera BEV와 lane 구조화 | 음영 ODD typed boundary handoff 공동 검증; 이후 MGeo candidate matching·범위 재평가 후 전 구간 vector/topology 승격 | 음영 provisional 구현 완료 |
 | 6 | MGeo crop과 source policy 평가 | 정상 GPS·Blackout의 map/camera 정합 지표 확보 | 장원태·안승현 |
 | 7 | LiDAR association과 판제 인터페이스 | ego/adjacent/unknown, occupancy와 ownership 합의 | 공동 |
 | 8 | 대회판 이식·추가 데이터·장기 재학습 | competition-only held-out 개선과 full rehearsal 통과 | 10월 후보 |

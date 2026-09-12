@@ -22,14 +22,16 @@ from drivable_bev.shadow_result_audit import (
     robustness_delta,
     summarize_boundary_frames,
     summarize_boundary_run_groups,
+    typed_boundary_frame,
 )
 
 
-BOUNDARY_TOPIC = "/perception/lane/boundaries"
+TYPED_BOUNDARY_TOPIC = "/perception/lane/boundary_observations"
+LEGACY_BOUNDARY_TOPIC = "/perception/lane/boundaries"
 RATE_TOPICS = {
     "model_grid": "/perception/camera/front/road_marking/model_grid/class_id",
     "fused_bev": "/perception/bev/camera/road_marking/class_id",
-    "boundaries": BOUNDARY_TOPIC,
+    "boundaries": TYPED_BOUNDARY_TOPIC,
 }
 
 
@@ -55,24 +57,41 @@ def write_yaml_atomic(path: Path, value: dict) -> None:
     temporary.replace(path)
 
 
+def _legacy_boundary_frame(message):
+    decoded = []
+    for marker in message.markers:
+        if not marker.text:
+            continue
+        try:
+            value = json.loads(marker.text)
+        except (TypeError, ValueError):
+            continue
+        if value.get("status") == "provisional_shadow_boundary":
+            decoded.append(value)
+    return decoded
+
+
 def decode_boundary_frames(bag_paths):
     import rosbag
 
     frames = []
     for bag_path in bag_paths:
         with rosbag.Bag(str(bag_path), "r") as bag:
-            for _, message, _ in bag.read_messages(topics=[BOUNDARY_TOPIC]):
-                decoded = []
-                for marker in message.markers:
-                    if not marker.text:
-                        continue
-                    try:
-                        value = json.loads(marker.text)
-                    except (TypeError, ValueError):
-                        continue
-                    if value.get("status") == "provisional_shadow_boundary":
-                        decoded.append(value)
-                frames.append(decoded)
+            available = set(bag.get_type_and_topic_info().topics)
+            topic = (
+                TYPED_BOUNDARY_TOPIC
+                if TYPED_BOUNDARY_TOPIC in available
+                else LEGACY_BOUNDARY_TOPIC
+            )
+            decoder = (
+                typed_boundary_frame
+                if topic == TYPED_BOUNDARY_TOPIC
+                else _legacy_boundary_frame
+            )
+            for _, message, _ in bag.read_messages(topics=[topic]):
+                decoded = decoder(message)
+                if decoded is not None:
+                    frames.append(decoded)
     return frames
 
 
@@ -96,6 +115,8 @@ def runtime_rates(metadata):
     result = {}
     for name, topic in RATE_TOPICS.items():
         value = statistics_by_topic.get(topic) or {}
+        if name == "boundaries" and not value:
+            value = statistics_by_topic.get(LEGACY_BOUNDARY_TOPIC) or {}
         result[name] = {
             "messages": int(value.get("messages", 0) or 0),
             "average_hz": float(value.get("average_hz", 0.0) or 0.0),

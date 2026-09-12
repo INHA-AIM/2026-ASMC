@@ -32,6 +32,7 @@ Behavior/FSM → Frenet Planner → MPC Controller
 |---|---|---|---|---|
 | `/vehicle/state` | State Estimator | FSM, Frenet, MPC | `asmc_msgs/VehicleState` | 통합 Ego state |
 | `/perception/objects` | Perception | FSM, Frenet | `asmc_msgs/DetectedObjectArray` | 센서 기반 객체 상태와 형상 |
+| `/perception/lane/boundary_observations` | Camera Perception | FSM/Frenet adapter | `asmc_msgs/LaneBoundaryObservationArray` | metric 차선 경계 관측; 현재 음영구간 provisional |
 | `/behavior/context` | Behavior/FSM | Frenet | `asmc_msgs/BehaviorContext` | 선택된 행동과 실행 target |
 | `/planning/trajectory` | Frenet | MPC | `asmc_msgs/Trajectory` | 최종 추종 trajectory |
 | `/planning/feedback` | Frenet | FSM | `asmc_msgs/PlanFeedback` | planning 및 행동 실행 결과 |
@@ -44,6 +45,7 @@ Behavior/FSM → Frenet Planner → MPC Controller
 - `VehicleState.header.frame_id`: `map`
 - `DetectedObjectArray.header.frame_id`: `map`
 - `Trajectory.header.frame_id`: `map`
+- `LaneBoundaryObservationArray.header.frame_id`: `base_link`
 - 위치와 길이: `m`
 - 각도: `rad`
 - 곡률: `1/m`
@@ -62,6 +64,7 @@ MORAI raw 단위 변환은 Bridge/State 계층에서 끝내고 algorithm message
 - Behavior: command가 결정된 시각
 - Trajectory: planning에 사용한 snapshot의 기준 시각
 - Feedback: planning 결과가 생성된 시각
+- Lane boundaries: 세 카메라 model-grid 입력 묶음의 최신 source 시각
 
 Consumer는 message 존재 여부와 별도로 freshness를 검사한다.
 
@@ -73,6 +76,7 @@ timeouts:
   objects: 0.30
   behavior: 0.50
   trajectory: 0.25
+  lane_boundaries: 0.30
 ```
 
 수치는 실측 후 조정할 수 있지만 freshness 검사 자체는 필수 계약이다.
@@ -174,10 +178,35 @@ Trajectory point는 `x`, `y`, `yaw`, `curvature`, `velocity`, `acceleration`을 
 | Transient generation failure | 최대 5 planning cycles 이전 valid path 재사용 |
 | Transient failure grace 초과 | STOP |
 | Trajectory missing/invalid/stale | MPC STOP |
+| Lane boundaries missing/invalid/stale | 카메라 경계를 사용한 차로 추론 금지; 유효 MGeo/route로 fallback하거나 보수 상태 유지 |
 
 Fresh empty `DetectedObjectArray`는 정상적인 "객체 없음"이다. 미수신 또는 stale array를 빈 배열로 해석하지 않는다.
 
-## 10. Runtime separation and compliance
+## 10. Lane-boundary observation contract
+
+`LaneBoundaryObservationArray`는 카메라가 실제로 관측한 N개의 경계를 `base_link`
+(x-forward, y-left) metric polyline으로 전달한다. 현재 producer의 적용 범위는
+`operating_domain=shadow_two_way_v1`이며, 이 문자열과 route/ODD 상태가 맞지 않으면
+consumer가 사용해서는 안 된다.
+
+- 원소는 공통 `reference_x_m`을 모두 통과할 때만 `order_valid=true`이고, 그때
+  `lateral_order=0`이 가장 왼쪽(+y)이다.
+- `color`는 white/yellow 관측 속성이다. 중앙선, home/opposing, lane 1/2/3 같은 의미가 아니다.
+- `tracking_id`는 publisher process 안의 short-term ID다. replay epoch 변화, 긴 누락,
+  재시작 뒤에는 재사용될 수 있으므로 전역 ID로 저장하지 않는다.
+- `semantic_score`와 `geometric_quality`는 서로 다른 heuristic evidence이며 calibrated
+  probability가 아니다. consumer가 두 값을 임의로 곱해 안전 확률로 해석하지 않는다.
+- `source_mask`는 front=1, left=2, right=4 bitmask다.
+- `valid=true, completeness=EMPTY`는 동기화 cycle은 처리됐지만 유효 경계가 없다는 뜻이다.
+  미수신/stale 또는 `valid=false`와 다르다.
+- `PARTIAL`은 정상적인 관측 상태다. 현재 음영구간 producer의 `COMPLETE` 기준은 노란 중앙
+  경계와 양쪽 흰 outer 후보 3개이며, 일반 도로의 고정 경계 수 계약이 아니다.
+
+판제는 경계 색상과 좌우 순서, route/Frenet/MGeo 문맥을 함께 사용해 차로 의미를 정한다.
+인지 메시지만으로 역주행, 원래 차로, 복귀 방향을 확정하지 않는다. 이 typed 계약은
+provisional executable contract이고, 전 구간 topology와 lane-center 계약은 후속 합의다.
+
+## 11. Runtime separation and compliance
 
 ```text
 competition:
@@ -198,7 +227,7 @@ Legacy: UDP Frenet + UDP MPC
 ROS:    ROS Frenet + ROS MPC + MORAI UDP Bridge
 ```
 
-## 11. Change control
+## 12. Change control
 
 - `asmc_msgs`가 executable contract다.
 - 이 문서가 사람이 읽는 specification이다.
@@ -207,9 +236,9 @@ ROS:    ROS Frenet + ROS MPC + MORAI UDP Bridge
 
 ## Appendix A. Camera·BEV interface working proposal
 
-아래 항목은 camera live와 MGeo local-crop pilot 전 단계의 **비정본 후보**다. 아직
-`asmc_msgs`나 다른 custom message로 구현되지 않았으며, 카메라 출력 범위·신뢰도·처리율과
-Planning/LiDAR 소비 요구를 측정한 뒤 별도 Path B PR에서 승격한다.
+아래 raster 항목은 camera live와 MGeo local-crop pilot 전 단계의 **비정본 후보**다.
+차선 경계 vector는 위 10절의 typed provisional 계약으로 구현됐지만, BEV raster와 전 구간
+topology/centerline 메시지는 아직 정본 custom message로 승격하지 않았다.
 
 ### A.1 Camera image-plane
 

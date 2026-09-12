@@ -13,6 +13,8 @@
        default="$(find drivable_bev)/../../../config/ASMC_sensor_set_v2.json"/>
   <arg name="bev_grid_config"
        default="$(find drivable_bev)/config/bev_grid.yaml"/>
+  <arg name="operating_domain" default="shadow_two_way_v1"/>
+  <arg name="algorithm_id" default="twinlite_v6_shadow_boundary_contract_v1"/>
 
   <include file="$(find drivable_bev)/launch/three_view_bev_pilot.launch">
     <arg name="checkpoint" value="$(arg checkpoint)"/>
@@ -32,5 +34,7 @@
     <arg name="views" value="front, left, right"/>
     <arg name="start_visualizer" value="false"/>
     <arg name="bev_grid_config" value="$(arg bev_grid_config)"/>
+    <arg name="operating_domain" value="$(arg operating_domain)"/>
+    <arg name="algorithm_id" value="$(arg algorithm_id)"/>
   </include>
 </launch>

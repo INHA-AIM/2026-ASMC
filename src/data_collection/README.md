@@ -14,6 +14,7 @@
 | 카메라 drivable/road-marking 학습 GT | Capture Mode → 파일 동기화 → native mask → model cache → version manifest | 현재 정본 |
 | 일반 ROS 토픽 snapshot | `sync_collector.launch` profile | 보조·레거시 경로 |
 | 팀 공용 재현 bag | allowlist profile + raw/result recorder/replay | `camera_raw`·`full_raw`·paused replay·result smoke 완료 |
+| 음영구간 판제 handoff 결과 | `shadow_boundary_result` | typed boundary·camera/lane diagnostics 최소 기록 |
 | 고주기 개발 GT | GT UDP bridge source-time + privileged bag | schema·Object ID 보존 검증 완료, p95 정합 미달로 학습 pair는 Capture 우선 |
 
 Capture Mode와 gRPC는 26.R1.h3 개발·학습용이다. 본선 배포 추론은 허용 UDP 센서만
