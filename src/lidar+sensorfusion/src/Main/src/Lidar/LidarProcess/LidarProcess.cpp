@@ -1,8 +1,11 @@
 #include <Lidar/LidarProcess/LidarProcess.hpp>
+#include <Lidar/LidarProcess/PipelineProfile.hpp>
+#include <Lidar/Tracking/MotionClassifier.hpp>
 #include <PlannerInterface/PlannerObjectAdapter.hpp>
 
 
 ros::Publisher marker_pub;
+LidarStageProfile g_LidarStageProfile;
 //deque<vector<LiDARObjectInfo>> prev_objects_queue;// 전프레임에 저장되어있는 벡터
 extern SENSOR_DATA st_SensorData;
 extern VehicleSpec st_VehicleSpec;
@@ -142,7 +145,10 @@ static inline void PublishCloudWithPub(const pcl::PointCloud<pcl::PointXYZI>::Pt
     pub.publish(msg);
 }
 
-void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR, const GPS_IMU& st_GPSIMU, LiDAR& st_LiDAR)
+void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
+                  const GPS_IMU& st_GPSIMU,
+                  LiDAR& st_LiDAR,
+                  MotionClassifier& motion_classifier)
 
 {
     auto start = std::chrono::steady_clock::now();  
@@ -167,6 +173,9 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR, const GPS_IMU& st_GPSIMU, L
     // [MOVE/SET] ROS 시간은 여기서, raw(ms) -> ns 변환
     ts_CurrTime = ros::Time().fromNSec((uint64_t)raw * 1000000ULL); // ms → ns
 
+    g_LidarStageProfile.Reset();
+    g_LidarStageProfile.raw_points = st_RawLiDAR.s32_Num;
+
     deque<vector<LiDARObjectInfo>> prev_objects_queue = st_LiDAR.Prev_Objects_Queue;
     pcl::PointCloud<pcl::PointXYZI>::Ptr roi_cloud(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::PointCloud<pcl::PointXYZI>::Ptr voxeled_cloud(new pcl::PointCloud<pcl::PointXYZI>);
@@ -182,15 +191,26 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR, const GPS_IMU& st_GPSIMU, L
 
     //const int MAX_FRAMES = 5;// prev_objects_queue 최대 프레임 수
 
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_RawCloud = MakePointCloudFromRaw(st_RawLiDAR);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_RawCloud;
+    LIDAR_STAGE(make_cloud_ms,
+                pcl_RawCloud = MakePointCloudFromRaw(st_RawLiDAR));
     // PublishCloud(pcl_RawCloud, st_RawLiDAR, "map");
 
-    Roi(pcl_RawCloud, roi_cloud, st_LiDAR, st_VehicleSpec);
-    PublishCloudWithPub(roi_cloud, st_RawLiDAR, "velodyne", RoiPub());
-    Voxel(roi_cloud,voxeled_cloud);
-    CorrectingPoints(voxeled_cloud, imu_compensation_cloud, st_GPSIMU);
-    NormalVectorFiltering(imu_compensation_cloud,ransac_cloud,st_GPSIMU);
-    PublishCloudWithPub(ransac_cloud, st_RawLiDAR, "velodyne", RansacPub());
+    LIDAR_STAGE(roi_ms, Roi(pcl_RawCloud, roi_cloud, st_LiDAR, st_VehicleSpec));
+    g_LidarStageProfile.roi_points = static_cast<int>(roi_cloud->points.size());
+    LIDAR_STAGE(roi_pub_ms,
+                PublishCloudWithPub(roi_cloud, st_RawLiDAR, "velodyne", RoiPub()));
+    LIDAR_STAGE(voxel_ms, Voxel(roi_cloud, voxeled_cloud));
+    g_LidarStageProfile.voxel_points =
+        static_cast<int>(voxeled_cloud->points.size());
+    LIDAR_STAGE(imu_correct_ms,
+                CorrectingPoints(voxeled_cloud, imu_compensation_cloud, st_GPSIMU));
+    LIDAR_STAGE(ransac_ms,
+                NormalVectorFiltering(imu_compensation_cloud, ransac_cloud, st_GPSIMU));
+    g_LidarStageProfile.ransac_points =
+        static_cast<int>(ransac_cloud->points.size());
+    LIDAR_STAGE(ransac_pub_ms,
+                PublishCloudWithPub(ransac_cloud, st_RawLiDAR, "velodyne", RansacPub()));
 
 
     // for (const auto& pt : ransac_cloud->points)
@@ -215,14 +235,25 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR, const GPS_IMU& st_GPSIMU, L
     // inout_cloud->width  = static_cast<uint32_t>(inout_cloud->points.size());
     // inout_cloud->height = 1;   // unorganized
     // inout_cloud->is_dense = false;
-    Clustering(ransac_cloud,clustering_cloud,all_cluster_indices,st_GPSIMU);
-    PublishCloudWithPub(clustering_cloud, st_RawLiDAR, "velodyne", ClusterPub());
-    PublishCloudWithPub(
-        TransformCloudToMap(clustering_cloud, st_GPSIMU, st_VehicleSpec),
-        st_RawLiDAR, "map", MapClusterPub());
+    LIDAR_STAGE(cluster_ms,
+                Clustering(ransac_cloud, clustering_cloud, all_cluster_indices,
+                           st_GPSIMU));
+    g_LidarStageProfile.cluster_points =
+        static_cast<int>(clustering_cloud->points.size());
+    g_LidarStageProfile.clusters = static_cast<int>(all_cluster_indices.size());
+    LIDAR_STAGE(cluster_pub_ms,
+                PublishCloudWithPub(clustering_cloud, st_RawLiDAR, "velodyne",
+                                    ClusterPub()));
+    LIDAR_STAGE(map_cluster_pub_ms,
+                PublishCloudWithPub(
+                    TransformCloudToMap(clustering_cloud, st_GPSIMU, st_VehicleSpec),
+                    st_RawLiDAR, "map", MapClusterPub()));
 
-    Objectinfo_for_km(object,ransac_cloud,clustering_cloud,all_cluster_indices, st_GPSIMU, st_VehicleSpec);
-    FrameFilter(prev_objects_queue,object,st_GPSIMU, st_VehicleSpec);
+    LIDAR_STAGE(objectinfo_ms,
+                Objectinfo_for_km(object, ransac_cloud, clustering_cloud,
+                                  all_cluster_indices, st_GPSIMU, st_VehicleSpec));
+    LIDAR_STAGE(framefilter_ms,
+                FrameFilter(prev_objects_queue, object, st_GPSIMU, st_VehicleSpec));
     
     // PublishCloud(clustering_cloud, st_RawLiDAR, "map");
     header.stamp = ts_CurrTime;      // 바운딩 박스 stamp 전달 
@@ -231,6 +262,10 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR, const GPS_IMU& st_GPSIMU, L
     // cout<<"시간텀 :"<<ts_CurrTime-ts_PrevTime<<endl;
     ts_PrevTime = ts_CurrTime;
     // cout<<"After:"<<ts_PrevTime<<endl;
+
+    // 모든 트랙에서 판정 이력을 먼저 갱신한다. 주행가능영역 필터는 이후
+    // Publisher 경계에서 적용하므로 도로 진입 전 이력을 잃지 않는다.
+    LIDAR_STAGE(motion_ms, motion_classifier.Update(object, ts_CurrTime));
 
     // object를 f32_Dist 기준으로 정렬한 후 st_LiDAR.vec_Objects에 저장
     sort(object.begin(), object.end(), [](const LiDARObjectInfo& a, const LiDARObjectInfo& b) {return a.f32_Dist < b.f32_Dist;});// 작은 값 우선
@@ -260,45 +295,29 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR, const GPS_IMU& st_GPSIMU, L
     pthread_mutex_unlock(&st_SensorData.st_MutexLiDAR);
 
     visualization_msgs::MarkerArray marker_array;
-    //marker_array.markers.reserve(objects_for_pub.size() * 3); // 미리 필요한 용량 
+    // Marker ID가 배열 index이고 수명이 무한이므로, 이전 프레임에서
+    // 관측되다 사라진 OBB가 RViz에 계속 남을 수 있다. 매 프레임
+    // 초기화하고 현재 관측(miss_count == 0)된 OBB만 다시 그린다.
+    visualization_msgs::Marker clear_marker;
+    clear_marker.header = header;
+    clear_marker.action = visualization_msgs::Marker::DELETEALL;
+    marker_array.markers.push_back(clear_marker);
 
     for (int i = 0; i < object.size(); ++i) {
         if(object[i].f32_CoreX==0&&object[i].f32_CoreY==0&&object[i].f32_CoreZ==0){
             break;
         }
 
-        marker_array.markers.push_back(createTextMarker(object[i], i, header));
-        marker_array.markers.push_back(createArrowMarker(object[i], i, header));
-        // marker_array.markers.push_back(createBoxMarker(object[i], i, header));
-        if (object[i].s32_MissCount==0){
-             marker_array.markers.push_back(createOBBMarker(object[i], i, header));
-        }
-       else{
-            marker_array.markers.push_back(createBoxMarker(object[i], i, header));
-       }
-    }
-
-    if (!marker_array.markers.empty()) {
-        marker_pub.publish(marker_array);
-    }else {
-        visualization_msgs::MarkerArray clear;
-        visualization_msgs::Marker m;
-        m.action = visualization_msgs::Marker::DELETEALL;
-        clear.markers.push_back(m);
-        marker_pub.publish(clear);
-    }
-    
-    VehicleSpec st_VehicleSpec {0};
-    int32 s32_Idx;
-    GPS_IMU st_TempGPSIMU = st_GPSIMU;
-    for (s32_Idx = 0; s32_Idx < object.size(); s32_Idx++)
-    {
-        if (object[s32_Idx].s32_MissCount > 0)
-        {
+        if (object[i].s32_MissCount != 0) {
             continue;
         }
 
-        //Body2ENU(st_VehicleSpec, st_TempGPSIMU, object[s32_Idx]);
-        cout << "(" << object[s32_Idx].f32_CoreX << ", " << object[s32_Idx].f32_CoreY<< ", " << object[s32_Idx].s32_Age << ")" << endl;
+        marker_array.markers.push_back(createTextMarker(object[i], i, header));
+        marker_array.markers.push_back(createArrowMarker(object[i], i, header));
+        // marker_array.markers.push_back(createBoxMarker(object[i], i, header));
+        marker_array.markers.push_back(createOBBMarker(object[i], i, header));
     }
+
+    LIDAR_STAGE(marker_ms, marker_pub.publish(marker_array));
+    g_LidarStageProfile.valid = true;
 }   

@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-noetic-desktop-full \
     git curl wget nano vim tmux sudo bash-completion \
-    build-essential cmake libyaml-cpp-dev \
+    build-essential cmake libyaml-cpp-dev libpcap-dev libgeographic-dev \
     python3-pip python3-dev \
     python3-scipy python3-numpy \
     iputils-ping net-tools mesa-utils \
@@ -31,8 +31,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements-lbc.txt requirements-mgeo.txt requirements-grpc.txt requirements-linknode.txt /tmp/
 RUN pip3 install --no-cache-dir --upgrade "pip<24.1"
 
-# ROS 컨테이너에서도 신호등 추론이 RTX 40(Ada) GPU를 사용하도록 CUDA wheel을
-# 명시한다. ultralytics보다 먼저 설치해 CPU용 torch가 간접 설치되지 않게 한다.
+# 시스템 Python 3.8 용 CUDA PyTorch. src/traffic_light/live_infer.py 가 이
+# 인터프리터를 사용한다. 기본 이미지는 RTX 40 시리즈용이며 신호등 ResNet18과
+# 센서퓨전 YOLO가 모두 이 CUDA 11.8 환경을 사용한다. RTX 50 전용 Python/CUDA
+# 환경은 이 파일이 아니라 Dockerfile.rtx50에서 추가한다.
 RUN pip3 install --no-cache-dir \
       torch==2.1.2 \
       torchvision==0.16.2 \

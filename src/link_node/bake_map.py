@@ -261,7 +261,12 @@ def main() -> int:
         ids = stop_line_nodes_on_route(data, _resolve(str(route_yaml)))
         stop_cfg['include_nodes'] = ids
         print(f'[stopline] route {Path(route_yaml).name} 위의 정지선 {len(ids)}개만 굽습니다')
-    stop = bake_stopline(data, grid, **stop_cfg)
+    # 정지선도 '깎인 뒤의' 도로로 클립한다. 깎지 않으면 도로를 깎은 만큼
+    # 정지선 양끝이 밖으로 나가 stopline_on_road_ratio 가 내려간다.
+    stop = bake_stopline(
+        data, grid,
+        clip_to=road.image if geom.get('clip_stopline_to_road', True) else None,
+        **stop_cfg)
     for name, res in (('road', road), ('lane', lane), ('stopline', stop)):
         stats = dict(res.stats)
         partial = stats.pop('partially_excluded_roads', [])
@@ -293,6 +298,21 @@ def main() -> int:
         repo_root=REPO_ROOT,
     )
     print(f'[write] {out_h5}  ({out_h5.stat().st_size / 1e6:.1f} MB)')
+
+    # C++ LiDAR final-output node consumes the same road raster without an
+    # HDF5 dependency.  Keep these two files beside the authoritative H5.
+    road_mask_png = out_h5.with_name('road_mask.png')
+    road_mask_yaml = out_h5.with_name('road_mask.yaml')
+    cv2.imwrite(str(road_mask_png), road.image)
+    with open(road_mask_yaml, 'w', encoding='utf-8') as f:
+        yaml.safe_dump({
+            'map_id': cfg['map_id'],
+            'pixels_per_meter': float(grid.pixels_per_meter),
+            'world_offset': [float(v) for v in grid.world_offset],
+            'local_origin_in_global': [
+                float(v) for v in data.local_origin_in_global],
+        }, f, sort_keys=False, allow_unicode=True)
+    print(f'[write] {road_mask_png} + {road_mask_yaml}')
 
     if not args.no_overlay and cfg['output'].get('overlay_png'):
         png = _resolve(cfg['output']['overlay_png'])

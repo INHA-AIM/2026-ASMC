@@ -19,6 +19,10 @@ geometry:
   fix_node_pinch: true
   # 차선을 도로 바깥으로 넘어가지 않게 자른다 (도로 축소분과 함께 적용).
   clip_lane_to_road: true
+  # 정지선도 같은 이유로 자른다. 정지선 길이는 차로 폭(3.5 m)인데 도로는
+  # drivable.outer_trim_m 만큼 깎여 있어, 끄면 양끝이 도로 밖으로 나간다
+  # (trim 0.3 에서 8개 중 3개의 우측 끝, 459 px 중 20 px). 방향 계산과 무관하다.
+  clip_stopline_to_road: true
 
 grid:
   pixels_per_meter: 5.0
@@ -49,7 +53,7 @@ drivable:
   # 차로와 차로 사이는 도로가 이어져 있어 영향을 받지 않는다. 0 이면 끔.
   outer_trim_m: 0.3
   # 주행가능영역에서 뺄 링크. live_check.py --collect-links 로 모은 목록.
-  # 동측 순환로(오벌 포함) 19개, 총 연장 4122 m.
+  # 동측 순환로(오벌 포함) 18개, 총 연장 4122 m.
   exclude_links: &excluded_links
     - A2256W000010   # (64,348)->(77,257)
     - A2256W000429   # (77,257)->(77,89)

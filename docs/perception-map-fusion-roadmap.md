@@ -99,6 +99,14 @@ LiDAR ─ detection/tracking/occupancy ───────────┤
 정적 지도에는 NPC와 스폰 장애물을 굽지 않는다. 지도 산출물에는 map 버전, bake 설정,
 전역경로 hash와 좌표계가 포함되어야 한다.
 
+**구현 위치: [`src/link_node/`](../src/link_node/README.md)** (offline bake 부분).
+`link_set.json` + `node_set.json`에서 drivable / lane / stop-line을 이진 래스터로 굽고
+`map_id`·bake 설정·좌표계 원점을 H5 attrs에 담는다. catkin 패키지가 아닌 오프라인
+CLI라서 `src/perception/` 아래가 아니라 `src/link_node/`에 둔다. **runtime local crop은
+아직 미구현**이며 담당 파트 미정이다 (기능적 프로토타입은 `live_check.py`의
+`ego_view()`, 0.28 ms/프레임). 위 목록 중 lane 연결관계·인접 차로 변경 가능성·속도
+제한 attribute는 아직 굽지 않는다.
+
 ### 3.2 Camera perception 후보 출력
 
 - view별 `drivable_probability`, `road_marking_probability`

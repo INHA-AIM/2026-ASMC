@@ -2,11 +2,18 @@
 #include <Parser/Parser.hpp>
 #include <Camera/Camera.hpp>
 #include <Lidar/LidarProcess/LidarProcess.hpp>
+#include <Lidar/LidarProcess/PipelineProfile.hpp>
+#include <Lidar/Tracking/MotionClassifier.hpp>
 #include <SensorFusion/SensorFusion.hpp>
 #include <PlannerInterface/PlannerObjectSender.hpp>
 #include <PlannerInterface/PlannerObjectRosPublisher.hpp>
 #include <ros/package.h>
+#include <algorithm>
+#include <chrono>
+#include <cmath>
 #include <memory>
+#include <numeric>
+#include <vector>
 
 
 // 실행 디렉터리와 무관하게 패키지 기준으로 설정 파일을 찾는다.
@@ -29,6 +36,7 @@ CAMERA st_Camera, st_CameraTemporal;
 GPS_REF st_GPSRef;
 std::unique_ptr<PlannerObjectSender> st_PlannerObjectSender;
 std::unique_ptr<PlannerObjectRosPublisher> st_PlannerObjectRosPublisher;
+std::unique_ptr<MotionClassifier> st_MotionClassifier;
 
 int32 GPSHZ, VisionHZ, LiDARHZ, IMUHZ, CANHZ;
 int32 VIEWERHZ; // InitViewer에서, 기준이 되는 센서의 HZ 할당해주기.
@@ -42,6 +50,108 @@ pthread_mutex_t st_DataTemporal;
 pthread_cond_t st_DataTemporalCond;
 
 bool b_isRunning = true;
+bool b_EnableSensorFusion = false;
+bool b_BenchmarkLidarPipeline = false;
+int32 s32_BenchmarkWarmupFrames = 30;
+int32 s32_BenchmarkSampleFrames = 200;
+
+namespace {
+
+struct LidarPipelineBenchmark {
+    int32 seen_frames = 0;
+    std::vector<double> elapsed_ms;
+    double raw_points_sum = 0.0;
+    double tracks_sum = 0.0;
+
+    // 단계별 누적치. ROI 폭이 늘어날 때 어느 구간이 비싸지는지 분리한다.
+    LidarStageProfile stage_sum;
+
+    void Accumulate(const LidarStageProfile& p) {
+        stage_sum.make_cloud_ms += p.make_cloud_ms;
+        stage_sum.roi_ms += p.roi_ms;
+        stage_sum.roi_pub_ms += p.roi_pub_ms;
+        stage_sum.voxel_ms += p.voxel_ms;
+        stage_sum.imu_correct_ms += p.imu_correct_ms;
+        stage_sum.ransac_ms += p.ransac_ms;
+        stage_sum.ransac_pub_ms += p.ransac_pub_ms;
+        stage_sum.cluster_ms += p.cluster_ms;
+        stage_sum.cluster_pub_ms += p.cluster_pub_ms;
+        stage_sum.map_cluster_pub_ms += p.map_cluster_pub_ms;
+        stage_sum.objectinfo_ms += p.objectinfo_ms;
+        stage_sum.framefilter_ms += p.framefilter_ms;
+        stage_sum.motion_ms += p.motion_ms;
+        stage_sum.marker_ms += p.marker_ms;
+        stage_sum.roi_points += p.roi_points;
+        stage_sum.voxel_points += p.voxel_points;
+        stage_sum.ransac_points += p.ransac_points;
+        stage_sum.cluster_points += p.cluster_points;
+        stage_sum.clusters += p.clusters;
+    }
+
+    void Add(double milliseconds, int32 raw_points, std::size_t tracks) {
+        ++seen_frames;
+        if (seen_frames <= s32_BenchmarkWarmupFrames) return;
+        elapsed_ms.push_back(milliseconds);
+        raw_points_sum += raw_points;
+        tracks_sum += tracks;
+        Accumulate(g_LidarStageProfile);
+        if (static_cast<int32>(elapsed_ms.size()) <
+            s32_BenchmarkSampleFrames) {
+            return;
+        }
+
+        std::vector<double> sorted = elapsed_ms;
+        std::sort(sorted.begin(), sorted.end());
+        const double sum = std::accumulate(
+            elapsed_ms.begin(), elapsed_ms.end(), 0.0);
+        const double mean = sum / elapsed_ms.size();
+        double squared_error_sum = 0.0;
+        for (const double value : elapsed_ms) {
+            const double error = value - mean;
+            squared_error_sum += error * error;
+        }
+        const double stddev = std::sqrt(
+            squared_error_sum / elapsed_ms.size());
+        const auto percentile = [&sorted](double fraction) {
+            const std::size_t index = static_cast<std::size_t>(std::ceil(
+                fraction * static_cast<double>(sorted.size()))) - 1;
+            return sorted[std::min(index, sorted.size() - 1)];
+        };
+        const double n = static_cast<double>(elapsed_ms.size());
+        ROS_INFO(
+            "[LIDAR_BENCH] roi_y=[%.1f,%.1f] frames=%zu mean=%.3fms median=%.3fms p95=%.3fms p99=%.3fms min=%.3fms max=%.3fms stddev=%.3fms raw_points_mean=%.1f tracks_mean=%.2f",
+            st_LiDAR.st_ROI.f32_MinY, st_LiDAR.st_ROI.f32_MaxY,
+            elapsed_ms.size(), mean, percentile(0.50), percentile(0.95),
+            percentile(0.99), sorted.front(), sorted.back(), stddev,
+            raw_points_sum / n,
+            tracks_sum / n);
+        ROS_INFO(
+            "[LIDAR_STAGE] roi_y=[%.1f,%.1f] make=%.3f roi=%.3f voxel=%.3f imu=%.3f ransac=%.3f cluster=%.3f objinfo=%.3f framefilter=%.3f motion=%.3f | pub_roi=%.3f pub_ransac=%.3f pub_cluster=%.3f pub_mapcluster=%.3f pub_marker=%.3f",
+            st_LiDAR.st_ROI.f32_MinY, st_LiDAR.st_ROI.f32_MaxY,
+            stage_sum.make_cloud_ms / n, stage_sum.roi_ms / n,
+            stage_sum.voxel_ms / n, stage_sum.imu_correct_ms / n,
+            stage_sum.ransac_ms / n, stage_sum.cluster_ms / n,
+            stage_sum.objectinfo_ms / n, stage_sum.framefilter_ms / n,
+            stage_sum.motion_ms / n, stage_sum.roi_pub_ms / n,
+            stage_sum.ransac_pub_ms / n, stage_sum.cluster_pub_ms / n,
+            stage_sum.map_cluster_pub_ms / n, stage_sum.marker_ms / n);
+        ROS_INFO(
+            "[LIDAR_POINTS] roi_y=[%.1f,%.1f] raw=%.1f roi=%.1f voxel=%.1f ransac=%.1f cluster=%.1f clusters=%.2f",
+            st_LiDAR.st_ROI.f32_MinY, st_LiDAR.st_ROI.f32_MaxY,
+            raw_points_sum / n, stage_sum.roi_points / n,
+            stage_sum.voxel_points / n, stage_sum.ransac_points / n,
+            stage_sum.cluster_points / n, stage_sum.clusters / n);
+        b_BenchmarkLidarPipeline = false;
+        // 측정이 끝나면 스스로 내려가야 로그가 flush 되고 다음 조건이
+        // 이전 프로세스와 CPU를 나눠 쓰지 않는다.
+        b_isRunning = false;
+        ros::shutdown();
+    }
+};
+
+LidarPipelineBenchmark st_LidarPipelineBenchmark;
+
+}  // namespace
 
 void InitMutex()
 {
@@ -218,6 +328,23 @@ void InitLidar(ros::NodeHandle &st_NodeHandle, pthread_t *pth_Lidar)
     st_LiDAR.st_Clustering.b_Enabled = config["LiDAR"]["Clustering"]["Enabled"].as<bool>();
     st_LiDAR.st_Clustering.f32_Eps = config["LiDAR"]["Clustering"]["Eps"].as<float32>();
     st_LiDAR.st_Clustering.s32_MinPoints = config["LiDAR"]["Clustering"]["MinPoints"].as<int32>();
+    ros::NodeHandle private_node("~");
+    private_node.param(
+        "roi_min_x", st_LiDAR.st_ROI.f32_MinX,
+        st_LiDAR.st_ROI.f32_MinX);
+    private_node.param(
+        "roi_max_x", st_LiDAR.st_ROI.f32_MaxX,
+        st_LiDAR.st_ROI.f32_MaxX);
+    private_node.param(
+        "roi_min_y", st_LiDAR.st_ROI.f32_MinY,
+        st_LiDAR.st_ROI.f32_MinY);
+    private_node.param(
+        "roi_max_y", st_LiDAR.st_ROI.f32_MaxY,
+        st_LiDAR.st_ROI.f32_MaxY);
+    ROS_INFO("LiDAR ROI: x=[%.1f,%.1f] y=[%.1f,%.1f] z=[%.1f,%.1f]",
+             st_LiDAR.st_ROI.f32_MinX, st_LiDAR.st_ROI.f32_MaxX,
+             st_LiDAR.st_ROI.f32_MinY, st_LiDAR.st_ROI.f32_MaxY,
+             st_LiDAR.st_ROI.f32_MinZ, st_LiDAR.st_ROI.f32_MaxZ);
     pthread_create(pth_Lidar, NULL, ParseLiDAR, (void*)&st_NodeHandle);
 }
 
@@ -277,11 +404,27 @@ void *TemporalThread(void *p_Arg)
         DeadReckoningProcess(st_CurrentData.st_RawGPS, st_CurrentData.st_RawIMU, st_CurrentData.st_RawCAN, st_GPSIMU);
         ProcessCameraStream(st_CurrentData.st_RawCamera, st_CurrentData.st_RawCamera2 ,st_Camera, st_GPSIMU);
 
-        LidarProcess(st_CurrentData.st_RawLiDAR, st_GPSIMU, st_LiDAR);
-        FusionProcess(st_CurrentData.st_RawYOLO, st_LiDAR, st_Camera);
+        const ros::Time previous_lidar_stamp = ts_CurrTime;
+        const auto lidar_pipeline_start = std::chrono::steady_clock::now();
+        LidarProcess(st_CurrentData.st_RawLiDAR, st_GPSIMU, st_LiDAR,
+                     *st_MotionClassifier);
+        if (b_EnableSensorFusion) {
+            FusionProcess(st_CurrentData.st_RawYOLO, st_LiDAR, st_Camera,
+                          ts_CurrTime);
+        }
         if (st_PlannerObjectRosPublisher) {
             st_PlannerObjectRosPublisher->Publish(
                 st_LiDAR, st_GPSIMU, st_VehicleSpec, ts_CurrTime);
+        }
+        if (b_BenchmarkLidarPipeline && !ts_CurrTime.isZero() &&
+            ts_CurrTime != previous_lidar_stamp) {
+            const auto lidar_pipeline_end = std::chrono::steady_clock::now();
+            const double elapsed_ms =
+                std::chrono::duration<double, std::milli>(
+                    lidar_pipeline_end - lidar_pipeline_start).count();
+            st_LidarPipelineBenchmark.Add(
+                elapsed_ms, st_CurrentData.st_RawLiDAR.s32_Num,
+                st_LiDAR.vec_Objects.size());
         }
         if (st_PlannerObjectSender) {
             st_PlannerObjectSender->Send(st_LiDAR, st_GPSIMU, st_VehicleSpec);
@@ -316,9 +459,22 @@ int main(int argc, char **argv)
 
     ros::init(argc, argv, "Main");
     ros::NodeHandle st_NodeHandle;
+    ros::NodeHandle st_PrivateNodeHandle("~");
+    st_PrivateNodeHandle.param(
+        "enable_sensor_fusion", b_EnableSensorFusion, true);
+    st_PrivateNodeHandle.param(
+        "benchmark_lidar_pipeline", b_BenchmarkLidarPipeline, false);
+    st_PrivateNodeHandle.param(
+        "benchmark_warmup_frames", s32_BenchmarkWarmupFrames, 30);
+    st_PrivateNodeHandle.param(
+        "benchmark_sample_frames", s32_BenchmarkSampleFrames, 200);
+    s32_BenchmarkWarmupFrames = std::max(0, s32_BenchmarkWarmupFrames);
+    s32_BenchmarkSampleFrames = std::max(10, s32_BenchmarkSampleFrames);
 
     InitMutex();
     InitVehicleSpec();
+    st_MotionClassifier =
+        std::make_unique<MotionClassifier>(st_PrivateNodeHandle);
     st_PlannerObjectRosPublisher =
         std::make_unique<PlannerObjectRosPublisher>(st_NodeHandle);
     InitPlannerInterface();
@@ -327,7 +483,11 @@ int main(int argc, char **argv)
     InitializeCamera(st_NodeHandle, &th_Camera);
 
     InitLidarViz(st_NodeHandle);
-    InitFusionLidarViz(st_NodeHandle);
+    if (b_EnableSensorFusion) {
+        InitFusionLidarViz(st_NodeHandle);
+    } else {
+        ROS_INFO("Camera-LiDAR sensor fusion disabled");
+    }
     InitLidar(st_NodeHandle, &th_Lidar);
 
     InitCAN(st_NodeHandle, &th_CAN);

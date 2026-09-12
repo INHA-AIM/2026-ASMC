@@ -287,6 +287,7 @@ def bake_stopline(
     include_nodes: Optional[Iterable[str]] = None,
     exclude_nodes: Optional[Iterable[str]] = None,
     only_with_traffic_light: bool = False,
+    clip_to: Optional[np.ndarray] = None,
 ) -> LayerResult:
     """on_stop_line 노드에 그 노드의 진행 방향과 수직인 선분을 그린다.
 
@@ -363,6 +364,17 @@ def bake_stopline(
             'traffic_light_id': node.traffic_light_id,
             'aligned': node.idx in bars,
         })
+
+    # 도로 밖으로 나간 정지선 양끝을 잘라낸다.
+    # 정지선 길이는 링크의 차로 폭(3.5 m)인데 도로는 drivable.outer_trim_m 만큼
+    # 깎여 있으므로, 깎은 쪽 끝이 그만큼 삐져나온다. 중앙은 항상 도로 안이다.
+    # (features 의 length_m 은 자르지 않는다 — 벡터는 실제 기하를 그대로 담는다.)
+    clipped_m2 = 0.0
+    if clip_to is not None:
+        before_px = int((canvas > 0).sum())
+        canvas = np.where(clip_to > 0, canvas, 0).astype(np.uint8)
+        clipped_m2 = (before_px - int((canvas > 0).sum())) / (grid.pixels_per_meter ** 2)
+
     return LayerResult(
         image=canvas,
         stats={
@@ -371,6 +383,7 @@ def bake_stopline(
             'filtered_out': skipped,
             'aligned_across_lanes': len(bars),
             'unresolved_heading': unresolved,
+            'clipped_to_road_m2': round(clipped_m2, 1),
             'thickness_px': thickness,
             'filled_px': int((canvas > 0).sum()),
         },
