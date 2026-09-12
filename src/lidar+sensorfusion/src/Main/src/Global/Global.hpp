@@ -119,6 +119,9 @@ struct BBox {
     Point2D st_Max_pt; // 좌하단
     Point2D st_Min_pt; // 우상단
     string str_class;
+    // YOLO가 내놓은 원본 라벨. str_class는 융합 정책이 car/person/unknown으로
+    // 접어 넣은 값이라 truck/bus 구분이 사라지므로 원본을 따로 들고 간다.
+    string str_raw_class;
     int c_idx;
 };
 
@@ -147,9 +150,10 @@ struct RAW_YOLO_DATA
 {
 	vector<BBox> vec_YOLO;
     bool b_Yolo_ready = false;
-    // Local monotonically increasing sequence. The custom YOLO message has no
-    // Header, so this distinguishes a new inference result from repeated reads
-    // of the same result in the faster Main processing loop.
+    // Timestamp of the camera image used for this inference result.
+    uint64 u64_ImageTimestampNs = 0;
+    // Local monotonically increasing sequence distinguishes a new inference
+    // result from repeated reads in the faster Main processing loop.
     uint64 u64_FrameSeq = 0;
 };
 
@@ -504,6 +508,10 @@ struct LiDARObjectInfo
 {
 	string str_ObjectClass = "unknown";      //car,person,truck
 
+    // str_ObjectClass를 확정시킨 YOLO 원본 라벨(car/truck/bus/person).
+    // 클래스가 unknown으로 돌아가면 같이 unknown이 된다.
+    std::string str_YoloClass = "unknown";
+
     std::string last_seen_class = "unknown";
     int continuity_counter = 0;    
     int class_miss_counter = 0;
@@ -555,6 +563,21 @@ struct LiDARObjectInfo
 	//
 
     float32 f32_Velocity;
+
+    float32 f32_AbsVx;
+    float32 f32_AbsVy;
+
+    // MotionClassifier 전용 결과. f32_AbsVx/Vy/Velocity는 항상 KF가
+    // 계산한 현재 프레임 원본이며 아래 판정값으로 덮어쓰지 않는다.
+    float32 f32_DecisionVxKPH = 0.0f;
+    float32 f32_DecisionVyKPH = 0.0f;
+    float32 f32_DecisionSpeedKPH = 0.0f;
+    float32 f32_MapDisplacementSpeedKPH = 0.0f;
+    float32 f32_MotionVelocityJumpKPH = 0.0f;
+    int32 s32_MotionState = 0;
+    int32 s32_MotionValidObservations = 0;
+    int32 s32_MotionAcceptedSamples = 0;
+    int32 s32_MotionCandidateSamples = 0;
 
     float32 f32_DirX;
     float32 f32_DirY;
@@ -769,6 +792,8 @@ struct CAMERA
 
 	//Data
 	cv::Mat bgr_image;
+	ros::Time front_image_stamp;
+	vector<uint8_t> front_compressed_image;
 
 	cv::Mat traffic_light_image;
 	bool is_traffic_light_camera_available = false;

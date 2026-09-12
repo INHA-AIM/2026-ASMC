@@ -12,8 +12,12 @@
 #include "../Visualization/Visualization.hpp"
 #include "../FrameFilter/FrameFilter.hpp"
 
+class MotionClassifier;
 
-void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR, const GPS_IMU& st_GPSIMU, LiDAR& st_LiDAR);
+void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
+                  const GPS_IMU& st_GPSIMU,
+                  LiDAR& st_LiDAR,
+                  MotionClassifier& motion_classifier);
 void InitLidarViz(ros::NodeHandle& nh);
 pcl::PointCloud<pcl::PointXYZI>::Ptr
 MakePointCloudFromRaw(const RAW_LIDAR_DATA& st_RawLiDAR);

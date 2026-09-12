@@ -151,6 +151,7 @@ static void PublishBoxesAndPcl(LiDAR& st_LiDAR)
 
         for (size_t idx=0; idx<st_LiDAR.vec_Objects.size(); ++idx) {
             const auto& obj = st_LiDAR.vec_Objects[idx];
+            if (obj.s32_MissCount <= 0) continue;
             if (obj.pcl_ClusterPoints.empty()) continue;
 
             // 박스

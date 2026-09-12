@@ -326,29 +326,80 @@ class GpsEgoSource:
 
 
 class RosEgoSource:
-    """이미 /Ego_topic 이 뜬 환경용."""
+    """이미 /Ego_topic 이 뜬 환경용.
 
-    def __init__(self, topic: str = '/Ego_topic') -> None:
+    위치는 **/gps 를 우선 쓴다.** beta(181B) Ego 패킷은 position 이 0 으로 채워져
+    오고, 브릿지가 그 값을 그대로 /Ego_topic 에 넣기 때문이다 (실측: position
+    (0,0) 인데 heading 은 정상). /gps 는 위경도와 함께 맵 원점 offset
+    (eastOffset / northOffset) 을 메시지에 담아 주므로 그것만으로 맵 로컬 좌표가
+    나온다 — H5 의 local_origin 을 쓰지 않아도 된다.
+
+    Ego position 이 0 이 아니면 그쪽을 그대로 쓴다.
+    """
+
+    def __init__(self, topic: str = '/Ego_topic', gps_topic: str = '/gps',
+                 utm_epsg: int = 32652, fallback_origin=None) -> None:
         import rospy
         from morai_msgs.msg import EgoVehicleStatus
         self._rospy = rospy
         rospy.init_node('link_node_live_check', anonymous=True, disable_signals=True)
-        self._latest: Optional[EgoState] = None
-        rospy.Subscriber(topic, EgoVehicleStatus, self._cb, queue_size=1)
         self.topic = topic
+        self.gps_topic = gps_topic
+        self._heading = None          # deg
+        self._vel_kmh = 0.0
+        self._ego_xy = None           # Ego 패킷이 준 위치 (보통 0)
+        self._gps_xy = None           # /gps 에서 변환한 위치
+        self._announced = False
+        self._fallback_origin = (np.asarray(fallback_origin, dtype=np.float64)[:2]
+                                 if fallback_origin is not None else None)
+        self._tf = None
+        self._utm_epsg = utm_epsg
+        rospy.Subscriber(topic, EgoVehicleStatus, self._ego_cb, queue_size=1)
+        try:
+            from morai_msgs.msg import GPSMessage
+            rospy.Subscriber(gps_topic, GPSMessage, self._gps_cb, queue_size=1)
+            self._gps_ok = True
+        except ImportError:
+            self._gps_ok = False
 
-    def _cb(self, msg) -> None:
-        self._latest = EgoState(
-            x=msg.position.x, y=msg.position.y, heading_deg=msg.heading,
-            velocity_kmh=float(getattr(msg.velocity, 'x', 0.0)) * 3.6,
-        )
+    def _ego_cb(self, msg) -> None:
+        self._heading = float(msg.heading)
+        self._vel_kmh = float(getattr(msg.velocity, 'x', 0.0)) * 3.6
+        x, y = float(msg.position.x), float(msg.position.y)
+        self._ego_xy = (x, y) if (abs(x) > 1e-6 or abs(y) > 1e-6) else None
+
+    def _gps_cb(self, msg) -> None:
+        lat, lon = float(msg.latitude), float(msg.longitude)
+        if abs(lat) < 1e-9 and abs(lon) < 1e-9:
+            return
+        if self._tf is None:
+            import pyproj
+            self._tf = pyproj.Transformer.from_crs(
+                'EPSG:4326', f'EPSG:{self._utm_epsg}', always_xy=True)
+        east, north = self._tf.transform(lon, lat)
+        # 메시지가 맵 원점 offset 을 직접 준다. 0 이면 H5 의 local_origin 으로 대체.
+        off = np.array([float(getattr(msg, 'eastOffset', 0.0)),
+                        float(getattr(msg, 'northOffset', 0.0))], dtype=np.float64)
+        if not off.any() and self._fallback_origin is not None:
+            off = self._fallback_origin
+        self._gps_xy = (east - off[0], north - off[1])
 
     def read(self) -> Optional[EgoState]:
         time.sleep(0.02)
-        return self._latest
+        if self._heading is None:
+            return None
+        xy = self._ego_xy or self._gps_xy
+        if xy is None:
+            return None
+        if not self._announced:
+            src = '/Ego_topic' if self._ego_xy else self.gps_topic
+            print(f'[src] 위치는 {src}, 방향은 {self.topic}')
+            self._announced = True
+        return EgoState(x=xy[0], y=xy[1], heading_deg=self._heading,
+                        velocity_kmh=self._vel_kmh)
 
     def describe(self) -> str:
-        return f'ROS {self.topic}'
+        return f'ROS {self.topic}' + (f' + {self.gps_topic}' if self._gps_ok else '')
 
     def close(self) -> None:
         pass
@@ -635,6 +686,43 @@ class ObjectSource:
 
     def close(self) -> None:
         self.sock.close()
+
+
+class RosObjectSource:
+    """ROS /Object_topic 에서 객체를 받는다.
+
+    컨테이너에서 브릿지가 이미 UDP 7505 를 잡고 있으면 ObjectSource(UDP) 로는
+    바인드할 수 없다. 그럴 때 이 경로를 쓴다. 위치는 이미 맵 로컬 좌표다.
+    """
+
+    def __init__(self, topic: str = '/Object_topic') -> None:
+        import rospy
+        from morai_msgs.msg import ObjectStatusList
+        self.topic = topic
+        self.objects: list = []
+        rospy.Subscriber(topic, ObjectStatusList, self._cb, queue_size=1)
+
+    def _cb(self, msg) -> None:
+        out = []
+        groups = ((getattr(msg, 'pedestrian_list', []), 0),
+                  (getattr(msg, 'npc_list', []), 1),
+                  (getattr(msg, 'obstacle_list', []), 2))
+        for items, type_id in groups:
+            for o in items:
+                out.append(ObjectState(
+                    idx=int(getattr(o, 'unique_id', 0)),
+                    type_id=int(getattr(o, 'type', type_id)),
+                    x=float(o.position.x), y=float(o.position.y),
+                    heading_deg=float(getattr(o, 'heading', 0.0)),
+                    length_m=float(getattr(o.size, 'x', 0.0)) or 4.6,
+                    width_m=float(getattr(o.size, 'y', 0.0)) or 1.9))
+        self.objects = out
+
+    def poll(self) -> list:
+        return self.objects
+
+    def close(self) -> None:
+        pass
 
 
 def object_on_road(m: BakedMap, obj: 'ObjectState', margin_px: int = 0) -> bool:
@@ -1066,6 +1154,8 @@ def main() -> int:
                     default=None, metavar='PORT',
                     help='MORAI Object Info UDP 를 받아 주행가능영역 안의 객체만 '
                          '표시한다 (기본 포트 %d)' % OBJECT_PORT_DEFAULT)
+    ap.add_argument('--object-topic', default='/Object_topic',
+                    help='--source ros 일 때 객체를 받을 토픽 (기본 /Object_topic)')
     ap.add_argument('--object-margin-m', type=float, default=0.0,
                     help='객체 판정에 줄 여유 (m). GPS·맵 오차로 경계 객체가 '
                          '들락거리면 0.5~1.0 을 준다')
@@ -1131,7 +1221,7 @@ def main() -> int:
         print(f'[src] {source.describe()}')
         print(f'      UTM EPSG:{args.utm_epsg}, 원점 {m.local_origin[:2].tolist()}')
     elif args.source == 'ros':
-        source = RosEgoSource()
+        source = RosEgoSource(fallback_origin=m.local_origin)
         print(f'[src] {source.describe()}')
     else:
         source = DemoEgoSource(m.grid, m.road)
@@ -1139,10 +1229,17 @@ def main() -> int:
 
     objsrc = None
     if args.objects is not None:
-        objsrc = ObjectSource(args.objects)
-        print(f'[obj] Object Info udp/{args.objects} 수신 — '
-              f'주행가능영역 안의 객체만 표시'
-              f'{" (여유 %.1f m)" % args.object_margin_m if args.object_margin_m else ""}')
+        margin_note = (' (여유 %.1f m)' % args.object_margin_m
+                       if args.object_margin_m else '')
+        if args.source == 'ros':
+            # 컨테이너에서는 브릿지가 udp/7505 를 이미 잡고 있어 ROS 토픽으로 받는다.
+            objsrc = RosObjectSource(args.object_topic)
+            print(f'[obj] ROS {args.object_topic} 수신 — '
+                  f'주행가능영역 안의 객체만 표시{margin_note}')
+        else:
+            objsrc = ObjectSource(args.objects)
+            print(f'[obj] Object Info udp/{args.objects} 수신 — '
+                  f'주행가능영역 안의 객체만 표시{margin_note}')
     obj_margin_px = int(round(args.object_margin_m * m.grid.pixels_per_meter))
 
     show = not args.no_window

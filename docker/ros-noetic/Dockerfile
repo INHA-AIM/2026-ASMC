@@ -3,8 +3,14 @@ FROM ros:noetic
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Ubuntu mirror hash mismatch 완화 (Docker Desktop/WSL 간헐적)
-RUN printf 'Acquire::Retries "5";\nAcquire::http::Pipeline-Depth "0";\n' \
+# Docker Desktop/WSL 환경에서 Ubuntu 저장소의 plain HTTP 연결이 응답 없이
+# 멈추는 경우가 있으므로 한국 Ubuntu 미러의 HTTPS endpoint로 고정한다.
+# ROS snapshot 저장소는 별도 호스트이며 정상 응답하므로 변경하지 않는다.
+RUN sed -i \
+      -e 's|http://archive.ubuntu.com/ubuntu/|https://kr.archive.ubuntu.com/ubuntu/|g' \
+      -e 's|http://security.ubuntu.com/ubuntu/|https://kr.archive.ubuntu.com/ubuntu/|g' \
+      /etc/apt/sources.list && \
+    printf 'Acquire::Retries "5";\nAcquire::http::Pipeline-Depth "0";\nAcquire::https::Timeout "30";\n' \
     > /etc/apt/apt.conf.d/99docker-apt-fix
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -31,8 +37,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements-lbc.txt requirements-mgeo.txt requirements-grpc.txt requirements-linknode.txt /tmp/
 RUN pip3 install --no-cache-dir --upgrade "pip<24.1"
 
-# ROS 컨테이너에서도 신호등 추론이 RTX 40(Ada) GPU를 사용하도록 CUDA wheel을
-# 명시한다. ultralytics보다 먼저 설치해 CPU용 torch가 간접 설치되지 않게 한다.
+# 시스템 Python 3.8 용 CUDA PyTorch. src/traffic_light/live_infer.py 가 이
+# 인터프리터를 사용한다. 기본 이미지는 RTX 40 시리즈용이며 신호등 ResNet18과
+# 센서퓨전 YOLO가 모두 이 CUDA 11.8 환경을 사용한다. RTX 50 전용 Python/CUDA
+# 환경은 이 파일이 아니라 Dockerfile.rtx50에서 추가한다.
 RUN pip3 install --no-cache-dir \
       torch==2.1.2 \
       torchvision==0.16.2 \
@@ -56,6 +64,12 @@ RUN pip3 install --no-cache-dir -r /tmp/requirements-lbc.txt && \
     pip3 install --no-cache-dir tqdm ultralytics && \
     rm -f /tmp/requirements-*.txt && \
     python3 -c "from scipy.spatial import cKDTree; import cv2; import numpy; import h5py; import pyproj"
+
+# lidar+sensorfusion의 Velodyne 입력과 좌표 변환 빌드 의존성.
+# 대형 ROS/Python 레이어 뒤에 두어 이 목록 변경 시 해당 캐시를 보존한다.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpcap-dev libgeographic-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc && \
     echo "[ -f /root/ws/devel/setup.bash ] && source /root/ws/devel/setup.bash" >> /root/.bashrc && \

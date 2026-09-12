@@ -360,6 +360,8 @@ void Objectinfo_for_km(vector<LiDARObjectInfo> &vec_NowObject,
         st_CurrentObj.f32_MaxY = f32_MaxY;
         st_CurrentObj.f32_MaxZ = f32_MaxZ;
         st_CurrentObj.f32_Velocity = 0.0;
+        st_CurrentObj.f32_AbsVx = 0.0;
+        st_CurrentObj.f32_AbsVy = 0.0;
 
 
         st_CurrentObj.f32_DirX = 0.0;
@@ -492,8 +494,6 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             // cout << "Cost("<<i<<","<<j<<")="<<vec_CostMatrix[i][j]<<"\n";
             vec_NowObject[j].f32_PrevCoreX = vec_Compare[i].f32_CoreX;
             vec_NowObject[j].f32_PrevCoreY = vec_Compare[i].f32_CoreY;
-            float32 f32_Prev_core_x = vec_Compare[i].f32_CoreX;
-            float32 f32_Prev_core_y = vec_Compare[i].f32_CoreY;
             // 이제 기존 코드처럼 트랙 업데이트
             vec_NowObject[j].f32_PredCoreX = vec_PredictedPositions[i].first;
             vec_NowObject[j].f32_PredCoreY = vec_PredictedPositions[i].second;
@@ -523,11 +523,12 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             vec_NowObject[j].f32_PrevYaw = vec_Compare[i].f32_PrevYaw ;
 
             vec_NowObject[j].str_ObjectClass      = vec_Compare[i].str_ObjectClass;
+            vec_NowObject[j].str_YoloClass        = vec_Compare[i].str_YoloClass;
             vec_NowObject[j].last_seen_class      = vec_Compare[i].last_seen_class;
             vec_NowObject[j].continuity_counter   = vec_Compare[i].continuity_counter;
+            vec_NowObject[j].class_miss_counter   = vec_Compare[i].class_miss_counter;
             vec_NowObject[j].is_class_locked      = vec_Compare[i].is_class_locked;
 
-            float32 f32_PrevYYY=vec_NowObject[j].f32_PrevYaw;
             obb_util::stabilizeMatchedOBB(
                 vec_Compare[i], vec_NowObject[j],
                 st_GPSIMU.st_IMU.f32_Yaw_deg);
@@ -554,120 +555,29 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             //       Eigen::Vector2f(f32_Det_x, f32_Det_y),static_cast<float>(f64_Time), H, R, 9.21f);  // chi2_gate는 99% 기본값
             // }
 
-            // 디버깅 출력
-            float32 f32_Rel_vx = vec_NowObject[j].Eigen_KfState_CA(2); 
-            float32 f32_Rel_vy = vec_NowObject[j].Eigen_KfState_CA(3); 
-            // float32 f32_Rel_vx = vec_NowObject[j].Eigen_KfState(2); 
-            // float32 f32_Rel_vy = vec_NowObject[j].Eigen_KfState(3); 
-            // float32 f32_Rel_vx= (vec_NowObject[j].f32_CoreX - f32_Prev_core_x)/f64_Time ;
-            // float32 f32_Rel_vy= (vec_NowObject[j].f32_CoreY - f32_Prev_core_y)/f64_Time ;
-            //--->
-            float32 v_mps = st_GPSIMU.st_CAN.f32_CurrentVel_KPH / 3.6f;
-            // cout<<"자차속도 :"<<v_mps*3.6<<endl;
+            const float32 f32_Rel_vx = vec_NowObject[j].Eigen_KfState_CA(2);
+            const float32 f32_Rel_vy = vec_NowObject[j].Eigen_KfState_CA(3);
+            const float32 v_mps =
+                st_GPSIMU.st_CAN.f32_CurrentVel_KPH / 3.6f;
+            const float32 f32_Abs_vx = f32_Rel_vx + v_mps;
+            const float32 f32_Abs_vy = f32_Rel_vy;
 
-            //요값 넣어서 자차랑 상대객체 속도 enu 기준으로 만든 부분
-            //float32 yaw_rad = st_GPSIMU.st_IMU.f32_Yaw_rad;
-
-            //요값 넣어서 자차랑 상대객체 속도 enu 기준으로 만든 부분
-            // float32 ego_vx = v_mps * cos(yaw_rad); // East 성분
-            // float32 ego_vy = v_mps * sin(yaw_rad); // North 성분
-
-            // float vx_enu_rel = cos(yaw_rad) * f32_Rel_vx - sin(yaw_rad) * f32_Rel_vy;
-            // float vy_enu_rel = sin(yaw_rad) * f32_Rel_vx + cos(yaw_rad) * f32_Rel_vy;
-
-            
-            // float32 f32_Abs_vx = f32_Rel_vx + v_mps*cos(vec_NowObject[j].f32_PrevYaw-f32_PrevYYY);
-            // // cout<<"절대 x:"<<f32_Abs_vx<<endl;
-            // float32 f32_Abs_vy = f32_Rel_vy + v_mps*sin(vec_NowObject[j].f32_PrevYaw-f32_PrevYYY);
-            float32 f32_Abs_vx = f32_Rel_vx + v_mps;
-            float32 f32_Abs_vy = f32_Rel_vy ;
-            float32 f32_PreviousEmaSpeed = vec_NowObject[j].f32_Velocity;
-            float32 f32_NowVelocity = sqrt(f32_Abs_vx*f32_Abs_vx + f32_Abs_vy*f32_Abs_vy);
-            // cout<<"요값변화량"<<st_GPSIMU.st_IMU.f32_Yaw_deg* M_PI / 180.0f - f32_PrevYYY<<endl;
-            float32 f32_SpeedPub=0;
-
-            // 임계값으로 어떻게든 해보자
-            // cout<<"차속도:"<<v_mps<<endl;
-            if(v_mps*3.6<3){
-                f32_Rel_vx= (vec_NowObject[j].f32_CoreX - f32_Prev_core_x)/f64_Time ;
-                f32_Rel_vy= (vec_NowObject[j].f32_CoreY - f32_Prev_core_y)/f64_Time ;  
-                f32_Abs_vx = f32_Rel_vx + v_mps;
-                f32_Abs_vy = f32_Rel_vy ;       
-                f32_NowVelocity = sqrt(f32_Abs_vy*f32_Abs_vy + f32_Abs_vx*f32_Abs_vx );
-                // if(abs(st_GPSIMU.st_IMU.f32_Yaw_deg-f32_PrevYYY)>0.05)
-                //     vec_NowObject[j].f32_Velocity = calculateEmaSpeed(f32_PreviousEmaSpeed,f32_NowVelocity,0.3);
-                // else{
-                //     vec_NowObject[j].f32_Velocity = f32_NowVelocity;
-                // }
-                vec_NowObject[j].f32_Velocity = f32_NowVelocity;
-                if (vec_NowObject[j].f32_Velocity > 1e-3f) {
-                    vec_NowObject[j].f32_DirX = f32_Abs_vx / vec_NowObject[j].f32_Velocity;
-                    vec_NowObject[j].f32_DirY = f32_Abs_vy / vec_NowObject[j].f32_Velocity;
-                } else {
-                    vec_NowObject[j].f32_DirX = 0.0f;
-                    vec_NowObject[j].f32_DirY = 0.0f;
-                }
-                if(vec_NowObject[j].f32_Velocity*3.6 >=4){
-                    vec_NowObject[j].b_IsDynamic=true;
-                    vec_NowObject[j].s32_DynamicCount++;
-                    // cout<<"동적 얼마나: "<<vec_NowObject[j].s32_DynamicCount<<endl;;
-                }
-                else{
-                    vec_NowObject[j].b_IsDynamic=false;
-                    vec_NowObject[j].s32_StaticCount++;
-                }
-
+            vec_NowObject[j].f32_AbsVx = f32_Abs_vx;
+            vec_NowObject[j].f32_AbsVy = f32_Abs_vy;
+            vec_NowObject[j].f32_Velocity =
+                std::hypot(f32_Abs_vx, f32_Abs_vy);
+            if (vec_NowObject[j].f32_Velocity > 1e-3f) {
+                vec_NowObject[j].f32_DirX =
+                    f32_Abs_vx / vec_NowObject[j].f32_Velocity;
+                vec_NowObject[j].f32_DirY =
+                    f32_Abs_vy / vec_NowObject[j].f32_Velocity;
+            } else {
+                vec_NowObject[j].f32_DirX = 0.0f;
+                vec_NowObject[j].f32_DirY = 0.0f;
             }
-            else{
-                f32_NowVelocity = sqrt(f32_Abs_vy*f32_Abs_vy + f32_Abs_vx*f32_Abs_vx ) ;
-                // if(abs(st_GPSIMU.st_IMU.f32_Yaw_deg-f32_PrevYYY)>0.05)
-                //     vec_NowObject[j].f32_Velocity = calculateEmaSpeed(f32_PreviousEmaSpeed,f32_NowVelocity,0.3);
-                // else{
-                //     vec_NowObject[j].f32_Velocity = f32_NowVelocity;
-                // }
-                vec_NowObject[j].f32_Velocity = f32_NowVelocity;
-                if (vec_NowObject[j].f32_Velocity > 1e-3f) {
-                    vec_NowObject[j].f32_DirX = f32_Abs_vx / vec_NowObject[j].f32_Velocity;
-                    vec_NowObject[j].f32_DirY = f32_Abs_vy / vec_NowObject[j].f32_Velocity;
-                } else {
-                    vec_NowObject[j].f32_DirX = 0.0f;
-                    vec_NowObject[j].f32_DirY = 0.0f;
-                }
-                if(vec_NowObject[j].f32_Velocity*3.6 >=6){
-                    vec_NowObject[j].b_IsDynamic=true;
-                    vec_NowObject[j].s32_DynamicCount++;
-                    if(vec_NowObject[j].str_ObjectClass=="person"){
-                        cout<<"동적사람속도: "<<vec_NowObject[j].f32_Velocity<<endl;
-                    }
-                
-                        //자동차,트럭,버스 정적상태에 대해서 동적으로 잠시 튀는 현상 막기 위한 코드 
-                        // if(vec_NowObject[j].str_ObjectClass=="car" || vec_NowObject[j].str_ObjectClass=="truck" || vec_NowObject[j].str_ObjectClass=="bus")
-                        //     cout<<"동적 얼마나: "<<vec_NowObject[j].s32_DynamicCount<<endl;
-                        //     if(vec_NowObject[j].s32_DynamicCount >= vec_NowObject[j].s32_StaticCount){
-                        //         vec_NowObject[j].b_IsDynamic=true;
-                        //         vec_NowObject[j].s32_DynamicCount++;
-                        //     }
-                        //     else{ 
-                        //         if(vec_NowObject[j].s32_DynamicCount <=12){
-                        //             vec_NowObject[j].b_IsDynamic=false;
-                        //             vec_NowObject[j].s32_StaticCount++;
-                        //         }
-                        //     }
-                }
-                else{
-                    // if(vec_NowObject[j].str_ObjectClass=="person"){
-                    //     if(vec_NowObject[j].f32_Velocity*3.6 >=3){
-                    //         vec_NowObject[j].b_IsDynamic=true;
-                    //         vec_NowObject[j].s32_DynamicCount++;
-                    //     }
-                    // }
-                    vec_NowObject[j].b_IsDynamic=false;
-                    vec_NowObject[j].s32_StaticCount++;
-                    if(vec_NowObject[j].str_ObjectClass=="person"){
-                        cout<<"정적사람속도: "<<vec_NowObject[j].f32_Velocity<<endl;
-                    }
-                }
-            }
+
+            // 동정적 판정은 트래킹의 실시간 속도를 변경하지 않는 별도
+            // MotionClassifier가 이 프레임의 모든 트랙에 대해 수행한다.
             
 
             

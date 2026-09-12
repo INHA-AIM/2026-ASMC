@@ -1,4 +1,5 @@
 #include "Parser.hpp"
+#include <SensorFusion/SensorFusion.hpp>
 
 namespace
 {
@@ -57,7 +58,8 @@ void ParseCameraUDP(ros::NodeHandle &st_NodeHandle)
                                 image_data.data(),
                                 front_nbytes);
                     st_SensorData.st_RawCamera.s32_Num = static_cast<int32_t>(front_nbytes);
-                    st_SensorData.st_RawCamera.u64_Timestamp = static_cast<uint64_t>(ros::Time::now().toNSec());
+                    st_SensorData.st_RawCamera.u64_Timestamp =
+                        static_cast<uint64_t>(ros::Time::now().toNSec());
                 }
                 else
                 {
@@ -68,7 +70,8 @@ void ParseCameraUDP(ros::NodeHandle &st_NodeHandle)
         sensor_msgs::CompressedImage msg;
         if (front_nbytes > 0)
         {
-            msg.header.stamp = ros::Time::now();
+            msg.header.stamp.fromNSec(
+                st_SensorData.st_RawCamera.u64_Timestamp);
             msg.format = "jpeg";
             msg.data.resize(front_nbytes);
             std::memcpy(msg.data.data(), st_SensorData.st_RawCamera.arc_Buffer, front_nbytes);
@@ -133,8 +136,13 @@ void CameraRosCallback(const sensor_msgs::CompressedImage::ConstPtr& msg)
     pthread_mutex_lock(&st_SensorData.st_MutexCamera);
     memcpy(st_SensorData.st_RawCamera.arc_Buffer, msg->data.data(), nbytes);
     st_SensorData.st_RawCamera.s32_Num = static_cast<int32>(nbytes);
-    st_SensorData.st_RawCamera.u64_Timestamp = static_cast<uint64>(ros::Time::now().toNSec());
+    const ros::Time source_stamp = msg->header.stamp.isZero()
+        ? ros::Time::now() : msg->header.stamp;
+    st_SensorData.st_RawCamera.u64_Timestamp =
+        static_cast<uint64>(source_stamp.toNSec());
     pthread_mutex_unlock(&st_SensorData.st_MutexCamera);
+
+    BufferFusionCameraFrame(source_stamp, msg->data);
 
     g_CameraImagePublisher.publish(msg);
 }
@@ -152,13 +160,22 @@ void YoloCallback(const Msg::Yolo_bbox_arr::ConstPtr& data)
         st_BBox.st_Min_pt.f32_X = detection.xMin;
         st_BBox.st_Min_pt.f32_Y = detection.yMin;
         st_BBox.str_class = detection.classes;
+        st_BBox.str_raw_class = detection.classes;
         st_YOLO.detected_objects.push_back(st_BBox);
     }
+    const ros::Time image_stamp = data->header.stamp.isZero()
+        ? ros::Time(0) : data->header.stamp;
+    uint64 frame_seq = 0;
     pthread_mutex_lock(&st_SensorData.st_MutexYOLO);
     st_SensorData.st_RawYOLO.vec_YOLO = st_YOLO.detected_objects;
     st_SensorData.st_RawYOLO.b_Yolo_ready = true;
-    ++st_SensorData.st_RawYOLO.u64_FrameSeq;
+    st_SensorData.st_RawYOLO.u64_ImageTimestampNs =
+        image_stamp.isZero() ? 0ULL : image_stamp.toNSec();
+    frame_seq = ++st_SensorData.st_RawYOLO.u64_FrameSeq;
     pthread_mutex_unlock(&st_SensorData.st_MutexYOLO);
+
+    BufferFusionYoloFrame(frame_seq, image_stamp,
+                          st_YOLO.detected_objects);
 }
 //==========================카메라========================== //  
 
@@ -205,7 +222,15 @@ void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
     pthread_mutex_lock(&st_SensorData.st_MutexLiDAR);
     // cout << "Before setting st_RawLiDAR.s32_Num: " << st_SensorData.st_RawLiDAR.s32_Num << endl;
 
-    st_SensorData.st_RawLiDAR.u64_Timestamp = GetMillisecond();
+    // /velodyne_points 의 stamp 는 브릿지가 ros::Time::now() 로 찍은 ROS epoch 다.
+    // GetMillisecond() 는 steady_clock(부팅 기준)이라 여기에 쓰면 이 노드가 발행하는
+    // stamp 가 실제 시각과 약 17억 초(20698일) 어긋난다 — bag 분석에서 다른 토픽과
+    // 맞출 수 없고 TF lookup 도 실패한다. 들어온 stamp 를 그대로 승계한다.
+    // 단위는 ms 를 유지해야 한다 (LidarProcess 가 *1e6 으로 ns 로 되돌린다).
+    const ros::Time ts_LiDARIn = msg->header.stamp.isZero() ? ros::Time::now()
+                                                            : msg->header.stamp;
+    st_SensorData.st_RawLiDAR.u64_Timestamp =
+        static_cast<uint64>(ts_LiDARIn.toNSec() / 1000000ULL);
 
     st_SensorData.st_RawLiDAR.s32_Num  = s32_Count;  // Set the number of points (not bytes)
 

@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 COMPOSE_FILE="$REPO_ROOT/docker/ros-noetic/docker-compose.yaml"
+RTX50_COMPOSE_FILE="$REPO_ROOT/docker/ros-noetic/docker-compose.rtx50.yaml"
 CONTAINER="asmc-ros-noetic"
 
 export ASMC="${ASMC:-$REPO_ROOT}"
@@ -12,6 +13,7 @@ export ASMC_DATA="${ASMC_DATA:-$(dirname "$REPO_ROOT")/data}"
 mkdir -p "$ASMC_DATA"
 
 COMPOSE=(docker compose -f "$COMPOSE_FILE")
+COMPOSE_RTX50=(docker compose -f "$COMPOSE_FILE" -f "$RTX50_COMPOSE_FILE")
 
 die() {
   echo "[FAIL] $*" >&2
@@ -174,8 +176,32 @@ case "$cmd" in
     inspect_mode
     print_next
     ;;
+  build-rtx50)
+    render_config
+    # Dockerfile.rtx50은 이미 빌드된 공용 asmc/ros-noetic:dev를 상속한다.
+    # 기본 이미지가 없을 때만 먼저 빌드하여 수 GB의 cu118 재다운로드를 피한다.
+    if ! docker image inspect asmc/ros-noetic:dev >/dev/null 2>&1; then
+      "${COMPOSE[@]}" build
+    fi
+    "${COMPOSE_RTX50[@]}" build
+    ;;
+  up-rtx50)
+    render_config
+    "${COMPOSE_RTX50[@]}" up -d --force-recreate
+    inspect_mode
+    print_next
+    ;;
+  rebuild-rtx50)
+    render_config
+    # 공용 RTX 40 이미지를 먼저 만든 뒤 RTX 50 파생 이미지를 no-cache로 만든다.
+    "${COMPOSE[@]}" build
+    "${COMPOSE_RTX50[@]}" build --no-cache
+    "${COMPOSE_RTX50[@]}" up -d --force-recreate
+    inspect_mode
+    print_next
+    ;;
   *)
-    echo "Usage: $0 {config [show]|build|up|status|check [port]|verify [seconds]|verify-gt [seconds]|down|rebuild}"
+    echo "Usage: $0 {config [show]|build|up|rebuild|build-rtx50|up-rtx50|rebuild-rtx50|status|check [port]|verify [seconds]|verify-gt [seconds]|down}"
     exit 2
     ;;
 esac

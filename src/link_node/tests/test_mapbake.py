@@ -1393,6 +1393,37 @@ def test_outer_shift_preserves_lane_thickness(data, grid):
     assert int(((shifted.image > 0) & (road.image == 0)).sum()) == 0
 
 
+@needs_map
+def test_stopline_clip_removes_ends_left_outside_by_outer_trim(data, grid):
+    """도로를 깎으면 정지선 양끝이 밖으로 나간다 — 방향 버그가 아니다.
+
+    정지선 길이는 링크의 차로 폭(3.5 m)인데 도로는 outer_trim_m 만큼 좌우로
+    깎이므로, 깎은 쪽 끝이 그만큼 삐져나와 stopline_on_road_ratio 가 내려간다
+    (실측 trim 0.3 에서 0.9956 -> 0.9564). 이걸 방향 계산 버그로 오진한 적이
+    있어 테스트로 박아둔다. 클립하면 밖으로 나간 픽셀이 정확히 0 이 된다.
+    """
+    from mapbake.topology import lane_pinch_corrections
+    fixed = lane_pinch_corrections(data.valid_links)
+    road = bake_drivable(data, grid, outer_trim_m=0.3, centerlines=fixed)
+
+    raw = bake_stopline(data, grid)
+    clipped = bake_stopline(data, grid, clip_to=road.image)
+
+    outside = int(((raw.image > 0) & (road.image == 0)).sum())
+    # 깎인 도로 기준으로는 실제로 밖에 나간 픽셀이 있다 (오진의 원인)
+    assert outside > 0
+    # 중앙은 전부 도로 안이다 — 방향이 틀렸다면 선 전체가 어긋난다
+    assert outside < 0.10 * int((raw.image > 0).sum())
+
+    # 클립하면 밖이 0 이 되고, 잃는 건 밖에 나간 만큼뿐이다
+    assert int(((clipped.image > 0) & (road.image == 0)).sum()) == 0
+    assert clipped.stats['filled_px'] == raw.stats['filled_px'] - outside
+    assert clipped.stats['clipped_to_road_m2'] > 0
+
+    # 클립을 끄면 예전 그대로다 (기본값이 바뀌어도 되돌릴 수 있어야 한다)
+    assert bake_stopline(data, grid, clip_to=None).stats['filled_px'] == raw.stats['filled_px']
+
+
 # ------------------------------------------------ 외부 파트용 조회 모듈
 
 @needs_map
@@ -1423,6 +1454,146 @@ def test_drivable_query_matches_raster():
 
     # 맵 범위 밖은 False
     assert not dm.contains(np.array([[1e6, 1e6]]))[0]
+
+
+def _mask(margin_m: float = 0.0):
+    import sys as _sys
+    _sys.path.insert(0, str(PKG_ROOT))
+    h5 = PKG_ROOT / 'out' / 'link_node_map.h5'
+    if not h5.is_file():
+        pytest.skip('구운 H5 가 없다')
+    from drivable_query import DrivableMask
+    return DrivableMask.load(h5, margin_m=margin_m)
+
+
+def test_quad_ratio_matches_center_yaw_and_ignores_corner_order():
+    """꼭짓점 방식이 중심+yaw 방식과 같은 답을 내야 한다.
+
+    필터 노드는 메시지의 obb_corners 를 그대로 쓴다 — 중심+yaw 로 박스를 다시
+    만들지 않으므로 yaw 규약이 어긋날 여지가 없다. 그 대신 두 방식이 일치하는지를
+    여기서 붙잡아 둔다. 꼭짓점 순서를 가정하지 않는 것도 같이 확인한다.
+    """
+    dm = _mask(margin_m=1.0)
+    rng = np.random.default_rng(11)
+    for _ in range(50):
+        cx, cy = rng.uniform([-400, -770], [110, 560])
+        length, width, yaw = (rng.uniform(1.5, 12.0), rng.uniform(0.8, 3.0),
+                              rng.uniform(-180.0, 180.0))
+        corners = dm.obb_corners(cx, cy, length, width, yaw)[1:]
+        assert dm.quad_inside_ratio(corners) == pytest.approx(
+            dm.obb_inside_ratio(cx, cy, length, width, yaw))
+        # 순서를 뒤섞어도 같은 답
+        assert dm.quad_inside_ratio(corners[rng.permutation(4)]) == pytest.approx(
+            dm.quad_inside_ratio(corners))
+
+    # 배치 결과가 하나씩 부른 것과 같아야 한다
+    quads = np.stack([dm.obb_corners(*rng.uniform([-400, -770], [110, 560]),
+                                     4.6, 1.9, rng.uniform(0, 360))[1:]
+                      for _ in range(20)])
+    batch = dm.quads_inside_ratio(quads)
+    one_by_one = [dm.quad_inside_ratio(q) for q in quads]
+    assert np.allclose(batch, one_by_one)
+    assert dm.quads_inside_ratio(np.zeros((0, 4, 2))).shape == (0,)
+
+
+@needs_map
+def test_filter_threshold_keeps_road_edge_and_drops_roadside(data, grid):
+    """임계 0.3 + margin 1.0 이 도로 끝 실물은 살리고 노변은 버려야 한다.
+
+    이 맵은 갓길이 없고 outer_trim_m 으로 좌우 0.3 m 를 더 깎았다. 그래서 도로
+    최외곽에 세워진 차는 여유 없이 재면 내부 비율이 0.40 밖에 안 나온다 —
+    임계 0.5 로 두면 실물을 버린다. 실측으로 고른 조합을 회귀로 박아둔다.
+    """
+    dm0, dm1 = _mask(margin_m=0.0), _mask(margin_m=1.0)
+
+    # 가장 긴 직선 링크의 중간에서 법선 방향으로 도로 경계를 찾는다
+    best = None
+    for link in data.valid_links:
+        pts = link.points
+        if len(pts) < 10:
+            continue
+        straight = np.linalg.norm(pts[-1] - pts[0])
+        if straight < 40:
+            continue
+        if np.linalg.norm(np.diff(pts, axis=0), axis=1).sum() / straight > 1.02:
+            continue
+        if best is None or straight > best[1]:
+            best = (link, straight)
+    assert best is not None
+    pts = best[0].points
+    mid = pts[len(pts) // 2]
+    tangent = pts[len(pts) // 2 + 2] - pts[len(pts) // 2 - 2]
+    tangent = tangent / np.linalg.norm(tangent)
+    normal = np.array([-tangent[1], tangent[0]])
+    edge = next(s for s in np.arange(0.0, 20.0, 0.05)
+                if not dm0.contains((mid - s * normal).reshape(1, 2))[0])
+
+    car = (4.6, 1.9)
+    yaw = math.degrees(math.atan2(tangent[1], tangent[0]))
+
+    def ratio(dm, offset):
+        c = mid - offset * normal
+        return dm.quad_inside_ratio(dm.obb_corners(c[0], c[1], *car, yaw)[1:])
+
+    # 여유 없이 재면 도로 끝 차량이 0.5 를 못 넘긴다 — 0.5 임계를 쓰면 안 되는 근거
+    assert ratio(dm0, edge) < 0.5
+    # 권장 조합(margin 1.0, 임계 0.3): 경계 밖 1 m 까지 살리고 2 m 부터 버린다
+    assert ratio(dm1, edge) >= 0.3
+    assert ratio(dm1, edge + 1.0) >= 0.3
+    assert ratio(dm1, edge + 2.0) < 0.3
+    # 도로 한가운데는 어느 쪽이든 전부 안
+    assert ratio(dm0, 0.0) == pytest.approx(1.0)
+
+
+def test_filter_node_reads_bottom_obb_corners():
+    """노드가 메시지에서 하층 꼭짓점 4개를 뽑고 축퇴 박스를 걸러내야 한다.
+
+    rospy / Msg 는 중첩 워크스페이스에만 있으므로 stub 을 끼워 import 한다.
+    """
+    import types
+    import importlib.util
+
+    stub_rospy = types.ModuleType('rospy')
+    for name in ('loginfo', 'logwarn', 'logerr', 'logfatal', 'spin'):
+        setattr(stub_rospy, name, lambda *a, **k: None)
+    stub_msg = types.ModuleType('Msg')
+    stub_msg_msg = types.ModuleType('Msg.msg')
+    stub_msg_msg.TrackedObjectArray = type('TrackedObjectArray', (), {})
+    saved = {k: sys.modules.get(k) for k in ('rospy', 'Msg', 'Msg.msg')}
+    sys.modules['rospy'] = stub_rospy
+    sys.modules['Msg'] = stub_msg
+    sys.modules['Msg.msg'] = stub_msg_msg
+    try:
+        spec = importlib.util.spec_from_file_location(
+            'drivable_filter_node', PKG_ROOT / 'drivable_filter_node.py')
+        node = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(node)
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                sys.modules.pop(k, None)
+            else:
+                sys.modules[k] = v
+
+    class P:
+        def __init__(self, x, y, z=0.0):
+            self.x, self.y, self.z = x, y, z
+
+    class Obj:
+        def __init__(self, corners):
+            self.obb_corners = corners
+
+    # 하층 0-3 은 사각형, 상층 4-7 은 z 만 다르다. 상층을 섞어 읽으면 안 된다.
+    bottom = [P(0, 0), P(4, 0), P(4, 2), P(0, 2)]
+    top = [P(99, 99, 1.5)] * 4
+    good = Obj(bottom + top)
+    degenerate = Obj([P(1, 1)] * 8)
+    nan_box = Obj([P(float('nan'), 0)] * 8)
+
+    quads, usable = node.quads_from_message([good, degenerate, nan_box])
+    assert quads.shape == (3, 4, 2)
+    assert np.array_equal(quads[0], [[0, 0], [4, 0], [4, 2], [0, 2]])
+    assert usable.tolist() == [True, False, False]
 
 
 @needs_map

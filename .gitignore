@@ -99,3 +99,4 @@ artifacts/perception_eval/analysis/twinlite_v6_lane_vector_x040_20260910/
 src/link_node/out/*
 !src/link_node/out/*.h5
 !src/link_node/out/*.yaml
+!src/link_node/out/road_mask.png

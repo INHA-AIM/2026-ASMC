@@ -159,10 +159,10 @@ LiDAR: # 라이다
       Min: 0.5
       Max: 100.0
     ROI:
-      MinX: -10.0
-      MaxX: 30.0
-      MinY: -10.0
-      MaxY: 10.0
+      MinX: -30.0
+      MaxX: 50.0
+      MinY: -20.0
+      MaxY: 20.0
       MinZ: -2.0
       MaxZ: 3.0
   Clustering:
