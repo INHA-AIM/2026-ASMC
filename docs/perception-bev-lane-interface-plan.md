@@ -3,9 +3,9 @@
 > **문서 역할:** Detailed Design Note — GT 정책 근거와 BEV/lane 후보 상세
 > **우선순위 정본:** [perception-map-fusion-roadmap.md](./perception-map-fusion-roadmap.md)
 > **문서 허브:** [README.md](./README.md)
-> 기준일: 2026-09-08
+> 기준일: 2026-09-12
 > 담당: 안승현
-> 상태: v6 drivable+4-class road-marking 본학습·validation·live 시각화 완료
+> 상태: v6·3-camera BEV·ground-plane 보정 완료, 음영구간 boundary provisional gate 및 typed handoff 구현 완료
 > 관련: [perception-dataset-labeling-split.md](./perception-dataset-labeling-split.md)
 
 팀 전체 map-camera-LiDAR 구조, provisional topic과 대회판 이식 일정은
@@ -19,13 +19,17 @@
 | 차선 GT | 가려진 차선을 복원하지 않고 보이는 차선만 positive | 합의 |
 | 정지선 | MGeo/전역경로 정지점을 1차 사용; 영상은 all-view road-marking class로 보조 검증 | 적용·평가 중 |
 | 3-camera BEV | RGB를 합쳐 재추론하지 않고 카메라별 segmentation 확률을 공통 ego-BEV로 투영 | 합의 |
-| BEV 구현 시점 | 학습 결과와 live 처리량을 측정하고 센서 주기·해상도를 동결한 뒤 본 구현 | 합의 |
+| BEV 구현 시점 | 현재 v2 센서 profile로 BEV·vector 기준선을 먼저 완성하고 센서 경량화는 후속 통제 실험 | 합의 |
 | 장애물 점유 | LiDAR-primary occupancy/tracking이 담당 | 합의 |
 | drivable의 객체 픽셀 | actor-negative(B): 차량·보행자·`obstacle`을 non-drivable로 감독 | 잠정 채택 |
 | 차로 변경 인터페이스 | mask와 별도로 ego/adjacent lane topology를 구조화 | 추가 설계 필요 |
 | 추가 데이터 시나리오 | 주최 측 예제·제밍구간의 통제 변형 사용, 범용 랜덤 생성기는 보류 | 합의 |
 | 정지선 배포 | MGeo/전역경로 정지점 1차, vision head는 보조·연구 확장 | 합의 |
 | 공통 좌표 | 후륜축 중앙 `base_link`, x-forward/y-left/z-up; raster 범위는 overlay 후 결정 | 좌표 정본·범위 보류 |
+
+개발 시각화는 열화 경계를 관찰하기 위해 `x[-5,30]×y[-12,12] m` exploration grid를
+사용한다. 기존 `[-5,20]×[-8,8] m` 정식 pilot 기본값과 정확도 gate는 그대로이며,
+개발 화면의 큰 직사각형을 판제 ODD로 해석하지 않는다.
 
 BEV의 최종 구현은 센서 profile 동결 뒤에 하되, 카메라 calibration과 좌표계,
 letterbox 역변환, 출력 메시지의 timestamp 계약은 데이터 수집 단계부터 보존한다.
@@ -164,12 +168,47 @@ sample-b는 model selection용 val이다. 최종 성능 판단에는 재학습 �
 ### P3 — 실시간 profile과 BEV
 
 1. 세 카메라 live 입력으로 FPS, p50/p95 latency, UDP drop, GPU/CPU memory를 측정한다.
-2. 센서 해상도·주기·압축률을 동결하고 학습 profile과 차이가 있으면 별도 validation한다.
-3. 모델 확률맵을 원본 카메라 좌표로 복원한 뒤 각 카메라 homography로 ego-BEV에 옮긴다.
-4. threshold 전 확률과 coverage/confidence를 융합한다. LiDAR occupancy 차감과
+2. 현재 v2 센서 해상도·주기·압축률을 기준선으로 고정하고 먼저 camera-to-BEV/vector를 완성한다.
+3. native GT loss budget으로 model-grid direct, native 복원과 hard/soft 융합 손실을 분리한다.
+4. 검증된 표현만 ego-BEV에 옮긴다. 1차 audit에서는 model-grid hard direct가 개선됐고
+   단순 4-class soft 평균은 gate를 통과하지 못했다.
+5. LiDAR occupancy 차감과
    `safe_drivable` 생성 책임은 인지·퓨전·판제 인터페이스 협의 후 확정한다.
-5. 제공 MGeo를 map prior와 camera-BEV 정합 평가에 모두 사용한다. 본선에서는 제공·허용된
+6. 제공 MGeo를 map prior와 camera-BEV 정합 평가에 모두 사용한다. 본선에서는 제공·허용된
    지도와 측위만 사용하고 GT/oracle sensor output을 배포 입력으로 누설하지 않는다.
+7. vector 기준선까지 완성한 뒤에만 센서 해상도·10/15/20 Hz를 낮추는 부하 최적화를 수행한다.
+
+**2026-09-11 보정:** MORAI `base_link` 후륜축 중심과 노면을 같은 `z=0`으로 취급했던
+오류를 수정했다. 두 구간 LiDAR fit을 바탕으로 정적 노면 `z=-0.35 m`를 calibration의
+필수 계약으로 두고 homography, model-grid evidence, 시각화와 offline 평가를 모두 같은
+평면에 연결했다. 동일 validation 재평가에서 white/yellow 지표는 크게 개선됐지만 모든
+범위 후보는 여전히 기준을 통과하지 못했다. 기존 `z=0` artifact는 비교용으로 보존하되
+superseded로 표시하며, 현재 BEV 범위는 lane candidate 필터와 피팅을 다시 평가하기 전까지
+provisional이다.
+
+2026-09-10 pilot에서는 native 확대나 lane raster 없이 `384×640` model-grid pixel을 연속
+`base_link (x,y)` evidence로 옮기는 경로까지 채택했다. 현 association+B-spline은 direct
+evidence보다 white/yellow 거리 지표가 나빠지고 offline p95 지연도 목표를 넘어서 debug로만
+유지한다. 이에 따라 `x[-5,20]×[-8,8] m`도 validated 범위가 아니라 provisional display
+ROI다. ground-plane/letterbox calibration 검산은 완료했으며, 다음에는 MGeo candidate
+matching으로 비차로 표식을 제거하고 3-view source association을 개선한다. 수동 검수를
+마친 뒤 같은 native GT·hash 입력으로 범위를 다시 선정한다.
+
+white/yellow class에는 같은 색의 주차칸과 안전지대 표식도 포함될 수 있으므로 색상 spline을
+곧바로 차로 경계로 해석하지 않는다. 짧은 횡단 표식은 종방향 support로 제거하되, 평행한
+주차선처럼 기하만으로 모호한 후보는 `unknown/non-lane marking` 상태로 보존한다. 60-frame
+검수에서 false bridge와 비차로 표식 오검출을 별도로 집계하고, 후자는 2% 이하일 때만
+lane-boundary/range gate를 통과한 것으로 본다. 기하·drivable 문맥이 부족하면 MGeo 또는
+lane-boundary 전용 GT를 추가한다.
+
+2026-09-12에는 비차로 표식이 없는 GPS 음영 왕복 2차로를 첫 ODD로 제한해 노란 중앙 경계와
+양쪽 흰 outer boundary를 최대 3개로 선별하고 short-term stable ID를 부여했다. 12-run
+replay에서 yellow 가용성은 clear/static `98.03/96.25%`, 세 경계 동시 완성률은
+`82.95/71.27%`였다. 출력률과 기술 배관은 통과했지만 정적 장애물에서 right outer 누락이
+남으므로 판제는 부분 관측·confidence·stale timeout을 전제로 개발한다. 인지는 경계의
+색상·왼쪽→오른쪽 순서·metric polyline만 제공하며 home/opposing 및 회피·복귀 의미는
+route/Frenet 문맥을 가진 판제가 결정한다. 일반 구간 MGeo matching과 재학습은 이 제한 ODD
+handoff 뒤에 진행한다.
 
 ## 4. MGeo·시나리오 자동화 활용 범위
 
@@ -208,7 +247,9 @@ controller, sensor-set hash를 저장한다.
   -> shared drivable + 4-class road-marking segmentation
   -> camera probabilities + per-view validity
   -> calibrated ego-BEV fusion
-  -> lane boundary/vector extraction
+  -> lane-color metric evidence
+  -> lane-boundary candidate discrimination
+  -> vector extraction
   -> ego/left/right lane association
   -> LiDAR occupancy/tracks association
   -> perception message
@@ -230,6 +271,11 @@ controller, sensor-set hash를 저장한다.
 - stopline polyline, ego 경로와의 교점 거리, confidence, age
 - 카메라 source bitmask와 LiDAR track association ID
 
+일반 debug spline은 여전히 위 vector/topology 계약이 아니라 `lane candidate`다. 다만 첫
+음영구간 ODD에서 선별한 경계는 `asmc_msgs/LaneBoundaryObservationArray`로 typed provisional
+handoff를 구현했다. 이 메시지는 N개 경계와 색상·순서·metric polyline만 표현하고
+home/opposing/절대 차로 번호는 담지 않는다. 전 구간 표식 분류와 topology 계약은 별도다.
+
 인지 파트는 관측된 차로 구조·경계·신뢰도와 장애물 association을 제공한다. “지금 차선을
 변경한다”는 최종 결정은 route, 규정, gap acceptance, LiDAR TTC를 결합하는 판단 파트가
 내린다. GPS/IMU 음영에서는 차량 원점과 연결된 drivable component 및 시간적으로 추적한
@@ -238,7 +284,7 @@ lane centerline으로 ego lane을 유지하고, MGeo lane ID는 유효 pose가 �
 ### 5.3 다음 설계 회의에서 확정할 항목
 
 1. 후륜축 중앙 `base_link` 검증과 실제 overlay 기반 BEV 범위/해상도
-2. lane boundary와 lane centerline의 custom message 스키마
+2. provisional boundary observation에서 전 구간 lane centerline/topology 계약으로 승격할 조건
 3. confidence, age, occlusion, invalid 상태의 의미와 timeout
 4. 끊긴 차선·교차로에서 topology 유지 규칙
 5. 카메라 확률 융합과 LiDAR occupancy 우선순위
@@ -247,7 +293,7 @@ lane centerline으로 ego lane을 유지하고, MGeo lane ID는 유효 pose가 �
 
 ## 6. 당장 개발하지 않는 항목
 
-- BEV 최종 grid와 ROS custom message 확정
+- BEV 최종 grid와 전 구간 topology ROS custom message 확정
 - learned view transform 또는 temporal BEV
 - 카메라 객체 검출 head 추가
 - 카메라 패키지 내부에서 MGeo bake/local crop까지 직접 구현하는 기능

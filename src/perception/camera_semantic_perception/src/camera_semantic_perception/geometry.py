@@ -89,6 +89,27 @@ def restore_probability(
     return np.clip(restored, 0.0, 1.0).astype(np.float32, copy=False)
 
 
+def restore_categorical_probabilities(
+    probabilities: np.ndarray, geometry: LetterboxGeometry
+) -> np.ndarray:
+    """Restore a ``[C,H,W]`` softmax volume and renormalize each pixel."""
+    value = np.asarray(probabilities)
+    if value.ndim != 3 or tuple(value.shape[1:]) != geometry.target_hw:
+        raise ValueError(
+            "categorical probability shape must be [C,{},{}], got {}".format(
+                geometry.target_hw[0], geometry.target_hw[1], value.shape
+            )
+        )
+    if value.dtype != np.float32:
+        raise ValueError("categorical probabilities must be float32")
+    restored = np.stack(
+        [restore_probability(channel, geometry) for channel in value], axis=0
+    )
+    total = restored.sum(axis=0, keepdims=True)
+    restored /= np.maximum(total, np.finfo(np.float32).eps)
+    return np.ascontiguousarray(restored, dtype=np.float32)
+
+
 def restore_class_ids(
     class_ids: np.ndarray, geometry: LetterboxGeometry
 ) -> np.ndarray:

@@ -1,0 +1,17 @@
+<launch>
+  <arg name="views" default="front"/>
+  <arg name="publish_per_view_mosaic" default="false"/>
+  <arg name="bev_grid_config"
+       default="$(find drivable_bev)/config/bev_grid.yaml"/>
+  <arg name="visualization_config"
+       default="$(find drivable_bev)/config/visualization.yaml"/>
+
+  <node pkg="drivable_bev" type="camera_bev_visualizer_node.py"
+        name="camera_bev_visualizer" output="screen" required="true">
+    <rosparam command="load" file="$(arg bev_grid_config)"/>
+    <rosparam command="load" file="$(find drivable_bev)/config/cameras_v2.yaml"/>
+    <rosparam command="load" file="$(arg visualization_config)"/>
+    <rosparam param="enabled_views" subst_value="true">[$(arg views)]</rosparam>
+    <param name="publish_per_view_mosaic" value="$(arg publish_per_view_mosaic)"/>
+  </node>
+</launch>

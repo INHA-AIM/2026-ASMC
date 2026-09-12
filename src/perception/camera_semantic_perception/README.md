@@ -162,14 +162,30 @@ frame age, VRAM과 다른 노드 동시 실행 시 지연은 Stage C3에서 다�
 
 각 선택 view에 다음 `sensor_msgs/Image`, `mono8` 토픽을 발행하며 입력 메시지의 stamp와
 frame ID를 보존한다. Drivable과 binary lane의 값 0~255는 confidence 0~1에 대응한다.
-Road-marking은 argmax class ID `0=background, 1=white, 2=yellow, 3=stopline`이다. 전체
-확률 tensor 대신 class-ID 한 장만 발행해 3-view ROS 대역폭을 기존 수준으로 유지한다.
+Road-marking은 argmax class ID `0=background, 1=white, 2=yellow, 3=stopline`이다. 내부
+backend 계약은 4-class softmax를 유지하고, 외부에는 class ID와 해당 pixel의 최대 softmax
+confidence만 발행한다. 전체 4-channel tensor를 보내지 않아 3-view ROS 대역폭 증가를
+제한한다.
 
 ```text
 /perception/camera/{view}/drivable/probability
 /perception/camera/{view}/lane/probability              # binary checkpoint
 /perception/camera/{view}/road_marking/class_id         # 4-class checkpoint
+/perception/camera/{view}/road_marking/confidence       # 4-class max softmax, 0~255
 ```
+
+Metric lane-vector 개발 launch에서만 다음 model-grid 출력을 켠다. 둘 다 `384×640`
+`mono8`이고 기존 출력과 같은 source stamp를 보존한다. 3-view batch 기준 최대 10 Hz이며,
+구독자가 없으면 추론 노드는 model-grid 배열 복사와 publish를 생략한다.
+
+```text
+/perception/camera/{view}/road_marking/model_grid/class_id
+/perception/camera/{view}/road_marking/model_grid/confidence
+```
+
+전체 per-class 확률 tensor는 발행하지 않는다. native GT loss-budget에서 단순 softmax 평균이
+얇은 foreground를 희석해 hard direct 기준보다 나빴기 때문이다. 필요하면 후속 A/B에서만
+내부 표현으로 다시 검토한다.
 
 성능 계측은 `diagnostic_msgs/DiagnosticArray`로 함께 발행한다.
 
@@ -190,6 +206,11 @@ queue/e2e p50·p95, source/receive/result stamp와 upstream timestamp fallback�
 /perception/camera/debug/mosaic/compressed
 ```
 
+publisher는 항상 advertise하지만 실제 panel/mosaic 구독자가 없으면 렌더링과 JPEG 인코딩을
+건너뛴다. BEV와 lane-vector 개발 화면까지 한 번에 띄울 때는
+[`drivable_bev` 개발 launch](../drivable_bev/README.md#실행)를 사용하고 `rqt_image_view`의
+dropdown에서 필요한 토픽만 선택한다.
+
 ## 검증
 
 ```bash
@@ -202,6 +223,7 @@ rostopic hz /perception/camera/front/lane/probability
 rostopic echo /perception/camera/front/lane/probability -n1
 rostopic hz /perception/camera/front/road_marking/class_id
 rostopic echo /perception/camera/front/road_marking/class_id -n1
+rostopic hz /perception/camera/front/road_marking/confidence
 rostopic hz /perception/camera/front/debug/panel/compressed
 rostopic echo /perception/camera/diagnostics -n1
 ```

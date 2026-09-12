@@ -2,8 +2,8 @@
 
 > **문서 역할:** Current Working Proposal — 인지 융합 방향과 단계별 결정 gate
 > **문서 허브:** [README.md](./README.md)
-> **상태:** Working Proposal v0.3 — 팀 검토와 실증 결과에 따라 변경 가능<br>
-> **기준일:** 2026-09-09<br>
+> **상태:** Working Proposal v0.9 — 음영구간 12-run camera-boundary gate 반영<br>
+> **기준일:** 2026-09-12<br>
 > **주요 참여:** 안승현(카메라 인지), 장원태(MGeo map prior 제안), 손재호(LiDAR 인지), planning/control 팀<br>
 > **상세 문서:** [인지 GT·BEV·차로 구조화 계획](./perception-bev-lane-interface-plan.md) · [UDP↔ROS 네트워크](./network-udp-ros.md) · [v4 학습 평가](./perception-v4-training-evaluation.md)
 
@@ -28,6 +28,13 @@
 transport gate → 좌표·BEV 기준 확정 → 카메라 결과 구조화 → MGeo 결합 → LiDAR/판제 연계**다.
 정지선은 MGeo/전역경로 정지점을 1차 후보로 두고 현재 영상 stopline class를 보조 검증과
 GPS Blackout 대응 후보로 평가한다.
+
+2026-09-11부터 전체 맵의 차선 topology를 한 번에 해결하지 않고 GPS 음영 왕복 2차로를
+첫 camera-lane ODD로 둔다. 개발 launch는 원거리 열화를 관찰하는
+`x[-5,30]×y[-12,12] m` exploration grid를 사용하지만, 이 범위는 판제 유효범위가 아니다.
+정식 pilot의 `[-5,20]×[-8,8] m` 설정은 유지한다. 인지는 yellow/white 경계, 그 사이 local
+lane strip과 기하학적 current occupancy를 제공하고, home/opposing 의미와 회피·복귀 판단은
+route seed 및 LiDAR occupancy를 가진 판제·퓨전이 소유하는 방향으로 검증한다.
 
 ## 2. 대회 통신 경계
 
@@ -98,7 +105,7 @@ LiDAR ─ detection/tracking/occupancy ───────────┤
 - 원본 영상에서의 coverage와 유효 영역
 - 모델/checkpoint/전처리 provenance
 - timestamp, frame age와 추론 지연
-- 추후 ego-BEV로 투영한 확률 및 관측 confidence
+- ego-BEV로 투영한 확률, class ID 및 관측 confidence
 
 18 epoch EMA v4 2-head validation은 1,404 sample에서 전체 drivable IoU `0.9842`, lane
 IoU `0.8930`이었던 이력 기준선이다. 현재는 drivable + 4-class road-marking v6
@@ -200,7 +207,7 @@ src/perception/
 ├── twinlite_morai/                 # 현재: 학습·평가와 TwinLite 전용 adapter
 ├── camera_semantic_perception/     # 제안: 모델 독립 live 추론·시각화·성능계측
 ├── map_prior/                      # 후보: offline bake 결과 로드와 local crop
-├── drivable_bev/                   # 후보: 공통 grid, camera/map layer와 fusion
+├── drivable_bev/                   # 현재: camera-only fused BEV pilot, 추후 map layer/fusion 후보
 └── morai_3d_detection/             # 현재: 손재호 3D 인지 연구 코드
 
 src/interfaces/                     # 실증 뒤 합의한 ROS message/topic 계약
@@ -246,13 +253,15 @@ mosaic를 만든다. BEV는 이 확률을 소비하는 별도 단계로 둔다.
 
 ```text
 /perception/camera/{view}/drivable/probability
-/perception/camera/{view}/road_marking/probability
+/perception/camera/{view}/road_marking/class_id
+/perception/camera/{view}/road_marking/confidence
 /perception/camera/{view}/debug/panel/compressed
 /perception/camera/debug/mosaic/compressed
-/perception/diagnostics
+/perception/camera/diagnostics
 ```
 
-- probability는 초기에는 `sensor_msgs/Image` `mono8`의 0~255 confidence를 후보로 한다.
+- drivable probability와 road-marking confidence는 `sensor_msgs/Image` `mono8`의 0~255다.
+- road marking class ID는 `0=background, 1=white, 2=yellow, 3=stopline`이다.
 - hard mask와 overlay는 시각화 노드가 configurable threshold로 파생한다.
 - float probability가 필요한지, 전송량이 적절한지는 BEV pilot에서 다시 결정한다.
 - 새 모델은 같은 head 의미를 반환하는 backend adapter를 추가해 교체한다.
@@ -266,7 +275,10 @@ mosaic를 만든다. BEV는 이 확률을 소비하는 별도 단계로 둔다.
 /perception/bev/map/route_corridor
 /perception/bev/map/stopline
 /perception/bev/camera/drivable_probability
-/perception/bev/camera/road_marking_probability
+/perception/bev/camera/road_marking/class_id
+/perception/bev/camera/road_marking/confidence
+/perception/bev/camera/coverage
+/perception/bev/camera/source_count
 /perception/bev/lidar/occupancy
 /perception/bev/fused/safe_drivable
 /perception/bev/fused/lanes
@@ -278,7 +290,7 @@ custom message를 검토한다.
 
 ### 6.4 아직 확정하지 않을 항목
 
-- BEV 전·후·좌·우 범위와 meter/pixel
+- map/LiDAR까지 포함한 최종 BEV 전·후·좌·우 범위와 meter/pixel
 - camera probability bit depth와 threshold
 - lane ID와 left/right adjacency custom message
 - fusion weight와 map-camera disagreement 처리
@@ -333,6 +345,98 @@ input/output/replaced frame, 오류 수, stage별 평균, processing FPS, queue/
 source/receive/result stamp를 발행한다. upstream bridge fallback도 view별로 전달한다. 동일
 raw bag replay와 model별 result bag으로 조건별 수치를 채우는 실증은 Stage C4에서 수행한다.
 
+**2026-09-10 camera-only BEV pilot 구현:** `src/perception/drivable_bev/`에서 MGeo·LiDAR와
+독립된 front/left/right 투영을 구현했다. 초기 grid는 후륜축 `base_link`, x-forward/y-left,
+`x=[-20,60]m`, `y=[-20,20]m`, `0.10m/cell`이었다. v2 정지 교차로
+live에서 세 view가 약 10 Hz로 출력됐고 projection+publish p95는 `4.74~5.23 ms`, 오류는
+0건이었다. RGB ground-grid와 coverage로 pitch/yaw 및 좌우 축을 육안 확인했다. 짧은 8구간
+비교에서 추론-only와 BEV projector+구독자 없는 lazy visualizer의 처리량 중앙값은 각각
+약 `49.5`, `47.9 view-fps`였다. debug JPEG 구독 부하는 운용 계측과 분리한다. 설정의
+60 m 상한을 유효 인지거리로 해석하지 않는다.
+
+**2026-09-10 fused BEV 범위 audit:** v6 EMA와 validation 1,404 sample을 `run/frame`으로
+묶은 결과 예상 156개가 아니라 468개의 complete 3-view group이 확인됐다. 계획한
+`x_max={30,25,20}`, `|y|max={12,10,8}`의 sunny/foggy·5 m 종방향·4 m 횡방향 평가에서 모든 기준을
+통과한 후보는 없었다. 명시된 fallback `x=[-5,20]m`, `y=[-8,8]m`, `0.10m/cell`을 적용했다.
+이 범위의 전체 drivable IoU는 sunny/foggy `0.9827/0.9738`이었지만 white/yellow IoU는
+`0.5191/0.4833`, recall은 `0.5439/0.5069`였다. 얇은 차선은 작은 image-space 오차가
+metric raster에서 크게 반영되므로 현재 범위를 차선 강건성 보증으로 해석하지 않는다.
+카메라별 geometry/edge/GSD/range 품질맵과 class confidence로 세 view를 융합하고 35 ms
+timestamp gate를 적용했다. 정식 fused 출력의 live rate·sync 거부율·지연은 아래 동적
+주행 gate에서 확인했으며 seam은 lane fitting 단계에서 다시 평가한다.
+
+**2026-09-10 fused live/replay gate:** BEV 통합 launch만 20 ms view coalescing을 적용하고
+35 ms source-stamp gate와 10 Hz fused throttle을 유지했다. live 누적 표본은 fused
+`9.66 Hz`, sync 폐기율 `3.33%`, fusion p95 `3.90 ms`, camera-to-fused p95 `95.35 ms`였다.
+242.437초 `camera_raw`를 1.0× replay한 별도 result bag에서는 fused `9.84 Hz`, 폐기율
+`3.66%`, fusion p95 `5.42 ms`, camera-to-fused p95 `111.54 ms`, 추론 약 `50.1 view-fps`,
+decode/inference error 0건이었다. raw RGB 세 view는 각각 약 20 Hz이고 header regression은
+없었다. 다만 validation overlap marking Chamfer p95 목표는 통과하지 못했으므로 현재
+fused raster를 직접 steering 기준선으로 승격하지 않는다. 다음 lane fitting에서 같은
+class·방향의 물리 선을 매칭한 metric seam audit을 다시 수행한다.
+
+위 2026-09-10 범위·loss 수치는 노면을 `base_link z=0`으로 가정했던 역사적 기준이다.
+MORAI의 후륜축 중심 원점과 실제 노면 사이 높이를 빠뜨린 사실을 2026-09-11 실측으로
+확인했으므로, 기존 artifact는 삭제하지 않되
+`superseded_due_to_ground_plane_contract`로만 보존한다. 현재 정본 수치는 아래 보정 절을
+사용한다.
+
+**2026-09-10 native GT loss-budget gate:** 기존 범위 audit의 GT가 `384×640` cache에서
+복원된 값임을 확인하고, native GT를 기준으로 468개 3-view frame의 여섯 경로를 다시
+비교했다. cache 왕복은 exact white/yellow IoU가 `0.4573/0.6337`이지만 F1@0.2m은
+`0.9504/0.9820`으로, 주 손실은 얇은 선의 두께·미세 위치 변화였다. 실제 prediction은
+native 복원을 생략한 model-grid hard direct 투영에서 F1@0.2m이 `0.7962/0.8920`에서
+`0.8400/0.9130`으로 개선됐다. 반면 단순 4-class soft 평균은 Sunny/Foggy 비회귀 및
+Chamfer·연결성 gate를 통과하지 못해 runtime 승격을 보류한다. 세부 수치와 overlay는
+당시 세부 수치는 기존 artifact에 보존하며 현재 정본으로 사용하지 않는다.
+
+**2026-09-11 ground-plane 계약 보정:** `base_link`는 노면이 아니라 후륜축 중앙이므로
+`cameras_v2.yaml`에 필수 평면 `z=-0.35 m`를 추가했다. 좁은 구간/음영구간 LiDAR 실측
+원점 높이는 `-0.354 m`, 20-frame 중앙값 `-0.331 m`였고, 보정된 카메라 역투영 차로폭은
+각각 약 `3.00 m`, `3.61 m`였다. LiDAR 도색점→RGB p95는 최대 `0.43 px`, 공통 도색선의
+3-view 횡잔차 p95는 `0.03 m` 이하로 intrinsic/extrinsic은 그대로 유지했다. 카메라 mount
+높이를 바꾸지 않고 homography, coverage/GSD, model-grid, visualizer와 offline evaluator가
+하나의 불변 평면을 사용하며 설정이 없으면 시작을 실패시킨다.
+
+동일 468개 Sunny/Foggy frame 재평가에서 prediction native-hard의 drivable/white/yellow/
+stopline IoU는 `0.9827/0.5306/0.6589/0.7873`, white/yellow F1@0.2m은
+`0.8924/0.9530`으로 정정됐다. z=0 결과보다 white/yellow IoU는 `+0.1164/+0.0982`지만,
+이는 모델 향상이 아니라 물리 지면 기준 오류 제거 효과다. 단순 soft 융합은 새 기준에서도
+F1/Chamfer 채택 gate를 통과하지 못했다. 범위 audit도 모든 후보가 실패해
+`x[-5,20]×y[-8,8] m`는 provisional로 유지한다. BEV-only live는 fused `9.13 Hz`,
+fusion p95 `4.36 ms`, camera-to-fused p95 `98.23 ms`, per-view projection p95
+`2.78~3.72 ms`, 오류 0이었다. lane-vector는 30그룹 smoke만 통과시켰으며 재튜닝 수치로
+채택하지 않는다. 세부 정본과 artifact 링크는
+[`drivable_bev` README](../src/perception/drivable_bev/README.md#2026-09-11-ground-plane-보정-및-재평가)를
+따른다.
+
+**2026-09-10 metric lane-vector pilot:** 모델 격자 class/max-confidence를 최대 10 Hz의
+lazy internal topic으로 추가하고, raster 확대 없이 각 pixel ray를 연속 `base_link (x,y)`
+evidence로 변환했다. white/yellow evidence를 종·횡 metric cluster, source association,
+robust cubic B-spline 순서로 처리하고 PointCloud2·MarkerArray와 lazy rqt debug 화면을
+구현했다. 그러나 468개 Sunny/Foggy native-GT frame에서 fitted white F1@0.2는
+sunny/foggy `0.733/0.733`으로 direct evidence `0.809/0.785`보다 낮았고 Chamfer p95도
+악화됐다. 중복 spline은 77 frame, offline vectorization p95는 `83.0 ms`여서 정확도·지연
+gate를 통과하지 못했다. confidence 0.60, 0.40 m bin, 4 m 최소 span과 shape-preserving
+curve fallback도 정확도 비회귀를 만족하지 못해 채택하지 않았다.
+
+따라서 이번 pilot의 채택 결과는 **보정된 model-grid direct metric evidence와 디버그 배관까지**다.
+spline은 원인 분석용 출력으로만 유지하며 planning 인터페이스나 validated BEV 범위로
+승격하지 않는다. `x[-5,20]×[-8,8] m`는 계속 provisional debug ROI다. ground-plane과
+letterbox 검산은 완료했으므로 다음에는 MGeo candidate matching으로 비차로 표식을 먼저
+거르고 동일 물리선의 3-view association을 개선한다. 이후 visible-only GT의 관측구간
+정량 평가와 60-frame false-bridge 검수를 통과한 뒤 범위 audit을 다시 실행한다. 상세
+실행·artifact 계약은
+[`drivable_bev` README](../src/perception/drivable_bev/README.md#2026-09-10-metric-lane-vector-pilot)를
+따른다.
+
+또한 Semantic의 white/yellow는 색상 표식이므로 같은 색의 주차칸·안전지대 표식을
+lane boundary와 자동으로 구별하지 않는다. 현재 spline은 모두 `lane candidate`이고,
+종방향 연속성만으로 진행 방향과 평행한 주차선을 완전히 제거할 수 없다. 60-frame 검수에
+비차로 표식 오검출을 별도 항목으로 두고 2% 이하를 range 승격 gate에 포함한다. 방향·길이,
+평행 경계와 drivable 문맥으로도 분리가 부족하면 MGeo 또는 lane-boundary 전용 GT를 붙인
+별도 classifier/모델 변경 실험으로 분리한다.
+
 ### Stage C4 — 조건별 live gate
 
 - 규정 조건 Sunny/Foggy × 11am/1pm/3pm
@@ -341,9 +445,19 @@ raw bag replay와 model별 result bag으로 조건별 수치를 채우는 실증
 - front-only와 three-view, perception 단독과 LiDAR 동시 실행 비교
 - 새 독립 Capture/test run으로 정량 평가
 
-이 결과로 센서 native 해상도, 추론 Hz, AMP와 batch 방식을 고정한다. 모델 변경은 live 또는
-독립 test에서 front lane 품질이나 full-stack latency가 부족한 경우에만 같은 조건으로
-비교한다.
+센서 native 해상도와 주기는 현재 v2 기준을 유지한다. 먼저 direct 투영, BEV 격자와
+camera-to-vector 기준선을 완성하고, 그 이후 같은 정확도·지연 기준에서 부하를 줄이는
+10/15/20 Hz 및 해상도 통제 실험을 한다. 모델 변경은 live 또는 독립 test에서 front lane
+품질이나 full-stack latency가 부족한 경우에만 같은 조건으로 비교한다.
+
+급출발·급제동에서 chassis dive/squat로 pitch가 변해 지면 투영이 흔들리는 현상은 현재
+정적 calibration을 임의 튜닝해 숨기지 않는다. 후속 개선은 camera+IMU+Ego source-time bag,
+카메라 stamp에 보간한 IMU quaternion, neutral pose 대비 빠른 pitch/roll 성분을 사용한
+프레임별 extrinsic/homography 보정을 1차 후보로 둔다. 느린 도로 경사와 빠른 차체 자세
+변화를 분리하고 lateral jitter, lane width, MGeo 정합 오차로 static/dynamic 방식을
+비교한다. 차선·소실점 기반 online self-calibration은 IMU 보정의 보조 후보로 둔다.
+관련 연구 후보는 [WS-3D-Lane](https://arxiv.org/abs/2209.11523)이다. 실측 영향이 목표
+허용오차보다 작을 때만 보정을 생략하며, 이번 lane-vector PR에서는 구현하지 않는다.
 
 ## 8. 공용 rosbag의 범위
 
@@ -389,6 +503,31 @@ data/rosbags/audits/<run_or_comparison>/
 Real Time UDP bag은 실제 비동기 지연·drop·jitter 분석 기준이다. 같은 bag을 재생하면 모델
 A/B 입력은 통제할 수 있지만 MORAI→UDP bridge 이전의 packet 손실까지 재현하지는 못하므로
 최종 선택 후 live Real Time 검증을 다시 수행한다.
+
+2026-09-12에는 GPS 음영 왕복 2차로를 대상으로 `shadow_clear`와
+`shadow_static_avoid_v1` 각각 Sunny/Foggy×11/13/15시의 wheel raw bag 12개를 확보했다.
+Cloudy·중복·중단·position reset run은 삭제하지 않고 rejected로 분리했으며, 정본 선택은
+`data/rosbags/audits/shadow_dataset_20260912/selection.yaml`에 둔다. 이 matrix에서는
+색상 표식 전체를 곧바로 판제 차선으로 쓰지 않고, 종방향 track 단계에서 노란 중앙 경계와
+양쪽 흰 outer boundary를 선별한 뒤 stable local ID와 왼쪽→오른쪽 순서를 제공한다.
+`home/opposing` 의미 부여는 판제 책임으로 남긴다. 장애물 없는 6개로 파라미터를 정하고
+정적 장애물 6개를 회피·복귀 강건성 검증에 사용한 뒤 provisional handoff를 결정한다.
+
+12-run replay에서 source timestamp가 run 사이에 역행할 때 외부 pipeline의 throttle이
+멈추는 문제를 발견해, 100 ms 이상 역행을 새 replay/simulator epoch로 처리하도록
+model-grid와 BEV를 보정했다. 15 Hz model-grid cap의 최종 v3는 모든 기술 품질 gate를
+통과했고 boundary actual rate `9.56~10.43 Hz`, fused BEV `9.55~10.07 Hz`, vectorization
+p95 `43.26~46.21 ms`였다. 장애물 없는 1,572 frame에서 yellow/3-boundary complete는
+`98.03/82.95%`, 정적 장애물 1,201 frame에서는 `96.25/71.27%`였다. resolved role 중복과
+좌우 순서 오류는 0건이지만 정적 장애물에서 right outer 가용성이 `77.52%`까지 낮아졌다.
+따라서 camera boundary는 음영구간 판제 interface 개발용 provisional 관측으로 먼저
+제공한다. `/perception/lane/boundary_observations`
+(`asmc_msgs/LaneBoundaryObservationArray`)에 N개 metric 경계, 색상, 왼쪽→오른쪽 순서,
+short-term ID와 품질을 담았고 home/opposing/절대 차로 번호는 넣지 않았다. 누락과 partial을
+정상 상태로 처리하고 세 경계를 항상 가정하거나 단독 steering 입력으로 쓰지 않는다.
+정본 수치와 lineage는
+[`drivable_bev` README](../src/perception/drivable_bev/README.md#2026-09-12-음영구간-replay-결과)를
+따른다.
 
 ### 8.1 학습용 Capture와 Streaming GT
 
@@ -467,8 +606,8 @@ adapter에 국한한다. 장기적으로 두 구현이 갈라지는 것을 막�
 | 1 | 센서셋·규정·수집 모드·차량 좌표계 정본 | JSON/문서 검증과 변경 범위 확인 | 완료 |
 | 2 | transport-aware raw/result bag과 source-time GT bridge | UDP smoke, lifecycle와 replay/audit 검증 | **구현 완료** |
 | 3 | actor GT와 UDP↔ROS 5분 gate | Object ID 대응 및 transport 선정 근거 | UI 실증 남음 |
-| 4 | 센서 calibration과 공통 BEV 기준 | GPS lever arm 검증, map-camera overlay로 범위·해상도 확정 | 공동 |
-| 5 | 3-camera BEV와 lane 구조화 | drivable/white/yellow/stopline vector·거리 출력 | 안승현 |
+| 4 | 센서 calibration과 공통 BEV 기준 | camera-only fused pilot 완료; provisional debug ROI를 vector 재평가·GPS lever arm·map overlay 후 확정 | camera 부분 진행 중 |
+| 5 | 3-camera BEV와 lane 구조화 | 음영 ODD typed boundary handoff 공동 검증; 이후 MGeo candidate matching·범위 재평가 후 전 구간 vector/topology 승격 | 음영 provisional 구현 완료 |
 | 6 | MGeo crop과 source policy 평가 | 정상 GPS·Blackout의 map/camera 정합 지표 확보 | 장원태·안승현 |
 | 7 | LiDAR association과 판제 인터페이스 | ego/adjacent/unknown, occupancy와 ownership 합의 | 공동 |
 | 8 | 대회판 이식·추가 데이터·장기 재학습 | competition-only held-out 개선과 full rehearsal 통과 | 10월 후보 |

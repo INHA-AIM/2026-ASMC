@@ -1,0 +1,68 @@
+# Debug-only v6 metric lane-vector pilot. Values remain provisional until the
+# native-GT parameter and range audits have completed.
+model_input_hw: [384, 640]
+source_masks:
+  front: 1
+  left: 2
+  right: 4
+
+frame_id: base_link
+operating_domain: shadow_two_way_v1
+algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+expected_boundary_count: 3
+evidence_x_min_m: -5.0
+evidence_x_max_m: 20.0
+evidence_y_min_m: -8.0
+evidence_y_max_m: 8.0
+max_ground_range_m: 22.0
+min_camera_depth_m: 0.10
+edge_taper_fraction: 0.08
+forward_fade_start_m: 15.0
+max_timestamp_skew_ms: 35.0
+sync_queue_size: 12
+diagnostics_interval_sec: 2.0
+
+confidence_by_class:
+  white: 0.50
+  yellow: 0.50
+
+x_bin_m: 0.25
+lateral_cluster_gap_m: 0.30
+max_track_gap_m: 2.0
+max_lateral_residual_m: 0.45
+max_heading_change_deg: 20.0
+min_track_nodes: 4
+min_observed_span_m: 2.0
+
+spline_smoothing: 0.05
+spline_sample_spacing_m: 0.25
+spline_robust_iterations: 3
+spline_outlier_scale: 2.5
+spline_control_spacing_m: 2.0
+
+# Provisional two-way GPS-shadow ODD. This filters colour-marking splines into
+# one yellow centre boundary and visible white outer boundaries. It deliberately
+# does not assign home/opposing-lane semantics.
+shadow_boundary:
+  enabled: true
+  reference_x_m: 5.0
+  min_confidence: 0.50
+  min_longitudinal_span_m: 3.0
+  min_observed_length_m: 3.0
+  max_bridged_ratio: 0.45
+  max_residual_p95_m: 0.30
+  max_abs_heading_deg: 50.0
+  max_abs_lateral_m: 7.0
+  lane_width_min_m: 2.4
+  lane_width_max_m: 4.6
+  expected_lane_width_m: 3.55
+  max_white_without_yellow: 2
+  temporal_max_lateral_residual_m: 0.65
+  temporal_max_missed_frames: 3
+  temporal_reset_gap_sec: 0.75
+
+# Initial evaluation-only core. It is not a controller contract.
+core_x_min_m: 0.0
+core_x_max_m: 15.0
+core_y_min_m: -6.0
+core_y_max_m: 6.0

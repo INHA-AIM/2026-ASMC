@@ -12,6 +12,8 @@ add_message_files(
   VehicleState.msg
   DetectedObject.msg
   DetectedObjectArray.msg
+  LaneBoundaryObservation.msg
+  LaneBoundaryObservationArray.msg
   BehaviorContext.msg
   TrajectoryPoint.msg
   Trajectory.msg

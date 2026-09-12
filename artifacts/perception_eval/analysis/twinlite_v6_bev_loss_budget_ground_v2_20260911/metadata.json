@@ -1,0 +1,117 @@
+{
+  "bev_config": {
+    "path": "/root/ws/src/perception/drivable_bev/config/bev_grid.yaml",
+    "sha256": "8bad13875a2b7d9eec4a35687433446b1a57112257ec34520cf5c1d6e47e0ad3"
+  },
+  "bev_grid": {
+    "resolution_m": 0.1,
+    "shape_hw": [
+      250,
+      160
+    ],
+    "x_max_m": 20.0,
+    "x_min_m": -5.0,
+    "y_max_m": 8.0,
+    "y_min_m": -8.0
+  },
+  "calibration": {
+    "path": "/root/ws/src/perception/drivable_bev/config/cameras_v2.yaml",
+    "sha256": "185164fb704761bd8ab24e69966ffb796e2f20148c54bda4a875e2486747df12"
+  },
+  "checkpoint": "/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt",
+  "checkpoint_sha256": "a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b",
+  "cloudy_accuracy_data_used": false,
+  "completed_at_utc": "2026-09-10T17:37:06+00:00",
+  "dataset_manifest": "/data/dataset_versions/twinlite_morai_v6_road_marking_actor_negative/val.jsonl",
+  "dataset_manifest_sha256": "4add24d993fabacb4a99f9d36caaee7c7d4ffc7c391e33d4c5d087a4d64092d4",
+  "dataset_version": "twinlite_morai_v6_road_marking_actor_negative",
+  "elapsed_seconds": 355.79958678400726,
+  "evaluation_source": "run-exclusive Sunny/Foggy Capture validation; frame sampling is not the 20Hz runtime sensor rate",
+  "ground_plane": {
+    "dz_dx": 0.0,
+    "dz_dy": 0.0,
+    "frame_id": "base_link",
+    "model": "plane",
+    "source": "lidar_ground_fit_20260911",
+    "z_at_origin_m": -0.35
+  },
+  "groups": 468,
+  "incomplete_groups": 0,
+  "model_input_hw": [
+    384,
+    640
+  ],
+  "modes": [
+    "native_reference",
+    "cache_roundtrip",
+    "model_grid_hard",
+    "prediction_native_hard",
+    "prediction_model_hard",
+    "prediction_model_soft"
+  ],
+  "native_manifests": {
+    "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel": {
+      "path": "/data/datasets/20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel/derived/perception_targets_native_v3_actor_negative/manifest.jsonl",
+      "sha256": "e5be5e5ce1d11f6f75fb952b534d329eb4293384716a370dc5ed09c231b4246d"
+    },
+    "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel": {
+      "path": "/data/datasets/20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel/derived/perception_targets_native_v3_actor_negative/manifest.jsonl",
+      "sha256": "2c02c987aab4ebf797a2c4881e5868b87dac972538077b64322db3c0bc18e8c3"
+    },
+    "20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel": {
+      "path": "/data/datasets/20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel/derived/perception_targets_native_v3_actor_negative/manifest.jsonl",
+      "sha256": "e98eaa404e2118eacf6aff3ba2d3787c321b752ce4271c96ef2a366b2f4501ad"
+    },
+    "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel": {
+      "path": "/data/datasets/20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel/derived/perception_targets_native_v3_actor_negative/manifest.jsonl",
+      "sha256": "92569174886a51a7ea7ec93bc0f960999383c6341f04b0c111a69e595c0eb639"
+    },
+    "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel": {
+      "path": "/data/datasets/20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel/derived/perception_targets_native_v3_actor_negative/manifest.jsonl",
+      "sha256": "1750198e57359c513dfe080a00e998c5a1125cc2edee5507d48262ea3c39756e"
+    },
+    "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel": {
+      "path": "/data/datasets/20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel/derived/perception_targets_native_v3_actor_negative/manifest.jsonl",
+      "sha256": "71b4495e192578cbb9710cba3a4af45addef4bcc7ae7ec010e53ea3a1e6f2f41"
+    }
+  },
+  "native_policy_id": "kcity_actor_negative_marking_all_views_v3",
+  "native_policy_sha256": "21521b2b87962bdfdc8c616221826616f4691431689088a2b33c960bb85f75e7",
+  "native_target_name": "perception_targets_native_v3_actor_negative",
+  "runtime_sensor_rate_hz": {
+    "front": 20.0,
+    "left": 20.0,
+    "right": 20.0
+  },
+  "samples": 1404,
+  "schema_version": "asmc-camera-bev-loss-budget-1.0.0",
+  "sensor_profile": {
+    "front": {
+      "height": 720,
+      "horizontal_fov_deg": 90.0,
+      "width": 1280
+    },
+    "left": {
+      "height": 480,
+      "horizontal_fov_deg": 130.0,
+      "width": 640
+    },
+    "right": {
+      "height": 480,
+      "horizontal_fov_deg": 130.0,
+      "width": 640
+    }
+  },
+  "shared_representation_note": "native_reference is the native-label projection into the fixed metric grid; homography and 0.10m rasterization are a shared representation floor, not claimed as independently observable ground-truth error",
+  "upstream_commit": "90f1b8695ae311d5123b05f8534b2e11e42499d2",
+  "views": [
+    "front",
+    "left",
+    "right"
+  ],
+  "weather": [
+    "foggy",
+    "sunny"
+  ],
+  "weights": "ema_state_dict"
+}

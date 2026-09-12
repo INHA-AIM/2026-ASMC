@@ -128,6 +128,11 @@ class SemanticVisualizerNode:
         view: str,
     ) -> None:
         self.callback_counts[view] += 1
+        publish_panel = self.panel_publishers[view].get_num_connections() > 0
+        publish_mosaic = self.mosaic_publisher.get_num_connections() > 0
+        if not publish_panel and not publish_mosaic:
+            self._maybe_log(time.monotonic())
+            return
         now = time.monotonic()
         if now - self.last_panel_wall[view] < self.minimum_period:
             self._maybe_log(now)
@@ -174,13 +179,17 @@ class SemanticVisualizerNode:
             rospy.logwarn_throttle(2.0, "visualizer rejected synchronized frame: %s", exc)
             return
 
-        encoded = self._compressed_message(panel, rgb_message.header)
-        if encoded is None:
-            return
-        self.panel_publishers[view].publish(encoded)
+        if publish_panel:
+            encoded = self._compressed_message(panel, rgb_message.header)
+            if encoded is None:
+                return
+            self.panel_publishers[view].publish(encoded)
         self.last_panel_wall[view] = now
         self.render_counts[view] += 1
 
+        if not publish_mosaic:
+            self._maybe_log(now)
+            return
         with self._lock:
             self.latest_panels[view] = panel
             self.latest_headers[view] = rgb_message.header

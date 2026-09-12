@@ -14,6 +14,7 @@
 | 카메라 drivable/road-marking 학습 GT | Capture Mode → 파일 동기화 → native mask → model cache → version manifest | 현재 정본 |
 | 일반 ROS 토픽 snapshot | `sync_collector.launch` profile | 보조·레거시 경로 |
 | 팀 공용 재현 bag | allowlist profile + raw/result recorder/replay | `camera_raw`·`full_raw`·paused replay·result smoke 완료 |
+| 음영구간 판제 handoff 결과 | `shadow_boundary_result` | typed boundary·camera/lane diagnostics 최소 기록 |
 | 고주기 개발 GT | GT UDP bridge source-time + privileged bag | schema·Object ID 보존 검증 완료, p95 정합 미달로 학습 pair는 Capture 우선 |
 
 Capture Mode와 gRPC는 26.R1.h3 개발·학습용이다. 본선 배포 추론은 허용 UDP 센서만
@@ -270,8 +271,16 @@ sensor profile이 바뀌지 않는 연속 수집 단위로 잡는다. 하나라�
 `backend:=grpc` 또는 `backend:=ros_topic`을 지정한다. ROS 방식은 publish 이후의
 저장 완료 응답이 없으므로 100-frame SensorData 파일 QA가 특히 중요하다.
 
-MORAI 이미지·GT는 Windows의 `SensorData`에 저장된다. Linux에는 다음 lineage만
-`$ASMC_DATA/capture_runs/<run_id>/` 아래 기록한다.
+MORAI 이미지·GT는 Windows의 `SensorData`에 저장되는데 **루트가 두 개로 갈린다.**
+`is_custom_file_name = true`인 캡처에서 카메라·GPS·IMU는
+`C:\MoraiLauncher_Win\SensorData`로, 3D LiDAR는
+`C:\MoraiLauncher_Win\MoraiLauncher_Win_Data\SaveFile\SensorData\LIDAR_5`로 간다.
+모라이 자체 동작이며 센서셋에 저장 경로 필드가 없어 설정으로 바꿀 수 없다. 아래
+`sync_capture_mode_data.py`의 `--sensor-root` 기본값은 앞의 루트만 가리키므로
+**LiDAR는 동기화 대상이 아니다.** 형식과 실측은
+[`docs/competition/capture-lidar-data-spec.md`](../../../docs/competition/capture-lidar-data-spec.md)에 있다.
+
+Linux에는 다음 lineage만 `$ASMC_DATA/capture_runs/<run_id>/` 아래 기록한다.
 
 - `meta.json`: Hz, gRPC 대상, motion gate 등 run 설정
 - `capture_manifest.jsonl`: custom filename, wall/ROS/MORAI sim time, Ego snapshot,

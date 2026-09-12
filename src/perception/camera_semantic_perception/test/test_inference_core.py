@@ -6,12 +6,17 @@ import unittest
 
 import numpy as np
 
-from camera_semantic_perception.backend import BackendInfo, SemanticBackend
+from camera_semantic_perception.backend import (
+    BackendInfo,
+    CategoricalOutput,
+    SemanticBackend,
+)
 from camera_semantic_perception.backends import create_backend
 from camera_semantic_perception.frame_buffer import EncodedFrame, LatestFrameBuffer
 from camera_semantic_perception.geometry import (
     compute_letterbox_geometry,
     letterbox_bgr,
+    restore_categorical_probabilities,
     restore_class_ids,
     restore_probability,
 )
@@ -75,7 +80,11 @@ class CategoricalDummyBackend(SemanticBackend):
         marking[:, 100:200, 100:200] = 1
         marking[:, 200:300, 200:300] = 2
         marking[:, 300:350, 300:400] = 3
-        return {"drivable": drivable, "road_marking": marking}
+        confidence = np.full(marking.shape, 0.9, dtype=np.float32)
+        return {
+            "drivable": drivable,
+            "road_marking": CategoricalOutput(marking, confidence),
+        }
 
 
 class GeometryTest(unittest.TestCase):
@@ -116,6 +125,17 @@ class GeometryTest(unittest.TestCase):
         self.assertEqual(restored.dtype, np.uint8)
         self.assertEqual(set(np.unique(restored)), {0, 3})
 
+    def test_restore_categorical_probabilities_renormalizes(self):
+        geometry = compute_letterbox_geometry((900, 1600), (384, 640))
+        probabilities = np.zeros((4, 384, 640), dtype=np.float32)
+        probabilities[0] = 0.1
+        probabilities[1] = 0.2
+        probabilities[2] = 0.3
+        probabilities[3] = 0.4
+        restored = restore_categorical_probabilities(probabilities, geometry)
+        self.assertEqual((4, 900, 1600), restored.shape)
+        np.testing.assert_allclose(restored.sum(axis=0), 1.0, atol=1e-6)
+
 
 class InferenceEngineTest(unittest.TestCase):
     def test_backend_registry_rejects_unknown_model(self):
@@ -139,15 +159,41 @@ class InferenceEngineTest(unittest.TestCase):
         )
         self.assertGreaterEqual(prediction.inference_ms, 0.0)
 
-    def test_categorical_output_restores_uint8_class_ids(self):
+    def test_categorical_output_restores_class_and_confidence(self):
         image = np.full((900, 1600, 3), (0, 0, 255), dtype=np.uint8)
         prediction = InferenceEngine(CategoricalDummyBackend()).infer(
             {"front": image}
         )
         marking = prediction.views["front"].probabilities["road_marking"]
+        confidence = prediction.views["front"].categorical_confidences[
+            "road_marking"
+        ]
         self.assertEqual(marking.shape, (900, 1600))
         self.assertEqual(marking.dtype, np.uint8)
         self.assertEqual(set(np.unique(marking)), {0, 1, 2, 3})
+        self.assertEqual(confidence.shape, (900, 1600))
+        self.assertEqual(confidence.dtype, np.float32)
+        np.testing.assert_allclose(confidence, 0.9, atol=1e-6)
+        model_marking = prediction.views["front"].model_grid_probabilities[
+            "road_marking"
+        ]
+        model_confidence = prediction.views[
+            "front"
+        ].model_grid_categorical_confidences["road_marking"]
+        self.assertEqual(model_marking.shape, (384, 640))
+        self.assertEqual(model_marking.dtype, np.uint8)
+        self.assertEqual(model_confidence.shape, (384, 640))
+        self.assertEqual(model_confidence.dtype, np.float32)
+        np.testing.assert_allclose(model_confidence, 0.9, atol=1e-6)
+
+    def test_model_grid_copy_can_be_disabled_for_unsubscribed_runtime(self):
+        image = np.zeros((720, 1280, 3), dtype=np.uint8)
+        prediction = InferenceEngine(CategoricalDummyBackend()).infer(
+            {"front": image}, preserve_model_grid=False
+        )
+        view = prediction.views["front"]
+        self.assertEqual({}, view.model_grid_probabilities)
+        self.assertEqual({}, view.model_grid_categorical_confidences)
 
 
 class LatestFrameBufferTest(unittest.TestCase):

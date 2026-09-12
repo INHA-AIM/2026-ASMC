@@ -1,0 +1,86 @@
+{
+  "schema_version": "asmc-camera-ground-plane-audit-1.0.0",
+  "date_kst": "2026-09-11",
+  "simulator": "26.R1.H3",
+  "sensor_set": "ASMC_sensor_set_v2",
+  "sensor_set_sha256": "0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428",
+  "calibration_snapshot": "src/perception/drivable_bev/config/cameras_v2.yaml",
+  "calibration_snapshot_sha256": "185164fb704761bd8ab24e69966ffb796e2f20148c54bda4a875e2486747df12",
+  "adopted_ground_plane": {
+    "frame_id": "base_link",
+    "model": "plane",
+    "z_at_origin_m": -0.35,
+    "dz_dx": 0.0,
+    "dz_dy": 0.0,
+    "source": "lidar_ground_fit_20260911"
+  },
+  "sites": {
+    "narrow_lane": {
+      "lidar_plane_in_sensor_frame": [0.003185, -0.002531, -1.801647],
+      "ground_z_at_base_link_origin_m": -0.354195,
+      "rgb_inverse_projection_width_m": [2.991, 3.006, 3.005, 3.003],
+      "rgb_inverse_projection_distance_range_m": [6.0, 15.0],
+      "lidar_paint_to_rgb_reprojection_p95_px_range": [0.0, 1.0],
+      "interpretation": "Approximately 3.0 m local lane; retained as a site-specific audit, not a fixed lane-width assumption."
+    },
+    "gps_shadow_lane": {
+      "lidar_frames": 20,
+      "ground_z_at_base_link_origin_m": {
+        "median": -0.331492,
+        "p05": -0.338481,
+        "p95": -0.3276
+      },
+      "lidar_plane_slope_median": [0.000375, -0.006208],
+      "lidar_fit_residual_p95_median_m": 0.01736,
+      "rgb_inverse_projection_width_m": {
+        "measurements": 100,
+        "median": 3.612158,
+        "p05": 3.439477,
+        "p95": 3.624382
+      },
+      "lidar_boundary_medians_y_m": {
+        "right_shaded_white": -1.814734,
+        "left_yellow": 1.705938,
+        "width": 3.520672
+      },
+      "lidar_paint_to_front_rgb_reprojection_px": {
+        "right_shaded_white_p50_p95": [0.0, 0.0],
+        "left_yellow_p50_p95": [0.0, 0.0],
+        "outer_shaded_white_p50_p95": [0.0, 0.42975]
+      },
+      "cross_view_lateral_residual_p95_m": {
+        "front_left_yellow_x_5p5_to_15m": 0.027606,
+        "front_right_shaded_white_x_6_to_15m": 0.026198
+      }
+    }
+  },
+  "runtime_bev_only": {
+    "fused_hz": 9.132,
+    "fusion_p95_ms": 4.356593,
+    "camera_to_fused_p95_ms": 98.229217,
+    "projection_p95_ms": {
+      "front": 3.724605,
+      "left": 3.542072,
+      "right": 2.776163
+    },
+    "projection_errors": 0,
+    "comparison_baseline_projection_plus_publish_p95_ms": {
+      "front": 5.23,
+      "left": 4.96,
+      "right": 4.74
+    }
+  },
+  "acceptance": {
+    "ground_origin_within_minus_0p35_plus_minus_0p02m": true,
+    "lidar_paint_to_rgb_p95_le_2px": true,
+    "shadow_lane_width_within_3p55_plus_minus_0p15m": true,
+    "cross_view_lateral_residual_le_0p15m": true,
+    "fused_output_ge_9hz": true,
+    "projection_latency_regression_le_5percent": true
+  },
+  "method_limitations": [
+    "The static ground-plane value represents the two audited sites; it is not a runtime LiDAR estimator.",
+    "RGB width statistics use color/brightness gates restricted to the audited physical boundary bands and are calibration evidence, not a general lane detector.",
+    "The full development launch with the provisional lane vectorizer is intentionally excluded from the BEV runtime gate because that post-processing remains unoptimized."
+  ]
+}

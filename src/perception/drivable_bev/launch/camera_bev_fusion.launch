@@ -1,0 +1,13 @@
+<launch>
+  <arg name="views" default="front, left, right"/>
+  <arg name="bev_grid_config"
+       default="$(find drivable_bev)/config/bev_grid.yaml"/>
+
+  <node pkg="drivable_bev" type="camera_bev_fusion_node.py"
+        name="camera_bev_fusion" output="screen" required="true">
+    <rosparam command="load" file="$(arg bev_grid_config)"/>
+    <rosparam command="load" file="$(find drivable_bev)/config/cameras_v2.yaml"/>
+    <rosparam command="load" file="$(find drivable_bev)/config/fusion.yaml"/>
+    <rosparam param="views" subst_value="true">[$(arg views)]</rosparam>
+  </node>
+</launch>

@@ -18,11 +18,44 @@ optional_topics:
   - /perception/camera/front/drivable/probability
   - /perception/camera/front/lane/probability
   - /perception/camera/front/road_marking/class_id
+  - /perception/camera/front/road_marking/confidence
+  - /perception/camera/front/road_marking/model_grid/class_id
+  - /perception/camera/front/road_marking/model_grid/confidence
   - /perception/camera/left/drivable/probability
   - /perception/camera/left/lane/probability
   - /perception/camera/left/road_marking/class_id
+  - /perception/camera/left/road_marking/confidence
+  - /perception/camera/left/road_marking/model_grid/class_id
+  - /perception/camera/left/road_marking/model_grid/confidence
   - /perception/camera/right/drivable/probability
   - /perception/camera/right/lane/probability
   - /perception/camera/right/road_marking/class_id
+  - /perception/camera/right/road_marking/confidence
+  - /perception/camera/right/road_marking/model_grid/class_id
+  - /perception/camera/right/road_marking/model_grid/confidence
+  - /perception/bev/debug/front/drivable_probability
+  - /perception/bev/debug/front/road_marking/class_id
+  - /perception/bev/debug/front/road_marking/confidence
+  - /perception/bev/debug/front/coverage
+  - /perception/bev/debug/left/drivable_probability
+  - /perception/bev/debug/left/road_marking/class_id
+  - /perception/bev/debug/left/road_marking/confidence
+  - /perception/bev/debug/left/coverage
+  - /perception/bev/debug/right/drivable_probability
+  - /perception/bev/debug/right/road_marking/class_id
+  - /perception/bev/debug/right/road_marking/confidence
+  - /perception/bev/debug/right/coverage
+  - /perception/bev/camera/drivable_probability
+  - /perception/bev/camera/road_marking/class_id
+  - /perception/bev/camera/road_marking/confidence
+  - /perception/bev/camera/coverage
+  - /perception/bev/camera/source_count
+  - /perception/bev/diagnostics
+  - /perception/lane/debug/evidence_points
+  - /perception/lane/debug/markers
+  - /perception/lane/boundary_observations
+  - /perception/lane/boundaries
+  - /perception/lane/diagnostics
 expected_types:
   /perception/camera/diagnostics: diagnostic_msgs/DiagnosticArray
+  /perception/lane/boundary_observations: asmc_msgs/LaneBoundaryObservationArray

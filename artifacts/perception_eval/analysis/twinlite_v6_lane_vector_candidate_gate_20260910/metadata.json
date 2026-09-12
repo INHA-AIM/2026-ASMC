@@ -1,0 +1,107 @@
+{
+  "schema_version": "asmc-camera-lane-vector-metadata-1.0.0",
+  "created_at": "2026-09-10T14:57:43.169602+00:00",
+  "dataset_version": "twinlite_morai_v6_road_marking_actor_negative",
+  "split": "val",
+  "checkpoint": "/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt",
+  "checkpoint_sha256": "a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b",
+  "weights": "ema_state_dict",
+  "upstream_commit": "90f1b8695ae311d5123b05f8534b2e11e42499d2",
+  "native_target_name": "perception_targets_native_v3_actor_negative",
+  "native_policy_id": "kcity_actor_negative_marking_all_views_v3",
+  "native_policy_sha256": "21521b2b87962bdfdc8c616221826616f4691431689088a2b33c960bb85f75e7",
+  "native_manifests": {
+    "20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel": {
+      "path": "/data/datasets/20260904_165112_kcity_comp_sample_b_seg01_sunny_sim11am_wheel/derived/perception_targets_native_v3_actor_negative/manifest.jsonl",
+      "sha256": "e5be5e5ce1d11f6f75fb952b534d329eb4293384716a370dc5ed09c231b4246d"
+    },
+    "20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel": {
+      "path": "/data/datasets/20260904_165358_kcity_comp_sample_b_seg02_foggy_sim1pm_wheel/derived/perception_targets_native_v3_actor_negative/manifest.jsonl",
+      "sha256": "2c02c987aab4ebf797a2c4881e5868b87dac972538077b64322db3c0bc18e8c3"
+    },
+    "20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel": {
+      "path": "/data/datasets/20260904_165508_kcity_comp_sample_b_seg03_sunny_sim3pm_wheel/derived/perception_targets_native_v3_actor_negative/manifest.jsonl",
+      "sha256": "e98eaa404e2118eacf6aff3ba2d3787c321b752ce4271c96ef2a366b2f4501ad"
+    },
+    "20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel": {
+      "path": "/data/datasets/20260904_165640_kcity_comp_sample_b_seg04_foggy_sim11am_wheel/derived/perception_targets_native_v3_actor_negative/manifest.jsonl",
+      "sha256": "92569174886a51a7ea7ec93bc0f960999383c6341f04b0c111a69e595c0eb639"
+    },
+    "20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel": {
+      "path": "/data/datasets/20260904_165830_kcity_comp_sample_b_seg05_sunny_sim1pm_wheel/derived/perception_targets_native_v3_actor_negative/manifest.jsonl",
+      "sha256": "1750198e57359c513dfe080a00e998c5a1125cc2edee5507d48262ea3c39756e"
+    },
+    "20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel": {
+      "path": "/data/datasets/20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel/derived/perception_targets_native_v3_actor_negative/manifest.jsonl",
+      "sha256": "71b4495e192578cbb9710cba3a4af45addef4bcc7ae7ec010e53ea3a1e6f2f41"
+    }
+  },
+  "calibration": "/root/ws/src/perception/drivable_bev/config/cameras_v2.yaml",
+  "calibration_sha256": "7979c3bcf97397f95f7f07a13b3b9b601fe24d97e486b4137a11acb1491cf96c",
+  "lane_config": "/root/ws/src/perception/drivable_bev/config/lane_fitting.yaml",
+  "lane_config_sha256": "882722bd9a38e559b2a332dbe5025c4b7e96dd73db61d3accc1f2891895ebdf6",
+  "parameters": {
+    "model_input_hw": [
+      384,
+      640
+    ],
+    "source_masks": {
+      "front": 1,
+      "left": 2,
+      "right": 4
+    },
+    "frame_id": "base_link",
+    "evidence_x_min_m": -5.0,
+    "evidence_x_max_m": 20.0,
+    "evidence_y_min_m": -8.0,
+    "evidence_y_max_m": 8.0,
+    "max_ground_range_m": 22.0,
+    "min_camera_depth_m": 0.1,
+    "edge_taper_fraction": 0.08,
+    "forward_fade_start_m": 15.0,
+    "max_timestamp_skew_ms": 35.0,
+    "sync_queue_size": 12,
+    "diagnostics_interval_sec": 2.0,
+    "confidence_by_class": {
+      "white": 0.5,
+      "yellow": 0.5
+    },
+    "x_bin_m": 0.25,
+    "lateral_cluster_gap_m": 0.3,
+    "max_track_gap_m": 2.0,
+    "max_lateral_residual_m": 0.45,
+    "max_heading_change_deg": 20.0,
+    "min_track_nodes": 4,
+    "min_observed_span_m": 2.0,
+    "spline_smoothing": 0.05,
+    "spline_sample_spacing_m": 0.25,
+    "spline_robust_iterations": 3,
+    "spline_outlier_scale": 2.5,
+    "spline_control_spacing_m": 2.0,
+    "core_x_min_m": 0.0,
+    "core_x_max_m": 15.0,
+    "core_y_min_m": -6.0,
+    "core_y_max_m": 6.0
+  },
+  "audit_grid": [
+    -5.0,
+    30.0,
+    -12.0,
+    12.0,
+    0.1
+  ],
+  "manual_review_complete": false,
+  "evaluation_contract": {
+    "ground_truth": "native visible-only road-marking masks projected to continuous base_link points",
+    "direct": "clustered model-grid evidence nodes",
+    "fitted": "only spline samples supported by observed evidence",
+    "bridged_gaps": "excluded from quantitative point metrics and retained for manual false-bridge review",
+    "manual_review_sampling": "evenly spaced across all evaluated 3-view groups",
+    "lane_boundary_limit": "color-only Semantic GT does not distinguish a lane boundary from same-color parking or safety-zone markings; those false positives require manual/map-assisted review"
+  },
+  "notes": [
+    "Native GT and predictions are evaluated as continuous ground points, not lane raster pixels.",
+    "False-bridge acceptance remains pending until manual_review.csv is completed.",
+    "White/yellow parking and safety-zone markings are not lane-boundary GT; review their false-positive status separately."
+  ]
+}
