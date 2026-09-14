@@ -1,0 +1,150 @@
+schema_version: asmc-shared-family-standalone-profile-baseline-1.0.0
+generated_at: '2026-09-14T23:09:10+09:00'
+status: standalone_profile_complete
+scope: shadow_two_way_v1
+deployment_allowed: false
+
+lineage:
+  git_commit: b6fff3d3c4d14c7946dbeac94d3146f125ca00a7
+  git_branch: feature/planning-shadow-lane-adapter
+  git_dirty: true
+  checkpoint:
+    path: artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+    sha256: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+  selection:
+    path: artifacts/perception_eval/analysis/shadow_maneuver_20260913/selection.yaml
+    sha256: 33cef1ad965afb16394cde995a09ce28e50bef0bff8a6909759dc0d27316567b
+  lane_fitting_config_sha256: 38dc92722dc297b07380a9178e2b3a74d28f3090c26a0e9e28b895ddd81400e6
+  camera_config_sha256: 185164fb704761bd8ab24e69966ffb796e2f20148c54bda4a875e2486747df12
+  bev_grid_config_sha256: 8bad13875a2b7d9eec4a35687433446b1a57112257ec34520cf5c1d6e47e0ad3
+  batch_summary:
+    path: artifacts/perception_eval/analysis/twinlite_v6_shared_runtime_standalone_profile_20260914/batch_summary.yaml
+    sha256: 9fded786820206de13d5ab53323963b4a7deb16e9dd9f83b37aed7f7c613cca2
+  runtime_audit:
+    path: artifacts/perception_eval/analysis/twinlite_v6_shared_runtime_standalone_profile_20260914/runtime_audit.yaml
+    sha256: 63511ea694aae5dc7ff7c274b85b4db1d7f38e3435d9a0a3e8b387d1addba1b0
+
+execution_environment:
+  ros_master: http://127.0.0.1:11312
+  ros_graph_isolated: true
+  compute_isolated: true
+  co_resident_perception_load: false
+  result_profile: shadow_runtime_profile_result
+  visualization_subscribers: 0
+  marker_subscribers: 0
+  notes:
+    - The pre-existing 11311 shadow-map review node was stopped for the run.
+    - The result bag excludes image and Marker topics and records structured runtime outputs only.
+    - The inference and lane pipeline stayed alive across runs; per-run topic rates are the throughput reference.
+
+quality:
+  runs: 4
+  frames: 1264
+  family_accepted_rate: 1.0
+  longest_family_rejected_streak_frames: 0
+  runtime_errors: 0
+  observed_role_presence_rate:
+    left_outer_boundary: 1.0
+    yellow_centre_boundary: 1.0
+    right_outer_boundary: 1.0
+  sample_state_ratios:
+    observed: 0.669533
+    structure_inferred: 0.102429
+    invalid: 0.228038
+    usable: 0.771962
+    structure_inferred_of_usable: 0.132687
+  geometry:
+    left_width_m_p50: 3.522344
+    right_width_m_p50: 3.535883
+    valid_span_m_p50: 20.038112
+    valid_span_m_p95: 21.749460
+    data_residual_p95_distribution_p50_m: 0.200520
+    data_residual_p95_distribution_p95_m: 0.485517
+    inlier_residual_p95_distribution_p95_m: 0.293360
+    outlier_rate_p95: 0.145631
+  interpretation: >-
+    Geometry and support-state distributions are stable relative to the
+    co-resident baseline. The replay emitted more frames because the pipeline
+    ran faster, so this is a distribution-level non-regression check rather
+    than a bitwise frame-for-frame comparison.
+
+throughput:
+  boundary_output_hz_by_run: [10.298, 10.182, 9.760, 10.077]
+  shared_diagnostics_hz_by_run: [10.298, 10.184, 9.762, 10.077]
+  minimum_shared_output_hz: 9.762
+  rolling_profiled_body_p95_ms_at_run_end: [77.510, 76.273, 76.915, 79.451]
+  profiled_body_ms:
+    mean: 65.141947
+    p50: 64.637599
+    p95: 78.525843
+    p99: 88.398293
+    max: 111.027772
+  shared_family_fit_ms:
+    mean: 28.716964
+    p50: 28.564109
+    p95: 35.369546
+    p99: 39.525196
+    max: 48.786735
+  three_view_sync_rejected_counter_delta_by_run: [0, 15, 18, 18]
+  note: >-
+    The lane diagnostic processing_fps is a rolling wall-clock metric from a
+    pipeline kept alive across runs and can include inter-run idle time. Use
+    result-topic rates above for per-run replay throughput.
+
+stage_profile_ms:
+  association: {mean: 7.522714, p50: 7.211916, p95: 10.547595, p99: 12.888780}
+  boundary_output_build: {mean: 0.441753, p50: 0.385361, p95: 0.725571, p99: 1.197820}
+  boundary_selection: {mean: 2.158533, p50: 2.040642, p95: 3.716987, p99: 5.256851}
+  evidence_concat: {mean: 0.035013, p50: 0.032676, p95: 0.048669, p99: 0.080646}
+  independent_spline_fit: {mean: 6.754461, p50: 6.410728, p95: 9.534139, p99: 11.727090}
+  input_decode_copy: {mean: 0.064955, p50: 0.062587, p95: 0.087838, p99: 0.111519}
+  node_reduction: {mean: 1.273055, p50: 1.293311, p95: 1.905734, p99: 2.211879}
+  projection_audit: {mean: 2.156758, p50: 2.025129, p95: 2.742976, p99: 3.481040}
+  projection_extract: {mean: 2.512140, p50: 2.450737, p95: 2.967992, p99: 3.382130}
+  shadow_prefit: {mean: 5.523219, p50: 5.134520, p95: 8.543773, p99: 11.720130}
+  shared_diagnostics_publish: {mean: 0.227675, p50: 0.205710, p95: 0.359586, p99: 0.458755}
+  shared_family_fit: {mean: 28.716964, p50: 28.564109, p95: 35.369546, p99: 39.525196}
+  temporal_tracking: {mean: 5.801525, p50: 5.437631, p95: 8.607776, p99: 11.719449}
+  typed_boundary_message_publish: {mean: 1.924350, p50: 1.692766, p95: 2.995206, p99: 5.733982}
+
+comparison_to_co_resident_baseline:
+  baseline_path: artifacts/perception_eval/analysis/twinlite_v6_shared_runtime_baseline_20260914/baseline.yaml
+  shared_fit_p50_reduction_percent: 28.01
+  shared_fit_p95_reduction_percent: 30.65
+  minimum_output_rate_increase_percent: 10.22
+  rolling_profiled_body_p95_reduction_at_run_end_percent: [39.24, 34.13, 33.87, 31.72]
+  state_ratio_delta:
+    observed: -0.000289
+    structure_inferred: 0.000477
+    invalid: -0.000188
+  interpretation: >-
+    The improvement comes from removing the co-resident perception and GUI
+    workload, not from changing the fitting algorithm. The standalone result
+    clears the 9 Hz development gate without changing geometry or thresholds.
+
+optimization_candidates:
+  - priority: 1
+    target: projection_audit_and_projection_extract
+    current_p50_ms: 4.475866
+    rationale: Combine duplicated projection traversals with a deterministic-output regression test.
+  - priority: 2
+    target: shared_family_fit_internal_profile
+    current_p50_ms: 28.564109
+    rationale: Profile basis construction, robust iterations, residual lookup, and linear solves before changing them.
+  - priority: 3
+    target: dual_independent_and_shared_paths
+    current_independent_fit_p50_ms: 6.410728
+    rationale: Remove duplicate work only after a typed shared-family public contract and planning quality gate exist.
+  - priority: 4
+    target: association_prefit_and_tracking
+    rationale: Optimize only after preserving IDs, support states, and false-bridge behavior in the four-bag replay.
+
+decision:
+  standalone_development_latency_gate: passed
+  geometry_and_state_non_regression: passed
+  production_contract_promotion: deferred
+  reason: >-
+    The shared-family stream is still a debug sidecar with
+    deployment_allowed=false. The next change is low-risk implementation
+    optimization followed by the same four-bag regression and a planning
+    closed-loop review; no ego-motion or IMU compensation is added now.

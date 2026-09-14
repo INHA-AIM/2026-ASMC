@@ -35,5 +35,6 @@
     <arg name="start_visualizer" value="true"/>
     <arg name="bev_grid_config" value="$(arg bev_grid_config)"/>
     <arg name="visualization_config" value="$(arg visualization_config)"/>
+    <arg name="enable_shared_family_debug" value="true"/>
   </include>
 </launch>

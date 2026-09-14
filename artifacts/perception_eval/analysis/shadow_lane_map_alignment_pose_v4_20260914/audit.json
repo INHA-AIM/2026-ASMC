@@ -1,0 +1,108 @@
+{
+  "audit_sha256": "e702a9a15ab26f3986189f6ca617096d9780e306c85980e0a1be2ab09fe008da",
+  "automatic_checks": {
+    "all_three_curves_visible_in_at_least_90pct_camera_frames": true,
+    "camera_sample_count_at_least_30": true,
+    "control_high_intensity_rate_below_5pct": true,
+    "lidar_sample_count_at_least_30": true,
+    "paint_high_intensity_uplift_at_least_5pct": true
+  },
+  "automatic_pass": true,
+  "calibration": {
+    "ground_plane": {
+      "dz_dx": 0.0,
+      "dz_dy": 0.0,
+      "frame_id": "base_link",
+      "model": "plane",
+      "source": "lidar_ground_fit_20260911",
+      "z_at_origin_m": -0.35
+    },
+    "path": "/root/ws/src/perception/drivable_bev/config/cameras_v2.yaml",
+    "sha256": "185164fb704761bd8ab24e69966ffb796e2f20148c54bda4a875e2486747df12"
+  },
+  "camera_projection": {
+    "all_three_curves_visible_rate": 1.0,
+    "frames_all_three_curves_visible": 48,
+    "visible_points_median_by_curve": {
+      "white_negative_normal": 108.5,
+      "white_positive_normal": 113.5,
+      "yellow_center": 113.5
+    }
+  },
+  "deployment_allowed": false,
+  "lidar_paint_alignment": {
+    "absolute_uplift": 0.378544806352293,
+    "control_distance_m": [
+      0.6,
+      1.2
+    ],
+    "control_high_intensity_rate": 0.0,
+    "forward_x_m": [
+      0.0,
+      20.0
+    ],
+    "ground_z_base_link_m": [
+      -0.55,
+      -0.15
+    ],
+    "high_intensity_threshold": 40.0,
+    "lateral_abs_y_m": 7.0,
+    "lidar_translation_m": [
+      0.8,
+      0.0,
+      1.45
+    ],
+    "near_distance_m": 0.2,
+    "near_high_intensity_rate": 0.378544806352293,
+    "totals": {
+      "control_high_points": 0,
+      "control_points": 20838,
+      "near_high_points": 2336,
+      "near_points": 6171
+    }
+  },
+  "limitations": [
+    "MGeo link width creates pseudo boundaries; this is not surveyed paint GT.",
+    "Static ground plane and Ego heading are used; dive/squat compensation is not applied.",
+    "LiDAR paint contrast validates alignment statistically, not every boundary point."
+  ],
+  "pseudo_gt": {
+    "ego_heading_offset_deg": -1.25,
+    "path": "/root/ws/artifacts/perception_eval/analysis/shadow_lane_map_pseudo_gt_pose_v4_20260914/shadow_lane_pseudo_gt.json",
+    "sha256": "b263e82d8483d7dc823085070b74a0f4f9b79b4aef9d8588b4665fa40474cba3"
+  },
+  "raw_run": {
+    "bag_files": [
+      "/data/rosbags/raw/20260912_001454_kcity2025_shadow_clear_sunny_1pm_wheel/bags/20260912_001454_kcity2025_shadow_clear_sunny_1pm_wheel_0.bag"
+    ],
+    "path": "/data/rosbags/raw/20260912_001454_kcity2025_shadow_clear_sunny_1pm_wheel",
+    "run_id": "20260912_001454_kcity2025_shadow_clear_sunny_1pm_wheel"
+  },
+  "review_status": "pending_human_overlay_review",
+  "sampling": {
+    "camera_candidates": 235,
+    "camera_ego_age_p95_ms": 24.5347859,
+    "camera_samples": 48,
+    "lidar_candidates": 100,
+    "lidar_ego_age_p95_ms": 29.8241372,
+    "lidar_samples": 48,
+    "method": "deterministic_reservoir_inside_shadow_polygon",
+    "requested_per_sensor": 48
+  },
+  "schema_version": "asmc-shadow-map-alignment-audit-1.0.0",
+  "status": "development_alignment_audit",
+  "topics": {
+    "/Ego_topic": "morai_msgs/EgoVehicleStatus",
+    "/cam_extra/image_jpeg/compressed": "sensor_msgs/CompressedImage",
+    "/cam_left/image_jpeg/compressed": "sensor_msgs/CompressedImage",
+    "/cam_right/image_jpeg/compressed": "sensor_msgs/CompressedImage",
+    "/gps": "morai_msgs/GPSMessage",
+    "/gps/fix": "sensor_msgs/NavSatFix",
+    "/image_jpeg/compressed": "sensor_msgs/CompressedImage",
+    "/imu": "sensor_msgs/Imu",
+    "/morai_sensor_bridge/diagnostics": "diagnostic_msgs/DiagnosticArray",
+    "/morai_udp_bridge/diagnostics": "diagnostic_msgs/DiagnosticArray",
+    "/tf_static": "tf2_msgs/TFMessage",
+    "/velodyne_points": "sensor_msgs/PointCloud2"
+  }
+}

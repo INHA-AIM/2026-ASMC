@@ -158,6 +158,18 @@ def fit_lane_track(
         dense_parameter, knots, degree, control_count
     ) @ control_points
     samples = _resample_curve(dense, sample_spacing_m)
+    # A smoothing B-spline is not required to interpolate its first and last
+    # evidence nodes.  Advertise only the longitudinal interval covered by
+    # both the evidence and the fitted curve; otherwise a downstream consumer
+    # can receive a valid_x interval for which no public polyline exists.
+    evidence_x_min = float(np.min(points[:, 0]))
+    evidence_x_max = float(np.max(points[:, 0]))
+    sample_x_min = float(np.min(samples[:, 0]))
+    sample_x_max = float(np.max(samples[:, 0]))
+    valid_x_min = max(evidence_x_min, sample_x_min)
+    valid_x_max = min(evidence_x_max, sample_x_max)
+    if valid_x_max < valid_x_min:
+        raise ValueError("fitted lane has no longitudinal overlap with its evidence")
     dx = np.diff(points[:, 0])
     positive_dx = dx[dx > 1e-6]
     normal_step = float(np.median(positive_dx)) if len(positive_dx) else 0.0
@@ -197,8 +209,8 @@ def fit_lane_track(
         sample_observed=np.ascontiguousarray(sample_observed),
         confidence=confidence,
         source_mask=source_mask,
-        valid_x_min_m=float(np.min(points[:, 0])),
-        valid_x_max_m=float(np.max(points[:, 0])),
+        valid_x_min_m=valid_x_min,
+        valid_x_max_m=valid_x_max,
         observed_length_m=observed_length,
         bridged_length_ratio=float(bridged_ratio),
         residual_p50_m=float(np.percentile(residual, 50)),
@@ -206,7 +218,7 @@ def fit_lane_track(
     )
 
 
-def fit_lane_tracks(tracks, **kwargs) -> list:
+def fit_lane_tracks_with_audit(tracks, **kwargs) -> tuple[list, dict]:
     ordered = sorted(
         tracks,
         key=lambda track: (
@@ -216,9 +228,24 @@ def fit_lane_tracks(tracks, **kwargs) -> list:
         ),
     )
     result = []
+    rejected = {
+        "value_error": 0,
+        "linear_algebra_error": 0,
+    }
     for lane_id, track in enumerate(ordered, 1):
         try:
             result.append(fit_lane_track(track, lane_id=lane_id, **kwargs))
-        except (ValueError, np.linalg.LinAlgError):
-            continue
+        except ValueError:
+            rejected["value_error"] += 1
+        except np.linalg.LinAlgError:
+            rejected["linear_algebra_error"] += 1
+    return result, {
+        "input_tracks": int(len(ordered)),
+        "accepted_lanes": int(len(result)),
+        "rejected": rejected,
+    }
+
+
+def fit_lane_tracks(tracks, **kwargs) -> list:
+    result, _ = fit_lane_tracks_with_audit(tracks, **kwargs)
     return result

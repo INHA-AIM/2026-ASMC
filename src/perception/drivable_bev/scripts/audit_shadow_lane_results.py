@@ -24,14 +24,28 @@ from drivable_bev.shadow_result_audit import (
     summarize_boundary_run_groups,
     typed_boundary_frame,
 )
+from drivable_bev.shared_runtime_audit import (
+    summarize_shared_runtime_frames,
+    summarize_shared_runtime_run_groups,
+)
+from drivable_bev.pipeline_audit import (
+    summarize_pipeline_frames,
+    summarize_pipeline_run_groups,
+)
 
 
 TYPED_BOUNDARY_TOPIC = "/perception/lane/boundary_observations"
 LEGACY_BOUNDARY_TOPIC = "/perception/lane/boundaries"
+PIPELINE_AUDIT_TOPIC = "/perception/lane/pipeline_audit"
+SHARED_FAMILY_DIAGNOSTICS_TOPIC = (
+    "/perception/lane/debug/shared_family/diagnostics"
+)
 RATE_TOPICS = {
     "model_grid": "/perception/camera/front/road_marking/model_grid/class_id",
     "fused_bev": "/perception/bev/camera/road_marking/class_id",
     "boundaries": TYPED_BOUNDARY_TOPIC,
+    "pipeline_audit": PIPELINE_AUDIT_TOPIC,
+    "shared_family": SHARED_FAMILY_DIAGNOSTICS_TOPIC,
 }
 
 
@@ -93,6 +107,128 @@ def decode_boundary_frames(bag_paths):
                 if decoded is not None:
                     frames.append(decoded)
     return frames
+
+
+def decode_pipeline_frames(bag_paths):
+    """Decode the frame-local audit payload recorded with each lane output."""
+    import rosbag
+
+    frames = []
+    topic_available = False
+    malformed_messages = 0
+    for bag_path in bag_paths:
+        with rosbag.Bag(str(bag_path), "r") as bag:
+            available = set(bag.get_type_and_topic_info().topics)
+            if PIPELINE_AUDIT_TOPIC not in available:
+                continue
+            topic_available = True
+            for _, message, _ in bag.read_messages(topics=[PIPELINE_AUDIT_TOPIC]):
+                status = next(
+                    (
+                        item
+                        for item in message.status
+                        if item.name == "drivable_bev/lane_pipeline_audit"
+                    ),
+                    None,
+                )
+                if status is None:
+                    malformed_messages += 1
+                    continue
+                values = {item.key: item.value for item in status.values}
+                try:
+                    frame = json.loads(values["frame"])
+                except (KeyError, TypeError, ValueError):
+                    malformed_messages += 1
+                    continue
+                if not isinstance(frame, dict):
+                    malformed_messages += 1
+                    continue
+                frames.append(frame)
+    summary = summarize_pipeline_frames(frames)
+    summary["topic_available"] = topic_available
+    summary["malformed_messages"] = malformed_messages
+    return frames, summary
+
+
+def _json_value(values, key, fallback):
+    try:
+        return json.loads(values.get(key, ""))
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _float_value(values, key):
+    try:
+        return float(values[key])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def decode_shared_family_frames(bag_paths):
+    """Decode the debug-only state contract from structured diagnostics."""
+    import rosbag
+
+    frames = []
+    topic_available = False
+    malformed_messages = 0
+    for bag_path in bag_paths:
+        with rosbag.Bag(str(bag_path), "r") as bag:
+            available = set(bag.get_type_and_topic_info().topics)
+            if SHARED_FAMILY_DIAGNOSTICS_TOPIC not in available:
+                continue
+            topic_available = True
+            for _, message, _ in bag.read_messages(
+                topics=[SHARED_FAMILY_DIAGNOSTICS_TOPIC]
+            ):
+                status = next(
+                    (
+                        item
+                        for item in message.status
+                        if item.name == "drivable_bev/shared_lane_family_debug"
+                    ),
+                    None,
+                )
+                if status is None:
+                    malformed_messages += 1
+                    continue
+                values = {item.key: item.value for item in status.values}
+                accepted = str(values.get("accepted", "false")).lower() == "true"
+                deployment_allowed = (
+                    str(values.get("deployment_allowed", "false")).lower()
+                    == "true"
+                )
+                boundary_support = _json_value(values, "boundary_support", {})
+                widths = _json_value(values, "widths_m", {})
+                valid_x = _json_value(values, "valid_x_m", [])
+                observed_roles = _json_value(values, "observed_roles", [])
+                inferred_roles = _json_value(values, "inferred_roles", [])
+                if not isinstance(boundary_support, dict) or not isinstance(widths, dict):
+                    malformed_messages += 1
+                    continue
+                frames.append(
+                    {
+                        "accepted": accepted,
+                        "reason": str(values.get("reason", status.message)),
+                        "deployment_allowed": deployment_allowed,
+                        "fit_ms": _float_value(values, "fit_ms"),
+                        "observed_roles": observed_roles,
+                        "inferred_roles": inferred_roles,
+                        "widths_m": widths,
+                        "data_residual_p95_m": _float_value(
+                            values, "data_residual_p95_m"
+                        ),
+                        "inlier_residual_p95_m": _float_value(
+                            values, "inlier_residual_p95_m"
+                        ),
+                        "outlier_rate": _float_value(values, "outlier_rate"),
+                        "valid_x_m": valid_x,
+                        "boundary_support": boundary_support,
+                    }
+                )
+    summary = summarize_shared_runtime_frames(frames)
+    summary["topic_available"] = topic_available
+    summary["malformed_messages"] = malformed_messages
+    return frames, summary
 
 
 def result_bag_paths(result_root: Path, metadata: dict):
@@ -166,6 +302,9 @@ def main():
         "runs": [],
     }
     grouped_frames = defaultdict(list)
+    grouped_shared_frames = defaultdict(list)
+    all_pipeline_frame_groups = []
+    all_shared_frame_groups = []
     technical_passed = True
     for item in runs:
         result_root = rosbag_root / "results" / item.run_id / args.model_id
@@ -176,10 +315,17 @@ def main():
             metadata = yaml.safe_load(stream) or {}
         gates = result_quality_gates(metadata)
         technical_passed = technical_passed and all(gates.values())
-        frames = decode_boundary_frames(result_bag_paths(result_root, metadata))
+        bag_paths = result_bag_paths(result_root, metadata)
+        frames = decode_boundary_frames(bag_paths)
         summary = summarize_boundary_frames(frames)
+        pipeline_frames, pipeline_summary = decode_pipeline_frames(bag_paths)
+        shared_frames, shared_summary = decode_shared_family_frames(bag_paths)
         grouped_frames[item.scenario].append(frames)
         grouped_frames[(item.scenario, item.weather)].append(frames)
+        grouped_shared_frames[item.scenario].append(shared_frames)
+        grouped_shared_frames[(item.scenario, item.weather)].append(shared_frames)
+        all_shared_frame_groups.append(shared_frames)
+        all_pipeline_frame_groups.append(pipeline_frames)
         document["runs"].append(
             {
                 "run_id": item.run_id,
@@ -194,6 +340,8 @@ def main():
                 ),
                 "runtime_rates": runtime_rates(metadata),
                 "boundary_summary": summary,
+                "pipeline_summary": pipeline_summary,
+                "shared_family_summary": shared_summary,
             }
         )
 
@@ -217,6 +365,29 @@ def main():
         scenario: rate_distribution(document["runs"], scenario)
         for scenario in scenarios
     }
+    document["shared_runtime_scenario_summary"] = {
+        scenario: summarize_shared_runtime_run_groups(
+            grouped_shared_frames[scenario]
+        )
+        for scenario in scenarios
+    }
+    document["shared_runtime_summary"] = summarize_shared_runtime_run_groups(
+        all_shared_frame_groups
+    )
+    document["pipeline_runtime_summary"] = summarize_pipeline_run_groups(
+        all_pipeline_frame_groups
+    )
+    document["shared_runtime_weather_summary"] = {
+        scenario: {
+            weather: summarize_shared_runtime_run_groups(
+                grouped_shared_frames[(scenario, weather)]
+            )
+            for weather in sorted(
+                {item.weather for item in runs if item.scenario == scenario}
+            )
+        }
+        for scenario in scenarios
+    }
     if {"shadow_clear", "shadow_static_avoid_v1"}.issubset(scenario_summary):
         document["static_minus_clear"] = robustness_delta(
             scenario_summary["shadow_clear"],
@@ -225,7 +396,9 @@ def main():
     document["technical_quality_passed"] = technical_passed
     document["interpretation"] = (
         "Availability and temporal-consistency audit only. It is not lane-geometry "
-        "ground truth accuracy and does not assign home/opposing semantics."
+        "ground truth accuracy and does not assign home/opposing semantics. "
+        "Observed samples are primary, structure-inferred samples are degraded, "
+        "and invalid samples are forbidden for consumers."
     )
     write_yaml_atomic(output, document)
     print("shadow boundary audit: {}".format(output))

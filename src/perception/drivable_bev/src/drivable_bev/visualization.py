@@ -17,6 +17,11 @@ ROAD_MARKING_COLORS_BGR = {
     3: (0, 0, 255),
 }
 
+SHARED_FAMILY_STATE_COLORS_BGR = {
+    "structure_inferred": (0, 165, 255),
+    "invalid": (45, 45, 210),
+}
+
 
 def bev_crop_slices(source: BevGridSpec, display: BevGridSpec):
     """Return exact array slices for an aligned display grid inside source."""
@@ -221,6 +226,71 @@ def draw_metric_lanes(canvas, lanes, grid, thickness=2, colors=None):
                         cv2.LINE_AA,
                     )
                 start = None
+
+
+def draw_stateful_lane_family(canvas, segments, grid, status_text=""):
+    """Draw shared-family segments with observation validity as the primary cue.
+
+    ``segments`` contains ``(role, state, class_id, points_xy)`` tuples.  The
+    caller must split segments at state transitions so this renderer cannot
+    accidentally connect an invalid interval to an observed one.
+    """
+    if canvas.shape[:2] != grid.shape:
+        raise ValueError("canvas shape does not match BEV grid")
+    valid_states = {"observed", "structure_inferred", "invalid"}
+    for role, state, class_id, points in segments:
+        del role  # Role is retained in the transport tuple and marker namespace.
+        if state not in valid_states:
+            raise ValueError("unknown shared-family visualization state")
+        class_id = int(class_id)
+        if class_id not in (1, 2):
+            raise ValueError("shared-family class must be white or yellow")
+        values = np.asarray(points, dtype=np.float64).reshape(-1, 2)
+        if len(values) < 2:
+            continue
+        pixels = np.rint(grid.metric_to_pixel(values)).astype(np.int32)
+        valid = (
+            (pixels[:, 0] >= 0)
+            & (pixels[:, 0] < canvas.shape[1])
+            & (pixels[:, 1] >= 0)
+            & (pixels[:, 1] < canvas.shape[0])
+        )
+        color = (
+            ROAD_MARKING_COLORS_BGR[class_id]
+            if state == "observed"
+            else SHARED_FAMILY_STATE_COLORS_BGR[state]
+        )
+        thickness = (
+            3
+            if state == "observed"
+            else 2
+            if state == "structure_inferred"
+            else 1
+        )
+        period = (
+            1
+            if state == "observed"
+            else 2
+            if state == "structure_inferred"
+            else 3
+        )
+        for index in range(len(pixels) - 1):
+            if index % period or not (valid[index] and valid[index + 1]):
+                continue
+            cv2.line(
+                canvas,
+                tuple(pixels[index]),
+                tuple(pixels[index + 1]),
+                color,
+                thickness,
+                cv2.LINE_AA,
+            )
+
+    legend = "SHARED  observed=lane color  inferred=orange dash  invalid=red dot"
+    _label_at(canvas, legend, max(14, canvas.shape[0] - 25))
+    if status_text:
+        _label_at(canvas, str(status_text), max(14, canvas.shape[0] - 8))
+    return canvas
 
 
 def draw_lane_reprojection(image_bgr, lanes, camera, thickness=2):
@@ -444,3 +514,14 @@ def _label(tile: np.ndarray, text: str) -> None:
     cv2.putText(
         tile, text, (8, baseline_y), font, scale, (255, 255, 255), 1, cv2.LINE_AA
     )
+
+
+def _label_at(tile: np.ndarray, text: str, baseline_y: int) -> None:
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    base_scale = 0.38
+    available_width = max(1, int(tile.shape[1]) - 16)
+    text_width = cv2.getTextSize(text, font, base_scale, 1)[0][0]
+    scale = min(base_scale, base_scale * available_width / max(1, text_width))
+    y = int(np.clip(baseline_y, 10, max(10, tile.shape[0] - 2)))
+    cv2.putText(tile, text, (8, y), font, scale, (0, 0, 0), 3, cv2.LINE_AA)
+    cv2.putText(tile, text, (8, y), font, scale, (255, 255, 255), 1, cv2.LINE_AA)

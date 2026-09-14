@@ -62,9 +62,18 @@ RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc && \
     echo "export LANG=en_US.UTF-8" >> /root/.bashrc && \
     echo "export LC_ALL=en_US.UTF-8" >> /root/.bashrc
 
+# Qt expects XDG_RUNTIME_DIR to exist, be owned by the current user and have
+# mode 0700. Do not inherit the host WSL path: it is commonly absent inside
+# the container. The helper also isolates per-run Qt geometry so a saved
+# dual-monitor position cannot make rqt/RViz open off-screen.
+COPY asmc-ros-gui /usr/local/bin/asmc-ros-gui
+RUN chmod 0755 /usr/local/bin/asmc-ros-gui && \
+    install -d -m 0700 /tmp/asmc-xdg-runtime
+
 WORKDIR /root/ws
 
 ENV QT_X11_NO_MITSHM=1
+ENV XDG_RUNTIME_DIR=/tmp/asmc-xdg-runtime
 ENV XCURSOR_PATH=/usr/share/icons
 ENV XCURSOR_THEME=DMZ-White
 

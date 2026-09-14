@@ -1,0 +1,41 @@
+{
+  "schema_version": "asmc-shadow-heading-calibration-1.0.0",
+  "status": "calibration_candidate",
+  "deployment_allowed": false,
+  "method": "lidar_paint_joint_heading_boundary_grid_search",
+  "parameters": {
+    "candidate_range_deg": [-2.0, 2.0],
+    "candidate_step_deg": 0.05,
+    "near_distance_m": 0.2,
+    "forward_range_m": [5.0, 25.0],
+    "intensity_threshold": 40.0,
+    "frame_stride": 5,
+    "source_run_pattern": "20260912_*shadow*"
+  },
+  "combined": {
+    "points": 8857,
+    "best_heading_offset_deg": -1.25,
+    "near_fraction_at_zero": 0.8574009258213842,
+    "near_fraction_at_best": 0.9418539008693688,
+    "recommended_geometry": {
+      "center_lateral_offset_m": 0.004928303994707306,
+      "positive_lane_width_m": 3.4840965105620922,
+      "negative_lane_width_m": 3.521494560407668
+    }
+  },
+  "runs": [
+    {"run_id": "20260912_001404_kcity2025_shadow_clear_foggy_1pm_wheel", "best_heading_offset_deg": -1.55, "points": 919},
+    {"run_id": "20260912_001454_kcity2025_shadow_clear_sunny_1pm_wheel", "best_heading_offset_deg": -1.40, "points": 1038},
+    {"run_id": "20260912_002714_kcity2025_shadow_clear_sunny_3pm_morai_auto", "best_heading_offset_deg": -1.15, "points": 925},
+    {"run_id": "20260912_003059_kcity2025_shadow_clear_sunny_11am_morai_auto", "best_heading_offset_deg": -1.60, "points": 624},
+    {"run_id": "20260912_003200_kcity2025_shadow_clear_foggy_11am_morai_auto", "best_heading_offset_deg": -1.25, "points": 732},
+    {"run_id": "20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel", "best_heading_offset_deg": -1.35, "points": 855},
+    {"run_id": "20260912_003847_kcity2025_shadow_static_avoid_v1_sunny_1pm_wheel", "best_heading_offset_deg": -1.35, "points": 609},
+    {"run_id": "20260912_003922_kcity2025_shadow_static_avoid_v1_sunny_3pm_wheel", "best_heading_offset_deg": -1.60, "points": 721},
+    {"run_id": "20260912_004015_kcity2025_shadow_static_avoid_v1_foggy_11am_wheel", "best_heading_offset_deg": -1.05, "points": 539},
+    {"run_id": "20260912_004053_kcity2025_shadow_static_avoid_v1_foggy_1pm_wheel", "best_heading_offset_deg": -1.80, "points": 583},
+    {"run_id": "20260912_004128_kcity2025_shadow_static_avoid_v1_foggy_3pm_wheel", "best_heading_offset_deg": -1.25, "points": 570},
+    {"run_id": "20260912_005122_kcity2025_shadow_clear_foggy_3pm_wheel", "best_heading_offset_deg": -1.40, "points": 742}
+  ],
+  "note": "For each yaw candidate, all three signed boundary offsets were re-estimated before scoring. Applied only when transforming shadow-zone map pseudo-GT into base_link; camera extrinsics and the vehicle-wide heading contract are unchanged."
+}

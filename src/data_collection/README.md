@@ -15,7 +15,9 @@
 | 일반 ROS 토픽 snapshot | `sync_collector.launch` profile | 보조·레거시 경로 |
 | 팀 공용 재현 bag | allowlist profile + raw/result recorder/replay | `camera_raw`·`full_raw`·paused replay·result smoke 완료 |
 | 음영구간 판제 handoff 결과 | `shadow_boundary_result` | typed boundary·camera/lane diagnostics 최소 기록 |
-| 고주기 개발 GT | GT UDP bridge source-time + privileged bag | schema·Object ID 보존 검증 완료, p95 정합 미달로 학습 pair는 Capture 우선 |
+| 고주기 RGB sequence | v2 + Simulation Time Sensor Record | 장착된 일반 센서만 저장. 시계열 학습·재생 후보 |
+| 고주기 supervised sequence | 최소 RGB+Semantic GT 센서셋 + Simulation Time Sensor Record | 별도 pilot 후 채택. v2 Sensor Record만으로 Semantic GT가 생기지 않음 |
+| 고주기 Streaming GT | GT UDP bridge source-time + privileged bag | schema·Object ID 보존 검증 완료, p95 정합 미달로 학습 pair는 Capture 우선 |
 
 Capture Mode와 gRPC는 26.R1.h3 개발·학습용이다. 본선 배포 추론은 허용 UDP 센서만
 사용하며 Semantic/Instance GT, Capture gRPC와 oracle 토픽을 사용하지 않는다.
@@ -51,7 +53,9 @@ Capture Mode는 Real/Simulation Time과 별개로 켜는 저장 기능이다. �
 | 현재 카메라 단일-frame 학습 | Real Time + Capture 1 Hz |
 | 카메라 단일-frame 보강 | Capture 1 Hz. 2/5/10 Hz 요청 pilot은 실효 1.4~1.7 Hz로 포화 |
 | 수동 휠 다양화 | Real Time + Capture |
-| 엄밀한 temporal GT | Simulation Time Sync Off 우선, 필요할 때만 Sync On |
+| 고주기 RGB 시계열 파일 | v2 + Simulation Time + Sensor Record. 필요 시 Sensor Synchronization 10 Hz pilot |
+| 고주기 RGB–Semantic 학습 pair | 최소 RGB+Semantic 센서셋 + Simulation Time + Sensor Record. pairing 검증 필수 |
+| 센서 생성 skew를 배제한 알고리즘 검증 | Simulation Time + Sensor Synchronization + source-time ROS bag/replay |
 | 실제 지연·drop·jitter 평가 | Real Time UDP + raw rosbag |
 | 모델 A/B 비교 | 같은 raw bag 재생, result는 모델별 분리 |
 | 기존 LiDAR clustering/OBB 튜닝 | PointCloud·GPS·IMU·Ego·개발용 Object GT raw bag |
@@ -61,6 +65,73 @@ Capture는 요청마다 시뮬레이션이 약 0.5초 멈춰 wheel/MPC temporal 
 실제 비동기 성능과 모델 A/B에는 raw rosbag을 사용한다. GT Connect stream은 Capture를
 대체하는 학습 정답이 아니라 고주기 정합·평가 후보이며, 허용 gap을 넘는 pair는 offline에서
 제외한다.
+
+### Simulation Time의 Sensor Record
+
+Time Manager 창의 `Synchronization Mode`는 **장착 센서들의 생성 시각·주기를 공통화하는
+센서 동기화 옵션**이다. 외부 알고리즘이 매 tick을 보내는 `External Sync`와는 다른 설정이다.
+External Sync가 꺼진 Simulation Time에서도 Sensor Record와 센서 동기화는 사용할 수 있다.
+동기화를 10Hz로 켜면 활성 센서는 UI에 입력한 공통 10Hz를 기준으로 생성·저장되고, 끄면
+카메라 20Hz, LiDAR 10Hz, GNSS 5Hz처럼 센서별 설정 주기를 따른다. 5Hz GNSS를 공통 10Hz로
+올렸을 때 새 측정과 hold/repeat 중 무엇으로 저장되는지는 버전별 pilot에서 확인한다.
+
+Sensor Record는 rosbag이 아니라 시뮬레이터가 센서별 원시 파일을 Windows에 직접 저장하는
+기능이다. 기본 경로는 다음과 같다.
+
+```text
+{MORAI 설치 경로}\MoraiLauncher_Win_Data\SaveFile\SensorData\
+├── CAMERA_<sensor_id>\
+├── LIDAR_<sensor_id>\
+├── GPS_<sensor_id>\
+└── IMU_<sensor_id>\
+```
+
+현재 개발 PC의 실행 파일은 `C:\MoraiLauncher_Win\MoraiLauncher_Win.exe`이고 실제 저장
+루트는 아래 경로다. 2026-09-14 v2 Sensor Record 실측에서는 `CAMERA_1~4`, `LIDAR_5`,
+`GPS_6`, `IMU_7`만 갱신됐고, 과거 GT 센서셋이 만들었던 `CAMERA_8~10`, `LIDAR_11`은
+갱신되지 않았다. 즉 Sensor Record는 현재 장착·활성화된 센서의 출력을 저장할 뿐,
+Capture처럼 장착하지 않은 Semantic/Instance 정답을 자동 생성하지 않는다.
+
+```text
+C:\MoraiLauncher_Win\MoraiLauncher_Win_Data\SaveFile\SensorData
+```
+
+파일명 시간은 wall time이 아니라 simulation time이다. Time mode 또는 Sync On/Off 전환 시
+simulation time이 0으로 초기화될 수 있으므로 record 종료 후 파일을 run별 디렉터리로 즉시
+복사·정본화하고, 서로 다른 session의 같은 simulation timestamp를 한 run으로 합치지 않는다.
+External Sync service의 `sensor_capture` 결과는 별도
+`SensorData\SynchronousMode\<SyncMode 시작 시각>`에 저장될 수 있으므로 UI Sensor Record와
+구분한다.
+
+용도는 다음처럼 나눈다.
+
+| 분석 목적 | Sensor Record + sensor sync | Real Time UDP rosbag |
+|---|---|---|
+| 장착된 3카메라·LiDAR 간 생성 시각 정합 | 권장 | 실제 skew를 포함한 보조 기준 |
+| RGB/Semantic 학습 pair | RGB와 Semantic 센서를 함께 장착한 최소 GT 센서셋에서만 권장 | source stamp gate를 통과한 pair만 사용 |
+| 센서 skew를 배제한 알고리즘 상한 평가 | source-time bag/replay를 함께 쓸 때 권장 | 실제 운용 기준 |
+| 실제 처리 지연·drop·jitter·bridge 부하 | 부적합 | 정본 |
+| 판제까지 포함한 실제 운용 거동 | 부적합 | 정본 |
+
+즉 Simulation Time + 10Hz Sensor Record는 **장착 센서의 생성 시각을 맞춘 통제 입력**을
+만드는 데 유용하지만, simulator-side 파일 기록이라 UDP/bridge/ROS queue/추론 지연은
+재현하지 않는다. 기존 live 추론은 이 파일을 직접 읽지 않으므로, 알고리즘 입력 skew를
+실제로 제거하려면 Sensor Synchronization을 켠 session에서 브릿지를
+`timestamp_mode:=source`로 실행하고 canonical ROS topic과 `/clock`, `/Ego_topic`을 bag으로
+기록하거나 Sensor Record 파일용 offline replay adapter가 필요하다. `receive` stamp를 쓰면
+센서 생성 시각이 같아도 네트워크 도착 시각 차이가 ROS stamp에 남는다.
+
+따라서 결과 명칭도 구분한다. Simulation Time sync 결과는 **controlled/ideal-input 알고리즘
+검증**, Real Time UDP bag 결과는 **deployment/운용 검증**이다. 전자는 센서 skew를 배제한
+상한선이고 후자를 대체하지 않는다. 고주기 supervised segmentation을 수집할 때는 v2를
+그대로 쓰지 않고 `RGB front/left/right + Semantic front/left/right + 필요한 상태 센서`만 둔
+최소 sync-training 센서셋을 별도 version으로 만든다. 정식 채택 전 30초 pilot에서 센서별
+파일 수, timestamp 단조성, 10Hz 공통 frame key, RGB–Semantic 및 camera–LiDAR pairing,
+GNSS 반복 여부를 먼저 검사한다.
+
+근거는 MORAI [Time Manager](https://help-morai-sim.scrollhelp.site/ko/morai-sim-drive/24.R2/morai-sim-time-management-function),
+[센서 검출 데이터와 저장 경로](https://help-morai-sim.scrollhelp.site/ko/morai-sim-drive/26.R1/-33),
+[Synchronous Mode 메시지](https://help-morai-sim.scrollhelp.site/ko/morai-sim-drive/24.R1.0/synchronous-mode-2)를 따른다.
 
 ## 재현 가능한 raw/result rosbag
 

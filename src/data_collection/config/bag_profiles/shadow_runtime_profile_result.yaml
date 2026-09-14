@@ -1,0 +1,29 @@
+name: shadow_runtime_profile_result
+description: Headless timing and geometry audit for the shadow shared lane-family pipeline.
+kind: result
+transport: replay
+timestamp_mode: replay
+timestamp_provenance:
+  output_header: inherited from the synchronized parent raw camera headers
+  diagnostics_header: replay clock at diagnostic publication
+  bag_time: replay clock at result recorder receipt
+sensor_set: replay_parent
+map: kcity2025
+compression: lz4
+privileged_gt: false
+deployment_allowed: false
+required_topics:
+  - /perception/camera/diagnostics
+  - /perception/lane/diagnostics
+  - /perception/lane/boundary_observations
+  - /perception/lane/pipeline_audit
+  - /perception/lane/debug/shared_family/diagnostics
+optional_topics:
+  - /perception/bev/diagnostics
+expected_types:
+  /perception/camera/diagnostics: diagnostic_msgs/DiagnosticArray
+  /perception/lane/diagnostics: diagnostic_msgs/DiagnosticArray
+  /perception/lane/boundary_observations: asmc_msgs/LaneBoundaryObservationArray
+  /perception/lane/pipeline_audit: diagnostic_msgs/DiagnosticArray
+  /perception/lane/debug/shared_family/diagnostics: diagnostic_msgs/DiagnosticArray
+  /perception/bev/diagnostics: diagnostic_msgs/DiagnosticArray

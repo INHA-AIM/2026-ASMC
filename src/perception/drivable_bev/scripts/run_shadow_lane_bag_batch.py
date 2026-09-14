@@ -51,12 +51,25 @@ def parse_args():
     parser.add_argument("--topic-timeout-sec", type=float, default=30.0)
     parser.add_argument("--min-free-gb", type=float, default=5.0)
     parser.add_argument(
+        "--result-profile",
+        default="shadow_boundary_result",
+        help=(
+            "result bag allowlist; use shadow_runtime_profile_result for a "
+            "headless timing run without Marker subscribers"
+        ),
+    )
+    parser.add_argument(
         "--external-pipeline",
         action="store_true",
         help=(
             "reuse an already running inference/BEV/lane pipeline; useful when "
             "the GPU container has read-only /data and the ROS container records"
         ),
+    )
+    parser.add_argument(
+        "--enable-shared-family-debug",
+        action="store_true",
+        help="record the evaluated shared-family debug sidecar as a runtime baseline",
     )
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
@@ -140,6 +153,9 @@ def result_summary(item, result_root, elapsed_s):
     camera = diagnostic_values(metadata, "camera_semantic_perception/inference")
     bev = diagnostic_values(metadata, "drivable_bev/fusion")
     lane = diagnostic_values(metadata, "drivable_bev/lane_vectorizer")
+    shared = diagnostic_values(
+        metadata, "drivable_bev/shared_lane_family_debug"
+    )
     gates = result_quality_gates(metadata)
     return {
         "run_id": item.run_id,
@@ -155,6 +171,7 @@ def result_summary(item, result_root, elapsed_s):
         "camera_diagnostics": camera,
         "bev_diagnostics": bev,
         "lane_diagnostics": lane,
+        "shared_family_diagnostics": shared,
         "topic_statistics": metadata.get("topic_statistics") or {},
         "quality_gates": gates,
         "quality_gate_passed": all(gates.values()),
@@ -174,10 +191,13 @@ def commands_for(item, args):
         "roslaunch", "drivable_bev", "three_view_lane_pipeline.launch",
         "checkpoint:={}".format(Path(args.checkpoint).expanduser().resolve()),
         "device:={}".format(args.device),
+        "enable_shared_family_debug:={}".format(
+            "true" if args.enable_shared_family_debug else "false"
+        ),
     ]
     recorder = [
         "roslaunch", "data_collection", "bag_recorder.launch",
-        "profile:=shadow_boundary_result",
+        "profile:={}".format(args.result_profile),
         "parent_raw_run_id:={}".format(item.run_id),
         "model_id:={}".format(args.model_id),
         "checkpoint:={}".format(Path(args.checkpoint).expanduser().resolve()),
@@ -228,6 +248,8 @@ def main():
         "model_id": args.model_id,
         "rate": args.rate,
         "external_pipeline": args.external_pipeline,
+        "shared_family_debug_enabled": args.enable_shared_family_debug,
+        "result_profile": args.result_profile,
         "runs": [],
     }
     plan = []
@@ -288,12 +310,17 @@ def main():
 
                 def pipeline_ready():
                     published = dict(rospy.get_published_topics())
-                    return {
+                    required = {
                         "/perception/camera/diagnostics",
                         "/perception/bev/diagnostics",
                         "/perception/lane/boundary_observations",
                         "/perception/lane/diagnostics",
-                    }.issubset(published)
+                    }
+                    if args.enable_shared_family_debug:
+                        required.add(
+                            "/perception/lane/debug/shared_family/diagnostics"
+                        )
+                    return required.issubset(published)
 
                 wait_for(
                     pipeline_ready,

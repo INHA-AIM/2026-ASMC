@@ -40,6 +40,34 @@ spline_robust_iterations: 3
 spline_outlier_scale: 2.5
 spline_control_spacing_m: 2.0
 
+# Shared-family passed the representative and full 12+4 offline gates. It is
+# available only as an explicitly enabled runtime debug sidecar; the public
+# boundary contract remains on the independent spline path.
+shared_lane_family:
+  runtime_debug_enabled: false
+  deployment_allowed: false
+  representation: shared_parametric_bspline_normal_offsets_v2
+  reference_x_m: 5.0
+  nominal_left_width_m: 3.48
+  nominal_right_width_m: 3.52
+  lane_width_min_m: 2.40
+  lane_width_max_m: 4.60
+  width_prior_strength: 0.35
+  spline_smoothing: 0.08
+  control_spacing_m: 2.5
+  sample_spacing_m: 0.25
+  robust_iterations: 5
+  robust_scale_m: 0.15
+  outlier_scale: 2.5
+  min_observed_roles: 2
+  min_family_span_m: 3.0
+  observed_support_radius_m: 0.45
+  support_residual_max_m: 0.35
+  min_local_support_roles: 2
+  max_structure_bridge_m: 0.75
+  min_observed_segment_m: 0.50
+  inferred_confidence_scale: 0.60
+
 # Provisional two-way GPS-shadow ODD. This filters colour-marking splines into
 # one yellow centre boundary and visible white outer boundaries. It deliberately
 # does not assign home/opposing-lane semantics.
@@ -58,8 +86,10 @@ shadow_boundary:
   expected_lane_width_m: 3.55
   max_white_without_yellow: 2
   temporal_max_lateral_residual_m: 0.65
-  temporal_max_missed_frames: 3
+  temporal_max_missed_frames: 8
   temporal_reset_gap_sec: 0.75
+  temporal_velocity_smoothing: 0.50
+  temporal_max_lateral_speed_mps: 4.0
 
 # Initial evaluation-only core. It is not a controller contract.
 core_x_min_m: 0.0

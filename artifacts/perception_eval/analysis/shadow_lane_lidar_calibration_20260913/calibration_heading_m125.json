@@ -1,0 +1,537 @@
+{
+  "combined_estimates": {
+    "white_negative_normal": {
+      "mad_m": 0.04166999488746198,
+      "median_m": -0.015586750945955779,
+      "offset_m": -0.01656625641296061,
+      "peak_fraction": 0.9353159851301115,
+      "support": 2516,
+      "total_associated": 2690
+    },
+    "white_positive_normal": {
+      "mad_m": 0.0378075034569937,
+      "median_m": -0.010843171929042437,
+      "offset_m": -0.010975185443200716,
+      "peak_fraction": 0.9781463414634146,
+      "support": 5013,
+      "total_associated": 5125
+    },
+    "yellow_center": {
+      "mad_m": 0.03911165044391705,
+      "median_m": 0.004970737077163135,
+      "offset_m": 0.004928303994707306,
+      "peak_fraction": 0.9201228878648233,
+      "support": 1198,
+      "total_associated": 1302
+    }
+  },
+  "deployment_allowed": false,
+  "note": "LiDAR paint-return calibration candidate; confirm in raw RGB BEV before promotion.",
+  "parameters": {
+    "association_distance_m": 0.9,
+    "ego_heading_offset_deg": -1.25,
+    "frame_stride": 5,
+    "ground_z_range_m": [
+      -0.55,
+      -0.15
+    ],
+    "intensity_threshold": 40.0,
+    "lidar_translation_m": [
+      0.8,
+      0.0,
+      1.45
+    ],
+    "max_pose_age_ms": 50.0
+  },
+  "pseudo_gt": "/root/ws/artifacts/perception_eval/analysis/shadow_lane_map_pseudo_gt_20260913/shadow_lane_pseudo_gt.json",
+  "recommended_geometry": {
+    "center_lateral_offset_m": 0.004928303994707306,
+    "negative_lane_width_m": 3.521494560407668,
+    "positive_lane_width_m": 3.4840965105620922
+  },
+  "run_pattern": "20260912_*shadow*",
+  "runs": [
+    {
+      "counters": {
+        "high_intensity_ground_points": 988,
+        "inside_shadow_frames": 21,
+        "lidar_frames": 309,
+        "pose_age_drops": 0,
+        "sampled_frames": 61
+      },
+      "estimates": {
+        "white_negative_normal": {
+          "mad_m": 0.03830457754388003,
+          "median_m": -0.03822269562497725,
+          "offset_m": -0.03949331464367596,
+          "peak_fraction": 0.9682539682539683,
+          "support": 244,
+          "total_associated": 252
+        },
+        "white_positive_normal": {
+          "mad_m": 0.0377846278575716,
+          "median_m": -0.01870163365851096,
+          "offset_m": -0.018659828214370476,
+          "peak_fraction": 0.9933333333333333,
+          "support": 596,
+          "total_associated": 600
+        },
+        "yellow_center": {
+          "mad_m": 0.03370286836555454,
+          "median_m": -0.017712388140121355,
+          "offset_m": -0.017622275464390373,
+          "peak_fraction": 0.9770992366412213,
+          "support": 128,
+          "total_associated": 131
+        }
+      },
+      "pose_delta_ms": {
+        "median": 4.149437,
+        "p95_abs": 13.511419
+      },
+      "run_id": "20260912_001404_kcity2025_shadow_clear_foggy_1pm_wheel"
+    },
+    {
+      "counters": {
+        "high_intensity_ground_points": 1193,
+        "inside_shadow_frames": 20,
+        "lidar_frames": 248,
+        "pose_age_drops": 0,
+        "sampled_frames": 49
+      },
+      "estimates": {
+        "white_negative_normal": {
+          "mad_m": 0.038036265113372256,
+          "median_m": -0.030863622051156746,
+          "offset_m": -0.03100838934254474,
+          "peak_fraction": 0.9927360774818402,
+          "support": 410,
+          "total_associated": 413
+        },
+        "white_positive_normal": {
+          "mad_m": 0.03642520252160422,
+          "median_m": -0.009540000460168233,
+          "offset_m": -0.009518891302271576,
+          "peak_fraction": 0.9952153110047847,
+          "support": 624,
+          "total_associated": 627
+        },
+        "yellow_center": {
+          "mad_m": 0.037106314330023454,
+          "median_m": -0.005896473813444296,
+          "offset_m": -0.004627998157316501,
+          "peak_fraction": 0.9738562091503268,
+          "support": 149,
+          "total_associated": 153
+        }
+      },
+      "pose_delta_ms": {
+        "median": 4.18067,
+        "p95_abs": 14.184236599999997
+      },
+      "run_id": "20260912_001454_kcity2025_shadow_clear_sunny_1pm_wheel"
+    },
+    {
+      "counters": {
+        "high_intensity_ground_points": 983,
+        "inside_shadow_frames": 16,
+        "lidar_frames": 165,
+        "pose_age_drops": 0,
+        "sampled_frames": 33
+      },
+      "estimates": {
+        "white_negative_normal": {
+          "mad_m": 0.03793663175189776,
+          "median_m": -0.031062103481144403,
+          "offset_m": -0.031062103481144403,
+          "peak_fraction": 1.0,
+          "support": 350,
+          "total_associated": 350
+        },
+        "white_positive_normal": {
+          "mad_m": 0.035659939693385274,
+          "median_m": -0.007611447851005134,
+          "offset_m": -0.009991103638457382,
+          "peak_fraction": 0.9820627802690582,
+          "support": 438,
+          "total_associated": 446
+        },
+        "yellow_center": {
+          "mad_m": 0.03477781760419432,
+          "median_m": -0.005687831802767054,
+          "offset_m": -0.006574517240130227,
+          "peak_fraction": 0.9732620320855615,
+          "support": 182,
+          "total_associated": 187
+        }
+      },
+      "pose_delta_ms": {
+        "median": 3.494263,
+        "p95_abs": 13.394117399999999
+      },
+      "run_id": "20260912_002714_kcity2025_shadow_clear_sunny_3pm_morai_auto"
+    },
+    {
+      "counters": {
+        "high_intensity_ground_points": 656,
+        "inside_shadow_frames": 15,
+        "lidar_frames": 167,
+        "pose_age_drops": 0,
+        "sampled_frames": 33
+      },
+      "estimates": {
+        "white_negative_normal": {
+          "mad_m": 0.03550736251702197,
+          "median_m": -0.03565208381091653,
+          "offset_m": -0.03701879164818968,
+          "peak_fraction": 0.9830508474576272,
+          "support": 116,
+          "total_associated": 118
+        },
+        "white_positive_normal": {
+          "mad_m": 0.03855926423793038,
+          "median_m": -0.0135561362202375,
+          "offset_m": -0.0135561362202375,
+          "peak_fraction": 0.9955555555555555,
+          "support": 448,
+          "total_associated": 450
+        },
+        "yellow_center": {
+          "mad_m": 0.032324852561516314,
+          "median_m": 0.0025588214349309157,
+          "offset_m": 0.0025588214349309157,
+          "peak_fraction": 1.0,
+          "support": 88,
+          "total_associated": 88
+        }
+      },
+      "pose_delta_ms": {
+        "median": 3.287315,
+        "p95_abs": 10.200643799999991
+      },
+      "run_id": "20260912_003059_kcity2025_shadow_clear_sunny_11am_morai_auto"
+    },
+    {
+      "counters": {
+        "high_intensity_ground_points": 780,
+        "inside_shadow_frames": 16,
+        "lidar_frames": 198,
+        "pose_age_drops": 0,
+        "sampled_frames": 39
+      },
+      "estimates": {
+        "white_negative_normal": {
+          "mad_m": 0.03902190076568408,
+          "median_m": -0.033925778770753964,
+          "offset_m": -0.03514011943128468,
+          "peak_fraction": 0.9907834101382489,
+          "support": 215,
+          "total_associated": 217
+        },
+        "white_positive_normal": {
+          "mad_m": 0.037138074482776826,
+          "median_m": -0.010203620569501077,
+          "offset_m": -0.009758358632704994,
+          "peak_fraction": 0.9935344827586207,
+          "support": 461,
+          "total_associated": 464
+        },
+        "yellow_center": {
+          "mad_m": 0.03504084534764493,
+          "median_m": -0.004177068227344217,
+          "offset_m": -0.005441828290903754,
+          "peak_fraction": 0.98989898989899,
+          "support": 98,
+          "total_associated": 99
+        }
+      },
+      "pose_delta_ms": {
+        "median": 3.661871,
+        "p95_abs": 15.642547900000002
+      },
+      "run_id": "20260912_003200_kcity2025_shadow_clear_foggy_11am_morai_auto"
+    },
+    {
+      "counters": {
+        "high_intensity_ground_points": 936,
+        "inside_shadow_frames": 15,
+        "lidar_frames": 208,
+        "pose_age_drops": 0,
+        "sampled_frames": 41
+      },
+      "estimates": {
+        "white_negative_normal": {
+          "mad_m": 0.04264001862734662,
+          "median_m": -0.0029648025187703174,
+          "offset_m": 0.003664186987205988,
+          "peak_fraction": 0.8896321070234113,
+          "support": 266,
+          "total_associated": 299
+        },
+        "white_positive_normal": {
+          "mad_m": 0.03948706910863936,
+          "median_m": -0.01443459303148361,
+          "offset_m": -0.015331901951719332,
+          "peak_fraction": 0.9791183294663574,
+          "support": 422,
+          "total_associated": 431
+        },
+        "yellow_center": {
+          "mad_m": 0.042856285211829985,
+          "median_m": 0.01283119051624243,
+          "offset_m": 0.011973396050540036,
+          "peak_fraction": 0.9071428571428571,
+          "support": 127,
+          "total_associated": 140
+        }
+      },
+      "pose_delta_ms": {
+        "median": 3.991842,
+        "p95_abs": 7.762671
+      },
+      "run_id": "20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel"
+    },
+    {
+      "counters": {
+        "high_intensity_ground_points": 714,
+        "inside_shadow_frames": 13,
+        "lidar_frames": 176,
+        "pose_age_drops": 0,
+        "sampled_frames": 35
+      },
+      "estimates": {
+        "white_negative_normal": {
+          "mad_m": 0.039278642476420454,
+          "median_m": 0.034681512157814585,
+          "offset_m": 0.034681512157814585,
+          "peak_fraction": 0.9290780141843972,
+          "support": 131,
+          "total_associated": 141
+        },
+        "white_positive_normal": {
+          "mad_m": 0.03707748032586188,
+          "median_m": -0.0054729173976221564,
+          "offset_m": -0.005756648903142994,
+          "peak_fraction": 0.984251968503937,
+          "support": 375,
+          "total_associated": 381
+        },
+        "yellow_center": {
+          "mad_m": 0.04140090256956465,
+          "median_m": 0.014040789368266407,
+          "offset_m": 0.023760560025899574,
+          "peak_fraction": 0.8235294117647058,
+          "support": 28,
+          "total_associated": 34
+        }
+      },
+      "pose_delta_ms": {
+        "median": 3.028392,
+        "p95_abs": 17.213916899999997
+      },
+      "run_id": "20260912_003847_kcity2025_shadow_static_avoid_v1_sunny_1pm_wheel"
+    },
+    {
+      "counters": {
+        "high_intensity_ground_points": 962,
+        "inside_shadow_frames": 12,
+        "lidar_frames": 156,
+        "pose_age_drops": 0,
+        "sampled_frames": 31
+      },
+      "estimates": {
+        "white_negative_normal": {
+          "mad_m": 0.046550700979968836,
+          "median_m": 0.0025910830665125967,
+          "offset_m": 0.0072592465599383,
+          "peak_fraction": 0.8564356435643564,
+          "support": 173,
+          "total_associated": 202
+        },
+        "white_positive_normal": {
+          "mad_m": 0.03675493777980059,
+          "median_m": -0.013883833148600207,
+          "offset_m": -0.013681585312154763,
+          "peak_fraction": 0.9548022598870056,
+          "support": 338,
+          "total_associated": 354
+        },
+        "yellow_center": {
+          "mad_m": 0.04618987925938997,
+          "median_m": 0.025278568721653513,
+          "offset_m": 0.02830316498223829,
+          "peak_fraction": 0.8493150684931506,
+          "support": 62,
+          "total_associated": 73
+        }
+      },
+      "pose_delta_ms": {
+        "median": 3.5429,
+        "p95_abs": 13.8692855
+      },
+      "run_id": "20260912_003922_kcity2025_shadow_static_avoid_v1_sunny_3pm_wheel"
+    },
+    {
+      "counters": {
+        "high_intensity_ground_points": 606,
+        "inside_shadow_frames": 10,
+        "lidar_frames": 144,
+        "pose_age_drops": 0,
+        "sampled_frames": 28
+      },
+      "estimates": {
+        "white_negative_normal": {
+          "mad_m": 0.04185717451875601,
+          "median_m": 0.04135882045681142,
+          "offset_m": 0.05715976395945058,
+          "peak_fraction": 0.7987421383647799,
+          "support": 127,
+          "total_associated": 159
+        },
+        "white_positive_normal": {
+          "mad_m": 0.036777967798980016,
+          "median_m": -0.010416443550022714,
+          "offset_m": -0.0094356078026692,
+          "peak_fraction": 0.9481481481481482,
+          "support": 256,
+          "total_associated": 270
+        },
+        "yellow_center": {
+          "mad_m": 0.04366150049290636,
+          "median_m": 0.026857452744749363,
+          "offset_m": 0.0367903461860849,
+          "peak_fraction": 0.8260869565217391,
+          "support": 76,
+          "total_associated": 92
+        }
+      },
+      "pose_delta_ms": {
+        "median": 3.3617014999999997,
+        "p95_abs": 6.1905863
+      },
+      "run_id": "20260912_004015_kcity2025_shadow_static_avoid_v1_foggy_11am_wheel"
+    },
+    {
+      "counters": {
+        "high_intensity_ground_points": 625,
+        "inside_shadow_frames": 11,
+        "lidar_frames": 152,
+        "pose_age_drops": 0,
+        "sampled_frames": 30
+      },
+      "estimates": {
+        "white_negative_normal": {
+          "mad_m": 0.04454967575140971,
+          "median_m": 0.01908319266480937,
+          "offset_m": 0.018141799904788817,
+          "peak_fraction": 0.9121621621621622,
+          "support": 135,
+          "total_associated": 148
+        },
+        "white_positive_normal": {
+          "mad_m": 0.03998675368288572,
+          "median_m": -0.007048492221636826,
+          "offset_m": -0.006717077093215339,
+          "peak_fraction": 0.9327217125382263,
+          "support": 305,
+          "total_associated": 327
+        },
+        "yellow_center": {
+          "mad_m": 0.04103145258238869,
+          "median_m": 0.04427109662211211,
+          "offset_m": 0.035199066622560074,
+          "peak_fraction": 0.7291666666666666,
+          "support": 70,
+          "total_associated": 96
+        }
+      },
+      "pose_delta_ms": {
+        "median": 3.7299395,
+        "p95_abs": 13.938891699999996
+      },
+      "run_id": "20260912_004053_kcity2025_shadow_static_avoid_v1_foggy_1pm_wheel"
+    },
+    {
+      "counters": {
+        "high_intensity_ground_points": 604,
+        "inside_shadow_frames": 12,
+        "lidar_frames": 155,
+        "pose_age_drops": 0,
+        "sampled_frames": 31
+      },
+      "estimates": {
+        "white_negative_normal": {
+          "mad_m": 0.04326689048982877,
+          "median_m": -0.010328816231985108,
+          "offset_m": -0.010515123675564694,
+          "peak_fraction": 0.96875,
+          "support": 124,
+          "total_associated": 128
+        },
+        "white_positive_normal": {
+          "mad_m": 0.037286815966542826,
+          "median_m": -0.004232828129447844,
+          "offset_m": -0.005198195528806594,
+          "peak_fraction": 0.9598930481283422,
+          "support": 359,
+          "total_associated": 374
+        },
+        "yellow_center": {
+          "mad_m": 0.037419580582083035,
+          "median_m": 0.027026759368619466,
+          "offset_m": 0.02076322917152062,
+          "peak_fraction": 0.9367088607594937,
+          "support": 74,
+          "total_associated": 79
+        }
+      },
+      "pose_delta_ms": {
+        "median": 3.270865,
+        "p95_abs": 15.862464500000002
+      },
+      "run_id": "20260912_004128_kcity2025_shadow_static_avoid_v1_foggy_3pm_wheel"
+    },
+    {
+      "counters": {
+        "high_intensity_ground_points": 794,
+        "inside_shadow_frames": 14,
+        "lidar_frames": 239,
+        "pose_age_drops": 0,
+        "sampled_frames": 47
+      },
+      "estimates": {
+        "white_negative_normal": {
+          "mad_m": 0.038302965240752065,
+          "median_m": -0.01361645121258552,
+          "offset_m": -0.012982830639526481,
+          "peak_fraction": 0.973384030418251,
+          "support": 256,
+          "total_associated": 263
+        },
+        "white_positive_normal": {
+          "mad_m": 0.039965412339948464,
+          "median_m": -0.008014728322220869,
+          "offset_m": -0.007998217082019449,
+          "peak_fraction": 0.9775561097256857,
+          "support": 392,
+          "total_associated": 401
+        },
+        "yellow_center": {
+          "mad_m": 0.04301897045265763,
+          "median_m": -0.004573754921491322,
+          "offset_m": -0.0043527057465678615,
+          "peak_fraction": 0.9153846153846154,
+          "support": 119,
+          "total_associated": 130
+        }
+      },
+      "pose_delta_ms": {
+        "median": 3.72386,
+        "p95_abs": 10.187816799999995
+      },
+      "run_id": "20260912_005122_kcity2025_shadow_clear_foggy_3pm_wheel"
+    }
+  ],
+  "schema_version": "asmc-shadow-lane-lidar-calibration-1.0.0",
+  "status": "calibration_candidate"
+}

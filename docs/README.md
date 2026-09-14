@@ -1,7 +1,7 @@
 # 2026-ASMC 문서 허브
 
 > **문서 상태:** Active Index
-> **최종 정리:** 2026-09-11
+> **최종 정리:** 2026-09-13
 > **대상:** 팀원 전원 · 관리: 통합 리드와 각 문서 담당자
 
 문서 파일은 기존 링크와 팀원의 북마크가 깨지지 않도록 현재 경로를 유지한다. 이 페이지에서
@@ -136,6 +136,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | [data_collection](../src/data_collection/README.md) | Capture, sync, mask/cache와 dataset 실행법 |
 | [frenet_planner](../src/frenet_planner/README.md) | Frenet Planner 책임, runtime I/O, core 폴더 지도, 빌드/테스트 |
 | [interfaces](../src/interfaces/README.md) | provisional topic과 합의된 계약의 승격 위치 |
+| [lane_boundary_adapter](../src/planning_control/lane_boundary_adapter/README.md) | 카메라 metric 경계를 판제와 검토하는 read-only C++ consumer pilot |
 | [integration](../src/integration/README.md) | UDP bridge와 내부 ROS 진입점 |
 | [learning](../src/learning/README.md) | 기존 LBC 연구 경로와 현재 인지 경로 구분 |
 

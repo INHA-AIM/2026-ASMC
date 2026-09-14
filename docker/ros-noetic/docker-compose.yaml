@@ -24,7 +24,9 @@ services:
       - __NV_PRIME_RENDER_OFFLOAD=1
       - __GLX_VENDOR_LIBRARY_NAME=nvidia
       - __VK_LAYER_NV_optimus=NVIDIA_only
-      - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
+      # Host /run/user/<uid> normally does not exist in this root container.
+      # Use the image-owned 0700 directory to avoid Qt/rqt/RViz startup faults.
+      - XDG_RUNTIME_DIR=/tmp/asmc-xdg-runtime
       - ROS_MASTER_URI=http://127.0.0.1:11311
       - MORAI_CMD_IP=127.0.0.1
     volumes:

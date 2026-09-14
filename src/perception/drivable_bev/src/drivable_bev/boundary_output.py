@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Sequence, Tuple
 
 import numpy as np
@@ -72,6 +72,21 @@ def _ordered_polyline(points) -> np.ndarray:
     return np.ascontiguousarray(value, dtype=np.float32)
 
 
+def _polyline_within_valid_x(points, lower: float, upper: float) -> np.ndarray:
+    """Clip fitted display tails to the evidence-valid public interval."""
+    value = _ordered_polyline(points).astype(np.float64)
+    unique_x, indices = np.unique(value[:, 0], return_index=True)
+    unique_y = value[indices, 1]
+    tolerance = 1e-6
+    if lower < unique_x[0] - tolerance or upper > unique_x[-1] + tolerance:
+        raise ValueError("boundary polyline does not cover its valid x range")
+    interior = unique_x[(unique_x > lower + tolerance) & (unique_x < upper - tolerance)]
+    target_x = np.concatenate(([lower], interior, [upper]))
+    target_x = np.unique(target_x)
+    target_y = np.interp(target_x, unique_x, unique_y)
+    return np.ascontiguousarray(np.column_stack((target_x, target_y)), dtype=np.float32)
+
+
 def build_shadow_boundary_output(
     tracked_boundaries: Sequence[TrackedBoundary],
     preferred_reference_x_m: float,
@@ -91,6 +106,27 @@ def build_shadow_boundary_output(
         tracked_boundaries,
         key=lambda item: item.observation.lateral_order_left_to_right,
     )
+    common_reference_x = None
+    if ordered:
+        common_lower = max(float(item.observation.lane.valid_x_min_m) for item in ordered)
+        common_upper = min(float(item.observation.lane.valid_x_max_m) for item in ordered)
+        if common_upper >= common_lower:
+            common_reference_x = float(
+                np.clip(float(preferred_reference_x_m), common_lower, common_upper)
+            )
+            # A lateral order is meaningful only when every curve is evaluated
+            # at the same longitudinal station.  During a lane departure the
+            # side cameras often provide shorter curves which do not reach the
+            # preferred 5 m station even though all curves overlap closer to
+            # the vehicle. Select that shared station instead of invalidating
+            # an otherwise usable observation.
+            ordered = sorted(
+                ordered,
+                key=lambda item: (
+                    -lane_y_at_x(item.observation.lane, common_reference_x),
+                    int(item.stable_id),
+                ),
+            )
     tracking_ids = [int(item.stable_id) for item in ordered]
     lateral_orders = [
         int(item.observation.lateral_order_left_to_right) for item in ordered
@@ -101,25 +137,35 @@ def build_shadow_boundary_output(
         raise ValueError("boundary lateral order must be contiguous and zero-based")
 
     values = []
-    all_cross_preferred_reference = True
-    for item in ordered:
+    common_reference_y = (
+        [lane_y_at_x(item.observation.lane, common_reference_x) for item in ordered]
+        if common_reference_x is not None
+        else []
+    )
+    common_order_valid = bool(common_reference_x is not None) and all(
+        common_reference_y[index] > common_reference_y[index + 1] + 1e-6
+        for index in range(len(common_reference_y) - 1)
+    )
+    for lateral_order, item in enumerate(ordered):
         observation = item.observation
         lane = observation.lane
         lower = float(lane.valid_x_min_m)
         upper = float(lane.valid_x_max_m)
         if not np.isfinite([lower, upper]).all() or upper < lower:
             raise ValueError("boundary valid x range is invalid")
-        crosses_reference = lower <= float(preferred_reference_x_m) <= upper
-        all_cross_preferred_reference &= crosses_reference
-        reference_x = float(np.clip(preferred_reference_x_m, lower, upper))
+        reference_x = (
+            common_reference_x
+            if common_reference_x is not None
+            else float(np.clip(preferred_reference_x_m, lower, upper))
+        )
         reference_y = float(lane_y_at_x(lane, reference_x))
         if not np.isfinite(reference_y):
             raise ValueError("boundary reference point is invalid")
         values.append(
             BoundaryOutputValue(
                 tracking_id=int(item.stable_id),
-                lateral_order=int(observation.lateral_order_left_to_right),
-                order_valid=False,
+                lateral_order=int(lateral_order),
+                order_valid=common_order_valid,
                 color=_color_from_class(lane.class_id),
                 source_mask=int(lane.source_mask),
                 semantic_score=float(np.clip(lane.confidence, 0.0, 1.0)),
@@ -136,14 +182,13 @@ def build_shadow_boundary_output(
                 reacquired_after_missed_frames=int(
                     item.reacquired_after_missed_frames
                 ),
-                polyline_xy=_ordered_polyline(lane.sample_points),
+                polyline_xy=_polyline_within_valid_x(
+                    lane.sample_points, lower, upper
+                ),
             )
         )
 
-    values = tuple(
-        replace(value, order_valid=bool(all_cross_preferred_reference))
-        for value in values
-    )
+    values = tuple(values)
     roles = {item.observation.role for item in ordered}
     if not values:
         completeness = COMPLETENESS_EMPTY

@@ -24,22 +24,31 @@ from visualization_msgs.msg import Marker, MarkerArray
 
 from drivable_bev.boundary_candidates import (
     TemporalBoundaryTracker,
-    select_shadow_lane_tracks,
-    select_shadow_boundaries,
+    select_shadow_lane_tracks_with_audit,
+    select_shadow_boundaries_with_audit,
 )
 from drivable_bev.boundary_output import (
     BoundaryOutputFrame,
+    COMPLETENESS_COMPLETE,
     COMPLETENESS_EMPTY,
     build_shadow_boundary_output,
 )
 from drivable_bev.calibration import calibrations_from_dict
 from drivable_bev.lane_evidence import reduce_evidence_to_nodes
-from drivable_bev.lane_tracking import associate_lane_nodes
+from drivable_bev.lane_tracking import associate_lane_nodes_with_audit
 from drivable_bev.model_grid_projection import (
     MetricEvidence,
     ModelGridGroundProjector,
 )
-from drivable_bev.spline_fitting import fit_lane_tracks
+from drivable_bev.pipeline_audit import PipelineAuditAccumulator
+from drivable_bev.shared_lane_family import (
+    LEFT_ROLE,
+    RIGHT_ROLE,
+    YELLOW_ROLE,
+    contiguous_sample_state_segments,
+    fit_shared_lane_family_with_audit,
+)
+from drivable_bev.spline_fitting import fit_lane_tracks_with_audit
 
 
 @dataclass(frozen=True)
@@ -49,6 +58,44 @@ class _ViewFrame:
     header: object
     class_id: np.ndarray
     confidence: np.ndarray
+    decode_copy_ms: float
+
+
+RUNTIME_PROFILE_SCHEMA = "asmc-lane-runtime-profile-1.0.0"
+RUNTIME_PROFILE_STAGES = (
+    "input_decode_copy",
+    "projection_audit",
+    "projection_extract",
+    "evidence_concat",
+    "node_reduction",
+    "association",
+    "shadow_prefit",
+    "shared_family_fit",
+    "independent_spline_fit",
+    "evidence_message_publish",
+    "candidate_marker_publish",
+    "shared_marker_publish",
+    "shared_diagnostics_publish",
+    "boundary_selection",
+    "temporal_tracking",
+    "boundary_output_build",
+    "legacy_boundary_marker_publish",
+    "typed_boundary_message_publish",
+    "profiled_body",
+    "pipeline_audit_update",
+    "pipeline_audit_message_publish",
+    "callback_total",
+)
+
+
+def _measure(timings, key, function):
+    started = time.perf_counter()
+    try:
+        return function()
+    finally:
+        timings[key] = timings.get(key, 0.0) + (
+            time.perf_counter() - started
+        ) * 1000.0
 
 
 def _names(value):
@@ -146,26 +193,59 @@ class LaneVectorizerNode:
                 rospy.get_param("~spline_control_spacing_m")
             ),
         }
+        self.shared_family_parameters = dict(
+            rospy.get_param("~shared_lane_family", {})
+        )
+        self.shared_family_debug_enabled = bool(
+            self.shared_family_parameters.pop("runtime_debug_enabled", False)
+        )
+        self.shared_family_deployment_allowed = bool(
+            self.shared_family_parameters.pop("deployment_allowed", False)
+        )
+        self.shared_family_representation = str(
+            self.shared_family_parameters.pop(
+                "representation", "shared_parametric_bspline_normal_offsets_v2"
+            )
+        )
+        # Kept for compatibility with the first offline-only configuration.
+        self.shared_family_parameters.pop("evaluation_only", None)
+        if self.shared_family_deployment_allowed:
+            raise ValueError(
+                "shared lane-family is a debug result and cannot be deployment_allowed"
+            )
         self.shadow_boundary_parameters = dict(
             rospy.get_param("~shadow_boundary", {})
         )
         self.shadow_boundary_enabled = bool(
             self.shadow_boundary_parameters.pop("enabled", True)
         )
-        self.boundary_tracker = TemporalBoundaryTracker(
-            max_lateral_residual_m=float(
+        self.temporal_boundary_parameters = {
+            "max_lateral_residual_m": float(
                 self.shadow_boundary_parameters.pop(
                     "temporal_max_lateral_residual_m", 0.65
                 )
             ),
-            max_missed_frames=int(
+            "max_missed_frames": int(
                 self.shadow_boundary_parameters.pop(
                     "temporal_max_missed_frames", 3
                 )
             ),
-            reset_gap_sec=float(
+            "reset_gap_sec": float(
                 self.shadow_boundary_parameters.pop("temporal_reset_gap_sec", 0.75)
             ),
+            "velocity_smoothing": float(
+                self.shadow_boundary_parameters.pop(
+                    "temporal_velocity_smoothing", 0.50
+                )
+            ),
+            "max_lateral_speed_mps": float(
+                self.shadow_boundary_parameters.pop(
+                    "temporal_max_lateral_speed_mps", 4.0
+                )
+            ),
+        }
+        self.boundary_tracker = TemporalBoundaryTracker(
+            **self.temporal_boundary_parameters
         )
         self.operating_domain = str(
             rospy.get_param("~operating_domain", "shadow_two_way_v1")
@@ -193,6 +273,8 @@ class LaneVectorizerNode:
             "track": self.track_parameters,
             "spline": self.spline_parameters,
             "shadow_boundary": self.shadow_boundary_parameters,
+            "temporal_boundary": self.temporal_boundary_parameters,
+            "boundary_reference_policy": "nearest_shared_longitudinal_support_v1",
             "calibration_sha256": self.calibration_sha256,
             "ground_plane": {
                 "frame_id": self.ground_plane.frame_id,
@@ -230,6 +312,24 @@ class LaneVectorizerNode:
         self.boundary_publish_ms = deque(maxlen=512)
         self.end_to_end_ms = deque(maxlen=512)
         self.output_times = deque(maxlen=256)
+        self.pipeline_audit = PipelineAuditAccumulator()
+        self.active_candidate_marker_keys = set()
+        self.active_boundary_marker_keys = set()
+        self.active_shared_family_marker_keys = set()
+        self.marker_delete_counts = {
+            "candidate": 0,
+            "boundary": 0,
+            "shared_family": 0,
+        }
+        self.shared_family_fit_ms = deque(maxlen=512)
+        self.runtime_stage_ms = {
+            stage: deque(maxlen=512) for stage in RUNTIME_PROFILE_STAGES
+        }
+        self.shared_family_errors = 0
+        self.last_shared_family_audit = {
+            "accepted": False,
+            "reason": "disabled",
+        }
 
         self.evidence_publisher = rospy.Publisher(
             "/perception/lane/debug/evidence_points", PointCloud2, queue_size=1
@@ -247,6 +347,19 @@ class LaneVectorizerNode:
         )
         self.diagnostics_publisher = rospy.Publisher(
             "/perception/lane/diagnostics", DiagnosticArray, queue_size=1
+        )
+        self.pipeline_audit_publisher = rospy.Publisher(
+            "/perception/lane/pipeline_audit", DiagnosticArray, queue_size=10
+        )
+        self.shared_family_marker_publisher = rospy.Publisher(
+            "/perception/lane/debug/shared_family/markers",
+            MarkerArray,
+            queue_size=1,
+        )
+        self.shared_family_diagnostics_publisher = rospy.Publisher(
+            "/perception/lane/debug/shared_family/diagnostics",
+            DiagnosticArray,
+            queue_size=10,
         )
 
         self.subscribers = []
@@ -272,11 +385,13 @@ class LaneVectorizerNode:
             rospy.Duration(interval), self._publish_diagnostics
         )
         rospy.loginfo(
-            "lane vector pilot ready views=%s model_hw=%s thresholds=%s skew<=%.1fms",
+            "lane vector pilot ready views=%s model_hw=%s thresholds=%s "
+            "skew<=%.1fms shared_family_debug=%s",
             self.views,
             model_hw,
             self.confidence_by_class,
             self.max_skew_ns / 1e6,
+            self.shared_family_debug_enabled,
         )
 
     def _view_callback(self, view, class_message, confidence_message):
@@ -289,15 +404,22 @@ class LaneVectorizerNode:
             self.pair_errors[view] += 1
             return
         try:
+            decode_started = time.perf_counter()
             projector = self.projectors[view]
             class_id = self._mono8(class_message, projector.model_hw)
             confidence = self._mono8(confidence_message, projector.model_hw)
+            decode_copy_ms = (time.perf_counter() - decode_started) * 1000.0
         except Exception as exc:
             self.pair_errors[view] += 1
             rospy.logwarn_throttle(2.0, "%s lane grid rejected: %s", view, exc)
             return
         frame = _ViewFrame(
-            view, stamps[0], class_message.header, class_id, confidence
+            view,
+            stamps[0],
+            class_message.header,
+            class_id,
+            confidence,
+            decode_copy_ms,
         )
         ready = None
         with self.buffer_lock:
@@ -328,25 +450,122 @@ class LaneVectorizerNode:
     def _process(self, frames):
         with self.processing_lock:
             started = time.perf_counter()
+            timings = {
+                "input_decode_copy": float(
+                    sum(frame.decode_copy_ms for frame in frames.values())
+                )
+            }
+            frame_audit = {
+                "projection": {},
+                "association": {},
+                "prefit": {},
+                "spline": {},
+                "boundary_selection": {},
+                "temporal": {},
+                "shared_family": {},
+                "counts": {},
+                "marker_policy": {
+                    "candidate": "explicit_delete_missing_ids",
+                    "boundary": "explicit_delete_missing_ids",
+                    "canonical_boundary_message": "independent_of_marker_rendering",
+                },
+            }
             try:
-                evidence = MetricEvidence.concatenate(
-                    [
-                        self.projectors[view].extract(
+                view_evidence = []
+                for view in self.views:
+                    projector = self.projectors[view]
+                    frame_audit["projection"][view] = _measure(
+                        timings,
+                        "projection_audit",
+                        lambda projector=projector, view=view: projector.selection_audit(
                             frames[view].class_id,
                             frames[view].confidence,
                             self.confidence_by_class,
+                        ),
+                    )
+                    view_evidence.append(
+                        _measure(
+                            timings,
+                            "projection_extract",
+                            lambda projector=projector, view=view: projector.extract(
+                                frames[view].class_id,
+                                frames[view].confidence,
+                                self.confidence_by_class,
+                            ),
                         )
-                        for view in self.views
-                    ]
+                    )
+                evidence = _measure(
+                    timings,
+                    "evidence_concat",
+                    lambda: MetricEvidence.concatenate(view_evidence),
                 )
-                nodes = reduce_evidence_to_nodes(evidence, **self.node_parameters)
-                tracks = associate_lane_nodes(nodes, **self.track_parameters)
-                fitted_tracks = (
-                    select_shadow_lane_tracks(tracks, self.shadow_boundary_parameters)
-                    if self.shadow_boundary_enabled
-                    else tracks
+                nodes = _measure(
+                    timings,
+                    "node_reduction",
+                    lambda: reduce_evidence_to_nodes(
+                        evidence, **self.node_parameters
+                    ),
                 )
-                lanes = fit_lane_tracks(fitted_tracks, **self.spline_parameters)
+                tracks, frame_audit["association"] = _measure(
+                    timings,
+                    "association",
+                    lambda: associate_lane_nodes_with_audit(
+                        nodes, **self.track_parameters
+                    ),
+                )
+                if self.shadow_boundary_enabled:
+                    fitted_tracks, frame_audit["prefit"] = _measure(
+                        timings,
+                        "shadow_prefit",
+                        lambda: select_shadow_lane_tracks_with_audit(
+                            tracks, self.shadow_boundary_parameters
+                        ),
+                    )
+                else:
+                    fitted_tracks = tracks
+                    frame_audit["prefit"] = {
+                        "input_tracks": int(len(tracks)),
+                        "eligible_tracks": int(len(tracks)),
+                        "selected_tracks": int(len(tracks)),
+                        "rejected": {},
+                    }
+                shared_family = None
+                if self.shared_family_debug_enabled:
+                    try:
+                        shared_family, shared_audit = _measure(
+                            timings,
+                            "shared_family_fit",
+                            lambda: fit_shared_lane_family_with_audit(
+                                fitted_tracks, self.shared_family_parameters
+                            ),
+                        )
+                    except Exception as exc:
+                        self.shared_family_errors += 1
+                        shared_audit = {
+                            "accepted": False,
+                            "reason": "runtime_error",
+                            "error": "{}: {}".format(type(exc).__name__, exc),
+                        }
+                        rospy.logwarn_throttle(
+                            2.0, "shared lane-family debug fit failed: %s", exc
+                        )
+                    shared_elapsed_ms = float(
+                        timings.get("shared_family_fit", 0.0)
+                    )
+                    self.shared_family_fit_ms.append(shared_elapsed_ms)
+                    shared_audit = dict(shared_audit)
+                    shared_audit["fit_ms"] = shared_elapsed_ms
+                    shared_audit["deployment_allowed"] = False
+                    shared_audit["runtime_debug_enabled"] = True
+                    frame_audit["shared_family"] = shared_audit
+                    self.last_shared_family_audit = shared_audit
+                lanes, frame_audit["spline"] = _measure(
+                    timings,
+                    "independent_spline_fit",
+                    lambda: fit_lane_tracks_with_audit(
+                        fitted_tracks, **self.spline_parameters
+                    ),
+                )
                 newest_header = max(
                     frames.values(), key=lambda value: value.stamp_ns
                 ).header
@@ -355,42 +574,124 @@ class LaneVectorizerNode:
                     frame_id=self.frame_id,
                 )
                 if self.evidence_publisher.get_num_connections() > 0:
-                    self.evidence_publisher.publish(self._point_cloud(evidence, header))
+                    _measure(
+                        timings,
+                        "evidence_message_publish",
+                        lambda: self.evidence_publisher.publish(
+                            self._point_cloud(evidence, header)
+                        ),
+                    )
                 if self.marker_publisher.get_num_connections() > 0:
-                    self.marker_publisher.publish(self._markers(lanes, header))
+                    _measure(
+                        timings,
+                        "candidate_marker_publish",
+                        lambda: self.marker_publisher.publish(
+                            self._markers(lanes, header)
+                        ),
+                    )
+                if self.shared_family_debug_enabled:
+                    if self.shared_family_marker_publisher.get_num_connections() > 0:
+                        _measure(
+                            timings,
+                            "shared_marker_publish",
+                            lambda: self.shared_family_marker_publisher.publish(
+                                self._shared_family_markers(shared_family, header)
+                            ),
+                        )
+                    _measure(
+                        timings,
+                        "shared_diagnostics_publish",
+                        lambda: self.shared_family_diagnostics_publisher.publish(
+                            self._shared_family_diagnostics_message(
+                                shared_family,
+                                self.last_shared_family_audit,
+                                header,
+                            )
+                        ),
+                    )
                 tracked_boundaries = ()
                 boundary_output = BoundaryOutputFrame(
                     COMPLETENESS_EMPTY, self.expected_boundary_count, ()
                 )
                 if self.shadow_boundary_enabled:
-                    observations = select_shadow_boundaries(
-                        lanes, self.shadow_boundary_parameters
-                    )
-                    tracked_boundaries = self.boundary_tracker.update(
-                        observations, max(frame.stamp_ns for frame in frames.values())
-                    )
-                    boundary_output = build_shadow_boundary_output(
-                        tracked_boundaries,
-                        preferred_reference_x_m=float(
-                            self.shadow_boundary_parameters.get("reference_x_m", 5.0)
+                    observations, frame_audit["boundary_selection"] = _measure(
+                        timings,
+                        "boundary_selection",
+                        lambda: select_shadow_boundaries_with_audit(
+                            lanes, self.shadow_boundary_parameters
                         ),
-                        expected_boundary_count=self.expected_boundary_count,
+                    )
+                    tracked_boundaries = _measure(
+                        timings,
+                        "temporal_tracking",
+                        lambda: self.boundary_tracker.update(
+                            observations,
+                            max(frame.stamp_ns for frame in frames.values()),
+                        ),
+                    )
+                    frame_audit["temporal"] = dict(self.boundary_tracker.last_audit)
+                    boundary_output = _measure(
+                        timings,
+                        "boundary_output_build",
+                        lambda: build_shadow_boundary_output(
+                            tracked_boundaries,
+                            preferred_reference_x_m=float(
+                                self.shadow_boundary_parameters.get(
+                                    "reference_x_m", 5.0
+                                )
+                            ),
+                            expected_boundary_count=self.expected_boundary_count,
+                        ),
                     )
                     if self.legacy_boundary_publisher.get_num_connections() > 0:
-                        self.legacy_boundary_publisher.publish(
-                            self._boundary_markers(tracked_boundaries, header)
+                        _measure(
+                            timings,
+                            "legacy_boundary_marker_publish",
+                            lambda: self.legacy_boundary_publisher.publish(
+                                self._boundary_markers(tracked_boundaries, header)
+                            ),
                         )
                     publish_started = time.perf_counter()
-                    self.boundary_observation_publisher.publish(
-                        self._boundary_observation_array(
-                            boundary_output, header, valid=True
-                        )
+                    _measure(
+                        timings,
+                        "typed_boundary_message_publish",
+                        lambda: self.boundary_observation_publisher.publish(
+                            self._boundary_observation_array(
+                                boundary_output, header, valid=True
+                            )
+                        ),
                     )
                     self.boundary_publish_ms.append(
                         (time.perf_counter() - publish_started) * 1000.0
                     )
             except Exception as exc:
                 self.errors += 1
+                frame_audit["error"] = "{}: {}".format(type(exc).__name__, exc)
+                frame_audit["counts"] = dict(frame_audit.get("counts") or {})
+                timings["profiled_body"] = (
+                    time.perf_counter() - started
+                ) * 1000.0
+                frame_audit["runtime_profile_schema"] = RUNTIME_PROFILE_SCHEMA
+                frame_audit["timing_ms"] = dict(timings)
+                audit_snapshot = _measure(
+                    timings,
+                    "pipeline_audit_update",
+                    lambda: self.pipeline_audit.update(frame_audit),
+                )
+                newest_header = max(
+                    frames.values(), key=lambda value: value.stamp_ns
+                ).header
+                _measure(
+                    timings,
+                    "pipeline_audit_message_publish",
+                    lambda: self.pipeline_audit_publisher.publish(
+                        self._pipeline_audit_message(audit_snapshot, newest_header)
+                    ),
+                )
+                timings["callback_total"] = (
+                    time.perf_counter() - started
+                ) * 1000.0
+                self._record_runtime_timings(timings)
                 rospy.logerr_throttle(2.0, "lane vectorization failed: %s", exc)
                 if self.shadow_boundary_enabled:
                     newest_header = max(
@@ -413,6 +714,7 @@ class LaneVectorizerNode:
                     )
                 return
             elapsed_ms = (time.perf_counter() - started) * 1000.0
+            timings["profiled_body"] = elapsed_ms
             self.processing_ms.append(elapsed_ms)
             self.output_times.append(time.monotonic())
             self.outputs += 1
@@ -441,12 +743,77 @@ class LaneVectorizerNode:
                     }
                 ),
                 "boundary_completeness": int(boundary_output.completeness),
+                "shared_family_available": bool(shared_family is not None),
+                "shared_family_observed_roles": int(
+                    len(self.last_shared_family_audit.get("observed_roles", []))
+                    if self.shared_family_debug_enabled
+                    else 0
+                ),
             }
+            frame_audit["counts"] = {
+                "model_marking_pixels": int(
+                    sum(
+                        value["model_marking_pixels"]
+                        for value in frame_audit["projection"].values()
+                    )
+                ),
+                "evidence": int(len(evidence.xy)),
+                "nodes": int(len(nodes)),
+                "tracks": int(len(tracks)),
+                "prefit_tracks": int(len(fitted_tracks)),
+                "lanes": int(len(lanes)),
+                "observations": int(
+                    frame_audit["boundary_selection"].get(
+                        "selected_boundaries", 0
+                    )
+                ),
+                "boundaries": int(len(tracked_boundaries)),
+                "yellow_boundaries": int(
+                    sum(
+                        item.observation.lane.class_id == 2
+                        for item in tracked_boundaries
+                    )
+                ),
+                "complete": False,
+                "boundary_completeness": int(boundary_output.completeness),
+                "shared_family_available": bool(shared_family is not None),
+            }
+            frame_audit["counts"]["complete"] = bool(
+                boundary_output.completeness == COMPLETENESS_COMPLETE
+                and len(boundary_output.boundaries) == self.expected_boundary_count
+            )
+            frame_audit["runtime_profile_schema"] = RUNTIME_PROFILE_SCHEMA
+            frame_audit["timing_ms"] = dict(timings)
+            audit_snapshot = _measure(
+                timings,
+                "pipeline_audit_update",
+                lambda: self.pipeline_audit.update(frame_audit),
+            )
+            newest_header = max(
+                frames.values(), key=lambda value: value.stamp_ns
+            ).header
+            _measure(
+                timings,
+                "pipeline_audit_message_publish",
+                lambda: self.pipeline_audit_publisher.publish(
+                    self._pipeline_audit_message(audit_snapshot, newest_header)
+                ),
+            )
+            timings["callback_total"] = (
+                time.perf_counter() - started
+            ) * 1000.0
+            self._record_runtime_timings(timings)
             completed_ns = int(rospy.Time.now().to_nsec())
             source_ns = max(frame.stamp_ns for frame in frames.values())
             age_ms = (completed_ns - source_ns) / 1e6
             if 0.0 <= age_ms <= 60000.0:
                 self.end_to_end_ms.append(age_ms)
+
+    def _record_runtime_timings(self, timings):
+        for stage in RUNTIME_PROFILE_STAGES:
+            value = float(timings.get(stage, 0.0))
+            if np.isfinite(value) and value >= 0.0:
+                self.runtime_stage_ms[stage].append(value)
 
     def _point_cloud(self, evidence, source_header):
         header = Header(stamp=source_header.stamp, frame_id=self.frame_id)
@@ -477,11 +844,8 @@ class LaneVectorizerNode:
         return point_cloud2.create_cloud(header, fields, points)
 
     def _markers(self, lanes, source_header):
-        delete = Marker()
-        delete.header.stamp = source_header.stamp
-        delete.header.frame_id = self.frame_id
-        delete.action = Marker.DELETEALL
-        markers = [delete]
+        markers = []
+        current_keys = set()
         for lane in lanes:
             marker = Marker()
             marker.header.stamp = source_header.stamp
@@ -493,6 +857,7 @@ class LaneVectorizerNode:
                 "white_candidate" if lane.class_id == 1 else "yellow_candidate"
             )
             marker.id = int(lane.lane_id)
+            current_keys.add((marker.ns, marker.id))
             marker.type = Marker.LINE_STRIP
             marker.action = Marker.ADD
             marker.pose.orientation.w = 1.0
@@ -528,14 +893,15 @@ class LaneVectorizerNode:
                 sort_keys=True,
             )
             markers.append(marker)
+        deleted = self.active_candidate_marker_keys - current_keys
+        markers.extend(self._delete_markers(deleted, source_header))
+        self.marker_delete_counts["candidate"] += len(deleted)
+        self.active_candidate_marker_keys = current_keys
         return MarkerArray(markers=markers)
 
     def _boundary_markers(self, boundaries, source_header):
-        delete = Marker()
-        delete.header.stamp = source_header.stamp
-        delete.header.frame_id = self.frame_id
-        delete.action = Marker.DELETEALL
-        markers = [delete]
+        markers = []
+        current_keys = set()
         for tracked in boundaries:
             observation = tracked.observation
             lane = observation.lane
@@ -546,6 +912,7 @@ class LaneVectorizerNode:
                 "white_boundary" if lane.class_id == 1 else "yellow_boundary"
             )
             marker.id = int(tracked.stable_id)
+            current_keys.add((marker.ns, marker.id))
             marker.type = Marker.LINE_STRIP
             marker.action = Marker.ADD
             marker.pose.orientation.w = 1.0
@@ -590,7 +957,148 @@ class LaneVectorizerNode:
                 sort_keys=True,
             )
             markers.append(marker)
+        deleted = self.active_boundary_marker_keys - current_keys
+        markers.extend(self._delete_markers(deleted, source_header))
+        self.marker_delete_counts["boundary"] += len(deleted)
+        self.active_boundary_marker_keys = current_keys
         return MarkerArray(markers=markers)
+
+    def _shared_family_markers(self, family, source_header):
+        """Render state-tagged shared-family segments without changing public output."""
+        markers = []
+        current_keys = set()
+        role_order = {
+            LEFT_ROLE: 0,
+            YELLOW_ROLE: 1,
+            RIGHT_ROLE: 2,
+        }
+        if family is not None:
+            for boundary in family.boundaries:
+                state_indices = {"observed": 0, "structure_inferred": 0, "invalid": 0}
+                for state, points in contiguous_sample_state_segments(
+                    boundary.sample_points, boundary.sample_state
+                ):
+                    marker = Marker()
+                    marker.header.stamp = source_header.stamp
+                    marker.header.frame_id = self.frame_id
+                    marker.ns = "shared_family/{}/{}".format(boundary.role, state)
+                    marker.id = (
+                        100 * role_order[boundary.role]
+                        + 10 * {"observed": 0, "structure_inferred": 1, "invalid": 2}[state]
+                        + state_indices[state]
+                    )
+                    state_indices[state] += 1
+                    current_keys.add((marker.ns, marker.id))
+                    marker.type = Marker.LINE_STRIP
+                    marker.action = Marker.ADD
+                    marker.pose.orientation.w = 1.0
+                    if state == "observed":
+                        marker.scale.x = 0.13
+                        marker.color.a = 0.98
+                        if boundary.class_id == 2:
+                            marker.color.r = marker.color.g = 1.0
+                            marker.color.b = 0.0
+                        else:
+                            marker.color.r = marker.color.g = marker.color.b = 1.0
+                    elif state == "structure_inferred":
+                        marker.scale.x = 0.10
+                        marker.color.r = 1.0
+                        marker.color.g = 0.55
+                        marker.color.b = 0.0
+                        marker.color.a = 0.92
+                    else:
+                        marker.scale.x = 0.06
+                        marker.color.r = 1.0
+                        marker.color.g = 0.0
+                        marker.color.b = 0.20
+                        marker.color.a = 0.55
+                    marker.points = [
+                        Point(
+                            x=float(x),
+                            y=float(y),
+                            z=float(
+                                self.ground_plane.xyz([[x, y]])[0, 2] + 0.08
+                            ),
+                        )
+                        for x, y in points
+                    ]
+                    marker.text = json.dumps(
+                        {
+                            "status": state,
+                            "role": boundary.role,
+                            "class_id": boundary.class_id,
+                            "confidence": round(boundary.confidence, 4),
+                            "observed_length_m": round(
+                                boundary.observed_length_m, 3
+                            ),
+                            "inferred_length_m": round(
+                                boundary.inferred_length_m, 3
+                            ),
+                            "invalid_length_m": round(
+                                boundary.invalid_length_m, 3
+                            ),
+                            "max_inferred_gap_m": round(
+                                boundary.max_inferred_gap_m, 3
+                            ),
+                            "deployment_allowed": False,
+                        },
+                        sort_keys=True,
+                    )
+                    markers.append(marker)
+        deleted = self.active_shared_family_marker_keys - current_keys
+        markers.extend(self._delete_markers(deleted, source_header))
+        self.marker_delete_counts["shared_family"] += len(deleted)
+        self.active_shared_family_marker_keys = current_keys
+        return MarkerArray(markers=markers)
+
+    def _shared_family_diagnostics_message(self, family, audit, source_header):
+        status = DiagnosticStatus()
+        status.name = "drivable_bev/shared_lane_family_debug"
+        status.hardware_id = "camera_metric_lane"
+        accepted = bool(family is not None and audit.get("accepted", False))
+        runtime_error = audit.get("reason") == "runtime_error"
+        status.level = (
+            DiagnosticStatus.ERROR
+            if runtime_error
+            else DiagnosticStatus.OK
+            if accepted
+            else DiagnosticStatus.WARN
+        )
+        status.message = str(audit.get("reason", "unknown"))
+        values = {
+            "runtime_debug_enabled": self.shared_family_debug_enabled,
+            "deployment_allowed": False,
+            "representation": self.shared_family_representation,
+            "accepted": accepted,
+            "reason": audit.get("reason", "unknown"),
+            "fit_ms": audit.get("fit_ms"),
+            "observed_roles": audit.get("observed_roles", []),
+            "inferred_roles": audit.get("inferred_roles", []),
+            "widths_m": audit.get("widths_m", {}),
+            "data_residual_p95_m": audit.get("data_residual_p95_m"),
+            "inlier_residual_p95_m": audit.get("inlier_residual_p95_m"),
+            "outlier_rate": audit.get("outlier_rate"),
+            "valid_x_m": audit.get("valid_x_m"),
+            "boundary_support": audit.get("boundary_support", {}),
+            "error": audit.get("error"),
+        }
+        status.values = [self._value(key, value) for key, value in values.items()]
+        message = DiagnosticArray()
+        message.header.stamp = source_header.stamp
+        message.status = [status]
+        return message
+
+    def _delete_markers(self, keys, source_header):
+        markers = []
+        for namespace, marker_id in sorted(keys):
+            marker = Marker()
+            marker.header.stamp = source_header.stamp
+            marker.header.frame_id = self.frame_id
+            marker.ns = str(namespace)
+            marker.id = int(marker_id)
+            marker.action = Marker.DELETE
+            markers.append(marker)
+        return markers
 
     def _boundary_observation_array(self, output, source_header, valid):
         message = LaneBoundaryObservationArray()
@@ -656,8 +1164,43 @@ class LaneVectorizerNode:
             value = "unavailable"
         return KeyValue(key=str(key), value=str(value))
 
+    def _pipeline_audit_message(self, snapshot, source_header):
+        frame = snapshot.get("last_frame") or {}
+        outcome = str(frame.get("primary_outcome", "unknown"))
+        counts = frame.get("counts") or {}
+        status = DiagnosticStatus()
+        status.name = "drivable_bev/lane_pipeline_audit"
+        status.hardware_id = "camera_metric_lane"
+        if frame.get("error"):
+            status.level = DiagnosticStatus.ERROR
+        elif bool(counts.get("complete", False)):
+            status.level = DiagnosticStatus.OK
+        else:
+            status.level = DiagnosticStatus.WARN
+        status.message = outcome
+        status.values = [
+            self._value("primary_outcome", outcome),
+            self._value("frame", frame),
+            self._value("cumulative_outcomes", snapshot.get("outcomes", {})),
+            self._value("cumulative_rejections", snapshot.get("rejections", {})),
+            self._value(
+                "current_streak_frames", snapshot.get("current_streak_frames", {})
+            ),
+            self._value(
+                "longest_streak_frames", snapshot.get("longest_streak_frames", {})
+            ),
+            self._value("frames", snapshot.get("frames", 0)),
+        ]
+        message = DiagnosticArray()
+        message.header.stamp = source_header.stamp
+        message.status = [status]
+        return message
+
     def _publish_diagnostics(self, _event):
         processing = np.asarray(self.processing_ms, dtype=np.float64)
+        shared_processing = np.asarray(
+            self.shared_family_fit_ms, dtype=np.float64
+        )
         boundary_publish = np.asarray(self.boundary_publish_ms, dtype=np.float64)
         latency = np.asarray(self.end_to_end_ms, dtype=np.float64)
         fps = 0.0
@@ -665,6 +1208,16 @@ class LaneVectorizerNode:
             fps = (len(self.output_times) - 1) / max(
                 self.output_times[-1] - self.output_times[0], 1e-9
             )
+        runtime_stage_summary = {}
+        for stage, samples in self.runtime_stage_ms.items():
+            values = np.asarray(samples, dtype=np.float64)
+            runtime_stage_summary[stage] = {
+                "count": int(len(values)),
+                "p50": float(np.percentile(values, 50)) if len(values) else None,
+                "p95": float(np.percentile(values, 95)) if len(values) else None,
+                "p99": float(np.percentile(values, 99)) if len(values) else None,
+                "max": float(np.max(values)) if len(values) else None,
+            }
         status = DiagnosticStatus()
         status.name = "drivable_bev/lane_vectorizer"
         status.hardware_id = "camera_metric_lane"
@@ -690,6 +1243,26 @@ class LaneVectorizerNode:
             "confidence_by_class": self.confidence_by_class,
             "shadow_boundary_enabled": self.shadow_boundary_enabled,
             "shadow_boundary_parameters": self.shadow_boundary_parameters,
+            "temporal_boundary_parameters": self.temporal_boundary_parameters,
+            "shared_family_debug_enabled": self.shared_family_debug_enabled,
+            "shared_family_deployment_allowed": False,
+            "shared_family_representation": self.shared_family_representation,
+            "shared_family_errors": self.shared_family_errors,
+            "shared_family_fit_p50_ms": float(np.percentile(shared_processing, 50))
+            if len(shared_processing)
+            else None,
+            "shared_family_fit_p95_ms": float(np.percentile(shared_processing, 95))
+            if len(shared_processing)
+            else None,
+            "runtime_profile_schema": RUNTIME_PROFILE_SCHEMA,
+            "runtime_stage_ms": runtime_stage_summary,
+            "runtime_debug_subscribers": {
+                "evidence_points": self.evidence_publisher.get_num_connections(),
+                "candidate_markers": self.marker_publisher.get_num_connections(),
+                "legacy_boundary_markers": self.legacy_boundary_publisher.get_num_connections(),
+                "shared_family_markers": self.shared_family_marker_publisher.get_num_connections(),
+            },
+            "last_shared_family_audit": self.last_shared_family_audit,
             "ground_plane_frame": self.ground_plane.frame_id,
             "ground_plane_coefficients": self.ground_plane.coefficients,
             "ground_plane_source": self.ground_plane.source,
@@ -698,6 +1271,9 @@ class LaneVectorizerNode:
             "boundary_algorithm_id": self.algorithm_id,
             "boundary_config_sha256": self.boundary_config_sha256,
             "boundary_expected_count": self.expected_boundary_count,
+            "pipeline_audit": self.pipeline_audit.snapshot(),
+            "marker_policy": "explicit_delete_missing_ids",
+            "marker_delete_counts": self.marker_delete_counts,
         }
         status.values = [self._value(key, value) for key, value in values.items()]
         message = DiagnosticArray()

@@ -14,6 +14,7 @@
   <depend>camera_semantic_perception</depend>
   <depend>geometry_msgs</depend>
   <depend>message_filters</depend>
+  <depend>morai_msgs</depend>
   <depend>rospy</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>

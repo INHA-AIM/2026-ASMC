@@ -1,0 +1,63 @@
+schema_version: asmc-shadow-zone-config-1.0.0
+map: kcity2025
+operating_domain: shadow_two_way_v1
+
+# File names are resolved below --data-root by build_shadow_lane_gt.py. They
+# are kept outside this repository because the MORAI map bundle is data, not
+# runtime source code.
+sources:
+  link_set: link_set.json
+  scenario: 2026_molit_comp_sample_scene.json
+
+shadow_area:
+  unique_id: 12
+  # MORAI scenario rotation is a vehicle/Unity-style heading rather than a
+  # mathematical map-XY angle. Its long local x axis maps to yaw-90 degrees.
+  yaw_to_map_offset_deg: -90.0
+  max_link_axis_error_deg: 8.0
+
+# These are opposing travel-direction link centre lines. The generator aligns
+# their arc-length direction before deriving the road centre and outer edges.
+links:
+  ids: [A2256W000126, A2256W000131]
+
+geometry:
+  resample_spacing_m: 0.50
+  expected_lane_width_m: 3.50
+  lane_width_tolerance_m: 0.50
+  clip_margin_m: 0.05
+  # Estimated from high-intensity road-paint returns in 12 independent
+  # Sunny/Foggy shadow runs (the four short maneuver bags lacked enough
+  # per-run support). Positive is the generator's family-normal direction.
+  # Values are rounded to centimetres instead of overfitting millimetres.
+  center_lateral_offset_m: 0.00
+  positive_lane_width_m: 3.48
+  negative_lane_width_m: 3.52
+  calibration:
+    method: lidar_paint_signed_residual
+    report: artifacts/perception_eval/analysis/shadow_lane_lidar_calibration_20260913/calibration_heading_m125.json
+    combined_support: 8727
+    source_runs: 12
+    status: calibration_candidate_pending_rgb_drive_review
+
+pose_alignment:
+  # A common far-range lateral drift remained after the metric width/offset
+  # fit. Jointly re-estimating all three boundary offsets for every yaw
+  # candidate prevents lateral offset from absorbing angular error. The
+  # aggregate optimum over 12 runs is -1.25 degrees.
+  ego_heading_offset_deg: -1.25
+  calibration:
+    method: lidar_paint_joint_heading_boundary_grid_search
+    report: artifacts/perception_eval/analysis/shadow_lane_heading_calibration_20260914/heading_offset_grid_search.json
+    candidate_range_deg: [-2.0, 2.0]
+    candidate_step_deg: 0.05
+    source_runs: 12
+    status: calibration_candidate_pending_rgb_drive_review
+
+provenance:
+  status: map_pseudo_gt
+  deployment_allowed: false
+  note: >-
+    Link centre lines and nominal widths do not constitute official painted
+    lane-boundary ground truth. Validate the generated curves against camera
+    semantics, LiDAR paint returns, or the reviewed map bake before use.

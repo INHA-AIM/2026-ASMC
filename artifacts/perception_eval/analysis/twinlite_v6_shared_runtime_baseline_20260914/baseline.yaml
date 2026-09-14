@@ -1,0 +1,188 @@
+schema_version: asmc-shared-family-runtime-baseline-1.0.0
+generated_at: '2026-09-14T16:44:52+09:00'
+status: four_bag_runtime_baseline_recorded
+scope: shadow_two_way_v1
+deployment_allowed: false
+
+lineage:
+  git_commit: b6fff3d3c4d14c7946dbeac94d3146f125ca00a7
+  git_branch: feature/planning-shadow-lane-adapter
+  git_dirty: true
+  checkpoint:
+    path: artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+    sha256: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+  lane_fitting_config_sha256: 38dc92722dc297b07380a9178e2b3a74d28f3090c26a0e9e28b895ddd81400e6
+  camera_config_sha256: 185164fb704761bd8ab24e69966ffb796e2f20148c54bda4a875e2486747df12
+  bev_grid_dev_sha256: 12c9cc1ab434d98a7720033bd75e871a9d8ed89490b6ca4e0f87acca9f912540
+
+consumption_policy:
+  observed: primary
+  structure_inferred: degraded_with_confidence
+  invalid: forbidden
+  temporal_predicted: not_implemented
+  note: >-
+    Invalid debug geometry is excluded even when it appears visually aligned;
+    it has no accepted local evidence support.
+
+runtime_smoke:
+  source_run_id: 20260913_195429_kcity2025_shadow_lateral_sweep_sunny_1pm_wheel
+  replay_duration_s: 25
+  shared_marker_hz: 8.4
+  shared_diagnostics_hz: 8.4
+  lazy_rqt_image_hz: 5.0
+  shared_fit_ms:
+    p50: 31.27
+    p95: 38.33
+  lane_vector_processing_ms:
+    p50: 92.47
+    p95: 116.46
+  runtime_errors: 0
+  three_view_sync_rejects: 0
+  interpretation: functional and visualization baseline, not production latency gate
+
+runtime_replay:
+  model_id: twinlite_v6_shared_runtime_baseline_v1_20260914
+  runs: 4
+  frames: 1126
+  execution_environment:
+    ros_master: http://127.0.0.1:11312
+    ros_graph_isolated: true
+    compute_isolated: false
+    co_resident_load: user_live_three_view_pipeline_on_ros_master_11311
+    interpretation: >-
+      Geometry and state accounting are valid. GPU/CPU throughput is a
+      conservative development-load baseline and must be remeasured with the
+      live 11311 pipeline stopped before a production latency decision.
+  batch_summary:
+    path: artifacts/perception_eval/analysis/twinlite_v6_shared_runtime_baseline_20260914/batch_summary.yaml
+    sha256: 7b45672e4a2f43d04dd6bb1f450d7a28623c43a6c22eba75f48fb51b4e29fe91
+  runtime_audit:
+    path: artifacts/perception_eval/analysis/twinlite_v6_shared_runtime_baseline_20260914/runtime_audit.yaml
+    sha256: f60037b0592e50c7d5a781dd70147d243f02e26a8bcd051b563342994778276e
+  family:
+    accepted_rate: 1.0
+    longest_rejected_streak_frames: 0
+    observed_role_presence_rate:
+      left_outer_boundary: 1.0
+      yellow_centre_boundary: 1.0
+      right_outer_boundary: 1.0
+    role_level_inferred_presence_rate:
+      left_outer_boundary: 0.0
+      yellow_centre_boundary: 0.0
+      right_outer_boundary: 0.0
+    fit_ms:
+      p50: 39.68
+      p95: 51.00
+    valid_span_m:
+      p50: 20.03
+      p95: 21.75
+  support_samples:
+    observed_of_all: 0.669822
+    structure_inferred_of_all: 0.101952
+    invalid_of_all: 0.228226
+    usable_of_all: 0.771774
+    structure_inferred_of_usable: 0.132101
+    note: >-
+      Role-level observed means every role retained sufficient direct support;
+      individual curve segments may still be structure-inferred or invalid.
+  geometry:
+    left_width_m_p50: 3.5218
+    right_width_m_p50: 3.5352
+    data_residual_p95_distribution_p50_m: 0.2005
+    data_residual_p95_distribution_p95_m: 0.4882
+    inlier_residual_p95_distribution_p95_m: 0.2928
+    outlier_rate_p95: 0.1456
+  throughput:
+    shared_output_hz_by_run: [9.082, 8.857, 8.866, 9.277]
+    shared_output_hz_min: 8.857
+    full_lane_processing_p95_ms_by_run: [127.55, 115.79, 116.31, 116.36]
+    lane_sync_rejected_counter_delta_by_run: [62, 66, 36, 33]
+    runtime_errors: 0
+    interpretation: >-
+      The 35 ms three-view gate rejected candidate input tuples while the
+      accepted shared-family stream remained continuous. Two runs narrowly
+      missed the 9 Hz target under a co-resident live perception workload.
+      Optimization is still useful, but standalone latency must be remeasured
+      before any production promotion decision.
+
+live_stationary_snapshot:
+  accepted: true
+  observed_roles:
+    - left_outer_boundary
+    - yellow_centre_boundary
+    - right_outer_boundary
+  inferred_roles: []
+  left_width_m: 3.5998937162389875
+  right_width_m: 3.573250534161838
+  fit_ms: 33.287783997366205
+  data_residual_p95_m: 0.47284473564419893
+  inlier_residual_p95_m: 0.2726956027771085
+  outlier_rate: 0.13135593220338984
+  valid_x_m: [0.33356018037199514, 19.27367799385885]
+  note: one stationary live frame; not a maneuver accuracy sample
+
+offline_context:
+  matrix_runs: 16
+  frames: 4075
+  map_supported_odd_frames: 1632
+  independent_complete_rate: 0.8438
+  shared_complete_rate: 1.0
+  paired_map_p95_delta_median_m: -0.0582
+  worst_distance_bin_regression_m: 0.0193
+  inferred_samples_over_0_50m_map_error: 9
+  inferred_samples_total: 43038
+  note: map values are pseudo-GT review signals, not absolute ground truth
+
+metric_contract:
+  availability:
+    - accepted_rate
+    - longest_rejected_streak_frames
+    - observed_role_presence_rates
+    - inferred_role_presence_rates
+  support:
+    - observed_length_ratio
+    - structure_inferred_length_ratio
+    - invalid_length_ratio
+    - usable_valid_span_m
+  geometry:
+    - left_width_m
+    - right_width_m
+    - data_residual_p95_m
+    - inlier_residual_p95_m
+    - outlier_rate
+  runtime:
+    - shared_fit_ms_p50_p95
+    - lane_vector_processing_ms_p50_p95
+    - output_hz
+    - sync_rejects
+    - runtime_errors
+  manual_review:
+    - false_bridge
+    - state_transition_flicker
+    - obstacle_avoid_return_continuity
+
+next_gate:
+  model_id: twinlite_v6_shared_runtime_baseline_v1_20260914
+  selection: artifacts/perception_eval/analysis/shadow_maneuver_20260913/selection.yaml
+  runs: 4
+  status: complete_with_throughput_followup
+  acceptance:
+    invalid_consumed: false
+    deployment_allowed_frames: 0
+    runtime_errors: 0
+    sync_rejects: 0
+    target_output_hz_min: 9.0
+    geometry_and_state_non_regression_required: true
+  result:
+    invalid_consumed: false
+    deployment_allowed_frames: 0
+    runtime_errors: 0
+    family_rejected_frames: 0
+    measured_output_hz_min: 8.857
+    geometry_and_state_non_regression: passed
+    throughput_target: narrowly_missed_under_co_resident_load
+    promotion_decision: debug_baseline_only
+
+deferred:
+  ego_motion_temporal: only_on_measured_dropout_or_planning_request
+  imu_pitch_roll_compensation: only_after_remaining_stack_or_measured_need

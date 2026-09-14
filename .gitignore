@@ -74,6 +74,9 @@ artifacts/perception_eval/analysis/*/metrics.json
 artifacts/perception_eval/analysis/*/metrics_by_bin.csv
 artifacts/perception_eval/analysis/*/frame_metrics.csv
 artifacts/perception_eval/analysis/*/manual_review.csv
+# Raw roslaunch/recorder logs are reproducible and frequently contain terminal
+# formatting whitespace. Keep the normalized YAML/JSON audit summaries instead.
+artifacts/perception_eval/analysis/**/*batch_summary_logs/
 
 # Superseded parameter sweeps are preserved locally but are not PR artifacts.
 artifacts/perception_eval/analysis/twinlite_v6_bev_loss_budget_20260910/

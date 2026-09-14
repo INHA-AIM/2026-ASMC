@@ -1,0 +1,28 @@
+<launch>
+  <!-- Evaluation-only consumer; it publishes no runtime boundary topic. -->
+  <arg name="run_id"/>
+  <arg name="output_dir"/>
+  <arg name="pseudo_gt_path"
+       default="$(find drivable_bev)/../../../artifacts/perception_eval/analysis/shadow_lane_map_pseudo_gt_pose_v4_20260914/shadow_lane_pseudo_gt.json"/>
+  <arg name="overlay_stride" default="30"/>
+  <arg name="overlay_limit" default="24"/>
+  <arg name="high_residual_overlay_threshold_m" default="0.50"/>
+  <arg name="high_residual_overlay_limit" default="100"/>
+  <arg name="pseudo_gt_disagreement_m" default="0.50"/>
+
+  <node pkg="drivable_bev" type="shadow_lane_family_offline_node.py"
+        name="shadow_lane_family_offline" output="screen" required="true">
+    <rosparam command="load" file="$(find drivable_bev)/config/lane_fitting.yaml"/>
+    <param name="run_id" value="$(arg run_id)"/>
+    <param name="output_dir" value="$(arg output_dir)"/>
+    <param name="pseudo_gt_path" value="$(arg pseudo_gt_path)"/>
+    <param name="overlay_stride" value="$(arg overlay_stride)"/>
+    <param name="overlay_limit" value="$(arg overlay_limit)"/>
+    <param name="high_residual_overlay_threshold_m"
+           value="$(arg high_residual_overlay_threshold_m)"/>
+    <param name="high_residual_overlay_limit"
+           value="$(arg high_residual_overlay_limit)"/>
+    <param name="pseudo_gt_disagreement_m"
+           value="$(arg pseudo_gt_disagreement_m)"/>
+  </node>
+</launch>

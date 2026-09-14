@@ -42,6 +42,8 @@ class _TrackState:
     observation: BoundaryObservation
     age_frames: int = 1
     missed_frames: int = 0
+    last_observed_stamp_ns: int = 0
+    lateral_velocity_mps: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -151,13 +153,13 @@ def _track_y_at_x(track, x_m: float) -> float:
     return float(np.interp(target, unique_x, points[indices, 1]))
 
 
-def _track_candidate(track, values: Mapping) -> Optional[_TrackCandidate]:
+def _track_candidate_with_reason(track, values: Mapping) -> tuple[Optional[_TrackCandidate], str]:
     points = np.asarray(track.xy, dtype=np.float64).reshape(-1, 2)
     if len(points) < 2:
-        return None
+        return None, "too_few_points"
     span = float(np.max(points[:, 0]) - np.min(points[:, 0]))
     if span < float(values["min_longitudinal_span_m"]):
-        return None
+        return None, "short_longitudinal_span"
     centered = points - np.mean(points, axis=0)
     covariance = centered.T @ centered
     eigenvalues, eigenvectors = np.linalg.eigh(covariance)
@@ -166,10 +168,10 @@ def _track_candidate(track, values: Mapping) -> Optional[_TrackCandidate]:
         direction = -direction
     heading = float(math.degrees(math.atan2(direction[1], direction[0])))
     if abs(heading) > float(values["max_abs_heading_deg"]):
-        return None
+        return None, "heading_outside_odd"
     reference_y = _track_y_at_x(track, float(values["reference_x_m"]))
     if abs(reference_y) > float(values["max_abs_lateral_m"]):
-        return None
+        return None, "lateral_position_outside_odd"
     node_weights = np.asarray(
         [max(1e-6, node.geometric_quality * math.sqrt(node.support)) for node in track.nodes],
         dtype=np.float64,
@@ -178,11 +180,16 @@ def _track_candidate(track, values: Mapping) -> Optional[_TrackCandidate]:
         np.average([node.confidence for node in track.nodes], weights=node_weights)
     )
     if confidence < float(values["min_confidence"]):
-        return None
+        return None, "mean_confidence_below_threshold"
     score = confidence * min(1.0, span / 15.0) * max(
         0.0, math.cos(math.radians(abs(heading)))
     )
-    return _TrackCandidate(track, float(score), reference_y, heading)
+    return _TrackCandidate(track, float(score), reference_y, heading), "accepted"
+
+
+def _track_candidate(track, values: Mapping) -> Optional[_TrackCandidate]:
+    candidate, _ = _track_candidate_with_reason(track, values)
+    return candidate
 
 
 def _track_separation(first: _TrackCandidate, second: _TrackCandidate) -> float:
@@ -204,13 +211,19 @@ def _track_separation(first: _TrackCandidate, second: _TrackCandidate) -> float:
     )
 
 
-def select_shadow_lane_tracks(tracks: Sequence, config: Optional[Mapping] = None) -> tuple:
+def select_shadow_lane_tracks_with_audit(
+    tracks: Sequence, config: Optional[Mapping] = None
+) -> tuple[tuple, dict]:
     """Preselect at most three shadow-boundary tracks before cubic fitting."""
     values = _config(config)
-    candidates = [
-        value for value in (_track_candidate(track, values) for track in tracks)
-        if value is not None
-    ]
+    rejected = {}
+    candidates = []
+    for track in tracks:
+        candidate, reason = _track_candidate_with_reason(track, values)
+        if candidate is None:
+            rejected[reason] = rejected.get(reason, 0) + 1
+        else:
+            candidates.append(candidate)
     yellow = sorted(
         (item for item in candidates if item.track.class_id == 2),
         key=lambda item: (-item.score, abs(item.reference_y_m)),
@@ -240,47 +253,76 @@ def select_shadow_lane_tracks(tracks: Sequence, config: Optional[Mapping] = None
             selected.append(item)
             if len(selected) >= int(values["max_white_without_yellow"]):
                 break
-    return tuple(
+    result = tuple(
         item.track
         for item in sorted(selected, key=lambda value: -value.reference_y_m)
     )
+    selected_ids = {id(value) for value in result}
+    for candidate in candidates:
+        if id(candidate.track) not in selected_ids:
+            key = (
+                "lower_rank_or_role_mismatch_yellow"
+                if int(candidate.track.class_id) == 2
+                else "width_side_or_rank_rejected_white"
+            )
+            rejected[key] = rejected.get(key, 0) + 1
+    return result, {
+        "input_tracks": int(len(tracks)),
+        "eligible_tracks": int(len(candidates)),
+        "selected_tracks": int(len(result)),
+        "selected_white": int(sum(track.class_id == 1 for track in result)),
+        "selected_yellow": int(sum(track.class_id == 2 for track in result)),
+        "rejected": dict(sorted(rejected.items())),
+    }
+
+
+def select_shadow_lane_tracks(tracks: Sequence, config: Optional[Mapping] = None) -> tuple:
+    result, _ = select_shadow_lane_tracks_with_audit(tracks, config)
+    return result
+
+
+def _eligible_observation(
+    lane: FittedLane, values: Mapping
+) -> tuple[Optional[BoundaryObservation], str]:
+    reference_x = float(values["reference_x_m"])
+    if int(lane.class_id) not in (1, 2):
+        return None, "unsupported_class"
+    span = float(lane.valid_x_max_m - lane.valid_x_min_m)
+    heading = lane_heading_deg(lane)
+    reference_y = lane_y_at_x(lane, reference_x)
+    if not np.isfinite(reference_y):
+        return None, "non_finite_reference"
+    if float(lane.confidence) < float(values["min_confidence"]):
+        return None, "confidence_below_threshold"
+    if span < float(values["min_longitudinal_span_m"]):
+        return None, "short_longitudinal_span"
+    if float(lane.observed_length_m) < float(values["min_observed_length_m"]):
+        return None, "short_observed_length"
+    if float(lane.bridged_length_ratio) > float(values["max_bridged_ratio"]):
+        return None, "bridged_ratio_above_limit"
+    if float(lane.residual_p95_m) > float(values["max_residual_p95_m"]):
+        return None, "spline_residual_above_limit"
+    if abs(heading) > float(values["max_abs_heading_deg"]):
+        return None, "heading_outside_odd"
+    if abs(reference_y) > float(values["max_abs_lateral_m"]):
+        return None, "lateral_position_outside_odd"
+    return (
+        BoundaryObservation(
+            lane=lane,
+            role="unresolved",
+            score=_lane_score(lane, heading),
+            reference_y_m=reference_y,
+            heading_deg=heading,
+        )
+    ), "accepted"
 
 
 def _eligible_observations(lanes: Sequence[FittedLane], values: Mapping) -> list:
-    result = []
-    reference_x = float(values["reference_x_m"])
-    for lane in lanes:
-        if int(lane.class_id) not in (1, 2):
-            continue
-        span = float(lane.valid_x_max_m - lane.valid_x_min_m)
-        heading = lane_heading_deg(lane)
-        reference_y = lane_y_at_x(lane, reference_x)
-        if not np.isfinite(reference_y):
-            continue
-        if float(lane.confidence) < float(values["min_confidence"]):
-            continue
-        if span < float(values["min_longitudinal_span_m"]):
-            continue
-        if float(lane.observed_length_m) < float(values["min_observed_length_m"]):
-            continue
-        if float(lane.bridged_length_ratio) > float(values["max_bridged_ratio"]):
-            continue
-        if float(lane.residual_p95_m) > float(values["max_residual_p95_m"]):
-            continue
-        if abs(heading) > float(values["max_abs_heading_deg"]):
-            continue
-        if abs(reference_y) > float(values["max_abs_lateral_m"]):
-            continue
-        result.append(
-            BoundaryObservation(
-                lane=lane,
-                role="unresolved",
-                score=_lane_score(lane, heading),
-                reference_y_m=reference_y,
-                heading_deg=heading,
-            )
-        )
-    return result
+    return [
+        observation
+        for observation, _ in (_eligible_observation(lane, values) for lane in lanes)
+        if observation is not None
+    ]
 
 
 def _separation(first: BoundaryObservation, second: BoundaryObservation) -> float:
@@ -296,16 +338,23 @@ def _separation(first: BoundaryObservation, second: BoundaryObservation) -> floa
     return float(np.median(differences))
 
 
-def select_shadow_boundaries(
+def select_shadow_boundaries_with_audit(
     lanes: Sequence[FittedLane], config: Optional[Mapping] = None
-) -> Tuple[BoundaryObservation, ...]:
+) -> tuple[Tuple[BoundaryObservation, ...], dict]:
     """Select colour-aware boundary candidates for the two-way shadow ODD.
 
     The output is ordered from physical left to right (positive to negative
     ``base_link`` y). Missing observations are not synthesized.
     """
     values = _config(config)
-    eligible = _eligible_observations(lanes, values)
+    eligible = []
+    rejected = {}
+    for lane in lanes:
+        observation, reason = _eligible_observation(lane, values)
+        if observation is None:
+            rejected[reason] = rejected.get(reason, 0) + 1
+        else:
+            eligible.append(observation)
     yellow = sorted(
         (item for item in eligible if item.lane.class_id == 2),
         key=lambda item: (-item.score, abs(item.reference_y_m), item.lane.lane_id),
@@ -366,7 +415,7 @@ def select_shadow_boundaries(
         selected,
         key=lambda item: (-item.reference_y_m, item.lane.class_id, item.lane.lane_id),
     )
-    return tuple(
+    result = tuple(
         BoundaryObservation(
             lane=item.lane,
             role=item.role,
@@ -377,20 +426,51 @@ def select_shadow_boundaries(
         )
         for index, item in enumerate(ordered)
     )
+    selected_lane_ids = {id(item.lane) for item in result}
+    for item in eligible:
+        if id(item.lane) not in selected_lane_ids:
+            key = (
+                "lower_rank_yellow"
+                if item.lane.class_id == 2
+                else "width_side_or_rank_rejected_white"
+            )
+            rejected[key] = rejected.get(key, 0) + 1
+    return result, {
+        "input_lanes": int(len(lanes)),
+        "eligible_lanes": int(len(eligible)),
+        "selected_boundaries": int(len(result)),
+        "selected_white": int(sum(item.lane.class_id == 1 for item in result)),
+        "selected_yellow": int(sum(item.lane.class_id == 2 for item in result)),
+        "rejected": dict(sorted(rejected.items())),
+    }
+
+
+def select_shadow_boundaries(
+    lanes: Sequence[FittedLane], config: Optional[Mapping] = None
+) -> Tuple[BoundaryObservation, ...]:
+    result, _ = select_shadow_boundaries_with_audit(lanes, config)
+    return result
 
 
 def boundary_lateral_residual(
     first: BoundaryObservation, second: BoundaryObservation
 ) -> float:
+    return abs(boundary_lateral_shift(first, second))
+
+
+def boundary_lateral_shift(
+    first: BoundaryObservation, second: BoundaryObservation
+) -> float:
+    """Median signed shift from ``first`` to ``second`` in base_link y."""
     if first.lane.class_id != second.lane.class_id:
         return float("inf")
     lower = max(first.lane.valid_x_min_m, second.lane.valid_x_min_m)
     upper = min(first.lane.valid_x_max_m, second.lane.valid_x_max_m)
     if upper - lower < 1.0:
-        return abs(first.reference_y_m - second.reference_y_m)
+        return float(second.reference_y_m - first.reference_y_m)
     samples = np.linspace(lower, upper, max(4, int(math.ceil(upper - lower)) + 1))
     residual = [
-        abs(lane_y_at_x(first.lane, x_value) - lane_y_at_x(second.lane, x_value))
+        lane_y_at_x(second.lane, x_value) - lane_y_at_x(first.lane, x_value)
         for x_value in samples
     ]
     return float(np.median(residual))
@@ -404,19 +484,40 @@ class TemporalBoundaryTracker:
         max_lateral_residual_m: float = 0.65,
         max_missed_frames: int = 3,
         reset_gap_sec: float = 0.75,
+        velocity_smoothing: float = 0.50,
+        max_lateral_speed_mps: float = 4.0,
     ) -> None:
-        if max_lateral_residual_m <= 0.0 or max_missed_frames < 0 or reset_gap_sec <= 0.0:
+        if (
+            max_lateral_residual_m <= 0.0
+            or max_missed_frames < 0
+            or reset_gap_sec <= 0.0
+            or not 0.0 <= velocity_smoothing <= 1.0
+            or max_lateral_speed_mps <= 0.0
+        ):
             raise ValueError("temporal boundary tracker settings are invalid")
         self.max_lateral_residual_m = float(max_lateral_residual_m)
         self.max_missed_frames = int(max_missed_frames)
         self.reset_gap_ns = int(round(float(reset_gap_sec) * 1e9))
+        self.velocity_smoothing = float(velocity_smoothing)
+        self.max_lateral_speed_mps = float(max_lateral_speed_mps)
         self._tracks = {}
         self._next_id = 1
         self._last_stamp_ns = None
+        self.last_audit = {}
 
     def reset(self) -> None:
         self._tracks = {}
         self._last_stamp_ns = None
+        self.last_audit = {
+            "reset": True,
+            "previous_tracks": 0,
+            "input_observations": 0,
+            "matched": 0,
+            "new_tracks": 0,
+            "missed_tracks": 0,
+            "expired_tracks": 0,
+            "output_tracks": 0,
+        }
 
     def update(
         self, observations: Sequence[BoundaryObservation], stamp_ns: int
@@ -424,17 +525,31 @@ class TemporalBoundaryTracker:
         stamp_ns = int(stamp_ns)
         if stamp_ns <= 0:
             raise ValueError("boundary timestamp must be positive")
+        reset_reason = "none"
+        previous_track_count = len(self._tracks)
         if self._last_stamp_ns is not None and (
             stamp_ns <= self._last_stamp_ns
             or stamp_ns - self._last_stamp_ns > self.reset_gap_ns
         ):
+            reset_reason = (
+                "non_monotonic_stamp"
+                if stamp_ns <= self._last_stamp_ns
+                else "timestamp_gap"
+            )
             self.reset()
         self._last_stamp_ns = stamp_ns
 
         candidates = []
         for stable_id, state in self._tracks.items():
+            elapsed_s = max(
+                0.0, (stamp_ns - state.last_observed_stamp_ns) / 1e9
+            )
+            predicted_shift = state.lateral_velocity_mps * elapsed_s
             for index, observation in enumerate(observations):
-                residual = boundary_lateral_residual(state.observation, observation)
+                measured_shift = boundary_lateral_shift(
+                    state.observation, observation
+                )
+                residual = abs(measured_shift - predicted_shift)
                 if residual <= self.max_lateral_residual_m:
                     role_penalty = 0.0 if state.observation.role == observation.role else 0.05
                     candidates.append((residual + role_penalty, stable_id, index))
@@ -446,33 +561,74 @@ class TemporalBoundaryTracker:
                 continue
             state = self._tracks[stable_id]
             missed = state.missed_frames
+            elapsed_s = max(
+                1e-6, (stamp_ns - state.last_observed_stamp_ns) / 1e9
+            )
+            measured_shift = boundary_lateral_shift(
+                state.observation, observations[index]
+            )
+            measured_velocity = float(
+                np.clip(
+                    measured_shift / elapsed_s,
+                    -self.max_lateral_speed_mps,
+                    self.max_lateral_speed_mps,
+                )
+            )
+            state.lateral_velocity_mps = (
+                self.velocity_smoothing * measured_velocity
+                + (1.0 - self.velocity_smoothing) * state.lateral_velocity_mps
+            )
             state.observation = observations[index]
             state.age_frames += 1
             state.missed_frames = 0
+            state.last_observed_stamp_ns = stamp_ns
             matched_tracks.add(stable_id)
             matched_observations.add(index)
             output.append(
                 TrackedBoundary(stable_id, observations[index], state.age_frames, missed)
             )
 
+        expired_tracks = 0
+        missed_tracks = 0
         for stable_id, state in list(self._tracks.items()):
             if stable_id in matched_tracks:
                 continue
             state.missed_frames += 1
+            missed_tracks += 1
             if state.missed_frames > self.max_missed_frames:
                 del self._tracks[stable_id]
+                expired_tracks += 1
 
+        new_tracks = 0
         for index, observation in enumerate(observations):
             if index in matched_observations:
                 continue
             stable_id = self._next_id
             self._next_id += 1
-            self._tracks[stable_id] = _TrackState(stable_id, observation)
+            self._tracks[stable_id] = _TrackState(
+                stable_id,
+                observation,
+                last_observed_stamp_ns=stamp_ns,
+            )
             output.append(TrackedBoundary(stable_id, observation, 1, 0))
+            new_tracks += 1
 
-        return tuple(
+        result = tuple(
             sorted(
                 output,
                 key=lambda item: item.observation.lateral_order_left_to_right,
             )
         )
+        self.last_audit = {
+            "reset": reset_reason != "none",
+            "reset_reason": reset_reason,
+            "previous_tracks": int(previous_track_count),
+            "input_observations": int(len(observations)),
+            "matched": int(len(matched_tracks)),
+            "new_tracks": int(new_tracks),
+            "missed_tracks": int(missed_tracks),
+            "expired_tracks": int(expired_tracks),
+            "output_tracks": int(len(result)),
+            "retained_internal_tracks": int(len(self._tracks)),
+        }
+        return result

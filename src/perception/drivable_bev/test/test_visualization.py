@@ -13,6 +13,7 @@ from drivable_bev.visualization import (
     colorize_road_marking,
     crop_bev_layers,
     draw_metric_lanes,
+    draw_stateful_lane_family,
     draw_ground_grid_overlay,
     render_fused_bev,
     render_fused_quality,
@@ -126,6 +127,51 @@ class VisualizationTest(unittest.TestCase):
         )
         draw_metric_lanes(canvas, [(1, points)], self.grid)
         self.assertGreater(np.count_nonzero(canvas), 0)
+
+    def test_stateful_shared_family_has_distinct_state_colors(self):
+        canvas = np.zeros((*self.grid.shape, 3), dtype=np.uint8)
+        segments = [
+            (
+                "left_outer_boundary",
+                "observed",
+                1,
+                np.asarray([[2.0, 2.0], [8.0, 2.0]]),
+            ),
+            (
+                "yellow_centre_boundary",
+                "structure_inferred",
+                2,
+                np.asarray([[2.0, 0.0], [8.0, 0.0]]),
+            ),
+            (
+                "right_outer_boundary",
+                "invalid",
+                1,
+                np.asarray([[2.0, -2.0], [8.0, -2.0]]),
+            ),
+        ]
+        rendered = draw_stateful_lane_family(
+            canvas, segments, self.grid, status_text="shared=accepted"
+        )
+        self.assertIs(rendered, canvas)
+        observed_pixel = np.rint(
+            self.grid.metric_to_pixel([[5.0, 2.0]])[0]
+        ).astype(int)
+        inferred_pixel = np.rint(
+            self.grid.metric_to_pixel([[2.0, 0.0]])[0]
+        ).astype(int)
+        invalid_pixel = np.rint(
+            self.grid.metric_to_pixel([[2.0, -2.0]])[0]
+        ).astype(int)
+        self.assertGreater(
+            int(canvas[observed_pixel[1], observed_pixel[0], 0]), 200
+        )
+        self.assertGreater(
+            int(canvas[inferred_pixel[1], inferred_pixel[0], 1]), 100
+        )
+        self.assertGreater(
+            int(canvas[invalid_pixel[1], invalid_pixel[0], 2]), 100
+        )
 
 
 if __name__ == "__main__":
