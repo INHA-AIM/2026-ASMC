@@ -1,0 +1,64 @@
+schema_version: asmc-shadow-distributed-support-candidate-1.0.0
+created_at_kst: "2026-09-15"
+status: implementation_verified_targeted_live_review_pending
+
+scope:
+  operating_domain: shadow_two_way_v1
+  candidate_algorithm_id: twinlite_v6_shadow_boundary_family_candidate_v3
+  changed_rejection_reason_only: insufficient_local_multi_role_support
+  temporal_prediction_used: false
+  map_geometry_used: false
+  one_role_recovery_allowed: false
+
+policy:
+  x_range_m: [0.0, 15.0]
+  minimum_observed_roles: 2
+  existing_role_assignment_minimum_track_span_m: 3.0
+  minimum_support_per_role_m: 2.0
+  minimum_union_support_m: 6.0
+  maximum_internal_gap_m: 3.0
+  maximum_role_heading_delta_deg: 15.0
+  maximum_inlier_residual_p95_m: 0.30
+  maximum_outlier_rate: 0.35
+  maximum_curvature_inv_m: 0.12
+  output_state_for_unobserved_family_member: structure_inferred
+
+synthetic_staggered_support:
+  input_fragments:
+    left_outer_boundary_x_m: [0.0, 5.0]
+    yellow_centre_boundary_x_m: [5.5, 11.0]
+    right_outer_boundary_x_m: [11.5, 18.0]
+  strict_result: insufficient_local_multi_role_support
+  strict_valid_length_m: 0.0
+  candidate_v3_result: accepted
+  acceptance_mode: distributed_multi_role
+  qualified_roles: 3
+  union_support_length_m: 14.7499
+  maximum_role_heading_delta_deg: 3.5083
+  inlier_residual_p95_m: 0.0005
+  outlier_rate: 0.0
+  curvature_p95_inv_m: 0.0053
+
+negative_control:
+  case: two_staggered_white_roles_with_12_95deg_heading_disagreement
+  configured_maximum_heading_delta_deg: 5.0
+  result: rejected
+  failed_gate: heading_consistency
+
+regression_evidence:
+  archived_full16_frames: 4023
+  archived_strict_accept_count: 4023
+  archived_reject_count: 0
+  interpretation: >-
+    The archived 12+4 audit contains no rejected family frame, so it cannot
+    measure real-world recovery rate. Candidate v3 does not enter the fallback
+    for these strict-accepted frames. Unit regression checks require exact
+    equality of control points, centre samples, validity and all boundary
+    sample/state arrays with the fallback disabled versus enabled.
+
+limitations:
+  - A targeted live or newly recorded high-heading dropout is still required
+    to measure real-world activation and false-family rate.
+  - too_few_observed_roles, assignment failure, non-monotonic geometry and all
+    non-local-support rejection reasons remain rejected.
+  - This is a non-deployment candidate and does not grant closed-loop authority.

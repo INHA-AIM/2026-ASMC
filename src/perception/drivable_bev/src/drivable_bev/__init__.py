@@ -34,6 +34,30 @@ from .boundary_output import (
     BoundaryOutputValue,
     build_shadow_boundary_output,
 )
+from .boundary_family_output import (
+    BoundaryFamilyMemberOutput,
+    BoundaryFamilyOutputFrame,
+    build_boundary_family_output,
+)
+from .invalid_support import (
+    DEFAULT_INVALID_SUPPORT_CONFIG,
+    InvalidSupportClassificationConfig,
+    classify_invalid_support,
+    invalid_support_config_from_dict,
+)
+from .invalid_support_review import (
+    HEALTHY_REVIEW_CATEGORY,
+    INVALID_REVIEW_CATEGORIES,
+    InvalidSupportReviewSampler,
+    invalid_support_review_categories,
+)
+from .invalid_map_audit import (
+    ERROR_BANDS_M,
+    InvalidMapReviewSampler,
+    invalid_category_masks,
+    invalid_distance_band,
+)
+from .pose_time_alignment import EgoPoseAlignment, align_ego_pose, pose_delta
 from .bag_batch import (
     SelectedBagRun,
     diagnostic_int,
@@ -41,6 +65,12 @@ from .bag_batch import (
     load_bag_selection,
     result_quality_gates,
     topic_message_count,
+)
+from .planning_usability import (
+    DEFAULT_PLANNING_ZONES,
+    LongitudinalZone,
+    measure_planning_usability,
+    planning_zones_from_config,
 )
 from .shadow_result_audit import (
     robustness_delta,
@@ -74,6 +104,28 @@ __all__ = [
     "BoundaryOutputFrame",
     "BoundaryOutputValue",
     "build_shadow_boundary_output",
+    "BoundaryFamilyMemberOutput",
+    "BoundaryFamilyOutputFrame",
+    "build_boundary_family_output",
+    "DEFAULT_INVALID_SUPPORT_CONFIG",
+    "InvalidSupportClassificationConfig",
+    "classify_invalid_support",
+    "invalid_support_config_from_dict",
+    "HEALTHY_REVIEW_CATEGORY",
+    "INVALID_REVIEW_CATEGORIES",
+    "InvalidSupportReviewSampler",
+    "invalid_support_review_categories",
+    "ERROR_BANDS_M",
+    "InvalidMapReviewSampler",
+    "invalid_category_masks",
+    "invalid_distance_band",
+    "EgoPoseAlignment",
+    "align_ego_pose",
+    "pose_delta",
+    "DEFAULT_PLANNING_ZONES",
+    "LongitudinalZone",
+    "measure_planning_usability",
+    "planning_zones_from_config",
     "select_shadow_lane_tracks",
     "load_bag_selection",
     "diagnostic_int",

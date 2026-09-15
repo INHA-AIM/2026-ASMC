@@ -111,6 +111,28 @@ xhost +local:docker
 echo $DISPLAY   # :0 또는 :1 이어야 함
 ```
 
+이미지는 `XDG_RUNTIME_DIR=/tmp/asmc-xdg-runtime`, `QT_X11_NO_MITSHM=1`과
+2GB shared memory를 기본 제공한다. 과거 듀얼모니터 창 좌표나 transport-specific topic이
+저장돼 rqt/RViz가 화면 밖에서 열리는 문제를 피하려면 컨테이너 안에서 공통 helper를 쓴다.
+
+```bash
+asmc-ros-gui rqt-image
+asmc-ros-gui rqt-image /perception/bev/debug/shadow_map_rgb
+asmc-ros-gui rviz -d /root/ws/path/to/config.rviz
+```
+
+`rqt-image`에 `/compressed`를 붙여도 helper가 base topic으로 정규화한 뒤 compressed
+transport를 선택한다. 실행마다 Qt 창 배치만 임시 디렉터리에서 시작하며 사용자가 지정한
+`.rviz` 파일은 삭제하거나 수정하지 않는다. 이 변경은 이미지 재빌드 후 적용된다.
+
+```bash
+./scripts/docker_ros_up.sh build
+# 실행 중인 브릿지·roslaunch를 종료한 뒤 컨테이너를 새 이미지로 재생성
+./scripts/docker_ros_up.sh up
+```
+
+`up`은 현재 컨테이너를 재생성하므로 MORAI 주행·녹화 중에는 실행하지 않는다.
+
 ### WSL에서 GPU
 
 Docker Desktop → WSL Integration 활성화, NVIDIA Container Toolkit 확인.

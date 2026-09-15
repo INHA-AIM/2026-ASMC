@@ -1,0 +1,412 @@
+schema_version: asmc-shadow-lane-batch-1.0.0
+status: complete
+started_at_utc: '2026-09-14T13:53:02.006+00:00'
+selection:
+  path: /root/ws/artifacts/perception_eval/analysis/shadow_maneuver_20260913/selection.yaml
+  sha256: 33cef1ad965afb16394cde995a09ce28e50bef0bff8a6909759dc0d27316567b
+checkpoint:
+  path: /root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+  sha256: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+model_id: twinlite_v6_shared_runtime_headless_smoke_v1_20260914
+rate: 1.0
+external_pipeline: true
+shared_family_debug_enabled: true
+result_profile: shadow_runtime_profile_result
+runs:
+- run_id: 20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel
+  scenario: shadow_boundary_straddle
+  weather: sunny
+  sim_hour: 13
+  recorded_controller: wheel
+  effective_controller: wheel
+  status: complete
+  elapsed_wall_s: 46.249
+  result_metadata: /data/rosbags/results/20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel/twinlite_v6_shared_runtime_headless_smoke_v1_20260914/metadata.yaml
+  result_bags:
+  - bytes: 1618526
+    file: twinlite_v6_shared_runtime_headless_smoke_v1_20260914_0.bag
+    sha256: 8d6cff48a8c6a2e9c3b7ca833f4afefd21519a98031184bc37f7e46232f3bf2d
+  camera_diagnostics:
+    average_stage_ms: '{"decode_ms": 9.93, "inference_ms": 34.71, "postprocess_ms":
+      5.03, "preprocess_ms": 5.12, "publish_ms": 8.81}'
+    backend: twinlite_plus
+    checkpoint_path: /root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+    checkpoint_sha256: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+    decode_errors: '0'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    inference_errors: '0'
+    input_hw: '[384, 640]'
+    input_timestamp_fallbacks_by_view: '{"front": 0, "left": 0, "right": 0}'
+    input_timestamp_regressions_by_view: '{"front": 0, "left": 0, "right": 0}'
+    latest_input_stamp_ns: '{"front": 1789296785813636064, "left": 1789296785812109470,
+      "right": 1789296785811777114}'
+    latest_receive_stamp_ns: '{"front": 1789394023435134649, "left": 1789394023434197664,
+      "right": 1789394023433103561}'
+    latest_result_stamp_ns: '1789394023530101776'
+    model_config: medium
+    model_grid_incomplete_batches: '1'
+    model_grid_output_batches: '751'
+    model_grid_throttled_batches: '377'
+    model_grid_timestamp_resets: '1'
+    output_batches: '1129'
+    output_by_view: '{"front": 1129, "left": 1128, "right": 1128}'
+    output_frames: '3385'
+    processing_fps: '45.234'
+    queue_age_p50_ms: '89.46362699498422'
+    queue_age_p95_ms: '125.19209739402866'
+    received_by_view: '{"front": 1546, "left": 1547, "right": 1547}'
+    replaced_by_view: '{"front": 416, "left": 418, "right": 418}'
+    views: '["front", "left", "right"]'
+    weights: ema
+  bev_diagnostics:
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    camera_to_fused_ms_p50: unavailable
+    camera_to_fused_ms_p95: unavailable
+    fusion_errors: '0'
+    fusion_ms_mean: '3.499670751523354'
+    fusion_ms_p95: '5.141301196999848'
+    grid_shape: 250,160
+    ground_plane_coefficients: (0.0, 0.0, -0.35)
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{''front'': 1064, ''left'': 1070, ''right'': 1083}'
+    last_result_stamp_ns: '1789394023954957008'
+    last_source_stamp_ns: '1789296786249204874'
+    last_timestamp_skew_ms: '1.516343'
+    max_fused_hz: '10.0'
+    max_timestamp_skew_ms: '35.0'
+    output_throttled: '279'
+    outputs: '739'
+    pair_errors_by_view: '{''front'': 0, ''left'': 0, ''right'': 0}'
+    processing_fps: '9.583142090462935'
+    queue_drops_by_view: '{''front'': 0, ''left'': 1, ''right'': 1}'
+    sync_rejected: '161'
+    sync_rejection_rate: '0.05004662729250855'
+    timestamp_resets: '1'
+    x_range_m: -5.0,20.0
+    y_range_m: -8.0,8.0
+  lane_diagnostics:
+    boundary_algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+    boundary_config_sha256: 6ed5378885a0f84083f6c19a22f4bfa5455be7e96e340110958edfb58126f64e
+    boundary_expected_count: '3'
+    boundary_operating_domain: shadow_two_way_v1
+    boundary_publish_p50_ms: '2.2960094938753173'
+    boundary_publish_p95_ms: '5.430486047407612'
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    confidence_by_class: '{"1": 0.5, "2": 0.5}'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    errors: '0'
+    ground_plane_coefficients: '[0.0, 0.0, -0.35]'
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{"front": 755, "left": 755, "right": 755}'
+    last_counts: '{"boundary_completeness": 2, "evidence": 8086, "lane_candidates":
+      3, "lanes": 3, "nodes": 206, "prefit_tracks": 3, "shadow_boundaries": 3, "shadow_corridor_complete":
+      true, "shadow_white_boundaries": 2, "shadow_yellow_boundaries": 1, "shared_family_available":
+      true, "shared_family_observed_roles": 3, "tracks": 3, "white_lanes": 2, "yellow_lanes":
+      1}'
+    last_shared_family_audit: '{"accepted": true, "assignment": {"left_outer_boundary":
+      {"candidate_count": 1, "measured_separation_m": 3.656406606428816}, "right_outer_boundary":
+      {"candidate_count": 1, "measured_separation_m": 3.8927256929369056}}, "boundary_support":
+      {"left_outer_boundary": {"bridged_length_ratio": 0.0, "inferred_length_m": 0.0,
+      "invalid_length_m": 8.133321053962996, "max_inferred_gap_m": 0.0, "observed_length_m":
+      19.513144561685674, "state": "observed"}, "right_outer_boundary": {"bridged_length_ratio":
+      0.2568309776110654, "inferred_length_m": 4.101553957074833, "invalid_length_m":
+      7.056119370147458, "max_inferred_gap_m": 4.25, "observed_length_m": 11.868302931785603,
+      "state": "observed"}, "yellow_centre_boundary": {"bridged_length_ratio": 0.3661907142060968,
+      "inferred_length_m": 6.499800751940954, "invalid_length_m": 7.597234004683965,
+      "max_inferred_gap_m": 5.0, "observed_length_m": 11.249968698200767, "state":
+      "observed"}}, "data_residual_p50_m": 0.08041181972230635, "data_residual_p95_m":
+      0.4720474900824674, "deployment_allowed": false, "discarded_tracks": 0, "eligible_tracks":
+      3, "fit_ms": 38.339499005815014, "inferred_roles": [], "inlier_residual_p50_m":
+      0.06752957910125586, "inlier_residual_p95_m": 0.27363253013388095, "input_tracks":
+      3, "local_support_count": {"p50": 2.0, "p95": 3.0}, "observed_role_count": 3,
+      "observed_roles": ["left_outer_boundary", "yellow_centre_boundary", "right_outer_boundary"],
+      "outlier_rate": 0.1407766990291262, "reason": "accepted", "representation":
+      "shared_parametric_bspline_normal_offsets_v2", "runtime_debug_enabled": true,
+      "valid_family_length_m": 17.749769450141724, "valid_x_m": [-1.5847902473500133,
+      16.00710239224794], "weighted_rms_m": 0.10453338508666338, "white_candidates":
+      2, "widths_m": {"left": 3.486282913668352, "right": 3.5189783545149176}, "yellow_candidates":
+      1}'
+    last_timestamp_skew_ms: '1.5163'
+    marker_delete_counts: '{"boundary": 0, "candidate": 0, "shared_family": 224}'
+    marker_policy: explicit_delete_missing_ids
+    outputs: '711'
+    pair_errors_by_view: '{"front": 0, "left": 0, "right": 0}'
+    pipeline_audit: '{"current_streak_frames": {"incomplete": 0, "no_boundary": 0,
+      "no_yellow": 0}, "frames": 711, "last_frame": {"association": {"accepted_tracks":
+      3, "assignment_conflicts": 0, "by_class": {"1": {"accepted_tracks": 2, "input_nodes":
+      158}, "2": {"accepted_tracks": 1, "input_nodes": 48}}, "candidate_pairs": 350,
+      "input_nodes": 206, "raw_tracklets": 3, "rejected_heading_change": 0, "rejected_lateral_residual":
+      147, "rejected_nonforward_or_gap": 0, "rejected_short_span": 0, "rejected_too_few_nodes":
+      0}, "boundary_selection": {"eligible_lanes": 3, "input_lanes": 3, "rejected":
+      {}, "selected_boundaries": 3, "selected_white": 2, "selected_yellow": 1}, "counts":
+      {"boundaries": 3, "boundary_completeness": 2, "complete": true, "evidence":
+      8086, "lanes": 3, "model_marking_pixels": 39933, "nodes": 206, "observations":
+      3, "prefit_tracks": 3, "shared_family_available": true, "tracks": 3, "yellow_boundaries":
+      1}, "marker_policy": {"boundary": "explicit_delete_missing_ids", "candidate":
+      "explicit_delete_missing_ids", "canonical_boundary_message": "independent_of_marker_rendering"},
+      "prefit": {"eligible_tracks": 3, "input_tracks": 3, "rejected": {}, "selected_tracks":
+      3, "selected_white": 2, "selected_yellow": 1}, "primary_outcome": "complete_boundary_family",
+      "projection": {"front": {"accepted": 2866, "below_confidence": 0, "by_class":
+      {"1": {"accepted": 2157, "below_confidence": 0, "model_pixels": 6954, "projection_invalid":
+      4797, "threshold": 0.5}, "2": {"accepted": 709, "below_confidence": 0, "model_pixels":
+      7980, "projection_invalid": 7271, "threshold": 0.5}}, "model_marking_pixels":
+      14934, "projection_invalid": 12068}, "left": {"accepted": 719, "below_confidence":
+      0, "by_class": {"1": {"accepted": 694, "below_confidence": 0, "model_pixels":
+      3106, "projection_invalid": 2412, "threshold": 0.5}, "2": {"accepted": 25, "below_confidence":
+      0, "model_pixels": 7768, "projection_invalid": 7743, "threshold": 0.5}}, "model_marking_pixels":
+      10874, "projection_invalid": 10155}, "right": {"accepted": 4501, "below_confidence":
+      0, "by_class": {"1": {"accepted": 4501, "below_confidence": 0, "model_pixels":
+      7446, "projection_invalid": 2945, "threshold": 0.5}, "2": {"accepted": 0, "below_confidence":
+      0, "model_pixels": 6679, "projection_invalid": 6679, "threshold": 0.5}}, "model_marking_pixels":
+      14125, "projection_invalid": 9624}}, "runtime_profile_schema": "asmc-lane-runtime-profile-1.0.0",
+      "shared_family": {"accepted": true, "assignment": {"left_outer_boundary": {"candidate_count":
+      1, "measured_separation_m": 3.656406606428816}, "right_outer_boundary": {"candidate_count":
+      1, "measured_separation_m": 3.8927256929369056}}, "boundary_support": {"left_outer_boundary":
+      {"bridged_length_ratio": 0.0, "inferred_length_m": 0.0, "invalid_length_m":
+      8.133321053962996, "max_inferred_gap_m": 0.0, "observed_length_m": 19.513144561685674,
+      "state": "observed"}, "right_outer_boundary": {"bridged_length_ratio": 0.2568309776110654,
+      "inferred_length_m": 4.101553957074833, "invalid_length_m": 7.056119370147458,
+      "max_inferred_gap_m": 4.25, "observed_length_m": 11.868302931785603, "state":
+      "observed"}, "yellow_centre_boundary": {"bridged_length_ratio": 0.3661907142060968,
+      "inferred_length_m": 6.499800751940954, "invalid_length_m": 7.597234004683965,
+      "max_inferred_gap_m": 5.0, "observed_length_m": 11.249968698200767, "state":
+      "observed"}}, "data_residual_p50_m": 0.08041181972230635, "data_residual_p95_m":
+      0.4720474900824674, "deployment_allowed": false, "discarded_tracks": 0, "eligible_tracks":
+      3, "fit_ms": 38.339499005815014, "inferred_roles": [], "inlier_residual_p50_m":
+      0.06752957910125586, "inlier_residual_p95_m": 0.27363253013388095, "input_tracks":
+      3, "local_support_count": {"p50": 2.0, "p95": 3.0}, "observed_role_count": 3,
+      "observed_roles": ["left_outer_boundary", "yellow_centre_boundary", "right_outer_boundary"],
+      "outlier_rate": 0.1407766990291262, "reason": "accepted", "representation":
+      "shared_parametric_bspline_normal_offsets_v2", "runtime_debug_enabled": true,
+      "valid_family_length_m": 17.749769450141724, "valid_x_m": [-1.5847902473500133,
+      16.00710239224794], "weighted_rms_m": 0.10453338508666338, "white_candidates":
+      2, "widths_m": {"left": 3.486282913668352, "right": 3.5189783545149176}, "yellow_candidates":
+      1}, "spline": {"accepted_lanes": 3, "input_tracks": 3, "rejected": {"linear_algebra_error":
+      0, "value_error": 0}}, "temporal": {"expired_tracks": 0, "input_observations":
+      3, "matched": 3, "missed_tracks": 0, "new_tracks": 0, "output_tracks": 3, "previous_tracks":
+      3, "reset": false, "reset_reason": "none", "retained_internal_tracks": 3}, "timing_ms":
+      {"association": 7.485639012884349, "boundary_output_build": 0.4326700000092387,
+      "boundary_selection": 3.1226070132106543, "evidence_concat": 0.035164994187653065,
+      "independent_spline_fit": 6.297571992035955, "input_decode_copy": 0.054774980526417494,
+      "node_reduction": 1.875776011729613, "profiled_body": 77.02502599568106, "projection_audit":
+      3.1194630137179047, "projection_extract": 3.0844459834042937, "shadow_prefit":
+      6.146328989416361, "shared_diagnostics_publish": 0.344022992067039, "shared_family_fit":
+      38.339499005815014, "temporal_tracking": 5.145216011442244, "typed_boundary_message_publish":
+      1.4774230076000094}}, "longest_streak_frames": {"incomplete": 13, "no_boundary":
+      0, "no_yellow": 13}, "outcome_rates": {"boundaries_without_yellow": 0.046413502109704644,
+      "complete_boundary_family": 0.9451476793248945, "partial_boundary_family": 0.008438818565400843},
+      "outcomes": {"boundaries_without_yellow": 33, "complete_boundary_family": 672,
+      "partial_boundary_family": 6}, "rejection_frame_counts": {"association.assignment_conflict":
+      225, "association.heading_change": 234, "association.lateral_residual": 711,
+      "association.nonforward_or_gap": 4, "association.short_span": 20, "association.too_few_nodes":
+      373, "boundary_selection.spline_residual_above_limit": 39, "prefit.short_longitudinal_span":
+      8, "prefit.width_side_or_rank_rejected_white": 1, "projection.front.below_confidence":
+      50, "projection.front.projection_invalid": 711, "projection.left.below_confidence":
+      43, "projection.left.projection_invalid": 711, "projection.right.below_confidence":
+      2, "projection.right.projection_invalid": 711}, "rejection_frame_counts_by_outcome":
+      {"boundaries_without_yellow": {"association.assignment_conflict": 1, "association.heading_change":
+      2, "association.lateral_residual": 33, "association.short_span": 1, "association.too_few_nodes":
+      6, "boundary_selection.spline_residual_above_limit": 33, "prefit.short_longitudinal_span":
+      1, "projection.front.below_confidence": 2, "projection.front.projection_invalid":
+      33, "projection.left.projection_invalid": 33, "projection.right.below_confidence":
+      1, "projection.right.projection_invalid": 33}, "complete_boundary_family": {"association.assignment_conflict":
+      220, "association.heading_change": 228, "association.lateral_residual": 672,
+      "association.nonforward_or_gap": 4, "association.short_span": 19, "association.too_few_nodes":
+      362, "prefit.short_longitudinal_span": 7, "prefit.width_side_or_rank_rejected_white":
+      1, "projection.front.below_confidence": 48, "projection.front.projection_invalid":
+      672, "projection.left.below_confidence": 42, "projection.left.projection_invalid":
+      672, "projection.right.below_confidence": 1, "projection.right.projection_invalid":
+      672}, "partial_boundary_family": {"association.assignment_conflict": 4, "association.heading_change":
+      4, "association.lateral_residual": 6, "association.too_few_nodes": 5, "boundary_selection.spline_residual_above_limit":
+      6, "projection.front.projection_invalid": 6, "projection.left.below_confidence":
+      1, "projection.left.projection_invalid": 6, "projection.right.projection_invalid":
+      6}}, "rejection_frame_rates": {"association.assignment_conflict": 0.31645569620253167,
+      "association.heading_change": 0.3291139240506329, "association.lateral_residual":
+      1.0, "association.nonforward_or_gap": 0.005625879043600563, "association.short_span":
+      0.02812939521800281, "association.too_few_nodes": 0.5246132208157525, "boundary_selection.spline_residual_above_limit":
+      0.05485232067510549, "prefit.short_longitudinal_span": 0.011251758087201125,
+      "prefit.width_side_or_rank_rejected_white": 0.0014064697609001407, "projection.front.below_confidence":
+      0.07032348804500703, "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.06047819971870605, "projection.left.projection_invalid": 1.0, "projection.right.below_confidence":
+      0.0028129395218002813, "projection.right.projection_invalid": 1.0}, "rejection_frame_rates_by_outcome":
+      {"boundaries_without_yellow": {"association.assignment_conflict": 0.030303030303030304,
+      "association.heading_change": 0.06060606060606061, "association.lateral_residual":
+      1.0, "association.short_span": 0.030303030303030304, "association.too_few_nodes":
+      0.18181818181818182, "boundary_selection.spline_residual_above_limit": 1.0,
+      "prefit.short_longitudinal_span": 0.030303030303030304, "projection.front.below_confidence":
+      0.06060606060606061, "projection.front.projection_invalid": 1.0, "projection.left.projection_invalid":
+      1.0, "projection.right.below_confidence": 0.030303030303030304, "projection.right.projection_invalid":
+      1.0}, "complete_boundary_family": {"association.assignment_conflict": 0.3273809523809524,
+      "association.heading_change": 0.3392857142857143, "association.lateral_residual":
+      1.0, "association.nonforward_or_gap": 0.005952380952380952, "association.short_span":
+      0.028273809523809524, "association.too_few_nodes": 0.5386904761904762, "prefit.short_longitudinal_span":
+      0.010416666666666666, "prefit.width_side_or_rank_rejected_white": 0.001488095238095238,
+      "projection.front.below_confidence": 0.07142857142857142, "projection.front.projection_invalid":
+      1.0, "projection.left.below_confidence": 0.0625, "projection.left.projection_invalid":
+      1.0, "projection.right.below_confidence": 0.001488095238095238, "projection.right.projection_invalid":
+      1.0}, "partial_boundary_family": {"association.assignment_conflict": 0.6666666666666666,
+      "association.heading_change": 0.6666666666666666, "association.lateral_residual":
+      1.0, "association.too_few_nodes": 0.8333333333333334, "boundary_selection.spline_residual_above_limit":
+      1.0, "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.16666666666666666, "projection.left.projection_invalid": 1.0, "projection.right.projection_invalid":
+      1.0}}, "rejections": {"association.assignment_conflict": 568, "association.heading_change":
+      704, "association.lateral_residual": 114413, "association.nonforward_or_gap":
+      4, "association.short_span": 22, "association.too_few_nodes": 453, "boundary_selection.spline_residual_above_limit":
+      39, "prefit.short_longitudinal_span": 8, "prefit.width_side_or_rank_rejected_white":
+      1, "projection.front.below_confidence": 54, "projection.front.projection_invalid":
+      8914347, "projection.left.below_confidence": 46, "projection.left.projection_invalid":
+      8397706, "projection.right.below_confidence": 2, "projection.right.projection_invalid":
+      7485404}, "rejections_by_outcome": {"boundaries_without_yellow": {"association.assignment_conflict":
+      11, "association.heading_change": 3, "association.lateral_residual": 5197, "association.short_span":
+      1, "association.too_few_nodes": 8, "boundary_selection.spline_residual_above_limit":
+      33, "prefit.short_longitudinal_span": 1, "projection.front.below_confidence":
+      2, "projection.front.projection_invalid": 403776, "projection.left.projection_invalid":
+      362676, "projection.right.below_confidence": 1, "projection.right.projection_invalid":
+      343321}, "complete_boundary_family": {"association.assignment_conflict": 546,
+      "association.heading_change": 684, "association.lateral_residual": 108297, "association.nonforward_or_gap":
+      4, "association.short_span": 21, "association.too_few_nodes": 438, "prefit.short_longitudinal_span":
+      7, "prefit.width_side_or_rank_rejected_white": 1, "projection.front.below_confidence":
+      52, "projection.front.projection_invalid": 8437198, "projection.left.below_confidence":
+      45, "projection.left.projection_invalid": 7969060, "projection.right.below_confidence":
+      1, "projection.right.projection_invalid": 7082154}, "partial_boundary_family":
+      {"association.assignment_conflict": 11, "association.heading_change": 17, "association.lateral_residual":
+      919, "association.too_few_nodes": 7, "boundary_selection.spline_residual_above_limit":
+      6, "projection.front.projection_invalid": 73373, "projection.left.below_confidence":
+      1, "projection.left.projection_invalid": 65970, "projection.right.projection_invalid":
+      59929}}}'
+    processing_fps: '9.366'
+    processing_p50_ms: '90.21883249806706'
+    processing_p95_ms: '111.41228998603765'
+    queue_drops_by_view: '{"front": 0, "left": 1, "right": 1}'
+    runtime_debug_subscribers: '{"candidate_markers": 0, "evidence_points": 0, "legacy_boundary_markers":
+      0, "shared_family_markers": 0}'
+    runtime_profile_schema: asmc-lane-runtime-profile-1.0.0
+    runtime_stage_ms: '{"association": {"count": 512, "max": 74.54135498846881, "p50":
+      10.239441005978733, "p95": 15.801858295162674, "p99": 19.992203833244268}, "boundary_output_build":
+      {"count": 512, "max": 6.280315021285787, "p50": 0.5320335039868951, "p95": 1.4157304147374812,
+      "p99": 2.938717146462293}, "boundary_selection": {"count": 512, "max": 19.05218599131331,
+      "p50": 3.1952880090102553, "p95": 6.332426045264583, "p99": 9.869203820999237},
+      "callback_total": {"count": 512, "max": 161.33810399333015, "p50": 90.82910449069459,
+      "p95": 112.11664829024812, "p99": 129.61394182668298}, "candidate_marker_publish":
+      {"count": 512, "max": 0.0, "p50": 0.0, "p95": 0.0, "p99": 0.0}, "evidence_concat":
+      {"count": 512, "max": 0.2676340227480978, "p50": 0.03676550113596022, "p95":
+      0.08416491764364763, "p99": 0.21278078231262038}, "evidence_message_publish":
+      {"count": 512, "max": 0.0, "p50": 0.0, "p95": 0.0, "p99": 0.0}, "independent_spline_fit":
+      {"count": 512, "max": 34.821212000679225, "p50": 9.522715001367033, "p95": 15.762857660592998,
+      "p99": 17.54319806117564}, "input_decode_copy": {"count": 512, "max": 0.38561702240258455,
+      "p50": 0.07149050361476839, "p95": 0.10454259754624218, "p99": 0.16438412916613723},
+      "legacy_boundary_marker_publish": {"count": 512, "max": 0.0, "p50": 0.0, "p95":
+      0.0, "p99": 0.0}, "node_reduction": {"count": 512, "max": 5.856242001755163,
+      "p50": 1.4198835124261677, "p95": 2.787160214211326, "p99": 3.8031551393214613},
+      "pipeline_audit_message_publish": {"count": 512, "max": 2.323933003935963, "p50":
+      0.30669898842461407, "p95": 0.7991619218955748, "p99": 1.357121821783948}, "pipeline_audit_update":
+      {"count": 512, "max": 1.5068280044943094, "p50": 0.359922501957044, "p95": 0.5776065532700159,
+      "p99": 0.9258204477373506}, "profiled_body": {"count": 512, "max": 158.7916539865546,
+      "p50": 90.21883249806706, "p95": 111.41228998603765, "p99": 128.8105432942393},
+      "projection_audit": {"count": 512, "max": 20.72737496928312, "p50": 3.012328001204878,
+      "p95": 5.359587306156753, "p99": 11.101317139400606}, "projection_extract":
+      {"count": 512, "max": 15.000034036347643, "p50": 3.0896285170456395, "p95":
+      5.144182554795406, "p99": 6.531219027529003}, "shadow_prefit": {"count": 512,
+      "max": 33.33430798375048, "p50": 5.967697987216525, "p95": 10.592252943024503,
+      "p99": 15.995490672648863}, "shared_diagnostics_publish": {"count": 512, "max":
+      1.250950008397922, "p50": 0.2330900024389848, "p95": 0.616380998690147, "p99":
+      0.8978491666493923}, "shared_family_fit": {"count": 512, "max": 68.17254098132253,
+      "p50": 37.642758499714546, "p95": 48.15263541531749, "p99": 54.166395399079185},
+      "shared_marker_publish": {"count": 512, "max": 12.603117007529363, "p50": 0.0,
+      "p95": 5.42744396225316, "p99": 9.39310627290977}, "temporal_tracking": {"count":
+      512, "max": 43.700280017219484, "p50": 8.311462501296774, "p95": 14.736617743619716,
+      "p99": 17.95927061000839}, "typed_boundary_message_publish": {"count": 512,
+      "max": 15.192831982858479, "p50": 2.2914845030754805, "p95": 5.426122562494129,
+      "p99": 8.844464823196176}}'
+    shadow_boundary_enabled: 'True'
+    shadow_boundary_parameters: '{"expected_lane_width_m": 3.55, "lane_width_max_m":
+      4.6, "lane_width_min_m": 2.4, "max_abs_heading_deg": 50.0, "max_abs_lateral_m":
+      7.0, "max_bridged_ratio": 0.45, "max_residual_p95_m": 0.3, "max_white_without_yellow":
+      2, "min_confidence": 0.5, "min_longitudinal_span_m": 3.0, "min_observed_length_m":
+      3.0, "reference_x_m": 5.0}'
+    shared_family_debug_enabled: 'True'
+    shared_family_deployment_allowed: 'False'
+    shared_family_errors: '0'
+    shared_family_fit_p50_ms: '37.642758499714546'
+    shared_family_fit_p95_ms: '48.15263541531749'
+    shared_family_representation: shared_parametric_bspline_normal_offsets_v2
+    sync_rejected: '130'
+    temporal_boundary_parameters: '{"max_lateral_residual_m": 0.65, "max_lateral_speed_mps":
+      4.0, "max_missed_frames": 8, "reset_gap_sec": 0.75, "velocity_smoothing": 0.5}'
+    views: '["front", "left", "right"]'
+  shared_family_diagnostics:
+    accepted: 'True'
+    boundary_support: '{"left_outer_boundary": {"bridged_length_ratio": 0.0, "inferred_length_m":
+      0.0, "invalid_length_m": 8.133321053962996, "max_inferred_gap_m": 0.0, "observed_length_m":
+      19.513144561685674, "state": "observed"}, "right_outer_boundary": {"bridged_length_ratio":
+      0.2568309776110654, "inferred_length_m": 4.101553957074833, "invalid_length_m":
+      7.056119370147458, "max_inferred_gap_m": 4.25, "observed_length_m": 11.868302931785603,
+      "state": "observed"}, "yellow_centre_boundary": {"bridged_length_ratio": 0.3661907142060968,
+      "inferred_length_m": 6.499800751940954, "invalid_length_m": 7.597234004683965,
+      "max_inferred_gap_m": 5.0, "observed_length_m": 11.249968698200767, "state":
+      "observed"}}'
+    data_residual_p95_m: '0.4720474900824674'
+    deployment_allowed: 'False'
+    error: unavailable
+    fit_ms: '38.339499005815014'
+    inferred_roles: '[]'
+    inlier_residual_p95_m: '0.27363253013388095'
+    observed_roles: '["left_outer_boundary", "yellow_centre_boundary", "right_outer_boundary"]'
+    outlier_rate: '0.1407766990291262'
+    reason: accepted
+    representation: shared_parametric_bspline_normal_offsets_v2
+    runtime_debug_enabled: 'True'
+    valid_x_m: '[-1.5847902473500133, 16.00710239224794]'
+    widths_m: '{"left": 3.486282913668352, "right": 3.5189783545149176}'
+  topic_statistics:
+    /perception/bev/diagnostics:
+      average_hz: 0.5
+      end_window_hz: 0.5
+      messages: 22
+      observed_seconds: 41.998
+      start_window_hz: 0.5
+    /perception/camera/diagnostics:
+      average_hz: 0.491
+      end_window_hz: 0.49
+      messages: 20
+      observed_seconds: 38.685
+      start_window_hz: 0.488
+    /perception/lane/boundary_observations:
+      average_hz: 9.29
+      end_window_hz: 9.22
+      messages: 354
+      observed_seconds: 37.999
+      start_window_hz: 9.309
+    /perception/lane/debug/shared_family/diagnostics:
+      average_hz: 9.291
+      end_window_hz: 9.21
+      messages: 354
+      observed_seconds: 37.995
+      start_window_hz: 9.326
+    /perception/lane/diagnostics:
+      average_hz: 0.5
+      end_window_hz: 0.5
+      messages: 22
+      observed_seconds: 41.976
+      start_window_hz: 0.499
+    /perception/lane/pipeline_audit:
+      average_hz: 9.29
+      end_window_hz: 9.222
+      messages: 354
+      observed_seconds: 37.999
+      start_window_hz: 9.306
+  quality_gates:
+    result_complete: true
+    camera_diagnostics_recorded: true
+    bev_diagnostics_recorded: true
+    lane_diagnostics_recorded: true
+    lane_boundaries_recorded: true
+    lane_outputs_positive: true
+    lane_errors_zero: true
+  quality_gate_passed: true
+  batch_action: recorded
+finished_at_utc: '2026-09-14T13:53:49.009+00:00'

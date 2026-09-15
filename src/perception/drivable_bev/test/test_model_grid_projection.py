@@ -74,6 +74,22 @@ class ModelGridProjectionTest(unittest.TestCase):
         self.assertTrue(np.all(result.xy[:, 1] >= -8.0))
         self.assertTrue(np.all(result.xy[:, 1] <= 8.0))
 
+    def test_selection_audit_separates_confidence_and_projection_loss(self):
+        projector = ModelGridGroundProjector(self.cameras["front"], source_mask=1)
+        classes = np.zeros(projector.model_hw, dtype=np.uint8)
+        confidence = np.zeros(projector.model_hw, dtype=np.uint8)
+        valid_row, valid_column = np.argwhere(projector.valid)[0]
+        invalid_row, invalid_column = np.argwhere(~projector.valid)[0]
+        classes[valid_row, valid_column] = 1
+        confidence[valid_row, valid_column] = 100
+        classes[invalid_row, invalid_column] = 2
+        confidence[invalid_row, invalid_column] = 255
+        audit = projector.selection_audit(classes, confidence, {1: 0.5, 2: 0.5})
+        self.assertEqual(2, audit["model_marking_pixels"])
+        self.assertEqual(1, audit["projection_invalid"])
+        self.assertEqual(1, audit["below_confidence"])
+        self.assertEqual(0, audit["accepted"])
+
 
 if __name__ == "__main__":
     unittest.main()

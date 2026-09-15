@@ -95,14 +95,52 @@ class BoundaryOutputTest(unittest.TestCase):
         self.assertEqual(COMPLETENESS_EMPTY, value.completeness)
         self.assertEqual((), value.boundaries)
 
-    def test_reference_outside_curve_marks_order_invalid_and_reports_actual_x(self):
+    def test_reference_moves_to_shared_support_when_preferred_x_is_unavailable(self):
         value = build_shadow_boundary_output(
             tracked([lane(1, 2, 0.0, x_start=-4.0, x_end=2.0)]),
             preferred_reference_x_m=5.0,
         )
         self.assertEqual(COMPLETENESS_PARTIAL, value.completeness)
-        self.assertFalse(value.boundaries[0].order_valid)
+        self.assertTrue(value.boundaries[0].order_valid)
         self.assertAlmostEqual(2.0, value.boundaries[0].reference_x_m)
+
+    def test_shared_reference_recovers_order_for_unequal_curve_ranges(self):
+        value = build_shadow_boundary_output(
+            tracked(
+                [
+                    lane(1, 2, 0.0, x_start=-3.0, x_end=3.0),
+                    lane(2, 1, 3.5, x_start=-2.0, x_end=2.0),
+                    lane(3, 1, -3.5, x_start=-1.0, x_end=4.0),
+                ]
+            ),
+            preferred_reference_x_m=5.0,
+        )
+        self.assertTrue(all(item.order_valid for item in value.boundaries))
+        self.assertEqual([2.0, 2.0, 2.0], [item.reference_x_m for item in value.boundaries])
+        self.assertEqual([0, 1, 2], [item.lateral_order for item in value.boundaries])
+        self.assertGreater(value.boundaries[0].reference_y_m, value.boundaries[1].reference_y_m)
+        self.assertGreater(value.boundaries[1].reference_y_m, value.boundaries[2].reference_y_m)
+
+    def test_disjoint_curve_ranges_keep_order_invalid(self):
+        first = tracked([lane(1, 2, 0.0, x_start=-4.0, x_end=-1.0)])[0]
+        second_value = tracked([lane(2, 1, 3.5, x_start=1.0, x_end=4.0)])[0]
+        second = TrackedBoundary(
+            stable_id=2,
+            observation=BoundaryObservation(
+                lane=second_value.observation.lane,
+                role=second_value.observation.role,
+                score=second_value.observation.score,
+                reference_y_m=second_value.observation.reference_y_m,
+                heading_deg=second_value.observation.heading_deg,
+                lateral_order_left_to_right=1,
+            ),
+            age_frames=second_value.age_frames,
+            reacquired_after_missed_frames=second_value.reacquired_after_missed_frames,
+        )
+        value = build_shadow_boundary_output(
+            [first, second], preferred_reference_x_m=5.0
+        )
+        self.assertTrue(all(not item.order_valid for item in value.boundaries))
 
     def test_invalid_polyline_fails_instead_of_publishing_bad_geometry(self):
         bad_lane = lane(1, 2, 0.0)
@@ -124,6 +162,20 @@ class BoundaryOutputTest(unittest.TestCase):
             build_shadow_boundary_output(
                 [invalid], preferred_reference_x_m=0.5
             )
+
+    def test_public_polyline_is_clipped_to_declared_valid_x(self):
+        fitted = lane(1, 2, 0.0, x_start=0.0, x_end=15.0)
+        extended_x = np.linspace(-1.0, 16.0, 69)
+        object.__setattr__(
+            fitted,
+            "sample_points",
+            np.column_stack((extended_x, np.zeros_like(extended_x))),
+        )
+        value = build_shadow_boundary_output(
+            tracked([fitted]), preferred_reference_x_m=5.0
+        )
+        self.assertAlmostEqual(0.0, value.boundaries[0].polyline_xy[0, 0])
+        self.assertAlmostEqual(15.0, value.boundaries[0].polyline_xy[-1, 0])
 
 
 if __name__ == "__main__":

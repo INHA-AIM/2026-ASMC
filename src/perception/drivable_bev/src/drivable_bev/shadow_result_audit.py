@@ -84,6 +84,13 @@ def summarize_boundary_frames(frames: Sequence[Sequence[Mapping]]) -> dict:
     any_count = yellow_count = complete_count = unresolved_count = 0
     duplicate_role_frames = lateral_order_error_frames = order_invalid_frames = 0
     total_boundaries = reacquired_events = 0
+    yellow_observed_count = color_pair_count = color_triplet_count = 0
+    white_outer_fallback_count = 0
+    common_support_count = preferred_reference_support_count = 0
+    longest_order_invalid_streak = current_order_invalid_streak = 0
+    longest_no_yellow_streak = current_no_yellow_streak = 0
+    longest_no_color_triplet_streak = current_no_color_triplet_streak = 0
+    longest_no_color_pair_streak = current_no_color_pair_streak = 0
     role_presence = Counter()
     stable_ids = set()
     role_id_switches = Counter()
@@ -116,6 +123,55 @@ def summarize_boundary_frames(frames: Sequence[Sequence[Mapping]]) -> dict:
         if orders and (orders != sorted(orders) or len(orders) != len(set(orders))):
             lateral_order_error_frames += 1
         order_invalid_frames += any(item.get("order_valid") is False for item in values)
+        colors = [int(item.get("class_id", 0) or 0) for item in values]
+        yellow_observed_count += 2 in colors
+        color_pair_count += colors.count(1) >= 1 and colors.count(2) >= 1
+        color_triplet_count += colors.count(1) >= 2 and colors.count(2) >= 1
+        white_outer_fallback_count += colors.count(1) >= 2 and colors.count(2) == 0
+        if 2 not in colors:
+            current_no_yellow_streak += 1
+            longest_no_yellow_streak = max(
+                longest_no_yellow_streak, current_no_yellow_streak
+            )
+        else:
+            current_no_yellow_streak = 0
+        if not (colors.count(1) >= 1 and colors.count(2) >= 1):
+            current_no_color_pair_streak += 1
+            longest_no_color_pair_streak = max(
+                longest_no_color_pair_streak, current_no_color_pair_streak
+            )
+        else:
+            current_no_color_pair_streak = 0
+        if not (colors.count(1) >= 2 and colors.count(2) >= 1):
+            current_no_color_triplet_streak += 1
+            longest_no_color_triplet_streak = max(
+                longest_no_color_triplet_streak,
+                current_no_color_triplet_streak,
+            )
+        else:
+            current_no_color_triplet_streak = 0
+        values_with_support = [
+            item
+            for item in values
+            if isinstance(item.get("valid_x"), (list, tuple))
+            and len(item["valid_x"]) == 2
+        ]
+        if values_with_support and len(values_with_support) == len(values):
+            common_lower = max(float(item["valid_x"][0]) for item in values_with_support)
+            common_upper = min(float(item["valid_x"][1]) for item in values_with_support)
+            common_support_count += common_upper >= common_lower
+            preferred_reference_support_count += all(
+                float(item["valid_x"][0]) <= 5.0 <= float(item["valid_x"][1])
+                for item in values_with_support
+            )
+        frame_order_invalid = any(item.get("order_valid") is False for item in values)
+        if frame_order_invalid:
+            current_order_invalid_streak += 1
+            longest_order_invalid_streak = max(
+                longest_order_invalid_streak, current_order_invalid_streak
+            )
+        else:
+            current_order_invalid_streak = 0
 
         for item in values:
             stable_id = item.get("stable_id")
@@ -140,6 +196,22 @@ def summarize_boundary_frames(frames: Sequence[Sequence[Mapping]]) -> dict:
         "any_boundary_rate": round(_rate(any_count, total), 6),
         "yellow_centre_frames": yellow_count,
         "yellow_centre_rate": round(_rate(yellow_count, total), 6),
+        "yellow_observed_frames": yellow_observed_count,
+        "yellow_observed_rate": round(_rate(yellow_observed_count, total), 6),
+        "color_pair_frames": color_pair_count,
+        "color_pair_rate": round(_rate(color_pair_count, total), 6),
+        "color_triplet_frames": color_triplet_count,
+        "color_triplet_rate": round(_rate(color_triplet_count, total), 6),
+        "white_outer_fallback_frames": white_outer_fallback_count,
+        "white_outer_fallback_rate": round(
+            _rate(white_outer_fallback_count, total), 6
+        ),
+        "common_support_frames": common_support_count,
+        "common_support_rate": round(_rate(common_support_count, total), 6),
+        "preferred_reference_support_frames": preferred_reference_support_count,
+        "preferred_reference_support_rate": round(
+            _rate(preferred_reference_support_count, total), 6
+        ),
         "corridor_complete_frames": complete_count,
         "corridor_complete_rate": round(_rate(complete_count, total), 6),
         "unresolved_frames": unresolved_count,
@@ -158,6 +230,10 @@ def summarize_boundary_frames(frames: Sequence[Sequence[Mapping]]) -> dict:
         "duplicate_role_frames": duplicate_role_frames,
         "lateral_order_error_frames": lateral_order_error_frames,
         "order_invalid_frames": order_invalid_frames,
+        "longest_order_invalid_streak_frames": longest_order_invalid_streak,
+        "longest_no_yellow_streak_frames": longest_no_yellow_streak,
+        "longest_no_color_pair_streak_frames": longest_no_color_pair_streak,
+        "longest_no_color_triplet_streak_frames": longest_no_color_triplet_streak,
     }
 
 
@@ -189,6 +265,23 @@ def summarize_boundary_run_groups(
     for value in per_run:
         role_switches.update(value["stable_id_switches_by_role"])
     result["stable_id_switches_by_role"] = dict(sorted(role_switches.items()))
+    # A streak cannot span independent raw runs.
+    result["longest_order_invalid_streak_frames"] = max(
+        (value["longest_order_invalid_streak_frames"] for value in per_run),
+        default=0,
+    )
+    result["longest_no_yellow_streak_frames"] = max(
+        (value["longest_no_yellow_streak_frames"] for value in per_run),
+        default=0,
+    )
+    result["longest_no_color_pair_streak_frames"] = max(
+        (value["longest_no_color_pair_streak_frames"] for value in per_run),
+        default=0,
+    )
+    result["longest_no_color_triplet_streak_frames"] = max(
+        (value["longest_no_color_triplet_streak_frames"] for value in per_run),
+        default=0,
+    )
     return result
 
 

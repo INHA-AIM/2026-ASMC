@@ -1,0 +1,760 @@
+schema_version: asmc-shadow-boundary-audit-1.0.0
+generated_at_utc: '2026-09-13T11:19:46.439+00:00'
+selection:
+  path: /root/ws/artifacts/perception_eval/analysis/shadow_maneuver_20260913/selection.yaml
+  sha256: 33cef1ad965afb16394cde995a09ce28e50bef0bff8a6909759dc0d27316567b
+model_id: twinlite_v6_shadow_shared_ref_y045_20260913
+runs:
+- run_id: 20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel
+  scenario: shadow_boundary_straddle
+  weather: sunny
+  sim_hour: 13
+  duration_s: 39.68
+  technical_quality_gates:
+    result_complete: true
+    camera_diagnostics_recorded: true
+    bev_diagnostics_recorded: true
+    lane_diagnostics_recorded: true
+    lane_boundaries_recorded: true
+    lane_outputs_positive: true
+    lane_errors_zero: true
+  technical_quality_passed: true
+  lane_diagnostics_final:
+    boundary_algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+    boundary_config_sha256: e16aff0d29be8cab65d54b349363fc647ab3dd3c1089864f411469d46a13cc4c
+    boundary_expected_count: '3'
+    boundary_operating_domain: shadow_two_way_v1
+    boundary_publish_p50_ms: '1.6674885046086274'
+    boundary_publish_p95_ms: '2.997610555030404'
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    confidence_by_class: '{"1": 0.5, "2": 0.45}'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    errors: '0'
+    ground_plane_coefficients: '[0.0, 0.0, -0.35]'
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{"front": 402, "left": 402, "right": 402}'
+    last_counts: '{"boundary_completeness": 2, "evidence": 8087, "lane_candidates":
+      3, "lanes": 3, "nodes": 207, "prefit_tracks": 3, "shadow_boundaries": 3, "shadow_corridor_complete":
+      true, "shadow_white_boundaries": 2, "shadow_yellow_boundaries": 1, "tracks":
+      3, "white_lanes": 2, "yellow_lanes": 1}'
+    last_timestamp_skew_ms: '1.868'
+    outputs: '402'
+    pair_errors_by_view: '{"front": 0, "left": 0, "right": 0}'
+    processing_fps: '10.401'
+    processing_p50_ms: '29.28986749611795'
+    processing_p95_ms: '38.815870237885974'
+    queue_drops_by_view: '{"front": 0, "left": 0, "right": 0}'
+    shadow_boundary_enabled: 'True'
+    shadow_boundary_parameters: '{"expected_lane_width_m": 3.55, "lane_width_max_m":
+      4.6, "lane_width_min_m": 2.4, "max_abs_heading_deg": 50.0, "max_abs_lateral_m":
+      7.0, "max_bridged_ratio": 0.45, "max_residual_p95_m": 0.3, "max_white_without_yellow":
+      2, "min_confidence": 0.45, "min_longitudinal_span_m": 3.0, "min_observed_length_m":
+      3.0, "reference_x_m": 5.0}'
+    sync_rejected: '0'
+    views: '["front", "left", "right"]'
+  runtime_rates:
+    model_grid:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    fused_bev:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    boundaries:
+      messages: 402
+      average_hz: 10.287
+      end_window_hz: 10.582
+  boundary_summary:
+    frames: 402
+    frames_with_any_boundary: 402
+    any_boundary_rate: 1.0
+    yellow_centre_frames: 386
+    yellow_centre_rate: 0.960199
+    yellow_observed_frames: 386
+    yellow_observed_rate: 0.960199
+    color_triplet_frames: 380
+    color_triplet_rate: 0.945274
+    common_support_frames: 402
+    common_support_rate: 1.0
+    preferred_reference_support_frames: 190
+    preferred_reference_support_rate: 0.472637
+    corridor_complete_frames: 380
+    corridor_complete_rate: 0.945274
+    unresolved_frames: 16
+    unresolved_rate: 0.039801
+    role_presence_frames:
+      left_outer_boundary: 380
+      right_outer_boundary: 386
+      unresolved: 16
+      yellow_centre_boundary: 386
+    role_presence_rates:
+      left_outer_boundary: 0.945274
+      right_outer_boundary: 0.960199
+      unresolved: 0.039801
+      yellow_centre_boundary: 0.960199
+    boundaries_total: 1184
+    boundaries_per_frame: 2.945274
+    unique_stable_ids: 5
+    stable_id_switches_by_role:
+      left_outer_boundary: 1
+      yellow_centre_boundary: 1
+    stable_id_switches_total: 2
+    reacquired_events: 7
+    duplicate_role_frames: 0
+    lateral_order_error_frames: 0
+    order_invalid_frames: 0
+    longest_order_invalid_streak_frames: 0
+    longest_no_yellow_streak_frames: 7
+    longest_no_color_triplet_streak_frames: 7
+- run_id: 20260913_195429_kcity2025_shadow_lateral_sweep_sunny_1pm_wheel
+  scenario: shadow_lateral_sweep
+  weather: sunny
+  sim_hour: 13
+  duration_s: 37.16
+  technical_quality_gates:
+    result_complete: true
+    camera_diagnostics_recorded: true
+    bev_diagnostics_recorded: true
+    lane_diagnostics_recorded: true
+    lane_boundaries_recorded: true
+    lane_outputs_positive: true
+    lane_errors_zero: true
+  technical_quality_passed: true
+  lane_diagnostics_final:
+    boundary_algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+    boundary_config_sha256: e16aff0d29be8cab65d54b349363fc647ab3dd3c1089864f411469d46a13cc4c
+    boundary_expected_count: '3'
+    boundary_operating_domain: shadow_two_way_v1
+    boundary_publish_p50_ms: '1.608127997315023'
+    boundary_publish_p95_ms: '2.7738717981264926'
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    confidence_by_class: '{"1": 0.5, "2": 0.45}'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    errors: '0'
+    ground_plane_coefficients: '[0.0, 0.0, -0.35]'
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{"front": 779, "left": 779, "right": 779}'
+    last_counts: '{"boundary_completeness": 2, "evidence": 5809, "lane_candidates":
+      3, "lanes": 3, "nodes": 210, "prefit_tracks": 3, "shadow_boundaries": 3, "shadow_corridor_complete":
+      true, "shadow_white_boundaries": 2, "shadow_yellow_boundaries": 1, "tracks":
+      3, "white_lanes": 2, "yellow_lanes": 1}'
+    last_timestamp_skew_ms: '2.0494'
+    outputs: '772'
+    pair_errors_by_view: '{"front": 0, "left": 0, "right": 0}'
+    processing_fps: '10.168'
+    processing_p50_ms: '28.872425500594545'
+    processing_p95_ms: '37.706856999284355'
+    queue_drops_by_view: '{"front": 0, "left": 0, "right": 0}'
+    shadow_boundary_enabled: 'True'
+    shadow_boundary_parameters: '{"expected_lane_width_m": 3.55, "lane_width_max_m":
+      4.6, "lane_width_min_m": 2.4, "max_abs_heading_deg": 50.0, "max_abs_lateral_m":
+      7.0, "max_bridged_ratio": 0.45, "max_residual_p95_m": 0.3, "max_white_without_yellow":
+      2, "min_confidence": 0.45, "min_longitudinal_span_m": 3.0, "min_observed_length_m":
+      3.0, "reference_x_m": 5.0}'
+    sync_rejected: '21'
+    views: '["front", "left", "right"]'
+  runtime_rates:
+    model_grid:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    fused_bev:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    boundaries:
+      messages: 370
+      average_hz: 10.081
+      end_window_hz: 10.419
+  boundary_summary:
+    frames: 370
+    frames_with_any_boundary: 370
+    any_boundary_rate: 1.0
+    yellow_centre_frames: 285
+    yellow_centre_rate: 0.77027
+    yellow_observed_frames: 285
+    yellow_observed_rate: 0.77027
+    color_triplet_frames: 273
+    color_triplet_rate: 0.737838
+    common_support_frames: 370
+    common_support_rate: 1.0
+    preferred_reference_support_frames: 203
+    preferred_reference_support_rate: 0.548649
+    corridor_complete_frames: 273
+    corridor_complete_rate: 0.737838
+    unresolved_frames: 85
+    unresolved_rate: 0.22973
+    role_presence_frames:
+      left_outer_boundary: 276
+      right_outer_boundary: 280
+      unresolved: 85
+      yellow_centre_boundary: 285
+    role_presence_rates:
+      left_outer_boundary: 0.745946
+      right_outer_boundary: 0.756757
+      unresolved: 0.22973
+      yellow_centre_boundary: 0.77027
+    boundaries_total: 1011
+    boundaries_per_frame: 2.732432
+    unique_stable_ids: 12
+    stable_id_switches_by_role:
+      yellow_centre_boundary: 9
+    stable_id_switches_total: 9
+    reacquired_events: 26
+    duplicate_role_frames: 0
+    lateral_order_error_frames: 0
+    order_invalid_frames: 0
+    longest_order_invalid_streak_frames: 0
+    longest_no_yellow_streak_frames: 13
+    longest_no_color_triplet_streak_frames: 13
+- run_id: 20260913_195750_kcity2025_shadow_static_avoid_return_foggy_11am_wheel
+  scenario: shadow_static_avoid_return
+  weather: foggy
+  sim_hour: 11
+  duration_s: 21.27
+  technical_quality_gates:
+    result_complete: true
+    camera_diagnostics_recorded: true
+    bev_diagnostics_recorded: true
+    lane_diagnostics_recorded: true
+    lane_boundaries_recorded: true
+    lane_outputs_positive: true
+    lane_errors_zero: true
+  technical_quality_passed: true
+  lane_diagnostics_final:
+    boundary_algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+    boundary_config_sha256: e16aff0d29be8cab65d54b349363fc647ab3dd3c1089864f411469d46a13cc4c
+    boundary_expected_count: '3'
+    boundary_operating_domain: shadow_two_way_v1
+    boundary_publish_p50_ms: '1.6242204947047867'
+    boundary_publish_p95_ms: '2.773221903771627'
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    confidence_by_class: '{"1": 0.5, "2": 0.45}'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    errors: '0'
+    ground_plane_coefficients: '[0.0, 0.0, -0.35]'
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{"front": 988, "left": 988, "right": 988}'
+    last_counts: '{"boundary_completeness": 2, "evidence": 8925, "lane_candidates":
+      3, "lanes": 3, "nodes": 211, "prefit_tracks": 3, "shadow_boundaries": 3, "shadow_corridor_complete":
+      true, "shadow_white_boundaries": 2, "shadow_yellow_boundaries": 1, "tracks":
+      3, "white_lanes": 2, "yellow_lanes": 1}'
+    last_timestamp_skew_ms: '1.7633'
+    outputs: '975'
+    pair_errors_by_view: '{"front": 0, "left": 0, "right": 0}'
+    processing_fps: '7.793'
+    processing_p50_ms: '28.59242349950364'
+    processing_p95_ms: '38.107089095865376'
+    queue_drops_by_view: '{"front": 0, "left": 0, "right": 0}'
+    shadow_boundary_enabled: 'True'
+    shadow_boundary_parameters: '{"expected_lane_width_m": 3.55, "lane_width_max_m":
+      4.6, "lane_width_min_m": 2.4, "max_abs_heading_deg": 50.0, "max_abs_lateral_m":
+      7.0, "max_bridged_ratio": 0.45, "max_residual_p95_m": 0.3, "max_white_without_yellow":
+      2, "min_confidence": 0.45, "min_longitudinal_span_m": 3.0, "min_observed_length_m":
+      3.0, "reference_x_m": 5.0}'
+    sync_rejected: '39'
+    views: '["front", "left", "right"]'
+  runtime_rates:
+    model_grid:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    fused_bev:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    boundaries:
+      messages: 203
+      average_hz: 9.711
+      end_window_hz: 8.884
+  boundary_summary:
+    frames: 203
+    frames_with_any_boundary: 203
+    any_boundary_rate: 1.0
+    yellow_centre_frames: 193
+    yellow_centre_rate: 0.950739
+    yellow_observed_frames: 193
+    yellow_observed_rate: 0.950739
+    color_triplet_frames: 171
+    color_triplet_rate: 0.842365
+    common_support_frames: 203
+    common_support_rate: 1.0
+    preferred_reference_support_frames: 186
+    preferred_reference_support_rate: 0.916256
+    corridor_complete_frames: 171
+    corridor_complete_rate: 0.842365
+    unresolved_frames: 10
+    unresolved_rate: 0.049261
+    role_presence_frames:
+      left_outer_boundary: 189
+      right_outer_boundary: 174
+      unresolved: 10
+      yellow_centre_boundary: 193
+    role_presence_rates:
+      left_outer_boundary: 0.931034
+      right_outer_boundary: 0.857143
+      unresolved: 0.049261
+      yellow_centre_boundary: 0.950739
+    boundaries_total: 575
+    boundaries_per_frame: 2.832512
+    unique_stable_ids: 4
+    stable_id_switches_by_role:
+      yellow_centre_boundary: 1
+    stable_id_switches_total: 1
+    reacquired_events: 22
+    duplicate_role_frames: 0
+    lateral_order_error_frames: 0
+    order_invalid_frames: 0
+    longest_order_invalid_streak_frames: 0
+    longest_no_yellow_streak_frames: 5
+    longest_no_color_triplet_streak_frames: 5
+- run_id: 20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel
+  scenario: shadow_static_avoid_return
+  weather: sunny
+  sim_hour: 13
+  duration_s: 28.78
+  technical_quality_gates:
+    result_complete: true
+    camera_diagnostics_recorded: true
+    bev_diagnostics_recorded: true
+    lane_diagnostics_recorded: true
+    lane_boundaries_recorded: true
+    lane_outputs_positive: true
+    lane_errors_zero: true
+  technical_quality_passed: true
+  lane_diagnostics_final:
+    boundary_algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+    boundary_config_sha256: e16aff0d29be8cab65d54b349363fc647ab3dd3c1089864f411469d46a13cc4c
+    boundary_expected_count: '3'
+    boundary_operating_domain: shadow_two_way_v1
+    boundary_publish_p50_ms: '1.6271309941657819'
+    boundary_publish_p95_ms: '2.7405036533309612'
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    confidence_by_class: '{"1": 0.5, "2": 0.45}'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    errors: '0'
+    ground_plane_coefficients: '[0.0, 0.0, -0.35]'
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{"front": 1278, "left": 1278, "right": 1278}'
+    last_counts: '{"boundary_completeness": 1, "evidence": 7296, "lane_candidates":
+      3, "lanes": 3, "nodes": 204, "prefit_tracks": 3, "shadow_boundaries": 2, "shadow_corridor_complete":
+      false, "shadow_white_boundaries": 1, "shadow_yellow_boundaries": 1, "tracks":
+      3, "white_lanes": 2, "yellow_lanes": 1}'
+    last_timestamp_skew_ms: '2.9883'
+    outputs: '1257'
+    pair_errors_by_view: '{"front": 0, "left": 0, "right": 0}'
+    processing_fps: '10.0'
+    processing_p50_ms: '29.111481497238856'
+    processing_p95_ms: '38.034437349415384'
+    queue_drops_by_view: '{"front": 0, "left": 0, "right": 0}'
+    shadow_boundary_enabled: 'True'
+    shadow_boundary_parameters: '{"expected_lane_width_m": 3.55, "lane_width_max_m":
+      4.6, "lane_width_min_m": 2.4, "max_abs_heading_deg": 50.0, "max_abs_lateral_m":
+      7.0, "max_bridged_ratio": 0.45, "max_residual_p95_m": 0.3, "max_white_without_yellow":
+      2, "min_confidence": 0.45, "min_longitudinal_span_m": 3.0, "min_observed_length_m":
+      3.0, "reference_x_m": 5.0}'
+    sync_rejected: '63'
+    views: '["front", "left", "right"]'
+  runtime_rates:
+    model_grid:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    fused_bev:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    boundaries:
+      messages: 282
+      average_hz: 10.006
+      end_window_hz: 10.179
+  boundary_summary:
+    frames: 282
+    frames_with_any_boundary: 282
+    any_boundary_rate: 1.0
+    yellow_centre_frames: 257
+    yellow_centre_rate: 0.911348
+    yellow_observed_frames: 257
+    yellow_observed_rate: 0.911348
+    color_triplet_frames: 216
+    color_triplet_rate: 0.765957
+    common_support_frames: 282
+    common_support_rate: 1.0
+    preferred_reference_support_frames: 250
+    preferred_reference_support_rate: 0.886525
+    corridor_complete_frames: 216
+    corridor_complete_rate: 0.765957
+    unresolved_frames: 25
+    unresolved_rate: 0.088652
+    role_presence_frames:
+      left_outer_boundary: 252
+      right_outer_boundary: 219
+      unresolved: 25
+      yellow_centre_boundary: 257
+    role_presence_rates:
+      left_outer_boundary: 0.893617
+      right_outer_boundary: 0.776596
+      unresolved: 0.088652
+      yellow_centre_boundary: 0.911348
+    boundaries_total: 774
+    boundaries_per_frame: 2.744681
+    unique_stable_ids: 10
+    stable_id_switches_by_role:
+      right_outer_boundary: 3
+      yellow_centre_boundary: 4
+    stable_id_switches_total: 7
+    reacquired_events: 19
+    duplicate_role_frames: 0
+    lateral_order_error_frames: 0
+    order_invalid_frames: 0
+    longest_order_invalid_streak_frames: 0
+    longest_no_yellow_streak_frames: 6
+    longest_no_color_triplet_streak_frames: 14
+scenario_summary:
+  shadow_boundary_straddle:
+    frames: 402
+    frames_with_any_boundary: 402
+    any_boundary_rate: 1.0
+    yellow_centre_frames: 386
+    yellow_centre_rate: 0.960199
+    yellow_observed_frames: 386
+    yellow_observed_rate: 0.960199
+    color_triplet_frames: 380
+    color_triplet_rate: 0.945274
+    common_support_frames: 402
+    common_support_rate: 1.0
+    preferred_reference_support_frames: 190
+    preferred_reference_support_rate: 0.472637
+    corridor_complete_frames: 380
+    corridor_complete_rate: 0.945274
+    unresolved_frames: 16
+    unresolved_rate: 0.039801
+    role_presence_frames:
+      left_outer_boundary: 380
+      right_outer_boundary: 386
+      unresolved: 16
+      yellow_centre_boundary: 386
+    role_presence_rates:
+      left_outer_boundary: 0.945274
+      right_outer_boundary: 0.960199
+      unresolved: 0.039801
+      yellow_centre_boundary: 0.960199
+    boundaries_total: 1184
+    boundaries_per_frame: 2.945274
+    unique_stable_ids: 5
+    stable_id_switches_by_role:
+      left_outer_boundary: 1
+      yellow_centre_boundary: 1
+    stable_id_switches_total: 2
+    reacquired_events: 7
+    duplicate_role_frames: 0
+    lateral_order_error_frames: 0
+    order_invalid_frames: 0
+    longest_order_invalid_streak_frames: 0
+    longest_no_yellow_streak_frames: 7
+    longest_no_color_triplet_streak_frames: 7
+  shadow_lateral_sweep:
+    frames: 370
+    frames_with_any_boundary: 370
+    any_boundary_rate: 1.0
+    yellow_centre_frames: 285
+    yellow_centre_rate: 0.77027
+    yellow_observed_frames: 285
+    yellow_observed_rate: 0.77027
+    color_triplet_frames: 273
+    color_triplet_rate: 0.737838
+    common_support_frames: 370
+    common_support_rate: 1.0
+    preferred_reference_support_frames: 203
+    preferred_reference_support_rate: 0.548649
+    corridor_complete_frames: 273
+    corridor_complete_rate: 0.737838
+    unresolved_frames: 85
+    unresolved_rate: 0.22973
+    role_presence_frames:
+      left_outer_boundary: 276
+      right_outer_boundary: 280
+      unresolved: 85
+      yellow_centre_boundary: 285
+    role_presence_rates:
+      left_outer_boundary: 0.745946
+      right_outer_boundary: 0.756757
+      unresolved: 0.22973
+      yellow_centre_boundary: 0.77027
+    boundaries_total: 1011
+    boundaries_per_frame: 2.732432
+    unique_stable_ids: 12
+    stable_id_switches_by_role:
+      yellow_centre_boundary: 9
+    stable_id_switches_total: 9
+    reacquired_events: 26
+    duplicate_role_frames: 0
+    lateral_order_error_frames: 0
+    order_invalid_frames: 0
+    longest_order_invalid_streak_frames: 0
+    longest_no_yellow_streak_frames: 13
+    longest_no_color_triplet_streak_frames: 13
+  shadow_static_avoid_return:
+    frames: 485
+    frames_with_any_boundary: 485
+    any_boundary_rate: 1.0
+    yellow_centre_frames: 450
+    yellow_centre_rate: 0.927835
+    yellow_observed_frames: 450
+    yellow_observed_rate: 0.927835
+    color_triplet_frames: 387
+    color_triplet_rate: 0.797938
+    common_support_frames: 485
+    common_support_rate: 1.0
+    preferred_reference_support_frames: 436
+    preferred_reference_support_rate: 0.898969
+    corridor_complete_frames: 387
+    corridor_complete_rate: 0.797938
+    unresolved_frames: 35
+    unresolved_rate: 0.072165
+    role_presence_frames:
+      left_outer_boundary: 441
+      right_outer_boundary: 393
+      unresolved: 35
+      yellow_centre_boundary: 450
+    role_presence_rates:
+      left_outer_boundary: 0.909278
+      right_outer_boundary: 0.810309
+      unresolved: 0.072165
+      yellow_centre_boundary: 0.927835
+    boundaries_total: 1349
+    boundaries_per_frame: 2.781443
+    unique_stable_ids: 14
+    stable_id_switches_by_role:
+      right_outer_boundary: 3
+      yellow_centre_boundary: 5
+    stable_id_switches_total: 8
+    reacquired_events: 41
+    duplicate_role_frames: 0
+    lateral_order_error_frames: 0
+    order_invalid_frames: 0
+    longest_order_invalid_streak_frames: 0
+    longest_no_yellow_streak_frames: 6
+    longest_no_color_triplet_streak_frames: 14
+weather_summary:
+  shadow_boundary_straddle:
+    sunny:
+      frames: 402
+      frames_with_any_boundary: 402
+      any_boundary_rate: 1.0
+      yellow_centre_frames: 386
+      yellow_centre_rate: 0.960199
+      yellow_observed_frames: 386
+      yellow_observed_rate: 0.960199
+      color_triplet_frames: 380
+      color_triplet_rate: 0.945274
+      common_support_frames: 402
+      common_support_rate: 1.0
+      preferred_reference_support_frames: 190
+      preferred_reference_support_rate: 0.472637
+      corridor_complete_frames: 380
+      corridor_complete_rate: 0.945274
+      unresolved_frames: 16
+      unresolved_rate: 0.039801
+      role_presence_frames:
+        left_outer_boundary: 380
+        right_outer_boundary: 386
+        unresolved: 16
+        yellow_centre_boundary: 386
+      role_presence_rates:
+        left_outer_boundary: 0.945274
+        right_outer_boundary: 0.960199
+        unresolved: 0.039801
+        yellow_centre_boundary: 0.960199
+      boundaries_total: 1184
+      boundaries_per_frame: 2.945274
+      unique_stable_ids: 5
+      stable_id_switches_by_role:
+        left_outer_boundary: 1
+        yellow_centre_boundary: 1
+      stable_id_switches_total: 2
+      reacquired_events: 7
+      duplicate_role_frames: 0
+      lateral_order_error_frames: 0
+      order_invalid_frames: 0
+      longest_order_invalid_streak_frames: 0
+      longest_no_yellow_streak_frames: 7
+      longest_no_color_triplet_streak_frames: 7
+  shadow_lateral_sweep:
+    sunny:
+      frames: 370
+      frames_with_any_boundary: 370
+      any_boundary_rate: 1.0
+      yellow_centre_frames: 285
+      yellow_centre_rate: 0.77027
+      yellow_observed_frames: 285
+      yellow_observed_rate: 0.77027
+      color_triplet_frames: 273
+      color_triplet_rate: 0.737838
+      common_support_frames: 370
+      common_support_rate: 1.0
+      preferred_reference_support_frames: 203
+      preferred_reference_support_rate: 0.548649
+      corridor_complete_frames: 273
+      corridor_complete_rate: 0.737838
+      unresolved_frames: 85
+      unresolved_rate: 0.22973
+      role_presence_frames:
+        left_outer_boundary: 276
+        right_outer_boundary: 280
+        unresolved: 85
+        yellow_centre_boundary: 285
+      role_presence_rates:
+        left_outer_boundary: 0.745946
+        right_outer_boundary: 0.756757
+        unresolved: 0.22973
+        yellow_centre_boundary: 0.77027
+      boundaries_total: 1011
+      boundaries_per_frame: 2.732432
+      unique_stable_ids: 12
+      stable_id_switches_by_role:
+        yellow_centre_boundary: 9
+      stable_id_switches_total: 9
+      reacquired_events: 26
+      duplicate_role_frames: 0
+      lateral_order_error_frames: 0
+      order_invalid_frames: 0
+      longest_order_invalid_streak_frames: 0
+      longest_no_yellow_streak_frames: 13
+      longest_no_color_triplet_streak_frames: 13
+  shadow_static_avoid_return:
+    foggy:
+      frames: 203
+      frames_with_any_boundary: 203
+      any_boundary_rate: 1.0
+      yellow_centre_frames: 193
+      yellow_centre_rate: 0.950739
+      yellow_observed_frames: 193
+      yellow_observed_rate: 0.950739
+      color_triplet_frames: 171
+      color_triplet_rate: 0.842365
+      common_support_frames: 203
+      common_support_rate: 1.0
+      preferred_reference_support_frames: 186
+      preferred_reference_support_rate: 0.916256
+      corridor_complete_frames: 171
+      corridor_complete_rate: 0.842365
+      unresolved_frames: 10
+      unresolved_rate: 0.049261
+      role_presence_frames:
+        left_outer_boundary: 189
+        right_outer_boundary: 174
+        unresolved: 10
+        yellow_centre_boundary: 193
+      role_presence_rates:
+        left_outer_boundary: 0.931034
+        right_outer_boundary: 0.857143
+        unresolved: 0.049261
+        yellow_centre_boundary: 0.950739
+      boundaries_total: 575
+      boundaries_per_frame: 2.832512
+      unique_stable_ids: 4
+      stable_id_switches_by_role:
+        yellow_centre_boundary: 1
+      stable_id_switches_total: 1
+      reacquired_events: 22
+      duplicate_role_frames: 0
+      lateral_order_error_frames: 0
+      order_invalid_frames: 0
+      longest_order_invalid_streak_frames: 0
+      longest_no_yellow_streak_frames: 5
+      longest_no_color_triplet_streak_frames: 5
+    sunny:
+      frames: 282
+      frames_with_any_boundary: 282
+      any_boundary_rate: 1.0
+      yellow_centre_frames: 257
+      yellow_centre_rate: 0.911348
+      yellow_observed_frames: 257
+      yellow_observed_rate: 0.911348
+      color_triplet_frames: 216
+      color_triplet_rate: 0.765957
+      common_support_frames: 282
+      common_support_rate: 1.0
+      preferred_reference_support_frames: 250
+      preferred_reference_support_rate: 0.886525
+      corridor_complete_frames: 216
+      corridor_complete_rate: 0.765957
+      unresolved_frames: 25
+      unresolved_rate: 0.088652
+      role_presence_frames:
+        left_outer_boundary: 252
+        right_outer_boundary: 219
+        unresolved: 25
+        yellow_centre_boundary: 257
+      role_presence_rates:
+        left_outer_boundary: 0.893617
+        right_outer_boundary: 0.776596
+        unresolved: 0.088652
+        yellow_centre_boundary: 0.911348
+      boundaries_total: 774
+      boundaries_per_frame: 2.744681
+      unique_stable_ids: 10
+      stable_id_switches_by_role:
+        right_outer_boundary: 3
+        yellow_centre_boundary: 4
+      stable_id_switches_total: 7
+      reacquired_events: 19
+      duplicate_role_frames: 0
+      lateral_order_error_frames: 0
+      order_invalid_frames: 0
+      longest_order_invalid_streak_frames: 0
+      longest_no_yellow_streak_frames: 6
+      longest_no_color_triplet_streak_frames: 14
+runtime_rate_summary:
+  shadow_boundary_straddle:
+    model_grid:
+      min_hz: 0.0
+      median_hz: 0.0
+      max_hz: 0.0
+    fused_bev:
+      min_hz: 0.0
+      median_hz: 0.0
+      max_hz: 0.0
+    boundaries:
+      min_hz: 10.287
+      median_hz: 10.287
+      max_hz: 10.287
+  shadow_lateral_sweep:
+    model_grid:
+      min_hz: 0.0
+      median_hz: 0.0
+      max_hz: 0.0
+    fused_bev:
+      min_hz: 0.0
+      median_hz: 0.0
+      max_hz: 0.0
+    boundaries:
+      min_hz: 10.081
+      median_hz: 10.081
+      max_hz: 10.081
+  shadow_static_avoid_return:
+    model_grid:
+      min_hz: 0.0
+      median_hz: 0.0
+      max_hz: 0.0
+    fused_bev:
+      min_hz: 0.0
+      median_hz: 0.0
+      max_hz: 0.0
+    boundaries:
+      min_hz: 9.711
+      median_hz: 9.8585
+      max_hz: 10.006
+technical_quality_passed: true
+interpretation: Availability and temporal-consistency audit only. It is not lane-geometry
+  ground truth accuracy and does not assign home/opposing semantics.

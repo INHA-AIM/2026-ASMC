@@ -12,6 +12,9 @@ uint8 SOURCE_RIGHT=4
 uint32 tracking_id
 
 # Zero-based physical order from +y (left) to -y (right) at reference_x_m.
+# A producer may move the reference from its preferred station to the nearest
+# shared longitudinal support. Every boundary in one valid ordered array must
+# therefore carry the same reference_x_m; consumers must not assume a fixed x.
 # Consumers must ignore lateral_order/reference_y_m when order_valid is false.
 uint16 lateral_order
 bool order_valid

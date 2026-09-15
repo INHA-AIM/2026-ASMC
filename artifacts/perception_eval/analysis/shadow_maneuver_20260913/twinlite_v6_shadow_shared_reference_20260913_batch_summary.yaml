@@ -1,0 +1,586 @@
+schema_version: asmc-shadow-lane-batch-1.0.0
+status: complete
+started_at_utc: '2026-09-13T11:12:24.058+00:00'
+selection:
+  path: /root/ws/artifacts/perception_eval/analysis/shadow_maneuver_20260913/selection.yaml
+  sha256: 33cef1ad965afb16394cde995a09ce28e50bef0bff8a6909759dc0d27316567b
+checkpoint:
+  path: /root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+  sha256: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+model_id: twinlite_v6_shadow_shared_reference_20260913
+rate: 1.0
+external_pipeline: true
+runs:
+- run_id: 20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel
+  scenario: shadow_boundary_straddle
+  weather: sunny
+  sim_hour: 13
+  recorded_controller: wheel
+  effective_controller: wheel
+  status: complete
+  elapsed_wall_s: 45.825
+  result_metadata: /data/rosbags/results/20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel/twinlite_v6_shadow_shared_reference_20260913/metadata.yaml
+  result_bags:
+  - bytes: 1016702
+    file: twinlite_v6_shadow_shared_reference_20260913_0.bag
+    sha256: bfb27de28b7e70c41d1a8533bb448fe0fe0b07d63f850805c1f4ba79b1a8dd99
+  camera_diagnostics:
+    average_stage_ms: '{"decode_ms": 6.74, "inference_ms": 20.14, "postprocess_ms":
+      3.35, "preprocess_ms": 3.5, "publish_ms": 5.98}'
+    backend: twinlite_plus
+    checkpoint_path: /root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+    checkpoint_sha256: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+    decode_errors: '0'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    inference_errors: '0'
+    input_hw: '[384, 640]'
+    input_timestamp_fallbacks_by_view: '{"front": 0, "left": 0, "right": 0}'
+    input_timestamp_regressions_by_view: '{"front": 0, "left": 0, "right": 0}'
+    latest_input_stamp_ns: '{"front": 1789296786120585918, "left": 1789296786119371891,
+      "right": 1789296786119663476}'
+    latest_receive_stamp_ns: '{"front": 1789297985495765924, "left": 1789297985494616985,
+      "right": 1789297985494972229}'
+    latest_result_stamp_ns: '1789297985531683921'
+    model_config: medium
+    model_grid_incomplete_batches: '11'
+    model_grid_output_batches: '401'
+    model_grid_throttled_batches: '357'
+    model_grid_timestamp_resets: '0'
+    output_batches: '769'
+    output_by_view: '{"front": 764, "left": 766, "right": 763}'
+    output_frames: '2293'
+    processing_fps: '58.124'
+    queue_age_p50_ms: '46.24507400149014'
+    queue_age_p95_ms: '61.28154060570521'
+    received_by_view: '{"front": 775, "left": 775, "right": 775}'
+    replaced_by_view: '{"front": 10, "left": 8, "right": 11}'
+    views: '["front", "left", "right"]'
+    weights: ema
+  bev_diagnostics:
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    camera_to_fused_ms_p50: unavailable
+    camera_to_fused_ms_p95: unavailable
+    fusion_errors: '0'
+    fusion_ms_mean: '2.4186922463095613'
+    fusion_ms_p95: '3.290038508566795'
+    grid_shape: 250,160
+    ground_plane_coefficients: (0.0, 0.0, -0.35)
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{''front'': 674, ''left'': 690, ''right'': 697}'
+    last_result_stamp_ns: '1789297985693372964'
+    last_source_stamp_ns: '1789296786249204874'
+    last_timestamp_skew_ms: '1.516343'
+    max_fused_hz: '10.0'
+    max_timestamp_skew_ms: '35.0'
+    output_throttled: '278'
+    outputs: '386'
+    pair_errors_by_view: '{''front'': 0, ''left'': 0, ''right'': 0}'
+    processing_fps: '9.846611381154158'
+    queue_drops_by_view: '{''front'': 0, ''left'': 0, ''right'': 0}'
+    sync_rejected: '69'
+    sync_rejection_rate: '0.033478893740902474'
+    timestamp_resets: '0'
+    x_range_m: -5.0,20.0
+    y_range_m: -8.0,8.0
+  lane_diagnostics:
+    boundary_algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+    boundary_config_sha256: df969b49bf7c8fcfc6503c332a0209d55694e7525ab9cca80474ec039bfa9bdb
+    boundary_expected_count: '3'
+    boundary_operating_domain: shadow_two_way_v1
+    boundary_publish_p50_ms: '1.6902085044421256'
+    boundary_publish_p95_ms: '2.808346200617961'
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    confidence_by_class: '{"1": 0.5, "2": 0.5}'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    errors: '0'
+    ground_plane_coefficients: '[0.0, 0.0, -0.35]'
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{"front": 402, "left": 402, "right": 402}'
+    last_counts: '{"boundary_completeness": 2, "evidence": 8085, "lane_candidates":
+      3, "lanes": 3, "nodes": 206, "prefit_tracks": 3, "shadow_boundaries": 3, "shadow_corridor_complete":
+      true, "shadow_white_boundaries": 2, "shadow_yellow_boundaries": 1, "tracks":
+      3, "white_lanes": 2, "yellow_lanes": 1}'
+    last_timestamp_skew_ms: '1.868'
+    outputs: '402'
+    pair_errors_by_view: '{"front": 0, "left": 0, "right": 0}'
+    processing_fps: '10.399'
+    processing_p50_ms: '29.803290992276743'
+    processing_p95_ms: '38.35499720662483'
+    queue_drops_by_view: '{"front": 0, "left": 0, "right": 0}'
+    shadow_boundary_enabled: 'True'
+    shadow_boundary_parameters: '{"expected_lane_width_m": 3.55, "lane_width_max_m":
+      4.6, "lane_width_min_m": 2.4, "max_abs_heading_deg": 50.0, "max_abs_lateral_m":
+      7.0, "max_bridged_ratio": 0.45, "max_residual_p95_m": 0.3, "max_white_without_yellow":
+      2, "min_confidence": 0.5, "min_longitudinal_span_m": 3.0, "min_observed_length_m":
+      3.0, "reference_x_m": 5.0}'
+    sync_rejected: '0'
+    views: '["front", "left", "right"]'
+  topic_statistics:
+    /perception/bev/diagnostics:
+      average_hz: 0.5
+      end_window_hz: 0.5
+      messages: 22
+      observed_seconds: 42.003
+      start_window_hz: 0.5
+    /perception/camera/diagnostics:
+      average_hz: 0.489
+      end_window_hz: 0.496
+      messages: 20
+      observed_seconds: 38.856
+      start_window_hz: 0.492
+    /perception/lane/boundary_observations:
+      average_hz: 10.293
+      end_window_hz: 10.384
+      messages: 402
+      observed_seconds: 38.959
+      start_window_hz: 10.386
+    /perception/lane/diagnostics:
+      average_hz: 0.5
+      end_window_hz: 0.5
+      messages: 22
+      observed_seconds: 42.002
+      start_window_hz: 0.5
+  quality_gates:
+    result_complete: true
+    camera_diagnostics_recorded: true
+    bev_diagnostics_recorded: true
+    lane_diagnostics_recorded: true
+    lane_boundaries_recorded: true
+    lane_outputs_positive: true
+    lane_errors_zero: true
+  quality_gate_passed: true
+  batch_action: recorded
+- run_id: 20260913_195429_kcity2025_shadow_lateral_sweep_sunny_1pm_wheel
+  scenario: shadow_lateral_sweep
+  weather: sunny
+  sim_hour: 13
+  recorded_controller: wheel
+  effective_controller: wheel
+  status: complete
+  elapsed_wall_s: 43.216
+  result_metadata: /data/rosbags/results/20260913_195429_kcity2025_shadow_lateral_sweep_sunny_1pm_wheel/twinlite_v6_shadow_shared_reference_20260913/metadata.yaml
+  result_bags:
+  - bytes: 905383
+    file: twinlite_v6_shadow_shared_reference_20260913_0.bag
+    sha256: 138142146ff0811817b5555e6cd945f4084f1ad05942d1769478e35a5e452bd7
+  camera_diagnostics:
+    average_stage_ms: '{"decode_ms": 6.99, "inference_ms": 19.58, "postprocess_ms":
+      3.41, "preprocess_ms": 3.69, "publish_ms": 5.78}'
+    backend: twinlite_plus
+    checkpoint_path: /root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+    checkpoint_sha256: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+    decode_errors: '0'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    inference_errors: '0'
+    input_hw: '[384, 640]'
+    input_timestamp_fallbacks_by_view: '{"front": 0, "left": 0, "right": 0}'
+    input_timestamp_regressions_by_view: '{"front": 0, "left": 0, "right": 0}'
+    latest_input_stamp_ns: '{"front": 1789296906289305448, "left": 1789296906288035869,
+      "right": 1789296906339085102}'
+    latest_receive_stamp_ns: '{"front": 1789298029437060117, "left": 1789298029436183214,
+      "right": 1789298029487324714}'
+    latest_result_stamp_ns: '1789298029524730682'
+    model_config: medium
+    model_grid_incomplete_batches: '26'
+    model_grid_output_batches: '777'
+    model_grid_throttled_batches: '696'
+    model_grid_timestamp_resets: '0'
+    output_batches: '1499'
+    output_by_view: '{"front": 1486, "left": 1490, "right": 1486}'
+    output_frames: '4462'
+    processing_fps: '59.887'
+    queue_age_p50_ms: '47.00267399311997'
+    queue_age_p95_ms: '62.5156199967023'
+    received_by_view: '{"front": 1505, "left": 1505, "right": 1506}'
+    replaced_by_view: '{"front": 19, "left": 15, "right": 20}'
+    views: '["front", "left", "right"]'
+    weights: ema
+  bev_diagnostics:
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    camera_to_fused_ms_p50: unavailable
+    camera_to_fused_ms_p95: unavailable
+    fusion_errors: '0'
+    fusion_ms_mean: '2.4365805545016883'
+    fusion_ms_p95: '3.307813456194708'
+    grid_shape: 250,160
+    ground_plane_coefficients: (0.0, 0.0, -0.35)
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{''front'': 1171, ''left'': 1186, ''right'': 1182}'
+    last_result_stamp_ns: '1789298029482011556'
+    last_source_stamp_ns: '1789296906289305448'
+    last_timestamp_skew_ms: '2.049446'
+    max_fused_hz: '10.0'
+    max_timestamp_skew_ms: '35.0'
+    output_throttled: '381'
+    outputs: '741'
+    pair_errors_by_view: '{''front'': 0, ''left'': 0, ''right'': 0}'
+    processing_fps: '9.70457773237373'
+    queue_drops_by_view: '{''front'': 0, ''left'': 0, ''right'': 0}'
+    sync_rejected: '172'
+    sync_rejection_rate: '0.04860129980220401'
+    timestamp_resets: '0'
+    x_range_m: -5.0,20.0
+    y_range_m: -8.0,8.0
+  lane_diagnostics:
+    boundary_algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+    boundary_config_sha256: df969b49bf7c8fcfc6503c332a0209d55694e7525ab9cca80474ec039bfa9bdb
+    boundary_expected_count: '3'
+    boundary_operating_domain: shadow_two_way_v1
+    boundary_publish_p50_ms: '1.6181220053113066'
+    boundary_publish_p95_ms: '2.700148006988456'
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    confidence_by_class: '{"1": 0.5, "2": 0.5}'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    errors: '0'
+    ground_plane_coefficients: '[0.0, 0.0, -0.35]'
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{"front": 777, "left": 777, "right": 777}'
+    last_counts: '{"boundary_completeness": 2, "evidence": 5809, "lane_candidates":
+      3, "lanes": 3, "nodes": 210, "prefit_tracks": 3, "shadow_boundaries": 3, "shadow_corridor_complete":
+      true, "shadow_white_boundaries": 2, "shadow_yellow_boundaries": 1, "tracks":
+      3, "white_lanes": 2, "yellow_lanes": 1}'
+    last_timestamp_skew_ms: '2.0494'
+    outputs: '773'
+    pair_errors_by_view: '{"front": 0, "left": 0, "right": 0}'
+    processing_fps: '10.197'
+    processing_p50_ms: '28.42932649946306'
+    processing_p95_ms: '37.320031898707384'
+    queue_drops_by_view: '{"front": 0, "left": 0, "right": 0}'
+    shadow_boundary_enabled: 'True'
+    shadow_boundary_parameters: '{"expected_lane_width_m": 3.55, "lane_width_max_m":
+      4.6, "lane_width_min_m": 2.4, "max_abs_heading_deg": 50.0, "max_abs_lateral_m":
+      7.0, "max_bridged_ratio": 0.45, "max_residual_p95_m": 0.3, "max_white_without_yellow":
+      2, "min_confidence": 0.5, "min_longitudinal_span_m": 3.0, "min_observed_length_m":
+      3.0, "reference_x_m": 5.0}'
+    sync_rejected: '12'
+    views: '["front", "left", "right"]'
+  topic_statistics:
+    /perception/bev/diagnostics:
+      average_hz: 0.5
+      end_window_hz: 0.5
+      messages: 21
+      observed_seconds: 40.002
+      start_window_hz: 0.5
+    /perception/camera/diagnostics:
+      average_hz: 0.491
+      end_window_hz: 0.496
+      messages: 19
+      observed_seconds: 36.664
+      start_window_hz: 0.489
+    /perception/lane/boundary_observations:
+      average_hz: 10.105
+      end_window_hz: 10.418
+      messages: 371
+      observed_seconds: 36.616
+      start_window_hz: 9.687
+    /perception/lane/diagnostics:
+      average_hz: 0.5
+      end_window_hz: 0.5
+      messages: 21
+      observed_seconds: 40.002
+      start_window_hz: 0.5
+  quality_gates:
+    result_complete: true
+    camera_diagnostics_recorded: true
+    bev_diagnostics_recorded: true
+    lane_diagnostics_recorded: true
+    lane_boundaries_recorded: true
+    lane_outputs_positive: true
+    lane_errors_zero: true
+  quality_gate_passed: true
+  batch_action: recorded
+- run_id: 20260913_195750_kcity2025_shadow_static_avoid_return_foggy_11am_wheel
+  scenario: shadow_static_avoid_return
+  weather: foggy
+  sim_hour: 11
+  recorded_controller: wheel
+  effective_controller: wheel
+  status: complete
+  elapsed_wall_s: 27.422
+  result_metadata: /data/rosbags/results/20260913_195750_kcity2025_shadow_static_avoid_return_foggy_11am_wheel/twinlite_v6_shadow_shared_reference_20260913/metadata.yaml
+  result_bags:
+  - bytes: 493146
+    file: twinlite_v6_shadow_shared_reference_20260913_0.bag
+    sha256: c602b12a5de6e01582660c94b81d6d167511ebe44401029f7d7d7c5b418c9c55
+  camera_diagnostics:
+    average_stage_ms: '{"decode_ms": 6.44, "inference_ms": 20.75, "postprocess_ms":
+      3.56, "preprocess_ms": 3.6, "publish_ms": 6.27}'
+    backend: twinlite_plus
+    checkpoint_path: /root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+    checkpoint_sha256: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+    decode_errors: '0'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    inference_errors: '0'
+    input_hw: '[384, 640]'
+    input_timestamp_fallbacks_by_view: '{"front": 0, "left": 0, "right": 0}'
+    input_timestamp_regressions_by_view: '{"front": 0, "left": 0, "right": 0}'
+    latest_input_stamp_ns: '{"front": 1789297091275717258, "left": 1789297091274083852,
+      "right": 1789297091273805141}'
+    latest_receive_stamp_ns: '{"front": 1789298056580783367, "left": 1789298056578902959,
+      "right": 1789298056578603744}'
+    latest_result_stamp_ns: '1789298056633689165'
+    model_config: medium
+    model_grid_incomplete_batches: '36'
+    model_grid_output_batches: '980'
+    model_grid_throttled_batches: '886'
+    model_grid_timestamp_resets: '0'
+    output_batches: '1902'
+    output_by_view: '{"front": 1883, "left": 1888, "right": 1885}'
+    output_frames: '5656'
+    processing_fps: '59.453'
+    queue_age_p50_ms: '47.08615499839652'
+    queue_age_p95_ms: '65.52889190788846'
+    received_by_view: '{"front": 1909, "left": 1909, "right": 1910}'
+    replaced_by_view: '{"front": 25, "left": 20, "right": 24}'
+    views: '["front", "left", "right"]'
+    weights: ema
+  bev_diagnostics:
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    camera_to_fused_ms_p50: unavailable
+    camera_to_fused_ms_p95: unavailable
+    fusion_errors: '0'
+    fusion_ms_mean: '2.465478479734884'
+    fusion_ms_p95: '3.3807445543061476'
+    grid_shape: 250,160
+    ground_plane_coefficients: (0.0, 0.0, -0.35)
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{''front'': 1571, ''left'': 1589, ''right'': 1570}'
+    last_result_stamp_ns: '1789298057222860813'
+    last_source_stamp_ns: '1789297091857443332'
+    last_timestamp_skew_ms: '1.965999'
+    max_fused_hz: '10.0'
+    max_timestamp_skew_ms: '35.0'
+    output_throttled: '551'
+    outputs: '949'
+    pair_errors_by_view: '{''front'': 0, ''left'': 0, ''right'': 0}'
+    processing_fps: '7.861363331740627'
+    queue_drops_by_view: '{''front'': 0, ''left'': 0, ''right'': 0}'
+    sync_rejected: '229'
+    sync_rejection_rate: '0.048414376321353064'
+    timestamp_resets: '0'
+    x_range_m: -5.0,20.0
+    y_range_m: -8.0,8.0
+  lane_diagnostics:
+    boundary_algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+    boundary_config_sha256: df969b49bf7c8fcfc6503c332a0209d55694e7525ab9cca80474ec039bfa9bdb
+    boundary_expected_count: '3'
+    boundary_operating_domain: shadow_two_way_v1
+    boundary_publish_p50_ms: '1.58088949683588'
+    boundary_publish_p95_ms: '2.657629703753628'
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    confidence_by_class: '{"1": 0.5, "2": 0.5}'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    errors: '0'
+    ground_plane_coefficients: '[0.0, 0.0, -0.35]'
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{"front": 986, "left": 986, "right": 986}'
+    last_counts: '{"boundary_completeness": 2, "evidence": 8925, "lane_candidates":
+      3, "lanes": 3, "nodes": 211, "prefit_tracks": 3, "shadow_boundaries": 3, "shadow_corridor_complete":
+      true, "shadow_white_boundaries": 2, "shadow_yellow_boundaries": 1, "tracks":
+      3, "white_lanes": 2, "yellow_lanes": 1}'
+    last_timestamp_skew_ms: '1.7633'
+    outputs: '969'
+    pair_errors_by_view: '{"front": 0, "left": 0, "right": 0}'
+    processing_fps: '7.647'
+    processing_p50_ms: '28.396644498570822'
+    processing_p95_ms: '37.564289753936464'
+    queue_drops_by_view: '{"front": 0, "left": 0, "right": 0}'
+    shadow_boundary_enabled: 'True'
+    shadow_boundary_parameters: '{"expected_lane_width_m": 3.55, "lane_width_max_m":
+      4.6, "lane_width_min_m": 2.4, "max_abs_heading_deg": 50.0, "max_abs_lateral_m":
+      7.0, "max_bridged_ratio": 0.45, "max_residual_p95_m": 0.3, "max_white_without_yellow":
+      2, "min_confidence": 0.5, "min_longitudinal_span_m": 3.0, "min_observed_length_m":
+      3.0, "reference_x_m": 5.0}'
+    sync_rejected: '51'
+    views: '["front", "left", "right"]'
+  topic_statistics:
+    /perception/bev/diagnostics:
+      average_hz: 0.5
+      end_window_hz: 0.5
+      messages: 13
+      observed_seconds: 24.002
+      start_window_hz: 0.5
+    /perception/camera/diagnostics:
+      average_hz: 0.494
+      end_window_hz: 0.487
+      messages: 11
+      observed_seconds: 20.251
+      start_window_hz: 0.496
+    /perception/lane/boundary_observations:
+      average_hz: 9.379
+      end_window_hz: 8.901
+      messages: 196
+      observed_seconds: 20.792
+      start_window_hz: 8.934
+    /perception/lane/diagnostics:
+      average_hz: 0.5
+      end_window_hz: 0.5
+      messages: 13
+      observed_seconds: 23.997
+      start_window_hz: 0.5
+  quality_gates:
+    result_complete: true
+    camera_diagnostics_recorded: true
+    bev_diagnostics_recorded: true
+    lane_diagnostics_recorded: true
+    lane_boundaries_recorded: true
+    lane_outputs_positive: true
+    lane_errors_zero: true
+  quality_gate_passed: true
+  batch_action: recorded
+- run_id: 20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel
+  scenario: shadow_static_avoid_return
+  weather: sunny
+  sim_hour: 13
+  recorded_controller: wheel
+  effective_controller: wheel
+  status: complete
+  elapsed_wall_s: 34.484
+  result_metadata: /data/rosbags/results/20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel/twinlite_v6_shadow_shared_reference_20260913/metadata.yaml
+  result_bags:
+  - bytes: 706430
+    file: twinlite_v6_shadow_shared_reference_20260913_0.bag
+    sha256: 57364738705e083f40bf34afb1b5cc397447dbd2a9cd2efc73712a3ff7ae0ce3
+  camera_diagnostics:
+    average_stage_ms: '{"decode_ms": 6.98, "inference_ms": 20.54, "postprocess_ms":
+      3.37, "preprocess_ms": 3.51, "publish_ms": 6.01}'
+    backend: twinlite_plus
+    checkpoint_path: /root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+    checkpoint_sha256: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+    decode_errors: '0'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    inference_errors: '0'
+    input_hw: '[384, 640]'
+    input_timestamp_fallbacks_by_view: '{"front": 0, "left": 0, "right": 0}'
+    input_timestamp_regressions_by_view: '{"front": 0, "left": 0, "right": 0}'
+    latest_input_stamp_ns: '{"front": 1789296992965357542, "left": 1789296992964416265,
+      "right": 1789296993013203620}'
+    latest_receive_stamp_ns: '{"front": 1789298090357375860, "left": 1789298090356020450,
+      "right": 1789298090404964447}'
+    latest_result_stamp_ns: '1789298090455343723'
+    model_config: medium
+    model_grid_incomplete_batches: '47'
+    model_grid_output_batches: '1256'
+    model_grid_throttled_batches: '1136'
+    model_grid_timestamp_resets: '1'
+    output_batches: '2439'
+    output_by_view: '{"front": 2416, "left": 2417, "right": 2418}'
+    output_frames: '7251'
+    processing_fps: '59.231'
+    queue_age_p50_ms: '50.89185599354096'
+    queue_age_p95_ms: '70.61873685233877'
+    received_by_view: '{"front": 2446, "left": 2447, "right": 2448}'
+    replaced_by_view: '{"front": 29, "left": 29, "right": 29}'
+    views: '["front", "left", "right"]'
+    weights: ema
+  bev_diagnostics:
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    camera_to_fused_ms_p50: unavailable
+    camera_to_fused_ms_p95: unavailable
+    fusion_errors: '0'
+    fusion_ms_mean: '2.4389073414283757'
+    fusion_ms_p95: '3.4160482515289914'
+    grid_shape: 250,160
+    ground_plane_coefficients: (0.0, 0.0, -0.35)
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{''front'': 1935, ''left'': 1955, ''right'': 2081}'
+    last_result_stamp_ns: '1789298092267850637'
+    last_source_stamp_ns: '1789296994827160596'
+    last_timestamp_skew_ms: '2.988338'
+    max_fused_hz: '10.0'
+    max_timestamp_skew_ms: '35.0'
+    output_throttled: '630'
+    outputs: '1217'
+    pair_errors_by_view: '{''front'': 0, ''left'': 0, ''right'': 0}'
+    processing_fps: '9.76727477283122'
+    queue_drops_by_view: '{''front'': 0, ''left'': 0, ''right'': 1}'
+    sync_rejected: '427'
+    sync_rejection_rate: '0.07151230949589683'
+    timestamp_resets: '1'
+    x_range_m: -5.0,20.0
+    y_range_m: -8.0,8.0
+  lane_diagnostics:
+    boundary_algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+    boundary_config_sha256: df969b49bf7c8fcfc6503c332a0209d55694e7525ab9cca80474ec039bfa9bdb
+    boundary_expected_count: '3'
+    boundary_operating_domain: shadow_two_way_v1
+    boundary_publish_p50_ms: '1.5991494947229512'
+    boundary_publish_p95_ms: '2.8294429495872464'
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    confidence_by_class: '{"1": 0.5, "2": 0.5}'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    errors: '0'
+    ground_plane_coefficients: '[0.0, 0.0, -0.35]'
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{"front": 1275, "left": 1275, "right": 1275}'
+    last_counts: '{"boundary_completeness": 1, "evidence": 7296, "lane_candidates":
+      3, "lanes": 3, "nodes": 204, "prefit_tracks": 3, "shadow_boundaries": 2, "shadow_corridor_complete":
+      false, "shadow_white_boundaries": 1, "shadow_yellow_boundaries": 1, "tracks":
+      3, "white_lanes": 2, "yellow_lanes": 1}'
+    last_timestamp_skew_ms: '2.9883'
+    outputs: '1253'
+    pair_errors_by_view: '{"front": 0, "left": 0, "right": 0}'
+    processing_fps: '10.082'
+    processing_p50_ms: '29.15428249980323'
+    processing_p95_ms: '37.400283703027526'
+    queue_drops_by_view: '{"front": 0, "left": 0, "right": 0}'
+    shadow_boundary_enabled: 'True'
+    shadow_boundary_parameters: '{"expected_lane_width_m": 3.55, "lane_width_max_m":
+      4.6, "lane_width_min_m": 2.4, "max_abs_heading_deg": 50.0, "max_abs_lateral_m":
+      7.0, "max_bridged_ratio": 0.45, "max_residual_p95_m": 0.3, "max_white_without_yellow":
+      2, "min_confidence": 0.5, "min_longitudinal_span_m": 3.0, "min_observed_length_m":
+      3.0, "reference_x_m": 5.0}'
+    sync_rejected: '66'
+    views: '["front", "left", "right"]'
+  topic_statistics:
+    /perception/bev/diagnostics:
+      average_hz: 0.5
+      end_window_hz: 0.5
+      messages: 16
+      observed_seconds: 30.002
+      start_window_hz: 0.5
+    /perception/camera/diagnostics:
+      average_hz: 0.494
+      end_window_hz: 0.496
+      messages: 14
+      observed_seconds: 26.33
+      start_window_hz: 0.496
+    /perception/lane/boundary_observations:
+      average_hz: 10.075
+      end_window_hz: 9.804
+      messages: 284
+      observed_seconds: 28.088
+      start_window_hz: 10.236
+    /perception/lane/diagnostics:
+      average_hz: 0.5
+      end_window_hz: 0.5
+      messages: 16
+      observed_seconds: 30.002
+      start_window_hz: 0.5
+  quality_gates:
+    result_complete: true
+    camera_diagnostics_recorded: true
+    bev_diagnostics_recorded: true
+    lane_diagnostics_recorded: true
+    lane_boundaries_recorded: true
+    lane_outputs_positive: true
+    lane_errors_zero: true
+  quality_gate_passed: true
+  batch_action: recorded
+finished_at_utc: '2026-09-13T11:14:57.262+00:00'

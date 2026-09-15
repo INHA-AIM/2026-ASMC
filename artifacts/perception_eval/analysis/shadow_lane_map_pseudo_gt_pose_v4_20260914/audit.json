@@ -1,0 +1,19 @@
+{
+  "artifact_sha256": "18d1947cc2914e6f3882ff1b9d4a7c747f0bae88532ee18d10dac8e4d7cd3b88",
+  "center_separation_m": {
+    "median": 3.510631603780702,
+    "p05": 3.489749077783224,
+    "p95": 3.5439073050748204
+  },
+  "deployment_allowed": false,
+  "lengths": {
+    "white_negative_normal_m": 116.1683490299329,
+    "white_positive_normal_m": 115.26579194019746,
+    "yellow_center_m": 115.71449171881628
+  },
+  "nominal_lane_width_m": 3.5,
+  "review_status": "pending_camera_review_after_lidar_calibration",
+  "sample_count": 231,
+  "schema_version": "asmc-shadow-lane-pseudo-gt-audit-1.0.0",
+  "status": "map_pseudo_gt"
+}

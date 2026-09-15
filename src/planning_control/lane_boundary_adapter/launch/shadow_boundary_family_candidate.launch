@@ -1,0 +1,12 @@
+<launch>
+  <arg name="config"
+       default="$(find lane_boundary_adapter)/config/shadow_boundary_family_consumer.yaml"/>
+
+  <node pkg="lane_boundary_adapter"
+        type="boundary_family_monitor_node"
+        name="boundary_family_monitor"
+        output="screen"
+        required="true">
+    <rosparam command="load" file="$(arg config)"/>
+  </node>
+</launch>

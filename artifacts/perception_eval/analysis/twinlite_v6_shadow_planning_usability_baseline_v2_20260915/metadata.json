@@ -1,0 +1,53 @@
+{
+  "artifacts": {
+    "runs": "runs.csv",
+    "summary": "summary.json"
+  },
+  "created_at_utc": "2026-09-14T18:32:19+00:00",
+  "lineage": {
+    "checkpoint": {
+      "path": "/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt",
+      "sha256": "a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b"
+    },
+    "selection": {
+      "path": "/root/ws/artifacts/perception_eval/analysis/shadow_maneuver_20260913/selection.yaml",
+      "sha256": "33cef1ad965afb16394cde995a09ce28e50bef0bff8a6909759dc0d27316567b"
+    }
+  },
+  "schema_version": "asmc-shadow-planning-usability-baseline-1.0.0",
+  "source_root": "/tmp/shadow_planning_usability_rep4_v1_20260915",
+  "sources": [
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel/frames.jsonl",
+      "frames_sha256": "f898c4a2cb06f7b9f160f75e5f74f01596bfc1d8da3f6e91e2fef5d88d312622",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel/metadata.json",
+      "metadata_sha256": "efb78cc0e7430f4b64c4106138dfee08c37c740d70c699febe7f00792d49f4b2",
+      "run_id": "20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195429_kcity2025_shadow_lateral_sweep_sunny_1pm_wheel/frames.jsonl",
+      "frames_sha256": "9ee641a73f5ff197c99020eb1cfbd13d4270f836d32ddc1a8c356ad90b16b677",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195429_kcity2025_shadow_lateral_sweep_sunny_1pm_wheel/metadata.json",
+      "metadata_sha256": "1efc8884db748e9d552ee7410c196acff8606fecca9d948aabb8af2399a2553d",
+      "run_id": "20260913_195429_kcity2025_shadow_lateral_sweep_sunny_1pm_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel/frames.jsonl",
+      "frames_sha256": "83aac29c6c66ad99523f15b09c63bd2315005aa99ef55428c81560559214fd66",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel/metadata.json",
+      "metadata_sha256": "6e97a0532b20ef17805b487b04768deca4cfea3df17742497aa23af56413333e",
+      "run_id": "20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195750_kcity2025_shadow_static_avoid_return_foggy_11am_wheel/frames.jsonl",
+      "frames_sha256": "1434a51f9d5ac0029c6e8e7606e304d180ecd8220697a789f9410378fa0afa76",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195750_kcity2025_shadow_static_avoid_return_foggy_11am_wheel/metadata.json",
+      "metadata_sha256": "9751c705b528a741f2c977007fb790c3225c3086e6c640a70999435574b6b9b7",
+      "run_id": "20260913_195750_kcity2025_shadow_static_avoid_return_foggy_11am_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    }
+  ]
+}

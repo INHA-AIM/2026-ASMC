@@ -264,6 +264,19 @@ class SemanticInferenceNode:
         message.data = value.tobytes()
         return message
 
+    @staticmethod
+    def _publish_unless_shutdown(publisher, message) -> bool:
+        """Publish without reporting a false inference failure during shutdown."""
+        if rospy.is_shutdown():
+            return False
+        try:
+            publisher.publish(message)
+        except rospy.ROSException:
+            if rospy.is_shutdown():
+                return False
+            raise
+        return True
+
     def _worker(self) -> None:
         while not rospy.is_shutdown():
             frames = self.buffer.pop_batch(timeout=0.2)
@@ -309,18 +322,24 @@ class SemanticInferenceNode:
                 frame = usable_frames[view]
                 for head, output in value.probabilities.items():
                     if head in self.categorical_heads:
-                        self.publishers[view][head].publish(
+                        if not self._publish_unless_shutdown(
+                            self.publishers[view][head],
                             self._image_message(output, frame, categorical=True)
-                        )
-                        self.confidence_publishers[view][head].publish(
+                        ):
+                            return
+                        if not self._publish_unless_shutdown(
+                            self.confidence_publishers[view][head],
                             self._image_message(
                                 value.categorical_confidences[head], frame
-                            )
-                        )
+                            ),
+                        ):
+                            return
                     else:
-                        self.publishers[view][head].publish(
+                        if not self._publish_unless_shutdown(
+                            self.publishers[view][head],
                             self._image_message(output, frame)
-                        )
+                        ):
+                            return
                 if publish_model_grid and view in self.model_grid_publishers:
                     class_publisher = self.model_grid_publishers[view]
                     confidence_publisher = self.model_grid_confidence_publishers[view]
@@ -328,21 +347,25 @@ class SemanticInferenceNode:
                         class_publisher.get_num_connections() > 0
                         or confidence_publisher.get_num_connections() > 0
                     ):
-                        class_publisher.publish(
+                        if not self._publish_unless_shutdown(
+                            class_publisher,
                             self._image_message(
                                 value.model_grid_probabilities["road_marking"],
                                 frame,
                                 categorical=True,
-                            )
-                        )
-                        confidence_publisher.publish(
+                            ),
+                        ):
+                            return
+                        if not self._publish_unless_shutdown(
+                            confidence_publisher,
                             self._image_message(
                                 value.model_grid_categorical_confidences[
                                     "road_marking"
                                 ],
                                 frame,
-                            )
-                        )
+                            ),
+                        ):
+                            return
             publish_ms = (time.perf_counter() - started) * 1000.0
             completed_ros_ns = int(rospy.Time.now().to_nsec())
             completed_monotonic = time.monotonic()

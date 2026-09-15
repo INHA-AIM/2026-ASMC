@@ -110,6 +110,13 @@ Instance/Depth를 한 trigger에 저장한 결과를 사용한다. 별도 Semant
 `ASMC_sensor_set_GT.json` 방식은 카메라 간 시계열·외부 파라미터 정합 부담이 있으므로
 현재 파이프라인에서는 사용하지 않는다.
 
+Simulation Time의 Sensor Record는 현재 장착된 센서만 저장한다. 2026-09-14 v2 실측에서도
+`CAMERA_1~4`, `LIDAR_5`, `GPS_6`, `IMU_7`만 갱신됐으며 Semantic 카메라 디렉터리는
+갱신되지 않았다. 따라서 v2 Sensor Record 결과를 RGB–Semantic 학습 pair로 간주하지 않는다.
+향후 5~10 Hz supervised sequence가 실제로 필요할 때만 RGB·Semantic front/left/right와
+필요한 상태 센서로 구성한 최소 sync-training 센서셋을 별도 version으로 만들고, frame key,
+timestamp, 해상도, extrinsic, 누락률을 검증한 새 manifest로 기존 Capture dataset과 분리한다.
+
 ## 3. Semantic → 정답 마스크
 
 ### 3.1 공식 26.R1 RGB 팔레트
@@ -358,8 +365,10 @@ v2 split은 5pm 학습 전 OOD 기준, v3 split은 `drive_003` 연속성 기준�
 ego-BEV로 투영·융합하고, 이후 learned view transform과 temporal/vector map으로
 확장한다. 이를 위해 새 run에는 sensor-set 사본·hash, 카메라 K/D/T, sim timestamp,
 weather/route/controller를 자기완결 메타데이터로 남긴다. 현재 1 Hz Capture 데이터는
-단일 프레임 인지에는 사용하되 temporal BEV/E2E 연구는 별도 5~10 Hz sequence profile로
-수집한다.
+단일 프레임 인지에는 사용한다. temporal BEV/E2E 연구용 5~10 Hz sequence는 RGB만 필요한지
+RGB–Semantic supervised pair가 필요한지 먼저 구분하고, 후자의 경우에만 최소 sync-training
+센서셋을 사용한다. Simulation Time sync 결과는 ideal-input 분석, Real Time UDP bag 결과는
+실제 운용 분석으로 서로 대체하지 않고 함께 보존한다.
 
 ## 9. 다음 구현 순서
 

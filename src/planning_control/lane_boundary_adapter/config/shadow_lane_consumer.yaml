@@ -1,0 +1,40 @@
+# Provisional read-only consumer for the two-way GPS-shadow ODD.
+# It does not determine home/opposing lanes and it never publishes control.
+topics:
+  input: /perception/lane/boundary_observations
+  markers: /planning/debug/camera_lane_strips
+  diagnostics: /planning/lane_observation/diagnostics
+
+adapter:
+  expected_frame_id: base_link
+  expected_operating_domain: shadow_two_way_v1
+  expected_algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+  expected_boundary_count: 3
+  reference_x_m: 5.0
+  consumer_x_min_m: 0.0
+  consumer_x_max_m: 15.0
+  sample_spacing_m: 0.25
+  min_common_length_m: 6.0
+  lane_width_min_m: 2.4
+  lane_width_max_m: 4.6
+  max_width_variation_m: 0.8
+  require_white_yellow_pair: true
+  # Shadow ODD only: when yellow is temporarily absent but both observed white
+  # outer boundaries describe two plausible lanes, expose a degraded inferred
+  # center. This never changes the perception observation itself.
+  allow_outer_white_pair_fallback: true
+  inferred_center_confidence_scale: 0.65
+
+freshness:
+  receive_timeout_sec: 0.30
+  source_timeout_sec: 0.30
+  future_tolerance_sec: 0.05
+
+monitor_rate_hz: 5.0
+
+visualization:
+  marker_z_m: -0.32
+  # Explicit DELETE is emitted only for vanished strip IDs. Zero lifetime
+  # prevents transient DELETEALL/expiry flicker while the freshness watchdog
+  # still clears stale observations.
+  marker_lifetime_sec: 0.0

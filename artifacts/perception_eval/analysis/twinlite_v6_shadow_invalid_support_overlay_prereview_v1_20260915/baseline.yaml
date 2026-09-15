@@ -1,0 +1,60 @@
+schema_version: asmc-invalid-support-overlay-prereview-decision-1.0.0
+created_at_kst: "2026-09-15"
+status: classification_visual_prereview_passed_support_policy_unchanged
+
+scope:
+  representative_runs: 4
+  conditions:
+    - shadow_clear_foggy_1pm_wheel
+    - shadow_clear_sunny_1pm_wheel
+    - shadow_static_avoid_v1_sunny_3pm_wheel
+    - shadow_static_avoid_v1_foggy_11am_wheel
+  selected_overlays: 44
+  map_overlay_available: 14
+  source_audit: /data/rosbags/audits/shadow_invalid_support_overlay_prereview_v1_20260915
+  source_clock: raw Ego plus existing evidence result on one rosbag playback clock
+
+selected_by_category:
+  vehicle_near_leading_tail: 8
+  preview_trailing_tail: 8
+  whole_support_shrink: 8
+  internal_support_gap: 5
+  preview_entry_missing: 7
+  no_material_invalid_support: 8
+
+visual_findings:
+  vehicle_near_leading_tail: red unsupported geometry appears at the low-x vehicle-side end
+  preview_trailing_tail: red unsupported geometry appears at the high-x far end
+  whole_support_shrink: unsupported geometry extends into the configured near or mid audit band
+  internal_support_gap: short red gaps are bracketed by non-invalid segments
+  preview_entry_missing: the configured far audit band begins without usable support
+  no_material_invalid_support: no classified gap exceeds the current reporting tolerance; sub-threshold red tails may remain
+  multi_label_behavior: expected and visible; one frame can belong to more than one category
+
+decision:
+  taxonomy_matches_intended_geometry: true
+  support_state_changed: false
+  invalid_geometry_promoted: false
+  invalid_geometry_planning_authority: false
+  fixed_distance_interface_adopted: false
+  interpretation: >-
+    The 0-15m and 15-20m ranges are current audit zones and a bounded
+    read-only adapter configuration, not a permanent perception or planning
+    interface. The producer retains the full configured polyline and explicit
+    per-sample support. Future consumers should derive continuous trusted
+    intervals and a maximum candidate horizon per frame.
+  next_gate: >-
+    Compare each role-matched INVALID segment with map pseudo-GT using
+    source-time Ego pose interpolation, then inspect representative threshold
+    and worst cases before defining any explicit low-authority candidate state.
+
+limitations:
+  - This is a geometry/taxonomy visual pre-review, not an accuracy audit.
+  - Only 14 of 44 sparsely selected frames were inside the pseudo-GT ODD and therefore displayed map geometry; all 1,031 replay frames had a valid nearest Ego pose.
+  - Map pseudo-GT is review-only and is not treated as absolute ground truth.
+  - Smooth red continuation does not prove that the unsupported curve is a valid lane.
+
+artifacts:
+  manifest: review_manifest.json
+  overview: contact_sheet_overview.jpg
+  per_category_pattern: contact_sheet_<category>.jpg

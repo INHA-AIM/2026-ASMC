@@ -11,14 +11,27 @@ from drivable_bev.shadow_result_audit import (
 )
 
 
-def boundary(role, stable_id, order, reacquired=0):
-    return {
+def boundary(
+    role,
+    stable_id,
+    order,
+    reacquired=0,
+    class_id=0,
+    valid_x=None,
+    order_valid=True,
+):
+    value = {
         "status": "provisional_shadow_boundary",
         "role": role,
         "stable_id": stable_id,
         "lateral_order_left_to_right": order,
         "reacquired_after_missed_frames": reacquired,
+        "class_id": class_id,
+        "order_valid": order_valid,
     }
+    if valid_x is not None:
+        value["valid_x"] = valid_x
+    return value
 
 
 class ShadowResultAuditTest(unittest.TestCase):
@@ -141,6 +154,39 @@ class ShadowResultAuditTest(unittest.TestCase):
         ]
         value = summarize_boundary_frames(frames)
         self.assertEqual(0, value["stable_id_switches_total"])
+
+    def test_summarizes_shared_support_and_outer_white_fallback(self):
+        frames = [
+            [
+                boundary(
+                    "left_outer_boundary", 1, 0, class_id=1, valid_x=[0.0, 8.0]
+                ),
+                boundary(
+                    "yellow_centre_boundary", 2, 1, class_id=2, valid_x=[1.0, 7.0]
+                ),
+            ],
+            [
+                boundary("unresolved", 1, 0, class_id=1, valid_x=[0.0, 4.0]),
+                boundary("unresolved", 3, 1, class_id=1, valid_x=[1.0, 4.0]),
+            ],
+        ]
+        value = summarize_boundary_frames(frames)
+        self.assertEqual(2, value["common_support_frames"])
+        self.assertEqual(1, value["preferred_reference_support_frames"])
+        self.assertEqual(1, value["color_pair_frames"])
+        self.assertEqual(1, value["white_outer_fallback_frames"])
+        self.assertEqual(1, value["longest_no_yellow_streak_frames"])
+
+    def test_counts_consecutive_invalid_order_frames(self):
+        frames = [
+            [boundary("unresolved", 1, 0, order_valid=True)],
+            [boundary("unresolved", 1, 0, order_valid=False)],
+            [boundary("unresolved", 1, 0, order_valid=False)],
+            [boundary("unresolved", 1, 0, order_valid=True)],
+        ]
+        value = summarize_boundary_frames(frames)
+        self.assertEqual(2, value["order_invalid_frames"])
+        self.assertEqual(2, value["longest_order_invalid_streak_frames"])
 
     def test_run_group_does_not_count_cross_run_id_change_as_switch(self):
         first = [[boundary("yellow_centre_boundary", 1, 0)]]

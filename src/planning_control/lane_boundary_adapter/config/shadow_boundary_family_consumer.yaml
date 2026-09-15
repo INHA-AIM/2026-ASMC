@@ -1,0 +1,52 @@
+# Read-only consumer for the provisional shared-family candidate.
+# It emits debug strips and diagnostics only. It never publishes a trajectory,
+# behavior decision, or vehicle command.
+topics:
+  input: /perception/lane/boundary_family
+  markers: /planning/debug/lane_boundary_family/strips
+  diagnostics: /planning/diagnostics/lane_boundary_family_adapter
+
+adapter:
+  expected_frame_id: base_link
+  expected_operating_domain: shadow_two_way_v1
+  expected_algorithm_id: twinlite_v6_shadow_boundary_family_candidate_v3
+  expected_representation: shared_parametric_bspline_normal_offsets_v2
+  expected_boundary_count: 3
+  # Bounded read-only audit window, not a permanent perception or planning
+  # horizon. The producer retains per-sample support over its full configured
+  # polyline; extend this only after a new accuracy/support audit.
+  consumer_x_min_m: 0.0
+  consumer_x_max_m: 15.0
+  min_segment_length_m: 0.25
+  lane_width_min_m: 2.4
+  lane_width_max_m: 4.6
+  max_width_variation_m: 0.8
+  # Locally inferred spans are usable but lower trust. An entirely inferred
+  # member is already scaled by the producer and is not scaled twice.
+  inferred_confidence_scale: 0.60
+  # Candidate-v3 additionally permits a conservatively gated, same-frame
+  # distributed multi-role family when role supports are longitudinally
+  # staggered. Its unsupported members remain STRUCTURE_INFERRED. Any INVALID
+  # that remains is still dropped here and can never be relabelled by this
+  # adapter.
+  # Refuse a candidate that silently claims production/deployment approval.
+  require_deployment_disallowed: true
+
+freshness:
+  receive_timeout_sec: 0.35
+  source_timeout_sec: 0.35
+  future_tolerance_sec: 0.05
+
+monitor_rate_hz: 10.0
+
+visualization:
+  marker_z_m: -0.31
+  # Explicit DELETE is used when a segment vanishes or input becomes stale.
+  marker_lifetime_sec: 0.0
+  # base_link is the rear-axle centre. The footprint therefore spans
+  # x[-0.790,3.845]m and y[-0.946,0.946]m.
+  vehicle_length_m: 4.635
+  vehicle_width_m: 1.892
+  vehicle_rear_overhang_m: 0.790
+  vehicle_wheelbase_m: 3.000
+  vehicle_marker_height_m: 0.12

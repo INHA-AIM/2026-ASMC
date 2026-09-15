@@ -7,7 +7,9 @@ import numpy as np
 from drivable_bev.boundary_candidates import (
     TemporalBoundaryTracker,
     select_shadow_lane_tracks,
+    select_shadow_lane_tracks_with_audit,
     select_shadow_boundaries,
+    select_shadow_boundaries_with_audit,
 )
 from drivable_bev.lane_evidence import LaneNode
 from drivable_bev.lane_tracking import LaneTrack
@@ -103,6 +105,22 @@ class ShadowBoundarySelectionTest(unittest.TestCase):
         self.assertEqual(2, len(selected))
         self.assertTrue(all(item.role == "unresolved" for item in selected))
 
+    def test_audit_reports_prefit_and_boundary_rejection_causes(self):
+        short = track(1, 1.0, x_end=1.5)
+        selected, prefit = select_shadow_lane_tracks_with_audit(
+            [track(2, 0.0), track(1, 3.55), short]
+        )
+        self.assertEqual(2, len(selected))
+        self.assertEqual(1, prefit["rejected"]["short_longitudinal_span"])
+
+        selected_boundaries, boundary = select_shadow_boundaries_with_audit(
+            [lane(1, 2, 0.0), lane(2, 1, 3.5, residual=0.8)]
+        )
+        self.assertEqual(1, len(selected_boundaries))
+        self.assertEqual(
+            1, boundary["rejected"]["spline_residual_above_limit"]
+        )
+
 
 class TemporalBoundaryTrackerTest(unittest.TestCase):
     def test_ids_survive_lateral_motion_and_one_missing_frame(self):
@@ -135,6 +153,28 @@ class TemporalBoundaryTrackerTest(unittest.TestCase):
         first_id = tracker.update(observation, 1_000_000_000)[0].stable_id
         second_id = tracker.update(observation, 2_000_000_000)[0].stable_id
         self.assertNotEqual(first_id, second_id)
+
+    def test_velocity_prediction_reacquires_after_lateral_manoeuvre_gap(self):
+        tracker = TemporalBoundaryTracker(
+            max_lateral_residual_m=0.65,
+            max_missed_frames=8,
+            velocity_smoothing=0.5,
+            max_lateral_speed_mps=4.0,
+        )
+        first = select_shadow_boundaries([lane(1, 2, 0.0)])
+        stable_id = tracker.update(first, 1_000_000_000)[0].stable_id
+        moving = select_shadow_boundaries([lane(2, 2, 0.2)])
+        self.assertEqual(
+            stable_id, tracker.update(moving, 1_100_000_000)[0].stable_id
+        )
+        for stamp_ns in range(1_200_000_000, 1_700_000_000, 100_000_000):
+            self.assertEqual((), tracker.update((), stamp_ns))
+        reacquired = select_shadow_boundaries([lane(3, 2, 1.2)])
+        output = tracker.update(reacquired, 1_700_000_000)
+        self.assertEqual(stable_id, output[0].stable_id)
+        self.assertEqual(5, output[0].reacquired_after_missed_frames)
+        self.assertEqual(1, tracker.last_audit["matched"])
+        self.assertEqual(0, tracker.last_audit["new_tracks"])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,166 @@
+schema_version: asmc-shadow-camera-perception-freeze-1.0.0
+generated_at: '2026-09-15T16:20:00+09:00'
+release_id: shadow_camera_perception_v3_candidate_20260915
+status: interface_and_parameters_frozen_for_planning_handoff
+operating_domain: shadow_two_way_v1
+deployment_allowed: false
+
+scope:
+  included:
+    - TwinLiteNet+ v6 three-camera semantic inference
+    - camera-only metric drivable BEV
+    - shared three-boundary family with per-sample support state
+  excluded:
+    - automatic shadow-zone activation
+    - home/opposing lane assignment
+    - LiDAR occupancy subtraction and safe-corridor generation
+    - Behavior, Frenet, MPC, and vehicle-command connection
+    - Ego-motion and IMU dynamic-extrinsic compensation
+
+lineage:
+  git_commit_at_measurement: 3f3b4833f19138a7dca5afd64d8466dd074a0add
+  git_branch: feature/planning-shadow-lane-adapter
+  git_dirty: true
+  checkpoint:
+    path: artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+    sha256: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+  lane_fitting_config:
+    path: src/perception/drivable_bev/config/lane_fitting.yaml
+    file_sha256: 00b0909db8813e8bda08e9c9efa079bc6556b98d56511c9b532da79aec060a9d
+    runtime_family_config_sha256: 691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070
+  camera_config:
+    path: src/perception/drivable_bev/config/cameras_v2.yaml
+    sha256: 185164fb704761bd8ab24e69966ffb796e2f20148c54bda4a875e2486747df12
+  bev_grid_config:
+    path: src/perception/drivable_bev/config/bev_grid.yaml
+    sha256: 8bad13875a2b7d9eec4a35687433446b1a57112257ec34520cf5c1d6e47e0ad3
+  selection:
+    path: artifacts/perception_eval/analysis/shadow_maneuver_20260913/selection.yaml
+    sha256: 33cef1ad965afb16394cde995a09ce28e50bef0bff8a6909759dc0d27316567b
+  batch_summary: artifacts/perception_eval/analysis/twinlite_v6_shadow_boundary_family_candidate_v3_profile_20260915/batch_summary.yaml
+  runtime_audit: artifacts/perception_eval/analysis/twinlite_v6_shadow_boundary_family_candidate_v3_profile_20260915/runtime_audit.yaml
+
+public_outputs:
+  lane_family:
+    topic: /perception/lane/boundary_family
+    type: asmc_msgs/LaneBoundaryFamily
+    frame_id: base_link
+    algorithm_id: twinlite_v6_shadow_boundary_family_candidate_v3
+    representation: shared_parametric_bspline_normal_offsets_v2
+  drivable_probability:
+    topic: /perception/bev/camera/drivable_probability
+    type: sensor_msgs/Image
+    encoding: mono8
+    value_contract: 0_to_255_camera_score
+    frame_id: base_link
+  drivable_coverage:
+    topic: /perception/bev/camera/coverage
+    type: sensor_msgs/Image
+    encoding: mono8
+    value_contract: 0_unknown_255_observed_by_at_least_one_camera
+    frame_id: base_link
+  grid:
+    x_m: [-5.0, 20.0]
+    y_m: [-8.0, 8.0]
+    resolution_m: 0.10
+    shape_height_width: [250, 160]
+
+representative_replay:
+  result_profile: shadow_runtime_profile_result
+  ros_master: http://127.0.0.1:11312
+  visualization_subscribers: 0
+  frames: 1270
+  family_accepted_frames: 1270
+  family_accepted_rate: 1.0
+  longest_rejected_streak_frames: 0
+  runtime_errors: 0
+  acceptance_modes:
+    strict_local_multi_role: 1270
+    distributed_multi_role: 0
+  shared_output_hz_by_run: [10.324, 10.323, 9.381, 10.406]
+  minimum_shared_output_hz: 9.381
+  profiled_body_ms: {p50: 76.368, p95: 96.961, p99: 112.534}
+  shared_family_fit_ms: {p50: 31.658, p95: 40.879, p99: 48.962}
+  sample_state_ratios:
+    observed: 0.672158
+    structure_inferred: 0.114967
+    invalid: 0.212876
+    usable: 0.787124
+    structure_inferred_of_usable: 0.146059
+  geometry:
+    valid_span_m: {p50: 20.074, p95: 21.749}
+    left_width_m: {p50: 3.522, p95: 3.602}
+    right_width_m: {p50: 3.535, p95: 3.580}
+    inlier_residual_p95_distribution_p95_m: 0.293
+    outlier_rate_p95: 0.146
+  interpretation:
+    - Availability, support-state, and runtime non-regression only; not map-GT accuracy.
+    - All recorded frames used the strict path, so these bags prove strict-path non-regression but not the real-world activation rate of the distributed-support fallback.
+    - The minimum result-topic rate clears the 9 Hz development gate, but integration headroom is modest.
+  result_bags:
+    - raw_run_id: 20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel
+      sha256: c7d3eec3fe3cb4795faa8361e1ad157196e1afa9bb7dd2cf1a537bb8d3f22606
+      bytes: 3416489
+    - raw_run_id: 20260913_195429_kcity2025_shadow_lateral_sweep_sunny_1pm_wheel
+      sha256: 8a963365abfb809d064f7584ca9afc38fd53585bccd42daf7d7ee67397494e81
+      bytes: 3267067
+    - raw_run_id: 20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel
+      sha256: 7ab5c78147651c5bcdd77272589988309d3ba653237729e09ab6ed253872ded8
+      bytes: 2550916
+    - raw_run_id: 20260913_195750_kcity2025_shadow_static_avoid_return_foggy_11am_wheel
+      sha256: 983a6ef59c4ee3e71c1b7fe8f07f5a4c950e4199d6683d9307c3a731b04e970e
+      bytes: 1731555
+
+handoff_profile_smoke:
+  status: complete
+  result_profile: shadow_camera_perception_handoff_result
+  parent_raw_run_id: 20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel
+  model_id: twinlite_v6_shadow_camera_perception_v3_handoff_smoke_20260915
+  result_root: /data/rosbags/results/20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel/twinlite_v6_shadow_camera_perception_v3_handoff_smoke_20260915
+  bag:
+    file: twinlite_v6_shadow_camera_perception_v3_handoff_smoke_20260915_0.bag
+    sha256: a404a662b1d2da9b197f34f96e38f261c4b5391258aeae3b63192a9882bd99dd
+    bytes: 10944566
+  required_topic_statistics:
+    /perception/lane/boundary_family: {messages: 401, average_hz: 10.290}
+    /perception/bev/camera/drivable_probability: {messages: 386, average_hz: 9.900}
+    /perception/bev/camera/coverage: {messages: 386, average_hz: 9.900}
+    /perception/camera/diagnostics: {messages: 20, average_hz: 0.493}
+    /perception/bev/diagnostics: {messages: 22, average_hz: 0.500}
+    /perception/lane/diagnostics: {messages: 22, average_hz: 0.500}
+  errors:
+    camera_decode: 0
+    camera_inference: 0
+    bev_fusion: 0
+    lane_runtime: 0
+  interpretation: >-
+    This verifies the result profile, required topic schemas, immutable raw
+    lineage, and recorder lifecycle. It is not a planning closed-loop test.
+
+optimization_decision:
+  pre_handoff_algorithm_optimization: not_required
+  rationale:
+    - Candidate v3 sustained at least 9.381 Hz with zero runtime error in isolated replay.
+    - The distributed-support branch was not entered in these bags, while several legacy stages slowed together versus the previous standalone run; this does not identify a v3-specific regression.
+    - Geometry, thresholds, and support-state semantics must remain stable for planning integration.
+  integration_risk: modest_compute_headroom
+  backlog_after_planning_integration:
+    - Add an opt-in deployment profile that skips legacy independent spline, temporal tracking, and legacy typed-boundary publication only after planning selects boundary_family as its source.
+    - Merge duplicated projection audit/extract traversal with deterministic geometry regression tests.
+    - Profile basis construction, robust iterations, residual lookup, and linear solves inside shared-family fit before changing the fitter.
+  required_regression_gate:
+    - same four raw bags
+    - identical algorithm_id, config hash, support-state semantics, and invalid hard split
+    - family accepted rate and geometry distributions non-regressing
+    - full-stack output at least 9 Hz with planning load
+
+ownership:
+  perception:
+    - publish lane family, drivable score, coverage, and diagnostics
+    - preserve source timestamp and support provenance
+  planning_control:
+    - decide shadow-zone activation and deactivation
+    - assign route, home/opposing, and maneuver meaning
+    - choose score thresholds, freshness policy, and fallback
+    - combine lane/drivable evidence with MGeo and LiDAR occupancy/objects
+    - perform closed-loop and competition-simulator validation

@@ -51,11 +51,32 @@ def parse_args():
     parser.add_argument("--topic-timeout-sec", type=float, default=30.0)
     parser.add_argument("--min-free-gb", type=float, default=5.0)
     parser.add_argument(
+        "--result-profile",
+        default="shadow_boundary_result",
+        help=(
+            "result bag allowlist; use shadow_runtime_profile_result for a "
+            "headless timing run without Marker subscribers"
+        ),
+    )
+    parser.add_argument(
         "--external-pipeline",
         action="store_true",
         help=(
             "reuse an already running inference/BEV/lane pipeline; useful when "
             "the GPU container has read-only /data and the ROS container records"
+        ),
+    )
+    parser.add_argument(
+        "--enable-shared-family-debug",
+        action="store_true",
+        help="record the evaluated shared-family debug sidecar as a runtime baseline",
+    )
+    parser.add_argument(
+        "--enable-boundary-family-candidate",
+        action="store_true",
+        help=(
+            "publish and record the typed /perception/lane/boundary_family "
+            "candidate without requiring Marker visualization"
         ),
     )
     parser.add_argument("--resume", action="store_true")
@@ -133,14 +154,19 @@ def metadata_status(path):
         return None
 
 
-def result_summary(item, result_root, elapsed_s):
+def result_summary(item, result_root, elapsed_s, require_boundary_family=False):
     metadata_path = result_root / "metadata.yaml"
     with metadata_path.open("r", encoding="utf-8") as stream:
         metadata = yaml.safe_load(stream) or {}
     camera = diagnostic_values(metadata, "camera_semantic_perception/inference")
     bev = diagnostic_values(metadata, "drivable_bev/fusion")
     lane = diagnostic_values(metadata, "drivable_bev/lane_vectorizer")
-    gates = result_quality_gates(metadata)
+    shared = diagnostic_values(
+        metadata, "drivable_bev/shared_lane_family_debug"
+    )
+    gates = result_quality_gates(
+        metadata, require_boundary_family=require_boundary_family
+    )
     return {
         "run_id": item.run_id,
         "scenario": item.scenario,
@@ -155,6 +181,7 @@ def result_summary(item, result_root, elapsed_s):
         "camera_diagnostics": camera,
         "bev_diagnostics": bev,
         "lane_diagnostics": lane,
+        "shared_family_diagnostics": shared,
         "topic_statistics": metadata.get("topic_statistics") or {},
         "quality_gates": gates,
         "quality_gate_passed": all(gates.values()),
@@ -174,10 +201,16 @@ def commands_for(item, args):
         "roslaunch", "drivable_bev", "three_view_lane_pipeline.launch",
         "checkpoint:={}".format(Path(args.checkpoint).expanduser().resolve()),
         "device:={}".format(args.device),
+        "enable_shared_family_debug:={}".format(
+            "true" if args.enable_shared_family_debug else "false"
+        ),
+        "enable_boundary_family_candidate:={}".format(
+            "true" if args.enable_boundary_family_candidate else "false"
+        ),
     ]
     recorder = [
         "roslaunch", "data_collection", "bag_recorder.launch",
-        "profile:=shadow_boundary_result",
+        "profile:={}".format(args.result_profile),
         "parent_raw_run_id:={}".format(item.run_id),
         "model_id:={}".format(args.model_id),
         "checkpoint:={}".format(Path(args.checkpoint).expanduser().resolve()),
@@ -189,6 +222,12 @@ def commands_for(item, args):
 
 def main():
     args = parse_args()
+    # The original debug switch remains a compatibility alias for the typed
+    # candidate output. The new switch permits headless typed output without
+    # Marker rendering.
+    args.enable_boundary_family_candidate = bool(
+        args.enable_boundary_family_candidate or args.enable_shared_family_debug
+    )
     if args.rate <= 0.0 or args.topic_timeout_sec <= 0.0:
         raise SystemExit("rate and topic timeout must be positive")
     checkpoint = Path(args.checkpoint).expanduser().resolve()
@@ -228,6 +267,9 @@ def main():
         "model_id": args.model_id,
         "rate": args.rate,
         "external_pipeline": args.external_pipeline,
+        "shared_family_debug_enabled": args.enable_shared_family_debug,
+        "boundary_family_candidate_enabled": args.enable_boundary_family_candidate,
+        "result_profile": args.result_profile,
         "runs": [],
     }
     plan = []
@@ -265,7 +307,12 @@ def main():
             metadata_path = result_root / "metadata.yaml"
             if result_root.exists():
                 if args.resume and metadata_status(metadata_path) == "complete":
-                    value = result_summary(item, result_root, 0.0)
+                    value = result_summary(
+                        item,
+                        result_root,
+                        0.0,
+                        require_boundary_family=args.enable_boundary_family_candidate,
+                    )
                     value["batch_action"] = "skipped_complete"
                     document["runs"].append(value)
                     write_yaml_atomic(summary_path, document)
@@ -288,12 +335,19 @@ def main():
 
                 def pipeline_ready():
                     published = dict(rospy.get_published_topics())
-                    return {
+                    required = {
                         "/perception/camera/diagnostics",
                         "/perception/bev/diagnostics",
                         "/perception/lane/boundary_observations",
                         "/perception/lane/diagnostics",
-                    }.issubset(published)
+                    }
+                    if args.enable_shared_family_debug:
+                        required.add(
+                            "/perception/lane/debug/shared_family/diagnostics"
+                        )
+                    if args.enable_boundary_family_candidate:
+                        required.add("/perception/lane/boundary_family")
+                    return required.issubset(published)
 
                 wait_for(
                     pipeline_ready,
@@ -324,7 +378,12 @@ def main():
                     terminate(pipeline)
                 if metadata_status(metadata_path) != "complete":
                     raise RuntimeError("result recorder did not finalize metadata")
-                value = result_summary(item, result_root, time.monotonic() - started)
+                value = result_summary(
+                    item,
+                    result_root,
+                    time.monotonic() - started,
+                    require_boundary_family=args.enable_boundary_family_candidate,
+                )
                 value["batch_action"] = "recorded"
                 document["runs"].append(value)
                 write_yaml_atomic(summary_path, document)

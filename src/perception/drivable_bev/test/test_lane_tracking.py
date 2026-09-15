@@ -5,7 +5,10 @@ import unittest
 import numpy as np
 
 from drivable_bev.lane_evidence import LaneNode
-from drivable_bev.lane_tracking import associate_lane_nodes
+from drivable_bev.lane_tracking import (
+    associate_lane_nodes,
+    associate_lane_nodes_with_audit,
+)
 
 
 def node(x, y, x_bin, class_id=1):
@@ -36,6 +39,17 @@ class LaneTrackingTest(unittest.TestCase):
             nodes.append(node(index * 0.5, 1.05, index, 2))
         tracks = associate_lane_nodes(nodes)
         self.assertEqual({1, 2}, {track.class_id for track in tracks})
+
+    def test_audit_explains_short_tracklet_rejection(self):
+        tracks, audit = associate_lane_nodes_with_audit(
+            [node(0.0, 1.0, 0), node(0.5, 1.0, 1)],
+            min_track_nodes=4,
+            min_observed_span_m=2.0,
+        )
+        self.assertEqual([], tracks)
+        self.assertEqual(2, audit["input_nodes"])
+        self.assertEqual(1, audit["rejected_too_few_nodes"])
+        self.assertEqual(0, audit["accepted_tracks"])
 
 
 if __name__ == "__main__":

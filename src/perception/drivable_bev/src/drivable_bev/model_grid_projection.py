@@ -180,13 +180,13 @@ class ModelGridGroundProjector:
         self.valid = np.ascontiguousarray(valid)
         self.geometric_quality = np.ascontiguousarray(quality, dtype=np.float32)
 
-    def extract(
+    def _selection_masks(
         self,
         class_id: np.ndarray,
         confidence: np.ndarray,
         confidence_by_class: Mapping[int, float],
         classes=(1, 2),
-    ) -> MetricEvidence:
+    ) -> tuple[np.ndarray, np.ndarray, dict]:
         classes_value = np.asarray(class_id)
         confidence_value = np.asarray(confidence)
         if classes_value.shape != self.model_hw or classes_value.dtype != np.uint8:
@@ -209,15 +209,79 @@ class ModelGridGroundProjector:
         ):
             raise ValueError("confidence lies outside [0,1]")
 
-        selected = np.zeros(self.model_hw, dtype=bool)
+        class_selected = np.zeros(self.model_hw, dtype=bool)
+        confidence_selected = np.zeros(self.model_hw, dtype=bool)
+        thresholds = {}
         for value in classes:
             threshold = float(confidence_by_class.get(int(value), 0.5))
             if not 0.0 <= threshold <= 1.0:
                 raise ValueError("class confidence threshold lies outside [0,1]")
-            selected |= (classes_value == int(value)) & (
+            class_mask = classes_value == int(value)
+            class_selected |= class_mask
+            confidence_selected |= class_mask & (
                 normalized_confidence >= threshold
             )
-        selected &= self.valid
+            thresholds[int(value)] = threshold
+        selected = confidence_selected & self.valid
+        return classes_value, normalized_confidence, {
+            "class_selected": class_selected,
+            "confidence_selected": confidence_selected,
+            "selected": selected,
+            "thresholds": thresholds,
+        }
+
+    def selection_audit(
+        self,
+        class_id: np.ndarray,
+        confidence: np.ndarray,
+        confidence_by_class: Mapping[int, float],
+        classes=(1, 2),
+    ) -> dict:
+        """Explain projection/confidence loss without changing extraction."""
+        classes_value, _, masks = self._selection_masks(
+            class_id, confidence, confidence_by_class, classes
+        )
+        by_class = {}
+        for value in classes:
+            class_mask = classes_value == int(value)
+            valid_class = class_mask & self.valid
+            accepted = valid_class & masks["confidence_selected"]
+            by_class[str(int(value))] = {
+                "model_pixels": int(np.count_nonzero(class_mask)),
+                "projection_invalid": int(np.count_nonzero(class_mask & ~self.valid)),
+                "below_confidence": int(
+                    np.count_nonzero(valid_class & ~masks["confidence_selected"])
+                ),
+                "accepted": int(np.count_nonzero(accepted)),
+                "threshold": float(masks["thresholds"][int(value)]),
+            }
+        return {
+            "model_marking_pixels": int(np.count_nonzero(masks["class_selected"])),
+            "projection_invalid": int(
+                np.count_nonzero(masks["class_selected"] & ~self.valid)
+            ),
+            "below_confidence": int(
+                np.count_nonzero(
+                    masks["class_selected"]
+                    & self.valid
+                    & ~masks["confidence_selected"]
+                )
+            ),
+            "accepted": int(np.count_nonzero(masks["selected"])),
+            "by_class": by_class,
+        }
+
+    def extract(
+        self,
+        class_id: np.ndarray,
+        confidence: np.ndarray,
+        confidence_by_class: Mapping[int, float],
+        classes=(1, 2),
+    ) -> MetricEvidence:
+        classes_value, normalized_confidence, masks = self._selection_masks(
+            class_id, confidence, confidence_by_class, classes
+        )
+        selected = masks["selected"]
         if not np.any(selected):
             return MetricEvidence.empty()
         count = int(np.count_nonzero(selected))

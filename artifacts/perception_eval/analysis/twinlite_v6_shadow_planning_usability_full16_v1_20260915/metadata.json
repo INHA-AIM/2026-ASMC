@@ -1,0 +1,155 @@
+{
+  "artifacts": {
+    "runs": "runs.csv",
+    "summary": "summary.json"
+  },
+  "created_at_utc": "2026-09-15T01:51:04+00:00",
+  "lineage": {
+    "checkpoint": {
+      "path": "/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt",
+      "sha256": "a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b"
+    },
+    "selections": [
+      {
+        "path": "/data/rosbags/audits/shadow_dataset_20260912/selection.yaml",
+        "sha256": "5eeeec2aeb7f8e76a8756cb766382f2d9d78d1d509d62c6428bf3785cf5bcc12"
+      },
+      {
+        "path": "/root/ws/artifacts/perception_eval/analysis/shadow_maneuver_20260913/selection.yaml",
+        "sha256": "33cef1ad965afb16394cde995a09ce28e50bef0bff8a6909759dc0d27316567b"
+      }
+    ]
+  },
+  "schema_version": "asmc-shadow-planning-usability-baseline-1.0.0",
+  "source_root": "/tmp/shadow_planning_usability_rep4_v1_20260915",
+  "sources": [
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_001404_kcity2025_shadow_clear_foggy_1pm_wheel/frames.jsonl",
+      "frames_sha256": "b715a8c7e06ce35b455a05dbe82076208be1c1d35c7989a74d0e1be310c97c1b",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_001404_kcity2025_shadow_clear_foggy_1pm_wheel/metadata.json",
+      "metadata_sha256": "4faa0bf32d582c72a529298159f2d8ed84bcbcfcf98a293f04f18d8420d478a5",
+      "run_id": "20260912_001404_kcity2025_shadow_clear_foggy_1pm_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_001454_kcity2025_shadow_clear_sunny_1pm_wheel/frames.jsonl",
+      "frames_sha256": "2f17d63b2963ab9852a0e8b2b890d1870fe4cfa347418a205ceec37594242f3e",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_001454_kcity2025_shadow_clear_sunny_1pm_wheel/metadata.json",
+      "metadata_sha256": "453e6e7c4291abf21f512745752d332bef5bd5882f632f1152d17f36e9c01564",
+      "run_id": "20260912_001454_kcity2025_shadow_clear_sunny_1pm_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_002714_kcity2025_shadow_clear_sunny_3pm_morai_auto/frames.jsonl",
+      "frames_sha256": "a65f6f3df5b96c892b4d30ddf149f891ccd2ac930fc3f47d0ca780c135bab15f",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_002714_kcity2025_shadow_clear_sunny_3pm_morai_auto/metadata.json",
+      "metadata_sha256": "56e84fb207d1b8ad0c0718799c626e7a1f9865f724c1102de80fc49c351448f2",
+      "run_id": "20260912_002714_kcity2025_shadow_clear_sunny_3pm_morai_auto",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_003059_kcity2025_shadow_clear_sunny_11am_morai_auto/frames.jsonl",
+      "frames_sha256": "c341156714b869d000d1c4d6f0112ae6f231aa33283ec2c899b7d3cc027be89e",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_003059_kcity2025_shadow_clear_sunny_11am_morai_auto/metadata.json",
+      "metadata_sha256": "9f1d18984c3b845999eae9ad8abc50d747ffca9158f9b816ba25403a97dbd633",
+      "run_id": "20260912_003059_kcity2025_shadow_clear_sunny_11am_morai_auto",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_003200_kcity2025_shadow_clear_foggy_11am_morai_auto/frames.jsonl",
+      "frames_sha256": "4e6b059df3776a3508509c7fa643477b2c706661114f45854c320fdc45fbaf2f",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_003200_kcity2025_shadow_clear_foggy_11am_morai_auto/metadata.json",
+      "metadata_sha256": "2890b095d3ccbf61dd5ded97859633d47f813c0f89cece245e97e18103dd768a",
+      "run_id": "20260912_003200_kcity2025_shadow_clear_foggy_11am_morai_auto",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/frames.jsonl",
+      "frames_sha256": "2f2af4e5dc7f641723956418642e9e46348caa6b68ea8a31c2589e0e8a599622",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/metadata.json",
+      "metadata_sha256": "19e5a8a208c56cf856ac0e5fdc907774bd501c7bcf8fd02f006c633827e40bec",
+      "run_id": "20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_003847_kcity2025_shadow_static_avoid_v1_sunny_1pm_wheel/frames.jsonl",
+      "frames_sha256": "7bf06dc9f02f7469ecb39ca384d17da74ef74dea00412f1e20be8c2ce0d67b31",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_003847_kcity2025_shadow_static_avoid_v1_sunny_1pm_wheel/metadata.json",
+      "metadata_sha256": "fa1d6fbd1e0fa7db4747009c42659e129521bf36de4660cc708390b89f963379",
+      "run_id": "20260912_003847_kcity2025_shadow_static_avoid_v1_sunny_1pm_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_003922_kcity2025_shadow_static_avoid_v1_sunny_3pm_wheel/frames.jsonl",
+      "frames_sha256": "61b333f1871af4c0b02c7f3964a5fe934e86fe99fed06923493f3b477747cab8",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_003922_kcity2025_shadow_static_avoid_v1_sunny_3pm_wheel/metadata.json",
+      "metadata_sha256": "433bf6293624920e3705c631672cecc655a4c32c124bca4764dacba2dbc3c568",
+      "run_id": "20260912_003922_kcity2025_shadow_static_avoid_v1_sunny_3pm_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_004015_kcity2025_shadow_static_avoid_v1_foggy_11am_wheel/frames.jsonl",
+      "frames_sha256": "aae4b7483ecc37769712e2b0079ad9f47672573f45029fee5eabdffa5727cd3f",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_004015_kcity2025_shadow_static_avoid_v1_foggy_11am_wheel/metadata.json",
+      "metadata_sha256": "b353b21b8c57c6bf336a431d120da8b7fc0aafe56f4f584a2cb95b564bc24c10",
+      "run_id": "20260912_004015_kcity2025_shadow_static_avoid_v1_foggy_11am_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_004053_kcity2025_shadow_static_avoid_v1_foggy_1pm_wheel/frames.jsonl",
+      "frames_sha256": "0c6b714424db3fcbba7227278f58bc52e052eda170ffef3e104cecde9e01394a",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_004053_kcity2025_shadow_static_avoid_v1_foggy_1pm_wheel/metadata.json",
+      "metadata_sha256": "7e04c9c208d0f877c4ed6e2962748f78afe815f2a7231d826610b8e98717265c",
+      "run_id": "20260912_004053_kcity2025_shadow_static_avoid_v1_foggy_1pm_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_004128_kcity2025_shadow_static_avoid_v1_foggy_3pm_wheel/frames.jsonl",
+      "frames_sha256": "59a2e991a52cb83c4343a6e97806bf57511ea3a7f09de4f9ae551795656a47b9",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_004128_kcity2025_shadow_static_avoid_v1_foggy_3pm_wheel/metadata.json",
+      "metadata_sha256": "2a6437e54114947aa29570ac741f71bfc57ff88c7297d85feca4f9620a3e0ed5",
+      "run_id": "20260912_004128_kcity2025_shadow_static_avoid_v1_foggy_3pm_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_005122_kcity2025_shadow_clear_foggy_3pm_wheel/frames.jsonl",
+      "frames_sha256": "e7d26477c49004cb0c221ae49c648d3b27628250dd1b91c6c0d752a6d58de9bc",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260912_005122_kcity2025_shadow_clear_foggy_3pm_wheel/metadata.json",
+      "metadata_sha256": "36d6431562f2ceb3a1cf582bad8295370fd1ede5b5fe8f27424a1d7602e9273b",
+      "run_id": "20260912_005122_kcity2025_shadow_clear_foggy_3pm_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel/frames.jsonl",
+      "frames_sha256": "f898c4a2cb06f7b9f160f75e5f74f01596bfc1d8da3f6e91e2fef5d88d312622",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel/metadata.json",
+      "metadata_sha256": "efb78cc0e7430f4b64c4106138dfee08c37c740d70c699febe7f00792d49f4b2",
+      "run_id": "20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195429_kcity2025_shadow_lateral_sweep_sunny_1pm_wheel/frames.jsonl",
+      "frames_sha256": "9ee641a73f5ff197c99020eb1cfbd13d4270f836d32ddc1a8c356ad90b16b677",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195429_kcity2025_shadow_lateral_sweep_sunny_1pm_wheel/metadata.json",
+      "metadata_sha256": "1efc8884db748e9d552ee7410c196acff8606fecca9d948aabb8af2399a2553d",
+      "run_id": "20260913_195429_kcity2025_shadow_lateral_sweep_sunny_1pm_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel/frames.jsonl",
+      "frames_sha256": "83aac29c6c66ad99523f15b09c63bd2315005aa99ef55428c81560559214fd66",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel/metadata.json",
+      "metadata_sha256": "6e97a0532b20ef17805b487b04768deca4cfea3df17742497aa23af56413333e",
+      "run_id": "20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    },
+    {
+      "frames_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195750_kcity2025_shadow_static_avoid_return_foggy_11am_wheel/frames.jsonl",
+      "frames_sha256": "1434a51f9d5ac0029c6e8e7606e304d180ecd8220697a789f9410378fa0afa76",
+      "metadata_path": "/tmp/shadow_planning_usability_rep4_v1_20260915/20260913_195750_kcity2025_shadow_static_avoid_return_foggy_11am_wheel/metadata.json",
+      "metadata_sha256": "9751c705b528a741f2c977007fb790c3225c3086e6c640a70999435574b6b9b7",
+      "run_id": "20260913_195750_kcity2025_shadow_static_avoid_return_foggy_11am_wheel",
+      "source_schema_version": "asmc-shadow-lane-family-ab-1.2.0"
+    }
+  ]
+}

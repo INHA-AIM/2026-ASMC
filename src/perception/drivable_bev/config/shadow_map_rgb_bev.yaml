@@ -1,0 +1,23 @@
+# Calibration-review grid only. This does not change the deployment semantic
+# BEV contract or declare the full rectangle planning-valid.
+frame_id: base_link
+x_min_m: -5.0
+x_max_m: 25.0
+y_min_m: -8.0
+y_max_m: 8.0
+resolution_m: 0.05
+
+max_ground_range_m: 30.0
+min_camera_depth_m: 0.10
+max_publish_hz: 10.0
+camera_sync_slop_ms: 35.0
+ego_pose_max_age_ms: 40.0
+sync_queue_size: 12
+ego_buffer_size: 250
+jpeg_quality: 90
+overlay_alpha: 0.85
+diagnostics_interval_sec: 2.0
+
+raw_topic: /perception/bev/debug/shadow_rgb/compressed
+overlay_topic: /perception/bev/debug/shadow_map_rgb/compressed
+diagnostics_topic: /perception/bev/debug/shadow_map_rgb/diagnostics

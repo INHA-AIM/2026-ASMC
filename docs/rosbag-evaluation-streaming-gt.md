@@ -1,7 +1,7 @@
 # rosbag 평가·Streaming GT 가이드
 
 > **문서 역할:** Active Guide — 재현 가능한 raw/result bag과 개발용 Streaming GT
-> **기준일:** 2026-09-09
+> **기준일:** 2026-09-14
 > **대회 운용 경계:** MORAI↔팀 PC는 UDP만 사용. Semantic·Instance·Object GT는 개발 전용
 > **관련:** [UDP↔ROS 네트워크](./network-udp-ros.md) · [인지 융합 로드맵](./perception-map-fusion-roadmap.md) · [data_collection README](../src/data_collection/README.md)
 
@@ -12,7 +12,10 @@ MORAI의 시간 진행, 외부 Sync, Capture, 센서 transport와 기록 형식�
 
 | 목적 | 정본 경로 | 이유 |
 |---|---|---|
-| 카메라/LiDAR 단일-frame 학습 GT | v2 또는 GT 센서셋 + Capture 1 Hz | RGB·Semantic·Instance와 box 파일을 같은 Capture로 보존 |
+| 카메라/LiDAR 단일-frame 학습 GT | v2 + Capture 1 Hz | 장착 센서 수를 늘리지 않고 RGB·Semantic·Instance와 box 파일을 같은 Capture로 보존 |
+| 고주기 RGB sequence | v2 + Simulation Time Sensor Record | 장착된 RGB·일반 센서 파일을 공통 주기 후보로 저장 |
+| 고주기 RGB–Semantic supervised sequence | 최소 RGB+Semantic 센서셋 + Simulation Time Sensor Record | v2에 없는 Semantic 센서를 명시적으로 장착해야 함 |
+| 입력 센서 skew를 배제한 알고리즘 검증 | Simulation Time Sensor Sync + UDP source-time bag/replay | 이상적인 동시 입력에서 알고리즘 자체를 분리 평가 |
 | 대회 운용·실시간 지연 평가 | v2 + UDP Connect + `full_raw`/파트별 raw bag | 실제 비동기 주기·drop·latency 보존 |
 | 고주기 개발용 oracle | GT 센서셋 + UDP source-time bag | Capture 정지 없이 RGB/Semantic, Intensity/Instance 스트림 기록 |
 | 모델 A/B | 동일 raw bag replay + 모델별 result bag | 입력을 고정하고 checkpoint별 결과를 분리 |
@@ -21,6 +24,20 @@ Capture 요청은 2026-09-09 pilot에서 요청 주기 2/5/10 Hz와 무관하게
 포화됐고 요청마다 시뮬레이션이 약 0.5초 멈췄다. 따라서 wheel/MPC 주행의 temporal 성능
 측정에는 쓰지 않는다. Capture v2의 한 LiDAR 파일 안에는 Intensity·Semantic·Instance와
 Instance box 텍스트가 함께 생성되고 XYZ가 일치했으므로 학습 정답의 1순위는 Capture다.
+
+2026-09-14 v2 Sensor Record 실측에서는 `CAMERA_1~4`, `LIDAR_5`, `GPS_6`, `IMU_7`만
+새로 기록됐고, 과거 GT 센서셋 디렉터리인 `CAMERA_8~10`, `LIDAR_11`은 갱신되지 않았다.
+Sensor Record는 장착된 센서의 고주기 파일 저장 기능이지 Capture의 oracle channel 생성
+기능이 아니다. 따라서 v2 Sensor Record는 RGB sequence에는 쓸 수 있지만 segmentation
+학습 label을 제공하지 않는다. 고주기 supervised camera data가 필요할 때만
+`RGB front/left/right + Semantic front/left/right + 필요한 상태 센서`로 제한한 별도
+sync-training 센서셋을 만들고, 기존 v2/대회 설정과 provenance를 분리한다.
+
+Simulation Time Sensor Synchronization은 실제 UDP 운용의 대체물이 아니다. 센서 생성 skew를
+배제하려면 브릿지를 `timestamp_mode:=source`로 실행해 canonical topic과 `/clock`, Ego/IMU를
+bag으로 남기거나 Sensor Record 파일을 offline replay해야 한다. `receive` stamp에는 도착
+시각 차이가 남는다. 이 결과는 `controlled/ideal-input`, Real Time UDP bag 결과는
+`deployment/operational`로 표기하고 두 기준을 함께 보고한다.
 
 MORAI는 카메라와 3D LiDAR에 ROS와 UDP를 지원하지만, ROS 선택이 외부 tick 동기화나
 GT 정합을 자동 보장하지 않는다. 현재 ROS1 연결은 `ws://127.0.0.1:9090` rosbridge를

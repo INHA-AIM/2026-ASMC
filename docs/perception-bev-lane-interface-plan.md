@@ -3,9 +3,9 @@
 > **문서 역할:** Detailed Design Note — GT 정책 근거와 BEV/lane 후보 상세
 > **우선순위 정본:** [perception-map-fusion-roadmap.md](./perception-map-fusion-roadmap.md)
 > **문서 허브:** [README.md](./README.md)
-> 기준일: 2026-09-12
+> 기준일: 2026-09-14
 > 담당: 안승현
-> 상태: v6·3-camera BEV·ground-plane 보정 완료, 음영구간 boundary provisional gate 및 typed handoff 구현 완료
+> 상태: v6·3-camera BEV·ground-plane 보정과 typed handoff 완료, 음영구간 joint lane-family 확대 gate 통과
 > 관련: [perception-dataset-labeling-split.md](./perception-dataset-labeling-split.md)
 
 팀 전체 map-camera-LiDAR 구조, provisional topic과 대회판 이식 일정은
@@ -190,9 +190,10 @@ provisional이다.
 `base_link (x,y)` evidence로 옮기는 경로까지 채택했다. 현 association+B-spline은 direct
 evidence보다 white/yellow 거리 지표가 나빠지고 offline p95 지연도 목표를 넘어서 debug로만
 유지한다. 이에 따라 `x[-5,20]×[-8,8] m`도 validated 범위가 아니라 provisional display
-ROI다. ground-plane/letterbox calibration 검산은 완료했으며, 다음에는 MGeo candidate
-matching으로 비차로 표식을 제거하고 3-view source association을 개선한다. 수동 검수를
-마친 뒤 같은 native GT·hash 입력으로 범위를 다시 선정한다.
+ROI다. ground-plane/letterbox calibration 검산 뒤 음영구간 rejection 원인 계측,
+pseudo-GT 검산과 shared lane-family 대표 offline A/B까지 완료했다. 일반 구간의
+MGeo candidate matching과 비차로 표식 제거는 그 뒤에 진행한다. 수동 검수를 마친 뒤 같은
+native GT·hash 입력으로 범위를 다시 선정한다.
 
 white/yellow class에는 같은 색의 주차칸과 안전지대 표식도 포함될 수 있으므로 색상 spline을
 곧바로 차로 경계로 해석하지 않는다. 짧은 횡단 표식은 종방향 support로 제거하되, 평행한
@@ -209,6 +210,143 @@ replay에서 yellow 가용성은 clear/static `98.03/96.25%`, 세 경계 동시 
 색상·왼쪽→오른쪽 순서·metric polyline만 제공하며 home/opposing 및 회피·복귀 의미는
 route/Frenet 문맥을 가진 판제가 결정한다. 일반 구간 MGeo matching과 재학습은 이 제한 ODD
 handoff 뒤에 진행한다.
+
+### P4 — 음영구간 joint lane-family 보강
+
+현재 다음 세 현상을 분리한다.
+
+- `/perception/lane/debug/markers`와 segmentation은 유지되지만 선택된 yellow boundary가
+  빠지는 producer 후보선별 문제
+- typed boundary는 유효하지만 `/planning/debug/camera_lane_strips`가 지워지는 consumer 또는
+  Marker lifecycle 문제
+- 급가감속 pitch와 차량 횡이동 때문에 실제 metric curve가 frame 사이에서 이동하는 문제
+
+현재 producer는 confidence가 임계값보다 낮은 model-grid evidence를 먼저 제거하고, x-bin
+기반 greedy association 뒤 가장 높은 yellow track 하나를 spline 전 선택한다. 각 spline은
+독립 피팅되며 temporal tracker는 local ID만 보존하고 형상은 예측하지 않는다. consumer
+visualizer도 매 frame `DELETEALL`을 발행한다. 따라서 모델 class mask가 안정적이어도 낮은
+confidence의 얇은 연결부, track score 교체 또는 한 frame의 unusable 상태가 큰 깜박임으로
+보일 수 있다. threshold `0.50→0.45` 단독 변경이 개선되지 않았으므로 임계값 완화만 반복하지
+않는다.
+
+첫 ODD의 map 근거는 제공 sample scenario의 `shadedAreaList`와 MGeo link
+`A2256W000126/A2256W000131`이다. 두 link width와 중심선 간격은 약 3.5 m이며 음영 volume의
+길이와 거의 일치한다. 단, 현재 배포 묶음에는 참조 lane-boundary의 실제 point geometry가
+없으므로 link-derived 세 경계는 `map_pseudo_gt`로 기록한다. 생성 과정은 다음과 같다.
+
+1. 두 반대방향 centerline을 같은 진행방향과 arc-length로 resample한다.
+2. 대응 중심점 중간으로 yellow road-centre curve를 만든다.
+3. 국소 접선에서 법선을 만들고 좌우로 width만큼 offset해 두 white outer를 만든다.
+4. 음영 polygon 밖의 segment는 제거하고 source file/hash, link ID와 유효 s 범위를 저장한다.
+5. 카메라 semantic 도색점과 LiDAR intensity 도색점으로 30~60 frame overlay 검산한다.
+
+runtime 후보는 세 곡선을 별도로 피팅하지 않고 공유 cubic B-spline `C(s)`와 완만히 변하는
+폭 `w(s)`를 추정한다. 관측 point와 각 역할 곡선 사이 robust weighted residual에 다음 soft
+prior를 더한다.
+
+- 같은 s에서 세 경계 접선의 평행성
+- `w(s)`의 3.5 m map prior와 허용범위
+- `w'(s)`와 spline curvature의 급변 억제
+- source confidence·geometry quality·카메라 overlap 품질
+- ego-motion으로 현재 frame에 옮긴 직전 lane-family와의 시간 연속성
+
+세 선 관측 시에는 모두로 상태를 갱신한다. yellow+white 또는 white+white만 있으면 법선
+offset으로 누락 경계를 `structure_inferred`로 만든다. 한 선만 남으면 최근 완전 관측과
+ego-motion이 유효할 때만 짧게 갱신하며, 모두 사라지면 `temporal_predicted`를 최대
+0.2~0.3초 유지한 뒤 invalid로 전환한다. 관측·구조추정·시간예측은 confidence, age와
+유효거리도 서로 다르게 내보낸다.
+
+새 학습 모델은 이번 gate에 넣지 않는다. 논문·코드의 차용 범위는 다음과 같다.
+
+| 연구 | 차용 내용 | 이번에 도입하지 않는 것 |
+|---|---|---|
+| LaneCPP, CVPR 2024 | continuous spline의 평행성·곡률·노면 prior | 전체 3D lane network |
+| Differentiable LSQ, ICCVW 2019 | confidence-weighted fitting, regularization | 구 ERFNet과 학습 layer 직접 복사 |
+| RVLD, ICCV 2023 | 이전 결과를 현재 frame으로 정렬한 뒤 재사용 | learned flow/feature network |
+| BézierLaneNet·BSNet | 연속 curve sampling과 local/global 표현 비교 | TwinLiteNet+ 교체 |
+| LaneAF·StructLane | lane instance association과 구조 관계 | affinity/attention head 추가 |
+
+첫 구현 단위는 shared-family runtime 출력 변경 전의 **진단·GT 정본화**다.
+
+1. 단계별 rejection reason과 boundary 상태 전이, longest outage를 result bag에 남긴다.
+2. Marker `DELETEALL`로 인한 화면 깜박임과 canonical message dropout을 분리한다.
+3. `shadow_zone_kcity2025` 설정과 map pseudo-GT 생성/audit 도구를 만든다.
+4. 기존 12-run+4 maneuver result를 새 지표로 재집계해 independent spline 기준선을 고정한다.
+5. 이 단계가 끝나기 전에는 spline 수식, public message, planning fallback과 모델 weight를
+   바꾸지 않는다.
+
+2026-09-13 구현에서는 각 stage audit와 별도 result-bag 토픽, producer/consumer의 explicit
+Marker DELETE, versioned shadow-zone 설정, pseudo-GT 생성·정합 audit를 추가했다. public
+boundary 의미와 모델 weight는 유지했다. 최초 map pseudo-GT는 yellow 115.71m, link 간격
+중앙값 3.511m이며 Sunny 13시 clear raw bag의 camera/LiDAR 각 48 frame 자동 gate를
+통과했다. 이후 2026-09-12 음영 12-run의 LiDAR 도색 반사점으로 heading 후보마다 세
+boundary offset을 다시 추정했다. joint 최적값은 음영 map pseudo-GT 전용
+`ego_heading_offset=-1.25°`, road center `0.00m`, 양쪽 폭 `3.48/3.52m`다. 같은
+48-frame audit의 경계 0.2m 이내 고반사점 비율은 `18.749%→37.854%`, 대조구간은 계속
+`0.000%`였다. 이 offset은 차량 heading이나 camera extrinsic을 전역 변경하지 않는다.
+정합 근거는 강화됐지만 paint survey가 아니므로 `deployment_allowed=false`다.
+
+2026-09-14에는 clear Sunny/Foggy 각 1개, lateral sweep Sunny 1개, static avoid-return
+Foggy 1개를 신규 `/perception/lane/pipeline_audit`와 함께 별도 result ID로 replay했다.
+모든 result가 기술 gate를 통과했고 boundary/audit 토픽은 약 `9.57~10.25Hz`였다. clear
+complete family는 `82.57/88.47%`, lateral sweep `74.05%`, avoid-return `83.50%`였다.
+불완전 또는 yellow 누락 frame은 모두 `spline_residual_above_limit`와 동시에 발생했다.
+반면 confidence 탈락은 적었고 association의 lateral rejection은 정상 complete frame에도
+항상 존재해 단독 원인으로 볼 수 없었다. 따라서 다음 구현은 confidence threshold 완화가
+아니라 세 경계를 함께 설명하는 weighted shared lane-family의 residual 안정화다.
+
+2026-09-14에는 weighted shared lane-family를 별도 offline consumer로 독립 구현했다. 하나의
+parametric cubic B-spline과 법선 방향 좌·우 offset으로 세 경계를 공동 설명하며,
+`3.48/3.52m` 폭은 robust objective의 soft prior다. 한 선만으로 family를 만들지 않고 최소
+두 역할이 있어야 누락 경계를 `structure_inferred`로 만든다. 기존 runtime boundary와 planning
+토픽은 변경하지 않았다.
+
+대표 4개 raw 1,255 frame 중 공지 음영 polygon 내부 508 frame에서 independent 대비 3경계
+complete가 `78.74→100.00%`, yellow 관측/output이 `85.63→100.00%`로 개선됐다. map 기준
+p95는 `0.3761→0.3775m`로 사실상 유지됐고, 거리별 p95는 0~10/10~15/15~20m에서 각각
+`0.1844→0.1629`, `0.2954→0.2602`, `0.3997→0.3897m`였다. left reference-y jitter p95도
+`0.0303→0.0213m`로 감소했다. 대표 정량 gate는 통과했다.
+
+다만 기존 residual gate를 통과한 독립 spline과 기존에 버리던 track도 포함한 shared fit의
+raw-evidence residual은 같은 모집단이 아니며, shared frame-level p95 분포가
+`0.2844→0.5380m`로 커졌다. 따라서 현재 판정은 `promising_offline_candidate`이고 runtime
+승격은 금지한다. 후속 대표 gate에서는 role curve로부터 0.35m 안쪽인 실제 metric support만
+`observed`로 인정하고, 두 역할 이상의 local support와 최대 0.75m 내부 공백만 family
+유효구간으로 남겼다. 단일 역할 원거리 꼬리는 `invalid`로 잘라냈다. 대표 1,200 frame의
+고잔차 75 frame은 모두 outlier를 포함했고, 고잔차 overlay 54장에서는 명백한 횡단 false
+bridge가 보이지 않았다. map과 비교 가능한 구조 추정 point 12,593개도 0.50m 이내였으나
+이는 pseudo-GT 기반 review signal일 뿐 정답 판정이 아니다.
+
+동일 후보를 12+4 전체 matrix 4,075 frame으로 확대했다. ODD 3경계 complete는
+`84.38→100.00%`였다. 서로 다른 출력 표본을 단순 합친 map p95는 `0.4013→0.4077m`지만,
+같은 run·frame·role의 paired p95를 run별 층화하면 16개 run이 모두 개선됐고 변화 중앙값은
+`-0.0582m`, 전체/거리 bin 최악 악화는 `+0.0193m`였다. maneuver 4개에서는 map p95가 약
+10cm 개선됐고, inferred sample 43,038개 중 0.50m 초과 map 불일치는 9개였다. 확대 gate는
+통과했다. shared support state는 planning 출력과 분리한 debug runtime sidecar로 이식했다.
+다음은 직접 주행에서 상태 전환과 깜박임을 검수하고 shared fitting 연산을 최적화한 뒤
+temporal 보상 없이 판제 closed-loop를 먼저 확인한다. 전 구간 MGeo candidate matching,
+대회판 fine-tuning과 센서 경량화는 음영구간 closed-loop handoff 뒤로 둔다.
+
+직접 RViz 검수 후 우선순위를 조정했다. `observed`는 정상 후보,
+`structure_inferred`는 강등된 제한 후보이며 `invalid`는 family 곡선이 차선에 맞아 보여도 local
+support가 없으므로 판제가 사용하지 않는다. 4개 maneuver result bag의 `1,126` frame에서 family
+accepted rate `100%`, 최장 reject 연속 0 frame을 확인했다. 곡선 sample 중 usable은 `77.18%`,
+그중 구조 추정은 `13.21%`였으며 invalid `22.82%`는 항상 제외한다. shared fit p50/p95는
+`39.68/51.00ms`, 출력률은 run별 `8.857~9.277Hz`였다.
+
+현재 shared geometry를 runtime 기준선으로 동결하고 동일 출력 비회귀 조건의 연산 최적화와
+temporal 없는 판제 A/B를 먼저 수행한다. 두 run이 9Hz 목표를 근소하게 놓쳤으므로 debug
+sidecar를 곧바로 정식 인터페이스로 승격하지 않는다. 해당 출력률은 기존 live perception과
+GPU/CPU를 공유한 보수적 개발 부하 수치이므로 standalone 조건에서 재측정한다. Ego-motion과
+IMU 자세 보정은 판제가
+dropout을 문제로 요청하거나 나머지 기능 완성 뒤 필요성이 측정될 때만 별도 옵션으로 구현한다.
+
+기존 temporal tracker의 대표 replay stable-ID 교체는 left 1회, yellow 6회였다. shared의
+역할 label은 구조적으로 고정되므로 이를 곧바로 shared ID switch 0회로 비교하지 않는다.
+실제 곡선 identity와 형상 연속성은 runtime 기준선에서 먼저 평가하고, 필요할 때만 여는
+ego-motion temporal 단계에서도 별도로 재평가한다. offline Python
+대표 audit p50/p95 `77.34/95.03ms`, 확대 audit `73.04/90.63ms`는 공통 전처리와 두 방법을
+모두 포함하므로 runtime latency가 아니다.
 
 ## 4. MGeo·시나리오 자동화 활용 범위
 

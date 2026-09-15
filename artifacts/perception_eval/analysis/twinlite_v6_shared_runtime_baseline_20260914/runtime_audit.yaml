@@ -1,0 +1,4316 @@
+schema_version: asmc-shadow-boundary-audit-1.0.0
+generated_at_utc: '2026-09-14T08:26:12.032+00:00'
+selection:
+  path: /root/ws/artifacts/perception_eval/analysis/shadow_maneuver_20260913/selection.yaml
+  sha256: 33cef1ad965afb16394cde995a09ce28e50bef0bff8a6909759dc0d27316567b
+model_id: twinlite_v6_shared_runtime_baseline_v1_20260914
+runs:
+- run_id: 20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel
+  scenario: shadow_boundary_straddle
+  weather: sunny
+  sim_hour: 13
+  duration_s: 39.68
+  technical_quality_gates:
+    result_complete: true
+    camera_diagnostics_recorded: true
+    bev_diagnostics_recorded: true
+    lane_diagnostics_recorded: true
+    lane_boundaries_recorded: true
+    lane_outputs_positive: true
+    lane_errors_zero: true
+  technical_quality_passed: true
+  lane_diagnostics_final:
+    boundary_algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+    boundary_config_sha256: 6ed5378885a0f84083f6c19a22f4bfa5455be7e96e340110958edfb58126f64e
+    boundary_expected_count: '3'
+    boundary_operating_domain: shadow_two_way_v1
+    boundary_publish_p50_ms: '2.393253002082929'
+    boundary_publish_p95_ms: '6.90267760073766'
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    confidence_by_class: '{"1": 0.5, "2": 0.5}'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    errors: '0'
+    ground_plane_coefficients: '[0.0, 0.0, -0.35]'
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{"front": 377, "left": 377, "right": 373}'
+    last_counts: '{"boundary_completeness": 2, "evidence": 8086, "lane_candidates":
+      3, "lanes": 3, "nodes": 206, "prefit_tracks": 3, "shadow_boundaries": 3, "shadow_corridor_complete":
+      true, "shadow_white_boundaries": 2, "shadow_yellow_boundaries": 1, "shared_family_available":
+      true, "shared_family_observed_roles": 3, "tracks": 3, "white_lanes": 2, "yellow_lanes":
+      1}'
+    last_shared_family_audit: '{"accepted": true, "assignment": {"left_outer_boundary":
+      {"candidate_count": 1, "measured_separation_m": 3.656406606428816}, "right_outer_boundary":
+      {"candidate_count": 1, "measured_separation_m": 3.8927256929369056}}, "boundary_support":
+      {"left_outer_boundary": {"bridged_length_ratio": 0.0, "inferred_length_m": 0.0,
+      "invalid_length_m": 8.133321053962996, "max_inferred_gap_m": 0.0, "observed_length_m":
+      19.513144561685674, "state": "observed"}, "right_outer_boundary": {"bridged_length_ratio":
+      0.2568309776110654, "inferred_length_m": 4.101553957074833, "invalid_length_m":
+      7.056119370147458, "max_inferred_gap_m": 4.25, "observed_length_m": 11.868302931785603,
+      "state": "observed"}, "yellow_centre_boundary": {"bridged_length_ratio": 0.3661907142060968,
+      "inferred_length_m": 6.499800751940954, "invalid_length_m": 7.597234004683965,
+      "max_inferred_gap_m": 5.0, "observed_length_m": 11.249968698200767, "state":
+      "observed"}}, "data_residual_p50_m": 0.08041181972230635, "data_residual_p95_m":
+      0.4720474900824674, "deployment_allowed": false, "discarded_tracks": 0, "eligible_tracks":
+      3, "fit_ms": 29.697930003749207, "inferred_roles": [], "inlier_residual_p50_m":
+      0.06752957910125586, "inlier_residual_p95_m": 0.27363253013388095, "input_tracks":
+      3, "local_support_count": {"p50": 2.0, "p95": 3.0}, "observed_role_count": 3,
+      "observed_roles": ["left_outer_boundary", "yellow_centre_boundary", "right_outer_boundary"],
+      "outlier_rate": 0.1407766990291262, "reason": "accepted", "representation":
+      "shared_parametric_bspline_normal_offsets_v2", "runtime_debug_enabled": true,
+      "valid_family_length_m": 17.749769450141724, "valid_x_m": [-1.5847902473500133,
+      16.00710239224794], "weighted_rms_m": 0.10453338508666338, "white_candidates":
+      2, "widths_m": {"left": 3.486282913668352, "right": 3.5189783545149176}, "yellow_candidates":
+      1}'
+    last_timestamp_skew_ms: '1.5163'
+    marker_delete_counts: '{"boundary": 0, "candidate": 0, "shared_family": 233}'
+    marker_policy: explicit_delete_missing_ids
+    outputs: '354'
+    pair_errors_by_view: '{"front": 0, "left": 0, "right": 0}'
+    pipeline_audit: '{"current_streak_frames": {"incomplete": 0, "no_boundary": 0,
+      "no_yellow": 0}, "frames": 354, "last_frame": {"association": {"accepted_tracks":
+      3, "assignment_conflicts": 0, "by_class": {"1": {"accepted_tracks": 2, "input_nodes":
+      158}, "2": {"accepted_tracks": 1, "input_nodes": 48}}, "candidate_pairs": 350,
+      "input_nodes": 206, "raw_tracklets": 3, "rejected_heading_change": 0, "rejected_lateral_residual":
+      147, "rejected_nonforward_or_gap": 0, "rejected_short_span": 0, "rejected_too_few_nodes":
+      0}, "boundary_selection": {"eligible_lanes": 3, "input_lanes": 3, "rejected":
+      {}, "selected_boundaries": 3, "selected_white": 2, "selected_yellow": 1}, "counts":
+      {"boundaries": 3, "boundary_completeness": 2, "complete": true, "evidence":
+      8086, "lanes": 3, "model_marking_pixels": 39933, "nodes": 206, "observations":
+      3, "prefit_tracks": 3, "shared_family_available": true, "tracks": 3, "yellow_boundaries":
+      1}, "marker_policy": {"boundary": "explicit_delete_missing_ids", "candidate":
+      "explicit_delete_missing_ids", "canonical_boundary_message": "independent_of_marker_rendering"},
+      "prefit": {"eligible_tracks": 3, "input_tracks": 3, "rejected": {}, "selected_tracks":
+      3, "selected_white": 2, "selected_yellow": 1}, "primary_outcome": "complete_boundary_family",
+      "projection": {"front": {"accepted": 2866, "below_confidence": 0, "by_class":
+      {"1": {"accepted": 2157, "below_confidence": 0, "model_pixels": 6954, "projection_invalid":
+      4797, "threshold": 0.5}, "2": {"accepted": 709, "below_confidence": 0, "model_pixels":
+      7980, "projection_invalid": 7271, "threshold": 0.5}}, "model_marking_pixels":
+      14934, "projection_invalid": 12068}, "left": {"accepted": 719, "below_confidence":
+      0, "by_class": {"1": {"accepted": 694, "below_confidence": 0, "model_pixels":
+      3106, "projection_invalid": 2412, "threshold": 0.5}, "2": {"accepted": 25, "below_confidence":
+      0, "model_pixels": 7768, "projection_invalid": 7743, "threshold": 0.5}}, "model_marking_pixels":
+      10874, "projection_invalid": 10155}, "right": {"accepted": 4501, "below_confidence":
+      0, "by_class": {"1": {"accepted": 4501, "below_confidence": 0, "model_pixels":
+      7446, "projection_invalid": 2945, "threshold": 0.5}, "2": {"accepted": 0, "below_confidence":
+      0, "model_pixels": 6679, "projection_invalid": 6679, "threshold": 0.5}}, "model_marking_pixels":
+      14125, "projection_invalid": 9624}}, "shared_family": {"accepted": true, "assignment":
+      {"left_outer_boundary": {"candidate_count": 1, "measured_separation_m": 3.656406606428816},
+      "right_outer_boundary": {"candidate_count": 1, "measured_separation_m": 3.8927256929369056}},
+      "boundary_support": {"left_outer_boundary": {"bridged_length_ratio": 0.0, "inferred_length_m":
+      0.0, "invalid_length_m": 8.133321053962996, "max_inferred_gap_m": 0.0, "observed_length_m":
+      19.513144561685674, "state": "observed"}, "right_outer_boundary": {"bridged_length_ratio":
+      0.2568309776110654, "inferred_length_m": 4.101553957074833, "invalid_length_m":
+      7.056119370147458, "max_inferred_gap_m": 4.25, "observed_length_m": 11.868302931785603,
+      "state": "observed"}, "yellow_centre_boundary": {"bridged_length_ratio": 0.3661907142060968,
+      "inferred_length_m": 6.499800751940954, "invalid_length_m": 7.597234004683965,
+      "max_inferred_gap_m": 5.0, "observed_length_m": 11.249968698200767, "state":
+      "observed"}}, "data_residual_p50_m": 0.08041181972230635, "data_residual_p95_m":
+      0.4720474900824674, "deployment_allowed": false, "discarded_tracks": 0, "eligible_tracks":
+      3, "fit_ms": 29.697930003749207, "inferred_roles": [], "inlier_residual_p50_m":
+      0.06752957910125586, "inlier_residual_p95_m": 0.27363253013388095, "input_tracks":
+      3, "local_support_count": {"p50": 2.0, "p95": 3.0}, "observed_role_count": 3,
+      "observed_roles": ["left_outer_boundary", "yellow_centre_boundary", "right_outer_boundary"],
+      "outlier_rate": 0.1407766990291262, "reason": "accepted", "representation":
+      "shared_parametric_bspline_normal_offsets_v2", "runtime_debug_enabled": true,
+      "valid_family_length_m": 17.749769450141724, "valid_x_m": [-1.5847902473500133,
+      16.00710239224794], "weighted_rms_m": 0.10453338508666338, "white_candidates":
+      2, "widths_m": {"left": 3.486282913668352, "right": 3.5189783545149176}, "yellow_candidates":
+      1}, "spline": {"accepted_lanes": 3, "input_tracks": 3, "rejected": {"linear_algebra_error":
+      0, "value_error": 0}}, "temporal": {"expired_tracks": 0, "input_observations":
+      3, "matched": 3, "missed_tracks": 0, "new_tracks": 0, "output_tracks": 3, "previous_tracks":
+      3, "reset": false, "reset_reason": "none", "retained_internal_tracks": 3}},
+      "longest_streak_frames": {"incomplete": 10, "no_boundary": 0, "no_yellow": 10},
+      "outcome_rates": {"boundaries_without_yellow": 0.0480225988700565, "complete_boundary_family":
+      0.940677966101695, "partial_boundary_family": 0.011299435028248588}, "outcomes":
+      {"boundaries_without_yellow": 17, "complete_boundary_family": 333, "partial_boundary_family":
+      4}, "rejection_frame_counts": {"association.assignment_conflict": 116, "association.heading_change":
+      119, "association.lateral_residual": 354, "association.nonforward_or_gap": 2,
+      "association.short_span": 15, "association.too_few_nodes": 190, "boundary_selection.spline_residual_above_limit":
+      21, "prefit.short_longitudinal_span": 2, "prefit.width_side_or_rank_rejected_white":
+      2, "projection.front.below_confidence": 24, "projection.front.projection_invalid":
+      354, "projection.left.below_confidence": 32, "projection.left.projection_invalid":
+      354, "projection.right.below_confidence": 2, "projection.right.projection_invalid":
+      354}, "rejection_frame_counts_by_outcome": {"boundaries_without_yellow": {"association.assignment_conflict":
+      1, "association.heading_change": 2, "association.lateral_residual": 17, "association.short_span":
+      2, "association.too_few_nodes": 4, "boundary_selection.spline_residual_above_limit":
+      17, "prefit.short_longitudinal_span": 1, "projection.front.below_confidence":
+      2, "projection.front.projection_invalid": 17, "projection.left.projection_invalid":
+      17, "projection.right.below_confidence": 1, "projection.right.projection_invalid":
+      17}, "complete_boundary_family": {"association.assignment_conflict": 111, "association.heading_change":
+      113, "association.lateral_residual": 333, "association.nonforward_or_gap": 2,
+      "association.short_span": 13, "association.too_few_nodes": 182, "prefit.short_longitudinal_span":
+      1, "prefit.width_side_or_rank_rejected_white": 2, "projection.front.below_confidence":
+      22, "projection.front.projection_invalid": 333, "projection.left.below_confidence":
+      30, "projection.left.projection_invalid": 333, "projection.right.below_confidence":
+      1, "projection.right.projection_invalid": 333}, "partial_boundary_family": {"association.assignment_conflict":
+      4, "association.heading_change": 4, "association.lateral_residual": 4, "association.too_few_nodes":
+      4, "boundary_selection.spline_residual_above_limit": 4, "projection.front.projection_invalid":
+      4, "projection.left.below_confidence": 2, "projection.left.projection_invalid":
+      4, "projection.right.projection_invalid": 4}}, "rejection_frame_rates": {"association.assignment_conflict":
+      0.327683615819209, "association.heading_change": 0.3361581920903955, "association.lateral_residual":
+      1.0, "association.nonforward_or_gap": 0.005649717514124294, "association.short_span":
+      0.0423728813559322, "association.too_few_nodes": 0.536723163841808, "boundary_selection.spline_residual_above_limit":
+      0.059322033898305086, "prefit.short_longitudinal_span": 0.005649717514124294,
+      "prefit.width_side_or_rank_rejected_white": 0.005649717514124294, "projection.front.below_confidence":
+      0.06779661016949153, "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.0903954802259887, "projection.left.projection_invalid": 1.0, "projection.right.below_confidence":
+      0.005649717514124294, "projection.right.projection_invalid": 1.0}, "rejection_frame_rates_by_outcome":
+      {"boundaries_without_yellow": {"association.assignment_conflict": 0.058823529411764705,
+      "association.heading_change": 0.11764705882352941, "association.lateral_residual":
+      1.0, "association.short_span": 0.11764705882352941, "association.too_few_nodes":
+      0.23529411764705882, "boundary_selection.spline_residual_above_limit": 1.0,
+      "prefit.short_longitudinal_span": 0.058823529411764705, "projection.front.below_confidence":
+      0.11764705882352941, "projection.front.projection_invalid": 1.0, "projection.left.projection_invalid":
+      1.0, "projection.right.below_confidence": 0.058823529411764705, "projection.right.projection_invalid":
+      1.0}, "complete_boundary_family": {"association.assignment_conflict": 0.3333333333333333,
+      "association.heading_change": 0.33933933933933935, "association.lateral_residual":
+      1.0, "association.nonforward_or_gap": 0.006006006006006006, "association.short_span":
+      0.03903903903903904, "association.too_few_nodes": 0.5465465465465466, "prefit.short_longitudinal_span":
+      0.003003003003003003, "prefit.width_side_or_rank_rejected_white": 0.006006006006006006,
+      "projection.front.below_confidence": 0.06606606606606606, "projection.front.projection_invalid":
+      1.0, "projection.left.below_confidence": 0.09009009009009009, "projection.left.projection_invalid":
+      1.0, "projection.right.below_confidence": 0.003003003003003003, "projection.right.projection_invalid":
+      1.0}, "partial_boundary_family": {"association.assignment_conflict": 1.0, "association.heading_change":
+      1.0, "association.lateral_residual": 1.0, "association.too_few_nodes": 1.0,
+      "boundary_selection.spline_residual_above_limit": 1.0, "projection.front.projection_invalid":
+      1.0, "projection.left.below_confidence": 0.5, "projection.left.projection_invalid":
+      1.0, "projection.right.projection_invalid": 1.0}}, "rejections": {"association.assignment_conflict":
+      321, "association.heading_change": 361, "association.lateral_residual": 57095,
+      "association.nonforward_or_gap": 3, "association.short_span": 15, "association.too_few_nodes":
+      231, "boundary_selection.spline_residual_above_limit": 21, "prefit.short_longitudinal_span":
+      2, "prefit.width_side_or_rank_rejected_white": 2, "projection.front.below_confidence":
+      25, "projection.front.projection_invalid": 4438902, "projection.left.below_confidence":
+      33, "projection.left.projection_invalid": 4188844, "projection.right.below_confidence":
+      2, "projection.right.projection_invalid": 3730497}, "rejections_by_outcome":
+      {"boundaries_without_yellow": {"association.assignment_conflict": 11, "association.heading_change":
+      3, "association.lateral_residual": 2691, "association.short_span": 2, "association.too_few_nodes":
+      6, "boundary_selection.spline_residual_above_limit": 17, "prefit.short_longitudinal_span":
+      1, "projection.front.below_confidence": 2, "projection.front.projection_invalid":
+      207420, "projection.left.projection_invalid": 185161, "projection.right.below_confidence":
+      1, "projection.right.projection_invalid": 176142}, "complete_boundary_family":
+      {"association.assignment_conflict": 294, "association.heading_change": 344,
+      "association.lateral_residual": 53766, "association.nonforward_or_gap": 3, "association.short_span":
+      13, "association.too_few_nodes": 217, "prefit.short_longitudinal_span": 1, "prefit.width_side_or_rank_rejected_white":
+      2, "projection.front.below_confidence": 23, "projection.front.projection_invalid":
+      4183098, "projection.left.below_confidence": 31, "projection.left.projection_invalid":
+      3962412, "projection.right.below_confidence": 1, "projection.right.projection_invalid":
+      3515802}, "partial_boundary_family": {"association.assignment_conflict": 16,
+      "association.heading_change": 14, "association.lateral_residual": 638, "association.too_few_nodes":
+      8, "boundary_selection.spline_residual_above_limit": 4, "projection.front.projection_invalid":
+      48384, "projection.left.below_confidence": 2, "projection.left.projection_invalid":
+      41271, "projection.right.projection_invalid": 38553}}}'
+    processing_fps: '9.218'
+    processing_p50_ms: '95.60524599510245'
+    processing_p95_ms: '127.55387139332012'
+    queue_drops_by_view: '{"front": 0, "left": 0, "right": 0}'
+    shadow_boundary_enabled: 'True'
+    shadow_boundary_parameters: '{"expected_lane_width_m": 3.55, "lane_width_max_m":
+      4.6, "lane_width_min_m": 2.4, "max_abs_heading_deg": 50.0, "max_abs_lateral_m":
+      7.0, "max_bridged_ratio": 0.45, "max_residual_p95_m": 0.3, "max_white_without_yellow":
+      2, "min_confidence": 0.5, "min_longitudinal_span_m": 3.0, "min_observed_length_m":
+      3.0, "reference_x_m": 5.0}'
+    shared_family_debug_enabled: 'True'
+    shared_family_deployment_allowed: 'False'
+    shared_family_errors: '0'
+    shared_family_fit_p50_ms: '39.04494550079107'
+    shared_family_fit_p95_ms: '50.95057195430854'
+    shared_family_representation: shared_parametric_bspline_normal_offsets_v2
+    sync_rejected: '65'
+    temporal_boundary_parameters: '{"max_lateral_residual_m": 0.65, "max_lateral_speed_mps":
+      4.0, "max_missed_frames": 8, "reset_gap_sec": 0.75, "velocity_smoothing": 0.5}'
+    views: '["front", "left", "right"]'
+  runtime_rates:
+    model_grid:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    fused_bev:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    boundaries:
+      messages: 354
+      average_hz: 9.08
+      end_window_hz: 9.245
+    pipeline_audit:
+      messages: 354
+      average_hz: 9.08
+      end_window_hz: 9.246
+    shared_family:
+      messages: 354
+      average_hz: 9.082
+      end_window_hz: 9.252
+  boundary_summary:
+    frames: 354
+    frames_with_any_boundary: 354
+    any_boundary_rate: 1.0
+    yellow_centre_frames: 337
+    yellow_centre_rate: 0.951977
+    yellow_observed_frames: 337
+    yellow_observed_rate: 0.951977
+    color_pair_frames: 337
+    color_pair_rate: 0.951977
+    color_triplet_frames: 333
+    color_triplet_rate: 0.940678
+    white_outer_fallback_frames: 17
+    white_outer_fallback_rate: 0.048023
+    common_support_frames: 354
+    common_support_rate: 1.0
+    preferred_reference_support_frames: 166
+    preferred_reference_support_rate: 0.468927
+    corridor_complete_frames: 333
+    corridor_complete_rate: 0.940678
+    unresolved_frames: 17
+    unresolved_rate: 0.048023
+    role_presence_frames:
+      left_outer_boundary: 334
+      right_outer_boundary: 336
+      unresolved: 17
+      yellow_centre_boundary: 337
+    role_presence_rates:
+      left_outer_boundary: 0.943503
+      right_outer_boundary: 0.949153
+      unresolved: 0.048023
+      yellow_centre_boundary: 0.951977
+    boundaries_total: 1041
+    boundaries_per_frame: 2.940678
+    unique_stable_ids: 4
+    stable_id_switches_by_role:
+      yellow_centre_boundary: 1
+    stable_id_switches_total: 1
+    reacquired_events: 7
+    duplicate_role_frames: 0
+    lateral_order_error_frames: 0
+    order_invalid_frames: 0
+    longest_order_invalid_streak_frames: 0
+    longest_no_yellow_streak_frames: 10
+    longest_no_color_pair_streak_frames: 10
+    longest_no_color_triplet_streak_frames: 10
+  pipeline_summary:
+    frames: 354
+    outcomes:
+      boundaries_without_yellow: 17
+      complete_boundary_family: 333
+      partial_boundary_family: 4
+    outcome_rates:
+      boundaries_without_yellow: 0.0480225988700565
+      complete_boundary_family: 0.940677966101695
+      partial_boundary_family: 0.011299435028248588
+    rejections:
+      association.assignment_conflict: 321
+      association.heading_change: 361
+      association.lateral_residual: 57095
+      association.nonforward_or_gap: 3
+      association.short_span: 15
+      association.too_few_nodes: 231
+      boundary_selection.spline_residual_above_limit: 21
+      prefit.short_longitudinal_span: 2
+      prefit.width_side_or_rank_rejected_white: 2
+      projection.front.below_confidence: 25
+      projection.front.projection_invalid: 4438902
+      projection.left.below_confidence: 33
+      projection.left.projection_invalid: 4188844
+      projection.right.below_confidence: 2
+      projection.right.projection_invalid: 3730497
+    rejection_frame_counts:
+      association.assignment_conflict: 116
+      association.heading_change: 119
+      association.lateral_residual: 354
+      association.nonforward_or_gap: 2
+      association.short_span: 15
+      association.too_few_nodes: 190
+      boundary_selection.spline_residual_above_limit: 21
+      prefit.short_longitudinal_span: 2
+      prefit.width_side_or_rank_rejected_white: 2
+      projection.front.below_confidence: 24
+      projection.front.projection_invalid: 354
+      projection.left.below_confidence: 32
+      projection.left.projection_invalid: 354
+      projection.right.below_confidence: 2
+      projection.right.projection_invalid: 354
+    rejection_frame_rates:
+      association.assignment_conflict: 0.327683615819209
+      association.heading_change: 0.3361581920903955
+      association.lateral_residual: 1.0
+      association.nonforward_or_gap: 0.005649717514124294
+      association.short_span: 0.0423728813559322
+      association.too_few_nodes: 0.536723163841808
+      boundary_selection.spline_residual_above_limit: 0.059322033898305086
+      prefit.short_longitudinal_span: 0.005649717514124294
+      prefit.width_side_or_rank_rejected_white: 0.005649717514124294
+      projection.front.below_confidence: 0.06779661016949153
+      projection.front.projection_invalid: 1.0
+      projection.left.below_confidence: 0.0903954802259887
+      projection.left.projection_invalid: 1.0
+      projection.right.below_confidence: 0.005649717514124294
+      projection.right.projection_invalid: 1.0
+    rejections_by_outcome:
+      boundaries_without_yellow:
+        association.assignment_conflict: 11
+        association.heading_change: 3
+        association.lateral_residual: 2691
+        association.short_span: 2
+        association.too_few_nodes: 6
+        boundary_selection.spline_residual_above_limit: 17
+        prefit.short_longitudinal_span: 1
+        projection.front.below_confidence: 2
+        projection.front.projection_invalid: 207420
+        projection.left.projection_invalid: 185161
+        projection.right.below_confidence: 1
+        projection.right.projection_invalid: 176142
+      complete_boundary_family:
+        association.assignment_conflict: 294
+        association.heading_change: 344
+        association.lateral_residual: 53766
+        association.nonforward_or_gap: 3
+        association.short_span: 13
+        association.too_few_nodes: 217
+        prefit.short_longitudinal_span: 1
+        prefit.width_side_or_rank_rejected_white: 2
+        projection.front.below_confidence: 23
+        projection.front.projection_invalid: 4183098
+        projection.left.below_confidence: 31
+        projection.left.projection_invalid: 3962412
+        projection.right.below_confidence: 1
+        projection.right.projection_invalid: 3515802
+      partial_boundary_family:
+        association.assignment_conflict: 16
+        association.heading_change: 14
+        association.lateral_residual: 638
+        association.too_few_nodes: 8
+        boundary_selection.spline_residual_above_limit: 4
+        projection.front.projection_invalid: 48384
+        projection.left.below_confidence: 2
+        projection.left.projection_invalid: 41271
+        projection.right.projection_invalid: 38553
+    rejection_frame_counts_by_outcome:
+      boundaries_without_yellow:
+        association.assignment_conflict: 1
+        association.heading_change: 2
+        association.lateral_residual: 17
+        association.short_span: 2
+        association.too_few_nodes: 4
+        boundary_selection.spline_residual_above_limit: 17
+        prefit.short_longitudinal_span: 1
+        projection.front.below_confidence: 2
+        projection.front.projection_invalid: 17
+        projection.left.projection_invalid: 17
+        projection.right.below_confidence: 1
+        projection.right.projection_invalid: 17
+      complete_boundary_family:
+        association.assignment_conflict: 111
+        association.heading_change: 113
+        association.lateral_residual: 333
+        association.nonforward_or_gap: 2
+        association.short_span: 13
+        association.too_few_nodes: 182
+        prefit.short_longitudinal_span: 1
+        prefit.width_side_or_rank_rejected_white: 2
+        projection.front.below_confidence: 22
+        projection.front.projection_invalid: 333
+        projection.left.below_confidence: 30
+        projection.left.projection_invalid: 333
+        projection.right.below_confidence: 1
+        projection.right.projection_invalid: 333
+      partial_boundary_family:
+        association.assignment_conflict: 4
+        association.heading_change: 4
+        association.lateral_residual: 4
+        association.too_few_nodes: 4
+        boundary_selection.spline_residual_above_limit: 4
+        projection.front.projection_invalid: 4
+        projection.left.below_confidence: 2
+        projection.left.projection_invalid: 4
+        projection.right.projection_invalid: 4
+    rejection_frame_rates_by_outcome:
+      boundaries_without_yellow:
+        association.assignment_conflict: 0.058823529411764705
+        association.heading_change: 0.11764705882352941
+        association.lateral_residual: 1.0
+        association.short_span: 0.11764705882352941
+        association.too_few_nodes: 0.23529411764705882
+        boundary_selection.spline_residual_above_limit: 1.0
+        prefit.short_longitudinal_span: 0.058823529411764705
+        projection.front.below_confidence: 0.11764705882352941
+        projection.front.projection_invalid: 1.0
+        projection.left.projection_invalid: 1.0
+        projection.right.below_confidence: 0.058823529411764705
+        projection.right.projection_invalid: 1.0
+      complete_boundary_family:
+        association.assignment_conflict: 0.3333333333333333
+        association.heading_change: 0.33933933933933935
+        association.lateral_residual: 1.0
+        association.nonforward_or_gap: 0.006006006006006006
+        association.short_span: 0.03903903903903904
+        association.too_few_nodes: 0.5465465465465466
+        prefit.short_longitudinal_span: 0.003003003003003003
+        prefit.width_side_or_rank_rejected_white: 0.006006006006006006
+        projection.front.below_confidence: 0.06606606606606606
+        projection.front.projection_invalid: 1.0
+        projection.left.below_confidence: 0.09009009009009009
+        projection.left.projection_invalid: 1.0
+        projection.right.below_confidence: 0.003003003003003003
+        projection.right.projection_invalid: 1.0
+      partial_boundary_family:
+        association.assignment_conflict: 1.0
+        association.heading_change: 1.0
+        association.lateral_residual: 1.0
+        association.too_few_nodes: 1.0
+        boundary_selection.spline_residual_above_limit: 1.0
+        projection.front.projection_invalid: 1.0
+        projection.left.below_confidence: 0.5
+        projection.left.projection_invalid: 1.0
+        projection.right.projection_invalid: 1.0
+    current_streak_frames:
+      no_boundary: 0
+      no_yellow: 0
+      incomplete: 0
+    longest_streak_frames:
+      no_boundary: 0
+      no_yellow: 10
+      incomplete: 10
+    last_frame:
+      association:
+        accepted_tracks: 3
+        assignment_conflicts: 0
+        by_class:
+          '1':
+            accepted_tracks: 2
+            input_nodes: 158
+          '2':
+            accepted_tracks: 1
+            input_nodes: 48
+        candidate_pairs: 350
+        input_nodes: 206
+        raw_tracklets: 3
+        rejected_heading_change: 0
+        rejected_lateral_residual: 147
+        rejected_nonforward_or_gap: 0
+        rejected_short_span: 0
+        rejected_too_few_nodes: 0
+      boundary_selection:
+        eligible_lanes: 3
+        input_lanes: 3
+        rejected: {}
+        selected_boundaries: 3
+        selected_white: 2
+        selected_yellow: 1
+      counts:
+        boundaries: 3
+        boundary_completeness: 2
+        complete: true
+        evidence: 8086
+        lanes: 3
+        model_marking_pixels: 39933
+        nodes: 206
+        observations: 3
+        prefit_tracks: 3
+        shared_family_available: true
+        tracks: 3
+        yellow_boundaries: 1
+      marker_policy:
+        boundary: explicit_delete_missing_ids
+        candidate: explicit_delete_missing_ids
+        canonical_boundary_message: independent_of_marker_rendering
+      prefit:
+        eligible_tracks: 3
+        input_tracks: 3
+        rejected: {}
+        selected_tracks: 3
+        selected_white: 2
+        selected_yellow: 1
+      primary_outcome: complete_boundary_family
+      projection:
+        front:
+          accepted: 2866
+          below_confidence: 0
+          by_class:
+            '1':
+              accepted: 2157
+              below_confidence: 0
+              model_pixels: 6954
+              projection_invalid: 4797
+              threshold: 0.5
+            '2':
+              accepted: 709
+              below_confidence: 0
+              model_pixels: 7980
+              projection_invalid: 7271
+              threshold: 0.5
+          model_marking_pixels: 14934
+          projection_invalid: 12068
+        left:
+          accepted: 719
+          below_confidence: 0
+          by_class:
+            '1':
+              accepted: 694
+              below_confidence: 0
+              model_pixels: 3106
+              projection_invalid: 2412
+              threshold: 0.5
+            '2':
+              accepted: 25
+              below_confidence: 0
+              model_pixels: 7768
+              projection_invalid: 7743
+              threshold: 0.5
+          model_marking_pixels: 10874
+          projection_invalid: 10155
+        right:
+          accepted: 4501
+          below_confidence: 0
+          by_class:
+            '1':
+              accepted: 4501
+              below_confidence: 0
+              model_pixels: 7446
+              projection_invalid: 2945
+              threshold: 0.5
+            '2':
+              accepted: 0
+              below_confidence: 0
+              model_pixels: 6679
+              projection_invalid: 6679
+              threshold: 0.5
+          model_marking_pixels: 14125
+          projection_invalid: 9624
+      shared_family:
+        accepted: true
+        assignment:
+          left_outer_boundary:
+            candidate_count: 1
+            measured_separation_m: 3.656406606428816
+          right_outer_boundary:
+            candidate_count: 1
+            measured_separation_m: 3.8927256929369056
+        boundary_support:
+          left_outer_boundary:
+            bridged_length_ratio: 0.0
+            inferred_length_m: 0.0
+            invalid_length_m: 8.133321053962996
+            max_inferred_gap_m: 0.0
+            observed_length_m: 19.513144561685674
+            state: observed
+          right_outer_boundary:
+            bridged_length_ratio: 0.2568309776110654
+            inferred_length_m: 4.101553957074833
+            invalid_length_m: 7.056119370147458
+            max_inferred_gap_m: 4.25
+            observed_length_m: 11.868302931785603
+            state: observed
+          yellow_centre_boundary:
+            bridged_length_ratio: 0.3661907142060968
+            inferred_length_m: 6.499800751940954
+            invalid_length_m: 7.597234004683965
+            max_inferred_gap_m: 5.0
+            observed_length_m: 11.249968698200767
+            state: observed
+        data_residual_p50_m: 0.08041181972230635
+        data_residual_p95_m: 0.4720474900824674
+        deployment_allowed: false
+        discarded_tracks: 0
+        eligible_tracks: 3
+        fit_ms: 29.697930003749207
+        inferred_roles: []
+        inlier_residual_p50_m: 0.06752957910125586
+        inlier_residual_p95_m: 0.27363253013388095
+        input_tracks: 3
+        local_support_count:
+          p50: 2.0
+          p95: 3.0
+        observed_role_count: 3
+        observed_roles:
+        - left_outer_boundary
+        - yellow_centre_boundary
+        - right_outer_boundary
+        outlier_rate: 0.1407766990291262
+        reason: accepted
+        representation: shared_parametric_bspline_normal_offsets_v2
+        runtime_debug_enabled: true
+        valid_family_length_m: 17.749769450141724
+        valid_x_m:
+        - -1.5847902473500133
+        - 16.00710239224794
+        weighted_rms_m: 0.10453338508666338
+        white_candidates: 2
+        widths_m:
+          left: 3.486282913668352
+          right: 3.5189783545149176
+        yellow_candidates: 1
+      spline:
+        accepted_lanes: 3
+        input_tracks: 3
+        rejected:
+          linear_algebra_error: 0
+          value_error: 0
+      temporal:
+        expired_tracks: 0
+        input_observations: 3
+        matched: 3
+        missed_tracks: 0
+        new_tracks: 0
+        output_tracks: 3
+        previous_tracks: 3
+        reset: false
+        reset_reason: none
+        retained_internal_tracks: 3
+    available: true
+    frame_messages: 354
+    topic_available: true
+    malformed_messages: 0
+  shared_family_summary:
+    frames: 354
+    accepted_frames: 354
+    accepted_rate: 1.0
+    rejection_reasons:
+      accepted: 354
+    longest_rejected_streak_frames: 0
+    deployment_allowed_frames: 0
+    observed_role_presence_rates:
+      left_outer_boundary: 1.0
+      yellow_centre_boundary: 1.0
+      right_outer_boundary: 1.0
+    inferred_role_presence_rates:
+      left_outer_boundary: 0.0
+      yellow_centre_boundary: 0.0
+      right_outer_boundary: 0.0
+    fit_ms:
+      count: 354
+      min: 22.456981998402625
+      p50: 39.04494550079107
+      p95: 50.95057195430854
+      max: 69.69721801578999
+    data_residual_p95_m:
+      count: 354
+      min: 0.03985072671074001
+      p50: 0.20907693572353936
+      p95: 0.49032318887742987
+      max: 1.7198244056102474
+    inlier_residual_p95_m:
+      count: 354
+      min: 0.03985072671074001
+      p50: 0.19651483239308706
+      p95: 0.2778227450612487
+      max: 0.3437309110690084
+    outlier_rate:
+      count: 354
+      min: 0.0
+      p50: 0.0
+      p95: 0.1619508749544295
+      max: 0.5369458128078818
+    valid_span_m:
+      count: 354
+      min: 5.701090087458734
+      p50: 20.56990052224596
+      p95: 21.999117105393786
+      max: 22.286690452154687
+    widths_m:
+      left:
+        count: 354
+        min: 3.467091043555135
+        p50: 3.5290815554246118
+        p95: 3.6016553958396322
+        max: 3.6019737293490786
+      right:
+        count: 354
+        min: 3.4075414584198622
+        p50: 3.5440364306957326
+        p95: 3.582564481142191
+        max: 3.601471433719185
+    sample_length_m:
+      by_role:
+        left_outer_boundary:
+          observed: 6489.971714904865
+          structure_inferred: 589.4311268238833
+          invalid: 1883.3107454132155
+        yellow_centre_boundary:
+          observed: 5040.1903711692075
+          structure_inferred: 1946.7220736125996
+          invalid: 1808.7556435008803
+        right_outer_boundary:
+          observed: 6338.864470056633
+          structure_inferred: 555.1620625447645
+          invalid: 1735.42739831656
+      total:
+        observed: 17869.026556130706
+        structure_inferred: 3091.3152629812475
+        invalid: 5427.493787230656
+      usable: 20960.341819111953
+      all: 26387.83560634261
+    sample_state_ratios:
+      observed_of_all: 0.677169
+      structure_inferred_of_all: 0.117149
+      invalid_of_all: 0.205682
+      usable_of_all: 0.794318
+      structure_inferred_of_usable: 0.147484
+    frame_usable_ratio:
+      count: 354
+      min: 0.21730982543162553
+      p50: 0.8540285171586331
+      p95: 0.9394914365898231
+      max: 0.957757592184063
+    frame_inferred_of_usable:
+      count: 354
+      min: 0.022923839964426655
+      p50: 0.139199222511025
+      p95: 0.22836421415836256
+      max: 0.42210099397150763
+    consumption_policy:
+      observed: primary
+      structure_inferred: degraded_with_confidence
+      invalid: forbidden
+      temporal_predicted: not_implemented
+    topic_available: true
+    malformed_messages: 0
+- run_id: 20260913_195429_kcity2025_shadow_lateral_sweep_sunny_1pm_wheel
+  scenario: shadow_lateral_sweep
+  weather: sunny
+  sim_hour: 13
+  duration_s: 37.16
+  technical_quality_gates:
+    result_complete: true
+    camera_diagnostics_recorded: true
+    bev_diagnostics_recorded: true
+    lane_diagnostics_recorded: true
+    lane_boundaries_recorded: true
+    lane_outputs_positive: true
+    lane_errors_zero: true
+  technical_quality_passed: true
+  lane_diagnostics_final:
+    boundary_algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+    boundary_config_sha256: 6ed5378885a0f84083f6c19a22f4bfa5455be7e96e340110958edfb58126f64e
+    boundary_expected_count: '3'
+    boundary_operating_domain: shadow_two_way_v1
+    boundary_publish_p50_ms: '2.2008645173627883'
+    boundary_publish_p95_ms: '6.008923212357329'
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    confidence_by_class: '{"1": 0.5, "2": 0.5}'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    errors: '0'
+    ground_plane_coefficients: '[0.0, 0.0, -0.35]'
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{"front": 724, "left": 724, "right": 720}'
+    last_counts: '{"boundary_completeness": 2, "evidence": 5793, "lane_candidates":
+      3, "lanes": 3, "nodes": 210, "prefit_tracks": 3, "shadow_boundaries": 3, "shadow_corridor_complete":
+      true, "shadow_white_boundaries": 2, "shadow_yellow_boundaries": 1, "shared_family_available":
+      true, "shared_family_observed_roles": 3, "tracks": 3, "white_lanes": 2, "yellow_lanes":
+      1}'
+    last_shared_family_audit: '{"accepted": true, "assignment": {"left_outer_boundary":
+      {"candidate_count": 1, "measured_separation_m": 3.585868526447853}, "right_outer_boundary":
+      {"candidate_count": 1, "measured_separation_m": 3.5845307884867337}}, "boundary_support":
+      {"left_outer_boundary": {"bridged_length_ratio": 0.0686843069116249, "inferred_length_m":
+      1.5548456822258303, "invalid_length_m": 3.121945140629469, "max_inferred_gap_m":
+      1.25, "observed_length_m": 21.082722521329423, "state": "observed"}, "right_outer_boundary":
+      {"bridged_length_ratio": 0.024260921257393996, "inferred_length_m": 0.4824977742132971,
+      "invalid_length_m": 2.8449585527843224, "max_inferred_gap_m": 0.0, "observed_length_m":
+      19.405360938746597, "state": "observed"}, "yellow_centre_boundary": {"bridged_length_ratio":
+      0.34117724265791466, "inferred_length_m": 7.249913961757829, "invalid_length_m":
+      2.9821409346862677, "max_inferred_gap_m": 7.0, "observed_length_m": 13.999785769906396,
+      "state": "observed"}}, "data_residual_p50_m": 0.06884932576977398, "data_residual_p95_m":
+      0.2922672237748487, "deployment_allowed": false, "discarded_tracks": 0, "eligible_tracks":
+      3, "fit_ms": 30.343503021867946, "inferred_roles": [], "inlier_residual_p50_m":
+      0.0687209906509857, "inlier_residual_p95_m": 0.2862422708039417, "input_tracks":
+      3, "local_support_count": {"p50": 3.0, "p95": 3.0}, "observed_role_count": 3,
+      "observed_roles": ["left_outer_boundary", "yellow_centre_boundary", "right_outer_boundary"],
+      "outlier_rate": 0.004784688995215311, "reason": "accepted", "representation":
+      "shared_parametric_bspline_normal_offsets_v2", "runtime_debug_enabled": true,
+      "valid_family_length_m": 21.249699731664222, "valid_x_m": [-1.3912264460955641,
+      19.687954443926994], "weighted_rms_m": 0.08584329705937489, "white_candidates":
+      2, "widths_m": {"left": 3.4583319235652796, "right": 3.3934759512448283}, "yellow_candidates":
+      1}'
+    last_timestamp_skew_ms: '2.2635'
+    marker_delete_counts: '{"boundary": 0, "candidate": 0, "shared_family": 429}'
+    marker_policy: explicit_delete_missing_ids
+    outputs: '679'
+    pair_errors_by_view: '{"front": 0, "left": 0, "right": 0}'
+    pipeline_audit: '{"current_streak_frames": {"incomplete": 0, "no_boundary": 0,
+      "no_yellow": 0}, "frames": 679, "last_frame": {"association": {"accepted_tracks":
+      3, "assignment_conflicts": 7, "by_class": {"1": {"accepted_tracks": 2, "input_nodes":
+      164}, "2": {"accepted_tracks": 1, "input_nodes": 46}}, "candidate_pairs": 382,
+      "input_nodes": 210, "raw_tracklets": 4, "rejected_heading_change": 1, "rejected_lateral_residual":
+      168, "rejected_nonforward_or_gap": 0, "rejected_short_span": 0, "rejected_too_few_nodes":
+      1}, "boundary_selection": {"eligible_lanes": 3, "input_lanes": 3, "rejected":
+      {}, "selected_boundaries": 3, "selected_white": 2, "selected_yellow": 1}, "counts":
+      {"boundaries": 3, "boundary_completeness": 2, "complete": true, "evidence":
+      5793, "lanes": 3, "model_marking_pixels": 36845, "nodes": 210, "observations":
+      3, "prefit_tracks": 3, "shared_family_available": true, "tracks": 3, "yellow_boundaries":
+      1}, "marker_policy": {"boundary": "explicit_delete_missing_ids", "candidate":
+      "explicit_delete_missing_ids", "canonical_boundary_message": "independent_of_marker_rendering"},
+      "prefit": {"eligible_tracks": 3, "input_tracks": 3, "rejected": {}, "selected_tracks":
+      3, "selected_white": 2, "selected_yellow": 1}, "primary_outcome": "complete_boundary_family",
+      "projection": {"front": {"accepted": 2833, "below_confidence": 0, "by_class":
+      {"1": {"accepted": 2171, "below_confidence": 0, "model_pixels": 7063, "projection_invalid":
+      4892, "threshold": 0.5}, "2": {"accepted": 662, "below_confidence": 0, "model_pixels":
+      7865, "projection_invalid": 7203, "threshold": 0.5}}, "model_marking_pixels":
+      14928, "projection_invalid": 12095}, "left": {"accepted": 1228, "below_confidence":
+      0, "by_class": {"1": {"accepted": 1228, "below_confidence": 0, "model_pixels":
+      3473, "projection_invalid": 2245, "threshold": 0.5}, "2": {"accepted": 0, "below_confidence":
+      0, "model_pixels": 7452, "projection_invalid": 7452, "threshold": 0.5}}, "model_marking_pixels":
+      10925, "projection_invalid": 9697}, "right": {"accepted": 1732, "below_confidence":
+      0, "by_class": {"1": {"accepted": 1732, "below_confidence": 0, "model_pixels":
+      4194, "projection_invalid": 2462, "threshold": 0.5}, "2": {"accepted": 0, "below_confidence":
+      0, "model_pixels": 6798, "projection_invalid": 6798, "threshold": 0.5}}, "model_marking_pixels":
+      10992, "projection_invalid": 9260}}, "shared_family": {"accepted": true, "assignment":
+      {"left_outer_boundary": {"candidate_count": 1, "measured_separation_m": 3.585868526447853},
+      "right_outer_boundary": {"candidate_count": 1, "measured_separation_m": 3.5845307884867337}},
+      "boundary_support": {"left_outer_boundary": {"bridged_length_ratio": 0.0686843069116249,
+      "inferred_length_m": 1.5548456822258303, "invalid_length_m": 3.121945140629469,
+      "max_inferred_gap_m": 1.25, "observed_length_m": 21.082722521329423, "state":
+      "observed"}, "right_outer_boundary": {"bridged_length_ratio": 0.024260921257393996,
+      "inferred_length_m": 0.4824977742132971, "invalid_length_m": 2.8449585527843224,
+      "max_inferred_gap_m": 0.0, "observed_length_m": 19.405360938746597, "state":
+      "observed"}, "yellow_centre_boundary": {"bridged_length_ratio": 0.34117724265791466,
+      "inferred_length_m": 7.249913961757829, "invalid_length_m": 2.9821409346862677,
+      "max_inferred_gap_m": 7.0, "observed_length_m": 13.999785769906396, "state":
+      "observed"}}, "data_residual_p50_m": 0.06884932576977398, "data_residual_p95_m":
+      0.2922672237748487, "deployment_allowed": false, "discarded_tracks": 0, "eligible_tracks":
+      3, "fit_ms": 30.343503021867946, "inferred_roles": [], "inlier_residual_p50_m":
+      0.0687209906509857, "inlier_residual_p95_m": 0.2862422708039417, "input_tracks":
+      3, "local_support_count": {"p50": 3.0, "p95": 3.0}, "observed_role_count": 3,
+      "observed_roles": ["left_outer_boundary", "yellow_centre_boundary", "right_outer_boundary"],
+      "outlier_rate": 0.004784688995215311, "reason": "accepted", "representation":
+      "shared_parametric_bspline_normal_offsets_v2", "runtime_debug_enabled": true,
+      "valid_family_length_m": 21.249699731664222, "valid_x_m": [-1.3912264460955641,
+      19.687954443926994], "weighted_rms_m": 0.08584329705937489, "white_candidates":
+      2, "widths_m": {"left": 3.4583319235652796, "right": 3.3934759512448283}, "yellow_candidates":
+      1}, "spline": {"accepted_lanes": 3, "input_tracks": 3, "rejected": {"linear_algebra_error":
+      0, "value_error": 0}}, "temporal": {"expired_tracks": 0, "input_observations":
+      3, "matched": 3, "missed_tracks": 0, "new_tracks": 0, "output_tracks": 3, "previous_tracks":
+      3, "reset": false, "reset_reason": "none", "retained_internal_tracks": 3}},
+      "longest_streak_frames": {"incomplete": 11, "no_boundary": 0, "no_yellow": 11},
+      "outcome_rates": {"boundaries_without_yellow": 0.13402061855670103, "complete_boundary_family":
+      0.845360824742268, "partial_boundary_family": 0.020618556701030927}, "outcomes":
+      {"boundaries_without_yellow": 91, "complete_boundary_family": 574, "partial_boundary_family":
+      14}, "rejection_frame_counts": {"association.assignment_conflict": 254, "association.heading_change":
+      260, "association.lateral_residual": 679, "association.nonforward_or_gap": 4,
+      "association.short_span": 39, "association.too_few_nodes": 410, "boundary_selection.spline_residual_above_limit":
+      105, "prefit.short_longitudinal_span": 8, "prefit.width_side_or_rank_rejected_white":
+      2, "projection.front.below_confidence": 57, "projection.front.projection_invalid":
+      679, "projection.left.below_confidence": 52, "projection.left.projection_invalid":
+      679, "projection.right.below_confidence": 15, "projection.right.projection_invalid":
+      679}, "rejection_frame_counts_by_outcome": {"boundaries_without_yellow": {"association.assignment_conflict":
+      9, "association.heading_change": 14, "association.lateral_residual": 91, "association.nonforward_or_gap":
+      1, "association.short_span": 9, "association.too_few_nodes": 40, "boundary_selection.spline_residual_above_limit":
+      91, "prefit.short_longitudinal_span": 1, "projection.front.below_confidence":
+      10, "projection.front.projection_invalid": 91, "projection.left.below_confidence":
+      4, "projection.left.projection_invalid": 91, "projection.right.below_confidence":
+      8, "projection.right.projection_invalid": 91}, "complete_boundary_family": {"association.assignment_conflict":
+      240, "association.heading_change": 240, "association.lateral_residual": 574,
+      "association.nonforward_or_gap": 3, "association.short_span": 26, "association.too_few_nodes":
+      360, "prefit.short_longitudinal_span": 4, "prefit.width_side_or_rank_rejected_white":
+      2, "projection.front.below_confidence": 46, "projection.front.projection_invalid":
+      574, "projection.left.below_confidence": 43, "projection.left.projection_invalid":
+      574, "projection.right.below_confidence": 7, "projection.right.projection_invalid":
+      574}, "partial_boundary_family": {"association.assignment_conflict": 5, "association.heading_change":
+      6, "association.lateral_residual": 14, "association.short_span": 4, "association.too_few_nodes":
+      10, "boundary_selection.spline_residual_above_limit": 14, "prefit.short_longitudinal_span":
+      3, "projection.front.below_confidence": 1, "projection.front.projection_invalid":
+      14, "projection.left.below_confidence": 5, "projection.left.projection_invalid":
+      14, "projection.right.projection_invalid": 14}}, "rejection_frame_rates": {"association.assignment_conflict":
+      0.374079528718704, "association.heading_change": 0.38291605301914583, "association.lateral_residual":
+      1.0, "association.nonforward_or_gap": 0.005891016200294551, "association.short_span":
+      0.05743740795287187, "association.too_few_nodes": 0.6038291605301914, "boundary_selection.spline_residual_above_limit":
+      0.15463917525773196, "prefit.short_longitudinal_span": 0.011782032400589101,
+      "prefit.width_side_or_rank_rejected_white": 0.0029455081001472753, "projection.front.below_confidence":
+      0.08394698085419734, "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.07658321060382917, "projection.left.projection_invalid": 1.0, "projection.right.below_confidence":
+      0.022091310751104567, "projection.right.projection_invalid": 1.0}, "rejection_frame_rates_by_outcome":
+      {"boundaries_without_yellow": {"association.assignment_conflict": 0.0989010989010989,
+      "association.heading_change": 0.15384615384615385, "association.lateral_residual":
+      1.0, "association.nonforward_or_gap": 0.01098901098901099, "association.short_span":
+      0.0989010989010989, "association.too_few_nodes": 0.43956043956043955, "boundary_selection.spline_residual_above_limit":
+      1.0, "prefit.short_longitudinal_span": 0.01098901098901099, "projection.front.below_confidence":
+      0.10989010989010989, "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.04395604395604396, "projection.left.projection_invalid": 1.0, "projection.right.below_confidence":
+      0.08791208791208792, "projection.right.projection_invalid": 1.0}, "complete_boundary_family":
+      {"association.assignment_conflict": 0.4181184668989547, "association.heading_change":
+      0.4181184668989547, "association.lateral_residual": 1.0, "association.nonforward_or_gap":
+      0.005226480836236934, "association.short_span": 0.04529616724738676, "association.too_few_nodes":
+      0.627177700348432, "prefit.short_longitudinal_span": 0.006968641114982578, "prefit.width_side_or_rank_rejected_white":
+      0.003484320557491289, "projection.front.below_confidence": 0.08013937282229965,
+      "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.07491289198606271, "projection.left.projection_invalid": 1.0, "projection.right.below_confidence":
+      0.012195121951219513, "projection.right.projection_invalid": 1.0}, "partial_boundary_family":
+      {"association.assignment_conflict": 0.35714285714285715, "association.heading_change":
+      0.42857142857142855, "association.lateral_residual": 1.0, "association.short_span":
+      0.2857142857142857, "association.too_few_nodes": 0.7142857142857143, "boundary_selection.spline_residual_above_limit":
+      1.0, "prefit.short_longitudinal_span": 0.21428571428571427, "projection.front.below_confidence":
+      0.07142857142857142, "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.35714285714285715, "projection.left.projection_invalid": 1.0, "projection.right.projection_invalid":
+      1.0}}, "rejections": {"association.assignment_conflict": 986, "association.heading_change":
+      665, "association.lateral_residual": 109217, "association.nonforward_or_gap":
+      5, "association.short_span": 39, "association.too_few_nodes": 518, "boundary_selection.spline_residual_above_limit":
+      105, "prefit.short_longitudinal_span": 8, "prefit.width_side_or_rank_rejected_white":
+      2, "projection.front.below_confidence": 60, "projection.front.projection_invalid":
+      8522387, "projection.left.below_confidence": 53, "projection.left.projection_invalid":
+      7989985, "projection.right.below_confidence": 16, "projection.right.projection_invalid":
+      7134184}, "rejections_by_outcome": {"boundaries_without_yellow": {"association.assignment_conflict":
+      53, "association.heading_change": 52, "association.lateral_residual": 14859,
+      "association.nonforward_or_gap": 1, "association.short_span": 9, "association.too_few_nodes":
+      75, "boundary_selection.spline_residual_above_limit": 91, "prefit.short_longitudinal_span":
+      1, "projection.front.below_confidence": 11, "projection.front.projection_invalid":
+      1156914, "projection.left.below_confidence": 4, "projection.left.projection_invalid":
+      1109382, "projection.right.below_confidence": 8, "projection.right.projection_invalid":
+      986855}, "complete_boundary_family": {"association.assignment_conflict": 911,
+      "association.heading_change": 594, "association.lateral_residual": 92044, "association.nonforward_or_gap":
+      4, "association.short_span": 26, "association.too_few_nodes": 428, "prefit.short_longitudinal_span":
+      4, "prefit.width_side_or_rank_rejected_white": 2, "projection.front.below_confidence":
+      48, "projection.front.projection_invalid": 7190395, "projection.left.below_confidence":
+      44, "projection.left.projection_invalid": 6720307, "projection.right.below_confidence":
+      8, "projection.right.projection_invalid": 6001093}, "partial_boundary_family":
+      {"association.assignment_conflict": 22, "association.heading_change": 19, "association.lateral_residual":
+      2314, "association.short_span": 4, "association.too_few_nodes": 15, "boundary_selection.spline_residual_above_limit":
+      14, "prefit.short_longitudinal_span": 3, "projection.front.below_confidence":
+      1, "projection.front.projection_invalid": 175078, "projection.left.below_confidence":
+      5, "projection.left.projection_invalid": 160296, "projection.right.projection_invalid":
+      146236}}}'
+    processing_fps: '8.894'
+    processing_p50_ms: '93.1508270004997'
+    processing_p95_ms: '115.78551931888796'
+    queue_drops_by_view: '{"front": 0, "left": 0, "right": 0}'
+    shadow_boundary_enabled: 'True'
+    shadow_boundary_parameters: '{"expected_lane_width_m": 3.55, "lane_width_max_m":
+      4.6, "lane_width_min_m": 2.4, "max_abs_heading_deg": 50.0, "max_abs_lateral_m":
+      7.0, "max_bridged_ratio": 0.45, "max_residual_p95_m": 0.3, "max_white_without_yellow":
+      2, "min_confidence": 0.5, "min_longitudinal_span_m": 3.0, "min_observed_length_m":
+      3.0, "reference_x_m": 5.0}'
+    shared_family_debug_enabled: 'True'
+    shared_family_deployment_allowed: 'False'
+    shared_family_errors: '0'
+    shared_family_fit_p50_ms: '38.41199948510621'
+    shared_family_fit_p95_ms: '49.89435039460659'
+    shared_family_representation: shared_parametric_bspline_normal_offsets_v2
+    sync_rejected: '131'
+    temporal_boundary_parameters: '{"max_lateral_residual_m": 0.65, "max_lateral_speed_mps":
+      4.0, "max_missed_frames": 8, "reset_gap_sec": 0.75, "velocity_smoothing": 0.5}'
+    views: '["front", "left", "right"]'
+  runtime_rates:
+    model_grid:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    fused_bev:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    boundaries:
+      messages: 325
+      average_hz: 8.854
+      end_window_hz: 9.258
+    pipeline_audit:
+      messages: 325
+      average_hz: 8.854
+      end_window_hz: 9.257
+    shared_family:
+      messages: 325
+      average_hz: 8.857
+      end_window_hz: 9.263
+  boundary_summary:
+    frames: 325
+    frames_with_any_boundary: 325
+    any_boundary_rate: 1.0
+    yellow_centre_frames: 251
+    yellow_centre_rate: 0.772308
+    yellow_observed_frames: 251
+    yellow_observed_rate: 0.772308
+    color_pair_frames: 251
+    color_pair_rate: 0.772308
+    color_triplet_frames: 241
+    color_triplet_rate: 0.741538
+    white_outer_fallback_frames: 74
+    white_outer_fallback_rate: 0.227692
+    common_support_frames: 325
+    common_support_rate: 1.0
+    preferred_reference_support_frames: 182
+    preferred_reference_support_rate: 0.56
+    corridor_complete_frames: 241
+    corridor_complete_rate: 0.741538
+    unresolved_frames: 74
+    unresolved_rate: 0.227692
+    role_presence_frames:
+      left_outer_boundary: 244
+      right_outer_boundary: 248
+      unresolved: 74
+      yellow_centre_boundary: 251
+    role_presence_rates:
+      left_outer_boundary: 0.750769
+      right_outer_boundary: 0.763077
+      unresolved: 0.227692
+      yellow_centre_boundary: 0.772308
+    boundaries_total: 891
+    boundaries_per_frame: 2.741538
+    unique_stable_ids: 8
+    stable_id_switches_by_role:
+      yellow_centre_boundary: 5
+    stable_id_switches_total: 5
+    reacquired_events: 21
+    duplicate_role_frames: 0
+    lateral_order_error_frames: 0
+    order_invalid_frames: 0
+    longest_order_invalid_streak_frames: 0
+    longest_no_yellow_streak_frames: 11
+    longest_no_color_pair_streak_frames: 11
+    longest_no_color_triplet_streak_frames: 11
+  pipeline_summary:
+    frames: 325
+    outcomes:
+      boundaries_without_yellow: 74
+      complete_boundary_family: 241
+      partial_boundary_family: 10
+    outcome_rates:
+      boundaries_without_yellow: 0.2276923076923077
+      complete_boundary_family: 0.7415384615384616
+      partial_boundary_family: 0.03076923076923077
+    rejections:
+      association.assignment_conflict: 665
+      association.heading_change: 304
+      association.lateral_residual: 52122
+      association.nonforward_or_gap: 2
+      association.short_span: 24
+      association.too_few_nodes: 287
+      boundary_selection.spline_residual_above_limit: 84
+      prefit.short_longitudinal_span: 6
+      projection.front.below_confidence: 35
+      projection.front.projection_invalid: 4083485
+      projection.left.below_confidence: 20
+      projection.left.projection_invalid: 3801141
+      projection.right.below_confidence: 14
+      projection.right.projection_invalid: 3403687
+    rejection_frame_counts:
+      association.assignment_conflict: 138
+      association.heading_change: 141
+      association.lateral_residual: 325
+      association.nonforward_or_gap: 2
+      association.short_span: 24
+      association.too_few_nodes: 220
+      boundary_selection.spline_residual_above_limit: 84
+      prefit.short_longitudinal_span: 6
+      projection.front.below_confidence: 33
+      projection.front.projection_invalid: 325
+      projection.left.below_confidence: 20
+      projection.left.projection_invalid: 325
+      projection.right.below_confidence: 13
+      projection.right.projection_invalid: 325
+    rejection_frame_rates:
+      association.assignment_conflict: 0.4246153846153846
+      association.heading_change: 0.4338461538461538
+      association.lateral_residual: 1.0
+      association.nonforward_or_gap: 0.006153846153846154
+      association.short_span: 0.07384615384615385
+      association.too_few_nodes: 0.676923076923077
+      boundary_selection.spline_residual_above_limit: 0.25846153846153846
+      prefit.short_longitudinal_span: 0.018461538461538463
+      projection.front.below_confidence: 0.10153846153846154
+      projection.front.projection_invalid: 1.0
+      projection.left.below_confidence: 0.06153846153846154
+      projection.left.projection_invalid: 1.0
+      projection.right.below_confidence: 0.04
+      projection.right.projection_invalid: 1.0
+    rejections_by_outcome:
+      boundaries_without_yellow:
+        association.assignment_conflict: 42
+        association.heading_change: 49
+        association.lateral_residual: 12168
+        association.nonforward_or_gap: 1
+        association.short_span: 7
+        association.too_few_nodes: 69
+        boundary_selection.spline_residual_above_limit: 74
+        projection.front.below_confidence: 9
+        projection.front.projection_invalid: 949494
+        projection.left.below_confidence: 4
+        projection.left.projection_invalid: 924221
+        projection.right.below_confidence: 7
+        projection.right.projection_invalid: 810713
+      complete_boundary_family:
+        association.assignment_conflict: 617
+        association.heading_change: 250
+        association.lateral_residual: 38278
+        association.nonforward_or_gap: 1
+        association.short_span: 13
+        association.too_few_nodes: 211
+        prefit.short_longitudinal_span: 3
+        projection.front.below_confidence: 25
+        projection.front.projection_invalid: 3007297
+        projection.left.below_confidence: 13
+        projection.left.projection_invalid: 2757895
+        projection.right.below_confidence: 7
+        projection.right.projection_invalid: 2485291
+      partial_boundary_family:
+        association.assignment_conflict: 6
+        association.heading_change: 5
+        association.lateral_residual: 1676
+        association.short_span: 4
+        association.too_few_nodes: 7
+        boundary_selection.spline_residual_above_limit: 10
+        prefit.short_longitudinal_span: 3
+        projection.front.below_confidence: 1
+        projection.front.projection_invalid: 126694
+        projection.left.below_confidence: 3
+        projection.left.projection_invalid: 119025
+        projection.right.projection_invalid: 107683
+    rejection_frame_counts_by_outcome:
+      boundaries_without_yellow:
+        association.assignment_conflict: 8
+        association.heading_change: 12
+        association.lateral_residual: 74
+        association.nonforward_or_gap: 1
+        association.short_span: 7
+        association.too_few_nodes: 36
+        boundary_selection.spline_residual_above_limit: 74
+        projection.front.below_confidence: 8
+        projection.front.projection_invalid: 74
+        projection.left.below_confidence: 4
+        projection.left.projection_invalid: 74
+        projection.right.below_confidence: 7
+        projection.right.projection_invalid: 74
+      complete_boundary_family:
+        association.assignment_conflict: 129
+        association.heading_change: 127
+        association.lateral_residual: 241
+        association.nonforward_or_gap: 1
+        association.short_span: 13
+        association.too_few_nodes: 178
+        prefit.short_longitudinal_span: 3
+        projection.front.below_confidence: 24
+        projection.front.projection_invalid: 241
+        projection.left.below_confidence: 13
+        projection.left.projection_invalid: 241
+        projection.right.below_confidence: 6
+        projection.right.projection_invalid: 241
+      partial_boundary_family:
+        association.assignment_conflict: 1
+        association.heading_change: 2
+        association.lateral_residual: 10
+        association.short_span: 4
+        association.too_few_nodes: 6
+        boundary_selection.spline_residual_above_limit: 10
+        prefit.short_longitudinal_span: 3
+        projection.front.below_confidence: 1
+        projection.front.projection_invalid: 10
+        projection.left.below_confidence: 3
+        projection.left.projection_invalid: 10
+        projection.right.projection_invalid: 10
+    rejection_frame_rates_by_outcome:
+      boundaries_without_yellow:
+        association.assignment_conflict: 0.10810810810810811
+        association.heading_change: 0.16216216216216217
+        association.lateral_residual: 1.0
+        association.nonforward_or_gap: 0.013513513513513514
+        association.short_span: 0.0945945945945946
+        association.too_few_nodes: 0.4864864864864865
+        boundary_selection.spline_residual_above_limit: 1.0
+        projection.front.below_confidence: 0.10810810810810811
+        projection.front.projection_invalid: 1.0
+        projection.left.below_confidence: 0.05405405405405406
+        projection.left.projection_invalid: 1.0
+        projection.right.below_confidence: 0.0945945945945946
+        projection.right.projection_invalid: 1.0
+      complete_boundary_family:
+        association.assignment_conflict: 0.5352697095435685
+        association.heading_change: 0.5269709543568465
+        association.lateral_residual: 1.0
+        association.nonforward_or_gap: 0.004149377593360996
+        association.short_span: 0.05394190871369295
+        association.too_few_nodes: 0.7385892116182573
+        prefit.short_longitudinal_span: 0.012448132780082987
+        projection.front.below_confidence: 0.0995850622406639
+        projection.front.projection_invalid: 1.0
+        projection.left.below_confidence: 0.05394190871369295
+        projection.left.projection_invalid: 1.0
+        projection.right.below_confidence: 0.024896265560165973
+        projection.right.projection_invalid: 1.0
+      partial_boundary_family:
+        association.assignment_conflict: 0.1
+        association.heading_change: 0.2
+        association.lateral_residual: 1.0
+        association.short_span: 0.4
+        association.too_few_nodes: 0.6
+        boundary_selection.spline_residual_above_limit: 1.0
+        prefit.short_longitudinal_span: 0.3
+        projection.front.below_confidence: 0.1
+        projection.front.projection_invalid: 1.0
+        projection.left.below_confidence: 0.3
+        projection.left.projection_invalid: 1.0
+        projection.right.projection_invalid: 1.0
+    current_streak_frames:
+      no_boundary: 0
+      no_yellow: 0
+      incomplete: 0
+    longest_streak_frames:
+      no_boundary: 0
+      no_yellow: 11
+      incomplete: 11
+    last_frame:
+      association:
+        accepted_tracks: 3
+        assignment_conflicts: 7
+        by_class:
+          '1':
+            accepted_tracks: 2
+            input_nodes: 164
+          '2':
+            accepted_tracks: 1
+            input_nodes: 46
+        candidate_pairs: 382
+        input_nodes: 210
+        raw_tracklets: 4
+        rejected_heading_change: 1
+        rejected_lateral_residual: 168
+        rejected_nonforward_or_gap: 0
+        rejected_short_span: 0
+        rejected_too_few_nodes: 1
+      boundary_selection:
+        eligible_lanes: 3
+        input_lanes: 3
+        rejected: {}
+        selected_boundaries: 3
+        selected_white: 2
+        selected_yellow: 1
+      counts:
+        boundaries: 3
+        boundary_completeness: 2
+        complete: true
+        evidence: 5793
+        lanes: 3
+        model_marking_pixels: 36845
+        nodes: 210
+        observations: 3
+        prefit_tracks: 3
+        shared_family_available: true
+        tracks: 3
+        yellow_boundaries: 1
+      marker_policy:
+        boundary: explicit_delete_missing_ids
+        candidate: explicit_delete_missing_ids
+        canonical_boundary_message: independent_of_marker_rendering
+      prefit:
+        eligible_tracks: 3
+        input_tracks: 3
+        rejected: {}
+        selected_tracks: 3
+        selected_white: 2
+        selected_yellow: 1
+      primary_outcome: complete_boundary_family
+      projection:
+        front:
+          accepted: 2833
+          below_confidence: 0
+          by_class:
+            '1':
+              accepted: 2171
+              below_confidence: 0
+              model_pixels: 7063
+              projection_invalid: 4892
+              threshold: 0.5
+            '2':
+              accepted: 662
+              below_confidence: 0
+              model_pixels: 7865
+              projection_invalid: 7203
+              threshold: 0.5
+          model_marking_pixels: 14928
+          projection_invalid: 12095
+        left:
+          accepted: 1228
+          below_confidence: 0
+          by_class:
+            '1':
+              accepted: 1228
+              below_confidence: 0
+              model_pixels: 3473
+              projection_invalid: 2245
+              threshold: 0.5
+            '2':
+              accepted: 0
+              below_confidence: 0
+              model_pixels: 7452
+              projection_invalid: 7452
+              threshold: 0.5
+          model_marking_pixels: 10925
+          projection_invalid: 9697
+        right:
+          accepted: 1732
+          below_confidence: 0
+          by_class:
+            '1':
+              accepted: 1732
+              below_confidence: 0
+              model_pixels: 4194
+              projection_invalid: 2462
+              threshold: 0.5
+            '2':
+              accepted: 0
+              below_confidence: 0
+              model_pixels: 6798
+              projection_invalid: 6798
+              threshold: 0.5
+          model_marking_pixels: 10992
+          projection_invalid: 9260
+      shared_family:
+        accepted: true
+        assignment:
+          left_outer_boundary:
+            candidate_count: 1
+            measured_separation_m: 3.585868526447853
+          right_outer_boundary:
+            candidate_count: 1
+            measured_separation_m: 3.5845307884867337
+        boundary_support:
+          left_outer_boundary:
+            bridged_length_ratio: 0.0686843069116249
+            inferred_length_m: 1.5548456822258303
+            invalid_length_m: 3.121945140629469
+            max_inferred_gap_m: 1.25
+            observed_length_m: 21.082722521329423
+            state: observed
+          right_outer_boundary:
+            bridged_length_ratio: 0.024260921257393996
+            inferred_length_m: 0.4824977742132971
+            invalid_length_m: 2.8449585527843224
+            max_inferred_gap_m: 0.0
+            observed_length_m: 19.405360938746597
+            state: observed
+          yellow_centre_boundary:
+            bridged_length_ratio: 0.34117724265791466
+            inferred_length_m: 7.249913961757829
+            invalid_length_m: 2.9821409346862677
+            max_inferred_gap_m: 7.0
+            observed_length_m: 13.999785769906396
+            state: observed
+        data_residual_p50_m: 0.06884932576977398
+        data_residual_p95_m: 0.2922672237748487
+        deployment_allowed: false
+        discarded_tracks: 0
+        eligible_tracks: 3
+        fit_ms: 30.343503021867946
+        inferred_roles: []
+        inlier_residual_p50_m: 0.0687209906509857
+        inlier_residual_p95_m: 0.2862422708039417
+        input_tracks: 3
+        local_support_count:
+          p50: 3.0
+          p95: 3.0
+        observed_role_count: 3
+        observed_roles:
+        - left_outer_boundary
+        - yellow_centre_boundary
+        - right_outer_boundary
+        outlier_rate: 0.004784688995215311
+        reason: accepted
+        representation: shared_parametric_bspline_normal_offsets_v2
+        runtime_debug_enabled: true
+        valid_family_length_m: 21.249699731664222
+        valid_x_m:
+        - -1.3912264460955641
+        - 19.687954443926994
+        weighted_rms_m: 0.08584329705937489
+        white_candidates: 2
+        widths_m:
+          left: 3.4583319235652796
+          right: 3.3934759512448283
+        yellow_candidates: 1
+      spline:
+        accepted_lanes: 3
+        input_tracks: 3
+        rejected:
+          linear_algebra_error: 0
+          value_error: 0
+      temporal:
+        expired_tracks: 0
+        input_observations: 3
+        matched: 3
+        missed_tracks: 0
+        new_tracks: 0
+        output_tracks: 3
+        previous_tracks: 3
+        reset: false
+        reset_reason: none
+        retained_internal_tracks: 3
+    available: true
+    frame_messages: 325
+    topic_available: true
+    malformed_messages: 0
+  shared_family_summary:
+    frames: 325
+    accepted_frames: 325
+    accepted_rate: 1.0
+    rejection_reasons:
+      accepted: 325
+    longest_rejected_streak_frames: 0
+    deployment_allowed_frames: 0
+    observed_role_presence_rates:
+      left_outer_boundary: 1.0
+      yellow_centre_boundary: 1.0
+      right_outer_boundary: 1.0
+    inferred_role_presence_rates:
+      left_outer_boundary: 0.0
+      yellow_centre_boundary: 0.0
+      right_outer_boundary: 0.0
+    fit_ms:
+      count: 325
+      min: 24.428661999991164
+      p50: 38.82914799032733
+      p95: 50.51336960750632
+      max: 61.2743980018422
+    data_residual_p95_m:
+      count: 325
+      min: 0.04766299023139408
+      p50: 0.20291962758643525
+      p95: 0.4850373603391656
+      max: 1.1487619246984326
+    inlier_residual_p95_m:
+      count: 325
+      min: 0.04766299023139408
+      p50: 0.18897075869100205
+      p95: 0.289364074623495
+      max: 0.33598052756451346
+    outlier_rate:
+      count: 325
+      min: 0.0
+      p50: 0.0
+      p95: 0.13793103448275862
+      max: 0.4009433962264151
+    valid_span_m:
+      count: 325
+      min: 10.94588640932401
+      p50: 20.510737569189285
+      p95: 21.46774369772296
+      max: 22.13424393491823
+    widths_m:
+      left:
+        count: 325
+        min: 3.4385689971962297
+        p50: 3.5200234695443884
+        p95: 3.6021479406323733
+        max: 3.6412146939752668
+      right:
+        count: 325
+        min: 3.3857532858167607
+        p50: 3.53611685085843
+        p95: 3.575709431142765
+        max: 3.5894381082781153
+    sample_length_m:
+      by_role:
+        left_outer_boundary:
+          observed: 6014.937841625709
+          structure_inferred: 636.2000510908149
+          invalid: 1612.1244923990023
+        yellow_centre_boundary:
+          observed: 4872.943330054419
+          structure_inferred: 1688.7275065881392
+          invalid: 1593.6728541905627
+        right_outer_boundary:
+          observed: 6112.895362906771
+          structure_inferred: 360.30819397784336
+          invalid: 1575.679695170538
+      total:
+        observed: 17000.776534586897
+        structure_inferred: 2685.2357516567977
+        invalid: 4781.477041760103
+      usable: 19686.012286243695
+      all: 24467.489328003798
+    sample_state_ratios:
+      observed_of_all: 0.694831
+      structure_inferred_of_all: 0.109747
+      invalid_of_all: 0.195422
+      usable_of_all: 0.804578
+      structure_inferred_of_usable: 0.136403
+    frame_usable_ratio:
+      count: 325
+      min: 0.4628366330476111
+      p50: 0.8417706910523056
+      p95: 0.9041416641907798
+      max: 0.9358380233852707
+    frame_inferred_of_usable:
+      count: 325
+      min: 0.039575874241028444
+      p50: 0.1398380213639957
+      p95: 0.2035343883089599
+      max: 0.28718128894907496
+    consumption_policy:
+      observed: primary
+      structure_inferred: degraded_with_confidence
+      invalid: forbidden
+      temporal_predicted: not_implemented
+    topic_available: true
+    malformed_messages: 0
+- run_id: 20260913_195750_kcity2025_shadow_static_avoid_return_foggy_11am_wheel
+  scenario: shadow_static_avoid_return
+  weather: foggy
+  sim_hour: 11
+  duration_s: 21.27
+  technical_quality_gates:
+    result_complete: true
+    camera_diagnostics_recorded: true
+    bev_diagnostics_recorded: true
+    lane_diagnostics_recorded: true
+    lane_boundaries_recorded: true
+    lane_outputs_positive: true
+    lane_errors_zero: true
+  technical_quality_passed: true
+  lane_diagnostics_final:
+    boundary_algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+    boundary_config_sha256: 6ed5378885a0f84083f6c19a22f4bfa5455be7e96e340110958edfb58126f64e
+    boundary_expected_count: '3'
+    boundary_operating_domain: shadow_two_way_v1
+    boundary_publish_p50_ms: '2.204959499067627'
+    boundary_publish_p95_ms: '5.472604154783767'
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    confidence_by_class: '{"1": 0.5, "2": 0.5}'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    errors: '0'
+    ground_plane_coefficients: '[0.0, 0.0, -0.35]'
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{"front": 922, "left": 922, "right": 918}'
+    last_counts: '{"boundary_completeness": 2, "evidence": 8925, "lane_candidates":
+      3, "lanes": 3, "nodes": 211, "prefit_tracks": 3, "shadow_boundaries": 3, "shadow_corridor_complete":
+      true, "shadow_white_boundaries": 2, "shadow_yellow_boundaries": 1, "shared_family_available":
+      true, "shared_family_observed_roles": 3, "tracks": 3, "white_lanes": 2, "yellow_lanes":
+      1}'
+    last_shared_family_audit: '{"accepted": true, "assignment": {"left_outer_boundary":
+      {"candidate_count": 1, "measured_separation_m": 3.627454708604445}, "right_outer_boundary":
+      {"candidate_count": 1, "measured_separation_m": 3.6114067177823594}}, "boundary_support":
+      {"left_outer_boundary": {"bridged_length_ratio": 0.0689143251685459, "inferred_length_m":
+      1.2889004790384608, "invalid_length_m": 8.339806600848803, "max_inferred_gap_m":
+      1.0, "observed_length_m": 17.41403937978127, "state": "observed"}, "right_outer_boundary":
+      {"bridged_length_ratio": 0.19743890122585744, "inferred_length_m": 3.223386370221484,
+      "invalid_length_m": 7.8335139169064405, "max_inferred_gap_m": 2.75, "observed_length_m":
+      13.102607900452345, "state": "observed"}, "yellow_centre_boundary": {"bridged_length_ratio":
+      0.08571398285453109, "inferred_length_m": 1.4999863313224595, "invalid_length_m":
+      8.083557958183992, "max_inferred_gap_m": 1.0, "observed_length_m": 15.99991603429449,
+      "state": "observed"}}, "data_residual_p50_m": 0.07755287916148898, "data_residual_p95_m":
+      0.2510368057615635, "deployment_allowed": false, "discarded_tracks": 0, "eligible_tracks":
+      3, "fit_ms": 41.730063006980345, "inferred_roles": [], "inlier_residual_p50_m":
+      0.07263732050756344, "inlier_residual_p95_m": 0.22781547280203704, "input_tracks":
+      3, "local_support_count": {"p50": 2.0, "p95": 3.0}, "observed_role_count": 3,
+      "observed_roles": ["left_outer_boundary", "yellow_centre_boundary", "right_outer_boundary"],
+      "outlier_rate": 0.023809523809523808, "reason": "accepted", "representation":
+      "shared_parametric_bspline_normal_offsets_v2", "runtime_debug_enabled": true,
+      "valid_family_length_m": 17.49990236561695, "valid_x_m": [-0.847320905751337,
+      16.29041993510187], "weighted_rms_m": 0.0835852214379785, "white_candidates":
+      2, "widths_m": {"left": 3.479557295310312, "right": 3.395306060369956}, "yellow_candidates":
+      1}'
+    last_timestamp_skew_ms: '1.7633'
+    marker_delete_counts: '{"boundary": 0, "candidate": 0, "shared_family": 573}'
+    marker_policy: explicit_delete_missing_ids
+    outputs: '865'
+    pair_errors_by_view: '{"front": 0, "left": 0, "right": 0}'
+    pipeline_audit: '{"current_streak_frames": {"incomplete": 0, "no_boundary": 0,
+      "no_yellow": 0}, "frames": 865, "last_frame": {"association": {"accepted_tracks":
+      3, "assignment_conflicts": 7, "by_class": {"1": {"accepted_tracks": 2, "input_nodes":
+      144}, "2": {"accepted_tracks": 1, "input_nodes": 67}}, "candidate_pairs": 329,
+      "input_nodes": 211, "raw_tracklets": 4, "rejected_heading_change": 1, "rejected_lateral_residual":
+      114, "rejected_nonforward_or_gap": 0, "rejected_short_span": 0, "rejected_too_few_nodes":
+      1}, "boundary_selection": {"eligible_lanes": 3, "input_lanes": 3, "rejected":
+      {}, "selected_boundaries": 3, "selected_white": 2, "selected_yellow": 1}, "counts":
+      {"boundaries": 3, "boundary_completeness": 2, "complete": true, "evidence":
+      8925, "lanes": 3, "model_marking_pixels": 41150, "nodes": 211, "observations":
+      3, "prefit_tracks": 3, "shared_family_available": true, "tracks": 3, "yellow_boundaries":
+      1}, "marker_policy": {"boundary": "explicit_delete_missing_ids", "candidate":
+      "explicit_delete_missing_ids", "canonical_boundary_message": "independent_of_marker_rendering"},
+      "prefit": {"eligible_tracks": 3, "input_tracks": 3, "rejected": {}, "selected_tracks":
+      3, "selected_white": 2, "selected_yellow": 1}, "primary_outcome": "complete_boundary_family",
+      "projection": {"front": {"accepted": 1883, "below_confidence": 0, "by_class":
+      {"1": {"accepted": 1125, "below_confidence": 0, "model_pixels": 6227, "projection_invalid":
+      5102, "threshold": 0.5}, "2": {"accepted": 758, "below_confidence": 0, "model_pixels":
+      7969, "projection_invalid": 7211, "threshold": 0.5}}, "model_marking_pixels":
+      14196, "projection_invalid": 12313}, "left": {"accepted": 5865, "below_confidence":
+      0, "by_class": {"1": {"accepted": 462, "below_confidence": 0, "model_pixels":
+      2850, "projection_invalid": 2388, "threshold": 0.5}, "2": {"accepted": 5403,
+      "below_confidence": 0, "model_pixels": 13546, "projection_invalid": 8143, "threshold":
+      0.5}}, "model_marking_pixels": 16396, "projection_invalid": 10531}, "right":
+      {"accepted": 1177, "below_confidence": 0, "by_class": {"1": {"accepted": 1177,
+      "below_confidence": 0, "model_pixels": 3637, "projection_invalid": 2460, "threshold":
+      0.5}, "2": {"accepted": 0, "below_confidence": 0, "model_pixels": 6921, "projection_invalid":
+      6921, "threshold": 0.5}}, "model_marking_pixels": 10558, "projection_invalid":
+      9381}}, "shared_family": {"accepted": true, "assignment": {"left_outer_boundary":
+      {"candidate_count": 1, "measured_separation_m": 3.627454708604445}, "right_outer_boundary":
+      {"candidate_count": 1, "measured_separation_m": 3.6114067177823594}}, "boundary_support":
+      {"left_outer_boundary": {"bridged_length_ratio": 0.0689143251685459, "inferred_length_m":
+      1.2889004790384608, "invalid_length_m": 8.339806600848803, "max_inferred_gap_m":
+      1.0, "observed_length_m": 17.41403937978127, "state": "observed"}, "right_outer_boundary":
+      {"bridged_length_ratio": 0.19743890122585744, "inferred_length_m": 3.223386370221484,
+      "invalid_length_m": 7.8335139169064405, "max_inferred_gap_m": 2.75, "observed_length_m":
+      13.102607900452345, "state": "observed"}, "yellow_centre_boundary": {"bridged_length_ratio":
+      0.08571398285453109, "inferred_length_m": 1.4999863313224595, "invalid_length_m":
+      8.083557958183992, "max_inferred_gap_m": 1.0, "observed_length_m": 15.99991603429449,
+      "state": "observed"}}, "data_residual_p50_m": 0.07755287916148898, "data_residual_p95_m":
+      0.2510368057615635, "deployment_allowed": false, "discarded_tracks": 0, "eligible_tracks":
+      3, "fit_ms": 41.730063006980345, "inferred_roles": [], "inlier_residual_p50_m":
+      0.07263732050756344, "inlier_residual_p95_m": 0.22781547280203704, "input_tracks":
+      3, "local_support_count": {"p50": 2.0, "p95": 3.0}, "observed_role_count": 3,
+      "observed_roles": ["left_outer_boundary", "yellow_centre_boundary", "right_outer_boundary"],
+      "outlier_rate": 0.023809523809523808, "reason": "accepted", "representation":
+      "shared_parametric_bspline_normal_offsets_v2", "runtime_debug_enabled": true,
+      "valid_family_length_m": 17.49990236561695, "valid_x_m": [-0.847320905751337,
+      16.29041993510187], "weighted_rms_m": 0.0835852214379785, "white_candidates":
+      2, "widths_m": {"left": 3.479557295310312, "right": 3.395306060369956}, "yellow_candidates":
+      1}, "spline": {"accepted_lanes": 3, "input_tracks": 3, "rejected": {"linear_algebra_error":
+      0, "value_error": 0}}, "temporal": {"expired_tracks": 0, "input_observations":
+      3, "matched": 3, "missed_tracks": 0, "new_tracks": 0, "output_tracks": 3, "previous_tracks":
+      3, "reset": false, "reset_reason": "none", "retained_internal_tracks": 3}},
+      "longest_streak_frames": {"incomplete": 11, "no_boundary": 0, "no_yellow": 11},
+      "outcome_rates": {"boundaries_without_yellow": 0.10982658959537572, "complete_boundary_family":
+      0.8473988439306358, "partial_boundary_family": 0.04277456647398844}, "outcomes":
+      {"boundaries_without_yellow": 95, "complete_boundary_family": 733, "partial_boundary_family":
+      37}, "rejection_frame_counts": {"association.assignment_conflict": 324, "association.heading_change":
+      331, "association.lateral_residual": 865, "association.nonforward_or_gap": 4,
+      "association.short_span": 57, "association.too_few_nodes": 496, "boundary_selection.spline_residual_above_limit":
+      132, "prefit.short_longitudinal_span": 10, "prefit.width_side_or_rank_rejected_white":
+      6, "projection.front.below_confidence": 63, "projection.front.projection_invalid":
+      865, "projection.left.below_confidence": 61, "projection.left.projection_invalid":
+      865, "projection.right.below_confidence": 15, "projection.right.projection_invalid":
+      865}, "rejection_frame_counts_by_outcome": {"boundaries_without_yellow": {"association.assignment_conflict":
+      9, "association.heading_change": 14, "association.lateral_residual": 95, "association.nonforward_or_gap":
+      1, "association.short_span": 9, "association.too_few_nodes": 41, "boundary_selection.spline_residual_above_limit":
+      95, "prefit.short_longitudinal_span": 2, "prefit.width_side_or_rank_rejected_white":
+      1, "projection.front.below_confidence": 10, "projection.front.projection_invalid":
+      95, "projection.left.below_confidence": 4, "projection.left.projection_invalid":
+      95, "projection.right.below_confidence": 8, "projection.right.projection_invalid":
+      95}, "complete_boundary_family": {"association.assignment_conflict": 305, "association.heading_change":
+      306, "association.lateral_residual": 733, "association.nonforward_or_gap": 3,
+      "association.short_span": 43, "association.too_few_nodes": 439, "prefit.short_longitudinal_span":
+      5, "prefit.width_side_or_rank_rejected_white": 3, "projection.front.below_confidence":
+      52, "projection.front.projection_invalid": 733, "projection.left.below_confidence":
+      51, "projection.left.projection_invalid": 733, "projection.right.below_confidence":
+      7, "projection.right.projection_invalid": 733}, "partial_boundary_family": {"association.assignment_conflict":
+      10, "association.heading_change": 11, "association.lateral_residual": 37, "association.short_span":
+      5, "association.too_few_nodes": 16, "boundary_selection.spline_residual_above_limit":
+      37, "prefit.short_longitudinal_span": 3, "prefit.width_side_or_rank_rejected_white":
+      2, "projection.front.below_confidence": 1, "projection.front.projection_invalid":
+      37, "projection.left.below_confidence": 6, "projection.left.projection_invalid":
+      37, "projection.right.projection_invalid": 37}}, "rejection_frame_rates": {"association.assignment_conflict":
+      0.3745664739884393, "association.heading_change": 0.38265895953757223, "association.lateral_residual":
+      1.0, "association.nonforward_or_gap": 0.004624277456647399, "association.short_span":
+      0.06589595375722543, "association.too_few_nodes": 0.5734104046242775, "boundary_selection.spline_residual_above_limit":
+      0.15260115606936417, "prefit.short_longitudinal_span": 0.011560693641618497,
+      "prefit.width_side_or_rank_rejected_white": 0.006936416184971098, "projection.front.below_confidence":
+      0.07283236994219654, "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.07052023121387284, "projection.left.projection_invalid": 1.0, "projection.right.below_confidence":
+      0.017341040462427744, "projection.right.projection_invalid": 1.0}, "rejection_frame_rates_by_outcome":
+      {"boundaries_without_yellow": {"association.assignment_conflict": 0.09473684210526316,
+      "association.heading_change": 0.14736842105263157, "association.lateral_residual":
+      1.0, "association.nonforward_or_gap": 0.010526315789473684, "association.short_span":
+      0.09473684210526316, "association.too_few_nodes": 0.43157894736842106, "boundary_selection.spline_residual_above_limit":
+      1.0, "prefit.short_longitudinal_span": 0.021052631578947368, "prefit.width_side_or_rank_rejected_white":
+      0.010526315789473684, "projection.front.below_confidence": 0.10526315789473684,
+      "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.042105263157894736, "projection.left.projection_invalid": 1.0, "projection.right.below_confidence":
+      0.08421052631578947, "projection.right.projection_invalid": 1.0}, "complete_boundary_family":
+      {"association.assignment_conflict": 0.41609822646657574, "association.heading_change":
+      0.417462482946794, "association.lateral_residual": 1.0, "association.nonforward_or_gap":
+      0.004092769440654843, "association.short_span": 0.058663028649386086, "association.too_few_nodes":
+      0.5989085948158254, "prefit.short_longitudinal_span": 0.0068212824010914054,
+      "prefit.width_side_or_rank_rejected_white": 0.004092769440654843, "projection.front.below_confidence":
+      0.07094133697135062, "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.06957708049113233, "projection.left.projection_invalid": 1.0, "projection.right.below_confidence":
+      0.009549795361527967, "projection.right.projection_invalid": 1.0}, "partial_boundary_family":
+      {"association.assignment_conflict": 0.2702702702702703, "association.heading_change":
+      0.2972972972972973, "association.lateral_residual": 1.0, "association.short_span":
+      0.13513513513513514, "association.too_few_nodes": 0.43243243243243246, "boundary_selection.spline_residual_above_limit":
+      1.0, "prefit.short_longitudinal_span": 0.08108108108108109, "prefit.width_side_or_rank_rejected_white":
+      0.05405405405405406, "projection.front.below_confidence": 0.02702702702702703,
+      "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.16216216216216217, "projection.left.projection_invalid": 1.0, "projection.right.projection_invalid":
+      1.0}}, "rejections": {"association.assignment_conflict": 1292, "association.heading_change":
+      820, "association.lateral_residual": 134585, "association.nonforward_or_gap":
+      5, "association.short_span": 57, "association.too_few_nodes": 635, "boundary_selection.spline_residual_above_limit":
+      133, "prefit.short_longitudinal_span": 10, "prefit.width_side_or_rank_rejected_white":
+      6, "projection.front.below_confidence": 66, "projection.front.projection_invalid":
+      10842728, "projection.left.below_confidence": 62, "projection.left.projection_invalid":
+      10105258, "projection.right.below_confidence": 16, "projection.right.projection_invalid":
+      9043163}, "rejections_by_outcome": {"boundaries_without_yellow": {"association.assignment_conflict":
+      53, "association.heading_change": 52, "association.lateral_residual": 15349,
+      "association.nonforward_or_gap": 1, "association.short_span": 9, "association.too_few_nodes":
+      76, "boundary_selection.spline_residual_above_limit": 95, "prefit.short_longitudinal_span":
+      2, "prefit.width_side_or_rank_rejected_white": 1, "projection.front.below_confidence":
+      11, "projection.front.projection_invalid": 1207908, "projection.left.below_confidence":
+      4, "projection.left.projection_invalid": 1162157, "projection.right.below_confidence":
+      8, "projection.right.projection_invalid": 1032069}, "complete_boundary_family":
+      {"association.assignment_conflict": 1196, "association.heading_change": 736,
+      "association.lateral_residual": 113843, "association.nonforward_or_gap": 4,
+      "association.short_span": 43, "association.too_few_nodes": 536, "prefit.short_longitudinal_span":
+      5, "prefit.width_side_or_rank_rejected_white": 3, "projection.front.below_confidence":
+      54, "projection.front.projection_invalid": 9172213, "projection.left.below_confidence":
+      52, "projection.left.projection_invalid": 8523427, "projection.right.below_confidence":
+      8, "projection.right.projection_invalid": 7629352}, "partial_boundary_family":
+      {"association.assignment_conflict": 43, "association.heading_change": 32, "association.lateral_residual":
+      5393, "association.short_span": 5, "association.too_few_nodes": 23, "boundary_selection.spline_residual_above_limit":
+      38, "prefit.short_longitudinal_span": 3, "prefit.width_side_or_rank_rejected_white":
+      2, "projection.front.below_confidence": 1, "projection.front.projection_invalid":
+      462607, "projection.left.below_confidence": 6, "projection.left.projection_invalid":
+      419674, "projection.right.projection_invalid": 381742}}}'
+    processing_fps: '7.11'
+    processing_p50_ms: '94.25087600538973'
+    processing_p95_ms: '116.31367950176354'
+    queue_drops_by_view: '{"front": 0, "left": 0, "right": 0}'
+    shadow_boundary_enabled: 'True'
+    shadow_boundary_parameters: '{"expected_lane_width_m": 3.55, "lane_width_max_m":
+      4.6, "lane_width_min_m": 2.4, "max_abs_heading_deg": 50.0, "max_abs_lateral_m":
+      7.0, "max_bridged_ratio": 0.45, "max_residual_p95_m": 0.3, "max_white_without_yellow":
+      2, "min_confidence": 0.5, "min_longitudinal_span_m": 3.0, "min_observed_length_m":
+      3.0, "reference_x_m": 5.0}'
+    shared_family_debug_enabled: 'True'
+    shared_family_deployment_allowed: 'False'
+    shared_family_errors: '0'
+    shared_family_fit_p50_ms: '39.0630164911272'
+    shared_family_fit_p95_ms: '50.629439945623744'
+    shared_family_representation: shared_parametric_bspline_normal_offsets_v2
+    sync_rejected: '167'
+    temporal_boundary_parameters: '{"max_lateral_residual_m": 0.65, "max_lateral_speed_mps":
+      4.0, "max_missed_frames": 8, "reset_gap_sec": 0.75, "velocity_smoothing": 0.5}'
+    views: '["front", "left", "right"]'
+  runtime_rates:
+    model_grid:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    fused_bev:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    boundaries:
+      messages: 186
+      average_hz: 8.864
+      end_window_hz: 9.486
+    pipeline_audit:
+      messages: 186
+      average_hz: 8.864
+      end_window_hz: 9.487
+    shared_family:
+      messages: 186
+      average_hz: 8.866
+      end_window_hz: 9.473
+  boundary_summary:
+    frames: 186
+    frames_with_any_boundary: 186
+    any_boundary_rate: 1.0
+    yellow_centre_frames: 182
+    yellow_centre_rate: 0.978495
+    yellow_observed_frames: 182
+    yellow_observed_rate: 0.978495
+    color_pair_frames: 181
+    color_pair_rate: 0.973118
+    color_triplet_frames: 159
+    color_triplet_rate: 0.854839
+    white_outer_fallback_frames: 4
+    white_outer_fallback_rate: 0.021505
+    common_support_frames: 186
+    common_support_rate: 1.0
+    preferred_reference_support_frames: 168
+    preferred_reference_support_rate: 0.903226
+    corridor_complete_frames: 159
+    corridor_complete_rate: 0.854839
+    unresolved_frames: 4
+    unresolved_rate: 0.021505
+    role_presence_frames:
+      left_outer_boundary: 177
+      right_outer_boundary: 163
+      unresolved: 4
+      yellow_centre_boundary: 182
+    role_presence_rates:
+      left_outer_boundary: 0.951613
+      right_outer_boundary: 0.876344
+      unresolved: 0.021505
+      yellow_centre_boundary: 0.978495
+    boundaries_total: 530
+    boundaries_per_frame: 2.849462
+    unique_stable_ids: 3
+    stable_id_switches_by_role: {}
+    stable_id_switches_total: 0
+    reacquired_events: 22
+    duplicate_role_frames: 0
+    lateral_order_error_frames: 0
+    order_invalid_frames: 0
+    longest_order_invalid_streak_frames: 0
+    longest_no_yellow_streak_frames: 2
+    longest_no_color_pair_streak_frames: 2
+    longest_no_color_triplet_streak_frames: 3
+  pipeline_summary:
+    frames: 186
+    outcomes:
+      boundaries_without_yellow: 4
+      complete_boundary_family: 159
+      partial_boundary_family: 23
+    outcome_rates:
+      boundaries_without_yellow: 0.021505376344086023
+      complete_boundary_family: 0.8548387096774194
+      partial_boundary_family: 0.12365591397849462
+    rejections:
+      association.assignment_conflict: 306
+      association.heading_change: 155
+      association.lateral_residual: 25368
+      association.short_span: 18
+      association.too_few_nodes: 117
+      boundary_selection.spline_residual_above_limit: 28
+      prefit.short_longitudinal_span: 2
+      prefit.width_side_or_rank_rejected_white: 4
+      projection.front.below_confidence: 6
+      projection.front.projection_invalid: 2320341
+      projection.left.below_confidence: 9
+      projection.left.projection_invalid: 2115273
+      projection.right.projection_invalid: 1908979
+    rejection_frame_counts:
+      association.assignment_conflict: 70
+      association.heading_change: 71
+      association.lateral_residual: 186
+      association.short_span: 18
+      association.too_few_nodes: 86
+      boundary_selection.spline_residual_above_limit: 27
+      prefit.short_longitudinal_span: 2
+      prefit.width_side_or_rank_rejected_white: 4
+      projection.front.below_confidence: 6
+      projection.front.projection_invalid: 186
+      projection.left.below_confidence: 9
+      projection.left.projection_invalid: 186
+      projection.right.projection_invalid: 186
+    rejection_frame_rates:
+      association.assignment_conflict: 0.3763440860215054
+      association.heading_change: 0.3817204301075269
+      association.lateral_residual: 1.0
+      association.short_span: 0.0967741935483871
+      association.too_few_nodes: 0.46236559139784944
+      boundary_selection.spline_residual_above_limit: 0.14516129032258066
+      prefit.short_longitudinal_span: 0.010752688172043012
+      prefit.width_side_or_rank_rejected_white: 0.021505376344086023
+      projection.front.below_confidence: 0.03225806451612903
+      projection.front.projection_invalid: 1.0
+      projection.left.below_confidence: 0.04838709677419355
+      projection.left.projection_invalid: 1.0
+      projection.right.projection_invalid: 1.0
+    rejections_by_outcome:
+      boundaries_without_yellow:
+        association.lateral_residual: 490
+        association.too_few_nodes: 1
+        boundary_selection.spline_residual_above_limit: 4
+        prefit.short_longitudinal_span: 1
+        prefit.width_side_or_rank_rejected_white: 1
+        projection.front.projection_invalid: 50994
+        projection.left.projection_invalid: 52775
+        projection.right.projection_invalid: 45214
+      complete_boundary_family:
+        association.assignment_conflict: 285
+        association.heading_change: 142
+        association.lateral_residual: 21799
+        association.short_span: 17
+        association.too_few_nodes: 108
+        prefit.short_longitudinal_span: 1
+        prefit.width_side_or_rank_rejected_white: 1
+        projection.front.below_confidence: 6
+        projection.front.projection_invalid: 1981818
+        projection.left.below_confidence: 8
+        projection.left.projection_invalid: 1803120
+        projection.right.projection_invalid: 1628259
+      partial_boundary_family:
+        association.assignment_conflict: 21
+        association.heading_change: 13
+        association.lateral_residual: 3079
+        association.short_span: 1
+        association.too_few_nodes: 8
+        boundary_selection.spline_residual_above_limit: 24
+        prefit.width_side_or_rank_rejected_white: 2
+        projection.front.projection_invalid: 287529
+        projection.left.below_confidence: 1
+        projection.left.projection_invalid: 259378
+        projection.right.projection_invalid: 235506
+    rejection_frame_counts_by_outcome:
+      boundaries_without_yellow:
+        association.lateral_residual: 4
+        association.too_few_nodes: 1
+        boundary_selection.spline_residual_above_limit: 4
+        prefit.short_longitudinal_span: 1
+        prefit.width_side_or_rank_rejected_white: 1
+        projection.front.projection_invalid: 4
+        projection.left.projection_invalid: 4
+        projection.right.projection_invalid: 4
+      complete_boundary_family:
+        association.assignment_conflict: 65
+        association.heading_change: 66
+        association.lateral_residual: 159
+        association.short_span: 17
+        association.too_few_nodes: 79
+        prefit.short_longitudinal_span: 1
+        prefit.width_side_or_rank_rejected_white: 1
+        projection.front.below_confidence: 6
+        projection.front.projection_invalid: 159
+        projection.left.below_confidence: 8
+        projection.left.projection_invalid: 159
+        projection.right.projection_invalid: 159
+      partial_boundary_family:
+        association.assignment_conflict: 5
+        association.heading_change: 5
+        association.lateral_residual: 23
+        association.short_span: 1
+        association.too_few_nodes: 6
+        boundary_selection.spline_residual_above_limit: 23
+        prefit.width_side_or_rank_rejected_white: 2
+        projection.front.projection_invalid: 23
+        projection.left.below_confidence: 1
+        projection.left.projection_invalid: 23
+        projection.right.projection_invalid: 23
+    rejection_frame_rates_by_outcome:
+      boundaries_without_yellow:
+        association.lateral_residual: 1.0
+        association.too_few_nodes: 0.25
+        boundary_selection.spline_residual_above_limit: 1.0
+        prefit.short_longitudinal_span: 0.25
+        prefit.width_side_or_rank_rejected_white: 0.25
+        projection.front.projection_invalid: 1.0
+        projection.left.projection_invalid: 1.0
+        projection.right.projection_invalid: 1.0
+      complete_boundary_family:
+        association.assignment_conflict: 0.4088050314465409
+        association.heading_change: 0.41509433962264153
+        association.lateral_residual: 1.0
+        association.short_span: 0.1069182389937107
+        association.too_few_nodes: 0.4968553459119497
+        prefit.short_longitudinal_span: 0.006289308176100629
+        prefit.width_side_or_rank_rejected_white: 0.006289308176100629
+        projection.front.below_confidence: 0.03773584905660377
+        projection.front.projection_invalid: 1.0
+        projection.left.below_confidence: 0.050314465408805034
+        projection.left.projection_invalid: 1.0
+        projection.right.projection_invalid: 1.0
+      partial_boundary_family:
+        association.assignment_conflict: 0.21739130434782608
+        association.heading_change: 0.21739130434782608
+        association.lateral_residual: 1.0
+        association.short_span: 0.043478260869565216
+        association.too_few_nodes: 0.2608695652173913
+        boundary_selection.spline_residual_above_limit: 1.0
+        prefit.width_side_or_rank_rejected_white: 0.08695652173913043
+        projection.front.projection_invalid: 1.0
+        projection.left.below_confidence: 0.043478260869565216
+        projection.left.projection_invalid: 1.0
+        projection.right.projection_invalid: 1.0
+    current_streak_frames:
+      no_boundary: 0
+      no_yellow: 0
+      incomplete: 0
+    longest_streak_frames:
+      no_boundary: 0
+      no_yellow: 2
+      incomplete: 3
+    last_frame:
+      association:
+        accepted_tracks: 3
+        assignment_conflicts: 7
+        by_class:
+          '1':
+            accepted_tracks: 2
+            input_nodes: 144
+          '2':
+            accepted_tracks: 1
+            input_nodes: 67
+        candidate_pairs: 329
+        input_nodes: 211
+        raw_tracklets: 4
+        rejected_heading_change: 1
+        rejected_lateral_residual: 114
+        rejected_nonforward_or_gap: 0
+        rejected_short_span: 0
+        rejected_too_few_nodes: 1
+      boundary_selection:
+        eligible_lanes: 3
+        input_lanes: 3
+        rejected: {}
+        selected_boundaries: 3
+        selected_white: 2
+        selected_yellow: 1
+      counts:
+        boundaries: 3
+        boundary_completeness: 2
+        complete: true
+        evidence: 8925
+        lanes: 3
+        model_marking_pixels: 41150
+        nodes: 211
+        observations: 3
+        prefit_tracks: 3
+        shared_family_available: true
+        tracks: 3
+        yellow_boundaries: 1
+      marker_policy:
+        boundary: explicit_delete_missing_ids
+        candidate: explicit_delete_missing_ids
+        canonical_boundary_message: independent_of_marker_rendering
+      prefit:
+        eligible_tracks: 3
+        input_tracks: 3
+        rejected: {}
+        selected_tracks: 3
+        selected_white: 2
+        selected_yellow: 1
+      primary_outcome: complete_boundary_family
+      projection:
+        front:
+          accepted: 1883
+          below_confidence: 0
+          by_class:
+            '1':
+              accepted: 1125
+              below_confidence: 0
+              model_pixels: 6227
+              projection_invalid: 5102
+              threshold: 0.5
+            '2':
+              accepted: 758
+              below_confidence: 0
+              model_pixels: 7969
+              projection_invalid: 7211
+              threshold: 0.5
+          model_marking_pixels: 14196
+          projection_invalid: 12313
+        left:
+          accepted: 5865
+          below_confidence: 0
+          by_class:
+            '1':
+              accepted: 462
+              below_confidence: 0
+              model_pixels: 2850
+              projection_invalid: 2388
+              threshold: 0.5
+            '2':
+              accepted: 5403
+              below_confidence: 0
+              model_pixels: 13546
+              projection_invalid: 8143
+              threshold: 0.5
+          model_marking_pixels: 16396
+          projection_invalid: 10531
+        right:
+          accepted: 1177
+          below_confidence: 0
+          by_class:
+            '1':
+              accepted: 1177
+              below_confidence: 0
+              model_pixels: 3637
+              projection_invalid: 2460
+              threshold: 0.5
+            '2':
+              accepted: 0
+              below_confidence: 0
+              model_pixels: 6921
+              projection_invalid: 6921
+              threshold: 0.5
+          model_marking_pixels: 10558
+          projection_invalid: 9381
+      shared_family:
+        accepted: true
+        assignment:
+          left_outer_boundary:
+            candidate_count: 1
+            measured_separation_m: 3.627454708604445
+          right_outer_boundary:
+            candidate_count: 1
+            measured_separation_m: 3.6114067177823594
+        boundary_support:
+          left_outer_boundary:
+            bridged_length_ratio: 0.0689143251685459
+            inferred_length_m: 1.2889004790384608
+            invalid_length_m: 8.339806600848803
+            max_inferred_gap_m: 1.0
+            observed_length_m: 17.41403937978127
+            state: observed
+          right_outer_boundary:
+            bridged_length_ratio: 0.19743890122585744
+            inferred_length_m: 3.223386370221484
+            invalid_length_m: 7.8335139169064405
+            max_inferred_gap_m: 2.75
+            observed_length_m: 13.102607900452345
+            state: observed
+          yellow_centre_boundary:
+            bridged_length_ratio: 0.08571398285453109
+            inferred_length_m: 1.4999863313224595
+            invalid_length_m: 8.083557958183992
+            max_inferred_gap_m: 1.0
+            observed_length_m: 15.99991603429449
+            state: observed
+        data_residual_p50_m: 0.07755287916148898
+        data_residual_p95_m: 0.2510368057615635
+        deployment_allowed: false
+        discarded_tracks: 0
+        eligible_tracks: 3
+        fit_ms: 41.730063006980345
+        inferred_roles: []
+        inlier_residual_p50_m: 0.07263732050756344
+        inlier_residual_p95_m: 0.22781547280203704
+        input_tracks: 3
+        local_support_count:
+          p50: 2.0
+          p95: 3.0
+        observed_role_count: 3
+        observed_roles:
+        - left_outer_boundary
+        - yellow_centre_boundary
+        - right_outer_boundary
+        outlier_rate: 0.023809523809523808
+        reason: accepted
+        representation: shared_parametric_bspline_normal_offsets_v2
+        runtime_debug_enabled: true
+        valid_family_length_m: 17.49990236561695
+        valid_x_m:
+        - -0.847320905751337
+        - 16.29041993510187
+        weighted_rms_m: 0.0835852214379785
+        white_candidates: 2
+        widths_m:
+          left: 3.479557295310312
+          right: 3.395306060369956
+        yellow_candidates: 1
+      spline:
+        accepted_lanes: 3
+        input_tracks: 3
+        rejected:
+          linear_algebra_error: 0
+          value_error: 0
+      temporal:
+        expired_tracks: 0
+        input_observations: 3
+        matched: 3
+        missed_tracks: 0
+        new_tracks: 0
+        output_tracks: 3
+        previous_tracks: 3
+        reset: false
+        reset_reason: none
+        retained_internal_tracks: 3
+    available: true
+    frame_messages: 186
+    topic_available: true
+    malformed_messages: 0
+  shared_family_summary:
+    frames: 186
+    accepted_frames: 186
+    accepted_rate: 1.0
+    rejection_reasons:
+      accepted: 186
+    longest_rejected_streak_frames: 0
+    deployment_allowed_frames: 0
+    observed_role_presence_rates:
+      left_outer_boundary: 1.0
+      yellow_centre_boundary: 1.0
+      right_outer_boundary: 1.0
+    inferred_role_presence_rates:
+      left_outer_boundary: 0.0
+      yellow_centre_boundary: 0.0
+      right_outer_boundary: 0.0
+    fit_ms:
+      count: 186
+      min: 28.64523301832378
+      p50: 39.658515495830216
+      p95: 50.632635240617674
+      max: 62.705388001631945
+    data_residual_p95_m:
+      count: 186
+      min: 0.033611488221076034
+      p50: 0.2365606122860932
+      p95: 1.3197424330109109
+      max: 1.9371680525001385
+    inlier_residual_p95_m:
+      count: 186
+      min: 0.033611488221076034
+      p50: 0.1747700624541273
+      p95: 0.2946484294365473
+      max: 0.31532527422032947
+    outlier_rate:
+      count: 186
+      min: 0.0
+      p50: 0.01683161416225258
+      p95: 0.3497263824884792
+      max: 0.37610619469026546
+    valid_span_m:
+      count: 186
+      min: 8.487196606999168
+      p50: 19.17942835475074
+      p95: 20.99011411864696
+      max: 21.741065578629918
+    widths_m:
+      left:
+        count: 186
+        min: 3.387205720731479
+        p50: 3.5197533623868615
+        p95: 3.627814503445241
+        max: 3.649883904663525
+      right:
+        count: 186
+        min: 3.361386136737727
+        p50: 3.5160504841993534
+        p95: 3.5874545919008263
+        max: 3.659808719267137
+    sample_length_m:
+      by_role:
+        left_outer_boundary:
+          observed: 2754.1151425714693
+          structure_inferred: 576.7972366679942
+          invalid: 1506.3959757937585
+        yellow_centre_boundary:
+          observed: 2996.4671059515317
+          structure_inferred: 317.24789519086386
+          invalid: 1441.2127175052358
+        right_outer_boundary:
+          observed: 2886.243420956466
+          structure_inferred: 410.94806661648926
+          invalid: 1377.2746812804996
+      total:
+        observed: 8636.825669479467
+        structure_inferred: 1304.9931984753473
+        invalid: 4324.883374579494
+      usable: 9941.818867954815
+      all: 14266.70224253431
+    sample_state_ratios:
+      observed_of_all: 0.605383
+      structure_inferred_of_all: 0.091471
+      invalid_of_all: 0.303145
+      usable_of_all: 0.696855
+      structure_inferred_of_usable: 0.131263
+    frame_usable_ratio:
+      count: 186
+      min: 0.33062900302109877
+      p50: 0.7199793046261538
+      p95: 0.8769711637965615
+      max: 0.9257701343061054
+    frame_inferred_of_usable:
+      count: 186
+      min: 0.0
+      p50: 0.13608109707485072
+      p95: 0.19717908903589285
+      max: 0.29357053213924766
+    consumption_policy:
+      observed: primary
+      structure_inferred: degraded_with_confidence
+      invalid: forbidden
+      temporal_predicted: not_implemented
+    topic_available: true
+    malformed_messages: 0
+- run_id: 20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel
+  scenario: shadow_static_avoid_return
+  weather: sunny
+  sim_hour: 13
+  duration_s: 28.78
+  technical_quality_gates:
+    result_complete: true
+    camera_diagnostics_recorded: true
+    bev_diagnostics_recorded: true
+    lane_diagnostics_recorded: true
+    lane_boundaries_recorded: true
+    lane_outputs_positive: true
+    lane_errors_zero: true
+  technical_quality_passed: true
+  lane_diagnostics_final:
+    boundary_algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+    boundary_config_sha256: 6ed5378885a0f84083f6c19a22f4bfa5455be7e96e340110958edfb58126f64e
+    boundary_expected_count: '3'
+    boundary_operating_domain: shadow_two_way_v1
+    boundary_publish_p50_ms: '2.1998264855938032'
+    boundary_publish_p95_ms: '5.676308811234773'
+    calibration_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    confidence_by_class: '{"1": 0.5, "2": 0.5}'
+    end_to_end_p50_ms: unavailable
+    end_to_end_p95_ms: unavailable
+    errors: '0'
+    ground_plane_coefficients: '[0.0, 0.0, -0.35]'
+    ground_plane_frame: base_link
+    ground_plane_source: lidar_ground_fit_20260911
+    inputs_by_view: '{"front": 1195, "left": 1195, "right": 1191}'
+    last_counts: '{"boundary_completeness": 1, "evidence": 7293, "lane_candidates":
+      3, "lanes": 3, "nodes": 204, "prefit_tracks": 3, "shadow_boundaries": 2, "shadow_corridor_complete":
+      false, "shadow_white_boundaries": 1, "shadow_yellow_boundaries": 1, "shared_family_available":
+      true, "shared_family_observed_roles": 3, "tracks": 3, "white_lanes": 2, "yellow_lanes":
+      1}'
+    last_shared_family_audit: '{"accepted": true, "assignment": {"left_outer_boundary":
+      {"candidate_count": 1, "measured_separation_m": 3.6416592896486426}, "right_outer_boundary":
+      {"candidate_count": 1, "measured_separation_m": 3.8309314616735137}}, "boundary_support":
+      {"left_outer_boundary": {"bridged_length_ratio": 0.06817724674585662, "inferred_length_m":
+      1.302746614036551, "invalid_length_m": 7.883790683544048, "max_inferred_gap_m":
+      1.0, "observed_length_m": 17.805484888663777, "state": "observed"}, "right_outer_boundary":
+      {"bridged_length_ratio": 0.36678685757826446, "inferred_length_m": 6.017842451814026,
+      "invalid_length_m": 7.5788407495239545, "max_inferred_gap_m": 6.0, "observed_length_m":
+      10.389077064188394, "state": "observed"}, "yellow_centre_boundary": {"bridged_length_ratio":
+      0.056338004576963016, "inferred_length_m": 0.9999953936968708, "invalid_length_m":
+      7.730452129694394, "max_inferred_gap_m": 0.5, "observed_length_m": 16.74993027736205,
+      "state": "observed"}}, "data_residual_p50_m": 0.057317519433826014, "data_residual_p95_m":
+      0.2623931651038193, "deployment_allowed": false, "discarded_tracks": 0, "eligible_tracks":
+      3, "fit_ms": 43.20257200743072, "inferred_roles": [], "inlier_residual_p50_m":
+      0.056464301407878725, "inlier_residual_p95_m": 0.22768337928328286, "input_tracks":
+      3, "local_support_count": {"p50": 2.0, "p95": 3.0}, "observed_role_count": 3,
+      "observed_roles": ["left_outer_boundary", "yellow_centre_boundary", "right_outer_boundary"],
+      "outlier_rate": 0.03431372549019608, "reason": "accepted", "representation":
+      "shared_parametric_bspline_normal_offsets_v2", "runtime_debug_enabled": true,
+      "valid_family_length_m": 17.74992567105892, "valid_x_m": [-0.7822034753548578,
+      16.668530450640354], "weighted_rms_m": 0.07462861060974947, "white_candidates":
+      2, "widths_m": {"left": 3.518628059459364, "right": 3.4789949627290815}, "yellow_candidates":
+      1}'
+    last_timestamp_skew_ms: '1.9019'
+    marker_delete_counts: '{"boundary": 0, "candidate": 0, "shared_family": 760}'
+    marker_policy: explicit_delete_missing_ids
+    outputs: '1126'
+    pair_errors_by_view: '{"front": 0, "left": 0, "right": 0}'
+    pipeline_audit: '{"current_streak_frames": {"incomplete": 13, "no_boundary": 0,
+      "no_yellow": 0}, "frames": 1126, "last_frame": {"association": {"accepted_tracks":
+      3, "assignment_conflicts": 0, "by_class": {"1": {"accepted_tracks": 2, "input_nodes":
+      136}, "2": {"accepted_tracks": 1, "input_nodes": 68}}, "candidate_pairs": 299,
+      "input_nodes": 204, "raw_tracklets": 3, "rejected_heading_change": 0, "rejected_lateral_residual":
+      98, "rejected_nonforward_or_gap": 0, "rejected_short_span": 0, "rejected_too_few_nodes":
+      0}, "boundary_selection": {"eligible_lanes": 2, "input_lanes": 3, "rejected":
+      {"spline_residual_above_limit": 1}, "selected_boundaries": 2, "selected_white":
+      1, "selected_yellow": 1}, "counts": {"boundaries": 2, "boundary_completeness":
+      1, "complete": false, "evidence": 7293, "lanes": 3, "model_marking_pixels":
+      38787, "nodes": 204, "observations": 2, "prefit_tracks": 3, "shared_family_available":
+      true, "tracks": 3, "yellow_boundaries": 1}, "marker_policy": {"boundary": "explicit_delete_missing_ids",
+      "candidate": "explicit_delete_missing_ids", "canonical_boundary_message": "independent_of_marker_rendering"},
+      "prefit": {"eligible_tracks": 3, "input_tracks": 3, "rejected": {}, "selected_tracks":
+      3, "selected_white": 2, "selected_yellow": 1}, "primary_outcome": "partial_boundary_family",
+      "projection": {"front": {"accepted": 1936, "below_confidence": 0, "by_class":
+      {"1": {"accepted": 1064, "below_confidence": 0, "model_pixels": 5796, "projection_invalid":
+      4732, "threshold": 0.5}, "2": {"accepted": 872, "below_confidence": 0, "model_pixels":
+      8215, "projection_invalid": 7343, "threshold": 0.5}}, "model_marking_pixels":
+      14011, "projection_invalid": 12075}, "left": {"accepted": 4819, "below_confidence":
+      0, "by_class": {"1": {"accepted": 424, "below_confidence": 0, "model_pixels":
+      2886, "projection_invalid": 2462, "threshold": 0.5}, "2": {"accepted": 4395,
+      "below_confidence": 0, "model_pixels": 11994, "projection_invalid": 7599, "threshold":
+      0.5}}, "model_marking_pixels": 14880, "projection_invalid": 10061}, "right":
+      {"accepted": 538, "below_confidence": 0, "by_class": {"1": {"accepted": 538,
+      "below_confidence": 0, "model_pixels": 3096, "projection_invalid": 2558, "threshold":
+      0.5}, "2": {"accepted": 0, "below_confidence": 0, "model_pixels": 6800, "projection_invalid":
+      6800, "threshold": 0.5}}, "model_marking_pixels": 9896, "projection_invalid":
+      9358}}, "shared_family": {"accepted": true, "assignment": {"left_outer_boundary":
+      {"candidate_count": 1, "measured_separation_m": 3.6416592896486426}, "right_outer_boundary":
+      {"candidate_count": 1, "measured_separation_m": 3.8309314616735137}}, "boundary_support":
+      {"left_outer_boundary": {"bridged_length_ratio": 0.06817724674585662, "inferred_length_m":
+      1.302746614036551, "invalid_length_m": 7.883790683544048, "max_inferred_gap_m":
+      1.0, "observed_length_m": 17.805484888663777, "state": "observed"}, "right_outer_boundary":
+      {"bridged_length_ratio": 0.36678685757826446, "inferred_length_m": 6.017842451814026,
+      "invalid_length_m": 7.5788407495239545, "max_inferred_gap_m": 6.0, "observed_length_m":
+      10.389077064188394, "state": "observed"}, "yellow_centre_boundary": {"bridged_length_ratio":
+      0.056338004576963016, "inferred_length_m": 0.9999953936968708, "invalid_length_m":
+      7.730452129694394, "max_inferred_gap_m": 0.5, "observed_length_m": 16.74993027736205,
+      "state": "observed"}}, "data_residual_p50_m": 0.057317519433826014, "data_residual_p95_m":
+      0.2623931651038193, "deployment_allowed": false, "discarded_tracks": 0, "eligible_tracks":
+      3, "fit_ms": 43.20257200743072, "inferred_roles": [], "inlier_residual_p50_m":
+      0.056464301407878725, "inlier_residual_p95_m": 0.22768337928328286, "input_tracks":
+      3, "local_support_count": {"p50": 2.0, "p95": 3.0}, "observed_role_count": 3,
+      "observed_roles": ["left_outer_boundary", "yellow_centre_boundary", "right_outer_boundary"],
+      "outlier_rate": 0.03431372549019608, "reason": "accepted", "representation":
+      "shared_parametric_bspline_normal_offsets_v2", "runtime_debug_enabled": true,
+      "valid_family_length_m": 17.74992567105892, "valid_x_m": [-0.7822034753548578,
+      16.668530450640354], "weighted_rms_m": 0.07462861060974947, "white_candidates":
+      2, "widths_m": {"left": 3.518628059459364, "right": 3.4789949627290815}, "yellow_candidates":
+      1}, "spline": {"accepted_lanes": 3, "input_tracks": 3, "rejected": {"linear_algebra_error":
+      0, "value_error": 0}}, "temporal": {"expired_tracks": 0, "input_observations":
+      2, "matched": 2, "missed_tracks": 0, "new_tracks": 0, "output_tracks": 2, "previous_tracks":
+      2, "reset": false, "reset_reason": "none", "retained_internal_tracks": 2}},
+      "longest_streak_frames": {"incomplete": 13, "no_boundary": 0, "no_yellow": 11},
+      "outcome_rates": {"boundaries_without_yellow": 0.10124333925399645, "complete_boundary_family":
+      0.8303730017761989, "partial_boundary_family": 0.06838365896980461}, "outcomes":
+      {"boundaries_without_yellow": 114, "complete_boundary_family": 935, "partial_boundary_family":
+      77}, "rejection_frame_counts": {"association.assignment_conflict": 365, "association.heading_change":
+      371, "association.lateral_residual": 1126, "association.nonforward_or_gap":
+      6, "association.short_span": 67, "association.too_few_nodes": 604, "boundary_selection.spline_residual_above_limit":
+      191, "prefit.short_longitudinal_span": 14, "prefit.width_side_or_rank_rejected_white":
+      17, "projection.front.below_confidence": 79, "projection.front.projection_invalid":
+      1126, "projection.left.below_confidence": 84, "projection.left.projection_invalid":
+      1126, "projection.right.below_confidence": 27, "projection.right.projection_invalid":
+      1126}, "rejection_frame_counts_by_outcome": {"boundaries_without_yellow": {"association.assignment_conflict":
+      14, "association.heading_change": 19, "association.lateral_residual": 114, "association.nonforward_or_gap":
+      1, "association.short_span": 14, "association.too_few_nodes": 54, "boundary_selection.spline_residual_above_limit":
+      114, "prefit.short_longitudinal_span": 4, "prefit.width_side_or_rank_rejected_white":
+      7, "projection.front.below_confidence": 12, "projection.front.projection_invalid":
+      114, "projection.left.below_confidence": 6, "projection.left.projection_invalid":
+      114, "projection.right.below_confidence": 9, "projection.right.projection_invalid":
+      114}, "complete_boundary_family": {"association.assignment_conflict": 337, "association.heading_change":
+      338, "association.lateral_residual": 935, "association.nonforward_or_gap": 4,
+      "association.short_span": 47, "association.too_few_nodes": 522, "prefit.short_longitudinal_span":
+      7, "prefit.width_side_or_rank_rejected_white": 7, "projection.front.below_confidence":
+      62, "projection.front.projection_invalid": 935, "projection.left.below_confidence":
+      65, "projection.left.projection_invalid": 935, "projection.right.below_confidence":
+      17, "projection.right.projection_invalid": 935}, "partial_boundary_family":
+      {"association.assignment_conflict": 14, "association.heading_change": 14, "association.lateral_residual":
+      77, "association.nonforward_or_gap": 1, "association.short_span": 6, "association.too_few_nodes":
+      28, "boundary_selection.spline_residual_above_limit": 77, "prefit.short_longitudinal_span":
+      3, "prefit.width_side_or_rank_rejected_white": 3, "projection.front.below_confidence":
+      5, "projection.front.projection_invalid": 77, "projection.left.below_confidence":
+      13, "projection.left.projection_invalid": 77, "projection.right.below_confidence":
+      1, "projection.right.projection_invalid": 77}}, "rejection_frame_rates": {"association.assignment_conflict":
+      0.3241563055062167, "association.heading_change": 0.32948490230905864, "association.lateral_residual":
+      1.0, "association.nonforward_or_gap": 0.0053285968028419185, "association.short_span":
+      0.05950266429840142, "association.too_few_nodes": 0.5364120781527532, "boundary_selection.spline_residual_above_limit":
+      0.16962699822380106, "prefit.short_longitudinal_span": 0.012433392539964476,
+      "prefit.width_side_or_rank_rejected_white": 0.015097690941385435, "projection.front.below_confidence":
+      0.07015985790408526, "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.07460035523978685, "projection.left.projection_invalid": 1.0, "projection.right.below_confidence":
+      0.023978685612788632, "projection.right.projection_invalid": 1.0}, "rejection_frame_rates_by_outcome":
+      {"boundaries_without_yellow": {"association.assignment_conflict": 0.12280701754385964,
+      "association.heading_change": 0.16666666666666666, "association.lateral_residual":
+      1.0, "association.nonforward_or_gap": 0.008771929824561403, "association.short_span":
+      0.12280701754385964, "association.too_few_nodes": 0.47368421052631576, "boundary_selection.spline_residual_above_limit":
+      1.0, "prefit.short_longitudinal_span": 0.03508771929824561, "prefit.width_side_or_rank_rejected_white":
+      0.06140350877192982, "projection.front.below_confidence": 0.10526315789473684,
+      "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.05263157894736842, "projection.left.projection_invalid": 1.0, "projection.right.below_confidence":
+      0.07894736842105263, "projection.right.projection_invalid": 1.0}, "complete_boundary_family":
+      {"association.assignment_conflict": 0.360427807486631, "association.heading_change":
+      0.36149732620320857, "association.lateral_residual": 1.0, "association.nonforward_or_gap":
+      0.0042780748663101605, "association.short_span": 0.05026737967914439, "association.too_few_nodes":
+      0.558288770053476, "prefit.short_longitudinal_span": 0.0074866310160427805,
+      "prefit.width_side_or_rank_rejected_white": 0.0074866310160427805, "projection.front.below_confidence":
+      0.06631016042780749, "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.06951871657754011, "projection.left.projection_invalid": 1.0, "projection.right.below_confidence":
+      0.01818181818181818, "projection.right.projection_invalid": 1.0}, "partial_boundary_family":
+      {"association.assignment_conflict": 0.18181818181818182, "association.heading_change":
+      0.18181818181818182, "association.lateral_residual": 1.0, "association.nonforward_or_gap":
+      0.012987012987012988, "association.short_span": 0.07792207792207792, "association.too_few_nodes":
+      0.36363636363636365, "boundary_selection.spline_residual_above_limit": 1.0,
+      "prefit.short_longitudinal_span": 0.03896103896103896, "prefit.width_side_or_rank_rejected_white":
+      0.03896103896103896, "projection.front.below_confidence": 0.06493506493506493,
+      "projection.front.projection_invalid": 1.0, "projection.left.below_confidence":
+      0.16883116883116883, "projection.left.projection_invalid": 1.0, "projection.right.below_confidence":
+      0.012987012987012988, "projection.right.projection_invalid": 1.0}}, "rejections":
+      {"association.assignment_conflict": 1546, "association.heading_change": 872,
+      "association.lateral_residual": 170860, "association.nonforward_or_gap": 7,
+      "association.short_span": 68, "association.too_few_nodes": 764, "boundary_selection.spline_residual_above_limit":
+      198, "prefit.short_longitudinal_span": 14, "prefit.width_side_or_rank_rejected_white":
+      17, "projection.front.below_confidence": 82, "projection.front.projection_invalid":
+      14157976, "projection.left.below_confidence": 87, "projection.left.projection_invalid":
+      13187710, "projection.right.below_confidence": 28, "projection.right.projection_invalid":
+      11847741}, "rejections_by_outcome": {"boundaries_without_yellow": {"association.assignment_conflict":
+      88, "association.heading_change": 57, "association.lateral_residual": 18312,
+      "association.nonforward_or_gap": 1, "association.short_span": 15, "association.too_few_nodes":
+      90, "boundary_selection.spline_residual_above_limit": 119, "prefit.short_longitudinal_span":
+      4, "prefit.width_side_or_rank_rejected_white": 7, "projection.front.below_confidence":
+      13, "projection.front.projection_invalid": 1456190, "projection.left.below_confidence":
+      6, "projection.left.projection_invalid": 1413122, "projection.right.below_confidence":
+      9, "projection.right.projection_invalid": 1250583}, "complete_boundary_family":
+      {"association.assignment_conflict": 1387, "association.heading_change": 775,
+      "association.lateral_residual": 142144, "association.nonforward_or_gap": 5,
+      "association.short_span": 47, "association.too_few_nodes": 635, "prefit.short_longitudinal_span":
+      7, "prefit.width_side_or_rank_rejected_white": 7, "projection.front.below_confidence":
+      64, "projection.front.projection_invalid": 11741563, "projection.left.below_confidence":
+      68, "projection.left.projection_invalid": 10909321, "projection.right.below_confidence":
+      18, "projection.right.projection_invalid": 9804188}, "partial_boundary_family":
+      {"association.assignment_conflict": 71, "association.heading_change": 40, "association.lateral_residual":
+      10404, "association.nonforward_or_gap": 1, "association.short_span": 6, "association.too_few_nodes":
+      39, "boundary_selection.spline_residual_above_limit": 79, "prefit.short_longitudinal_span":
+      3, "prefit.width_side_or_rank_rejected_white": 3, "projection.front.below_confidence":
+      5, "projection.front.projection_invalid": 960223, "projection.left.below_confidence":
+      13, "projection.left.projection_invalid": 865267, "projection.right.below_confidence":
+      1, "projection.right.projection_invalid": 792970}}}'
+    processing_fps: '9.303'
+    processing_p50_ms: '96.15601650148164'
+    processing_p95_ms: '116.35880619578529'
+    queue_drops_by_view: '{"front": 0, "left": 0, "right": 0}'
+    shadow_boundary_enabled: 'True'
+    shadow_boundary_parameters: '{"expected_lane_width_m": 3.55, "lane_width_max_m":
+      4.6, "lane_width_min_m": 2.4, "max_abs_heading_deg": 50.0, "max_abs_lateral_m":
+      7.0, "max_bridged_ratio": 0.45, "max_residual_p95_m": 0.3, "max_white_without_yellow":
+      2, "min_confidence": 0.5, "min_longitudinal_span_m": 3.0, "min_observed_length_m":
+      3.0, "reference_x_m": 5.0}'
+    shared_family_debug_enabled: 'True'
+    shared_family_deployment_allowed: 'False'
+    shared_family_errors: '0'
+    shared_family_fit_p50_ms: '39.92595949966926'
+    shared_family_fit_p95_ms: '50.7058735442115'
+    shared_family_representation: shared_parametric_bspline_normal_offsets_v2
+    sync_rejected: '203'
+    temporal_boundary_parameters: '{"max_lateral_residual_m": 0.65, "max_lateral_speed_mps":
+      4.0, "max_missed_frames": 8, "reset_gap_sec": 0.75, "velocity_smoothing": 0.5}'
+    views: '["front", "left", "right"]'
+  runtime_rates:
+    model_grid:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    fused_bev:
+      messages: 0
+      average_hz: 0.0
+      end_window_hz: 0.0
+    boundaries:
+      messages: 261
+      average_hz: 9.275
+      end_window_hz: 9.415
+    pipeline_audit:
+      messages: 261
+      average_hz: 9.275
+      end_window_hz: 9.414
+    shared_family:
+      messages: 261
+      average_hz: 9.277
+      end_window_hz: 9.425
+  boundary_summary:
+    frames: 261
+    frames_with_any_boundary: 261
+    any_boundary_rate: 1.0
+    yellow_centre_frames: 242
+    yellow_centre_rate: 0.927203
+    yellow_observed_frames: 242
+    yellow_observed_rate: 0.927203
+    color_pair_frames: 241
+    color_pair_rate: 0.923372
+    color_triplet_frames: 202
+    color_triplet_rate: 0.773946
+    white_outer_fallback_frames: 14
+    white_outer_fallback_rate: 0.05364
+    common_support_frames: 261
+    common_support_rate: 1.0
+    preferred_reference_support_frames: 227
+    preferred_reference_support_rate: 0.869732
+    corridor_complete_frames: 202
+    corridor_complete_rate: 0.773946
+    unresolved_frames: 19
+    unresolved_rate: 0.072797
+    role_presence_frames:
+      left_outer_boundary: 239
+      right_outer_boundary: 204
+      unresolved: 19
+      yellow_centre_boundary: 242
+    role_presence_rates:
+      left_outer_boundary: 0.915709
+      right_outer_boundary: 0.781609
+      unresolved: 0.072797
+      yellow_centre_boundary: 0.927203
+    boundaries_total: 718
+    boundaries_per_frame: 2.750958
+    unique_stable_ids: 4
+    stable_id_switches_by_role:
+      yellow_centre_boundary: 1
+    stable_id_switches_total: 1
+    reacquired_events: 21
+    duplicate_role_frames: 0
+    lateral_order_error_frames: 0
+    order_invalid_frames: 0
+    longest_order_invalid_streak_frames: 0
+    longest_no_yellow_streak_frames: 5
+    longest_no_color_pair_streak_frames: 5
+    longest_no_color_triplet_streak_frames: 13
+  pipeline_summary:
+    frames: 261
+    outcomes:
+      boundaries_without_yellow: 19
+      complete_boundary_family: 202
+      partial_boundary_family: 40
+    outcome_rates:
+      boundaries_without_yellow: 0.07279693486590039
+      complete_boundary_family: 0.7739463601532567
+      partial_boundary_family: 0.1532567049808429
+    rejections:
+      association.assignment_conflict: 254
+      association.heading_change: 52
+      association.lateral_residual: 36275
+      association.nonforward_or_gap: 2
+      association.short_span: 11
+      association.too_few_nodes: 129
+      boundary_selection.spline_residual_above_limit: 65
+      prefit.short_longitudinal_span: 4
+      prefit.width_side_or_rank_rejected_white: 11
+      projection.front.below_confidence: 16
+      projection.front.projection_invalid: 3315248
+      projection.left.below_confidence: 25
+      projection.left.projection_invalid: 3082452
+      projection.right.below_confidence: 12
+      projection.right.projection_invalid: 2804578
+    rejection_frame_counts:
+      association.assignment_conflict: 41
+      association.heading_change: 40
+      association.lateral_residual: 261
+      association.nonforward_or_gap: 2
+      association.short_span: 10
+      association.too_few_nodes: 108
+      boundary_selection.spline_residual_above_limit: 59
+      prefit.short_longitudinal_span: 4
+      prefit.width_side_or_rank_rejected_white: 11
+      projection.front.below_confidence: 16
+      projection.front.projection_invalid: 261
+      projection.left.below_confidence: 23
+      projection.left.projection_invalid: 261
+      projection.right.below_confidence: 12
+      projection.right.projection_invalid: 261
+    rejection_frame_rates:
+      association.assignment_conflict: 0.15708812260536398
+      association.heading_change: 0.1532567049808429
+      association.lateral_residual: 1.0
+      association.nonforward_or_gap: 0.007662835249042145
+      association.short_span: 0.038314176245210725
+      association.too_few_nodes: 0.41379310344827586
+      boundary_selection.spline_residual_above_limit: 0.2260536398467433
+      prefit.short_longitudinal_span: 0.01532567049808429
+      prefit.width_side_or_rank_rejected_white: 0.0421455938697318
+      projection.front.below_confidence: 0.06130268199233716
+      projection.front.projection_invalid: 1.0
+      projection.left.below_confidence: 0.08812260536398467
+      projection.left.projection_invalid: 1.0
+      projection.right.below_confidence: 0.04597701149425287
+      projection.right.projection_invalid: 1.0
+    rejections_by_outcome:
+      boundaries_without_yellow:
+        association.assignment_conflict: 35
+        association.heading_change: 5
+        association.lateral_residual: 2963
+        association.short_span: 6
+        association.too_few_nodes: 14
+        boundary_selection.spline_residual_above_limit: 24
+        prefit.short_longitudinal_span: 2
+        prefit.width_side_or_rank_rejected_white: 6
+        projection.front.below_confidence: 2
+        projection.front.projection_invalid: 248282
+        projection.left.below_confidence: 2
+        projection.left.projection_invalid: 250965
+        projection.right.below_confidence: 1
+        projection.right.projection_invalid: 218514
+      complete_boundary_family:
+        association.assignment_conflict: 191
+        association.heading_change: 39
+        association.lateral_residual: 28301
+        association.nonforward_or_gap: 1
+        association.short_span: 4
+        association.too_few_nodes: 99
+        prefit.short_longitudinal_span: 2
+        prefit.width_side_or_rank_rejected_white: 4
+        projection.front.below_confidence: 10
+        projection.front.projection_invalid: 2569350
+        projection.left.below_confidence: 16
+        projection.left.projection_invalid: 2385894
+        projection.right.below_confidence: 10
+        projection.right.projection_invalid: 2174836
+      partial_boundary_family:
+        association.assignment_conflict: 28
+        association.heading_change: 8
+        association.lateral_residual: 5011
+        association.nonforward_or_gap: 1
+        association.short_span: 1
+        association.too_few_nodes: 16
+        boundary_selection.spline_residual_above_limit: 41
+        prefit.width_side_or_rank_rejected_white: 1
+        projection.front.below_confidence: 4
+        projection.front.projection_invalid: 497616
+        projection.left.below_confidence: 7
+        projection.left.projection_invalid: 445593
+        projection.right.below_confidence: 1
+        projection.right.projection_invalid: 411228
+    rejection_frame_counts_by_outcome:
+      boundaries_without_yellow:
+        association.assignment_conflict: 5
+        association.heading_change: 5
+        association.lateral_residual: 19
+        association.short_span: 5
+        association.too_few_nodes: 13
+        boundary_selection.spline_residual_above_limit: 19
+        prefit.short_longitudinal_span: 2
+        prefit.width_side_or_rank_rejected_white: 6
+        projection.front.below_confidence: 2
+        projection.front.projection_invalid: 19
+        projection.left.below_confidence: 2
+        projection.left.projection_invalid: 19
+        projection.right.below_confidence: 1
+        projection.right.projection_invalid: 19
+      complete_boundary_family:
+        association.assignment_conflict: 32
+        association.heading_change: 32
+        association.lateral_residual: 202
+        association.nonforward_or_gap: 1
+        association.short_span: 4
+        association.too_few_nodes: 83
+        prefit.short_longitudinal_span: 2
+        prefit.width_side_or_rank_rejected_white: 4
+        projection.front.below_confidence: 10
+        projection.front.projection_invalid: 202
+        projection.left.below_confidence: 14
+        projection.left.projection_invalid: 202
+        projection.right.below_confidence: 10
+        projection.right.projection_invalid: 202
+      partial_boundary_family:
+        association.assignment_conflict: 4
+        association.heading_change: 3
+        association.lateral_residual: 40
+        association.nonforward_or_gap: 1
+        association.short_span: 1
+        association.too_few_nodes: 12
+        boundary_selection.spline_residual_above_limit: 40
+        prefit.width_side_or_rank_rejected_white: 1
+        projection.front.below_confidence: 4
+        projection.front.projection_invalid: 40
+        projection.left.below_confidence: 7
+        projection.left.projection_invalid: 40
+        projection.right.below_confidence: 1
+        projection.right.projection_invalid: 40
+    rejection_frame_rates_by_outcome:
+      boundaries_without_yellow:
+        association.assignment_conflict: 0.2631578947368421
+        association.heading_change: 0.2631578947368421
+        association.lateral_residual: 1.0
+        association.short_span: 0.2631578947368421
+        association.too_few_nodes: 0.6842105263157895
+        boundary_selection.spline_residual_above_limit: 1.0
+        prefit.short_longitudinal_span: 0.10526315789473684
+        prefit.width_side_or_rank_rejected_white: 0.3157894736842105
+        projection.front.below_confidence: 0.10526315789473684
+        projection.front.projection_invalid: 1.0
+        projection.left.below_confidence: 0.10526315789473684
+        projection.left.projection_invalid: 1.0
+        projection.right.below_confidence: 0.05263157894736842
+        projection.right.projection_invalid: 1.0
+      complete_boundary_family:
+        association.assignment_conflict: 0.15841584158415842
+        association.heading_change: 0.15841584158415842
+        association.lateral_residual: 1.0
+        association.nonforward_or_gap: 0.0049504950495049506
+        association.short_span: 0.019801980198019802
+        association.too_few_nodes: 0.41089108910891087
+        prefit.short_longitudinal_span: 0.009900990099009901
+        prefit.width_side_or_rank_rejected_white: 0.019801980198019802
+        projection.front.below_confidence: 0.04950495049504951
+        projection.front.projection_invalid: 1.0
+        projection.left.below_confidence: 0.06930693069306931
+        projection.left.projection_invalid: 1.0
+        projection.right.below_confidence: 0.04950495049504951
+        projection.right.projection_invalid: 1.0
+      partial_boundary_family:
+        association.assignment_conflict: 0.1
+        association.heading_change: 0.075
+        association.lateral_residual: 1.0
+        association.nonforward_or_gap: 0.025
+        association.short_span: 0.025
+        association.too_few_nodes: 0.3
+        boundary_selection.spline_residual_above_limit: 1.0
+        prefit.width_side_or_rank_rejected_white: 0.025
+        projection.front.below_confidence: 0.1
+        projection.front.projection_invalid: 1.0
+        projection.left.below_confidence: 0.175
+        projection.left.projection_invalid: 1.0
+        projection.right.below_confidence: 0.025
+        projection.right.projection_invalid: 1.0
+    current_streak_frames:
+      no_boundary: 0
+      no_yellow: 0
+      incomplete: 13
+    longest_streak_frames:
+      no_boundary: 0
+      no_yellow: 5
+      incomplete: 13
+    last_frame:
+      association:
+        accepted_tracks: 3
+        assignment_conflicts: 0
+        by_class:
+          '1':
+            accepted_tracks: 2
+            input_nodes: 136
+          '2':
+            accepted_tracks: 1
+            input_nodes: 68
+        candidate_pairs: 299
+        input_nodes: 204
+        raw_tracklets: 3
+        rejected_heading_change: 0
+        rejected_lateral_residual: 98
+        rejected_nonforward_or_gap: 0
+        rejected_short_span: 0
+        rejected_too_few_nodes: 0
+      boundary_selection:
+        eligible_lanes: 2
+        input_lanes: 3
+        rejected:
+          spline_residual_above_limit: 1
+        selected_boundaries: 2
+        selected_white: 1
+        selected_yellow: 1
+      counts:
+        boundaries: 2
+        boundary_completeness: 1
+        complete: false
+        evidence: 7293
+        lanes: 3
+        model_marking_pixels: 38787
+        nodes: 204
+        observations: 2
+        prefit_tracks: 3
+        shared_family_available: true
+        tracks: 3
+        yellow_boundaries: 1
+      marker_policy:
+        boundary: explicit_delete_missing_ids
+        candidate: explicit_delete_missing_ids
+        canonical_boundary_message: independent_of_marker_rendering
+      prefit:
+        eligible_tracks: 3
+        input_tracks: 3
+        rejected: {}
+        selected_tracks: 3
+        selected_white: 2
+        selected_yellow: 1
+      primary_outcome: partial_boundary_family
+      projection:
+        front:
+          accepted: 1936
+          below_confidence: 0
+          by_class:
+            '1':
+              accepted: 1064
+              below_confidence: 0
+              model_pixels: 5796
+              projection_invalid: 4732
+              threshold: 0.5
+            '2':
+              accepted: 872
+              below_confidence: 0
+              model_pixels: 8215
+              projection_invalid: 7343
+              threshold: 0.5
+          model_marking_pixels: 14011
+          projection_invalid: 12075
+        left:
+          accepted: 4819
+          below_confidence: 0
+          by_class:
+            '1':
+              accepted: 424
+              below_confidence: 0
+              model_pixels: 2886
+              projection_invalid: 2462
+              threshold: 0.5
+            '2':
+              accepted: 4395
+              below_confidence: 0
+              model_pixels: 11994
+              projection_invalid: 7599
+              threshold: 0.5
+          model_marking_pixels: 14880
+          projection_invalid: 10061
+        right:
+          accepted: 538
+          below_confidence: 0
+          by_class:
+            '1':
+              accepted: 538
+              below_confidence: 0
+              model_pixels: 3096
+              projection_invalid: 2558
+              threshold: 0.5
+            '2':
+              accepted: 0
+              below_confidence: 0
+              model_pixels: 6800
+              projection_invalid: 6800
+              threshold: 0.5
+          model_marking_pixels: 9896
+          projection_invalid: 9358
+      shared_family:
+        accepted: true
+        assignment:
+          left_outer_boundary:
+            candidate_count: 1
+            measured_separation_m: 3.6416592896486426
+          right_outer_boundary:
+            candidate_count: 1
+            measured_separation_m: 3.8309314616735137
+        boundary_support:
+          left_outer_boundary:
+            bridged_length_ratio: 0.06817724674585662
+            inferred_length_m: 1.302746614036551
+            invalid_length_m: 7.883790683544048
+            max_inferred_gap_m: 1.0
+            observed_length_m: 17.805484888663777
+            state: observed
+          right_outer_boundary:
+            bridged_length_ratio: 0.36678685757826446
+            inferred_length_m: 6.017842451814026
+            invalid_length_m: 7.5788407495239545
+            max_inferred_gap_m: 6.0
+            observed_length_m: 10.389077064188394
+            state: observed
+          yellow_centre_boundary:
+            bridged_length_ratio: 0.056338004576963016
+            inferred_length_m: 0.9999953936968708
+            invalid_length_m: 7.730452129694394
+            max_inferred_gap_m: 0.5
+            observed_length_m: 16.74993027736205
+            state: observed
+        data_residual_p50_m: 0.057317519433826014
+        data_residual_p95_m: 0.2623931651038193
+        deployment_allowed: false
+        discarded_tracks: 0
+        eligible_tracks: 3
+        fit_ms: 43.20257200743072
+        inferred_roles: []
+        inlier_residual_p50_m: 0.056464301407878725
+        inlier_residual_p95_m: 0.22768337928328286
+        input_tracks: 3
+        local_support_count:
+          p50: 2.0
+          p95: 3.0
+        observed_role_count: 3
+        observed_roles:
+        - left_outer_boundary
+        - yellow_centre_boundary
+        - right_outer_boundary
+        outlier_rate: 0.03431372549019608
+        reason: accepted
+        representation: shared_parametric_bspline_normal_offsets_v2
+        runtime_debug_enabled: true
+        valid_family_length_m: 17.74992567105892
+        valid_x_m:
+        - -0.7822034753548578
+        - 16.668530450640354
+        weighted_rms_m: 0.07462861060974947
+        white_candidates: 2
+        widths_m:
+          left: 3.518628059459364
+          right: 3.4789949627290815
+        yellow_candidates: 1
+      spline:
+        accepted_lanes: 3
+        input_tracks: 3
+        rejected:
+          linear_algebra_error: 0
+          value_error: 0
+      temporal:
+        expired_tracks: 0
+        input_observations: 2
+        matched: 2
+        missed_tracks: 0
+        new_tracks: 0
+        output_tracks: 2
+        previous_tracks: 2
+        reset: false
+        reset_reason: none
+        retained_internal_tracks: 2
+    available: true
+    frame_messages: 261
+    topic_available: true
+    malformed_messages: 0
+  shared_family_summary:
+    frames: 261
+    accepted_frames: 261
+    accepted_rate: 1.0
+    rejection_reasons:
+      accepted: 261
+    longest_rejected_streak_frames: 0
+    deployment_allowed_frames: 0
+    observed_role_presence_rates:
+      left_outer_boundary: 1.0
+      yellow_centre_boundary: 1.0
+      right_outer_boundary: 1.0
+    inferred_role_presence_rates:
+      left_outer_boundary: 0.0
+      yellow_centre_boundary: 0.0
+      right_outer_boundary: 0.0
+    fit_ms:
+      count: 261
+      min: 26.011918991571292
+      p50: 41.40604002168402
+      p95: 51.310351002030075
+      max: 61.48266000673175
+    data_residual_p95_m:
+      count: 261
+      min: 0.042217205196334984
+      p50: 0.1742480480989701
+      p95: 0.3942240163857105
+      max: 1.4452456772495186
+    inlier_residual_p95_m:
+      count: 261
+      min: 0.042217205196334984
+      p50: 0.16375064236146822
+      p95: 0.29801885055453103
+      max: 0.31363973621749164
+    outlier_rate:
+      count: 261
+      min: 0.0
+      p50: 0.0
+      p95: 0.1038961038961039
+      max: 0.37799043062200954
+    valid_span_m:
+      count: 261
+      min: 9.463765811936266
+      p50: 19.81044759351791
+      p95: 21.693413099432917
+      max: 22.198251157167004
+    widths_m:
+      left:
+        count: 261
+        min: 3.4520314708321576
+        p50: 3.518656222971417
+        p95: 3.595438753350403
+        max: 3.675610251001017
+      right:
+        count: 261
+        min: 3.4261205449405074
+        p50: 3.531931874753815
+        p95: 3.580253676131177
+        max: 3.7251718521989434
+    sample_length_m:
+      by_role:
+        left_outer_boundary:
+          observed: 4639.829763239678
+          structure_inferred: 425.9542878269028
+          invalid: 1644.6490118421812
+        yellow_centre_boundary:
+          observed: 4542.445795761617
+          structure_inferred: 473.99760042879615
+          invalid: 1623.9192393856647
+        right_outer_boundary:
+          observed: 4278.115220035678
+          structure_inferred: 689.2991479770069
+          invalid: 1607.7253909106496
+      total:
+        observed: 13460.390779036974
+        structure_inferred: 1589.251036232706
+        invalid: 4876.293642138496
+      usable: 15049.64181526968
+      all: 19925.935457408177
+    sample_state_ratios:
+      observed_of_all: 0.675521
+      structure_inferred_of_all: 0.079758
+      invalid_of_all: 0.244721
+      usable_of_all: 0.755279
+      structure_inferred_of_usable: 0.105601
+    frame_usable_ratio:
+      count: 261
+      min: 0.3580655672145771
+      p50: 0.780170083643961
+      p95: 0.9223965803044198
+      max: 0.9411559752724997
+    frame_inferred_of_usable:
+      count: 261
+      min: 0.004761757593399676
+      p50: 0.10130286692844805
+      p95: 0.2239071479572496
+      max: 0.31569941778897087
+    consumption_policy:
+      observed: primary
+      structure_inferred: degraded_with_confidence
+      invalid: forbidden
+      temporal_predicted: not_implemented
+    topic_available: true
+    malformed_messages: 0
+scenario_summary:
+  shadow_boundary_straddle:
+    frames: 354
+    frames_with_any_boundary: 354
+    any_boundary_rate: 1.0
+    yellow_centre_frames: 337
+    yellow_centre_rate: 0.951977
+    yellow_observed_frames: 337
+    yellow_observed_rate: 0.951977
+    color_pair_frames: 337
+    color_pair_rate: 0.951977
+    color_triplet_frames: 333
+    color_triplet_rate: 0.940678
+    white_outer_fallback_frames: 17
+    white_outer_fallback_rate: 0.048023
+    common_support_frames: 354
+    common_support_rate: 1.0
+    preferred_reference_support_frames: 166
+    preferred_reference_support_rate: 0.468927
+    corridor_complete_frames: 333
+    corridor_complete_rate: 0.940678
+    unresolved_frames: 17
+    unresolved_rate: 0.048023
+    role_presence_frames:
+      left_outer_boundary: 334
+      right_outer_boundary: 336
+      unresolved: 17
+      yellow_centre_boundary: 337
+    role_presence_rates:
+      left_outer_boundary: 0.943503
+      right_outer_boundary: 0.949153
+      unresolved: 0.048023
+      yellow_centre_boundary: 0.951977
+    boundaries_total: 1041
+    boundaries_per_frame: 2.940678
+    unique_stable_ids: 4
+    stable_id_switches_by_role:
+      yellow_centre_boundary: 1
+    stable_id_switches_total: 1
+    reacquired_events: 7
+    duplicate_role_frames: 0
+    lateral_order_error_frames: 0
+    order_invalid_frames: 0
+    longest_order_invalid_streak_frames: 0
+    longest_no_yellow_streak_frames: 10
+    longest_no_color_pair_streak_frames: 10
+    longest_no_color_triplet_streak_frames: 10
+  shadow_lateral_sweep:
+    frames: 325
+    frames_with_any_boundary: 325
+    any_boundary_rate: 1.0
+    yellow_centre_frames: 251
+    yellow_centre_rate: 0.772308
+    yellow_observed_frames: 251
+    yellow_observed_rate: 0.772308
+    color_pair_frames: 251
+    color_pair_rate: 0.772308
+    color_triplet_frames: 241
+    color_triplet_rate: 0.741538
+    white_outer_fallback_frames: 74
+    white_outer_fallback_rate: 0.227692
+    common_support_frames: 325
+    common_support_rate: 1.0
+    preferred_reference_support_frames: 182
+    preferred_reference_support_rate: 0.56
+    corridor_complete_frames: 241
+    corridor_complete_rate: 0.741538
+    unresolved_frames: 74
+    unresolved_rate: 0.227692
+    role_presence_frames:
+      left_outer_boundary: 244
+      right_outer_boundary: 248
+      unresolved: 74
+      yellow_centre_boundary: 251
+    role_presence_rates:
+      left_outer_boundary: 0.750769
+      right_outer_boundary: 0.763077
+      unresolved: 0.227692
+      yellow_centre_boundary: 0.772308
+    boundaries_total: 891
+    boundaries_per_frame: 2.741538
+    unique_stable_ids: 8
+    stable_id_switches_by_role:
+      yellow_centre_boundary: 5
+    stable_id_switches_total: 5
+    reacquired_events: 21
+    duplicate_role_frames: 0
+    lateral_order_error_frames: 0
+    order_invalid_frames: 0
+    longest_order_invalid_streak_frames: 0
+    longest_no_yellow_streak_frames: 11
+    longest_no_color_pair_streak_frames: 11
+    longest_no_color_triplet_streak_frames: 11
+  shadow_static_avoid_return:
+    frames: 447
+    frames_with_any_boundary: 447
+    any_boundary_rate: 1.0
+    yellow_centre_frames: 424
+    yellow_centre_rate: 0.948546
+    yellow_observed_frames: 424
+    yellow_observed_rate: 0.948546
+    color_pair_frames: 422
+    color_pair_rate: 0.944072
+    color_triplet_frames: 361
+    color_triplet_rate: 0.807606
+    white_outer_fallback_frames: 18
+    white_outer_fallback_rate: 0.040268
+    common_support_frames: 447
+    common_support_rate: 1.0
+    preferred_reference_support_frames: 395
+    preferred_reference_support_rate: 0.883669
+    corridor_complete_frames: 361
+    corridor_complete_rate: 0.807606
+    unresolved_frames: 23
+    unresolved_rate: 0.051454
+    role_presence_frames:
+      left_outer_boundary: 416
+      right_outer_boundary: 367
+      unresolved: 23
+      yellow_centre_boundary: 424
+    role_presence_rates:
+      left_outer_boundary: 0.930649
+      right_outer_boundary: 0.821029
+      unresolved: 0.051454
+      yellow_centre_boundary: 0.948546
+    boundaries_total: 1248
+    boundaries_per_frame: 2.791946
+    unique_stable_ids: 7
+    stable_id_switches_by_role:
+      yellow_centre_boundary: 1
+    stable_id_switches_total: 1
+    reacquired_events: 43
+    duplicate_role_frames: 0
+    lateral_order_error_frames: 0
+    order_invalid_frames: 0
+    longest_order_invalid_streak_frames: 0
+    longest_no_yellow_streak_frames: 5
+    longest_no_color_pair_streak_frames: 5
+    longest_no_color_triplet_streak_frames: 13
+weather_summary:
+  shadow_boundary_straddle:
+    sunny:
+      frames: 354
+      frames_with_any_boundary: 354
+      any_boundary_rate: 1.0
+      yellow_centre_frames: 337
+      yellow_centre_rate: 0.951977
+      yellow_observed_frames: 337
+      yellow_observed_rate: 0.951977
+      color_pair_frames: 337
+      color_pair_rate: 0.951977
+      color_triplet_frames: 333
+      color_triplet_rate: 0.940678
+      white_outer_fallback_frames: 17
+      white_outer_fallback_rate: 0.048023
+      common_support_frames: 354
+      common_support_rate: 1.0
+      preferred_reference_support_frames: 166
+      preferred_reference_support_rate: 0.468927
+      corridor_complete_frames: 333
+      corridor_complete_rate: 0.940678
+      unresolved_frames: 17
+      unresolved_rate: 0.048023
+      role_presence_frames:
+        left_outer_boundary: 334
+        right_outer_boundary: 336
+        unresolved: 17
+        yellow_centre_boundary: 337
+      role_presence_rates:
+        left_outer_boundary: 0.943503
+        right_outer_boundary: 0.949153
+        unresolved: 0.048023
+        yellow_centre_boundary: 0.951977
+      boundaries_total: 1041
+      boundaries_per_frame: 2.940678
+      unique_stable_ids: 4
+      stable_id_switches_by_role:
+        yellow_centre_boundary: 1
+      stable_id_switches_total: 1
+      reacquired_events: 7
+      duplicate_role_frames: 0
+      lateral_order_error_frames: 0
+      order_invalid_frames: 0
+      longest_order_invalid_streak_frames: 0
+      longest_no_yellow_streak_frames: 10
+      longest_no_color_pair_streak_frames: 10
+      longest_no_color_triplet_streak_frames: 10
+  shadow_lateral_sweep:
+    sunny:
+      frames: 325
+      frames_with_any_boundary: 325
+      any_boundary_rate: 1.0
+      yellow_centre_frames: 251
+      yellow_centre_rate: 0.772308
+      yellow_observed_frames: 251
+      yellow_observed_rate: 0.772308
+      color_pair_frames: 251
+      color_pair_rate: 0.772308
+      color_triplet_frames: 241
+      color_triplet_rate: 0.741538
+      white_outer_fallback_frames: 74
+      white_outer_fallback_rate: 0.227692
+      common_support_frames: 325
+      common_support_rate: 1.0
+      preferred_reference_support_frames: 182
+      preferred_reference_support_rate: 0.56
+      corridor_complete_frames: 241
+      corridor_complete_rate: 0.741538
+      unresolved_frames: 74
+      unresolved_rate: 0.227692
+      role_presence_frames:
+        left_outer_boundary: 244
+        right_outer_boundary: 248
+        unresolved: 74
+        yellow_centre_boundary: 251
+      role_presence_rates:
+        left_outer_boundary: 0.750769
+        right_outer_boundary: 0.763077
+        unresolved: 0.227692
+        yellow_centre_boundary: 0.772308
+      boundaries_total: 891
+      boundaries_per_frame: 2.741538
+      unique_stable_ids: 8
+      stable_id_switches_by_role:
+        yellow_centre_boundary: 5
+      stable_id_switches_total: 5
+      reacquired_events: 21
+      duplicate_role_frames: 0
+      lateral_order_error_frames: 0
+      order_invalid_frames: 0
+      longest_order_invalid_streak_frames: 0
+      longest_no_yellow_streak_frames: 11
+      longest_no_color_pair_streak_frames: 11
+      longest_no_color_triplet_streak_frames: 11
+  shadow_static_avoid_return:
+    foggy:
+      frames: 186
+      frames_with_any_boundary: 186
+      any_boundary_rate: 1.0
+      yellow_centre_frames: 182
+      yellow_centre_rate: 0.978495
+      yellow_observed_frames: 182
+      yellow_observed_rate: 0.978495
+      color_pair_frames: 181
+      color_pair_rate: 0.973118
+      color_triplet_frames: 159
+      color_triplet_rate: 0.854839
+      white_outer_fallback_frames: 4
+      white_outer_fallback_rate: 0.021505
+      common_support_frames: 186
+      common_support_rate: 1.0
+      preferred_reference_support_frames: 168
+      preferred_reference_support_rate: 0.903226
+      corridor_complete_frames: 159
+      corridor_complete_rate: 0.854839
+      unresolved_frames: 4
+      unresolved_rate: 0.021505
+      role_presence_frames:
+        left_outer_boundary: 177
+        right_outer_boundary: 163
+        unresolved: 4
+        yellow_centre_boundary: 182
+      role_presence_rates:
+        left_outer_boundary: 0.951613
+        right_outer_boundary: 0.876344
+        unresolved: 0.021505
+        yellow_centre_boundary: 0.978495
+      boundaries_total: 530
+      boundaries_per_frame: 2.849462
+      unique_stable_ids: 3
+      stable_id_switches_by_role: {}
+      stable_id_switches_total: 0
+      reacquired_events: 22
+      duplicate_role_frames: 0
+      lateral_order_error_frames: 0
+      order_invalid_frames: 0
+      longest_order_invalid_streak_frames: 0
+      longest_no_yellow_streak_frames: 2
+      longest_no_color_pair_streak_frames: 2
+      longest_no_color_triplet_streak_frames: 3
+    sunny:
+      frames: 261
+      frames_with_any_boundary: 261
+      any_boundary_rate: 1.0
+      yellow_centre_frames: 242
+      yellow_centre_rate: 0.927203
+      yellow_observed_frames: 242
+      yellow_observed_rate: 0.927203
+      color_pair_frames: 241
+      color_pair_rate: 0.923372
+      color_triplet_frames: 202
+      color_triplet_rate: 0.773946
+      white_outer_fallback_frames: 14
+      white_outer_fallback_rate: 0.05364
+      common_support_frames: 261
+      common_support_rate: 1.0
+      preferred_reference_support_frames: 227
+      preferred_reference_support_rate: 0.869732
+      corridor_complete_frames: 202
+      corridor_complete_rate: 0.773946
+      unresolved_frames: 19
+      unresolved_rate: 0.072797
+      role_presence_frames:
+        left_outer_boundary: 239
+        right_outer_boundary: 204
+        unresolved: 19
+        yellow_centre_boundary: 242
+      role_presence_rates:
+        left_outer_boundary: 0.915709
+        right_outer_boundary: 0.781609
+        unresolved: 0.072797
+        yellow_centre_boundary: 0.927203
+      boundaries_total: 718
+      boundaries_per_frame: 2.750958
+      unique_stable_ids: 4
+      stable_id_switches_by_role:
+        yellow_centre_boundary: 1
+      stable_id_switches_total: 1
+      reacquired_events: 21
+      duplicate_role_frames: 0
+      lateral_order_error_frames: 0
+      order_invalid_frames: 0
+      longest_order_invalid_streak_frames: 0
+      longest_no_yellow_streak_frames: 5
+      longest_no_color_pair_streak_frames: 5
+      longest_no_color_triplet_streak_frames: 13
+runtime_rate_summary:
+  shadow_boundary_straddle:
+    model_grid:
+      min_hz: 0.0
+      median_hz: 0.0
+      max_hz: 0.0
+    fused_bev:
+      min_hz: 0.0
+      median_hz: 0.0
+      max_hz: 0.0
+    boundaries:
+      min_hz: 9.08
+      median_hz: 9.08
+      max_hz: 9.08
+    pipeline_audit:
+      min_hz: 9.08
+      median_hz: 9.08
+      max_hz: 9.08
+    shared_family:
+      min_hz: 9.082
+      median_hz: 9.082
+      max_hz: 9.082
+  shadow_lateral_sweep:
+    model_grid:
+      min_hz: 0.0
+      median_hz: 0.0
+      max_hz: 0.0
+    fused_bev:
+      min_hz: 0.0
+      median_hz: 0.0
+      max_hz: 0.0
+    boundaries:
+      min_hz: 8.854
+      median_hz: 8.854
+      max_hz: 8.854
+    pipeline_audit:
+      min_hz: 8.854
+      median_hz: 8.854
+      max_hz: 8.854
+    shared_family:
+      min_hz: 8.857
+      median_hz: 8.857
+      max_hz: 8.857
+  shadow_static_avoid_return:
+    model_grid:
+      min_hz: 0.0
+      median_hz: 0.0
+      max_hz: 0.0
+    fused_bev:
+      min_hz: 0.0
+      median_hz: 0.0
+      max_hz: 0.0
+    boundaries:
+      min_hz: 8.864
+      median_hz: 9.0695
+      max_hz: 9.275
+    pipeline_audit:
+      min_hz: 8.864
+      median_hz: 9.0695
+      max_hz: 9.275
+    shared_family:
+      min_hz: 8.866
+      median_hz: 9.0715
+      max_hz: 9.277
+shared_runtime_scenario_summary:
+  shadow_boundary_straddle:
+    frames: 354
+    accepted_frames: 354
+    accepted_rate: 1.0
+    rejection_reasons:
+      accepted: 354
+    longest_rejected_streak_frames: 0
+    deployment_allowed_frames: 0
+    observed_role_presence_rates:
+      left_outer_boundary: 1.0
+      yellow_centre_boundary: 1.0
+      right_outer_boundary: 1.0
+    inferred_role_presence_rates:
+      left_outer_boundary: 0.0
+      yellow_centre_boundary: 0.0
+      right_outer_boundary: 0.0
+    fit_ms:
+      count: 354
+      min: 22.456981998402625
+      p50: 39.04494550079107
+      p95: 50.95057195430854
+      max: 69.69721801578999
+    data_residual_p95_m:
+      count: 354
+      min: 0.03985072671074001
+      p50: 0.20907693572353936
+      p95: 0.49032318887742987
+      max: 1.7198244056102474
+    inlier_residual_p95_m:
+      count: 354
+      min: 0.03985072671074001
+      p50: 0.19651483239308706
+      p95: 0.2778227450612487
+      max: 0.3437309110690084
+    outlier_rate:
+      count: 354
+      min: 0.0
+      p50: 0.0
+      p95: 0.1619508749544295
+      max: 0.5369458128078818
+    valid_span_m:
+      count: 354
+      min: 5.701090087458734
+      p50: 20.56990052224596
+      p95: 21.999117105393786
+      max: 22.286690452154687
+    widths_m:
+      left:
+        count: 354
+        min: 3.467091043555135
+        p50: 3.5290815554246118
+        p95: 3.6016553958396322
+        max: 3.6019737293490786
+      right:
+        count: 354
+        min: 3.4075414584198622
+        p50: 3.5440364306957326
+        p95: 3.582564481142191
+        max: 3.601471433719185
+    sample_length_m:
+      by_role:
+        left_outer_boundary:
+          observed: 6489.971714904865
+          structure_inferred: 589.4311268238833
+          invalid: 1883.3107454132155
+        yellow_centre_boundary:
+          observed: 5040.1903711692075
+          structure_inferred: 1946.7220736125996
+          invalid: 1808.7556435008803
+        right_outer_boundary:
+          observed: 6338.864470056633
+          structure_inferred: 555.1620625447645
+          invalid: 1735.42739831656
+      total:
+        observed: 17869.026556130706
+        structure_inferred: 3091.3152629812475
+        invalid: 5427.493787230656
+      usable: 20960.341819111953
+      all: 26387.83560634261
+    sample_state_ratios:
+      observed_of_all: 0.677169
+      structure_inferred_of_all: 0.117149
+      invalid_of_all: 0.205682
+      usable_of_all: 0.794318
+      structure_inferred_of_usable: 0.147484
+    frame_usable_ratio:
+      count: 354
+      min: 0.21730982543162553
+      p50: 0.8540285171586331
+      p95: 0.9394914365898231
+      max: 0.957757592184063
+    frame_inferred_of_usable:
+      count: 354
+      min: 0.022923839964426655
+      p50: 0.139199222511025
+      p95: 0.22836421415836256
+      max: 0.42210099397150763
+    consumption_policy:
+      observed: primary
+      structure_inferred: degraded_with_confidence
+      invalid: forbidden
+      temporal_predicted: not_implemented
+    runs: 1
+  shadow_lateral_sweep:
+    frames: 325
+    accepted_frames: 325
+    accepted_rate: 1.0
+    rejection_reasons:
+      accepted: 325
+    longest_rejected_streak_frames: 0
+    deployment_allowed_frames: 0
+    observed_role_presence_rates:
+      left_outer_boundary: 1.0
+      yellow_centre_boundary: 1.0
+      right_outer_boundary: 1.0
+    inferred_role_presence_rates:
+      left_outer_boundary: 0.0
+      yellow_centre_boundary: 0.0
+      right_outer_boundary: 0.0
+    fit_ms:
+      count: 325
+      min: 24.428661999991164
+      p50: 38.82914799032733
+      p95: 50.51336960750632
+      max: 61.2743980018422
+    data_residual_p95_m:
+      count: 325
+      min: 0.04766299023139408
+      p50: 0.20291962758643525
+      p95: 0.4850373603391656
+      max: 1.1487619246984326
+    inlier_residual_p95_m:
+      count: 325
+      min: 0.04766299023139408
+      p50: 0.18897075869100205
+      p95: 0.289364074623495
+      max: 0.33598052756451346
+    outlier_rate:
+      count: 325
+      min: 0.0
+      p50: 0.0
+      p95: 0.13793103448275862
+      max: 0.4009433962264151
+    valid_span_m:
+      count: 325
+      min: 10.94588640932401
+      p50: 20.510737569189285
+      p95: 21.46774369772296
+      max: 22.13424393491823
+    widths_m:
+      left:
+        count: 325
+        min: 3.4385689971962297
+        p50: 3.5200234695443884
+        p95: 3.6021479406323733
+        max: 3.6412146939752668
+      right:
+        count: 325
+        min: 3.3857532858167607
+        p50: 3.53611685085843
+        p95: 3.575709431142765
+        max: 3.5894381082781153
+    sample_length_m:
+      by_role:
+        left_outer_boundary:
+          observed: 6014.937841625709
+          structure_inferred: 636.2000510908149
+          invalid: 1612.1244923990023
+        yellow_centre_boundary:
+          observed: 4872.943330054419
+          structure_inferred: 1688.7275065881392
+          invalid: 1593.6728541905627
+        right_outer_boundary:
+          observed: 6112.895362906771
+          structure_inferred: 360.30819397784336
+          invalid: 1575.679695170538
+      total:
+        observed: 17000.776534586897
+        structure_inferred: 2685.2357516567977
+        invalid: 4781.477041760103
+      usable: 19686.012286243695
+      all: 24467.489328003798
+    sample_state_ratios:
+      observed_of_all: 0.694831
+      structure_inferred_of_all: 0.109747
+      invalid_of_all: 0.195422
+      usable_of_all: 0.804578
+      structure_inferred_of_usable: 0.136403
+    frame_usable_ratio:
+      count: 325
+      min: 0.4628366330476111
+      p50: 0.8417706910523056
+      p95: 0.9041416641907798
+      max: 0.9358380233852707
+    frame_inferred_of_usable:
+      count: 325
+      min: 0.039575874241028444
+      p50: 0.1398380213639957
+      p95: 0.2035343883089599
+      max: 0.28718128894907496
+    consumption_policy:
+      observed: primary
+      structure_inferred: degraded_with_confidence
+      invalid: forbidden
+      temporal_predicted: not_implemented
+    runs: 1
+  shadow_static_avoid_return:
+    frames: 447
+    accepted_frames: 447
+    accepted_rate: 1.0
+    rejection_reasons:
+      accepted: 447
+    longest_rejected_streak_frames: 0
+    deployment_allowed_frames: 0
+    observed_role_presence_rates:
+      left_outer_boundary: 1.0
+      yellow_centre_boundary: 1.0
+      right_outer_boundary: 1.0
+    inferred_role_presence_rates:
+      left_outer_boundary: 0.0
+      yellow_centre_boundary: 0.0
+      right_outer_boundary: 0.0
+    fit_ms:
+      count: 447
+      min: 26.011918991571292
+      p50: 40.45287499320693
+      p95: 51.29840740119107
+      max: 62.705388001631945
+    data_residual_p95_m:
+      count: 447
+      min: 0.033611488221076034
+      p50: 0.1872625459728292
+      p95: 1.0330312155781822
+      max: 1.9371680525001385
+    inlier_residual_p95_m:
+      count: 447
+      min: 0.033611488221076034
+      p50: 0.16855491450475185
+      p95: 0.2951718629778839
+      max: 0.31532527422032947
+    outlier_rate:
+      count: 447
+      min: 0.0
+      p50: 0.0
+      p95: 0.299283489096573
+      max: 0.37799043062200954
+    valid_span_m:
+      count: 447
+      min: 8.487196606999168
+      p50: 19.431419275456463
+      p95: 21.54379764537269
+      max: 22.198251157167004
+    widths_m:
+      left:
+        count: 447
+        min: 3.387205720731479
+        p50: 3.5186631219617777
+        p95: 3.620836910105912
+        max: 3.675610251001017
+      right:
+        count: 447
+        min: 3.361386136737727
+        p50: 3.52788523962702
+        p95: 3.5827913234692073
+        max: 3.7251718521989434
+    sample_length_m:
+      by_role:
+        left_outer_boundary:
+          observed: 7393.944905811155
+          structure_inferred: 1002.7515244948972
+          invalid: 3151.044987635944
+        yellow_centre_boundary:
+          observed: 7538.912901713146
+          structure_inferred: 791.2454956196605
+          invalid: 3065.1319568909016
+        right_outer_boundary:
+          observed: 7164.358640992144
+          structure_inferred: 1100.2472145934964
+          invalid: 2985.0000721911533
+      total:
+        observed: 22097.216448516447
+        structure_inferred: 2894.244234708054
+        invalid: 9201.177016717998
+      usable: 24991.4606832245
+      all: 34192.6376999425
+    sample_state_ratios:
+      observed_of_all: 0.646257
+      structure_inferred_of_all: 0.084645
+      invalid_of_all: 0.269098
+      usable_of_all: 0.730902
+      structure_inferred_of_usable: 0.115809
+    frame_usable_ratio:
+      count: 447
+      min: 0.33062900302109877
+      p50: 0.7538283149761972
+      p95: 0.907643900985516
+      max: 0.9411559752724997
+    frame_inferred_of_usable:
+      count: 447
+      min: 0.0
+      p50: 0.12014764673847854
+      p95: 0.20442644625494683
+      max: 0.31569941778897087
+    consumption_policy:
+      observed: primary
+      structure_inferred: degraded_with_confidence
+      invalid: forbidden
+      temporal_predicted: not_implemented
+    runs: 2
+shared_runtime_summary:
+  frames: 1126
+  accepted_frames: 1126
+  accepted_rate: 1.0
+  rejection_reasons:
+    accepted: 1126
+  longest_rejected_streak_frames: 0
+  deployment_allowed_frames: 0
+  observed_role_presence_rates:
+    left_outer_boundary: 1.0
+    yellow_centre_boundary: 1.0
+    right_outer_boundary: 1.0
+  inferred_role_presence_rates:
+    left_outer_boundary: 0.0
+    yellow_centre_boundary: 0.0
+    right_outer_boundary: 0.0
+  fit_ms:
+    count: 1126
+    min: 22.456981998402625
+    p50: 39.6792635001475
+    p95: 50.99617424275493
+    max: 69.69721801578999
+  data_residual_p95_m:
+    count: 1126
+    min: 0.033611488221076034
+    p50: 0.20054612414588383
+    p95: 0.48816698246352785
+    max: 1.9371680525001385
+  inlier_residual_p95_m:
+    count: 1126
+    min: 0.033611488221076034
+    p50: 0.18343915958908674
+    p95: 0.2927657975383187
+    max: 0.3437309110690084
+  outlier_rate:
+    count: 1126
+    min: 0.0
+    p50: 0.0
+    p95: 0.14563106796116504
+    max: 0.5369458128078818
+  valid_span_m:
+    count: 1126
+    min: 5.701090087458734
+    p50: 20.025329868022673
+    p95: 21.749548438829734
+    max: 22.286690452154687
+  widths_m:
+    left:
+      count: 1126
+      min: 3.387205720731479
+      p50: 3.5217714531737894
+      p95: 3.602489035365988
+      max: 3.675610251001017
+    right:
+      count: 1126
+      min: 3.361386136737727
+      p50: 3.5351687395983973
+      p95: 3.5797902753883726
+      max: 3.7251718521989434
+  sample_length_m:
+    by_role:
+      left_outer_boundary:
+        observed: 19898.85446234169
+        structure_inferred: 2228.3827024095917
+        invalid: 6646.48022544815
+      yellow_centre_boundary:
+        observed: 17452.046602936785
+        structure_inferred: 4426.695075820397
+        invalid: 6467.560454582337
+      right_outer_boundary:
+        observed: 19616.118473955557
+        structure_inferred: 2015.7174711161056
+        invalid: 6296.107165678247
+    total:
+      observed: 56967.01953923404
+      structure_inferred: 8670.795249346094
+      invalid: 19410.147845708736
+    usable: 65637.81478858013
+    all: 85047.96263428887
+  sample_state_ratios:
+    observed_of_all: 0.669822
+    structure_inferred_of_all: 0.101952
+    invalid_of_all: 0.228226
+    usable_of_all: 0.771774
+    structure_inferred_of_usable: 0.132101
+  frame_usable_ratio:
+    count: 1126
+    min: 0.21730982543162553
+    p50: 0.7953641601416787
+    p95: 0.9309959488585736
+    max: 0.957757592184063
+  frame_inferred_of_usable:
+    count: 1126
+    min: 0.0
+    p50: 0.1352962455300591
+    p95: 0.21726340269036049
+    max: 0.42210099397150763
+  consumption_policy:
+    observed: primary
+    structure_inferred: degraded_with_confidence
+    invalid: forbidden
+    temporal_predicted: not_implemented
+  runs: 4
+shared_runtime_weather_summary:
+  shadow_boundary_straddle:
+    sunny:
+      frames: 354
+      accepted_frames: 354
+      accepted_rate: 1.0
+      rejection_reasons:
+        accepted: 354
+      longest_rejected_streak_frames: 0
+      deployment_allowed_frames: 0
+      observed_role_presence_rates:
+        left_outer_boundary: 1.0
+        yellow_centre_boundary: 1.0
+        right_outer_boundary: 1.0
+      inferred_role_presence_rates:
+        left_outer_boundary: 0.0
+        yellow_centre_boundary: 0.0
+        right_outer_boundary: 0.0
+      fit_ms:
+        count: 354
+        min: 22.456981998402625
+        p50: 39.04494550079107
+        p95: 50.95057195430854
+        max: 69.69721801578999
+      data_residual_p95_m:
+        count: 354
+        min: 0.03985072671074001
+        p50: 0.20907693572353936
+        p95: 0.49032318887742987
+        max: 1.7198244056102474
+      inlier_residual_p95_m:
+        count: 354
+        min: 0.03985072671074001
+        p50: 0.19651483239308706
+        p95: 0.2778227450612487
+        max: 0.3437309110690084
+      outlier_rate:
+        count: 354
+        min: 0.0
+        p50: 0.0
+        p95: 0.1619508749544295
+        max: 0.5369458128078818
+      valid_span_m:
+        count: 354
+        min: 5.701090087458734
+        p50: 20.56990052224596
+        p95: 21.999117105393786
+        max: 22.286690452154687
+      widths_m:
+        left:
+          count: 354
+          min: 3.467091043555135
+          p50: 3.5290815554246118
+          p95: 3.6016553958396322
+          max: 3.6019737293490786
+        right:
+          count: 354
+          min: 3.4075414584198622
+          p50: 3.5440364306957326
+          p95: 3.582564481142191
+          max: 3.601471433719185
+      sample_length_m:
+        by_role:
+          left_outer_boundary:
+            observed: 6489.971714904865
+            structure_inferred: 589.4311268238833
+            invalid: 1883.3107454132155
+          yellow_centre_boundary:
+            observed: 5040.1903711692075
+            structure_inferred: 1946.7220736125996
+            invalid: 1808.7556435008803
+          right_outer_boundary:
+            observed: 6338.864470056633
+            structure_inferred: 555.1620625447645
+            invalid: 1735.42739831656
+        total:
+          observed: 17869.026556130706
+          structure_inferred: 3091.3152629812475
+          invalid: 5427.493787230656
+        usable: 20960.341819111953
+        all: 26387.83560634261
+      sample_state_ratios:
+        observed_of_all: 0.677169
+        structure_inferred_of_all: 0.117149
+        invalid_of_all: 0.205682
+        usable_of_all: 0.794318
+        structure_inferred_of_usable: 0.147484
+      frame_usable_ratio:
+        count: 354
+        min: 0.21730982543162553
+        p50: 0.8540285171586331
+        p95: 0.9394914365898231
+        max: 0.957757592184063
+      frame_inferred_of_usable:
+        count: 354
+        min: 0.022923839964426655
+        p50: 0.139199222511025
+        p95: 0.22836421415836256
+        max: 0.42210099397150763
+      consumption_policy:
+        observed: primary
+        structure_inferred: degraded_with_confidence
+        invalid: forbidden
+        temporal_predicted: not_implemented
+      runs: 1
+  shadow_lateral_sweep:
+    sunny:
+      frames: 325
+      accepted_frames: 325
+      accepted_rate: 1.0
+      rejection_reasons:
+        accepted: 325
+      longest_rejected_streak_frames: 0
+      deployment_allowed_frames: 0
+      observed_role_presence_rates:
+        left_outer_boundary: 1.0
+        yellow_centre_boundary: 1.0
+        right_outer_boundary: 1.0
+      inferred_role_presence_rates:
+        left_outer_boundary: 0.0
+        yellow_centre_boundary: 0.0
+        right_outer_boundary: 0.0
+      fit_ms:
+        count: 325
+        min: 24.428661999991164
+        p50: 38.82914799032733
+        p95: 50.51336960750632
+        max: 61.2743980018422
+      data_residual_p95_m:
+        count: 325
+        min: 0.04766299023139408
+        p50: 0.20291962758643525
+        p95: 0.4850373603391656
+        max: 1.1487619246984326
+      inlier_residual_p95_m:
+        count: 325
+        min: 0.04766299023139408
+        p50: 0.18897075869100205
+        p95: 0.289364074623495
+        max: 0.33598052756451346
+      outlier_rate:
+        count: 325
+        min: 0.0
+        p50: 0.0
+        p95: 0.13793103448275862
+        max: 0.4009433962264151
+      valid_span_m:
+        count: 325
+        min: 10.94588640932401
+        p50: 20.510737569189285
+        p95: 21.46774369772296
+        max: 22.13424393491823
+      widths_m:
+        left:
+          count: 325
+          min: 3.4385689971962297
+          p50: 3.5200234695443884
+          p95: 3.6021479406323733
+          max: 3.6412146939752668
+        right:
+          count: 325
+          min: 3.3857532858167607
+          p50: 3.53611685085843
+          p95: 3.575709431142765
+          max: 3.5894381082781153
+      sample_length_m:
+        by_role:
+          left_outer_boundary:
+            observed: 6014.937841625709
+            structure_inferred: 636.2000510908149
+            invalid: 1612.1244923990023
+          yellow_centre_boundary:
+            observed: 4872.943330054419
+            structure_inferred: 1688.7275065881392
+            invalid: 1593.6728541905627
+          right_outer_boundary:
+            observed: 6112.895362906771
+            structure_inferred: 360.30819397784336
+            invalid: 1575.679695170538
+        total:
+          observed: 17000.776534586897
+          structure_inferred: 2685.2357516567977
+          invalid: 4781.477041760103
+        usable: 19686.012286243695
+        all: 24467.489328003798
+      sample_state_ratios:
+        observed_of_all: 0.694831
+        structure_inferred_of_all: 0.109747
+        invalid_of_all: 0.195422
+        usable_of_all: 0.804578
+        structure_inferred_of_usable: 0.136403
+      frame_usable_ratio:
+        count: 325
+        min: 0.4628366330476111
+        p50: 0.8417706910523056
+        p95: 0.9041416641907798
+        max: 0.9358380233852707
+      frame_inferred_of_usable:
+        count: 325
+        min: 0.039575874241028444
+        p50: 0.1398380213639957
+        p95: 0.2035343883089599
+        max: 0.28718128894907496
+      consumption_policy:
+        observed: primary
+        structure_inferred: degraded_with_confidence
+        invalid: forbidden
+        temporal_predicted: not_implemented
+      runs: 1
+  shadow_static_avoid_return:
+    foggy:
+      frames: 186
+      accepted_frames: 186
+      accepted_rate: 1.0
+      rejection_reasons:
+        accepted: 186
+      longest_rejected_streak_frames: 0
+      deployment_allowed_frames: 0
+      observed_role_presence_rates:
+        left_outer_boundary: 1.0
+        yellow_centre_boundary: 1.0
+        right_outer_boundary: 1.0
+      inferred_role_presence_rates:
+        left_outer_boundary: 0.0
+        yellow_centre_boundary: 0.0
+        right_outer_boundary: 0.0
+      fit_ms:
+        count: 186
+        min: 28.64523301832378
+        p50: 39.658515495830216
+        p95: 50.632635240617674
+        max: 62.705388001631945
+      data_residual_p95_m:
+        count: 186
+        min: 0.033611488221076034
+        p50: 0.2365606122860932
+        p95: 1.3197424330109109
+        max: 1.9371680525001385
+      inlier_residual_p95_m:
+        count: 186
+        min: 0.033611488221076034
+        p50: 0.1747700624541273
+        p95: 0.2946484294365473
+        max: 0.31532527422032947
+      outlier_rate:
+        count: 186
+        min: 0.0
+        p50: 0.01683161416225258
+        p95: 0.3497263824884792
+        max: 0.37610619469026546
+      valid_span_m:
+        count: 186
+        min: 8.487196606999168
+        p50: 19.17942835475074
+        p95: 20.99011411864696
+        max: 21.741065578629918
+      widths_m:
+        left:
+          count: 186
+          min: 3.387205720731479
+          p50: 3.5197533623868615
+          p95: 3.627814503445241
+          max: 3.649883904663525
+        right:
+          count: 186
+          min: 3.361386136737727
+          p50: 3.5160504841993534
+          p95: 3.5874545919008263
+          max: 3.659808719267137
+      sample_length_m:
+        by_role:
+          left_outer_boundary:
+            observed: 2754.1151425714693
+            structure_inferred: 576.7972366679942
+            invalid: 1506.3959757937585
+          yellow_centre_boundary:
+            observed: 2996.4671059515317
+            structure_inferred: 317.24789519086386
+            invalid: 1441.2127175052358
+          right_outer_boundary:
+            observed: 2886.243420956466
+            structure_inferred: 410.94806661648926
+            invalid: 1377.2746812804996
+        total:
+          observed: 8636.825669479467
+          structure_inferred: 1304.9931984753473
+          invalid: 4324.883374579494
+        usable: 9941.818867954815
+        all: 14266.70224253431
+      sample_state_ratios:
+        observed_of_all: 0.605383
+        structure_inferred_of_all: 0.091471
+        invalid_of_all: 0.303145
+        usable_of_all: 0.696855
+        structure_inferred_of_usable: 0.131263
+      frame_usable_ratio:
+        count: 186
+        min: 0.33062900302109877
+        p50: 0.7199793046261538
+        p95: 0.8769711637965615
+        max: 0.9257701343061054
+      frame_inferred_of_usable:
+        count: 186
+        min: 0.0
+        p50: 0.13608109707485072
+        p95: 0.19717908903589285
+        max: 0.29357053213924766
+      consumption_policy:
+        observed: primary
+        structure_inferred: degraded_with_confidence
+        invalid: forbidden
+        temporal_predicted: not_implemented
+      runs: 1
+    sunny:
+      frames: 261
+      accepted_frames: 261
+      accepted_rate: 1.0
+      rejection_reasons:
+        accepted: 261
+      longest_rejected_streak_frames: 0
+      deployment_allowed_frames: 0
+      observed_role_presence_rates:
+        left_outer_boundary: 1.0
+        yellow_centre_boundary: 1.0
+        right_outer_boundary: 1.0
+      inferred_role_presence_rates:
+        left_outer_boundary: 0.0
+        yellow_centre_boundary: 0.0
+        right_outer_boundary: 0.0
+      fit_ms:
+        count: 261
+        min: 26.011918991571292
+        p50: 41.40604002168402
+        p95: 51.310351002030075
+        max: 61.48266000673175
+      data_residual_p95_m:
+        count: 261
+        min: 0.042217205196334984
+        p50: 0.1742480480989701
+        p95: 0.3942240163857105
+        max: 1.4452456772495186
+      inlier_residual_p95_m:
+        count: 261
+        min: 0.042217205196334984
+        p50: 0.16375064236146822
+        p95: 0.29801885055453103
+        max: 0.31363973621749164
+      outlier_rate:
+        count: 261
+        min: 0.0
+        p50: 0.0
+        p95: 0.1038961038961039
+        max: 0.37799043062200954
+      valid_span_m:
+        count: 261
+        min: 9.463765811936266
+        p50: 19.81044759351791
+        p95: 21.693413099432917
+        max: 22.198251157167004
+      widths_m:
+        left:
+          count: 261
+          min: 3.4520314708321576
+          p50: 3.518656222971417
+          p95: 3.595438753350403
+          max: 3.675610251001017
+        right:
+          count: 261
+          min: 3.4261205449405074
+          p50: 3.531931874753815
+          p95: 3.580253676131177
+          max: 3.7251718521989434
+      sample_length_m:
+        by_role:
+          left_outer_boundary:
+            observed: 4639.829763239678
+            structure_inferred: 425.9542878269028
+            invalid: 1644.6490118421812
+          yellow_centre_boundary:
+            observed: 4542.445795761617
+            structure_inferred: 473.99760042879615
+            invalid: 1623.9192393856647
+          right_outer_boundary:
+            observed: 4278.115220035678
+            structure_inferred: 689.2991479770069
+            invalid: 1607.7253909106496
+        total:
+          observed: 13460.390779036974
+          structure_inferred: 1589.251036232706
+          invalid: 4876.293642138496
+        usable: 15049.64181526968
+        all: 19925.935457408177
+      sample_state_ratios:
+        observed_of_all: 0.675521
+        structure_inferred_of_all: 0.079758
+        invalid_of_all: 0.244721
+        usable_of_all: 0.755279
+        structure_inferred_of_usable: 0.105601
+      frame_usable_ratio:
+        count: 261
+        min: 0.3580655672145771
+        p50: 0.780170083643961
+        p95: 0.9223965803044198
+        max: 0.9411559752724997
+      frame_inferred_of_usable:
+        count: 261
+        min: 0.004761757593399676
+        p50: 0.10130286692844805
+        p95: 0.2239071479572496
+        max: 0.31569941778897087
+      consumption_policy:
+        observed: primary
+        structure_inferred: degraded_with_confidence
+        invalid: forbidden
+        temporal_predicted: not_implemented
+      runs: 1
+technical_quality_passed: true
+interpretation: Availability and temporal-consistency audit only. It is not lane-geometry
+  ground truth accuracy and does not assign home/opposing semantics. Observed samples
+  are primary, structure-inferred samples are degraded, and invalid samples are forbidden
+  for consumers.

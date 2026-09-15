@@ -1,0 +1,2822 @@
+{
+  "created_at_utc": "2026-09-14T18:32:19+00:00",
+  "interpretation": {
+    "geometry_repair_applied": false,
+    "internal_gap": "unusable x-span bracketed by usable intervals in the same zone",
+    "observed_interval": "all pair-boundary endpoint states are observed",
+    "tail_gap": "unusable x-span touching either zone boundary",
+    "usable_interval": "all pair-boundary endpoint states are non-invalid"
+  },
+  "lineage": {
+    "checkpoint": {
+      "path": "/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt",
+      "sha256": "a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b"
+    },
+    "selection": {
+      "path": "/root/ws/artifacts/perception_eval/analysis/shadow_maneuver_20260913/selection.yaml",
+      "sha256": "33cef1ad965afb16394cde995a09ce28e50bef0bff8a6909759dc0d27316567b"
+    }
+  },
+  "overall": {
+    "far_debug": {
+      "both_strips": {
+        "continuous_from_start_m": {
+          "p05": 0.7932123927450379,
+          "p50": 4.521272250475469,
+          "p95": 4.865305393299363
+        },
+        "coverage_at_least_0_80_rate": 0.6883830455259027,
+        "coverage_ratio": {
+          "p05": 0.16698318228628636,
+          "p50": 0.9042544500950939,
+          "p95": 0.9730610786598726
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.2999486246152003,
+          "p95": 0.9291348870871767
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.03218210361067504,
+        "longest_below_0_80_streak_frames": 60,
+        "longest_below_0_80_streak_sec": 5.712173938,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.47872774952453057,
+          "p95": 4.165084088568568
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.0,
+          "p50": 0.3620462265141938
+        },
+        "start_anchored_rate": 0.9583987441130298,
+        "zero_coverage_rate": 0.03924646781789639
+      },
+      "left_strip": {
+        "continuous_from_start_m": {
+          "p05": 0.7932123927450379,
+          "p50": 4.521272250475469,
+          "p95": 4.865305393299363
+        },
+        "coverage_at_least_0_80_rate": 0.6883830455259027,
+        "coverage_ratio": {
+          "p05": 0.16698318228628636,
+          "p50": 0.9042544500950939,
+          "p95": 0.9730610786598726
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.1569969006378319,
+          "p95": 0.9170870399106718
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.03218210361067504,
+        "longest_below_0_80_streak_frames": 60,
+        "longest_below_0_80_streak_sec": 5.712173938,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.47872774952453057,
+          "p95": 4.165084088568568
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.0,
+          "p50": 0.6434241354753816
+        },
+        "start_anchored_rate": 0.9583987441130298,
+        "zero_coverage_rate": 0.03924646781789639
+      },
+      "right_strip": {
+        "continuous_from_start_m": {
+          "p05": 0.7932123927450379,
+          "p50": 4.521272250475469,
+          "p95": 4.865305393299363
+        },
+        "coverage_at_least_0_80_rate": 0.6883830455259027,
+        "coverage_ratio": {
+          "p05": 0.16698318228628636,
+          "p50": 0.9042544500950939,
+          "p95": 0.9730610786598726
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.05642648322508759,
+          "p95": 0.8590759719781654
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.03218210361067504,
+        "longest_below_0_80_streak_frames": 60,
+        "longest_below_0_80_streak_sec": 5.712173938,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.47872774952453057,
+          "p95": 4.165084088568568
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.0,
+          "p50": 0.7021030738864958
+        },
+        "start_anchored_rate": 0.9583987441130298,
+        "zero_coverage_rate": 0.03924646781789639
+      }
+    },
+    "mid_ahead": {
+      "both_strips": {
+        "continuous_from_start_m": {
+          "p05": 5.0,
+          "p50": 5.0,
+          "p95": 5.0
+        },
+        "coverage_at_least_0_80_rate": 0.966248037676609,
+        "coverage_ratio": {
+          "p05": 1.0,
+          "p50": 1.0,
+          "p95": 1.0
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.0,
+          "p95": 0.6674473645504745
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.9583987441130298,
+        "longest_below_0_80_streak_frames": 15,
+        "longest_below_0_80_streak_sec": 2.1632761955,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.1890787125286293,
+          "p50": 1.0
+        },
+        "start_anchored_rate": 0.9733124018838305,
+        "zero_coverage_rate": 0.026687598116169546
+      },
+      "left_strip": {
+        "continuous_from_start_m": {
+          "p05": 5.0,
+          "p50": 5.0,
+          "p95": 5.0
+        },
+        "coverage_at_least_0_80_rate": 0.966248037676609,
+        "coverage_ratio": {
+          "p05": 1.0,
+          "p50": 1.0,
+          "p95": 1.0
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.0,
+          "p95": 0.17834708667653185
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.9583987441130298,
+        "longest_below_0_80_streak_frames": 15,
+        "longest_below_0_80_streak_sec": 2.1632761955,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.6064414725481501,
+          "p50": 1.0
+        },
+        "start_anchored_rate": 0.9733124018838305,
+        "zero_coverage_rate": 0.026687598116169546
+      },
+      "right_strip": {
+        "continuous_from_start_m": {
+          "p05": 5.0,
+          "p50": 5.0,
+          "p95": 5.0
+        },
+        "coverage_at_least_0_80_rate": 0.966248037676609,
+        "coverage_ratio": {
+          "p05": 1.0,
+          "p50": 1.0,
+          "p95": 1.0
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.0,
+          "p95": 0.6459598323176315
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.9583987441130298,
+        "longest_below_0_80_streak_frames": 15,
+        "longest_below_0_80_streak_sec": 2.1632761955,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.27393804353650786,
+          "p50": 1.0
+        },
+        "start_anchored_rate": 0.9733124018838305,
+        "zero_coverage_rate": 0.026687598116169546
+      }
+    },
+    "near_ahead": {
+      "both_strips": {
+        "continuous_from_start_m": {
+          "p05": 6.154999999999999,
+          "p50": 6.154999999999999,
+          "p95": 6.154999999999999
+        },
+        "coverage_at_least_0_80_rate": 0.9740973312401884,
+        "coverage_ratio": {
+          "p05": 1.0,
+          "p50": 1.0,
+          "p95": 1.0
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.24338728693426043,
+          "p95": 0.3306102448324661
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.9615384615384616,
+        "longest_below_0_80_streak_frames": 10,
+        "longest_below_0_80_streak_sec": 1.0003030305,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.6347733649170993,
+          "p50": 0.7564027805548998
+        },
+        "start_anchored_rate": 0.9897959183673469,
+        "zero_coverage_rate": 0.0
+      },
+      "left_strip": {
+        "continuous_from_start_m": {
+          "p05": 6.154999999999999,
+          "p50": 6.154999999999999,
+          "p95": 6.154999999999999
+        },
+        "coverage_at_least_0_80_rate": 0.9740973312401884,
+        "coverage_ratio": {
+          "p05": 1.0,
+          "p50": 1.0,
+          "p95": 1.0
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.2098281175801754,
+          "p95": 0.3263978950373043
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.9615384615384616,
+        "longest_below_0_80_streak_frames": 10,
+        "longest_below_0_80_streak_sec": 1.0003030305,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.6725536861946879,
+          "p50": 0.7838065669764318
+        },
+        "start_anchored_rate": 0.9897959183673469,
+        "zero_coverage_rate": 0.0
+      },
+      "right_strip": {
+        "continuous_from_start_m": {
+          "p05": 6.154999999999999,
+          "p50": 6.154999999999999,
+          "p95": 6.154999999999999
+        },
+        "coverage_at_least_0_80_rate": 0.9740973312401884,
+        "coverage_ratio": {
+          "p05": 1.0,
+          "p50": 1.0,
+          "p95": 1.0
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.20308378502631336,
+          "p95": 0.32791107071379555
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.9615384615384616,
+        "longest_below_0_80_streak_frames": 10,
+        "longest_below_0_80_streak_sec": 1.0003030305,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.6664290466099168,
+          "p50": 0.7603553910197731
+        },
+        "start_anchored_rate": 0.9897959183673469,
+        "zero_coverage_rate": 0.0
+      }
+    },
+    "planning_consumer": {
+      "both_strips": {
+        "continuous_from_start_m": {
+          "p05": 0.0,
+          "p50": 15.0,
+          "p95": 15.0
+        },
+        "coverage_at_least_0_80_rate": 0.9599686028257457,
+        "coverage_ratio": {
+          "p05": 0.9392497916063024,
+          "p50": 1.0,
+          "p95": 1.0
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.34448037319953884,
+          "p95": 0.5370984297781014
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.695447409733124,
+        "longest_below_0_80_streak_frames": 15,
+        "longest_below_0_80_streak_sec": 2.1632761955,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.9112531259054504
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.4269810255580918,
+          "p50": 0.6317344953536798
+        },
+        "start_anchored_rate": 0.8163265306122449,
+        "zero_coverage_rate": 0.0
+      },
+      "left_strip": {
+        "continuous_from_start_m": {
+          "p05": 0.0,
+          "p50": 15.0,
+          "p95": 15.0
+        },
+        "coverage_at_least_0_80_rate": 0.9599686028257457,
+        "coverage_ratio": {
+          "p05": 0.9392497916063024,
+          "p50": 1.0,
+          "p95": 1.0
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.31587367909329334,
+          "p95": 0.3915887486156899
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.695447409733124,
+        "longest_below_0_80_streak_frames": 15,
+        "longest_below_0_80_streak_sec": 2.1632761955,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.9112531259054504
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.5740975304489002,
+          "p50": 0.6656317506040474
+        },
+        "start_anchored_rate": 0.8163265306122449,
+        "zero_coverage_rate": 0.0
+      },
+      "right_strip": {
+        "continuous_from_start_m": {
+          "p05": 0.0,
+          "p50": 15.0,
+          "p95": 15.0
+        },
+        "coverage_at_least_0_80_rate": 0.9599686028257457,
+        "coverage_ratio": {
+          "p05": 0.9392497916063024,
+          "p50": 1.0,
+          "p95": 1.0
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.24299144417370305,
+          "p95": 0.46764093482956975
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.695447409733124,
+        "longest_below_0_80_streak_frames": 15,
+        "longest_below_0_80_streak_sec": 2.1632761955,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.9112531259054504
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.43283663491367913,
+          "p50": 0.6767565468438292
+        },
+        "start_anchored_rate": 0.8163265306122449,
+        "zero_coverage_rate": 0.0
+      }
+    },
+    "vehicle_envelope": {
+      "both_strips": {
+        "continuous_from_start_m": {
+          "p05": 0.0,
+          "p50": 4.635,
+          "p95": 4.635
+        },
+        "coverage_at_least_0_80_rate": 0.7480376766091051,
+        "coverage_ratio": {
+          "p05": 0.7499136998427282,
+          "p50": 0.9965924106133205,
+          "p95": 1.0
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.7923803700355027,
+          "p95": 1.0
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.4835164835164835,
+        "longest_below_0_80_streak_frames": 118,
+        "longest_below_0_80_streak_sec": 11.671070814,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.015794176807259697,
+          "p95": 1.1591500012289555
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.0,
+          "p50": 0.0
+        },
+        "start_anchored_rate": 0.6295133437990581,
+        "zero_coverage_rate": 0.01020408163265306
+      },
+      "left_strip": {
+        "continuous_from_start_m": {
+          "p05": 0.0,
+          "p50": 4.635,
+          "p95": 4.635
+        },
+        "coverage_at_least_0_80_rate": 0.7480376766091051,
+        "coverage_ratio": {
+          "p05": 0.7499136998427282,
+          "p50": 0.9965924106133205,
+          "p95": 1.0
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.7591214614956526,
+          "p95": 1.0
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.4835164835164835,
+        "longest_below_0_80_streak_frames": 118,
+        "longest_below_0_80_streak_sec": 11.671070814,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.015794176807259697,
+          "p95": 1.1591500012289555
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.0,
+          "p50": 0.0
+        },
+        "start_anchored_rate": 0.6295133437990581,
+        "zero_coverage_rate": 0.01020408163265306
+      },
+      "right_strip": {
+        "continuous_from_start_m": {
+          "p05": 0.0,
+          "p50": 4.635,
+          "p95": 4.635
+        },
+        "coverage_at_least_0_80_rate": 0.7480376766091051,
+        "coverage_ratio": {
+          "p05": 0.7499136998427282,
+          "p50": 0.9965924106133205,
+          "p95": 1.0
+        },
+        "degraded_coverage_ratio": {
+          "p50": 0.5881240327545458,
+          "p95": 1.0
+        },
+        "family_available_rate": 1.0,
+        "frames": 1274,
+        "fully_continuous_rate": 0.4835164835164835,
+        "longest_below_0_80_streak_frames": 118,
+        "longest_below_0_80_streak_sec": 11.671070814,
+        "longest_internal_unusable_gap_m": {
+          "p50": 0.0,
+          "p95": 0.0
+        },
+        "longest_unusable_gap_m": {
+          "p50": 0.015794176807259697,
+          "p95": 1.1591500012289555
+        },
+        "observed_coverage_ratio": {
+          "p05": 0.0,
+          "p50": 0.3650388072057613
+        },
+        "start_anchored_rate": 0.6295133437990581,
+        "zero_coverage_rate": 0.01020408163265306
+      }
+    }
+  },
+  "reporting_thresholds": {
+    "coverage_ratio": 0.8,
+    "is_acceptance_gate": false
+  },
+  "run_count": 4,
+  "runs": {
+    "20260913_195226_kcity2025_shadow_boundary_straddle_sunny_1pm_wheel": {
+      "frames": 402,
+      "tags": {
+        "scenario": "shadow_boundary_straddle",
+        "sim_time": "1pm",
+        "weather": "sunny"
+      },
+      "zones": {
+        "far_debug": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 0.9851712235688862,
+              "p50": 4.525216815756092,
+              "p95": 4.82200843546303
+            },
+            "coverage_at_least_0_80_rate": 0.6741293532338308,
+            "coverage_ratio": {
+              "p05": 0.19703424471377726,
+              "p50": 0.9050433631512185,
+              "p95": 0.9644016870926061
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.2499540108635653,
+              "p95": 0.870528946472923
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.03233830845771144,
+            "longest_below_0_80_streak_frames": 60,
+            "longest_below_0_80_streak_sec": 5.712173938,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.47478318424390764,
+              "p95": 4.014828776431114
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.4481302444553698
+            },
+            "start_anchored_rate": 0.9701492537313433,
+            "zero_coverage_rate": 0.029850746268656716
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.9851712235688862,
+              "p50": 4.525216815756092,
+              "p95": 4.82200843546303
+            },
+            "coverage_at_least_0_80_rate": 0.6741293532338308,
+            "coverage_ratio": {
+              "p05": 0.19703424471377726,
+              "p50": 0.9050433631512185,
+              "p95": 0.9644016870926061
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.09995267630226365,
+              "p95": 0.6345956777354128
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.03233830845771144,
+            "longest_below_0_80_streak_frames": 60,
+            "longest_below_0_80_streak_sec": 5.712173938,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.47478318424390764,
+              "p95": 4.014828776431114
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.001077887027899462,
+              "p50": 0.6604228445590892
+            },
+            "start_anchored_rate": 0.9701492537313433,
+            "zero_coverage_rate": 0.029850746268656716
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.9851712235688862,
+              "p50": 4.525216815756092,
+              "p95": 4.82200843546303
+            },
+            "coverage_at_least_0_80_rate": 0.6741293532338308,
+            "coverage_ratio": {
+              "p05": 0.19703424471377726,
+              "p50": 0.9050433631512185,
+              "p95": 0.9644016870926061
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.1548928464240369,
+              "p95": 0.8594362000837691
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.03233830845771144,
+            "longest_below_0_80_streak_frames": 60,
+            "longest_below_0_80_streak_sec": 5.712173938,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.47478318424390764,
+              "p95": 4.014828776431114
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.7113778612958268
+            },
+            "start_anchored_rate": 0.9701492537313433,
+            "zero_coverage_rate": 0.029850746268656716
+          }
+        },
+        "mid_ahead": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 5.0,
+              "p50": 5.0,
+              "p95": 5.0
+            },
+            "coverage_at_least_0_80_rate": 0.972636815920398,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.0,
+              "p95": 0.6815817130523768
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.9701492537313433,
+            "longest_below_0_80_streak_frames": 9,
+            "longest_below_0_80_streak_sec": 0.820562123,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.3162728183518651,
+              "p50": 1.0
+            },
+            "start_anchored_rate": 0.9825870646766169,
+            "zero_coverage_rate": 0.017412935323383085
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 5.0,
+              "p50": 5.0,
+              "p95": 5.0
+            },
+            "coverage_at_least_0_80_rate": 0.972636815920398,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.9701492537313433,
+            "longest_below_0_80_streak_frames": 9,
+            "longest_below_0_80_streak_sec": 0.820562123,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.9003649394743782,
+              "p50": 1.0
+            },
+            "start_anchored_rate": 0.9825870646766169,
+            "zero_coverage_rate": 0.017412935323383085
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 5.0,
+              "p50": 5.0,
+              "p95": 5.0
+            },
+            "coverage_at_least_0_80_rate": 0.972636815920398,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.0,
+              "p95": 0.6815817130523768
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.9701492537313433,
+            "longest_below_0_80_streak_frames": 9,
+            "longest_below_0_80_streak_sec": 0.820562123,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.3162728183518651,
+              "p50": 1.0
+            },
+            "start_anchored_rate": 0.9825870646766169,
+            "zero_coverage_rate": 0.017412935323383085
+          }
+        },
+        "near_ahead": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 6.154999999999999,
+              "p50": 6.154999999999999,
+              "p95": 6.154999999999999
+            },
+            "coverage_at_least_0_80_rate": 0.9825870646766169,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.30330347697898885,
+              "p95": 0.32969038163752223
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.9825870646766169,
+            "longest_below_0_80_streak_frames": 7,
+            "longest_below_0_80_streak_sec": 0.684559106,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.6697978626487717,
+              "p50": 0.6962404392202048
+            },
+            "start_anchored_rate": 1.0,
+            "zero_coverage_rate": 0.0
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 6.154999999999999,
+              "p50": 6.154999999999999,
+              "p95": 6.154999999999999
+            },
+            "coverage_at_least_0_80_rate": 0.9825870646766169,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.30126839273810924,
+              "p95": 0.3283168934266857
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.9825870646766169,
+            "longest_below_0_80_streak_frames": 7,
+            "longest_below_0_80_streak_sec": 0.684559106,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.6714573835242267,
+              "p50": 0.6982761050823167
+            },
+            "start_anchored_rate": 1.0,
+            "zero_coverage_rate": 0.0
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 6.154999999999999,
+              "p50": 6.154999999999999,
+              "p95": 6.154999999999999
+            },
+            "coverage_at_least_0_80_rate": 0.9825870646766169,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.30330347697898885,
+              "p95": 0.32969038163752223
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.9825870646766169,
+            "longest_below_0_80_streak_frames": 7,
+            "longest_below_0_80_streak_sec": 0.684559106,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.6697978626487717,
+              "p50": 0.6962404392202048
+            },
+            "start_anchored_rate": 1.0,
+            "zero_coverage_rate": 0.0
+          }
+        },
+        "planning_consumer": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 15.0,
+              "p95": 15.0
+            },
+            "coverage_at_least_0_80_rate": 0.9825870646766169,
+            "coverage_ratio": {
+              "p05": 0.9751325593840914,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.3849026939480823,
+              "p95": 0.5524448204319551
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.664179104477612,
+            "longest_below_0_80_streak_frames": 7,
+            "longest_below_0_80_streak_sec": 0.684559106,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.37301160923862936
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.4308189863331568,
+              "p50": 0.6149055020135032
+            },
+            "start_anchored_rate": 0.7935323383084577,
+            "zero_coverage_rate": 0.0
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 15.0,
+              "p95": 15.0
+            },
+            "coverage_at_least_0_80_rate": 0.9825870646766169,
+            "coverage_ratio": {
+              "p05": 0.9751325593840914,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.3800264988511478,
+              "p95": 0.39297340125326297
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.664179104477612,
+            "longest_below_0_80_streak_frames": 7,
+            "longest_below_0_80_streak_sec": 0.684559106,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.37301160923862936
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.5797390050288752,
+              "p50": 0.6189427527037741
+            },
+            "start_anchored_rate": 0.7935323383084577,
+            "zero_coverage_rate": 0.0
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 15.0,
+              "p95": 15.0
+            },
+            "coverage_at_least_0_80_rate": 0.9825870646766169,
+            "coverage_ratio": {
+              "p05": 0.9751325593840914,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.3843250795712646,
+              "p95": 0.5524440549598446
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.664179104477612,
+            "longest_below_0_80_streak_frames": 7,
+            "longest_below_0_80_streak_sec": 0.684559106,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.37301160923862936
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.43083894740232787,
+              "p50": 0.615430483996922
+            },
+            "start_anchored_rate": 0.7935323383084577,
+            "zero_coverage_rate": 0.0
+          }
+        },
+        "vehicle_envelope": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 4.635,
+              "p95": 4.635
+            },
+            "coverage_at_least_0_80_rate": 0.7064676616915423,
+            "coverage_ratio": {
+              "p05": 0.7510575975951251,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.6492537313432836,
+            "longest_below_0_80_streak_frames": 118,
+            "longest_below_0_80_streak_sec": 11.671070814,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 1.1538480351465952
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.0
+            },
+            "start_anchored_rate": 0.664179104477612,
+            "zero_coverage_rate": 0.0
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 4.635,
+              "p95": 4.635
+            },
+            "coverage_at_least_0_80_rate": 0.7064676616915423,
+            "coverage_ratio": {
+              "p05": 0.7510575975951251,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.6492537313432836,
+            "longest_below_0_80_streak_frames": 118,
+            "longest_below_0_80_streak_sec": 11.671070814,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 1.1538480351465952
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.0
+            },
+            "start_anchored_rate": 0.664179104477612,
+            "zero_coverage_rate": 0.0
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 4.635,
+              "p95": 4.635
+            },
+            "coverage_at_least_0_80_rate": 0.7064676616915423,
+            "coverage_ratio": {
+              "p05": 0.7510575975951251,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "family_available_rate": 1.0,
+            "frames": 402,
+            "fully_continuous_rate": 0.6492537313432836,
+            "longest_below_0_80_streak_frames": 118,
+            "longest_below_0_80_streak_sec": 11.671070814,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 1.1538480351465952
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.0
+            },
+            "start_anchored_rate": 0.664179104477612,
+            "zero_coverage_rate": 0.0
+          }
+        }
+      }
+    },
+    "20260913_195429_kcity2025_shadow_lateral_sweep_sunny_1pm_wheel": {
+      "frames": 377,
+      "tags": {
+        "scenario": "shadow_lateral_sweep",
+        "sim_time": "1pm",
+        "weather": "sunny"
+      },
+      "zones": {
+        "far_debug": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 2.4686874434968047,
+              "p50": 4.570667122390599,
+              "p95": 4.9820528844893746
+            },
+            "coverage_at_least_0_80_rate": 0.7904509283819628,
+            "coverage_ratio": {
+              "p05": 0.4937374886993609,
+              "p50": 0.9141334244781198,
+              "p95": 0.9964105768978748
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.34557211647236485,
+              "p95": 0.9163860438583313
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.04774535809018567,
+            "longest_below_0_80_streak_frames": 13,
+            "longest_below_0_80_streak_sec": 1.2258658405,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.42933287760940075,
+              "p95": 2.5313125565031935
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.5076789617521598
+            },
+            "start_anchored_rate": 0.9761273209549072,
+            "zero_coverage_rate": 0.023872679045092837
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 2.4686874434968047,
+              "p50": 4.570667122390599,
+              "p95": 4.9820528844893746
+            },
+            "coverage_at_least_0_80_rate": 0.7904509283819628,
+            "coverage_ratio": {
+              "p05": 0.4937374886993609,
+              "p50": 0.9141334244781198,
+              "p95": 0.9964105768978748
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.24649442111952807,
+              "p95": 0.8827154556108244
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.04774535809018567,
+            "longest_below_0_80_streak_frames": 13,
+            "longest_below_0_80_streak_sec": 1.2258658405,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.42933287760940075,
+              "p95": 2.5313125565031935
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.6452598033354555
+            },
+            "start_anchored_rate": 0.9761273209549072,
+            "zero_coverage_rate": 0.023872679045092837
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 2.4686874434968047,
+              "p50": 4.570667122390599,
+              "p95": 4.9820528844893746
+            },
+            "coverage_at_least_0_80_rate": 0.7904509283819628,
+            "coverage_ratio": {
+              "p05": 0.4937374886993609,
+              "p50": 0.9141334244781198,
+              "p95": 0.9964105768978748
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.049030635133370734,
+              "p95": 0.8051090542754298
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.04774535809018567,
+            "longest_below_0_80_streak_frames": 13,
+            "longest_below_0_80_streak_sec": 1.2258658405,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.42933287760940075,
+              "p95": 2.5313125565031935
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.7408411094962748
+            },
+            "start_anchored_rate": 0.9761273209549072,
+            "zero_coverage_rate": 0.023872679045092837
+          }
+        },
+        "mid_ahead": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 5.0,
+              "p50": 5.0,
+              "p95": 5.0
+            },
+            "coverage_at_least_0_80_rate": 0.9814323607427056,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.0,
+              "p95": 0.20261028388090582
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.9761273209549072,
+            "longest_below_0_80_streak_frames": 7,
+            "longest_below_0_80_streak_sec": 0.6683311465,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.6770765179081373,
+              "p50": 1.0
+            },
+            "start_anchored_rate": 0.9893899204244032,
+            "zero_coverage_rate": 0.010610079575596816
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 5.0,
+              "p50": 5.0,
+              "p95": 5.0
+            },
+            "coverage_at_least_0_80_rate": 0.9814323607427056,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.0,
+              "p95": 0.12646298576107037
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.9761273209549072,
+            "longest_below_0_80_streak_frames": 7,
+            "longest_below_0_80_streak_sec": 0.6683311465,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.7973897161190939,
+              "p50": 1.0
+            },
+            "start_anchored_rate": 0.9893899204244032,
+            "zero_coverage_rate": 0.010610079575596816
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 5.0,
+              "p50": 5.0,
+              "p95": 5.0
+            },
+            "coverage_at_least_0_80_rate": 0.9814323607427056,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.0,
+              "p95": 0.11893726099799458
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.9761273209549072,
+            "longest_below_0_80_streak_frames": 7,
+            "longest_below_0_80_streak_sec": 0.6683311465,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.811465688337356,
+              "p50": 1.0
+            },
+            "start_anchored_rate": 0.9893899204244032,
+            "zero_coverage_rate": 0.010610079575596816
+          }
+        },
+        "near_ahead": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 6.154999999999999,
+              "p50": 6.154999999999999,
+              "p95": 6.154999999999999
+            },
+            "coverage_at_least_0_80_rate": 1.0,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.2963595749122188,
+              "p95": 0.3272734759265437
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.9893899204244032,
+            "longest_below_0_80_streak_frames": 0,
+            "longest_below_0_80_streak_sec": 0.0,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.6727265240734563,
+              "p50": 0.7036404250877812
+            },
+            "start_anchored_rate": 1.0,
+            "zero_coverage_rate": 0.0
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 6.154999999999999,
+              "p50": 6.154999999999999,
+              "p95": 6.154999999999999
+            },
+            "coverage_at_least_0_80_rate": 1.0,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.2951749775694845,
+              "p95": 0.32564530021119553
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.9893899204244032,
+            "longest_below_0_80_streak_frames": 0,
+            "longest_below_0_80_streak_sec": 0.0,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.6730643836655845,
+              "p50": 0.7048250224305156
+            },
+            "start_anchored_rate": 1.0,
+            "zero_coverage_rate": 0.0
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 6.154999999999999,
+              "p50": 6.154999999999999,
+              "p95": 6.154999999999999
+            },
+            "coverage_at_least_0_80_rate": 1.0,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.296273753744731,
+              "p95": 0.326776933386426
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.9893899204244032,
+            "longest_below_0_80_streak_frames": 0,
+            "longest_below_0_80_streak_sec": 0.0,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.6730643836655845,
+              "p50": 0.703726246255269
+            },
+            "start_anchored_rate": 1.0,
+            "zero_coverage_rate": 0.0
+          }
+        },
+        "planning_consumer": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 15.0,
+              "p95": 15.0
+            },
+            "coverage_at_least_0_80_rate": 0.9814323607427056,
+            "coverage_ratio": {
+              "p05": 0.9770927279629668,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.37882783691296223,
+              "p95": 0.43862409477740666
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.76657824933687,
+            "longest_below_0_80_streak_frames": 7,
+            "longest_below_0_80_streak_sec": 0.6683311465,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.34360908055549816
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.541074360794745,
+              "p50": 0.6211721630870378
+            },
+            "start_anchored_rate": 0.8169761273209549,
+            "zero_coverage_rate": 0.0
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 15.0,
+              "p95": 15.0
+            },
+            "coverage_at_least_0_80_rate": 0.9814323607427056,
+            "coverage_ratio": {
+              "p05": 0.9770927279629668,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.37803946360594337,
+              "p95": 0.43178791568806973
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.76657824933687,
+            "longest_below_0_80_streak_frames": 7,
+            "longest_below_0_80_streak_sec": 0.6683311465,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.34360908055549816
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.5440754739476438,
+              "p50": 0.6219279744921187
+            },
+            "start_anchored_rate": 0.8169761273209549,
+            "zero_coverage_rate": 0.0
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 15.0,
+              "p95": 15.0
+            },
+            "coverage_at_least_0_80_rate": 0.9814323607427056,
+            "coverage_ratio": {
+              "p05": 0.9770927279629668,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.3779395455723138,
+              "p95": 0.39151441095902983
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.76657824933687,
+            "longest_below_0_80_streak_frames": 7,
+            "longest_below_0_80_streak_sec": 0.6683311465,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.34360908055549816
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.6041191398195294,
+              "p50": 0.6220604544276862
+            },
+            "start_anchored_rate": 0.8169761273209549,
+            "zero_coverage_rate": 0.0
+          }
+        },
+        "vehicle_envelope": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 4.635,
+              "p95": 4.635
+            },
+            "coverage_at_least_0_80_rate": 0.8037135278514589,
+            "coverage_ratio": {
+              "p05": 0.7567894611293249,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.610079575596817,
+            "longest_below_0_80_streak_frames": 73,
+            "longest_below_0_80_streak_sec": 7.3281958105000005,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 1.1272808476655798
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.0
+            },
+            "start_anchored_rate": 0.6923076923076923,
+            "zero_coverage_rate": 0.0
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 4.635,
+              "p95": 4.635
+            },
+            "coverage_at_least_0_80_rate": 0.8037135278514589,
+            "coverage_ratio": {
+              "p05": 0.7567894611293249,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.610079575596817,
+            "longest_below_0_80_streak_frames": 73,
+            "longest_below_0_80_streak_sec": 7.3281958105000005,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 1.1272808476655798
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.0
+            },
+            "start_anchored_rate": 0.6923076923076923,
+            "zero_coverage_rate": 0.0
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 4.635,
+              "p95": 4.635
+            },
+            "coverage_at_least_0_80_rate": 0.8037135278514589,
+            "coverage_ratio": {
+              "p05": 0.7567894611293249,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "family_available_rate": 1.0,
+            "frames": 377,
+            "fully_continuous_rate": 0.610079575596817,
+            "longest_below_0_80_streak_frames": 73,
+            "longest_below_0_80_streak_sec": 7.3281958105000005,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 1.1272808476655798
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.0
+            },
+            "start_anchored_rate": 0.6923076923076923,
+            "zero_coverage_rate": 0.0
+          }
+        }
+      }
+    },
+    "20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel": {
+      "frames": 288,
+      "tags": {
+        "scenario": "shadow_static_avoid_return",
+        "sim_time": "1pm",
+        "weather": "sunny"
+      },
+      "zones": {
+        "far_debug": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 1.1079432793178603,
+              "p50": 4.499491574756842,
+              "p95": 4.90592082186989
+            },
+            "coverage_at_least_0_80_rate": 0.6423611111111112,
+            "coverage_ratio": {
+              "p05": 0.2575674158523248,
+              "p50": 0.8998983149513684,
+              "p95": 0.981184164373978
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.29608019490257687,
+              "p95": 0.8867261864846836
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.034722222222222224,
+            "longest_below_0_80_streak_frames": 28,
+            "longest_below_0_80_streak_sec": 2.649534225,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.500508425243158,
+              "p95": 3.712162920738376
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.4647023916832218
+            },
+            "start_anchored_rate": 0.96875,
+            "zero_coverage_rate": 0.03125
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 1.1079432793178603,
+              "p50": 4.499491574756842,
+              "p95": 4.90592082186989
+            },
+            "coverage_at_least_0_80_rate": 0.6423611111111112,
+            "coverage_ratio": {
+              "p05": 0.2575674158523248,
+              "p50": 0.8998983149513684,
+              "p95": 0.981184164373978
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.14998047430781547,
+              "p95": 0.6825234541075694
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.034722222222222224,
+            "longest_below_0_80_streak_frames": 28,
+            "longest_below_0_80_streak_sec": 2.649534225,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.500508425243158,
+              "p95": 3.712162920738376
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.6436145087231477
+            },
+            "start_anchored_rate": 0.96875,
+            "zero_coverage_rate": 0.03125
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 1.1079432793178603,
+              "p50": 4.499491574756842,
+              "p95": 4.90592082186989
+            },
+            "coverage_at_least_0_80_rate": 0.6423611111111112,
+            "coverage_ratio": {
+              "p05": 0.2575674158523248,
+              "p50": 0.8998983149513684,
+              "p95": 0.981184164373978
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.0,
+              "p95": 0.8146674277669227
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.034722222222222224,
+            "longest_below_0_80_streak_frames": 28,
+            "longest_below_0_80_streak_sec": 2.649534225,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.500508425243158,
+              "p95": 3.712162920738376
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.7394916635961117
+            },
+            "start_anchored_rate": 0.96875,
+            "zero_coverage_rate": 0.03125
+          }
+        },
+        "mid_ahead": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 5.0,
+              "p50": 5.0,
+              "p95": 5.0
+            },
+            "coverage_at_least_0_80_rate": 0.9722222222222222,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.0,
+              "p95": 0.4568971118484307
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.96875,
+            "longest_below_0_80_streak_frames": 8,
+            "longest_below_0_80_streak_sec": 0.758311748,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.1528227400372432,
+              "p50": 1.0
+            },
+            "start_anchored_rate": 0.9722222222222222,
+            "zero_coverage_rate": 0.027777777777777776
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 5.0,
+              "p50": 5.0,
+              "p95": 5.0
+            },
+            "coverage_at_least_0_80_rate": 0.9722222222222222,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.0,
+              "p95": 0.09970081773465621
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.96875,
+            "longest_below_0_80_streak_frames": 8,
+            "longest_below_0_80_streak_sec": 0.758311748,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.7275427276998715,
+              "p50": 1.0
+            },
+            "start_anchored_rate": 0.9722222222222222,
+            "zero_coverage_rate": 0.027777777777777776
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 5.0,
+              "p50": 5.0,
+              "p95": 5.0
+            },
+            "coverage_at_least_0_80_rate": 0.9722222222222222,
+            "coverage_ratio": {
+              "p05": 1.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.0,
+              "p95": 0.394440347229256
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.96875,
+            "longest_below_0_80_streak_frames": 8,
+            "longest_below_0_80_streak_sec": 0.758311748,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.1528227400372432,
+              "p50": 1.0
+            },
+            "start_anchored_rate": 0.9722222222222222,
+            "zero_coverage_rate": 0.027777777777777776
+          }
+        },
+        "near_ahead": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 5.185746828516249,
+              "p50": 6.154999999999999,
+              "p95": 6.154999999999999
+            },
+            "coverage_at_least_0_80_rate": 0.9618055555555556,
+            "coverage_ratio": {
+              "p05": 0.8762166467768614,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.2030475110240353,
+              "p95": 0.3918431346507401
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.9375,
+            "longest_below_0_80_streak_frames": 8,
+            "longest_below_0_80_streak_sec": 0.772571087,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.7618865390884131
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.5392529832793392,
+              "p50": 0.7969486854496426
+            },
+            "start_anchored_rate": 0.96875,
+            "zero_coverage_rate": 0.0
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 5.185746828516249,
+              "p50": 6.154999999999999,
+              "p95": 6.154999999999999
+            },
+            "coverage_at_least_0_80_rate": 0.9618055555555556,
+            "coverage_ratio": {
+              "p05": 0.8762166467768614,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.1624068711730008,
+              "p95": 0.3247085000601188
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.9375,
+            "longest_below_0_80_streak_frames": 8,
+            "longest_below_0_80_streak_sec": 0.772571087,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.7618865390884131
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.675235371449672,
+              "p50": 0.8375711147440945
+            },
+            "start_anchored_rate": 0.96875,
+            "zero_coverage_rate": 0.0
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 5.185746828516249,
+              "p50": 6.154999999999999,
+              "p95": 6.154999999999999
+            },
+            "coverage_at_least_0_80_rate": 0.9618055555555556,
+            "coverage_ratio": {
+              "p05": 0.8762166467768614,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.16246029170050433,
+              "p95": 0.3283686324066599
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.9375,
+            "longest_below_0_80_streak_frames": 8,
+            "longest_below_0_80_streak_sec": 0.772571087,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.7618865390884131
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.5727657830539937,
+              "p50": 0.8375356816146857
+            },
+            "start_anchored_rate": 0.96875,
+            "zero_coverage_rate": 0.0
+          }
+        },
+        "planning_consumer": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 15.0,
+              "p95": 15.0
+            },
+            "coverage_at_least_0_80_rate": 0.9375,
+            "coverage_ratio": {
+              "p05": 0.6557842585019238,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.1653184600442652,
+              "p95": 0.42807554046295326
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.7291666666666666,
+            "longest_below_0_80_streak_frames": 10,
+            "longest_below_0_80_streak_sec": 0.99444604,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 5.16323612247114
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.3085016116811184,
+              "p50": 0.8206233927424231
+            },
+            "start_anchored_rate": 0.8541666666666666,
+            "zero_coverage_rate": 0.0
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 15.0,
+              "p95": 15.0
+            },
+            "coverage_at_least_0_80_rate": 0.9375,
+            "coverage_ratio": {
+              "p05": 0.6557842585019238,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.09988240098955448,
+              "p95": 0.3854144260411938
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.7291666666666666,
+            "longest_below_0_80_streak_frames": 10,
+            "longest_below_0_80_streak_sec": 0.99444604,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 5.16323612247114
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.6116148510148067,
+              "p50": 0.8880488664832733
+            },
+            "start_anchored_rate": 0.8541666666666666,
+            "zero_coverage_rate": 0.0
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 15.0,
+              "p95": 15.0
+            },
+            "coverage_at_least_0_80_rate": 0.9375,
+            "coverage_ratio": {
+              "p05": 0.6557842585019238,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.09317530762004328,
+              "p95": 0.39516968708834
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.7291666666666666,
+            "longest_below_0_80_streak_frames": 10,
+            "longest_below_0_80_streak_sec": 0.99444604,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 5.16323612247114
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.3085016116811184,
+              "p50": 0.8990207912342218
+            },
+            "start_anchored_rate": 0.8541666666666666,
+            "zero_coverage_rate": 0.0
+          }
+        },
+        "vehicle_envelope": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 4.635,
+              "p95": 4.635
+            },
+            "coverage_at_least_0_80_rate": 0.7708333333333334,
+            "coverage_ratio": {
+              "p05": 0.7484334221093634,
+              "p50": 0.9735737746142619,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.2696365872225327,
+              "p95": 1.0
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.25,
+            "longest_below_0_80_streak_frames": 51,
+            "longest_below_0_80_streak_sec": 4.937681674999999,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.1224855546628969,
+              "p95": 1.1660110885231012
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.6899796323433871
+            },
+            "start_anchored_rate": 0.5972222222222222,
+            "zero_coverage_rate": 0.03125
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 4.635,
+              "p95": 4.635
+            },
+            "coverage_at_least_0_80_rate": 0.7708333333333334,
+            "coverage_ratio": {
+              "p05": 0.7484334221093634,
+              "p50": 0.9735737746142619,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.10759802665511689,
+              "p95": 1.0
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.25,
+            "longest_below_0_80_streak_frames": 51,
+            "longest_below_0_80_streak_sec": 4.937681674999999,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.1224855546628969,
+              "p95": 1.1660110885231012
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.7861982743536822
+            },
+            "start_anchored_rate": 0.5972222222222222,
+            "zero_coverage_rate": 0.03125
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 4.635,
+              "p95": 4.635
+            },
+            "coverage_at_least_0_80_rate": 0.7708333333333334,
+            "coverage_ratio": {
+              "p05": 0.7484334221093634,
+              "p50": 0.9735737746142619,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.21552097462938435,
+              "p95": 1.0
+            },
+            "family_available_rate": 1.0,
+            "frames": 288,
+            "fully_continuous_rate": 0.25,
+            "longest_below_0_80_streak_frames": 51,
+            "longest_below_0_80_streak_sec": 4.937681674999999,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.1224855546628969,
+              "p95": 1.1660110885231012
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.7540098666143727
+            },
+            "start_anchored_rate": 0.5972222222222222,
+            "zero_coverage_rate": 0.03125
+          }
+        }
+      }
+    },
+    "20260913_195750_kcity2025_shadow_static_avoid_return_foggy_11am_wheel": {
+      "frames": 207,
+      "tags": {
+        "scenario": "shadow_static_avoid_return",
+        "sim_time": "11am",
+        "weather": "foggy"
+      },
+      "zones": {
+        "far_debug": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 4.338404717741152,
+              "p95": 4.743692025588132
+            },
+            "coverage_at_least_0_80_rate": 0.5942028985507246,
+            "coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.8676809435482304,
+              "p95": 0.9487384051176263
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.5864902490653876,
+              "p95": 0.9463545342665743
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.0,
+            "longest_below_0_80_streak_frames": 37,
+            "longest_below_0_80_streak_sec": 4.2628724575,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.6615952822588476,
+              "p95": 5.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.0
+            },
+            "start_anchored_rate": 0.8888888888888888,
+            "zero_coverage_rate": 0.0966183574879227
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 4.338404717741152,
+              "p95": 4.743692025588132
+            },
+            "coverage_at_least_0_80_rate": 0.5942028985507246,
+            "coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.8676809435482304,
+              "p95": 0.9487384051176263
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.23257674051556626,
+              "p95": 0.9459648417647374
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.0,
+            "longest_below_0_80_streak_frames": 37,
+            "longest_below_0_80_streak_sec": 4.2628724575,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.6615952822588476,
+              "p95": 5.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.15640109524279672
+            },
+            "start_anchored_rate": 0.8888888888888888,
+            "zero_coverage_rate": 0.0966183574879227
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 4.338404717741152,
+              "p95": 4.743692025588132
+            },
+            "coverage_at_least_0_80_rate": 0.5942028985507246,
+            "coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.8676809435482304,
+              "p95": 0.9487384051176263
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.0,
+              "p95": 0.912933123984918
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.0,
+            "longest_below_0_80_streak_frames": 37,
+            "longest_below_0_80_streak_sec": 4.2628724575,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.6615952822588476,
+              "p95": 5.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.4681526800743157
+            },
+            "start_anchored_rate": 0.8888888888888888,
+            "zero_coverage_rate": 0.0966183574879227
+          }
+        },
+        "mid_ahead": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 5.0,
+              "p95": 5.0
+            },
+            "coverage_at_least_0_80_rate": 0.9178743961352657,
+            "coverage_ratio": {
+              "p05": 0.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.06532724344134877,
+              "p95": 0.7789372703749108
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.8888888888888888,
+            "longest_below_0_80_streak_frames": 15,
+            "longest_below_0_80_streak_sec": 2.1632761955,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 5.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.9002345108077285
+            },
+            "start_anchored_rate": 0.927536231884058,
+            "zero_coverage_rate": 0.07246376811594203
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 5.0,
+              "p95": 5.0
+            },
+            "coverage_at_least_0_80_rate": 0.9178743961352657,
+            "coverage_ratio": {
+              "p05": 0.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.0,
+              "p95": 0.4564425727722256
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.8888888888888888,
+            "longest_below_0_80_streak_frames": 15,
+            "longest_below_0_80_streak_sec": 2.1632761955,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 5.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 1.0
+            },
+            "start_anchored_rate": 0.927536231884058,
+            "zero_coverage_rate": 0.07246376811594203
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 5.0,
+              "p95": 5.0
+            },
+            "coverage_at_least_0_80_rate": 0.9178743961352657,
+            "coverage_ratio": {
+              "p05": 0.0,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.0,
+              "p95": 0.5759494719667672
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.8888888888888888,
+            "longest_below_0_80_streak_frames": 15,
+            "longest_below_0_80_streak_sec": 2.1632761955,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 5.0
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 1.0
+            },
+            "start_anchored_rate": 0.927536231884058,
+            "zero_coverage_rate": 0.07246376811594203
+          }
+        },
+        "near_ahead": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 4.482151948690627,
+              "p50": 6.154999999999999,
+              "p95": 6.154999999999999
+            },
+            "coverage_at_least_0_80_rate": 0.927536231884058,
+            "coverage_ratio": {
+              "p05": 0.7433965585656315,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.2065632694995117,
+              "p95": 0.3643369007628946
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.9033816425120773,
+            "longest_below_0_80_streak_frames": 10,
+            "longest_below_0_80_streak_sec": 1.0003030305,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 1.5793941820285387
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.44697262897086654,
+              "p50": 0.7924937292806322
+            },
+            "start_anchored_rate": 0.9806763285024155,
+            "zero_coverage_rate": 0.0
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 4.482151948690627,
+              "p50": 6.154999999999999,
+              "p95": 6.154999999999999
+            },
+            "coverage_at_least_0_80_rate": 0.927536231884058,
+            "coverage_ratio": {
+              "p05": 0.7433965585656315,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.2030539431026201,
+              "p95": 0.31878814353942586
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.9033816425120773,
+            "longest_below_0_80_streak_frames": 10,
+            "longest_below_0_80_streak_sec": 1.0003030305,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 1.5793941820285387
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.5696725875514472,
+              "p50": 0.7969225889514095
+            },
+            "start_anchored_rate": 0.9806763285024155,
+            "zero_coverage_rate": 0.0
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 4.482151948690627,
+              "p50": 6.154999999999999,
+              "p95": 6.154999999999999
+            },
+            "coverage_at_least_0_80_rate": 0.927536231884058,
+            "coverage_ratio": {
+              "p05": 0.7433965585656315,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.1624634305497261,
+              "p95": 0.32394011283567764
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.9033816425120773,
+            "longest_below_0_80_streak_frames": 10,
+            "longest_below_0_80_streak_sec": 1.0003030305,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 1.5793941820285387
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.4891381855597907,
+              "p50": 0.7981751869876949
+            },
+            "start_anchored_rate": 0.9806763285024155,
+            "zero_coverage_rate": 0.0
+          }
+        },
+        "planning_consumer": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 15.0,
+              "p95": 15.0
+            },
+            "coverage_at_least_0_80_rate": 0.9082125603864735,
+            "coverage_ratio": {
+              "p05": 0.5958420020169736,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.2428138716952433,
+              "p95": 0.3916818459541428
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.5797101449275363,
+            "longest_below_0_80_streak_frames": 15,
+            "longest_below_0_80_streak_sec": 2.1632761955,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 6.062369969745394
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.3544345612134024,
+              "p50": 0.7342897604373914
+            },
+            "start_anchored_rate": 0.8067632850241546,
+            "zero_coverage_rate": 0.0
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 15.0,
+              "p95": 15.0
+            },
+            "coverage_at_least_0_80_rate": 0.9082125603864735,
+            "coverage_ratio": {
+              "p05": 0.5958420020169736,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.15344065334014273,
+              "p95": 0.3846090074941092
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.5797101449275363,
+            "longest_below_0_80_streak_frames": 15,
+            "longest_below_0_80_streak_sec": 2.1632761955,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 6.062369969745394
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.5158893525011579,
+              "p50": 0.8040059416239604
+            },
+            "start_anchored_rate": 0.8067632850241546,
+            "zero_coverage_rate": 0.0
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 15.0,
+              "p95": 15.0
+            },
+            "coverage_at_least_0_80_rate": 0.9082125603864735,
+            "coverage_ratio": {
+              "p05": 0.5958420020169736,
+              "p50": 1.0,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.08345313379843407,
+              "p95": 0.38924744482568824
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.5797101449275363,
+            "longest_below_0_80_streak_frames": 15,
+            "longest_below_0_80_streak_sec": 2.1632761955,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 6.062369969745394
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.41595793872392756,
+              "p50": 0.9144616174764325
+            },
+            "start_anchored_rate": 0.8067632850241546,
+            "zero_coverage_rate": 0.0
+          }
+        },
+        "vehicle_envelope": {
+          "both_strips": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 0.0,
+              "p95": 4.635
+            },
+            "coverage_at_least_0_80_rate": 0.6956521739130435,
+            "coverage_ratio": {
+              "p05": 0.7460872044489756,
+              "p50": 0.9414879053905993,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.48176778586433383,
+              "p95": 1.0
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.2560386473429952,
+            "longest_below_0_80_streak_frames": 57,
+            "longest_below_0_80_streak_sec": 5.6420245175,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.2712035585145727,
+              "p95": 1.1768858073789985
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.4383245681719269
+            },
+            "start_anchored_rate": 0.4927536231884058,
+            "zero_coverage_rate": 0.01932367149758454
+          },
+          "left_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 0.0,
+              "p95": 4.635
+            },
+            "coverage_at_least_0_80_rate": 0.6956521739130435,
+            "coverage_ratio": {
+              "p05": 0.7460872044489756,
+              "p50": 0.9414879053905993,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.21574913573916923,
+              "p95": 1.0
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.2560386473429952,
+            "longest_below_0_80_streak_frames": 57,
+            "longest_below_0_80_streak_sec": 5.6420245175,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.2712035585145727,
+              "p95": 1.1768858073789985
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.7194437663383572
+            },
+            "start_anchored_rate": 0.4927536231884058,
+            "zero_coverage_rate": 0.01932367149758454
+          },
+          "right_strip": {
+            "continuous_from_start_m": {
+              "p05": 0.0,
+              "p50": 0.0,
+              "p95": 4.635
+            },
+            "coverage_at_least_0_80_rate": 0.6956521739130435,
+            "coverage_ratio": {
+              "p05": 0.7460872044489756,
+              "p50": 0.9414879053905993,
+              "p95": 1.0
+            },
+            "degraded_coverage_ratio": {
+              "p50": 0.10787467992562735,
+              "p95": 1.0
+            },
+            "family_available_rate": 1.0,
+            "frames": 207,
+            "fully_continuous_rate": 0.2560386473429952,
+            "longest_below_0_80_streak_frames": 57,
+            "longest_below_0_80_streak_sec": 5.6420245175,
+            "longest_internal_unusable_gap_m": {
+              "p50": 0.0,
+              "p95": 0.0
+            },
+            "longest_unusable_gap_m": {
+              "p50": 0.2712035585145727,
+              "p95": 1.1768858073789985
+            },
+            "observed_coverage_ratio": {
+              "p05": 0.0,
+              "p50": 0.7461370070082484
+            },
+            "start_anchored_rate": 0.4927536231884058,
+            "zero_coverage_rate": 0.01932367149758454
+          }
+        }
+      }
+    }
+  },
+  "schema_version": "asmc-shadow-planning-usability-baseline-1.0.0",
+  "status": "measurement_only_no_policy_change",
+  "valid_frames": 1274
+}

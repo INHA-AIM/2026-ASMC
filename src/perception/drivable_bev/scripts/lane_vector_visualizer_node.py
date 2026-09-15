@@ -3,12 +3,14 @@
 
 from __future__ import annotations
 
+import json
 import threading
 
 import cv2
 import message_filters
 import numpy as np
 import rospy
+from diagnostic_msgs.msg import DiagnosticArray
 from sensor_msgs import point_cloud2
 from sensor_msgs.msg import CompressedImage, Image, PointCloud2
 from visualization_msgs.msg import Marker, MarkerArray
@@ -21,6 +23,7 @@ from drivable_bev.visualization import (
     draw_metric_evidence,
     draw_metric_grid,
     draw_metric_lanes,
+    draw_stateful_lane_family,
     render_fused_bev,
 )
 
@@ -73,6 +76,8 @@ class LaneVectorVisualizerNode:
         self.evidence_class = np.empty(0, dtype=np.uint8)
         self.lanes = []
         self.boundaries = []
+        self.shared_family_segments = []
+        self.shared_family_status = "waiting for shared-family diagnostics"
         self.images = {}
         self.latest_stamp = rospy.Time()
 
@@ -86,6 +91,11 @@ class LaneVectorVisualizerNode:
             ),
             "boundaries": rospy.Publisher(
                 base + "/boundaries_bev/compressed", CompressedImage, queue_size=1
+            ),
+            "shared_family": rospy.Publisher(
+                base + "/shared_family_bev/compressed",
+                CompressedImage,
+                queue_size=1,
             ),
             "reprojection": rospy.Publisher(
                 base + "/camera_reprojection_mosaic/compressed",
@@ -224,6 +234,59 @@ class LaneVectorVisualizerNode:
             if stamp is not None:
                 self.latest_stamp = stamp
 
+    def _shared_family_marker_callback(self, message):
+        segments = []
+        stamp = None
+        for marker in message.markers:
+            if marker.action != Marker.ADD or marker.type != Marker.LINE_STRIP:
+                continue
+            parts = marker.ns.split("/")
+            if len(parts) != 3 or parts[0] != "shared_family":
+                continue
+            role, state = parts[1], parts[2]
+            class_id = 2 if role == "yellow_centre_boundary" else 1
+            if state not in ("observed", "structure_inferred", "invalid"):
+                continue
+            if len(marker.points) < 2:
+                continue
+            segments.append(
+                (
+                    role,
+                    state,
+                    class_id,
+                    np.asarray(
+                        [(point.x, point.y) for point in marker.points],
+                        dtype=np.float64,
+                    ),
+                )
+            )
+            stamp = marker.header.stamp
+        with self.lock:
+            self.shared_family_segments = segments
+            if stamp is not None:
+                self.latest_stamp = stamp
+
+    def _shared_family_diagnostics_callback(self, message):
+        if not message.status:
+            return
+        status = message.status[0]
+        values = {value.key: value.value for value in status.values}
+        try:
+            widths = json.loads(values.get("widths_m", "{}"))
+        except (TypeError, ValueError):
+            widths = {}
+        width_text = (
+            " L={:.2f}m R={:.2f}m".format(
+                float(widths["left"]), float(widths["right"])
+            )
+            if "left" in widths and "right" in widths
+            else ""
+        )
+        text = "shared={}{}".format(status.message, width_text)
+        with self.lock:
+            self.shared_family_status = text
+            self.latest_stamp = message.header.stamp
+
     def _camera_callback(self, message, view):
         if self.publishers["reprojection"].get_num_connections() == 0:
             return
@@ -251,6 +314,11 @@ class LaneVectorVisualizerNode:
             boundaries = [
                 (class_id, points.copy()) for class_id, points in self.boundaries
             ]
+            shared_family_segments = [
+                (role, state, class_id, points.copy())
+                for role, state, class_id, points in self.shared_family_segments
+            ]
+            shared_family_status = self.shared_family_status
             images = {view: image.copy() for view, image in self.images.items()}
             stamp = self.latest_stamp
         try:
@@ -271,6 +339,17 @@ class LaneVectorVisualizerNode:
                 )
                 self.publishers["boundaries"].publish(
                     self._compressed(boundary_image, stamp)
+                )
+            if requested["shared_family"]:
+                shared_family_image = self._base(layers)
+                draw_stateful_lane_family(
+                    shared_family_image,
+                    shared_family_segments,
+                    self.display_grid,
+                    status_text=shared_family_status,
+                )
+                self.publishers["shared_family"].publish(
+                    self._compressed(shared_family_image, stamp)
                 )
             if requested["reprojection"] and all(
                 view in images for view in self.view_order
@@ -322,6 +401,18 @@ class LaneVectorVisualizerNode:
                     "/perception/lane/boundaries",
                     MarkerArray,
                     self._boundary_marker_callback,
+                    queue_size=1,
+                ),
+                rospy.Subscriber(
+                    "/perception/lane/debug/shared_family/markers",
+                    MarkerArray,
+                    self._shared_family_marker_callback,
+                    queue_size=1,
+                ),
+                rospy.Subscriber(
+                    "/perception/lane/debug/shared_family/diagnostics",
+                    DiagnosticArray,
+                    self._shared_family_diagnostics_callback,
                     queue_size=1,
                 ),
             ]

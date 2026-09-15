@@ -1,0 +1,305 @@
+{
+  "bands_are_acceptance_gates": false,
+  "contact_sheets": {
+    "internal_support_gap/supportive": "contact_sheet_internal_support_gap_supportive.jpg",
+    "no_material_invalid_support/review": "contact_sheet_no_material_invalid_support_review.jpg",
+    "no_material_invalid_support/supportive": "contact_sheet_no_material_invalid_support_supportive.jpg",
+    "preview_entry_missing/supportive": "contact_sheet_preview_entry_missing_supportive.jpg",
+    "preview_trailing_tail/review": "contact_sheet_preview_trailing_tail_review.jpg",
+    "preview_trailing_tail/supportive": "contact_sheet_preview_trailing_tail_supportive.jpg",
+    "vehicle_near_leading_tail/supportive": "contact_sheet_vehicle_near_leading_tail_supportive.jpg",
+    "whole_support_shrink/supportive": "contact_sheet_whole_support_shrink_supportive.jpg"
+  },
+  "aligned_minus_nearest_frame_p95_m": {
+    "absolute_p95": 0.012542078312204448,
+    "maximum_absolute": 0.022576362542209568,
+    "p50": -0.0004041851316501921,
+    "p95": 0.006470727487907123,
+    "paired_category_frames": 408
+  },
+  "created_at_utc": "2026-09-15T04:04:42+00:00",
+  "ego_pose_alignment": {
+    "bracket_span_ms": {
+      "p50": 17.280936,
+      "p95": 34.4698196
+    },
+    "delta_from_nearest": {
+      "heading_deg_p95": 0.056163828485239264,
+      "translation_m_p95": 0.12081299455692329
+    },
+    "mode_counts": {
+      "interpolated": 1030,
+      "nearest_fallback": 1
+    },
+    "nearest_age_ms": {
+      "p50": 7.054329,
+      "p95": 11.620283
+    },
+    "offline_map_evaluation_only": true,
+    "runtime_ego_motion_compensation": false
+  },
+  "error_bands_m": [
+    0.35,
+    0.6
+  ],
+  "frames": 1031,
+  "inside_pseudo_gt_odd_frames": 378,
+  "interpretation": "signed normal and absolute distances compare retained INVALID geometry with same-role map pseudo-GT; map, projection and asynchronous sensor uncertainty remain, so bands prioritize review and do not pass/fail frames",
+  "invalid_geometry_planning_authority": false,
+  "metrics_by_category_role": [
+    {
+      "aligned_abs_p50_frame_p50_m": 0.031298868601099414,
+      "aligned_abs_p95_frame_p50_m": 0.035427821953988484,
+      "aligned_abs_p95_frame_p95_m": 0.06158986219922015,
+      "aligned_frames": 6,
+      "aligned_points": 30,
+      "aligned_signed_p50_frame_p50_m": -0.005917183631515069,
+      "category": "internal_support_gap",
+      "nearest_abs_p95_frame_p50_m": 0.034463581003582974,
+      "nearest_abs_p95_frame_p95_m": 0.06312365454348516,
+      "role": "left_outer_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.02203074919509286,
+      "aligned_abs_p95_frame_p50_m": 0.024377553456653663,
+      "aligned_abs_p95_frame_p95_m": 0.04408995709585559,
+      "aligned_frames": 6,
+      "aligned_points": 30,
+      "aligned_signed_p50_frame_p50_m": -0.011692151365083996,
+      "category": "internal_support_gap",
+      "nearest_abs_p95_frame_p50_m": 0.024473463532036617,
+      "nearest_abs_p95_frame_p95_m": 0.045463748869264214,
+      "role": "right_outer_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.030215480030743286,
+      "aligned_abs_p95_frame_p50_m": 0.03245347584865959,
+      "aligned_abs_p95_frame_p95_m": 0.08107047353393512,
+      "aligned_frames": 6,
+      "aligned_points": 30,
+      "aligned_signed_p50_frame_p50_m": 0.030215480030743286,
+      "category": "internal_support_gap",
+      "nearest_abs_p95_frame_p50_m": 0.03167758865543898,
+      "nearest_abs_p95_frame_p95_m": 0.08369738687143244,
+      "role": "yellow_centre_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.03457277145331707,
+      "aligned_abs_p95_frame_p50_m": 0.07872132307177004,
+      "aligned_abs_p95_frame_p95_m": 0.2583283975343836,
+      "aligned_frames": 88,
+      "aligned_points": 1746,
+      "aligned_signed_p50_frame_p50_m": -0.005593046423465151,
+      "category": "no_material_invalid_support",
+      "nearest_abs_p95_frame_p50_m": 0.07874289105103856,
+      "nearest_abs_p95_frame_p95_m": 0.25834558403838026,
+      "role": "left_outer_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.03811297918646716,
+      "aligned_abs_p95_frame_p50_m": 0.08109988432250714,
+      "aligned_abs_p95_frame_p95_m": 0.22567507934438125,
+      "aligned_frames": 88,
+      "aligned_points": 1746,
+      "aligned_signed_p50_frame_p50_m": -0.025781530541471108,
+      "category": "no_material_invalid_support",
+      "nearest_abs_p95_frame_p50_m": 0.08029193734966394,
+      "nearest_abs_p95_frame_p95_m": 0.22570873357331972,
+      "role": "right_outer_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.029523207863298175,
+      "aligned_abs_p95_frame_p50_m": 0.08570669782861831,
+      "aligned_abs_p95_frame_p95_m": 0.27091711872852786,
+      "aligned_frames": 88,
+      "aligned_points": 1746,
+      "aligned_signed_p50_frame_p50_m": 0.017192111303489854,
+      "category": "no_material_invalid_support",
+      "nearest_abs_p95_frame_p50_m": 0.08467476158234102,
+      "nearest_abs_p95_frame_p95_m": 0.2714255712788306,
+      "role": "yellow_centre_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.03692851168961754,
+      "aligned_abs_p95_frame_p50_m": 0.07140331638298664,
+      "aligned_abs_p95_frame_p95_m": 0.1965428345542331,
+      "aligned_frames": 9,
+      "aligned_points": 177,
+      "aligned_signed_p50_frame_p50_m": -0.02167753511058983,
+      "category": "preview_entry_missing",
+      "nearest_abs_p95_frame_p50_m": 0.07424630515107662,
+      "nearest_abs_p95_frame_p95_m": 0.21120272326222467,
+      "role": "left_outer_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.0664981309202871,
+      "aligned_abs_p95_frame_p50_m": 0.11663356641705075,
+      "aligned_abs_p95_frame_p95_m": 0.19370544439941653,
+      "aligned_frames": 9,
+      "aligned_points": 174,
+      "aligned_signed_p50_frame_p50_m": 0.00985123230134494,
+      "category": "preview_entry_missing",
+      "nearest_abs_p95_frame_p50_m": 0.11194423440679738,
+      "nearest_abs_p95_frame_p95_m": 0.19738129346638283,
+      "role": "right_outer_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.06573678074798361,
+      "aligned_abs_p95_frame_p50_m": 0.12259280336929118,
+      "aligned_abs_p95_frame_p95_m": 0.19983987395945615,
+      "aligned_frames": 9,
+      "aligned_points": 176,
+      "aligned_signed_p50_frame_p50_m": 0.04050004626237773,
+      "category": "preview_entry_missing",
+      "nearest_abs_p95_frame_p50_m": 0.12955213704290816,
+      "nearest_abs_p95_frame_p95_m": 0.2034863026336207,
+      "role": "yellow_centre_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.06921400946829737,
+      "aligned_abs_p95_frame_p50_m": 0.07750482366809772,
+      "aligned_abs_p95_frame_p95_m": 0.4307436503288184,
+      "aligned_frames": 215,
+      "aligned_points": 872,
+      "aligned_signed_p50_frame_p50_m": -0.009675139814723194,
+      "category": "preview_trailing_tail",
+      "nearest_abs_p95_frame_p50_m": 0.07703684262158705,
+      "nearest_abs_p95_frame_p95_m": 0.42935044683393553,
+      "role": "left_outer_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.07190027788900259,
+      "aligned_abs_p95_frame_p50_m": 0.0805916267867659,
+      "aligned_abs_p95_frame_p95_m": 0.35929598678805663,
+      "aligned_frames": 251,
+      "aligned_points": 892,
+      "aligned_signed_p50_frame_p50_m": -0.027259765994012516,
+      "category": "preview_trailing_tail",
+      "nearest_abs_p95_frame_p50_m": 0.0796631881688327,
+      "nearest_abs_p95_frame_p95_m": 0.3584645965474813,
+      "role": "right_outer_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.0583552253125324,
+      "aligned_abs_p95_frame_p50_m": 0.061992603363070845,
+      "aligned_abs_p95_frame_p95_m": 0.39160964168129675,
+      "aligned_frames": 285,
+      "aligned_points": 902,
+      "aligned_signed_p50_frame_p50_m": 0.01901492059431677,
+      "category": "preview_trailing_tail",
+      "nearest_abs_p95_frame_p50_m": 0.06390087846553932,
+      "nearest_abs_p95_frame_p95_m": 0.3917499110462689,
+      "role": "yellow_centre_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.05810347610331998,
+      "aligned_abs_p95_frame_p50_m": 0.08625078965453967,
+      "aligned_abs_p95_frame_p95_m": 0.18715493140257508,
+      "aligned_frames": 9,
+      "aligned_points": 100,
+      "aligned_signed_p50_frame_p50_m": 0.011092033156957466,
+      "category": "vehicle_near_leading_tail",
+      "nearest_abs_p95_frame_p50_m": 0.08374181512965738,
+      "nearest_abs_p95_frame_p95_m": 0.19178297541792466,
+      "role": "left_outer_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.0622883192593953,
+      "aligned_abs_p95_frame_p50_m": 0.07494354370768701,
+      "aligned_abs_p95_frame_p95_m": 0.1762814684876614,
+      "aligned_frames": 9,
+      "aligned_points": 96,
+      "aligned_signed_p50_frame_p50_m": -0.038767715232085345,
+      "category": "vehicle_near_leading_tail",
+      "nearest_abs_p95_frame_p50_m": 0.07859353959722915,
+      "nearest_abs_p95_frame_p95_m": 0.1809704958465776,
+      "role": "right_outer_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.08734579134975236,
+      "aligned_abs_p95_frame_p50_m": 0.10740730342235526,
+      "aligned_abs_p95_frame_p95_m": 0.15223518959854715,
+      "aligned_frames": 9,
+      "aligned_points": 95,
+      "aligned_signed_p50_frame_p50_m": -0.008361099837714221,
+      "category": "vehicle_near_leading_tail",
+      "nearest_abs_p95_frame_p50_m": 0.10740743092546856,
+      "nearest_abs_p95_frame_p95_m": 0.15294131550555423,
+      "role": "yellow_centre_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.03249688711952674,
+      "aligned_abs_p95_frame_p50_m": 0.07831347890259442,
+      "aligned_abs_p95_frame_p95_m": 0.1771568579101988,
+      "aligned_frames": 11,
+      "aligned_points": 160,
+      "aligned_signed_p50_frame_p50_m": -0.006277946706031708,
+      "category": "whole_support_shrink",
+      "nearest_abs_p95_frame_p50_m": 0.08198642680708866,
+      "nearest_abs_p95_frame_p95_m": 0.17910258074294644,
+      "role": "left_outer_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.02310474843075463,
+      "aligned_abs_p95_frame_p50_m": 0.03949534465893689,
+      "aligned_abs_p95_frame_p95_m": 0.14666796079844147,
+      "aligned_frames": 11,
+      "aligned_points": 156,
+      "aligned_signed_p50_frame_p50_m": -2.6312921478221362e-05,
+      "category": "whole_support_shrink",
+      "nearest_abs_p95_frame_p50_m": 0.04070072626771026,
+      "nearest_abs_p95_frame_p95_m": 0.14980318309180377,
+      "role": "right_outer_boundary"
+    },
+    {
+      "aligned_abs_p50_frame_p50_m": 0.04032403716134206,
+      "aligned_abs_p95_frame_p50_m": 0.057370874015221604,
+      "aligned_abs_p95_frame_p95_m": 0.1500613110457326,
+      "aligned_frames": 11,
+      "aligned_points": 157,
+      "aligned_signed_p50_frame_p50_m": 0.039809130401293566,
+      "category": "whole_support_shrink",
+      "nearest_abs_p95_frame_p50_m": 0.06213710648498857,
+      "nearest_abs_p95_frame_p95_m": 0.1501875407862683,
+      "role": "yellow_centre_boundary"
+    }
+  ],
+  "review_band_frame_counts": {
+    "internal_support_gap/supportive": 6,
+    "no_material_invalid_support/review": 1,
+    "no_material_invalid_support/supportive": 87,
+    "preview_entry_missing/supportive": 9,
+    "preview_trailing_tail/review": 22,
+    "preview_trailing_tail/supportive": 263,
+    "vehicle_near_leading_tail/supportive": 9,
+    "whole_support_shrink/supportive": 11
+  },
+  "runs": [
+    {
+      "frames": "/data/rosbags/audits/shadow_invalid_map_distance_representative_v1_20260915/20260912_001404_kcity2025_shadow_clear_foggy_1pm_wheel/frames.jsonl",
+      "frames_sha256": "5ed87fb46abbb0da552b9687787ab62392c030b97176eda066d358ad9a092ad6",
+      "metadata": "/data/rosbags/audits/shadow_invalid_map_distance_representative_v1_20260915/20260912_001404_kcity2025_shadow_clear_foggy_1pm_wheel/metadata.json",
+      "metadata_sha256": "4876151933ef7422c228594f317ef689c4c65f427dceb5254bf7ec96bef9f497"
+    },
+    {
+      "frames": "/data/rosbags/audits/shadow_invalid_map_distance_representative_v1_20260915/20260912_001454_kcity2025_shadow_clear_sunny_1pm_wheel/frames.jsonl",
+      "frames_sha256": "96b089877b0638e655afd543f86e559e3b63214b61f87c1ee38472486216f4ab",
+      "metadata": "/data/rosbags/audits/shadow_invalid_map_distance_representative_v1_20260915/20260912_001454_kcity2025_shadow_clear_sunny_1pm_wheel/metadata.json",
+      "metadata_sha256": "9521e7ab2a5f09d894d3f65254a01fd620cd36a297c2b1626d336fb21fe305c7"
+    },
+    {
+      "frames": "/data/rosbags/audits/shadow_invalid_map_distance_representative_v1_20260915/20260912_003922_kcity2025_shadow_static_avoid_v1_sunny_3pm_wheel/frames.jsonl",
+      "frames_sha256": "6398734cc6beaa2412ceda03f31e59930ffa90f11a13450c51605e4e31fb940b",
+      "metadata": "/data/rosbags/audits/shadow_invalid_map_distance_representative_v1_20260915/20260912_003922_kcity2025_shadow_static_avoid_v1_sunny_3pm_wheel/metadata.json",
+      "metadata_sha256": "f975579bc0e3ccc73bc3763924a28bf84d4086f563c96b00e18b15f8b44a65bc"
+    },
+    {
+      "frames": "/data/rosbags/audits/shadow_invalid_map_distance_representative_v1_20260915/20260912_004015_kcity2025_shadow_static_avoid_v1_foggy_11am_wheel/frames.jsonl",
+      "frames_sha256": "849c285edda6185e9b99814750496148bb9da9d061c617fbc038a90aa04fa4ce",
+      "metadata": "/data/rosbags/audits/shadow_invalid_map_distance_representative_v1_20260915/20260912_004015_kcity2025_shadow_static_avoid_v1_foggy_11am_wheel/metadata.json",
+      "metadata_sha256": "937427b4da4fed510c8a55212ccf052120af6225ada6a6f1230a032150f56aab"
+    }
+  ],
+  "schema_version": "asmc-invalid-map-distance-summary-1.0.0",
+  "status": "representative_offline_measurement"
+}
