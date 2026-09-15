@@ -81,11 +81,11 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 │   ├── aim_scenario_runner/   # scenario ✅
 │   └── grpc_inha_univ/        # gRPC ✅
 ├── scripts/
-│   ├── rosbridge.sh           # WebSocket rosbridge (개발)
+│   ├── rosbridge.sh           # 종료된 direct ROS 실험 재현용(본선/현재 개발 금지)
 │   ├── udp_bridge.sh          # UDP bridges (--simulator 26r1|competition)
 │   └── …
 ├── mgeo_toolkit/ · R_KR_PG_KATRI/
-└── config/morai_rosbridge.env
+└── config/morai_rosbridge.env # 위 실험의 레거시 설정
 ```
 
 팀원별 **어느 폴더를 고칠지:** [docs/team-dev-guide.md](docs/team-dev-guide.md)

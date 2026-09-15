@@ -4,7 +4,7 @@
 > **담당:** 안승현
 > **데이터 정본:** [인지 데이터 라벨링·분할 계약](../../docs/perception-dataset-labeling-split.md)
 > **전체 로드맵:** [카메라·MGeo·LiDAR 융합 로드맵](../../docs/perception-map-fusion-roadmap.md)
-> **rosbag 정본:** [rosbag 평가·Streaming GT 가이드](../../docs/rosbag-evaluation-streaming-gt.md)
+> **rosbag 정본:** [rosbag 재현 평가 가이드](../../docs/rosbag-evaluation-streaming-gt.md)
 > **문서 허브:** [docs/README.md](../../docs/README.md)
 
 ## 수집 경로 선택
@@ -19,7 +19,7 @@
 | 음영구간 v3 판제 인수 replay | `shadow_camera_perception_handoff_result` | family·drivable score·coverage와 3단 diagnostics 필수; 제어 승격과 무관 |
 | 고주기 RGB sequence | v2 + Simulation Time Sensor Record | 장착된 일반 센서만 저장. 시계열 학습·재생 후보 |
 | 고주기 supervised sequence | 최소 RGB+Semantic GT 센서셋 + Simulation Time Sensor Record | 별도 pilot 후 채택. v2 Sensor Record만으로 Semantic GT가 생기지 않음 |
-| 고주기 Streaming GT | GT UDP bridge source-time + privileged bag | schema·Object ID 보존 검증 완료, p95 정합 미달로 학습 pair는 Capture 우선 |
+| 고주기 Streaming GT | GT UDP bridge source-time + privileged bag | 종료된 실험. profile은 재현용으로만 보존 |
 
 Capture Mode와 gRPC는 26.R1.h3 개발·학습용이다. 본선 배포 추론은 허용 UDP 센서만
 사용하며 Semantic/Instance GT, Capture gRPC와 oracle 토픽을 사용하지 않는다.
@@ -57,16 +57,15 @@ Capture Mode는 Real/Simulation Time과 별개로 켜는 저장 기능이다. �
 | 수동 휠 다양화 | Real Time + Capture |
 | 고주기 RGB 시계열 파일 | v2 + Simulation Time + Sensor Record. 필요 시 Sensor Synchronization 10 Hz pilot |
 | 고주기 RGB–Semantic 학습 pair | 최소 RGB+Semantic 센서셋 + Simulation Time + Sensor Record. pairing 검증 필수 |
-| 센서 생성 skew를 배제한 알고리즘 검증 | Simulation Time + Sensor Synchronization + source-time ROS bag/replay |
+| 센서 생성 skew를 배제한 알고리즘 검증 | 필요 시 Simulation Time Sensor Record + offline replay pilot |
 | 실제 지연·drop·jitter 평가 | Real Time UDP + raw rosbag |
 | 모델 A/B 비교 | 같은 raw bag 재생, result는 모델별 분리 |
 | 기존 LiDAR clustering/OBB 튜닝 | PointCloud·GPS·IMU·Ego·개발용 Object GT raw bag |
 | 학습형 LiDAR 객체 검출 | 실제 Intensity point cloud + Instance/3D box GT Capture |
 
 Capture는 요청마다 시뮬레이션이 약 0.5초 멈춰 wheel/MPC temporal 평가에 적합하지 않다.
-실제 비동기 성능과 모델 A/B에는 raw rosbag을 사용한다. GT Connect stream은 Capture를
-대체하는 학습 정답이 아니라 고주기 정합·평가 후보이며, 허용 gap을 넘는 pair는 offline에서
-제외한다.
+실제 비동기 성능과 모델 A/B에는 Real Time UDP raw rosbag을 사용한다. 과거 GT Connect
+stream은 Capture를 대체하지 못했고 Streaming/ROS GT transport 실험은 종료했다.
 
 ### Simulation Time의 Sensor Record
 
@@ -117,19 +116,18 @@ External Sync service의 `sensor_capture` 결과는 별도
 
 즉 Simulation Time + 10Hz Sensor Record는 **장착 센서의 생성 시각을 맞춘 통제 입력**을
 만드는 데 유용하지만, simulator-side 파일 기록이라 UDP/bridge/ROS queue/추론 지연은
-재현하지 않는다. 기존 live 추론은 이 파일을 직접 읽지 않으므로, 알고리즘 입력 skew를
-실제로 제거하려면 Sensor Synchronization을 켠 session에서 브릿지를
-`timestamp_mode:=source`로 실행하고 canonical ROS topic과 `/clock`, `/Ego_topic`을 bag으로
-기록하거나 Sensor Record 파일용 offline replay adapter가 필요하다. `receive` stamp를 쓰면
-센서 생성 시각이 같아도 네트워크 도착 시각 차이가 ROS stamp에 남는다.
+재현하지 않는다. 기존 live 추론은 이 파일을 직접 읽지 않는다. 알고리즘 입력 skew를
+실제로 제거할 필요가 생기면 Sensor Record 파일용 offline replay pilot을 별도로 만든다.
+과거 `timestamp_mode:=source` GT bag 경로는 종료됐고, `receive` stamp를 사용하는 현행
+Real Time UDP bag에는 네트워크 도착 시각 차이가 남는다.
 
-따라서 결과 명칭도 구분한다. Simulation Time sync 결과는 **controlled/ideal-input 알고리즘
-검증**, Real Time UDP bag 결과는 **deployment/운용 검증**이다. 전자는 센서 skew를 배제한
-상한선이고 후자를 대체하지 않는다. 고주기 supervised segmentation을 수집할 때는 v2를
-그대로 쓰지 않고 `RGB front/left/right + Semantic front/left/right + 필요한 상태 센서`만 둔
-최소 sync-training 센서셋을 별도 version으로 만든다. 정식 채택 전 30초 pilot에서 센서별
-파일 수, timestamp 단조성, 10Hz 공통 frame key, RGB–Semantic 및 camera–LiDAR pairing,
-GNSS 반복 여부를 먼저 검사한다.
+따라서 결과 명칭도 구분한다. 향후 Simulation Time sync 결과는
+**controlled/ideal-input 알고리즘 검증**, Real Time UDP bag 결과는 **deployment/운용
+검증**이다. 전자는 새 pilot을 통과해도 후자를 대체하지 않는다. 고주기 supervised
+segmentation이 실제로 필요해질 때만 `RGB front/left/right + Semantic front/left/right +
+필요한 상태 센서`의 최소 sync-training 센서셋을 별도 version으로 검토한다. 정식 채택 전
+30초 pilot에서 센서별 파일 수, timestamp 단조성, 10Hz 공통 frame key, RGB–Semantic
+pairing과 GNSS 반복 여부를 먼저 검사한다.
 
 근거는 MORAI [Time Manager](https://help-morai-sim.scrollhelp.site/ko/morai-sim-drive/24.R2/morai-sim-time-management-function),
 [센서 검출 데이터와 저장 경로](https://help-morai-sim.scrollhelp.site/ko/morai-sim-drive/26.R1/-33),
@@ -137,12 +135,10 @@ GNSS 반복 여부를 먼저 검사한다.
 
 ## 재현 가능한 raw/result rosbag
 
-SIM 버전과 transport가 metadata에서 구분되도록 일반 운용과 GT oracle을 명시적인 profile로
-실행한다.
+SIM 버전과 transport가 metadata에서 구분되도록 Real Time UDP 운용 profile을 실행한다.
 
 ```bash
 ./scripts/udp_bridge.sh --simulator 26r1
-./scripts/udp_bridge.sh --simulator 26r1 timestamp_mode:=source  # GT 정합
 ./scripts/udp_bridge.sh --simulator competition
 ```
 
@@ -154,11 +150,10 @@ map, Git 상태, sensor set/transport, topic/type/rate, bridge diagnostics와 ba
 # 대회 입력 재현용. bridge는 기본 receive mode
 roslaunch data_collection bag_recorder.launch \
   profile:=full_raw scenario:=comp_sample controller:=wheel
-
-# 개발용 LiDAR oracle. bridge는 위 GT/source mode
-roslaunch data_collection bag_recorder.launch \
-  profile:=lidar_dev_gt_udp scenario:=jamming_modified controller:=morai_auto
 ```
+
+`lidar_dev_gt_udp`와 `dev_oracle_udp`는 과거 실험을 재현할 때만 사용하며 신규 운용·학습의
+권장 명령에는 포함하지 않는다. direct ROS GT 구현은 현재 `main`에 없고 백업 브랜치에만 있다.
 
 저장 위치는 `/data/rosbags/raw/<auto_run_id>/`이며 raw는 덮어쓰지 않는다. 잘못된 closed
 run은 `reject_bag_run.py --run-id ... --reason ...`으로 `/data/rosbags/rejected/`에 옮긴다.
@@ -183,8 +178,8 @@ result replay는 실행 순서가 중요하다. 추론과 result recorder를 rep
 기준선은 [전용 가이드](../../docs/rosbag-evaluation-streaming-gt.md#4-replay와-result-lineage)를
 따른다.
 
-profile 목록, result bag/checkpoint lineage, source timestamp의 센서별 의미와 UDP↔ROS 5분
-선정 gate는 [전용 가이드](../../docs/rosbag-evaluation-streaming-gt.md)를 따른다.
+profile 목록, result bag/checkpoint lineage와 종료된 GT transport 실험의 한계는
+[전용 가이드](../../docs/rosbag-evaluation-streaming-gt.md)를 따른다.
 
 ## ROS topic snapshot collector (보조 경로)
 
@@ -206,7 +201,8 @@ snapshot할 뿐 **MORAI 외부 Sync 제어기가 아니다**. 상태·LiDAR 등 
 
 “나중에 뭐 쓸지 몰라서 항상 full” → I/O·디스크로 수집이 죽음.
 기존 snapshot `config/profiles/lidar_gt.yaml`은 ID 11 Streaming rosbag profile이 아니다.
-새 GT bag은 `config/bag_profiles/lidar_dev_gt_udp.yaml`을 사용한다.
+과거 GT bag은 `config/bag_profiles/lidar_dev_gt_udp.yaml`로 재현할 수 있으나 현행 권장
+수집 경로는 아니다.
 
 ### 환경변수
 
@@ -275,9 +271,9 @@ ID 5의 실제 intensity만 detector 입력으로 사용하고 ID 11의 instance
 `_instance.txt`/`_instance_8Points.txt`는 class, 3D box, 상대속도와 unique ID 정답으로만
 사용한다. GT value를 입력 feature로 사용하지 않는다. 공용 bridge는 9311을
 항상 독립 수신해, GT가 송신할 때 `/velodyne_points_instance`의 `instance_id uint32`로
-발행한다. v2 센서셋에서는 해당 포트가 데이터 없이 대기한다. Streaming GT에는
-5–11 pairing gap이 있으므로 detector 학습 정답은
-Capture 파일을 우선하고 rosbag은 실시간 정합·평가·디버깅에 쓴다.
+발행한다. v2 센서셋에서는 해당 포트가 데이터 없이 대기한다. 과거 Streaming GT에는
+5–11 pairing gap이 있었으므로 detector 학습 정답은 Capture 파일을 사용한다. 일반 Real
+Time raw bag은 clustering/tracking과 통합 성능 재현에 사용한다.
 
 ### 실행
 
@@ -600,7 +596,7 @@ state를 기록한다.
 
 ### 선행 조건
 
-1. MORAI + bridge → ROS 토픽 (`aim_ws-va` `morai_*_bridge` 또는 개발용 rosbridge)
+1. MORAI + UDP bridge → 내부 ROS 토픽 (`aim_ws-va` `morai_*_bridge`)
 2. 카메라 토픽 이름이 브릿지와 다르면 `config/profiles/*.yaml`의 `topics:` 수정
 3. 대회 ROS UI에는 TL Get·센서 ROS가 없을 수 있음 → `missing[]`로 기록되고 계속 진행
 

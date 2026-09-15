@@ -250,14 +250,14 @@ rostopic hz /frenet_planner/trajectory
 | 경로 | 역할 |
 |------|------|
 | `src/perception/twinlite_morai/` | TwinLiteNet+ MORAI 데이터·학습·평가 adapter |
-| `src/perception/camera_semantic_perception/` | **제안:** 모델 독립 live 추론·시각화·성능계측 |
-| `src/perception/drivable_bev/` | **후보:** camera/map/LiDAR 공통 BEV 공동 작업 |
-| `src/data_collection/` | Capture GT·mask·dataset 파이프라인, 추후 최소 bag profile |
+| `src/perception/camera_semantic_perception/` | 모델 독립 live 추론·시각화·성능계측 |
+| `src/perception/drivable_bev/` | 3-camera BEV와 음영 shared lane-family v3; 전역 map 결합은 공동 작업 |
+| `src/data_collection/` | Capture GT·mask·dataset, Real Time UDP raw/result bag |
 | `src/learning_by_cheating/` | LBC BEV·학습·자율주행 |
-| `scripts/rosbridge.sh` | WebSocket rosbridge (개발) |
+| `scripts/rosbridge.sh` | 종료된 direct ROS 실험 재현용 WebSocket |
 | `scripts/udp_bridge.sh` | 26.R1.H3/대회판 공용 UDP bridge와 실행 profile |
 | `scripts/diagnose_morai_rosbridge.sh`, `wait_morai_topic.sh` | 진단 |
-| `config/morai_rosbridge.env` | rosbridge 설정 |
+| `config/morai_rosbridge.env` | 종료된 direct ROS 실험 설정 |
 | `mgeo_toolkit/` | HD map bake |
 | `R_KR_PG_KATRI/` | 맵 JSON 자산 |
 | `docker/`, `docs/` | 환경·문서 |
@@ -280,7 +280,7 @@ rostopic hz /frenet_planner/trajectory
 | `src/learning_by_cheating/scripts/verify_lbc_spec.py` | 스펙 단위 테스트 |
 | `src/learning_by_cheating/autonomous_driving.py` | SA 추론 → `/ctrl_cmd` |
 | `src/learning_by_cheating/train.py`, `train_v2.py` | 학습 |
-| `scripts/rosbridge.sh` | 포트 9090 (WebSocket) |
+| `scripts/rosbridge.sh` | 종료된 direct ROS 실험 재현용 포트 9090 (WebSocket) |
 
 ### 검증
 
@@ -289,7 +289,7 @@ checklist **§2, §3**
 ```bash
 ./scripts/udp_bridge.sh --simulator 26r1
 # 대회판: ./scripts/udp_bridge.sh --simulator competition
-# ROS 비교 실험만: ./scripts/rosbridge.sh
+# 과거 direct ROS 실패 재현만: ./scripts/rosbridge.sh
 python3 src/learning_by_cheating/scripts/verify_lbc_spec.py
 ./src/learning_by_cheating/scripts/start_lbc_imshow.sh
 ```
@@ -458,10 +458,10 @@ checklist **§5**
 | 순위 | 작업 | 담당 |
 |------|------|------|
 | 1 | 센서셋·규정·수집 모드·차량 좌표계 정본화 | 완료, 팀 검토 |
-| 2 | transport-aware raw/result bag과 Streaming GT bridge | 구현 완료, actor/ROS pilot 남음 |
-| 3 | Capture/Streaming GT 정합 정책 확정 | Capture 주기 pilot 완료, actor GT 검증 남음 |
+| 2 | Real Time UDP raw/result bag | 구현 완료, 현재 재현·성능 기준 |
+| 3 | Streaming/ROS GT transport 조사 | 종료, `origin/backup/ros-gt-experimental-20260910` 보존 |
 | 4 | GPS lever arm 검증과 camera/map 공통 BEV 기준 | 안승현·장원태 |
-| 5 | 3-camera BEV, lane/stopline 구조화 | 안승현 |
+| 5 | 음영 3-camera BEV/lane-family v3 | 구현·판제 인수 완료 |
 | 6 | MGeo crop과 정상 GPS/Blackout source policy 평가 | 안승현·장원태 |
 | 7 | LiDAR association, safe corridor ownership과 판제 interface | 인지·planning/control |
 | 8 | 10월 대회판 데이터 보강·장기 재학습·안정화 이식 | 전원 |

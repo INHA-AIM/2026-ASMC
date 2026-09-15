@@ -1,9 +1,22 @@
-# rosbag 평가·Streaming GT 가이드
+# rosbag 재현 평가 가이드와 GT 전송 실험 기록
 
-> **문서 역할:** Active Guide — 재현 가능한 raw/result bag과 개발용 Streaming GT
-> **기준일:** 2026-09-14
+> **문서 역할:** Active Guide — 재현 가능한 Real Time UDP raw/result bag. Streaming/ROS GT 절은 종료된 실험 기록
+> **기준일:** 2026-09-15
 > **대회 운용 경계:** MORAI↔팀 PC는 UDP만 사용. Semantic·Instance·Object GT는 개발 전용
 > **관련:** [UDP↔ROS 네트워크](./network-udp-ros.md) · [인지 융합 로드맵](./perception-map-fusion-roadmap.md) · [data_collection README](../src/data_collection/README.md)
+
+## 현재 결정
+
+- 모델·판제 A/B의 정본은 `v2 + Real Time UDP + raw/result rosbag`이다.
+- 단일-frame 학습 GT는 Capture 파일을 사용한다. 고주기 simulator-side 원본이 필요하면
+  Simulation Time Sensor Record를 별도 provenance로 평가한다.
+- direct MORAI ROS/rosbridge GT와 ROS-vs-UDP GT transport 비교는 2026-09-15부로 종료했다.
+  관련 미병합 구현은 `origin/backup/ros-gt-experimental-20260910`에만 보존하며 현재
+  `main`의 지원 경로나 후속 gate가 아니다.
+- UDP Streaming GT도 rate/schema 조사 기록으로만 남긴다. `lidar_dev_gt_udp`와
+  `dev_oracle_udp` profile은 재현을 위해 유지하지만 신규 학습·판제 개발의 기본 경로가 아니다.
+- `asmc-ros-noetic` 컨테이너와 내부 ROS는 폐기 대상이 아니다. 대회 UDP를 ROS topic으로
+  정규화하고 카메라·LiDAR 인지 노드를 실행하는 현재 런타임 기반이다.
 
 ## 1. 어떤 수집 방식을 언제 쓰는가
 
@@ -15,9 +28,9 @@ MORAI의 시간 진행, 외부 Sync, Capture, 센서 transport와 기록 형식�
 | 카메라/LiDAR 단일-frame 학습 GT | v2 + Capture 1 Hz | 장착 센서 수를 늘리지 않고 RGB·Semantic·Instance와 box 파일을 같은 Capture로 보존 |
 | 고주기 RGB sequence | v2 + Simulation Time Sensor Record | 장착된 RGB·일반 센서 파일을 공통 주기 후보로 저장 |
 | 고주기 RGB–Semantic supervised sequence | 최소 RGB+Semantic 센서셋 + Simulation Time Sensor Record | v2에 없는 Semantic 센서를 명시적으로 장착해야 함 |
-| 입력 센서 skew를 배제한 알고리즘 검증 | Simulation Time Sensor Sync + UDP source-time bag/replay | 이상적인 동시 입력에서 알고리즘 자체를 분리 평가 |
+| 입력 센서 skew를 배제한 알고리즘 검증 | Simulation Time Sensor Record/offline replay | 필요가 생길 때 별도 pilot. 현행 gate 아님 |
 | 대회 운용·실시간 지연 평가 | v2 + UDP Connect + `full_raw`/파트별 raw bag | 실제 비동기 주기·drop·latency 보존 |
-| 고주기 개발용 oracle | GT 센서셋 + UDP source-time bag | Capture 정지 없이 RGB/Semantic, Intensity/Instance 스트림 기록 |
+| 고주기 개발용 oracle | GT 센서셋 + UDP source-time bag | 종료된 transport 실험. 아래 수치는 참고 기록 |
 | 모델 A/B | 동일 raw bag replay + 모델별 result bag | 입력을 고정하고 checkpoint별 결과를 분리 |
 
 Capture 요청은 2026-09-09 pilot에서 요청 주기 2/5/10 Hz와 무관하게 약 1.4~1.7 Hz에
@@ -34,18 +47,21 @@ Sensor Record는 장착된 센서의 고주기 파일 저장 기능이지 Captur
 sync-training 센서셋을 만들고, 기존 v2/대회 설정과 provenance를 분리한다.
 
 Simulation Time Sensor Synchronization은 실제 UDP 운용의 대체물이 아니다. 센서 생성 skew를
-배제하려면 브릿지를 `timestamp_mode:=source`로 실행해 canonical topic과 `/clock`, Ego/IMU를
-bag으로 남기거나 Sensor Record 파일을 offline replay해야 한다. `receive` stamp에는 도착
-시각 차이가 남는다. 이 결과는 `controlled/ideal-input`, Real Time UDP bag 결과는
-`deployment/operational`로 표기하고 두 기준을 함께 보고한다.
+분리할 필요가 생기면 Sensor Record 파일을 offline replay하는 pilot을 새로 정의한다.
+과거 `timestamp_mode:=source` bag은 `controlled/ideal-input` 연구에 사용했지만 현재 개발
+gate에서는 제외한다. Real Time UDP bag 결과만 `deployment/operational` 기준으로 사용한다.
 
 MORAI는 카메라와 3D LiDAR에 ROS와 UDP를 지원하지만, ROS 선택이 외부 tick 동기화나
-GT 정합을 자동 보장하지 않는다. 현재 ROS1 연결은 `ws://127.0.0.1:9090` rosbridge를
-경유하므로 실제 수신률·timestamp·부하로 판단한다. 근거는 MORAI
+GT 정합을 자동 보장하지 않는다. direct ROS/rosbridge 실험은 아래 기록처럼 필수 센서
+advertise 단계에서 실패해 종료했다. 근거는 MORAI
 [센서 통신 프로토콜](https://help-morai-sim.scrollhelp.site/ko/morai-sim-drive/26.R1/-35)과
 [Capture Mode](https://morai-sim--drive-user-manual--en-22-r2.scrollhelp.site/msdume2/capture-sensor-data)를 따른다.
 
-## 2. Streaming GT 브릿지
+## 2. Streaming GT 브릿지 — 종료된 실험 경로
+
+이 절은 2026-09-09 결과의 재현·해석을 위한 기록이다. 아래 GT/source 실행을 새 개발의
+기본값으로 사용하지 않는다. 현재 운용은 `--simulator 26r1` 또는 `competition`의 receive
+mode이며, GT-only port가 idle인 것은 오류가 아니다.
 
 공용 UDP bridge는 v2와 GT 포트 합집합을 항상 연다. v2를 로드하면 선택
 GT 포트가 대기하고, GT를 로드하면 Semantic과 Instance가 자동 수신된다.
@@ -96,9 +112,9 @@ profile은 snapshot용 `config/profiles/`와 분리된
 | `full_raw` | RGB 4, ID 5, GPS/IMU/Ego/TF/control | UDP receive | 배포 가능 |
 | `camera_raw` | RGB 전·좌·우와 차량 상태 | UDP receive | 배포 가능 |
 | `lidar_raw` | ID 5와 GPS/IMU/Ego | UDP receive | 배포 가능 |
-| `lidar_dev_gt_udp` | ID 5·11, Object, GPS/IMU/Ego | UDP source | privileged |
-| `dev_oracle_udp` | RGB/Semantic, ID 5·11, Object와 상태 | UDP source | privileged |
-| `dev_oracle_raw` | `dev_oracle_udp`의 canonical alias | UDP source | privileged |
+| `lidar_dev_gt_udp` | ID 5·11, Object, GPS/IMU/Ego | UDP source | archived privileged experiment |
+| `dev_oracle_udp` | RGB/Semantic, ID 5·11, Object와 상태 | UDP source | archived privileged experiment |
+| `dev_oracle_raw` | `dev_oracle_udp`의 canonical alias | UDP source | archived privileged experiment |
 | `camera_semantic_result` | 카메라 추론 결과와 diagnostics | replay clock | 결과 |
 
 일반 profile에 Semantic·Instance·`/Object_topic`을 넣으면 시작 전에 실패한다. GT profile은
@@ -294,7 +310,7 @@ Foggy 13시 통제 장면의 `lidar_dev_gt_udp` bag에서 364만 sampled point �
 auditor가 `ok=false`로 보고하므로 학습 pair로 자동 승격하지 않는다. Capture box와의 수치
 교차검증은 LiDAR detector 학습 데이터셋을 실제 만들 때 수행한다.
 
-## 6. 후순위 ROS GT 검토 기록
+## 6. 종료된 ROS GT 검토 기록
 
 MORAI의 Network Settings와 센서를 ROS로 전환하고 `rosbridge_websocket`을
 `0.0.0.0:9090`에서 실행해 확인했다. Network Settings는 21개 WebSocket client로 연결됐고
@@ -307,20 +323,20 @@ beta `EgoVehicleStatus.msg`가 갖고 있지 않아 rosbridge가 각 message를 
 topic 연속 수신 조건을 시작 단계에서 만족하지 못했으므로 이 조건에서는 5분 부하·정합
 비교를 진행하지 않고 ROS gate 실패로 판정했다. `dev_oracle_raw`는 검증된 UDP alias다.
 
-현재 저장소에는 ROS GT용 센서셋·adapter·bag profile을 포함하지 않는다. 향후 UDP만으로
-해결할 수 없는 요구가 확인될 때 별도 실험 PR에서 MORAI UI export 센서셋과 메시지 adapter를
-함께 설계한다. 팀 공용 `morai_msgs`를 실험 목적으로 즉시 바꾸지는 않는다.
+현재 저장소에는 ROS GT용 센서셋·adapter·bag profile을 포함하지 않는다. 당시 미병합
+구현은 `origin/backup/ros-gt-experimental-20260910`에 보존한다. 이 경로는 종료됐으며,
+새로운 명시적 요구와 팀 합의가 없는 한 재개하지 않는다. 팀 공용 `morai_msgs`도 이
+실험을 위해 바꾸지 않는다.
 
 완료한 항목:
 
 - NPC·보행자를 둔 `lidar_dev_gt_udp` bag 기록과 Instance schema/rate 검증
 - ID 11의 비영 Instance ID와 `/Object_topic` unique ID 대응 검증
 
-후순위 항목:
+별도 요구가 생길 때만 검토할 항목:
 
 1. LiDAR 학습 데이터셋을 만들 때 같은 Capture의 `_instance.txt`/8Points box와 수치 교차검증
-2. UDP만으로 부족한 지표가 확인될 때 별도 ROS GT 실험 범위와 5분 A/B gate 재수립
+2. 현재 Capture/Real Time UDP 경로로 해결되지 않는 구체적 문제가 확인될 때 새 실험으로 재설계
 
 현재 UDP는 대회 운용과 raw/result 재현 평가에 문제가 없고 ROS 1차 gate는 필수 센서
-advertise 단계에서 실패했다. 따라서 ROS GT 재실험은 카메라 BEV·판제 전달 인터페이스보다
-후순위로 둔다.
+advertise 단계에서 실패했다. 따라서 ROS GT transport 비교는 후속 로드맵에서 제거했다.

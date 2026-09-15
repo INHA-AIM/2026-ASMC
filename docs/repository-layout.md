@@ -2,7 +2,7 @@
 
 > **문서 역할:** Active Reference — 실제 코드 위치와 ownership 요약
 > **문서 허브:** [README.md](./README.md)
-> **최종 수정:** 2026-09-05
+> **최종 수정:** 2026-09-15
 > 팀원별 상세 경로·검증: [team-dev-guide.md](./team-dev-guide.md)  
 > Git 규약 (trunk · ownership · Path A/B): [collaboration.md](./collaboration.md)
 
@@ -17,7 +17,7 @@
 ├── src/                  # catkin 패키지 + 논리 README
 ├── tools/                # scenario runner, grpc (non-catkin)
 ├── scripts/              # bridge, build, docker 헬퍼
-├── config/               # morai_rosbridge.env (WebSocket; UDP는 launch)
+├── config/               # morai_rosbridge.env (종료된 direct ROS 실험; UDP는 launch)
 ├── mgeo_toolkit/         # 기존 HD map bake 도구
 ├── R_KR_PG_KATRI/        # 기존 KATRI 맵 자산; K-City 대회 데이터는 $ASMC_DATA
 ├── CONTRIBUTING.md
@@ -47,7 +47,7 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | 경로 | 담당 | GitHub |
 |------|------|--------|
 | `src/learning_by_cheating/` | 안승현 | @ahnsh03 |
-| `scripts/rosbridge.sh`, `config/morai_rosbridge.env` | 안승현 | @ahnsh03 |
+| `scripts/rosbridge.sh`, `config/morai_rosbridge.env` | 종료된 direct ROS 실험 보존 | @ahnsh03 |
 | `scripts/udp_bridge.sh`, `src/morai_*_bridge/` | 이강태·안승현 | @kante2 · @ahnsh03 |
 | `mgeo_toolkit/`, `R_KR_PG_KATRI/` | 안승현 | @ahnsh03 |
 
@@ -57,8 +57,8 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 |------|------|--------|
 | `src/perception/morai_3d_detection/` | 손재호 | @sonshiny |
 | `src/perception/twinlite_morai/` | 안승현 | @ahnsh03 |
-| `src/perception/drivable_bev/` | 인지·맵·LiDAR 공동 후보 | @ahnsh03 주관 협의 |
-| `src/data_collection/` | Capture GT·mask·dataset | @ahnsh03 |
+| `src/perception/drivable_bev/` | 3-camera BEV·음영 lane-family v3; 전역 map 결합 후보 | @ahnsh03 주관 협의 |
+| `src/data_collection/` | Capture GT·mask·dataset·Real Time raw/result bag | @ahnsh03 |
 | `tools/aim_scenario_runner/` | 장원태 | @wkddnjsxo |
 | `tools/grpc_inha_univ/` | 장원태 | @wkddnjsxo |
 
@@ -117,12 +117,12 @@ CODEOWNERS 자동 리뷰: [.github/CODEOWNERS](../.github/CODEOWNERS)
 | 모듈 | ASMC 경로 |
 |------|-----------|
 | Behavior / Frenet / MPC | `src/behavior_planner/`(미연동), `frenet_planner/`, `mpc_controller/` |
-| Camera lane/drivable | `src/perception/twinlite_morai/`, `camera_semantic_perception/`(제안) |
+| Camera lane/drivable | `src/perception/twinlite_morai/`, `camera_semantic_perception/`, `drivable_bev/` |
 | LiDAR/3D perception | `src/perception/morai_3d_detection/`, `src/lidar+sensorfusion/` |
-| 공통 BEV | `src/perception/drivable_bev/`(후보) |
+| 공통 BEV | camera v3는 `src/perception/drivable_bev/`; 전역 map/LiDAR 결합 규격은 합의 중 |
 | Capture·dataset | `src/data_collection/`, `scripts/*perception*`, `scripts/*twinlite*` |
 | SA_plan / LBC | `src/learning_by_cheating/` |
 | Scenario / gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` |
-| Bridge | `scripts/udp_bridge.sh` (UDP) · `scripts/rosbridge.sh` (WebSocket 개발용) |
+| Bridge | `scripts/udp_bridge.sh` (현행 UDP) · `scripts/rosbridge.sh` (종료된 direct ROS 실험 재현용) |
 
 상세 파일명: [team-dev-guide.md](./team-dev-guide.md)
