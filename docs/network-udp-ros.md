@@ -2,7 +2,7 @@
 
 > **문서 역할:** Canonical — 시뮬 UDP 경계, 포트, bridge와 Docker 네트워크 정본
 > **문서 허브:** [README.md](./README.md)
-> **최종 수정:** 2026-09-09
+> **최종 수정:** 2026-09-15
 > **지위:** 팀 공식 권장  
 > **개발 SIM (현재):** **MORAI 26.R1.h3** — 대회 배포 SIM 아님  
 > **msg:** `src/MORAI-ROS_morai_msgs` submodule **`beta_drive`**  
@@ -18,10 +18,15 @@
 | **일상 개발** | **26.R1.h3** + 본 브릿지 + `beta_drive` |
 | **대회 당일/게이트** | 대회 MORAI · 허용 **UDP만** (토픽·기능 제약 많음 → 별도 재검증) |
 | **UDP 브릿지** | `./scripts/udp_bridge.sh` — 바이너리 UDP ↔ ROS |
-| **rosbridge** | `./scripts/rosbridge.sh` — WebSocket · **개발 편의 · 당일 금지** |
+| **rosbridge** | `./scripts/rosbridge.sh` — 종료된 direct ROS 실험 재현용 · **현재 개발/당일 금지** |
 | **권장 진입점** | `./scripts/udp_bridge.sh --simulator 26r1\|competition` |
 
 이 문서의 포트/토픽은 **26.R1.h3 개발 스택** 기준이다. 대회 SIM에 그대로 꽂기 전에 패킷·포트를 다시 맞춰야 한다.
+
+2026-09-15 결정: direct MORAI ROS/rosbridge GT와 ROS-vs-UDP GT bag 비교는 종료했다.
+미병합 코드는 `origin/backup/ros-gt-experimental-20260910`에만 보존한다. 반면
+`asmc-ros-noetic`은 UDP packet을 내부 ROS topic으로 바꾸고 인지 노드를 실행하는 현행
+컨테이너이므로 계속 사용한다.
 
 ### 0.1 공용 UDP bridge와 SIM profile
 
@@ -256,16 +261,16 @@ LiDAR Dest **2368 쓰지 말 것.**
 
 GT LiDAR(ID 11)는 ID 5와 같은 위치·10 Hz에서 `intensityType=2` Instance로 송신한다.
 학습 입력은 ID 5의 실제 Intensity이고 ID 11의 point ID와 3D box 파일은 정답으로만 쓴다.
-브릿지는 9311을 항상 독립 bind하며 v2에서는 데이터 없이 대기한다. GT 정합 수집에서
-source timestamp가 필요할 때만 다음 파라미터를 추가한다.
+브릿지는 9311을 항상 독립 bind하며 v2에서는 데이터 없이 대기한다. 아래 source mode는
+종료된 Streaming GT 실험을 재현할 때만 사용한다.
 
 ```bash
 ./scripts/udp_bridge.sh --simulator 26r1 timestamp_mode:=source
 ```
 
 ID 11은 `x,y,z float32 + instance_id uint32`로 발행된다. ID 5와 socket, packet buffer,
-publisher를 공유하지 않는다. source timestamp와 raw/result bag 운용은
-[rosbag 평가·Streaming GT 가이드](./rosbag-evaluation-streaming-gt.md)를 따른다.
+publisher를 공유하지 않는다. 현행 Real Time raw/result bag과 종료된 source timestamp
+실험의 구분은 [rosbag 재현 평가 가이드](./rosbag-evaluation-streaming-gt.md)를 따른다.
 
 ### 6.1 host network 검사와 LiDAR 장애 대응
 
@@ -331,7 +336,7 @@ LiDAR Dest를 다른 번호로 옮기지 않는다.
 시험 중 `udp_bridge.sh`가 전달한 `cmd_ip`가 통합 launch에서 누락되는 문제도 발견해
 수정했다. 현재 기본값 `127.0.0.1`이 실제 송신 노드까지 전달된다.
 
-### 6.3 2026-09-09 Streaming GT 실측
+### 6.3 2026-09-09 Streaming GT 실측 — 종료된 실험 기록
 
 GT sensor set과 source timestamp bridge를 Real Time/UDP Connect에서 검증했다.
 
@@ -345,9 +350,9 @@ GT sensor set과 source timestamp bridge를 Real Time/UDP Connect에서 검증�
 | ID 5–11 p95 | 최신 102 ms, 이전 약 106~108 ms |
 
 9311 수신과 stream 분리는 통과했지만 두 LiDAR와 최신 camera 표본의 strict pairing 기준은
-통과하지 못했다. 따라서 Streaming GT는 평가·디버깅에 쓰고, 학습 label은 Capture 파일을
-우선한다. 현재 장애물이 없는 장면에서는 Instance ID가 모두 0이었으므로 actor 장면에서
-Object/box ID 대응 검증이 남아 있다.
+통과하지 못했다. 후속 actor 장면에서 Instance↔Object ID는 확인했지만 엄격한 pairing은
+여전히 실패해 Streaming GT transport 경로를 종료했다. 학습 label은 Capture 파일을 쓰며,
+일반 clustering/tracking과 통합 성능 평가는 Real Time UDP raw bag을 쓴다.
 
 ### 6.4 2026-09-09 v2 UDP↔ROS 지연·수신률 기준선
 

@@ -92,7 +92,7 @@ Behavior Planner가 다시 연결되기 전에는 handoff 문서의 토픽과 la
 | [perception-map-fusion-roadmap.md](./perception-map-fusion-roadmap.md) | camera/MGeo/LiDAR 전체 전략, live와 대회판 이식 | Current Working Proposal |
 | [shadow-camera-perception-handoff.md](./shadow-camera-perception-handoff.md) | 음영구간 v3 lane-family·drivable 판제 소비 계약과 성능 동결 | Active Handoff Guide |
 | [camera-object-detection-handoff.md](./camera-object-detection-handoff.md) | 손재호용 YOLO 즉시 사용·경량 후보·NAS fine-tune 인수 가이드 | Active Guide |
-| [rosbag-evaluation-streaming-gt.md](./rosbag-evaluation-streaming-gt.md) | raw/result bag, source timestamp, Streaming GT와 ROS/UDP gate | Active Guide |
+| [rosbag-evaluation-streaming-gt.md](./rosbag-evaluation-streaming-gt.md) | Real Time UDP raw/result bag 정본과 종료된 GT transport 실험 기록 | Active Guide + Archived Experiment |
 | [perception-dataset-labeling-split.md](./perception-dataset-labeling-split.md) | Capture 원본, mask, ignore, manifest와 split 계약 | Canonical Data Contract |
 | [perception-bev-lane-interface-plan.md](./perception-bev-lane-interface-plan.md) | GT 정책, metric lane 후보, BEV/lane topology 상세 | Detailed Design Note |
 | [perception-v4-training-evaluation.md](./perception-v4-training-evaluation.md) | TwinLiteNet+ v4 10/18 epoch 결과 | Experiment Record |
@@ -121,7 +121,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | 본선 허용 여부 판단 | [competition-environment](./competition-environment.md) | [network-udp-ros](./network-udp-ros.md), [competition-data](./competition-data.md) |
 | MPC/Frenet 실행 | [planning-control-udp](./planning-control-udp.md) | [sim checklist](./sim-verification-checklist.md) |
 | Capture/마스크/학습 데이터 | [dataset contract](./perception-dataset-labeling-split.md) | [data_collection README](../src/data_collection/README.md) |
-| raw bag 녹화·재생·모델 A/B | [rosbag/Streaming GT guide](./rosbag-evaluation-streaming-gt.md) | [data_collection README](../src/data_collection/README.md) |
+| raw bag 녹화·재생·모델 A/B | [rosbag 재현 평가 guide](./rosbag-evaluation-streaming-gt.md) | [data_collection README](../src/data_collection/README.md) |
 | 카메라 live 추론 | [fusion roadmap §5~7](./perception-map-fusion-roadmap.md#5-코드-경계-제안) | [v4 evaluation](./perception-v4-training-evaluation.md) |
 | 카메라–LiDAR 객체 분류 | [object detector handoff](./camera-object-detection-handoff.md) | [sensor-fusion 실행](../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md), [rosbag 평가](./rosbag-evaluation-streaming-gt.md) |
 | MGeo·카메라·LiDAR BEV | [fusion roadmap](./perception-map-fusion-roadmap.md) | [BEV design note](./perception-bev-lane-interface-plan.md) |

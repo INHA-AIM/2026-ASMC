@@ -1,13 +1,13 @@
 # MORAI 시뮬 검증 체크리스트
 
 > **문서 역할:** Active Checklist — 공통/파트별 시뮬 검증
-> **주의:** `Legacy/개발 전용`으로 표시된 rosbridge·gRPC 항목은 본선 gate가 아니다.
+> **주의:** direct rosbridge 실험은 종료됐고 gRPC는 개발 전용이다. 둘 다 본선 gate가 아니다.
 > **정본 연결:** 허용 통신과 포트는 [network-udp-ros.md](./network-udp-ros.md), Planning은 [planning-control-udp.md](./planning-control-udp.md)
 > **문서 허브:** [README.md](./README.md)
 > **목적:** 코드 통합(catkin build) 이후, **실제 MORAI 시뮬**에서 담당 파트별로 확인할 항목을 기록합니다.  
 > **원칙:** 통합 PR은 build green으로 merge 가능. 아래 항목은 **merge 후·대회 전** 팀원이 로컬에서 수행하고 결과를 PR 코멘트·노션·이슈에 남깁니다.
 
-**최종 수정:** 2026-09-05
+**최종 수정:** 2026-09-15
 
 ---
 
@@ -79,7 +79,8 @@ rostopic hz /Ego_topic /image_jpeg/compressed /velodyne_points /gps /imu
 | 3.2 | UDP 수신 | 안승현 | bridge의 Ego/camera/LiDAR/GPS/IMU rx 증가 |
 | 3.3 | 토픽 rate·age | 안승현 | 핵심 토픽이 설정 Hz 부근이고 장시간 정지하지 않음 |
 
-`rosbridge.sh`와 WebSocket 9090 검증은 레거시 개발 편의 항목이며 본선 경로가 아니다.
+`rosbridge.sh`와 WebSocket 9090 검증은 종료된 direct ROS 실험 재현 항목이며 현행 개발·본선
+경로가 아니다. `asmc-ros-noetic` 내부 ROS와 혼동하지 않는다.
 
 ---
 

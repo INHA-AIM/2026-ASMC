@@ -13,7 +13,7 @@ lane/drivable 학습·live 추론은 `src/perception/twinlite_morai/`와 이후
 | `src/learning_by_cheating/` | 안승현 | ✅ PR #2 |
 | `mgeo_toolkit/` | 안승현 | ✅ |
 | `R_KR_PG_KATRI/` | — | 맵 JSON |
-| `scripts/rosbridge.sh` | 안승현 | 개발용 레거시 WebSocket, 본선 금지 |
+| `scripts/rosbridge.sh` | 안승현 | 종료된 direct ROS 실험 재현용, 본선/현재 개발 금지 |
 | `scripts/udp_bridge.sh` | 이강태·안승현 | 현재 센서 ROS 변환 경로 |
 
 상세: [docs/team-dev-guide.md](../../docs/team-dev-guide.md) §4
@@ -26,8 +26,8 @@ source devel/setup.bash
 ./src/learning_by_cheating/scripts/start_lbc_morai.sh
 ```
 
-구현이 WebSocket 동작을 특별히 비교해야 할 때만 `rosbridge.sh`를 개발용으로 사용한다.
-대회판과 현재 카메라 live 검증의 기본 경로는 UDP bridge다.
+과거 WebSocket 실패 조건을 재현해야 할 때만 `rosbridge.sh`를 사용한다. ROS GT transport
+비교는 종료됐고 대회판과 현재 카메라 live 검증의 기본 경로는 UDP bridge다.
 
 ## 주의
 

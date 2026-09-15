@@ -10,7 +10,7 @@ MORAI UDP → bridge → 팀 PC 내부 ROS다.
 | 경로 | 내용 | 담당 | 상태 |
 |------|------|------|------|
 | `scripts/udp_bridge.sh` | 허용 UDP → 내부 ROS sensor/status bridge | 이강태·안승현 | 현재 기본 |
-| `scripts/rosbridge.sh` | roscore + WebSocket rosbridge | 안승현 | 개발용 레거시, 본선 금지 |
+| `scripts/rosbridge.sh` | roscore + WebSocket rosbridge | 안승현 | 종료된 direct ROS 실험 재현용, 본선/현재 개발 금지 |
 | `scripts/wait_morai_topic.sh` | 토픽 대기 | 안승현 | ✅ |
 | `scripts/diagnose_morai_rosbridge.sh` | rosbridge 연결 진단 | 안승현 | ✅ |
 | `config/morai_rosbridge.env` | rosbridge 포트·ROS env | 안승현 | ✅ |
@@ -24,10 +24,13 @@ MORAI UDP → bridge → 팀 PC 내부 ROS다.
 ./scripts/udp_bridge.sh --simulator 26r1
 # 대회판은: ./scripts/udp_bridge.sh --simulator competition
 
-# WebSocket 기능을 별도로 재현할 때만 사용 — 본선 금지
+# 과거 direct ROS 실패를 재현할 때만 사용 — 현재 개발·본선 금지
 ./scripts/rosbridge.sh
 ./scripts/diagnose_morai_rosbridge.sh
 ```
+
+`asmc-ros-noetic` 컨테이너는 이 레거시 rosbridge와 같은 뜻이 아니다. UDP bridge가 MORAI
+packet을 내부 ROS topic으로 정규화하고 인지 노드를 실행하는 현재 필수 환경이다.
 
 Capture Mode gRPC와 시나리오 gRPC는 개발·데이터 수집 도구이며 본선 runtime에 포함하지
 않는다. 본선 launch에는 규정 외 oracle/GT subscriber가 없는지 별도 검사한다.

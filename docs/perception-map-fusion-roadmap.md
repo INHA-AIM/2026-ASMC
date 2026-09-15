@@ -2,7 +2,7 @@
 
 > **문서 역할:** Current Working Proposal — 인지 융합 방향과 단계별 결정 gate
 > **문서 허브:** [README.md](./README.md)
-> **상태:** Working Proposal v0.15 — INVALID 위치 정렬·map 거리 대표 audit 반영<br>
+> **상태:** Working Proposal v0.16 — 음영 camera v3 인수 완료, HD맵 결합 단계<br>
 > **기준일:** 2026-09-15<br>
 > **주요 참여:** 안승현(카메라 인지), 장원태(MGeo map prior 제안), 손재호(LiDAR 인지), planning/control 팀<br>
 > **상세 문서:** [인지 GT·BEV·차로 구조화 계획](./perception-bev-lane-interface-plan.md) · [UDP↔ROS 네트워크](./network-udp-ros.md) · [v4 학습 평가](./perception-v4-training-evaluation.md)
@@ -24,8 +24,9 @@
 | Camera perception | 현재 보이는 drivable·white/yellow/stopline 관측 | TwinLiteNet+ 4-class road-marking 모델을 live 검증, 모델 교체 가능한 adapter 사용 |
 | LiDAR perception | 동·정적 장애물의 위치·점유·추적 | 장애물 검출을 도로/차로 문맥과 연결하고 최종 safe area에서 우선 반영 |
 
-현재 작업 순서는 **설정·문서 정본화 → 재현 가능한 raw bag 평가 기반 → Streaming GT
-transport gate → 좌표·BEV 기준 확정 → 카메라 결과 구조화 → MGeo 결합 → LiDAR/판제 연계**다.
+현재 작업 순서는 **재현 가능한 Real Time UDP raw bag 기준 → 음영 camera v3 인수 → MGeo
+bake/crop 결합 → LiDAR/판제 연계 → 대회판 이식**이다. Streaming/ROS GT transport 비교는
+종료했으며 관련 미병합 구현은 `origin/backup/ros-gt-experimental-20260910`에만 보존한다.
 정지선은 MGeo/전역경로 정지점을 1차 후보로 두고 현재 영상 stopline class를 보조 검증과
 GPS Blackout 대응 후보로 평가한다.
 
@@ -636,7 +637,7 @@ camera-to-vector 기준선을 완성하고, 그 이후 같은 정확도·지연 
 별도 프로세스로 실행하며 기록 중 resample이나 timestamp 정렬을 하지 않는다. message
 header stamp와 bag 기록 시각을 보존하고 정렬은 offline auditor/evaluator가 담당한다.
 실행법과 profile 계약은
-[rosbag 평가·Streaming GT 가이드](./rosbag-evaluation-streaming-gt.md)를 정본으로 삼는다.
+[rosbag 재현 평가 가이드](./rosbag-evaluation-streaming-gt.md)를 정본으로 삼는다.
 
 Raw 입력과 모델 결과는 다음처럼 분리한다.
 
@@ -666,8 +667,8 @@ data/rosbags/audits/<run_or_comparison>/
 | `camera_raw` | RGB×3, Ego와 선택적 GPS/IMU |
 | `lidar_raw` | Intensity point cloud, GPS/IMU/Ego |
 | `full_raw` | 통합 재현에 필요한 원천 입력 allowlist |
-| `lidar_dev_gt_udp` | ID 5/11, Object와 차량 상태의 privileged source-time stream |
-| `dev_oracle_udp/ros` | transport A/B를 위한 전체 privileged oracle |
+| `lidar_dev_gt_udp` | 종료된 ID 5/11 privileged transport 실험 재현용 |
+| `dev_oracle_udp` | 종료된 privileged UDP oracle 실험 재현용 |
 | `camera_semantic_result` | replay 추론 결과와 구조화 diagnostics |
 
 Real Time UDP bag은 실제 비동기 지연·drop·jitter 분석 기준이다. 같은 bag을 재생하면 모델
@@ -731,7 +732,7 @@ metric accuracy 합격률이 아니라 판제 인터페이스 연속성 기준�
 [`lane_boundary_adapter` README](../src/planning_control/lane_boundary_adapter/README.md#2026-09-13-회피차로-이탈-replay)를
 따른다.
 
-### 8.1 학습용 Capture와 Streaming GT
+### 8.1 학습용 Capture와 종료된 Streaming GT 조사
 
 카메라 단일-frame 학습은 Real Time + Capture 1 Hz를 기준으로 둔다. 2026-09-09에
 2/5/10 Hz 요청을 시험했지만 실제 저장은 약 1.4~1.7 Hz에 포화됐고 요청마다 시뮬레이션이
@@ -748,9 +749,9 @@ metric accuracy 합격률이 아니라 판제 인터페이스 연속성 기준�
 
 v2 Sensor Record 실측에서 갱신된 것은 `CAMERA_1~4`, `LIDAR_5`, `GPS_6`, `IMU_7`뿐이며
 Semantic/Instance GT 디렉터리는 갱신되지 않았다. Sensor Record는 장착 센서만 기록하므로
-v2만으로 고주기 supervised GT를 얻었다고 간주하지 않는다. Simulation Time + Sensor Sync를
-사용한 결과는 source timestamp bag/replay와 결합해 sensor-generation skew를 배제한
-`controlled/ideal-input` 기준으로만 보고하고, Real Time UDP의 운용 기준을 대체하지 않는다.
+v2만으로 고주기 supervised GT를 얻었다고 간주하지 않는다. Simulation Time + Sensor Sync는
+필요가 생길 때 Sensor Record/offline replay pilot으로 다시 정의하며, 과거 source-time
+Streaming GT bag을 현행 정확도 gate로 사용하지 않는다. Real Time UDP가 운용 기준이다.
 현재 자세한 실행·저장 경로와 pilot gate는
 [data_collection README](../src/data_collection/README.md#simulation-time의-sensor-record)를 따른다.
 
@@ -774,9 +775,10 @@ Streaming GT를 자동 학습 pair로 사용하지 않는다. RGB–Semantic도 
 3 ms에서 31~35 ms까지 달라졌다. 허용 gap을 넘는 frame은 offline에서 제외하며 train/val/test는
 인접 frame이 아니라 scenario/run/object seed 단위로 분리한다.
 
-현재 UDP GT bridge는 source timestamp와 독립 ID 11 stream을 구현했다. ROS GT 구현은
-현재 범위에 포함하지 않으며, UDP만으로 해결할 수 없는 요구가 확인될 때 별도 실험으로
-재검토한다. 대회 경로는 항상 UDP로 유지한다.
+UDP GT bridge의 source timestamp와 독립 ID 11 stream은 실험 당시 구현·검증했으나 현재
+개발 우선순위에서 제외했다. direct ROS/rosbridge GT와 ROS-vs-UDP 비교도 종료했으며 미병합
+구현은 `origin/backup/ros-gt-experimental-20260910`에 보존한다. Capture 학습 GT와 Real Time
+UDP raw/result 재현 평가만 현행 경로로 유지한다. 대회 경로는 항상 UDP다.
 
 ## 9. 26.R1.h3 개발판과 대회판 이식 전략
 
@@ -946,8 +948,8 @@ LiDAR occupancy 결합, safe corridor, fallback과 closed-loop 검증은 판제�
 | 순서 | 산출물 | 다음 단계 진입 조건 | 상태 |
 |---:|---|---|---|
 | 1 | 센서셋·규정·수집 모드·차량 좌표계 정본 | JSON/문서 검증과 변경 범위 확인 | 완료 |
-| 2 | transport-aware raw/result bag과 source-time GT bridge | UDP smoke, lifecycle와 replay/audit 검증 | **구현 완료** |
-| 3 | actor GT와 UDP↔ROS 5분 gate | Object ID 대응 및 transport 선정 근거 | UI 실증 남음 |
+| 2 | Real Time UDP raw/result bag | lifecycle, replay/audit와 v3 성능 bag | **구현·운용 중** |
+| 3 | Streaming/ROS GT transport 조사 | rate/schema와 실패 원인 기록 | **종료·백업 브랜치 보존** |
 | 4 | 센서 calibration과 공통 BEV 기준 | camera-only fused pilot 완료; provisional debug ROI를 vector 재평가·GPS lever arm·map overlay 후 확정 | camera 부분 진행 중 |
 | 5 | 3-camera BEV와 lane 구조화 | 판제 소유 feature flag·closed-loop·full-stack profile | **v3 interface/parameter 동결 및 성능 bag 완료; 제어 미연결 handoff** |
 | 6 | MGeo crop과 source policy 평가 | 정상 GPS·Blackout의 map/camera 정합 지표 확보 | 장원태·안승현 |
@@ -966,7 +968,7 @@ LiDAR occupancy 결합, safe corridor, fallback과 closed-loop 검증은 판제�
 6. planning이 필요한 raster/vector 필드와 update rate
 7. competition branch 이름, 유지 기간과 main backport 규칙
 8. 대회판 GT Capture 가능 범위와 train/val/test 분할
-9. 공용 rosbag profile 담당과 저장 용량/보존 정책
+9. 공용 Real Time raw/result bag의 담당과 저장 용량/보존 정책
 
 변경 제안은 이 문서의 전제를 조용히 덮어쓰지 말고, 근거가 된 실증 run, metric 또는
 인터페이스 소비 요구와 함께 반영한다.

@@ -3,7 +3,7 @@
 > **문서 역할:** Version Reference — 조사 시점의 26.R1/대회 msg 차이 기록
 > **주의:** 실제 대회판 이식 시 재실측하고 [morai-msgs-beta-policy.md](./morai-msgs-beta-policy.md)를 갱신한다.
 > **문서 허브:** [README.md](./README.md)
-> **최종 수정:** 2026-09-09
+> **최종 수정:** 2026-09-15
 > 통합 시 **단일 submodule** 기준을 정하고, 레거시 코드는 필드 차이를 인지해야 합니다.
 > **대회 ROS UI 실측:** [docs/competition/morai-competition-ros-topics.md](../../docs/competition/morai-competition-ros-topics.md)
 
@@ -56,8 +56,8 @@
 `EgoVehicleStatus` 변환이 거부됐다. 반면 공통 스키마인 `/Object_topic`은 약 39~40 Hz로
 정상 수신됐고 NPC·보행자 ID도 보존됐다. 즉 같은 ASMC workspace에서 direct ROS를 선택하면
 토픽별로 부분 호환되는 상태가 되므로 팀 기본 경로로 삼지 않는다. 26.R1.H3와 대회판 모두
-UDP bridge가 beta 내부 계약으로 정규화하며, direct ROS는 `rosbridge.sh` 격리
-실험으로만 둔다.
+UDP bridge가 beta 내부 계약으로 정규화한다. direct ROS/rosbridge GT 비교는 2026-09-15
+종료했으며 `rosbridge.sh`는 당시 실패 조건 재현용으로만 남긴다.
 
 ### ROS msg 차이와 UDP bridge 공용 범위
 

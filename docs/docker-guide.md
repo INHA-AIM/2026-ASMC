@@ -148,7 +148,7 @@ Docker Desktop → WSL Integration 활성화, NVIDIA Container Toolkit 확인.
 | Docker 네트워크 | Docker Desktop **host networking** (`ports:` 포워딩 없음) |
 | MORAI IP | Host/Dest 모두 **`127.0.0.1`** |
 | Ctrl | `cmd_ip=127.0.0.1` · `cmd_port` **9111** (팀 표준 Host) |
-| rosbridge | `./scripts/rosbridge.sh` — 개발 편의 · **당일 금지** |
+| rosbridge | `./scripts/rosbridge.sh` — 종료된 direct ROS 실험 재현용 · **현재 개발/당일 금지** |
 
 ```bash
 ./scripts/docker_ros_up.sh up
