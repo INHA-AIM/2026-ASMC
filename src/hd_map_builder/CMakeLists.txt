@@ -20,11 +20,14 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_corridor.py)
   catkin_add_nosetests(test/test_nominal.py)
   catkin_add_nosetests(test/test_current_builder.py)
+  catkin_add_nosetests(test/test_observed.py)
+  catkin_add_nosetests(test/test_observed_builder.py)
 endif()
 
 catkin_install_python(PROGRAMS
   scripts/audit_legacy_alignment.py
   scripts/build_current_corridor.py
+  scripts/calibrate_observed_lanes.py
   scripts/legacy_origin_overlay_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

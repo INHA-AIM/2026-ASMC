@@ -50,7 +50,7 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `scripts/rosbridge.sh`, `config/morai_rosbridge.env` | 종료된 direct ROS 실험 보존 | @ahnsh03 |
 | `scripts/udp_bridge.sh`, `src/morai_*_bridge/` | 이강태·안승현 | @kante2 · @ahnsh03 |
 | `mgeo_toolkit/`, `R_KR_PG_KATRI/` | 안승현 | @ahnsh03 |
-| `src/hd_map_builder/` | current Node/Link HD맵 후보·구맵 전이 audit | @ahnsh03 (장원태 관측 자료 협의) |
+| `src/hd_map_builder/` | current Node/Link HD맵 명목·관측 보정 후보와 구맵 전이 audit | @ahnsh03 (장원태 관측 자료 협의) |
 
 ### perception · scenario (✅ PR #3)
 

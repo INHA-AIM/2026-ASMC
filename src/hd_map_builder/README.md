@@ -34,9 +34,11 @@
 hd_map_builder/
 ├── config/
 │   ├── kcity2025_competition_corridor.yaml
+│   ├── kcity2025_observed_calibration.yaml
 │   └── kcity2025_legacy_transfer.yaml
 ├── schemas/canonical-hd-map-v1.schema.json
 ├── scripts/build_current_corridor.py
+├── scripts/calibrate_observed_lanes.py
 ├── scripts/audit_legacy_alignment.py
 ├── scripts/legacy_origin_overlay_node.py
 ├── launch/legacy_origin_overlay.launch
@@ -52,6 +54,8 @@ hd_map_builder/
 │   ├── corridor.py            current route/corridor/topology
 │   ├── nominal.py             명목 경계·정지선 후보
 │   ├── current_builder.py     current-only canonical 후보 생성
+│   ├── observed.py            exact projection·robust offset core
+│   ├── observed_builder.py    관측 보정·구간 분할·감사 산출물
 │   └── audit.py               route/lane/road/부가 layer audit
 ├── reports/                   작은 정량 결과와 후보 index
 └── test/
@@ -70,6 +74,18 @@ python3 src/hd_map_builder/scripts/build_current_corridor.py
 출력은 `reports/kcity2025_current_corridor_20260916/`에 생성된다. 이 빌드는 설정의
 source key를 current global/link/node, route link와 주최측 전역경로로 제한한다.
 관측선·구맵 경로가 추가되면 시작을 실패하므로 명목 기준선 provenance가 섞이지 않는다.
+
+원태 관측선으로 경계 후보를 보정하는 2단계:
+
+```bash
+python3 src/hd_map_builder/scripts/calibrate_observed_lanes.py
+```
+
+2단계 설정은 1단계 `nominal_candidate_map.json`의 SHA-256을 고정 입력으로 검사한다.
+19개 CSV의 직접 관측만 fit support로 쓰며 `generated`, `interpolated`, manual bridge와
+기존 raster용 `inward_offset_m=0.03`은 보정 geometry에 적용하지 않는다. CSV의
+`LEFT/RIGHT`는 수집 차량 기준 audit 값일 뿐 canonical 좌우 역할로 복사하지 않는다.
+출력은 `reports/kcity2025_observed_calibration_20260916/`에 생성된다.
 
 구맵 전이 가능성 audit:
 
@@ -141,6 +157,27 @@ src/hd_map_builder/reports/kcity2025_legacy_alignment_20260916/
 교차로·짧은 link는 자동 경계 생성을 건너뛰었고, 합류·분기 후보는
 `review_required`로 남겼다. 관측선·구맵 보정 전까지 map과 모든 feature는
 `operational=false`, `candidate` 상태다.
+
+## 2026-09-16 원태 관측선 기반 경계 보정 후보
+
+`kcity2025_observed_calibration.yaml`의 고정 계약으로 19개 CSV 26,511행을 감사했다.
+
+- 직접 관측 25,414행만 사용: Semantic LiDAR 13,679행, GPS Direct 11,735행
+- 생성 958행과 시간 보간 139행은 audit-only
+- 직접 관측 60개 segment를 exact polyline projection한 뒤 current topology 안에서만
+  경계 전환을 허용
+- 자동 gate를 통과한 match run 76개, 검토 필요 74개, 기각 47개, 미대응 15개
+- source conflict가 없는 3,734개 1m profile bin을 적용
+- 85개 parent 경계 중 50개에 60개 `observed_calibrated` interval 생성
+- 양쪽 경계가 모두 통과한 구간의 폭 sample 3,143개: 중앙값 3.468m,
+  p05/p95 3.276/3.803m
+
+보정 interval 밖은 원래 `link_nominal` geometry로 남고, 보정/명목 station interval은
+서로 길이 중복 없이 parent 전체를 구성한다. 합류 taper에서 폭이 좁아지는 후보도 있으므로
+폭 profile은 관측 감사값이며 current link의 `width_start/end=3.5m`를 수정하지 않는다.
+정량 결과와 review overlay는
+[`observed calibration report`](reports/kcity2025_observed_calibration_20260916/README.md)에
+있다. 이 map도 여전히 `candidate`, `operational=false`다.
 
 ## 구맵 origin-only 주행 검수
 

@@ -2,7 +2,7 @@
 
 > **문서 역할:** Current Working Proposal — 인지 융합 방향과 단계별 결정 gate
 > **문서 허브:** [README.md](./README.md)
-> **상태:** Working Proposal v0.18 — 음영 camera v3 인수 완료, current Node/Link HD맵 명목 기준선 생성<br>
+> **상태:** Working Proposal v0.19 — 음영 camera v3 인수 완료, current Node/Link HD맵 관측 보정 후보 생성<br>
 > **기준일:** 2026-09-16<br>
 > **주요 참여:** 안승현(카메라 인지), 장원태(MGeo map prior 제안), 손재호(LiDAR 인지), planning/control 팀<br>
 > **상세 문서:** [인지 GT·BEV·차로 구조화 계획](./perception-bev-lane-interface-plan.md) · [UDP↔ROS 네트워크](./network-udp-ros.md) · [v4 학습 평가](./perception-v4-training-evaluation.md)
@@ -143,8 +143,19 @@ route에 연결된 `on_stop_line` node 13개는 모두 명목 stopline 후보를
 선분과의 검산 전이다. 모든 feature는 `candidate`, map은 `operational=false`이며 관측선과
 구 KATRI 자료는 이 기준선 생성에 사용하지 않았다. 정량 결과와 source hash는
 [`current corridor report`](../src/hd_map_builder/reports/kcity2025_current_corridor_20260916/README.md)에
-있다. 다음 gate는 current topology를 고정한 채 원태 관측선으로 폭·경계를 보정하고,
-변경되지 않은 구간에만 구맵 속성·누락 geometry를 보조 적용하는 것이다.
+있다.
+
+2단계에서는 장원태가 수집한 19개 관측 CSV 26,511행을 별도 계약으로 감사하고, 직접
+관측 25,414행만 current 명목 경계에 정합했다. 고정 폭 생성 958행, 시간 보간 139행,
+수동 bridge와 raster용 0.03m offset은 canonical fit에서 제외했다. 자동 gate를 통과한
+76개 match run으로 85개 parent 경계 중 50개에 60개 보정 interval을 만들었으며, 나머지
+구간은 명목 후보로 유지했다. 양쪽 관측이 함께 통과한 폭 표본은 3,143개이고 중앙값은
+3.468m지만, 합류 taper를 포함하므로 current link의 일률적 3.5m 속성을 덮어쓰지 않는다.
+link centerline 70개와 stopline 13개는 1단계 그대로다. 상세 결과는
+[`observed calibration report`](../src/hd_map_builder/reports/kcity2025_observed_calibration_20260916/README.md)에
+있다. 이 결과도 `candidate`, `operational=false`다. 다음 gate는 자동 적용과
+`review_required` overlay 검수 후, 변경되지 않은 구간에만 구맵 속성·누락 geometry를
+보조 적용하는 것이다.
 
 ### 3.2 Camera perception 후보 출력
 
@@ -1013,7 +1024,7 @@ LiDAR occupancy 결합, safe corridor, fallback과 closed-loop 검증은 판제�
 | 3 | Streaming/ROS GT transport 조사 | rate/schema와 실패 원인 기록 | **종료·백업 브랜치 보존** |
 | 4 | 센서 calibration과 공통 BEV 기준 | camera-only fused pilot 완료; provisional debug ROI를 vector 재평가·GPS lever arm·map overlay 후 확정 | camera 부분 진행 중 |
 | 5 | 3-camera BEV와 lane 구조화 | 판제 소유 feature flag·closed-loop·full-stack profile | **v3 interface/parameter 동결 및 성능 bag 완료; 제어 미연결 handoff** |
-| 6 | Current HD맵 보정과 crop/source policy | Node/Link 명목 기준선 완료; 관측선 보정·안정 구간 구맵 이식·RGB-BEV 검수 후 정상 GPS/Blackout 정합 | **1단계 완료, 보정 대기** |
+| 6 | Current HD맵 보정과 crop/source policy | Node/Link 명목 기준선과 원태 직접 관측 경계 보정 후보 완료; overlay 검수·안정 구간 구맵 이식·RGB-BEV 검수 후 정상 GPS/Blackout 정합 | **2단계 후보 완료, 수동 검수 대기** |
 | 7 | LiDAR association과 판제 인터페이스 | ego/adjacent/unknown, occupancy와 ownership 합의 | 공동 |
 | 8 | 대회판 이식·추가 데이터·장기 재학습 | competition-only held-out 개선과 full rehearsal 통과 | 10월 후보 |
 
