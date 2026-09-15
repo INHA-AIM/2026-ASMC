@@ -49,6 +49,21 @@ render_config() {
   fi
 }
 
+render_rtx50_config() {
+  local rendered
+  rendered="$("${COMPOSE_RTX50[@]}" config)"
+  grep -q '^    image: asmc/ros-noetic:rtx50$' <<<"$rendered" \
+    || die "RTX 50 compose overlay did not select asmc/ros-noetic:rtx50"
+  grep -q '^      dockerfile: Dockerfile.rtx50$' <<<"$rendered" \
+    || die "RTX 50 compose overlay did not select Dockerfile.rtx50"
+  grep -q '^    network_mode: host$' <<<"$rendered" \
+    || die "RTX 50 compose does not preserve host network mode"
+  if grep -q '^    ports:$' <<<"$rendered"; then
+    die "RTX 50 host-mode compose must not publish ports"
+  fi
+  echo "[OK] RTX 50 overlay preserves host mode and selects the derived image"
+}
+
 inspect_mode() {
   assert_host_mode
   docker inspect "$CONTAINER" --format \
@@ -178,21 +193,22 @@ case "$cmd" in
     ;;
   build-rtx50)
     render_config
-    # Dockerfile.rtx50은 이미 빌드된 공용 asmc/ros-noetic:dev를 상속한다.
-    # 기본 이미지가 없을 때만 먼저 빌드하여 수 GB의 cu118 재다운로드를 피한다.
-    if ! docker image inspect asmc/ros-noetic:dev >/dev/null 2>&1; then
-      "${COMPOSE[@]}" build
-    fi
+    render_rtx50_config
+    # 파생 이미지가 오래된 asmc/ros-noetic:dev를 상속하지 않도록 기본 이미지를
+    # 항상 먼저 갱신한다. Docker layer cache가 있어 변경 없는 cu118은 재다운로드하지 않는다.
+    "${COMPOSE[@]}" build
     "${COMPOSE_RTX50[@]}" build
     ;;
   up-rtx50)
     render_config
+    render_rtx50_config
     "${COMPOSE_RTX50[@]}" up -d --force-recreate
     inspect_mode
     print_next
     ;;
   rebuild-rtx50)
     render_config
+    render_rtx50_config
     # 공용 RTX 40 이미지를 먼저 만든 뒤 RTX 50 파생 이미지를 no-cache로 만든다.
     "${COMPOSE[@]}" build
     "${COMPOSE_RTX50[@]}" build --no-cache

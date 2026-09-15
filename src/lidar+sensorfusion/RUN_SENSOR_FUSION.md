@@ -35,8 +35,14 @@ Start the outer sensor bridge first:
 cd /path/to/2026-ASMC
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-./scripts/udp_bridge.sh --simulator 26r1
+./scripts/udp_bridge.sh --simulator 26r1 publish_map_tf:=true
 ```
+
+`publish_map_tf:=true` is an opt-in raw GPS + latest IMU transform used by
+this standalone map-frame fusion candidate. Do not enable it when localization
+already publishes the authoritative `map -> base_link` transform; two TF
+authorities for the same edge are invalid. The ordinary team UDP bridge keeps
+this option false by default.
 
 In another terminal, start the perception node. Camera-LiDAR class fusion and
 the YOLO node are enabled by default:

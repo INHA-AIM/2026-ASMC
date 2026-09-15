@@ -13,20 +13,21 @@ TEST(FusionClassPolicy, NormalizesToThreeOutputClasses) {
 TEST(FusionClassPolicy, InitialClassNeedsFiveConsistentObservations) {
     LiDARObjectInfo object;
     for (int i = 0; i < 4; ++i) {
-        fusion_class::Observe(object, "truck", 5, 3);
+        fusion_class::Observe(object, "truck", "truck", 5, 3);
         EXPECT_EQ("unknown", object.str_ObjectClass);
     }
-    fusion_class::Observe(object, "truck", 5, 3);
+    fusion_class::Observe(object, "truck", "truck", 5, 3);
     EXPECT_EQ("car", object.str_ObjectClass);
+    EXPECT_EQ("truck", object.str_YoloClass);
 }
 
 TEST(FusionClassPolicy, ConfirmedClassChangesAfterThreeOppositeObservations) {
     LiDARObjectInfo object;
     object.str_ObjectClass = "car";
-    fusion_class::Observe(object, "person", 5, 3);
-    fusion_class::Observe(object, "person", 5, 3);
+    fusion_class::Observe(object, "person", "person", 5, 3);
+    fusion_class::Observe(object, "person", "person", 5, 3);
     EXPECT_EQ("car", object.str_ObjectClass);
-    fusion_class::Observe(object, "person", 5, 3);
+    fusion_class::Observe(object, "person", "person", 5, 3);
     EXPECT_EQ("person", object.str_ObjectClass);
 }
 
@@ -44,7 +45,7 @@ TEST(FusionClassPolicy, ThreeMissesKeepClassAndFourthResetsIt) {
 TEST(FusionClassPolicy, UnsupportedObservationDoesNotEraseConfirmedClass) {
     LiDARObjectInfo object;
     object.str_ObjectClass = "car";
-    fusion_class::Observe(object, "bicycle", 5, 3);
+    fusion_class::Observe(object, "bicycle", "bicycle", 5, 3);
     EXPECT_EQ("car", object.str_ObjectClass);
 }
 

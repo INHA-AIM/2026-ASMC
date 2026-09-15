@@ -51,11 +51,13 @@ RUN pip3 install --no-cache-dir --ignore-installed \
       "psutil>=5.8" \
       "protobuf==3.20.3"
 
+# RTX 40 기본 이미지에서 검증한 Ultralytics 버전을 고정해 재빌드 날짜에
+# 따른 YOLO 동작/의존성 변경을 막는다. RTX 50은 별도 requirements를 사용한다.
 RUN pip3 install --no-cache-dir -r /tmp/requirements-lbc.txt && \
     pip3 install --no-cache-dir -r /tmp/requirements-mgeo.txt && \
     pip3 install --no-cache-dir -r /tmp/requirements-grpc.txt && \
     pip3 install --no-cache-dir -r /tmp/requirements-linknode.txt && \
-    pip3 install --no-cache-dir tqdm ultralytics && \
+    pip3 install --no-cache-dir tqdm ultralytics==8.4.150 && \
     rm -f /tmp/requirements-*.txt && \
     python3 -c "from scipy.spatial import cKDTree; import cv2; import numpy; import h5py; import pyproj"
 

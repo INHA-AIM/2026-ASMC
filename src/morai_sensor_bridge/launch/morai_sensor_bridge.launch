@@ -20,6 +20,10 @@
   <!-- KATRI map local origin: UTM52N - offset = planner/map coordinates. -->
   <arg name="gps_east_offset"  default="302595.0"/>
   <arg name="gps_north_offset" default="4124145.0"/>
+  <!-- Raw GPS+latest-IMU map TF is an opt-in visualization/fusion aid. Keep
+       false by default so it cannot compete with the localization stack's
+       authoritative map -> base_link transform. -->
+  <arg name="publish_map_tf" default="false"/>
   <arg name="enable_lidar" default="true"/>
   <arg name="enable_semantic_camera" default="true"/>
   <arg name="lidar_model"  default="VLP-16"/>
@@ -50,6 +54,7 @@
     <param name="planner_imu_port"   value="$(arg planner_imu_port)"/>
     <param name="gps_east_offset"  value="$(arg gps_east_offset)"/>
     <param name="gps_north_offset" value="$(arg gps_north_offset)"/>
+    <param name="publish_map_tf" value="$(arg publish_map_tf)"/>
     <param name="lidar_port" value="$(arg lidar_port)"/>
     <param name="lidar_topic" value="$(arg lidar_topic)"/>
     <param name="lidar_host_port" value="$(arg lidar_host_port)"/>

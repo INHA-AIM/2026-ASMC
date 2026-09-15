@@ -127,7 +127,9 @@ class SensorBridge(object):
         # 없어서, 메시지에 frame_id="map" 이 붙어 있어도 RViz 에서 velodyne
         # 프레임 데이터와 겹쳐 볼 수 없다 (Fixed Frame=map 이 실패한다).
         # 위치는 GPS, 방위는 IMU orientation 을 쓴다 — 둘 다 허용 센서다.
-        self.publish_map_tf = bool(p("~publish_map_tf", True))
+        # 기본은 꺼 둔다. 측위 노드가 발행하는 authoritative map -> base_link와
+        # 동시에 켜면 TF authority가 충돌하므로 디버그/융합 실행에서만 opt-in한다.
+        self.publish_map_tf = bool(p("~publish_map_tf", False))
         self.frame_map = str(p("~map_frame", "map"))
         self.frame_base = str(p("~base_frame", "base_link"))
         self.utm_epsg = int(p("~utm_epsg", 32652))
