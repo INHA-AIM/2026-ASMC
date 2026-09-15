@@ -33,7 +33,28 @@ from drivable_bev.boundary_candidates import (
 from drivable_bev.lane_evidence import reduce_evidence_to_nodes
 from drivable_bev.lane_tracking import associate_lane_nodes_with_audit
 from drivable_bev.model_grid_projection import MetricEvidence
-from drivable_bev.shadow_map_gt import map_xy_to_base, nearest_polyline_distance
+from drivable_bev.invalid_support import (
+    classify_invalid_support,
+    invalid_support_config_from_dict,
+)
+from drivable_bev.invalid_support_review import InvalidSupportReviewSampler
+from drivable_bev.invalid_map_audit import (
+    InvalidMapReviewSampler,
+    invalid_category_masks,
+    invalid_distance_band,
+)
+from drivable_bev.planning_usability import (
+    DEFAULT_PLANNING_ZONES,
+    measure_planning_usability,
+    planning_zones_from_config,
+)
+from drivable_bev.pose_time_alignment import align_ego_pose, pose_delta
+from drivable_bev.rgb_bev import StampedEgoPose
+from drivable_bev.shadow_map_gt import (
+    map_xy_to_base,
+    nearest_polyline_distance,
+    nearest_polyline_signed_normal_distance,
+)
 from drivable_bev.shared_lane_family import (
     LEFT_ROLE,
     RIGHT_ROLE,
@@ -47,7 +68,7 @@ from drivable_bev.shared_lane_family import (
 from drivable_bev.spline_fitting import fit_lane_tracks_with_audit
 
 
-SCHEMA_VERSION = "asmc-shadow-lane-family-ab-1.1.0"
+SCHEMA_VERSION = "asmc-shadow-lane-family-ab-1.5.0"
 METHODS = ("independent", "shared")
 DISTANCE_BINS = ((0.0, 10.0), (10.0, 15.0), (15.0, 20.0))
 
@@ -65,7 +86,10 @@ def _sha256(path):
 
 
 def _percentile(values, percentile):
-    finite = np.asarray([value for value in values if np.isfinite(value)], dtype=np.float64)
+    finite = np.asarray(
+        [value for value in values if value is not None and np.isfinite(value)],
+        dtype=np.float64,
+    )
     return float(np.percentile(finite, percentile)) if len(finite) else None
 
 
@@ -124,6 +148,14 @@ class ShadowLaneFamilyOfflineNode:
         self.ego_max_age_ns = int(
             round(float(rospy.get_param("~ego_pose_max_age_ms", 50.0)) * 1e6)
         )
+        self.ego_alignment_mode = str(
+            rospy.get_param("~ego_pose_alignment_mode", "nearest")
+        ).strip().lower()
+        self.ego_max_bracket_ns = int(
+            round(float(rospy.get_param("~ego_pose_max_bracket_ms", 100.0)) * 1e6)
+        )
+        if self.ego_alignment_mode not in ("nearest", "interpolate"):
+            raise ValueError("ego_pose_alignment_mode must be nearest or interpolate")
         self.ego_buffer = deque(maxlen=int(rospy.get_param("~ego_buffer_size", 300)))
         self.lock = threading.Lock()
         self.started_at = _utc_now()
@@ -141,6 +173,24 @@ class ShadowLaneFamilyOfflineNode:
         self.high_residual_overlay_limit = int(
             rospy.get_param("~high_residual_overlay_limit", 100)
         )
+        self.invalid_review_sampler = InvalidSupportReviewSampler(
+            limit_per_category=int(
+                rospy.get_param("~invalid_support_overlay_limit_per_category", 0)
+            ),
+            min_frame_gap=int(
+                rospy.get_param("~invalid_support_overlay_min_frame_gap", 15)
+            ),
+        )
+        self.invalid_review_manifest = []
+        self.invalid_map_review_sampler = InvalidMapReviewSampler(
+            limit_per_category_band=int(
+                rospy.get_param("~invalid_map_overlay_limit_per_category_band", 0)
+            ),
+            min_frame_gap=int(
+                rospy.get_param("~invalid_map_overlay_min_frame_gap", 15)
+            ),
+        )
+        self.invalid_map_review_manifest = []
         self.pseudo_gt_disagreement_m = float(
             rospy.get_param("~pseudo_gt_disagreement_m", 0.50)
         )
@@ -220,12 +270,61 @@ class ShadowLaneFamilyOfflineNode:
         self.shared_parameters.pop("runtime_debug_enabled", None)
         self.shared_parameters.pop("deployment_allowed", None)
         self.shared_parameters.pop("representation", None)
+        self.invalid_support_config = invalid_support_config_from_dict(
+            rospy.get_param("~invalid_support_classification", {})
+        )
+        self.planning_zones = planning_zones_from_config(
+            rospy.get_param(
+                "~planning_usability_zones",
+                [
+                    {
+                        "name": zone.name,
+                        "x_min_m": zone.x_min_m,
+                        "x_max_m": zone.x_max_m,
+                    }
+                    for zone in DEFAULT_PLANNING_ZONES
+                ],
+            )
+        )
         self.config_snapshot = {
             "node": self.node_parameters,
             "track": self.track_parameters,
             "independent_spline": self.spline_parameters,
             "boundary": self.boundary_parameters,
             "shared_lane_family": self.shared_parameters,
+            "planning_usability": {
+                "interval_contract": "both_endpoint_support_non_invalid",
+                "zones": [
+                    {
+                        "name": value.name,
+                        "x_min_m": value.x_min_m,
+                        "x_max_m": value.x_max_m,
+                    }
+                    for value in self.planning_zones
+                ],
+            },
+            "invalid_support_classification": (
+                self.invalid_support_config.to_dict()
+            ),
+            "invalid_support_overlay_review": {
+                "limit_per_category": self.invalid_review_sampler.limit_per_category,
+                "min_frame_gap": self.invalid_review_sampler.min_frame_gap,
+                "measurement_only": True,
+                "invalid_geometry_planning_authority": False,
+            },
+            "ego_pose_alignment": {
+                "mode": self.ego_alignment_mode,
+                "max_nearest_age_ms": self.ego_max_age_ns / 1e6,
+                "max_bracket_span_ms": self.ego_max_bracket_ns / 1e6,
+                "offline_map_evaluation_only": True,
+                "runtime_ego_motion_compensation": False,
+            },
+            "invalid_map_distance_review": {
+                "limit_per_category_band": self.invalid_map_review_sampler.limit,
+                "min_frame_gap": self.invalid_map_review_sampler.min_frame_gap,
+                "error_bands_m": [0.35, 0.60],
+                "bands_are_acceptance_gates": False,
+            },
         }
         rospy.Subscriber(
             self.ego_topic, EgoVehicleStatus, self._ego_callback, queue_size=200
@@ -244,26 +343,26 @@ class ShadowLaneFamilyOfflineNode:
         stamp_ns = int(message.header.stamp.to_nsec())
         if stamp_ns <= 0:
             stamp_ns = int(rospy.Time.now().to_nsec())
-        value = (
-            stamp_ns,
-            float(message.position.x),
-            float(message.position.y),
-            float(message.heading),
+        value = StampedEgoPose(
+            stamp_ns=stamp_ns,
+            x_m=float(message.position.x),
+            y_m=float(message.position.y),
+            heading_deg=float(message.heading),
         )
-        if np.isfinite(value).all():
+        if np.isfinite((value.x_m, value.y_m, value.heading_deg)).all():
             with self.lock:
                 self.ego_buffer.append(value)
 
-    def _nearest_ego(self, stamp_ns):
+    def _align_ego(self, stamp_ns, mode=None):
         with self.lock:
-            if not self.ego_buffer:
-                return None, None
             values = list(self.ego_buffer)
-        chosen = min(values, key=lambda item: abs(item[0] - stamp_ns))
-        age_ns = abs(chosen[0] - stamp_ns)
-        if age_ns > self.ego_max_age_ns:
-            return None, age_ns / 1e6
-        return chosen, age_ns / 1e6
+        return align_ego_pose(
+            values,
+            stamp_ns,
+            self.ego_max_age_ns,
+            self.ego_max_bracket_ns,
+            self.ego_alignment_mode if mode is None else mode,
+        )
 
     @staticmethod
     def _decode_evidence(message):
@@ -295,7 +394,7 @@ class ShadowLaneFamilyOfflineNode:
     def _map_targets(self, ego):
         if ego is None:
             return None
-        _, x_m, y_m, heading_deg = ego
+        x_m, y_m, heading_deg = ego.x_m, ego.y_m, ego.heading_deg
         if cv2.pointPolygonTest(
             self.shadow_polygon, (float(x_m), float(y_m)), False
         ) < 0.0:
@@ -456,6 +555,89 @@ class ShadowLaneFamilyOfflineNode:
             )
         return {"available": bool(result), "roles": result}
 
+    @staticmethod
+    def _invalid_boundary_map_metrics(points, target):
+        prediction = np.asarray(points, dtype=np.float64).reshape(-1, 2)
+        reference = np.asarray(target, dtype=np.float64).reshape(-1, 2)
+        if not len(prediction) or len(reference) < 2:
+            return {
+                "available": False,
+                "point_count": int(len(prediction)),
+                "signed_normal_p50_m": None,
+                "signed_normal_mean_m": None,
+                "absolute_p50_m": None,
+                "absolute_p95_m": None,
+                "distance_bins": {},
+            }
+        signed = nearest_polyline_signed_normal_distance(prediction, reference)
+        absolute = np.abs(signed)
+        result = {
+            "available": True,
+            "point_count": int(len(prediction)),
+            "signed_normal_p50_m": _percentile(signed, 50),
+            "signed_normal_mean_m": float(np.mean(signed)),
+            "absolute_p50_m": _percentile(absolute, 50),
+            "absolute_p95_m": _percentile(absolute, 95),
+            "distance_bins": {},
+        }
+        for lower, upper in DISTANCE_BINS:
+            selected = (prediction[:, 0] >= lower) & (prediction[:, 0] < upper)
+            label = "{:g}_{:g}m".format(lower, upper)
+            result["distance_bins"][label] = {
+                "point_count": int(np.count_nonzero(selected)),
+                "absolute_p50_m": _percentile(absolute[selected], 50),
+                "absolute_p95_m": _percentile(absolute[selected], 95),
+                "signed_normal_p50_m": _percentile(signed[selected], 50),
+            }
+        return result
+
+    def _invalid_map_metrics(
+        self, boundaries, targets, planning_usability, classification
+    ):
+        """Compare retained INVALID samples with the same-role map boundary."""
+        if targets is None or not boundaries:
+            return {
+                "available": False,
+                "categories": {},
+                "interpretation": "review_signal_only",
+            }
+        by_category = {}
+        for role in ROLE_ORDER:
+            value = boundaries.get(role)
+            if value is None or role not in targets:
+                continue
+            masks = invalid_category_masks(
+                value.sample_points[:, 0],
+                value.sample_state,
+                planning_usability,
+                classification,
+            )
+            for category, selected in masks.items():
+                if not np.any(selected):
+                    continue
+                metric = self._invalid_boundary_map_metrics(
+                    value.sample_points[selected], targets[role]
+                )
+                by_category.setdefault(category, {"roles": {}})["roles"][role] = metric
+        for category, value in by_category.items():
+            p95 = [
+                metric["absolute_p95_m"]
+                for metric in value["roles"].values()
+                if metric.get("absolute_p95_m") is not None
+            ]
+            value["frame_absolute_p95_m"] = max(p95) if p95 else None
+            value["review_band"] = invalid_distance_band(
+                value["frame_absolute_p95_m"]
+            )
+        return {
+            "available": bool(by_category),
+            "categories": by_category,
+            "interpretation": "role_matched_map_pseudo_gt_review_signal_only",
+            "error_bands_m": [0.35, 0.60],
+            "bands_are_acceptance_gates": False,
+            "invalid_geometry_planning_authority": False,
+        }
+
     def _evidence_callback(self, message):
         started = time.perf_counter()
         stamp_ns = int(message.header.stamp.to_nsec())
@@ -542,6 +724,14 @@ class ShadowLaneFamilyOfflineNode:
             )
             valid_mask = (
                 np.zeros(0, dtype=bool) if family is None else family.sample_valid
+            )
+            planning_usability = measure_planning_usability(
+                family,
+                zones=self.planning_zones,
+                anchor_tolerance_m=self.invalid_support_config.gap_tolerance_m,
+            )
+            invalid_support_classification = classify_invalid_support(
+                planning_usability, self.invalid_support_config
             )
             row["methods"]["shared"] = {
                 "available": family is not None,
@@ -634,10 +824,18 @@ class ShadowLaneFamilyOfflineNode:
                     "right": family.right_width_m,
                 },
                 "audit": family_audit,
+                "planning_usability": planning_usability,
+                "invalid_support_classification": invalid_support_classification,
             }
-            ego, ego_age_ms = self._nearest_ego(stamp_ns)
-            targets = self._map_targets(ego)
-            row["ego_pose_age_ms"] = ego_age_ms
+            ego_alignment = self._align_ego(stamp_ns)
+            nearest_alignment = self._align_ego(stamp_ns, mode="nearest")
+            targets = self._map_targets(ego_alignment.pose)
+            nearest_targets = self._map_targets(nearest_alignment.pose)
+            row["ego_pose_alignment"] = ego_alignment.to_dict()
+            row["ego_pose_alignment"]["delta_from_nearest"] = pose_delta(
+                ego_alignment.pose, nearest_alignment.pose
+            )
+            row["ego_pose_age_ms"] = ego_alignment.nearest_age_ms
             row["within_map_odd"] = targets is not None
             row["methods"]["independent"]["map"] = self._method_map_metrics(
                 independent, targets
@@ -645,6 +843,24 @@ class ShadowLaneFamilyOfflineNode:
             row["methods"]["shared"]["map"] = self._method_map_metrics(
                 shared, targets
             )
+            invalid_map = self._invalid_map_metrics(
+                shared,
+                targets,
+                planning_usability,
+                invalid_support_classification,
+            )
+            nearest_invalid_map = self._invalid_map_metrics(
+                shared,
+                nearest_targets,
+                planning_usability,
+                invalid_support_classification,
+            )
+            row["invalid_map_distance"] = {
+                "aligned": invalid_map,
+                "nearest_reference": nearest_invalid_map,
+                "comparison_purpose": "pose_time_alignment_sensitivity",
+                "runtime_support_state_changed": False,
+            }
             row["pipeline"] = {
                 "evidence": int(len(evidence.xy)),
                 "nodes": int(len(nodes)),
@@ -669,6 +885,7 @@ class ShadowLaneFamilyOfflineNode:
                         None if family is None else family.data_residual_p95_m
                     ),
                 )
+                self.overlay_count += 1
             if (
                 family is not None
                 and family.data_residual_p95_m
@@ -684,6 +901,96 @@ class ShadowLaneFamilyOfflineNode:
                     selected_tracks,
                     category="high_residual",
                     residual_p95_m=family.data_residual_p95_m,
+                )
+                self.high_residual_overlay_count += 1
+            for review_category in self.invalid_review_sampler.select(
+                len(self.rows), invalid_support_classification
+            ):
+                relative_path = self._write_overlay(
+                    len(self.rows),
+                    independent,
+                    shared,
+                    targets,
+                    selected_tracks,
+                    category="invalid_support/{}".format(review_category),
+                    residual_p95_m=(
+                        None if family is None else family.data_residual_p95_m
+                    ),
+                    invalid_support_classification=invalid_support_classification,
+                    selected_review_category=review_category,
+                    show_invalid=True,
+                )
+                self.invalid_review_manifest.append(
+                    {
+                        "run_id": self.run_id,
+                        "frame_index": int(len(self.rows)),
+                        "stamp_ns": stamp_ns,
+                        "selected_category": review_category,
+                        "active_categories": [
+                            name
+                            for name, enabled in invalid_support_classification[
+                                "flags"
+                            ].items()
+                            if enabled
+                        ],
+                        "primary_reason": invalid_support_classification[
+                            "primary_reason"
+                        ],
+                        "measurements": invalid_support_classification[
+                            "measurements"
+                        ],
+                        "overlay": relative_path,
+                        "map_overlay_available": targets is not None,
+                        "invalid_geometry_planning_authority": False,
+                    }
+                )
+            category_bands = {
+                category: value["review_band"]
+                for category, value in invalid_map.get("categories", {}).items()
+                if value.get("review_band") != "unavailable"
+            }
+            for review_category, review_band in self.invalid_map_review_sampler.select(
+                len(self.rows), category_bands
+            ):
+                category_metric = invalid_map["categories"][review_category]
+                relative_path = self._write_overlay(
+                    len(self.rows),
+                    independent,
+                    shared,
+                    targets,
+                    selected_tracks,
+                    category="invalid_map_distance/{}/{}".format(
+                        review_category, review_band
+                    ),
+                    residual_p95_m=(
+                        None if family is None else family.data_residual_p95_m
+                    ),
+                    invalid_support_classification=invalid_support_classification,
+                    selected_review_category=review_category,
+                    show_invalid=True,
+                    invalid_map_review={
+                        "band": review_band,
+                        "frame_absolute_p95_m": category_metric.get(
+                            "frame_absolute_p95_m"
+                        ),
+                    },
+                )
+                self.invalid_map_review_manifest.append(
+                    {
+                        "run_id": self.run_id,
+                        "frame_index": int(len(self.rows)),
+                        "stamp_ns": stamp_ns,
+                        "selected_category": review_category,
+                        "review_band": review_band,
+                        "frame_absolute_p95_m": category_metric.get(
+                            "frame_absolute_p95_m"
+                        ),
+                        "roles": category_metric.get("roles", {}),
+                        "overlay": relative_path,
+                        "ego_pose_alignment": row["ego_pose_alignment"],
+                        "inside_pseudo_gt_odd": True,
+                        "invalid_geometry_planning_authority": False,
+                    }
                 )
         except Exception as exc:
             name = type(exc).__name__
@@ -716,7 +1023,15 @@ class ShadowLaneFamilyOfflineNode:
         ) * (width - 1)
         return np.rint(np.column_stack((column, row))).astype(np.int32)
 
-    def _draw_curve(self, image, points, color, thickness=2, sample_state=None):
+    def _draw_curve(
+        self,
+        image,
+        points,
+        color,
+        thickness=2,
+        sample_state=None,
+        invalid_color=None,
+    ):
         pixel = self._metric_pixel(points, image.shape)
         if sample_state is None:
             cv2.polylines(image, [pixel], False, color, thickness, cv2.LINE_AA)
@@ -725,12 +1040,15 @@ class ShadowLaneFamilyOfflineNode:
         for index in range(len(pixel) - 1):
             endpoints = state[index : index + 2]
             if np.any(endpoints == SAMPLE_INVALID):
-                continue
-            segment_color = (
-                color
-                if np.all(endpoints == SAMPLE_OBSERVED)
-                else (0, 128, 255)
-            )
+                if invalid_color is None:
+                    continue
+                segment_color = invalid_color
+            else:
+                segment_color = (
+                    color
+                    if np.all(endpoints == SAMPLE_OBSERVED)
+                    else (0, 128, 255)
+                )
             cv2.line(
                 image,
                 tuple(pixel[index]),
@@ -786,6 +1104,10 @@ class ShadowLaneFamilyOfflineNode:
         selected_tracks,
         category,
         residual_p95_m,
+        invalid_support_classification=None,
+        selected_review_category=None,
+        show_invalid=False,
+        invalid_map_review=None,
     ):
         output_dir = self.overlay_dir / category
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -809,10 +1131,16 @@ class ShadowLaneFamilyOfflineNode:
         for value in shared.values():
             color = (0, 255, 255) if value.class_id == 2 else (255, 0, 255)
             self._draw_curve(
-                image, value.sample_points, color, 2, value.sample_state
+                image,
+                value.sample_points,
+                color,
+                2,
+                value.sample_state,
+                invalid_color=(0, 0, 255) if show_invalid else None,
             )
         cv2.putText(image, "map gray (review only) | independent cyan", (8, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.43, (230, 230, 230), 1, cv2.LINE_AA)
-        cv2.putText(image, "shared obs yellow/magenta | inferred orange | invalid hidden", (8, 42), cv2.FONT_HERSHEY_SIMPLEX, 0.39, (230, 230, 230), 1, cv2.LINE_AA)
+        invalid_label = "invalid red (math only; unsupported)" if show_invalid else "invalid hidden"
+        cv2.putText(image, "shared obs yellow/magenta | inferred orange | {}".format(invalid_label), (8, 42), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (230, 230, 230), 1, cv2.LINE_AA)
         cv2.putText(image, "support gray | residual outlier red", (8, 62), cv2.FONT_HERSHEY_SIMPLEX, 0.43, (180, 180, 180), 1, cv2.LINE_AA)
         if residual_p95_m is not None:
             cv2.putText(
@@ -825,11 +1153,65 @@ class ShadowLaneFamilyOfflineNode:
                 1,
                 cv2.LINE_AA,
             )
-        cv2.imwrite(str(output_dir / "frame_{:06d}.jpg".format(index)), image)
-        if category == "periodic":
-            self.overlay_count += 1
-        else:
-            self.high_residual_overlay_count += 1
+        if invalid_support_classification is not None:
+            measurements = invalid_support_classification.get("measurements", {})
+            category_text = "review={} | active={}".format(
+                selected_review_category,
+                ",".join(
+                    name
+                    for name, enabled in invalid_support_classification.get(
+                        "flags", {}
+                    ).items()
+                    if enabled
+                )
+                or "none",
+            )
+            cv2.putText(
+                image,
+                category_text,
+                (8, 102),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.34,
+                (255, 255, 255),
+                1,
+                cv2.LINE_AA,
+            )
+            metric_text = "lead={:.2f}m trail={:.2f}m near={:.0f}% mid={:.0f}%".format(
+                float(measurements.get("vehicle_near_leading_tail_m", 0.0)),
+                float(measurements.get("preview_trailing_tail_m", 0.0)),
+                100.0 * float(measurements.get("near_coverage_ratio", 0.0)),
+                100.0 * float(measurements.get("mid_coverage_ratio", 0.0)),
+            )
+            cv2.putText(
+                image,
+                metric_text,
+                (8, 120),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.38,
+                (255, 255, 255),
+                1,
+                cv2.LINE_AA,
+            )
+        if invalid_map_review is not None:
+            p95 = invalid_map_review.get("frame_absolute_p95_m")
+            label = "map normal-distance={} p95={}".format(
+                invalid_map_review.get("band", "unknown"),
+                "n/a" if p95 is None else "{:.3f}m".format(float(p95)),
+            )
+            cv2.putText(
+                image,
+                label,
+                (8, 140),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.38,
+                (255, 255, 255),
+                1,
+                cv2.LINE_AA,
+            )
+        path = output_dir / "frame_{:06d}.jpg".format(index)
+        if not cv2.imwrite(str(path), image):
+            raise OSError("failed to write overlay: {}".format(path))
+        return str(path.relative_to(self.output_dir))
 
     @staticmethod
     def _summarize_method(rows, method):
@@ -963,6 +1345,101 @@ class ShadowLaneFamilyOfflineNode:
             }
         return result
 
+    @staticmethod
+    def _summarize_pose_alignment(rows):
+        values = [row.get("ego_pose_alignment") or {} for row in rows]
+        modes = Counter(value.get("mode", "missing") for value in values)
+        nearest_age = [value.get("nearest_age_ms") for value in values]
+        bracket = [value.get("bracket_span_ms") for value in values]
+        translation = [
+            (value.get("delta_from_nearest") or {}).get("translation_m")
+            for value in values
+        ]
+        heading = [
+            (value.get("delta_from_nearest") or {}).get("heading_deg")
+            for value in values
+        ]
+        return {
+            "mode_counts": dict(sorted(modes.items())),
+            "nearest_age_ms": {
+                "p50": _percentile(nearest_age, 50),
+                "p95": _percentile(nearest_age, 95),
+            },
+            "bracket_span_ms": {
+                "p50": _percentile(bracket, 50),
+                "p95": _percentile(bracket, 95),
+            },
+            "delta_from_nearest": {
+                "translation_m_p50": _percentile(translation, 50),
+                "translation_m_p95": _percentile(translation, 95),
+                "heading_deg_p50": _percentile(heading, 50),
+                "heading_deg_p95": _percentile(heading, 95),
+            },
+            "offline_map_evaluation_only": True,
+            "runtime_ego_motion_compensation": False,
+        }
+
+    @staticmethod
+    def _summarize_invalid_map(rows):
+        def summarize_alignment(name):
+            values = {}
+            bands = Counter()
+            for row in rows:
+                root = ((row.get("invalid_map_distance") or {}).get(name) or {})
+                for category, category_value in root.get("categories", {}).items():
+                    bands[(category, category_value.get("review_band", "unavailable"))] += 1
+                    for role, metric in category_value.get("roles", {}).items():
+                        key = (category, role)
+                        value = values.setdefault(
+                            key,
+                            {"absolute_p50": [], "absolute_p95": [], "signed_p50": []},
+                        )
+                        value["absolute_p50"].append(metric.get("absolute_p50_m"))
+                        value["absolute_p95"].append(metric.get("absolute_p95_m"))
+                        value["signed_p50"].append(metric.get("signed_normal_p50_m"))
+            return {
+                "by_category_role": {
+                    "{}/{}".format(category, role): {
+                        "frames": len(value["absolute_p95"]),
+                        "frame_absolute_p50_m_p50": _percentile(value["absolute_p50"], 50),
+                        "frame_absolute_p95_m_p50": _percentile(value["absolute_p95"], 50),
+                        "frame_absolute_p95_m_p95": _percentile(value["absolute_p95"], 95),
+                        "signed_normal_p50_m_p50": _percentile(value["signed_p50"], 50),
+                    }
+                    for (category, role), value in sorted(values.items())
+                },
+                "review_band_frame_counts": {
+                    "{}/{}".format(category, band): int(count)
+                    for (category, band), count in sorted(bands.items())
+                },
+            }
+
+        aligned = summarize_alignment("aligned")
+        nearest = summarize_alignment("nearest_reference")
+        deltas = []
+        for row in rows:
+            root = row.get("invalid_map_distance") or {}
+            aligned_categories = (root.get("aligned") or {}).get("categories", {})
+            nearest_categories = (root.get("nearest_reference") or {}).get("categories", {})
+            for category in set(aligned_categories) & set(nearest_categories):
+                aligned_p95 = aligned_categories[category].get("frame_absolute_p95_m")
+                nearest_p95 = nearest_categories[category].get("frame_absolute_p95_m")
+                if aligned_p95 is not None and nearest_p95 is not None:
+                    deltas.append(float(aligned_p95) - float(nearest_p95))
+        return {
+            "aligned": aligned,
+            "nearest_reference": nearest,
+            "aligned_minus_nearest_frame_p95_m": {
+                "p50": _percentile(deltas, 50),
+                "p95": _percentile(deltas, 95),
+                "absolute_p95": _percentile(np.abs(deltas), 95),
+            },
+            "interpretation": "descriptive_role_matched_map_pseudo_gt_review_only",
+            "error_bands_m": [0.35, 0.60],
+            "bands_are_acceptance_gates": False,
+            "invalid_geometry_planning_authority": False,
+        }
+
     def _finalize(self):
         if getattr(self, "finalized", False):
             return
@@ -990,7 +1467,62 @@ class ShadowLaneFamilyOfflineNode:
                     method: self._summarize_method(valid, method)
                     for method in METHODS
                 },
+                "invalid_support_overlay_review": {
+                    "selected_overlays": int(len(self.invalid_review_manifest)),
+                    "by_category": self.invalid_review_sampler.summary(),
+                    "measurement_only": True,
+                    "invalid_geometry_planning_authority": False,
+                },
+                "ego_pose_alignment": self._summarize_pose_alignment(valid),
+                "invalid_map_distance": self._summarize_invalid_map(valid),
             }
+            review_manifest_path = self.output_dir / "invalid_support_review.json"
+            review_manifest_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "asmc-invalid-support-overlay-review-1.0.0",
+                        "run_id": self.run_id,
+                        "measurement_only": True,
+                        "invalid_geometry_planning_authority": False,
+                        "selection": {
+                            "limit_per_category": (
+                                self.invalid_review_sampler.limit_per_category
+                            ),
+                            "min_frame_gap": self.invalid_review_sampler.min_frame_gap,
+                            "counts": self.invalid_review_sampler.summary(),
+                        },
+                        "overlays": self.invalid_review_manifest,
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            invalid_map_manifest_path = self.output_dir / "invalid_map_distance_review.json"
+            invalid_map_manifest_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "asmc-invalid-map-distance-review-1.0.0",
+                        "run_id": self.run_id,
+                        "measurement_only": True,
+                        "pseudo_gt_is_absolute_truth": False,
+                        "bands_are_acceptance_gates": False,
+                        "error_bands_m": [0.35, 0.60],
+                        "invalid_geometry_planning_authority": False,
+                        "selection": {
+                            "limit_per_category_band": self.invalid_map_review_sampler.limit,
+                            "min_frame_gap": self.invalid_map_review_sampler.min_frame_gap,
+                            "counts": self.invalid_map_review_sampler.summary(),
+                        },
+                        "overlays": self.invalid_map_review_manifest,
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
             metadata = {
                 "schema_version": SCHEMA_VERSION,
                 "status": "complete",
@@ -1021,6 +1553,8 @@ class ShadowLaneFamilyOfflineNode:
                     "frames": self.frames_path.name,
                     "metrics": "metrics.json",
                     "overlays": "overlays/",
+                    "invalid_support_review": review_manifest_path.name,
+                    "invalid_map_distance_review": invalid_map_manifest_path.name,
                 },
             }
             (self.output_dir / "metrics.json").write_text(

@@ -131,6 +131,23 @@ class BagBatchTest(unittest.TestCase):
         self.assertFalse(gates["lane_outputs_positive"])
         self.assertFalse(gates["lane_boundaries_recorded"])
 
+    def test_candidate_quality_gate_is_opt_in_and_checks_typed_topic(self):
+        metadata = {
+            "status": "complete",
+            "topic_statistics": {},
+            "diagnostics_final": {},
+        }
+        ordinary = result_quality_gates(metadata)
+        self.assertNotIn("boundary_family_recorded", ordinary)
+        required = result_quality_gates(metadata, require_boundary_family=True)
+        self.assertFalse(required["boundary_family_recorded"])
+        metadata["topic_statistics"]["/perception/lane/boundary_family"] = {
+            "messages": "7"
+        }
+        required = result_quality_gates(metadata, require_boundary_family=True)
+        self.assertTrue(required["boundary_family_recorded"])
+        self.assertTrue(required["lane_boundaries_recorded"])
+
 
 if __name__ == "__main__":
     unittest.main()

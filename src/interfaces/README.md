@@ -33,6 +33,9 @@ Behavior/FSM → Frenet Planner → MPC Controller
 | `/vehicle/state` | State Estimator | FSM, Frenet, MPC | `asmc_msgs/VehicleState` | 통합 Ego state |
 | `/perception/objects` | Perception | FSM, Frenet | `asmc_msgs/DetectedObjectArray` | 센서 기반 객체 상태와 형상 |
 | `/perception/lane/boundary_observations` | Camera Perception | FSM/Frenet adapter | `asmc_msgs/LaneBoundaryObservationArray` | metric 차선 경계 관측; 현재 음영구간 provisional |
+| `/perception/lane/boundary_family` | Camera Perception | planning candidate adapter | `asmc_msgs/LaneBoundaryFamily` | 공동 피팅 3경계와 sample별 support 상태; non-deployment 후보 |
+| `/perception/bev/camera/drivable_probability` | Camera Perception | planning candidate adapter | `sensor_msgs/Image` | `base_link` metric BEV의 mono8 drivable score; coverage와 함께 사용 |
+| `/perception/bev/camera/coverage` | Camera Perception | planning candidate adapter | `sensor_msgs/Image` | drivable cell의 camera 관측 유효성; 0은 unknown |
 | `/behavior/context` | Behavior/FSM | Frenet | `asmc_msgs/BehaviorContext` | 선택된 행동과 실행 target |
 | `/planning/trajectory` | Frenet | MPC | `asmc_msgs/Trajectory` | 최종 추종 trajectory |
 | `/planning/feedback` | Frenet | FSM | `asmc_msgs/PlanFeedback` | planning 및 행동 실행 결과 |
@@ -46,6 +49,7 @@ Behavior/FSM → Frenet Planner → MPC Controller
 - `DetectedObjectArray.header.frame_id`: `map`
 - `Trajectory.header.frame_id`: `map`
 - `LaneBoundaryObservationArray.header.frame_id`: `base_link`
+- `LaneBoundaryFamily.header.frame_id`: `base_link`
 - 위치와 길이: `m`
 - 각도: `rad`
 - 곡률: `1/m`
@@ -206,6 +210,60 @@ consumer가 사용해서는 안 된다.
 인지 메시지만으로 역주행, 원래 차로, 복귀 방향을 확정하지 않는다. 이 typed 계약은
 provisional executable contract이고, 전 구간 topology와 lane-center 계약은 후속 합의다.
 
+### 10.1 Shared boundary-family candidate
+
+`/perception/lane/boundary_family`는 위 independent 관측 계약을 교체하지 않는 별도 후보
+인터페이스다. 구현 기법인 `shared_family`를 토픽 이름에 넣지 않고 결과 의미인
+`boundary_family`를 사용하므로, 향후 fitting 구현이 바뀌어도 동일 의미 계약을 유지할 수
+있다. 현재 `operating_domain=shadow_two_way_v1`, `deployment_allowed=false`이며 판제
+closed-loop gate 전에는 authoritative 입력으로 사용할 수 없다.
+
+- 세 원소의 `role`은 왼쪽 흰 outer, 노란 road-centre, 오른쪽 흰 outer의 기하 순서다.
+  home/opposing/절대 차로 번호는 아니다.
+- `polyline`과 `support_state`는 길이가 같으며 arc-length 순서로 대응한다.
+- `SUPPORT_OBSERVED`는 해당 역할의 직접 evidence가 지지한다.
+- `SUPPORT_STRUCTURE_INFERRED`는 accepted same-frame family의 공동 normal-offset 구조로
+  만든 강등된 **사용 가능 후보**다. 디버그 화면의 주황색 구간이며 temporal prediction이나
+  map 보간이 아니다. 현재 시간 제한 shadow pilot에서는 family acceptance gate를 먼저
+  통과한 frame에 한해 `x[0,15]m` 안의 local support 공백도 이 상태로 유지한다.
+- `SUPPORT_INVALID`는 local support가 없는 붉은 구간이다. 좌표 자체는 원인 audit과 향후
+  명시적 opt-in 저권한 preview/fallback 실험을 위해 보존하지만 **인지 관측을 뜻하지
+  않는다**. 현재 bounded completion 밖(주로 15m 이후)에서는 기본 consumer가 polyline을
+  분할하며, 별도 정책 합의 없이 이 구간을 차로 경계나 corridor로 사용하거나
+  `OBSERVED`로 재표기해서는 안 된다.
+- `valid=false`는 fresh reject/error 결과이며 missing/stale과 구분한다. 이때 boundaries는
+  비어 있고 `status_reason`이 원인을 설명한다.
+- aggregate confidence와 residual은 calibration된 안전 확률이 아니다. 판제 후보 adapter는
+  inferred를 observed보다 낮은 신뢰도로 다루고 freshness·ODD·config hash를 함께 검사한다.
+
+기존 `/perception/lane/boundary_observations`와 C++ adapter는 그대로 유지한다. 별도
+`lane_boundary_adapter/boundary_family_monitor_node`가 새 후보를 read-only strip/centerline
+segment로 변환한다. 이 consumer는 네 endpoint support 중 하나라도 `INVALID`이면 해당
+interval을 생략하고, `STRUCTURE_INFERRED`가 하나라도 있으면 segment를 degraded로 분리해
+confidence를 낮춘다. 출력은 debug MarkerArray와 DiagnosticArray뿐이며 Behavior/Frenet/MPC나
+제어 명령에는 연결하지 않는다.
+
+```text
+/planning/debug/lane_boundary_family/strips
+/planning/diagnostics/lane_boundary_family_adapter
+```
+
+현재 candidate algorithm ID는
+`twinlite_v6_shadow_boundary_family_candidate_v3`다. v2가 strict-accepted family의
+`x[0,15]m` 수학 곡선만 `STRUCTURE_INFERRED`로 유지했다면, v3는 strict gate가 오직
+`insufficient_local_multi_role_support`로 거부한 경우에만 보수적인 distributed-support gate를
+추가한다. 둘 이상의 same-frame 역할이 각 2m 이상, 합집합 6m 이상이며 heading, residual,
+outlier, 곡률 조건을 모두 통과해야 한다. 역할별 직접 support 밖은 계속 inferred이고 one-role
+복원, temporal prediction과 map 보간은 없다. strict-accepted frame은 기존 결과와 동일하다.
+실제 high-heading dropout의 activation/false-family 비율과 read-only adapter를 확인한 뒤에만
+planner feature flag나 canonical derived message를 논의한다.
+
+2026-09-15 v3 handoff에서는 lane-family 메시지와 파라미터를 동결했지만 제어 권한은
+승격하지 않았다. drivable BEV 최소 계약과 장애물 회피 결합 순서, on/off 및 파트별 소유권은
+[음영구간 카메라 인지 v3 판제 인수 가이드](../../docs/shadow-camera-perception-handoff.md)를
+따른다. 판제는 `coverage=0`인 drivable cell을 non-drivable로 확정하지 않고 unknown으로
+보존해야 하며, LiDAR occupancy/object를 충돌 veto로 우선 적용한다.
+
 ## 11. Runtime separation and compliance
 
 ```text
@@ -237,8 +295,10 @@ ROS:    ROS Frenet + ROS MPC + MORAI UDP Bridge
 ## Appendix A. Camera·BEV interface working proposal
 
 아래 raster 항목은 camera live와 MGeo local-crop pilot 전 단계의 **비정본 후보**다.
-차선 경계 vector는 위 10절의 typed provisional 계약으로 구현됐지만, BEV raster와 전 구간
-topology/centerline 메시지는 아직 정본 custom message로 승격하지 않았다.
+차선 경계 vector는 위 10절의 typed provisional 계약으로 구현됐다. 음영구간 v3는
+`drivable_probability + coverage`의 정확한 grid와 Image envelope를 별도 인수 가이드에서
+동결했지만, 이는 공통 BEV custom message 승격을 뜻하지 않는다. BEV raster의 범용 metadata와
+전 구간 topology/centerline 메시지는 아직 정본 계약으로 확정하지 않았다.
 
 ### A.1 Camera image-plane
 

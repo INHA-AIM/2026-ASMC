@@ -11,6 +11,7 @@ from drivable_bev.shadow_map_gt import (
     lidar_paint_alignment,
     map_xy_to_base,
     nearest_polyline_distance,
+    nearest_polyline_signed_normal_distance,
     points_in_rotated_rectangle,
     resample_polyline,
 )
@@ -54,6 +55,13 @@ class ShadowMapGtTest(unittest.TestCase):
         )
         value = nearest_polyline_distance([[5.0, 0.0]], family)
         self.assertAlmostEqual(4.0, value[0])
+
+    def test_signed_normal_distance_uses_increasing_x_orientation(self):
+        reference = np.asarray([[2.0, 0.0], [1.0, 0.0], [0.0, 0.0]])
+        value = nearest_polyline_signed_normal_distance(
+            [[1.0, 0.25], [1.0, -0.40]], reference
+        )
+        np.testing.assert_allclose(value, [0.25, -0.40], atol=1e-12)
 
     def setUp(self):
         self.links = [

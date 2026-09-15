@@ -1,10 +1,10 @@
 """Shared lane-family fitting for the K-City GPS-shadow ODD.
 
-This module deliberately does not change the public runtime boundary contract.
-It provides the evaluated shared representation to offline analysis and to an
-explicitly enabled debug-only runtime sidecar. A single parametric centre
-curve explains the yellow road-centre marking and the two white outer
-boundaries through normal-direction offsets.
+This module leaves the established independent boundary-observation contract
+unchanged. It provides the evaluated shared representation to offline analysis,
+debug visualization, and an explicitly enabled typed candidate interface. A
+single parametric centre curve explains the yellow road-centre marking and the
+two white outer boundaries through normal-direction offsets.
 
 The implementation is original, dependency-light NumPy code.  It borrows the
 general ideas of confidence-weighted least squares and continuous physical
@@ -144,6 +144,27 @@ DEFAULT_SHARED_FAMILY_CONFIG = {
     "max_structure_bridge_m": 0.75,
     "min_observed_segment_m": 0.50,
     "inferred_confidence_scale": 0.60,
+    # Explicit, bounded fail-soft policy for the shadow-road candidate.  This
+    # never creates a family from one observed role: it is applied only after
+    # the normal multi-role acceptance gate has passed.  Samples promoted by
+    # this policy remain STRUCTURE_INFERRED, never OBSERVED.
+    "same_frame_completion_enabled": False,
+    "same_frame_completion_x_min_m": 0.0,
+    "same_frame_completion_x_max_m": 15.0,
+    # Conservative fallback for two or more globally assigned roles whose
+    # supports are staggered along the road and therefore fail the strict
+    # local-overlap gate.  It is disabled in the reusable library default and
+    # explicitly enabled by the shadow-road runtime configuration.
+    "distributed_support_enabled": False,
+    "distributed_support_x_min_m": 0.0,
+    "distributed_support_x_max_m": 15.0,
+    "distributed_min_role_support_m": 2.0,
+    "distributed_min_union_support_m": 6.0,
+    "distributed_max_internal_gap_m": 3.0,
+    "distributed_max_heading_delta_deg": 15.0,
+    "distributed_max_inlier_residual_p95_m": 0.30,
+    "distributed_max_outlier_rate": 0.35,
+    "distributed_max_curvature_inv_m": 0.12,
 }
 
 
@@ -164,6 +185,12 @@ def _config(values: Optional[Mapping]) -> dict:
         "support_residual_max_m",
         "max_structure_bridge_m",
         "min_observed_segment_m",
+        "distributed_min_role_support_m",
+        "distributed_min_union_support_m",
+        "distributed_max_internal_gap_m",
+        "distributed_max_heading_delta_deg",
+        "distributed_max_inlier_residual_p95_m",
+        "distributed_max_curvature_inv_m",
     )
     if any(float(result[key]) <= 0.0 for key in positive):
         raise ValueError("shared lane-family distances must be positive")
@@ -181,6 +208,26 @@ def _config(values: Optional[Mapping]) -> dict:
         raise ValueError("min_local_support_roles must be two or three")
     if not 0.0 < float(result["inferred_confidence_scale"]) <= 1.0:
         raise ValueError("inferred confidence scale must lie in (0,1]")
+    completion_bounds = (
+        float(result["same_frame_completion_x_min_m"]),
+        float(result["same_frame_completion_x_max_m"]),
+    )
+    if not np.isfinite(completion_bounds).all():
+        raise ValueError("same-frame completion bounds must be finite")
+    if completion_bounds[1] <= completion_bounds[0]:
+        raise ValueError("same-frame completion range must have positive length")
+    distributed_bounds = (
+        float(result["distributed_support_x_min_m"]),
+        float(result["distributed_support_x_max_m"]),
+    )
+    if not np.isfinite(distributed_bounds).all():
+        raise ValueError("distributed-support bounds must be finite")
+    if distributed_bounds[1] <= distributed_bounds[0]:
+        raise ValueError("distributed-support range must have positive length")
+    if not 0.0 <= float(result["distributed_max_outlier_rate"]) <= 1.0:
+        raise ValueError("distributed-support outlier rate must lie in [0,1]")
+    if float(result["distributed_max_heading_delta_deg"]) > 90.0:
+        raise ValueError("distributed-support heading delta must not exceed 90deg")
     return result
 
 
@@ -460,6 +507,151 @@ def _longest_state_length(state, expected, sample_station):
     return max(lengths, default=0.0)
 
 
+def _mask_segment_length(mask, segment_length) -> float:
+    values = np.asarray(mask, dtype=bool).reshape(-1)
+    segments = np.asarray(segment_length, dtype=np.float64).reshape(-1)
+    if len(values) != len(segments) + 1:
+        raise ValueError("sample mask and segment lengths do not align")
+    return float(np.sum(segments[values[:-1] & values[1:]]))
+
+
+def _longest_internal_false_run(mask, sample_station) -> float:
+    runs = _run_lengths(mask, sample_station)
+    return max(
+        (
+            length
+            for start, stop, value, length in runs
+            if not value and start > 0 and stop < len(mask)
+        ),
+        default=0.0,
+    )
+
+
+def _track_axis(track) -> np.ndarray:
+    points = np.asarray(track.xy, dtype=np.float64).reshape(-1, 2)
+    weights = _track_weights(track)
+    centre = np.average(points, axis=0, weights=weights)
+    centered = points - centre
+    covariance = (centered * weights[:, None]).T @ centered
+    eigenvalues, eigenvectors = np.linalg.eigh(covariance)
+    axis = eigenvectors[:, int(np.argmax(eigenvalues))]
+    norm = float(np.linalg.norm(axis))
+    if norm <= 1e-9:
+        raise ValueError("lane role has a degenerate principal axis")
+    return axis / norm
+
+
+def _maximum_role_heading_delta_deg(roles: Mapping) -> float:
+    axes = [_track_axis(track) for track in roles.values()]
+    maximum = 0.0
+    for first_index, first in enumerate(axes):
+        for second in axes[first_index + 1 :]:
+            # Lane direction is unoriented; antiparallel axes describe the
+            # same physical heading.
+            cosine = float(np.clip(abs(np.dot(first, second)), 0.0, 1.0))
+            maximum = max(maximum, math.degrees(math.acos(cosine)))
+    return float(maximum)
+
+
+def _curve_curvature_p95(points) -> float:
+    values = np.asarray(points, dtype=np.float64).reshape(-1, 2)
+    segment = np.diff(values, axis=0)
+    length = np.linalg.norm(segment, axis=1)
+    valid = length > 1e-6
+    if int(np.sum(valid)) < 2:
+        return float("inf")
+    unit = segment[valid] / length[valid, None]
+    cosine = np.sum(unit[:-1] * unit[1:], axis=1)
+    sine = unit[:-1, 0] * unit[1:, 1] - unit[:-1, 1] * unit[1:, 0]
+    turn = np.abs(np.arctan2(sine, np.clip(cosine, -1.0, 1.0)))
+    scale = 0.5 * (length[valid][:-1] + length[valid][1:])
+    curvature = turn / np.maximum(scale, 1e-6)
+    return float(np.percentile(curvature, 95)) if len(curvature) else 0.0
+
+
+def _distributed_support_gate(
+    roles,
+    role_support,
+    centre_samples,
+    sample_station,
+    centre_segment,
+    residual,
+    values,
+):
+    """Evaluate a same-frame, multi-role but non-overlapping fallback."""
+    lower = float(values["distributed_support_x_min_m"])
+    upper = float(values["distributed_support_x_max_m"])
+    window = (centre_samples[:, 0] >= lower) & (centre_samples[:, 0] <= upper)
+    support_in_window = {
+        role: np.asarray(role_support[role], dtype=bool) & window
+        for role in ROLE_ORDER
+    }
+    role_lengths = {
+        role: _mask_segment_length(support_in_window[role], centre_segment)
+        for role in ROLE_ORDER
+    }
+    qualified_roles = [
+        role
+        for role in roles
+        if role_lengths[role] >= float(values["distributed_min_role_support_m"])
+    ]
+    union_support = np.any(
+        np.vstack([support_in_window[role] for role in ROLE_ORDER]), axis=0
+    )
+    union_length = _mask_segment_length(union_support, centre_segment)
+    internal_gap = _longest_internal_false_run(union_support, sample_station)
+    inlier = residual <= float(values["support_residual_max_m"])
+    inlier_p95 = (
+        float(np.percentile(residual[inlier], 95)) if np.any(inlier) else float("inf")
+    )
+    outlier_rate = float(np.mean(~inlier))
+    heading_delta = _maximum_role_heading_delta_deg(
+        {role: roles[role] for role in qualified_roles}
+    ) if len(qualified_roles) >= 2 else float("inf")
+    # Judge shape only inside the fallback's bounded consumer window. A noisy
+    # mathematical tail outside this window must not veto otherwise coherent
+    # same-frame evidence, and that tail is never promoted by this policy.
+    curvature_p95 = _curve_curvature_p95(centre_samples[window])
+    checks = {
+        "qualified_role_count": len(qualified_roles)
+        >= int(values["min_observed_roles"]),
+        "union_support_length": union_length
+        >= float(values["distributed_min_union_support_m"]),
+        "internal_gap": internal_gap
+        <= float(values["distributed_max_internal_gap_m"]),
+        "heading_consistency": heading_delta
+        <= float(values["distributed_max_heading_delta_deg"]),
+        "inlier_residual": inlier_p95
+        <= float(values["distributed_max_inlier_residual_p95_m"]),
+        "outlier_rate": outlier_rate
+        <= float(values["distributed_max_outlier_rate"]),
+        "curvature": curvature_p95
+        <= float(values["distributed_max_curvature_inv_m"]),
+    }
+    enabled = bool(values["distributed_support_enabled"])
+    accepted = bool(enabled and all(checks.values()))
+    audit = {
+        "enabled": enabled,
+        "attempted": True,
+        "accepted": accepted,
+        "x_min_m": lower,
+        "x_max_m": upper,
+        "qualified_roles": qualified_roles,
+        "role_support_length_m": role_lengths,
+        "union_support_length_m": union_length,
+        "max_internal_unsupported_gap_m": internal_gap,
+        "max_role_heading_delta_deg": heading_delta,
+        "inlier_residual_p95_m": inlier_p95,
+        "outlier_rate": outlier_rate,
+        "curve_curvature_p95_inv_m": curvature_p95,
+        "checks": checks,
+        "rejection_reasons": [name for name, passed in checks.items() if not passed],
+        "temporal_prediction_used": False,
+        "map_geometry_used": False,
+    }
+    return accepted, union_support, audit
+
+
 def _weighted_average(values, weights) -> float:
     value = np.asarray(values, dtype=np.float64)
     weight = np.asarray(weights, dtype=np.float64)
@@ -677,29 +869,72 @@ def fit_shared_lane_family_with_audit(
     local_support_count = np.sum(
         np.vstack([role_support[role] for role in ROLE_ORDER]), axis=0
     ).astype(np.uint8)
-    sample_valid = local_support_count >= int(values["min_local_support_roles"])
-    sample_valid = _fill_short_internal_gaps(
-        sample_valid,
+    raw_sample_valid = local_support_count >= int(values["min_local_support_roles"])
+    raw_sample_valid = _fill_short_internal_gaps(
+        raw_sample_valid,
         sample_station,
         float(values["max_structure_bridge_m"]),
     )
-    sample_valid = _remove_short_support_islands(
-        sample_valid,
+    raw_sample_valid = _remove_short_support_islands(
+        raw_sample_valid,
         sample_station,
         float(values["min_family_span_m"]),
     )
     centre_segment = np.linalg.norm(np.diff(centre_samples, axis=0), axis=1)
-    valid_centre_segment = sample_valid[:-1] & sample_valid[1:]
-    valid_family_length = float(np.sum(centre_segment[valid_centre_segment]))
-    if valid_family_length < float(values["min_family_span_m"]):
-        audit.update(
-            {
-                "accepted": False,
-                "reason": "insufficient_local_multi_role_support",
-                "valid_family_length_m": valid_family_length,
-            }
+    valid_centre_segment = raw_sample_valid[:-1] & raw_sample_valid[1:]
+    strict_valid_family_length = float(np.sum(centre_segment[valid_centre_segment]))
+    acceptance_mode = "strict_local_multi_role"
+    distributed_audit = {
+        "enabled": bool(values["distributed_support_enabled"]),
+        "attempted": False,
+        "accepted": False,
+    }
+    if strict_valid_family_length < float(values["min_family_span_m"]):
+        distributed_accepted, distributed_support, distributed_audit = (
+            _distributed_support_gate(
+                roles,
+                role_support,
+                centre_samples,
+                sample_station,
+                centre_segment,
+                residual,
+                values,
+            )
         )
-        return None, audit
+        if not distributed_accepted:
+            audit.update(
+                {
+                    "accepted": False,
+                    "reason": "insufficient_local_multi_role_support",
+                    "valid_family_length_m": strict_valid_family_length,
+                    "strict_valid_family_length_m": strict_valid_family_length,
+                    "distributed_support": distributed_audit,
+                }
+            )
+            return None, audit
+        raw_sample_valid = distributed_support
+        acceptance_mode = "distributed_multi_role"
+    valid_family_length = _mask_segment_length(raw_sample_valid, centre_segment)
+
+    # Time-bounded shadow ODD promotion.  The shared curve is already accepted
+    # from independent multi-role evidence above; this only keeps its fitted
+    # geometry continuous inside the configured consumer window.  Direct
+    # observations continue to be derived from raw_sample_valid so the policy
+    # cannot relabel unsupported pixels as measured evidence.
+    completion_mask = np.zeros(len(centre_samples), dtype=bool)
+    if bool(values["same_frame_completion_enabled"]):
+        completion_mask = (
+            (~raw_sample_valid)
+            & (centre_samples[:, 0] >= float(values["same_frame_completion_x_min_m"]))
+            & (centre_samples[:, 0] <= float(values["same_frame_completion_x_max_m"]))
+        )
+    sample_valid = raw_sample_valid | completion_mask
+    promoted_segments = (
+        sample_valid[:-1]
+        & sample_valid[1:]
+        & ~(raw_sample_valid[:-1] & raw_sample_valid[1:])
+    )
+    promoted_length_m = float(np.sum(centre_segment[promoted_segments]))
 
     boundaries = []
     for role in ROLE_ORDER:
@@ -723,7 +958,11 @@ def fit_shared_lane_family_with_audit(
             source_mask = 0
             confidence = fallback_confidence
 
-        sample_observed = role_support[role] & sample_valid
+        # Strict frames retain the established local multi-role observation
+        # semantics byte-for-byte. In the distributed fallback raw_sample_valid
+        # is the bounded union support, so each role's own close evidence is
+        # observed while the other family members remain inferred.
+        sample_observed = role_support[role] & raw_sample_valid
         sample_state = np.full(len(sample_points), SAMPLE_INVALID, dtype=np.uint8)
         sample_state[sample_valid] = SAMPLE_STRUCTURE_INFERRED
         sample_state[sample_observed] = SAMPLE_OBSERVED
@@ -797,6 +1036,7 @@ def fit_shared_lane_family_with_audit(
         {
             "accepted": True,
             "reason": "accepted",
+            "acceptance_mode": acceptance_mode,
             "representation": "shared_parametric_bspline_normal_offsets_v2",
             "observed_roles": [role for role in ROLE_ORDER if role in roles],
             "inferred_roles": [role for role in ROLE_ORDER if role not in roles],
@@ -810,6 +1050,18 @@ def fit_shared_lane_family_with_audit(
             "inlier_residual_p95_m": family.inlier_residual_p95_m,
             "outlier_rate": family.outlier_rate,
             "valid_family_length_m": valid_family_length,
+            "strict_valid_family_length_m": strict_valid_family_length,
+            "distributed_support": distributed_audit,
+            "same_frame_completion": {
+                "enabled": bool(values["same_frame_completion_enabled"]),
+                "x_min_m": float(values["same_frame_completion_x_min_m"]),
+                "x_max_m": float(values["same_frame_completion_x_max_m"]),
+                "promoted_sample_count": int(np.sum(completion_mask)),
+                "promoted_length_m": promoted_length_m,
+                "state": STRUCTURE_INFERRED,
+                "temporal_prediction_used": False,
+                "map_geometry_used": False,
+            },
             "local_support_count": {
                 "p50": float(np.percentile(local_support_count, 50)),
                 "p95": float(np.percentile(local_support_count, 95)),

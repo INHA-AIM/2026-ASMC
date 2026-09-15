@@ -15,7 +15,12 @@ import message_filters
 import numpy as np
 import rospy
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
-from asmc_msgs.msg import LaneBoundaryObservation, LaneBoundaryObservationArray
+from asmc_msgs.msg import (
+    LaneBoundaryFamily,
+    LaneBoundaryFamilyMember,
+    LaneBoundaryObservation,
+    LaneBoundaryObservationArray,
+)
 from geometry_msgs.msg import Point, Point32
 from sensor_msgs import point_cloud2
 from sensor_msgs.msg import Image, PointCloud2, PointField
@@ -33,7 +38,12 @@ from drivable_bev.boundary_output import (
     COMPLETENESS_EMPTY,
     build_shadow_boundary_output,
 )
+from drivable_bev.boundary_family_output import build_boundary_family_output
 from drivable_bev.calibration import calibrations_from_dict
+from drivable_bev.invalid_support import (
+    classify_invalid_support,
+    invalid_support_config_from_dict,
+)
 from drivable_bev.lane_evidence import reduce_evidence_to_nodes
 from drivable_bev.lane_tracking import associate_lane_nodes_with_audit
 from drivable_bev.model_grid_projection import (
@@ -41,6 +51,11 @@ from drivable_bev.model_grid_projection import (
     ModelGridGroundProjector,
 )
 from drivable_bev.pipeline_audit import PipelineAuditAccumulator
+from drivable_bev.planning_usability import (
+    DEFAULT_PLANNING_ZONES,
+    measure_planning_usability,
+    planning_zones_from_config,
+)
 from drivable_bev.shared_lane_family import (
     LEFT_ROLE,
     RIGHT_ROLE,
@@ -61,7 +76,7 @@ class _ViewFrame:
     decode_copy_ms: float
 
 
-RUNTIME_PROFILE_SCHEMA = "asmc-lane-runtime-profile-1.0.0"
+RUNTIME_PROFILE_SCHEMA = "asmc-lane-runtime-profile-1.2.0"
 RUNTIME_PROFILE_STAGES = (
     "input_decode_copy",
     "projection_audit",
@@ -71,11 +86,13 @@ RUNTIME_PROFILE_STAGES = (
     "association",
     "shadow_prefit",
     "shared_family_fit",
+    "invalid_support_classification",
     "independent_spline_fit",
     "evidence_message_publish",
     "candidate_marker_publish",
     "shared_marker_publish",
     "shared_diagnostics_publish",
+    "boundary_family_message_publish",
     "boundary_selection",
     "temporal_tracking",
     "boundary_output_build",
@@ -207,8 +224,39 @@ class LaneVectorizerNode:
                 "representation", "shared_parametric_bspline_normal_offsets_v2"
             )
         )
+        self.boundary_family_candidate_enabled = bool(
+            rospy.get_param("~enable_boundary_family_candidate", False)
+        )
+        self.boundary_family_algorithm_id = str(
+            rospy.get_param(
+                "~boundary_family_algorithm_id",
+                "twinlite_v6_shadow_boundary_family_candidate_v3",
+            )
+        ).strip()
+        if not self.boundary_family_algorithm_id:
+            raise ValueError("boundary family algorithm_id is required")
+        self.shared_family_runtime_enabled = bool(
+            self.shared_family_debug_enabled
+            or self.boundary_family_candidate_enabled
+        )
         # Kept for compatibility with the first offline-only configuration.
         self.shared_family_parameters.pop("evaluation_only", None)
+        self.invalid_support_config = invalid_support_config_from_dict(
+            rospy.get_param("~invalid_support_classification", {})
+        )
+        self.planning_zones = planning_zones_from_config(
+            rospy.get_param(
+                "~planning_usability_zones",
+                [
+                    {
+                        "name": zone.name,
+                        "x_min_m": zone.x_min_m,
+                        "x_max_m": zone.x_max_m,
+                    }
+                    for zone in DEFAULT_PLANNING_ZONES
+                ],
+            )
+        )
         if self.shared_family_deployment_allowed:
             raise ValueError(
                 "shared lane-family is a debug result and cannot be deployment_allowed"
@@ -289,7 +337,58 @@ class LaneVectorizerNode:
                 separators=(",", ":"),
             ).encode("utf-8")
         ).hexdigest()
+        boundary_family_contract_config = {
+            "algorithm_id": self.boundary_family_algorithm_id,
+            "operating_domain": self.operating_domain,
+            "expected_boundary_count": self.expected_boundary_count,
+            "representation": self.shared_family_representation,
+            "model_input_hw": list(model_hw),
+            "source_masks": source_masks,
+            "confidence_by_class": self.confidence_by_class,
+            "node": self.node_parameters,
+            "track": self.track_parameters,
+            "shadow_prefit": self.shadow_boundary_parameters,
+            "shared_lane_family": self.shared_family_parameters,
+            "calibration_sha256": self.calibration_sha256,
+            "ground_plane": {
+                "frame_id": self.ground_plane.frame_id,
+                "coefficients": self.ground_plane.coefficients,
+                "source": self.ground_plane.source,
+            },
+            "support_policy": (
+                "bounded_distributed_same_frame_multi_role_completion_v3"
+            ),
+        }
+        self.boundary_family_config_sha256 = hashlib.sha256(
+            json.dumps(
+                boundary_family_contract_config,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
         self.frame_id = str(rospy.get_param("~frame_id", "base_link"))
+        vehicle_footprint = dict(rospy.get_param("~vehicle_footprint", {}))
+        self.vehicle_length_m = float(vehicle_footprint.get("length_m", 4.635))
+        self.vehicle_width_m = float(vehicle_footprint.get("width_m", 1.892))
+        self.vehicle_rear_overhang_m = float(
+            vehicle_footprint.get("rear_overhang_m", 0.790)
+        )
+        self.vehicle_wheelbase_m = float(
+            vehicle_footprint.get("wheelbase_m", 3.000)
+        )
+        self.vehicle_marker_height_m = float(
+            vehicle_footprint.get("marker_height_m", 0.12)
+        )
+        if (
+            self.vehicle_length_m <= 0.0
+            or self.vehicle_width_m <= 0.0
+            or not 0.0 <= self.vehicle_rear_overhang_m < self.vehicle_length_m
+            or self.vehicle_wheelbase_m <= 0.0
+            or self.vehicle_wheelbase_m
+            > self.vehicle_length_m - self.vehicle_rear_overhang_m
+            or self.vehicle_marker_height_m <= 0.0
+        ):
+            raise ValueError("vehicle_footprint parameters are invalid")
         self.max_skew_ns = int(
             round(float(rospy.get_param("~max_timestamp_skew_ms", 35.0)) * 1e6)
         )
@@ -326,6 +425,8 @@ class LaneVectorizerNode:
             stage: deque(maxlen=512) for stage in RUNTIME_PROFILE_STAGES
         }
         self.shared_family_errors = 0
+        self.boundary_family_outputs = 0
+        self.boundary_family_invalid_outputs = 0
         self.last_shared_family_audit = {
             "accepted": False,
             "reason": "disabled",
@@ -343,6 +444,11 @@ class LaneVectorizerNode:
         self.boundary_observation_publisher = rospy.Publisher(
             "/perception/lane/boundary_observations",
             LaneBoundaryObservationArray,
+            queue_size=1,
+        )
+        self.boundary_family_publisher = rospy.Publisher(
+            "/perception/lane/boundary_family",
+            LaneBoundaryFamily,
             queue_size=1,
         )
         self.diagnostics_publisher = rospy.Publisher(
@@ -386,12 +492,13 @@ class LaneVectorizerNode:
         )
         rospy.loginfo(
             "lane vector pilot ready views=%s model_hw=%s thresholds=%s "
-            "skew<=%.1fms shared_family_debug=%s",
+            "skew<=%.1fms shared_family_debug=%s boundary_family_candidate=%s",
             self.views,
             model_hw,
             self.confidence_by_class,
             self.max_skew_ns / 1e6,
             self.shared_family_debug_enabled,
+            self.boundary_family_candidate_enabled,
         )
 
     def _view_callback(self, view, class_message, confidence_message):
@@ -450,6 +557,7 @@ class LaneVectorizerNode:
     def _process(self, frames):
         with self.processing_lock:
             started = time.perf_counter()
+            family_candidate_published = False
             timings = {
                 "input_decode_copy": float(
                     sum(frame.decode_copy_ms for frame in frames.values())
@@ -530,7 +638,7 @@ class LaneVectorizerNode:
                         "rejected": {},
                     }
                 shared_family = None
-                if self.shared_family_debug_enabled:
+                if self.shared_family_runtime_enabled:
                     try:
                         shared_family, shared_audit = _measure(
                             timings,
@@ -547,7 +655,7 @@ class LaneVectorizerNode:
                             "error": "{}: {}".format(type(exc).__name__, exc),
                         }
                         rospy.logwarn_throttle(
-                            2.0, "shared lane-family debug fit failed: %s", exc
+                            2.0, "shared lane-family fit failed: %s", exc
                         )
                     shared_elapsed_ms = float(
                         timings.get("shared_family_fit", 0.0)
@@ -556,22 +664,60 @@ class LaneVectorizerNode:
                     shared_audit = dict(shared_audit)
                     shared_audit["fit_ms"] = shared_elapsed_ms
                     shared_audit["deployment_allowed"] = False
-                    shared_audit["runtime_debug_enabled"] = True
+                    shared_audit["runtime_debug_enabled"] = bool(
+                        self.shared_family_debug_enabled
+                    )
+                    shared_audit["candidate_output_enabled"] = bool(
+                        self.boundary_family_candidate_enabled
+                    )
+                    planning_usability = measure_planning_usability(
+                        shared_family,
+                        zones=self.planning_zones,
+                        anchor_tolerance_m=(
+                            self.invalid_support_config.gap_tolerance_m
+                        ),
+                    )
+                    shared_audit["invalid_support_classification"] = _measure(
+                        timings,
+                        "invalid_support_classification",
+                        lambda: classify_invalid_support(
+                            planning_usability, self.invalid_support_config
+                        ),
+                    )
                     frame_audit["shared_family"] = shared_audit
                     self.last_shared_family_audit = shared_audit
-                lanes, frame_audit["spline"] = _measure(
-                    timings,
-                    "independent_spline_fit",
-                    lambda: fit_lane_tracks_with_audit(
-                        fitted_tracks, **self.spline_parameters
-                    ),
-                )
                 newest_header = max(
                     frames.values(), key=lambda value: value.stamp_ns
                 ).header
                 header = Header(
                     stamp=newest_header.stamp,
                     frame_id=self.frame_id,
+                )
+                if self.boundary_family_candidate_enabled:
+                    family_output = build_boundary_family_output(
+                        shared_family,
+                        status_reason=self.last_shared_family_audit.get(
+                            "reason", "unknown"
+                        ),
+                        expected_boundary_count=self.expected_boundary_count,
+                    )
+                    _measure(
+                        timings,
+                        "boundary_family_message_publish",
+                        lambda: self.boundary_family_publisher.publish(
+                            self._boundary_family_message(family_output, header)
+                        ),
+                    )
+                    family_candidate_published = True
+                    self.boundary_family_outputs += 1
+                    if not family_output.valid:
+                        self.boundary_family_invalid_outputs += 1
+                lanes, frame_audit["spline"] = _measure(
+                    timings,
+                    "independent_spline_fit",
+                    lambda: fit_lane_tracks_with_audit(
+                        fitted_tracks, **self.spline_parameters
+                    ),
                 )
                 if self.evidence_publisher.get_num_connections() > 0:
                     _measure(
@@ -589,8 +735,11 @@ class LaneVectorizerNode:
                             self._markers(lanes, header)
                         ),
                     )
-                if self.shared_family_debug_enabled:
-                    if self.shared_family_marker_publisher.get_num_connections() > 0:
+                if self.shared_family_runtime_enabled:
+                    if (
+                        self.shared_family_debug_enabled
+                        and self.shared_family_marker_publisher.get_num_connections() > 0
+                    ):
                         _measure(
                             timings,
                             "shared_marker_publish",
@@ -693,6 +842,38 @@ class LaneVectorizerNode:
                 ) * 1000.0
                 self._record_runtime_timings(timings)
                 rospy.logerr_throttle(2.0, "lane vectorization failed: %s", exc)
+                if (
+                    self.boundary_family_candidate_enabled
+                    and not family_candidate_published
+                ):
+                    try:
+                        newest_header = max(
+                            frames.values(), key=lambda value: value.stamp_ns
+                        ).header
+                        error_header = Header(
+                            stamp=newest_header.stamp,
+                            frame_id=self.frame_id,
+                        )
+                        error_output = build_boundary_family_output(
+                            None,
+                            status_reason="pipeline_error: {}".format(
+                                type(exc).__name__
+                            ),
+                            expected_boundary_count=self.expected_boundary_count,
+                        )
+                        self.boundary_family_publisher.publish(
+                            self._boundary_family_message(
+                                error_output, error_header
+                            )
+                        )
+                        self.boundary_family_outputs += 1
+                        self.boundary_family_invalid_outputs += 1
+                    except Exception as publish_exc:
+                        rospy.logerr_throttle(
+                            2.0,
+                            "failed to publish invalid boundary-family candidate: %s",
+                            publish_exc,
+                        )
                 if self.shadow_boundary_enabled:
                     newest_header = max(
                         frames.values(), key=lambda value: value.stamp_ns
@@ -744,10 +925,22 @@ class LaneVectorizerNode:
                 ),
                 "boundary_completeness": int(boundary_output.completeness),
                 "shared_family_available": bool(shared_family is not None),
+                "shared_family_acceptance_mode": str(
+                    self.last_shared_family_audit.get(
+                        "acceptance_mode", "rejected"
+                    )
+                ),
+                "shared_family_distributed": bool(
+                    self.last_shared_family_audit.get("acceptance_mode")
+                    == "distributed_multi_role"
+                ),
                 "shared_family_observed_roles": int(
                     len(self.last_shared_family_audit.get("observed_roles", []))
-                    if self.shared_family_debug_enabled
+                    if self.shared_family_runtime_enabled
                     else 0
+                ),
+                "boundary_family_candidate_published": bool(
+                    family_candidate_published
                 ),
             }
             frame_audit["counts"] = {
@@ -777,6 +970,10 @@ class LaneVectorizerNode:
                 "complete": False,
                 "boundary_completeness": int(boundary_output.completeness),
                 "shared_family_available": bool(shared_family is not None),
+                "shared_family_distributed": bool(
+                    self.last_shared_family_audit.get("acceptance_mode")
+                    == "distributed_multi_role"
+                ),
             }
             frame_audit["counts"]["complete"] = bool(
                 boundary_output.completeness == COMPLETENESS_COMPLETE
@@ -965,7 +1162,7 @@ class LaneVectorizerNode:
 
     def _shared_family_markers(self, family, source_header):
         """Render state-tagged shared-family segments without changing public output."""
-        markers = []
+        markers = self._vehicle_footprint_markers(source_header)
         current_keys = set()
         role_order = {
             LEFT_ROLE: 0,
@@ -1051,6 +1248,109 @@ class LaneVectorizerNode:
         self.active_shared_family_marker_keys = current_keys
         return MarkerArray(markers=markers)
 
+    def _vehicle_footprint_markers(self, source_header):
+        """Build a metric ego reference without affecting perception output."""
+        rear_x = -self.vehicle_rear_overhang_m
+        front_x = self.vehicle_length_m - self.vehicle_rear_overhang_m
+        half_width = 0.5 * self.vehicle_width_m
+        body_center_x = 0.5 * (rear_x + front_x)
+
+        def ground_point(x, y, z_offset):
+            ground_z = float(self.ground_plane.xyz([[x, y]])[0, 2])
+            return Point(x=float(x), y=float(y), z=ground_z + z_offset)
+
+        body = Marker()
+        body.header.stamp = source_header.stamp
+        body.header.frame_id = self.frame_id
+        body.ns = "ego_vehicle_body"
+        body.id = 0
+        body.type = Marker.CUBE
+        body.action = Marker.ADD
+        body.pose.position.x = body_center_x
+        body.pose.position.y = 0.0
+        body.pose.position.z = float(
+            self.ground_plane.xyz([[body_center_x, 0.0]])[0, 2]
+            + 0.5 * self.vehicle_marker_height_m
+        )
+        body.pose.orientation.w = 1.0
+        body.scale.x = self.vehicle_length_m
+        body.scale.y = self.vehicle_width_m
+        body.scale.z = self.vehicle_marker_height_m
+        body.color.r = 0.15
+        body.color.g = 0.55
+        body.color.b = 0.95
+        body.color.a = 0.28
+
+        outline = Marker()
+        outline.header = body.header
+        outline.ns = "ego_vehicle_outline"
+        outline.id = 0
+        outline.type = Marker.LINE_STRIP
+        outline.action = Marker.ADD
+        outline.pose.orientation.w = 1.0
+        outline.scale.x = 0.08
+        outline.color.r = 0.25
+        outline.color.g = 0.85
+        outline.color.b = 1.0
+        outline.color.a = 0.95
+        outline.points = [
+            ground_point(rear_x, half_width, 0.02),
+            ground_point(front_x, half_width, 0.02),
+            ground_point(front_x, -half_width, 0.02),
+            ground_point(rear_x, -half_width, 0.02),
+            ground_point(rear_x, half_width, 0.02),
+        ]
+
+        rear_axle = Marker()
+        rear_axle.header = body.header
+        rear_axle.ns = "ego_vehicle_rear_axle"
+        rear_axle.id = 0
+        rear_axle.type = Marker.LINE_STRIP
+        rear_axle.action = Marker.ADD
+        rear_axle.pose.orientation.w = 1.0
+        rear_axle.scale.x = 0.10
+        rear_axle.color.r = 1.0
+        rear_axle.color.g = 0.35
+        rear_axle.color.b = 0.10
+        rear_axle.color.a = 1.0
+        rear_axle.points = [
+            ground_point(0.0, half_width, 0.04),
+            ground_point(0.0, -half_width, 0.04),
+        ]
+
+        front_axle = Marker()
+        front_axle.header = body.header
+        front_axle.ns = "ego_vehicle_front_axle"
+        front_axle.id = 0
+        front_axle.type = Marker.LINE_STRIP
+        front_axle.action = Marker.ADD
+        front_axle.pose.orientation.w = 1.0
+        front_axle.scale.x = 0.10
+        front_axle.color.r = 0.25
+        front_axle.color.g = 1.0
+        front_axle.color.b = 0.35
+        front_axle.color.a = 1.0
+        front_axle.points = [
+            ground_point(self.vehicle_wheelbase_m, half_width, 0.04),
+            ground_point(self.vehicle_wheelbase_m, -half_width, 0.04),
+        ]
+
+        origin = Marker()
+        origin.header = body.header
+        origin.ns = "ego_vehicle_base_link"
+        origin.id = 0
+        origin.type = Marker.SPHERE
+        origin.action = Marker.ADD
+        origin.pose.position = ground_point(0.0, 0.0, 0.10)
+        origin.pose.orientation.w = 1.0
+        origin.scale.x = origin.scale.y = origin.scale.z = 0.22
+        origin.color.r = 1.0
+        origin.color.g = 0.18
+        origin.color.b = 0.10
+        origin.color.a = 1.0
+
+        return [body, outline, rear_axle, front_axle, origin]
+
     def _shared_family_diagnostics_message(self, family, audit, source_header):
         status = DiagnosticStatus()
         status.name = "drivable_bev/shared_lane_family_debug"
@@ -1067,10 +1367,15 @@ class LaneVectorizerNode:
         status.message = str(audit.get("reason", "unknown"))
         values = {
             "runtime_debug_enabled": self.shared_family_debug_enabled,
+            "candidate_output_enabled": self.boundary_family_candidate_enabled,
+            "candidate_topic": "/perception/lane/boundary_family",
+            "candidate_algorithm_id": self.boundary_family_algorithm_id,
+            "candidate_config_sha256": self.boundary_family_config_sha256,
             "deployment_allowed": False,
             "representation": self.shared_family_representation,
             "accepted": accepted,
             "reason": audit.get("reason", "unknown"),
+            "acceptance_mode": audit.get("acceptance_mode", "rejected"),
             "fit_ms": audit.get("fit_ms"),
             "observed_roles": audit.get("observed_roles", []),
             "inferred_roles": audit.get("inferred_roles", []),
@@ -1080,12 +1385,65 @@ class LaneVectorizerNode:
             "outlier_rate": audit.get("outlier_rate"),
             "valid_x_m": audit.get("valid_x_m"),
             "boundary_support": audit.get("boundary_support", {}),
+            "same_frame_completion": audit.get("same_frame_completion", {}),
+            "distributed_support": audit.get("distributed_support", {}),
+            "invalid_support_classification": audit.get(
+                "invalid_support_classification", {}
+            ),
+            "invalid_default_planning_use_allowed": False,
             "error": audit.get("error"),
         }
         status.values = [self._value(key, value) for key, value in values.items()]
         message = DiagnosticArray()
         message.header.stamp = source_header.stamp
         message.status = [status]
+        return message
+
+    def _boundary_family_message(self, output, source_header):
+        message = LaneBoundaryFamily()
+        message.header.stamp = source_header.stamp
+        message.header.frame_id = self.frame_id
+        message.valid = bool(output.valid)
+        message.deployment_allowed = False
+        message.expected_boundary_count = int(output.expected_boundary_count)
+        message.operating_domain = self.operating_domain
+        message.algorithm_id = self.boundary_family_algorithm_id
+        message.representation = self.shared_family_representation
+        message.config_sha256 = self.boundary_family_config_sha256
+        message.status_reason = str(output.status_reason)
+        message.valid_x_min_m = float(output.valid_x_min_m)
+        message.valid_x_max_m = float(output.valid_x_max_m)
+        message.left_width_m = float(output.left_width_m)
+        message.right_width_m = float(output.right_width_m)
+        message.data_residual_p50_m = float(output.data_residual_p50_m)
+        message.data_residual_p95_m = float(output.data_residual_p95_m)
+        message.inlier_residual_p50_m = float(output.inlier_residual_p50_m)
+        message.inlier_residual_p95_m = float(output.inlier_residual_p95_m)
+        message.outlier_rate = float(output.outlier_rate)
+        message.weighted_rms_m = float(output.weighted_rms_m)
+        for value in output.boundaries:
+            boundary = LaneBoundaryFamilyMember()
+            boundary.role = int(value.role)
+            boundary.color = int(value.color)
+            boundary.source_mask = int(value.source_mask)
+            boundary.overall_state = int(value.overall_state)
+            boundary.confidence = float(value.confidence)
+            boundary.residual_valid = bool(value.residual_valid)
+            boundary.residual_p50_m = float(value.residual_p50_m)
+            boundary.residual_p95_m = float(value.residual_p95_m)
+            boundary.observed_length_m = float(value.observed_length_m)
+            boundary.inferred_length_m = float(value.inferred_length_m)
+            boundary.invalid_length_m = float(value.invalid_length_m)
+            boundary.max_inferred_gap_m = float(value.max_inferred_gap_m)
+            boundary.bridged_length_ratio = float(value.bridged_length_ratio)
+            xyz = self.ground_plane.xyz(value.polyline_xy)
+            boundary.polyline = [
+                Point32(x=float(x), y=float(y), z=float(z)) for x, y, z in xyz
+            ]
+            boundary.support_state = [
+                int(state) for state in value.support_state
+            ]
+            message.boundaries.append(boundary)
         return message
 
     def _delete_markers(self, keys, source_header):
@@ -1245,9 +1603,16 @@ class LaneVectorizerNode:
             "shadow_boundary_parameters": self.shadow_boundary_parameters,
             "temporal_boundary_parameters": self.temporal_boundary_parameters,
             "shared_family_debug_enabled": self.shared_family_debug_enabled,
+            "shared_family_runtime_enabled": self.shared_family_runtime_enabled,
             "shared_family_deployment_allowed": False,
             "shared_family_representation": self.shared_family_representation,
             "shared_family_errors": self.shared_family_errors,
+            "boundary_family_candidate_enabled": self.boundary_family_candidate_enabled,
+            "boundary_family_topic": "/perception/lane/boundary_family",
+            "boundary_family_outputs": self.boundary_family_outputs,
+            "boundary_family_invalid_outputs": self.boundary_family_invalid_outputs,
+            "boundary_family_algorithm_id": self.boundary_family_algorithm_id,
+            "boundary_family_config_sha256": self.boundary_family_config_sha256,
             "shared_family_fit_p50_ms": float(np.percentile(shared_processing, 50))
             if len(shared_processing)
             else None,
@@ -1261,6 +1626,7 @@ class LaneVectorizerNode:
                 "candidate_markers": self.marker_publisher.get_num_connections(),
                 "legacy_boundary_markers": self.legacy_boundary_publisher.get_num_connections(),
                 "shared_family_markers": self.shared_family_marker_publisher.get_num_connections(),
+                "boundary_family": self.boundary_family_publisher.get_num_connections(),
             },
             "last_shared_family_audit": self.last_shared_family_audit,
             "ground_plane_frame": self.ground_plane.frame_id,

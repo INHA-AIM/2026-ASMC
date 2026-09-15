@@ -36,5 +36,6 @@
     <arg name="bev_grid_config" value="$(arg bev_grid_config)"/>
     <arg name="visualization_config" value="$(arg visualization_config)"/>
     <arg name="enable_shared_family_debug" value="true"/>
+    <arg name="enable_boundary_family_candidate" value="true"/>
   </include>
 </launch>

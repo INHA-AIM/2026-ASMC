@@ -29,9 +29,10 @@ development exploration grid: x [-5, 30] m, y [-12, 12] m, 0.10 m/cell
 output: 350 rows x 240 columns, ego=(col 120,row 300)
 ```
 
-개발 격자의 전체 범위는 정확도 검증 결과가 아니며 판제 ODD도 아니다. 현재 음영구간
-후속 검증에서는 `0~10 m`를 제어 핵심, `10~15 m`를 preview, 그 밖을 diagnostic 영역으로
-분리한다. production launch와 설정은 개발 격자 추가로 변경되지 않았다.
+개발 격자의 전체 범위는 정확도 검증 결과가 아니며 판제 ODD도 아니다. 현재 음영구간의
+`0~10`, `10~15`, `15~20m` 구분은 거리별 열화를 비교하기 위한 **audit bin**이다. 이를
+고정 control/preview 인터페이스로 해석하지 않는다. production launch와 설정은 개발 격자
+추가로 변경되지 않았다.
 
 OpenCV `(column,row)`과 metric 좌표의 변환은 `grid.py`만 소유한다.
 
@@ -455,6 +456,12 @@ squares를 NumPy로 구현해 배포 의존성을 늘리지 않았다. 이 구�
 /perception/lane/debug/camera_reprojection_mosaic/compressed
 /perception/lane/diagnostics
 ```
+
+`/perception/lane/debug/shared_family/markers`에는 차선 support와 함께 실제 차량 제원의
+디버그 footprint도 표시한다. 반투명 파란 상자는 차체 `x[-0.790,3.845]m`,
+`y[-0.946,0.946]m`, 빨간 점은 후륜축 중앙인 `base_link`, 주황 가로선은 후륜축
+`x=0`, 녹색 가로선은 전륜축 `x=3.0m`다. 이 표식은 좌표 기준일 뿐 lane fitting이나
+판제 후보 계산에는 사용하지 않는다.
 
 `/perception/lane/boundaries`는 왕복 2차로 GPS 음영구간에 한정한 provisional 출력이다.
 색상 spline 전체를 먼저 만들지 않고 track 단계에서 종방향 support·heading·confidence를
@@ -1175,3 +1182,402 @@ residual lookup·linear solve 내부 시간을 먼저 더 나눈다. independent
 shared-family typed public 계약과 판제 gate 이후로 미룬다. 정본 수치와 비교 판단은
 `artifacts/perception_eval/analysis/twinlite_v6_shared_runtime_standalone_profile_20260914/baseline.yaml`을
 따른다.
+
+### 2026-09-14 typed shared boundary-family 후보
+
+shared-family를 Marker/diagnostics에서만 보지 않고 판제 후보 adapter가 손실 없이 읽을 수
+있도록 다음 additive typed 토픽을 추가했다.
+
+```text
+/perception/lane/boundary_family
+    asmc_msgs/LaneBoundaryFamily
+```
+
+토픽 이름은 fitting 구현명인 `shared_family_observations` 대신 결과 의미인
+`boundary_family`를 쓴다. 기존 `/perception/lane/boundary_observations`와 C++ adapter는
+변경하지 않았으며 새 메시지는 `deployment_allowed=false`인 후보 계약이다. 세 family member는
+left outer white, road-centre yellow, right outer white의 **기하 역할**만 표현하고
+home/opposing/절대 차로 번호를 정하지 않는다.
+
+각 `polyline` sample에는 같은 길이의 `support_state`가 붙는다.
+
+- `OBSERVED`: 해당 역할의 실제 model evidence가 지지하는 정상 후보
+- `STRUCTURE_INFERRED`: accepted same-frame family와 normal-offset 구조로 생성한 강등된
+  사용 가능 후보. candidate v2는 `x[0,15]m` 안의 순간 local-support 공백도 이 상태로
+  유지한다. RViz의 주황색 구간이며 temporal/map prediction은 아니다.
+- `INVALID`: bounded completion 밖이거나 family support가 없는 붉은 구간. 메시지에는
+  검수용 좌표를 남기지만 downstream은 이 위치에서 곡선을 분할하고 사용하지 않는다.
+
+fit reject나 pipeline error도 토픽을 침묵시키지 않고 `valid=false`, 빈 boundaries와
+`status_reason`으로 발행한다. consumer는 missing/stale와 fresh reject를 구분해야 한다.
+candidate만 headless로 켜려면 다음처럼 실행한다.
+
+```bash
+roslaunch drivable_bev three_view_lane_pipeline.launch \
+  enable_boundary_family_candidate:=true \
+  enable_shared_family_debug:=false
+
+rostopic hz /perception/lane/boundary_family
+rostopic echo -n1 /perception/lane/boundary_family
+```
+
+기존 `enable_shared_family_debug:=true`는 하위 호환을 위해 typed candidate도 함께 켠다.
+`shadow_runtime_profile_result`는 새 typed 토픽을 required로, 일반 result profile은 optional로
+기록한다.
+
+2026-09-15에는 planning_control 쪽의 별도 read-only C++ adapter를 추가했다.
+
+```bash
+roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch
+```
+
+adapter는 shared sample의 네 endpoint가 모두 observed인 interval만 정상 strip으로 만들고,
+structure-inferred가 포함되면 주황 degraded segment로 분리한다. invalid endpoint가 하나라도
+있으면 해당 interval을 출력하지 않는다. straddle raw bag의 격리 smoke에서 398개 candidate를
+contract error 없이 소비했고 debug MarkerArray는 약 10.1~10.6Hz였다. 이 결과는
+`deployment_allowed=false`이며 Behavior/Frenet/MPC나 제어 출력에는 연결되지 않았다.
+
+정밀 A/B는 시간 제약으로 생략하고 candidate v2 bounded completion을 적용했다. 다음 단계는
+live shadow ODD에서 제어 미연결 관찰 gate를 수행하는 것이다. Ego-motion/IMU 보상은 계속
+보류한다.
+
+연산 최적화는 인터페이스 연결 뒤 geometry/state 비회귀 gate로 진행한다. 우선순위는
+projection audit/extract 중복 순회 제거, shared fit 내부 세분 profile, 그 다음 candidate가
+기본 소스로 승격될 때 independent fit 제거 여부 검토 순이다.
+
+### 2026-09-15 판제 실제 가용구간 기준선
+
+기존 `structure_complete=100%`는 세 역할의 family 곡선 객체가 존재한다는 뜻이지, 판제
+adapter가 끊김 없이 사용할 수 있다는 뜻은 아니다. 이를 구분하기 위해 producer의 sample
+상태를 C++ read-only adapter와 같은 규칙으로 다시 계측했다. 인접한 두 sample의 두 경계
+endpoint가 모두 non-invalid일 때만 한 strip interval을 usable로 인정한다. `observed`만 있는
+길이와 `structure_inferred`를 포함한 degraded 길이도 분리한다. 이 계측은 fitting이나 support
+상태를 고치지 않는다.
+
+대표 maneuver raw bag 4개를 동일 v6 EMA checkpoint로 격리 재생한 결과는 1,274 frame이다.
+아래 `≥80%`는 다음 실험을 비교하기 위한 보고 임계값이며 production 합격 기준이 아니다.
+
+| 구간 (`base_link` x) | 두 strip coverage p05 / p50 | ≥80% frame | 완전 연속 frame | 시작 anchor | 최대 gap p95 | 최대 internal gap p95 |
+|---|---:|---:|---:|---:|---:|---:|
+| 현재 adapter audit window `0~15m` | 93.92% / 100.00% | 96.00% | 69.54% | 81.63% | 0.91m | 0.00m |
+| 차량 envelope `-0.79~3.845m` | 74.99% / 99.66% | 74.80% | 48.35% | 62.95% | 1.16m | 0.00m |
+| 근거리 전방 `3.845~10m` | 100.00% / 100.00% | 97.41% | 96.15% | 98.98% | 0.00m | 0.00m |
+| 중거리 전방 `10~15m` | 100.00% / 100.00% | 96.62% | 95.84% | 97.33% | 0.00m | 0.00m |
+| 원거리 debug `15~20m` | 16.70% / 90.43% | 68.84% | 3.22% | 95.84% | 4.17m | 0.00m |
+
+`0~15m`에서 80% 미만인 최장 연속 구간은 약 2.16초였다. static avoid-return 두 run의
+coverage p05는 Sunny/Foggy에서 각각 65.58/59.58%로 straddle/lateral-sweep보다 낮았다.
+반면 `3.845~15m`는 대부분의 frame에서 완전 연속이었다. 현재 좌·우·두 strip의 **가용**
+coverage가 동일한 것은 세 경계에 공통 `sample_valid`를 적용하기 때문이다. 한 역할만
+invalid가 되어 한쪽 strip만 사라진 것이 아니라 family support의 선두/말단이 세 경계에서
+동시에 끊기는 현재 구현 특성을 수치로 확인했다.
+
+모든 구간의 internal-gap p95가 0m이므로 `max_structure_bridge_m=0.75`를 곧바로 늘리는 것은
+현재 병목을 해결하지 못한다. 다음 실험은 원거리 invalid tail을 살리지 않고, 충분한
+`3.845~15m` support가 있는 frame에서 차량 근처 leading tail만 보수적으로 구조 완성하는
+방향으로 제한한다. 그 전에 같은 계측을 12+4 전체 matrix로 확대해 날씨·시간·clear/static
+조건에 비회귀인지 확인한다.
+
+재현 가능한 소형 artifact에는 checkpoint와 selection SHA-256, run별/구간별 수치가 있다.
+
+```text
+artifacts/perception_eval/analysis/
+└── twinlite_v6_shadow_planning_usability_baseline_v2_20260915/
+    ├── summary.json
+    ├── runs.csv
+    └── metadata.json
+```
+
+새 계측 코드는 `planning_usability.py`와
+`summarize_shadow_planning_usability.py`에 있으며, raw/result bag이나 공개 ROS 토픽은
+변경하지 않았다. 현재 판정은 **대표 기준선 계측 완료, 보간 정책 변경 전**이다.
+
+#### 12+4 전체 확대 결과
+
+같은 checkpoint·support 파라미터를 고정해 기본 clear/static 12개와 maneuver 4개를 합친
+16개 raw bag, 4,122 frame으로 확대했다. 집계용 80% coverage는 비교 지표이지 production
+합격선이 아니다.
+
+| 구간 | coverage p05 / p50 | 일부라도 가용 | ≥50% frame | ≥80% frame | 완전 연속 | 최장 ≥80% 미달 |
+|---|---:|---:|---:|---:|---:|---:|
+| 현재 adapter audit window `0~15m` | 63.13 / 100.00% | 100.00% | 99.27% | 93.77% | 69.84% | 2.16s |
+| 근거리 전방 `3.845~10m` | 84.91 / 100.00% | 100.00% | 99.44% | 95.51% | 93.77% | 2.20s |
+| 중거리 전방 `10~15m` | 72.49 / 100.00% | 96.39% | 95.61% | 94.78% | 93.43% | 2.16s |
+| 원거리 audit band `15~20m` | 0.00 / 89.75% | 93.84% | 79.65% | 62.08% | 0.99% | 7.50s |
+
+`0~15m`의 낮은 tail은 static-avoid 계열에 집중됐다. clear는 80% coverage frame이 97.5%,
+기존 static-avoid는 86.5%, avoid-return은 92.5%였다. 모든 zone에서 internal gap p95는
+계속 0m다. 즉 유효 segment 중간이 반복적으로 뚫리는 문제가 아니라 시작 또는 끝의
+support 범위가 줄어드는 문제다.
+
+`15~20m` 관측은 판제가 곡률과 다음 경계를 미리 보는 데 활용할 가능성이 있다. 실제로
+shared family 객체와 수학적 spline은 100% frame에 존재한다. 그러나 local camera support가
+전혀 없는 frame이 6.16%이고, Foggy에서는 80% coverage가 53.7%뿐이다. 따라서 거리를
+기준으로 토픽을 잘라 둘로 나누지 않고 다음 동적 계약을 후보로 둔다.
+
+- producer는 설정된 전체 polyline과 sample별 `observed/structure_inferred/invalid`를 보존한다.
+- consumer는 frame마다 연속 trusted interval과 최대 candidate horizon을 계산한다. 중간 gap이
+  있을 수 있으므로 단일 horizon 수치만으로 전체 가용성을 표현하지 않는다.
+- 현재 C++ adapter의 `x[0,15]m` clip은 안전한 read-only 검증을 위한 임시 설정이지 최종
+  perception/planning 계약이 아니다.
+- 검증된 same-frame extrapolation을 추가한다면 거리 자체가 아니라 별도 저권한 상태,
+  confidence와 provenance로 구분한다. support가 약할 때는 이전 승인 경계나 MGeo가 fallback을
+  맡으며 camera `invalid`를 정상 관측으로 위장하지 않는다.
+
+다음 작은 작업은 현재 red/invalid sample 자체의 map 거리와 camera overlay를 leading tail,
+far trailing tail, whole-support 축소로 나눠 평가하는 것이다. 이 평가를 통과하기 전에는
+`invalid`를 `structure_inferred`로 일괄 승격하거나 20m까지 무조건 연장하지 않는다.
+
+전체 정본은 다음 artifact에 있다.
+
+```text
+artifacts/perception_eval/analysis/
+└── twinlite_v6_shadow_planning_usability_full16_v1_20260915/
+    ├── baseline.yaml
+    ├── summary.json
+    ├── runs.csv
+    └── metadata.json
+```
+
+약 54MB의 per-frame 중간 audit은 Git에 넣지 않고
+`/data/rosbags/audits/shadow_planning_usability_full16_v1_20260915/`에 보존한다. 같은 raw를
+다시 추론하면 scheduler에 따라 frame 모집단이 조금 달라질 수 있으므로, 다음 파라미터 A/B는
+한 callback 안에서 baseline과 후보를 동시에 계산해 동일 입력 frame으로 비교한다.
+
+#### Invalid support 원인 분류
+
+다음 작은 단계에서는 support를 보강하지 않고 기존 invalid를 원인별로 계측했다. 새
+`planning_usability` schema는 각 zone의 첫/마지막 usable x와 leading/trailing/internal gap을
+직접 저장한다. 분류는 다중 label이다. 한 frame에 차량 근처 leading tail과 원거리 trailing
+tail이 함께 있으면 둘 다 남기며 `primary_reason`은 보고용 축약일 뿐이다.
+
+- `vehicle_near_leading_tail`: `x=0`에서 시작하는 invalid가 차량 전방 끝 `x=3.845m` 구간과
+  겹침
+- `preview_trailing_tail`: 설정된 preview `x[15,20]m`의 끝에 닿는 invalid
+- `preview_entry_missing`: `x=15m`에서 preview support가 시작되지 않음
+- `whole_support_shrink`: preview만 약한 경우가 아니라 `3.845~10m` 또는 `10~15m` coverage가
+  보고 임계값 80% 아래로 축소
+- `internal_support_gap`: `0~15m` 안에서 usable interval 양쪽에 둘러싸인 invalid
+
+16개 run을 explicit tail metric으로 재계산한 4,023 frame 결과는 다음과 같다. 이전 4,122
+frame 기준선과 다른 result replay 모집단이므로 절대 frame 수를 직접 차감해 성능 변화로
+해석하지 않는다.
+
+| invalid 원인 | frame 비율 | 길이 요약 |
+|---|---:|---:|
+| 차량 근처 leading tail | 13.94% | 전체-frame p95 0.367m |
+| preview trailing tail | 85.83% | 전체-frame p50 0.503m, p95 5.0m |
+| preview 시작 미고정 | 6.39% | preview 일부/전체 선두 미지원 |
+| 전체 support 축소 | 7.56% | near 또는 mid coverage <80% |
+| 내부 support gap | 0.75% | 전체-frame p95 0m |
+
+원거리 trailing 비율이 높은 것은 20m까지 항상 연속이라는 뜻이 아니라, 0.26m보다 큰 작은
+말단 절단도 포함하기 때문이다. `0~15m`는 현재 adapter audit window이고 20m는 현 grid의
+평가 상한이며, 둘 다 영구 인터페이스가 아니다. Foggy의 preview trailing/entry-missing
+비율은 각각 90.51/10.47%로 Sunny의 82.63/3.60%보다 약하다. 반면 전체 support 축소는
+7.56%여서 차량 근처 completion과
+근·중거리 붕괴를 같은 정책으로 처리해서는 안 된다.
+
+`invalid_support.py`는 이 분류만 수행하고 support state나 geometry를 바꾸지 않는다. runtime
+shared-family diagnostics와 offline frame에는 같은 분류가 기록된다. typed 메시지에는 invalid
+좌표가 계속 남아 판제가 명시적으로 선택하는 저권한 preview/fallback 실험에 활용할 수 있지만,
+현재 기본 C++ adapter는 여전히 invalid interval을 분할·폐기한다. 이 좌표는 카메라 관측이
+아니므로 `observed/structure_inferred`로 재표기하면 안 된다. zone 범위는 설정에서 읽으므로
+향후 segmentation 재학습으로 유효거리가 늘면 코드 변경 없이 named audit zone을 다시
+설정하고 측정할 수 있다.
+
+```text
+artifacts/perception_eval/analysis/
+└── twinlite_v6_shadow_invalid_support_full16_v1_20260915/
+    ├── baseline.yaml
+    ├── summary.json
+    ├── runs.csv
+    ├── invalid_support_runs.csv
+    └── metadata.json
+```
+
+per-frame 정본은
+`/data/rosbags/audits/shadow_invalid_support_full16_v1_20260915/`에 보존한다. evidence가 없는
+과거 maneuver result bag으로 만든 빈 시도는 삭제하지 않고
+`/data/rosbags/audits/rejected_shadow_invalid_support_no_evidence_20260915/`로 이동했다.
+
+#### Invalid support 분류 오버레이 사전검수
+
+분류 직후 support 정책을 바꾸지 않고 clear/static-avoid, Sunny/Foggy 대표 4개 run에서
+분류별 최대 2 frame을 20-frame 간격으로 추출했다. raw bag의 Ego와 기존 evidence result를
+하나의 replay clock으로 재생했으므로 새 GPU 추론 변동은 없다. 빨간 실선은 shared family가
+계산한 좌표 중 local camera support가 `INVALID`인 구간이며 **저신뢰 관측 차선이 아니다**.
+
+44개 overlay에서 leading/trailing/whole-shrink/internal-gap/preview-entry 분류가 각각 의도한
+저-x 말단, 고-x 말단, 근·중거리 축소, 내부 공백, 원거리 audit band 진입 공백에 대응했다.
+multi-label frame도 의도대로 여러 contact sheet에 남는다. `no_material_invalid_support`는
+분류 임계값을 넘는 gap이 없다는 뜻이며 0.26m 이하의 빨간 말단까지 없다는 뜻은 아니다.
+
+이 단계는 taxonomy/geometry 위치 사전검수만 통과했다. sparse 선택 44장 중 map 선을 함께
+그릴 수 있었던 14장은 legacy nearest-Ego gate 실패 때문이 아니라 선택 frame이 pseudo-GT
+음영 ODD 안에 있었던 경우다. 네 run의 1,031 frame은 모두 50ms 이내 nearest Ego pose를
+가졌다. 따라서 이 44장만으로 map 정확도를 판정하지 않고, ODD 전체 frame을 대상으로 별도
+시간 정렬·거리 평가를 수행한다. 그 전에는 빨간 좌표를 새 저권한 상태로 승격하지 않는다.
+
+```text
+artifacts/perception_eval/analysis/
+└── twinlite_v6_shadow_invalid_support_overlay_prereview_v1_20260915/
+    ├── baseline.yaml
+    ├── review_manifest.json
+    ├── contact_sheet_overview.jpg
+    └── contact_sheet_<category>.jpg
+```
+
+같은 자료를 다시 만들 때 offline launch의 기본값은 기존 동작 보존을 위해 분류 overlay가
+꺼져 있다. 다음 두 인자를 명시하고 raw Ego와 evidence result를 한 `rosbag play --clock`에
+넣는다.
+
+```bash
+roslaunch drivable_bev shadow_lane_family_offline.launch \
+  run_id:=<run_id> output_dir:=<new_output_dir> \
+  overlay_stride:=0 high_residual_overlay_limit:=0 \
+  invalid_support_overlay_limit_per_category:=2 \
+  invalid_support_overlay_min_frame_gap:=20
+
+rosrun drivable_bev summarize_invalid_support_review.py \
+  --input-root <per_run_audit_root> \
+  --output-dir <new_summary_dir>
+```
+
+#### Source-time 위치 정렬과 INVALID–map 거리 평가
+
+대표 clear/static-avoid Sunny/Foggy 4개 run의 1,031 frame을 raw Ego와 기존 v3 evidence result의
+단일 replay clock으로 다시 평가했다. 이는 **오프라인 map 평가용 pose 정렬**이며 runtime
+ego-motion prediction이나 IMU 자세 보정이 아니다. camera evidence source stamp를 앞뒤
+`/Ego_topic`으로 감싸서 XY는 선형, heading은 최단각으로 보간했다. 1,030 frame은 보간됐고
+1 frame만 100ms bracket 제한 때문에 nearest로 fallback했다. nearest sample age p50/p95는
+`7.05/11.62ms`, bracket span은 `17.28/34.47ms`였다.
+
+보간 pose와 nearest pose의 차이는 p95 이동 `0.121m`, heading `0.056°`였지만, 동일 INVALID
+category-frame의 role-matched map 거리 p95 변화는 중앙값 `-0.0004m`, 절댓값 p95
+`0.0125m`, 최대 `0.0226m`였다. 보간은 평가 시각의 모호성을 제거하지만 기존 원거리 잔차의
+주원인은 아니다.
+
+음영 polygon 안의 378 frame에서 left-white/yellow/right-white를 같은 역할의 pseudo-GT와만
+대응하고, map polyline 법선방향 signed distance를 측정했다. 분류는 multi-label이라 총
+408 category-frame 관측이며 독립 frame 수로 해석하지 않는다.
+
+| INVALID 구간 | 역할별 frame-p95 중앙값 범위 | 역할별 frame-p95의 p95 범위 |
+|---|---:|---:|
+| 차량 근처 leading tail | 0.075~0.107m | 0.152~0.187m |
+| whole-support shrink | 0.039~0.078m | 0.147~0.177m |
+| internal support gap | 0.024~0.035m | 0.044~0.081m |
+| preview entry missing | 0.071~0.123m | 0.194~0.200m |
+| far trailing tail | 0.062~0.081m | 0.359~0.431m |
+
+오차 구간 `≤0.35m`, `0.35~0.60m`, `>0.60m`는 각각 overlay의 supportive/review/priority-review
+우선순위일 뿐 합격 기준이 아니다. 408개 category-frame 중 `385/23/0`개였고, map pseudo-GT,
+평면 투영과 비동기 sensor의 잔여 오차를 포함한다. contact sheet에서 가까운 leading·whole
+shrink·internal gap은 map과 대체로 겹쳤고, review band는 원거리 trailing tail에 집중됐다.
+이 결과는 빨간 수학 곡선이 무작위 이탈은 아니라는 근거지만 camera support를 복구하지는
+않으므로 `INVALID→STRUCTURE_INFERRED` 일괄 승격이나 hard 거리 gate에는 사용하지 않는다.
+
+```text
+/data/rosbags/audits/shadow_invalid_map_distance_representative_v1_20260915/
+artifacts/perception_eval/analysis/
+└── twinlite_v6_shadow_invalid_map_distance_representative_v1_20260915/
+    ├── baseline.yaml
+    ├── summary.json
+    ├── metrics_by_run.csv
+    ├── metrics_by_category_role.csv
+    └── contact_sheet_<category>_<review-band>.jpg
+```
+
+재현 시 기존 동작 보존을 위해 기본 `nearest`를 유지하고, 이 audit에서만 다음 인자를 명시한다.
+
+```bash
+roslaunch drivable_bev shadow_lane_family_offline.launch \
+  run_id:=<run_id> output_dir:=<new_output_dir> \
+  ego_pose_alignment_mode:=interpolate ego_pose_max_bracket_ms:=100 \
+  overlay_stride:=0 high_residual_overlay_limit:=0 \
+  invalid_map_overlay_limit_per_category_band:=2
+
+rosrun drivable_bev summarize_invalid_map_distance.py \
+  --input-root <per_run_audit_root> \
+  --output-dir <new_summary_dir>
+```
+
+#### 시간 제한 판제 후보 승격: candidate v2
+
+2026-09-15에는 추가 A/B보다 음영구간 handoff를 우선하기로 결정했다. 앞선 대표 map audit에서
+차량 근처 leading tail, whole-support shrink, internal gap과 preview-entry의 역할별 frame-p95가
+최대 `0.187/0.177/0.081/0.200m`였던 점을 근거로, **accepted shared family에 한해서만**
+`x[0,15]m` 안의 기존 invalid sample을 `STRUCTURE_INFERRED`로 승격한다.
+
+- 2개 이상 역할과 최소 3m local multi-role support가 필요한 family acceptance gate는 유지한다.
+- 승격 sample은 주황색이며 `OBSERVED`가 아니다.
+- temporal prediction, Ego-motion 전파와 MGeo는 사용하지 않는다.
+- fitted family 자체의 표본 범위를 넘겨 외삽하지 않는다.
+- 15m 이후의 원거리 tail과 family reject frame은 계속 `INVALID`다.
+- 기존 independent 토픽과 판제 제어 경로는 바꾸지 않는다.
+
+설정은 `shared_lane_family.same_frame_completion_*`에 있고 candidate algorithm ID는
+`twinlite_v6_shadow_boundary_family_candidate_v2`다. 이 결정은 시간 제약에 따른
+fail-soft 후보이며 정밀 A/B 승인으로 간주하지 않는다. 사용자는 live 주행에서 주황 구간의
+false bridge와 세 경계 연속성을 다시 확인해야 한다. read-only adapter는 inferred segment를
+계속 강등해 표시하고 남은 invalid를 분할한다.
+
+#### 엇갈린 다중 역할 support 복구: candidate v3
+
+candidate v3는 v2의 조건을 넓게 완화하지 않는다. 기존 strict family가
+`insufficient_local_multi_role_support`로만 거부됐고, 같은 frame 안에 독립적으로 배정된
+역할이 둘 이상 있지만 그 종방향 support 구간만 엇갈린 경우에만 별도 gate를 평가한다.
+
+- 기존 role assignment의 3m track-span 자격은 유지한다. 그 뒤 `x[0,15]m` 안에서 각 역할은
+  최소 2m의 close support를 가져야 하고, 합집합 support는 최소 6m다.
+- 내부 무관측 gap은 3m 이하, 역할 간 heading 차이는 15도 이하이어야 한다.
+- inlier residual p95 `0.30m`, outlier rate `0.35`, 곡률 p95 `0.12 1/m` 상한을 모두 지킨다.
+- 합격해도 해당 역할의 직접 support만 `OBSERVED`이고 나머지 family member는
+  `STRUCTURE_INFERRED`다. temporal prediction과 MGeo는 사용하지 않는다.
+- 한 역할만 남은 frame, 역할 배정 실패, 비단조 geometry와 다른 reject 사유는 복구하지 않는다.
+- strict-accepted frame은 fallback branch에 들어가지 않으므로 기존 geometry와 state가 정확히
+  유지된다.
+
+합성 staggered-support 사례는 strict valid length 0m에서 v3 union support 14.75m로 복구됐고,
+12.95도 heading 불일치 negative control은 설정한 5도 gate에서 거부됐다. 기존 12+4 감사의
+4,023 frame은 모두 strict accepted였으므로 실데이터 recovery rate를 과장하지 않는다. 해당
+자료는 기존 정상 frame의 비회귀 근거이고, 실제 activation/false-family 비율은 새 high-heading
+주행에서 별도로 확인해야 한다. 정본 수치는
+`twinlite_v6_shadow_distributed_support_candidate_v3_20260915/baseline.yaml`에 있다.
+
+현재 candidate algorithm ID는
+`twinlite_v6_shadow_boundary_family_candidate_v3`이며 diagnostics의
+`acceptance_mode`가 `strict_local_multi_role` 또는 `distributed_multi_role`을 구분한다.
+
+### 2026-09-15 candidate v3 동결과 판제 handoff
+
+사용자의 live straddle·회피 주행에서 세 경계 연속성과 distributed-support 보완을 확인한 뒤,
+v3 geometry·threshold·sample-state를 더 조정하지 않는 판제 인수 기준으로 동결했다. 같은
+대표 4개 raw bag을 시각화 subscriber 없이 격리 재생한 결과는 총 1,270 frame이다.
+
+| 항목 | 결과 |
+|---|---:|
+| family accepted / reject 최장 | 100% / 0 frame |
+| runtime error | 0 |
+| run별 family 출력 | `10.324/10.323/9.381/10.406Hz` |
+| 전체 lane body p50/p95 | `76.37/96.96ms` |
+| shared fit p50/p95 | `31.66/40.88ms` |
+| observed/inferred/invalid sample | `67.22/11.50/21.29%` |
+| valid span p50/p95 | `20.07/21.75m` |
+
+네 bag에서는 `distributed_multi_role`가 0회였으므로 정상 strict path의 비회귀·처리량
+근거로만 쓴다. 이전 standalone보다 이번 p95가 높았지만 fallback 자체는 실행되지 않았고
+association, independent fit, tracking도 함께 느려져 v3 고유 회귀로 보지 않는다. 최저
+9.381Hz로 9Hz gate는 통과했으므로 handoff 전에 알고리즘을 다시 최적화하지 않는다.
+full-stack에서 실제로 9Hz를 깨면 legacy independent 경로의 opt-in 비활성화, projection
+중복 순회 결합, shared-fit 내부 세분 profile 순으로 진행한다.
+
+성능 result bag은 `shadow_runtime_profile_result`로 기록했고, 판제 인수 replay에는
+`boundary_family + drivable_probability + coverage`를 필수로 하는
+`shadow_camera_perception_handoff_result`를 사용한다. 인지는 토픽까지만 제공하며 음영구간
+on/off, route/home/opposing 의미, LiDAR occupancy 결합과 closed-loop 검증 코드는 추가하지
+않았다. 판제가 읽어야 할 field, fail-safe와 장애물 회피 결합 순서는
+[판제 인수 가이드](../../../docs/shadow-camera-perception-handoff.md), 정확한 config·checkpoint·
+bag SHA-256은
+[`freeze.yaml`](../../../artifacts/perception_eval/analysis/twinlite_v6_shadow_boundary_family_candidate_v3_profile_20260915/freeze.yaml)에
+고정했다.

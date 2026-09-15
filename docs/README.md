@@ -1,7 +1,7 @@
 # 2026-ASMC 문서 허브
 
 > **문서 상태:** Active Index
-> **최종 정리:** 2026-09-13
+> **최종 정리:** 2026-09-15
 > **대상:** 팀원 전원 · 관리: 통합 리드와 각 문서 담당자
 
 문서 파일은 기존 링크와 팀원의 북마크가 깨지지 않도록 현재 경로를 유지한다. 이 페이지에서
@@ -90,6 +90,7 @@ Behavior Planner가 다시 연결되기 전에는 handoff 문서의 토픽과 la
 | 문서 | 역할 | 상태 |
 |---|---|---|
 | [perception-map-fusion-roadmap.md](./perception-map-fusion-roadmap.md) | camera/MGeo/LiDAR 전체 전략, live와 대회판 이식 | Current Working Proposal |
+| [shadow-camera-perception-handoff.md](./shadow-camera-perception-handoff.md) | 음영구간 v3 lane-family·drivable 판제 소비 계약과 성능 동결 | Active Handoff Guide |
 | [camera-object-detection-handoff.md](./camera-object-detection-handoff.md) | 손재호용 YOLO 즉시 사용·경량 후보·NAS fine-tune 인수 가이드 | Active Guide |
 | [rosbag-evaluation-streaming-gt.md](./rosbag-evaluation-streaming-gt.md) | raw/result bag, source timestamp, Streaming GT와 ROS/UDP gate | Active Guide |
 | [perception-dataset-labeling-split.md](./perception-dataset-labeling-split.md) | Capture 원본, mask, ignore, manifest와 split 계약 | Canonical Data Contract |
@@ -124,6 +125,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | 카메라 live 추론 | [fusion roadmap §5~7](./perception-map-fusion-roadmap.md#5-코드-경계-제안) | [v4 evaluation](./perception-v4-training-evaluation.md) |
 | 카메라–LiDAR 객체 분류 | [object detector handoff](./camera-object-detection-handoff.md) | [sensor-fusion 실행](../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md), [rosbag 평가](./rosbag-evaluation-streaming-gt.md) |
 | MGeo·카메라·LiDAR BEV | [fusion roadmap](./perception-map-fusion-roadmap.md) | [BEV design note](./perception-bev-lane-interface-plan.md) |
+| 음영구간 카메라 출력을 판제에 연결 | [shadow camera handoff](./shadow-camera-perception-handoff.md) | [lane boundary adapter](../src/planning_control/lane_boundary_adapter/README.md) |
 | 대회판 이식 | [fusion roadmap §9](./perception-map-fusion-roadmap.md#9-26r1h3-개발판과-대회판-이식-전략) | [msg versions](./morai-msgs-versions.md), [network](./network-udp-ros.md) |
 
 ## 5. 모듈 README 진입점

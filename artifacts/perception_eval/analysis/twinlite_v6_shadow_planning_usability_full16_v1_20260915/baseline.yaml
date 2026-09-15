@@ -1,0 +1,81 @@
+schema_version: asmc-shadow-planning-usability-decision-1.0.0
+created_at_kst: "2026-09-15"
+status: full_12_plus_4_measurement_complete_policy_unchanged
+
+scope:
+  raw_runs: 16
+  valid_frames: 4122
+  baseline_matrix_runs: 12
+  maneuver_runs: 4
+  checkpoint_sha256: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+  interval_contract: both_endpoint_support_non_invalid
+  reporting_coverage_threshold: 0.80
+  reporting_threshold_is_acceptance_gate: false
+
+planning_consumer_0_15m:
+  family_object_rate: 1.0
+  nonzero_coverage_rate: 1.0
+  coverage_at_least_0_50_rate: 0.9927
+  coverage_at_least_0_80_rate: 0.9377
+  coverage_p05: 0.6313
+  coverage_p50: 1.0
+  fully_continuous_rate: 0.6984
+  start_anchored_rate: 0.8578
+  longest_below_0_80_streak_sec: 2.163
+  longest_unusable_gap_p95_m: 5.531
+  longest_internal_unusable_gap_p95_m: 0.0
+
+forward_control_evidence:
+  near_3_845_10m:
+    coverage_at_least_0_80_rate: 0.9551
+    coverage_p05: 0.8491
+    coverage_p50: 1.0
+  mid_10_15m:
+    coverage_at_least_0_80_rate: 0.9478
+    coverage_p05: 0.7249
+    coverage_p50: 1.0
+
+preview_15_20m:
+  family_object_rate: 1.0
+  nonzero_supported_coverage_rate: 0.9384
+  coverage_at_least_0_50_rate: 0.7965
+  coverage_at_least_0_80_rate: 0.6208
+  coverage_p05: 0.0
+  coverage_p50: 0.8975
+  fully_continuous_rate: 0.0099
+  observed_coverage_p50: 0.0999
+  degraded_coverage_p50: 0.4401
+  longest_below_0_80_streak_sec: 7.504
+  foggy:
+    nonzero_supported_coverage_rate: 0.902
+    coverage_at_least_0_50_rate: 0.726
+    coverage_at_least_0_80_rate: 0.537
+  sunny:
+    nonzero_supported_coverage_rate: 0.963
+    coverage_at_least_0_50_rate: 0.845
+    coverage_at_least_0_80_rate: 0.679
+
+decision:
+  runtime_policy_changed: false
+  keep_family_message_fresh_when_fit_exists: true
+  current_read_only_adapter_audit_window_m: [0.0, 15.0]
+  current_far_audit_band_m: [15.0, 20.0]
+  fixed_distance_interface_adopted: false
+  observed_is_control_usable: true
+  structure_inferred_is_degraded_control_usable: true
+  invalid_is_control_usable: false
+  preview_extrapolation_is_implemented: false
+  next_measurement: >-
+    Evaluate currently invalid leading/trailing family samples against the
+    shadow map and manual overlays before introducing a separate low-authority
+    preview state. Do not relabel invalid samples as observed.
+  range_interpretation: >-
+    These two ranges are measurement bins and a bounded adapter experiment,
+    not a permanent perception or planning horizon. Preserve per-sample support
+    and derive trusted intervals and candidate reach for each frame.
+
+artifacts:
+  persistent_per_frame_audit: /data/rosbags/audits/shadow_planning_usability_full16_v1_20260915
+  detailed_summary: summary.json
+  per_run_csv: runs.csv
+  source_metadata: metadata.json

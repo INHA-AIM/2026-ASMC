@@ -3,7 +3,7 @@
   <name>lane_boundary_adapter</name>
   <version>0.1.0</version>
   <description>
-    Read-only C++ adapter from camera lane-boundary observations to local lane-strip candidates.
+    Read-only C++ adapters from independent and shared camera lane-boundary observations to local lane-strip candidates.
   </description>
 
   <maintainer email="autonav@todo.todo">ASMC</maintainer>

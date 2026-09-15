@@ -16,6 +16,8 @@
   <arg name="operating_domain" default="shadow_two_way_v1"/>
   <arg name="algorithm_id" default="twinlite_v6_shadow_boundary_contract_v1"/>
   <arg name="enable_shared_family_debug" default="false"/>
+  <arg name="enable_boundary_family_candidate"
+       default="$(arg enable_shared_family_debug)"/>
 
   <include file="$(find drivable_bev)/launch/three_view_bev_pilot.launch">
     <arg name="checkpoint" value="$(arg checkpoint)"/>
@@ -38,5 +40,7 @@
     <arg name="operating_domain" value="$(arg operating_domain)"/>
     <arg name="algorithm_id" value="$(arg algorithm_id)"/>
     <arg name="enable_shared_family_debug" value="$(arg enable_shared_family_debug)"/>
+    <arg name="enable_boundary_family_candidate"
+         value="$(arg enable_boundary_family_candidate)"/>
   </include>
 </launch>

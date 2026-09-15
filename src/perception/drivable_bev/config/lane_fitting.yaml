@@ -22,6 +22,15 @@ max_timestamp_skew_ms: 35.0
 sync_queue_size: 12
 diagnostics_interval_sec: 2.0
 
+# RViz debug reference only. base_link is the rear-axle centre; these values
+# do not participate in evidence extraction, fitting, or candidate output.
+vehicle_footprint:
+  length_m: 4.635
+  width_m: 1.892
+  rear_overhang_m: 0.790
+  wheelbase_m: 3.000
+  marker_height_m: 0.12
+
 confidence_by_class:
   white: 0.50
   yellow: 0.50
@@ -41,8 +50,8 @@ spline_outlier_scale: 2.5
 spline_control_spacing_m: 2.0
 
 # Shared-family passed the representative and full 12+4 offline gates. It is
-# available only as an explicitly enabled runtime debug sidecar; the public
-# boundary contract remains on the independent spline path.
+# available as an explicitly enabled runtime debug sidecar and typed candidate;
+# the established independent boundary contract remains unchanged.
 shared_lane_family:
   runtime_debug_enabled: false
   deployment_allowed: false
@@ -67,6 +76,54 @@ shared_lane_family:
   max_structure_bridge_m: 0.75
   min_observed_segment_m: 0.50
   inferred_confidence_scale: 0.60
+  # Fail-soft handoff for the time-limited shadow-road integration. A family
+  # must still pass the normal multi-role same-frame fit first. Within this
+  # window only, unsupported fitted samples are exposed as degraded
+  # STRUCTURE_INFERRED geometry; they are never relabelled OBSERVED. The far
+  # 15-20m debug tail remains INVALID.
+  same_frame_completion_enabled: true
+  same_frame_completion_x_min_m: 0.0
+  same_frame_completion_x_max_m: 15.0
+  # Candidate-v3 recovery for same-frame roles whose longitudinal supports do
+  # not overlap enough for the strict local-support gate. This is deliberately
+  # narrower than a one-line fallback: at least two independently assigned
+  # roles must each contribute >=2m, their union must span >=6m inside x[0,15],
+  # and heading/residual/outlier/curvature gates must all pass. Strictly
+  # accepted frames never enter this branch and therefore remain unchanged.
+  distributed_support_enabled: true
+  distributed_support_x_min_m: 0.0
+  distributed_support_x_max_m: 15.0
+  distributed_min_role_support_m: 2.0
+  distributed_min_union_support_m: 6.0
+  distributed_max_internal_gap_m: 3.0
+  distributed_max_heading_delta_deg: 15.0
+  distributed_max_inlier_residual_p95_m: 0.30
+  distributed_max_outlier_rate: 0.35
+  distributed_max_curvature_inv_m: 0.12
+
+# Audit-only taxonomy for the mathematical family samples that remain INVALID.
+# The control/preview extents are read from the named planning-usability zones,
+# so a later checkpoint can extend the useful range through configuration.
+# This block never promotes support or grants control authority.
+invalid_support_classification:
+  control_zone: planning_consumer
+  vehicle_zone: vehicle_envelope
+  near_zone: near_ahead
+  mid_zone: mid_ahead
+  preview_zone: far_debug
+  strip: both_strips
+  gap_tolerance_m: 0.26
+  whole_support_min_coverage_ratio: 0.80
+
+# Current v6 measurement horizons. A later checkpoint may extend these bounds
+# after a fresh accuracy/support audit; classifier code and message fields do
+# not need to change.
+planning_usability_zones:
+  - {name: planning_consumer, x_min_m: 0.0, x_max_m: 15.0}
+  - {name: vehicle_envelope, x_min_m: -0.790, x_max_m: 3.845}
+  - {name: near_ahead, x_min_m: 3.845, x_max_m: 10.0}
+  - {name: mid_ahead, x_min_m: 10.0, x_max_m: 15.0}
+  - {name: far_debug, x_min_m: 15.0, x_max_m: 20.0}
 
 # Provisional two-way GPS-shadow ODD. This filters colour-marking splines into
 # one yellow centre boundary and visible white outer boundaries. It deliberately

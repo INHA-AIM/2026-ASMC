@@ -30,6 +30,7 @@ include_directories(
 )
 
 add_library(lane_boundary_adapter
+  src/boundary_family_adapter.cpp
   src/lane_boundary_adapter.cpp
 )
 add_dependencies(lane_boundary_adapter ${catkin_EXPORTED_TARGETS})
@@ -40,6 +41,15 @@ add_executable(lane_boundary_monitor_node
 )
 add_dependencies(lane_boundary_monitor_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(lane_boundary_monitor_node
+  lane_boundary_adapter
+  ${catkin_LIBRARIES}
+)
+
+add_executable(boundary_family_monitor_node
+  src/boundary_family_monitor_node.cpp
+)
+add_dependencies(boundary_family_monitor_node ${catkin_EXPORTED_TARGETS})
+target_link_libraries(boundary_family_monitor_node
   lane_boundary_adapter
   ${catkin_LIBRARIES}
 )
@@ -55,10 +65,22 @@ if(CATKIN_ENABLE_TESTING)
       ${catkin_LIBRARIES}
     )
   endif()
+
+  catkin_add_gtest(boundary_family_adapter_test
+    test/boundary_family_adapter_test.cpp
+  )
+  if(TARGET boundary_family_adapter_test)
+    add_dependencies(boundary_family_adapter_test ${catkin_EXPORTED_TARGETS})
+    target_link_libraries(boundary_family_adapter_test
+      lane_boundary_adapter
+      ${catkin_LIBRARIES}
+    )
+  endif()
 endif()
 
 install(TARGETS
     lane_boundary_adapter
+    boundary_family_monitor_node
     lane_boundary_monitor_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

@@ -51,6 +51,11 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_rgb_bev.py)
   catkin_add_nosetests(test/test_map_lane_calibration.py)
   catkin_add_nosetests(test/test_shared_lane_family.py)
+  catkin_add_nosetests(test/test_planning_usability.py)
+  catkin_add_nosetests(test/test_invalid_support.py)
+  catkin_add_nosetests(test/test_invalid_support_review.py)
+  catkin_add_nosetests(test/test_invalid_map_audit.py)
+  catkin_add_nosetests(test/test_pose_time_alignment.py)
   catkin_add_nosetests(test/test_shared_runtime_audit.py)
 endif()
 
@@ -68,6 +73,9 @@ catkin_install_python(PROGRAMS
   scripts/calibrate_shadow_lane_gt.py
   scripts/shadow_lane_family_offline_node.py
   scripts/summarize_shadow_lane_family.py
+  scripts/summarize_shadow_planning_usability.py
+  scripts/summarize_invalid_support_review.py
+  scripts/summarize_invalid_map_distance.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

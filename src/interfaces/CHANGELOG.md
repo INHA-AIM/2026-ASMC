@@ -2,6 +2,53 @@
 
 공용 ROS 계약의 breaking change와 합의 사항을 기록한다.
 
+## Unreleased - shared boundary-family candidate
+
+### Added
+
+- `asmc_msgs/LaneBoundaryFamilyMember`와 `LaneBoundaryFamily`를 추가했다. 공동 피팅한 세
+  경계와 sample별 `OBSERVED/STRUCTURE_INFERRED/INVALID` support 상태를 보존한다.
+- non-deployment 후보 토픽 `/perception/lane/boundary_family`를 추가했다. 주황색
+  `STRUCTURE_INFERRED`는 낮은 신뢰도의 사용 가능 geometry이고 붉은 `INVALID`는 소비
+  금지 구간이다.
+- read-only C++ consumer와 `/planning/debug/lane_boundary_family/strips`,
+  `/planning/diagnostics/lane_boundary_family_adapter`를 추가했다. consumer는 inferred를
+  degraded segment로 분리하고 invalid endpoint가 포함된 interval을 절대 잇지 않는다.
+- `INVALID`를 차량 근처 leading tail, 설정된 preview의 trailing tail, near/mid 전체 support
+  축소와 내부 gap으로 분류하는 measurement-only diagnostics를 추가했다. 좌표는 향후 명시적
+  opt-in 저권한 preview 실험을 위해 보존하지만 기본 adapter의 사용 금지 계약은 바꾸지 않았다.
+
+### Changed
+
+- 시간 제한 shadow-road handoff를 위해 candidate algorithm을
+  `twinlite_v6_shadow_boundary_family_candidate_v2`로 올렸다. 정상적인 2-role 이상
+  same-frame family acceptance gate는 그대로 두고, accepted frame의 `x[0,15]m`에서만
+  기존 `INVALID` sample을 `STRUCTURE_INFERRED`로 승격한다. 이는 관측 승격, temporal
+  prediction 또는 map 보간이 아니며 15m 밖과 family reject frame은 계속 invalid다.
+- candidate algorithm을 `twinlite_v6_shadow_boundary_family_candidate_v3`로 올렸다. strict
+  local-support gate가 `insufficient_local_multi_role_support`로 거부한 frame에 한해서,
+  둘 이상의 same-frame 역할이 충분한 개별 support와 일관된 heading/residual/curvature를
+  보이면 종방향으로 엇갈린 support 합집합을 허용한다. 각 역할이 직접 지지하지 않은 경계
+  sample은 계속 `STRUCTURE_INFERRED`이며 한 역할만 남은 frame과 다른 reject 사유는 복구하지
+  않는다. v3는 기존 strict-accepted geometry를 변경하지 않는다.
+
+### Compatibility
+
+- 기존 `/perception/lane/boundary_observations` 메시지와 MD5, C++ planning adapter 및
+  Marker 토픽은 변경하지 않았다. 새 계약은 additive이며 closed-loop gate 전에는
+  `deployment_allowed=false`다.
+- 새 consumer는 debug/diagnostics만 발행하며 BehaviorCommand, Trajectory와 UDP 제어 출력은
+  없다. 기존 판제 실행 경로의 기본 입력도 변경하지 않았다.
+
+### Frozen planning handoff snapshot (2026-09-15)
+
+- candidate v3의 geometry, threshold, sample support 계약과 config hash를 대표 4개 raw bag의
+  headless result lineage로 동결했다. 이는 interface freeze이며 production control 승격이 아니다.
+- 판제 최소 입력을 `/perception/lane/boundary_family`,
+  `/perception/bev/camera/drivable_probability`, `/perception/bev/camera/coverage`로 문서화했다.
+- 음영 ODD on/off, home/opposing 의미, LiDAR occupancy 결합, fallback과 closed-loop 승격은
+  판제 소유로 남겼고 perception-to-control 연결은 추가하지 않았다.
+
 ## Unreleased - feature/ahn-camera-bev-pilot (typed lane-boundary observation)
 
 ### Added

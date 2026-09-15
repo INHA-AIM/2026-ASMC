@@ -176,6 +176,51 @@ def nearest_polyline_distance(points_xy, reference_xy, chunk_size: int = 256) ->
     return result
 
 
+def nearest_polyline_signed_normal_distance(
+    points_xy, reference_xy, chunk_size: int = 256
+) -> np.ndarray:
+    """Return signed normal distance to an oriented local-frame polyline.
+
+    The reference is oriented toward increasing ``base_link`` x.  Positive
+    values lie to the left of its local tangent.  Endpoint-clamped values are
+    still diagnostic only and should not be interpreted as centimetre-grade
+    ground truth.
+    """
+    points = np.asarray(points_xy, dtype=np.float64).reshape(-1, 2)
+    reference = np.asarray(reference_xy, dtype=np.float64).reshape(-1, 2)
+    if len(reference) < 2 or not np.isfinite(reference).all():
+        raise ValueError("reference must contain a finite N-by-2 polyline")
+    if reference[-1, 0] < reference[0, 0]:
+        reference = reference[::-1].copy()
+    segment_start = reference[:-1]
+    segment_delta = np.diff(reference, axis=0)
+    length_squared = np.sum(segment_delta * segment_delta, axis=1)
+    keep = length_squared > 1e-12
+    segment_start = segment_start[keep]
+    segment_delta = segment_delta[keep]
+    length_squared = length_squared[keep]
+    if not len(segment_start) or int(chunk_size) <= 0:
+        raise ValueError("reference has no measurable segment or chunk is invalid")
+    result = np.empty(len(points), dtype=np.float64)
+    for start in range(0, len(points), int(chunk_size)):
+        stop = min(len(points), start + int(chunk_size))
+        relative = points[start:stop, None, :] - segment_start[None, :, :]
+        parameter = np.clip(
+            np.sum(relative * segment_delta[None, :, :], axis=2)
+            / length_squared[None, :],
+            0.0,
+            1.0,
+        )
+        closest = segment_start[None, :, :] + parameter[:, :, None] * segment_delta[None, :, :]
+        offset = points[start:stop, None, :] - closest
+        squared = np.sum(offset * offset, axis=2)
+        chosen = np.argmin(squared, axis=1)
+        tangent = segment_delta[chosen] / np.sqrt(length_squared[chosen])[:, None]
+        left_normal = np.column_stack((-tangent[:, 1], tangent[:, 0]))
+        result[start:stop] = np.sum(offset[np.arange(stop - start), chosen] * left_normal, axis=1)
+    return result
+
+
 def lidar_paint_alignment(
     points_xyi,
     reference_xy,

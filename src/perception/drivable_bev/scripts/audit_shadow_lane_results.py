@@ -209,6 +209,12 @@ def decode_shared_family_frames(bag_paths):
                     {
                         "accepted": accepted,
                         "reason": str(values.get("reason", status.message)),
+                        "acceptance_mode": str(
+                            values.get(
+                                "acceptance_mode",
+                                "legacy_unspecified" if accepted else "rejected",
+                            )
+                        ),
                         "deployment_allowed": deployment_allowed,
                         "fit_ms": _float_value(values, "fit_ms"),
                         "observed_roles": observed_roles,

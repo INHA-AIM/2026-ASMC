@@ -8,10 +8,13 @@ from drivable_bev.shared_runtime_audit import (
 )
 
 
-def frame(accepted=True, inferred=False):
+def frame(accepted=True, inferred=False, acceptance_mode=None):
     return {
         "accepted": accepted,
         "reason": "accepted" if accepted else "too_few_observed_roles",
+        "acceptance_mode": acceptance_mode or (
+            "strict_local_multi_role" if accepted else "rejected"
+        ),
         "deployment_allowed": False,
         "fit_ms": 12.0,
         "observed_roles": [
@@ -57,9 +60,15 @@ class SharedRuntimeAuditTest(unittest.TestCase):
         self.assertEqual("forbidden", value["consumption_policy"]["invalid"])
 
     def test_reports_rates_widths_and_latency(self):
-        value = summarize_shared_runtime_frames([frame(), frame(False)])
-        self.assertEqual(2, value["frames"])
-        self.assertEqual(0.5, value["accepted_rate"])
+        value = summarize_shared_runtime_frames(
+            [frame(), frame(False), frame(acceptance_mode="distributed_multi_role")]
+        )
+        self.assertEqual(3, value["frames"])
+        self.assertEqual(0.666667, value["accepted_rate"])
+        self.assertEqual(
+            1, value["acceptance_modes"]["distributed_multi_role"]
+        )
+        self.assertEqual(0.333333, value["distributed_multi_role_rate"])
         self.assertEqual(12.0, value["fit_ms"]["p95"])
         self.assertEqual(3.5, value["widths_m"]["left"]["p50"])
         self.assertEqual(1, value["longest_rejected_streak_frames"])

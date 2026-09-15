@@ -18,6 +18,7 @@ required_topics:
   - /perception/lane/boundary_observations
 optional_topics:
   - /perception/bev/diagnostics
+  - /perception/lane/boundary_family
   - /perception/lane/pipeline_audit
   - /perception/lane/debug/shared_family/diagnostics
   - /perception/lane/debug/shared_family/markers
@@ -25,6 +26,7 @@ expected_types:
   /perception/camera/diagnostics: diagnostic_msgs/DiagnosticArray
   /perception/lane/diagnostics: diagnostic_msgs/DiagnosticArray
   /perception/lane/boundary_observations: asmc_msgs/LaneBoundaryObservationArray
+  /perception/lane/boundary_family: asmc_msgs/LaneBoundaryFamily
   /perception/bev/diagnostics: diagnostic_msgs/DiagnosticArray
   /perception/lane/pipeline_audit: diagnostic_msgs/DiagnosticArray
   /perception/lane/debug/shared_family/diagnostics: diagnostic_msgs/DiagnosticArray

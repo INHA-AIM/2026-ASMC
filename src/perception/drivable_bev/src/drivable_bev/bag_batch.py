@@ -138,7 +138,9 @@ def diagnostic_int(values: Mapping, key: str, default: int = 0) -> int:
         return int(default)
 
 
-def result_quality_gates(metadata: Mapping) -> dict:
+def result_quality_gates(
+    metadata: Mapping, require_boundary_family: bool = False
+) -> dict:
     """Build technical, non-accuracy gates for a shadow lane result bag.
 
     Boundary messages must be present, but an individual message may contain
@@ -149,10 +151,13 @@ def result_quality_gates(metadata: Mapping) -> dict:
     typed_boundary_count = topic_message_count(
         metadata, "/perception/lane/boundary_observations"
     )
+    family_boundary_count = topic_message_count(
+        metadata, "/perception/lane/boundary_family"
+    )
     legacy_boundary_count = topic_message_count(
         metadata, "/perception/lane/boundaries"
     )
-    return {
+    result = {
         "result_complete": metadata.get("status") == "complete",
         "camera_diagnostics_recorded": topic_message_count(
             metadata, "/perception/camera/diagnostics"
@@ -164,8 +169,13 @@ def result_quality_gates(metadata: Mapping) -> dict:
             metadata, "/perception/lane/diagnostics"
         ) > 0,
         "lane_boundaries_recorded": (
-            typed_boundary_count > 0 or legacy_boundary_count > 0
+            typed_boundary_count > 0
+            or family_boundary_count > 0
+            or legacy_boundary_count > 0
         ),
         "lane_outputs_positive": diagnostic_int(lane, "outputs") > 0,
         "lane_errors_zero": diagnostic_int(lane, "errors") == 0,
     }
+    if require_boundary_family:
+        result["boundary_family_recorded"] = family_boundary_count > 0
+    return result

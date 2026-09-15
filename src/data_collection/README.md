@@ -15,6 +15,8 @@
 | 일반 ROS 토픽 snapshot | `sync_collector.launch` profile | 보조·레거시 경로 |
 | 팀 공용 재현 bag | allowlist profile + raw/result recorder/replay | `camera_raw`·`full_raw`·paused replay·result smoke 완료 |
 | 음영구간 판제 handoff 결과 | `shadow_boundary_result` | typed boundary·camera/lane diagnostics 최소 기록 |
+| shared-family read-only 판제 adapter A/B | `shadow_boundary_family_adapter_result` | family 입력·adapter 진단 필수, strip marker 선택 기록; deployment 금지 |
+| 음영구간 v3 판제 인수 replay | `shadow_camera_perception_handoff_result` | family·drivable score·coverage와 3단 diagnostics 필수; 제어 승격과 무관 |
 | 고주기 RGB sequence | v2 + Simulation Time Sensor Record | 장착된 일반 센서만 저장. 시계열 학습·재생 후보 |
 | 고주기 supervised sequence | 최소 RGB+Semantic GT 센서셋 + Simulation Time Sensor Record | 별도 pilot 후 채택. v2 Sensor Record만으로 Semantic GT가 생기지 않음 |
 | 고주기 Streaming GT | GT UDP bridge source-time + privileged bag | schema·Object ID 보존 검증 완료, p95 정합 미달로 학습 pair는 Capture 우선 |

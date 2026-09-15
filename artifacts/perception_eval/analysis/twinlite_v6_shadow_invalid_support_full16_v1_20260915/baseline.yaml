@@ -1,0 +1,88 @@
+schema_version: asmc-shadow-invalid-support-decision-1.0.0
+created_at_kst: "2026-09-15"
+status: full_12_plus_4_classification_complete_support_policy_unchanged
+
+scope:
+  raw_runs: 16
+  valid_frames: 4023
+  baseline_matrix_runs: 12
+  maneuver_runs: 4
+  checkpoint_sha256: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+  current_read_only_adapter_audit_window_m: [0.0, 15.0]
+  current_far_audit_band_m: [15.0, 20.0]
+  gap_tolerance_m: 0.26
+  whole_support_reporting_threshold: 0.80
+  tail_metrics_explicit_rate: 1.0
+
+classification:
+  multi_label: true
+  vehicle_near_leading_tail:
+    frames: 561
+    rate: 0.1394
+    all_frame_length_p95_m: 0.3674
+    meaning: invalid support touches the control start and overlaps the vehicle-front interval
+  preview_trailing_tail:
+    frames: 3453
+    rate: 0.8583
+    all_frame_length_p50_m: 0.5029
+    all_frame_length_p95_m: 5.0
+    meaning: invalid support touches the configured preview end
+  preview_entry_missing:
+    frames: 257
+    rate: 0.0639
+    meaning: usable support does not anchor at the start of the preview zone
+  whole_support_shrink:
+    frames: 304
+    rate: 0.0756
+    meaning: near 3.845-10m or mid 10-15m support coverage is below 0.80
+  internal_support_gap:
+    frames: 30
+    rate: 0.0075
+    all_frame_length_p95_m: 0.0
+    meaning: an invalid gap is bracketed by usable intervals inside 0-15m
+
+weather:
+  sunny:
+    frames: 2389
+    vehicle_near_leading_tail_rate: 0.1545
+    preview_trailing_tail_rate: 0.8263
+    preview_entry_missing_rate: 0.0360
+    whole_support_shrink_rate: 0.0628
+  foggy:
+    frames: 1634
+    vehicle_near_leading_tail_rate: 0.1175
+    preview_trailing_tail_rate: 0.9051
+    preview_entry_missing_rate: 0.1047
+    whole_support_shrink_rate: 0.0942
+
+contract:
+  support_state_changed: false
+  geometry_repair_applied: false
+  default_invalid_planning_use_allowed: false
+  invalid_coordinates_retained: true
+  interpretation: >-
+    INVALID coordinates remain available for audit and a future explicit
+    low-authority planning preview/fallback experiment. They are not claimed
+    camera evidence and must not be relabelled as OBSERVED or
+    STRUCTURE_INFERRED. The current read-only adapter still splits at INVALID.
+  future_range_extension: >-
+    Audit bounds are named configuration zones, not a fixed interface. A later
+    segmentation checkpoint may extend the measured range without changing
+    the classification or message structure.
+
+decision:
+  current_read_only_adapter_audit_window_m: [0.0, 15.0]
+  fixed_distance_interface_adopted: false
+  mandatory_20m_extension: false
+  next_gate: >-
+    Review map distance and camera overlays for each invalid category. Evaluate
+    vehicle-near same-frame structural completion separately from optional far
+    preview. Do not promote whole-support shrink or unsupported far tails.
+
+artifacts:
+  persistent_per_frame_audit: /data/rosbags/audits/shadow_invalid_support_full16_v1_20260915
+  rejected_no_evidence_attempt: /data/rosbags/audits/rejected_shadow_invalid_support_no_evidence_20260915
+  detailed_summary: summary.json
+  planning_runs: runs.csv
+  classification_runs: invalid_support_runs.csv
+  source_metadata: metadata.json

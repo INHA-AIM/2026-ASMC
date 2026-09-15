@@ -4,6 +4,15 @@ import unittest
 
 import numpy as np
 
+from drivable_bev.boundary_family_output import (
+    ROLE_LEFT_OUTER_BOUNDARY,
+    ROLE_RIGHT_OUTER_BOUNDARY,
+    ROLE_ROAD_CENTRE_BOUNDARY,
+    SUPPORT_INVALID,
+    SUPPORT_OBSERVED,
+    SUPPORT_STRUCTURE_INFERRED,
+    build_boundary_family_output,
+)
 from drivable_bev.lane_evidence import LaneNode
 from drivable_bev.lane_tracking import LaneTrack
 from drivable_bev.shared_lane_family import (
@@ -58,7 +67,58 @@ def without_station_range(value, lower, upper):
     )
 
 
+def add_lateral_slope(value, slope):
+    nodes = []
+    for node in value.nodes:
+        xy = np.asarray(node.xy, dtype=np.float64).copy()
+        xy[1] += float(slope) * float(xy[0])
+        nodes.append(
+            LaneNode(
+                xy=xy,
+                class_id=node.class_id,
+                confidence=node.confidence,
+                geometric_quality=node.geometric_quality,
+                source_mask=node.source_mask,
+                support=node.support,
+                x_bin=node.x_bin,
+            )
+        )
+    return LaneTrack(tuple(nodes))
+
+
 class SharedLaneFamilyTest(unittest.TestCase):
+    def test_candidate_output_preserves_inferred_and_invalid_samples(self):
+        family = fit_shared_lane_family(
+            [
+                track(1, 3.50, x_max=10.0),
+                track(1, -3.50, x_max=18.0),
+            ]
+        )
+        output = build_boundary_family_output(family, "accepted")
+        self.assertTrue(output.valid)
+        self.assertEqual("accepted", output.status_reason)
+        self.assertEqual(
+            [
+                ROLE_LEFT_OUTER_BOUNDARY,
+                ROLE_ROAD_CENTRE_BOUNDARY,
+                ROLE_RIGHT_OUTER_BOUNDARY,
+            ],
+            [value.role for value in output.boundaries],
+        )
+        yellow = output.boundaries[1]
+        self.assertEqual(SUPPORT_STRUCTURE_INFERRED, yellow.overall_state)
+        self.assertIn(SUPPORT_STRUCTURE_INFERRED, yellow.support_state)
+        self.assertIn(SUPPORT_INVALID, yellow.support_state)
+        self.assertNotIn(SUPPORT_OBSERVED, yellow.support_state)
+        self.assertEqual(len(yellow.polyline_xy), len(yellow.support_state))
+
+    def test_rejected_candidate_is_fresh_invalid_empty_frame(self):
+        output = build_boundary_family_output(None, "too_few_observed_roles")
+        self.assertFalse(output.valid)
+        self.assertEqual("too_few_observed_roles", output.status_reason)
+        self.assertEqual(3, output.expected_boundary_count)
+        self.assertEqual((), output.boundaries)
+
     def test_state_segments_do_not_bridge_transitions(self):
         points = np.column_stack((np.arange(8, dtype=np.float64), np.zeros(8)))
         states = np.asarray(
@@ -181,6 +241,135 @@ class SharedLaneFamilyTest(unittest.TestCase):
                 family.boundary(RIGHT_ROLE).sample_state[tail] == SAMPLE_INVALID
             )
         )
+
+    def test_bounded_same_frame_completion_promotes_only_candidate_window(self):
+        family, audit = fit_shared_lane_family_with_audit(
+            [
+                track(1, 3.48, x_max=10.0),
+                track(2, 0.0, x_max=10.0),
+                track(1, -3.52, x_max=18.0),
+            ],
+            {
+                "same_frame_completion_enabled": True,
+                "same_frame_completion_x_min_m": 0.0,
+                "same_frame_completion_x_max_m": 15.0,
+            },
+        )
+        promoted_tail = (family.centre_points[:, 0] > 11.0) & (
+            family.centre_points[:, 0] <= 15.0
+        )
+        far_tail = family.centre_points[:, 0] > 15.0
+        self.assertTrue(np.any(promoted_tail))
+        self.assertTrue(np.any(far_tail))
+        self.assertTrue(np.all(family.sample_valid[promoted_tail]))
+        self.assertTrue(
+            np.all(
+                family.boundary(RIGHT_ROLE).sample_state[promoted_tail]
+                == SAMPLE_STRUCTURE_INFERRED
+            )
+        )
+        self.assertTrue(np.all(~family.sample_valid[far_tail]))
+        self.assertTrue(
+            np.all(
+                family.boundary(RIGHT_ROLE).sample_state[far_tail]
+                == SAMPLE_INVALID
+            )
+        )
+        self.assertGreater(
+            audit["same_frame_completion"]["promoted_sample_count"], 0
+        )
+        self.assertFalse(
+            audit["same_frame_completion"]["temporal_prediction_used"]
+        )
+
+    def test_same_frame_completion_never_accepts_one_role_family(self):
+        family, audit = fit_shared_lane_family_with_audit(
+            [track(2, 0.0)],
+            {
+                "same_frame_completion_enabled": True,
+                "distributed_support_enabled": True,
+            },
+        )
+        self.assertIsNone(family)
+        self.assertEqual("too_few_observed_roles", audit["reason"])
+
+    def test_same_frame_completion_range_is_validated(self):
+        with self.assertRaises(ValueError):
+            fit_shared_lane_family(
+                [track(1, 3.48), track(2, 0.0)],
+                {
+                    "same_frame_completion_enabled": True,
+                    "same_frame_completion_x_min_m": 15.0,
+                    "same_frame_completion_x_max_m": 15.0,
+                },
+            )
+
+    def test_distributed_multi_role_support_recovers_staggered_fragments(self):
+        tracks = [
+            track(1, 3.48, x_min=0.0, x_max=5.0),
+            track(2, 0.0, x_min=5.5, x_max=11.0),
+            track(1, -3.52, x_min=11.5, x_max=18.0),
+        ]
+        strict, strict_audit = fit_shared_lane_family_with_audit(tracks)
+        self.assertIsNone(strict)
+        self.assertEqual(
+            "insufficient_local_multi_role_support", strict_audit["reason"]
+        )
+
+        family, audit = fit_shared_lane_family_with_audit(
+            tracks,
+            {
+                "distributed_support_enabled": True,
+                "same_frame_completion_enabled": True,
+            },
+        )
+        self.assertIsNotNone(family)
+        self.assertEqual("distributed_multi_role", audit["acceptance_mode"])
+        self.assertTrue(audit["distributed_support"]["accepted"])
+        self.assertEqual(3, len(audit["distributed_support"]["qualified_roles"]))
+        self.assertTrue(
+            all(
+                np.any(boundary.sample_state == SAMPLE_OBSERVED)
+                and np.any(boundary.sample_state == SAMPLE_STRUCTURE_INFERRED)
+                for boundary in family.boundaries
+            )
+        )
+
+    def test_distributed_support_rejects_inconsistent_role_headings(self):
+        family, audit = fit_shared_lane_family_with_audit(
+            [
+                track(1, 3.48, x_min=0.0, x_max=5.0),
+                add_lateral_slope(
+                    track(1, -3.52, x_min=5.5, x_max=11.0), 0.20
+                ),
+            ],
+            {
+                "distributed_support_enabled": True,
+                "distributed_max_heading_delta_deg": 5.0,
+            },
+        )
+        self.assertIsNone(family)
+        self.assertEqual("insufficient_local_multi_role_support", audit["reason"])
+        self.assertIn(
+            "heading_consistency",
+            audit["distributed_support"]["rejection_reasons"],
+        )
+
+    def test_distributed_flag_does_not_change_strict_family_geometry(self):
+        tracks = [track(1, 3.48), track(2, 0.0), track(1, -3.52)]
+        strict, strict_audit = fit_shared_lane_family_with_audit(tracks)
+        enabled, enabled_audit = fit_shared_lane_family_with_audit(
+            tracks, {"distributed_support_enabled": True}
+        )
+        self.assertEqual("strict_local_multi_role", strict_audit["acceptance_mode"])
+        self.assertEqual("strict_local_multi_role", enabled_audit["acceptance_mode"])
+        self.assertFalse(enabled_audit["distributed_support"]["attempted"])
+        self.assertTrue(np.array_equal(strict.control_points, enabled.control_points))
+        self.assertTrue(np.array_equal(strict.centre_points, enabled.centre_points))
+        self.assertTrue(np.array_equal(strict.sample_valid, enabled.sample_valid))
+        for first, second in zip(strict.boundaries, enabled.boundaries):
+            self.assertTrue(np.array_equal(first.sample_points, second.sample_points))
+            self.assertTrue(np.array_equal(first.sample_state, second.sample_state))
 
     def test_laterally_displaced_support_is_not_marked_observed(self):
         yellow = track(2, 0.0)

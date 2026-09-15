@@ -1,0 +1,42 @@
+name: shadow_camera_perception_handoff_result
+description: Frozen shadow-camera lane-family and drivable-BEV outputs for planning handoff replay.
+kind: result
+transport: replay
+timestamp_mode: replay
+timestamp_provenance:
+  output_header: inherited from the synchronized parent raw camera headers
+  diagnostics_header: replay clock at diagnostic publication
+  bag_time: replay clock at result recorder receipt
+sensor_set: replay_parent
+map: kcity2025
+compression: lz4
+privileged_gt: false
+# The data contract is frozen for integration, but activation and closed-loop
+# authority remain owned by planning. Recording this profile does not promote
+# the source to an autonomous control input.
+deployment_allowed: false
+required_topics:
+  - /perception/lane/boundary_family
+  - /perception/bev/camera/drivable_probability
+  - /perception/bev/camera/coverage
+  - /perception/camera/diagnostics
+  - /perception/bev/diagnostics
+  - /perception/lane/diagnostics
+optional_topics:
+  - /perception/bev/camera/source_count
+  - /perception/bev/camera/road_marking/class_id
+  - /perception/bev/camera/road_marking/confidence
+  - /perception/lane/pipeline_audit
+  - /perception/lane/debug/shared_family/diagnostics
+expected_types:
+  /perception/lane/boundary_family: asmc_msgs/LaneBoundaryFamily
+  /perception/bev/camera/drivable_probability: sensor_msgs/Image
+  /perception/bev/camera/coverage: sensor_msgs/Image
+  /perception/camera/diagnostics: diagnostic_msgs/DiagnosticArray
+  /perception/bev/diagnostics: diagnostic_msgs/DiagnosticArray
+  /perception/lane/diagnostics: diagnostic_msgs/DiagnosticArray
+  /perception/bev/camera/source_count: sensor_msgs/Image
+  /perception/bev/camera/road_marking/class_id: sensor_msgs/Image
+  /perception/bev/camera/road_marking/confidence: sensor_msgs/Image
+  /perception/lane/pipeline_audit: diagnostic_msgs/DiagnosticArray
+  /perception/lane/debug/shared_family/diagnostics: diagnostic_msgs/DiagnosticArray

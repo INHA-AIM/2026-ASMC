@@ -1,0 +1,88 @@
+schema_version: asmc-shadow-invalid-map-distance-baseline-1.0.0
+status: representative_offline_measurement
+created_date_kst: 2026-09-15
+
+scope:
+  runs: 4
+  frames: 1031
+  inside_pseudo_gt_odd_frames: 378
+  category_frame_observations: 408
+  runtime_output_changed: false
+  runtime_ego_motion_compensation: false
+  support_state_changed: false
+  invalid_geometry_planning_authority: false
+
+pose_alignment:
+  requested: interpolate
+  interpolated_frames: 1030
+  nearest_fallback_frames: 1
+  nearest_age_ms:
+    p50: 7.054329
+    p95: 11.620283
+  bracket_span_ms:
+    p50: 17.280936
+    p95: 34.469820
+  interpolated_minus_nearest_pose:
+    translation_m_p95: 0.120813
+    heading_deg_p95: 0.056164
+
+distance_method:
+  association: same_boundary_role_only
+  residual: signed_normal_distance_to_oriented_map_polyline
+  roles:
+    - left_outer_boundary
+    - yellow_centre_boundary
+    - right_outer_boundary
+  pseudo_gt_status: map_pseudo_gt
+  pseudo_gt_sha256: b263e82d8483d7dc823085070b74a0f4f9b79b4aef9d8588b4665fa40474cba3
+  interpretation: review_signal_only
+
+alignment_sensitivity:
+  paired_category_frames: 408
+  aligned_minus_nearest_frame_p95_m:
+    p50: -0.000404
+    p95: 0.006471
+    absolute_p95: 0.012542
+    maximum_absolute: 0.022576
+  conclusion: source-time interpolation removes a small evaluation ambiguity but does not explain the remaining far-range disagreement
+
+relaxed_review_bands:
+  supportive_max_m: 0.35
+  review_max_m: 0.60
+  priority_review_above_m: 0.60
+  acceptance_gate: false
+  category_frame_counts:
+    supportive: 385
+    review: 23
+    priority_review: 0
+  warning: category-frame observations are multi-label and are not independent frame counts
+
+selected_results:
+  vehicle_near_leading_tail_frame_p95_m:
+    role_p50_range: [0.074944, 0.107407]
+    role_p95_range: [0.152235, 0.187155]
+  whole_support_shrink_frame_p95_m:
+    role_p50_range: [0.039495, 0.078313]
+    role_p95_range: [0.146668, 0.177157]
+  internal_support_gap_frame_p95_m:
+    role_p50_range: [0.024378, 0.035428]
+    role_p95_range: [0.044090, 0.081070]
+  preview_entry_missing_frame_p95_m:
+    role_p50_range: [0.071403, 0.122593]
+    role_p95_range: [0.193705, 0.199840]
+  preview_trailing_tail_frame_p95_m:
+    role_p50_range: [0.061993, 0.080592]
+    role_p95_range: [0.359296, 0.430744]
+
+artifacts:
+  per_run_root: /data/rosbags/audits/shadow_invalid_map_distance_representative_v1_20260915
+  aggregate_summary: summary.json
+  category_role_csv: metrics_by_category_role.csv
+  run_csv: metrics_by_run.csv
+  overlays: contact_sheet_<category>_<review_band>.jpg
+
+decision:
+  representative_measurement: pass
+  promote_invalid_to_structure_inferred: false
+  adopt_hard_distance_gate: false
+  next: test a separately typed low-authority same-frame geometry candidate, then repeat on all 12+4 bags if it improves planning continuity without false bridges

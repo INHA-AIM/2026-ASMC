@@ -52,6 +52,15 @@ def summarize_shared_runtime_frames(frames: Sequence[Mapping]) -> dict:
     total = len(frames)
     accepted = [frame for frame in frames if bool(frame.get("accepted"))]
     reasons = Counter(str(frame.get("reason", "unknown")) for frame in frames)
+    acceptance_modes = Counter(
+        str(
+            frame.get(
+                "acceptance_mode",
+                "legacy_unspecified" if frame.get("accepted") else "rejected",
+            )
+        )
+        for frame in frames
+    )
     observed_role_frames = Counter()
     inferred_role_frames = Counter()
     role_lengths = {
@@ -133,6 +142,10 @@ def summarize_shared_runtime_frames(frames: Sequence[Mapping]) -> dict:
         "accepted_frames": len(accepted),
         "accepted_rate": round(_rate(len(accepted), total), 6),
         "rejection_reasons": dict(sorted(reasons.items())),
+        "acceptance_modes": dict(sorted(acceptance_modes.items())),
+        "distributed_multi_role_rate": round(
+            _rate(acceptance_modes["distributed_multi_role"], total), 6
+        ),
         "longest_rejected_streak_frames": longest_rejected,
         "deployment_allowed_frames": deployment_allowed_frames,
         "observed_role_presence_rates": {

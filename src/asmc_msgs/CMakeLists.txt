@@ -14,6 +14,8 @@ add_message_files(
   DetectedObjectArray.msg
   LaneBoundaryObservation.msg
   LaneBoundaryObservationArray.msg
+  LaneBoundaryFamilyMember.msg
+  LaneBoundaryFamily.msg
   BehaviorContext.msg
   TrajectoryPoint.msg
   Trajectory.msg
