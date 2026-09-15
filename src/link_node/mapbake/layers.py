@@ -286,6 +286,7 @@ def bake_stopline(
     group_radius_m: float = 12.0,
     include_nodes: Optional[Iterable[str]] = None,
     exclude_nodes: Optional[Iterable[str]] = None,
+    connect_node_groups: Optional[Iterable[Iterable[str]]] = None,
     only_with_traffic_light: bool = False,
     clip_to: Optional[np.ndarray] = None,
 ) -> LayerResult:
@@ -333,6 +334,7 @@ def bake_stopline(
 
     skipped = 0
     features: List[Dict[str, Any]] = []
+    node_by_id = {node.idx: node for node in data.stop_line_nodes}
     for node in data.stop_line_nodes:
         if not selected(node):
             skipped += 1
@@ -365,6 +367,69 @@ def bake_stopline(
             'aligned': node.idx in bars,
         })
 
+    # 일부 다차로 정지선은 링크 중심 간격이 width보다 넓어 둥근 line cap만
+    # 간신히 맞닿는다. 명시한 그룹만 노드 중심 사이를 같은 두께로 이어 접합부가
+    # 가늘어지지 않게 한다. 다른 정지선의 길이와 선택에는 영향을 주지 않는다.
+    connected_groups = 0
+    merged_vector_groups = 0
+    for group in connect_node_groups or ():
+        group_ids = [str(idx) for idx in group]
+        group_nodes = [node_by_id[idx] for idx in group_ids
+                       if str(idx) in node_by_id and selected(node_by_id[str(idx)])]
+        if len(group_nodes) < 2:
+            continue
+        points = np.stack([node.point for node in group_nodes], axis=0)
+        # 설정 순서와 무관하게 첫 두 노드를 잇는 축으로 정렬한다.
+        axis = points[1] - points[0]
+        norm = float(np.linalg.norm(axis))
+        if norm < 1e-8:
+            continue
+        order = np.argsort(points.dot(axis / norm))
+        draw_polyline(canvas, grid, points[order], thickness)
+        connected_groups += 1
+
+        # H5의 벡터 표현도 같은 그룹을 실제 선분 하나로 만든다. 각 원본 feature의
+        # 최외곽 끝점을 공통 bar 축에 투영해 전체 길이를 구한다.
+        member_features = [f for f in features if f['idx'] in group_ids]
+        if len(member_features) >= 2:
+            direction = np.array([member_features[0]['dir_x'],
+                                  member_features[0]['dir_y']], dtype=np.float64)
+            direction /= np.linalg.norm(direction)
+            normal = np.array([-direction[1], direction[0]])
+            end_projections = []
+            normal_projections = []
+            for feature in member_features:
+                center = np.array([feature['x'], feature['y']], dtype=np.float64)
+                feature_dir = np.array([feature['dir_x'], feature['dir_y']],
+                                       dtype=np.float64)
+                if np.dot(feature_dir, direction) < 0:
+                    feature_dir = -feature_dir
+                half = 0.5 * float(feature['length_m'])
+                for endpoint in (center - half * feature_dir,
+                                 center + half * feature_dir):
+                    end_projections.append(float(np.dot(endpoint, direction)))
+                normal_projections.append(float(np.dot(center, normal)))
+            lo, hi = min(end_projections), max(end_projections)
+            merged_center = (0.5 * (lo + hi) * direction
+                             + np.mean(normal_projections) * normal)
+            first_at = min(i for i, f in enumerate(features) if f['idx'] in group_ids)
+            features[:] = [f for f in features if f['idx'] not in group_ids]
+            merged = {
+                'idx': '+'.join(group_ids),
+                'x': float(merged_center[0]),
+                'y': float(merged_center[1]),
+                'dir_x': float(direction[0]),
+                'dir_y': float(direction[1]),
+                'heading_x': float(member_features[0]['heading_x']),
+                'heading_y': float(member_features[0]['heading_y']),
+                'length_m': float(hi - lo),
+                'traffic_light_id': member_features[0]['traffic_light_id'],
+                'aligned': True,
+                'merged_nodes': group_ids,
+            }
+            features.insert(min(first_at, len(features)), merged)
+            merged_vector_groups += 1
+
     # 도로 밖으로 나간 정지선 양끝을 잘라낸다.
     # 정지선 길이는 링크의 차로 폭(3.5 m)인데 도로는 drivable.outer_trim_m 만큼
     # 깎여 있으므로, 깎은 쪽 끝이 그만큼 삐져나온다. 중앙은 항상 도로 안이다.
@@ -382,6 +447,8 @@ def bake_stopline(
             'drawn': drawn,
             'filtered_out': skipped,
             'aligned_across_lanes': len(bars),
+            'connected_node_groups': connected_groups,
+            'merged_vector_groups': merged_vector_groups,
             'unresolved_heading': unresolved,
             'clipped_to_road_m2': round(clipped_m2, 1),
             'thickness_px': thickness,

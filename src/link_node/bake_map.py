@@ -14,7 +14,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import cv2
 import numpy as np
@@ -24,6 +24,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mapbake.io_mgeo import load_link_node
 from mapbake.layers import bake_drivable, bake_lane, bake_stopline
+from mapbake.observed_lane import (
+    apply_observed_lane_overrides,
+    exclude_road_between_observed_boundaries,
+    restore_trimmed_road_on_links,
+    trim_road_outside_observed_lanes,
+)
 from mapbake.raster import RasterGrid, compute_bounds
 from mapbake.topology import lane_pinch_corrections
 from mapbake.writer import write_h5
@@ -37,11 +43,23 @@ def _resolve(p: str) -> Path:
     return path if path.is_absolute() else REPO_ROOT / path
 
 
-def colorize(road: np.ndarray, lane: np.ndarray, stopline: np.ndarray) -> np.ndarray:
-    """road 회색 / lane 노랑 / stopline 빨강 (BGR). 뒤에 칠한 것이 위로 온다."""
+def colorize(
+    road: np.ndarray,
+    lane: np.ndarray,
+    stopline: np.ndarray,
+    lane_white: Optional[np.ndarray] = None,
+    lane_yellow: Optional[np.ndarray] = None,
+) -> np.ndarray:
+    """road 회색 / 흰·황색 차선 / stopline 빨강 (BGR)."""
     canvas = np.zeros((*road.shape, 3), dtype=np.uint8)
     canvas[road > 0] = (90, 90, 90)
-    canvas[lane > 0] = (40, 230, 240)
+    if lane_white is None or lane_yellow is None:
+        canvas[lane > 0] = (40, 230, 240)
+    else:
+        colored = cv2.bitwise_or(lane_white, lane_yellow)
+        canvas[(lane > 0) & (colored == 0)] = (40, 230, 240)
+        canvas[lane_white > 0] = (235, 235, 235)
+        canvas[lane_yellow > 0] = (0, 220, 255)
     canvas[stopline > 0] = (60, 60, 235)
     return canvas
 
@@ -114,14 +132,20 @@ def build_overlay(
     lane: np.ndarray,
     stopline: np.ndarray,
     max_px: int,
+    lane_white: Optional[np.ndarray] = None,
+    lane_yellow: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     h, w = road.shape
     scale = min(1.0, max_px / max(h, w))
     if scale < 1.0:
         size = (max(1, int(w * scale)), max(1, int(h * scale)))
         road, lane, stopline = (_maxpool_to(x, size) for x in (road, lane, stopline))
+        if lane_white is not None:
+            lane_white = _maxpool_to(lane_white, size)
+        if lane_yellow is not None:
+            lane_yellow = _maxpool_to(lane_yellow, size)
     # 이미지 행이 +y 이므로, 위쪽이 북쪽이 되도록 뒤집어 저장한다.
-    return cv2.flip(colorize(road, lane, stopline), 0)
+    return cv2.flip(colorize(road, lane, stopline, lane_white, lane_yellow), 0)
 
 
 def build_zoom(
@@ -131,6 +155,8 @@ def build_zoom(
     grid: RasterGrid,
     center_xy: np.ndarray,
     half_extent_m: float,
+    lane_white: Optional[np.ndarray] = None,
+    lane_yellow: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """월드 한 지점 주변을 원해상도로 잘라낸다. 차선/정지선 형상 육안 검증용."""
     c, r = grid.to_pixel(np.asarray(center_xy).reshape(1, 2))[0]
@@ -139,7 +165,10 @@ def build_zoom(
     r0, r1 = max(0, r - half), min(grid.height_px, r + half)
     if c1 - c0 < 2 or r1 - r0 < 2:
         return np.zeros((2, 2, 3), dtype=np.uint8)
-    crop = colorize(road[r0:r1, c0:c1], lane[r0:r1, c0:c1], stopline[r0:r1, c0:c1])
+    white_crop = None if lane_white is None else lane_white[r0:r1, c0:c1]
+    yellow_crop = None if lane_yellow is None else lane_yellow[r0:r1, c0:c1]
+    crop = colorize(road[r0:r1, c0:c1], lane[r0:r1, c0:c1],
+                    stopline[r0:r1, c0:c1], white_crop, yellow_crop)
     return cv2.flip(crop, 0)
 
 
@@ -255,6 +284,115 @@ def main() -> int:
     lane = bake_lane(data, grid, centerlines=centerlines,
                      clip_to=road.image if geom.get('clip_lane_to_road', True) else None,
                      **lane_cfg)
+
+    # 링크 기반 차선은 디버그용 prior로 보존한다. 최종 사용 여부는 observed 설정이다.
+    observed_lane = None
+    observed_road_trim = None
+    road_manual_restore = None
+    road_boundary_exclusion = None
+    observed_cfg = dict(cfg.get('observed_lane', {}))
+    if observed_cfg.pop('enabled', False):
+        trim_outer_road = bool(observed_cfg.pop('trim_outer_road', False))
+        outer_trim_cfg = dict(observed_cfg.pop('outer_trim', {}))
+        boundary_exclusion_cfg = list(
+            observed_cfg.pop('road_exclusions_between_boundaries', []))
+        restore_link_ids = set(outer_trim_cfg.pop('restore_links', []))
+        restore_link_width_scale = float(
+            outer_trim_cfg.pop('restore_link_width_scale', 1.0))
+        observed_sources = []
+        for item in observed_cfg.pop('sources', []):
+            source = dict(item)
+            source['path'] = str(_resolve(str(source['path'])))
+            observed_sources.append(source)
+        observed_lane = apply_observed_lane_overrides(
+            lane.image,
+            grid,
+            observed_sources,
+            road=road.image,
+            **observed_cfg,
+        )
+
+    lane_image = observed_lane.image if observed_lane is not None else lane.image
+    road_image = road.image
+    if observed_lane is not None and np.any(observed_lane.observed_road):
+        # 링크 폭보다 실측 경계가 바깥에 있는 구간은 좌·우 경계 사이를 road에 보강한다.
+        road_image = cv2.bitwise_or(road.image, observed_lane.observed_road)
+        added = int(((road_image > 0) & (road.image == 0)).sum())
+        observed_lane.stats['road_added_px'] = added
+        observed_lane.stats['road_added_m2'] = round(
+            added / (grid.pixels_per_meter ** 2), 2)
+    if observed_lane is not None and trim_outer_road:
+        road_before_outer_trim = road_image
+        road_link_ids = {feature['idx'] for feature in road.features}
+        road_centerlines = [
+            centerlines.get(link.idx, link.points)
+            for link in data.valid_links if link.idx in road_link_ids
+        ]
+        observed_road_trim = trim_road_outside_observed_lanes(
+            road_image,
+            observed_lane.observed,
+            grid,
+            observed_lane.features,
+            road_centerlines,
+            **outer_trim_cfg,
+        )
+        road_image = observed_road_trim.image
+        if restore_link_ids:
+            links_by_id = {link.idx: link for link in data.valid_links}
+            missing = sorted(restore_link_ids - set(links_by_id))
+            if missing:
+                raise ValueError(
+                    f'outer_trim.restore_links에 없는 링크: {", ".join(missing)}')
+            restore_links = [
+                {
+                    'idx': idx,
+                    'points': centerlines.get(idx, links_by_id[idx].points),
+                    'width_m': links_by_id[idx].width_m,
+                }
+                for idx in sorted(restore_link_ids)
+            ]
+            # 링크 기반 원본 road에 실제로 있었지만 outer trim이 잘못 제거한 영역만
+            # 되살린다. 관측 polygon 자체를 확장하거나 새 도로를 만들지는 않는다.
+            road_image, road_manual_restore, restore_stats = (
+                restore_trimmed_road_on_links(
+                    road_image,
+                    road.image,
+                    grid,
+                    restore_links,
+                    width_scale=restore_link_width_scale,
+                ))
+            # 복구된 내부 차선은 더 이상 '외곽 도색 제외' 진단에 남기지 않는다.
+            observed_road_trim.excluded_lane_mask = cv2.bitwise_and(
+                observed_road_trim.excluded_lane_mask,
+                cv2.bitwise_not(road_manual_restore),
+            )
+            observed_road_trim.removed_mask = cv2.bitwise_and(
+                road_before_outer_trim, cv2.bitwise_not(road_image))
+            remaining_removed_px = int(
+                (observed_road_trim.removed_mask > 0).sum())
+            remaining_excluded_px = int(
+                (observed_road_trim.excluded_lane_mask > 0).sum())
+            observed_road_trim.stats.update({
+                'removed_px': remaining_removed_px,
+                'removed_m2': round(
+                    remaining_removed_px / (grid.pixels_per_meter ** 2), 2),
+                'excluded_lane_px': remaining_excluded_px,
+                'excluded_lane_m2': round(
+                    remaining_excluded_px / (grid.pixels_per_meter ** 2), 2),
+            })
+            observed_road_trim.stats['manual_link_restore'] = restore_stats
+        observed_lane.stats['outer_road_trim'] = observed_road_trim.stats
+    if observed_lane is not None and boundary_exclusion_cfg:
+        road_image, road_boundary_exclusion, exclusion_stats = (
+            exclude_road_between_observed_boundaries(
+                road_image,
+                grid,
+                observed_lane.features,
+                boundary_exclusion_cfg,
+            ))
+        observed_lane.stats['road_boundary_exclusion'] = exclusion_stats
+    if observed_lane is not None:
+        print(f'[bake] observed_lane {json.dumps(observed_lane.stats, ensure_ascii=False)}')
     stop_cfg = dict(cfg.get('stopline', {}))
     route_yaml = args.stopline_route or stop_cfg.pop('route_yaml', None)
     if route_yaml:
@@ -265,7 +403,7 @@ def main() -> int:
     # 정지선 양끝이 밖으로 나가 stopline_on_road_ratio 가 내려간다.
     stop = bake_stopline(
         data, grid,
-        clip_to=road.image if geom.get('clip_stopline_to_road', True) else None,
+        clip_to=road_image if geom.get('clip_stopline_to_road', True) else None,
         **stop_cfg)
     for name, res in (('road', road), ('lane', lane), ('stopline', stop)):
         stats = dict(res.stats)
@@ -279,21 +417,48 @@ def main() -> int:
                   f'{" ..." if len(partial) > 6 else ""}')
             print(f'       도로 전체를 빼려면 exclude_roads 에 road_id 를 넣으세요.')
 
-    metrics = compute_metrics(road.image, lane.image, stop.image, grid)
+    metrics = compute_metrics(road_image, lane_image, stop.image, grid)
     print(f'[check] {json.dumps(metrics, ensure_ascii=False)}')
 
     out_h5 = args.output or _resolve(cfg['output']['h5'])
+    output_layers = {
+        'road': road_image,
+        'lane': lane_image,
+        'stopline': stop.image,
+    }
+    if observed_lane is not None:
+        output_layers.update({
+            'lane_prior': lane.image,
+            'lane_observed': observed_lane.observed,
+            'lane_observed_white': observed_lane.observed_white,
+            'lane_observed_yellow': observed_lane.observed_yellow,
+            'lane_erase_mask': observed_lane.erase_mask,
+            'road_prior': road.image,
+            'road_observed': observed_lane.observed_road,
+        })
+        if observed_road_trim is not None:
+            output_layers['road_outer_trim_mask'] = observed_road_trim.removed_mask
+            output_layers['road_outer_lane_excluded'] = (
+                observed_road_trim.excluded_lane_mask)
+        if road_manual_restore is not None:
+            output_layers['road_manual_restore'] = road_manual_restore
+        if road_boundary_exclusion is not None:
+            output_layers['road_boundary_exclusion'] = road_boundary_exclusion
     write_h5(
         out_h5,
-        {'road': road.image, 'lane': lane.image, 'stopline': stop.image},
+        output_layers,
         grid,
         map_id=cfg['map_id'],
         local_origin_in_global=data.local_origin_in_global,
         source_files=data.source_files,
-        layer_params={k: cfg.get(k, {}) for k in ('drivable', 'lane', 'stopline')},
+        layer_params={k: cfg.get(k, {})
+                      for k in ('drivable', 'lane', 'observed_lane', 'stopline')},
         stats={'road': road.stats, 'lane': lane.stats, 'stopline': stop.stats,
+               'observed_lane': observed_lane.stats if observed_lane is not None else None,
                'metrics': metrics},
         stopline_features=stop.features,
+        observed_lane_features=(observed_lane.features
+                                if observed_lane is not None else ()),
         links=link_records(data, centerlines, road, lane),
         repo_root=REPO_ROOT,
     )
@@ -303,7 +468,7 @@ def main() -> int:
     # HDF5 dependency.  Keep these two files beside the authoritative H5.
     road_mask_png = out_h5.with_name('road_mask.png')
     road_mask_yaml = out_h5.with_name('road_mask.yaml')
-    cv2.imwrite(str(road_mask_png), road.image)
+    cv2.imwrite(str(road_mask_png), road_image)
     with open(road_mask_yaml, 'w', encoding='utf-8') as f:
         yaml.safe_dump({
             'map_id': cfg['map_id'],
@@ -317,8 +482,11 @@ def main() -> int:
     if not args.no_overlay and cfg['output'].get('overlay_png'):
         png = _resolve(cfg['output']['overlay_png'])
         png.parent.mkdir(parents=True, exist_ok=True)
-        overlay = build_overlay(road.image, lane.image, stop.image,
-                                int(cfg['output'].get('overlay_max_px', 2000)))
+        overlay = build_overlay(
+            road_image, lane_image, stop.image,
+            int(cfg['output'].get('overlay_max_px', 2000)),
+            observed_lane.observed_white if observed_lane is not None else None,
+            observed_lane.observed_yellow if observed_lane is not None else None)
         cv2.imwrite(str(png), overlay)
         print(f'[write] {png}  {overlay.shape[1]}x{overlay.shape[0]}')
 
@@ -327,7 +495,10 @@ def main() -> int:
         stops = np.stack([n.point for n in data.stop_line_nodes], axis=0)
         counts = [(np.linalg.norm(stops - p, axis=1) < 40.0).sum() for p in stops]
         center = stops[int(np.argmax(counts))]
-        zoom = build_zoom(road.image, lane.image, stop.image, grid, center, 60.0)
+        zoom = build_zoom(
+            road_image, lane_image, stop.image, grid, center, 60.0,
+            observed_lane.observed_white if observed_lane is not None else None,
+            observed_lane.observed_yellow if observed_lane is not None else None)
         zpng = png.with_name(png.stem + '_zoom.png')
         cv2.imwrite(str(zpng), zoom)
         print(f'[write] {zpng}  {zoom.shape[1]}x{zoom.shape[0]} '

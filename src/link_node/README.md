@@ -1,8 +1,8 @@
 # link_node — 링크·노드 기반 BEV 정적 레이어 베이커
 
-MGeo `link_set.json` + `node_set.json` **만으로** 주행가능영역 / 차선 / 정지선을
-이진(0/255) 래스터로 굽고 HDF5 로 저장하는 오프라인 도구. ROS·UDP·시뮬레이터를
-쓰지 않는다.
+MGeo `link_set.json` + `node_set.json`과 직접 수집한 GPS/LiDAR 차선 CSV로
+주행가능영역 / 차선 / 정지선을 이진(0/255) 래스터로 굽고 HDF5 로 저장하는
+오프라인 도구다. 베이크 자체는 ROS·UDP·시뮬레이터 없이 실행된다.
 
 팀 로드맵의 **MGeo map prior** 계층([인지 융합 로드맵](../../docs/perception-map-fusion-roadmap.md)
 3.1)이 여기서 구현된다. catkin 패키지가 아니라 오프라인 CLI 라서 `src/perception/`
@@ -10,21 +10,44 @@ MGeo `link_set.json` + `node_set.json` **만으로** 주행가능영역 / 차선
 아직 이 저장소에 없다** — `live_check.py` 의 `ego_view()` 가 기능적으로 같은 일을
 0.28 ms/프레임에 하지만 ROS 노드로 감싸지 않았고, 어느 파트가 맡을지 미정이다.
 
-## 실행
+## 최신 운영 요약
+
+- 기준 설정: `src/link_node/config/waize_katri.yaml`
+- 실측 CSV: `src/link_node/data/observed_lanes/`의 19개 파일
+- 최신·유일한 운영 H5: `src/link_node/out/link_node_map.h5`
+- 라이다용 주행가능영역: `src/link_node/out/road_mask.png` + `road_mask.yaml`
+- 좌표계: UTM52N 원점 `(302595.0, 4124145.0)`을 뺀 map-local ENU
+- 해상도: 5 px/m, `3085 × 7232`
+
+`link_node_map.before_*.h5`는 과거 작업 전 백업이었으며 현재는 삭제했다. 소비 코드는
+파일명이 정확히 `link_node_map.h5`인 최신 파일만 사용한다.
+
+## 베이크 실행
 
 ```bash
-python3 src/link_node/bake_map.py                       # 기본 설정으로 굽기
-python3 src/link_node/bake_map.py --ppm 4               # 해상도 바꿔서
-python3 src/link_node/bake_map.py --no-overlay          # 검증 PNG 생략
-python3 -m pytest src/link_node/tests -q                # 테스트
+cd /home/jang/2026-ASMC
+
+# 현재 운영 설정으로 road/lane/stopline과 라이다용 PNG를 모두 다시 생성
+python3 src/link_node/bake_map.py \
+  --config src/link_node/config/waize_katri.yaml
+
+# 검증 PNG가 필요 없을 때
+python3 src/link_node/bake_map.py \
+  --config src/link_node/config/waize_katri.yaml --no-overlay
+
+# 변경 후 회귀검증
+python3 -m pytest -q src/link_node/tests
 ```
 
-산출물은 `src/link_node/out/` 에 떨어진다 (git 추적 제외).
+명령은 저장소 루트에서 실행한다. CSV 경로가 저장소 상대경로이므로 `/home/jang/lane_data`
+원본이 없어도 베이크할 수 있다. 산출물은 `src/link_node/out/`에 생성된다.
 
 | 파일 | 내용 |
 |---|---|
-| `link_node_map.h5` | `road` / `lane` / `stopline` 데이터셋 + 메타 attrs |
-| `overlay.png` | 전체 맵 확인용 (road 회색 / lane 노랑 / stopline 빨강) |
+| `link_node_map.h5` | 최종 `road` / `lane` / `stopline`, 진단 레이어와 벡터 |
+| `road_mask.png` | H5의 최종 `road`와 픽셀 단위로 동일한 C++ 라이다 입력 |
+| `road_mask.yaml` | PNG의 좌표 원점, 해상도, map id |
+| `overlay.png` | 전체 맵 확인용 (road 회색 / 흰·황색 lane / stopline 빨강) |
 | `overlay_zoom.png` | 정지선이 가장 밀집한 교차로를 원해상도로 ±60 m |
 
 ## 맵
@@ -74,11 +97,15 @@ bounds `x[-404.5, 112.4] y[-775.0, 571.2]`, ppm 5 에서 **3085 × 7232 px**.
    > 두 조건을 같이 써야 갈린다. 실측상 20 m² 미만 구멍 38개는 전부 내접반경
    > 1.88 m 이하로 인도 섬이 아니고, 남는 것 중 가장 작은 게 22.9 m² 다.
 
-**최외곽 깎기**(`outer_trim_m`, 기본 **0.3 m**) — 링크의 `width_start`(3.5 m)로 그린
+**링크 기반 prior의 최외곽 깎기**(`outer_trim_m`, 기본 **0.3 m**) — 링크의
+`width_start`(3.5 m)로 그린
 도로는 **실제 노면보다 좌우 0.3 m 씩 넓다**(시뮬과 대조해 확인). 그래서 도로 최외곽을
 침식으로 그만큼 깎는다. 차로와 차로 사이는 도로가 이어져 있어 영향을 받지 않는다.
 
-| `outer_trim_m` | 도로 면적 | |
+아래 표는 실측 CSV 후처리를 도입하기 전에 `outer_trim_m`만 비교했던 기준 실험이다.
+현재 최종 운영 면적은 이 표가 아니라 검증 절의 **89,834.4 m²**다.
+
+| `outer_trim_m` | 당시 prior 도로 면적 | |
 |---|---|---|
 | 0.0 m | 102,541 m² | 링크 폭 그대로 (실제보다 넓음) |
 | 0.2 m | 97,355 m² | |
@@ -98,7 +125,9 @@ bounds `x[-404.5, 112.4] y[-775.0, 571.2]`, ppm 5 에서 **3085 × 7232 px**.
            차선   .   .   #   #   #   #   #   #   .   ← 두께 유지
 ```
 
-결과: 도로 93,624 m², 차선 도로 밖 **0 px**, 도로 연결 덩어리 4개 유지.
+당시 prior-only 결과는 도로 93,624 m², 차선 도로 밖 0 px, 도로 연결 덩어리 4개였다.
+현재는 직접 수집 차선의 외곽 도색까지 road에서 제외하므로 최종 차선 일부가 의도적으로
+`road=0` 위에 놓이며, 최종 수치는 아래 검증 표를 기준으로 한다.
 
 > ⚠️ **침식 커널은 짝수 크기를 허용해야 한다.** 홀수만 쓰면 반지름이 정수 픽셀로
 > 갇혀 ppm=5 에서 0.2 m 단위밖에 못 깎는다 — 0.3 m 요청이 0.4 m 로 반올림된다.
@@ -118,6 +147,62 @@ bounds `x[-404.5, 112.4] y[-775.0, 571.2]`, ppm 5 에서 **3085 × 7232 px**.
 정확히 일치한다(n=80). 따라서 중심선을 법선 방향 ±`width/2` 오프셋하면 그게 곧
 차선 경계이고, 한 차로의 좌경계와 왼쪽 차로의 우경계는 같은 위치에 떨어진다.
 이진 래스터라 겹쳐 그려도 결과가 같아 중복 제거가 필요 없다.
+
+#### 직접 수집 차선 override
+
+`observed_lane` 설정이 켜져 있으면 CSV의 `lane_map_x/y`를 같은 격자에
+래스터화한다. 현재 `keep_prior: false`이므로 최종 `lane`에는 직접 수집 차선만
+들어가고 링크 기반 예측 차선은 `lane_prior`에만 보존된다. 좌·우 중심점에는 수집
+시각화와 같은 `inward_offset_m: 0.03` 보정을 먼저 적용한다.
+
+현재 사용하는 CSV 19개는 모두 `src/link_node/data/observed_lanes/`에 함께 보관한다.
+새 CSV를 적용할 때도 이 폴더에 복사한 뒤 `waize_katri.yaml`의 `observed_lane.sources`
+에 **저장소 상대경로**로 추가한다. `/home/jang/lane_data/...` 같은 개인 절대경로를
+설정에 다시 넣지 않는다.
+
+`fill_road_between_sides: true`이면 각 CSV의 보정된 LEFT/RIGHT 경계 사이를 채워
+기존 링크 기반 `road`와 합친다. 링크 폭이 실제보다 좁은 구간에서도 실측 차선과 그
+사이 노면이 주행가능영역에 포함된다. 여러 CSV의 영역은 합집합이므로 인접 차로를
+각각 수집한 경우 다차선 영역으로 합쳐진다.
+
+`side_colors` 설정은 CSV의 소수 색상 오검출보다 우선한다. 중앙선처럼 색이 명확한
+파일은 `LEFT: YELLOW`, 외곽 흰선은 `RIGHT: WHITE`처럼 파일별로 지정한다. 합쳐진
+`ro_merge3.csv`처럼 한 side에 여러 실제 색이 있는 파일은 CSV의 `lane_color`를
+그대로 사용한다.
+
+최종 `road`에는 실측 차선을 이용한 후처리도 적용된다.
+
+1. 좌·우가 함께 수집된 파일은 두 경계 사이를 road로 보강한다.
+2. 실측선 양쪽의 인접 링크를 조사해 최외곽선 바깥 road와 외곽 도색 폭을 제거한다.
+3. 합류부 A411에서 외곽선으로 오판되어 잘린 원래 링크 road 17.84 m²는 지정 복구한다.
+4. `A2256W000432→427`과 `A2256W000153→451` 사이 구조물은 두 실측 흰선 경계까지
+   포함해 74.88 m²를 주행불가로 제거한다.
+5. `turnel_left`와 `end_left2` 사이의 6.194 m 미수집 구간은 접선 방향이 일치하는
+   수동 bridge로 연결한다.
+
+내부 차선은 도로 안의 도색이므로 `lane=255`와 `road=255`가 동시에 될 수 있다.
+외곽선으로 판정된 도색만 `road=0`이다. 따라서 소비 코드에서 `lane`을 무조건
+주행불가로 취급하면 다차선의 내부 차선까지 장애물처럼 처리하므로 주의한다.
+
+H5에는 비교·복구를 위해 다음 레이어를 같이 남긴다.
+
+| 데이터셋 | 내용 |
+|---|---|
+| `lane` | 실제 소비 코드가 사용하는 교체 완료 차선 |
+| `lane_prior` | 수정 전 링크 기반 예측 차선 |
+| `lane_observed` | 직접 수집 차선 전체 |
+| `lane_observed_white` / `lane_observed_yellow` | 색상별 직접 수집 차선 |
+| `lane_erase_mask` | 실제로 삭제된 prior 차선 픽셀 |
+| `road_prior` | 실측 경계 보강 전 링크 기반 주행가능영역 |
+| `road_observed` | 각 CSV의 좌·우 실측 경계 사이 영역 |
+| `road_outer_trim_mask` | 실측 최외곽선 바깥에서 제거된 road |
+| `road_outer_lane_excluded` | road에서 제외된 외곽 도색 픽셀 |
+| `road_manual_restore` | A411에서 되살린 원래 유효 road |
+| `road_boundary_exclusion` | 두 도로 사이 구조물 제거 polygon |
+
+`observed_lane_points` / `observed_lane_offsets`에는 0.03 m 보정된 실측 중심선
+벡터를 함께 저장한다. `live_check.py --show-object-lane-distance`는 이 벡터와 MORAI
+객체의 실제 회전 박스를 사용해 객체 외곽에서 차선 도색 외곽까지의 최단거리를 그린다.
 
 차선을 긋지 않는 링크가 두 종류 있다:
 
@@ -288,6 +373,12 @@ row = round(ppm * (wy - offset_y))
 ```
 /road /lane /stopline     uint8 (H, W), 값 0/255, gzip-9
 
+/lane_prior /lane_observed /lane_observed_white /lane_observed_yellow
+/lane_erase_mask
+/road_prior /road_observed /road_outer_trim_mask
+/road_outer_lane_excluded /road_manual_restore /road_boundary_exclusion
+  위 데이터셋은 비교·검증용이다. 실제 소비 대상은 /road /lane /stopline이다.
+
 attrs:
   pixels_per_meter, world_offset_in_meters(float32[2])
   width_in_meters, height_in_meters, width_in_pixels, height_in_pixels
@@ -298,6 +389,10 @@ attrs:
 /stopline_points /stopline_dirs /stopline_headings /stopline_lengths
   구운 정지선의 벡터 원본 (래스터만으로는 '가장 가까운 정지선'을 못 찾는다)
   attrs: stopline_ids, stopline_traffic_lights
+
+/observed_lane_points /observed_lane_offsets
+  보정·bridge까지 반영한 실측 차선 벡터
+  attrs: observed_lane_sides, observed_lane_colors, observed_lane_sources
 
 /link_points /link_offsets                       ← 검증 전용, 규약 미확정
   링크 중심선을 이어붙인 것 + 링크별 시작 인덱스
@@ -320,9 +415,11 @@ attrs:
 | 지표 | 값 | 의미 |
 |---|---|---|
 | `stopline_on_road_ratio` | 1.000 | 정지선 픽셀이 road 안에 있는 비율 (`clip_stopline_to_road` 로 잘라내므로 1.0) |
-| `lane_near_road_ratio` | 1.000 | 차선이 road 경계 ±0.6 m 안에 있는 비율 |
+| `lane_near_road_ratio` | 0.9978 | 차선이 road 경계 ±0.6 m 안에 있는 비율 |
 | `world_roundtrip_max_err_m` | 0.084 | `world→pixel→world` 오차 (허용 `1/ppm` = 0.2) |
-| `road_area_m2` | 93,624 | 주행가능영역 면적 (제외 18개 + 최외곽 0.3 m 깎기) |
+| `road_area_m2` | 89,834.4 | 실측 외곽 절단·링크 제외·구조물 제외까지 반영된 최종 면적 |
+| `lane_px` | 26,199 | 실측 CSV와 수동 bridge가 반영된 최종 차선 픽셀 |
+| `stopline_px` | 418 | 선택된 정지선 최종 픽셀 |
 
 > ⚠️ **`stopline_on_road_ratio` 가 낮다고 방향 계산을 파지 말 것.** 정지선 길이는
 > 링크의 차로 폭(3.5 m)인데 도로는 `drivable.outer_trim_m` 만큼 좌우로 깎이므로,
@@ -340,21 +437,50 @@ attrs:
 `overlay.png` 는 [behavior_planner 대시보드](../behavior_planner/web/index.html)와
 같은 맵이므로 눈으로 직접 대조할 수 있다.
 
+## 시각화
+
+### 정적 결과 확인
+
+베이크 후 `src/link_node/out/overlay.png`를 열면 전체 지도를 확인할 수 있다. 회색은
+최종 road, 흰색/노란색은 직접 수집 차선, 빨간색은 정지선이다. 시뮬레이터 연결 없이
+ego 중심 화면을 보려면 다음을 실행한다.
+
+```bash
+cd /home/jang/2026-ASMC
+python3 src/link_node/live_check.py --source demo
+
+# 더 확대: 한 화면에 보이는 실제 범위를 줄인다. 창 크기도 함께 키울 수 있다.
+python3 src/link_node/live_check.py --source demo --window-m 30 --out-px 900
+```
+
+현재 뷰어에는 실행 중 마우스 휠/키보드 줌이 없다. `--window-m`이 작을수록 확대되고
+클수록 축소된다. 값을 바꾸려면 뷰어를 다시 실행한다.
+
 ## MORAI 실주행 대조 검증
 
 `live_check.py` 는 MORAI 의 Ego 상태를 받아 구운 맵과 대조한다. **ROS 워크스페이스를
 빌드하지 않아도** 되도록 Ego UDP 를 직접 파싱하는 경로를 기본으로 쓴다.
 
 ```bash
-# 0) 먼저 패킷이 도착하는지부터 확인 (원인 절반은 여기서 갈린다)
-sudo -E python3 src/link_node/live_check.py --probe
+# MORAI Destination PORT가 기본 909일 때 먼저 수신 확인
+sudo -E python3 src/link_node/live_check.py --probe --seconds 15
 
-# 1) 실제 검증
+# Ego UDP 직접 수신
 sudo -E python3 src/link_node/live_check.py
-sudo -E python3 src/link_node/live_check.py --source gps   # 위치는 GPS, 방향은 Ego
-python3 src/link_node/live_check.py --source ros     # /Ego_topic 이 이미 떠 있을 때
-python3 src/link_node/live_check.py --source demo    # MORAI 없이 뷰어만 확인
-python3 src/link_node/live_check.py --no-window      # 창 없이 지표만
+
+# MORAI Destination PORT를 911로 설정했다면 반드시 같은 포트를 명시
+python3 src/link_node/live_check.py --port 911
+python3 src/link_node/live_check.py --probe --analyze --port 911 --seconds 15
+
+# Ego 패킷에 위치가 없을 때: 위치는 GPS, 방향은 Ego
+sudo -E python3 src/link_node/live_check.py --source gps
+
+# /Ego_topic과 /Object_topic이 이미 뜬 ROS 환경
+python3 src/link_node/live_check.py --source ros --objects \
+  --show-object-lane-distance --show-outside-objects
+
+# 창 없이 수치만 확인
+python3 src/link_node/live_check.py --source ros --no-window
 ```
 
 **포트는 909** — `morai_udp_bridge.launch` 의 `ego_port` 와 같은 값이고, MORAI
@@ -365,6 +491,26 @@ sudo 를 피하려면 MORAI 쪽 포트를 1024 이상으로 바꾸고 `--port` �
 
 Destination IP 는 MORAI(Windows) 에서 이 호스트로 닿는 주소다. WSL 이면 `hostname -I`
 의 첫 값(NAT 모드에서는 127.0.0.1 이 아니다). 실행하면 후보 IP 를 출력해 준다.
+
+ROS 브리지가 Docker 컨테이너 안에서 이미 실행 중이면 UDP 포트를 호스트 뷰어와
+경쟁시키지 말고 같은 컨테이너에서 ROS 소스를 사용한다.
+
+```bash
+# Docker 명령이 되는 터미널에서 실행. <container>는 docker ps에 나온 이름이다.
+docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+docker exec -it <container> bash
+
+# 컨테이너 안
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+python3 src/link_node/live_check.py --source ros --objects \
+  --show-object-lane-distance --show-outside-objects
+```
+
+WSL에서 `docker: command not found`가 나오면 Docker Desktop의 해당 배포판 WSL
+integration을 켜거나 Windows PowerShell에서 `docker exec`을 실행한다. 호스트 WSL에서
+`cd /root/ws`를 실행하는 것은 컨테이너 접속이 아니며 권한 오류가 나는 것이 정상이다.
 
 > docker 브릿지를 동시에 돌리는 중이라면 MORAI 는 Ego 를 한 곳으로만 보내므로 둘이
 > 포트를 다툰다. 그럴 땐 브릿지를 띄운 채 컨테이너 안에서 `--source ros` 로 붙이면
@@ -527,6 +673,12 @@ objects 6   on-road 5   off-road 1 (hidden)
 판정은 중심점 하나가 아니라 **차체 네 귀퉁이와 중심 5점** 중 하나라도 도로에 걸치면
 안으로 친다. 한 점만 보면 경계에서 들락거린다.
 
+이 판정은 `lane` 레이어를 별도로 보지 않고 **오직 H5의 최종 `road`**만 본다. 다만
+내부 차선이나 외곽으로 분류되지 못한 차선은 같은 픽셀에서 `lane=255`, `road=255`일
+수 있다. 화면은 회색 road 위에 차선을 나중에 덮어 그리므로 회색이 보이지 않아도
+차선 밑 road 값은 255일 수 있다. 또한 5점 중 하나만 닿아도 객체 전체가 표시된다.
+정확한 인지 필터 결과를 검증할 때는 아래 C++의 OBB 내부비율 방식과 혼동하지 않는다.
+
 > ⚠️ 이 판정은 **측위 정확도에 종속**된다. 위치가 0.3 m 만 틀려도 도로 가장자리
 > 객체가 밖으로 튀어나간다(실측). 구운 도로도 링크 중심선 × 3.5 m 근사라 갓길이
 > 없다. **인지에서 객체를 버리는 용도로 쓰지 말 것** — 계산 범위를 좁히는 용도로
@@ -626,14 +778,24 @@ MORAI 를 붙였을 때 정상이라면 이와 비슷한 값이어야 한다.
 
 ## 라이다 파트 인계
 
-주행가능영역을 다른 파트에서 조회할 때 필요한 것만 정리한다.
+### 현재 연결 상태
 
-### 가져갈 파일 2개
-
-| 파일 | 크기 | 무엇 |
+| 소비자 | 읽는 파일 | 현재 상태 |
 |---|---|---|
-| `src/link_node/drivable_query.py` | 10 KB | 조회 모듈. 이 저장소의 다른 코드를 import 하지 않는다 |
-| `src/link_node/out/link_node_map.h5` | 0.6 MB | 구운 맵 (`road` / `lane` / `stopline` + 메타) |
+| C++ LiDAR `Main` | `road_mask.png` + `road_mask.yaml` | `main.launch`에 이미 연결됨 |
+| Python 라이다/판단제어 | `link_node_map.h5` + `drivable_query.py` | API 제공, 소비 노드에서 직접 로드해야 함 |
+| `live_check.py` | `link_node_map.h5` | 기본 경로로 이미 연결됨 |
+
+C++ LiDAR는 HDF5 의존성을 두지 않기 위해 H5를 직접 읽지 않는다. `bake_map.py`가
+최종 H5의 `/road`와 완전히 같은 `road_mask.png`와 좌표 메타데이터 YAML을 함께 쓴다.
+현재 두 road의 픽셀 차이는 0이다.
+
+### Python 소비자가 가져갈 파일
+
+| 파일 | 무엇 |
+|---|---|---|
+| `src/link_node/drivable_query.py` | 조회 모듈. 이 저장소의 다른 코드를 import 하지 않는다 |
+| `src/link_node/out/link_node_map.h5` | 약 1.7 MB. 최종 road/lane/stopline과 벡터/메타 |
 
 필요 패키지는 `numpy`, `h5py`, `opencv-python` 뿐이다.
 
@@ -662,18 +824,22 @@ st_GPSData.f64_N = ... .north - msg.northOffset;
 ```python
 from drivable_query import DrivableMask
 
-dm = DrivableMask.load('link_node_map.h5', margin_m=1.0)
+dm = DrivableMask.load('link_node_map.h5', margin_m=0.0)
 dm.check_map('waize_katri_2025-10-23')      # 맵 판본 확인 (권장)
 
 # 점 단위 — (N,2) ENU 미터 -> (N,) bool
 keep = dm.contains(points_en)
 
-# OBB 단위 — 중심 + 네 귀퉁이 중 하나라도 걸치면 True
+# OBB 단위 — 중심 + 네 귀퉁이 중 하나라도 걸치면 True(느슨한 확인용)
 on = dm.obb_overlaps(cx, cy, length_m, width_m, yaw_deg)
 
 # 이진 대신 0~1 점수로 받기 (권장)
 score = dm.obb_inside_ratio(cx, cy, length_m, width_m, yaw_deg)
 ```
+
+`margin_m=0.0`은 베이크 경계를 그대로 쓴다. 측위 오차 여유가 필요하면 먼저
+`0.2~0.3 m`로 검증한다. `1.0 m`는 좁은 구조물 제외 영역이나 차선 폭만큼 잘라낸
+영역을 다시 메울 수 있으므로 “정확한 베이크 경계”가 목적이면 쓰지 않는다.
 
 | 메서드 | 용도 |
 |---|---|
@@ -705,31 +871,21 @@ score = dm.obb_inside_ratio(cx, cy, length_m, width_m, yaw_deg)
 150개가 다 나온다. (라이다 조회는 `road` 레이어만 쓰므로 실사용에는 영향이 없다 —
 `stopline` 레이어나 정지선 벡터를 쓸 거라면 반드시 확인할 것.)
 
-**1. `margin_m` 을 줄 것.** 도로 폭을 실제 노면에 맞추려고 좌우 0.3 m 를 깎아둔
-상태라 경계가 빡빡하다. 여유 없이 쓰면 측위 오차 **0.2 m 에도** 가장자리 객체를
-놓친다 (실측).
-
-| 측위 오차 | 여유 0 | 여유 0.5 m | 여유 1.0 m |
-|---|---|---|---|
-| 0.0 m | 살림 | 살림 | 살림 |
-| 0.2 m | **버림** | 살림 | 살림 |
-| 0.5 m | **버림** | **버림** | 살림 |
-| 1.0 m | **버림** | **버림** | 살림 |
-
-| `margin_m` | 면적 | |
-|---|---|---|
-| 0.0 | 93,624 m² | 실제 노면 (빡빡) |
-| 0.5 | 108,254 m² | +16% |
-| **1.0** | **121,429 m²** | **+30% (권장)** |
+**1. `margin_m`은 목적에 맞게 정할 것.** 현재 베이크는 실측 외곽선과 구조물 경계를
+road에서 의도적으로 잘라냈다. 정확한 경계 검증은 `0.0`, 일반적인 GNSS 오차 여유는
+우선 `0.2~0.3 m`부터 시험한다. `1.0 m`는 놓침을 줄이는 보수적 객체 필터에는 쓸 수
+있지만, 양쪽에서 각각 1 m 팽창하므로 폭 2 m 이하의 좁은 제외 영역을 사실상 다시
+주행가능하게 만든다.
 
 **2. 판정은 측위 정확도에 종속된다.** 위치는 이 모듈이 추정하지 않는다 — 주어진
 좌표를 읽을 뿐이다. GPS 가 어긋나면 판정도 그만큼 어긋난다.
 
-**3. 실측 노면이 아니다.** 링크 중심선 × 차로폭에서 유도한 근사치라 갓길이 없고,
-합류부에서 도로가 직각으로 좁아진다.
+**3. 전체가 실측 노면인 것은 아니다.** 기본 road는 링크 중심선 × 차로폭에서
+유도하고, 수집한 경계 사이 보강·외곽 절단·수동 복구·구조물 제거를 그 위에 적용한다.
+CSV가 없는 구간은 여전히 링크 기반 근사치다.
 
-**4. 제외된 구간이 있다.** 동측 순환로 18개 링크를 뺀 상태다. 거기 객체는 전부
-'밖' 으로 판정된다. 목록은 `config/waize_katri.yaml` 의 `drivable.exclude_links`.
+**4. 제외된 구간이 있다.** 현재 링크 24개를 뺀 상태다. 거기 객체는 전부 '밖'으로
+판정된다. 목록은 `config/waize_katri.yaml`의 `drivable.exclude_links`에 있다.
 
 **5. 하드 게이트로 쓰지 말 것.** 객체를 버리는 판단에 쓰면 되돌릴 수 없다.
 계산 범위를 좁히는 용도로 쓰고, `obb_inside_ratio()` 점수를 넘겨 최종 판단은
@@ -743,6 +899,49 @@ python3 src/link_node/drivable_query.py
 # 20만 점 조회 6.30 ms, 주행가능영역 안 17.6%
 # OBB 예: True (내부 비율 1.00)
 ```
+
+이 데모는 성능 확인을 위해 코드 내부에서 `margin_m=1.0`을 사용한다. 운영 권장값을
+뜻하지 않는다. 베이크 원본을 확인하려면 호출부를 `margin_m=0.0`으로 사용한다.
+
+## 판단·제어 파트 사용법
+
+현재 저장소의 판단·제어 노드가 `link_node_map.h5`를 자동으로 읽도록 연결돼 있지는
+않다. 아래처럼 직접 로드하거나, 필요한 local crop을 ROS 토픽으로 발행하는 adapter를
+붙여야 한다. “H5에 들어 있음”과 “판단제어가 이미 사용 중”은 다르다.
+
+세 래스터를 같은 API로 점 조회할 수 있다.
+
+```python
+from pathlib import Path
+from drivable_query import DrivableMask
+
+h5 = Path('/home/jang/2026-ASMC/src/link_node/out/link_node_map.h5')
+road = DrivableMask.load(h5, layer='road', margin_m=0.0)
+lane = DrivableMask.load(h5, layer='lane', margin_m=0.0)
+stopline = DrivableMask.load(h5, layer='stopline', margin_m=0.0)
+
+road.check_map('waize_katri_2025-10-23')
+is_drivable = road.contains(points_map_xy)   # (N, 2) -> (N,) bool
+is_lane = lane.contains(points_map_xy)
+is_stopline = stopline.contains(points_map_xy)
+```
+
+위 예제는 `drivable_query.py`를 소비 패키지에 함께 둔 경우다. 원본 위치에서 직접
+import하려면 실행 전에 `export PYTHONPATH=/home/jang/2026-ASMC/src/link_node:$PYTHONPATH`
+를 적용한다. 입력은 반드시 map-local ENU여야 한다.
+UTM 절대좌표를 넣는 경우 각 조회기에 `set_utm_input()`을 호출한다.
+
+차선과 정지선은 폭이 얇기 때문에 차량 중심 한 점을 정확히 찍는 방식보다 벡터를 쓰는
+편이 낫다.
+
+- 차선: `observed_lane_points` + `observed_lane_offsets`, 색/side attrs
+- 정지선: `stopline_points`, `stopline_dirs`, `stopline_headings`, `stopline_lengths`
+- 주행가능영역: `/road` 래스터 또는 `road_mask.png`
+
+판단제어가 nearest lane/stopline 거리, 진행방향, 신호등 ID까지 필요하면 위 벡터를
+읽어 공간 인덱스를 구성한다. `stopline_ids`와 `stopline_traffic_lights` attrs가 정지선
+행과 같은 순서다. 현재 정지선은 선택된 노드 8개가 7개 벡터 그룹으로 저장돼 있으므로
+대회 전체 150개를 의미하지 않는다.
 
 ## 주행가능영역 최종 출력 (`/last_lidar`)
 
@@ -791,6 +990,11 @@ roslaunch Main main.launch
 | `~dynamic_speed_kph` | **5.0** | 동적 객체 판정 속도 |
 | `~enable_sensor_fusion` | **false** | 카메라 클래스 퓨전과 FusionLiDAR 실행 여부 |
 
+> ⚠️ `main.launch`의 현재 기본 `drivable_margin_m=1.0`은 최종 road를 로드한 뒤
+> 메모리에서 1 m 팽창시킨다. 그래서 베이크 파일에는 정확히 잘린 구조물도 라이다
+> 런타임에서는 다시 포함될 수 있다. 정확한 경계를 그대로 적용하려면
+> `main.launch` 값을 `0.0`으로, 작은 측위 여유만 필요하면 `0.2~0.3`으로 바꾼다.
+
 `drivable_filter_node.py`는 C++ 결과와 대조하는 독립 구현으로 남겨 둔다. 실시간
 운용 중 함께 실행하면 `/last_lidar` publisher가 둘이 되므로 동시에 실행하지 않는다.
 
@@ -829,7 +1033,7 @@ bounding range에 드는지만 점검하고 어긋나면 로그로 알린다
 (`test_quad_ratio_matches_center_yaw_and_ignores_corner_order`, 무작위 OBB 50개에서
 차이 0.000000).
 
-### 왜 비율 0.3 + 여유 1.0 인가
+### OBB 비율 판정과 기존 1.0 m 여유의 의미
 
 느슨한 방식(중심+네 귀퉁이 5점 중 하나라도 걸치면 살림)과 비교해 실측했다. 가장 긴
 직선 링크에서 도로 경계를 찾고 소형차(4.6×1.9 m)를 옮겨가며 잰 값이다.
@@ -856,8 +1060,9 @@ bounding range에 드는지만 점검하고 어긋나면 로그로 알린다
    통과한다. 비율은 박스 크기로 나누므로 이 문제가 없고, 0.2 m 격자에서 귀퉁이가
    픽셀 하나에 걸리는 운에도 흔들리지 않는다.
 
-`margin_m: 1.0` 을 함께 쓰면 경계 밖 1.0 m 객체까지 살아남는다 — 느슨 방식과 같은
-보수성인데 크기 정규화가 덤으로 붙는다.
+`margin_m: 1.0`을 함께 쓰면 경계 밖 1.0 m 객체까지 살아남는다. 이는 객체 누락을
+줄이는 보수적 설정이지, 베이크 경계를 정확히 따르는 설정은 아니다. 외곽선과 구조물
+제외 결과가 중요한 운용에서는 margin을 낮춘 뒤 실제 측위 오차로 재검증한다.
 
 ### 실제로 돌려서 확인한 것
 
@@ -905,14 +1110,21 @@ src/link_node/
 ├── bake_map.py                 CLI (로드 → 베이크 → 지표 → H5/PNG)
 ├── live_check.py               MORAI 실주행 대조 (Ego UDP / ROS / demo)
 ├── config/waize_katri.yaml     소스 경로와 레이어 파라미터
+├── data/observed_lanes/        베이크에 사용하는 실측 차선 CSV 19개
+├── out/
+│   ├── link_node_map.h5        최신 운영 H5
+│   ├── road_mask.png           C++ LiDAR가 직접 읽는 최종 road
+│   └── road_mask.yaml          PNG 좌표·해상도·map-id 메타데이터
 ├── mapbake/
 │   ├── io_mgeo.py              JSON 로더 + 스키마 정규화
 │   ├── topology.py             리샘플·법선·heading, 노드→링크 역인덱스
 │   ├── raster.py               좌표 규약, 그리기, 구멍 메우기
 │   ├── layers.py               road / lane / stopline 베이크
+│   ├── observed_lane.py        실측 CSV 보정·연결·road 후처리
 │   └── writer.py               H5 입출력
 ├── drivable_filter_node.py     주행가능영역 밖 객체를 걸러 last_lidar 로 발행
-└── tests/test_mapbake.py       84 tests
+├── drivable_query.py           H5 래스터 조회 API
+└── tests/                       베이크·실측 차선 회귀테스트 101개
 ```
 
 `topology.py` 가 세 레이어의 공통 기반이다 — 차선은 법선, 정지선은 노드 heading 이
