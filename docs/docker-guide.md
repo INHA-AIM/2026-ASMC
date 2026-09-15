@@ -67,6 +67,40 @@ xhost -local:docker
 | pip 패키지만 추가 | requirements 수정 후 `rebuild` |
 | 코드만 변경 | **재빌드 불필요** — `build_ws.sh`만 |
 
+### GPU 세대별 이미지
+
+대부분의 팀원이 쓰는 RTX 40 계열은 기본 이미지가 정본이다. 기존 명령과 CUDA/Python
+stack을 바꾸지 않는다.
+
+| GPU | 이미지·명령 | Python / PyTorch | 상태 |
+|---|---|---|---|
+| RTX 40 계열 | `build`, `up` → `asmc/ros-noetic:dev` | 3.8 / 2.1.2+cu118, Ultralytics 8.4.150 | 팀 기본값, 기존 운용값 고정 |
+| RTX 5070 등 RTX 50 계열 | `build-rtx50`, `up-rtx50` → `asmc/ros-noetic:rtx50` | 추론만 3.9 / 2.7.1+cu128 | RTX 5070 팀원 실기 동작 확인 |
+
+이번 RTX 50 지원에서 기본 Dockerfile에 추가된 시스템 패키지는 센서퓨전 빌드용
+`libpcap-dev`, `libgeographic-dev`뿐이다. 기본 Python 3.8, torch/torchvision cu118,
+ROS Noetic, host network와 rqt/RViz helper는 유지한다. 기존 RTX 40 컨테이너에서
+확인한 Ultralytics 8.4.150도 고정해 재빌드 날짜에 따른 패키지 drift를 막는다.
+RTX 50 이미지는 기본 이미지를
+상속하고 YOLO·신호등 추론 프로세스만 `/opt/yolo-venv`로 분리하므로 소스와 ROS 메시지는
+공유한다.
+
+RTX 40 팀원은 `up-rtx50`을 사용할 필요가 없다. 기능상 이점 없이 CUDA 12.8 wheel과
+추가 Python 환경만 내려받아 이미지가 커진다. 반대로 RTX 50 팀원은 기본 `up`으로
+실행하면 cu118에 `sm_120` 커널이 없어 추론이 실패할 수 있으므로 전용 명령을 사용한다.
+GPU 세대와 관계없이 Dockerfile 또는 requirements를 pull한 뒤에는 해당 이미지를 다시
+build해야 한다.
+
+```bash
+# RTX 40 (기본)
+./scripts/docker_ros_up.sh build
+./scripts/docker_ros_up.sh up
+
+# RTX 50 (opt-in)
+./scripts/docker_ros_up.sh build-rtx50
+./scripts/docker_ros_up.sh up-rtx50
+```
+
 ## 3. Perception 학습 컨테이너
 
 ```bash

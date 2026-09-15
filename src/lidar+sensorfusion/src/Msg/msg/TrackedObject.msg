@@ -1,6 +1,10 @@
 int32 id
 int16 type
+# classification: fusion policy result, one of car / person / unknown.
+# yolo_class: the raw YOLO label that confirmed it (car / truck / bus / person),
+#             or "unknown" when no camera detection currently backs this track.
 string classification
+string yolo_class
 bool is_dynamic
 int32 age
 int32 miss_count

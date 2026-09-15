@@ -2,7 +2,7 @@
 
 > **문서 역할:** Current Working Proposal — 인지 융합 방향과 단계별 결정 gate
 > **문서 허브:** [README.md](./README.md)
-> **상태:** Working Proposal v0.16 — 음영 camera v3 인수 완료, HD맵 결합 단계<br>
+> **상태:** Working Proposal v0.17 — 음영 camera v3 인수 완료, HD맵·LiDAR 결합 후보 통합<br>
 > **기준일:** 2026-09-15<br>
 > **주요 참여:** 안승현(카메라 인지), 장원태(MGeo map prior 제안), 손재호(LiDAR 인지), planning/control 팀<br>
 > **상세 문서:** [인지 GT·BEV·차로 구조화 계획](./perception-bev-lane-interface-plan.md) · [UDP↔ROS 네트워크](./network-udp-ros.md) · [v4 학습 평가](./perception-v4-training-evaluation.md)
@@ -11,6 +11,23 @@
 센서셋에 맞춰 정본화하되, 토픽 이름, BEV raster 범위·해상도, 메시지 필드와 담당 경계는
 아직 최종 계약이 아니다. 카메라 BEV 투영과 map bake pilot 결과를 확인한 뒤
 `src/interfaces/`에서 별도 합의하고 변경 이력을 남긴다.
+
+### 제안·구현 출처와 현재 통합 기준
+
+이 문서의 전체 우선순위와 파트 경계는 **안승현의 현행 통합안**을 기준으로 정리했다.
+팀 확정 계약은 아니며, 담당자 검토에서 다른 결론이 나오면 근거와 함께 갱신한다. 다른
+팀원의 의견이나 구현을 통합한 부분은 다음처럼 출처를 남긴다.
+
+| 범위 | 제안·요구 출처 | 구현·검증 출처 | 이 문서에서의 취급 |
+|---|---|---|---|
+| 3카메라 drivable/lane, 음영 shared-family | 안승현 | 안승현의 bag·live 평가 | 현재 camera handoff 기준선 |
+| MGeo/node-link map prior와 offline bake | 장원태 | 장원태 `src/link_node/`, PR #37 | local crop·대회 맵 검증 전 후보 |
+| LiDAR 장애물·OBB·속도/추적 운용 요구 | 손재호 | 장원태가 요구를 통합 구현한 PR #37 | `/last_lidar`·camera fusion 후보, 담당자 재검증 필요 |
+| safe corridor, 회피·복귀와 최종 제어 권한 | planning/control 협의 대상 | 미확정 | 인지 결과를 소비한 뒤 판제가 결정 |
+
+따라서 PR #37의 코드 작성자는 장원태로 기록하되, LiDAR 요구 자체를 장원태의 단독
+의견으로 표기하지 않는다. 반대로 이 문서의 통합 우선순위를 팀 전체의 확정 결정으로
+표현하지도 않는다.
 
 ## 1. 목표와 우선순위
 
@@ -99,6 +116,18 @@ LiDAR ─ detection/tracking/occupancy ───────────┤
 정적 지도에는 NPC와 스폰 장애물을 굽지 않는다. 지도 산출물에는 map 버전, bake 설정,
 전역경로 hash와 좌표계가 포함되어야 한다.
 
+**장원태 제안·구현(PR #37): [`src/link_node/`](../src/link_node/README.md)** (offline bake 부분).
+`link_set.json` + `node_set.json`에서 drivable / lane / stop-line을 이진 래스터로 굽고
+`map_id`·bake 설정·좌표계 원점을 H5 attrs에 담는다. catkin 패키지가 아닌 오프라인
+CLI라서 `src/perception/` 아래가 아니라 `src/link_node/`에 둔다. **runtime local crop은
+아직 미구현**이며 담당 파트 미정이다 (기능적 프로토타입은 `live_check.py`의
+`ego_view()`, 0.28 ms/프레임). 위 목록 중 lane 연결관계·인접 차로 변경 가능성·속도
+제한 attribute는 아직 굽지 않는다.
+
+현재 산출물은 `behavior_planner`의 `waize_katri_2025-10-23` 판본에서 생성한
+근사 map prior다. H5의 `map_id`와 원점 검사를 통과하더라도 공식 대회 K-City 판본 및
+실제 도색과의 검산 전에는 deployment 정본으로 승격하지 않는다.
+
 ### 3.2 Camera perception 후보 출력
 
 - view별 `drivable_probability`, `road_marking_probability`
@@ -129,6 +158,20 @@ camera segmentation 누락 때문에 `outside` 판정만으로 LiDAR 검출물�
 차량 주변 안전 envelope에 들어오거나 LiDAR 신뢰도가 높은 물체는 별도 collision 후보로
 보존한다. 정적 drivable에서 LiDAR occupancy를 차감한 `safe_drivable`은 유력한 후보지만,
 그 생성 책임을 인지·퓨전·판제 중 어디에 둘지는 소비 인터페이스 합의 후 확정한다.
+
+**손재호의 LiDAR 운용 요구를 반영해 장원태가 구현한 PR #37 후보**는 tracked OBB를 map
+ENU로 변환하고, `src/link_node` road mask에 대한 5×5 footprint sampling 비율로
+주행가능영역 후보만 `/last_lidar`에 발행한다. source-stamped YOLO 결과와 LiDAR frame을
+시간 매칭해 `person/car/unknown` 및 원본 `yolo_class` 근거도 함께 보존하며, 동적 판정은
+별도 `MotionClassifier`로 분리했다. 이는 LiDAR 객체의 도로 문맥 필터와 분류 후보이지,
+LiDAR occupancy를 차감해 최종 주행 corridor를 확정하는 구현은 아니다. 손재호의 최신
+tracker 기준선, 대회 맵 판본, full-stack 지연과 판제 fallback을 재검증한 뒤 소비 권한을
+올린다.
+
+이 후보가 사용하는 raw GPS+latest IMU 기반 `map -> base_link` TF는 정식 측위
+출력이 아니다. 기본 UDP 브리지에서는 `publish_map_tf:=false`이며, 장원태의
+PR #37 기반 LiDAR 융합을 단독 검증할 때만 명시적으로 켠다. 향후 측위 노드가
+동일 TF를 발행하면 브리지 쪽 TF를 동시에 켜지 않는다.
 
 ### 3.4 차량·센서 좌표계 계약
 

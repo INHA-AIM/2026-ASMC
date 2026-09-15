@@ -11,6 +11,7 @@ morai_udp_bridge 와 별도 노드로 돌린다.
   3D Lidar Velodyne raw     -> sensor_msgs/PointCloud2
   GPS      NMEA ascii       -> morai_msgs/GPSMessage + sensor_msgs/NavSatFix
   IMU      #IMUData$        -> sensor_msgs/Imu
+  GPS + IMU                 -> TF map -> base_link (~publish_map_tf)
 
 포맷 근거: MORAI-Autonomous/MORAI-SensorExample
 """
@@ -24,6 +25,8 @@ from collections import deque
 import numpy as np
 import rospy
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
+import tf2_ros
+from geometry_msgs.msg import TransformStamped
 from sensor_msgs.msg import (CompressedImage, Image, Imu, NavSatFix,
                              NavSatStatus, PointCloud2, PointField)
 from morai_msgs.msg import GPSMessage
@@ -119,6 +122,20 @@ class SensorBridge(object):
         self.gps_east_offset = float(p("~gps_east_offset", 0.0))
         self.gps_north_offset = float(p("~gps_north_offset", 0.0))
         self.publish_raw = bool(p("~publish_raw_image", False))
+
+        # map -> base_link 동적 TF. 이걸 발행하지 않으면 map 프레임이 TF 트리에
+        # 없어서, 메시지에 frame_id="map" 이 붙어 있어도 RViz 에서 velodyne
+        # 프레임 데이터와 겹쳐 볼 수 없다 (Fixed Frame=map 이 실패한다).
+        # 위치는 GPS, 방위는 IMU orientation 을 쓴다 — 둘 다 허용 센서다.
+        # 기본은 꺼 둔다. 측위 노드가 발행하는 authoritative map -> base_link와
+        # 동시에 켜면 TF authority가 충돌하므로 디버그/융합 실행에서만 opt-in한다.
+        self.publish_map_tf = bool(p("~publish_map_tf", False))
+        self.frame_map = str(p("~map_frame", "map"))
+        self.frame_base = str(p("~base_frame", "base_link"))
+        self.utm_epsg = int(p("~utm_epsg", 32652))
+        self._tf_bcast = None
+        self._utm = None
+        self._last_imu_q = None
 
         # MORAI의 단일 GPS/IMU UDP 스트림을 ROS 변환과 standalone planner가
         # 동시에 사용할 수 있도록 원본 datagram을 planner 전용 포트로 복제한다.
@@ -634,6 +651,7 @@ class SensorBridge(object):
             fx.status.service = NavSatStatus.SERVICE_GPS
             fx.latitude, fx.longitude, fx.altitude = lat, lon, alt
             self.pub_fix.publish(fx)
+            self._broadcast_map_tf(stamp, lat, lon)
             self._record_processing(name, processing_started_ns)
             self._mark_message(name)
 
@@ -669,6 +687,11 @@ class SensorBridge(object):
             m.linear_acceleration.x, m.linear_acceleration.y, \
                 m.linear_acceleration.z = d[7], d[8], d[9]
             self.pub_imu.publish(m)
+            # map TF uses the latest IMU orientation. GPS and IMU arrive on
+            # independent UDP streams, so no timestamp interpolation is
+            # implied here.
+            self._last_imu_q = (m.orientation.x, m.orientation.y,
+                                m.orientation.z, m.orientation.w)
             self._record_processing(name, processing_started_ns)
             self._mark_message(name)
 
@@ -682,6 +705,49 @@ class SensorBridge(object):
     def _mark_message(self, name):
         self.stats[name] += 1
         self.last_received_monotonic[name] = time.monotonic()
+
+    def _broadcast_map_tf(self, stamp, lat, lon):
+        """GPS 위치 + IMU 방위로 map -> base_link 를 발행한다.
+
+        위경도를 UTM 으로 옮긴 뒤 gps_east/north_offset 을 뺀다 — GPSMessage 에
+        싣는 offset 과 같은 값이라 TF 와 메시지의 map 좌표가 일치한다.
+
+        한계: 이건 GPS 원시 위치를 그대로 쓰는 것이지 필터링된 측위가 아니다.
+        GPS 가 튀면 TF 도 같이 튄다. IMU 와 시각 보간도 하지 않는다.
+        """
+        if not self.publish_map_tf:
+            return
+        if self._tf_bcast is None:
+            self._tf_bcast = tf2_ros.TransformBroadcaster()
+            if self.gps_east_offset == 0.0 and self.gps_north_offset == 0.0:
+                rospy.logwarn(
+                    "publish_map_tf 가 켜져 있는데 gps_east/north_offset 이 0 이다. "
+                    "map 좌표가 UTM 절대값이 되어 RViz 원점에서 수백 km 떨어진다.")
+        if self._utm is None:
+            try:
+                from pyproj import Transformer
+                self._utm = Transformer.from_crs(
+                    "EPSG:4326", "EPSG:%d" % self.utm_epsg, always_xy=True)
+            except Exception as e:
+                rospy.logerr_throttle(
+                    30.0, "pyproj 없음 - map TF 를 발행할 수 없다: %s", e)
+                self.publish_map_tf = False
+                return
+        if self._last_imu_q is None:
+            # 방위 없이 위치만 내보내면 라이다 점군이 엉뚱한 방향으로 회전한다.
+            rospy.logwarn_throttle(10.0, "IMU orientation 대기 중 - map TF 보류")
+            return
+        east, north = self._utm.transform(lon, lat)
+        t = TransformStamped()
+        t.header.stamp = stamp
+        t.header.frame_id = self.frame_map
+        t.child_frame_id = self.frame_base
+        t.transform.translation.x = east - self.gps_east_offset
+        t.transform.translation.y = north - self.gps_north_offset
+        t.transform.translation.z = 0.0
+        (t.transform.rotation.x, t.transform.rotation.y,
+         t.transform.rotation.z, t.transform.rotation.w) = self._last_imu_q
+        self._tf_bcast.sendTransform(t)
 
     def _forward_to_planner(self, name, raw):
         forward_sock = self.planner_forward_sockets.get(name)

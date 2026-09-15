@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# YOLO 노드를 컨테이너의 GPU 프로필에 맞는 Python 환경으로 실행한다.
+#
+# catkin_install_python이 devel/lib/Main/YOLODetection.py 로 생성하는 relay
+# 스크립트는 빌드 시점의 시스템 Python(#!/usr/bin/python3 = 3.8)으로 shebang이
+# 고정된다. 따라서 소스 파일의 shebang만 바꿔서는 인터프리터를 바꿀 수 없다.
+# 이 래퍼가 인터프리터를 명시적으로 지정해 그 문제를 없앤다.
+set -euo pipefail
+
+YOLO_PYTHON="${ASMC_YOLO_PYTHON:-/usr/bin/python3}"
+
+# 이 래퍼와 YOLODetection.py는 같은 catkin libexec 디렉터리에 설치된다
+# (devel space: devel/lib/Main, install space: install/lib/Main).
+# 현재 작업 디렉터리에 의존하지 않도록 래퍼 자신의 절대 경로에서 찾는다.
+HERE="$(cd -- "$(dirname -- "$(readlink -f -- "$0")")" && pwd)"
+NODE_SCRIPT="$HERE/YOLODetection.py"
+
+if [ ! -x "$YOLO_PYTHON" ]; then
+    echo "[FATAL] YOLO Python 실행 파일이 없습니다: $YOLO_PYTHON" >&2
+    echo "        선택한 GPU 프로필의 컨테이너 이미지를 재빌드하십시오." >&2
+    exit 1
+fi
+
+if [ ! -f "$NODE_SCRIPT" ]; then
+    echo "[FATAL] YOLO 노드 스크립트가 없습니다: $NODE_SCRIPT" >&2
+    echo "        catkin_make로 Main 패키지를 빌드했는지 확인하십시오." >&2
+    exit 1
+fi
+
+exec "$YOLO_PYTHON" "$NODE_SCRIPT" "$@"

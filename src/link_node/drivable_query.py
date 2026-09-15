@@ -174,6 +174,42 @@ class DrivableMask:
         pts = (np.array([cx, cy]) + uu.ravel()[:, None] * f + vv.ravel()[:, None] * r)
         return float(self.contains(pts).mean())
 
+    # -------------------------------------------------- 사각형(OBB 꼭짓점) 단위
+    @staticmethod
+    def _order_quads(quads: np.ndarray) -> np.ndarray:
+        """(N,4,2) 꼭짓점을 중심 기준 반시계로 정렬한다.
+
+        꼭짓점 순서를 가정하지 않기 위해서다. 사각형은 항상 볼록이라 중심에서
+        본 각도로 정렬하면 둘레 순서가 된다.
+        """
+        c = quads.mean(axis=1, keepdims=True)
+        ang = np.arctan2(quads[..., 1] - c[..., 1], quads[..., 0] - c[..., 0])
+        return np.take_along_axis(quads, np.argsort(ang, axis=1)[..., None], axis=1)
+
+    def quads_inside_ratio(self, quads_xy, samples: int = 5) -> np.ndarray:
+        """(N,4,2) 사각형들의 내부를 격자로 훑어 주행가능영역에 든 비율 (N,).
+
+        OBB 의 네 꼭짓점을 그대로 넣는다. 중심+yaw 로 박스를 다시 만들지 않으므로
+        yaw 규약(라디안/도, 법선 방향)이 어긋날 여지가 없다. 조회는 전체 점을
+        한 번에 묶어서 하므로 객체 수만큼 파이썬 루프를 돌지 않는다.
+        """
+        q = np.asarray(quads_xy, dtype=np.float64).reshape(-1, 4, 2)
+        if q.shape[0] == 0:
+            return np.zeros(0, dtype=np.float64)
+        q = self._order_quads(q)
+        t = np.linspace(0.0, 1.0, max(2, samples))
+        uu, vv = np.meshgrid(t, t)
+        u, v = uu.ravel(), vv.ravel()
+        # 이변수 보간. 정렬된 q0..q3 에 대해 u 는 q0->q1, v 는 q0->q3 방향이다.
+        w = np.stack([(1 - u) * (1 - v), u * (1 - v), u * v, (1 - u) * v], axis=1)
+        pts = np.einsum('sk,nkd->nsd', w, q)
+        inside = self.contains(pts.reshape(-1, 2)).reshape(q.shape[0], -1)
+        return inside.mean(axis=1)
+
+    def quad_inside_ratio(self, corners_xy, samples: int = 5) -> float:
+        """사각형 하나의 내부 비율. quads_inside_ratio 의 단수형."""
+        return float(self.quads_inside_ratio(corners_xy, samples=samples)[0])
+
     def local_from_wgs84(self, lat, lon, utm_epsg: int = 32652) -> np.ndarray:
         """위경도 -> 맵 로컬 미터. GPS 로 들어올 때만 필요하다."""
         import pyproj

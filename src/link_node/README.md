@@ -4,6 +4,12 @@ MGeo `link_set.json` + `node_set.json` **만으로** 주행가능영역 / 차선
 이진(0/255) 래스터로 굽고 HDF5 로 저장하는 오프라인 도구. ROS·UDP·시뮬레이터를
 쓰지 않는다.
 
+팀 로드맵의 **MGeo map prior** 계층([인지 융합 로드맵](../../docs/perception-map-fusion-roadmap.md)
+3.1)이 여기서 구현된다. catkin 패키지가 아니라 오프라인 CLI 라서 `src/perception/`
+아래가 아닌 `src/link_node/` 에 둔다. 로드맵이 함께 잡아둔 **런타임 local crop 은
+아직 이 저장소에 없다** — `live_check.py` 의 `ego_view()` 가 기능적으로 같은 일을
+0.28 ms/프레임에 하지만 ROS 노드로 감싸지 않았고, 어느 파트가 맡을지 미정이다.
+
 ## 실행
 
 ```bash
@@ -213,6 +219,23 @@ PCA 로 구해 정지선 방향으로 쓴다. 묶는 조건은 세 가지다:
 그래도 20° 를 넘는 그룹은 버리고 접선 법선으로 폴백한다. 혼자 있는 노드(단일 차로
 진입부)도 접선 법선을 쓴다.
 
+**도로 밖으로 나간 끝은 잘라낸다** (`geometry.clip_stopline_to_road`, 기본 켬).
+정지선 길이는 링크의 차로 폭(3.5 m)인데 도로는 `drivable.outer_trim_m` 만큼 좌우로
+깎이므로, 그대로 두면 깎은 쪽 끝이 삐져나온다. 차선의 `clip_lane_to_road` 와 같은
+방식이다. 길이를 일률적으로 줄이는 것(`length_scale`)보다 남는 픽셀이 많다:
+
+| 방안 (trim 0.3) | 픽셀 | 도로 밖 | `stopline_on_road` |
+|---|---|---|---|
+| 손대지 않음 | 459 | 20 | 0.9564 |
+| `length_scale 0.90` | 398 | 6 | 0.9849 |
+| `length_scale 0.829` (= (3.5−0.6)/3.5) | 381 | 2 | 0.9948 |
+| `length_scale 0.80` | 383 | 0 | 1.0000 |
+| **도로로 클립** | **439** | **0** | **1.0000** |
+
+래스터만 자르고 **벡터(`stopline_points` / `stopline_lengths`)는 자르지 않는다** —
+그쪽은 실제 기하를 그대로 담아야 '가장 가까운 정지선' 조회가 맞는다. 도로 면적에는
+영향이 없다 (정지선은 별도 레이어).
+
 #### 일부 정지선만 굽기
 
 기본은 150개 전부다. 특정 정지선만 필요하면 네 가지 방법이 있다.
@@ -271,9 +294,24 @@ attrs:
   map_id, local_origin_in_global(float64[3])     ← 맵 혼동 방지
   layers, source_files, layer_params, stats      ← JSON 문자열
   git_sha, baked_at
+
+/stopline_points /stopline_dirs /stopline_headings /stopline_lengths
+  구운 정지선의 벡터 원본 (래스터만으로는 '가장 가까운 정지선'을 못 찾는다)
+  attrs: stopline_ids, stopline_traffic_lights
+
+/link_points /link_offsets                       ← 검증 전용, 규약 미확정
+  링크 중심선을 이어붙인 것 + 링크별 시작 인덱스
+  attrs: link_ids, link_in_road, link_in_lane
 ```
 
 읽을 때는 `mapbake.writer.read_h5_meta(path)` 로 attrs 만 먼저 확인할 수 있다.
+
+> ⚠️ **`link_*` 는 현재 `live_check.py` 만 읽는다** (`--show-links` / `--collect-links`
+> 가 주변 링크와 좌우 거리를 표시하는 데 쓴다). 인계 대상인 `drivable_query.py` 는
+> 읽지 않고, **외부 파트용 규약도 정해진 바 없다.** 라이다의 `lane_relation`
+> (로드맵 3.3) 에 쓰기로 정해지면 `nearest_link` + 종·횡거리 API 를
+> `drivable_query.py` 에 얹고 여기에 규약을 적을 것. 안 쓰기로 정해지면 H5 에서
+> 빼되, 빼면 검증 뷰어가 깨지므로 플래그로 분리해야 한다.
 
 ## 검증
 
@@ -281,10 +319,23 @@ attrs:
 
 | 지표 | 값 | 의미 |
 |---|---|---|
-| `stopline_on_road_ratio` | 0.986 | 정지선 픽셀이 road 안에 있는 비율. 노드가 링크 위에 있으므로 1.0 에 가까워야 정상 — 낮으면 방향 계산 버그 |
+| `stopline_on_road_ratio` | 1.000 | 정지선 픽셀이 road 안에 있는 비율 (`clip_stopline_to_road` 로 잘라내므로 1.0) |
 | `lane_near_road_ratio` | 1.000 | 차선이 road 경계 ±0.6 m 안에 있는 비율 |
 | `world_roundtrip_max_err_m` | 0.084 | `world→pixel→world` 오차 (허용 `1/ppm` = 0.2) |
 | `road_area_m2` | 93,624 | 주행가능영역 면적 (제외 18개 + 최외곽 0.3 m 깎기) |
+
+> ⚠️ **`stopline_on_road_ratio` 가 낮다고 방향 계산을 파지 말 것.** 정지선 길이는
+> 링크의 차로 폭(3.5 m)인데 도로는 `drivable.outer_trim_m` 만큼 좌우로 깎이므로,
+> 클립을 끄면 **깎은 쪽 끝이 그만큼 삐져나와** 이 값이 내려간다. 방향과 무관하다.
+>
+> | `outer_trim_m` | 0.0 | 0.2 | 0.3 | 0.4 |
+> |---|---|---|---|---|
+> | 클립 끔 | 0.9956 | 0.9695 | 0.9564 | 0.9259 |
+>
+> 실측(trim 0.3): 8개 중 3개(`A1256W000807` / `A1256W000582` / `A1256W000682`)의
+> **우측 끝만** 밖으로 나가고 459 px 중 20 px(4.4%) 이다. 중앙은 전부 도로 안이다 —
+> 방향이 틀렸다면 선 전체가 어긋난다. 이 오진을 막으려고
+> `test_stopline_clip_removes_ends_left_outside_by_outer_trim` 을 박아뒀다.
 
 `overlay.png` 는 [behavior_planner 대시보드](../behavior_planner/web/index.html)와
 같은 맵이므로 눈으로 직접 대조할 수 있다.
@@ -629,6 +680,8 @@ score = dm.obb_inside_ratio(cx, cy, length_m, width_m, yaw_deg)
 | `contains(points)` | 점 벡터 조회 |
 | `obb_overlaps(...)` | OBB 가 주행가능영역에 걸치는지 |
 | `obb_inside_ratio(...)` | OBB 가 든 비율 (0~1) |
+| `quads_inside_ratio(quads)` | **(N,4,2) 사각형들의 내부 비율 (N,). 배치·꼭짓점 입력** |
+| `quad_inside_ratio(corners)` | 사각형 하나의 내부 비율 |
 | `check_map(map_id)` | 맵 판본 확인, 다르면 예외 |
 | `looks_like_same_frame(points)` | 좌표계 원점이 맞는지 확인 |
 
@@ -637,12 +690,20 @@ score = dm.obb_inside_ratio(cx, cy, length_m, width_m, yaw_deg)
 | | |
 |---|---|
 | 20만 점 조회 | **6.3 ms** (10 Hz 스캔 기준 여유 15배) |
+| 객체 200개 × 25점 배치 | **0.88 ms** (`quads_inside_ratio`) |
 | 조회 1회 | 1.6 µs, 맵 크기와 무관한 O(1) |
 | 로드 | 0.05 s, RAM 상주 **22 MB** (`road` 한 장만 읽는다) |
 
 점 하나당 나눗셈 2번 + 배열 인덱싱 1번이다. 탐색이나 매칭은 없다.
 
 ### 반드시 알아야 할 것
+
+**0. 정지선은 8개만 구워져 있다.** 이 맵의 정지선 노드는 150개인데, 현재
+`config/waize_katri.yaml` 의 `stopline.include_nodes` 가 **경로 검증용으로 주행하며
+모은 8개**로 한정되어 있다. 대회 경로가 확정돼서 고른 게 아니라 그 시점 주행 구간의
+것이므로 **임시 상태**다. 전체가 필요하면 `include_nodes` 를 비우고 다시 구우면
+150개가 다 나온다. (라이다 조회는 `road` 레이어만 쓰므로 실사용에는 영향이 없다 —
+`stopline` 레이어나 정지선 벡터를 쓸 거라면 반드시 확인할 것.)
 
 **1. `margin_m` 을 줄 것.** 도로 폭을 실제 노면에 맞추려고 좌우 0.3 m 를 깎아둔
 상태라 경계가 빡빡하다. 여유 없이 쓰면 측위 오차 **0.2 m 에도** 가장자리 객체를
@@ -683,6 +744,160 @@ python3 src/link_node/drivable_query.py
 # OBB 예: True (내부 비율 1.00)
 ```
 
+## 주행가능영역 최종 출력 (`/last_lidar`)
+
+실시간 운용에서는 `Main`의 C++ 발행기가 트래킹된 객체를 ENU로 변환하고,
+**주행가능영역 안에 있는 것만** 골라 최종 토픽으로 발행한다.
+
+```
+입력  /lidar/tracked_objects_map   Msg/TrackedObjectArray, frame_id = "map"
+출력  /last_lidar                  같은 타입, frame_id = "map"
+시각화 /last_lidar_markers         MarkerArray, frame_id = "velodyne"
+```
+
+객체 하나(`Msg/TrackedObject`)가 담는 값. 좌표/속도는 모두 `header.frame_id`
+(= `map`, ENU) 기준이다.
+
+| 필드 | 뜻 |
+|---|---|
+| `id` | 트래커 ID (프레임 간 유지) |
+| `type` | 정수 코드. 1 = person, 2 = car/truck/bus, 3 = 그 외 |
+| `classification` | 융합 정책 결과 문자열: `car` / `person` / `unknown` |
+| `yolo_class` | 이 클래스를 확정시킨 YOLO 원본 라벨: `car`/`truck`/`bus`/`person`, 카메라 근거가 없으면 `unknown` |
+| `is_dynamic` | 동적 객체 판정 |
+| `age` | 연속 추적된 프레임 수 |
+| `miss_count` | 미관측 프레임 수 (`/last_lidar` 는 항상 0) |
+| `cluster_center` | 클러스터 중심점 (x, y, z) |
+| `obb_center` | OBB 중심점 |
+| `obb_corners[8]` | OBB 꼭짓점. 0–3 = 아랫면(zMin), 4–7 = 윗면(zMax) |
+| `obb_yaw` | OBB 긴 축의 방위각 [rad], +x 기준 CCW |
+| `velocity_mps` | 절대 속도 벡터 [m/s] (기준값) |
+| `speed_kph` | 위 벡터의 크기 [km/h] (표시·검증용) |
+| `length` / `width` / `height` | OBB 치수 [m] |
+
+```bash
+cd src/lidar+sensorfusion
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+roslaunch Main main.launch
+```
+
+| 파라미터 | 기본 | 뜻 |
+|---|---|---|
+| `~drivable_margin_m` | **1.0** | 마스크를 이만큼 팽창시켜 여유를 준다 |
+| `~drivable_ratio_threshold` | **0.3** | OBB 내부 비율이 이 값 이상이면 남긴다 |
+| `~drivable_samples` | 5 | OBB를 5×5 격자로 훑는다 |
+| `~drivable_map_id` | `waize_katri_2025-10-23` | 판본 확인. 다르면 `Main` 시작 실패 |
+| `~dynamic_speed_kph` | **5.0** | 동적 객체 판정 속도 |
+| `~enable_sensor_fusion` | **false** | 카메라 클래스 퓨전과 FusionLiDAR 실행 여부 |
+
+`drivable_filter_node.py`는 C++ 결과와 대조하는 독립 구현으로 남겨 둔다. 실시간
+운용 중 함께 실행하면 `/last_lidar` publisher가 둘이 되므로 동시에 실행하지 않는다.
+
+### 좌표 변환이 없다
+
+라이다의 `map` 프레임은 [Parser.cpp](../lidar+sensorfusion/src/Main/src/Parser/Parser.cpp)
+가 UTM52N 에서 `eastOffset`/`northOffset` 을 뺀 ENU 이고, 그 offset 을
+[morai_sensor_bridge.launch](../morai_sensor_bridge/launch/morai_sensor_bridge.launch)
+가 `302595.0` / `4124145.0` 으로 넣는다 — 구운 맵의 `local_origin_in_global` 과
+**같은 값이다.** 그래서 좌표를 그대로 넣는다.
+
+실주행 중 확인한 값이다:
+
+```
+$ rostopic echo /gps -n1 | grep -i offset
+eastOffset: 302595.0
+northOffset: 4124145.0
+```
+
+그때 실차 위경도 `(37.240995, 126.774368)` 를 맵 로컬로 옮기면 `(-9.63, -216.69) m`
+이고 구운 주행가능영역 **안**이다. 노드는 첫 프레임에서 객체가 맵
+bounding range에 드는지만 점검하고 어긋나면 로그로 알린다
+(`좌표 범위 확인 OK` / `객체 좌표가 맵 범위 밖입니다`). 이 검사는 큰
+원점 불일치를 찾는 후리스틱이며, 맵 범위 안의 GPS 점프나 수 m 오차를
+증명하지는 않는다.
+
+### 판정은 OBB 꼭짓점으로 한다
+
+메시지의 `obb_corners[0..3]` (하층 4개, 상층은 4..7) 은 **이미 map ENU 로 개별
+변환된 값**이다. 그래서 중심+yaw 로 박스를 다시 만들지 않는다 — yaw 규약(라디안/도,
+법선 방향)이 어긋날 여지를 없애기 위해서다. `obb_yaw` 는 **라디안**이라 `yaw_deg` 를
+받는 API 에 그대로 넣으면 안 된다.
+
+꼭짓점 순서는 가정하지 않는다 (`quads_inside_ratio` 가 중심 기준 각도로 다시 정렬).
+두 방식이 같은 답을 내는지는 회귀로 붙잡아 뒀다
+(`test_quad_ratio_matches_center_yaw_and_ignores_corner_order`, 무작위 OBB 50개에서
+차이 0.000000).
+
+### 왜 비율 0.3 + 여유 1.0 인가
+
+느슨한 방식(중심+네 귀퉁이 5점 중 하나라도 걸치면 살림)과 비교해 실측했다. 가장 긴
+직선 링크에서 도로 경계를 찾고 소형차(4.6×1.9 m)를 옮겨가며 잰 값이다.
+
+| 차 중심 위치 | 5점 느슨 | 25점 비율 | 임계 0.3 | 임계 0.5 | 임계 0.8 |
+|---|---|---|---|---|---|
+| 도로 중앙 | 살림 | 1.00 | 살림 | 살림 | 살림 |
+| 경계 안쪽 0.5 m | 살림 | 0.72 | 살림 | 살림 | **버림** |
+| **경계 바로 위** | 살림 | **0.40** | 살림 | **버림** | **버림** |
+| 경계 밖 0.5 m | 살림 | 0.20 | **버림** | 버림 | 버림 |
+| 경계 밖 1.0 m | 버림 | 0.00 | 버림 | 버림 | 버림 |
+
+(여유 없이 `margin_m: 0` 으로 잰 값)
+
+세 가지가 여기서 나왔다:
+
+1. **임계 0.5 이상은 쓰면 안 된다.** 도로 최외곽에 세워진 차가 비율 **0.40** 밖에
+   안 나온다 — 이 맵은 갓길이 없고 `outer_trim_m` 으로 좌우 0.3 m 를 더 깎았기
+   때문이다. 0.5 로 두면 **실물 정차 차량을 버린다.**
+2. **느슨 vs 비율의 차이는 0.5 m 폭 띠 하나뿐이다.** "경계 밖 0.5 m" 한 줄만 갈린다.
+   방식 선택보다 `margin_m` 이 훨씬 크게 흔든다.
+3. **그래도 비율을 쓰는 이유는 크기 정규화다.** 5점 방식은 **박스가 클수록 귀퉁이가
+   멀리 뻗어 도로에 닿기 쉽다** — 벽이나 건물을 오검출한 거대한 OBB 가 귀퉁이 하나로
+   통과한다. 비율은 박스 크기로 나누므로 이 문제가 없고, 0.2 m 격자에서 귀퉁이가
+   픽셀 하나에 걸리는 운에도 흔들리지 않는다.
+
+`margin_m: 1.0` 을 함께 쓰면 경계 밖 1.0 m 객체까지 살아남는다 — 느슨 방식과 같은
+보수성인데 크기 정규화가 덤으로 붙는다.
+
+### 실제로 돌려서 확인한 것
+
+격리된 마스터(실시스템과 분리)에 노드를 띄우고 합성 객체를 쏴서 확인했다:
+
+```
+[drivable_filter] map_id=waize_katri_2025-10-23 shape=(7232, 3085) ppm=5.0
+                  margin=1.0 m  threshold=0.3  samples=5x5
+[drivable_filter] /lidar/tracked_objects_map -> last_lidar
+[drivable_filter] 좌표 범위 확인 OK — 객체 6개가 맵 범위 안입니다.
+[drivable_filter] 1 프레임  객체 6 -> 4 (버림 2)
+```
+
+| 위치 | 내부 비율 | 기대 | `last_lidar` 실제 |
+|---|---|---|---|
+| 도로 중앙 / 경계 안쪽 0.5 m / 경계 위 / 경계 밖 1.0 m | 1.00 / 1.00 / 0.92 / 0.56 | 살림 | **살림** |
+| 경계 밖 2.0 m / 5.0 m | 0.08 / 0.00 | 버림 | **버림** |
+
+MORAI 기록 bag의 `/lidar/tracked_objects_map` 398프레임을 원 속도로
+재생한 종단 검증에서는 입력 398프레임/객체 781개가 출력
+398프레임/객체 540개가 되었고, 프레임 유실은 없었다.
+다만 이 bag의 GPS에는 연속 샘플이 최대 46.25 m 점프한 구간이 있어,
+이 결과는 ROS 종단 전송과 필터 실행을 검증한 것이지 keep/drop의 실세계
+GT 정답률을 검증한 것은 아니다.
+
+### 알고 쓸 것
+
+- **기하를 못 믿는 객체는 버리지 않고 남긴다.** 꼭짓점이 비유한값이거나 한 점으로
+  모인 축퇴 박스는 비율이 무의미하므로 통과시키고 로그에 센다. 놓치는 쪽보다 남기는
+  쪽으로 기울인 것이다.
+- **입력은 이미 정제되어 있다.** `MakePlannerObjects` 가 `miss_count != 0`(KF 추정만
+  된 객체), 노이즈 클래스, 빈 클러스터를 발행 전에 걸러낸다. 최대 200개
+  (`~map_output_max_objects`).
+- **점수를 메시지에 실으려면** `TrackedObject.msg` 에 필드를 추가해야 하고 그건
+  `Msg` 패키지 수정 → 중첩 워크스페이스 재빌드다. 지금은 넣지 않았다.
+- `/lidar/tracking_markers_map` 은 같은 객체의 RViz 표시용이다. 필터 입력으로는
+  `/lidar/tracked_objects_map` 하나만 쓴다.
+- **하드 게이트로 쓰지 말 것** 은 여전히 유효하다 (위 "반드시 알아야 할 것" 5번).
+  이 노드는 계산 범위를 좁히는 용도다.
+
 ## 구조
 
 ```
@@ -696,7 +911,8 @@ src/link_node/
 │   ├── raster.py               좌표 규약, 그리기, 구멍 메우기
 │   ├── layers.py               road / lane / stopline 베이크
 │   └── writer.py               H5 입출력
-└── tests/test_mapbake.py       50 tests
+├── drivable_filter_node.py     주행가능영역 밖 객체를 걸러 last_lidar 로 발행
+└── tests/test_mapbake.py       84 tests
 ```
 
 `topology.py` 가 세 레이어의 공통 기반이다 — 차선은 법선, 정지선은 노드 heading 이

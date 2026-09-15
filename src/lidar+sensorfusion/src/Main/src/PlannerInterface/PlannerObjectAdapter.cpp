@@ -63,37 +63,6 @@ Eigen::Matrix3d RawLidarFromPreprocessedRotation(const GPS_IMU& gps_imu) {
         Eigen::Vector3d::UnitY()).toRotationMatrix();
 }
 
-Eigen::Vector3d LidarLeverArmVelocityPreprocessed(
-    const GPS_IMU& gps_imu,
-    const VehicleSpec& vehicle) {
-    // EgoVehicleStatus/CAN speed is the translational speed of the vehicle
-    // reference point (the rear-axle origin in setting.yaml), whereas the
-    // relative object velocity is measured at the LiDAR origin.  A rotating
-    // rigid body therefore needs v_lidar = v_reference + omega x r.
-    const Eigen::Vector3d angular_velocity_vehicle(
-        gps_imu.st_IMU.f32_AngularVelX,
-        gps_imu.st_IMU.f32_AngularVelY,
-        gps_imu.st_IMU.f32_AngularVelZ);
-    const Eigen::Vector3d reference_to_lidar_vehicle(
-        vehicle.st_LiDARPos.f32_X,
-        vehicle.st_LiDARPos.f32_Y,
-        vehicle.st_LiDARPos.f32_Z);
-    if (!angular_velocity_vehicle.allFinite() ||
-        !reference_to_lidar_vehicle.allFinite()) {
-        return Eigen::Vector3d::Zero();
-    }
-
-    const Eigen::Vector3d lever_velocity_vehicle =
-        angular_velocity_vehicle.cross(reference_to_lidar_vehicle);
-
-    // Tracking operates on the LiDAR cloud after CorrectingPoints() applies
-    // Ry(+imu_pitch).  Convert the vehicle-frame lever velocity into that
-    // exact frame; RotateLidarVectorToMap() later applies the inverse chain.
-    return RawLidarFromPreprocessedRotation(gps_imu).transpose() *
-           VehicleFromLidarRotation(vehicle).transpose() *
-           lever_velocity_vehicle;
-}
-
 Eigen::Vector3d ToEigen(const PlannerPoint3D& point) {
     return {point.x, point.y, point.z};
 }
@@ -167,6 +136,8 @@ std::vector<PlannerObject> MakePlannerObjects(
         planner_object.id = object.s32_Id;
         planner_object.type = MapObjectType(object.str_ObjectClass);
         planner_object.classification = object.str_ObjectClass;
+        planner_object.yolo_class =
+            object.str_YoloClass.empty() ? "unknown" : object.str_YoloClass;
         planner_object.is_dynamic = object.b_IsDynamic;
         planner_object.age = object.s32_Age;
         planner_object.miss_count = object.s32_MissCount;
@@ -180,9 +151,16 @@ std::vector<PlannerObject> MakePlannerObjects(
             gps_imu, vehicle);
         for (std::size_t i = 0; i < planner_object.obb_corners_map.size(); ++i) {
             const auto& corner = object.OBB_Corners_Body[i];
+            planner_object.obb_corners_lidar[i] = {
+                corner.x, corner.y, corner.z};
             planner_object.obb_corners_map[i] = TransformLidarPointToMap(
                 {corner.x, corner.y, corner.z}, gps_imu, vehicle);
         }
+        planner_object.cluster_center_lidar = {
+            object.f32_CoreX, object.f32_CoreY, object.f32_CoreZ};
+        planner_object.obb_center_lidar = {
+            object.f32_OBB_CenterX, object.f32_OBB_CenterY,
+            object.f32_OBB_CenterZ};
 
         // OBB의 긴 축(+x)을 회전시켜 map XY에 투영한다. 위치 translation과
         // 속도 방향을 OBB heading에 섞지 않는다.
@@ -198,28 +176,13 @@ std::vector<PlannerObject> MakePlannerObjects(
         planner_object.height = std::max(
             kMinBoxSide, object.f32_OBB_ZMax - object.f32_OBB_ZMin);
 
-        const double speed_mps = std::isfinite(object.f32_Velocity)
-            ? std::max(0.0, static_cast<double>(object.f32_Velocity))
-            : 0.0;
-        const double direction_norm = std::hypot(
-            object.f32_DirX, object.f32_DirY);
         PlannerPoint3D velocity_lidar{};
-        if (speed_mps > 0.0 && std::isfinite(direction_norm) &&
-            direction_norm > 1e-6) {
-            velocity_lidar.x = speed_mps * object.f32_DirX / direction_norm;
-            velocity_lidar.y = speed_mps * object.f32_DirY / direction_norm;
-
-            // Tracking.cpp already adds the CAN translational speed, so do not
-            // add it again here.  It does not include the LiDAR lever-arm
-            // velocity, however; add omega x r exactly once before the map
-            // rotation.  Leave an uninitialized/zero tracker velocity at zero
-            // instead of publishing omega x r alone as a false object speed.
-            const Eigen::Vector3d lever_velocity_lidar =
-                LidarLeverArmVelocityPreprocessed(gps_imu, vehicle);
-            velocity_lidar.x += lever_velocity_lidar.x();
-            velocity_lidar.y += lever_velocity_lidar.y();
-            velocity_lidar.z += lever_velocity_lidar.z();
+        if (std::isfinite(object.f32_AbsVx) &&
+            std::isfinite(object.f32_AbsVy)) {
+            velocity_lidar.x = object.f32_AbsVx;
+            velocity_lidar.y = object.f32_AbsVy;
         }
+        planner_object.velocity_lidar_mps = velocity_lidar;
         planner_object.velocity_map_mps = RotateLidarVectorToMap(
             velocity_lidar, gps_imu, vehicle);
         planner_object.speed_kph = kMpsToKph * std::sqrt(
@@ -229,6 +192,20 @@ std::vector<PlannerObject> MakePlannerObjects(
                 planner_object.velocity_map_mps.y +
             planner_object.velocity_map_mps.z *
                 planner_object.velocity_map_mps.z);
+        planner_object.decision_vx_kph = object.f32_DecisionVxKPH;
+        planner_object.decision_vy_kph = object.f32_DecisionVyKPH;
+        planner_object.decision_speed_kph = object.f32_DecisionSpeedKPH;
+        planner_object.map_displacement_speed_kph =
+            object.f32_MapDisplacementSpeedKPH;
+        planner_object.motion_velocity_jump_kph =
+            object.f32_MotionVelocityJumpKPH;
+        planner_object.motion_state = object.s32_MotionState;
+        planner_object.motion_valid_observations =
+            object.s32_MotionValidObservations;
+        planner_object.motion_accepted_samples =
+            object.s32_MotionAcceptedSamples;
+        planner_object.motion_candidate_samples =
+            object.s32_MotionCandidateSamples;
 
         if (!IsFinite(planner_object.cluster_center_map) ||
             !IsFinite(planner_object.obb_center_map) ||

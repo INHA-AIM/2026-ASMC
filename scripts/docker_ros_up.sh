@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 COMPOSE_FILE="$REPO_ROOT/docker/ros-noetic/docker-compose.yaml"
+RTX50_COMPOSE_FILE="$REPO_ROOT/docker/ros-noetic/docker-compose.rtx50.yaml"
 CONTAINER="asmc-ros-noetic"
 
 export ASMC="${ASMC:-$REPO_ROOT}"
@@ -12,6 +13,7 @@ export ASMC_DATA="${ASMC_DATA:-$(dirname "$REPO_ROOT")/data}"
 mkdir -p "$ASMC_DATA"
 
 COMPOSE=(docker compose -f "$COMPOSE_FILE")
+COMPOSE_RTX50=(docker compose -f "$COMPOSE_FILE" -f "$RTX50_COMPOSE_FILE")
 
 die() {
   echo "[FAIL] $*" >&2
@@ -45,6 +47,21 @@ render_config() {
   if [ "${1:-}" = "show" ]; then
     printf '%s\n' "$rendered"
   fi
+}
+
+render_rtx50_config() {
+  local rendered
+  rendered="$("${COMPOSE_RTX50[@]}" config)"
+  grep -q '^    image: asmc/ros-noetic:rtx50$' <<<"$rendered" \
+    || die "RTX 50 compose overlay did not select asmc/ros-noetic:rtx50"
+  grep -q '^      dockerfile: Dockerfile.rtx50$' <<<"$rendered" \
+    || die "RTX 50 compose overlay did not select Dockerfile.rtx50"
+  grep -q '^    network_mode: host$' <<<"$rendered" \
+    || die "RTX 50 compose does not preserve host network mode"
+  if grep -q '^    ports:$' <<<"$rendered"; then
+    die "RTX 50 host-mode compose must not publish ports"
+  fi
+  echo "[OK] RTX 50 overlay preserves host mode and selects the derived image"
 }
 
 inspect_mode() {
@@ -174,8 +191,33 @@ case "$cmd" in
     inspect_mode
     print_next
     ;;
+  build-rtx50)
+    render_config
+    render_rtx50_config
+    # 파생 이미지가 오래된 asmc/ros-noetic:dev를 상속하지 않도록 기본 이미지를
+    # 항상 먼저 갱신한다. Docker layer cache가 있어 변경 없는 cu118은 재다운로드하지 않는다.
+    "${COMPOSE[@]}" build
+    "${COMPOSE_RTX50[@]}" build
+    ;;
+  up-rtx50)
+    render_config
+    render_rtx50_config
+    "${COMPOSE_RTX50[@]}" up -d --force-recreate
+    inspect_mode
+    print_next
+    ;;
+  rebuild-rtx50)
+    render_config
+    render_rtx50_config
+    # 공용 RTX 40 이미지를 먼저 만든 뒤 RTX 50 파생 이미지를 no-cache로 만든다.
+    "${COMPOSE[@]}" build
+    "${COMPOSE_RTX50[@]}" build --no-cache
+    "${COMPOSE_RTX50[@]}" up -d --force-recreate
+    inspect_mode
+    print_next
+    ;;
   *)
-    echo "Usage: $0 {config [show]|build|up|status|check [port]|verify [seconds]|verify-gt [seconds]|down|rebuild}"
+    echo "Usage: $0 {config [show]|build|up|rebuild|build-rtx50|up-rtx50|rebuild-rtx50|status|check [port]|verify [seconds]|verify-gt [seconds]|down}"
     exit 2
     ;;
 esac

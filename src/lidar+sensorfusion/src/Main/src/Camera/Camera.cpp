@@ -365,6 +365,11 @@ void ProcessCameraStream(const RawImageFrame& front_frame, const RawImageFrame& 
     pthread_mutex_unlock(&st_SensorData.st_MutexCamera);
 
     st_Camera.bgr_image = cv::imdecode(encoded1, cv::IMREAD_COLOR);
+    st_Camera.front_image_stamp.fromNSec(front_frame.u64_Timestamp);
+    st_Camera.front_compressed_image.assign(
+        reinterpret_cast<const uint8_t*>(front_frame.arc_Buffer),
+        reinterpret_cast<const uint8_t*>(front_frame.arc_Buffer) +
+            front_frame.s32_Num);
 
     if (st_Camera.bgr_image.empty()) {
         std::cout << "[DEBUG] Front camera image is empty after imdecode!" << std::endl;

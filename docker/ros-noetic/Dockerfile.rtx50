@@ -1,0 +1,29 @@
+# RTX 50 시리즈용 파생 이미지.
+# 먼저 동일 디렉터리의 Dockerfile을 asmc/ros-noetic:dev로 빌드해야 한다.
+FROM asmc/ros-noetic:dev
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ROS Noetic의 시스템 Python 3.8/cu118은 그대로 둔다. RTX 50(sm_120)을
+# 지원하는 센서퓨전 YOLO와 신호등 ResNet18만 Python 3.9/cu128 환경에서
+# 실행한다.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.9 python3.9-venv python3.9-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-yolo-gpu.txt /tmp/requirements-inference-rtx50.txt
+RUN python3.9 -m venv /opt/yolo-venv && \
+    /opt/yolo-venv/bin/python -m pip install --no-cache-dir \
+      "pip==26.0.1" "setuptools==82.0.1" "wheel==0.48.0" && \
+    /opt/yolo-venv/bin/python -m pip install --no-cache-dir \
+      --index-url https://download.pytorch.org/whl/cu128 \
+      torch==2.7.1 torchvision==0.22.1 && \
+    /opt/yolo-venv/bin/python -m pip install --no-cache-dir \
+      -r /tmp/requirements-inference-rtx50.txt && \
+    rm -f /tmp/requirements-inference-rtx50.txt && \
+    /opt/yolo-venv/bin/python -c \
+      "import torch,torchvision,ultralytics,cv2,numpy,rospkg,netifaces; assert torch.version.cuda.startswith('12.8'); print('RTX50 inference:',torch.__version__,torchvision.__version__,ultralytics.__version__)"
+
+# docker exec로 실행한 셸과 두 실행 래퍼가 같은 인터프리터를 선택한다.
+ENV ASMC_YOLO_PYTHON=/opt/yolo-venv/bin/python
+ENV ASMC_TRAFFIC_LIGHT_PYTHON=/opt/yolo-venv/bin/python

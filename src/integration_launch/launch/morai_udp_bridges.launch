@@ -16,6 +16,8 @@
   <arg name="instance_lidar_port" default="9311"/>
   <arg name="instance_lidar_topic" default="/velodyne_points_instance"/>
   <arg name="timestamp_mode" default="receive"/>
+  <!-- Opt-in only: authoritative localization must be the sole map TF owner. -->
+  <arg name="publish_map_tf" default="false"/>
   <arg name="cmd_ip" default="$(optenv MORAI_CMD_IP 127.0.0.1)"/>
   <arg name="cmd_port" default="9111"/>
   <include file="$(find morai_udp_bridge)/launch/morai_udp_bridge.launch">
@@ -31,5 +33,6 @@
     <arg name="instance_lidar_port" value="$(arg instance_lidar_port)"/>
     <arg name="instance_lidar_topic" value="$(arg instance_lidar_topic)"/>
     <arg name="timestamp_mode" value="$(arg timestamp_mode)"/>
+    <arg name="publish_map_tf" value="$(arg publish_map_tf)"/>
   </include>
 </launch>

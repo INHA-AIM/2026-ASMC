@@ -57,6 +57,17 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 ```
 
+> **GPU 추론 이미지 선택**: RTX 40 팀원은 위의 기본 `build`/`up`을 그대로
+> 사용합니다(Python 3.8 + PyTorch 2.1.2/cu118). 이번 통합에서 기본 GPU stack은
+> 변경하지 않았고 LiDAR 빌드 의존성과 기존 Ultralytics 8.4.150 고정만 반영했습니다.
+> RTX 50 팀원은 최초 1회
+> `./scripts/docker_ros_up.sh build-rtx50`, 실행할 때 `up-rtx50`을 사용합니다.
+> RTX 50 이미지에서는 센서퓨전 YOLO와 신호등 ResNet18이 모두 격리된
+> `/opt/yolo-venv`(Python 3.9 + PyTorch cu128)를 사용합니다. 두 이미지 모두
+> NVIDIA 드라이버와 Container Toolkit은 **host**에 설치돼 있어야 하며,
+> 컨테이너 안에 드라이버를 설치하면 안 됩니다. 확인·문제해결 절차는
+> [src/lidar+sensorfusion/RUN_SENSOR_FUSION.md](src/lidar+sensorfusion/RUN_SENSOR_FUSION.md#camera-inference-gpu-cuda)를 보십시오.
+
 상세: [docs/getting-started.md](docs/getting-started.md)
 
 ## 저장소 구조 (요약)

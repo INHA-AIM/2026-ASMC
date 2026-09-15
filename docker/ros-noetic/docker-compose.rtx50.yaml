@@ -1,0 +1,9 @@
+services:
+  asmc-ros-noetic:
+    build:
+      context: .
+      dockerfile: Dockerfile.rtx50
+    image: asmc/ros-noetic:rtx50
+    environment:
+      - ASMC_YOLO_PYTHON=/opt/yolo-venv/bin/python
+      - ASMC_TRAFFIC_LIGHT_PYTHON=/opt/yolo-venv/bin/python

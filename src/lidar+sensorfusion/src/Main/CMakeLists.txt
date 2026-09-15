@@ -52,6 +52,7 @@ add_library(myHeader
   src/Lidar/RoiVoxel/RoiVoxel.cpp
   src/Lidar/Visualization/Visualization.cpp
   src/Lidar/Tracking/Tracking.cpp
+  src/Lidar/Tracking/MotionClassifier.cpp
   src/Lidar/Kalman/Kalman.cpp
   src/Lidar/ImuRansac/ImuFusion.cpp
   src/Lidar/ImuRansac/Ransac.cpp
@@ -66,7 +67,7 @@ add_library(myHeader
 )
 add_dependencies(myHeader ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-target_link_libraries(myHeader ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} Geographic)
+target_link_libraries(myHeader ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} yaml-cpp Geographic)
 
 add_executable(main src/main.cpp)
 add_dependencies(main myHeader ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -78,7 +79,52 @@ target_link_libraries(main myHeader
   Geographic
 )
 
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(test_motion_classifier
+    test/test_motion_classifier.cpp
+    src/Lidar/Tracking/MotionClassifier.cpp
+  )
+  if(TARGET test_motion_classifier)
+    target_link_libraries(test_motion_classifier ${catkin_LIBRARIES})
+  endif()
+  catkin_add_gtest(test_fusion_class_policy
+    test/test_fusion_class_policy.cpp
+  )
+  if(TARGET test_fusion_class_policy)
+    target_link_libraries(test_fusion_class_policy ${catkin_LIBRARIES})
+  endif()
+  catkin_add_gtest(test_fusion_time_matcher
+    test/test_fusion_time_matcher.cpp
+  )
+  if(TARGET test_fusion_time_matcher)
+    target_link_libraries(test_fusion_time_matcher ${catkin_LIBRARIES})
+  endif()
+endif()
+
 catkin_install_python(PROGRAMS
   src/Camera/YOLO/YOLODetection.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+# YOLO 노드는 CUDA 12.8 PyTorch가 설치된 Python 3.9 전용 환경에서 실행해야
+# 한다. catkin_install_python이 만드는 relay 스크립트는 빌드 시점의 시스템
+# Python으로 shebang이 고정되므로, 인터프리터를 명시하는 shell 래퍼를 같은
+# libexec 디렉터리에 함께 둔다.
+#   devel space  : 아래 file(COPY)가 devel/lib/Main 에 복사한다.
+#   install space: install(PROGRAMS)가 shebang을 고치지 않고 그대로 설치한다.
+# 두 경우 모두 래퍼와 YOLODetection.py가 같은 디렉터리에 놓이므로, 래퍼는
+# 자기 절대 경로를 기준으로 노드 스크립트를 찾을 수 있다.
+file(COPY scripts/yolo_detection_node
+  DESTINATION ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}
+  FILE_PERMISSIONS
+    OWNER_READ OWNER_WRITE OWNER_EXECUTE
+    GROUP_READ GROUP_EXECUTE
+    WORLD_READ WORLD_EXECUTE
+)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+  ${CMAKE_CURRENT_SOURCE_DIR}/scripts/yolo_detection_node
+)
+
+install(PROGRAMS scripts/yolo_detection_node
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
