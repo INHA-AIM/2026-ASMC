@@ -2,8 +2,8 @@
 
 > **문서 역할:** Current Working Proposal — 인지 융합 방향과 단계별 결정 gate
 > **문서 허브:** [README.md](./README.md)
-> **상태:** Working Proposal v0.17 — 음영 camera v3 인수 완료, HD맵·LiDAR 결합 후보 통합<br>
-> **기준일:** 2026-09-15<br>
+> **상태:** Working Proposal v0.18 — 음영 camera v3 인수 완료, current Node/Link HD맵 명목 기준선 생성<br>
+> **기준일:** 2026-09-16<br>
 > **주요 참여:** 안승현(카메라 인지), 장원태(MGeo map prior 제안), 손재호(LiDAR 인지), planning/control 팀<br>
 > **상세 문서:** [인지 GT·BEV·차로 구조화 계획](./perception-bev-lane-interface-plan.md) · [UDP↔ROS 네트워크](./network-udp-ros.md) · [v4 학습 평가](./perception-v4-training-evaluation.md)
 
@@ -127,6 +127,24 @@ CLI라서 `src/perception/` 아래가 아니라 `src/link_node/`에 둔다. **ru
 현재 산출물은 `behavior_planner`의 `waize_katri_2025-10-23` 판본에서 생성한
 근사 map prior다. H5의 `map_id`와 원점 검사를 통과하더라도 공식 대회 K-City 판본 및
 실제 도색과의 검산 전에는 deployment 정본으로 승격하지 않는다.
+
+**안승현 current-only 재구축 후보: [`src/hd_map_builder/`](../src/hd_map_builder/README.md).**
+기존 `src/link_node`를 수정하지 않고, 현재 K-City 2025 link/node를 topology 정본으로 삼는
+별도 provenance-aware vector 후보를 만들었다. 주최측 전역경로와 current route link 39개는
+폐루프 2,184.612m 전 구간에서 일치했다. route, 고주로 인접 차로, 음영과 정적 장애물
+양방향 context를 합친 current link는 70개다. 고주로 15m corridor의 평행 link 32개는
+진행 방향이 같은 30개와 반대 방향 2개로 명시적으로 분류한다. 경로에 짧게 닿은 link가
+다른 도로까지 이어지는 경우 topology ID는 유지하되 export geometry만 corridor로 자른다.
+
+첫 단계에서는 current link 폭을 법선 offset해 명목 lane boundary 85개를 만들고, 인접
+link의 공통 경계 21개를 중복 제거했다. 현재 맵의 모든 `width_start/end`가 3.5m이므로 이는
+실제 도색 GT가 아니다. 합류·분기·비일반 link 등 42개 경계는 `review_required`다. 공식
+route에 연결된 `on_stop_line` node 13개는 모두 명목 stopline 후보를 가지지만 실제 도색
+선분과의 검산 전이다. 모든 feature는 `candidate`, map은 `operational=false`이며 관측선과
+구 KATRI 자료는 이 기준선 생성에 사용하지 않았다. 정량 결과와 source hash는
+[`current corridor report`](../src/hd_map_builder/reports/kcity2025_current_corridor_20260916/README.md)에
+있다. 다음 gate는 current topology를 고정한 채 원태 관측선으로 폭·경계를 보정하고,
+변경되지 않은 구간에만 구맵 속성·누락 geometry를 보조 적용하는 것이다.
 
 ### 3.2 Camera perception 후보 출력
 
@@ -995,7 +1013,7 @@ LiDAR occupancy 결합, safe corridor, fallback과 closed-loop 검증은 판제�
 | 3 | Streaming/ROS GT transport 조사 | rate/schema와 실패 원인 기록 | **종료·백업 브랜치 보존** |
 | 4 | 센서 calibration과 공통 BEV 기준 | camera-only fused pilot 완료; provisional debug ROI를 vector 재평가·GPS lever arm·map overlay 후 확정 | camera 부분 진행 중 |
 | 5 | 3-camera BEV와 lane 구조화 | 판제 소유 feature flag·closed-loop·full-stack profile | **v3 interface/parameter 동결 및 성능 bag 완료; 제어 미연결 handoff** |
-| 6 | MGeo crop과 source policy 평가 | 정상 GPS·Blackout의 map/camera 정합 지표 확보 | 장원태·안승현 |
+| 6 | Current HD맵 보정과 crop/source policy | Node/Link 명목 기준선 완료; 관측선 보정·안정 구간 구맵 이식·RGB-BEV 검수 후 정상 GPS/Blackout 정합 | **1단계 완료, 보정 대기** |
 | 7 | LiDAR association과 판제 인터페이스 | ego/adjacent/unknown, occupancy와 ownership 합의 | 공동 |
 | 8 | 대회판 이식·추가 데이터·장기 재학습 | competition-only held-out 개선과 full rehearsal 통과 | 10월 후보 |
 

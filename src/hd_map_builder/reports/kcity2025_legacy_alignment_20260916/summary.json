@@ -1,0 +1,877 @@
+{
+  "audit_id": "kcity2025_legacy_alignment_20260916",
+  "auxiliary_layers": {
+    "singlecrosswalk_set": {
+      "note": "candidate count only; physical asset and current ID still require review",
+      "reference_tiers": {
+        "D": 58
+      },
+      "total": 58,
+      "within_route_m": {
+        "10": 15,
+        "15": 17,
+        "25": 17,
+        "5": 10
+      }
+    },
+    "surface_marking_set": {
+      "note": "candidate count only; physical asset and current ID still require review",
+      "reference_tiers": {
+        "A": 121,
+        "B": 46,
+        "D": 71
+      },
+      "total": 238,
+      "within_route_m": {
+        "10": 56,
+        "15": 69,
+        "25": 84,
+        "5": 38
+      }
+    },
+    "traffic_light_set": {
+      "note": "candidate count only; physical asset and current ID still require review",
+      "reference_tiers": {
+        "A": 19,
+        "B": 37,
+        "D": 25
+      },
+      "total": 81,
+      "within_route_m": {
+        "10": 9,
+        "15": 15,
+        "25": 15,
+        "5": 7
+      }
+    },
+    "traffic_sign_set": {
+      "note": "candidate count only; physical asset and current ID still require review",
+      "reference_tiers": {
+        "A": 44,
+        "B": 19,
+        "D": 3
+      },
+      "total": 66,
+      "within_route_m": {
+        "10": 21,
+        "15": 26,
+        "25": 30,
+        "5": 10
+      }
+    }
+  },
+  "coordinate_contract": {
+    "fitted_rotation_deg": 0.0,
+    "fitted_scale": 1.0,
+    "formula": "target_local = source_local + source_origin - target_origin",
+    "reason": "declared origins are authoritative; changed areas must not bias ICP",
+    "translation_legacy_to_current_xyz_m": [
+      -135.0580000000191,
+      -1509.4629999999888,
+      28.991
+    ]
+  },
+  "counts": {
+    "current_links": 634,
+    "legacy_lane_boundaries": 1579,
+    "legacy_links": 667
+  },
+  "decisions": {
+    "current_link_node_are_topology_authority": true,
+    "high_speed_is_first_transfer_pilot": true,
+    "layer_specific_gates_required": true,
+    "legacy_features_remain_candidate_until_review": true,
+    "legacy_mgeo_is_input_adapter_not_runtime_schema": true
+  },
+  "lane_boundary_candidates": {
+    "comparison_target": "current_link_width_proxy_not_ground_truth",
+    "high_speed_candidate_count": 64,
+    "tier_a_or_b_attributes": {
+      "color": {
+        "blue": 10,
+        "white": 359,
+        "yellow": 195
+      },
+      "shape": {
+        "Broken": 111,
+        "Broken Solid": 1,
+        "Solid": 449,
+        "Solid Broken": 2,
+        "Solid Solid": 1
+      },
+      "type": {
+        "501": 163,
+        "503": 56,
+        "504": 3,
+        "505": 217,
+        "506": 22,
+        "515": 15,
+        "525": 52,
+        "531": 24,
+        "535": 12
+      }
+    },
+    "tiers": {
+      "A": 449,
+      "B": 115,
+      "D": 1015
+    }
+  },
+  "link_correspondence": {
+    "mapped_feature_count": 366,
+    "tiers": {
+      "A": 275,
+      "B": 61,
+      "D": 331
+    }
+  },
+  "map_id": "kcity2025_hd_candidate_v1",
+  "observed_lane_comparison": [
+    {
+      "category": "other",
+      "collection_sources": "LIDAR_SEMANTIC:1646",
+      "distance_p50_m": 0.2274833276467642,
+      "distance_p95_m": 0.5814400303868082,
+      "sample_count": 1646,
+      "source_file": "5.csv",
+      "within_0_50_ratio": 0.9058323207776428,
+      "within_0_75_ratio": 0.9738760631834751,
+      "within_1_00_ratio": 0.9756986634264885
+    },
+    {
+      "category": "other",
+      "collection_sources": "LIDAR_SEMANTIC:705",
+      "distance_p50_m": 0.35836734366793116,
+      "distance_p95_m": 3.514975000828195,
+      "sample_count": 705,
+      "source_file": "6.csv",
+      "within_0_50_ratio": 0.7588652482269503,
+      "within_0_75_ratio": 0.7702127659574468,
+      "within_1_00_ratio": 0.7858156028368795
+    },
+    {
+      "category": "other",
+      "collection_sources": "LIDAR_SEMANTIC:278",
+      "distance_p50_m": 0.251508461218116,
+      "distance_p95_m": 3.0351141402164425,
+      "sample_count": 278,
+      "source_file": "7.csv",
+      "within_0_50_ratio": 0.5035971223021583,
+      "within_0_75_ratio": 0.5035971223021583,
+      "within_1_00_ratio": 0.5035971223021583
+    },
+    {
+      "category": "shadow_end",
+      "collection_sources": "GPS_DIRECT:1263",
+      "distance_p50_m": 0.19087864506888544,
+      "distance_p95_m": 4.554738206765943,
+      "sample_count": 1263,
+      "source_file": "end_left2.csv",
+      "within_0_50_ratio": 0.8669833729216152,
+      "within_0_75_ratio": 0.885193982581156,
+      "within_1_00_ratio": 0.8883610451306413
+    },
+    {
+      "category": "shadow_end",
+      "collection_sources": "GPS_DIRECT:1133",
+      "distance_p50_m": 0.1989020741390747,
+      "distance_p95_m": 0.4363094033372836,
+      "sample_count": 1133,
+      "source_file": "end_right.csv",
+      "within_0_50_ratio": 0.971756398940865,
+      "within_0_75_ratio": 1.0,
+      "within_1_00_ratio": 1.0
+    },
+    {
+      "category": "other",
+      "collection_sources": "LIDAR_SEMANTIC:1144",
+      "distance_p50_m": 11.621246031040826,
+      "distance_p95_m": 11.63784553135392,
+      "sample_count": 1144,
+      "source_file": "fourth_point.csv",
+      "within_0_50_ratio": 0.0,
+      "within_0_75_ratio": 0.0,
+      "within_1_00_ratio": 0.0
+    },
+    {
+      "category": "high_speed",
+      "collection_sources": "LIDAR_SEMANTIC:1160",
+      "distance_p50_m": 0.1451903987235186,
+      "distance_p95_m": 0.2972770100745146,
+      "sample_count": 1160,
+      "source_file": "hi_en_left.csv",
+      "within_0_50_ratio": 0.9922413793103448,
+      "within_0_75_ratio": 1.0,
+      "within_1_00_ratio": 1.0
+    },
+    {
+      "category": "high_speed",
+      "collection_sources": "LIDAR_SEMANTIC:1998",
+      "distance_p50_m": 0.1498181553313459,
+      "distance_p95_m": 0.3379148535871032,
+      "sample_count": 1998,
+      "source_file": "hi_en_right.csv",
+      "within_0_50_ratio": 1.0,
+      "within_0_75_ratio": 1.0,
+      "within_1_00_ratio": 1.0
+    },
+    {
+      "category": "high_speed",
+      "collection_sources": "GPS_DIRECT:1744",
+      "distance_p50_m": 3.5275991314781994,
+      "distance_p95_m": 4.478742045132224,
+      "sample_count": 1744,
+      "source_file": "hi_left.csv",
+      "within_0_50_ratio": 0.125,
+      "within_0_75_ratio": 0.12844036697247707,
+      "within_1_00_ratio": 0.13245412844036697
+    },
+    {
+      "category": "high_speed",
+      "collection_sources": "GPS_DIRECT:401",
+      "distance_p50_m": 0.28971080516939346,
+      "distance_p95_m": 0.39022360530433137,
+      "sample_count": 401,
+      "source_file": "hi_middel_right.csv",
+      "within_0_50_ratio": 1.0,
+      "within_0_75_ratio": 1.0,
+      "within_1_00_ratio": 1.0
+    },
+    {
+      "category": "high_speed",
+      "collection_sources": "GPS_DIRECT:603",
+      "distance_p50_m": 0.15928162894447448,
+      "distance_p95_m": 0.7320260412658588,
+      "sample_count": 603,
+      "source_file": "hi_middle_left.csv",
+      "within_0_50_ratio": 0.9170812603648425,
+      "within_0_75_ratio": 0.9519071310116086,
+      "within_1_00_ratio": 1.0
+    },
+    {
+      "category": "high_speed",
+      "collection_sources": "GPS_DIRECT:2734",
+      "distance_p50_m": 0.2968573997216981,
+      "distance_p95_m": 1.5761812158835622,
+      "sample_count": 2734,
+      "source_file": "hi_right.csv",
+      "within_0_50_ratio": 0.7607900512070227,
+      "within_0_75_ratio": 0.8760058522311631,
+      "within_1_00_ratio": 0.9122165325530358
+    },
+    {
+      "category": "high_speed",
+      "collection_sources": "GPS_DIRECT:1689",
+      "distance_p50_m": 0.12676353465637782,
+      "distance_p95_m": 0.21443348971467607,
+      "sample_count": 1689,
+      "source_file": "hi_right2.csv",
+      "within_0_50_ratio": 1.0,
+      "within_0_75_ratio": 1.0,
+      "within_1_00_ratio": 1.0
+    },
+    {
+      "category": "high_speed",
+      "collection_sources": "GPS_DIRECT:1658",
+      "distance_p50_m": 0.1444977326058771,
+      "distance_p95_m": 0.24242379839042166,
+      "sample_count": 1658,
+      "source_file": "hi_right3.csv",
+      "within_0_50_ratio": 1.0,
+      "within_0_75_ratio": 1.0,
+      "within_1_00_ratio": 1.0
+    },
+    {
+      "category": "other",
+      "collection_sources": "LIDAR_SEMANTIC:5317",
+      "distance_p50_m": 0.278302314082232,
+      "distance_p95_m": 3.1783796265146527,
+      "sample_count": 5317,
+      "source_file": "ro_merge3.csv",
+      "within_0_50_ratio": 0.5606545044197856,
+      "within_0_75_ratio": 0.5726913673123942,
+      "within_1_00_ratio": 0.5740078991912733
+    },
+    {
+      "category": "other",
+      "collection_sources": "LIDAR_SEMANTIC:833",
+      "distance_p50_m": 0.179404134228498,
+      "distance_p95_m": 0.4196226115074759,
+      "sample_count": 833,
+      "source_file": "second_point.csv",
+      "within_0_50_ratio": 0.985594237695078,
+      "within_0_75_ratio": 0.9915966386554622,
+      "within_1_00_ratio": 0.9963985594237695
+    },
+    {
+      "category": "other",
+      "collection_sources": "LIDAR_SEMANTIC:1045",
+      "distance_p50_m": 0.11495365880738836,
+      "distance_p95_m": 0.5523169146239985,
+      "sample_count": 1045,
+      "source_file": "start_point.csv",
+      "within_0_50_ratio": 0.939712918660287,
+      "within_0_75_ratio": 0.9655502392344497,
+      "within_1_00_ratio": 0.9674641148325359
+    },
+    {
+      "category": "other",
+      "collection_sources": "LIDAR_SEMANTIC:395",
+      "distance_p50_m": 0.1952123214348004,
+      "distance_p95_m": 0.6446576133172075,
+      "sample_count": 395,
+      "source_file": "third_point.csv",
+      "within_0_50_ratio": 0.9113924050632911,
+      "within_0_75_ratio": 0.9898734177215189,
+      "within_1_00_ratio": 1.0
+    },
+    {
+      "category": "shadow_end",
+      "collection_sources": "GPS_DIRECT:504",
+      "distance_p50_m": 3.254048847417071,
+      "distance_p95_m": 8.121189874472076,
+      "sample_count": 504,
+      "source_file": "turnel_left.csv",
+      "within_0_50_ratio": 0.3115079365079365,
+      "within_0_75_ratio": 0.32936507936507936,
+      "within_1_00_ratio": 0.34523809523809523
+    }
+  ],
+  "road_mesh": {
+    "available": true,
+    "comparison_target": "current_link_width_proxy_not_ground_truth",
+    "evaluated": true,
+    "feature_count": 1,
+    "metrics": {
+      "high_speed": {
+        "current_proxy_covered_by_legacy": 0.9969547363078485,
+        "end_s_m": 1741.5859204343146,
+        "iou": 0.9423437568145143,
+        "legacy_covered_by_current": 0.9450640773301842,
+        "start_s_m": 1118.7417511690987
+      },
+      "largest_rebuild_interval": {
+        "current_proxy_covered_by_legacy": 0.27653958944281526,
+        "end_s_m": 341.9059325306558,
+        "iou": 0.27266155847910944,
+        "legacy_covered_by_current": 0.951084215834594,
+        "start_s_m": 212.95827273316712
+      },
+      "route_30m_corridor": {
+        "current_proxy_covered_by_legacy": 0.8459467453377523,
+        "iou": 0.7757208228437904,
+        "legacy_covered_by_current": 0.9033292571326763
+      },
+      "shadow_tail": {
+        "current_proxy_covered_by_legacy": 0.9823202691074083,
+        "end_s_m": 2184.6,
+        "iou": 0.7442949439867228,
+        "legacy_covered_by_current": 0.7544007209372184,
+        "start_s_m": 1851.0
+      }
+    },
+    "pixels_per_meter": 2.0
+  },
+  "route": {
+    "intervals": [
+      {
+        "current_link_ids": [
+          "A2256W000748",
+          "A2256W000329",
+          "A2256W000236",
+          "A2256W000219",
+          "A2256W000182",
+          "A2256W000215",
+          "A2256W000338",
+          "A2256W000325"
+        ],
+        "distance_p50_m": 0.10103907489622012,
+        "distance_p95_m": 0.6061743077347402,
+        "end_index": 428,
+        "end_s_m": 212.4583470102632,
+        "end_xy": [
+          -92.03439071305695,
+          -252.24923247258766
+        ],
+        "legacy_link_ids": [
+          "A219BS010380",
+          "A219BS010385",
+          "A219BS010679",
+          "A219BS010387",
+          "A219BS010669",
+          "A219BS010670",
+          "A219BS010682",
+          "A219BS010677"
+        ],
+        "length_m": 212.4583470102632,
+        "start_index": 0,
+        "start_s_m": 0.0,
+        "start_xy": [
+          -131.68979755061446,
+          -428.3310229377821
+        ],
+        "status": "reuse"
+      },
+      {
+        "current_link_ids": [
+          "A2256W000213",
+          "A2256W000222",
+          "A2256W000215"
+        ],
+        "distance_p50_m": 1.694775557932643,
+        "distance_p95_m": 7.238175354524052,
+        "end_index": 687,
+        "end_s_m": 341.9059325306558,
+        "end_xy": [
+          -59.87655348409931,
+          -129.39341187952127
+        ],
+        "legacy_link_ids": [
+          "A219BS010388",
+          "A219BS010432",
+          "A219BS010387",
+          "A219BS010433"
+        ],
+        "length_m": 128.94765979748865,
+        "start_index": 429,
+        "start_s_m": 212.95827273316712,
+        "start_xy": [
+          -91.79275931626883,
+          -251.81157964612902
+        ],
+        "status": "rebuild"
+      },
+      {
+        "current_link_ids": [
+          "A2256W000315",
+          "A2256W000202",
+          "A2256W000599",
+          "A2256W000220",
+          "A2256W000205",
+          "A2256W000728",
+          "A2256W000207",
+          "A2256W000318"
+        ],
+        "distance_p50_m": 0.2079615238893168,
+        "distance_p95_m": 0.3424877220072772,
+        "end_index": 1120,
+        "end_s_m": 556.118733149548,
+        "end_xy": [
+          -60.17378440989295,
+          84.74110447297302
+        ],
+        "legacy_link_ids": [
+          "A219BS010094",
+          "A219BS010086",
+          "A219BS010618",
+          "A219BS010433",
+          "A219BS010430",
+          "A219BS010091",
+          "A219BS010085",
+          "A219BS010087"
+        ],
+        "length_m": 213.71280126065807,
+        "start_index": 688,
+        "start_s_m": 342.40593188888994,
+        "start_xy": [
+          -59.87739226615616,
+          -128.89341322484387
+        ],
+        "status": "reuse"
+      },
+      {
+        "current_link_ids": [
+          "A2256W000318"
+        ],
+        "distance_p50_m": 2.125141023814054,
+        "distance_p95_m": 2.723345463066199,
+        "end_index": 1160,
+        "end_s_m": 576.1187036803565,
+        "end_xy": [
+          -46.39103347847041,
+          98.09972154914166
+        ],
+        "legacy_link_ids": [
+          "A219BS010430"
+        ],
+        "length_m": 19.49997090105785,
+        "start_index": 1121,
+        "start_s_m": 556.6187327792986,
+        "start_xy": [
+          -60.04053646465437,
+          85.22302211618653
+        ],
+        "status": "rebuild"
+      },
+      {
+        "current_link_ids": [
+          "A2256W000308",
+          "A2256W000083",
+          "A2256W000318",
+          "A2256W000323",
+          "A2256W000297"
+        ],
+        "distance_p50_m": 0.08911566307854611,
+        "distance_p95_m": 0.31529114579323053,
+        "end_index": 1239,
+        "end_s_m": 614.876827021381,
+        "end_xy": [
+          -7.749773560724724,
+          99.55829374565171
+        ],
+        "legacy_link_ids": [
+          "A219BS010430",
+          "A219BS010612"
+        ],
+        "length_m": 38.25813213516096,
+        "start_index": 1161,
+        "start_s_m": 576.61869488622,
+        "start_xy": [
+          -45.91249730657208,
+          98.2446157799647
+        ],
+        "status": "reuse"
+      },
+      {
+        "current_link_ids": [
+          "A2256W000083"
+        ],
+        "distance_p50_m": 1.8090951377936162,
+        "distance_p95_m": 2.502971051047013,
+        "end_index": 1269,
+        "end_s_m": 629.8767110186507,
+        "end_xy": [
+          2.340518855149582,
+          109.7490889808044
+        ],
+        "legacy_link_ids": [
+          "A219BS010612",
+          "A219BS010073"
+        ],
+        "length_m": 14.49988754854121,
+        "start_index": 1240,
+        "start_s_m": 615.3768234701095,
+        "start_xy": [
+          -7.266716478232977,
+          99.68733755137511
+        ],
+        "status": "rebuild"
+      },
+      {
+        "current_link_ids": [
+          "A2256W000304",
+          "A2256W000846",
+          "A2256W000411",
+          "A2256W000054",
+          "A2256W000148",
+          "A2256W000146",
+          "A2256W000866",
+          "A2256W000151"
+        ],
+        "distance_p50_m": 0.24970715848655745,
+        "distance_p95_m": 0.457056923498124,
+        "end_index": 2491,
+        "end_s_m": 1238.7416322215497,
+        "end_xy": [
+          64.27994840118224,
+          136.53814589194107
+        ],
+        "legacy_link_ids": [
+          "A219BS010073",
+          "A219BS010440",
+          "A219BS010303",
+          "A219BS010598",
+          "A219BS010594",
+          "A219BS010442",
+          "A219BS010586",
+          "LN000013"
+        ],
+        "length_m": 608.3649218858762,
+        "start_index": 1270,
+        "start_s_m": 630.3767103356735,
+        "start_xy": [
+          2.4718871570293923,
+          110.23152207076043
+        ],
+        "status": "reuse"
+      },
+      {
+        "current_link_ids": [
+          "A2256W000411"
+        ],
+        "distance_p50_m": 1.1538241525601944,
+        "distance_p95_m": 1.2515005024649382,
+        "end_index": 2538,
+        "end_s_m": 1262.2416095265635,
+        "end_xy": [
+          65.63860564667675,
+          113.07757136352302
+        ],
+        "legacy_link_ids": [
+          "A219BS010303",
+          "A219BS010310"
+        ],
+        "length_m": 22.999978710864525,
+        "start_index": 2492,
+        "start_s_m": 1239.241630815699,
+        "start_xy": [
+          64.30656925044667,
+          136.03885647232988
+        ],
+        "status": "rebuild"
+      },
+      {
+        "current_link_ids": [
+          "A2256W000408",
+          "A2256W000153",
+          "A2256W000420",
+          "A2256W000445",
+          "A2256W000451",
+          "A2256W000411",
+          "A2256W000446",
+          "A2256W000409"
+        ],
+        "distance_p50_m": 0.24041274044691707,
+        "distance_p95_m": 0.7088132728567531,
+        "end_index": 3583,
+        "end_s_m": 1783.0572973249689,
+        "end_xy": [
+          70.77262248877811,
+          -407.0783722938318
+        ],
+        "legacy_link_ids": [
+          "A219BS010301",
+          "A219BS010083",
+          "A219BS010314",
+          "A219BS010119",
+          "A219BS010106",
+          "A219BS010110",
+          "A219BS010103",
+          "A219BS010108"
+        ],
+        "length_m": 520.3156888412664,
+        "start_index": 2539,
+        "start_s_m": 1262.7416084837025,
+        "start_xy": [
+          65.66975683088185,
+          112.57854374819232
+        ],
+        "status": "reuse"
+      },
+      {
+        "current_link_ids": [
+          "A2256W000446"
+        ],
+        "distance_p50_m": 1.5050651706930975,
+        "distance_p95_m": 1.734580977334545,
+        "end_index": 3632,
+        "end_s_m": 1807.5572210459206,
+        "end_xy": [
+          68.03518254277523,
+          -431.36522816309986
+        ],
+        "legacy_link_ids": [
+          "A219BS010106",
+          "A219BS010113"
+        ],
+        "length_m": 23.99993437948956,
+        "start_index": 3584,
+        "start_s_m": 1783.557286666431,
+        "start_xy": [
+          70.77790879582943,
+          -407.5783336888751
+        ],
+        "status": "rebuild"
+      },
+      {
+        "current_link_ids": [
+          "A2256W000446"
+        ],
+        "distance_p50_m": 0.4435312270556539,
+        "distance_p95_m": 1.0261263831554095,
+        "end_index": 3693,
+        "end_s_m": 1838.0567850977413,
+        "end_xy": [
+          57.569281708670495,
+          -459.93197780699495
+        ],
+        "legacy_link_ids": [
+          "A219BS010115",
+          "A219BS010106",
+          "A219BS010114"
+        ],
+        "length_m": 29.99956930764938,
+        "start_index": 3633,
+        "start_s_m": 1808.057215790092,
+        "start_xy": [
+          67.92449736103076,
+          -431.852817677693
+        ],
+        "status": "reuse"
+      },
+      {
+        "current_link_ids": [
+          "A2256W000446"
+        ],
+        "distance_p50_m": 1.1153322379457988,
+        "distance_p95_m": 1.4358368376221706,
+        "end_index": 3718,
+        "end_s_m": 1850.5567277921864,
+        "end_xy": [
+          50.11447384138772,
+          -469.91892744162925
+        ],
+        "legacy_link_ids": [
+          "A219BS010378",
+          "A219BS010114"
+        ],
+        "length_m": 11.999949958655407,
+        "start_index": 3694,
+        "start_s_m": 1838.556777833531,
+        "start_xy": [
+          57.34064569310266,
+          -460.3766330759705
+        ],
+        "status": "rebuild"
+      },
+      {
+        "current_link_ids": [
+          "A2256W000126",
+          "A2256W000128",
+          "A2256W000332",
+          "A2256W000448",
+          "A2256W000751",
+          "A2256W000333",
+          "A2256W000154",
+          "A2256W000446"
+        ],
+        "distance_p50_m": 0.21932190831632128,
+        "distance_p95_m": 0.4630122936927094,
+        "end_index": 4391,
+        "end_s_m": 2184.6117233360674,
+        "end_xy": [
+          -131.68979755061446,
+          -428.3310229377821
+        ],
+        "legacy_link_ids": [
+          "A219BS010378",
+          "A219BS010380"
+        ],
+        "length_m": 333.55499612468316,
+        "start_index": 3719,
+        "start_s_m": 1851.0567272113842,
+        "start_xy": [
+          49.7795424848243,
+          -470.2901691494004
+        ],
+        "status": "reuse"
+      }
+    ],
+    "origin_only_xy_residual_median": [
+      -0.039390054957785026,
+      -0.05880082005444365
+    ],
+    "origin_only_xy_residual_norm_p95_m": 0.5747311703269153,
+    "origin_only_z_residual_median_m": 0.10236014867859566,
+    "origin_only_z_residual_p05_m": -0.04414224573814529,
+    "origin_only_z_residual_p95_m": 0.1611504987199197,
+    "reuse_length_m": 1959.664439567186,
+    "reuse_length_ratio": 0.8970310003530652,
+    "total_length_m": 2184.6117233360674
+  },
+  "route_regions": {
+    "high_speed": {
+      "end_s_m": 1741.5859204343146,
+      "start_s_m": 1118.7417511690987
+    },
+    "shadow_tail": {
+      "end_s_m": 2184.6,
+      "start_s_m": 1851.0
+    }
+  },
+  "source_records": {
+    "current": {
+      "global_info": {
+        "bytes": 2382,
+        "configured_path": "src/behavior_planner/src/config/global_info.json",
+        "resolved_display": "src/behavior_planner/src/config/global_info.json",
+        "sha256": "bd74fa3f05830e0741c3c7f51d0f7935f389be3879251fd0231918538a05f133"
+      },
+      "link_set": {
+        "bytes": 9112815,
+        "configured_path": "src/behavior_planner/src/config/link_set.json",
+        "resolved_display": "src/behavior_planner/src/config/link_set.json",
+        "sha256": "5ce0fd57da07b83221c0a4d117b0606b2d9c094c8de476a7d1176c78a4dc5b0f"
+      },
+      "node_set": {
+        "bytes": 107804,
+        "configured_path": "src/behavior_planner/src/config/node_set.json",
+        "resolved_display": "src/behavior_planner/src/config/node_set.json",
+        "sha256": "baafc1acbb4a34eadcafe6136f2b3ac330cebf0cf5727a324c4f117a54eba7dc"
+      },
+      "route": {
+        "bytes": 249627,
+        "configured_path": "R_KR_PG_KATRI/2026_molit_comp_global_path.txt",
+        "resolved_display": "R_KR_PG_KATRI/2026_molit_comp_global_path.txt",
+        "sha256": "f74ff6f53e27c0c4b2cc0e004e5873f7ee1f68f2107f0429f0aad55254d73ee6"
+      }
+    },
+    "legacy": {
+      "global_info": {
+        "bytes": 4437,
+        "configured_path": "R_KR_PG_KATRI/global_info.json",
+        "resolved_display": "R_KR_PG_KATRI/global_info.json",
+        "sha256": "22722d01fab4c0fc27a69f6814a9233931fcec8a40ef2fb3de46033291d09d73"
+      },
+      "lane_boundary_set": {
+        "bytes": 8950083,
+        "configured_path": "R_KR_PG_KATRI/lane_boundary_set.json",
+        "resolved_display": "R_KR_PG_KATRI/lane_boundary_set.json",
+        "sha256": "2e09ace3bfc625e9b717d9f13c00f551527d3b23e37c7e3b256c26706840037b"
+      },
+      "link_set": {
+        "bytes": 18721302,
+        "configured_path": "R_KR_PG_KATRI/link_set.json",
+        "resolved_display": "R_KR_PG_KATRI/link_set.json",
+        "sha256": "0c15ff96bb08856adf10b8de3e3fa24dd1dc0287141257eb99893c3f33ef22d7"
+      },
+      "node_set": {
+        "bytes": 129829,
+        "configured_path": "R_KR_PG_KATRI/node_set.json",
+        "resolved_display": "R_KR_PG_KATRI/node_set.json",
+        "sha256": "0484fc036f1c19e0307f35a26fda85affb3438875cf78e65fc9ac476546790ed"
+      },
+      "road_mesh": {
+        "bytes": 2197012,
+        "configured_path": "../data/KATRI 맵(K-CITY 구간 한정) 주행 가능 영역 자료/mgeo_toolkit/data/KATRI/road_mesh_out_line.json",
+        "resolved_display": "<external-data>/road_mesh_out_line.json",
+        "sha256": "e8175fcc1887a57911024709a164b2fb685d07718eb0e5108debb3e4e9670539"
+      },
+      "singlecrosswalk_set": {
+        "bytes": 81602,
+        "configured_path": "R_KR_PG_KATRI/singlecrosswalk_set.json",
+        "resolved_display": "R_KR_PG_KATRI/singlecrosswalk_set.json",
+        "sha256": "65924f42cae58ce94e5884c71ba79fcd9364d2c72d3ad16eeb26902eefacd4cd"
+      },
+      "surface_marking_set": {
+        "bytes": 151378,
+        "configured_path": "R_KR_PG_KATRI/surface_marking_set.json",
+        "resolved_display": "R_KR_PG_KATRI/surface_marking_set.json",
+        "sha256": "4ee667744ffdbe16f38c51f5524d12360e84f5c05e477a659371573001a9e139"
+      },
+      "traffic_light_set": {
+        "bytes": 50093,
+        "configured_path": "R_KR_PG_KATRI/traffic_light_set.json",
+        "resolved_display": "R_KR_PG_KATRI/traffic_light_set.json",
+        "sha256": "c9f4c00a47d4cacab7974bb8a4d867511e3ea95e421d74b7729fe5f367eb7697"
+      },
+      "traffic_sign_set": {
+        "bytes": 34126,
+        "configured_path": "R_KR_PG_KATRI/traffic_sign_set.json",
+        "resolved_display": "R_KR_PG_KATRI/traffic_sign_set.json",
+        "sha256": "5bb6003b3e7bdf9c67302239d506b31d92f6658a51aeea9602d4291d440f0b5d"
+      }
+    }
+  },
+  "status": "analysis_only_no_operational_map_mutation"
+}

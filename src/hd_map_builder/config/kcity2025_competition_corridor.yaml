@@ -1,0 +1,76 @@
+schema_version: asmc.hd_map.corridor_config/v1
+build_id: kcity2025_current_corridor_20260916
+map_id: kcity2025_competition_corridor_nominal_v1
+
+# This first baseline is current-map only.  Do not add legacy KATRI or observed
+# lane paths here; those inputs belong to the later calibration stage.
+sources:
+  current_global_info: src/behavior_planner/src/config/global_info.json
+  current_link_set: src/behavior_planner/src/config/link_set.json
+  current_node_set: src/behavior_planner/src/config/node_set.json
+  route_links: src/behavior_planner/src/config/route_links_1.yaml
+  organizer_route: R_KR_PG_KATRI/2026_molit_comp_global_path.txt
+
+route:
+  expected_link_count: 39
+  closed_loop: true
+  validation_sample_step_m: 1.0
+  maximum_distance_p95_m: 0.50
+  maximum_length_difference_m: 2.0
+
+corridors:
+  high_speed:
+    start_link: A2256W000411
+    end_link: A2256W000153
+    half_width_m: 15.0
+    max_heading_deg: 30.0
+    minimum_support: 3
+    # Selection preserves the source link ID, while route-only export clips
+    # high-speed context geometry so unrelated continuations do not leak in.
+    clip_sample_step_m: 0.50
+    minimum_clip_length_m: 2.0
+
+  # The primary and opposite links are explicit competition-mission context.
+  # One direction-continuous predecessor/successor hop preserves entry/exit
+  # context without pulling unrelated intersection branches into the map.
+  shadow:
+    primary_links: [A2256W000126]
+    opposite_links: [A2256W000131]
+    topology_hops: 1
+    max_heading_deg: 30.0
+
+  static_obstacle:
+    primary_links: [A2256W000222]
+    opposite_links: [A2256W000221]
+    topology_hops: 1
+    max_heading_deg: 30.0
+
+nominal_lane_boundary:
+  resample_step_m: 0.50
+  minimum_link_length_m: 10.0
+  excluded_link_types: ['1']
+  shared_boundary_max_p95_m: 0.75
+  fallback_width_m: 3.50
+  source_status: link_nominal
+  operational: false
+
+stopline:
+  group_radius_m: 12.0
+  max_heading_diff_deg: 30.0
+  max_longitudinal_m: 1.5
+  expected_route_stop_node_count: 13
+  source_status: link_nominal
+  operational: false
+
+explicit_opposite_pairs:
+  A2256W000126: A2256W000131
+  A2256W000131: A2256W000126
+  A2256W000222: A2256W000221
+  A2256W000221: A2256W000222
+
+promotion_policy:
+  current_link_node_are_topology_authority: true
+  nominal_boundaries_are_ground_truth: false
+  observed_or_legacy_inputs_allowed: false
+  generated_feature_status: candidate
+  existing_link_node_package_mutation_allowed: false

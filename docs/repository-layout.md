@@ -2,7 +2,7 @@
 
 > **문서 역할:** Active Reference — 실제 코드 위치와 ownership 요약
 > **문서 허브:** [README.md](./README.md)
-> **최종 수정:** 2026-09-15
+> **최종 수정:** 2026-09-16
 > 팀원별 상세 경로·검증: [team-dev-guide.md](./team-dev-guide.md)  
 > Git 규약 (trunk · ownership · Path A/B): [collaboration.md](./collaboration.md)
 
@@ -50,6 +50,7 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `scripts/rosbridge.sh`, `config/morai_rosbridge.env` | 종료된 direct ROS 실험 보존 | @ahnsh03 |
 | `scripts/udp_bridge.sh`, `src/morai_*_bridge/` | 이강태·안승현 | @kante2 · @ahnsh03 |
 | `mgeo_toolkit/`, `R_KR_PG_KATRI/` | 안승현 | @ahnsh03 |
+| `src/hd_map_builder/` | current Node/Link HD맵 후보·구맵 전이 audit | @ahnsh03 (장원태 관측 자료 협의) |
 
 ### perception · scenario (✅ PR #3)
 
@@ -90,6 +91,7 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `src/perception/morai_3d_detection/` | — | — | — | 👀 | 👀 | ✅ |
 | `src/perception/twinlite_morai/` · `src/data_collection/` | — | — | — | ✅ | 👀 | 👀 |
 | `src/perception/drivable_bev/` | 👀 | 👀 | 👀 | ✅ 주관 | ✅ 합의 | ✅ 합의 |
+| `src/hd_map_builder/` | 👀 | 👀 | 👀 | ✅ 주관 | ✅ 관측 자료 협의 | 👀 |
 | `docker/` | 👀 | 👀 | 👀 | ✅ | 👀 | ✅ train |
 | `docs/` | 👀 | 👀 | 👀 | ✅ | 👀 | 👀 |
 | `src/interfaces/` | ✅ 합의 | ✅ 합의 | ✅ 합의 | ✅ 주관 | ✅ 합의 | ✅ 합의 |

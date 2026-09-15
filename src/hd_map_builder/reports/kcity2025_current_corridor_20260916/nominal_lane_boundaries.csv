@@ -1,0 +1,86 @@
+candidate_id,geometry_status,boundary_role,current_link_ids,link_sides,nominal_width_start_m,nominal_width_end_m,shared_distance_p95_m,point_count
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000029:left,link_nominal,corridor_edge,A2256W000029,"{""A2256W000029"": ""left""}",3.5,3.5,,22
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000029:A2256W000175,link_nominal,shared,A2256W000029;A2256W000175,"{""A2256W000029"": ""right"", ""A2256W000175"": ""left""}",3.5;3.5,3.5;3.5,0.11871393943355238,22
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000126:left,link_nominal,corridor_edge,A2256W000126,"{""A2256W000126"": ""left""}",3.5,3.5,,239
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000126:right,link_nominal,corridor_edge,A2256W000126,"{""A2256W000126"": ""right""}",3.5,3.5,,239
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000128:left,link_nominal,corridor_edge,A2256W000128,"{""A2256W000128"": ""left""}",3.5,3.5,,228
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000128:right,link_nominal,corridor_edge,A2256W000128,"{""A2256W000128"": ""right""}",3.5,3.5,,228
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000129:left,link_nominal,corridor_edge,A2256W000129,"{""A2256W000129"": ""left""}",3.5,3.5,,39
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000129:right,link_nominal,corridor_edge,A2256W000129,"{""A2256W000129"": ""right""}",3.5,3.5,,39
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000131:left,link_nominal,corridor_edge,A2256W000131,"{""A2256W000131"": ""left""}",3.5,3.5,,240
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000131:right,link_nominal,corridor_edge,A2256W000131,"{""A2256W000131"": ""right""}",3.5,3.5,,240
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000148:left,link_nominal,corridor_edge,A2256W000148,"{""A2256W000148"": ""left""}",3.5,3.5,,55
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000148:right,link_nominal,corridor_edge,A2256W000148,"{""A2256W000148"": ""right""}",3.5,3.5,,55
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000153:A2256W000432,review_required,shared,A2256W000153;A2256W000432,"{""A2256W000153"": ""left"", ""A2256W000432"": ""right""}",3.5;3.5,3.5;3.5,2.254788584483087,314
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000153:right,review_required,corridor_edge,A2256W000153,"{""A2256W000153"": ""right""}",3.5,3.5,,298
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000175:A2256W000406,link_nominal,shared,A2256W000175;A2256W000406,"{""A2256W000175"": ""right"", ""A2256W000406"": ""left""}",3.5;3.5,3.5;3.5,0.12131527186978965,27
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000179:A2256W000408,review_required,shared,A2256W000179;A2256W000408,"{""A2256W000179"": ""left"", ""A2256W000408"": ""right""}",3.5;3.5,3.5;3.5,2.6360098002877836,345
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000179:right,link_nominal,corridor_edge,A2256W000179,"{""A2256W000179"": ""right""}",3.5,3.5,,301
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000202:left,link_nominal,corridor_edge,A2256W000202,"{""A2256W000202"": ""left""}",3.5,3.5,,126
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000202:right,link_nominal,corridor_edge,A2256W000202,"{""A2256W000202"": ""right""}",3.5,3.5,,126
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000205:left,link_nominal,corridor_edge,A2256W000205,"{""A2256W000205"": ""left""}",3.5,3.5,,25
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000205:right,link_nominal,corridor_edge,A2256W000205,"{""A2256W000205"": ""right""}",3.5,3.5,,25
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000213:left,review_required,corridor_edge,A2256W000213,"{""A2256W000213"": ""left""}",3.5,3.5,,158
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000213:right,review_required,corridor_edge,A2256W000213,"{""A2256W000213"": ""right""}",3.5,3.5,,158
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000219:left,review_required,corridor_edge,A2256W000219,"{""A2256W000219"": ""left""}",3.5,3.5,,46
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000219:right,review_required,corridor_edge,A2256W000219,"{""A2256W000219"": ""right""}",3.5,3.5,,46
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000220:left,review_required,corridor_edge,A2256W000220,"{""A2256W000220"": ""left""}",3.5,3.5,,40
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000220:right,review_required,corridor_edge,A2256W000220,"{""A2256W000220"": ""right""}",3.5,3.5,,40
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000304:left,review_required,corridor_edge,A2256W000304,"{""A2256W000304"": ""left""}",3.5,3.5,,448
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000304:right,review_required,corridor_edge,A2256W000304,"{""A2256W000304"": ""right""}",3.5,3.5,,448
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000308:left,review_required,corridor_edge,A2256W000308,"{""A2256W000308"": ""left""}",3.5,3.5,,60
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000308:right,review_required,corridor_edge,A2256W000308,"{""A2256W000308"": ""right""}",3.5,3.5,,60
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000315:left,review_required,corridor_edge,A2256W000315,"{""A2256W000315"": ""left""}",3.5,3.5,,137
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000315:right,review_required,corridor_edge,A2256W000315,"{""A2256W000315"": ""right""}",3.5,3.5,,137
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000329:left,review_required,corridor_edge,A2256W000329,"{""A2256W000329"": ""left""}",3.5,3.5,,132
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000329:right,review_required,corridor_edge,A2256W000329,"{""A2256W000329"": ""right""}",3.5,3.5,,132
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000332:left,review_required,corridor_edge,A2256W000332,"{""A2256W000332"": ""left""}",3.5,3.5,,69
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000332:right,review_required,corridor_edge,A2256W000332,"{""A2256W000332"": ""right""}",3.5,3.5,,69
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000406:right,link_nominal,corridor_edge,A2256W000406,"{""A2256W000406"": ""right""}",3.5,3.5,,30
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000408:A2256W000434,link_nominal,shared,A2256W000408;A2256W000434,"{""A2256W000408"": ""left"", ""A2256W000434"": ""right""}",3.5;3.5,3.5;3.5,0.14202728706024378,307
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000409:A2256W000410,link_nominal,shared,A2256W000409;A2256W000410,"{""A2256W000409"": ""left"", ""A2256W000410"": ""right""}",3.5;3.5,3.5;3.5,0.14453355057493186,350
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000409:A2256W000411,review_required,shared,A2256W000409;A2256W000411,"{""A2256W000409"": ""right"", ""A2256W000411"": ""left""}",3.5;3.5,3.5;3.5,2.5230212957769824,348
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000410:A2256W000418,link_nominal,shared,A2256W000410;A2256W000418,"{""A2256W000410"": ""left"", ""A2256W000418"": ""right""}",3.5;3.5,3.5;3.5,0.03135723650371382,347
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000411:right,link_nominal,corridor_edge,A2256W000411,"{""A2256W000411"": ""right""}",3.5,3.5,,336
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000418:A2256W000429,link_nominal,shared,A2256W000418;A2256W000429,"{""A2256W000418"": ""left"", ""A2256W000429"": ""right""}",3.5;3.5,3.5;3.5,0.027502071799213452,344
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000420:A2256W000430,review_required,shared,A2256W000420;A2256W000430,"{""A2256W000420"": ""left"", ""A2256W000430"": ""right""}",3.5;3.5,3.5;3.5,0.03557505021570126,172
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000420:right,review_required,corridor_edge,A2256W000420,"{""A2256W000420"": ""right""}",3.5,3.5,,167
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000421:left,link_nominal,corridor_edge,A2256W000421,"{""A2256W000421"": ""left""}",3.5,3.5,,301
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000421:A2256W000435,link_nominal,shared,A2256W000421;A2256W000435,"{""A2256W000421"": ""right"", ""A2256W000435"": ""left""}",3.5;3.5,3.5;3.5,0.03806128173438922,315
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000422:A2256W000423,review_required,shared,A2256W000422;A2256W000423,"{""A2256W000422"": ""left"", ""A2256W000423"": ""right""}",3.5;3.5,3.5;3.5,2.7062385678789003,159
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000422:A2256W000445,review_required,shared,A2256W000422;A2256W000445,"{""A2256W000422"": ""right"", ""A2256W000445"": ""left""}",3.5;3.5,3.5;3.5,2.9476651780988927,159
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000423:A2256W000425,review_required,shared,A2256W000423;A2256W000425,"{""A2256W000423"": ""left"", ""A2256W000425"": ""right""}",3.5;3.5,3.5;3.5,0.14171070251867401,154
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000424:left,review_required,corridor_edge,A2256W000424,"{""A2256W000424"": ""left""}",3.5,3.5,,297
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000424:A2256W000432,review_required,shared,A2256W000424;A2256W000432,"{""A2256W000424"": ""right"", ""A2256W000432"": ""left""}",3.5;3.5,3.5;3.5,1.5568141339243453,313
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000425:left,link_nominal,corridor_edge,A2256W000425,"{""A2256W000425"": ""left""}",3.5,3.5,,151
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000426:left,review_required,corridor_edge,A2256W000426,"{""A2256W000426"": ""left""}",3.5,3.5,,24
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000426:A2256W000427,review_required,shared,A2256W000426;A2256W000427,"{""A2256W000426"": ""right"", ""A2256W000427"": ""left""}",3.5;3.5,3.5;3.5,1.4469234568993659,25
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000427:A2256W000451,review_required,shared,A2256W000427;A2256W000451,"{""A2256W000427"": ""right"", ""A2256W000451"": ""left""}",3.5;3.5,3.5;3.5,0.9828699132620328,33
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000429:left,link_nominal,corridor_edge,A2256W000429,"{""A2256W000429"": ""left""}",3.5,3.5,,336
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000430:A2256W000431,link_nominal,shared,A2256W000430;A2256W000431,"{""A2256W000430"": ""left"", ""A2256W000431"": ""right""}",3.5;3.5,3.5;3.5,0.02553085215736687,173
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000431:A2256W000433,link_nominal,shared,A2256W000431;A2256W000433,"{""A2256W000431"": ""left"", ""A2256W000433"": ""right""}",3.5;3.5,3.5;3.5,0.023065498812680475,172
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000433:left,link_nominal,corridor_edge,A2256W000433,"{""A2256W000433"": ""left""}",3.5,3.5,,167
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000434:A2256W000435,link_nominal,shared,A2256W000434;A2256W000435,"{""A2256W000434"": ""left"", ""A2256W000435"": ""right""}",3.5;3.5,3.5;3.5,0.03548997150177153,309
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000441:left,link_nominal,corridor_edge,A2256W000441,"{""A2256W000441"": ""left""}",3.5,3.5,,237
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000441:right,link_nominal,corridor_edge,A2256W000441,"{""A2256W000441"": ""right""}",3.5,3.5,,237
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000445:right,review_required,corridor_edge,A2256W000445,"{""A2256W000445"": ""right""}",3.5,3.5,,152
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000446:left,link_nominal,corridor_edge,A2256W000446,"{""A2256W000446"": ""left""}",3.5,3.5,,158
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000446:right,link_nominal,corridor_edge,A2256W000446,"{""A2256W000446"": ""right""}",3.5,3.5,,158
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000448:left,link_nominal,corridor_edge,A2256W000448,"{""A2256W000448"": ""left""}",3.5,3.5,,38
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000448:right,link_nominal,corridor_edge,A2256W000448,"{""A2256W000448"": ""right""}",3.5,3.5,,38
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000451:right,review_required,corridor_edge,A2256W000451,"{""A2256W000451"": ""right""}",3.5,3.5,,81
+kcity2025_competition_corridor_nominal_v1:lane_boundary:shared:A2256W000543:A2256W000546,review_required,shared,A2256W000543;A2256W000546,"{""A2256W000543"": ""left"", ""A2256W000546"": ""right""}",3.5;3.5,3.5;3.5,0.2148198215828824,123
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000543:right,review_required,corridor_edge,A2256W000543,"{""A2256W000543"": ""right""}",3.5,3.5,,120
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000546:left,link_nominal,corridor_edge,A2256W000546,"{""A2256W000546"": ""left""}",3.5,3.5,,434
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000748:left,review_required,corridor_edge,A2256W000748,"{""A2256W000748"": ""left""}",3.5,3.5,,147
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000748:right,review_required,corridor_edge,A2256W000748,"{""A2256W000748"": ""right""}",3.5,3.5,,147
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000751:left,link_nominal,corridor_edge,A2256W000751,"{""A2256W000751"": ""left""}",3.5,3.5,,39
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000751:right,link_nominal,corridor_edge,A2256W000751,"{""A2256W000751"": ""right""}",3.5,3.5,,39
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000759:left,review_required,corridor_edge,A2256W000759,"{""A2256W000759"": ""left""}",3.5,3.5,,94
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000759:right,review_required,corridor_edge,A2256W000759,"{""A2256W000759"": ""right""}",3.5,3.5,,94
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000846:left,review_required,corridor_edge,A2256W000846,"{""A2256W000846"": ""left""}",3.5,3.5,,270
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000846:right,review_required,corridor_edge,A2256W000846,"{""A2256W000846"": ""right""}",3.5,3.5,,270
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000866:left,review_required,corridor_edge,A2256W000866,"{""A2256W000866"": ""left""}",3.5,3.5,,33
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W000866:right,review_required,corridor_edge,A2256W000866,"{""A2256W000866"": ""right""}",3.5,3.5,,33
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W001105:left,link_nominal,corridor_edge,A2256W001105,"{""A2256W001105"": ""left""}",3.5,3.5,,453
+kcity2025_competition_corridor_nominal_v1:lane_boundary:A2256W001105:right,link_nominal,corridor_edge,A2256W001105,"{""A2256W001105"": ""right""}",3.5,3.5,,453
