@@ -42,6 +42,7 @@ def write_h5(
     layer_params: Mapping[str, Any] = (),
     stats: Mapping[str, Any] = (),
     stopline_features: Any = (),
+    observed_lane_features: Any = (),
     links: Any = (),
     compression_level: int = 9,
     repo_root: Path = None,
@@ -88,6 +89,22 @@ def write_h5(
             hf.attrs['stopline_ids'] = json.dumps([f['idx'] for f in feats])
             hf.attrs['stopline_traffic_lights'] = json.dumps(
                 [f['traffic_light_id'] for f in feats])
+
+        # 객체-실측 차선 거리를 래스터 오차 없이 계산할 수 있도록 보정된 중심선도 저장한다.
+        observed = list(observed_lane_features or ())
+        if observed:
+            pts, offsets = [], [0]
+            for feature in observed:
+                p_ = np.asarray(feature['points'], dtype=np.float32).reshape(-1, 2)
+                pts.append(p_)
+                offsets.append(offsets[-1] + p_.shape[0])
+            hf.create_dataset('observed_lane_points', data=np.vstack(pts),
+                              compression='gzip', compression_opts=4)
+            hf.create_dataset('observed_lane_offsets',
+                              data=np.asarray(offsets, dtype=np.int32))
+            hf.attrs['observed_lane_sides'] = json.dumps([f['side'] for f in observed])
+            hf.attrs['observed_lane_colors'] = json.dumps([f['color'] for f in observed])
+            hf.attrs['observed_lane_sources'] = json.dumps([f['source'] for f in observed])
 
         # 어떤 링크가 어느 레이어에 들어갔는지 벡터로 남긴다. 주행하면서 '지금 밟고
         # 있는 링크' 를 알아야 제외 목록을 만들 수 있다.

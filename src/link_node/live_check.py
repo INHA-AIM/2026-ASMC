@@ -110,6 +110,27 @@ class ObjectState:
         return OBJ_TYPE_NAME.get(self.type_id, f'obs{self.type_id}')
 
 
+def object_dimensions(obj: ObjectState) -> Tuple[float, float]:
+    """MORAI가 보낸 실제 평면 크기(L, W)를 반환한다.
+
+    양수인 size는 작더라도 절대 확대하지 않는다. 패킷이 0/NaN을 보낸 경우에만
+    화면과 영역 판정이 망가지지 않도록 타입별 대표 크기를 사용한다.
+    """
+    fallbacks = {
+        0: (0.8, 0.8),   # pedestrian
+        1: (4.6, 1.9),   # npc vehicle
+        2: (0.5, 0.5),   # static obstacle
+    }
+    fallback = fallbacks.get(obj.type_id, (0.5, 0.5))
+    length = float(obj.length_m)
+    width = float(obj.width_m)
+    if not np.isfinite(length) or length <= 0.0:
+        length = fallback[0]
+    if not np.isfinite(width) or width <= 0.0:
+        width = fallback[1]
+    return length, width
+
+
 def parse_object_packet(data: bytes) -> Optional[list]:
     """#MoraiObjInfo$ 패킷 -> ObjectState 목록."""
     if not data.startswith(OBJ_HDR) or len(data) <= OBJ_PRE + TAIL:
@@ -436,6 +457,12 @@ class DemoEgoSource:
 class BakedMap:
     road: np.ndarray
     lane: np.ndarray
+    lane_white: np.ndarray
+    lane_yellow: np.ndarray
+    lane_segment_a: np.ndarray
+    lane_segment_b: np.ndarray
+    lane_segment_colors: list
+    lane_paint_width_m: float
     stopline: np.ndarray
     grid: RasterGrid
     map_id: str
@@ -477,8 +504,33 @@ class BakedMap:
             else:
                 lpts = np.zeros((0, 2), dtype=np.float32)
                 lowner = np.zeros(0, dtype=np.int32)
+            lane_a, lane_b, lane_colors = [], [], []
+            if 'observed_lane_points' in hf and 'observed_lane_offsets' in hf:
+                observed_pts = np.asarray(hf['observed_lane_points'], dtype=np.float64)
+                observed_offs = np.asarray(hf['observed_lane_offsets'], dtype=np.int64)
+                feature_colors = json.loads(hf.attrs.get('observed_lane_colors', '[]'))
+                for k in range(len(observed_offs) - 1):
+                    p_ = observed_pts[observed_offs[k]:observed_offs[k + 1]]
+                    if len(p_) < 2:
+                        continue
+                    lane_a.append(p_[:-1])
+                    lane_b.append(p_[1:])
+                    lane_colors.extend([feature_colors[k] if k < len(feature_colors) else '?']
+                                       * (len(p_) - 1))
+            layer_params = json.loads(hf.attrs.get('layer_params', '{}'))
+            paint_width = float((layer_params.get('observed_lane') or {}).get(
+                'line_width_m', 0.15))
             return cls(
-                road=hf['road'][:], lane=hf['lane'][:], stopline=hf['stopline'][:],
+                road=hf['road'][:], lane=hf['lane'][:],
+                lane_white=(hf['lane_observed_white'][:]
+                            if 'lane_observed_white' in hf else np.zeros_like(hf['lane'][:])),
+                lane_yellow=(hf['lane_observed_yellow'][:]
+                             if 'lane_observed_yellow' in hf else np.zeros_like(hf['lane'][:])),
+                lane_segment_a=(np.vstack(lane_a) if lane_a else np.zeros((0, 2))),
+                lane_segment_b=(np.vstack(lane_b) if lane_b else np.zeros((0, 2))),
+                lane_segment_colors=lane_colors,
+                lane_paint_width_m=paint_width,
+                stopline=hf['stopline'][:],
                 grid=grid,
                 map_id=str(hf.attrs.get('map_id', '?')),
                 local_origin=np.asarray(hf.attrs.get('local_origin_in_global', []),
@@ -714,8 +766,8 @@ class RosObjectSource:
                     type_id=int(getattr(o, 'type', type_id)),
                     x=float(o.position.x), y=float(o.position.y),
                     heading_deg=float(getattr(o, 'heading', 0.0)),
-                    length_m=float(getattr(o.size, 'x', 0.0)) or 4.6,
-                    width_m=float(getattr(o.size, 'y', 0.0)) or 1.9))
+                    length_m=float(getattr(o.size, 'x', 0.0)),
+                    width_m=float(getattr(o.size, 'y', 0.0))))
         self.objects = out
 
     def poll(self) -> list:
@@ -734,7 +786,8 @@ def object_on_road(m: BakedMap, obj: 'ObjectState', margin_px: int = 0) -> bool:
     yaw = math.radians(obj.heading_deg)
     f = np.array([math.cos(yaw), math.sin(yaw)])
     r = np.array([f[1], -f[0]])
-    hl, hw = 0.5 * max(obj.length_m, 0.5), 0.5 * max(obj.width_m, 0.5)
+    length_m, width_m = object_dimensions(obj)
+    hl, hw = 0.5 * length_m, 0.5 * width_m
     c = np.array([obj.x, obj.y])
     pts = np.stack([c,
                     c + hl * f + hw * r, c + hl * f - hw * r,
@@ -750,9 +803,101 @@ def object_on_road(m: BakedMap, obj: 'ObjectState', margin_px: int = 0) -> bool:
     return False
 
 
+def _point_on_segment(point: np.ndarray, a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    ab = b - a
+    den = float(np.dot(ab, ab))
+    if den < 1e-12:
+        return a.copy()
+    t = float(np.clip(np.dot(point - a, ab) / den, 0.0, 1.0))
+    return a + t * ab
+
+
+def _segment_intersection(
+    a: np.ndarray, b: np.ndarray, c: np.ndarray, d: np.ndarray
+) -> Optional[np.ndarray]:
+    ab, cd = b - a, d - c
+    den = float(ab[0] * cd[1] - ab[1] * cd[0])
+    if abs(den) < 1e-12:
+        return None
+    ac = c - a
+    t = float((ac[0] * cd[1] - ac[1] * cd[0]) / den)
+    u = float((ac[0] * ab[1] - ac[1] * ab[0]) / den)
+    return a + t * ab if -1e-9 <= t <= 1.0 + 1e-9 and -1e-9 <= u <= 1.0 + 1e-9 else None
+
+
+def _segment_to_object_box(
+    a: np.ndarray, b: np.ndarray, obj: ObjectState
+) -> Tuple[float, np.ndarray, np.ndarray]:
+    """차선 중심선 segment와 회전 객체 박스 사이의 정확한 최단거리와 두 점."""
+    length_m, width_m = object_dimensions(obj)
+    yaw = math.radians(obj.heading_deg)
+    f = np.array([math.cos(yaw), math.sin(yaw)])
+    r = np.array([f[1], -f[0]])
+    hl, hw = 0.5 * length_m, 0.5 * width_m
+    center = np.array([obj.x, obj.y], dtype=np.float64)
+    corners = np.stack([center + hl * f + hw * r, center + hl * f - hw * r,
+                        center - hl * f - hw * r, center - hl * f + hw * r])
+    edges = list(zip(corners, np.roll(corners, -1, axis=0)))
+    for e0, e1 in edges:
+        hit = _segment_intersection(a, b, e0, e1)
+        if hit is not None:
+            return 0.0, hit, hit
+
+    candidates = []
+    for lane_point in (a, b):
+        rel = lane_point - center
+        box_point = (center + np.clip(np.dot(rel, f), -hl, hl) * f
+                     + np.clip(np.dot(rel, r), -hw, hw) * r)
+        candidates.append((float(np.linalg.norm(lane_point - box_point)),
+                           box_point, lane_point))
+    for box_point in corners:
+        lane_point = _point_on_segment(box_point, a, b)
+        candidates.append((float(np.linalg.norm(lane_point - box_point)),
+                           box_point, lane_point))
+    return min(candidates, key=lambda item: item[0])
+
+
+def nearest_object_lane_gap(m: BakedMap, obj: ObjectState) -> Optional[dict]:
+    """객체 외곽부터 실측 차선 도색 외곽까지의 거리와 측정 선분."""
+    a, b = m.lane_segment_a, m.lane_segment_b
+    if len(a) == 0:
+        return None
+    center = np.array([obj.x, obj.y], dtype=np.float64)
+    ab = b - a
+    den = np.sum(ab * ab, axis=1)
+    t = np.divide(np.sum((center - a) * ab, axis=1), den,
+                  out=np.zeros_like(den), where=den > 1e-12)
+    nearest = a + np.clip(t, 0.0, 1.0)[:, None] * ab
+    center_d = np.linalg.norm(nearest - center, axis=1)
+    count = min(64, len(a))
+    indices = np.argpartition(center_d, count - 1)[:count]
+    best = None
+    best_idx = -1
+    for i in indices:
+        candidate = _segment_to_object_box(a[i], b[i], obj)
+        if best is None or candidate[0] < best[0]:
+            best, best_idx = candidate, int(i)
+    if best is None:
+        return None
+    centerline_gap, object_point, lane_center_point = best
+    paint_half = 0.5 * max(0.0, m.lane_paint_width_m)
+    direction = object_point - lane_center_point
+    norm = float(np.linalg.norm(direction))
+    lane_edge = (lane_center_point if norm < 1e-12 else
+                 lane_center_point + min(paint_half, norm) * direction / norm)
+    return {
+        'distance_m': max(0.0, centerline_gap - paint_half),
+        'object_point': object_point,
+        'lane_point': lane_edge,
+        'color': (m.lane_segment_colors[best_idx]
+                  if best_idx < len(m.lane_segment_colors) else '?'),
+    }
+
+
 def draw_objects(canvas: np.ndarray, m: BakedMap, ego: EgoState, objects: list,
                  window_m: float, out_px: int, margin_px: int = 0,
-                 show_outside: bool = False) -> tuple:
+                 show_outside: bool = False,
+                 show_lane_distance: bool = False) -> tuple:
     """주행가능영역 안의 객체만 그린다 (show_outside 면 밖도 흐리게)."""
     inside = outside = 0
     for o in objects:
@@ -766,7 +911,8 @@ def draw_objects(canvas: np.ndarray, m: BakedMap, ego: EgoState, objects: list,
         yaw = math.radians(o.heading_deg)
         f = np.array([math.cos(yaw), math.sin(yaw)])
         r = np.array([f[1], -f[0]])
-        hl, hw = 0.5 * max(o.length_m, 0.5), 0.5 * max(o.width_m, 0.5)
+        length_m, width_m = object_dimensions(o)
+        hl, hw = 0.5 * length_m, 0.5 * width_m
         c = np.array([o.x, o.y])
         box = np.stack([c + hl * f + hw * r, c + hl * f - hw * r,
                         c - hl * f - hw * r, c - hl * f + hw * r])
@@ -785,6 +931,21 @@ def draw_objects(canvas: np.ndarray, m: BakedMap, ego: EgoState, objects: list,
                     (int(anchor[0]) + 6, int(anchor[1])),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.35,
                     (255, 255, 255) if on else (110, 110, 110), 1, cv2.LINE_AA)
+        if show_lane_distance:
+            measure = nearest_object_lane_gap(m, o)
+            if measure is not None:
+                endpoints = world_to_view(
+                    np.stack([measure['object_point'], measure['lane_point']]),
+                    ego, window_m, out_px)
+                p0, p1 = (tuple(np.round(p).astype(int)) for p in endpoints)
+                cv2.line(canvas, p0, p1, (0, 255, 255), 1, cv2.LINE_AA)
+                mid = np.round(endpoints.mean(axis=0)).astype(int)
+                prefix = 'W' if measure['color'] == 'WHITE' else 'Y' if measure['color'] == 'YELLOW' else 'L'
+                text_ = f"{prefix} {measure['distance_m']:.2f}m"
+                cv2.putText(canvas, text_, (int(mid[0]) + 3, int(mid[1]) - 3),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 0), 3, cv2.LINE_AA)
+                cv2.putText(canvas, text_, (int(mid[0]) + 3, int(mid[1]) - 3),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 255, 255), 1, cv2.LINE_AA)
     return inside, outside
 
 
@@ -805,6 +966,19 @@ def nearest_link(m: BakedMap, ego: EgoState) -> Optional[dict]:
     }
 
 
+def _warp_thin_binary(
+    layer: np.ndarray, affine: np.ndarray, size: tuple, threshold: int = 64
+) -> np.ndarray:
+    """1 px 선을 회전할 때 최근접 보간으로 생기는 시각적 단절을 막는다.
+
+    H5 원본 선은 연속이어도 회전·확대된 출력 격자의 픽셀 중심이 원본 선을 비껴가면
+    INTER_NEAREST는 점을 건너뛴다. 선 레이어만 선형 보간 후 낮은 임계값으로 다시
+    이진화하면 연결성을 유지한다. 원본 H5나 거리 계산용 벡터는 바꾸지 않는다.
+    """
+    warped = cv2.warpAffine(layer, affine, size, flags=cv2.INTER_LINEAR)
+    return np.where(warped >= threshold, 255, 0).astype(np.uint8)
+
+
 def ego_view(
     m: BakedMap, ego: EgoState, window_m: float, out_px: int, grid_m: float = 10.0
 ) -> np.ndarray:
@@ -819,13 +993,18 @@ def ego_view(
 
     size = (out_px, out_px)
     road = cv2.warpAffine(m.road, aff, size, flags=cv2.INTER_NEAREST)
-    lane = cv2.warpAffine(m.lane, aff, size, flags=cv2.INTER_NEAREST)
-    stop = cv2.warpAffine(m.stopline, aff, size, flags=cv2.INTER_NEAREST)
+    lane = _warp_thin_binary(m.lane, aff, size)
+    lane_white = _warp_thin_binary(m.lane_white, aff, size)
+    lane_yellow = _warp_thin_binary(m.lane_yellow, aff, size)
+    stop = _warp_thin_binary(m.stopline, aff, size)
 
     canvas = np.zeros((out_px, out_px, 3), dtype=np.uint8)
     draw_world_grid(canvas, ego, window_m, out_px, grid_m)
     canvas[road > 0] = (90, 90, 90)
-    canvas[lane > 0] = (40, 230, 240)
+    colored = cv2.bitwise_or(lane_white, lane_yellow)
+    canvas[(lane > 0) & (colored == 0)] = (40, 230, 240)
+    canvas[lane_white > 0] = (235, 235, 235)
+    canvas[lane_yellow > 0] = (0, 220, 255)
     canvas[stop > 0] = (60, 60, 235)
 
     # ego 차체 (Ioniq 5, 후륜 차축 원점) 를 뷰 좌표에 직접 그린다.
@@ -1161,6 +1340,8 @@ def main() -> int:
                          '들락거리면 0.5~1.0 을 준다')
     ap.add_argument('--show-outside-objects', action='store_true',
                     help='주행가능영역 밖 객체도 회색 테두리로 표시한다 (확인용)')
+    ap.add_argument('--show-object-lane-distance', action='store_true',
+                    help='객체 외곽과 가장 가까운 실측 차선 도색 외곽 사이 거리를 표시한다')
     ap.add_argument('--show-links', type=float, nargs='?', const=12.0, default=None,
                     metavar='R',
                     help='주변 링크 중심선을 색으로 그리고 id 와 좌우 거리를 표시한다 '
@@ -1342,7 +1523,8 @@ def main() -> int:
                     obj_in, obj_out = draw_objects(
                         canvas, m, ego, objects, args.window_m, args.out_px,
                         margin_px=obj_margin_px,
-                        show_outside=args.show_outside_objects)
+                        show_outside=args.show_outside_objects,
+                        show_lane_distance=args.show_object_lane_distance)
                 ratio = on_road / max(1, total)
                 status = ('ON ROAD', (120, 255, 120)) if (road_v or 0) > 0 else \
                          ('OFF ROAD', (80, 80, 255))

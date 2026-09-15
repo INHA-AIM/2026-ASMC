@@ -397,6 +397,18 @@ def test_ego_view_is_centered_on_ego(baked, data):
     assert tuple(int(v) for v in view[128, 128]) == (255, 255, 255)
 
 
+def test_thin_lane_warp_remains_connected_after_rotation():
+    import cv2
+    from live_check import _warp_thin_binary
+
+    lane = np.zeros((100, 100), dtype=np.uint8)
+    cv2.line(lane, (20, 80), (80, 20), 255, 1, cv2.LINE_8)
+    affine = cv2.getRotationMatrix2D((50, 50), 17.0, 1.6)
+    warped = _warp_thin_binary(lane, affine, (160, 160))
+    components = cv2.connectedComponents((warped > 0).astype(np.uint8), 8)[0] - 1
+    assert components == 1
+
+
 @needs_map
 def test_ego_view_translates_not_only_rotates(baked, data):
     """직선 구간에서도 전진이 화면에 반영되어야 한다.
@@ -975,6 +987,30 @@ def test_two_lanes_of_one_stop_line_form_a_single_bar(data, grid):
     assert int((one > 0).sum()) < 0.65 * int((both > 0).sum())
 
 
+@needs_map
+def test_targeted_stopline_connection_fills_full_thickness_only_for_group(data, grid):
+    pair = ['A1256W000593', 'A1256W000742']
+    a, b = (next(n for n in data.stop_line_nodes if n.idx == i) for i in pair)
+    raw = bake_stopline(data, grid, include_nodes=pair)
+    joined = bake_stopline(data, grid, include_nodes=pair,
+                           connect_node_groups=[pair])
+    direction = b.point - a.point
+    direction /= np.linalg.norm(direction)
+    normal = np.array([-direction[1], direction[0]])
+    # 두 cap 사이의 가운데에서 정지선 폭 방향 양옆까지 모두 채워져야 한다.
+    samples = np.stack([(a.point + b.point) * 0.5 + d * normal
+                        for d in (-0.2, 0.0, 0.2)])
+    px = grid.to_pixel(samples)
+    assert (joined.image[px[:, 1], px[:, 0]] > 0).all()
+    assert not (raw.image[px[:, 1], px[:, 0]] > 0).all()
+    assert joined.stats['connected_node_groups'] == 1
+    assert joined.stats['merged_vector_groups'] == 1
+    assert len(joined.features) == 1
+    assert joined.features[0]['idx'] == 'A1256W000593+A1256W000742'
+    assert joined.features[0]['length_m'] == pytest.approx(7.55, abs=0.2)
+    assert joined.features[0]['traffic_light_id'] == 'C1256W000052'
+
+
 # ------------------------------------------------ 합류부에서 도로가 뚝 좁아짐
 
 @needs_map
@@ -1201,7 +1237,8 @@ def _fake_object_packet(objs):
 
 
 def test_parse_object_packet_reads_positions():
-    from live_check import parse_object_packet
+    from live_check import (_segment_to_object_box, ObjectState,
+                            object_dimensions, parse_object_packet)
     pkt = _fake_object_packet([(7, 1, 12.5, -34.25, 90.0, 4.6, 1.9),
                                (8, 0, -1.0, 2.0, 0.0, 0.8, 0.8)])
     objs = parse_object_packet(pkt)
@@ -1211,6 +1248,16 @@ def test_parse_object_packet_reads_positions():
     assert objs[0].y == pytest.approx(-34.25, abs=1e-3)
     assert objs[0].type_name == 'npc'
     assert objs[1].type_name == 'ped'
+    small = ObjectState(2, 2, 0.0, 0.0, 0.0, 0.366, 0.366)
+    assert object_dimensions(small) == pytest.approx((0.366, 0.366))
+    # size가 유효하지 않을 때만 obstacle 폴백을 사용한다.
+    missing = ObjectState(3, 2, 0.0, 0.0, 0.0, 0.0, float('nan'))
+    assert object_dimensions(missing) == pytest.approx((0.5, 0.5))
+    distance, box_point, lane_point = _segment_to_object_box(
+        np.array([0.5, -1.0]), np.array([0.5, 1.0]), small)
+    assert distance == pytest.approx(0.5 - 0.366 / 2.0)
+    assert box_point[0] == pytest.approx(0.366 / 2.0)
+    assert lane_point[0] == pytest.approx(0.5)
     # 빈 슬롯(id 0, 좌표 0)은 걸러진다
     assert len(parse_object_packet(_fake_object_packet([]))) == 0
     assert parse_object_packet(b'nonsense') is None
