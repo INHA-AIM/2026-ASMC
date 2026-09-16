@@ -62,14 +62,6 @@ RefLine BuildRefLine(const std::vector<double>& wx,
 // Newton Iteration으로 수치 풀이
 // =========================================================
 
-// s_hint가 주어지면(nullptr이 아니면), 전체 경로가 아니라 s_hint ± window
-// 구간의 점들 중에서만 "가장 가까운 초기값"을 찾는다. 트랙이 자기 자신과
-// 가까이 지나가는 구간(헤어핀, 루프 등)에서 매 사이클 전체 탐색을 하면
-// 실제로는 몇 m밖에 안 움직였는데도 물리적으로 가깝지만 s로는 수백~수천m
-// 떨어진 다른 구간의 점으로 최근접점이 순간적으로 튀어버리는 문제가 있다
-// (실측 재현: 한 틱 사이 s가 2176->2048, d가 1->720m로 폭주). 이전 사이클의
-// s 근방으로 탐색을 제한하면(한 제어 틱에 차량이 이동 가능한 거리는 window에
-// 비해 훨씬 작으므로) 이 문제가 생기지 않는다.
 double FindClosestS(const RefLine& ref, double x, double y,
                      const double* s_hint = nullptr, double window = 30.0);
 

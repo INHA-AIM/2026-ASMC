@@ -5,9 +5,8 @@
 #include <vector>
 
 // =========================================================
-// 곡률 기반 사전 감속 (mpc_controller의 옛 planner/path_planner.cpp 로직을
-// Frenet Frame Planner 쪽으로 이식한 것). lookahead 구간 내 최대 곡률로
-// velocity-keeping 목표속도를 정한다.
+// 곡률 기반 사전 감속 (mpc_controller의 옛 planner/path_planner.cpp 로직을 Frenet Frame Planner 쪽으로 이식한 것). 
+// lookahead 구간 내 최대 곡률로 velocity-keeping 목표속도를 정한다.
 // =========================================================
 struct CurveSpeedConfig {
     double target_vel        = 10.0;
