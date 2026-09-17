@@ -6,9 +6,9 @@
 #include <limits>
 #include <unordered_map>
 
+#include "frenet_planner/Generator/BoundaryConditionPolicy.hpp"
 #include "frenet_planner/Math/Utils.hpp"
 #include "frenet_planner/Speed/CurveSpeed.hpp"
-#include "frenet_planner/Speed/SpeedPolicy.hpp"
 #include "frenet_planner/Speed/TargetSpeedResolver.hpp"
 
 bool FrenetPlanner::Init(const std::string& yaml_path) {
@@ -788,18 +788,21 @@ bool FrenetPlanner::PlanInternal(
     ArcDerivToTimeDeriv(s_dot, s_ddot, d_prime, d_pprime, d_dot, d_ddot);
     last_d_dot_ = d_dot;  // 클램프 전 원본 값 - 진단 목적(아래 kMaxDDot 클램프 폭 자체를 보려고)
 
-    // 투영 오차가 후보의 초기 가속도 경계조건을 비현실적으로 키우지 않도록
-    // 다항식 중간구간의 overshoot 여유를 포함해 한계의 일정 비율로 제한한다.
-    const double boundary_margin = limits_.boundary_condition_accel_fraction;
-    s_ddot = clip(s_ddot, -limits_.max_longitudinal_accel * boundary_margin,
-                  limits_.max_longitudinal_accel * boundary_margin);
-    d_ddot = clip(d_ddot, -limits_.max_lateral_accel * boundary_margin,
-                  limits_.max_lateral_accel * boundary_margin);
-
-    // 큰 heading 오차로 과대 추정될 수 있는 초기 횡속도도 제한한다.
-    d_dot = clip(d_dot, -limits_.max_initial_d_dot, limits_.max_initial_d_dot);
-
-    FrenetState start{s, s_dot, s_ddot, d, d_dot, d_ddot};
+    // R7-C: 물리적 boundary clamp(투영 오차로 인한 비현실적 초기 가속도/
+    // 횡속도 제한)는 Generator/BoundaryConditionPolicy로 옮겼다 - raw 값은
+    // 위에서 이미 last_d_dot_로 보존했고(clamp 이전), 여기서는 clamp된
+    // planning용 초기조건만 만든다. 수식/파라미터 의미는 그대로다.
+    //
+    // s_ddot/d_dot/d_ddot 지역변수는 예전에는 clip()이 제자리에서 덮어썼다 -
+    // 아래 FOLLOW/STOP/KEEP Process 호출부가 start와 별도로 이 값들을 받으므로
+    // (§16: raw와 planning state를 섞지 않되, 여기서는 두 호출부 모두
+    // clamp-이후 값을 기대하는 기존 계약을 그대로 보존한다), start 생성 후
+    // 그 clamp된 필드로 재대입한다.
+    const FrenetState start = ClampInitialBoundaryState(
+        s, s_dot, s_ddot, d, d_dot, d_ddot, limits_);
+    s_ddot = start.s_dd;
+    d_dot = start.d_d;
+    d_ddot = start.d_dd;
 
     // =====================================================================
     // AVOID PREPARE: 후보 평가와 유지 궤적을 한 사이클에서 만든다 (D6-2b)

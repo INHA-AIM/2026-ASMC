@@ -59,9 +59,9 @@ add_library(frenet_planner_core
   src/frenet_planner/Generator/LateralGenerator.cpp
   src/frenet_planner/Generator/LongitudinalGenerator.cpp
   src/frenet_planner/Generator/CandidateCombiner.cpp
+  src/frenet_planner/Generator/BoundaryConditionPolicy.cpp
   src/frenet_planner/Evaluation/KinematicFilter.cpp
   src/frenet_planner/Speed/CurveSpeed.cpp
-  src/frenet_planner/Speed/SpeedPolicy.cpp
   src/frenet_planner/Speed/TargetSpeedResolver.cpp
   src/frenet_planner/Evaluation/Cost.cpp
   src/frenet_planner/Evaluation/CollisionChecker.cpp

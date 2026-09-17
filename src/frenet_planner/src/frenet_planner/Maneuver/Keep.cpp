@@ -24,8 +24,8 @@
 #include <utility>
 
 #include "frenet_planner/Evaluation/Cost.hpp"
+#include "frenet_planner/Generator/BoundaryConditionPolicy.hpp"
 #include "frenet_planner/Maneuver/ManeuverUtils.hpp"
-#include "frenet_planner/Speed/SpeedPolicy.hpp"
 
 namespace {
 
