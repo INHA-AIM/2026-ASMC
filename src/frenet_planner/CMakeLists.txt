@@ -62,6 +62,7 @@ add_library(frenet_planner_core
   src/frenet_planner/Evaluation/KinematicFilter.cpp
   src/frenet_planner/Speed/CurveSpeed.cpp
   src/frenet_planner/Speed/SpeedPolicy.cpp
+  src/frenet_planner/Speed/TargetSpeedResolver.cpp
   src/frenet_planner/Evaluation/Cost.cpp
   src/frenet_planner/Evaluation/CollisionChecker.cpp
   src/frenet_planner/Math/Polynomial.cpp
@@ -383,8 +384,9 @@ if(CATKIN_ENABLE_TESTING)
   add_test(NAME curve_speed_envelope_test COMMAND curve_speed_envelope_test)
 
   # fix/yuntae-frenet-speed-continuity Phase 2: target speed recovery rate
-  # limit 회귀. 실제 ApplyTargetSpeedRateLimit(Speed/SpeedPolicy.hpp)를
-  # 직접 호출한다.
+  # limit 회귀. R7-B: 실제 production ResolveTargetSpeed
+  # (Speed/TargetSpeedResolver.hpp)를 곧은 직선 RefLine으로 호출해 rate-limit
+  # 동작만 분리 검증한다.
   add_executable(target_speed_rate_limit_test
     tests/target_speed_rate_limit_test.cpp
   )

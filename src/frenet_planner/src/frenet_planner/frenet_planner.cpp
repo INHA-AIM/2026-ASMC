@@ -9,6 +9,7 @@
 #include "frenet_planner/Math/Utils.hpp"
 #include "frenet_planner/Speed/CurveSpeed.hpp"
 #include "frenet_planner/Speed/SpeedPolicy.hpp"
+#include "frenet_planner/Speed/TargetSpeedResolver.hpp"
 
 bool FrenetPlanner::Init(const std::string& yaml_path) {
     std::string waypoint_file;
@@ -561,22 +562,21 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
         obj.yaw_rate = it == object_yaw_rates.end() ? 0.0 : it->second;
     }
 
-    ctx.resolved_target_speed = LookaheadTargetSpeed(
-        ref_, ctx.s, ego.v, curve_speed_cfg_, limits_.max_longitudinal_accel,
-        limits_.max_lateral_accel, limits_.max_curvature);
-    if (external_command.has_target_speed) {
-        ctx.resolved_target_speed = std::min(ctx.resolved_target_speed,
-                                             external_command.target_speed);
-    }
-    if (external_command.has_max_speed) {
-        ctx.resolved_target_speed = std::min(ctx.resolved_target_speed,
-                                             external_command.max_speed);
-    }
-
-    // Cycle-to-cycle target speed recovery continuity
-    // (fix/yuntae-frenet-speed-continuity Phase 2).
-    ctx.resolved_target_speed = ApplyTargetSpeedRateLimit(
-        ctx.resolved_target_speed, last_target_speed_, has_target_speed_history_,
+    // R7-B: target speed 조립 순서(curve envelope -> external target cap ->
+    // external max cap -> rate limit)는 TargetSpeedResolver로 옮겼다 - 순서와
+    // 결과는 동일하다. BehaviorState/PlannerCommand 전체를 넘기지 않고 여기서
+    // 필요한 scalar/flag만 해석해서 넘긴다(history는 FrenetPlanner가 소유).
+    TargetSpeedInput target_speed_input;
+    target_speed_input.ego_s = ctx.s;
+    target_speed_input.ego_speed = ego.v;
+    target_speed_input.has_external_target_speed = external_command.has_target_speed;
+    target_speed_input.external_target_speed = external_command.target_speed;
+    target_speed_input.has_external_max_speed = external_command.has_max_speed;
+    target_speed_input.external_max_speed = external_command.max_speed;
+    target_speed_input.has_history = has_target_speed_history_;
+    target_speed_input.previous_target_speed = last_target_speed_;
+    ctx.resolved_target_speed = ResolveTargetSpeed(
+        ref_, target_speed_input, curve_speed_cfg_, limits_,
         max_target_speed_accel_, replanning_period_s_);
     has_target_speed_history_ = true;
 
