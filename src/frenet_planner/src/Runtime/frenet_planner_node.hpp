@@ -42,6 +42,13 @@ class FrenetPlannerNode {
     void behaviorCallback(const asmc_msgs::BehaviorContext::ConstPtr& message);
     void planningTimerCallback(const ros::SteadyTimerEvent& event);
 
+    // 기존(레거시) v1 planning path: /behavior/context -> /planning/feedback.
+    // v2 명령이 하나도 도착하지 않았을 때만 planningTimerCallback이 호출한다
+    // (runV2PlanningCycle이 false를 반환한 경우). ros::SteadyTime::now()를
+    // 자체적으로 다시 얻는다 - v2와 달리 외부에서 timestamp를 주입받지
+    // 않는다(R8-A2: 기존 semantics 그대로 보존).
+    void runV1PlanningCycle();
+
     // ===== v2 인터페이스 (D3-3) =====
     //
     // v1(/behavior/context -> /planning/feedback)과 병행 운영한다. v2 경로는

@@ -307,6 +307,16 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
     // 없으므로 반드시 하나만 처리한다.
     if (runV2PlanningCycle(ros::Time::now())) return;
 
+    runV1PlanningCycle();
+}
+
+// 기존 v1 planning path(레거시 /behavior/context -> /planning/feedback).
+// v2 명령이 없을 때만 호출된다(planningTimerCallback 주석 참고). 이 함수는
+// 예전 timer callback 본문을 그대로 옮긴 것으로, ros::SteadyTime::now()를
+// 자체적으로 다시 얻는다 - v2와 달리 이 경로는 처음부터 외부에서 주입받는
+// timestamp가 아니라 이 시점의 실제 시각을 썼다(이 semantics를 바꾸지
+// 않는다).
+void FrenetPlannerNode::runV1PlanningCycle() {
     if (!planner_initialized_) {
         ROS_ERROR_THROTTLE(
             5.0, "Frenet planning disabled: planner is not initialized");
