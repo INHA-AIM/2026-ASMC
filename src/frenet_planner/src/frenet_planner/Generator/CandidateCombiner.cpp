@@ -124,6 +124,15 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
             longitudinal_set = GenerateStoppingCandidates(start, cmd.stop_position, cfg);
             break;
 
+        // R6-D audit: frenet_planner.cpp의 IsSupportedExternalMode()가 MERGE를
+        // 허용하지 않고, PrepareMerge/PlanCommittedMerge 같은 진입점 자체가
+        // 없다 - 이 case는 production에서 어떤 caller로부터도 도달하지
+        // 않는다(테스트가 PlannerCommand{mode=MERGE}로 직접 호출할 때만
+        // 실행된다). AVOID/LANE_CHANGE가 request-native로 이전한 뒤에도 이
+        // case가 legacy ResolveManeuver를 완전히 제거하지 못하게 막는 마지막
+        // 이유다 - MERGE의 FSM 계약이 열리기 전까지는 건드리지 않는다
+        // (Option 1: behavior-preserving 유지, 임의로 활성화하거나 삭제하지
+        // 않는다).
         case MERGE:
             if (cmd.merge_crossing) {
                 if (cmd.target_object_id >= 0) {
