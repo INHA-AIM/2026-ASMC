@@ -9,6 +9,7 @@
 #include "frenet_planner/Common/PlannerCommand.hpp"
 #include "frenet_planner/Generator/CandidateCombiner.hpp"
 #include "frenet_planner/Pipeline/PlannerConfigBundle.hpp"
+#include "frenet_planner/Pipeline/TrajectoryRequest.hpp"
 #include "frenet_planner/Reference/Reference.hpp"
 
 // KEEP/FOLLOW/STOP이 공유하는 candidate 파이프라인 중, FrenetPlanner의
@@ -29,6 +30,19 @@ public:
     // 조정한 값을 그대로 받는다(이 클래스는 limits를 변형하지 않는다).
     std::vector<FrenetPath> GenerateCandidates(
         const FrenetState& maneuver_start, const PlannerCommand& cmd,
+        const KinematicLimits& maneuver_limits,
+        const std::vector<TrackedObject>& planning_collision_obstacles,
+        bool append_keep_continuity_candidates,
+        PlannerDebugStats* stats) const;
+
+    // R4-B: KEEP이 PlannerCommand 대신 TrajectoryRequest를 넘기는 경로.
+    // 내부적으로 request를 최소한의 PlannerCommand scratch 값으로 변환해
+    // 기존 ResolveManeuver/AppendKeepContinuityCandidates를 그대로
+    // 호출한다 - CandidateCombiner의 switch(cmd.mode)는 아직 그대로 두고
+    // (R5에서 LongitudinalMode 기반으로 교체 예정), 이 오버로드는 그
+    // 호출부만 Request 기반으로 바꾸는 것이 목적이다.
+    std::vector<FrenetPath> GenerateCandidates(
+        const FrenetState& maneuver_start, const TrajectoryRequest& request,
         const KinematicLimits& maneuver_limits,
         const std::vector<TrackedObject>& planning_collision_obstacles,
         bool append_keep_continuity_candidates,

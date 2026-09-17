@@ -204,9 +204,29 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     const bool append_keep_continuity_candidates =
         external_keep_candidates &&
         std::fabs(maneuver_start.d) <= cfg.lane_width * 0.5;
-    std::vector<FrenetPath> candidates = trajectory_pipeline.GenerateCandidates(
-        maneuver_start, cmd, maneuver_limits, planning_collision_obstacles,
-        append_keep_continuity_candidates, &stats);
+    // R4-B: 진짜 외부 KEEP(FSM이 직접 LANE_KEEPING을 지정한 경우)만
+    // TrajectoryRequest를 만들어 넘긴다. UpdateExternalStopExecution의
+    // APPROACH scratch(cmd.mode를 LANE_KEEPING으로 바꾼 것)는 여전히
+    // PlannerCommand 경로를 탄다 - 그건 "FSM이 요구한 것"이 아니라 STOP
+    // lifecycle의 내부 구현 세부사항이므로 R4-D(STOP 전환)에서 다룬다.
+    const bool is_true_external_keep =
+        external_command->mode == LANE_KEEPING && !external_stop_mode;
+    std::vector<FrenetPath> candidates;
+    if (is_true_external_keep) {
+        TrajectoryRequest request;
+        request.lateral.target_d = 0.0;
+        request.lateral.search_tolerance = 0.0;
+        request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
+        request.target_speed = cmd.target_speed;
+        candidates = trajectory_pipeline.GenerateCandidates(
+            maneuver_start, request, maneuver_limits,
+            planning_collision_obstacles, append_keep_continuity_candidates,
+            &stats);
+    } else {
+        candidates = trajectory_pipeline.GenerateCandidates(
+            maneuver_start, cmd, maneuver_limits, planning_collision_obstacles,
+            append_keep_continuity_candidates, &stats);
+    }
 
     const double lateral_cost_target = cmd.has_stop_lateral_hold
         ? cmd.stop_lateral_hold_d : 0.0;

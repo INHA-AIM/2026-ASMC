@@ -6,6 +6,41 @@
 #include "frenet_planner/Generator/LateralGenerator.hpp"
 #include "frenet_planner/Generator/LongitudinalGenerator.hpp"
 
+namespace {
+
+// TrajectoryRequest -> ResolveManeuver가 이해하는 PlannerCommand scratch 값
+// 변환. ResolveManeuver(CandidateCombiner.cpp)의 switch(cmd.mode)는 R5에서
+// switch(request.longitudinal_mode)로 교체될 때까지 이 변환을 거친다 -
+// 이 함수 밖에서는 어떤 코드도 이 PlannerCommand를 다시 들여다보지 않는다
+// (target_object_id/merge_*/avoidance_d_offset 등 KEEP/FOLLOW/STOP과 무관한
+// 필드는 채우지 않는다 - aggregate 기본값 그대로 둔다).
+PlannerCommand MakeResolveManeuverCommand(const TrajectoryRequest& request) {
+    PlannerCommand cmd{};
+    cmd.target_speed = request.target_speed;
+    switch (request.longitudinal_mode) {
+        case LongitudinalMode::FOLLOWING:
+            cmd.mode = FOLLOWING;
+            cmd.leader_s = request.following.leader_s;
+            cmd.leader_speed = request.following.leader_speed;
+            cmd.leader_accel = request.following.leader_accel;
+            cmd.time_gap = request.following.time_gap;
+            cmd.min_gap = request.following.min_gap;
+            cmd.gap_gain = request.following.gap_gain;
+            break;
+        case LongitudinalMode::STOPPING:
+            cmd.mode = STOP;
+            cmd.stop_position = request.stop.stop_s;
+            break;
+        case LongitudinalMode::VELOCITY_KEEPING:
+        default:
+            cmd.mode = LANE_KEEPING;
+            break;
+    }
+    return cmd;
+}
+
+}  // namespace
+
 TrajectoryPipeline::TrajectoryPipeline(const PlannerConfigBundle& config,
                                        const RefLine& ref)
     : config_(config), ref_(ref) {}
@@ -60,4 +95,16 @@ std::vector<FrenetPath> TrajectoryPipeline::GenerateCandidates(
                                        candidates);
     }
     return candidates;
+}
+
+std::vector<FrenetPath> TrajectoryPipeline::GenerateCandidates(
+    const FrenetState& maneuver_start, const TrajectoryRequest& request,
+    const KinematicLimits& maneuver_limits,
+    const std::vector<TrackedObject>& planning_collision_obstacles,
+    bool append_keep_continuity_candidates,
+    PlannerDebugStats* stats) const {
+    const PlannerCommand cmd = MakeResolveManeuverCommand(request);
+    return GenerateCandidates(maneuver_start, cmd, maneuver_limits,
+                              planning_collision_obstacles,
+                              append_keep_continuity_candidates, stats);
 }
