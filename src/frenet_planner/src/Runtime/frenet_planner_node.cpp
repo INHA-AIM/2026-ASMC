@@ -118,48 +118,6 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
                     << (runtime_loaded_ ? "true" : "false"));
 }
 
-void FrenetPlannerNode::vehicleCallback(
-    const asmc_msgs::VehicleState::ConstPtr& message) {
-    if (!message) return;
-    std::lock_guard<std::mutex> lock(input_mutex_);
-    latest_vehicle_ = *message;
-    vehicle_received_at_ = ros::SteadyTime::now();
-    has_vehicle_ = true;
-}
-
-void FrenetPlannerNode::objectsCallback(
-    const asmc_msgs::DetectedObjectArray::ConstPtr& message) {
-    if (!message) return;
-    std::lock_guard<std::mutex> lock(input_mutex_);
-    latest_objects_ = *message;
-    objects_received_at_ = ros::SteadyTime::now();
-    has_objects_ = true;
-}
-
-void FrenetPlannerNode::behaviorCallback(
-    const asmc_msgs::BehaviorContext::ConstPtr& message) {
-    if (!message) return;
-    std::lock_guard<std::mutex> lock(input_mutex_);
-    latest_behavior_ = *message;
-    behavior_received_at_ = ros::SteadyTime::now();
-    has_behavior_ = true;
-}
-
-FrenetPlannerNode::InputSnapshot FrenetPlannerNode::takeSnapshot() const {
-    std::lock_guard<std::mutex> lock(input_mutex_);
-    InputSnapshot snapshot;
-    snapshot.vehicle = latest_vehicle_;
-    snapshot.objects = latest_objects_;
-    snapshot.behavior = latest_behavior_;
-    snapshot.vehicle_received_at = vehicle_received_at_;
-    snapshot.objects_received_at = objects_received_at_;
-    snapshot.behavior_received_at = behavior_received_at_;
-    snapshot.has_vehicle = has_vehicle_;
-    snapshot.has_objects = has_objects_;
-    snapshot.has_behavior = has_behavior_;
-    return snapshot;
-}
-
 double FrenetPlannerNode::trajectoryDt() const {
     const double dt = planner_.sample_dt();
     return planner_initialized_ && std::isfinite(dt) && dt > 0.0 ? dt : 0.1;
@@ -577,16 +535,6 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
         "trajectory published",
         snapshot.behavior.command_id, path.x.size(), planner_.sample_dt(),
         vehicle_age, objects_age, behavior_age);
-}
-
-void FrenetPlannerNode::behaviorCommandV2Callback(
-    const asmc_msgs::BehaviorCommand::ConstPtr& message) {
-    if (!message) return;
-    // 저장만 한다. validation/transaction/planning은 20 Hz timer가 수행한다
-    // (runV2PlanningCycle 주석 참고).
-    std::lock_guard<std::mutex> lock(input_mutex_);
-    latest_v2_command_ = *message;
-    has_v2_command_ = true;
 }
 
 bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
