@@ -19,6 +19,7 @@
 #include "frenet_planner/Evaluation/Cost.hpp"
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
+#include "frenet_planner/Pipeline/PlannerConfigBundle.hpp"
 #include "frenet_planner/visualization/planner_debug_writer.hpp"
 
 // Frenet Frame Path Planner: 전역 경로(RefLine)를 기준으로 한 Local Planner.
@@ -1044,6 +1045,13 @@ private:
     // 근사한다. 저속 fallback과 AVOID SHIFT 시작거리가 같은 값을 사용한다.
     double LowSpeedLateralTransitionDistance(double from_d,
                                               double to_d) const;
+
+    // ExecuteManeuverPipeline이 참조하는 config 10종을 값 복사 없이 참조로
+    // 묶어 반환한다 - Pipeline/TrajectoryPipeline으로 이 함수를 분리하기
+    // 위한 선행 작업(R3 1/4단계)이며, 이 시점에는 아직 pipeline 내부에서
+    // 개별 멤버 접근 대신 이 번들을 통해서만 읽도록 바꾸는 순수 구조
+    // 이동만 한다.
+    PlannerConfigBundle MakePipelineConfigBundle() const;
 
     RefLine ref_;
     ReferenceConfig ref_config_{};

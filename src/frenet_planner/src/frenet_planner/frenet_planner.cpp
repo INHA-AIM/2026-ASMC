@@ -222,6 +222,12 @@ double FrenetPlanner::LowSpeedLateralTransitionDistance(
             std::sqrt(lateral_distance / usable_curvature));
 }
 
+PlannerConfigBundle FrenetPlanner::MakePipelineConfigBundle() const {
+    return PlannerConfigBundle{
+        path_cfg_, limits_, cost_weights_, vehicle_shape_, collision_cfg_,
+        stop_cfg_, merge_cfg_, avoid_cfg_, following_cfg_, lane_width_};
+}
+
 // Cartesian 정지 목표 -> reference line 종방향 좌표.
 bool FrenetPlanner::ProjectPointToFrenet(double x, double y, double s_hint,
                                          double search_window,
