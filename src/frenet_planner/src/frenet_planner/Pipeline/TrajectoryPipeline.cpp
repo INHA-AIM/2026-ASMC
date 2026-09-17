@@ -38,40 +38,12 @@ void TrajectoryPipeline::AppendKeepContinuityCandidates(
 }
 
 std::vector<FrenetPath> TrajectoryPipeline::GenerateCandidates(
-    const FrenetState& maneuver_start, const PlannerCommand& cmd,
-    const KinematicLimits& maneuver_limits,
-    const std::vector<TrackedObject>& planning_collision_obstacles,
-    bool append_keep_continuity_candidates,
-    PlannerDebugStats* stats) const {
-    // legacy behavior-aware path - AVOID/LANE_CHANGE/MERGE 전용(R5 범위 밖).
-    // KEEP/FOLLOW/STOP은 더 이상 이 오버로드를 거치지 않는다(§10/§11).
-    std::vector<FrenetPath> candidates = ResolveManeuver(
-        maneuver_start, cmd, ref_, config_.path, maneuver_limits,
-        config_.lane_width, planning_collision_obstacles,
-        config_.vehicle_shape, config_.collision, config_.stop, config_.merge,
-        stats);
-
-    // moderate-speed curvature starvation 완화(Phase B): 실측 MORAI에서
-    // 급커브 근접 중 유효한 결합 후보가 있는데도 전부 중앙(d1=0) 복귀였던
-    // 탓에 사후 곡률 필터에서 통째로 탈락하는 사례가 있었다. 현재 오프셋을
-    // 유지하는 continuity candidate를 추가한다 - d=0 강제 클램프가 아니라
-    // 대안 후보 하나를 더 얹는 것뿐이다(호출자가 lane 안인지 이미 확인).
-    if (append_keep_continuity_candidates) {
-        AppendKeepContinuityCandidates(maneuver_start, cmd.target_speed,
-                                       planning_collision_obstacles,
-                                       candidates);
-    }
-    return candidates;
-}
-
-std::vector<FrenetPath> TrajectoryPipeline::GenerateCandidates(
     const FrenetState& maneuver_start, const TrajectoryRequest& request,
     const KinematicLimits& maneuver_limits,
     const std::vector<TrackedObject>& planning_collision_obstacles,
     bool append_keep_continuity_candidates,
     PlannerDebugStats* stats) const {
-    // Request-native path(R5) - PlannerCommand로 역변환하지 않는다. §10/§11:
-    // 이 오버로드는 절대 위 PlannerCommand 오버로드를 호출하지 않는다.
+    // Request-native path(R5/R6) - PlannerCommand로 역변환하지 않는다.
     std::vector<FrenetPath> candidates = GenerateRequestedCandidates(
         maneuver_start, request, ref_, config_.path, maneuver_limits,
         planning_collision_obstacles, config_.vehicle_shape, config_.collision,

@@ -204,14 +204,17 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     const bool append_keep_continuity_candidates =
         external_keep_candidates &&
         std::fabs(maneuver_start.d) <= cfg.lane_width * 0.5;
-    // R4-B/C/D: 진짜 외부 KEEP(FSM이 직접 LANE_KEEPING을 지정한 경우),
-    // FOLLOW, STOP(APPROACH/BRAKING)은 TrajectoryRequest를 만들어 넘긴다.
+    // R4-B/C/D, R6-E: 이 함수는 frenet_planner.cpp의 PlanInternal switch(§6
+    // 주석 참고)에서 AVOID/LANE_CHANGE가 먼저 가로채고 MERGE가
+    // IsSupportedExternalMode에서 이미 걸러진 뒤에만 호출되므로,
+    // external_command->mode는 항상 {LANE_KEEPING, STOP, FOLLOWING} 중
+    //하나다 - 그래서 아래 네 분기(진짜 외부 KEEP, FOLLOW,
+    // STOP-APPROACH/BRAKING)가 이 함수에 도달 가능한 전체 경우의 수를
+    // 남김없이 덮는다(legacy PlannerCommand 오버로드로 빠지는 경우가 없다).
     // STOP의 phase 전이/target latch(stop_) 자체는 여전히
     // UpdateExternalStopExecution(Stop.cpp)이 소유한다 - 여기서는 그 결과
     // (cmd.mode/target_speed/stop_position/lateral hold)를 Request로
     // 정규화만 한다. HOLD는 이미 위에서 조기 반환하므로 이 분기에 오지 않는다.
-    // MERGE/AVOID/LANE_CHANGE는 R4 범위 밖이라 PlannerCommand 경로를 그대로
-    // 유지한다.
     const bool is_true_external_keep =
         external_command->mode == LANE_KEEPING && !external_stop_mode;
     const bool is_follow = cmd.mode == FOLLOWING;
@@ -219,49 +222,41 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     // APPROACH -> LANE_KEEPING, BRAKING -> STOP(그대로) 로 이미 정해뒀다.
     const bool is_stop_approach = external_stop_mode && cmd.mode == LANE_KEEPING;
     const bool is_stop_braking = external_stop_mode && cmd.mode == STOP;
-    std::vector<FrenetPath> candidates;
-    if (is_true_external_keep || is_follow || is_stop_approach || is_stop_braking) {
-        TrajectoryRequest request;
-        request.lateral.target_d =
-            cmd.has_stop_lateral_hold ? cmd.stop_lateral_hold_d : 0.0;
-        // legacy ResolveManeuver의 lateral tolerance 규칙(CandidateCombiner.cpp
-        // 참고)을 그대로 옮긴다: hold가 있으면 항상 0. hold가 없으면 KEEP/
-        // STOP-APPROACH(내부적으로 velocity keeping에 위임)만 0이고, FOLLOW와
-        // STOP-BRAKING(hold 없음)은 cfg.path.lateral_target_tolerance를 그대로
-        // 쓴다 - 이 tolerance를 실수로 0으로 좁히면 FOLLOW/STOP-BRAKING의
-        // 정상적인 좌우 탐색 폭이 사라진다.
-        request.lateral.search_tolerance =
-            (cmd.has_stop_lateral_hold || is_true_external_keep || is_stop_approach)
-                ? 0.0 : cfg.path.lateral_target_tolerance;
-        request.target_speed = cmd.target_speed;
-        if (is_follow) {
-            request.longitudinal_mode = LongitudinalMode::FOLLOWING;
-            request.collision.coast_exempt_object_id = cmd.target_object_id;
-            request.following.leader_s = cmd.leader_s;
-            request.following.leader_speed = cmd.leader_speed;
-            request.following.leader_accel = cmd.leader_accel;
-            request.following.time_gap = cmd.time_gap;
-            request.following.min_gap = cmd.min_gap;
-            request.following.gap_gain = cmd.gap_gain;
-        } else if (is_stop_braking) {
-            request.longitudinal_mode = LongitudinalMode::STOPPING;
-            request.stop.stop_s = cmd.stop_position;
-            request.stop.terminal_offset = cfg.stop.delta_s_override;
-        } else {
-            // 진짜 외부 KEEP과 STOP-APPROACH(velocity keeping으로 위임) 모두
-            // 여기로 떨어진다 - 둘 다 Generator 입장에서는 동일한
-            // VELOCITY_KEEPING 요청이다.
-            request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
-        }
-        candidates = trajectory_pipeline.GenerateCandidates(
-            maneuver_start, request, maneuver_limits,
-            planning_collision_obstacles, append_keep_continuity_candidates,
-            &stats);
+    TrajectoryRequest request;
+    request.lateral.target_d =
+        cmd.has_stop_lateral_hold ? cmd.stop_lateral_hold_d : 0.0;
+    // legacy ResolveManeuver의 lateral tolerance 규칙(CandidateCombiner.cpp
+    // 참고)을 그대로 옮긴다: hold가 있으면 항상 0. hold가 없으면 KEEP/
+    // STOP-APPROACH(내부적으로 velocity keeping에 위임)만 0이고, FOLLOW와
+    // STOP-BRAKING(hold 없음)은 cfg.path.lateral_target_tolerance를 그대로
+    // 쓴다 - 이 tolerance를 실수로 0으로 좁히면 FOLLOW/STOP-BRAKING의
+    // 정상적인 좌우 탐색 폭이 사라진다.
+    request.lateral.search_tolerance =
+        (cmd.has_stop_lateral_hold || is_true_external_keep || is_stop_approach)
+            ? 0.0 : cfg.path.lateral_target_tolerance;
+    request.target_speed = cmd.target_speed;
+    if (is_follow) {
+        request.longitudinal_mode = LongitudinalMode::FOLLOWING;
+        request.collision.coast_exempt_object_id = cmd.target_object_id;
+        request.following.leader_s = cmd.leader_s;
+        request.following.leader_speed = cmd.leader_speed;
+        request.following.leader_accel = cmd.leader_accel;
+        request.following.time_gap = cmd.time_gap;
+        request.following.min_gap = cmd.min_gap;
+        request.following.gap_gain = cmd.gap_gain;
+    } else if (is_stop_braking) {
+        request.longitudinal_mode = LongitudinalMode::STOPPING;
+        request.stop.stop_s = cmd.stop_position;
+        request.stop.terminal_offset = cfg.stop.delta_s_override;
     } else {
-        candidates = trajectory_pipeline.GenerateCandidates(
-            maneuver_start, cmd, maneuver_limits, planning_collision_obstacles,
-            append_keep_continuity_candidates, &stats);
+        // 진짜 외부 KEEP과 STOP-APPROACH(velocity keeping으로 위임) 모두
+        // 여기로 떨어진다 - 둘 다 Generator 입장에서는 동일한
+        // VELOCITY_KEEPING 요청이다.
+        request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
     }
+    std::vector<FrenetPath> candidates = trajectory_pipeline.GenerateCandidates(
+        maneuver_start, request, maneuver_limits, planning_collision_obstacles,
+        append_keep_continuity_candidates, &stats);
 
     const double lateral_cost_target = cmd.has_stop_lateral_hold
         ? cmd.stop_lateral_hold_d : 0.0;
