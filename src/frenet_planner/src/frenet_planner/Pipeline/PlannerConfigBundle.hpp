@@ -2,6 +2,8 @@
 #define FRENET_PIPELINE_PLANNER_CONFIG_BUNDLE_HPP
 
 #include "frenet_planner/Config/FrenetConfig.hpp"
+#include "frenet_planner/Evaluation/CollisionChecker.hpp"
+#include "frenet_planner/Evaluation/Cost.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
 

@@ -20,6 +20,7 @@
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
 #include "frenet_planner/Pipeline/PlannerConfigBundle.hpp"
+#include "frenet_planner/Pipeline/TrajectoryPipeline.hpp"
 #include "frenet_planner/visualization/planner_debug_writer.hpp"
 
 // Frenet Frame Path Planner: 전역 경로(RefLine)를 기준으로 한 Local Planner.
@@ -874,16 +875,6 @@ private:
         double ego_s, int target_object_id,
         const std::vector<TrackedObject>& obstacles,
         FollowingContext& context) const;
-
-    // moderate-speed curvature starvation 완화(fix/yuntae-frenet-speed-continuity
-    // Phase B). external KEEP에서 결합 후보가 전부 곡률 필터에 탈락하는 사례를
-    // 막기 위해, 현재 오프셋을 유지하는 continuity candidate를 candidates에
-    // 추가로 얹는다(대체가 아니라 추가) - 자세한 배경은 PlanInternal의 호출부
-    // 주석 참고. maneuver_start.d가 차선 폭 안일 때만 호출된다(호출부에서 보장).
-    void AppendExternalKeepContinuityCandidates(
-        const FrenetState& maneuver_start, const PlannerCommand& cmd,
-        const std::vector<TrackedObject>& planning_collision_obstacles,
-        std::vector<FrenetPath>& candidates) const;
 
     // external KEEP의 no-valid-candidate 분기에서 저속 근방일 때만 호출되는
     // crawl fallback 실행부(fix/yuntae-frenet-speed-continuity Phase 5). 호출

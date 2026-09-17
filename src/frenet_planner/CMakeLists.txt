@@ -40,6 +40,7 @@ target_include_directories(frenet_geometry PUBLIC
 # and the frenet_planner_node executable below.
 add_library(frenet_planner_core
   src/frenet_planner/frenet_planner.cpp
+  src/frenet_planner/Pipeline/TrajectoryPipeline.cpp
   src/frenet_planner/Maneuver/ManeuverUtils.cpp
   src/frenet_planner/Maneuver/Follow.cpp
   src/frenet_planner/Maneuver/Keep.cpp
