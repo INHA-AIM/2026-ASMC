@@ -13,7 +13,8 @@
 bool FrenetPlanner::Init(const std::string& yaml_path) {
     std::string waypoint_file;
     std::string config_error;
-    if (!LoadParams(yaml_path, ref_config_, path_cfg_, limits_, cost_weights_,
+    if (!LoadParams(yaml_path, ref_config_, object_tracking_cfg_, path_cfg_, limits_,
+                     cost_weights_,
                      vehicle_shape_,
                      collision_cfg_, curve_speed_cfg_, following_cfg_, avoid_cfg_,
                      lane_change_cfg_,
@@ -30,7 +31,8 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
     // key로 중복 관리하지 않고 여기서 그대로 대입한다.
     ref_config_.max_curvature = limits_.max_curvature;
 
-    if (!ValidateConfig(ref_config_, path_cfg_, limits_, cost_weights_, vehicle_shape_,
+    if (!ValidateConfig(ref_config_, object_tracking_cfg_, path_cfg_, limits_,
+                         cost_weights_, vehicle_shape_,
                          collision_cfg_, curve_speed_cfg_, following_cfg_,
                          avoid_cfg_, lane_change_cfg_, stop_cfg_,
                          emergency_stop_cfg_, merge_cfg_, highway_merge_cfg_,
@@ -525,17 +527,21 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
             object_tracks_[obj.id] = ObjectTrack{obj.heading, 0.0, 0};
         } else {
             const double measured = std::remainder(obj.heading - it->second.heading,
-                                                    2.0 * M_PI) / 0.05;
+                                                    2.0 * M_PI) / replanning_period_s_;
             // UDP heading 양자화/순간 점프를 억제하고 차량 수준의 yaw-rate로 제한한다.
-            const double bounded = clip(measured, -1.0, 1.0);
-            it->second.yaw_rate = 0.8 * it->second.yaw_rate + 0.2 * bounded;
+            const double bounded = clip(measured,
+                                        -object_tracking_cfg_.yaw_rate_clamp_rad_s,
+                                        object_tracking_cfg_.yaw_rate_clamp_rad_s);
+            const double alpha = object_tracking_cfg_.yaw_rate_smoothing_alpha;
+            it->second.yaw_rate = (1.0 - alpha) * it->second.yaw_rate + alpha * bounded;
             it->second.heading = obj.heading;
             it->second.missing_cycles = 0;
         }
         object_yaw_rates[obj.id] = object_tracks_[obj.id].yaw_rate;
     }
     for (auto it = object_tracks_.begin(); it != object_tracks_.end();) {
-        if (it->second.missing_cycles > 20) it = object_tracks_.erase(it);
+        if (it->second.missing_cycles > object_tracking_cfg_.missing_cycles_eviction)
+            it = object_tracks_.erase(it);
         else ++it;
     }
     // obstacles의 각 TrackedObject는 이미 authoritative corners(perception의

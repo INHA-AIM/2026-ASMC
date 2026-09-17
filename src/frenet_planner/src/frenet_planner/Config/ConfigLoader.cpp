@@ -31,6 +31,7 @@ bool loadInto(const YAML::Node& root, const std::string& dotted_key, T& out) {
 
 bool LoadParams(const std::string& yaml_path,
                  ReferenceConfig& reference_cfg,
+                 ObjectTrackingConfig& object_tracking_cfg,
                  PathGeneratorConfig& path_cfg,
                  KinematicLimits& limits,
                  CostWeights& cost_weights,
@@ -80,6 +81,10 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/reference/relax_max_iter",                  reference_cfg.relax_max_iter);
     REQUIRE("planner/reference/relax_step",                      reference_cfg.relax_step);
     REQUIRE("planner/reference/ego_projection_search_window",    reference_cfg.ego_projection_search_window);
+
+    REQUIRE("planner/object_tracking/yaw_rate_clamp_rad_s",     object_tracking_cfg.yaw_rate_clamp_rad_s);
+    REQUIRE("planner/object_tracking/yaw_rate_smoothing_alpha", object_tracking_cfg.yaw_rate_smoothing_alpha);
+    REQUIRE("planner/object_tracking/missing_cycles_eviction",  object_tracking_cfg.missing_cycles_eviction);
 
     REQUIRE("planner/path_generator/lateral_d1/min",   path_cfg.lateral_d1.min);
     REQUIRE("planner/path_generator/lateral_d1/max",   path_cfg.lateral_d1.max);

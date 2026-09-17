@@ -1063,6 +1063,7 @@ private:
     MergeConfig merge_cfg_{};
     HighwayMergeConfig highway_merge_cfg_{};
     PlannerVisualizationConfig visualization_cfg_{};
+    ObjectTrackingConfig object_tracking_cfg_{};
     std::unique_ptr<PlannerDebugWriter> debug_writer_;
     double wheelbase_;
     double lane_width_;

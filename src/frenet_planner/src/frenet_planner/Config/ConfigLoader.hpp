@@ -20,6 +20,7 @@
 // ConfigValidator::ValidateConfig()의 책임이다.
 bool LoadParams(const std::string& yaml_path,
                 ReferenceConfig& reference_cfg,
+                ObjectTrackingConfig& object_tracking_cfg,
                 PathGeneratorConfig& path_cfg,
                 KinematicLimits& limits,
                 CostWeights& cost_weights,

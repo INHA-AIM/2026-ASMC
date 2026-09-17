@@ -44,6 +44,7 @@ bool CheckFinite(double value, const std::string& name,
 }  // namespace
 
 bool ValidateConfig(const ReferenceConfig& reference_cfg,
+                     const ObjectTrackingConfig& object_tracking_cfg,
                      const PathGeneratorConfig& path_cfg,
                      const KinematicLimits& limits,
                      const CostWeights& cost_weights,
@@ -86,6 +87,23 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
                               "planner/reference/ego_projection_search_window",
                               error_message))
         return false;
+
+    // --- object_tracking ---
+    if (!CheckPositiveFinite(object_tracking_cfg.yaw_rate_clamp_rad_s,
+                              "planner/object_tracking/yaw_rate_clamp_rad_s",
+                              error_message))
+        return false;
+    if (!IsFinite(object_tracking_cfg.yaw_rate_smoothing_alpha) ||
+        object_tracking_cfg.yaw_rate_smoothing_alpha <= 0.0 ||
+        object_tracking_cfg.yaw_rate_smoothing_alpha > 1.0) {
+        error_message =
+            "planner/object_tracking/yaw_rate_smoothing_alpha must be in (0, 1]";
+        return false;
+    }
+    if (object_tracking_cfg.missing_cycles_eviction <= 0) {
+        error_message = "planner/object_tracking/missing_cycles_eviction must be > 0";
+        return false;
+    }
 
     // --- path_generator ---
     if (!CheckRange(path_cfg.lateral_d1, "planner/path_generator/lateral_d1", error_message))

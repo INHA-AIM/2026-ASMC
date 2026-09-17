@@ -20,6 +20,7 @@
 // 발견했다고 런타임에 enabled를 조용히 false로 바꾸지 않는다. 설정이
 // 유효하지 않으면 Init() 자체가 실패해야 한다.
 bool ValidateConfig(const ReferenceConfig& reference_cfg,
+                     const ObjectTrackingConfig& object_tracking_cfg,
                      const PathGeneratorConfig& path_cfg,
                      const KinematicLimits& limits,
                      const CostWeights& cost_weights,

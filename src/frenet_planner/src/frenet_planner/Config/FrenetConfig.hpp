@@ -7,7 +7,23 @@
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
 
 // =========================================================
-// 곡률 기반 사전 감속 (mpc_controller의 옛 planner/path_planner.cpp 로직을 Frenet Frame Planner 쪽으로 이식한 것). 
+// TrackedObject의 연속 heading으로 yaw-rate를 추정/보관하는 파라미터
+// (frenet_planner.cpp의 PreparePlanningContext). 회전교차로/합류에서 순환
+// 차량의 곡선 예측(Merge.cpp)에 쓰인다.
+// =========================================================
+struct ObjectTrackingConfig {
+    // [rad/s] 관측된 yaw-rate의 절대값 상한. UDP heading 양자화/순간 점프로
+    // 인한 비현실적인 값을 차량 수준으로 제한한다.
+    double yaw_rate_clamp_rad_s;
+    // 지수평활 계수(0-1). 새 관측치에 주는 가중치 - 클수록 더 빠르게
+    // 반응하지만 노이즈에 더 민감해진다.
+    double yaw_rate_smoothing_alpha;
+    // [cycles] 이 사이클 수 넘게 관측되지 않은 객체 트랙을 제거한다.
+    int missing_cycles_eviction;
+};
+
+// =========================================================
+// 곡률 기반 사전 감속 (mpc_controller의 옛 planner/path_planner.cpp 로직을 Frenet Frame Planner 쪽으로 이식한 것).
 // lookahead 구간 내 최대 곡률로 velocity-keeping 목표속도를 정한다.
 // =========================================================
 struct CurveSpeedConfig {
