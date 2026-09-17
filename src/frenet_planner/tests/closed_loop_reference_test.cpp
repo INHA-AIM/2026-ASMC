@@ -36,6 +36,18 @@ void Expect(bool condition, const std::string& name) {
 
 constexpr double kMaxCurvature = 0.1704;  // production params.yaml과 동일
 
+ReferenceConfig MakeReferenceConfig(double max_curvature) {
+    ReferenceConfig config{};
+    config.max_curvature = max_curvature;
+    config.closure_tolerance_m = 0.05;
+    config.smoothing_window_m = 10.0;
+    config.resample_ds = 0.5;
+    config.relax_max_iter = 300;
+    config.relax_step = 0.3;
+    config.ego_projection_search_window = 30.0;
+    return config;
+}
+
 std::string MakeLocalConfig(const std::string& source, const std::string& waypoints,
                             const std::string& out_path) {
     std::ifstream in(source);
@@ -71,7 +83,7 @@ double Dist(const RefPoint& a, const RefPoint& b) {
 void TestClosedLoopDetection() {
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     RefLine closed_ref;
-    Expect(LoadReferenceLine(waypoint_file, closed_ref, kMaxCurvature),
+    Expect(LoadReferenceLine(waypoint_file, closed_ref, MakeReferenceConfig(kMaxCurvature)),
            "setup: real competition waypoint loads");
     Expect(closed_ref.closed_loop,
            "18.1: real competition waypoint is detected as closed_loop=true");
@@ -79,7 +91,7 @@ void TestClosedLoopDetection() {
     // 열린 synthetic path: 직선 100m, 첫점/끝점이 멀리 떨어져 있다.
     const std::vector<double> open_x = {0.0, 10.0, 20.0, 30.0, 40.0, 50.0};
     const std::vector<double> open_y = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    const RefLine open_ref = BuildRefLine(open_x, open_y, kMaxCurvature);
+    const RefLine open_ref = BuildRefLine(open_x, open_y, MakeReferenceConfig(kMaxCurvature));
     Expect(!open_ref.closed_loop,
            "18.1: open synthetic path is detected as closed_loop=false");
 }
@@ -88,7 +100,7 @@ void TestClosedLoopDetection() {
 void TestPhysicalClosureAfterPreprocessing() {
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     RefLine ref;
-    Expect(LoadReferenceLine(waypoint_file, ref, kMaxCurvature),
+    Expect(LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(kMaxCurvature)),
            "setup: reference loads for closure check");
     Expect(ref.closed_loop, "18.2 setup: reference is closed_loop");
 
@@ -105,7 +117,7 @@ void TestPhysicalClosureAfterPreprocessing() {
 void TestLoopLength() {
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     RefLine ref;
-    LoadReferenceLine(waypoint_file, ref, kMaxCurvature);
+    LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(kMaxCurvature));
 
     Expect(ref.length > 0.0, "18.3: ref.length is positive");
     Expect(std::fabs(ref.points.front().s) < 1e-9,
@@ -120,7 +132,7 @@ void TestLoopLength() {
 void TestSeamSpatialContinuity() {
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     RefLine ref;
-    LoadReferenceLine(waypoint_file, ref, kMaxCurvature);
+    LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(kMaxCurvature));
     const double length = ref.length;
     constexpr double kEps = 0.3;
     // 재샘플링 간격은 production kResampleDs(0.5m)와 같은 자릿수 - 정상적인
@@ -149,7 +161,7 @@ void TestSeamSpatialContinuity() {
 void TestHeadingContinuity() {
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     RefLine ref;
-    LoadReferenceLine(waypoint_file, ref, kMaxCurvature);
+    LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(kMaxCurvature));
     const double length = ref.length;
     constexpr double kEps = 0.3;
 
@@ -171,7 +183,7 @@ void TestHeadingContinuity() {
 void TestCurvatureContinuity() {
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     RefLine ref;
-    LoadReferenceLine(waypoint_file, ref, kMaxCurvature);
+    LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(kMaxCurvature));
     const double length = ref.length;
     constexpr double kEps = 0.3;
 
@@ -194,7 +206,7 @@ void TestCurvatureContinuity() {
 void TestDKappaContinuity() {
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     RefLine ref;
-    LoadReferenceLine(waypoint_file, ref, kMaxCurvature);
+    LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(kMaxCurvature));
     const double length = ref.length;
 
     bool all_finite = true;
@@ -217,7 +229,7 @@ void TestDKappaContinuity() {
 void TestInterpolateWrapRegression() {
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     RefLine ref;
-    LoadReferenceLine(waypoint_file, ref, kMaxCurvature);
+    LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(kMaxCurvature));
     const double length = ref.length;
     constexpr double kDelta = 3.0;
 
@@ -234,7 +246,7 @@ void TestInterpolateWrapRegression() {
     // 열린 경로: length를 넘어가도 clamp될 뿐 wrap하지 않는다.
     const std::vector<double> open_x = {0.0, 10.0, 20.0, 30.0, 40.0, 50.0};
     const std::vector<double> open_y = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    const RefLine open_ref = BuildRefLine(open_x, open_y, kMaxCurvature);
+    const RefLine open_ref = BuildRefLine(open_x, open_y, MakeReferenceConfig(kMaxCurvature));
     const RefPoint beyond = Interpolate(open_ref, open_ref.length + 100.0);
     Expect(Dist(beyond, open_ref.points.back()) < 1e-6,
            "18.8: open path clamps beyond the end instead of wrapping");
@@ -249,7 +261,7 @@ void TestInterpolateWrapRegression() {
 void TestProjectionSeamRegression() {
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     RefLine ref;
-    LoadReferenceLine(waypoint_file, ref, kMaxCurvature);
+    LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(kMaxCurvature));
     const double length = ref.length;
 
     const std::vector<double> offsets = {
@@ -263,7 +275,7 @@ void TestProjectionSeamRegression() {
         Expect(std::isfinite(rp.x) && std::isfinite(rp.y),
                "18.9: seam sample pose is finite");
 
-        const double projected = FindClosestS(ref, rp.x, rp.y, &prev_s);
+        const double projected = FindClosestS(ref, rp.x, rp.y, &prev_s, 30.0);
         Expect(std::isfinite(projected), "18.9: FindClosestS returns a finite s");
 
         // 순환 거리로 판단: 투영된 s와 실제 알고 있는 s_query(모듈로 length)
@@ -292,7 +304,7 @@ void TestProductionKeepTrajectoryCrossesSeam() {
         "closed_loop_reference_test_params.yaml");
 
     RefLine ref;
-    LoadReferenceLine(waypoint_file, ref, kMaxCurvature);
+    LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(kMaxCurvature));
     Expect(ref.closed_loop, "18.10 setup: production reference is closed_loop");
 
     FrenetPlanner planner;
@@ -359,7 +371,8 @@ void TestProductionKeepTrajectoryCrossesSeam() {
     final_pose.v = path.v.back();
     final_pose.a = path.a.back();
     double fs=0, fs_dot=0, fs_ddot=0, fd=0, fd_prime=0, fd_pprime=0;
-    CartesianToFrenet(ref, final_pose, fs, fs_dot, fs_ddot, fd, fd_prime, fd_pprime);
+    CartesianToFrenet(ref, final_pose, fs, fs_dot, fs_ddot, fd, fd_prime, fd_pprime,
+                      /*s_hint=*/nullptr, /*search_window=*/30.0);
     std::printf("  18.10: terminal d=%.4f\n", fd);
     Expect(std::fabs(fd) < 1.0,
            "18.10: KEEP selected terminal d remains centerline-oriented across the seam");
@@ -370,11 +383,14 @@ void TestProductionKeepTrajectoryCrossesSeam() {
 void TestCurveSpeedSeamRegression() {
     const std::string waypoint_file = FRENET_TEST_WAYPOINT_FILE;
     RefLine ref;
-    LoadReferenceLine(waypoint_file, ref, kMaxCurvature);
+    LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(kMaxCurvature));
 
     CurveSpeedConfig cfg{};
     cfg.target_vel = 10.0;
     cfg.curve_lookahead_m = 15.0;
+    cfg.lateral_accel_safety_factor = 0.8;
+    cfg.comfortable_decel_factor = 0.5;
+    cfg.min_usable_decel = 0.5;
     const double max_lateral_accel = 3.0;
     const double max_longitudinal_accel = 3.0;
 
@@ -393,7 +409,7 @@ void TestCurveSpeedSeamRegression() {
     // 합성 경로라 항상 target_vel이어야 한다.
     const std::vector<double> open_x = {0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0};
     const std::vector<double> open_y = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    const RefLine open_ref = BuildRefLine(open_x, open_y, kMaxCurvature);
+    const RefLine open_ref = BuildRefLine(open_x, open_y, MakeReferenceConfig(kMaxCurvature));
     const double v_open = LookaheadTargetSpeed(open_ref, open_ref.length - 1.0, 9.0,
                                                cfg, max_longitudinal_accel,
                                                max_lateral_accel, kMaxCurvature);

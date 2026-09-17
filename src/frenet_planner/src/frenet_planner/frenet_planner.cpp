@@ -13,7 +13,8 @@
 bool FrenetPlanner::Init(const std::string& yaml_path) {
     std::string waypoint_file;
     std::string config_error;
-    if (!LoadParams(yaml_path, path_cfg_, limits_, cost_weights_, vehicle_shape_,
+    if (!LoadParams(yaml_path, ref_config_, path_cfg_, limits_, cost_weights_,
+                     vehicle_shape_,
                      collision_cfg_, curve_speed_cfg_, following_cfg_, avoid_cfg_,
                      lane_change_cfg_,
                      stop_cfg_, emergency_stop_cfg_, merge_cfg_, highway_merge_cfg_,
@@ -24,7 +25,12 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
                     yaml_path.c_str(), config_error.c_str());
         return false;
     }
-    if (!ValidateConfig(path_cfg_, limits_, cost_weights_, vehicle_shape_,
+    // reference line 자체가 만족해야 하는 곡률 한계는 KinematicFilter가
+    // 후보를 걸러내는 물리적 한계와 같은 차량 능력이어야 한다 - 별도 YAML
+    // key로 중복 관리하지 않고 여기서 그대로 대입한다.
+    ref_config_.max_curvature = limits_.max_curvature;
+
+    if (!ValidateConfig(ref_config_, path_cfg_, limits_, cost_weights_, vehicle_shape_,
                          collision_cfg_, curve_speed_cfg_, following_cfg_,
                          avoid_cfg_, lane_change_cfg_, stop_cfg_,
                          emergency_stop_cfg_, merge_cfg_, highway_merge_cfg_,
@@ -42,7 +48,7 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
 
     debug_writer_ = std::make_unique<PlannerDebugWriter>(visualization_cfg_);
 
-    if (waypoint_file.empty() || !LoadReferenceLine(waypoint_file, ref_, limits_.max_curvature)) {
+    if (waypoint_file.empty() || !LoadReferenceLine(waypoint_file, ref_, ref_config_)) {
         std::printf("[FrenetPlanner] Reference line load failed (waypoint_file='%s')\n",
                     waypoint_file.c_str());
         return false;
@@ -55,25 +61,15 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
         std::printf("[FrenetPlanner] Roundabout MERGE conflict: s=%.2f pos=(%.2f, %.2f)\n",
                     merge_cfg_.conflict_s, conflict.x, conflict.y);
     }
+    // zone s-ordering은 ConfigValidator::ValidateConfig가 이미 검증했다 -
+    // 여기서는 로그만 남긴다. 잘못된 zone 설정은 Init() 자체를 실패시키므로
+    // (Rule: config가 유효하지 않으면 조용히 기능을 끄지 않는다) 이 지점에
+    // 도달했다면 highway_merge_cfg_는 항상 유효하다.
     if (!highway_merge_cfg_.enabled || highway_merge_cfg_.zones.empty()) {
         std::printf("[FrenetPlanner] Highway MERGE disabled: measure start/conflict/"
                     "completion_s, then set planner.highway_merge.enabled=true\n");
     } else {
         for (const auto& zone : highway_merge_cfg_.zones) {
-            bool valid_zone = zone.start_s >= 0.0 && !zone.checkpoints.empty();
-            double previous_clear_s = zone.start_s;
-            for (const auto& checkpoint : zone.checkpoints) {
-                valid_zone = valid_zone && checkpoint.conflict_s > previous_clear_s &&
-                    checkpoint.clear_s > checkpoint.conflict_s;
-                previous_clear_s = checkpoint.clear_s;
-            }
-            valid_zone = valid_zone && zone.completion_s >= previous_clear_s;
-            if (!valid_zone) {
-                std::printf("[FrenetPlanner] Highway MERGE zone '%s' invalid s ordering; "
-                            "policy disabled\n", zone.name.c_str());
-                highway_merge_cfg_.enabled = false;
-                break;
-            }
             std::printf("[FrenetPlanner] Highway MERGE '%s': start=%.2f complete=%.2f "
                         "checkpoints=%zu\n", zone.name.c_str(), zone.start_s,
                         zone.completion_s, zone.checkpoints.size());
@@ -103,8 +99,9 @@ bool FrenetPlanner::GenerateDecelToZeroPath(double s, double d, double s_dot,
             ? stop_.commanded_decel
             : stop_cfg_.comfortable_decel;
     const double decel = std::max(
-        0.1, last_mode_ == EMERGENCY ? emergency_stop_cfg_.decel
-                                     : normal_stop_decel);
+        stop_cfg_.min_decel,
+        last_mode_ == EMERGENCY ? emergency_stop_cfg_.decel
+                                : normal_stop_decel);
     const double v0 = std::max(0.0, s_dot);
     const int n = static_cast<int>(std::ceil(v0 / decel / path_cfg_.dt)) + 1;
     out_path.x.assign(n, 0.0); out_path.y.assign(n, 0.0);
@@ -299,7 +296,8 @@ bool FrenetPlanner::ProjectEgoToS(const CartesianState& ego, double& out_s) cons
     if (!ref_loaded_ || ref_.points.empty()) return false;
     if (!std::isfinite(ego.x) || !std::isfinite(ego.y)) return false;
     const double s = FindClosestS(ref_, ego.x, ego.y,
-                                  has_last_s_ ? &last_s_ : nullptr);
+                                  has_last_s_ ? &last_s_ : nullptr,
+                                  ref_config_.ego_projection_search_window);
     if (!std::isfinite(s)) return false;
     out_s = s;
     return true;
@@ -513,7 +511,8 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
 
     CartesianToFrenet(ref_, ego, ctx.s, ctx.s_dot, ctx.s_ddot, ctx.d,
                        ctx.d_prime, ctx.d_pprime,
-                       has_last_s_ ? &last_s_ : nullptr);
+                       has_last_s_ ? &last_s_ : nullptr,
+                       ref_config_.ego_projection_search_window);
     last_s_ = ctx.s;
     has_last_s_ = true;
 

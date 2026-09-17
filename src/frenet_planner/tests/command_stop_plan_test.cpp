@@ -110,7 +110,7 @@ double MaxAbsCurvature(const CartesianPath& path) {
 
 double LateralOffsetAt(const RefLine& reference, double x, double y,
                        double near_s) {
-    const double projected_s = FindClosestS(reference, x, y, &near_s);
+    const double projected_s = FindClosestS(reference, x, y, &near_s, 30.0);
     const RefPoint point = Interpolate(reference, projected_s);
     return -std::sin(point.theta) * (x - point.x) +
             std::cos(point.theta) * (y - point.y);
@@ -135,8 +135,17 @@ int main() {
     // planner가 내부적으로 쓰는 RefLine. BuildRefLine이 균일 재샘플링을 하므로
     // 호길이 파라미터화가 waypoint 파일의 누적 s와 다르다. 투영 검증은 반드시
     // 이 좌표계에서 해야 한다.
+    ReferenceConfig reference_config{};
+    reference_config.max_curvature = 0.2;
+    reference_config.closure_tolerance_m = 0.05;
+    reference_config.smoothing_window_m = 10.0;
+    reference_config.resample_ds = 0.5;
+    reference_config.relax_max_iter = 300;
+    reference_config.relax_step = 0.3;
+    reference_config.ego_projection_search_window = 30.0;
+
     RefLine reference;
-    if (!LoadReferenceLine(waypoint_file, reference, 0.2) ||
+    if (!LoadReferenceLine(waypoint_file, reference, reference_config) ||
         reference.points.empty()) {
         std::cerr << "[FAIL] reference line load\n";
         return 1;

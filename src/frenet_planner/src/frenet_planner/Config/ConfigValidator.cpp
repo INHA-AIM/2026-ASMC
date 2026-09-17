@@ -43,7 +43,8 @@ bool CheckFinite(double value, const std::string& name,
 
 }  // namespace
 
-bool ValidateConfig(const PathGeneratorConfig& path_cfg,
+bool ValidateConfig(const ReferenceConfig& reference_cfg,
+                     const PathGeneratorConfig& path_cfg,
                      const KinematicLimits& limits,
                      const CostWeights& cost_weights,
                      const VehicleShape& vehicle_shape,
@@ -62,6 +63,30 @@ bool ValidateConfig(const PathGeneratorConfig& path_cfg,
                      double replanning_period_s,
                      double max_target_speed_accel,
                      std::string& error_message) {
+    // --- reference ---
+    if (!CheckPositiveFinite(reference_cfg.closure_tolerance_m,
+                              "planner/reference/closure_tolerance_m", error_message))
+        return false;
+    if (!CheckPositiveFinite(reference_cfg.smoothing_window_m,
+                              "planner/reference/smoothing_window_m", error_message))
+        return false;
+    if (!CheckPositiveFinite(reference_cfg.resample_ds,
+                              "planner/reference/resample_ds", error_message))
+        return false;
+    if (reference_cfg.relax_max_iter <= 0) {
+        error_message = "planner/reference/relax_max_iter must be > 0";
+        return false;
+    }
+    if (!IsFinite(reference_cfg.relax_step) || reference_cfg.relax_step <= 0.0 ||
+        reference_cfg.relax_step > 1.0) {
+        error_message = "planner/reference/relax_step must be in (0, 1]";
+        return false;
+    }
+    if (!CheckPositiveFinite(reference_cfg.ego_projection_search_window,
+                              "planner/reference/ego_projection_search_window",
+                              error_message))
+        return false;
+
     // --- path_generator ---
     if (!CheckRange(path_cfg.lateral_d1, "planner/path_generator/lateral_d1", error_message))
         return false;
@@ -129,6 +154,21 @@ bool ValidateConfig(const PathGeneratorConfig& path_cfg,
         error_message = "planner/curve_speed/curve_lookahead_m must be finite and >= 0";
         return false;
     }
+    if (!IsFinite(curve_speed_cfg.lateral_accel_safety_factor) ||
+        curve_speed_cfg.lateral_accel_safety_factor <= 0.0 ||
+        curve_speed_cfg.lateral_accel_safety_factor > 1.0) {
+        error_message = "planner/curve_speed/lateral_accel_safety_factor must be in (0, 1]";
+        return false;
+    }
+    if (!IsFinite(curve_speed_cfg.comfortable_decel_factor) ||
+        curve_speed_cfg.comfortable_decel_factor <= 0.0 ||
+        curve_speed_cfg.comfortable_decel_factor > 1.0) {
+        error_message = "planner/curve_speed/comfortable_decel_factor must be in (0, 1]";
+        return false;
+    }
+    if (!CheckPositiveFinite(curve_speed_cfg.min_usable_decel,
+                              "planner/curve_speed/min_usable_decel", error_message))
+        return false;
 
     // --- following ---
     if (!IsFinite(following_cfg.time_gap) || following_cfg.time_gap < 0.0) {
@@ -276,6 +316,8 @@ bool ValidateConfig(const PathGeneratorConfig& path_cfg,
     if (!CheckPositiveFinite(stop_cfg.projection_search_window,
                               "planner/stop/projection_search_window", error_message))
         return false;
+    if (!CheckPositiveFinite(stop_cfg.min_decel, "planner/stop/min_decel", error_message))
+        return false;
 
     // --- emergency_stop ---
     if (!CheckPositiveFinite(emergency_stop_cfg.decel, "planner/emergency_stop/decel", error_message))
@@ -386,6 +428,13 @@ bool ValidateConfig(const PathGeneratorConfig& path_cfg,
         return false;
     }
     for (const auto& zone : highway_merge_cfg.zones) {
+        if (highway_merge_cfg.enabled &&
+            (!IsFinite(zone.start_s) || zone.start_s < 0.0 || zone.checkpoints.empty())) {
+            error_message =
+                "planner/highway_merge/zones/" + zone.name +
+                ": start_s must be finite and >= 0, and checkpoints must not be empty";
+            return false;
+        }
         if (!IsFinite(zone.start_s) || !IsFinite(zone.completion_s) ||
             zone.completion_s < zone.start_s) {
             error_message =

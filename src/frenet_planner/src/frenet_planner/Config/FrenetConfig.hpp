@@ -12,6 +12,16 @@ struct CurveSpeedConfig {
     double target_vel;
     // 속도 기반 제동거리 앞에 추가하는 곡률 preview 거리 [m].
     double curve_lookahead_m;
+    // 횡가속도 한계의 몇 %만 사용할지(여유폭 확보). v_curve =
+    // sqrt(max_lateral_accel * lateral_accel_safety_factor / |kappa|).
+    double lateral_accel_safety_factor;
+    // 실제 평균 감속도를 max_longitudinal_accel의 몇 배로 가정할지
+    // (lookahead 제동거리 계산에 사용).
+    double comfortable_decel_factor;
+    // [m/s^2] usable_decel(=max_longitudinal_accel*comfortable_decel_factor)의
+    // 최소 하한 - 설정된 감속 한계가 매우 작아도 lookahead 제동거리 계산이
+    // 발산하지 않게 한다.
+    double min_usable_decel;
 };
 
 // =========================================================
@@ -156,6 +166,12 @@ struct StopConfig {
     // 먼 정지 목표는 투영이 틀어져 max_lateral_offset 검사에서 거부되고,
     // 정상 명령이 INVALID_COMMAND로 즉시 정지하게 된다.
     double projection_search_window;
+    // [m/s^2] GenerateDecelToZeroPath(STOP/EMERGENCY 공유)가 실제로 쓰는
+    // 감속도의 최소 하한. comfortable_decel/emergency_stop.decel은 이미
+    // ConfigValidator가 >0으로 검증하므로 이 값은 "설정이 잘못됐을 때의
+    // 방어"가 아니라, 0에 매우 가까운 유효값이 들어왔을 때 생성 루프가
+    // 비정상적으로 길어지는 것을 막는 안전 하한이다.
+    double min_decel;
 };
 
 // Emergency braking has no fixed stop target.  This deceleration determines

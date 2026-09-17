@@ -70,6 +70,27 @@ planner:
   # safety rate limit. 최종 MORAI tuning 값이 아니다.
   max_target_speed_accel: 2.0
 
+  # --- Reference line 구축/조회 (Reference/Reference.cpp) ---------
+  # max_curvature는 kinematic_limits.max_curvature를 그대로 공유한다
+  # (FrenetPlanner::Init()이 대입) - 여기서 별도로 지정하지 않는다.
+  reference:
+    # [m] 폐루프 판정 허용오차. 원본 waypoint 간격(대회 경로 기준 약
+    # 0.4~0.5m)보다 훨씬 작게 잡아야 우연히 가까운 open path를 closed로
+    # 오판정하지 않는다.
+    closure_tolerance_m: 0.05
+    # [m] 국소 급커브 완화 1단계(이동평균 스무딩)의 전체 윈도우 폭.
+    smoothing_window_m: 10.0
+    # [m] 스무딩 뒤 균일 재샘플링 간격(원본 waypoint 간격과 동일하게).
+    resample_ds: 0.5
+    # 잔여 곡률 초과분 국소 이완(라플라시안 완화)의 최대 반복 횟수.
+    relax_max_iter: 300
+    # 초과 지점을 양옆 중점 쪽으로 당기는 비율(0-1).
+    relax_step: 0.3
+    # [m] FindClosestS의 ego 위치추정용 기본 탐색창. 정지/회피 목표 투영처럼
+    # ego보다 훨씬 앞선 지점을 찾는 호출은 각자 전용 탐색창(stop.
+    # projection_search_window 등)을 쓴다 - 이 값은 ego localization 전용이다.
+    ego_projection_search_window: 30.0
+
   # --- 곡률 기반 사전 감속 (mpc_controller 옛 path_planner.cpp에서 이식) ---
   # v_curve = sqrt(max_lateral_accel * kSafetyMargin / max(|kappa|, kMinKappaForCalc))
   # 연속 곡률-속도 관계(Speed/CurveSpeed.cpp)만 쓰고, 이산 curve_vel_*/
@@ -78,6 +99,14 @@ planner:
     target_vel: 13.0
     # [m] 속도 기반 필요 제동거리에 더해지는 추가 곡률 preview 거리.
     curve_lookahead_m: 27.0
+    # 횡가속도 한계의 80%만 사용(여유폭 확보). v_curve = sqrt(max_lateral_accel
+    # * lateral_accel_safety_factor / |kappa|).
+    lateral_accel_safety_factor: 0.8
+    # 실제 평균 감속도는 max_longitudinal_accel의 절반 정도로 가정(lookahead
+    # 제동거리 계산용).
+    comfortable_decel_factor: 0.5
+    # [m/s^2] usable_decel의 최소 하한.
+    min_usable_decel: 0.5
 
   # --- Following(Sec.V-A, constant-time-gap-law) ---
   # FSM이 BehaviorCommand.primary_object_id로 지정한 FOLLOW 대상의 유효성
@@ -155,6 +184,10 @@ planner:
     # 이라 정지 목표에 쓰면 목표가 창 밖으로 나가 Newton이 다른 구간으로 발산한다.
     # 반드시 실제 최대 stop lookahead보다 크게 유지할 것.
     projection_search_window: 100.0
+    # [m/s^2] STOP/EMERGENCY 공유 decel-to-zero 생성기가 실제로 쓰는 감속도의
+    # 최소 하한(comfortable_decel/emergency_stop.decel이 이미 >0으로 검증되므로
+    # 방어값이 아니라 극단적으로 작은 유효값에서 생성 루프 길이를 제한하는 하한).
+    min_decel: 0.1
 
   # 목표점 없는 AEB/E-STOP 직접 감속 궤적. MPC의 full-brake override와
   # 동일한 최대감속 가정을 사용해 예상 정지 위치가 실제 제어와 맞게 한다.

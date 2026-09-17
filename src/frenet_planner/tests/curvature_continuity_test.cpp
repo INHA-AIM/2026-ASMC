@@ -64,6 +64,18 @@ CartesianState BuildPoseAt(const RefLine& ref, double s, double d, double s_dot,
 
 constexpr double kMaxCurvature = 0.1704;
 
+ReferenceConfig MakeReferenceConfig(double max_curvature) {
+    ReferenceConfig config{};
+    config.max_curvature = max_curvature;
+    config.closure_tolerance_m = 0.05;
+    config.smoothing_window_m = 10.0;
+    config.resample_ds = 0.5;
+    config.relax_max_iter = 300;
+    config.relax_step = 0.3;
+    config.ego_projection_search_window = 30.0;
+    return config;
+}
+
 }  // namespace
 
 // CASE B1/B3/B4: 실제 MORAI 스냅샷 재현. 유효 candidate가 남아야 하고,
@@ -77,7 +89,7 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
 
     RefLine ref;
     double max_curvature_for_load = kMaxCurvature;
-    Expect(LoadReferenceLine(waypoint_file, ref, max_curvature_for_load),
+    Expect(LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(max_curvature_for_load)),
            "setup: reference line loads for direct pose construction");
 
     struct Snapshot {
@@ -177,7 +189,7 @@ void TestNormalKeepStillRecentersToCenter() {
 
     RefLine ref;
     double max_curvature_for_load = kMaxCurvature;
-    LoadReferenceLine(waypoint_file, ref, max_curvature_for_load);
+    LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(max_curvature_for_load));
 
     FrenetPlanner planner;
     planner.Init(config);
@@ -203,7 +215,8 @@ void TestNormalKeepStillRecentersToCenter() {
         final_pose.v = path.v.back();
         final_pose.a = path.a.back();
         double fs = 0.0, fs_dot = 0.0, fs_ddot = 0.0, fd = 0.0, fd_prime = 0.0, fd_pprime = 0.0;
-        CartesianToFrenet(ref, final_pose, fs, fs_dot, fs_ddot, fd, fd_prime, fd_pprime);
+        CartesianToFrenet(ref, final_pose, fs, fs_dot, fs_ddot, fd, fd_prime, fd_pprime,
+                          /*s_hint=*/nullptr, /*search_window=*/30.0);
         std::printf("  normal KEEP: terminal d=%.4f (initial d=0.30)\n", fd);
         Expect(std::fabs(fd) < 0.3,
                "normal KEEP: still recenters toward the lane center (terminal "

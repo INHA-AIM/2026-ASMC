@@ -170,7 +170,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         for (const TrackedObject& object : predicted_obstacles) {
             double object_s = 0.0, object_d = 0.0, object_s_dot = 0.0;
             ProjectObjectToFrenet(ref_, object, object_s, object_d,
-                                  object_s_dot);
+                                  object_s_dot,
+                                  ref_config_.ego_projection_search_window);
             double object_gap = object_s - s;
             if (object_gap <= 0.0 && track_length > 0.0) {
                 object_gap += track_length;
@@ -337,7 +338,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
                     continue;
                 }
                 double obj_s, obj_d, obj_s_dot;
-                ProjectObjectToFrenet(ref_, *obj_it, obj_s, obj_d, obj_s_dot);
+                ProjectObjectToFrenet(ref_, *obj_it, obj_s, obj_d, obj_s_dot,
+                                      ref_config_.ego_projection_search_window);
                 double obj_gap = obj_s - s;
                 const double track_length = ref_.points.empty() ? 0.0 : ref_.points.back().s;
                 if (obj_gap <= 0.0 && track_length > 0.0) obj_gap += track_length;

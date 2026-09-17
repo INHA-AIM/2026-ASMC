@@ -6,17 +6,17 @@
 #include <cmath>
 
 double VelocityFromCurvature(double k, const CurveSpeedConfig& cfg, double max_lateral_accel) {
-    constexpr double kSafetyMargin = 0.8;         // 한계의 80%만 사용 (여유폭 확보)
     constexpr double kMinKappaForCalc = 1e-4;      // 0 나누기 방지 (거의 직선)
-    const double v_curve = std::sqrt(max_lateral_accel * kSafetyMargin / std::max(k, kMinKappaForCalc));
+    const double v_curve = std::sqrt(
+        max_lateral_accel * cfg.lateral_accel_safety_factor / std::max(k, kMinKappaForCalc));
     return clip(v_curve, 0.0, cfg.target_vel);
 }
 
 double LookaheadTargetSpeed(const RefLine& ref, double s_start, double ego_speed,
                              const CurveSpeedConfig& cfg, double max_longitudinal_accel,
                              double max_lateral_accel, double max_curvature) {
-    constexpr double kComfortableDecelFactor = 0.5;  // 실제 평균 감속도는 max의 절반 정도로 가정
-    const double usable_decel = std::max(0.5, max_longitudinal_accel * kComfortableDecelFactor);
+    const double usable_decel = std::max(
+        cfg.min_usable_decel, max_longitudinal_accel * cfg.comfortable_decel_factor);
     const double v_floor = VelocityFromCurvature(max_curvature, cfg, max_lateral_accel);
     const double speed_drop = std::max(0.0, ego_speed * ego_speed - v_floor * v_floor);
     const double required_dist = speed_drop / (2.0 * usable_decel);

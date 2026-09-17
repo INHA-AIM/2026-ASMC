@@ -1048,6 +1048,7 @@ private:
                                               double to_d) const;
 
     RefLine ref_;
+    ReferenceConfig ref_config_{};
     PathGeneratorConfig path_cfg_{};
     KinematicLimits limits_{};
     CostWeights cost_weights_{};

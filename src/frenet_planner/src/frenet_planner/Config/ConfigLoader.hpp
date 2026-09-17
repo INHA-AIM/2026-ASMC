@@ -8,6 +8,7 @@
 #include "frenet_planner/Evaluation/Cost.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
+#include "frenet_planner/Reference/Reference.hpp"
 #include "frenet_planner/visualization/planner_debug_writer.hpp"
 
 // params.yaml -> 각 config struct 로드 (yaml-cpp 기반, ROS 의존성 없음).
@@ -18,6 +19,7 @@
 // 존재/타입만 검사하며, range/순서/물리적 정합성 같은 값 자체의 타당성은
 // ConfigValidator::ValidateConfig()의 책임이다.
 bool LoadParams(const std::string& yaml_path,
+                ReferenceConfig& reference_cfg,
                 PathGeneratorConfig& path_cfg,
                 KinematicLimits& limits,
                 CostWeights& cost_weights,

@@ -48,10 +48,12 @@ void ArcDerivToTimeDeriv(double s_dot, double s_ddot,
 // s_hint: 이전 사이클의 s (있으면 FindClosestS가 그 근방으로 탐색을 제한함 -
 // ref_line.hpp의 FindClosestS 주석 참고, 자기 자신과 가까운 트랙 구간에서
 // 최근접점이 엉뚱한 s로 튀는 문제 방지).
+// search_window: FindClosestS에 넘길 탐색창 반경(ego localization 기준,
+// planner.reference.ego_projection_search_window).
 void CartesianToFrenet(const RefLine& ref, const CartesianState& cs,
                         double& s, double& s_dot, double& s_ddot,
                         double& d, double& d_prime, double& d_pprime,
-                        const double* s_hint = nullptr);
+                        const double* s_hint, double search_window);
 
 // =========================================================
 // [배치 변환] FrenetPath 전체 -> CartesianPath

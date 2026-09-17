@@ -37,7 +37,8 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
 
     if (it != obstacles.end()) {
         double object_s = 0.0, object_d = 0.0, object_s_dot = 0.0;
-        ProjectObjectToFrenet(ref_, *it, object_s, object_d, object_s_dot);
+        ProjectObjectToFrenet(ref_, *it, object_s, object_d, object_s_dot,
+                             ref_config_.ego_projection_search_window);
 
         // 폐루프 트랙에서 gap이 음수로 크게 튀지 않도록 감아준다.
         const double track_length =

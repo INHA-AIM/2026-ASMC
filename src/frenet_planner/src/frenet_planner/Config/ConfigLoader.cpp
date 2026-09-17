@@ -30,6 +30,7 @@ bool loadInto(const YAML::Node& root, const std::string& dotted_key, T& out) {
 }  // namespace
 
 bool LoadParams(const std::string& yaml_path,
+                 ReferenceConfig& reference_cfg,
                  PathGeneratorConfig& path_cfg,
                  KinematicLimits& limits,
                  CostWeights& cost_weights,
@@ -73,6 +74,13 @@ bool LoadParams(const std::string& yaml_path,
 #define REQUIRE(key, field) \
     require((key), [&]() { return loadInto(root, (key), (field)); })
 
+    REQUIRE("planner/reference/closure_tolerance_m",            reference_cfg.closure_tolerance_m);
+    REQUIRE("planner/reference/smoothing_window_m",              reference_cfg.smoothing_window_m);
+    REQUIRE("planner/reference/resample_ds",                     reference_cfg.resample_ds);
+    REQUIRE("planner/reference/relax_max_iter",                  reference_cfg.relax_max_iter);
+    REQUIRE("planner/reference/relax_step",                      reference_cfg.relax_step);
+    REQUIRE("planner/reference/ego_projection_search_window",    reference_cfg.ego_projection_search_window);
+
     REQUIRE("planner/path_generator/lateral_d1/min",   path_cfg.lateral_d1.min);
     REQUIRE("planner/path_generator/lateral_d1/max",   path_cfg.lateral_d1.max);
     REQUIRE("planner/path_generator/lateral_d1/step",  path_cfg.lateral_d1.step);
@@ -112,6 +120,9 @@ bool LoadParams(const std::string& yaml_path,
 
     REQUIRE("planner/curve_speed/target_vel",        curve_speed_cfg.target_vel);
     REQUIRE("planner/curve_speed/curve_lookahead_m", curve_speed_cfg.curve_lookahead_m);
+    REQUIRE("planner/curve_speed/lateral_accel_safety_factor", curve_speed_cfg.lateral_accel_safety_factor);
+    REQUIRE("planner/curve_speed/comfortable_decel_factor",    curve_speed_cfg.comfortable_decel_factor);
+    REQUIRE("planner/curve_speed/min_usable_decel",            curve_speed_cfg.min_usable_decel);
 
     REQUIRE("planner/following/time_gap",             following_cfg.time_gap);
     REQUIRE("planner/following/min_gap",              following_cfg.min_gap);
@@ -153,6 +164,7 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/stop/max_lateral_offset",      stop_cfg.max_lateral_offset);
     REQUIRE("planner/stop/target_change_tolerance", stop_cfg.target_change_tolerance);
     REQUIRE("planner/stop/projection_search_window", stop_cfg.projection_search_window);
+    REQUIRE("planner/stop/min_decel", stop_cfg.min_decel);
 
     REQUIRE("planner/emergency_stop/decel", emergency_stop_cfg.decel);
 
