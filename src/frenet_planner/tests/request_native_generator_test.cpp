@@ -254,12 +254,12 @@ void TestStopTerminalOffsetIsRequestDriven() {
            "request.stop.terminal_offset, not a config it re-reads itself)");
 }
 
-// Test D: has_hold=true, target_d=0.0이 has_hold=false와 실제로 다른 후보
-// 집합을 만드는지 확인한다(R4-E가 고친 sentinel 버그의 회귀 방지) - hold가
-// 걸리면 tolerance=0으로 좁아지고(터미널 d가 0 하나로 고정), hold가 없으면
-// (KEEP 기준) search_tolerance=0을 명시했을 때만 동일한 결과가 나오므로,
-// 여기서는 search_tolerance를 0이 아닌 값으로 주고 has_hold로만 좁혀지는지
-// 검증한다.
+// Test D: target_d=0.0 + search_tolerance>0이 target_d=0.0 + tolerance=0과
+// 실제로 다른(넓은) 후보 집합을 만드는지 확인한다(R4-E가 고친 hold-sentinel
+// 버그의 회귀 방지, R6-A에서 LateralRequest.has_hold 필드 자체를 제거한
+// 뒤에도 이 계약은 그대로 유지되어야 한다) - target_d==0.0을 "hold/센터
+// 고정"의 암묵적 신호로 취급하지 않고 search_tolerance만 spread를
+// 결정한다는 것을 증명한다.
 void TestLateralHoldAtZeroDiffersFromNoHold() {
     const RefLine ref = MakeStraightRef();
     const PathGeneratorConfig cfg = MakeConfig();
@@ -269,16 +269,10 @@ void TestLateralHoldAtZeroDiffersFromNoHold() {
     const std::vector<TrackedObject> no_obstacles;
     const FrenetState start = MakeStraightStart();
 
-    auto TerminalDSpread = [&](bool has_hold) {
+    auto TerminalDSpread = [&](double search_tolerance) {
         TrajectoryRequest request;
-        request.lateral.has_hold = has_hold;
         request.lateral.target_d = 0.0;
-        // has_hold와 무관하게 search_tolerance는 그대로 authoritative
-        // input이다(§5) - 여기서는 hold 자체가 켜져도 값(target_d=0.0)이
-        // 바뀌지 않는지가 관심사이므로, search_tolerance를 넓게 줘서 만약
-        // has_hold=true를 target_d!=0.0로 오인하는 sentinel 버그가 있다면
-        // 이 tolerance가 무시되고 좁아지는지를 별도로 확인한다.
-        request.lateral.search_tolerance = cfg.lateral_target_tolerance;
+        request.lateral.search_tolerance = search_tolerance;
         request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
         request.target_speed = 5.0;
 
@@ -295,28 +289,20 @@ void TestLateralHoldAtZeroDiffersFromNoHold() {
         return max_d - min_d;
     };
 
-    const double spread_no_hold = TerminalDSpread(/*has_hold=*/false);
-    const double spread_hold_at_zero = TerminalDSpread(/*has_hold=*/true);
+    const double spread_zero_tolerance = TerminalDSpread(0.0);
+    const double spread_with_tolerance = TerminalDSpread(cfg.lateral_target_tolerance);
 
-    std::printf("  lateral hold d=0: spread(no_hold)=%.3f "
-                "spread(has_hold=true, target_d=0.0)=%.3f\n",
-                spread_no_hold, spread_hold_at_zero);
-    // has_hold는 R5의 GenerateRequestedCandidates에서 target_d/tolerance를
-    // 그대로 authoritative input으로 쓰므로(§5), 이 함수 자체는 has_hold
-    // 필드를 별도로 읽지 않는다 - hold 여부에 따른 tolerance 좁힘은 R4의
-    // Keep.cpp 쪽(request 생성부)의 책임이다. 따라서 이 테스트는 "동일한
-    // target_d/search_tolerance를 명시하면 has_hold 값과 무관하게 동일한
-    // 후보가 나온다"(=target_d=0.0이 hold 여부를 암묵적으로 바꾸지 않는다)
-    // 것을 확인한다.
-    Expect(std::fabs(spread_no_hold - spread_hold_at_zero) < kEpsilon,
-           "lateral request: has_hold=true with target_d=0.0 produces the "
-           "same candidate spread as has_hold=false with the same "
-           "target_d/search_tolerance (target_d==0.0 is not treated as an "
-           "implicit sentinel by the generator itself)");
-    Expect(spread_no_hold > kEpsilon,
-           "lateral request: search_tolerance is genuinely honored (spread "
-           "> 0 when tolerance > 0), so a sentinel-based bug upstream would "
-           "have been visible as spread collapsing to 0");
+    std::printf("  lateral target_d=0: spread(tolerance=0)=%.3f "
+                "spread(tolerance=%.2f)=%.3f\n",
+                spread_zero_tolerance, cfg.lateral_target_tolerance,
+                spread_with_tolerance);
+    Expect(spread_zero_tolerance < kEpsilon,
+           "lateral request: target_d=0.0 with search_tolerance=0.0 collapses "
+           "to a single centered candidate (no implicit widening)");
+    Expect(spread_with_tolerance > kEpsilon,
+           "lateral request: target_d=0.0 with search_tolerance>0 still "
+           "spreads (target_d==0.0 is not treated as an implicit hold/"
+           "sentinel by the generator itself)");
 }
 
 // Test E: FOLLOW request가 기존 cfg.lateral_target_tolerance 범위를
