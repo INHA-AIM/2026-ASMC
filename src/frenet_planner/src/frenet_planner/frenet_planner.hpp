@@ -11,6 +11,7 @@
 #include "frenet_planner/Common/ObjectTypes.hpp"
 #include "frenet_planner/Common/PlannerCommand.hpp"
 #include "frenet_planner/Config/ConfigLoader.hpp"
+#include "frenet_planner/Config/ConfigValidator.hpp"
 #include "frenet_planner/Config/FrenetConfig.hpp"
 #include "frenet_planner/Reference/Reference.hpp"
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
@@ -1062,16 +1063,16 @@ private:
     HighwayMergeConfig highway_merge_cfg_{};
     PlannerVisualizationConfig visualization_cfg_{};
     std::unique_ptr<PlannerDebugWriter> debug_writer_;
-    double wheelbase_ = 3.0;
-    double lane_width_ = 3.5;
+    double wheelbase_;
+    double lane_width_;
     // [s] 이 값은 caller(ROS node의 planning/frequency)의 실제 replanning
     // 주기를 나타낸다. path_cfg_.dt(trajectory 샘플 간격)와는 다른 개념이다
     // - 절대 섞어 쓰지 않는다(fix/yuntae-frenet-speed-continuity Phase 2).
-    double replanning_period_s_ = 0.05;
+    double replanning_period_s_;
     // [m/s^2] target speed가 이전 cycle보다 증가하는 방향에만 적용하는
     // rate limit. 감속 방향은 curve braking envelope(Phase 1)가 이미
     // 안전하게 처리하므로 여기서 추가로 막지 않는다.
-    double max_target_speed_accel_ = 2.0;
+    double max_target_speed_accel_;
     bool ref_loaded_ = false;
 
     // 직전 사이클의 s (FindClosestS 탐색범위 힌트용 - ref_line.hpp 주석 참고,

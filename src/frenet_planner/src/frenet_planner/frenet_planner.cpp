@@ -12,13 +12,29 @@
 
 bool FrenetPlanner::Init(const std::string& yaml_path) {
     std::string waypoint_file;
-    LoadParams(yaml_path, path_cfg_, limits_, cost_weights_, vehicle_shape_,
-               collision_cfg_, curve_speed_cfg_, following_cfg_, avoid_cfg_,
-               lane_change_cfg_,
-               stop_cfg_, emergency_stop_cfg_, merge_cfg_, highway_merge_cfg_,
-               visualization_cfg_,
-               wheelbase_, lane_width_, replanning_period_s_,
-               max_target_speed_accel_, waypoint_file);
+    std::string config_error;
+    if (!LoadParams(yaml_path, path_cfg_, limits_, cost_weights_, vehicle_shape_,
+                     collision_cfg_, curve_speed_cfg_, following_cfg_, avoid_cfg_,
+                     lane_change_cfg_,
+                     stop_cfg_, emergency_stop_cfg_, merge_cfg_, highway_merge_cfg_,
+                     visualization_cfg_,
+                     wheelbase_, lane_width_, replanning_period_s_,
+                     max_target_speed_accel_, waypoint_file, config_error)) {
+        std::printf("[FrenetPlanner] Config load failed ('%s'): %s\n",
+                    yaml_path.c_str(), config_error.c_str());
+        return false;
+    }
+    if (!ValidateConfig(path_cfg_, limits_, cost_weights_, vehicle_shape_,
+                         collision_cfg_, curve_speed_cfg_, following_cfg_,
+                         avoid_cfg_, lane_change_cfg_, stop_cfg_,
+                         emergency_stop_cfg_, merge_cfg_, highway_merge_cfg_,
+                         visualization_cfg_, wheelbase_, lane_width_,
+                         replanning_period_s_, max_target_speed_accel_,
+                         config_error)) {
+        std::printf("[FrenetPlanner] Config validation failed ('%s'): %s\n",
+                    yaml_path.c_str(), config_error.c_str());
+        return false;
+    }
 
     if (!waypoint_file.empty() && waypoint_file.front() != '/') {
         waypoint_file = std::string(FRENET_PACKAGE_SRC_DIR) + "/" + waypoint_file;

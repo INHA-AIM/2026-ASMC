@@ -48,6 +48,7 @@ add_library(frenet_planner_core
   src/frenet_planner/Maneuver/LaneChange.cpp
   src/frenet_planner/Maneuver/Merge.cpp
   src/frenet_planner/Config/ConfigLoader.cpp
+  src/frenet_planner/Config/ConfigValidator.cpp
   src/frenet_planner/visualization/planner_debug_writer.cpp
   src/frenet_planner/Reference/Reference.cpp
   src/frenet_planner/Generator/SamplingUtils.cpp
@@ -213,6 +214,18 @@ if(CATKIN_ENABLE_TESTING)
     frenet_planner_core
   )
   add_test(NAME command_keep_plan_test COMMAND command_keep_plan_test)
+
+  add_executable(config_loader_validation_test
+    tests/config_loader_validation_test.cpp
+  )
+  target_compile_definitions(config_loader_validation_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(config_loader_validation_test
+    frenet_planner_core
+  )
+  add_test(NAME config_loader_validation_test COMMAND config_loader_validation_test)
 
   add_executable(command_validation_test
     tests/command_validation_test.cpp
