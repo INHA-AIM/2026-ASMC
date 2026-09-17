@@ -204,31 +204,45 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     const bool append_keep_continuity_candidates =
         external_keep_candidates &&
         std::fabs(maneuver_start.d) <= cfg.lane_width * 0.5;
-    // R4-B/C: 진짜 외부 KEEP(FSM이 직접 LANE_KEEPING을 지정한 경우)과
-    // FOLLOW는 TrajectoryRequest를 만들어 넘긴다. UpdateExternalStopExecution의
-    // APPROACH scratch(cmd.mode를 LANE_KEEPING으로 바꾼 것)는 여전히
-    // PlannerCommand 경로를 탄다 - 그건 "FSM이 요구한 것"이 아니라 STOP
-    // lifecycle의 내부 구현 세부사항이므로 R4-D(STOP 전환)에서 다룬다.
+    // R4-B/C/D: 진짜 외부 KEEP(FSM이 직접 LANE_KEEPING을 지정한 경우),
+    // FOLLOW, STOP(APPROACH/BRAKING)은 TrajectoryRequest를 만들어 넘긴다.
+    // STOP의 phase 전이/target latch(stop_) 자체는 여전히
+    // UpdateExternalStopExecution(Stop.cpp)이 소유한다 - 여기서는 그 결과
+    // (cmd.mode/target_speed/stop_position/lateral hold)를 Request로
+    // 정규화만 한다. HOLD는 이미 위에서 조기 반환하므로 이 분기에 오지 않는다.
     // MERGE/AVOID/LANE_CHANGE는 R4 범위 밖이라 PlannerCommand 경로를 그대로
     // 유지한다.
     const bool is_true_external_keep =
         external_command->mode == LANE_KEEPING && !external_stop_mode;
     const bool is_follow = cmd.mode == FOLLOWING;
+    // external_stop_mode에서 cmd.mode는 UpdateExternalStopExecution이
+    // APPROACH -> LANE_KEEPING, BRAKING -> STOP(그대로) 로 이미 정해뒀다.
+    const bool is_stop_approach = external_stop_mode && cmd.mode == LANE_KEEPING;
+    const bool is_stop_braking = external_stop_mode && cmd.mode == STOP;
     std::vector<FrenetPath> candidates;
-    if (is_true_external_keep || is_follow) {
+    if (is_true_external_keep || is_follow || is_stop_approach || is_stop_braking) {
         TrajectoryRequest request;
-        request.lateral.target_d = 0.0;
+        request.lateral.target_d =
+            cmd.has_stop_lateral_hold ? cmd.stop_lateral_hold_d : 0.0;
         request.lateral.search_tolerance = 0.0;
         request.target_speed = cmd.target_speed;
         if (is_follow) {
             request.longitudinal_mode = LongitudinalMode::FOLLOWING;
+            request.following.leader_object_id = cmd.target_object_id;
             request.following.leader_s = cmd.leader_s;
             request.following.leader_speed = cmd.leader_speed;
             request.following.leader_accel = cmd.leader_accel;
             request.following.time_gap = cmd.time_gap;
             request.following.min_gap = cmd.min_gap;
             request.following.gap_gain = cmd.gap_gain;
+        } else if (is_stop_braking) {
+            request.longitudinal_mode = LongitudinalMode::STOPPING;
+            request.stop.stop_s = cmd.stop_position;
+            request.stop.terminal_offset = cfg.stop.delta_s_override;
         } else {
+            // 진짜 외부 KEEP과 STOP-APPROACH(velocity keeping으로 위임) 모두
+            // 여기로 떨어진다 - 둘 다 Generator 입장에서는 동일한
+            // VELOCITY_KEEPING 요청이다.
             request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
         }
         candidates = trajectory_pipeline.GenerateCandidates(

@@ -17,9 +17,24 @@ namespace {
 PlannerCommand MakeResolveManeuverCommand(const TrajectoryRequest& request) {
     PlannerCommand cmd{};
     cmd.target_speed = request.target_speed;
+    // ResolveManeuver의 lateral 목표/tolerance 계산은 cmd.mode와
+    // cmd.has_stop_lateral_hold를 함께 본다(CandidateCombiner.cpp 참고):
+    //   - has_stop_lateral_hold=true  -> target_d 고정, tolerance=0
+    //   - mode==LANE_KEEPING/FOLLOWING (hold 없음) -> ResolveLateralOffset의
+    //     default: 0.0, FOLLOWING만 tolerance=cfg.lateral_target_tolerance
+    //     (KEEP은 tolerance=0 - CandidateCombiner의 별도 LANE_KEEPING 분기)
+    // request.lateral.search_tolerance != 0(=STOP lateral hold가 아닌
+    // 넓은 탐색이 필요한 경우)은 R4 범위의 KEEP/FOLLOW/STOP 어디에서도
+    // 아직 쓰이지 않으므로, 0이 아닌 target_d는 곧 "STOP lateral hold"로
+    // 해석한다 - AVOID/LANE_CHANGE가 이 오버로드를 쓰게 되면(R5+) 이 가정을
+    // 다시 검토해야 한다.
+    const bool has_lateral_hold = request.lateral.target_d != 0.0;
+    cmd.has_stop_lateral_hold = has_lateral_hold;
+    cmd.stop_lateral_hold_d = request.lateral.target_d;
     switch (request.longitudinal_mode) {
         case LongitudinalMode::FOLLOWING:
             cmd.mode = FOLLOWING;
+            cmd.target_object_id = request.following.leader_object_id;
             cmd.leader_s = request.following.leader_s;
             cmd.leader_speed = request.following.leader_speed;
             cmd.leader_accel = request.following.leader_accel;

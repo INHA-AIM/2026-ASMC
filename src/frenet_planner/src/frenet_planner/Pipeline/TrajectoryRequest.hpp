@@ -42,8 +42,13 @@ struct LateralRequest {
 
 // FOLLOWING 전용 종방향 생성 입력. leader_s/leader_speed/leader_accel은
 // 이미 Frenet으로 투영되고 FollowingContext가 검증한 값이다 - Generator는
-// "누가 leader인지"를 모르고 이 세 값만 안다.
+// "누가 leader인지"를 몰라도 이 값들로 종방향 후보를 만들 수 있다.
+// leader_object_id는 예외다: 충돌 필터가 "이 물체는 추종 대상이니 reactive
+// coast 연장 단계에서는 장애물로 보지 않는다"를 판단하는 데 필요한 식별자로,
+// FOLLOW의 의미(어떤 behavior인지)가 아니라 "어떤 물체를 봐줄지"라는 안전
+// 필터 입력이라 여기 남긴다.
 struct FollowingRequest {
+    int leader_object_id = -1;
     double leader_s = 0.0;
     double leader_speed = 0.0;
     double leader_accel = 0.0;
