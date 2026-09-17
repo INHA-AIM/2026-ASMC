@@ -86,7 +86,8 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
     lateral_cfg.lateral_d1.min = d_offset - lateral_tolerance;
     lateral_cfg.lateral_d1.max = d_offset + lateral_tolerance;
 
-    std::vector<FrenetPath> lateral_set = GenerateLateralCandidates(start, lateral_cfg);
+    std::vector<FrenetPath> lateral_set =
+        GenerateLateralCandidates(start, lateral_cfg, limits.low_speed_fallback_v);
     FilterLateralByAcceleration(lateral_set, limits);
     if (stats) {
         stats->lateral_total = lateral_set.size();

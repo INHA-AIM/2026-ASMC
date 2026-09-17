@@ -117,6 +117,9 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/kinematic_limits/avoid_shift_usable_lateral_accel_fraction",
             limits.avoid_shift_usable_lateral_accel_fraction);
     REQUIRE("planner/kinematic_limits/max_initial_d_dot", limits.max_initial_d_dot);
+    REQUIRE("planner/kinematic_limits/low_speed_crawl_accel",      limits.low_speed_crawl_accel);
+    REQUIRE("planner/kinematic_limits/low_speed_min_creep_speed",  limits.low_speed_min_creep_speed);
+    REQUIRE("planner/kinematic_limits/low_speed_crawl_speed_cap",  limits.low_speed_crawl_speed_cap);
 
     REQUIRE("planner/cost_weights/kj",     cost_weights.kj);
     REQUIRE("planner/cost_weights/kt",     cost_weights.kt);

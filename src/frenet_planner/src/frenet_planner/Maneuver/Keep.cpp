@@ -47,7 +47,8 @@ void FrenetPlanner::AppendExternalKeepContinuityCandidates(
     const std::vector<TrackedObject>& planning_collision_obstacles,
     std::vector<FrenetPath>& candidates) const {
     std::vector<FrenetPath> continuity_lateral =
-        GenerateLateralContinuityCandidates(maneuver_start, path_cfg_);
+        GenerateLateralContinuityCandidates(maneuver_start, path_cfg_,
+                                            limits_.low_speed_fallback_v);
     FilterLateralByAcceleration(continuity_lateral, limits_);
 
     std::vector<FrenetPath> longitudinal_for_continuity =

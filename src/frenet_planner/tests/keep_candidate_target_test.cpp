@@ -49,7 +49,13 @@ PathGeneratorConfig MakeConfig() {
 }
 
 KinematicLimits MakeLimits() {
-    return KinematicLimits{3.0, 3.0, kMaxCurvature, 6.0};
+    KinematicLimits limits{};
+    limits.max_lateral_accel = 3.0;
+    limits.max_longitudinal_accel = 3.0;
+    limits.max_curvature = kMaxCurvature;
+    limits.max_longitudinal_jerk = 6.0;
+    limits.low_speed_fallback_v = 0.5;
+    return limits;
 }
 
 // 이 테스트는 LANE_KEEPING/AVOID/LANE_CHANGE만 exercise한다(STOP/MERGE
@@ -140,7 +146,8 @@ void TestKeepContinuityFallbackStillExists() {
     start.s_d = 5.0;
     start.s_dd = 0.0;
 
-    auto continuity = GenerateLateralContinuityCandidates(start, cfg);
+    auto continuity = GenerateLateralContinuityCandidates(
+        start, cfg, limits.low_speed_fallback_v);
     FilterLateralByAcceleration(continuity, limits);
 
     bool found_current_d = false;

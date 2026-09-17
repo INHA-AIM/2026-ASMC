@@ -118,8 +118,7 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
     }
 
     // 유예 중에는 직전 속도로 leader 위치를 예측한다(legacy와 동일).
-    constexpr double kPlannerCycleDt = 0.05;  // 20 Hz
-    context.leader_s += context.leader_speed * kPlannerCycleDt;
+    context.leader_s += context.leader_speed * replanning_period_s_;
 
     return FollowTargetStatus::GRACE;
 }

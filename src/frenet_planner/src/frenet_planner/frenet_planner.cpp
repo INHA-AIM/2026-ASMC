@@ -158,14 +158,15 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
     out_path.v.reserve(minimum_samples); out_path.a.reserve(minimum_samples);
 
     double s_i = s;
-    double v_prev = std::max(ego.v, kMinCreepSpeed);
+    double v_prev = std::max(ego.v, limits_.low_speed_min_creep_speed);
     // 거리 기반 후보는 목표 횡이동을 실제로 끝낼 때까지 생성한다. 안전을
     // 위해 비정상 파라미터에도 유한한 상한을 둔다(0.1 s 기준 60 s).
     constexpr int kMaximumSamples = 600;
     for (int i = 0; i < kMaximumSamples; ++i) {
         const double t = i * path_cfg_.dt;
         const double crawl_speed = clip(
-            ego.v + kCrawlAccel * t, kMinCreepSpeed, kCrawlSpeedCap);
+            ego.v + limits_.low_speed_crawl_accel * t,
+            limits_.low_speed_min_creep_speed, limits_.low_speed_crawl_speed_cap);
         const double v_i = std::min(crawl_speed, speed_cap);
         if (i > 0) s_i += 0.5 * (v_i + v_prev) * path_cfg_.dt;
         v_prev = v_i;
@@ -183,7 +184,8 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
                                      * std::cos(M_PI * frac);
 
         RefPoint rp = Interpolate(ref_, s_i);
-        const double a_i = (v_i < kCrawlSpeedCap) ? kCrawlAccel : 0.0;
+        const double a_i = (v_i < limits_.low_speed_crawl_speed_cap)
+                               ? limits_.low_speed_crawl_accel : 0.0;
         CartesianState cs = FrenetToCartesian(rp, s_i, v_i, a_i, d_i, d_prime, d_pprime);
 
         out_path.x.push_back(cs.x);
@@ -672,7 +674,7 @@ bool FrenetPlanner::PlanInternal(
     //   2. 후보가 전부 탈락하면 "긴급정지인데 아무 궤적도 못 보냄"이 된다.
     //      긴급정지에서 그 실패 방향 자체를 제거하는 것이 목적이다.
     //
-    // 저속 fallback보다 먼저 처리한다. 그 fallback은 kMinCreepSpeed로 기어서
+    // 저속 fallback보다 먼저 처리한다. 그 fallback은 limits_.low_speed_min_creep_speed로 기어서
     // 전진하는 경로라 긴급정지 중에 차량이 계속 움직이게 된다.
     //
     // 차량이 이미 멈춰 있으면(v0 ~= 0) 0속도 궤적이 나온다. 새 정상 명령이
@@ -741,7 +743,7 @@ bool FrenetPlanner::PlanInternal(
     }
 
     const bool external_stop = external_command->mode == STOP;
-    // 외부 FOLLOW도 저속 fallback을 타지 않는다. 그 경로는 kMinCreepSpeed로
+    // 외부 FOLLOW도 저속 fallback을 타지 않는다. 그 경로는 limits_.low_speed_min_creep_speed로
     // 기어서 전진하는데, 앞차가 정지해 있으면 그대로 다가가 붙는다. FOLLOW의
     // 종방향 목표는 선행차와의 gap이므로 정상 following 후보 생성기
     // (GenerateFollowingCandidates)로 보내야 한다 - 그 생성기는 leader가

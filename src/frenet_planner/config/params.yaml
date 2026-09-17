@@ -333,6 +333,13 @@ planner:
     avoid_shift_usable_lateral_accel_fraction: 0.8
     # [m/s] 후보 생성 초기 횡속도(d_dot) 경계조건의 절대값 상한.
     max_initial_d_dot: 0.5
+    # [m/s^2] 일반 저속 fallback(PlanLowSpeedFallback)의 크롤링 가속도.
+    # 회전교차로 MERGE는 이 프로파일을 쓰지 않는다.
+    low_speed_crawl_accel: 0.5
+    # [m/s] 저속 fallback의 최소 전진속도(0 근처에 갇히지 않도록).
+    low_speed_min_creep_speed: 0.3
+    # [m/s] 저속 fallback 안에서의 속도 상한.
+    low_speed_crawl_speed_cap: 2.0
 
   # --- CostWeights (cost.hpp) ---------------------------------
   cost_weights:

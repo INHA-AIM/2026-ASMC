@@ -170,6 +170,19 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
     if (!CheckPositiveFinite(limits.max_initial_d_dot,
                               "planner/kinematic_limits/max_initial_d_dot", error_message))
         return false;
+    if (!CheckPositiveFinite(limits.low_speed_crawl_accel,
+                              "planner/kinematic_limits/low_speed_crawl_accel", error_message))
+        return false;
+    if (!CheckPositiveFinite(limits.low_speed_min_creep_speed,
+                              "planner/kinematic_limits/low_speed_min_creep_speed", error_message))
+        return false;
+    if (!IsFinite(limits.low_speed_crawl_speed_cap) ||
+        limits.low_speed_crawl_speed_cap < limits.low_speed_min_creep_speed) {
+        error_message =
+            "planner/kinematic_limits/low_speed_crawl_speed_cap must be finite "
+            "and >= low_speed_min_creep_speed";
+        return false;
+    }
 
     // --- cost_weights: 논문/설계상 음수 가중치는 의미가 없다(비용을 보상으로
     // 뒤집는 것과 같다). 0은 "이 항을 끈다"는 뜻으로 허용한다.

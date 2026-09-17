@@ -51,6 +51,14 @@ struct KinematicLimits {
     // [m/s] 후보 생성 초기 횡속도(d_dot) 경계조건의 절대값 상한. 큰 heading
     // 오차로 과대 추정될 수 있는 초기 d_dot을 제한한다.
     double max_initial_d_dot;
+    // [m/s^2] 일반 저속 fallback(PlanLowSpeedFallback)의 크롤링 가속도.
+    // 회전교차로 MERGE는 이 프로파일을 쓰지 않고 정상 MERGE 후보 생성기로
+    // 처리한다.
+    double low_speed_crawl_accel;
+    // [m/s] 저속 fallback의 최소 전진속도(0 근처에 갇히지 않도록).
+    double low_speed_min_creep_speed;
+    // [m/s] 저속 fallback 안에서의 속도 상한.
+    double low_speed_crawl_speed_cap;
 };
 
 // [Sec.VI 1단] 결합 전 가속도 필터링.

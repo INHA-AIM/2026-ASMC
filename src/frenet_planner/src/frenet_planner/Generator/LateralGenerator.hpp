@@ -22,8 +22,12 @@
 #include "frenet_planner/Common/PlannerCommand.hpp"
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
 
+// low_speed_threshold: KinematicLimits.low_speed_fallback_v와 같은 값을
+// 넘겨야 한다 - PlanLowSpeedFallback이 crawl로 전환하는 속도 경계와
+// 이 함수의 저속-처리 경계가 어긋나면 두 경로 사이에 사각지대가 생긴다.
 std::vector<FrenetPath> GenerateLateralCandidates(const FrenetState& start,
-                                                   const PathGeneratorConfig& cfg);
+                                                   const PathGeneratorConfig& cfg,
+                                                   double low_speed_threshold);
 
 // =========================================================
 // Lateral continuity candidate (fix/yuntae-frenet-speed-continuity Phase B)
@@ -41,7 +45,8 @@ std::vector<FrenetPath> GenerateLateralCandidates(const FrenetState& start,
 // 곡률 필터에서 탈락했을 때만 이 candidate가 유일한 valid 후보로 남아
 // 선택된다.
 std::vector<FrenetPath> GenerateLateralContinuityCandidates(const FrenetState& start,
-                                                             const PathGeneratorConfig& cfg);
+                                                             const PathGeneratorConfig& cfg,
+                                                             double low_speed_threshold);
 
 // AVOID 모드는 PlannerCommand.avoidance_d_offset을 그대로 lateral 목표 중심으로 사용.
 // LANE_CHANGE_*(D7)는 PlannerCommand.lane_change_d_offset을 그대로 쓴다 - FSM이

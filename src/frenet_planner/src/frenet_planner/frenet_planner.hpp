@@ -1037,11 +1037,9 @@ private:
     bool GenerateDecelToZeroPath(double s, double d, double s_dot,
                                  CartesianPath& out_path) const;
 
-    // 일반 저속 fallback의 크롤링 가속 프로파일 상수. 회전교차로 MERGE는
-    // 이 고정 2 m/s 프로파일을 쓰지 않고 정상 MERGE 후보 생성기로 처리한다.
-    static constexpr double kCrawlAccel = 0.5;       // [m/s^2] 완만한 가속
-    static constexpr double kMinCreepSpeed = 0.3;    // [m/s] 최소 전진속도 (0 근처에 갇히지 않도록)
-    static constexpr double kCrawlSpeedCap = 2.0;    // [m/s] 이 fallback 안에서의 속도 상한
+    // 일반 저속 fallback의 크롤링 가속 프로파일은 limits_.low_speed_crawl_accel/
+    // low_speed_min_creep_speed/low_speed_crawl_speed_cap이다. 회전교차로
+    // MERGE는 이 프로파일을 쓰지 않고 정상 MERGE 후보 생성기로 처리한다.
     // max_curvature로 만들 수 있는 대칭 S-curve의 종방향 길이를 보수적으로
     // 근사한다. 저속 fallback과 AVOID SHIFT 시작거리가 같은 값을 사용한다.
     double LowSpeedLateralTransitionDistance(double from_d,

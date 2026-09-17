@@ -147,7 +147,12 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
         direct_cfg.delta_s = {-3.0, 3.0, 1.0};
         direct_cfg.delta_s_dot = {-2.0, 2.0, 1.0};
         direct_cfg.dt = 0.1;
-        KinematicLimits direct_limits{3.0, 3.0, kMaxCurvature, 6.0};
+        KinematicLimits direct_limits{};
+        direct_limits.max_lateral_accel = 3.0;
+        direct_limits.max_longitudinal_accel = 3.0;
+        direct_limits.max_curvature = kMaxCurvature;
+        direct_limits.max_longitudinal_jerk = 6.0;
+        direct_limits.low_speed_fallback_v = 0.5;
         VehicleShape vehicle_shape{2.0, 4.5, -1.0};
         CollisionCheckConfig collision_cfg{0.3, 0.1, 3.0};
         std::vector<TrackedObject> no_obstacles;
@@ -163,7 +168,8 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
                                                  direct_stop_cfg, direct_merge_cfg,
                                                  &direct_stats);
         std::vector<FrenetPath> continuity =
-            GenerateLateralContinuityCandidates(direct_start, direct_cfg);
+            GenerateLateralContinuityCandidates(direct_start, direct_cfg,
+                                                direct_limits.low_speed_fallback_v);
         FilterLateralByAcceleration(continuity, direct_limits);
         auto continuity_lon =
             GenerateVelocityKeepingCandidates(direct_start, snap.target_speed, direct_cfg);
