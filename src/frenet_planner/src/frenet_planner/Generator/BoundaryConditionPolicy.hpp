@@ -1,27 +1,29 @@
-#ifndef FRENET_SPEED_POLICY_HPP
-#define FRENET_SPEED_POLICY_HPP
+#ifndef FRENET_GENERATOR_BOUNDARY_CONDITION_POLICY_HPP
+#define FRENET_GENERATOR_BOUNDARY_CONDITION_POLICY_HPP
 
-// CurveSpeed.hpp의 곡률 기반 envelope 계산과 달리, 이 파일의 함수들은
-// RefLine/곡률을 참조하지 않는 순수 longitudinal policy다 (frenet_planner.cpp의
-// 익명 namespace에 있던 것을 분리) - 실제 트랙 형상과 무관하게 스칼라 입력만으로
-// 검증 가능해야 하는 로직이라 curve_speed_envelope_test와 분리된
-// target_speed_rate_limit_test/braking_memory_test가 이 파일만 필요로 한다.
-// 로직 자체는 옮기기 전과 동일하며 이 분리 작업에서 수식을 바꾸지 않는다.
+#include "frenet_planner/Common/FrenetTypes.hpp"
+#include "frenet_planner/Evaluation/KinematicFilter.hpp"
 
-// Cycle-to-cycle target speed recovery continuity (fix/yuntae-frenet-speed-continuity
-// Phase 2). 안전 감속 방향(raw_target < last_target)은 curve braking envelope
-// (LookaheadTargetSpeed)가 이미 처리하므로 여기서는 즉시 허용한다. 반대로
-// target이 이전 cycle보다 올라가는 방향만
-// max_target_speed_accel * replanning_period_s 만큼으로 제한해, 커브를
-// 벗어난 직후 5.x -> 10 같은 한 cycle급 점프를 막는다.
+// R7-C: "지금 센서/ego 상태에서 얻은 Frenet state 중, trajectory polynomial의
+// 초기조건으로 어떤 값을 사용할 것인가"만 담당한다. frenet_planner.cpp의
+// PlanInternal에 있던 물리적 clamp(투영 오차로 인한 비현실적 초기 가속도/
+// 횡속도 제한)를 그대로 옮긴 것이며, 이 분리 작업에서 수식/파라미터 의미를
+// 바꾸지 않는다.
 //
-// has_history가 false(첫 cycle, 또는 EMERGENCY 직후 리셋 이후 첫 정상
-// cycle)이면 raw_target을 그대로 반환한다 - 그렇지 않으면 last_target의
-// 초기값(0.0)과 무관한 실제 ego 속도가 있어도 0 근처로 묶인다.
-double ApplyTargetSpeedRateLimit(double raw_target, double last_target,
-                                  bool has_history,
-                                  double max_target_speed_accel,
-                                  double replanning_period_s);
+// raw(클램프 전) 값은 진단/피드백용(last_d_dot_ 등)으로 호출부가 별도로
+// 보존한다 - 이 함수는 clamp *이후* planning에 쓸 초기조건만 계산한다.
+
+// s_ddot: 투영 오차가 초기 종방향 가속도 경계조건을 비현실적으로 키우지
+//         않도록 max_longitudinal_accel * boundary_condition_accel_fraction로
+//         제한한다.
+// d_ddot: 같은 이유로 max_lateral_accel * boundary_condition_accel_fraction로
+//         제한한다.
+// d_dot:  큰 heading 오차로 과대 추정될 수 있는 초기 횡속도를
+//         max_initial_d_dot으로 제한한다.
+FrenetState ClampInitialBoundaryState(double s, double s_dot, double raw_s_ddot,
+                                       double d, double raw_d_dot,
+                                       double raw_d_ddot,
+                                       const KinematicLimits& limits);
 
 // external KEEP/LANE_KEEPING의 velocity-keeping 후보 생성에 쓸 "계획용" 초기
 // 종방향 가속도를 결정한다 (fix/yuntae-frenet-speed-continuity Phase A).
@@ -47,4 +49,4 @@ double ResolveVelocityKeepingBoundaryAcceleration(double raw_s_ddot,
                                                    double resolved_target_speed,
                                                    double deadband);
 
-#endif
+#endif  // FRENET_GENERATOR_BOUNDARY_CONDITION_POLICY_HPP

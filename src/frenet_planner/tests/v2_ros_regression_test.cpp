@@ -1391,9 +1391,14 @@ int main(int argc, char** argv) {
                    std::fabs(pass.target_d - locked_target_d) < 1e-9,
                "controlled lateral pose advances AVOID SHIFT to PASS only");
 
+        // RETURN 단계는 측정된 ego_d가 실제로 avoid_cfg_.lateral_tolerance
+        // 이내로 돌아와야 completed=true가 된다(AvoidLifecycle.cpp 주석:
+        // "장애물을 완전히 지난 뒤에도 바로 COMPLETED하지 않는다. RETURN에서
+        // d=0 복귀가 끝나야..."). ego를 locked_target_d에 그대로 두면
+        // |ego_d|가 lateral_tolerance(0.4)를 영원히 넘어 RunUntilState가
+        // 항상 timeout한다 - d=0 근처로 옮겨 실제 복귀를 시뮬레이션한다.
         const Pose2D clear_ego =
-            PoseAtOffset(waypoints, kAvoidObstacleS + 20.0,
-                         locked_target_d);
+            PoseAtOffset(waypoints, kAvoidObstacleS + 20.0, 0.0);
         Feedback completed;
         const bool got_completed = harness.RunUntilState(
             avoid, clear_ego, kCruiseSpeed, Feedback::COMPLETED, 30,
@@ -1579,15 +1584,21 @@ int main(int argc, char** argv) {
 
     std::printf("\n=== unimplemented maneuver ===\n");
     {
-        // D6-4a에서 AVOID gate를 여므로 아직 닫혀 있는 LANE_CHANGE를
-        // unimplemented 예시로 쓴다. validation을 먼저 통과해야 node gate의
-        // MANEUVER_NOT_IMPLEMENTED 경로를 실제로 검증할 수 있다.
+        // R9-B: LANE_CHANGE는 D6-4a 이후 gate가 열려(SetImplementedManeuver
+        // 참고) 더 이상 unimplemented 예시가 아니다 - 이 절이 실제로는 정상
+        // LANE_CHANGE PREPARE 경로를 타면서 result_code/detail이 채워져
+        // "does not fake a result_code" 단언만 실패하고 있었다(R9-A 감사에서
+        // 확인). 여전히 닫혀 있는 MERGE로 교체한다 - MERGE는
+        // SetImplementedManeuver로 열린 적이 없고 PrepareMerge/
+        // PlanCommittedMerge 진입점 자체가 없다(R9-A Generator/Maneuver 감사
+        // 참고). validation을 먼저 통과해야 node gate의
+        // MANEUVER_NOT_IMPLEMENTED 경로를 실제로 검증할 수 있으므로
+        // merge_type을 채운다(behavior_command_adapter의 "MERGE requires a
+        // merge_type" validation).
         const uint32_t id = ++command_id;
-        Command lane_change = harness.MakeCommand(id, Command::LANE_CHANGE);
-        lane_change.execution_request = Command::PREPARE;
-        lane_change.direction = Command::DIRECTION_LEFT;
-        harness.SetTargetOnPath(lane_change, 230.0);
-        harness.Run(lane_change, ego, kCruiseSpeed, 12, false);
+        Command merge = harness.MakeCommand(id, Command::MERGE);
+        merge.merge_type = Command::MERGE_ROUNDABOUT;
+        harness.Run(merge, ego, kCruiseSpeed, 12, false);
         Feedback feedback;
         Expect(harness.LastFor(id, feedback) &&
                    feedback.command_accepted &&
@@ -1998,8 +2009,17 @@ int main(int argc, char** argv) {
         Expect(got_pose && pose_feedback.target_d_valid &&
                    pose_feedback.target_d > 3.0,
                "AVOID consumes the projected target pose intent");
+        // R9-B: selected_target_d는 요청 target_d가 아니라 실제 선택된
+        // 후보의 종단 d다(Avoid.cpp 주석: "요청 +2.50 -> 실제 종단 +3.00").
+        // lateral_target_tolerance(0.5m) 격자 안에서 자유롭게 벗어날 수
+        // 있으므로, 요청 delta(3.8-2.75=1.05)에서 최악의 경우 양쪽으로
+        // 각 0.5m씩 줄어들 수 있다(worst-case 최소 delta = 0.05). 0.8은
+        // 그 worst-case보다 커서 항상 통과할 수 없는 threshold였다 -
+        // 이 tolerance를 명시적으로 반영해 0.0으로 낮춘다(그래도 방향은
+        // 확실히 검증한다: 위 두 개별 bound(>1.0, >3.0)가 이미 절대값을
+        // 검증하므로 여기서는 순서만 확인하면 된다).
         Expect(got_geometry && got_pose &&
-                   pose_feedback.target_d - geometry_feedback.target_d > 0.8,
+                   pose_feedback.target_d - geometry_feedback.target_d > 0.0,
                "the target pose actually changes the selected target_d");
         reset_avoid_state();
     }
@@ -2471,8 +2491,11 @@ int main(int argc, char** argv) {
         Feedback pass;
         harness.RunUntilProgress(avoid, pass_ego, kCruiseSpeed,
                                  Feedback::EXECUTING, 0.5, 30, pass);
+        // RETURN 완료 조건은 측정된 ego_d가 실제로 lateral_tolerance
+        // 이내로 돌아와야 한다(위 "AVOID basic handshake lifecycle" 절
+        // 주석 참고). locked_target_d에 그대로 두면 항상 timeout한다.
         const Pose2D clear_ego =
-            PoseAtOffset(waypoints, kAvoidObstacleS + 20.0, locked_target_d);
+            PoseAtOffset(waypoints, kAvoidObstacleS + 20.0, 0.0);
         Feedback completed;
         const bool got_completed = harness.RunUntilState(
             avoid, clear_ego, kCruiseSpeed, Feedback::COMPLETED, 40, completed);

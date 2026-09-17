@@ -27,17 +27,16 @@ std::vector<double> CumulativeArcLength(const std::vector<double>& x, const std:
 
 // 원본 waypoint의 물리적 첫점/끝점 거리로 폐루프 여부를 판정한다. 대회
 // global path처럼 마지막 점이 첫점을 그대로 복제해 명시적으로 닫혀 있는
-// 입력을 감지하는 것이 목적이므로, 허용 오차는 원본 waypoint 간격(대회
-// 경로 기준 약 0.4~0.5m)보다 훨씬 작게 잡아 우연히 가까운 open path를
-// closed로 오判정하지 않는다.
-constexpr double kClosureToleranceM = 0.05;  // [m]
-
-bool DetectClosedLoop(const std::vector<double>& x, const std::vector<double>& y) {
+// 입력을 감지하는 것이 목적이므로, 허용 오차(config.closure_tolerance_m)는
+// 원본 waypoint 간격(대회 경로 기준 약 0.4~0.5m)보다 훨씬 작게 잡아 우연히
+// 가까운 open path를 closed로 오판정하지 않는다.
+bool DetectClosedLoop(const std::vector<double>& x, const std::vector<double>& y,
+                       double closure_tolerance_m) {
     const int n = static_cast<int>(x.size());
     if (n < 4) return false;  // 닫힌 삼각형 이상은 되어야 폐루프로 취급
     const double dx = x.back() - x.front();
     const double dy = y.back() - y.front();
-    return std::sqrt(dx * dx + dy * dy) <= kClosureToleranceM;
+    return std::sqrt(dx * dx + dy * dy) <= closure_tolerance_m;
 }
 
 // (아래 3단계 스무딩 파이프라인에서 사용, 정의는 이 파일 뒤쪽에 있음)
@@ -50,11 +49,8 @@ void ComputeThetaKappa(const std::vector<double>& x, const std::vector<double>& 
 // 아래 3단계(스무딩 -> 균일 재샘플링 -> 잔여 초과분 국소 이완)로 완화한다.
 // 스무딩만 단독으로 하면 인접점끼리 arc-length상 다닥다닥 붙어버려 오히려
 // kappa=dtheta/ds의 분모(ds)가 작아지며 곡률이 더 커지는 역효과가 실측으로
-// 확인됐다 (재샘플링으로 ds를 다시 균일하게 맞춰줘야 함).
-constexpr double kSmoothingWindowM = 10.0;  // [m] 이동평균 전체 윈도우 폭
-constexpr double kResampleDs       = 0.5;   // [m] 재샘플링 간격 (원본 waypoint 간격과 동일)
-constexpr int    kRelaxMaxIter     = 300;
-constexpr double kRelaxStep        = 0.3;   // 초과 지점을 양옆 중점 쪽으로 당기는 비율
+// 확인됐다 (재샘플링으로 ds를 다시 균일하게 맞춰줘야 함). 각 단계 파라미터는
+// config.smoothing_window_m/resample_ds/relax_max_iter/relax_step.
 
 // 폐루프 총 물리 길이(닫힘 구간 포함). 열린 경로는 그냥 누적 s의 마지막 값.
 double TotalArcLength(const std::vector<double>& x, const std::vector<double>& y, bool closed) {
@@ -217,12 +213,13 @@ void ResampleUniform(const std::vector<double>& x, const std::vector<double>& y,
 // closed==true면 순환 시퀀스 전체(이음새 포함)를 내부 점으로 취급한다 -
 // 열린 경로처럼 양 끝(i=0, i=n-1)을 예외 처리하지 않는다.
 void FixInfeasibleCurvature(std::vector<double>& x, std::vector<double>& y,
-                            bool closed, double max_curvature) {
+                            bool closed, double max_curvature,
+                            int relax_max_iter, double relax_step) {
     const int n = static_cast<int>(x.size());
     if (n < 3) return;
 
     std::vector<double> theta, kappa;
-    for (int iter = 0; iter < kRelaxMaxIter; iter++) {
+    for (int iter = 0; iter < relax_max_iter; iter++) {
         ComputeThetaKappa(x, y, closed, theta, kappa);
 
         std::vector<int> bad;
@@ -238,8 +235,8 @@ void FixInfeasibleCurvature(std::vector<double>& x, std::vector<double>& y,
             const int next = closed ? (i + 1) % n : std::min(i + 1, n - 1);
             const double mx = 0.5 * (x[prev] + x[next]);
             const double my = 0.5 * (y[prev] + y[next]);
-            x[i] = x[i] * (1.0 - kRelaxStep) + mx * kRelaxStep;
-            y[i] = y[i] * (1.0 - kRelaxStep) + my * kRelaxStep;
+            x[i] = x[i] * (1.0 - relax_step) + mx * relax_step;
+            y[i] = y[i] * (1.0 - relax_step) + my * relax_step;
         }
     }
 }
@@ -298,12 +295,13 @@ void ComputeThetaKappa(const std::vector<double>& x, const std::vector<double>& 
 // BuildRefLine
 // =========================================================
 
-RefLine BuildRefLine(const std::vector<double>& wx, const std::vector<double>& wy, double max_curvature) {
+RefLine BuildRefLine(const std::vector<double>& wx, const std::vector<double>& wy,
+                     const ReferenceConfig& config, double max_curvature) {
 
     if (wx.size() < 2 || wx.size() != wy.size())
         throw std::invalid_argument("Waypoints must have at least 2 points and matching sizes");
 
-    const bool closed = DetectClosedLoop(wx, wy);
+    const bool closed = DetectClosedLoop(wx, wy, config.closure_tolerance_m);
 
     // 폐루프 입력은 마지막 점이 첫점의 물리적 복제다(대회 global path 계약).
     // 모든 순환 전처리(smoothing/resampling/derivative)는 이 복제를 제거한
@@ -318,12 +316,13 @@ RefLine BuildRefLine(const std::vector<double>& wx, const std::vector<double>& w
 
     // 0. 국소 급커브 완화: 스무딩 -> 균일 재샘플링 -> 잔여 초과분 국소 이완.
     std::vector<double> smoothed_x, smoothed_y;
-    SmoothWaypoints(unique_x, unique_y, kSmoothingWindowM, closed, smoothed_x, smoothed_y);
+    SmoothWaypoints(unique_x, unique_y, config.smoothing_window_m, closed, smoothed_x, smoothed_y);
 
     std::vector<double> sx, sy;
-    ResampleUniform(smoothed_x, smoothed_y, kResampleDs, closed, sx, sy);
+    ResampleUniform(smoothed_x, smoothed_y, config.resample_ds, closed, sx, sy);
 
-    FixInfeasibleCurvature(sx, sy, closed, max_curvature);
+    FixInfeasibleCurvature(sx, sy, closed, max_curvature,
+                           config.relax_max_iter, config.relax_step);
 
     const int n_unique = static_cast<int>(sx.size());
     const int n = closed ? n_unique + 1 : n_unique;
@@ -551,7 +550,8 @@ double FindClosestS(const RefLine& ref, double x, double y,
     return s;
 }
 
-bool LoadReferenceLine(const std::string& path, RefLine& out_ref, double max_curvature) {
+bool LoadReferenceLine(const std::string& path, RefLine& out_ref,
+                       const ReferenceConfig& config, double max_curvature) {
     std::ifstream file(path);
     if (!file.is_open()) {
         std::printf("[FrenetPlanner] Failed to open waypoint file: %s\n", path.c_str());
@@ -595,7 +595,7 @@ bool LoadReferenceLine(const std::string& path, RefLine& out_ref, double max_cur
         return false;
     }
 
-    out_ref = BuildRefLine(wx, wy, max_curvature);
+    out_ref = BuildRefLine(wx, wy, config, max_curvature);
     std::printf("[FrenetPlanner] Loaded %zu waypoints from %s (closed_loop=%s, length=%.2f)\n",
                wx.size(), path.c_str(), out_ref.closed_loop ? "true" : "false", out_ref.length);
     return true;

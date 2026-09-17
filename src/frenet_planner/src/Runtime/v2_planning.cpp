@@ -1,690 +1,33 @@
+/**
+ * @file v2_planning.cpp
+ * @brief v2(BehaviorCommand transaction) planning cycle: command validation,
+ *        transaction acceptance, per-mode target projection/execution, and
+ *        v2 trajectory publication.
+ *
+ * R8-B1: runV2PlanningCycle()의 body를 frenet_planner_node.cpp에서 그대로
+ * 옮겼다 - 여전히 FrenetPlannerNode의 멤버 함수이고, 이 단계에서 내부를 추가로
+ * 쪼개지 않는다(그 다음 단계는 R8-B2).
+ *
+ * R8-B2: STOP target 투영만 target_projection.cpp의
+ * FrenetPlannerNode::prepareStopTarget()으로 옮겼다 - 그 블록만 이후 execution
+ * 로직과 공유 mutable state 없이 early-return으로 완전히 닫혀 있었기
+ * 때문이다. AVOID/LANE_CHANGE target 투영은 execution/feedback 구성과 깊게
+ * 얽혀 있어 이번 단계에서는 그대로 이 파일에 남는다(공통 추상화를 만들지
+ * 않는다 - 경계가 더 명확해지면 이후 단계에서 재검토).
+ */
+
 #include "frenet_planner_node.hpp"
 
 #include <cmath>
-#include <sstream>
-#include <vector>
 #include <utility>
 
+#include "angle_utils.hpp"
 #include "avoid_commit_coordinator.hpp"
 #include "lane_change_commit_coordinator.hpp"
-#include <geometry_msgs/Point.h>
 #include "message_converter.hpp"
 #include "steady_freshness.hpp"
 
 namespace frenet_planner_ros {
-
-namespace {
-
-// quaternion -> yaw. D3-2 validation이 단위 quaternion을 이미 보장하므로
-// 정규화는 하지 않는다.
-double YawFromQuaternion(const geometry_msgs::Quaternion& q) {
-    const double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
-    const double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
-    return std::atan2(siny_cosp, cosy_cosp);
-}
-
-// 각도를 (-pi, pi]로 정규화. 단순 뺄셈으로 비교하면 179도와 -179도의 차이가
-// 358도로 계산되어 실제 2도 차이를 큰 오차로 오판한다.
-double NormalizeAngle(double angle) {
-    return std::atan2(std::sin(angle), std::cos(angle));
-}
-
-}  // namespace
-
-FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
-    : nh_(std::move(nh)), pnh_(std::move(pnh)) {
-    std::string vehicle_topic = "/vehicle/state";
-    std::string objects_topic = "/perception/objects";
-    std::string behavior_topic = "/behavior/context";
-    std::string trajectory_topic = "/planning/trajectory";
-    std::string feedback_topic = "/planning/feedback";
-    // v2 인터페이스. v1과 병행 운영하며 D10 cutover까지 두 계통을 모두
-    // 유지한다(계약 1.2절, 10.6절).
-    std::string behavior_command_v2_topic = "/behavior/command_v2";
-    std::string feedback_v2_topic = "/planning/frenet_feedback_v2";
-    std::string marker_topic = "/planning/markers";
-    std::string planner_config_path;
-
-    pnh_.param("planning/frequency", planning_frequency_hz_, planning_frequency_hz_);
-    pnh_.param("timeouts/vehicle_state", vehicle_timeout_seconds_,
-               vehicle_timeout_seconds_);
-    pnh_.param("timeouts/objects", objects_timeout_seconds_,
-               objects_timeout_seconds_);
-    pnh_.param("timeouts/behavior", behavior_timeout_seconds_,
-               behavior_timeout_seconds_);
-    pnh_.param<std::string>("planner/config_path", planner_config_path, "");
-    pnh_.param("topics/vehicle_state", vehicle_topic, vehicle_topic);
-    pnh_.param("topics/objects", objects_topic, objects_topic);
-    pnh_.param("topics/behavior", behavior_topic, behavior_topic);
-    pnh_.param("publish_topics/trajectory", trajectory_topic, trajectory_topic);
-    pnh_.param("publish_topics/feedback", feedback_topic, feedback_topic);
-    pnh_.param("topics/behavior_command_v2", behavior_command_v2_topic,
-               behavior_command_v2_topic);
-    pnh_.param("publish_topics/feedback_v2", feedback_v2_topic,
-               feedback_v2_topic);
-    pnh_.param("v2/stop/max_target_heading_error_rad",
-               stop_max_target_heading_error_rad_,
-               stop_max_target_heading_error_rad_);
-
-    if (!std::isfinite(stop_max_target_heading_error_rad_) ||
-        stop_max_target_heading_error_rad_ <= 0.0 ||
-        stop_max_target_heading_error_rad_ > M_PI) {
-        ROS_WARN("Invalid v2/stop/max_target_heading_error_rad %.3f; using 45 deg",
-                 stop_max_target_heading_error_rad_);
-        stop_max_target_heading_error_rad_ = 0.785398;
-    }
-
-    // v2 AVOID target pose 투영 (D6-1a). STOP과 값을 공유하지 않는다 -
-    // 두 질문의 허용 횡거리가 다르다(헤더 주석 참고).
-    pnh_.param("v2/avoid/projection_search_window",
-               avoid_projection_search_window_,
-               avoid_projection_search_window_);
-    pnh_.param("v2/avoid/max_target_lateral_offset",
-               avoid_max_target_lateral_offset_,
-               avoid_max_target_lateral_offset_);
-    pnh_.param("v2/avoid/max_target_heading_error_rad",
-               avoid_max_target_heading_error_rad_,
-               avoid_max_target_heading_error_rad_);
-
-    if (!std::isfinite(avoid_projection_search_window_) ||
-        avoid_projection_search_window_ <= 0.0) {
-        ROS_WARN("Invalid v2/avoid/projection_search_window %.3f; using 100 m",
-                 avoid_projection_search_window_);
-        avoid_projection_search_window_ = 100.0;
-    }
-    if (!std::isfinite(avoid_max_target_lateral_offset_) ||
-        avoid_max_target_lateral_offset_ <= 0.0) {
-        ROS_WARN("Invalid v2/avoid/max_target_lateral_offset %.3f; using 4 m",
-                 avoid_max_target_lateral_offset_);
-        avoid_max_target_lateral_offset_ = 4.0;
-    }
-    if (!std::isfinite(avoid_max_target_heading_error_rad_) ||
-        avoid_max_target_heading_error_rad_ <= 0.0 ||
-        avoid_max_target_heading_error_rad_ > M_PI) {
-        ROS_WARN("Invalid v2/avoid/max_target_heading_error_rad %.3f; "
-                 "using 45 deg", avoid_max_target_heading_error_rad_);
-        avoid_max_target_heading_error_rad_ = 0.785398;
-    }
-
-    // v2 LANE_CHANGE target_pose_map sanity 투영. AVOID와 값을 공유하지
-    // 않는다 - 헤더 주석 참고.
-    pnh_.param("v2/lane_change/projection_search_window",
-               lane_change_projection_search_window_,
-               lane_change_projection_search_window_);
-    pnh_.param("v2/lane_change/max_target_lateral_offset",
-               lane_change_max_target_lateral_offset_,
-               lane_change_max_target_lateral_offset_);
-    pnh_.param("v2/lane_change/max_target_heading_error_rad",
-               lane_change_max_target_heading_error_rad_,
-               lane_change_max_target_heading_error_rad_);
-
-    if (!std::isfinite(lane_change_projection_search_window_) ||
-        lane_change_projection_search_window_ <= 0.0) {
-        ROS_WARN("Invalid v2/lane_change/projection_search_window %.3f; "
-                 "using 100 m", lane_change_projection_search_window_);
-        lane_change_projection_search_window_ = 100.0;
-    }
-    if (!std::isfinite(lane_change_max_target_lateral_offset_) ||
-        lane_change_max_target_lateral_offset_ <= 0.0) {
-        ROS_WARN("Invalid v2/lane_change/max_target_lateral_offset %.3f; "
-                 "using 6 m", lane_change_max_target_lateral_offset_);
-        lane_change_max_target_lateral_offset_ = 6.0;
-    }
-    if (!std::isfinite(lane_change_max_target_heading_error_rad_) ||
-        lane_change_max_target_heading_error_rad_ <= 0.0 ||
-        lane_change_max_target_heading_error_rad_ > M_PI) {
-        ROS_WARN("Invalid v2/lane_change/max_target_heading_error_rad %.3f; "
-                 "using 45 deg", lane_change_max_target_heading_error_rad_);
-        lane_change_max_target_heading_error_rad_ = 0.785398;
-    }
-    pnh_.param("publish_topics/markers", marker_topic, marker_topic);
-
-    if (planning_frequency_hz_ <= 0.0) {
-        ROS_WARN("Invalid planning frequency %.3f Hz; using 20 Hz",
-                 planning_frequency_hz_);
-        planning_frequency_hz_ = 20.0;
-    }
-    if (vehicle_timeout_seconds_ <= 0.0 || objects_timeout_seconds_ <= 0.0 ||
-        behavior_timeout_seconds_ <= 0.0) {
-        ROS_WARN("Invalid input timeout configuration; using 0.20/0.30/0.50 s");
-        vehicle_timeout_seconds_ = 0.20;
-        objects_timeout_seconds_ = 0.30;
-        behavior_timeout_seconds_ = 0.50;
-    }
-
-    if (planner_config_path.empty()) {
-        ROS_ERROR("Missing required private parameter: planner/config_path");
-    } else {
-        planner_initialized_ = planner_.Init(planner_config_path);
-        if (!planner_initialized_) {
-            ROS_ERROR_STREAM("Frenet planner initialization failed: "
-                             << planner_config_path);
-        }
-    }
-
-    trajectory_pub_ = nh_.advertise<asmc_msgs::Trajectory>(trajectory_topic, 1);
-    feedback_pub_ = nh_.advertise<asmc_msgs::PlanFeedback>(feedback_topic, 1);
-    feedback_v2_pub_ =
-        nh_.advertise<asmc_msgs::FrenetFeedback>(feedback_v2_topic, 1);
-
-    // v2 구현 상태. 열린 maneuver만 planner를 호출한다(계약 11.4절).
-    // 닫혀 있는 maneuver는 FAILED로 회신한다 - 조용히 velocity keeping
-    // 궤적을 만드는 것보다 안전하다.
-    //
-    // LANE_CHANGE는 fixed-reference 검증을 위해 이 gate를 연다 - Behavior
-    // Planner의 scorer/policy는 그대로 닫혀 있으므로 실제 FSM이 자동으로
-    // LANE_CHANGE를 고르지는 않는다. 수동 검증은
-    // tools/lane_change_test_publisher.cpp로 명령을 직접 발행해 수행한다.
-    command_manager_.SetImplementedManeuver(
-        asmc_msgs::BehaviorCommand::KEEP, true);
-    command_manager_.SetImplementedManeuver(
-        asmc_msgs::BehaviorCommand::STOP, true);
-    command_manager_.SetImplementedManeuver(
-        asmc_msgs::BehaviorCommand::EMERGENCY_STOP, true);
-    command_manager_.SetImplementedManeuver(
-        asmc_msgs::BehaviorCommand::FOLLOW, true);
-    command_manager_.SetImplementedManeuver(
-        asmc_msgs::BehaviorCommand::AVOID, true);
-    command_manager_.SetImplementedManeuver(
-        asmc_msgs::BehaviorCommand::LANE_CHANGE, true);
-    marker_pub_ =
-        nh_.advertise<visualization_msgs::MarkerArray>(marker_topic, 1);
-
-    vehicle_sub_ = nh_.subscribe(
-        vehicle_topic, 1, &FrenetPlannerNode::vehicleCallback, this);
-    objects_sub_ = nh_.subscribe(
-        objects_topic, 1, &FrenetPlannerNode::objectsCallback, this);
-    behavior_sub_ = nh_.subscribe(
-        behavior_topic, 1, &FrenetPlannerNode::behaviorCallback, this);
-    behavior_command_v2_sub_ = nh_.subscribe(
-        behavior_command_v2_topic, 1,
-        &FrenetPlannerNode::behaviorCommandV2Callback, this);
-
-    planning_timer_ = nh_.createSteadyTimer(
-        ros::WallDuration(1.0 / planning_frequency_hz_),
-        &FrenetPlannerNode::planningTimerCallback, this);
-
-    ROS_INFO_STREAM("Frenet ROS runtime initialized at " << planning_frequency_hz_
-                    << " Hz; inputs: " << vehicle_topic << ", "
-                    << objects_topic << ", " << behavior_topic
-                    << "; outputs: " << trajectory_topic << ", "
-                    << feedback_topic << "; v2: " << behavior_command_v2_topic
-                    << " -> " << feedback_v2_topic
-                    << " (KEEP/STOP/E-STOP/FOLLOW/AVOID/LANE_CHANGE enabled)"
-                    << "; planner_initialized="
-                    << (planner_initialized_ ? "true" : "false"));
-}
-
-void FrenetPlannerNode::vehicleCallback(
-    const asmc_msgs::VehicleState::ConstPtr& message) {
-    if (!message) return;
-    std::lock_guard<std::mutex> lock(input_mutex_);
-    latest_vehicle_ = *message;
-    vehicle_received_at_ = ros::SteadyTime::now();
-    has_vehicle_ = true;
-}
-
-void FrenetPlannerNode::objectsCallback(
-    const asmc_msgs::DetectedObjectArray::ConstPtr& message) {
-    if (!message) return;
-    std::lock_guard<std::mutex> lock(input_mutex_);
-    latest_objects_ = *message;
-    objects_received_at_ = ros::SteadyTime::now();
-    has_objects_ = true;
-}
-
-void FrenetPlannerNode::behaviorCallback(
-    const asmc_msgs::BehaviorContext::ConstPtr& message) {
-    if (!message) return;
-    std::lock_guard<std::mutex> lock(input_mutex_);
-    latest_behavior_ = *message;
-    behavior_received_at_ = ros::SteadyTime::now();
-    has_behavior_ = true;
-}
-
-FrenetPlannerNode::InputSnapshot FrenetPlannerNode::takeSnapshot() const {
-    std::lock_guard<std::mutex> lock(input_mutex_);
-    InputSnapshot snapshot;
-    snapshot.vehicle = latest_vehicle_;
-    snapshot.objects = latest_objects_;
-    snapshot.behavior = latest_behavior_;
-    snapshot.vehicle_received_at = vehicle_received_at_;
-    snapshot.objects_received_at = objects_received_at_;
-    snapshot.behavior_received_at = behavior_received_at_;
-    snapshot.has_vehicle = has_vehicle_;
-    snapshot.has_objects = has_objects_;
-    snapshot.has_behavior = has_behavior_;
-    return snapshot;
-}
-
-double FrenetPlannerNode::trajectoryDt() const {
-    const double dt = planner_.sample_dt();
-    return planner_initialized_ && std::isfinite(dt) && dt > 0.0 ? dt : 0.1;
-}
-
-asmc_msgs::VehicleState FrenetPlannerNode::stopReferenceVehicle(
-    const InputSnapshot& snapshot) const {
-    if (snapshot.has_vehicle && std::isfinite(snapshot.vehicle.x) &&
-        std::isfinite(snapshot.vehicle.y) && std::isfinite(snapshot.vehicle.yaw)) {
-        return snapshot.vehicle;
-    }
-    if (has_stop_reference_vehicle_) return last_stop_reference_vehicle_;
-
-    asmc_msgs::VehicleState unknown;
-    unknown.header.frame_id = "map";
-    unknown.valid = false;
-    return unknown;
-}
-
-void FrenetPlannerNode::publishResult(
-    const asmc_msgs::Trajectory& trajectory, const InputSnapshot& snapshot,
-    bool previous_plan_still_valid) {
-    trajectory_pub_.publish(trajectory);
-    publishDebugMarkers(trajectory, snapshot);
-
-    asmc_msgs::PlanFeedback feedback;
-    feedback.header.stamp = ros::Time::now();
-    feedback.header.frame_id = "map";
-    feedback.command_id = snapshot.has_behavior ? snapshot.behavior.command_id : 0;
-    feedback.plan_valid = trajectory.valid;
-    feedback.failure_reason = trajectory.failure_reason;
-    feedback.selected_behavior = snapshot.has_behavior
-        ? snapshot.behavior.selected_behavior
-        : asmc_msgs::BehaviorContext::KEEP;
-    feedback.selected_target_link_id = snapshot.has_behavior
-        ? snapshot.behavior.target_link_id : "";
-    feedback.previous_plan_still_valid = previous_plan_still_valid;
-    feedback_pub_.publish(feedback);
-}
-
-void FrenetPlannerNode::publishDebugMarkers(
-    const asmc_msgs::Trajectory& trajectory,
-    const InputSnapshot& snapshot) {
-    visualization_msgs::MarkerArray markers;
-    visualization_msgs::Marker clear;
-    clear.action = visualization_msgs::Marker::DELETEALL;
-    markers.markers.push_back(clear);
-
-    {
-        int candidate_id = 0;
-        const auto& candidate_paths = planner_.last_candidate_paths();
-        const auto& candidate_validity = planner_.last_candidate_validity();
-        for (std::size_t candidate_index = 0;
-             candidate_index < candidate_paths.size(); ++candidate_index) {
-            const CartesianPath& candidate = candidate_paths[candidate_index];
-            const bool valid = candidate_index < candidate_validity.size()
-                && candidate_validity[candidate_index];
-            visualization_msgs::Marker marker;
-            marker.header = trajectory.header;
-            marker.header.frame_id = "map";
-            marker.ns = valid ? "frenet_candidates_valid"
-                              : "frenet_candidates_rejected";
-            marker.id = candidate_id++;
-            marker.type = visualization_msgs::Marker::LINE_STRIP;
-            marker.action = visualization_msgs::Marker::ADD;
-            marker.pose.orientation.w = 1.0;
-            marker.scale.x = 0.08;
-            marker.color.r = valid ? 0.35 : 1.0;
-            marker.color.g = valid ? 0.65 : 0.20;
-            marker.color.b = valid ? 1.0 : 0.25;
-            marker.color.a = valid ? 0.50 : 0.40;
-            for (std::size_t i = 0; i < candidate.x.size(); ++i) {
-                geometry_msgs::Point point;
-                point.x = candidate.x[i];
-                point.y = candidate.y[i];
-                point.z = 0.25;
-                marker.points.push_back(point);
-            }
-            markers.markers.push_back(std::move(marker));
-        }
-    }
-
-    visualization_msgs::Marker selected;
-    selected.header = trajectory.header;
-    selected.header.frame_id = "map";
-    selected.ns = "frenet_selected_trajectory";
-    selected.id = 0;
-    selected.type = visualization_msgs::Marker::LINE_STRIP;
-    selected.action = visualization_msgs::Marker::ADD;
-    selected.pose.orientation.w = 1.0;
-    selected.scale.x = 0.35;
-    selected.color.r = 1.0;
-    selected.color.g = 0.82;
-    selected.color.a = trajectory.valid ? 1.0 : 0.45;
-    for (const auto& point : trajectory.points) {
-        geometry_msgs::Point p;
-        p.x = point.x;
-        p.y = point.y;
-        p.z = 0.45;
-        selected.points.push_back(p);
-    }
-    markers.markers.push_back(selected);
-
-    if (snapshot.has_behavior && snapshot.behavior.has_stop_target) {
-        visualization_msgs::Marker stop;
-        stop.header = selected.header;
-        stop.ns = "frenet_stop_target";
-        stop.id = 0;
-        stop.type = visualization_msgs::Marker::CYLINDER;
-        stop.action = visualization_msgs::Marker::ADD;
-        stop.pose.position.x = snapshot.behavior.stop_x;
-        stop.pose.position.y = snapshot.behavior.stop_y;
-        stop.pose.position.z = 0.15;
-        stop.pose.orientation.w = 1.0;
-        stop.scale.x = 1.3;
-        stop.scale.y = 1.3;
-        stop.scale.z = 0.3;
-        stop.color.r = 1.0;
-        stop.color.a = 0.9;
-        markers.markers.push_back(stop);
-    }
-
-    visualization_msgs::Marker status;
-    status.header = selected.header;
-    status.ns = "frenet_status";
-    status.id = 0;
-    status.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
-    status.action = visualization_msgs::Marker::ADD;
-    status.pose.position.x = trajectory.ego_at_plan.x;
-    status.pose.position.y = trajectory.ego_at_plan.y;
-    status.pose.position.z = 4.7;
-    status.pose.orientation.w = 1.0;
-    status.scale.z = 0.7;
-    status.color.r = 1.0;
-    status.color.g = 0.82;
-    status.color.a = 1.0;
-    std::ostringstream text;
-    text << "Frenet selected: " << trajectory.points.size() << " points"
-         << "  valid=" << trajectory.valid
-         << "  failure=" << static_cast<int>(trajectory.failure_reason);
-    if (snapshot.has_behavior) {
-        text << "  command=" << snapshot.behavior.command_id
-             << "  behavior="
-             << static_cast<int>(snapshot.behavior.selected_behavior);
-    }
-    status.text = text.str();
-    markers.markers.push_back(status);
-    marker_pub_.publish(markers);
-}
-
-void FrenetPlannerNode::publishDebugMarkersV2(
-    const asmc_msgs::Trajectory& trajectory,
-    const asmc_msgs::BehaviorCommand& command) {
-    // Reuse the established candidate/selected-path renderer.  InputSnapshot
-    // is only used here for debug labels and the STOP marker, so adapt the v2
-    // command without feeding it back into the v1 planning path.
-    InputSnapshot snapshot;
-    snapshot.has_behavior = true;
-    snapshot.behavior.command_id = command.command_id;
-    snapshot.behavior.selected_behavior = command.maneuver_type;
-    snapshot.behavior.target_link_id = command.target_link_id;
-    snapshot.behavior.has_stop_target =
-        command.maneuver_type == asmc_msgs::BehaviorCommand::STOP &&
-        command.has_target_pose;
-    if (snapshot.behavior.has_stop_target) {
-        snapshot.behavior.stop_x = command.target_pose_map.position.x;
-        snapshot.behavior.stop_y = command.target_pose_map.position.y;
-    }
-    publishDebugMarkers(trajectory, snapshot);
-}
-
-void FrenetPlannerNode::publishStop(const InputSnapshot& snapshot,
-                                    uint8_t failure_reason) {
-    has_last_valid_trajectory_ = false;
-    plan_fail_streak_ = 0;
-    const asmc_msgs::Trajectory stop = MakeStopTrajectory(
-        stopReferenceVehicle(snapshot), trajectoryDt(), failure_reason);
-    publishResult(stop, snapshot, false);
-}
-
-void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
-    // v2 명령이 하나라도 도착했으면 v2가 이 사이클을 소유한다. v1 경로는
-    // v2 명령이 없을 때만 동작하므로, FSM이 v2로 전환하기 전까지 기존
-    // KEEP/STOP 주행이 그대로 유지된다(계약 10.6절).
-    //
-    // 두 계통이 같은 사이클에 궤적을 발행하면 MPC가 어느 것을 따를지 알 수
-    // 없으므로 반드시 하나만 처리한다.
-    if (runV2PlanningCycle(ros::Time::now())) return;
-
-    if (!planner_initialized_) {
-        ROS_ERROR_THROTTLE(
-            5.0, "Frenet planning disabled: planner is not initialized");
-        publishStop(takeSnapshot(), asmc_msgs::Trajectory::FAILURE_NOT_INITIALIZED);
-        return;
-    }
-
-    const InputSnapshot snapshot = takeSnapshot();
-    if (!snapshot.has_vehicle || !snapshot.has_objects || !snapshot.has_behavior) {
-        ROS_WARN_THROTTLE(
-            5.0,
-            "Frenet input snapshot incomplete: vehicle=%d objects=%d behavior=%d",
-            snapshot.has_vehicle, snapshot.has_objects, snapshot.has_behavior);
-        const uint8_t reason = !snapshot.has_vehicle
-            ? asmc_msgs::Trajectory::FAILURE_STATE_STALE
-            : (!snapshot.has_objects
-                ? asmc_msgs::Trajectory::FAILURE_OBJECTS_STALE
-                : asmc_msgs::Trajectory::FAILURE_BEHAVIOR_STALE);
-        publishStop(snapshot, reason);
-        return;
-    }
-
-    const ros::SteadyTime steady_now = ros::SteadyTime::now();
-    double vehicle_age = 0.0;
-    double objects_age = 0.0;
-    double behavior_age = 0.0;
-    if (!IsSteadyFresh(snapshot.vehicle_received_at, steady_now,
-                       vehicle_timeout_seconds_, &vehicle_age)) {
-        ROS_WARN_THROTTLE(
-            1.0, "Frenet STOP required: invalid/stale vehicle state age=%.3f s",
-            vehicle_age);
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_STATE_STALE);
-        return;
-    }
-    if (!IsSteadyFresh(snapshot.objects_received_at, steady_now,
-                       objects_timeout_seconds_, &objects_age)) {
-        ROS_WARN_THROTTLE(
-            1.0, "Frenet STOP required: invalid/stale objects age=%.3f s",
-            objects_age);
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_OBJECTS_STALE);
-        return;
-    }
-    if (!IsSteadyFresh(snapshot.behavior_received_at, steady_now,
-                       behavior_timeout_seconds_, &behavior_age)) {
-        ROS_WARN_THROTTLE(
-            1.0, "Frenet STOP required: invalid/stale behavior age=%.3f s",
-            behavior_age);
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_BEHAVIOR_STALE);
-        return;
-    }
-
-    if (snapshot.behavior.force_stop) {
-        ROS_WARN_THROTTLE(
-            1.0, "Frenet STOP required: behavior force_stop command_id=%u",
-            snapshot.behavior.command_id);
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_NONE);
-        return;
-    }
-
-    CartesianState ego{};
-    PlannerCommand command{};
-    std::vector<TrackedObject> objects;
-
-    const ConversionStatus vehicle_status =
-        ConvertVehicleState(snapshot.vehicle, ego);
-    if (vehicle_status != ConversionStatus::OK) {
-        ROS_WARN_THROTTLE(
-            1.0, "Frenet STOP required: vehicle conversion failed (%s)",
-            ConversionStatusName(vehicle_status));
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
-        return;
-    }
-    last_stop_reference_vehicle_ = snapshot.vehicle;
-    has_stop_reference_vehicle_ = true;
-
-    const ConversionStatus behavior_status =
-        ConvertBehaviorContext(snapshot.behavior, command);
-    if (behavior_status != ConversionStatus::OK) {
-        ROS_WARN_THROTTLE(
-            1.0, "Frenet STOP required: behavior conversion failed (%s)",
-            ConversionStatusName(behavior_status));
-        publishStop(
-            snapshot,
-            behavior_status == ConversionStatus::UNSUPPORTED_BEHAVIOR
-                ? asmc_msgs::Trajectory::FAILURE_UNSUPPORTED_BEHAVIOR
-                : asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
-        return;
-    }
-
-    // STOP 목표는 BehaviorContext가 map 좌표(stop_x/y)로 준다. message_converter는
-    // RefLine을 모르므로 유효성만 검사하고 stop_position을 NaN으로 남긴다.
-    // RefLine을 가진 planner가 여기서 Frenet s로 투영해 명령을 완성한다.
-    if (command.mode == STOP) {
-        double ego_s = 0.0;
-        if (!planner_.ProjectEgoToS(ego, ego_s)) {
-            ROS_WARN_THROTTLE(
-                1.0, "Frenet STOP required: cannot project ego onto reference line");
-            publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
-            return;
-        }
-        double stop_s = 0.0;
-        // ego_s를 hint로 넘겨 트랙이 자기 자신과 가까워지는 구간에서 최근접점이
-        // 다른 구간으로 튀지 않게 한다. 목표가 경로에서 너무 멀면 false.
-        if (!planner_.ProjectPointToS(snapshot.behavior.stop_x,
-                                      snapshot.behavior.stop_y,
-                                      ego_s, stop_s)) {
-            ROS_WARN_THROTTLE(
-                1.0,
-                "Frenet STOP required: stop target (%.2f, %.2f) is not on the "
-                "reference line (command_id=%u)",
-                snapshot.behavior.stop_x, snapshot.behavior.stop_y,
-                snapshot.behavior.command_id);
-            publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
-            return;
-        }
-        command.stop_position = stop_s;
-    }
-
-    const ConversionStatus objects_status =
-        ConvertDetectedObjects(snapshot.objects, objects);
-    if (objects_status != ConversionStatus::OK) {
-        ROS_WARN_THROTTLE(
-            1.0, "Frenet STOP required: objects conversion failed (%s)",
-            ConversionStatusName(objects_status));
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
-        return;
-    }
-
-    CartesianPath path;
-    if (!planner_.Plan(ego, objects, command, path)) {
-        ++plan_fail_streak_;
-        // 이전 궤적 재사용은 "이번 사이클만 후보를 못 만든" 일시적 실패에만
-        // 허용된다. 명령 자체가 잘못됐거나(INVALID_COMMAND) 지원하지 않는
-        // 모드(UNSUPPORTED_BEHAVIOR)인데 이전 궤적을 계속 내보내면, 예를 들어
-        // STOP 명령을 받고도 직전 KEEP 궤적을 따라 계속 주행하게 된다.
-        // 이런 실패는 재사용 없이 즉시 정지한다.
-        const FrenetPlanner::PlanFailureReason reason =
-            planner_.last_failure_reason();
-        bool immediate_stop = true;
-        uint8_t failure_code = asmc_msgs::Trajectory::FAILURE_GENERATION;
-        const char* reason_name = "UNKNOWN";
-        switch (reason) {
-            case FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED:
-                failure_code = asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED;
-                reason_name = "COLLISION_BLOCKED";
-                break;
-            case FrenetPlanner::PlanFailureReason::INVALID_COMMAND:
-                failure_code = asmc_msgs::Trajectory::FAILURE_INVALID_INPUT;
-                reason_name = "INVALID_COMMAND";
-                break;
-            case FrenetPlanner::PlanFailureReason::UNSUPPORTED_BEHAVIOR:
-                failure_code =
-                    asmc_msgs::Trajectory::FAILURE_UNSUPPORTED_BEHAVIOR;
-                reason_name = "UNSUPPORTED_BEHAVIOR";
-                break;
-            case FrenetPlanner::PlanFailureReason::NOT_INITIALIZED:
-                failure_code = asmc_msgs::Trajectory::FAILURE_NOT_INITIALIZED;
-                reason_name = "NOT_INITIALIZED";
-                break;
-            case FrenetPlanner::PlanFailureReason::TRANSIENT_GENERATION_FAILURE:
-                immediate_stop = false;
-                reason_name = "TRANSIENT_GENERATION_FAILURE";
-                break;
-            case FrenetPlanner::PlanFailureReason::NONE:
-                // Plan()이 false를 반환했는데 NONE이면 planner 내부 계약 위반이다.
-                // 재사용 대상으로 삼지 않고 안전하게 정지한다.
-                reason_name = "NONE";
-                break;
-        }
-
-        if (immediate_stop) {
-            ROS_WARN_THROTTLE(
-                1.0,
-                "Frenet immediate STOP: reason=%s command_id=%u",
-                reason_name, snapshot.behavior.command_id);
-            publishStop(snapshot, failure_code);
-            return;
-        }
-
-        if (has_last_valid_trajectory_ &&
-            plan_fail_streak_ <= kMaxTransientFailCycles) {
-            asmc_msgs::Trajectory reused = last_valid_trajectory_;
-            reused.failure_reason = asmc_msgs::Trajectory::FAILURE_GENERATION;
-            publishResult(reused, snapshot, true);
-            ROS_WARN("Frenet transient failure %d/%d: reusing previous trajectory",
-                     plan_fail_streak_, kMaxTransientFailCycles);
-            return;
-        }
-        ROS_WARN_THROTTLE(
-            1.0,
-            "Frenet Plan(command) failed: reason=%s command_id=%u; "
-            "publishing STOP after transient reuse window",
-            reason_name, snapshot.behavior.command_id);
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_GENERATION);
-        return;
-    }
-
-    asmc_msgs::Trajectory trajectory;
-    const ConversionStatus trajectory_status = ConvertCartesianPath(
-        path, planner_.sample_dt(), snapshot.vehicle, trajectory);
-    if (trajectory_status != ConversionStatus::OK) {
-        ++plan_fail_streak_;
-        if (has_last_valid_trajectory_ &&
-            plan_fail_streak_ <= kMaxTransientFailCycles) {
-            asmc_msgs::Trajectory reused = last_valid_trajectory_;
-            reused.failure_reason = asmc_msgs::Trajectory::FAILURE_GENERATION;
-            publishResult(reused, snapshot, true);
-            return;
-        }
-        ROS_WARN_THROTTLE(
-            1.0, "Frenet trajectory conversion failed (%s)",
-            ConversionStatusName(trajectory_status));
-        publishStop(snapshot, asmc_msgs::Trajectory::FAILURE_GENERATION);
-        return;
-    }
-
-    plan_fail_streak_ = 0;
-    last_valid_trajectory_ = trajectory;
-    has_last_valid_trajectory_ = true;
-    publishResult(trajectory, snapshot, false);
-
-    ROS_INFO_THROTTLE(
-        1.0,
-        "Frenet KEEP plan ready: command_id=%u points=%zu dt=%.3f "
-        "vehicle_age=%.3f objects_age=%.3f behavior_age=%.3f; "
-        "trajectory published",
-        snapshot.behavior.command_id, path.x.size(), planner_.sample_dt(),
-        vehicle_age, objects_age, behavior_age);
-}
-
-void FrenetPlannerNode::behaviorCommandV2Callback(
-    const asmc_msgs::BehaviorCommand::ConstPtr& message) {
-    if (!message) return;
-    // 저장만 한다. validation/transaction/planning은 20 Hz timer가 수행한다
-    // (runV2PlanningCycle 주석 참고).
-    std::lock_guard<std::mutex> lock(input_mutex_);
-    latest_v2_command_ = *message;
-    has_v2_command_ = true;
-}
 
 bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     // 방금 수신한 명령. 아래 2단계에서 transaction 소유권에 따라 실제 계획
@@ -944,9 +287,9 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     const bool inputs_ready =
         snapshot.has_vehicle && snapshot.has_objects &&
         IsSteadyFresh(snapshot.vehicle_received_at, steady_now,
-                     vehicle_timeout_seconds_, &vehicle_age) &&
+                     runtime_.vehicle_state_timeout_s, &vehicle_age) &&
         IsSteadyFresh(snapshot.objects_received_at, steady_now,
-                     objects_timeout_seconds_, &objects_age);
+                     runtime_.objects_timeout_s, &objects_age);
     if (!inputs_ready) {
         // 명령은 정상이므로 transaction을 버리지 않는다. 이 사이클의 planning
         // 만 막고, 입력이 회복되면 같은 transaction으로 계속한다(계약 11.3절).
@@ -1050,125 +393,16 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     // ConvertBehaviorCommand는 RefLine을 모르므로 stop_position을 NaN으로
     // 남긴다. RefLine을 가진 이 계층에서 map 좌표 -> Frenet s로 투영한다.
     // (v1과 동일한 방식. ProjectPointToS가 이 용도로 만들어진 함수다.)
+    //
+    // R8-B2: 이 블록은 target_projection.cpp의 prepareStopTarget()으로
+    // 옮겼다 - 실패 시 이 함수가 직접 정지/피드백을 발행하고 true를 반환하는
+    // (그래서 caller가 그대로 return true) 계약까지 포함해서 그대로다.
+    // 성공하면 planner_command.stop_position을 채우고 false를 반환한다.
     if (planner_command.mode == STOP) {
-        if (!ego_s_valid) {
-            // 투영 기준점을 얻지 못하면 정지 목표도 만들 수 없다.
-            command_manager_.NotifyPlanFailed(
-                /*terminal=*/true,
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
-                "cannot project ego onto the reference line");
-            CommandAcceptance failed = acceptance;
-            failed.planning_target = PlanningTarget::NONE;
-            failed.execution_state = command_manager_.execution_state();
-            failed.result_code =
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
-            failed.detail = "cannot project ego onto the reference line";
-            has_last_v2_trajectory_ = false;
-            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
-                stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
-            trajectory_pub_.publish(stop);
-            publishFeedbackV2(feedback_command_id, failed, &stop,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
-                              /*plan_valid=*/false);
+        if (prepareStopTarget(command, feedback_command_id, acceptance,
+                              snapshot, ego_s, ego_s_valid, planner_command)) {
             return true;
         }
-        double stop_s = 0.0;
-        // ego_s를 hint로 넘겨 트랙이 자기 자신과 가까워지는 구간에서 최근접점이
-        // 다른 구간으로 튀지 않게 한다. 목표가 경로에서 너무 멀면 false다.
-        if (!planner_.ProjectPointToS(command.target_pose_map.position.x,
-                                      command.target_pose_map.position.y,
-                                      ego_s, stop_s)) {
-            command_manager_.NotifyPlanFailed(
-                /*terminal=*/true,
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
-                "stop target is not on the reference line");
-            CommandAcceptance failed = acceptance;
-            failed.planning_target = PlanningTarget::NONE;
-            failed.execution_state = command_manager_.execution_state();
-            failed.result_code =
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
-            failed.detail = "stop target is not on the reference line";
-            ROS_WARN_THROTTLE(1.0,
-                              "v2 STOP target (%.2f, %.2f) is not on the "
-                              "reference line (command_id=%u)",
-                              command.target_pose_map.position.x,
-                              command.target_pose_map.position.y,
-                              command.command_id);
-            has_last_v2_trajectory_ = false;
-            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
-                stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
-            trajectory_pub_.publish(stop);
-            publishFeedbackV2(feedback_command_id, failed, &stop,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
-                              /*plan_valid=*/false);
-            return true;
-        }
-
-        // 투영이 성공해도 방향이 맞는지는 별개다. 왕복 구간이
-        // max_lateral_offset(5m) 이내로 나란히 지나가면 Cartesian 거리는
-        // 가깝지만 진행 방향이 반대인 지점에 목표가 붙을 수 있다.
-        // 계약 3.4절 4항의 heading 검증이다.
-        double reference_heading = 0.0;
-        if (!planner_.ReferenceHeadingAt(stop_s, reference_heading)) {
-            command_manager_.NotifyPlanFailed(
-                /*terminal=*/true,
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
-                "cannot read reference heading at the stop target");
-            CommandAcceptance failed = acceptance;
-            failed.planning_target = PlanningTarget::NONE;
-            failed.execution_state = command_manager_.execution_state();
-            failed.result_code =
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
-            failed.detail = "cannot read reference heading at the stop target";
-            has_last_v2_trajectory_ = false;
-            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
-                stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
-            trajectory_pub_.publish(stop);
-            publishFeedbackV2(feedback_command_id, failed, &stop,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
-                              /*plan_valid=*/false);
-            return true;
-        }
-
-        const double target_yaw =
-            YawFromQuaternion(command.target_pose_map.orientation);
-        // 단순 뺄셈이 아니라 정규화해서 비교한다. 179도와 -179도는 실제로
-        // 2도 차이인데 뺄셈만 하면 358도가 된다.
-        const double heading_error =
-            std::fabs(NormalizeAngle(target_yaw - reference_heading));
-        if (heading_error > stop_max_target_heading_error_rad_) {
-            command_manager_.NotifyPlanFailed(
-                /*terminal=*/true,
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
-                "stop target heading disagrees with the reference line");
-            CommandAcceptance failed = acceptance;
-            failed.planning_target = PlanningTarget::NONE;
-            failed.execution_state = command_manager_.execution_state();
-            failed.result_code =
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
-            failed.detail =
-                "stop target heading disagrees with the reference line";
-            ROS_WARN_THROTTLE(
-                1.0,
-                "v2 STOP target heading rejected: target=%.3f ref=%.3f "
-                "error=%.3f rad > %.3f (command_id=%u)",
-                target_yaw, reference_heading, heading_error,
-                stop_max_target_heading_error_rad_, command.command_id);
-            has_last_v2_trajectory_ = false;
-            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
-                stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
-            trajectory_pub_.publish(stop);
-            publishFeedbackV2(feedback_command_id, failed, &stop,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
-                              /*plan_valid=*/false);
-            return true;
-        }
-
-        planner_command.stop_position = stop_s;
     }
 
     // ---- 4c. AVOID 목표점 투영 (D6-1a) ----------------------------------
@@ -1215,8 +449,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         if (!planner_.ProjectPointToFrenet(
                 command.target_pose_map.position.x,
                 command.target_pose_map.position.y, ego_s,
-                avoid_projection_search_window_,
-                avoid_max_target_lateral_offset_, avoid_s, avoid_d)) {
+                runtime_.avoid_projection_search_window,
+                runtime_.avoid_max_target_lateral_offset, avoid_s, avoid_d)) {
             command_manager_.NotifyPlanFailed(
                 /*terminal=*/true,
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
@@ -1276,7 +510,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // 뺄셈만 하면 358도가 된다.
         const double heading_error =
             std::fabs(NormalizeAngle(target_yaw - reference_heading));
-        if (heading_error > avoid_max_target_heading_error_rad_) {
+        if (heading_error > runtime_.avoid_max_target_heading_error_rad) {
             command_manager_.NotifyPlanFailed(
                 /*terminal=*/true,
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
@@ -1293,7 +527,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 "v2 AVOID target heading rejected: target=%.3f ref=%.3f "
                 "error=%.3f rad > %.3f (command_id=%u)",
                 target_yaw, reference_heading, heading_error,
-                avoid_max_target_heading_error_rad_, command.command_id);
+                runtime_.avoid_max_target_heading_error_rad, command.command_id);
             has_last_v2_trajectory_ = false;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
@@ -1350,8 +584,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             !planner_.ProjectPointToFrenet(
                 command.target_pose_map.position.x,
                 command.target_pose_map.position.y, ego_s,
-                lane_change_projection_search_window_,
-                lane_change_max_target_lateral_offset_, target_pose_s,
+                runtime_.lane_change_projection_search_window,
+                runtime_.lane_change_max_target_lateral_offset, target_pose_s,
                 target_pose_d)) {
             // has_target_pose=false는 이미 ValidateBehaviorCommand가
             // 거부해야 정상이지만(계약 3.3절), 방어적으로 여기서도 같은
@@ -1414,7 +648,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         const double lane_change_heading_error = std::fabs(
             NormalizeAngle(lane_change_target_yaw - reference_heading));
         if (lane_change_heading_error >
-            lane_change_max_target_heading_error_rad_) {
+            runtime_.lane_change_max_target_heading_error_rad) {
             command_manager_.NotifyPlanFailed(
                 /*terminal=*/true,
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
@@ -1434,7 +668,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 "ref=%.3f error=%.3f rad > %.3f (command_id=%u)",
                 lane_change_target_yaw, reference_heading,
                 lane_change_heading_error,
-                lane_change_max_target_heading_error_rad_,
+                runtime_.lane_change_max_target_heading_error_rad,
                 command.command_id);
             has_last_v2_trajectory_ = false;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(

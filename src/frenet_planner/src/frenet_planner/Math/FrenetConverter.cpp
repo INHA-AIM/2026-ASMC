@@ -104,9 +104,9 @@ void ArcDerivToTimeDeriv(double s_dot, double s_ddot,
 void CartesianToFrenet(const RefLine& ref, const CartesianState& cs,
                         double& s, double& s_dot, double& s_ddot,
                         double& d, double& d_prime, double& d_pprime,
-                        const double* s_hint) {
+                        const double* s_hint, double search_window) {
 
-    s = FindClosestS(ref, cs.x, cs.y, s_hint);
+    s = FindClosestS(ref, cs.x, cs.y, s_hint, search_window);
     RefPoint rp = Interpolate(ref, s);
 
     const double theta_r  = rp.theta;

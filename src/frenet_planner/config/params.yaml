@@ -2,7 +2,60 @@
 # Frenet Frame Planner 파라미터 (mpc_controller에 통합된 버전)
 # 행동 모드는 외부 FSM(BehaviorCommand)이 지정하고, frenet_planner는 그
 # 명령을 trajectory로 만드는 실행만 담당한다.
+#
+# 이 파일이 모든 configurable parameter의 유일한 source다. runtime: 은 ROS
+# node 계층(주기/timeout/topic/v2 계약 검증 임계값), planner: 는 Frenet
+# planner core 계층 파라미터다. C++ 쪽에는 이 값들의 fallback default를
+# 두지 않는다 - 키 누락/타입 오류/범위 위반은 초기화 실패로 처리한다.
 # =========================================================
+
+runtime:
+  planning_frequency_hz: 20.0
+
+  timeouts:
+    vehicle_state: 0.50
+    objects: 0.30
+    behavior: 0.50
+
+  topics:
+    vehicle_state: /vehicle/state
+    objects: /perception/objects
+    behavior: /behavior/context
+    behavior_command_v2: /behavior/command_v2
+
+  publish_topics:
+    trajectory: /planning/trajectory
+    feedback: /planning/feedback
+    feedback_v2: /planning/frenet_feedback_v2
+    markers: /planning/markers
+
+  # v2 인터페이스(FSM <-> Frenet) 계약 검증 임계값. planning 알고리즘
+  # 파라미터가 아니라 node가 FSM 입력을 거부/수락하는 기준이지만, Parameter
+  # Single-Source 원칙에 따라 이 파일에 둔다.
+  interface_validation:
+    stop:
+      # [rad] STOP target pose의 허용 heading 오차. 초기 개발값이며 MORAI
+      # 검증 후 조인다 - 너무 좁으면 정상 STOP이 거부되고, 너무 넓으면 반대
+      # 방향을 통과시킨다.
+      max_target_heading_error_rad: 0.785398
+    avoid:
+      # [m] AVOID target pose 투영 탐색창. 회피 목표점은 보통 장애물 근방
+      # (수십 m 앞)이므로 STOP과 같은 100 m로 시작한다.
+      projection_search_window: 100.0
+      # [m] 목표점이 경로에서 이보다 멀면 이 경로에 대한 회피 목표가 아니라고
+      # 보고 TARGET_PROJECTION_FAILED로 거부한다. planner.avoid.avoid_offset
+      # 과는 무관한 별도의 spatial validity bound다(주석 참고).
+      max_target_lateral_offset: 4.0
+      # [rad] 목표 pose의 heading 허용 오차. STOP과 같은 이유로 필요하다.
+      max_target_heading_error_rad: 0.785398
+    lane_change:
+      # [m] LANE_CHANGE target_pose_map 투영 탐색창.
+      projection_search_window: 100.0
+      # [m] "인접 차로 중심"이라는 질문은 STOP/AVOID와 허용 오차가 같을
+      # 이유가 없어 별도로 둔다.
+      max_target_lateral_offset: 6.0
+      # [rad] 목표 pose의 heading 허용 오차.
+      max_target_heading_error_rad: 0.785398
 
 planner:
   wheelbase: 3.0    # [m] mpc_controller/config/mpc_params.yaml과 동일 값 유지
@@ -17,17 +70,54 @@ planner:
   # safety rate limit. 최종 MORAI tuning 값이 아니다.
   max_target_speed_accel: 2.0
 
+  # --- Reference line 구축/조회 (Reference/Reference.cpp) ---------
+  # max_curvature는 kinematic_limits.max_curvature를 그대로 공유한다
+  # (FrenetPlanner::Init()이 대입) - 여기서 별도로 지정하지 않는다.
+  reference:
+    # [m] 폐루프 판정 허용오차. 원본 waypoint 간격(대회 경로 기준 약
+    # 0.4~0.5m)보다 훨씬 작게 잡아야 우연히 가까운 open path를 closed로
+    # 오판정하지 않는다.
+    closure_tolerance_m: 0.05
+    # [m] 국소 급커브 완화 1단계(이동평균 스무딩)의 전체 윈도우 폭.
+    smoothing_window_m: 10.0
+    # [m] 스무딩 뒤 균일 재샘플링 간격(원본 waypoint 간격과 동일하게).
+    resample_ds: 0.5
+    # 잔여 곡률 초과분 국소 이완(라플라시안 완화)의 최대 반복 횟수.
+    relax_max_iter: 300
+    # 초과 지점을 양옆 중점 쪽으로 당기는 비율(0-1).
+    relax_step: 0.3
+    # [m] FindClosestS의 ego 위치추정용 기본 탐색창. 정지/회피 목표 투영처럼
+    # ego보다 훨씬 앞선 지점을 찾는 호출은 각자 전용 탐색창(stop.
+    # projection_search_window 등)을 쓴다 - 이 값은 ego localization 전용이다.
+    ego_projection_search_window: 30.0
+
+  # --- Object tracking (frenet_planner.cpp PreparePlanningContext) --
+  # TrackedObject 연속 heading으로 yaw-rate를 추정/보관한다. 회전교차로/
+  # 합류에서 순환 차량의 곡선 예측(Merge.cpp)에 쓰인다.
+  object_tracking:
+    # [rad/s] 관측된 yaw-rate 절대값 상한(UDP heading 양자화/순간 점프 억제).
+    yaw_rate_clamp_rad_s: 1.0
+    # 지수평활 계수 - 새 관측치에 주는 가중치.
+    yaw_rate_smoothing_alpha: 0.2
+    # [cycles] 이 사이클 수 넘게 관측되지 않은 객체 트랙을 제거한다.
+    missing_cycles_eviction: 20
+
   # --- 곡률 기반 사전 감속 (mpc_controller 옛 path_planner.cpp에서 이식) ---
+  # v_curve = sqrt(max_lateral_accel * kSafetyMargin / max(|kappa|, kMinKappaForCalc))
+  # 연속 곡률-속도 관계(Speed/CurveSpeed.cpp)만 쓰고, 이산 curve_vel_*/
+  # curve_th_* 문턱값은 쓰지 않는다(사용처 없음 확인 후 제거, 2026 리팩토링).
   curve_speed:
     target_vel: 13.0
-    curve_vel_sharp: 4.0
-    curve_vel_mid:   5.5
-    curve_vel_mild:  7.0
-    curve_th_sharp:  0.080
-    curve_th_mid:    0.035
-    curve_th_mild:   0.015
     # [m] 속도 기반 필요 제동거리에 더해지는 추가 곡률 preview 거리.
     curve_lookahead_m: 27.0
+    # 횡가속도 한계의 80%만 사용(여유폭 확보). v_curve = sqrt(max_lateral_accel
+    # * lateral_accel_safety_factor / |kappa|).
+    lateral_accel_safety_factor: 0.8
+    # 실제 평균 감속도는 max_longitudinal_accel의 절반 정도로 가정(lookahead
+    # 제동거리 계산용).
+    comfortable_decel_factor: 0.5
+    # [m/s^2] usable_decel의 최소 하한.
+    min_usable_decel: 0.5
 
   # --- Following(Sec.V-A, constant-time-gap-law) ---
   # FSM이 BehaviorCommand.primary_object_id로 지정한 FOLLOW 대상의 유효성
@@ -46,6 +136,9 @@ planner:
   avoid:
     detection_distance: 120.0 # [m] KEEP의 8 s reactive horizon보다 넓게 확보해 Behavior/AVOID 사이의 blind band를 없앤다
     avoid_offset: 5.0         # [m] 회피 시 lateral_d1 격자를 밀어낼 크기
+    # [m] legacy geometry 기반(target pose 없음) target_d 계산에서 자차/장애물
+    # 반폭 합 + safety_margin에 추가로 더하는 여유.
+    direction_extra_margin: 0.3
     min_shift_start_distance: 10.0 # [m] 저속에서도 확보할 최소 SHIFT 준비거리
     max_shift_start_distance: 70.0 # [m] 고속에서도 지나치게 일찍 이탈하지 않는 상한
     shift_time_margin: 0.7     # [s] 횡이동 계산에 더하는 조향/제어 응답 여유
@@ -64,6 +157,16 @@ planner:
     low_speed_transition_scale_max: 1.6
     low_speed_transition_scale_step: 0.2
     low_speed_path_extension: 1.0 # [m] 횡이동 완료 뒤 추가 충돌검사 거리
+    # [cycle] v2 AVOID 대상의 일시적 미관측 유예. following.dropout_grace_cycles
+    # 를 가져다 쓰지 않는다 - 서로 다른 행동의 config가 강하게 결합되면
+    # FOLLOW 튜닝이 AVOID 동작을 바꾼다.
+    dropout_grace_cycles: 5
+    # COMMIT 이후 target_index별 비용 분리폭. 잠긴 target을 물리적 전환거리
+    # 비용 차이보다 훨씬 크게 우선시키기 위한 스케일.
+    committed_target_index_cost_scale: 1000.0
+    # PREPARE에서 좌/우 후보 비용이 동률일 때 비선호 방향에 더하는 미세
+    # tie-break 가중치.
+    direction_tiebreak_cost: 1e-3
 
   # --- LANE_CHANGE: FSM이 target_pose_map으로 지정한 인접 차로 목표로의
   # 횡이동 완료 판정(§17). 초기 개발값이며 MORAI 튜닝 대상이다.
@@ -101,6 +204,14 @@ planner:
     # 이라 정지 목표에 쓰면 목표가 창 밖으로 나가 Newton이 다른 구간으로 발산한다.
     # 반드시 실제 최대 stop lookahead보다 크게 유지할 것.
     projection_search_window: 100.0
+    # [m/s^2] STOP/EMERGENCY 공유 decel-to-zero 생성기가 실제로 쓰는 감속도의
+    # 최소 하한(comfortable_decel/emergency_stop.decel이 이미 >0으로 검증되므로
+    # 방어값이 아니라 극단적으로 작은 유효값에서 생성 루프 길이를 제한하는 하한).
+    min_decel: 0.1
+    # 공용 delta_s 격자([-3,+3]m, step 1.0)는 +쪽 후보가 정지 목표를 지나쳐서
+    # 멈춘다. STOP/INTERSECTION_WAIT은 목표 앞에서만 후보를 생성하도록 이
+    # 범위로 override한다.
+    delta_s_override: { min: -1.0, max: 0.0, step: 0.25 }
 
   # 목표점 없는 AEB/E-STOP 직접 감속 궤적. MPC의 full-brake override와
   # 동일한 최대감속 가정을 사용해 예상 정지 위치가 실제 제어와 맞게 한다.
@@ -123,6 +234,25 @@ planner:
     commit_distance: 15.0      # [m] 이 거리부터 선택한 gap을 고정
     safe_confirm_cycles: 3     # 연속 안전 판정 횟수(20Hz)
     cross_speed_floor: 3.0     # [m/s] COMMIT/CROSS 중 교차구역 이탈 최저 목표속도
+    # [m] 물리적 제동거리에 더하는 여유. 이 여유를 넘어야 정지 quintic으로
+    # 전환한다 - 없으면 먼 거리부터 모든 T 후보가 조기 감속한다.
+    braking_distance_margin: 3.0
+    # [m/s] MERGE 도착/추종 목표속도의 최소 하한(0에 가까운 크리프 속도 방지).
+    min_arrival_speed: 1.0
+    # [s] 회전교차로 순환 차량 constant-turn-rate 예측의 시간 샘플링 간격.
+    prediction_dt: 0.05
+    # [s] 진입시각 후보를 훑는 탐색 간격.
+    entry_search_dt: 0.1
+    # [m/s] MinimumTravelTime의 최소 목표/현재 속도 가정.
+    min_travel_speed: 0.5
+    # [m/s^2] MinimumTravelTime의 최소 가속도 가정.
+    min_travel_accel: 0.1
+    # [s] GenerateMergeArrivalCandidates의 entry_time 주변 T 격자 매칭
+    # 허용폭 하한(time_horizon.step보다 좁으면 이 값이 우선한다).
+    arrival_time_match_tolerance: 0.6
+    # [s] arrival_speed = distance / merge_entry_time 계산의 분모 하한.
+    # entry_time이 이보다 짧으면 target_speed로 대체한다.
+    min_entry_time_for_arrival_speed: 0.1
 
   # --- 고주로/본선 합류 MERGE --------------------------------
   # 실측한 세 합류 구간의 start/conflict/completion_s를 zone별로 사용한다.
@@ -154,6 +284,15 @@ planner:
     commit_distance: 20.0
     safe_confirm_cycles: 3
     cross_speed_floor: 4.0
+    # [s] 진입시각 후보를 훑는 탐색 간격.
+    entry_search_dt: 0.1
+    # [s] entry/clear 구간 전체를 따라 ego footprint 충돌 재검사를 하는
+    # 시간 샘플링 간격.
+    collision_check_dt: 0.1
+    # [m/s] MinimumTravelTime의 최소 목표/현재 속도 가정.
+    min_travel_speed: 0.5
+    # [m/s^2] MinimumTravelTime의 최소 가속도 가정.
+    min_travel_accel: 0.1
 
   # --- 실시간 후보 경로 디버그 시각화 -----------------------
   # Planner가 최신 스냅샷을 원자적으로 갱신하고 tools/planner_visualizer.py가 읽는다.
@@ -185,6 +324,34 @@ planner:
     # jerk가 5.28로 5.0을 근소하게 초과해 candidate starvation을 유발했다.
     # excessive jerk reproducer(약 10.67)는 6.0에서도 계속 reject된다.
     max_longitudinal_jerk: 6.0
+    # [m/s] 이 속도 미만이면 quintic candidate 파이프라인 대신 저속
+    # crawl/geometric fallback을 쓴다. KEEP/AVOID/LANE_CHANGE가 공유.
+    low_speed_fallback_v: 0.5
+    # [s] 저속 crawl fallback이 만드는 경로의 기본 지속시간.
+    low_speed_crawl_duration_s: 2.0
+    # [m/s] low_speed_fallback_v보다 넉넉히 위의 external KEEP starvation
+    # 복구 경계.
+    near_low_speed_fallback_v: 1.5
+    # 저속 lateral transition 거리 계산에서 max_curvature의 몇 %만 사용할지.
+    low_speed_usable_curvature_fraction: 0.8
+    # 저속 lateral transition 거리에 곱하는 여유 배수.
+    low_speed_transition_distance_margin: 1.1
+    # 후보 생성 초기 경계조건(s_ddot/d_ddot)을 가속도 한계의 몇 %로 clip할지.
+    boundary_condition_accel_fraction: 0.8
+    # AVOID SHIFT 시작거리 계산에서 max_lateral_accel의 몇 %만 사용할지.
+    avoid_shift_usable_lateral_accel_fraction: 0.8
+    # [m/s] 후보 생성 초기 횡속도(d_dot) 경계조건의 절대값 상한.
+    max_initial_d_dot: 0.5
+    # [m/s^2] 일반 저속 fallback(PlanLowSpeedFallback)의 크롤링 가속도.
+    # 회전교차로 MERGE는 이 프로파일을 쓰지 않는다.
+    low_speed_crawl_accel: 0.5
+    # [m/s] 저속 fallback의 최소 전진속도(0 근처에 갇히지 않도록).
+    low_speed_min_creep_speed: 0.3
+    # [m/s] 저속 fallback 안에서의 속도 상한.
+    low_speed_crawl_speed_cap: 2.0
+    # [m/s] external KEEP 경계조건 구성에서 "의도적 가속/감속"과 "유지"를
+    # 가르는 목표속도 변화 불감대.
+    accel_intent_deadband_mps: 0.3
 
   # --- CostWeights (cost.hpp) ---------------------------------
   cost_weights:

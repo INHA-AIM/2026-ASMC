@@ -1,16 +1,18 @@
 /**
  * @file Keep.cpp
- * @brief external KEEP(LANE_KEEPING) 전용 candidate 보강과, KEEP/FOLLOW/
+ * @brief external KEEP(LANE_KEEPING) 전용 저속 fallback과, KEEP/FOLLOW/
  *        STOP이 공유하는 candidate 파이프라인(ExecuteManeuverPipeline).
  *
- * ExecuteManeuverPipeline은 candidate 생성 -> 곡률/충돌 필터 -> cost 평가
- * -> 최적 후보 선택 -> Cartesian 변환까지, KEEP/FOLLOW/STOP이 실제로 동일하게
- * 거치는 pipeline이다. STOP 전용 분기(external_stop_mode)가 이 pipeline
- * 뒷부분 전체에 걸쳐 있어서 모드별로 쪼개면 같은 조건을 여러 곳에서
- * 유지해야 하므로, KEEP 파일에 pipeline 본체를 두고 KeepProcess는 그 얇은
- * 진입점 역할만 한다(frenet_planner.hpp 클래스 선언부 주석 참고). Follow.cpp/
- * Stop.cpp의 FollowProcess/StopProcess는 각자 모드별 준비만 하고 이
- * pipeline을 호출한다.
+ * ExecuteManeuverPipeline은 STOP lifecycle(stop_)과 진단 상태(last_ 계열/
+ * prev_mode_/debug_writer_) 갱신, cost 평가 -> 최적 후보 선택 -> Cartesian
+ * 변환까지 담당한다. candidate 생성 -> 곡률/충돌 필터 -> continuity
+ * candidate 추가는 FrenetPlanner의 mutable 상태에 의존하지 않으므로
+ * Pipeline/TrajectoryPipeline으로 분리했다(R3 2/4단계). STOP 전용 분기
+ * (external_stop_mode)가 이 pipeline 뒷부분 전체에 걸쳐 있어서 모드별로
+ * 쪼개면 같은 조건을 여러 곳에서 유지해야 하므로, KEEP 파일에 pipeline
+ * 본체를 두고 KeepProcess는 그 얇은 진입점 역할만 한다(frenet_planner.hpp
+ * 클래스 선언부 주석 참고). Follow.cpp/Stop.cpp의 FollowProcess/StopProcess는
+ * 각자 모드별 준비만 하고 이 pipeline을 호출한다.
  */
 
 #include "frenet_planner/frenet_planner.hpp"
@@ -22,11 +24,8 @@
 #include <utility>
 
 #include "frenet_planner/Evaluation/Cost.hpp"
-#include "frenet_planner/Generator/CandidateCombiner.hpp"
-#include "frenet_planner/Generator/LateralGenerator.hpp"
-#include "frenet_planner/Generator/LongitudinalGenerator.hpp"
+#include "frenet_planner/Generator/BoundaryConditionPolicy.hpp"
 #include "frenet_planner/Maneuver/ManeuverUtils.hpp"
-#include "frenet_planner/Speed/SpeedPolicy.hpp"
 
 namespace {
 
@@ -42,38 +41,12 @@ const char* ModeName(BehaviorState mode) {
 
 }  // namespace
 
-void FrenetPlanner::AppendExternalKeepContinuityCandidates(
-    const FrenetState& maneuver_start, const PlannerCommand& cmd,
-    const std::vector<TrackedObject>& planning_collision_obstacles,
-    std::vector<FrenetPath>& candidates) const {
-    std::vector<FrenetPath> continuity_lateral =
-        GenerateLateralContinuityCandidates(maneuver_start, path_cfg_);
-    FilterLateralByAcceleration(continuity_lateral, limits_);
-
-    std::vector<FrenetPath> longitudinal_for_continuity =
-        GenerateVelocityKeepingCandidates(maneuver_start, cmd.target_speed,
-                                          path_cfg_);
-    FilterLongitudinalByKinematicLimits(longitudinal_for_continuity, limits_);
-
-    std::vector<FrenetPath> continuity_combined = CombineLateralLongitudinal(
-        continuity_lateral, longitudinal_for_continuity);
-    FilterByCurvature(continuity_combined, ref_, limits_);
-    if (!planning_collision_obstacles.empty()) {
-        FilterByCollision(continuity_combined, ref_,
-                          planning_collision_obstacles, vehicle_shape_,
-                          collision_cfg_, /*coast_exempt_id=*/-1);
-    }
-    candidates.insert(candidates.end(),
-                      std::make_move_iterator(continuity_combined.begin()),
-                      std::make_move_iterator(continuity_combined.end()));
-}
-
 bool FrenetPlanner::PlanExternalKeepLowSpeedFallback(const CartesianState& ego,
                                                       double s, double d,
                                                       double resolved_target_speed,
                                                       CartesianPath& out_path) {
     const bool fallback_ok = PlanLowSpeedFallback(
-        ego, s, d, /*target_d=*/0.0, out_path, /*duration_s=*/2.0,
+        ego, s, d, /*target_d=*/0.0, out_path, limits_.low_speed_crawl_duration_s,
         resolved_target_speed);
     std::printf("[FrenetPlanner-KEEP] near-low-speed fail-safe: no "
                 "candidate (v=%.2f), emitting crawl fallback path\n",
@@ -90,6 +63,10 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     const std::vector<TrackedObject>& predicted_obstacles,
     double resolved_target_speed, const PlannerCommand& command,
     CartesianPath& out_path) {
+    // Pipeline/TrajectoryPipeline 분리(R3 1/4단계)를 위한 선행 작업 - 이
+    // pipeline이 참조하는 config 10종을 번들 하나로 묶어 그 필드를 통해서만
+    // 읽는다. 값/동작은 기존과 완전히 동일하다(순수 구조 이동).
+    const PlannerConfigBundle cfg = MakePipelineConfigBundle();
     const PlannerCommand* external_command = &command;
     // 외부 command 경로는 FSM이 지정한 mode를 그대로 받아 실행한다. 진입
     // 가능한 모드는 ValidateExternalCommand의 whitelist가 이미 걸러낸 상태다.
@@ -125,8 +102,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         // 붙이지 않는다. 현재 d를 종단 목표로 고정하되 lateral quintic의
         // 종단 d_dot/d_ddot=0 조건은 유지되므로 차체는 경로 방향으로 곧게
         // 정렬된다. 허용 범위 밖이거나 속도가 높으면 기존 d=0 복귀 그대로다.
-        if (std::fabs(s_dot) <= stop_cfg_.lateral_hold_speed &&
-            std::fabs(d) <= stop_cfg_.lateral_error_tolerance) {
+        if (std::fabs(s_dot) <= cfg.stop.lateral_hold_speed &&
+            std::fabs(d) <= cfg.stop.lateral_error_tolerance) {
             cmd.has_stop_lateral_hold = true;
             cmd.stop_lateral_hold_d = d;
         }
@@ -160,17 +137,18 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     if (external_stop_mode && std::isfinite(stop_distance) &&
         stop_distance >= 0.0) {
         const double rear_overhang = std::max(
-            0.0, std::min(avoid_cfg_.rear_overhang, vehicle_shape_.length));
-        const double front_extent = vehicle_shape_.length - rear_overhang;
+            0.0, std::min(cfg.avoid.rear_overhang, cfg.vehicle_shape.length));
+        const double front_extent = cfg.vehicle_shape.length - rear_overhang;
         const double protected_distance =
-            stop_distance + front_extent + collision_cfg_.safety_margin;
+            stop_distance + front_extent + cfg.collision.safety_margin;
         const double track_length =
             ref_.points.empty() ? 0.0 : ref_.points.back().s;
         stop_scoped_collision_obstacles.reserve(predicted_obstacles.size());
         for (const TrackedObject& object : predicted_obstacles) {
             double object_s = 0.0, object_d = 0.0, object_s_dot = 0.0;
             ProjectObjectToFrenet(ref_, object, object_s, object_d,
-                                  object_s_dot);
+                                  object_s_dot,
+                                  ref_config_.ego_projection_search_window);
             double object_gap = object_s - s;
             if (object_gap <= 0.0 && track_length > 0.0) {
                 object_gap += track_length;
@@ -197,50 +175,100 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     FrenetState maneuver_start = start;
     const bool external_keep_candidates = external_command->mode == LANE_KEEPING;
     if (external_keep_candidates) {
-        constexpr double kAccelIntentDeadband = 0.3;  // [m/s]
         maneuver_start.s_dd = ResolveVelocityKeepingBoundaryAcceleration(
-            start.s_dd, s_dot, resolved_target_speed, kAccelIntentDeadband);
+            start.s_dd, s_dot, resolved_target_speed,
+            cfg.limits.accel_intent_deadband_mps);
     }
-    KinematicLimits maneuver_limits = limits_;
+    KinematicLimits maneuver_limits = cfg.limits;
     if (external_stop_mode) {
         // 일반 주행의 가속도 한계는 그대로 두고 STOP 후보에만 서비스 제동
         // 한계를 허용한다. MPC의 accel_min보다 큰 감속 궤적을 보내지 않도록
         // params.yaml에서 두 값을 같은 크기로 유지한다.
         maneuver_limits.max_longitudinal_accel = std::max(
             maneuver_limits.max_longitudinal_accel,
-            stop_cfg_.max_service_decel);
+            cfg.stop.max_service_decel);
     }
-    std::vector<FrenetPath> candidates = ResolveManeuver(
-        maneuver_start, cmd, ref_, path_cfg_, maneuver_limits, lane_width_,
-        planning_collision_obstacles, vehicle_shape_, collision_cfg_, &stats);
-
-    // moderate-speed curvature starvation 완화(Phase B): 실측 MORAI에서
-    // 급커브 근접 중 유효한 결합 후보가 있는데도 전부 중앙(d1=0) 복귀였던
-    // 탓에 사후 곡률 필터에서 통째로 탈락하는 사례가 있었다(예:
-    // combined=78, after_curvature=0). external KEEP에만, 현재 d가 차선
-    // 폭 안일 때만, 현재 오프셋을 유지하는 continuity candidate를
-    // 추가한다 - d=0 강제 클램프가 아니라 대안 후보 하나를 더 얹는
-    // 것뿐이며, 아래 EvaluateCosts가 여전히 target_d=0을 기준으로 비용을
-    // 매기므로 중앙 복귀 후보가 곡률을 통과하면 그쪽이 그대로 선택된다
-    // (kd/kd_path 항이 더 낮은 비용을 준다). 중앙 복귀가 전부 곡률에서
-    // 탈락했을 때만 이 candidate가 유일하게 남아 선택된다.
-    if (external_keep_candidates &&
-        std::fabs(maneuver_start.d) <= lane_width_ * 0.5) {
-        AppendExternalKeepContinuityCandidates(
-            maneuver_start, cmd, planning_collision_obstacles, candidates);
+    // candidate 생성 -> 곡률/충돌 필터 -> (external KEEP && lane 안일 때)
+    // continuity candidate 추가는 FrenetPlanner의 mutable 상태(stop_/
+    // v2_following_/last_*/prev_mode_/debug_writer_)에 의존하지 않으므로
+    // TrajectoryPipeline(R3 2/4단계)으로 위임한다. moderate-speed curvature
+    // starvation 완화(Phase B) 배경: 실측 MORAI에서 급커브 근접 중 유효한
+    // 결합 후보가 있는데도 전부 중앙(d1=0) 복귀였던 탓에 사후 곡률 필터에서
+    // 통째로 탈락하는 사례가 있었다(예: combined=78, after_curvature=0).
+    // d=0 강제 클램프가 아니라 대안 후보 하나를 더 얹는 것뿐이며, 아래
+    // EvaluateCosts가 여전히 target_d=0을 기준으로 비용을 매기므로 중앙
+    // 복귀 후보가 곡률을 통과하면 그쪽이 그대로 선택된다(kd/kd_path 항이
+    // 더 낮은 비용을 준다). 중앙 복귀가 전부 곡률에서 탈락했을 때만 이
+    // candidate가 유일하게 남아 선택된다.
+    const TrajectoryPipeline trajectory_pipeline(cfg, ref_);
+    const bool append_keep_continuity_candidates =
+        external_keep_candidates &&
+        std::fabs(maneuver_start.d) <= cfg.lane_width * 0.5;
+    // R4-B/C/D, R6-E: 이 함수는 frenet_planner.cpp의 PlanInternal switch(§6
+    // 주석 참고)에서 AVOID/LANE_CHANGE가 먼저 가로채고 MERGE가
+    // IsSupportedExternalMode에서 이미 걸러진 뒤에만 호출되므로,
+    // external_command->mode는 항상 {LANE_KEEPING, STOP, FOLLOWING} 중
+    //하나다 - 그래서 아래 네 분기(진짜 외부 KEEP, FOLLOW,
+    // STOP-APPROACH/BRAKING)가 이 함수에 도달 가능한 전체 경우의 수를
+    // 남김없이 덮는다(legacy PlannerCommand 오버로드로 빠지는 경우가 없다).
+    // STOP의 phase 전이/target latch(stop_) 자체는 여전히
+    // UpdateExternalStopExecution(Stop.cpp)이 소유한다 - 여기서는 그 결과
+    // (cmd.mode/target_speed/stop_position/lateral hold)를 Request로
+    // 정규화만 한다. HOLD는 이미 위에서 조기 반환하므로 이 분기에 오지 않는다.
+    const bool is_true_external_keep =
+        external_command->mode == LANE_KEEPING && !external_stop_mode;
+    const bool is_follow = cmd.mode == FOLLOWING;
+    // external_stop_mode에서 cmd.mode는 UpdateExternalStopExecution이
+    // APPROACH -> LANE_KEEPING, BRAKING -> STOP(그대로) 로 이미 정해뒀다.
+    const bool is_stop_approach = external_stop_mode && cmd.mode == LANE_KEEPING;
+    const bool is_stop_braking = external_stop_mode && cmd.mode == STOP;
+    TrajectoryRequest request;
+    request.lateral.target_d =
+        cmd.has_stop_lateral_hold ? cmd.stop_lateral_hold_d : 0.0;
+    // legacy ResolveManeuver의 lateral tolerance 규칙(CandidateCombiner.cpp
+    // 참고)을 그대로 옮긴다: hold가 있으면 항상 0. hold가 없으면 KEEP/
+    // STOP-APPROACH(내부적으로 velocity keeping에 위임)만 0이고, FOLLOW와
+    // STOP-BRAKING(hold 없음)은 cfg.path.lateral_target_tolerance를 그대로
+    // 쓴다 - 이 tolerance를 실수로 0으로 좁히면 FOLLOW/STOP-BRAKING의
+    // 정상적인 좌우 탐색 폭이 사라진다.
+    request.lateral.search_tolerance =
+        (cmd.has_stop_lateral_hold || is_true_external_keep || is_stop_approach)
+            ? 0.0 : cfg.path.lateral_target_tolerance;
+    request.target_speed = cmd.target_speed;
+    if (is_follow) {
+        request.longitudinal_mode = LongitudinalMode::FOLLOWING;
+        request.collision.coast_exempt_object_id = cmd.target_object_id;
+        request.following.leader_s = cmd.leader_s;
+        request.following.leader_speed = cmd.leader_speed;
+        request.following.leader_accel = cmd.leader_accel;
+        request.following.time_gap = cmd.time_gap;
+        request.following.min_gap = cmd.min_gap;
+        request.following.gap_gain = cmd.gap_gain;
+    } else if (is_stop_braking) {
+        request.longitudinal_mode = LongitudinalMode::STOPPING;
+        request.stop.stop_s = cmd.stop_position;
+        request.stop.terminal_offset = cfg.stop.delta_s_override;
+    } else {
+        // 진짜 외부 KEEP과 STOP-APPROACH(velocity keeping으로 위임) 모두
+        // 여기로 떨어진다 - 둘 다 Generator 입장에서는 동일한
+        // VELOCITY_KEEPING 요청이다.
+        request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
     }
+    std::vector<FrenetPath> candidates = trajectory_pipeline.GenerateCandidates(
+        maneuver_start, request, maneuver_limits, planning_collision_obstacles,
+        append_keep_continuity_candidates, &stats);
 
     const double lateral_cost_target = cmd.has_stop_lateral_hold
         ? cmd.stop_lateral_hold_d : 0.0;
-    EvaluateCosts(candidates, cost_weights_, lateral_cost_target);
+    EvaluateCosts(candidates, cfg.cost_weights, lateral_cost_target);
 
     if (cmd.mode != prev_mode_) {
         std::printf("[FrenetPlanner] mode: %s -> %s (s=%.2f d=%.3f)\n",
                     ModeName(prev_mode_), ModeName(cmd.mode), s, d);
         if (cmd.mode == FOLLOWING) {
             const double gap = leader_s - s;
-            const double desired_gap = following_cfg_.min_gap
-                                     + following_cfg_.time_gap * leader_speed;
+            const double desired_gap = cfg.following.min_gap
+                                     + cfg.following.time_gap * leader_speed;
             std::printf("[FrenetPlanner]   leader_id=%d leader_s=%.2f leader_speed=%.2f "
                         "gap=%.2f desired_gap=%.2f\n",
                         cmd.target_object_id, leader_s, leader_speed, gap, desired_gap);
@@ -337,7 +365,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
                     continue;
                 }
                 double obj_s, obj_d, obj_s_dot;
-                ProjectObjectToFrenet(ref_, *obj_it, obj_s, obj_d, obj_s_dot);
+                ProjectObjectToFrenet(ref_, *obj_it, obj_s, obj_d, obj_s_dot,
+                                      ref_config_.ego_projection_search_window);
                 double obj_gap = obj_s - s;
                 const double track_length = ref_.points.empty() ? 0.0 : ref_.points.back().s;
                 if (obj_gap <= 0.0 && track_length > 0.0) obj_gap += track_length;
@@ -349,7 +378,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
                             "same_lane=%d leader_id=%d leader_match=%d\n",
                             rank + 1, blocker_id, blocked_paths, first_t,
                             obj_s, obj_d, obj_gap, obj_s_dot,
-                            std::fabs(obj_d) <= lane_width_ * 0.5 ? 1 : 0,
+                            std::fabs(obj_d) <= cfg.lane_width * 0.5 ? 1 : 0,
                             cmd.mode == FOLLOWING ? cmd.target_object_id : -1,
                             cmd.mode == FOLLOWING &&
                                 cmd.target_object_id == blocker_id ? 1 : 0);
@@ -382,10 +411,9 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         // GenerateFollowingCandidates의 정지-리더 목표, AVOID의 전용 저속
         // 처리)이 있으므로 여기서는 건드리지 않는다 - 순수 외부 KEEP만
         // 대상이다.
-        constexpr double kNearLowSpeedFallbackV = 1.5;  // [m/s] kLowSpeedFallbackV보다 넉넉히 위
         const bool external_keep = cmd.mode == LANE_KEEPING;
         if (external_keep &&
-            std::fabs(ego.v) < kNearLowSpeedFallbackV &&
+            std::fabs(ego.v) < cfg.limits.near_low_speed_fallback_v &&
             last_failure_reason_ != PlanFailureReason::COLLISION_BLOCKED) {
             return PlanExternalKeepLowSpeedFallback(ego, s, d,
                                                      resolved_target_speed, out_path);
@@ -426,11 +454,11 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     if (++state_log_tick % 5 == 0) {
         if (cmd.mode == FOLLOWING) {
             const double gap = leader_s - s;
-            const double desired_gap = following_cfg_.min_gap
-                                     + following_cfg_.time_gap * leader_speed;
+            const double desired_gap = cfg.following.min_gap
+                                     + cfg.following.time_gap * leader_speed;
             const double approach_speed = std::max(0.0, std::min(
                 cmd.target_speed,
-                leader_speed + following_cfg_.gap_gain * (gap - desired_gap)));
+                leader_speed + cfg.following.gap_gain * (gap - desired_gap)));
             std::printf("[FrenetPlanner-STATE] mode=FOLLOWING leader_id=%d s=%.2f d=%.3f "
                         "ego_speed=%.2f leader_speed=%.2f relative_speed=%.2f "
                         "gap=%.2f desired_gap=%.2f gap_error=%.2f approach_speed=%.2f chosen_d=%.3f "

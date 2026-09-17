@@ -22,7 +22,7 @@ struct SamplingRange {
 
 struct PathGeneratorConfig {
     SamplingRange lateral_d1;      // 목표 횡방향 오프셋 d1 후보 범위 [m] (Sec.IV-A)
-    double lateral_target_tolerance = 0.5; // [m] 모드가 지정한 목표 d 주변 탐색 폭
+    double lateral_target_tolerance; // [m] 모드가 지정한 목표 d 주변 탐색 폭
     SamplingRange time_horizon;    // 종료시간 Tj 후보 범위 [s] (lateral/longitudinal 공통)
     SamplingRange delta_s;         // following/merging/stopping용 Δsi 범위 [m] (Sec.V-A)
     SamplingRange delta_s_dot;     // velocity keeping용 Δṡi 범위 [m/s] (Sec.V-B)

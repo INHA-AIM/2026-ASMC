@@ -13,9 +13,9 @@
 #include "frenet_planner/Common/PlannerCommand.hpp"
 
 struct PlannerVisualizationConfig {
-    bool enabled = false;
-    double publish_hz = 5.0;
-    std::string snapshot_path = "/tmp/frenet_planner_debug.json";
+    bool enabled;
+    double publish_hz;
+    std::string snapshot_path;
 };
 
 class PlannerDebugWriter {

@@ -40,6 +40,9 @@ CurveSpeedConfig MakeCurveCfg() {
     CurveSpeedConfig cfg;
     cfg.target_vel = 10.0;
     cfg.curve_lookahead_m = 15.0;
+    cfg.lateral_accel_safety_factor = 0.8;
+    cfg.comfortable_decel_factor = 0.5;
+    cfg.min_usable_decel = 0.5;
     return cfg;
 }
 

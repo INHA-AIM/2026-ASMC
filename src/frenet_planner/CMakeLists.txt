@@ -20,6 +20,7 @@ catkin_package(
 
 include_directories(
   src
+  src/Runtime
   ${catkin_INCLUDE_DIRS}
   ${YAML_CPP_INCLUDE_DIRS}
 )
@@ -39,23 +40,29 @@ target_include_directories(frenet_geometry PUBLIC
 # and the frenet_planner_node executable below.
 add_library(frenet_planner_core
   src/frenet_planner/frenet_planner.cpp
+  src/frenet_planner/Pipeline/TrajectoryPipeline.cpp
   src/frenet_planner/Maneuver/ManeuverUtils.cpp
   src/frenet_planner/Maneuver/Follow.cpp
   src/frenet_planner/Maneuver/Keep.cpp
   src/frenet_planner/Maneuver/Stop.cpp
-  src/frenet_planner/Maneuver/Avoid.cpp
-  src/frenet_planner/Maneuver/LaneChange.cpp
-  src/frenet_planner/Maneuver/Merge.cpp
-  src/frenet_planner/Common/ParameterLoader.cpp
+  src/frenet_planner/Maneuver/Avoid/Avoid.cpp
+  src/frenet_planner/Maneuver/Avoid/AvoidTargetResolver.cpp
+  src/frenet_planner/Maneuver/Avoid/AvoidLifecycle.cpp
+  src/frenet_planner/Maneuver/LaneChange/LaneChange.cpp
+  src/frenet_planner/Maneuver/LaneChange/LaneChangeLifecycle.cpp
+  src/frenet_planner/Maneuver/Merge/MergeGapEvaluator.cpp
+  src/frenet_planner/Config/ConfigLoader.cpp
+  src/frenet_planner/Config/ConfigValidator.cpp
   src/frenet_planner/visualization/planner_debug_writer.cpp
   src/frenet_planner/Reference/Reference.cpp
   src/frenet_planner/Generator/SamplingUtils.cpp
   src/frenet_planner/Generator/LateralGenerator.cpp
   src/frenet_planner/Generator/LongitudinalGenerator.cpp
   src/frenet_planner/Generator/CandidateCombiner.cpp
+  src/frenet_planner/Generator/BoundaryConditionPolicy.cpp
   src/frenet_planner/Evaluation/KinematicFilter.cpp
   src/frenet_planner/Speed/CurveSpeed.cpp
-  src/frenet_planner/Speed/SpeedPolicy.cpp
+  src/frenet_planner/Speed/TargetSpeedResolver.cpp
   src/frenet_planner/Evaluation/Cost.cpp
   src/frenet_planner/Evaluation/CollisionChecker.cpp
   src/frenet_planner/Math/Polynomial.cpp
@@ -75,7 +82,7 @@ target_link_libraries(frenet_planner_core
 # ROS runtime with input validation, command-based Plan() invocation,
 # fail-safe handling, and trajectory/feedback publication.
 add_library(frenet_planner_message_converter
-  src/message_converter.cpp
+  src/Runtime/message_converter.cpp
 )
 add_dependencies(frenet_planner_message_converter
   ${catkin_EXPORTED_TARGETS}
@@ -89,7 +96,7 @@ target_link_libraries(frenet_planner_message_converter
 # fingerprint가 여기에 추가된다. FSM 계약 경계이므로 planner core가 아니라
 # ROS 계층에 둔다 (docs/fsm-frenet-interface-v2.md 12.8절).
 add_library(frenet_behavior_command_adapter
-  src/behavior_command_adapter.cpp
+  src/Runtime/behavior_command_adapter.cpp
 )
 add_dependencies(frenet_behavior_command_adapter
   ${catkin_EXPORTED_TARGETS}
@@ -102,7 +109,7 @@ target_link_libraries(frenet_behavior_command_adapter
 # 관계(transaction / terminal latch / preemption)를 갖는 stateful 계층이다
 # (docs/fsm-frenet-interface-v2.md 12.8절).
 add_library(frenet_command_execution_manager
-  src/command_execution_manager.cpp
+  src/Runtime/command_execution_manager.cpp
 )
 add_dependencies(frenet_command_execution_manager
   ${catkin_EXPORTED_TARGETS}
@@ -113,9 +120,15 @@ target_link_libraries(frenet_command_execution_manager
 )
 
 add_executable(frenet_planner_node
-  src/main.cpp
-  src/frenet_planner_node.cpp
-  src/feedback_builder.cpp
+  src/Runtime/main.cpp
+  src/Runtime/frenet_planner_node.cpp
+  src/Runtime/input_snapshot.cpp
+  src/Runtime/v2_planning.cpp
+  src/Runtime/target_projection.cpp
+  src/Runtime/output_publisher.cpp
+  src/Runtime/debug_marker_publisher.cpp
+  src/Runtime/feedback_builder.cpp
+  src/Runtime/RuntimeConfig.cpp
 )
 add_dependencies(frenet_planner_node
   ${catkin_EXPORTED_TARGETS}
@@ -125,6 +138,7 @@ target_link_libraries(frenet_planner_node
   frenet_command_execution_manager
   frenet_behavior_command_adapter
   frenet_planner_core
+  yaml-cpp
   ${catkin_LIBRARIES}
 )
 
@@ -210,6 +224,18 @@ if(CATKIN_ENABLE_TESTING)
     frenet_planner_core
   )
   add_test(NAME command_keep_plan_test COMMAND command_keep_plan_test)
+
+  add_executable(config_loader_validation_test
+    tests/config_loader_validation_test.cpp
+  )
+  target_compile_definitions(config_loader_validation_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(config_loader_validation_test
+    frenet_planner_core
+  )
+  add_test(NAME config_loader_validation_test COMMAND config_loader_validation_test)
 
   add_executable(command_validation_test
     tests/command_validation_test.cpp
@@ -363,8 +389,9 @@ if(CATKIN_ENABLE_TESTING)
   add_test(NAME curve_speed_envelope_test COMMAND curve_speed_envelope_test)
 
   # fix/yuntae-frenet-speed-continuity Phase 2: target speed recovery rate
-  # limit 회귀. 실제 ApplyTargetSpeedRateLimit(Speed/SpeedPolicy.hpp)를
-  # 직접 호출한다.
+  # limit 회귀. R7-B: 실제 production ResolveTargetSpeed
+  # (Speed/TargetSpeedResolver.hpp)를 곧은 직선 RefLine으로 호출해 rate-limit
+  # 동작만 분리 검증한다.
   add_executable(target_speed_rate_limit_test
     tests/target_speed_rate_limit_test.cpp
   )
@@ -423,6 +450,15 @@ if(CATKIN_ENABLE_TESTING)
     frenet_planner_core
   )
   add_test(NAME keep_candidate_target_test COMMAND keep_candidate_target_test)
+
+  # R5-F: TrajectoryRequest -> GenerateRequestedCandidates 경계 계약 회귀.
+  add_executable(request_native_generator_test
+    tests/request_native_generator_test.cpp
+  )
+  target_link_libraries(request_native_generator_test
+    frenet_planner_core
+  )
+  add_test(NAME request_native_generator_test COMMAND request_native_generator_test)
 
   # fix/yuntae-planner Commit F: 폐루프 reference topology(전처리/조회) 연속성 회귀.
   add_executable(closed_loop_reference_test

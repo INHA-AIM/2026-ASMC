@@ -74,7 +74,7 @@ int main() {
     ego.x = 0.0;
     ego.y = 0.0;
     ego.yaw = 0.0;
-    const VehicleShape ego_shape{2.0, 2.0};
+    const VehicleShape ego_shape{2.0, 2.0, -1.0};
     const geometry::Polygon2D ego_footprint =
         MakeEgoFootprint(ego, ego_shape, 0.0);
 
@@ -142,7 +142,7 @@ int main() {
     const TrackedObject beside_rear_axle =
         MakeObstacle(-0.116, -2.581, 0.0, 0.0, 3.027, 4.5, 1.8);
     const geometry::Polygon2D centered_margin =
-        MakeEgoFootprint(ego, VehicleShape{1.9, 4.635}, 0.5);
+        MakeEgoFootprint(ego, VehicleShape{1.9, 4.635, -1.0}, 0.5);
     const geometry::Polygon2D rear_axle_margin =
         MakeEgoFootprint(ego, VehicleShape{1.9, 4.635, 0.79}, 0.5);
     Expect(CheckObstacleOverlap(centered_margin, {}, beside_rear_axle, 0.0),
@@ -150,8 +150,15 @@ int main() {
     Expect(!CheckObstacleOverlap(rear_axle_margin, {}, beside_rear_axle, 0.0),
            "rear-axle footprint removes the side false positive");
 
+    ReferenceConfig straight_ref_config{};
+    straight_ref_config.closure_tolerance_m = 0.05;
+    straight_ref_config.smoothing_window_m = 10.0;
+    straight_ref_config.resample_ds = 0.5;
+    straight_ref_config.relax_max_iter = 300;
+    straight_ref_config.relax_step = 0.3;
+    straight_ref_config.ego_projection_search_window = 30.0;
     const RefLine straight_ref =
-        BuildRefLine({-10.0, 10.0}, {0.0, 0.0}, 1.0);
+        BuildRefLine({-10.0, 10.0}, {0.0, 0.0}, straight_ref_config, /*max_curvature=*/1.0);
     const CollisionCheckConfig collision_cfg{0.5, 0.0, 1.0};
     const TrackedObject lateral_near_margin = MakeObstacle(0.0, 2.4);
     const TrackedObject lateral_overlapping = MakeObstacle(0.0, 1.5);

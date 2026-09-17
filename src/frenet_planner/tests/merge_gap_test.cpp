@@ -1,4 +1,4 @@
-// MERGE gap/TTC 순수 계산 회귀 (Maneuver/Merge.hpp).
+// MERGE gap/TTC 순수 계산 회귀 (Maneuver/Merge/MergeGapEvaluator.hpp).
 //
 // legacy_behavior_regression_test.cpp가 검증하던 "MERGE를 언제 자동
 // 활성화할지"는 이번 refactor에서 완전히 삭제되었다 - 그 권한은 이제
@@ -22,9 +22,10 @@
 //           항상 결과가 unsafe/unconfirmed다.
 //
 // 실제 production FindRoundaboutGap/FindHighwayMergeGap
-// (Maneuver/Merge.hpp)을 그대로 호출한다 - 로직을 복사하지 않는다.
+// (Maneuver/Merge/MergeGapEvaluator.hpp)을 그대로 호출한다 - 로직을
+// 복사하지 않는다.
 
-#include "frenet_planner/Maneuver/Merge.hpp"
+#include "frenet_planner/Maneuver/Merge/MergeGapEvaluator.hpp"
 
 #include "frenet_planner/Geometry/PolygonUtils.hpp"
 
@@ -116,6 +117,10 @@ MergeConfig MakeRoundaboutCfg(double conflict_s) {
     cfg.commit_distance = 15.0;
     cfg.safe_confirm_cycles = 3;
     cfg.cross_speed_floor = 3.0;
+    cfg.prediction_dt = 0.05;
+    cfg.entry_search_dt = 0.1;
+    cfg.min_travel_speed = 0.5;
+    cfg.min_travel_accel = 0.1;
     return cfg;
 }
 
@@ -135,6 +140,10 @@ HighwayMergeConfig MakeHighwayCfg() {
     cfg.commit_distance = 20.0;
     cfg.safe_confirm_cycles = 3;
     cfg.cross_speed_floor = 4.0;
+    cfg.entry_search_dt = 0.1;
+    cfg.collision_check_dt = 0.1;
+    cfg.min_travel_speed = 0.5;
+    cfg.min_travel_accel = 0.1;
     return cfg;
 }
 
@@ -142,6 +151,7 @@ VehicleShape MakeEgoShape() {
     VehicleShape shape;
     shape.width = 1.9;
     shape.length = 4.5;
+    shape.rear_overhang = -1.0;
     return shape;
 }
 

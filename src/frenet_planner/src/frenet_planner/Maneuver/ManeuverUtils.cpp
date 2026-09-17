@@ -6,7 +6,8 @@
 #include "frenet_planner/Math/FrenetConverter.hpp"
 
 void ProjectObjectToFrenet(const RefLine& ref, const TrackedObject& obj,
-                           double& out_s, double& out_d, double& out_s_dot) {
+                           double& out_s, double& out_d, double& out_s_dot,
+                           double ego_projection_search_window) {
     CartesianState cs{};
     cs.x = obj.x;
     cs.y = obj.y;
@@ -16,7 +17,8 @@ void ProjectObjectToFrenet(const RefLine& ref, const TrackedObject& obj,
     cs.a = 0.0;       // 가속도 정보 없음 - s_ddot은 안 쓰므로 무관
 
     double s, s_dot, s_ddot, d, d_prime, d_pprime;
-    CartesianToFrenet(ref, cs, s, s_dot, s_ddot, d, d_prime, d_pprime, nullptr);
+    CartesianToFrenet(ref, cs, s, s_dot, s_ddot, d, d_prime, d_pprime, nullptr,
+                       ego_projection_search_window);
 
     out_s = s;
     out_d = d;

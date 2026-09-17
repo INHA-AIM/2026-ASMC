@@ -1,8 +1,9 @@
 <launch>
   <node pkg="frenet_planner" type="frenet_planner_node"
         name="frenet_planner" output="screen">
-    <rosparam command="load"
-              file="$(find frenet_planner)/config/runtime.yaml"/>
+    <!-- Single parameter source: the node reads both its own runtime
+         settings (runtime:) and the Frenet planner core settings
+         (planner:) directly from params.yaml. -->
     <param name="planner/config_path"
            value="$(find frenet_planner)/config/params.yaml"/>
   </node>

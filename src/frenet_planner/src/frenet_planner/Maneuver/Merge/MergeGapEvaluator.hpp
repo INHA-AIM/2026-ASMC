@@ -1,11 +1,11 @@
-#ifndef FRENET_MANEUVER_MERGE_HPP
-#define FRENET_MANEUVER_MERGE_HPP
+#ifndef FRENET_MANEUVER_MERGE_GAP_EVALUATOR_HPP
+#define FRENET_MANEUVER_MERGE_GAP_EVALUATOR_HPP
 
 #include <unordered_map>
 #include <vector>
 
 #include "frenet_planner/Common/ObjectTypes.hpp"
-#include "frenet_planner/Common/PlannerConfig.hpp"
+#include "frenet_planner/Config/FrenetConfig.hpp"
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/Reference/Reference.hpp"
 
@@ -13,6 +13,11 @@
 // 아니므로 frenet_planner.hpp에는 선언하지 않는다. "지금 이 gap이 안전한가"
 // 만 답한다 - MERGE를 자동 활성화할지, 언제 COMMIT할지는 이 파일의 책임이
 // 아니다(FSM이 지정한 MERGE 실행을 다루는 별도 호출자의 책임).
+//
+// R6-F3: 파일명을 Merge.hpp -> MergeGapEvaluator.hpp로 바꿨다(순수 rename,
+// 로직/시그니처 변경 없음) - 이 파일의 실제 역할이 gap/TTC 계산뿐이라는
+// 것을 이름에 그대로 반영한다. MERGE production 실행(활성화/COMMIT)은
+// 여전히 이 파일의 책임이 아니고, 여전히 어디에도 구현되어 있지 않다.
 
 struct RoundaboutGap {
     bool safe = false;
@@ -48,4 +53,4 @@ RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
                                   const CollisionCheckConfig& collision_cfg,
                                   double desired_speed, double max_ego_accel);
 
-#endif  // FRENET_MANEUVER_MERGE_HPP
+#endif  // FRENET_MANEUVER_MERGE_GAP_EVALUATOR_HPP

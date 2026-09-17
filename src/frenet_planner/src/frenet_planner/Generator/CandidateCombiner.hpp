@@ -23,9 +23,11 @@
 
 #include "frenet_planner/Common/FrenetTypes.hpp"
 #include "frenet_planner/Common/PlannerCommand.hpp"
+#include "frenet_planner/Config/FrenetConfig.hpp"
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
+#include "frenet_planner/Pipeline/TrajectoryRequest.hpp"
 #include "frenet_planner/Reference/Reference.hpp"
 
 // [Sec.VI 2단] Tlat x Tlon 결합 — 같은 T(종료시간)를 가진 후보끼리만 결합.
@@ -59,6 +61,34 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                                          const std::vector<TrackedObject>& obstacles,
                                          const VehicleShape& vehicle_shape,
                                          const CollisionCheckConfig& collision_cfg,
+                                         const StopConfig& stop_cfg,
+                                         const MergeConfig& merge_cfg,
                                          PlannerDebugStats* stats = nullptr);
+
+// =========================================================
+// R5: TrajectoryRequest 기반 candidate 생성 — KEEP/FOLLOW/STOP 전용.
+//
+// ResolveManeuver와 동일한 3단계(lateral 생성 -> longitudinal 생성 ->
+// 결합/곡률/충돌 필터)를 거치지만, 입력을 PlannerCommand/BehaviorState가
+// 아니라 TrajectoryRequest 하나로만 받는다 - 이 함수와 그 아래에서 호출하는
+// 어떤 코드도 BehaviorState/PlannerCommand/ROS 타입을 참조하지 않는다.
+//
+// R6: KEEP/FOLLOW/STOP에 이어 LANE_CHANGE/AVOID(정상 속도 구간)도 이 함수를
+// 사용한다. MERGE는 production에서 도달 불가능하므로(§13 audit 참고) 여전히
+// 대상이 아니다 - 남은 legacy caller는 ResolveManeuver(PlannerCommand) 직접
+// 호출뿐이다.
+//
+// 충돌 필터 예외 정책(coast_exempt/escape)은 request.collision에서 그대로
+// 읽는다(R6-A) - longitudinal_mode를 보고 추론하지 않는다.
+std::vector<FrenetPath> GenerateRequestedCandidates(
+    const FrenetState& start,
+    const TrajectoryRequest& request,
+    const RefLine& ref,
+    const PathGeneratorConfig& cfg,
+    const KinematicLimits& limits,
+    const std::vector<TrackedObject>& obstacles,
+    const VehicleShape& vehicle_shape,
+    const CollisionCheckConfig& collision_cfg,
+    PlannerDebugStats* stats = nullptr);
 
 #endif  // FRENET_GENERATOR_CANDIDATE_COMBINER_HPP

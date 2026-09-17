@@ -19,6 +19,7 @@
 #include "frenet_planner/Generator/CandidateCombiner.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
+#include "frenet_planner/Pipeline/TrajectoryRequest.hpp"
 
 #include <cmath>
 #include <fstream>
@@ -64,6 +65,17 @@ CartesianState BuildPoseAt(const RefLine& ref, double s, double d, double s_dot,
 
 constexpr double kMaxCurvature = 0.1704;
 
+ReferenceConfig MakeReferenceConfig() {
+    ReferenceConfig config{};
+    config.closure_tolerance_m = 0.05;
+    config.smoothing_window_m = 10.0;
+    config.resample_ds = 0.5;
+    config.relax_max_iter = 300;
+    config.relax_step = 0.3;
+    config.ego_projection_search_window = 30.0;
+    return config;
+}
+
 }  // namespace
 
 // CASE B1/B3/B4: 실제 MORAI 스냅샷 재현. 유효 candidate가 남아야 하고,
@@ -77,7 +89,7 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
 
     RefLine ref;
     double max_curvature_for_load = kMaxCurvature;
-    Expect(LoadReferenceLine(waypoint_file, ref, max_curvature_for_load),
+    Expect(LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(), max_curvature_for_load),
            "setup: reference line loads for direct pose construction");
 
     struct Snapshot {
@@ -119,15 +131,16 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
         // 실제로 판정한 값과 다를 수 있다(frenet_converter.hpp 설계 노트:
         // analytic 식은 저속에서 발산해 의도적으로 필터에서 배제됨). 이
         // divergence는 Phase B와 무관한 기존 특성이다 - 그래서 curvature
-        // 판정 자체는 FilterByCurvature/ResolveManeuver를 직접 호출해
-        // (production 함수, 로직 복제 없음) 확인한다.
+        // 판정 자체는 FilterByCurvature/GenerateRequestedCandidates를 직접
+        // 호출해(production 함수, 로직 복제 없음) 확인한다.
         FrenetState direct_start{};
         direct_start.s = snap.s; direct_start.d = snap.d;
         direct_start.s_d = snap.s_dot; direct_start.s_dd = snap.s_ddot;
-        PlannerCommand direct_cmd{};
-        direct_cmd.mode = LANE_KEEPING;
-        direct_cmd.has_target_speed = true;
-        direct_cmd.target_speed = snap.target_speed;
+        TrajectoryRequest direct_request;
+        direct_request.lateral.target_d = 0.0;
+        direct_request.lateral.search_tolerance = 0.0;
+        direct_request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
+        direct_request.target_speed = snap.target_speed;
         PathGeneratorConfig direct_cfg;
         direct_cfg.lateral_d1 = {-3.0, 3.0, 0.5};
         direct_cfg.lateral_target_tolerance = 0.5;
@@ -135,17 +148,22 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
         direct_cfg.delta_s = {-3.0, 3.0, 1.0};
         direct_cfg.delta_s_dot = {-2.0, 2.0, 1.0};
         direct_cfg.dt = 0.1;
-        KinematicLimits direct_limits{3.0, 3.0, kMaxCurvature, 6.0};
-        VehicleShape vehicle_shape{2.0, 4.5};
+        KinematicLimits direct_limits{};
+        direct_limits.max_lateral_accel = 3.0;
+        direct_limits.max_longitudinal_accel = 3.0;
+        direct_limits.max_curvature = kMaxCurvature;
+        direct_limits.max_longitudinal_jerk = 6.0;
+        direct_limits.low_speed_fallback_v = 0.5;
+        VehicleShape vehicle_shape{2.0, 4.5, -1.0};
         CollisionCheckConfig collision_cfg{0.3, 0.1, 3.0};
         std::vector<TrackedObject> no_obstacles;
         PlannerDebugStats direct_stats{};
-        auto direct_candidates = ResolveManeuver(direct_start, direct_cmd, ref, direct_cfg,
-                                                 direct_limits, /*lane_width=*/3.5,
-                                                 no_obstacles, vehicle_shape, collision_cfg,
-                                                 &direct_stats);
+        auto direct_candidates = GenerateRequestedCandidates(
+            direct_start, direct_request, ref, direct_cfg, direct_limits,
+            no_obstacles, vehicle_shape, collision_cfg, &direct_stats);
         std::vector<FrenetPath> continuity =
-            GenerateLateralContinuityCandidates(direct_start, direct_cfg);
+            GenerateLateralContinuityCandidates(direct_start, direct_cfg,
+                                                direct_limits.low_speed_fallback_v);
         FilterLateralByAcceleration(continuity, direct_limits);
         auto continuity_lon =
             GenerateVelocityKeepingCandidates(direct_start, snap.target_speed, direct_cfg);
@@ -155,7 +173,7 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
         std::size_t continuity_valid = 0;
         for (const auto& p : continuity_combined) if (p.valid) ++continuity_valid;
 
-        std::printf("  %s: ResolveManeuver after_curvature=%zu, continuity candidates "
+        std::printf("  %s: GenerateRequestedCandidates after_curvature=%zu, continuity candidates "
                     "valid after curvature=%zu\n",
                     snap.label, direct_stats.combined_valid_after_curvature, continuity_valid);
         Expect(direct_stats.combined_valid_after_curvature + continuity_valid >= 1,
@@ -177,7 +195,7 @@ void TestNormalKeepStillRecentersToCenter() {
 
     RefLine ref;
     double max_curvature_for_load = kMaxCurvature;
-    LoadReferenceLine(waypoint_file, ref, max_curvature_for_load);
+    LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(), max_curvature_for_load);
 
     FrenetPlanner planner;
     planner.Init(config);
@@ -203,7 +221,8 @@ void TestNormalKeepStillRecentersToCenter() {
         final_pose.v = path.v.back();
         final_pose.a = path.a.back();
         double fs = 0.0, fs_dot = 0.0, fs_ddot = 0.0, fd = 0.0, fd_prime = 0.0, fd_pprime = 0.0;
-        CartesianToFrenet(ref, final_pose, fs, fs_dot, fs_ddot, fd, fd_prime, fd_pprime);
+        CartesianToFrenet(ref, final_pose, fs, fs_dot, fs_ddot, fd, fd_prime, fd_pprime,
+                          /*s_hint=*/nullptr, /*search_window=*/30.0);
         std::printf("  normal KEEP: terminal d=%.4f (initial d=0.30)\n", fd);
         Expect(std::fabs(fd) < 0.3,
                "normal KEEP: still recenters toward the lane center (terminal "

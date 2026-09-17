@@ -6,19 +6,39 @@
 #include <limits>
 #include <unordered_map>
 
+#include "frenet_planner/Generator/BoundaryConditionPolicy.hpp"
 #include "frenet_planner/Math/Utils.hpp"
 #include "frenet_planner/Speed/CurveSpeed.hpp"
-#include "frenet_planner/Speed/SpeedPolicy.hpp"
+#include "frenet_planner/Speed/TargetSpeedResolver.hpp"
 
 bool FrenetPlanner::Init(const std::string& yaml_path) {
     std::string waypoint_file;
-    LoadParams(yaml_path, path_cfg_, limits_, cost_weights_, vehicle_shape_,
-               collision_cfg_, curve_speed_cfg_, following_cfg_, avoid_cfg_,
-               lane_change_cfg_,
-               stop_cfg_, emergency_stop_cfg_, merge_cfg_, highway_merge_cfg_,
-               visualization_cfg_,
-               wheelbase_, lane_width_, replanning_period_s_,
-               max_target_speed_accel_, waypoint_file);
+    std::string config_error;
+    if (!LoadParams(yaml_path, ref_config_, object_tracking_cfg_, path_cfg_, limits_,
+                     cost_weights_,
+                     vehicle_shape_,
+                     collision_cfg_, curve_speed_cfg_, following_cfg_, avoid_cfg_,
+                     lane_change_cfg_,
+                     stop_cfg_, emergency_stop_cfg_, merge_cfg_, highway_merge_cfg_,
+                     visualization_cfg_,
+                     wheelbase_, lane_width_, replanning_period_s_,
+                     max_target_speed_accel_, waypoint_file, config_error)) {
+        std::printf("[FrenetPlanner] Config load failed ('%s'): %s\n",
+                    yaml_path.c_str(), config_error.c_str());
+        return false;
+    }
+    if (!ValidateConfig(ref_config_, object_tracking_cfg_, path_cfg_, limits_,
+                         cost_weights_, vehicle_shape_,
+                         collision_cfg_, curve_speed_cfg_, following_cfg_,
+                         avoid_cfg_, lane_change_cfg_, stop_cfg_,
+                         emergency_stop_cfg_, merge_cfg_, highway_merge_cfg_,
+                         visualization_cfg_, wheelbase_, lane_width_,
+                         replanning_period_s_, max_target_speed_accel_,
+                         config_error)) {
+        std::printf("[FrenetPlanner] Config validation failed ('%s'): %s\n",
+                    yaml_path.c_str(), config_error.c_str());
+        return false;
+    }
 
     if (!waypoint_file.empty() && waypoint_file.front() != '/') {
         waypoint_file = std::string(FRENET_PACKAGE_SRC_DIR) + "/" + waypoint_file;
@@ -26,7 +46,11 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
 
     debug_writer_ = std::make_unique<PlannerDebugWriter>(visualization_cfg_);
 
-    if (waypoint_file.empty() || !LoadReferenceLine(waypoint_file, ref_, limits_.max_curvature)) {
+    // reference line 자체가 만족해야 하는 곡률 한계는 KinematicFilter가
+    // 후보를 걸러내는 물리적 한계와 같은 차량 능력이다 - 별도 YAML key로
+    // 중복 관리하지 않고 loaded KinematicLimits에서 그대로 읽어 넘긴다.
+    if (waypoint_file.empty() ||
+        !LoadReferenceLine(waypoint_file, ref_, ref_config_, limits_.max_curvature)) {
         std::printf("[FrenetPlanner] Reference line load failed (waypoint_file='%s')\n",
                     waypoint_file.c_str());
         return false;
@@ -39,25 +63,15 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
         std::printf("[FrenetPlanner] Roundabout MERGE conflict: s=%.2f pos=(%.2f, %.2f)\n",
                     merge_cfg_.conflict_s, conflict.x, conflict.y);
     }
+    // zone s-ordering은 ConfigValidator::ValidateConfig가 이미 검증했다 -
+    // 여기서는 로그만 남긴다. 잘못된 zone 설정은 Init() 자체를 실패시키므로
+    // (Rule: config가 유효하지 않으면 조용히 기능을 끄지 않는다) 이 지점에
+    // 도달했다면 highway_merge_cfg_는 항상 유효하다.
     if (!highway_merge_cfg_.enabled || highway_merge_cfg_.zones.empty()) {
         std::printf("[FrenetPlanner] Highway MERGE disabled: measure start/conflict/"
                     "completion_s, then set planner.highway_merge.enabled=true\n");
     } else {
         for (const auto& zone : highway_merge_cfg_.zones) {
-            bool valid_zone = zone.start_s >= 0.0 && !zone.checkpoints.empty();
-            double previous_clear_s = zone.start_s;
-            for (const auto& checkpoint : zone.checkpoints) {
-                valid_zone = valid_zone && checkpoint.conflict_s > previous_clear_s &&
-                    checkpoint.clear_s > checkpoint.conflict_s;
-                previous_clear_s = checkpoint.clear_s;
-            }
-            valid_zone = valid_zone && zone.completion_s >= previous_clear_s;
-            if (!valid_zone) {
-                std::printf("[FrenetPlanner] Highway MERGE zone '%s' invalid s ordering; "
-                            "policy disabled\n", zone.name.c_str());
-                highway_merge_cfg_.enabled = false;
-                break;
-            }
             std::printf("[FrenetPlanner] Highway MERGE '%s': start=%.2f complete=%.2f "
                         "checkpoints=%zu\n", zone.name.c_str(), zone.start_s,
                         zone.completion_s, zone.checkpoints.size());
@@ -87,8 +101,9 @@ bool FrenetPlanner::GenerateDecelToZeroPath(double s, double d, double s_dot,
             ? stop_.commanded_decel
             : stop_cfg_.comfortable_decel;
     const double decel = std::max(
-        0.1, last_mode_ == EMERGENCY ? emergency_stop_cfg_.decel
-                                     : normal_stop_decel);
+        stop_cfg_.min_decel,
+        last_mode_ == EMERGENCY ? emergency_stop_cfg_.decel
+                                : normal_stop_decel);
     const double v0 = std::max(0.0, s_dot);
     const int n = static_cast<int>(std::ceil(v0 / decel / path_cfg_.dt)) + 1;
     out_path.x.assign(n, 0.0); out_path.y.assign(n, 0.0);
@@ -143,14 +158,15 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
     out_path.v.reserve(minimum_samples); out_path.a.reserve(minimum_samples);
 
     double s_i = s;
-    double v_prev = std::max(ego.v, kMinCreepSpeed);
+    double v_prev = std::max(ego.v, limits_.low_speed_min_creep_speed);
     // 거리 기반 후보는 목표 횡이동을 실제로 끝낼 때까지 생성한다. 안전을
     // 위해 비정상 파라미터에도 유한한 상한을 둔다(0.1 s 기준 60 s).
     constexpr int kMaximumSamples = 600;
     for (int i = 0; i < kMaximumSamples; ++i) {
         const double t = i * path_cfg_.dt;
         const double crawl_speed = clip(
-            ego.v + kCrawlAccel * t, kMinCreepSpeed, kCrawlSpeedCap);
+            ego.v + limits_.low_speed_crawl_accel * t,
+            limits_.low_speed_min_creep_speed, limits_.low_speed_crawl_speed_cap);
         const double v_i = std::min(crawl_speed, speed_cap);
         if (i > 0) s_i += 0.5 * (v_i + v_prev) * path_cfg_.dt;
         v_prev = v_i;
@@ -168,7 +184,8 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
                                      * std::cos(M_PI * frac);
 
         RefPoint rp = Interpolate(ref_, s_i);
-        const double a_i = (v_i < kCrawlSpeedCap) ? kCrawlAccel : 0.0;
+        const double a_i = (v_i < limits_.low_speed_crawl_speed_cap)
+                               ? limits_.low_speed_crawl_accel : 0.0;
         CartesianState cs = FrenetToCartesian(rp, s_i, v_i, a_i, d_i, d_prime, d_pprime);
 
         out_path.x.push_back(cs.x);
@@ -198,13 +215,18 @@ double FrenetPlanner::LowSpeedLateralTransitionDistance(
     // longitudinal distance ~= 2*sqrt(D/kappa)다. 차량 한계값을 그대로
     // 쓰면 이산 샘플/MPC 오차에 취약하므로 곡률의 80%와 거리 10% 여유를
     // 사용한다. D=2.75m, max_curvature=0.28이면 약 7.7m다.
-    const double usable_curvature =
-        std::max(1e-3, limits_.max_curvature * 0.8);
-    constexpr double kDistanceMargin = 1.1;
+    const double usable_curvature = std::max(
+        1e-3, limits_.max_curvature * limits_.low_speed_usable_curvature_fraction);
     return std::max(
         1.0,
-        kDistanceMargin * 2.0 *
+        limits_.low_speed_transition_distance_margin * 2.0 *
             std::sqrt(lateral_distance / usable_curvature));
+}
+
+PlannerConfigBundle FrenetPlanner::MakePipelineConfigBundle() const {
+    return PlannerConfigBundle{
+        path_cfg_, limits_, cost_weights_, vehicle_shape_, collision_cfg_,
+        stop_cfg_, merge_cfg_, avoid_cfg_, following_cfg_, lane_width_};
 }
 
 // Cartesian 정지 목표 -> reference line 종방향 좌표.
@@ -283,7 +305,8 @@ bool FrenetPlanner::ProjectEgoToS(const CartesianState& ego, double& out_s) cons
     if (!ref_loaded_ || ref_.points.empty()) return false;
     if (!std::isfinite(ego.x) || !std::isfinite(ego.y)) return false;
     const double s = FindClosestS(ref_, ego.x, ego.y,
-                                  has_last_s_ ? &last_s_ : nullptr);
+                                  has_last_s_ ? &last_s_ : nullptr,
+                                  ref_config_.ego_projection_search_window);
     if (!std::isfinite(s)) return false;
     out_s = s;
     return true;
@@ -497,7 +520,8 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
 
     CartesianToFrenet(ref_, ego, ctx.s, ctx.s_dot, ctx.s_ddot, ctx.d,
                        ctx.d_prime, ctx.d_pprime,
-                       has_last_s_ ? &last_s_ : nullptr);
+                       has_last_s_ ? &last_s_ : nullptr,
+                       ref_config_.ego_projection_search_window);
     last_s_ = ctx.s;
     has_last_s_ = true;
 
@@ -511,17 +535,21 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
             object_tracks_[obj.id] = ObjectTrack{obj.heading, 0.0, 0};
         } else {
             const double measured = std::remainder(obj.heading - it->second.heading,
-                                                    2.0 * M_PI) / 0.05;
+                                                    2.0 * M_PI) / replanning_period_s_;
             // UDP heading 양자화/순간 점프를 억제하고 차량 수준의 yaw-rate로 제한한다.
-            const double bounded = clip(measured, -1.0, 1.0);
-            it->second.yaw_rate = 0.8 * it->second.yaw_rate + 0.2 * bounded;
+            const double bounded = clip(measured,
+                                        -object_tracking_cfg_.yaw_rate_clamp_rad_s,
+                                        object_tracking_cfg_.yaw_rate_clamp_rad_s);
+            const double alpha = object_tracking_cfg_.yaw_rate_smoothing_alpha;
+            it->second.yaw_rate = (1.0 - alpha) * it->second.yaw_rate + alpha * bounded;
             it->second.heading = obj.heading;
             it->second.missing_cycles = 0;
         }
         object_yaw_rates[obj.id] = object_tracks_[obj.id].yaw_rate;
     }
     for (auto it = object_tracks_.begin(); it != object_tracks_.end();) {
-        if (it->second.missing_cycles > 20) it = object_tracks_.erase(it);
+        if (it->second.missing_cycles > object_tracking_cfg_.missing_cycles_eviction)
+            it = object_tracks_.erase(it);
         else ++it;
     }
     // obstacles의 각 TrackedObject는 이미 authoritative corners(perception의
@@ -534,22 +562,21 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
         obj.yaw_rate = it == object_yaw_rates.end() ? 0.0 : it->second;
     }
 
-    ctx.resolved_target_speed = LookaheadTargetSpeed(
-        ref_, ctx.s, ego.v, curve_speed_cfg_, limits_.max_longitudinal_accel,
-        limits_.max_lateral_accel, limits_.max_curvature);
-    if (external_command.has_target_speed) {
-        ctx.resolved_target_speed = std::min(ctx.resolved_target_speed,
-                                             external_command.target_speed);
-    }
-    if (external_command.has_max_speed) {
-        ctx.resolved_target_speed = std::min(ctx.resolved_target_speed,
-                                             external_command.max_speed);
-    }
-
-    // Cycle-to-cycle target speed recovery continuity
-    // (fix/yuntae-frenet-speed-continuity Phase 2).
-    ctx.resolved_target_speed = ApplyTargetSpeedRateLimit(
-        ctx.resolved_target_speed, last_target_speed_, has_target_speed_history_,
+    // R7-B: target speed 조립 순서(curve envelope -> external target cap ->
+    // external max cap -> rate limit)는 TargetSpeedResolver로 옮겼다 - 순서와
+    // 결과는 동일하다. BehaviorState/PlannerCommand 전체를 넘기지 않고 여기서
+    // 필요한 scalar/flag만 해석해서 넘긴다(history는 FrenetPlanner가 소유).
+    TargetSpeedInput target_speed_input;
+    target_speed_input.ego_s = ctx.s;
+    target_speed_input.ego_speed = ego.v;
+    target_speed_input.has_external_target_speed = external_command.has_target_speed;
+    target_speed_input.external_target_speed = external_command.target_speed;
+    target_speed_input.has_external_max_speed = external_command.has_max_speed;
+    target_speed_input.external_max_speed = external_command.max_speed;
+    target_speed_input.has_history = has_target_speed_history_;
+    target_speed_input.previous_target_speed = last_target_speed_;
+    ctx.resolved_target_speed = ResolveTargetSpeed(
+        ref_, target_speed_input, curve_speed_cfg_, limits_,
         max_target_speed_accel_, replanning_period_s_);
     has_target_speed_history_ = true;
 
@@ -638,8 +665,7 @@ bool FrenetPlanner::PlanInternal(
     // fallback으로 직접 경로를 만든다 (클래스 헤더 주석 참고 - 나누기 없는 안전한
     // 경로). AVOID/장애물 회피는 이 fallback에서는 다루지 않는다 - 정지 근처
     // 속도로는 위험한 회피 기동이 필요할 상황이 원래 적고, 속도가 오르면 바로
-    // 아래의 정상 파이프라인으로 자동 복귀한다.
-    constexpr double kLowSpeedFallbackV = 0.5;  // [m/s]
+    // 아래의 정상 파이프라인으로 자동 복귀한다. 문턱은 limits_.low_speed_fallback_v.
 
     // =====================================================================
     // 외부 EMERGENCY_STOP: 후보 파이프라인을 건너뛰고 직접 감속한다.
@@ -653,7 +679,7 @@ bool FrenetPlanner::PlanInternal(
     //   2. 후보가 전부 탈락하면 "긴급정지인데 아무 궤적도 못 보냄"이 된다.
     //      긴급정지에서 그 실패 방향 자체를 제거하는 것이 목적이다.
     //
-    // 저속 fallback보다 먼저 처리한다. 그 fallback은 kMinCreepSpeed로 기어서
+    // 저속 fallback보다 먼저 처리한다. 그 fallback은 limits_.low_speed_min_creep_speed로 기어서
     // 전진하는 경로라 긴급정지 중에 차량이 계속 움직이게 된다.
     //
     // 차량이 이미 멈춰 있으면(v0 ~= 0) 0속도 궤적이 나온다. 새 정상 명령이
@@ -722,7 +748,7 @@ bool FrenetPlanner::PlanInternal(
     }
 
     const bool external_stop = external_command->mode == STOP;
-    // 외부 FOLLOW도 저속 fallback을 타지 않는다. 그 경로는 kMinCreepSpeed로
+    // 외부 FOLLOW도 저속 fallback을 타지 않는다. 그 경로는 limits_.low_speed_min_creep_speed로
     // 기어서 전진하는데, 앞차가 정지해 있으면 그대로 다가가 붙는다. FOLLOW의
     // 종방향 목표는 선행차와의 gap이므로 정상 following 후보 생성기
     // (GenerateFollowingCandidates)로 보내야 한다 - 그 생성기는 leader가
@@ -737,7 +763,7 @@ bool FrenetPlanner::PlanInternal(
     // 여기서 제외하지 않으면 PREPARE 블록에 도달하지도 못한다 - 이 분기가
     // 먼저 return하기 때문이다(실측으로 확인: v=0.3에서 low_speed_context이
     // 0으로 나오고 maintenance가 미검사 crawl이었다).
-    if (std::fabs(ego.v) < kLowSpeedFallbackV &&
+    if (std::fabs(ego.v) < limits_.low_speed_fallback_v &&
         !external_stop && !external_follow && !avoid_prepare &&
         !avoid_committed && !lane_change_prepare && !lane_change_committed) {
         static int low_speed_log_tick = 0;
@@ -749,7 +775,8 @@ bool FrenetPlanner::PlanInternal(
         last_mode_ = external_command->mode;
         last_target_speed_ = resolved_target_speed;
         const bool fallback_ok = PlanLowSpeedFallback(
-            ego, s, d, 0.0, out_path, 2.0, resolved_target_speed);
+            ego, s, d, 0.0, out_path, limits_.low_speed_crawl_duration_s,
+            resolved_target_speed);
         if (fallback_ok) {
             last_candidate_paths_.push_back(out_path);
             last_candidate_validity_.push_back(true);
@@ -761,19 +788,21 @@ bool FrenetPlanner::PlanInternal(
     ArcDerivToTimeDeriv(s_dot, s_ddot, d_prime, d_pprime, d_dot, d_ddot);
     last_d_dot_ = d_dot;  // 클램프 전 원본 값 - 진단 목적(아래 kMaxDDot 클램프 폭 자체를 보려고)
 
-    // 투영 오차가 후보의 초기 가속도 경계조건을 비현실적으로 키우지 않도록
-    // 다항식 중간구간의 overshoot 여유를 포함해 한계의 80%로 제한한다.
-    constexpr double kBoundaryMargin = 0.8;
-    s_ddot = clip(s_ddot, -limits_.max_longitudinal_accel * kBoundaryMargin,
-                  limits_.max_longitudinal_accel * kBoundaryMargin);
-    d_ddot = clip(d_ddot, -limits_.max_lateral_accel * kBoundaryMargin,
-                  limits_.max_lateral_accel * kBoundaryMargin);
-
-    // 큰 heading 오차로 과대 추정될 수 있는 초기 횡속도도 제한한다.
-    constexpr double kMaxDDot = 0.5;  // [m/s]
-    d_dot = clip(d_dot, -kMaxDDot, kMaxDDot);
-
-    FrenetState start{s, s_dot, s_ddot, d, d_dot, d_ddot};
+    // R7-C: 물리적 boundary clamp(투영 오차로 인한 비현실적 초기 가속도/
+    // 횡속도 제한)는 Generator/BoundaryConditionPolicy로 옮겼다 - raw 값은
+    // 위에서 이미 last_d_dot_로 보존했고(clamp 이전), 여기서는 clamp된
+    // planning용 초기조건만 만든다. 수식/파라미터 의미는 그대로다.
+    //
+    // s_ddot/d_dot/d_ddot 지역변수는 예전에는 clip()이 제자리에서 덮어썼다 -
+    // 아래 FOLLOW/STOP/KEEP Process 호출부가 start와 별도로 이 값들을 받으므로
+    // (§16: raw와 planning state를 섞지 않되, 여기서는 두 호출부 모두
+    // clamp-이후 값을 기대하는 기존 계약을 그대로 보존한다), start 생성 후
+    // 그 clamp된 필드로 재대입한다.
+    const FrenetState start = ClampInitialBoundaryState(
+        s, s_dot, s_ddot, d, d_dot, d_ddot, limits_);
+    s_ddot = start.s_dd;
+    d_dot = start.d_d;
+    d_ddot = start.d_dd;
 
     // =====================================================================
     // AVOID PREPARE: 후보 평가와 유지 궤적을 한 사이클에서 만든다 (D6-2b)

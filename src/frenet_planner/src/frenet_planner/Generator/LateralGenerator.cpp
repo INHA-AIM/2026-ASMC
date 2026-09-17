@@ -31,7 +31,8 @@ FrenetPath SampleLateralQuintic(const QuinticPolynomial& poly, const std::vector
 // =========================================================
 
 std::vector<FrenetPath> GenerateLateralCandidates(const FrenetState& start,
-                                                   const PathGeneratorConfig& cfg) {
+                                                   const PathGeneratorConfig& cfg,
+                                                   double low_speed_threshold) {
     std::vector<FrenetPath> result;
 
     // 저속 임시 처리 (헤더 주석 참고): 이 속도 미만에서는
@@ -43,9 +44,8 @@ std::vector<FrenetPath> GenerateLateralCandidates(const FrenetState& start,
     // 유지"로 영원히 갇히는 문제가 실측으로 확인됐다(속도가 임계값을 못 넘어
     // 저속 분기를 못 벗어남). start.d와 다르면(=0 근처가 아니면) 차선 중앙
     // (d1=0) 후보도 같이 만들어 최소한 하나는 살아남을 여지를 준다.
-    constexpr double kLowSpeedThreshold = 0.5;  // [m/s]
     std::vector<double> d1_list;
-    if (std::fabs(start.s_d) < kLowSpeedThreshold) {
+    if (std::fabs(start.s_d) < low_speed_threshold) {
         d1_list.push_back(start.d);
         if (std::fabs(start.d) > 1e-3) d1_list.push_back(0.0);
     } else {
@@ -69,12 +69,13 @@ std::vector<FrenetPath> GenerateLateralCandidates(const FrenetState& start,
 }
 
 std::vector<FrenetPath> GenerateLateralContinuityCandidates(const FrenetState& start,
-                                                             const PathGeneratorConfig& cfg) {
+                                                             const PathGeneratorConfig& cfg,
+                                                             double low_speed_threshold) {
     PathGeneratorConfig continuity_cfg = cfg;
     continuity_cfg.lateral_d1.min = start.d;
     continuity_cfg.lateral_d1.max = start.d;
     continuity_cfg.lateral_d1.step = 0.0;
-    return GenerateLateralCandidates(start, continuity_cfg);
+    return GenerateLateralCandidates(start, continuity_cfg, low_speed_threshold);
 }
 
 double ResolveLateralOffset(const PlannerCommand& cmd, double lane_width) {

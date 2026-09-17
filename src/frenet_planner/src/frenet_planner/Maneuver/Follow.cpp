@@ -37,7 +37,8 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
 
     if (it != obstacles.end()) {
         double object_s = 0.0, object_d = 0.0, object_s_dot = 0.0;
-        ProjectObjectToFrenet(ref_, *it, object_s, object_d, object_s_dot);
+        ProjectObjectToFrenet(ref_, *it, object_s, object_d, object_s_dot,
+                             ref_config_.ego_projection_search_window);
 
         // 폐루프 트랙에서 gap이 음수로 크게 튀지 않도록 감아준다.
         const double track_length =
@@ -117,8 +118,7 @@ FrenetPlanner::FollowTargetStatus FrenetPlanner::ResolveExternalFollowTarget(
     }
 
     // 유예 중에는 직전 속도로 leader 위치를 예측한다(legacy와 동일).
-    constexpr double kPlannerCycleDt = 0.05;  // 20 Hz
-    context.leader_s += context.leader_speed * kPlannerCycleDt;
+    context.leader_s += context.leader_speed * replanning_period_s_;
 
     return FollowTargetStatus::GRACE;
 }

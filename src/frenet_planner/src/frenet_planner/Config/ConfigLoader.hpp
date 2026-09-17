@@ -1,17 +1,26 @@
-#ifndef PLANNER_COMMON_PARAMETER_LOADER_HPP
-#define PLANNER_COMMON_PARAMETER_LOADER_HPP
+#ifndef PLANNER_CONFIG_CONFIG_LOADER_HPP
+#define PLANNER_CONFIG_CONFIG_LOADER_HPP
 
 #include <string>
 
-#include "frenet_planner/Common/PlannerConfig.hpp"
+#include "frenet_planner/Config/FrenetConfig.hpp"
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/Evaluation/Cost.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
+#include "frenet_planner/Reference/Reference.hpp"
 #include "frenet_planner/visualization/planner_debug_writer.hpp"
 
-// params.yaml -> 각 config struct 로드 (yaml-cpp 기반, ROS 의존성 없음)
-void LoadParams(const std::string& yaml_path,
+// params.yaml -> 각 config struct 로드 (yaml-cpp 기반, ROS 의존성 없음).
+//
+// 필수 key 누락, YAML 타입 오류, 시퀀스/객체 모양 불일치가 하나라도 있으면
+// false를 반환하고 error_message에 원인이 된 key를 남긴다 - 어떤 필드도
+// 조용히 이전 값(대개 미정의)에 머무르지 않는다. 여기서는 개별 key의
+// 존재/타입만 검사하며, range/순서/물리적 정합성 같은 값 자체의 타당성은
+// ConfigValidator::ValidateConfig()의 책임이다.
+bool LoadParams(const std::string& yaml_path,
+                ReferenceConfig& reference_cfg,
+                ObjectTrackingConfig& object_tracking_cfg,
                 PathGeneratorConfig& path_cfg,
                 KinematicLimits& limits,
                 CostWeights& cost_weights,
@@ -30,6 +39,7 @@ void LoadParams(const std::string& yaml_path,
                 double& lane_width,
                 double& replanning_period_s,
                 double& max_target_speed_accel,
-                std::string& waypoint_file);
+                std::string& waypoint_file,
+                std::string& error_message);
 
-#endif  // PLANNER_COMMON_PARAMETER_LOADER_HPP
+#endif  // PLANNER_CONFIG_CONFIG_LOADER_HPP

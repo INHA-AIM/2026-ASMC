@@ -9,15 +9,18 @@
 #include "frenet_planner/Common/CartesianTypes.hpp"
 #include "frenet_planner/Common/FrenetTypes.hpp"
 #include "frenet_planner/Common/ObjectTypes.hpp"
-#include "frenet_planner/Common/ParameterLoader.hpp"
 #include "frenet_planner/Common/PlannerCommand.hpp"
-#include "frenet_planner/Common/PlannerConfig.hpp"
+#include "frenet_planner/Config/ConfigLoader.hpp"
+#include "frenet_planner/Config/ConfigValidator.hpp"
+#include "frenet_planner/Config/FrenetConfig.hpp"
 #include "frenet_planner/Reference/Reference.hpp"
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
 #include "frenet_planner/Generator/CandidateCombiner.hpp"
 #include "frenet_planner/Evaluation/Cost.hpp"
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
+#include "frenet_planner/Pipeline/PlannerConfigBundle.hpp"
+#include "frenet_planner/Pipeline/TrajectoryPipeline.hpp"
 #include "frenet_planner/visualization/planner_debug_writer.hpp"
 
 // Frenet Frame Path Planner: 전역 경로(RefLine)를 기준으로 한 Local Planner.
@@ -51,9 +54,11 @@ public:
     bool Init(const std::string& yaml_path);
 
     // 외부 FSM command 기반 진입점. 현재 external whitelist는 LANE_KEEPING /
-    // STOP / EMERGENCY / FOLLOWING / AVOID이며(IsSupportedExternalMode 참고),
-    // MERGE/LANE_CHANGE는 core 구현이 있어도 UNSUPPORTED_BEHAVIOR로 거부한다.
-    // ROS 계약이 확정되는 모드부터 whitelist를 확장한다(D7/D8).
+    // STOP / EMERGENCY / FOLLOWING / AVOID / LANE_CHANGE_LEFT /
+    // LANE_CHANGE_RIGHT이며(IsSupportedExternalMode 참고), MERGE는 core
+    // 구현이 있어도 UNSUPPORTED_BEHAVIOR로 거부한다(R6-D: production에서
+    // MERGE로 도달하는 caller가 없다는 것을 감사로 확인했고, FSM 계약이
+    // 별도로 확정되기 전까지 이 결정을 바꾸지 않는다).
     // obstacles의 각 TrackedObject는 authoritative 8 corners(perception의
     // obb_corners)를 이미 채운 상태여야 한다 - Planner는 center/dimension
     // 으로 geometry를 재생성하지 않는다. corners 없이 들어온 객체를 걸러
@@ -586,6 +591,7 @@ private:
         double resolved_target_speed, const PlannerCommand& external_command,
         CartesianPath& out_path);
 
+    // 정의: Maneuver/Avoid/AvoidLifecycle.cpp (R6-F1).
     double EffectiveAvoidShiftStartDistance(double ego_speed,
                                             double ego_d) const;
     void UpdateCommittedAvoidLifecycle(double ego_s, double ego_d,
@@ -593,7 +599,9 @@ private:
                                        AvoidPrepareResult& result);
 
     // ---------------------------------------------------------------------
-    // v2 LANE_CHANGE 내부. Avoid.cpp의 대응 함수와 같은 역할 분리를 따른다.
+    // v2 LANE_CHANGE 내부. Maneuver/Avoid/의 대응 함수와 같은 역할 분리를
+    // 따른다 - commit/lifecycle은 LaneChangeLifecycle.cpp, target 캡처/
+    // maintenance/orchestration은 LaneChange.cpp (R6-F2).
     // ---------------------------------------------------------------------
     //
     // authoritative execution target(target_d)은 Behavior/FSM이 MGeo Link
@@ -644,11 +652,14 @@ private:
     // 번 잠그고, start_d(진행률 계산용 기준점)를 기록한다.
     //
     // 반환값: PlanInternal이 그대로 return해야 하는 상태만 false로 전달한다.
+    //
+    // 정의: Maneuver/LaneChange/LaneChange.cpp (R6-F2).
     bool PrepareExternalLaneChangeTarget(
         double ego_s, double ego_d, const PlannerCommand& command,
         bool lane_change_prepare, bool lane_change_committed);
 
     // LANE_CHANGE PREPARE/COMMITTED 실행 전체. AvoidProcess와 동일한 구조다.
+    // 정의: Maneuver/LaneChange/LaneChange.cpp (R6-F2).
     bool LaneChangeProcess(
         const CartesianState& ego, const FrenetState& start,
         double s, double d, double resolved_target_speed,
@@ -660,6 +671,7 @@ private:
     // LANE_CHANGE PREPARE의 유지 궤적. BuildAvoidMaintenancePath와 동일한
     // 3단계 우선순위(충돌 검사를 통과한 현재 차선 유지 -> 종방향 감속 ->
     // 0속도 hold, §9) - 로직을 복제하지 않고 그대로 재사용한다.
+    // 정의: Maneuver/LaneChange/LaneChange.cpp (R6-F2).
     bool BuildLaneChangeMaintenancePath(
         const CartesianState& ego, const FrenetState& start,
         const PlannerCommand& base_command,
@@ -670,6 +682,7 @@ private:
     // 전환하고 progress를 갱신한다. UpdateCommittedAvoidLifecycle과 같은
     // 역할 분리이지만 obstacle clearance(PASS)에 대응하는 단계가 없다 -
     // 지나쳐야 할 장애물이 없으므로 위치 도달이 곧 HOLD 전환 조건이다.
+    // 정의: Maneuver/LaneChange/LaneChangeLifecycle.cpp (R6-F2).
     void UpdateCommittedLaneChangeLifecycle(double ego_s, double ego_d,
                                             double ego_d_dot, double ego_yaw,
                                             LaneChangePrepareResult& result);
@@ -698,6 +711,8 @@ private:
     // 로 자기잠금이 되어 영원히 READY에 도달하지 못한다. crawl도 반드시
     // 충돌 검사를 통과해야 하며(PlanLowSpeedFallback 자체는 충돌 필터를
     // 타지 않는다), 막히면 2번/3번으로 내려간다.
+    //
+    // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1, orchestration).
     bool BuildAvoidMaintenancePath(
         const CartesianState& ego, const FrenetState& start,
         const PlannerCommand& base_command,
@@ -705,6 +720,8 @@ private:
         CartesianPath& out_path) const;
 
     // 현재 위치에서 0속도로 정지 유지하는 한 점 궤적. STOP HOLD와 같은 형태다.
+    // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1) - LaneChange.cpp도 이 helper를
+    // 공유한다(AVOID 전용 로직이 아니다).
     void BuildZeroSpeedHoldPath(const CartesianState& ego, double s,
                                 CartesianPath& out_path) const;
 
@@ -721,6 +738,8 @@ private:
     // 반환값: PlanInternal이 그대로 return해야 하는 상태만 false로
     // 전달한다(TARGET_OBJECT_LOST, NORMAL purpose에서의
     // UNSUPPORTED_BEHAVIOR). 그 외엔 true.
+    //
+    // 정의: Maneuver/Avoid/AvoidTargetResolver.cpp (R6-F1).
     bool PrepareExternalAvoidTargets(
         double ego_s, const std::vector<TrackedObject>& obstacles,
         const PlannerCommand& command, bool avoid_prepare, bool avoid_committed);
@@ -738,6 +757,8 @@ private:
     // avoid_prepare(purpose==AVOID_PREPARE), avoid_committed
     // (purpose==AVOID_COMMITTED), v2_avoidance_.committed(core context
     // lock 여부)는 서로 다른 세 축이며 이 함수 안에서도 합치지 않는다.
+    //
+    // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1, orchestration).
     bool AvoidProcess(
         const CartesianState& ego, const FrenetState& start,
         double s, double d, double resolved_target_speed,
@@ -873,16 +894,6 @@ private:
         const std::vector<TrackedObject>& obstacles,
         FollowingContext& context) const;
 
-    // moderate-speed curvature starvation 완화(fix/yuntae-frenet-speed-continuity
-    // Phase B). external KEEP에서 결합 후보가 전부 곡률 필터에 탈락하는 사례를
-    // 막기 위해, 현재 오프셋을 유지하는 continuity candidate를 candidates에
-    // 추가로 얹는다(대체가 아니라 추가) - 자세한 배경은 PlanInternal의 호출부
-    // 주석 참고. maneuver_start.d가 차선 폭 안일 때만 호출된다(호출부에서 보장).
-    void AppendExternalKeepContinuityCandidates(
-        const FrenetState& maneuver_start, const PlannerCommand& cmd,
-        const std::vector<TrackedObject>& planning_collision_obstacles,
-        std::vector<FrenetPath>& candidates) const;
-
     // external KEEP의 no-valid-candidate 분기에서 저속 근방일 때만 호출되는
     // crawl fallback 실행부(fix/yuntae-frenet-speed-continuity Phase 5). 호출
     // 여부 판단(external_keep/속도 문턱/COLLISION_BLOCKED 제외)은 PlanInternal이
@@ -959,12 +970,15 @@ private:
     // 탐색거리는 legacy AVOID와 같은 방식으로 확장한다. config 값을 그대로
     // 쓰면 충돌 lookahead보다 짧아져, 장애물을 회피 대상으로 등록하기 전에
     // 충돌 필터가 중앙 후보를 모두 제거해 속도가 급락한다.
+    //
+    // 정의: Maneuver/Avoid/AvoidTargetResolver.cpp (R6-F1).
     AvoidTargetStatus ResolveExternalAvoidTarget(
         double ego_s, int target_object_id,
         const std::vector<TrackedObject>& obstacles,
         AvoidanceContext& context) const;
 
     // v2 AVOID 대상의 유효 탐색거리 [m]. resolver와 진단 출력이 공유한다.
+    // 정의: Maneuver/Avoid/AvoidTargetResolver.cpp (R6-F1).
     double EffectiveAvoidDetectionDistance() const;
 
     // 확보한 대상에 대해 평가할 회피 목표 d를 정한다 (D6-2a).
@@ -1013,6 +1027,7 @@ private:
         // 아니므로 INVALID_COMMAND가 아니라 WAITING이다(계약 3.3.4절).
         bool direction_conflict = false;
     };
+    // 정의: Maneuver/Avoid/AvoidTargetResolver.cpp (R6-F1).
     AvoidTargetPlan DecideAvoidTargets(const AvoidanceContext& context,
                                        LateralDirection direction) const;
 
@@ -1036,17 +1051,23 @@ private:
     bool GenerateDecelToZeroPath(double s, double d, double s_dot,
                                  CartesianPath& out_path) const;
 
-    // 일반 저속 fallback의 크롤링 가속 프로파일 상수. 회전교차로 MERGE는
-    // 이 고정 2 m/s 프로파일을 쓰지 않고 정상 MERGE 후보 생성기로 처리한다.
-    static constexpr double kCrawlAccel = 0.5;       // [m/s^2] 완만한 가속
-    static constexpr double kMinCreepSpeed = 0.3;    // [m/s] 최소 전진속도 (0 근처에 갇히지 않도록)
-    static constexpr double kCrawlSpeedCap = 2.0;    // [m/s] 이 fallback 안에서의 속도 상한
+    // 일반 저속 fallback의 크롤링 가속 프로파일은 limits_.low_speed_crawl_accel/
+    // low_speed_min_creep_speed/low_speed_crawl_speed_cap이다. 회전교차로
+    // MERGE는 이 프로파일을 쓰지 않고 정상 MERGE 후보 생성기로 처리한다.
     // max_curvature로 만들 수 있는 대칭 S-curve의 종방향 길이를 보수적으로
     // 근사한다. 저속 fallback과 AVOID SHIFT 시작거리가 같은 값을 사용한다.
     double LowSpeedLateralTransitionDistance(double from_d,
                                               double to_d) const;
 
+    // ExecuteManeuverPipeline이 참조하는 config 10종을 값 복사 없이 참조로
+    // 묶어 반환한다 - Pipeline/TrajectoryPipeline으로 이 함수를 분리하기
+    // 위한 선행 작업(R3 1/4단계)이며, 이 시점에는 아직 pipeline 내부에서
+    // 개별 멤버 접근 대신 이 번들을 통해서만 읽도록 바꾸는 순수 구조
+    // 이동만 한다.
+    PlannerConfigBundle MakePipelineConfigBundle() const;
+
     RefLine ref_;
+    ReferenceConfig ref_config_{};
     PathGeneratorConfig path_cfg_{};
     KinematicLimits limits_{};
     CostWeights cost_weights_{};
@@ -1061,17 +1082,18 @@ private:
     MergeConfig merge_cfg_{};
     HighwayMergeConfig highway_merge_cfg_{};
     PlannerVisualizationConfig visualization_cfg_{};
+    ObjectTrackingConfig object_tracking_cfg_{};
     std::unique_ptr<PlannerDebugWriter> debug_writer_;
-    double wheelbase_ = 3.0;
-    double lane_width_ = 3.5;
+    double wheelbase_;
+    double lane_width_;
     // [s] 이 값은 caller(ROS node의 planning/frequency)의 실제 replanning
     // 주기를 나타낸다. path_cfg_.dt(trajectory 샘플 간격)와는 다른 개념이다
     // - 절대 섞어 쓰지 않는다(fix/yuntae-frenet-speed-continuity Phase 2).
-    double replanning_period_s_ = 0.05;
+    double replanning_period_s_;
     // [m/s^2] target speed가 이전 cycle보다 증가하는 방향에만 적용하는
     // rate limit. 감속 방향은 curve braking envelope(Phase 1)가 이미
     // 안전하게 처리하므로 여기서 추가로 막지 않는다.
-    double max_target_speed_accel_ = 2.0;
+    double max_target_speed_accel_;
     bool ref_loaded_ = false;
 
     // 직전 사이클의 s (FindClosestS 탐색범위 힌트용 - ref_line.hpp 주석 참고,

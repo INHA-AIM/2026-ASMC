@@ -12,10 +12,11 @@
 //
 // 이 테스트는 실제 production FrenetPlanner::Plan()을 그대로 호출한다 -
 // 로직을 복사하지 않는다. 완화 로직(ResolveVelocityKeepingBoundaryAcceleration)
-// 자체의 단위 계약은 Speed/SpeedPolicy.hpp에서 직접 검증한다.
+// 자체의 단위 계약은 Generator/BoundaryConditionPolicy.hpp에서 직접
+// 검증한다(R7-C: Speed/SpeedPolicy.hpp에서 이곳으로 이동).
 
 #include "frenet_planner/frenet_planner.hpp"
-#include "frenet_planner/Speed/SpeedPolicy.hpp"
+#include "frenet_planner/Generator/BoundaryConditionPolicy.hpp"
 
 #include <cmath>
 #include <fstream>

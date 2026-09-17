@@ -54,6 +54,8 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                                          const std::vector<TrackedObject>& obstacles,
                                          const VehicleShape& vehicle_shape,
                                          const CollisionCheckConfig& collision_cfg,
+                                         const StopConfig& stop_cfg,
+                                         const MergeConfig& merge_cfg,
                                          PlannerDebugStats* stats) {
     // 1. lateral 후보. 전 모드에 공유된 [-3,+3]m 격자를 쓰면
     // LANE_KEEPING에서도 먼 장애물을 보고 옆 후보가 선택된다. 모드가
@@ -84,7 +86,8 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
     lateral_cfg.lateral_d1.min = d_offset - lateral_tolerance;
     lateral_cfg.lateral_d1.max = d_offset + lateral_tolerance;
 
-    std::vector<FrenetPath> lateral_set = GenerateLateralCandidates(start, lateral_cfg);
+    std::vector<FrenetPath> lateral_set =
+        GenerateLateralCandidates(start, lateral_cfg, limits.low_speed_fallback_v);
     FilterLateralByAcceleration(lateral_set, limits);
     if (stats) {
         stats->lateral_total = lateral_set.size();
@@ -107,12 +110,10 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
             // 공용 delta_s는 [-3, +3]m이라 +쪽 후보는 정지 목표를 지나쳐서
             // 멈춘다. 정지선/정지 지점 semantics에서는 오버슈트가 곧 위반이므로
             // STOP 계열은 목표 앞에서만 멈추도록 delta 범위를 제한한다.
-            PathGeneratorConfig stop_cfg = cfg;
-            stop_cfg.delta_s.min = -1.0;
-            stop_cfg.delta_s.max = 0.0;
-            stop_cfg.delta_s.step = 0.25;
+            PathGeneratorConfig stop_delta_cfg = cfg;
+            stop_delta_cfg.delta_s = stop_cfg.delta_s_override;
             longitudinal_set =
-                GenerateStoppingCandidates(start, cmd.stop_position, stop_cfg);
+                GenerateStoppingCandidates(start, cmd.stop_position, stop_delta_cfg);
             break;
         }
 
@@ -123,6 +124,15 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
             longitudinal_set = GenerateStoppingCandidates(start, cmd.stop_position, cfg);
             break;
 
+        // R6-D audit: frenet_planner.cpp의 IsSupportedExternalMode()가 MERGE를
+        // 허용하지 않고, PrepareMerge/PlanCommittedMerge 같은 진입점 자체가
+        // 없다 - 이 case는 production에서 어떤 caller로부터도 도달하지
+        // 않는다(테스트가 PlannerCommand{mode=MERGE}로 직접 호출할 때만
+        // 실행된다). AVOID/LANE_CHANGE가 request-native로 이전한 뒤에도 이
+        // case가 legacy ResolveManeuver를 완전히 제거하지 못하게 막는 마지막
+        // 이유다 - MERGE의 FSM 계약이 열리기 전까지는 건드리지 않는다
+        // (Option 1: behavior-preserving 유지, 임의로 활성화하거나 삭제하지
+        // 않는다).
         case MERGE:
             if (cmd.merge_crossing) {
                 if (cmd.target_object_id >= 0) {
@@ -136,8 +146,8 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
             } else if (!cmd.merge_gap_safe) {
                 const double stop_distance = std::max(0.0, cmd.merge_stop_s - start.s);
                 const double braking_distance = start.s_d * start.s_d /
-                    (2.0 * std::max(limits.max_longitudinal_accel, 0.1));
-                if (stop_distance > braking_distance + 3.0) {
+                    (2.0 * limits.max_longitudinal_accel);
+                if (stop_distance > braking_distance + merge_cfg.braking_distance_margin) {
                     // 먼 거리부터 정지 quintic을 강제하면 모든 T 후보가 조기 감속한다.
                     // 제동구간 전까지는 global-path 순항을 유지한다.
                     longitudinal_set = GenerateVelocityKeepingCandidates(
@@ -147,13 +157,16 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                 }
             } else {
                 const double distance = std::max(0.0, cmd.merge_conflict_s - start.s);
-                const double arrival_speed = cmd.merge_entry_time > 0.1
-                    ? distance / cmd.merge_entry_time : cmd.target_speed;
+                const double arrival_speed =
+                    cmd.merge_entry_time > merge_cfg.min_entry_time_for_arrival_speed
+                        ? distance / cmd.merge_entry_time : cmd.target_speed;
                 if (cmd.merge_committed &&
                     cmd.merge_entry_time >= cfg.time_horizon.min - 1e-6) {
                     longitudinal_set = GenerateMergeArrivalCandidates(
                         start, cmd.merge_conflict_s, cmd.merge_entry_time,
-                        std::min(cmd.target_speed, std::max(arrival_speed, 1.0)), cfg);
+                        std::min(cmd.target_speed,
+                                 std::max(arrival_speed, merge_cfg.min_arrival_speed)),
+                        cfg, merge_cfg.arrival_time_match_tolerance);
                 } else if (cmd.merge_committed) {
                     // conflict 도착까지 남은 시간이 lateral/longitudinal 공통
                     // 최소 horizon보다 짧아지면 exact-arrival quintic을 만들 수 없다.
@@ -169,11 +182,15 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                         longitudinal_set = GenerateFollowingCandidates(
                             start, cmd.leader_s, cmd.leader_speed, cmd.leader_accel,
                             cmd.time_gap, cmd.min_gap,
-                            std::min(cmd.target_speed, std::max(arrival_speed, 1.0)),
+                            std::min(cmd.target_speed,
+                                     std::max(arrival_speed, merge_cfg.min_arrival_speed)),
                             cmd.gap_gain, cfg);
                     } else {
                         longitudinal_set = GenerateVelocityKeepingCandidates(
-                            start, std::min(cmd.target_speed, std::max(arrival_speed, 1.0)), cfg);
+                            start,
+                            std::min(cmd.target_speed,
+                                     std::max(arrival_speed, merge_cfg.min_arrival_speed)),
+                            cfg);
                     }
                 }
             }
@@ -215,6 +232,94 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
             cmd.mode == AVOID ? cmd.target_object_id : -1;
         FilterByCollision(combined, ref, obstacles, vehicle_shape, collision_cfg,
                           coast_exempt_id, avoid_escape_id);
+    }
+    if (stats) {
+        for (const auto& p : combined) if (p.valid) stats->combined_valid_after_collision++;
+    }
+
+    return combined;
+}
+
+std::vector<FrenetPath> GenerateRequestedCandidates(
+    const FrenetState& start,
+    const TrajectoryRequest& request,
+    const RefLine& ref,
+    const PathGeneratorConfig& cfg,
+    const KinematicLimits& limits,
+    const std::vector<TrackedObject>& obstacles,
+    const VehicleShape& vehicle_shape,
+    const CollisionCheckConfig& collision_cfg,
+    PlannerDebugStats* stats) {
+    // 1. lateral 후보. request.lateral이 authoritative input이다 - target_d/
+    // search_tolerance를 ResolveLateralOffset이나 cmd.mode로 다시 계산하지
+    // 않는다(§5).
+    PathGeneratorConfig lateral_cfg = cfg;
+    lateral_cfg.lateral_d1.min =
+        request.lateral.target_d - request.lateral.search_tolerance;
+    lateral_cfg.lateral_d1.max =
+        request.lateral.target_d + request.lateral.search_tolerance;
+
+    std::vector<FrenetPath> lateral_set =
+        GenerateLateralCandidates(start, lateral_cfg, limits.low_speed_fallback_v);
+    FilterLateralByAcceleration(lateral_set, limits);
+    if (stats) {
+        stats->lateral_total = lateral_set.size();
+        for (const auto& p : lateral_set) if (p.valid) stats->lateral_valid++;
+    }
+
+    // 2. longitudinal 후보 (request.longitudinal_mode에 따라 생성 방식 선택)
+    std::vector<FrenetPath> longitudinal_set;
+
+    switch (request.longitudinal_mode) {
+        case LongitudinalMode::FOLLOWING:
+            longitudinal_set = GenerateFollowingCandidates(
+                start, request.following.leader_s, request.following.leader_speed,
+                request.following.leader_accel, request.following.time_gap,
+                request.following.min_gap, request.target_speed,
+                request.following.gap_gain, cfg);
+            break;
+
+        case LongitudinalMode::STOPPING: {
+            // 공용 delta_s는 [-3, +3]m이라 +쪽 후보는 정지 목표를 지나쳐서
+            // 멈춘다. STOP은 목표 앞에서만 멈추도록 delta 범위를 제한한다 -
+            // 이 범위는 request.stop.terminal_offset으로 온다(호출자가
+            // StopConfig.delta_s_override를 그대로 옮겨 채운 값).
+            PathGeneratorConfig stop_delta_cfg = cfg;
+            stop_delta_cfg.delta_s = request.stop.terminal_offset;
+            longitudinal_set = GenerateStoppingCandidates(
+                start, request.stop.stop_s, stop_delta_cfg);
+            break;
+        }
+
+        case LongitudinalMode::VELOCITY_KEEPING:
+        default:
+            longitudinal_set =
+                GenerateVelocityKeepingCandidates(start, request.target_speed, cfg);
+            break;
+    }
+
+    FilterLongitudinalByKinematicLimits(longitudinal_set, limits);
+    if (stats) {
+        stats->longitudinal_total = longitudinal_set.size();
+        for (const auto& p : longitudinal_set) if (p.valid) stats->longitudinal_valid++;
+    }
+
+    // 3. 결합 + 사후 곡률 필터링
+    std::vector<FrenetPath> combined = CombineLateralLongitudinal(lateral_set, longitudinal_set);
+    if (stats) stats->combined_total = combined.size();
+    FilterByCurvature(combined, ref, limits);
+    if (stats) {
+        for (const auto& p : combined) if (p.valid) stats->combined_valid_after_curvature++;
+    }
+
+    // 4. 충돌 필터. request.collision이 예외 정책의 단일 authoritative
+    // 입력이다(R6-A) - longitudinal_mode를 보고 coast_exempt/escape를 다시
+    // 추론하지 않는다. 호출자가 FOLLOWING이면 leader를, AVOID면 회피 대상을
+    // 채워 넣고, 해당 없으면 -1을 그대로 둔다.
+    if (!obstacles.empty()) {
+        FilterByCollision(combined, ref, obstacles, vehicle_shape, collision_cfg,
+                          request.collision.coast_exempt_object_id,
+                          request.collision.escape_object_id);
     }
     if (stats) {
         for (const auto& p : combined) if (p.valid) stats->combined_valid_after_collision++;
