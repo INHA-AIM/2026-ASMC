@@ -125,6 +125,8 @@ add_executable(frenet_planner_node
   src/Runtime/input_snapshot.cpp
   src/Runtime/v2_planning.cpp
   src/Runtime/target_projection.cpp
+  src/Runtime/output_publisher.cpp
+  src/Runtime/debug_marker_publisher.cpp
   src/Runtime/feedback_builder.cpp
   src/Runtime/RuntimeConfig.cpp
 )
