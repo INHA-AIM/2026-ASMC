@@ -233,6 +233,17 @@ planner:
     braking_distance_margin: 3.0
     # [m/s] MERGE 도착/추종 목표속도의 최소 하한(0에 가까운 크리프 속도 방지).
     min_arrival_speed: 1.0
+    # [s] 회전교차로 순환 차량 constant-turn-rate 예측의 시간 샘플링 간격.
+    prediction_dt: 0.05
+    # [s] 진입시각 후보를 훑는 탐색 간격.
+    entry_search_dt: 0.1
+    # [m/s] MinimumTravelTime의 최소 목표/현재 속도 가정.
+    min_travel_speed: 0.5
+    # [m/s^2] MinimumTravelTime의 최소 가속도 가정.
+    min_travel_accel: 0.1
+    # [s] GenerateMergeArrivalCandidates의 entry_time 주변 T 격자 매칭
+    # 허용폭 하한(time_horizon.step보다 좁으면 이 값이 우선한다).
+    arrival_time_match_tolerance: 0.6
 
   # --- 고주로/본선 합류 MERGE --------------------------------
   # 실측한 세 합류 구간의 start/conflict/completion_s를 zone별로 사용한다.
@@ -264,6 +275,15 @@ planner:
     commit_distance: 20.0
     safe_confirm_cycles: 3
     cross_speed_floor: 4.0
+    # [s] 진입시각 후보를 훑는 탐색 간격.
+    entry_search_dt: 0.1
+    # [s] entry/clear 구간 전체를 따라 ego footprint 충돌 재검사를 하는
+    # 시간 샘플링 간격.
+    collision_check_dt: 0.1
+    # [m/s] MinimumTravelTime의 최소 목표/현재 속도 가정.
+    min_travel_speed: 0.5
+    # [m/s^2] MinimumTravelTime의 최소 가속도 가정.
+    min_travel_accel: 0.1
 
   # --- 실시간 후보 경로 디버그 시각화 -----------------------
   # Planner가 최신 스냅샷을 원자적으로 갱신하고 tools/planner_visualizer.py가 읽는다.

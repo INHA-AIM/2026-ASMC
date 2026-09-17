@@ -146,6 +146,18 @@ struct MergeConfig {
     // [m/s] MERGE 도착/추종 목표속도의 최소 하한. entry_time 기반 계산이
     // 0에 가까운 크리프 속도를 요구하지 않도록 한다.
     double min_arrival_speed;
+    // [s] 회전교차로 순환 차량 constant-turn-rate 예측의 시간 샘플링 간격.
+    double prediction_dt;
+    // [s] 진입시각 후보를 훑는 탐색 간격.
+    double entry_search_dt;
+    // [m/s] MinimumTravelTime의 최소 목표/현재 속도 가정(가속 시간 계산이
+    // 0에 가까운 속도로 나누지 않도록).
+    double min_travel_speed;
+    // [m/s^2] MinimumTravelTime의 최소 가속도 가정.
+    double min_travel_accel;
+    // [s] GenerateMergeArrivalCandidates가 entry_time 주변 T 격자를 남길 때
+    // 쓰는 최소 매칭 허용폭(time_horizon.step보다 좁으면 이 값이 우선한다).
+    double arrival_time_match_tolerance;
 };
 
 // =========================================================
@@ -243,6 +255,15 @@ struct HighwayMergeConfig {
     double commit_distance;       // [m]
     int safe_confirm_cycles;
     double cross_speed_floor;     // [m/s]
+    // [s] 진입시각 후보를 훑는 탐색 간격.
+    double entry_search_dt;
+    // [s] entry/clear 구간 전체를 따라 ego footprint 충돌 재검사를 하는
+    // 시간 샘플링 간격.
+    double collision_check_dt;
+    // [m/s] MinimumTravelTime의 최소 목표/현재 속도 가정.
+    double min_travel_speed;
+    // [m/s^2] MinimumTravelTime의 최소 가속도 가정.
+    double min_travel_accel;
 };
 
 #endif  // PLANNER_CONFIG_FRENET_CONFIG_HPP

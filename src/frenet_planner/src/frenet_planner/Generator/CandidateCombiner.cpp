@@ -155,7 +155,7 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                         start, cmd.merge_conflict_s, cmd.merge_entry_time,
                         std::min(cmd.target_speed,
                                  std::max(arrival_speed, merge_cfg.min_arrival_speed)),
-                        cfg);
+                        cfg, merge_cfg.arrival_time_match_tolerance);
                 } else if (cmd.merge_committed) {
                     // conflict 도착까지 남은 시간이 lateral/longitudinal 공통
                     // 최소 horizon보다 짧아지면 exact-arrival quintic을 만들 수 없다.

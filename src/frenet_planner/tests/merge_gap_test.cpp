@@ -116,6 +116,10 @@ MergeConfig MakeRoundaboutCfg(double conflict_s) {
     cfg.commit_distance = 15.0;
     cfg.safe_confirm_cycles = 3;
     cfg.cross_speed_floor = 3.0;
+    cfg.prediction_dt = 0.05;
+    cfg.entry_search_dt = 0.1;
+    cfg.min_travel_speed = 0.5;
+    cfg.min_travel_accel = 0.1;
     return cfg;
 }
 
@@ -135,6 +139,10 @@ HighwayMergeConfig MakeHighwayCfg() {
     cfg.commit_distance = 20.0;
     cfg.safe_confirm_cycles = 3;
     cfg.cross_speed_floor = 4.0;
+    cfg.entry_search_dt = 0.1;
+    cfg.collision_check_dt = 0.1;
+    cfg.min_travel_speed = 0.5;
+    cfg.min_travel_accel = 0.1;
     return cfg;
 }
 

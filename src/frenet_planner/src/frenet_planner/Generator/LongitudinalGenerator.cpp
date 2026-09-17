@@ -192,14 +192,16 @@ std::vector<FrenetPath> GenerateMergeArrivalCandidates(const FrenetState& start,
                                                         double conflict_s,
                                                         double entry_time,
                                                         double entry_speed,
-                                                        const PathGeneratorConfig& cfg) {
+                                                        const PathGeneratorConfig& cfg,
+                                                        double arrival_time_match_tolerance) {
     std::vector<FrenetPath> result;
     // lateral 후보와 정확히 같은 T 격자를 써야 Combine 단계에서 결합된다.
     // 선택 entry_time 주변의 격자만 남겨 시간 목표를 유지한다.
     for (double T = cfg.time_horizon.min;
          T <= cfg.time_horizon.max + 1e-9; T += cfg.time_horizon.step) {
         if (T <= 1e-6) continue;
-        if (std::fabs(T - entry_time) > std::max(0.6, cfg.time_horizon.step)) continue;
+        if (std::fabs(T - entry_time) >
+            std::max(arrival_time_match_tolerance, cfg.time_horizon.step)) continue;
         const std::vector<double> times = SampleTimes(T, cfg.dt);
         // 위치 종단조건을 느슨한 평균속도로 대체하지 않고 conflict_s에 직접 고정한다.
         QuinticPolynomial poly = MakeQuintic(start.s, start.s_d, start.s_dd,

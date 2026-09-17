@@ -449,6 +449,17 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
         error_message = "planner/merge/min_arrival_speed must be finite and >= 0";
         return false;
     }
+    if (!CheckPositiveFinite(merge_cfg.prediction_dt, "planner/merge/prediction_dt", error_message))
+        return false;
+    if (!CheckPositiveFinite(merge_cfg.entry_search_dt, "planner/merge/entry_search_dt", error_message))
+        return false;
+    if (!CheckPositiveFinite(merge_cfg.min_travel_speed, "planner/merge/min_travel_speed", error_message))
+        return false;
+    if (!CheckPositiveFinite(merge_cfg.min_travel_accel, "planner/merge/min_travel_accel", error_message))
+        return false;
+    if (!CheckPositiveFinite(merge_cfg.arrival_time_match_tolerance,
+                              "planner/merge/arrival_time_match_tolerance", error_message))
+        return false;
 
     // --- highway_merge. Disabled configs (enabled=false) still get their
     // scalar fields range-checked - a garbage value shouldn't hide behind
@@ -506,6 +517,18 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
         error_message = "planner/highway_merge/cross_speed_floor must be finite and >= 0";
         return false;
     }
+    if (!CheckPositiveFinite(highway_merge_cfg.entry_search_dt,
+                              "planner/highway_merge/entry_search_dt", error_message))
+        return false;
+    if (!CheckPositiveFinite(highway_merge_cfg.collision_check_dt,
+                              "planner/highway_merge/collision_check_dt", error_message))
+        return false;
+    if (!CheckPositiveFinite(highway_merge_cfg.min_travel_speed,
+                              "planner/highway_merge/min_travel_speed", error_message))
+        return false;
+    if (!CheckPositiveFinite(highway_merge_cfg.min_travel_accel,
+                              "planner/highway_merge/min_travel_accel", error_message))
+        return false;
     for (const auto& zone : highway_merge_cfg.zones) {
         if (highway_merge_cfg.enabled &&
             (!IsFinite(zone.start_s) || zone.start_s < 0.0 || zone.checkpoints.empty())) {

@@ -204,6 +204,12 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/merge/cross_speed_floor",   merge_cfg.cross_speed_floor);
     REQUIRE("planner/merge/braking_distance_margin", merge_cfg.braking_distance_margin);
     REQUIRE("planner/merge/min_arrival_speed",       merge_cfg.min_arrival_speed);
+    REQUIRE("planner/merge/prediction_dt",           merge_cfg.prediction_dt);
+    REQUIRE("planner/merge/entry_search_dt",         merge_cfg.entry_search_dt);
+    REQUIRE("planner/merge/min_travel_speed",        merge_cfg.min_travel_speed);
+    REQUIRE("planner/merge/min_travel_accel",        merge_cfg.min_travel_accel);
+    REQUIRE("planner/merge/arrival_time_match_tolerance",
+            merge_cfg.arrival_time_match_tolerance);
 
     REQUIRE("planner/highway_merge/enabled",                    highway_merge_cfg.enabled);
     REQUIRE("planner/highway_merge/approach_distance",          highway_merge_cfg.approach_distance);
@@ -219,6 +225,10 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/highway_merge/commit_distance",            highway_merge_cfg.commit_distance);
     REQUIRE("planner/highway_merge/safe_confirm_cycles",        highway_merge_cfg.safe_confirm_cycles);
     REQUIRE("planner/highway_merge/cross_speed_floor",          highway_merge_cfg.cross_speed_floor);
+    REQUIRE("planner/highway_merge/entry_search_dt",            highway_merge_cfg.entry_search_dt);
+    REQUIRE("planner/highway_merge/collision_check_dt",         highway_merge_cfg.collision_check_dt);
+    REQUIRE("planner/highway_merge/min_travel_speed",           highway_merge_cfg.min_travel_speed);
+    REQUIRE("planner/highway_merge/min_travel_accel",           highway_merge_cfg.min_travel_accel);
 
 #undef REQUIRE
 

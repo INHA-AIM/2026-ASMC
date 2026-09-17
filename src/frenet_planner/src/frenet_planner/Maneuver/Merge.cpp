@@ -11,12 +11,13 @@ struct Arrival { int id; double time; };
 // 최소 도달시간. MERGE gap 판정과 실제 종방향 후보가 서로 다른 속도를
 // 가정하지 않도록 정지 상태에서도 가속 시간을 명시적으로 포함한다.
 double MinimumTravelTime(double distance, double initial_speed,
-                         double desired_speed, double accel) {
+                         double desired_speed, double accel,
+                         double min_travel_speed, double min_travel_accel) {
     if (distance <= 0.0) return 0.0;
     const double v0 = std::max(0.0, initial_speed);
-    const double target = std::max(desired_speed, 0.5);
-    const double a = std::max(accel, 0.1);
-    if (v0 >= target) return distance / std::max(v0, 0.5);
+    const double target = std::max(desired_speed, min_travel_speed);
+    const double a = std::max(accel, min_travel_accel);
+    if (v0 >= target) return distance / std::max(v0, min_travel_speed);
 
     const double accel_time = (target - v0) / a;
     const double accel_distance = v0 * accel_time + 0.5 * a * accel_time * accel_time;
@@ -49,10 +50,9 @@ RoundaboutGap FindRoundaboutGap(const RefLine& ref, const FrenetState& ego,
         // conflict point를 보지 못한다. 관측된 yaw-rate를 이용한 constant-turn-rate
         // 궤적을 샘플링해 conflict point 최근접 도달시각을 구한다.
         const double t_end = cfg.max_wait_time + cfg.ego_clear_time;
-        constexpr double kPredictionDt = 0.05;
         double best_t = 0.0;
         double best_miss = std::hypot(conflict.x - obj.x, conflict.y - obj.y);
-        for (double t = kPredictionDt; t <= t_end + 1e-9; t += kPredictionDt) {
+        for (double t = cfg.prediction_dt; t <= t_end + 1e-9; t += cfg.prediction_dt) {
             double px, py;
             if (std::fabs(yaw_rate) > 1e-3) {
                 px = obj.x + obj.speed / yaw_rate *
@@ -78,18 +78,21 @@ RoundaboutGap FindRoundaboutGap(const RefLine& ref, const FrenetState& ego,
 
     const double distance = std::max(0.0, cfg.conflict_s - ego.s);
     const double earliest = MinimumTravelTime(
-        distance, ego.s_d, desired_speed, max_ego_accel);
+        distance, ego.s_d, desired_speed, max_ego_accel,
+        cfg.min_travel_speed, cfg.min_travel_accel);
     // rear gap은 고정 ego_clear_time이 아니라, 현재 가속 능력으로 conflict
     // point부터 completion_distance까지 실제로 빠져나가는 시간을 사용한다.
     // 설정값은 측정/모델 오차에 대한 최소 하한으로만 유지한다.
     const double entry_speed = std::min(
-        std::max(desired_speed, 0.5),
+        std::max(desired_speed, cfg.min_travel_speed),
         std::sqrt(std::max(0.0, ego.s_d * ego.s_d +
-                                   2.0 * std::max(max_ego_accel, 0.1) * distance)));
+                                   2.0 * std::max(max_ego_accel, cfg.min_travel_accel) *
+                                       distance)));
     const double clear_duration = std::max(
         cfg.ego_clear_time,
         MinimumTravelTime(cfg.completion_distance, entry_speed,
-                          desired_speed, max_ego_accel));
+                          desired_speed, max_ego_accel,
+                          cfg.min_travel_speed, cfg.min_travel_accel));
     result.clear_time = clear_duration;
 
     // Ego가 너무 멀어 도착 자체가 예측 시간범위 밖이면 현재 관측 차량으로
@@ -106,8 +109,8 @@ RoundaboutGap FindRoundaboutGap(const RefLine& ref, const FrenetState& ego,
     }
     result.confirmed = true;
 
-    constexpr double kSearchDt = 0.1;
-    for (double entry = earliest; entry <= cfg.max_wait_time + 1e-9; entry += kSearchDt) {
+    for (double entry = earliest; entry <= cfg.max_wait_time + 1e-9;
+         entry += cfg.entry_search_dt) {
         int preceding_id = -1, following_id = -1;
         double preceding_time = -1.0, following_time = -1.0;
         for (const auto& arrival : arrivals) {
@@ -151,13 +154,15 @@ RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
 
     const double distance = std::max(0.0, checkpoint.conflict_s - ego.s);
     const double earliest = MinimumTravelTime(
-        distance, ego.s_d, desired_speed, max_ego_accel);
-    const double entry_speed = std::max(0.5, std::min(
+        distance, ego.s_d, desired_speed, max_ego_accel,
+        cfg.min_travel_speed, cfg.min_travel_accel);
+    const double entry_speed = std::max(cfg.min_travel_speed, std::min(
         desired_speed, std::sqrt(std::max(0.0, ego.s_d * ego.s_d +
-            2.0 * std::max(max_ego_accel, 0.1) * distance))));
+            2.0 * std::max(max_ego_accel, cfg.min_travel_accel) * distance))));
     const double clear_distance = checkpoint.clear_s - checkpoint.conflict_s;
     const double clear_time = MinimumTravelTime(
-        clear_distance, entry_speed, desired_speed, max_ego_accel);
+        clear_distance, entry_speed, desired_speed, max_ego_accel,
+        cfg.min_travel_speed, cfg.min_travel_accel);
     result.clear_time = clear_time;
     if (earliest > cfg.max_wait_time) {
         result.entry_time = earliest;
@@ -165,10 +170,8 @@ RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
     }
     result.confirmed = true;
 
-    constexpr double kSearchDt = 0.1;
-    constexpr double kCollisionDt = 0.1;
     for (double entry = earliest; entry <= cfg.max_wait_time + 1e-9;
-         entry += kSearchDt) {
+         entry += cfg.entry_search_dt) {
         int front_id = -1, rear_id = -1;
         double front_gap = std::numeric_limits<double>::infinity();
         double rear_gap = std::numeric_limits<double>::infinity();
@@ -181,7 +184,7 @@ RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
         // 검사가 동일한 점유구간을 보게 된다.
         const double total_time = entry + clear_time;
         for (double t = 0.0; t <= total_time + 1e-9 && collision_free;
-             t += kCollisionDt) {
+             t += cfg.collision_check_dt) {
             double ego_s;
             if (t <= entry && entry > 1e-6) {
                 const double ratio = std::min(1.0, t / entry);
