@@ -45,7 +45,9 @@ add_library(frenet_planner_core
   src/frenet_planner/Maneuver/Follow.cpp
   src/frenet_planner/Maneuver/Keep.cpp
   src/frenet_planner/Maneuver/Stop.cpp
-  src/frenet_planner/Maneuver/Avoid.cpp
+  src/frenet_planner/Maneuver/Avoid/Avoid.cpp
+  src/frenet_planner/Maneuver/Avoid/AvoidTargetResolver.cpp
+  src/frenet_planner/Maneuver/Avoid/AvoidLifecycle.cpp
   src/frenet_planner/Maneuver/LaneChange.cpp
   src/frenet_planner/Maneuver/Merge.cpp
   src/frenet_planner/Config/ConfigLoader.cpp
