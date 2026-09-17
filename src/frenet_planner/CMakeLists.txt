@@ -20,6 +20,7 @@ catkin_package(
 
 include_directories(
   src
+  src/Runtime
   ${catkin_INCLUDE_DIRS}
   ${YAML_CPP_INCLUDE_DIRS}
 )
@@ -75,7 +76,7 @@ target_link_libraries(frenet_planner_core
 # ROS runtime with input validation, command-based Plan() invocation,
 # fail-safe handling, and trajectory/feedback publication.
 add_library(frenet_planner_message_converter
-  src/message_converter.cpp
+  src/Runtime/message_converter.cpp
 )
 add_dependencies(frenet_planner_message_converter
   ${catkin_EXPORTED_TARGETS}
@@ -89,7 +90,7 @@ target_link_libraries(frenet_planner_message_converter
 # fingerprint가 여기에 추가된다. FSM 계약 경계이므로 planner core가 아니라
 # ROS 계층에 둔다 (docs/fsm-frenet-interface-v2.md 12.8절).
 add_library(frenet_behavior_command_adapter
-  src/behavior_command_adapter.cpp
+  src/Runtime/behavior_command_adapter.cpp
 )
 add_dependencies(frenet_behavior_command_adapter
   ${catkin_EXPORTED_TARGETS}
@@ -102,7 +103,7 @@ target_link_libraries(frenet_behavior_command_adapter
 # 관계(transaction / terminal latch / preemption)를 갖는 stateful 계층이다
 # (docs/fsm-frenet-interface-v2.md 12.8절).
 add_library(frenet_command_execution_manager
-  src/command_execution_manager.cpp
+  src/Runtime/command_execution_manager.cpp
 )
 add_dependencies(frenet_command_execution_manager
   ${catkin_EXPORTED_TARGETS}
@@ -113,9 +114,9 @@ target_link_libraries(frenet_command_execution_manager
 )
 
 add_executable(frenet_planner_node
-  src/main.cpp
-  src/frenet_planner_node.cpp
-  src/feedback_builder.cpp
+  src/Runtime/main.cpp
+  src/Runtime/frenet_planner_node.cpp
+  src/Runtime/feedback_builder.cpp
 )
 add_dependencies(frenet_planner_node
   ${catkin_EXPORTED_TARGETS}
