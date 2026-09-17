@@ -123,6 +123,7 @@ add_executable(frenet_planner_node
   src/Runtime/main.cpp
   src/Runtime/frenet_planner_node.cpp
   src/Runtime/input_snapshot.cpp
+  src/Runtime/v2_planning.cpp
   src/Runtime/feedback_builder.cpp
   src/Runtime/RuntimeConfig.cpp
 )
