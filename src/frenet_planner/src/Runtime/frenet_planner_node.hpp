@@ -72,6 +72,22 @@ class FrenetPlannerNode {
     // 기존 v1 경로를 계속 수행한다 - cutover 전까지 두 계통이 병행한다.
     bool runV2PlanningCycle(const ros::Time& now);
 
+    // STOP target pose(map 좌표) -> Frenet s 투영과 heading validation
+    // (계약 3.4절 4항). ConvertBehaviorCommand는 RefLine을 모르므로
+    // stop_position을 NaN으로 남기고, RefLine을 가진 이 계층이 완성한다.
+    //
+    // 실패하면 이 함수가 직접 SAFE_STOP 궤적/피드백을 발행하고 true를
+    // 반환한다 - caller(runV2PlanningCycle)는 그대로 return true 한다.
+    // 성공하면 planner_command.stop_position을 채우고 false를 반환한다
+    // (R8-B2: STOP만 분리 - 이 블록만 이후 execution 로직과 공유 mutable
+    // state 없이 early-return으로 완전히 닫혀 있었다. AVOID/LANE_CHANGE
+    // 투영은 실행 로직과 얽혀 있어 v2_planning.cpp에 남는다).
+    bool prepareStopTarget(const asmc_msgs::BehaviorCommand& command,
+                           uint32_t feedback_command_id,
+                           const CommandAcceptance& acceptance,
+                           const InputSnapshot& snapshot, double ego_s,
+                           bool ego_s_valid, PlannerCommand& planner_command);
+
     // AVOID PREPARE/post-COMMIT이 채우는 피드백 필드 (D6-2c/D6-3c).
     //
     // publishFeedbackV2의 인자를 계속 늘리는 대신 한 묶음으로 넘긴다.

@@ -6,11 +6,14 @@
  *
  * R8-B1: runV2PlanningCycle()의 body를 frenet_planner_node.cpp에서 그대로
  * 옮겼다 - 여전히 FrenetPlannerNode의 멤버 함수이고, 이 단계에서 내부를 추가로
- * 쪼개지 않는다(그 다음 단계는 R8-B2). YawFromQuaternion/NormalizeAngle도
- * 함께 옮긴다 - 이 두 anonymous-namespace helper는 runV2PlanningCycle 내부의
- * STOP/AVOID/LANE_CHANGE target projection에서만 쓰이고(v1 경로는 쓰지
- * 않는다), anonymous namespace는 translation-unit 단위로 linkage가 갇히므로
- * 실제 사용처를 따라 이동한다.
+ * 쪼개지 않는다(그 다음 단계는 R8-B2).
+ *
+ * R8-B2: STOP target 투영만 target_projection.cpp의
+ * FrenetPlannerNode::prepareStopTarget()으로 옮겼다 - 그 블록만 이후 execution
+ * 로직과 공유 mutable state 없이 early-return으로 완전히 닫혀 있었기
+ * 때문이다. AVOID/LANE_CHANGE target 투영은 execution/feedback 구성과 깊게
+ * 얽혀 있어 이번 단계에서는 그대로 이 파일에 남는다(공통 추상화를 만들지
+ * 않는다 - 경계가 더 명확해지면 이후 단계에서 재검토).
  */
 
 #include "frenet_planner_node.hpp"
@@ -18,30 +21,13 @@
 #include <cmath>
 #include <utility>
 
+#include "angle_utils.hpp"
 #include "avoid_commit_coordinator.hpp"
 #include "lane_change_commit_coordinator.hpp"
 #include "message_converter.hpp"
 #include "steady_freshness.hpp"
 
 namespace frenet_planner_ros {
-
-namespace {
-
-// quaternion -> yaw. D3-2 validation이 단위 quaternion을 이미 보장하므로
-// 정규화는 하지 않는다.
-double YawFromQuaternion(const geometry_msgs::Quaternion& q) {
-    const double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
-    const double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
-    return std::atan2(siny_cosp, cosy_cosp);
-}
-
-// 각도를 (-pi, pi]로 정규화. 단순 뺄셈으로 비교하면 179도와 -179도의 차이가
-// 358도로 계산되어 실제 2도 차이를 큰 오차로 오판한다.
-double NormalizeAngle(double angle) {
-    return std::atan2(std::sin(angle), std::cos(angle));
-}
-
-}  // namespace
 
 bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     // 방금 수신한 명령. 아래 2단계에서 transaction 소유권에 따라 실제 계획
@@ -407,125 +393,16 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     // ConvertBehaviorCommand는 RefLine을 모르므로 stop_position을 NaN으로
     // 남긴다. RefLine을 가진 이 계층에서 map 좌표 -> Frenet s로 투영한다.
     // (v1과 동일한 방식. ProjectPointToS가 이 용도로 만들어진 함수다.)
+    //
+    // R8-B2: 이 블록은 target_projection.cpp의 prepareStopTarget()으로
+    // 옮겼다 - 실패 시 이 함수가 직접 정지/피드백을 발행하고 true를 반환하는
+    // (그래서 caller가 그대로 return true) 계약까지 포함해서 그대로다.
+    // 성공하면 planner_command.stop_position을 채우고 false를 반환한다.
     if (planner_command.mode == STOP) {
-        if (!ego_s_valid) {
-            // 투영 기준점을 얻지 못하면 정지 목표도 만들 수 없다.
-            command_manager_.NotifyPlanFailed(
-                /*terminal=*/true,
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
-                "cannot project ego onto the reference line");
-            CommandAcceptance failed = acceptance;
-            failed.planning_target = PlanningTarget::NONE;
-            failed.execution_state = command_manager_.execution_state();
-            failed.result_code =
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
-            failed.detail = "cannot project ego onto the reference line";
-            has_last_v2_trajectory_ = false;
-            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
-                stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
-            trajectory_pub_.publish(stop);
-            publishFeedbackV2(feedback_command_id, failed, &stop,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
-                              /*plan_valid=*/false);
+        if (prepareStopTarget(command, feedback_command_id, acceptance,
+                              snapshot, ego_s, ego_s_valid, planner_command)) {
             return true;
         }
-        double stop_s = 0.0;
-        // ego_s를 hint로 넘겨 트랙이 자기 자신과 가까워지는 구간에서 최근접점이
-        // 다른 구간으로 튀지 않게 한다. 목표가 경로에서 너무 멀면 false다.
-        if (!planner_.ProjectPointToS(command.target_pose_map.position.x,
-                                      command.target_pose_map.position.y,
-                                      ego_s, stop_s)) {
-            command_manager_.NotifyPlanFailed(
-                /*terminal=*/true,
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
-                "stop target is not on the reference line");
-            CommandAcceptance failed = acceptance;
-            failed.planning_target = PlanningTarget::NONE;
-            failed.execution_state = command_manager_.execution_state();
-            failed.result_code =
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
-            failed.detail = "stop target is not on the reference line";
-            ROS_WARN_THROTTLE(1.0,
-                              "v2 STOP target (%.2f, %.2f) is not on the "
-                              "reference line (command_id=%u)",
-                              command.target_pose_map.position.x,
-                              command.target_pose_map.position.y,
-                              command.command_id);
-            has_last_v2_trajectory_ = false;
-            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
-                stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
-            trajectory_pub_.publish(stop);
-            publishFeedbackV2(feedback_command_id, failed, &stop,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
-                              /*plan_valid=*/false);
-            return true;
-        }
-
-        // 투영이 성공해도 방향이 맞는지는 별개다. 왕복 구간이
-        // max_lateral_offset(5m) 이내로 나란히 지나가면 Cartesian 거리는
-        // 가깝지만 진행 방향이 반대인 지점에 목표가 붙을 수 있다.
-        // 계약 3.4절 4항의 heading 검증이다.
-        double reference_heading = 0.0;
-        if (!planner_.ReferenceHeadingAt(stop_s, reference_heading)) {
-            command_manager_.NotifyPlanFailed(
-                /*terminal=*/true,
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
-                "cannot read reference heading at the stop target");
-            CommandAcceptance failed = acceptance;
-            failed.planning_target = PlanningTarget::NONE;
-            failed.execution_state = command_manager_.execution_state();
-            failed.result_code =
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
-            failed.detail = "cannot read reference heading at the stop target";
-            has_last_v2_trajectory_ = false;
-            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
-                stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
-            trajectory_pub_.publish(stop);
-            publishFeedbackV2(feedback_command_id, failed, &stop,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
-                              /*plan_valid=*/false);
-            return true;
-        }
-
-        const double target_yaw =
-            YawFromQuaternion(command.target_pose_map.orientation);
-        // 단순 뺄셈이 아니라 정규화해서 비교한다. 179도와 -179도는 실제로
-        // 2도 차이인데 뺄셈만 하면 358도가 된다.
-        const double heading_error =
-            std::fabs(NormalizeAngle(target_yaw - reference_heading));
-        if (heading_error > runtime_.stop_max_target_heading_error_rad) {
-            command_manager_.NotifyPlanFailed(
-                /*terminal=*/true,
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
-                "stop target heading disagrees with the reference line");
-            CommandAcceptance failed = acceptance;
-            failed.planning_target = PlanningTarget::NONE;
-            failed.execution_state = command_manager_.execution_state();
-            failed.result_code =
-                asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED;
-            failed.detail =
-                "stop target heading disagrees with the reference line";
-            ROS_WARN_THROTTLE(
-                1.0,
-                "v2 STOP target heading rejected: target=%.3f ref=%.3f "
-                "error=%.3f rad > %.3f (command_id=%u)",
-                target_yaw, reference_heading, heading_error,
-                runtime_.stop_max_target_heading_error_rad, command.command_id);
-            has_last_v2_trajectory_ = false;
-            const asmc_msgs::Trajectory stop = MakeStopTrajectory(
-                stopReferenceVehicle(snapshot), trajectoryDt(),
-                asmc_msgs::Trajectory::FAILURE_INVALID_INPUT);
-            trajectory_pub_.publish(stop);
-            publishFeedbackV2(feedback_command_id, failed, &stop,
-                              asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
-                              /*plan_valid=*/false);
-            return true;
-        }
-
-        planner_command.stop_position = stop_s;
     }
 
     // ---- 4c. AVOID 목표점 투영 (D6-1a) ----------------------------------
