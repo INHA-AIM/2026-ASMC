@@ -441,6 +441,15 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME keep_candidate_target_test COMMAND keep_candidate_target_test)
 
+  # R5-F: TrajectoryRequest -> GenerateRequestedCandidates 경계 계약 회귀.
+  add_executable(request_native_generator_test
+    tests/request_native_generator_test.cpp
+  )
+  target_link_libraries(request_native_generator_test
+    frenet_planner_core
+  )
+  add_test(NAME request_native_generator_test COMMAND request_native_generator_test)
+
   # fix/yuntae-planner Commit F: 폐루프 reference topology(전처리/조회) 연속성 회귀.
   add_executable(closed_loop_reference_test
     tests/closed_loop_reference_test.cpp
