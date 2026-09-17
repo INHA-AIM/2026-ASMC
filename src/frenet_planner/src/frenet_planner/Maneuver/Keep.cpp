@@ -225,7 +225,15 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         request.lateral.has_hold = cmd.has_stop_lateral_hold;
         request.lateral.target_d =
             cmd.has_stop_lateral_hold ? cmd.stop_lateral_hold_d : 0.0;
-        request.lateral.search_tolerance = 0.0;
+        // legacy ResolveManeuver의 lateral tolerance 규칙(CandidateCombiner.cpp
+        // 참고)을 그대로 옮긴다: hold가 있으면 항상 0. hold가 없으면 KEEP/
+        // STOP-APPROACH(내부적으로 velocity keeping에 위임)만 0이고, FOLLOW와
+        // STOP-BRAKING(hold 없음)은 cfg.path.lateral_target_tolerance를 그대로
+        // 쓴다 - 이 tolerance를 실수로 0으로 좁히면 FOLLOW/STOP-BRAKING의
+        // 정상적인 좌우 탐색 폭이 사라진다.
+        request.lateral.search_tolerance =
+            (cmd.has_stop_lateral_hold || is_true_external_keep || is_stop_approach)
+                ? 0.0 : cfg.path.lateral_target_tolerance;
         request.target_speed = cmd.target_speed;
         if (is_follow) {
             request.longitudinal_mode = LongitudinalMode::FOLLOWING;

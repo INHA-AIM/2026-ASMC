@@ -230,3 +230,93 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
 
     return combined;
 }
+
+std::vector<FrenetPath> GenerateRequestedCandidates(
+    const FrenetState& start,
+    const TrajectoryRequest& request,
+    const RefLine& ref,
+    const PathGeneratorConfig& cfg,
+    const KinematicLimits& limits,
+    const std::vector<TrackedObject>& obstacles,
+    const VehicleShape& vehicle_shape,
+    const CollisionCheckConfig& collision_cfg,
+    PlannerDebugStats* stats) {
+    // 1. lateral 후보. request.lateral이 authoritative input이다 - target_d/
+    // search_tolerance를 ResolveLateralOffset이나 cmd.mode로 다시 계산하지
+    // 않는다(§5).
+    PathGeneratorConfig lateral_cfg = cfg;
+    lateral_cfg.lateral_d1.min =
+        request.lateral.target_d - request.lateral.search_tolerance;
+    lateral_cfg.lateral_d1.max =
+        request.lateral.target_d + request.lateral.search_tolerance;
+
+    std::vector<FrenetPath> lateral_set =
+        GenerateLateralCandidates(start, lateral_cfg, limits.low_speed_fallback_v);
+    FilterLateralByAcceleration(lateral_set, limits);
+    if (stats) {
+        stats->lateral_total = lateral_set.size();
+        for (const auto& p : lateral_set) if (p.valid) stats->lateral_valid++;
+    }
+
+    // 2. longitudinal 후보 (request.longitudinal_mode에 따라 생성 방식 선택)
+    std::vector<FrenetPath> longitudinal_set;
+
+    switch (request.longitudinal_mode) {
+        case LongitudinalMode::FOLLOWING:
+            longitudinal_set = GenerateFollowingCandidates(
+                start, request.following.leader_s, request.following.leader_speed,
+                request.following.leader_accel, request.following.time_gap,
+                request.following.min_gap, request.target_speed,
+                request.following.gap_gain, cfg);
+            break;
+
+        case LongitudinalMode::STOPPING: {
+            // 공용 delta_s는 [-3, +3]m이라 +쪽 후보는 정지 목표를 지나쳐서
+            // 멈춘다. STOP은 목표 앞에서만 멈추도록 delta 범위를 제한한다 -
+            // 이 범위는 request.stop.terminal_offset으로 온다(호출자가
+            // StopConfig.delta_s_override를 그대로 옮겨 채운 값).
+            PathGeneratorConfig stop_delta_cfg = cfg;
+            stop_delta_cfg.delta_s = request.stop.terminal_offset;
+            longitudinal_set = GenerateStoppingCandidates(
+                start, request.stop.stop_s, stop_delta_cfg);
+            break;
+        }
+
+        case LongitudinalMode::VELOCITY_KEEPING:
+        default:
+            longitudinal_set =
+                GenerateVelocityKeepingCandidates(start, request.target_speed, cfg);
+            break;
+    }
+
+    FilterLongitudinalByKinematicLimits(longitudinal_set, limits);
+    if (stats) {
+        stats->longitudinal_total = longitudinal_set.size();
+        for (const auto& p : longitudinal_set) if (p.valid) stats->longitudinal_valid++;
+    }
+
+    // 3. 결합 + 사후 곡률 필터링
+    std::vector<FrenetPath> combined = CombineLateralLongitudinal(lateral_set, longitudinal_set);
+    if (stats) stats->combined_total = combined.size();
+    FilterByCurvature(combined, ref, limits);
+    if (stats) {
+        for (const auto& p : combined) if (p.valid) stats->combined_valid_after_curvature++;
+    }
+
+    // 4. 충돌 필터. FOLLOWING의 leader는 실제 후보 구간에서는 검사하고
+    // reactive coast 연장에서만 제외한다(§7/§8) - AVOID escape는 이 경로
+    // 대상 모드에 없으므로 항상 -1이다.
+    if (!obstacles.empty()) {
+        const int coast_exempt_id =
+            request.longitudinal_mode == LongitudinalMode::FOLLOWING
+                ? request.following.leader_object_id
+                : -1;
+        FilterByCollision(combined, ref, obstacles, vehicle_shape, collision_cfg,
+                          coast_exempt_id, /*avoid_escape_object_id=*/-1);
+    }
+    if (stats) {
+        for (const auto& p : combined) if (p.valid) stats->combined_valid_after_collision++;
+    }
+
+    return combined;
+}

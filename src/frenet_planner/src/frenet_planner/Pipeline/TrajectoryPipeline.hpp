@@ -52,9 +52,11 @@ private:
     // moderate-speed curvature starvation 완화(Phase B) - Keep.cpp의
     // AppendExternalKeepContinuityCandidates를 그대로 옮긴 것. 현재
     // 오프셋을 유지하는 continuity candidate를 candidates에 추가로
-    // 얹는다(대체가 아니라 추가).
+    // 얹는다(대체가 아니라 추가). target_speed만 필요로 하므로(PlannerCommand/
+    // TrajectoryRequest 어느 쪽도 아닌 스칼라) 두 GenerateCandidates
+    // 오버로드가 이 헬퍼를 공유해도 서로를 호출하지 않는다(§10/§11).
     void AppendKeepContinuityCandidates(
-        const FrenetState& maneuver_start, const PlannerCommand& cmd,
+        const FrenetState& maneuver_start, double target_speed,
         const std::vector<TrackedObject>& planning_collision_obstacles,
         std::vector<FrenetPath>& candidates) const;
 

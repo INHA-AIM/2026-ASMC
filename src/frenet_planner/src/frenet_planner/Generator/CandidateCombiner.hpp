@@ -27,6 +27,7 @@
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
+#include "frenet_planner/Pipeline/TrajectoryRequest.hpp"
 #include "frenet_planner/Reference/Reference.hpp"
 
 // [Sec.VI 2단] Tlat x Tlon 결합 — 같은 T(종료시간)를 가진 후보끼리만 결합.
@@ -63,5 +64,31 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                                          const StopConfig& stop_cfg,
                                          const MergeConfig& merge_cfg,
                                          PlannerDebugStats* stats = nullptr);
+
+// =========================================================
+// R5: TrajectoryRequest 기반 candidate 생성 — KEEP/FOLLOW/STOP 전용.
+//
+// ResolveManeuver와 동일한 3단계(lateral 생성 -> longitudinal 생성 ->
+// 결합/곡률/충돌 필터)를 거치지만, 입력을 PlannerCommand/BehaviorState가
+// 아니라 TrajectoryRequest 하나로만 받는다 - 이 함수와 그 아래에서 호출하는
+// 어떤 코드도 BehaviorState/PlannerCommand/ROS 타입을 참조하지 않는다.
+//
+// AVOID/LANE_CHANGE/MERGE는 이 함수의 대상이 아니다(R5 범위 밖) - 그 세
+// 모드는 계속 ResolveManeuver(PlannerCommand)를 직접 호출한다
+// (legacy behavior-aware path, Maneuver/Avoid.cpp, Maneuver/LaneChange.cpp).
+//
+// coast_exempt_id는 FOLLOWING에서만 request.following.leader_object_id로
+// 채워진다 - 이 물체를 reactive coast 연장 단계에서 장애물로 보지 않기
+// 위한 안전 필터 입력이다(어떤 behavior인지와 무관).
+std::vector<FrenetPath> GenerateRequestedCandidates(
+    const FrenetState& start,
+    const TrajectoryRequest& request,
+    const RefLine& ref,
+    const PathGeneratorConfig& cfg,
+    const KinematicLimits& limits,
+    const std::vector<TrackedObject>& obstacles,
+    const VehicleShape& vehicle_shape,
+    const CollisionCheckConfig& collision_cfg,
+    PlannerDebugStats* stats = nullptr);
 
 #endif  // FRENET_GENERATOR_CANDIDATE_COMBINER_HPP
