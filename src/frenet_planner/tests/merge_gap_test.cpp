@@ -1,4 +1,4 @@
-// MERGE gap/TTC 순수 계산 회귀 (Maneuver/Merge.hpp).
+// MERGE gap/TTC 순수 계산 회귀 (Maneuver/Merge/MergeGapEvaluator.hpp).
 //
 // legacy_behavior_regression_test.cpp가 검증하던 "MERGE를 언제 자동
 // 활성화할지"는 이번 refactor에서 완전히 삭제되었다 - 그 권한은 이제
@@ -22,9 +22,10 @@
 //           항상 결과가 unsafe/unconfirmed다.
 //
 // 실제 production FindRoundaboutGap/FindHighwayMergeGap
-// (Maneuver/Merge.hpp)을 그대로 호출한다 - 로직을 복사하지 않는다.
+// (Maneuver/Merge/MergeGapEvaluator.hpp)을 그대로 호출한다 - 로직을
+// 복사하지 않는다.
 
-#include "frenet_planner/Maneuver/Merge.hpp"
+#include "frenet_planner/Maneuver/Merge/MergeGapEvaluator.hpp"
 
 #include "frenet_planner/Geometry/PolygonUtils.hpp"
 

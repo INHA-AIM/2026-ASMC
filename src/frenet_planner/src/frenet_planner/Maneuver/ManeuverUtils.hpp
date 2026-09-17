@@ -25,13 +25,13 @@ void ProjectObjectToFrenet(const RefLine& ref, const TrackedObject& obj,
                            double ego_projection_search_window);
 
 // 폐루프 트랙에서 current_s -> target_s의 전방 호길이. STOP(stop_distance
-// 계산, Maneuver/Stop.cpp)과 AVOID(post-COMMIT gap, Maneuver/Avoid.cpp)가
-// 쓴다.
+// 계산, Maneuver/Stop.cpp)과 AVOID(post-COMMIT gap, Maneuver/Avoid/Avoid.cpp
+// 및 Maneuver/Avoid/AvoidLifecycle.cpp)가 쓴다.
 double ForwardArcDistance(double current_s, double target_s, double s_max);
 
 // fresh Cartesian collision recheck. AVOID(저속 crawl/PREPARE,
-// Maneuver/Avoid.cpp)와 MERGE(M2: locked replay/commit_pending candidate
-// 검증, Maneuver/Merge.cpp)가 쓴다.
+// Maneuver/Avoid/Avoid.cpp)와 MERGE(M2: locked replay/commit_pending
+// candidate 검증, Maneuver/Merge/MergeGapEvaluator.cpp)가 쓴다.
 bool CartesianTrajectoryClear(const CartesianPath& path,
                               const std::vector<TrackedObject>& obstacles,
                               const VehicleShape& ego_shape,

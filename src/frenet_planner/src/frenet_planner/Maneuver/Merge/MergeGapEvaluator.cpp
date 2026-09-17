@@ -1,4 +1,4 @@
-#include "frenet_planner/Maneuver/Merge.hpp"
+#include "frenet_planner/Maneuver/Merge/MergeGapEvaluator.hpp"
 
 #include <algorithm>
 #include <cmath>
