@@ -68,15 +68,11 @@ struct FollowingRequest {
 // 계속 소유).
 struct StopRequest {
     double stop_s = 0.0;
-    // STOP 계열은 정지 목표를 지나치지 않도록 delta_s 범위를 제한한다
-    // (CandidateCombiner의 stop_cfg.delta_s_override와 동일한 값이어야 한다).
-    //
-    // 주의(R4 시점): 이 필드는 아직 아무도 읽지 않는다 - ResolveManeuver의
-    // STOP 분기는 지금도 request가 아니라 StopConfig.delta_s_override를
-    // 직접 읽는다(CandidateCombiner.cpp). R5에서 switch(cmd.mode)를
-    // switch(request.longitudinal_mode)로 옮길 때 이 필드를 실제로
-    // 배선해야 한다 - 그 전까지는 호출부가 채워 넣어도 값 자체는 아직
-    // 아무 영향을 주지 않는다.
+    // STOP 계열은 정지 목표를 지나치지 않도록 delta_s 범위를 제한한다.
+    // R5부터 GenerateRequestedCandidates(CandidateCombiner.cpp)가 이 값을
+    // 직접 읽어 종방향 후보를 만든다 - 호출자(Keep.cpp)가
+    // StopConfig.delta_s_override를 그대로 옮겨 채우므로 단일 출처는
+    // 여전히 config지만, generator는 config를 다시 읽지 않고 이 필드만 본다.
     SamplingRange terminal_offset{};
 };
 

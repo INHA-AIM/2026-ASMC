@@ -25,9 +25,12 @@ class TrajectoryPipeline {
 public:
     TrajectoryPipeline(const PlannerConfigBundle& config, const RefLine& ref);
 
-    // ResolveManeuver -> (external KEEP && lane 안일 때) continuity candidate
-    // 추가까지. maneuver_limits는 STOP 서비스 감속 허용 등 호출자가 이미
-    // 조정한 값을 그대로 받는다(이 클래스는 limits를 변형하지 않는다).
+    // legacy behavior-aware path: ResolveManeuver(PlannerCommand, switch(cmd.mode))
+    // -> (external KEEP && lane 안일 때) continuity candidate 추가까지.
+    // AVOID/LANE_CHANGE/MERGE 전용(R5 범위 밖) - KEEP/FOLLOW/STOP은 더 이상
+    // 이 오버로드를 거치지 않는다. maneuver_limits는 STOP 서비스 감속 허용 등
+    // 호출자가 이미 조정한 값을 그대로 받는다(이 클래스는 limits를 변형하지
+    // 않는다).
     std::vector<FrenetPath> GenerateCandidates(
         const FrenetState& maneuver_start, const PlannerCommand& cmd,
         const KinematicLimits& maneuver_limits,
@@ -35,12 +38,10 @@ public:
         bool append_keep_continuity_candidates,
         PlannerDebugStats* stats) const;
 
-    // R4-B: KEEP이 PlannerCommand 대신 TrajectoryRequest를 넘기는 경로.
-    // 내부적으로 request를 최소한의 PlannerCommand scratch 값으로 변환해
-    // 기존 ResolveManeuver/AppendKeepContinuityCandidates를 그대로
-    // 호출한다 - CandidateCombiner의 switch(cmd.mode)는 아직 그대로 두고
-    // (R5에서 LongitudinalMode 기반으로 교체 예정), 이 오버로드는 그
-    // 호출부만 Request 기반으로 바꾸는 것이 목적이다.
+    // request-native path(R5): KEEP/FOLLOW/STOP 전용. GenerateRequestedCandidates
+    // (switch(request.longitudinal_mode), BehaviorState/PlannerCommand 없음)를
+    // 직접 호출한다 - 위 PlannerCommand 오버로드로 역변환하지 않는다(두
+    // 오버로드는 서로를 호출하지 않는다).
     std::vector<FrenetPath> GenerateCandidates(
         const FrenetState& maneuver_start, const TrajectoryRequest& request,
         const KinematicLimits& maneuver_limits,
