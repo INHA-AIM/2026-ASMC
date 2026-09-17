@@ -54,9 +54,11 @@ public:
     bool Init(const std::string& yaml_path);
 
     // 외부 FSM command 기반 진입점. 현재 external whitelist는 LANE_KEEPING /
-    // STOP / EMERGENCY / FOLLOWING / AVOID이며(IsSupportedExternalMode 참고),
-    // MERGE/LANE_CHANGE는 core 구현이 있어도 UNSUPPORTED_BEHAVIOR로 거부한다.
-    // ROS 계약이 확정되는 모드부터 whitelist를 확장한다(D7/D8).
+    // STOP / EMERGENCY / FOLLOWING / AVOID / LANE_CHANGE_LEFT /
+    // LANE_CHANGE_RIGHT이며(IsSupportedExternalMode 참고), MERGE는 core
+    // 구현이 있어도 UNSUPPORTED_BEHAVIOR로 거부한다(R6-D: production에서
+    // MERGE로 도달하는 caller가 없다는 것을 감사로 확인했고, FSM 계약이
+    // 별도로 확정되기 전까지 이 결정을 바꾸지 않는다).
     // obstacles의 각 TrackedObject는 authoritative 8 corners(perception의
     // obb_corners)를 이미 채운 상태여야 한다 - Planner는 center/dimension
     // 으로 geometry를 재생성하지 않는다. corners 없이 들어온 객체를 걸러
@@ -589,6 +591,7 @@ private:
         double resolved_target_speed, const PlannerCommand& external_command,
         CartesianPath& out_path);
 
+    // 정의: Maneuver/Avoid/AvoidLifecycle.cpp (R6-F1).
     double EffectiveAvoidShiftStartDistance(double ego_speed,
                                             double ego_d) const;
     void UpdateCommittedAvoidLifecycle(double ego_s, double ego_d,
@@ -596,7 +599,9 @@ private:
                                        AvoidPrepareResult& result);
 
     // ---------------------------------------------------------------------
-    // v2 LANE_CHANGE 내부. Avoid.cpp의 대응 함수와 같은 역할 분리를 따른다.
+    // v2 LANE_CHANGE 내부. Maneuver/Avoid/의 대응 함수와 같은 역할 분리를
+    // 따른다 - commit/lifecycle은 LaneChangeLifecycle.cpp, target 캡처/
+    // maintenance/orchestration은 LaneChange.cpp (R6-F2).
     // ---------------------------------------------------------------------
     //
     // authoritative execution target(target_d)은 Behavior/FSM이 MGeo Link
@@ -647,11 +652,14 @@ private:
     // 번 잠그고, start_d(진행률 계산용 기준점)를 기록한다.
     //
     // 반환값: PlanInternal이 그대로 return해야 하는 상태만 false로 전달한다.
+    //
+    // 정의: Maneuver/LaneChange/LaneChange.cpp (R6-F2).
     bool PrepareExternalLaneChangeTarget(
         double ego_s, double ego_d, const PlannerCommand& command,
         bool lane_change_prepare, bool lane_change_committed);
 
     // LANE_CHANGE PREPARE/COMMITTED 실행 전체. AvoidProcess와 동일한 구조다.
+    // 정의: Maneuver/LaneChange/LaneChange.cpp (R6-F2).
     bool LaneChangeProcess(
         const CartesianState& ego, const FrenetState& start,
         double s, double d, double resolved_target_speed,
@@ -663,6 +671,7 @@ private:
     // LANE_CHANGE PREPARE의 유지 궤적. BuildAvoidMaintenancePath와 동일한
     // 3단계 우선순위(충돌 검사를 통과한 현재 차선 유지 -> 종방향 감속 ->
     // 0속도 hold, §9) - 로직을 복제하지 않고 그대로 재사용한다.
+    // 정의: Maneuver/LaneChange/LaneChange.cpp (R6-F2).
     bool BuildLaneChangeMaintenancePath(
         const CartesianState& ego, const FrenetState& start,
         const PlannerCommand& base_command,
@@ -673,6 +682,7 @@ private:
     // 전환하고 progress를 갱신한다. UpdateCommittedAvoidLifecycle과 같은
     // 역할 분리이지만 obstacle clearance(PASS)에 대응하는 단계가 없다 -
     // 지나쳐야 할 장애물이 없으므로 위치 도달이 곧 HOLD 전환 조건이다.
+    // 정의: Maneuver/LaneChange/LaneChangeLifecycle.cpp (R6-F2).
     void UpdateCommittedLaneChangeLifecycle(double ego_s, double ego_d,
                                             double ego_d_dot, double ego_yaw,
                                             LaneChangePrepareResult& result);
@@ -701,6 +711,8 @@ private:
     // 로 자기잠금이 되어 영원히 READY에 도달하지 못한다. crawl도 반드시
     // 충돌 검사를 통과해야 하며(PlanLowSpeedFallback 자체는 충돌 필터를
     // 타지 않는다), 막히면 2번/3번으로 내려간다.
+    //
+    // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1, orchestration).
     bool BuildAvoidMaintenancePath(
         const CartesianState& ego, const FrenetState& start,
         const PlannerCommand& base_command,
@@ -708,6 +720,8 @@ private:
         CartesianPath& out_path) const;
 
     // 현재 위치에서 0속도로 정지 유지하는 한 점 궤적. STOP HOLD와 같은 형태다.
+    // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1) - LaneChange.cpp도 이 helper를
+    // 공유한다(AVOID 전용 로직이 아니다).
     void BuildZeroSpeedHoldPath(const CartesianState& ego, double s,
                                 CartesianPath& out_path) const;
 
@@ -724,6 +738,8 @@ private:
     // 반환값: PlanInternal이 그대로 return해야 하는 상태만 false로
     // 전달한다(TARGET_OBJECT_LOST, NORMAL purpose에서의
     // UNSUPPORTED_BEHAVIOR). 그 외엔 true.
+    //
+    // 정의: Maneuver/Avoid/AvoidTargetResolver.cpp (R6-F1).
     bool PrepareExternalAvoidTargets(
         double ego_s, const std::vector<TrackedObject>& obstacles,
         const PlannerCommand& command, bool avoid_prepare, bool avoid_committed);
@@ -741,6 +757,8 @@ private:
     // avoid_prepare(purpose==AVOID_PREPARE), avoid_committed
     // (purpose==AVOID_COMMITTED), v2_avoidance_.committed(core context
     // lock 여부)는 서로 다른 세 축이며 이 함수 안에서도 합치지 않는다.
+    //
+    // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1, orchestration).
     bool AvoidProcess(
         const CartesianState& ego, const FrenetState& start,
         double s, double d, double resolved_target_speed,
@@ -952,12 +970,15 @@ private:
     // 탐색거리는 legacy AVOID와 같은 방식으로 확장한다. config 값을 그대로
     // 쓰면 충돌 lookahead보다 짧아져, 장애물을 회피 대상으로 등록하기 전에
     // 충돌 필터가 중앙 후보를 모두 제거해 속도가 급락한다.
+    //
+    // 정의: Maneuver/Avoid/AvoidTargetResolver.cpp (R6-F1).
     AvoidTargetStatus ResolveExternalAvoidTarget(
         double ego_s, int target_object_id,
         const std::vector<TrackedObject>& obstacles,
         AvoidanceContext& context) const;
 
     // v2 AVOID 대상의 유효 탐색거리 [m]. resolver와 진단 출력이 공유한다.
+    // 정의: Maneuver/Avoid/AvoidTargetResolver.cpp (R6-F1).
     double EffectiveAvoidDetectionDistance() const;
 
     // 확보한 대상에 대해 평가할 회피 목표 d를 정한다 (D6-2a).
@@ -1006,6 +1027,7 @@ private:
         // 아니므로 INVALID_COMMAND가 아니라 WAITING이다(계약 3.3.4절).
         bool direction_conflict = false;
     };
+    // 정의: Maneuver/Avoid/AvoidTargetResolver.cpp (R6-F1).
     AvoidTargetPlan DecideAvoidTargets(const AvoidanceContext& context,
                                        LateralDirection direction) const;
 
