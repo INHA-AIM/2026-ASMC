@@ -427,8 +427,12 @@ int main() {
                "switching to KEEP clears the v2 follow state");
     }
 
-    // --- dropout grace: 1~5 cycle 유지, 6번째 LOST ------------------------
-    // dropout_grace_cycles=5 (20Hz 기준 0.25초)
+    // --- dropout grace: 1~10 cycle 유지, 11번째 LOST -----------------------
+    // dropout_grace_cycles=10 (config/params.yaml: 20Hz 기준 0.5초, Behavior
+    // FOLLOW 해제 유예 0.4s보다 길게 유지하도록 의도적으로 설정된 값이다.
+    // PlannerConfig.hpp의 구조체 기본값 5는 이 값을 로드하지 못했을 때의
+    // fallback일 뿐이며, 여기서는 MakeLocalConfig()로 실제 params.yaml을
+    // 로드하므로 10을 기준으로 검증한다).
     {
         FrenetPlanner planner;
         if (!planner.Init(config)) return 1;
@@ -440,21 +444,21 @@ int main() {
         planner.Plan(ego, objects, MakeFollowCommand(15), path);
         Expect(planner.active_leader_id() == 15, "grace: leader acquired");
 
-        // 1~5번째 미관측은 유예 대상이다.
+        // 1~10번째 미관측은 유예 대상이다.
         bool grace_held = true;
-        for (int cycle = 1; cycle <= 5; ++cycle) {
+        for (int cycle = 1; cycle <= 10; ++cycle) {
             planner.Plan(ego, no_objects, MakeFollowCommand(15), path);
             if (planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST ||
                 planner.active_leader_id() != 15) {
                 grace_held = false;
             }
         }
-        Expect(grace_held, "grace: cycles 1-5 keep the leader");
+        Expect(grace_held, "grace: cycles 1-10 keep the leader");
 
-        // 6번째에서 유예가 끝난다.
+        // 11번째에서 유예가 끝난다.
         const bool ok = planner.Plan(ego, no_objects, MakeFollowCommand(15), path);
         Expect(!ok && planner.last_failure_reason() == Reason::TARGET_OBJECT_LOST,
-               "grace: cycle 6 is TARGET_OBJECT_LOST");
+               "grace: cycle 11 is TARGET_OBJECT_LOST");
         Expect(planner.active_leader_id() == -1,
                "grace: no active leader after the grace window");
     }

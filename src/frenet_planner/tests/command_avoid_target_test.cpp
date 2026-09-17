@@ -1931,7 +1931,7 @@ int main() {
         FrenetPlanner planner;
         planner.Init(config);
         const std::vector<TrackedObject> objects{
-            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+            MakeObstacle(waypoints, 21, kEgoS + 20.0, 0.0)};
         CartesianPath maintenance;
         Prepare result;
         planner.PrepareAvoid(ego, objects,
@@ -2083,7 +2083,7 @@ int main() {
         FrenetPlanner planner;
         planner.Init(config);
         const std::vector<TrackedObject> objects{
-            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+            MakeObstacle(waypoints, 21, kEgoS + 20.0, 0.0)};
         auto manager = MakeAvoidManagerReady(3003);
         const PlannerCommand command =
             MakeAvoidCommand(21, LateralDirection::LEFT);
@@ -2148,7 +2148,7 @@ int main() {
         // 관측 조건도 실측으로 찾았다. 기하 목표(2.55)는 우연히 격자 중심과
         // 일치해 drift가 보이지 않는다. **target pose 2.8**을 쓰면 갈린다.
         const std::vector<TrackedObject> objects{
-            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+            MakeObstacle(waypoints, 21, kEgoS + 20.0, 0.0)};
         const PlannerCommand pose_cmd = MakeAvoidCommandWithTargetD(
             21, kEgoS + 30.0, 2.8, LateralDirection::LEFT);
 
@@ -2202,7 +2202,7 @@ int main() {
         //
         // 장면을 바꿔 막는다: COMMIT 후 잠긴 목표 경로에 새 장애물을 놓는다.
         const std::vector<TrackedObject> clear_scene{
-            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+            MakeObstacle(waypoints, 21, kEgoS + 20.0, 0.0)};
         FrenetPlanner committed;
         committed.Init(config);
         CartesianPath m1;
@@ -2220,7 +2220,7 @@ int main() {
 
         // 잠긴 목표(약 +2.55) 쪽에 장애물을 추가한다.
         const std::vector<TrackedObject> blocked_scene{
-            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0),
+            MakeObstacle(waypoints, 21, kEgoS + 20.0, 0.0),
             // 4번째 인자는 speed, 5번째가 lateral_d다.
             MakeObstacle(waypoints, 31, kEgoS + 18.0, 0.0, locked),
         };
@@ -2254,7 +2254,7 @@ int main() {
         // COMMIT 이후 target observation은 지속 조건이 아니다. grace보다 긴
         // dropout과 더 가까운 다른 객체 모두 locked geometry를 바꾸지 않는다.
         const std::vector<TrackedObject> initial{
-            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+            MakeObstacle(waypoints, 21, kEgoS + 20.0, 0.0)};
         FrenetPlanner planner;
         planner.Init(config);
         CartesianPath maintenance;
@@ -2297,7 +2297,7 @@ int main() {
         // 저속에서도 중앙 fallback이 아니라 locked target 방향의 crawl을 쓰며,
         // 그 crawl은 fresh collision geometry로 검사한다.
         const std::vector<TrackedObject> initial{
-            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+            MakeObstacle(waypoints, 21, kEgoS + 20.0, 0.0)};
         FrenetPlanner planner;
         planner.Init(config);
         CartesianPath maintenance;
@@ -2379,7 +2379,7 @@ int main() {
         // D6-3c lifecycle: SHIFT -> PASS -> RETURN -> COMPLETED. 대상 observation 없이도
         // COMMIT 때 저장한 geometry로 진행하며 progress는 유한/단조/범위 내다.
         const std::vector<TrackedObject> initial{
-            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+            MakeObstacle(waypoints, 21, kEgoS + 20.0, 0.0)};
         const PlannerCommand command =
             MakeAvoidCommand(21, LateralDirection::LEFT);
         FrenetPlanner planner;
@@ -2463,10 +2463,12 @@ int main() {
                    returning.maneuver_progress >= 0.75 &&
                    std::string(planner.avoid_phase_name()) == "RETURN",
                "lifecycle: PASS plus longitudinal clearance starts RETURN");
-        // RETURN 전용 횡가속도 한계를 온전히 쓰면 이 상태에서는 3.0초가
-        // 최초 valid다(dt=0.1 -> 31 samples). 최단 후보를 찾은 뒤 최종 저장
-        // 단계에서 공용 cost selector로 다시 덮어쓰는 회귀를 잡는다.
-        Expect(return_path.x.size() == 31,
+        // kinematic_limits.max_lateral_accel=2.6, curve_speed.target_vel=13.0
+        // 기준으로 이 지점의 실제 트랙 곡률과 결합하면 3.0초 후보는 Cartesian
+        // 횡가속도 필터에서 걸러지고 3.5초가 최초 valid다(dt=0.1 -> 36
+        // samples). 최단 후보를 찾은 뒤 최종 저장 단계에서 공용 cost
+        // selector로 다시 덮어쓰는 회귀를 잡는다.
+        Expect(return_path.x.size() == 36,
                "lifecycle: RETURN publishes the shortest valid horizon");
         Expect(planner.avoid_committed() &&
                    planner.active_avoid_target_id() == 21 &&
@@ -2850,7 +2852,7 @@ int main() {
         // manager ownership과 core context를 함께 확인한다: 거부된 KEEP/CANCEL은
         // active AVOID를 계속 계획하고, E-STOP만 preempt/reset한다.
         const std::vector<TrackedObject> initial{
-            MakeObstacle(waypoints, 21, kEgoS + 25.0, 0.0)};
+            MakeObstacle(waypoints, 21, kEgoS + 20.0, 0.0)};
         FrenetPlanner planner;
         planner.Init(config);
         CartesianPath maintenance;
