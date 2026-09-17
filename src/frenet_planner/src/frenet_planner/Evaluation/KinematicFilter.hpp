@@ -24,6 +24,33 @@ struct KinematicLimits {
     // |s⃛| 허용치 [m/s^3]. 초기 safety limit이며 최종 MORAI tuning 값이 아니다
     // (fix/yuntae-frenet-speed-continuity).
     double max_longitudinal_jerk;
+    // [m/s] 이 속도 미만이면 quintic candidate 파이프라인 대신 저속
+    // crawl/geometric fallback을 쓴다. KEEP/AVOID/LANE_CHANGE가 공유하는
+    // 단일 값이다 - 파일마다 다른 값을 쓰면 maneuver 전환 시 저속 판정
+    // 경계가 어긋난다.
+    double low_speed_fallback_v;
+    // [s] 저속 crawl fallback이 만드는 경로의 기본 지속시간.
+    double low_speed_crawl_duration_s;
+    // [m/s] low_speed_fallback_v보다 넉넉히 위의 경계. 이 속도 미만이고
+    // external KEEP의 정상 velocity-keeping 후보가 전부 탈락했을 때만(=
+    // starvation), 이미 검증된 저속 fallback 경로로 안전하게 이어간다
+    // (fix/yuntae-frenet-speed-continuity Phase 5).
+    double near_low_speed_fallback_v;
+    // 저속 lateral transition 거리 계산에서 max_curvature의 몇 %만
+    // 사용할지(여유폭 확보) - 이산 샘플/MPC 오차에 대한 여유다.
+    double low_speed_usable_curvature_fraction;
+    // 저속 lateral transition 거리에 곱하는 여유 배수(10% 정도).
+    double low_speed_transition_distance_margin;
+    // 후보 생성 초기 경계조건(s_ddot/d_ddot)을 max_longitudinal_accel/
+    // max_lateral_accel의 몇 %로 clip할지 - 투영 오차가 초기 가속도 경계를
+    // 비현실적으로 키우지 않도록, 다항식 중간구간 overshoot 여유를 남긴다.
+    double boundary_condition_accel_fraction;
+    // AVOID SHIFT 시작거리 계산에서 max_lateral_accel의 몇 %만 사용할지
+    // (조향/제어 응답 여유).
+    double avoid_shift_usable_lateral_accel_fraction;
+    // [m/s] 후보 생성 초기 횡속도(d_dot) 경계조건의 절대값 상한. 큰 heading
+    // 오차로 과대 추정될 수 있는 초기 d_dot을 제한한다.
+    double max_initial_d_dot;
 };
 
 // [Sec.VI 1단] 결합 전 가속도 필터링.

@@ -167,10 +167,9 @@ FrenetPlanner::AvoidTargetPlan FrenetPlanner::DecideAvoidTargets(
     //
     // legacy begin_avoidance 분기와 **같은 식**이다. 고정 ±avoid_offset(5.0)이
     // 아니라 장애물의 실제 횡위치 + 실제 폭을 반영한다.
-    constexpr double kDirectionExtraMargin = 0.3;
     const double clearance =
         0.5 * (vehicle_shape_.width + context.obstacle_width) +
-        collision_cfg_.safety_margin + kDirectionExtraMargin;
+        collision_cfg_.safety_margin + avoid_cfg_.direction_extra_margin;
     const double left_target = context.obstacle_d + clearance;
     const double right_target = context.obstacle_d - clearance;
 
@@ -249,8 +248,9 @@ double FrenetPlanner::EffectiveAvoidShiftStartDistance(
     // Rest-to-rest quintic의 peak |d_ddot|은 대략 5.77*D/T^2다.
     // 실제 Cartesian 횡가속도 필터와 동일한 한계를 사용해 필요한 최소
     // 횡이동 시간을 구하고, 제어 응답 여유를 더한다.
-    const double usable_lateral_accel =
-        std::max(0.1, limits_.max_lateral_accel * 0.8);
+    const double usable_lateral_accel = std::max(
+        0.1, limits_.max_lateral_accel *
+                 limits_.avoid_shift_usable_lateral_accel_fraction);
     const double shift_time =
         std::sqrt(5.77 * lateral_distance / usable_lateral_accel) +
         std::max(0.0, avoid_cfg_.shift_time_margin);
@@ -264,11 +264,11 @@ double FrenetPlanner::EffectiveAvoidShiftStartDistance(
         collision_cfg_.safety_margin;
     double dynamic_distance =
         std::max(0.0, ego_speed) * shift_time + geometry_clearance;
-    // 0.5 m/s 미만에서는 시간 기반 quintic 대신 거리 기반 fallback을
-    // 실행한다. 그 거리는 고정값이 아니라 목표 횡이동량과 max_curvature로
-    // 계산하며, 차량/장애물 형상 여유를 별도로 합쳐 SHIFT를 시작한다.
-    constexpr double kLowSpeedFallbackV = 0.5;
-    if (std::fabs(ego_speed) < kLowSpeedFallbackV) {
+    // limits_.low_speed_fallback_v 미만에서는 시간 기반 quintic 대신 거리
+    // 기반 fallback을 실행한다. 그 거리는 고정값이 아니라 목표 횡이동량과
+    // max_curvature로 계산하며, 차량/장애물 형상 여유를 별도로 합쳐 SHIFT를
+    // 시작한다.
+    if (std::fabs(ego_speed) < limits_.low_speed_fallback_v) {
         dynamic_distance = std::max(
             dynamic_distance,
             LowSpeedLateralTransitionDistance(
@@ -522,13 +522,12 @@ bool FrenetPlanner::BuildAvoidMaintenancePath(
     //
     // 저속에서는 정상 후보 파이프라인이 lateral candidate를 제한하므로
     // crawl을 쓴다. 정상 속도에서는 중앙 유지(KEEP) 후보를 만든다.
-    constexpr double kLowSpeedFallbackV = 0.5;  // [m/s] (PlanInternal과 동일)
-    const bool low_speed = std::fabs(ego.v) < kLowSpeedFallbackV;
+    const bool low_speed = std::fabs(ego.v) < limits_.low_speed_fallback_v;
 
     if (low_speed) {
         // crawl은 현재 d를 유지한다. PREPARE 중에 횡이동을 시작하면 안 된다.
         CartesianPath crawl;
-        if (PlanLowSpeedFallback(ego, s, d, d, crawl, 2.0,
+        if (PlanLowSpeedFallback(ego, s, d, d, crawl, limits_.low_speed_crawl_duration_s,
                                  base_command.target_speed) &&
             crawl.x.size() >= 2) {
             // PlanLowSpeedFallback은 충돌 필터를 타지 않는다. 그대로 쓰면
@@ -594,10 +593,9 @@ bool FrenetPlanner::AvoidProcess(
     last_target_speed_ = resolved_target_speed;
     result.direction_conflict = v2_avoid_targets_.direction_conflict;
 
-    constexpr double kLowSpeedFallbackV = 0.5;  // [m/s]
     // 상황 정보다. 상태 판단(READY/WAITING)에는 쓰지 않는다 - 그것은
     // candidate_valid만으로 정한다(헤더 주석 참고).
-    result.low_speed_context = std::fabs(ego.v) < kLowSpeedFallbackV;
+    result.low_speed_context = std::fabs(ego.v) < limits_.low_speed_fallback_v;
     result.ego_speed_mps = std::max(0.0, ego.v);
 
     // COMMIT 이후의 종방향 위치와 실제 d를 먼저 반영해야 이번 cycle의

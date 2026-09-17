@@ -100,6 +100,18 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/kinematic_limits/max_longitudinal_accel", limits.max_longitudinal_accel);
     REQUIRE("planner/kinematic_limits/max_curvature",          limits.max_curvature);
     REQUIRE("planner/kinematic_limits/max_longitudinal_jerk",  limits.max_longitudinal_jerk);
+    REQUIRE("planner/kinematic_limits/low_speed_fallback_v",       limits.low_speed_fallback_v);
+    REQUIRE("planner/kinematic_limits/low_speed_crawl_duration_s", limits.low_speed_crawl_duration_s);
+    REQUIRE("planner/kinematic_limits/near_low_speed_fallback_v",  limits.near_low_speed_fallback_v);
+    REQUIRE("planner/kinematic_limits/low_speed_usable_curvature_fraction",
+            limits.low_speed_usable_curvature_fraction);
+    REQUIRE("planner/kinematic_limits/low_speed_transition_distance_margin",
+            limits.low_speed_transition_distance_margin);
+    REQUIRE("planner/kinematic_limits/boundary_condition_accel_fraction",
+            limits.boundary_condition_accel_fraction);
+    REQUIRE("planner/kinematic_limits/avoid_shift_usable_lateral_accel_fraction",
+            limits.avoid_shift_usable_lateral_accel_fraction);
+    REQUIRE("planner/kinematic_limits/max_initial_d_dot", limits.max_initial_d_dot);
 
     REQUIRE("planner/cost_weights/kj",     cost_weights.kj);
     REQUIRE("planner/cost_weights/kt",     cost_weights.kt);
@@ -133,6 +145,7 @@ bool LoadParams(const std::string& yaml_path,
 
     REQUIRE("planner/avoid/detection_distance",         avoid_cfg.detection_distance);
     REQUIRE("planner/avoid/avoid_offset",               avoid_cfg.avoid_offset);
+    REQUIRE("planner/avoid/direction_extra_margin",      avoid_cfg.direction_extra_margin);
     REQUIRE("planner/avoid/min_shift_start_distance",   avoid_cfg.min_shift_start_distance);
     REQUIRE("planner/avoid/max_shift_start_distance",   avoid_cfg.max_shift_start_distance);
     REQUIRE("planner/avoid/shift_time_margin",          avoid_cfg.shift_time_margin);

@@ -193,12 +193,11 @@ bool FrenetPlanner::BuildLaneChangeMaintenancePath(
     //      아직 unsafe라는 이유만으로 감속/정지하지 않는다.
     //   2. 종방향 감속
     //   3. 0속도 hold
-    constexpr double kLowSpeedFallbackV = 0.5;  // [m/s] (PlanInternal과 동일)
-    const bool low_speed = std::fabs(ego.v) < kLowSpeedFallbackV;
+    const bool low_speed = std::fabs(ego.v) < limits_.low_speed_fallback_v;
 
     if (low_speed) {
         CartesianPath crawl;
-        if (PlanLowSpeedFallback(ego, s, d, d, crawl, 2.0,
+        if (PlanLowSpeedFallback(ego, s, d, d, crawl, limits_.low_speed_crawl_duration_s,
                                  base_command.target_speed) &&
             crawl.x.size() >= 2) {
             int blocking_id = -1;
@@ -254,8 +253,7 @@ bool FrenetPlanner::LaneChangeProcess(
     last_mode_ = command.mode;
     last_target_speed_ = resolved_target_speed;
 
-    constexpr double kLowSpeedFallbackV = 0.5;  // [m/s]
-    result.low_speed_context = std::fabs(ego.v) < kLowSpeedFallbackV;
+    result.low_speed_context = std::fabs(ego.v) < limits_.low_speed_fallback_v;
 
     // HOLD_TARGET_LANE에서도 매 cycle 잠긴 target_d로 계속 replan한다 -
     // 정지 상태가 아니다(frenet_planner.hpp의 LaneChangePhase 주석 참고).
@@ -268,7 +266,7 @@ bool FrenetPlanner::LaneChangeProcess(
     if (lane_change_committed && result.low_speed_context) {
         result.generated_candidate_count = 1;
         CartesianPath crawl;
-        PlanLowSpeedFallback(ego, s, d, v2_lane_change_.target_d, crawl, 2.0,
+        PlanLowSpeedFallback(ego, s, d, v2_lane_change_.target_d, crawl, limits_.low_speed_crawl_duration_s,
                              resolved_target_speed);
         int blocking_id = -1;
         if (crawl.x.size() < 2 ||

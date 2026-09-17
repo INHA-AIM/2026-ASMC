@@ -111,6 +111,47 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
         return false;
     if (!CheckPositiveFinite(limits.max_longitudinal_jerk, "planner/kinematic_limits/max_longitudinal_jerk", error_message))
         return false;
+    if (!CheckPositiveFinite(limits.low_speed_fallback_v,
+                              "planner/kinematic_limits/low_speed_fallback_v", error_message))
+        return false;
+    if (!CheckPositiveFinite(limits.low_speed_crawl_duration_s,
+                              "planner/kinematic_limits/low_speed_crawl_duration_s", error_message))
+        return false;
+    if (!IsFinite(limits.near_low_speed_fallback_v) ||
+        limits.near_low_speed_fallback_v < limits.low_speed_fallback_v) {
+        error_message =
+            "planner/kinematic_limits/near_low_speed_fallback_v must be finite "
+            "and >= low_speed_fallback_v";
+        return false;
+    }
+    if (!IsFinite(limits.low_speed_usable_curvature_fraction) ||
+        limits.low_speed_usable_curvature_fraction <= 0.0 ||
+        limits.low_speed_usable_curvature_fraction > 1.0) {
+        error_message =
+            "planner/kinematic_limits/low_speed_usable_curvature_fraction must be in (0, 1]";
+        return false;
+    }
+    if (!CheckPositiveFinite(limits.low_speed_transition_distance_margin,
+                              "planner/kinematic_limits/low_speed_transition_distance_margin",
+                              error_message))
+        return false;
+    if (!IsFinite(limits.boundary_condition_accel_fraction) ||
+        limits.boundary_condition_accel_fraction <= 0.0 ||
+        limits.boundary_condition_accel_fraction > 1.0) {
+        error_message =
+            "planner/kinematic_limits/boundary_condition_accel_fraction must be in (0, 1]";
+        return false;
+    }
+    if (!IsFinite(limits.avoid_shift_usable_lateral_accel_fraction) ||
+        limits.avoid_shift_usable_lateral_accel_fraction <= 0.0 ||
+        limits.avoid_shift_usable_lateral_accel_fraction > 1.0) {
+        error_message =
+            "planner/kinematic_limits/avoid_shift_usable_lateral_accel_fraction must be in (0, 1]";
+        return false;
+    }
+    if (!CheckPositiveFinite(limits.max_initial_d_dot,
+                              "planner/kinematic_limits/max_initial_d_dot", error_message))
+        return false;
 
     // --- cost_weights: 논문/설계상 음수 가중치는 의미가 없다(비용을 보상으로
     // 뒤집는 것과 같다). 0은 "이 항을 끈다"는 뜻으로 허용한다.
@@ -197,6 +238,10 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
         return false;
     if (!IsFinite(avoid_cfg.avoid_offset) || avoid_cfg.avoid_offset < 0.0) {
         error_message = "planner/avoid/avoid_offset must be finite and >= 0";
+        return false;
+    }
+    if (!IsFinite(avoid_cfg.direction_extra_margin) || avoid_cfg.direction_extra_margin < 0.0) {
+        error_message = "planner/avoid/direction_extra_margin must be finite and >= 0";
         return false;
     }
     if (!IsFinite(avoid_cfg.min_shift_start_distance) || avoid_cfg.min_shift_start_distance < 0.0) {

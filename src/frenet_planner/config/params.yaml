@@ -125,6 +125,9 @@ planner:
   avoid:
     detection_distance: 120.0 # [m] KEEP의 8 s reactive horizon보다 넓게 확보해 Behavior/AVOID 사이의 blind band를 없앤다
     avoid_offset: 5.0         # [m] 회피 시 lateral_d1 격자를 밀어낼 크기
+    # [m] legacy geometry 기반(target pose 없음) target_d 계산에서 자차/장애물
+    # 반폭 합 + safety_margin에 추가로 더하는 여유.
+    direction_extra_margin: 0.3
     min_shift_start_distance: 10.0 # [m] 저속에서도 확보할 최소 SHIFT 준비거리
     max_shift_start_distance: 70.0 # [m] 고속에서도 지나치게 일찍 이탈하지 않는 상한
     shift_time_margin: 0.7     # [s] 횡이동 계산에 더하는 조향/제어 응답 여유
@@ -281,6 +284,24 @@ planner:
     # jerk가 5.28로 5.0을 근소하게 초과해 candidate starvation을 유발했다.
     # excessive jerk reproducer(약 10.67)는 6.0에서도 계속 reject된다.
     max_longitudinal_jerk: 6.0
+    # [m/s] 이 속도 미만이면 quintic candidate 파이프라인 대신 저속
+    # crawl/geometric fallback을 쓴다. KEEP/AVOID/LANE_CHANGE가 공유.
+    low_speed_fallback_v: 0.5
+    # [s] 저속 crawl fallback이 만드는 경로의 기본 지속시간.
+    low_speed_crawl_duration_s: 2.0
+    # [m/s] low_speed_fallback_v보다 넉넉히 위의 external KEEP starvation
+    # 복구 경계.
+    near_low_speed_fallback_v: 1.5
+    # 저속 lateral transition 거리 계산에서 max_curvature의 몇 %만 사용할지.
+    low_speed_usable_curvature_fraction: 0.8
+    # 저속 lateral transition 거리에 곱하는 여유 배수.
+    low_speed_transition_distance_margin: 1.1
+    # 후보 생성 초기 경계조건(s_ddot/d_ddot)을 가속도 한계의 몇 %로 clip할지.
+    boundary_condition_accel_fraction: 0.8
+    # AVOID SHIFT 시작거리 계산에서 max_lateral_accel의 몇 %만 사용할지.
+    avoid_shift_usable_lateral_accel_fraction: 0.8
+    # [m/s] 후보 생성 초기 횡속도(d_dot) 경계조건의 절대값 상한.
+    max_initial_d_dot: 0.5
 
   # --- CostWeights (cost.hpp) ---------------------------------
   cost_weights:

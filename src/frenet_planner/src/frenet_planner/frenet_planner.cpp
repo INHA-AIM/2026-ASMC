@@ -211,12 +211,11 @@ double FrenetPlanner::LowSpeedLateralTransitionDistance(
     // longitudinal distance ~= 2*sqrt(D/kappa)다. 차량 한계값을 그대로
     // 쓰면 이산 샘플/MPC 오차에 취약하므로 곡률의 80%와 거리 10% 여유를
     // 사용한다. D=2.75m, max_curvature=0.28이면 약 7.7m다.
-    const double usable_curvature =
-        std::max(1e-3, limits_.max_curvature * 0.8);
-    constexpr double kDistanceMargin = 1.1;
+    const double usable_curvature = std::max(
+        1e-3, limits_.max_curvature * limits_.low_speed_usable_curvature_fraction);
     return std::max(
         1.0,
-        kDistanceMargin * 2.0 *
+        limits_.low_speed_transition_distance_margin * 2.0 *
             std::sqrt(lateral_distance / usable_curvature));
 }
 
@@ -653,8 +652,7 @@ bool FrenetPlanner::PlanInternal(
     // fallback으로 직접 경로를 만든다 (클래스 헤더 주석 참고 - 나누기 없는 안전한
     // 경로). AVOID/장애물 회피는 이 fallback에서는 다루지 않는다 - 정지 근처
     // 속도로는 위험한 회피 기동이 필요할 상황이 원래 적고, 속도가 오르면 바로
-    // 아래의 정상 파이프라인으로 자동 복귀한다.
-    constexpr double kLowSpeedFallbackV = 0.5;  // [m/s]
+    // 아래의 정상 파이프라인으로 자동 복귀한다. 문턱은 limits_.low_speed_fallback_v.
 
     // =====================================================================
     // 외부 EMERGENCY_STOP: 후보 파이프라인을 건너뛰고 직접 감속한다.
@@ -752,7 +750,7 @@ bool FrenetPlanner::PlanInternal(
     // 여기서 제외하지 않으면 PREPARE 블록에 도달하지도 못한다 - 이 분기가
     // 먼저 return하기 때문이다(실측으로 확인: v=0.3에서 low_speed_context이
     // 0으로 나오고 maintenance가 미검사 crawl이었다).
-    if (std::fabs(ego.v) < kLowSpeedFallbackV &&
+    if (std::fabs(ego.v) < limits_.low_speed_fallback_v &&
         !external_stop && !external_follow && !avoid_prepare &&
         !avoid_committed && !lane_change_prepare && !lane_change_committed) {
         static int low_speed_log_tick = 0;
@@ -764,7 +762,8 @@ bool FrenetPlanner::PlanInternal(
         last_mode_ = external_command->mode;
         last_target_speed_ = resolved_target_speed;
         const bool fallback_ok = PlanLowSpeedFallback(
-            ego, s, d, 0.0, out_path, 2.0, resolved_target_speed);
+            ego, s, d, 0.0, out_path, limits_.low_speed_crawl_duration_s,
+            resolved_target_speed);
         if (fallback_ok) {
             last_candidate_paths_.push_back(out_path);
             last_candidate_validity_.push_back(true);
@@ -777,16 +776,15 @@ bool FrenetPlanner::PlanInternal(
     last_d_dot_ = d_dot;  // 클램프 전 원본 값 - 진단 목적(아래 kMaxDDot 클램프 폭 자체를 보려고)
 
     // 투영 오차가 후보의 초기 가속도 경계조건을 비현실적으로 키우지 않도록
-    // 다항식 중간구간의 overshoot 여유를 포함해 한계의 80%로 제한한다.
-    constexpr double kBoundaryMargin = 0.8;
-    s_ddot = clip(s_ddot, -limits_.max_longitudinal_accel * kBoundaryMargin,
-                  limits_.max_longitudinal_accel * kBoundaryMargin);
-    d_ddot = clip(d_ddot, -limits_.max_lateral_accel * kBoundaryMargin,
-                  limits_.max_lateral_accel * kBoundaryMargin);
+    // 다항식 중간구간의 overshoot 여유를 포함해 한계의 일정 비율로 제한한다.
+    const double boundary_margin = limits_.boundary_condition_accel_fraction;
+    s_ddot = clip(s_ddot, -limits_.max_longitudinal_accel * boundary_margin,
+                  limits_.max_longitudinal_accel * boundary_margin);
+    d_ddot = clip(d_ddot, -limits_.max_lateral_accel * boundary_margin,
+                  limits_.max_lateral_accel * boundary_margin);
 
     // 큰 heading 오차로 과대 추정될 수 있는 초기 횡속도도 제한한다.
-    constexpr double kMaxDDot = 0.5;  // [m/s]
-    d_dot = clip(d_dot, -kMaxDDot, kMaxDDot);
+    d_dot = clip(d_dot, -limits_.max_initial_d_dot, limits_.max_initial_d_dot);
 
     FrenetState start{s, s_dot, s_ddot, d, d_dot, d_ddot};
 

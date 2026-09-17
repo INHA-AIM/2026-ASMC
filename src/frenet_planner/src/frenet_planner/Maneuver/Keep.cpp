@@ -73,7 +73,7 @@ bool FrenetPlanner::PlanExternalKeepLowSpeedFallback(const CartesianState& ego,
                                                       double resolved_target_speed,
                                                       CartesianPath& out_path) {
     const bool fallback_ok = PlanLowSpeedFallback(
-        ego, s, d, /*target_d=*/0.0, out_path, /*duration_s=*/2.0,
+        ego, s, d, /*target_d=*/0.0, out_path, limits_.low_speed_crawl_duration_s,
         resolved_target_speed);
     std::printf("[FrenetPlanner-KEEP] near-low-speed fail-safe: no "
                 "candidate (v=%.2f), emitting crawl fallback path\n",
@@ -385,10 +385,9 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         // GenerateFollowingCandidates의 정지-리더 목표, AVOID의 전용 저속
         // 처리)이 있으므로 여기서는 건드리지 않는다 - 순수 외부 KEEP만
         // 대상이다.
-        constexpr double kNearLowSpeedFallbackV = 1.5;  // [m/s] kLowSpeedFallbackV보다 넉넉히 위
         const bool external_keep = cmd.mode == LANE_KEEPING;
         if (external_keep &&
-            std::fabs(ego.v) < kNearLowSpeedFallbackV &&
+            std::fabs(ego.v) < limits_.near_low_speed_fallback_v &&
             last_failure_reason_ != PlanFailureReason::COLLISION_BLOCKED) {
             return PlanExternalKeepLowSpeedFallback(ego, s, d,
                                                      resolved_target_speed, out_path);

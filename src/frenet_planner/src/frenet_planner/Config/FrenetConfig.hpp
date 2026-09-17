@@ -53,6 +53,9 @@ struct AvoidConfig {
     // 폭 절반씩 + 여유(0.3m)를 감안한 최소 이격(~2.2m)보다 확실히 크게 잡아야
     // 좌/우 클리어 판정이 "장애물 자신" 때문에 항상 막힌 것으로 나오지 않는다.
     double avoid_offset;
+    // [m] legacy geometry 기반(target pose 없음) target_d 계산에서, 자차/
+    // 장애물 반폭 합 + safety_margin에 추가로 더하는 여유.
+    double direction_extra_margin;
     // 동적 SHIFT 시작거리 = ego_speed * required_lateral_shift_time
     //                         + vehicle/obstacle clearance.
     // 아래 값은 지나치게 가깝거나 먼 결과를 막는 안전 경계다.
