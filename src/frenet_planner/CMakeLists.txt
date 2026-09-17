@@ -117,6 +117,7 @@ add_executable(frenet_planner_node
   src/Runtime/main.cpp
   src/Runtime/frenet_planner_node.cpp
   src/Runtime/feedback_builder.cpp
+  src/Runtime/RuntimeConfig.cpp
 )
 add_dependencies(frenet_planner_node
   ${catkin_EXPORTED_TARGETS}
@@ -126,6 +127,7 @@ target_link_libraries(frenet_planner_node
   frenet_command_execution_manager
   frenet_behavior_command_adapter
   frenet_planner_core
+  yaml-cpp
   ${catkin_LIBRARIES}
 )
 

@@ -16,6 +16,7 @@
 #include "frenet_planner/frenet_planner.hpp"
 #include "behavior_command_adapter.hpp"
 #include "command_execution_manager.hpp"
+#include "RuntimeConfig.hpp"
 
 namespace frenet_planner_ros {
 
@@ -220,73 +221,13 @@ class FrenetPlannerNode {
     bool has_last_valid_trajectory_ = false;
     int plan_fail_streak_ = 0;
 
-    // v2 STOP target pose의 허용 heading 오차 [rad] (계약 3.4절 4항).
-    //
-    // 투영점의 reference yaw와 목표 pose의 yaw 차이가 이 값을 넘으면
-    // TARGET_PROJECTION_FAILED로 거부한다. 왕복 구간이 max_lateral_offset
-    // 이내로 나란히 지나갈 때 반대 방향 구간에 목표가 붙는 것을 막는다.
-    //
-    // 기본값 45도. 초기 개발값이며 MORAI 검증 후 조인다 - 너무 좁게 잡으면
-    // 정상 STOP이 거부되고, 너무 넓으면 반대 방향을 통과시킨다.
-    // 이 값은 planning 알고리즘 파라미터가 아니라 v2 계약 검증 임계값이므로
-    // params.yaml이 아닌 ROS param으로 둔다(검증이 node 책임이기 때문).
-    double stop_max_target_heading_error_rad_ = 0.785398;
+    // ROS node 계층 설정(planning frequency/timeout/topic/v2 계약 검증
+    // 임계값). params.yaml의 runtime: 섹션에서 로드한다 - 필드별 의미와
+    // 서로 다른 maneuver끼리 값을 공유하지 않는 이유는 RuntimeConfig.hpp
+    // 참고.
+    RuntimeConfig runtime_{};
+    bool runtime_loaded_ = false;
 
-    // ===== v2 AVOID target pose 투영 파라미터 (D6-1a) =====
-    //
-    // AVOID의 target pose는 선택 사항이다(원본 메시지: "AVOID: 필요하면
-    // 회피 목표점"). 주어졌으면 Frenet (s, d)로 투영해 D6-2의 목표 d로 쓴다.
-    //
-    // STOP의 값을 그대로 쓰지 않는 이유:
-    //   STOP  "정지선이 이 경로 위에 있는가"  -> 경로에 붙어 있어야 한다
-    //   AVOID "회피 목표점이 이 경로 근방인가" -> 옆으로 비켜난 점이 정상이다
-    // 두 질문의 허용 횡거리가 같을 이유가 없다. 그리고 STOP config를
-    // AVOID가 끌어다 쓰면 STOP 튜닝이 AVOID 동작을 바꾼다(AvoidConfig에
-    // dropout_grace_cycles를 따로 둔 것과 같은 판단).
-    //
-    // planning 알고리즘 파라미터가 아니라 v2 계약 검증 임계값이므로
-    // params.yaml이 아닌 ROS param으로 둔다 - 검증이 node 책임이기 때문이다.
-
-    // [m] 투영 탐색창. 회피 목표점은 보통 장애물 근방(수십 m 앞)이므로
-    // STOP과 같은 100 m로 시작한다.
-    double avoid_projection_search_window_ = 100.0;
-
-    // [m] 목표점이 경로에서 이보다 멀면 이 경로에 대한 회피 목표가 아니라고
-    // 보고 TARGET_PROJECTION_FAILED로 거부한다.
-    //
-    // 기본값 4.0. 이 값은 avoid_cfg_.avoid_offset(params.yaml에서 5.0)과
-    // 무관하게 정한 **target pose의 spatial validity bound**다. 두 값을
-    // 비교해서 정하지 않는 이유:
-    //   avoid_offset  후보 생성 시 lateral_d 격자를 밀어낼 크기
-    //   이 값         FSM이 준 목표점이 이 경로의 것인지 판별하는 임계값
-    // 실제 회피 목표 d는 격자 크기가 아니라 차량/장애물 폭 + safety margin
-    // 으로 계산되므로(legacy도 동일), avoid_offset보다 커야 할 이유가 없다.
-    //
-    // MORAI에서 실제 FSM target pose 분포를 보고 조정한다.
-    double avoid_max_target_lateral_offset_ = 4.0;
-
-    // [rad] 목표 pose의 heading 허용 오차. STOP과 같은 이유로 필요하다
-    // (왕복 구간이 나란히 지나가면 반대 방향 구간에 목표가 붙는다).
-    // 계약 3.4절 4항.
-    double avoid_max_target_heading_error_rad_ = 0.785398;
-
-    // ===== v2 LANE_CHANGE target_pose_map 투영 파라미터 =====
-    //
-    // LANE_CHANGE의 target pose는 항상 필수다(계약 3.3절 검증 matrix -
-    // has_target_pose=true 강제). 이 투영 결과가 core의 authoritative
-    // 실행 target_d가 된다(PlannerCommand.hpp의 target_pose_projection_*
-    // 주석 참고) - 그 전에 방향/heading이 명령과 모순되지 않는지 여기서
-    // 검증한다. STOP/AVOID의 허용 오차 값을 그대로 재사용하지 않는다 -
-    // "인접 차로 중심"이라는 질문은 "회피 목표점"과 허용 오차가 같을
-    // 이유가 없다.
-    double lane_change_projection_search_window_ = 100.0;
-    double lane_change_max_target_lateral_offset_ = 6.0;
-    double lane_change_max_target_heading_error_rad_ = 0.785398;
-
-    double planning_frequency_hz_ = 20.0;
-    double vehicle_timeout_seconds_ = 0.20;
-    double objects_timeout_seconds_ = 0.30;
-    double behavior_timeout_seconds_ = 0.50;
     static constexpr int kMaxTransientFailCycles = 5;
 
 };

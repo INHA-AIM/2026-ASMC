@@ -33,128 +33,20 @@ double NormalizeAngle(double angle) {
 
 FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     : nh_(std::move(nh)), pnh_(std::move(pnh)) {
-    std::string vehicle_topic = "/vehicle/state";
-    std::string objects_topic = "/perception/objects";
-    std::string behavior_topic = "/behavior/context";
-    std::string trajectory_topic = "/planning/trajectory";
-    std::string feedback_topic = "/planning/feedback";
-    // v2 인터페이스. v1과 병행 운영하며 D10 cutover까지 두 계통을 모두
-    // 유지한다(계약 1.2절, 10.6절).
-    std::string behavior_command_v2_topic = "/behavior/command_v2";
-    std::string feedback_v2_topic = "/planning/frenet_feedback_v2";
-    std::string marker_topic = "/planning/markers";
     std::string planner_config_path;
-
-    pnh_.param("planning/frequency", planning_frequency_hz_, planning_frequency_hz_);
-    pnh_.param("timeouts/vehicle_state", vehicle_timeout_seconds_,
-               vehicle_timeout_seconds_);
-    pnh_.param("timeouts/objects", objects_timeout_seconds_,
-               objects_timeout_seconds_);
-    pnh_.param("timeouts/behavior", behavior_timeout_seconds_,
-               behavior_timeout_seconds_);
     pnh_.param<std::string>("planner/config_path", planner_config_path, "");
-    pnh_.param("topics/vehicle_state", vehicle_topic, vehicle_topic);
-    pnh_.param("topics/objects", objects_topic, objects_topic);
-    pnh_.param("topics/behavior", behavior_topic, behavior_topic);
-    pnh_.param("publish_topics/trajectory", trajectory_topic, trajectory_topic);
-    pnh_.param("publish_topics/feedback", feedback_topic, feedback_topic);
-    pnh_.param("topics/behavior_command_v2", behavior_command_v2_topic,
-               behavior_command_v2_topic);
-    pnh_.param("publish_topics/feedback_v2", feedback_v2_topic,
-               feedback_v2_topic);
-    pnh_.param("v2/stop/max_target_heading_error_rad",
-               stop_max_target_heading_error_rad_,
-               stop_max_target_heading_error_rad_);
-
-    if (!std::isfinite(stop_max_target_heading_error_rad_) ||
-        stop_max_target_heading_error_rad_ <= 0.0 ||
-        stop_max_target_heading_error_rad_ > M_PI) {
-        ROS_WARN("Invalid v2/stop/max_target_heading_error_rad %.3f; using 45 deg",
-                 stop_max_target_heading_error_rad_);
-        stop_max_target_heading_error_rad_ = 0.785398;
-    }
-
-    // v2 AVOID target pose 투영 (D6-1a). STOP과 값을 공유하지 않는다 -
-    // 두 질문의 허용 횡거리가 다르다(헤더 주석 참고).
-    pnh_.param("v2/avoid/projection_search_window",
-               avoid_projection_search_window_,
-               avoid_projection_search_window_);
-    pnh_.param("v2/avoid/max_target_lateral_offset",
-               avoid_max_target_lateral_offset_,
-               avoid_max_target_lateral_offset_);
-    pnh_.param("v2/avoid/max_target_heading_error_rad",
-               avoid_max_target_heading_error_rad_,
-               avoid_max_target_heading_error_rad_);
-
-    if (!std::isfinite(avoid_projection_search_window_) ||
-        avoid_projection_search_window_ <= 0.0) {
-        ROS_WARN("Invalid v2/avoid/projection_search_window %.3f; using 100 m",
-                 avoid_projection_search_window_);
-        avoid_projection_search_window_ = 100.0;
-    }
-    if (!std::isfinite(avoid_max_target_lateral_offset_) ||
-        avoid_max_target_lateral_offset_ <= 0.0) {
-        ROS_WARN("Invalid v2/avoid/max_target_lateral_offset %.3f; using 4 m",
-                 avoid_max_target_lateral_offset_);
-        avoid_max_target_lateral_offset_ = 4.0;
-    }
-    if (!std::isfinite(avoid_max_target_heading_error_rad_) ||
-        avoid_max_target_heading_error_rad_ <= 0.0 ||
-        avoid_max_target_heading_error_rad_ > M_PI) {
-        ROS_WARN("Invalid v2/avoid/max_target_heading_error_rad %.3f; "
-                 "using 45 deg", avoid_max_target_heading_error_rad_);
-        avoid_max_target_heading_error_rad_ = 0.785398;
-    }
-
-    // v2 LANE_CHANGE target_pose_map sanity 투영. AVOID와 값을 공유하지
-    // 않는다 - 헤더 주석 참고.
-    pnh_.param("v2/lane_change/projection_search_window",
-               lane_change_projection_search_window_,
-               lane_change_projection_search_window_);
-    pnh_.param("v2/lane_change/max_target_lateral_offset",
-               lane_change_max_target_lateral_offset_,
-               lane_change_max_target_lateral_offset_);
-    pnh_.param("v2/lane_change/max_target_heading_error_rad",
-               lane_change_max_target_heading_error_rad_,
-               lane_change_max_target_heading_error_rad_);
-
-    if (!std::isfinite(lane_change_projection_search_window_) ||
-        lane_change_projection_search_window_ <= 0.0) {
-        ROS_WARN("Invalid v2/lane_change/projection_search_window %.3f; "
-                 "using 100 m", lane_change_projection_search_window_);
-        lane_change_projection_search_window_ = 100.0;
-    }
-    if (!std::isfinite(lane_change_max_target_lateral_offset_) ||
-        lane_change_max_target_lateral_offset_ <= 0.0) {
-        ROS_WARN("Invalid v2/lane_change/max_target_lateral_offset %.3f; "
-                 "using 6 m", lane_change_max_target_lateral_offset_);
-        lane_change_max_target_lateral_offset_ = 6.0;
-    }
-    if (!std::isfinite(lane_change_max_target_heading_error_rad_) ||
-        lane_change_max_target_heading_error_rad_ <= 0.0 ||
-        lane_change_max_target_heading_error_rad_ > M_PI) {
-        ROS_WARN("Invalid v2/lane_change/max_target_heading_error_rad %.3f; "
-                 "using 45 deg", lane_change_max_target_heading_error_rad_);
-        lane_change_max_target_heading_error_rad_ = 0.785398;
-    }
-    pnh_.param("publish_topics/markers", marker_topic, marker_topic);
-
-    if (planning_frequency_hz_ <= 0.0) {
-        ROS_WARN("Invalid planning frequency %.3f Hz; using 20 Hz",
-                 planning_frequency_hz_);
-        planning_frequency_hz_ = 20.0;
-    }
-    if (vehicle_timeout_seconds_ <= 0.0 || objects_timeout_seconds_ <= 0.0 ||
-        behavior_timeout_seconds_ <= 0.0) {
-        ROS_WARN("Invalid input timeout configuration; using 0.20/0.30/0.50 s");
-        vehicle_timeout_seconds_ = 0.20;
-        objects_timeout_seconds_ = 0.30;
-        behavior_timeout_seconds_ = 0.50;
-    }
 
     if (planner_config_path.empty()) {
         ROS_ERROR("Missing required private parameter: planner/config_path");
     } else {
+        std::string runtime_error;
+        if (!LoadRuntimeConfig(planner_config_path, runtime_, runtime_error)) {
+            ROS_ERROR_STREAM("Frenet runtime config load failed ('"
+                             << planner_config_path << "'): " << runtime_error);
+        } else {
+            runtime_loaded_ = true;
+        }
+
         planner_initialized_ = planner_.Init(planner_config_path);
         if (!planner_initialized_) {
             ROS_ERROR_STREAM("Frenet planner initialization failed: "
@@ -162,10 +54,12 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
         }
     }
 
-    trajectory_pub_ = nh_.advertise<asmc_msgs::Trajectory>(trajectory_topic, 1);
-    feedback_pub_ = nh_.advertise<asmc_msgs::PlanFeedback>(feedback_topic, 1);
-    feedback_v2_pub_ =
-        nh_.advertise<asmc_msgs::FrenetFeedback>(feedback_v2_topic, 1);
+    trajectory_pub_ =
+        nh_.advertise<asmc_msgs::Trajectory>(runtime_.trajectory_topic, 1);
+    feedback_pub_ =
+        nh_.advertise<asmc_msgs::PlanFeedback>(runtime_.feedback_topic, 1);
+    feedback_v2_pub_ = nh_.advertise<asmc_msgs::FrenetFeedback>(
+        runtime_.feedback_v2_topic, 1);
 
     // v2 구현 상태. 열린 maneuver만 planner를 호출한다(계약 11.4절).
     // 닫혀 있는 maneuver는 FAILED로 회신한다 - 조용히 velocity keeping
@@ -187,32 +81,41 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
         asmc_msgs::BehaviorCommand::AVOID, true);
     command_manager_.SetImplementedManeuver(
         asmc_msgs::BehaviorCommand::LANE_CHANGE, true);
-    marker_pub_ =
-        nh_.advertise<visualization_msgs::MarkerArray>(marker_topic, 1);
+    marker_pub_ = nh_.advertise<visualization_msgs::MarkerArray>(
+        runtime_.markers_topic, 1);
 
     vehicle_sub_ = nh_.subscribe(
-        vehicle_topic, 1, &FrenetPlannerNode::vehicleCallback, this);
+        runtime_.vehicle_state_topic, 1, &FrenetPlannerNode::vehicleCallback, this);
     objects_sub_ = nh_.subscribe(
-        objects_topic, 1, &FrenetPlannerNode::objectsCallback, this);
+        runtime_.objects_topic, 1, &FrenetPlannerNode::objectsCallback, this);
     behavior_sub_ = nh_.subscribe(
-        behavior_topic, 1, &FrenetPlannerNode::behaviorCallback, this);
+        runtime_.behavior_topic, 1, &FrenetPlannerNode::behaviorCallback, this);
     behavior_command_v2_sub_ = nh_.subscribe(
-        behavior_command_v2_topic, 1,
+        runtime_.behavior_command_v2_topic, 1,
         &FrenetPlannerNode::behaviorCommandV2Callback, this);
 
-    planning_timer_ = nh_.createSteadyTimer(
-        ros::WallDuration(1.0 / planning_frequency_hz_),
-        &FrenetPlannerNode::planningTimerCallback, this);
+    // runtime_loaded_==false면 planning_frequency_hz가 정의되지 않은 값일 수
+    // 있다 - 이 경우 timer를 만들지 않는다(1Hz fallback으로 조용히 계속
+    // 도는 대신 명백히 동작하지 않는 상태로 둔다).
+    if (runtime_loaded_) {
+        planning_timer_ = nh_.createSteadyTimer(
+            ros::WallDuration(1.0 / runtime_.planning_frequency_hz),
+            &FrenetPlannerNode::planningTimerCallback, this);
+    }
 
-    ROS_INFO_STREAM("Frenet ROS runtime initialized at " << planning_frequency_hz_
-                    << " Hz; inputs: " << vehicle_topic << ", "
-                    << objects_topic << ", " << behavior_topic
-                    << "; outputs: " << trajectory_topic << ", "
-                    << feedback_topic << "; v2: " << behavior_command_v2_topic
-                    << " -> " << feedback_v2_topic
+    ROS_INFO_STREAM("Frenet ROS runtime initialized at "
+                    << runtime_.planning_frequency_hz
+                    << " Hz; inputs: " << runtime_.vehicle_state_topic << ", "
+                    << runtime_.objects_topic << ", " << runtime_.behavior_topic
+                    << "; outputs: " << runtime_.trajectory_topic << ", "
+                    << runtime_.feedback_topic << "; v2: "
+                    << runtime_.behavior_command_v2_topic
+                    << " -> " << runtime_.feedback_v2_topic
                     << " (KEEP/STOP/E-STOP/FOLLOW/AVOID/LANE_CHANGE enabled)"
                     << "; planner_initialized="
-                    << (planner_initialized_ ? "true" : "false"));
+                    << (planner_initialized_ ? "true" : "false")
+                    << "; runtime_loaded="
+                    << (runtime_loaded_ ? "true" : "false"));
 }
 
 void FrenetPlannerNode::vehicleCallback(
@@ -473,7 +376,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
     double objects_age = 0.0;
     double behavior_age = 0.0;
     if (!IsSteadyFresh(snapshot.vehicle_received_at, steady_now,
-                       vehicle_timeout_seconds_, &vehicle_age)) {
+                       runtime_.vehicle_state_timeout_s, &vehicle_age)) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: invalid/stale vehicle state age=%.3f s",
             vehicle_age);
@@ -481,7 +384,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
         return;
     }
     if (!IsSteadyFresh(snapshot.objects_received_at, steady_now,
-                       objects_timeout_seconds_, &objects_age)) {
+                       runtime_.objects_timeout_s, &objects_age)) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: invalid/stale objects age=%.3f s",
             objects_age);
@@ -489,7 +392,7 @@ void FrenetPlannerNode::planningTimerCallback(const ros::SteadyTimerEvent&) {
         return;
     }
     if (!IsSteadyFresh(snapshot.behavior_received_at, steady_now,
-                       behavior_timeout_seconds_, &behavior_age)) {
+                       runtime_.behavior_timeout_s, &behavior_age)) {
         ROS_WARN_THROTTLE(
             1.0, "Frenet STOP required: invalid/stale behavior age=%.3f s",
             behavior_age);
@@ -944,9 +847,9 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     const bool inputs_ready =
         snapshot.has_vehicle && snapshot.has_objects &&
         IsSteadyFresh(snapshot.vehicle_received_at, steady_now,
-                     vehicle_timeout_seconds_, &vehicle_age) &&
+                     runtime_.vehicle_state_timeout_s, &vehicle_age) &&
         IsSteadyFresh(snapshot.objects_received_at, steady_now,
-                     objects_timeout_seconds_, &objects_age);
+                     runtime_.objects_timeout_s, &objects_age);
     if (!inputs_ready) {
         // 명령은 정상이므로 transaction을 버리지 않는다. 이 사이클의 planning
         // 만 막고, 입력이 회복되면 같은 transaction으로 계속한다(계약 11.3절).
@@ -1139,7 +1042,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // 2도 차이인데 뺄셈만 하면 358도가 된다.
         const double heading_error =
             std::fabs(NormalizeAngle(target_yaw - reference_heading));
-        if (heading_error > stop_max_target_heading_error_rad_) {
+        if (heading_error > runtime_.stop_max_target_heading_error_rad) {
             command_manager_.NotifyPlanFailed(
                 /*terminal=*/true,
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
@@ -1156,7 +1059,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 "v2 STOP target heading rejected: target=%.3f ref=%.3f "
                 "error=%.3f rad > %.3f (command_id=%u)",
                 target_yaw, reference_heading, heading_error,
-                stop_max_target_heading_error_rad_, command.command_id);
+                runtime_.stop_max_target_heading_error_rad, command.command_id);
             has_last_v2_trajectory_ = false;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
@@ -1215,8 +1118,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         if (!planner_.ProjectPointToFrenet(
                 command.target_pose_map.position.x,
                 command.target_pose_map.position.y, ego_s,
-                avoid_projection_search_window_,
-                avoid_max_target_lateral_offset_, avoid_s, avoid_d)) {
+                runtime_.avoid_projection_search_window,
+                runtime_.avoid_max_target_lateral_offset, avoid_s, avoid_d)) {
             command_manager_.NotifyPlanFailed(
                 /*terminal=*/true,
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
@@ -1276,7 +1179,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // 뺄셈만 하면 358도가 된다.
         const double heading_error =
             std::fabs(NormalizeAngle(target_yaw - reference_heading));
-        if (heading_error > avoid_max_target_heading_error_rad_) {
+        if (heading_error > runtime_.avoid_max_target_heading_error_rad) {
             command_manager_.NotifyPlanFailed(
                 /*terminal=*/true,
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
@@ -1293,7 +1196,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 "v2 AVOID target heading rejected: target=%.3f ref=%.3f "
                 "error=%.3f rad > %.3f (command_id=%u)",
                 target_yaw, reference_heading, heading_error,
-                avoid_max_target_heading_error_rad_, command.command_id);
+                runtime_.avoid_max_target_heading_error_rad, command.command_id);
             has_last_v2_trajectory_ = false;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
@@ -1350,8 +1253,8 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             !planner_.ProjectPointToFrenet(
                 command.target_pose_map.position.x,
                 command.target_pose_map.position.y, ego_s,
-                lane_change_projection_search_window_,
-                lane_change_max_target_lateral_offset_, target_pose_s,
+                runtime_.lane_change_projection_search_window,
+                runtime_.lane_change_max_target_lateral_offset, target_pose_s,
                 target_pose_d)) {
             // has_target_pose=false는 이미 ValidateBehaviorCommand가
             // 거부해야 정상이지만(계약 3.3절), 방어적으로 여기서도 같은
@@ -1414,7 +1317,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         const double lane_change_heading_error = std::fabs(
             NormalizeAngle(lane_change_target_yaw - reference_heading));
         if (lane_change_heading_error >
-            lane_change_max_target_heading_error_rad_) {
+            runtime_.lane_change_max_target_heading_error_rad) {
             command_manager_.NotifyPlanFailed(
                 /*terminal=*/true,
                 asmc_msgs::FrenetFeedback::TARGET_PROJECTION_FAILED,
@@ -1434,7 +1337,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
                 "ref=%.3f error=%.3f rad > %.3f (command_id=%u)",
                 lane_change_target_yaw, reference_heading,
                 lane_change_heading_error,
-                lane_change_max_target_heading_error_rad_,
+                runtime_.lane_change_max_target_heading_error_rad,
                 command.command_id);
             has_last_v2_trajectory_ = false;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
