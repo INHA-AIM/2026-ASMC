@@ -152,9 +152,15 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
         CollisionCheckConfig collision_cfg{0.3, 0.1, 3.0};
         std::vector<TrackedObject> no_obstacles;
         PlannerDebugStats direct_stats{};
+        StopConfig direct_stop_cfg{};
+        direct_stop_cfg.delta_s_override = {-1.0, 0.0, 0.25};
+        MergeConfig direct_merge_cfg{};
+        direct_merge_cfg.braking_distance_margin = 3.0;
+        direct_merge_cfg.min_arrival_speed = 1.0;
         auto direct_candidates = ResolveManeuver(direct_start, direct_cmd, ref, direct_cfg,
                                                  direct_limits, /*lane_width=*/3.5,
                                                  no_obstacles, vehicle_shape, collision_cfg,
+                                                 direct_stop_cfg, direct_merge_cfg,
                                                  &direct_stats);
         std::vector<FrenetPath> continuity =
             GenerateLateralContinuityCandidates(direct_start, direct_cfg);

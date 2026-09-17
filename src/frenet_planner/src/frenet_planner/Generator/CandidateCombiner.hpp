@@ -23,6 +23,7 @@
 
 #include "frenet_planner/Common/FrenetTypes.hpp"
 #include "frenet_planner/Common/PlannerCommand.hpp"
+#include "frenet_planner/Config/FrenetConfig.hpp"
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
@@ -59,6 +60,8 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                                          const std::vector<TrackedObject>& obstacles,
                                          const VehicleShape& vehicle_shape,
                                          const CollisionCheckConfig& collision_cfg,
+                                         const StopConfig& stop_cfg,
+                                         const MergeConfig& merge_cfg,
                                          PlannerDebugStats* stats = nullptr);
 
 #endif  // FRENET_GENERATOR_CANDIDATE_COMBINER_HPP

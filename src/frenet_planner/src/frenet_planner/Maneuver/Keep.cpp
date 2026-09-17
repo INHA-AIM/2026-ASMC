@@ -213,7 +213,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     }
     std::vector<FrenetPath> candidates = ResolveManeuver(
         maneuver_start, cmd, ref_, path_cfg_, maneuver_limits, lane_width_,
-        planning_collision_obstacles, vehicle_shape_, collision_cfg_, &stats);
+        planning_collision_obstacles, vehicle_shape_, collision_cfg_,
+        stop_cfg_, merge_cfg_, &stats);
 
     // moderate-speed curvature starvation 완화(Phase B): 실측 MORAI에서
     // 급커브 근접 중 유효한 결합 후보가 있는데도 전부 중앙(d1=0) 복귀였던

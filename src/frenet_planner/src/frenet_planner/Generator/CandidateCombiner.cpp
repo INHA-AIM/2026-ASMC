@@ -54,6 +54,8 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                                          const std::vector<TrackedObject>& obstacles,
                                          const VehicleShape& vehicle_shape,
                                          const CollisionCheckConfig& collision_cfg,
+                                         const StopConfig& stop_cfg,
+                                         const MergeConfig& merge_cfg,
                                          PlannerDebugStats* stats) {
     // 1. lateral 후보. 전 모드에 공유된 [-3,+3]m 격자를 쓰면
     // LANE_KEEPING에서도 먼 장애물을 보고 옆 후보가 선택된다. 모드가
@@ -107,12 +109,10 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
             // 공용 delta_s는 [-3, +3]m이라 +쪽 후보는 정지 목표를 지나쳐서
             // 멈춘다. 정지선/정지 지점 semantics에서는 오버슈트가 곧 위반이므로
             // STOP 계열은 목표 앞에서만 멈추도록 delta 범위를 제한한다.
-            PathGeneratorConfig stop_cfg = cfg;
-            stop_cfg.delta_s.min = -1.0;
-            stop_cfg.delta_s.max = 0.0;
-            stop_cfg.delta_s.step = 0.25;
+            PathGeneratorConfig stop_delta_cfg = cfg;
+            stop_delta_cfg.delta_s = stop_cfg.delta_s_override;
             longitudinal_set =
-                GenerateStoppingCandidates(start, cmd.stop_position, stop_cfg);
+                GenerateStoppingCandidates(start, cmd.stop_position, stop_delta_cfg);
             break;
         }
 
@@ -137,7 +137,7 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                 const double stop_distance = std::max(0.0, cmd.merge_stop_s - start.s);
                 const double braking_distance = start.s_d * start.s_d /
                     (2.0 * std::max(limits.max_longitudinal_accel, 0.1));
-                if (stop_distance > braking_distance + 3.0) {
+                if (stop_distance > braking_distance + merge_cfg.braking_distance_margin) {
                     // 먼 거리부터 정지 quintic을 강제하면 모든 T 후보가 조기 감속한다.
                     // 제동구간 전까지는 global-path 순항을 유지한다.
                     longitudinal_set = GenerateVelocityKeepingCandidates(
@@ -153,7 +153,9 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                     cmd.merge_entry_time >= cfg.time_horizon.min - 1e-6) {
                     longitudinal_set = GenerateMergeArrivalCandidates(
                         start, cmd.merge_conflict_s, cmd.merge_entry_time,
-                        std::min(cmd.target_speed, std::max(arrival_speed, 1.0)), cfg);
+                        std::min(cmd.target_speed,
+                                 std::max(arrival_speed, merge_cfg.min_arrival_speed)),
+                        cfg);
                 } else if (cmd.merge_committed) {
                     // conflict 도착까지 남은 시간이 lateral/longitudinal 공통
                     // 최소 horizon보다 짧아지면 exact-arrival quintic을 만들 수 없다.
@@ -169,11 +171,15 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                         longitudinal_set = GenerateFollowingCandidates(
                             start, cmd.leader_s, cmd.leader_speed, cmd.leader_accel,
                             cmd.time_gap, cmd.min_gap,
-                            std::min(cmd.target_speed, std::max(arrival_speed, 1.0)),
+                            std::min(cmd.target_speed,
+                                     std::max(arrival_speed, merge_cfg.min_arrival_speed)),
                             cmd.gap_gain, cfg);
                     } else {
                         longitudinal_set = GenerateVelocityKeepingCandidates(
-                            start, std::min(cmd.target_speed, std::max(arrival_speed, 1.0)), cfg);
+                            start,
+                            std::min(cmd.target_speed,
+                                     std::max(arrival_speed, merge_cfg.min_arrival_speed)),
+                            cfg);
                     }
                 }
             }

@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "frenet_planner/Generator/GeneratorConfig.hpp"
+
 // =========================================================
 // 곡률 기반 사전 감속 (mpc_controller의 옛 planner/path_planner.cpp 로직을 Frenet Frame Planner 쪽으로 이식한 것). 
 // lookahead 구간 내 최대 곡률로 velocity-keeping 목표속도를 정한다.
@@ -119,6 +121,12 @@ struct MergeConfig {
     double commit_distance;      // [m] 이 거리 안에서 선택한 gap을 고정
     int safe_confirm_cycles;     // 순간 오검출로 진입하지 않도록 연속 안전 확인
     double cross_speed_floor;    // [m/s] COMMIT/CROSS 중 교차구역 이탈 최저 목표속도
+    // [m] 물리적 제동거리에 더하는 여유. 이 여유를 넘어서야 정지 quintic으로
+    // 전환한다 - 여유가 없으면 먼 거리부터 모든 T 후보가 조기 감속한다.
+    double braking_distance_margin;
+    // [m/s] MERGE 도착/추종 목표속도의 최소 하한. entry_time 기반 계산이
+    // 0에 가까운 크리프 속도를 요구하지 않도록 한다.
+    double min_arrival_speed;
 };
 
 // =========================================================
@@ -166,6 +174,10 @@ struct StopConfig {
     // 먼 정지 목표는 투영이 틀어져 max_lateral_offset 검사에서 거부되고,
     // 정상 명령이 INVALID_COMMAND로 즉시 정지하게 된다.
     double projection_search_window;
+    // 공용 delta_s 격자([-3,+3]m)는 +쪽 후보가 정지 목표를 지나쳐서 멈춘다.
+    // 정지선 semantics에서는 오버슈트가 곧 위반이므로 STOP/INTERSECTION_WAIT
+    // 전용으로 더 좁은 범위를 쓴다(목표 앞에서만 후보 생성).
+    SamplingRange delta_s_override;
     // [m/s^2] GenerateDecelToZeroPath(STOP/EMERGENCY 공유)가 실제로 쓰는
     // 감속도의 최소 하한. comfortable_decel/emergency_stop.decel은 이미
     // ConfigValidator가 >0으로 검증하므로 이 값은 "설정이 잘못됐을 때의

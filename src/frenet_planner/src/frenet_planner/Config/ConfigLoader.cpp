@@ -165,6 +165,9 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/stop/target_change_tolerance", stop_cfg.target_change_tolerance);
     REQUIRE("planner/stop/projection_search_window", stop_cfg.projection_search_window);
     REQUIRE("planner/stop/min_decel", stop_cfg.min_decel);
+    REQUIRE("planner/stop/delta_s_override/min",  stop_cfg.delta_s_override.min);
+    REQUIRE("planner/stop/delta_s_override/max",  stop_cfg.delta_s_override.max);
+    REQUIRE("planner/stop/delta_s_override/step", stop_cfg.delta_s_override.step);
 
     REQUIRE("planner/emergency_stop/decel", emergency_stop_cfg.decel);
 
@@ -181,6 +184,8 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/merge/commit_distance",     merge_cfg.commit_distance);
     REQUIRE("planner/merge/safe_confirm_cycles", merge_cfg.safe_confirm_cycles);
     REQUIRE("planner/merge/cross_speed_floor",   merge_cfg.cross_speed_floor);
+    REQUIRE("planner/merge/braking_distance_margin", merge_cfg.braking_distance_margin);
+    REQUIRE("planner/merge/min_arrival_speed",       merge_cfg.min_arrival_speed);
 
     REQUIRE("planner/highway_merge/enabled",                    highway_merge_cfg.enabled);
     REQUIRE("planner/highway_merge/approach_distance",          highway_merge_cfg.approach_distance);

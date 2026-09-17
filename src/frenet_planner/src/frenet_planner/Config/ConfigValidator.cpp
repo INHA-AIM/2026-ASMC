@@ -318,6 +318,14 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
         return false;
     if (!CheckPositiveFinite(stop_cfg.min_decel, "planner/stop/min_decel", error_message))
         return false;
+    if (!CheckRange(stop_cfg.delta_s_override, "planner/stop/delta_s_override", error_message))
+        return false;
+    if (stop_cfg.delta_s_override.max > 0.0) {
+        error_message =
+            "planner/stop/delta_s_override/max must be <= 0 (STOP candidates must "
+            "not overshoot the stop target)";
+        return false;
+    }
 
     // --- emergency_stop ---
     if (!CheckPositiveFinite(emergency_stop_cfg.decel, "planner/emergency_stop/decel", error_message))
@@ -368,6 +376,14 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
     }
     if (!IsFinite(merge_cfg.cross_speed_floor) || merge_cfg.cross_speed_floor < 0.0) {
         error_message = "planner/merge/cross_speed_floor must be finite and >= 0";
+        return false;
+    }
+    if (!IsFinite(merge_cfg.braking_distance_margin) || merge_cfg.braking_distance_margin < 0.0) {
+        error_message = "planner/merge/braking_distance_margin must be finite and >= 0";
+        return false;
+    }
+    if (!IsFinite(merge_cfg.min_arrival_speed) || merge_cfg.min_arrival_speed < 0.0) {
+        error_message = "planner/merge/min_arrival_speed must be finite and >= 0";
         return false;
     }
 

@@ -52,6 +52,22 @@ KinematicLimits MakeLimits() {
     return KinematicLimits{3.0, 3.0, kMaxCurvature, 6.0};
 }
 
+// 이 테스트는 LANE_KEEPING/AVOID/LANE_CHANGE만 exercise한다(STOP/MERGE
+// 아님) - ResolveManeuver가 요구하는 필수 파라미터라 채우지만, 값 자체는
+// 이 테스트의 어떤 경로에서도 읽히지 않는다.
+StopConfig MakeStopCfgForNonStopModes() {
+    StopConfig cfg{};
+    cfg.delta_s_override = {-1.0, 0.0, 0.25};
+    return cfg;
+}
+
+MergeConfig MakeMergeCfgForNonMergeModes() {
+    MergeConfig cfg{};
+    cfg.braking_distance_margin = 3.0;
+    cfg.min_arrival_speed = 1.0;
+    return cfg;
+}
+
 RefLine MakeStraightRef() {
     // 곡률 0인 직선 참조선. lateral 후보 자체(narrowed grid)를 확인하는
     // 목적이므로 곡률 필터의 영향을 배제한다.
@@ -93,7 +109,9 @@ void TestKeepNominalCandidatesTargetCenter() {
 
     PlannerDebugStats stats{};
     auto candidates = ResolveManeuver(start, keep, ref, cfg, limits, kLaneWidth,
-                                      no_obstacles, vehicle_shape, collision_cfg, &stats);
+                                      no_obstacles, vehicle_shape, collision_cfg,
+                                      MakeStopCfgForNonStopModes(),
+                                      MakeMergeCfgForNonMergeModes(), &stats);
 
     std::size_t valid_count = 0;
     bool all_centered = true;
@@ -165,7 +183,8 @@ void TestOtherManeuversKeepTargetSpread() {
         PlannerDebugStats stats{};
         auto candidates = ResolveManeuver(start, avoid, ref, cfg, limits, kLaneWidth,
                                           no_obstacles, vehicle_shape, collision_cfg,
-                                          &stats);
+                                          MakeStopCfgForNonStopModes(),
+                                          MakeMergeCfgForNonMergeModes(), &stats);
         bool found_offset = false;
         bool found_spread = false;
         for (const auto& p : candidates) {
@@ -198,7 +217,8 @@ void TestOtherManeuversKeepTargetSpread() {
         PlannerDebugStats stats{};
         auto candidates = ResolveManeuver(start, lane_change, ref, cfg, limits, kLaneWidth,
                                           no_obstacles, vehicle_shape, collision_cfg,
-                                          &stats);
+                                          MakeStopCfgForNonStopModes(),
+                                          MakeMergeCfgForNonMergeModes(), &stats);
         bool found_spread = false;
         for (const auto& p : candidates) {
             if (!p.valid || p.d.empty()) continue;

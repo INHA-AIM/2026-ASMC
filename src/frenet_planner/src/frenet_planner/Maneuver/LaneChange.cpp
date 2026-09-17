@@ -217,7 +217,7 @@ bool FrenetPlanner::BuildLaneChangeMaintenancePath(
         auto keep_candidates =
             ResolveManeuver(start, keep_cmd, ref_, path_cfg_, limits_,
                             lane_width_, collision_obstacles, vehicle_shape_,
-                            collision_cfg_, &keep_stats);
+                            collision_cfg_, stop_cfg_, merge_cfg_, &keep_stats);
         EvaluateCosts(keep_candidates, cost_weights_, 0.0);
         FilterByCartesianLateralAcceleration(keep_candidates, ref_,
                                              limits_.max_lateral_accel);
@@ -316,7 +316,7 @@ bool FrenetPlanner::LaneChangeProcess(
     auto generated = ResolveManeuver(
         start, side_cmd, ref_, generation_cfg, limits_, lane_width_,
         predicted_collision_obstacles, vehicle_shape_, collision_cfg_,
-        &side_stats);
+        stop_cfg_, merge_cfg_, &side_stats);
     EvaluateCosts(generated, cost_weights_, target_d);
     FilterByCartesianLateralAcceleration(generated, ref_,
                                          limits_.max_lateral_accel);

@@ -549,7 +549,7 @@ bool FrenetPlanner::BuildAvoidMaintenancePath(
         auto keep_candidates =
             ResolveManeuver(start, keep_cmd, ref_, path_cfg_, limits_,
                             lane_width_, collision_obstacles, vehicle_shape_,
-                            collision_cfg_, &keep_stats);
+                            collision_cfg_, stop_cfg_, merge_cfg_, &keep_stats);
         EvaluateCosts(keep_candidates, cost_weights_, 0.0);
         FilterByCartesianLateralAcceleration(keep_candidates, ref_,
                                              limits_.max_lateral_accel);
@@ -918,7 +918,7 @@ bool FrenetPlanner::AvoidProcess(
             auto generated = ResolveManeuver(
                 start, side_cmd, ref_, generation_cfg, limits_, lane_width_,
                 phase_collision_obstacles, vehicle_shape_,
-                collision_cfg_, &side_stats);
+                collision_cfg_, stop_cfg_, merge_cfg_, &side_stats);
             EvaluateCosts(generated, cost_weights_, target_d);
             // 공용 횡가속도 생성 필터와 같은 설정 한계(3.0 m/s^2)를 사용한다.
             // 과거 AVOID에만 중복 적용되던 80% 축소는 제거한다.
