@@ -25,6 +25,23 @@ class FrenetPlannerNode {
     FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh);
 
  private:
+    // ===== R8: Runtime 책임 구획 =====
+    //
+    // 이 클래스는 ROS 리소스와 runtime 상태를 계속 소유하지만, 실제 구현은
+    // 책임별로 나뉜 여러 .cpp에 있다(정의: Runtime/<file>.cpp).
+    //   Input           input_snapshot.cpp
+    //   V1 Planning     frenet_planner_node.cpp (runV1PlanningCycle)
+    //   V2 Planning     v2_planning.cpp
+    //   Projection      target_projection.cpp (STOP만; AVOID/LANE_CHANGE는
+    //                   v2_planning.cpp에 남아 있다 - R8-B2 참고)
+    //   Feedback        feedback_builder.cpp
+    //   Output          output_publisher.cpp
+    //   Visualization   debug_marker_publisher.cpp
+    //   Bootstrap       frenet_planner_node.cpp (constructor)
+    // 상태 소유권은 전부 FrenetPlannerNode에 남아 있다 - 파일 이동은 정의
+    // 위치만 바꾼다(R6-F에서 확립한 것과 동일한 원칙).
+
+    // ---- Input snapshot (input_snapshot.cpp) ----
     struct InputSnapshot {
         asmc_msgs::VehicleState vehicle;
         asmc_msgs::DetectedObjectArray objects;
@@ -42,6 +59,8 @@ class FrenetPlannerNode {
     void behaviorCallback(const asmc_msgs::BehaviorContext::ConstPtr& message);
     void planningTimerCallback(const ros::SteadyTimerEvent& event);
 
+    // ---- V1 planning (frenet_planner_node.cpp) ----
+    //
     // 기존(레거시) v1 planning path: /behavior/context -> /planning/feedback.
     // v2 명령이 하나도 도착하지 않았을 때만 planningTimerCallback이 호출한다
     // (runV2PlanningCycle이 false를 반환한 경우). ros::SteadyTime::now()를
@@ -49,6 +68,8 @@ class FrenetPlannerNode {
     // 않는다(R8-A2: 기존 semantics 그대로 보존).
     void runV1PlanningCycle();
 
+    // ---- V2 planning (v2_planning.cpp) ----
+    //
     // ===== v2 인터페이스 (D3-3) =====
     //
     // v1(/behavior/context -> /planning/feedback)과 병행 운영한다. v2 경로는
@@ -72,6 +93,8 @@ class FrenetPlannerNode {
     // 기존 v1 경로를 계속 수행한다 - cutover 전까지 두 계통이 병행한다.
     bool runV2PlanningCycle(const ros::Time& now);
 
+    // ---- Target projection (target_projection.cpp) ----
+    //
     // STOP target pose(map 좌표) -> Frenet s 투영과 heading validation
     // (계약 3.4절 4항). ConvertBehaviorCommand는 RefLine을 모르므로
     // stop_position을 NaN으로 남기고, RefLine을 가진 이 계층이 완성한다.
@@ -88,6 +111,8 @@ class FrenetPlannerNode {
                            const InputSnapshot& snapshot, double ego_s,
                            bool ego_s_valid, PlannerCommand& planner_command);
 
+    // ---- Feedback (feedback_builder.cpp) ----
+    //
     // AVOID PREPARE/post-COMMIT이 채우는 피드백 필드 (D6-2c/D6-3c).
     //
     // publishFeedbackV2의 인자를 계속 늘리는 대신 한 묶음으로 넘긴다.
@@ -178,19 +203,27 @@ class FrenetPlannerNode {
                            const LaneChangeFeedbackFields* lane_change_fields =
                                nullptr);
 
+    // input_snapshot.cpp
     InputSnapshot takeSnapshot() const;
+
+    // ---- Output (output_publisher.cpp) ----
     void publishStop(const InputSnapshot& snapshot, uint8_t failure_reason);
     void publishResult(const asmc_msgs::Trajectory& trajectory,
                        const InputSnapshot& snapshot,
                        bool previous_plan_still_valid);
+    asmc_msgs::VehicleState stopReferenceVehicle(
+        const InputSnapshot& snapshot) const;
+    double trajectoryDt() const;
+
+    // ---- Visualization (debug_marker_publisher.cpp) ----
     void publishDebugMarkers(const asmc_msgs::Trajectory& trajectory,
                              const InputSnapshot& snapshot);
     void publishDebugMarkersV2(
         const asmc_msgs::Trajectory& trajectory,
         const asmc_msgs::BehaviorCommand& command);
-    asmc_msgs::VehicleState stopReferenceVehicle(
-        const InputSnapshot& snapshot) const;
-    double trajectoryDt() const;
+
+    // ---- State (owned by FrenetPlannerNode; see per-section comments
+    // above for who reads/writes what) ----
 
     ros::NodeHandle nh_;
     ros::NodeHandle pnh_;
