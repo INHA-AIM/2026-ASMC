@@ -48,7 +48,8 @@ add_library(frenet_planner_core
   src/frenet_planner/Maneuver/Avoid/Avoid.cpp
   src/frenet_planner/Maneuver/Avoid/AvoidTargetResolver.cpp
   src/frenet_planner/Maneuver/Avoid/AvoidLifecycle.cpp
-  src/frenet_planner/Maneuver/LaneChange.cpp
+  src/frenet_planner/Maneuver/LaneChange/LaneChange.cpp
+  src/frenet_planner/Maneuver/LaneChange/LaneChangeLifecycle.cpp
   src/frenet_planner/Maneuver/Merge.cpp
   src/frenet_planner/Config/ConfigLoader.cpp
   src/frenet_planner/Config/ConfigValidator.cpp
