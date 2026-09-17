@@ -47,7 +47,7 @@ add_library(frenet_planner_core
   src/frenet_planner/Maneuver/Avoid.cpp
   src/frenet_planner/Maneuver/LaneChange.cpp
   src/frenet_planner/Maneuver/Merge.cpp
-  src/frenet_planner/Common/ParameterLoader.cpp
+  src/frenet_planner/Config/ConfigLoader.cpp
   src/frenet_planner/visualization/planner_debug_writer.cpp
   src/frenet_planner/Reference/Reference.cpp
   src/frenet_planner/Generator/SamplingUtils.cpp

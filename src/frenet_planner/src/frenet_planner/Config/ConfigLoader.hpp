@@ -1,9 +1,9 @@
-#ifndef PLANNER_COMMON_PARAMETER_LOADER_HPP
-#define PLANNER_COMMON_PARAMETER_LOADER_HPP
+#ifndef PLANNER_CONFIG_CONFIG_LOADER_HPP
+#define PLANNER_CONFIG_CONFIG_LOADER_HPP
 
 #include <string>
 
-#include "frenet_planner/Common/PlannerConfig.hpp"
+#include "frenet_planner/Config/FrenetConfig.hpp"
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/Evaluation/Cost.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
@@ -32,4 +32,4 @@ void LoadParams(const std::string& yaml_path,
                 double& max_target_speed_accel,
                 std::string& waypoint_file);
 
-#endif  // PLANNER_COMMON_PARAMETER_LOADER_HPP
+#endif  // PLANNER_CONFIG_CONFIG_LOADER_HPP

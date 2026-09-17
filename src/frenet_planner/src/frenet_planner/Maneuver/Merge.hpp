@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "frenet_planner/Common/ObjectTypes.hpp"
-#include "frenet_planner/Common/PlannerConfig.hpp"
+#include "frenet_planner/Config/FrenetConfig.hpp"
 #include "frenet_planner/Evaluation/CollisionChecker.hpp"
 #include "frenet_planner/Reference/Reference.hpp"
 

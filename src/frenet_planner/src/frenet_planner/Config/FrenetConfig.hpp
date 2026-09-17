@@ -1,5 +1,5 @@
-#ifndef PLANNER_COMMON_PLANNER_CONFIG_HPP
-#define PLANNER_COMMON_PLANNER_CONFIG_HPP
+#ifndef PLANNER_CONFIG_FRENET_CONFIG_HPP
+#define PLANNER_CONFIG_FRENET_CONFIG_HPP
 
 #include <string>
 #include <vector>
@@ -204,4 +204,4 @@ struct HighwayMergeConfig {
     double cross_speed_floor = 4.0;     // [m/s]
 };
 
-#endif  // PLANNER_COMMON_PLANNER_CONFIG_HPP
+#endif  // PLANNER_CONFIG_FRENET_CONFIG_HPP

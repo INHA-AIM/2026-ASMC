@@ -1,4 +1,4 @@
-#include "frenet_planner/Common/ParameterLoader.hpp"
+#include "frenet_planner/Config/ConfigLoader.hpp"
 
 #include <cstdio>
 
