@@ -26,11 +26,6 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
                     yaml_path.c_str(), config_error.c_str());
         return false;
     }
-    // reference line 자체가 만족해야 하는 곡률 한계는 KinematicFilter가
-    // 후보를 걸러내는 물리적 한계와 같은 차량 능력이어야 한다 - 별도 YAML
-    // key로 중복 관리하지 않고 여기서 그대로 대입한다.
-    ref_config_.max_curvature = limits_.max_curvature;
-
     if (!ValidateConfig(ref_config_, object_tracking_cfg_, path_cfg_, limits_,
                          cost_weights_, vehicle_shape_,
                          collision_cfg_, curve_speed_cfg_, following_cfg_,
@@ -50,7 +45,11 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
 
     debug_writer_ = std::make_unique<PlannerDebugWriter>(visualization_cfg_);
 
-    if (waypoint_file.empty() || !LoadReferenceLine(waypoint_file, ref_, ref_config_)) {
+    // reference line 자체가 만족해야 하는 곡률 한계는 KinematicFilter가
+    // 후보를 걸러내는 물리적 한계와 같은 차량 능력이다 - 별도 YAML key로
+    // 중복 관리하지 않고 loaded KinematicLimits에서 그대로 읽어 넘긴다.
+    if (waypoint_file.empty() ||
+        !LoadReferenceLine(waypoint_file, ref_, ref_config_, limits_.max_curvature)) {
         std::printf("[FrenetPlanner] Reference line load failed (waypoint_file='%s')\n",
                     waypoint_file.c_str());
         return false;

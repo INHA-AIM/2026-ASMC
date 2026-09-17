@@ -137,7 +137,7 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
             } else if (!cmd.merge_gap_safe) {
                 const double stop_distance = std::max(0.0, cmd.merge_stop_s - start.s);
                 const double braking_distance = start.s_d * start.s_d /
-                    (2.0 * std::max(limits.max_longitudinal_accel, 0.1));
+                    (2.0 * limits.max_longitudinal_accel);
                 if (stop_distance > braking_distance + merge_cfg.braking_distance_margin) {
                     // 먼 거리부터 정지 quintic을 강제하면 모든 T 후보가 조기 감속한다.
                     // 제동구간 전까지는 global-path 순항을 유지한다.
@@ -148,8 +148,9 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                 }
             } else {
                 const double distance = std::max(0.0, cmd.merge_conflict_s - start.s);
-                const double arrival_speed = cmd.merge_entry_time > 0.1
-                    ? distance / cmd.merge_entry_time : cmd.target_speed;
+                const double arrival_speed =
+                    cmd.merge_entry_time > merge_cfg.min_entry_time_for_arrival_speed
+                        ? distance / cmd.merge_entry_time : cmd.target_speed;
                 if (cmd.merge_committed &&
                     cmd.merge_entry_time >= cfg.time_horizon.min - 1e-6) {
                     longitudinal_set = GenerateMergeArrivalCandidates(

@@ -296,7 +296,7 @@ void ComputeThetaKappa(const std::vector<double>& x, const std::vector<double>& 
 // =========================================================
 
 RefLine BuildRefLine(const std::vector<double>& wx, const std::vector<double>& wy,
-                     const ReferenceConfig& config) {
+                     const ReferenceConfig& config, double max_curvature) {
 
     if (wx.size() < 2 || wx.size() != wy.size())
         throw std::invalid_argument("Waypoints must have at least 2 points and matching sizes");
@@ -321,7 +321,7 @@ RefLine BuildRefLine(const std::vector<double>& wx, const std::vector<double>& w
     std::vector<double> sx, sy;
     ResampleUniform(smoothed_x, smoothed_y, config.resample_ds, closed, sx, sy);
 
-    FixInfeasibleCurvature(sx, sy, closed, config.max_curvature,
+    FixInfeasibleCurvature(sx, sy, closed, max_curvature,
                            config.relax_max_iter, config.relax_step);
 
     const int n_unique = static_cast<int>(sx.size());
@@ -551,7 +551,7 @@ double FindClosestS(const RefLine& ref, double x, double y,
 }
 
 bool LoadReferenceLine(const std::string& path, RefLine& out_ref,
-                       const ReferenceConfig& config) {
+                       const ReferenceConfig& config, double max_curvature) {
     std::ifstream file(path);
     if (!file.is_open()) {
         std::printf("[FrenetPlanner] Failed to open waypoint file: %s\n", path.c_str());
@@ -595,7 +595,7 @@ bool LoadReferenceLine(const std::string& path, RefLine& out_ref,
         return false;
     }
 
-    out_ref = BuildRefLine(wx, wy, config);
+    out_ref = BuildRefLine(wx, wy, config, max_curvature);
     std::printf("[FrenetPlanner] Loaded %zu waypoints from %s (closed_loop=%s, length=%.2f)\n",
                wx.size(), path.c_str(), out_ref.closed_loop ? "true" : "false", out_ref.length);
     return true;

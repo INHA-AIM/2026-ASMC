@@ -810,14 +810,15 @@ bool FrenetPlanner::AvoidProcess(
                     // 물리적으로 유효한 전환거리를 우선한다.
                     double cost = transition_distance;
                     if (avoid_committed) {
-                        cost += static_cast<double>(target_index) * 1000.0;
+                        cost += static_cast<double>(target_index) *
+                                avoid_cfg_.committed_target_index_cost_scale;
                     } else {
                         const bool is_right =
                             target_d < v2_avoidance_.obstacle_d;
                         const bool preferred =
                             avoid_cfg_.prefer_right_when_equal
                                 ? is_right : !is_right;
-                        if (!preferred) cost += 1e-3;
+                        if (!preferred) cost += avoid_cfg_.direction_tiebreak_cost;
                     }
                     if (cost < selected_cost) {
                         selected = candidate;

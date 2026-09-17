@@ -161,6 +161,12 @@ planner:
     # 를 가져다 쓰지 않는다 - 서로 다른 행동의 config가 강하게 결합되면
     # FOLLOW 튜닝이 AVOID 동작을 바꾼다.
     dropout_grace_cycles: 5
+    # COMMIT 이후 target_index별 비용 분리폭. 잠긴 target을 물리적 전환거리
+    # 비용 차이보다 훨씬 크게 우선시키기 위한 스케일.
+    committed_target_index_cost_scale: 1000.0
+    # PREPARE에서 좌/우 후보 비용이 동률일 때 비선호 방향에 더하는 미세
+    # tie-break 가중치.
+    direction_tiebreak_cost: 1e-3
 
   # --- LANE_CHANGE: FSM이 target_pose_map으로 지정한 인접 차로 목표로의
   # 횡이동 완료 판정(§17). 초기 개발값이며 MORAI 튜닝 대상이다.
@@ -244,6 +250,9 @@ planner:
     # [s] GenerateMergeArrivalCandidates의 entry_time 주변 T 격자 매칭
     # 허용폭 하한(time_horizon.step보다 좁으면 이 값이 우선한다).
     arrival_time_match_tolerance: 0.6
+    # [s] arrival_speed = distance / merge_entry_time 계산의 분모 하한.
+    # entry_time이 이보다 짧으면 target_speed로 대체한다.
+    min_entry_time_for_arrival_speed: 0.1
 
   # --- 고주로/본선 합류 MERGE --------------------------------
   # 실측한 세 합류 구간의 start/conflict/completion_s를 zone별로 사용한다.
@@ -340,6 +349,9 @@ planner:
     low_speed_min_creep_speed: 0.3
     # [m/s] 저속 fallback 안에서의 속도 상한.
     low_speed_crawl_speed_cap: 2.0
+    # [m/s] external KEEP 경계조건 구성에서 "의도적 가속/감속"과 "유지"를
+    # 가르는 목표속도 변화 불감대.
+    accel_intent_deadband_mps: 0.3
 
   # --- CostWeights (cost.hpp) ---------------------------------
   cost_weights:

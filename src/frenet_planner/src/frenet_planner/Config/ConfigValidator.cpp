@@ -183,6 +183,9 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
             "and >= low_speed_min_creep_speed";
         return false;
     }
+    if (!CheckPositiveFinite(limits.accel_intent_deadband_mps,
+                              "planner/kinematic_limits/accel_intent_deadband_mps", error_message))
+        return false;
 
     // --- cost_weights: 논문/설계상 음수 가중치는 의미가 없다(비용을 보상으로
     // 뒤집는 것과 같다). 0은 "이 항을 끈다"는 뜻으로 허용한다.
@@ -339,6 +342,12 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
         error_message = "planner/avoid/dropout_grace_cycles must be >= 0";
         return false;
     }
+    if (!CheckPositiveFinite(avoid_cfg.committed_target_index_cost_scale,
+                              "planner/avoid/committed_target_index_cost_scale", error_message))
+        return false;
+    if (!CheckPositiveFinite(avoid_cfg.direction_tiebreak_cost,
+                              "planner/avoid/direction_tiebreak_cost", error_message))
+        return false;
 
     // --- lane_change ---
     if (!IsFinite(lane_change_cfg.lateral_position_tolerance) ||
@@ -472,6 +481,9 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
         return false;
     if (!CheckPositiveFinite(merge_cfg.arrival_time_match_tolerance,
                               "planner/merge/arrival_time_match_tolerance", error_message))
+        return false;
+    if (!CheckPositiveFinite(merge_cfg.min_entry_time_for_arrival_speed,
+                              "planner/merge/min_entry_time_for_arrival_speed", error_message))
         return false;
 
     // --- highway_merge. Disabled configs (enabled=false) still get their

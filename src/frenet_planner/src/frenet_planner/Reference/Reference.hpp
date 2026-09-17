@@ -9,13 +9,6 @@
 // 로드하며, C++ fallback default를 두지 않는다(Parameter Single-Source).
 // =========================================================
 struct ReferenceConfig {
-    // 차량이 실제로 낼 수 있는 최대 곡률. 이 값을 넘는 국소 곡률은
-    // FixInfeasibleCurvature가 완화한다. planner.kinematic_limits.max_curvature
-    // 와 동일한 값을 공유한다(KinematicFilter가 이 값으로 후보를 걸러내는
-    // 물리적 한계와, reference line 자체가 만족해야 하는 곡률 한계는 같은
-    // 차량 능력이어야 하므로 - ConfigLoader가 두 곳에 각자 로드하지 않고
-    // FrenetPlanner::Init()에서 limits_.max_curvature를 그대로 대입한다).
-    double max_curvature;
     // [m] 폐루프(닫힌 트랙) 판정 허용오차 - 원본 waypoint 간격보다 훨씬
     // 작게 잡아야 우연히 가까운 open path를 closed로 오판정하지 않는다.
     double closure_tolerance_m;
@@ -81,9 +74,14 @@ struct RefLine {
 // heading, kappa, d_kappa 수치 미분으로 계산
 // =========================================================
 
+// max_curvature는 ReferenceConfig의 필드가 아니라 별도 인자로 받는다 - 이는
+// planner.kinematic_limits.max_curvature와 동일한 물리적 차량 능력이며(같은
+// 값을 YAML에 중복 정의하지 않는다), FrenetPlanner::Init()이 로드된
+// KinematicLimits에서 그대로 넘겨준다.
 RefLine BuildRefLine(const std::vector<double>& wx,
                      const std::vector<double>& wy,
-                     const ReferenceConfig& config);
+                     const ReferenceConfig& config,
+                     double max_curvature);
 
 // =========================================================
 // s* 탐색 (Cartesian -> Frenet First Step)
@@ -105,6 +103,6 @@ RefPoint Interpolate(const RefLine& ref, double s);
 // waypoint 파일("x y" 또는 "x,y") -> RefLine
 // =========================================================
 bool LoadReferenceLine(const std::string& path, RefLine& out_ref,
-                       const ReferenceConfig& config);
+                       const ReferenceConfig& config, double max_curvature);
 
 #endif

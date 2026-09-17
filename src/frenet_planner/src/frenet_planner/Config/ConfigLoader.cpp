@@ -120,6 +120,7 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/kinematic_limits/low_speed_crawl_accel",      limits.low_speed_crawl_accel);
     REQUIRE("planner/kinematic_limits/low_speed_min_creep_speed",  limits.low_speed_min_creep_speed);
     REQUIRE("planner/kinematic_limits/low_speed_crawl_speed_cap",  limits.low_speed_crawl_speed_cap);
+    REQUIRE("planner/kinematic_limits/accel_intent_deadband_mps",  limits.accel_intent_deadband_mps);
 
     REQUIRE("planner/cost_weights/kj",     cost_weights.kj);
     REQUIRE("planner/cost_weights/kt",     cost_weights.kt);
@@ -169,6 +170,9 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/avoid/low_speed_transition_scale_step", avoid_cfg.low_speed_transition_scale_step);
     REQUIRE("planner/avoid/low_speed_path_extension",   avoid_cfg.low_speed_path_extension);
     REQUIRE("planner/avoid/dropout_grace_cycles",       avoid_cfg.dropout_grace_cycles);
+    REQUIRE("planner/avoid/committed_target_index_cost_scale",
+            avoid_cfg.committed_target_index_cost_scale);
+    REQUIRE("planner/avoid/direction_tiebreak_cost",    avoid_cfg.direction_tiebreak_cost);
 
     REQUIRE("planner/lane_change/lateral_position_tolerance", lane_change_cfg.lateral_position_tolerance);
     REQUIRE("planner/lane_change/lateral_speed_tolerance",     lane_change_cfg.lateral_speed_tolerance);
@@ -213,6 +217,8 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/merge/min_travel_accel",        merge_cfg.min_travel_accel);
     REQUIRE("planner/merge/arrival_time_match_tolerance",
             merge_cfg.arrival_time_match_tolerance);
+    REQUIRE("planner/merge/min_entry_time_for_arrival_speed",
+            merge_cfg.min_entry_time_for_arrival_speed);
 
     REQUIRE("planner/highway_merge/enabled",                    highway_merge_cfg.enabled);
     REQUIRE("planner/highway_merge/approach_distance",          highway_merge_cfg.approach_distance);

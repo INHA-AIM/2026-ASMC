@@ -59,6 +59,10 @@ struct KinematicLimits {
     double low_speed_min_creep_speed;
     // [m/s] 저속 fallback 안에서의 속도 상한.
     double low_speed_crawl_speed_cap;
+    // [m/s] external KEEP 경계조건 구성에서, 목표속도 변화가 "의도적
+    // 가속/감속"인지 "유지"인지 가르는 불감대. 이 폭 안의 속도차는 s_ddot
+    // 경계조건에 반영하지 않는다(ResolveVelocityKeepingBoundaryAcceleration).
+    double accel_intent_deadband_mps;
 };
 
 // [Sec.VI 1단] 결합 전 가속도 필터링.

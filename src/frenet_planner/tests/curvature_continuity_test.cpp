@@ -64,9 +64,8 @@ CartesianState BuildPoseAt(const RefLine& ref, double s, double d, double s_dot,
 
 constexpr double kMaxCurvature = 0.1704;
 
-ReferenceConfig MakeReferenceConfig(double max_curvature) {
+ReferenceConfig MakeReferenceConfig() {
     ReferenceConfig config{};
-    config.max_curvature = max_curvature;
     config.closure_tolerance_m = 0.05;
     config.smoothing_window_m = 10.0;
     config.resample_ds = 0.5;
@@ -89,7 +88,7 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
 
     RefLine ref;
     double max_curvature_for_load = kMaxCurvature;
-    Expect(LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(max_curvature_for_load)),
+    Expect(LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(), max_curvature_for_load),
            "setup: reference line loads for direct pose construction");
 
     struct Snapshot {
@@ -201,7 +200,7 @@ void TestNormalKeepStillRecentersToCenter() {
 
     RefLine ref;
     double max_curvature_for_load = kMaxCurvature;
-    LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(max_curvature_for_load));
+    LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(), max_curvature_for_load);
 
     FrenetPlanner planner;
     planner.Init(config);

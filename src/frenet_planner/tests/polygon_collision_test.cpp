@@ -151,7 +151,6 @@ int main() {
            "rear-axle footprint removes the side false positive");
 
     ReferenceConfig straight_ref_config{};
-    straight_ref_config.max_curvature = 1.0;
     straight_ref_config.closure_tolerance_m = 0.05;
     straight_ref_config.smoothing_window_m = 10.0;
     straight_ref_config.resample_ds = 0.5;
@@ -159,7 +158,7 @@ int main() {
     straight_ref_config.relax_step = 0.3;
     straight_ref_config.ego_projection_search_window = 30.0;
     const RefLine straight_ref =
-        BuildRefLine({-10.0, 10.0}, {0.0, 0.0}, straight_ref_config);
+        BuildRefLine({-10.0, 10.0}, {0.0, 0.0}, straight_ref_config, /*max_curvature=*/1.0);
     const CollisionCheckConfig collision_cfg{0.5, 0.0, 1.0};
     const TrackedObject lateral_near_margin = MakeObstacle(0.0, 2.4);
     const TrackedObject lateral_overlapping = MakeObstacle(0.0, 1.5);

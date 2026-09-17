@@ -199,9 +199,9 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     FrenetState maneuver_start = start;
     const bool external_keep_candidates = external_command->mode == LANE_KEEPING;
     if (external_keep_candidates) {
-        constexpr double kAccelIntentDeadband = 0.3;  // [m/s]
         maneuver_start.s_dd = ResolveVelocityKeepingBoundaryAcceleration(
-            start.s_dd, s_dot, resolved_target_speed, kAccelIntentDeadband);
+            start.s_dd, s_dot, resolved_target_speed,
+            limits_.accel_intent_deadband_mps);
     }
     KinematicLimits maneuver_limits = limits_;
     if (external_stop_mode) {

@@ -110,6 +110,15 @@ struct AvoidConfig {
     // FollowingConfig.dropout_grace_cycles를 가져다 쓰지 않는다 - 서로 다른
     // 행동의 config가 강하게 결합되면 FOLLOW 튜닝이 AVOID 동작을 바꾼다.
     int dropout_grace_cycles;
+
+    // COMMIT 이후 target_index별 비용 분리폭. 잠긴(먼저 나열된) target을
+    // 다른 target보다 항상 우선시키기 위해, 물리적 전환거리 비용 차이보다
+    // 훨씬 크게 잡는다.
+    double committed_target_index_cost_scale;
+    // PREPARE 단계에서 좌/우 후보의 전환거리 비용이 동률일 때, 선호 방향이
+    // 아닌 쪽에 더하는 미세 tie-break 가중치. 실제 궤적 품질에는 영향을
+    // 주지 않고 방향 선택의 대칭만 깬다.
+    double direction_tiebreak_cost;
 };
 
 // =========================================================
@@ -158,6 +167,11 @@ struct MergeConfig {
     // [s] GenerateMergeArrivalCandidates가 entry_time 주변 T 격자를 남길 때
     // 쓰는 최소 매칭 허용폭(time_horizon.step보다 좁으면 이 값이 우선한다).
     double arrival_time_match_tolerance;
+    // [s] arrival_speed = distance / merge_entry_time 계산의 분모 하한.
+    // entry_time이 이보다 짧으면 0에 가까운 시간으로 나눠 속도가 발산하므로
+    // target_speed로 대체한다. entry_search_dt(진입시각 탐색 간격)와는 의미가
+    // 달라 별도 파라미터로 둔다.
+    double min_entry_time_for_arrival_speed;
 };
 
 // =========================================================
