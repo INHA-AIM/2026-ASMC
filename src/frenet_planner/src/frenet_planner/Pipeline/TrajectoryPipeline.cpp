@@ -23,13 +23,10 @@ PlannerCommand MakeResolveManeuverCommand(const TrajectoryRequest& request) {
     //   - mode==LANE_KEEPING/FOLLOWING (hold 없음) -> ResolveLateralOffset의
     //     default: 0.0, FOLLOWING만 tolerance=cfg.lateral_target_tolerance
     //     (KEEP은 tolerance=0 - CandidateCombiner의 별도 LANE_KEEPING 분기)
-    // request.lateral.search_tolerance != 0(=STOP lateral hold가 아닌
-    // 넓은 탐색이 필요한 경우)은 R4 범위의 KEEP/FOLLOW/STOP 어디에서도
-    // 아직 쓰이지 않으므로, 0이 아닌 target_d는 곧 "STOP lateral hold"로
-    // 해석한다 - AVOID/LANE_CHANGE가 이 오버로드를 쓰게 되면(R5+) 이 가정을
-    // 다시 검토해야 한다.
-    const bool has_lateral_hold = request.lateral.target_d != 0.0;
-    cmd.has_stop_lateral_hold = has_lateral_hold;
+    // request.lateral.has_hold를 그대로 옮긴다 - target_d==0.0을 "hold
+    // 없음"의 sentinel로 쓰면 d=0 근방에서 hold가 걸리는 경우(STOP이
+    // 정확히 차선 중앙에서 감속하는 경우)를 놓친다.
+    cmd.has_stop_lateral_hold = request.lateral.has_hold;
     cmd.stop_lateral_hold_d = request.lateral.target_d;
     switch (request.longitudinal_mode) {
         case LongitudinalMode::FOLLOWING:

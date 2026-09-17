@@ -222,6 +222,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     std::vector<FrenetPath> candidates;
     if (is_true_external_keep || is_follow || is_stop_approach || is_stop_braking) {
         TrajectoryRequest request;
+        request.lateral.has_hold = cmd.has_stop_lateral_hold;
         request.lateral.target_d =
             cmd.has_stop_lateral_hold ? cmd.stop_lateral_hold_d : 0.0;
         request.lateral.search_tolerance = 0.0;

@@ -35,7 +35,12 @@ enum class LongitudinalMode {
 // 횡방향 목표. 대부분의 모드는 고정폭(search_tolerance=0)으로 target_d
 // 하나만 추종한다 - AVOID/LANE_CHANGE처럼 목표 주변을 넓게 탐색해야 하는
 // 모드가 이 struct를 쓰게 되면(R5+) tolerance가 의미를 갖는다.
+//
+// hold를 target_d != 0.0 같은 암묵적 sentinel로 판단하지 않는다 - 차선
+// 중앙(d=0.0)에서 hold가 걸리는 경우(예: STOP이 정확히 중앙에서 감속)와
+// hold가 아예 없는 경우를 구분할 수 없어진다. 반드시 이 플래그로 구분한다.
 struct LateralRequest {
+    bool has_hold = false;
     double target_d = 0.0;
     double search_tolerance = 0.0;
 };
@@ -64,7 +69,14 @@ struct FollowingRequest {
 struct StopRequest {
     double stop_s = 0.0;
     // STOP 계열은 정지 목표를 지나치지 않도록 delta_s 범위를 제한한다
-    // (CandidateCombiner의 stop_cfg.delta_s_override와 동일한 값).
+    // (CandidateCombiner의 stop_cfg.delta_s_override와 동일한 값이어야 한다).
+    //
+    // 주의(R4 시점): 이 필드는 아직 아무도 읽지 않는다 - ResolveManeuver의
+    // STOP 분기는 지금도 request가 아니라 StopConfig.delta_s_override를
+    // 직접 읽는다(CandidateCombiner.cpp). R5에서 switch(cmd.mode)를
+    // switch(request.longitudinal_mode)로 옮길 때 이 필드를 실제로
+    // 배선해야 한다 - 그 전까지는 호출부가 채워 넣어도 값 자체는 아직
+    // 아무 영향을 주지 않는다.
     SamplingRange terminal_offset{};
 };
 
