@@ -136,7 +136,7 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
         direct_cfg.delta_s_dot = {-2.0, 2.0, 1.0};
         direct_cfg.dt = 0.1;
         KinematicLimits direct_limits{3.0, 3.0, kMaxCurvature, 6.0};
-        VehicleShape vehicle_shape{2.0, 4.5};
+        VehicleShape vehicle_shape{2.0, 4.5, -1.0};
         CollisionCheckConfig collision_cfg{0.3, 0.1, 3.0};
         std::vector<TrackedObject> no_obstacles;
         PlannerDebugStats direct_stats{};

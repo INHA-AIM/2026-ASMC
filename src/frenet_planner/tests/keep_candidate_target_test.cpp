@@ -76,7 +76,7 @@ void TestKeepNominalCandidatesTargetCenter() {
     const RefLine ref = MakeStraightRef();
     const PathGeneratorConfig cfg = MakeConfig();
     const KinematicLimits limits = MakeLimits();
-    const VehicleShape vehicle_shape{2.0, 4.5};
+    const VehicleShape vehicle_shape{2.0, 4.5, -1.0};
     const CollisionCheckConfig collision_cfg{0.3, 0.1, 3.0};
     const std::vector<TrackedObject> no_obstacles;
 
@@ -145,7 +145,7 @@ void TestOtherManeuversKeepTargetSpread() {
     const RefLine ref = MakeStraightRef();
     const PathGeneratorConfig cfg = MakeConfig();
     const KinematicLimits limits = MakeLimits();
-    const VehicleShape vehicle_shape{2.0, 4.5};
+    const VehicleShape vehicle_shape{2.0, 4.5, -1.0};
     const CollisionCheckConfig collision_cfg{0.3, 0.1, 3.0};
     const std::vector<TrackedObject> no_obstacles;
 

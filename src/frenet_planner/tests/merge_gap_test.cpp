@@ -142,6 +142,7 @@ VehicleShape MakeEgoShape() {
     VehicleShape shape;
     shape.width = 1.9;
     shape.length = 4.5;
+    shape.rear_overhang = -1.0;
     return shape;
 }
 

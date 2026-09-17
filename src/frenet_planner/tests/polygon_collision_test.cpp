@@ -74,7 +74,7 @@ int main() {
     ego.x = 0.0;
     ego.y = 0.0;
     ego.yaw = 0.0;
-    const VehicleShape ego_shape{2.0, 2.0};
+    const VehicleShape ego_shape{2.0, 2.0, -1.0};
     const geometry::Polygon2D ego_footprint =
         MakeEgoFootprint(ego, ego_shape, 0.0);
 
@@ -142,7 +142,7 @@ int main() {
     const TrackedObject beside_rear_axle =
         MakeObstacle(-0.116, -2.581, 0.0, 0.0, 3.027, 4.5, 1.8);
     const geometry::Polygon2D centered_margin =
-        MakeEgoFootprint(ego, VehicleShape{1.9, 4.635}, 0.5);
+        MakeEgoFootprint(ego, VehicleShape{1.9, 4.635, -1.0}, 0.5);
     const geometry::Polygon2D rear_axle_margin =
         MakeEgoFootprint(ego, VehicleShape{1.9, 4.635, 0.79}, 0.5);
     Expect(CheckObstacleOverlap(centered_margin, {}, beside_rear_axle, 0.0),
