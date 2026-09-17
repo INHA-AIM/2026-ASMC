@@ -9,15 +9,9 @@
 // lookahead 구간 내 최대 곡률로 velocity-keeping 목표속도를 정한다.
 // =========================================================
 struct CurveSpeedConfig {
-    double target_vel        = 10.0;
-    double curve_vel_sharp   = 4.0;
-    double curve_vel_mid     = 5.5;
-    double curve_vel_mild    = 7.0;
-    double curve_th_sharp    = 0.080;
-    double curve_th_mid      = 0.035;
-    double curve_th_mild     = 0.015;
+    double target_vel;
     // 속도 기반 제동거리 앞에 추가하는 곡률 preview 거리 [m].
-    double curve_lookahead_m = 15.0;
+    double curve_lookahead_m;
 };
 
 // =========================================================

@@ -71,14 +71,11 @@ planner:
   max_target_speed_accel: 2.0
 
   # --- 곡률 기반 사전 감속 (mpc_controller 옛 path_planner.cpp에서 이식) ---
+  # v_curve = sqrt(max_lateral_accel * kSafetyMargin / max(|kappa|, kMinKappaForCalc))
+  # 연속 곡률-속도 관계(Speed/CurveSpeed.cpp)만 쓰고, 이산 curve_vel_*/
+  # curve_th_* 문턱값은 쓰지 않는다(사용처 없음 확인 후 제거, 2026 리팩토링).
   curve_speed:
     target_vel: 13.0
-    curve_vel_sharp: 4.0
-    curve_vel_mid:   5.5
-    curve_vel_mild:  7.0
-    curve_th_sharp:  0.080
-    curve_th_mid:    0.035
-    curve_th_mild:   0.015
     # [m] 속도 기반 필요 제동거리에 더해지는 추가 곡률 preview 거리.
     curve_lookahead_m: 27.0
 

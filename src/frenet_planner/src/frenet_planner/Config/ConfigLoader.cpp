@@ -92,12 +92,6 @@ void LoadParams(const std::string& yaml_path,
     loadInto(root, "planner/collision_check/reactive_lookahead", collision_cfg.reactive_lookahead);
 
     loadInto(root, "planner/curve_speed/target_vel",       curve_speed_cfg.target_vel);
-    loadInto(root, "planner/curve_speed/curve_vel_sharp",  curve_speed_cfg.curve_vel_sharp);
-    loadInto(root, "planner/curve_speed/curve_vel_mid",    curve_speed_cfg.curve_vel_mid);
-    loadInto(root, "planner/curve_speed/curve_vel_mild",   curve_speed_cfg.curve_vel_mild);
-    loadInto(root, "planner/curve_speed/curve_th_sharp",   curve_speed_cfg.curve_th_sharp);
-    loadInto(root, "planner/curve_speed/curve_th_mid",     curve_speed_cfg.curve_th_mid);
-    loadInto(root, "planner/curve_speed/curve_th_mild",    curve_speed_cfg.curve_th_mild);
     loadInto(root, "planner/curve_speed/curve_lookahead_m",curve_speed_cfg.curve_lookahead_m);
 
     loadInto(root, "planner/following/time_gap",             following_cfg.time_gap);
