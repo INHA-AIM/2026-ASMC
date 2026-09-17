@@ -34,6 +34,7 @@
 #include "frenet_planner/Maneuver/ManeuverUtils.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
 #include "frenet_planner/Math/Utils.hpp"
+#include "frenet_planner/Pipeline/TrajectoryRequest.hpp"
 
 bool FrenetPlanner::CanCommitLaneChange(
     const LaneChangePrepareResult& result) const {
@@ -209,14 +210,17 @@ bool FrenetPlanner::BuildLaneChangeMaintenancePath(
             }
         }
     } else {
-        PlannerCommand keep_cmd = base_command;
-        keep_cmd.mode = LANE_KEEPING;
-        keep_cmd.lane_change_d_offset = 0.0;
+        // R6-B: 이 유지 궤적은 순수 KEEP 요청이다(lane_change 고유 상태
+        // 불필요) - request-native path를 직접 사용한다.
+        TrajectoryRequest keep_request;
+        keep_request.lateral.target_d = 0.0;
+        keep_request.lateral.search_tolerance = 0.0;
+        keep_request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
+        keep_request.target_speed = base_command.target_speed;
         PlannerDebugStats keep_stats;
-        auto keep_candidates =
-            ResolveManeuver(start, keep_cmd, ref_, path_cfg_, limits_,
-                            lane_width_, collision_obstacles, vehicle_shape_,
-                            collision_cfg_, stop_cfg_, merge_cfg_, &keep_stats);
+        auto keep_candidates = GenerateRequestedCandidates(
+            start, keep_request, ref_, path_cfg_, limits_,
+            collision_obstacles, vehicle_shape_, collision_cfg_, &keep_stats);
         EvaluateCosts(keep_candidates, cost_weights_, 0.0);
         FilterByCartesianLateralAcceleration(keep_candidates, ref_,
                                              limits_.max_lateral_accel);
@@ -303,18 +307,22 @@ bool FrenetPlanner::LaneChangeProcess(
     // 를 Frenet이 다시 정하는 셈이 된다(Behavior가 이미 정한 값을 core가
     // 재해석) - PREPARE에서 선택한 값이 COMMIT에서 그대로 잠기므로, PREPARE도
     // COMMIT/HOLD와 같은 정확도로 겨냥해야 둘 사이에 값이 갈리지 않는다.
-    PathGeneratorConfig generation_cfg = path_cfg_;
-    generation_cfg.lateral_target_tolerance = 0.0;
-
-    PlannerCommand side_cmd = command;
-    side_cmd.lane_change_d_offset = target_d;
-    side_cmd.target_speed = resolved_target_speed;
+    // R6-B: target_d는 FSM/MGeo가 투영한 값이 authoritative다 - request로
+    // 그대로 옮기고 search_tolerance=0으로 항상 정확히 겨냥한다(위 주석
+    // 설명과 동일한 이유, PREPARE도 COMMIT/HOLD와 같은 정확도 유지).
+    // LANE_CHANGE는 AVOID처럼 escape 대상 물체가 없으므로 collision 예외는
+    // 없다(coast_exempt/escape 모두 기본값 -1 유지).
+    TrajectoryRequest request;
+    request.lateral.target_d = target_d;
+    request.lateral.search_tolerance = 0.0;
+    request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
+    request.target_speed = resolved_target_speed;
 
     PlannerDebugStats side_stats;
-    auto generated = ResolveManeuver(
-        start, side_cmd, ref_, generation_cfg, limits_, lane_width_,
+    auto generated = GenerateRequestedCandidates(
+        start, request, ref_, path_cfg_, limits_,
         predicted_collision_obstacles, vehicle_shape_, collision_cfg_,
-        stop_cfg_, merge_cfg_, &side_stats);
+        &side_stats);
     EvaluateCosts(generated, cost_weights_, target_d);
     FilterByCartesianLateralAcceleration(generated, ref_,
                                          limits_.max_lateral_accel);
