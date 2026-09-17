@@ -5,17 +5,22 @@
 // 선택된 terminal d가 바뀌는 조향 oscillation의 원인이 됐다. 이 테스트는
 // LANE_KEEPING nominal 후보가 d=0 하나로 고정됐는지, 그리고 기존
 // continuity fallback(GenerateLateralContinuityCandidates)과 다른
-// maneuver(AVOID/LANE_CHANGE)의 target semantics는 그대로인지 확인한다.
+// maneuver(AVOID/LANE_CHANGE)의 target semantics(전역 tolerance 적용 시
+// 목표 주변 스프레드가 유지되는가)는 그대로인지 확인한다.
 //
-// production 함수(ResolveManeuver, GenerateLateralContinuityCandidates)를
-// 직접 호출한다 - 로직을 복사하지 않는다.
+// R6: production 경로(KEEP/FOLLOW/STOP/LANE_CHANGE/AVOID 정상 속도 구간
+// 전부)가 GenerateRequestedCandidates로 이동했으므로 이 테스트도 그 함수를
+// 직접 호출한다 - 로직을 복사하지 않는다. AVOID/LANE_CHANGE 케이스는
+// "이 generator가 target_d/search_tolerance를 그대로 존중한다"는 계약
+// 자체를 검증하는 것이지, 특정 maneuver가 항상 이 tolerance로 호출한다는
+// 뜻은 아니다(예: LANE_CHANGE는 production에서 항상 tolerance=0을 쓴다).
 
 #include "frenet_planner/Common/FrenetTypes.hpp"
-#include "frenet_planner/Common/PlannerCommand.hpp"
 #include "frenet_planner/Generator/CandidateCombiner.hpp"
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
 #include "frenet_planner/Generator/LateralGenerator.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
+#include "frenet_planner/Pipeline/TrajectoryRequest.hpp"
 #include "frenet_planner/Reference/Reference.hpp"
 
 #include <cmath>
@@ -58,22 +63,6 @@ KinematicLimits MakeLimits() {
     return limits;
 }
 
-// 이 테스트는 LANE_KEEPING/AVOID/LANE_CHANGE만 exercise한다(STOP/MERGE
-// 아님) - ResolveManeuver가 요구하는 필수 파라미터라 채우지만, 값 자체는
-// 이 테스트의 어떤 경로에서도 읽히지 않는다.
-StopConfig MakeStopCfgForNonStopModes() {
-    StopConfig cfg{};
-    cfg.delta_s_override = {-1.0, 0.0, 0.25};
-    return cfg;
-}
-
-MergeConfig MakeMergeCfgForNonMergeModes() {
-    MergeConfig cfg{};
-    cfg.braking_distance_margin = 3.0;
-    cfg.min_arrival_speed = 1.0;
-    return cfg;
-}
-
 RefLine MakeStraightRef() {
     // 곡률 0인 직선 참조선. lateral 후보 자체(narrowed grid)를 확인하는
     // 목적이므로 곡률 필터의 영향을 배제한다.
@@ -108,16 +97,16 @@ void TestKeepNominalCandidatesTargetCenter() {
     start.s_d = 5.0;
     start.s_dd = 0.0;
 
-    PlannerCommand keep{};
-    keep.mode = LANE_KEEPING;
-    keep.has_target_speed = true;
+    TrajectoryRequest keep;
+    keep.lateral.target_d = 0.0;
+    keep.lateral.search_tolerance = 0.0;
+    keep.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
     keep.target_speed = 5.0;
 
     PlannerDebugStats stats{};
-    auto candidates = ResolveManeuver(start, keep, ref, cfg, limits, kLaneWidth,
-                                      no_obstacles, vehicle_shape, collision_cfg,
-                                      MakeStopCfgForNonStopModes(),
-                                      MakeMergeCfgForNonMergeModes(), &stats);
+    auto candidates = GenerateRequestedCandidates(
+        start, keep, ref, cfg, limits, no_obstacles, vehicle_shape,
+        collision_cfg, &stats);
 
     std::size_t valid_count = 0;
     bool all_centered = true;
@@ -181,17 +170,16 @@ void TestOtherManeuversKeepTargetSpread() {
     start.s_dd = 0.0;
 
     {
-        PlannerCommand avoid{};
-        avoid.mode = AVOID;
-        avoid.has_target_speed = true;
+        TrajectoryRequest avoid;
+        avoid.lateral.target_d = 1.0;
+        avoid.lateral.search_tolerance = cfg.lateral_target_tolerance;
+        avoid.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
         avoid.target_speed = 5.0;
-        avoid.avoidance_d_offset = 1.0;
 
         PlannerDebugStats stats{};
-        auto candidates = ResolveManeuver(start, avoid, ref, cfg, limits, kLaneWidth,
-                                          no_obstacles, vehicle_shape, collision_cfg,
-                                          MakeStopCfgForNonStopModes(),
-                                          MakeMergeCfgForNonMergeModes(), &stats);
+        auto candidates = GenerateRequestedCandidates(
+            start, avoid, ref, cfg, limits, no_obstacles, vehicle_shape,
+            collision_cfg, &stats);
         bool found_offset = false;
         bool found_spread = false;
         for (const auto& p : candidates) {
@@ -209,23 +197,23 @@ void TestOtherManeuversKeepTargetSpread() {
     }
 
     {
-        // D7: LANE_CHANGE_LEFT/RIGHT의 목표 중심은 더 이상 고정 ±lane_width가
-        // 아니라 PlannerCommand.lane_change_d_offset(FSM target_pose_map을
-        // Frenet으로 투영한 값)이다(LateralGenerator.cpp ResolveLateralOffset
-        // 참고). 이 테스트는 그 목표 주변 스프레드 정책(전역
-        // lateral_target_tolerance, 좁히지 않음)이 유지되는지만 확인한다 -
-        // 목표를 lane_change_d_offset으로 명시해야 한다.
-        PlannerCommand lane_change{};
-        lane_change.mode = LANE_CHANGE_LEFT;
-        lane_change.lane_change_d_offset = kLaneWidth;
-        lane_change.has_target_speed = true;
+        // D7: LANE_CHANGE_LEFT/RIGHT의 목표 중심은 고정 ±lane_width가 아니라
+        // FSM target_pose_map을 Frenet으로 투영한 값이다 - Maneuver 계층이
+        // 그 값을 request.lateral.target_d로 그대로 옮긴다. 이 테스트는
+        // generator 자체가 target_d 주변 스프레드 정책(전역
+        // lateral_target_tolerance, 좁히지 않음)을 존중하는지만 확인한다
+        // (production LANE_CHANGE는 항상 search_tolerance=0을 쓰지만, 그건
+        // Maneuver 계층의 정책 선택이지 generator의 제약이 아니다).
+        TrajectoryRequest lane_change;
+        lane_change.lateral.target_d = kLaneWidth;
+        lane_change.lateral.search_tolerance = cfg.lateral_target_tolerance;
+        lane_change.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
         lane_change.target_speed = 5.0;
 
         PlannerDebugStats stats{};
-        auto candidates = ResolveManeuver(start, lane_change, ref, cfg, limits, kLaneWidth,
-                                          no_obstacles, vehicle_shape, collision_cfg,
-                                          MakeStopCfgForNonStopModes(),
-                                          MakeMergeCfgForNonMergeModes(), &stats);
+        auto candidates = GenerateRequestedCandidates(
+            start, lane_change, ref, cfg, limits, no_obstacles, vehicle_shape,
+            collision_cfg, &stats);
         bool found_spread = false;
         for (const auto& p : candidates) {
             if (!p.valid || p.d.empty()) continue;

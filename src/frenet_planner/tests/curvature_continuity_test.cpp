@@ -19,6 +19,7 @@
 #include "frenet_planner/Generator/CandidateCombiner.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
+#include "frenet_planner/Pipeline/TrajectoryRequest.hpp"
 
 #include <cmath>
 #include <fstream>
@@ -130,15 +131,16 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
         // 실제로 판정한 값과 다를 수 있다(frenet_converter.hpp 설계 노트:
         // analytic 식은 저속에서 발산해 의도적으로 필터에서 배제됨). 이
         // divergence는 Phase B와 무관한 기존 특성이다 - 그래서 curvature
-        // 판정 자체는 FilterByCurvature/ResolveManeuver를 직접 호출해
-        // (production 함수, 로직 복제 없음) 확인한다.
+        // 판정 자체는 FilterByCurvature/GenerateRequestedCandidates를 직접
+        // 호출해(production 함수, 로직 복제 없음) 확인한다.
         FrenetState direct_start{};
         direct_start.s = snap.s; direct_start.d = snap.d;
         direct_start.s_d = snap.s_dot; direct_start.s_dd = snap.s_ddot;
-        PlannerCommand direct_cmd{};
-        direct_cmd.mode = LANE_KEEPING;
-        direct_cmd.has_target_speed = true;
-        direct_cmd.target_speed = snap.target_speed;
+        TrajectoryRequest direct_request;
+        direct_request.lateral.target_d = 0.0;
+        direct_request.lateral.search_tolerance = 0.0;
+        direct_request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
+        direct_request.target_speed = snap.target_speed;
         PathGeneratorConfig direct_cfg;
         direct_cfg.lateral_d1 = {-3.0, 3.0, 0.5};
         direct_cfg.lateral_target_tolerance = 0.5;
@@ -156,16 +158,9 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
         CollisionCheckConfig collision_cfg{0.3, 0.1, 3.0};
         std::vector<TrackedObject> no_obstacles;
         PlannerDebugStats direct_stats{};
-        StopConfig direct_stop_cfg{};
-        direct_stop_cfg.delta_s_override = {-1.0, 0.0, 0.25};
-        MergeConfig direct_merge_cfg{};
-        direct_merge_cfg.braking_distance_margin = 3.0;
-        direct_merge_cfg.min_arrival_speed = 1.0;
-        auto direct_candidates = ResolveManeuver(direct_start, direct_cmd, ref, direct_cfg,
-                                                 direct_limits, /*lane_width=*/3.5,
-                                                 no_obstacles, vehicle_shape, collision_cfg,
-                                                 direct_stop_cfg, direct_merge_cfg,
-                                                 &direct_stats);
+        auto direct_candidates = GenerateRequestedCandidates(
+            direct_start, direct_request, ref, direct_cfg, direct_limits,
+            no_obstacles, vehicle_shape, collision_cfg, &direct_stats);
         std::vector<FrenetPath> continuity =
             GenerateLateralContinuityCandidates(direct_start, direct_cfg,
                                                 direct_limits.low_speed_fallback_v);
@@ -178,7 +173,7 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
         std::size_t continuity_valid = 0;
         for (const auto& p : continuity_combined) if (p.valid) ++continuity_valid;
 
-        std::printf("  %s: ResolveManeuver after_curvature=%zu, continuity candidates "
+        std::printf("  %s: GenerateRequestedCandidates after_curvature=%zu, continuity candidates "
                     "valid after curvature=%zu\n",
                     snap.label, direct_stats.combined_valid_after_curvature, continuity_valid);
         Expect(direct_stats.combined_valid_after_curvature + continuity_valid >= 1,
