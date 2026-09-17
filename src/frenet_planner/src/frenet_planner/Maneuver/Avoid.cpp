@@ -23,6 +23,7 @@
 #include "frenet_planner/Maneuver/ManeuverUtils.hpp"
 #include "frenet_planner/Math/FrenetConverter.hpp"
 #include "frenet_planner/Math/Utils.hpp"
+#include "frenet_planner/Pipeline/TrajectoryRequest.hpp"
 
 double FrenetPlanner::EffectiveAvoidDetectionDistance() const {
     // config 값을 그대로 쓰면 충돌 lookahead보다 짧아져, 장애물을 회피 대상으로
@@ -541,14 +542,17 @@ bool FrenetPlanner::BuildAvoidMaintenancePath(
             }
         }
     } else {
-        PlannerCommand keep_cmd = base_command;
-        keep_cmd.mode = LANE_KEEPING;
-        keep_cmd.avoidance_d_offset = 0.0;
+        // R6-C: 이 유지 궤적은 순수 KEEP 요청이다(AVOID 고유 상태 불필요) -
+        // request-native path를 직접 사용한다.
+        TrajectoryRequest keep_request;
+        keep_request.lateral.target_d = 0.0;
+        keep_request.lateral.search_tolerance = 0.0;
+        keep_request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
+        keep_request.target_speed = base_command.target_speed;
         PlannerDebugStats keep_stats;
-        auto keep_candidates =
-            ResolveManeuver(start, keep_cmd, ref_, path_cfg_, limits_,
-                            lane_width_, collision_obstacles, vehicle_shape_,
-                            collision_cfg_, stop_cfg_, merge_cfg_, &keep_stats);
+        auto keep_candidates = GenerateRequestedCandidates(
+            start, keep_request, ref_, path_cfg_, limits_,
+            collision_obstacles, vehicle_shape_, collision_cfg_, &keep_stats);
         EvaluateCosts(keep_candidates, cost_weights_, 0.0);
         FilterByCartesianLateralAcceleration(keep_candidates, ref_,
                                              limits_.max_lateral_accel);
@@ -897,10 +901,20 @@ bool FrenetPlanner::AvoidProcess(
         // 그래도 남겨두는 이유는 방어 계층이기 때문이다. 위쪽 목표 목록
         // 대체가 깨지면(예: D7에서 목표 목록 로직을 고칠 때) 이 줄이
         // 마지막 방어선이 된다. 두 방어를 동시에 잃는 것보다 낫다.
-        PathGeneratorConfig generation_cfg = path_cfg_;
-        if (v2_avoidance_.committed) {
-            generation_cfg.lateral_target_tolerance = 0.0;
-        }
+        // R6-C: search_tolerance는 legacy lateral_target_tolerance override와
+        // 동일한 규칙(committed면 0, 그렇지 않으면 전역 tolerance)을 그대로
+        // 옮긴다 - PathGeneratorConfig를 복제해 override하는 대신 request가
+        // 그 값을 직접 담는다.
+        const double search_tolerance =
+            v2_avoidance_.committed ? 0.0 : path_cfg_.lateral_target_tolerance;
+
+        // escape_object_id: 접근/통과 구간에서 회피 대상 물체에 대한 충돌
+        // 스코핑을 완화하는 legacy avoid_escape_id와 동일한 입력이다(legacy는
+        // cmd.mode==AVOID일 때 cmd.target_object_id를 그대로 썼다 - command는
+        // FSM이 지정한 target_object_id를 이미 담고 있고 side_cmd가 이를
+        // 바꾸지 않았으므로, 여기서도 command.target_object_id를 그대로
+        // 옮긴다).
+        const int escape_object_id = command.target_object_id;
 
         const int target_count = avoid_committed
             ? static_cast<int>(committed_targets.size())
@@ -908,16 +922,19 @@ bool FrenetPlanner::AvoidProcess(
         for (int index = 0; index < target_count; ++index) {
             const double target_d = avoid_committed
                 ? committed_targets[index] : v2_avoid_targets_.candidates[index];
-            PlannerCommand side_cmd = command;
-            side_cmd.mode = AVOID;
-            side_cmd.avoidance_d_offset = target_d;
-            side_cmd.target_speed = resolved_target_speed;
+
+            TrajectoryRequest request;
+            request.lateral.target_d = target_d;
+            request.lateral.search_tolerance = search_tolerance;
+            request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
+            request.target_speed = resolved_target_speed;
+            request.collision.escape_object_id = escape_object_id;
 
             PlannerDebugStats side_stats;
-            auto generated = ResolveManeuver(
-                start, side_cmd, ref_, generation_cfg, limits_, lane_width_,
-                phase_collision_obstacles, vehicle_shape_,
-                collision_cfg_, stop_cfg_, merge_cfg_, &side_stats);
+            auto generated = GenerateRequestedCandidates(
+                start, request, ref_, path_cfg_, limits_,
+                phase_collision_obstacles, vehicle_shape_, collision_cfg_,
+                &side_stats);
             EvaluateCosts(generated, cost_weights_, target_d);
             // 공용 횡가속도 생성 필터와 같은 설정 한계(3.0 m/s^2)를 사용한다.
             // 과거 AVOID에만 중복 적용되던 80% 축소는 제거한다.
