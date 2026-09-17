@@ -170,7 +170,7 @@ void TestFollowRequestPropagatesLeaderAndExemption() {
     request.lateral.search_tolerance = cfg.lateral_target_tolerance;
     request.longitudinal_mode = LongitudinalMode::FOLLOWING;
     request.target_speed = 5.0;
-    request.following.leader_object_id = kLeaderId;
+    request.collision.coast_exempt_object_id = kLeaderId;
     request.following.leader_s = kLeaderS;
     request.following.leader_speed = 0.0;  // 정지 leader (R4-D 재현 조건)
     request.following.leader_accel = 0.0;
@@ -336,7 +336,6 @@ void TestFollowRequestKeepsLateralTolerance() {
     request.lateral.search_tolerance = cfg.lateral_target_tolerance;
     request.longitudinal_mode = LongitudinalMode::FOLLOWING;
     request.target_speed = 5.0;
-    request.following.leader_object_id = -1;
     request.following.leader_s = start.s + 30.0;
     request.following.leader_speed = 5.0;
     request.following.leader_accel = 0.0;

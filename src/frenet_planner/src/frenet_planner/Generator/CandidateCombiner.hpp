@@ -73,13 +73,13 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
 // 아니라 TrajectoryRequest 하나로만 받는다 - 이 함수와 그 아래에서 호출하는
 // 어떤 코드도 BehaviorState/PlannerCommand/ROS 타입을 참조하지 않는다.
 //
-// AVOID/LANE_CHANGE/MERGE는 이 함수의 대상이 아니다(R5 범위 밖) - 그 세
-// 모드는 계속 ResolveManeuver(PlannerCommand)를 직접 호출한다
-// (legacy behavior-aware path, Maneuver/Avoid.cpp, Maneuver/LaneChange.cpp).
+// R6: KEEP/FOLLOW/STOP에 이어 LANE_CHANGE/AVOID(정상 속도 구간)도 이 함수를
+// 사용한다. MERGE는 production에서 도달 불가능하므로(§13 audit 참고) 여전히
+// 대상이 아니다 - 남은 legacy caller는 ResolveManeuver(PlannerCommand) 직접
+// 호출뿐이다.
 //
-// coast_exempt_id는 FOLLOWING에서만 request.following.leader_object_id로
-// 채워진다 - 이 물체를 reactive coast 연장 단계에서 장애물로 보지 않기
-// 위한 안전 필터 입력이다(어떤 behavior인지와 무관).
+// 충돌 필터 예외 정책(coast_exempt/escape)은 request.collision에서 그대로
+// 읽는다(R6-A) - longitudinal_mode를 보고 추론하지 않는다.
 std::vector<FrenetPath> GenerateRequestedCandidates(
     const FrenetState& start,
     const TrajectoryRequest& request,

@@ -237,7 +237,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         request.target_speed = cmd.target_speed;
         if (is_follow) {
             request.longitudinal_mode = LongitudinalMode::FOLLOWING;
-            request.following.leader_object_id = cmd.target_object_id;
+            request.collision.coast_exempt_object_id = cmd.target_object_id;
             request.following.leader_s = cmd.leader_s;
             request.following.leader_speed = cmd.leader_speed;
             request.following.leader_accel = cmd.leader_accel;

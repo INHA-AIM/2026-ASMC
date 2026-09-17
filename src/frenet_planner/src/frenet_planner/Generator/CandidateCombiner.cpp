@@ -303,16 +303,14 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
         for (const auto& p : combined) if (p.valid) stats->combined_valid_after_curvature++;
     }
 
-    // 4. 충돌 필터. FOLLOWING의 leader는 실제 후보 구간에서는 검사하고
-    // reactive coast 연장에서만 제외한다(§7/§8) - AVOID escape는 이 경로
-    // 대상 모드에 없으므로 항상 -1이다.
+    // 4. 충돌 필터. request.collision이 예외 정책의 단일 authoritative
+    // 입력이다(R6-A) - longitudinal_mode를 보고 coast_exempt/escape를 다시
+    // 추론하지 않는다. 호출자가 FOLLOWING이면 leader를, AVOID면 회피 대상을
+    // 채워 넣고, 해당 없으면 -1을 그대로 둔다.
     if (!obstacles.empty()) {
-        const int coast_exempt_id =
-            request.longitudinal_mode == LongitudinalMode::FOLLOWING
-                ? request.following.leader_object_id
-                : -1;
         FilterByCollision(combined, ref, obstacles, vehicle_shape, collision_cfg,
-                          coast_exempt_id, /*avoid_escape_object_id=*/-1);
+                          request.collision.coast_exempt_object_id,
+                          request.collision.escape_object_id);
     }
     if (stats) {
         for (const auto& p : combined) if (p.valid) stats->combined_valid_after_collision++;
