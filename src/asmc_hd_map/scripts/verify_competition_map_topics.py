@@ -13,6 +13,7 @@ from asmc_msgs.msg import (
     HdMapMeta,
     DrivableAreaArray,
     LaneArray,
+    LaneAssociation,
     LaneMarking,
     LaneMarkingArray,
     MissionZone,
@@ -33,6 +34,7 @@ EXPECTED_TYPES = {
     "/hd_map/global/drivable_grid": "nav_msgs/OccupancyGrid",
     "/hd_map/local/lanes": "asmc_msgs/LaneArray",
     "/hd_map/local/drivable_grid": "nav_msgs/OccupancyGrid",
+    "/hd_map/local/current_lane": "asmc_msgs/LaneAssociation",
     "/hd_map/debug/markers": "visualization_msgs/MarkerArray",
 }
 
@@ -160,6 +162,27 @@ def main() -> int:
     _require(len(lane_by_link) == 69, "lane link IDs are not unique")
     _require("A2256W000427" not in lane_by_link, "unused toll lane A427 must remain excluded")
     _require("A2256W000179" not in lane_by_link, "exit-only lane A179 must remain excluded")
+    excluded_bus_links = {
+        "A2256W000429", "A2256W000433", "A2256W000421",
+        "A2256W000425", "A2256W000424",
+    }
+    _require(
+        not (excluded_bus_links & set(lane_by_link)),
+        "bus-only high-speed lane leaked into the competition lane product",
+    )
+    expected_high_speed_lanes = {
+        "A2256W000418": 2,
+        "A2256W000410": 3,
+        "A2256W000409": 4,
+        "A2256W000411": 5,
+    }
+    _require(
+        {
+            link_id: int(lane_by_link[link_id].lane_number)
+            for link_id in expected_high_speed_lanes
+        } == expected_high_speed_lanes,
+        "high-speed traversable lane numbers must remain 2/3/4 plus merge lane 5",
+    )
     _require("A2256W000131" in lane_by_link, "shadow-zone opposite lane A131 is missing")
     _require("A2256W000432" in lane_by_link, "usable toll lane A432 is missing")
     expected_extra_intersections = {

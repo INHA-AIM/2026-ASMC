@@ -39,6 +39,7 @@ publisher는 시작 전에 stage14 map, P1-C metadata, 공식 global path와 P2-
 | `/hd_map/global/mission_zones` | `asmc_msgs/MissionZoneArray` | latched | 미션·속도 profile·상시 인지 policy zone 15개 |
 | `/hd_map/local/lanes` | `asmc_msgs/LaneArray` | pose update, non-latched | Ego 주변 120 m 정사각 영역과 교차하는 Lane subset |
 | `/hd_map/local/drivable_grid` | `nav_msgs/OccupancyGrid` | pose update, non-latched | global cell에 정렬된 `600×600`, 0.2 m local crop |
+| `/hd_map/local/current_lane` | `asmc_msgs/LaneAssociation` | pose update, non-latched | 후륜축 중심 현재 허용 차로와 경계/이탈/전환 상태 |
 | `/hd_map/debug/markers` | `visualization_msgs/MarkerArray` | 1 Hz, non-latched | 차선·경로·link 방향·station·체크포인트·미션·build 정보 |
 
 P2-B v4의 `HdMapMeta.operational=true`, `complete=true`, `lane_count=69`,

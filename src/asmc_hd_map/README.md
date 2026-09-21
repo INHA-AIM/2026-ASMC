@@ -21,7 +21,8 @@ rosrun asmc_hd_map verify_competition_map_topics.py
 ```
 
 운영 launch는 global 정본과 함께 `/hd_map/local/lanes`,
-`/hd_map/local/drivable_grid`를 기본 활성화한다. local crop은 map frame·global ID를 유지하며
+`/hd_map/local/drivable_grid`, `/hd_map/local/current_lane`을 기본 활성화한다. local crop은
+map frame·global ID를 유지하며
 기본 120 m 정사각형, 0.2 m/600×600 grid, 최대 5 Hz다. 정규화 pose를 사용할 때는
 `local_pose_source:=pose_stamped local_pose_topic:=/localization/pose`를 지정한다.
 기본 위치원은 `/gps`와 `/imu`이며 WGS84→UTM52N 변환 후 맵 원점
@@ -612,10 +613,28 @@ directed start/end node-pair closure로 내부 link 4개를 더해 총 8개를 �
 A126 옆 반대방향 A131만 명시적으로 포함한다. reviewed 경계 보정 41개 Lane, 인접 차로 fill
 18개와 H5-검증 교차로 gap patch 10개가 Lane 사이 및 교차로 내부의 빈틈을 채운다.
 
-운영 launch는 ego pose 기반 `/hd_map/local/lanes`와 `/hd_map/local/drivable_grid`도 기본으로
+운영 launch는 ego pose 기반 `/hd_map/local/lanes`, `/hd_map/local/drivable_grid`,
+`/hd_map/local/current_lane`도 기본으로
 발행한다. 기본 crop은 map frame 120 m 정사각형이며 grid는 global cell에 정렬된
 `600×600@0.2 m`다. local Lane은 global ID와 원 geometry를 유지하는 subset이라
 `complete=false`이고, 판제는 여기에 `base_link` 변환을 다시 적용하면 안 된다.
+
+현재 차로는 GPS 전방 offset 0.35 m를 제거한 map-frame `base_link` 원점, 즉 후륜축 중심으로
+판정한다. 공유 경계에서는 기존 차로를 유지하고 인접 polygon 안쪽 0.30 m에 2 pose 연속
+들어온 뒤 전환한다. 최대 2 m의 작은 이탈은 `NEARBY`로 차로 ID를 유지하지만 `INSIDE`와
+동일하게 취급하면 안 되며, 0.5초 동안 새 pose가 없으면 `STALE/valid=false`다. 고주로의
+A433 연결 버스전용 1차로는 후보에서 제외되어 대회 후보는 2·3·4차로와 합류차로 5뿐이다.
+
+주행 중 간단히 확인하려면 다음 필드만 출력한다.
+
+```bash
+rostopic echo /hd_map/local/current_lane \
+  --filter 'm.valid' | grep -E 'state:|link_id:|lane_number:|signed_lateral|polygon_clearance|transition_'
+
+# 26R1 개발 시뮬레이터에서 Ego 원위치 복구를 포함한 고주로 회귀 검사
+python3 tools/audit/verify_hd_map_lane_association_live.py \
+  --host host.docker.internal --report /tmp/hd_map_lane_association_live.json
+```
 
 노드 부근의 짧은 paint gap도 publisher가 자동으로 붙이지 않는다. 판제가 geometry gap을 어떻게
 해석해야 하는지와 P2 topology 계약은

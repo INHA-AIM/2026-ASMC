@@ -8,6 +8,20 @@ from typing import Iterable
 import numpy as np
 
 
+def valid_wgs84_position(latitude: float, longitude: float) -> bool:
+    """Reject non-finite/out-of-range coordinates and MORAI's (0, 0) outage sentinel."""
+
+    latitude = float(latitude)
+    longitude = float(longitude)
+    return (
+        math.isfinite(latitude)
+        and math.isfinite(longitude)
+        and -90.0 <= latitude <= 90.0
+        and -180.0 <= longitude <= 180.0
+        and not (abs(latitude) <= 1e-9 and abs(longitude) <= 1e-9)
+    )
+
+
 def quaternion_yaw_rad(x: float, y: float, z: float, w: float) -> float:
     values = np.asarray([x, y, z, w], dtype=np.float64)
     norm = float(np.linalg.norm(values))

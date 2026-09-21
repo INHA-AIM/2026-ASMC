@@ -33,6 +33,7 @@ add_message_files(
   LaneMarkingArray.msg
   Lane.msg
   LaneArray.msg
+  LaneAssociation.msg
   DrivableArea.msg
   DrivableAreaArray.msg
   CompetitionCheckpoint.msg

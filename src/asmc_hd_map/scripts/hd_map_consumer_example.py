@@ -8,6 +8,7 @@ from asmc_msgs.msg import (
     DrivableAreaArray,
     HdMapMeta,
     LaneArray,
+    LaneAssociation,
     LaneMarkingArray,
     MissionZoneArray,
 )
@@ -21,6 +22,7 @@ class HdMapConsumerExample:
         self.local_messages = {}
         self.reported_build_id = ""
         self.local_reported = False
+        self.last_lane_id = None
         topics = {
             "meta": ("/hd_map/meta", HdMapMeta),
             "markings": ("/hd_map/global/lane_markings", LaneMarkingArray),
@@ -48,6 +50,10 @@ class HdMapConsumerExample:
             rospy.Subscriber(
                 "/hd_map/local/drivable_grid", OccupancyGrid, self._local_callback,
                 callback_args="grid", queue_size=1,
+            ),
+            rospy.Subscriber(
+                "/hd_map/local/current_lane", LaneAssociation,
+                self._association_callback, queue_size=1,
             ),
         ])
 
@@ -134,6 +140,28 @@ class HdMapConsumerExample:
             len(lanes.lanes), grid.info.width, grid.info.height, grid.info.resolution,
         )
         self.local_reported = True
+
+    def _association_callback(self, message: LaneAssociation) -> None:
+        if message.state == LaneAssociation.STATE_STALE:
+            rospy.logwarn_throttle(2.0, "current-lane association is stale")
+            return
+        lane_key = (message.valid, message.lane_id, message.state)
+        if lane_key == self.last_lane_id:
+            return
+        self.last_lane_id = lane_key
+        if not message.valid:
+            rospy.logwarn(
+                "No traversable current lane at rear-axle reference (%.2f, %.2f)",
+                message.reference_point.x, message.reference_point.y,
+            )
+            return
+        rospy.loginfo(
+            "Current lane link=%s lane=%d scope=%s state=%d lateral=%+.2fm "
+            "clearance=%+.2fm confidence=%.2f",
+            message.link_id, message.lane_number, message.lane_number_scope_id,
+            message.state, message.signed_lateral_offset_m,
+            message.polygon_clearance_m, message.confidence,
+        )
 
 
 def main() -> None:

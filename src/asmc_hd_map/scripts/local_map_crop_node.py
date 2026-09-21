@@ -10,7 +10,7 @@ from pathlib import Path
 import threading
 import time
 
-from asmc_msgs.msg import HdMapMeta, LaneArray
+from asmc_msgs.msg import HdMapMeta, LaneArray, LaneAssociation
 from geometry_msgs.msg import PoseStamped
 from morai_msgs.msg import EgoVehicleStatus, GPSMessage
 from nav_msgs.msg import OccupancyGrid
@@ -18,7 +18,16 @@ import numpy as np
 import rospy
 from sensor_msgs.msg import Imu
 
-from asmc_hd_map.live_pose import projected_gps_to_base_link, quaternion_yaw_rad
+from asmc_hd_map.lane_association import (
+    LaneAssociator,
+    LaneAssociationResult,
+    LaneGeometry,
+)
+from asmc_hd_map.live_pose import (
+    projected_gps_to_base_link,
+    quaternion_yaw_rad,
+    valid_wgs84_position,
+)
 from asmc_hd_map.local_crop import (
     crop_occupancy_grid,
     geometry_bounds,
@@ -37,6 +46,11 @@ class LocalMapCropNode:
         if not math.isfinite(self.publish_hz) or self.publish_hz <= 0.0:
             raise ValueError("publish_hz must be positive and finite")
         self.minimum_period = 1.0 / self.publish_hz
+        self.pose_stale_timeout_sec = float(
+            rospy.get_param("~pose_stale_timeout_sec", 0.5)
+        )
+        if not math.isfinite(self.pose_stale_timeout_sec) or self.pose_stale_timeout_sec <= 0.0:
+            raise ValueError("pose_stale_timeout_sec must be positive and finite")
         self.pose_source = str(rospy.get_param("~pose_source", "gps_imu")).strip().lower()
         if self.pose_source not in {"gps_imu", "ego_status", "pose_stamped"}:
             raise ValueError("pose_source must be gps_imu, ego_status, or pose_stamped")
@@ -48,6 +62,9 @@ class LocalMapCropNode:
         self.global_grid_message = None
         self.global_occupancy = None
         self.latest_pose = None
+        self.latest_pose_received_monotonic = 0.0
+        self.lane_associator = None
+        self.latest_association = LaneAssociationResult(valid=False, state=0)
         self.last_publish = 0.0
         self.first_publish_logged = False
 
@@ -92,6 +109,9 @@ class LocalMapCropNode:
         self.grid_pub = rospy.Publisher(
             "/hd_map/local/drivable_grid", OccupancyGrid, queue_size=1, latch=False
         )
+        self.association_pub = rospy.Publisher(
+            "/hd_map/local/current_lane", LaneAssociation, queue_size=1, latch=False
+        )
         self.subscribers = [
             rospy.Subscriber("/hd_map/meta", HdMapMeta, self._on_meta, queue_size=1),
             rospy.Subscriber(
@@ -133,6 +153,9 @@ class LocalMapCropNode:
                 self._on_pose_stamped,
                 queue_size=1,
             ))
+        self.publish_timer = rospy.Timer(
+            rospy.Duration.from_sec(self.minimum_period), self._on_publish_timer
+        )
         rospy.loginfo(
             "local HD-map crop ready pose_source=%s extent=%.1fm publish<=%.1fHz "
             "geometry_frame=map%s",
@@ -146,7 +169,6 @@ class LocalMapCropNode:
     def _on_meta(self, message: HdMapMeta) -> None:
         with self.lock:
             self.meta = message
-        self._try_publish(force=True)
 
     @staticmethod
     def _lane_message_bounds(lane):
@@ -159,10 +181,47 @@ class LocalMapCropNode:
             rospy.logerr("local crop rejected incomplete or non-map global LaneArray")
             return
         bounds = [self._lane_message_bounds(lane) for lane in message.lanes]
+        try:
+            associator = LaneAssociator(
+                [
+                    LaneGeometry.from_coordinates(
+                        lane_id=lane.id,
+                        link_id=lane.link_id,
+                        lane_number=lane.lane_number,
+                        lane_number_scope_id=lane.lane_number_scope_id,
+                        polygon_xy=[(point.x, point.y) for point in lane.polygon],
+                        centerline_xy=[(point.x, point.y) for point in lane.centerline],
+                        left_adjacent_lane_id=lane.left_adjacent_lane_id,
+                        right_adjacent_lane_id=lane.right_adjacent_lane_id,
+                        predecessor_lane_ids=tuple(lane.predecessor_lane_ids),
+                        successor_lane_ids=tuple(lane.successor_lane_ids),
+                        bidirectional=(lane.direction == lane.DIRECTION_BIDIRECTIONAL),
+                    )
+                    for lane in message.lanes
+                ],
+                switch_penetration_m=float(
+                    rospy.get_param("~lane_switch_penetration_m", 0.30)
+                ),
+                switch_confirmation_samples=int(
+                    rospy.get_param("~lane_switch_confirmation_samples", 2)
+                ),
+                boundary_band_m=float(
+                    rospy.get_param("~lane_boundary_band_m", 0.15)
+                ),
+                nearby_distance_m=float(
+                    rospy.get_param("~lane_nearby_distance_m", 2.0)
+                ),
+            )
+        except ValueError as error:
+            rospy.logerr("local crop rejected invalid lane association geometry: %s", error)
+            return
         with self.lock:
             self.global_lanes = message
             self.lane_bounds = bounds
-        self._try_publish(force=True)
+            self.lane_associator = associator
+            if self.latest_pose is not None:
+                x_m, y_m, yaw_rad, _ = self.latest_pose
+                self.latest_association = associator.update(x_m, y_m, yaw_rad)
 
     def _on_global_grid(self, message: OccupancyGrid) -> None:
         if message.header.frame_id != "map":
@@ -187,7 +246,6 @@ class LocalMapCropNode:
         with self.lock:
             self.global_grid_message = message
             self.global_occupancy = occupancy
-        self._try_publish(force=True)
 
     def _on_ego(self, message: EgoVehicleStatus) -> None:
         x_m = float(message.position.x)
@@ -200,7 +258,7 @@ class LocalMapCropNode:
             )
             return
         stamp = message.header.stamp if message.header.stamp.to_nsec() else rospy.Time.now()
-        self._set_pose(x_m, y_m, stamp)
+        self._set_pose(x_m, y_m, math.radians(float(message.heading)), stamp)
 
     def _on_imu(self, message: Imu) -> None:
         try:
@@ -219,6 +277,14 @@ class LocalMapCropNode:
         if int(message.status) <= 0:
             rospy.logwarn_throttle(
                 2.0, "local HD-map crop ignored invalid GPS status=%s", message.status
+            )
+            return
+        if not valid_wgs84_position(message.latitude, message.longitude):
+            rospy.logwarn_throttle(
+                2.0,
+                "local HD-map crop ignored invalid GPS coordinate latitude=%s longitude=%s",
+                message.latitude,
+                message.longitude,
             )
             return
         stamp = message.header.stamp if message.header.stamp.to_nsec() else rospy.Time.now()
@@ -263,7 +329,7 @@ class LocalMapCropNode:
         except (ValueError, OverflowError) as error:
             rospy.logwarn_throttle(2.0, "local HD-map crop GPS conversion failed: %s", error)
             return
-        self._set_pose(float(base_xy[0]), float(base_xy[1]), stamp)
+        self._set_pose(float(base_xy[0]), float(base_xy[1]), yaw, stamp)
 
     def _on_pose_stamped(self, message: PoseStamped) -> None:
         if message.header.frame_id != "map":
@@ -272,17 +338,34 @@ class LocalMapCropNode:
             )
             return
         stamp = message.header.stamp if message.header.stamp.to_nsec() else rospy.Time.now()
+        orientation = message.pose.orientation
+        try:
+            yaw = quaternion_yaw_rad(
+                orientation.x, orientation.y, orientation.z, orientation.w
+            )
+        except ValueError as error:
+            rospy.logwarn_throttle(
+                2.0, "local HD-map crop ignored invalid PoseStamped: %s", error
+            )
+            return
         self._set_pose(
-            float(message.pose.position.x), float(message.pose.position.y), stamp
+            float(message.pose.position.x), float(message.pose.position.y), yaw, stamp
         )
 
-    def _set_pose(self, x_m: float, y_m: float, stamp) -> None:
-        if not math.isfinite(x_m) or not math.isfinite(y_m):
+    def _set_pose(self, x_m: float, y_m: float, yaw_rad: float, stamp) -> None:
+        if not all(math.isfinite(value) for value in (x_m, y_m, yaw_rad)):
             rospy.logwarn_throttle(2.0, "local HD-map crop ignored non-finite pose")
             return
         with self.lock:
-            self.latest_pose = (x_m, y_m, stamp)
-        self._try_publish(force=False)
+            self.latest_pose = (x_m, y_m, yaw_rad, stamp)
+            self.latest_pose_received_monotonic = time.monotonic()
+            if self.lane_associator is not None:
+                self.latest_association = self.lane_associator.update(
+                    x_m, y_m, yaw_rad
+                )
+
+    def _on_publish_timer(self, _event) -> None:
+        self._try_publish(force=True)
 
     @staticmethod
     def _identity_matches(meta: HdMapMeta, lanes: LaneArray) -> bool:
@@ -312,7 +395,9 @@ class LocalMapCropNode:
             grid = self.global_grid_message
             occupancy = self.global_occupancy
             lane_bounds = list(self.lane_bounds)
-            x_m, y_m, stamp = self.latest_pose
+            x_m, y_m, _yaw_rad, stamp = self.latest_pose
+            association = self.latest_association
+            pose_stale = now - self.latest_pose_received_monotonic > self.pose_stale_timeout_sec
             if not self._identity_matches(meta, lanes):
                 rospy.logerr_throttle(2.0, "local HD-map crop detected global build identity drift")
                 return
@@ -348,10 +433,45 @@ class LocalMapCropNode:
             grid_output.info.origin.position.z = grid.info.origin.position.z
             grid_output.info.origin.orientation.w = 1.0
             grid_output.data = cropped.data.reshape(-1).astype(np.int8).tolist()
+
+            association_output = LaneAssociation()
+            association_output.header.stamp = stamp
+            association_output.header.frame_id = "map"
+            association_output.build_id = lanes.build_id
+            association_output.map_id = lanes.map_id
+            association_output.geometry_sha256 = lanes.geometry_sha256
+            association_output.valid = bool(association.valid and not pose_stale)
+            association_output.state = (
+                LaneAssociation.STATE_STALE if pose_stale else association.state
+            )
+            association_output.reference_type = (
+                LaneAssociation.REFERENCE_BASE_LINK_REAR_AXLE
+            )
+            association_output.reference_point.x = x_m
+            association_output.reference_point.y = y_m
+            association_output.reference_point.z = 0.0
+            association_output.lane_id = association.lane_id
+            association_output.link_id = association.link_id
+            association_output.lane_number = association.lane_number
+            association_output.lane_number_scope_id = association.lane_number_scope_id
+            association_output.centerline_distance_m = association.centerline_distance_m
+            association_output.signed_lateral_offset_m = association.signed_lateral_offset_m
+            association_output.polygon_clearance_m = association.polygon_clearance_m
+            association_output.heading_error_rad = association.heading_error_rad
+            association_output.confidence = 0.0 if pose_stale else association.confidence
+            association_output.previous_lane_id = association.previous_lane_id
+            association_output.transition_pending = association.transition_pending
+            association_output.transition_candidate_lane_id = (
+                association.transition_candidate_lane_id
+            )
+            association_output.transition_candidate_samples = min(
+                255, association.transition_candidate_samples
+            )
             self.last_publish = now
 
         self.lanes_pub.publish(lane_output)
         self.grid_pub.publish(grid_output)
+        self.association_pub.publish(association_output)
         if not self.first_publish_logged:
             rospy.loginfo(
                 "local HD-map crop published x=%.2f y=%.2f lanes=%d grid=%dx%d@%.2fm "

@@ -29,10 +29,10 @@ class P1BContractTest(unittest.TestCase):
 
     def test_repository_contract_is_valid(self):
         result = validate_contract(REPO_ROOT, self.contract, self.baseline)
-        self.assertEqual(result["message_count"], 24)
+        self.assertEqual(result["message_count"], 25)
         self.assertEqual(result["legacy_message_count"], 13)
-        self.assertEqual(result["new_message_count"], 11)
-        self.assertEqual(result["topic_count"], 10)
+        self.assertEqual(result["new_message_count"], 12)
+        self.assertEqual(result["topic_count"], 11)
 
     def test_legacy_ros_md5_compatibility(self):
         md5s = all_message_md5(self.specs)
@@ -45,6 +45,7 @@ class P1BContractTest(unittest.TestCase):
         self.assertEqual(md5s["HdMapMeta"], "adb0d98c5dbd41055ebb929fcdf3af19")
         self.assertEqual(md5s["LaneMarkingArray"], "2eae16c9d4bf3385ac35eba4b3d1b823")
         self.assertEqual(md5s["LaneArray"], "95ad93ef58c8ff22f4069b8ca2388395")
+        self.assertEqual(md5s["LaneAssociation"], "fac864677f1248f439252de3e651536d")
         self.assertEqual(md5s["MissionZoneArray"], "04325427bb7aedffd9a6ec4881ed46ce")
 
     def test_md5_changes_when_a_legacy_field_changes(self):

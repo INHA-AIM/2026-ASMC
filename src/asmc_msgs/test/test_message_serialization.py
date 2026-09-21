@@ -13,6 +13,7 @@ EXPECTED_MD5 = {
     "LaneMarkingArray": "2eae16c9d4bf3385ac35eba4b3d1b823",
     "Lane": "380340d72bbc206438d6cf73629c5fa4",
     "LaneArray": "95ad93ef58c8ff22f4069b8ca2388395",
+    "LaneAssociation": "fac864677f1248f439252de3e651536d",
     "DrivableArea": "3f988da146dba2b6bd2348b32ba3fb7d",
     "DrivableAreaArray": "672c8c1123790ada26596de6aab5edcb",
     "CompetitionCheckpoint": "794b79e3d48ac7fef6493abadad2fc47",

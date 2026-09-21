@@ -18,6 +18,7 @@
   <arg name="local_imu_topic" default="/imu"/>
   <arg name="local_extent_m" default="120.0"/>
   <arg name="local_publish_hz" default="5.0"/>
+  <arg name="local_pose_stale_timeout_sec" default="0.5"/>
 
   <node pkg="asmc_hd_map" type="competition_map_publisher_node.py"
         name="competition_map_publisher" output="screen" required="true">
@@ -44,6 +45,12 @@
     <param name="gps_offset_tolerance_m" value="1.0"/>
     <param name="extent_m" value="$(arg local_extent_m)"/>
     <param name="publish_hz" value="$(arg local_publish_hz)"/>
+    <param name="pose_stale_timeout_sec" value="$(arg local_pose_stale_timeout_sec)"/>
+    <!-- Current-lane reference is the map-frame base_link origin (rear axle). -->
+    <param name="lane_switch_penetration_m" value="0.30"/>
+    <param name="lane_switch_confirmation_samples" value="2"/>
+    <param name="lane_boundary_band_m" value="0.15"/>
+    <param name="lane_nearby_distance_m" value="2.0"/>
   </node>
 
   <node if="$(arg rviz)" pkg="rviz" type="rviz" name="competition_map_debug_rviz"

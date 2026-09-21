@@ -67,6 +67,7 @@ REQUIRED_TOPICS = {
     "/hd_map/global/mission_zones",
     "/hd_map/local/lanes",
     "/hd_map/local/drivable_grid",
+    "/hd_map/local/current_lane",
     "/hd_map/debug/markers",
 }
 
@@ -297,6 +298,15 @@ def _validate_semantics(specs: Mapping[str, MessageSpec]) -> None:
     marking = _constant_map(specs["LaneMarking"])
     if marking.get("PATTERN_SOLID") != "1" or marking.get("PATTERN_BROKEN") != "2":
         raise ContractError("LaneMarking solid/broken constants changed")
+
+    association = _constant_map(specs["LaneAssociation"])
+    if (
+        association.get("STATE_INSIDE") != "1"
+        or association.get("STATE_NEARBY") != "3"
+        or association.get("STATE_STALE") != "4"
+        or association.get("REFERENCE_BASE_LINK_REAR_AXLE") != "1"
+    ):
+        raise ContractError("LaneAssociation state/reference constants changed")
 
 
 def _validate_topics(contract: Mapping[str, object], message_md5: Mapping[str, str]) -> None:

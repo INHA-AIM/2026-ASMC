@@ -55,6 +55,14 @@ new_messages:
   asmc_msgs/LaneArray:
     md5: 95ad93ef58c8ff22f4069b8ca2388395
     required_fields: [header, build_id, map_id, geometry_sha256, complete, lanes]
+  asmc_msgs/LaneAssociation:
+    md5: fac864677f1248f439252de3e651536d
+    required_fields: [header, build_id, map_id, geometry_sha256, valid, state,
+      reference_type, reference_point, lane_id, link_id, lane_number,
+      lane_number_scope_id, centerline_distance_m, signed_lateral_offset_m,
+      polygon_clearance_m, heading_error_rad, confidence, previous_lane_id,
+      transition_pending, transition_candidate_lane_id,
+      transition_candidate_samples]
   asmc_msgs/DrivableArea:
     md5: 3f988da146dba2b6bd2348b32ba3fb7d
     required_fields: [id, area_type, validity, source_type, polygon, lane_ids,
@@ -153,6 +161,14 @@ topics:
     queue_size: 1
     publication: ego_update
     authority: derived_crop
+  /hd_map/local/current_lane:
+    type: asmc_msgs/LaneAssociation
+    md5: fac864677f1248f439252de3e651536d
+    scope: local
+    latch: false
+    queue_size: 1
+    publication: ego_update
+    authority: derived_association
   /hd_map/debug/markers:
     type: visualization_msgs/MarkerArray
     md5: d155b9ce5188fbaf89745847fd5882d7
@@ -168,6 +184,10 @@ consumer_rules:
   - Lane markings, checkpoints, and mission zones are static global metadata and are not republished as local crops.
   - Global topics must use header.frame_id=map and be latched.
   - Local topics are map-frame spatial subsets, not vehicle-frame geometry.
+  - Current-lane association uses the map-frame base_link origin, defined by this stack as the rear-axle center after GPS lever-arm correction.
+  - Lateral lane switches require 0.30 m target-polygon penetration for two distinct pose samples; a point on a shared boundary retains the previous lane.
+  - STATE_NEARBY retains continuity for a departure of at most 2.0 m but is not equivalent to STATE_INSIDE; STATE_STALE is invalid for planning.
+  - Only traversable lanes in the global LaneArray are association candidates; excluded bus-only lanes such as the A433-connected high-speed lane cannot become current.
   - IDs in local crops retain their global namespace and identity.
   - Lane numbers are valid only within lane_number_scope_id and the stated station interval.
   - LaneMarking pattern is explicit; consumers must not infer solid or broken from point spacing.
@@ -189,6 +209,7 @@ planning_consumption:
   optional_local_cache_topics:
     - /hd_map/local/lanes
     - /hd_map/local/drivable_grid
+    - /hd_map/local/current_lane
   local_crop_is_planning_horizon: false
   active_mission_selection: consumer_matches_current_link_or_route_station_against_global_mission_zones
   vector_geometry_authority: [/hd_map/global/lanes, /hd_map/global/drivable_areas]
@@ -220,6 +241,15 @@ local_crop_policy:
     maximum_pair_gap_ms: 100.0
     maximum_origin_offset_error_m: 1.0
   publish_hz: 5.0
+  pose_stale_timeout_sec: 0.5
+  current_lane_association:
+    topic: /hd_map/local/current_lane
+    reference_point: base_link_rear_axle_center
+    switch_penetration_m: 0.30
+    switch_confirmation_samples: 2
+    boundary_band_m: 0.15
+    nearby_distance_m: 2.0
+    excluded_lane_policy: lanes_absent_from_global_lane_array_are_never_candidates
 
 implementation_stage:
   messages_and_contract: P1-B

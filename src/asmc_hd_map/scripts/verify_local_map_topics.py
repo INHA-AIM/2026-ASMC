@@ -7,7 +7,7 @@ import threading
 import sys
 import time
 
-from asmc_msgs.msg import HdMapMeta, LaneArray
+from asmc_msgs.msg import HdMapMeta, LaneArray, LaneAssociation
 from morai_msgs.msg import EgoVehicleStatus
 from nav_msgs.msg import OccupancyGrid
 import numpy as np
@@ -49,6 +49,10 @@ def main() -> int:
         published.get("/hd_map/local/drivable_grid") == "nav_msgs/OccupancyGrid",
         "local grid topic is missing or has the wrong type",
     )
+    _require(
+        published.get("/hd_map/local/current_lane") == "asmc_msgs/LaneAssociation",
+        "current-lane topic is missing or has the wrong type",
+    )
 
     meta = rospy.wait_for_message("/hd_map/meta", HdMapMeta, timeout=timeout)
     global_lanes = rospy.wait_for_message(
@@ -63,7 +67,7 @@ def main() -> int:
 
     def callback(message, key):
         received[key] = message
-        if set(received) == {"lanes", "grid"}:
+        if set(received) == {"lanes", "grid", "association"}:
             ready.set()
 
     subscribers = [
@@ -74,6 +78,10 @@ def main() -> int:
         rospy.Subscriber(
             "/hd_map/local/drivable_grid", OccupancyGrid, callback,
             callback_args="grid", queue_size=1,
+        ),
+        rospy.Subscriber(
+            "/hd_map/local/current_lane", LaneAssociation, callback,
+            callback_args="association", queue_size=1,
         ),
     ]
     publisher = rospy.Publisher(ego_topic, EgoVehicleStatus, queue_size=1)
@@ -93,10 +101,17 @@ def main() -> int:
 
     local_lanes = received["lanes"]
     local_grid = received["grid"]
+    association = received["association"]
     _require(not local_lanes.complete, "local LaneArray must use complete=false")
     _require(local_lanes.header.frame_id == "map", "local lanes left the map frame")
     _require(local_grid.header.frame_id == "map", "local grid left the map frame")
     _require(local_lanes.build_id == meta.build_id, "local/global build ID mismatch")
+    _require(association.build_id == meta.build_id, "association/global build ID mismatch")
+    _require(
+        association.reference_type == LaneAssociation.REFERENCE_BASE_LINK_REAR_AXLE,
+        "current-lane association uses the wrong vehicle reference point",
+    )
+    _require(association.header.frame_id == "map", "current-lane reference left map frame")
     _require(local_lanes.map_id == meta.map_id, "local/global map ID mismatch")
     _require(
         local_lanes.geometry_sha256 == meta.geometry_sha256,
