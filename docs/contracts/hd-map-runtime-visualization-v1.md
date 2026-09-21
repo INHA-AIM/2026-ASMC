@@ -32,8 +32,8 @@ publisher는 시작 전에 stage14 map, P1-C metadata, 공식 global path와 P2-
 |---|---|---|---|
 | `/hd_map/meta` | `asmc_msgs/HdMapMeta` | latched | build/map/geometry/manifest SHA와 준비 상태 |
 | `/hd_map/global/lane_markings` | `asmc_msgs/LaneMarkingArray` | latched | 차선 도색 121개와 정지선 7개 |
-| `/hd_map/global/lanes` | `asmc_msgs/LaneArray` | latched | route/same-direction/mission lane와 음영 반대차로 총 69개 |
-| `/hd_map/global/drivable_areas` | `asmc_msgs/DrivableAreaArray` | latched | Lane 69 + corridor fill 18 + junction patch 10 = vector area 97개 |
+| `/hd_map/global/lanes` | `asmc_msgs/LaneArray` | latched | route/same-direction/mission lane, A134 로터리와 음영 반대차로 총 70개 |
+| `/hd_map/global/drivable_areas` | `asmc_msgs/DrivableAreaArray` | latched | Lane 70 + corridor fill 18 + surface patch 14 = vector area 102개 |
 | `/hd_map/global/drivable_grid` | `nav_msgs/OccupancyGrid` | latched | vector area에서 만든 0.2 m lookup raster |
 | `/hd_map/global/checkpoints` | `asmc_msgs/CompetitionCheckpointArray` | latched | 공식 체크포인트 16개, 3 m, yaw, route/link station |
 | `/hd_map/global/mission_zones` | `asmc_msgs/MissionZoneArray` | latched | 미션·속도 profile·상시 인지 policy zone 15개 |
@@ -42,14 +42,14 @@ publisher는 시작 전에 stage14 map, P1-C metadata, 공식 global path와 P2-
 | `/hd_map/local/current_lane` | `asmc_msgs/LaneAssociation` | pose update, non-latched | 후륜축 중심 현재 허용 차로와 경계/이탈/전환 상태 |
 | `/hd_map/debug/markers` | `visualization_msgs/MarkerArray` | 1 Hz, non-latched | 차선·경로·link 방향·station·체크포인트·미션·build 정보 |
 
-P2-B v4의 `HdMapMeta.operational=true`, `complete=true`, `lane_count=69`,
-`drivable_area_count=97`이 현재 기준이다. `lane_marking_count=128`은 물리 차선 도색 121개와
+P2-B v5의 `HdMapMeta.operational=true`, `complete=true`, `lane_count=70`,
+`drivable_area_count=102`가 현재 기준이다. `lane_marking_count=128`은 물리 차선 도색 121개와
 정지선 7개를 같은 `LaneMarking` 계약으로 전달하기 때문이다.
 
 ### 2.1 판제의 권장 소비 방식
 
 판제의 정본은 위치에 맞춰 잘라서 보내는 local 토픽이 아니라, 시작 시 한 번 수신하는
-latched global 토픽이다. 현재 vector 규모는 Lane 69개, DrivableArea 97개, Marking 128개로
+latched global 토픽이다. 현재 vector 규모는 Lane 70개, DrivableArea 102개, Marking 128개로
 작기 때문에 consumer가 `map` 좌표 polygon/centerline의 공간 인덱스를 한 번 만들고 Ego의
 현재 map XY로 조회하는 방식이 가장 단순하고 결정적이다.
 
@@ -89,6 +89,14 @@ display는 꺼져 있다.
   `Lane.right_boundary_id`이고, 필요하면 이 필드로 marking→lane reverse index를 만든다.
 - 물리 도색의 짧은 gap은 `LaneMarking`에 그대로 남지만, 주행 연속성은 `Lane.polygon`,
   topology와 `DrivableArea` union으로 전달된다.
+- `DrivableArea.validity=VALIDATED`인 polygon은 `source_type`이 `LANE_CLIPPED`든 `HYBRID`든
+  동일한 통행 가능 면이다. `source_type`, `source_dataset`, `source_feature_id`는 생성 근거를
+  추적하는 provenance이지 planner cost나 우선순위가 아니다. 판제는 validated polygon 전체를
+  union하거나 동일한 값 `0`으로 합쳐진 `OccupancyGrid`를 사용한다.
+- surface patch/corridor fill은 빈 노면을 보완하지만 새 차로를 만들지는 않는다.
+  `/hd_map/local/current_lane`은 계속 `Lane.polygon`과 topology로 차로 ID를 판정하고,
+  `DrivableArea`/grid는 collision·주행면 판정에 사용한다. 즉 같은 통행 가능 면이면서도 차로
+  번호를 임의로 부여하지 않는 의도적인 역할 분리다.
 
 local 토픽은 2단계 consumer handoff에서 활성화했다. 기본 입력은 `/gps`와 `/imu`이며,
 WGS84→UTM52N, 맵 원점 `(302595, 4124145)m`, GPS 전방 lever arm 0.35 m를 적용해 map XY를
@@ -165,28 +173,31 @@ marking의 유효한 국소 횡거리로 Lane 외곽을 보정하고 MGeo 인접
 - build ID, geometry hash 앞 16자리와 P2-B product count
 - 0.2 m OccupancyGrid와 cyan Lane polygon/centerline
 - route-only connector(파랑), 정적 장애물(주황), 동적 장애물(자홍), 일반 우회전(연두), 음영 반대차로(보라)
-- 인접차로 corridor fill(노랑)과 H5-검증 교차로 gap patch(주황) outline
+- A134 로터리·A151 접속 surface(밝은 파랑), 인접차로 corridor fill(노랑), 그 밖의 H5 patch(주황) outline
 
 점선은 message의 `pattern`과 dash/gap 속성으로 시각화한다. polyline point 간격을 보고
 실선/점선을 추정하지 않는다.
 
-### 4.1 개발용 차선 source 비교
+### 4.1 개발용 HD map source 비교
 
-최종 검토 차선, 구 맵 origin 정합 차선, 원태 H5 vector는 운영 publisher와 분리된 다음
-개발 launch로 확인한다.
+최종 검토 차선, 구 맵 origin 정합 차선, 원태 H5 vector, 최신 compact 주행가능영역과
+자르기 전 구 H5 road bake는 운영 publisher와 분리된 다음 개발 launch로 확인한다.
 
 ```bash
-roslaunch asmc_hd_map lane_source_comparison.launch repo_root:=/root/ws
+roslaunch asmc_hd_map hd_map_source_comparison.launch repo_root:=/root/ws
 ```
 
 | 레이어 | 개발 전용 토픽 |
 |---|---|
-| 최종 검토 차선 | `/asmc_hd_map/development/lane_sources/final_curated` |
-| 구 맵 origin 정합 차선 | `/asmc_hd_map/development/lane_sources/legacy_origin_aligned` |
-| 원태 H5 원본 vector | `/asmc_hd_map/development/lane_sources/won_tae_h5` |
+| 최종 검토 차선 | `/asmc_hd_map/development/hd_map_sources/lanes/final_curated` |
+| 구 맵 origin 정합 차선 | `/asmc_hd_map/development/hd_map_sources/lanes/legacy_origin_aligned` |
+| 원태 H5 원본 vector | `/asmc_hd_map/development/hd_map_sources/lanes/won_tae_h5` |
+| 최신 compact 주행가능영역 | `/asmc_hd_map/development/hd_map_sources/drivable/latest` |
+| 구 H5 road bake | `/asmc_hd_map/development/hd_map_sources/drivable/legacy_h5_bake` |
 
-세 source는 별도 `MarkerArray`로 발행되며 자동 병합되지 않는다. RViz preset은 최종 차선만
-기본 활성화하고 나머지는 수동으로 켜도록 구성했다. 이 개발 launch와
+차선 세 source는 별도 `MarkerArray`, 주행가능영역 두 source는 별도 `OccupancyGrid`로
+발행되며 자동 병합되지 않는다. RViz preset은 최종 차선과 최신 영역만 기본 활성화하고
+나머지는 수동으로 켜도록 구성했다. 이 개발 launch와
 `development/won_tae_link_node/`의 보존 자료는 판제 runtime launch에 포함되지 않는다.
 
 고정 TopDownOrtho 프리셋은 화면 기준으로 글자가 바로 보이도록 180도 회전을 명시한다.
@@ -206,14 +217,15 @@ A866·A054·A846은 일반 전역경로 추종 구간이며, 이 구간에 보�
 
 컨테이너 smoke validator는 늦게 접속해 latched 전역 토픽을 실제 구독하고 다음을 검사한다.
 
-- 정확한 topic type 10개(global/meta/debug 8개 + local 2개)
-- local topic 2개의 등록과 별도 smoke 검사에서 global/local lane·grid parity
+- 정확한 topic type 11개(global/meta/debug 8개 + local 3개)
+- local topic 3개의 등록과 별도 smoke 검사에서 global/local lane·grid parity 및 현재 차로 상태
 - geometry SHA `01ec671f…4bcfbf`
 - marking 128개 = lane marking 121개 + stopline 7개
-- Lane 69개/vector area 97개, A432·A131 포함/A427·A179 제외
-- non-route 교차로가 reviewed set 14개와 정확히 일치
+- Lane 70개/vector area 102개, A432·A131·A134 포함/A427·A179 제외
+- non-route 교차로가 reviewed set 15개와 정확히 일치
 - 동적 장애물 node-pair closure 8개와 파생 link `A066/A087/A211/A1125`
-- 인접차로 fill 18개, H5-검증 patch 10개, 정적·동적 면의 단일 연결성과 내부 hole 0개
+- 인접차로 fill 18개, H5-검증 patch 14개, 정적·동적 면의 단일 연결성과 내부 hole 0개
+- A134 로터리·A151 접속부의 단일 연결성, H5 기반 2 m envelope 확장과 중앙 섬 비주행 보존
 - 음영구간 `A126/A131` bridge와 일반도로 reviewed-boundary refinement
 - grid 0.2 m, `3085×7232`, 값 `0/100`, published boundary ID의 marking 참조 무결성
 - checkpoint 16개, 반경 3 m, route 2184.611723336 m

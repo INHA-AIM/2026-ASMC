@@ -1,8 +1,8 @@
 schema_version: asmc.hd_map.candidate_review_config/v1
-review_id: kcity2025_final_legacy_won_tae_comparison_20260921
+review_id: kcity2025_hd_map_source_comparison_20260922
 
-# Development-only, source-separated visualization. None of these three
-# geometry sets is merged or written by the visualization node.
+# Development-only, source-separated visualization. None of these lane or
+# drivable-area geometry sets is merged or written by the visualization node.
 sources:
   nominal_map: src/asmc_hd_map/reports/kcity2025_current_corridor_20260916/nominal_candidate_map.json
   observed_map: src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/observed_candidate_map.json
@@ -14,6 +14,7 @@ sources:
   legacy_adopted_map: src/asmc_hd_map/reports/kcity2025_hybrid_completion_20260916/hybrid_candidate_map.json
   won_tae_h5: src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5
   curated_candidate_map: src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json
+  compact_drivable_grid: src/asmc_hd_map/config/kcity2025_compact_drivable_grid.npz
   competition_route: R_KR_PG_KATRI/2026_molit_comp_global_path.txt
 
 comparison:
@@ -34,6 +35,12 @@ source_roles:
   won_tae_h5:
     description: immutable vector observations stored in Won-tae's H5 bake
     vector_only: true
+  latest_drivable:
+    description: reviewed compact competition drivable grid derived from the vector product
+    build_id: kcity2025_roundabout_extended_drivable_v5
+  legacy_h5_bake:
+    description: uncut Won-tae H5 road bake retained only as a visual reference
+    comparison_only: true
 
 regions: {}
 visualization: {width_px: 1600, height_px: 1000, padding_px: 35}

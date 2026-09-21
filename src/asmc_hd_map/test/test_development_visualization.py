@@ -12,7 +12,7 @@ class DevelopmentVisualizationContractTest(unittest.TestCase):
     def setUpClass(cls):
         cls.repo_root = Path(__file__).resolve().parents[3]
         cls.package_root = cls.repo_root / "src/asmc_hd_map"
-        cls.config_path = cls.package_root / "config/kcity2025_lane_source_comparison.yaml"
+        cls.config_path = cls.package_root / "config/kcity2025_hd_map_source_comparison.yaml"
         cls.config = yaml.safe_load(cls.config_path.read_text(encoding="utf-8"))
         cls.layers = load_review_layers(cls.config_path, cls.repo_root)
 
@@ -22,6 +22,16 @@ class DevelopmentVisualizationContractTest(unittest.TestCase):
         self.assertTrue(comparison["source_merging_forbidden"])
         self.assertTrue(comparison["runtime_publication_forbidden"])
         self.assertEqual(comparison["primary_source"], "final_curated")
+
+    def test_latest_and_legacy_drivable_sources_are_explicit(self):
+        latest = self.layers["source_paths"]["compact_drivable_grid"]
+        self.assertEqual(
+            latest.relative_to(self.package_root).as_posix(),
+            "config/kcity2025_compact_drivable_grid.npz",
+        )
+        roles = self.config["source_roles"]
+        self.assertTrue(roles["legacy_h5_bake"]["comparison_only"])
+        self.assertIn("build_id", roles["latest_drivable"])
 
     def test_final_reviewed_marking_counts_are_frozen(self):
         path = self.layers["source_paths"]["curated_candidate_map"]
@@ -48,16 +58,25 @@ class DevelopmentVisualizationContractTest(unittest.TestCase):
         self.assertTrue(self.config["comparison"]["legacy_current_corridor_only"])
 
     def test_launch_and_rviz_use_development_only_topics(self):
-        launch = (self.package_root / "launch/lane_source_comparison.launch").read_text(
+        launch = (self.package_root / "launch/hd_map_source_comparison.launch").read_text(
             encoding="utf-8"
         )
         self.assertIn('<param name="comparison_primary" value="curated"/>', launch)
+        self.assertIn('<param name="compare_drivable_sources" value="true"/>', launch)
         self.assertIn('<param name="topic_root" value="/asmc_hd_map/development"/>', launch)
-        rviz = (self.package_root / "rviz/lane_source_comparison.rviz").read_text(
+        rviz = (self.package_root / "rviz/hd_map_source_comparison.rviz").read_text(
             encoding="utf-8"
         )
         for suffix in ("final_curated", "legacy_origin_aligned", "won_tae_h5"):
-            self.assertIn("/asmc_hd_map/development/lane_sources/" + suffix, rviz)
+            self.assertIn("/asmc_hd_map/development/hd_map_sources/lanes/" + suffix, rviz)
+        for suffix in ("latest", "legacy_h5_bake"):
+            self.assertIn("/asmc_hd_map/development/hd_map_sources/drivable/" + suffix, rviz)
+        self.assertIn('Name: "1 Latest compact drivable"', rviz)
+        self.assertIn('Name: "2 Legacy H5 road bake"', rviz)
+
+    def test_old_lane_only_entrypoint_was_replaced(self):
+        self.assertFalse((self.package_root / "launch/lane_source_comparison.launch").exists())
+        self.assertFalse((self.package_root / "rviz/lane_source_comparison.rviz").exists())
 
 
 if __name__ == "__main__":

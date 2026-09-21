@@ -30,8 +30,8 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
         self.assertEqual(self.artifact["reviewed_geometry_sha256"],
                          "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf")
         self.assertEqual(stats["route_lane_count"], 39)
-        self.assertEqual(stats["selected_lane_count"], 69)
-        self.assertEqual(stats["drivable_area_count"], 97)
+        self.assertEqual(stats["selected_lane_count"], 70)
+        self.assertEqual(stats["drivable_area_count"], 102)
         self.assertEqual(stats["checkpoint_centers_inside"], 16)
         self.assertLess(stats["compact_fraction_of_legacy"], 0.20)
         self.assertEqual(self.artifact["grid"]["resolution_m"], 0.2)
@@ -48,7 +48,12 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
         self.assertEqual(stats["boundary_refined_lane_count"], 41)
         self.assertEqual(stats["boundary_refined_side_count"], 74)
         self.assertEqual(stats["corridor_fill_area_count"], 18)
-        self.assertEqual(stats["intersection_surface_patch_count"], 10)
+        self.assertEqual(stats["intersection_surface_patch_count"], 14)
+        self.assertEqual(
+            self.artifact["selection"]["intersection_groups"]["roundabout_maneuver"],
+            ["A2256W000134"],
+        )
+        self.assertIn("A2256W000134", self.artifact["selection"]["selected_lane_link_ids"])
 
     def test_intersections_are_exactly_route_plus_explicit_allowlist(self):
         selection = self.artifact["selection"]
@@ -63,7 +68,7 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
             if lane["lane_type"] == "intersection"
         }
         self.assertEqual(intersection_lanes - route, explicit - route)
-        self.assertEqual(len(selection["intersection_support_link_ids"]), 21)
+        self.assertEqual(len(selection["intersection_support_link_ids"]), 22)
         closure = selection["intersection_node_pair_closures"]["dynamic_obstacle_maneuver"]
         self.assertEqual(
             closure["derived_link_ids"],
@@ -105,6 +110,49 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
         shadow = next(value for value in pairs if value["id"] == "gps_shadow_A126_A131")
         self.assertEqual(shadow["link_ids"], ["A2256W000126", "A2256W000131"])
         self.assertEqual(shadow["source"], "explicit_reviewed_pair")
+
+    def test_roundabout_a134_a151_surface_is_connected_and_center_island_is_preserved(self):
+        areas = [
+            area for area in self.artifact["drivable_areas"]
+            if area.get("surface_group") == "roundabout_maneuver"
+        ]
+        patches = [area for area in areas if area["id"].startswith("drivable:surface:")]
+        self.assertEqual(len(patches), 4)
+        self.assertGreater(sum(area["surface_area_m2"] for area in patches), 55.0)
+        self.assertTrue(all(area["surface_preserves_holes"] for area in patches))
+        self.assertTrue(all(area["surface_envelope_buffer_m"] == 2.0 for area in patches))
+        self.assertTrue(all(
+            area["surface_supplemental_link_ids"] == ["A2256W000151"]
+            for area in patches
+        ))
+        self.assertTrue(all(area["validity"] == "validated" for area in areas))
+
+        polygons = [np.asarray(area["polygon"], dtype=np.float64)[:, :2] for area in areas]
+        points = np.vstack(polygons)
+        resolution = float(self.artifact["grid"]["resolution_m"])
+        origin = points.min(axis=0) - 1.0
+        extent = points.max(axis=0) - origin + 1.0
+        shape = tuple(np.ceil(extent[::-1] / resolution).astype(int))
+        mask = np.zeros(shape, dtype=np.uint8)
+        for polygon in polygons:
+            pixels = np.rint((polygon - origin[None, :]) / resolution).astype(np.int32)
+            cv2.fillPoly(mask, [pixels.reshape((-1, 1, 2))], 1, cv2.LINE_8)
+        component_count, _ = cv2.connectedComponents(mask, connectivity=8)
+        self.assertEqual(component_count - 1, 1)
+
+        grid = self.arrays["occupancy"]
+        grid_origin = np.asarray([
+            self.artifact["grid"]["origin_x"], self.artifact["grid"]["origin_y"]
+        ])
+
+        def occupancy(x, y):
+            pixel = np.rint((np.asarray([x, y]) - grid_origin) / resolution).astype(int)
+            return int(grid[pixel[1], pixel[0]])
+
+        self.assertEqual(occupancy(-102.0, 340.0), 100)
+        self.assertEqual(occupancy(-102.97, 325.54), 0)
+        self.assertEqual(occupancy(-114.11, 330.54), 0)
+        self.assertEqual(occupancy(-89.43, 330.98), 0)
 
     def test_obstacle_surfaces_are_connected_and_have_no_internal_holes(self):
         for group in ("static_obstacle_maneuver", "dynamic_obstacle_maneuver"):

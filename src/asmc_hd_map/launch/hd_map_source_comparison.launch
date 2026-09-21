@@ -1,6 +1,6 @@
 <launch>
-  <!-- Development only: final team markings, old-map markings, and Won-tae H5
-       vectors stay on three independent topics and are never merged. -->
+  <!-- Development only: three lane sources and two drivable-area sources stay
+       on independent topics and are never merged by this node. -->
   <arg name="rviz" default="true"/>
   <arg name="pose_source" default="gps_imu"/>
   <arg name="ego_topic" default="/Ego_topic"/>
@@ -9,15 +9,18 @@
   <arg name="repo_root" default=""/>
   <arg name="local_radius_m" default="80.0"/>
   <arg name="max_publish_hz" default="5.0"/>
+  <arg name="drivable_resolution_m" default="0.20"/>
+  <arg name="drivable_max_publish_hz" default="1.0"/>
 
   <node pkg="asmc_hd_map" type="candidate_map_overlay_node.py"
-        name="lane_source_comparison" output="screen" required="true">
+        name="hd_map_source_comparison" output="screen" required="true">
     <param name="comparison_mode" value="true"/>
     <param name="comparison_primary" value="curated"/>
+    <param name="compare_drivable_sources" value="true"/>
     <param name="topic_root" value="/asmc_hd_map/development"/>
     <param name="repo_root" value="$(arg repo_root)"/>
     <param name="config_path"
-           value="$(find asmc_hd_map)/config/kcity2025_lane_source_comparison.yaml"/>
+           value="$(find asmc_hd_map)/config/kcity2025_hd_map_source_comparison.yaml"/>
     <param name="ego_topic" value="$(arg ego_topic)"/>
     <param name="gps_topic" value="$(arg gps_topic)"/>
     <param name="imu_topic" value="$(arg imu_topic)"/>
@@ -28,9 +31,11 @@
     <param name="maximum_gps_imu_gap_ms" value="100.0"/>
     <param name="local_radius_m" value="$(arg local_radius_m)"/>
     <param name="max_publish_hz" value="$(arg max_publish_hz)"/>
+    <param name="drivable_resolution_m" value="$(arg drivable_resolution_m)"/>
+    <param name="drivable_max_publish_hz" value="$(arg drivable_max_publish_hz)"/>
     <param name="pose_distance_warning_m" value="20.0"/>
   </node>
 
-  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="lane_source_comparison_rviz"
-        args="-d $(find asmc_hd_map)/rviz/lane_source_comparison.rviz"/>
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="hd_map_source_comparison_rviz"
+        args="-d $(find asmc_hd_map)/rviz/hd_map_source_comparison.rviz"/>
 </launch>

@@ -14,24 +14,42 @@ Visualization Manager:
       Name: Metric grid
       Plane: XY
       Reference Frame: base_link
+    - Alpha: 0.30
+      Class: rviz/Map
+      Color Scheme: map
+      Draw Behind: true
+      Enabled: true
+      Name: "1 Latest compact drivable"
+      Topic: /asmc_hd_map/development/hd_map_sources/drivable/latest
+      Unreliable: false
+      Use Timestamp: false
+    - Alpha: 0.30
+      Class: rviz/Map
+      Color Scheme: map
+      Draw Behind: true
+      Enabled: false
+      Name: "2 Legacy H5 road bake"
+      Topic: /asmc_hd_map/development/hd_map_sources/drivable/legacy_h5_bake
+      Unreliable: false
+      Use Timestamp: false
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /asmc_hd_map/development/lane_sources/final_curated
-      Name: "1 Final reviewed lanes"
+      Marker Topic: /asmc_hd_map/development/hd_map_sources/lanes/final_curated
+      Name: "3 Final reviewed lanes"
       Queue Size: 2
     - Class: rviz/MarkerArray
       Enabled: false
-      Marker Topic: /asmc_hd_map/development/lane_sources/legacy_origin_aligned
-      Name: "2 Legacy origin-aligned lanes"
+      Marker Topic: /asmc_hd_map/development/hd_map_sources/lanes/legacy_origin_aligned
+      Name: "4 Legacy origin-aligned lanes"
       Queue Size: 2
     - Class: rviz/MarkerArray
       Enabled: false
-      Marker Topic: /asmc_hd_map/development/lane_sources/won_tae_h5
-      Name: "3 Won-tae H5 vectors"
+      Marker Topic: /asmc_hd_map/development/hd_map_sources/lanes/won_tae_h5
+      Name: "5 Won-tae H5 vectors"
       Queue Size: 2
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /asmc_hd_map/development/lane_sources/ego_context
+      Marker Topic: /asmc_hd_map/development/hd_map_sources/ego_context
       Name: Ego footprint
       Queue Size: 2
   Enabled: true
