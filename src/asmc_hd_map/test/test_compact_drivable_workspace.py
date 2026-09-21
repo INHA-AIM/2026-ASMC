@@ -31,7 +31,7 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
                          "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf")
         self.assertEqual(stats["route_lane_count"], 39)
         self.assertEqual(stats["selected_lane_count"], 70)
-        self.assertEqual(stats["drivable_area_count"], 101)
+        self.assertEqual(stats["drivable_area_count"], 102)
         self.assertEqual(stats["checkpoint_centers_inside"], 16)
         self.assertLess(stats["compact_fraction_of_legacy"], 0.20)
         self.assertEqual(self.artifact["grid"]["resolution_m"], 0.2)
@@ -48,7 +48,7 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
         self.assertEqual(stats["boundary_refined_lane_count"], 41)
         self.assertEqual(stats["boundary_refined_side_count"], 74)
         self.assertEqual(stats["corridor_fill_area_count"], 18)
-        self.assertEqual(stats["intersection_surface_patch_count"], 13)
+        self.assertEqual(stats["intersection_surface_patch_count"], 14)
         self.assertEqual(
             self.artifact["selection"]["intersection_groups"]["roundabout_maneuver"],
             ["A2256W000134"],
@@ -111,16 +111,21 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
         self.assertEqual(shadow["link_ids"], ["A2256W000126", "A2256W000131"])
         self.assertEqual(shadow["source"], "explicit_reviewed_pair")
 
-    def test_roundabout_a134_surface_is_connected_and_center_island_is_preserved(self):
+    def test_roundabout_a134_a151_surface_is_connected_and_center_island_is_preserved(self):
         areas = [
             area for area in self.artifact["drivable_areas"]
             if area.get("surface_group") == "roundabout_maneuver"
         ]
         patches = [area for area in areas if area["id"].startswith("drivable:surface:")]
-        self.assertEqual(len(patches), 3)
-        self.assertGreater(sum(area["surface_area_m2"] for area in patches), 35.0)
+        self.assertEqual(len(patches), 4)
+        self.assertGreater(sum(area["surface_area_m2"] for area in patches), 55.0)
         self.assertTrue(all(area["surface_preserves_holes"] for area in patches))
         self.assertTrue(all(area["surface_envelope_buffer_m"] == 2.0 for area in patches))
+        self.assertTrue(all(
+            area["surface_supplemental_link_ids"] == ["A2256W000151"]
+            for area in patches
+        ))
+        self.assertTrue(all(area["validity"] == "validated" for area in areas))
 
         polygons = [np.asarray(area["polygon"], dtype=np.float64)[:, :2] for area in areas]
         points = np.vstack(polygons)

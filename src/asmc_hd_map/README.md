@@ -30,7 +30,7 @@ map frame·global ID를 유지하며
 `/Ego_topic`은 `frame_id=base_link`, `position=(0,0)`으로 들어오므로 map XY로 쓰지 않는다.
 센서의 `eastOffset/northOffset`이 맵 원점과 1 m 넘게 다르면 local crop 발행을 거부한다.
 
-판제의 권장 방식은 70개 Lane, 101개 DrivableArea, 128개 LaneMarking과 15개 MissionZone을
+판제의 권장 방식은 70개 Lane, 102개 DrivableArea, 128개 LaneMarking과 15개 MissionZone을
 latched global 토픽에서 시작 시 한 번 받고, `map` 좌표의 Ego 위치로 자체 공간 조회하는
 것이다. local lane/grid는 선택적 lookup·시각화 캐시이며 planner horizon이나 별도의 정본이
 아니다. 따라서 local 120 m 정사각형이 곡선 경로 전후방과 정확히 맞지 않아도 global 기반
@@ -38,11 +38,11 @@ latched global 토픽에서 시작 시 한 번 받고, `map` 좌표의 Ego 위�
 link 또는 route station을 global metadata와 대조한다. 자세한 소비 우선순위와 의도적으로 빈
 필드는 [runtime contract](../../docs/contracts/hd-map-runtime-visualization-v1.md)를 따른다.
 
-최종 차선·구 맵 origin 정합 차선·원태 H5 vector를 각각 켜서 비교하는 개발 화면은 다음과
-같다. 세 레이어는 서로 다른 토픽이며 자동 혼합되지 않는다.
+최종 차선·구 맵 origin 정합 차선·원태 H5 vector와 최신/구 주행가능영역을 각각 켜서
+비교하는 개발 화면은 다음과 같다. 다섯 레이어는 서로 다른 토픽이며 자동 혼합되지 않는다.
 
 ```bash
-roslaunch asmc_hd_map lane_source_comparison.launch repo_root:=/root/ws
+roslaunch asmc_hd_map hd_map_source_comparison.launch repo_root:=/root/ws
 ```
 
 이 비교 launch도 기본적으로 `/gps`+`/imu`를 사용한다. `pose_source:=ego_status`는
@@ -51,12 +51,15 @@ competition corridor에서 20 m 넘게 벗어난 좌표는 잘못된 origin 진�
 
 | 개발 레이어 | 토픽 |
 |---|---|
-| 최종 검토 차선 121개와 정지선 7개 | `/asmc_hd_map/development/lane_sources/final_curated` |
-| 구 맵 origin 정합 corridor 차선 | `/asmc_hd_map/development/lane_sources/legacy_origin_aligned` |
-| 원태 H5에 저장된 원본 vector | `/asmc_hd_map/development/lane_sources/won_tae_h5` |
+| 최종 검토 차선 121개와 정지선 7개 | `/asmc_hd_map/development/hd_map_sources/lanes/final_curated` |
+| 구 맵 origin 정합 corridor 차선 | `/asmc_hd_map/development/hd_map_sources/lanes/legacy_origin_aligned` |
+| 원태 H5에 저장된 원본 vector | `/asmc_hd_map/development/hd_map_sources/lanes/won_tae_h5` |
+| 최신 compact 주행가능영역 | `/asmc_hd_map/development/hd_map_sources/drivable/latest` |
+| 자르기 전 구 H5 road bake | `/asmc_hd_map/development/hd_map_sources/drivable/legacy_h5_bake` |
 
-RViz에서는 기본적으로 최종 차선만 켜며, Displays에서 나머지 두 레이어를 독립적으로
-활성화할 수 있다. 이 launch는 개발 전용이며 판제 배포 launch에 포함하지 않는다.
+RViz에서는 최종 차선과 최신 compact 영역만 기본으로 켠다. Displays에서 구 차선 두 종류와
+구 H5 bake를 독립적으로 켜고 끌 수 있다. 이 launch는 개발 전용이며 판제 배포 launch에
+포함하지 않는다.
 
 주최측 제공 대회 전역경로
 `R_KR_PG_KATRI/2026_molit_comp_global_path.txt`를 주행 corridor와 누적 거리 `s`의 기준으로
@@ -89,10 +92,10 @@ asmc_hd_map/
 ├── launch/
 │   ├── competition_map.launch             판제용 운영 진입점
 │   ├── competition_map_debug.launch       통합 RViz 검수
-│   └── lane_source_comparison.launch      3종 원천 개발 비교
+│   └── hd_map_source_comparison.launch    차선 3종·주행가능영역 2종 개발 비교
 ├── rviz/
 │   ├── competition_map_debug.rviz
-│   └── lane_source_comparison.rviz
+│   └── hd_map_source_comparison.rviz
 ├── scripts/                   결정적 builder, publisher, verifier
 ├── src/asmc_hd_map/           ROS 비의존 geometry·metadata core
 ├── reports/                   동결 산출물과 정량 audit
@@ -605,15 +608,15 @@ rosrun asmc_hd_map verify_local_map_topics.py
 
 기존 토픽에 `/hd_map/global/lanes`, `/hd_map/global/drivable_areas`,
 `/hd_map/global/drivable_grid`가 추가된다. P2-B build는 `operational=true`, `complete=true`이며
-70개 Lane과 101개 vector area를 발행한다. RViz의 Map display는 0.2 m derived grid를,
+70개 Lane과 102개 vector area를 발행한다. RViz의 Map display는 0.2 m derived grid를,
 cyan outline/centerline은 Lane geometry를 표시한다. 정적 장애물 allowlist는 주황색, 동적은
 자홍색, 일반 우회전은 연두색, A134 로터리 확장은 밝은 파란색 outline으로 구분한다. 동적 장애물 교차로는 검토 anchor 4개의
 directed start/end node-pair closure로 내부 link 4개를 더해 총 8개를 사용하고, 빠져나가는
 차로인 A179는 제외한다. 모든 link polygon은 노드 법선에서 flat cap으로 끝난다. 음영구간은
 A126 옆 반대방향 A131만 명시적으로 포함한다. reviewed 경계 보정 41개 Lane, 인접 차로 fill
-18개와 H5-검증 surface patch 13개가 Lane 사이 및 교차로 내부의 빈틈을 채운다. 추가된
-A134 로터리 영역은 2 m 확장 envelope 안에서 자르기 전 H5 포장면을 복원하되 중앙 섬은
-비주행으로 유지한다.
+18개와 H5-검증 surface patch 14개가 Lane 사이 및 교차로 내부의 빈틈을 채운다. 추가된
+A134 로터리 영역은 2 m 확장 envelope와 A151 접속부 안에서 자르기 전 H5 포장면을
+복원하되 중앙 섬은 비주행으로 유지한다.
 
 운영 launch는 ego pose 기반 `/hd_map/local/lanes`, `/hd_map/local/drivable_grid`,
 `/hd_map/local/current_lane`도 기본으로
@@ -661,7 +664,7 @@ PYTHONPATH=src/asmc_hd_map/src \
 보정으로 만든 5 px/m raster다. 이 감사의 guard/candidate 분류는 P2-B v1의 H5 hybrid 후보를
 검토하기 위한 기록으로 보존한다. P2-B v5는 반경 확장의 경계가 불명확하다는 주행 검수를
 반영해 reviewed route와 명시 link를 우선한다. H5는 선택된 장애물 교차로 envelope와
-A134 로터리의 2 m 확장 envelope 안에서만 surface 경계로 사용한다. P2-A 동안
+A134 로터리의 2 m 확장 envelope와 A151 접속부 안에서만 surface 경계로 사용한다. P2-A 동안
 stage14 geometry hash와 `/hd_map/*` publisher 동작은 바뀌지 않았다.
 
 ## P2-B route-compact 주행가능영역
@@ -670,7 +673,8 @@ stage14 geometry hash와 `/hd_map/*` publisher 동작은 바뀌지 않았다.
 차로, explicit 장애물 회피 link, A134 로터리와 음영구간 반대차로 A131만 선택한다. 일반도로는 reviewed
 차선의 국소 횡거리로 경계를 보정하고, 선택된 인접 차로 사이를 vector corridor로 채운다.
 정적·동적 교차로와 A134 로터리만 검토된 link envelope 내부에서 H5 road와 결합한다.
-A134는 중앙 섬을 유지하며, 그 밖의 일반 교차로는 전역경로 link 외 노면을 추가하지 않는다.
+A134는 중앙 섬을 유지하고 A151 접속부까지 작은 seam만 보완하며, 그 밖의 일반 교차로는
+전역경로 link 외 노면을 추가하지 않는다.
 
 ```bash
 PYTHONPATH=src/asmc_hd_map/src \
@@ -691,8 +695,9 @@ rosrun asmc_hd_map verify_competition_map_topics.py
 교차로 support link는 명시된 미션 공간이며 policy 밖 전역경로 이탈 허가를 뜻하지 않는다.
 동적 장애물 교차로의 node-pair closure는 지정 anchor들의 시작 노드 집합에서 끝 노드 집합으로
 향하는 교차로 link만 채택하므로 접근로·반대 방향·인접 도로를 추가하지 않는다.
-`DrivableAreaArray`에는 70개 Lane 면 외에 18개 인접차로 fill과 13개 H5 surface patch가
-별도 provenance로 포함된다. 따라서 판제는 개별 Lane뿐 아니라 이 전체 vector union을
-주행가능영역으로 사용해야 한다.
+`DrivableAreaArray`에는 70개 Lane 면 외에 18개 인접차로 fill과 14개 H5 surface patch가
+별도 provenance로 포함된다. provenance는 검수 추적용이며 비용·통행등급이 아니다. 따라서
+판제는 출처별로 차등 처리하지 않고 이 전체 validated vector union을 주행가능영역으로
+사용해야 한다.
 물리 paint gap은 계속 `LaneMarking`에 남지만 연속 주행영역은 Lane
 polygon/grid로 전달되므로 노드 주변의 짧은 도색 공백 때문에 주행가능영역이 끊기지 않는다.

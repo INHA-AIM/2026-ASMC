@@ -12,6 +12,7 @@ import time
 
 from geometry_msgs.msg import Point
 from morai_msgs.msg import EgoVehicleStatus, GPSMessage
+from nav_msgs.msg import OccupancyGrid
 import numpy as np
 import rospy
 from sensor_msgs.msg import Imu
@@ -128,6 +129,71 @@ def _won_tae_h5_vectors(path: Path):
     return lanes, stoplines
 
 
+def _npz_drivable_grid(path: Path):
+    with np.load(str(path), allow_pickle=False) as archive:
+        occupancy = np.asarray(archive["occupancy"], dtype=np.int8)
+        resolution = float(np.asarray(archive["resolution_m"]).reshape(-1)[0])
+        origin = np.asarray(archive["origin_xy"], dtype=np.float64).reshape(-1)[:2]
+    return _validated_drivable_grid(occupancy, resolution, origin, "latest compact map")
+
+
+def _won_tae_h5_drivable_grid(path: Path):
+    try:
+        import h5py
+    except ImportError as error:
+        raise RuntimeError("HD-map source comparison requires h5py") from error
+    with h5py.File(str(path), "r") as handle:
+        road = np.asarray(handle["road"], dtype=np.uint8)
+        occupancy = np.where(road > 0, 0, 100).astype(np.int8)
+        resolution = 1.0 / float(handle.attrs["pixels_per_meter"])
+        origin = np.asarray(
+            handle.attrs["world_offset_in_meters"], dtype=np.float64,
+        ).reshape(-1)[:2]
+    return _validated_drivable_grid(occupancy, resolution, origin, "legacy H5 bake")
+
+
+def _validated_drivable_grid(occupancy, resolution: float, origin, label: str):
+    values = np.asarray(occupancy, dtype=np.int8)
+    origin_xy = np.asarray(origin, dtype=np.float64)
+    if values.ndim != 2 or not values.size:
+        raise ValueError("%s occupancy must be a non-empty 2-D array" % label)
+    if resolution <= 0.0 or origin_xy.shape != (2,) or not np.isfinite(origin_xy).all():
+        raise ValueError("%s raster metadata is invalid" % label)
+    if not set(np.unique(values)).issubset({-1, 0, 100}):
+        raise ValueError("%s occupancy must use -1/0/100" % label)
+    return {
+        "occupancy": np.ascontiguousarray(values),
+        "resolution_m": float(resolution),
+        "origin_xy": origin_xy,
+        "label": label,
+    }
+
+
+def _local_drivable_grid(source, pose, radius_m: float, resolution_m: float) -> np.ndarray:
+    """Sample a map raster into an Ego-centered base_link OccupancyGrid."""
+
+    size = int(math.ceil(2.0 * float(radius_m) / float(resolution_m)))
+    extent = size * float(resolution_m)
+    coordinates = -0.5 * extent + (np.arange(size, dtype=np.float64) + 0.5) * resolution_m
+    local_x, local_y = np.meshgrid(coordinates, coordinates)
+    heading = math.radians(float(pose[2]))
+    cosine, sine = math.cos(heading), math.sin(heading)
+    map_x = float(pose[0]) + cosine * local_x - sine * local_y
+    map_y = float(pose[1]) + sine * local_x + cosine * local_y
+    source_resolution = float(source["resolution_m"])
+    source_origin = source["origin_xy"]
+    pixel_x = np.rint((map_x - source_origin[0]) / source_resolution).astype(np.int64)
+    pixel_y = np.rint((map_y - source_origin[1]) / source_resolution).astype(np.int64)
+    occupancy = source["occupancy"]
+    inside = (
+        (pixel_x >= 0) & (pixel_x < occupancy.shape[1])
+        & (pixel_y >= 0) & (pixel_y < occupancy.shape[0])
+    )
+    local = np.full((size, size), -1, dtype=np.int8)
+    local[inside] = occupancy[pixel_y[inside], pixel_x[inside]]
+    return local
+
+
 class CandidateMapOverlayNode:
     def __init__(self) -> None:
         config_path = Path(rospy.get_param("~config_path")).resolve()
@@ -143,6 +209,9 @@ class CandidateMapOverlayNode:
                 raise ValueError("repository root was not found; set ~repo_root")
         review = load_review_layers(config_path, repo_root)
         self.comparison_mode = bool(rospy.get_param("~comparison_mode", False))
+        self.compare_drivable_sources = bool(
+            rospy.get_param("~compare_drivable_sources", False)
+        )
         self.curation_only = bool(rospy.get_param("~curation_only", False))
         self.topic_root = "/" + str(
             rospy.get_param("~topic_root", "/asmc_hd_map")
@@ -249,6 +318,26 @@ class CandidateMapOverlayNode:
             h5_path = review["source_paths"].get("won_tae_h5")
             if h5_path is None:
                 raise ValueError("comparison config requires sources.won_tae_h5")
+            if self.compare_drivable_sources:
+                compact_grid_path = review["source_paths"].get("compact_drivable_grid")
+                if compact_grid_path is None:
+                    raise ValueError(
+                        "drivable source comparison requires sources.compact_drivable_grid"
+                    )
+                self.compare_latest_drivable = _npz_drivable_grid(compact_grid_path)
+                self.compare_legacy_drivable = _won_tae_h5_drivable_grid(h5_path)
+                self.drivable_resolution_m = float(
+                    rospy.get_param("~drivable_resolution_m", 0.20)
+                )
+                self.drivable_max_hz = float(
+                    rospy.get_param("~drivable_max_publish_hz", 1.0)
+                )
+                if self.drivable_resolution_m <= 0.0 or self.drivable_max_hz <= 0.0:
+                    raise ValueError(
+                        "drivable_resolution_m and drivable_max_publish_hz must be positive"
+                    )
+                self.drivable_minimum_period = 1.0 / self.drivable_max_hz
+                self.drivable_last_publish = 0.0
             won_tae_lanes, won_tae_stoplines = _won_tae_h5_vectors(h5_path)
             self.compare_won_tae = {
                 (color, "solid"): _as_layer([
@@ -329,11 +418,20 @@ class CandidateMapOverlayNode:
         elif self.comparison_mode:
             if self.comparison_primary == "curated":
                 topic_names = {
-                    "compare_primary": self.topic_root + "/lane_sources/final_curated",
-                    "compare_won_tae": self.topic_root + "/lane_sources/won_tae_h5",
-                    "compare_legacy": self.topic_root + "/lane_sources/legacy_origin_aligned",
-                    "ego": self.topic_root + "/lane_sources/ego_context",
+                    "compare_primary": self.topic_root + "/hd_map_sources/lanes/final_curated",
+                    "compare_won_tae": self.topic_root + "/hd_map_sources/lanes/won_tae_h5",
+                    "compare_legacy": self.topic_root + "/hd_map_sources/lanes/legacy_origin_aligned",
+                    "ego": self.topic_root + "/hd_map_sources/ego_context",
                 }
+                if self.compare_drivable_sources:
+                    topic_names.update({
+                        "compare_latest_drivable": (
+                            self.topic_root + "/hd_map_sources/drivable/latest"
+                        ),
+                        "compare_legacy_drivable": (
+                            self.topic_root + "/hd_map_sources/drivable/legacy_h5_bake"
+                        ),
+                    })
             else:
                 topic_names = {
                     "compare_primary": self.topic_root + "/compare/preplan_hybrid",
@@ -341,10 +439,16 @@ class CandidateMapOverlayNode:
                     "compare_legacy": self.topic_root + "/compare/legacy_origin_aligned",
                     "ego": self.topic_root + "/compare/ego_context",
                 }
-        self.publishers = {
-            key: rospy.Publisher(topic, MarkerArray, queue_size=1, latch=False)
-            for key, topic in topic_names.items()
-        }
+        self.publishers = {}
+        for key, topic in topic_names.items():
+            message_type = (
+                OccupancyGrid if key in {
+                    "compare_latest_drivable", "compare_legacy_drivable"
+                } else MarkerArray
+            )
+            self.publishers[key] = rospy.Publisher(
+                topic, message_type, queue_size=1, latch=False,
+            )
         self.subscribers = []
         if self.pose_source == "gps_imu":
             try:
@@ -414,12 +518,13 @@ class CandidateMapOverlayNode:
             )
         elif self.comparison_mode and self.comparison_primary == "curated":
             rospy.loginfo(
-                "lane source comparison ready pose_source=%s radius=%.1fm rate<=%.1fHz "
-                "final_markings=%d final_stoplines=%d legacy_refs=%d",
+                "HD-map source comparison ready pose_source=%s radius=%.1fm rate<=%.1fHz "
+                "final_markings=%d final_stoplines=%d legacy_refs=%d drivable=%s",
                 self.pose_source, self.radius_m, self.max_hz,
                 self.curated_feature_count,
                 len(self.curated_stoplines),
                 len(review["legacy_references"]),
+                "latest+legacy_h5" if self.compare_drivable_sources else "disabled",
             )
         else:
             rospy.loginfo(
@@ -639,6 +744,33 @@ class CandidateMapOverlayNode:
         ))
         publisher.publish(MarkerArray(markers=markers))
 
+    def _publish_drivable_comparison(self, pose, stamp) -> None:
+        if "compare_latest_drivable" not in self.publishers:
+            return
+        now = time.monotonic()
+        if now - self.drivable_last_publish < self.drivable_minimum_period:
+            return
+        for key, source in (
+            ("compare_latest_drivable", self.compare_latest_drivable),
+            ("compare_legacy_drivable", self.compare_legacy_drivable),
+        ):
+            local = _local_drivable_grid(
+                source, pose, self.radius_m, self.drivable_resolution_m,
+            )
+            message = OccupancyGrid()
+            message.header.frame_id = "base_link"
+            message.header.stamp = stamp
+            message.info.resolution = self.drivable_resolution_m
+            message.info.width = int(local.shape[1])
+            message.info.height = int(local.shape[0])
+            extent = message.info.width * message.info.resolution
+            message.info.origin.position.x = -0.5 * extent
+            message.info.origin.position.y = -0.5 * extent
+            message.info.origin.orientation.w = 1.0
+            message.data = local.reshape(-1).tolist()
+            self.publishers[key].publish(message)
+        self.drivable_last_publish = now
+
     def _publish_three_source_comparison(self, pose, stamp) -> None:
         primary_layers = (
             self.curated if self.comparison_primary == "curated" else self.compare_preplan
@@ -664,6 +796,7 @@ class CandidateMapOverlayNode:
             "compare_legacy", self.compare_legacy, self.compare_legacy_stoplines,
             pose, stamp, "legacy_origin_aligned", (0.95, 0.15, 0.9, 0.9),
         )
+        self._publish_drivable_comparison(pose, stamp)
         self._publish_ego(stamp)
 
     def _publish_curated_candidate(self, pose, stamp) -> None:

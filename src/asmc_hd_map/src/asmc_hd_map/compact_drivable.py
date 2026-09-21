@@ -479,9 +479,24 @@ def legacy_intersection_surface_patches(
         preserve_holes = bool(raw_policy.get("preserve_holes", False))
         if envelope_buffer_m < 0.0:
             raise CompactDrivableError("surface envelope buffer must be non-negative")
-        selected = [lane for lane in lanes if lane.get("drivable_group") == str(group)]
+        supplemental_link_ids = {
+            str(value) for value in raw_policy.get("supplemental_link_ids", [])
+        }
+        selected = [
+            lane for lane in lanes
+            if lane.get("drivable_group") == str(group)
+            or lane.get("link_id") in supplemental_link_ids
+        ]
         if not selected:
             raise CompactDrivableError("surface group has no lanes: %s" % group)
+        missing_supplemental = supplemental_link_ids.difference(
+            str(lane.get("link_id")) for lane in selected
+        )
+        if missing_supplemental:
+            raise CompactDrivableError(
+                "surface supplemental links are not selected lanes: %s"
+                % sorted(missing_supplemental)
+            )
         lane_geometry = {
             lane["link_id"]: Polygon([point[:2] for point in lane["polygon"]]).buffer(0)
             for lane in selected
@@ -547,6 +562,7 @@ def legacy_intersection_surface_patches(
                             "surface_area_m2": round(float(final_piece.area), 4),
                             "surface_envelope_buffer_m": envelope_buffer_m,
                             "surface_preserves_holes": preserve_holes,
+                            "surface_supplemental_link_ids": sorted(supplemental_link_ids),
                         })
     return output
 
@@ -923,7 +939,7 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
             "Ordinary-road polygons locally follow reviewed paint where its signed lateral support is valid.",
             "Selected adjacent lane pairs are joined by canonical vector corridor-fill areas.",
             "Legacy H5 contributes only gap patches inside explicitly reviewed envelopes.",
-            "A134 roundabout pavement uses the legacy H5 only inside a 2.0 m padded link envelope and preserves the center island.",
+            "A134 roundabout pavement uses the legacy H5 only inside its 2.0 m padded envelope plus the selected A151 stitch envelope, and preserves the center island.",
             "A131 is available only as the explicitly reviewed opposite lane beside shadow-zone A126.",
             "Explicit obstacle-intersection links describe maneuverable space, not permission to leave mission policy.",
         ],
@@ -955,7 +971,7 @@ def write_product(repo_root: Path, source_config: Path) -> Dict[str, Any]:
 def render_report(product: Mapping[str, Any]) -> str:
     stats = product["statistics"]
     return "\n".join([
-        "# K-City 2025 P2-B v5 A134 로터리 확장 주행가능영역",
+        "# K-City 2025 P2-B v5 A134 로터리·A151 접속부 주행가능영역",
         "",
         "> **상태:** 생성·검증 가능한 P2-B product. reviewed 차선 geometry는 변경하지 않음.",
         "",
@@ -969,7 +985,7 @@ def render_report(product: Mapping[str, Any]) -> str:
         "- 교차로의 거리/반경 확장을 폐기하고 reviewed link set만 추가했다.",
         "- 동적 장애물 교차로는 검토된 4개 anchor의 directed start/end node-pair closure 8개 link를 사용한다.",
         "- 정적·동적 교차로는 선택 link envelope 안의 legacy H5 road만 gap patch로 사용한다.",
-        "- A134 로터리는 2.0 m 확장 link envelope 안의 legacy H5 포장면을 사용하고 중앙 섬은 비주행으로 보존한다.",
+        "- A134 로터리는 2.0 m 확장 link envelope와 A151 접속부 안의 legacy H5 포장면을 사용하고 중앙 섬은 비주행으로 보존한다.",
         "- 일반 교차로는 전역경로 link만, 정적·동적 장애물 교차로는 검토된 회피 link만 포함한다.",
         "- 반대차로는 음영구간 A131만 명시적으로 포함하고, 그 밖의 대회 외 도로는 제거했다.",
         "- `OccupancyGrid`는 vector product를 0.20 m/px로 rasterize한 파생 표현이다.",
@@ -997,6 +1013,7 @@ def render_report(product: Mapping[str, Any]) -> str:
         "- roundabout extension: `%s`" % ", ".join(
             product["selection"]["intersection_groups"]["roundabout_maneuver"]
         ),
+        "- roundabout surface stitch: `A2256W000151` (envelope reference only; not a new lane)",
         "- legacy road: `%.2f m²`, compact road: `%.2f m²` (`%.2f%%`)" % (
             stats["legacy_road_area_m2"], stats["compact_road_area_m2"],
             100.0 * stats["compact_fraction_of_legacy"]),

@@ -250525,6 +250525,7 @@
       "surface_envelope_buffer_m": 0.0,
       "surface_group": "static_obstacle_maneuver",
       "surface_preserves_holes": false,
+      "surface_supplemental_link_ids": [],
       "validity": "validated"
     },
     {
@@ -250616,6 +250617,7 @@
       "surface_envelope_buffer_m": 0.0,
       "surface_group": "static_obstacle_maneuver",
       "surface_preserves_holes": false,
+      "surface_supplemental_link_ids": [],
       "validity": "validated"
     },
     {
@@ -250707,6 +250709,7 @@
       "surface_envelope_buffer_m": 0.0,
       "surface_group": "static_obstacle_maneuver",
       "surface_preserves_holes": false,
+      "surface_supplemental_link_ids": [],
       "validity": "validated"
     },
     {
@@ -250763,6 +250766,7 @@
       "surface_envelope_buffer_m": 0.0,
       "surface_group": "static_obstacle_maneuver",
       "surface_preserves_holes": false,
+      "surface_supplemental_link_ids": [],
       "validity": "validated"
     },
     {
@@ -250819,6 +250823,7 @@
       "surface_envelope_buffer_m": 0.0,
       "surface_group": "static_obstacle_maneuver",
       "surface_preserves_holes": false,
+      "surface_supplemental_link_ids": [],
       "validity": "validated"
     },
     {
@@ -250860,6 +250865,7 @@
       "surface_envelope_buffer_m": 0.0,
       "surface_group": "static_obstacle_maneuver",
       "surface_preserves_holes": false,
+      "surface_supplemental_link_ids": [],
       "validity": "validated"
     },
     {
@@ -250945,6 +250951,7 @@
       "surface_envelope_buffer_m": 0.0,
       "surface_group": "dynamic_obstacle_maneuver",
       "surface_preserves_holes": false,
+      "surface_supplemental_link_ids": [],
       "validity": "validated"
     },
     {
@@ -251010,6 +251017,7 @@
       "surface_envelope_buffer_m": 0.0,
       "surface_group": "dynamic_obstacle_maneuver",
       "surface_preserves_holes": false,
+      "surface_supplemental_link_ids": [],
       "validity": "validated"
     },
     {
@@ -251080,6 +251088,7 @@
       "surface_envelope_buffer_m": 0.0,
       "surface_group": "dynamic_obstacle_maneuver",
       "surface_preserves_holes": false,
+      "surface_supplemental_link_ids": [],
       "validity": "validated"
     },
     {
@@ -251165,6 +251174,7 @@
       "surface_envelope_buffer_m": 0.0,
       "surface_group": "dynamic_obstacle_maneuver",
       "surface_preserves_holes": false,
+      "surface_supplemental_link_ids": [],
       "validity": "validated"
     },
     {
@@ -251172,10 +251182,12 @@
       "id": "drivable:surface:roundabout_maneuver:00:00:00:00",
       "intersection_guarded": true,
       "lane_ids": [
-        "lane:A2256W000134"
+        "lane:A2256W000134",
+        "lane:A2256W000151"
       ],
       "link_ids": [
-        "A2256W000134"
+        "A2256W000134",
+        "A2256W000151"
       ],
       "polygon": [
         [
@@ -251335,17 +251347,338 @@
         ],
         [
           -88.5159,
-          335.3966,
+          335.3542,
           0.0
         ],
         [
-          -88.0457,
-          335.0792,
+          -88.5159,
+          335.5542,
           0.0
         ],
         [
-          -85.4032,
-          332.667,
+          -88.1159,
+          335.9542,
+          0.0
+        ],
+        [
+          -88.1159,
+          336.1542,
+          0.0
+        ],
+        [
+          -87.9159,
+          336.3542,
+          0.0
+        ],
+        [
+          -87.9159,
+          336.5542,
+          0.0
+        ],
+        [
+          -87.7159,
+          336.7542,
+          0.0
+        ],
+        [
+          -87.7159,
+          336.9542,
+          0.0
+        ],
+        [
+          -87.5159,
+          337.1542,
+          0.0
+        ],
+        [
+          -87.5159,
+          337.3542,
+          0.0
+        ],
+        [
+          -87.3159,
+          337.5542,
+          0.0
+        ],
+        [
+          -87.3159,
+          337.9542,
+          0.0
+        ],
+        [
+          -87.1159,
+          338.1542,
+          0.0
+        ],
+        [
+          -87.1159,
+          338.5542,
+          0.0
+        ],
+        [
+          -86.9159,
+          338.7542,
+          0.0
+        ],
+        [
+          -86.9159,
+          339.1542,
+          0.0
+        ],
+        [
+          -86.7159,
+          339.3542,
+          0.0
+        ],
+        [
+          -86.7159,
+          339.7542,
+          0.0
+        ],
+        [
+          -86.5159,
+          339.9542,
+          0.0
+        ],
+        [
+          -86.5159,
+          340.9542,
+          0.0
+        ],
+        [
+          -86.3159,
+          341.1542,
+          0.0
+        ],
+        [
+          -86.3159,
+          342.5231,
+          0.0
+        ],
+        [
+          -82.0476,
+          343.85,
+          0.0
+        ],
+        [
+          -81.4416,
+          343.823,
+          0.0
+        ],
+        [
+          -81.0543,
+          343.7039,
+          0.0
+        ],
+        [
+          -80.699,
+          343.5092,
+          0.0
+        ],
+        [
+          -80.2572,
+          343.0936,
+          0.0
+        ],
+        [
+          -78.1775,
+          339.7933,
+          0.0
+        ],
+        [
+          -78.0792,
+          339.5542,
+          0.0
+        ],
+        [
+          -78.3159,
+          339.3542,
+          0.0
+        ],
+        [
+          -78.9159,
+          339.3542,
+          0.0
+        ],
+        [
+          -79.1159,
+          339.1542,
+          0.0
+        ],
+        [
+          -79.3159,
+          339.1542,
+          0.0
+        ],
+        [
+          -79.5159,
+          338.9542,
+          0.0
+        ],
+        [
+          -79.9682,
+          338.902,
+          0.0
+        ],
+        [
+          -81.8327,
+          341.8616,
+          0.0
+        ],
+        [
+          -83.4851,
+          340.7593,
+          0.0
+        ],
+        [
+          -84.369,
+          340.0277,
+          0.0
+        ],
+        [
+          -85.1907,
+          339.2082,
+          0.0
+        ],
+        [
+          -85.9374,
+          338.3127,
+          0.0
+        ],
+        [
+          -89.4322,
+          333.5571,
+          0.0
+        ],
+        [
+          -90.672,
+          332.2108,
+          0.0
+        ],
+        [
+          -91.6489,
+          331.2897,
+          0.0
+        ],
+        [
+          -93.4867,
+          329.9507,
+          0.0
+        ],
+        [
+          -95.0518,
+          329.0663,
+          0.0
+        ],
+        [
+          -97.1384,
+          328.1898,
+          0.0
+        ]
+      ],
+      "source_dataset": "legacy_h5_clipped_to_selected_link_envelope",
+      "source_feature_id": "surface:roundabout_maneuver:00",
+      "source_type": "hybrid",
+      "surface_area_m2": 29.6555,
+      "surface_envelope_buffer_m": 2.0,
+      "surface_group": "roundabout_maneuver",
+      "surface_preserves_holes": true,
+      "surface_supplemental_link_ids": [
+        "A2256W000151"
+      ],
+      "validity": "validated"
+    },
+    {
+      "area_type": "junction",
+      "id": "drivable:surface:roundabout_maneuver:00:03:00:00",
+      "intersection_guarded": true,
+      "lane_ids": [
+        "lane:A2256W000134",
+        "lane:A2256W000151"
+      ],
+      "link_ids": [
+        "A2256W000134",
+        "A2256W000151"
+      ],
+      "polygon": [
+        [
+          -82.9159,
+          336.3542,
+          0.0
+        ],
+        [
+          -83.3159,
+          335.9542,
+          0.0
+        ],
+        [
+          -83.3159,
+          335.7542,
+          0.0
+        ],
+        [
+          -83.7159,
+          335.3542,
+          0.0
+        ],
+        [
+          -83.7159,
+          335.1542,
+          0.0
+        ],
+        [
+          -83.9159,
+          334.9542,
+          0.0
+        ],
+        [
+          -83.9159,
+          334.7542,
+          0.0
+        ],
+        [
+          -84.1159,
+          334.7542,
+          0.0
+        ],
+        [
+          -84.3159,
+          334.5542,
+          0.0
+        ],
+        [
+          -84.3159,
+          334.3542,
+          0.0
+        ],
+        [
+          -84.5159,
+          334.1542,
+          0.0
+        ],
+        [
+          -84.5159,
+          333.9542,
+          0.0
+        ],
+        [
+          -84.7159,
+          333.7542,
+          0.0
+        ],
+        [
+          -84.7159,
+          333.5542,
+          0.0
+        ],
+        [
+          -85.3159,
+          332.9542,
+          0.0
+        ],
+        [
+          -85.3159,
+          332.7542,
           0.0
         ],
         [
@@ -251534,28 +251867,23 @@
           0.0
         ],
         [
-          -97.5968,
-          324.4106,
+          -97.0557,
+          324.5506,
           0.0
         ],
         [
-          -95.7487,
-          324.9711,
+          -94.4781,
+          325.471,
           0.0
         ],
         [
-          -93.5001,
-          325.9291,
+          -92.9986,
+          326.1903,
           0.0
         ],
         [
-          -92.0729,
-          326.7119,
-          0.0
-        ],
-        [
-          -90.6987,
-          327.6151,
+          -91.5844,
+          327.0128,
           0.0
         ],
         [
@@ -251574,59 +251902,44 @@
           0.0
         ],
         [
-          -89.3925,
-          333.6007,
+          -88.0988,
+          332.4222,
           0.0
         ],
         [
-          -90.672,
-          332.2108,
+          -86.728,
+          331.3343,
           0.0
         ],
         [
-          -91.6489,
-          331.2897,
-          0.0
-        ],
-        [
-          -93.8497,
-          329.7274,
-          0.0
-        ],
-        [
-          -95.0518,
-          329.0663,
-          0.0
-        ],
-        [
-          -96.2946,
-          328.5083,
-          0.0
-        ],
-        [
-          -98.0135,
-          327.917,
+          -82.9159,
+          336.4963,
           0.0
         ]
       ],
       "source_dataset": "legacy_h5_clipped_to_selected_link_envelope",
       "source_feature_id": "surface:roundabout_maneuver:00",
       "source_type": "hybrid",
-      "surface_area_m2": 25.3714,
+      "surface_area_m2": 16.0255,
       "surface_envelope_buffer_m": 2.0,
       "surface_group": "roundabout_maneuver",
       "surface_preserves_holes": true,
+      "surface_supplemental_link_ids": [
+        "A2256W000151"
+      ],
       "validity": "validated"
     },
     {
       "area_type": "junction",
-      "id": "drivable:surface:roundabout_maneuver:00:01:00:00",
+      "id": "drivable:surface:roundabout_maneuver:00:04:00:00",
       "intersection_guarded": true,
       "lane_ids": [
-        "lane:A2256W000134"
+        "lane:A2256W000134",
+        "lane:A2256W000151"
       ],
       "link_ids": [
-        "A2256W000134"
+        "A2256W000134",
+        "A2256W000151"
       ],
       "polygon": [
         [
@@ -251707,17 +252020,22 @@
       "surface_envelope_buffer_m": 2.0,
       "surface_group": "roundabout_maneuver",
       "surface_preserves_holes": true,
+      "surface_supplemental_link_ids": [
+        "A2256W000151"
+      ],
       "validity": "validated"
     },
     {
       "area_type": "junction",
-      "id": "drivable:surface:roundabout_maneuver:00:02:00:00",
+      "id": "drivable:surface:roundabout_maneuver:00:05:00:00",
       "intersection_guarded": true,
       "lane_ids": [
-        "lane:A2256W000134"
+        "lane:A2256W000134",
+        "lane:A2256W000151"
       ],
       "link_ids": [
-        "A2256W000134"
+        "A2256W000134",
+        "A2256W000151"
       ],
       "polygon": [
         [
@@ -251763,6 +252081,9 @@
       "surface_envelope_buffer_m": 2.0,
       "surface_group": "roundabout_maneuver",
       "surface_preserves_holes": true,
+      "surface_supplemental_link_ids": [
+        "A2256W000151"
+      ],
       "validity": "validated"
     }
   ],
@@ -251775,7 +252096,7 @@
     "origin_y": -825.0457763671875,
     "path": "src/asmc_hd_map/config/kcity2025_compact_drivable_grid.npz",
     "resolution_m": 0.2,
-    "sha256": "454d3bdfffdb43eacbfec72f10ce6027229f57837fb6d925d339a71bc12d889c",
+    "sha256": "ee0db44e5d672e58e429a09a68ed119fb92400d2a83a2f304f9ddc9d1e011fd0",
     "values": {
       "drivable": 0,
       "non_drivable": 100,
@@ -451850,12 +452171,12 @@
     "Ordinary-road polygons locally follow reviewed paint where its signed lateral support is valid.",
     "Selected adjacent lane pairs are joined by canonical vector corridor-fill areas.",
     "Legacy H5 contributes only gap patches inside explicitly reviewed envelopes.",
-    "A134 roundabout pavement uses the legacy H5 only inside a 2.0 m padded link envelope and preserves the center island.",
+    "A134 roundabout pavement uses the legacy H5 only inside its 2.0 m padded envelope plus the selected A151 stitch envelope, and preserves the center island.",
     "A131 is available only as the explicitly reviewed opposite lane beside shadow-zone A126.",
     "Explicit obstacle-intersection links describe maneuverable space, not permission to leave mission policy."
   ],
   "map_id": "waize_katri_2025-10-23",
-  "product_sha256": "8c3281bf5330032f8d265e10c1502d9f55ef50dac4addb54fee31a0d5a301d8e",
+  "product_sha256": "e3ace572721885a3d22bd2c14d6932c6215a3be451fb33c774ebd8982cda0ff9",
   "reviewed_geometry_sha256": "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf",
   "schema_version": "asmc.hd_map.compact_drivable/v5",
   "selection": {
@@ -452288,14 +452609,14 @@
     "boundary_refined_lane_count": 41,
     "boundary_refined_side_count": 74,
     "checkpoint_centers_inside": 16,
-    "compact_fraction_of_legacy": 0.165918,
-    "compact_road_area_m2": 14905.16,
+    "compact_fraction_of_legacy": 0.166143,
+    "compact_road_area_m2": 14925.4,
     "corridor_fill_area_count": 18,
-    "drivable_area_count": 101,
+    "drivable_area_count": 102,
     "explicit_additional_lane_count": 1,
     "explicit_non_route_intersection_lane_count": 15,
     "intersection_support_link_count": 22,
-    "intersection_surface_patch_count": 13,
+    "intersection_surface_patch_count": 14,
     "legacy_road_area_m2": 89834.44,
     "route_lane_count": 39,
     "same_direction_extra_lane_count": 16,

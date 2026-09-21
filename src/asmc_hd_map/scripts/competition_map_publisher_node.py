@@ -510,11 +510,15 @@ def build_debug_markers(
                         "drivable_group_roundabout_labels", label_id,
                         Marker.TEXT_VIEW_FACING, stamp,
                     )
-                    label.pose.position = _point(centerline[len(centerline) // 2], 0.9)
+                    label_position = centerline[len(centerline) // 2]
+                    label.pose.position = _point(label_position, 0.9)
                     label.scale.z = 1.25
                     label.color = color
-                    label.text = "%s ROUNDABOUT DRIVABLE" % lane.get("link_id", "A134")
+                    label.text = "%s ROUNDABOUT DRIVABLE" % short_link_id(
+                        lane.get("link_id", "A2256W000134")
+                    )
                     markers.append(label)
+                    occupied_text_xy.append(label_position[:2])
 
         surface_styles = {
             "selected_lane_topology_corridor_fill": (

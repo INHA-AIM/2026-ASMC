@@ -117,7 +117,7 @@ def main() -> int:
     _require(meta.geometry_sha256 == "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf", "geometry SHA drift")
     _require(meta.build_id == "kcity2025_roundabout_extended_drivable_v5", "P2-B v5 build ID drift")
     _require(meta.operational and meta.complete, "P2-B map must be operational and complete")
-    _require(meta.lane_count == 70 and meta.drivable_area_count == 101, "P2-B v5 product count drift")
+    _require(meta.lane_count == 70 and meta.drivable_area_count == 102, "P2-B v5 product count drift")
     _require(
         "compact_drivable_product" in meta.source_ids and "legacy_drivable_h5" in meta.source_ids,
         "P2-B provenance is missing from HdMapMeta",
@@ -128,7 +128,7 @@ def main() -> int:
              "marking/meta identity mismatch")
     _require(markings.geometry_sha256 == meta.geometry_sha256, "marking/meta geometry SHA mismatch")
     _require(lanes.complete and len(lanes.lanes) == 70, "global lane product is incomplete")
-    _require(areas.complete and len(areas.areas) == 101, "global drivable vector product is incomplete")
+    _require(areas.complete and len(areas.areas) == 102, "global drivable vector product is incomplete")
     _require(lanes.build_id == meta.build_id and lanes.map_id == meta.map_id,
              "lane/meta identity mismatch")
     _require(areas.build_id == meta.build_id and areas.map_id == meta.map_id,
@@ -298,11 +298,14 @@ def main() -> int:
         _require(hole_count == 0, "%s obstacle surface still contains holes" % name)
     roundabout_areas = [
         value for value in areas.areas
-        if value.link_ids and set(value.link_ids) == {"A2256W000134"}
+        if (
+            set(value.link_ids) == {"A2256W000134"}
+            or value.source_feature_id.startswith("surface:roundabout_maneuver:")
+        )
     ]
     _require(
-        len(roundabout_areas) == 4,
-        "A134 roundabout surface must contain one lane and three H5 patches",
+        len(roundabout_areas) == 5,
+        "A134/A151 roundabout stitch must contain one lane and four H5 patches",
     )
     roundabout_mask = _rasterized_area_union(roundabout_areas)
     component_count, _ = cv2.connectedComponents(roundabout_mask, connectivity=8)
@@ -318,7 +321,7 @@ def main() -> int:
     source_counts = Counter(value.source_dataset for value in areas.areas)
     _require(
         source_counts["selected_lane_topology_corridor_fill"] == 18
-        and source_counts["legacy_h5_clipped_to_selected_link_envelope"] == 13,
+        and source_counts["legacy_h5_clipped_to_selected_link_envelope"] == 14,
         "surface fill source counts drift",
     )
     _require(

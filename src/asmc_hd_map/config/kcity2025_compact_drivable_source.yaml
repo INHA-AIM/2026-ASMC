@@ -108,6 +108,8 @@ surface_refinement:
     - group: roundabout_maneuver
       envelope_buffer_m: 2.0
       preserve_holes: true
+      supplemental_link_ids:
+        - A2256W000151
   minimum_patch_area_m2: 0.50
   vector_simplify_tolerance_m: 0.05
 

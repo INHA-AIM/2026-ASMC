@@ -99,6 +99,11 @@ class HdMapConsumerExample:
             "rules unless planner policy explicitly opts in."
         )
         rospy.loginfo(
+            "Union every VALIDATED DrivableArea regardless of source_type; LANE_CLIPPED/HYBRID "
+            "and source_dataset are provenance, not traversal cost. The derived OccupancyGrid "
+            "already rasterizes that union uniformly as value 0."
+        )
+        rospy.loginfo(
             "Local lanes/grid are an optional map-frame cache for bounded lookup and "
             "visualization, not a planning horizon; markings, checkpoints, and missions "
             "remain global static metadata."

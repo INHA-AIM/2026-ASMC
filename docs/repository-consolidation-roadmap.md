@@ -304,9 +304,9 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
   41개 Lane/74개 측면은 신뢰 가능한 reviewed paint 횡거리로 보정한다. MGeo 인접차로와
   A126/A131 사이에 vector corridor fill 18개를 추가한다. 정적·동적 교차로는 선택 link
   envelope 안에서만 legacy H5 road를 gap patch로 사용하여 단일 연결·내부 hole 0개를
-  보장한다. A134는 2 m 확장 envelope에서 원본 H5 포장면을 복원하고 중앙 섬을 제외한다.
-  총 DrivableArea는 101개이며 `OccupancyGrid`는 0.2 m 파생 raster다. 면적은
-  14,905.16 m²(legacy 전체의 16.59%)이고 checkpoint 16개를 모두 포함한다. A179·A427과
+  보장한다. A134는 2 m 확장 envelope와 A151 접속부에서 원본 H5 포장면을 복원하고 중앙
+  섬을 제외한다. 총 DrivableArea는 102개이며 `OccupancyGrid`는 0.2 m 파생 raster다. 면적은
+  14,925.40 m²(legacy 전체의 16.61%)이고 checkpoint 16개를 모두 포함한다. A179·A427과
   명시적 갓길·버스·미사용 toll lane은 제외한다.
 - **P2-C 통합 완료:** stage14 차선 결과를 geometry regression 기준으로 삼아 builder,
   runtime publisher, 검증기와 RViz를 `asmc_hd_map` 한 패키지로 통합했다. 원태의 이전
@@ -315,8 +315,9 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
 - **P2-D consumer handoff 완료:** global cell에 정렬된 120 m/0.2 m local grid와 같은 범위의
   Lane subset을 ego update마다 최대 5 Hz로 발행한다. local geometry와 ID는 global `map`
   namespace를 유지하고, 실제 ROS smoke에서 global/local lane 선택·grid cell parity를 검사한다.
-- 최종 검토 차선·구 맵 origin 정합 차선·원태 H5 vector를 각각 독립 토픽으로 보는
-  `lane_source_comparison.launch`를 개발 전용으로 유지한다. 운영 `/hd_map/global/*`과 섞지 않는다.
+- 최종 검토 차선·구 맵 origin 정합 차선·원태 H5 vector와 최신/구 주행가능영역을 각각
+  독립 토픽으로 보는 `hd_map_source_comparison.launch`를 개발 전용으로 유지한다. 운영
+  `/hd_map/global/*`과 섞지 않는다.
 - 주행가능영역 원본은 Node/Link road mesh를 사용하되, 양쪽 물리 차선이 신뢰 가능한 일반
   road segment만 차선 안쪽으로 clip한다.
 - junction/교차로, boundary가 없는 구간, 합류·분기 전이부에는 `intersection_guard`를 두어
