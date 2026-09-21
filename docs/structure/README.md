@@ -1,0 +1,76 @@
+# 팀 문서 정보 구조 검토안
+
+> **상태:** Structure Review Only
+>
+> **작성일:** 2026-09-22
+> **중요:** 이 단계에서는 기존 문서를 이동·삭제·통합하거나 본문을 고치지 않는다.
+
+## 목적
+
+현재 `docs/` 루트에는 정본 계약, 실행 가이드, 패키지 설계, 인수인계, 실험 기록과 과거
+의사결정이 함께 있다. 내용 손실과 의미 왜곡 없이 정리하기 위해 다음 순서를 고정한다.
+
+1. 현재 파일을 그대로 둔 채 역할·대상·정본성을 전수 분류한다.
+2. 아래 목표 디렉터리와 파일별 이동표를 팀이 검토한다.
+3. 별도 PR에서 `git mv`와 링크 교정만 수행한다. 본문은 바꾸지 않는다.
+4. 이동 결과를 확인한 뒤 디렉터리별로 중복 제거·통합·상태 갱신을 진행한다.
+5. 삭제 후보는 대체 정본과 내용 parity가 확인된 뒤에만 제거한다.
+
+현재 파일별 분류와 제안 경로는 [current-inventory.md](./current-inventory.md), 실제 이동 시
+검증 절차는 [migration-gates.md](./migration-gates.md)를 따른다.
+
+## 목표 구조
+
+```text
+docs/
+├── README.md                         전체 문서 허브와 정본 우선순위
+├── onboarding/                       처음 참여한 팀원을 위한 최소 경로
+├── governance/                       Git, ownership, 문서 관리 정책
+├── competition/                      공식 규정 요약, 대회 자산과 시뮬 기준
+├── architecture/                     시스템·저장소 목표 구조와 단계별 로드맵
+├── contracts/
+│   ├── common/                       공용 메시지·좌표계·시간 규약
+│   ├── competition/                  체크포인트·미션 metadata
+│   ├── hd-map/                       HD Map topic/runtime 소비 계약
+│   ├── perception/                   데이터셋·인지 출력 계약
+│   ├── planning/                     FSM/Frenet/행동 계약
+│   └── simulator/                    MORAI message 호환 정책
+├── packages/
+│   ├── asmc_msgs/                    패키지 설계·생성 규칙
+│   ├── asmc_hd_map/                  builder/runtime/검수 방법
+│   ├── asmc_bridge/                  UDP·센서 decoder·환경 profile
+│   ├── asmc_perception/              camera/LiDAR/BEV/fusion 개발 문서
+│   └── planning-control/             planner/controller 설계 참고
+├── operations/                       Docker, 네트워크, rosbag, 시뮬 검증·배포
+├── handoffs/
+│   ├── perception/                   인지 출력 인수인계
+│   └── planning/                     판제 연동 인수인계
+├── records/
+│   ├── baselines/                    동결된 회귀 기준
+│   ├── hd-map/                       날짜가 있는 지도 검수·audit 기록
+│   ├── perception/                   모델·데이터 실험 결과
+│   └── simulator/                    버전 조사 기록
+└── archive/                          현재 실행에 쓰지 않는 과거 설계·이식 기록
+```
+
+## 분류 원칙
+
+- `contracts/`는 다른 파트가 구현을 맞춰야 하는 인터페이스만 둔다.
+- `packages/`는 해당 패키지를 개발·검증하는 사람을 위한 설계와 실행법을 둔다.
+- `operations/`는 여러 패키지를 함께 실행하거나 현장에 배포하는 절차를 둔다.
+- `handoffs/`는 생산자와 소비자 사이의 현재 인수 조건을 둔다.
+- `records/`는 특정 날짜·버전의 사실을 보존하며 최신 설정으로 해석하지 않는다.
+- `archive/`는 역사적 맥락을 보존하되 문서 상단에서 현재 정본으로 연결한다.
+- 대용량 원문 PDF, 개인 연구 자료와 작업 중 초안은 팀 저장소가 아니라 워크스페이스 상위
+  `docs/`에서 관리하고 팀 문서에는 필요한 결론과 출처만 남긴다.
+
+## 이번 단계에서 하지 않는 일
+
+- 기존 경로 이동 또는 이름 변경
+- 여러 문서의 본문 병합
+- 과거 기록 삭제
+- Working Proposal을 Canonical로 승격
+- 팀 저장소 문서와 개인 워크스페이스 자료의 자동 동기화
+
+이 경계를 지켜야 다음 단계의 diff가 “경로 변경”과 “내용 변경”으로 분리되어 리뷰 중 내용
+유실을 찾을 수 있다.
