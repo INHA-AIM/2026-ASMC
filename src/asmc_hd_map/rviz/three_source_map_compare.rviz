@@ -1,0 +1,60 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+  - Class: rviz/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.45
+      Cell Size: 5
+      Class: rviz/Grid
+      Color: 80; 90; 100
+      Enabled: true
+      Name: Metric grid
+      Plane: XY
+      Reference Frame: base_link
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /asmc_hd_map/compare/preplan_hybrid
+      Name: "1 Pre-plan completed map"
+      Queue Size: 2
+    - Class: rviz/MarkerArray
+      Enabled: false
+      Marker Topic: /asmc_hd_map/compare/won_tae_bake
+      Name: "2 Won-tae pushed H5"
+      Queue Size: 2
+    - Class: rviz/MarkerArray
+      Enabled: false
+      Marker Topic: /asmc_hd_map/compare/legacy_origin_aligned
+      Name: "3 Legacy origin-aligned corridor"
+      Queue Size: 2
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /asmc_hd_map/compare/ego_context
+      Name: Ego footprint
+      Queue Size: 2
+  Enabled: true
+  Global Options:
+    Background Color: 15; 18; 22
+    Fixed Frame: base_link
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+  Views:
+    Current:
+      Angle: 0
+      Class: rviz/TopDownOrtho
+      Name: Ego top-down
+      Scale: 45
+      Target Frame: base_link
+      X: 20
+      Y: 0
+Window Geometry:
+  Height: 900
+  Width: 1250

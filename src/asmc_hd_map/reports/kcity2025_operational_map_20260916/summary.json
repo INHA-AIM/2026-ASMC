@@ -1,0 +1,124 @@
+{
+  "build_id": "kcity2025_operational_map_20260916",
+  "contracts": {
+    "lateral_geometry_and_width": "Won-tae direct 2025 observations",
+    "paint_representation": "observation-gated legacy template or current-2025 reconstruction",
+    "runtime_connection": false,
+    "stoplines": "Won-tae H5 allowlist plus driving review",
+    "topology": "current Node/Link"
+  },
+  "corridor_roles": {
+    "high_speed_opposite_direction": 2,
+    "high_speed_parallel": 32,
+    "high_speed_same_direction": 30,
+    "official_route": 39,
+    "shadow_connector": 4,
+    "shadow_opposite": 1,
+    "shadow_primary": 1,
+    "static_obstacle_connector": 4,
+    "static_obstacle_opposite": 1,
+    "static_obstacle_primary": 1
+  },
+  "counts": {
+    "current_link_centerline": 70,
+    "forbidden_surface": 1,
+    "lane_area": 70,
+    "lane_marking": 49,
+    "legacy_review_only": 115,
+    "legacy_template_aligned_count": 28,
+    "legacy_template_count": 146,
+    "legacy_template_driving_reviewed_count": 3,
+    "logical_lane_boundary": 85,
+    "observation_anchor_runs": 76,
+    "stopline_kept": 8,
+    "stopline_rejected": 1
+  },
+  "driving_reviewed_intervals": [
+    {
+      "lane_id": "A2256W000748",
+      "name": "start_to_first_stopline",
+      "opposing_lane_markings_included": false,
+      "review_source": "live_route_review_20260916",
+      "route_s_max_m": 72.62896869677363,
+      "route_s_min_m": 0.0,
+      "stopline_node_id": "A1256W000736",
+      "successor_geometry_role": "logical_corridor_only",
+      "successor_link_id": "A2256W000182"
+    }
+  ],
+  "map_id": "kcity2025_competition_operational_candidate_v1",
+  "next_stage": "drive_review_each_route_interval_then_promote_selected_features",
+  "operational": false,
+  "quality": {
+    "lane_area_quality_counts": {
+      "1": 17,
+      "2": 2,
+      "3": 51
+    },
+    "nominal_fallback_lane_count": 17,
+    "nominal_fallback_lane_ids": [
+      "A2256W000010",
+      "A2256W000054",
+      "A2256W000083",
+      "A2256W000146",
+      "A2256W000151",
+      "A2256W000154",
+      "A2256W000182",
+      "A2256W000207",
+      "A2256W000215",
+      "A2256W000221",
+      "A2256W000222",
+      "A2256W000236",
+      "A2256W000318",
+      "A2256W000333",
+      "A2256W000599",
+      "A2256W000728",
+      "A2256W001220"
+    ],
+    "nonfallback_width_p05_m": 2.921811815347642,
+    "nonfallback_width_p50_m": 3.500000000000003,
+    "nonfallback_width_p95_m": 4.114713378539835,
+    "width_sanity_failure_samples": 487
+  },
+  "raster": {
+    "axis_convention": "col=+x,row=-y",
+    "boundary_rule_codes": {
+      "0": "none",
+      "1": "permitted",
+      "2": "restricted",
+      "3": "prohibited",
+      "4": "unknown",
+      "5": "stopline"
+    },
+    "bounds_xy_m": [
+      [
+        -177.33208077725007,
+        -560.6728087757695
+      ],
+      [
+        94.37576492639229,
+        352.64119413275347
+      ]
+    ],
+    "frame_id": "map",
+    "height_px": 4568,
+    "maneuver_surface_semantics": "route_and_special-zone physical lane polygons; permission remains boundary-rule/planner policy",
+    "origin_xy_m": [
+      -177.33208077725007,
+      -560.6728087757695
+    ],
+    "resolution_m": 0.2,
+    "source_quality_codes": {
+      "0": "outside_or_forbidden",
+      "1": "link_nominal_fallback",
+      "2": "partially_observed",
+      "3": "direct_observed"
+    },
+    "width_px": 1360
+  },
+  "source_snapshot": {
+    "git_commit": "e67f5daf721d909e9f267e110a5b59d02d45c5b9",
+    "verified_file_count": 21
+  },
+  "status": "candidate_requires_route_by_route_review"
+}

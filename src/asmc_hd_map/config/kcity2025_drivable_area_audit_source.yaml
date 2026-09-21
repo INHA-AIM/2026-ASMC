@@ -1,0 +1,67 @@
+schema_version: asmc.hd_map.drivable_area_audit_source/v1
+audit_id: kcity2025_drivable_area_input_audit_v1
+scope: competition_route_only
+
+# P2-A is an input/classification audit.  It must not mutate stage14 paint,
+# the legacy H5 road layer, or publish P2 lane/drivable topics.
+write_policy:
+  mutate_hd_map_geometry: false
+  publish_drivable_products: false
+  delete_legacy_link_node: false
+
+sources:
+  current_link_set:
+    path: src/behavior_planner/src/config/link_set.json
+    sha256: 5ce0fd57da07b83221c0a4d117b0606b2d9c094c8de476a7d1176c78a4dc5b0f
+  current_node_set:
+    path: src/behavior_planner/src/config/node_set.json
+    sha256: baafc1acbb4a34eadcafe6136f2b3ac330cebf0cf5727a324c4f117a54eba7dc
+  current_global_info:
+    path: src/behavior_planner/src/config/global_info.json
+    sha256: bd74fa3f05830e0741c3c7f51d0f7935f389be3879251fd0231918538a05f133
+  reviewed_route_links:
+    path: src/behavior_planner/src/config/route_links_1.yaml
+    sha256: d5444dce6da7bb7da1f88c3cdf1cbdef4e1a0eebcf8d0d7a5db03830a97554bf
+  reviewed_lane_markings:
+    path: src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json
+    sha256: ffcccb478ab9fea5232631dab49145eb59c9211a88c6d2f460108355fc4c54ee
+  competition_metadata:
+    path: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml
+    sha256: 6e11a97cb0abbadd9bae98acd9884a92b97d59aa3d6d1a3547aa12b77217ddea
+  legacy_drivable_h5:
+    path: src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5
+    sha256: e8ce47f504cd0387686718dfe72f12d17e8c684d0cc23fe41d9938171d896e86
+
+expected:
+  frame_id: map
+  map_id: waize_katri_2025-10-23
+  local_origin_in_global: [302595.0, 4124145.0, 0.0]
+  route_link_count: 39
+  route_length_m: 2184.611723336
+  checkpoint_count: 16
+  lane_marking_count: 121
+  stopline_count: 7
+  reviewed_geometry_sha256: 01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf
+  legacy_road_shape: [7232, 3085]
+  legacy_road_nonzero_px: 2245861
+  legacy_pixels_per_meter: 5.0
+
+classification:
+  sample_step_m: 1.0
+  marking_sample_step_m: 0.5
+  minimum_lateral_distance_m: 0.4
+  maximum_boundary_distance_m: 8.0
+  minimum_bilateral_coverage: 0.80
+  intersection_link_types: ['1']
+  intersection_clear_from_start_m: 30.0
+  merge_diverge_link_types: ['3']
+  topology_transition_buffer_m: 5.0
+  minimum_lane_clip_interval_m: 5.0
+  # These link types are guarded for the full link even when paint happens to
+  # be visible.  A153/A451 contain the reviewed toll split-island transition.
+  full_guard_reasons:
+    '3': merge_diverge_or_toll_transition
+
+outputs:
+  manifest: src/asmc_hd_map/config/kcity2025_drivable_area_input_audit.yaml
+  report: docs/baselines/kcity2025-drivable-area-input-audit-v1.md

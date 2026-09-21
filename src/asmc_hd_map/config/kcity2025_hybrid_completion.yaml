@@ -1,0 +1,132 @@
+schema_version: asmc.hd_map.hybrid_completion_config/v1
+build_id: kcity2025_hybrid_completion_20260916
+map_id: kcity2025_competition_hd_candidate_v3
+
+sources:
+  legacy_adopted_map: src/asmc_hd_map/reports/kcity2025_legacy_adoption_20260916/legacy_adopted_candidate_map.json
+  nominal_map: src/asmc_hd_map/reports/kcity2025_current_corridor_20260916/nominal_candidate_map.json
+  boundary_offset_profiles: src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/boundary_offset_profiles.csv
+  pre_roundabout_observations: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/6.csv
+  competition_route: R_KR_PG_KATRI/2026_molit_comp_global_path.txt
+
+# Rebuild only the current-2025 road pieces that do not agree with the old KATRI
+# geometry.  Each interval is expressed in official-route station so a curve
+# fragment from the legacy map cannot leak across a link-ID boundary.
+route_reconstruction:
+  sample_step_m: 0.25
+  output_step_m: 0.50
+  width_smoothing_length_m: 5.0
+  minimum_half_width_m: 1.40
+  maximum_half_width_m: 2.10
+  mirror_single_side_observation: true
+  legacy_suppression_distance_m: 4.0
+  intervals:
+    - name: obstacle_bypass_2025
+      start_s_m: 200.0
+      # The longitudinal paint ends at the current-map stop-line node.  The
+      # former 445m endpoint leaked about 8.2m of solid paint into the
+      # intersection visible after the dynamic-obstacle section.
+      end_s_m: 436.7975664415793
+      left_color: yellow
+      right_color: white
+      legacy_suppression_distance_m: 12.0
+      reason: current_2025_static_dynamic_obstacle_route
+    # The route lane is the left of two through lanes here.  Won-tae's direct
+    # observations cover the yellow road edge and the far-right white road
+    # edge.  Their midpoint is therefore the route lane's right shared line.
+    # Only that side is replaced so the reviewed double-yellow is preserved.
+    - name: pre_roundabout_observed_right_2025
+      start_s_m: 478.0
+      end_s_m: 550.5
+      sides: [right]
+      right_color: white
+      width_source_mode: observed_outer_midpoint
+      observation_left_source_file: 6_left.csv
+      observation_left_color: YELLOW
+      observation_right_source_file: 6_right2.csv
+      observation_right_color: WHITE
+      observation_station_bin_m: 1.0
+      minimum_common_observation_bins: 40
+      # Driving review showed that the equal-width midpoint of the two
+      # observed road edges still placed the route-right line slightly too
+      # far outside. Preserve its shape but move it toward the route.
+      observation_inward_correction_m: 0.25
+      legacy_suppression_distance_m: 3.0
+      reason: won_tae_observed_two_lane_outer_midpoint_with_driving_review_inset
+    - name: post_dynamic_right_turn_broken_2025
+      start_s_m: 550.6187353754743
+      end_s_m: 600.0
+      left_color: white
+      right_color: white
+      lane_shape: broken
+      dash_length_m: 3.0
+      dash_gap_m: 3.0
+      legacy_suppression_distance_m: 12.0
+      reason: current_2025_broken_right_turn_guides_after_stopline_A1256W000757
+    - name: roundabout_exit_to_high_speed_2025
+      start_s_m: 600.0
+      end_s_m: 647.0
+      left_color: yellow
+      right_color: white
+      legacy_suppression_distance_m: 8.0
+      reason: current_2025_roundabout_exit_transition
+    - name: high_speed_entry_straight_2025
+      start_s_m: 930.5
+      end_s_m: 975.0
+      left_color: white
+      right_color: white
+      legacy_suppression_distance_m: 12.0
+      reason: current_2025_straight_after_roundabout_exit_stopline
+    # The old KATRI safety-zone edge sits about 2.2m route-right. Won-tae's
+    # direct hi_right.csv observations on current link A2256W000153 support
+    # 1.710m and agree with the wheel-on-line driving review.
+    - name: high_speed_safety_zone_observed_right_2025
+      start_s_m: 1593.5863873852518
+      end_s_m: 1741.7209885112245
+      sides: [right]
+      right_color: white
+      legacy_suppression_distance_m: 4.0
+      reason: current_hi_right_observed_safety_zone_boundary
+    - name: tollgate_to_shadow_2025
+      start_s_m: 1776.0
+      end_s_m: 1885.0
+      left_color: yellow
+      right_color: white
+      legacy_suppression_distance_m: 8.0
+      reason: current_2025_tollgate_shadow_transition
+
+# The old KATRI geometry omits the lane-1/lane-2 shared boundary through parts
+# of the high-speed multi-lane section.  Current topology identifies the same
+# physical boundary under the following link pairs.  The smooth current-link
+# nominal curve is shifted only by the robust median of accepted observations.
+high_speed_missing_shared_boundaries:
+  lane_color: white
+  legacy_replacement_distance_m: 1.0
+  link_pairs:
+    - [A2256W000418, A2256W000429]
+    - [A2256W000431, A2256W000433]
+    - [A2256W000435, A2256W000421]
+    - [A2256W000423, A2256W000425]
+    - [A2256W000432, A2256W000424]
+    - [A2256W000427, A2256W000426]
+
+# on_stop_line is a topology hint, not painted-line ground truth.  These three
+# route nodes were rejected by the 2026-09-16 MORAI driving inspection.
+stopline_review:
+  rejected_route_node_ids:
+    A1256W000742: roundabout_inside_not_painted
+    A1256W000831: shadow_entrance_virtual_marker_not_painted
+    A1256W000842: shadow_exit_not_painted
+
+promotion_policy:
+  operational: false
+  current_link_node_topology_authority: true
+  legacy_geometry_only_in_reviewed_unchanged_regions: true
+  observed_geometry_is_width_evidence_only: true
+  reconstructed_geometry_requires_final_driving_review: true
+
+visualization:
+  width_px: 1600
+  height_px: 1000
+  padding_px: 35
+  corridor_margin_m: 15.0

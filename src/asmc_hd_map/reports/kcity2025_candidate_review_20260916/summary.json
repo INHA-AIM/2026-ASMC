@@ -1,0 +1,271 @@
+{
+  "decision": "all lane-change-reachable high-speed centerlines are retained; stable legacy paint geometry and current reconstructed 2025 gaps form a non-operational hybrid candidate",
+  "geometry_usage": {
+    "current_link_node_topology_used": true,
+    "current_reconstructed_geometry_used": true,
+    "legacy_geometry_merged_into_candidate_map": true,
+    "legacy_geometry_shown_as_review_reference": true,
+    "observed_calibrated_geometry_shown_as_validation_reference": true,
+    "observed_calibrated_geometry_used": false,
+    "observed_geometry_demoted_to_validation_reference": true,
+    "painted_stoplines_after_driving_review": 10,
+    "reviewed_legacy_adoption_candidate_available": true
+  },
+  "high_speed_inventory": {
+    "all_lane_change_reachable_links_present": true,
+    "centerline_only_boundary_review_link_ids": [
+      "A2256W000010"
+    ],
+    "lane_change_reachable_link_count": 25,
+    "lane_change_reachable_with_observed_calibration_count": 21,
+    "lane_change_reachable_without_observed_calibration_link_ids": [
+      "A2256W000179",
+      "A2256W000424",
+      "A2256W000426",
+      "A2256W000427"
+    ],
+    "legacy_high_speed_candidate_count": 64,
+    "legacy_high_speed_tiers": {
+      "A": 56,
+      "B": 8
+    },
+    "opposite_direction_count": 2,
+    "parallel_current_link_count": 32,
+    "same_direction_count": 30
+  },
+  "observed_legacy_high_speed_agreement": {
+    "comparable_interval_count": 25,
+    "distance_p50_m": 0.10549921819021507,
+    "distance_p95_m": 0.5149854617810226,
+    "interpretation": "review_only_observed_to_legacy_nearest_distance",
+    "matched_within_3m_count": 13744,
+    "matched_within_3m_ratio": 0.9773163620849037,
+    "observed_interval_count": 25,
+    "promotion_gate": false,
+    "sample_count": 14063,
+    "within_0_30m_ratio": 0.8779831199068685,
+    "within_0_75m_ratio": 0.9817374854481956
+  },
+  "operational": false,
+  "overlay_regions": {
+    "competition_corridor": {
+      "bounds_xy": [
+        [
+          -183.4999171711388,
+          -565.9258838542538
+        ],
+        [
+          99.6257922623034,
+          357.7904883160853
+        ]
+      ],
+      "layer_counts": {
+        "adopted_legacy_boundary": 164,
+        "current_link": 70,
+        "legacy_tier_a": 344,
+        "legacy_tier_b": 75,
+        "nominal_boundary": 85,
+        "observation_automatic": 6,
+        "observation_rejected": 12,
+        "observation_review_required": 27,
+        "observation_unmatched": 15,
+        "observed_calibrated": 60,
+        "stopline": 10
+      }
+    },
+    "high_speed_01_entry": {
+      "bounds_xy": [
+        [
+          -23.338825026643462,
+          244.49492757255211
+        ],
+        [
+          88.59665366448462,
+          357.7904883160853
+        ]
+      ],
+      "layer_counts": {
+        "adopted_legacy_boundary": 25,
+        "current_link": 12,
+        "legacy_tier_a": 31,
+        "nominal_boundary": 14,
+        "observation_automatic": 1,
+        "observation_rejected": 3,
+        "observation_review_required": 10,
+        "observation_unmatched": 1,
+        "observed_calibrated": 11
+      }
+    },
+    "high_speed_02_north": {
+      "bounds_xy": [
+        [
+          50.073913682601415,
+          77.19790052389726
+        ],
+        [
+          89.44065402587876,
+          268.637467188295
+        ]
+      ],
+      "layer_counts": {
+        "adopted_legacy_boundary": 21,
+        "current_link": 14,
+        "legacy_tier_a": 25,
+        "nominal_boundary": 17,
+        "observation_review_required": 6,
+        "observed_calibrated": 11
+      }
+    },
+    "high_speed_03_middle_north": {
+      "bounds_xy": [
+        [
+          54.884961067466065,
+          -5.3787580179050565
+        ],
+        [
+          89.8533310664352,
+          101.21414165571332
+        ]
+      ],
+      "layer_counts": {
+        "adopted_legacy_boundary": 12,
+        "current_link": 14,
+        "legacy_tier_a": 13,
+        "nominal_boundary": 17,
+        "observation_review_required": 5,
+        "observed_calibrated": 11
+      }
+    },
+    "high_speed_04_middle_south": {
+      "bounds_xy": [
+        [
+          51.809451583417726,
+          -154.91862475825474
+        ],
+        [
+          90.60510640754364,
+          18.62577439425513
+        ]
+      ],
+      "layer_counts": {
+        "adopted_legacy_boundary": 22,
+        "current_link": 15,
+        "legacy_tier_a": 22,
+        "legacy_tier_b": 3,
+        "nominal_boundary": 19,
+        "observation_review_required": 4,
+        "observed_calibrated": 10
+      }
+    },
+    "high_speed_05_south": {
+      "bounds_xy": [
+        [
+          56.046424655942246,
+          -377.74847655789927
+        ],
+        [
+          91.60749652027152,
+          -130.88929166039452
+        ]
+      ],
+      "layer_counts": {
+        "adopted_legacy_boundary": 34,
+        "current_link": 18,
+        "legacy_tier_a": 38,
+        "legacy_tier_b": 5,
+        "nominal_boundary": 24,
+        "observation_review_required": 5,
+        "observed_calibrated": 9
+      }
+    },
+    "high_speed_06_exit": {
+      "bounds_xy": [
+        [
+          58.2132850644696,
+          -417.578488108702
+        ],
+        [
+          91.68018554752996,
+          -353.73142873868346
+        ]
+      ],
+      "layer_counts": {
+        "adopted_legacy_boundary": 25,
+        "current_link": 9,
+        "legacy_tier_a": 15,
+        "legacy_tier_b": 5,
+        "nominal_boundary": 13,
+        "observation_automatic": 1,
+        "observation_review_required": 4,
+        "observed_calibrated": 5
+      }
+    },
+    "shadow": {
+      "bounds_xy": [
+        [
+          -186.4999171711388,
+          -568.9258838542538
+        ],
+        [
+          61.72385303582996,
+          -461.41094469698146
+        ]
+      ],
+      "layer_counts": {
+        "adopted_legacy_boundary": 18,
+        "current_link": 10,
+        "legacy_tier_a": 16,
+        "legacy_tier_b": 5,
+        "nominal_boundary": 16,
+        "observation_automatic": 2,
+        "observation_review_required": 2,
+        "observed_calibrated": 14,
+        "stopline": 1
+      }
+    },
+    "static_obstacle": {
+      "bounds_xy": [
+        [
+          -94.9685367429629,
+          -245.3942881319672
+        ],
+        [
+          -44.83293701335788,
+          -63.45965605089441
+        ]
+      ],
+      "layer_counts": {
+        "adopted_legacy_boundary": 2,
+        "current_link": 8,
+        "legacy_tier_a": 10,
+        "legacy_tier_b": 2,
+        "nominal_boundary": 8,
+        "observation_automatic": 2,
+        "observation_rejected": 1,
+        "observation_review_required": 1,
+        "observed_calibrated": 5,
+        "stopline": 1
+      }
+    }
+  },
+  "review_config_sha256": "4201e0c6a91a27fdb91b9496b52715b05087eb43090e8fff20e28700eb1e0fe2",
+  "review_id": "kcity2025_candidate_review_20260916",
+  "source_hashes": {
+    "competition_route": "f74ff6f53e27c0c4b2cc0e004e5873f7ee1f68f2107f0429f0aad55254d73ee6",
+    "high_speed_legacy_index": "11607cff25885d15df3304756cb7c05d6f155550c5d218a42197ddeb250be67c",
+    "legacy_adopted_map": "b424c56c310557fd8fbe6388c9320eae8dff0cf545d4e67e998a803239328be4",
+    "legacy_config": "3b3c7ab666a252bd32094c28e66067b45d2481e5468bd287a553bb29177c6839",
+    "legacy_lane_audit": "d5b7771a30ef3914effb5ee0a9334f047e1ec24a524acdc25122264288dd2d92",
+    "nominal_map": "209a0d06fdecaa570c6364a791b7b3f2a5404dc1e8f570d9bb54841fcfe57b9a",
+    "observed_config": "2caa3bdb121be360c188009f6f2035f204034bc3bb787e4d8b0f57b1406699c7",
+    "observed_map": "e591071b0cba3dbee5e1c78ee7d54ff6ae7df2b35f760b87c2762cd140856f9d",
+    "segment_matches": "92aecc5ac94235ab47d5ed78cf115e7d5c191dd99704d85fc68958a789d4cf1f"
+  },
+  "status": "review_only_non_operational",
+  "transfer_recommendation": {
+    "changed_or_branching_sections": "do_not_copy_without_current_geometry_validation",
+    "current_topology_remains_authoritative": true,
+    "legacy_tier_b": "manual_review_or_current_observation_support_required",
+    "stable_high_speed_legacy_tier_a": "adopted_in_non_operational_hybrid_candidate"
+  }
+}

@@ -1,0 +1,34 @@
+schema_version: asmc.hd_map.candidate_review_config/v1
+review_id: kcity2025_three_source_compare_20260916
+
+# This configuration is intentionally source-separating. It does not read the
+# operational-map experiment and never merges any of the three displayed maps.
+sources:
+  nominal_map: src/asmc_hd_map/reports/kcity2025_current_corridor_20260916/nominal_candidate_map.json
+  observed_map: src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/observed_candidate_map.json
+  observed_config: src/asmc_hd_map/config/kcity2025_observed_calibration.yaml
+  segment_matches: src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/segment_matches.csv
+  legacy_config: src/asmc_hd_map/config/kcity2025_legacy_transfer.yaml
+  legacy_lane_audit: src/asmc_hd_map/reports/kcity2025_legacy_alignment_20260916/lane_transfer_candidates.csv
+  high_speed_legacy_index: src/asmc_hd_map/reports/kcity2025_legacy_alignment_20260916/high_speed_candidate_index.json
+  legacy_adopted_map: src/asmc_hd_map/reports/kcity2025_hybrid_completion_20260916/hybrid_candidate_map.json
+  won_tae_h5: src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5
+  competition_route: R_KR_PG_KATRI/2026_molit_comp_global_path.txt
+
+comparison:
+  sources_are_independent: true
+  preplan_hybrid_sha256: b424c56c310557fd8fbe6388c9320eae8dff0cf545d4e67e998a803239328be4
+  won_tae_h5_sha256: e8ce47f504cd0387686718dfe72f12d17e8c684d0cc23fe41d9938171d896e86
+  legacy_lane_set_sha256: 2e09ace3bfc625e9b717d9f13c00f551527d3b23e37c7e3b256c26706840037b
+  # Only old-map A/B features assigned to the current 70-link competition
+  # corridor are shown. This retains all reviewed high-speed lanes, official
+  # route boundaries, and route connectors/guides without unrelated roads.
+  legacy_current_corridor_only: true
+
+regions: {}
+visualization: {width_px: 1600, height_px: 1000, padding_px: 35}
+promotion_policy:
+  operational: false
+  comparison_only: true
+  source_merging_forbidden: true
+expected: {}

@@ -1,0 +1,36 @@
+{
+  "axis_convention": "col=+x,row=-y",
+  "boundary_rule_codes": {
+    "0": "none",
+    "1": "permitted",
+    "2": "restricted",
+    "3": "prohibited",
+    "4": "unknown",
+    "5": "stopline"
+  },
+  "bounds_xy_m": [
+    [
+      -177.33208077725007,
+      -560.6728087757695
+    ],
+    [
+      94.37576492639229,
+      352.64119413275347
+    ]
+  ],
+  "frame_id": "map",
+  "height_px": 4568,
+  "maneuver_surface_semantics": "route_and_special-zone physical lane polygons; permission remains boundary-rule/planner policy",
+  "origin_xy_m": [
+    -177.33208077725007,
+    -560.6728087757695
+  ],
+  "resolution_m": 0.2,
+  "source_quality_codes": {
+    "0": "outside_or_forbidden",
+    "1": "link_nominal_fallback",
+    "2": "partially_observed",
+    "3": "direct_observed"
+  },
+  "width_px": 1360
+}

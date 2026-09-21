@@ -1,0 +1,36 @@
+schema_version: asmc.hd_map.candidate_review_config/v1
+review_id: kcity2025_operational_candidate_review_20260916
+
+sources:
+  nominal_map: src/asmc_hd_map/reports/kcity2025_current_corridor_20260916/nominal_candidate_map.json
+  observed_map: src/asmc_hd_map/reports/kcity2025_operational_map_20260916/operational_candidate_map.json
+  observed_config: src/asmc_hd_map/config/kcity2025_observed_calibration.yaml
+  segment_matches: src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/segment_matches.csv
+  legacy_config: src/asmc_hd_map/config/kcity2025_legacy_transfer.yaml
+  legacy_lane_audit: src/asmc_hd_map/reports/kcity2025_legacy_alignment_20260916/lane_transfer_candidates.csv
+  high_speed_legacy_index: src/asmc_hd_map/reports/kcity2025_legacy_alignment_20260916/high_speed_candidate_index.json
+  legacy_adopted_map: src/asmc_hd_map/reports/kcity2025_operational_map_20260916/operational_candidate_map.json
+  competition_route: R_KR_PG_KATRI/2026_molit_comp_global_path.txt
+
+regions:
+  high_speed:
+    corridor_roles: [high_speed_same_direction]
+    margin_m: 15.0
+  shadow:
+    corridor_roles: [shadow_primary, shadow_opposite, shadow_connector]
+    margin_m: 15.0
+  static_obstacle:
+    corridor_roles: [static_obstacle_primary, static_obstacle_opposite, static_obstacle_connector]
+    margin_m: 15.0
+
+visualization: {width_px: 1600, height_px: 1000, padding_px: 35}
+
+promotion_policy:
+  operational: false
+  direct_observation_geometry_anchor: true
+  legacy_template_requires_local_gate: true
+  review_bundle_mutates_candidate_map: false
+
+expected:
+  high_speed_parallel_links: 32
+  lane_change_reachable_links: 25

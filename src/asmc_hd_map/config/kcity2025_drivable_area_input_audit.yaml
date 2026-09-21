@@ -1,0 +1,1553 @@
+schema_version: asmc.hd_map.drivable_area_input_audit/v1
+audit_id: kcity2025_drivable_area_input_audit_v1
+scope: competition_route_only
+status: p2a_complete_no_geometry_change
+sources:
+  competition_metadata:
+    path: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml
+    sha256: 6e11a97cb0abbadd9bae98acd9884a92b97d59aa3d6d1a3547aa12b77217ddea
+    bytes: 28179
+  current_global_info:
+    path: src/behavior_planner/src/config/global_info.json
+    sha256: bd74fa3f05830e0741c3c7f51d0f7935f389be3879251fd0231918538a05f133
+    bytes: 2382
+  current_link_set:
+    path: src/behavior_planner/src/config/link_set.json
+    sha256: 5ce0fd57da07b83221c0a4d117b0606b2d9c094c8de476a7d1176c78a4dc5b0f
+    bytes: 9112815
+  current_node_set:
+    path: src/behavior_planner/src/config/node_set.json
+    sha256: baafc1acbb4a34eadcafe6136f2b3ac330cebf0cf5727a324c4f117a54eba7dc
+    bytes: 107804
+  legacy_drivable_h5:
+    path: src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5
+    sha256: e8ce47f504cd0387686718dfe72f12d17e8c684d0cc23fe41d9938171d896e86
+    bytes: 1683347
+  reviewed_lane_markings:
+    path: src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json
+    sha256: ffcccb478ab9fea5232631dab49145eb59c9211a88c6d2f460108355fc4c54ee
+    bytes: 1957494
+  reviewed_route_links:
+    path: src/behavior_planner/src/config/route_links_1.yaml
+    sha256: d5444dce6da7bb7da1f88c3cdf1cbdef4e1a0eebcf8d0d7a5db03830a97554bf
+    bytes: 991
+frame:
+  frame_id: map
+  map_id: waize_katri_2025-10-23
+  local_origin_in_global:
+  - 302595.0
+  - 4124145.0
+  - 0.0
+reviewed_hd_map:
+  geometry_sha256: 01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf
+  lane_marking_count: 121
+  stopline_count: 7
+legacy_drivable_prior:
+  representation: node_link_centerline_buffer_raster_with_reviewed_observation_adjustments
+  true_vector_road_mesh_available: false
+  dataset: road
+  shape:
+  - 7232
+  - 3085
+  pixels_per_meter: 5.0
+  world_offset_in_meters:
+  - -454.5158996582031
+  - -825.0457763671875
+  road_nonzero_px: 2245861
+  road_area_m2: 89834.44
+  checkpoint_centers_inside: 16
+  checkpoint_count: 16
+classification_policy:
+  sample_step_m: 1.0
+  marking_sample_step_m: 0.5
+  minimum_lateral_distance_m: 0.4
+  maximum_boundary_distance_m: 8.0
+  minimum_bilateral_coverage: 0.8
+  intersection_link_types:
+  - '1'
+  intersection_clear_from_start_m: 30.0
+  merge_diverge_link_types:
+  - '3'
+  topology_transition_buffer_m: 5.0
+  minimum_lane_clip_interval_m: 5.0
+  full_guard_reasons:
+    '3': merge_diverge_or_toll_transition
+route_summary:
+  closed_loop: true
+  topologically_continuous: true
+  link_count: 39
+  route_length_m: 2184.611723336
+  guarded_length_m: 984.488495
+  lane_clip_candidate_length_m: 1200.123227
+  action_counts:
+    hybrid_guard_and_clip_candidate: 15
+    lane_clip_candidate: 6
+    preserve_prior: 18
+  full_route_coverage: true
+route_links:
+- link_id: A2256W000748
+  order: 0
+  route_start_m: 0.0
+  route_end_m: 72.628969
+  length_m: 72.628969
+  link_type: '6'
+  road_id: '4000694'
+  ego_lane: 1
+  from_node: A1256W000332
+  to_node: A1256W000736
+  topology:
+    from_incoming: 2
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 3
+  reviewed_marking_count: 3
+  boundary_evidence:
+    sample_count: 74
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 2.017
+    right_median_distance_m: 2.008
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 5.0
+    reasons:
+    - topology_transition_at_start
+    route_start_m: 0.0
+    route_end_m: 5.0
+  - start_m: 67.628969
+    end_m: 72.628969
+    reasons:
+    - topology_transition_at_end
+    route_start_m: 67.628969
+    route_end_m: 72.628969
+  lane_clip_candidate_intervals:
+  - start_m: 5.0
+    end_m: 67.628969
+    route_start_m: 5.0
+    route_end_m: 67.628969
+  status: audited_not_applied
+- link_id: A2256W000182
+  order: 1
+  route_start_m: 72.628969
+  route_end_m: 94.954246
+  length_m: 22.325277
+  link_type: '1'
+  road_id: '4000293'
+  ego_lane: 1
+  from_node: A1256W000736
+  to_node: A1256W000693
+  topology:
+    from_incoming: 1
+    from_outgoing: 3
+    to_incoming: 3
+    to_outgoing: 1
+  reviewed_marking_count: 4
+  boundary_evidence:
+    sample_count: 24
+    left_coverage: 1.0
+    right_coverage: 0.5
+    bilateral_coverage: 0.5
+    left_median_distance_m: 1.708
+    right_median_distance_m: 3.138
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 22.325277
+    reasons:
+    - insufficient_bilateral_marking_coverage
+    - intersection_link
+    - topology_transition_at_end
+    - topology_transition_at_start
+    route_start_m: 72.628969
+    route_end_m: 94.954246
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000329
+  order: 2
+  route_start_m: 94.954246
+  route_end_m: 160.009167
+  length_m: 65.054921
+  link_type: '6'
+  road_id: '4000135'
+  ego_lane: 1
+  from_node: A1256W000693
+  to_node: A1256W000749
+  topology:
+    from_incoming: 3
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 2
+  reviewed_marking_count: 5
+  boundary_evidence:
+    sample_count: 67
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.704
+    right_median_distance_m: 1.818
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 5.0
+    reasons:
+    - topology_transition_at_start
+    route_start_m: 94.954246
+    route_end_m: 99.954246
+  - start_m: 60.054921
+    end_m: 65.054921
+    reasons:
+    - topology_transition_at_end
+    route_start_m: 155.009167
+    route_end_m: 160.009167
+  lane_clip_candidate_intervals:
+  - start_m: 5.0
+    end_m: 60.054921
+    route_start_m: 99.954246
+    route_end_m: 155.009167
+  status: audited_not_applied
+- link_id: A2256W000236
+  order: 3
+  route_start_m: 160.009167
+  route_end_m: 186.285732
+  length_m: 26.276564
+  link_type: '1'
+  road_id: '4000243'
+  ego_lane: 1
+  from_node: A1256W000749
+  to_node: A1256W000739
+  topology:
+    from_incoming: 1
+    from_outgoing: 2
+    to_incoming: 2
+    to_outgoing: 1
+  reviewed_marking_count: 3
+  boundary_evidence:
+    sample_count: 28
+    left_coverage: 0.3571
+    right_coverage: 0.3571
+    bilateral_coverage: 0.3571
+    left_median_distance_m: 3.197
+    right_median_distance_m: 3.268
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 26.276564
+    reasons:
+    - insufficient_bilateral_marking_coverage
+    - intersection_link
+    - topology_transition_at_end
+    - topology_transition_at_start
+    route_start_m: 160.009167
+    route_end_m: 186.285731
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000219
+  order: 4
+  route_start_m: 186.285732
+  route_end_m: 208.458941
+  length_m: 22.173209
+  link_type: '6'
+  road_id: '4000199'
+  ego_lane: 1
+  from_node: A1256W000739
+  to_node: A1256W000682
+  topology:
+    from_incoming: 2
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 2
+  reviewed_marking_count: 2
+  boundary_evidence:
+    sample_count: 24
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.623
+    right_median_distance_m: 1.613
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 5.0
+    reasons:
+    - topology_transition_at_start
+    route_start_m: 186.285732
+    route_end_m: 191.285732
+  - start_m: 17.173209
+    end_m: 22.173209
+    reasons:
+    - topology_transition_at_end
+    route_start_m: 203.458941
+    route_end_m: 208.458941
+  lane_clip_candidate_intervals:
+  - start_m: 5.0
+    end_m: 17.173209
+    route_start_m: 191.285732
+    route_end_m: 203.458941
+  status: audited_not_applied
+- link_id: A2256W000215
+  order: 5
+  route_start_m: 208.458941
+  route_end_m: 237.42279
+  length_m: 28.963849
+  link_type: '1'
+  road_id: '4000253'
+  ego_lane: 1
+  from_node: A1256W000682
+  to_node: A1256W000576
+  topology:
+    from_incoming: 1
+    from_outgoing: 2
+    to_incoming: 2
+    to_outgoing: 1
+  reviewed_marking_count: 2
+  boundary_evidence:
+    sample_count: 30
+    left_coverage: 0.3667
+    right_coverage: 0.3667
+    bilateral_coverage: 0.3667
+    left_median_distance_m: 3.016
+    right_median_distance_m: 2.983
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 28.963849
+    reasons:
+    - insufficient_bilateral_marking_coverage
+    - intersection_link
+    - topology_transition_at_end
+    - topology_transition_at_start
+    route_start_m: 208.458941
+    route_end_m: 237.42279
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000213
+  order: 6
+  route_start_m: 237.42279
+  route_end_m: 315.906098
+  length_m: 78.483308
+  link_type: '6'
+  road_id: '4000251'
+  ego_lane: 1
+  from_node: A1256W000576
+  to_node: A1256W000807
+  topology:
+    from_incoming: 2
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 2
+  reviewed_marking_count: 3
+  boundary_evidence:
+    sample_count: 80
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.498
+    right_median_distance_m: 1.503
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 5.0
+    reasons:
+    - topology_transition_at_start
+    route_start_m: 237.42279
+    route_end_m: 242.42279
+  - start_m: 73.483308
+    end_m: 78.483308
+    reasons:
+    - topology_transition_at_end
+    route_start_m: 310.906098
+    route_end_m: 315.906098
+  lane_clip_candidate_intervals:
+  - start_m: 5.0
+    end_m: 73.483308
+    route_start_m: 242.42279
+    route_end_m: 310.906098
+  status: audited_not_applied
+- link_id: A2256W000222
+  order: 7
+  route_start_m: 315.906098
+  route_end_m: 346.741824
+  length_m: 30.835725
+  link_type: '1'
+  road_id: '4000203'
+  ego_lane: 1
+  from_node: A1256W000807
+  to_node: A1256W000563
+  topology:
+    from_incoming: 1
+    from_outgoing: 2
+    to_incoming: 2
+    to_outgoing: 1
+  reviewed_marking_count: 1
+  boundary_evidence:
+    sample_count: 32
+    left_coverage: 1.0
+    right_coverage: 0.0
+    bilateral_coverage: 0.0
+    left_median_distance_m: 1.75
+    right_median_distance_m: null
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 30.835725
+    reasons:
+    - insufficient_bilateral_marking_coverage
+    - intersection_link
+    - topology_transition_at_end
+    - topology_transition_at_start
+    route_start_m: 315.906098
+    route_end_m: 346.741823
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000220
+  order: 8
+  route_start_m: 346.741824
+  route_end_m: 365.775741
+  length_m: 19.033917
+  link_type: '6'
+  road_id: '4000204'
+  ego_lane: 1
+  from_node: A1256W000563
+  to_node: A1256W000866
+  topology:
+    from_incoming: 2
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 2
+  reviewed_marking_count: 2
+  boundary_evidence:
+    sample_count: 21
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.724
+    right_median_distance_m: 2.248
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 5.0
+    reasons:
+    - topology_transition_at_start
+    route_start_m: 346.741824
+    route_end_m: 351.741824
+  - start_m: 14.033917
+    end_m: 19.033917
+    reasons:
+    - topology_transition_at_end
+    route_start_m: 360.775741
+    route_end_m: 365.775741
+  lane_clip_candidate_intervals:
+  - start_m: 5.0
+    end_m: 14.033917
+    route_start_m: 351.741824
+    route_end_m: 360.775741
+  status: audited_not_applied
+- link_id: A2256W000202
+  order: 9
+  route_start_m: 365.775741
+  route_end_m: 427.851844
+  length_m: 62.076103
+  link_type: '6'
+  road_id: '4000216'
+  ego_lane: 1
+  from_node: A1256W000866
+  to_node: A1256W000550
+  topology:
+    from_incoming: 1
+    from_outgoing: 2
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 2
+  boundary_evidence:
+    sample_count: 64
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.973
+    right_median_distance_m: 1.971
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 5.0
+    reasons:
+    - topology_transition_at_start
+    route_start_m: 365.775741
+    route_end_m: 370.775741
+  lane_clip_candidate_intervals:
+  - start_m: 5.0
+    end_m: 62.076103
+    route_start_m: 370.775741
+    route_end_m: 427.851844
+  status: audited_not_applied
+- link_id: A2256W000728
+  order: 10
+  route_start_m: 427.851844
+  route_end_m: 436.797566
+  length_m: 8.945723
+  link_type: '6'
+  road_id: '4000657'
+  ego_lane: 1
+  from_node: A1256W000550
+  to_node: A1256W000208
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 2
+  reviewed_marking_count: 2
+  boundary_evidence:
+    sample_count: 10
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.948
+    right_median_distance_m: 1.993
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 8.945723
+    reasons:
+    - clip_interval_below_minimum
+    - topology_transition_at_end
+    route_start_m: 427.851844
+    route_end_m: 436.797567
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000599
+  order: 11
+  route_start_m: 436.797566
+  route_end_m: 462.941613
+  length_m: 26.144046
+  link_type: '1'
+  road_id: '4000750'
+  ego_lane: 1
+  from_node: A1256W000208
+  to_node: A1256W000158
+  topology:
+    from_incoming: 1
+    from_outgoing: 2
+    to_incoming: 2
+    to_outgoing: 1
+  reviewed_marking_count: 2
+  boundary_evidence:
+    sample_count: 28
+    left_coverage: 0.4286
+    right_coverage: 0.4286
+    bilateral_coverage: 0.4286
+    left_median_distance_m: 2.381
+    right_median_distance_m: 2.547
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 26.144046
+    reasons:
+    - insufficient_bilateral_marking_coverage
+    - intersection_link
+    - topology_transition_at_end
+    - topology_transition_at_start
+    route_start_m: 436.797566
+    route_end_m: 462.941612
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000207
+  order: 12
+  route_start_m: 462.941613
+  route_end_m: 471.091599
+  length_m: 8.149987
+  link_type: '6'
+  road_id: '4000220'
+  ego_lane: 1
+  from_node: A1256W000158
+  to_node: A1256W000554
+  topology:
+    from_incoming: 2
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 4
+  boundary_evidence:
+    sample_count: 10
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.921
+    right_median_distance_m: 1.899
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 8.149987
+    reasons:
+    - clip_interval_below_minimum
+    - topology_transition_at_start
+    route_start_m: 462.941613
+    route_end_m: 471.0916
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000205
+  order: 13
+  route_start_m: 471.091599
+  route_end_m: 482.819185
+  length_m: 11.727586
+  link_type: '6'
+  road_id: '4000218'
+  ego_lane: 1
+  from_node: A1256W000554
+  to_node: A1256W000660
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 8
+  boundary_evidence:
+    sample_count: 13
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.932
+    right_median_distance_m: 1.951
+  action: lane_clip_candidate
+  intersection_guarded: false
+  guard_intervals: []
+  lane_clip_candidate_intervals:
+  - start_m: 0.0
+    end_m: 11.727586
+    route_start_m: 471.091599
+    route_end_m: 482.819185
+  status: audited_not_applied
+- link_id: A2256W000315
+  order: 14
+  route_start_m: 482.819185
+  route_end_m: 550.618735
+  length_m: 67.79955
+  link_type: '6'
+  road_id: '4000183'
+  ego_lane: 1
+  from_node: A1256W000660
+  to_node: A1256W000757
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 3
+  reviewed_marking_count: 5
+  boundary_evidence:
+    sample_count: 69
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.902
+    right_median_distance_m: 1.896
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 62.79955
+    end_m: 67.79955
+    reasons:
+    - topology_transition_at_end
+    route_start_m: 545.618735
+    route_end_m: 550.618735
+  lane_clip_candidate_intervals:
+  - start_m: 0.0
+    end_m: 62.79955
+    route_start_m: 482.819185
+    route_end_m: 545.618735
+  status: audited_not_applied
+- link_id: A2256W000318
+  order: 15
+  route_start_m: 550.618735
+  route_end_m: 580.868425
+  length_m: 30.24969
+  link_type: '1'
+  road_id: '4000185'
+  ego_lane: 1
+  from_node: A1256W000757
+  to_node: A1256W000578
+  topology:
+    from_incoming: 1
+    from_outgoing: 3
+    to_incoming: 2
+    to_outgoing: 1
+  reviewed_marking_count: 2
+  boundary_evidence:
+    sample_count: 32
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.75
+    right_median_distance_m: 1.754
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 30.24969
+    reasons:
+    - intersection_link
+    - topology_transition_at_end
+    - topology_transition_at_start
+    route_start_m: 550.618735
+    route_end_m: 580.868425
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000308
+  order: 16
+  route_start_m: 580.868425
+  route_end_m: 609.876838
+  length_m: 29.008413
+  link_type: '6'
+  road_id: '4000223'
+  ego_lane: 1
+  from_node: A1256W000578
+  to_node: A1256W000742
+  topology:
+    from_incoming: 2
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 3
+  reviewed_marking_count: 3
+  boundary_evidence:
+    sample_count: 31
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.632
+    right_median_distance_m: 1.847
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 5.0
+    reasons:
+    - topology_transition_at_start
+    route_start_m: 580.868425
+    route_end_m: 585.868425
+  - start_m: 24.008413
+    end_m: 29.008413
+    reasons:
+    - topology_transition_at_end
+    route_start_m: 604.876838
+    route_end_m: 609.876838
+  lane_clip_candidate_intervals:
+  - start_m: 5.0
+    end_m: 24.008413
+    route_start_m: 585.868425
+    route_end_m: 604.876838
+  status: audited_not_applied
+- link_id: A2256W000083
+  order: 17
+  route_start_m: 609.876838
+  route_end_m: 635.112607
+  length_m: 25.235769
+  link_type: '1'
+  road_id: '4000338'
+  ego_lane: 1
+  from_node: A1256W000742
+  to_node: A1256W000746
+  topology:
+    from_incoming: 1
+    from_outgoing: 3
+    to_incoming: 2
+    to_outgoing: 1
+  reviewed_marking_count: 1
+  boundary_evidence:
+    sample_count: 27
+    left_coverage: 1.0
+    right_coverage: 0.0
+    bilateral_coverage: 0.0
+    left_median_distance_m: 1.756
+    right_median_distance_m: null
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 25.235769
+    reasons:
+    - insufficient_bilateral_marking_coverage
+    - intersection_link
+    - topology_transition_at_end
+    - topology_transition_at_start
+    route_start_m: 609.876838
+    route_end_m: 635.112607
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000304
+  order: 18
+  route_start_m: 635.112607
+  route_end_m: 858.502396
+  length_m: 223.389789
+  link_type: '6'
+  road_id: '4000221'
+  ego_lane: 1
+  from_node: A1256W000746
+  to_node: A1256W000632
+  topology:
+    from_incoming: 2
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 2
+  boundary_evidence:
+    sample_count: 225
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.756
+    right_median_distance_m: 1.736
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 5.0
+    reasons:
+    - topology_transition_at_start
+    route_start_m: 635.112607
+    route_end_m: 640.112607
+  lane_clip_candidate_intervals:
+  - start_m: 5.0
+    end_m: 223.389789
+    route_start_m: 640.112607
+    route_end_m: 858.502396
+  status: audited_not_applied
+- link_id: A2256W000148
+  order: 19
+  route_start_m: 858.502396
+  route_end_m: 885.100688
+  length_m: 26.598291
+  link_type: '6'
+  road_id: '4000767'
+  ego_lane: 1
+  from_node: A1256W000632
+  to_node: A1256W000709
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 2
+  boundary_evidence:
+    sample_count: 28
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.805
+    right_median_distance_m: 1.758
+  action: lane_clip_candidate
+  intersection_guarded: false
+  guard_intervals: []
+  lane_clip_candidate_intervals:
+  - start_m: 0.0
+    end_m: 26.598291
+    route_start_m: 858.502396
+    route_end_m: 885.100687
+  status: audited_not_applied
+- link_id: A2256W000146
+  order: 20
+  route_start_m: 885.100688
+  route_end_m: 904.004158
+  length_m: 18.90347
+  link_type: '1'
+  road_id: '4000878'
+  ego_lane: 1
+  from_node: A1256W000709
+  to_node: A1256W000728
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 2
+    to_outgoing: 2
+  reviewed_marking_count: 3
+  boundary_evidence:
+    sample_count: 20
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 2.256
+    right_median_distance_m: 1.977
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 18.90347
+    reasons:
+    - intersection_link
+    - topology_transition_at_end
+    route_start_m: 885.100688
+    route_end_m: 904.004158
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000151
+  order: 21
+  route_start_m: 904.004158
+  route_end_m: 914.837314
+  length_m: 10.833156
+  link_type: '1'
+  road_id: '4000881'
+  ego_lane: 1
+  from_node: A1256W000728
+  to_node: A1256W000636
+  topology:
+    from_incoming: 2
+    from_outgoing: 2
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 3
+  boundary_evidence:
+    sample_count: 12
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 2.844
+    right_median_distance_m: 2.022
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 10.833156
+    reasons:
+    - intersection_link
+    - topology_transition_at_start
+    route_start_m: 904.004158
+    route_end_m: 914.837314
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000866
+  order: 22
+  route_start_m: 914.837314
+  route_end_m: 930.601907
+  length_m: 15.764593
+  link_type: '6'
+  road_id: '4000879'
+  ego_lane: 1
+  from_node: A1256W000636
+  to_node: A1256W000073
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 2
+  reviewed_marking_count: 3
+  boundary_evidence:
+    sample_count: 17
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.584
+    right_median_distance_m: 1.883
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 10.764593
+    end_m: 15.764593
+    reasons:
+    - topology_transition_at_end
+    route_start_m: 925.601907
+    route_end_m: 930.601907
+  lane_clip_candidate_intervals:
+  - start_m: 0.0
+    end_m: 10.764593
+    route_start_m: 914.837314
+    route_end_m: 925.601907
+  status: audited_not_applied
+- link_id: A2256W000054
+  order: 23
+  route_start_m: 930.601907
+  route_end_m: 984.711782
+  length_m: 54.109875
+  link_type: '1'
+  road_id: '4000871'
+  ego_lane: 1
+  from_node: A1256W000073
+  to_node: A1256W000896
+  topology:
+    from_incoming: 1
+    from_outgoing: 2
+    to_incoming: 3
+    to_outgoing: 1
+  reviewed_marking_count: 5
+  boundary_evidence:
+    sample_count: 56
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.614
+    right_median_distance_m: 1.845
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 30.0
+    reasons:
+    - intersection_link
+    - topology_transition_at_start
+    route_start_m: 930.601907
+    route_end_m: 960.601907
+  - start_m: 49.109875
+    end_m: 54.109875
+    reasons:
+    - topology_transition_at_end
+    route_start_m: 979.711782
+    route_end_m: 984.711782
+  lane_clip_candidate_intervals:
+  - start_m: 30.0
+    end_m: 49.109875
+    route_start_m: 960.601907
+    route_end_m: 979.711782
+  status: audited_not_applied
+- link_id: A2256W000846
+  order: 24
+  route_start_m: 984.711782
+  route_end_m: 1118.741751
+  length_m: 134.029969
+  link_type: '6'
+  road_id: '4000870'
+  ego_lane: 1
+  from_node: A1256W000896
+  to_node: A1256W000419
+  topology:
+    from_incoming: 3
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 7
+  boundary_evidence:
+    sample_count: 136
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.802
+    right_median_distance_m: 1.854
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 5.0
+    reasons:
+    - topology_transition_at_start
+    route_start_m: 984.711782
+    route_end_m: 989.711782
+  lane_clip_candidate_intervals:
+  - start_m: 5.0
+    end_m: 134.029969
+    route_start_m: 989.711782
+    route_end_m: 1118.741751
+  status: audited_not_applied
+- link_id: A2256W000411
+  order: 25
+  route_start_m: 1118.741751
+  route_end_m: 1286.154645
+  length_m: 167.412894
+  link_type: '6'
+  road_id: '4000104'
+  ego_lane: 5
+  from_node: A1256W000419
+  to_node: A1256W000465
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 2
+    to_outgoing: 1
+  reviewed_marking_count: 4
+  boundary_evidence:
+    sample_count: 169
+    left_coverage: 0.7574
+    right_coverage: 1.0
+    bilateral_coverage: 0.7574
+    left_median_distance_m: 1.782
+    right_median_distance_m: 1.94
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 167.412894
+    reasons:
+    - insufficient_bilateral_marking_coverage
+    - topology_transition_at_end
+    route_start_m: 1118.741751
+    route_end_m: 1286.154645
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000420
+  order: 26
+  route_start_m: 1286.154645
+  route_end_m: 1368.728446
+  length_m: 82.5738
+  link_type: '6'
+  road_id: '4000142'
+  ego_lane: 4
+  from_node: A1256W000465
+  to_node: A1256W000791
+  topology:
+    from_incoming: 2
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 2
+  reviewed_marking_count: 2
+  boundary_evidence:
+    sample_count: 84
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.696
+    right_median_distance_m: 1.701
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 5.0
+    reasons:
+    - topology_transition_at_start
+    route_start_m: 1286.154645
+    route_end_m: 1291.154645
+  - start_m: 77.5738
+    end_m: 82.5738
+    reasons:
+    - topology_transition_at_end
+    route_start_m: 1363.728445
+    route_end_m: 1368.728445
+  lane_clip_candidate_intervals:
+  - start_m: 5.0
+    end_m: 77.5738
+    route_start_m: 1291.154645
+    route_end_m: 1363.728445
+  status: audited_not_applied
+- link_id: A2256W000408
+  order: 27
+  route_start_m: 1368.728446
+  route_end_m: 1518.246886
+  length_m: 149.51844
+  link_type: '6'
+  road_id: '4000107'
+  ego_lane: 4
+  from_node: A1256W000791
+  to_node: A1256W000463
+  topology:
+    from_incoming: 1
+    from_outgoing: 2
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 2
+  boundary_evidence:
+    sample_count: 151
+    left_coverage: 1.0
+    right_coverage: 0.0
+    bilateral_coverage: 0.0
+    left_median_distance_m: 1.863
+    right_median_distance_m: null
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 149.51844
+    reasons:
+    - insufficient_bilateral_marking_coverage
+    - topology_transition_at_start
+    route_start_m: 1368.728446
+    route_end_m: 1518.246886
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000445
+  order: 28
+  route_start_m: 1518.246886
+  route_end_m: 1593.586387
+  length_m: 75.339502
+  link_type: '6'
+  road_id: '4000112'
+  ego_lane: 4
+  from_node: A1256W000463
+  to_node: A1256W000638
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 3
+    to_outgoing: 2
+  reviewed_marking_count: 4
+  boundary_evidence:
+    sample_count: 77
+    left_coverage: 0.3636
+    right_coverage: 1.0
+    bilateral_coverage: 0.3636
+    left_median_distance_m: 1.414
+    right_median_distance_m: 1.579
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 75.339502
+    reasons:
+    - insufficient_bilateral_marking_coverage
+    - topology_transition_at_end
+    route_start_m: 1518.246886
+    route_end_m: 1593.586388
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000153
+  order: 29
+  route_start_m: 1593.586387
+  route_end_m: 1741.720989
+  length_m: 148.134601
+  link_type: '3'
+  road_id: '4000111'
+  ego_lane: 3
+  from_node: A1256W000638
+  to_node: A1256W000611
+  topology:
+    from_incoming: 3
+    from_outgoing: 2
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 7
+  boundary_evidence:
+    sample_count: 150
+    left_coverage: 0.8067
+    right_coverage: 1.0
+    bilateral_coverage: 0.8067
+    left_median_distance_m: 1.806
+    right_median_distance_m: 1.715
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 148.134601
+    reasons:
+    - merge_diverge_or_toll_transition
+    - topology_transition_at_start
+    route_start_m: 1593.586387
+    route_end_m: 1741.720988
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000451
+  order: 30
+  route_start_m: 1741.720989
+  route_end_m: 1781.557329
+  length_m: 39.836341
+  link_type: '3'
+  road_id: '4000113'
+  ego_lane: 3
+  from_node: A1256W000611
+  to_node: A1256W000477
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 9
+  boundary_evidence:
+    sample_count: 41
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.807
+    right_median_distance_m: 1.902
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 39.836341
+    reasons:
+    - merge_diverge_or_toll_transition
+    route_start_m: 1741.720989
+    route_end_m: 1781.55733
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000446
+  order: 31
+  route_start_m: 1781.557329
+  route_end_m: 1859.641578
+  length_m: 78.084249
+  link_type: '6'
+  road_id: '4000140'
+  ego_lane: 1
+  from_node: A1256W000477
+  to_node: A1256W000456
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 6
+  boundary_evidence:
+    sample_count: 80
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.778
+    right_median_distance_m: 1.655
+  action: lane_clip_candidate
+  intersection_guarded: false
+  guard_intervals: []
+  lane_clip_candidate_intervals:
+  - start_m: 0.0
+    end_m: 78.084249
+    route_start_m: 1781.557329
+    route_end_m: 1859.641578
+  status: audited_not_applied
+- link_id: A2256W000448
+  order: 32
+  route_start_m: 1859.641578
+  route_end_m: 1877.744799
+  length_m: 18.103221
+  link_type: '6'
+  road_id: '4000028'
+  ego_lane: 1
+  from_node: A1256W000456
+  to_node: A1256W000831
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 7
+  boundary_evidence:
+    sample_count: 20
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.633
+    right_median_distance_m: 1.652
+  action: lane_clip_candidate
+  intersection_guarded: false
+  guard_intervals: []
+  lane_clip_candidate_intervals:
+  - start_m: 0.0
+    end_m: 18.103221
+    route_start_m: 1859.641578
+    route_end_m: 1877.744799
+  status: audited_not_applied
+- link_id: A2256W000126
+  order: 33
+  route_start_m: 1877.744799
+  route_end_m: 1996.730792
+  length_m: 118.985993
+  link_type: '6'
+  road_id: '4000361'
+  ego_lane: 1
+  from_node: A1256W000831
+  to_node: A1256W000838
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 4
+  boundary_evidence:
+    sample_count: 120
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.613
+    right_median_distance_m: 1.929
+  action: lane_clip_candidate
+  intersection_guarded: false
+  guard_intervals: []
+  lane_clip_candidate_intervals:
+  - start_m: 0.0
+    end_m: 118.985993
+    route_start_m: 1877.744799
+    route_end_m: 1996.730792
+  status: audited_not_applied
+- link_id: A2256W000128
+  order: 34
+  route_start_m: 1996.730792
+  route_end_m: 2109.847527
+  length_m: 113.116736
+  link_type: '6'
+  road_id: '4000860'
+  ego_lane: 1
+  from_node: A1256W000838
+  to_node: A1256W000842
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 6
+  boundary_evidence:
+    sample_count: 115
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.72
+    right_median_distance_m: 1.862
+  action: lane_clip_candidate
+  intersection_guarded: false
+  guard_intervals: []
+  lane_clip_candidate_intervals:
+  - start_m: 0.0
+    end_m: 113.116736
+    route_start_m: 1996.730792
+    route_end_m: 2109.847528
+  status: audited_not_applied
+- link_id: A2256W000333
+  order: 35
+  route_start_m: 2109.847527
+  route_end_m: 2120.982192
+  length_m: 11.134665
+  link_type: '1'
+  road_id: '4000139'
+  ego_lane: 1
+  from_node: A1256W000842
+  to_node: A1256W000616
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 2
+    to_outgoing: 2
+  reviewed_marking_count: 5
+  boundary_evidence:
+    sample_count: 13
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 3.203
+    right_median_distance_m: 1.84
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 11.134665
+    reasons:
+    - intersection_link
+    - topology_transition_at_end
+    route_start_m: 2109.847527
+    route_end_m: 2120.982192
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000154
+  order: 36
+  route_start_m: 2120.982192
+  route_end_m: 2132.230988
+  length_m: 11.248796
+  link_type: '1'
+  road_id: '4000263'
+  ego_lane: 1
+  from_node: A1256W000616
+  to_node: A1256W000633
+  topology:
+    from_incoming: 2
+    from_outgoing: 2
+    to_incoming: 1
+    to_outgoing: 1
+  reviewed_marking_count: 6
+  boundary_evidence:
+    sample_count: 13
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 3.53
+    right_median_distance_m: 2.28
+  action: preserve_prior
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 11.248796
+    reasons:
+    - intersection_link
+    - topology_transition_at_start
+    route_start_m: 2120.982192
+    route_end_m: 2132.230988
+  lane_clip_candidate_intervals: []
+  status: audited_not_applied
+- link_id: A2256W000332
+  order: 37
+  route_start_m: 2132.230988
+  route_end_m: 2165.753338
+  length_m: 33.52235
+  link_type: '6'
+  road_id: '4000138'
+  ego_lane: 1
+  from_node: A1256W000633
+  to_node: A1256W000144
+  topology:
+    from_incoming: 1
+    from_outgoing: 1
+    to_incoming: 1
+    to_outgoing: 2
+  reviewed_marking_count: 3
+  boundary_evidence:
+    sample_count: 35
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.772
+    right_median_distance_m: 2.244
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 28.52235
+    end_m: 33.52235
+    reasons:
+    - topology_transition_at_end
+    route_start_m: 2160.753338
+    route_end_m: 2165.753338
+  lane_clip_candidate_intervals:
+  - start_m: 0.0
+    end_m: 28.52235
+    route_start_m: 2132.230988
+    route_end_m: 2160.753338
+  status: audited_not_applied
+- link_id: A2256W000751
+  order: 38
+  route_start_m: 2165.753338
+  route_end_m: 2184.611723
+  length_m: 18.858385
+  link_type: '6'
+  road_id: '4000697'
+  ego_lane: 1
+  from_node: A1256W000144
+  to_node: A1256W000332
+  topology:
+    from_incoming: 1
+    from_outgoing: 2
+    to_incoming: 2
+    to_outgoing: 1
+  reviewed_marking_count: 3
+  boundary_evidence:
+    sample_count: 20
+    left_coverage: 1.0
+    right_coverage: 1.0
+    bilateral_coverage: 1.0
+    left_median_distance_m: 1.953
+    right_median_distance_m: 2.093
+  action: hybrid_guard_and_clip_candidate
+  intersection_guarded: true
+  guard_intervals:
+  - start_m: 0.0
+    end_m: 5.0
+    reasons:
+    - topology_transition_at_start
+    route_start_m: 2165.753338
+    route_end_m: 2170.753338
+  - start_m: 13.858385
+    end_m: 18.858385
+    reasons:
+    - topology_transition_at_end
+    route_start_m: 2179.611723
+    route_end_m: 2184.611723
+  lane_clip_candidate_intervals:
+  - start_m: 5.0
+    end_m: 13.858385
+    route_start_m: 2170.753338
+    route_end_m: 2179.611723
+  status: audited_not_applied
+next_gate:
+  stage: P2-B_lane_and_drivable_geometry
+  requirements:
+  - build lane centerlines/polygons without modifying reviewed paint
+  - clip only lane_clip_candidate_intervals
+  - preserve legacy road inside every guard interval
+  - validate checkpoint centers, route connectivity, polygon validity, and geometry SHA parity

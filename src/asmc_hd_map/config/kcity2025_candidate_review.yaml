@@ -1,0 +1,78 @@
+schema_version: asmc.hd_map.candidate_review_config/v1
+review_id: kcity2025_candidate_review_20260916
+
+sources:
+  nominal_map: src/asmc_hd_map/reports/kcity2025_current_corridor_20260916/nominal_candidate_map.json
+  observed_map: src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/observed_candidate_map.json
+  observed_config: src/asmc_hd_map/config/kcity2025_observed_calibration.yaml
+  segment_matches: src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/segment_matches.csv
+  legacy_config: src/asmc_hd_map/config/kcity2025_legacy_transfer.yaml
+  legacy_lane_audit: src/asmc_hd_map/reports/kcity2025_legacy_alignment_20260916/lane_transfer_candidates.csv
+  high_speed_legacy_index: src/asmc_hd_map/reports/kcity2025_legacy_alignment_20260916/high_speed_candidate_index.json
+  # Final review layer for this stage: stable legacy geometry plus current-only
+  # reconstructions at the 2025 obstacle/rotary/toll transitions.
+  legacy_adopted_map: src/asmc_hd_map/reports/kcity2025_hybrid_completion_20260916/hybrid_candidate_map.json
+  competition_route: R_KR_PG_KATRI/2026_molit_comp_global_path.txt
+
+# A region crop is derived from these authoritative current-link seeds. Other
+# high-speed lanes, observations, and origin-aligned legacy references are then
+# drawn whenever they intersect that crop.
+regions:
+  high_speed_01_entry:
+    road_ids: ['4000870', '4000357']
+    margin_m: 12.0
+    width_px: 1200
+    height_px: 1200
+  high_speed_02_north:
+    road_ids: ['4000104']
+    margin_m: 12.0
+    width_px: 1000
+    height_px: 1600
+  high_speed_03_middle_north:
+    road_ids: ['4000142']
+    margin_m: 12.0
+    width_px: 1000
+    height_px: 1600
+  high_speed_04_middle_south:
+    road_ids: ['4000107']
+    margin_m: 12.0
+    width_px: 1000
+    height_px: 1600
+  high_speed_05_south:
+    road_ids: ['4000112', '4000111']
+    margin_m: 12.0
+    width_px: 1000
+    height_px: 1600
+  high_speed_06_exit:
+    road_ids: ['4000113']
+    margin_m: 12.0
+    width_px: 1000
+    height_px: 1600
+  shadow:
+    corridor_roles: [shadow_primary, shadow_opposite, shadow_connector]
+    margin_m: 15.0
+  static_obstacle:
+    corridor_roles: [static_obstacle_primary, static_obstacle_opposite, static_obstacle_connector]
+    margin_m: 15.0
+
+visualization:
+  width_px: 1600
+  height_px: 1000
+  padding_px: 35
+
+promotion_policy:
+  operational: false
+  origin_only_legacy_geometry_is_reference_only: true
+  hybrid_geometry_is_reviewed_candidate: true
+  current_reconstructed_geometry_requires_driving_review: true
+  review_bundle_mutates_candidate_map: false
+  # Stable high-speed Tier A is the first legacy transfer candidate, but this
+  # review step does not silently merge it. Current link/node remains topology.
+  stable_high_speed_tier_a: promote_after_driving_overlay_review
+  tier_b: require_manual_review_or_current_observation_support
+
+expected:
+  # Includes the route entry/exit links tagged by the 15m high-speed corridor,
+  # not only the five links between A2256W000411 and A2256W000153.
+  high_speed_parallel_links: 32
+  lane_change_reachable_links: 25

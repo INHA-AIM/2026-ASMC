@@ -1,0 +1,47 @@
+schema_version: asmc.hd_map.legacy_adoption_config/v1
+build_id: kcity2025_legacy_adoption_20260916
+map_id: kcity2025_competition_hd_candidate_v2
+
+sources:
+  observed_candidate_map: src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/observed_candidate_map.json
+  legacy_transfer_config: src/asmc_hd_map/config/kcity2025_legacy_transfer.yaml
+  legacy_lane_audit: src/asmc_hd_map/reports/kcity2025_legacy_alignment_20260916/lane_transfer_candidates.csv
+
+# These intervals are a review decision, not an automatic inference. They combine
+# the origin-only audit with the 2026-09-16 MORAI driving inspection. The tollgate
+# exit -> shadow entrance transition remains excluded even though a short automatic
+# reuse island existed inside it.
+approved_route_intervals:
+  - {name: early_unchanged, start_s_m: 0.0, end_s_m: 212.4583470102632}
+  - {name: post_obstacle_unchanged, start_s_m: 342.40593188888994, end_s_m: 556.118733149548}
+  - {name: roundabout_approach, start_s_m: 576.61869488622, end_s_m: 614.876827021381}
+  - {name: roundabout_to_tollgate, start_s_m: 630.3767103356735, end_s_m: 1783.0572973249689}
+  - {name: shadow_and_tail, start_s_m: 1851.0567272113842, end_s_m: 2184.6117233360674}
+
+selection:
+  sample_step_m: 0.25
+  output_step_m: 0.50
+  current_link_sample_step_m: 0.50
+  maximum_link_center_distance_m: 2.80
+  maximum_route_context_distance_m: 12.0
+  maximum_heading_difference_deg: 30.0
+  close_internal_gap_m: 1.0
+  minimum_segment_length_m: 2.0
+  excluded_colors: [blue]
+  # 530 is a stop line in the legacy NGII layer. Current stop-line candidates
+  # were accepted by driving review and remain authoritative.
+  excluded_lane_types: [530]
+
+promotion_policy:
+  current_link_node_topology_authority: true
+  current_stoplines_authority: true
+  preserve_legacy_geometry_without_snapping: true
+  observed_geometry_is_validation_reference_only: true
+  unresolved_route_context_requires_topology_binding: true
+  operational: false
+
+visualization:
+  width_px: 1600
+  height_px: 1000
+  padding_px: 35
+  corridor_margin_m: 12.0

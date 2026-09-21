@@ -1,0 +1,244 @@
+{
+  "pipeline_sources": {
+    "boundary_offset_profiles": {
+      "bytes": 657041,
+      "configured_path": "src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/boundary_offset_profiles.csv",
+      "resolved_display": "src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/boundary_offset_profiles.csv",
+      "sha256": "93c57108dce910c151516cefba4aa02d550a8128035a3c0aa5147b2572e8c71c"
+    },
+    "current_global_info": {
+      "bytes": 2382,
+      "configured_path": "src/behavior_planner/src/config/global_info.json",
+      "resolved_display": "src/behavior_planner/src/config/global_info.json",
+      "sha256": "bd74fa3f05830e0741c3c7f51d0f7935f389be3879251fd0231918538a05f133"
+    },
+    "current_link_set": {
+      "bytes": 9112815,
+      "configured_path": "src/behavior_planner/src/config/link_set.json",
+      "resolved_display": "src/behavior_planner/src/config/link_set.json",
+      "sha256": "5ce0fd57da07b83221c0a4d117b0606b2d9c094c8de476a7d1176c78a4dc5b0f"
+    },
+    "current_node_set": {
+      "bytes": 107804,
+      "configured_path": "src/behavior_planner/src/config/node_set.json",
+      "resolved_display": "src/behavior_planner/src/config/node_set.json",
+      "sha256": "baafc1acbb4a34eadcafe6136f2b3ac330cebf0cf5727a324c4f117a54eba7dc"
+    },
+    "hybrid_map": {
+      "bytes": 8436143,
+      "configured_path": "src/asmc_hd_map/reports/kcity2025_hybrid_completion_20260916/hybrid_candidate_map.json",
+      "resolved_display": "src/asmc_hd_map/reports/kcity2025_hybrid_completion_20260916/hybrid_candidate_map.json",
+      "sha256": "b424c56c310557fd8fbe6388c9320eae8dff0cf545d4e67e998a803239328be4"
+    },
+    "legacy_lane_boundary": {
+      "bytes": 8950083,
+      "configured_path": "R_KR_PG_KATRI/lane_boundary_set.json",
+      "resolved_display": "R_KR_PG_KATRI/lane_boundary_set.json",
+      "sha256": "2e09ace3bfc625e9b717d9f13c00f551527d3b23e37c7e3b256c26706840037b"
+    },
+    "link_width_profiles": {
+      "bytes": 892500,
+      "configured_path": "src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/link_width_profiles.csv",
+      "resolved_display": "src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/link_width_profiles.csv",
+      "sha256": "2f590338f37139f5a1c20abd4bcc81e372c4d845299ef90b4c31471cadd89dce"
+    },
+    "nominal_map": {
+      "bytes": 3248409,
+      "configured_path": "src/asmc_hd_map/reports/kcity2025_current_corridor_20260916/nominal_candidate_map.json",
+      "resolved_display": "src/asmc_hd_map/reports/kcity2025_current_corridor_20260916/nominal_candidate_map.json",
+      "sha256": "209a0d06fdecaa570c6364a791b7b3f2a5404dc1e8f570d9bb54841fcfe57b9a"
+    },
+    "observed_map": {
+      "bytes": 5357269,
+      "configured_path": "src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/observed_candidate_map.json",
+      "resolved_display": "src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/observed_candidate_map.json",
+      "sha256": "e591071b0cba3dbee5e1c78ee7d54ff6ae7df2b35f760b87c2762cd140856f9d"
+    },
+    "organizer_route": {
+      "bytes": 249627,
+      "configured_path": "R_KR_PG_KATRI/2026_molit_comp_global_path.txt",
+      "resolved_display": "R_KR_PG_KATRI/2026_molit_comp_global_path.txt",
+      "sha256": "f74ff6f53e27c0c4b2cc0e004e5873f7ee1f68f2107f0429f0aad55254d73ee6"
+    },
+    "segment_matches": {
+      "bytes": 78764,
+      "configured_path": "src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/segment_matches.csv",
+      "resolved_display": "src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/segment_matches.csv",
+      "sha256": "92aecc5ac94235ab47d5ed78cf115e7d5c191dd99704d85fc68958a789d4cf1f"
+    }
+  },
+  "won_tae_snapshot": {
+    "file_count": 21,
+    "files": [
+      {
+        "bytes": 15655,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/config/waize_katri.yaml",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/config/waize_katri.yaml",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/config/waize_katri.yaml",
+        "role": "won_tae_bake_config",
+        "sha256": "a4470c16df2bd6eff46b57cfa29a25dc704c6be4cbd012da9f58342d5b8a32c2"
+      },
+      {
+        "bytes": 1683347,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5",
+        "role": "won_tae_baked_audit",
+        "sha256": "e8ce47f504cd0387686718dfe72f12d17e8c684d0cc23fe41d9938171d896e86"
+      },
+      {
+        "bytes": 199865,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/5.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/5.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/5.csv",
+        "role": "direct_observation",
+        "sha256": "58dba782f85b29b707a45722c2a7882ea5ce67003e605185e7840f0b07cf5e9b"
+      },
+      {
+        "bytes": 123977,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/6.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/6.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/6.csv",
+        "role": "direct_observation",
+        "sha256": "fef2145498d535a52a68cb49301c7e965962920c504881f60cae34e29170a76f"
+      },
+      {
+        "bytes": 33931,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/7.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/7.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/7.csv",
+        "role": "direct_observation",
+        "sha256": "1b0baed543e7c5e248e584c4b76315eae98103fc837a77b1a11737c1383194cc"
+      },
+      {
+        "bytes": 197801,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/end_left2.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/end_left2.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/end_left2.csv",
+        "role": "direct_observation",
+        "sha256": "8e26415d6f9973af9e77ec270fb032c8a1095f5f7af6786137ab57e058948f94"
+      },
+      {
+        "bytes": 178223,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/end_right.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/end_right.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/end_right.csv",
+        "role": "direct_observation",
+        "sha256": "1567ee60909d2a3511675f08500618b9f7428623be49052d45acf8ff3cd50158"
+      },
+      {
+        "bytes": 170262,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/fourth_point.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/fourth_point.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/fourth_point.csv",
+        "role": "direct_observation",
+        "sha256": "d180a9c4c34e715760e9b8f20a69680b1632003e573a2e51efa5528c500e6a65"
+      },
+      {
+        "bytes": 171497,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_en_left.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_en_left.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_en_left.csv",
+        "role": "direct_observation",
+        "sha256": "a603ba1290cdf5559d9e0417e184e07ff6cdcdcc1634725d1d138938167897c7"
+      },
+      {
+        "bytes": 292188,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_en_right.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_en_right.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_en_right.csv",
+        "role": "direct_observation",
+        "sha256": "86744913d74eb6ab462226cf47249333b4574759c4a651b3da4148fa07f56580"
+      },
+      {
+        "bytes": 264956,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_left.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_left.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_left.csv",
+        "role": "direct_observation",
+        "sha256": "157b6bc093b49d15ae112953965700e2bf51d3197a9f90fe9f75bebb46a1c793"
+      },
+      {
+        "bytes": 62093,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_middel_right.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_middel_right.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_middel_right.csv",
+        "role": "direct_observation",
+        "sha256": "6d236f0c4270a22b2fba02cb37219977046c1719b906a133a6a2fafe64bc0e67"
+      },
+      {
+        "bytes": 92476,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_middle_left.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_middle_left.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_middle_left.csv",
+        "role": "direct_observation",
+        "sha256": "da5b967f9d4aec27b3a60bbf7d13a49866e7144c2ee7ba47cafbae8b63fa6aab"
+      },
+      {
+        "bytes": 423727,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right.csv",
+        "role": "direct_observation",
+        "sha256": "4d97bc771602ff132b91ad36b5cd3754fd16beed0de02e00f824a4a4c9ae80f5"
+      },
+      {
+        "bytes": 237831,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right2.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right2.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right2.csv",
+        "role": "direct_observation",
+        "sha256": "316b9371a170cbd7de5eefc04dfd2113cc5df5660d9ec151ef9aa10578797d11"
+      },
+      {
+        "bytes": 253189,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right3.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right3.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right3.csv",
+        "role": "direct_observation",
+        "sha256": "0a616b652fdfefdcf28fe8ffda3f1f6848dd2c22868da39c74f0beb3f6755aac"
+      },
+      {
+        "bytes": 1003715,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/ro_merge3.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/ro_merge3.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/ro_merge3.csv",
+        "role": "direct_observation",
+        "sha256": "a1622e16946c8330377644a825aa5533ffb623c5bfb972011f413f42f8a5d025"
+      },
+      {
+        "bytes": 127261,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/second_point.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/second_point.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/second_point.csv",
+        "role": "direct_observation",
+        "sha256": "e06a3a043071b385ef2b23d9ce8ac92984a7239dc6059556a598c6a00bcd3f19"
+      },
+      {
+        "bytes": 171346,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/start_point.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/start_point.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/start_point.csv",
+        "role": "direct_observation",
+        "sha256": "1eeed06e9043a1748a58c761182b17354cce16f360320fd2c354e8f316bfdd9c"
+      },
+      {
+        "bytes": 57990,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/third_point.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/third_point.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/third_point.csv",
+        "role": "direct_observation",
+        "sha256": "cd9f339b1fc295171eec767f910aa8b12ed1766a1f6d64fba315a3d2816948b1"
+      },
+      {
+        "bytes": 81522,
+        "configured_path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/turnel_left.csv",
+        "path": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/turnel_left.csv",
+        "resolved_display": "src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/turnel_left.csv",
+        "role": "direct_observation",
+        "sha256": "21a4a7c870d5d9d64f6f1903f525f5a7cb0d6eb8d51ebb5825bfbf5cdb644d65"
+      }
+    ],
+    "git_commit": "e67f5daf721d909e9f267e110a5b59d02d45c5b9"
+  }
+}
