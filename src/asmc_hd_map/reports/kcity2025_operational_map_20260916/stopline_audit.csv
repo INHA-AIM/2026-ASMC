@@ -1,0 +1,10 @@
+node_id,decision,reason,current_link_id,route_s_m,length_m
+A1256W000682,kept,won_tae_h5_allowlist,A2256W000219,208.4589412270318,3.5
+A1256W000807,kept,won_tae_h5_allowlist,A2256W000213,315.9060981416605,3.5
+A1256W000208,kept,won_tae_h5_allowlist,A2256W000728,436.79756644158005,3.5
+A1256W000757,kept,won_tae_h5_allowlist,A2256W000315,550.6187353754732,3.5
+A1256W000582,kept,won_tae_h5_allowlist,A2256W000310,550.5537160694781,3.5
+A1256W000593,kept,won_tae_h5_allowlist,A2256W000309,609.8489441471309,3.5
+A1256W000709,kept,won_tae_h5_allowlist,A2256W000148,885.1006875594753,3.5
+A1256W000736,kept,live_route_review_20260916_painted_stopline,A2256W000748,72.62896869677363,3.5
+A1256W000742,rejected,roundabout_inside_not_painted,,,

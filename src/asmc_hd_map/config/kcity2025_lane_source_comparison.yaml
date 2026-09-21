@@ -1,0 +1,44 @@
+schema_version: asmc.hd_map.candidate_review_config/v1
+review_id: kcity2025_final_legacy_won_tae_comparison_20260921
+
+# Development-only, source-separated visualization. None of these three
+# geometry sets is merged or written by the visualization node.
+sources:
+  nominal_map: src/asmc_hd_map/reports/kcity2025_current_corridor_20260916/nominal_candidate_map.json
+  observed_map: src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/observed_candidate_map.json
+  observed_config: src/asmc_hd_map/config/kcity2025_observed_calibration.yaml
+  segment_matches: src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/segment_matches.csv
+  legacy_config: src/asmc_hd_map/config/kcity2025_legacy_transfer.yaml
+  legacy_lane_audit: src/asmc_hd_map/reports/kcity2025_legacy_alignment_20260916/lane_transfer_candidates.csv
+  high_speed_legacy_index: src/asmc_hd_map/reports/kcity2025_legacy_alignment_20260916/high_speed_candidate_index.json
+  legacy_adopted_map: src/asmc_hd_map/reports/kcity2025_hybrid_completion_20260916/hybrid_candidate_map.json
+  won_tae_h5: src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5
+  curated_candidate_map: src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json
+  competition_route: R_KR_PG_KATRI/2026_molit_comp_global_path.txt
+
+comparison:
+  sources_are_independent: true
+  primary_source: final_curated
+  legacy_current_corridor_only: true
+  source_merging_forbidden: true
+  runtime_publication_forbidden: true
+
+source_roles:
+  final_curated:
+    description: reviewed competition lane markings completed by the team
+    expected_lane_markings: 121
+    expected_stoplines: 7
+  legacy_origin_aligned:
+    description: old KATRI lane geometry with origin translation only
+    corridor_filter: current_70_link_corridor_tier_A_or_B
+  won_tae_h5:
+    description: immutable vector observations stored in Won-tae's H5 bake
+    vector_only: true
+
+regions: {}
+visualization: {width_px: 1600, height_px: 1000, padding_px: 35}
+promotion_policy:
+  operational: false
+  comparison_only: true
+  source_merging_forbidden: true
+expected: {}

@@ -1,0 +1,1741 @@
+schema_version: asmc.hd_map.route_curation/v1
+build_id: kcity2025_route_curation_stage14_20260918
+map_id: kcity2025_competition_route_curation_candidate_v14
+
+promotion_policy:
+  operational: false
+  partial_candidate: true
+  unimplemented_segments_emit_no_geometry: true
+  source_geometry_is_never_modified_without_an_explicit_override: true
+
+deferred_non_route_reviews:
+  - id: a076_uturn_white_broken
+    current_link_id: A2256W000076
+    requested_color: white
+    requested_pattern: broken
+    requested_alignment: parallel_to_centerline
+    status: review_required
+    reason: no_won_tae_direct_vector_within_20m_and_outside_official_route_curation
+    required_evidence: HDMAP_REVIEW_xy_or_source_vector_id
+
+sources:
+  comparison_config: src/asmc_hd_map/config/kcity2025_three_source_compare.yaml
+
+geometry:
+  sample_step_m: 0.25
+  output_step_m: 0.50
+  minimum_segment_length_m: 2.0
+  maximum_route_distance_m: 6.0
+  maximum_heading_difference_deg: 30.0
+
+# Link order and route stations come from the current K-City 2025 topology.
+# Only `implemented_candidate` entries are emitted by the current builder.
+# All other entries are an auditable backlog, not executable guesses.
+segments:
+  - id: stage01_start_legacy
+    status: implemented_candidate
+    route_s_min_m: 0.0
+    route_s_max_m: 186.28573174794127
+    end_exclusive: true
+    current_link_ids: [A2256W000748, A2256W000182, A2256W000329, A2256W000236]
+    source_policy:
+      primary: legacy_origin_aligned
+      allowed_sources: [legacy_origin_aligned, current_mgeo_reviewed_curve]
+    stopline_policy: deferred_separate_review
+    evidence: [S01, S02, S10, R01C]
+    excluded_legacy_source_ids: [B219BS010180]
+    current_link_markings:
+      - id: a182_left_white_broken_guide
+        source_current_link_id: A2256W000182
+        side: left
+        offset_start_m: 2.090181009801611
+        offset_end_m: 1.3659621265996007
+        source_station_max_m: 18.24969971769037
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 3.0
+        functional_role: route_left_intersection_guide
+        target_current_link_ids: [A2256W000182]
+        selection_id: stage01_a182_current_link_curvature_with_legacy_endpoint_offsets
+        line_width_m: 0.15
+    notes:
+      - The incomplete user token A2256W000 is interpreted as the interval before A2256W000219.
+      - Keep the origin-only legacy geometry except for the explicitly replaced A182 guide; do not blend Won-tae H5 or pre-plan geometry.
+      - Replace only legacy B219BS010180 with the current A182 curvature while retaining its reviewed start/end lateral offsets and route interval.
+      - The A2256W000748 route-right white marking is physically solid.
+      - At the end of A2256W000329, extend the route-right white marking to the same route cross-section as the yellow marking.
+
+  - id: stage02_new_road_219_to_213
+    status: implemented_candidate
+    route_s_min_m: 186.28573174794127
+    route_s_max_m: 315.90606194683437
+    end_exclusive: true
+    current_link_ids: [A2256W000219, A2256W000215, A2256W000213]
+    source_policy:
+      primary: won_tae_h5
+      fallback: none_in_this_unit
+    stopline_policy: won_tae_h5_allowlist_only
+    evidence: [S02, S11, S12]
+    h5_markings:
+      - id: entry_yellow
+        vector_indices: [5]
+        expected_source_file: third_point.csv
+        color: yellow
+        pattern: solid
+      - id: entry_white
+        vector_indices: [6]
+        expected_source_file: third_point.csv
+        color: white
+        pattern: solid
+        align_route_end_to_h5_vector_index: 5
+        endpoint_alignment_id: stage02_a219_right_endpoint_alignment
+        maximum_extension_m: 1.0
+      - id: a213_yellow_before_physical_gap
+        vector_indices: [21]
+        expected_source_file: fourth_point.csv
+        color: yellow
+        pattern: solid
+      - id: a213_yellow_after_physical_gap
+        vector_indices: [22]
+        expected_source_file: fourth_point.csv
+        color: yellow
+        pattern: solid
+      - id: a213_white
+        vector_indices: [23]
+        expected_source_file: fourth_point.csv
+        color: white
+        pattern: solid
+    h5_stoplines:
+      - source_id: A1256W000682
+        target_current_link_id: A2256W000219
+        expected_route_s_m: 208.4589412270312
+        route_s_tolerance_m: 0.30
+        maximum_route_distance_m: 0.50
+        line_width_m: 0.40
+        reason: MORAI_2025_driving_review_A219_end_painted_stopline
+      - source_id: A1256W000807
+        target_current_link_id: A2256W000213
+        expected_route_s_m: 315.90606194683437
+        route_s_tolerance_m: 0.30
+        maximum_route_distance_m: 0.50
+        line_width_m: 0.40
+        reason: MORAI_2025_driving_review_A213_end_painted_stopline
+    notes:
+      - Remove non-route opposing-lane paint and stop lines at which the competition route does not stop.
+      - Do not copy the pre-plan continuous solid boundaries across A2256W000215.
+      - The H5 observation gap through the intersection remains empty; guide paint is not synthesized in this unit.
+      - Extend H5 vector 6 to the route cross-section of vector 5 while retaining its lateral offset.
+      - Preserve the 2.278m split between H5 yellow vectors 21 and 22 because driving review indicates a physical paint gap.
+      - Include only H5 stoplines A1256W000682 and A1256W000807 at the reviewed A2256W000219/A2256W000213 ends; do not reintroduce other H5 or legacy stoplines.
+
+  - id: stage03_static_obstacle_intersection_222
+    status: implemented_candidate
+    route_s_min_m: 315.90606194683437
+    route_s_max_m: 365.7757405566522
+    end_exclusive: true
+    current_link_ids: [A2256W000222, A2256W000220]
+    source_policy:
+      primary: won_tae_h5
+      guide_geometry_reference: cleaned_preplan
+    stopline_policy: none_stage02_owns_entry_stopline
+    evidence: [S02, S13]
+    h5_markings:
+      - id: a220_yellow
+        vector_indices: [7]
+        expected_source_file: 5.csv
+        color: yellow
+        pattern: solid
+      - id: a220_white
+        vector_indices: [8]
+        expected_source_file: 5.csv
+        color: white
+        pattern: solid
+    preplan_guides:
+      - id: a222_centerline_guide
+        preplan_source_id: kcity2025_competition_hd_candidate_v3:lane_boundary:current_reconstructed:route:obstacle_bypass_2025:left
+        route_s_min_m: 315.90606194683437
+        route_s_max_m: 346.74182354000453
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 3.0
+        line_width_m: 0.15
+        pattern_override_id: stage03_a222_yellow_solid_to_white_broken_guide
+    notes:
+      - Remove both pre-plan solid boundary extensions after the preceding stop line.
+      - Retain only the left current-topology curve as a white broken guide between the center-line endpoints through A2256W000222.
+      - Resume the directly observed yellow and white solid boundaries with H5 vectors 7 and 8 at A2256W000220.
+
+  - id: stage04_link_202_and_following_intersection
+    status: implemented_candidate
+    route_s_min_m: 365.7757405566522
+    route_s_max_m: 471.09159934040485
+    end_exclusive: true
+    current_link_ids: [A2256W000202, A2256W000009, A2256W000728, A2256W000599, A2256W000207]
+    source_policy:
+      primary: won_tae_h5
+      rejected_reference: cleaned_preplan_continuous_intersection_boundaries
+    stopline_policy: won_tae_h5_allowlist_only
+    evidence: [R04, R04C]
+    h5_markings:
+      - id: a202_to_post_stop_yellow
+        vector_indices: [7]
+        expected_source_file: 5.csv
+        color: yellow
+        pattern: solid
+        run_selection: longest
+      - id: a202_lane1_right_white_broken
+        vector_indices: [8]
+        expected_source_file: 5.csv
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 3.0
+        route_s_max_m: 427.85184362810037
+        additional_target_current_link_ids: [A2256W000009]
+        attribute_override_id: stage04_a202_lane1_right_white_broken
+      - id: a728_to_post_stop_white_solid
+        vector_indices: [8]
+        expected_source_file: 5.csv
+        color: white
+        pattern: solid
+        route_s_min_m: 427.85184362810037
+      - id: a207_yellow
+        vector_indices: [10]
+        expected_source_file: 6.csv
+        color: yellow
+        pattern: solid
+      - id: a207_white
+        vector_indices: [17]
+        expected_source_file: 6.csv
+        color: white
+        pattern: solid
+        route_normal_smoothing:
+          method: constant_median_offset
+          correction_id: stage04_a207_right_constant_offset_straightening
+          maximum_correction_m: 0.20
+    legacy_markings:
+      - id: stage04_a009_right_outer_solid_from_legacy
+        source_id: B219BS010398
+        color: white
+        pattern: solid
+        functional_role: lane_2_right_outer_boundary
+        route_s_min_m: 365.7757405566522
+        route_s_max_m: 427.85184362810037
+        target_current_link_ids: [A2256W000009]
+    h5_stoplines:
+      - source_id: A1256W000208
+        target_current_link_id: A2256W000728
+        expected_route_s_m: 436.7975664415793
+        route_s_tolerance_m: 0.30
+        maximum_route_distance_m: 0.50
+        line_width_m: 0.40
+        reason: won_tae_H5_A728_end_painted_stopline
+    notes:
+      - Use H5 vector 7 as the route-left solid boundary.
+      - Split H5 vector 8 at the A202/A728 node: it is the A202-right/A009-left shared white broken divider on A202 and remains solid only from A728 onward.
+      - Add legacy B219BS010398 as the A009 right outer white solid and clip it at the A202 end before the A728 split.
+      - Keep the following A2256W000599 intersection empty after vectors 7 and 8 physically end; never extend pre-plan solid boundaries through it.
+      - Resume only H5 vectors 10 and 17 on A2256W000207 and clip them before A2256W000205.
+      - Vector 9 and vector 16 are short overlapping retrace fragments and are not duplicated into the canonical candidate.
+
+  - id: stage05_dynamic_obstacle_205_to_315
+    status: implemented_candidate
+    route_s_min_m: 471.09159934040485
+    route_s_max_m: 550.6187353754743
+    end_exclusive: true
+    current_link_ids: [A2256W000205, A2256W000315]
+    source_policy:
+      primary: won_tae_h5
+      supplement: legacy_origin_aligned
+    stopline_policy: won_tae_h5_two_lane_allowlist
+    evidence: [S03, R05C]
+    h5_markings:
+      - id: a205_entry_yellow
+        vector_indices: [10]
+        expected_source_file: 6.csv
+        color: yellow
+        pattern: solid
+        run_selection: longest
+        route_normal_smoothing:
+          method: constant_median_offset
+          correction_id: stage05_a205_entry_yellow_constant_offset_straightening
+          maximum_correction_m: 0.25
+      - id: a205_uturn_yellow_1
+        vector_indices: [11]
+        expected_source_file: 6.csv
+        expected_source_color: yellow
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 3.0
+        minimum_segment_length_m: 0.50
+        run_selection: longest
+        attribute_override_id: stage05_uturn_yellow_to_white_broken
+        route_normal_smoothing:
+          method: constant_median_offset
+          align_lateral_to_h5_vector_index: 10
+          correction_id: stage05_uturn_1_parallel_to_centerline
+          maximum_correction_m: 0.40
+      - id: a205_uturn_yellow_2
+        vector_indices: [12]
+        expected_source_file: 6.csv
+        expected_source_color: yellow
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 3.0
+        minimum_segment_length_m: 0.50
+        run_selection: longest
+        attribute_override_id: stage05_uturn_yellow_to_white_broken
+        route_normal_smoothing:
+          method: constant_median_offset
+          align_lateral_to_h5_vector_index: 10
+          correction_id: stage05_uturn_2_parallel_to_centerline
+          maximum_correction_m: 0.40
+      - id: a315_uturn_yellow_3
+        vector_indices: [13]
+        expected_source_file: 6.csv
+        expected_source_color: yellow
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 3.0
+        minimum_segment_length_m: 0.50
+        run_selection: longest
+        attribute_override_id: stage05_uturn_yellow_to_white_broken
+        route_normal_smoothing:
+          method: constant_median_offset
+          align_lateral_to_h5_vector_index: 10
+          correction_id: stage05_uturn_3_parallel_to_centerline
+          maximum_correction_m: 0.40
+      - id: a315_uturn_yellow_4
+        vector_indices: [14]
+        expected_source_file: 6.csv
+        expected_source_color: yellow
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 3.0
+        minimum_segment_length_m: 0.50
+        run_selection: longest
+        attribute_override_id: stage05_uturn_yellow_to_white_broken
+        route_normal_smoothing:
+          method: constant_median_offset
+          align_lateral_to_h5_vector_index: 10
+          correction_id: stage05_uturn_4_parallel_to_centerline
+          maximum_correction_m: 0.40
+      - id: a315_yellow
+        vector_indices: [15]
+        expected_source_file: 6.csv
+        color: yellow
+        pattern: solid
+      - id: a205_entry_lane1_right_white
+        vector_indices: [17]
+        expected_source_file: 6.csv
+        color: white
+        pattern: solid
+        route_s_max_m: 473.34
+        route_normal_smoothing:
+          method: constant_median_offset
+          correction_id: stage05_a205_entry_right_constant_offset_straightening
+          maximum_correction_m: 0.20
+      - id: lane2_outer_white
+        vector_indices: [18]
+        expected_source_file: 6.csv
+        color: white
+        pattern: solid
+    legacy_markings:
+      - id: stage05_lane1_right_broken_from_legacy
+        source_id: B219BS010382
+        color: white
+        pattern: broken
+        functional_role: lane_1_right_divider
+        align_route_end_to_route_s_m: 550.6187353754743
+        endpoint_alignment_id: stage05_lane1_right_to_c123_stopline
+        maximum_extension_m: 12.5
+    h5_stoplines:
+      - source_id: A1256W000757
+        target_current_link_id: A2256W000315
+        expected_route_s_m: 550.6187353754743
+        route_s_tolerance_m: 0.30
+        maximum_route_distance_m: 0.50
+        line_width_m: 0.40
+        reason: MORAI_2025_driving_review_C1256W000123_route_lane_stopline
+      - source_id: A1256W000582
+        target_current_link_id: A2256W000310
+        expected_route_s_m: 550.6187353754743
+        route_s_tolerance_m: 0.30
+        maximum_route_distance_m: 4.00
+        line_width_m: 0.40
+        reason: MORAI_2025_driving_review_C1256W000123_adjacent_lane_stopline
+    same_pattern_continuity_bridges:
+      - id: a207_to_a205_yellow_solid_continuity
+        from:
+          segment_id: stage04_link_202_and_following_intersection
+          source_id: won_tae_h5_vectors_10
+        to:
+          segment_id: stage05_dynamic_obstacle_205_to_315
+          source_id: won_tae_h5_vectors_10
+        color: yellow
+        pattern: solid
+        functional_role: centerline_continuity
+        target_current_link_ids: [A2256W000207, A2256W000205]
+        maximum_gap_m: 0.50
+        selection_id: stage05_same_yellow_solid_capture_gap_bridge
+      - id: a207_to_a205_white_solid_continuity
+        from:
+          segment_id: stage04_link_202_and_following_intersection
+          source_id: won_tae_h5_vectors_17
+        to:
+          segment_id: stage05_dynamic_obstacle_205_to_315
+          source_id: won_tae_h5_vectors_17
+        color: white
+        pattern: solid
+        functional_role: route_right_solid_continuity
+        target_current_link_ids: [A2256W000207, A2256W000205]
+        maximum_gap_m: 0.25
+        selection_id: stage05_same_white_solid_capture_gap_bridge
+    notes:
+      - Keep H5 center-line and outer-boundary positions, including the U-turn transition.
+      - Add only the missing lane-1 right white broken marking from legacy geometry.
+      - Vectors 11 through 14 are U-turn guide dashes, not yellow center-line paint; output them as white broken and align them parallel to vector 10.
+      - Retain the physical gaps between H5 vectors 10 through 15; do not bridge them.
+      - Straighten only the short H5 vector 17 entry fragment and join by station to the legacy broken divider without extrapolating either source.
+      - Extend the lane-1 right broken divider to the C1256W000123 stop-line cross-section, then include both H5 stop-line halves A1256W000757/A1256W000582.
+      - Bridge only the 0.354m yellow-solid and 0.154m white-solid H5 capture gaps across A207/A205; never bridge either solid into the following white broken U-turn/divider paint.
+      - The second lane remains available for obstacle avoidance; broken-line crossing has no mission penalty.
+
+  - id: stage06_right_turn_318
+    status: implemented_candidate
+    route_s_min_m: 550.6187353754743
+    route_s_max_m: 580.8684254144293
+    end_exclusive: true
+    current_link_ids: [A2256W000318]
+    source_policy:
+      primary: current_mgeo_route_guide
+      geometry_reference: cleaned_preplan_current_route_reconstruction
+      rejected_reference: legacy_B219BS011450_variable_offset_curve
+    evidence: [S04, S05, S16, R06]
+    preplan_guides:
+      - id: a318_left_white_broken_guide
+        preplan_source_id: kcity2025_competition_hd_candidate_v3:lane_boundary:current_reconstructed:route:post_dynamic_right_turn_broken_2025:left
+        route_s_min_m: 550.6187353754743
+        route_s_max_m: 580.8684254144293
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 3.0
+        line_width_m: 0.15
+        selection_id: stage06_a318_current_curve_left_guide
+      - id: a318_right_a319_left_white_broken_guide
+        preplan_source_id: kcity2025_competition_hd_candidate_v3:lane_boundary:current_reconstructed:route:post_dynamic_right_turn_broken_2025:right
+        route_s_min_m: 550.6187353754743
+        route_s_max_m: 580.8684254144293
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 3.0
+        line_width_m: 0.15
+        selection_id: stage06_a318_right_a319_left_shared_guide
+        additional_target_current_link_ids: [A2256W000319]
+    current_link_markings:
+      - id: a319_right_outer_white_solid
+        source_current_link_id: A2256W000319
+        side: right
+        anchor_h5_vector_index: 18
+        anchor_max_longitudinal_gap_m: 0.10
+        color: white
+        pattern: solid
+        functional_role: lane_2_outer_boundary
+        target_current_link_ids: [A2256W000319]
+        selection_id: stage06_a319_right_current_link_offset
+        line_width_m: 0.15
+    notes:
+      - Reject legacy B219BS011450 on A2256W000318 because its route-normal offset crosses from +0.97 m to -1.78 m and does not follow the current turn curvature.
+      - Use the reviewed current-route reconstruction at a constant left offset of about 1.75 m and clip it exactly to A2256W000318.
+      - Keep both physical white broken intersection guides and do not emit either reconstruction past the A318 end node.
+      - Treat the A318 right and A319 left guide as one shared physical marking owned by both links.
+      - Anchor the A319 route-right, lane-2 outer white solid to the preceding A310 H5 vector 18 endpoint rather than the nominal 1.75 m half-width.
+
+  - id: stage07_post_turn_308
+    status: implemented_candidate
+    route_s_min_m: 580.8684254144293
+    route_s_max_m: 609.8768384406588
+    end_exclusive: true
+    current_link_ids: [A2256W000308]
+    source_policy: {primary: won_tae_h5, supplement: legacy_origin_aligned}
+    stopline_policy: won_tae_h5_combined_two_lane_allowlist
+    evidence: [R07, R07S]
+    h5_markings:
+      - id: a308_left_yellow
+        vector_indices: [19]
+        expected_source_file: 7.csv
+        color: yellow
+        pattern: solid
+      - id: a308_lane2_outer_white
+        vector_indices: [20]
+        expected_source_file: 7.csv
+        color: white
+        pattern: solid
+    legacy_markings:
+      - id: stage07_lane1_right_broken_from_legacy
+        source_id: B219BS011450
+        color: white
+        pattern: broken
+        functional_role: lane_1_right_divider
+        attribute_override_id: stage07_a308_lane1_right_solid_to_broken
+        additional_target_current_link_ids: [A2256W000309]
+        dash_phase_m: 3.745963252936214
+    current_link_markings:
+      - id: a309_right_outer_transition_to_h5
+        source_current_link_id: A2256W000309
+        side: right
+        offset_start_m: 1.4646365485351711
+        offset_end_m: 1.5271444688273712
+        source_station_max_m: 2.0799992640075846
+        color: white
+        pattern: solid
+        functional_role: lane_2_outer_boundary_continuity
+        target_current_link_ids: [A2256W000309]
+        selection_id: stage07_a319_to_a309_outer_solid_continuity
+        line_width_m: 0.15
+    h5_stoplines:
+      - source_id: A1256W000593+A1256W000742
+        target_current_link_id: A2256W000308
+        additional_target_current_link_ids: [A2256W000309]
+        expected_route_s_m: 609.8768384406588
+        route_s_tolerance_m: 0.30
+        maximum_route_distance_m: 3.00
+        line_width_m: 0.40
+        reason: MORAI_2025_latest_driving_review_A308_end_painted_two_lane_stopline
+    notes:
+      - Use Won-tae H5 vectors 19 and 20 for the 2025 yellow left edge and lane-2 outer white edge.
+      - Add only the missing lane-1 right white broken divider from the locally matching A308 portion of legacy B219BS011450.
+      - Continue the A319 outer solid over the first 2.08m of A309 with a reviewed varying offset until it meets H5 vector 20.
+      - Preserve a natural 3m/3m dash phase across the A318/A308 junction and bind the shared divider to A308/A309 without filling its physical dash gaps.
+      - Do not reuse B219BS011450 on the preceding A318 connector.
+      - Latest live-driving review supersedes the earlier rejection and confirms the two-lane painted stop line at the A308/A309 end.
+      - Use the combined Won-tae H5 stop-line vector and keep ownership on both current links A308/A309.
+
+  - id: stage08_guide_083
+    status: implemented_candidate
+    route_s_min_m: 609.8768384406588
+    route_s_max_m: 635.1126073415768
+    end_exclusive: true
+    current_link_ids: [A2256W000083]
+    source_policy:
+      primary: current_mgeo_route_guide
+      geometry_reference: cleaned_preplan_current_route_reconstruction
+      attribute_override: yellow_solid_to_white_broken
+    evidence: [R08]
+    preplan_guides:
+      - id: a083_white_broken_route_guide
+        preplan_source_id: kcity2025_competition_hd_candidate_v3:lane_boundary:current_reconstructed:route:roundabout_exit_to_high_speed_2025:left
+        route_s_min_m: 609.8768384406588
+        route_s_max_m: 635.1126073415768
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 3.0
+        line_width_m: 0.15
+        pattern_override_id: stage08_a083_yellow_solid_to_white_broken_guide
+        selection_id: stage08_a083_route_guide
+    notes:
+      - Add only the competition-route white broken guide marking through A2256W000083.
+      - Use the current-route reconstruction for curvature, but reject its source yellow solid attributes.
+      - Do not emit either route edge as a continuous solid boundary through this intersection connector.
+
+  - id: stage09_two_lane_expansion_304
+    status: implemented_candidate
+    route_s_min_m: 635.1126073415768
+    route_s_max_m: 858.5023964184002
+    end_exclusive: true
+    current_link_ids: [A2256W000304, A2256W000307]
+    source_policy: {primary: won_tae_h5, optional_center_template: legacy_origin_aligned}
+    evidence: [S09, R09]
+    h5_markings:
+      - id: a304_left_yellow
+        vector_indices: [25]
+        expected_source_file: ro_merge3.csv
+        color: yellow
+        pattern: solid
+        run_selection: longest
+        prepend_route_min_source_anchor: true
+        maximum_start_extension_m: 1.0
+        start_anchor_alignment_id: stage09_preserve_h5_yellow_start_without_zigzag
+        target_current_link_ids: [A2256W000304]
+      - id: a307_right_outer_white
+        vector_indices: [28]
+        expected_source_file: ro_merge3.csv
+        color: white
+        pattern: solid
+        run_selection: longest
+        target_current_link_ids: [A2256W000307]
+    h5_midpoint_markings:
+      - id: a304_right_a307_left_white_broken
+        left_h5_vector_index: 25
+        right_h5_vector_index: 28
+        left_expected_source_file: ro_merge3.csv
+        right_expected_source_file: ro_merge3.csv
+        left_expected_color: yellow
+        right_expected_color: white
+        route_owner_current_link_id: A2256W000304
+        target_current_link_ids: [A2256W000304, A2256W000307]
+        maximum_source_distance_m: 7.0
+        maximum_heading_difference_deg: 20.0
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 3.0
+        line_width_m: 0.15
+        functional_role: lane_1_right_lane_2_left_shared_divider
+        selection_id: stage09_h5_two_outer_boundary_midpoint_divider
+    notes:
+      - The road changed from one lane in legacy KATRI to two lanes in K-City 2025.
+      - Never reuse the legacy left white solid as the new lane-1 divider.
+      - Use H5 vector 25 as the yellow left boundary and vector 28 as the lane-2 right outer white solid.
+      - Reject the 3.75 m zigzag duplicate projection at the vector-25 start, retain its authoritative first anchor, and join that anchor directly to the longest route-contiguous run.
+      - Generate the lane-1 right/lane-2 left broken marking from their route-normal midpoint.
+      - The H5 yellow start station is authoritative; legacy yellow may only smooth the supported continuation.
+
+  - id: stage10_roundabout_approach_148
+    status: implemented_candidate
+    route_s_min_m: 858.5023964184002
+    route_s_max_m: 914.8373138296832
+    end_exclusive: true
+    current_link_ids: [A2256W000148, A2256W000146, A2256W000151]
+    source_policy:
+      primary: won_tae_h5
+      smoothing_reference: current_link_route_normal
+      rejected_width_reference: legacy_origin_aligned
+    evidence: [S08, S21, R10, R10C, R10D]
+    h5_markings:
+      - id: roundabout_inner_yellow_smoothed
+        vector_indices: [26]
+        expected_source_file: ro_merge3.csv
+        color: yellow
+        pattern: solid
+        functional_role: roundabout_inner_circular_boundary
+        route_s_min_m: 892.75
+        route_s_max_m: 914.8373138296832
+        target_current_link_ids: [A2256W000146, A2256W000151]
+        run_selection: longest
+        polyline_smoothing:
+          method: arc_length_moving_average
+          smoothing_length_m: 1.0
+          maximum_correction_m: 0.20
+          correction_id: stage10_roundabout_inner_yellow_arc_smoothing
+    h5_route_profile_markings:
+      - id: a148_left_yellow_smoothed
+        vector_indices: [25]
+        expected_source_file: ro_merge3.csv
+        expected_source_color: yellow
+        route_owner_current_link_ids: [A2256W000148]
+        target_current_link_ids: [A2256W000148]
+        route_s_min_m: 858.5023964184002
+        route_s_max_m: 885.1006875594776
+        station_bin_m: 0.5
+        smoothing_length_m: 5.0
+        maximum_source_distance_m: 6.0
+        maximum_heading_difference_deg: 45.0
+        maximum_profile_gap_m: 1.5
+        maximum_smoothing_correction_m: 0.25
+        color: yellow
+        pattern: solid
+        functional_role: route_left_centerline_to_roundabout_stopline
+        profile_correction_id: stage10_a148_left_robust_profile
+        align_route_start_to_route_s_m: 858.3073083848091
+        startpoint_alignment_id: stage10_a148_yellow_start_gap_closed
+        maximum_start_extension_m: 0.60
+        align_route_end_to_route_s_m: 885.1006875594776
+        endpoint_alignment_id: stage10_a148_yellow_end_at_stopline
+        maximum_extension_m: 0.50
+      - id: a148_roundabout_right_white_smoothed
+        vector_indices: [29, 31, 51, 36, 37, 43]
+        expected_source_file: ro_merge3.csv
+        expected_source_color: white
+        route_owner_current_link_ids: [A2256W000148, A2256W000146, A2256W000151]
+        target_current_link_ids: [A2256W000148, A2256W000146, A2256W000151]
+        route_s_min_m: 858.5023964184002
+        route_s_max_m: 914.8373138296832
+        station_bin_m: 0.5
+        smoothing_length_m: 3.0
+        maximum_source_distance_m: 6.0
+        maximum_heading_difference_deg: 45.0
+        maximum_profile_gap_m: 3.0
+        maximum_smoothing_correction_m: 0.30
+        color: white
+        pattern: solid
+        functional_role: route_right_roundabout_outer_boundary
+        profile_correction_id: stage10_roundabout_right_robust_profile
+        align_route_start_to_route_s_m: 858.3073083848091
+        startpoint_alignment_id: stage10_a148_white_start_gap_closed
+        maximum_start_extension_m: 0.80
+    parallel_route_profile_markings:
+      - id: a146_short_yellow_parallel_to_opposite_white
+        reference_source_id: won_tae_h5_profile_29_31_51_36_37_43
+        anchor_source_id: won_tae_h5_profile_25
+        reference_color: white
+        route_owner_current_link_ids: [A2256W000146]
+        target_current_link_ids: [A2256W000146]
+        route_s_min_m: 885.1006875594776
+        route_s_max_m: 889.3505833773406
+        route_end_legacy_source_id: B219BS011472
+        route_end_tolerance_m: 0.05
+        maximum_route_distance_m: 6.0
+        maximum_heading_difference_deg: 45.0
+        maximum_anchor_extrapolation_m: 0.50
+        lateral_separation_min_m: 3.25
+        lateral_separation_max_m: 3.75
+        color: yellow
+        pattern: solid
+        functional_role: short_post_stop_centerline_parallel_to_opposite_white
+        line_width_m: 0.15
+        selection_id: stage10_replace_noisy_h5_tail_with_parallel_short_centerline
+    h5_stoplines:
+      - source_id: A1256W000709
+        target_current_link_id: A2256W000148
+        expected_route_s_m: 885.1006875594776
+        route_s_tolerance_m: 0.30
+        maximum_route_distance_m: 0.50
+        line_width_m: 0.40
+        reason: won_tae_h5_roundabout_entry_painted_stopline
+    notes:
+      - Smooth the H5 wiggle as a robust station-bin route-normal profile while pinning its first and last accepted observation bins.
+      - End the direct yellow profile at the A1256W000709 stopline; replace the noisy post-stop retrace with a 4.25 m yellow segment parallel to the opposite H5 white solid and end it at the reviewed B219BS011472 legacy centerline endpoint.
+      - Keep the actual observation gaps between the approach yellow, inner circular yellow, and exit yellow as separate features.
+      - Legacy makes the pre-roundabout lane too wide and lacks the inner yellow circular marking, so it is not emitted.
+      - Emit only the H5 A1256W000709 painted stopline; exclude other pre-plan/current stop lines and unrelated roundabout paint.
+
+  - id: stage11_roundabout_exit_to_high_speed
+    status: implemented_candidate
+    route_s_min_m: 914.8373138296832
+    route_s_max_m: 1118.741751169101
+    end_exclusive: true
+    current_link_ids: [A2256W000866, A2256W000054, A2256W000846]
+    source_policy: {primary: legacy_origin_aligned}
+    evidence: [S21, S22, S24, S26, S27, R11, R11A, R11B]
+    excluded_legacy_source_ids: [B219BS010215, B219BS011489, B219BS011497]
+    legacy_markings:
+      - id: a866_left_yellow_to_white_broken_start
+        source_id: B219BS011499
+        route_s_min_m: 914.8373138296832
+        route_s_max_m: 930.6019068794745
+        target_current_link_ids: [A2256W000866]
+        color: yellow
+        pattern: solid
+        functional_role: a866_left_yellow_edge
+        align_route_end_to_route_s_m: 930.6019068794745
+        endpoint_alignment_id: stage11_a866_yellow_to_link_end
+        maximum_extension_m: 13.0
+      - id: a846_right_solid_to_node
+        source_id: B219BS011112
+        route_s_min_m: 1109.70
+        route_s_max_m: 1118.741751169101
+        target_current_link_ids: [A2256W000846]
+        color: white
+        pattern: solid
+        align_route_end_to_route_s_m: 1118.741751169101
+        endpoint_alignment_id: stage11_a846_right_solid_to_node
+        maximum_extension_m: 2.10
+        functional_role: a846_right_solid_to_node
+    parallel_route_profile_markings:
+      - id: a846_left_solid_parallel_to_right
+        reference_source_id: B219BS011112
+        anchor_source_id: B219BS011490
+        replace_source_id: B219BS011113
+        reference_color: white
+        reference_pattern: solid
+        route_owner_current_link_ids: [A2256W000846]
+        target_current_link_ids: [A2256W000846]
+        route_s_min_m: 1109.961490688191
+        route_s_max_m: 1118.741751169101
+        maximum_route_distance_m: 6.0
+        maximum_heading_difference_deg: 30.0
+        maximum_anchor_extrapolation_m: 0.50
+        lateral_separation_min_m: 3.35
+        lateral_separation_max_m: 3.70
+        color: white
+        pattern: solid
+        functional_role: a846_left_solid_parallel_to_right_to_node
+        selection_id: stage11_a846_left_parallel_to_right
+        source_display: legacy_origin_aligned_width_adjusted
+        geometry_quality: reviewed_parallel_to_legacy_right_boundary
+        provenance_transform: anchored_parallel_offset_from_legacy_right_boundary
+        align_start_to_anchor_endpoint: true
+        maximum_start_snap_m: 0.10
+    same_pattern_continuity_bridges:
+      - id: a866_left_white_solid_connection
+        from:
+          segment_id: stage10_roundabout_approach_148
+          source_id: won_tae_h5_profile_29_31_51_36_37_43
+        to:
+          segment_id: stage11_roundabout_exit_to_high_speed
+          source_id: B219BS011494
+        color: white
+        pattern: solid
+        functional_role: a866_left_white_solid_connection
+        target_current_link_ids: [A2256W000151, A2256W000866]
+        maximum_gap_m: 3.60
+        selection_id: stage11_a866_white_gap_closed
+    notes:
+      - Use only the origin-aligned legacy corridor through A866, A054, and A846.
+      - Exclude B219BS010215, the non-route A2256W000057 entry guide that crosses into A054.
+      - Exclude B219BS011489/011497 because they are the non-route A2256W000150 yellow fork.
+      - Keep B219BS011490 as the lower A846 left-width anchor. Replace only the short B219BS011113 piece with a solid parallel to B219BS011112 at the B219BS011490 lane width, and end it at the A846 node cross-section.
+      - Extend B219BS011499 at fixed lateral offset through the A866 end, immediately before the A054 white broken marking begins.
+      - Extend B219BS011112 to the A846 node so the right solid meets the next right solid. Preserve the lateral step from the new A846 left solid to stage12 B219BS011097; stage12 independently owns B219BS011097 and must keep it white broken.
+
+  - id: stage12_high_speed_entry_and_body
+    status: implemented_candidate
+    route_s_min_m: 1118.741751169101
+    route_s_max_m: 1741.7209885112245
+    end_exclusive: true
+    current_link_ids: [A2256W000411, A2256W000420, A2256W000408, A2256W000445, A2256W000153]
+    source_policy: {primary: preplan, local_position_reference: won_tae_h5}
+    evidence: [S06, S07, S19, S20, S21, S22, S24, S25, S26, S27, S28, R12, R12A, R12B, R12C, R12D, R12E, R12F]
+    review_markings:
+      - id: a411_route_right_solid
+        source_collection: preplan
+        source_provenance_id: B219BS011096
+        route_s_min_m: 1118.741751169101
+        route_s_max_m: 1281.1572456094677
+        align_route_start_to_route_s_m: 1118.741751169101
+        maximum_start_extension_m: 0.50
+        target_current_link_ids: [A2256W000411, A2256W000846]
+        color: white
+        pattern: solid
+        functional_role: usable_lane_3_right_edge
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a411_start_aligned_right
+      - id: a411_lane_2_3_broken
+        source_collection: preplan
+        source_provenance_id: B219BS011098
+        route_s_min_m: 1118.741751169101
+        route_s_max_m: 1281.1572456094677
+        align_route_start_to_route_s_m: 1118.741751169101
+        maximum_start_extension_m: 0.50
+        target_current_link_ids: [A2256W000175, A2256W000406, A2256W000409, A2256W000410]
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 3.0
+        functional_role: usable_lane_2_3_divider
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a411_start_aligned_lane_2_3
+      - id: a411_lane_1_2_broken
+        source_collection: preplan
+        source_provenance_id: B219BS011117
+        route_s_min_m: 1118.741751169101
+        route_s_max_m: 1281.1572456094677
+        maximum_route_distance_m: 10.0
+        align_route_start_to_route_s_m: 1118.741751169101
+        maximum_start_extension_m: 0.50
+        target_current_link_ids: [A2256W000175, A2256W000410]
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 3.0
+        functional_role: usable_lane_1_2_divider
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a411_start_aligned_lane_1_2
+      - id: a418_lane_1_left_solid
+        source_collection: preplan
+        source_provenance_id: A2256W000418+A2256W000429
+        route_s_min_m: 1118.741751169101
+        route_s_max_m: 1286.1546454384031
+        maximum_route_distance_m: 14.0
+        align_route_start_to_route_s_m: 1118.741751169101
+        maximum_start_extension_m: 0.50
+        target_current_link_ids: [A2256W000418, A2256W000429]
+        color: white
+        pattern: solid
+        functional_role: usable_lane_1_left_edge_bus_lane_excluded
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: current_topology_with_observed_width_prior
+        selection_id: stage12_a418_left_solid_restored
+      - id: a411_left_merge_broken
+        source_collection: preplan
+        source_provenance_id: B219BS011097
+        route_s_min_m: 1118.741751169101
+        route_s_max_m: 1281.1572456094677
+        align_route_start_to_route_s_m: 1118.741751169101
+        maximum_start_extension_m: 0.50
+        target_current_link_ids: [A2256W000411, A2256W000846]
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 3.0
+        functional_role: a411_left_merge_boundary
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a411_left_merge_broken
+      - id: a420_route_right_solid
+        source_collection: preplan
+        source_provenance_id: B219BS011119
+        route_s_min_m: 1281.1572456094677
+        route_s_max_m: 1383.1800850547247
+        target_current_link_ids: [A2256W000179, A2256W000409, A2256W000411, A2256W000420]
+        color: white
+        pattern: solid
+        functional_role: usable_lane_3_right_edge
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a420_right
+      - id: a420_route_left_broken
+        source_collection: preplan
+        source_provenance_id: B219BS011106
+        route_s_min_m: 1281.1572456094677
+        route_s_max_m: 1383.1800850547247
+        target_current_link_ids: [A2256W000179, A2256W000408, A2256W000409, A2256W000410, A2256W000420, A2256W000430, A2256W000434]
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 5.0
+        functional_role: usable_lane_2_3_divider
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a420_route_left
+      - id: a420_lane_1_2_broken
+        source_collection: preplan
+        source_provenance_id: B219BS011107
+        route_s_min_m: 1281.1572456094677
+        route_s_max_m: 1383.1800850547247
+        target_current_link_ids: [A2256W000410, A2256W000430, A2256W000434]
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 5.0
+        functional_role: usable_lane_1_2_divider
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a420_lane_1_2
+      - id: a420_usable_lane_left_edge
+        source_collection: preplan
+        source_provenance_id: A2256W000431+A2256W000433
+        route_s_min_m: 1286.1546454384022
+        route_s_max_m: 1368.728445622188
+        maximum_route_distance_m: 10.0
+        target_current_link_ids: [A2256W000431, A2256W000433]
+        color: white
+        pattern: solid
+        functional_role: usable_lane_1_left_edge_bus_lane_excluded
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: current_topology_with_observed_width_prior
+        selection_id: stage12_a420_bus_lane_right_boundary_only
+      - id: a408_route_right_broken
+        source_collection: preplan
+        source_provenance_id: B219BS011100
+        route_s_min_m: 1382.683500012723
+        route_s_max_m: 1518.2468855207765
+        target_current_link_ids: [A2256W000179]
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 5.0
+        functional_role: route_right_lane_divider
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a408_right
+      - id: a408_route_left_broken
+        source_collection: preplan
+        source_provenance_id: B219BS011104
+        route_s_min_m: 1382.683500012723
+        route_s_max_m: 1526.0
+        target_current_link_ids: [A2256W000408, A2256W000434, A2256W000445]
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 5.0
+        functional_role: usable_lane_2_3_divider
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a408_left
+      - id: a408_lane_1_2_broken
+        source_collection: preplan
+        source_provenance_id: B219BS011103
+        route_s_min_m: 1382.683500012723
+        route_s_max_m: 1526.5
+        target_current_link_ids: [A2256W000422, A2256W000434, A2256W000435]
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 5.0
+        functional_role: usable_lane_1_2_divider
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a408_lane_1_2
+      - id: a408_usable_lane_left_edge
+        source_collection: preplan
+        source_provenance_id: A2256W000421+A2256W000435
+        route_s_min_m: 1368.728445622188
+        route_s_max_m: 1518.246885520777
+        maximum_route_distance_m: 10.0
+        target_current_link_ids: [A2256W000421, A2256W000435]
+        color: white
+        pattern: solid
+        functional_role: usable_lane_1_left_edge_bus_lane_excluded
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: current_topology_with_observed_width_prior
+        selection_id: stage12_a408_bus_lane_right_boundary_only
+      - id: a445_left_preplan_lead_in
+        source_collection: preplan
+        source_provenance_id: B219BS010518
+        route_s_min_m: 1525.75
+        route_s_max_m: 1565.75
+        target_current_link_ids: [A2256W000445]
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 5.0
+        functional_role: a445_left_split_divider
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a445_left_preplan_lead_in
+      - id: a445_lane_1_2_branch
+        source_collection: preplan
+        source_provenance_id: B219BS010447
+        route_s_min_m: 1526.25
+        route_s_max_m: 1566.25
+        target_current_link_ids: [A2256W000422]
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 5.0
+        functional_role: usable_lane_1_2_divider
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a445_lane_1_2_branch
+      - id: a423_right_broken_to_link_end
+        source_collection: legacy_raw
+        source_provenance_id: B219BS010509
+        route_s_min_m: 1565.75
+        route_s_max_m: 1593.5863873852518
+        align_route_end_to_route_s_m: 1593.5863873852518
+        maximum_end_extension_m: 0.50
+        target_current_link_ids: [A2256W000423]
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 5.0
+        functional_role: a423_right_lane_divider_to_node
+        source_display: legacy_origin_aligned_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a423_right_to_node
+      - id: a445_usable_lane_left_branch
+        source_collection: preplan
+        source_provenance_id: A2256W000423+A2256W000425
+        route_s_min_m: 1518.246885520777
+        route_s_max_m: 1593.5863873852518
+        maximum_route_distance_m: 10.0
+        target_current_link_ids: [A2256W000423, A2256W000425]
+        color: white
+        pattern: solid
+        functional_role: a423_left_solid_boundary
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: current_topology_with_observed_width_prior
+        selection_id: stage12_a423_left_solid_restored
+      - id: a432_left_preplan_node_handoff
+        source_collection: preplan
+        source_provenance_id: A2256W000424+A2256W000432
+        route_s_min_m: 1593.0
+        route_s_max_m: 1599.5
+        maximum_route_distance_m: 10.0
+        target_current_link_ids: [A2256W000424, A2256W000432]
+        color: white
+        pattern: solid
+        functional_role: a432_left_solid_preplan_node_handoff
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_node_handoff_to_legacy
+        selection_id: stage12_a432_left_preplan_node_handoff
+      - id: a153_right_observed_width
+        source_collection: preplan
+        source_provenance_id: A2256W000153+A2256W000445+A2256W000451
+        route_s_min_m: 1593.5863873852518
+        route_s_max_m: 1741.7209885112245
+        align_route_start_to_route_s_m: 1593.5863873852518
+        maximum_start_extension_m: 0.50
+        target_current_link_ids: [A2256W000153]
+        color: white
+        pattern: solid
+        functional_role: a153_right_safety_zone_boundary
+        source_display: preplan_h5_width_adjusted
+        geometry_quality: current_topology_with_won_tae_width_prior
+        selection_id: stage12_a153_right_previous_reviewed_shift
+      - id: a153_left_split_solid
+        source_collection: preplan
+        source_provenance_id: B219BS010433
+        route_s_min_m: 1716.75
+        route_s_max_m: 1739.25
+        target_current_link_ids: [A2256W000153]
+        color: white
+        pattern: solid
+        functional_role: a153_left_split_boundary
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a153_left_split
+      - id: a153_adjacent_split_solid
+        source_collection: preplan
+        source_provenance_id: B219BS010434
+        route_s_min_m: 1716.75
+        route_s_max_m: 1739.25
+        target_current_link_ids: [A2256W000153, A2256W000432]
+        color: white
+        pattern: solid
+        functional_role: adjacent_lane_split_boundary
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a153_adjacent_split
+      - id: a432_left_solid_to_second_island
+        source_collection: legacy_raw
+        source_provenance_id: B219BS010446
+        route_s_min_m: 1599.5
+        route_s_max_m: 1717.25
+        maximum_route_distance_m: 10.0
+        target_current_link_ids: [A2256W000424, A2256W000432]
+        color: white
+        color_override_id: stage12_b010446_blue_to_white_2025
+        pattern: solid
+        pattern_override_id: stage12_b010446_broken_to_solid_2025
+        functional_role: a432_left_solid_to_second_tollgate_island
+        source_display: legacy_origin_aligned_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_a432_left_solid_restored
+      - id: a153_second_island_split_inner
+        source_collection: legacy_raw
+        source_provenance_id: B219BS010435
+        route_s_min_m: 1716.75
+        route_s_max_m: 1739.5
+        use_full_source_geometry: true
+        maximum_full_source_route_extension_m: 0.75
+        maximum_route_distance_m: 10.0
+        target_current_link_ids: [A2256W000432]
+        color: white
+        pattern: solid
+        functional_role: second_tollgate_island_split_inner
+        source_display: legacy_origin_aligned_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_second_island_split_inner
+      - id: a153_second_island_split_outer
+        source_collection: legacy_raw
+        source_provenance_id: B219BS010436
+        route_s_min_m: 1716.75
+        route_s_max_m: 1739.5
+        use_full_source_geometry: true
+        maximum_full_source_route_extension_m: 0.75
+        maximum_route_distance_m: 10.0
+        target_current_link_ids: [A2256W000424, A2256W000432]
+        color: white
+        pattern: solid
+        functional_role: second_tollgate_island_split_outer
+        source_display: legacy_origin_aligned_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage12_second_island_split_outer
+    current_link_markings:
+      - id: a153_left_broken_parallel_to_reviewed_right
+        source_current_link_id: A2256W000153
+        side: left
+        source_station_min_m: 36.4136126147482
+        source_station_max_m: 123.1961160879302
+        offset_m: 1.797
+        parallel_reference_ids: [A2256W000153+A2256W000445+A2256W000451]
+        parallel_separation_m: 3.507
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 5.0
+        functional_role: a153_left_lane_divider_parallel_to_right
+        target_current_link_ids: [A2256W000153]
+        selection_id: stage12_a153_left_parallel_to_reviewed_right
+        line_width_m: 0.15
+      - id: a445_right_won_tae_profile_to_a153_vertex
+        source_current_link_id: A2256W000445
+        side: right
+        offset_profile:
+          - {source_station_m: 0.0, offset_m: 1.724}
+          - {source_station_m: 13.25, offset_m: 1.570}
+          - {source_station_m: 26.50, offset_m: 1.593}
+          - {source_station_m: 39.75, offset_m: 1.428}
+          - {source_station_m: 53.00, offset_m: 1.459}
+          - {source_station_m: 75.60, offset_m: 1.710}
+        observation_reference_ids: [hi_right.csv, A2256W000153+A2256W000445+A2256W000451]
+        color: white
+        pattern: solid
+        functional_role: a445_right_boundary_joined_to_a153_vertex
+        target_current_link_ids: [A2256W000445]
+        selection_id: stage12_a445_right_won_tae_profile_and_a153_vertex
+        line_width_m: 0.15
+    same_pattern_continuity_bridges:
+      - id: a846_right_to_a411_right_solid
+        from:
+          segment_id: stage11_roundabout_exit_to_high_speed
+          source_id: B219BS011112
+        to:
+          segment_id: stage12_high_speed_entry_and_body
+          source_id: B219BS011096
+        color: white
+        pattern: solid
+        functional_role: a846_a411_right_solid_node_connection
+        target_current_link_ids: [A2256W000846, A2256W000411]
+        maximum_gap_m: 0.02
+        selection_id: stage12_a846_a411_right_solid_connected
+      - id: a408_to_a423_left_solid
+        from:
+          segment_id: stage12_high_speed_entry_and_body
+          source_id: A2256W000421+A2256W000435
+        to:
+          segment_id: stage12_high_speed_entry_and_body
+          source_id: A2256W000423+A2256W000425
+        color: white
+        pattern: solid
+        functional_role: a423_left_solid_start_connection
+        target_current_link_ids: [A2256W000421, A2256W000423, A2256W000425]
+        maximum_gap_m: 0.50
+        selection_id: stage12_a423_left_solid_start_gap_closed
+      - id: a445_right_to_a153_right_vertex
+        from:
+          segment_id: stage12_high_speed_entry_and_body
+          source_id: A2256W000445
+        to:
+          segment_id: stage12_high_speed_entry_and_body
+          source_id: A2256W000153+A2256W000445+A2256W000451
+        color: white
+        pattern: solid
+        functional_role: a445_a153_right_boundary_vertex
+        target_current_link_ids: [A2256W000445, A2256W000153]
+        maximum_gap_m: 0.50
+        selection_id: stage12_a445_a153_reviewed_vertex_connection
+      - id: a423_left_to_a432_left_solid
+        from:
+          segment_id: stage12_high_speed_entry_and_body
+          source_id: A2256W000423+A2256W000425
+        to:
+          segment_id: stage12_high_speed_entry_and_body
+          source_id: A2256W000424+A2256W000432
+          selection_id: stage12_a432_left_preplan_node_handoff
+        color: white
+        pattern: solid
+        functional_role: a432_left_solid_start_connection
+        target_current_link_ids: [A2256W000423, A2256W000425, A2256W000424, A2256W000432]
+        maximum_gap_m: 0.05
+        selection_id: stage12_a432_left_solid_start_gap_closed
+      - id: a432_preplan_to_legacy_left_solid
+        from:
+          segment_id: stage12_high_speed_entry_and_body
+          source_id: A2256W000424+A2256W000432
+          selection_id: stage12_a432_left_preplan_node_handoff
+        to:
+          segment_id: stage12_high_speed_entry_and_body
+          source_id: B219BS010446
+          selection_id: stage12_a432_left_solid_restored
+        color: white
+        pattern: solid
+        functional_role: a432_left_solid_preplan_to_legacy_handoff
+        target_current_link_ids: [A2256W000424, A2256W000432]
+        maximum_gap_m: 0.60
+        transition_style: tangent_continuous_cubic
+        from_trim_m: 2.0
+        to_trim_m: 2.0
+        selection_id: stage12_a432_left_preplan_to_legacy_smooth
+    notes:
+      - Remove the far-left bus-only yellow boundary from the competition output.
+      - Start the usable lane-1/2/3 boundaries at the A2256W000411 start node with aligned endpoints.
+      - Roll back the mistaken A2256W000411 constant-width solid; retain pre-plan B219BS011097 broken and restore B219BS011106 to the same original start cross-section as the other dividers.
+      - Shift both A2256W000445 boundaries using H5 evidence; join its right boundary to the corrected A2256W000153 right boundary at one vertex.
+      - Restore the A2256W000418 lane-1 left white solid and replace the legacy A2256W000153 broken line with a current-link parallel of the reviewed right solid.
+      - Preserve only the reviewed left-boundary step between A2256W000846 and the following A2256W000411; keep the A411 left boundary broken.
+      - Connect only the sub-centimeter A846 B219BS011112-to-A411 B219BS011096 right-solid endpoint gap; do not connect the A846 left solid to the offset A411 B219BS011097 broken line.
+      - Keep A2256W000423+A2256W000425 as the reviewed white solid left boundary and close its sub-0.5 m start handoff.
+      - End the A445 broken divider before its solid merge taper; do not retain the H5 broken line where it overlaps the reviewed right solid.
+      - Suppress the two sub-0.5 m terminal dash fragments and begin A153 paint at the second reviewed dash.
+      - Clip B219BS011100 at the A179 end node and continue A423 right broken B219BS010509 to its node.
+      - Restore the second tollgate island as one exact chain: white solid B219BS010446 is the A432-left approach to the split vertex, B219BS010435/436 form the upstream solid fork, and stage13 B219BS010455/456 close the fork; never retain a separate reconstructed solid through the island.
+      - Use only the short pre-plan A424+A432 node handoff, blend it tangentially into legacy B219BS010446, and preserve the legacy approach and second-island fork thereafter.
+
+  - id: stage13_high_speed_tail_to_333
+    status: implemented_candidate
+    route_s_min_m: 1741.7209885112245
+    route_s_max_m: 2132.2309878620313
+    end_exclusive: true
+    current_link_ids: [A2256W000451, A2256W000446, A2256W000448, A2256W000126, A2256W000128, A2256W000333, A2256W000154]
+    source_policy: {primary: preplan}
+    evidence: [S20, S21, S22, S23, S24, S25, R12E, R13, R13A, R13B, R13C, R13D]
+    h5_markings:
+      - id: a451_a446_right_white_observed
+        vector_indices: [53]
+        expected_source_file: hi_right.csv
+        expected_source_color: white
+        route_s_min_m: 1759.149387606567
+        route_s_max_m: 1820.5994538178333
+        color: white
+        pattern: solid
+      - id: a446_left_yellow_observed
+        vector_indices: [62]
+        expected_source_file: turnel_left.csv
+        expected_source_color: yellow
+        route_s_min_m: 1781.5573293005787
+        route_s_max_m: 1820.5994538178333
+        color: yellow
+        pattern: solid
+    review_markings:
+      - id: a451_route_left_solid
+        source_collection: legacy_raw
+        source_provenance_id: B219BS010453
+        route_s_min_m: 1741.7209885112245
+        route_s_max_m: 1759.149387606567
+        use_full_source_geometry: true
+        maximum_full_source_route_extension_m: 3.50
+        target_current_link_ids: [A2256W000153, A2256W000451]
+        color: white
+        pattern: solid
+        functional_role: a451_route_left_transition
+        source_display: legacy_origin_aligned_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_a451_route_left
+      - id: a451_tollgate_first_island_outer
+        source_collection: legacy_raw
+        source_provenance_id: B219BS010454
+        route_s_min_m: 1739.0
+        route_s_max_m: 1759.5
+        use_full_source_geometry: true
+        maximum_full_source_route_extension_m: 3.50
+        target_current_link_ids: [A2256W000432, A2256W000451]
+        color: white
+        pattern: solid
+        functional_role: a451_tollgate_first_island_outer_boundary
+        source_display: legacy_origin_aligned_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_a451_tollgate_first_island_outer
+      - id: a451_tollgate_second_island_inner
+        source_collection: legacy_raw
+        source_provenance_id: B219BS010455
+        route_s_min_m: 1739.0
+        route_s_max_m: 1759.5
+        use_full_source_geometry: true
+        maximum_full_source_route_extension_m: 3.50
+        maximum_route_distance_m: 10.0
+        target_current_link_ids: [A2256W000432, A2256W000451]
+        color: white
+        pattern: solid
+        functional_role: a451_tollgate_second_island_inner_boundary
+        source_display: legacy_origin_aligned_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_a451_tollgate_second_island_inner
+      - id: a451_tollgate_second_island_outer
+        source_collection: legacy_raw
+        source_provenance_id: B219BS010456
+        route_s_min_m: 1739.0
+        route_s_max_m: 1759.5
+        use_full_source_geometry: true
+        maximum_full_source_route_extension_m: 3.50
+        maximum_route_distance_m: 10.0
+        target_current_link_ids: [A2256W000451]
+        color: white
+        pattern: solid
+        functional_role: a451_tollgate_second_island_outer_boundary
+        source_display: legacy_origin_aligned_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_a451_tollgate_second_island_outer
+      - id: a451_tollgate_route_right
+        source_collection: legacy_raw
+        source_provenance_id: B219BS010512
+        route_s_min_m: 1741.7209885112245
+        route_s_max_m: 1759.149387606567
+        target_current_link_ids: [A2256W000451]
+        color: white
+        pattern: solid
+        functional_role: a451_tollgate_route_right_boundary
+        source_display: legacy_origin_aligned_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_a451_tollgate_route_right
+      - id: tollgate_to_shadow_left_yellow
+        source_collection: preplan
+        source_feature_id: kcity2025_competition_hd_candidate_v3:lane_boundary:current_reconstructed:route:tollgate_to_shadow_2025:left
+        route_s_min_m: 1820.5994538178333
+        route_s_max_m: 1877.7447989655966
+        target_current_link_ids: [A2256W000446, A2256W000448]
+        color: yellow
+        pattern: solid
+        functional_role: route_left_edge
+        source_display: preplan_current_reconstructed
+        geometry_quality: current_topology_with_observed_width_prior
+        selection_id: stage13_tollgate_shadow_left
+      - id: tollgate_to_shadow_right_white
+        source_collection: preplan
+        source_feature_id: kcity2025_competition_hd_candidate_v3:lane_boundary:current_reconstructed:route:tollgate_to_shadow_2025:right
+        route_s_min_m: 1820.5994538178333
+        route_s_max_m: 1877.7447989655966
+        target_current_link_ids: [A2256W000446, A2256W000448]
+        color: white
+        pattern: solid
+        functional_role: route_right_edge
+        source_display: preplan_current_reconstructed
+        geometry_quality: current_topology_with_observed_width_prior
+        selection_id: stage13_tollgate_shadow_right
+      - id: shadow_left_yellow
+        source_collection: legacy_raw
+        source_provenance_id: B219BS011264
+        route_s_min_m: 1877.7447989655966
+        route_s_max_m: 2087.4806862998275
+        align_route_start_to_route_s_m: 1877.7447989655966
+        maximum_start_extension_m: 0.50
+        target_current_link_ids: [A2256W000126, A2256W000128, A2256W000131, A2256W000441]
+        color: yellow
+        pattern: solid
+        functional_role: route_left_edge
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_shadow_left
+      - id: shadow_right_white
+        source_collection: legacy_raw
+        source_provenance_id: B219BS010443
+        route_s_min_m: 1877.7447989655966
+        route_s_max_m: 2079.7306889854794
+        align_route_start_to_route_s_m: 1877.7447989655966
+        maximum_start_extension_m: 0.50
+        target_current_link_ids: [A2256W000126, A2256W000128, A2256W000448]
+        color: white
+        pattern: solid
+        functional_role: route_right_edge
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_shadow_right
+      - id: shadow_opposite_lane_outer_white
+        source_collection: legacy_raw
+        source_provenance_id: LM000001
+        route_s_min_m: 1877.7447989655966
+        route_s_max_m: 1996.7307915312317
+        maximum_route_distance_m: 10.0
+        target_current_link_ids: [A2256W000131]
+        color: white
+        pattern: solid
+        functional_role: shadow_opposite_lane_outer_boundary
+        source_display: legacy_origin_aligned_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_shadow_a131_outer_white
+      - id: shadow_exit_left_yellow
+        source_collection: legacy_raw
+        source_provenance_id: B219BS011267
+        route_s_min_m: 2087.4806862998275
+        route_s_max_m: 2109.8475271563316
+        target_current_link_ids: [A2256W000128, A2256W000441]
+        color: yellow
+        pattern: solid
+        functional_role: route_left_edge
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_shadow_exit_left
+      - id: shadow_exit_right_white
+        source_collection: legacy_raw
+        source_provenance_id: B219BS010473
+        route_s_min_m: 2079.7306889854794
+        route_s_max_m: 2114.204569903584
+        target_current_link_ids: [A2256W000128, A2256W000333]
+        color: white
+        pattern: solid
+        functional_role: route_right_edge
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_shadow_exit_right
+      - id: a333_a154_left_guide
+        source_collection: preplan
+        source_feature_id: kcity2025_competition_hd_candidate_v3:lane_boundary:legacy:B219BS011535:segment:00:hybrid_clip:00
+        route_s_min_m: 2117.1092650684186
+        route_s_max_m: 2124.4057385353067
+        use_full_source_geometry: true
+        maximum_full_source_route_extension_m: 3.0
+        maximum_route_distance_m: 15.0
+        maximum_heading_difference_deg: 180.0
+        target_current_link_ids: [A2256W000154, A2256W000333]
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 5.0
+        functional_role: route_left_intersection_guide
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_a333_a154_left_guide
+      - id: a333_a154_left_guide_lead
+        source_collection: preplan
+        source_feature_id: kcity2025_competition_hd_candidate_v3:lane_boundary:legacy:B219BS011535:segment:01:hybrid_clip:00
+        route_s_min_m: 2115.3473482976106
+        route_s_max_m: 2121.981998798588
+        use_full_source_geometry: true
+        maximum_full_source_route_extension_m: 3.0
+        maximum_route_distance_m: 15.0
+        maximum_heading_difference_deg: 180.0
+        target_current_link_ids: [A2256W000154, A2256W000333]
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 5.0
+        functional_role: route_left_intersection_guide
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_a333_a154_left_guide_lead
+      - id: a333_a154_left_guide_tail
+        source_collection: preplan
+        source_feature_id: kcity2025_competition_hd_candidate_v3:lane_boundary:legacy:B219BS011535:segment:02:hybrid_clip:00
+        route_s_min_m: 2120.8472569999963
+        route_s_max_m: 2126.4819519925536
+        use_full_source_geometry: true
+        maximum_full_source_route_extension_m: 3.0
+        maximum_route_distance_m: 15.0
+        maximum_heading_difference_deg: 180.0
+        target_current_link_ids: [A2256W000154, A2256W000333]
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 5.0
+        functional_role: route_left_intersection_guide
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_a333_a154_left_guide_tail
+      - id: a333_a154_right_solid
+        source_collection: preplan
+        source_provenance_id: B219BS011260
+        route_s_min_m: 2114.204569903584
+        route_s_max_m: 2128.318363198669
+        target_current_link_ids: [A2256W000154, A2256W000333]
+        color: white
+        pattern: solid
+        functional_role: route_right_edge
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_a333_a154_right
+      - id: a154_right_to_return
+        source_collection: preplan
+        source_provenance_id: B219BS010472
+        route_s_min_m: 2128.318363198669
+        route_s_max_m: 2132.2309878620313
+        target_current_link_ids: [A2256W000154]
+        color: white
+        pattern: solid
+        functional_role: route_right_edge
+        source_display: preplan_high_speed_reviewed
+        geometry_quality: reviewed_preplan_origin_aligned
+        selection_id: stage13_a154_right_to_return
+    parallel_route_profile_markings:
+      - id: a451_left_white_broken_parallel_to_observed_right
+        reference_source_id: won_tae_h5_vectors_53
+        anchor_legacy_source_id: B219BS010438
+        reference_color: white
+        reference_pattern: solid
+        route_owner_current_link_ids: [A2256W000451]
+        target_current_link_ids: [A2256W000451]
+        route_s_min_m: 1759.149387606567
+        route_s_max_m: 1781.5573293005787
+        maximum_route_distance_m: 10.0
+        maximum_heading_difference_deg: 45.0
+        maximum_anchor_extrapolation_m: 0.50
+        lateral_separation_min_m: 3.25
+        lateral_separation_max_m: 4.25
+        color: white
+        pattern: broken
+        dash_length_m: 3.0
+        dash_gap_m: 5.0
+        functional_role: a451_left_white_broken_parallel_to_observed_right
+        selection_id: stage13_a451_left_parallel_to_h5_right
+    same_pattern_continuity_bridges:
+      - id: a153_right_to_a451_legacy_right
+        from:
+          segment_id: stage12_high_speed_entry_and_body
+          source_id: A2256W000153+A2256W000445+A2256W000451
+        to:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: B219BS010512
+        color: white
+        pattern: solid
+        functional_role: a153_a451_right_legacy_connection
+        target_current_link_ids: [A2256W000153, A2256W000451]
+        maximum_gap_m: 0.50
+        selection_id: stage13_a153_right_to_legacy_gap_closed
+      - id: a451_legacy_right_to_h5_53
+        from:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: B219BS010512
+        to:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: won_tae_h5_vectors_53
+        color: white
+        pattern: solid
+        functional_role: a451_legacy_to_h5_right_connection
+        target_current_link_ids: [A2256W000451]
+        maximum_gap_m: 0.50
+        transition_style: tangent_continuous_cubic
+        from_trim_m: 2.0
+        to_trim_m: 2.0
+        selection_id: stage13_a451_legacy_right_to_h5_gap_closed
+      - id: a446_h5_to_preplan_left
+        from:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: won_tae_h5_vectors_62
+        to:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: A2256W000126+A2256W000446+A2256W000448+A2256W000451
+          selection_id: stage13_tollgate_shadow_left
+        color: yellow
+        pattern: solid
+        functional_role: a446_a448_h5_yellow_connection
+        target_current_link_ids: [A2256W000446, A2256W000448]
+        maximum_gap_m: 0.50
+        selection_id: stage13_a446_h5_to_preplan_left_gap_closed
+      - id: a446_h5_to_preplan_right
+        from:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: won_tae_h5_vectors_53
+        to:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: A2256W000126+A2256W000446+A2256W000448+A2256W000451
+          selection_id: stage13_tollgate_shadow_right
+        color: white
+        pattern: solid
+        functional_role: a446_a448_h5_white_connection
+        target_current_link_ids: [A2256W000446, A2256W000448]
+        maximum_gap_m: 0.50
+        selection_id: stage13_a446_h5_to_preplan_right_gap_closed
+      - id: a448_to_shadow_left
+        from:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: A2256W000126+A2256W000446+A2256W000448+A2256W000451
+          selection_id: stage13_tollgate_shadow_left
+        to:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: B219BS011264
+        color: yellow
+        pattern: solid
+        functional_role: a448_shadow_yellow_connection
+        target_current_link_ids: [A2256W000448, A2256W000126]
+        maximum_gap_m: 0.10
+        transition_style: tangent_continuous_cubic
+        from_trim_m: 2.0
+        to_trim_m: 2.0
+        selection_id: stage13_a448_shadow_left_gap_closed
+      - id: a448_to_shadow_right
+        from:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: A2256W000126+A2256W000446+A2256W000448+A2256W000451
+          selection_id: stage13_tollgate_shadow_right
+        to:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: B219BS010443
+        color: white
+        pattern: solid
+        functional_role: a448_shadow_white_connection
+        target_current_link_ids: [A2256W000448, A2256W000126]
+        maximum_gap_m: 0.25
+        transition_style: tangent_continuous_cubic
+        from_trim_m: 2.0
+        to_trim_m: 2.0
+        selection_id: stage13_a448_shadow_right_gap_closed
+      - id: shadow_late_a128_left
+        from:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: B219BS011264
+        to:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: B219BS011267
+        color: yellow
+        pattern: solid
+        functional_role: a128_left_solid_connection
+        target_current_link_ids: [A2256W000128]
+        maximum_gap_m: 0.30
+        selection_id: stage13_a128_left_gap_closed
+      - id: shadow_late_a128_right
+        from:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: B219BS010443
+        to:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: B219BS010473
+        color: white
+        pattern: solid
+        functional_role: a128_right_solid_connection
+        target_current_link_ids: [A2256W000128]
+        maximum_gap_m: 0.30
+        selection_id: stage13_a128_right_gap_closed
+    notes:
+      - Use only the reviewed pre-plan route and usable-lane boundaries through A451 to A154.
+      - Preserve the downstream halves of both origin-aligned tollgate islands with full B219BS010453/454 and B219BS010455/456 geometry; stage12 owns their B219BS010433/434 and B219BS010435/436 upstream forks, and no A427 topology is assigned.
+      - Use legacy B219BS010512 on the early-A451 route-right edge, then make a tangent-continuous handoff to Won-tae H5 vector 53 at the island merge; replace raw B219BS010438 geometry with a white broken profile anchored at its start and parallel to the observed right solid through the A451 end node.
+      - Use Won-tae H5 vector 62 for the early-A446 yellow left solid.
+      - Switch both A446 boundaries to the pre-plan reconstruction at the A446 midpoint route_s 1820.599, carry them through A448, and use tangent-continuous 2 m + 2 m blends at the A448-to-shadow source handoffs.
+      - After A448, include the A126 route lane and A131 opposite-lane outer boundary for the shadow avoidance surface.
+      - Use the shared raw endpoints of B219BS011264/011267 and B219BS010443/010473 to remove the late-A128 yellow/white gaps.
+      - Preserve all three pre-plan B219BS011535 broken paint fragments on the left of A333/A154 instead of selecting only the owner-bound fragment.
+      - Exclude the far-left bus-only yellow sources B219BS011265, B219BS010519, and LM000002.
+      - Do not emit A1256W000616 or any other pre-plan/current stopline after A2256W000333 because it is not painted in the 2025 map.
+
+  - id: stage14_return_332_to_finish
+    status: implemented_candidate
+    route_s_min_m: 2132.2309878620313
+    route_s_max_m: 2184.6117233360696
+    end_exclusive: false
+    current_link_ids: [A2256W000332, A2256W000751]
+    source_policy: {primary: legacy_origin_aligned}
+    evidence: [R14]
+    legacy_markings:
+      - id: a332_a751_left_yellow_to_finish
+        source_id: B219BS010411
+        route_s_min_m: 2132.2309878620313
+        route_s_max_m: 2184.6117233360696
+        align_route_end_to_route_s_m: 2184.6117233360696
+        maximum_extension_m: 0.50
+        endpoint_alignment_id: stage14_left_finish_endpoint_alignment
+        target_current_link_ids: [A2256W000332, A2256W000751]
+        color: yellow
+        pattern: solid
+        functional_role: route_left_edge
+      - id: a751_right_broken_to_finish
+        source_id: B219BS010474
+        route_s_min_m: 2165.753338357946
+        route_s_max_m: 2184.6117233360696
+        align_route_end_to_route_s_m: 2184.6117233360696
+        maximum_extension_m: 0.50
+        endpoint_alignment_id: stage14_right_finish_endpoint_alignment
+        target_current_link_ids: [A2256W000751]
+        color: white
+        pattern: broken
+        functional_role: route_right_lane_divider
+    same_pattern_continuity_bridges:
+      - id: a154_to_a332_right
+        from:
+          segment_id: stage13_high_speed_tail_to_333
+          source_id: B219BS010472
+        to:
+          segment_id: stage14_return_332_to_finish
+          source_id: B219BS010472
+        color: white
+        pattern: solid
+        functional_role: a154_a332_right_solid_connection
+        target_current_link_ids: [A2256W000154, A2256W000332]
+        maximum_gap_m: 0.30
+        selection_id: stage14_a154_a332_right_gap_closed
+    notes:
+      - Use the origin-only legacy corridor through A332 and A751 to the finish.
+      - Keep only features assigned to the official return links; do not pull adjacent start-area branches into the finish segment.
+
+marking_overrides:
+  - id: stage01_a748_right_solid
+    segment_id: stage01_start_legacy
+    legacy_source_id: B219BS010474
+    current_link_id: A2256W000748
+    set_pattern: solid
+    reason: MORAI_2025_driving_review_S01
+  - id: stage01_a329_right_endpoint_alignment
+    segment_id: stage01_start_legacy
+    legacy_source_id: B219BS011301
+    current_link_id: A2256W000329
+    align_route_end_to_legacy_source_id: B219BS011297
+    maximum_extension_m: 1.0
+    reason: MORAI_2025_driving_review_S10
+visualization:
+  width_px: 1300
+  height_px: 900
+  padding_px: 40
+  corridor_margin_m: 10.0

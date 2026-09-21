@@ -1,0 +1,34 @@
+<launch>
+  <!-- Current route-by-route partial candidate; only approved stages are emitted. -->
+  <arg name="rviz" default="true"/>
+  <arg name="pose_source" default="gps_imu"/>
+  <arg name="ego_topic" default="/Ego_topic"/>
+  <arg name="gps_topic" default="/gps"/>
+  <arg name="imu_topic" default="/imu"/>
+  <arg name="repo_root" default=""/>
+  <arg name="local_radius_m" default="80.0"/>
+  <arg name="max_publish_hz" default="5.0"/>
+
+  <node pkg="asmc_hd_map" type="candidate_map_overlay_node.py"
+        name="route_curation_review" output="screen">
+    <param name="comparison_mode" value="true"/>
+    <param name="curation_only" value="true"/>
+    <param name="repo_root" value="$(arg repo_root)"/>
+    <param name="config_path"
+           value="$(find asmc_hd_map)/config/kcity2025_route_curation_overlay.yaml"/>
+    <param name="ego_topic" value="$(arg ego_topic)"/>
+    <param name="gps_topic" value="$(arg gps_topic)"/>
+    <param name="imu_topic" value="$(arg imu_topic)"/>
+    <param name="pose_source" value="$(arg pose_source)"/>
+    <param name="utm_epsg" value="32652"/>
+    <param name="gps_lever_arm_x_m" value="0.35"/>
+    <param name="gps_lever_arm_y_m" value="0.0"/>
+    <param name="maximum_gps_imu_gap_ms" value="100.0"/>
+    <param name="local_radius_m" value="$(arg local_radius_m)"/>
+    <param name="max_publish_hz" value="$(arg max_publish_hz)"/>
+    <param name="pose_distance_warning_m" value="20.0"/>
+  </node>
+
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="route_curation_review_rviz"
+        args="-d $(find asmc_hd_map)/rviz/route_curation_review.rviz"/>
+</launch>

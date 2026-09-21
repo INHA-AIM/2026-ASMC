@@ -1,7 +1,7 @@
 # 2026-ASMC 문서 허브
 
 > **문서 상태:** Active Index
-> **최종 정리:** 2026-09-15
+> **최종 정리:** 2026-09-21
 > **대상:** 팀원 전원 · 관리: 통합 리드와 각 문서 담당자
 
 문서 파일은 기존 링크와 팀원의 북마크가 깨지지 않도록 현재 경로를 유지한다. 이 페이지에서
@@ -33,7 +33,8 @@ planning/control 개발자는 [Planning/Control UDP 규약](./planning-control-u
 | Planning/Control 실행 | [planning-control-udp.md](./planning-control-udp.md) | planning-behavior-handoff의 ROS 경로는 레거시 |
 | 카메라 데이터·라벨·split | [perception-dataset-labeling-split.md](./perception-dataset-labeling-split.md) | 개별 학습 기록보다 우선 |
 | 인지 융합 방향·우선순위 | [perception-map-fusion-roadmap.md](./perception-map-fusion-roadmap.md) | BEV 세부안·초기 agentic 문서보다 우선 |
-| 공용 메시지 계약 | [src/interfaces/README.md](../src/interfaces/README.md) | 현재는 초안. pilot 뒤 합의된 항목만 정본으로 승격 |
+| 공용 HD Map·대회 metadata 계약 | [HD Map topic contract v1](./contracts/hd-map-topic-contract-v1.md) | P1-B에서 동결한 `asmc_msgs` 1.0.0 및 `/hd_map/*` 정본 |
+| 인지·판제 실험 interface | [src/interfaces/README.md](../src/interfaces/README.md) | 현재는 초안. pilot 뒤 합의된 항목만 정본으로 승격 |
 
 `Working Proposal`은 구현을 시작하기 위한 후보안이지 다른 파트가 반드시 따라야 하는
 확정 계약이 아니다.
@@ -58,6 +59,13 @@ planning/control 개발자는 [Planning/Control UDP 규약](./planning-control-u
 | [git-workflow.md](./git-workflow.md) | collaboration 정책을 실행하는 명령 예시 | Command Reference |
 | [integration-plan.md](./integration-plan.md) | Wave 1/2 이식 과정과 당시 판단 | Historical Record |
 | [architecture-overview.md](./architecture-overview.md) | 전체 모듈과 현재 목표 구조 요약 | Working Overview |
+| [repository-consolidation-roadmap.md](./repository-consolidation-roadmap.md) | msg·bridge·HD Map·perception 4-패키지 통합, 체크포인트/미션, 현장 배포 단계 | Working Proposal |
+| [baselines/runtime-baseline-v1.md](./baselines/runtime-baseline-v1.md) | P1-A package/topic/message/sensor/bag/HD Map 회귀 기준과 후속 요구 | Frozen Baseline |
+| [contracts/hd-map-topic-contract-v1.md](./contracts/hd-map-topic-contract-v1.md) | P1-B `asmc_msgs` HD Map·체크포인트·미션 message/topic 계약 | Frozen Interface |
+| [contracts/kcity2025-competition-metadata-v1.md](./contracts/kcity2025-competition-metadata-v1.md) | P1-C 공식 체크포인트 projection과 권위별 mission-zone 정본 | Frozen Metadata |
+| [contracts/hd-map-runtime-visualization-v1.md](./contracts/hd-map-runtime-visualization-v1.md) | 2단계 global/local ROS publisher, RViz와 paint-gap 소비 규칙 | Active Runtime |
+| [baselines/kcity2025-drivable-area-input-audit-v1.md](./baselines/kcity2025-drivable-area-input-audit-v1.md) | P2-A Node/Link road prior, lane-clip 후보와 intersection guard 정본 | Frozen P2 Input |
+| [baselines/kcity2025-compact-drivable-map-v1.md](./baselines/kcity2025-compact-drivable-map-v1.md) | P2-B route-compact Lane/vector/grid 결과와 판제 소비 규칙 | Active HD Map Product |
 
 ### 3.3 대회·시뮬·네트워크
 
@@ -126,6 +134,12 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | 카메라–LiDAR 객체 분류 | [object detector handoff](./camera-object-detection-handoff.md) | [sensor-fusion 실행](../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md), [rosbag 평가](./rosbag-evaluation-streaming-gt.md) |
 | MGeo·카메라·LiDAR BEV | [fusion roadmap](./perception-map-fusion-roadmap.md) | [BEV design note](./perception-bev-lane-interface-plan.md) |
 | 음영구간 카메라 출력을 판제에 연결 | [shadow camera handoff](./shadow-camera-perception-handoff.md) | [lane boundary adapter](../src/planning_control/lane_boundary_adapter/README.md) |
+| 통합 전 package/topic/HD Map 회귀 확인 | [P1-A runtime baseline](./baselines/runtime-baseline-v1.md) | [통합 로드맵](./repository-consolidation-roadmap.md) |
+| HD Map·체크포인트 토픽을 구현/소비 | [P1-B topic contract](./contracts/hd-map-topic-contract-v1.md) | [asmc_msgs README](../src/asmc_msgs/README.md), [통합 로드맵](./repository-consolidation-roadmap.md) |
+| 주행가능영역 clip·보호구간을 확인 | [P2-A input audit](./baselines/kcity2025-drivable-area-input-audit-v1.md) | [runtime/visualization contract](./contracts/hd-map-runtime-visualization-v1.md), [통합 로드맵](./repository-consolidation-roadmap.md) |
+| compact Lane·주행가능영역을 실행/소비 | [P2-B compact map](./baselines/kcity2025-compact-drivable-map-v1.md) | [runtime/visualization contract](./contracts/hd-map-runtime-visualization-v1.md), [HD Map README](../src/asmc_hd_map/README.md) |
+| 체크포인트·미션 경계를 확인 | [P1-C competition metadata](./contracts/kcity2025-competition-metadata-v1.md) | [생성 bundle](../src/asmc_hd_map/config/kcity2025_competition_metadata.yaml) |
+| HD Map 토픽·RViz를 실행 | [2단계 runtime/visualization](./contracts/hd-map-runtime-visualization-v1.md) | [P1-B topic contract](./contracts/hd-map-topic-contract-v1.md) |
 | 대회판 이식 | [fusion roadmap §9](./perception-map-fusion-roadmap.md#9-26r1h3-개발판과-대회판-이식-전략) | [msg versions](./morai-msgs-versions.md), [network](./network-udp-ros.md) |
 
 ## 5. 모듈 README 진입점

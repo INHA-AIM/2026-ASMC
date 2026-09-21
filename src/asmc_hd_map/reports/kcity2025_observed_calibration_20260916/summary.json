@@ -1,0 +1,61 @@
+{
+  "build_id": "kcity2025_observed_calibration_20260916",
+  "candidate_map": {
+    "calibrated_interval_count": 60,
+    "calibrated_parent_boundary_count": 50,
+    "link_width_sample_count": 3143,
+    "nominal_remainder_interval_count": 134,
+    "parent_feature_counts": {
+      "lane_boundary": 85,
+      "link_centerline": 70,
+      "stopline": 13
+    },
+    "result_feature_counts": {
+      "lane_boundary": 194,
+      "link_centerline": 70,
+      "stopline": 13
+    },
+    "route_link_count_unchanged": true,
+    "stopline_count_unchanged": true
+  },
+  "input_contract": {
+    "current_gps_direct_rows": 11735,
+    "current_lidar_semantic_rows": 13679,
+    "direct_rows": 25414,
+    "generated_audit_only_rows": 958,
+    "interpolated_audit_only_rows": 139,
+    "manual_bridges_used": false,
+    "raster_inward_offset_m": 0.0,
+    "source_count": 19,
+    "total_rows": 26511
+  },
+  "limitations": [
+    "lane shape remains unknown",
+    "one-sided observations are not lane-width measurements",
+    "review_required and conflict profiles are not applied",
+    "candidate map is non-operational"
+  ],
+  "map_id": "kcity2025_competition_corridor_observed_v1",
+  "matching": {
+    "applied_profile_bin_count": 3734,
+    "automatic_profile_count_before_conflict": 76,
+    "conflict_profile_bin_count": 0,
+    "profile_bin_count": 3734,
+    "run_status_counts": {
+      "automatic": 76,
+      "rejected": 47,
+      "review_required": 74,
+      "unmatched": 15
+    }
+  },
+  "operational": false,
+  "parent": {
+    "map_id": "kcity2025_competition_corridor_nominal_v1",
+    "sha256": "209a0d06fdecaa570c6364a791b7b3f2a5404dc1e8f570d9bb54841fcfe57b9a"
+  },
+  "segmentation": {
+    "resampled_point_count": 32780,
+    "segment_count": 60
+  },
+  "status": "candidate_observed_calibration"
+}

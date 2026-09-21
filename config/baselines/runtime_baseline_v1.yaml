@@ -1,0 +1,2992 @@
+schema_version: 1
+baseline_id: runtime_baseline_v1
+purpose: P1-A package/topic/message/sensor/bag/HD-map regression baseline
+determinism:
+  timestamps_omitted: true
+  paths: repository-relative or ASMC_DATA-relative
+  large_artifacts: referenced by size and SHA-256; never copied
+protected_scope:
+  package_moves: false
+  sensor_config_changes: false
+  network_config_changes: false
+  hd_map_geometry_changes: false
+  planning_owned_source_changes: false
+packages:
+  count: 24
+  items:
+  - name: morai_msgs
+    path: src/MORAI-ROS_morai_msgs
+    version: 0.0.0
+    dependencies:
+      buildtool:
+      - catkin
+      build:
+      - geometry_msgs
+      - message_generation
+      - std_msgs
+      build_export:
+      - geometry_msgs
+      - std_msgs
+      exec:
+      - geometry_msgs
+      - message_runtime
+      - std_msgs
+      test: []
+      generic: []
+    package_xml_sha256: 0697fe0871f772ef50e7b7cd47d8217821ceb7781211411de55cf912beaa8071
+  - name: asmc_hd_map
+    path: src/asmc_hd_map
+    version: 0.2.0
+    dependencies:
+      buildtool:
+      - catkin
+      build: []
+      build_export: []
+      exec:
+      - python3-h5py
+      - python3-numpy
+      - python3-opencv
+      - python3-pyproj
+      - python3-shapely
+      - python3-yaml
+      test:
+      - python3-nose
+      generic:
+      - asmc_msgs
+      - geometry_msgs
+      - morai_msgs
+      - nav_msgs
+      - rospy
+      - sensor_msgs
+      - std_msgs
+      - visualization_msgs
+    package_xml_sha256: cd81e66367b6327b7078d34cb10b307820d80f1751270654764ed407deeba258
+  - name: asmc_msgs
+    path: src/asmc_msgs
+    version: 1.0.0
+    dependencies:
+      buildtool:
+      - catkin
+      build:
+      - geometry_msgs
+      - message_generation
+      - std_msgs
+      build_export:
+      - geometry_msgs
+      - std_msgs
+      exec:
+      - geometry_msgs
+      - message_runtime
+      - std_msgs
+      test:
+      - python3-nose
+      generic: []
+    package_xml_sha256: bd833490f6d39c7a799a04259e308fd6a29df29bfda194538705f58c3804379d
+  - name: behavior_planner
+    path: src/behavior_planner
+    version: 0.1.0
+    dependencies:
+      buildtool:
+      - catkin
+      build:
+      - message_generation
+      build_export: []
+      exec:
+      - frenet_planner
+      - message_runtime
+      - mpc_controller
+      - rosbag
+      - rosgraph
+      - rospkg
+      - rviz
+      - sensor_msgs
+      - traffic_light
+      - vehicle_state
+      test: []
+      generic:
+      - asmc_msgs
+      - geometry_msgs
+      - morai_msgs
+      - roscpp
+      - rospy
+      - std_msgs
+      - visualization_msgs
+      - yaml-cpp
+    package_xml_sha256: 6a62b71b889a5a2471e14f1c0fbefee72f117f99dfc0b1444abf0adeb3cf88e3
+  - name: data_collection
+    path: src/data_collection
+    version: 0.1.0
+    dependencies:
+      buildtool:
+      - catkin
+      build: []
+      build_export: []
+      exec:
+      - python3-grpcio
+      - python3-protobuf
+      - python3-psutil
+      - python3-yaml
+      test: []
+      generic:
+      - diagnostic_msgs
+      - geometry_msgs
+      - message_filters
+      - morai_msgs
+      - rosbag
+      - rosgraph
+      - rospkg
+      - rospy
+      - sensor_msgs
+      - std_msgs
+      - std_srvs
+    package_xml_sha256: 7c1fc3d7e44c2327ed2a5d7cc994d7931f89c316fdf1df98cb6f5ec5891b844d
+  - name: frenet_planner
+    path: src/frenet_planner
+    version: 0.1.0
+    dependencies:
+      buildtool:
+      - catkin
+      build: []
+      build_export: []
+      exec:
+      - behavior_planner
+      - morai_sensor_bridge
+      - morai_udp_bridge
+      - mpc_controller
+      - vehicle_state
+      test: []
+      generic:
+      - asmc_msgs
+      - morai_msgs
+      - roscpp
+      - sensor_msgs
+      - visualization_msgs
+      - yaml-cpp
+    package_xml_sha256: bcb5cdf6a2b39e9197f240cfd5d4e63d75acef198065beaa64a7abe9d0b4379b
+  - name: integration_launch
+    path: src/integration_launch
+    version: 0.0.0
+    dependencies:
+      buildtool:
+      - catkin
+      build: []
+      build_export: []
+      exec:
+      - morai_sensor_bridge
+      - morai_udp_bridge
+      test: []
+      generic: []
+    package_xml_sha256: fedf484b3e30954b20b736c405f8687ab1720ea308739139d6bc9b9e8d4c9d16
+  - name: Main
+    path: src/lidar+sensorfusion/src/Main
+    version: 0.0.1
+    dependencies:
+      buildtool:
+      - catkin
+      build:
+      - Msg
+      - geometry_msgs
+      - message_generation
+      - morai_msgs
+      - roscpp
+      - roslib
+      - rospy
+      - std_msgs
+      - tf2
+      - tf2_geometry_msgs
+      - tf2_ros
+      - visualization_msgs
+      build_export:
+      - Msg
+      - geometry_msgs
+      - morai_msgs
+      - roscpp
+      - roslib
+      - std_msgs
+      - tf2
+      - tf2_geometry_msgs
+      - tf2_ros
+      - visualization_msgs
+      exec:
+      - Msg
+      - geometry_msgs
+      - message_runtime
+      - morai_msgs
+      - roscpp
+      - roslib
+      - rospy
+      - std_msgs
+      - tf2
+      - tf2_geometry_msgs
+      - tf2_ros
+      - visualization_msgs
+      test: []
+      generic: []
+    package_xml_sha256: 41966366e8e573bc32f2c04d95058df7c5407913d7a48c9023d29886c4928754
+  - name: Msg
+    path: src/lidar+sensorfusion/src/Msg
+    version: 0.0.0
+    dependencies:
+      buildtool:
+      - catkin
+      build:
+      - geometry_msgs
+      - message_generation
+      - std_msgs
+      build_export:
+      - geometry_msgs
+      - std_msgs
+      exec:
+      - geometry_msgs
+      - message_runtime
+      - std_msgs
+      test: []
+      generic: []
+    package_xml_sha256: 58125f8136bc2e0e78f0f66fdc6502bde254b340f00dcd16ea251065e797c6f3
+  - name: morai_msgs
+    path: src/lidar+sensorfusion/src/morai_msgs
+    version: 0.0.0
+    dependencies:
+      buildtool:
+      - catkin
+      build:
+      - geometry_msgs
+      - message_generation
+      - std_msgs
+      build_export:
+      - geometry_msgs
+      - std_msgs
+      exec:
+      - geometry_msgs
+      - message_runtime
+      - std_msgs
+      test: []
+      generic: []
+    package_xml_sha256: 0697fe0871f772ef50e7b7cd47d8217821ceb7781211411de55cf912beaa8071
+  - name: velodyne
+    path: src/lidar+sensorfusion/src/velodyne/velodyne
+    version: 1.7.0
+    dependencies:
+      buildtool:
+      - catkin
+      build: []
+      build_export: []
+      exec:
+      - velodyne_driver
+      - velodyne_laserscan
+      - velodyne_msgs
+      - velodyne_pointcloud
+      test: []
+      generic: []
+    package_xml_sha256: e6f4cfdafca99a29e59e2adaf4b4c92016b62e61b67c2e80ef20111c353e3f44
+  - name: velodyne_driver
+    path: src/lidar+sensorfusion/src/velodyne/velodyne_driver
+    version: 1.7.0
+    dependencies:
+      buildtool:
+      - catkin
+      build: []
+      build_export: []
+      exec: []
+      test:
+      - roslaunch
+      - roslint
+      - rostest
+      generic:
+      - diagnostic_updater
+      - dynamic_reconfigure
+      - libpcap
+      - nodelet
+      - roscpp
+      - tf
+      - velodyne_msgs
+    package_xml_sha256: 2efbbb88fa11a9b6c0a6e697e948d991effdc8e039230f5e4e7c44cdbb0f7665
+  - name: velodyne_laserscan
+    path: src/lidar+sensorfusion/src/velodyne/velodyne_laserscan
+    version: 1.7.0
+    dependencies:
+      buildtool:
+      - catkin
+      build:
+      - roslint
+      build_export: []
+      exec: []
+      test:
+      - roslaunch
+      - rostest
+      generic:
+      - dynamic_reconfigure
+      - nodelet
+      - roscpp
+      - sensor_msgs
+    package_xml_sha256: ff4525c02053cbf7fb8d274ad36a2eae609690c21353995ae124d4d58490d80b
+  - name: velodyne_msgs
+    path: src/lidar+sensorfusion/src/velodyne/velodyne_msgs
+    version: 1.7.0
+    dependencies:
+      buildtool:
+      - catkin
+      build:
+      - message_generation
+      build_export: []
+      exec:
+      - message_runtime
+      test: []
+      generic:
+      - std_msgs
+    package_xml_sha256: 8fb6241be57531a0ba607d9e33f513a7c0b20c8a98e21b715df84909fc799987
+  - name: velodyne_pcl
+    path: src/lidar+sensorfusion/src/velodyne/velodyne_pcl
+    version: 1.7.0
+    dependencies:
+      buildtool:
+      - catkin
+      build:
+      - roslint
+      build_export: []
+      exec: []
+      test: []
+      generic:
+      - pcl_ros
+    package_xml_sha256: e83fb370067004fca910d35b041c5092d9daa4b3eaac1e7b19f6a6b0a17b934b
+  - name: velodyne_pointcloud
+    path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud
+    version: 1.7.0
+    dependencies:
+      buildtool:
+      - catkin
+      build:
+      - roslint
+      build_export: []
+      exec:
+      - velodyne_laserscan
+      test:
+      - roslaunch
+      - rostest
+      - rosunit
+      - tf2_ros
+      generic:
+      - angles
+      - diagnostic_updater
+      - dynamic_reconfigure
+      - eigen
+      - nodelet
+      - roscpp
+      - roslib
+      - sensor_msgs
+      - tf2_ros
+      - velodyne_driver
+      - velodyne_msgs
+      - yaml-cpp
+    package_xml_sha256: 868ccd6556523e7162e3be52a536771500022d546bf8fd8cea4132be274588de
+  - name: morai_sensor_bridge
+    path: src/morai_sensor_bridge
+    version: 0.1.0
+    dependencies:
+      buildtool:
+      - catkin
+      build: []
+      build_export: []
+      exec:
+      - tf2_ros
+      test: []
+      generic:
+      - diagnostic_msgs
+      - morai_msgs
+      - rospy
+      - sensor_msgs
+      - std_msgs
+    package_xml_sha256: 76c769fe2c6cfbb9b96cb267d9eda6765abf5523b2d8ace93fce55fda4f2bf77
+  - name: morai_udp_bridge
+    path: src/morai_udp_bridge
+    version: 0.1.0
+    dependencies:
+      buildtool:
+      - catkin
+      build: []
+      build_export: []
+      exec: []
+      test: []
+      generic:
+      - diagnostic_msgs
+      - geometry_msgs
+      - morai_msgs
+      - rospy
+      - std_msgs
+    package_xml_sha256: 255cc68600d4613f1e3da77679686aa5fdabd0a8e79d37099f8bf45ae2eb916a
+  - name: mpc_controller
+    path: src/mpc_controller
+    version: 0.1.0
+    dependencies:
+      buildtool:
+      - catkin
+      build: []
+      build_export: []
+      exec: []
+      test: []
+      generic:
+      - asmc_msgs
+      - morai_msgs
+      - roscpp
+      - yaml-cpp
+    package_xml_sha256: 28e723fb7bc1572f5dd4c23beb6d09cabd4c4fa90709a9b9d2842cf707a73b3d
+  - name: camera_semantic_perception
+    path: src/perception/camera_semantic_perception
+    version: 0.1.0
+    dependencies:
+      buildtool:
+      - catkin
+      build: []
+      build_export: []
+      exec:
+      - python3-numpy
+      - python3-opencv
+      test:
+      - python3-nose
+      generic:
+      - diagnostic_msgs
+      - message_filters
+      - rospy
+      - sensor_msgs
+    package_xml_sha256: 54556472c8a68405e6a1c8b77603512b23f06aec7a119f5d438b0d1d822c6647
+  - name: drivable_bev
+    path: src/perception/drivable_bev
+    version: 0.1.0
+    dependencies:
+      buildtool:
+      - catkin
+      build: []
+      build_export: []
+      exec:
+      - data_collection
+      - python3-numpy
+      - python3-opencv
+      - python3-yaml
+      - rosbag
+      test:
+      - python3-nose
+      generic:
+      - asmc_msgs
+      - camera_semantic_perception
+      - diagnostic_msgs
+      - geometry_msgs
+      - message_filters
+      - morai_msgs
+      - rospy
+      - sensor_msgs
+      - std_msgs
+      - visualization_msgs
+    package_xml_sha256: f8d929d4a5d9fd8e485cfcc2fd5a9e3e8d1840a6d5ef96ccb00a13f148979345
+  - name: lane_boundary_adapter
+    path: src/planning_control/lane_boundary_adapter
+    version: 0.1.0
+    dependencies:
+      buildtool:
+      - catkin
+      build: []
+      build_export: []
+      exec: []
+      test:
+      - rostest
+      generic:
+      - asmc_msgs
+      - diagnostic_msgs
+      - geometry_msgs
+      - roscpp
+      - std_msgs
+      - visualization_msgs
+    package_xml_sha256: 06b2e8ccabda03cc3c534143f1e32b6561967cbd58ba5fe4dab8fa3b77570d7b
+  - name: traffic_light
+    path: src/traffic_light
+    version: 0.1.0
+    dependencies:
+      buildtool:
+      - catkin
+      build: []
+      build_export: []
+      exec:
+      - python3-opencv
+      test: []
+      generic:
+      - rospy
+      - sensor_msgs
+      - std_msgs
+    package_xml_sha256: 32fcbc24d19dbc36ae21521d2c528ddce84cc30de13ea756e72bc2e98c4de79f
+  - name: vehicle_state
+    path: src/vehicle_state
+    version: 0.1.0
+    dependencies:
+      buildtool:
+      - catkin
+      build: []
+      build_export: []
+      exec: []
+      test: []
+      generic:
+      - asmc_msgs
+      - morai_msgs
+      - roscpp
+      - sensor_msgs
+    package_xml_sha256: eb494c5e16bb97f7919a9496eb6e260efea68409c4f04466d03469fa7580d26f
+  internal_dependency_edges:
+  - from: Main
+    to: Msg
+  - from: Main
+    to: morai_msgs
+  - from: asmc_hd_map
+    to: asmc_msgs
+  - from: asmc_hd_map
+    to: morai_msgs
+  - from: behavior_planner
+    to: asmc_msgs
+  - from: behavior_planner
+    to: frenet_planner
+  - from: behavior_planner
+    to: morai_msgs
+  - from: behavior_planner
+    to: mpc_controller
+  - from: behavior_planner
+    to: traffic_light
+  - from: behavior_planner
+    to: vehicle_state
+  - from: data_collection
+    to: morai_msgs
+  - from: drivable_bev
+    to: asmc_msgs
+  - from: drivable_bev
+    to: camera_semantic_perception
+  - from: drivable_bev
+    to: data_collection
+  - from: drivable_bev
+    to: morai_msgs
+  - from: frenet_planner
+    to: asmc_msgs
+  - from: frenet_planner
+    to: behavior_planner
+  - from: frenet_planner
+    to: morai_msgs
+  - from: frenet_planner
+    to: morai_sensor_bridge
+  - from: frenet_planner
+    to: morai_udp_bridge
+  - from: frenet_planner
+    to: mpc_controller
+  - from: frenet_planner
+    to: vehicle_state
+  - from: integration_launch
+    to: morai_sensor_bridge
+  - from: integration_launch
+    to: morai_udp_bridge
+  - from: lane_boundary_adapter
+    to: asmc_msgs
+  - from: morai_sensor_bridge
+    to: morai_msgs
+  - from: morai_udp_bridge
+    to: morai_msgs
+  - from: mpc_controller
+    to: asmc_msgs
+  - from: mpc_controller
+    to: morai_msgs
+  - from: vehicle_state
+    to: asmc_msgs
+  - from: vehicle_state
+    to: morai_msgs
+  - from: velodyne
+    to: velodyne_driver
+  - from: velodyne
+    to: velodyne_laserscan
+  - from: velodyne
+    to: velodyne_msgs
+  - from: velodyne
+    to: velodyne_pointcloud
+  - from: velodyne_driver
+    to: velodyne_msgs
+  - from: velodyne_pointcloud
+    to: velodyne_driver
+  - from: velodyne_pointcloud
+    to: velodyne_laserscan
+  - from: velodyne_pointcloud
+    to: velodyne_msgs
+launches:
+  file_count: 54
+  node_declaration_count: 61
+  files:
+  - path: src/asmc_hd_map/launch/candidate_map_overlay.launch
+    nodes:
+    - pkg: asmc_hd_map
+      type: candidate_map_overlay_node.py
+      name: candidate_map_overlay
+      remaps: []
+    - pkg: rviz
+      type: rviz
+      name: candidate_map_overlay_rviz
+      remaps: []
+    includes: []
+  - path: src/asmc_hd_map/launch/competition_map.launch
+    nodes: []
+    includes:
+    - $(find asmc_hd_map)/launch/competition_map_debug.launch
+  - path: src/asmc_hd_map/launch/competition_map_debug.launch
+    nodes:
+    - pkg: asmc_hd_map
+      type: competition_map_publisher_node.py
+      name: competition_map_publisher
+      remaps: []
+    - pkg: asmc_hd_map
+      type: local_map_crop_node.py
+      name: local_map_crop
+      remaps: []
+    - pkg: rviz
+      type: rviz
+      name: competition_map_debug_rviz
+      remaps: []
+    includes: []
+  - path: src/asmc_hd_map/launch/lane_source_comparison.launch
+    nodes:
+    - pkg: asmc_hd_map
+      type: candidate_map_overlay_node.py
+      name: lane_source_comparison
+      remaps: []
+    - pkg: rviz
+      type: rviz
+      name: lane_source_comparison_rviz
+      remaps: []
+    includes: []
+  - path: src/asmc_hd_map/launch/legacy_origin_overlay.launch
+    nodes:
+    - pkg: asmc_hd_map
+      type: legacy_origin_overlay_node.py
+      name: legacy_origin_overlay
+      remaps: []
+    - pkg: rviz
+      type: rviz
+      name: legacy_origin_overlay_rviz
+      remaps: []
+    includes: []
+  - path: src/asmc_hd_map/launch/operational_candidate_overlay.launch
+    nodes:
+    - pkg: asmc_hd_map
+      type: candidate_map_overlay_node.py
+      name: operational_candidate_overlay
+      remaps: []
+    - pkg: asmc_hd_map
+      type: map_review_logger_node.py
+      name: map_review_logger
+      remaps: []
+    - pkg: rviz
+      type: rviz
+      name: operational_candidate_rviz
+      remaps: []
+    includes: []
+  - path: src/asmc_hd_map/launch/route_curation_review.launch
+    nodes:
+    - pkg: asmc_hd_map
+      type: candidate_map_overlay_node.py
+      name: route_curation_review
+      remaps: []
+    - pkg: rviz
+      type: rviz
+      name: route_curation_review_rviz
+      remaps: []
+    includes: []
+  - path: src/asmc_hd_map/launch/route_curation_stage1.launch
+    nodes:
+    - pkg: asmc_hd_map
+      type: candidate_map_overlay_node.py
+      name: route_curation_stage1
+      remaps: []
+    - pkg: rviz
+      type: rviz
+      name: route_curation_stage1_rviz
+      remaps: []
+    includes: []
+  - path: src/asmc_hd_map/launch/three_source_map_compare.launch
+    nodes:
+    - pkg: asmc_hd_map
+      type: candidate_map_overlay_node.py
+      name: three_source_map_compare
+      remaps: []
+    - pkg: rviz
+      type: rviz
+      name: three_source_map_compare_rviz
+      remaps: []
+    includes: []
+  - path: src/behavior_planner/launch/autonomy_no_bridges.launch
+    nodes:
+    - pkg: frenet_planner
+      type: empty_objects_test_publisher
+      name: empty_objects_test_publisher
+      remaps: []
+    - pkg: traffic_light
+      type: live_infer.py
+      name: traffic_light_infer
+      remaps: []
+    includes:
+    - $(find behavior_planner)/launch/behavior_node.launch
+    - $(find frenet_planner)/launch/frenet_planner.launch
+    - $(find mpc_controller)/launch/mpc_controller.launch
+    - $(find vehicle_state)/launch/vehicle_state.launch
+    - $(find vehicle_state)/launch/vehicle_state_ego_dev.launch
+  - path: src/behavior_planner/launch/autonomy_no_bridges_v2.launch
+    nodes:
+    - pkg: behavior_planner
+      type: morai_objects_adapter.py
+      name: morai_objects_adapter
+      remaps: []
+    - pkg: traffic_light
+      type: live_infer.py
+      name: traffic_light_infer
+      remaps: []
+    includes:
+    - $(find behavior_planner)/launch/behavior_node_v2.launch
+    - $(find frenet_planner)/launch/frenet_planner.launch
+    - $(find mpc_controller)/launch/mpc_controller.launch
+    - $(find vehicle_state)/launch/vehicle_state.launch
+    - $(find vehicle_state)/launch/vehicle_state_ego_dev.launch
+  - path: src/behavior_planner/launch/behavior_node.launch
+    nodes:
+    - pkg: behavior_planner
+      type: behavior_dashboard_server.py
+      name: behavior_dashboard_server
+      remaps: []
+    - pkg: behavior_planner
+      type: behavior_node
+      name: behavior_planner
+      remaps: []
+    - pkg: behavior_planner
+      type: open_dashboard.py
+      name: behavior_dashboard_opener
+      remaps: []
+    - pkg: rviz
+      type: rviz
+      name: behavior_debug_rviz
+      remaps: []
+    includes: []
+  - path: src/behavior_planner/launch/behavior_node_v2.launch
+    nodes: []
+    includes:
+    - $(find behavior_planner)/launch/behavior_node.launch
+  - path: src/behavior_planner/launch/pedal_calibration.launch
+    nodes:
+    - pkg: behavior_planner
+      type: pedal_calibration_node.py
+      name: pedal_calibration
+      remaps: []
+    includes: []
+  - path: src/behavior_planner/launch/steering_calibration.launch
+    nodes:
+    - pkg: behavior_planner
+      type: steering_calibration_node.py
+      name: steering_calibration
+      remaps: []
+    includes: []
+  - path: src/data_collection/launch/bag_recorder.launch
+    nodes:
+    - pkg: data_collection
+      type: bag_recorder_node.py
+      name: asmc_bag_recorder
+      remaps: []
+    includes: []
+  - path: src/data_collection/launch/bag_replay.launch
+    nodes:
+    - pkg: data_collection
+      type: bag_replay_node.py
+      name: asmc_bag_replay
+      remaps: []
+    includes: []
+  - path: src/data_collection/launch/capture_mode_collector.launch
+    nodes:
+    - pkg: data_collection
+      type: capture_mode_collector_node.py
+      name: capture_mode_collector
+      remaps: []
+    includes: []
+  - path: src/data_collection/launch/sync_collector.launch
+    nodes:
+    - pkg: data_collection
+      type: sync_collector_node.py
+      name: sync_collector
+      remaps: []
+    includes: []
+  - path: src/frenet_planner/launch/frenet_planner.launch
+    nodes:
+    - pkg: frenet_planner
+      type: frenet_planner_node
+      name: frenet_planner
+      remaps: []
+    includes: []
+  - path: src/frenet_planner/launch/keep_morai_no_obstacles.launch
+    nodes:
+    - pkg: frenet_planner
+      type: empty_objects_test_publisher
+      name: empty_objects_test_publisher
+      remaps: []
+    includes:
+    - $(find behavior_planner)/launch/behavior_node.launch
+    - $(find frenet_planner)/launch/frenet_planner.launch
+    - $(find morai_sensor_bridge)/launch/morai_sensor_bridge.launch
+    - $(find morai_udp_bridge)/launch/morai_udp_bridge.launch
+    - $(find mpc_controller)/launch/mpc_controller.launch
+    - $(find vehicle_state)/launch/vehicle_state.launch
+    - $(find vehicle_state)/launch/vehicle_state_ego_dev.launch
+  - path: src/integration_launch/launch/morai_udp_bridges.launch
+    nodes: []
+    includes:
+    - $(find morai_sensor_bridge)/launch/morai_sensor_bridge.launch
+    - $(find morai_udp_bridge)/launch/morai_udp_bridge.launch
+  - path: src/lidar+sensorfusion/src/Main/main.launch
+    nodes:
+    - pkg: Main
+      type: main
+      name: Main
+      remaps:
+      - from: /Competition_topic
+        to: /Ego_topic
+    - pkg: Main
+      type: yolo_detection_node
+      name: yolo_detection_node
+      remaps: []
+    - pkg: rviz
+      type: rviz
+      name: sensor_fusion_rviz
+      remaps: []
+    includes:
+    - $(find velodyne_pointcloud)/launch/VLP16_points.launch
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_driver/launch/nodelet_manager.launch
+    nodes:
+    - pkg: nodelet
+      type: nodelet
+      name: $(arg manager)
+      remaps: []
+    - pkg: nodelet
+      type: nodelet
+      name: $(arg manager)_driver
+      remaps: []
+    includes: []
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/32e_points.launch
+    nodes: []
+    includes:
+    - $(find velodyne_driver)/launch/nodelet_manager.launch
+    - $(find velodyne_pointcloud)/launch/laserscan_nodelet.launch
+    - $(find velodyne_pointcloud)/launch/transform_nodelet.launch
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/64e_S3.launch
+    nodes: []
+    includes:
+    - $(find velodyne_driver)/launch/nodelet_manager.launch
+    - $(find velodyne_pointcloud)/launch/laserscan_nodelet.launch
+    - $(find velodyne_pointcloud)/launch/transform_nodelet.launch
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/VLP-32C_points.launch
+    nodes: []
+    includes:
+    - $(find velodyne_driver)/launch/nodelet_manager.launch
+    - $(find velodyne_pointcloud)/launch/laserscan_nodelet.launch
+    - $(find velodyne_pointcloud)/launch/transform_nodelet.launch
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/VLP16_points.launch
+    nodes: []
+    includes:
+    - $(find velodyne_driver)/launch/nodelet_manager.launch
+    - $(find velodyne_pointcloud)/launch/laserscan_nodelet.launch
+    - $(find velodyne_pointcloud)/launch/transform_nodelet.launch
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/VLS128_points.launch
+    nodes: []
+    includes:
+    - $(find velodyne_driver)/launch/nodelet_manager.launch
+    - $(find velodyne_pointcloud)/launch/laserscan_nodelet.launch
+    - $(find velodyne_pointcloud)/launch/transform_nodelet.launch
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/laserscan_nodelet.launch
+    nodes:
+    - pkg: nodelet
+      type: nodelet
+      name: $(arg manager)_laserscan
+      remaps: []
+    includes: []
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/transform_nodelet.launch
+    nodes:
+    - pkg: nodelet
+      type: nodelet
+      name: $(arg manager)_transform
+      remaps: []
+    includes: []
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/static_vehicle_tf.launch
+    nodes:
+    - pkg: tf2_ros
+      type: static_transform_publisher
+      name: map_to_odom
+      remaps: []
+    - pkg: tf2_ros
+      type: static_transform_publisher
+      name: vehicle_is_odom
+      remaps: []
+    - pkg: tf2_ros
+      type: static_transform_publisher
+      name: vehicle_velodyne_tf
+      remaps: []
+    includes: []
+  - path: src/morai_sensor_bridge/launch/morai_sensor_bridge.launch
+    nodes:
+    - pkg: morai_sensor_bridge
+      type: morai_sensor_bridge.py
+      name: morai_sensor_bridge
+      remaps: []
+    - pkg: tf2_ros
+      type: static_transform_publisher
+      name: base_to_velodyne
+      remaps: []
+    includes: []
+  - path: src/morai_udp_bridge/launch/morai_udp_bridge.launch
+    nodes:
+    - pkg: morai_udp_bridge
+      type: morai_udp_bridge.py
+      name: morai_udp_bridge
+      remaps: []
+    includes: []
+  - path: src/mpc_controller/launch/mpc_controller.launch
+    nodes:
+    - pkg: mpc_controller
+      type: mpc_controller_node
+      name: mpc_controller
+      remaps: []
+    includes: []
+  - path: src/perception/camera_semantic_perception/launch/front.launch
+    nodes: []
+    includes:
+    - $(find camera_semantic_perception)/launch/semantic_inference.launch
+  - path: src/perception/camera_semantic_perception/launch/front_visualizer.launch
+    nodes: []
+    includes:
+    - $(find camera_semantic_perception)/launch/semantic_visualizer.launch
+  - path: src/perception/camera_semantic_perception/launch/semantic_inference.launch
+    nodes:
+    - pkg: camera_semantic_perception
+      type: semantic_inference_node.py
+      name: camera_semantic_inference
+      remaps: []
+    includes: []
+  - path: src/perception/camera_semantic_perception/launch/semantic_visualizer.launch
+    nodes:
+    - pkg: camera_semantic_perception
+      type: semantic_visualizer_node.py
+      name: camera_semantic_visualizer
+      remaps: []
+    includes: []
+  - path: src/perception/camera_semantic_perception/launch/three_view.launch
+    nodes: []
+    includes:
+    - $(find camera_semantic_perception)/launch/semantic_inference.launch
+  - path: src/perception/camera_semantic_perception/launch/three_view_visualizer.launch
+    nodes: []
+    includes:
+    - $(find camera_semantic_perception)/launch/semantic_visualizer.launch
+  - path: src/perception/drivable_bev/launch/camera_bev.launch
+    nodes:
+    - pkg: drivable_bev
+      type: camera_bev_node.py
+      name: camera_bev
+      remaps: []
+    includes: []
+  - path: src/perception/drivable_bev/launch/camera_bev_fusion.launch
+    nodes:
+    - pkg: drivable_bev
+      type: camera_bev_fusion_node.py
+      name: camera_bev_fusion
+      remaps: []
+    includes: []
+  - path: src/perception/drivable_bev/launch/camera_bev_visualizer.launch
+    nodes:
+    - pkg: drivable_bev
+      type: camera_bev_visualizer_node.py
+      name: camera_bev_visualizer
+      remaps: []
+    includes: []
+  - path: src/perception/drivable_bev/launch/lane_vector_pilot.launch
+    nodes:
+    - pkg: drivable_bev
+      type: lane_vector_visualizer_node.py
+      name: camera_lane_vector_visualizer
+      remaps: []
+    - pkg: drivable_bev
+      type: lane_vectorizer_node.py
+      name: camera_lane_vectorizer
+      remaps: []
+    includes: []
+  - path: src/perception/drivable_bev/launch/shadow_lane_family_offline.launch
+    nodes:
+    - pkg: drivable_bev
+      type: shadow_lane_family_offline_node.py
+      name: shadow_lane_family_offline
+      remaps: []
+    includes: []
+  - path: src/perception/drivable_bev/launch/shadow_map_rgb_bev.launch
+    nodes:
+    - pkg: drivable_bev
+      type: shadow_map_rgb_bev_node.py
+      name: shadow_map_rgb_bev
+      remaps: []
+    includes: []
+  - path: src/perception/drivable_bev/launch/three_view_bev_pilot.launch
+    nodes: []
+    includes:
+    - $(find camera_semantic_perception)/launch/three_view.launch
+    - $(find drivable_bev)/launch/camera_bev.launch
+    - $(find drivable_bev)/launch/camera_bev_fusion.launch
+    - $(find drivable_bev)/launch/camera_bev_visualizer.launch
+  - path: src/perception/drivable_bev/launch/three_view_lane_pipeline.launch
+    nodes: []
+    includes:
+    - $(find drivable_bev)/launch/lane_vector_pilot.launch
+    - $(find drivable_bev)/launch/three_view_bev_pilot.launch
+  - path: src/perception/drivable_bev/launch/three_view_perception_dev.launch
+    nodes: []
+    includes:
+    - $(find camera_semantic_perception)/launch/three_view_visualizer.launch
+    - $(find drivable_bev)/launch/lane_vector_pilot.launch
+    - $(find drivable_bev)/launch/three_view_bev_pilot.launch
+  - path: src/planning_control/lane_boundary_adapter/launch/shadow_boundary_family_candidate.launch
+    nodes:
+    - pkg: lane_boundary_adapter
+      type: boundary_family_monitor_node
+      name: boundary_family_monitor
+      remaps: []
+    includes: []
+  - path: src/planning_control/lane_boundary_adapter/launch/shadow_lane_consumer_pilot.launch
+    nodes:
+    - pkg: lane_boundary_adapter
+      type: lane_boundary_monitor_node
+      name: lane_boundary_monitor
+      remaps: []
+    includes: []
+  - path: src/vehicle_state/launch/vehicle_state.launch
+    nodes:
+    - pkg: vehicle_state
+      type: vehicle_state_node
+      name: gps_imu_vehicle_state_adapter
+      remaps: []
+    includes: []
+  - path: src/vehicle_state/launch/vehicle_state_ego_dev.launch
+    nodes:
+    - pkg: vehicle_state
+      type: ego_vehicle_state_dev_node
+      name: ego_vehicle_state_dev_adapter
+      remaps: []
+    includes: []
+executables:
+  declaration_count: 153
+  items:
+  - package: Main
+    kind: cmake_add_executable
+    target: main
+    source: src/lidar+sensorfusion/src/Main/CMakeLists.txt
+  - package: Main
+    kind: launch_node
+    target: main
+    source: src/lidar+sensorfusion/src/Main/main.launch
+  - package: Main
+    kind: catkin_install_python
+    target: src/Camera/YOLO/YOLODetection.py
+    source: src/lidar+sensorfusion/src/Main/CMakeLists.txt
+  - package: Main
+    kind: launch_node
+    target: yolo_detection_node
+    source: src/lidar+sensorfusion/src/Main/main.launch
+  - package: asmc_hd_map
+    kind: launch_node
+    target: candidate_map_overlay_node.py
+    source: src/asmc_hd_map/launch/candidate_map_overlay.launch
+  - package: asmc_hd_map
+    kind: launch_node
+    target: candidate_map_overlay_node.py
+    source: src/asmc_hd_map/launch/lane_source_comparison.launch
+  - package: asmc_hd_map
+    kind: launch_node
+    target: candidate_map_overlay_node.py
+    source: src/asmc_hd_map/launch/operational_candidate_overlay.launch
+  - package: asmc_hd_map
+    kind: launch_node
+    target: candidate_map_overlay_node.py
+    source: src/asmc_hd_map/launch/route_curation_review.launch
+  - package: asmc_hd_map
+    kind: launch_node
+    target: candidate_map_overlay_node.py
+    source: src/asmc_hd_map/launch/route_curation_stage1.launch
+  - package: asmc_hd_map
+    kind: launch_node
+    target: candidate_map_overlay_node.py
+    source: src/asmc_hd_map/launch/three_source_map_compare.launch
+  - package: asmc_hd_map
+    kind: launch_node
+    target: competition_map_publisher_node.py
+    source: src/asmc_hd_map/launch/competition_map_debug.launch
+  - package: asmc_hd_map
+    kind: launch_node
+    target: legacy_origin_overlay_node.py
+    source: src/asmc_hd_map/launch/legacy_origin_overlay.launch
+  - package: asmc_hd_map
+    kind: launch_node
+    target: local_map_crop_node.py
+    source: src/asmc_hd_map/launch/competition_map_debug.launch
+  - package: asmc_hd_map
+    kind: launch_node
+    target: map_review_logger_node.py
+    source: src/asmc_hd_map/launch/operational_candidate_overlay.launch
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/audit_legacy_alignment.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/build_candidate_review.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/build_compact_drivable_map.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/build_competition_metadata.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/build_current_corridor.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/build_drivable_area_input_audit.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/build_hybrid_completion.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/build_legacy_adoption.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/build_operational_map.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/build_route_curation.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/calibrate_observed_lanes.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/candidate_map_overlay_node.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/competition_map_publisher_node.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/hd_map_consumer_example.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/legacy_origin_overlay_node.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/local_map_crop_node.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/map_review_logger_node.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/verify_competition_map_topics.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: asmc_hd_map
+    kind: catkin_install_python
+    target: scripts/verify_local_map_topics.py
+    source: src/asmc_hd_map/CMakeLists.txt
+  - package: behavior_planner
+    kind: launch_node
+    target: behavior_dashboard_server.py
+    source: src/behavior_planner/launch/behavior_node.launch
+  - package: behavior_planner
+    kind: cmake_add_executable
+    target: behavior_node
+    source: src/behavior_planner/CMakeLists.txt
+  - package: behavior_planner
+    kind: launch_node
+    target: behavior_node
+    source: src/behavior_planner/launch/behavior_node.launch
+  - package: behavior_planner
+    kind: launch_node
+    target: morai_objects_adapter.py
+    source: src/behavior_planner/launch/autonomy_no_bridges_v2.launch
+  - package: behavior_planner
+    kind: launch_node
+    target: open_dashboard.py
+    source: src/behavior_planner/launch/behavior_node.launch
+  - package: behavior_planner
+    kind: launch_node
+    target: pedal_calibration_node.py
+    source: src/behavior_planner/launch/pedal_calibration.launch
+  - package: behavior_planner
+    kind: catkin_install_python
+    target: scripts/behavior_dashboard_server.py
+    source: src/behavior_planner/CMakeLists.txt
+  - package: behavior_planner
+    kind: catkin_install_python
+    target: scripts/morai_objects_adapter.py
+    source: src/behavior_planner/CMakeLists.txt
+  - package: behavior_planner
+    kind: catkin_install_python
+    target: scripts/open_dashboard.py
+    source: src/behavior_planner/CMakeLists.txt
+  - package: behavior_planner
+    kind: catkin_install_python
+    target: scripts/pedal_calibration_node.py
+    source: src/behavior_planner/CMakeLists.txt
+  - package: behavior_planner
+    kind: catkin_install_python
+    target: scripts/steering_calibration_node.py
+    source: src/behavior_planner/CMakeLists.txt
+  - package: behavior_planner
+    kind: launch_node
+    target: steering_calibration_node.py
+    source: src/behavior_planner/launch/steering_calibration.launch
+  - package: camera_semantic_perception
+    kind: catkin_install_python
+    target: scripts/semantic_inference_node.py
+    source: src/perception/camera_semantic_perception/CMakeLists.txt
+  - package: camera_semantic_perception
+    kind: catkin_install_python
+    target: scripts/semantic_visualizer_node.py
+    source: src/perception/camera_semantic_perception/CMakeLists.txt
+  - package: camera_semantic_perception
+    kind: launch_node
+    target: semantic_inference_node.py
+    source: src/perception/camera_semantic_perception/launch/semantic_inference.launch
+  - package: camera_semantic_perception
+    kind: launch_node
+    target: semantic_visualizer_node.py
+    source: src/perception/camera_semantic_perception/launch/semantic_visualizer.launch
+  - package: data_collection
+    kind: launch_node
+    target: bag_recorder_node.py
+    source: src/data_collection/launch/bag_recorder.launch
+  - package: data_collection
+    kind: launch_node
+    target: bag_replay_node.py
+    source: src/data_collection/launch/bag_replay.launch
+  - package: data_collection
+    kind: launch_node
+    target: capture_mode_collector_node.py
+    source: src/data_collection/launch/capture_mode_collector.launch
+  - package: data_collection
+    kind: catkin_install_python
+    target: scripts/audit_rosbag_run.py
+    source: src/data_collection/CMakeLists.txt
+  - package: data_collection
+    kind: catkin_install_python
+    target: scripts/bag_recorder_node.py
+    source: src/data_collection/CMakeLists.txt
+  - package: data_collection
+    kind: catkin_install_python
+    target: scripts/bag_replay_node.py
+    source: src/data_collection/CMakeLists.txt
+  - package: data_collection
+    kind: catkin_install_python
+    target: scripts/capture_mode_collector_node.py
+    source: src/data_collection/CMakeLists.txt
+  - package: data_collection
+    kind: catkin_install_python
+    target: scripts/monitor_transport_pilot.py
+    source: src/data_collection/CMakeLists.txt
+  - package: data_collection
+    kind: catkin_install_python
+    target: scripts/reject_bag_run.py
+    source: src/data_collection/CMakeLists.txt
+  - package: data_collection
+    kind: catkin_install_python
+    target: scripts/sync_collector_node.py
+    source: src/data_collection/CMakeLists.txt
+  - package: data_collection
+    kind: launch_node
+    target: sync_collector_node.py
+    source: src/data_collection/launch/sync_collector.launch
+  - package: drivable_bev
+    kind: launch_node
+    target: camera_bev_fusion_node.py
+    source: src/perception/drivable_bev/launch/camera_bev_fusion.launch
+  - package: drivable_bev
+    kind: launch_node
+    target: camera_bev_node.py
+    source: src/perception/drivable_bev/launch/camera_bev.launch
+  - package: drivable_bev
+    kind: launch_node
+    target: camera_bev_visualizer_node.py
+    source: src/perception/drivable_bev/launch/camera_bev_visualizer.launch
+  - package: drivable_bev
+    kind: launch_node
+    target: lane_vector_visualizer_node.py
+    source: src/perception/drivable_bev/launch/lane_vector_pilot.launch
+  - package: drivable_bev
+    kind: launch_node
+    target: lane_vectorizer_node.py
+    source: src/perception/drivable_bev/launch/lane_vector_pilot.launch
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/audit_shadow_lane_map_alignment.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/audit_shadow_lane_results.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/build_shadow_lane_gt.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/calibrate_shadow_lane_gt.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/camera_bev_fusion_node.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/camera_bev_node.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/camera_bev_visualizer_node.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/lane_vector_visualizer_node.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/lane_vectorizer_node.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/run_shadow_lane_bag_batch.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/shadow_lane_family_offline_node.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/shadow_map_rgb_bev_node.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/summarize_invalid_map_distance.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/summarize_invalid_support_review.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/summarize_shadow_lane_family.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: catkin_install_python
+    target: scripts/summarize_shadow_planning_usability.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - package: drivable_bev
+    kind: launch_node
+    target: shadow_lane_family_offline_node.py
+    source: src/perception/drivable_bev/launch/shadow_lane_family_offline.launch
+  - package: drivable_bev
+    kind: launch_node
+    target: shadow_map_rgb_bev_node.py
+    source: src/perception/drivable_bev/launch/shadow_map_rgb_bev.launch
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: behavior_command_adapter_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: braking_memory_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: closed_loop_reference_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: command_avoid_target_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: command_emergency_plan_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: command_execution_manager_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: command_follow_plan_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: command_keep_plan_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: command_lane_change_plan_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: command_stop_plan_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: command_validation_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: config_loader_validation_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: curvature_continuity_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: curve_speed_envelope_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: empty_objects_test_publisher
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: launch_node
+    target: empty_objects_test_publisher
+    source: src/behavior_planner/launch/autonomy_no_bridges.launch
+  - package: frenet_planner
+    kind: launch_node
+    target: empty_objects_test_publisher
+    source: src/frenet_planner/launch/keep_morai_no_obstacles.launch
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: frenet_planner_node
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: launch_node
+    target: frenet_planner_node
+    source: src/frenet_planner/launch/frenet_planner.launch
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: geometry_foundation_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: keep_candidate_target_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: lane_change_test_publisher
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: longitudinal_kinematics_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: low_speed_keep_handoff_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: merge_gap_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: message_converter_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: planner_command_defaults_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: polygon_collision_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: request_native_generator_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: target_speed_rate_limit_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: v2_enum_mapping_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: v2_ros_regression_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: lane_boundary_adapter
+    kind: cmake_add_executable
+    target: boundary_family_monitor_node
+    source: src/planning_control/lane_boundary_adapter/CMakeLists.txt
+  - package: lane_boundary_adapter
+    kind: launch_node
+    target: boundary_family_monitor_node
+    source: src/planning_control/lane_boundary_adapter/launch/shadow_boundary_family_candidate.launch
+  - package: lane_boundary_adapter
+    kind: cmake_add_executable
+    target: lane_boundary_monitor_node
+    source: src/planning_control/lane_boundary_adapter/CMakeLists.txt
+  - package: lane_boundary_adapter
+    kind: launch_node
+    target: lane_boundary_monitor_node
+    source: src/planning_control/lane_boundary_adapter/launch/shadow_lane_consumer_pilot.launch
+  - package: morai_sensor_bridge
+    kind: launch_node
+    target: morai_sensor_bridge.py
+    source: src/morai_sensor_bridge/launch/morai_sensor_bridge.launch
+  - package: morai_sensor_bridge
+    kind: catkin_install_python
+    target: scripts/morai_sensor_bridge.py
+    source: src/morai_sensor_bridge/CMakeLists.txt
+  - package: morai_udp_bridge
+    kind: launch_node
+    target: morai_udp_bridge.py
+    source: src/morai_udp_bridge/launch/morai_udp_bridge.launch
+  - package: morai_udp_bridge
+    kind: catkin_install_python
+    target: scripts/morai_udp_bridge.py
+    source: src/morai_udp_bridge/CMakeLists.txt
+  - package: mpc_controller
+    kind: cmake_add_executable
+    target: mpc_controller_node
+    source: src/mpc_controller/CMakeLists.txt
+  - package: mpc_controller
+    kind: launch_node
+    target: mpc_controller_node
+    source: src/mpc_controller/launch/mpc_controller.launch
+  - package: nodelet
+    kind: launch_node
+    target: nodelet
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_driver/launch/nodelet_manager.launch
+  - package: nodelet
+    kind: launch_node
+    target: nodelet
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/laserscan_nodelet.launch
+  - package: nodelet
+    kind: launch_node
+    target: nodelet
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/transform_nodelet.launch
+  - package: rviz
+    kind: launch_node
+    target: rviz
+    source: src/asmc_hd_map/launch/candidate_map_overlay.launch
+  - package: rviz
+    kind: launch_node
+    target: rviz
+    source: src/asmc_hd_map/launch/competition_map_debug.launch
+  - package: rviz
+    kind: launch_node
+    target: rviz
+    source: src/asmc_hd_map/launch/lane_source_comparison.launch
+  - package: rviz
+    kind: launch_node
+    target: rviz
+    source: src/asmc_hd_map/launch/legacy_origin_overlay.launch
+  - package: rviz
+    kind: launch_node
+    target: rviz
+    source: src/asmc_hd_map/launch/operational_candidate_overlay.launch
+  - package: rviz
+    kind: launch_node
+    target: rviz
+    source: src/asmc_hd_map/launch/route_curation_review.launch
+  - package: rviz
+    kind: launch_node
+    target: rviz
+    source: src/asmc_hd_map/launch/route_curation_stage1.launch
+  - package: rviz
+    kind: launch_node
+    target: rviz
+    source: src/asmc_hd_map/launch/three_source_map_compare.launch
+  - package: rviz
+    kind: launch_node
+    target: rviz
+    source: src/behavior_planner/launch/behavior_node.launch
+  - package: rviz
+    kind: launch_node
+    target: rviz
+    source: src/lidar+sensorfusion/src/Main/main.launch
+  - package: tf2_ros
+    kind: launch_node
+    target: static_transform_publisher
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/static_vehicle_tf.launch
+  - package: tf2_ros
+    kind: launch_node
+    target: static_transform_publisher
+    source: src/morai_sensor_bridge/launch/morai_sensor_bridge.launch
+  - package: traffic_light
+    kind: catkin_install_python
+    target: live_infer.py
+    source: src/traffic_light/CMakeLists.txt
+  - package: traffic_light
+    kind: launch_node
+    target: live_infer.py
+    source: src/behavior_planner/launch/autonomy_no_bridges.launch
+  - package: traffic_light
+    kind: launch_node
+    target: live_infer.py
+    source: src/behavior_planner/launch/autonomy_no_bridges_v2.launch
+  - package: traffic_light
+    kind: catkin_install_python
+    target: traffic_light.py
+    source: src/traffic_light/CMakeLists.txt
+  - package: vehicle_state
+    kind: cmake_add_executable
+    target: ego_vehicle_state_dev_node
+    source: src/vehicle_state/CMakeLists.txt
+  - package: vehicle_state
+    kind: launch_node
+    target: ego_vehicle_state_dev_node
+    source: src/vehicle_state/launch/vehicle_state_ego_dev.launch
+  - package: vehicle_state
+    kind: cmake_add_executable
+    target: vehicle_state_adapter_test
+    source: src/vehicle_state/CMakeLists.txt
+  - package: vehicle_state
+    kind: cmake_add_executable
+    target: vehicle_state_node
+    source: src/vehicle_state/CMakeLists.txt
+  - package: vehicle_state
+    kind: launch_node
+    target: vehicle_state_node
+    source: src/vehicle_state/launch/vehicle_state.launch
+  - package: velodyne_driver
+    kind: cmake_add_executable
+    target: velodyne_node
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_driver/src/driver/CMakeLists.txt
+  - package: velodyne_laserscan
+    kind: cmake_add_executable
+    target: ${PROJECT_NAME}_node
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/CMakeLists.txt
+  - package: velodyne_pointcloud
+    kind: cmake_add_executable
+    target: dynamic_reconfigure_node
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/CMakeLists.txt
+  - package: velodyne_pointcloud
+    kind: cmake_add_executable
+    target: transform_node
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/src/conversions/CMakeLists.txt
+static_topic_references:
+  method: literal advertise/subscribe calls and launch remaps; runtime topics come from bags
+  reference_count: 120
+  references:
+  - direction: publish
+    topic: /CollisionData
+    message_type_literal: CollisionData
+    source: src/morai_udp_bridge/scripts/morai_udp_bridge.py
+    line: 145
+  - direction: subscribe
+    topic: /Competition_topic
+    message_type_literal: morai_msgs::EgoVehicleStatus
+    source: src/lidar+sensorfusion/src/Main/src/Parser/Parser.cpp
+    line: 320
+  - direction: publish
+    topic: /Ego_topic
+    message_type_literal: EgoVehicleStatus
+    source: src/morai_udp_bridge/scripts/morai_udp_bridge.py
+    line: 141
+  - direction: remap
+    topic: /Ego_topic
+    message_type_literal: ''
+    source: src/lidar+sensorfusion/src/Main/main.launch
+    line: null
+    from: /Competition_topic
+  - direction: subscribe
+    topic: /Ego_topic
+    message_type_literal: EgoVehicleStatus
+    source: src/behavior_planner/scripts/pedal_calibration_node.py
+    line: 91
+  - direction: subscribe
+    topic: /Ego_topic
+    message_type_literal: EgoVehicleStatus
+    source: src/behavior_planner/scripts/steering_calibration_node.py
+    line: 98
+  - direction: subscribe
+    topic: /Ego_topic
+    message_type_literal: EgoVehicleStatus
+    source: src/learning_by_cheating/autonomous_driving.py
+    line: 92
+  - direction: subscribe
+    topic: /Ego_topic
+    message_type_literal: EgoVehicleStatus
+    source: src/learning_by_cheating/scripts/lbc_bev_collector.py
+    line: 71
+  - direction: subscribe
+    topic: /Ego_topic
+    message_type_literal: EgoVehicleStatus
+    source: src/learning_by_cheating/scripts/lbc_bev_visualizer.py
+    line: 136
+  - direction: subscribe
+    topic: /Ego_topic
+    message_type_literal: EgoVehicleStatus
+    source: src/perception/morai_3d_detection/morai_3d_live.py
+    line: 280
+  - direction: publish
+    topic: /Object_topic
+    message_type_literal: ObjectStatusList
+    source: src/morai_udp_bridge/scripts/morai_udp_bridge.py
+    line: 143
+  - direction: subscribe
+    topic: /Object_topic
+    message_type_literal: ObjectStatusList
+    source: src/behavior_planner/scripts/behavior_dashboard_server.py
+    line: 111
+  - direction: subscribe
+    topic: /Object_topic
+    message_type_literal: ObjectStatusList
+    source: src/learning_by_cheating/scripts/lbc_bev_collector.py
+    line: 72
+  - direction: subscribe
+    topic: /Object_topic
+    message_type_literal: ObjectStatusList
+    source: src/learning_by_cheating/scripts/lbc_bev_visualizer.py
+    line: 137
+  - direction: subscribe
+    topic: /Object_topic
+    message_type_literal: ObjectStatusList
+    source: src/lidar+sensorfusion/measure_velocity_response.py
+    line: 36
+  - direction: subscribe
+    topic: /Object_topic
+    message_type_literal: ObjectStatusList
+    source: src/perception/morai_3d_detection/morai_3d_live.py
+    line: 287
+  - direction: publish
+    topic: /YOLO/BBox
+    message_type_literal: Yolo_bbox_arr
+    source: src/lidar+sensorfusion/src/Main/src/Camera/YOLO/YOLODetection.py
+    line: 148
+  - direction: publish
+    topic: /asmc_hd_map/debug/competition_route
+    message_type_literal: MarkerArray
+    source: src/asmc_hd_map/scripts/legacy_origin_overlay_node.py
+    line: 154
+  - direction: publish
+    topic: /asmc_hd_map/debug/current_link_centers
+    message_type_literal: MarkerArray
+    source: src/asmc_hd_map/scripts/legacy_origin_overlay_node.py
+    line: 151
+  - direction: publish
+    topic: /asmc_hd_map/debug/ego_context
+    message_type_literal: MarkerArray
+    source: src/asmc_hd_map/scripts/legacy_origin_overlay_node.py
+    line: 157
+  - direction: publish
+    topic: /asmc_hd_map/debug/legacy_lanes
+    message_type_literal: MarkerArray
+    source: src/asmc_hd_map/scripts/legacy_origin_overlay_node.py
+    line: 145
+  - direction: publish
+    topic: /asmc_hd_map/debug/legacy_link_centers
+    message_type_literal: MarkerArray
+    source: src/asmc_hd_map/scripts/legacy_origin_overlay_node.py
+    line: 148
+  - direction: subscribe
+    topic: /asmc_hd_map/review/capture_anchor
+    message_type_literal: Empty
+    source: src/asmc_hd_map/scripts/map_review_logger_node.py
+    line: 45
+  - direction: publish
+    topic: /asmc_hd_map/review/context
+    message_type_literal: String
+    source: src/asmc_hd_map/scripts/map_review_logger_node.py
+    line: 42
+  - direction: publish
+    topic: /behavior/command_v2
+    message_type_literal: Command
+    source: src/frenet_planner/tests/v2_ros_regression_test.cpp
+    line: 206
+  - direction: subscribe
+    topic: /behavior/feature_debug
+    message_type_literal: UrbanFeatureDebug
+    source: src/behavior_planner/scripts/behavior_dashboard_server.py
+    line: 102
+  - direction: publish
+    topic: /camera/image/compressed
+    message_type_literal: sensor_msgs::CompressedImage
+    source: src/lidar+sensorfusion/src/Main/src/Parser/Parser.cpp
+    line: 40
+  - direction: publish
+    topic: /camera/image/compressed
+    message_type_literal: sensor_msgs::CompressedImage
+    source: src/lidar+sensorfusion/src/Main/src/Parser/Parser.cpp
+    line: 121
+  - direction: subscribe
+    topic: /camera/image/compressed
+    message_type_literal: CompressedImage
+    source: src/lidar+sensorfusion/src/Main/src/Camera/YOLO/YOLODetection.py
+    line: 146
+  - direction: subscribe
+    topic: /ctrl_cmd
+    message_type_literal: CtrlCmd
+    source: src/morai_udp_bridge/scripts/morai_udp_bridge.py
+    line: 152
+  - direction: publish
+    topic: /ctrl_cmd_0
+    message_type_literal: CtrlCmd
+    source: src/learning_by_cheating/autonomous_driving.py
+    line: 120
+  - direction: publish
+    topic: /ctrl_cmd_0
+    message_type_literal: morai_msgs::CtrlCmd
+    source: src/lidar+sensorfusion/src/Main/src/Parser/Parser.cpp
+    line: 321
+  - direction: publish
+    topic: /fusion/debug_image
+    message_type_literal: sensor_msgs::Image
+    source: src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionCamera.cpp
+    line: 449
+  - direction: publish
+    topic: /fusion/debug_image/compressed
+    message_type_literal: sensor_msgs::CompressedImage
+    source: src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionCamera.cpp
+    line: 441
+  - direction: publish
+    topic: /gps
+    message_type_literal: GPSMessage
+    source: src/morai_sensor_bridge/scripts/morai_sensor_bridge.py
+    line: 247
+  - direction: subscribe
+    topic: /gps
+    message_type_literal: GPSMessage
+    source: src/behavior_planner/scripts/pedal_calibration_node.py
+    line: 94
+  - direction: subscribe
+    topic: /gps
+    message_type_literal: GPSMessage
+    source: src/behavior_planner/scripts/steering_calibration_node.py
+    line: 100
+  - direction: subscribe
+    topic: /gps
+    message_type_literal: morai_msgs::GPSMessage
+    source: src/lidar+sensorfusion/src/Main/src/Parser/Parser.cpp
+    line: 254
+  - direction: publish
+    topic: /gps/fix
+    message_type_literal: NavSatFix
+    source: src/morai_sensor_bridge/scripts/morai_sensor_bridge.py
+    line: 248
+  - direction: publish
+    topic: /hd_map/debug/markers
+    message_type_literal: MarkerArray
+    source: src/asmc_hd_map/scripts/competition_map_publisher_node.py
+    line: 835
+  - direction: publish
+    topic: /hd_map/global/checkpoints
+    message_type_literal: CompetitionCheckpointArray
+    source: src/asmc_hd_map/scripts/competition_map_publisher_node.py
+    line: 814
+  - direction: publish
+    topic: /hd_map/global/drivable_areas
+    message_type_literal: DrivableAreaArray
+    source: src/asmc_hd_map/scripts/competition_map_publisher_node.py
+    line: 827
+  - direction: publish
+    topic: /hd_map/global/drivable_grid
+    message_type_literal: OccupancyGrid
+    source: src/asmc_hd_map/scripts/competition_map_publisher_node.py
+    line: 830
+  - direction: subscribe
+    topic: /hd_map/global/drivable_grid
+    message_type_literal: OccupancyGrid
+    source: src/asmc_hd_map/scripts/local_map_crop_node.py
+    line: 100
+  - direction: publish
+    topic: /hd_map/global/lane_markings
+    message_type_literal: LaneMarkingArray
+    source: src/asmc_hd_map/scripts/competition_map_publisher_node.py
+    line: 811
+  - direction: publish
+    topic: /hd_map/global/lanes
+    message_type_literal: LaneArray
+    source: src/asmc_hd_map/scripts/competition_map_publisher_node.py
+    line: 824
+  - direction: subscribe
+    topic: /hd_map/global/lanes
+    message_type_literal: LaneArray
+    source: src/asmc_hd_map/scripts/local_map_crop_node.py
+    line: 97
+  - direction: publish
+    topic: /hd_map/global/mission_zones
+    message_type_literal: MissionZoneArray
+    source: src/asmc_hd_map/scripts/competition_map_publisher_node.py
+    line: 817
+  - direction: publish
+    topic: /hd_map/local/drivable_grid
+    message_type_literal: OccupancyGrid
+    source: src/asmc_hd_map/scripts/local_map_crop_node.py
+    line: 92
+  - direction: subscribe
+    topic: /hd_map/local/drivable_grid
+    message_type_literal: OccupancyGrid
+    source: src/asmc_hd_map/scripts/hd_map_consumer_example.py
+    line: 48
+  - direction: subscribe
+    topic: /hd_map/local/drivable_grid
+    message_type_literal: OccupancyGrid
+    source: src/asmc_hd_map/scripts/verify_local_map_topics.py
+    line: 74
+  - direction: publish
+    topic: /hd_map/local/lanes
+    message_type_literal: LaneArray
+    source: src/asmc_hd_map/scripts/local_map_crop_node.py
+    line: 89
+  - direction: subscribe
+    topic: /hd_map/local/lanes
+    message_type_literal: LaneArray
+    source: src/asmc_hd_map/scripts/hd_map_consumer_example.py
+    line: 44
+  - direction: subscribe
+    topic: /hd_map/local/lanes
+    message_type_literal: LaneArray
+    source: src/asmc_hd_map/scripts/verify_local_map_topics.py
+    line: 70
+  - direction: publish
+    topic: /hd_map/meta
+    message_type_literal: HdMapMeta
+    source: src/asmc_hd_map/scripts/competition_map_publisher_node.py
+    line: 810
+  - direction: subscribe
+    topic: /hd_map/meta
+    message_type_literal: HdMapMeta
+    source: src/asmc_hd_map/scripts/local_map_crop_node.py
+    line: 96
+  - direction: publish
+    topic: /imu
+    message_type_literal: Imu
+    source: src/morai_sensor_bridge/scripts/morai_sensor_bridge.py
+    line: 252
+  - direction: subscribe
+    topic: /imu
+    message_type_literal: Imu
+    source: src/behavior_planner/scripts/pedal_calibration_node.py
+    line: 96
+  - direction: subscribe
+    topic: /imu
+    message_type_literal: Imu
+    source: src/behavior_planner/scripts/steering_calibration_node.py
+    line: 102
+  - direction: subscribe
+    topic: /imu
+    message_type_literal: sensor_msgs::Imu
+    source: src/lidar+sensorfusion/src/Main/src/Parser/Parser.cpp
+    line: 366
+  - direction: publish
+    topic: /last_lidar
+    message_type_literal: Msg::TrackedObjectArray
+    source: src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.cpp
+    line: 286
+  - direction: publish
+    topic: /last_lidar_markers
+    message_type_literal: visualization_msgs::MarkerArray
+    source: src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.cpp
+    line: 289
+  - direction: publish
+    topic: /lbc_bev/image_cropped
+    message_type_literal: Image
+    source: src/learning_by_cheating/scripts/lbc_bev_visualizer.py
+    line: 134
+  - direction: publish
+    topic: /lbc_bev/image_full
+    message_type_literal: Image
+    source: src/learning_by_cheating/scripts/lbc_bev_visualizer.py
+    line: 133
+  - direction: publish
+    topic: /lidar/debug_clustered
+    message_type_literal: sensor_msgs::PointCloud2
+    source: src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp
+    line: 76
+  - direction: publish
+    topic: /lidar/debug_clustered_map
+    message_type_literal: sensor_msgs::PointCloud2
+    source: src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp
+    line: 83
+  - direction: publish
+    topic: /lidar/debug_ransac
+    message_type_literal: sensor_msgs::PointCloud2
+    source: src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp
+    line: 61
+  - direction: publish
+    topic: /lidar/debug_raw
+    message_type_literal: sensor_msgs::PointCloud2
+    source: src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp
+    line: 54
+  - direction: publish
+    topic: /lidar/debug_roi
+    message_type_literal: sensor_msgs::PointCloud2
+    source: src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp
+    line: 68
+  - direction: publish
+    topic: /lidar/object
+    message_type_literal: sensor_msgs::PointCloud2
+    source: src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionLiDAR.cpp
+    line: 22
+  - direction: publish
+    topic: /lidar/object_boxes
+    message_type_literal: visualization_msgs::MarkerArray
+    source: src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionLiDAR.cpp
+    line: 21
+  - direction: publish
+    topic: /lidar/tracked_objects_map
+    message_type_literal: Msg::TrackedObjectArray
+    source: src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.cpp
+    line: 282
+  - direction: publish
+    topic: /lidar/tracking_markers_map
+    message_type_literal: visualization_msgs::MarkerArray
+    source: src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.cpp
+    line: 284
+  - direction: publish
+    topic: /lidar_tracking_markers
+    message_type_literal: visualization_msgs::MarkerArray
+    source: src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp
+    line: 16
+  - direction: publish
+    topic: /lidar_tracking_markers
+    message_type_literal: visualization_msgs::MarkerArray
+    source: src/lidar+sensorfusion/src/Main/src/Lidar/Visualization/Visualization.cpp
+    line: 221
+  - direction: subscribe
+    topic: /lidar_tracking_markers
+    message_type_literal: MarkerArray
+    source: src/lidar+sensorfusion/measure_velocity_response.py
+    line: 39
+  - direction: subscribe
+    topic: /map_line
+    message_type_literal: OccupancyGrid
+    source: src/learning_by_cheating/autonomous_driving.py
+    line: 100
+  - direction: subscribe
+    topic: /map_npc
+    message_type_literal: OccupancyGrid
+    source: src/learning_by_cheating/autonomous_driving.py
+    line: 106
+  - direction: subscribe
+    topic: /map_path
+    message_type_literal: OccupancyGrid
+    source: src/learning_by_cheating/autonomous_driving.py
+    line: 112
+  - direction: publish
+    topic: /morai_sensor_bridge/diagnostics
+    message_type_literal: DiagnosticArray
+    source: src/morai_sensor_bridge/scripts/morai_sensor_bridge.py
+    line: 170
+  - direction: subscribe
+    topic: /morai_sensor_bridge/diagnostics
+    message_type_literal: DiagnosticArray
+    source: src/perception/camera_semantic_perception/scripts/semantic_inference_node.py
+    line: 187
+  - direction: publish
+    topic: /morai_udp_bridge/diagnostics
+    message_type_literal: DiagnosticArray
+    source: src/morai_udp_bridge/scripts/morai_udp_bridge.py
+    line: 147
+  - direction: publish
+    topic: /pa_waypoints
+    message_type_literal: MarkerArray
+    source: src/learning_by_cheating/autonomous_driving.py
+    line: 127
+  - direction: publish
+    topic: /pedal_calibration/metadata
+    message_type_literal: String
+    source: src/behavior_planner/scripts/pedal_calibration_node.py
+    line: 86
+  - direction: publish
+    topic: /pedal_calibration/status
+    message_type_literal: String
+    source: src/behavior_planner/scripts/pedal_calibration_node.py
+    line: 84
+  - direction: publish
+    topic: /perception/bev/debug/diagnostics
+    message_type_literal: DiagnosticArray
+    source: src/perception/drivable_bev/scripts/camera_bev_node.py
+    line: 143
+  - direction: publish
+    topic: /perception/bev/debug/fused/compressed
+    message_type_literal: CompressedImage
+    source: src/perception/drivable_bev/scripts/camera_bev_visualizer_node.py
+    line: 158
+  - direction: publish
+    topic: /perception/bev/debug/fused_quality/compressed
+    message_type_literal: CompressedImage
+    source: src/perception/drivable_bev/scripts/camera_bev_visualizer_node.py
+    line: 161
+  - direction: publish
+    topic: /perception/bev/debug/mosaic/compressed
+    message_type_literal: CompressedImage
+    source: src/perception/drivable_bev/scripts/camera_bev_visualizer_node.py
+    line: 174
+  - direction: publish
+    topic: /perception/bev/debug/source_view
+    message_type_literal: Image
+    source: src/perception/drivable_bev/scripts/camera_bev_fusion_node.py
+    line: 153
+  - direction: publish
+    topic: /perception/bev/diagnostics
+    message_type_literal: DiagnosticArray
+    source: src/perception/drivable_bev/scripts/camera_bev_fusion_node.py
+    line: 178
+  - direction: publish
+    topic: /perception/camera/debug/mosaic/compressed
+    message_type_literal: CompressedImage
+    source: src/perception/camera_semantic_perception/scripts/semantic_visualizer_node.py
+    line: 65
+  - direction: publish
+    topic: /perception/camera/diagnostics
+    message_type_literal: DiagnosticArray
+    source: src/perception/camera_semantic_perception/scripts/semantic_inference_node.py
+    line: 143
+  - direction: publish
+    topic: /perception/lane/boundaries
+    message_type_literal: MarkerArray
+    source: src/perception/drivable_bev/scripts/lane_vectorizer_node.py
+    line: 441
+  - direction: subscribe
+    topic: /perception/lane/boundaries
+    message_type_literal: MarkerArray
+    source: src/perception/drivable_bev/scripts/lane_vector_visualizer_node.py
+    line: 400
+  - direction: publish
+    topic: /perception/lane/boundary_family
+    message_type_literal: LaneBoundaryFamily
+    source: src/perception/drivable_bev/scripts/lane_vectorizer_node.py
+    line: 449
+  - direction: publish
+    topic: /perception/lane/boundary_observations
+    message_type_literal: LaneBoundaryObservationArray
+    source: src/perception/drivable_bev/scripts/lane_vectorizer_node.py
+    line: 444
+  - direction: publish
+    topic: /perception/lane/debug/evidence_points
+    message_type_literal: PointCloud2
+    source: src/perception/drivable_bev/scripts/lane_vectorizer_node.py
+    line: 435
+  - direction: subscribe
+    topic: /perception/lane/debug/evidence_points
+    message_type_literal: PointCloud2
+    source: src/perception/drivable_bev/scripts/lane_vector_visualizer_node.py
+    line: 388
+  - direction: publish
+    topic: /perception/lane/debug/markers
+    message_type_literal: MarkerArray
+    source: src/perception/drivable_bev/scripts/lane_vectorizer_node.py
+    line: 438
+  - direction: subscribe
+    topic: /perception/lane/debug/markers
+    message_type_literal: MarkerArray
+    source: src/perception/drivable_bev/scripts/lane_vector_visualizer_node.py
+    line: 394
+  - direction: publish
+    topic: /perception/lane/debug/shared_family/diagnostics
+    message_type_literal: DiagnosticArray
+    source: src/perception/drivable_bev/scripts/lane_vectorizer_node.py
+    line: 465
+  - direction: subscribe
+    topic: /perception/lane/debug/shared_family/diagnostics
+    message_type_literal: DiagnosticArray
+    source: src/perception/drivable_bev/scripts/lane_vector_visualizer_node.py
+    line: 412
+  - direction: publish
+    topic: /perception/lane/debug/shared_family/markers
+    message_type_literal: MarkerArray
+    source: src/perception/drivable_bev/scripts/lane_vectorizer_node.py
+    line: 460
+  - direction: subscribe
+    topic: /perception/lane/debug/shared_family/markers
+    message_type_literal: MarkerArray
+    source: src/perception/drivable_bev/scripts/lane_vector_visualizer_node.py
+    line: 406
+  - direction: publish
+    topic: /perception/lane/diagnostics
+    message_type_literal: DiagnosticArray
+    source: src/perception/drivable_bev/scripts/lane_vectorizer_node.py
+    line: 454
+  - direction: publish
+    topic: /perception/lane/pipeline_audit
+    message_type_literal: DiagnosticArray
+    source: src/perception/drivable_bev/scripts/lane_vectorizer_node.py
+    line: 457
+  - direction: publish
+    topic: /perception/objects
+    message_type_literal: asmc_msgs::DetectedObjectArray
+    source: src/frenet_planner/tests/v2_ros_regression_test.cpp
+    line: 209
+  - direction: subscribe
+    topic: /planning/frenet_feedback_v2
+    message_type_literal: Feedback
+    source: src/frenet_planner/tests/v2_ros_regression_test.cpp
+    line: 196
+  - direction: subscribe
+    topic: /planning/markers
+    message_type_literal: MarkerArray
+    source: src/behavior_planner/scripts/behavior_dashboard_server.py
+    line: 114
+  - direction: subscribe
+    topic: /planning/trajectory
+    message_type_literal: Trajectory
+    source: src/behavior_planner/scripts/behavior_dashboard_server.py
+    line: 105
+  - direction: subscribe
+    topic: /planning/trajectory
+    message_type_literal: asmc_msgs::Trajectory
+    source: src/frenet_planner/tests/v2_ros_regression_test.cpp
+    line: 201
+  - direction: publish
+    topic: /showAll
+    message_type_literal: visualization_msgs::MarkerArray
+    source: src/lidar+sensorfusion/src/Main/src/Parser/Parser.cpp
+    line: 418
+  - direction: publish
+    topic: /vehicle/state
+    message_type_literal: asmc_msgs::VehicleState
+    source: src/frenet_planner/tests/v2_ros_regression_test.cpp
+    line: 207
+  - direction: subscribe
+    topic: /vehicle/state
+    message_type_literal: VehicleState
+    source: src/behavior_planner/scripts/behavior_dashboard_server.py
+    line: 108
+  - direction: publish
+    topic: scan
+    message_type_literal: sensor_msgs::LaserScan
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/src/velodyne_laserscan.cpp
+    line: 43
+  - direction: publish
+    topic: velodyne_packets
+    message_type_literal: velodyne_msgs::VelodyneScan
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_driver/src/driver/driver.cc
+    line: 195
+  - direction: publish
+    topic: velodyne_points
+    message_type_literal: sensor_msgs::PointCloud2
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/tests/lazy_subscriber.cpp
+    line: 84
+  - direction: publish
+    topic: velodyne_points
+    message_type_literal: sensor_msgs::PointCloud2
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/tests/system.cpp
+    line: 702
+  - direction: publish
+    topic: velodyne_points
+    message_type_literal: sensor_msgs::PointCloud2
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/src/conversions/transform.cc
+    line: 46
+message_contracts:
+  scope: team/runtime messages; pinned and duplicate morai_msgs trees excluded
+  md5_method: generated headers; ROS1 source calculation fallback for unbuilt asmc_msgs
+  count: 33
+  items:
+  - type: Msg/TrackedObject
+    source: src/lidar+sensorfusion/src/Msg/msg/TrackedObject.msg
+    source_sha256: c1cba43089d4909873650f92cde14d86964376449559f1c76b7e7fb397b5265a
+    ros_md5: 6c96135eb03a3ee93bba474fa835f57d
+  - type: Msg/TrackedObjectArray
+    source: src/lidar+sensorfusion/src/Msg/msg/TrackedObjectArray.msg
+    source_sha256: e3ae24a4bc2f200044be54f8f219504fa2e721f58b846c188b4ce38ed111251a
+    ros_md5: e127b2aabd7494ad01a5a56b005bf07e
+  - type: Msg/Yolo_bbox
+    source: src/lidar+sensorfusion/src/Msg/msg/Yolo_bbox.msg
+    source_sha256: e18df2183cb2d19ebfcf5e03fd01aec48a93fe83f156197460b8f848eb1bf4b8
+    ros_md5: 605f5dd6f8f921f2dc15199c760840f9
+  - type: Msg/Yolo_bbox_arr
+    source: src/lidar+sensorfusion/src/Msg/msg/Yolo_bbox_arr.msg
+    source_sha256: 24f263d3ccbb64879554db75104f6e1283f12e875478a48982af60c39371d214
+    ros_md5: 9604a9d8104d38c3bd9830382a3571d0
+  - type: asmc_msgs/BehaviorCommand
+    source: src/asmc_msgs/msg/BehaviorCommand.msg
+    source_sha256: 4d1eae77eceeb23ce4e6453340e57a7e44d5b96251af88de391c9ad64e493d5b
+    ros_md5: fad196232c8f54cbbe2a1bced9d3972a
+  - type: asmc_msgs/BehaviorContext
+    source: src/asmc_msgs/msg/BehaviorContext.msg
+    source_sha256: 364e6bd6c949d9eb30200c47f5439c173cb837dd214058c36cb1359f6790a576
+    ros_md5: 450f8f3ab65064fbb3622550828cadc5
+  - type: asmc_msgs/CompetitionCheckpoint
+    source: src/asmc_msgs/msg/CompetitionCheckpoint.msg
+    source_sha256: 0d2a14ec11ff92106b461fb98d64d08b4958345b586f0f70ba8474d10244ee4b
+    ros_md5: 794b79e3d48ac7fef6493abadad2fc47
+  - type: asmc_msgs/CompetitionCheckpointArray
+    source: src/asmc_msgs/msg/CompetitionCheckpointArray.msg
+    source_sha256: 528ed5154faa0b3624647c7eaafce4753ca883839909c500f75c92a01671125e
+    ros_md5: 2a9f1f28734c005b499ce4993b20931e
+  - type: asmc_msgs/DetectedObject
+    source: src/asmc_msgs/msg/DetectedObject.msg
+    source_sha256: 0137ff768f5cad6e5e2c3784dd6af818dcd4888a647b4f08a73a60a3d6ff630e
+    ros_md5: a965285ae904ae3ade687b9c54c2c515
+  - type: asmc_msgs/DetectedObjectArray
+    source: src/asmc_msgs/msg/DetectedObjectArray.msg
+    source_sha256: b9d4660cd540fb36ee9ac7673e5d25a64cab9416b031128922d145f277a5fcad
+    ros_md5: 14fbd9679c2d87ae7498e4269d9678da
+  - type: asmc_msgs/DrivableArea
+    source: src/asmc_msgs/msg/DrivableArea.msg
+    source_sha256: 6c2b8f838ac50d927e2489b5477989c9715226641d9ae609d68c68cf9175f8d7
+    ros_md5: 3f988da146dba2b6bd2348b32ba3fb7d
+  - type: asmc_msgs/DrivableAreaArray
+    source: src/asmc_msgs/msg/DrivableAreaArray.msg
+    source_sha256: d6d143bab65d2f5b7598e21f011e8f2b35e19981e699144c546e8ed43b1c7f45
+    ros_md5: 672c8c1123790ada26596de6aab5edcb
+  - type: asmc_msgs/FrenetFeedback
+    source: src/asmc_msgs/msg/FrenetFeedback.msg
+    source_sha256: e68970875d9120c1d845de237b8b9f488b8d6f20f11de54d02291061c51b400f
+    ros_md5: 072b15bb1dfe3f5b99d17c1487408114
+  - type: asmc_msgs/HdMapMeta
+    source: src/asmc_msgs/msg/HdMapMeta.msg
+    source_sha256: e8bf223ccd185df17e8c6c2601a9aa8d7913f9235f6590325b694ea489278e2c
+    ros_md5: adb0d98c5dbd41055ebb929fcdf3af19
+  - type: asmc_msgs/Lane
+    source: src/asmc_msgs/msg/Lane.msg
+    source_sha256: c842278e9a430499e723b050b7cb84119f2f3e8c5b74877795252fa55f8bc761
+    ros_md5: 380340d72bbc206438d6cf73629c5fa4
+  - type: asmc_msgs/LaneArray
+    source: src/asmc_msgs/msg/LaneArray.msg
+    source_sha256: a199edb1a688ef6f60c87348017fe5142da648f396164e006d77ce9d2f181ecd
+    ros_md5: 95ad93ef58c8ff22f4069b8ca2388395
+  - type: asmc_msgs/LaneBoundaryFamily
+    source: src/asmc_msgs/msg/LaneBoundaryFamily.msg
+    source_sha256: 6bc3ca95dba989daa017db8cb57ca8061b9c73c5e273335fb40300c826d8611f
+    ros_md5: 70ac79f98ca1244c782ea4067becd6af
+  - type: asmc_msgs/LaneBoundaryFamilyMember
+    source: src/asmc_msgs/msg/LaneBoundaryFamilyMember.msg
+    source_sha256: 18764087479b4a0da230c3cd749a01408092c9b19afeea25ccd404c7f0229d69
+    ros_md5: 516612ff4e656e2e61852056fda78969
+  - type: asmc_msgs/LaneBoundaryObservation
+    source: src/asmc_msgs/msg/LaneBoundaryObservation.msg
+    source_sha256: 752dea18724055c250e69770c55b9141af77a950721312b790558d7748d26687
+    ros_md5: 6ae63de01bc8e43ba30dbb4add2129c3
+  - type: asmc_msgs/LaneBoundaryObservationArray
+    source: src/asmc_msgs/msg/LaneBoundaryObservationArray.msg
+    source_sha256: e9b5f165668069858fab289f149fe7b17a40812a1dc0f02e0fcf0011db86b081
+    ros_md5: f4c14183f7aa8631b2893327df0651f1
+  - type: asmc_msgs/LaneMarking
+    source: src/asmc_msgs/msg/LaneMarking.msg
+    source_sha256: 024758c33675a9a3954b6568bb28be719af29c55b41a9a0f6f94af885332fb5a
+    ros_md5: 65d4f9e4cbb4f60a65b5d7c3702e49fa
+  - type: asmc_msgs/LaneMarkingArray
+    source: src/asmc_msgs/msg/LaneMarkingArray.msg
+    source_sha256: c2ddbcd1379f10b04f79ccda07ddd20c3071acef11ec382a46d6cb35f15d10b0
+    ros_md5: 2eae16c9d4bf3385ac35eba4b3d1b823
+  - type: asmc_msgs/MissionZone
+    source: src/asmc_msgs/msg/MissionZone.msg
+    source_sha256: d06e3ec39bd8c0292c22ce9b09e388ff7bf084d62fa5f8b552a63f01da8334e6
+    ros_md5: 902a8d5532787290e6471aa52a8a0d9c
+  - type: asmc_msgs/MissionZoneArray
+    source: src/asmc_msgs/msg/MissionZoneArray.msg
+    source_sha256: 8c7f097982bf18eb465b509bd5e65811e5f71ae731e36a89f5931f6c629b77af
+    ros_md5: 04325427bb7aedffd9a6ec4881ed46ce
+  - type: asmc_msgs/PlanFeedback
+    source: src/asmc_msgs/msg/PlanFeedback.msg
+    source_sha256: 17278e09283ac563bf4880b0192d3dab3f20b816479f6e43572feb5969428c2e
+    ros_md5: b5132603c037f3cf42de5a795df54d52
+  - type: asmc_msgs/Trajectory
+    source: src/asmc_msgs/msg/Trajectory.msg
+    source_sha256: 1fe76fb79468ba3579c18ccc96d33a971b40dd17704509e854625b554c43406d
+    ros_md5: 38657ba74f761a20afb310b0265cb085
+  - type: asmc_msgs/TrajectoryPoint
+    source: src/asmc_msgs/msg/TrajectoryPoint.msg
+    source_sha256: 9bdce6e444790723cf69f664a698cde1a8b848fb917a92e58d3e0ce11812ac04
+    ros_md5: f3382a560d156ee4a98b9951e48b3f3e
+  - type: asmc_msgs/VehicleState
+    source: src/asmc_msgs/msg/VehicleState.msg
+    source_sha256: 8167c328acb6cdc21270d4fceda53f90686dfc27c1540217ff6d6c6204cb451f
+    ros_md5: 7b5b81807cda33ae90638895dcf749f1
+  - type: behavior_planner/BehaviorContext
+    source: src/behavior_planner/msg/BehaviorContext.msg
+    source_sha256: 705253df4131921d26bbf7b6d9f0007fff6d8b208cd4bd5d1dfd42a8f6c5ba95
+    ros_md5: da76030d0c0b268889a850bc8bcce5dd
+  - type: behavior_planner/PlanFeedback
+    source: src/behavior_planner/msg/PlanFeedback.msg
+    source_sha256: 3740414b11fe11f2d018dcadf85a32f54ce90b4abeba7a31d1c5d0760cb04d4d
+    ros_md5: 6f4a10e67e2ec54e46e3797b766681f5
+  - type: behavior_planner/UrbanFeatureDebug
+    source: src/behavior_planner/msg/UrbanFeatureDebug.msg
+    source_sha256: a5eaf12dd7972d720c15220e063fb267f6bdfcdb925fefa623ee67657e91eac9
+    ros_md5: 01f6813b8f3711370df9eb54aa2b495c
+  - type: velodyne_msgs/VelodynePacket
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_msgs/msg/VelodynePacket.msg
+    source_sha256: 87a00a34f67cb7320d810736dc10b575c63db73dd25a4c46a0dccd0f41916ee0
+    ros_md5: ae4f90a23256f44e82baa08dd45c3456
+  - type: velodyne_msgs/VelodyneScan
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_msgs/msg/VelodyneScan.msg
+    source_sha256: 2ae7c1ca2f72bb060be7bdbd65ec5cd781529ca4be44e2593a522470aa228a1a
+    ros_md5: 50804fc9533a0e579e6322c04ae70566
+representative_bags:
+  scenario_pairing: same 20260913_195606 shadow_static_avoid_return run
+  reader: built-in ROS1 bag-v2 index reader
+  raw:
+    path: rosbags/raw/20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel/bags/20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel_0.bag
+    bytes: 116558834
+    sha256: a2f1b41be24ecd4eaf79eeadc6c5a32c2ae126f9b68f349e06478fa242559ebc
+    duration_s: 28.25983
+    message_count: 4619
+    topics:
+    - topic: /Ego_topic
+      type: morai_msgs/EgoVehicleStatus
+      md5: a54480c8f4c41293a77cf7a0eb3925c9
+      messages: 1378
+      average_hz: 48.761793
+    - topic: /cam_left/image_jpeg/compressed
+      type: sensor_msgs/CompressedImage
+      md5: 8f7a12909da2c9d3332d540a0977563f
+      messages: 564
+      average_hz: 19.957657
+    - topic: /cam_right/image_jpeg/compressed
+      type: sensor_msgs/CompressedImage
+      md5: 8f7a12909da2c9d3332d540a0977563f
+      messages: 563
+      average_hz: 19.922271
+    - topic: /gps
+      type: morai_msgs/GPSMessage
+      md5: 6ab9511aaf9d33b721630ddffc1f7c5f
+      messages: 142
+      average_hz: 5.0248
+    - topic: /image_jpeg/compressed
+      type: sensor_msgs/CompressedImage
+      md5: 8f7a12909da2c9d3332d540a0977563f
+      messages: 563
+      average_hz: 19.922271
+    - topic: /imu
+      type: sensor_msgs/Imu
+      md5: 6a62c6daae103f4ff57a132d6f95cec2
+      messages: 1396
+      average_hz: 49.398739
+    - topic: /morai_sensor_bridge/diagnostics
+      type: diagnostic_msgs/DiagnosticArray
+      md5: 60810da900de1dd6ddd437c3503511da
+      messages: 6
+      average_hz: 0.212315
+    - topic: /morai_udp_bridge/diagnostics
+      type: diagnostic_msgs/DiagnosticArray
+      md5: 60810da900de1dd6ddd437c3503511da
+      messages: 6
+      average_hz: 0.212315
+    - topic: /tf_static
+      type: tf2_msgs/TFMessage
+      md5: 94810edda583a504dfda3829e70d7eec
+      messages: 1
+      average_hz: 0.035386
+  result:
+    path: rosbags/results/20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel/twinlite_v6_shadow_boundary_family_candidate_v3_profile_v1_20260915/bags/twinlite_v6_shadow_boundary_family_candidate_v3_profile_v1_20260915_0.bag
+    bytes: 2550916
+    sha256: 7ab5c78147651c5bcdd77272589988309d3ba653237729e09ab6ed253872ded8
+    duration_s: 28.229753
+    message_count: 1218
+    topics:
+    - topic: /perception/bev/diagnostics
+      type: diagnostic_msgs/DiagnosticArray
+      md5: 60810da900de1dd6ddd437c3503511da
+      messages: 16
+      average_hz: 0.566778
+    - topic: /perception/camera/diagnostics
+      type: diagnostic_msgs/DiagnosticArray
+      md5: 60810da900de1dd6ddd437c3503511da
+      messages: 14
+      average_hz: 0.495931
+    - topic: /perception/lane/boundary_family
+      type: asmc_msgs/LaneBoundaryFamily
+      md5: 70ac79f98ca1244c782ea4067becd6af
+      messages: 293
+      average_hz: 10.37912
+    - topic: /perception/lane/boundary_observations
+      type: asmc_msgs/LaneBoundaryObservationArray
+      md5: f4c14183f7aa8631b2893327df0651f1
+      messages: 293
+      average_hz: 10.37912
+    - topic: /perception/lane/debug/shared_family/diagnostics
+      type: diagnostic_msgs/DiagnosticArray
+      md5: 60810da900de1dd6ddd437c3503511da
+      messages: 293
+      average_hz: 10.37912
+    - topic: /perception/lane/diagnostics
+      type: diagnostic_msgs/DiagnosticArray
+      md5: 60810da900de1dd6ddd437c3503511da
+      messages: 16
+      average_hz: 0.566778
+    - topic: /perception/lane/pipeline_audit
+      type: diagnostic_msgs/DiagnosticArray
+      md5: 60810da900de1dd6ddd437c3503511da
+      messages: 293
+      average_hz: 10.37912
+sensors:
+  canonical_v2:
+    path: config/ASMC_sensor_set_v2.json
+    bytes: 22362
+    sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
+    sensor_count: 7
+    inventory:
+    - id: 1
+      label: camera_1
+      position_m:
+        x: 1.9
+        y: 0.0
+        z: 1.2
+      rotation_deg:
+        roll: 0.0
+        pitch: 2.0
+        yaw: 0.0
+      period_s: 0.050000001
+      nominal_hz: 20.0
+      udp:
+        host_ip: 127.0.0.1
+        host_port: 9290
+        destination_ip: 127.0.0.1
+        destination_port: 9291
+    - id: 2
+      label: camera_2
+      position_m:
+        x: 1.15
+        y: 0.65
+        z: 1.2
+      rotation_deg:
+        roll: 0.0
+        pitch: 10.0
+        yaw: 70.0
+      period_s: 0.050000001
+      nominal_hz: 20.0
+      udp:
+        host_ip: 127.0.0.1
+        host_port: 9292
+        destination_ip: 127.0.0.1
+        destination_port: 9293
+    - id: 3
+      label: camera_3
+      position_m:
+        x: 1.15
+        y: -0.65
+        z: 1.2
+      rotation_deg:
+        roll: 0.0
+        pitch: 10.0
+        yaw: 290.0
+      period_s: 0.050000001
+      nominal_hz: 20.0
+      udp:
+        host_ip: 127.0.0.1
+        host_port: 9294
+        destination_ip: 127.0.0.1
+        destination_port: 9295
+    - id: 4
+      label: camera_4
+      position_m:
+        x: 0.0
+        y: 0.0
+        z: 1.4
+      rotation_deg:
+        roll: 0.0
+        pitch: 328.0
+        yaw: 0.0
+      period_s: 0.100000001
+      nominal_hz: 10.0
+      udp:
+        host_ip: 127.0.0.1
+        host_port: 9296
+        destination_ip: 127.0.0.1
+        destination_port: 9297
+    - id: 5
+      label: lidar3d_1
+      position_m:
+        x: 0.8
+        y: 0.0
+        z: 1.45
+      rotation_deg:
+        roll: 0.0
+        pitch: 0.0
+        yaw: 0.0
+      period_s: 0.100000001
+      nominal_hz: 10.0
+      udp:
+        host_ip: 127.0.0.1
+        host_port: 9298
+        destination_ip: 127.0.0.1
+        destination_port: 9299
+      model: VLP16
+      frequency_index: 1
+    - id: 6
+      label: gps_1
+      position_m:
+        x: 0.35
+        y: 0.0
+        z: 1.25
+      rotation_deg:
+        roll: 0.0
+        pitch: 0.0
+        yaw: 0.0
+      period_s: 0.200000003
+      nominal_hz: 5.0
+      udp:
+        host_ip: 127.0.0.1
+        host_port: 9300
+        destination_ip: 127.0.0.1
+        destination_port: 9301
+    - id: 7
+      label: imu_1
+      position_m:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      rotation_deg:
+        roll: 0.0
+        pitch: 0.0
+        yaw: 0.0
+      period_s: 0.02
+      nominal_hz: 50.000001
+      udp:
+        host_ip: 127.0.0.1
+        host_port: 9302
+        destination_ip: 127.0.0.1
+        destination_port: 9303
+  submitted_autonav_reference:
+    path: On-site inspection/MoraiLauncher_Win_S/MoraiLauncher_Win_Data/SaveFile/Sensor/25.S4.MolitComp03/Autonav_sensor.json
+    bytes: 22361
+    sha256: a5c9abf1f51d6676fe5ce79229bc93e00782b018ed4c776c3bd7c5987d1287be
+    role: provenance_only_not_runtime_source
+    semantic_differences_from_v2:
+    - path: $.cameraList[3].rot.pitch
+      v2: '328.000'
+      submitted_autonav: '340.000'
+  lidar_rate_contract:
+    baseline_hz: 10.0
+    approved_future_target_hz: 15.0
+    owner_requirement: Son Jae-ho / LiDAR
+    change_stage: 3
+    status: recorded_not_applied
+    verification: MORAI UI export plus >=30 s observed /velodyne_points at 14-16 Hz
+hd_map:
+  path: src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json
+  summary_path: src/asmc_hd_map/reports/kcity2025_route_curation_20260917/summary.json
+  map_id: kcity2025_competition_route_curation_candidate_v14
+  build_id: kcity2025_route_curation_stage14_20260918
+  frame_id:
+    crs: +proj=utm +zone=52 +datum=WGS84 +units=m +no_defs
+    frame_id: map
+    local_origin_in_global:
+    - 302595.0
+    - 4124145.0
+    - 0.0
+  schema_version: asmc.hd_map.canonical/v1
+  operational: false
+  partial_candidate: true
+  feature_counts:
+    lane_marking: 121
+    stopline: 7
+  lane_marking_colors:
+    white: 94
+    yellow: 27
+  lane_marking_patterns:
+    broken: 31
+    solid: 90
+  file_sha256: ffcccb478ab9fea5232631dab49145eb59c9211a88c6d2f460108355fc4c54ee
+  geometry_sha256: 01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf
+  summary_sha256: fae31f20b910d31f31786690e67c1dc8e5b0d3a7c451c2002c576d3dae972b91
+  validation:
+    expected:
+      lane_marking: 121
+      stopline: 7
+      white: 94
+      yellow: 27
+      solid: 90
+      broken: 31
+    actual:
+      lane_marking: 121
+      stopline: 7
+      white: 94
+      yellow: 27
+      solid: 90
+      broken: 31
+    passed: true
+competition_inputs:
+  checkpoints:
+    path: R_KR_PG_K-city_2025/2026_molit_comp_checkpoints.json
+    sha256: a77bcfdcc86be35ab62c15013dfd6f1ccb21869728778a997b360725165f5a6f
+    count: 16
+    pass_radius_m: 3.0
+    yaw_unit: deg
+  global_path:
+    path: R_KR_PG_K-city_2025/2026_molit_comp_global_path.txt
+    sha256: 50658991e607d9339d76e4cd6cb169dfc733ea53b93de2c3e222460bb497cc05
+    point_count: 4430
+    length_xy_m: 2184.611723
+    start_success_5_percent_station_m: 109.230586
+  status: P1-C_metadata_frozen_not_yet_published
+  metadata_bundle:
+    path: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml
+    sha256: 6e11a97cb0abbadd9bae98acd9884a92b97d59aa3d6d1a3547aa12b77217ddea
+    schema_version: asmc.competition_metadata/v1
+    checkpoint_count: 16
+    mission_zone_count: 15
+    mission_status_counts:
+      derived_official: 4
+      provisional: 11
+    validation_passed: true
+    published: false
+root_scripts:
+  count: 30
+  category_counts:
+    container: 3
+    diagnostic: 7
+    runtime_or_build: 10
+    train_eval_data: 10
+  items:
+  - path: scripts/analyze_camera_bev_loss_budget.py
+    category: train_eval_data
+    executable: true
+    sha256: c30f21d3b0506228bcf2792ee70aa5b6d2693cf3ed361da678b54a516d3f4ec3
+  - path: scripts/analyze_camera_bev_range.py
+    category: train_eval_data
+    executable: true
+    sha256: c8eca1044a45213082112ad3ee2d2d4ec74ac71979c53d9b9a8301e8027b52f9
+  - path: scripts/analyze_camera_lane_range.py
+    category: train_eval_data
+    executable: true
+    sha256: e4adeefc24de68c17b3c8688f7028ee283e6fd0e9ad2c54111a5c60a647a0fac
+  - path: scripts/analyze_camera_lane_vectors.py
+    category: train_eval_data
+    executable: true
+    sha256: 59ac52986f4fddca770d6e77c4ad775f54fd59f270b09002ff08ece9e60d4e28
+  - path: scripts/asmc_env.sh
+    category: runtime_or_build
+    executable: false
+    sha256: edd674e20ac271ae3f41aa2d92cf4584519c0b6b4b9d120fdaec267aa387fed8
+  - path: scripts/audit_semantic_capture.py
+    category: diagnostic
+    executable: true
+    sha256: c56157bf444c7d473fbcc230be59710bec30d76f1d4bfa5ce32046984025b7b7
+  - path: scripts/bake_perception_masks.py
+    category: train_eval_data
+    executable: true
+    sha256: 62570e67e8a31520a1d8943951e0238c7d65308aa013c8a911b9cd653c415f66
+  - path: scripts/bridge.sh
+    category: runtime_or_build
+    executable: true
+    sha256: 3bcde77f3a9a146d57597e40ee4748fee3d6f73efaabe035bab4f3b4d3bb24a4
+  - path: scripts/build_perception_dataset.py
+    category: train_eval_data
+    executable: false
+    sha256: 4eda607bb8181af25c2efaa9dea846cb0a993b6ecff939787fe1222db2ef7597
+  - path: scripts/build_planning_control.sh
+    category: runtime_or_build
+    executable: true
+    sha256: 08cb6455013012a0d7fd3aa6f709e7638510e58ce54f6f0741b6ce1a78be1391
+  - path: scripts/build_ws.sh
+    category: runtime_or_build
+    executable: true
+    sha256: e8b0ec59f0dffda510bd6deaddab722cd6a683e5cd63063ceb45dd6a70aa86f9
+  - path: scripts/compare_twinlite_actor_policies.py
+    category: runtime_or_build
+    executable: false
+    sha256: 2b3272fafc279dd290bafe36b8c82d28dd519d4dd229f00484a45e2dbafba84f
+  - path: scripts/curate_perception_frames.py
+    category: train_eval_data
+    executable: true
+    sha256: abaf230342704a480785f1659ef99a7ba6ce880833657e9d2dbcf40ffa04c778
+  - path: scripts/diagnose_morai_bridge.sh
+    category: diagnostic
+    executable: true
+    sha256: 37da7b342c78a9d5253612104134dfc5825c77abd2a6f6c862a61de05e31dd9a
+  - path: scripts/diagnose_morai_rosbridge.sh
+    category: diagnostic
+    executable: true
+    sha256: c2f5dcf15fadfb45b6d58cf3114ae0e368127110be9b24735226e95401e9ce23
+  - path: scripts/docker_perception_up.sh
+    category: container
+    executable: true
+    sha256: 432965d31a6cec897b7481af22db07b83074f2a136b5fce6aefd02bda2081e97
+  - path: scripts/docker_ros_up.sh
+    category: container
+    executable: true
+    sha256: e3291eb045160453927c4e59d32de3df05b3505b5077ff375e3bba571397f335
+  - path: scripts/docker_training_job.sh
+    category: container
+    executable: true
+    sha256: b67976dc0114beaa875ab2dc584081a19bf4012896b9edf82886b3dc1488af88
+  - path: scripts/evaluate_twinlite.py
+    category: train_eval_data
+    executable: false
+    sha256: 926ff59c06876170d7880ecec96126c039d55b8382987ac162a157fb446b4fc4
+  - path: scripts/probe_host_udp.py
+    category: diagnostic
+    executable: true
+    sha256: e3092a1f4492f360cafb1977b005630ff801ceda171c446aa892e3b037102488
+  - path: scripts/render_twinlite_predictions.py
+    category: runtime_or_build
+    executable: false
+    sha256: cecb14ffaeed34790ce9760ef24d19b7e0bfb024e4c632aa2d34f631107e4631
+  - path: scripts/rosbridge.sh
+    category: runtime_or_build
+    executable: true
+    sha256: 267f0b025f71f0de17a5f23952fdda3f4bf557c2226853f6edd4e0b3c6ea39d3
+  - path: scripts/run_planner_controller.sh
+    category: runtime_or_build
+    executable: true
+    sha256: a930f461c14ce65a98c13f7ce1072354759649640778d0f5ec60fb413c7b0c1b
+  - path: scripts/smoke_twinlite_data_loss.py
+    category: diagnostic
+    executable: false
+    sha256: 4ffba8dd4c059cbd315ab23220b76e27ef02ad1ea66e08ff4cfa254902cb808f
+  - path: scripts/sync_capture_mode_data.py
+    category: runtime_or_build
+    executable: true
+    sha256: f9ef7c060abc946ddc9f9b065e56c3fec2053603ccc594b5ebd1fe912375f3ed
+  - path: scripts/train_twinlite.py
+    category: train_eval_data
+    executable: false
+    sha256: d24c79895505bc78d00aaed4496c8bca810e1f2ac63b7ffc7267fdcb1ef09a1b
+  - path: scripts/train_twinlite_tiny.py
+    category: train_eval_data
+    executable: true
+    sha256: d6c536b2ea2490f16646a818cc0df5b0827595b3d01e879c556a34524ac59e82
+  - path: scripts/udp_bridge.sh
+    category: runtime_or_build
+    executable: true
+    sha256: 5050f25fd9e796deb0000d78cda094e35b8600e45682d3f9304e37857e4fab34
+  - path: scripts/verify_morai_topics.py
+    category: diagnostic
+    executable: true
+    sha256: e04cdf6f2b636eecf6ed30eae5aa9061c95e976e49da3177d4e538f76635a2f3
+  - path: scripts/wait_morai_topic.sh
+    category: diagnostic
+    executable: false
+    sha256: f73f1521c6be975955a8d11f0c166725117d2766a8867c83f00e83cdc8906ceb
+legacy_references:
+  scan_scope: repository text excluding generated reports and large files
+  items:
+  - name: learning
+    target: src/learning/
+    reference_file_count: 2
+    files:
+    - docs/README.md
+    - docs/team-dev-guide.md
+  - name: learning_by_cheating
+    target: src/learning_by_cheating/
+    reference_file_count: 12
+    files:
+    - docs/architecture-overview.md
+    - docs/collaboration.md
+    - docs/repository-layout.md
+    - docs/sim-verification-checklist.md
+    - docs/team-dev-guide.md
+    - scripts/diagnose_morai_rosbridge.sh
+    - src/learning/README.md
+    - src/learning_by_cheating/README_LBC_BEV.md
+    - src/learning_by_cheating/dataset_v2.py
+    - src/learning_by_cheating/lbc_bev/ws_root.py
+    - src/learning_by_cheating/scripts/lbc_bev_diagnose.py
+    - src/learning_by_cheating/scripts/lbc_bev_visualizer.py
+  - name: link_node
+    target: src/asmc_hd_map/development/won_tae_link_node/
+    reference_file_count: 18
+    files:
+    - docs/architecture-overview.md
+    - docs/perception-map-fusion-roadmap.md
+    - src/asmc_hd_map/config/kcity2025_compact_drivable_source.yaml
+    - src/asmc_hd_map/config/kcity2025_drivable_area_audit_source.yaml
+    - src/asmc_hd_map/config/kcity2025_drivable_area_input_audit.yaml
+    - src/asmc_hd_map/config/kcity2025_hybrid_completion.yaml
+    - src/asmc_hd_map/config/kcity2025_lane_source_comparison.yaml
+    - src/asmc_hd_map/config/kcity2025_legacy_transfer.yaml
+    - src/asmc_hd_map/config/kcity2025_observed_calibration.yaml
+    - src/asmc_hd_map/config/kcity2025_operational_map.yaml
+    - src/asmc_hd_map/config/kcity2025_route_curation_overlay.yaml
+    - src/asmc_hd_map/config/kcity2025_three_source_compare.yaml
+    - src/asmc_hd_map/development/won_tae_link_node/README.md
+    - src/asmc_hd_map/development/won_tae_link_node/bake_map.py
+    - src/asmc_hd_map/development/won_tae_link_node/config/waize_katri.yaml
+    - src/asmc_hd_map/development/won_tae_link_node/drivable_filter_node.py
+    - src/asmc_hd_map/development/won_tae_link_node/live_check.py
+    - src/asmc_hd_map/development/won_tae_link_node/tests/test_mapbake.py
+  - name: morai_udp_bridge
+    target: src/morai_udp_bridge/
+    reference_file_count: 2
+    files:
+    - docs/network-udp-ros.md
+    - src/asmc_hd_map/development/won_tae_link_node/live_check.py
+  - name: morai_sensor_bridge
+    target: src/morai_sensor_bridge/
+    reference_file_count: 1
+    files:
+    - docs/network-udp-ros.md
+  - name: vehicle_state
+    target: src/vehicle_state/
+    reference_file_count: 0
+    files: []
+  - name: camera_semantic_perception
+    target: src/camera_semantic_perception/
+    reference_file_count: 1
+    files:
+    - docs/perception-map-fusion-roadmap.md
+  - name: drivable_bev
+    target: src/perception/drivable_bev/
+    reference_file_count: 11
+    files:
+    - docs/README.md
+    - docs/architecture-overview.md
+    - docs/perception-agentic-loop.md
+    - docs/perception-map-fusion-roadmap.md
+    - docs/repository-layout.md
+    - docs/shadow-camera-perception-handoff.md
+    - docs/team-dev-guide.md
+    - scripts/analyze_camera_bev_loss_budget.py
+    - scripts/analyze_camera_bev_range.py
+    - scripts/analyze_camera_lane_vectors.py
+    - src/perception/drivable_bev/README.md
+  - name: traffic_light
+    target: src/traffic_light/
+    reference_file_count: 0
+    files: []
+  - name: data_collection
+    target: src/data_collection/
+    reference_file_count: 5
+    files:
+    - docs/README.md
+    - docs/perception-map-fusion-roadmap.md
+    - docs/repository-layout.md
+    - docs/rosbag-evaluation-streaming-gt.md
+    - docs/team-dev-guide.md
+  - name: duplicate_msg
+    target: src/lidar+sensorfusion/src/Msg/
+    reference_file_count: 0
+    files: []
+  - name: duplicate_morai_msgs
+    target: src/lidar+sensorfusion/src/morai_msgs/
+    reference_file_count: 0
+    files: []
+future_requirements:
+- id: lidar_15hz
+  stage: 3
+  status: approved_not_applied
+  requirement: Change the Autonav VLP16 from the 10 Hz baseline to 15 Hz.
+  owner: Son Jae-ho / LiDAR
+  acceptance: MORAI UI-exported config; >=30 s observed /velodyne_points average in 14-16 Hz plus tracking/resource comparison.
+- id: field_aligned_udp_ports
+  stage: 3
+  status: approved_not_applied
+  requirement: 'Use field ports in both environments: Ctrl 9093/9094 mode 2, Competition Vehicle Status 7603/7502, Collision
+    9091/9092, v2 sensor ports 9290-9303.'
+  acceptance: Only IP differs between dev_local and competition_lan; packet replay and profile validation pass.
+- id: package_consolidation
+  stage: 2-5
+  status: planned
+  requirement: Converge team-owned runtime code on asmc_msgs, asmc_hd_map, asmc_bridge, and asmc_perception without moving
+    planning-owned packages.
+  acceptance: Each legacy deletion gate has replacement parity and zero live references.
+- id: field_rehearsal
+  stage: 6
+  status: planned
+  requirement: Run native-Linux Docker LAN2LAN rehearsal on two hosts before deployment freeze.
+  acceptance: 15 minute full-stack run, offline recovery, packet/resource evidence, and rollback runbook.

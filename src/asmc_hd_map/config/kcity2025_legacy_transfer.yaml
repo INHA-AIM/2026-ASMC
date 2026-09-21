@@ -1,0 +1,65 @@
+schema_version: asmc.hd_map.transfer_config/v1
+audit_id: kcity2025_legacy_alignment_20260916
+map_id: kcity2025_hd_candidate_v1
+
+# All paths are resolved from the repository root.  The optional road mesh is
+# deliberately not copied into this package until a reviewed layer is promoted.
+sources:
+  current:
+    global_info: src/behavior_planner/src/config/global_info.json
+    link_set: src/behavior_planner/src/config/link_set.json
+    node_set: src/behavior_planner/src/config/node_set.json
+    # Organizer-provided competition route.  It defines the driven corridor
+    # and route station only; it is not treated as lane-boundary ground truth.
+    route: R_KR_PG_KATRI/2026_molit_comp_global_path.txt
+  legacy:
+    global_info: R_KR_PG_KATRI/global_info.json
+    link_set: R_KR_PG_KATRI/link_set.json
+    node_set: R_KR_PG_KATRI/node_set.json
+    lane_boundary_set: R_KR_PG_KATRI/lane_boundary_set.json
+    surface_marking_set: R_KR_PG_KATRI/surface_marking_set.json
+    traffic_light_set: R_KR_PG_KATRI/traffic_light_set.json
+    traffic_sign_set: R_KR_PG_KATRI/traffic_sign_set.json
+    singlecrosswalk_set: R_KR_PG_KATRI/singlecrosswalk_set.json
+    road_mesh_candidates:
+      - ../data/KATRI 맵(K-CITY 구간 한정) 주행 가능 영역 자료/mgeo_toolkit/data/KATRI/road_mesh_out_line.json
+  current_observed_lane_glob: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/*.csv
+
+sampling:
+  link_step_m: 1.0
+  lane_step_m: 0.5
+  route_step_m: 1.0
+  road_raster_pixels_per_meter: 2.0
+
+matching:
+  search_distance_m: 8.0
+  search_heading_deg: 30.0
+  strict_distance_m: 1.0
+  strict_heading_deg: 15.0
+  tier_a_coverage: 0.80
+  tier_a_p95_m: 0.75
+  relaxed_distance_m: 1.5
+  relaxed_heading_deg: 15.0
+  tier_b_coverage: 0.60
+  lane_tier_a_distance_m: 0.75
+  lane_tier_a_heading_deg: 10.0
+  lane_tier_b_distance_m: 1.50
+  lane_tier_b_heading_deg: 15.0
+  close_route_gap_m: 8.0
+  remove_route_island_m: 3.0
+
+route_regions:
+  high_speed:
+    start_link: A2256W000411
+    end_link: A2256W000153
+    corridor_half_width_m: 15.0
+  shadow_tail:
+    start_s_m: 1851.0
+    end_s_m: 2184.6
+
+promotion_policy:
+  topology_authority: current_mgeo
+  legacy_default_status: candidate
+  forbid_legacy_ids_as_runtime_foreign_keys: true
+  require_current_observation_for_operational_lane: true
+  excluded_operational_lane_colors: [blue]

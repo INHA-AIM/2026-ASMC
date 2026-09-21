@@ -1,0 +1,1030 @@
+schema_version: asmc.competition_metadata/v1
+metadata_id: kcity2025_competition_metadata_v1
+contract_id: asmc_hd_map_topic_contract_v1
+frame_id: map
+sources:
+  official_checkpoints:
+    path: $ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_checkpoints.json
+    sha256: a77bcfdcc86be35ab62c15013dfd6f1ccb21869728778a997b360725165f5a6f
+    bytes: 3274
+    authority: official
+  official_global_path:
+    path: $ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_global_path.txt
+    sha256: 50658991e607d9339d76e4cd6cb169dfc733ea53b93de2c3e222460bb497cc05
+    bytes: 254056
+    authority: official
+  current_link_set:
+    path: $ASMC_DATA/R_KR_PG_K-city_2025/link_set.json
+    sha256: 5ce0fd57da07b83221c0a4d117b0606b2d9c094c8de476a7d1176c78a4dc5b0f
+    bytes: 9112815
+    authority: organizer_map
+  route_links:
+    path: src/behavior_planner/src/config/route_links_1.yaml
+    sha256: d5444dce6da7bb7da1f88c3cdf1cbdef4e1a0eebcf8d0d7a5db03830a97554bf
+    bytes: 991
+    authority: team_reviewed_route_decomposition
+  reviewed_hd_map:
+    path: src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json
+    sha256: ffcccb478ab9fea5232631dab49145eb59c9211a88c6d2f460108355fc4c54ee
+    bytes: 1957494
+    authority: team_reviewed_candidate
+official_notice:
+  source: 디스코드 체크 포인트 정보 업로드 공지
+  author: YeongHu Park
+  announced: '2026-08-03'
+  map: R-KR_PG_K-City_2025
+  notes:
+  - 지정 위치·Heading으로 Ego가 소환되나, 소환 과정에서 위치·각도가 일부 틀어질 수 있음
+  - 전역경로를 일부 수정해 사용해도 해당 체크포인트를 반드시 경유해야 함
+  - 각 포인트별 위치 기준 반경 3m 이내로 통과해야 함
+route:
+  route_id: 2026_molit_comp_global_path
+  closed_loop: true
+  point_count: 4430
+  length_xy_m: 2184.611723336
+  start_success_5_percent_station_m: 109.230586167
+  closure_error_xy_m: 0.0
+  link_ids:
+  - A2256W000748
+  - A2256W000182
+  - A2256W000329
+  - A2256W000236
+  - A2256W000219
+  - A2256W000215
+  - A2256W000213
+  - A2256W000222
+  - A2256W000220
+  - A2256W000202
+  - A2256W000728
+  - A2256W000599
+  - A2256W000207
+  - A2256W000205
+  - A2256W000315
+  - A2256W000318
+  - A2256W000308
+  - A2256W000083
+  - A2256W000304
+  - A2256W000148
+  - A2256W000146
+  - A2256W000151
+  - A2256W000866
+  - A2256W000054
+  - A2256W000846
+  - A2256W000411
+  - A2256W000420
+  - A2256W000408
+  - A2256W000445
+  - A2256W000153
+  - A2256W000451
+  - A2256W000446
+  - A2256W000448
+  - A2256W000126
+  - A2256W000128
+  - A2256W000333
+  - A2256W000154
+  - A2256W000332
+  - A2256W000751
+  link_ranges:
+  - link_id: A2256W000748
+    order: 0
+    start_station_m: 0.0
+    end_station_m: 72.628968697
+    length_m: 72.628968697
+  - link_id: A2256W000182
+    order: 1
+    start_station_m: 72.628968697
+    end_station_m: 94.954245905
+    length_m: 22.325277208
+  - link_id: A2256W000329
+    order: 2
+    start_station_m: 94.954245905
+    end_station_m: 160.009167271
+    length_m: 65.054921366
+  - link_id: A2256W000236
+    order: 3
+    start_station_m: 160.009167271
+    end_station_m: 186.285731748
+    length_m: 26.276564477
+  - link_id: A2256W000219
+    order: 4
+    start_station_m: 186.285731748
+    end_station_m: 208.458941227
+    length_m: 22.173209479
+  - link_id: A2256W000215
+    order: 5
+    start_station_m: 208.458941227
+    end_station_m: 237.422790208
+    length_m: 28.963848981
+  - link_id: A2256W000213
+    order: 6
+    start_station_m: 237.422790208
+    end_station_m: 315.906098142
+    length_m: 78.483307934
+  - link_id: A2256W000222
+    order: 7
+    start_station_m: 315.906098142
+    end_station_m: 346.74182354
+    length_m: 30.835725398
+  - link_id: A2256W000220
+    order: 8
+    start_station_m: 346.74182354
+    end_station_m: 365.775740557
+    length_m: 19.033917017
+  - link_id: A2256W000202
+    order: 9
+    start_station_m: 365.775740557
+    end_station_m: 427.851843628
+    length_m: 62.076103071
+  - link_id: A2256W000728
+    order: 10
+    start_station_m: 427.851843628
+    end_station_m: 436.797566442
+    length_m: 8.945722813
+  - link_id: A2256W000599
+    order: 11
+    start_station_m: 436.797566442
+    end_station_m: 462.941612517
+    length_m: 26.144046076
+  - link_id: A2256W000207
+    order: 12
+    start_station_m: 462.941612517
+    end_station_m: 471.09159934
+    length_m: 8.149986823
+  - link_id: A2256W000205
+    order: 13
+    start_station_m: 471.09159934
+    end_station_m: 482.819185214
+    length_m: 11.727585874
+  - link_id: A2256W000315
+    order: 14
+    start_station_m: 482.819185214
+    end_station_m: 550.618735375
+    length_m: 67.799550161
+  - link_id: A2256W000318
+    order: 15
+    start_station_m: 550.618735375
+    end_station_m: 580.868425414
+    length_m: 30.249690039
+  - link_id: A2256W000308
+    order: 16
+    start_station_m: 580.868425414
+    end_station_m: 609.876838441
+    length_m: 29.008413026
+  - link_id: A2256W000083
+    order: 17
+    start_station_m: 609.876838441
+    end_station_m: 635.112607342
+    length_m: 25.235768901
+  - link_id: A2256W000304
+    order: 18
+    start_station_m: 635.112607342
+    end_station_m: 858.502396418
+    length_m: 223.389789077
+  - link_id: A2256W000148
+    order: 19
+    start_station_m: 858.502396418
+    end_station_m: 885.100687559
+    length_m: 26.598291141
+  - link_id: A2256W000146
+    order: 20
+    start_station_m: 885.100687559
+    end_station_m: 904.004157997
+    length_m: 18.903470438
+  - link_id: A2256W000151
+    order: 21
+    start_station_m: 904.004157997
+    end_station_m: 914.83731383
+    length_m: 10.833155833
+  - link_id: A2256W000866
+    order: 22
+    start_station_m: 914.83731383
+    end_station_m: 930.601906879
+    length_m: 15.76459305
+  - link_id: A2256W000054
+    order: 23
+    start_station_m: 930.601906879
+    end_station_m: 984.711781717
+    length_m: 54.109874837
+  - link_id: A2256W000846
+    order: 24
+    start_station_m: 984.711781717
+    end_station_m: 1118.741751169
+    length_m: 134.029969452
+  - link_id: A2256W000411
+    order: 25
+    start_station_m: 1118.741751169
+    end_station_m: 1286.154645438
+    length_m: 167.412894269
+  - link_id: A2256W000420
+    order: 26
+    start_station_m: 1286.154645438
+    end_station_m: 1368.728445622
+    length_m: 82.573800184
+  - link_id: A2256W000408
+    order: 27
+    start_station_m: 1368.728445622
+    end_station_m: 1518.246885521
+    length_m: 149.518439899
+  - link_id: A2256W000445
+    order: 28
+    start_station_m: 1518.246885521
+    end_station_m: 1593.586387385
+    length_m: 75.339501864
+  - link_id: A2256W000153
+    order: 29
+    start_station_m: 1593.586387385
+    end_station_m: 1741.720988511
+    length_m: 148.134601126
+  - link_id: A2256W000451
+    order: 30
+    start_station_m: 1741.720988511
+    end_station_m: 1781.557329301
+    length_m: 39.836340789
+  - link_id: A2256W000446
+    order: 31
+    start_station_m: 1781.557329301
+    end_station_m: 1859.64157824
+    length_m: 78.084248939
+  - link_id: A2256W000448
+    order: 32
+    start_station_m: 1859.64157824
+    end_station_m: 1877.744798966
+    length_m: 18.103220726
+  - link_id: A2256W000126
+    order: 33
+    start_station_m: 1877.744798966
+    end_station_m: 1996.730791531
+    length_m: 118.985992566
+  - link_id: A2256W000128
+    order: 34
+    start_station_m: 1996.730791531
+    end_station_m: 2109.847527156
+    length_m: 113.116735625
+  - link_id: A2256W000333
+    order: 35
+    start_station_m: 2109.847527156
+    end_station_m: 2120.982191955
+    length_m: 11.134664799
+  - link_id: A2256W000154
+    order: 36
+    start_station_m: 2120.982191955
+    end_station_m: 2132.230987862
+    length_m: 11.248795907
+  - link_id: A2256W000332
+    order: 37
+    start_station_m: 2132.230987862
+    end_station_m: 2165.753338147
+    length_m: 33.522350285
+  - link_id: A2256W000751
+    order: 38
+    start_station_m: 2165.753338147
+    end_station_m: 2184.611723336
+    length_m: 18.858385189
+checkpoints:
+- id: START_END
+  label: START / END
+  sequence: 0
+  is_start: true
+  is_finish: true
+  pose:
+    position:
+      x: -131.68979755061446
+      y: -428.3310229377821
+      z: 28.543960281954277
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.509778293459
+      w: 0.860305812788
+  official_yaw_deg: 61.298126221
+  pass_radius_m: 3.0
+  route_station_m: 0.0
+  link_id: A2256W000748
+  link_station_m: 0.0
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '1'
+  label: '1'
+  sequence: 1
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: -96.34194502758328
+      y: -364.8851077128202
+      z: 28.53881740888334
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.530309474953
+      w: 0.847804140575
+  official_yaw_deg: 64.052734375
+  pass_radius_m: 3.0
+  route_station_m: 72.628968697
+  link_id: A2256W000748
+  link_station_m: 72.628968697
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '2'
+  label: '2'
+  sequence: 2
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: -104.71588468790287
+      y: -275.14425209118053
+      z: 28.48829083410744
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.5072363549
+      w: 0.861806985506
+  official_yaw_deg: 60.959838867
+  pass_radius_m: 3.0
+  route_station_m: 186.285731748
+  link_id: A2256W000236
+  link_station_m: 26.276564477
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '3'
+  label: '3'
+  sequence: 3
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: -79.9685367429629
+      y: -230.3942881319672
+      z: 28.401036010337744
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.508273042259
+      w: 0.861195979155
+  official_yaw_deg: 61.097732543
+  pass_radius_m: 3.0
+  route_station_m: 237.422790208
+  link_id: A2256W000215
+  link_station_m: 28.963848981
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '4'
+  label: '4'
+  sequence: 4
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: -59.88466601172695
+      y: -124.55752767482772
+      z: 28.380910298729233
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.70769718106
+      w: 0.706515887946
+  official_yaw_deg: 90.095718383
+  pass_radius_m: 3.0
+  route_station_m: 346.74182354
+  link_id: A2256W000222
+  link_station_m: 30.835725398
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '5'
+  label: '5'
+  sequence: 5
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: -60.34860723745078
+      y: -0.21668933285400271
+      z: 28.383039161118077
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.709086662161
+      w: 0.705121341008
+  official_yaw_deg: 90.321304321
+  pass_radius_m: 3.0
+  route_station_m: 471.09159934
+  link_id: A2256W000205
+  link_station_m: 0.0
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '6'
+  label: '6'
+  sequence: 6
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: -41.70069433480967
+      y: 98.73265545303002
+      z: 28.358756220677893
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.003982480564
+      w: 0.999992069893
+  official_yaw_deg: 0.456359863
+  pass_radius_m: 3.0
+  route_station_m: 580.868425414
+  link_id: A2256W000318
+  link_station_m: 30.249690039
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '7'
+  label: '7'
+  sequence: 7
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: 2.9027890474535525
+      y: 114.94218392064795
+      z: 28.430466193056173
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.715940309501
+      w: 0.698161495093
+  official_yaw_deg: 91.440628051
+  pass_radius_m: 3.0
+  route_station_m: 635.112607342
+  link_id: A2256W000083
+  link_station_m: 25.235768901
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '8'
+  label: '8'
+  sequence: 8
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: -99.44168814341538
+      y: 291.20583281712607
+      z: 28.379763120717023
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.708713433761
+      w: 0.705496469734
+  official_yaw_deg: 90.260665893
+  pass_radius_m: 3.0
+  route_station_m: 858.502396418
+  link_id: A2256W000304
+  link_station_m: 223.389789077
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '9'
+  label: '9'
+  sequence: 9
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: -65.32824593910482
+      y: 342.2530235303566
+      z: 28.484
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.033404738054
+      w: 0.999441906003
+  official_yaw_deg: 3.828613281
+  pass_radius_m: 3.0
+  route_station_m: 930.601906879
+  link_id: A2256W000866
+  link_station_m: 15.76459305
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '10'
+  label: '10'
+  sequence: 10
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: 62.073913682601415
+      y: 256.4949275725521
+      z: 28.268789437406806
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.700989798666
+      w: 0.713171299314
+  official_yaw_deg: -89.012939453
+  pass_radius_m: 3.0
+  route_station_m: 1118.741751169
+  link_id: A2256W000846
+  link_station_m: 134.029969452
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '11'
+  label: '11'
+  sequence: 11
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: 66.88496106746607
+      y: 89.19790052389726
+      z: 28.29935643790693
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.702850022047
+      w: 0.711338067665
+  official_yaw_deg: -89.312222534
+  pass_radius_m: 3.0
+  route_station_m: 1286.154645438
+  link_id: A2256W000411
+  link_station_m: 167.412894269
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '12'
+  label: '12'
+  sequence: 12
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: 75.41420370276319
+      y: -217.855053961277
+      z: 28.382283640697267
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.73498759137
+      w: 0.678080556079
+  official_yaw_deg: -94.612335205
+  pass_radius_m: 3.0
+  route_station_m: 1593.586387385
+  link_id: A2256W000445
+  link_station_m: 75.339501864
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '13'
+  label: '13'
+  sequence: 13
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: 70.21414883446414
+      y: -365.74847655789927
+      z: 28.301585314776467
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.70741423095
+      w: 0.706799197686
+  official_yaw_deg: -90.049835205
+  pass_radius_m: 3.0
+  route_station_m: 1741.720988511
+  link_id: A2256W000153
+  link_station_m: 148.134601126
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '14'
+  label: '14'
+  sequence: 14
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: 43.761510782991536
+      y: -476.41094469698146
+      z: 28.294397987369784
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.931691885412
+      w: 0.363249543231
+  official_yaw_deg: -137.400207519
+  pass_radius_m: 3.0
+  route_station_m: 1859.64157824
+  link_id: A2256W000446
+  link_station_m: 78.084248939
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+- id: '15'
+  label: '15'
+  sequence: 15
+  is_start: false
+  is_finish: false
+  pose:
+    position:
+      x: -74.86074459552765
+      y: -544.5780326710083
+      z: 28.429146234972457
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.973436696791
+      w: 0.228956321905
+  official_yaw_deg: -153.528732299
+  pass_radius_m: 3.0
+  route_station_m: 1996.730791531
+  link_id: A2256W000126
+  link_station_m: 118.985992566
+  source_reference: official_checkpoints
+  projection:
+    route_error_xy_m: 0.0
+    link_error_xy_m: 0.0
+mission_zones:
+- id: start_success_5_percent
+  mission_type: start_success
+  status: derived_official
+  source_reference: official_rule_route_5_percent
+  description: 출발 후 공식 전역경로 길이의 5%를 통과하면 출발 성공
+  route_station_start_m: 0.0
+  route_station_end_m: 109.230586167
+  start_link_id: A2256W000748
+  end_link_id: A2256W000329
+  link_ids:
+  - A2256W000748
+  - A2256W000182
+  - A2256W000329
+  checkpoint_ids:
+  - START_END
+  - '1'
+  polygon: []
+  has_speed_limit: false
+  speed_limit_kph: 0.0
+  rule_payload_json: '{"required_route_fraction":0.05}'
+  planning_enforcement_allowed: true
+- id: speed_limit_60_before_high_speed
+  mission_type: speed_limit
+  status: derived_official
+  source_reference: official_rule_mapped_to_route_links
+  description: 출발부터 A846 종료까지 적용되는 공식 최고속도 60 km/h 구간
+  route_station_start_m: 0.0
+  route_station_end_m: 1118.741751169
+  start_link_id: A2256W000748
+  end_link_id: A2256W000846
+  link_ids:
+  - A2256W000748
+  - A2256W000182
+  - A2256W000329
+  - A2256W000236
+  - A2256W000219
+  - A2256W000215
+  - A2256W000213
+  - A2256W000222
+  - A2256W000220
+  - A2256W000202
+  - A2256W000728
+  - A2256W000599
+  - A2256W000207
+  - A2256W000205
+  - A2256W000315
+  - A2256W000318
+  - A2256W000308
+  - A2256W000083
+  - A2256W000304
+  - A2256W000148
+  - A2256W000146
+  - A2256W000151
+  - A2256W000866
+  - A2256W000054
+  - A2256W000846
+  checkpoint_ids:
+  - START_END
+  - '1'
+  - '2'
+  - '3'
+  - '4'
+  - '5'
+  - '6'
+  - '7'
+  - '8'
+  - '9'
+  - '10'
+  polygon: []
+  has_speed_limit: true
+  speed_limit_kph: 60.0
+  rule_payload_json: '{"interpretation":"effective_competition_speed_limit"}'
+  planning_enforcement_allowed: true
+- id: high_speed_exception
+  mission_type: high_speed_exception
+  status: derived_official
+  source_reference: official_rule_mapped_to_route_links
+  description: 공식 고주로 속도 예외 corridor를 route link 경계에 투영
+  route_station_start_m: 1118.741751169
+  route_station_end_m: 1741.720988511
+  start_link_id: A2256W000411
+  end_link_id: A2256W000153
+  link_ids:
+  - A2256W000411
+  - A2256W000420
+  - A2256W000408
+  - A2256W000445
+  - A2256W000153
+  checkpoint_ids:
+  - '10'
+  - '11'
+  - '12'
+  - '13'
+  polygon: []
+  has_speed_limit: false
+  speed_limit_kph: 0.0
+  rule_payload_json: '{"interpretation":"no_competition_speed_cap","speed_limit_kph":null}'
+  planning_enforcement_allowed: true
+- id: speed_limit_60_after_high_speed
+  mission_type: speed_limit
+  status: derived_official
+  source_reference: official_rule_mapped_to_route_links
+  description: A451 시작부터 START/END까지 다시 적용되는 공식 최고속도 60 km/h 구간
+  route_station_start_m: 1741.720988511
+  route_station_end_m: 2184.611723336
+  start_link_id: A2256W000451
+  end_link_id: A2256W000751
+  link_ids:
+  - A2256W000451
+  - A2256W000446
+  - A2256W000448
+  - A2256W000126
+  - A2256W000128
+  - A2256W000333
+  - A2256W000154
+  - A2256W000332
+  - A2256W000751
+  checkpoint_ids:
+  - '13'
+  - '14'
+  - '15'
+  polygon: []
+  has_speed_limit: true
+  speed_limit_kph: 60.0
+  rule_payload_json: '{"interpretation":"effective_competition_speed_limit"}'
+  planning_enforcement_allowed: true
+- id: traffic_light_activation_A236_to_A308
+  mission_type: traffic_light
+  status: provisional
+  source_reference: team_qna_and_situation_review
+  description: A236 시작부터 A308 종료까지만 신호등 인지 노드 활성화가 필요한 구간
+  route_station_start_m: 160.009167271
+  route_station_end_m: 609.876838441
+  start_link_id: A2256W000236
+  end_link_id: A2256W000308
+  link_ids:
+  - A2256W000236
+  - A2256W000219
+  - A2256W000215
+  - A2256W000213
+  - A2256W000222
+  - A2256W000220
+  - A2256W000202
+  - A2256W000728
+  - A2256W000599
+  - A2256W000207
+  - A2256W000205
+  - A2256W000315
+  - A2256W000318
+  - A2256W000308
+  checkpoint_ids:
+  - '2'
+  - '3'
+  - '4'
+  - '5'
+  - '6'
+  polygon: []
+  has_speed_limit: false
+  speed_limit_kph: 0.0
+  rule_payload_json: '{"disable_outside_zone":true,"perception_monitoring":"activation_zone","policy_scope":"link_span","requires_official_boundary_confirmation":true,"runtime_activation_hint":"enable_within_zone_only","spatial_mission":false,"stop_decision_requires_validated_signal_and_stopline":true}'
+  planning_enforcement_allowed: false
+- id: gps_shadow_candidate
+  mission_type: gps_shadow
+  status: provisional
+  source_reference: team_map_review_shadow_zone
+  description: A448 종료 노드부터 A126 종료까지의 GPS 음영 후보
+  route_station_start_m: 1877.744798966
+  route_station_end_m: 1996.730791531
+  start_link_id: A2256W000126
+  end_link_id: A2256W000126
+  link_ids:
+  - A2256W000126
+  checkpoint_ids:
+  - '15'
+  polygon: []
+  has_speed_limit: false
+  speed_limit_kph: 0.0
+  rule_payload_json: '{"drivable_area_bridge_id":"gps_shadow_A126_A131","requires_official_boundary_confirmation":true,"usable_opposite_lane_link_ids":["A2256W000131"]}'
+  planning_enforcement_allowed: false
+- id: static_obstacle_candidate
+  mission_type: static_obstacle
+  status: provisional
+  source_reference: team_qna_and_situation_review
+  description: A213 종료 후 A220 시작 전 교차로 영역인 A222 정적 장애물 구간
+  route_station_start_m: 315.906098142
+  route_station_end_m: 346.74182354
+  start_link_id: A2256W000222
+  end_link_id: A2256W000222
+  link_ids:
+  - A2256W000222
+  checkpoint_ids:
+  - '4'
+  polygon: []
+  has_speed_limit: false
+  speed_limit_kph: 0.0
+  rule_payload_json: '{"boundary_interpretation":"after_A213_before_A220_intersection","requires_official_boundary_confirmation":true}'
+  planning_enforcement_allowed: false
+- id: dynamic_obstacle_candidate
+  mission_type: dynamic_obstacle
+  status: provisional
+  source_reference: team_qna_and_situation_review
+  description: A728부터 A205까지의 동적 장애물 구간
+  route_station_start_m: 427.851843628
+  route_station_end_m: 482.819185214
+  start_link_id: A2256W000728
+  end_link_id: A2256W000205
+  link_ids:
+  - A2256W000728
+  - A2256W000599
+  - A2256W000207
+  - A2256W000205
+  checkpoint_ids:
+  - '5'
+  polygon: []
+  has_speed_limit: false
+  speed_limit_kph: 0.0
+  rule_payload_json: '{"boundary_interpretation":"A728_through_A205","requires_official_boundary_confirmation":true}'
+  planning_enforcement_allowed: false
+- id: roundabout_candidate
+  mission_type: roundabout
+  status: provisional
+  source_reference: official_figure_team_link_mapping
+  description: A148-A146-A151 회전교차로 후보
+  route_station_start_m: 858.502396418
+  route_station_end_m: 914.83731383
+  start_link_id: A2256W000148
+  end_link_id: A2256W000151
+  link_ids:
+  - A2256W000148
+  - A2256W000146
+  - A2256W000151
+  checkpoint_ids:
+  - '8'
+  polygon: []
+  has_speed_limit: false
+  speed_limit_kph: 0.0
+  rule_payload_json: '{"requires_official_boundary_confirmation":true}'
+  planning_enforcement_allowed: false
+- id: surrounding_vehicle_candidate
+  mission_type: surrounding_vehicle
+  status: provisional
+  source_reference: official_figure_team_link_mapping
+  description: A411-A420-A408-A445-A153 주변 차량 인지 후보
+  route_station_start_m: 1118.741751169
+  route_station_end_m: 1741.720988511
+  start_link_id: A2256W000411
+  end_link_id: A2256W000153
+  link_ids:
+  - A2256W000411
+  - A2256W000420
+  - A2256W000408
+  - A2256W000445
+  - A2256W000153
+  checkpoint_ids:
+  - '10'
+  - '11'
+  - '12'
+  - '13'
+  polygon: []
+  has_speed_limit: false
+  speed_limit_kph: 0.0
+  rule_payload_json: '{"requires_official_boundary_confirmation":true}'
+  planning_enforcement_allowed: false
+- id: traffic_light_C1256W000077
+  mission_type: traffic_light
+  status: provisional
+  source_reference: stage14_reviewed_stopline_projection
+  description: 검수된 정지선에서 파생한 신호등 경계 후보 C1256W000077
+  route_station_start_m: 208.458941227
+  route_station_end_m: 208.458941227
+  start_link_id: A2256W000219
+  end_link_id: A2256W000219
+  link_ids:
+  - A2256W000219
+  checkpoint_ids: []
+  polygon: []
+  has_speed_limit: false
+  speed_limit_kph: 0.0
+  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage02_new_road_219_to_213:A1256W000682"],"stopline_topology_link_ids":["A2256W000219"],"traffic_light_id":"C1256W000077"}'
+  planning_enforcement_allowed: false
+- id: traffic_light_C1256W000091
+  mission_type: traffic_light
+  status: provisional
+  source_reference: stage14_reviewed_stopline_projection
+  description: 검수된 정지선에서 파생한 신호등 경계 후보 C1256W000091
+  route_station_start_m: 315.906098142
+  route_station_end_m: 315.906098142
+  start_link_id: A2256W000213
+  end_link_id: A2256W000213
+  link_ids:
+  - A2256W000213
+  checkpoint_ids: []
+  polygon: []
+  has_speed_limit: false
+  speed_limit_kph: 0.0
+  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage02_new_road_219_to_213:A1256W000807"],"stopline_topology_link_ids":["A2256W000213"],"traffic_light_id":"C1256W000091"}'
+  planning_enforcement_allowed: false
+- id: traffic_light_C1256W000016
+  mission_type: traffic_light
+  status: provisional
+  source_reference: stage14_reviewed_stopline_projection
+  description: 검수된 정지선에서 파생한 신호등 경계 후보 C1256W000016
+  route_station_start_m: 436.797566442
+  route_station_end_m: 436.797566442
+  start_link_id: A2256W000728
+  end_link_id: A2256W000728
+  link_ids:
+  - A2256W000728
+  checkpoint_ids: []
+  polygon: []
+  has_speed_limit: false
+  speed_limit_kph: 0.0
+  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage04_link_202_and_following_intersection:A1256W000208"],"stopline_topology_link_ids":["A2256W000728"],"traffic_light_id":"C1256W000016"}'
+  planning_enforcement_allowed: false
+- id: traffic_light_C1256W000123
+  mission_type: traffic_light
+  status: provisional
+  source_reference: stage14_reviewed_stopline_projection
+  description: 검수된 정지선에서 파생한 신호등 경계 후보 C1256W000123
+  route_station_start_m: 550.618735375
+  route_station_end_m: 550.618735375
+  start_link_id: A2256W000315
+  end_link_id: A2256W000315
+  link_ids:
+  - A2256W000315
+  checkpoint_ids: []
+  polygon: []
+  has_speed_limit: false
+  speed_limit_kph: 0.0
+  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage05_dynamic_obstacle_205_to_315:A1256W000582","kcity2025_competition_route_curation_candidate_v14:stopline:stage05_dynamic_obstacle_205_to_315:A1256W000757"],"stopline_topology_link_ids":["A2256W000310","A2256W000315"],"traffic_light_id":"C1256W000123"}'
+  planning_enforcement_allowed: false
+- id: traffic_light_C1256W000052
+  mission_type: traffic_light
+  status: provisional
+  source_reference: stage14_reviewed_stopline_projection
+  description: 검수된 정지선에서 파생한 신호등 경계 후보 C1256W000052
+  route_station_start_m: 609.868390593
+  route_station_end_m: 609.868390593
+  start_link_id: A2256W000308
+  end_link_id: A2256W000308
+  link_ids:
+  - A2256W000308
+  checkpoint_ids: []
+  polygon: []
+  has_speed_limit: false
+  speed_limit_kph: 0.0
+  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage07_post_turn_308:A1256W000593+A1256W000742"],"stopline_topology_link_ids":["A2256W000308","A2256W000309"],"traffic_light_id":"C1256W000052"}'
+  planning_enforcement_allowed: false
+validation:
+  passed: true
+  checkpoint_count: 16
+  mission_zone_count: 15
+  mission_status_counts:
+    derived_official: 4
+    provisional: 11
+  speed_profile_segment_count: 3
+  speed_profile_full_route_coverage: true
+  traffic_light_activation_start_m: 160.009167271
+  traffic_light_activation_end_m: 609.876838441
+  traffic_light_boundary_count: 5
+  max_checkpoint_route_projection_error_m: 0.0
+  max_checkpoint_link_projection_error_m: 0.0

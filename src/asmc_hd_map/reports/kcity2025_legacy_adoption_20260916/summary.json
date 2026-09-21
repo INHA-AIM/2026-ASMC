@@ -1,0 +1,223 @@
+{
+  "adopted_by_audit_tier": {
+    "A": 149,
+    "B": 36,
+    "D": 10
+  },
+  "adopted_by_color": {
+    "white": 138,
+    "yellow": 57
+  },
+  "approved_route_intervals": [
+    {
+      "end_s_m": 212.4583470102632,
+      "name": "early_unchanged",
+      "start_s_m": 0.0
+    },
+    {
+      "end_s_m": 556.118733149548,
+      "name": "post_obstacle_unchanged",
+      "start_s_m": 342.40593188888994
+    },
+    {
+      "end_s_m": 614.876827021381,
+      "name": "roundabout_approach",
+      "start_s_m": 576.61869488622
+    },
+    {
+      "end_s_m": 1783.0572973249689,
+      "name": "roundabout_to_tollgate",
+      "start_s_m": 630.3767103356735
+    },
+    {
+      "end_s_m": 2184.6117233360674,
+      "name": "shadow_and_tail",
+      "start_s_m": 1851.0567272113842
+    }
+  ],
+  "build_id": "kcity2025_legacy_adoption_20260916",
+  "coordinate_transform": {
+    "rotation_deg": 0.0,
+    "scale": 1.0,
+    "translation_legacy_to_current_xyz_m": [
+      -135.0580000000191,
+      -1509.4629999999888,
+      28.991
+    ]
+  },
+  "counts": {
+    "adopted_legacy_source_lanes": 163,
+    "adopted_segment_count": 195,
+    "changed_region_review_segment_count": 19,
+    "current_link_bound_segment_count": 136,
+    "current_link_center_count": 70,
+    "current_stopline_count": 13,
+    "legacy_source_lanes": 1579,
+    "legacy_source_lanes_with_any_output": 166,
+    "nominal_reference_count": 134,
+    "observed_validation_reference_count": 60,
+    "rescued_tier_d_source_lanes": 8,
+    "route_context_segment_count": 59,
+    "route_context_source_lanes": 53
+  },
+  "decision": "legacy geometry is adopted only where it remains locally compatible with current corridor links inside driving-reviewed route intervals; current topology and stoplines remain authoritative",
+  "excluded_source_lanes": {
+    "current_stopline_authority": 164,
+    "excluded_color": 11
+  },
+  "map_id": "kcity2025_competition_hd_candidate_v2",
+  "operational": false,
+  "overlays": {
+    "early_intersections": {
+      "bounds_xy": [
+        [
+          -143.68979755061446,
+          -440.3310229377821
+        ],
+        [
+          14.471887157029393,
+          122.23152207076043
+        ]
+      ],
+      "layer_counts": {
+        "changed_region_review_required": 12,
+        "current_link": 23,
+        "current_stopline": 7,
+        "legacy_validated": 88,
+        "nominal_reference": 31,
+        "observed_validation_reference": 16
+      },
+      "route_s_m": [
+        0.0,
+        630.3767103356735
+      ]
+    },
+    "full_corridor": {
+      "bounds_xy": [
+        [
+          -171.2424569206958,
+          -562.4941644336607
+        ],
+        [
+          87.41420370276319,
+          357.7904883160853
+        ]
+      ],
+      "layer_counts": {
+        "changed_region_review_required": 19,
+        "current_link": 70,
+        "current_stopline": 13,
+        "legacy_validated": 195,
+        "nominal_reference": 133,
+        "observed_validation_reference": 60
+      },
+      "route_s_m": [
+        0.0,
+        2184.6117233360674
+      ]
+    },
+    "high_speed_to_tollgate": {
+      "bounds_xy": [
+        [
+          50.081494407204126,
+          -419.0783722938318
+        ],
+        [
+          87.41420370276319,
+          267.9949864885217
+        ]
+      ],
+      "layer_counts": {
+        "changed_region_review_required": 1,
+        "current_link": 33,
+        "legacy_validated": 61,
+        "nominal_reference": 60,
+        "observed_validation_reference": 23
+      },
+      "route_s_m": [
+        1118.741751169101,
+        1783.0572973249689
+      ]
+    },
+    "roundabout_to_high_speed": {
+      "bounds_xy": [
+        [
+          -111.51975925426862,
+          86.2446157799647
+        ],
+        [
+          74.07391368260141,
+          357.7904883160853
+        ]
+      ],
+      "layer_counts": {
+        "changed_region_review_required": 7,
+        "current_link": 20,
+        "current_stopline": 4,
+        "legacy_validated": 62,
+        "nominal_reference": 36,
+        "observed_validation_reference": 20
+      },
+      "route_s_m": [
+        576.61869488622,
+        1118.741751169101
+      ]
+    },
+    "shadow_and_tail": {
+      "bounds_xy": [
+        [
+          -171.2424569206958,
+          -562.4941644336607
+        ],
+        [
+          61.7795424848243,
+          -416.3310229377821
+        ]
+      ],
+      "layer_counts": {
+        "changed_region_review_required": 4,
+        "current_link": 12,
+        "current_stopline": 3,
+        "legacy_validated": 23,
+        "nominal_reference": 31,
+        "observed_validation_reference": 18
+      },
+      "route_s_m": [
+        1851.0567272113842,
+        2184.6117233360674
+      ]
+    },
+    "tollgate_to_shadow_excluded": {
+      "bounds_xy": [
+        [
+          37.7795424848243,
+          -482.2901691494004
+        ],
+        [
+          82.7937677169834,
+          -395.0783722938318
+        ]
+      ],
+      "layer_counts": {
+        "changed_region_review_required": 7,
+        "current_link": 4,
+        "legacy_validated": 11,
+        "nominal_reference": 10,
+        "observed_validation_reference": 5
+      },
+      "route_s_m": [
+        1783.0572973249689,
+        1851.0567272113842
+      ]
+    }
+  },
+  "policy": {
+    "current_link_node_topology_authority": true,
+    "current_stoplines_authority": true,
+    "observed_geometry_is_validation_reference_only": true,
+    "operational": false,
+    "preserve_legacy_geometry_without_snapping": true,
+    "unresolved_route_context_requires_topology_binding": true
+  },
+  "status": "candidate_legacy_adopted_non_operational"
+}

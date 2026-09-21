@@ -1,0 +1,1374 @@
+{
+  "current_link_ids": [
+    "A2256W000010",
+    "A2256W000029",
+    "A2256W000153",
+    "A2256W000175",
+    "A2256W000179",
+    "A2256W000406",
+    "A2256W000408",
+    "A2256W000409",
+    "A2256W000410",
+    "A2256W000411",
+    "A2256W000418",
+    "A2256W000420",
+    "A2256W000421",
+    "A2256W000422",
+    "A2256W000423",
+    "A2256W000424",
+    "A2256W000425",
+    "A2256W000426",
+    "A2256W000427",
+    "A2256W000429",
+    "A2256W000430",
+    "A2256W000431",
+    "A2256W000432",
+    "A2256W000433",
+    "A2256W000434",
+    "A2256W000435",
+    "A2256W000445",
+    "A2256W000451",
+    "A2256W000543",
+    "A2256W000546",
+    "A2256W000846",
+    "A2256W001105"
+  ],
+  "driven_current_link_ids": [
+    "A2256W000153",
+    "A2256W000408",
+    "A2256W000409",
+    "A2256W000411",
+    "A2256W000420",
+    "A2256W000423",
+    "A2256W000445"
+  ],
+  "features": [
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010409",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS010409",
+      "status": "candidate",
+      "strict_coverage": 0.9500213583938488,
+      "strict_distance_p95_m": 0.6900198346063665,
+      "target_current_link_ids": [
+        "A2256W000543",
+        "A2256W000546",
+        "A2256W000413"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010427",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS010427",
+      "status": "candidate",
+      "strict_coverage": 0.9967845659163987,
+      "strict_distance_p95_m": 0.3056667119498862,
+      "target_current_link_ids": [
+        "A2256W000846"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010429",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS010429",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.27448978716654093,
+      "target_current_link_ids": [
+        "A2256W001105"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010430",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        531
+      ],
+      "legacy_id": "B219BS010430",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.2762315178565794,
+      "target_current_link_ids": [
+        "A2256W001105"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010431",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "B219BS010431",
+      "status": "candidate",
+      "strict_coverage": 0.9991645781119465,
+      "strict_distance_p95_m": 0.42873561979534225,
+      "target_current_link_ids": [
+        "A2256W000546"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010432",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS010432",
+      "status": "candidate",
+      "strict_coverage": 0.7948717948717948,
+      "strict_distance_p95_m": 0.5875391050246216,
+      "target_current_link_ids": [
+        "A2256W000153",
+        "A2256W000432"
+      ],
+      "tier": "B"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010433",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS010433",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.33153318969845064,
+      "target_current_link_ids": [
+        "A2256W000153"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010434",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS010434",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.38388120488444505,
+      "target_current_link_ids": [
+        "A2256W000432",
+        "A2256W000153"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010435",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS010435",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.37468821769376065,
+      "target_current_link_ids": [
+        "A2256W000432"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010436",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS010436",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.6768928638254652,
+      "target_current_link_ids": [
+        "A2256W000424",
+        "A2256W000432"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010438",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS010438",
+      "status": "candidate",
+      "strict_coverage": 0.627906976744186,
+      "strict_distance_p95_m": 0.666517249444084,
+      "target_current_link_ids": [
+        "A2256W000446",
+        "A2256W000451"
+      ],
+      "tier": "B"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010439",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        531
+      ],
+      "legacy_id": "B219BS010439",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.5874464278030745,
+      "target_current_link_ids": [
+        "A2256W000153"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010445",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS010445",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.23639398367383746,
+      "target_current_link_ids": [
+        "A2256W001105"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010447",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS010447",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.23759495318226445,
+      "target_current_link_ids": [
+        "A2256W000423"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010448",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        506
+      ],
+      "legacy_id": "B219BS010448",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.4959201313183984,
+      "target_current_link_ids": [
+        "A2256W000445",
+        "A2256W001105"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010449",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        506
+      ],
+      "legacy_id": "B219BS010449",
+      "status": "candidate",
+      "strict_coverage": 0.9927536231884058,
+      "strict_distance_p95_m": 0.7056972927570322,
+      "target_current_link_ids": [
+        "A2256W000153"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010451",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS010451",
+      "status": "candidate",
+      "strict_coverage": 0.375,
+      "strict_distance_p95_m": 0.7312512029720863,
+      "target_current_link_ids": [
+        "A2256W000446",
+        "A2256W000451"
+      ],
+      "tier": "B"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010452",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS010452",
+      "status": "candidate",
+      "strict_coverage": 0.3923076923076923,
+      "strict_distance_p95_m": 0.6250239317385937,
+      "target_current_link_ids": [
+        "A2256W000427",
+        "A2256W000444"
+      ],
+      "tier": "B"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010453",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS010453",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.3022687892266147,
+      "target_current_link_ids": [
+        "A2256W000451",
+        "A2256W000153"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010454",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS010454",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.41154887762584424,
+      "target_current_link_ids": [
+        "A2256W000427",
+        "A2256W000432"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010455",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS010455",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.3129415437594112,
+      "target_current_link_ids": [
+        "A2256W000427",
+        "A2256W000432"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010456",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS010456",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.6426830589561916,
+      "target_current_link_ids": [
+        "A2256W000426",
+        "A2256W000424",
+        "A2256W000427"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010509",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS010509",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.24791571974646917,
+      "target_current_link_ids": [
+        "A2256W000423",
+        "A2256W000445"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010510",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        506
+      ],
+      "legacy_id": "B219BS010510",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.30152895700773746,
+      "target_current_link_ids": [
+        "A2256W000445"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010512",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS010512",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.24815236277862138,
+      "target_current_link_ids": [
+        "A2256W000451",
+        "A2256W000153"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010513",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        531
+      ],
+      "legacy_id": "B219BS010513",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.2661803541852799,
+      "target_current_link_ids": [
+        "A2256W000153"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010518",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS010518",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.38390424142710156,
+      "target_current_link_ids": [
+        "A2256W000422",
+        "A2256W000445"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010520",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "B219BS010520",
+      "status": "candidate",
+      "strict_coverage": 0.8364312267657993,
+      "strict_distance_p95_m": 0.7438464693022546,
+      "target_current_link_ids": [
+        "A2256W000424"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010521",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "B219BS010521",
+      "status": "candidate",
+      "strict_coverage": 0.5869565217391305,
+      "strict_distance_p95_m": 0.7480689372630382,
+      "target_current_link_ids": [
+        "A2256W000425",
+        "A2256W000546"
+      ],
+      "tier": "B"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010522",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        506
+      ],
+      "legacy_id": "B219BS010522",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.3099345152049553,
+      "target_current_link_ids": [
+        "A2256W000153"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010524",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "B219BS010524",
+      "status": "candidate",
+      "strict_coverage": 0.9152542372881356,
+      "strict_distance_p95_m": 0.7484567819517174,
+      "target_current_link_ids": [
+        "A2256W000425"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010525",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "B219BS010525",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.7263681821741247,
+      "target_current_link_ids": [
+        "A2256W000424"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS010526",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "B219BS010526",
+      "status": "candidate",
+      "strict_coverage": 0.62,
+      "strict_distance_p95_m": 0.7482454424223564,
+      "target_current_link_ids": [
+        "A2256W000424"
+      ],
+      "tier": "B"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011094",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS011094",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.33999404442723863,
+      "target_current_link_ids": [
+        "A2256W000406",
+        "A2256W000175"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011095",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS011095",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.26288367856348394,
+      "target_current_link_ids": [
+        "A2256W000406"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011096",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS011096",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.6149635707242437,
+      "target_current_link_ids": [
+        "A2256W000411"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011097",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid Broken"
+      ],
+      "lane_type": [
+        506
+      ],
+      "legacy_id": "B219BS011097",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.2709059846564489,
+      "target_current_link_ids": [
+        "A2256W000411",
+        "A2256W000409"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011098",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS011098",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.23712410951703314,
+      "target_current_link_ids": [
+        "A2256W000410",
+        "A2256W000409"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011100",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS011100",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.4589813124586297,
+      "target_current_link_ids": [
+        "A2256W000179",
+        "A2256W000408"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011101",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS011101",
+      "status": "candidate",
+      "strict_coverage": 0.9791666666666666,
+      "strict_distance_p95_m": 0.3761270722345615,
+      "target_current_link_ids": [
+        "A2256W000406"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011102",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "B219BS011102",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.24081487666183113,
+      "target_current_link_ids": [
+        "A2256W000429"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011103",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS011103",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.22874084320513688,
+      "target_current_link_ids": [
+        "A2256W000435",
+        "A2256W000434"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011104",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS011104",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.24213824241108034,
+      "target_current_link_ids": [
+        "A2256W000434",
+        "A2256W000408"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011105",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "B219BS011105",
+      "status": "candidate",
+      "strict_coverage": 0.9964285714285714,
+      "strict_distance_p95_m": 0.29337138841494503,
+      "target_current_link_ids": [
+        "A2256W000421"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011106",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS011106",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.23593588764218057,
+      "target_current_link_ids": [
+        "A2256W000430",
+        "A2256W000420"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011107",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS011107",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.23951311880035878,
+      "target_current_link_ids": [
+        "A2256W000430",
+        "A2256W000431"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011110",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "B219BS011110",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.23199803257043033,
+      "target_current_link_ids": [
+        "A2256W000433",
+        "A2256W000421"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011111",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS011111",
+      "status": "candidate",
+      "strict_coverage": 0.9867549668874173,
+      "strict_distance_p95_m": 0.21293915428566076,
+      "target_current_link_ids": [
+        "A2256W000406",
+        "A2256W000175"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011112",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS011112",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.24360835522923802,
+      "target_current_link_ids": [
+        "A2256W000846"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011113",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid Broken"
+      ],
+      "lane_type": [
+        506
+      ],
+      "legacy_id": "B219BS011113",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.3017816808861376,
+      "target_current_link_ids": [
+        "A2256W000846"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011114",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS011114",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.17931652000321593,
+      "target_current_link_ids": [
+        "A2256W000406",
+        "A2256W000175"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011115",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "B219BS011115",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.3315508758294987,
+      "target_current_link_ids": [
+        "A2256W000010",
+        "A2256W000029"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011116",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "B219BS011116",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.2515713778898921,
+      "target_current_link_ids": [
+        "A2256W000010"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011117",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS011117",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.24080196149081,
+      "target_current_link_ids": [
+        "A2256W000410",
+        "A2256W000418"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011118",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "B219BS011118",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.25018437929161236,
+      "target_current_link_ids": [
+        "A2256W000029",
+        "A2256W000010",
+        "A2256W000175",
+        "A2256W000406"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011119",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS011119",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.2673085187119321,
+      "target_current_link_ids": [
+        "A2256W000420"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011120",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS011120",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.1967963827136984,
+      "target_current_link_ids": [
+        "A2256W000029",
+        "A2256W000175"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011121",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Broken"
+      ],
+      "lane_type": [
+        503
+      ],
+      "legacy_id": "B219BS011121",
+      "status": "candidate",
+      "strict_coverage": 0.9562043795620438,
+      "strict_distance_p95_m": 0.27117029575454177,
+      "target_current_link_ids": [
+        "A2256W000175",
+        "A2256W000029"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011122",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS011122",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.2760865324233041,
+      "target_current_link_ids": [
+        "A2256W000179"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011123",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "B219BS011123",
+      "status": "candidate",
+      "strict_coverage": 0.47058823529411764,
+      "strict_distance_p95_m": 0.7472758632823053,
+      "target_current_link_ids": [
+        "A2256W000546"
+      ],
+      "tier": "B"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011265",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "B219BS011265",
+      "status": "candidate",
+      "strict_coverage": 0.6954612005856515,
+      "strict_distance_p95_m": 0.7461410629307285,
+      "target_current_link_ids": [
+        "A2256W000424",
+        "A2256W000425",
+        "A2256W000426",
+        "A2256W000546"
+      ],
+      "tier": "B"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011372",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS011372",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.25669293104943164,
+      "target_current_link_ids": [
+        "A2256W001105"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:B219BS011490",
+      "lane_color": [
+        "white"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        505
+      ],
+      "legacy_id": "B219BS011490",
+      "status": "candidate",
+      "strict_coverage": 1.0,
+      "strict_distance_p95_m": 0.29021017080520306,
+      "target_current_link_ids": [
+        "A2256W000846"
+      ],
+      "tier": "A"
+    },
+    {
+      "candidate_id": "kcity2025_hd_candidate_v1:lane_boundary:legacy:LM000002",
+      "lane_color": [
+        "yellow"
+      ],
+      "lane_shape": [
+        "Solid"
+      ],
+      "lane_type": [
+        501
+      ],
+      "legacy_id": "LM000002",
+      "status": "candidate",
+      "strict_coverage": 0.813953488372093,
+      "strict_distance_p95_m": 0.744781803959709,
+      "target_current_link_ids": [
+        "A2256W000426",
+        "A2256W000424"
+      ],
+      "tier": "A"
+    }
+  ],
+  "map_id": "kcity2025_hd_candidate_v1",
+  "operational": false,
+  "route_region": {
+    "end_s_m": 1741.5859204343146,
+    "start_s_m": 1118.7417511690987
+  },
+  "status": "candidate"
+}

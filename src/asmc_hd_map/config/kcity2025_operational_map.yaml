@@ -1,0 +1,145 @@
+schema_version: asmc.hd_map.operational_map_config/v1
+build_id: kcity2025_operational_map_20260916
+map_id: kcity2025_competition_operational_candidate_v1
+
+# This stage is intentionally a candidate.  It establishes the vector/raster
+# contract used for final route-by-route review, but cannot promote itself.
+promotion_policy:
+  operational: false
+  feature_status: candidate
+  current_link_node_topology_authority: true
+  won_tae_direct_observation_geometry_authority: true
+  legacy_geometry_requires_observation_gate: true
+
+# Immutable source snapshot.  The observation/H5/config inputs are exactly the
+# files committed by Won-tae in e67f5da.  A changed byte fails the build instead
+# of silently producing a different map.
+source_snapshot:
+  git_commit: e67f5daf721d909e9f267e110a5b59d02d45c5b9
+  files:
+    - {path: src/asmc_hd_map/development/won_tae_link_node/config/waize_katri.yaml, sha256: a4470c16df2bd6eff46b57cfa29a25dc704c6be4cbd012da9f58342d5b8a32c2, role: won_tae_bake_config}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5, sha256: e8ce47f504cd0387686718dfe72f12d17e8c684d0cc23fe41d9938171d896e86, role: won_tae_baked_audit}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/5.csv, sha256: 58dba782f85b29b707a45722c2a7882ea5ce67003e605185e7840f0b07cf5e9b, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/6.csv, sha256: fef2145498d535a52a68cb49301c7e965962920c504881f60cae34e29170a76f, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/7.csv, sha256: 1b0baed543e7c5e248e584c4b76315eae98103fc837a77b1a11737c1383194cc, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/end_left2.csv, sha256: 8e26415d6f9973af9e77ec270fb032c8a1095f5f7af6786137ab57e058948f94, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/end_right.csv, sha256: 1567ee60909d2a3511675f08500618b9f7428623be49052d45acf8ff3cd50158, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/fourth_point.csv, sha256: d180a9c4c34e715760e9b8f20a69680b1632003e573a2e51efa5528c500e6a65, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_en_left.csv, sha256: a603ba1290cdf5559d9e0417e184e07ff6cdcdcc1634725d1d138938167897c7, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_en_right.csv, sha256: 86744913d74eb6ab462226cf47249333b4574759c4a651b3da4148fa07f56580, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_left.csv, sha256: 157b6bc093b49d15ae112953965700e2bf51d3197a9f90fe9f75bebb46a1c793, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_middel_right.csv, sha256: 6d236f0c4270a22b2fba02cb37219977046c1719b906a133a6a2fafe64bc0e67, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_middle_left.csv, sha256: da5b967f9d4aec27b3a60bbf7d13a49866e7144c2ee7ba47cafbae8b63fa6aab, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right.csv, sha256: 4d97bc771602ff132b91ad36b5cd3754fd16beed0de02e00f824a4a4c9ae80f5, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right2.csv, sha256: 316b9371a170cbd7de5eefc04dfd2113cc5df5660d9ec151ef9aa10578797d11, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_right3.csv, sha256: 0a616b652fdfefdcf28fe8ffda3f1f6848dd2c22868da39c74f0beb3f6755aac, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/ro_merge3.csv, sha256: a1622e16946c8330377644a825aa5533ffb623c5bfb972011f413f42f8a5d025, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/second_point.csv, sha256: e06a3a043071b385ef2b23d9ce8ac92984a7239dc6059556a598c6a00bcd3f19, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/start_point.csv, sha256: 1eeed06e9043a1748a58c761182b17354cce16f360320fd2c354e8f316bfdd9c, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/third_point.csv, sha256: cd9f339b1fc295171eec767f910aa8b12ed1766a1f6d64fba315a3d2816948b1, role: direct_observation}
+    - {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/turnel_left.csv, sha256: 21a4a7c870d5d9d64f6f1903f525f5a7cb0d6eb8d51ebb5825bfbf5cdb644d65, role: direct_observation}
+
+sources:
+  nominal_map: {path: src/asmc_hd_map/reports/kcity2025_current_corridor_20260916/nominal_candidate_map.json, sha256: 209a0d06fdecaa570c6364a791b7b3f2a5404dc1e8f570d9bb54841fcfe57b9a}
+  observed_map: {path: src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/observed_candidate_map.json, sha256: e591071b0cba3dbee5e1c78ee7d54ff6ae7df2b35f760b87c2762cd140856f9d}
+  hybrid_map: {path: src/asmc_hd_map/reports/kcity2025_hybrid_completion_20260916/hybrid_candidate_map.json, sha256: b424c56c310557fd8fbe6388c9320eae8dff0cf545d4e67e998a803239328be4}
+  boundary_offset_profiles: {path: src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/boundary_offset_profiles.csv, sha256: 93c57108dce910c151516cefba4aa02d550a8128035a3c0aa5147b2572e8c71c}
+  link_width_profiles: {path: src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/link_width_profiles.csv, sha256: 2f590338f37139f5a1c20abd4bcc81e372c4d845299ef90b4c31471cadd89dce}
+  segment_matches: {path: src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/segment_matches.csv, sha256: 92aecc5ac94235ab47d5ed78cf115e7d5c191dd99704d85fc68958a789d4cf1f}
+  legacy_lane_boundary: {path: R_KR_PG_KATRI/lane_boundary_set.json, sha256: 2e09ace3bfc625e9b717d9f13c00f551527d3b23e37c7e3b256c26706840037b}
+  current_link_set: {path: src/behavior_planner/src/config/link_set.json, sha256: 5ce0fd57da07b83221c0a4d117b0606b2d9c094c8de476a7d1176c78a4dc5b0f}
+  current_node_set: {path: src/behavior_planner/src/config/node_set.json, sha256: baafc1acbb4a34eadcafe6136f2b3ac330cebf0cf5727a324c4f117a54eba7dc}
+  current_global_info: {path: src/behavior_planner/src/config/global_info.json, sha256: bd74fa3f05830e0741c3c7f51d0f7935f389be3879251fd0231918538a05f133}
+  organizer_route: {path: R_KR_PG_KATRI/2026_molit_comp_global_path.txt, sha256: f74ff6f53e27c0c4b2cc0e004e5873f7ee1f68f2107f0429f0aad55254d73ee6}
+
+geometry:
+  sample_step_m: 0.50
+  station_bin_m: 1.0
+  direct_gap_limit_m: 2.0
+  width_smoothing_length_m: 5.0
+  sanity_width_min_m: 2.5
+  sanity_width_max_m: 4.5
+  fallback_width_m: 3.5
+
+legacy_gate:
+  # A legacy template may extend slightly beyond a directly observed run. A
+  # 0.55 majority-support gate keeps those ends conservative while retaining
+  # the A2256W000748 paint whose supported span has centimetre-level residual.
+  minimum_observed_coverage: 0.55
+  maximum_lateral_residual_p95_m: 0.25
+  maximum_heading_difference_p95_deg: 5.0
+  # Retained as an audit metric only. It compares the observed 2025 lane width
+  # against the current-link 3.5 m proxy, not the fitted marking error, so it
+  # must not reject an individually well-aligned physical marking.
+  maximum_width_difference_m: 0.25
+  maximum_projection_distance_m: 2.0
+  maximum_projection_heading_deg: 30.0
+
+# Route-by-route human holdout decisions. These do not relax the automatic
+# gate for any other legacy feature. `extend_to_boundary_end` only closes the
+# short reviewed paint tail to the owning current logical boundary endpoint.
+driving_reviewed_intervals:
+  - name: start_to_first_stopline
+    lane_id: A2256W000748
+    route_s_min_m: 0.0
+    route_s_max_m: 72.62896869677363
+    stopline_node_id: A1256W000736
+    successor_link_id: A2256W000182
+    successor_geometry_role: logical_corridor_only
+    opposing_lane_markings_included: false
+    review_source: live_route_review_20260916
+
+driving_reviewed_markings:
+  B219BS010411:
+    interval: start_to_first_stopline
+    side: left
+    color: yellow
+    pattern: solid
+    clip_to_reviewed_lane: true
+    extend_to_boundary_start: true
+    extend_to_boundary_end: true
+    maximum_extension_m: 2.5
+  B219BS010474:
+    interval: start_to_first_stopline
+    side: right
+    color: white
+    pattern: solid
+    clip_to_reviewed_lane: true
+    extend_to_boundary_start: true
+    extend_to_boundary_end: false
+  B219BS011269:
+    interval: start_to_first_stopline
+    side: right
+    color: white
+    pattern: solid
+    clip_to_reviewed_lane: true
+    extend_to_boundary_start: false
+    extend_to_boundary_end: true
+    maximum_extension_m: 2.5
+
+stoplines:
+  # H5 selection is the operational allowlist.  The inner rotary marker was
+  # confirmed to have no paint and is explicitly rejected.
+  h5_allowlist: [A1256W000682, A1256W000807, A1256W000208, A1256W000757, A1256W000582, A1256W000593, A1256W000709]
+  driving_review_allowlist:
+    A1256W000736: live_route_review_20260916_painted_stopline
+  rejected: {A1256W000742: roundabout_inside_not_painted}
+  line_width_m: 0.40
+
+special_zones:
+  maneuver_role_prefixes: [high_speed_same_direction, shadow_, static_obstacle_]
+  exclude_roles: [high_speed_opposite_direction]
+  forbidden_between_observations:
+    - name: split_island_432_427__153_451
+      first: {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_middle_left.csv, side: LEFT, color: WHITE}
+      second: {path: src/asmc_hd_map/development/won_tae_link_node/data/observed_lanes/hi_middel_right.csv, side: RIGHT, color: WHITE}
+
+raster:
+  resolution_m: 0.20
+  margin_m: 5.0
+  boundary_thickness_m: 0.20
+
+visualization:
+  width_px: 1600
+  height_px: 1000
+  padding_px: 30

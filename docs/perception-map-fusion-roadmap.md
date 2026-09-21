@@ -2,8 +2,8 @@
 
 > **문서 역할:** Current Working Proposal — 인지 융합 방향과 단계별 결정 gate
 > **문서 허브:** [README.md](./README.md)
-> **상태:** Working Proposal v0.17 — 음영 camera v3 인수 완료, HD맵·LiDAR 결합 후보 통합<br>
-> **기준일:** 2026-09-15<br>
+> **상태:** Working Proposal v0.19 — 음영 camera v3 인수 완료, current Node/Link HD맵 관측 보정 후보 생성<br>
+> **기준일:** 2026-09-16<br>
 > **주요 참여:** 안승현(카메라 인지), 장원태(MGeo map prior 제안), 손재호(LiDAR 인지), planning/control 팀<br>
 > **상세 문서:** [인지 GT·BEV·차로 구조화 계획](./perception-bev-lane-interface-plan.md) · [UDP↔ROS 네트워크](./network-udp-ros.md) · [v4 학습 평가](./perception-v4-training-evaluation.md)
 
@@ -21,7 +21,7 @@
 | 범위 | 제안·요구 출처 | 구현·검증 출처 | 이 문서에서의 취급 |
 |---|---|---|---|
 | 3카메라 drivable/lane, 음영 shared-family | 안승현 | 안승현의 bag·live 평가 | 현재 camera handoff 기준선 |
-| MGeo/node-link map prior와 offline bake | 장원태 | 장원태 `src/link_node/`, PR #37 | local crop·대회 맵 검증 전 후보 |
+| MGeo/node-link map prior와 offline bake | 장원태 | 장원태 `src/asmc_hd_map/development/won_tae_link_node/`, PR #37 | local crop·대회 맵 검증 전 후보 |
 | LiDAR 장애물·OBB·속도/추적 운용 요구 | 손재호 | 장원태가 요구를 통합 구현한 PR #37 | `/last_lidar`·camera fusion 후보, 담당자 재검증 필요 |
 | safe corridor, 회피·복귀와 최종 제어 권한 | planning/control 협의 대상 | 미확정 | 인지 결과를 소비한 뒤 판제가 결정 |
 
@@ -116,10 +116,10 @@ LiDAR ─ detection/tracking/occupancy ───────────┤
 정적 지도에는 NPC와 스폰 장애물을 굽지 않는다. 지도 산출물에는 map 버전, bake 설정,
 전역경로 hash와 좌표계가 포함되어야 한다.
 
-**장원태 제안·구현(PR #37): [`src/link_node/`](../src/link_node/README.md)** (offline bake 부분).
+**장원태 제안·구현(PR #37): [`src/asmc_hd_map/development/won_tae_link_node/`](../src/asmc_hd_map/development/won_tae_link_node/README.md)** (offline bake 부분).
 `link_set.json` + `node_set.json`에서 drivable / lane / stop-line을 이진 래스터로 굽고
 `map_id`·bake 설정·좌표계 원점을 H5 attrs에 담는다. catkin 패키지가 아닌 오프라인
-CLI라서 `src/perception/` 아래가 아니라 `src/link_node/`에 둔다. **runtime local crop은
+CLI라서 `src/perception/` 아래가 아니라 `src/asmc_hd_map/development/won_tae_link_node/`에 둔다. **runtime local crop은
 아직 미구현**이며 담당 파트 미정이다 (기능적 프로토타입은 `live_check.py`의
 `ego_view()`, 0.28 ms/프레임). 위 목록 중 lane 연결관계·인접 차로 변경 가능성·속도
 제한 attribute는 아직 굽지 않는다.
@@ -127,6 +127,120 @@ CLI라서 `src/perception/` 아래가 아니라 `src/link_node/`에 둔다. **ru
 현재 산출물은 `behavior_planner`의 `waize_katri_2025-10-23` 판본에서 생성한
 근사 map prior다. H5의 `map_id`와 원점 검사를 통과하더라도 공식 대회 K-City 판본 및
 실제 도색과의 검산 전에는 deployment 정본으로 승격하지 않는다.
+
+**안승현 current-only 재구축 후보: [`src/asmc_hd_map/`](../src/asmc_hd_map/README.md).**
+기존 `src/asmc_hd_map/development/won_tae_link_node`를 수정하지 않고, 현재 K-City 2025 link/node를 topology 정본으로 삼는
+별도 provenance-aware vector 후보를 만들었다. 주최측 전역경로와 current route link 39개는
+폐루프 2,184.612m 전 구간에서 일치했다. route, 고주로 인접 차로, 음영과 정적 장애물
+양방향 context를 합친 current link는 70개다. 고주로 15m corridor의 평행 link 32개는
+진행 방향이 같은 30개와 반대 방향 2개로 명시적으로 분류한다. 경로에 짧게 닿은 link가
+다른 도로까지 이어지는 경우 topology ID는 유지하되 export geometry만 corridor로 자른다.
+
+첫 단계에서는 current link 폭을 법선 offset해 명목 lane boundary 85개를 만들고, 인접
+link의 공통 경계 21개를 중복 제거했다. 현재 맵의 모든 `width_start/end`가 3.5m이므로 이는
+실제 도색 GT가 아니다. 합류·분기·비일반 link 등 42개 경계는 `review_required`다. 공식
+route에 연결된 `on_stop_line` node 13개는 모두 명목 stopline 후보를 가지지만 실제 도색
+선분과의 검산 전이다. 모든 feature는 `candidate`, map은 `operational=false`이며 관측선과
+구 KATRI 자료는 이 기준선 생성에 사용하지 않았다. 정량 결과와 source hash는
+[`current corridor report`](../src/asmc_hd_map/reports/kcity2025_current_corridor_20260916/README.md)에
+있다.
+
+2단계에서는 장원태가 수집한 19개 관측 CSV 26,511행을 별도 계약으로 감사하고, 직접
+관측 25,414행만 current 명목 경계에 정합했다. 고정 폭 생성 958행, 시간 보간 139행,
+수동 bridge와 raster용 0.03m offset은 canonical fit에서 제외했다. 자동 gate를 통과한
+76개 match run으로 85개 parent 경계 중 50개에 60개 보정 interval을 만들었으며, 나머지
+구간은 명목 후보로 유지했다. 양쪽 관측이 함께 통과한 폭 표본은 3,143개이고 중앙값은
+3.468m지만, 합류 taper를 포함하므로 current link의 일률적 3.5m 속성을 덮어쓰지 않는다.
+link centerline 70개와 stopline 13개는 1단계 그대로다. 상세 결과는
+[`observed calibration report`](../src/asmc_hd_map/reports/kcity2025_observed_calibration_20260916/README.md)에
+있다. 이 결과도 `candidate`, `operational=false`다. 다음 gate는 자동 적용과
+`review_required` overlay 검수 후, 변경되지 않은 구간에만 구맵 속성·누락 geometry를
+보조 적용하는 것이다.
+
+고주로 검수에서는 공식 route 차로만 남기지 않고 current 평행 link 32개를 보존했다.
+route에서 좌우 인접 topology로 도달 가능한 25개 차선변경 link는 전부 포함되어 있으며,
+21개는 원태 관측 보정 interval을 갖고 4개는 명목 폭 후보로 남아 있다. 원태 보정선과
+동일 current link에 대응된 고주로 구맵 A/B 경계의 거리 p50/p95는 0.105/0.515m였다.
+따라서 변경되지 않은 고주로의 Tier A 구맵 geometry·색상·선 형태는 우선 이식 후보로
+분류한다. 단 current node/link가 topology를 계속 소유하며, Tier B·분기·변경구간은
+원태 current-map 관측 또는 주행 검수 없이 자동 승격하지 않는다. 구간별 비교와 주행용
+RViz layer는 [`candidate review report`](../src/asmc_hd_map/reports/kcity2025_candidate_review_20260916/README.md)에
+정리했다. 이 검수 bundle 자체는 map을 변경하지 않고 `operational=false`를 유지한다.
+주행 검수 pose는 대회판에서 `/Ego_topic.position=(0,0)`으로 파싱된 사례를 확인했으므로
+이를 사용하지 않고 `/gps` UTM52N 위치와 `/imu` yaw를 조합한다. candidate map 원점
+`(302595, 4124145)m`과 GPS 전방 lever arm 0.35m를 명시적으로 적용하며, 이 변환은
+review node 내부에서만 수행해 공용 `map → base_link` TF를 발행하지 않는다.
+동일 원칙을 2단계 planner-facing local crop에도 적용한다. 현재 센서의
+`eastOffset/northOffset=(302595, 4124145)m`은 맵 원점과 일치하며, 실측 GPS를 변환한
+`(-131.3, -427.7)m`은 START 부근이다. 따라서 `(0,0)`에서 약 60 m 떨어져 보인 현상은
+origin 오류가 아니라 map XY가 없는 `EgoVehicleStatus`를 강제로 선택한 입력 오류다.
+
+2026-09-16 초기 주행 검수에서는 정지선 13개를 current 후보로 유지하고, 차선은 구맵과
+current corridor가 일치하는 안정 구간의 원본 geometry·색상·형태를 우선 채택하기로 했다.
+원태 관측선은 깔끔하지 않은 구간이 있어 canonical geometry가 아니라 validation reference로
+사용한다. 로터리~고주로~톨게이트와 음영구간 이후를 포함해 구맵 source lane 163개,
+segment 195개를 별도 v2 후보에 보존했다. 이 중 인접 link가 현재 70-link 골격에 없는
+59개는 잘못된 소유권을 붙이지 않고 `route_context_only`로 남겼다. 톨게이트 출구~음영 입구의 변경구간은 제외했고
+국소적으로 일치하는 19개 조각도 review-only로 격리했다. 차로폭은 일률 3.5m가 아니라
+채택한 실제 구맵 geometry를 따르며 current node/link가 topology 정본인 원칙은 유지한다.
+상세 기준과 오버레이는
+[`legacy adoption report`](../src/asmc_hd_map/reports/kcity2025_legacy_adoption_20260916/README.md)에
+있다. 이 후보도 전체 gap/transition 주행 검수 전까지 `operational=false`다.
+
+후속 주행 검수에서는 2025 변경구간에 남은 legacy curve fragment, 고주로 lane 1–2 공유
+경계 누락, 실제 도색이 없는 정지선을 확인했다. v3 hybrid candidate는 안정 구간 legacy
+geometry를 유지하면서 정적·동적 장애물 새 도로, 로터리 출구→고주로, 톨게이트→음영
+전환을 current 공식 경로로 재생성한다. 동적 장애물 구간 종방향 도색은 실제
+`A1256W000208` 정지선 `route_s=436.798m`에서 끝내고 단일
+yellow로 확장했고, `930.6~974.9m` 고주로 진입의 구맵 connector curve는 current 직선
+경계로 교체했다. 로터리 전 우측 공유선은 원태 direct 2차로 외곽 관측의 station별
+midpoint를 route 쪽으로 0.25m 보정하되 이중 yellow는 유지한다. 다른 원태 관측은 직접 geometry가 아니라
+link별 폭 prior로만 사용한다. `A1256W000757` 정지선 뒤 `550.619~600m`는 실제 도색처럼
+white/white broken 경계로 바꾸고 RViz에서도 metric dash/gap으로 표시한다. 고주로 공유
+경계 6개를 current topology에서 복원했다. 톨게이트 전 `1593.586~1741.721m`
+안전지대측 경계는 구맵 약 2.2m offset 대신 원태 `hi_right.csv` 직접 관측이 지지하는
+route-right half-width 중앙값 1.710m로 교체했다. 로터리 내부
+`A1256W000742` 및 음영구간 `A1256W000831`, `A1256W000842`를 non-painted로 기각해
+stopline candidate를 10개로 줄였다. 상세 산출물은
+[`hybrid completion report`](../src/asmc_hd_map/reports/kcity2025_hybrid_completion_20260916/README.md)에
+있으며, 여전히 `operational=false`다.
+
+후속 원태 관측 기준 operational candidate 주행 검수에서는 여러 source를 한 화면에 섞은
+상태로는 구간별 geometry 선택 근거를 분리하기 어렵다는 문제가 확인됐다. 따라서 해당
+후보의 추가 승격은 일시 중지하고, 다음 세 입력만 독립 토픽으로 보여 주는
+`three_source_map_compare.launch`를 추가했다.
+
+- 원태 관측 기준 정본화 계획 직전의 hybrid candidate
+- 원태 커밋 `e67f5da` H5에 저장된 관측 차선/정지선 vector
+- origin translation만 적용한 구 KATRI Tier A/B 차선
+
+구맵 layer는 current 대회 corridor 70개 link와 대응된 127개 source로 제한한다. 이 집합은
+기존 고주로 전체와 공식 route/connector 관련 경계를 보존하되 무관한 도로는 제거한다.
+세 source는 display 단계에서도 merge하지 않으며, 구간별 주행 검수로 선택이 끝날 때까지
+자동 offset·blend·smoothing을 다시 적용하지 않는다. 기존 operational candidate와
+surface bake는 provenance와 실패 분석용 artifact로만 보존한다.
+
+2026-09-17 route curation은 이 원칙에 따라 14개 작은 검수 단계로 분리했다. 첫 구현은
+`route_s=[0,186.286m)`, `A2256W000748→182→329→236`뿐이며 origin-only legacy를 사용한다.
+`A2256W000748` route-right의 legacy source `B219BS010474`만 주행 화면 근거로 broken에서
+solid로 교정했다. 정지선과 surface는 독립 allowlist가 확정되기 전까지 출력하지 않는다.
+`A2256W000219` 이후 H5/pre-plan/legacy 조합 요청은 문서와 config에는 보존했지만 아직
+geometry를 만들지 않는다. 상세 내용은
+[`경로별 HD맵 선택 검수`](./hd-map-route-curation-review-20260917.md)를 따른다.
+
+2026-09-16 원태 관측 기준 operational candidate는 current topology 70개, logical
+boundary 85개, lane area 70개를 유지하면서 physical marking 49개를 선택했다. 이 중
+legacy는 자동 gate 28개와 live 주행 승인 3개다. 구맵 paint gate는 관측 coverage 55%, 횡오차 p95 0.25m,
+heading p95 5도와 current topology 귀속을 요구한다. 실제 관측 폭과 current link의
+fallback 3.5m 차이는 개별 선의 오차가 아니므로 lane-area audit에만 사용한다. 시작 구간
+`A2256W000748`, `route_s=0.00~72.629m` 첫 확정 구간은 yellow solid/white solid로
+고정했다. 오른쪽은 서로 맞닿은 구맵 두 조각을 연결하고 양쪽의 짧은 tail은 첫 정지선까지
+logical boundary로 닫았다. 후속 `A2256W000182` 사거리 connector는 물리선이 아닌 current
+nominal logical corridor로 유지한다. 또한 live 주행에서
+도색을 확인한 `A1256W000736` 정지선은 원태 H5 7개와 구분된 driving-review provenance로
+추가했다. 총 정지선은 8개이며 후보는 계속 `operational=false`다. 정량 audit과 파생
+raster는 [`operational candidate report`](../src/asmc_hd_map/reports/kcity2025_operational_map_20260916/README.md)에
+기록한다.
 
 ### 3.2 Camera perception 후보 출력
 
@@ -160,7 +274,7 @@ camera segmentation 누락 때문에 `outside` 판정만으로 LiDAR 검출물�
 그 생성 책임을 인지·퓨전·판제 중 어디에 둘지는 소비 인터페이스 합의 후 확정한다.
 
 **손재호의 LiDAR 운용 요구를 반영해 장원태가 구현한 PR #37 후보**는 tracked OBB를 map
-ENU로 변환하고, `src/link_node` road mask에 대한 5×5 footprint sampling 비율로
+ENU로 변환하고, `src/asmc_hd_map/development/won_tae_link_node` road mask에 대한 5×5 footprint sampling 비율로
 주행가능영역 후보만 `/last_lidar`에 발행한다. source-stamped YOLO 결과와 LiDAR frame을
 시간 매칭해 `person/car/unknown` 및 원본 `yolo_class` 근거도 함께 보존하며, 동적 판정은
 별도 `MotionClassifier`로 분리했다. 이는 LiDAR 객체의 도로 문맥 필터와 분류 후보이지,
@@ -995,7 +1109,7 @@ LiDAR occupancy 결합, safe corridor, fallback과 closed-loop 검증은 판제�
 | 3 | Streaming/ROS GT transport 조사 | rate/schema와 실패 원인 기록 | **종료·백업 브랜치 보존** |
 | 4 | 센서 calibration과 공통 BEV 기준 | camera-only fused pilot 완료; provisional debug ROI를 vector 재평가·GPS lever arm·map overlay 후 확정 | camera 부분 진행 중 |
 | 5 | 3-camera BEV와 lane 구조화 | 판제 소유 feature flag·closed-loop·full-stack profile | **v3 interface/parameter 동결 및 성능 bag 완료; 제어 미연결 handoff** |
-| 6 | MGeo crop과 source policy 평가 | 정상 GPS·Blackout의 map/camera 정합 지표 확보 | 장원태·안승현 |
+| 6 | Current HD맵 보정과 crop/source policy | 원태 direct anchor 기반 vector/raster 후보에서 구간별 주행 검수 후 선택 승격; 이후 정상 GPS/Blackout 정합 | **정본 후보·특수구간 surface bake·1Hz review logger 완료, operational=false** |
 | 7 | LiDAR association과 판제 인터페이스 | ego/adjacent/unknown, occupancy와 ownership 합의 | 공동 |
 | 8 | 대회판 이식·추가 데이터·장기 재학습 | competition-only held-out 개선과 full rehearsal 통과 | 10월 후보 |
 

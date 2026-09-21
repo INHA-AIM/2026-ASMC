@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "asmc.hd_map.canonical/v1",
+  "title": "ASMC canonical HD-map feature collection",
+  "type": "object",
+  "required": ["schema_version", "map_id", "frame", "sources", "features"],
+  "properties": {
+    "schema_version": {"const": "asmc.hd_map.canonical/v1"},
+    "map_id": {"type": "string", "minLength": 1},
+    "frame": {
+      "type": "object",
+      "required": ["frame_id", "crs", "local_origin_in_global"],
+      "properties": {
+        "frame_id": {"const": "map"},
+        "crs": {"type": "string"},
+        "local_origin_in_global": {
+          "type": "array", "minItems": 3, "maxItems": 3,
+          "items": {"type": "number"}
+        }
+      }
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "feature_type", "frame_id", "geometry", "attributes", "topology", "provenance", "validation", "status"]
+      }
+    }
+  }
+}
