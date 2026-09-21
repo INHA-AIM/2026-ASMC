@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import struct
 import sys
 import tempfile
@@ -15,7 +16,7 @@ import build_runtime_baseline as baseline
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DATA_ROOT = REPO_ROOT.parent / "data"
+DATA_ROOT = Path(os.environ.get("ASMC_DATA", str(REPO_ROOT.parent / "data")))
 
 
 def _field(name: str, value: bytes) -> bytes:
@@ -152,6 +153,19 @@ class RuntimeBaselineTest(unittest.TestCase):
         value = {"schema_version": 1, "unicode": "체크", "items": [3, 2, 1]}
         self.assertEqual(baseline.dump_manifest(value), baseline.dump_manifest(value))
         self.assertEqual(value, json.loads(json.dumps(value, ensure_ascii=False)))
+
+    def test_repository_symlink_does_not_escape_or_enter_reference_scan(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            root = workspace / "repository"
+            source = root / "src"
+            source.mkdir(parents=True)
+            external = workspace / "external.txt"
+            external.write_text("src/link_node/", encoding="utf-8")
+            link = source / "CMakeLists.txt"
+            link.symlink_to(external)
+            self.assertEqual("src/CMakeLists.txt", baseline.repo_relative(link, root))
+            self.assertNotIn(link, list(baseline._candidate_reference_files(root)))
 
 
 if __name__ == "__main__":

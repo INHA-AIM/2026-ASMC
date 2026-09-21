@@ -1070,7 +1070,7 @@ launches:
       remaps: []
     includes: []
 executables:
-  declaration_count: 151
+  declaration_count: 153
   items:
   - package: Main
     kind: cmake_add_executable
@@ -1450,6 +1450,10 @@ executables:
     source: src/frenet_planner/CMakeLists.txt
   - package: frenet_planner
     kind: cmake_add_executable
+    target: config_loader_validation_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
     target: curvature_continuity_test
     source: src/frenet_planner/CMakeLists.txt
   - package: frenet_planner
@@ -1511,6 +1515,10 @@ executables:
   - package: frenet_planner
     kind: cmake_add_executable
     target: polygon_collision_test
+    source: src/frenet_planner/CMakeLists.txt
+  - package: frenet_planner
+    kind: cmake_add_executable
+    target: request_native_generator_test
     source: src/frenet_planner/CMakeLists.txt
   - package: frenet_planner
     kind: cmake_add_executable

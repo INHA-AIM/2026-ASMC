@@ -113,7 +113,11 @@ def require_file(path: Path, label: str) -> Path:
 
 
 def repo_relative(path: Path, repo_root: Path) -> str:
-    return path.resolve().relative_to(repo_root.resolve()).as_posix()
+    # Preserve the repository entry rather than following symlinks. Catkin
+    # workspaces may contain a tracked CMakeLists.txt symlink into /opt/ros;
+    # resolving it would both escape the repository and make the manifest
+    # depend on the host ROS installation.
+    return path.absolute().relative_to(repo_root.absolute()).as_posix()
 
 
 def data_relative(path: Path, data_root: Path) -> str:
@@ -845,6 +849,10 @@ def _candidate_reference_files(repo_root: Path) -> Iterable[Path]:
         if not root.exists():
             continue
         for path in sorted(root.rglob("*")):
+            # External/toolchain symlink contents are not repository source and
+            # would make this audit host-dependent.
+            if path.is_symlink():
+                continue
             if not path.is_file() or path.suffix.lower() not in TEXT_SUFFIXES:
                 continue
             relative = repo_relative(path, repo_root)
@@ -971,7 +979,7 @@ def render_report(manifest: Mapping[str, Any]) -> str:
     lines = [
         "# P1-A Runtime Baseline v1",
         "",
-        "> **상태:** 동결된 회귀 기준 · 생성 도구: `tools/audit/build_runtime_baseline.py`  ",
+        "> **상태:** 동결된 회귀 기준 · 생성 도구: `tools/audit/build_runtime_baseline.py`",
         "> **주의:** 이 문서는 센서셋·네트워크·패키지 경로·HD맵 geometry를 변경하지 않는다.",
         "",
         "## 1. 요약",
