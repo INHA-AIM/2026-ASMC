@@ -1,0 +1,228 @@
+schema_version: 1
+contract_id: asmc_hd_map_topic_contract_v1
+status: frozen
+package:
+  name: asmc_msgs
+  version: 1.0.0
+  compatibility_policy: additive_only
+  notes: Existing message definitions and their ROS1 MD5 sums must not change.
+
+frame_conventions:
+  geometry_frame: map
+  local_topics_geometry_frame: map
+  yaw_unit: radians
+  official_checkpoint_yaw_unit: degrees
+  route_station_unit: meters
+  speed_unit: meters_per_second
+  polygon_ring: open
+
+legacy_messages:
+  asmc_msgs/BehaviorCommand: fad196232c8f54cbbe2a1bced9d3972a
+  asmc_msgs/BehaviorContext: 450f8f3ab65064fbb3622550828cadc5
+  asmc_msgs/DetectedObject: a965285ae904ae3ade687b9c54c2c515
+  asmc_msgs/DetectedObjectArray: 14fbd9679c2d87ae7498e4269d9678da
+  asmc_msgs/FrenetFeedback: 072b15bb1dfe3f5b99d17c1487408114
+  asmc_msgs/LaneBoundaryFamily: 70ac79f98ca1244c782ea4067becd6af
+  asmc_msgs/LaneBoundaryFamilyMember: 516612ff4e656e2e61852056fda78969
+  asmc_msgs/LaneBoundaryObservation: 6ae63de01bc8e43ba30dbb4add2129c3
+  asmc_msgs/LaneBoundaryObservationArray: f4c14183f7aa8631b2893327df0651f1
+  asmc_msgs/PlanFeedback: b5132603c037f3cf42de5a795df54d52
+  asmc_msgs/Trajectory: 38657ba74f761a20afb310b0265cb085
+  asmc_msgs/TrajectoryPoint: f3382a560d156ee4a98b9951e48b3f3e
+  asmc_msgs/VehicleState: 7b5b81807cda33ae90638895dcf749f1
+
+new_messages:
+  asmc_msgs/HdMapMeta:
+    md5: adb0d98c5dbd41055ebb929fcdf3af19
+    required_fields: [header, schema_major, schema_minor, contract_id, build_id, map_id,
+      geometry_sha256, manifest_sha256, generated_at, scope, operational, complete,
+      coordinate_system, source_ids, source_sha256, lane_marking_count, lane_count,
+      drivable_area_count, checkpoint_count, mission_zone_count]
+  asmc_msgs/LaneMarking:
+    md5: 65d4f9e4cbb4f60a65b5d7c3702e49fa
+    required_fields: [id, color, pattern, physical_type, role, width_m, polyline,
+      left_lane_ids, right_lane_ids, source_type, source_dataset, source_feature_id]
+  asmc_msgs/LaneMarkingArray:
+    md5: 2eae16c9d4bf3385ac35eba4b3d1b823
+    required_fields: [header, build_id, map_id, geometry_sha256, complete, markings]
+  asmc_msgs/Lane:
+    md5: 380340d72bbc206438d6cf73629c5fa4
+    required_fields: [id, link_id, lane_type, direction, lane_number,
+      lane_number_scope_id, route_station_start_m, route_station_end_m,
+      left_boundary_id, right_boundary_id, left_adjacent_lane_id,
+      right_adjacent_lane_id, predecessor_lane_ids, successor_lane_ids,
+      centerline, polygon, source_type, source_dataset, source_feature_id]
+  asmc_msgs/LaneArray:
+    md5: 95ad93ef58c8ff22f4069b8ca2388395
+    required_fields: [header, build_id, map_id, geometry_sha256, complete, lanes]
+  asmc_msgs/DrivableArea:
+    md5: 3f988da146dba2b6bd2348b32ba3fb7d
+    required_fields: [id, area_type, validity, source_type, polygon, lane_ids,
+      link_ids, intersection_guarded, source_dataset, source_feature_id]
+  asmc_msgs/DrivableAreaArray:
+    md5: 672c8c1123790ada26596de6aab5edcb
+    required_fields: [header, build_id, map_id, geometry_sha256, complete, areas]
+  asmc_msgs/CompetitionCheckpoint:
+    md5: 794b79e3d48ac7fef6493abadad2fc47
+    required_fields: [id, sequence, is_start, is_finish, pose, official_yaw_deg,
+      pass_radius_m, route_station_m, link_id, link_station_m, source_reference]
+  asmc_msgs/CompetitionCheckpointArray:
+    md5: 2a9f1f28734c005b499ce4993b20931e
+    required_fields: [header, build_id, route_id, source_sha256, route_length_m,
+      checkpoints]
+  asmc_msgs/MissionZone:
+    md5: 902a8d5532787290e6471aa52a8a0d9c
+    required_fields: [id, mission_type, status, source_reference, description,
+      route_station_start_m, route_station_end_m, start_link_id, end_link_id,
+      link_ids, checkpoint_ids, polygon, has_speed_limit, speed_limit_kph,
+      rule_payload_json]
+  asmc_msgs/MissionZoneArray:
+    md5: 04325427bb7aedffd9a6ec4881ed46ce
+    required_fields: [header, build_id, route_id, source_sha256, zones]
+
+topics:
+  /hd_map/meta:
+    type: asmc_msgs/HdMapMeta
+    md5: adb0d98c5dbd41055ebb929fcdf3af19
+    scope: global
+    latch: true
+    queue_size: 1
+    publication: on_change
+    authority: authoritative
+  /hd_map/global/lane_markings:
+    type: asmc_msgs/LaneMarkingArray
+    md5: 2eae16c9d4bf3385ac35eba4b3d1b823
+    scope: global
+    latch: true
+    queue_size: 1
+    publication: on_change
+    authority: authoritative
+  /hd_map/global/lanes:
+    type: asmc_msgs/LaneArray
+    md5: 95ad93ef58c8ff22f4069b8ca2388395
+    scope: global
+    latch: true
+    queue_size: 1
+    publication: on_change
+    authority: authoritative
+  /hd_map/global/drivable_areas:
+    type: asmc_msgs/DrivableAreaArray
+    md5: 672c8c1123790ada26596de6aab5edcb
+    scope: global
+    latch: true
+    queue_size: 1
+    publication: on_change
+    authority: authoritative
+  /hd_map/global/drivable_grid:
+    type: nav_msgs/OccupancyGrid
+    md5: 3381f2d731d4076ec5c71b0759edbe4e
+    scope: global
+    latch: true
+    queue_size: 1
+    publication: on_change
+    authority: derived
+  /hd_map/global/checkpoints:
+    type: asmc_msgs/CompetitionCheckpointArray
+    md5: 2a9f1f28734c005b499ce4993b20931e
+    scope: global
+    latch: true
+    queue_size: 1
+    publication: on_change
+    authority: authoritative
+  /hd_map/global/mission_zones:
+    type: asmc_msgs/MissionZoneArray
+    md5: 04325427bb7aedffd9a6ec4881ed46ce
+    scope: global
+    latch: true
+    queue_size: 1
+    publication: on_change
+    authority: mixed_status
+  /hd_map/local/lanes:
+    type: asmc_msgs/LaneArray
+    md5: 95ad93ef58c8ff22f4069b8ca2388395
+    scope: local
+    latch: false
+    queue_size: 1
+    publication: ego_update
+    authority: derived_crop
+  /hd_map/local/drivable_grid:
+    type: nav_msgs/OccupancyGrid
+    md5: 3381f2d731d4076ec5c71b0759edbe4e
+    scope: local
+    latch: false
+    queue_size: 1
+    publication: ego_update
+    authority: derived_crop
+  /hd_map/debug/markers:
+    type: visualization_msgs/MarkerArray
+    md5: d155b9ce5188fbaf89745847fd5882d7
+    scope: debug
+    latch: false
+    queue_size: 1
+    publication: on_change_or_subscriber
+    authority: visualization_only
+
+consumer_rules:
+  - Planning authority comes from the complete latched global topics, which consumers receive once and spatially index by ego map position.
+  - Local lane and grid topics are optional derived caches for bounded lookup and visualization; they are not the planning horizon or a replacement for global semantics.
+  - Lane markings, checkpoints, and mission zones are static global metadata and are not republished as local crops.
+  - Global topics must use header.frame_id=map and be latched.
+  - Local topics are map-frame spatial subsets, not vehicle-frame geometry.
+  - IDs in local crops retain their global namespace and identity.
+  - Lane numbers are valid only within lane_number_scope_id and the stated station interval.
+  - LaneMarking pattern is explicit; consumers must not infer solid or broken from point spacing.
+  - DrivableArea intersection_guarded polygons preserve road mesh where lane clipping is unsafe.
+  - MissionZone STATUS_UNSPECIFIED is invalid for publication.
+  - MissionZone STATUS_PROVISIONAL must not activate mandatory planning or control rules.
+  - OccupancyGrid uses 0 for drivable, 100 for non-drivable, and -1 for unknown.
+
+planning_consumption:
+  recommended_mode: subscribe_global_once_and_query_by_map_position
+  authoritative_global_topics:
+    - /hd_map/meta
+    - /hd_map/global/lane_markings
+    - /hd_map/global/lanes
+    - /hd_map/global/drivable_areas
+    - /hd_map/global/drivable_grid
+    - /hd_map/global/checkpoints
+    - /hd_map/global/mission_zones
+  optional_local_cache_topics:
+    - /hd_map/local/lanes
+    - /hd_map/local/drivable_grid
+  local_crop_is_planning_horizon: false
+  active_mission_selection: consumer_matches_current_link_or_route_station_against_global_mission_zones
+  vector_geometry_authority: [/hd_map/global/lanes, /hd_map/global/drivable_areas]
+  raster_lookup_derivative: /hd_map/global/drivable_grid
+  visualization_only_topic: /hd_map/debug/markers
+
+local_crop_policy:
+  purpose: optional_bounded_lookup_and_visualization_cache
+  geometry_frame: map
+  extent_m: 120.0
+  shape: axis_aligned_square
+  lane_selection: polygon_or_centerline_bounds_intersects_crop
+  lane_geometry_clipped: false
+  lane_ids_preserve_global_identity: true
+  lane_array_complete: false
+  grid_alignment: global_grid_cells
+  grid_resolution_m: 0.2
+  grid_width_cells: 600
+  grid_height_cells: 600
+  outside_global_grid_value: -1
+  default_pose_source: gps_imu
+  supported_pose_sources: [gps_imu, ego_status, pose_stamped]
+  gps_imu_policy:
+    gps_topic: /gps
+    imu_topic: /imu
+    utm_epsg: 32652
+    local_origin_in_global: [302595.0, 4124145.0, 0.0]
+    gps_lever_arm_m: [0.35, 0.0]
+    maximum_pair_gap_ms: 100.0
+    maximum_origin_offset_error_m: 1.0
+  publish_hz: 5.0
+
+implementation_stage:
+  messages_and_contract: P1-B
+  metadata_population: P1-C
+  read_only_publisher_and_markers: P1-D
+  production_map_publisher: phase_2

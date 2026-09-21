@@ -25,6 +25,20 @@ add_message_files(
   # (docs/fsm-frenet-interface-v2.md 1.4절).
   BehaviorCommand.msg
   FrenetFeedback.msg
+  # HD Map / competition metadata contract v1. These are additive message
+  # types; do not edit the legacy messages above because their ROS1 MD5 sums
+  # are already consumed by the planning stack and recorded in P1-A.
+  HdMapMeta.msg
+  LaneMarking.msg
+  LaneMarkingArray.msg
+  Lane.msg
+  LaneArray.msg
+  DrivableArea.msg
+  DrivableAreaArray.msg
+  CompetitionCheckpoint.msg
+  CompetitionCheckpointArray.msg
+  MissionZone.msg
+  MissionZoneArray.msg
 )
 
 generate_messages(
@@ -39,3 +53,7 @@ catkin_package(
   message_runtime
   std_msgs
 )
+
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_nosetests(test/test_message_serialization.py)
+endif()
