@@ -1,0 +1,7 @@
+# Deterministically generated HD-map artifacts are kept for runtime and
+# provenance, but GitHub should collapse their very large diffs by default.
+src/asmc_hd_map/reports/** linguist-generated=true
+src/asmc_hd_map/config/kcity2025_compact_drivable_map.json linguist-generated=true
+src/asmc_hd_map/config/*.npz binary
+src/asmc_hd_map/**/*.png binary
+src/asmc_hd_map/**/*.h5 binary

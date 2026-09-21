@@ -196,6 +196,11 @@ class LocalMapCropNode:
                         predecessor_lane_ids=tuple(lane.predecessor_lane_ids),
                         successor_lane_ids=tuple(lane.successor_lane_ids),
                         bidirectional=(lane.direction == lane.DIRECTION_BIDIRECTIONAL),
+                        route_assigned=(
+                            lane.route_station_start_m >= 0.0
+                            and lane.route_station_end_m >= 0.0
+                        ),
+                        intersection=(lane.lane_type == lane.TYPE_INTERSECTION),
                     )
                     for lane in message.lanes
                 ],
@@ -210,6 +215,9 @@ class LocalMapCropNode:
                 ),
                 nearby_distance_m=float(
                     rospy.get_param("~lane_nearby_distance_m", 2.0)
+                ),
+                intersection_switch_margin_m=float(
+                    rospy.get_param("~lane_intersection_switch_margin_m", 0.75)
                 ),
             )
         except ValueError as error:

@@ -32,6 +32,8 @@ class LaneGeometry:
     predecessor_lane_ids: Tuple[str, ...] = ()
     successor_lane_ids: Tuple[str, ...] = ()
     bidirectional: bool = False
+    route_assigned: bool = False
+    intersection: bool = False
 
     @classmethod
     def from_coordinates(
@@ -107,6 +109,7 @@ class LaneAssociator:
         boundary_band_m: float = 0.15,
         nearby_distance_m: float = 2.0,
         maximum_heading_error_deg: float = 100.0,
+        intersection_switch_margin_m: float = 0.75,
     ) -> None:
         self.lanes = tuple(lanes)
         if not self.lanes:
@@ -119,9 +122,14 @@ class LaneAssociator:
         self.boundary_band_m = float(boundary_band_m)
         self.nearby_distance_m = float(nearby_distance_m)
         self.maximum_heading_error_rad = math.radians(maximum_heading_error_deg)
+        self.intersection_switch_margin_m = float(intersection_switch_margin_m)
         if self.switch_penetration_m < 0.0 or self.switch_confirmation_samples < 1:
             raise ValueError("invalid lane-switch hysteresis")
-        if self.boundary_band_m < 0.0 or self.nearby_distance_m <= 0.0:
+        if (
+            self.boundary_band_m < 0.0
+            or self.nearby_distance_m <= 0.0
+            or self.intersection_switch_margin_m < 0.0
+        ):
             raise ValueError("invalid association distance")
         self.current_lane_id = ""
         self.pending_lane_id = ""
@@ -281,7 +289,25 @@ class LaneAssociator:
             self._reset_pending()
             return self._result(current, previous_lane_id)
 
-        best_inside = inside[0] if inside else None
+        # First preserve explicit topology. When an established lane has
+        # completely left the search neighbourhood, guarded-intersection
+        # support polygons can overlap the official route polygon. Prefer the
+        # route-assigned candidate only for that reacquisition ambiguity. A
+        # fresh acquisition and normal adjacent-lane motion stay proximity-
+        # based, so obstacle-manoeuvre support lanes remain selectable.
+        connected_inside = [
+            candidate
+            for candidate in inside
+            if candidate.lane.lane_id in current_lane.successor_lane_ids
+            or candidate.lane.lane_id in current_lane.predecessor_lane_ids
+        ]
+        if connected_inside:
+            best_inside = connected_inside[0]
+        elif current is None:
+            route_inside = [candidate for candidate in inside if candidate.lane.route_assigned]
+            best_inside = route_inside[0] if route_inside else (inside[0] if inside else None)
+        else:
+            best_inside = inside[0] if inside else None
         if best_inside is not None:
             target_id = best_inside.lane.lane_id
             longitudinal = (
@@ -293,6 +319,20 @@ class LaneAssociator:
                 current_lane.right_adjacent_lane_id,
             }
             if longitudinal:
+                self.current_lane_id = target_id
+                self._reset_pending()
+                return self._result(best_inside, previous_lane_id)
+
+            intersection_transfer = (
+                current is not None
+                and not current.inside
+                and current_lane.intersection
+                and best_inside.lane.intersection
+                and best_inside.clearance_m > self.boundary_band_m
+                and current.center_distance_m - best_inside.center_distance_m
+                >= self.intersection_switch_margin_m
+            )
+            if intersection_transfer:
                 self.current_lane_id = target_id
                 self._reset_pending()
                 return self._result(best_inside, previous_lane_id)

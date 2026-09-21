@@ -87,6 +87,37 @@ class LaneAssociationTest(unittest.TestCase):
         self.assertFalse(result.valid)
         self.assertEqual(result.state, STATE_UNKNOWN)
 
+    def test_route_lane_only_wins_stale_reacquisition_overlap(self):
+        support = straight_lane(
+            "lane:support", 0.0, 3.5, lane_number=0,
+        )
+        route = straight_lane(
+            "lane:route", 0.0, 3.5, lane_number=1, route_assigned=True,
+        )
+        fresh = LaneAssociator([support, route]).update(
+            1.75, 5.0, math.pi / 2.0
+        )
+        self.assertEqual(fresh.lane_id, "lane:support")
+
+        stale = straight_lane("lane:stale", 10.0, 13.5, lane_number=1)
+        associator = LaneAssociator([support, route, stale])
+        associator.update(11.75, 5.0, math.pi / 2.0)
+        result = associator.update(1.75, 5.0, math.pi / 2.0)
+        self.assertEqual(result.lane_id, "lane:route")
+
+    def test_intersection_transfer_uses_clear_centerline_advantage(self):
+        old = straight_lane(
+            "lane:old", 0.0, 3.5, lane_number=1, intersection=True,
+        )
+        new = straight_lane(
+            "lane:new", 4.0, 7.5, lane_number=1, intersection=True,
+        )
+        associator = LaneAssociator([old, new])
+        associator.update(1.75, 5.0, math.pi / 2.0)
+        result = associator.update(5.0, 5.0, math.pi / 2.0)
+        self.assertEqual(result.lane_id, "lane:new")
+        self.assertEqual(result.state, STATE_INSIDE)
+
 
 if __name__ == "__main__":
     unittest.main()

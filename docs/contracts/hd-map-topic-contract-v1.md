@@ -99,6 +99,13 @@ non-drivable `100`, unknown `-1`로 고정한다.
 - 현재 차로 기준점은 GPS 안테나나 전방 범퍼가 아닌 map-frame `base_link` 원점(후륜축 중심)이다.
   공유 경계 위에서는 기존 차로를 유지하고, 인접 차로 안쪽 0.30 m pose가 2회 연속 관측될 때
   횡방향 전환한다. 링크 선후행 전환은 이전 polygon을 벗어나 successor에 들어오면 즉시 수행한다.
+- 노드 전환에서는 명시된 predecessor/successor를 우선한다. 확정돼 있던 차로가 검색 범위를
+  완전히 벗어난 뒤 보호 교차로 support polygon과 전역경로 polygon이 겹치는 경우에만 유효한
+  route station 차로를 재획득 기준으로 우선한다. 최초 획득과 인접차로 이동은 거리 및 위
+  hysteresis를 그대로 적용하므로 장애물 회피용 support link도 선택할 수 있다.
+- 교차로 내부에서 topology로 직접 연결되지 않은 경로로 이동할 때는 이전 polygon을 벗어나고
+  새 교차로 centerline이 0.75 m 이상 더 가까울 때만 즉시 전환한다. 큰 교차로 polygon의
+  중첩 때문에 이미 지나온 branch를 계속 현재 차로로 유지하는 현상을 방지한다.
 - `NEARBY`는 최대 2 m의 작은 이탈 중 연속성을 위한 상태일 뿐 `INSIDE`가 아니다. `STALE`은
   planning에 유효하지 않다.
 - 고주로의 A433 연결 1차로는 버스전용이며 global Lane 제품에서 제외한다. 대회 주행 후보는

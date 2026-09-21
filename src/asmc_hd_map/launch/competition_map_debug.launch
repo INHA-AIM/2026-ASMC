@@ -51,6 +51,7 @@
     <param name="lane_switch_confirmation_samples" value="2"/>
     <param name="lane_boundary_band_m" value="0.15"/>
     <param name="lane_nearby_distance_m" value="2.0"/>
+    <param name="lane_intersection_switch_margin_m" value="0.75"/>
   </node>
 
   <node if="$(arg rviz)" pkg="rviz" type="rviz" name="competition_map_debug_rviz"

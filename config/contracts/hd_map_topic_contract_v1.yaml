@@ -186,6 +186,8 @@ consumer_rules:
   - Local topics are map-frame spatial subsets, not vehicle-frame geometry.
   - Current-lane association uses the map-frame base_link origin, defined by this stack as the rear-axle center after GPS lever-arm correction.
   - Lateral lane switches require 0.30 m target-polygon penetration for two distinct pose samples; a point on a shared boundary retains the previous lane.
+  - Explicit predecessor/successor topology wins a node transition; if the established lane has fully left the search neighbourhood and guarded-intersection polygons overlap, a valid route-station lane wins reacquisition. Fresh acquisition and adjacent-lane motion remain proximity-based.
+  - Inside an intersection, a non-topological transfer is immediate only after leaving the previous polygon and gaining at least 0.75 m centerline-distance advantage; this prevents large overlapping polygons from holding a stale branch.
   - STATE_NEARBY retains continuity for a departure of at most 2.0 m but is not equivalent to STATE_INSIDE; STATE_STALE is invalid for planning.
   - Only traversable lanes in the global LaneArray are association candidates; excluded bus-only lanes such as the A433-connected high-speed lane cannot become current.
   - IDs in local crops retain their global namespace and identity.
@@ -249,6 +251,7 @@ local_crop_policy:
     switch_confirmation_samples: 2
     boundary_band_m: 0.15
     nearby_distance_m: 2.0
+    intersection_switch_margin_m: 0.75
     excluded_lane_policy: lanes_absent_from_global_lane_array_are_never_candidates
 
 implementation_stage:
