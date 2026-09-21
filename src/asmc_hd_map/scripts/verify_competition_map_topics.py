@@ -115,9 +115,9 @@ def main() -> int:
         _require(message.header.frame_id == "map", "%s left the map frame" % name)
 
     _require(meta.geometry_sha256 == "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf", "geometry SHA drift")
-    _require(meta.build_id == "kcity2025_boundary_filled_drivable_v4", "P2-B v4 build ID drift")
+    _require(meta.build_id == "kcity2025_roundabout_extended_drivable_v5", "P2-B v5 build ID drift")
     _require(meta.operational and meta.complete, "P2-B map must be operational and complete")
-    _require(meta.lane_count == 69 and meta.drivable_area_count == 97, "P2-B v4 product count drift")
+    _require(meta.lane_count == 70 and meta.drivable_area_count == 101, "P2-B v5 product count drift")
     _require(
         "compact_drivable_product" in meta.source_ids and "legacy_drivable_h5" in meta.source_ids,
         "P2-B provenance is missing from HdMapMeta",
@@ -127,8 +127,8 @@ def main() -> int:
     _require(markings.build_id == meta.build_id and markings.map_id == meta.map_id,
              "marking/meta identity mismatch")
     _require(markings.geometry_sha256 == meta.geometry_sha256, "marking/meta geometry SHA mismatch")
-    _require(lanes.complete and len(lanes.lanes) == 69, "global lane product is incomplete")
-    _require(areas.complete and len(areas.areas) == 97, "global drivable vector product is incomplete")
+    _require(lanes.complete and len(lanes.lanes) == 70, "global lane product is incomplete")
+    _require(areas.complete and len(areas.areas) == 101, "global drivable vector product is incomplete")
     _require(lanes.build_id == meta.build_id and lanes.map_id == meta.map_id,
              "lane/meta identity mismatch")
     _require(areas.build_id == meta.build_id and areas.map_id == meta.map_id,
@@ -159,7 +159,7 @@ def main() -> int:
         _require(value.width_m > 0.0 and value.source_dataset and value.source_feature_id,
                  "marking width/provenance is incomplete: %s" % value.id)
     lane_by_link = {value.link_id: value for value in lanes.lanes}
-    _require(len(lane_by_link) == 69, "lane link IDs are not unique")
+    _require(len(lane_by_link) == 70, "lane link IDs are not unique")
     _require("A2256W000427" not in lane_by_link, "unused toll lane A427 must remain excluded")
     _require("A2256W000179" not in lane_by_link, "exit-only lane A179 must remain excluded")
     excluded_bus_links = {
@@ -189,7 +189,7 @@ def main() -> int:
         "A2256W000066", "A2256W000087", "A2256W000100", "A2256W000111",
         "A2256W000206", "A2256W000211", "A2256W000221", "A2256W000226",
         "A2256W000227", "A2256W000319", "A2256W000636", "A2256W000746",
-        "A2256W001124", "A2256W001125",
+        "A2256W001124", "A2256W001125", "A2256W000134",
     }
     route_links = {
         "A2256W000748", "A2256W000182", "A2256W000329", "A2256W000236",
@@ -296,10 +296,29 @@ def main() -> int:
         _, hierarchy = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
         hole_count = 0 if hierarchy is None else sum(value[3] >= 0 for value in hierarchy[0])
         _require(hole_count == 0, "%s obstacle surface still contains holes" % name)
+    roundabout_areas = [
+        value for value in areas.areas
+        if value.link_ids and set(value.link_ids) == {"A2256W000134"}
+    ]
+    _require(
+        len(roundabout_areas) == 4,
+        "A134 roundabout surface must contain one lane and three H5 patches",
+    )
+    roundabout_mask = _rasterized_area_union(roundabout_areas)
+    component_count, _ = cv2.connectedComponents(roundabout_mask, connectivity=8)
+    _require(component_count - 1 == 1, "A134 roundabout surface is disconnected")
+
+    def grid_value(x_m, y_m):
+        x = int(round((x_m - grid.info.origin.position.x) / grid.info.resolution))
+        y = int(round((y_m - grid.info.origin.position.y) / grid.info.resolution))
+        return grid.data[y * grid.info.width + x]
+
+    _require(grid_value(-102.0, 340.0) == 100, "roundabout center island became drivable")
+    _require(grid_value(-102.97, 325.54) == 0, "A134 centerline is not drivable")
     source_counts = Counter(value.source_dataset for value in areas.areas)
     _require(
         source_counts["selected_lane_topology_corridor_fill"] == 18
-        and source_counts["legacy_h5_clipped_to_selected_link_envelope"] == 10,
+        and source_counts["legacy_h5_clipped_to_selected_link_envelope"] == 13,
         "surface fill source counts drift",
     )
     _require(

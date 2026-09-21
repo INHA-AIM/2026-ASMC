@@ -454,19 +454,31 @@ def legacy_intersection_surface_patches(
     road: np.ndarray,
     ppm: float,
     offset: np.ndarray,
-    groups: Sequence[str],
+    group_policies: Sequence[Mapping[str, Any]],
     minimum_area_m2: float,
     simplify_tolerance_m: float,
 ) -> List[Dict[str, Any]]:
-    """Fill H5-supported gaps inside selected obstacle-link envelopes."""
+    """Fill H5-supported gaps inside explicitly reviewed link envelopes.
+
+    Obstacle junctions intentionally close holes between selected maneuver
+    links.  A roundabout is different: its center island must remain
+    non-drivable, while the original H5 pavement just outside the nominal link
+    width is useful.  Per-group envelope padding and hole preservation keep
+    those two policies separate.
+    """
 
     try:
         from shapely.geometry import Polygon
-        from shapely.ops import unary_union
+        from shapely.ops import triangulate, unary_union
     except ImportError as error:
         raise CompactDrivableError("python3-shapely is required for surface refinement") from error
     output: List[Dict[str, Any]] = []
-    for group in groups:
+    for raw_policy in group_policies:
+        group = str(raw_policy["group"])
+        envelope_buffer_m = float(raw_policy.get("envelope_buffer_m", 0.0))
+        preserve_holes = bool(raw_policy.get("preserve_holes", False))
+        if envelope_buffer_m < 0.0:
+            raise CompactDrivableError("surface envelope buffer must be non-negative")
         selected = [lane for lane in lanes if lane.get("drivable_group") == str(group)]
         if not selected:
             raise CompactDrivableError("surface group has no lanes: %s" % group)
@@ -480,7 +492,7 @@ def legacy_intersection_surface_patches(
                 link_id for link_id, polygon in lane_geometry.items()
                 if polygon.intersects(component)
             )
-            envelope = component.convex_hull
+            envelope = component.convex_hull.buffer(envelope_buffer_m)
             legacy = _legacy_surface_geometry(road, ppm, offset, envelope.bounds)
             target = component.union(legacy.intersection(envelope)).buffer(0)
             patch = target.difference(component).buffer(0)
@@ -488,7 +500,18 @@ def legacy_intersection_surface_patches(
                 if float(polygon.area) < minimum_area_m2:
                     continue
                 simplified = polygon.simplify(simplify_tolerance_m, preserve_topology=True)
-                for piece_index, piece in enumerate(_polygon_parts(simplified)):
+                pieces = _polygon_parts(simplified)
+                if preserve_holes:
+                    hole_safe_pieces = []
+                    for piece in pieces:
+                        if not piece.interiors:
+                            hole_safe_pieces.append(piece)
+                            continue
+                        for triangle in triangulate(piece):
+                            clipped = triangle.intersection(piece).buffer(0)
+                            hole_safe_pieces.extend(_polygon_parts(clipped))
+                    pieces = hole_safe_pieces
+                for piece_index, piece in enumerate(pieces):
                     if float(piece.area) < minimum_area_m2:
                         continue
                     # A DrivableArea is a simple open ring. Surface patch holes
@@ -522,6 +545,8 @@ def legacy_intersection_surface_patches(
                             "source_feature_id": "surface:%s:%02d" % (group, component_index),
                             "surface_group": str(group),
                             "surface_area_m2": round(float(final_piece.area), 4),
+                            "surface_envelope_buffer_m": envelope_buffer_m,
+                            "surface_preserves_holes": preserve_holes,
                         })
     return output
 
@@ -789,7 +814,7 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
         road,
         legacy_ppm,
         offset,
-        [str(value) for value in surface_policy["legacy_h5_intersection_surface_groups"]],
+        surface_policy["legacy_h5_intersection_surface_groups"],
         float(surface_policy["minimum_patch_area_m2"]),
         float(surface_policy["vector_simplify_tolerance_m"]),
     )
@@ -818,7 +843,7 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
     if missing_checkpoints:
         raise CompactDrivableError("checkpoints outside compact road: %s" % missing_checkpoints)
     product_core = {
-        "schema_version": "asmc.hd_map.compact_drivable/v4",
+        "schema_version": "asmc.hd_map.compact_drivable/v5",
         "build_id": str(config["build_id"]),
         "map_id": str(h5["map_id"]),
         "frame_id": "map",
@@ -897,7 +922,8 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
             "The reviewed dynamic junction uses directed node-pair closure links to avoid internal seams.",
             "Ordinary-road polygons locally follow reviewed paint where its signed lateral support is valid.",
             "Selected adjacent lane pairs are joined by canonical vector corridor-fill areas.",
-            "Legacy H5 contributes only gap patches inside selected obstacle-junction envelopes.",
+            "Legacy H5 contributes only gap patches inside explicitly reviewed envelopes.",
+            "A134 roundabout pavement uses the legacy H5 only inside a 2.0 m padded link envelope and preserves the center island.",
             "A131 is available only as the explicitly reviewed opposite lane beside shadow-zone A126.",
             "Explicit obstacle-intersection links describe maneuverable space, not permission to leave mission policy.",
         ],
@@ -929,7 +955,7 @@ def write_product(repo_root: Path, source_config: Path) -> Dict[str, Any]:
 def render_report(product: Mapping[str, Any]) -> str:
     stats = product["statistics"]
     return "\n".join([
-        "# K-City 2025 P2-B v4 boundary-filled 주행가능영역",
+        "# K-City 2025 P2-B v5 A134 로터리 확장 주행가능영역",
         "",
         "> **상태:** 생성·검증 가능한 P2-B product. reviewed 차선 geometry는 변경하지 않음.",
         "",
@@ -943,6 +969,7 @@ def render_report(product: Mapping[str, Any]) -> str:
         "- 교차로의 거리/반경 확장을 폐기하고 reviewed link set만 추가했다.",
         "- 동적 장애물 교차로는 검토된 4개 anchor의 directed start/end node-pair closure 8개 link를 사용한다.",
         "- 정적·동적 교차로는 선택 link envelope 안의 legacy H5 road만 gap patch로 사용한다.",
+        "- A134 로터리는 2.0 m 확장 link envelope 안의 legacy H5 포장면을 사용하고 중앙 섬은 비주행으로 보존한다.",
         "- 일반 교차로는 전역경로 link만, 정적·동적 장애물 교차로는 검토된 회피 link만 포함한다.",
         "- 반대차로는 음영구간 A131만 명시적으로 포함하고, 그 밖의 대회 외 도로는 제거했다.",
         "- `OccupancyGrid`는 vector product를 0.20 m/px로 rasterize한 파생 표현이다.",
@@ -966,6 +993,9 @@ def render_report(product: Mapping[str, Any]) -> str:
         ),
         "- dynamic allowlist: `%s`" % ", ".join(
             product["selection"]["intersection_groups"]["dynamic_obstacle_maneuver"]
+        ),
+        "- roundabout extension: `%s`" % ", ".join(
+            product["selection"]["intersection_groups"]["roundabout_maneuver"]
         ),
         "- legacy road: `%.2f m²`, compact road: `%.2f m²` (`%.2f%%`)" % (
             stats["legacy_road_area_m2"], stats["compact_road_area_m2"],

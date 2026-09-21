@@ -485,6 +485,7 @@ def build_debug_markers(
             "dynamic_obstacle_maneuver": _color(1.0, 0.1, 0.7, 0.98),
             "non_mission_route_turns": _color(0.45, 1.0, 0.25, 0.95),
             "gps_shadow_opposite_lane": _color(0.65, 0.45, 1.0, 0.98),
+            "roundabout_maneuver": _color(0.15, 0.65, 1.0, 0.98),
         }
         for marker_id, (group, color) in enumerate(group_colors.items()):
             grouped_marker = _marker("drivable_group_%s" % group, marker_id, Marker.LINE_LIST, stamp)
@@ -497,6 +498,23 @@ def build_debug_markers(
                 for start, end in zip(polygon, polygon[1:] + polygon[:1]):
                     grouped_marker.points.extend((_point(start, 0.24), _point(end, 0.24)))
             markers.append(grouped_marker)
+            if group == "roundabout_maneuver":
+                for label_id, lane in enumerate(
+                    value for value in product.get("lanes", [])
+                    if value.get("drivable_group") == group
+                ):
+                    centerline = lane.get("centerline", [])
+                    if not centerline:
+                        continue
+                    label = _marker(
+                        "drivable_group_roundabout_labels", label_id,
+                        Marker.TEXT_VIEW_FACING, stamp,
+                    )
+                    label.pose.position = _point(centerline[len(centerline) // 2], 0.9)
+                    label.scale.z = 1.25
+                    label.color = color
+                    label.text = "%s ROUNDABOUT DRIVABLE" % lane.get("link_id", "A134")
+                    markers.append(label)
 
         surface_styles = {
             "selected_lane_topology_corridor_fill": (
@@ -513,8 +531,18 @@ def build_debug_markers(
             value.color = color
             surface_markers[dataset] = value
             markers.append(value)
+        roundabout_surface = _marker(
+            "compact_roundabout_surface", len(surface_markers), Marker.LINE_LIST, stamp
+        )
+        roundabout_surface.scale.x = 0.22
+        roundabout_surface.color = _color(0.1, 0.75, 1.0, 0.98)
+        markers.append(roundabout_surface)
         for area in product.get("drivable_areas", []):
-            marker = surface_markers.get(str(area.get("source_dataset")))
+            marker = (
+                roundabout_surface
+                if area.get("surface_group") == "roundabout_maneuver"
+                else surface_markers.get(str(area.get("source_dataset")))
+            )
             if marker is None:
                 continue
             polygon = area.get("polygon", [])

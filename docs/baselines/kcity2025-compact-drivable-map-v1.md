@@ -1,4 +1,4 @@
-# K-City 2025 P2-B v4 boundary-filled 주행가능영역
+# K-City 2025 P2-B v5 A134 로터리 확장 주행가능영역
 
 > **상태:** 생성·검증 가능한 P2-B product. reviewed 차선 geometry는 변경하지 않음.
 
@@ -12,24 +12,26 @@
 - 교차로의 거리/반경 확장을 폐기하고 reviewed link set만 추가했다.
 - 동적 장애물 교차로는 검토된 4개 anchor의 directed start/end node-pair closure 8개 link를 사용한다.
 - 정적·동적 교차로는 선택 link envelope 안의 legacy H5 road만 gap patch로 사용한다.
+- A134 로터리는 2.0 m 확장 link envelope 안의 legacy H5 포장면을 사용하고 중앙 섬은 비주행으로 보존한다.
 - 일반 교차로는 전역경로 link만, 정적·동적 장애물 교차로는 검토된 회피 link만 포함한다.
 - 반대차로는 음영구간 A131만 명시적으로 포함하고, 그 밖의 대회 외 도로는 제거했다.
 - `OccupancyGrid`는 vector product를 0.20 m/px로 rasterize한 파생 표현이다.
 
 ## 결과
 
-- route lanes: `39`, selected lanes: `69` (extra same-direction `16`)
-- intersection support links: `21`, vector areas: `97`
-- base lane areas: `69`, adjacent corridor fills: `18`, intersection gap patches: `10`
+- route lanes: `39`, selected lanes: `70` (extra same-direction `16`)
+- intersection support links: `22`, vector areas: `101`
+- base lane areas: `70`, adjacent corridor fills: `18`, intersection gap patches: `13`
 - reviewed-boundary refinement: `41` lanes / `74` sides
 - explicit shadow opposite lane: `A2256W000131` beside route `A2256W000126`
-- reviewed non-route intersection lanes: `14`
+- reviewed non-route intersection lanes: `15`
 - static allowlist: `A2256W000100, A2256W000111, A2256W000221, A2256W000222, A2256W000226, A2256W000227, A2256W000746`
 - dynamic allowlist: `A2256W000066, A2256W000087, A2256W000206, A2256W000211, A2256W000599, A2256W000636, A2256W001124, A2256W001125`
-- legacy road: `89834.44 m²`, compact road: `14813.76 m²` (`16.49%`)
+- roundabout extension: `A2256W000134`
+- legacy road: `89834.44 m²`, compact road: `14905.16 m²` (`16.59%`)
 - reviewed geometry SHA: `01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf`
-- product SHA: `45571ad573e558c95607f13f60db3afe2f029474d8248280d264c4d6d9bba353`
-- grid SHA: `290328b060fd71f2eba4bf86127c2d79d1bdcad1e47d7fbc5404693b2b16e60d`
+- product SHA: `8c3281bf5330032f8d265e10c1502d9f55ef50dac4addb54fee31a0d5a301d8e`
+- grid SHA: `454d3bdfffdb43eacbfec72f10ce6027229f57837fb6d925d339a71bc12d889c`
 
 ## 소비 규칙
 

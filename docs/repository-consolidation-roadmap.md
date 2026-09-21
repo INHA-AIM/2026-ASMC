@@ -299,13 +299,14 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
   road는 진짜 vector road mesh가 아니라 Node/Link 중심선 buffer에 실측 보정을 더한 raster임을
   명시했으며, 16개 checkpoint 중심 포함·폐곡선 topology·입력 SHA·stage14 geometry hash를
   검증했다. 이 단계에서는 geometry와 publisher를 변경하지 않았다.
-- **P2-B v4 완료:** 전역경로 39개, 같은 방향 usable 차로, 명시 장애물 link와 음영구간
-  반대차로 A131을 선택한다. 69개 Lane polygon은 endpoint node 법선의 flat cap으로 끝나며,
+- **P2-B v5 완료:** 전역경로 39개, 같은 방향 usable 차로, 명시 장애물 link, A134 로터리와
+  음영구간 반대차로 A131을 선택한다. 70개 Lane polygon은 endpoint node 법선의 flat cap으로 끝나며,
   41개 Lane/74개 측면은 신뢰 가능한 reviewed paint 횡거리로 보정한다. MGeo 인접차로와
   A126/A131 사이에 vector corridor fill 18개를 추가한다. 정적·동적 교차로는 선택 link
-  envelope 안에서만 legacy H5 road를 gap patch 10개로 사용하여 단일 연결·내부 hole 0개를
-  보장한다. 총 DrivableArea는 97개이며 `OccupancyGrid`는 0.2 m 파생 raster다. 면적은
-  14,813.76 m²(legacy 전체의 16.49%)이고 checkpoint 16개를 모두 포함한다. A179·A427과
+  envelope 안에서만 legacy H5 road를 gap patch로 사용하여 단일 연결·내부 hole 0개를
+  보장한다. A134는 2 m 확장 envelope에서 원본 H5 포장면을 복원하고 중앙 섬을 제외한다.
+  총 DrivableArea는 101개이며 `OccupancyGrid`는 0.2 m 파생 raster다. 면적은
+  14,905.16 m²(legacy 전체의 16.59%)이고 checkpoint 16개를 모두 포함한다. A179·A427과
   명시적 갓길·버스·미사용 toll lane은 제외한다.
 - **P2-C 통합 완료:** stage14 차선 결과를 geometry regression 기준으로 삼아 builder,
   runtime publisher, 검증기와 RViz를 `asmc_hd_map` 한 패키지로 통합했다. 원태의 이전

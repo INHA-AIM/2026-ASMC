@@ -1,5 +1,5 @@
-schema_version: asmc.hd_map.compact_drivable_source/v4
-build_id: kcity2025_boundary_filled_drivable_v4
+schema_version: asmc.hd_map.compact_drivable_source/v5
+build_id: kcity2025_roundabout_extended_drivable_v5
 scope: competition_route_and_usable_same_direction_lanes
 
 sources:
@@ -54,6 +54,10 @@ selection:
       - A2256W000318
       - A2256W000319
       - A2256W000083
+    # Planner-reviewed extension into the roundabout surface. A134 is not on
+    # the frozen global route, but is a valid roundabout maneuver link.
+    roundabout_maneuver:
+      - A2256W000134
   # Close the directed start-node x end-node combinations defined by the four
   # reviewed dynamic-obstacle anchors. This adds only intersection links whose
   # endpoints are already on that reviewed junction boundary (A1125/A066/
@@ -91,10 +95,19 @@ surface_refinement:
       group: gps_shadow_opposite_lane
       link_ids: [A2256W000126, A2256W000131]
   # H5 is used only as a surface boundary reference inside each selected
-  # obstacle-junction component's flat-ended vector envelope.
+  # component's reviewed vector envelope. Obstacle junctions close internal
+  # gaps, while the roundabout keeps the H5 center island non-drivable and
+  # admits the full pavement around A134 beyond its nominal 3.5 m width.
   legacy_h5_intersection_surface_groups:
-    - static_obstacle_maneuver
-    - dynamic_obstacle_maneuver
+    - group: static_obstacle_maneuver
+      envelope_buffer_m: 0.0
+      preserve_holes: false
+    - group: dynamic_obstacle_maneuver
+      envelope_buffer_m: 0.0
+      preserve_holes: false
+    - group: roundabout_maneuver
+      envelope_buffer_m: 2.0
+      preserve_holes: true
   minimum_patch_area_m2: 0.50
   vector_simplify_tolerance_m: 0.05
 
