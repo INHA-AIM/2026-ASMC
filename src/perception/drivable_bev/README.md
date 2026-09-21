@@ -860,7 +860,7 @@ pytorch-auto-drive,StructLane}`에 있다. LaneCPP와 BSNet은 공개 구현이 
 센서 해상도·10/15/20 Hz 최적화는 camera-to-vector 기준선이 완성된 뒤 정확도·지연 저하
 없이 부하를 줄이는 마지막 단계로 미룬다.
 
-현재 runtime은 `src/link_node`, LBC, 외부 `morai-roach`/연구 repository를 import하지 않는다.
+현재 runtime은 `src/asmc_hd_map/development/won_tae_link_node`, LBC, 외부 `morai-roach`/연구 repository를 import하지 않는다.
 기존 camera native/model-grid 토픽과 typed boundary 공개 계약은 하위 호환한다.
 
 ### 2026-09-14 representative pipeline-audit replay

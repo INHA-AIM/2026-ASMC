@@ -40,7 +40,7 @@ ego-BEV → lane/topology + safe drivable + object/lane context
 | Expert / Behavior | rule + route, τ* 로깅 | `src/behavior_planner/` (+ LBC 학습 경로) | 정윤태·양서준 / 안승현 |
 | PA | GT BEV → τ (teacher) | `src/learning_by_cheating/` | 안승현 |
 | 차선·주행가능영역·eval | 카메라 학습·live 추론·음영 lane-family v3 | `src/perception/twinlite_morai/`, `camera_semantic_perception/`, `drivable_bev/` | 안승현 |
-| MGeo map prior | current Node/Link vector 후보·offline bake, pose 기반 local crop | `src/hd_map_builder/` 후보와 기존 `src/link_node/` | 안승현·장원태 협의 |
+| MGeo map prior | current Node/Link vector 후보·offline bake, pose 기반 local crop | `src/asmc_hd_map/` 후보와 기존 `src/asmc_hd_map/development/won_tae_link_node/` | 안승현·장원태 협의 |
 | 공통 BEV·차로 문맥 | map/camera/LiDAR layer와 object association | `src/perception/drivable_bev/` | 인지·맵·LiDAR 공동 |
 | LiDAR 장애물 | clustering·OBB·tracking·카메라 보조 분류 | `src/lidar+sensorfusion/` | 손재호, 정윤태 |
 | SA_plan | BEV̂ → τ | `src/learning_by_cheating/` | 안승현 |
