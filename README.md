@@ -84,13 +84,14 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 │   ├── perception/morai_3d_detection/  # perception ✅
 │   ├── morai_udp_bridge/      # UDP↔ROS (Ego/Ctrl) ✅
 │   ├── morai_sensor_bridge/   # UDP↔ROS (sensors) ✅
+│   ├── vehicle_state/         # GPS/IMU→공용 VehicleState ✅
 │   └── MORAI-ROS_morai_msgs/  # submodule beta_drive
 ├── tools/
 │   ├── aim_scenario_runner/   # scenario ✅
 │   └── grpc_inha_univ/        # gRPC ✅
 ├── scripts/
 │   ├── rosbridge.sh           # 종료된 direct ROS 실험 재현용(본선/현재 개발 금지)
-│   ├── udp_bridge.sh          # UDP bridges (--simulator 26r1|competition)
+│   ├── udp_bridge.sh          # UDP bridges (simulator provenance label 선택)
 │   └── …
 ├── mgeo_toolkit/ · R_KR_PG_KATRI/
 └── config/morai_rosbridge.env # 위 실험의 레거시 설정

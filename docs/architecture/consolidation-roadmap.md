@@ -337,6 +337,10 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
 
 ### 6.2 `asmc_bridge`
 
+현재 구현·입출력·timestamp/TF와 이관 검증의 상세 인벤토리는
+[MORAI bridge 개발·통합 가이드](../packages/asmc_bridge/README.md)를 따른다. 이 절은 목표
+아키텍처이며 현재 `asmc_bridge` package나 환경 profile이 이미 있다는 뜻이 아니다.
+
 - UDP network/sensor decode와 `vehicle_state` 정규화를 한 패키지에 둔다.
 - simulator profile과 transport profile을 분리한다. 예:
   `25s4_molitcomp03 + competition_lan`, `26r1_h3 + dev_local`.

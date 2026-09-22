@@ -6,7 +6,9 @@
 
 대회 허용 범위는 [대회 환경](../competition/README.md), Planning/Control의 독립 실행은
 [Planning/Control 규약](./planning-control.md), bag 기록·재생은
-[rosbag 가이드](./rosbag-evaluation.md)를 따른다.
+[rosbag 가이드](./rosbag-evaluation.md)를 따른다. parser·timestamp·TF·`vehicle_state`를
+수정하거나 Phase 3 이관을 준비할 때는 [MORAI bridge guide](../packages/asmc_bridge/README.md)를
+함께 본다.
 
 ## 1. 현재값과 승인된 후속 목표
 
@@ -43,6 +45,8 @@ MORAI GPS/IMU --UDP--> standalone Frenet --UDP :9300--> MPC --UDP--> MORAI
 - gRPC scenario runner와 GT topic은 개발·데이터 수집 전용이다.
 - 현재 bridge는 `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`로 나뉘어 있다.
   단일 `asmc_bridge`는 Phase 3 parity 이후에만 교체한다.
+- `udp_bridge.sh --simulator competition`은 현재 packet provenance/diagnostics 라벨만 바꾼다.
+  현장 IP·port·privileged-stream allowlist를 적용하는 배포 profile이 아니다.
 
 ## 3. Docker 기동
 
@@ -118,6 +122,9 @@ cd /root/ws
 source devel/setup.bash
 ./scripts/udp_bridge.sh --simulator 26r1
 ```
+
+현재 `--simulator competition`도 같은 launch 기본값을 사용한다. Phase 3의
+`competition_lan` profile이 구현되기 전에는 이를 현장 설정 완료 명령으로 사용하지 않는다.
 
 다른 터미널에서:
 

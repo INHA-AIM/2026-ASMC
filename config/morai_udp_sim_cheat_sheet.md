@@ -3,6 +3,7 @@
 > **개발 SIM: 26.R1.h3** (대회 배포 SIM 아님)  
 > Docker Desktop + `./scripts/docker_ros_up.sh` + `./scripts/udp_bridge.sh --simulator 26r1` 기준.
 > 상세: [개발·시뮬레이터 운영 가이드](../docs/operations/README.md)
+> bridge 구현·통합 gate: [MORAI bridge guide](../docs/packages/asmc_bridge/README.md)
 > 센서셋: [`ASMC_sensor_set_v2.json`](./ASMC_sensor_set_v2.json) (현재 주행용 Camera×4/LiDAR/GPS/IMU)<br>
 > GT용: [`ASMC_sensor_set_GT.json`](./ASMC_sensor_set_GT.json) (v2 + Semantic Camera×3 + Instance LiDAR)
 
@@ -24,6 +25,9 @@ Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127
 Connect/Dest 9299와 다른 9299 listener를 순서대로 확인한다. 개별 Docker port forwarding은
 사용하지 않는다. **9299를 다른 포트로 옮기지 말 것.** 상세:
 [운영 가이드 §6](../docs/operations/README.md#6-문제-해결)
+
+`--simulator competition`은 현재 simulator 라벨만 바꾸며 아래 loopback IP와 포트를 현장값으로
+전환하지 않는다. 이 표는 Phase 3 profile 적용 전의 **개발용 현재값**이다.
 
 ---
 

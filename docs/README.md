@@ -11,7 +11,8 @@
 [D2 대회·운영 보고서](./structure/d2-competition-operations-report.md),
 [본문 축약 보존 감사](./structure/d2-content-parity-audit.md),
 [D2 계약 보고서](./structure/d2-contracts-report.md),
-[D2 HD Map·message 보고서](./structure/d2-hd-map-msgs-report.md)를 참고한다.
+[D2 HD Map·message 보고서](./structure/d2-hd-map-msgs-report.md),
+[D2 bridge 보고서](./structure/d2-bridge-report.md)를 참고한다.
 이 페이지에서 정본, 작업 중 설계안, 사용 가이드와 과거 기록을 구분한다. 내용이
 충돌하면 아래의 `정본 우선순위`를 적용하고, 기록 문서를 현재 설정으로 해석하지 않는다.
 
@@ -35,6 +36,7 @@ planning/control 개발자는 [Planning/Control UDP 규약](./operations/plannin
 |---|---|---|
 | 대회 규정·공개 자산 | 주최 측 최신 원문 → [대회 요약](./competition/README.md) | 공식 원문이 항상 우선. 요약 문서를 함께 갱신 |
 | Docker·시뮬 통신·포트 | [운영 가이드](./operations/README.md) | 현재 적용값과 3단계 목표를 혼용하지 않음 |
+| bridge 구현·통합 gate | [MORAI bridge guide](./packages/asmc_bridge/README.md) | 현재 세 패키지와 아직 없는 `asmc_bridge`를 구분 |
 | Git·ownership | [협업 규칙](./governance/README.md)과 [ownership](./onboarding/ownership.md) | 과거 Phase 0/Path A 문서보다 우선 |
 | 공용 계약 탐색·변경 gate | [계약 문서 허브](./contracts/README.md) | 실제 구현은 링크된 개별 계약과 기계 정본을 함께 확인 |
 | Planning/Control 실행 | [planning-control-udp.md](./operations/planning-control.md) | planning-behavior-handoff의 ROS 경로는 레거시 |
@@ -84,6 +86,7 @@ planning/control 개발자는 [Planning/Control UDP 규약](./operations/plannin
 | [morai-msgs-beta-policy.md](./contracts/simulator/morai-msgs-beta-policy.md) | `beta_drive` submodule과 필드 정렬 규칙 | Canonical until port |
 | [morai-msgs-versions.md](./records/simulator/morai-msgs-versions.md) | 26.R1과 대회 msg 차이 조사 기록 | Version Reference |
 | [2026-09 transport 검증](./records/simulator/runtime-transport-2026-09.md) | host network, rate/latency와 종료된 GT 실험 | Experiment Record |
+| [MORAI bridge 개발·통합](./packages/asmc_bridge/README.md) | 현재 parser/state 경계와 Phase 3 이관 gate | Active Package-Group Guide |
 
 MORAI 화면에 입력할 값만 필요하면
 [UDP 치트시트](../config/morai_udp_sim_cheat_sheet.md)를 사용한다. 상세 설명과 장애 대응은
@@ -132,6 +135,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 |---|---|---|
 | 처음 실행 | [개발 시작](./onboarding/README.md) | [운영 가이드](./operations/README.md) |
 | UDP 센서가 안 들어옴 | [운영 가이드](./operations/README.md) | [UDP 치트시트](../config/morai_udp_sim_cheat_sheet.md) |
+| bridge parser·timestamp·vehicle state 수정 | [MORAI bridge guide](./packages/asmc_bridge/README.md) | [운영 gate](./operations/README.md#7-변경-범위별-시뮬-검증) |
 | Git 작업·PR | [협업 규칙](./governance/README.md) | [ownership](./onboarding/ownership.md), [CONTRIBUTING](../CONTRIBUTING.md) |
 | 본선 허용 여부 판단 | [대회 환경](./competition/README.md) | [운영 가이드](./operations/README.md) |
 | MPC/Frenet 실행 | [Planning/Control](./operations/planning-control.md) | [운영 gate](./operations/README.md#7-변경-범위별-시뮬-검증) |
@@ -157,6 +161,10 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 |---|---|
 | [asmc_hd_map guide](./packages/asmc_hd_map/README.md) | HD Map builder/runtime/source comparison 개발·검증 |
 | [asmc_msgs guide](./packages/asmc_msgs/README.md) | 공용 ROS1 message 소유·호환·추가 절차 |
+| [MORAI bridge guide](./packages/asmc_bridge/README.md) | 현재 bridge/state 구현과 Phase 3 통합 gate |
+| [morai_udp_bridge](../src/morai_udp_bridge/README.md) | Network UDP·Ctrl 빠른 시작 |
+| [morai_sensor_bridge](../src/morai_sensor_bridge/README.md) | Sensor UDP decode 빠른 시작 |
+| [vehicle_state](../src/vehicle_state/README.md) | GPS/IMU 상태 정규화와 배타적 source |
 | [src/perception](../src/perception/README.md) | 인지 파트 상태·코드·문서 지도 |
 | [twinlite_morai](../src/perception/twinlite_morai/README.md) | binary/4-class 2-head 학습 adapter와 현재 후보 |
 | [drivable_bev](../src/perception/drivable_bev/README.md) | 3-camera fused metric BEV, 범위 audit와 calibration/live gate |

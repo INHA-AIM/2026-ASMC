@@ -26,7 +26,7 @@
 | MPC | `src/mpc_controller/` | 정윤태·양서준 |
 | Planning adapter | `src/planning_control/` | 통합·판제 공동 |
 | 통합 launch | `src/integration_launch/` | 정윤태·통합 공동 |
-| UDP/sensor bridge | `src/morai_udp_bridge/`, `src/morai_sensor_bridge/`, `src/vehicle_state/` | 이강태·안승현 |
+| UDP/sensor bridge | `src/morai_udp_bridge/`, `src/morai_sensor_bridge/`, `src/vehicle_state/`; [개발 가이드](../packages/asmc_bridge/README.md) | 이강태·안승현 |
 | Camera/BEV | `src/perception/camera_semantic_perception/`, `drivable_bev/`, `twinlite_morai/` | 안승현, perception 공동 리뷰 |
 | LiDAR/3D | `src/perception/morai_3d_detection/`, `src/lidar+sensorfusion/` | 손재호, 통합 공동 리뷰 |
 | 데이터 수집 | `src/data_collection/` | 안승현, perception 공동 리뷰 |
@@ -40,7 +40,7 @@
 | 목표 | 현재 상태 |
 |---|---|
 | `asmc_hd_map` | 2단계 완료. 운영 map과 global/local topic 사용 |
-| `asmc_bridge` | 3단계 예정. 기존 세 bridge/state 패키지를 검증 후 통합 |
+| `asmc_bridge` | 3단계 예정. [현재 세 bridge/state 패키지와 이관 gate](../packages/asmc_bridge/README.md)를 검증 후 통합 |
 | `asmc_perception` | 4단계 예정. 현재 perception/LiDAR/data 패키지는 삭제하지 않음 |
 | `learning*` 정리 | 4단계 gate 전 삭제 금지. `src/learning`은 링크 이관 후 제거 후보 |
 | 단일 실행·시각화 | 5단계 예정 |

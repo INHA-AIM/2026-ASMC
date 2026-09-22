@@ -68,15 +68,26 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 현재 실행 흐름: [planning-control-udp.md](../operations/planning-control.md). 이전 ROS 통합 기록은
 [planning-behavior-handoff.md](../handoffs/planning/behavior-legacy.md)에 보존한다.
 
+### bridge · HD Map
+
+| 경로 | 역할 | 담당 |
+|---|---|---|
+| `src/morai_udp_bridge/` | Network UDP·Ctrl adapter | 이강태·안승현 |
+| `src/morai_sensor_bridge/` | Camera/LiDAR/GPS/IMU decoder | 이강태·안승현 |
+| `src/vehicle_state/` | GPS/IMU→`asmc_msgs/VehicleState` | 통합·판제 공동 |
+| `src/integration_launch/` | 현재 bridge 공동 launch, planning 공동 소유 | 정윤태·통합 공동 |
+| `src/asmc_hd_map/` | reviewed HD Map과 runtime | 안승현 |
+
+현재 bridge 구조와 Phase 3 이관 gate는 [MORAI bridge guide](../packages/asmc_bridge/README.md)를
+따른다. 단일 `asmc_bridge`와 환경 profile은 아직 구현되지 않았다.
+
 ### learning (✅ PR #2)
 
 | 경로 | 담당 | GitHub |
 |------|------|--------|
 | `src/learning_by_cheating/` | 안승현 | @ahnsh03 |
 | `scripts/rosbridge.sh`, `config/morai_rosbridge.env` | 종료된 direct ROS 실험 보존 | @ahnsh03 |
-| `scripts/udp_bridge.sh`, `src/morai_*_bridge/` | 이강태·안승현 | @kante2 · @ahnsh03 |
 | `mgeo_toolkit/`, `R_KR_PG_KATRI/` | 안승현 | @ahnsh03 |
-| `src/asmc_hd_map/` | reviewed HD맵, compact Lane/vector/grid runtime, 개발 source 비교 | @ahnsh03 (장원태 관측 자료 협의) |
 
 ### perception · scenario (✅ PR #3)
 
