@@ -80,8 +80,12 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 │   ├── asmc_hd_map/           # HD Map builder/runtime/검수
 │   ├── learning_by_cheating/  # learning ✅
 │   ├── data_collection/        # Capture GT · mask · dataset ✅
+│   ├── perception/camera_semantic_perception/ # camera ROS live inference ✅
+│   ├── perception/drivable_bev/          # metric BEV · lane observation ✅
 │   ├── perception/twinlite_morai/        # camera 2-head binary/4-class 학습·평가 ✅
 │   ├── perception/morai_3d_detection/  # perception ✅
+│   ├── traffic_light/          # camera traffic-light inference ✅
+│   ├── lidar+sensorfusion/     # 독립 nested LiDAR/fusion workspace
 │   ├── morai_udp_bridge/      # UDP↔ROS (Ego/Ctrl) ✅
 │   ├── morai_sensor_bridge/   # UDP↔ROS (sensors) ✅
 │   ├── vehicle_state/         # GPS/IMU→공용 VehicleState ✅

@@ -1,7 +1,8 @@
 # 카메라·MGeo·LiDAR 인지 융합 개발 로드맵
 
-> **문서 역할:** Current Working Proposal — 인지 융합 방향과 단계별 결정 gate
+> **문서 역할:** Working Proposal + Chronological Record — 인지 융합 방향과 단계별 결정 gate
 > **문서 허브:** [README.md](../../README.md)
+> **현재 코드 진입점:** [Perception 개발·통합 가이드](./README.md)
 > **상태:** Working Proposal v0.19 — 음영 camera v3 인수 완료, current Node/Link HD맵 관측 보정 후보 생성<br>
 > **기준일:** 2026-09-16<br>
 > **주요 참여:** 안승현(카메라 인지), 장원태(MGeo map prior 제안), 손재호(LiDAR 인지), planning/control 팀<br>
@@ -11,6 +12,11 @@
 센서셋에 맞춰 정본화하되, 토픽 이름, BEV raster 범위·해상도, 메시지 필드와 담당 경계는
 아직 최종 계약이 아니다. 카메라 BEV 투영과 map bake pilot 결과를 확인한 뒤
 `src/interfaces/`에서 별도 합의하고 변경 이력을 남긴다.
+
+> **시점 주의:** 이 문서에는 2026-09-16 전후의 구현 과정과 당시 후보 상태가 시간순으로
+> 보존돼 있다. 현재 package, 실행법과 완성된 HD Map 상태는 위 package-group guide와 각
+> package README·동결 contract가 우선한다. 과거 분석은 삭제하거나 최신 상태로 재작성하지
+> 않았다.
 
 ### 제안·구현 출처와 현재 통합 기준
 

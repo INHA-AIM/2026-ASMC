@@ -27,7 +27,7 @@
 3. `contracts/` — 완료
 4. `packages/asmc_hd_map/`와 `packages/asmc_msgs/` — 완료
 5. `packages/asmc_bridge/` — 완료
-6. `packages/asmc_perception/`
+6. `packages/asmc_perception/` — 완료. 상세 분석·실험 본문은 축약하지 않고 진입점과 권위만 통합
 7. `packages/planning-control/`와 `handoffs/`
 8. `records/`와 `archive/`
 

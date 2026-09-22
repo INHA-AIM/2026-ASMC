@@ -1,6 +1,7 @@
 # TwinLiteNet+ MORAI training adapter
 
 > **역할:** Active Module — MORAI manifest, TwinLiteNet+ loader, 2-head loss와 학습/eval 연결
+> **통합 경계:** [Perception 개발·통합 가이드](../../../docs/packages/asmc_perception/README.md)
 > **현재 live 후보:** Medium, lane+drivable, v5 actor-negative(B) 18 epoch EMA
 > **다음 학습 후보:** Medium, drivable+4-class road-marking, v6
 > **데이터 정본:** [perception-dataset-labeling-split.md](../../../docs/contracts/perception/dataset-labeling-split.md)

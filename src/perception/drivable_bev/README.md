@@ -3,6 +3,10 @@
 > 상태: 3-camera fused metric BEV + metric lane-vector pilot + GPS 음영구간
 > boundary selector. 12-run provisional gate와 typed provisional handoff 구현을 완료했으며,
 > 전 구간 topology/판제 정본 계약은 아직 합의 전이다.
+>
+> 문서 안내: 현재 package 경계는 [Perception 개발·통합 가이드](../../../docs/packages/asmc_perception/README.md),
+> 판제 소비 규칙은 [shadow camera handoff](../../../docs/handoffs/perception/shadow-camera.md)가
+> 우선한다. 아래 날짜별 audit와 후보 변화는 근거 보존용 기록이며 축약하지 않았다.
 
 TwinLiteNet+의 원본 영상 크기 drivable probability와 4-class road-marking 결과를
 카메라별로 `base_link` 지면 격자에 투영한 뒤 하나의 BEV로 융합한다. MGeo, GPS, LiDAR

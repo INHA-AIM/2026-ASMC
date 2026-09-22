@@ -1,7 +1,8 @@
 # 인지 GT·BEV·차로 구조화 계획
 
 > **문서 역할:** Detailed Design Note — GT 정책 근거와 BEV/lane 후보 상세
-> **우선순위 정본:** [perception-map-fusion-roadmap.md](./roadmap.md)
+> **현재 코드 진입점:** [Perception 개발·통합 가이드](./README.md)
+> **당시 우선순위 제안:** [perception-map-fusion-roadmap.md](./roadmap.md)
 > **문서 허브:** [README.md](../../README.md)
 > 기준일: 2026-09-14
 > 담당: 안승현
@@ -11,6 +12,9 @@
 팀 전체 map-camera-LiDAR 구조, provisional topic과 대회판 이식 일정은
 [카메라·MGeo·LiDAR 인지 융합 개발 로드맵](./roadmap.md)을 따른다.
 이 문서는 GT 정책과 BEV/차로 구조화 세부 근거를 보존한다.
+기준일 당시의 합의·보류·평가 상태를 보존한 설계 기록이므로 현재 package 실행법이나 동결
+topic contract로 해석하지 않는다. 후속 구현으로 상태가 달라져도 원래 비교 근거와 수치는
+삭제하지 않는다.
 
 ## 1. 현재 합의와 보류 항목
 

@@ -1,6 +1,6 @@
 # 팀 문서 정보 구조
 
-> **상태:** D2 Content Consolidation — 다섯 묶음 완료
+> **상태:** D2 Content Consolidation — 여섯 묶음 완료
 >
 > **작성일:** 2026-09-22
 > **진행:** D1 경로 이전을 마쳤고, D2에서 디렉터리 묶음별로 본문을 통합한다.
@@ -23,7 +23,8 @@
 [대회·운영 보고서](./d2-competition-operations-report.md),
 [계약 보고서](./d2-contracts-report.md),
 [HD Map·message 보고서](./d2-hd-map-msgs-report.md),
-[bridge 보고서](./d2-bridge-report.md)처럼 묶음별로 기록한다. 큰 폭으로 줄인 앞선 두 묶음은
+[bridge 보고서](./d2-bridge-report.md),
+[perception 보고서](./d2-perception-report.md)처럼 묶음별로 기록한다. 큰 폭으로 줄인 앞선 두 묶음은
 [본문 축약 보존 감사](./d2-content-parity-audit.md)에서 원문 절과 현재 행선지를 다시 확인했다.
 
 ## 목표 구조
@@ -79,7 +80,8 @@ docs/
 - D2-3: `contracts/` 정리 완료
 - D2-4: `packages/asmc_hd_map/`·`packages/asmc_msgs/` 통합 완료
 - D2-5: `packages/asmc_bridge/` 통합 완료
-- D2-6 이후: [migration-gates.md](./migration-gates.md)의 순서로 진행
+- D2-6: `packages/asmc_perception/` 진입점·권위 통합 완료. 세부 분석 본문은 원문 보존
+- D2-7 이후: [migration-gates.md](./migration-gates.md)의 순서로 진행
 - D3: 내용 parity 확인 뒤 호환 안내와 불필요한 중복 제거
 
 각 D2 묶음은 원문→정본 대응표와 링크 검증 결과를 남긴다. Working Proposal을 근거 없이

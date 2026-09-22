@@ -89,16 +89,23 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `scripts/rosbridge.sh`, `config/morai_rosbridge.env` | 종료된 direct ROS 실험 보존 | @ahnsh03 |
 | `mgeo_toolkit/`, `R_KR_PG_KATRI/` | 안승현 | @ahnsh03 |
 
-### perception · scenario (✅ PR #3)
+### perception · scenario (분산 package 운영 중)
 
 | 경로 | 담당 | GitHub |
 |------|------|--------|
 | `src/perception/morai_3d_detection/` | 손재호 | @sonshiny |
 | `src/perception/twinlite_morai/` | 안승현 | @ahnsh03 |
+| `src/perception/camera_semantic_perception/` | 1/3-camera semantic runtime | @ahnsh03 |
 | `src/perception/drivable_bev/` | 3-camera BEV·음영 lane-family v3; 전역 map 결합 후보 | @ahnsh03 주관 협의 |
+| `src/traffic_light/` | extra camera 신호등 runtime | 장원태·통합 공동 리뷰 |
+| `src/lidar+sensorfusion/` | 독립 nested LiDAR·camera fusion workspace | @sonshiny·통합 공동 리뷰 |
 | `src/data_collection/` | Capture GT·mask·dataset·Real Time raw/result bag | @ahnsh03 |
 | `tools/aim_scenario_runner/` | 장원태 | @wkddnjsxo |
 | `tools/grpc_inha_univ/` | 장원태 | @wkddnjsxo |
+
+현재 package 경계, 본선 입력 규칙과 Phase 4 이관 gate는
+[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. 단일
+`asmc_perception`은 아직 구현되지 않았다.
 
 ### interfaces (⬜ 합의 중)
 

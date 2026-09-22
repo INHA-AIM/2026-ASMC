@@ -1,5 +1,11 @@
 # data_collection — Capture·rosbag·동기화·인지 데이터셋
 
+> **역할:** Active Package Guide — 현재 수집·bag·dataset 재현 절차
+>
+> 인지 전체 경계는 [Perception 개발·통합 가이드](../../docs/packages/asmc_perception/README.md),
+> label·split 정본은 [dataset contract](../../docs/contracts/perception/dataset-labeling-split.md)를
+> 따른다. 이 문서의 상세 명령과 모드 차이는 Phase 4 분리 전까지 그대로 보존한다.
+
 > **역할:** Active Module — Capture GT, raw/result rosbag, 동기화, mask/cache/dataset lineage
 > **담당:** 안승현
 > **데이터 정본:** [인지 데이터 라벨링·분할 계약](../../docs/contracts/perception/dataset-labeling-split.md)

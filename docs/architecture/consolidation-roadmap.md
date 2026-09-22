@@ -359,6 +359,10 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
 
 ### 6.3 `asmc_perception`과 `learning*` 정리
 
+현재 분산 package와 문서·runtime 경계의 상세 인벤토리는
+[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. 이 절은 Phase 4
+목표이며 `asmc_perception` package가 이미 존재하거나 기존 package를 지금 삭제한다는 뜻이 아니다.
+
 - camera semantic, metric BEV/lane family, traffic light, LiDAR runtime, fusion을 하위 Python/C++
   namespace로 이식한다.
 - model weight는 repo 밖 artifact로 유지하고 package에는 manifest/SHA/config만 둔다.

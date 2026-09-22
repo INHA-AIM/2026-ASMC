@@ -1,6 +1,10 @@
 # Camera semantic perception
 
 > 상태: Stage C1·C2 완료, Stage C3 구조화 diagnostics 구현
+>
+> 현재 인지 package 경계와 본선 입력 규칙은
+> [Perception 개발·통합 가이드](../../../docs/packages/asmc_perception/README.md)를 함께 본다.
+> 이 문서의 날짜별 실측은 해당 실행 시점의 기록이며 영구 성능 계약이 아니다.
 
 MORAI의 전방 또는 전·좌·우 JPEG 카메라를 latest-only 방식으로 받아 TwinLiteNet+ 2-head
 추론 결과를 표준 ROS 토픽으로 발행한다. Binary lane checkpoint와 4-class road-marking

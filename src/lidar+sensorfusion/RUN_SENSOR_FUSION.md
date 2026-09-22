@@ -1,5 +1,11 @@
 # LiDAR + camera sensor fusion
 
+> **역할:** Active Standalone Guide — 독립 nested catkin workspace의 build·runtime·검증
+>
+> Phase 4 통합 경계와 중복 package 제거 gate는
+> [Perception 개발·통합 가이드](../../docs/packages/asmc_perception/README.md)를 따른다. 이
+> workspace는 outer catkin package처럼 취급하거나 parity 확인 전에 이동하지 않는다.
+
 This directory is a self-contained ROS1 Noetic catkin workspace nested under
 the `2026-ASMC` repository. `CATKIN_IGNORE` keeps the outer workspace from
 recursively building the copied packages; build this directory separately.
