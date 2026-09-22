@@ -5,7 +5,7 @@
 > **상태:** Working Proposal v0.19 — 음영 camera v3 인수 완료, current Node/Link HD맵 관측 보정 후보 생성<br>
 > **기준일:** 2026-09-16<br>
 > **주요 참여:** 안승현(카메라 인지), 장원태(MGeo map prior 제안), 손재호(LiDAR 인지), planning/control 팀<br>
-> **상세 문서:** [인지 GT·BEV·차로 구조화 계획](./bev-lane-interface-plan.md) · [UDP↔ROS 네트워크](../../operations/network-udp-ros.md) · [v4 학습 평가](../../records/perception/twinlitenet-v4-evaluation.md)
+> **상세 문서:** [인지 GT·BEV·차로 구조화 계획](./bev-lane-interface-plan.md) · [운영 가이드](../../operations/README.md) · [v4 학습 평가](../../records/perception/twinlitenet-v4-evaluation.md)
 
 이 문서는 팀 전체의 개발 방향을 맞추기 위한 제안서다. 차량·센서 기준 좌표는 규정과
 센서셋에 맞춰 정본화하되, 토픽 이름, BEV raster 범위·해상도, 메시지 필드와 담당 경계는

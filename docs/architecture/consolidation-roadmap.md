@@ -444,7 +444,7 @@ P1-A 범위가 아니므로 현재 bridge·sensor/network config에는 아직 �
 9. VLP16을 30초 이상 측정해 `/velodyne_points` 평균 14~16 Hz, packet loss와 손재호 tracking
    결과를 확인하고 10 Hz baseline과 비교
 
-결과가 통과하면 `network-udp-ros.md`의 competition 절과 UDP 치트시트를 현장 profile로
+결과가 통과하면 `operations/README.md`의 competition 절과 UDP 치트시트를 현장 profile로
 갱신한다. 개발 profile의 localhost 값은 별도 절에 보존한다.
 
 ## 8. 삭제·완료 게이트

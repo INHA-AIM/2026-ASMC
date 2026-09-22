@@ -1,7 +1,7 @@
 # integration (논리 그룹)
 
 > **역할:** Active Index — MORAI UDP bridge와 내부 ROS 런타임 진입점
-> **네트워크 정본:** [network-udp-ros.md](../../docs/operations/network-udp-ros.md)
+> **운영 정본:** [개발·시뮬레이터 운영 가이드](../../docs/operations/README.md)
 > **문서 허브:** [docs/README.md](../../docs/README.md)
 
 실제 스크립트는 repo 루트 `scripts/`에 있고 이 폴더에는 README만 있다. 기본 경로는

@@ -7,7 +7,8 @@
 문서는 독자와 역할에 따라 `onboarding/`, `contracts/`, `packages/`, `operations/`,
 `records/`, `archive/` 등으로 나눈다. 주요 이전 경로에는 한 릴리스 동안 새 정본으로 연결하는
 호환 안내만 남긴다. 이동 결과는 [D1 경로 이전 보고서](./structure/d1-path-migration-report.md),
-첫 본문 통합은 [D2 온보딩·협업 보고서](./structure/d2-onboarding-governance-report.md)를 참고한다.
+본문 통합은 [D2 온보딩·협업 보고서](./structure/d2-onboarding-governance-report.md)와
+[D2 대회·운영 보고서](./structure/d2-competition-operations-report.md)를 참고한다.
 이 페이지에서 정본, 작업 중 설계안, 사용 가이드와 과거 기록을 구분한다. 내용이
 충돌하면 아래의 `정본 우선순위`를 적용하고, 기록 문서를 현재 설정으로 해석하지 않는다.
 
@@ -18,7 +19,7 @@
 1. [개발 시작](./onboarding/README.md) — clone, Docker, 환경과 첫 빌드
 2. [팀 ownership](./onboarding/ownership.md) — 담당 경로와 검증 책임
 3. [협업 규칙](./governance/README.md) — 브랜치, PR과 리뷰 기준
-4. [대회 환경·규정](./competition/environment.md) — 허용 입력과 당일 제약
+4. [대회 환경·규정](./competition/README.md) — 허용 입력과 당일 제약
 5. [팀 아키텍처](./architecture/system-overview.md) — 현재 시스템 경계
 
 현재 인지 개발자는 [카메라·MGeo·LiDAR 융합 로드맵](./packages/asmc_perception/roadmap.md),
@@ -29,8 +30,8 @@ planning/control 개발자는 [Planning/Control UDP 규약](./operations/plannin
 
 | 주제 | 현재 정본 | 충돌 시 처리 |
 |---|---|---|
-| 대회 규정 | 주최 측 최신 규정집·공식 공지 → [competition-environment.md](./competition/environment.md) | 공식 원문이 항상 우선. 요약 문서를 함께 갱신 |
-| 시뮬 통신·포트 | [network-udp-ros.md](./operations/network-udp-ros.md) | Docker/getting-started의 중복 설명보다 우선 |
+| 대회 규정·공개 자산 | 주최 측 최신 원문 → [대회 요약](./competition/README.md) | 공식 원문이 항상 우선. 요약 문서를 함께 갱신 |
+| Docker·시뮬 통신·포트 | [운영 가이드](./operations/README.md) | 현재 적용값과 3단계 목표를 혼용하지 않음 |
 | Git·ownership | [협업 규칙](./governance/README.md)과 [ownership](./onboarding/ownership.md) | 과거 Phase 0/Path A 문서보다 우선 |
 | Planning/Control 실행 | [planning-control-udp.md](./operations/planning-control.md) | planning-behavior-handoff의 ROS 경로는 레거시 |
 | 카메라 데이터·라벨·split | [perception-dataset-labeling-split.md](./contracts/perception/dataset-labeling-split.md) | 개별 학습 기록보다 우선 |
@@ -48,7 +49,6 @@ planning/control 개발자는 [Planning/Control UDP 규약](./operations/plannin
 | 문서 | 역할 | 상태 |
 |---|---|---|
 | [개발 시작과 환경](./onboarding/README.md) | clone, build, OS·언어·데이터 경로 기준 | Active Guide |
-| [docker-guide.md](./operations/docker.md) | ROS/학습 컨테이너 운영과 트러블슈팅 | Active Guide |
 | [repository-layout.md](./architecture/repository-layout.md) | 코드 위치와 경로별 ownership 요약 | Active Reference |
 | [팀 ownership](./onboarding/ownership.md) | 담당 경로와 검증 책임 | Active Reference |
 
@@ -71,16 +71,16 @@ planning/control 개발자는 [Planning/Control UDP 규약](./operations/plannin
 
 | 문서 | 역할 | 상태 |
 |---|---|---|
-| [competition-environment.md](./competition/environment.md) | 규정 v1.1, 센서와 미션 요약 | Canonical Summary |
-| [competition-data.md](./competition/assets.md) | 배포 map/path/scenario/checkpoint 자산 | Active Reference |
-| [network-udp-ros.md](./operations/network-udp-ros.md) | UDP bridge, 포트, Docker 네트워크와 진단 | Canonical |
+| [대회 환경·규정·공개 자산](./competition/README.md) | 규정 v1.1, 센서, 미션과 배포 자산 | Canonical Summary |
+| [개발·시뮬레이터 운영](./operations/README.md) | Docker, 현재 UDP profile, 진단과 시뮬 gate | Canonical |
+| [rosbag 기록·평가](./operations/rosbag-evaluation.md) | raw/result 기록, replay와 lineage | Active Guide |
 | [morai-msgs-beta-policy.md](./contracts/simulator/morai-msgs-beta-policy.md) | `beta_drive` submodule과 필드 정렬 규칙 | Canonical until port |
 | [morai-msgs-versions.md](./records/simulator/morai-msgs-versions.md) | 26.R1과 대회 msg 차이 조사 기록 | Version Reference |
-| [sim-verification-checklist.md](./operations/sim-verification-checklist.md) | 파트별 시뮬 통합 검증 | Active Checklist, 일부 레거시 항목 표기 |
+| [2026-09 transport 검증](./records/simulator/runtime-transport-2026-09.md) | host network, rate/latency와 종료된 GT 실험 | Experiment Record |
 
 MORAI 화면에 입력할 값만 필요하면
 [UDP 치트시트](../config/morai_udp_sim_cheat_sheet.md)를 사용한다. 상세 설명과 장애 대응은
-치트시트가 아니라 `network-udp-ros.md`에서 관리한다.
+치트시트가 아니라 운영 가이드에서 관리한다.
 
 ### 3.4 Planning/Control
 
@@ -100,7 +100,7 @@ Behavior Planner가 다시 연결되기 전에는 handoff 문서의 토픽과 la
 | [perception-map-fusion-roadmap.md](./packages/asmc_perception/roadmap.md) | camera/MGeo/LiDAR 전체 전략, live와 대회판 이식 | Current Working Proposal |
 | [shadow-camera-perception-handoff.md](./handoffs/perception/shadow-camera.md) | 음영구간 v3 lane-family·drivable 판제 소비 계약과 성능 동결 | Active Handoff Guide |
 | [camera-object-detection-handoff.md](./handoffs/perception/camera-object-detection.md) | 손재호용 YOLO 즉시 사용·경량 후보·NAS fine-tune 인수 가이드 | Active Guide |
-| [rosbag-evaluation-streaming-gt.md](./operations/rosbag-evaluation.md) | Real Time UDP raw/result bag 정본과 종료된 GT transport 실험 기록 | Active Guide + Archived Experiment |
+| [rosbag 기록·재생·평가](./operations/rosbag-evaluation.md) | Real Time UDP raw/result bag과 lineage | Active Guide |
 | [perception-dataset-labeling-split.md](./contracts/perception/dataset-labeling-split.md) | Capture 원본, mask, ignore, manifest와 split 계약 | Canonical Data Contract |
 | [perception-bev-lane-interface-plan.md](./packages/asmc_perception/bev-lane-interface-plan.md) | GT 정책, metric lane 후보, BEV/lane topology 상세 | Detailed Design Note |
 | [perception-v4-training-evaluation.md](./records/perception/twinlitenet-v4-evaluation.md) | TwinLiteNet+ v4 10/18 epoch 결과 | Experiment Record |
@@ -123,11 +123,11 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 
 | 하려는 작업 | 먼저 볼 문서 | 다음 문서 |
 |---|---|---|
-| 처음 실행 | [getting-started](./onboarding/README.md) | [docker-guide](./operations/docker.md), [network-udp-ros](./operations/network-udp-ros.md) |
-| UDP 센서가 안 들어옴 | [network-udp-ros](./operations/network-udp-ros.md) | [UDP 치트시트](../config/morai_udp_sim_cheat_sheet.md), [sim checklist](./operations/sim-verification-checklist.md) |
+| 처음 실행 | [개발 시작](./onboarding/README.md) | [운영 가이드](./operations/README.md) |
+| UDP 센서가 안 들어옴 | [운영 가이드](./operations/README.md) | [UDP 치트시트](../config/morai_udp_sim_cheat_sheet.md) |
 | Git 작업·PR | [협업 규칙](./governance/README.md) | [ownership](./onboarding/ownership.md), [CONTRIBUTING](../CONTRIBUTING.md) |
-| 본선 허용 여부 판단 | [competition-environment](./competition/environment.md) | [network-udp-ros](./operations/network-udp-ros.md), [competition-data](./competition/assets.md) |
-| MPC/Frenet 실행 | [planning-control-udp](./operations/planning-control.md) | [sim checklist](./operations/sim-verification-checklist.md) |
+| 본선 허용 여부 판단 | [대회 환경](./competition/README.md) | [운영 가이드](./operations/README.md) |
+| MPC/Frenet 실행 | [Planning/Control](./operations/planning-control.md) | [운영 gate](./operations/README.md#7-변경-범위별-시뮬-검증) |
 | Capture/마스크/학습 데이터 | [dataset contract](./contracts/perception/dataset-labeling-split.md) | [data_collection README](../src/data_collection/README.md) |
 | raw bag 녹화·재생·모델 A/B | [rosbag 재현 평가 guide](./operations/rosbag-evaluation.md) | [data_collection README](../src/data_collection/README.md) |
 | 카메라 live 추론 | [fusion roadmap §5~7](./packages/asmc_perception/roadmap.md#5-코드-경계-제안) | [v4 evaluation](./records/perception/twinlitenet-v4-evaluation.md) |
@@ -140,7 +140,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | compact Lane·주행가능영역을 실행/소비 | [P2-B compact map](./records/baselines/kcity2025-compact-drivable-v1.md) | [runtime/visualization contract](./contracts/hd-map/runtime-v1.md), [HD Map README](../src/asmc_hd_map/README.md) |
 | 체크포인트·미션 경계를 확인 | [P1-C competition metadata](./contracts/competition/kcity2025-metadata-v1.md) | [생성 bundle](../src/asmc_hd_map/config/kcity2025_competition_metadata.yaml) |
 | HD Map 토픽·RViz를 실행 | [2단계 runtime/visualization](./contracts/hd-map/runtime-v1.md) | [P1-B topic contract](./contracts/hd-map/topic-v1.md) |
-| 대회판 이식 | [fusion roadmap §9](./packages/asmc_perception/roadmap.md#9-26r1h3-개발판과-대회판-이식-전략) | [msg versions](./records/simulator/morai-msgs-versions.md), [network](./operations/network-udp-ros.md) |
+| 대회판 이식 | [fusion roadmap §9](./packages/asmc_perception/roadmap.md#9-26r1h3-개발판과-대회판-이식-전략) | [msg versions](./records/simulator/morai-msgs-versions.md), [운영 가이드](./operations/README.md) |
 
 ## 5. 모듈 README 진입점
 

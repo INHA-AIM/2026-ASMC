@@ -65,7 +65,7 @@
 ## 5. Wave 1 요약 (유지)
 
 planning-v2 · LBC · scenario · Det3D v1 — 이전 문서 §5–§9 내용 유효.
-UDP 권장: [network-udp-ros.md](../../operations/network-udp-ros.md)
+현재 UDP 기준: [운영 가이드](../../operations/README.md)
 인지 eval: [perception-agentic-loop.md](../perception/agentic-loop.md)
 
 > 이 절은 ROS 기반 이전 구현 기록이다. 현재 정본은

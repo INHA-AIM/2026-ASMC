@@ -23,7 +23,7 @@
 한 PR에 아래 한 묶음만 다룬다.
 
 1. `onboarding/`와 `governance/` — 완료
-2. `competition/`와 `operations/`
+2. `competition/`와 `operations/` — 완료
 3. `contracts/`
 4. `packages/asmc_hd_map/`와 `packages/asmc_msgs/`
 5. `packages/asmc_bridge/`

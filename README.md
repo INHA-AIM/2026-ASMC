@@ -19,7 +19,7 @@
 | [협업 규칙](docs/governance/README.md) | 브랜치, PR, 리뷰와 main 안정성 |
 | [시스템 개요](docs/architecture/system-overview.md) | 현재 아키텍처와 모듈 경계 |
 | [통합 로드맵](docs/architecture/consolidation-roadmap.md) | 패키지 통합부터 현장 배포까지의 순서 |
-| [네트워크](docs/operations/network-udp-ros.md) | MORAI UDP, Docker network와 진단 |
+| [운영 가이드](docs/operations/README.md) | Docker, MORAI UDP, 시뮬 검증과 현장 전환 기준 |
 | [기여 요약](CONTRIBUTING.md) | PR 전 최소 확인 사항 |
 
 ## 빠른 시작
@@ -33,7 +33,7 @@ Windows 팀원은 최초 한 번 Docker Desktop **4.34 이상**에서 다음 설
 
 `Network` 또는 `Enable host networking`이 보이지 않으면 Docker Desktop을 업데이트하고
 Windows containers 모드가 아닌지 확인합니다. 상세 확인법은
-[UDP↔ROS 네트워크 가이드](docs/operations/network-udp-ros.md#31-docker-desktop-최초-설정팀원별-1회)를
+[개발·시뮬레이터 운영 가이드](docs/operations/README.md)를
 따릅니다. MORAI의 기존 `127.0.0.1`과 센서 포트는 변경하지 않습니다.
 
 ```bash

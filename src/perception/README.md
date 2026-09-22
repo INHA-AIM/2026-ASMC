@@ -37,7 +37,7 @@
 | [BEV/lane 설계 노트](../../docs/packages/asmc_perception/bev-lane-interface-plan.md) | 정책 선택 근거와 상세 후보 |
 | [v4 학습 평가](../../docs/records/perception/twinlitenet-v4-evaluation.md) | 현재 18 epoch 후보 성능 |
 | [rosbag 재현 평가](../../docs/operations/rosbag-evaluation.md) | Real Time UDP raw/result bag과 종료된 privileged GT 실험 경계 |
-| [시뮬 체크리스트](../../docs/operations/sim-verification-checklist.md) | live 및 full-stack 검증 항목 |
+| [시뮬 체크리스트](../../docs/operations/README.md) | live 및 full-stack 검증 항목 |
 
 ## 실행 환경과 데이터
 

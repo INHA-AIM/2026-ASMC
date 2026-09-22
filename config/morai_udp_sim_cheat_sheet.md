@@ -2,7 +2,7 @@
 
 > **개발 SIM: 26.R1.h3** (대회 배포 SIM 아님)  
 > Docker Desktop + `./scripts/docker_ros_up.sh` + `./scripts/udp_bridge.sh --simulator 26r1` 기준.
-> 상세: [docs/operations/network-udp-ros.md](../docs/operations/network-udp-ros.md)
+> 상세: [개발·시뮬레이터 운영 가이드](../docs/operations/README.md)
 > 센서셋: [`ASMC_sensor_set_v2.json`](./ASMC_sensor_set_v2.json) (현재 주행용 Camera×4/LiDAR/GPS/IMU)<br>
 > GT용: [`ASMC_sensor_set_GT.json`](./ASMC_sensor_set_GT.json) (v2 + Semantic Camera×3 + Instance LiDAR)
 
@@ -23,7 +23,7 @@ Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127
 **LiDAR만 0이고 cam/gps/imu는 될 때:** `docker_ros_up.sh status`의 host mode, MORAI
 Connect/Dest 9299와 다른 9299 listener를 순서대로 확인한다. 개별 Docker port forwarding은
 사용하지 않는다. **9299를 다른 포트로 옮기지 말 것.** 상세:
-[docs/operations/network-udp-ros.md §6.1](../docs/operations/network-udp-ros.md#61-host-network-검사와-lidar-장애-대응)
+[운영 가이드 §6](../docs/operations/README.md#6-문제-해결)
 
 ---
 

@@ -10,7 +10,7 @@ catkin이 아닌 **Python·gRPC·시나리오** 도구.
 
 설정: `aim_scenario_runner/config/runtime.yaml` (gRPC host)  
 담당과 리뷰 경계: [팀 ownership](../docs/onboarding/ownership.md)
-검증: [docs/operations/sim-verification-checklist.md](../docs/operations/sim-verification-checklist.md) §4
+검증: [운영 가이드 §7](../docs/operations/README.md#7-변경-범위별-시뮬-검증)
 
 ```bash
 ./tools/aim_scenario_runner/run.sh

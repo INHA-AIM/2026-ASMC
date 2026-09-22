@@ -113,7 +113,7 @@ docker exec -it asmc-ros-noetic bash -lc 'cd /root/ws && ./scripts/build_plannin
 - bridge: packet fixture, topic type/rate, 기존 profile 회귀
 - 공용 message: MD5/serialization과 모든 consumer build
 
-통합 검증은 [시뮬 체크리스트](../operations/sim-verification-checklist.md)를 따른다.
+통합 검증은 [시뮬 체크리스트](../operations/README.md)를 따른다.
 
 ## 6. main 장애와 긴급 수정
 

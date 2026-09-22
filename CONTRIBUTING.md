@@ -43,5 +43,5 @@ gh pr create --fill
 - [ ] 데이터, 비밀값, 절대경로와 불필요한 생성물이 없다.
 - [ ] submodule pointer 변경 의도와 대상 commit을 확인했다.
 
-통합 검증은 [시뮬 검증 체크리스트](docs/operations/sim-verification-checklist.md), MORAI message
+통합 검증은 [시뮬 검증 체크리스트](./docs/operations/README.md), MORAI message
 변경은 [beta_drive 정책](docs/contracts/simulator/morai-msgs-beta-policy.md)을 따른다.

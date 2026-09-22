@@ -36,7 +36,10 @@ MORAI GPS/IMU ─UDP─> frenet_planner_node
 | Planner → MPC | `127.0.0.1:9300` |
 | MPC → MORAI CtrlCmd | `127.0.0.1:9111` (Docker Desktop host mode) |
 
-대회 SIM에서는 현장 제공 포트를 다시 확인한다. 포트·IP는 알고리즘 소스가 아니라 각 모듈의 `src/udp_network/network.yaml`에서 관리한다.
+위 값은 아직 적용 중인 개발 기준이다. Phase 3에서는 개발·현장 포트를 `9093/9094`로
+통일하고 IP만 profile로 분리한다. 전환 전에는 임의로 바꾸지 않는다. 현재값과 목표값은
+[운영 가이드 §1](./README.md#1-현재값과-승인된-후속-목표)을 따른다. 포트·IP는 알고리즘
+소스가 아니라 각 모듈의 `src/udp_network/network.yaml`에서 관리한다.
 
 ## 대회 입력 규약
 
@@ -45,6 +48,15 @@ MORAI GPS/IMU ─UDP─> frenet_planner_node
 - 현재 `object_info.enabled` 기본값은 `true`다.
 - perception 객체 인터페이스가 연결되면 동일 역할을 교체하고 ObjectInfo receiver와 설정을 제거한다.
 - MPC 차량 파라미터는 wheelbase `3.0 m`, steering limit `40°`를 유지한다.
+
+## 최소 시뮬 gate
+
+- global path load와 GPS/IMU localization 유효
+- Planner `:9300` 송신과 MPC 수신
+- 임시 ObjectInfo를 켠 경우 `:7505` 수신과 장애물 반응
+- Ctrl 목적지·mode 확인 후 실제 차량 이동
+- 급커브·저속 구간에서 경로 이탈과 조향 진동 없음
+- Ctrl-C 뒤 두 process와 UDP socket 종료
 
 ## 제거된 ROS 경로
 

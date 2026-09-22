@@ -37,4 +37,4 @@
 
 정책: [협업 규칙](../docs/governance/README.md) ·
 [팀 ownership](../docs/onboarding/ownership.md) ·
-[시뮬 검증](../docs/operations/sim-verification-checklist.md)
+[시뮬 검증](../docs/operations/README.md)
