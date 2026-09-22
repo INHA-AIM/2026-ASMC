@@ -5,7 +5,7 @@ cd "$(dirname "$(readlink -f "$0")")/.."
 
 if [[ ! -d src/MORAI-ROS_morai_msgs && ! -L src/MORAI-ROS_morai_msgs ]]; then
   echo "[build_ws] ERROR: src/MORAI-ROS_morai_msgs 가 없습니다."
-  echo "  docs/onboarding/getting-started.md §3 참고 (submodule 또는 symlink)"
+  echo "  docs/onboarding/README.md §2 참고 (submodule 초기화)"
   exit 1
 fi
 

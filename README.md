@@ -13,19 +13,14 @@
 
 | 문서 | 내용 |
 |------|------|
-| [docs/README.md](docs/README.md) | **★ 정본·가이드·설계안·기록을 구분한 전체 문서 허브** |
-| [docs/governance/collaboration.md](docs/governance/collaboration.md) | **★ Phase0/1 · WIP · Path A/B (필독)** |
-| [docs/operations/network-udp-ros.md](docs/operations/network-udp-ros.md) | **UDP↔ROS (26.R1.h3 · Docker `127.0.0.1`)** |
-| [docs/operations/planning-control.md](docs/operations/planning-control.md) | **Planning/Control UDP-only 정본** |
-| [docs/archive/perception/agentic-loop.md](docs/archive/perception/agentic-loop.md) | Loc-Aid/bake 에이전틱 eval |
-| [docs/packages/asmc_perception/roadmap.md](docs/packages/asmc_perception/roadmap.md) | **카메라·MGeo·LiDAR 인지 융합 및 대회판 이식 제안** |
-| [docs/onboarding/getting-started.md](docs/onboarding/getting-started.md) | 클론·첫 빌드 |
-| [docs/onboarding/team-dev-guide.md](docs/onboarding/team-dev-guide.md) | 팀원별 경로 |
-| [docs/archive/integration/wave1-wave2-plan.md](docs/archive/integration/wave1-wave2-plan.md) | Wave 1/2 |
-| [docs/operations/sim-verification-checklist.md](docs/operations/sim-verification-checklist.md) | 시뮬 검증 |
-| [docs/architecture/system-overview.md](docs/architecture/system-overview.md) | 아키텍처 |
-| [docs/governance/git-workflow.md](docs/governance/git-workflow.md) | Path A/B 명령 |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | 기여 요약 |
+| [문서 허브](docs/README.md) | 정본·가이드·설계안·기록의 전체 색인 |
+| [개발 시작](docs/onboarding/README.md) | clone, Docker, 빌드와 환경 기준 |
+| [팀 ownership](docs/onboarding/ownership.md) | 담당 경로와 검증 책임 |
+| [협업 규칙](docs/governance/README.md) | 브랜치, PR, 리뷰와 main 안정성 |
+| [시스템 개요](docs/architecture/system-overview.md) | 현재 아키텍처와 모듈 경계 |
+| [통합 로드맵](docs/architecture/consolidation-roadmap.md) | 패키지 통합부터 현장 배포까지의 순서 |
+| [네트워크](docs/operations/network-udp-ros.md) | MORAI UDP, Docker network와 진단 |
+| [기여 요약](CONTRIBUTING.md) | PR 전 최소 확인 사항 |
 
 ## 빠른 시작
 
@@ -68,7 +63,7 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 > 컨테이너 안에 드라이버를 설치하면 안 됩니다. 확인·문제해결 절차는
 > [src/lidar+sensorfusion/RUN_SENSOR_FUSION.md](src/lidar+sensorfusion/RUN_SENSOR_FUSION.md#camera-inference-gpu-cuda)를 보십시오.
 
-상세: [docs/onboarding/getting-started.md](docs/onboarding/getting-started.md)
+상세: [docs/onboarding/README.md](docs/onboarding/README.md)
 
 ## 저장소 구조 (요약)
 
@@ -99,15 +94,14 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 └── config/morai_rosbridge.env # 위 실험의 레거시 설정
 ```
 
-팀원별 **어느 폴더를 고칠지:** [docs/onboarding/team-dev-guide.md](docs/onboarding/team-dev-guide.md)
+팀원별 **어느 폴더를 고칠지:** [docs/onboarding/ownership.md](docs/onboarding/ownership.md)
 
-## Git (Phase 0/1 · Trunk)
+## Git과 PR
 
-- **Phase 0:** 기능은 개인 레포 OK. ASMC `main` = 빌드되는 문서/인프라/안승현 인지만. **WIP는 Draft PR** ([collaboration §2.5](docs/governance/collaboration.md))
-- **Phase 1:** 소유 모듈 → `main` 자주 푸시; interfaces/UDP/docker/교차 → Path B
-- 상세: [collaboration.md](docs/governance/collaboration.md) · [network-udp-ros.md](docs/operations/network-udp-ros.md)
+- 최신 `main`에서 짧은 브랜치를 만든다.
+- 모든 변경은 PR과 CODEOWNERS 리뷰를 거쳐 merge한다.
+- WIP 공유는 Draft PR을 사용한다.
+- 과거 Phase 0 개인 레포와 `main` 직푸시 정책은 현재 규칙이 아니다.
 
-## 레거시 · Phase 0 분산 코드
-
-Phase 0에는 **개인/분산 레포**에서 기능을 완성한다 (`external/team/`).  
-Wave 2(8/7~)에 ASMC로 이식. 매핑: [docs/archive/integration/wave1-wave2-plan.md](docs/archive/integration/wave1-wave2-plan.md) · [team-status](../docs/competition/team-status.md)
+상세 명령은 [협업 규칙](docs/governance/README.md), 과거 이식 기록은
+[Wave 1/2 archive](docs/archive/integration/wave1-wave2-plan.md)를 참고한다.

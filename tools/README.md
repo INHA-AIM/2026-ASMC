@@ -9,7 +9,7 @@ catkin이 아닌 **Python·gRPC·시나리오** 도구.
 | `audit/` | 통합 회귀·계약 기준 | `build_runtime_baseline.py --write\|--check`, `validate_p1b_contract.py` |
 
 설정: `aim_scenario_runner/config/runtime.yaml` (gRPC host)  
-가이드: [docs/onboarding/team-dev-guide.md](../docs/onboarding/team-dev-guide.md) §5
+담당과 리뷰 경계: [팀 ownership](../docs/onboarding/ownership.md)
 검증: [docs/operations/sim-verification-checklist.md](../docs/operations/sim-verification-checklist.md) §4
 
 ```bash

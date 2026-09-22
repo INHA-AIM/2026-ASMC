@@ -10,7 +10,7 @@
 완료 조건은 사용자가 [목표 구조](./README.md)와
 [파일별 이동표](./current-inventory.md)를 확인하는 것이다.
 
-## D1 — 경로만 이전 (완료, 병합 검토 대기)
+## D1 — 경로만 이전 (완료)
 
 - 별도 PR과 단일 목적 브랜치에서 `git mv`만 사용한다.
 - 각 문서의 본문 의미는 변경하지 않는다.
@@ -20,9 +20,9 @@
 
 ## D2 — 디렉터리별 내용 통합
 
-한 PR에 한 디렉터리만 다룬다.
+한 PR에 아래 한 묶음만 다룬다.
 
-1. `onboarding/`와 `governance/`
+1. `onboarding/`와 `governance/` — 완료
 2. `competition/`와 `operations/`
 3. `contracts/`
 4. `packages/asmc_hd_map/`와 `packages/asmc_msgs/`

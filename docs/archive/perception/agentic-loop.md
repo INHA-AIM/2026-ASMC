@@ -126,4 +126,4 @@ src/perception/drivable_bev/   # 구현 예정 (bake · crop · IPM)
 ## 7. 관련
 
 - [architecture 로컬](../../../../docs/competition/architecture.md) · [team-status](../../../../docs/competition/team-status.md)
-- [network-udp-ros.md](../../operations/network-udp-ros.md) · [collaboration.md](../../governance/collaboration.md)
+- [network-udp-ros.md](../../operations/network-udp-ros.md) · [collaboration.md](../../governance/README.md)

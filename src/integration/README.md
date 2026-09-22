@@ -17,7 +17,7 @@ MORAI UDP → bridge → 팀 PC 내부 ROS다.
 | `tools/grpc_inha_univ/` | gRPC 제어 브릿지 | 장원태 | ✅ |
 | UDP `Ctrl_cmd` | standalone planning/control | 정윤태·양서준 | 현재 경로는 planning 규약 참고 |
 
-상세: [docs/onboarding/team-dev-guide.md](../../docs/onboarding/team-dev-guide.md)
+상세: [docs/onboarding/ownership.md](../../docs/onboarding/ownership.md)
 
 ```bash
 # 기본 개발·대회 경로

@@ -1,9 +1,9 @@
-# 팀 문서 정보 구조 검토안
+# 팀 문서 정보 구조
 
-> **상태:** D1 Path Migration Complete — 본문 통합 전
+> **상태:** D2 Content Consolidation — 첫 묶음 완료
 >
 > **작성일:** 2026-09-22
-> **중요:** D1에서 기존 문서를 승인된 경로로 이동하고 링크만 교정했다. 본문 통합·축약·삭제는 하지 않았다.
+> **진행:** D1 경로 이전을 마쳤고, D2에서 디렉터리 묶음별로 본문을 통합한다.
 
 ## 목적
 
@@ -19,6 +19,8 @@
 현재 파일별 분류와 제안 경로는 [current-inventory.md](./current-inventory.md), 실제 이동 시
 검증 절차는 [migration-gates.md](./migration-gates.md)를 따른다.
 이동 결과와 호환 stub 목록은 [d1-path-migration-report.md](./d1-path-migration-report.md)에 기록한다.
+본문 통합 결과는 묶음별 보고서에 기록하며 첫 결과는
+[d2-onboarding-governance-report.md](./d2-onboarding-governance-report.md)다.
 
 ## 목표 구조
 
@@ -65,13 +67,12 @@ docs/
 - 대용량 원문 PDF, 개인 연구 자료와 작업 중 초안은 팀 저장소가 아니라 워크스페이스 상위
   `docs/`에서 관리하고 팀 문서에는 필요한 결론과 출처만 남긴다.
 
-## 이번 단계에서 하지 않는 일
+## 진행 현황
 
-- 기존 경로 이동 또는 이름 변경
-- 여러 문서의 본문 병합
-- 과거 기록 삭제
-- Working Proposal을 Canonical로 승격
-- 팀 저장소 문서와 개인 워크스페이스 자료의 자동 동기화
+- D1: 경로 이전과 호환 안내 완료
+- D2-1: `onboarding/`·`governance/` 통합 완료
+- D2-2 이후: [migration-gates.md](./migration-gates.md)의 순서로 진행
+- D3: 내용 parity 확인 뒤 호환 안내와 불필요한 중복 제거
 
-이 경계를 지켜야 다음 단계의 diff가 “경로 변경”과 “내용 변경”으로 분리되어 리뷰 중 내용
-유실을 찾을 수 있다.
+각 D2 묶음은 원문→정본 대응표와 링크 검증 결과를 남긴다. Working Proposal을 근거 없이
+Canonical로 바꾸거나 날짜가 있는 기록을 최신 설정처럼 덮어쓰지 않는다.

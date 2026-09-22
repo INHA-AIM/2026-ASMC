@@ -163,9 +163,9 @@ ip route | grep default | awk '{print $3}'   # WSL → Windows
 
 ## 8. 관련 문서
 
-- [team-dev-guide.md](../onboarding/team-dev-guide.md) — **팀원별 개발 경로·주의사항**
+- [팀 ownership](../onboarding/ownership.md) — **팀원별 개발 경로·주의사항**
 - [integration-plan.md](../archive/integration/wave1-wave2-plan.md) — 통합 단계
 - [morai-msgs-beta-policy.md](../contracts/simulator/morai-msgs-beta-policy.md) — msg 정본
-- [getting-started.md](../onboarding/getting-started.md) — clone·Docker
+- [개발 시작](../onboarding/README.md) — clone·Docker
 - [docker-guide.md](./docker.md) — 컨테이너 사용
 - [planning-behavior-handoff.md](../handoffs/planning/behavior-legacy.md) — planning 토픽 계약

@@ -6,7 +6,7 @@
 > **문서 허브:** [README.md](../../README.md)
 > **통합 리드:** 안승현
 > **최종 수정:** 2026-07-25
-> 현황: [로컬 team-status](../../../../docs/competition/team-status.md) · Git: [collaboration.md](../../governance/collaboration.md)
+> 현황: [로컬 team-status](../../../../docs/competition/team-status.md) · Git: [collaboration.md](../../governance/README.md)
 
 ## 1. 전략 (Phase 0 / 1)
 

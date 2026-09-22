@@ -1,4 +1,4 @@
 # 문서 이동 안내
 
-이 문서는 [onboarding/getting-started.md](./onboarding/getting-started.md)로 이동했습니다.
+이 문서는 [개발 시작과 환경](./onboarding/README.md)으로 통합됐습니다.
 이 파일은 기존 외부 링크를 위한 한 릴리스 호환 안내이며 정본이 아닙니다.

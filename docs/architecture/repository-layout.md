@@ -3,8 +3,8 @@
 > **문서 역할:** Active Reference — 실제 코드 위치와 ownership 요약
 > **문서 허브:** [README.md](../README.md)
 > **최종 수정:** 2026-09-21
-> 팀원별 상세 경로·검증: [team-dev-guide.md](../onboarding/team-dev-guide.md)
-> Git 규약 (trunk · ownership · Path A/B): [collaboration.md](../governance/collaboration.md)
+> 담당 경로·검증: [팀 ownership](../onboarding/ownership.md)
+> Git·PR 규칙: [협업 규칙](../governance/README.md)
 
 현재 표는 실제 경로를 나타낸다. HD맵은 `asmc_hd_map`으로 통합됐고, 나머지 팀 소유 공용
 코드는 `asmc_msgs`, `asmc_bridge`, `asmc_perception` 경계로 순차 수렴시킨다. 단계별 삭제
@@ -153,4 +153,4 @@ CODEOWNERS 자동 리뷰: [.github/CODEOWNERS](../../.github/CODEOWNERS)
 | Scenario / gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` |
 | Bridge | `scripts/udp_bridge.sh` (현행 UDP) · `scripts/rosbridge.sh` (종료된 direct ROS 실험 재현용) |
 
-상세 파일명: [team-dev-guide.md](../onboarding/team-dev-guide.md)
+담당과 검증 책임: [팀 ownership](../onboarding/ownership.md)

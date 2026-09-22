@@ -1,11 +1,10 @@
-# FSM ↔ Frenet 인터페이스 v2 계약 (D0)
+# FSM ↔ Frenet 인터페이스 v2 계약
 
-> **상태:** 계약 고정 문서. 이 문서는 `BehaviorCommand` / `FrenetFeedback` 기반
-> v2 인터페이스의 유일한 기준(source of truth)이다. D1 이후의 모든 커밋은 이
-> 문서에 정의된 계약을 구현하며, 계약을 바꾸려면 코드보다 이 문서를 먼저 고친다.
+> **상태:** Frozen Interface — `BehaviorCommand` / `FrenetFeedback` 기반 v2 인터페이스의
+> 기준이다. 두 message는 현재 `asmc_msgs`에 등록되어 있고 Behavior/Frenet 구현이 사용한다.
+> 본문의 D0~D10 표기는 구현 rollout 단계 기록이며 현재 미구현 상태를 뜻하지 않는다.
 >
-> **범위:** 이 커밋(D0)은 문서만 추가한다. production 알고리즘 코드는 한 줄도
-> 바꾸지 않는다.
+> **원래 범위:** 최초 D0 커밋은 계약만 고정했다. 이후 구현 이력은 Git에서 보존한다.
 >
 > **수정 대상 경계:** 이 프로젝트에서 수정하는 것은 **Frenet Planner와 MPC 코드뿐이다.**
 > `BehaviorCommand.msg` / `FrenetFeedback.msg`는 **FSM 개발자가 정의한 원본을 그대로
@@ -48,10 +47,9 @@ v2의 핵심 전환은 두 가지다.
 | `BehaviorCommand` | `asmc_msgs` | `src/asmc_msgs/msg/BehaviorCommand.msg` |
 | `FrenetFeedback` | `asmc_msgs` | `src/asmc_msgs/msg/FrenetFeedback.msg` |
 
-> **현재 상태(D0~D2):** 두 메시지는 **production 경로에 아직 추가되지 않았다.**
-> FSM 개발자가 전달한 원본을 `docs/asmc_msg/`에 reference copy로만 보관하고 있다.
-> 실제 `asmc_msgs` 등록(`add_message_files`, 빌드 연결)은 **D3에서 수행**한다.
-> 위 표의 경로는 D3 이후의 목표 위치다.
+> **현재 상태:** 두 원본은 `src/asmc_msgs/msg/`에 있고 `CMakeLists.txt`에 등록되어 있다.
+> `src/behavior_planner/`와 `src/frenet_planner/`가 이 production message를 사용한다.
+> 별도 reference copy는 유지하지 않으며 message 내용은 해당 production 파일이 정본이다.
 
 **두 메시지를 다른 패키지에 복사하지 않는다.** ROS에서 `asmc_msgs/BehaviorCommand`와
 `behavior_planner/BehaviorCommand`는 내용이 같아도 서로 다른 타입이며, 같은 토픽에

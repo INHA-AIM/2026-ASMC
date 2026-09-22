@@ -503,6 +503,6 @@ A. **보장 안 됨.** 26 개발용 기준. 대회 빌드에서 Dest/패킷 재�
 
 ## 8. 관련
 
-- [getting-started.md](../onboarding/getting-started.md) · [docker-guide.md](./docker.md) · [morai-msgs-versions.md](../records/simulator/morai-msgs-versions.md)
+- [개발 시작](../onboarding/README.md) · [Docker 가이드](./docker.md) · [MORAI message 버전](../records/simulator/morai-msgs-versions.md)
 - [config/morai_udp_sim_cheat_sheet.md](../../config/morai_udp_sim_cheat_sheet.md)
 - 로컬 상세: [udp-bridge-porting.md](../../../docs/competition/udp-bridge-porting.md)

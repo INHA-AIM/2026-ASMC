@@ -6,20 +6,20 @@
 
 문서는 독자와 역할에 따라 `onboarding/`, `contracts/`, `packages/`, `operations/`,
 `records/`, `archive/` 등으로 나눈다. 주요 이전 경로에는 한 릴리스 동안 새 정본으로 연결하는
-호환 안내만 남긴다. 이동 결과는 [D1 경로 이전 보고서](./structure/d1-path-migration-report.md)를
-참고한다. 이 페이지에서 정본, 작업 중 설계안, 사용 가이드와 과거 기록을 구분한다. 내용이
+호환 안내만 남긴다. 이동 결과는 [D1 경로 이전 보고서](./structure/d1-path-migration-report.md),
+첫 본문 통합은 [D2 온보딩·협업 보고서](./structure/d2-onboarding-governance-report.md)를 참고한다.
+이 페이지에서 정본, 작업 중 설계안, 사용 가이드와 과거 기록을 구분한다. 내용이
 충돌하면 아래의 `정본 우선순위`를 적용하고, 기록 문서를 현재 설정으로 해석하지 않는다.
 
 ## 1. 처음 보는 팀원이 읽을 문서
 
-아래 여섯 개를 먼저 읽고, 필요한 파트의 상세 문서로 이동한다.
+아래 문서를 순서대로 읽고 필요한 파트의 상세 문서로 이동한다.
 
-1. [시작 가이드](./onboarding/getting-started.md) — clone, Docker와 첫 실행
-2. [협업 가이드](./governance/collaboration.md) — Git, ownership와 PR 기준
-3. [대회 환경·규정](./competition/environment.md) — v1.1 허용 입력과 당일 제약
-4. [UDP↔ROS 네트워크](./operations/network-udp-ros.md) — 26.R1.h3 개발 및 대회 통신 경계
-5. [팀 아키텍처 개요](./architecture/system-overview.md) — 현재 시스템 한 장 요약
-6. [팀원별 개발 가이드](./onboarding/team-dev-guide.md) — 담당 경로와 검증 책임
+1. [개발 시작](./onboarding/README.md) — clone, Docker, 환경과 첫 빌드
+2. [팀 ownership](./onboarding/ownership.md) — 담당 경로와 검증 책임
+3. [협업 규칙](./governance/README.md) — 브랜치, PR과 리뷰 기준
+4. [대회 환경·규정](./competition/environment.md) — 허용 입력과 당일 제약
+5. [팀 아키텍처](./architecture/system-overview.md) — 현재 시스템 경계
 
 현재 인지 개발자는 [카메라·MGeo·LiDAR 융합 로드맵](./packages/asmc_perception/roadmap.md),
 planning/control 개발자는 [Planning/Control UDP 규약](./operations/planning-control.md)을 이어서
@@ -31,7 +31,7 @@ planning/control 개발자는 [Planning/Control UDP 규약](./operations/plannin
 |---|---|---|
 | 대회 규정 | 주최 측 최신 규정집·공식 공지 → [competition-environment.md](./competition/environment.md) | 공식 원문이 항상 우선. 요약 문서를 함께 갱신 |
 | 시뮬 통신·포트 | [network-udp-ros.md](./operations/network-udp-ros.md) | Docker/getting-started의 중복 설명보다 우선 |
-| Git·ownership | [collaboration.md](./governance/collaboration.md) | git-workflow/team-dev-guide의 예시보다 우선 |
+| Git·ownership | [협업 규칙](./governance/README.md)과 [ownership](./onboarding/ownership.md) | 과거 Phase 0/Path A 문서보다 우선 |
 | Planning/Control 실행 | [planning-control-udp.md](./operations/planning-control.md) | planning-behavior-handoff의 ROS 경로는 레거시 |
 | 카메라 데이터·라벨·split | [perception-dataset-labeling-split.md](./contracts/perception/dataset-labeling-split.md) | 개별 학습 기록보다 우선 |
 | 인지 융합 방향·우선순위 | [perception-map-fusion-roadmap.md](./packages/asmc_perception/roadmap.md) | BEV 세부안·초기 agentic 문서보다 우선 |
@@ -47,18 +47,16 @@ planning/control 개발자는 [Planning/Control UDP 규약](./operations/plannin
 
 | 문서 | 역할 | 상태 |
 |---|---|---|
-| [getting-started.md](./onboarding/getting-started.md) | clone부터 첫 build/run까지 최소 절차 | Active Guide |
-| [development-environment.md](./onboarding/development-environment.md) | OS, Python, ROS, 데이터 경로 표준 | Active Reference |
+| [개발 시작과 환경](./onboarding/README.md) | clone, build, OS·언어·데이터 경로 기준 | Active Guide |
 | [docker-guide.md](./operations/docker.md) | ROS/학습 컨테이너 운영과 트러블슈팅 | Active Guide |
 | [repository-layout.md](./architecture/repository-layout.md) | 코드 위치와 경로별 ownership 요약 | Active Reference |
-| [team-dev-guide.md](./onboarding/team-dev-guide.md) | 팀원별 작업 경로·주의사항·검증 | Active Guide |
+| [팀 ownership](./onboarding/ownership.md) | 담당 경로와 검증 책임 | Active Reference |
 
 ### 3.2 협업·통합
 
 | 문서 | 역할 | 상태 |
 |---|---|---|
-| [collaboration.md](./governance/collaboration.md) | trunk, Path A/B, ownership의 정책 정본 | Canonical |
-| [git-workflow.md](./governance/git-workflow.md) | collaboration 정책을 실행하는 명령 예시 | Command Reference |
+| [협업과 Git 규칙](./governance/README.md) | 브랜치, PR, review와 main 안정성 | Canonical |
 | [integration-plan.md](./archive/integration/wave1-wave2-plan.md) | Wave 1/2 이식 과정과 당시 판단 | Historical Record |
 | [architecture-overview.md](./architecture/system-overview.md) | 전체 모듈과 현재 목표 구조 요약 | Working Overview |
 | [repository-consolidation-roadmap.md](./architecture/consolidation-roadmap.md) | msg·bridge·HD Map·perception 4-패키지 통합, 체크포인트/미션, 현장 배포 단계 | Working Proposal |
@@ -125,9 +123,9 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 
 | 하려는 작업 | 먼저 볼 문서 | 다음 문서 |
 |---|---|---|
-| 처음 실행 | [getting-started](./onboarding/getting-started.md) | [docker-guide](./operations/docker.md), [network-udp-ros](./operations/network-udp-ros.md) |
+| 처음 실행 | [getting-started](./onboarding/README.md) | [docker-guide](./operations/docker.md), [network-udp-ros](./operations/network-udp-ros.md) |
 | UDP 센서가 안 들어옴 | [network-udp-ros](./operations/network-udp-ros.md) | [UDP 치트시트](../config/morai_udp_sim_cheat_sheet.md), [sim checklist](./operations/sim-verification-checklist.md) |
-| Git 작업·PR | [collaboration](./governance/collaboration.md) | [git-workflow](./governance/git-workflow.md), [team-dev-guide](./onboarding/team-dev-guide.md) |
+| Git 작업·PR | [협업 규칙](./governance/README.md) | [ownership](./onboarding/ownership.md), [CONTRIBUTING](../CONTRIBUTING.md) |
 | 본선 허용 여부 판단 | [competition-environment](./competition/environment.md) | [network-udp-ros](./operations/network-udp-ros.md), [competition-data](./competition/assets.md) |
 | MPC/Frenet 실행 | [planning-control-udp](./operations/planning-control.md) | [sim checklist](./operations/sim-verification-checklist.md) |
 | Capture/마스크/학습 데이터 | [dataset contract](./contracts/perception/dataset-labeling-split.md) | [data_collection README](../src/data_collection/README.md) |
