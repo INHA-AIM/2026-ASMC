@@ -3,6 +3,7 @@
 ASMC 내부 ROS1 메시지의 정본 패키지다. 패키지 버전 `1.0.0`부터 기존 planning/perception
 메시지 13개와 HD Map·competition metadata 메시지 12개의 MD5를 동결한다.
 
+- 개발·변경 절차: [package guide](../../docs/packages/asmc_msgs/README.md)
 - 사람이 읽는 규약: [HD Map topic contract v1](../../docs/contracts/hd-map/topic-v1.md)
 - 기계 판독 규약: [hd_map_topic_contract_v1.yaml](../../config/contracts/hd_map_topic_contract_v1.yaml)
 - 검증: `python3 tools/audit/validate_p1b_contract.py`

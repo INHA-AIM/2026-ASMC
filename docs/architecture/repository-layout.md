@@ -16,8 +16,9 @@ gate는 [저장소 통합 로드맵](./consolidation-roadmap.md)을 따른다. p
 ```
 2026-ASMC/
 ├── docs/                 # 팀 문서
-│   ├── baselines/        # 생성된 P1-A 회귀 기준 보고서
-│   └── contracts/        # 동결된 사람이 읽는 interface 계약
+│   ├── contracts/        # 동결된 사람이 읽는 interface 계약
+│   ├── packages/         # package 개발·검증 가이드
+│   └── records/          # baseline·실험·검수 기록
 ├── docker/
 │   ├── ros-noetic/       # ROS catkin 개발 (+ libyaml-cpp)
 │   └── perception-train/ # PyTorch 학습

@@ -38,7 +38,7 @@
 
 | 현재 영역 | 판단 | 처리 방향 |
 |---|---|---|
-| `asmc_msgs` | 공용 메시지 13개, 이미 정본 후보 | 유지·확장 |
+| `asmc_msgs` | 공용 메시지 25개(기존 동결 13 + additive 12), 현재 정본 | 유지·호환 검증 |
 | `behavior_planner/msg` | planning 소유이며 공용 메시지와 일부 중복 | 1단계에서 수정 금지. planning 협의 후 adapter 또는 별도 이관 |
 | `lidar+sensorfusion/src/Msg` | `TrackedObject*`, `Yolo_bbox*` 4개가 별도 메시지 패키지 | 소비자 이관과 함께 `asmc_msgs`로 흡수 |
 | `morai_udp_bridge` + `morai_sensor_bridge` + `vehicle_state` | 한 외부 경계가 세 패키지로 분산 | `asmc_bridge`로 통합 |
@@ -144,8 +144,9 @@ metadata, 검증 기준**을 먼저 고정한다. 이 단계가 끝나면 이후
 
 #### B. `asmc_msgs` v1 동결
 
-**완료.** 기존 13개 메시지의 ROS1 MD5를 유지하고 `asmc_msgs` 1.0.0에 다음 11개 타입을
-추가했다. 기계 판독 정본은
+**완료.** P1-B에서 기존 13개 메시지의 ROS1 MD5를 유지하고 HD Map·competition 타입
+11개를 추가했다. P2-D에서 현재 차로 상태용 `LaneAssociation`을 additive policy로 더해
+현재 `asmc_msgs` 1.0.0은 기존 13 + 신규 12, 총 25개다. 기계 판독 정본은
 [`config/contracts/hd_map_topic_contract_v1.yaml`](../../config/contracts/hd_map_topic_contract_v1.yaml),
 사람이 읽는 규약은 [HD Map topic contract v1](../contracts/hd-map/topic-v1.md)이다.
 
@@ -154,6 +155,7 @@ metadata, 검증 기준**을 먼저 고정한다. 이 단계가 끝나면 이후
 | `HdMapMeta` | schema/build/map ID, frame, source hash, 생성 시각, global/local 여부 |
 | `LaneMarking` / `LaneMarkingArray` | geometry, white/yellow, solid/broken, 폭, physical/logical 역할, source provenance |
 | `Lane` / `LaneArray` | lane ID·차로 번호, centerline·polygon, left/right boundary ID, adjacency, 진행 방향 |
+| `LaneAssociation` | 후륜축 중심 현재 차로, 횡오차·경계 여유·전환·stale 상태 |
 | `DrivableArea` / `DrivableAreaArray` | polygon ID, lane/junction 여부, source, validity |
 | `CompetitionCheckpoint` / `...Array` | 순서, pose, 공식 yaw, 3 m 반경, route station, link ID |
 | `MissionZone` / `MissionZoneArray` | mission type, start/end station·link, official/provisional 상태, 규칙 payload |
@@ -173,6 +175,7 @@ latched publish하고 local crop은 ego pose가 들어올 때 갱신한다.
 /hd_map/global/mission_zones
 /hd_map/local/lanes
 /hd_map/local/drivable_grid
+/hd_map/local/current_lane
 /hd_map/debug/markers
 ```
 
@@ -184,7 +187,8 @@ latched publish하고 local crop은 ego pose가 들어올 때 갱신한다.
 CMake 등록, package version, topic latch/scope를 검사한다. ROS Noetic build 후에는
 `src/asmc_msgs/test/test_message_serialization.py`로 generated type의 MD5와
 serialize/deserialize 왕복을 검사한다.
-P1-B에서는 publisher와 geometry를 추가하지 않았고 P1-C metadata 구현이 다음 작업이다.
+P1-B 자체에서는 publisher와 geometry를 추가하지 않았다. 이후 P1-C metadata, P1-D publisher와
+P2-D `LaneAssociation`까지 완료됐으며 wire schema의 현재값은 contract YAML을 따른다.
 
 #### C. 체크포인트 정본화
 
@@ -267,9 +271,11 @@ P1-D에서 표시하지만 사람 승인 전 판제 강제 규칙으로 사용�
 
 P1-A 자체 완료 조건인 manifest/report byte-for-byte 재생성 검증은
 `python3 tools/audit/build_runtime_baseline.py --check`로 통과했다. ROS Noetic 컨테이너에서는
-`asmc_msgs` 24종 생성, 기존 13종의 실제 `rosmsg md5`, generated-message serialization과
+당시 `asmc_msgs` 24종 생성, 기존 13종의 실제 `rosmsg md5`, generated-message serialization과
 P2-A workspace 회귀, source 비교와 local crop 계약을 포함해 `asmc_hd_map` 전체 106개
-테스트를 통과했다.
+테스트를 통과했다. 이후 additive `LaneAssociation`이 추가돼 현재 contract validator 기준은
+25종/11 topic이며, 현재 ROS 비의존 `asmc_hd_map` discovery는 118개다. 날짜가 다른 두
+검증 횟수를 같은 baseline 수치로 덮어쓰지 않는다.
 
 P1-C 기준으로 checkpoint 16개의 route/link XY 투영 오차는 모두 `0.0 m`, route station은
 단조 증가하며 START/END station 0과 5% station `109.230586167 m` 단위 테스트가 통과했다.

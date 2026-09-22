@@ -76,6 +76,8 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 │   ├── frenet_planner/        # standalone UDP planning ✅
 │   ├── mpc_controller/        # standalone UDP control ✅
 │   ├── integration_launch/    # ROS bridge launch only
+│   ├── asmc_msgs/             # 팀 내부 ROS1 공용 message 계약
+│   ├── asmc_hd_map/           # HD Map builder/runtime/검수
 │   ├── learning_by_cheating/  # learning ✅
 │   ├── data_collection/        # Capture GT · mask · dataset ✅
 │   ├── perception/twinlite_morai/        # camera 2-head binary/4-class 학습·평가 ✅

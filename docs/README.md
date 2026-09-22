@@ -10,7 +10,8 @@
 본문 통합은 [D2 온보딩·협업 보고서](./structure/d2-onboarding-governance-report.md)와
 [D2 대회·운영 보고서](./structure/d2-competition-operations-report.md),
 [본문 축약 보존 감사](./structure/d2-content-parity-audit.md),
-[D2 계약 보고서](./structure/d2-contracts-report.md)를 참고한다.
+[D2 계약 보고서](./structure/d2-contracts-report.md),
+[D2 HD Map·message 보고서](./structure/d2-hd-map-msgs-report.md)를 참고한다.
 이 페이지에서 정본, 작업 중 설계안, 사용 가이드와 과거 기록을 구분한다. 내용이
 충돌하면 아래의 `정본 우선순위`를 적용하고, 기록 문서를 현재 설정으로 해석하지 않는다.
 
@@ -146,12 +147,16 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | compact Lane·주행가능영역을 실행/소비 | [P2-B compact map](./records/baselines/kcity2025-compact-drivable-v1.md) | [runtime/visualization contract](./contracts/hd-map/runtime-v1.md), [HD Map README](../src/asmc_hd_map/README.md) |
 | 체크포인트·미션 경계를 확인 | [P1-C competition metadata](./contracts/competition/kcity2025-metadata-v1.md) | [생성 bundle](../src/asmc_hd_map/config/kcity2025_competition_metadata.yaml) |
 | HD Map 토픽·RViz를 실행 | [2단계 runtime/visualization](./contracts/hd-map/runtime-v1.md) | [P1-B topic contract](./contracts/hd-map/topic-v1.md) |
+| HD Map builder·산출물을 변경·검증 | [asmc_hd_map package guide](./packages/asmc_hd_map/README.md) | [P2-B compact map](./records/baselines/kcity2025-compact-drivable-v1.md) |
+| 공용 ROS message를 추가·검증 | [asmc_msgs package guide](./packages/asmc_msgs/README.md) | [계약 허브](./contracts/README.md) |
 | 대회판 이식 | [fusion roadmap §9](./packages/asmc_perception/roadmap.md#9-26r1h3-개발판과-대회판-이식-전략) | [msg versions](./records/simulator/morai-msgs-versions.md), [운영 가이드](./operations/README.md) |
 
 ## 5. 모듈 README 진입점
 
 | README | 역할 |
 |---|---|
+| [asmc_hd_map guide](./packages/asmc_hd_map/README.md) | HD Map builder/runtime/source comparison 개발·검증 |
+| [asmc_msgs guide](./packages/asmc_msgs/README.md) | 공용 ROS1 message 소유·호환·추가 절차 |
 | [src/perception](../src/perception/README.md) | 인지 파트 상태·코드·문서 지도 |
 | [twinlite_morai](../src/perception/twinlite_morai/README.md) | binary/4-class 2-head 학습 adapter와 현재 후보 |
 | [drivable_bev](../src/perception/drivable_bev/README.md) | 3-camera fused metric BEV, 범위 audit와 calibration/live gate |
