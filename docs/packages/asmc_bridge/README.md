@@ -19,6 +19,7 @@ bridge 구현을 개발·검증하고 Phase 3에서 안전하게 통합하는 �
 | 두 UDP bridge 동시 기동 | `src/integration_launch/` | 운영 중, planning 공동 소유 |
 | 단일 `asmc_bridge` | 존재하지 않음 | Phase 3 목표 |
 | `local`/`lan2lan` 계약·MORAI JSON | P3-A 완료 | live LAN gate 대기 |
+| Competition Vehicle Status decoder | P3-B 정적 계약·fixture 완료 | live capture gate 대기 |
 
 P3-A 이후에도 현재 패키지 이름과 launch를 사용한다. 문서상의 목표 구조를 근거로 경로를 먼저
 옮기거나 기존 패키지를 삭제하지 않는다. `asmc_bridge` 승격은 bag replay, packet fixture,
@@ -27,8 +28,8 @@ producer/consumer build와 실제 MORAI 검증을 모두 통과한 뒤에만 한
 ## 2. 현재 데이터 흐름
 
 ```text
-MORAI Network UDP ──> morai_udp_bridge ──> /Ego_topic, /Object_topic,
-       │                                      /CollisionData
+MORAI Network UDP ──> morai_udp_bridge ──> /Ego_topic, /Competition_topic,
+       │                                      /Object_topic, /CollisionData
        └─< /ctrl_cmd ───────────────────── Ctrl UDP
 
 MORAI Sensor UDP ──> morai_sensor_bridge ──> camera, PointCloud2, /gps, /imu
@@ -45,6 +46,7 @@ interface는 가능한 한 `asmc_msgs`를 사용하되, Phase 3 전환 PR에서 
 | 방향 | 현재 UDP | ROS topic·type | 비고 |
 |---|---:|---|---|
 | MORAI→팀 | Ego Host/Dest `9088/9099` | `/Ego_topic`, `morai_msgs/EgoVehicleStatus` | 현재 공통 상태 입력 |
+| MORAI→팀 | Competition Host/Dest `7603/7502` | `/Competition_topic`, `morai_msgs/EgoVehicleStatus` | 정적 decoder 완료, live capture 대기 |
 | MORAI→팀 | Object Dest `7505` | `/Object_topic`, `morai_msgs/ObjectStatusList` | privileged 개발 oracle |
 | MORAI→팀 | Collision Dest `9092` | `/CollisionData`, `morai_msgs/CollisionData` | 충돌 때만 publish |
 | 팀→MORAI | Ctrl Host `9093` | subscribe `/ctrl_cmd`, `morai_msgs/CtrlCmd` | Dest metadata 9094, mode 2, D gear packet |
@@ -201,7 +203,7 @@ make target”으로 실패할 수 있다.
 - 현장 MORAI `192.168.0.1`, Autonav `192.168.0.10`
 - VLP16은 MORAI UI 저장본으로 15 Hz를 만들고 30초 평균 14~16 Hz를 확인한다.
 
-P3-A 산출물은 [`config/bridge`](../../../config/bridge/)와
+P3-A/P3-B 산출물은 [`config/bridge`](../../../config/bridge/)와
 [`config/morai`](../../../config/morai/)에 있다. 26r1/대회판 raw export는 entry 수와
 `PUBSUB_TYPE`이 달라 template을 분리하고, transport별 IP는 generator가 일괄 적용한다.
 

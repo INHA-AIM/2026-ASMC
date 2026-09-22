@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "baseline_id": "p3a_bridge_profiles_v1",
+  "baseline_id": "p3b_bridge_profiles_v1",
   "runtime_protocol": {
     "id": "morai_udp",
     "release_behavior_split": false,
@@ -24,19 +24,19 @@
     "artifacts": {
       "entrypoint": {
         "path": "scripts/udp_bridge.sh",
-        "sha256": "079f97e781a4ae450606b79c47cfb48d539138914b8d7fb52e09e2658787bb30"
+        "sha256": "2781fb327a23aecbfb790fc96a6afbe94cb635ef22ca5efae41fc5922520d8a4"
       },
       "integration_launch": {
         "path": "src/integration_launch/launch/morai_udp_bridges.launch",
-        "sha256": "9e520f9099b32bafc353333d454c7012b3d29420d3de57767ec775e7e3732ed3"
+        "sha256": "2ebade70cd3659f8ecf615d2c47f691f8e5639721ca29aad517988b8d6b906e0"
       },
       "network_launch": {
         "path": "src/morai_udp_bridge/launch/morai_udp_bridge.launch",
-        "sha256": "b2a5ebcba8f2de7a051081d32ebec612619edbf2b0f40a8cddd421d3b000b9b1"
+        "sha256": "5ab71b3f0b8530be000203cf5b363f32fa4015b786547be875d786837e4463ef"
       },
       "network_node": {
         "path": "src/morai_udp_bridge/scripts/morai_udp_bridge.py",
-        "sha256": "5ab65b793d78341050f23f4d3f3197eb2c56681b313df3c8f0c59d5ab3efe3ac"
+        "sha256": "67231a2467c3d37972d72ee9a0f8ef64808280f12b8cfcba05fa70f9c2b02519"
       },
       "sensor_launch": {
         "path": "src/morai_sensor_bridge/launch/morai_sensor_bridge.launch",
@@ -62,6 +62,7 @@
     },
     "published_topics": {
       "/Ego_topic": "morai_msgs/EgoVehicleStatus",
+      "/Competition_topic": "morai_msgs/EgoVehicleStatus",
       "/Object_topic": "morai_msgs/ObjectStatusList",
       "/CollisionData": "morai_msgs/CollisionData",
       "/image_jpeg/compressed": "sensor_msgs/CompressedImage",
@@ -109,7 +110,17 @@
       "morai_pubsub_type": 258,
       "host_port": 7603,
       "destination_port": 7502,
-      "state": "network_contract_frozen_decoder_pending"
+      "runtime_bridge_bind_port": 7502,
+      "state": "static_decoder_active_live_capture_pending",
+      "packet_contract": {
+        "header_ascii": "#MoraiInfo$",
+        "payload_bytes": 152,
+        "datagram_bytes": 181,
+        "evidence": "on_site_competition_assembly_static_inspection",
+        "fixture_path": "src/morai_udp_bridge/test/fixtures/competition_vehicle_status_181.hex",
+        "fixture_sha256": "8e63bb46396ff4d1919206973380b6c1042bc532f68464961ab9fcd504efb80f",
+        "live_acceptance": "pending_competition_simulator_packet_capture"
+      }
     },
     "collision_data": {
       "direction": "morai_to_autonav",

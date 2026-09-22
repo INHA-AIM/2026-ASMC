@@ -350,8 +350,9 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
   `9093/9094`(mode 2), Competition Vehicle Status `7603/7502`, CollisionData `9091/9092`,
   v2/v3 sensor `9290~9303`이다. Ctrl `9111/9112`는 P3-A에서 archive로 격리하고 기본값을
   `9093/9094`로 전환했다. Ego Vehicle Status는 release별 PUBSUB 차이를 유지하면서 포트를
-  `9088/9099`로 통일했다. Competition Vehicle Status `7603/7502` decoder 검증 뒤 상태 입력
-  우선순위를 확정한다.
+  `9088/9099`로 통일했다. Competition Vehicle Status `7603/7502`는 P3-B에서 정적
+  decoder·fixture와 별도 `/Competition_topic`을 추가했다. live capture·field 교차 검증 뒤
+  상태 입력 우선순위를 확정한다.
 - 현행 v2/제출 Autonav의 VLP16 10 Hz를 손재호 LiDAR runtime 요구에 따라 15 Hz로 바꾼다.
   JSON 수치만 추측해 고치지 않고 MORAI UI에서 15 Hz 설정 후 재저장해 `sensorPeriod`와
   `frequencyIndex`를 확인한다. 30초 이상 `/velodyne_points` 평균 14~16 Hz, packet loss,
@@ -433,7 +434,8 @@ semantic 차이는 자유 카메라 4번 pitch가 현재 v2 `328°`, 제출본 `
 
 P3-A에서 개발 Ctrl도 `9093/9094`로 맞추고 `local`과 `lan2lan` network JSON을
 release별 template에서 생성하도록 했다. 두 transport는 포트·mode가 같고 IP만 다르다.
-Competition Vehicle Status decoder, privileged stream allowlist와 실제 두 PC 검증은 아직 남았다.
+Competition Vehicle Status의 live capture 승인, privileged stream allowlist와 실제 두 PC
+검증은 아직 남았다. 정적 decoder·fixture·ROS publish 계약은 P3-B에서 적용했다.
 
 ### 7.2 배포 원칙
 

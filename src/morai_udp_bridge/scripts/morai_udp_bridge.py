@@ -5,6 +5,8 @@ MORAI UDP <-> ROS1 bridge
 rosbridge(websocket/JSON) 없이 UDP 바이너리를 직접 파싱/생성한다.
 
   UDP -> ROS   /Ego_topic      morai_msgs/EgoVehicleStatus
+               /Competition_topic
+                                morai_msgs/EgoVehicleStatus
                /Object_topic   morai_msgs/ObjectStatusList
                /CollisionData  morai_msgs/CollisionData
   ROS -> UDP   /ctrl_cmd       morai_msgs/CtrlCmd
@@ -117,11 +119,86 @@ def vec3(x, y, z):
     return v
 
 
+def decode_vehicle_status_packet(data):
+    """Decode a validated MORAI Ego/Competition vehicle-status datagram.
+
+    Static inspection of the competition simulator establishes the 152-byte
+    vehicle-status payload (181 bytes including header/aux/tail). Keep the
+    parser shared with Ego Vehicle Status, but keep their ROS topics and
+    diagnostics independent so consumers can enforce source policy. Live
+    packet-capture acceptance remains a separate deployment gate.
+    """
+    if not data.startswith(EGO_HDR):
+        raise ValueError("vehicle status header mismatch")
+    if len(data) < EGO_PRE + TAIL or data[-TAIL:] != b"\r\n":
+        raise ValueError("vehicle status packet has an invalid tail")
+
+    payload_length = struct.unpack(
+        "<i", data[len(EGO_HDR):len(EGO_HDR) + 4]
+    )[0]
+    body = data[EGO_PRE:-TAIL]
+    if payload_length != len(body):
+        raise ValueError(
+            "vehicle status declared payload {}B != received {}B".format(
+                payload_length, len(body)
+            )
+        )
+
+    variant = EGO_VARIANTS.get(len(data))
+    if variant is None:
+        raise ValueError(
+            "unsupported vehicle status packet length {}B (expected 181/229/245)".format(
+                len(data)
+            )
+        )
+    rear_off, link_off, ext_off, ext_n = variant
+
+    sec, nsec, ctrl_mode, gear = struct.unpack(EGO_HEAD_FMT, body[0:10])
+    common = struct.unpack(EGO_COMMON_FMT, body[10:110])
+    front_steer = struct.unpack("<f", body[110:114])[0]
+    rear_steer = None
+    if rear_off is not None:
+        rear_steer = struct.unpack("<f", body[rear_off:rear_off + 4])[0]
+    extension = struct.unpack(
+        "<{}f".format(ext_n), body[ext_off:ext_off + ext_n * 4]
+    )
+    floats = tuple(common) + (front_steer,) + tuple(extension)
+    if rear_steer is not None:
+        floats += (rear_steer,)
+    if not all(math.isfinite(value) for value in floats):
+        raise ValueError("vehicle status packet contains a non-finite value")
+
+    return {
+        "sec": sec,
+        "nsec": nsec,
+        "ctrl_mode": ctrl_mode,
+        "gear": gear,
+        "signed_velocity_kph": common[0],
+        "map_data_id": struct.unpack("<i", body[14:18])[0],
+        "accel": common[2],
+        "brake": common[3],
+        "position": common[10:13],
+        "heading_deg": common[15],
+        "velocity_kph": common[16:19],
+        "angular_velocity_deg_s": common[19:22],
+        "acceleration_m_s2": common[22:25],
+        "front_steer_deg": front_steer,
+        "rear_steer_deg": rear_steer,
+        "link_id": body[link_off:link_off + LINK_LEN]
+        .decode("utf-8", "ignore")
+        .strip("\x00 "),
+        "extension": extension,
+        "payload_length": payload_length,
+        "packet_length": len(data),
+    }
+
+
 class MoraiUdpBridge(object):
 
     def __init__(self):
         p = rospy.get_param
         self.ego_port = p("~ego_port", 9099)
+        self.competition_port = p("~competition_port", 7502)
         self.obj_port = p("~object_port", 9021)
         self.col_port = p("~collision_port", 9031)
         self.cmd_ip = p("~cmd_ip", "127.0.0.1")
@@ -139,6 +216,9 @@ class MoraiUdpBridge(object):
 
         self.pub_ego = rospy.Publisher("/Ego_topic", EgoVehicleStatus,
                                        queue_size=1)
+        self.pub_competition = rospy.Publisher(
+            "/Competition_topic", EgoVehicleStatus, queue_size=1
+        )
         self.pub_obj = rospy.Publisher("/Object_topic", ObjectStatusList,
                                        queue_size=1)
         self.pub_col = rospy.Publisher("/CollisionData", CollisionData,
@@ -151,15 +231,22 @@ class MoraiUdpBridge(object):
         rospy.Subscriber("/ctrl_cmd", CtrlCmd, self.on_ctrl_cmd, queue_size=1)
 
         self.last_link_id = ""
-        self.stats = {"ego": 0, "obj": 0, "col": 0, "cmd": 0}
+        self.last_competition_link_id = ""
+        self.stats = {
+            "ego": 0, "competition": 0, "obj": 0, "col": 0, "cmd": 0
+        }
         # Rolling callback wall time. UDP inputs cover validated datagram
         # parse->ROS publish enqueue; cmd covers ROS callback->UDP sendto.
         self.processing_ms = {
             name: deque(maxlen=4096) for name in self.stats
         }
         self.last_activity_monotonic = dict((name, None) for name in self.stats)
-        self.timestamp_fallbacks = {"ego": 0, "obj": 0, "col": 0}
-        self.timestamp_regressions = {"ego": 0, "obj": 0, "col": 0}
+        self.timestamp_fallbacks = {
+            "ego": 0, "competition": 0, "obj": 0, "col": 0
+        }
+        self.timestamp_regressions = {
+            "ego": 0, "competition": 0, "obj": 0, "col": 0
+        }
         self._last_source_ns = {}
         self._started_monotonic = time.monotonic()
         self._last_report_monotonic = self._started_monotonic
@@ -168,6 +255,8 @@ class MoraiUdpBridge(object):
 
         for port, kind, hdr, cb in (
                 (self.ego_port, "ego", EGO_HDR, self.handle_ego),
+                (self.competition_port, "competition", EGO_HDR,
+                 self.handle_competition),
                 (self.obj_port, "obj", OBJ_HDR, self.handle_obj),
                 (self.col_port, "col", COL_HDR, self.handle_col)):
             t = threading.Thread(target=self.rx_loop,
@@ -221,57 +310,56 @@ class MoraiUdpBridge(object):
 
     # ---------------- Ego ----------------
     def handle_ego(self, data):
-        var = EGO_VARIANTS.get(len(data))
-        if var is None:
-            if "egolen" not in self.warned:
-                self.warned.add("egolen")
-                rospy.logerr("Ego %dB 는 미지의 버전입니다 (181/229/245 만 지원). "
-                             "morai_ego_probe.py 로 구조를 확인하세요.",
-                             len(data))
-            return
-        rear_off, link_off, ext_off, ext_n = var
+        self.publish_vehicle_status(data, "ego", self.pub_ego)
 
-        body = data[EGO_PRE:-TAIL]
-        sec, nsec, ctrl_mode, gear = struct.unpack(EGO_HEAD_FMT, body[0:10])
-        f = struct.unpack(EGO_COMMON_FMT, body[10:110])
-        front_steer = struct.unpack("<f", body[110:114])[0]
-        ext = struct.unpack("<%df" % ext_n,
-                            body[ext_off:ext_off + ext_n * 4])
+    def handle_competition(self, data):
+        self.publish_vehicle_status(
+            data, "competition", self.pub_competition
+        )
+
+    def publish_vehicle_status(self, data, kind, publisher):
+        decoded = decode_vehicle_status_packet(data)
 
         m = EgoVehicleStatus()
-        m.header.stamp = self.packet_stamp(sec, nsec, "ego")
+        m.header.stamp = self.packet_stamp(
+            decoded["sec"], decoded["nsec"], kind
+        )
         m.header.frame_id = self.frame_id
+        # Neither the standard legacy UDP body nor the competition 152-byte
+        # body carries the ROS-only unique_id field.
         m.unique_id = -1
 
-        m.accel = f[2]
-        m.brake = f[3]
-        m.position = vec3(f[10], f[11], f[12])
-        m.heading = f[15]
+        m.accel = decoded["accel"]
+        m.brake = decoded["brake"]
+        m.position = vec3(*decoded["position"])
+        m.heading = decoded["heading_deg"]
 
         k = KMH2MS if self.ego_vel_ms else 1.0
-        m.velocity = vec3(f[16] * k, f[17] * k, f[18] * k)
+        velocity = decoded["velocity_kph"]
+        m.velocity = vec3(velocity[0] * k, velocity[1] * k, velocity[2] * k)
         # beta_drive 에는 angular_velocity 없음 (va msg 전용)
         if hasattr(m, "angular_velocity"):
-            m.angular_velocity = vec3(f[19], f[20], f[21])
-        m.acceleration = vec3(f[22], f[23], f[24])
+            m.angular_velocity = vec3(*decoded["angular_velocity_deg_s"])
+        m.acceleration = vec3(*decoded["acceleration_m_s2"])
 
         # beta_drive: wheel_angle / va: front_steer_angle
         if hasattr(m, "wheel_angle"):
-            m.wheel_angle = front_steer
+            m.wheel_angle = decoded["front_steer_deg"]
         if hasattr(m, "front_steer_angle"):
-            m.front_steer_angle = front_steer
-        if hasattr(m, "rear_steer_angle") and rear_off is not None:
-            m.rear_steer_angle = struct.unpack(
-                "<f", body[rear_off:rear_off + 4])[0]
+            m.front_steer_angle = decoded["front_steer_deg"]
+        if (hasattr(m, "rear_steer_angle")
+                and decoded["rear_steer_deg"] is not None):
+            m.rear_steer_angle = decoded["rear_steer_deg"]
 
-        for name, val in zip(EXT_NAMES, ext):
+        for name, val in zip(EXT_NAMES, decoded["extension"]):
             if hasattr(m, name):
                 setattr(m, name, val)
 
-        self.last_link_id = body[link_off:link_off + LINK_LEN] \
-            .decode("utf-8", "ignore").strip("\x00 ")
-
-        self.pub_ego.publish(m)
+        if kind == "competition":
+            self.last_competition_link_id = decoded["link_id"]
+        else:
+            self.last_link_id = decoded["link_id"]
+        publisher.publish(m)
 
     # ---------------- Object ----------------
     def handle_obj(self, data):
@@ -421,23 +509,29 @@ class MoraiUdpBridge(object):
             for name, count in self.stats.items()
         )
         rospy.loginfo(
-            "rx ego=%d(%.1fHz) obj=%d(%.1fHz) col=%d(%.1fHz) | "
-            "tx cmd=%d(%.1fHz) | link=%s",
+            "rx ego=%d(%.1fHz) competition=%d(%.1fHz) "
+            "obj=%d(%.1fHz) col=%d(%.1fHz) | "
+            "tx cmd=%d(%.1fHz) | links ego=%s competition=%s",
             self.stats["ego"], interval_rates["ego"],
+            self.stats["competition"], interval_rates["competition"],
             self.stats["obj"], interval_rates["obj"],
             self.stats["col"], interval_rates["col"],
             self.stats["cmd"], interval_rates["cmd"],
             self.last_link_id or "-",
+            self.last_competition_link_id or "-",
         )
         self._last_report_stats = dict(self.stats)
         self._last_report_monotonic = now
         if self.stats["ego"] == 0:
             rospy.logwarn("Ego 수신 0건. MORAI Destination PORT 와 "
                           "~ego_port 가 같은지 확인하세요.")
+        if self.stats["competition"] == 0:
+            rospy.logwarn("Competition status 수신 0건. MORAI Destination PORT 와 "
+                          "~competition_port 가 같은지 확인하세요.")
         message = DiagnosticArray()
         message.header.stamp = rospy.Time.now()
         elapsed = max(1e-6, now - self._started_monotonic)
-        for kind in ("ego", "obj", "col", "cmd"):
+        for kind in ("ego", "competition", "obj", "col", "cmd"):
             metrics = latency_summary(self.processing_ms[kind])
             last_activity = self.last_activity_monotonic[kind]
             last_age_sec = (

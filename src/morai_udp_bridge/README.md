@@ -1,6 +1,6 @@
 # morai_udp_bridge
 
-MORAI Network UDP의 Ego/Object/Collision packet을 ROS1으로 변환하고 `/ctrl_cmd`를 Ego Ctrl Cmd
+MORAI Network UDP의 Ego/Competition/Object/Collision packet을 ROS1으로 변환하고 `/ctrl_cmd`를 Ego Ctrl Cmd
 UDP로 보내는 현재 bridge다. 단일 `asmc_bridge`로의 통합은 아직 시작하지 않았다.
 
 - 구현·단위·검증: [bridge package-group guide](../../docs/packages/asmc_bridge/README.md)
@@ -11,16 +11,25 @@ UDP로 보내는 현재 bridge다. 단일 `asmc_bridge`로의 통합은 아직 �
 roslaunch morai_udp_bridge morai_udp_bridge.launch
 ```
 
-현재 기본값은 Ego `9099`, Object `7505`, Collision `9092`, Ctrl target `127.0.0.1:9093`이다.
+현재 기본값은 Ego `9099`, Competition `7502`, Object `7505`, Collision `9092`,
+Ctrl target `127.0.0.1:9093`이다.
 `ObjectInfo`는 개발 oracle이며 본선 profile에 포함하면 안 된다. 진단의 `runtime_profile`은
 `morai_udp` 하나다. release별 MORAI import와 transport IP는
 [`config/morai`](../../config/morai/)에서 분리한다.
 
 입출력:
 
-- publish `/Ego_topic`, `/Object_topic`, `/CollisionData`
+- publish `/Ego_topic`, `/Competition_topic`, `/Object_topic`, `/CollisionData`
 - subscribe `/ctrl_cmd`
 - publish `/morai_udp_bridge/diagnostics`
 
-Competition Vehicle Status decoder 전환 전까지 Ego Vehicle Status `9099`를 공통 회귀 기준으로
-유지한다.
+Competition Vehicle Status는 대회판 assembly의 152-byte payload 정적 분석과 synthetic
+fixture를 기준으로 엄격하게 길이·header·tail을 검사한다. `unique_id`는 UDP body에 없어
+`-1`, `lateral_offset`은 제공되지 않아 기본 `0`이다. 현장 승인 전까지 Ego Vehicle Status
+`9099`도 독립 회귀 기준으로 유지한다.
+
+```bash
+rostopic hz /Competition_topic
+rostopic echo -n1 /Competition_topic
+rostopic echo /morai_udp_bridge/diagnostics
+```

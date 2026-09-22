@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the P3-A bridge baseline, transport profiles, and MORAI presets."""
+"""Validate the P3-B bridge baseline, transport profiles, and MORAI presets."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from render_morai_network_profiles import (  # noqa: E402
 
 
 class ContractError(RuntimeError):
-    """Raised when the committed P3-A contract and implementation diverge."""
+    """Raised when the committed P3-B contract and implementation diverge."""
 
 
 def _require(condition: bool, message: str) -> None:
@@ -144,6 +144,11 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "normalized vehicle state topic changed",
     )
     _require(
+        implementation["published_topics"]["/Competition_topic"]
+        == "morai_msgs/EgoVehicleStatus",
+        "Competition Vehicle Status topic contract changed",
+    )
+    _require(
         implementation["subscribed_topics"]["/ctrl_cmd"] == "morai_msgs/CtrlCmd",
         "Ctrl topic contract changed",
     )
@@ -163,6 +168,36 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     _require(
         ego_status["morai_pubsub_type_by_release"] == {"26r1": 770, "molitcomp03": 295},
         "Ego Vehicle Status PUBSUB mapping changed",
+    )
+    competition_status = contract["channels"]["competition_vehicle_status"]
+    _require(
+        (
+            competition_status["host_port"],
+            competition_status["destination_port"],
+            competition_status["runtime_bridge_bind_port"],
+        )
+        == (7603, 7502, 7502),
+        "Competition Vehicle Status must use 7603/7502",
+    )
+    _require(
+        competition_status["state"]
+        == "static_decoder_active_live_capture_pending",
+        "Competition decoder acceptance state changed",
+    )
+    packet_contract = competition_status["packet_contract"]
+    _require(
+        (
+            packet_contract["header_ascii"],
+            packet_contract["payload_bytes"],
+            packet_contract["datagram_bytes"],
+        )
+        == ("#MoraiInfo$", 152, 181),
+        "Competition packet contract changed",
+    )
+    _require(
+        _sha256(REPO_ROOT / packet_contract["fixture_path"])
+        == packet_contract["fixture_sha256"],
+        "Competition packet fixture SHA changed",
     )
     _require(
         contract["transport_profiles"]["local"]
@@ -214,6 +249,21 @@ def validate(contract_path: Path) -> Dict[str, Any]:
                 (ego_udp["hostPort"], ego_udp["destinationPort"]) == (9088, 9099),
                 f"{release}/{transport} Ego Vehicle Status ports changed",
             )
+            competition_entries = [
+                entry
+                for entry in _network_entries(generated_document)
+                if entry.get("PUBSUB_TYPE") == competition_status["morai_pubsub_type"]
+            ]
+            _require(
+                len(competition_entries) == 1,
+                f"{release} must contain one Competition Vehicle Status",
+            )
+            competition_udp = competition_entries[0]["config"]["udpConfig"]
+            _require(
+                (competition_udp["hostPort"], competition_udp["destinationPort"])
+                == (7603, 7502),
+                f"{release}/{transport} Competition Vehicle Status ports changed",
+            )
     try:
         check_all(contract)
     except ProfileError as exc:
@@ -231,6 +281,14 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     _require(_launch_arg(integration, "cmd_port") == "9093", "integration Ctrl default is not 9093")
     _require(_launch_arg(udp_launch, "cmd_port") == "9093", "UDP Ctrl default is not 9093")
     _require(_launch_arg(udp_launch, "ego_port") == "9099", "Ego status bind port is not 9099")
+    _require(
+        _launch_arg(integration, "competition_port") == "7502",
+        "integration Competition status bind port is not 7502",
+    )
+    _require(
+        _launch_arg(udp_launch, "competition_port") == "7502",
+        "UDP Competition status bind port is not 7502",
+    )
     entrypoint_text = (REPO_ROOT / "scripts/udp_bridge.sh").read_text(encoding="utf-8")
     _require(
         "Usage: ./scripts/udp_bridge.sh [--transport local|lan2lan]" in entrypoint_text,
@@ -277,6 +335,7 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "published_topic_count": len(implementation["published_topics"]),
         "ctrl": "9093/9094 mode 2",
         "ego_status": "9088/9099",
+        "competition_status": "7603/7502 static decoder; live capture pending",
         "sensor_sets": summaries,
     }
 
@@ -285,7 +344,7 @@ def main() -> None:
     contract_path = REPO_ROOT / "config/bridge/bridge_profiles_v1.json"
     result = validate(contract_path)
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
-    print("P3-A bridge profile contract: PASS")
+    print("P3-B bridge profile contract: PASS")
 
 
 if __name__ == "__main__":

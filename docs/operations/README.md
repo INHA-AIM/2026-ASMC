@@ -12,7 +12,8 @@
 
 ## 1. 현재값과 남은 승인 항목
 
-P3-A에서 공통 runtime과 profile 계약, Ctrl 포트까지 적용했다. 파일이 존재하는 것과 현장
+P3-A에서 공통 runtime과 profile 계약, Ctrl 포트를 적용했고 P3-B에서
+Competition Vehicle Status의 정적 decoder·fixture를 추가했다. 파일이 존재하는 것과 현장
 live acceptance가 끝난 것을 구분한다.
 
 | 항목 | 현재 적용값 | 남은 gate |
@@ -20,15 +21,16 @@ live acceptance가 끝난 것을 구분한다.
 | 개발 IP | Host/Destination `127.0.0.1` | 동일 |
 | 현장 IP | profile 계약·생성본: MORAI `192.168.0.1`, Autonav `192.168.0.10` | 실제 두 PC 리허설 |
 | Ego Ctrl Cmd | `9093/9094`, type 1, mode 2 | 실제 Ctrl 응답·packet capture |
-| 차량 상태 | Ego Vehicle Status `9088/9099` | Competition Vehicle Status `7603/7502` decoder는 후속 |
+| 차량 상태 | Ego `9088/9099`, Competition `7603/7502` 별도 topic | Competition live capture·field 교차 검증 |
 | CollisionData | destination `9092` | `9091/9092` pair |
 | ObjectInfo | `7505`, 임시 개발 oracle | competition profile에서 제거 |
 | 센서 | `9290~9303` | 같은 포트, IP만 profile별 변경 |
 | VLP16 | v2 10 Hz 회귀 기준, v3 UI 저장본 15 Hz | 30초 실측 14~16 Hz와 tracking 비교 |
 
 정본은 [`bridge_profiles_v1.json`](../../config/bridge/bridge_profiles_v1.json)이다. generated
-network JSON은 IP·port 계약 검증을 통과하지만 Competition Vehicle Status decoder와 privileged
-stream 차단, 실제 LAN 검증은 아직 남았다. v3도 파일 기준 15 Hz 후보이지 배포 승인이 아니다.
+network JSON·decoder·synthetic UDP publish 계약은 검증하지만 Competition live capture,
+privileged stream 차단과 실제 LAN 검증은 아직 남았다. v3도 파일 기준 15 Hz 후보이지
+배포 승인이 아니다.
 
 ## 2. 런타임 경계
 
@@ -90,6 +92,7 @@ Compose는 `network_mode: host`이고 개별 `ports:` forwarding을 사용하지
 | 채널 | 현재 포트 | ROS/소비자 |
 |---|---:|---|
 | Ego Vehicle Status | Host/Dest `9088/9099` | `/Ego_topic` |
+| Competition Vehicle Status | Host/Dest `7603/7502` | `/Competition_topic` |
 | Object Info | Dest `7505` | `/Object_topic`, 임시 oracle |
 | Collision Data | Host/Dest `9091/9092` | `/CollisionData` |
 | Ego Ctrl Cmd | Host/Dest `9093/9094`, mode 2 | `morai_udp_bridge`가 `/ctrl_cmd`를 UDP로 전송 |
@@ -237,5 +240,5 @@ Phase 3에서 현재값을 바꿀 때 다음을 한 변경으로 검증한다.
    복구를 리허설한다.
 
 Ctrl은 `9093/9094`로 전환됐고 Ego Vehicle Status는 두 release 모두 `9088/9099`로 통일됐다.
-Ego Vehicle Status는 Competition Vehicle Status decoder가 검증될 때까지 상태 입력 회귀 기준으로,
+Ego Vehicle Status는 Competition Vehicle Status live capture·field 검증이 끝날 때까지 상태 입력 회귀 기준으로,
 LiDAR v2 10 Hz는 v3 live acceptance가 끝날 때까지 센서 회귀 기준으로 유지한다.

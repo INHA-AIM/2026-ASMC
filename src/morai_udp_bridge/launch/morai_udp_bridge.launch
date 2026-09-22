@@ -4,6 +4,7 @@
   <arg name="transport_profile" default="local"/>
   <!-- AIM06 스크린샷 기준 포트 (사람마다 Cmd/일부 포트 다름) -->
   <arg name="ego_port"       default="9099"/>   <!-- Ego Vehicle Status Dest -->
+  <arg name="competition_port" default="7502"/> <!-- Competition Vehicle Status Dest -->
   <arg name="object_port"    default="7505"/>   <!-- Object Info Dest -->
   <arg name="collision_port" default="9092"/>   <!-- Collision Data Dest -->
   <arg name="cmd_ip"         default="127.0.0.1"/>
@@ -16,6 +17,7 @@
     <param name="runtime_profile" value="$(arg runtime_profile)"/>
     <param name="transport_profile" value="$(arg transport_profile)"/>
     <param name="ego_port"           value="$(arg ego_port)"/>
+    <param name="competition_port"   value="$(arg competition_port)"/>
     <param name="object_port"        value="$(arg object_port)"/>
     <param name="collision_port"     value="$(arg collision_port)"/>
     <param name="cmd_ip"             value="$(arg cmd_ip)"/>
