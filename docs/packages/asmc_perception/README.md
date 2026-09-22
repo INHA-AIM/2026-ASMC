@@ -20,6 +20,7 @@
 | camera–LiDAR 객체 분류 | [object detection handoff](../../handoffs/perception/camera-object-detection.md) | Active Handoff Guide |
 | GT·BEV·lane 정책의 상세 근거 | [BEV/lane design note](./bev-lane-interface-plan.md) | Dated Detailed Design Note |
 | camera/map/LiDAR 개발 과정과 열린 결정 | [fusion roadmap](./roadmap.md) | Working Proposal + Chronological Record |
+| LiDAR 패키지의 현재 완성도와 개선 계획 | [LiDAR assessment](./lidar-assessment-and-roadmap.md) | Assessment Record + Working Proposal |
 | 특정 checkpoint의 학습 결과 | [v4 evaluation](../../records/perception/twinlitenet-v4-evaluation.md) | Experiment Record |
 
 충돌할 때는 공식 규정, 동결된 contract, 현재 package source와 launch, handoff, working
@@ -117,6 +118,10 @@ LiDAR runtime은 독립 nested catkin workspace다. outer workspace의 sensor br
 별도로 build/run한다. current object topic, time matching, class hysteresis, GPU 세대별 실행과
 RViz 절차는 [sensor-fusion guide](../../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)가 정본이다.
 Phase 3에서 VLP16을 15 Hz로 바꾸기 전까지 현재 회귀 기준은 10 Hz이며 두 값을 혼동하지 않는다.
+
+현재 파이프라인의 단계별 완성도, 증상별 원인, GT → 센서 전환에서 판제 쪽에도 필요한 변경과
+개선 우선순위는 [LiDAR assessment](./lidar-assessment-and-roadmap.md)에 있다. 실행 절차가 아니라
+평가와 제안이므로 `RUN_SENSOR_FUSION.md`의 정본 지위를 대체하지 않는다.
 
 ## 6. 개발 입력과 본선 입력을 분리한다
 
