@@ -16,6 +16,10 @@
 > **선행 문서:** [planning-behavior-handoff.md](../../handoffs/planning/behavior-legacy.md)는
 > `BehaviorContext`/`PlanFeedback` 기반 v1 규약이며 legacy reference다. 두 규약은
 > cutover 전까지 병행 운영된다(10절).
+>
+> **빠른 읽기:** 현재 wire/runtime 계약은 1~11절, 12절은 D0~D10 구현 rollout의 역사와
+> 완료 기준이다. 현재 지원 maneuver와 실행법은
+> [`src/frenet_planner/README.md`](../../../src/frenet_planner/README.md)를 우선한다.
 
 ---
 
@@ -42,7 +46,7 @@ v2의 핵심 전환은 두 가지다.
 
 ### 1.1 소유권
 
-| 메시지 | 소유 패키지 | D3 이후 production 경로 |
+| 메시지 | 소유 패키지 | 현재 production 경로 |
 |---|---|---|
 | `BehaviorCommand` | `asmc_msgs` | `src/asmc_msgs/msg/BehaviorCommand.msg` |
 | `FrenetFeedback` | `asmc_msgs` | `src/asmc_msgs/msg/FrenetFeedback.msg` |
@@ -64,7 +68,7 @@ v2의 핵심 전환은 두 가지다.
 > 따라 `behavior_planner` 패키지는 건드리지 않는다. 혼동을 줄이는 정리는 FSM
 > 담당자에게 요청할 사항으로 남긴다.
 
-### 1.2 토픽 (D3에서 개설)
+### 1.2 토픽 (현재 production과 legacy 병행)
 
 | 방향 | v1 (유지) | v2 (신규) |
 |---|---|---|
@@ -149,7 +153,7 @@ FSM에 반영"하므로, echo가 틀리면 피드백 전체가 무시된다.
 | 긴급정지 | `EMERGENCY_STOP` = **6** | `EMERGENCY` = **10** |
 | (내부 전용) | — | `INTERSECTION_WAIT`=4, `TURN_LEFT`=5, `TURN_RIGHT`=6 |
 
-내부 enum 순서는 `src/frenet_planner/src/frenet_planner/global/global.hpp`의
+내부 enum 순서는 `src/frenet_planner/src/frenet_planner/Common/BehaviorTypes.hpp`의
 선언 순서에서 온다.
 
 > **`static_cast<BehaviorState>(msg.maneuver_type)`는 금지한다.**
@@ -1468,11 +1472,16 @@ const double min_gap = cmd.min_gap > 0.0
 | # | 항목 | 확정 기한 | 현재 처리 |
 |---|---|---|---|
 | **Q1** | `MERGE`에서 `has_target_pose=true`가 필수인가 권장인가 | **D8 시작 전** | 3.3절 표에 "미정"으로 표시. D8 전까지 validation에서 강제하지 않는다 |
-| **Q6** | `EMERGENCY_STOP` 정지 목표를 Frenet이 자체 계산 | **D4 시작 전** | 8.1절 정책대로 구현 예정. 메시지 변경이 아니라 책임 분계 확인이므로 구현을 막지 않는다 |
+| **Q6** | `EMERGENCY_STOP` 정지 목표를 Frenet이 자체 계산 | 해결 | 8.1절 정책대로 Frenet이 소유하며 현재 production gate가 열려 있다 |
 
 ---
 
-## 12. 개발 순서 (D0~D10)
+## 12. 구현 rollout 기록 (D0~D10)
+
+이 절은 계약을 구현한 순서와 단계별 완료 기준을 보존하는 기록이다. 표의 미래형 문구를 현재
+미구현 목록으로 해석하지 않는다. 현재 production gate는 KEEP, STOP, EMERGENCY_STOP,
+FOLLOW, AVOID와 LANE_CHANGE에 열려 있고 MERGE는 아직 닫혀 있다. 최신 상태와 테스트 수는
+package README와 실제 CMake/test 등록을 따른다.
 
 ### 12.1 핵심 원칙: 모드 구현 = 경로 생성 + Feedback 한 세트
 
@@ -2278,18 +2287,19 @@ src/asmc_msgs/msg/
 ├─ BehaviorCommand.msg                      (D3-1: 원본 그대로 등록)
 └─ FrenetFeedback.msg                       (D3-1: 원본 그대로 등록)
 
-src/frenet_planner/src/ros/
-├─ behavior_command_adapter.hpp / .cpp      (D3-1: enum 매핑
-│                                            D3-2: validation + fingerprint)
-└─ command_execution_manager.hpp / .cpp     (D3-3: transaction + latch + preemption
-                                             D4:   캐시 소유권 8.4절)
+src/frenet_planner/src/Runtime/
+├─ behavior_command_adapter.hpp / .cpp      (enum 매핑, validation, fingerprint)
+├─ command_execution_manager.hpp / .cpp     (transaction, latch, preemption)
+├─ feedback_builder.cpp                     (FrenetFeedback 생성)
+└─ v2_planning.cpp                          (v2 planning cycle)
 
 src/frenet_planner/tests/
-├─ v2_enum_mapping_test.cpp                 (D3-1: 2.4절 회귀 + negative)
-├─ behavior_command_adapter_test.cpp        (D3-2: 3절/4절 회귀)
-└─ command_execution_manager_test.cpp       (D3-3: 6절/7절 회귀)
+├─ v2_enum_mapping_test.cpp                 (2절 enum 회귀)
+├─ behavior_command_adapter_test.cpp        (validation/fingerprint 회귀)
+├─ command_execution_manager_test.cpp       (lifecycle 회귀)
+└─ command_*_plan_test.cpp                  (maneuver별 회귀)
 ```
 
 execution/handshake는 planning 수학이 아니라 **transaction 상태**이므로 planner
-core가 아닌 ROS/FSM 경계 계층에 둔다. `PlannerCommand`는 D2에서 planning 입력으로
-정리하며, transaction 필드(`execution_request` 등)를 어디에 둘지는 D2에서 확정한다.
+core가 아닌 ROS/FSM 경계 계층에 둔다. `PlannerCommand`는 planning 입력이고 transaction
+상태는 `Runtime` 경계가 소유한다.

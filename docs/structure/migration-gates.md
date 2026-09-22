@@ -24,7 +24,7 @@
 
 1. `onboarding/`와 `governance/` — 완료
 2. `competition/`와 `operations/` — 완료
-3. `contracts/`
+3. `contracts/` — 완료
 4. `packages/asmc_hd_map/`와 `packages/asmc_msgs/`
 5. `packages/asmc_bridge/`
 6. `packages/asmc_perception/`

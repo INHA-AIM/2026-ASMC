@@ -185,8 +185,28 @@ asmc-ros-gui rviz -d /root/ws/<config>.rviz
 | scenario/gRPC | 개발 profile에서만 scenario 시작·종료·NPC spawn |
 | full stack | 모든 node 동시 기동, 15분 이상 주행, restart recovery |
 
+압축 전 체크리스트에 있던 판정 가능한 세부 기준 중 현재도 유효한 항목은 다음과 같다.
+
+- Frenet/MPC: global path load, GPS/IMU 유효성, planner→MPC `:9300`, Ctrl 목적지,
+  급커브·저속 구간 이탈/조향 진동과 `Ctrl+C` 뒤 process/socket 종료를 확인한다.
+- camera: checkpoint/model source SHA, front·left·right 출력, view 간 timestamp skew,
+  stale/drop, FPS, p50/p95 latency와 VRAM을 기록한다.
+- LiDAR/fusion: detector/tracker 출력, camera sync 허용값과 CPU/GPU 사용량을 함께 기록한다.
+- scenario/gRPC: 개발 profile에서 route drive, NPC spawn과 정상 종료를 확인한다. gRPC host와
+  route 시각화는 본선 profile의 gate가 아니다.
+
 검증 결과에는 환경, MORAI/profile, Git commit, 실행 명령, PASS/FAIL, 로그와 미검증 항목을
 남긴다. LBC와 direct rosbridge는 회귀 재현용일 뿐 현재 full-stack gate가 아니다.
+
+```markdown
+## Sim verify — <파트> — <이름> — <날짜>
+
+- 환경: OS/Docker, MORAI·sensor/network profile, map/scenario
+- commit과 실행 명령:
+- 범위와 결과: PASS / FAIL
+- rate·latency·자원·로그:
+- 미검증 항목과 이유:
+```
 
 ## 8. 현장 전환 gate
 

@@ -3,8 +3,8 @@
 > **상태:** Frozen Interface — P1-B
 > **기계 판독 정본:**
 > [`config/contracts/hd_map_topic_contract_v1.yaml`](../../../config/contracts/hd_map_topic_contract_v1.yaml)
-> **적용 범위:** 메시지와 토픽 의미 동결. P1-C metadata와 P1-D read-only publisher 구현 완료,
-> Lane/DrivableArea 제품은 2단계에서 구현
+> **적용 범위:** 메시지와 토픽 의미 동결. P1-C metadata, read-only publisher와 2단계
+> Lane/DrivableArea 제품 구현 완료
 
 ## 1. 호환성 원칙
 
@@ -111,7 +111,13 @@ non-drivable `100`, unknown `-1`로 고정한다.
 - 고주로의 A433 연결 1차로는 버스전용이며 global Lane 제품에서 제외한다. 대회 주행 후보는
   차로번호 2·3·4와 진입 합류차로 5뿐이다.
 
-## 5. 이 단계에서 하지 않는 일
+## 5. v1 계약의 단계 경계
 
-P1-B에는 기존 HD Map geometry 변환, 체크포인트 값 채우기, 미션 경계 확정, drivable-area
-clipping, publisher/RViz 구현이 포함되지 않는다. 각각 P1-C, P1-D와 2단계의 검증 gate를 거친다.
+P1-B에서 동결한 것은 message/topic 의미이며, 당시 기존 HD Map geometry 변환, 체크포인트 값,
+미션 경계, drivable-area clipping과 publisher/RViz 구현은 범위 밖이었다. 이 항목은 이후 P1-C,
+P1-D와 2단계 gate를 거쳐 현재 구현됐다. 구현 결과와 실행법은
+[runtime v1](./runtime-v1.md), 제품 기준값은
+[compact drivable baseline](../../records/baselines/kcity2025-compact-drivable-v1.md)을 따른다.
+
+후속 구현이 완료됐다는 사실은 v1 wire schema를 다시 열었다는 뜻이 아니다. 필드 변경이
+필요하면 기존 타입을 수정하지 않고 새 계약 version/type을 추가한다.

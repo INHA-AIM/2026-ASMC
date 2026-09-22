@@ -3,9 +3,10 @@
 > **문서 역할:** Canonical until competition port — 현재 submodule과 msg 정렬 규칙
 > **버전 조사:** [morai-msgs-versions.md](../../records/simulator/morai-msgs-versions.md)
 > **문서 허브:** [README.md](../../README.md)
-> **최종 수정:** 2026-07-25
-> **상태:** 통합 **시작 전** 확정 규칙
-> **관련:** [morai-msgs-versions.md](../../records/simulator/morai-msgs-versions.md) · [integration-plan.md](../../archive/integration/wave1-wave2-plan.md) · [대회 ROS 실측](../../../../docs/competition/morai-competition-ros-topics.md)
+> **현재 상태:** submodule 등록·공용 message 정렬 완료, competition port 전까지 유지
+> **관련:** [버전 조사](../../records/simulator/morai-msgs-versions.md) ·
+> [과거 integration 기록](../../archive/integration/wave1-wave2-plan.md) ·
+> [운영 profile](../../operations/README.md)
 
 ## 1. 원칙 (한 줄)
 
@@ -41,7 +42,7 @@ diff -ru <26.R1-clone>/msg <beta_drive-clone>/msg
 
 ---
 
-## 3. 통합 단계별 beta 정렬 (코드 이식 시)
+## 3. beta 정렬 gate (코드 이식·추가 시)
 
 통합은 `integrate/*` PR로 진행하되, **각 PR merge 조건에 beta 정렬을 포함**한다.
 
@@ -84,7 +85,10 @@ diff -ru <26.R1-clone>/msg <beta_drive-clone>/msg
 | 차량 상태 | `msg.angular_velocity` (Vector3) | 제거됨 — 필요 시 다른 토픽·유도 |
 | 대회 전용 | — | `Competition.msg` 등 (판정 연동 시) |
 
-### 파트별 통합 시 예상 작업
+### 레거시 출처별 port 참고
+
+아래 표는 초기 이식 출처를 식별하기 위한 기록이다. 현재 코드의 완료 상태나 담당 경로는
+[ownership](../../onboarding/ownership.md)과 각 package README를 따른다.
 
 | 출처 | beta 상태 | 통합 PR에서 할 일 |
 |------|-----------|-------------------|
@@ -98,7 +102,8 @@ diff -ru <26.R1-clone>/msg <beta_drive-clone>/msg
 ## 5. 신호등·토픽 (beta 정렬과 별개)
 
 - **msg:** `beta_drive`에도 `IntscnTL`, `TrafficLight`, **`GetTrafficLightStatus`** 등 **정의 있음**
-- **대회 런타임:** Set만 · Get 안 나옴 → [실측](../../../../docs/competition/morai-competition-ros-topics.md)
+- **대회 런타임:** 허용된 UDP와 팀 내부 정규화 topic만 사용한다. 현재 profile은
+  [운영 가이드](../../operations/README.md)를 따른다.
 - **26.R1.h3:** Get 발행 → **GT 라벨 세션에만** 사용 (일상 1순위 아님)
 - **노이즈:** 대회 SIM (1순위)
 - collector: 기본=대회 토픽 · TL Get은 26 profile optional
@@ -106,26 +111,25 @@ diff -ru <26.R1-clone>/msg <beta_drive-clone>/msg
 
 ---
 
-## 6. submodule 등록 (통합 리드, planning-v1 PR)
+## 6. submodule 사용
 
-통합 시작 시 최초 1회:
-
-```bash
-cd "$ASMC"
-# 기존 symlink 제거 후
-git submodule add -b beta_drive \
-  https://github.com/MORAI-Autonomous/MORAI-ROS_morai_msgs.git \
-  src/MORAI-ROS_morai_msgs
-git submodule update --init --recursive
-```
-
-팀원 clone 후:
+submodule은 이미 등록되어 있으므로 다시 `git submodule add`하지 않는다. 새 clone 또는 pin
+동기화에는 다음만 사용한다.
 
 ```bash
 git clone --recurse-submodules https://github.com/INHAautonav/2026-ASMC.git
-# 또는
+# 기존 clone
 git submodule update --init --recursive
 ```
+
+현재 pin을 확인한다.
+
+```bash
+git submodule status src/MORAI-ROS_morai_msgs
+```
+
+정본 pin은 `45c6baf148f2327f4c9fefd48262f25bdfe4b567`이다. pin 변경은 전체 consumer
+build와 필드 diff를 포함한 별도 PR로만 수행한다.
 
 ---
 
@@ -142,12 +146,7 @@ git submodule update --init --recursive
 
 ---
 
-## 8. 담당
+## 8. Ownership
 
-| 역할 | 담당 |
-|------|------|
-| submodule·beta 정책 | 안승현 (통합 리드) |
-| planning beta 검증 | 정윤태·양서준 |
-| LBC beta 마이그레이션 | 안승현 |
-| scenario beta 마이그레이션 | 장원태 |
-| perception live | 손재호 |
+submodule과 공용 wire schema는 통합 lead가 주관하고, 변경되는 producer·consumer owner가 함께
+리뷰한다. 현재 담당자와 경로는 [ownership](../../onboarding/ownership.md)이 정본이다.

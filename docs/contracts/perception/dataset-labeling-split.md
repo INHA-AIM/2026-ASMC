@@ -5,6 +5,10 @@
 > 기준일: 2026-09-08<br>
 > 대상 모델: TwinLiteNet+ Medium (drivable + 4-class road-marking)<br>
 > 상태: actor-negative(B) 잠정 채택, v6 본학습·validation·live 시각화 완료
+>
+> **빠른 읽기:** 현재 data contract는 §1~8과 §10의 최종 결정이다. §9의 날짜별 학습 결과는
+> 결정 근거를 보존한 rollout 기록이며 새 결과를 덮어쓸 위치가 아니다. 신규 성능 결과는
+> `docs/records/perception/`에 추가한다.
 
 ## 1. 현재 데이터와 사용 범위
 

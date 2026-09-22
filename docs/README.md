@@ -8,7 +8,9 @@
 `records/`, `archive/` 등으로 나눈다. 주요 이전 경로에는 한 릴리스 동안 새 정본으로 연결하는
 호환 안내만 남긴다. 이동 결과는 [D1 경로 이전 보고서](./structure/d1-path-migration-report.md),
 본문 통합은 [D2 온보딩·협업 보고서](./structure/d2-onboarding-governance-report.md)와
-[D2 대회·운영 보고서](./structure/d2-competition-operations-report.md)를 참고한다.
+[D2 대회·운영 보고서](./structure/d2-competition-operations-report.md),
+[본문 축약 보존 감사](./structure/d2-content-parity-audit.md),
+[D2 계약 보고서](./structure/d2-contracts-report.md)를 참고한다.
 이 페이지에서 정본, 작업 중 설계안, 사용 가이드와 과거 기록을 구분한다. 내용이
 충돌하면 아래의 `정본 우선순위`를 적용하고, 기록 문서를 현재 설정으로 해석하지 않는다.
 
@@ -33,6 +35,7 @@ planning/control 개발자는 [Planning/Control UDP 규약](./operations/plannin
 | 대회 규정·공개 자산 | 주최 측 최신 원문 → [대회 요약](./competition/README.md) | 공식 원문이 항상 우선. 요약 문서를 함께 갱신 |
 | Docker·시뮬 통신·포트 | [운영 가이드](./operations/README.md) | 현재 적용값과 3단계 목표를 혼용하지 않음 |
 | Git·ownership | [협업 규칙](./governance/README.md)과 [ownership](./onboarding/ownership.md) | 과거 Phase 0/Path A 문서보다 우선 |
+| 공용 계약 탐색·변경 gate | [계약 문서 허브](./contracts/README.md) | 실제 구현은 링크된 개별 계약과 기계 정본을 함께 확인 |
 | Planning/Control 실행 | [planning-control-udp.md](./operations/planning-control.md) | planning-behavior-handoff의 ROS 경로는 레거시 |
 | 카메라 데이터·라벨·split | [perception-dataset-labeling-split.md](./contracts/perception/dataset-labeling-split.md) | 개별 학습 기록보다 우선 |
 | 인지 융합 방향·우선순위 | [perception-map-fusion-roadmap.md](./packages/asmc_perception/roadmap.md) | BEV 세부안·초기 agentic 문서보다 우선 |
@@ -66,6 +69,9 @@ planning/control 개발자는 [Planning/Control UDP 규약](./operations/plannin
 | [contracts/hd-map-runtime-visualization-v1.md](./contracts/hd-map/runtime-v1.md) | 2단계 global/local ROS publisher, RViz와 paint-gap 소비 규칙 | Active Runtime |
 | [baselines/kcity2025-drivable-area-input-audit-v1.md](./records/baselines/kcity2025-drivable-input-v1.md) | P2-A Node/Link road prior, lane-clip 후보와 intersection guard 정본 | Frozen P2 Input |
 | [baselines/kcity2025-compact-drivable-map-v1.md](./records/baselines/kcity2025-compact-drivable-v1.md) | P2-B route-compact Lane/vector/grid 결과와 판제 소비 규칙 | Active HD Map Product |
+
+공용 계약을 구현하거나 바꾸려면 먼저 [계약 문서 허브](./contracts/README.md)에서 consumer,
+기계 정본과 검증 gate를 확인한다.
 
 ### 3.3 대회·시뮬·네트워크
 
