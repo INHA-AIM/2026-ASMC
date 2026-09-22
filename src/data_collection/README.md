@@ -352,8 +352,9 @@ MORAI 이미지·GT는 Windows의 `SensorData`에 저장되는데 **루트가 �
 `C:\MoraiLauncher_Win\MoraiLauncher_Win_Data\SaveFile\SensorData\LIDAR_5`로 간다.
 모라이 자체 동작이며 센서셋에 저장 경로 필드가 없어 설정으로 바꿀 수 없다. 아래
 `sync_capture_mode_data.py`의 `--sensor-root` 기본값은 앞의 루트만 가리키므로
-**LiDAR는 동기화 대상이 아니다.** 형식과 실측은
-[`docs/competition/capture-lidar-data-spec.md`](../../../docs/competition/capture-lidar-data-spec.md)에 있다.
+**LiDAR는 동기화 대상이 아니다.** LiDAR Capture 형식과 과거 실측 상세는 repository 밖의
+개인 분석 기록으로 분리돼 있으며, 팀 공용 파이프라인이 이를 사용하게 될 때 별도 versioned
+contract와 importer를 이 저장소에 추가한다.
 
 Linux에는 다음 lineage만 `$ASMC_DATA/capture_runs/<run_id>/` 아래 기록한다.
 
@@ -609,7 +610,9 @@ state를 기록한다.
 ### 모드
 
 현재: `latest_timer` (최신 메시지 래치 후 `collect_hz` 스냅샷).
-다음: Time Manager sync tick ([mentoring](../../../docs/competition/mentoring-morai.md) §6).
+Time Manager sync tick은 구현되지 않은 후속 후보이며, MORAI
+[Synchronous Mode](https://help-morai-sim.scrollhelp.site/ko/morai-sim-drive/26.R1/synchronous-mode)를
+기준으로 별도 pilot 뒤 채택한다.
 
 ### lane/drivable 수집 구현 상태
 
@@ -623,4 +626,6 @@ Capture Mode 동기화본 → native target → TwinLite cache → run-based dat
 - 카메라 blob을 `.jpg`로 저장하므로 Semantic 무손실 PNG/ID map writer가 별도로 필요
 - `lane_capture` / `lane_stream_gt` profile은 아직 없음
 
-구현 순서는 [데이터 로드맵 WP-01~09](../../../docs/competition/yolopv3-data-development-roadmap.md)와 [수집 계약](../../../docs/competition/sync-collection-design.md)을 따른다. Bronze/Silver에는 native 해상도를 보존하며 TwinLite H×W=384×640 변환은 Silver 이후 adapter/Gold에서 수행한다.
+과거 YOLOPv3 WP와 Bronze/Silver/Gold 수집 설계는 현재 계획이 아니다. 현재 구현 순서와
+후속 gate는 [인지 통합 로드맵](../../docs/packages/asmc_perception/roadmap.md), native 원본·mask·split
+규칙은 [데이터셋 계약](../../docs/contracts/perception/dataset-labeling-split.md)을 따른다.

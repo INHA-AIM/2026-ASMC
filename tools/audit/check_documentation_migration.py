@@ -230,6 +230,14 @@ def validate_current_tree(manifest: dict) -> List[str]:
             if not path_part:
                 continue
             resolved = (markdown.parent / path_part).resolve()
+            try:
+                resolved.relative_to(REPO_ROOT)
+            except ValueError:
+                errors.append(
+                    f"local Markdown link escapes repository root: "
+                    f"{markdown.relative_to(REPO_ROOT)} -> {raw_link}"
+                )
+                continue
             if not resolved.exists():
                 errors.append(
                     f"broken local Markdown link: "

@@ -2,7 +2,7 @@
 
 > **문서 역할:** Working Overview — 현재 전체 구조를 짧게 연결하는 문서
 > **문서 허브:** [README.md](../README.md)
-> **상태:** Working Overview v0.4 — 상세: 상위 [architecture.md](../../../docs/competition/architecture.md) · [운영 가이드](../operations/README.md) · [인지 융합 로드맵](../packages/asmc_perception/roadmap.md)
+> **상태:** Working Overview v0.4 — 상세: [운영 가이드](../operations/README.md) · [인지 융합 로드맵](../packages/asmc_perception/roadmap.md)
 
 ## 1. 한 줄 요약
 
