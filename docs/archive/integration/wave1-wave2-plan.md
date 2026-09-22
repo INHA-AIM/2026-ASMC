@@ -1,12 +1,14 @@
 # 통합 계획·진행 상황
 
 > **문서 역할:** Historical Record — Wave 1/2 이식 당시의 계획과 결과
-> **현재 우선순위:** [architecture-overview.md](../../architecture/system-overview.md) · [perception-map-fusion-roadmap.md](../../packages/asmc_perception/roadmap.md)
+> **Archive 허브:** [README.md](../README.md)
+> **현재 우선순위:** [시스템 구조](../../architecture/system-overview.md) · [통합 로드맵](../../architecture/consolidation-roadmap.md) · [Perception guide](../../packages/asmc_perception/README.md)
 > **주의:** 이 문서의 날짜·다음 작업을 현재 일정으로 사용하지 않는다.
 > **문서 허브:** [README.md](../../README.md)
 > **통합 리드:** 안승현
 > **최종 수정:** 2026-07-25
-> 현황: [로컬 team-status](../../../../docs/competition/team-status.md) · Git: [collaboration.md](../../governance/README.md)
+> 당시 현황 원문: 상위 개인 workspace `docs/competition/team-status.md` (팀 clone 미포함) ·
+> 현재 Git 규칙: [협업 가이드](../../governance/README.md)
 
 ## 1. 전략 (Phase 0 / 1)
 
@@ -60,16 +62,19 @@
 | aim_ws | ochang | `2b6eb4b` | **Deprecated** |
 | aim_ws | va_seunghyun | `1ae08b7` | 참조 |
 
-클론: `external/team/` — [README](../../../../external/team/README.md)
+당시 clone inventory는 상위 개인 workspace `external/team/README.md`에 있으며 팀 repository에는
+포함하지 않는다. 필요한 upstream commit은 위 표에 보존했다.
 
 ## 5. Wave 1 요약 (유지)
 
-planning-v2 · LBC · scenario · Det3D v1 — 이전 문서 §5–§9 내용 유효.
-현재 UDP 기준: [운영 가이드](../../operations/README.md)
+planning-v2 · LBC · scenario · Det3D v1 — 아래 내용은 당시 이식 기록으로 유효하다.
+현재 전체 운영: [운영 가이드](../../operations/README.md)
 인지 eval: [perception-agentic-loop.md](../perception/agentic-loop.md)
 
-> 이 절은 ROS 기반 이전 구현 기록이다. 현재 정본은
-> [planning-control-udp.md](../../operations/planning-control.md)이며 upstream 기준은 `465833e`다.
+> 이 절은 ROS 기반 이전 구현과 이후 standalone 전환 당시의 기록이다. standalone 내용은
+> [historical UDP baseline](../planning/standalone-udp-baseline.md), 현재 실행은
+> [Planning/Control 운영 규약](../../operations/planning-control.md)을 따른다. 당시 upstream
+> 기준은 `465833e`다.
 
 **신규 패키지:** `src/behavior_planner/` — MGeo 기반 상위 의사결정, `/behavior/context` publish
 

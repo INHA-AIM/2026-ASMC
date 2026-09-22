@@ -1,6 +1,9 @@
 # D1: Legacy 행동 선택권 / 계산 자산 경계 분석
 
-> **상태:** D1-1 분석 산출물. **코드를 수정하지 않는다.**
+> **상태:** Historical D1-1 분석 산출물. **현재 작업 목록으로 사용하지 않는다.**
+>
+> **Archive 허브:** [README.md](../README.md) · **현재 경계:**
+> [Planning/Control guide](../../packages/planning-control/README.md)
 >
 > **목적:** `frenet_planner.cpp`에서 "Frenet이 스스로 행동을 결정하는 코드"와
 > "그 행동을 수행하기 위해 계산하는 코드"를 완전히 분류한다. 실제 코드 경계

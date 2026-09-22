@@ -1,6 +1,7 @@
 # 인지 에이전틱 평가 루프 (Loc-Aid · MGeo bake · BEV)
 
 > **문서 역할:** Research Reference — 2026-07 초기 반복 평가 아이디어
+> **Archive 허브:** [README.md](../README.md)
 > **현재 로드맵:** 우선순위와 인터페이스는 [perception-map-fusion-roadmap.md](../../packages/asmc_perception/roadmap.md)를 따른다.
 > **문서 허브:** [README.md](../../README.md)
 > **최종 수정:** 2026-07-25
@@ -125,5 +126,6 @@ src/perception/drivable_bev/   # 구현 예정 (bake · crop · IPM)
 
 ## 7. 관련
 
-- [architecture 로컬](../../../../docs/competition/architecture.md) · [team-status](../../../../docs/competition/team-status.md)
+- 당시 개인 workspace 원문: `docs/competition/architecture.md`, `docs/competition/team-status.md`
+  (팀 repository clone에는 미포함)
 - [운영 가이드](../../operations/README.md) · [협업 규칙](../../governance/README.md)

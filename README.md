@@ -20,6 +20,8 @@
 | [시스템 개요](docs/architecture/system-overview.md) | 현재 아키텍처와 모듈 경계 |
 | [통합 로드맵](docs/architecture/consolidation-roadmap.md) | 패키지 통합부터 현장 배포까지의 순서 |
 | [운영 가이드](docs/operations/README.md) | Docker, MORAI UDP, 시뮬 검증과 현장 전환 기준 |
+| [검증·실험 기록](docs/records/README.md) | 날짜·commit·artifact별 baseline과 실험 결과 |
+| [역사·레거시 기록](docs/archive/README.md) | 현재 실행 금지인 과거 설계와 대체 문서 |
 | [기여 요약](CONTRIBUTING.md) | PR 전 최소 확인 사항 |
 
 ## 빠른 시작

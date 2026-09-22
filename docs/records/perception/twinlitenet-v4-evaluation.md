@@ -1,12 +1,15 @@
 # TwinLiteNet+ v4 2-head 학습 평가
 
 > **문서 역할:** Experiment Record — 특정 dataset/checkpoint의 재현 가능한 결과
+> **기록 허브:** [records index](../README.md)
 > **현재 의사결정:** [perception-map-fusion-roadmap.md](../../packages/asmc_perception/roadmap.md)
 > **문서 허브:** [README.md](../../README.md)
 > 평가일: 2026-09-04 · 18 epoch 결과 반영: 2026-09-05<br>
 > 데이터: `twinlite_morai_v4_comp8_train_val_sample_b`<br>
 > 모델: TwinLiteNet+ Medium, lane + drivable, 현재 후보 epoch 18 EMA<br>
 > 체크포인트: `artifacts/perception_eval/runs/twinlite_medium_morai_v4_comp8_init_ema_b12_e18_20260904/best_mean.pt`
+>
+> `artifacts/`는 Git 밖의 로컬 산출물일 수 있으며 경로 부재가 이 기록의 수치 삭제를 뜻하지 않는다.
 
 ## 1. epoch 10 중간 기준의 고정 validation 개선
 

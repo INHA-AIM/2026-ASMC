@@ -1,11 +1,13 @@
 # MORAI morai_msgs 버전 매핑
 
 > **문서 역할:** Version Reference — 조사 시점의 26.R1/대회 msg 차이 기록
+> **기록 허브:** [records index](../README.md)
 > **주의:** 실제 대회판 이식 시 재실측하고 [morai-msgs-beta-policy.md](../../contracts/simulator/morai-msgs-beta-policy.md)를 갱신한다.
 > **문서 허브:** [README.md](../../README.md)
 > **최종 수정:** 2026-09-15
 > 통합 시 **단일 submodule** 기준을 정하고, 레거시 코드는 필드 차이를 인지해야 합니다.
-> **대회 ROS UI 실측:** [docs/competition/morai-competition-ros-topics.md](../../../../docs/competition/morai-competition-ros-topics.md)
+> **대회 ROS UI 실측 원문:** 상위 개인 workspace
+> `docs/competition/morai-competition-ros-topics.md` (팀 repository clone에는 미포함)
 
 ## 1. upstream 브랜치·태그 정리
 
@@ -110,7 +112,8 @@ ROS의 `.msg` 필드/토픽 차이는 direct ROS serialization 계약의 차이�
 
 ### 대회 MORAI ROS UI 실측 (2026-07-25)
 
-**정본:** [docs/competition/morai-competition-ros-topics.md](../../../../docs/competition/morai-competition-ros-topics.md)
+**당시 원문:** 상위 개인 workspace `docs/competition/morai-competition-ros-topics.md`.
+팀 공유에 필요한 관측 결과는 아래 표에 보존했다.
 
 대회 버전 ROS Topic 패널에 **노출된 전부:**
 
@@ -129,7 +132,7 @@ Bridge: `127.0.0.1:9090` · Target Frame **50 Hz**.
 
 → “대회에 Get이 없다” = **런타임 사실**. `.msg` 부재가 아님.
 → **기본 SIM = 대회**. **GT 라벨 세션만 26.R1.h3**.
-→ `rostopic list` 대기: [morai-competition-ros-topics.md](../../../../docs/competition/morai-competition-ros-topics.md) §7.
+→ 당시 `rostopic list` 대기 절차는 위 workspace 원문의 §7에 있다.
 
 **통합 시:** 코드·일상 = `beta_drive` + **대회 SIM**. 26은 privileged 수집 전용.
 

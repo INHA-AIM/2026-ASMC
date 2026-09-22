@@ -2,6 +2,8 @@
 
 > **문서 역할:** Experiment Record — 26.R1.H3 네트워크, UDP bridge, bag과 종료된 GT 실험
 >
+> **기록 허브:** [records index](../README.md)
+>
 > 현재 실행값은 [운영 가이드](../../operations/README.md)를 따른다. 이 문서의 수치는 당시
 > 환경의 관측값이며 현재 설정 또는 본선 보장을 뜻하지 않는다.
 

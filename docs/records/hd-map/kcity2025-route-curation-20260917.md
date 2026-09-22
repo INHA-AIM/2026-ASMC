@@ -1,5 +1,12 @@
 # K-City 2025 경로별 HD맵 선택 검수 — 2026-09-17
 
+> **문서 역할:** Dated HD Map Audit Record — stage01~14 선택·보정 근거
+>
+> **기록 허브:** [records index](../README.md)
+>
+> **현재 구현:** [asmc_hd_map guide](../../packages/asmc_hd_map/README.md)와
+> `src/asmc_hd_map/config/kcity2025_route_curation.yaml`을 우선한다.
+
 ## 목적과 고정 원칙
 
 세 source를 자동으로 섞지 않고 실제 MORAI 2025 주행 화면을 기준으로 link 구간마다 선택한다.

@@ -14,7 +14,8 @@
 [D2 HD Map·message 보고서](./structure/d2-hd-map-msgs-report.md),
 [D2 bridge 보고서](./structure/d2-bridge-report.md),
 [D2 perception 보고서](./structure/d2-perception-report.md),
-[D2 Planning/Control·handoff 보고서](./structure/d2-planning-handoffs-report.md)를 참고한다.
+[D2 Planning/Control·handoff 보고서](./structure/d2-planning-handoffs-report.md),
+[D2 records·archive 보고서](./structure/d2-records-archive-report.md)를 참고한다.
 이 페이지에서 정본, 작업 중 설계안, 사용 가이드와 과거 기록을 구분한다. 내용이
 충돌하면 아래의 `정본 우선순위`를 적용하고, 기록 문서를 현재 설정으로 해석하지 않는다.
 
@@ -69,11 +70,11 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 | [integration-plan.md](./archive/integration/wave1-wave2-plan.md) | Wave 1/2 이식 과정과 당시 판단 | Historical Record |
 | [architecture-overview.md](./architecture/system-overview.md) | 전체 모듈과 현재 목표 구조 요약 | Working Overview |
 | [repository-consolidation-roadmap.md](./architecture/consolidation-roadmap.md) | msg·bridge·HD Map·perception 4-패키지 통합, 체크포인트/미션, 현장 배포 단계 | Working Proposal |
-| [baselines/runtime-baseline-v1.md](./records/baselines/runtime-v1.md) | P1-A package/topic/message/sensor/bag/HD Map 회귀 기준과 후속 요구 | Frozen Baseline |
+| [baselines/runtime-baseline-v1.md](./records/baselines/runtime-v1.md) | P1-A 당시 package/topic/message/sensor/bag/HD Map snapshot | Frozen Snapshot (`73c0a8c`) |
 | [contracts/hd-map-topic-contract-v1.md](./contracts/hd-map/topic-v1.md) | P1-B `asmc_msgs` HD Map·체크포인트·미션 message/topic 계약 | Frozen Interface |
 | [contracts/kcity2025-competition-metadata-v1.md](./contracts/competition/kcity2025-metadata-v1.md) | P1-C 공식 체크포인트 projection과 권위별 mission-zone 정본 | Frozen Metadata |
 | [contracts/hd-map-runtime-visualization-v1.md](./contracts/hd-map/runtime-v1.md) | 2단계 global/local ROS publisher, RViz와 paint-gap 소비 규칙 | Active Runtime |
-| [baselines/kcity2025-drivable-area-input-audit-v1.md](./records/baselines/kcity2025-drivable-input-v1.md) | P2-A Node/Link road prior, lane-clip 후보와 intersection guard 정본 | Frozen P2 Input |
+| [baselines/kcity2025-drivable-area-input-audit-v1.md](./records/baselines/kcity2025-drivable-input-v1.md) | P2-A Node/Link road prior, lane-clip 후보와 intersection guard 입력 감사 | Frozen P2 Input |
 | [baselines/kcity2025-compact-drivable-map-v1.md](./records/baselines/kcity2025-compact-drivable-v1.md) | P2-B route-compact Lane/vector/grid 결과와 판제 소비 규칙 | Active HD Map Product |
 
 공용 계약을 구현하거나 바꾸려면 먼저 [계약 문서 허브](./contracts/README.md)에서 consumer,
@@ -136,6 +137,16 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 학습 결과가 바뀌면 모든 문서에 수치를 복사하지 않는다. 실험 수치는 evaluation 문서에
 추가하고 roadmap에는 현재 의사결정에 필요한 요약만 반영한다.
 
+### 3.6 기록·역사 자료
+
+| 문서 | 역할 | 상태 |
+|---|---|---|
+| [records index](./records/README.md) | baseline·HD Map audit·모델·simulator 실측의 시점과 현재 권위 | Active Index |
+| [archive index](./archive/README.md) | 과거 이식·연구·planning 설계와 현재 대체 문서 | Active Index |
+
+현재 설정을 찾을 때는 records/archive에서 시작하지 않는다. 정본·운영 문서에서 출발한 뒤
+결정 근거나 과거 비교가 필요할 때 이 두 index를 사용한다.
+
 ## 4. 작업별 바로가기
 
 | 하려는 작업 | 먼저 볼 문서 | 다음 문서 |
@@ -152,7 +163,8 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | 카메라–LiDAR 객체 분류 | [object detector handoff](./handoffs/perception/camera-object-detection.md) | [sensor-fusion 실행](../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md), [rosbag 평가](./operations/rosbag-evaluation.md) |
 | HD Map·카메라·LiDAR 문맥 | [Perception package-group guide](./packages/asmc_perception/README.md) | [fusion roadmap](./packages/asmc_perception/roadmap.md), [BEV design note](./packages/asmc_perception/bev-lane-interface-plan.md) |
 | 음영구간 카메라 출력을 판제에 연결 | [shadow camera handoff](./handoffs/perception/shadow-camera.md) | [lane boundary adapter](../src/planning_control/lane_boundary_adapter/README.md) |
-| 통합 전 package/topic/HD Map 회귀 확인 | [P1-A runtime baseline](./records/baselines/runtime-v1.md) | [통합 로드맵](./architecture/consolidation-roadmap.md) |
+| P1-A 당시 package/topic/HD Map snapshot 확인 | [records index](./records/README.md) | [P1-A runtime v1](./records/baselines/runtime-v1.md) |
+| 날짜별 수치·과거 결정 근거를 찾기 | [records index](./records/README.md) | [archive index](./archive/README.md) |
 | HD Map·체크포인트 토픽을 구현/소비 | [P1-B topic contract](./contracts/hd-map/topic-v1.md) | [asmc_msgs README](../src/asmc_msgs/README.md), [통합 로드맵](./architecture/consolidation-roadmap.md) |
 | 주행가능영역 clip·보호구간을 확인 | [P2-A input audit](./records/baselines/kcity2025-drivable-input-v1.md) | [runtime/visualization contract](./contracts/hd-map/runtime-v1.md), [통합 로드맵](./architecture/consolidation-roadmap.md) |
 | compact Lane·주행가능영역을 실행/소비 | [P2-B compact map](./records/baselines/kcity2025-compact-drivable-v1.md) | [runtime/visualization contract](./contracts/hd-map/runtime-v1.md), [HD Map README](../src/asmc_hd_map/README.md) |
@@ -172,6 +184,8 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | [Perception package-group guide](./packages/asmc_perception/README.md) | 현재 camera/BEV/LiDAR/traffic/data 경계와 Phase 4 gate |
 | [Planning/Control package-group guide](./packages/planning-control/README.md) | 현재 Behavior/Frenet/MPC 경계, legacy와 변경 gate |
 | [Handoff index](./handoffs/README.md) | 파트 간 인수 조건과 deployment/legacy 상태 |
+| [Records index](./records/README.md) | 특정 시점의 baseline·실험·검수 결과와 현재 권위 |
+| [Archive index](./archive/README.md) | 현재 실행 금지인 과거 설계와 대체 문서 |
 | [morai_udp_bridge](../src/morai_udp_bridge/README.md) | Network UDP·Ctrl 빠른 시작 |
 | [morai_sensor_bridge](../src/morai_sensor_bridge/README.md) | Sensor UDP decode 빠른 시작 |
 | [vehicle_state](../src/vehicle_state/README.md) | GPS/IMU 상태 정규화와 배타적 source |

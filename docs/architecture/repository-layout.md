@@ -37,11 +37,13 @@ gate는 [저장소 통합 로드맵](./consolidation-roadmap.md)을 따른다. p
 
 **Git에 넣지 않음:** `build/`, `devel/`, `data/`, `checkpoints/`, `.bag`, `*.pth`
 
-P1-A 기준은 [runtime-baseline-v1.md](../records/baselines/runtime-v1.md)에서 확인하고 다음 명령으로
-재생성 여부를 검증한다. bag과 현장 원본은 `$ASMC_DATA`에서 읽되 저장소로 복사하지 않는다.
+P1-A 당시 snapshot은 [runtime-baseline-v1.md](../records/baselines/runtime-v1.md)에 보존한다.
+현재 HEAD는 승인된 후속 변경으로 v1과 다르므로 `build_runtime_baseline.py --check`를 일상
+회귀에 넣지 않는다. 다음 repository-wide freeze는 v1을 덮어쓰지 않고 새 version으로 만든다.
+현재 contract/product는 아래 명령으로 검증한다. bag과 현장 원본은 `$ASMC_DATA`에서 읽되
+저장소로 복사하지 않는다.
 
 ```bash
-python3 tools/audit/build_runtime_baseline.py --check
 python3 tools/audit/validate_p1b_contract.py
 python3 src/asmc_hd_map/scripts/build_competition_metadata.py --check
 PYTHONPATH=src/asmc_hd_map/src python3 src/asmc_hd_map/scripts/build_drivable_area_input_audit.py --check

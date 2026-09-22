@@ -95,11 +95,14 @@ status가 비어 있으면 validator가 실패한다. P1-D 시각화에서는 �
 python3 src/asmc_hd_map/scripts/build_competition_metadata.py --check
 PYTHONPATH=src/asmc_hd_map/src \
   python3 -m unittest src/asmc_hd_map/test/test_competition_metadata.py
-python3 tools/audit/build_runtime_baseline.py --check
 ```
 
 `--write`는 source config를 검토해 변경한 경우에만 사용한다. 출력은 timestamp를 넣지 않으며
 같은 입력에서 byte-for-byte 동일하다.
+
+P1-A runtime baseline v1은 content commit `73c0a8c`의 repository snapshot이며 현재 metadata
+검증 명령에 포함하지 않는다. 현재 HEAD 전체를 다시 동결하려면 v1을 덮어쓰지 않고 새 baseline
+version을 만든다.
 
 ## 5. 아직 하지 않는 일
 

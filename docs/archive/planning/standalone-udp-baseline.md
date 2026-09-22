@@ -2,6 +2,8 @@
 
 > **문서 역할:** Historical Runtime Baseline — ROS runtime 전환 전 standalone C++17+UDP 경로
 >
+> **Archive 허브:** [README.md](../README.md)
+>
 > **원문 위치:** `docs/operations/planning-control.md`
 >
 > **보존 시점:** 2026-09-22 D2 planning-control 통합 직전

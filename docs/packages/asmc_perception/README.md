@@ -179,6 +179,7 @@ Vendor Velodyne driver는 팀 인지 runtime과 같은 package로 합치지 않�
 
 긴 roadmap, BEV 설계 노트, package README와 handoff·record의 본문을 줄이거나 이동하지 않았다.
 새 guide는 현재 상태를 찾아가는 색인만 제공한다. 절별 행선지와 미변경 범위는
-[D2 perception 통합 기록](../../structure/d2-perception-report.md)에서 확인한다. 날짜별 분석을
-`records/`로 물리적으로 분리하는 작업은 원문 절 대응과 링크 검증을 동반하는 후속 묶음에서만
-수행한다.
+[D2 perception 통합 기록](../../structure/d2-perception-report.md)에서 확인한다. D2 records 감사에서도
+날짜별 분석은 실행·I/O 문맥과 기존 anchor를 보존하기 위해 원래 package README에 유지했다.
+현재 위치와 이후 이동 gate는 [records index](../../records/README.md#4-package에-남아-있는-날짜별-로그)를
+따른다.
