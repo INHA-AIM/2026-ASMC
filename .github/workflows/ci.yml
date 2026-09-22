@@ -32,6 +32,9 @@ jobs:
           test -d src/MORAI-ROS_morai_msgs/.git || test -f src/MORAI-ROS_morai_msgs/package.xml
           echo "morai_msgs present"
 
+      - name: Verify documentation migration
+        run: python3 tools/audit/check_documentation_migration.py
+
       - name: catkin_make
         run: |
           source /opt/ros/noetic/setup.bash

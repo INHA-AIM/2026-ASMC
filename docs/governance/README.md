@@ -104,7 +104,8 @@ chore(scope): 빌드·설정
 docker exec -it asmc-ros-noetic bash -lc 'cd /root/ws && ./scripts/build_ws.sh'
 ```
 
-- 문서 이동: 로컬 Markdown 링크와 `git diff --check`
+- 문서 이동: 로컬 Markdown 링크, `git diff --check`와
+  `python3 tools/audit/check_documentation_migration.py`
 - HD Map: deterministic builder/test와 topic/RViz smoke
 - perception: 동일 bag replay, 출력 rate·latency·message contract
 - bridge: packet fixture, topic type/rate, 기존 profile 회귀

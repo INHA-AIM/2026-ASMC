@@ -15,7 +15,8 @@
 [D2 bridge 보고서](./structure/d2-bridge-report.md),
 [D2 perception 보고서](./structure/d2-perception-report.md),
 [D2 Planning/Control·handoff 보고서](./structure/d2-planning-handoffs-report.md),
-[D2 records·archive 보고서](./structure/d2-records-archive-report.md)를 참고한다.
+[D2 records·archive 보고서](./structure/d2-records-archive-report.md),
+[D3 정보 보존·경로 호환 감사](./structure/d3-retention-compatibility-report.md)를 참고한다.
 이 페이지에서 정본, 작업 중 설계안, 사용 가이드와 과거 기록을 구분한다. 내용이
 충돌하면 아래의 `정본 우선순위`를 적용하고, 기록 문서를 현재 설정으로 해석하지 않는다.
 
@@ -222,6 +223,9 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 6. 오래된 문서는 삭제하기 전에 Legacy banner와 대체 정본 링크를 먼저 추가한다.
 7. 파일 이동·이름 변경은 전체 상대 링크와 외부 북마크 영향을 확인한 별도 PR에서만 한다.
 8. 문서의 날짜는 실제로 내용을 재검토했을 때만 변경한다.
+9. 옛 경로 stub의 생성·제거는
+   [`documentation_migration_v1.json`](../config/docs/documentation_migration_v1.json)과
+   D3 removal gate를 함께 갱신하고 checker를 통과해야 한다.
 
 ### 새 내용을 어디에 적을지
 

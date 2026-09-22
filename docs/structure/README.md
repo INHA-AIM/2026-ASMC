@@ -1,9 +1,9 @@
 # 팀 문서 정보 구조
 
-> **상태:** D2 Content Consolidation — 여덟 묶음 완료, D2 종료
+> **상태:** D3 Retention/Compatibility Audit — 보존 감사 완료, 호환 stub 제거 유예
 >
 > **작성일:** 2026-09-22
-> **진행:** D1 경로 이전을 마쳤고, D2에서 디렉터리 묶음별로 본문을 통합한다.
+> **진행:** D1 경로 이전과 D2 본문 통합을 마쳤고, D3에서 보존·호환 gate를 고정했다.
 
 ## 목적
 
@@ -28,6 +28,8 @@
 [Planning/Control·handoff 보고서](./d2-planning-handoffs-report.md),
 [records·archive 보고서](./d2-records-archive-report.md)처럼 묶음별로 기록한다. 큰 폭으로 줄인 앞선 두 묶음은
 [본문 축약 보존 감사](./d2-content-parity-audit.md)에서 원문 절과 현재 행선지를 다시 확인했다.
+D3의 전체 원문 inventory와 외부 경로 유지 판단은
+[정보 보존·경로 호환 감사](./d3-retention-compatibility-report.md)를 따른다.
 
 ## 목표 구조
 
@@ -85,7 +87,8 @@ docs/
 - D2-6: `packages/asmc_perception/` 진입점·권위 통합 완료. 세부 분석 본문은 원문 보존
 - D2-7: `packages/planning-control/`·`handoffs/` 통합 완료. standalone UDP 원문은 archive 보존
 - D2-8: `records/`·`archive/` 통합 완료. 기존 실측·분석 본문과 generated export 보존
-- D3: 내용 parity 확인 뒤 호환 안내와 불필요한 중복 제거
+- D3: 원문 37개와 generated export 2개의 행선지·byte/절 parity 감사 완료. migration이 아직
+  `main`과 후속 배포를 거치지 않아 호환 안내 17개와 historical export 제거는 유예
 
 각 D2 묶음은 원문→정본 대응표와 링크 검증 결과를 남긴다. Working Proposal을 근거 없이
 Canonical로 바꾸거나 날짜가 있는 기록을 최신 설정처럼 덮어쓰지 않는다.

@@ -34,13 +34,18 @@
 각 PR은 원문 절→새 문서 절 대응표를 남겨 누락 여부를 검토한다. 수치·경로·명령을 바꾸는
 경우 구조 정리와 분리해 별도 구현 근거를 요구한다.
 
-## D3 — 중복·옛 문서 제거
+## D3 — 중복·옛 문서 제거 (감사 완료, 삭제 유예)
 
 - 정본에 모든 고유 내용이 옮겨졌는지 절 단위로 확인한다.
 - 삭제 대상은 마지막 commit과 대체 문서를 archive index에 기록한다.
 - `Historical/Legacy` 자체는 오래됐다는 이유만으로 삭제하지 않는다.
 - 개인 작업에만 필요한 상세 조사·원문·대용량 자료는 상위 워크스페이스 `docs/`에 남기고,
   팀 저장소에는 결론·계약·재현 방법만 보존한다.
+
+[D3 보존·호환 감사](./d3-retention-compatibility-report.md)에서 D1 이전 Markdown 37개와
+generated text 2개의 행선지를 모두 확인했다. 현재 migration은 아직 `main`과 한 번의 후속
+배포를 거치지 않았으므로 호환 stub 17개와 generated export는 삭제하지 않는다. 제거 gate는
+`config/docs/documentation_migration_v1.json`에 기계 판독 형태로 고정한다.
 
 ## 공통 금지 사항
 
