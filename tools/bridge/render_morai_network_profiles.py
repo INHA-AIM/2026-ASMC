@@ -37,10 +37,10 @@ def _rewrite_udp_ips(config: Dict[str, Any], morai_ip: str, autonav_ip: str) -> 
 
 
 def render_profile(
-    contract: Dict[str, Any], simulator: str, transport: str
+    contract: Dict[str, Any], release: str, transport: str
 ) -> Dict[str, Any]:
     try:
-        template_rel = contract["network_templates"][simulator]["template"]
+        template_rel = contract["network_templates"][release]["template"]
         transport_data = contract["transport_profiles"][transport]
     except KeyError as exc:
         raise ProfileError(f"unknown profile key: {exc.args[0]}") from exc
@@ -50,10 +50,14 @@ def render_profile(
     morai_ip = transport_data["morai_ip"]
     autonav_ip = transport_data["autonav_ip"]
     channels = contract["channels"]
-    field_transport = transport == "competition_lan"
+    field_transport = transport == "lan2lan"
     default_morai_ip = "127.0.0.1" if field_transport else morai_ip
     default_autonav_ip = "127.0.0.1" if field_transport else autonav_ip
     ctrl_found = status_found = collision_found = False
+    ego_status_found = False
+    ego_status_pubsub = channels["ego_vehicle_status"][
+        "morai_pubsub_type_by_release"
+    ][release]
 
     for entry in _entries(result):
         # Field output is fail-closed: all unspecified/privileged channels stay
@@ -82,6 +86,12 @@ def render_profile(
             udp["hostPort"] = channels["competition_vehicle_status"]["host_port"]
             udp["destinationPort"] = channels["competition_vehicle_status"]["destination_port"]
             status_found = True
+        elif pubsub == ego_status_pubsub:
+            udp = entry["config"]["udpConfig"]
+            _rewrite_udp_ips(entry["config"], morai_ip, autonav_ip)
+            udp["hostPort"] = channels["ego_vehicle_status"]["host_port"]
+            udp["destinationPort"] = channels["ego_vehicle_status"]["destination_port"]
+            ego_status_found = True
         elif pubsub == channels["collision_data"]["morai_pubsub_type"]:
             udp = entry["config"]["udpConfig"]
             _rewrite_udp_ips(entry["config"], morai_ip, autonav_ip)
@@ -94,13 +104,14 @@ def render_profile(
         for name, found in (
             ("Ego Ctrl Cmd", ctrl_found),
             ("Competition Vehicle Status", status_found),
+            ("Ego Vehicle Status", ego_status_found),
             ("CollisionData", collision_found),
         )
         if not found
     ]
     if missing:
         raise ProfileError(
-            f"{simulator} template lacks required MORAI entries: {', '.join(missing)}"
+            f"{release} template lacks required MORAI entries: {', '.join(missing)}"
         )
     return result
 
@@ -110,22 +121,22 @@ def rendered_bytes(document: Dict[str, Any]) -> bytes:
 
 
 def profile_items(contract: Dict[str, Any]) -> Iterable[Tuple[str, str, Path]]:
-    for simulator, spec in contract["network_templates"].items():
+    for release, spec in contract["network_templates"].items():
         for transport, output_rel in spec["generated"].items():
-            yield simulator, transport, REPO_ROOT / output_rel
+            yield release, transport, REPO_ROOT / output_rel
 
 
 def write_all(contract: Dict[str, Any]) -> None:
-    for simulator, transport, output in profile_items(contract):
+    for release, transport, output in profile_items(contract):
         output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_bytes(rendered_bytes(render_profile(contract, simulator, transport)))
+        output.write_bytes(rendered_bytes(render_profile(contract, release, transport)))
         print(f"wrote {output.relative_to(REPO_ROOT)}")
 
 
 def check_all(contract: Dict[str, Any]) -> None:
     failures = []
-    for simulator, transport, output in profile_items(contract):
-        expected = rendered_bytes(render_profile(contract, simulator, transport))
+    for release, transport, output in profile_items(contract):
+        expected = rendered_bytes(render_profile(contract, release, transport))
         if not output.is_file():
             failures.append(f"missing {output.relative_to(REPO_ROOT)}")
         elif output.read_bytes() != expected:

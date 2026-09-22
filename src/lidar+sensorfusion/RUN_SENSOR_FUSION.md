@@ -41,7 +41,7 @@ Start the outer sensor bridge first:
 cd /path/to/2026-ASMC
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-./scripts/udp_bridge.sh --simulator 26r1 publish_map_tf:=true
+./scripts/udp_bridge.sh publish_map_tf:=true
 ```
 
 `publish_map_tf:=true` is an opt-in raw GPS + latest IMU transform used by

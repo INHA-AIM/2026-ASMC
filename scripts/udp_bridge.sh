@@ -2,8 +2,9 @@
 # Start MORAI UDP ↔ ROS bridges (NOT rosbridge / WebSocket).
 # Packages: morai_udp_bridge + morai_sensor_bridge
 #
-# Simulator selection chooses MORAI import-file provenance only. Both releases
-# run the single morai_udp protocol profile and the same canonical ROS topics.
+# Both supported MORAI releases run the same morai_udp protocol and canonical
+# ROS topics. Release selection belongs to the JSON imported in the MORAI UI,
+# not to this runtime command.
 # The bridge opens the union of ASMC_sensor_set_v2 and GT sensor ports; optional
 # GT ports simply remain idle when a regular sensor set is loaded in MORAI.
 set -euo pipefail
@@ -14,44 +15,28 @@ source "$SCRIPT_DIR/asmc_env.sh"
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/udp_bridge.sh [--simulator 26r1|competition] [--transport dev_local|competition_lan] [roslaunch overrides]
-
-Simulator releases (one bridge implementation):
-  26r1        MORAI 26.R1.H3 development simulator (default)
-  competition MORAI 25.S4.MolitComp03 competition simulator
+Usage: ./scripts/udp_bridge.sh [--transport local|lan2lan] [roslaunch overrides]
 
 Transport profiles:
-  dev_local       MORAI/Autonav 127.0.0.1 (default)
-  competition_lan MORAI 192.168.0.1, Autonav 192.168.0.10
+  local   MORAI and Autonav bridge on one workstation via 127.0.0.1 (default)
+  lan2lan MORAI PC 192.168.0.1 and Autonav PC 192.168.0.10
 
 The bridge always listens for the v2 sensors and the optional GT Semantic
 cameras/Instance LiDAR. Loading v2 leaves the optional ports idle; loading GT
 activates them automatically. The script does not change MORAI UI settings.
 
 Examples:
-  ./scripts/udp_bridge.sh --simulator 26r1
-  ./scripts/udp_bridge.sh --simulator competition --transport competition_lan
-  ./scripts/udp_bridge.sh --simulator 26r1 timestamp_mode:=source
+  ./scripts/udp_bridge.sh
+  ./scripts/udp_bridge.sh --transport lan2lan
+  ./scripts/udp_bridge.sh timestamp_mode:=source
 EOF
 }
 
-SIMULATOR="${ASMC_SIMULATOR:-26r1}"
-TRANSPORT="${ASMC_TRANSPORT:-dev_local}"
+RUNTIME_PROFILE="morai_udp"
+TRANSPORT="${ASMC_TRANSPORT:-local}"
 LAUNCH_ARGS=()
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --simulator)
-      if [ "$#" -lt 2 ]; then
-        echo "[udp_bridge] ERROR: --simulator requires a value." >&2
-        exit 2
-      fi
-      SIMULATOR="$2"
-      shift 2
-      ;;
-    --simulator=*)
-      SIMULATOR="${1#*=}"
-      shift
-      ;;
     --transport)
       if [ "$#" -lt 2 ]; then
         echo "[udp_bridge] ERROR: --transport requires a value." >&2
@@ -68,8 +53,13 @@ while [ "$#" -gt 0 ]; do
       usage
       exit 0
       ;;
-    simulator_profile:=*)
-      echo "[udp_bridge] ERROR: use --simulator instead of simulator_profile." >&2
+    --simulator|--simulator=*|simulator_profile:=*)
+      echo "[udp_bridge] ERROR: --simulator was removed because both MORAI releases use one runtime." >&2
+      echo "  Import the release-matching JSON in MORAI; select only --transport here." >&2
+      exit 2
+      ;;
+    runtime_profile:=*)
+      echo "[udp_bridge] ERROR: runtime_profile is fixed to morai_udp." >&2
       exit 2
       ;;
     transport_profile:=*)
@@ -83,31 +73,13 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-case "${SIMULATOR,,}" in
-  26r1|26.r1|26.r1.h3|dev|dev_26r1_h3)
-    SIMULATOR_PROFILE="morai_udp"
-    SIMULATOR_LABEL="26.R1.H3 development"
-    SIMULATOR_PRESET_TAG="26r1"
-    ;;
-  competition|25s4|25.s4|25.s4.molitcomp03|competition_25s4_molitcomp03)
-    SIMULATOR_PROFILE="morai_udp"
-    SIMULATOR_LABEL="25.S4.MolitComp03 competition"
-    SIMULATOR_PRESET_TAG="molitcomp03"
-    ;;
-  *)
-    echo "[udp_bridge] ERROR: unknown simulator '$SIMULATOR'." >&2
-    usage >&2
-    exit 2
-    ;;
-esac
-
 case "${TRANSPORT,,}" in
-  dev_local|dev|local)
-    TRANSPORT_PROFILE="dev_local"
+  local)
+    TRANSPORT_PROFILE="local"
     TRANSPORT_CMD_IP="127.0.0.1"
     ;;
-  competition_lan|competition|field|lan)
-    TRANSPORT_PROFILE="competition_lan"
+  lan2lan)
+    TRANSPORT_PROFILE="lan2lan"
     TRANSPORT_CMD_IP="192.168.0.1"
     ;;
   *)
@@ -116,16 +88,19 @@ case "${TRANSPORT,,}" in
     exit 2
     ;;
 esac
-NETWORK_PRESET="config/morai/network/generated/ASMC_network_set_${SIMULATOR_PRESET_TAG}_${TRANSPORT_PROFILE}.json"
+NETWORK_PRESET_26R1="config/morai/network/generated/ASMC_network_set_26r1_${TRANSPORT_PROFILE}.json"
+NETWORK_PRESET_COMP="config/morai/network/generated/ASMC_network_set_molitcomp03_${TRANSPORT_PROFILE}.json"
 
 # Parse and shift our CLI arguments before sourcing catkin setup files. Catkin
 # setup forwards the caller's positional parameters to _setup_util.py.
 cd "$ASMC_WS_ROOT"
-if [ ! -f "$ASMC_WS_ROOT/$NETWORK_PRESET" ]; then
-  echo "[udp_bridge] ERROR: generated network preset is missing: $NETWORK_PRESET" >&2
-  echo "  python3 tools/bridge/render_morai_network_profiles.py --write" >&2
-  exit 1
-fi
+for preset in "$NETWORK_PRESET_26R1" "$NETWORK_PRESET_COMP"; do
+  if [ ! -f "$ASMC_WS_ROOT/$preset" ]; then
+    echo "[udp_bridge] ERROR: generated network preset is missing: $preset" >&2
+    echo "  python3 tools/bridge/render_morai_network_profiles.py --write" >&2
+    exit 1
+  fi
+done
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash 2>/dev/null || true
 
@@ -163,10 +138,11 @@ echo "=========================================="
 echo "  ASMC_WS_ROOT   : $ASMC_WS_ROOT"
 echo "  ROS_MASTER_URI : $ROS_MASTER_URI"
 echo "  Launch         : integration_launch/morai_udp_bridges.launch"
-echo "  Runtime        : ${SIMULATOR_PROFILE}"
-echo "  Simulator      : ${SIMULATOR_LABEL}"
+echo "  Runtime        : ${RUNTIME_PROFILE} (26r1 and competition shared)"
 echo "  Transport      : ${TRANSPORT_PROFILE}"
-echo "  Network preset : ${NETWORK_PRESET}"
+echo "  MORAI preset   : import ONE file matching the installed release"
+echo "                   26r1       -> ${NETWORK_PRESET_26R1}"
+echo "                   competition -> ${NETWORK_PRESET_COMP}"
 CMD_IP="${MORAI_CMD_IP:-$TRANSPORT_CMD_IP}"
 # If caller already passed cmd_ip:=..., do not override.
 has_cmd_ip=0
@@ -183,7 +159,7 @@ EXTRA=()
 if [ "$has_cmd_ip" -eq 0 ]; then
   EXTRA+=( "cmd_ip:=${CMD_IP}" )
 fi
-EXTRA+=( "simulator_profile:=${SIMULATOR_PROFILE}" )
+EXTRA+=( "runtime_profile:=${RUNTIME_PROFILE}" )
 EXTRA+=( "transport_profile:=${TRANSPORT_PROFILE}" )
 if [ "$has_semantic" -eq 0 ]; then
   EXTRA+=( "enable_semantic_camera:=true" )
@@ -193,6 +169,7 @@ if [ "$has_instance" -eq 0 ]; then
 fi
 echo "  cmd_ip         : ${CMD_IP} (Ctrl → Windows MORAI Host PORT)"
 echo "  Ctrl default   : 9093/9094, mode 2"
+echo "  Ego status     : 9088/9099 (both MORAI releases normalized)"
 echo "  Sensor ports   : v2 + optional GT union (automatic)"
 echo "  Timestamp      : receive default; GT pairing: timestamp_mode:=source"
 echo "  Verify         : rostopic hz /Ego_topic"

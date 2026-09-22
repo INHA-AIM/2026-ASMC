@@ -144,8 +144,8 @@ pairing과 GNSS 반복 여부를 먼저 검사한다.
 SIM 버전과 transport가 metadata에서 구분되도록 Real Time UDP 운용 profile을 실행한다.
 
 ```bash
-./scripts/udp_bridge.sh --simulator 26r1
-./scripts/udp_bridge.sh --simulator competition
+./scripts/udp_bridge.sh
+./scripts/udp_bridge.sh --transport lan2lan
 ```
 
 기본 녹화는 scenario와 controller만 입력한다. KST 시작 시각, 초기 날씨·시뮬레이션 시간,

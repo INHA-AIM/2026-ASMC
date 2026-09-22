@@ -4,21 +4,26 @@
 
 | MORAI release | 개발 PC 한 대 | 현장 두 PC |
 |---|---|---|
-| 26.R1.H3 | `network/generated/ASMC_network_set_26r1_dev_local.json` | 검증용 `..._26r1_competition_lan.json` |
-| 25.S4.MolitComp03 | `network/generated/ASMC_network_set_molitcomp03_dev_local.json` | `network/generated/ASMC_network_set_molitcomp03_competition_lan.json` |
+| 26.R1.H3 | `network/generated/ASMC_network_set_26r1_local.json` | 검증용 `..._26r1_lan2lan.json` |
+| 25.S4.MolitComp03 | `network/generated/ASMC_network_set_molitcomp03_local.json` | `network/generated/ASMC_network_set_molitcomp03_lan2lan.json` |
 
-현장 정본 조합은 `molitcomp03 + competition_lan`이다. 두 release의 import schema와
+현장 정본 조합은 `molitcomp03 + lan2lan`이다. 두 release의 import schema와
 `PUBSUB_TYPE`은 다르므로 파일을 교차 import하지 않는다. 반면 ROS bridge runtime은 둘 다
 `morai_udp` 하나다. `generated/`는 `templates/`와
 [`bridge_profiles_v1.json`](../bridge/bridge_profiles_v1.json)에서 결정적으로 생성한다.
 
 ```bash
-./scripts/udp_bridge.sh --simulator 26r1 --transport dev_local
-./scripts/udp_bridge.sh --simulator competition --transport competition_lan
+./scripts/udp_bridge.sh
+./scripts/udp_bridge.sh --transport lan2lan
 ```
 
-두 번째 명령은 Ctrl 대상 IP와 diagnostics를 현장 profile로 맞추지만 실제 LAN gate를 대신하지
-않는다. 현장 network JSON은 Ctrl, Competition Vehicle Status, CollisionData만 LAN IP를 쓰고
+인자가 없는 첫 명령은 `runtime=morai_udp`, `transport=local`, Ctrl target
+`127.0.0.1:9093`으로 실행된다. sensor set이나 MORAI release를 선택하지는 않는다. sensor set과
+release network JSON은 MORAI UI에서 불러온 것이 기준이다.
+
+두 번째 명령은 Ctrl 대상 IP와 diagnostics를 `lan2lan`으로 맞추지만 실제 LAN gate를 대신하지
+않는다. `lan2lan` network JSON은 Ctrl, Ego Vehicle Status, Competition Vehicle Status,
+CollisionData만 LAN IP를 쓰고
 Object/legacy/미확인 채널은 MORAI PC loopback에 둔다. renderer는 UDP field만 바꾸며
 gRPC/rosbridge 설정은 별도 개발 도구 소유다.
 
@@ -49,7 +54,7 @@ Camera×4, GPS/IMU, UDP `9290~9303`은 같다. export release 차이로 v3에는
 v3 승인 조건은 `/velodyne_points`를 30초 이상 측정한 평균 14~16 Hz, packet/parse error,
 latency·CPU, 손재호 tracking의 10 Hz 대비 결과다.
 
-현재 sensor JSON 네 개의 UDP IP는 `dev_local` export다. `competition_lan` sensor JSON 생성과
+현재 sensor JSON 네 개의 UDP IP는 `local` export다. `lan2lan` sensor JSON 생성과
 검증은 v3 live acceptance 작업에서 함께 수행하며, 그 전에는 network JSON만 보고 현장 센서
 transport가 완료됐다고 판단하지 않는다.
 
@@ -57,15 +62,35 @@ transport가 완료됐다고 판단하지 않는다.
 
 | transport | MORAI | Autonav |
 |---|---|---|
-| `dev_local` | `127.0.0.1` | `127.0.0.1` |
-| `competition_lan` | `192.168.0.1` | `192.168.0.10` |
+| `local` | `127.0.0.1` | `127.0.0.1` |
+| `lan2lan` | `192.168.0.1` | `192.168.0.10` |
 
 Docker Desktop 개발 compose는 `network_mode: host`이므로 Docker `ports:`를 열거하지 않는다.
-`./scripts/docker_ros_up.sh check`로 Windows↔container loopback UDP를 검사한다. WSL/Windows의
-모든 포트를 여는 것은 필요하지 않고 공격 면만 넓힌다. 현장에서는 MORAI `192.168.0.1`을
-source로 제한해 Autonav inbound UDP `7502`, `9092`, `9291/9293/9295/9297/9299`, `9301/9303`
-만 허용한다. GT 전용 `9305/9307/9309/9311`과 legacy oracle `909/7505`는 본선 allowlist에
-넣지 않는다. Ctrl `9093`은 Autonav에서 MORAI로 나가는 목적지다.
+`./scripts/docker_ros_up.sh check`로 Windows↔container loopback UDP를 검사한다.
 
-Windows loopback 검증은 실제 LAN ingress를 증명하지 않는다. `competition_lan`은 native Linux
-두 PC에서 route, firewall, bind, packet rate와 재시작 복구를 별도로 통과해야 한다.
+Windows 11 22H2 이상의 WSL 개발 PC에서는 `%UserProfile%\.wslconfig`의 mirrored networking을
+LAN2LAN 후보로 사용한다.
+
+```ini
+[wsl2]
+networkingMode=mirrored
+firewall=true
+```
+
+변경 후 PowerShell에서 `wsl --shutdown`하고 Docker Desktop 4.34 이상의 host networking을
+활성화한다. mirrored mode는 Windows NIC를 WSL에 반영하고 Windows↔WSL localhost 통신 및 LAN의
+WSL 접근을 지원한다. Docker Desktop host networking은 그 위에서 container와 host 사이의
+TCP/UDP를 연결한다. 둘은 별도 계층이므로 둘 다 켜고 실제 UDP 왕복으로 검증해야 한다.
+
+bridge 수신 socket은 `0.0.0.0`과 기존 destination port에 bind하므로 포트를 변환하지 않는다.
+Windows Firewall과 Hyper-V firewall에서는 MORAI `192.168.0.1` source에 대해 Autonav inbound UDP
+`7502`, `9092`, `9099`, `9291/9293/9295/9297/9299`, `9301/9303`만 허용한다. GT 전용
+`9305/9307/9309/9311`과 Object oracle `7505`는 본선 allowlist에 넣지 않는다. Ctrl `9093`은
+Autonav에서 MORAI로 나가는 목적지다. 기본 inbound action 전체를 Allow로 바꾸지 않는다.
+
+- WSL mirrored networking: <https://learn.microsoft.com/windows/wsl/networking#mirrored-mode-networking>
+- Docker Desktop host networking: <https://docs.docker.com/engine/network/drivers/host/#docker-desktop>
+
+Windows loopback 검증은 실제 LAN ingress를 증명하지 않는다. `lan2lan`은 Windows+WSL+Docker
+구성과 최종 native Linux 구성 각각에서 route, firewall, bind, packet rate와 재시작 복구를
+통과해야 한다.

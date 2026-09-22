@@ -9,9 +9,9 @@
 ```bash
 roslaunch integration_launch morai_udp_bridges.launch
 # 또는 저장소 진입점
-./scripts/udp_bridge.sh --simulator 26r1
+./scripts/udp_bridge.sh
 ```
 
-현재 `--simulator competition`은 provenance label만 바꾸며 현장 transport profile을 적용하지
-않는다. 현장 IP/포트와 privileged stream allowlist가 구현되기 전에는 이 명령을 본선 준비
-완료의 근거로 사용하지 않는다.
+26r1과 대회판은 같은 launch를 사용한다. release는 MORAI UI의 network JSON에서 고르고,
+bridge에서는 기본 `local` 또는 `--transport lan2lan`만 선택한다. 실제 LAN gate와 privileged
+stream allowlist가 완료되기 전에는 `lan2lan` 선택만으로 본선 준비가 끝난 것은 아니다.

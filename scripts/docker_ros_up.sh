@@ -146,10 +146,10 @@ print_next() {
 [NEXT] Start the UDP bridge in a separate foreground terminal:
   docker exec -it asmc-ros-noetic bash
   source devel/setup.bash
-  ./scripts/udp_bridge.sh --simulator 26r1 --transport dev_local
+  ./scripts/udp_bridge.sh
 
 Keep MORAI Host/Destination IP at 127.0.0.1 and keep every port unchanged.
-Field candidate: ./scripts/udp_bridge.sh --simulator competition --transport competition_lan
+Field candidate: ./scripts/udp_bridge.sh --transport lan2lan
 EOF
 }
 

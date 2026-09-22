@@ -63,7 +63,7 @@ src/
 ├── asmc_msgs/                 # 팀 내부 message만
 ├── asmc_bridge/
 │   ├── src/asmc_bridge/       # network, sensor, vehicle_state
-│   ├── config/profiles/       # dev_local, competition_lan
+│   ├── config/profiles/       # local, lan2lan
 │   ├── launch/
 │   └── test/
 ├── asmc_hd_map/
@@ -343,13 +343,15 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
 
 - UDP network/sensor decode와 `vehicle_state` 정규화를 한 패키지에 둔다.
 - 공통 runtime protocol `morai_udp`와 simulator release, transport profile을 분리한다. 예:
-  `morai_udp + molitcomp03 + competition_lan`, `morai_udp + 26r1 + dev_local`.
+  `morai_udp + molitcomp03 + lan2lan`, `morai_udp + 26r1 + local`.
 - 외부 `morai_msgs`는 wire adapter에서만 보이고, 내부 node는 가능한 한 `asmc_msgs`를 쓴다.
 - privileged Object/GT 토픽은 개발 profile에서만 허용하며 competition launch에서 시작하지 않는다.
 - 개발과 현장의 **포트와 채널은 동일하게** 만들고 IP만 profile로 바꾼다. 목표 포트는 Ctrl
   `9093/9094`(mode 2), Competition Vehicle Status `7603/7502`, CollisionData `9091/9092`,
   v2/v3 sensor `9290~9303`이다. Ctrl `9111/9112`는 P3-A에서 archive로 격리하고 기본값을
-  `9093/9094`로 전환했다. Ego Status `909`는 Competition Vehicle Status decoder 검증 뒤 폐기한다.
+  `9093/9094`로 전환했다. Ego Vehicle Status는 release별 PUBSUB 차이를 유지하면서 포트를
+  `9088/9099`로 통일했다. Competition Vehicle Status `7603/7502` decoder 검증 뒤 상태 입력
+  우선순위를 확정한다.
 - 현행 v2/제출 Autonav의 VLP16 10 Hz를 손재호 LiDAR runtime 요구에 따라 15 Hz로 바꾼다.
   JSON 수치만 추측해 고치지 않고 MORAI UI에서 15 Hz 설정 후 재저장해 `sensorPeriod`와
   `frequencyIndex`를 확인한다. 30초 이상 `/velodyne_points` 평균 14~16 Hz, packet loss,
@@ -379,8 +381,8 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
 
 ```bash
 ./scripts/asmc build
-./scripts/asmc sim up --profile dev_local
-./scripts/asmc bridge run --profile competition_lan
+./scripts/asmc sim up --profile local
+./scripts/asmc bridge run --profile lan2lan
 ./scripts/asmc map run
 ./scripts/asmc perception run
 ./scripts/asmc debug rviz
@@ -409,7 +411,7 @@ lane/area, checkpoint 3 m radius, active mission, topic rate/staleness를 한 la
 
 현장 센서 폴더에는 다른 팀 설정도 섞여 있다. 우리 팀은 **Autonav**이며,
 `0918sensors.json`을 Autonav 설정 근거로 사용하지 않는다. 현재 실행 정본은
-`config/morai/sensors/ASMC_sensor_set_v2.json`, 현장 `Autonav_sensor.json`은 제출 이력 확인용이다.
+`config/morai/sensors/ASMC_sensor_set_v2.json`, 현장 `Autonav_sensor_submitted.json`은 제출 이력 확인용이다.
 
 두 Autonav 파일의 sensor 구성·주기·UDP 포트는 다음과 같이 동일하다.
 
@@ -429,16 +431,18 @@ semantic 차이는 자유 카메라 4번 pitch가 현재 v2 `328°`, 제출본 `
 채널이므로 JSON 필드의 나열 순서를 패킷 진행 방향으로 해석하지 않는다. PUBSUB enum과 UI
 이름은 실제 simulator 화면에서 다시 대조한다.
 
-P3-A에서 개발 Ctrl도 `9093/9094`로 맞추고 `dev_local`과 `competition_lan` network JSON을
+P3-A에서 개발 Ctrl도 `9093/9094`로 맞추고 `local`과 `lan2lan` network JSON을
 release별 template에서 생성하도록 했다. 두 transport는 포트·mode가 같고 IP만 다르다.
 Competition Vehicle Status decoder, privileged stream allowlist와 실제 두 PC 검증은 아직 남았다.
 
 ### 7.2 배포 원칙
 
-- `dev_local`과 `competition_lan`을 명시적으로 선택하며 자동 IP 추측을 금지한다.
+- `local`과 `lan2lan`을 명시적으로 선택하며 자동 IP 추측을 금지한다.
 - 3단계에서 생성한 두 profile은 포트·채널·Ctrl mode가 같고 Host/Destination IP만 달라야 한다.
-- 본선 팀 PC에서는 native Linux Docker `network_mode: host`를 우선 후보로 검증한다.
-  WSL/Docker Desktop host networking의 localhost 실측을 LAN ingress 보장으로 간주하지 않는다.
+- Windows 개발·현장점검 PC에서는 WSL mirrored networking과 Docker Desktop host networking을
+  조합해 Windows LAN IP와 동일 UDP port가 WSL/container까지 유지되는지 검증한다. 최종 본선
+  팀 PC가 native Linux라면 같은 port 계약으로 `network_mode: host`를 다시 검증한다. 어느 쪽도
+  localhost 실측만으로 LAN ingress를 보장했다고 간주하지 않는다.
 - NIC 고정 IP·netmask·route는 운영 요원 확인값을 사용하고 Wi-Fi/다중 route 간섭을 제거한다.
 - 필요한 UDP만 host firewall에 허용하고, bind 충돌은 시작 전에 `ss`로 검사한다.
 - 이미지 tag, image digest, git commit, map bundle hash, model hash, network profile hash를 한

@@ -1,7 +1,7 @@
 <launch>
   <!-- Shared packet/runtime profile for supported MORAI simulator releases. -->
-  <arg name="simulator_profile" default="morai_udp"/>
-  <arg name="transport_profile" default="dev_local"/>
+  <arg name="runtime_profile" default="morai_udp"/>
+  <arg name="transport_profile" default="local"/>
   <!-- AIM06 Sensor Dest: cam1–4 / lidar / gps / imu (+ optional semantic) -->
   <!-- Dest 순서: cam1–4 → lidar → gps → imu. Host는 SIM bind — listen/publish 금지. -->
   <arg name="lidar_port"      default="9299"/>
@@ -40,7 +40,7 @@
 
   <node pkg="morai_sensor_bridge" type="morai_sensor_bridge.py"
         name="morai_sensor_bridge" output="screen">
-    <param name="simulator_profile" value="$(arg simulator_profile)"/>
+    <param name="runtime_profile" value="$(arg runtime_profile)"/>
     <param name="transport_profile" value="$(arg transport_profile)"/>
     <param name="enable_camera" value="true"/>
     <param name="enable_semantic_camera" value="$(arg enable_semantic_camera)"/>

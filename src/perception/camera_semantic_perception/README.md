@@ -49,7 +49,7 @@ docker exec -it asmc-ros-noetic bash -lc './scripts/build_ws.sh'
 # 별도 터미널: UDP 브릿지
 docker exec -it asmc-ros-noetic bash
 source devel/setup.bash
-./scripts/udp_bridge.sh --simulator 26r1
+./scripts/udp_bridge.sh
 
 # 별도 터미널: front-only GPU 추론
 docker exec -it asmc-perception-train bash

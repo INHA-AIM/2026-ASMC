@@ -20,7 +20,7 @@ live acceptance가 끝난 것을 구분한다.
 | 개발 IP | Host/Destination `127.0.0.1` | 동일 |
 | 현장 IP | profile 계약·생성본: MORAI `192.168.0.1`, Autonav `192.168.0.10` | 실제 두 PC 리허설 |
 | Ego Ctrl Cmd | `9093/9094`, type 1, mode 2 | 실제 Ctrl 응답·packet capture |
-| 차량 상태 | Ego Vehicle Status destination `909` | Competition Vehicle Status `7603/7502` |
+| 차량 상태 | Ego Vehicle Status `9088/9099` | Competition Vehicle Status `7603/7502` decoder는 후속 |
 | CollisionData | destination `9092` | `9091/9092` pair |
 | ObjectInfo | `7505`, 임시 개발 oracle | competition profile에서 제거 |
 | 센서 | `9290~9303` | 같은 포트, IP만 profile별 변경 |
@@ -46,8 +46,8 @@ MORAI <--UDP-- morai_udp_bridge <--ROS-- /ctrl_cmd
 - gRPC scenario runner와 GT topic은 개발·데이터 수집 전용이다.
 - 현재 bridge는 `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`로 나뉘어 있다.
   단일 `asmc_bridge`는 Phase 3 parity 이후에만 교체한다.
-- 두 simulator release는 `morai_udp` runtime 하나를 쓴다. `udp_bridge.sh --simulator`는 release별
-  import 파일과 provenance를 고를 뿐 현장 transport를 자동 선택하지 않는다.
+- 두 simulator release는 `morai_udp` runtime 하나를 쓴다. release는 MORAI UI에 import할 JSON으로,
+  transport는 `udp_bridge.sh`의 `local`/`lan2lan`으로 선택한다.
 
 ## 3. Docker 기동
 
@@ -89,7 +89,7 @@ Compose는 `network_mode: host`이고 개별 `ports:` forwarding을 사용하지
 
 | 채널 | 현재 포트 | ROS/소비자 |
 |---|---:|---|
-| Ego Vehicle Status | Dest `909` | `/Ego_topic` |
+| Ego Vehicle Status | Host/Dest `9088/9099` | `/Ego_topic` |
 | Object Info | Dest `7505` | `/Object_topic`, 임시 oracle |
 | Collision Data | Host/Dest `9091/9092` | `/CollisionData` |
 | Ego Ctrl Cmd | Host/Dest `9093/9094`, mode 2 | `morai_udp_bridge`가 `/ctrl_cmd`를 UDP로 전송 |
@@ -120,17 +120,17 @@ GT 센서셋에서만 Semantic camera `9305/9307/9309`, Instance LiDAR `9311`을
 cd /root/ws
 ./scripts/build_ws.sh
 source devel/setup.bash
-./scripts/udp_bridge.sh --simulator 26r1
+./scripts/udp_bridge.sh
 ```
 
-`--simulator competition`도 같은 `morai_udp` launch를 사용한다. 현장에서는 별도로
-`ASMC_network_set_molitcomp03_competition_lan.json`을 MORAI에 로드해야 하며, 실제 LAN gate 전에는
+26r1과 대회판 모두 같은 `morai_udp` launch를 사용한다. 현장에서는 별도로
+`ASMC_network_set_molitcomp03_lan2lan.json`을 MORAI에 로드해야 하며, 실제 LAN gate 전에는
 이를 현장 설정 완료로 간주하지 않는다.
 
 현장 후보 명령은 명시적 transport를 함께 쓴다.
 
 ```bash
-./scripts/udp_bridge.sh --simulator competition --transport competition_lan
+./scripts/udp_bridge.sh --transport lan2lan
 ```
 
 다른 터미널에서:
@@ -227,13 +227,15 @@ asmc-ros-gui rviz -d /root/ws/<config>.rviz
 
 Phase 3에서 현재값을 바꿀 때 다음을 한 변경으로 검증한다.
 
-1. `dev_local`과 `competition_lan`의 port·channel·Ctrl mode가 같고 IP만 다른지 확인한다.
-2. Ctrl `9093/9094`, Status `7603/7502`, Collision `9091/9092` packet 방향을 UI와 capture로
-   확인한다.
+1. `local`과 `lan2lan`의 port·channel·Ctrl mode가 같고 IP만 다른지 확인한다.
+2. Ctrl `9093/9094`, Ego Vehicle Status `9088/9099`, Competition Vehicle Status
+   `7603/7502`, Collision `9091/9092` packet 방향을 UI와 capture로 확인한다.
 3. MORAI UI에서 VLP16 15 Hz로 저장하고 `sensorPeriod`·`frequencyIndex`를 비교한다.
 4. `/velodyne_points`를 30초 이상 측정해 평균 14~16 Hz와 packet/parse 오류를 확인한다.
 5. 10 Hz baseline 대비 손재호 tracking, latency와 CPU/GPU를 비교한다.
-6. native Linux의 실제 두 PC에서 firewall, route, restart와 offline 복구를 리허설한다.
+6. Windows+WSL mirrored 또는 native Linux의 실제 두 PC에서 firewall, route, restart와 offline
+   복구를 리허설한다.
 
-Ctrl은 `9093/9094`로 전환됐다. Ego `909`와 LiDAR v2 10 Hz는 각각 Competition Vehicle Status
-decoder와 v3 live acceptance가 끝날 때까지 회귀 기준으로 유지한다.
+Ctrl은 `9093/9094`로 전환됐고 Ego Vehicle Status는 두 release 모두 `9088/9099`로 통일됐다.
+Ego Vehicle Status는 Competition Vehicle Status decoder가 검증될 때까지 상태 입력 회귀 기준으로,
+LiDAR v2 10 Hz는 v3 live acceptance가 끝날 때까지 센서 회귀 기준으로 유지한다.

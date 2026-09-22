@@ -20,7 +20,7 @@ SIMULATOR_PROFILE="${ASMC_SIMULATOR_PROFILE:-dev_26r1_h3_ros_experimental}"
 case "$SIMULATOR_PROFILE" in
   competition_*)
     echo "[rosbridge] ERROR: competition simulator transport must be UDP." >&2
-    echo "  Use: ./scripts/udp_bridge.sh --simulator competition" >&2
+    echo "  Use: ./scripts/udp_bridge.sh --transport lan2lan" >&2
     exit 2
     ;;
 esac

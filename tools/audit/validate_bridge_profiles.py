@@ -54,13 +54,14 @@ def _ctrl_entry(document: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _validate_generated_ips(
-    document: Dict[str, Any], transport: str, contract: Dict[str, Any]
+    document: Dict[str, Any], release: str, transport: str, contract: Dict[str, Any]
 ) -> None:
     profile = contract["transport_profiles"][transport]
-    field = transport == "competition_lan"
+    field = transport == "lan2lan"
     allowed_pubsub = {
         contract["channels"]["competition_vehicle_status"]["morai_pubsub_type"],
         contract["channels"]["collision_data"]["morai_pubsub_type"],
+        contract["channels"]["ego_vehicle_status"]["morai_pubsub_type_by_release"][release],
     }
     for entry in _network_entries(document):
         config_udp = entry.get("config", {}).get("udpConfig", {})
@@ -123,6 +124,10 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         set(runtime["supported_simulator_releases"]) == {"26r1", "molitcomp03"},
         "both simulator releases must be covered",
     )
+    _require(
+        contract["defaults"] == {"transport_profile": "local", "sensor_set": "v2"},
+        "runtime defaults must remain release-independent local + v2",
+    )
     implementation = contract["implementation_baseline"]
     _require(
         implementation["packages"]
@@ -149,20 +154,30 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         == (9093, 9094, 2),
         "Ego Ctrl Cmd must be 9093/9094 mode 2",
     )
+    ego_status = contract["channels"]["ego_vehicle_status"]
     _require(
-        contract["transport_profiles"]["dev_local"]
+        (ego_status["host_port"], ego_status["destination_port"], ego_status["runtime_bridge_bind_port"])
+        == (9088, 9099, 9099),
+        "Ego Vehicle Status must be normalized to 9088/9099",
+    )
+    _require(
+        ego_status["morai_pubsub_type_by_release"] == {"26r1": 770, "molitcomp03": 295},
+        "Ego Vehicle Status PUBSUB mapping changed",
+    )
+    _require(
+        contract["transport_profiles"]["local"]
         == {
             "morai_ip": "127.0.0.1",
             "autonav_ip": "127.0.0.1",
             "deployment_state": "active_default",
         },
-        "dev_local IP contract changed",
+        "local IP contract changed",
     )
-    field = contract["transport_profiles"]["competition_lan"]
+    field = contract["transport_profiles"]["lan2lan"]
     _require(
         (field["morai_ip"], field["autonav_ip"])
         == ("192.168.0.1", "192.168.0.10"),
-        "competition_lan IP contract changed",
+        "lan2lan IP contract changed",
     )
 
     for release, spec in contract["network_templates"].items():
@@ -185,8 +200,19 @@ def validate(contract_path: Path) -> Dict[str, Any]:
                 _sha256(output_path) == spec["generated_sha256"][transport],
                 f"{release}/{transport} generated network SHA changed",
             )
-            _validate_generated_ips(
-                json.loads(output_path.read_text(encoding="utf-8")), transport, contract
+            generated_document = json.loads(output_path.read_text(encoding="utf-8"))
+            _validate_generated_ips(generated_document, release, transport, contract)
+            ego_entries = [
+                entry
+                for entry in _network_entries(generated_document)
+                if entry.get("PUBSUB_TYPE")
+                == ego_status["morai_pubsub_type_by_release"][release]
+            ]
+            _require(len(ego_entries) == 1, f"{release} must contain one Ego Vehicle Status")
+            ego_udp = ego_entries[0]["config"]["udpConfig"]
+            _require(
+                (ego_udp["hostPort"], ego_udp["destinationPort"]) == (9088, 9099),
+                f"{release}/{transport} Ego Vehicle Status ports changed",
             )
     try:
         check_all(contract)
@@ -196,14 +222,24 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     integration = REPO_ROOT / "src/integration_launch/launch/morai_udp_bridges.launch"
     udp_launch = REPO_ROOT / "src/morai_udp_bridge/launch/morai_udp_bridge.launch"
     sensor_launch = REPO_ROOT / "src/morai_sensor_bridge/launch/morai_sensor_bridge.launch"
-    _require(_launch_arg(integration, "simulator_profile") == "morai_udp", "integration runtime profile split")
-    _require(_launch_arg(udp_launch, "simulator_profile") == "morai_udp", "UDP runtime profile split")
-    _require(_launch_arg(sensor_launch, "simulator_profile") == "morai_udp", "sensor runtime profile split")
-    _require(_launch_arg(integration, "transport_profile") == "dev_local", "integration transport default changed")
-    _require(_launch_arg(udp_launch, "transport_profile") == "dev_local", "UDP transport default changed")
-    _require(_launch_arg(sensor_launch, "transport_profile") == "dev_local", "sensor transport default changed")
+    _require(_launch_arg(integration, "runtime_profile") == "morai_udp", "integration runtime profile split")
+    _require(_launch_arg(udp_launch, "runtime_profile") == "morai_udp", "UDP runtime profile split")
+    _require(_launch_arg(sensor_launch, "runtime_profile") == "morai_udp", "sensor runtime profile split")
+    _require(_launch_arg(integration, "transport_profile") == "local", "integration transport default changed")
+    _require(_launch_arg(udp_launch, "transport_profile") == "local", "UDP transport default changed")
+    _require(_launch_arg(sensor_launch, "transport_profile") == "local", "sensor transport default changed")
     _require(_launch_arg(integration, "cmd_port") == "9093", "integration Ctrl default is not 9093")
     _require(_launch_arg(udp_launch, "cmd_port") == "9093", "UDP Ctrl default is not 9093")
+    _require(_launch_arg(udp_launch, "ego_port") == "9099", "Ego status bind port is not 9099")
+    entrypoint_text = (REPO_ROOT / "scripts/udp_bridge.sh").read_text(encoding="utf-8")
+    _require(
+        "Usage: ./scripts/udp_bridge.sh [--transport local|lan2lan]" in entrypoint_text,
+        "bridge CLI must expose transport without a simulator selector",
+    )
+    _require(
+        'SIMULATOR="${ASMC_SIMULATOR' not in entrypoint_text,
+        "bridge CLI must not select a simulator release",
+    )
 
     summaries = {
         name: _sensor_summary(REPO_ROOT / spec["path"])
@@ -240,6 +276,7 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "packages": implementation["packages"],
         "published_topic_count": len(implementation["published_topics"]),
         "ctrl": "9093/9094 mode 2",
+        "ego_status": "9088/9099",
         "sensor_sets": summaries,
     }
 

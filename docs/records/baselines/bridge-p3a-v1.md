@@ -5,22 +5,23 @@
 
 ## 동결한 결정
 
-26.R1.H3와 25.S4.MolitComp03의 현재 Python bridge에는 packet parser나 topic 동작 분기가 없고
-`simulator_profile`은 diagnostics 문자열뿐이었다. P3-A부터 runtime protocol을 `morai_udp` 하나로
-고정한다. `--simulator` 선택은 release별 MORAI import와 실행 provenance를 고르는 용도이며 새
-bridge 구현을 선택하지 않는다.
+26.R1.H3와 25.S4.MolitComp03의 현재 Python bridge에는 packet parser나 topic 동작 분기가 없었다.
+P3-A부터 runtime protocol을 `morai_udp` 하나로 고정하고 `--simulator` 실행 인자를 제거했다.
+release 선택은 MORAI UI에 import하는 network JSON의 schema와 provenance에만 남긴다.
 
 MORAI network export 자체는 동일하지 않다. 26r1 export는 22개 entry와 Ctrl `PUBSUB_TYPE=786`,
 MolitComp03 export는 12개 entry와 Ctrl `PUBSUB_TYPE=771`을 가진다. 따라서 release template은
-분리하고, IP만 `dev_local` 또는 `competition_lan`으로 렌더링한다.
+분리하고, IP만 `local` 또는 `lan2lan`으로 렌더링한다.
 
-현장 renderer는 allowlist 방식이다. Ctrl, Competition Vehicle Status, CollisionData만 LAN IP로
+현장 renderer는 allowlist 방식이다. Ctrl, Ego Vehicle Status, Competition Vehicle Status,
+CollisionData만 LAN IP로
 승격하고 Object/legacy/미확인 network entry는 loopback에 남긴다. 센서셋의 현장 IP 파생본은 v3
 live acceptance와 함께 만드는 후속 범위다.
 
 Ctrl 기본값은 이번 변경부터 `9093/9094`, mode 2다. 과거 `9111/9112` 파일은 archive로
-격리했다. Competition Vehicle Status `7603/7502`는 network 계약만 동결됐으며 현재 bridge의
-legacy Ego Status `908/909` decoder를 대체하는 작업은 아직 남았다.
+격리했다. 현장 원본의 Ego Vehicle Status `9088/9099`와 Autonav 시험본·26r1의 `908/909` 중
+unprivileged destination을 사용하는 `9088/9099`로 양쪽 network JSON과 bridge를 통일했다.
+Competition Vehicle Status `7603/7502`는 별도 채널이며 decoder 작업은 아직 남았다.
 
 현재 구현 기준선은 `integration_launch`, `morai_udp_bridge`, `morai_sensor_bridge`,
 `vehicle_state` 네 package와 그 entrypoint/launch/node SHA, 필수 publish/subscribe topic을 기계
@@ -40,10 +41,10 @@ tracking 비교를 통과하기 전에는 배포 승인이 아니다.
 
 ## WSL/Docker 판단
 
-개발 compose는 host networking이고 개별 Docker port publishing을 쓰지 않는다. 따라서 “WSL의
-모든 포트 개방”은 해결책이 아니다. loopback은 왕복 probe로 확인하고, 현장 firewall은 필요한
-inbound UDP destination만 MORAI PC source IP에 한정해 허용한다. 실제 LAN은 native Linux 두 PC
-리허설을 별도 gate로 둔다.
+개발 compose는 host networking이고 개별 Docker port publishing을 쓰지 않는다. Windows 개발
+환경은 WSL mirrored networking과 Docker Desktop host networking을 조합해 Windows·WSL·container가
+동일 포트를 쓰는 구성을 후속 LAN2LAN gate로 검증한다. 방화벽은 필요한 inbound UDP만 허용하며,
+실제 두 PC route·bind·packet rate·재시작 복구를 별도 gate로 둔다.
 
 ## 재현·검증
 

@@ -18,7 +18,7 @@ bridge 구현을 개발·검증하고 Phase 3에서 안전하게 통합하는 �
 | GPS/IMU→팀 내부 차량 상태 | `src/vehicle_state/` | 운영 중 |
 | 두 UDP bridge 동시 기동 | `src/integration_launch/` | 운영 중, planning 공동 소유 |
 | 단일 `asmc_bridge` | 존재하지 않음 | Phase 3 목표 |
-| `dev_local`/`competition_lan` 계약·MORAI JSON | P3-A 완료 | live LAN gate 대기 |
+| `local`/`lan2lan` 계약·MORAI JSON | P3-A 완료 | live LAN gate 대기 |
 
 P3-A 이후에도 현재 패키지 이름과 launch를 사용한다. 문서상의 목표 구조를 근거로 경로를 먼저
 옮기거나 기존 패키지를 삭제하지 않는다. `asmc_bridge` 승격은 bag replay, packet fixture,
@@ -44,7 +44,7 @@ interface는 가능한 한 `asmc_msgs`를 사용하되, Phase 3 전환 PR에서 
 
 | 방향 | 현재 UDP | ROS topic·type | 비고 |
 |---|---:|---|---|
-| MORAI→팀 | Ego Dest `909` | `/Ego_topic`, `morai_msgs/EgoVehicleStatus` | 개발 상태·debug |
+| MORAI→팀 | Ego Host/Dest `9088/9099` | `/Ego_topic`, `morai_msgs/EgoVehicleStatus` | 현재 공통 상태 입력 |
 | MORAI→팀 | Object Dest `7505` | `/Object_topic`, `morai_msgs/ObjectStatusList` | privileged 개발 oracle |
 | MORAI→팀 | Collision Dest `9092` | `/CollisionData`, `morai_msgs/CollisionData` | 충돌 때만 publish |
 | 팀→MORAI | Ctrl Host `9093` | subscribe `/ctrl_cmd`, `morai_msgs/CtrlCmd` | Dest metadata 9094, mode 2, D gear packet |
@@ -124,18 +124,15 @@ fallback으로 자동 선택하지 않는다.
 ```bash
 cd /root/ws
 source devel/setup.bash
-./scripts/udp_bridge.sh --simulator 26r1
+./scripts/udp_bridge.sh
 roslaunch vehicle_state vehicle_state.launch
 ```
 
-`--simulator 26r1|competition`은 release별 MORAI import와 packet provenance만 선택하며 두 경우
-모두 `morai_udp` runtime을 쓴다. transport는 별도 network JSON으로 선택한다. 특히
-`--simulator competition`만으로 현장 IP, Competition Vehicle Status decoder 또는 GT 비활성화가
-적용되지 않는다.
+26r1과 대회판 모두 `morai_udp` runtime을 쓰므로 bridge 명령에서 simulator를 선택하지 않는다.
+release별 MORAI import는 UI에서 선택하고, bridge에서는 transport만 선택한다.
 
-현장 후보에서는 `--simulator competition --transport competition_lan`을 함께 지정한다. 스크립트가
-선택한 generated MORAI JSON 경로와 Ctrl 대상 IP를 출력하며 diagnostics에도 transport 이름을
-남긴다.
+현장 후보에서는 `--transport lan2lan`을 지정한다. 스크립트가 두 release에 대응하는 generated
+MORAI JSON 경로와 Ctrl 대상 IP를 출력하며 diagnostics에도 transport 이름을 남긴다.
 
 다른 터미널에서:
 
@@ -190,7 +187,7 @@ make target”으로 실패할 수 있다.
 |---|---|---|
 | runtime | `morai_udp` | 공통 packet adapter와 ROS topic |
 | simulator release | `26r1`, `molitcomp03` | MORAI import schema와 provenance |
-| transport | `dev_local`, `competition_lan` | IP, port, direction, allowlist |
+| transport | `local`, `lan2lan` | IP, port, direction, allowlist |
 | sensor | `ASMC_sensor_set_v1/v2/v3/GT` | pose, rate와 센서 종류 |
 
 확정된 목표:

@@ -72,7 +72,7 @@ Docker 상태는 network mode가 `host`이고 published port가 없는 상태다
 개발 MORAI 26.R1 프로필은 다음처럼 실행한다.
 
 ```bash
-./scripts/udp_bridge.sh --simulator 26r1
+./scripts/udp_bridge.sh
 ```
 
 현재 개발 설정의 Host/Destination IP는 `127.0.0.1`이다. 현장 IP·9093/9094 등의 승인된

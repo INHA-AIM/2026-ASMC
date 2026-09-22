@@ -15,7 +15,8 @@ class BridgeProfileContractTest(unittest.TestCase):
         result = validate(REPO_ROOT / "config/bridge/bridge_profiles_v1.json")
         self.assertEqual("morai_udp", result["runtime_protocol"])
         self.assertEqual("9093/9094 mode 2", result["ctrl"])
-        self.assertEqual(["competition_lan", "dev_local"], result["transport_profiles"])
+        self.assertEqual("9088/9099", result["ego_status"])
+        self.assertEqual(["lan2lan", "local"], result["transport_profiles"])
         self.assertEqual(4, result["network_profiles"])
         self.assertEqual(14, result["published_topic_count"])
         self.assertEqual(

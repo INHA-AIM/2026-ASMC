@@ -1,7 +1,7 @@
 # MORAI UDP — 시뮬 UI 치트시트
 
 > **공통 런타임:** `morai_udp` — 26.R1.H3와 25.S4.MolitComp03가 같은 bridge를 사용한다.
-> Docker Desktop + `./scripts/docker_ros_up.sh` + `./scripts/udp_bridge.sh --simulator 26r1` 기준.
+> Docker Desktop + `./scripts/docker_ros_up.sh` + `./scripts/udp_bridge.sh` 기준.
 > 상세: [개발·시뮬레이터 운영 가이드](../../docs/operations/README.md)
 > bridge 구현·통합 gate: [MORAI bridge guide](../../docs/packages/asmc_bridge/README.md)
 > 센서셋: [`ASMC_sensor_set_v2.json`](./sensors/ASMC_sensor_set_v2.json) (현재 10 Hz 회귀 기준)<br>
@@ -17,10 +17,10 @@ Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127
 1. Docker Desktop + WSL Integration ON → `./scripts/docker_ros_up.sh up`
 2. MORAI **Host/Dest IP 전부 `127.0.0.1`**
 3. **센서셋** `ASMC_sensor_set_v2.json` Import (또는 15 Hz 시험용 v3, 개발 GT용 GT)
-4. **Network Settings**: `network/generated/ASMC_network_set_26r1_dev_local.json` Import
-   (현재 bridge 호환 Ego **909** · Object **7505** · Collision **9092** 포함)
+4. **Network Settings**: `network/generated/ASMC_network_set_26r1_local.json` Import
+   (현재 bridge 호환 Ego **9099** · Object **7505** · Collision **9092** 포함)
 5. **Cmd Control**: 타입 **Ego Ctrl Cmd**, Host/Dest **9093 / 9094**, mode **2**
-6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh --simulator 26r1`
+6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh`
 7. 확인: `rostopic hz /Ego_topic` · `/velodyne_points` · `/image_jpeg/compressed`
 
 **LiDAR만 0이고 cam/gps/imu는 될 때:** `docker_ros_up.sh status`의 host mode, MORAI
@@ -28,8 +28,9 @@ Connect/Dest 9299와 다른 9299 listener를 순서대로 확인한다. 개별 D
 사용하지 않는다. **9299를 다른 포트로 옮기지 말 것.** 상세:
 [운영 가이드 §6](../../docs/operations/README.md#6-문제-해결)
 
-`--simulator`는 release별 MORAI import 파일과 provenance를 고르며 bridge 구현은 바꾸지 않는다.
-아래 표는 `dev_local`이다. 현장 파일은 [MORAI config 안내](./README.md)에서 별도로 고른다.
+bridge 명령에는 simulator 선택이 없다. 26r1과 대회판은 같은 runtime을 쓰고, release 차이는
+MORAI UI에 import하는 network JSON에서만 선택한다. 아래 표는 `local`이다. `lan2lan` 파일은
+[MORAI config 안내](./README.md)에서 별도로 고른다.
 
 ---
 
@@ -57,7 +58,8 @@ Mode:     2
 
 | 채널 | Dest | (참고 Host) |
 |------|------|-------------|
-| Ego Vehicle Status | **909** | 908 |
+| Ego Vehicle Status | **9099** | 9088 |
+| Competition Vehicle Status | **7502** | 7603 |
 | Object Info | **7505** | 7605 |
 | Collision Data | **9092** | 9091 |
 
@@ -86,7 +88,7 @@ Mode:     2
 GT 센서셋을 로드하면 별도 옵션 없이 자동 수신한다.
 
 ```bash
-./scripts/udp_bridge.sh --simulator 26r1
+./scripts/udp_bridge.sh
 ```
 
 | 센서 | Host / Dest | ROS 토픽 |
@@ -103,7 +105,7 @@ Camera-10은 예전 **9090**이 아님 (rosbridge와 충돌).
 v2에서 ID 11은 대기하고 GT에서 자동 수신한다. 정합용 source stamp가 필요하면:
 
 ```bash
-./scripts/udp_bridge.sh --simulator 26r1 timestamp_mode:=source
+./scripts/udp_bridge.sh timestamp_mode:=source
 ```
 
 | 센서 | Host / Dest | ROS 토픽 | field |
@@ -120,5 +122,5 @@ v2에서 ID 11은 대기하고 GT에서 자동 수신한다. 정합용 source st
 ```bash
 ./scripts/docker_ros_up.sh up && docker exec -it asmc-ros-noetic bash
 # 컨테이너 안
-source devel/setup.bash && ./scripts/udp_bridge.sh --simulator 26r1
+source devel/setup.bash && ./scripts/udp_bridge.sh
 ```

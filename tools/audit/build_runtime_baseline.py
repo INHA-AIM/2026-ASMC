@@ -44,7 +44,7 @@ COMPETITION_METADATA_REL = Path(
 )
 AUTONAV_SENSOR_REL = Path(
     "On-site inspection/MoraiLauncher_Win_S/MoraiLauncher_Win_Data/SaveFile/"
-    "Sensor/25.S4.MolitComp03/Autonav_sensor.json"
+    "Sensor/25.S4.MolitComp03/Autonav_sensor_submitted.json"
 )
 RAW_BAG_REL = Path(
     "rosbags/raw/20260913_195606_kcity2025_shadow_static_avoid_return_sunny_1pm_wheel/"
@@ -897,7 +897,7 @@ def future_requirements() -> List[Dict[str, Any]]:
             "stage": 3,
             "status": "approved_not_applied",
             "requirement": "Use field ports in both environments: Ctrl 9093/9094 mode 2, Competition Vehicle Status 7603/7502, Collision 9091/9092, v2 sensor ports 9290-9303.",
-            "acceptance": "Only IP differs between dev_local and competition_lan; packet replay and profile validation pass.",
+            "acceptance": "Only IP differs between local and lan2lan; packet replay and profile validation pass.",
         },
         {
             "id": "package_consolidation",
@@ -1036,7 +1036,7 @@ def render_report(manifest: Mapping[str, Any]) -> str:
             "MORAI UI에서 15 Hz로 설정·재저장하여 `sensorPeriod`와 `frequencyIndex`를 확인한 뒤",
             "30초 이상 `/velodyne_points` 실측과 tracking/resource 비교를 통과해야 한다.",
             "",
-            "현장 제출 `Autonav_sensor.json`은 provenance 전용이다. v2와의 semantic 차이는",
+            "현장 제출 `Autonav_sensor_submitted.json`은 provenance 전용이다. v2와의 semantic 차이는",
             "자유 카메라 pitch(`328°` 대 제출본 `340°`) 하나뿐이며 실행 정본은 v2다.",
             "",
             "## 4. 대표 bag 토픽",

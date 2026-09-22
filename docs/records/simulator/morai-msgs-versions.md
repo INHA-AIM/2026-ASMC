@@ -70,12 +70,12 @@ ROS의 `.msg` 필드/토픽 차이는 direct ROS serialization 계약의 차이�
 - Camera/GPS/IMU는 센서 UDP 포맷을, 3D LiDAR는 Velodyne protocol을 해석한다.
 - Ego는 현재 181/229/245-byte 패킷 변형을 길이로 구분한다.
 - ROS 출력은 버전과 무관하게 현재 `beta_drive` canonical topic으로 고정한다.
-- `udp_bridge.sh --simulator 26r1|competition`은 구현을 복제하지 않고 provenance와
-  향후 호환 파라미터 분기만 관리한다.
+- `udp_bridge.sh`는 release와 무관한 단일 구현이다. release provenance와 schema는 MORAI에
+  import한 `ASMC_network_set_26r1_*`/`ASMC_network_set_molitcomp03_*` 파일로 관리한다.
 
 다만 26.R1은 front/rear steer 추가와 UDP 예제 갱신이 공지됐으므로, 대회판에서
 수신 header/패킷 길이와 23-byte CtrlCmd 반응은 실차로 gate한다. 차이가 확인되면
-별도 bridge 복제가 아니라 공용 parser의 패킷 변형과 simulator profile 파라미터로 추가한다.
+별도 bridge 복제가 아니라 공용 parser의 검증된 packet variant로 추가한다.
 공식 근거는 MORAI [26.R1 센서 통신 프로토콜](https://help-morai-sim.scrollhelp.site/ko/morai-sim-drive/26.R1/-35)과
 [26.R1 release note](https://help-morai-sim.scrollhelp.site/ko/morai-sim-drive/26.R1/morai-sim-drive-26-r1-0)를 따른다.
 
