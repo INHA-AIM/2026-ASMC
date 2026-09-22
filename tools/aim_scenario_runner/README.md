@@ -31,4 +31,4 @@ jang `aim_scenario_runner` — MORAI gRPC 시나리오 자동화. **LBC route BE
 
 ## 시뮬 검증
 
-[docs/sim-verification-checklist.md](../../docs/sim-verification-checklist.md) §4 — **장원태**
+[docs/operations/sim-verification-checklist.md](../../docs/operations/sim-verification-checklist.md) §4 — **장원태**

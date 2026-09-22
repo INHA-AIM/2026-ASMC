@@ -2,9 +2,9 @@
 
 > **역할:** Active Module — Capture GT, raw/result rosbag, 동기화, mask/cache/dataset lineage
 > **담당:** 안승현
-> **데이터 정본:** [인지 데이터 라벨링·분할 계약](../../docs/perception-dataset-labeling-split.md)
-> **전체 로드맵:** [카메라·MGeo·LiDAR 융합 로드맵](../../docs/perception-map-fusion-roadmap.md)
-> **rosbag 정본:** [rosbag 재현 평가 가이드](../../docs/rosbag-evaluation-streaming-gt.md)
+> **데이터 정본:** [인지 데이터 라벨링·분할 계약](../../docs/contracts/perception/dataset-labeling-split.md)
+> **전체 로드맵:** [카메라·MGeo·LiDAR 융합 로드맵](../../docs/packages/asmc_perception/roadmap.md)
+> **rosbag 정본:** [rosbag 재현 평가 가이드](../../docs/operations/rosbag-evaluation.md)
 > **문서 허브:** [docs/README.md](../../docs/README.md)
 
 ## 수집 경로 선택
@@ -175,11 +175,11 @@ rosrun data_collection audit_rosbag_run.py \
 result replay는 실행 순서가 중요하다. 추론과 result recorder를 replay controller보다 먼저
 띄우면 wall clock을 사용해 지연 통계가 깨질 수 있다. result recorder는 이를 막기 위해
 `/use_sim_time=true`가 아닌 상태에서는 시작하지 않는다. 상세한 4터미널 순서와 실제 smoke
-기준선은 [전용 가이드](../../docs/rosbag-evaluation-streaming-gt.md#4-replay와-result-lineage)를
+기준선은 [전용 가이드](../../docs/operations/rosbag-evaluation.md#4-replay와-result-lineage)를
 따른다.
 
 profile 목록, result bag/checkpoint lineage와 종료된 GT transport 실험의 한계는
-[전용 가이드](../../docs/rosbag-evaluation-streaming-gt.md)를 따른다.
+[전용 가이드](../../docs/operations/rosbag-evaluation.md)를 따른다.
 
 ## ROS topic snapshot collector (보조 경로)
 
@@ -413,7 +413,7 @@ TwinLiteNet+ 입력은 `intensity/{front,left,right}`, 라벨 원본은 대응�
 `instance`·`depth`는 향후 작업을 위해 원본으로 보존한다.
 
 라벨 팔레트, `384×640` paired letterbox, run-based split과 QA 계약은
-[`docs/perception-dataset-labeling-split.md`](../../docs/perception-dataset-labeling-split.md)를
+[`docs/contracts/perception/dataset-labeling-split.md`](../../docs/contracts/perception/dataset-labeling-split.md)를
 따른다.
 
 객체 포함 run의 Semantic 전수 감사는 `scripts/audit_semantic_capture.py`로 수행한다.

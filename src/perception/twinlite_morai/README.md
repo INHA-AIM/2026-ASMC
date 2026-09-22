@@ -3,9 +3,9 @@
 > **역할:** Active Module — MORAI manifest, TwinLiteNet+ loader, 2-head loss와 학습/eval 연결
 > **현재 live 후보:** Medium, lane+drivable, v5 actor-negative(B) 18 epoch EMA
 > **다음 학습 후보:** Medium, drivable+4-class road-marking, v6
-> **데이터 정본:** [perception-dataset-labeling-split.md](../../../docs/perception-dataset-labeling-split.md)
-> **평가 기록:** [perception-v4-training-evaluation.md](../../../docs/perception-v4-training-evaluation.md)
-> **다음 단계:** [인지 융합 로드맵 §7](../../../docs/perception-map-fusion-roadmap.md#7-카메라-live-개발과-평가-계획)
+> **데이터 정본:** [perception-dataset-labeling-split.md](../../../docs/contracts/perception/dataset-labeling-split.md)
+> **평가 기록:** [perception-v4-training-evaluation.md](../../../docs/records/perception/twinlitenet-v4-evaluation.md)
+> **다음 단계:** [인지 융합 로드맵 §7](../../../docs/packages/asmc_perception/roadmap.md#7-카메라-live-개발과-평가-계획)
 
 `$ASMC_DATA/dataset_versions/<version>/<split>.jsonl`을 읽어 run/view provenance를
 유지한 채 세 카메라 표본을 하나의 공유 가중치 모델에 공급한다.

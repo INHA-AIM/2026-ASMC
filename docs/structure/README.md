@@ -1,9 +1,9 @@
 # 팀 문서 정보 구조 검토안
 
-> **상태:** Structure Review Only
+> **상태:** D1 Path Migration Complete — 본문 통합 전
 >
 > **작성일:** 2026-09-22
-> **중요:** 이 단계에서는 기존 문서를 이동·삭제·통합하거나 본문을 고치지 않는다.
+> **중요:** D1에서 기존 문서를 승인된 경로로 이동하고 링크만 교정했다. 본문 통합·축약·삭제는 하지 않았다.
 
 ## 목적
 
@@ -18,6 +18,7 @@
 
 현재 파일별 분류와 제안 경로는 [current-inventory.md](./current-inventory.md), 실제 이동 시
 검증 절차는 [migration-gates.md](./migration-gates.md)를 따른다.
+이동 결과와 호환 stub 목록은 [d1-path-migration-report.md](./d1-path-migration-report.md)에 기록한다.
 
 ## 목표 구조
 

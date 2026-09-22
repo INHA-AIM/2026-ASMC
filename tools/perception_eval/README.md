@@ -2,9 +2,9 @@
 
 > **역할:** Research/Legacy Stub — 초기 Loc-Aid·bake 평가 인터페이스
 > **현재 평가 경로:** repo 루트 `scripts/evaluate_twinlite.py`, `scripts/render_twinlite_predictions.py`
-> **현재 로드맵:** [인지 융합 로드맵](../../docs/perception-map-fusion-roadmap.md)
+> **현재 로드맵:** [인지 융합 로드맵](../../docs/packages/asmc_perception/roadmap.md)
 
-상세 초기 아이디어: [perception-agentic-loop.md](../../docs/perception-agentic-loop.md)
+상세 초기 아이디어: [perception-agentic-loop.md](../../docs/archive/perception/agentic-loop.md)
 
 ```bash
 ./tools/perception_eval/run_all.sh --help

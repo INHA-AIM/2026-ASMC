@@ -12,7 +12,7 @@ from asmc_hd_map.drivable_area_audit import (
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SOURCE_PATH = REPO_ROOT / "src/asmc_hd_map/config/kcity2025_drivable_area_audit_source.yaml"
 MANIFEST_PATH = REPO_ROOT / "src/asmc_hd_map/config/kcity2025_drivable_area_input_audit.yaml"
-REPORT_PATH = REPO_ROOT / "docs/baselines/kcity2025-drivable-area-input-audit-v1.md"
+REPORT_PATH = REPO_ROOT / "docs/records/baselines/kcity2025-drivable-input-v1.md"
 
 
 class DrivableAreaAuditWorkspaceTest(unittest.TestCase):

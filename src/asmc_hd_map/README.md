@@ -36,7 +36,7 @@ latched global 토픽에서 시작 시 한 번 받고, `map` 좌표의 Ego 위�
 아니다. 따라서 local 120 m 정사각형이 곡선 경로 전후방과 정확히 맞지 않아도 global 기반
 판제에는 정보 손실이 없다. 미션·체크포인트·차선 도색은 local로 중복 발행하지 않으며 현재
 link 또는 route station을 global metadata와 대조한다. 자세한 소비 우선순위와 의도적으로 빈
-필드는 [runtime contract](../../docs/contracts/hd-map-runtime-visualization-v1.md)를 따른다.
+필드는 [runtime contract](../../docs/contracts/hd-map/runtime-v1.md)를 따른다.
 
 최종 차선·구 맵 origin 정합 차선·원태 H5 vector와 최신/구 주행가능영역을 각각 켜서
 비교하는 개발 화면은 다음과 같다. 다섯 레이어는 서로 다른 토픽이며 자동 혼합되지 않는다.
@@ -304,7 +304,7 @@ launch의 입력이나 표시에는 포함되지 않는다.
 
 세 source 비교 결과를 한 번에 전체 맵으로 합치지 않고 link 구간별로 확정하는 partial
 candidate를 추가했다. 전체 결정·스크린샷 evidence는
-[`HD맵 경로별 선택 검수 문서`](../../docs/hd-map-route-curation-review-20260917.md)에 있다.
+[`HD맵 경로별 선택 검수 문서`](../../docs/records/hd-map/kcity2025-route-curation-20260917.md)에 있다.
 
 현재 구현 범위는 출발점부터 `A2256W000751` finish까지다. 1단계는 origin-only legacy geometry를
 사용하고 `A2256W000748`의 route-right 도색을 solid로 교정했다. `A2256W000329` 끝의 짧은
@@ -586,7 +586,7 @@ A451 시작부터 START/END까지 다시 60 km/h인 세 비중첩 구간으로 �
 중지할 수 있도록 `enable_within_zone_only` hint를 함께 전달한다.
 
 상세 규약은
-[`docs/contracts/kcity2025-competition-metadata-v1.md`](../../docs/contracts/kcity2025-competition-metadata-v1.md)를
+[`docs/contracts/competition/kcity2025-metadata-v1.md`](../../docs/contracts/competition/kcity2025-metadata-v1.md)를
 참조한다.
 
 ## 2단계 통합 runtime과 RViz
@@ -643,7 +643,7 @@ python3 tools/audit/verify_hd_map_lane_association_live.py \
 
 노드 부근의 짧은 paint gap도 publisher가 자동으로 붙이지 않는다. 판제가 geometry gap을 어떻게
 해석해야 하는지와 P2 topology 계약은
-[`HD Map runtime·visualization v1`](../../docs/contracts/hd-map-runtime-visualization-v1.md)에 정리했다.
+[`HD Map runtime·visualization v1`](../../docs/contracts/hd-map/runtime-v1.md)에 정리했다.
 
 ## P2-A lane topology·drivable-area 입력 감사
 
@@ -656,7 +656,7 @@ PYTHONPATH=src/asmc_hd_map/src \
 ```
 
 정본 manifest는 `config/kcity2025_drivable_area_input_audit.yaml`, 사람이 읽는 결과는
-[`P2-A input audit`](../../docs/baselines/kcity2025-drivable-area-input-audit-v1.md)이다. 현재 39개
+[`P2-A input audit`](../../docs/records/baselines/kcity2025-drivable-input-v1.md)이다. 현재 39개
 경로 링크 중 18개는 기존 road 전부 보존, 15개는 끝단 보호와 중간 clip 후보의 혼합, 6개는
 전 구간 lane-clip 후보로 분류됐다. 이 수치는 clip을 이미 적용했다는 뜻이 아니다.
 
@@ -688,7 +688,7 @@ rosrun asmc_hd_map verify_competition_map_topics.py
 입력 정책은 `config/kcity2025_compact_drivable_source.yaml`, vector/topology 산출물은
 `config/kcity2025_compact_drivable_map.json`, raster 정본은
 `config/kcity2025_compact_drivable_grid.npz`다. 결과와 소비 규칙은
-[`P2-B compact map`](../../docs/baselines/kcity2025-compact-drivable-map-v1.md)에 기록한다.
+[`P2-B compact map`](../../docs/records/baselines/kcity2025-compact-drivable-v1.md)에 기록한다.
 
 판제 geometry 정본은 차로 번호·인접 관계·경로 station과 polygon을 담은 `LaneArray`와
 `DrivableAreaArray`다. `OccupancyGrid`는 이를 0.2 m/px로 변환한 빠른 lookup용 파생물이다.

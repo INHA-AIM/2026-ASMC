@@ -17,7 +17,7 @@ pilot은 기존 planner/controller 실행 경로나 차량 제어 명령에 연�
 ./scripts/run_planner_controller.sh
 ```
 
-정본 규약과 포트표는 [docs/planning-control-udp.md](../../docs/planning-control-udp.md)를 따른다. ROS 모듈은 별도로 `./scripts/build_ws.sh`로 빌드한다.
+정본 규약과 포트표는 [docs/operations/planning-control.md](../../docs/operations/planning-control.md)를 따른다. ROS 모듈은 별도로 `./scripts/build_ws.sh`로 빌드한다.
 
 카메라 경계 관측을 제어와 분리해 확인하려면
 [lane boundary adapter README](./lane_boundary_adapter/README.md)를 따른다. 해당 출력은

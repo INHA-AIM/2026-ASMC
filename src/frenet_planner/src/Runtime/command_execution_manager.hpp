@@ -11,7 +11,7 @@
 //
 // 이 경계를 지키지 않으면 adapter가 곧 state machine이 되어버린다. 상태를
 // 갖는 판단은 전부 이쪽에 둔다.
-// 계약: docs/fsm-frenet-interface-v2.md 12.8절
+// 계약: docs/contracts/planning/fsm-frenet-v2.md 12.8절
 //
 // ===== 왜 transaction인가 =====
 //

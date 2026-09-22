@@ -1,7 +1,7 @@
 # ASMC ROS Interface Specification
 
 > **문서 역할:** Canonical — 현재 구현된 팀 내부 ROS 계약
-> **인지 확장 작업안:** [인지 융합 로드맵 §6](../../docs/perception-map-fusion-roadmap.md#6-working-topicinterface-proposal)
+> **인지 확장 작업안:** [인지 융합 로드맵 §6](../../docs/packages/asmc_perception/roadmap.md#6-working-topicinterface-proposal)
 > **문서 허브:** [docs/README.md](../../docs/README.md)
 
 이 문서는 `2026-ASMC` 내부 ROS 모듈 사이의 사람이 읽는 인터페이스 정본이다.
@@ -260,7 +260,7 @@ planner feature flag나 canonical derived message를 논의한다.
 
 2026-09-15 v3 handoff에서는 lane-family 메시지와 파라미터를 동결했지만 제어 권한은
 승격하지 않았다. drivable BEV 최소 계약과 장애물 회피 결합 순서, on/off 및 파트별 소유권은
-[음영구간 카메라 인지 v3 판제 인수 가이드](../../docs/shadow-camera-perception-handoff.md)를
+[음영구간 카메라 인지 v3 판제 인수 가이드](../../docs/handoffs/perception/shadow-camera.md)를
 따른다. 판제는 `coverage=0`인 drivable cell을 non-drivable로 확정하지 않고 unknown으로
 보존해야 하며, LiDAR occupancy/object를 충돌 veto로 우선 적용한다.
 
@@ -344,7 +344,7 @@ BEV 계약이 아니다.
 | 속도 프로파일 | MPC에 별도 전달 여부 | ☐ |
 
 현재 Planning/Control 계약은 위 초안이 아니라 이 문서의 `asmc_msgs/Trajectory` 정의와
-[planning-control-udp.md](../../docs/planning-control-udp.md)를 따른다.
+[planning-control-udp.md](../../docs/operations/planning-control.md)를 따른다.
 
 ### B.2 LBC BEV tensor draft
 

@@ -4,7 +4,7 @@
 
 ## Path (필수)
 
-문서: [docs/collaboration.md](../docs/collaboration.md)
+문서: [docs/governance/collaboration.md](../docs/governance/collaboration.md)
 
 - [ ] **Path B** — 아래 중 하나 이상 (이 PR이 맞는 경우)
   - [ ] `interfaces/` · msg/토픽 계약
@@ -36,7 +36,7 @@
 
 ## 변경 범위 확인
 
-- [ ] [team-dev-guide.md](../docs/team-dev-guide.md) 담당·합의 경로만 수정
+- [ ] [team-dev-guide.md](../docs/onboarding/team-dev-guide.md) 담당·합의 경로만 수정
 - [ ] `src/MORAI-ROS_morai_msgs/` submodule을 직접 커밋하지 않음
 - [ ] 호스트 절대경로(`/home/…`) 없음
 - [ ] 대용량 데이터·체크포인트 없음
@@ -44,8 +44,8 @@
 ## 테스트
 
 - [ ] `./scripts/build_ws.sh` (또는 해당 패키지) 성공
-- [ ] morai_msgs / msg 변경 시 [morai-msgs-beta-policy.md](../docs/morai-msgs-beta-policy.md)
-- [ ] (가능 시) [sim-verification-checklist.md](../docs/sim-verification-checklist.md) 해당 §
+- [ ] morai_msgs / msg 변경 시 [morai-msgs-beta-policy.md](../docs/contracts/simulator/morai-msgs-beta-policy.md)
+- [ ] (가능 시) [sim-verification-checklist.md](../docs/operations/sim-verification-checklist.md) 해당 §
 
 ## Breaking change (해당 시)
 

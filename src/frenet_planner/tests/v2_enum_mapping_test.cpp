@@ -8,7 +8,7 @@
 // 차선변경으로, AVOID가 교차로 대기로, STOP이 좌회전으로 실행된다. 나중에
 // 누가 "매핑 함수가 번거롭다"며 cast로 되돌리면 이 테스트가 막는다.
 //
-// 계약: docs/fsm-frenet-interface-v2.md 2절
+// 계약: docs/contracts/planning/fsm-frenet-v2.md 2절
 
 #include "behavior_command_adapter.hpp"
 

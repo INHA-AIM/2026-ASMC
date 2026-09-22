@@ -1,7 +1,7 @@
 # perception
 
 > **역할:** 인지 파트 코드·문서 진입점
-> **현재 전략:** [카메라·MGeo·LiDAR 인지 융합 로드맵](../../docs/perception-map-fusion-roadmap.md)
+> **현재 전략:** [카메라·MGeo·LiDAR 인지 융합 로드맵](../../docs/packages/asmc_perception/roadmap.md)
 > **팀 문서 허브:** [docs/README.md](../../docs/README.md)
 
 ## 현재 상태
@@ -32,12 +32,12 @@
 
 | 문서 | 내용 |
 |---|---|
-| [융합 로드맵](../../docs/perception-map-fusion-roadmap.md) | 전체 우선순위, 코드 후보, topic과 대회판 이식 |
-| [데이터 계약](../../docs/perception-dataset-labeling-split.md) | 원본, mask, ignore, manifest와 split 정본 |
-| [BEV/lane 설계 노트](../../docs/perception-bev-lane-interface-plan.md) | 정책 선택 근거와 상세 후보 |
-| [v4 학습 평가](../../docs/perception-v4-training-evaluation.md) | 현재 18 epoch 후보 성능 |
-| [rosbag 재현 평가](../../docs/rosbag-evaluation-streaming-gt.md) | Real Time UDP raw/result bag과 종료된 privileged GT 실험 경계 |
-| [시뮬 체크리스트](../../docs/sim-verification-checklist.md) | live 및 full-stack 검증 항목 |
+| [융합 로드맵](../../docs/packages/asmc_perception/roadmap.md) | 전체 우선순위, 코드 후보, topic과 대회판 이식 |
+| [데이터 계약](../../docs/contracts/perception/dataset-labeling-split.md) | 원본, mask, ignore, manifest와 split 정본 |
+| [BEV/lane 설계 노트](../../docs/packages/asmc_perception/bev-lane-interface-plan.md) | 정책 선택 근거와 상세 후보 |
+| [v4 학습 평가](../../docs/records/perception/twinlitenet-v4-evaluation.md) | 현재 18 epoch 후보 성능 |
+| [rosbag 재현 평가](../../docs/operations/rosbag-evaluation.md) | Real Time UDP raw/result bag과 종료된 privileged GT 실험 경계 |
+| [시뮬 체크리스트](../../docs/operations/sim-verification-checklist.md) | live 및 full-stack 검증 항목 |
 
 ## 실행 환경과 데이터
 

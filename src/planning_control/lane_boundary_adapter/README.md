@@ -1,7 +1,7 @@
 # Lane Boundary Adapter
 
 > 음영구간 v3의 판제 소비 규칙, camera drivable 결합과 파트별 소유권은
-> [음영구간 카메라 인지 v3 판제 인수 가이드](../../../docs/shadow-camera-perception-handoff.md)를
+> [음영구간 카메라 인지 v3 판제 인수 가이드](../../../docs/handoffs/perception/shadow-camera.md)를
 > 먼저 따른다.
 
 카메라 인지가 발행하는 typed metric 경계 관측을 판제 개발자가 확인할 수 있는 차로 띠

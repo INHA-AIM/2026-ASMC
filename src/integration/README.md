@@ -1,7 +1,7 @@
 # integration (논리 그룹)
 
 > **역할:** Active Index — MORAI UDP bridge와 내부 ROS 런타임 진입점
-> **네트워크 정본:** [network-udp-ros.md](../../docs/network-udp-ros.md)
+> **네트워크 정본:** [network-udp-ros.md](../../docs/operations/network-udp-ros.md)
 > **문서 허브:** [docs/README.md](../../docs/README.md)
 
 실제 스크립트는 repo 루트 `scripts/`에 있고 이 폴더에는 README만 있다. 기본 경로는
@@ -17,7 +17,7 @@ MORAI UDP → bridge → 팀 PC 내부 ROS다.
 | `tools/grpc_inha_univ/` | gRPC 제어 브릿지 | 장원태 | ✅ |
 | UDP `Ctrl_cmd` | standalone planning/control | 정윤태·양서준 | 현재 경로는 planning 규약 참고 |
 
-상세: [docs/team-dev-guide.md](../../docs/team-dev-guide.md)
+상세: [docs/onboarding/team-dev-guide.md](../../docs/onboarding/team-dev-guide.md)
 
 ```bash
 # 기본 개발·대회 경로

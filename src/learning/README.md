@@ -16,7 +16,7 @@ lane/drivable 학습·live 추론은 `src/perception/twinlite_morai/`와 이후
 | `scripts/rosbridge.sh` | 안승현 | 종료된 direct ROS 실험 재현용, 본선/현재 개발 금지 |
 | `scripts/udp_bridge.sh` | 이강태·안승현 | 현재 센서 ROS 변환 경로 |
 
-상세: [docs/team-dev-guide.md](../../docs/team-dev-guide.md) §4
+상세: [docs/onboarding/team-dev-guide.md](../../docs/onboarding/team-dev-guide.md) §4
 
 ## LBC 재현용 시작
 
