@@ -34,9 +34,9 @@
 `docs/` 기준 상대 링크, 두 문서를 합치면서 다시 쓴 소개 문장뿐이었다. feature count, 좌표·거리,
 명령, topic, 변경 순서와 provenance 표에서 사라진 고유 값은 없었다.
 
-중앙 guide를 stub으로 남기지 않은 이유는 두 경로가 이 migration 브랜치에서만 생겼고 아직
-`main`이나 배포에 포함되지 않았기 때문이다. 저장소와 관리 중인 상위 workspace의 링크는 모두
-source README로 직접 교정했다.
+중앙 guide를 stub으로 남기지 않은 이유는 두 경로가 migration 브랜치에서만 생겼다가 PR #45
+병합 전에 제거돼 `main`이나 배포 경로로 노출된 적이 없기 때문이다. 저장소와 관리 중인 상위
+workspace의 링크는 모두 source README로 직접 교정했다.
 
 ## 호환 stub 정리
 

@@ -1,9 +1,10 @@
 # 팀 문서 정보 구조
 
-> **상태:** D4 Package README Canonicalization — 문서 구조 정리 완료
+> **상태:** D5 Post-merge Closeout — 문서 구조 정리 완료, 호환 유예 진행 중
 >
-> **작성일:** 2026-09-22
-> **진행:** D1~D3 이전·통합·보존 감사를 마치고 D4에서 실제 package README를 source에 정본화했다.
+> **최종 갱신:** 2026-09-23
+> **진행:** D1~D4 정리 결과가 PR #45로 `main`에 병합됐다. 과거 경로 12개는 후속 팀 배포
+> 1회가 끝날 때까지 호환 안내로 유지한다.
 
 ## 목적
 
@@ -88,10 +89,12 @@ docs/
 - D2-6: `packages/asmc_perception/` 진입점·권위 통합 완료. 세부 분석 본문은 원문 보존
 - D2-7: `packages/planning-control/`·`handoffs/` 통합 완료. standalone UDP 원문은 archive 보존
 - D2-8: `records/`·`archive/` 통합 완료. 기존 실측·분석 본문과 generated export 보존
-- D3: 원문 37개와 generated export 2개의 행선지·byte/절 parity 감사 완료. migration이 아직
-  `main`과 후속 배포를 거치지 않아 과거 main 경로 호환 안내와 historical export 제거는 유예
+- D3: 원문 37개와 generated export 2개의 행선지·byte/절 parity 감사 완료. 과거 main 경로
+  호환 안내와 historical export는 후속 팀 배포 gate까지 유지
 - D4: `asmc_hd_map`·`asmc_msgs` 1:1 가이드를 source README에 통합하고 branch-only stub 5개
   제거. 실제 package와 package-group 문서 경계 확정
+- D5: PR #45·merge commit `7107531b`를 기록하고 호환 유예를 `main 병합 완료·후속 배포 대기`
+  상태로 전환
 
 각 D2 묶음은 원문→정본 대응표와 링크 검증 결과를 남긴다. Working Proposal을 근거 없이
 Canonical로 바꾸거나 날짜가 있는 기록을 최신 설정처럼 덮어쓰지 않는다.

@@ -5,7 +5,8 @@
 > **기계 정본:** [`documentation_migration_v1.json`](../../config/docs/documentation_migration_v1.json)
 >
 > **결론:** 원문 행선지가 없는 문서는 발견되지 않았다. D4 후속 검토에서 branch-only 중간
-> stub 5개만 제거했고, 과거 `main` 경로 12개와 historical 자료는 유지한다.
+> stub 5개만 제거했고, 과거 `main` 경로 12개와 historical 자료는 유지한다. 문서 migration은
+> PR #45로 병합됐으며, 호환 안내는 후속 팀 배포 1회가 끝날 때까지 유지한다.
 
 ## 1. 감사 범위와 방법
 
@@ -83,12 +84,13 @@ Markdown 기준은 37개, 11,427줄, 640,681 bytes이고 generated text까지 �
 D4에서 외부 기본 브랜치 링크가 될 수 없음을 확인하고 제거했다. 각 남은 stub은 본문을
 복제하지 않고 새 정본 한 곳만 링크한다.
 
-이 migration commit은 아직 `main`이나 후속 팀 배포에 포함되지 않았다. 따라서 “한 릴리스
-호환” 유예가 시작되지도 않았고, D3에서 stub을 지우면 과거 PR·채팅·북마크가 즉시 깨진다.
-다음 조건을 모두 만족할 때만 별도 PR에서 제거한다.
+문서 migration은 2026-09-22 PR #45, merge commit
+`7107531b76fe3c41dfe1488eee23c5cf89c8c8b4`로 `main`에 병합됐다. 이 시점부터 “한 릴리스
+호환” 유예가 시작됐지만 아직 후속 팀 배포는 완료되지 않았다. 지금 stub을 지우면 과거
+PR·채팅·북마크가 즉시 깨질 수 있으므로 다음 조건을 모두 만족할 때만 별도 PR에서 제거한다.
 
-1. 문서 migration이 `main`에 병합된다.
-2. 그 뒤 최소 한 번의 팀 release 또는 대회 배포가 끝난다.
+1. 문서 migration이 `main`에 병합된다. — PR #45로 충족
+2. 그 뒤 최소 한 번의 팀 release 또는 대회 배포가 끝난다. — 대기 중
 3. 팀 저장소와 관리 중인 상위 workspace가 모두 새 정본을 직접 링크한다.
 4. 제거할 옛 경로와 대체 경로를 PR에 명시한다.
 5. 제거 뒤 migration checker와 Markdown link 검사가 통과한다.
@@ -111,7 +113,7 @@ D4에서 외부 기본 브랜치 링크가 될 수 없음을 확인하고 제거
   `operations/{docker,network-udp-ros,sim-verification-checklist}.md`
 - 제거한 중앙 guide 2개: 내용 전체를 각각 `src/asmc_hd_map/README.md`와
   `src/asmc_msgs/README.md`에 합침
-- 과거 `main` 경로 stub 12개: 호환 유예 미충족으로 유지
+- 과거 `main` 경로 stub 12개: 후속 팀 배포 gate가 남아 있어 유지
 - `archive/generated-msg/*.txt`: 현재 `.msg`와 semantic duplicate지만 외부 검토 export 소비가
   없다는 확인 전까지 유지
 - `records/`와 `archive/`: 현재 실행 정본은 아니어도 실측·실패·결정 근거이므로 유지
