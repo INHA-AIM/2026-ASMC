@@ -1,5 +1,8 @@
 # D2 `asmc_hd_map`·`asmc_msgs` 문서 통합 기록
 
+> **후속 상태:** D4에서 1:1 package guide를 각각 `src/asmc_hd_map/README.md`와
+> `src/asmc_msgs/README.md`에 합쳤다. 아래 D2 당시 분리 경로는 역사적 처리 기록이다.
+
 > **상태:** 2026-09-22 통합 완료
 >
 > **범위:** 두 공용 package의 개발·검증 문서와 직접 연결된 index·현재 상태
@@ -9,10 +12,10 @@
 | 이전 위치 | 새 역할 | 처리 |
 |---|---|---|
 | `src/asmc_hd_map/README.md` 703줄 | package 빠른 시작 85줄 | 운영 실행과 정본 링크만 유지 |
-| 같은 문서의 현재 builder/runtime 절 | `docs/packages/asmc_hd_map/README.md` | 생성물·pose·비교·변경 gate 통합 |
+| 같은 문서의 현재 builder/runtime 절 | `src/asmc_hd_map/README.md` | D4에서 package README로 재통합 |
 | 같은 문서의 날짜별 후보 절 | 기존 `reports/`와 `docs/records/hd-map/` | 정량·선택 근거의 기존 정본으로 연결 |
 | `src/asmc_msgs/README.md` | package 빠른 설명 | 상세 변경 절차를 package guide로 분리 |
-| 분산된 message 유지 규칙 | `docs/packages/asmc_msgs/README.md` | 25개 타입, MD5와 추가 절차 통합 |
+| 분산된 message 유지 규칙 | `src/asmc_msgs/README.md` | D4에서 package README로 재통합 |
 
 Active package 문서에서는 “어떻게 실행·검증·변경하는가”만 찾을 수 있게 하고, 날짜가 있는
 후보 생성 과정은 records/reports로 남겼다. Frozen topic/message 의미는 contracts에서
@@ -22,7 +25,7 @@ Active package 문서에서는 “어떻게 실행·검증·변경하는가”�
 
 | 기존 `src/asmc_hd_map/README.md` 절 | 현재 행선지 |
 |---|---|
-| 운영과 개발 진입점, 구조, 최종 runtime | [HD Map package guide](../packages/asmc_hd_map/README.md) §1~7 |
+| 운영과 개발 진입점, 구조, 최종 runtime | [HD Map package README](../../src/asmc_hd_map/README.md) |
 | 승격 원칙 | package guide §2, §8 |
 | 첫 legacy audit | `reports/kcity2025_legacy_alignment_20260916/` |
 | current-only corridor | `reports/kcity2025_current_corridor_20260916/` |

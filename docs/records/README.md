@@ -37,7 +37,7 @@
 
 P2-A는 P2-B 이전의 입력 감사이므로 문서 끝의 “다음 gate”를 현재 미완료 작업으로 해석하지
 않는다. 현재 주행가능영역은 P2-B product와
-[asmc_hd_map guide](../packages/asmc_hd_map/README.md)를 따른다.
+[asmc_hd_map guide](../../src/asmc_hd_map/README.md)를 따른다.
 
 ## 3. Perception·simulator 기록
 

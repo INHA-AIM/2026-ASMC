@@ -1,9 +1,9 @@
 # 팀 문서 정보 구조
 
-> **상태:** D3 Retention/Compatibility Audit — 보존 감사 완료, 호환 stub 제거 유예
+> **상태:** D4 Package README Canonicalization — 문서 구조 정리 완료
 >
 > **작성일:** 2026-09-22
-> **진행:** D1 경로 이전과 D2 본문 통합을 마쳤고, D3에서 보존·호환 gate를 고정했다.
+> **진행:** D1~D3 이전·통합·보존 감사를 마치고 D4에서 실제 package README를 source에 정본화했다.
 
 ## 목적
 
@@ -30,6 +30,8 @@
 [본문 축약 보존 감사](./d2-content-parity-audit.md)에서 원문 절과 현재 행선지를 다시 확인했다.
 D3의 전체 원문 inventory와 외부 경로 유지 판단은
 [정보 보존·경로 호환 감사](./d3-retention-compatibility-report.md)를 따른다.
+[D4 package README 결과](./d4-package-readme-report.md)는 source-local 문서와 중앙 package-group
+문서의 경계를 기록한다.
 
 ## 목표 구조
 
@@ -48,8 +50,6 @@ docs/
 │   ├── planning/                     FSM/Frenet/행동 계약
 │   └── simulator/                    MORAI message 호환 정책
 ├── packages/
-│   ├── asmc_msgs/                    패키지 설계·생성 규칙
-│   ├── asmc_hd_map/                  builder/runtime/검수 방법
 │   ├── asmc_bridge/                  UDP·센서 decoder·환경 profile
 │   ├── asmc_perception/              camera/LiDAR/BEV/fusion 개발 문서
 │   └── planning-control/             planner/controller 설계 참고
@@ -68,7 +68,8 @@ docs/
 ## 분류 원칙
 
 - `contracts/`는 다른 파트가 구현을 맞춰야 하는 인터페이스만 둔다.
-- `packages/`는 해당 패키지를 개발·검증하는 사람을 위한 설계와 실행법을 둔다.
+- 실제 package 한 개의 개발·검증은 `src/<package>/README.md`에 둔다.
+- `packages/`는 여러 현재 package의 공통 경계 또는 아직 없는 통합 package 계획을 둔다.
 - `operations/`는 여러 패키지를 함께 실행하거나 현장에 배포하는 절차를 둔다.
 - `handoffs/`는 생산자와 소비자 사이의 현재 인수 조건을 둔다.
 - `records/`는 특정 날짜·버전의 사실을 보존하며 최신 설정으로 해석하지 않는다.
@@ -88,7 +89,9 @@ docs/
 - D2-7: `packages/planning-control/`·`handoffs/` 통합 완료. standalone UDP 원문은 archive 보존
 - D2-8: `records/`·`archive/` 통합 완료. 기존 실측·분석 본문과 generated export 보존
 - D3: 원문 37개와 generated export 2개의 행선지·byte/절 parity 감사 완료. migration이 아직
-  `main`과 후속 배포를 거치지 않아 호환 안내 17개와 historical export 제거는 유예
+  `main`과 후속 배포를 거치지 않아 과거 main 경로 호환 안내와 historical export 제거는 유예
+- D4: `asmc_hd_map`·`asmc_msgs` 1:1 가이드를 source README에 통합하고 branch-only stub 5개
+  제거. 실제 package와 package-group 문서 경계 확정
 
 각 D2 묶음은 원문→정본 대응표와 링크 검증 결과를 남긴다. Working Proposal을 근거 없이
 Canonical로 바꾸거나 날짜가 있는 기록을 최신 설정처럼 덮어쓰지 않는다.

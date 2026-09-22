@@ -44,8 +44,16 @@
 
 [D3 보존·호환 감사](./d3-retention-compatibility-report.md)에서 D1 이전 Markdown 37개와
 generated text 2개의 행선지를 모두 확인했다. 현재 migration은 아직 `main`과 한 번의 후속
-배포를 거치지 않았으므로 호환 stub 17개와 generated export는 삭제하지 않는다. 제거 gate는
-`config/docs/documentation_migration_v1.json`에 기계 판독 형태로 고정한다.
+배포를 거치지 않았으므로 과거 `main` 경로 stub 12개와 generated export는 삭제하지 않는다.
+제거 gate는 `config/docs/documentation_migration_v1.json`에 기계 판독 형태로 고정한다.
+
+## D4 — 패키지 README 정본화 (완료)
+
+- 실제 package 한 개의 실행·구조·변경·검증은 `src/<package>/README.md`에 둔다.
+- 여러 package를 묶는 통합 경계와 아직 없는 목표 package는 `docs/packages/`에 둔다.
+- `asmc_hd_map`·`asmc_msgs` 중앙 guide의 고유 내용을 source README에 합친 뒤 제거한다.
+- 이 브랜치에만 존재한 중간 호환 stub 5개는 제거하고, 과거 `main` 경로 12개만 유지한다.
+- 결과와 보존 검증은 [D4 보고서](./d4-package-readme-report.md)에 기록한다.
 
 ## 공통 금지 사항
 

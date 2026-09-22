@@ -16,7 +16,8 @@
 [D2 perception 보고서](./structure/d2-perception-report.md),
 [D2 Planning/Control·handoff 보고서](./structure/d2-planning-handoffs-report.md),
 [D2 records·archive 보고서](./structure/d2-records-archive-report.md),
-[D3 정보 보존·경로 호환 감사](./structure/d3-retention-compatibility-report.md)를 참고한다.
+[D3 정보 보존·경로 호환 감사](./structure/d3-retention-compatibility-report.md),
+[D4 패키지 README 정본화 결과](./structure/d4-package-readme-report.md)를 참고한다.
 이 페이지에서 정본, 작업 중 설계안, 사용 가이드와 과거 기록을 구분한다. 내용이
 충돌하면 아래의 `정본 우선순위`를 적용하고, 기록 문서를 현재 설정으로 해석하지 않는다.
 
@@ -171,16 +172,16 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | compact Lane·주행가능영역을 실행/소비 | [P2-B compact map](./records/baselines/kcity2025-compact-drivable-v1.md) | [runtime/visualization contract](./contracts/hd-map/runtime-v1.md), [HD Map README](../src/asmc_hd_map/README.md) |
 | 체크포인트·미션 경계를 확인 | [P1-C competition metadata](./contracts/competition/kcity2025-metadata-v1.md) | [생성 bundle](../src/asmc_hd_map/config/kcity2025_competition_metadata.yaml) |
 | HD Map 토픽·RViz를 실행 | [2단계 runtime/visualization](./contracts/hd-map/runtime-v1.md) | [P1-B topic contract](./contracts/hd-map/topic-v1.md) |
-| HD Map builder·산출물을 변경·검증 | [asmc_hd_map package guide](./packages/asmc_hd_map/README.md) | [P2-B compact map](./records/baselines/kcity2025-compact-drivable-v1.md) |
-| 공용 ROS message를 추가·검증 | [asmc_msgs package guide](./packages/asmc_msgs/README.md) | [계약 허브](./contracts/README.md) |
+| HD Map builder·산출물을 변경·검증 | [asmc_hd_map package guide](../src/asmc_hd_map/README.md) | [P2-B compact map](./records/baselines/kcity2025-compact-drivable-v1.md) |
+| 공용 ROS message를 추가·검증 | [asmc_msgs package guide](../src/asmc_msgs/README.md) | [계약 허브](./contracts/README.md) |
 | 대회판 이식 | [fusion roadmap §9](./packages/asmc_perception/roadmap.md#9-26r1h3-개발판과-대회판-이식-전략) | [msg versions](./records/simulator/morai-msgs-versions.md), [운영 가이드](./operations/README.md) |
 
 ## 5. 모듈 README 진입점
 
 | README | 역할 |
 |---|---|
-| [asmc_hd_map guide](./packages/asmc_hd_map/README.md) | HD Map builder/runtime/source comparison 개발·검증 |
-| [asmc_msgs guide](./packages/asmc_msgs/README.md) | 공용 ROS1 message 소유·호환·추가 절차 |
+| [asmc_hd_map guide](../src/asmc_hd_map/README.md) | HD Map builder/runtime/source comparison 개발·검증 |
+| [asmc_msgs guide](../src/asmc_msgs/README.md) | 공용 ROS1 message 소유·호환·추가 절차 |
 | [MORAI bridge guide](./packages/asmc_bridge/README.md) | 현재 bridge/state 구현과 Phase 3 통합 gate |
 | [Perception package-group guide](./packages/asmc_perception/README.md) | 현재 camera/BEV/LiDAR/traffic/data 경계와 Phase 4 gate |
 | [Planning/Control package-group guide](./packages/planning-control/README.md) | 현재 Behavior/Frenet/MPC 경계, legacy와 변경 gate |
@@ -226,6 +227,8 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 9. 옛 경로 stub의 생성·제거는
    [`documentation_migration_v1.json`](../config/docs/documentation_migration_v1.json)과
    D3 removal gate를 함께 갱신하고 checker를 통과해야 한다.
+10. 실제 package 하나의 실행·구조·변경·검증은 `src/<package>/README.md`에 두고,
+    `docs/packages/`에는 여러 package의 공통 경계나 아직 없는 통합 package 계획만 둔다.
 
 ### 새 내용을 어디에 적을지
 

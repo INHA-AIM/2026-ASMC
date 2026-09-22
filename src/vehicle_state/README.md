@@ -3,7 +3,7 @@
 MORAI GPS/IMU를 팀 내부 `asmc_msgs/VehicleState`로 정규화해 `/vehicle/state`에 발행한다.
 
 - 상태 추정 규칙과 검증: [bridge package-group guide](../../docs/packages/asmc_bridge/README.md#4-팀-내부-vehiclestate)
-- message 호환 규칙: [asmc_msgs guide](../../docs/packages/asmc_msgs/README.md)
+- message 호환 규칙: [asmc_msgs guide](../asmc_msgs/README.md)
 
 본선 후보 GPS/IMU source:
 

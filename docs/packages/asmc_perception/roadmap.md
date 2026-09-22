@@ -114,7 +114,7 @@ LiDAR ─ detection/tracking/occupancy ───────────┤
 
 > **상태 주의:** 이 절은 2026-09-16~17 `asmc_hd_map` 후보를 발전시킨 시간순 기록이다.
 > 아래의 “미구현”, `candidate`, `operational=false`는 당시 snapshot을 뜻한다. 현재 Phase 2
-> 제품과 실행·소비법은 [HD Map package guide](../asmc_hd_map/README.md)와
+> 제품과 실행·소비법은 [HD Map package guide](../../../src/asmc_hd_map/README.md)와
 > [runtime contract](../../contracts/hd-map/runtime-v1.md)를 우선한다.
 
 - drivable surface와 route corridor

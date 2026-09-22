@@ -161,6 +161,10 @@ def validate_current_tree(manifest: dict) -> List[str]:
         if legacy_raw in legacy_names:
             errors.append(f"duplicate compatibility redirect: {legacy_raw}")
         legacy_names.add(legacy_raw)
+        if legacy_raw not in sources:
+            errors.append(
+                f"compatibility redirect was not present in the pre-migration inventory: {legacy_raw}"
+            )
         try:
             legacy = repo_path(legacy_raw)
             target = repo_path(target_raw)

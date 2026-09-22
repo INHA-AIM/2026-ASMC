@@ -4,8 +4,8 @@
 >
 > **기계 정본:** [`documentation_migration_v1.json`](../../config/docs/documentation_migration_v1.json)
 >
-> **결론:** 원문 행선지가 없는 문서는 발견되지 않았다. 호환 안내와 historical 자료는 아직
-> 삭제 gate를 충족하지 않아 유지한다.
+> **결론:** 원문 행선지가 없는 문서는 발견되지 않았다. D4 후속 검토에서 branch-only 중간
+> stub 5개만 제거했고, 과거 `main` 경로 12개와 historical 자료는 유지한다.
 
 ## 1. 감사 범위와 방법
 
@@ -65,9 +65,9 @@ Markdown 기준은 37개, 11,427줄, 640,681 bytes이고 generated text까지 �
 | 현재 UDP/IP/Hz와 아직 미적용인 현장 목표 | [운영 가이드](../operations/README.md), [bridge guide](../packages/asmc_bridge/README.md) |
 | 차량·센서 pose, 허용 입력, 공개 자산과 채점 수치 | [대회 환경](../competition/README.md) |
 | raw/result bag lineage와 종료된 Streaming GT 결과 | [rosbag guide](../operations/rosbag-evaluation.md), [transport record](../records/simulator/runtime-transport-2026-09.md) |
-| ROS1 MD5, HD Map topic/frame/scope | [topic contract](../contracts/hd-map/topic-v1.md), [asmc_msgs guide](../packages/asmc_msgs/README.md) |
+| ROS1 MD5, HD Map topic/frame/scope | [topic contract](../contracts/hd-map/topic-v1.md), [asmc_msgs guide](../../src/asmc_msgs/README.md) |
 | 체크포인트·미션 권위와 provisional 금지 경계 | [competition metadata](../contracts/competition/kcity2025-metadata-v1.md) |
-| HD Map 후보 선택과 geometry product 근거 | [HD Map records](../records/README.md), [HD Map guide](../packages/asmc_hd_map/README.md) |
+| HD Map 후보 선택과 geometry product 근거 | [HD Map records](../records/README.md), [HD Map guide](../../src/asmc_hd_map/README.md) |
 | 데이터 palette·mask·split과 날짜별 모델 평가 | [dataset contract](../contracts/perception/dataset-labeling-split.md), [perception records](../records/README.md) |
 | FSM/Frenet transaction과 legacy/production 경계 | [FSM/Frenet contract](../contracts/planning/fsm-frenet-v2.md), [Planning guide](../packages/planning-control/README.md) |
 
@@ -78,8 +78,10 @@ Markdown 기준은 37개, 11,427줄, 640,681 bytes이고 generated text까지 �
 
 ## 4. 외부 링크 호환 정책
 
-현재 호환 stub은 17개다. D1의 주요 옛 경로 12개와 D2 통합 과정에서 생긴 중간 경로 5개를
-포함한다. 각 stub은 본문을 복제하지 않고 새 정본 한 곳만 링크한다.
+현재 호환 stub은 12개이며 모두 D1 이전 `main@577231b`에 실제로 존재했던 주요 경로다. D3
+최초 감사 때는 D2 통합 과정에서 이 브랜치에만 생긴 중간 경로 5개도 포함해 17개였으나,
+D4에서 외부 기본 브랜치 링크가 될 수 없음을 확인하고 제거했다. 각 남은 stub은 본문을
+복제하지 않고 새 정본 한 곳만 링크한다.
 
 이 migration commit은 아직 `main`이나 후속 팀 배포에 포함되지 않았다. 따라서 “한 릴리스
 호환” 유예가 시작되지도 않았고, D3에서 stub을 지우면 과거 PR·채팅·북마크가 즉시 깨진다.
@@ -97,19 +99,23 @@ Markdown 기준은 37개, 11,427줄, 640,681 bytes이고 generated text까지 �
 외부 참고 문서가 정확한 권위를 따라가게 한 것이다.
 
 인터넷·메신저·과거 PR 본문처럼 저장소 밖의 모든 링크를 전수 검색할 수는 없다. 이 때문에
-현재 17개 stub을 보수적으로 유지하며, machine manifest와 checker가 누락·오연결·내부 역참조를
+현재 12개 stub을 보수적으로 유지하며, machine manifest와 checker가 누락·오연결·내부 역참조를
 막는다.
 
 ## 5. D3 삭제 판단
 
-이번 단계에서 삭제한 문서는 없다.
+원래 D3 감사 커밋에서는 문서를 삭제하지 않았다. 이어진 D4에서 아래 branch-only stub과
+1:1 중앙 package guide를 정리했다.
 
-- 17개 stub: 호환 유예 미충족으로 유지
+- 제거한 branch-only stub 5개: `competition/{assets,environment}.md`,
+  `operations/{docker,network-udp-ros,sim-verification-checklist}.md`
+- 제거한 중앙 guide 2개: 내용 전체를 각각 `src/asmc_hd_map/README.md`와
+  `src/asmc_msgs/README.md`에 합침
+- 과거 `main` 경로 stub 12개: 호환 유예 미충족으로 유지
 - `archive/generated-msg/*.txt`: 현재 `.msg`와 semantic duplicate지만 외부 검토 export 소비가
   없다는 확인 전까지 유지
 - `records/`와 `archive/`: 현재 실행 정본은 아니어도 실측·실패·결정 근거이므로 유지
 - 빈 `docs/` 디렉터리: 0개
 
-즉 D3의 결과는 “삭제할 수 있는 것처럼 보이는 파일을 바로 삭제”가 아니라, 중복 본문은 이미
-stub으로 축소됐음을 확인하고 남은 삭제 후보의 gate를 자동화한 것이다. 다음 제거 PR 전까지
-manifest의 `redirect_policy.state`는 `keep`으로 둔다.
+즉 D3/D4의 결과는 근거가 있는 branch-only 중복만 제거하고, 외부 링크와 역사적 근거는
+보존한 것이다. 다음 제거 PR 전까지 manifest의 `redirect_policy.state`는 `keep`으로 둔다.

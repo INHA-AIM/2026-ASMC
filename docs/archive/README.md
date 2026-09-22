@@ -15,7 +15,7 @@ Archive는 실패·변경 이유와 과거 의사결정 맥락을 보존한다. 
 | [인지 agentic loop](./perception/agentic-loop.md) | Loc-Aid·MGeo bake·BEV 초기 연구 루프 | [Perception guide](../packages/asmc_perception/README.md), [현재 roadmap](../packages/asmc_perception/roadmap.md) |
 | [D1 legacy behavior 분석](./planning/d1-legacy-behavior-boundary.md) | commit `fa530f9`의 policy/computation 분류 | [FSM↔Frenet v2 contract](../contracts/planning/fsm-frenet-v2.md), [Planning guide](../packages/planning-control/README.md) |
 | [standalone UDP 기준선](./planning/standalone-udp-baseline.md) | ROS runtime 전환 전 Frenet/MPC 실행 | [Planning 운영 규약](../operations/planning-control.md) |
-| [generated message export](./generated-msg/README.md) | v2 message 외부 텍스트 사본 | `src/asmc_msgs/msg/`와 [message guide](../packages/asmc_msgs/README.md) |
+| [generated message export](./generated-msg/README.md) | v2 message 외부 텍스트 사본 | `src/asmc_msgs/msg/`와 [message guide](../../src/asmc_msgs/README.md) |
 
 ## 2. 읽는 방법
 

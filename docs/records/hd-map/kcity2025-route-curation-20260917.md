@@ -4,7 +4,7 @@
 >
 > **기록 허브:** [records index](../README.md)
 >
-> **현재 구현:** [asmc_hd_map guide](../../packages/asmc_hd_map/README.md)와
+> **현재 구현:** [asmc_hd_map guide](../../../src/asmc_hd_map/README.md)와
 > `src/asmc_hd_map/config/kcity2025_route_curation.yaml`을 우선한다.
 
 ## 목적과 고정 원칙
