@@ -5,3 +5,7 @@ src/asmc_hd_map/config/kcity2025_compact_drivable_map.json linguist-generated=tr
 src/asmc_hd_map/config/*.npz binary
 src/asmc_hd_map/**/*.png binary
 src/asmc_hd_map/**/*.h5 binary
+
+# MORAI UI exports use CRLF on Windows. Preserve their importable source bytes
+# and treat CR as part of the line ending when Git checks whitespace.
+config/morai/**/*.json whitespace=cr-at-eol

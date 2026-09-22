@@ -73,6 +73,7 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 | [architecture-overview.md](./architecture/system-overview.md) | 전체 모듈과 현재 목표 구조 요약 | Working Overview |
 | [repository-consolidation-roadmap.md](./architecture/consolidation-roadmap.md) | msg·bridge·HD Map·perception 4-패키지 통합, 체크포인트/미션, 현장 배포 단계 | Working Proposal |
 | [baselines/runtime-baseline-v1.md](./records/baselines/runtime-v1.md) | P1-A 당시 package/topic/message/sensor/bag/HD Map snapshot | Frozen Snapshot (`73c0a8c`) |
+| [P3-A bridge baseline](./records/baselines/bridge-p3a-v1.md) | 공통 `morai_udp`, transport/network/sensor profile과 bridge source/topic SHA | Active Baseline |
 | [contracts/hd-map-topic-contract-v1.md](./contracts/hd-map/topic-v1.md) | P1-B `asmc_msgs` HD Map·체크포인트·미션 message/topic 계약 | Frozen Interface |
 | [contracts/kcity2025-competition-metadata-v1.md](./contracts/competition/kcity2025-metadata-v1.md) | P1-C 공식 체크포인트 projection과 권위별 mission-zone 정본 | Frozen Metadata |
 | [contracts/hd-map-runtime-visualization-v1.md](./contracts/hd-map/runtime-v1.md) | 2단계 global/local ROS publisher, RViz와 paint-gap 소비 규칙 | Active Runtime |
@@ -93,9 +94,10 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 | [morai-msgs-versions.md](./records/simulator/morai-msgs-versions.md) | 26.R1과 대회 msg 차이 조사 기록 | Version Reference |
 | [2026-09 transport 검증](./records/simulator/runtime-transport-2026-09.md) | host network, rate/latency와 종료된 GT 실험 | Experiment Record |
 | [MORAI bridge 개발·통합](./packages/asmc_bridge/README.md) | 현재 parser/state 경계와 Phase 3 이관 gate | Active Package-Group Guide |
+| [Bridge profile contract](../config/bridge/README.md) | release×transport network 생성, Ctrl 9093/9094, 센서셋 v1/v2/v3/GT | Machine Contract Guide |
 
 MORAI 화면에 입력할 값만 필요하면
-[UDP 치트시트](../config/morai_udp_sim_cheat_sheet.md)를 사용한다. 상세 설명과 장애 대응은
+[UDP 치트시트](../config/morai/udp-sim-cheat-sheet.md)를 사용한다. 상세 설명과 장애 대응은
 치트시트가 아니라 운영 가이드에서 관리한다.
 
 ### 3.4 Planning/Control
@@ -155,7 +157,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | 하려는 작업 | 먼저 볼 문서 | 다음 문서 |
 |---|---|---|
 | 처음 실행 | [개발 시작](./onboarding/README.md) | [운영 가이드](./operations/README.md) |
-| UDP 센서가 안 들어옴 | [운영 가이드](./operations/README.md) | [UDP 치트시트](../config/morai_udp_sim_cheat_sheet.md) |
+| UDP 센서가 안 들어옴 | [운영 가이드](./operations/README.md) | [UDP 치트시트](../config/morai/udp-sim-cheat-sheet.md) |
 | bridge parser·timestamp·vehicle state 수정 | [MORAI bridge guide](./packages/asmc_bridge/README.md) | [운영 gate](./operations/README.md#7-변경-범위별-시뮬-검증) |
 | Git 작업·PR | [협업 규칙](./governance/README.md) | [ownership](./onboarding/ownership.md), [CONTRIBUTING](../CONTRIBUTING.md) |
 | 본선 허용 여부 판단 | [대회 환경](./competition/README.md) | [운영 가이드](./operations/README.md) |

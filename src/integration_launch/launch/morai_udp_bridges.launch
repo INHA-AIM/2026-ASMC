@@ -8,8 +8,9 @@
   Rosbridge (dev only): ./scripts/rosbridge.sh
 -->
 <launch>
-  <!-- Explicit provenance only; packet compatibility is verified per simulator. -->
-  <arg name="simulator_profile" default="dev_26r1_h3"/>
+  <!-- One runtime protocol for 26.R1.H3 and 25.S4.MolitComp03. -->
+  <arg name="simulator_profile" default="morai_udp"/>
+  <arg name="transport_profile" default="dev_local"/>
   <!-- Open the v2+GT port union. Optional GT sockets stay idle with v2. -->
   <arg name="enable_semantic_camera" default="true"/>
   <arg name="enable_instance_lidar" default="true"/>
@@ -19,15 +20,17 @@
   <!-- Opt-in only: authoritative localization must be the sole map TF owner. -->
   <arg name="publish_map_tf" default="false"/>
   <arg name="cmd_ip" default="$(optenv MORAI_CMD_IP 127.0.0.1)"/>
-  <arg name="cmd_port" default="9111"/>
+  <arg name="cmd_port" default="9093"/>
   <include file="$(find morai_udp_bridge)/launch/morai_udp_bridge.launch">
     <arg name="simulator_profile" value="$(arg simulator_profile)"/>
+    <arg name="transport_profile" value="$(arg transport_profile)"/>
     <arg name="cmd_ip" value="$(arg cmd_ip)"/>
     <arg name="cmd_port" value="$(arg cmd_port)"/>
     <arg name="timestamp_mode" value="$(arg timestamp_mode)"/>
   </include>
   <include file="$(find morai_sensor_bridge)/launch/morai_sensor_bridge.launch">
     <arg name="simulator_profile" value="$(arg simulator_profile)"/>
+    <arg name="transport_profile" value="$(arg transport_profile)"/>
     <arg name="enable_semantic_camera" value="$(arg enable_semantic_camera)"/>
     <arg name="enable_instance_lidar" value="$(arg enable_instance_lidar)"/>
     <arg name="instance_lidar_port" value="$(arg instance_lidar_port)"/>

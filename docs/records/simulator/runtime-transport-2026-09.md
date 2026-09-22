@@ -26,7 +26,7 @@ Windows loopback 검증이며 실제 두 PC LAN ingress를 보장하지 않는�
 
 ## 2. 2026-09-09 v2 UDP→ROS 60초 기준선
 
-조건은 26.R1.H3, `ASMC_sensor_set_v2.json`, Docker host network,
+조건은 26.R1.H3, `config/morai/sensors/ASMC_sensor_set_v2.json`, Docker host network,
 `timestamp_mode=receive`다.
 
 ```bash

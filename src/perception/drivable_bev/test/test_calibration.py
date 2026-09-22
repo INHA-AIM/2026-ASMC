@@ -19,7 +19,7 @@ from drivable_bev.calibration import (
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = PACKAGE_ROOT.parents[2]
 SNAPSHOT = PACKAGE_ROOT / "config" / "cameras_v2.yaml"
-SENSOR_SET = REPO_ROOT / "config" / "ASMC_sensor_set_v2.json"
+SENSOR_SET = REPO_ROOT / "config/morai/sensors/ASMC_sensor_set_v2.json"
 
 
 class CameraCalibrationTest(unittest.TestCase):

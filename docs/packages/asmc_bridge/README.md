@@ -18,9 +18,9 @@ bridge 구현을 개발·검증하고 Phase 3에서 안전하게 통합하는 �
 | GPS/IMU→팀 내부 차량 상태 | `src/vehicle_state/` | 운영 중 |
 | 두 UDP bridge 동시 기동 | `src/integration_launch/` | 운영 중, planning 공동 소유 |
 | 단일 `asmc_bridge` | 존재하지 않음 | Phase 3 목표 |
-| `dev_local`/`competition_lan` profile | 존재하지 않음 | Phase 3 목표 |
+| `dev_local`/`competition_lan` 계약·MORAI JSON | P3-A 완료 | live LAN gate 대기 |
 
-Phase 3 전에는 현재 패키지 이름과 launch를 사용한다. 문서상의 목표 구조를 근거로 경로를 먼저
+P3-A 이후에도 현재 패키지 이름과 launch를 사용한다. 문서상의 목표 구조를 근거로 경로를 먼저
 옮기거나 기존 패키지를 삭제하지 않는다. `asmc_bridge` 승격은 bag replay, packet fixture,
 producer/consumer build와 실제 MORAI 검증을 모두 통과한 뒤에만 한다.
 
@@ -47,7 +47,7 @@ interface는 가능한 한 `asmc_msgs`를 사용하되, Phase 3 전환 PR에서 
 | MORAI→팀 | Ego Dest `909` | `/Ego_topic`, `morai_msgs/EgoVehicleStatus` | 개발 상태·debug |
 | MORAI→팀 | Object Dest `7505` | `/Object_topic`, `morai_msgs/ObjectStatusList` | privileged 개발 oracle |
 | MORAI→팀 | Collision Dest `9092` | `/CollisionData`, `morai_msgs/CollisionData` | 충돌 때만 publish |
-| 팀→MORAI | Ctrl Host `9111` | subscribe `/ctrl_cmd`, `morai_msgs/CtrlCmd` | mode 2, D gear packet |
+| 팀→MORAI | Ctrl Host `9093` | subscribe `/ctrl_cmd`, `morai_msgs/CtrlCmd` | Dest metadata 9094, mode 2, D gear packet |
 
 Ego UDP velocity는 ROS에서 m/s로 변환한다. Object velocity는 현재 `morai_msgs` 관례에 따라
 km/h다. Ctrl steering 입력은 radian이며 ±40°를 ±1로 정규화한다. 이 단위를 topic 이름만 보고
@@ -128,10 +128,14 @@ source devel/setup.bash
 roslaunch vehicle_state vehicle_state.launch
 ```
 
-`--simulator 26r1|competition`은 현재 `simulator_profile` 진단 라벨과 packet provenance만
-선택한다. 포트·IP·허용 stream을 바꾸는 transport profile이 아니다. 특히
-`--simulator competition`만으로 현장 IP, `9093/9094`, Competition Vehicle Status 또는 GT
-비활성화가 적용되지 않는다.
+`--simulator 26r1|competition`은 release별 MORAI import와 packet provenance만 선택하며 두 경우
+모두 `morai_udp` runtime을 쓴다. transport는 별도 network JSON으로 선택한다. 특히
+`--simulator competition`만으로 현장 IP, Competition Vehicle Status decoder 또는 GT 비활성화가
+적용되지 않는다.
+
+현장 후보에서는 `--simulator competition --transport competition_lan`을 함께 지정한다. 스크립트가
+선택한 generated MORAI JSON 경로와 Ctrl 대상 IP를 출력하며 diagnostics에도 transport 이름을
+남긴다.
 
 다른 터미널에서:
 
@@ -180,13 +184,14 @@ make target”으로 실패할 수 있다.
 
 ## 7. Phase 3 통합 설계 경계
 
-목표 조합은 `simulator_profile × transport_profile × sensor_profile`이다.
+계약 조합은 `runtime_protocol × simulator_release × transport_profile × sensor_set`이다.
 
 | 축 | 예 | 책임 |
 |---|---|---|
-| simulator | `26r1_h3`, `25s4_molitcomp03` | packet/message 호환과 provenance |
+| runtime | `morai_udp` | 공통 packet adapter와 ROS topic |
+| simulator release | `26r1`, `molitcomp03` | MORAI import schema와 provenance |
 | transport | `dev_local`, `competition_lan` | IP, port, direction, allowlist |
-| sensor | `autonav_v2`, `autonav_competition_15hz`, `dev_gt` | pose, rate와 센서 종류 |
+| sensor | `ASMC_sensor_set_v1/v2/v3/GT` | pose, rate와 센서 종류 |
 
 확정된 목표:
 
@@ -198,6 +203,10 @@ make target”으로 실패할 수 있다.
 - 개발 IP 양쪽 `127.0.0.1`
 - 현장 MORAI `192.168.0.1`, Autonav `192.168.0.10`
 - VLP16은 MORAI UI 저장본으로 15 Hz를 만들고 30초 평균 14~16 Hz를 확인한다.
+
+P3-A 산출물은 [`config/bridge`](../../../config/bridge/)와
+[`config/morai`](../../../config/morai/)에 있다. 26r1/대회판 raw export는 entry 수와
+`PUBSUB_TYPE`이 달라 template을 분리하고, transport별 IP는 generator가 일괄 적용한다.
 
 JSON의 `sensorPeriod`만 추측해 고치지 않는다. 10 Hz baseline과 손재호 tracking 결과, packet
 loss, processing latency와 CPU/GPU를 비교한다. 현장 실제 두 PC, firewall·route·restart·offline

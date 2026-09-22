@@ -2,7 +2,7 @@
 
 > **문서 역할:** Canonical — Docker, MORAI UDP profile, bridge 기동과 시뮬 검증
 >
-> **현재 기준:** 26.R1.H3 + `ASMC_sensor_set_v2.json` + ROS1 Noetic + Docker host network
+> **현재 기준:** 공통 `morai_udp` bridge + `ASMC_sensor_set_v2.json` + ROS1 Noetic + Docker host network
 
 대회 허용 범위는 [대회 환경](../competition/README.md), Planning/Control의 실행은
 [Planning/Control 규약](./planning-control.md), bag 기록·재생은
@@ -10,25 +10,25 @@
 수정하거나 Phase 3 이관을 준비할 때는 [MORAI bridge guide](../packages/asmc_bridge/README.md)를
 함께 본다.
 
-## 1. 현재값과 승인된 후속 목표
+## 1. 현재값과 남은 승인 항목
 
-아래 두 열을 섞지 않는다. 3단계 `asmc_bridge` 전까지 launch와 MORAI UI에는 **현재 적용값**을
-사용한다.
+P3-A에서 공통 runtime과 profile 계약, Ctrl 포트까지 적용했다. 파일이 존재하는 것과 현장
+live acceptance가 끝난 것을 구분한다.
 
-| 항목 | 현재 적용값 | 3단계 승인 목표 |
+| 항목 | 현재 적용값 | 남은 gate |
 |---|---|---|
 | 개발 IP | Host/Destination `127.0.0.1` | 동일 |
-| 현장 IP | 아직 공용 profile 없음 | MORAI `192.168.0.1`, Autonav `192.168.0.10` |
-| Ego Ctrl Cmd | `9111/9112`, type 1, mode 2 | `9093/9094`, type 1, mode 2 |
+| 현장 IP | profile 계약·생성본: MORAI `192.168.0.1`, Autonav `192.168.0.10` | 실제 두 PC 리허설 |
+| Ego Ctrl Cmd | `9093/9094`, type 1, mode 2 | 실제 Ctrl 응답·packet capture |
 | 차량 상태 | Ego Vehicle Status destination `909` | Competition Vehicle Status `7603/7502` |
 | CollisionData | destination `9092` | `9091/9092` pair |
 | ObjectInfo | `7505`, 임시 개발 oracle | competition profile에서 제거 |
 | 센서 | `9290~9303` | 같은 포트, IP만 profile별 변경 |
-| VLP16 | 설정 10 Hz | UI 저장본 15 Hz, 실측 14~16 Hz |
+| VLP16 | v2 10 Hz 회귀 기준, v3 UI 저장본 15 Hz | 30초 실측 14~16 Hz와 tracking 비교 |
 
-네트워크와 LiDAR 목표는 승인됐지만 **아직 코드·센서셋에 적용하지 않았다**. Phase 3에서
-`dev_local`과 `competition_lan` profile을 만들고 packet fixture, 30초 topic rate, 손재호
-tracking 결과, CPU와 latency를 함께 비교한 뒤 전환한다.
+정본은 [`bridge_profiles_v1.json`](../../config/bridge/bridge_profiles_v1.json)이다. generated
+network JSON은 IP·port 계약 검증을 통과하지만 Competition Vehicle Status decoder와 privileged
+stream 차단, 실제 LAN 검증은 아직 남았다. v3도 파일 기준 15 Hz 후보이지 배포 승인이 아니다.
 
 ## 2. 런타임 경계
 
@@ -46,8 +46,8 @@ MORAI <--UDP-- morai_udp_bridge <--ROS-- /ctrl_cmd
 - gRPC scenario runner와 GT topic은 개발·데이터 수집 전용이다.
 - 현재 bridge는 `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`로 나뉘어 있다.
   단일 `asmc_bridge`는 Phase 3 parity 이후에만 교체한다.
-- `udp_bridge.sh --simulator competition`은 현재 packet provenance/diagnostics 라벨만 바꾼다.
-  현장 IP·port·privileged-stream allowlist를 적용하는 배포 profile이 아니다.
+- 두 simulator release는 `morai_udp` runtime 하나를 쓴다. `udp_bridge.sh --simulator`는 release별
+  import 파일과 provenance를 고를 뿐 현장 transport를 자동 선택하지 않는다.
 
 ## 3. Docker 기동
 
@@ -92,7 +92,7 @@ Compose는 `network_mode: host`이고 개별 `ports:` forwarding을 사용하지
 | Ego Vehicle Status | Dest `909` | `/Ego_topic` |
 | Object Info | Dest `7505` | `/Object_topic`, 임시 oracle |
 | Collision Data | Host/Dest `9091/9092` | `/CollisionData` |
-| Ego Ctrl Cmd | Host/Dest `9111/9112` | `morai_udp_bridge`가 `/ctrl_cmd`를 UDP로 전송 |
+| Ego Ctrl Cmd | Host/Dest `9093/9094`, mode 2 | `morai_udp_bridge`가 `/ctrl_cmd`를 UDP로 전송 |
 
 ### 센서
 
@@ -110,7 +110,7 @@ GT 센서셋에서만 Semantic camera `9305/9307/9309`, Instance LiDAR `9311`을
 이 optional port를 열 수 있지만 competition profile에서는 GT publisher와 profile을 시작하지
 않는다. LiDAR destination은 `9299`이며 과거 `2368`을 쓰지 않는다.
 
-한 장짜리 UI 입력표는 [UDP 치트시트](../../config/morai_udp_sim_cheat_sheet.md)를 사용한다.
+한 장짜리 UI 입력표는 [UDP 치트시트](../../config/morai/udp-sim-cheat-sheet.md)를 사용한다.
 
 ## 5. 빌드·실행·상태 확인
 
@@ -123,8 +123,15 @@ source devel/setup.bash
 ./scripts/udp_bridge.sh --simulator 26r1
 ```
 
-현재 `--simulator competition`도 같은 launch 기본값을 사용한다. Phase 3의
-`competition_lan` profile이 구현되기 전에는 이를 현장 설정 완료 명령으로 사용하지 않는다.
+`--simulator competition`도 같은 `morai_udp` launch를 사용한다. 현장에서는 별도로
+`ASMC_network_set_molitcomp03_competition_lan.json`을 MORAI에 로드해야 하며, 실제 LAN gate 전에는
+이를 현장 설정 완료로 간주하지 않는다.
+
+현장 후보 명령은 명시적 transport를 함께 쓴다.
+
+```bash
+./scripts/udp_bridge.sh --simulator competition --transport competition_lan
+```
 
 다른 터미널에서:
 
@@ -228,4 +235,5 @@ Phase 3에서 현재값을 바꿀 때 다음을 한 변경으로 검증한다.
 5. 10 Hz baseline 대비 손재호 tracking, latency와 CPU/GPU를 비교한다.
 6. native Linux의 실제 두 PC에서 firewall, route, restart와 offline 복구를 리허설한다.
 
-전환 전에는 `9111/9112`, Ego `909`와 LiDAR 10 Hz를 현재 회귀 기준으로 유지한다.
+Ctrl은 `9093/9094`로 전환됐다. Ego `909`와 LiDAR v2 10 Hz는 각각 Competition Vehicle Status
+decoder와 v3 live acceptance가 끝날 때까지 회귀 기준으로 유지한다.

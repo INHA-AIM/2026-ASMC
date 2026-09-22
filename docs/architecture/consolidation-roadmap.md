@@ -342,14 +342,14 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
 아키텍처이며 현재 `asmc_bridge` package나 환경 profile이 이미 있다는 뜻이 아니다.
 
 - UDP network/sensor decode와 `vehicle_state` 정규화를 한 패키지에 둔다.
-- simulator profile과 transport profile을 분리한다. 예:
-  `25s4_molitcomp03 + competition_lan`, `26r1_h3 + dev_local`.
+- 공통 runtime protocol `morai_udp`와 simulator release, transport profile을 분리한다. 예:
+  `morai_udp + molitcomp03 + competition_lan`, `morai_udp + 26r1 + dev_local`.
 - 외부 `morai_msgs`는 wire adapter에서만 보이고, 내부 node는 가능한 한 `asmc_msgs`를 쓴다.
 - privileged Object/GT 토픽은 개발 profile에서만 허용하며 competition launch에서 시작하지 않는다.
 - 개발과 현장의 **포트와 채널은 동일하게** 만들고 IP만 profile로 바꾼다. 목표 포트는 Ctrl
   `9093/9094`(mode 2), Competition Vehicle Status `7603/7502`, CollisionData `9091/9092`,
-  v2 sensor `9290~9303`이다. 기존 개발값 Ctrl `9111/9112`, Ego Status `909`는 3단계 전환이
-  검증된 뒤 폐기한다.
+  v2/v3 sensor `9290~9303`이다. Ctrl `9111/9112`는 P3-A에서 archive로 격리하고 기본값을
+  `9093/9094`로 전환했다. Ego Status `909`는 Competition Vehicle Status decoder 검증 뒤 폐기한다.
 - 현행 v2/제출 Autonav의 VLP16 10 Hz를 손재호 LiDAR runtime 요구에 따라 15 Hz로 바꾼다.
   JSON 수치만 추측해 고치지 않고 MORAI UI에서 15 Hz 설정 후 재저장해 `sensorPeriod`와
   `frequencyIndex`를 확인한다. 30초 이상 `/velodyne_points` 평균 14~16 Hz, packet loss,
@@ -409,7 +409,7 @@ lane/area, checkpoint 3 m radius, active mission, topic rate/staleness를 한 la
 
 현장 센서 폴더에는 다른 팀 설정도 섞여 있다. 우리 팀은 **Autonav**이며,
 `0918sensors.json`을 Autonav 설정 근거로 사용하지 않는다. 현재 실행 정본은
-`config/ASMC_sensor_set_v2.json`, 현장 `Autonav_sensor.json`은 제출 이력 확인용이다.
+`config/morai/sensors/ASMC_sensor_set_v2.json`, 현장 `Autonav_sensor.json`은 제출 이력 확인용이다.
 
 두 Autonav 파일의 sensor 구성·주기·UDP 포트는 다음과 같이 동일하다.
 
@@ -429,9 +429,9 @@ semantic 차이는 자유 카메라 4번 pitch가 현재 v2 `328°`, 제출본 `
 채널이므로 JSON 필드의 나열 순서를 패킷 진행 방향으로 해석하지 않는다. PUBSUB enum과 UI
 이름은 실제 simulator 화면에서 다시 대조한다.
 
-3단계에서 개발도 이 포트를 사용하도록 맞춘다. `dev_local`은 양쪽 IP가 `127.0.0.1`,
-`competition_lan`은 시뮬 `192.168.0.1`과 팀 PC `192.168.0.10`이며 **IP만 다르다**. 이 변경은
-P1-A 범위가 아니므로 현재 bridge·sensor/network config에는 아직 적용하지 않았다.
+P3-A에서 개발 Ctrl도 `9093/9094`로 맞추고 `dev_local`과 `competition_lan` network JSON을
+release별 template에서 생성하도록 했다. 두 transport는 포트·mode가 같고 IP만 다르다.
+Competition Vehicle Status decoder, privileged stream allowlist와 실제 두 PC 검증은 아직 남았다.
 
 ### 7.2 배포 원칙
 

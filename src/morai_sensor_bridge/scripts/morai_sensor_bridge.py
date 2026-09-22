@@ -111,8 +111,9 @@ class SensorBridge(object):
         self.frame_imu = p("~imu_frame", "imu")
         self.frame_gps = p("~gps_frame", "gps")
         self.simulator_profile = str(
-            p("~simulator_profile", "dev_26r1_h3")
+            p("~simulator_profile", "morai_udp")
         )
+        self.transport_profile = str(p("~transport_profile", "dev_local"))
         self.timestamp_mode = str(p("~timestamp_mode", "receive")).strip().lower()
         if self.timestamp_mode not in ("receive", "source"):
             raise ValueError("timestamp_mode must be receive or source")
@@ -808,6 +809,7 @@ class SensorBridge(object):
                 status.message = "no data"
             status.values = [
                 KeyValue("simulator_profile", self.simulator_profile),
+                KeyValue("transport_profile", self.transport_profile),
                 KeyValue("timestamp_mode", self.timestamp_mode),
                 KeyValue("optional_stream", str(name in self.optional_streams).lower()),
                 KeyValue("messages", str(self.stats[name])),

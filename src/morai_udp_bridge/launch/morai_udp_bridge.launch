@@ -1,18 +1,20 @@
 <launch>
-  <!-- dev_26r1_h3[_gt] or competition_25s4_molitcomp03; metadata/diagnostics label -->
-  <arg name="simulator_profile" default="dev_26r1_h3"/>
+  <!-- Shared packet/runtime profile for supported MORAI simulator releases. -->
+  <arg name="simulator_profile" default="morai_udp"/>
+  <arg name="transport_profile" default="dev_local"/>
   <!-- AIM06 스크린샷 기준 포트 (사람마다 Cmd/일부 포트 다름) -->
   <arg name="ego_port"       default="909"/>    <!-- Ego Vehicle Status Dest -->
   <arg name="object_port"    default="7505"/>   <!-- Object Info Dest -->
   <arg name="collision_port" default="9092"/>   <!-- Collision Data Dest -->
   <arg name="cmd_ip"         default="127.0.0.1"/>
-  <arg name="cmd_port"       default="9111"/>   <!-- Ego Ctrl Cmd Host (SIM listen) -->
+  <arg name="cmd_port"       default="9093"/>   <!-- Ego Ctrl Cmd Host (SIM listen) -->
   <arg name="max_steer_deg"  default="40.0"/>
   <arg name="timestamp_mode" default="receive"/>
 
   <node pkg="morai_udp_bridge" type="morai_udp_bridge.py"
         name="morai_udp_bridge" output="screen">
     <param name="simulator_profile" value="$(arg simulator_profile)"/>
+    <param name="transport_profile" value="$(arg transport_profile)"/>
     <param name="ego_port"           value="$(arg ego_port)"/>
     <param name="object_port"        value="$(arg object_port)"/>
     <param name="collision_port"     value="$(arg collision_port)"/>

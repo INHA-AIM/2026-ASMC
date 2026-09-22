@@ -132,8 +132,9 @@ class MoraiUdpBridge(object):
         self.frame_id = p("~frame_id", "base_link")
         self.ego_vel_ms = bool(p("~ego_velocity_in_ms", True))
         self.simulator_profile = str(
-            p("~simulator_profile", "dev_26r1_h3")
+            p("~simulator_profile", "morai_udp")
         )
+        self.transport_profile = str(p("~transport_profile", "dev_local"))
         self.timestamp_mode = str(p("~timestamp_mode", "receive")).strip().lower()
         if self.timestamp_mode not in ("receive", "source"):
             raise ValueError("timestamp_mode must be receive or source")
@@ -459,6 +460,7 @@ class MoraiUdpBridge(object):
                 status.message = "no data"
             status.values = [
                 KeyValue("simulator_profile", self.simulator_profile),
+                KeyValue("transport_profile", self.transport_profile),
                 KeyValue("timestamp_mode", self.timestamp_mode),
                 KeyValue(
                     "direction",

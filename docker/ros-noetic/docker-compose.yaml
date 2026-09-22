@@ -1,6 +1,6 @@
 # Docker Desktop + WSL host networking.
 # MORAI Host/Destination IP와 Ctrl 목적지는 모두 127.0.0.1을 사용한다.
-# 개발 SIM: 26.R1.h3 (대회 SIM 아님). 치트시트: config/morai_udp_sim_cheat_sheet.md
+# 지원 SIM: 26.R1.H3 / 25.S4.MolitComp03. 치트시트: config/morai/udp-sim-cheat-sheet.md
 services:
   asmc-ros-noetic:
     build:

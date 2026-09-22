@@ -92,9 +92,10 @@ ls "$ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_"*
 
 | 저장소 센서셋 | 용도 |
 |---|---|
-| `config/ASMC_sensor_set_v2.json` | 26.R1.H3 현재 개발·LAN2LAN 이식 기준 |
-| `config/ASMC_sensor_set_GT.json` | Semantic×3 + Instance LiDAR 개발 정답 전용 |
-| `config/ASMC_sensor_set_v1.json` | 과거 재현 전용 |
+| `config/morai/sensors/ASMC_sensor_set_v2.json` | 26.R1.H3 현재 10 Hz 회귀 기준 |
+| `config/morai/sensors/ASMC_sensor_set_v3.json` | 15 Hz 현장 후보, live acceptance 전 |
+| `config/morai/sensors/ASMC_sensor_set_GT.json` | Semantic×3 + Instance LiDAR 개발 정답 전용 |
+| `config/morai/sensors/ASMC_sensor_set_v1.json` | 과거 재현 전용 |
 
 현장 자료의 `Autonav_sensor.json`은 이전 제출본 provenance이고 다른 팀 센서셋은 사용하지
 않는다. v2와 이전 Autonav의 의미 있는 차이는 자유 카메라 pitch `328°` 대 `340°`이며 현재

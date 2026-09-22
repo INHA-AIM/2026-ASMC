@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "baseline_id": "p3a_bridge_profiles_v1",
+  "runtime_protocol": {
+    "id": "morai_udp",
+    "release_behavior_split": false,
+    "supported_simulator_releases": [
+      "26r1",
+      "molitcomp03"
+    ],
+    "note": "The two simulator releases use one ROS bridge implementation. Release-specific MORAI import schemas remain separate."
+  },
+  "defaults": {
+    "simulator_release": "26r1",
+    "transport_profile": "dev_local",
+    "sensor_set": "v2"
+  },
+  "implementation_baseline": {
+    "packages": [
+      "integration_launch",
+      "morai_udp_bridge",
+      "morai_sensor_bridge",
+      "vehicle_state"
+    ],
+    "artifacts": {
+      "entrypoint": {
+        "path": "scripts/udp_bridge.sh",
+        "sha256": "289e1dcdff8ca9c7a58f75cc139f0f20fbd16092d96d6b4bbc803dbff7dbbe8c"
+      },
+      "integration_launch": {
+        "path": "src/integration_launch/launch/morai_udp_bridges.launch",
+        "sha256": "2aee4b3ba202bc95a1ef1bcefe6e2f6ac40ea1bec3c7a24eea11c85468e64343"
+      },
+      "network_launch": {
+        "path": "src/morai_udp_bridge/launch/morai_udp_bridge.launch",
+        "sha256": "49e564135f5331e1303d223bc559fe39eb25b1e042dab0119efb834b3051b8e9"
+      },
+      "network_node": {
+        "path": "src/morai_udp_bridge/scripts/morai_udp_bridge.py",
+        "sha256": "5dfd1ac7f395954c512040b7151b0768e075720e843274cfb05a7f0517b780fa"
+      },
+      "sensor_launch": {
+        "path": "src/morai_sensor_bridge/launch/morai_sensor_bridge.launch",
+        "sha256": "b6794769fe2c15925625f63f6791fd13d48878422aa6234ea74f069ecc328d77"
+      },
+      "sensor_node": {
+        "path": "src/morai_sensor_bridge/scripts/morai_sensor_bridge.py",
+        "sha256": "d2037745c55463937c300631d315b1b7053a97ef0cb0f270db908c589918271c"
+      },
+      "vehicle_state_launch": {
+        "path": "src/vehicle_state/launch/vehicle_state.launch",
+        "sha256": "d9ea6e3d3c7cdaed56cd08a36f5f8fbd26bc534ca05838439ed3185ef7ddfc51"
+      },
+      "vehicle_state_node": {
+        "path": "src/vehicle_state/src/vehicle_state_node.cpp",
+        "sha256": "e4204af688896ef18832501809645f5d7c6170d9881dacb7738683a2eb26e572"
+      }
+    },
+    "subscribed_topics": {
+      "/ctrl_cmd": "morai_msgs/CtrlCmd",
+      "/gps": "morai_msgs/GPSMessage",
+      "/imu": "sensor_msgs/Imu"
+    },
+    "published_topics": {
+      "/Ego_topic": "morai_msgs/EgoVehicleStatus",
+      "/Object_topic": "morai_msgs/ObjectStatusList",
+      "/CollisionData": "morai_msgs/CollisionData",
+      "/image_jpeg/compressed": "sensor_msgs/CompressedImage",
+      "/cam_left/image_jpeg/compressed": "sensor_msgs/CompressedImage",
+      "/cam_right/image_jpeg/compressed": "sensor_msgs/CompressedImage",
+      "/cam_extra/image_jpeg/compressed": "sensor_msgs/CompressedImage",
+      "/velodyne_points": "sensor_msgs/PointCloud2",
+      "/gps": "morai_msgs/GPSMessage",
+      "/gps/fix": "sensor_msgs/NavSatFix",
+      "/imu": "sensor_msgs/Imu",
+      "/vehicle/state": "asmc_msgs/VehicleState",
+      "/morai_udp_bridge/diagnostics": "diagnostic_msgs/DiagnosticArray",
+      "/morai_sensor_bridge/diagnostics": "diagnostic_msgs/DiagnosticArray"
+    },
+    "optional_development_topics": {
+      "/sem_front/image_jpeg/compressed": "sensor_msgs/CompressedImage",
+      "/sem_left/image_jpeg/compressed": "sensor_msgs/CompressedImage",
+      "/sem_right/image_jpeg/compressed": "sensor_msgs/CompressedImage",
+      "/velodyne_points_instance": "sensor_msgs/PointCloud2"
+    }
+  },
+  "transport_profiles": {
+    "dev_local": {
+      "morai_ip": "127.0.0.1",
+      "autonav_ip": "127.0.0.1",
+      "deployment_state": "active_default"
+    },
+    "competition_lan": {
+      "morai_ip": "192.168.0.1",
+      "autonav_ip": "192.168.0.10",
+      "deployment_state": "contract_frozen_live_rehearsal_pending"
+    }
+  },
+  "channels": {
+    "ego_ctrl_cmd": {
+      "direction": "autonav_to_morai",
+      "host_port": 9093,
+      "destination_port": 9094,
+      "ctrl_mode": 2,
+      "runtime_bridge_target_port": 9093,
+      "state": "active_default"
+    },
+    "competition_vehicle_status": {
+      "direction": "morai_to_autonav",
+      "morai_pubsub_type": 258,
+      "host_port": 7603,
+      "destination_port": 7502,
+      "state": "network_contract_frozen_decoder_pending"
+    },
+    "collision_data": {
+      "direction": "morai_to_autonav",
+      "morai_pubsub_type": 261,
+      "host_port": 9091,
+      "destination_port": 9092,
+      "runtime_bridge_bind_port": 9092,
+      "state": "active_default"
+    },
+    "legacy_ego_status": {
+      "direction": "morai_to_autonav",
+      "host_port": 908,
+      "destination_port": 909,
+      "state": "development_compatibility_only"
+    },
+    "legacy_object_info": {
+      "direction": "morai_to_autonav",
+      "host_port": 7605,
+      "destination_port": 7505,
+      "state": "development_oracle_only"
+    }
+  },
+  "sensor_ports": {
+    "camera_front": [9290, 9291],
+    "camera_left": [9292, 9293],
+    "camera_right": [9294, 9295],
+    "camera_extra": [9296, 9297],
+    "vlp16": [9298, 9299],
+    "gps": [9300, 9301],
+    "imu": [9302, 9303]
+  },
+  "network_templates": {
+    "26r1": {
+      "template": "config/morai/network/templates/ASMC_network_template_26r1.json",
+      "template_sha256": "d4031a5fbbbfd6c22ed0bd08daaf079cb3ac14dd216327c4deba503e1cb172f6",
+      "generated": {
+        "dev_local": "config/morai/network/generated/ASMC_network_set_26r1_dev_local.json",
+        "competition_lan": "config/morai/network/generated/ASMC_network_set_26r1_competition_lan.json"
+      },
+      "generated_sha256": {
+        "dev_local": "d55ce36cba66a28f0fc764f23edc6017f99682e70ab346711fad04b3b1b5ad1a",
+        "competition_lan": "68547278c4ed3bc1134f4f6b99dbbafb295787fd5f3a863b09958c6d304e2ff5"
+      }
+    },
+    "molitcomp03": {
+      "template": "config/morai/network/templates/ASMC_network_template_molitcomp03.json",
+      "template_sha256": "4f98840f4c8e5245c4a0dd8d6d17cd96c962c5f67f5c266c0ef7175ef6171d7b",
+      "generated": {
+        "dev_local": "config/morai/network/generated/ASMC_network_set_molitcomp03_dev_local.json",
+        "competition_lan": "config/morai/network/generated/ASMC_network_set_molitcomp03_competition_lan.json"
+      },
+      "generated_sha256": {
+        "dev_local": "ae719f7820fcf6c5c493e5fd5232ebd6e56cc629090ba4d483919f5ebbe74c6d",
+        "competition_lan": "cd5de9583cf8d7e35cf61869de3097a736a23d02347cf3f4020e40332824f4da"
+      }
+    }
+  },
+  "legacy_network_artifacts": {
+    "26r1_local_9111": {
+      "path": "config/morai/network/archive/ASMC_network_set_26r1_local_legacy_9111.json",
+      "sha256": "b5b381b19f26891a90fd267ee9d85add0baf9f9a5ec23d99a68055ee1014f828",
+      "role": "historical_reproduction_only"
+    }
+  },
+  "sensor_sets": {
+    "v1": {
+      "path": "config/morai/sensors/ASMC_sensor_set_v1.json",
+      "sha256": "a5c9abf1f51d6676fe5ce79229bc93e00782b018ed4c776c3bd7c5987d1287be",
+      "role": "legacy_reproduction",
+      "lidar_hz": 10,
+      "live_acceptance": "historical"
+    },
+    "v2": {
+      "path": "config/morai/sensors/ASMC_sensor_set_v2.json",
+      "sha256": "0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428",
+      "role": "current_10hz_regression",
+      "lidar_hz": 10,
+      "live_acceptance": "accepted_baseline"
+    },
+    "v3": {
+      "path": "config/morai/sensors/ASMC_sensor_set_v3.json",
+      "sha256": "4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f",
+      "role": "competition_15hz_candidate",
+      "lidar_hz": 15,
+      "live_acceptance": "pending_30s_14_to_16hz_and_tracking"
+    },
+    "GT": {
+      "path": "config/morai/sensors/ASMC_sensor_set_GT.json",
+      "sha256": "ef278764593c28db4e2cf29a5e657ac530822fbdad38ddf8c7d7015d2886d801",
+      "role": "development_ground_truth_only",
+      "lidar_hz": 10,
+      "live_acceptance": "development_only"
+    }
+  }
+}

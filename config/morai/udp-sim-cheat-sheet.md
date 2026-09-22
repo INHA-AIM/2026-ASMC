@@ -1,11 +1,12 @@
-# MORAI UDP — 시뮬 UI 치트시트 (26.R1.h3 개발용)
+# MORAI UDP — 시뮬 UI 치트시트
 
-> **개발 SIM: 26.R1.h3** (대회 배포 SIM 아님)  
+> **공통 런타임:** `morai_udp` — 26.R1.H3와 25.S4.MolitComp03가 같은 bridge를 사용한다.
 > Docker Desktop + `./scripts/docker_ros_up.sh` + `./scripts/udp_bridge.sh --simulator 26r1` 기준.
-> 상세: [개발·시뮬레이터 운영 가이드](../docs/operations/README.md)
-> bridge 구현·통합 gate: [MORAI bridge guide](../docs/packages/asmc_bridge/README.md)
-> 센서셋: [`ASMC_sensor_set_v2.json`](./ASMC_sensor_set_v2.json) (현재 주행용 Camera×4/LiDAR/GPS/IMU)<br>
-> GT용: [`ASMC_sensor_set_GT.json`](./ASMC_sensor_set_GT.json) (v2 + Semantic Camera×3 + Instance LiDAR)
+> 상세: [개발·시뮬레이터 운영 가이드](../../docs/operations/README.md)
+> bridge 구현·통합 gate: [MORAI bridge guide](../../docs/packages/asmc_bridge/README.md)
+> 센서셋: [`ASMC_sensor_set_v2.json`](./sensors/ASMC_sensor_set_v2.json) (현재 10 Hz 회귀 기준)<br>
+> 15 Hz 후보: [`ASMC_sensor_set_v3.json`](./sensors/ASMC_sensor_set_v3.json)<br>
+> GT용: [`ASMC_sensor_set_GT.json`](./sensors/ASMC_sensor_set_GT.json) (v2 + Semantic Camera×3 + Instance LiDAR)
 
 ---
 
@@ -15,19 +16,20 @@ Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127
 
 1. Docker Desktop + WSL Integration ON → `./scripts/docker_ros_up.sh up`
 2. MORAI **Host/Dest IP 전부 `127.0.0.1`**
-3. **센서셋** `ASMC_sensor_set_v2.json` Import (또는 개발 GT용 `ASMC_sensor_set_GT.json`)
-4. **Network Settings** (센서셋에 없음): Ego **909** · Object **7505** · Collision **9092**
-5. **Cmd Control**: 타입 **Ego Ctrl Cmd**, Host/Dest **9111 / 9112**
+3. **센서셋** `ASMC_sensor_set_v2.json` Import (또는 15 Hz 시험용 v3, 개발 GT용 GT)
+4. **Network Settings**: `network/generated/ASMC_network_set_26r1_dev_local.json` Import
+   (현재 bridge 호환 Ego **909** · Object **7505** · Collision **9092** 포함)
+5. **Cmd Control**: 타입 **Ego Ctrl Cmd**, Host/Dest **9093 / 9094**, mode **2**
 6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh --simulator 26r1`
 7. 확인: `rostopic hz /Ego_topic` · `/velodyne_points` · `/image_jpeg/compressed`
 
 **LiDAR만 0이고 cam/gps/imu는 될 때:** `docker_ros_up.sh status`의 host mode, MORAI
 Connect/Dest 9299와 다른 9299 listener를 순서대로 확인한다. 개별 Docker port forwarding은
 사용하지 않는다. **9299를 다른 포트로 옮기지 말 것.** 상세:
-[운영 가이드 §6](../docs/operations/README.md#6-문제-해결)
+[운영 가이드 §6](../../docs/operations/README.md#6-문제-해결)
 
-`--simulator competition`은 현재 simulator 라벨만 바꾸며 아래 loopback IP와 포트를 현장값으로
-전환하지 않는다. 이 표는 Phase 3 profile 적용 전의 **개발용 현재값**이다.
+`--simulator`는 release별 MORAI import 파일과 provenance를 고르며 bridge 구현은 바꾸지 않는다.
+아래 표는 `dev_local`이다. 현장 파일은 [MORAI config 안내](./README.md)에서 별도로 고른다.
 
 ---
 
@@ -44,8 +46,9 @@ Destination IP:   127.0.0.1
 
 ```
 타입:     Ego Ctrl Cmd          ← TrajectoryTrackingCmd 금지
-Host:     9111
-Dest:     9112
+Host:     9093
+Dest:     9094
+Mode:     2
 ```
 
 ---

@@ -36,7 +36,7 @@ HD_MAP_REL = Path(
 HD_MAP_SUMMARY_REL = Path(
     "src/asmc_hd_map/reports/kcity2025_route_curation_20260917/summary.json"
 )
-SENSOR_REL = Path("config/ASMC_sensor_set_v2.json")
+SENSOR_REL = Path("config/morai/sensors/ASMC_sensor_set_v2.json")
 CHECKPOINT_REL = Path("R_KR_PG_K-city_2025/2026_molit_comp_checkpoints.json")
 GLOBAL_PATH_REL = Path("R_KR_PG_K-city_2025/2026_molit_comp_global_path.txt")
 COMPETITION_METADATA_REL = Path(

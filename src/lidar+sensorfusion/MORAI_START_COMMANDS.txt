@@ -4,7 +4,7 @@
 [Sensor configuration]
 
 Import the outer repository file in MORAI:
-  config/ASMC_sensor_set_v1.json
+  config/morai/sensors/ASMC_sensor_set_v1.json
 
 Front camera: xyz=(1.90, 0.00, 1.20)m, rpy=(0, 2, 0)deg,
               1280x720, horizontal FOV=90deg

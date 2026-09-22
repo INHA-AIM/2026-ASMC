@@ -26,6 +26,7 @@
 | 기록 | 시점·식별자 | 보존하는 사실 | 현재 권위 |
 |---|---|---|---|
 | [P1-A runtime v1](./baselines/runtime-v1.md) | content commit `73c0a8c` | 당시 24 packages, 33 runtime messages, sensor/bag/HD Map snapshot | 현재 구조는 package guide와 contracts |
+| [P3-A bridge v1](./baselines/bridge-p3a-v1.md) | 2026-09-23, `p3a_bridge_profiles_v1` | bridge source/topic SHA, 공통 runtime, transport/network/sensor profile | [bridge profile contract](../../config/bridge/bridge_profiles_v1.json) |
 | [P2-A drivable input](./baselines/kcity2025-drivable-input-v1.md) | P2-A, stage14 SHA | link별 clip/guard 입력 판정 | P2-B 결과가 후속 product |
 | [P2-B compact drivable](./baselines/kcity2025-compact-drivable-v1.md) | `kcity2025_roundabout_extended_drivable_v5` | Lane/vector/grid 개수와 product SHA | [HD Map runtime contract](../contracts/hd-map/runtime-v1.md)와 현 product hash |
 | [route curation 2026-09-17](./hd-map/kcity2025-route-curation-20260917.md) | stage01~14 audit | source별 선택, 사용자 검수와 링크별 보정 근거 | machine policy와 current package guide |

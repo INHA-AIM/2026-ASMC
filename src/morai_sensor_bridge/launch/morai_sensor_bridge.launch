@@ -1,6 +1,7 @@
 <launch>
-  <!-- dev_26r1_h3[_gt] or competition_25s4_molitcomp03; metadata/diagnostics label -->
-  <arg name="simulator_profile" default="dev_26r1_h3"/>
+  <!-- Shared packet/runtime profile for supported MORAI simulator releases. -->
+  <arg name="simulator_profile" default="morai_udp"/>
+  <arg name="transport_profile" default="dev_local"/>
   <!-- AIM06 Sensor Dest: cam1–4 / lidar / gps / imu (+ optional semantic) -->
   <!-- Dest 순서: cam1–4 → lidar → gps → imu. Host는 SIM bind — listen/publish 금지. -->
   <arg name="lidar_port"      default="9299"/>
@@ -29,7 +30,7 @@
   <arg name="lidar_model"  default="VLP-16"/>
   <arg name="lidar_rotation_rate" default="10.0"/>
   <arg name="publish_lidar_tf" default="true"/>
-  <!-- ASMC_sensor_set_v2.json Lidar3D pose -->
+  <!-- config/morai/sensors/ASMC_sensor_set_v2.json Lidar3D pose -->
   <arg name="lidar_x" default="0.80"/>
   <arg name="lidar_y" default="0.0"/>
   <arg name="lidar_z" default="1.45"/>
@@ -40,6 +41,7 @@
   <node pkg="morai_sensor_bridge" type="morai_sensor_bridge.py"
         name="morai_sensor_bridge" output="screen">
     <param name="simulator_profile" value="$(arg simulator_profile)"/>
+    <param name="transport_profile" value="$(arg transport_profile)"/>
     <param name="enable_camera" value="true"/>
     <param name="enable_semantic_camera" value="$(arg enable_semantic_camera)"/>
     <param name="enable_lidar"  value="$(arg enable_lidar)"/>

@@ -17,7 +17,7 @@ The authoritative ASMC v1 poses are:
 - GPS: `xyz=(0.35, 0.00, 1.25)m`
 
 The runtime copy is in `src/Main/setting.yaml`; the simulator source is the
-outer repository's `config/ASMC_sensor_set_v1.json`.
+outer repository's `config/morai/sensors/ASMC_sensor_set_v1.json`.
 
 ## Build
 
