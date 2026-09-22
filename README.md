@@ -13,19 +13,16 @@
 
 | 문서 | 내용 |
 |------|------|
-| [docs/README.md](docs/README.md) | **★ 정본·가이드·설계안·기록을 구분한 전체 문서 허브** |
-| [docs/collaboration.md](docs/collaboration.md) | **★ Phase0/1 · WIP · Path A/B (필독)** |
-| [docs/network-udp-ros.md](docs/network-udp-ros.md) | **UDP↔ROS (26.R1.h3 · Docker `127.0.0.1`)** |
-| [docs/planning-control-udp.md](docs/planning-control-udp.md) | **Planning/Control UDP-only 정본** |
-| [docs/perception-agentic-loop.md](docs/perception-agentic-loop.md) | Loc-Aid/bake 에이전틱 eval |
-| [docs/perception-map-fusion-roadmap.md](docs/perception-map-fusion-roadmap.md) | **카메라·MGeo·LiDAR 인지 융합 및 대회판 이식 제안** |
-| [docs/getting-started.md](docs/getting-started.md) | 클론·첫 빌드 |
-| [docs/team-dev-guide.md](docs/team-dev-guide.md) | 팀원별 경로 |
-| [docs/integration-plan.md](docs/integration-plan.md) | Wave 1/2 |
-| [docs/sim-verification-checklist.md](docs/sim-verification-checklist.md) | 시뮬 검증 |
-| [docs/architecture-overview.md](docs/architecture-overview.md) | 아키텍처 |
-| [docs/git-workflow.md](docs/git-workflow.md) | Path A/B 명령 |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | 기여 요약 |
+| [문서 허브](docs/README.md) | 정본·가이드·설계안·기록의 전체 색인 |
+| [개발 시작](docs/onboarding/README.md) | clone, Docker, 빌드와 환경 기준 |
+| [팀 ownership](docs/onboarding/ownership.md) | 담당 경로와 검증 책임 |
+| [협업 규칙](docs/governance/README.md) | 브랜치, PR, 리뷰와 main 안정성 |
+| [시스템 개요](docs/architecture/system-overview.md) | 현재 아키텍처와 모듈 경계 |
+| [통합 로드맵](docs/architecture/consolidation-roadmap.md) | 패키지 통합부터 현장 배포까지의 순서 |
+| [운영 가이드](docs/operations/README.md) | Docker, MORAI UDP, 시뮬 검증과 현장 전환 기준 |
+| [검증·실험 기록](docs/records/README.md) | 날짜·commit·artifact별 baseline과 실험 결과 |
+| [역사·레거시 기록](docs/archive/README.md) | 현재 실행 금지인 과거 설계와 대체 문서 |
+| [기여 요약](CONTRIBUTING.md) | PR 전 최소 확인 사항 |
 
 ## 빠른 시작
 
@@ -38,7 +35,7 @@ Windows 팀원은 최초 한 번 Docker Desktop **4.34 이상**에서 다음 설
 
 `Network` 또는 `Enable host networking`이 보이지 않으면 Docker Desktop을 업데이트하고
 Windows containers 모드가 아닌지 확인합니다. 상세 확인법은
-[UDP↔ROS 네트워크 가이드](docs/network-udp-ros.md#31-docker-desktop-최초-설정팀원별-1회)를
+[개발·시뮬레이터 운영 가이드](docs/operations/README.md)를
 따릅니다. MORAI의 기존 `127.0.0.1`과 센서 포트는 변경하지 않습니다.
 
 ```bash
@@ -52,9 +49,6 @@ xhost +local:docker
 ./scripts/docker_ros_up.sh up
 ./scripts/docker_ros_up.sh check
 docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
-
-# ROS 없는 Planning/Control
-docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 ```
 
 > **GPU 추론 이미지 선택**: RTX 40 팀원은 위의 기본 `build`/`up`을 그대로
@@ -68,7 +62,7 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 > 컨테이너 안에 드라이버를 설치하면 안 됩니다. 확인·문제해결 절차는
 > [src/lidar+sensorfusion/RUN_SENSOR_FUSION.md](src/lidar+sensorfusion/RUN_SENSOR_FUSION.md#camera-inference-gpu-cuda)를 보십시오.
 
-상세: [docs/getting-started.md](docs/getting-started.md)
+상세: [docs/onboarding/README.md](docs/onboarding/README.md)
 
 ## 저장소 구조 (요약)
 
@@ -78,36 +72,42 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 ├── docker/                    # ros-noetic · perception-train
 ├── src/
 │   ├── behavior_planner/      # planning ✅
-│   ├── frenet_planner/        # standalone UDP planning ✅
-│   ├── mpc_controller/        # standalone UDP control ✅
+│   ├── frenet_planner/        # ROS trajectory planning + C++ core ✅
+│   ├── mpc_controller/        # ROS trajectory control + C++ core ✅
 │   ├── integration_launch/    # ROS bridge launch only
+│   ├── asmc_msgs/             # 팀 내부 ROS1 공용 message 계약
+│   ├── asmc_hd_map/           # HD Map builder/runtime/검수
 │   ├── learning_by_cheating/  # learning ✅
 │   ├── data_collection/        # Capture GT · mask · dataset ✅
+│   ├── perception/camera_semantic_perception/ # camera ROS live inference ✅
+│   ├── perception/drivable_bev/          # metric BEV · lane observation ✅
 │   ├── perception/twinlite_morai/        # camera 2-head binary/4-class 학습·평가 ✅
 │   ├── perception/morai_3d_detection/  # perception ✅
+│   ├── traffic_light/          # camera traffic-light inference ✅
+│   ├── lidar+sensorfusion/     # 독립 nested LiDAR/fusion workspace
 │   ├── morai_udp_bridge/      # UDP↔ROS (Ego/Ctrl) ✅
 │   ├── morai_sensor_bridge/   # UDP↔ROS (sensors) ✅
+│   ├── vehicle_state/         # GPS/IMU→공용 VehicleState ✅
 │   └── MORAI-ROS_morai_msgs/  # submodule beta_drive
 ├── tools/
 │   ├── aim_scenario_runner/   # scenario ✅
 │   └── grpc_inha_univ/        # gRPC ✅
 ├── scripts/
 │   ├── rosbridge.sh           # 종료된 direct ROS 실험 재현용(본선/현재 개발 금지)
-│   ├── udp_bridge.sh          # UDP bridges (--simulator 26r1|competition)
+│   ├── udp_bridge.sh          # UDP bridges (simulator provenance label 선택)
 │   └── …
 ├── mgeo_toolkit/ · R_KR_PG_KATRI/
 └── config/morai_rosbridge.env # 위 실험의 레거시 설정
 ```
 
-팀원별 **어느 폴더를 고칠지:** [docs/team-dev-guide.md](docs/team-dev-guide.md)
+팀원별 **어느 폴더를 고칠지:** [docs/onboarding/ownership.md](docs/onboarding/ownership.md)
 
-## Git (Phase 0/1 · Trunk)
+## Git과 PR
 
-- **Phase 0:** 기능은 개인 레포 OK. ASMC `main` = 빌드되는 문서/인프라/안승현 인지만. **WIP는 Draft PR** ([collaboration §2.5](docs/collaboration.md))
-- **Phase 1:** 소유 모듈 → `main` 자주 푸시; interfaces/UDP/docker/교차 → Path B
-- 상세: [collaboration.md](docs/collaboration.md) · [network-udp-ros.md](docs/network-udp-ros.md)
+- 최신 `main`에서 짧은 브랜치를 만든다.
+- 모든 변경은 PR과 CODEOWNERS 리뷰를 거쳐 merge한다.
+- WIP 공유는 Draft PR을 사용한다.
+- 과거 Phase 0 개인 레포와 `main` 직푸시 정책은 현재 규칙이 아니다.
 
-## 레거시 · Phase 0 분산 코드
-
-Phase 0에는 **개인/분산 레포**에서 기능을 완성한다 (`external/team/`).  
-Wave 2(8/7~)에 ASMC로 이식. 매핑: [docs/integration-plan.md](docs/integration-plan.md) · [team-status](../docs/competition/team-status.md)
+상세 명령은 [협업 규칙](docs/governance/README.md), 과거 이식 기록은
+[Wave 1/2 archive](docs/archive/integration/wave1-wave2-plan.md)를 참고한다.

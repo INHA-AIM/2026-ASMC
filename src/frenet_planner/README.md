@@ -25,7 +25,7 @@ Canonical topic(현재 production 경로, v2):
 레거시 v1 경로(`/behavior/context` → `/planning/feedback`, `BehaviorContext`/
 `PlanFeedback`)가 같은 노드 안에 병행 운영 중이다 - v2 명령이 하나라도 도착하면
 그 사이클은 v2가 소유하고, v2 명령이 없을 때만 v1 경로가 동작한다. v1은 D10
-cutover 전까지의 과도기 경로다(`../../docs/fsm-frenet-interface-v2.md` 10절).
+cutover 전까지의 과도기 경로다(`../../docs/contracts/planning/fsm-frenet-v2.md` 10절).
 
 현재 v2에서 production gate가 열린 maneuver: KEEP, STOP, EMERGENCY_STOP,
 FOLLOW, AVOID, LANE_CHANGE. MERGE는 미구현이며, gate가 닫힌 maneuver 명령은
@@ -41,7 +41,7 @@ LANE_CHANGE를 자동으로 고르지 않는다 - 이 단계의 수동 검증은
 
 - **기존 RefLine을 그대로 유지한다.** Route/FSM이 새 전역 경로를 보내 참조선
   자체를 교체하는 기능(runtime global-path/reference handoff)은 이번 범위에
-  없다 - `docs/planning-control-refactoring-guidelines.md`의 "one policy, one
+  없다 - `docs/packages/planning-control/refactoring.md`의 "one policy, one
   authoritative owner" 원칙에 따라, 아직 검증되지 않은 좌표계 전환 로직을
   넣기보다 이번 단계는 고정 참조선 위의 순수 lateral shift로 좁혔다.
 - **실행 목표는 Behavior/FSM이 준 `target_pose_map`(MGeo 목표 Link
@@ -77,7 +77,7 @@ input snapshot(vehicle/objects/behavior) 획득
 입력 누락/무효/stale, collision blocked, 명령 검증 실패 등 실패 경로는 모두
 안전정지(STOP trajectory, `valid=true` + `failure_reason`)로 수렴한다. 전이/
 fail-safe 표는 `../interfaces/README.md` 9절, v2 세부 계약은
-`../../docs/fsm-frenet-interface-v2.md`를 따른다.
+`../../docs/contracts/planning/fsm-frenet-v2.md`를 따른다.
 
 ## Core Folder Map
 
@@ -136,13 +136,13 @@ Vehicle/objects/behavior 입력 누락·무효·stale, `force_stop`, collision b
 통신한다(패키지 자체 launch는 `launch/frenet_planner.launch`).
 
 ```bash
-# 저장소 표준 빌드 스크립트(frenet_planner + mpc_controller)
-bash scripts/build_planning_control.sh
+# 저장소 표준 ROS/catkin 빌드
+./scripts/build_ws.sh
 
 # 또는 catkin 워크스페이스에서 이 패키지만
-catkin_make --pkg frenet_planner
+catkin_make --only-pkg-with-deps frenet_planner
 
-# 등록된 회귀 테스트 전체 실행(현재 23개)
+# 등록된 회귀 테스트 전체 실행(현재 25개)
 cd <catkin build dir>/frenet_planner   # 또는 워크스페이스 build/frenet_planner
 ctest --output-on-failure
 ```
@@ -153,7 +153,8 @@ ctest --output-on-failure
 
 ## Related Documentation
 
-- [../../docs/planning-control-refactoring-guidelines.md](../../docs/planning-control-refactoring-guidelines.md) — 아키텍처 경계, ownership, refactoring 규칙
-- [../../docs/fsm-frenet-interface-v2.md](../../docs/fsm-frenet-interface-v2.md) — FSM↔Frenet v2 계약 고정 문서
+- [../../docs/packages/planning-control/refactoring.md](../../docs/packages/planning-control/refactoring.md) — 아키텍처 경계, ownership, refactoring 규칙
+- [../../docs/packages/planning-control/README.md](../../docs/packages/planning-control/README.md) — 현재 package-group 경계와 이관 gate
+- [../../docs/contracts/planning/fsm-frenet-v2.md](../../docs/contracts/planning/fsm-frenet-v2.md) — FSM↔Frenet v2 계약 고정 문서
 - [../interfaces/README.md](../interfaces/README.md) — 공용 ROS 계약(canonical topic, timestamp, fail-safe)
 - [../../docs/README.md](../../docs/README.md) — 문서 허브

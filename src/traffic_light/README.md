@@ -1,5 +1,11 @@
 # 신호등 인지 — ROS 추론 배포판
 
+> **역할:** Active Standalone Package Guide
+>
+> 통합 경계는 [Perception 개발·통합 가이드](../../docs/packages/asmc_perception/README.md)를
+> 따른다. HD Map의 신호등 필요 구간 metadata와 이 추론 process를 연결하는 구간별
+> orchestration은 아직 구현된 기능으로 간주하지 않는다.
+
 MORAI의 ROS compressed image를 받아 신호등 상태를 추론하고 결과를 다시 ROS
 토픽으로 발행한다. 기본 입력은 `/cam_extra/image_jpeg/compressed`이다.
 

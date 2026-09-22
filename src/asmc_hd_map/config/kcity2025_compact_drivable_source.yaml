@@ -126,4 +126,4 @@ raster:
 outputs:
   product: src/asmc_hd_map/config/kcity2025_compact_drivable_map.json
   grid: src/asmc_hd_map/config/kcity2025_compact_drivable_grid.npz
-  report: docs/baselines/kcity2025-compact-drivable-map-v1.md
+  report: docs/records/baselines/kcity2025-compact-drivable-v1.md

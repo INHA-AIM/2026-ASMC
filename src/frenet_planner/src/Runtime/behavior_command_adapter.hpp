@@ -27,7 +27,7 @@
 //   AVOID(4) -> INTERSECTION_WAIT
 //   STOP(5)  -> TURN_LEFT
 // 이 되어, FSM이 합류를 지시했는데 차선변경을 실행하는 종류의 사고가 난다.
-// 계약: docs/fsm-frenet-interface-v2.md 2절
+// 계약: docs/contracts/planning/fsm-frenet-v2.md 2절
 
 #include <cstdint>
 #include <string>
@@ -73,7 +73,7 @@ uint8_t ConvertToFeedbackManeuver(BehaviorState mode);
 //   MANEUVER_NOT_IMPLEMENTED  아직 열리지 않은 maneuver -> node의 구현 상태 조회
 //
 // 두 검사는 명령의 내용과 무관하므로 ValidateBehaviorCommand의 책임이 아니다.
-// 계약: docs/fsm-frenet-interface-v2.md 11.2절
+// 계약: docs/contracts/planning/fsm-frenet-v2.md 11.2절
 enum class CommandValidationCode {
     OK = 0,
     // 형식·필수 필드 오류. 원인은 FSM 측이며, FSM은 명령을 고쳐 새
@@ -120,7 +120,7 @@ CommandValidationResult ValidateBehaviorCommand(
 //   valid_until        매 발행마다 갱신된다.
 //   reason             디버그 문자열이며 판단에 쓰지 않는다.
 //
-// 계약: docs/fsm-frenet-interface-v2.md 4절
+// 계약: docs/contracts/planning/fsm-frenet-v2.md 4절
 struct CommandFingerprint {
     uint8_t maneuver_type = 0;
     uint8_t direction = 0;

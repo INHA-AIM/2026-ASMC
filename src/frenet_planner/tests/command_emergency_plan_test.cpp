@@ -7,7 +7,7 @@
 // 으로 후보를 만들고, 전부 탈락하면 "긴급정지인데 아무 궤적도 못 보냄"이
 // 된다. 긴급정지에서 그 실패 방향 자체를 제거하는 것이 목적이다.
 //
-// 계약: docs/fsm-frenet-interface-v2.md 8.1절
+// 계약: docs/contracts/planning/fsm-frenet-v2.md 8.1절
 
 #include "frenet_planner/frenet_planner.hpp"
 

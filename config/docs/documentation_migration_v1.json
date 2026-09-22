@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "baseline": {
+    "commit": "577231b",
+    "markdown_files": 37,
+    "markdown_lines": 11427,
+    "markdown_bytes": 640681,
+    "generated_text_files": 2,
+    "generated_text_lines": 508,
+    "generated_text_bytes": 15063,
+    "unchanged_binary_assets": 5
+  },
+  "retention": [
+    {
+      "source": "docs/README.md",
+      "targets": ["docs/README.md"],
+      "disposition": "evolved_index",
+      "evidence": "docs/structure/d3-retention-compatibility-report.md"
+    },
+    {
+      "source": "docs/architecture-overview.md",
+      "targets": ["docs/architecture/system-overview.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d1-path-migration-report.md"
+    },
+    {
+      "source": "docs/asmc_msg/BehaviorCommand.msg.txt",
+      "targets": ["docs/archive/generated-msg/BehaviorCommand.msg.txt"],
+      "disposition": "byte_identical_artifact",
+      "evidence": "docs/structure/d2-records-archive-report.md"
+    },
+    {
+      "source": "docs/asmc_msg/FrenetFeedback.msg.txt",
+      "targets": ["docs/archive/generated-msg/FrenetFeedback.msg.txt"],
+      "disposition": "byte_identical_artifact",
+      "evidence": "docs/structure/d2-records-archive-report.md"
+    },
+    {
+      "source": "docs/baselines/kcity2025-compact-drivable-map-v1.md",
+      "targets": ["docs/records/baselines/kcity2025-compact-drivable-v1.md"],
+      "disposition": "byte_identical_snapshot",
+      "evidence": "docs/structure/d2-records-archive-report.md"
+    },
+    {
+      "source": "docs/baselines/kcity2025-drivable-area-input-audit-v1.md",
+      "targets": ["docs/records/baselines/kcity2025-drivable-input-v1.md"],
+      "disposition": "byte_identical_snapshot",
+      "evidence": "docs/structure/d2-records-archive-report.md"
+    },
+    {
+      "source": "docs/baselines/runtime-baseline-v1.md",
+      "targets": ["docs/records/baselines/runtime-v1.md"],
+      "disposition": "byte_identical_snapshot",
+      "evidence": "docs/structure/d2-records-archive-report.md"
+    },
+    {
+      "source": "docs/camera-object-detection-handoff.md",
+      "targets": ["docs/handoffs/perception/camera-object-detection.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-planning-handoffs-report.md"
+    },
+    {
+      "source": "docs/collaboration.md",
+      "targets": ["docs/governance/README.md", "docs/archive/integration/wave1-wave2-plan.md"],
+      "disposition": "consolidated_with_intentional_obsolete_omissions",
+      "evidence": "docs/structure/d2-content-parity-audit.md"
+    },
+    {
+      "source": "docs/competition-data.md",
+      "targets": ["docs/competition/README.md"],
+      "disposition": "consolidated",
+      "evidence": "docs/structure/d2-competition-operations-report.md"
+    },
+    {
+      "source": "docs/competition-environment.md",
+      "targets": ["docs/competition/README.md"],
+      "disposition": "consolidated",
+      "evidence": "docs/structure/d2-competition-operations-report.md"
+    },
+    {
+      "source": "docs/contracts/hd-map-runtime-visualization-v1.md",
+      "targets": ["docs/contracts/hd-map/runtime-v1.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-contracts-report.md"
+    },
+    {
+      "source": "docs/contracts/hd-map-topic-contract-v1.md",
+      "targets": ["docs/contracts/hd-map/topic-v1.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-contracts-report.md"
+    },
+    {
+      "source": "docs/contracts/kcity2025-competition-metadata-v1.md",
+      "targets": ["docs/contracts/competition/kcity2025-metadata-v1.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-contracts-report.md"
+    },
+    {
+      "source": "docs/d1-legacy-behavior-boundary.md",
+      "targets": ["docs/archive/planning/d1-legacy-behavior-boundary.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-planning-handoffs-report.md"
+    },
+    {
+      "source": "docs/development-environment.md",
+      "targets": ["docs/onboarding/README.md"],
+      "disposition": "consolidated_with_intentional_obsolete_omissions",
+      "evidence": "docs/structure/d2-content-parity-audit.md"
+    },
+    {
+      "source": "docs/docker-guide.md",
+      "targets": ["docs/operations/README.md"],
+      "disposition": "consolidated",
+      "evidence": "docs/structure/d2-content-parity-audit.md"
+    },
+    {
+      "source": "docs/fsm-frenet-interface-v2.md",
+      "targets": ["docs/contracts/planning/fsm-frenet-v2.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-contracts-report.md"
+    },
+    {
+      "source": "docs/getting-started.md",
+      "targets": ["docs/onboarding/README.md"],
+      "disposition": "consolidated",
+      "evidence": "docs/structure/d2-content-parity-audit.md"
+    },
+    {
+      "source": "docs/git-workflow.md",
+      "targets": ["docs/governance/README.md", "docs/archive/integration/wave1-wave2-plan.md"],
+      "disposition": "consolidated_with_intentional_obsolete_omissions",
+      "evidence": "docs/structure/d2-content-parity-audit.md"
+    },
+    {
+      "source": "docs/hd-map-route-curation-review-20260917.md",
+      "targets": ["docs/records/hd-map/kcity2025-route-curation-20260917.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-records-archive-report.md"
+    },
+    {
+      "source": "docs/integration-plan.md",
+      "targets": ["docs/archive/integration/wave1-wave2-plan.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-records-archive-report.md"
+    },
+    {
+      "source": "docs/morai-msgs-beta-policy.md",
+      "targets": ["docs/contracts/simulator/morai-msgs-beta-policy.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-contracts-report.md"
+    },
+    {
+      "source": "docs/morai-msgs-versions.md",
+      "targets": ["docs/records/simulator/morai-msgs-versions.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-records-archive-report.md"
+    },
+    {
+      "source": "docs/network-udp-ros.md",
+      "targets": ["docs/operations/README.md", "docs/records/simulator/runtime-transport-2026-09.md"],
+      "disposition": "consolidated_and_split_by_authority",
+      "evidence": "docs/structure/d2-content-parity-audit.md"
+    },
+    {
+      "source": "docs/perception-agentic-loop.md",
+      "targets": ["docs/archive/perception/agentic-loop.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-perception-report.md"
+    },
+    {
+      "source": "docs/perception-bev-lane-interface-plan.md",
+      "targets": ["docs/packages/asmc_perception/bev-lane-interface-plan.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-perception-report.md"
+    },
+    {
+      "source": "docs/perception-dataset-labeling-split.md",
+      "targets": ["docs/contracts/perception/dataset-labeling-split.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-perception-report.md"
+    },
+    {
+      "source": "docs/perception-map-fusion-roadmap.md",
+      "targets": ["docs/packages/asmc_perception/roadmap.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-perception-report.md"
+    },
+    {
+      "source": "docs/perception-v4-training-evaluation.md",
+      "targets": ["docs/records/perception/twinlitenet-v4-evaluation.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-records-archive-report.md"
+    },
+    {
+      "source": "docs/planning-behavior-handoff.md",
+      "targets": ["docs/handoffs/planning/behavior-legacy.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-planning-handoffs-report.md"
+    },
+    {
+      "source": "docs/planning-control-refactoring-guidelines.md",
+      "targets": ["docs/packages/planning-control/refactoring.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-planning-handoffs-report.md"
+    },
+    {
+      "source": "docs/planning-control-udp.md",
+      "targets": ["docs/operations/planning-control.md", "docs/archive/planning/standalone-udp-baseline.md"],
+      "disposition": "consolidated_and_split_by_authority",
+      "evidence": "docs/structure/d2-planning-handoffs-report.md"
+    },
+    {
+      "source": "docs/repository-consolidation-roadmap.md",
+      "targets": ["docs/architecture/consolidation-roadmap.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d1-path-migration-report.md"
+    },
+    {
+      "source": "docs/repository-layout.md",
+      "targets": ["docs/architecture/repository-layout.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d1-path-migration-report.md"
+    },
+    {
+      "source": "docs/rosbag-evaluation-streaming-gt.md",
+      "targets": ["docs/operations/rosbag-evaluation.md", "docs/records/simulator/runtime-transport-2026-09.md"],
+      "disposition": "consolidated_and_split_by_authority",
+      "evidence": "docs/structure/d2-content-parity-audit.md"
+    },
+    {
+      "source": "docs/shadow-camera-perception-handoff.md",
+      "targets": ["docs/handoffs/perception/shadow-camera.md"],
+      "disposition": "body_retained_and_currentized",
+      "evidence": "docs/structure/d2-planning-handoffs-report.md"
+    },
+    {
+      "source": "docs/sim-verification-checklist.md",
+      "targets": ["docs/operations/README.md"],
+      "disposition": "consolidated",
+      "evidence": "docs/structure/d2-content-parity-audit.md"
+    },
+    {
+      "source": "docs/team-dev-guide.md",
+      "targets": ["docs/onboarding/ownership.md", "docs/governance/README.md", "docs/architecture/repository-layout.md"],
+      "disposition": "consolidated_with_intentional_obsolete_omissions",
+      "evidence": "docs/structure/d2-content-parity-audit.md"
+    }
+  ],
+  "frozen_current_files": [
+    {
+      "path": "docs/records/baselines/runtime-v1.md",
+      "sha256": "12749bc7c67dedce15223356e0cf5249b6f8e7b61a1f3c7bb93045dfc7f9009f"
+    },
+    {
+      "path": "docs/records/baselines/kcity2025-drivable-input-v1.md",
+      "sha256": "b0ace45d45af4a5b56317950f958bbb206b5a4fc651f33868b590850d8d90bf4"
+    },
+    {
+      "path": "docs/records/baselines/kcity2025-compact-drivable-v1.md",
+      "sha256": "95430c5b3fbc5beb9a4517faae11b1de335358a9dbbdd7a9e2d72a3071a0d9ff"
+    },
+    {
+      "path": "docs/archive/generated-msg/BehaviorCommand.msg.txt",
+      "sha256": "8146606c640fd089e71b1348cb806d7aca1e9fb2f19dbd2af8d1b7290da17274"
+    },
+    {
+      "path": "docs/archive/generated-msg/FrenetFeedback.msg.txt",
+      "sha256": "caac9cd7686e17b6b58ada9796994dbbf3ff00caf35d2862c16f36974810ae8b"
+    }
+  ],
+  "unchanged_assets": [
+    "docs/competition/images/image-20230408-141822.png",
+    "docs/competition/images/스크린샷 2025-08-08 112023.png",
+    "docs/competition/images/스크린샷 2026-06-30 111239.png",
+    "docs/competition/images/스크린샷 2026-07-10 124338.png",
+    "docs/competition/images/스크린샷 2026-07-13 162644.png"
+  ],
+  "redirect_policy": {
+    "state": "keep",
+    "reason": "The migration is not yet merged to main and no post-migration release has completed.",
+    "removal_requires": [
+      "migration merged to main",
+      "at least one subsequent team release or competition delivery completed",
+      "owned workspace and repository references point directly to canonical targets",
+      "PR records every removed legacy path and replacement",
+      "documentation migration checker passes after removal"
+    ]
+  },
+  "redirects": [
+    {"legacy": "docs/collaboration.md", "target": "docs/governance/README.md"},
+    {"legacy": "docs/contracts/hd-map-runtime-visualization-v1.md", "target": "docs/contracts/hd-map/runtime-v1.md"},
+    {"legacy": "docs/contracts/hd-map-topic-contract-v1.md", "target": "docs/contracts/hd-map/topic-v1.md"},
+    {"legacy": "docs/contracts/kcity2025-competition-metadata-v1.md", "target": "docs/contracts/competition/kcity2025-metadata-v1.md"},
+    {"legacy": "docs/getting-started.md", "target": "docs/onboarding/README.md"},
+    {"legacy": "docs/network-udp-ros.md", "target": "docs/operations/README.md"},
+    {"legacy": "docs/perception-dataset-labeling-split.md", "target": "docs/contracts/perception/dataset-labeling-split.md"},
+    {"legacy": "docs/perception-map-fusion-roadmap.md", "target": "docs/packages/asmc_perception/roadmap.md"},
+    {"legacy": "docs/planning-control-udp.md", "target": "docs/operations/planning-control.md"},
+    {"legacy": "docs/repository-consolidation-roadmap.md", "target": "docs/architecture/consolidation-roadmap.md"},
+    {"legacy": "docs/sim-verification-checklist.md", "target": "docs/operations/README.md"},
+    {"legacy": "docs/team-dev-guide.md", "target": "docs/onboarding/ownership.md"}
+  ]
+}

@@ -3,6 +3,10 @@
 > 상태: 3-camera fused metric BEV + metric lane-vector pilot + GPS 음영구간
 > boundary selector. 12-run provisional gate와 typed provisional handoff 구현을 완료했으며,
 > 전 구간 topology/판제 정본 계약은 아직 합의 전이다.
+>
+> 문서 안내: 현재 package 경계는 [Perception 개발·통합 가이드](../../../docs/packages/asmc_perception/README.md),
+> 판제 소비 규칙은 [shadow camera handoff](../../../docs/handoffs/perception/shadow-camera.md)가
+> 우선한다. 아래 날짜별 audit와 후보 변화는 근거 보존용 기록이며 축약하지 않았다.
 
 TwinLiteNet+의 원본 영상 크기 drivable probability와 4-class road-marking 결과를
 카메라별로 `base_link` 지면 격자에 투영한 뒤 하나의 BEV로 융합한다. MGeo, GPS, LiDAR
@@ -854,7 +858,7 @@ TwinLiteNet+을 다른 lane network로 교체하지 않고 현재 model-grid evi
 pytorch-auto-drive,StructLane}`에 있다. LaneCPP와 BSNet은 공개 구현이 확인되지 않아 논문만
 참고한다. runtime에서 외부 repository를 import하지 않으며, 라이선스가 없거나 비상업
 조건인 소스를 팀 코드에 복사하지 않는다. 구체적인 수식·GT·gate는
-[`perception-bev-lane-interface-plan.md`](../../../docs/perception-bev-lane-interface-plan.md#p4--음영구간-joint-lane-family-보강)를
+[`perception-bev-lane-interface-plan.md`](../../../docs/packages/asmc_perception/bev-lane-interface-plan.md#p4--음영구간-joint-lane-family-보강)를
 따른다.
 
 센서 해상도·10/15/20 Hz 최적화는 camera-to-vector 기준선이 완성된 뒤 정확도·지연 저하
@@ -1577,7 +1581,7 @@ full-stack에서 실제로 9Hz를 깨면 legacy independent 경로의 opt-in 비
 `shadow_camera_perception_handoff_result`를 사용한다. 인지는 토픽까지만 제공하며 음영구간
 on/off, route/home/opposing 의미, LiDAR occupancy 결합과 closed-loop 검증 코드는 추가하지
 않았다. 판제가 읽어야 할 field, fail-safe와 장애물 회피 결합 순서는
-[판제 인수 가이드](../../../docs/shadow-camera-perception-handoff.md), 정확한 config·checkpoint·
+[판제 인수 가이드](../../../docs/handoffs/perception/shadow-camera.md), 정확한 config·checkpoint·
 bag SHA-256은
 [`freeze.yaml`](../../../artifacts/perception_eval/analysis/twinlite_v6_shadow_boundary_family_candidate_v3_profile_20260915/freeze.yaml)에
 고정했다.

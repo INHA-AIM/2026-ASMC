@@ -1,6 +1,10 @@
 # Camera semantic perception
 
 > 상태: Stage C1·C2 완료, Stage C3 구조화 diagnostics 구현
+>
+> 현재 인지 package 경계와 본선 입력 규칙은
+> [Perception 개발·통합 가이드](../../../docs/packages/asmc_perception/README.md)를 함께 본다.
+> 이 문서의 날짜별 실측은 해당 실행 시점의 기록이며 영구 성능 계약이 아니다.
 
 MORAI의 전방 또는 전·좌·우 JPEG 카메라를 latest-only 방식으로 받아 TwinLiteNet+ 2-head
 추론 결과를 표준 ROS 토픽으로 발행한다. Binary lane checkpoint와 4-class road-marking
@@ -125,7 +129,7 @@ Overlay는 rqt용 panel/mosaic에서 제외했다. 기본
 front-only panel은 640×1080, 3-view mosaic는 1920×1080이며 최대 10 Hz로 JPEG 발행하므로
 원본 확률 토픽의 처리율을 불필요하게 따라가지 않는다.
 카메라별 종횡비가 다르면 각 타일을 늘이지 않고 검은 여백으로 행 높이를 맞춘다.
-화면이 열리지 않으면 [Docker GUI 설정](../../../docs/docker-guide.md)을 먼저 확인한다.
+화면이 열리지 않으면 [Docker GUI 설정](../../../docs/operations/README.md)을 먼저 확인한다.
 
 날씨·시간 표기와 threshold는 노드를 재시작하지 않고 바꿀 수 있다.
 
@@ -197,7 +201,7 @@ Metric lane-vector 개발 launch에서만 다음 model-grid 출력을 켠다. �
 decode/inference 오류, preprocess/inference/postprocess/publish 평균 시간, processing FPS,
 queue/e2e p50·p95, source/receive/result stamp와 upstream timestamp fallback이 들어간다.
 같은 raw bag으로 모델을 비교할 때 `camera_semantic_result` profile로 별도 result bag에
-기록한다. 절차는 [rosbag 평가 가이드](../../../docs/rosbag-evaluation-streaming-gt.md)를 따른다.
+기록한다. 절차는 [rosbag 평가 가이드](../../../docs/operations/rosbag-evaluation.md)를 따른다.
 
 시각화 노드는 다음 `sensor_msgs/CompressedImage` 디버그 토픽을 발행한다.
 

@@ -841,7 +841,7 @@ def _candidate_reference_files(repo_root: Path) -> Iterable[Path]:
     excluded_prefixes = (
         "src/asmc_hd_map/reports/",
         "config/baselines/",
-        "docs/baselines/",
+        "docs/records/baselines/",
         "tools/audit/",
     )
     for root_name in ("docs", "scripts", "src", "tools"):
@@ -1139,7 +1139,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         "--manifest", type=Path, default=Path("config/baselines/runtime_baseline_v1.yaml")
     )
     parser.add_argument(
-        "--report", type=Path, default=Path("docs/baselines/runtime-baseline-v1.md")
+        "--report", type=Path, default=Path("docs/records/baselines/runtime-v1.md")
     )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--write", action="store_true", help="write the baseline outputs")

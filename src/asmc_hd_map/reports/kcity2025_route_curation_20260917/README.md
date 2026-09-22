@@ -2,7 +2,7 @@
 
 이 report는 전체 HD맵이 아니라 출발점부터 `A2256W000751` finish까지 검수된 차선 선택만 담은
 부분 후보이다. 정본 결정과 후속 backlog는
-[`docs/hd-map-route-curation-review-20260917.md`](../../../../docs/hd-map-route-curation-review-20260917.md)에
+[`docs/records/hd-map/kcity2025-route-curation-20260917.md`](../../../../docs/records/hd-map/kcity2025-route-curation-20260917.md)에
 있다.
 
 - implemented: stage01~`stage14_return_332_to_finish`

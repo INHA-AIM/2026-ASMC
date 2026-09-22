@@ -36,7 +36,7 @@
 //               E-STOP preemption, COMPLETED 뒤 새 transaction
 //   Feedback    post-COMMIT collision SAFE_STOP에서 잠긴 진단 유지
 //
-// 계약: docs/fsm-frenet-interface-v2.md
+// 계약: docs/contracts/planning/fsm-frenet-v2.md
 
 #include <asmc_msgs/BehaviorCommand.h>
 #include <asmc_msgs/DetectedObjectArray.h>

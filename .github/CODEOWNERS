@@ -1,40 +1,40 @@
-# Default — integration lead reviews shared infrastructure
-/docker/                          @ahnsh03
-/scripts/build_ws.sh              @ahnsh03
-/scripts/docker_ros_up.sh         @ahnsh03
-/scripts/asmc_env.sh              @ahnsh03
-/src/integration_launch/          @ahnsh03 @yuntae12-sudo
-/src/interfaces/                  @ahnsh03
-/docs/                            @ahnsh03
-/.github/                         @ahnsh03
+# Shared infrastructure and contracts
+/.github/                              @ahnsh03
+/config/                               @ahnsh03
+/docker/                               @ahnsh03
+/docs/                                 @ahnsh03
+/scripts/                              @ahnsh03
+/src/asmc_msgs/                        @ahnsh03 @yuntae12-sudo @kante2
+/src/integration_launch/               @ahnsh03 @yuntae12-sudo
+/src/interfaces/                       @ahnsh03
+/src/MORAI-ROS_morai_msgs/             @ahnsh03
 
-# Planning — 정윤태 · 양서준
-/src/behavior_planner/            @yuntae12-sudo @yangseojun
-/src/mpc_controller/              @yuntae12-sudo @yangseojun
+# HD Map and data collection
+/src/asmc_hd_map/                      @ahnsh03
+/src/data_collection/                  @ahnsh03 @sonshiny
 
-# Frenet planner — 이강태
-/src/planner/                     @kante2 @yuntae12-sudo
+# Planning and control
+/src/behavior_planner/                 @yuntae12-sudo @yangseojun
+/src/frenet_planner/                   @kante2 @yuntae12-sudo
+/src/mpc_controller/                   @yuntae12-sudo @yangseojun
+/src/planning_control/                 @ahnsh03 @yuntae12-sudo @kante2
 
-# Learning · rosbridge (WebSocket, NOT UDP) — 안승현
-/src/learning_by_cheating/        @ahnsh03
-/scripts/rosbridge.sh             @ahnsh03
-/scripts/bridge.sh                @ahnsh03
-/scripts/diagnose_morai_rosbridge.sh @ahnsh03
-/scripts/diagnose_morai_bridge.sh @ahnsh03
-/config/                          @ahnsh03
-/mgeo_toolkit/                    @ahnsh03
+# Bridge and vehicle state
+/src/morai_sensor_bridge/              @kante2 @ahnsh03
+/src/morai_udp_bridge/                 @kante2 @ahnsh03
+/src/vehicle_state/                    @kante2 @ahnsh03
 
-# UDP bridges (competition path) — 이강태 · 안승현
-/src/morai_udp_bridge/            @kante2 @ahnsh03
-/src/morai_sensor_bridge/         @kante2 @ahnsh03
-/scripts/udp_bridge.sh            @kante2 @ahnsh03
+# Perception
+/src/perception/                       @sonshiny @ahnsh03
+/src/lidar+sensorfusion/               @sonshiny @ahnsh03
+/src/traffic_light/                    @wkddnjsxo @ahnsh03
 
-# Perception — 손재호
-/src/perception/                  @sonshiny
+# Legacy learning paths remain owned until the Phase 4 parity gate
+/src/learning/                         @ahnsh03
+/src/learning_by_cheating/             @ahnsh03
 
-# Scenario · gRPC — 장원태
-/tools/aim_scenario_runner/       @wkddnjsxo
-/tools/grpc_inha_univ/            @wkddnjsxo
-
-# Submodule — integration lead only
-/src/MORAI-ROS_morai_msgs/        @ahnsh03
+# Scenario, gRPC and evaluation tools
+/tools/aim_scenario_runner/            @wkddnjsxo
+/tools/grpc_inha_univ/                 @wkddnjsxo
+/tools/audit/                          @ahnsh03
+/tools/perception_eval/                @ahnsh03 @sonshiny

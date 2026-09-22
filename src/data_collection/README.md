@@ -1,10 +1,16 @@
 # data_collection — Capture·rosbag·동기화·인지 데이터셋
 
+> **역할:** Active Package Guide — 현재 수집·bag·dataset 재현 절차
+>
+> 인지 전체 경계는 [Perception 개발·통합 가이드](../../docs/packages/asmc_perception/README.md),
+> label·split 정본은 [dataset contract](../../docs/contracts/perception/dataset-labeling-split.md)를
+> 따른다. 이 문서의 상세 명령과 모드 차이는 Phase 4 분리 전까지 그대로 보존한다.
+
 > **역할:** Active Module — Capture GT, raw/result rosbag, 동기화, mask/cache/dataset lineage
 > **담당:** 안승현
-> **데이터 정본:** [인지 데이터 라벨링·분할 계약](../../docs/perception-dataset-labeling-split.md)
-> **전체 로드맵:** [카메라·MGeo·LiDAR 융합 로드맵](../../docs/perception-map-fusion-roadmap.md)
-> **rosbag 정본:** [rosbag 재현 평가 가이드](../../docs/rosbag-evaluation-streaming-gt.md)
+> **데이터 정본:** [인지 데이터 라벨링·분할 계약](../../docs/contracts/perception/dataset-labeling-split.md)
+> **전체 로드맵:** [카메라·MGeo·LiDAR 융합 로드맵](../../docs/packages/asmc_perception/roadmap.md)
+> **rosbag 정본:** [rosbag 재현 평가 가이드](../../docs/operations/rosbag-evaluation.md)
 > **문서 허브:** [docs/README.md](../../docs/README.md)
 
 ## 수집 경로 선택
@@ -175,11 +181,11 @@ rosrun data_collection audit_rosbag_run.py \
 result replay는 실행 순서가 중요하다. 추론과 result recorder를 replay controller보다 먼저
 띄우면 wall clock을 사용해 지연 통계가 깨질 수 있다. result recorder는 이를 막기 위해
 `/use_sim_time=true`가 아닌 상태에서는 시작하지 않는다. 상세한 4터미널 순서와 실제 smoke
-기준선은 [전용 가이드](../../docs/rosbag-evaluation-streaming-gt.md#4-replay와-result-lineage)를
+기준선은 [전용 가이드](../../docs/operations/rosbag-evaluation.md#4-replay와-result-lineage)를
 따른다.
 
 profile 목록, result bag/checkpoint lineage와 종료된 GT transport 실험의 한계는
-[전용 가이드](../../docs/rosbag-evaluation-streaming-gt.md)를 따른다.
+[전용 가이드](../../docs/operations/rosbag-evaluation.md)를 따른다.
 
 ## ROS topic snapshot collector (보조 경로)
 
@@ -237,7 +243,7 @@ Docker에서는 ROS 컨테이너에 `/data`로 쓰기 가능, 학습 컨테이�
 ## Capture Mode 파이프라인 (현재 카메라 GT 정본)
 
 `capture_mode_collector_node.py`는 차량 제어 명령을 발행하지 않는다. 따라서
-`mpc_node`가 `/ctrl_cmd`를 발행하는 자동주행과 MORAI Game Wheel/Keyboard 수동주행에서
+`mpc_controller_node`가 `/ctrl_cmd`를 발행하는 자동주행과 MORAI Game Wheel/Keyboard 수동주행에서
 동일하게 사용할 수 있다.
 
 ### 준비
@@ -346,8 +352,9 @@ MORAI 이미지·GT는 Windows의 `SensorData`에 저장되는데 **루트가 �
 `C:\MoraiLauncher_Win\MoraiLauncher_Win_Data\SaveFile\SensorData\LIDAR_5`로 간다.
 모라이 자체 동작이며 센서셋에 저장 경로 필드가 없어 설정으로 바꿀 수 없다. 아래
 `sync_capture_mode_data.py`의 `--sensor-root` 기본값은 앞의 루트만 가리키므로
-**LiDAR는 동기화 대상이 아니다.** 형식과 실측은
-[`docs/competition/capture-lidar-data-spec.md`](../../../docs/competition/capture-lidar-data-spec.md)에 있다.
+**LiDAR는 동기화 대상이 아니다.** LiDAR Capture 형식과 과거 실측 상세는 repository 밖의
+개인 분석 기록으로 분리돼 있으며, 팀 공용 파이프라인이 이를 사용하게 될 때 별도 versioned
+contract와 importer를 이 저장소에 추가한다.
 
 Linux에는 다음 lineage만 `$ASMC_DATA/capture_runs/<run_id>/` 아래 기록한다.
 
@@ -413,7 +420,7 @@ TwinLiteNet+ 입력은 `intensity/{front,left,right}`, 라벨 원본은 대응�
 `instance`·`depth`는 향후 작업을 위해 원본으로 보존한다.
 
 라벨 팔레트, `384×640` paired letterbox, run-based split과 QA 계약은
-[`docs/perception-dataset-labeling-split.md`](../../docs/perception-dataset-labeling-split.md)를
+[`docs/contracts/perception/dataset-labeling-split.md`](../../docs/contracts/perception/dataset-labeling-split.md)를
 따른다.
 
 객체 포함 run의 Semantic 전수 감사는 `scripts/audit_semantic_capture.py`로 수행한다.
@@ -603,7 +610,9 @@ state를 기록한다.
 ### 모드
 
 현재: `latest_timer` (최신 메시지 래치 후 `collect_hz` 스냅샷).
-다음: Time Manager sync tick ([mentoring](../../../docs/competition/mentoring-morai.md) §6).
+Time Manager sync tick은 구현되지 않은 후속 후보이며, MORAI
+[Synchronous Mode](https://help-morai-sim.scrollhelp.site/ko/morai-sim-drive/26.R1/synchronous-mode)를
+기준으로 별도 pilot 뒤 채택한다.
 
 ### lane/drivable 수집 구현 상태
 
@@ -617,4 +626,6 @@ Capture Mode 동기화본 → native target → TwinLite cache → run-based dat
 - 카메라 blob을 `.jpg`로 저장하므로 Semantic 무손실 PNG/ID map writer가 별도로 필요
 - `lane_capture` / `lane_stream_gt` profile은 아직 없음
 
-구현 순서는 [데이터 로드맵 WP-01~09](../../../docs/competition/yolopv3-data-development-roadmap.md)와 [수집 계약](../../../docs/competition/sync-collection-design.md)을 따른다. Bronze/Silver에는 native 해상도를 보존하며 TwinLite H×W=384×640 변환은 Silver 이후 adapter/Gold에서 수행한다.
+과거 YOLOPv3 WP와 Bronze/Silver/Gold 수집 설계는 현재 계획이 아니다. 현재 구현 순서와
+후속 gate는 [인지 통합 로드맵](../../docs/packages/asmc_perception/roadmap.md), native 원본·mask·split
+규칙은 [데이터셋 계약](../../docs/contracts/perception/dataset-labeling-split.md)을 따른다.
