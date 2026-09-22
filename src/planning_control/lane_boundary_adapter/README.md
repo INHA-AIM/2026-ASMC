@@ -1,5 +1,8 @@
 # Lane Boundary Adapter
 
+> Planning 전체 경계와 제어 승격 gate는
+> [Planning/Control 개발 가이드](../../../docs/packages/planning-control/README.md)를 따른다.
+>
 > 음영구간 v3의 판제 소비 규칙, camera drivable 결합과 파트별 소유권은
 > [음영구간 카메라 인지 v3 판제 인수 가이드](../../../docs/handoffs/perception/shadow-camera.md)를
 > 먼저 따른다.

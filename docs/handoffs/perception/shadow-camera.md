@@ -1,6 +1,7 @@
 # 음영구간 카메라 인지 v3 판제 인수 가이드
 
 > **문서 상태:** Active Handoff Guide
+> **Handoff 허브:** [README.md](../README.md)
 >
 > **동결 ID:** `shadow_camera_perception_v3_candidate_20260915`
 >
@@ -9,6 +10,7 @@
 > **상세 실험:** [drivable_bev README](../../../src/perception/drivable_bev/README.md)
 > **실행 계약:** [asmc_msgs](../../../src/asmc_msgs/msg/LaneBoundaryFamily.msg),
 > [lane_boundary_adapter](../../../src/planning_control/lane_boundary_adapter/README.md)
+> **Planning 경계:** [Planning/Control 개발 가이드](../../packages/planning-control/README.md)
 
 이 문서는 음영 왕복 2차로에서 카메라가 제공하는 차선 family와 주행가능영역을 판제가
 어떻게 해석해야 하는지 설명한다. 인지 쪽에서는 ROS 출력까지만 제공한다. 어느 위치에서

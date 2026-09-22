@@ -16,7 +16,7 @@ MORAI UDP → bridge → 팀 PC 내부 ROS다.
 | `scripts/diagnose_morai_rosbridge.sh` | rosbridge 연결 진단 | 안승현 | ✅ |
 | `config/morai_rosbridge.env` | rosbridge 포트·ROS env | 안승현 | ✅ |
 | `tools/grpc_inha_univ/` | gRPC 제어 브릿지 | 장원태 | ✅ |
-| UDP `Ctrl_cmd` | standalone planning/control | 정윤태·양서준 | 현재 경로는 planning 규약 참고 |
+| ROS `/ctrl_cmd`→Ctrl UDP | MPC→`morai_udp_bridge` | 정윤태·양서준·bridge 공동 | 현재 경로는 planning 규약 참고 |
 
 상세: [docs/onboarding/ownership.md](../../docs/onboarding/ownership.md)
 

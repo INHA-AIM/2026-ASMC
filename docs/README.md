@@ -13,7 +13,8 @@
 [D2 계약 보고서](./structure/d2-contracts-report.md),
 [D2 HD Map·message 보고서](./structure/d2-hd-map-msgs-report.md),
 [D2 bridge 보고서](./structure/d2-bridge-report.md),
-[D2 perception 보고서](./structure/d2-perception-report.md)를 참고한다.
+[D2 perception 보고서](./structure/d2-perception-report.md),
+[D2 Planning/Control·handoff 보고서](./structure/d2-planning-handoffs-report.md)를 참고한다.
 이 페이지에서 정본, 작업 중 설계안, 사용 가이드와 과거 기록을 구분한다. 내용이
 충돌하면 아래의 `정본 우선순위`를 적용하고, 기록 문서를 현재 설정으로 해석하지 않는다.
 
@@ -28,7 +29,7 @@
 5. [팀 아키텍처](./architecture/system-overview.md) — 현재 시스템 경계
 
 현재 인지 개발자는 [Perception 개발·통합 가이드](./packages/asmc_perception/README.md),
-planning/control 개발자는 [Planning/Control UDP 규약](./operations/planning-control.md)을 이어서
+planning/control 개발자는 [Planning/Control 개발 가이드](./packages/planning-control/README.md)를 이어서
 읽는다.
 
 ## 2. 정본 우선순위
@@ -41,7 +42,7 @@ planning/control 개발자는 [Planning/Control UDP 규약](./operations/plannin
 | perception 구현·통합 gate | [Perception package-group guide](./packages/asmc_perception/README.md) | 현재 분산 패키지와 아직 없는 `asmc_perception`을 구분 |
 | Git·ownership | [협업 규칙](./governance/README.md)과 [ownership](./onboarding/ownership.md) | 과거 Phase 0/Path A 문서보다 우선 |
 | 공용 계약 탐색·변경 gate | [계약 문서 허브](./contracts/README.md) | 실제 구현은 링크된 개별 계약과 기계 정본을 함께 확인 |
-| Planning/Control 실행 | [planning-control-udp.md](./operations/planning-control.md) | planning-behavior-handoff의 ROS 경로는 레거시 |
+| Planning/Control 실행 | [Planning/Control 운영 규약](./operations/planning-control.md) | standalone UDP와 v1 handoff를 현재 경로로 사용하지 않음 |
 | 카메라 데이터·라벨·split | [perception-dataset-labeling-split.md](./contracts/perception/dataset-labeling-split.md) | 개별 학습 기록보다 우선 |
 | 인지 융합 방향·우선순위 | [perception-map-fusion-roadmap.md](./packages/asmc_perception/roadmap.md) | BEV 세부안·초기 agentic 문서보다 우선 |
 | 공용 HD Map·대회 metadata 계약 | [HD Map topic contract v1](./contracts/hd-map/topic-v1.md) | P1-B에서 동결한 `asmc_msgs` 1.0.0 및 `/hd_map/*` 정본 |
@@ -98,12 +99,14 @@ MORAI 화면에 입력할 값만 필요하면
 
 | 문서 | 역할 | 상태 |
 |---|---|---|
-| [planning-control-udp.md](./operations/planning-control.md) | 현재 standalone Frenet/MPC 실행 규약 | Canonical |
+| [Planning/Control 개발 가이드](./packages/planning-control/README.md) | 현재 Behavior/Frenet/MPC 경계와 변경 gate | Active Package-Group Guide |
+| [Planning/Control 운영 규약](./operations/planning-control.md) | 현재 ROS build·launch·topic·fail-safe 확인 | Canonical Operations |
 | [planning-control-refactoring-guidelines.md](./packages/planning-control/refactoring.md) | Frenet/MPC 아키텍처 경계, ownership, dependency 방향, refactoring 체크리스트 | Active Reference |
 | [planning-behavior-handoff.md](./handoffs/planning/behavior-legacy.md) | 이전 ROS 3-package 통합 설계와 검증 기록 | Legacy Reference |
+| [Handoff index](./handoffs/README.md) | 현재 인지→판제·인지→LiDAR 인수 조건과 legacy 구분 | Active Index |
 
-Behavior Planner가 다시 연결되기 전에는 handoff 문서의 토픽과 launch를 현재 실행 경로에
-적용하지 않는다.
+현재 Behavior/Frenet v2는 연결돼 있다. legacy handoff 본문의 옛 경로·message·launch는
+현재 실행에 적용하지 않는다.
 
 ### 3.5 Perception·데이터·BEV
 
@@ -142,7 +145,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | bridge parser·timestamp·vehicle state 수정 | [MORAI bridge guide](./packages/asmc_bridge/README.md) | [운영 gate](./operations/README.md#7-변경-범위별-시뮬-검증) |
 | Git 작업·PR | [협업 규칙](./governance/README.md) | [ownership](./onboarding/ownership.md), [CONTRIBUTING](../CONTRIBUTING.md) |
 | 본선 허용 여부 판단 | [대회 환경](./competition/README.md) | [운영 가이드](./operations/README.md) |
-| MPC/Frenet 실행 | [Planning/Control](./operations/planning-control.md) | [운영 gate](./operations/README.md#7-변경-범위별-시뮬-검증) |
+| Behavior/Frenet/MPC 실행 | [Planning/Control 운영 규약](./operations/planning-control.md) | [package-group guide](./packages/planning-control/README.md) |
 | Capture/마스크/학습 데이터 | [dataset contract](./contracts/perception/dataset-labeling-split.md) | [data_collection README](../src/data_collection/README.md) |
 | raw bag 녹화·재생·모델 A/B | [rosbag 재현 평가 guide](./operations/rosbag-evaluation.md) | [data_collection README](../src/data_collection/README.md) |
 | 카메라 live 추론 | [Perception package-group guide](./packages/asmc_perception/README.md#8-실행검증-진입점) | [camera README](../src/perception/camera_semantic_perception/README.md) |
@@ -167,6 +170,8 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | [asmc_msgs guide](./packages/asmc_msgs/README.md) | 공용 ROS1 message 소유·호환·추가 절차 |
 | [MORAI bridge guide](./packages/asmc_bridge/README.md) | 현재 bridge/state 구현과 Phase 3 통합 gate |
 | [Perception package-group guide](./packages/asmc_perception/README.md) | 현재 camera/BEV/LiDAR/traffic/data 경계와 Phase 4 gate |
+| [Planning/Control package-group guide](./packages/planning-control/README.md) | 현재 Behavior/Frenet/MPC 경계, legacy와 변경 gate |
+| [Handoff index](./handoffs/README.md) | 파트 간 인수 조건과 deployment/legacy 상태 |
 | [morai_udp_bridge](../src/morai_udp_bridge/README.md) | Network UDP·Ctrl 빠른 시작 |
 | [morai_sensor_bridge](../src/morai_sensor_bridge/README.md) | Sensor UDP decode 빠른 시작 |
 | [vehicle_state](../src/vehicle_state/README.md) | GPS/IMU 상태 정규화와 배타적 source |

@@ -28,7 +28,7 @@
 4. `packages/asmc_hd_map/`와 `packages/asmc_msgs/` — 완료
 5. `packages/asmc_bridge/` — 완료
 6. `packages/asmc_perception/` — 완료. 상세 분석·실험 본문은 축약하지 않고 진입점과 권위만 통합
-7. `packages/planning-control/`와 `handoffs/`
+7. `packages/planning-control/`와 `handoffs/` — 완료. 현재 ROS runtime과 legacy handoff 분리
 8. `records/`와 `archive/`
 
 각 PR은 원문 절→새 문서 절 대응표를 남겨 누락 여부를 검토한다. 수치·경로·명령을 바꾸는

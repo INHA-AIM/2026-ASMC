@@ -1,68 +1,182 @@
-# Planning/Control UDP-only 규약
+# Planning/Control ROS 운영 규약
 
-> **문서 역할:** Canonical — 현재 standalone Frenet/MPC 실행 규약
-> **문서 허브:** [README.md](../README.md)
-> **상태:** Active — Planning/Control의 정본
-> **기준 upstream:** `yuntae12-sudo/mpc_ws` `465833e`
+> **문서 역할:** Canonical Operations — 현재 Behavior·Frenet·MPC 실행과 관측
+>
+> **상태:** Active — MORAI 외부는 UDP, 팀 PC 내부 Planning/Control은 ROS1/catkin
+>
+> **개발 경계:** [Planning/Control package-group guide](../packages/planning-control/README.md)
 
-## 범위
+## 1. 범위
 
-Frenet Planner와 MPC Controller는 ROS, catkin, ROS topic, `morai_msgs`에 의존하지 않는 standalone C++17 프로그램으로 운용한다. Behavior Planner는 현재 파이프라인에 연결하지 않는다. 다른 모듈의 ROS 사용 여부는 각 파트에서 별도로 판단한다.
+현재 Planning/Control은 `behavior_planner`, `frenet_planner`, `mpc_controller` ROS package로
+운영한다. MORAI와 직접 통신하는 것은 bridge뿐이며 planner/controller가 UDP socket을 직접
+열지 않는다.
 
 ```text
-MORAI GPS/IMU ─UDP─> frenet_planner_node
-                         │ PlannedPath UDP :9300
-                         v
-                     mpc_node ─UDP CtrlCmd─> MORAI
+MORAI --UDP--> bridge/state/perception --ROS--> Behavior/FSM
+                                                 │ BehaviorCommand v2
+                                                 ▼
+                                              Frenet
+                                                 │ Trajectory
+                                                 ▼
+                                                MPC --/ctrl_cmd--> UDP bridge --> MORAI
 ```
 
-## 빌드·실행
+이전에 사용한 standalone UDP `Planner :9300 → MPC`와 직접 Ctrl UDP 경로는
+[역사 기준선](../archive/planning/standalone-udp-baseline.md)에 보존한다. 현재 소스에는
+적용하지 않는다.
+
+## 2. 빌드
+
+ROS Noetic container에서 전체 workspace를 빌드한다.
 
 ```bash
-./scripts/build_planning_control.sh
-./scripts/run_planner_controller.sh
+cd /root/ws
+./scripts/build_ws.sh
+source devel/setup.bash
 ```
 
-`./scripts/build_ws.sh`는 ROS 모듈만 빌드한다. Planning/Control은 `src/frenet_planner/build`, `src/mpc_controller/build`에서 각각 plain CMake로 빌드한다.
+필요하면 관련 package만 빌드한다.
 
-본선 global path는 Git에 넣지 않고 `$ASMC_DATA`에서 컨테이너 `/data`로 읽기 전용 마운트한다. 기본 설정은 `/data/R_KR_PG_K-city_2025/2026_molit_comp_global_path.txt`를 사용한다.
+```bash
+catkin_make --only-pkg-with-deps \
+  behavior_planner frenet_planner mpc_controller vehicle_state
+source devel/setup.bash
+```
 
-## ASMC 개발 포트
+`scripts/build_planning_control.sh`와 `run_planner_controller.sh`는 이전 standalone 구조와
+executable 이름을 가리키므로 현재 정본 명령이 아니다. Phase 5 script 정리 전까지 실행하지
+않는다.
 
-| 데이터 | 주소/포트 |
-|---|---|
-| GPS 수신 | `0.0.0.0:9301` |
-| IMU 수신 | `0.0.0.0:9303` |
-| Planner → MPC | `127.0.0.1:9300` |
-| MPC → MORAI CtrlCmd | `127.0.0.1:9111` (Docker Desktop host mode) |
+## 3. 개발 실행
 
-위 값은 아직 적용 중인 개발 기준이다. Phase 3에서는 개발·현장 포트를 `9093/9094`로
-통일하고 IP만 profile로 분리한다. 전환 전에는 임의로 바꾸지 않는다. 현재값과 목표값은
-[운영 가이드 §1](./README.md#1-현재값과-승인된-후속-목표)을 따른다. 포트·IP는 알고리즘
-소스가 아니라 각 모듈의 `src/udp_network/network.yaml`에서 관리한다.
+터미널 1에서 현재 개발 bridge를 실행한다.
 
-## 대회 입력 규약
+```bash
+cd /root/ws
+source devel/setup.bash
+./scripts/udp_bridge.sh --simulator 26r1
+```
 
-- 기본 localization은 GPS/IMU다.
-- `ObjectInfo:7505`는 센서 기반 객체 입력이 들어오기 전까지 현재 대회 경로의 Planner 검증에 임시 사용한다.
-- 현재 `object_info.enabled` 기본값은 `true`다.
-- perception 객체 인터페이스가 연결되면 동일 역할을 교체하고 ObjectInfo receiver와 설정을 제거한다.
-- MPC 차량 파라미터는 wheelbase `3.0 m`, steering limit `40°`를 유지한다.
+터미널 2에서 v2 planning chain을 실행한다.
 
-## 최소 시뮬 gate
+```bash
+cd /root/ws
+source devel/setup.bash
+roslaunch behavior_planner autonomy_no_bridges_v2.launch
+```
 
-- global path load와 GPS/IMU localization 유효
-- Planner `:9300` 송신과 MPC 수신
-- 임시 ObjectInfo를 켠 경우 `:7505` 수신과 장애물 반응
-- Ctrl 목적지·mode 확인 후 실제 차량 이동
-- 급커브·저속 구간에서 경로 이탈과 조향 진동 없음
-- Ctrl-C 뒤 두 process와 UDP socket 종료
+이 launch는 다음을 함께 시작한다.
 
-## 제거된 ROS 경로
+- GPS/IMU 또는 개발 Ego source 기반 `vehicle_state`
+- `/Object_topic`→`/perception/objects` 임시 adapter
+- Behavior v2, Frenet과 MPC
+- 기본값으로 traffic-light camera inference
 
-- `src/planner/` ROS/catkin 패키지
-- `src/mpc_controller/launch/` 및 ROS node/topic/parameter-server 경로
-- `integration_launch/launch/integration.launch`
-- `/behavior/context`, `/planner/plan_feedback`, `/frenet_planner/trajectory`, `/ctrl_cmd` 기반 Planning/Control 연결
+체크포인트가 없는 배관 시험에서는 신호등 node를 명시적으로 끌 수 있다.
 
-이전 구현은 Git 이력에서 확인한다. `docs/handoffs/planning/behavior-legacy.md`는 레거시 ROS 설계 참고용이며 현재 실행 규약이 아니다.
+```bash
+roslaunch behavior_planner autonomy_no_bridges_v2.launch \
+  traffic_light:=false dashboard:=false
+```
+
+이것은 개발용 launch다. `/Object_topic`은 privileged simulator oracle이므로 본선 허용
+LiDAR perception으로 교체되기 전에는 competition launch로 사용하지 않는다.
+
+## 4. Component·호환 smoke
+
+| 명령 | 용도 | 주의 |
+|---|---|---|
+| `roslaunch behavior_planner behavior_node_v2.launch` | Behavior v2 단독 | 입력/feedback 별도 필요 |
+| `roslaunch frenet_planner frenet_planner.launch` | Frenet 단독 | state/object/command 별도 필요 |
+| `roslaunch mpc_controller mpc_controller.launch` | MPC 단독 | 입력 없으면 STOP이 정상 |
+| `roslaunch frenet_planner keep_morai_no_obstacles.launch` | obstacle-free KEEP E2E | perception 미사용, production gate 아님 |
+| `roslaunch behavior_planner autonomy_no_bridges.launch` | v1 호환 smoke | 현재 v2 production 계약 아님 |
+
+v1과 v2 node를 동시에 띄워 같은 output topic에 중복 publisher를 만들지 않는다. 같은
+`/vehicle/state`, `/ctrl_cmd`와 `map→base_link`도 authoritative producer를 하나만 둔다.
+
+## 5. 현재 topic 계약
+
+| Topic | Type | Producer→Consumer | 상태 |
+|---|---|---|---|
+| `/vehicle/state` | `asmc_msgs/VehicleState` | state→Behavior/Frenet/MPC | current |
+| `/perception/objects` | `asmc_msgs/DetectedObjectArray` | perception/adapter→Frenet | current boundary, 개발 adapter 사용 중 |
+| `/behavior/command_v2` | `asmc_msgs/BehaviorCommand` | Behavior→Frenet/MPC | current v2 |
+| `/planning/frenet_feedback_v2` | `asmc_msgs/FrenetFeedback` | Frenet→Behavior | current v2 |
+| `/planning/trajectory` | `asmc_msgs/Trajectory` | Frenet→MPC | current |
+| `/ctrl_cmd` | `morai_msgs/CtrlCmd` | MPC→bridge | current |
+| `/behavior/context` | `asmc_msgs/BehaviorContext` | Behavior→Frenet | v1 compatibility |
+| `/planning/feedback` | `asmc_msgs/PlanFeedback` | Frenet→Behavior | v1 compatibility |
+
+필드·enum·transaction은 [FSM↔Frenet v2 contract](../contracts/planning/fsm-frenet-v2.md), frame과
+timestamp는 [ROS interface](../../src/interfaces/README.md)가 정본이다.
+
+## 6. 관측
+
+```bash
+rostopic info /vehicle/state
+rostopic info /perception/objects
+rostopic info /behavior/command_v2
+rostopic info /planning/frenet_feedback_v2
+rostopic info /planning/trajectory
+rostopic info /ctrl_cmd
+
+rostopic hz /vehicle/state /behavior/command_v2 /planning/trajectory /ctrl_cmd
+rostopic echo /behavior/command_v2 -n1
+rostopic echo /planning/frenet_feedback_v2 -n1
+rostopic echo /planning/trajectory -n1
+```
+
+`rostopic hz`만으로 유효성을 판단하지 않는다. 다음도 함께 본다.
+
+- `header.stamp`, `frame_id`, `valid`와 failure/result code
+- v2 `command_id`, execution request/state와 terminal latch
+- trajectory source/provenance와 ego snapshot
+- Frenet/MPC stale·invalid·fail-safe 로그
+- `/ctrl_cmd` publisher가 하나인지 여부
+
+RViz debug는 `/behavior/markers`와 `/planning/markers`를 함께 표시한다. camera lane adapter
+Marker는 read-only이며 현재 control 입력이 아니다.
+
+## 7. Fail-safe 기준
+
+- Vehicle/object/behavior 입력 누락·invalid·stale은 Frenet의 안전정지 경로로 수렴한다.
+- MPC는 trajectory나 vehicle state가 없거나 stale이면 STOP을 발행한다.
+- invalid·불연속 reference, interpolation/solver 실패도 STOP이다.
+- EMERGENCY_STOP command는 MPC emergency override가 우선한다.
+- v2에서 gate가 닫힌 maneuver는 다른 행동으로 조용히 대체하지 않는다.
+
+STOP이 발행된다는 사실만으로 안전 검증이 끝나지 않는다. 제동거리, packet loss, bridge mode와
+실제 차량 응답은 MORAI closed-loop에서 확인한다.
+
+## 8. 테스트
+
+```bash
+catkin_make run_tests_behavior_planner run_tests_mpc_controller
+
+cd build/frenet_planner
+ctest --output-on-failure
+cd ../..
+
+catkin_test_results build/test_results/behavior_planner
+catkin_test_results build/test_results/mpc_controller
+```
+
+Frenet은 catkin package 단위 `run_tests_frenet_planner` target을 등록하지 않고 package build
+directory에 25개 CTest를 등록한다. `catkin_test_results`는 결과 경로 하나씩 집계한다.
+
+`v2_ros_regression_test`는 살아 있는 `roscore`와 Frenet node가 필요해 자동 CTest에 포함되지
+않는다. 실행법은 `src/frenet_planner/tests/v2_ros_regression_test.cpp`의 상단 주석을 따른다.
+
+MORAI를 실제로 돌리지 않았다면 unit/static 결과와 full-course 미검증 상태를 분리해 보고한다.
+
+## 9. 현재 본선 준비 gap
+
+- Behavior는 package-local MGeo/route JSON을 읽고 `/hd_map/*`를 아직 직접 소비하지 않는다.
+- Behavior는 raw `/Object_topic`, Frenet은 개발 adapter가 만든 `/perception/objects`를 사용한다.
+- `autonomy_no_bridges_v2.launch`는 privileged object input 때문에 field-safe가 아니다.
+- LANE_CHANGE reference handoff, MERGE gate와 full-course 반복주행은 별도 검증이 필요하다.
+- Phase 3 network profile과 15 Hz LiDAR 전환은 아직 이 문서의 현재 실행값이 아니다.
+
+이 gap이 닫히기 전에는 단위 테스트나 개발 주행 성공을 본선 배포 완료로 표현하지 않는다.

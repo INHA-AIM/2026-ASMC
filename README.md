@@ -47,9 +47,6 @@ xhost +local:docker
 ./scripts/docker_ros_up.sh up
 ./scripts/docker_ros_up.sh check
 docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
-
-# ROS 없는 Planning/Control
-docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 ```
 
 > **GPU 추론 이미지 선택**: RTX 40 팀원은 위의 기본 `build`/`up`을 그대로
@@ -73,8 +70,8 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_planning_control.sh'
 ├── docker/                    # ros-noetic · perception-train
 ├── src/
 │   ├── behavior_planner/      # planning ✅
-│   ├── frenet_planner/        # standalone UDP planning ✅
-│   ├── mpc_controller/        # standalone UDP control ✅
+│   ├── frenet_planner/        # ROS trajectory planning + C++ core ✅
+│   ├── mpc_controller/        # ROS trajectory control + C++ core ✅
 │   ├── integration_launch/    # ROS bridge launch only
 │   ├── asmc_msgs/             # 팀 내부 ROS1 공용 message 계약
 │   ├── asmc_hd_map/           # HD Map builder/runtime/검수

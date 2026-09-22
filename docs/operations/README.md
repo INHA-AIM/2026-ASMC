@@ -4,7 +4,7 @@
 >
 > **현재 기준:** 26.R1.H3 + `ASMC_sensor_set_v2.json` + ROS1 Noetic + Docker host network
 
-대회 허용 범위는 [대회 환경](../competition/README.md), Planning/Control의 독립 실행은
+대회 허용 범위는 [대회 환경](../competition/README.md), Planning/Control의 실행은
 [Planning/Control 규약](./planning-control.md), bag 기록·재생은
 [rosbag 가이드](./rosbag-evaluation.md)를 따른다. parser·timestamp·TF·`vehicle_state`를
 수정하거나 Phase 3 이관을 준비할 때는 [MORAI bridge guide](../packages/asmc_bridge/README.md)를
@@ -34,13 +34,14 @@ tracking 결과, CPU와 latency를 함께 비교한 뒤 전환한다.
 
 ```text
 MORAI --UDP--> morai_sensor_bridge/morai_udp_bridge --> 팀 내부 ROS topic
-MORAI <--UDP-- /ctrl_cmd adapter
+MORAI <--UDP-- morai_udp_bridge <--ROS-- /ctrl_cmd
 
-MORAI GPS/IMU --UDP--> standalone Frenet --UDP :9300--> MPC --UDP--> MORAI
+/vehicle/state + perception --> Behavior/FSM --> Frenet --> MPC --> /ctrl_cmd
 ```
 
 - MORAI와 팀 PC 사이에는 허용 UDP만 쓴다.
 - ROS는 팀 PC 내부의 정규화·인지·디버깅 경계다.
+- Behavior/Frenet/MPC도 현재 내부 ROS topic으로 연결되며 직접 UDP socket을 열지 않는다.
 - `rosbridge.sh` direct WebSocket 실험은 종료됐으며 현재 개발·본선 경로가 아니다.
 - gRPC scenario runner와 GT topic은 개발·데이터 수집 전용이다.
 - 현재 bridge는 `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`로 나뉘어 있다.
@@ -91,8 +92,7 @@ Compose는 `network_mode: host`이고 개별 `ports:` forwarding을 사용하지
 | Ego Vehicle Status | Dest `909` | `/Ego_topic` |
 | Object Info | Dest `7505` | `/Object_topic`, 임시 oracle |
 | Collision Data | Host/Dest `9091/9092` | `/CollisionData` |
-| Ego Ctrl Cmd | Host/Dest `9111/9112` | `/ctrl_cmd` 또는 standalone MPC |
-| Planner → MPC | `9300` | standalone 내부 UDP |
+| Ego Ctrl Cmd | Host/Dest `9111/9112` | `morai_udp_bridge`가 `/ctrl_cmd`를 UDP로 전송 |
 
 ### 센서
 
@@ -186,7 +186,7 @@ asmc-ros-gui rviz -d /root/ws/<config>.rviz
 | 공통 | submodule `45c6baf`, `build_ws.sh`, host network check, 핵심 sensor topic |
 | bridge | packet parse error 0, topic rate/staleness, Ctrl 목적지·응답 |
 | HD Map | global/local topic, RViz, ego crop, geometry/checkpoint 회귀 |
-| Frenet/MPC | standalone build, global path, GPS/IMU, `:9300`, Ctrl tracking |
+| Behavior/Frenet/MPC | catkin build, v2 topic transaction, trajectory provenance·fail-safe, Ctrl tracking |
 | camera | frozen checkpoint, 3-view output, timestamp skew, FPS/latency |
 | LiDAR/fusion | VLP16 topic, detector/tracker output, camera sync와 resource |
 | scenario/gRPC | 개발 profile에서만 scenario 시작·종료·NPC spawn |
@@ -194,8 +194,9 @@ asmc-ros-gui rviz -d /root/ws/<config>.rviz
 
 압축 전 체크리스트에 있던 판정 가능한 세부 기준 중 현재도 유효한 항목은 다음과 같다.
 
-- Frenet/MPC: global path load, GPS/IMU 유효성, planner→MPC `:9300`, Ctrl 목적지,
-  급커브·저속 구간 이탈/조향 진동과 `Ctrl+C` 뒤 process/socket 종료를 확인한다.
+- Behavior/Frenet/MPC: route·GPS/IMU 유효성, command ID와 feedback lifecycle,
+  trajectory source time·연속성, `/ctrl_cmd` 단일 publisher·목적지, 급커브·저속 구간
+  이탈/조향 진동과 `Ctrl+C` 뒤 node·bridge 종료를 확인한다.
 - camera: checkpoint/model source SHA, front·left·right 출력, view 간 timestamp skew,
   stale/drop, FPS, p50/p95 latency와 VRAM을 기록한다.
 - LiDAR/fusion: detector/tracker 출력, camera sync 허용값과 CPU/GPU 사용량을 함께 기록한다.

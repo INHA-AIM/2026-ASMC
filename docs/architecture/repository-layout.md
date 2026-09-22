@@ -61,12 +61,14 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | 패키지 | 경로 | 담당 | GitHub |
 |--------|------|------|--------|
 | Behavior planner | `src/behavior_planner/` | 정윤태·양서준 | @yuntae12-sudo · @yangseojun |
-| MPC (`mpc_node`, standalone UDP) | `src/mpc_controller/` | 정윤태·양서준 | @yuntae12-sudo · @yangseojun |
-| Frenet planner (standalone UDP) | `src/frenet_planner/` | 이강태 | @kante2 |
+| MPC (`mpc_controller_node`, ROS+core) | `src/mpc_controller/` | 정윤태·양서준 | @yuntae12-sudo · @yangseojun |
+| Frenet planner (`frenet_planner_node`, ROS+core) | `src/frenet_planner/` | 이강태 | @kante2 |
 | ROS bridge launch | `src/integration_launch/` | 정윤태 | @yuntae12-sudo |
 
-현재 실행 흐름: [planning-control-udp.md](../operations/planning-control.md). 이전 ROS 통합 기록은
-[planning-behavior-handoff.md](../handoffs/planning/behavior-legacy.md)에 보존한다.
+현재 개발 경계는 [Planning/Control guide](../packages/planning-control/README.md), 실행 흐름은
+[운영 규약](../operations/planning-control.md)을 따른다. v1 설계와 standalone UDP 기준선은
+각각 [legacy handoff](../handoffs/planning/behavior-legacy.md)와
+[archive](../archive/planning/standalone-udp-baseline.md)에 보존한다.
 
 ### bridge · HD Map
 
@@ -163,7 +165,7 @@ CODEOWNERS 자동 리뷰: [.github/CODEOWNERS](../../.github/CODEOWNERS)
 
 | 모듈 | ASMC 경로 |
 |------|-----------|
-| Behavior / Frenet / MPC | `src/behavior_planner/`(미연동), `frenet_planner/`, `mpc_controller/` |
+| Behavior / Frenet / MPC | `src/behavior_planner/`, `frenet_planner/`, `mpc_controller/` (v2 ROS 연결) |
 | Camera lane/drivable | `src/perception/twinlite_morai/`, `camera_semantic_perception/`, `drivable_bev/` |
 | LiDAR/3D perception | `src/perception/morai_3d_detection/`, `src/lidar+sensorfusion/` |
 | 공통 BEV | camera v3는 `src/perception/drivable_bev/`; 전역 map/LiDAR 결합 규격은 합의 중 |

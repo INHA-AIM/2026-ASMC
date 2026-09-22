@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ROS 모듈 catkin 빌드. UDP-only Planning/Control은 별도 CMake 빌드한다.
+# ROS1 catkin workspace 빌드. Behavior/Frenet/MPC도 현재 이 workspace에 포함된다.
 set -euo pipefail
 cd "$(dirname "$(readlink -f "$0")")/.."
 
@@ -14,4 +14,4 @@ export ROS_MASTER_URI="${ROS_MASTER_URI:-http://127.0.0.1:11311}"
 source /opt/ros/noetic/setup.bash
 catkin_make "$@"
 echo "[build_ws] done. source devel/setup.bash"
-echo "[build_ws] planning/control: ./scripts/build_planning_control.sh"
+echo "[build_ws] planning/control catkin packages included"

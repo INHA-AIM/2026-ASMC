@@ -243,7 +243,7 @@ Docker에서는 ROS 컨테이너에 `/data`로 쓰기 가능, 학습 컨테이�
 ## Capture Mode 파이프라인 (현재 카메라 GT 정본)
 
 `capture_mode_collector_node.py`는 차량 제어 명령을 발행하지 않는다. 따라서
-`mpc_node`가 `/ctrl_cmd`를 발행하는 자동주행과 MORAI Game Wheel/Keyboard 수동주행에서
+`mpc_controller_node`가 `/ctrl_cmd`를 발행하는 자동주행과 MORAI Game Wheel/Keyboard 수동주행에서
 동일하게 사용할 수 있다.
 
 ### 준비

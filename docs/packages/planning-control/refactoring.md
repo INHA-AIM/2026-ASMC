@@ -1,6 +1,7 @@
 # Planning/Control 리팩토링 가이드라인
 
 > **문서 상태:** Active Reference — 팀 리뷰 후 Canonical 승격 여부를 결정한다.
+> **현재 package 경계:** [Planning/Control 개발 가이드](./README.md)
 > **범위:** `src/frenet_planner/`, `src/mpc_controller/` 코드를 수정할 때 지켜야 하는
 > 아키텍처 규칙. 알고리즘 파라미터 튜닝 가이드가 아니다.
 > **기준 시점:** `Fix/yuntae-planner` 브랜치, Commit E(트래잭토리 provenance 수정 +
@@ -229,14 +230,14 @@ trajectory timestamp provenance 수정은 "리팩토링"이 아니라 명시적�
 - [ ] 옮긴 순수 로직에 대한 unit test가 있는가
 - [ ] 적절한 경우 negative/regression test가 있는가
 - [ ] 기존 패키지 테스트가 모두 남아있고 통과하는가
-  - Frenet: `src/frenet_planner/build`에서 `ctest` (현재 21개 등록 테스트)
-  - MPC: `src/mpc_controller/build`에서 `ctest` (현재 4개 gtest 바이너리)
+  - Frenet: catkin build의 `build/frenet_planner`에서 `ctest` (현재 25개 등록 테스트)
+  - MPC: catkin build의 `build/mpc_controller`에서 `ctest` (현재 5개 gtest 바이너리)
   - `v2_ros_regression_test`는 `add_test`에 등록되어 있지 않다 - roscore와
     `frenet_planner_node`를 수동으로 띄운 뒤 `rosrun`으로 실행한다(파일 상단
     주석의 실행법 참고).
 - [ ] 통합 회귀(가능하면 `v2_ros_regression_test`)를 실행했는가
 - [ ] `git diff --check`가 깨끗한가
-- [ ] 빌드가 깨끗한가(`scripts/build_planning_control.sh` 또는 `catkin_make`)
+- [ ] ROS/catkin 빌드가 깨끗한가(`scripts/build_ws.sh` 또는 관련 package `catkin_make`)
 
 MORAI 실주행 결과는 실제로 실행한 경우에만 보고한다. "Static/unit/regression
 verification complete, MORAI full-course validation pending" 같은 정확한

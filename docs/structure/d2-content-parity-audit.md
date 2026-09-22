@@ -36,9 +36,10 @@
 | IDE 개인 선호, 지난 주간 일정 | 없음 | 계약·재현 정보가 아니므로 의도적 제외 |
 | `main` 직접 push Path A | Git 이력과 Wave 기록 | 현재 보호 정책과 충돌하여 의도적 폐기 |
 
-과거 문서의 `src/planner/`와 ROS 기반 Planning/Control 실행처럼 현재 tree와 맞지 않는 문장은
-복원하지 않았다. 현재 경로는 `src/frenet_planner/`이고 standalone 실행은
-[Planning/Control 규약](../operations/planning-control.md)이 우선한다.
+과거 문서의 `src/planner/` 경로처럼 현재 tree와 맞지 않는 문장은 복원하지 않았다. 이후
+D2-7 source audit에서 Planning/Control은 현재 ROS1/catkin runtime임을 확인했으며, 실행은
+[Planning/Control 규약](../operations/planning-control.md), standalone UDP 설명은
+[역사 기준선](../archive/planning/standalone-udp-baseline.md)을 따른다.
 
 ## 대회·운영 원문 대응
 

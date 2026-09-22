@@ -102,9 +102,6 @@ chore(scope): 빌드·설정
 ```bash
 # ROS/catkin
 docker exec -it asmc-ros-noetic bash -lc 'cd /root/ws && ./scripts/build_ws.sh'
-
-# standalone planning/control
-docker exec -it asmc-ros-noetic bash -lc 'cd /root/ws && ./scripts/build_planning_control.sh'
 ```
 
 - 문서 이동: 로컬 Markdown 링크와 `git diff --check`

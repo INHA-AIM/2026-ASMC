@@ -44,15 +44,18 @@ ego-BEV → lane/topology + safe drivable + object/lane context
 | 공통 BEV·차로 문맥 | map/camera/LiDAR layer와 object association | `src/perception/drivable_bev/` | 인지·맵·LiDAR 공동 |
 | LiDAR 장애물 | clustering·OBB·tracking·카메라 보조 분류 | `src/lidar+sensorfusion/` | 손재호, 정윤태 |
 | SA_plan | BEV̂ → τ | `src/learning_by_cheating/` | 안승현 |
-| Frenet + MPC | UDP 경로 생성·추종 → UDP CtrlCmd | `src/frenet_planner/`, `src/mpc_controller/` | 이강태 / 정윤태·양서준 |
+| Behavior + Frenet + MPC | ROS command→trajectory→control; bridge가 Ctrl UDP 전송 | `src/behavior_planner/`, `src/frenet_planner/`, `src/mpc_controller/` | 정윤태·양서준·이강태 |
 | Scenario / gRPC | 시나리오·시뮬 API | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |
 | Bridge | MORAI UDP 경계·내부 ROS 변환 | `src/morai_*_bridge/`, `scripts/udp_bridge.sh` | 이강태, 안승현 |
 
 ## 5. Planning/Control
 
-- Bicycle 3.0 m, δ_max 40°, UDP Ctrl_cmd **cmd type 1 + ctrl mode 2**
+- Bicycle 3.0 m, δ_max 40°. MPC는 `/ctrl_cmd`, bridge가 UDP **cmd type 1 + ctrl mode 2**를 소유한다.
 
-Planning/Control은 ROS/catkin/topic 없이 standalone C++17 + UDP로 실행한다. Behavior Planner는 현재 미연동이다. 상세 정본은 [planning-control-udp.md](../operations/planning-control.md)를 따른다.
+Planning/Control은 ROS1/catkin runtime과 transport-independent C++ core로 구성된다. 현재 v2
+Behavior→Frenet→MPC 경로와 알려진 본선 준비 gap은
+[Planning/Control 개발 가이드](../packages/planning-control/README.md), 실행은
+[운영 규약](../operations/planning-control.md)을 따른다.
 
 ## 6. 인터페이스
 

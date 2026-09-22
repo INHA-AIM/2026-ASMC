@@ -1,23 +1,28 @@
 # Planning/Control
 
-현재 대회 운용의 Frenet Planner와 MPC Controller는 정본 문서대로 standalone UDP 경로를
-사용한다. 카메라 인지는 MORAI UDP bridge 뒤의 내부 ROS 토픽을 사용하며, 아래
-`lane_boundary_adapter`는 그 관측 계약을 판제와 검토하기 위한 별도 ROS pilot이다. 이
-pilot은 기존 planner/controller 실행 경로나 차량 제어 명령에 연결되지 않는다.
+현재 Behavior Planner, Frenet Planner와 MPC Controller는 ROS1/catkin package이며 내부
+`asmc_msgs` topic으로 연결된다. MORAI UDP는 bridge package만 소유한다. 자세한 현재 구조는
+[Planning/Control 개발 가이드](../../docs/packages/planning-control/README.md), 실행은
+[운영 규약](../../docs/operations/planning-control.md)을 따른다.
+
+아래 `lane_boundary_adapter`는 camera 관측 계약을 판제와 검토하기 위한 별도 read-only ROS
+pilot이다. 기존 planner/controller 실행 경로나 차량 제어 명령에 연결되지 않는다.
 
 | 프로젝트 | 담당 | 빌드 |
 |---|---|---|
-| `src/frenet_planner/` | 이강태 | CMake, C++17 |
-| `src/mpc_controller/` | 정윤태·양서준 | CMake, C++17 |
-| `src/behavior_planner/` | 정윤태·양서준 | 현재 UDP 파이프라인 미연동 |
+| `src/frenet_planner/` | 이강태 | Catkin, C++17 ROS runtime + core |
+| `src/mpc_controller/` | 정윤태·양서준 | Catkin, C++17 ROS runtime + core |
+| `src/behavior_planner/` | 정윤태·양서준 | Catkin, v2 Behavior/FSM runtime |
 | `src/planning_control/lane_boundary_adapter/` | 안승현·판제 공동 검토 | Catkin, C++17, read-only ROS pilot |
 
 ```bash
-./scripts/build_planning_control.sh
-./scripts/run_planner_controller.sh
+./scripts/build_ws.sh
+source devel/setup.bash
+roslaunch behavior_planner autonomy_no_bridges_v2.launch
 ```
 
-정본 규약과 포트표는 [docs/operations/planning-control.md](../../docs/operations/planning-control.md)를 따른다. ROS 모듈은 별도로 `./scripts/build_ws.sh`로 빌드한다.
+위 launch는 개발 `/Object_topic` adapter를 사용하므로 본선 sensor-only launch가 아니다.
+이전 standalone helper는 현재 executable과 맞지 않으므로 사용하지 않는다.
 
 카메라 경계 관측을 제어와 분리해 확인하려면
 [lane boundary adapter README](./lane_boundary_adapter/README.md)를 따른다. 해당 출력은

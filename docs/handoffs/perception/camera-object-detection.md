@@ -1,6 +1,8 @@
 # 카메라 객체 검출 인수 가이드 — 손재호
 
 > **문서 상태:** Active Guide / Handoff
+> **Handoff 허브:** [README.md](../README.md)
+> **Perception 경계:** [Perception 개발·통합 가이드](../../packages/asmc_perception/README.md)
 > **기준일:** 2026-09-11
 > **대상:** LiDAR·센서융합 담당 손재호, 카메라 담당 안승현
 > **범위:** 기존 detector 즉시 사용, 경량 후보 선택, NAS Capture 데이터 fine-tune 준비

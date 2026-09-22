@@ -15,11 +15,16 @@
 | `operations/sim-verification-checklist.md` | `operations/README.md` | 범위별 최소 검증표 통합 |
 | `operations/rosbag-evaluation.md` | 같은 경로 | active raw/result 절차만 유지 |
 | 위 두 운영 문서의 날짜별 실측 | `records/simulator/runtime-transport-2026-09.md` | rate·latency·GT 성공/실패를 기록으로 분리 |
-| `operations/planning-control.md` | 같은 경로 | standalone 책임을 유지하고 port 전환 경계 명시 |
+| `operations/planning-control.md` | 같은 경로 | 당시 standalone 책임과 port 전환 경계 명시; D2-7에서 후속 교정 |
 
 기존 active 문서 7개 1,546줄은 active 정본 4개 610줄로 줄였다. 날짜별 검증 144줄은
 현재 설정과 섞이지 않도록 record로 분리했다. 기존 5개 경로에는 외부 링크를 위한 호환
 안내만 남겼다.
+
+> **D2-7 후속 교정:** source·launch·package manifest 재감사에서 현재 Planning/Control이
+> ROS1/catkin runtime으로 복귀한 것을 확인했다. active 운영 문서는 현재 구조로 교정했고,
+> 이 보고서 작성 당시 standalone 내용은
+> [historical baseline](../archive/planning/standalone-udp-baseline.md)에 보존했다.
 
 ## 현재 상태와 의미 보존
 

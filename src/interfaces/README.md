@@ -36,10 +36,12 @@ Behavior/FSM → Frenet Planner → MPC Controller
 | `/perception/lane/boundary_family` | Camera Perception | planning candidate adapter | `asmc_msgs/LaneBoundaryFamily` | 공동 피팅 3경계와 sample별 support 상태; non-deployment 후보 |
 | `/perception/bev/camera/drivable_probability` | Camera Perception | planning candidate adapter | `sensor_msgs/Image` | `base_link` metric BEV의 mono8 drivable score; coverage와 함께 사용 |
 | `/perception/bev/camera/coverage` | Camera Perception | planning candidate adapter | `sensor_msgs/Image` | drivable cell의 camera 관측 유효성; 0은 unknown |
-| `/behavior/context` | Behavior/FSM | Frenet | `asmc_msgs/BehaviorContext` | 선택된 행동과 실행 target |
+| `/behavior/command_v2` | Behavior/FSM | Frenet, MPC | `asmc_msgs/BehaviorCommand` | 현재 maneuver transaction과 target |
+| `/planning/frenet_feedback_v2` | Frenet | Behavior/FSM | `asmc_msgs/FrenetFeedback` | 현재 transaction 실행 결과 |
 | `/planning/trajectory` | Frenet | MPC | `asmc_msgs/Trajectory` | 최종 추종 trajectory |
-| `/planning/feedback` | Frenet | FSM | `asmc_msgs/PlanFeedback` | planning 및 행동 실행 결과 |
 | `/ctrl_cmd` | MPC | MORAI UDP Bridge | `morai_msgs/CtrlCmd` | 차량 제어 명령 |
+| `/behavior/context` | Behavior/FSM | Frenet | `asmc_msgs/BehaviorContext` | v1 compatibility command |
+| `/planning/feedback` | Frenet | FSM | `asmc_msgs/PlanFeedback` | v1 compatibility feedback |
 
 실시간 topic은 기본 `queue_size=1`로 사용하고 이름은 launch/remap으로 변경 가능하게 한다.
 
@@ -109,6 +111,10 @@ Frenet d:           +d LEFT,             -d RIGHT
 ```
 
 ## 6. Behavior command rules
+
+현재 v2 transaction, validation과 lifecycle의 정본은
+[FSM↔Frenet v2 contract](../../docs/contracts/planning/fsm-frenet-v2.md)다. 아래
+`BehaviorContext` 규칙은 v1 compatibility 경로에 적용한다.
 
 `BehaviorContext`는 판단 과정이나 score가 아니라 선택된 행동과 실행 target만 전달한다.
 
@@ -344,7 +350,7 @@ BEV 계약이 아니다.
 | 속도 프로파일 | MPC에 별도 전달 여부 | ☐ |
 
 현재 Planning/Control 계약은 위 초안이 아니라 이 문서의 `asmc_msgs/Trajectory` 정의와
-[planning-control-udp.md](../../docs/operations/planning-control.md)를 따른다.
+[Planning/Control 운영 규약](../../docs/operations/planning-control.md)을 따른다.
 
 ### B.2 LBC BEV tensor draft
 

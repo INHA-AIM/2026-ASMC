@@ -1,10 +1,12 @@
 # Planner 3-패키지 통합 아키텍처 (v4 — 열린 결정사항 코드로 검증 완료)
 
 > **문서 역할:** Legacy Reference — 이전 ROS 3-package 통합 설계 기록
-> **문서 허브:** [README.md](../../README.md)
-> **상태:** Legacy reference. 현재 Planning/Control 실행 규약은
-> [planning-control-udp.md](../../operations/planning-control.md)이며 Behavior Planner는 미연동이다.
-> 이 문서의 ROS topic·integration launch 절차를 현재 파이프라인에 적용하지 않는다.
+> **Handoff 허브:** [README.md](../README.md)
+> **상태:** `BehaviorContext`/`PlanFeedback` v1 이전 설계 기록. 현재 Behavior Planner는
+> 연결되어 있으며 production 방향은 [FSM↔Frenet v2 contract](../../contracts/planning/fsm-frenet-v2.md)와
+> [Planning/Control 개발 가이드](../../packages/planning-control/README.md)를 따른다.
+> 본문의 `planner/`, 옛 callback, Float32MultiArray와 integration launch 절차를 현재 코드에
+> 적용하지 않는다. 미해결·확정 표기는 당시 설계 시점의 기록으로 보존한다.
 
 > **출처:** [yuntae12-sudo/mpc_ws](https://github.com/yuntae12-sudo/mpc_ws) `INTEGRATION_PLAN.md` @ `72e2a37`  
 > **ASMC 반영:** `integrate/planning-v2` — `behavior_planner`, `behavior_bridge`, `integration.launch` 확장
