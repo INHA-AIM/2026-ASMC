@@ -34,7 +34,7 @@
 각 PR은 원문 절→새 문서 절 대응표를 남겨 누락 여부를 검토한다. 수치·경로·명령을 바꾸는
 경우 구조 정리와 분리해 별도 구현 근거를 요구한다.
 
-## D3 — 중복·옛 문서 제거 (감사 완료, 삭제 유예)
+## D3 — 중복·옛 문서 제거 (감사 완료, 후속 배포 대기)
 
 - 정본에 모든 고유 내용이 옮겨졌는지 절 단위로 확인한다.
 - 삭제 대상은 마지막 commit과 대체 문서를 archive index에 기록한다.
@@ -43,9 +43,10 @@
   팀 저장소에는 결론·계약·재현 방법만 보존한다.
 
 [D3 보존·호환 감사](./d3-retention-compatibility-report.md)에서 D1 이전 Markdown 37개와
-generated text 2개의 행선지를 모두 확인했다. 현재 migration은 아직 `main`과 한 번의 후속
-배포를 거치지 않았으므로 과거 `main` 경로 stub 12개와 generated export는 삭제하지 않는다.
-제거 gate는 `config/docs/documentation_migration_v1.json`에 기계 판독 형태로 고정한다.
+generated text 2개의 행선지를 모두 확인했다. 문서 migration은 PR #45, merge commit
+`7107531b`로 `main`에 반영됐다. 아직 그 뒤의 팀 배포가 완료되지 않았으므로 과거 `main`
+경로 stub 12개와 generated export는 삭제하지 않는다. 제거 gate는
+`config/docs/documentation_migration_v1.json`에 기계 판독 형태로 고정한다.
 
 ## D4 — 패키지 README 정본화 (완료)
 
@@ -54,6 +55,13 @@ generated text 2개의 행선지를 모두 확인했다. 현재 migration은 아
 - `asmc_hd_map`·`asmc_msgs` 중앙 guide의 고유 내용을 source README에 합친 뒤 제거한다.
 - 이 브랜치에만 존재한 중간 호환 stub 5개는 제거하고, 과거 `main` 경로 12개만 유지한다.
 - 결과와 보존 검증은 [D4 보고서](./d4-package-readme-report.md)에 기록한다.
+
+## D5 — 병합 상태 closeout (완료)
+
+- PR #45와 merge commit `7107531b`를 migration manifest와 D3 감사 기록에 남긴다.
+- 호환 유예 시작 상태를 `main 병합 완료·후속 팀 배포 대기`로 갱신한다.
+- 호환 안내 12개와 historical 자료의 삭제·이동은 이번 단계에 포함하지 않는다.
+- 이후 제거는 D3 gate를 모두 만족하는 별도 PR에서만 수행한다.
 
 ## 공통 금지 사항
 

@@ -277,7 +277,12 @@
   ],
   "redirect_policy": {
     "state": "keep",
-    "reason": "The migration is not yet merged to main and no post-migration release has completed.",
+    "reason": "The migration was merged to main by PR #45, but no subsequent team release or competition delivery has completed.",
+    "merge_evidence": {
+      "pull_request": 45,
+      "commit": "7107531b76fe3c41dfe1488eee23c5cf89c8c8b4",
+      "merged_at": "2026-09-22T23:52:31+09:00"
+    },
     "removal_requires": [
       "migration merged to main",
       "at least one subsequent team release or competition delivery completed",
