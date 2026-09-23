@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the additive P4-B perception message/topic contract without ROS."""
+"""Validate the additive perception message/topic contract without ROS."""
 
 from __future__ import annotations
 
@@ -111,8 +111,16 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
             raise ContractError(f"canonical topic type/MD5 mismatch: {topic}")
         if definition.get("latch") is not False:
             raise ContractError(f"dynamic perception topic must not be latched: {topic}")
-        if definition.get("producer_status") != "declared_not_published_p4b":
-            raise ContractError(f"P4-B must not claim an unimplemented producer: {topic}")
+        expected_status = (
+            "active_parallel_p4c"
+            if topic == "/perception/traffic_light/detection"
+            else "declared_not_published_p4b"
+        )
+        if definition.get("producer_status") != expected_status:
+            raise ContractError(
+                f"unexpected producer status for {topic}: "
+                f"{definition.get('producer_status')}"
+            )
 
     compatibility = _mapping(
         contract.get("compatibility_topics"), "compatibility_topics"
@@ -132,6 +140,7 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
         "start_traffic_light",
         "start_lidar_fusion",
         "start_recorder",
+        "start_visualization",
     ):
         if name not in arguments:
             raise ContractError(f"facade launch is missing {name}")
@@ -162,10 +171,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     try:
         result = validate_contract(repo_root, contract)
     except (ContractError, OSError, ValueError, yaml.YAMLError, ET.ParseError) as exc:
-        print(f"P4-B perception contract validation failed: {exc}", file=sys.stderr)
+        print(f"Perception contract validation failed: {exc}", file=sys.stderr)
         return 1
     print(
-        "P4-B perception contract valid: "
+        "Perception contract valid: "
         f"{result['message_count']} messages, "
         f"{result['canonical_topic_count']} canonical topics, "
         f"{result['compatibility_topic_count']} compatibility topics"

@@ -48,7 +48,7 @@ canonical_topics:
     stamp: source_camera_header
     queue_size: 1
     latch: false
-    producer_status: declared_not_published_p4b
+    producer_status: active_parallel_p4c
   /perception/lidar/tracked_objects:
     type: asmc_msgs/TrackedObjectArray
     md5: e127b2aabd7494ad01a5a56b005bf07e

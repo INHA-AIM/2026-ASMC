@@ -53,6 +53,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             "start_traffic_light": "false",
             "start_lidar_fusion": "false",
             "start_recorder": "false",
+            "start_visualization": "false",
         }
         for name, default in expected.items():
             self.assertIn(name, arguments)
@@ -68,7 +69,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
                 ("drivable_bev", "camera_bev_node.py"),
                 ("drivable_bev", "camera_bev_fusion_node.py"),
                 ("drivable_bev", "lane_vectorizer_node.py"),
-                ("traffic_light", "live_infer.py"),
+                ("asmc_perception", "traffic_light_node.py"),
             },
             nodes,
         )
@@ -76,6 +77,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         self.assertTrue(any("camera_semantic_perception" in item for item in includes))
         self.assertTrue(any("lidar_legacy_launch" in item for item in includes))
         self.assertTrue(any("data_collection" in item for item in includes))
+        self.assertTrue(any("visualization.launch" in item for item in includes))
 
     def test_v3_calibration_is_bound_to_exact_sensor_artifact(self):
         sensor_path = SENSOR_ROOT / "ASMC_sensor_set_v3.json"
@@ -93,15 +95,29 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             values.append([_camera_contract(item) for item in document["cameraList"]])
         self.assertEqual(values[0], values[1])
 
-    def test_typed_topics_are_declared_but_not_falsely_claimed_as_published(self):
+    def test_typed_topic_cutover_status_matches_runtime(self):
         traffic = self.runtime["components"]["traffic_light"]
         lidar = self.runtime["components"]["lidar_fusion"]
-        self.assertEqual("declared_not_published_p4b", traffic["canonical_producer_status"])
+        self.assertEqual("active_parallel_p4c", traffic["canonical_producer_status"])
         self.assertEqual("declared_not_published_p4b", lidar["canonical_producer_status"])
         self.assertTrue(self.runtime["compatibility"]["preserve_legacy_topics"])
         self.assertFalse(self.runtime["compatibility"]["physical_source_moves"])
         self.assertFalse(self.runtime["compatibility"]["package_deletions"])
         self.assertFalse(self.runtime["compatibility"]["oracle_inputs_allowed"])
+
+    def test_host_entrypoint_selects_the_gpu_container(self):
+        script = (REPO_ROOT / "scripts" / "perception.sh").read_text(encoding="utf-8")
+        self.assertIn("asmc-perception-train", script)
+        self.assertIn("docker_perception_up.sh", script)
+        self.assertIn("roslaunch asmc_perception perception.launch", script)
+
+    def test_visualization_launch_uses_v3_calibration(self):
+        visualizer = ET.parse(PACKAGE_ROOT / "launch" / "visualization.launch").getroot()
+        values = [item.get("default", "") for item in visualizer.findall("arg")]
+        self.assertTrue(any("cameras_v3.yaml" in value for value in values))
+        node_types = {item.get("type") for item in visualizer.iter("node")}
+        self.assertIn("camera_bev_visualizer_node.py", node_types)
+        self.assertIn("lane_vector_visualizer_node.py", node_types)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 
 > **문서 역할:** Working Proposal — 패키지 통합과 본선 배포를 위한 단계별 실행 계획
 > **작성 기준:** 2026-09-20 저장소와 현장 점검 반출 자료의 read-only 감사
-> **진행 상태:** 1·2단계, 3단계 P3-G local closeout과 P4-A·P4-B 완료. 다음은 P4-C camera/BEV/traffic/recorder 이식
+> **진행 상태:** 1·2단계, 3단계 P3-G local closeout, P4-A·P4-B와 P4-C1 완료. 다음은 P4-C parity와 camera/BEV/recorder 이식
 > **보호 범위:** `behavior_planner`, `frenet_planner`, `mpc_controller`,
 > `planning_control/lane_boundary_adapter` 및 planning 소유 launch는 이 계획의 일방적 이동·삭제 대상이 아니다.
 
@@ -504,10 +504,10 @@ P4-B에서 canonical `asmc_perception` package와 단일 compatibility launch, v
 traffic-light/LiDAR additive message·topic 계약을 추가했다. 기존 runtime source와 legacy topic은
 이동·삭제하지 않았고 canonical typed producer는 아직 미연결 상태로 명시했다.
 
-다음 작업은 `P4-C camera/BEV/traffic-light/recorder runtime 이식`이다. 먼저 traffic-light가 실제
-추론 image header를 typed 결과에 전달하도록 병행 발행하고, camera/BEV 실행 코드를 새 package
-namespace로 한 단위씩 옮겨 representative bag의 topic/type/frame/stamp/rate/latency parity를
-확인한다. LiDAR/`Msg`/구 road mask 이식은 별도 P4-D로 유지한다. 중복 `Msg`/`morai_msgs` 및
+P4-C1에서 traffic-light가 실제 추론 image header를 typed 결과에 전달하도록 병행 발행하고,
+GPU container wrapper와 camera/BEV/lane debug 시각화 진입점을 추가했다. 다음은 대표 bag에서
+String/typed parity와 stale 동작을 검증한 뒤 camera/BEV 실행 코드와 recorder를 새 package
+namespace로 한 단위씩 옮기는 작업이다. LiDAR/`Msg`/구 road mask 이식은 별도 P4-D로 유지한다. 중복 `Msg`/`morai_msgs` 및
 `learning*` 삭제는 clean build, bag parity와 blocking reference zero 이후에만 수행한다.
 
 실제 두 PC LAN2LAN은 팀원 측 코드 준비와 perception 통합, 최소 단일 실행 진입점 이후 Phase 6

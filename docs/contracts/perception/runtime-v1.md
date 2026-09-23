@@ -1,13 +1,13 @@
 # Perception runtime topic contract v1
 
-> **상태:** Frozen additive interface (P4-B)
+> **상태:** Frozen additive interface; traffic-light producer active in parallel (P4-C1)
 > **기계 정본:** `config/contracts/perception_runtime_topic_contract_v1.yaml`
 > **실행 façade:** `src/asmc_perception/launch/perception.launch`
 
 이 계약은 신호등과 LiDAR 객체 결과를 판제가 소비할 canonical ROS1 타입으로 옮기기 위한
-경계다. P4-B에서는 타입과 topic 의미를 먼저 고정하고 기존 producer와 topic을 유지한다.
-따라서 아래 canonical topic은 **아직 발행된다고 가정하면 안 되며**, 기계 정본의
-`producer_status=declared_not_published_p4b`가 후속 PR에서 바뀐 뒤에만 사용한다.
+경계다. P4-B에서 타입과 topic 의미를 먼저 고정했고 P4-C1에서 신호등 typed producer를
+병행 연결했다. LiDAR canonical topic은 여전히 **발행된다고 가정하면 안 되며** 기계 정본의
+`producer_status`가 실제 producer 상태의 권위다.
 
 ## 1. 메시지
 
@@ -41,9 +41,9 @@ consumer와 비교하기 위한 사람이 읽는 값이지 enum 대신 사용하
 
 ## 2. Canonical topic
 
-| Topic | Type | Frame/stamp | P4-B 상태 |
+| Topic | Type | Frame/stamp | 현재 상태 |
 |---|---|---|---|
-| `/perception/traffic_light/detection` | `asmc_msgs/TrafficLightDetection` | `camera_extra`, 실제 입력 image header | 선언됨, 미발행 |
+| `/perception/traffic_light/detection` | `asmc_msgs/TrafficLightDetection` | `camera_extra`, 실제 입력 image header | P4-C1 병행 발행 |
 | `/perception/lidar/tracked_objects` | `asmc_msgs/TrackedObjectArray` | `map`, LiDAR source stamp | 선언됨, 미발행 |
 | `/perception/lidar/drivable_tracked_objects` | `asmc_msgs/TrackedObjectArray` | `map`, 같은 source stamp | 선언됨, 미발행 |
 
@@ -72,12 +72,13 @@ frame에서 객체 수, ID, OBB, 속도, dynamic state 및 신호 label/confiden
 ## 4. Façade 실행 경계
 
 ```bash
-roslaunch asmc_perception perception.launch
+./scripts/perception.sh
+./scripts/perception.sh start_visualization:=true
 ```
 
 기본 실행은 v3 sensor-set provenance를 가진 3-camera lane pipeline이다. traffic-light,
 LiDAR/fusion, recorder는 명시적으로 켠다. LiDAR는 아직 nested workspace overlay가 필요하며
-P4-B façade가 `Main`, `Msg`, 중복 `morai_msgs`를 소유하거나 삭제하지 않는다.
+P4-C1 runtime이 `Main`, `Msg`, 중복 `morai_msgs`를 소유하거나 삭제하지 않는다.
 
 v2와 v3는 VLP-16 주기가 다르지만 네 camera의 pose, intrinsics, period와 UDP 설정은 같다.
 `cameras_v3.yaml`은 v3 원본 전체 SHA를 기록하고 unit test가 camera parity를 고정한다.
@@ -86,7 +87,7 @@ v2와 v3는 VLP-16 주기가 다르지만 네 camera의 pose, intrinsics, period
 
 Traffic-light producer 전환:
 
-1. 실제 추론 image header를 typed 결과에 복사한다.
+1. **완료:** 실제 추론 image header를 typed 결과에 복사한다.
 2. representative bag에서 String과 typed label/confidence/stale parity를 검증한다.
 3. 판제 consumer의 invalid/stale fail-safe를 확인한다.
 

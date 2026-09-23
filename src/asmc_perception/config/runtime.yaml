@@ -12,7 +12,8 @@ components:
     activation_zone: TRAFFIC_LIGHT_REQUIRED
     legacy_topics: [/traffic_light/state, /traffic_light/detail]
     canonical_topic: /perception/traffic_light/detection
-    canonical_producer_status: declared_not_published_p4b
+    implementation: asmc_perception/traffic_light_node.py
+    canonical_producer_status: active_parallel_p4c
   lidar_fusion:
     enabled_by_default: false
     workspace: nested_legacy_overlay
@@ -23,6 +24,16 @@ components:
     canonical_producer_status: declared_not_published_p4b
   recorder:
     enabled_by_default: false
+  visualization:
+    enabled_by_default: false
+    image_topics:
+      - /perception/camera/debug/mosaic/compressed
+      - /perception/bev/debug/fused/compressed
+      - /perception/bev/debug/fused_quality/compressed
+      - /perception/lane/debug/evidence_bev/compressed
+      - /perception/lane/debug/fitted_bev/compressed
+      - /perception/lane/debug/boundaries_bev/compressed
+      - /perception/lane/debug/camera_reprojection_mosaic/compressed
 
 compatibility:
   preserve_legacy_topics: true

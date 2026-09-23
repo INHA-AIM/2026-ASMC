@@ -11,12 +11,13 @@
 
   <depend>asmc_msgs</depend>
   <depend>rospy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
 
   <exec_depend>camera_semantic_perception</exec_depend>
   <exec_depend>data_collection</exec_depend>
   <exec_depend>diagnostic_msgs</exec_depend>
   <exec_depend>drivable_bev</exec_depend>
-  <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>traffic_light</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
 

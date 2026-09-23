@@ -1,10 +1,11 @@
 <launch>
-  <!-- P4-B compatibility facade.  It composes existing executables without
-       moving their source or removing any legacy topic. -->
+  <!-- P4-C1 runtime entrypoint. Camera/BEV still compose the proven legacy
+       executables; traffic-light is canonical here and legacy topics remain. -->
   <arg name="start_camera_lane" default="true"/>
   <arg name="start_traffic_light" default="false"/>
   <arg name="start_lidar_fusion" default="false"/>
   <arg name="start_recorder" default="false"/>
+  <arg name="start_visualization" default="false"/>
 
   <arg name="camera_checkpoint"
        default="$(find asmc_perception)/../../artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt"/>
@@ -24,6 +25,10 @@
   <arg name="traffic_light_checkpoint" default="$(find traffic_light)/best.pt"/>
   <arg name="traffic_light_device" default="auto"/>
   <arg name="traffic_light_image_topic" default="/cam_extra/image_jpeg/compressed"/>
+  <arg name="traffic_light_state_topic" default="/traffic_light/state"/>
+  <arg name="traffic_light_detail_topic" default="/traffic_light/detail"/>
+  <arg name="traffic_light_typed_topic"
+       default="/perception/traffic_light/detection"/>
   <arg name="traffic_light_hz" default="10.0"/>
   <arg name="traffic_light_min_detect" default="0.40"/>
   <arg name="traffic_light_stale_sec" default="1.0"/>
@@ -79,11 +84,18 @@
   </group>
 
   <group if="$(arg start_traffic_light)">
-    <!-- P4-B preserves both legacy String topics.  The typed producer is
-         connected only after source-header propagation is implemented. -->
-    <node pkg="traffic_light" type="live_infer.py" name="traffic_light_infer"
+    <!-- P4-C1 preserves both legacy String topics while publishing the exact
+         source-image header on the typed result. -->
+    <node pkg="asmc_perception" type="traffic_light_node.py" name="traffic_light_infer"
           output="screen" required="true"
-          args="--ckpt $(arg traffic_light_checkpoint) --image-topic $(arg traffic_light_image_topic) --state-topic /traffic_light/state --detail-topic /traffic_light/detail --device $(arg traffic_light_device) --hz $(arg traffic_light_hz) --min-detect $(arg traffic_light_min_detect) --stale-sec $(arg traffic_light_stale_sec)"/>
+          args="--ckpt $(arg traffic_light_checkpoint) --image-topic $(arg traffic_light_image_topic) --state-topic $(arg traffic_light_state_topic) --detail-topic $(arg traffic_light_detail_topic) --typed-topic $(arg traffic_light_typed_topic) --device $(arg traffic_light_device) --hz $(arg traffic_light_hz) --min-detect $(arg traffic_light_min_detect) --stale-sec $(arg traffic_light_stale_sec)"/>
+  </group>
+
+  <group if="$(arg start_visualization)">
+    <include file="$(find asmc_perception)/launch/visualization.launch">
+      <arg name="camera_calibration_config" value="$(arg camera_calibration_config)"/>
+      <arg name="bev_grid_config" value="$(arg bev_grid_config)"/>
+    </include>
   </group>
 
   <group if="$(arg start_lidar_fusion)">
