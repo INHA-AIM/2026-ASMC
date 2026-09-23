@@ -6,7 +6,7 @@ catkin이 아닌 **Python·gRPC·시나리오** 도구.
 |------|------|--------|
 | `aim_scenario_runner/` | 장원태 | `run.sh`, `scenario_launcher.py` |
 | `grpc_inha_univ/` | 장원태 | `run_mode.sh`, `src/api/morai_sim_client.py` |
-| `audit/` | 통합 회귀·계약 기준 | `build_runtime_baseline.py`, `validate_p1b_contract.py`, `validate_bridge_profiles.py` |
+| `audit/` | 통합 회귀·계약 기준 | `build_runtime_baseline.py`, `build_perception_runtime_baseline.py`, `validate_p1b_contract.py`, `validate_bridge_profiles.py` |
 | `bridge/` | MORAI release template에서 transport별 import 생성 | `render_morai_network_profiles.py --write\|--check` |
 
 설정: `aim_scenario_runner/config/runtime.yaml` (gRPC host)  
@@ -32,6 +32,8 @@ python3 tools/audit/validate_bridge_profiles.py
 python3 -m unittest tools/audit/test_bridge_profiles.py
 python3 -m unittest tools/audit/test_p1b_contract.py
 python3 tools/audit/check_documentation_migration.py
+python3 tools/audit/build_perception_runtime_baseline.py --check
+python3 -m unittest tools/audit/test_perception_runtime_baseline.py
 # D1 이전 commit 이력이 있는 clone에서 원문 inventory와 byte 이동까지 확인
 python3 tools/audit/check_documentation_migration.py --with-history
 # ROS Noetic workspace를 build/source한 환경에서 실행
