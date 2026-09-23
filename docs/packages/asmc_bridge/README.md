@@ -20,6 +20,7 @@ bridge 구현을 개발·검증하고 Phase 3에서 안전하게 통합하는 �
 | 단일 `asmc_bridge` | 존재하지 않음 | Phase 3 목표 |
 | `local`/`lan2lan` 계약·MORAI JSON | P3-A 완료 | live LAN gate 대기 |
 | Competition Vehicle Status decoder | P3-B 정적 계약·fixture 완료 | live capture gate 대기 |
+| stream allowlist·sensor IP 파생본 | P3-C 구현 | live LAN gate 대기 |
 
 P3-A 이후에도 현재 패키지 이름과 launch를 사용한다. 문서상의 목표 구조를 근거로 경로를 먼저
 옮기거나 기존 패키지를 삭제하지 않는다. `asmc_bridge` 승격은 bag replay, packet fixture,
@@ -67,9 +68,9 @@ authoritative map pose나 GPS/IMU fallback으로 사용하지 않는다.
 | Semantic camera 3대 | `9305/9307/9309` | `/sem_*/image_jpeg/compressed` | 개발 GT 전용 |
 | Instance LiDAR | `9311` | `/velodyne_points_instance` | 개발 GT 전용 |
 
-기본 launch는 v2와 GT 포트의 합집합을 열어 optional GT stream이 없으면 idle로 둔다. 이는 개발
-편의를 위한 현재 구현이지 본선 allowlist 보장을 의미하지 않는다. competition launch에서는
-Object/Semantic/Instance 입력을 시작하지 않는 별도 profile이 Phase 3에 필요하다.
+기본 `competition` stream profile은 Object/Semantic/Instance socket과 publisher를 생성하지 않는다.
+`development`는 이 입력을 추가하지만 local transport에서만 허용된다. CLI를 우회해
+launch를 직접 실행해도 bridge node가 `lan2lan + development`를 거부한다.
 
 GPS/IMU 원본 datagram은 기본값으로 `127.0.0.1:9401/9403`에도 복제된다. 이는 단일 MORAI UDP를
 동시에 소비하던 standalone planner 호환 경로다. 현재 consumer가 이를 요구하는지 Phase 3

@@ -2,13 +2,14 @@
   <!-- Shared packet/runtime profile for supported MORAI simulator releases. -->
   <arg name="runtime_profile" default="morai_udp"/>
   <arg name="transport_profile" default="local"/>
+  <arg name="stream_profile" default="competition"/>
   <!-- AIM06 Sensor Dest: cam1–4 / lidar / gps / imu (+ optional semantic) -->
   <!-- Dest 순서: cam1–4 → lidar → gps → imu. Host는 SIM bind — listen/publish 금지. -->
   <arg name="lidar_port"      default="9299"/>
   <arg name="lidar_topic"     default="/velodyne_points"/>
   <arg name="lidar_host_port" default="0"/>
-  <!-- v2 has no traffic on the optional GT ports; keeping them open is safe. -->
-  <arg name="enable_instance_lidar" default="true"/>
+  <!-- Privileged GT streams are explicit development-only inputs. -->
+  <arg name="enable_instance_lidar" default="$(eval arg('stream_profile') == 'development')"/>
   <arg name="instance_lidar_port" default="9311"/>
   <arg name="instance_lidar_topic" default="/velodyne_points_instance"/>
   <arg name="timestamp_mode" default="receive"/>
@@ -26,7 +27,7 @@
        authoritative map -> base_link transform. -->
   <arg name="publish_map_tf" default="false"/>
   <arg name="enable_lidar" default="true"/>
-  <arg name="enable_semantic_camera" default="true"/>
+  <arg name="enable_semantic_camera" default="$(eval arg('stream_profile') == 'development')"/>
   <arg name="lidar_model"  default="VLP-16"/>
   <arg name="lidar_rotation_rate" default="10.0"/>
   <arg name="publish_lidar_tf" default="true"/>
@@ -42,6 +43,7 @@
         name="morai_sensor_bridge" output="screen">
     <param name="runtime_profile" value="$(arg runtime_profile)"/>
     <param name="transport_profile" value="$(arg transport_profile)"/>
+    <param name="stream_profile" value="$(arg stream_profile)"/>
     <param name="enable_camera" value="true"/>
     <param name="enable_semantic_camera" value="$(arg enable_semantic_camera)"/>
     <param name="enable_lidar"  value="$(arg enable_lidar)"/>

@@ -5,8 +5,8 @@
 # Both supported MORAI releases run the same morai_udp protocol and canonical
 # ROS topics. Release selection belongs to the JSON imported in the MORAI UI,
 # not to this runtime command.
-# The bridge opens the union of ASMC_sensor_set_v2 and GT sensor ports; optional
-# GT ports simply remain idle when a regular sensor set is loaded in MORAI.
+# The default competition stream profile opens only the deployment allowlist.
+# Object/Semantic/Instance inputs require explicit local development mode.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
@@ -15,18 +15,22 @@ source "$SCRIPT_DIR/asmc_env.sh"
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/udp_bridge.sh [--transport local|lan2lan] [roslaunch overrides]
+Usage: ./scripts/udp_bridge.sh [--transport local|lan2lan] [--streams competition|development] [roslaunch overrides]
 
 Transport profiles:
   local   MORAI and Autonav bridge on one workstation via 127.0.0.1 (default)
   lan2lan MORAI PC 192.168.0.1 and Autonav PC 192.168.0.10
 
-The bridge always listens for the v2 sensors and the optional GT Semantic
-cameras/Instance LiDAR. Loading v2 leaves the optional ports idle; loading GT
-activates them automatically. The script does not change MORAI UI settings.
+Stream profiles:
+  competition  Ego/Competition/Collision + RGB/LiDAR/GPS/IMU (default)
+  development  adds Object/Semantic/Instance; local transport only
+
+The script does not change MORAI UI settings. Import the generated sensor JSON
+matching the selected transport. v3 remains a 15 Hz candidate until live gate.
 
 Examples:
   ./scripts/udp_bridge.sh
+  ./scripts/udp_bridge.sh --streams development
   ./scripts/udp_bridge.sh --transport lan2lan
   ./scripts/udp_bridge.sh timestamp_mode:=source
 EOF
@@ -34,6 +38,7 @@ EOF
 
 RUNTIME_PROFILE="morai_udp"
 TRANSPORT="${ASMC_TRANSPORT:-local}"
+STREAMS="${ASMC_STREAMS:-competition}"
 LAUNCH_ARGS=()
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -47,6 +52,18 @@ while [ "$#" -gt 0 ]; do
       ;;
     --transport=*)
       TRANSPORT="${1#*=}"
+      shift
+      ;;
+    --streams)
+      if [ "$#" -lt 2 ]; then
+        echo "[udp_bridge] ERROR: --streams requires a value." >&2
+        exit 2
+      fi
+      STREAMS="$2"
+      shift 2
+      ;;
+    --streams=*)
+      STREAMS="${1#*=}"
       shift
       ;;
     -h|--help)
@@ -64,6 +81,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     transport_profile:=*)
       echo "[udp_bridge] ERROR: use --transport instead of transport_profile." >&2
+      exit 2
+      ;;
+    stream_profile:=*)
+      echo "[udp_bridge] ERROR: use --streams instead of stream_profile." >&2
       exit 2
       ;;
     *)
@@ -88,13 +109,33 @@ case "${TRANSPORT,,}" in
     exit 2
     ;;
 esac
+case "${STREAMS,,}" in
+  competition)
+    STREAM_PROFILE="competition"
+    ;;
+  development)
+    STREAM_PROFILE="development"
+    if [ "$TRANSPORT_PROFILE" != "local" ]; then
+      echo "[udp_bridge] ERROR: development streams are local-only." >&2
+      echo "  Use --transport local or switch to --streams competition." >&2
+      exit 2
+    fi
+    ;;
+  *)
+    echo "[udp_bridge] ERROR: unknown stream profile '$STREAMS'." >&2
+    usage >&2
+    exit 2
+    ;;
+esac
 NETWORK_PRESET_26R1="config/morai/network/generated/ASMC_network_set_26r1_${TRANSPORT_PROFILE}.json"
 NETWORK_PRESET_COMP="config/morai/network/generated/ASMC_network_set_molitcomp03_${TRANSPORT_PROFILE}.json"
+SENSOR_PRESET_V2="config/morai/sensors/generated/ASMC_sensor_set_v2_${TRANSPORT_PROFILE}.json"
+SENSOR_PRESET_V3="config/morai/sensors/generated/ASMC_sensor_set_v3_${TRANSPORT_PROFILE}.json"
 
 # Parse and shift our CLI arguments before sourcing catkin setup files. Catkin
 # setup forwards the caller's positional parameters to _setup_util.py.
 cd "$ASMC_WS_ROOT"
-for preset in "$NETWORK_PRESET_26R1" "$NETWORK_PRESET_COMP"; do
+for preset in "$NETWORK_PRESET_26R1" "$NETWORK_PRESET_COMP" "$SENSOR_PRESET_V2" "$SENSOR_PRESET_V3"; do
   if [ ! -f "$ASMC_WS_ROOT/$preset" ]; then
     echo "[udp_bridge] ERROR: generated network preset is missing: $preset" >&2
     echo "  python3 tools/bridge/render_morai_network_profiles.py --write" >&2
@@ -140,19 +181,18 @@ echo "  ROS_MASTER_URI : $ROS_MASTER_URI"
 echo "  Launch         : integration_launch/morai_udp_bridges.launch"
 echo "  Runtime        : ${RUNTIME_PROFILE} (26r1 and competition shared)"
 echo "  Transport      : ${TRANSPORT_PROFILE}"
+echo "  Streams        : ${STREAM_PROFILE}"
 echo "  MORAI preset   : import ONE file matching the installed release"
 echo "                   26r1       -> ${NETWORK_PRESET_26R1}"
 echo "                   competition -> ${NETWORK_PRESET_COMP}"
+echo "  Sensor preset  : v2 -> ${SENSOR_PRESET_V2}"
+echo "                   v3 -> ${SENSOR_PRESET_V3} (15 Hz candidate)"
 CMD_IP="${MORAI_CMD_IP:-$TRANSPORT_CMD_IP}"
 # If caller already passed cmd_ip:=..., do not override.
 has_cmd_ip=0
-has_semantic=0
-has_instance=0
 for a in "${LAUNCH_ARGS[@]}"; do
   case "$a" in
     cmd_ip:=*) has_cmd_ip=1 ;;
-    enable_semantic_camera:=*) has_semantic=1 ;;
-    enable_instance_lidar:=*) has_instance=1 ;;
   esac
 done
 EXTRA=()
@@ -161,23 +201,25 @@ if [ "$has_cmd_ip" -eq 0 ]; then
 fi
 EXTRA+=( "runtime_profile:=${RUNTIME_PROFILE}" )
 EXTRA+=( "transport_profile:=${TRANSPORT_PROFILE}" )
-if [ "$has_semantic" -eq 0 ]; then
-  EXTRA+=( "enable_semantic_camera:=true" )
-fi
-if [ "$has_instance" -eq 0 ]; then
-  EXTRA+=( "enable_instance_lidar:=true" )
-fi
+EXTRA+=( "stream_profile:=${STREAM_PROFILE}" )
 echo "  cmd_ip         : ${CMD_IP} (Ctrl → Windows MORAI Host PORT)"
 echo "  Ctrl default   : 9093/9094, mode 2"
 echo "  Ego status     : 9088/9099 (both MORAI releases normalized)"
 echo "  Competition    : 7603/7502 -> /Competition_topic"
-echo "  Sensor ports   : v2 + optional GT union (automatic)"
+echo "  Sensor ports   : competition allowlist 9291..9303"
+if [ "$STREAM_PROFILE" = "development" ]; then
+  echo "                   + Object/Semantic/Instance development inputs"
+fi
 echo "  Timestamp      : receive default; GT pairing: timestamp_mode:=source"
 echo "  Verify         : rostopic hz /Ego_topic"
 echo "                  rostopic hz /Competition_topic"
 echo "                  rostopic hz /image_jpeg/compressed"
-echo "                  rostopic hz /sem_front/image_jpeg/compressed  # GT only"
-echo "                  rostopic hz /velodyne_points_instance         # GT only"
+if [ "$STREAM_PROFILE" = "development" ]; then
+  echo "                  rostopic hz /sem_front/image_jpeg/compressed"
+  echo "                  rostopic hz /velodyne_points_instance"
+else
+  echo "                  python3 scripts/verify_morai_topics.py --profile competition"
+fi
 echo "=========================================="
 echo ""
 

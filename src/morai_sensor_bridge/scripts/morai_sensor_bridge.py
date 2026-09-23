@@ -112,6 +112,17 @@ class SensorBridge(object):
         self.frame_gps = p("~gps_frame", "gps")
         self.runtime_profile = str(p("~runtime_profile", "morai_udp"))
         self.transport_profile = str(p("~transport_profile", "local"))
+        self.stream_profile = str(p("~stream_profile", "competition"))
+        if self.stream_profile not in ("competition", "development"):
+            raise ValueError("stream_profile must be competition or development")
+        if self.transport_profile == "lan2lan" and self.stream_profile != "competition":
+            raise ValueError("lan2lan transport only permits the competition stream profile")
+        if self.stream_profile == "competition" and (
+                bool(p("~enable_semantic_camera", False))
+                or bool(p("~enable_instance_lidar", False))):
+            raise ValueError(
+                "competition stream profile forbids Semantic and Instance sensors"
+            )
         self.timestamp_mode = str(p("~timestamp_mode", "receive")).strip().lower()
         if self.timestamp_mode not in ("receive", "source"):
             raise ValueError("timestamp_mode must be receive or source")
@@ -158,9 +169,8 @@ class SensorBridge(object):
         self.processing_ms = {}
         self.assembly_ms = {}
         self.last_received_monotonic = {}
-        # v2 does not transmit these GT-only streams. Their idle sockets are
-        # expected in the union-port bridge; verify-gt promotes them to
-        # required inputs when a GT run is requested.
+        # Only the explicit local development profile starts GT-only streams;
+        # verify-gt then promotes them to required inputs for that run.
         self.optional_streams = set()
         self._last_source_ns = {}
         self._started_monotonic = time.monotonic()
@@ -808,6 +818,7 @@ class SensorBridge(object):
             status.values = [
                 KeyValue("runtime_profile", self.runtime_profile),
                 KeyValue("transport_profile", self.transport_profile),
+                KeyValue("stream_profile", self.stream_profile),
                 KeyValue("timestamp_mode", self.timestamp_mode),
                 KeyValue("optional_stream", str(name in self.optional_streams).lower()),
                 KeyValue("messages", str(self.stats[name])),

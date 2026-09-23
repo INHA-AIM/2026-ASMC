@@ -13,7 +13,8 @@
 ## 1. 현재값과 남은 승인 항목
 
 P3-A에서 공통 runtime과 profile 계약, Ctrl 포트를 적용했고 P3-B에서
-Competition Vehicle Status의 정적 decoder·fixture를 추가했다. 파일이 존재하는 것과 현장
+Competition Vehicle Status decoder, P3-C에서 stream allowlist와 센서 transport 파생본을
+추가했다. 파일이 존재하는 것과 현장
 live acceptance가 끝난 것을 구분한다.
 
 | 항목 | 현재 적용값 | 남은 gate |
@@ -24,12 +25,13 @@ live acceptance가 끝난 것을 구분한다.
 | 차량 상태 | Ego `9088/9099`, Competition `7603/7502` 별도 topic | Competition live capture·field 교차 검증 |
 | CollisionData | destination `9092` | `9091/9092` pair |
 | ObjectInfo | `7505`, 임시 개발 oracle | competition profile에서 제거 |
-| 센서 | `9290~9303` | 같은 포트, IP만 profile별 변경 |
+| 센서 | v2/v3 local·lan2lan 파생본, `9290~9303` | 실제 LAN packet rate |
+| privileged stream | 기본 차단, local `development`에서만 활성 | 본선 launch topic absence 재확인 |
 | VLP16 | v2 10 Hz 회귀 기준, v3 UI 저장본 15 Hz | 30초 실측 14~16 Hz와 tracking 비교 |
 
 정본은 [`bridge_profiles_v1.json`](../../config/bridge/bridge_profiles_v1.json)이다. generated
-network JSON·decoder·synthetic UDP publish 계약은 검증하지만 Competition live capture,
-privileged stream 차단과 실제 LAN 검증은 아직 남았다. v3도 파일 기준 15 Hz 후보이지
+network/sensor JSON·decoder·synthetic UDP publish·allowlist 계약은 검증하지만
+Competition live capture와 실제 LAN 검증은 아직 남았다. v3도 파일 기준 15 Hz 후보이지
 배포 승인이 아니다.
 
 ## 2. 런타임 경계
@@ -50,6 +52,7 @@ MORAI <--UDP-- morai_udp_bridge <--ROS-- /ctrl_cmd
   단일 `asmc_bridge`는 Phase 3 parity 이후에만 교체한다.
 - 두 simulator release는 `morai_udp` runtime 하나를 쓴다. release는 MORAI UI에 import할 JSON으로,
   transport는 `udp_bridge.sh`의 `local`/`lan2lan`으로 선택한다.
+- stream policy는 `competition`(기본)과 `development`(로컬 oracle)로 나뉘며 release와 독립적이다.
 
 ## 3. Docker 기동
 
@@ -136,12 +139,17 @@ source devel/setup.bash
 ./scripts/udp_bridge.sh --transport lan2lan
 ```
 
+기본 명령은 `local + competition`이다. Object/Semantic/Instance가 필요한 개발 실험만
+`./scripts/udp_bridge.sh --streams development`로 실행한다. development와 lan2lan을 결합하면
+스크립트와 두 bridge node가 모두 기동을 거부한다.
+
 다른 터미널에서:
 
 ```bash
 ./scripts/docker_ros_up.sh verify 8
 
 rostopic hz /Ego_topic
+rostopic hz /Competition_topic
 rostopic hz /image_jpeg/compressed
 rostopic hz /velodyne_points
 rostopic hz /gps
@@ -149,8 +157,9 @@ rostopic hz /imu
 rostopic echo /Ego_topic -n1
 ```
 
-`verify`는 Ego, RGB 4대, LiDAR, GPS, IMU의 count/rate를 확인한다. GT 실험 재현에서만
-`verify-gt 20`을 사용한다. v2에서 GT-only stream이 idle인 것은 오류가 아니다.
+`verify`는 Ego/Competition, RGB 4대, LiDAR, GPS, IMU의 count/rate와 privileged publisher
+부재를 확인한다. GT 실험 재현에서만 `--streams development`와 `verify-gt 20`을
+함께 사용한다.
 
 설정 Hz보다 낮은 관측값을 바로 packet loss로 단정하지 않는다. sequence가 없는 stream은
 SIM 송신 cadence, Windows ingress, UDP, bridge와 ROS scheduling을 단일 rate만으로 분리할 수

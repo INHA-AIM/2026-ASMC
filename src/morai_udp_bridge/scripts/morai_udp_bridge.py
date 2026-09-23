@@ -210,19 +210,39 @@ class MoraiUdpBridge(object):
         self.ego_vel_ms = bool(p("~ego_velocity_in_ms", True))
         self.runtime_profile = str(p("~runtime_profile", "morai_udp"))
         self.transport_profile = str(p("~transport_profile", "local"))
+        self.stream_profile = str(p("~stream_profile", "competition"))
+        if self.stream_profile not in ("competition", "development"):
+            raise ValueError("stream_profile must be competition or development")
+        if self.transport_profile == "lan2lan" and self.stream_profile != "competition":
+            raise ValueError("lan2lan transport only permits the competition stream profile")
+        self.enabled_inputs = {
+            "ego": bool(p("~enable_ego_status", True)),
+            "competition": bool(p("~enable_competition_status", True)),
+            "obj": bool(p("~enable_object", False)),
+            "col": bool(p("~enable_collision", True)),
+        }
+        if self.stream_profile == "competition" and self.enabled_inputs["obj"]:
+            raise ValueError("competition stream profile forbids ObjectInfo")
         self.timestamp_mode = str(p("~timestamp_mode", "receive")).strip().lower()
         if self.timestamp_mode not in ("receive", "source"):
             raise ValueError("timestamp_mode must be receive or source")
 
-        self.pub_ego = rospy.Publisher("/Ego_topic", EgoVehicleStatus,
-                                       queue_size=1)
-        self.pub_competition = rospy.Publisher(
-            "/Competition_topic", EgoVehicleStatus, queue_size=1
+        self.pub_ego = (
+            rospy.Publisher("/Ego_topic", EgoVehicleStatus, queue_size=1)
+            if self.enabled_inputs["ego"] else None
         )
-        self.pub_obj = rospy.Publisher("/Object_topic", ObjectStatusList,
-                                       queue_size=1)
-        self.pub_col = rospy.Publisher("/CollisionData", CollisionData,
-                                       queue_size=1)
+        self.pub_competition = (
+            rospy.Publisher("/Competition_topic", EgoVehicleStatus, queue_size=1)
+            if self.enabled_inputs["competition"] else None
+        )
+        self.pub_obj = (
+            rospy.Publisher("/Object_topic", ObjectStatusList, queue_size=1)
+            if self.enabled_inputs["obj"] else None
+        )
+        self.pub_col = (
+            rospy.Publisher("/CollisionData", CollisionData, queue_size=1)
+            if self.enabled_inputs["col"] else None
+        )
         self.pub_diagnostics = rospy.Publisher(
             "/morai_udp_bridge/diagnostics", DiagnosticArray, queue_size=1
         )
@@ -232,9 +252,10 @@ class MoraiUdpBridge(object):
 
         self.last_link_id = ""
         self.last_competition_link_id = ""
-        self.stats = {
-            "ego": 0, "competition": 0, "obj": 0, "col": 0, "cmd": 0
-        }
+        self.stats = {"cmd": 0}
+        self.stats.update(
+            (name, 0) for name, enabled in self.enabled_inputs.items() if enabled
+        )
         # Rolling callback wall time. UDP inputs cover validated datagram
         # parse->ROS publish enqueue; cmd covers ROS callback->UDP sendto.
         self.processing_ms = {
@@ -242,23 +263,27 @@ class MoraiUdpBridge(object):
         }
         self.last_activity_monotonic = dict((name, None) for name in self.stats)
         self.timestamp_fallbacks = {
-            "ego": 0, "competition": 0, "obj": 0, "col": 0
+            name: 0 for name in self.stats if name != "cmd"
         }
-        self.timestamp_regressions = {
-            "ego": 0, "competition": 0, "obj": 0, "col": 0
-        }
+        self.timestamp_regressions = dict(self.timestamp_fallbacks)
         self._last_source_ns = {}
         self._started_monotonic = time.monotonic()
         self._last_report_monotonic = self._started_monotonic
         self._last_report_stats = dict(self.stats)
         self.warned = set()
 
-        for port, kind, hdr, cb in (
-                (self.ego_port, "ego", EGO_HDR, self.handle_ego),
-                (self.competition_port, "competition", EGO_HDR,
-                 self.handle_competition),
-                (self.obj_port, "obj", OBJ_HDR, self.handle_obj),
-                (self.col_port, "col", COL_HDR, self.handle_col)):
+        listeners = (
+            (self.ego_port, "ego", EGO_HDR, self.handle_ego),
+            (self.competition_port, "competition", EGO_HDR,
+             self.handle_competition),
+            (self.obj_port, "obj", OBJ_HDR, self.handle_obj),
+            (self.col_port, "col", COL_HDR, self.handle_col),
+        )
+        for port, kind, hdr, cb in listeners:
+            if not self.enabled_inputs[kind]:
+                rospy.loginfo("disabled %-11s by stream profile %s",
+                              kind, self.stream_profile)
+                continue
             t = threading.Thread(target=self.rx_loop,
                                  args=(port, kind, hdr, cb))
             t.daemon = True
@@ -508,30 +533,31 @@ class MoraiUdpBridge(object):
             )
             for name, count in self.stats.items()
         )
+        rx_summary = " ".join(
+            "{}={}({:.1f}Hz)".format(
+                name, self.stats[name], interval_rates[name]
+            )
+            for name in ("ego", "competition", "obj", "col")
+            if name in self.stats
+        )
         rospy.loginfo(
-            "rx ego=%d(%.1fHz) competition=%d(%.1fHz) "
-            "obj=%d(%.1fHz) col=%d(%.1fHz) | "
-            "tx cmd=%d(%.1fHz) | links ego=%s competition=%s",
-            self.stats["ego"], interval_rates["ego"],
-            self.stats["competition"], interval_rates["competition"],
-            self.stats["obj"], interval_rates["obj"],
-            self.stats["col"], interval_rates["col"],
+            "rx %s | tx cmd=%d(%.1fHz) | links ego=%s competition=%s",
+            rx_summary,
             self.stats["cmd"], interval_rates["cmd"],
-            self.last_link_id or "-",
-            self.last_competition_link_id or "-",
+            self.last_link_id or "-", self.last_competition_link_id or "-",
         )
         self._last_report_stats = dict(self.stats)
         self._last_report_monotonic = now
-        if self.stats["ego"] == 0:
+        if self.stats.get("ego") == 0:
             rospy.logwarn("Ego 수신 0건. MORAI Destination PORT 와 "
                           "~ego_port 가 같은지 확인하세요.")
-        if self.stats["competition"] == 0:
+        if self.stats.get("competition") == 0:
             rospy.logwarn("Competition status 수신 0건. MORAI Destination PORT 와 "
                           "~competition_port 가 같은지 확인하세요.")
         message = DiagnosticArray()
         message.header.stamp = rospy.Time.now()
         elapsed = max(1e-6, now - self._started_monotonic)
-        for kind in ("ego", "competition", "obj", "col", "cmd"):
+        for kind in sorted(self.stats):
             metrics = latency_summary(self.processing_ms[kind])
             last_activity = self.last_activity_monotonic[kind]
             last_age_sec = (
@@ -553,6 +579,7 @@ class MoraiUdpBridge(object):
             status.values = [
                 KeyValue("runtime_profile", self.runtime_profile),
                 KeyValue("transport_profile", self.transport_profile),
+                KeyValue("stream_profile", self.stream_profile),
                 KeyValue("timestamp_mode", self.timestamp_mode),
                 KeyValue(
                     "direction",

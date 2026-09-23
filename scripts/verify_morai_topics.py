@@ -11,8 +11,9 @@ import time
 from pathlib import Path
 
 
-DEFAULT_REQUIRED_TOPICS = (
+COMPETITION_REQUIRED_TOPICS = (
     "/Ego_topic",
+    "/Competition_topic",
     "/image_jpeg/compressed",
     "/cam_left/image_jpeg/compressed",
     "/cam_right/image_jpeg/compressed",
@@ -22,7 +23,15 @@ DEFAULT_REQUIRED_TOPICS = (
     "/imu",
 )
 
-GT_REQUIRED_TOPICS = DEFAULT_REQUIRED_TOPICS + (
+DEVELOPMENT_REQUIRED_TOPICS = COMPETITION_REQUIRED_TOPICS + (
+    "/Object_topic",
+    "/sem_front/image_jpeg/compressed",
+    "/sem_left/image_jpeg/compressed",
+    "/sem_right/image_jpeg/compressed",
+    "/velodyne_points_instance",
+)
+
+COMPETITION_FORBIDDEN_TOPICS = (
     "/Object_topic",
     "/sem_front/image_jpeg/compressed",
     "/sem_left/image_jpeg/compressed",
@@ -32,6 +41,7 @@ GT_REQUIRED_TOPICS = DEFAULT_REQUIRED_TOPICS + (
 
 NOMINAL_RATES_HZ = {
     "/Ego_topic": 50.0,
+    "/Competition_topic": 50.0,
     "/Object_topic": 50.0,
     "/image_jpeg/compressed": 20.0,
     "/cam_left/image_jpeg/compressed": 20.0,
@@ -52,8 +62,11 @@ def parse_args():
     parser.add_argument("--duration", type=float, default=8.0)
     parser.add_argument("--min-messages", type=int, default=2)
     parser.add_argument(
-        "--profile", choices=("runtime", "gt"), default="runtime",
-        help="runtime checks v2 inputs; gt also checks privileged streaming topics",
+        "--profile",
+        choices=("competition", "development", "runtime", "gt"),
+        default="competition",
+        help=("competition checks the deployment allowlist and absence of privileged "
+              "publishers; development adds Object/Semantic/Instance. runtime/gt are aliases"),
     )
     parser.add_argument(
         "--required-topic",
@@ -144,7 +157,14 @@ def main():
             "ROS message packages are required; run this inside asmc-ros-noetic"
         ) from exc
 
-    defaults = GT_REQUIRED_TOPICS if args.profile == "gt" else DEFAULT_REQUIRED_TOPICS
+    profile = {"runtime": "competition", "gt": "development"}.get(
+        args.profile, args.profile
+    )
+    defaults = (
+        DEVELOPMENT_REQUIRED_TOPICS
+        if profile == "development"
+        else COMPETITION_REQUIRED_TOPICS
+    )
     topics = tuple(args.required_topics or defaults)
     lock = threading.Lock()
     samples = {topic: [] for topic in topics}
@@ -188,6 +208,7 @@ def main():
     subscribers = []
     typed_messages = {
         "/Ego_topic": EgoVehicleStatus,
+        "/Competition_topic": EgoVehicleStatus,
         "/Object_topic": ObjectStatusList,
         "/gps": GPSMessage,
         "/imu": Imu,
@@ -221,6 +242,7 @@ def main():
 
     finished = time.monotonic()
     report = {
+        "stream_profile": profile,
         "duration_seconds": round(finished - started, 6),
         "min_messages": args.min_messages,
         "topics": {},
@@ -228,6 +250,22 @@ def main():
     failures = []
     with lock:
         snapshot = {topic: list(values) for topic, values in samples.items()}
+
+    published_topics = dict(rospy.get_published_topics())
+    forbidden_publishers = (
+        sorted(
+            topic for topic in COMPETITION_FORBIDDEN_TOPICS
+            if topic in published_topics
+        )
+        if profile == "competition" else []
+    )
+    report["forbidden_topic_publishers"] = forbidden_publishers
+    if forbidden_publishers:
+        failures.append("privileged:" + ",".join(forbidden_publishers))
+        print(
+            "[FAIL] competition profile exposes privileged publishers: "
+            + ", ".join(forbidden_publishers)
+        )
 
     print("TOPIC                                             COUNT   RATE(Hz)   STATUS")
     for topic in topics:
@@ -287,7 +325,7 @@ def main():
             "subscriber age in source timestamp mode"
         ),
     }
-    if args.profile == "gt":
+    if profile == "development":
         schema = pointcloud_fields.get("/velodyne_points_instance", {})
         schema_ok = schema.get("instance_id") == 6 and "intensity" not in schema
         report["instance_lidar_schema"] = {

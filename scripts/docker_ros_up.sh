@@ -176,10 +176,10 @@ case "$cmd" in
     check_udp_loopback "${2:-39199}"
     ;;
   verify)
-    verify_topics "${2:-8}" runtime
+    verify_topics "${2:-8}" competition
     ;;
   verify-gt)
-    verify_topics "${2:-8}" gt
+    verify_topics "${2:-8}" development
     ;;
   down)
     "${COMPOSE[@]}" down

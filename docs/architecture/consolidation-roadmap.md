@@ -434,8 +434,9 @@ semantic 차이는 자유 카메라 4번 pitch가 현재 v2 `328°`, 제출본 `
 
 P3-A에서 개발 Ctrl도 `9093/9094`로 맞추고 `local`과 `lan2lan` network JSON을
 release별 template에서 생성하도록 했다. 두 transport는 포트·mode가 같고 IP만 다르다.
-Competition Vehicle Status의 live capture 승인, privileged stream allowlist와 실제 두 PC
-검증은 아직 남았다. 정적 decoder·fixture·ROS publish 계약은 P3-B에서 적용했다.
+Competition Vehicle Status의 live capture 승인과 실제 두 PC 검증은 아직 남았다.
+정적 decoder·fixture·ROS publish 계약은 P3-B, privileged stream allowlist와 v2/v3
+sensor local/lan2lan IP 파생본은 P3-C에서 적용했다.
 
 ### 7.2 배포 원칙
 

@@ -11,9 +11,11 @@
   <!-- One runtime protocol for 26.R1.H3 and 25.S4.MolitComp03. -->
   <arg name="runtime_profile" default="morai_udp"/>
   <arg name="transport_profile" default="local"/>
-  <!-- Open the v2+GT port union. Optional GT sockets stay idle with v2. -->
-  <arg name="enable_semantic_camera" default="true"/>
-  <arg name="enable_instance_lidar" default="true"/>
+  <!-- competition is fail-closed; development explicitly adds Object/GT. -->
+  <arg name="stream_profile" default="competition"/>
+  <arg name="enable_object" default="$(eval arg('stream_profile') == 'development')"/>
+  <arg name="enable_semantic_camera" default="$(eval arg('stream_profile') == 'development')"/>
+  <arg name="enable_instance_lidar" default="$(eval arg('stream_profile') == 'development')"/>
   <arg name="instance_lidar_port" default="9311"/>
   <arg name="instance_lidar_topic" default="/velodyne_points_instance"/>
   <arg name="timestamp_mode" default="receive"/>
@@ -25,6 +27,8 @@
   <include file="$(find morai_udp_bridge)/launch/morai_udp_bridge.launch">
     <arg name="runtime_profile" value="$(arg runtime_profile)"/>
     <arg name="transport_profile" value="$(arg transport_profile)"/>
+    <arg name="stream_profile" value="$(arg stream_profile)"/>
+    <arg name="enable_object" value="$(arg enable_object)"/>
     <arg name="cmd_ip" value="$(arg cmd_ip)"/>
     <arg name="cmd_port" value="$(arg cmd_port)"/>
     <arg name="competition_port" value="$(arg competition_port)"/>
@@ -33,6 +37,7 @@
   <include file="$(find morai_sensor_bridge)/launch/morai_sensor_bridge.launch">
     <arg name="runtime_profile" value="$(arg runtime_profile)"/>
     <arg name="transport_profile" value="$(arg transport_profile)"/>
+    <arg name="stream_profile" value="$(arg stream_profile)"/>
     <arg name="enable_semantic_camera" value="$(arg enable_semantic_camera)"/>
     <arg name="enable_instance_lidar" value="$(arg enable_instance_lidar)"/>
     <arg name="instance_lidar_port" value="$(arg instance_lidar_port)"/>

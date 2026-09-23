@@ -16,12 +16,13 @@ Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127
 
 1. Docker Desktop + WSL Integration ON → `./scripts/docker_ros_up.sh up`
 2. MORAI **Host/Dest IP 전부 `127.0.0.1`**
-3. **센서셋** `ASMC_sensor_set_v2.json` Import (또는 15 Hz 시험용 v3, 개발 GT용 GT)
+3. **센서셋** `sensors/generated/ASMC_sensor_set_v2_local.json` Import
+   (또는 15 Hz 시험용 `...v3_local.json`)
 4. **Network Settings**: `network/generated/ASMC_network_set_26r1_local.json` Import
    (현재 bridge 호환 Ego **9099** · Object **7505** · Collision **9092** 포함)
 5. **Cmd Control**: 타입 **Ego Ctrl Cmd**, Host/Dest **9093 / 9094**, mode **2**
 6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh`
-7. 확인: `rostopic hz /Ego_topic` · `/velodyne_points` · `/image_jpeg/compressed`
+7. 확인: `rostopic hz /Ego_topic` · `/Competition_topic` · `/velodyne_points`
 
 **LiDAR만 0이고 cam/gps/imu는 될 때:** `docker_ros_up.sh status`의 host mode, MORAI
 Connect/Dest 9299와 다른 9299 listener를 순서대로 확인한다. 개별 Docker port forwarding은
@@ -84,11 +85,11 @@ Mode:     2
 
 ## GT Semantic Camera (ASMC_sensor_set_GT.json)
 
-브릿지는 v2·GT 포트 합집합을 항상 연다. v2에서는 아래 포트가 대기하고,
-GT 센서셋을 로드하면 별도 옵션 없이 자동 수신한다.
+기본 competition profile은 아래 포트나 publisher를 열지 않는다. GT 센서셋은
+local 개발 profile을 명시해야 수신한다.
 
 ```bash
-./scripts/udp_bridge.sh
+./scripts/udp_bridge.sh --streams development
 ```
 
 | 센서 | Host / Dest | ROS 토픽 |
@@ -101,11 +102,10 @@ Camera-10은 예전 **9090**이 아님 (rosbridge와 충돌).
 
 ## GT Instance LiDAR (ASMC_sensor_set_GT.json)
 
-브릿지는 ID 5와 선택 GT ID 11 포트를 항상 독립적으로 연다.
-v2에서 ID 11은 대기하고 GT에서 자동 수신한다. 정합용 source stamp가 필요하면:
+ID 11은 local development profile에서만 독립 수신한다. 정합용 source stamp가 필요하면:
 
 ```bash
-./scripts/udp_bridge.sh timestamp_mode:=source
+./scripts/udp_bridge.sh --streams development timestamp_mode:=source
 ```
 
 | 센서 | Host / Dest | ROS 토픽 | field |

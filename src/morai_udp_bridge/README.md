@@ -16,6 +16,8 @@ Ctrl target `127.0.0.1:9093`이다.
 `ObjectInfo`는 개발 oracle이며 본선 profile에 포함하면 안 된다. 진단의 `runtime_profile`은
 `morai_udp` 하나다. release별 MORAI import와 transport IP는
 [`config/morai`](../../config/morai/)에서 분리한다.
+기본 `stream_profile=competition`은 Object socket과 `/Object_topic` publisher를 생성하지 않는다.
+Object oracle은 local에서 `--streams development`로만 활성화한다.
 
 입출력:
 

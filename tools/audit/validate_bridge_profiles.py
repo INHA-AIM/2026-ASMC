@@ -19,6 +19,11 @@ from render_morai_network_profiles import (  # noqa: E402
     check_all,
     load_contract,
 )
+from render_morai_sensor_profiles import (  # noqa: E402
+    SensorProfileError,
+    check_all as check_all_sensor_profiles,
+    iter_udp_configs,
+)
 
 
 class ContractError(RuntimeError):
@@ -125,8 +130,38 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "both simulator releases must be covered",
     )
     _require(
-        contract["defaults"] == {"transport_profile": "local", "sensor_set": "v2"},
-        "runtime defaults must remain release-independent local + v2",
+        contract["defaults"]
+        == {
+            "transport_profile": "local",
+            "stream_profile": "competition",
+            "sensor_set": "v2",
+        },
+        "runtime defaults must remain release-independent local + competition + v2",
+    )
+    stream_profiles = contract["stream_profiles"]
+    _require(
+        set(stream_profiles) == {"competition", "development"},
+        "stream profiles must be competition and development",
+    )
+    _require(
+        stream_profiles["competition"]["deployment_safe"],
+        "competition stream profile must be deployment-safe",
+    )
+    _require(
+        stream_profiles["development"]["allowed_transports"] == ["local"],
+        "development streams must remain local-only",
+    )
+    expected_forbidden_topics = {
+        "/Object_topic",
+        "/sem_front/image_jpeg/compressed",
+        "/sem_left/image_jpeg/compressed",
+        "/sem_right/image_jpeg/compressed",
+        "/velodyne_points_instance",
+    }
+    _require(
+        set(stream_profiles["competition"]["forbidden_topics"])
+        == expected_forbidden_topics,
+        "competition privileged-topic denylist changed",
     )
     implementation = contract["implementation_baseline"]
     _require(
@@ -151,6 +186,10 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     _require(
         implementation["subscribed_topics"]["/ctrl_cmd"] == "morai_msgs/CtrlCmd",
         "Ctrl topic contract changed",
+    )
+    _require(
+        set(implementation["optional_development_topics"]) == expected_forbidden_topics,
+        "development-only topic inventory changed",
     )
 
     ctrl = contract["channels"]["ego_ctrl_cmd"]
@@ -268,6 +307,10 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         check_all(contract)
     except ProfileError as exc:
         raise ContractError(str(exc)) from exc
+    try:
+        check_all_sensor_profiles(contract)
+    except SensorProfileError as exc:
+        raise ContractError(str(exc)) from exc
 
     integration = REPO_ROOT / "src/integration_launch/launch/morai_udp_bridges.launch"
     udp_launch = REPO_ROOT / "src/morai_udp_bridge/launch/morai_udp_bridge.launch"
@@ -278,6 +321,24 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     _require(_launch_arg(integration, "transport_profile") == "local", "integration transport default changed")
     _require(_launch_arg(udp_launch, "transport_profile") == "local", "UDP transport default changed")
     _require(_launch_arg(sensor_launch, "transport_profile") == "local", "sensor transport default changed")
+    _require(_launch_arg(integration, "stream_profile") == "competition", "integration stream default changed")
+    _require(_launch_arg(udp_launch, "stream_profile") == "competition", "UDP stream default changed")
+    _require(_launch_arg(sensor_launch, "stream_profile") == "competition", "sensor stream default changed")
+    expected_development_eval = "$(eval arg('stream_profile') == 'development')"
+    _require(
+        _launch_arg(integration, "enable_object") == expected_development_eval,
+        "integration Object allowlist is not stream-profile controlled",
+    )
+    _require(
+        _launch_arg(integration, "enable_semantic_camera")
+        == expected_development_eval,
+        "integration Semantic allowlist is not stream-profile controlled",
+    )
+    _require(
+        _launch_arg(integration, "enable_instance_lidar")
+        == expected_development_eval,
+        "integration Instance allowlist is not stream-profile controlled",
+    )
     _require(_launch_arg(integration, "cmd_port") == "9093", "integration Ctrl default is not 9093")
     _require(_launch_arg(udp_launch, "cmd_port") == "9093", "UDP Ctrl default is not 9093")
     _require(_launch_arg(udp_launch, "ego_port") == "9099", "Ego status bind port is not 9099")
@@ -291,12 +352,17 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     )
     entrypoint_text = (REPO_ROOT / "scripts/udp_bridge.sh").read_text(encoding="utf-8")
     _require(
-        "Usage: ./scripts/udp_bridge.sh [--transport local|lan2lan]" in entrypoint_text,
-        "bridge CLI must expose transport without a simulator selector",
+        "[--transport local|lan2lan] [--streams competition|development]"
+        in entrypoint_text,
+        "bridge CLI must expose transport and streams without a simulator selector",
     )
     _require(
         'SIMULATOR="${ASMC_SIMULATOR' not in entrypoint_text,
         "bridge CLI must not select a simulator release",
+    )
+    _require(
+        "development streams are local-only" in entrypoint_text,
+        "bridge CLI must reject LAN2LAN privileged streams",
     )
 
     summaries = {
@@ -308,6 +374,40 @@ def validate(contract_path: Path) -> Dict[str, Any]:
             _sha256(REPO_ROOT / spec["path"]) == spec["sha256"],
             f"{name} sensor set SHA changed",
         )
+        for transport, generated_rel in spec.get("transport_generated", {}).items():
+            generated_path = REPO_ROOT / generated_rel
+            _require(
+                _sha256(generated_path)
+                == spec["transport_generated_sha256"][transport],
+                f"{name}/{transport} generated sensor SHA changed",
+            )
+            document = json.loads(generated_path.read_text(encoding="utf-8"))
+            expected_ips = (
+                contract["transport_profiles"][transport]["morai_ip"],
+                contract["transport_profiles"][transport]["autonav_ip"],
+            )
+            udp_configs = list(iter_udp_configs(document))
+            _require(
+                len(udp_configs) == spec["expected_udp_channels"],
+                f"{name}/{transport} sensor UDP channel count changed",
+            )
+            _require(
+                all(
+                    (udp.get("hostIP"), udp.get("destinationIP")) == expected_ips
+                    for udp in udp_configs
+                ),
+                f"{name}/{transport} sensor IP mapping changed",
+            )
+    for name in ("v2", "v3"):
+        _require(
+            set(contract["sensor_sets"][name]["transport_generated"])
+            == {"local", "lan2lan"},
+            f"{name} must provide local and LAN2LAN sensor imports",
+        )
+    _require(
+        "transport_generated" not in contract["sensor_sets"]["GT"],
+        "GT sensor set must not have a deployment transport derivative",
+    )
     for name, spec in contract["legacy_network_artifacts"].items():
         _require(
             _sha256(REPO_ROOT / spec["path"]) == spec["sha256"],
@@ -331,6 +431,11 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "network_profiles": sum(
             len(spec["generated"]) for spec in contract["network_templates"].values()
         ),
+        "sensor_transport_profiles": sum(
+            len(spec.get("transport_generated", {}))
+            for spec in contract["sensor_sets"].values()
+        ),
+        "default_stream_profile": contract["defaults"]["stream_profile"],
         "packages": implementation["packages"],
         "published_topic_count": len(implementation["published_topics"]),
         "ctrl": "9093/9094 mode 2",
@@ -344,7 +449,7 @@ def main() -> None:
     contract_path = REPO_ROOT / "config/bridge/bridge_profiles_v1.json"
     result = validate(contract_path)
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
-    print("P3-B bridge profile contract: PASS")
+    print("P3-C bridge profile contract: PASS")
 
 
 if __name__ == "__main__":

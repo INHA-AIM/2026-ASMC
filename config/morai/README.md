@@ -14,11 +14,14 @@
 
 ```bash
 ./scripts/udp_bridge.sh
+./scripts/udp_bridge.sh --streams development
 ./scripts/udp_bridge.sh --transport lan2lan
 ```
 
-인자가 없는 첫 명령은 `runtime=morai_udp`, `transport=local`, Ctrl target
-`127.0.0.1:9093`으로 실행된다. sensor set이나 MORAI release를 선택하지는 않는다. sensor set과
+인자가 없는 첫 명령은 `runtime=morai_udp`, `transport=local`, `streams=competition`,
+Ctrl target `127.0.0.1:9093`으로 실행된다. Object/Semantic/Instance는 발행하지 않으며
+두 번째 명령에서만 local 개발 oracle로 연다. sensor set이나 MORAI release를 bridge가
+선택하지는 않는다. sensor set과
 release network JSON은 MORAI UI에서 불러온 것이 기준이다.
 
 두 번째 명령은 Ctrl 대상 IP와 diagnostics를 `lan2lan`으로 맞추지만 실제 LAN gate를 대신하지
@@ -30,6 +33,8 @@ gRPC/rosbridge 설정은 별도 개발 도구 소유다.
 ```bash
 python3 tools/bridge/render_morai_network_profiles.py --write
 python3 tools/bridge/render_morai_network_profiles.py --check
+python3 tools/bridge/render_morai_sensor_profiles.py --write
+python3 tools/bridge/render_morai_sensor_profiles.py --check
 ```
 
 `archive/ASMC_network_set_26r1_local_legacy_9111.json`은 과거 bag/run 재현용이다. 새 실행에
@@ -54,9 +59,10 @@ Camera×4, GPS/IMU, UDP `9290~9303`은 같다. export release 차이로 v3에는
 v3 승인 조건은 `/velodyne_points`를 30초 이상 측정한 평균 14~16 Hz, packet/parse error,
 latency·CPU, 손재호 tracking의 10 Hz 대비 결과다.
 
-현재 sensor JSON 네 개의 UDP IP는 `local` export다. `lan2lan` sensor JSON 생성과
-검증은 v3 live acceptance 작업에서 함께 수행하며, 그 전에는 network JSON만 보고 현장 센서
-transport가 완료됐다고 판단하지 않는다.
+원본 네 파일은 UI export·provenance 기준이다. `sensors/generated/`의 v2/v3
+`local`/`lan2lan` 파일은 포트·pose·주기를 고정하고 UDP IP만 transport 계약으로 바꾸어
+생성한 MORAI import용이다. GT는 local 개발 전용이며 LAN2LAN 파생본을 만들지 않는다.
+v3 LAN2LAN 파일의 존재는 15 Hz live acceptance나 실제 LAN 승인을 의미하지 않는다.
 
 ## IP와 Docker/WSL
 

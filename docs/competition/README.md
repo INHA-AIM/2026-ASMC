@@ -66,9 +66,8 @@ staleness, latency와 자원 사용량을 측정한다.
 - 차량 제어: Ego Ctrl Cmd, `cmd type 1`, `ctrl mode 2`
 - 상태: Competition Vehicle Status와 CollisionData
 
-LiDAR 15 Hz와 현장 동일 포트는 승인된 후속 요구지만 아직 설정에 적용하지 않았다. 숫자를
-JSON에서 추측해 바꾸지 않고 3단계 `asmc_bridge`에서 MORAI UI 저장본과 30초 이상 실측으로
-검증한다.
+현장 동일 포트·IP 파생 계약과 v3 15 Hz UI 저장본은 적용됐다. 다만 v3는 30초
+이상 14~16 Hz, packet/latency/resource와 손재호 tracking 비교 전이므로 본선 승인이 아니다.
 규정의 10 Hz 이하 권장은 의무 상한이 아니며 공식 최대 15 Hz 안에서 팀 목표를 검증한다.
 
 ## 3. 공개 자산과 로컬 배치

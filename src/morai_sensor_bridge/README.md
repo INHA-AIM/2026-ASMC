@@ -10,9 +10,9 @@ MORAI Sensor UDP를 ROS1 camera, PointCloud2, GPS와 IMU message로 변환하는
 roslaunch morai_sensor_bridge morai_sensor_bridge.launch
 ```
 
-기본 runtime은 RGB 4대, VLP16, GPS와 IMU를 열며 개발 편의를 위해 Semantic camera와 Instance
-LiDAR optional port도 연다. optional stream은 v2에서 idle이지만, 본선 allowlist를 만족하는
-별도 launch/profile은 Phase 3에서 구현해야 한다.
+기본 `competition` profile은 RGB 4대, VLP16, GPS와 IMU만 연다. Semantic camera와
+Instance LiDAR는 `./scripts/udp_bridge.sh --streams development`에서만 열리며 LAN2LAN과
+결합할 수 없다.
 
 `timestamp_mode=receive`가 기본이다. `publish_map_tf=false`를 유지해 localization의 authoritative
 `map→base_link`와 충돌하지 않게 한다. `base_link→velodyne` static TF는 기본 발행한다.

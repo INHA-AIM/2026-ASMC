@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "baseline_id": "p3b_bridge_profiles_v1",
+  "baseline_id": "p3c_bridge_profiles_v1",
   "runtime_protocol": {
     "id": "morai_udp",
     "release_behavior_split": false,
@@ -12,7 +12,49 @@
   },
   "defaults": {
     "transport_profile": "local",
+    "stream_profile": "competition",
     "sensor_set": "v2"
+  },
+  "stream_profiles": {
+    "competition": {
+      "deployment_safe": true,
+      "network_inputs": [
+        "ego_vehicle_status",
+        "competition_vehicle_status",
+        "collision_data"
+      ],
+      "sensor_inputs": [
+        "camera_front",
+        "camera_left",
+        "camera_right",
+        "camera_extra",
+        "vlp16",
+        "gps",
+        "imu"
+      ],
+      "forbidden_topics": [
+        "/Object_topic",
+        "/sem_front/image_jpeg/compressed",
+        "/sem_left/image_jpeg/compressed",
+        "/sem_right/image_jpeg/compressed",
+        "/velodyne_points_instance"
+      ]
+    },
+    "development": {
+      "deployment_safe": false,
+      "allowed_transports": [
+        "local"
+      ],
+      "adds_network_inputs": [
+        "legacy_object_info"
+      ],
+      "adds_sensor_inputs": [
+        "semantic_camera_front",
+        "semantic_camera_left",
+        "semantic_camera_right",
+        "instance_lidar"
+      ]
+    }
   },
   "implementation_baseline": {
     "packages": [
@@ -24,27 +66,39 @@
     "artifacts": {
       "entrypoint": {
         "path": "scripts/udp_bridge.sh",
-        "sha256": "2781fb327a23aecbfb790fc96a6afbe94cb635ef22ca5efae41fc5922520d8a4"
+        "sha256": "0776d8b3b0f76b17a9f61902f683fc6249fe7ee5044501d8db0feb4859211c0a"
       },
       "integration_launch": {
         "path": "src/integration_launch/launch/morai_udp_bridges.launch",
-        "sha256": "2ebade70cd3659f8ecf615d2c47f691f8e5639721ca29aad517988b8d6b906e0"
+        "sha256": "cea66a6994f244390b4809e692c9e533d8a2c01dfdf0b5ddcc0e21d9e787cce6"
       },
       "network_launch": {
         "path": "src/morai_udp_bridge/launch/morai_udp_bridge.launch",
-        "sha256": "5ab71b3f0b8530be000203cf5b363f32fa4015b786547be875d786837e4463ef"
+        "sha256": "b49f95c3bdc6d049f259414e89016326dd35393a537d6313abebd2ee2730819d"
       },
       "network_node": {
         "path": "src/morai_udp_bridge/scripts/morai_udp_bridge.py",
-        "sha256": "67231a2467c3d37972d72ee9a0f8ef64808280f12b8cfcba05fa70f9c2b02519"
+        "sha256": "ef011febb24ae344f6f3c82cafd4198b0565bae8a313f8fa01078592c315fa52"
       },
       "sensor_launch": {
         "path": "src/morai_sensor_bridge/launch/morai_sensor_bridge.launch",
-        "sha256": "a69ae1fce5cc93baeec3f764f8431d2d74f8c3ffd4af860005824a0d0497c53f"
+        "sha256": "96adf7b39e0b3731fd2cd6f09781eeba9ce70408d0918001416e7e45d4de3ce2"
       },
       "sensor_node": {
         "path": "src/morai_sensor_bridge/scripts/morai_sensor_bridge.py",
-        "sha256": "fdaab6a1fb8217e9a31870f5792bef53c153fcfdadd6392068e738063071d4f6"
+        "sha256": "226eea20b15ec6e35f862195d7a4a03b9fef7c779d6caf3071e5001776452461"
+      },
+      "docker_entrypoint": {
+        "path": "scripts/docker_ros_up.sh",
+        "sha256": "62b558de2a6d0d56c9a20ad4b6e18e34906aaca68da8882dd25121d86aaef969"
+      },
+      "topic_verifier": {
+        "path": "scripts/verify_morai_topics.py",
+        "sha256": "7655d8bd5e956c69a88018967d3edf9bd97b0423fa02e8afcdff433d58002deb"
+      },
+      "sensor_profile_renderer": {
+        "path": "tools/bridge/render_morai_sensor_profiles.py",
+        "sha256": "04b99b06ecfcf07be4588b4f2bd4517c46862d397b36c9609f14c7c339674e1d"
       },
       "vehicle_state_launch": {
         "path": "src/vehicle_state/launch/vehicle_state.launch",
@@ -63,7 +117,6 @@
     "published_topics": {
       "/Ego_topic": "morai_msgs/EgoVehicleStatus",
       "/Competition_topic": "morai_msgs/EgoVehicleStatus",
-      "/Object_topic": "morai_msgs/ObjectStatusList",
       "/CollisionData": "morai_msgs/CollisionData",
       "/image_jpeg/compressed": "sensor_msgs/CompressedImage",
       "/cam_left/image_jpeg/compressed": "sensor_msgs/CompressedImage",
@@ -78,6 +131,7 @@
       "/morai_sensor_bridge/diagnostics": "diagnostic_msgs/DiagnosticArray"
     },
     "optional_development_topics": {
+      "/Object_topic": "morai_msgs/ObjectStatusList",
       "/sem_front/image_jpeg/compressed": "sensor_msgs/CompressedImage",
       "/sem_left/image_jpeg/compressed": "sensor_msgs/CompressedImage",
       "/sem_right/image_jpeg/compressed": "sensor_msgs/CompressedImage",
@@ -203,14 +257,32 @@
       "sha256": "0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428",
       "role": "current_10hz_regression",
       "lidar_hz": 10,
-      "live_acceptance": "accepted_baseline"
+      "live_acceptance": "accepted_baseline",
+      "expected_udp_channels": 7,
+      "transport_generated": {
+        "local": "config/morai/sensors/generated/ASMC_sensor_set_v2_local.json",
+        "lan2lan": "config/morai/sensors/generated/ASMC_sensor_set_v2_lan2lan.json"
+      },
+      "transport_generated_sha256": {
+        "local": "2a15e3861c859458fd317e60cdad9d73891caaa329ddf2ab6e9a6106a8462c3e",
+        "lan2lan": "262adec024a1dcd0949d09143820d247ef7c716a5ce2452fc0a8a1e753da65e4"
+      }
     },
     "v3": {
       "path": "config/morai/sensors/ASMC_sensor_set_v3.json",
       "sha256": "4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f",
       "role": "competition_15hz_candidate",
       "lidar_hz": 15,
-      "live_acceptance": "pending_30s_14_to_16hz_and_tracking"
+      "live_acceptance": "pending_30s_14_to_16hz_and_tracking",
+      "expected_udp_channels": 7,
+      "transport_generated": {
+        "local": "config/morai/sensors/generated/ASMC_sensor_set_v3_local.json",
+        "lan2lan": "config/morai/sensors/generated/ASMC_sensor_set_v3_lan2lan.json"
+      },
+      "transport_generated_sha256": {
+        "local": "2a9e2ec198554b22fa3440725f4eb5b5e6290d1f9bd2ca4c6ac0fe3862c7ea70",
+        "lan2lan": "50089b67e3f1e022d684ae71f84761b2362c0a5f9421ca794616dbbb2021205d"
+      }
     },
     "GT": {
       "path": "config/morai/sensors/ASMC_sensor_set_GT.json",
