@@ -22,7 +22,7 @@ bridge 구현을 개발·검증하고 Phase 3에서 안전하게 통합하는 �
 | Competition Vehicle Status decoder | P3-B 정적 계약·fixture 완료 | live capture gate 대기 |
 | stream allowlist·sensor IP 파생본 | P3-C 구현 | live LAN gate 대기 |
 | 단일 launch façade·vehicle state composition | P3-D 구현 | package 물리 이전·삭제 대기 |
-| local MolitComp03 수신·LiDAR frame gate | P3-E 실측 | v3 15 Hz·Competition status 미승인 |
+| local MolitComp03 수신·LiDAR frame gate | P3-E 실측 | 설정·소비 15 Hz 승인, Competition status 현장 대기 |
 
 P3-D는 launch composition만 `asmc_bridge`로 승격했다. 구현 node와 호환 launch는 bag replay,
 packet fixture, producer/consumer build와 실제 MORAI 검증을 모두 통과할 때까지 이동·삭제하지
@@ -82,8 +82,9 @@ launch를 직접 실행해도 bridge node가 `lan2lan + development`를 거부�
 
 VLP16은 기본 `lidar_frame_mode=azimuth`로 packet의 물리 회전 경계를 검출한다. 고정 75 packet
 조립은 v3에서 약 8 Hz로 잘못 보였고, azimuth 조립 뒤 약 12 Hz로 측정됐다. 이는 프레이밍은
-바로잡았지만 v3의 목표 15 Hz는 아직 실패했다는 뜻이다. diagnostics의 `raw_packet_hz`,
-`packets_per_frame_median`, `interval_hz`를 함께 확인한다.
+바로잡은 결과다. v3 설정과 손재호 소비 loop는 15 Hz이고 실제 완성 scan 약 12 Hz는 허용한다.
+없는 scan을 복제하지 않으며 diagnostics의 `raw_packet_hz`, `packets_per_frame_median`,
+`interval_hz`를 함께 확인한다.
 
 GPS/IMU 원본 datagram은 기본값으로 `127.0.0.1:9401/9403`에도 복제된다. 이는 단일 MORAI UDP를
 동시에 소비하던 standalone planner 호환 경로다. 현재 consumer가 이를 요구하는지 Phase 3
@@ -222,7 +223,8 @@ make target”으로 실패할 수 있다.
 - Autonav v2 sensor `9290~9303`
 - 개발 IP 양쪽 `127.0.0.1`
 - 현장 MORAI `192.168.0.1`, Autonav `192.168.0.10`
-- VLP16은 MORAI UI 저장본으로 15 Hz를 만들고 30초 평균 14~16 Hz를 확인한다.
+- VLP16은 MORAI UI 저장본과 손재호 소비 loop를 15 Hz로 유지한다. 실제 완성 scan 약 12 Hz는
+  허용하며 중복 재발행하지 않는다.
 
 P3-A/P3-B 산출물은 [`config/bridge`](../../../config/bridge/)와
 [`config/morai`](../../../config/morai/)에 있다. 26r1/대회판 raw export는 entry 수와
@@ -239,7 +241,7 @@ loss, processing latency와 CPU/GPU를 비교한다. 현장 실제 두 PC, firew
 3. parser와 vehicle-state core를 동작 변경 없이 새 namespace로 이식한다.
 4. raw bag replay에서 topic type/count/rate/frame/unit parity를 확인한다.
 5. dev MORAI에서 sensor, 상태와 Ctrl closed-loop를 검증한다.
-6. competition allowlist와 15 Hz를 별도 승인한다.
+6. competition allowlist와 실제 두 PC LAN2LAN을 별도 승인한다.
 7. planning 공동 소유 `integration_launch` 변경을 판제와 리뷰한다.
 8. 한 릴리스의 rollback 경로 뒤 기존 세 package 삭제 여부를 결정한다.
 

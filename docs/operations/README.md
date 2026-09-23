@@ -21,20 +21,20 @@ live acceptance가 끝난 것을 구분한다.
 |---|---|---|
 | 개발 IP | Host/Destination `127.0.0.1` | 동일 |
 | 현장 IP | profile 계약·생성본: MORAI `192.168.0.1`, Autonav `192.168.0.10` | 실제 두 PC 리허설 |
-| Ego Ctrl Cmd | `9093/9094`, type 1, mode 2 | 실제 Ctrl 응답·packet capture |
+| Ego Ctrl Cmd | `9093/9094`, type 1, mode 2 | local brake closed loop 통과; LAN2LAN 재검증 |
 | 차량 상태 | Ego `9088/9099`; MolitComp Competition `9797/9798` | Competition mode live packet·field 확인 |
 | TrafficLight simulator oracle | `258`, `7603/7502` | team production bridge에서 소비 금지 |
 | CollisionData | destination `9092` | `9091/9092` pair |
 | ObjectInfo | `7505`, 임시 개발 oracle | competition profile에서 제거 |
 | 센서 | v2/v3 local·lan2lan 파생본, `9290~9303` | 실제 LAN packet rate |
 | privileged stream | 기본 차단, local `development`에서만 활성 | 본선 launch topic absence 재확인 |
-| VLP16 | v2 10 Hz 회귀 기준, v3 UI 저장본 15 Hz 후보 | local 실측 약 12 Hz; 30초 14~16 Hz와 tracking 재검증 |
+| VLP16 | v2 10 Hz 회귀, v3 설정·소비 15 Hz | local 완성 scan 약 12 Hz 허용; LAN 자원·지연 재검증 |
 
 정본은 [`bridge_profiles_v1.json`](../../config/bridge/bridge_profiles_v1.json)이다. generated
 network/sensor JSON·decoder·synthetic UDP publish·allowlist 계약은 검증하지만,
 실측된 `7502` packet은 Competition이 아닌 `#TrafficLight$`였다. 실제 Competition type 787의
-`9798`은 아직 0건이므로 차단 상태다. 실제 LAN 검증도 남았다. v3는 파일 기준 15 Hz 후보이나
-약 12 Hz만 실측돼 배포 승인이 아니다.
+`9798`은 아직 0건이므로 차단 상태다. 실제 LAN 검증도 남았다. v3는 설정과 소비 loop가
+15 Hz이고 완성 scan 약 12 Hz 입력은 허용한다.
 
 type 258 TrafficLight status와 `GetTrafficLightStatus` 조회 서비스는 서로 다르다. 조사한 주최
 MolitComp03, 팀 MolitComp03, 26.R1 network export에는 type 778 MoraiTLServiceProvider가 없고
@@ -181,13 +181,13 @@ rostopic echo /Ego_topic -n1
 인자는 bridge 동작을 바꾸지 않고 검증 목록만 선택한다. GT 실험 재현에서만 `--streams
 development`와 `verify-gt 20 molitcomp03`을 함께 사용한다.
 
-v3 LiDAR 목표를 별도로 검사할 때는 다음처럼 실행한다. 현재 MolitComp03 local 표본은 약
-12 Hz라 이 명령이 실패하는 것이 정상이며, 15 Hz가 실제로 확인되기 전 gate를 낮추지 않는다.
+LiDAR 실제 도착률만 별도로 검사할 때는 다음처럼 실행한다. 이 exact-arrival 진단은 v3의
+설정·소비 15 Hz 요구와 다르며, 현재 MolitComp03에서는 약 12 Hz를 넣어 사용한다.
 
 ```bash
 python3 scripts/verify_morai_topics.py \
   --duration 30 --required-topic /velodyne_points \
-  --lidar-target-hz 15 --strict-thresholds
+  --lidar-target-hz 12 --strict-thresholds
 ```
 
 설정 Hz보다 낮은 관측값을 바로 packet loss로 단정하지 않는다. sequence가 없는 stream은
@@ -274,12 +274,12 @@ Phase 3에서 현재값을 바꿀 때 다음을 한 변경으로 검증한다.
 2. Ctrl `9093/9094`, Ego Vehicle Status `9088/9099`, MolitComp Competition Vehicle Status
    `9797/9798`, Collision `9091/9092` packet 방향을 UI와 capture로 확인한다. `7603/7502`는
    TrafficLight status이며 Competition Vehicle Status로 해석하지 않는다.
-3. MORAI UI에서 VLP16 15 Hz로 저장하고 `sensorPeriod`·`frequencyIndex`를 비교한다.
-4. `/velodyne_points`를 30초 이상 측정해 평균 14~16 Hz와 packet/parse 오류를 확인한다.
-5. 10 Hz baseline 대비 손재호 tracking, latency와 CPU/GPU를 비교한다.
+3. MORAI UI의 VLP16 15 Hz `sensorPeriod`·`frequencyIndex`와 손재호 소비 loop 15 Hz를 유지한다.
+4. `/velodyne_points`의 실제 완성 scan률(현재 약 12 Hz)과 packet/parse 오류를 확인한다.
+5. 손재호 tracking, latency와 CPU/GPU를 관찰하되 실제 scan을 중복 재발행하지 않는다.
 6. Windows+WSL mirrored 또는 native Linux의 실제 두 PC에서 firewall, route, restart와 offline
    복구를 리허설한다.
 
 Ctrl은 `9093/9094`로 전환됐고 Ego Vehicle Status는 두 release 모두 `9088/9099`로 통일됐다.
 Ego Vehicle Status는 Competition Vehicle Status live capture·field 검증이 끝날 때까지 상태 입력 회귀 기준으로,
-LiDAR v2 10 Hz는 v3 live acceptance가 끝날 때까지 센서 회귀 기준으로 유지한다.
+LiDAR v2 10 Hz는 과거 비교·회귀용으로 유지하고, 배포 센서 설정은 v3 15 Hz를 사용한다.

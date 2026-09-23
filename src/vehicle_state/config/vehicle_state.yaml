@@ -4,6 +4,11 @@ topics:
 publish_topic: /vehicle/state
 publish_frequency: 50.0
 
+diagnostics:
+  # A 5 Hz GPS stream needs more than one fix before speed becomes valid.
+  # Keep that normal warm-up distinct from a sensor-stale warning.
+  startup_grace: 1.0
+
 timeouts:
   gps: 0.50
   imu: 0.30

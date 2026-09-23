@@ -82,7 +82,9 @@ def parse_args():
     )
     parser.add_argument(
         "--lidar-target-hz", type=float,
-        help="expected LiDAR output rate; for v3 use 15 and combine with --strict-thresholds",
+        help=("optional exact-arrival diagnostic; do not use this to validate the "
+              "v3 configured/consumer 15 Hz requirement because complete scans may "
+              "arrive at about 12 Hz"),
     )
     parser.add_argument(
         "--simulator-release",

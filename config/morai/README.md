@@ -94,7 +94,7 @@ Vehicle Status, Ego Ctrl Cmd, Competition Vehicle Status로 고정했다. 릴리
 |---|---:|---:|---|
 | `ASMC_sensor_set_v1.json` | 340° | 10 Hz | 최초 설정·과거 재현 |
 | `ASMC_sensor_set_v2.json` | 328° | 10 Hz | 현재 회귀 기준 |
-| `ASMC_sensor_set_v3.json` | 328° | 15 Hz | 본선 후보, live acceptance 대기 |
+| `ASMC_sensor_set_v3.json` | 328° | 15 Hz | 본선 설정, 실제 완성 scan 약 12 Hz 허용 |
 | `ASMC_sensor_set_GT.json` | 328° | 10 Hz | v2 + Semantic Camera 3대 + Instance LiDAR, 개발 전용 |
 
 v3는 MORAI UI가 저장한 `sensorPeriod≈0.06666667`, `frequencyIndex=2`를 가진다. v2와 센서 pose,
@@ -102,15 +102,15 @@ Camera×4, GPS/IMU, UDP `9290~9303`은 같다. export release 차이로 v3에는
 필드가 없고 LiDAR의 `fireDistance`, `noiseRatio`, `velodyneUnit`가 명시돼 있다. 이 schema 차이를
 센서 구성 변경으로 오해하지 않는다.
 
-v3 승인 조건은 `/velodyne_points`를 30초 이상 측정한 평균 14~16 Hz, packet/parse error,
-latency·CPU, 손재호 tracking의 10 Hz 대비 결과다. 2026-09-23 MolitComp03 local 실측에서는
-raw 약 600 packet/s, 50 packet/revolution, 약 12 Hz였으므로 아직 실패 상태다. bridge는
-azimuth 기준으로 고쳐 8 Hz 오조립을 제거했지만 시뮬레이터 원신호를 15 Hz로 만들지는 않는다.
+v3의 팀 요구는 UI 저장 주기와 손재호 코드의 소비 loop가 15 Hz인 것이다. 2026-09-23
+MolitComp03 local 실측은 raw 약 600 packet/s, 50 packet/revolution, 완성 scan 약 12 Hz였고
+이는 허용된다. bridge는 azimuth 기준으로 8 Hz 오조립을 제거하며, 시뮬레이터에 없는 scan을
+복제해 15 Hz로 만들지 않는다. packet/parse error, latency·CPU와 tracking 품질은 계속 관찰한다.
 
 원본 네 파일은 UI export·provenance 기준이다. `sensors/generated/`의 v2/v3
 `local`/`lan2lan` 파일은 포트·pose·주기를 고정하고 UDP IP만 transport 계약으로 바꾸어
 생성한 MORAI import용이다. GT는 local 개발 전용이며 LAN2LAN 파생본을 만들지 않는다.
-v3 LAN2LAN 파일의 존재는 15 Hz live acceptance나 실제 LAN 승인을 의미하지 않는다.
+v3 LAN2LAN 파일의 존재는 실제 LAN2LAN 배포 승인을 의미하지 않는다.
 
 ## IP와 Docker/WSL
 

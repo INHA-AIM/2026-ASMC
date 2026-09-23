@@ -7,8 +7,9 @@ P3-C에서 `competition`/`development` stream policy와 v2/v3 sensor transport �
 추가했다.
 P3-D에서 `asmc_bridge/bridge.launch`를 canonical façade로 추가해 Network, Sensor,
 GPS/IMU `/vehicle/state`를 한 번에 기동한다. 기존 패키지는 rollback 기준으로 보존한다.
-P3-E local 실측에서 v3 LiDAR 프레이밍을 물리 회전 기준으로 고쳤고, 실제 약 12 Hz 및
-UDP `7502`의 `#TrafficLight$` header를 미승인 gate로 기록했다.
+P3-E local 실측에서 v3 LiDAR 프레이밍을 물리 회전 기준으로 고쳤고, 설정·소비 15 Hz와
+허용되는 실제 완성 scan 약 12 Hz를 구분했다. UDP `7502`의 `#TrafficLight$` header도
+Competition Vehicle Status와 분리해 기록했다.
 
 - runtime protocol은 `morai_udp` 하나다. 26.R1.H3와 25.S4.MolitComp03 때문에 bridge code를
   분기하지 않는다.
@@ -25,8 +26,8 @@ UDP `7502`의 `#TrafficLight$` header를 미승인 gate로 기록했다.
   Status로 해석하거나 canonical bridge에서 소비하지 않는다.
 - type 258과 GetTrafficLight query는 별개다. 조사한 두 release와 주최 export에는
   MoraiTLServiceProvider type 778이 없으므로 query를 필수 계약으로 두지 않는다.
-- v3의 15 Hz는 UI 저장 값이 확인된 후보지만 local raw UDP 실측은 약 12 Hz였다. 30초
-  14~16 Hz와 손재호 tracking 비교 전에는 본선 승인으로 간주하지 않는다.
+- v3는 UI 저장값과 손재호 코드의 소비 loop가 15 Hz다. local raw UDP 완성 scan 약 12 Hz는
+  요구상 허용하며, bridge가 중복 cloud를 만들어 15 Hz로 부풀리지 않는다.
 - 기본 `competition`은 Object/Semantic/Instance publisher를 생성하지 않는다. 이 입력은
   local `development`에서만 활성화하며 LAN2LAN과의 결합은 거부한다.
 - `sensors/generated/` v2/v3 파생본은 UDP IP만 transport에 맞게 바꾸며 GT LAN2LAN은

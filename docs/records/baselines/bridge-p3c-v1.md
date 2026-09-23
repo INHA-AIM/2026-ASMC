@@ -35,7 +35,7 @@ schema가 원본과 같은지 검사한다. GT는 privileged local 전용이므�
 ## 남은 gate
 
 - Competition Vehicle Status live packet capture·field 교차 검증
-- v3 VLP16 30초 평균 14~16 Hz와 손재호 tracking 비교
+- v3 설정·손재호 소비 loop 15 Hz 확인(후속 P3-E에서 실제 완성 scan 약 12 Hz 허용으로 확정)
 - Windows/WSL/Docker 또는 native Linux의 실제 두 PC LAN2LAN
 - firewall·route·packet rate·restart recovery·offline 리허설
 

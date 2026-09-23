@@ -50,7 +50,7 @@ staleness, latency와 자원 사용량을 측정한다.
 |---|---|---|
 | GPS | 1, 최대 30 Hz | 5 Hz |
 | IMU | 1, 최대 50 Hz | 50 Hz |
-| 3D LiDAR | VLP16 Intensity 1, 최대 15 Hz | v2는 10 Hz; 3단계 승인 목표 15 Hz |
+| 3D LiDAR | VLP16 Intensity 1, 최대 15 Hz | v3 설정·손재호 소비 loop 15 Hz; 실제 scan 약 12 Hz 허용 |
 | Camera | 고정 3 + 자유 1, 최대 30 Hz, GT None | 20/20/20/10 Hz |
 
 고정 카메라:
@@ -67,7 +67,8 @@ staleness, latency와 자원 사용량을 측정한다.
 - 상태: Competition Vehicle Status와 CollisionData
 
 현장 동일 포트·IP 파생 계약과 v3 15 Hz UI 저장본은 적용됐다. 다만 v3는 30초
-이상 14~16 Hz, packet/latency/resource와 손재호 tracking 비교 전이므로 본선 승인이 아니다.
+실제 완성 scan은 약 12 Hz로 관측됐고 팀 요구상 허용된다. 없는 scan을 복제하지 않으며
+packet/latency/resource와 손재호 tracking 품질을 계속 관찰한다.
 규정의 10 Hz 이하 권장은 의무 상한이 아니며 공식 최대 15 Hz 안에서 팀 목표를 검증한다.
 
 ## 3. 공개 자산과 로컬 배치
@@ -92,7 +93,7 @@ ls "$ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_"*
 | 저장소 센서셋 | 용도 |
 |---|---|
 | `config/morai/sensors/ASMC_sensor_set_v2.json` | 26.R1.H3 현재 10 Hz 회귀 기준 |
-| `config/morai/sensors/ASMC_sensor_set_v3.json` | 15 Hz 현장 후보, live acceptance 전 |
+| `config/morai/sensors/ASMC_sensor_set_v3.json` | 설정·소비 15 Hz 본선본, 실제 scan 약 12 Hz 허용 |
 | `config/morai/sensors/ASMC_sensor_set_GT.json` | Semantic×3 + Instance LiDAR 개발 정답 전용 |
 | `config/morai/sensors/ASMC_sensor_set_v1.json` | 과거 재현 전용 |
 

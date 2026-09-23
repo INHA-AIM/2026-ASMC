@@ -11,7 +11,8 @@
 namespace {
 class GpsImuVehicleStateNode {
 public:
-    GpsImuVehicleStateNode() : private_nh_("~") {
+    GpsImuVehicleStateNode()
+        : private_nh_("~"), started_at_(ros::SteadyTime::now()) {
         frenet_planner_ros::StateAdapterConfig config;
         private_nh_.param("timeouts/gps", config.gps_timeout_s, 0.20);
         private_nh_.param("timeouts/imu", config.imu_timeout_s, 0.20);
@@ -50,6 +51,8 @@ public:
             "publish_topic", output_topic, "/vehicle/state");
         double frequency = 50.0;
         private_nh_.param("publish_frequency", frequency, 50.0);
+        private_nh_.param(
+            "diagnostics/startup_grace", startup_grace_s_, 1.0);
         publisher_ = nh_.advertise<asmc_msgs::VehicleState>(output_topic, 1);
         gps_subscriber_ = nh_.subscribe(
             gps_topic, 1, &GpsImuVehicleStateNode::gpsCallback, this);
@@ -69,9 +72,16 @@ private:
         estimator_->updateImu(*message, ros::SteadyTime::now());
     }
     void timerCallback(const ros::SteadyTimerEvent&) {
-        const auto state = estimator_->makeState(ros::SteadyTime::now());
+        const auto now = ros::SteadyTime::now();
+        const auto state = estimator_->makeState(now);
         publisher_.publish(state);
-        if (!state.valid) {
+        if (state.valid) {
+            has_published_valid_state_ = true;
+        } else if (!has_published_valid_state_ &&
+                   (now - started_at_).toSec() < startup_grace_s_) {
+            ROS_INFO_ONCE(
+                "GPS/IMU vehicle state is waiting for its initial valid sensor window");
+        } else {
             ROS_WARN_THROTTLE(
                 2.0, "GPS/IMU vehicle state unavailable, invalid, or stale");
         }
@@ -84,6 +94,9 @@ private:
     ros::Subscriber imu_subscriber_;
     ros::Publisher publisher_;
     ros::SteadyTimer timer_;
+    ros::SteadyTime started_at_;
+    double startup_grace_s_ = 1.0;
+    bool has_published_valid_state_ = false;
 };
 }  // namespace
 

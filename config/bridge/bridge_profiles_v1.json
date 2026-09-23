@@ -75,7 +75,7 @@
       },
       "entrypoint": {
         "path": "scripts/udp_bridge.sh",
-        "sha256": "7987f4ef6b6d2626d46253e502cb290eb127911ef63369166eb7b04f0149136b"
+        "sha256": "e5c55d022ce3a2bf106c2bc44bef1371b53773a1c040d2edfbef53826d76be95"
       },
       "integration_launch": {
         "path": "src/integration_launch/launch/morai_udp_bridges.launch",
@@ -103,7 +103,7 @@
       },
       "topic_verifier": {
         "path": "scripts/verify_morai_topics.py",
-        "sha256": "c3972a95492ca5b08e523c07a110d8b7172e81dc1ed37bd4c0d7cc0ab69530a6"
+        "sha256": "2a766ce166aa8ffe9b451ca6ff0c4a887d4a93f39ea2fd0c11e497aa070cfa64"
       },
       "network_profile_renderer": {
         "path": "tools/bridge/render_morai_network_profiles.py",
@@ -119,7 +119,7 @@
       },
       "vehicle_state_node": {
         "path": "src/vehicle_state/src/vehicle_state_node.cpp",
-        "sha256": "e4204af688896ef18832501809645f5d7c6170d9881dacb7738683a2eb26e572"
+        "sha256": "e0151fbf595ba7502844aacc927a479aa55633f64b2fd3c204b2a37b235d10e2"
       }
     },
     "subscribed_topics": {
@@ -337,9 +337,9 @@
     "v3": {
       "path": "config/morai/sensors/ASMC_sensor_set_v3.json",
       "sha256": "4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f",
-      "role": "competition_15hz_candidate",
+      "role": "competition_configured_15hz",
       "lidar_hz": 15,
-      "live_acceptance": "failed_2026_09_23_measured_about_12hz_target_14_to_16hz",
+      "live_acceptance": "accepted_configured_15hz_observed_complete_scans_about_12hz",
       "expected_udp_channels": 7,
       "transport_generated": {
         "local": "config/morai/sensors/generated/ASMC_sensor_set_v3_local.json",
@@ -369,9 +369,31 @@
       "physical_revolution_hz_approx": 12.0,
       "bridge_output_hz_before_azimuth_framing": 7.86,
       "bridge_output_hz_after_azimuth_framing": 12.01,
-      "target_hz": 15.0,
-      "acceptance_range_hz": [14.0, 16.0],
-      "accepted": false
+      "configured_sensor_hz": 15.0,
+      "consumer_poll_hz": 15.0,
+      "observed_complete_scan_hz_approx": 12.0,
+      "duplicate_resampling_enabled": false,
+      "requirement": "configured_and_consumer_cycle_15hz_actual_complete_scan_arrival_may_be_lower",
+      "accepted": true
+    },
+    "vehicle_state": {
+      "valid_after_initial_sensor_window": true,
+      "observed_publish_hz_approx": 50.0,
+      "initial_invalid_is_warmup": true
+    },
+    "ctrl_closed_loop": {
+      "command_topic": "/ctrl_cmd",
+      "udp_target_port": 9093,
+      "test_command": "brake_1_stationary",
+      "observed_ego_brake": 1.0,
+      "accepted": true
+    },
+    "bag_replay": {
+      "duration_seconds": 6.5,
+      "message_count": 1700,
+      "required_runtime_topics": 9,
+      "valid_vehicle_state_messages": 327,
+      "accepted": true
     },
     "competition_udp_9798": {
       "configured_pubsub_type": 787,

@@ -188,7 +188,8 @@ echo "  MORAI preset   : import ONE file matching the installed release"
 echo "                   26r1       -> ${NETWORK_PRESET_26R1}"
 echo "                   competition -> ${NETWORK_PRESET_COMP}"
 echo "  Sensor preset  : v2 -> ${SENSOR_PRESET_V2}"
-echo "                   v3 -> ${SENSOR_PRESET_V3} (15 Hz candidate)"
+echo "                   v3 -> ${SENSOR_PRESET_V3}"
+echo "                        configured 15 Hz; complete scans near 12 Hz are accepted"
 # Receive sockets bind the same ports for both transports. Only the outgoing
 # Ctrl destination changes, so derive it from the explicit transport instead
 # of a container-wide environment value that could silently keep LAN2LAN on

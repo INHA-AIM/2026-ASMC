@@ -151,7 +151,9 @@ ID 5/11, GPS와 IMU는 advertise되지 않았다. `/Ego_topic`도 MORAI payload�
 `ASMC_sensor_set_v3_local.json`을 import했다. 카메라·GPS·IMU·LiDAR raw UDP는 수신됐다.
 LiDAR는 고정 75 packet 조립에서 약 7.86 Hz였으나 packet azimuth wrap 기준 조립으로 바꾼 뒤
 약 12.01 Hz였다. raw 약 600 packet/s, 50 packet/revolution이고 device timestamp 기준 물리
-회전율도 약 11.85~12.1 Hz였으므로 목표 15 Hz의 14~16 Hz gate는 실패했다.
+회전율도 약 11.85~12.1 Hz였다. 이후 요구를 재확인해 센서 설정과 손재호 소비 loop 15 Hz가
+필수이고 실제 완성 scan 약 12 Hz는 허용되는 것으로 확정했다. 그러므로 이 값은 실패 gate가
+아니며, 중복 cloud 재발행으로 수치만 맞추지 않는다.
 
 Network UDP `7502`의 live header는 `#TrafficLight$`였다. enum과 현장 export를 대조해 type
 258의 TrafficLight status임을 확인했고, MolitComp Competition Vehicle Status는 type 787,

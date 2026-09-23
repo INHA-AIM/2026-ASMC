@@ -5,7 +5,7 @@
 > 상세: [개발·시뮬레이터 운영 가이드](../../docs/operations/README.md)
 > bridge 구현·통합 gate: [MORAI bridge guide](../../docs/packages/asmc_bridge/README.md)
 > 센서셋: [`ASMC_sensor_set_v2.json`](./sensors/ASMC_sensor_set_v2.json) (현재 10 Hz 회귀 기준)<br>
-> 15 Hz 후보: [`ASMC_sensor_set_v3.json`](./sensors/ASMC_sensor_set_v3.json)<br>
+> 15 Hz 설정본: [`ASMC_sensor_set_v3.json`](./sensors/ASMC_sensor_set_v3.json) — 완성 scan 약 12 Hz 허용<br>
 > GT용: [`ASMC_sensor_set_GT.json`](./sensors/ASMC_sensor_set_GT.json) (v2 + Semantic Camera×3 + Instance LiDAR)
 
 ---

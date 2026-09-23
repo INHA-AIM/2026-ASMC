@@ -558,8 +558,8 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     _require(summaries["v3"]["lidar_frequency_index"] == 2, "v3 frequencyIndex changed")
     _require(
         contract["sensor_sets"]["v3"]["live_acceptance"]
-        == "failed_2026_09_23_measured_about_12hz_target_14_to_16hz",
-        "v3 live 15 Hz failure must remain explicit until re-accepted",
+        == "accepted_configured_15hz_observed_complete_scans_about_12hz",
+        "v3 configured 15 Hz acceptance semantics changed",
     )
     _require(summaries["v2"]["lidar_ports"] == [9298, 9299], "v2 LiDAR ports changed")
     _require(summaries["v3"]["lidar_ports"] == [9298, 9299], "v3 LiDAR ports changed")
@@ -572,8 +572,22 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     _require(live["sensor_set"] == "v3", "P3-E sensor set changed")
     lidar_live = live["lidar"]
     _require(lidar_live["packets_per_revolution"] == 50, "live LiDAR packet grouping changed")
-    _require(lidar_live["acceptance_range_hz"] == [14.0, 16.0], "LiDAR gate changed")
-    _require(not lidar_live["accepted"], "failed v3 live rate must not be accepted")
+    _require(
+        (
+            lidar_live["configured_sensor_hz"],
+            lidar_live["consumer_poll_hz"],
+            lidar_live["observed_complete_scan_hz_approx"],
+            lidar_live["duplicate_resampling_enabled"],
+            lidar_live["accepted"],
+        ) == (15.0, 15.0, 12.0, False, True),
+        "configured-15/observed-12 LiDAR requirement changed",
+    )
+    _require(
+        live["vehicle_state"]["valid_after_initial_sensor_window"]
+        and live["ctrl_closed_loop"]["accepted"]
+        and live["bag_replay"]["accepted"],
+        "local vehicle-state, Ctrl, or bag-replay gate regressed",
+    )
     competition_live = live["competition_udp_9798"]
     _require(
         competition_live["configured_pubsub_type"] == 787
@@ -608,7 +622,7 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "ego_status": "9088/9099",
         "competition_status": "9797/9798 type 787; live emission pending",
         "lidar_frame_mode": composition["lidar_frame_mode"],
-        "v3_live_rate_accepted": lidar_live["accepted"],
+        "v3_configured_cycle_accepted": lidar_live["accepted"],
         "sensor_sets": summaries,
     }
 

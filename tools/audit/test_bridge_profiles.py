@@ -22,7 +22,7 @@ class BridgeProfileContractTest(unittest.TestCase):
             result["competition_status"],
         )
         self.assertEqual("azimuth", result["lidar_frame_mode"])
-        self.assertFalse(result["v3_live_rate_accepted"])
+        self.assertTrue(result["v3_configured_cycle_accepted"])
         self.assertEqual(["lan2lan", "local"], result["transport_profiles"])
         self.assertEqual(4, result["network_profiles"])
         self.assertEqual(4, result["sensor_transport_profiles"])

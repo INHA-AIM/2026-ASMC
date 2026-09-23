@@ -19,7 +19,8 @@ Instance LiDAR는 `./scripts/udp_bridge.sh --streams development`에서만 열�
 
 VLP16은 기본 `lidar_frame_mode=azimuth`로 물리 회전 경계마다 PointCloud2를 만든다. 이전
 고정 packet-count 방식은 v3에서 출력률을 약 8 Hz로 낮춰 보이게 했다. 2026-09-23 local
-실측에서는 보정 뒤에도 raw 신호가 약 12 Hz여서 v3 15 Hz gate는 아직 실패 상태다.
+실측에서는 보정 뒤 raw 완성 scan이 약 12 Hz다. 팀 요구는 v3 설정과 손재호 소비 loop가
+15 Hz인 것이므로 이 도착률은 허용하며, bridge는 중복 cloud를 재발행하지 않는다.
 `packet_count`는 과거 재현이 필요한 경우에만 명시한다.
 
 ```bash

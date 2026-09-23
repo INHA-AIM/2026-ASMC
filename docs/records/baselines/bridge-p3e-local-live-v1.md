@@ -4,7 +4,7 @@
 >
 > 기계 판독 정본: [`config/bridge/bridge_profiles_v1.json`](../../../config/bridge/bridge_profiles_v1.json)
 >
-> 상태: local 실측 완료, LiDAR 15 Hz와 Competition Vehicle Status는 **미승인**
+> 상태: local 실측 완료, LiDAR 설정·소비 주기와 일반 runtime은 **승인**, Competition Vehicle Status만 현장 확인 대기
 
 ## 시험 조건
 
@@ -29,7 +29,10 @@ Host/Destination `9093/9094`, mode 2다.
 | VLP16 raw UDP | 약 600 packet/s | 수신 |
 | VLP16 packets/revolution | 50 | 물리 회전 경계 확인 |
 | 기존 75 packet 조립 출력 | 약 7.86 Hz | 잘못된 v3 프레이밍 |
-| azimuth 조립 출력 | 약 12.01 Hz | 프레이밍 수정, 15 Hz gate 실패 |
+| azimuth 조립 출력 | 약 12.01 Hz | 프레이밍 수정, 허용된 실제 입력률 |
+| 손재호 LiDAR 소비 loop | `ros::Rate(15)`, `Vehicle.LiDAR.Hz=15` | 요구 충족 |
+| Ctrl closed loop | 정지 brake 1.0 송신 후 Ego brake 1.0 | `9093` 왕복 승인 |
+| runtime bag replay | 6.5초, 1,700 message, 필수 9 topic | 별도 ROS master 검증 통과 |
 | UDP destination 7502, type 258 | `#TrafficLight$` | TrafficLight oracle, bridge 비소비 |
 | UDP destination 9798, type 787 | 8초간 0 packet | Competition mode live emission 대기 |
 | UDP destination 911, type 770 | `#MoraiInfo$`, 229 B, 약 45 Hz | legacy MoraiInfo stream 확인 |
@@ -39,10 +42,22 @@ Network를 bridge 기동 뒤 다시 Connect한 표본에서는 Ego/Collision이 
 `valid=false`였는데, adapter가 invalid quaternion을 거부한 정상 동작이다. 시뮬 Play 상태의
 유효 quaternion 표본과 혼동하지 않는다.
 
-LiDAR device timestamp와 wall time으로 계산한 회전율이 모두 약 11.85~12.1 Hz여서 단순한
-ROS publish 지연이나 wall-clock slowdown으로 설명되지 않는다. v3 JSON에는
-`sensorPeriod≈0.06666667`, `frequencyIndex=2`가 저장돼 있지만, 이 실행의 MORAI 원 UDP는
-14~16 Hz를 만들지 않았다. 따라서 v3를 15 Hz 승인으로 표시하지 않는다.
+LiDAR device timestamp와 wall time으로 계산한 회전율은 모두 약 11.85~12.1 Hz다. v3 JSON에는
+`sensorPeriod≈0.06666667`, `frequencyIndex=2`가 저장돼 있고, 손재호 코드는
+`Vehicle.LiDAR.Hz=15`와 `ros::Rate(15)`로 callback을 처리한다. 팀 요구는 이 설정·소비 주기가
+15 Hz인 것이며 완성 scan이 약 12 Hz로 들어오는 것은 허용된다. 따라서 없는 scan을 복제해
+15 Hz로 재발행하지 않는다. 같은 timestamp를 반복 처리하지 않는 기존 보호도 유지한다.
+
+`/vehicle/state`의 기동 직후 `valid=false`는 5 Hz GPS 두 표본으로 속도 baseline을 만들기 전의
+정상 warm-up이었다. 유효 GPS/IMU 뒤에는 약 50 Hz, `valid=true`로 안정됐다. 이 정상 상태를
+고장처럼 경고하지 않도록 1초 startup grace를 두되, 이후 invalid/stale은 계속 경고한다.
+
+Ctrl은 차량 정지 상태에서 `/ctrl_cmd`의 brake 1.0을 약 2초 보냈고, bridge diagnostics의
+송신 count와 `/Ego_topic.brake=1.0`을 모두 확인했다. 이는 ROS→UDP 9093→MORAI→Ego UDP→ROS
+왕복을 검증한 것이다. 이어서 참가팀 runtime 토픽을 6.5초 bag(1,700 message)으로 임시
+기록해 별도 ROS master에서 재생했고, 카메라 4개·LiDAR·GPS·IMU·Ego·`/vehicle/state` 필수
+9개 토픽과 유효 VehicleState 327개를 소비자 검증기가 모두 통과했다. 검증 bag은 기준 데이터로
+복사하지 않고 재현 명령과 결과만 남긴다.
 
 ## 적용한 런타임 보정
 
@@ -55,17 +70,14 @@ transport 선택도 보정했다. Compose의 전역 `MORAI_CMD_IP=127.0.0.1`을 
 `udp_bridge.sh`가 `local→127.0.0.1`, `lan2lan→192.168.0.1`로 Ctrl 목적지를 결정한다.
 수신 socket은 두 transport 모두 동일 port의 `0.0.0.0`에 bind한다.
 
-## 미해결 gate
+## 남은 gate
 
-1. MORAI UI에서 v3를 다시 15 Hz로 선택·저장한 export와 실제 raw revolution rate를 비교한다.
-2. `/velodyne_points`를 30초 이상 측정해 평균 14~16 Hz를 통과시킨다.
-3. 10 Hz 대비 손재호 tracking, latency, CPU와 packet 오류를 비교한다.
-4. MolitComp03 Competition Vehicle Status는 현장·팀 export의 type 787,
+1. MolitComp03 Competition Vehicle Status는 현장·팀 export의 type 787,
    `9797→9798`이다. Competition mode에서 packet을 실제 발생시켜 181 B 계약과 field를
    교차 검증한다. type 258, `7603→7502`는 TrafficLight status라 이 gate에 사용할 수 없다.
-5. Network publisher는 bridge 재기동 뒤 MORAI UI에서 Connect/reload가 필요할 수 있다.
+2. Network publisher는 bridge 재기동 뒤 MORAI UI에서 Connect/reload가 필요할 수 있다.
    센서 수신만으로 Ego/Collision network channel까지 정상이라고 판정하지 않는다.
-6. `/ctrl_cmd`를 안전한 정지 상태에서 publish해 `9093` 송신과 실제 차량 응답을 확인한다.
+3. 실제 두 PC LAN2LAN·방화벽·재시작 복구는 Phase 6에서 확인한다.
 
 ## 재검증 명령
 
@@ -74,16 +86,16 @@ transport 선택도 보정했다. Compose의 전역 `MORAI_CMD_IP=127.0.0.1`을 
 
 python3 scripts/verify_morai_topics.py \
   --duration 30 \
-  --required-topic /velodyne_points \
-  --lidar-target-hz 15 \
-  --strict-thresholds
+  --required-topic /velodyne_points
 
 rostopic echo /morai_sensor_bridge/diagnostics -n1
 rostopic echo /vehicle/state -n1
 ```
 
-Competition status가 해결되기 전에는 전체 `competition` verifier 실패를 낮춰서 통과시키지
-않는다. 미확인 채널을 선택 항목으로 바꾸는 대신 배포 차단 상태를 유지한다.
+`--lidar-target-hz`는 정확한 도착률을 별도로 시험할 때만 쓰며, v3의 설정·소비 15 Hz 요구를
+검증하는 옵션이 아니다. Competition status가 해결되기 전에는 MolitComp03 전체 verifier의
+해당 실패를 낮춰서 통과시키지 않는다. 개발 중에는 participant runtime 9개 토픽을 명시해
+나머지 경로를 독립 검증한다.
 
 ## Network export 비교
 

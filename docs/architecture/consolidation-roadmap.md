@@ -354,10 +354,10 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
   P3-E live/enum 대조에서 type 258 TrafficLight status임을 확인했다. 실제 MolitComp
   Competition Vehicle Status는 type 787, `9797/9798`이며 정적 decoder·fixture와 별도
   `/Competition_topic`의 live field 교차 검증 뒤 상태 입력 우선순위를 확정한다.
-- 현행 v2/제출 Autonav의 VLP16 10 Hz를 손재호 LiDAR runtime 요구에 따라 15 Hz로 바꾼다.
-  JSON 수치만 추측해 고치지 않고 MORAI UI에서 15 Hz 설정 후 재저장해 `sensorPeriod`와
-  `frequencyIndex`를 확인한다. 30초 이상 `/velodyne_points` 평균 14~16 Hz, packet loss,
-  latency/CPU와 tracking 결과를 10 Hz baseline과 비교해야 한다.
+- 현행 v2/제출 Autonav의 VLP16 10 Hz를 손재호 LiDAR runtime 요구에 따라 v3 설정 15 Hz로
+  바꾼다. JSON 수치만 추측하지 않고 MORAI UI 저장본의 `sensorPeriod`와 `frequencyIndex`,
+  손재호 코드의 소비 loop 15 Hz를 확인한다. 실제 완성 scan은 약 12 Hz여도 허용하며,
+  packet/parse 오류, latency/CPU와 tracking 품질을 계속 관찰한다. 없는 scan을 복제하지 않는다.
 - planning 공동 소유 `integration_launch`는 새 launch를 include하도록 별도 승인받고, 그 전에는
   변경하지 않는다.
 
@@ -465,8 +465,8 @@ P3-D에서 `asmc_bridge` canonical launch façade와 기본 GPS/IMU `/vehicle/st
 6. 15분 이상 full stack 주행, CPU/GPU/RAM/packet drop 기록
 7. bridge 또는 perception node 단독 재시작 후 복구 확인
 8. 네트워크 단절·시뮬 reset·checkpoint respawn 절차 확인
-9. VLP16을 30초 이상 측정해 `/velodyne_points` 평균 14~16 Hz, packet loss와 손재호 tracking
-   결과를 확인하고 10 Hz baseline과 비교
+9. VLP16 설정·손재호 소비 loop 15 Hz와 `/velodyne_points` 실제 완성 scan률을 함께 기록하고,
+   packet/parse 오류와 tracking 품질을 확인한다. 약 12 Hz 실제 입력은 허용한다.
 
 결과가 통과하면 `operations/README.md`의 competition 절과 UDP 치트시트를 현장 profile로
 갱신한다. 개발 profile의 localhost 값은 별도 절에 보존한다.

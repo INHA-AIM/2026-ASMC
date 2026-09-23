@@ -37,11 +37,11 @@ Competition Vehicle Status `7603/7502`는 별도 채널이며 decoder 작업은 
 
 - v1: Camera-4 pitch 340°, VLP16 10 Hz, 과거 재현
 - v2: Camera-4 pitch 328°, VLP16 10 Hz, 현재 회귀 기준
-- v3: v2 geometry/ports + VLP16 15 Hz UI export, live acceptance 대기
+- v3: v2 geometry/ports + VLP16 15 Hz UI export, 설정·소비 15 Hz 승인
 - GT: v2 + Semantic Camera×3 + Instance LiDAR, 개발 전용
 
-v3의 파일 값과 실제 packet rate를 구분한다. 30초 평균 14~16 Hz, error/latency/CPU와 손재호
-tracking 비교를 통과하기 전에는 배포 승인이 아니다.
+후속 P3-E에서 요구를 재확인했다. v3 파일과 손재호 소비 loop는 15 Hz를 유지하고, 실제 완성
+scan 약 12 Hz는 허용한다. error/latency/CPU와 tracking 품질은 별도로 관찰한다.
 
 ## WSL/Docker 판단
 
@@ -59,5 +59,6 @@ python3 -m unittest tools/audit/test_bridge_profiles.py
 ./scripts/docker_ros_up.sh config
 ```
 
-다음 P3 작업은 Competition Vehicle Status decoder/fixture, transport-aware launch, privileged
-stream allowlist다. 그 뒤 v3 15 Hz live acceptance와 실제 LAN 리허설로 넘어간다.
+당시 다음 P3 작업은 Competition Vehicle Status decoder/fixture, transport-aware launch,
+privileged stream allowlist였다. 후속 P3-E에서 v3 설정·소비 15 Hz와 실제 완성 scan 약 12 Hz
+허용을 확정했고, 실제 LAN 리허설은 계속 남아 있다.
