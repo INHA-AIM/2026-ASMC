@@ -1,0 +1,31 @@
+schema_version: 1
+profile: competition_runtime_v1
+
+components:
+  camera_lane:
+    enabled_by_default: true
+    sensor_set: ASMC_sensor_set_v3
+    output_frame: base_link
+    source_stamp_policy: newest_synchronized_camera_source
+  traffic_light:
+    enabled_by_default: false
+    activation_zone: TRAFFIC_LIGHT_REQUIRED
+    legacy_topics: [/traffic_light/state, /traffic_light/detail]
+    canonical_topic: /perception/traffic_light/detection
+    canonical_producer_status: declared_not_published_p4b
+  lidar_fusion:
+    enabled_by_default: false
+    workspace: nested_legacy_overlay
+    legacy_topics: [/lidar/tracked_objects_map, /last_lidar]
+    canonical_topics:
+      - /perception/lidar/tracked_objects
+      - /perception/lidar/drivable_tracked_objects
+    canonical_producer_status: declared_not_published_p4b
+  recorder:
+    enabled_by_default: false
+
+compatibility:
+  preserve_legacy_topics: true
+  physical_source_moves: false
+  package_deletions: false
+  oracle_inputs_allowed: false

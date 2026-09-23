@@ -20,6 +20,9 @@ EXPECTED_MD5 = {
     "CompetitionCheckpointArray": "2a9f1f28734c005b499ce4993b20931e",
     "MissionZone": "902a8d5532787290e6471aa52a8a0d9c",
     "MissionZoneArray": "04325427bb7aedffd9a6ec4881ed46ce",
+    "TrafficLightDetection": "86055e23eb1cd7ce661d0c315d66a05e",
+    "TrackedObject": "6c96135eb03a3ee93bba474fa835f57d",
+    "TrackedObjectArray": "e127b2aabd7494ad01a5a56b005bf07e",
 }
 
 

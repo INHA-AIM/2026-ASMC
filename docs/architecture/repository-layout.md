@@ -28,7 +28,7 @@ gate는 [저장소 통합 로드맵](./consolidation-roadmap.md)을 따른다. p
 ├── scripts/              # bridge, build, docker 헬퍼
 ├── config/               # simulator 설정과 기계 판독 baseline/contract
 │   ├── baselines/        # runtime_baseline_v1.yaml
-│   └── contracts/        # HD Map message/topic contract v1
+│   └── contracts/        # HD Map·perception message/topic contract와 registry
 ├── mgeo_toolkit/         # 기존 HD map bake 도구
 ├── R_KR_PG_KATRI/        # 기존 KATRI 맵 자산; K-City 대회 데이터는 $ASMC_DATA
 ├── CONTRIBUTING.md
@@ -45,6 +45,7 @@ P1-A 당시 snapshot은 [runtime-baseline-v1.md](../records/baselines/runtime-v1
 
 ```bash
 python3 tools/audit/validate_p1b_contract.py
+python3 tools/audit/validate_perception_contract.py
 python3 src/asmc_hd_map/scripts/build_competition_metadata.py --check
 PYTHONPATH=src/asmc_hd_map/src python3 src/asmc_hd_map/scripts/build_drivable_area_input_audit.py --check
 PYTHONPATH=src/asmc_hd_map/src python3 src/asmc_hd_map/scripts/build_compact_drivable_map.py --repo-root "$PWD" --check
@@ -90,10 +91,11 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `scripts/rosbridge.sh`, `config/morai_rosbridge.env` | 종료된 direct ROS 실험 보존 | @ahnsh03 |
 | `mgeo_toolkit/`, `R_KR_PG_KATRI/` | 안승현 | @ahnsh03 |
 
-### perception · scenario (분산 package 운영 중)
+### perception · scenario (P4-B façade + 분산 runtime 병행)
 
 | 경로 | 담당 | GitHub |
 |------|------|--------|
+| `src/asmc_perception/` | 단일 launch/config와 additive interface façade | @sonshiny·@ahnsh03 |
 | `src/perception/morai_3d_detection/` | 손재호 | @sonshiny |
 | `src/perception/twinlite_morai/` | 안승현 | @ahnsh03 |
 | `src/perception/camera_semantic_perception/` | 1/3-camera semantic runtime | @ahnsh03 |
@@ -105,8 +107,8 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `tools/grpc_inha_univ/` | 장원태 | @wkddnjsxo |
 
 현재 package 경계, 본선 입력 규칙과 Phase 4 이관 gate는
-[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. 단일
-`asmc_perception`은 아직 구현되지 않았다.
+[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. P4-B façade는
+구현됐지만 실제 runtime source는 기존 package에 남아 있으며 후속 parity PR 전에는 삭제하지 않는다.
 
 ### interfaces (⬜ 합의 중)
 

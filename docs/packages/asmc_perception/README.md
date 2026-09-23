@@ -2,7 +2,7 @@
 
 > **문서 역할:** Active Package-Group Guide — 현재 인지 코드 경계, 문서 권위와 Phase 4 이관 gate
 >
-> **현재 상태:** 단일 `asmc_perception` 패키지는 아직 없으며 기존 runtime·학습·수집 패키지를 운영 중
+> **현재 상태:** P4-B `asmc_perception` compatibility façade가 존재하며 기존 runtime·학습·수집 패키지를 병행 운영 중
 
 이 문서는 긴 인지 설계·실험 문서를 대체하거나 요약 폐기하기 위한 문서가 아니다. 현재 어떤
 코드와 문서를 먼저 사용해야 하는지 안내하는 진입점이다. 날짜별 분석, 수치, 실패 원인과 후보
@@ -39,7 +39,7 @@ proposal, 날짜별 record 순으로 판단한다. roadmap의 과거 `candidate`
 | traffic-light runtime | `src/traffic_light/` | extra camera 기반 독립 ROS inference |
 | 수집·bag·dataset 도구 | `src/data_collection/` | ROS recorder와 offline dataset 작업이 한 package에 공존 |
 | 정적 도로·mission context | `src/asmc_hd_map/` | 완성된 별도 package, `/hd_map/*`를 통해 소비 |
-| 통합 `asmc_perception` | 존재하지 않음 | [저장소 통합 로드맵](../../architecture/consolidation-roadmap.md)의 Phase 4 목표 |
+| 통합 `asmc_perception` | `src/asmc_perception/` | P4-B 단일 launch/config·additive interface façade; runtime source 이식 전 |
 
 현재 경로를 목표 경로처럼 부르거나 먼저 삭제하지 않는다. 특히 `src/lidar+sensorfusion/`에는
 `Main`, 중복 `Msg`·`morai_msgs`와 vendor Velodyne package가 함께 있으므로 한 번에 이동할 수
@@ -186,9 +186,15 @@ P4-A 기준선은 완료됐다. 기계 정본은
 Vendor Velodyne driver는 팀 인지 runtime과 같은 package로 합치지 않는다. 단일 package라는 목표가
 실패 경계와 upstream ownership을 없앤다는 뜻은 아니다.
 
-다음 P4-B는 canonical `asmc_perception` façade와 additive interface 결정이다. traffic-light의
-unheadered String을 즉시 제거하지 않고 typed 출력과 병행하며, LiDAR `Msg/TrackedObject*`도
-consumer cutover 전에는 기존 MD5를 유지한다. 물리 이동·삭제는 아직 P4-B 범위가 아니다.
+P4-B에서 canonical `asmc_perception` façade와 additive interface를 추가했다. 실행과 현재 제한은
+[package README](../../../src/asmc_perception/README.md), typed topic의 frame/stamp/freshness 및
+cutover gate는 [Perception runtime contract v1](../../contracts/perception/runtime-v1.md)이 정본이다.
+traffic-light String과 LiDAR `Msg/TrackedObject*`는 그대로 유지되며 typed topic은 아직
+`declared_not_published_p4b`다.
+
+다음 P4-C는 camera/BEV/traffic-light/recorder runtime을 한 단위씩 이식한다. 첫 producer 변경은
+traffic-light가 실제 추론 입력 image header를 `TrafficLightDetection`에 보존해 legacy String과
+병행 발행하는 작업이다. LiDAR 이식과 구 road-mask 교체는 별도 P4-D로 분리한다.
 
 ## 10. 이번 문서 통합에서 보존한 것
 

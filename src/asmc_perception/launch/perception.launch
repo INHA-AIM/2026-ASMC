@@ -1,0 +1,106 @@
+<launch>
+  <!-- P4-B compatibility facade.  It composes existing executables without
+       moving their source or removing any legacy topic. -->
+  <arg name="start_camera_lane" default="true"/>
+  <arg name="start_traffic_light" default="false"/>
+  <arg name="start_lidar_fusion" default="false"/>
+  <arg name="start_recorder" default="false"/>
+
+  <arg name="camera_checkpoint"
+       default="$(find asmc_perception)/../../artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt"/>
+  <arg name="camera_device" default="cuda"/>
+  <arg name="camera_warmup_iterations" default="1"/>
+  <arg name="camera_batch_wait_ms" default="20.0"/>
+  <arg name="camera_model_grid_max_hz" default="15.0"/>
+  <arg name="camera_sensor_set_path"
+       default="$(find asmc_perception)/../../config/morai/sensors/ASMC_sensor_set_v3.json"/>
+  <arg name="camera_calibration_config"
+       default="$(find asmc_perception)/config/cameras_v3.yaml"/>
+  <arg name="bev_grid_config"
+       default="$(find drivable_bev)/config/bev_grid.yaml"/>
+  <arg name="lane_operating_domain" default="shadow_two_way_v1"/>
+  <arg name="lane_algorithm_id" default="twinlite_v6_shadow_boundary_contract_v1"/>
+
+  <arg name="traffic_light_checkpoint" default="$(find traffic_light)/best.pt"/>
+  <arg name="traffic_light_device" default="auto"/>
+  <arg name="traffic_light_image_topic" default="/cam_extra/image_jpeg/compressed"/>
+  <arg name="traffic_light_hz" default="10.0"/>
+  <arg name="traffic_light_min_detect" default="0.40"/>
+  <arg name="traffic_light_stale_sec" default="1.0"/>
+
+  <arg name="lidar_legacy_launch"
+       default="$(find asmc_perception)/../lidar+sensorfusion/src/Main/main.launch"/>
+  <arg name="lidar_start_velodyne_driver" default="false"/>
+  <arg name="lidar_enable_sensor_fusion" default="true"/>
+  <arg name="lidar_rviz" default="false"/>
+
+  <arg name="recorder_profile" default="full_raw"/>
+  <arg name="recorder_scenario" default=""/>
+  <arg name="recorder_run_id" default=""/>
+  <arg name="recorder_rosbag_root" default=""/>
+
+  <group if="$(arg start_camera_lane)">
+    <include file="$(find camera_semantic_perception)/launch/three_view.launch">
+      <arg name="checkpoint" value="$(arg camera_checkpoint)"/>
+      <arg name="device" value="$(arg camera_device)"/>
+      <arg name="warmup_iterations" value="$(arg camera_warmup_iterations)"/>
+      <arg name="batch_wait_ms" value="$(arg camera_batch_wait_ms)"/>
+      <arg name="publish_model_grid_road_marking" value="true"/>
+      <arg name="model_grid_max_hz" value="$(arg camera_model_grid_max_hz)"/>
+    </include>
+
+    <node pkg="drivable_bev" type="camera_bev_node.py"
+          name="camera_bev" output="screen" required="true">
+      <rosparam command="load" file="$(arg bev_grid_config)"/>
+      <rosparam command="load" file="$(arg camera_calibration_config)"/>
+      <rosparam param="enabled_views">[front, left, right]</rosparam>
+      <param name="verify_sensor_set" value="true"/>
+      <param name="sensor_set_path" value="$(arg camera_sensor_set_path)"/>
+    </node>
+
+    <node pkg="drivable_bev" type="camera_bev_fusion_node.py"
+          name="camera_bev_fusion" output="screen" required="true">
+      <rosparam command="load" file="$(arg bev_grid_config)"/>
+      <rosparam command="load" file="$(arg camera_calibration_config)"/>
+      <rosparam command="load" file="$(find drivable_bev)/config/fusion.yaml"/>
+      <rosparam param="views">[front, left, right]</rosparam>
+    </node>
+
+    <node pkg="drivable_bev" type="lane_vectorizer_node.py"
+          name="camera_lane_vectorizer" output="screen" required="true">
+      <rosparam command="load" file="$(arg camera_calibration_config)"/>
+      <rosparam command="load" file="$(find drivable_bev)/config/lane_fitting.yaml"/>
+      <rosparam param="views">[front, left, right]</rosparam>
+      <param name="operating_domain" value="$(arg lane_operating_domain)"/>
+      <param name="algorithm_id" value="$(arg lane_algorithm_id)"/>
+      <param name="shared_lane_family/runtime_debug_enabled" value="false"/>
+      <param name="enable_boundary_family_candidate" value="false"/>
+    </node>
+  </group>
+
+  <group if="$(arg start_traffic_light)">
+    <!-- P4-B preserves both legacy String topics.  The typed producer is
+         connected only after source-header propagation is implemented. -->
+    <node pkg="traffic_light" type="live_infer.py" name="traffic_light_infer"
+          output="screen" required="true"
+          args="--ckpt $(arg traffic_light_checkpoint) --image-topic $(arg traffic_light_image_topic) --state-topic /traffic_light/state --detail-topic /traffic_light/detail --device $(arg traffic_light_device) --hz $(arg traffic_light_hz) --min-detect $(arg traffic_light_min_detect) --stale-sec $(arg traffic_light_stale_sec)"/>
+  </group>
+
+  <group if="$(arg start_lidar_fusion)">
+    <!-- Requires the legacy nested workspace overlay until P4-D migration. -->
+    <include file="$(arg lidar_legacy_launch)">
+      <arg name="start_velodyne_driver" value="$(arg lidar_start_velodyne_driver)"/>
+      <arg name="enable_sensor_fusion" value="$(arg lidar_enable_sensor_fusion)"/>
+      <arg name="rviz" value="$(arg lidar_rviz)"/>
+    </include>
+  </group>
+
+  <group if="$(arg start_recorder)">
+    <include file="$(find data_collection)/launch/bag_recorder.launch">
+      <arg name="profile" value="$(arg recorder_profile)"/>
+      <arg name="scenario" value="$(arg recorder_scenario)"/>
+      <arg name="run_id" value="$(arg recorder_run_id)"/>
+      <arg name="rosbag_root" value="$(arg recorder_rosbag_root)"/>
+    </include>
+  </group>
+</launch>

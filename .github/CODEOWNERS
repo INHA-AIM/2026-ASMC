@@ -25,6 +25,7 @@
 /src/vehicle_state/                    @kante2 @ahnsh03
 
 # Perception
+/src/asmc_perception/                  @sonshiny @ahnsh03
 /src/perception/                       @sonshiny @ahnsh03
 /src/lidar+sensorfusion/               @sonshiny @ahnsh03
 /src/traffic_light/                    @wkddnjsxo @ahnsh03

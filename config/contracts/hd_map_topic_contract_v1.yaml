@@ -1,6 +1,7 @@
 schema_version: 1
 contract_id: asmc_hd_map_topic_contract_v1
 status: frozen
+message_registry: config/contracts/asmc_msgs_contract_registry_v1.yaml
 package:
   name: asmc_msgs
   version: 1.0.0

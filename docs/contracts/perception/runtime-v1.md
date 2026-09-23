@@ -1,0 +1,109 @@
+# Perception runtime topic contract v1
+
+> **상태:** Frozen additive interface (P4-B)
+> **기계 정본:** `config/contracts/perception_runtime_topic_contract_v1.yaml`
+> **실행 façade:** `src/asmc_perception/launch/perception.launch`
+
+이 계약은 신호등과 LiDAR 객체 결과를 판제가 소비할 canonical ROS1 타입으로 옮기기 위한
+경계다. P4-B에서는 타입과 topic 의미를 먼저 고정하고 기존 producer와 topic을 유지한다.
+따라서 아래 canonical topic은 **아직 발행된다고 가정하면 안 되며**, 기계 정본의
+`producer_status=declared_not_published_p4b`가 후속 PR에서 바뀐 뒤에만 사용한다.
+
+## 1. 메시지
+
+| 타입 | 역할 | 핵심 규칙 |
+|---|---|---|
+| `asmc_msgs/TrafficLightDetection` | 신호등 분류·신뢰도·freshness | 실제 추론 입력 image header를 보존 |
+| `asmc_msgs/TrackedObject` | LiDAR/fusion tracked object | array header frame의 OBB·절대속도, SI 권위 |
+| `asmc_msgs/TrackedObjectArray` | 동일 시점 객체 배열 | LiDAR source header 보존 |
+
+`TrackedObject*` 필드와 MD5는 nested `Msg/TrackedObject*`와 같게 설계했다. 그러나 ROS datatype
+이름은 다르므로 이름이 다른 publisher/subscriber가 자동 연결된다고 가정하지 않는다. producer
+이관 또는 명시적 adapter와 bag parity가 필요하다.
+
+`TrafficLightDetection`의 `state`는 다음과 같다.
+
+| 값 | 의미 | `valid` |
+|---:|---|---|
+| 0 | UNKNOWN | false |
+| 1 | NOT_DETECTED | false |
+| 2 | RED | true |
+| 3 | YELLOW | true |
+| 4 | GREEN | true |
+| 5 | RED_YELLOW | true |
+| 6 | RED_LEFT | true |
+| 7 | GREEN_LEFT | true |
+| 8 | LEFT | true |
+
+`stale=true`인 결과는 항상 무효다. `candidate_labels`와
+`candidate_confidences`는 길이가 같고 confidence 내림차순이어야 한다. `label`은 기존 문자열
+consumer와 비교하기 위한 사람이 읽는 값이지 enum 대신 사용하는 별도 권위가 아니다.
+
+## 2. Canonical topic
+
+| Topic | Type | Frame/stamp | P4-B 상태 |
+|---|---|---|---|
+| `/perception/traffic_light/detection` | `asmc_msgs/TrafficLightDetection` | `camera_extra`, 실제 입력 image header | 선언됨, 미발행 |
+| `/perception/lidar/tracked_objects` | `asmc_msgs/TrackedObjectArray` | `map`, LiDAR source stamp | 선언됨, 미발행 |
+| `/perception/lidar/drivable_tracked_objects` | `asmc_msgs/TrackedObjectArray` | `map`, 같은 source stamp | 선언됨, 미발행 |
+
+세 topic은 동적 인지 결과라 latch하지 않는다. 신호등 adapter가 단순 ROS 수신 시각이나 가장
+가까운 camera header를 붙이는 것은 허용하지 않는다. 실제 추론에 쓴 정확한 image header를
+producer가 전달해야 한다.
+
+Tracked object의 `cluster_center`, `obb_center`, `obb_corners`, `obb_yaw`, `velocity_mps`는 모두
+array `header.frame_id` 기준이다. canonical runtime은 `map`을 사용하며 위치·속도는 SI가
+권위다. `speed_kph`는 화면과 회귀 확인 편의를 위한 파생값이다.
+
+## 3. 호환 topic
+
+다음 topic은 consumer 전환이 끝날 때까지 유지한다.
+
+| Topic | Type | 종료 조건 |
+|---|---|---|
+| `/traffic_light/state` | `std_msgs/String` | 모든 consumer가 typed detection 사용 |
+| `/traffic_light/detail` | `std_msgs/String` JSON | String/detail parity와 consumer 전환 |
+| `/lidar/tracked_objects_map` | `Msg/TrackedObjectArray` | `asmc_msgs` bag parity와 참조 0 |
+| `/last_lidar` | `Msg/TrackedObjectArray` | 최종 HD Map filter parity와 참조 0 |
+
+기존 topic을 remap으로 숨기지 않는다. 일정 기간 legacy와 canonical을 병행 발행하고 같은 source
+frame에서 객체 수, ID, OBB, 속도, dynamic state 및 신호 label/confidence/stale을 비교한다.
+
+## 4. Façade 실행 경계
+
+```bash
+roslaunch asmc_perception perception.launch
+```
+
+기본 실행은 v3 sensor-set provenance를 가진 3-camera lane pipeline이다. traffic-light,
+LiDAR/fusion, recorder는 명시적으로 켠다. LiDAR는 아직 nested workspace overlay가 필요하며
+P4-B façade가 `Main`, `Msg`, 중복 `morai_msgs`를 소유하거나 삭제하지 않는다.
+
+v2와 v3는 VLP-16 주기가 다르지만 네 camera의 pose, intrinsics, period와 UDP 설정은 같다.
+`cameras_v3.yaml`은 v3 원본 전체 SHA를 기록하고 unit test가 camera parity를 고정한다.
+
+## 5. 이관 gate
+
+Traffic-light producer 전환:
+
+1. 실제 추론 image header를 typed 결과에 복사한다.
+2. representative bag에서 String과 typed label/confidence/stale parity를 검증한다.
+3. 판제 consumer의 invalid/stale fail-safe를 확인한다.
+
+LiDAR producer 전환:
+
+1. nested `Msg`와 `asmc_msgs`의 field, MD5, 단위와 frame parity를 검증한다.
+2. bag에서 객체 수·ID·OBB·속도·dynamic state를 비교한다.
+3. 구 `link_node` mask filter를 최종 `/hd_map` 영역 consumer로 교체하고 parity를 확인한다.
+4. 모든 consumer 참조가 0이 된 뒤에만 nested `Msg`를 삭제한다.
+
+## 6. 검증
+
+```bash
+python3 tools/audit/validate_p1b_contract.py
+python3 tools/audit/validate_perception_contract.py
+python3 -m unittest tools/audit/test_perception_contract.py
+python3 -m unittest src/asmc_perception/test/test_facade_contract.py
+```
+
+ROS 환경에서는 `asmc_msgs` generated serialization과 façade launch parsing을 추가로 확인한다.

@@ -2,7 +2,7 @@
 
 > **문서 역할:** Working Proposal — 패키지 통합과 본선 배포를 위한 단계별 실행 계획
 > **작성 기준:** 2026-09-20 저장소와 현장 점검 반출 자료의 read-only 감사
-> **진행 상태:** 1·2단계와 3단계 P3-G local closeout, P4-A perception baseline 완료. 다음은 P4-B façade/interface
+> **진행 상태:** 1·2단계, 3단계 P3-G local closeout과 P4-A·P4-B 완료. 다음은 P4-C camera/BEV/traffic/recorder 이식
 > **보호 범위:** `behavior_planner`, `frenet_planner`, `mpc_controller`,
 > `planning_control/lane_boundary_adapter` 및 planning 소유 launch는 이 계획의 일방적 이동·삭제 대상이 아니다.
 
@@ -38,7 +38,7 @@
 
 | 현재 영역 | 판단 | 처리 방향 |
 |---|---|---|
-| `asmc_msgs` | 공용 메시지 25개(기존 동결 13 + additive 12), 현재 정본 | 유지·호환 검증 |
+| `asmc_msgs` | 공용 메시지 28개(기존 13 + HD Map 12 + perception 3), 현재 정본 | 유지·호환 검증 |
 | `behavior_planner/msg` | planning 소유이며 공용 메시지와 일부 중복 | 1단계에서 수정 금지. planning 협의 후 adapter 또는 별도 이관 |
 | `lidar+sensorfusion/src/Msg` | `TrackedObject*`, `Yolo_bbox*` 4개가 별도 메시지 패키지 | 소비자 이관과 함께 `asmc_msgs`로 흡수 |
 | `morai_udp_bridge` + `morai_sensor_bridge` + `vehicle_state` | P3-F 이전 세 패키지로 분산 | `asmc_bridge`로 물리 통합 완료 |
@@ -145,9 +145,13 @@ metadata, 검증 기준**을 먼저 고정한다. 이 단계가 끝나면 이후
 
 **완료.** P1-B에서 기존 13개 메시지의 ROS1 MD5를 유지하고 HD Map·competition 타입
 11개를 추가했다. P2-D에서 현재 차로 상태용 `LaneAssociation`을 additive policy로 더해
-현재 `asmc_msgs` 1.0.0은 기존 13 + 신규 12, 총 25개다. 기계 판독 정본은
+P4-B의 perception additive 3개를 포함한 현재 `asmc_msgs` 1.0.0은 총 28개다. HD Map 기계 판독 정본은
 [`config/contracts/hd_map_topic_contract_v1.yaml`](../../config/contracts/hd_map_topic_contract_v1.yaml),
-사람이 읽는 규약은 [HD Map topic contract v1](../contracts/hd-map/topic-v1.md)이다.
+perception 정본은
+[`config/contracts/perception_runtime_topic_contract_v1.yaml`](../../config/contracts/perception_runtime_topic_contract_v1.yaml)이며,
+전체 소유 관계는 `asmc_msgs_contract_registry_v1.yaml`이 검사한다. 사람이 읽는 규약은
+[HD Map topic contract v1](../contracts/hd-map/topic-v1.md)과
+[Perception runtime topic contract v1](../contracts/perception/runtime-v1.md)이다.
 
 | 메시지 계열 | 필수 정보 |
 |---|---|
@@ -490,16 +494,20 @@ rosbag, model checkpoint와 주최 배포 원본은 repo로 옮기지 않고 `$A
 
 ## 9. 다음 착수점
 
-**P1-A~P1-D, P2-A~P2-D, P3-A~P3-G local과 P4-A는 완료됐다.** `asmc_hd_map`과
+**P1-A~P1-D, P2-A~P2-D, P3-A~P3-G local과 P4-A~P4-B는 완료됐다.** `asmc_hd_map`과
 `asmc_bridge`는 각각 단일 package/runtime 계약을 소유한다. P4-A는 camera, LiDAR,
 traffic-light, BEV, lane, fusion, recorder의 package/launch/topic/type/frame/timestamp/model SHA,
 bag profile과 배포 금지 oracle을
 [`p4a_perception_runtime_v1`](../records/baselines/perception-p4a-runtime-v1.md)로 동결했다.
 
-다음 작업은 `P4-B canonical asmc_perception façade와 additive interface 결정`이다. 새 package의
-공통 launch/config 경계를 먼저 만들되 기존 node와 topic을 include/remap으로 유지한다.
-traffic-light typed 결과와 LiDAR tracked-object의 `asmc_msgs` 이관안을 추가 계약으로 정한 뒤,
-후속 PR에서 camera/BEV/traffic/recorder와 LiDAR를 순차 이식한다. 중복 `Msg`/`morai_msgs` 및
+P4-B에서 canonical `asmc_perception` package와 단일 compatibility launch, v3 camera calibration,
+traffic-light/LiDAR additive message·topic 계약을 추가했다. 기존 runtime source와 legacy topic은
+이동·삭제하지 않았고 canonical typed producer는 아직 미연결 상태로 명시했다.
+
+다음 작업은 `P4-C camera/BEV/traffic-light/recorder runtime 이식`이다. 먼저 traffic-light가 실제
+추론 image header를 typed 결과에 전달하도록 병행 발행하고, camera/BEV 실행 코드를 새 package
+namespace로 한 단위씩 옮겨 representative bag의 topic/type/frame/stamp/rate/latency parity를
+확인한다. LiDAR/`Msg`/구 road mask 이식은 별도 P4-D로 유지한다. 중복 `Msg`/`morai_msgs` 및
 `learning*` 삭제는 clean build, bag parity와 blocking reference zero 이후에만 수행한다.
 
 실제 두 PC LAN2LAN은 팀원 측 코드 준비와 perception 통합, 최소 단일 실행 진입점 이후 Phase 6

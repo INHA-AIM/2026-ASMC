@@ -50,6 +50,7 @@ EXTERNAL_MESSAGE_MD5 = {
     "geometry_msgs/Point": "4a842b65f413084dc2b10fb484ea7f17",
     "geometry_msgs/Point32": "cc153912f1453b708d221682bc23d9ac",
     "geometry_msgs/Pose": "e45d45a5a1ce597b249e23fb30fc871f",
+    "geometry_msgs/Vector3": "4a842b65f413084dc2b10fb484ea7f17",
 }
 
 EXTERNAL_TOPIC_TYPES = {
@@ -236,7 +237,8 @@ def _validate_legacy_against_p1a(
 
 
 def _validate_messages(
-    contract: Mapping[str, object], specs: Mapping[str, MessageSpec], baseline_path: Path
+    contract: Mapping[str, object], specs: Mapping[str, MessageSpec], baseline_path: Path,
+    registered_names: Optional[set] = None,
 ) -> Dict[str, str]:
     md5s = all_message_md5(specs)
     legacy = _as_mapping(contract.get("legacy_messages"), "legacy_messages")
@@ -246,11 +248,18 @@ def _validate_messages(
     declared_names = {_message_name(name) for name in legacy} | {
         _message_name(name) for name in additions
     }
-    if declared_names != set(specs):
+    missing_sources = sorted(declared_names - set(specs))
+    if missing_sources:
         raise ContractError(
-            "message inventory mismatch: "
-            f"undeclared={sorted(set(specs) - declared_names)}, "
-            f"missing_sources={sorted(declared_names - set(specs))}"
+            f"contract message sources are missing: {missing_sources}"
+        )
+    if registered_names is None:
+        registered_names = declared_names
+    if set(specs) != registered_names:
+        raise ContractError(
+            "message registry mismatch: "
+            f"unregistered={sorted(set(specs) - registered_names)}, "
+            f"missing_sources={sorted(registered_names - set(specs))}"
         )
 
     for type_name, expected_md5 in legacy.items():
@@ -274,6 +283,35 @@ def _validate_messages(
         if missing:
             raise ContractError(f"{type_name} missing required fields: {missing}")
     return md5s
+
+
+def _load_registered_message_names(repo_root: Path, registry_relative: object) -> set:
+    if not registry_relative:
+        raise ContractError("message_registry is required")
+    registry_path = repo_root / str(registry_relative)
+    registry = _load_yaml(registry_path)
+    if registry.get("schema_version") != 1:
+        raise ContractError("message registry must use schema_version 1")
+    entries = _as_list(registry.get("contracts"), "message registry contracts")
+    owners: Dict[str, str] = {}
+    for index, raw_entry in enumerate(entries):
+        entry = _as_mapping(raw_entry, f"message registry contracts[{index}]")
+        relative = str(entry.get("path", ""))
+        if not relative:
+            raise ContractError("message registry contract path is empty")
+        child = _load_yaml(repo_root / relative)
+        sections = _as_list(entry.get("message_sections"), f"{relative}.message_sections")
+        for raw_section in sections:
+            section_name = str(raw_section)
+            section = _as_mapping(child.get(section_name), f"{relative}.{section_name}")
+            for type_name in section:
+                name = _message_name(str(type_name))
+                if name in owners:
+                    raise ContractError(
+                        f"message {type_name} has multiple contracts: {owners[name]}, {relative}"
+                    )
+                owners[name] = relative
+    return set(owners)
 
 
 def _constant_map(spec: MessageSpec) -> Dict[str, str]:
@@ -355,12 +393,18 @@ def validate_contract(repo_root: Path, contract_path: Path, baseline_path: Path)
     specs = load_message_specs(message_dir)
     _validate_cmake(message_dir, specs)
     _validate_package_version(message_dir, str(package.get("version", "")))
-    md5s = _validate_messages(contract, specs, baseline_path)
+    registered_names = _load_registered_message_names(
+        repo_root, contract.get("message_registry")
+    )
+    md5s = _validate_messages(contract, specs, baseline_path, registered_names)
     _validate_semantics(specs)
     _validate_topics(contract, md5s)
     return {
         "contract_id": contract.get("contract_id"),
         "message_count": len(specs),
+        "contract_message_count": len(_as_mapping(contract.get("legacy_messages"), "legacy_messages"))
+        + len(_as_mapping(contract.get("new_messages"), "new_messages")),
+        "registered_message_count": len(registered_names),
         "legacy_message_count": len(_as_mapping(contract.get("legacy_messages"), "legacy_messages")),
         "new_message_count": len(_as_mapping(contract.get("new_messages"), "new_messages")),
         "topic_count": len(_as_mapping(contract.get("topics"), "topics")),
@@ -390,8 +434,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     print(
         "P1-B contract valid: "
-        f"{result['message_count']} messages "
-        f"({result['legacy_message_count']} frozen + {result['new_message_count']} new), "
+        f"{result['registered_message_count']} registered messages; "
+        f"HD Map contract owns {result['contract_message_count']} "
+        f"({result['legacy_message_count']} frozen + {result['new_message_count']} additive), "
         f"{result['topic_count']} topics"
     )
     return 0

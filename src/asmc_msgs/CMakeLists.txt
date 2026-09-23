@@ -40,6 +40,12 @@ add_message_files(
   CompetitionCheckpointArray.msg
   MissionZone.msg
   MissionZoneArray.msg
+  # Phase 4 perception contracts.  These are additive replacements for the
+  # legacy traffic-light String and nested Msg/TrackedObject* interfaces.
+  # The legacy producers/topics remain available during consumer cutover.
+  TrafficLightDetection.msg
+  TrackedObject.msg
+  TrackedObjectArray.msg
 )
 
 generate_messages(

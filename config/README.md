@@ -6,7 +6,7 @@
 |---|---|---|
 | [`bridge/`](./bridge/) | P3-A bridge·transport 기계 판독 계약 | Phase 3 |
 | [`morai/`](./morai/) | MORAI network import와 `ASMC_sensor_set_*` | Phase 3 |
-| [`contracts/`](./contracts/) | ROS message/topic 계약 | Phase 1 |
+| [`contracts/`](./contracts/) | ROS message/topic 계약과 `asmc_msgs` 소유 registry | Phase 1·4 |
 | [`baselines/`](./baselines/) | P1 저장소 snapshot과 P4 인지 runtime 이관 baseline | Phase 1·4 |
 | `perception_target_policy_*.json` | perception target 정책의 현행 호환 경로 | Phase 4에서 이동 검토 |
 | `twinlite_*.json` | perception 실험 표본 | Phase 4에서 이동 검토 |
@@ -30,4 +30,6 @@ bag profile과 oracle 금지선을 기록한다.
 ```bash
 python3 tools/audit/build_perception_runtime_baseline.py --check
 python3 -m unittest tools/audit/test_perception_runtime_baseline.py
+python3 tools/audit/validate_perception_contract.py
+python3 -m unittest tools/audit/test_perception_contract.py
 ```

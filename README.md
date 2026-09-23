@@ -77,6 +77,7 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 │   ├── asmc_msgs/             # 팀 내부 ROS1 공용 message 계약
 │   ├── asmc_bridge/           # MORAI Network/Sensor UDP + VehicleState
 │   ├── asmc_hd_map/           # HD Map builder/runtime/검수
+│   ├── asmc_perception/       # P4-B 단일 launch/config/interface façade
 │   ├── learning_by_cheating/  # learning ✅
 │   ├── data_collection/        # Capture GT · mask · dataset ✅
 │   ├── perception/camera_semantic_perception/ # camera ROS live inference ✅
