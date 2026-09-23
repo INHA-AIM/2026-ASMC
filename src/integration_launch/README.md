@@ -1,7 +1,8 @@
 # integration_launch
 
-현재 MORAI network/sensor bridge를 함께 실행하는 launch-only ROS1 package다. Planning/Control
-공동 소유이므로 Phase 3 통합 때 일방적으로 이동하거나 삭제하지 않는다.
+현재 MORAI network/sensor bridge를 함께 실행하는 호환 launch-only ROS1 package다.
+P3-D부터 canonical 진입점은 `asmc_bridge/bridge.launch`이지만 Planning/Control 공동 소유와
+rollback·parity 검증을 위해 이 launch를 유지한다.
 
 - bridge 구조와 통합 gate: [bridge package-group guide](../../docs/packages/asmc_bridge/README.md)
 - Docker·MORAI UI·진단: [운영 가이드](../../docs/operations/README.md)

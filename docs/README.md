@@ -41,7 +41,7 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 |---|---|---|
 | 대회 규정·공개 자산 | 주최 측 최신 원문 → [대회 요약](./competition/README.md) | 공식 원문이 항상 우선. 요약 문서를 함께 갱신 |
 | Docker·시뮬 통신·포트 | [운영 가이드](./operations/README.md) | 현재 적용값과 3단계 목표를 혼용하지 않음 |
-| bridge 구현·통합 gate | [MORAI bridge guide](./packages/asmc_bridge/README.md) | 현재 세 패키지와 아직 없는 `asmc_bridge`를 구분 |
+| bridge 구현·통합 gate | [MORAI bridge guide](./packages/asmc_bridge/README.md) | `asmc_bridge` façade와 보존된 하위 패키지를 구분 |
 | perception 구현·통합 gate | [Perception package-group guide](./packages/asmc_perception/README.md) | 현재 분산 패키지와 아직 없는 `asmc_perception`을 구분 |
 | Git·ownership | [협업 규칙](./governance/README.md)과 [ownership](./onboarding/ownership.md) | 과거 Phase 0/Path A 문서보다 우선 |
 | 공용 계약 탐색·변경 gate | [계약 문서 허브](./contracts/README.md) | 실제 구현은 링크된 개별 계약과 기계 정본을 함께 확인 |
@@ -75,7 +75,8 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 | [baselines/runtime-baseline-v1.md](./records/baselines/runtime-v1.md) | P1-A 당시 package/topic/message/sensor/bag/HD Map snapshot | Frozen Snapshot (`73c0a8c`) |
 | [P3-A bridge baseline](./records/baselines/bridge-p3a-v1.md) | 공통 `morai_udp`, transport/network/sensor profile과 bridge source/topic SHA | Frozen P3-A Baseline |
 | [P3-B Competition status baseline](./records/baselines/bridge-p3b-v1.md) | `7603/7502` decoder·fixture·`/Competition_topic`과 live acceptance gate | Frozen P3-B Baseline |
-| [P3-C stream/sensor transport baseline](./records/baselines/bridge-p3c-v1.md) | 본선 allowlist, local-only oracle, v2/v3 sensor IP 파생 계약 | Active Baseline |
+| [P3-C stream/sensor transport baseline](./records/baselines/bridge-p3c-v1.md) | 본선 allowlist, local-only oracle, v2/v3 sensor IP 파생 계약 | Frozen P3-C Baseline |
+| [P3-D bridge façade baseline](./records/baselines/bridge-p3d-v1.md) | Network·Sensor·VehicleState 단일 launch와 rollback 경계 | Active Baseline |
 | [contracts/hd-map-topic-contract-v1.md](./contracts/hd-map/topic-v1.md) | P1-B `asmc_msgs` HD Map·체크포인트·미션 message/topic 계약 | Frozen Interface |
 | [contracts/kcity2025-competition-metadata-v1.md](./contracts/competition/kcity2025-metadata-v1.md) | P1-C 공식 체크포인트 projection과 권위별 mission-zone 정본 | Frozen Metadata |
 | [contracts/hd-map-runtime-visualization-v1.md](./contracts/hd-map/runtime-v1.md) | 2단계 global/local ROS publisher, RViz와 paint-gap 소비 규칙 | Active Runtime |

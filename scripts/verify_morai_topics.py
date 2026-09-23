@@ -21,6 +21,7 @@ COMPETITION_REQUIRED_TOPICS = (
     "/velodyne_points",
     "/gps",
     "/imu",
+    "/vehicle/state",
 )
 
 DEVELOPMENT_REQUIRED_TOPICS = COMPETITION_REQUIRED_TOPICS + (
@@ -54,6 +55,7 @@ NOMINAL_RATES_HZ = {
     "/velodyne_points_instance": 10.0,
     "/gps": 5.0,
     "/imu": 50.0,
+    "/vehicle/state": 50.0,
 }
 
 
@@ -149,6 +151,7 @@ def main():
 
     try:
         import rospy
+        from asmc_msgs.msg import VehicleState
         from morai_msgs.msg import EgoVehicleStatus, GPSMessage, ObjectStatusList
         from diagnostic_msgs.msg import DiagnosticArray
         from sensor_msgs.msg import CompressedImage, Imu, PointCloud2
@@ -172,10 +175,12 @@ def main():
     header_ages_ms = {topic: [] for topic in topics}
     source_regressions = {topic: 0 for topic in topics}
     pointcloud_fields = {}
+    valid_vehicle_states = 0
     bridge_diagnostics = {}
     started = time.monotonic()
 
     def callback(message, topic_name):
+        nonlocal valid_vehicle_states
         now = time.monotonic()
         wall_now = time.time()
         with lock:
@@ -192,6 +197,8 @@ def main():
                 pointcloud_fields[topic_name] = {
                     field.name: field.datatype for field in message.fields
                 }
+            if topic_name == "/vehicle/state" and getattr(message, "valid", False):
+                valid_vehicle_states += 1
 
     def diagnostics_callback(message, topic_name):
         values = {}
@@ -214,6 +221,7 @@ def main():
         "/imu": Imu,
         "/velodyne_points": PointCloud2,
         "/velodyne_points_instance": PointCloud2,
+        "/vehicle/state": VehicleState,
     }
     for topic in topics:
         message_type = (
@@ -260,12 +268,16 @@ def main():
         if profile == "competition" else []
     )
     report["forbidden_topic_publishers"] = forbidden_publishers
+    report["valid_vehicle_state_messages"] = valid_vehicle_states
     if forbidden_publishers:
         failures.append("privileged:" + ",".join(forbidden_publishers))
         print(
             "[FAIL] competition profile exposes privileged publishers: "
             + ", ".join(forbidden_publishers)
         )
+    if "/vehicle/state" in topics and valid_vehicle_states == 0:
+        failures.append("/vehicle/state:valid")
+        print("[FAIL] /vehicle/state was never valid during the measurement window")
 
     print("TOPIC                                             COUNT   RATE(Hz)   STATUS")
     for topic in topics:

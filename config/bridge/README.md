@@ -5,6 +5,8 @@ simulator release, runtime protocol, transport, sensor set을 서로 다른 축�
 P3-B에서 Competition Vehicle Status decoder와 fixture 계약을 추가했다.
 P3-C에서 `competition`/`development` stream policy와 v2/v3 sensor transport 파생 계약을
 추가했다.
+P3-D에서 `asmc_bridge/bridge.launch`를 canonical façade로 추가해 Network, Sensor,
+GPS/IMU `/vehicle/state`를 한 번에 기동한다. 기존 패키지는 rollback 기준으로 보존한다.
 
 - runtime protocol은 `morai_udp` 하나다. 26.R1.H3와 25.S4.MolitComp03 때문에 bridge code를
   분기하지 않는다.

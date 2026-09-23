@@ -137,8 +137,9 @@ SENSOR_PRESET_V3="config/morai/sensors/generated/ASMC_sensor_set_v3_${TRANSPORT_
 cd "$ASMC_WS_ROOT"
 for preset in "$NETWORK_PRESET_26R1" "$NETWORK_PRESET_COMP" "$SENSOR_PRESET_V2" "$SENSOR_PRESET_V3"; do
   if [ ! -f "$ASMC_WS_ROOT/$preset" ]; then
-    echo "[udp_bridge] ERROR: generated network preset is missing: $preset" >&2
+    echo "[udp_bridge] ERROR: generated MORAI preset is missing: $preset" >&2
     echo "  python3 tools/bridge/render_morai_network_profiles.py --write" >&2
+    echo "  python3 tools/bridge/render_morai_sensor_profiles.py --write" >&2
     exit 1
   fi
 done
@@ -148,11 +149,12 @@ source devel/setup.bash 2>/dev/null || true
 export ROS_MASTER_URI="${ROS_MASTER_URI:-http://127.0.0.1:11311}"
 export ROS_IP="${ROS_IP:-127.0.0.1}"
 
-if ! rospack find morai_udp_bridge >/dev/null 2>&1 \
+if ! rospack find asmc_bridge >/dev/null 2>&1 \
+  || ! rospack find morai_udp_bridge >/dev/null 2>&1 \
   || ! rospack find morai_sensor_bridge >/dev/null 2>&1; then
   echo "[udp_bridge] packages not found — build first:"
   echo "  ./scripts/build_ws.sh"
-  echo "  # or: catkin_make --pkg morai_udp_bridge morai_sensor_bridge"
+  echo "  # or: catkin_make --pkg asmc_bridge morai_udp_bridge morai_sensor_bridge vehicle_state"
   exit 1
 fi
 
@@ -178,7 +180,7 @@ echo "  NOT rosbridge — binary UDP ↔ ROS topics"
 echo "=========================================="
 echo "  ASMC_WS_ROOT   : $ASMC_WS_ROOT"
 echo "  ROS_MASTER_URI : $ROS_MASTER_URI"
-echo "  Launch         : integration_launch/morai_udp_bridges.launch"
+echo "  Launch         : asmc_bridge/bridge.launch"
 echo "  Runtime        : ${RUNTIME_PROFILE} (26r1 and competition shared)"
 echo "  Transport      : ${TRANSPORT_PROFILE}"
 echo "  Streams        : ${STREAM_PROFILE}"
@@ -206,6 +208,7 @@ echo "  cmd_ip         : ${CMD_IP} (Ctrl → Windows MORAI Host PORT)"
 echo "  Ctrl default   : 9093/9094, mode 2"
 echo "  Ego status     : 9088/9099 (both MORAI releases normalized)"
 echo "  Competition    : 7603/7502 -> /Competition_topic"
+echo "  Vehicle state  : GPS/IMU -> /vehicle/state"
 echo "  Sensor ports   : competition allowlist 9291..9303"
 if [ "$STREAM_PROFILE" = "development" ]; then
   echo "                   + Object/Semantic/Instance development inputs"
@@ -214,6 +217,7 @@ echo "  Timestamp      : receive default; GT pairing: timestamp_mode:=source"
 echo "  Verify         : rostopic hz /Ego_topic"
 echo "                  rostopic hz /Competition_topic"
 echo "                  rostopic hz /image_jpeg/compressed"
+echo "                  rostopic hz /vehicle/state"
 if [ "$STREAM_PROFILE" = "development" ]; then
   echo "                  rostopic hz /sem_front/image_jpeg/compressed"
   echo "                  rostopic hz /velodyne_points_instance"
@@ -223,5 +227,5 @@ fi
 echo "=========================================="
 echo ""
 
-exec roslaunch integration_launch morai_udp_bridges.launch \
+exec roslaunch asmc_bridge bridge.launch \
   "${EXTRA[@]}" "${LAUNCH_ARGS[@]}"

@@ -2,7 +2,7 @@
 
 > **문서 역할:** Active Package-Group Guide — 현재 bridge/state 구현과 Phase 3 통합 gate
 >
-> **현재 상태:** `asmc_bridge` 패키지는 아직 없으며 세 runtime 패키지와 launch 패키지가 운영 중
+> **현재 상태:** `asmc_bridge` canonical launch façade와 기존 세 runtime 패키지가 함께 운영 중
 
 Docker·MORAI UI·현재 포트로 실행하는 절차는 [운영 가이드](../../operations/README.md),
 대회 허용 센서와 현장 조건은 [대회 환경](../../competition/README.md), 외부 message 호환은
@@ -16,15 +16,16 @@ bridge 구현을 개발·검증하고 Phase 3에서 안전하게 통합하는 �
 | Network UDP와 Ctrl | `src/morai_udp_bridge/` | 운영 중 |
 | Camera/LiDAR/GPS/IMU decode | `src/morai_sensor_bridge/` | 운영 중 |
 | GPS/IMU→팀 내부 차량 상태 | `src/vehicle_state/` | 운영 중 |
-| 두 UDP bridge 동시 기동 | `src/integration_launch/` | 운영 중, planning 공동 소유 |
-| 단일 `asmc_bridge` | 존재하지 않음 | Phase 3 목표 |
+| 호환 UDP composition | `src/integration_launch/` | rollback·parity 기준, planning 공동 소유 |
+| canonical `asmc_bridge` launch | `src/asmc_bridge/` | P3-D façade, 기본 `/vehicle/state` 포함 |
 | `local`/`lan2lan` 계약·MORAI JSON | P3-A 완료 | live LAN gate 대기 |
 | Competition Vehicle Status decoder | P3-B 정적 계약·fixture 완료 | live capture gate 대기 |
 | stream allowlist·sensor IP 파생본 | P3-C 구현 | live LAN gate 대기 |
+| 단일 launch façade·vehicle state composition | P3-D 구현 | package 물리 이전·삭제 대기 |
 
-P3-A 이후에도 현재 패키지 이름과 launch를 사용한다. 문서상의 목표 구조를 근거로 경로를 먼저
-옮기거나 기존 패키지를 삭제하지 않는다. `asmc_bridge` 승격은 bag replay, packet fixture,
-producer/consumer build와 실제 MORAI 검증을 모두 통과한 뒤에만 한다.
+P3-D는 launch composition만 `asmc_bridge`로 승격했다. 구현 node와 호환 launch는 bag replay,
+packet fixture, producer/consumer build와 실제 MORAI 검증을 모두 통과할 때까지 이동·삭제하지
+않는다. rollback은 `integration_launch/morai_udp_bridges.launch`로 가능하다.
 
 ## 2. 현재 데이터 흐름
 
@@ -128,13 +129,13 @@ fallback으로 자동 선택하지 않는다.
 cd /root/ws
 source devel/setup.bash
 ./scripts/udp_bridge.sh
-roslaunch vehicle_state vehicle_state.launch
 ```
 
 26r1과 대회판 모두 `morai_udp` runtime을 쓰므로 bridge 명령에서 simulator를 선택하지 않는다.
 release별 MORAI import는 UI에서 선택하고, bridge에서는 transport만 선택한다.
 
-현장 후보에서는 `--transport lan2lan`을 지정한다. 스크립트가 두 release에 대응하는 generated
+현장 후보에서는 `--transport lan2lan`을 지정한다. 스크립트는 `asmc_bridge/bridge.launch`를
+기동해 Network/Sensor bridge와 GPS/IMU `/vehicle/state`를 함께 연다. 두 release에 대응하는 generated
 MORAI JSON 경로와 Ctrl 대상 IP를 출력하며 diagnostics에도 transport 이름을 남긴다.
 
 다른 터미널에서:

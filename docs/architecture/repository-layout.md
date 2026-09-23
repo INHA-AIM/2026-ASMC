@@ -83,7 +83,8 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `src/asmc_hd_map/` | reviewed HD Map과 runtime | 안승현 |
 
 현재 bridge 구조와 Phase 3 이관 gate는 [MORAI bridge guide](../packages/asmc_bridge/README.md)를
-따른다. 단일 `asmc_bridge`와 환경 profile은 아직 구현되지 않았다.
+따른다. `src/asmc_bridge` canonical launch façade와 환경 profile은 P3-D까지 구현됐으며,
+하위 node의 물리 이전·삭제는 live parity 검증 후로 보류한다.
 
 ### learning (✅ PR #2)
 
@@ -132,6 +133,7 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `src/mpc_controller/` | ✅ | ✅ | 👀 | 👀 | — | — |
 | `src/frenet_planner/` | 👀 | 👀 | ✅ | 👀 | — | — |
 | `src/integration_launch/` | ✅ | 👀 | 👀 | 👀 | — | — |
+| `src/asmc_bridge/` | 👀 | 👀 | ✅ | ✅ | — | 👀 |
 | `src/learning_by_cheating/` | — | — | — | ✅ | — | — |
 | `scripts/rosbridge.sh` | 👀 | 👀 | 👀 | ✅ | — | — |
 | `scripts/udp_bridge.sh` · `src/morai_*_bridge/` | 👀 | 👀 | ✅ | ✅ | — | — |

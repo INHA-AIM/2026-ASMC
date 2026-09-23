@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "baseline_id": "p3c_bridge_profiles_v1",
+  "baseline_id": "p3d_bridge_profiles_v1",
   "runtime_protocol": {
     "id": "morai_udp",
     "release_behavior_split": false,
@@ -58,15 +58,24 @@
   },
   "implementation_baseline": {
     "packages": [
+      "asmc_bridge",
       "integration_launch",
       "morai_udp_bridge",
       "morai_sensor_bridge",
       "vehicle_state"
     ],
     "artifacts": {
+      "facade_launch": {
+        "path": "src/asmc_bridge/launch/bridge.launch",
+        "sha256": "4eb53a3038371264664204c700d9ddeef40dae8fa252757328afb066a1241792"
+      },
+      "facade_package": {
+        "path": "src/asmc_bridge/package.xml",
+        "sha256": "1d99ce237d69bad39f932b811ded7c206233f4e8c08b95a232bf2e2801df1269"
+      },
       "entrypoint": {
         "path": "scripts/udp_bridge.sh",
-        "sha256": "0776d8b3b0f76b17a9f61902f683fc6249fe7ee5044501d8db0feb4859211c0a"
+        "sha256": "cb7d2005bfcb52277d1650861896b1b93d55d6558a83b647d269022ee6019e64"
       },
       "integration_launch": {
         "path": "src/integration_launch/launch/morai_udp_bridges.launch",
@@ -94,7 +103,7 @@
       },
       "topic_verifier": {
         "path": "scripts/verify_morai_topics.py",
-        "sha256": "7655d8bd5e956c69a88018967d3edf9bd97b0423fa02e8afcdff433d58002deb"
+        "sha256": "d95f58e5a3685776443bc6c8f9dbf96f79c22571115cee2f281c9c06f7d7e649"
       },
       "sensor_profile_renderer": {
         "path": "tools/bridge/render_morai_sensor_profiles.py",
@@ -137,6 +146,14 @@
       "/sem_right/image_jpeg/compressed": "sensor_msgs/CompressedImage",
       "/velodyne_points_instance": "sensor_msgs/PointCloud2"
     }
+  },
+  "composition": {
+    "canonical_package": "asmc_bridge",
+    "canonical_launch": "bridge.launch",
+    "vehicle_state_default": true,
+    "vehicle_state_source": "gps_imu",
+    "compatibility_launch": "integration_launch/morai_udp_bridges.launch",
+    "legacy_packages_retained_for_rollback": true
   },
   "transport_profiles": {
     "local": {

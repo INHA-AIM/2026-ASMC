@@ -166,7 +166,13 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     implementation = contract["implementation_baseline"]
     _require(
         implementation["packages"]
-        == ["integration_launch", "morai_udp_bridge", "morai_sensor_bridge", "vehicle_state"],
+        == [
+            "asmc_bridge",
+            "integration_launch",
+            "morai_udp_bridge",
+            "morai_sensor_bridge",
+            "vehicle_state",
+        ],
         "bridge package baseline changed",
     )
     for name, spec in implementation["artifacts"].items():
@@ -312,9 +318,14 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     except SensorProfileError as exc:
         raise ContractError(str(exc)) from exc
 
+    facade = REPO_ROOT / "src/asmc_bridge/launch/bridge.launch"
     integration = REPO_ROOT / "src/integration_launch/launch/morai_udp_bridges.launch"
     udp_launch = REPO_ROOT / "src/morai_udp_bridge/launch/morai_udp_bridge.launch"
     sensor_launch = REPO_ROOT / "src/morai_sensor_bridge/launch/morai_sensor_bridge.launch"
+    _require(_launch_arg(facade, "runtime_profile") == "morai_udp", "facade runtime profile split")
+    _require(_launch_arg(facade, "transport_profile") == "local", "facade transport default changed")
+    _require(_launch_arg(facade, "stream_profile") == "competition", "facade stream default changed")
+    _require(_launch_arg(facade, "enable_vehicle_state") == "true", "facade vehicle state default changed")
     _require(_launch_arg(integration, "runtime_profile") == "morai_udp", "integration runtime profile split")
     _require(_launch_arg(udp_launch, "runtime_profile") == "morai_udp", "UDP runtime profile split")
     _require(_launch_arg(sensor_launch, "runtime_profile") == "morai_udp", "sensor runtime profile split")
@@ -363,6 +374,23 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     _require(
         "development streams are local-only" in entrypoint_text,
         "bridge CLI must reject LAN2LAN privileged streams",
+    )
+    _require(
+        "exec roslaunch asmc_bridge bridge.launch" in entrypoint_text,
+        "bridge CLI must use the canonical asmc_bridge facade",
+    )
+    composition = contract["composition"]
+    _require(
+        composition
+        == {
+            "canonical_package": "asmc_bridge",
+            "canonical_launch": "bridge.launch",
+            "vehicle_state_default": True,
+            "vehicle_state_source": "gps_imu",
+            "compatibility_launch": "integration_launch/morai_udp_bridges.launch",
+            "legacy_packages_retained_for_rollback": True,
+        },
+        "bridge composition contract changed",
     )
 
     summaries = {
@@ -436,6 +464,7 @@ def validate(contract_path: Path) -> Dict[str, Any]:
             for spec in contract["sensor_sets"].values()
         ),
         "default_stream_profile": contract["defaults"]["stream_profile"],
+        "canonical_launch": "asmc_bridge/bridge.launch",
         "packages": implementation["packages"],
         "published_topic_count": len(implementation["published_topics"]),
         "ctrl": "9093/9094 mode 2",
@@ -449,7 +478,7 @@ def main() -> None:
     contract_path = REPO_ROOT / "config/bridge/bridge_profiles_v1.json"
     result = validate(contract_path)
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
-    print("P3-C bridge profile contract: PASS")
+    print("P3-D bridge profile contract: PASS")
 
 
 if __name__ == "__main__":

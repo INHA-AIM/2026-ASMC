@@ -1,0 +1,31 @@
+<!--
+  Canonical ASMC bridge facade.
+
+  The implementation packages remain separate during P3-D rollback/parity.
+  This launch owns only composition and the deployment-safe defaults.
+-->
+<launch>
+  <arg name="runtime_profile" default="morai_udp"/>
+  <arg name="transport_profile" default="local"/>
+  <arg name="stream_profile" default="competition"/>
+  <arg name="timestamp_mode" default="receive"/>
+  <arg name="publish_map_tf" default="false"/>
+  <arg name="cmd_ip" default="$(optenv MORAI_CMD_IP 127.0.0.1)"/>
+  <arg name="cmd_port" default="9093"/>
+  <arg name="competition_port" default="7502"/>
+  <arg name="enable_vehicle_state" default="true"/>
+
+  <include file="$(find integration_launch)/launch/morai_udp_bridges.launch">
+    <arg name="runtime_profile" value="$(arg runtime_profile)"/>
+    <arg name="transport_profile" value="$(arg transport_profile)"/>
+    <arg name="stream_profile" value="$(arg stream_profile)"/>
+    <arg name="timestamp_mode" value="$(arg timestamp_mode)"/>
+    <arg name="publish_map_tf" value="$(arg publish_map_tf)"/>
+    <arg name="cmd_ip" value="$(arg cmd_ip)"/>
+    <arg name="cmd_port" value="$(arg cmd_port)"/>
+    <arg name="competition_port" value="$(arg competition_port)"/>
+  </include>
+
+  <include if="$(arg enable_vehicle_state)"
+           file="$(find vehicle_state)/launch/vehicle_state.launch"/>
+</launch>

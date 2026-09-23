@@ -48,8 +48,8 @@ MORAI <--UDP-- morai_udp_bridge <--ROS-- /ctrl_cmd
 - Behavior/Frenet/MPC도 현재 내부 ROS topic으로 연결되며 직접 UDP socket을 열지 않는다.
 - `rosbridge.sh` direct WebSocket 실험은 종료됐으며 현재 개발·본선 경로가 아니다.
 - gRPC scenario runner와 GT topic은 개발·데이터 수집 전용이다.
-- 현재 bridge는 `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`로 나뉘어 있다.
-  단일 `asmc_bridge`는 Phase 3 parity 이후에만 교체한다.
+- `asmc_bridge/bridge.launch`가 `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`를 한 번에
+  기동한다. 구현 패키지와 `integration_launch`는 rollback·parity 기준으로 유지한다.
 - 두 simulator release는 `morai_udp` runtime 하나를 쓴다. release는 MORAI UI에 import할 JSON으로,
   transport는 `udp_bridge.sh`의 `local`/`lan2lan`으로 선택한다.
 - stream policy는 `competition`(기본)과 `development`(로컬 oracle)로 나뉘며 release와 독립적이다.
@@ -128,6 +128,10 @@ cd /root/ws
 source devel/setup.bash
 ./scripts/udp_bridge.sh
 ```
+
+이 명령은 `/vehicle/state`까지 포함한다. 기존 stack이 vehicle-state node를 별도로 기동하는
+일시적 호환 실행에서만 `enable_vehicle_state:=false`를 사용하고, 동일 topic의 publisher를
+두 개 실행하지 않는다.
 
 26r1과 대회판 모두 같은 `morai_udp` launch를 사용한다. 현장에서는 별도로
 `ASMC_network_set_molitcomp03_lan2lan.json`을 MORAI에 로드해야 하며, 실제 LAN gate 전에는

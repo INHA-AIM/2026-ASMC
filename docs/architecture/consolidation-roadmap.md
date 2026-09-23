@@ -437,6 +437,8 @@ release별 template에서 생성하도록 했다. 두 transport는 포트·mode�
 Competition Vehicle Status의 live capture 승인과 실제 두 PC 검증은 아직 남았다.
 정적 decoder·fixture·ROS publish 계약은 P3-B, privileged stream allowlist와 v2/v3
 sensor local/lan2lan IP 파생본은 P3-C에서 적용했다.
+P3-D에서 `asmc_bridge` canonical launch façade와 기본 GPS/IMU `/vehicle/state` composition을
+추가했다. 기존 node package와 `integration_launch`는 live parity·rollback을 위해 유지한다.
 
 ### 7.2 배포 원칙
 

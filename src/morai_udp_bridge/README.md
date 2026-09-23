@@ -1,7 +1,8 @@
 # morai_udp_bridge
 
 MORAI Network UDP의 Ego/Competition/Object/Collision packet을 ROS1으로 변환하고 `/ctrl_cmd`를 Ego Ctrl Cmd
-UDP로 보내는 현재 bridge다. 단일 `asmc_bridge`로의 통합은 아직 시작하지 않았다.
+UDP로 보내는 Network adapter다. P3-D의 `asmc_bridge` façade가 이 node를 조합하지만,
+rollback·packet parity를 위해 구현 패키지 경계는 유지한다.
 
 - 구현·단위·검증: [bridge package-group guide](../../docs/packages/asmc_bridge/README.md)
 - 현재 포트와 실행: [운영 가이드](../../docs/operations/README.md)
