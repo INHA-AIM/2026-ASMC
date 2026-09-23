@@ -2,7 +2,7 @@
 
 > **문서 역할:** Working Proposal — 패키지 통합과 본선 배포를 위한 단계별 실행 계획
 > **작성 기준:** 2026-09-20 저장소와 현장 점검 반출 자료의 read-only 감사
-> **진행 상태:** 1·2단계 완료, 3단계 P3-G local closeout 완료. 다음은 P4-A perception baseline
+> **진행 상태:** 1·2단계와 3단계 P3-G local closeout, P4-A perception baseline 완료. 다음은 P4-B façade/interface
 > **보호 범위:** `behavior_planner`, `frenet_planner`, `mpc_controller`,
 > `planning_control/lane_boundary_adapter` 및 planning 소유 launch는 이 계획의 일방적 이동·삭제 대상이 아니다.
 
@@ -490,11 +490,17 @@ rosbag, model checkpoint와 주최 배포 원본은 repo로 옮기지 않고 `$A
 
 ## 9. 다음 착수점
 
-**P1-A~P1-D, P2-A~P2-D와 P3-A~P3-G의 local 범위는 완료됐다.** `asmc_hd_map`과
-`asmc_bridge`는 각각 단일 package/runtime 계약을 소유한다. 다음 작업은 패키지를 옮기기 전
-`P4-A perception runtime baseline`이다. camera, LiDAR, traffic-light, BEV, fitting, fusion,
-recorder의 package/topic/type/frame/timestamp/model SHA와 배포 금지 oracle을 먼저 동결한다.
-그 뒤 façade와 물리 이관, 중복 `Msg`/`morai_msgs` 및 `learning*` 제거 gate를 순서대로 진행한다.
+**P1-A~P1-D, P2-A~P2-D, P3-A~P3-G local과 P4-A는 완료됐다.** `asmc_hd_map`과
+`asmc_bridge`는 각각 단일 package/runtime 계약을 소유한다. P4-A는 camera, LiDAR,
+traffic-light, BEV, lane, fusion, recorder의 package/launch/topic/type/frame/timestamp/model SHA,
+bag profile과 배포 금지 oracle을
+[`p4a_perception_runtime_v1`](../records/baselines/perception-p4a-runtime-v1.md)로 동결했다.
+
+다음 작업은 `P4-B canonical asmc_perception façade와 additive interface 결정`이다. 새 package의
+공통 launch/config 경계를 먼저 만들되 기존 node와 topic을 include/remap으로 유지한다.
+traffic-light typed 결과와 LiDAR tracked-object의 `asmc_msgs` 이관안을 추가 계약으로 정한 뒤,
+후속 PR에서 camera/BEV/traffic/recorder와 LiDAR를 순차 이식한다. 중복 `Msg`/`morai_msgs` 및
+`learning*` 삭제는 clean build, bag parity와 blocking reference zero 이후에만 수행한다.
 
 실제 두 PC LAN2LAN은 팀원 측 코드 준비와 perception 통합, 최소 단일 실행 진입점 이후 Phase 6
 리허설에서 수행한다. P3-G의 `--require-competition-status`는 그때 주최판 type 787 수락 gate로

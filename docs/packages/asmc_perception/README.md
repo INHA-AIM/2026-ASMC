@@ -168,7 +168,12 @@ runtime 계약이나 deployment 허용 상태가 자동 승격되지는 않는�
 
 ## 9. Phase 4 통합 gate
 
-1. 현재 package, launch, topic/type/frame/stamp와 model artifact baseline을 다시 기록한다.
+P4-A 기준선은 완료됐다. 기계 정본은
+[`perception_runtime_baseline_v1.yaml`](../../../config/baselines/perception_runtime_baseline_v1.yaml),
+사람이 검토할 결과는 [P4-A record](../../records/baselines/perception-p4a-runtime-v1.md)다.
+이 기준선은 현 구조를 목표로 승인하지 않고 안전한 이관을 위한 비교점으로만 사용한다.
+
+1. **완료:** 현재 package, launch, topic/type/frame/stamp와 model artifact baseline을 기록한다.
 2. camera, BEV, LiDAR, traffic-light의 runtime 코드와 offline train/eval/curation을 분류한다.
 3. 공용 message 변경은 `asmc_msgs` consumer와 MD5 영향을 먼저 검토한다.
 4. 새 namespace로 runtime을 이식하되 기존 launch와 bag replay를 병행한다.
@@ -180,6 +185,10 @@ runtime 계약이나 deployment 허용 상태가 자동 승격되지는 않는�
 
 Vendor Velodyne driver는 팀 인지 runtime과 같은 package로 합치지 않는다. 단일 package라는 목표가
 실패 경계와 upstream ownership을 없앤다는 뜻은 아니다.
+
+다음 P4-B는 canonical `asmc_perception` façade와 additive interface 결정이다. traffic-light의
+unheadered String을 즉시 제거하지 않고 typed 출력과 병행하며, LiDAR `Msg/TrackedObject*`도
+consumer cutover 전에는 기존 MD5를 유지한다. 물리 이동·삭제는 아직 P4-B 범위가 아니다.
 
 ## 10. 이번 문서 통합에서 보존한 것
 

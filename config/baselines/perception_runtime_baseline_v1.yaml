@@ -1,0 +1,1424 @@
+schema_version: 1
+baseline_id: p4a_perception_runtime_v1
+input_commit: 1bd8ec9
+purpose: P4-A perception package/topic/frame/timestamp/model/oracle migration baseline
+determinism:
+  timestamps_omitted: true
+  paths: repository-relative
+  tree_inventory: git tracked files only
+protected_scope:
+  package_moves: false
+  package_deletions: false
+  runtime_behavior_changes: false
+  model_artifact_changes: false
+  message_changes: false
+  planning_owned_source_changes: false
+runtime_scopes:
+  scope_count: 17
+  tracked_file_count: 567
+  tree_sha256: 3ef41f860624c6f5ef1306ae7583cbae5436082e7457c6593989485778252392
+  items:
+  - id: camera_semantic
+    path: src/perception/camera_semantic_perception
+    classification: catkin_team_runtime
+    target: asmc_perception/camera
+    tracked_file_count: 25
+    launch_file_count: 6
+    python_file_count: 13
+    cpp_file_count: 0
+    tree_sha256: 32b2c1c2d0cf7d1a8c69481d9eb64e451ef9bdf4217e9b5eb8efcddae3f5605c
+    package:
+      name: camera_semantic_perception
+      version: 0.1.0
+      dependencies:
+      - diagnostic_msgs
+      - message_filters
+      - python3-nose
+      - python3-numpy
+      - python3-opencv
+      - rospy
+      - sensor_msgs
+      package_xml_sha256: 54556472c8a68405e6a1c8b77603512b23f06aec7a119f5d438b0d1d822c6647
+  - id: drivable_bev
+    path: src/perception/drivable_bev
+    classification: catkin_team_mixed
+    target: asmc_perception/bev_lane + tools/perception
+    tracked_file_count: 94
+    launch_file_count: 9
+    python_file_count: 73
+    cpp_file_count: 0
+    tree_sha256: f3882cf8ef4daaadbec0abd08d62a8b3340c774f60b759a3cdf09e561f1e9865
+    package:
+      name: drivable_bev
+      version: 0.1.0
+      dependencies:
+      - asmc_msgs
+      - camera_semantic_perception
+      - data_collection
+      - diagnostic_msgs
+      - geometry_msgs
+      - message_filters
+      - morai_msgs
+      - python3-nose
+      - python3-numpy
+      - python3-opencv
+      - python3-yaml
+      - rosbag
+      - rospy
+      - sensor_msgs
+      - std_msgs
+      - visualization_msgs
+      package_xml_sha256: f8d929d4a5d9fd8e485cfcc2fd5a9e3e8d1840a6d5ef96ccb00a13f148979345
+  - id: traffic_light
+    path: src/traffic_light
+    classification: catkin_team_runtime
+    target: asmc_perception/traffic_light
+    tracked_file_count: 10
+    launch_file_count: 0
+    python_file_count: 3
+    cpp_file_count: 0
+    tree_sha256: abe3e6181c198ab6b27e66b57be4d5b0683bb3561b96e0db06b8323b18ead7e5
+    package:
+      name: traffic_light
+      version: 0.1.0
+      dependencies:
+      - python3-opencv
+      - rospy
+      - sensor_msgs
+      - std_msgs
+      package_xml_sha256: 32fcbc24d19dbc36ae21521d2c528ddce84cc30de13ea756e72bc2e98c4de79f
+  - id: data_collection
+    path: src/data_collection
+    classification: catkin_team_mixed
+    target: asmc_perception/recorder + tools/perception
+    tracked_file_count: 49
+    launch_file_count: 4
+    python_file_count: 26
+    cpp_file_count: 0
+    tree_sha256: 3754ef012aecb5b86f2f0b9668938fe4cdeebe0e60ebec12268118cbecca2e92
+    package:
+      name: data_collection
+      version: 0.1.0
+      dependencies:
+      - diagnostic_msgs
+      - geometry_msgs
+      - message_filters
+      - morai_msgs
+      - python3-grpcio
+      - python3-protobuf
+      - python3-psutil
+      - python3-yaml
+      - rosbag
+      - rosgraph
+      - rospkg
+      - rospy
+      - sensor_msgs
+      - std_msgs
+      - std_srvs
+      package_xml_sha256: 7c1fc3d7e44c2327ed2a5d7cc994d7931f89c316fdf1df98cb6f5ec5891b844d
+  - id: lidar_main
+    path: src/lidar+sensorfusion/src/Main
+    classification: nested_catkin_team_runtime
+    target: asmc_perception/lidar_fusion
+    tracked_file_count: 62
+    launch_file_count: 1
+    python_file_count: 1
+    cpp_file_count: 30
+    tree_sha256: 590f7efb5ce12bc10dee0014ece0b6e1d8ba03abfc0e40e0dfce35e84cc67070
+    package:
+      name: Main
+      version: 0.0.1
+      dependencies:
+      - Msg
+      - geometry_msgs
+      - message_generation
+      - message_runtime
+      - morai_msgs
+      - roscpp
+      - roslib
+      - rospy
+      - std_msgs
+      - tf2
+      - tf2_geometry_msgs
+      - tf2_ros
+      - visualization_msgs
+      package_xml_sha256: 41966366e8e573bc32f2c04d95058df7c5407913d7a48c9023d29886c4928754
+  - id: lidar_msg
+    path: src/lidar+sensorfusion/src/Msg
+    classification: nested_catkin_team_duplicate
+    target: asmc_msgs
+    tracked_file_count: 6
+    launch_file_count: 0
+    python_file_count: 0
+    cpp_file_count: 0
+    tree_sha256: bb4aa31abf747b3d88cb293875ad46ed329c8b671d2bcabacf0a417d676537bb
+    package:
+      name: Msg
+      version: 0.0.0
+      dependencies:
+      - geometry_msgs
+      - message_generation
+      - message_runtime
+      - std_msgs
+      package_xml_sha256: 58125f8136bc2e0e78f0f66fdc6502bde254b340f00dcd16ea251065e797c6f3
+  - id: lidar_morai_msgs
+    path: src/lidar+sensorfusion/src/morai_msgs
+    classification: nested_catkin_external_duplicate
+    target: pinned MORAI-ROS_morai_msgs
+    tracked_file_count: 123
+    launch_file_count: 0
+    python_file_count: 0
+    cpp_file_count: 0
+    tree_sha256: ab40f2a44655be70ae529b2f584e5bf3c487b0e9637b2e7a1e47b55a4a729176
+    package:
+      name: morai_msgs
+      version: 0.0.0
+      dependencies:
+      - geometry_msgs
+      - message_generation
+      - message_runtime
+      - std_msgs
+      package_xml_sha256: 0697fe0871f772ef50e7b7cd47d8217821ceb7781211411de55cf912beaa8071
+  - id: velodyne_vendor
+    path: src/lidar+sensorfusion/src/velodyne/velodyne
+    classification: nested_catkin_upstream_vendor
+    target: system dependency or vendor
+    tracked_file_count: 3
+    launch_file_count: 0
+    python_file_count: 0
+    cpp_file_count: 0
+    tree_sha256: 4a18bb27e60ba60fd4ba10ca75c2b0ea0d3c8f7b37cf8ea771f9267a7da1cc5e
+    package:
+      name: velodyne
+      version: 1.7.0
+      dependencies:
+      - velodyne_driver
+      - velodyne_laserscan
+      - velodyne_msgs
+      - velodyne_pointcloud
+      package_xml_sha256: e6f4cfdafca99a29e59e2adaf4b4c92016b62e61b67c2e80ef20111c353e3f44
+  - id: velodyne_driver_vendor
+    path: src/lidar+sensorfusion/src/velodyne/velodyne_driver
+    classification: nested_catkin_upstream_vendor
+    target: system dependency or vendor
+    tracked_file_count: 26
+    launch_file_count: 1
+    python_file_count: 0
+    cpp_file_count: 5
+    tree_sha256: 6866e49a09573c89e6f50b760a3075a18a464fea102975a48c8d1662544d97f5
+    package:
+      name: velodyne_driver
+      version: 1.7.0
+      dependencies:
+      - diagnostic_updater
+      - dynamic_reconfigure
+      - libpcap
+      - nodelet
+      - roscpp
+      - roslaunch
+      - roslint
+      - rostest
+      - tf
+      - velodyne_msgs
+      package_xml_sha256: 2efbbb88fa11a9b6c0a6e697e948d991effdc8e039230f5e4e7c44cdbb0f7665
+  - id: velodyne_laserscan_vendor
+    path: src/lidar+sensorfusion/src/velodyne/velodyne_laserscan
+    classification: nested_catkin_upstream_vendor
+    target: system dependency or vendor
+    tracked_file_count: 16
+    launch_file_count: 0
+    python_file_count: 0
+    cpp_file_count: 5
+    tree_sha256: 2f9e7de87f7d99ae3910343e9151206e32336a9d126241b851b31a80d1322eee
+    package:
+      name: velodyne_laserscan
+      version: 1.7.0
+      dependencies:
+      - dynamic_reconfigure
+      - nodelet
+      - roscpp
+      - roslaunch
+      - roslint
+      - rostest
+      - sensor_msgs
+      package_xml_sha256: ff4525c02053cbf7fb8d274ad36a2eae609690c21353995ae124d4d58490d80b
+  - id: velodyne_msgs_vendor
+    path: src/lidar+sensorfusion/src/velodyne/velodyne_msgs
+    classification: nested_catkin_upstream_vendor
+    target: system dependency or vendor
+    tracked_file_count: 6
+    launch_file_count: 0
+    python_file_count: 0
+    cpp_file_count: 0
+    tree_sha256: 385369570ffaa00ddee8cc8d68c992d6d4b42c0e08ece58cb07688c77cfd08e0
+    package:
+      name: velodyne_msgs
+      version: 1.7.0
+      dependencies:
+      - message_generation
+      - message_runtime
+      - std_msgs
+      package_xml_sha256: 8fb6241be57531a0ba607d9e33f513a7c0b20c8a98e21b715df84909fc799987
+  - id: velodyne_pcl_vendor
+    path: src/lidar+sensorfusion/src/velodyne/velodyne_pcl
+    classification: nested_catkin_upstream_vendor
+    target: system dependency or vendor
+    tracked_file_count: 5
+    launch_file_count: 0
+    python_file_count: 0
+    cpp_file_count: 0
+    tree_sha256: 94d7aa69509c2dd8f3925fc76b09a4b82ed3bf266bd4a3c14a14c48fa6b3f5ff
+    package:
+      name: velodyne_pcl
+      version: 1.7.0
+      dependencies:
+      - pcl_ros
+      - roslint
+      package_xml_sha256: e83fb370067004fca910d35b041c5092d9daa4b3eaac1e7b19f6a6b0a17b934b
+  - id: velodyne_pointcloud_vendor
+    path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud
+    classification: nested_catkin_upstream_vendor
+    target: system dependency or vendor
+    tracked_file_count: 58
+    launch_file_count: 8
+    python_file_count: 2
+    cpp_file_count: 8
+    tree_sha256: 512d2a98b89201497ca21fdee81c7548138857d55d1d3cf6d5d1e0d86cd4e1d3
+    package:
+      name: velodyne_pointcloud
+      version: 1.7.0
+      dependencies:
+      - angles
+      - diagnostic_updater
+      - dynamic_reconfigure
+      - eigen
+      - nodelet
+      - roscpp
+      - roslaunch
+      - roslib
+      - roslint
+      - rostest
+      - rosunit
+      - sensor_msgs
+      - tf2_ros
+      - velodyne_driver
+      - velodyne_laserscan
+      - velodyne_msgs
+      - yaml-cpp
+      package_xml_sha256: 868ccd6556523e7162e3be52a536771500022d546bf8fd8cea4132be274588de
+  - id: twinlite_morai
+    path: src/perception/twinlite_morai
+    classification: non_catkin_backend_offline
+    target: asmc_perception backend + tools/perception
+    tracked_file_count: 9
+    launch_file_count: 0
+    python_file_count: 8
+    cpp_file_count: 0
+    tree_sha256: ec56f2947eb721278911337ba2b2a79e4a23e0a213cdae63e456e8bec5307498
+    package: null
+  - id: morai_3d_detection
+    path: src/perception/morai_3d_detection
+    classification: non_catkin_research
+    target: tools/perception candidate
+    tracked_file_count: 36
+    launch_file_count: 0
+    python_file_count: 26
+    cpp_file_count: 1
+    tree_sha256: 15364d7990cb526eac3b03f4280c18f93c994737ddef1a0014e488d06c92f75a
+    package: null
+  - id: learning
+    path: src/learning
+    classification: legacy_placeholder
+    target: delete after reference gate
+    tracked_file_count: 1
+    launch_file_count: 0
+    python_file_count: 0
+    cpp_file_count: 0
+    tree_sha256: 46495cac4deb81e50945ef16e3b8314d1a86bf79d258cdd01bc3f2ccdc3f13e6
+    package: null
+  - id: learning_by_cheating
+    path: src/learning_by_cheating
+    classification: legacy_runtime_research
+    target: replace then delete; preserve in git history
+    tracked_file_count: 38
+    launch_file_count: 0
+    python_file_count: 27
+    cpp_file_count: 0
+    tree_sha256: ac58ada2fd92b3e031d6ba638f6cf746a2ce16d6530868011c8f88cd7147c8cc
+    package: null
+launch_inventory:
+  file_count: 29
+  node_declaration_count: 23
+  items:
+  - path: src/data_collection/launch/bag_recorder.launch
+    nodes:
+    - package: data_collection
+      type: bag_recorder_node.py
+      name: asmc_bag_recorder
+      required: 'true'
+    includes: []
+    sha256: 60677da5758d1a84d09c26e8d2e4fd1af1c38684765e813357af8eafc8e5433f
+  - path: src/data_collection/launch/bag_replay.launch
+    nodes:
+    - package: data_collection
+      type: bag_replay_node.py
+      name: asmc_bag_replay
+      required: 'true'
+    includes: []
+    sha256: a6e9ffe6ebca60d2fadd2bfcb3125f7c0114503786bf012ce141c288c06f3a28
+  - path: src/data_collection/launch/capture_mode_collector.launch
+    nodes:
+    - package: data_collection
+      type: capture_mode_collector_node.py
+      name: capture_mode_collector
+      required: 'false'
+    includes: []
+    sha256: 9db7b74f780e040f979a3c4c838cdfdbe532f2647ae0f3a9d1067d6e308d1197
+  - path: src/data_collection/launch/sync_collector.launch
+    nodes:
+    - package: data_collection
+      type: sync_collector_node.py
+      name: sync_collector
+      required: 'false'
+    includes: []
+    sha256: 6c66d951012ae05cc460a26022325a05cf1ec6b2d51fd0e7ae8f76e9efd9d740
+  - path: src/lidar+sensorfusion/src/Main/main.launch
+    nodes:
+    - package: Main
+      type: main
+      name: Main
+      required: 'false'
+    - package: Main
+      type: yolo_detection_node
+      name: yolo_detection_node
+      required: 'false'
+    - package: rviz
+      type: rviz
+      name: sensor_fusion_rviz
+      required: 'false'
+    includes:
+    - $(find velodyne_pointcloud)/launch/VLP16_points.launch
+    sha256: cb46e452f5f228f10e287bcb8e4dce0794c26bf873f698495e21828fccfebbf6
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_driver/launch/nodelet_manager.launch
+    nodes:
+    - package: nodelet
+      type: nodelet
+      name: $(arg manager)
+      required: 'false'
+    - package: nodelet
+      type: nodelet
+      name: $(arg manager)_driver
+      required: 'false'
+    includes: []
+    sha256: d4482f4e36ef1b589c3602be1037030231b041140f245ed6cd051dd77987d2ba
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/32e_points.launch
+    nodes: []
+    includes:
+    - $(find velodyne_driver)/launch/nodelet_manager.launch
+    - $(find velodyne_pointcloud)/launch/laserscan_nodelet.launch
+    - $(find velodyne_pointcloud)/launch/transform_nodelet.launch
+    sha256: 16a5a2f393a7f45668e9832b3588a1b52d8abd41e3106193812c97cd024da8dd
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/64e_S3.launch
+    nodes: []
+    includes:
+    - $(find velodyne_driver)/launch/nodelet_manager.launch
+    - $(find velodyne_pointcloud)/launch/laserscan_nodelet.launch
+    - $(find velodyne_pointcloud)/launch/transform_nodelet.launch
+    sha256: 59aa27567725979adfd1f4ec3ce3519e65423a94466d0be03fa9375bfa5affa9
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/VLP-32C_points.launch
+    nodes: []
+    includes:
+    - $(find velodyne_driver)/launch/nodelet_manager.launch
+    - $(find velodyne_pointcloud)/launch/laserscan_nodelet.launch
+    - $(find velodyne_pointcloud)/launch/transform_nodelet.launch
+    sha256: 1276099d0023fa25944fca2add1c56dc4ae597313727b076603dd5efc4cb4598
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/VLP16_points.launch
+    nodes: []
+    includes:
+    - $(find velodyne_driver)/launch/nodelet_manager.launch
+    - $(find velodyne_pointcloud)/launch/laserscan_nodelet.launch
+    - $(find velodyne_pointcloud)/launch/transform_nodelet.launch
+    sha256: e431eea8ad3f1483f75b715389568536024aa9ac40afeee03e43e692a77e0ac4
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/VLS128_points.launch
+    nodes: []
+    includes:
+    - $(find velodyne_driver)/launch/nodelet_manager.launch
+    - $(find velodyne_pointcloud)/launch/laserscan_nodelet.launch
+    - $(find velodyne_pointcloud)/launch/transform_nodelet.launch
+    sha256: 33a5af52c7e389aa2e6932d9b42236652ec4f33bf26b347526c137629714535d
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/laserscan_nodelet.launch
+    nodes:
+    - package: nodelet
+      type: nodelet
+      name: $(arg manager)_laserscan
+      required: 'false'
+    includes: []
+    sha256: b8ee2d4227799e1428954c61fada7e533fdd120ae345ed0e8849e35e1201849b
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/launch/transform_nodelet.launch
+    nodes:
+    - package: nodelet
+      type: nodelet
+      name: $(arg manager)_transform
+      required: 'false'
+    includes: []
+    sha256: 455b75a4fe114371d24e4796ec66f7bf4e574f9e7781b774df49a2a625be1dc3
+  - path: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/tests/static_vehicle_tf.launch
+    nodes:
+    - package: tf2_ros
+      type: static_transform_publisher
+      name: map_to_odom
+      required: 'false'
+    - package: tf2_ros
+      type: static_transform_publisher
+      name: vehicle_is_odom
+      required: 'false'
+    - package: tf2_ros
+      type: static_transform_publisher
+      name: vehicle_velodyne_tf
+      required: 'false'
+    includes: []
+    sha256: a47486c83051e294e52fa4963707e82180b01de44961181cb2a28dd6054050ae
+  - path: src/perception/camera_semantic_perception/launch/front.launch
+    nodes: []
+    includes:
+    - $(find camera_semantic_perception)/launch/semantic_inference.launch
+    sha256: 3fc544e3d55bd5782864ea834ff32611f7dce1ea8705c9065a6b38928b9f2956
+  - path: src/perception/camera_semantic_perception/launch/front_visualizer.launch
+    nodes: []
+    includes:
+    - $(find camera_semantic_perception)/launch/semantic_visualizer.launch
+    sha256: dd4576c80db61a7378590084338bd1b342c02aae1ddebd31cb11321cf67ea0b2
+  - path: src/perception/camera_semantic_perception/launch/semantic_inference.launch
+    nodes:
+    - package: camera_semantic_perception
+      type: semantic_inference_node.py
+      name: camera_semantic_inference
+      required: 'true'
+    includes: []
+    sha256: 00b952877a06adf63577d211b87b37e109406e130458e80e5d64e7cfa8246e8a
+  - path: src/perception/camera_semantic_perception/launch/semantic_visualizer.launch
+    nodes:
+    - package: camera_semantic_perception
+      type: semantic_visualizer_node.py
+      name: camera_semantic_visualizer
+      required: 'true'
+    includes: []
+    sha256: d3e0f25cb18611d08e11b2e67844ed032450a2373bb8bc6584babe1a8959fb59
+  - path: src/perception/camera_semantic_perception/launch/three_view.launch
+    nodes: []
+    includes:
+    - $(find camera_semantic_perception)/launch/semantic_inference.launch
+    sha256: 47dcb5bebfe5b468a439e77b23b2f7f63647a121aa4d6207a810046cb9492361
+  - path: src/perception/camera_semantic_perception/launch/three_view_visualizer.launch
+    nodes: []
+    includes:
+    - $(find camera_semantic_perception)/launch/semantic_visualizer.launch
+    sha256: 53361c600730b9bfa40e01c2a26bddb9c7c485a2786775eae0f505484c689e1a
+  - path: src/perception/drivable_bev/launch/camera_bev.launch
+    nodes:
+    - package: drivable_bev
+      type: camera_bev_node.py
+      name: camera_bev
+      required: 'true'
+    includes: []
+    sha256: 512e3837cd90a31c62bd60ed30d1f3fdd3695cae93b613ba8204a25203f6035b
+  - path: src/perception/drivable_bev/launch/camera_bev_fusion.launch
+    nodes:
+    - package: drivable_bev
+      type: camera_bev_fusion_node.py
+      name: camera_bev_fusion
+      required: 'true'
+    includes: []
+    sha256: 23790e3ccbc93738fccabac8fef8779500d8027780dfd02666f248f07c7018c0
+  - path: src/perception/drivable_bev/launch/camera_bev_visualizer.launch
+    nodes:
+    - package: drivable_bev
+      type: camera_bev_visualizer_node.py
+      name: camera_bev_visualizer
+      required: 'true'
+    includes: []
+    sha256: b47392f5bdad78967d4d930d0e6cdeccd7a5861a3ba9b31c9aabded5fba1be97
+  - path: src/perception/drivable_bev/launch/lane_vector_pilot.launch
+    nodes:
+    - package: drivable_bev
+      type: lane_vector_visualizer_node.py
+      name: camera_lane_vector_visualizer
+      required: 'true'
+    - package: drivable_bev
+      type: lane_vectorizer_node.py
+      name: camera_lane_vectorizer
+      required: 'true'
+    includes: []
+    sha256: 136c351e76d0b999887afd39543d4f0653f5d88e20b0756f779f10439b4830aa
+  - path: src/perception/drivable_bev/launch/shadow_lane_family_offline.launch
+    nodes:
+    - package: drivable_bev
+      type: shadow_lane_family_offline_node.py
+      name: shadow_lane_family_offline
+      required: 'true'
+    includes: []
+    sha256: 03b1b29c91493bcd035980806ebd8cec3d52fbd964628121df89da0ca66954cb
+  - path: src/perception/drivable_bev/launch/shadow_map_rgb_bev.launch
+    nodes:
+    - package: drivable_bev
+      type: shadow_map_rgb_bev_node.py
+      name: shadow_map_rgb_bev
+      required: 'true'
+    includes: []
+    sha256: df0ee657a390b6ea69183380f86266f708803c6142a13b8ec32a8d340c959340
+  - path: src/perception/drivable_bev/launch/three_view_bev_pilot.launch
+    nodes: []
+    includes:
+    - $(find camera_semantic_perception)/launch/three_view.launch
+    - $(find drivable_bev)/launch/camera_bev.launch
+    - $(find drivable_bev)/launch/camera_bev_fusion.launch
+    - $(find drivable_bev)/launch/camera_bev_visualizer.launch
+    sha256: 04e1540c55ee8a8e47c1a54c0a29573037580de47932bcfdf4f449dea1ebfddb
+  - path: src/perception/drivable_bev/launch/three_view_lane_pipeline.launch
+    nodes: []
+    includes:
+    - $(find drivable_bev)/launch/lane_vector_pilot.launch
+    - $(find drivable_bev)/launch/three_view_bev_pilot.launch
+    sha256: 55be12202ae71d2be1e942e88c5cf0f0b9a928fab3ae4d3ecbd29608eff5dcdf
+  - path: src/perception/drivable_bev/launch/three_view_perception_dev.launch
+    nodes: []
+    includes:
+    - $(find camera_semantic_perception)/launch/three_view_visualizer.launch
+    - $(find drivable_bev)/launch/lane_vector_pilot.launch
+    - $(find drivable_bev)/launch/three_view_bev_pilot.launch
+    sha256: be467c518bcb437aed4a5dc238967c707483857a309f00967d32116cdacb8bd3
+declared_entrypoints:
+  count: 34
+  items:
+  - kind: catkin_install_python
+    name: scripts/audit_rosbag_run.py
+    source: src/data_collection/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/bag_recorder_node.py
+    source: src/data_collection/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/bag_replay_node.py
+    source: src/data_collection/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/capture_mode_collector_node.py
+    source: src/data_collection/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/monitor_transport_pilot.py
+    source: src/data_collection/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/reject_bag_run.py
+    source: src/data_collection/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/sync_collector_node.py
+    source: src/data_collection/CMakeLists.txt
+  - kind: catkin_install_python
+    name: src/Camera/YOLO/YOLODetection.py
+    source: src/lidar+sensorfusion/src/Main/CMakeLists.txt
+  - kind: cmake_add_executable
+    name: main
+    source: src/lidar+sensorfusion/src/Main/CMakeLists.txt
+  - kind: cmake_add_executable
+    name: velodyne_node
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_driver/src/driver/CMakeLists.txt
+  - kind: cmake_add_executable
+    name: ${PROJECT_NAME}_node
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_laserscan/CMakeLists.txt
+  - kind: cmake_add_executable
+    name: dynamic_reconfigure_node
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/CMakeLists.txt
+  - kind: cmake_add_executable
+    name: transform_node
+    source: src/lidar+sensorfusion/src/velodyne/velodyne_pointcloud/src/conversions/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/semantic_inference_node.py
+    source: src/perception/camera_semantic_perception/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/semantic_visualizer_node.py
+    source: src/perception/camera_semantic_perception/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/audit_shadow_lane_map_alignment.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/audit_shadow_lane_results.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/build_shadow_lane_gt.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/calibrate_shadow_lane_gt.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/camera_bev_fusion_node.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/camera_bev_node.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/camera_bev_visualizer_node.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/lane_vector_visualizer_node.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/lane_vectorizer_node.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/run_shadow_lane_bag_batch.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/shadow_lane_family_offline_node.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/shadow_map_rgb_bev_node.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/summarize_invalid_map_distance.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/summarize_invalid_support_review.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/summarize_shadow_lane_family.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: scripts/summarize_shadow_planning_usability.py
+    source: src/perception/drivable_bev/CMakeLists.txt
+  - kind: catkin_install_python
+    name: live_infer.py
+    source: src/traffic_light/CMakeLists.txt
+  - kind: catkin_install_python
+    name: traffic_light.py
+    source: src/traffic_light/CMakeLists.txt
+  - kind: operator_wrapper
+    name: run.sh
+    source: src/traffic_light/run.sh
+topic_contract:
+  coordinate_contract:
+    camera_bev_and_lane: base_link, x forward, y left, z up
+    lidar_tracked_objects: map; positions and velocity are absolute in array header frame
+    hd_map_context: map; consumers perform the map/base_link transform exactly once
+  inputs:
+  - topic: /image_jpeg/compressed
+    type: sensor_msgs/CompressedImage
+    producer: asmc_bridge
+    role: front_rgb_input
+    frame_policy: camera_front
+    timestamp_policy: source header; bridge receive-time fallback
+    deployment_allowed: true
+  - topic: /cam_left/image_jpeg/compressed
+    type: sensor_msgs/CompressedImage
+    producer: asmc_bridge
+    role: left_rgb_input
+    frame_policy: camera_left
+    timestamp_policy: source header; bridge receive-time fallback
+    deployment_allowed: true
+  - topic: /cam_right/image_jpeg/compressed
+    type: sensor_msgs/CompressedImage
+    producer: asmc_bridge
+    role: right_rgb_input
+    frame_policy: camera_right
+    timestamp_policy: source header; bridge receive-time fallback
+    deployment_allowed: true
+  - topic: /cam_extra/image_jpeg/compressed
+    type: sensor_msgs/CompressedImage
+    producer: asmc_bridge
+    role: traffic_light_rgb_input
+    frame_policy: camera_extra
+    timestamp_policy: source header; bridge receive-time fallback
+    deployment_allowed: true
+  - topic: /velodyne_points
+    type: sensor_msgs/PointCloud2
+    producer: asmc_bridge
+    role: lidar_input
+    frame_policy: velodyne
+    timestamp_policy: source header; bridge receive-time fallback
+    deployment_allowed: true
+  - topic: /gps
+    type: morai_msgs/GPSMessage
+    producer: asmc_bridge
+    role: localization_input
+    frame_policy: message has no Header contract
+    timestamp_policy: bridge receive time is not carried in message
+    deployment_allowed: true
+  - topic: /imu
+    type: sensor_msgs/Imu
+    producer: asmc_bridge
+    role: orientation_input
+    frame_policy: imu_link
+    timestamp_policy: source header; bridge receive-time fallback
+    deployment_allowed: true
+  - topic: /Ego_topic
+    type: morai_msgs/EgoVehicleStatus
+    producer: asmc_bridge
+    role: vehicle_input_and_Main_compatibility_remap
+    frame_policy: map-like simulator coordinates; no Header
+    timestamp_policy: message has no Header
+    deployment_allowed: true
+  outputs:
+  - topic: /YOLO/BBox
+    type: Msg/Yolo_bbox_arr
+    producer: Main/yolo_detection_node
+    role: LiDAR_camera_fusion_internal
+    frame_policy: image frame
+    timestamp_policy: preserve relayed image header
+    deployment_allowed: true
+  - topic: /camera/image/compressed
+    type: sensor_msgs/CompressedImage
+    producer: Main
+    role: LiDAR_fusion_camera_compatibility_relay
+    frame_policy: preserve front camera frame
+    timestamp_policy: preserve front camera header
+    deployment_allowed: true
+  - topic: /ctrl_cmd_0
+    type: morai_msgs/CtrlCmd
+    producer: Main
+    role: legacy_control_output_not_perception_contract
+    frame_policy: not geometric
+    timestamp_policy: unheadered
+    deployment_allowed: false
+  - topic: /last_lidar
+    type: Msg/TrackedObjectArray
+    producer: Main
+    role: legacy_filtered_objects
+    frame_policy: map
+    timestamp_policy: LiDAR source stamp
+    deployment_allowed: true
+  - topic: /last_lidar_markers
+    type: visualization_msgs/MarkerArray
+    producer: Main
+    role: legacy_filtered_visualization
+    frame_policy: velodyne
+    timestamp_policy: LiDAR source stamp
+    deployment_allowed: false
+  - topic: /lidar/tracked_objects_map
+    type: Msg/TrackedObjectArray
+    producer: Main
+    role: tracked_objects
+    frame_policy: map
+    timestamp_policy: LiDAR source stamp
+    deployment_allowed: true
+  - topic: /lidar/tracking_markers_map
+    type: visualization_msgs/MarkerArray
+    producer: Main
+    role: tracked_object_visualization
+    frame_policy: map
+    timestamp_policy: LiDAR source stamp
+    deployment_allowed: false
+  - topic: /perception/bev/camera/coverage
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: fused_bev
+    frame_policy: base_link
+    timestamp_policy: newest synchronized source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/camera/drivable_probability
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: fused_bev
+    frame_policy: base_link
+    timestamp_policy: newest synchronized source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/camera/road_marking/class_id
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: fused_bev
+    frame_policy: base_link
+    timestamp_policy: newest synchronized source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/camera/road_marking/confidence
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: fused_bev
+    frame_policy: base_link
+    timestamp_policy: newest synchronized source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/camera/source_count
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: fused_bev
+    frame_policy: base_link
+    timestamp_policy: newest synchronized source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/debug/front/coverage
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: per_view_bev_debug
+    frame_policy: base_link
+    timestamp_policy: preserve semantic source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/debug/front/drivable_probability
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: per_view_bev_debug
+    frame_policy: base_link
+    timestamp_policy: preserve semantic source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/debug/front/road_marking/class_id
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: per_view_bev_debug
+    frame_policy: base_link
+    timestamp_policy: preserve semantic source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/debug/front/road_marking/confidence
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: per_view_bev_debug
+    frame_policy: base_link
+    timestamp_policy: preserve semantic source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/debug/left/coverage
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: per_view_bev_debug
+    frame_policy: base_link
+    timestamp_policy: preserve semantic source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/debug/left/drivable_probability
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: per_view_bev_debug
+    frame_policy: base_link
+    timestamp_policy: preserve semantic source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/debug/left/road_marking/class_id
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: per_view_bev_debug
+    frame_policy: base_link
+    timestamp_policy: preserve semantic source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/debug/left/road_marking/confidence
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: per_view_bev_debug
+    frame_policy: base_link
+    timestamp_policy: preserve semantic source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/debug/right/coverage
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: per_view_bev_debug
+    frame_policy: base_link
+    timestamp_policy: preserve semantic source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/debug/right/drivable_probability
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: per_view_bev_debug
+    frame_policy: base_link
+    timestamp_policy: preserve semantic source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/debug/right/road_marking/class_id
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: per_view_bev_debug
+    frame_policy: base_link
+    timestamp_policy: preserve semantic source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/debug/right/road_marking/confidence
+    type: sensor_msgs/Image
+    producer: drivable_bev
+    role: per_view_bev_debug
+    frame_policy: base_link
+    timestamp_policy: preserve semantic source stamp
+    deployment_allowed: true
+  - topic: /perception/bev/diagnostics
+    type: diagnostic_msgs/DiagnosticArray
+    producer: drivable_bev
+    role: diagnostic
+    frame_policy: not geometric
+    timestamp_policy: publish/receive time
+    deployment_allowed: true
+  - topic: /perception/camera/diagnostics
+    type: diagnostic_msgs/DiagnosticArray
+    producer: camera_semantic_perception
+    role: diagnostic
+    frame_policy: not geometric
+    timestamp_policy: publish/receive time
+    deployment_allowed: true
+  - topic: /perception/camera/front/drivable/probability
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_semantic
+    frame_policy: camera_front
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/front/lane/probability
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_semantic
+    frame_policy: camera_front
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/front/road_marking/class_id
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_semantic
+    frame_policy: camera_front
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/front/road_marking/confidence
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_semantic
+    frame_policy: camera_front
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/front/road_marking/model_grid/class_id
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_model_grid
+    frame_policy: camera_front
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/front/road_marking/model_grid/confidence
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_model_grid
+    frame_policy: camera_front
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/left/drivable/probability
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_semantic
+    frame_policy: camera_left
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/left/lane/probability
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_semantic
+    frame_policy: camera_left
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/left/road_marking/class_id
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_semantic
+    frame_policy: camera_left
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/left/road_marking/confidence
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_semantic
+    frame_policy: camera_left
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/left/road_marking/model_grid/class_id
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_model_grid
+    frame_policy: camera_left
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/left/road_marking/model_grid/confidence
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_model_grid
+    frame_policy: camera_left
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/right/drivable/probability
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_semantic
+    frame_policy: camera_right
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/right/lane/probability
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_semantic
+    frame_policy: camera_right
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/right/road_marking/class_id
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_semantic
+    frame_policy: camera_right
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/right/road_marking/confidence
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_semantic
+    frame_policy: camera_right
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/right/road_marking/model_grid/class_id
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_model_grid
+    frame_policy: camera_right
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/camera/right/road_marking/model_grid/confidence
+    type: sensor_msgs/Image
+    producer: camera_semantic_perception
+    role: camera_model_grid
+    frame_policy: camera_right
+    timestamp_policy: preserve input image header
+    deployment_allowed: true
+  - topic: /perception/lane/boundaries
+    type: visualization_msgs/MarkerArray
+    producer: drivable_bev
+    role: legacy_visualization
+    frame_policy: base_link
+    timestamp_policy: synchronized camera source stamp
+    deployment_allowed: false
+  - topic: /perception/lane/boundary_family
+    type: asmc_msgs/LaneBoundaryFamily
+    producer: drivable_bev
+    role: provisional_candidate
+    frame_policy: base_link
+    timestamp_policy: synchronized camera source stamp
+    deployment_allowed: false
+  - topic: /perception/lane/boundary_observations
+    type: asmc_msgs/LaneBoundaryObservationArray
+    producer: drivable_bev
+    role: typed_lane_handoff
+    frame_policy: base_link
+    timestamp_policy: synchronized camera source stamp
+    deployment_allowed: true
+  - topic: /perception/lane/diagnostics
+    type: diagnostic_msgs/DiagnosticArray
+    producer: drivable_bev
+    role: diagnostic
+    frame_policy: not geometric
+    timestamp_policy: publish/receive time
+    deployment_allowed: true
+  - topic: /traffic_light/detail
+    type: std_msgs/String JSON
+    producer: traffic_light
+    role: traffic_light_detail
+    frame_policy: not geometric; unheadered
+    timestamp_policy: no source stamp; inference timing only
+    deployment_allowed: true
+  - topic: /traffic_light/state
+    type: std_msgs/String
+    producer: traffic_light
+    role: traffic_light_label
+    frame_policy: not geometric; unheadered
+    timestamp_policy: no source stamp; stale timeout is local monotonic time
+    deployment_allowed: true
+  input_count: 8
+  output_count: 50
+rate_contract:
+  bridge_configured_or_nominal_hz:
+    front_rgb: 20.0
+    left_rgb: 20.0
+    right_rgb: 20.0
+    traffic_light_rgb: 10.0
+    vlp16_configured: 15.0
+    gps: 5.0
+    imu_nominal: 50.0
+  bridge_local_observed_hz:
+    imu_approx_range:
+    - 42.0
+    - 44.0
+    vlp16_complete_scan_approx: 12.0
+  vlp16_acceptance: configured/consumer loop 15 Hz; approximately 12 Hz complete scans accepted without duplication
+  three_view_lane_model_grid_max_hz: 15.0
+  camera_bev_fused_max_hz: 10.0
+duplicate_messages:
+  count: 4
+  items:
+  - type: Msg/TrackedObject
+    ros1_md5: 6c96135eb03a3ee93bba474fa835f57d
+    source: src/lidar+sensorfusion/src/Msg/msg/TrackedObject.msg
+    source_sha256: c1cba43089d4909873650f92cde14d86964376449559f1c76b7e7fb397b5265a
+    migration: additive asmc_msgs equivalent then consumer cutover; preserve 6c96135eb03a3ee93bba474fa835f57d
+  - type: Msg/TrackedObjectArray
+    ros1_md5: e127b2aabd7494ad01a5a56b005bf07e
+    source: src/lidar+sensorfusion/src/Msg/msg/TrackedObjectArray.msg
+    source_sha256: e3ae24a4bc2f200044be54f8f219504fa2e721f58b846c188b4ce38ed111251a
+    migration: additive asmc_msgs equivalent then consumer cutover; preserve e127b2aabd7494ad01a5a56b005bf07e
+  - type: Msg/Yolo_bbox
+    ros1_md5: 605f5dd6f8f921f2dc15199c760840f9
+    source: src/lidar+sensorfusion/src/Msg/msg/Yolo_bbox.msg
+    source_sha256: e18df2183cb2d19ebfcf5e03fd01aec48a93fe83f156197460b8f848eb1bf4b8
+    migration: additive asmc_msgs equivalent then consumer cutover; preserve 605f5dd6f8f921f2dc15199c760840f9
+  - type: Msg/Yolo_bbox_arr
+    ros1_md5: 9604a9d8104d38c3bd9830382a3571d0
+    source: src/lidar+sensorfusion/src/Msg/msg/Yolo_bbox_arr.msg
+    source_sha256: 24f263d3ccbb64879554db75104f6e1283f12e875478a48982af60c39371d214
+    migration: additive asmc_msgs equivalent then consumer cutover; preserve 9604a9d8104d38c3bd9830382a3571d0
+model_artifacts:
+  policy: runtime selects by explicit path; migration target is external artifact manifest with SHA-256
+  items:
+  - id: camera_twinlite_v6
+    path: artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+    selected: true
+    consumer: three_view_lane_pipeline.launch
+    sha256: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+    size_bytes: 8141406
+  - id: traffic_light_resnet18
+    path: src/traffic_light/best.pt
+    selected: true
+    consumer: traffic_light/live_infer.py
+    sha256: 70ddaf222e7bc6ff2b4748c4b07c1b24dec72a2671f39bc18e0b243ddd93c0d5
+    size_bytes: 44795403
+  - id: lidar_camera_yolo11m
+    path: src/lidar+sensorfusion/src/Main/YOLOWeight/yolo11m.pt
+    selected: true
+    consumer: Main/main.launch
+    sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+    size_bytes: 40684120
+  - id: lidar_camera_yolo11m_duplicate
+    path: src/lidar+sensorfusion/src/Main/YOLOWeight/yolo11m(1).pt
+    selected: false
+    consumer: null
+    sha256: 6cf89c17d9a1122b9b6f3f6abe7574bf3f80cc4653e549d1bfd102ec8e421bf9
+    size_bytes: 19155482
+  selected_count: 3
+  unselected_duplicate_count: 1
+bag_profiles:
+  count: 11
+  deployment_allowed_count: 5
+  privileged_gt_count: 3
+  items:
+  - name: camera_raw
+    path: src/data_collection/config/bag_profiles/camera_raw.yaml
+    extends: null
+    kind: raw
+    sensor_set: ASMC_sensor_set_v2
+    privileged_gt: false
+    deployment_allowed: true
+    required_topic_count: 4
+    optional_topic_count: 7
+    sha256: 531be87143ace05bd413b5945d7549ee5d5e69632af2025c9cbbc094db4ac7b8
+  - name: camera_semantic_result
+    path: src/data_collection/config/bag_profiles/camera_semantic_result.yaml
+    extends: null
+    kind: result
+    sensor_set: replay_parent
+    privileged_gt: false
+    deployment_allowed: true
+    required_topic_count: 1
+    optional_topic_count: 45
+    sha256: c0afc665af3f1357c7911127318dcd45336e58d589a55dc7f1c8f36803af584a
+  - name: dev_oracle_raw
+    path: src/data_collection/config/bag_profiles/dev_oracle_raw.yaml
+    extends: dev_oracle_udp
+    kind: raw
+    sensor_set: ASMC_sensor_set_GT
+    privileged_gt: true
+    deployment_allowed: false
+    required_topic_count: 12
+    optional_topic_count: 7
+    sha256: 9b7847e7244085b669bdcc9e590c9c25f9e27e480d9674429884016a4d468246
+  - name: dev_oracle_udp
+    path: src/data_collection/config/bag_profiles/dev_oracle_udp.yaml
+    extends: null
+    kind: raw
+    sensor_set: ASMC_sensor_set_GT
+    privileged_gt: true
+    deployment_allowed: false
+    required_topic_count: 12
+    optional_topic_count: 7
+    sha256: c9999bb3f51b73beb066efe7e4842de3b0c7e43619289a948430134131d1e143
+  - name: full_raw
+    path: src/data_collection/config/bag_profiles/full_raw.yaml
+    extends: null
+    kind: raw
+    sensor_set: ASMC_sensor_set_v2
+    privileged_gt: false
+    deployment_allowed: true
+    required_topic_count: 7
+    optional_topic_count: 8
+    sha256: 39795e2f90a6fa958091222e62a3d9ef8db21b9d4077516daf427167254d0b42
+  - name: lidar_dev_gt_udp
+    path: src/data_collection/config/bag_profiles/lidar_dev_gt_udp.yaml
+    extends: null
+    kind: raw
+    sensor_set: ASMC_sensor_set_GT
+    privileged_gt: true
+    deployment_allowed: false
+    required_topic_count: 6
+    optional_topic_count: 4
+    sha256: 3f6023fabe2b0dae9f636430164cc2cf65f4f807c0666225cd7cd8e3d6eb4d14
+  - name: lidar_raw
+    path: src/data_collection/config/bag_profiles/lidar_raw.yaml
+    extends: null
+    kind: raw
+    sensor_set: ASMC_sensor_set_v2
+    privileged_gt: false
+    deployment_allowed: true
+    required_topic_count: 4
+    optional_topic_count: 5
+    sha256: 66fa6e81290a5282e1d348e5b06e5aa77a450f3f3dbf84c01f9d81f2788c7a4c
+  - name: shadow_boundary_family_adapter_result
+    path: src/data_collection/config/bag_profiles/shadow_boundary_family_adapter_result.yaml
+    extends: null
+    kind: result
+    sensor_set: replay_parent
+    privileged_gt: false
+    deployment_allowed: false
+    required_topic_count: 2
+    optional_topic_count: 3
+    sha256: 2cb969e727f1bb5b0e80f2132dcf87750605d6dd15f14a50d07fc141a227e16b
+  - name: shadow_boundary_result
+    path: src/data_collection/config/bag_profiles/shadow_boundary_result.yaml
+    extends: null
+    kind: result
+    sensor_set: replay_parent
+    privileged_gt: false
+    deployment_allowed: true
+    required_topic_count: 3
+    optional_topic_count: 5
+    sha256: 2454056030134cacf2a668e21ab86112bcad75efe31162adccac0a49ca7a704b
+  - name: shadow_camera_perception_handoff_result
+    path: src/data_collection/config/bag_profiles/shadow_camera_perception_handoff_result.yaml
+    extends: null
+    kind: result
+    sensor_set: replay_parent
+    privileged_gt: false
+    deployment_allowed: false
+    required_topic_count: 6
+    optional_topic_count: 5
+    sha256: 4059f390ffbfadc9d0bec3d8a2f2f0ea88bb8299600cb8c5b61d69d6460b94cf
+  - name: shadow_runtime_profile_result
+    path: src/data_collection/config/bag_profiles/shadow_runtime_profile_result.yaml
+    extends: null
+    kind: result
+    sensor_set: replay_parent
+    privileged_gt: false
+    deployment_allowed: false
+    required_topic_count: 6
+    optional_topic_count: 1
+    sha256: 93d6c50a6ed347882775967e8eddaf535d45a37d893e57e68a12c017f800d465
+oracle_policy:
+  deployment_forbidden_inputs:
+  - MORAI Capture Mode or gRPC truth
+  - Semantic/Instance GT camera or LiDAR
+  - /Object_topic or simulator object truth
+  - simulator TrafficLight status
+  - disallowed global pose during GPS-shadow operation
+  - GT-derived masks, pseudo-GT, or map overlays used as live perception input
+  allowed_use: offline development/evaluation profiles explicitly marked privileged_gt=true and deployment_allowed=false
+known_integration_risks:
+- id: camera_calibration_v2_provenance
+  severity: high
+  fact: operational three-view lane launch and cameras_v2.yaml name v2 while bridge deployment baseline is sensor
+    set v3
+  p4_action: prove geometry parity or create a v3-named calibration before changing runtime default
+- id: lidar_stale_drivable_mask
+  severity: critical
+  fact: Main loads ../../../link_node/out/road_mask and map id waize_katri_2025-10-23 instead of the final asmc_hd_map
+    contract
+  p4_action: replace with /hd_map vector/grid consumer and run object-filter parity
+- id: nested_message_and_morai_duplicates
+  severity: high
+  fact: Main depends on nested Msg and a second morai_msgs package
+  p4_action: migrate TrackedObject/Yolo messages additively to asmc_msgs and pin the outer morai_msgs dependency
+- id: traffic_light_unheadered_output
+  severity: high
+  fact: state/detail are std_msgs/String without source timestamp, validity, or typed confidence
+  p4_action: define typed additive output and retain String compatibility until planning cutover
+- id: lidar_legacy_side_effects
+  severity: medium
+  fact: Main relays /camera/image/compressed and publishes /ctrl_cmd_0 in addition to perception results
+  p4_action: separate perception ownership; preserve relay compatibility only while YOLO consumer requires it
+- id: lidar_legacy_sensor_rate_provenance
+  severity: medium
+  fact: Main/setting.yaml names sensor set v1 and camera/GPS 30 Hz although the bridge baseline is v3 at 20/5 Hz;
+    LiDAR loop is correctly 15 Hz
+  p4_action: make bridge topics authoritative and validate queues/timing with measured v3 rates before moving Main
+- id: bag_profiles_v2_provenance
+  severity: medium
+  fact: deployment-allowed camera_raw, lidar_raw, and full_raw profiles still declare sensor set v2 while the bridge
+    deployment default is v3
+  p4_action: add explicit v3 recording profiles or a reviewed sensor-set override before using these profiles as
+    deployment evidence
+- id: mixed_runtime_and_offline_tools
+  severity: medium
+  fact: drivable_bev and data_collection contain runtime nodes and offline dataset/audit tools together
+  p4_action: move only offline entrypoints to tools/perception after import and bag parity
+- id: duplicate_unselected_yolo_weight
+  severity: low
+  fact: yolo11m(1).pt is tracked but no audited launch selects it
+  p4_action: remove only after artifact provenance review
+migration_gates:
+- canonical asmc_perception launch reproduces audited input/output topics or supplies an explicit compatibility
+  remap
+- all geometric outputs keep the audited frame and source-stamp policy
+- selected model paths and SHA-256 values are recorded in the deployment artifact manifest
+- raw/result bag replay demonstrates topic, type, geometry, rate, staleness, and latency parity
+- traffic-light typed replacement is additive until every consumer leaves String topics
+- lidar tracked-object messages move to asmc_msgs without silent field/unit/frame changes
+- nested morai_msgs and Msg are removed only after clean build and zero consumer references
+- learning and learning_by_cheating are removed only after blocking external reference count reaches zero and BEV/map
+  replacement parity passes
+- vendor Velodyne packages remain external/vendor dependencies rather than being absorbed into asmc_perception
+- oracle profiles remain deployment-blocked
+source_assertions:
+- path: src/lidar+sensorfusion/src/Main/main.launch
+  sha256: cb46e452f5f228f10e287bcb8e4dce0794c26bf873f698495e21828fccfebbf6
+  assertion_count: 3
+- path: src/lidar+sensorfusion/src/Main/setting.yaml
+  sha256: 0c317bcad9fc0162959dc7d4658e47cdf89ff557b8d47db2db73679f654f8f15
+  assertion_count: 3
+- path: src/lidar+sensorfusion/src/Main/src/Parser/Parser.cpp
+  sha256: a09cf138aedee1a6b636df107ecd8e4c5e89668643439a5ae5851ce1b1323375
+  assertion_count: 3
+- path: src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.cpp
+  sha256: 04ea4f7e0c859b1ecc2cee44237d3deb931e6a8013f381cd5197bc7bf7e3b39e
+  assertion_count: 3
+- path: src/perception/drivable_bev/launch/three_view_lane_pipeline.launch
+  sha256: 55be12202ae71d2be1e942e88c5cf0f0b9a928fab3ae4d3ecbd29608eff5dcdf
+  assertion_count: 2
+- path: src/traffic_light/live_infer.py
+  sha256: 1dd46a2a6890884ca49c86a8ab7530b4dea01d9661e1a52ffd218802cb167900
+  assertion_count: 3
+external_reference_gates:
+  rules:
+  - id: learning_by_cheating
+    blocking_external_file_count: 2
+    blocking_occurrence_count: 2
+    blocking_files:
+    - scripts/diagnose_morai_rosbridge.sh
+    - tools/aim_scenario_runner/utils/route_bev_visualizer_controller.py
+    reference_only_file_count: 3
+    reference_only_occurrence_count: 33
+    reference_only_files:
+    - config/baselines/runtime_baseline_v1.yaml
+    - src/learning/README.md
+    - tools/audit/build_runtime_baseline.py
+  - id: duplicate_Msg
+    blocking_external_file_count: 7
+    blocking_occurrence_count: 14
+    blocking_files:
+    - src/asmc_hd_map/development/won_tae_link_node/drivable_filter_node.py
+    - src/lidar+sensorfusion/src/Main/src/Camera/YOLO/YOLODetection.py
+    - src/lidar+sensorfusion/src/Main/src/Global/Global.hpp
+    - src/lidar+sensorfusion/src/Main/src/Lidar/Visualization/Visualization.cpp
+    - src/lidar+sensorfusion/src/Main/src/Parser/Parser.cpp
+    - src/lidar+sensorfusion/src/Main/src/Parser/Parser.hpp
+    - src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.cpp
+    reference_only_file_count: 1
+    reference_only_occurrence_count: 2
+    reference_only_files:
+    - config/baselines/runtime_baseline_v1.yaml
+  - id: nested_morai_msgs
+    blocking_external_file_count: 0
+    blocking_occurrence_count: 0
+    blocking_files: []
+    reference_only_file_count: 2
+    reference_only_occurrence_count: 4
+    reference_only_files:
+    - config/baselines/runtime_baseline_v1.yaml
+    - tools/audit/build_runtime_baseline.py
+  - id: legacy_link_node_mask
+    blocking_external_file_count: 2
+    blocking_occurrence_count: 5
+    blocking_files:
+    - src/lidar+sensorfusion/src/Main/main.launch
+    - src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.cpp
+    reference_only_file_count: 0
+    reference_only_occurrence_count: 0
+    reference_only_files: []
+next_step: P4-B canonical asmc_perception facade and additive interface decisions; no physical source deletion

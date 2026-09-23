@@ -80,6 +80,7 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 | [P3-E local live baseline](./records/baselines/bridge-p3e-local-live-v1.md) | MolitComp03 v3 rate, azimuth framing과 Competition header 차단 gate | Active Baseline |
 | [P3-F consolidated baseline](./records/baselines/bridge-p3f-consolidated-v1.md) | bridge 4→1 package 이관, build/test와 post-move local smoke | Active Baseline |
 | [P3-G local closeout baseline](./records/baselines/bridge-p3g-local-closeout-v1.md) | 참가팀 local과 주최 현장 Competition status gate 분리 | Active Baseline |
+| [P4-A perception runtime baseline](./records/baselines/perception-p4a-runtime-v1.md) | 분산 인지 package/topic/frame/stamp/model/oracle와 이관 gate | Active Baseline |
 | [contracts/hd-map-topic-contract-v1.md](./contracts/hd-map/topic-v1.md) | P1-B `asmc_msgs` HD Map·체크포인트·미션 message/topic 계약 | Frozen Interface |
 | [contracts/kcity2025-competition-metadata-v1.md](./contracts/competition/kcity2025-metadata-v1.md) | P1-C 공식 체크포인트 projection과 권위별 mission-zone 정본 | Frozen Metadata |
 | [contracts/hd-map-runtime-visualization-v1.md](./contracts/hd-map/runtime-v1.md) | 2단계 global/local ROS publisher, RViz와 paint-gap 소비 규칙 | Active Runtime |
