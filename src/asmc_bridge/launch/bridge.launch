@@ -10,9 +10,10 @@
   <arg name="stream_profile" default="competition"/>
   <arg name="timestamp_mode" default="receive"/>
   <arg name="publish_map_tf" default="false"/>
+  <arg name="lidar_frame_mode" default="azimuth"/>
   <arg name="cmd_ip" default="$(optenv MORAI_CMD_IP 127.0.0.1)"/>
   <arg name="cmd_port" default="9093"/>
-  <arg name="competition_port" default="7502"/>
+  <arg name="competition_port" default="9798"/>
   <arg name="enable_vehicle_state" default="true"/>
 
   <include file="$(find integration_launch)/launch/morai_udp_bridges.launch">
@@ -21,6 +22,7 @@
     <arg name="stream_profile" value="$(arg stream_profile)"/>
     <arg name="timestamp_mode" value="$(arg timestamp_mode)"/>
     <arg name="publish_map_tf" value="$(arg publish_map_tf)"/>
+    <arg name="lidar_frame_mode" value="$(arg lidar_frame_mode)"/>
     <arg name="cmd_ip" value="$(arg cmd_ip)"/>
     <arg name="cmd_port" value="$(arg cmd_port)"/>
     <arg name="competition_port" value="$(arg competition_port)"/>

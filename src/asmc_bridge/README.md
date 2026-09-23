@@ -21,3 +21,10 @@ roslaunch asmc_bridge bridge.launch
 Object/Semantic/Instance oracle은 `./scripts/udp_bridge.sh --streams development`로만 열 수 있고
 LAN2LAN과 함께 사용할 수 없다. simulator release는 launch 인자가 아니며 MORAI UI에 import한
 network JSON schema로만 구분한다.
+
+수신은 두 transport 모두 같은 UDP port에서 이뤄지지만 Ctrl 목적지 IP가 다르다. local은
+인자 없이 실행하고 현장은 `--transport lan2lan`을 명시한다. P3-E local 실측에서 v3 LiDAR는
+azimuth 조립 뒤 약 12 Hz였고 아직 배포 미승인이다. MolitComp Competition Vehicle Status는
+type 787의 `9797→9798`이며, type 258의 `7603→7502` TrafficLight oracle과 구분한다.
+type 258은 GetTrafficLight 조회 서비스가 아니며, 조사한 두 release export에는 해당 service
+type 778이 없다. production bridge는 어느 쪽도 신호등 판단 입력으로 사용하지 않는다.

@@ -347,12 +347,13 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
 - 외부 `morai_msgs`는 wire adapter에서만 보이고, 내부 node는 가능한 한 `asmc_msgs`를 쓴다.
 - privileged Object/GT 토픽은 개발 profile에서만 허용하며 competition launch에서 시작하지 않는다.
 - 개발과 현장의 **포트와 채널은 동일하게** 만들고 IP만 profile로 바꾼다. 목표 포트는 Ctrl
-  `9093/9094`(mode 2), Competition Vehicle Status `7603/7502`, CollisionData `9091/9092`,
+  `9093/9094`(mode 2), MolitComp Competition Vehicle Status `9797/9798`, CollisionData `9091/9092`,
   v2/v3 sensor `9290~9303`이다. Ctrl `9111/9112`는 P3-A에서 archive로 격리하고 기본값을
   `9093/9094`로 전환했다. Ego Vehicle Status는 release별 PUBSUB 차이를 유지하면서 포트를
-  `9088/9099`로 통일했다. Competition Vehicle Status `7603/7502`는 P3-B에서 정적
-  decoder·fixture와 별도 `/Competition_topic`을 추가했다. live capture·field 교차 검증 뒤
-  상태 입력 우선순위를 확정한다.
+  `9088/9099`로 통일했다. P3-B 당시 Competition Vehicle Status를 `7603/7502`로 해석했으나
+  P3-E live/enum 대조에서 type 258 TrafficLight status임을 확인했다. 실제 MolitComp
+  Competition Vehicle Status는 type 787, `9797/9798`이며 정적 decoder·fixture와 별도
+  `/Competition_topic`의 live field 교차 검증 뒤 상태 입력 우선순위를 확정한다.
 - 현행 v2/제출 Autonav의 VLP16 10 Hz를 손재호 LiDAR runtime 요구에 따라 15 Hz로 바꾼다.
   JSON 수치만 추측해 고치지 않고 MORAI UI에서 15 Hz 설정 후 재저장해 `sensorPeriod`와
   `frequencyIndex`를 확인한다. 30초 이상 `/velodyne_points` 평균 14~16 Hz, packet loss,
@@ -427,8 +428,8 @@ semantic 차이는 자유 카메라 4번 pitch가 현재 v2 `328°`, 제출본 `
 현재 실행 기준은 v2 `328°`를 유지한다.
 
 현장 `2026_molit_comp_network.json`의 Ctrl profile에는 Host `192.168.0.1:9093`, Destination
-`192.168.0.10:9094`가 들어 있고, Competition Vehicle Status `7603/7502`, Collision
-`9091/9092` 등 non-loopback port pair가 저장돼 있다. Ctrl은 팀 PC에서 시뮬 Host로 보내는
+`192.168.0.10:9094`가 들어 있고, Competition Vehicle Status `9797/9798`, TrafficLight status
+`7603/7502`, Collision `9091/9092` 등 non-loopback port pair가 저장돼 있다. Ctrl은 팀 PC에서 시뮬 Host로 보내는
 채널이므로 JSON 필드의 나열 순서를 패킷 진행 방향으로 해석하지 않는다. PUBSUB enum과 UI
 이름은 실제 simulator 화면에서 다시 대조한다.
 

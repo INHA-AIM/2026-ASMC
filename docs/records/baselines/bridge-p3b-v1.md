@@ -3,6 +3,10 @@
 > 기준일: 2026-09-23
 >
 > 기계 판독 정본: [`config/bridge/bridge_profiles_v1.json`](../../../config/bridge/bridge_profiles_v1.json)
+>
+> **P3-E 정정:** 이 baseline의 `7603/7502` 매핑은 잘못됐다. type 258은 TrafficLight
+> status이고 MolitComp Competition Vehicle Status는 type 787, `9797/9798`이다. decoder
+> fixture 자체는 유지하되 live 승인 대상 port는 P3-E 계약을 따른다.
 
 ## 적용 범위
 

@@ -152,9 +152,9 @@
             "pubSleepTime": 0.019999999552965164,
             "pubFrequency": 50.0,
             "udpConfig": {
-              "hostIP": "192.168.0.1",
+              "hostIP": "127.0.0.1",
               "hostPort": 7603,
-              "destinationIP": "192.168.0.10",
+              "destinationIP": "127.0.0.1",
               "destinationPort": 7502,
               "receiveTimeout": 50,
               "isBufferThreadActivated": true,

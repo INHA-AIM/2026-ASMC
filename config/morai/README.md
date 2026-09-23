@@ -40,6 +40,52 @@ python3 tools/bridge/render_morai_sensor_profiles.py --check
 `archive/ASMC_network_set_26r1_local_legacy_9111.json`은 과거 bag/run 재현용이다. 새 실행에
 로드하지 않는다.
 
+## Network export 차이
+
+release JSON은 단순 IP 변형이 아니다. 팀이 26r1 UI에서 저장한 v2 export는 23개 entry,
+MolitComp local dev export는 12개 entry다. Ctrl도 각각 type 786/771이고 Ego status는
+type 770/295다. renderer는 release별 template을 유지하면서 Ctrl을 `9093/9094 mode 2`, Ego를
+`9088/9099`로 정규화한다. bridge binary와 ROS topic은 하나로 유지한다.
+
+주최 PC MolitComp network의 10개 type은 팀 local dev의 공통 부분이며, 팀 dev에만 type 266
+SensorSync와 type 783 MoraiSL subscriber가 더 있다. 이 둘은 LAN으로 승격하지 않는다. 두
+MolitComp 원본에서 공통 entry의 종류 차이는 없고, 설정 차이는 TF2(type 267)의 network 활성
+상태와 Ctrl mode(주최 2, 팀 원본 1)다. 생성기는 Ctrl만 mode 2로 정규화한다.
+
+type 787 `9797→9798`이 Competition Vehicle Status이고 MolitComp에만 있다. type 258
+`7603→7502`는 연속 송신형 TrafficLight Status publisher다. 이것은
+`GetTrafficLightStatus`/`MoraiTLServiceProvider`와 같은 조회 서비스가 아니다. 조사한 주최
+MolitComp, 팀 MolitComp, 26.R1 export 모두 type 778 MoraiTLServiceProvider를 포함하지 않으며,
+참가팀 배포판의 Network UI에도 GetTrafficLight가 없었다. 26.R1 export에 gRPC service(type
+4865)가 있거나 저장소에 gRPC proto가 있다는 사실도 실제 실행판에서 traffic-light query가
+허용·제공된다는 증거가 아니다. 따라서 canonical bridge와 검증기는 GetTrafficLight를 필수
+입력으로 요구하지 않고, type 258도 production planning 입력으로 소비하지 않는다. 실제 신호등
+판단은 카메라 인지 결과를 사용한다. 주최 network에 있는 항목 전체를 팀 runtime 필수 입력으로
+해석하지 않는다.
+
+정확한 원본 inventory는 다음과 같다. `Division_TYPE` 1/2/3/4는 각각 publisher,
+subscriber, controller, service다.
+
+| export | publisher (1) | subscriber (2) | controller (3) | service (4) | 별도 gRPC |
+|---|---|---|---|---|---|
+| 주최 MolitComp03 | 258, 261, 267, 295, 787, 770, 772 | 259 | 771 | 780 | 없음 |
+| 팀 MolitComp03 local | 위와 같음 | 259, **266, 783** | 771 | 780 | 없음 |
+| 팀 26.R1 local | 258, 261, 265, 263, 267, 271, 770, 772, 779 | 259, 262, 264, 266, 776, 783 | 786 | 269, 270, 274, 275, 780, 782 | 4865 |
+
+주요 이름은 `258=TLStatusPublisher`, `259=TLCtrlSubscriber`, `261=CollisionData`,
+`262=SensorPosSubscriber`, `263/264/265=GlobalIntersection publisher/control/status`,
+`266=SensorSyncDataSubscriber`, `267=TF2Publisher`, `269/270/274/275=SyncMode service`,
+`271=SyncModeInfoPublisher`, `770=MoraiInfoPublisher`, `772=MoraiObjectInfoPublisher`,
+`776=MoraiLampsSubscriber`, `779=MoraiReplayInfoPublisher`, `780=MoraiEventCmdServiceProvider`,
+`782=MoraiMapSpecServiceProvider`, `783=MoraiSLSubscriber`, `4865=MoraiService(gRPC)`다.
+MolitComp 전용 `295/771/787`은 해당 실행판 UI/export와 live packet을 기준으로 각각 Ego
+Vehicle Status, Ego Ctrl Cmd, Competition Vehicle Status로 고정했다. 릴리스가 다른 enum 이름을
+숫자만 보고 교차 적용하지 않는다.
+
+26.R1의 type 770은 Ego/MoraiInfo이고 MolitComp03의 type 295가 Ego Vehicle Status다. type
+787 Competition Vehicle Status는 26.R1에 없다. 따라서 release JSON 하나로의 병합은 하지
+않지만 ROS bridge binary, 포트 계약, ROS topic API는 공통으로 유지한다.
+
 ## 센서셋
 
 파일명은 팀 명명 규칙인 `ASMC_sensor_set_*`를 유지한다.
@@ -57,7 +103,9 @@ Camera×4, GPS/IMU, UDP `9290~9303`은 같다. export release 차이로 v3에는
 센서 구성 변경으로 오해하지 않는다.
 
 v3 승인 조건은 `/velodyne_points`를 30초 이상 측정한 평균 14~16 Hz, packet/parse error,
-latency·CPU, 손재호 tracking의 10 Hz 대비 결과다.
+latency·CPU, 손재호 tracking의 10 Hz 대비 결과다. 2026-09-23 MolitComp03 local 실측에서는
+raw 약 600 packet/s, 50 packet/revolution, 약 12 Hz였으므로 아직 실패 상태다. bridge는
+azimuth 기준으로 고쳐 8 Hz 오조립을 제거했지만 시뮬레이터 원신호를 15 Hz로 만들지는 않는다.
 
 원본 네 파일은 UI export·provenance 기준이다. `sensors/generated/`의 v2/v3
 `local`/`lan2lan` 파일은 포트·pose·주기를 고정하고 UDP IP만 transport 계약으로 바꾸어
@@ -89,8 +137,13 @@ WSL 접근을 지원한다. Docker Desktop host networking은 그 위에서 cont
 TCP/UDP를 연결한다. 둘은 별도 계층이므로 둘 다 켜고 실제 UDP 왕복으로 검증해야 한다.
 
 bridge 수신 socket은 `0.0.0.0`과 기존 destination port에 bind하므로 포트를 변환하지 않는다.
+따라서 sensor/network 수신은 local과 LAN2LAN에서 같은 bridge binary와 port를 쓴다. 다만
+`/ctrl_cmd`의 송신 목적지 IP는 수신 전에도 확정돼야 하므로 기본 local은 인자 없이,
+현장은 `--transport lan2lan`을 명시한다. sender IP 자동 추론은 다중 NIC·NAT·mirrored 환경과
+첫 status packet 이전 제어에서 모호하므로 기본 정책으로 사용하지 않는다.
 Windows Firewall과 Hyper-V firewall에서는 MORAI `192.168.0.1` source에 대해 Autonav inbound UDP
-`7502`, `9092`, `9099`, `9291/9293/9295/9297/9299`, `9301/9303`만 허용한다. GT 전용
+`9798`, `9092`, `9099`, `9291/9293/9295/9297/9299`, `9301/9303`만 허용한다. TrafficLight
+oracle `7502`, GT 전용
 `9305/9307/9309/9311`과 Object oracle `7505`는 본선 allowlist에 넣지 않는다. Ctrl `9093`은
 Autonav에서 MORAI로 나가는 목적지다. 기본 inbound action 전체를 Allow로 바꾸지 않는다.
 

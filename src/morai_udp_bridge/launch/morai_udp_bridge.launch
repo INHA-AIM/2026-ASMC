@@ -9,7 +9,7 @@
   <arg name="enable_collision" default="true"/>
   <!-- AIM06 스크린샷 기준 포트 (사람마다 Cmd/일부 포트 다름) -->
   <arg name="ego_port"       default="9099"/>   <!-- Ego Vehicle Status Dest -->
-  <arg name="competition_port" default="7502"/> <!-- Competition Vehicle Status Dest -->
+  <arg name="competition_port" default="9798"/> <!-- Competition Vehicle Status Dest -->
   <arg name="object_port"    default="7505"/>   <!-- Object Info Dest -->
   <arg name="collision_port" default="9092"/>   <!-- Collision Data Dest -->
   <arg name="cmd_ip"         default="127.0.0.1"/>

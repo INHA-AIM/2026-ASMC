@@ -50,6 +50,40 @@ class SensorBridgeProtocolTest(unittest.TestCase):
         )
         np.testing.assert_array_equal(decoded["id"], [0, 7, 255])
 
+    @staticmethod
+    def lidar_packet(azimuth):
+        packet = bytearray(1200)
+        struct.pack_into("<H", packet, 2, azimuth)
+        return bytes(packet)
+
+    def test_azimuth_assembler_resynchronizes_and_emits_one_revolution(self):
+        assembler = MODULE.VelodyneFrameAssembler("azimuth", 75)
+        # Initial partial revolution is deliberately dropped at the first wrap.
+        for index, azimuth in enumerate((30000, 33000, 35900, 100)):
+            self.assertIsNone(
+                assembler.push(self.lidar_packet(azimuth), index, index)
+            )
+        completed = None
+        full_revolution = tuple(range(100, 36100, 2000)) + (50,)
+        for index, azimuth in enumerate(full_revolution, 4):
+            completed = assembler.push(
+                self.lidar_packet(azimuth), index, index
+            )
+        self.assertIsNotNone(completed)
+        chunks, device_times, started_ns = completed
+        self.assertEqual(len(full_revolution), len(chunks))
+        self.assertEqual(
+            list(range(3, 3 + len(full_revolution))), device_times
+        )
+        self.assertEqual(3, started_ns)
+
+    def test_packet_count_mode_preserves_legacy_grouping(self):
+        assembler = MODULE.VelodyneFrameAssembler("packet_count", 3)
+        self.assertIsNone(assembler.push(self.lidar_packet(100), 1, 10))
+        self.assertIsNone(assembler.push(self.lidar_packet(200), 2, 20))
+        completed = assembler.push(self.lidar_packet(300), 3, 30)
+        self.assertEqual(3, len(completed[0]))
+
 
 if __name__ == "__main__":
     unittest.main()

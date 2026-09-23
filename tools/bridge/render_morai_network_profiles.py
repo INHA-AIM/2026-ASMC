@@ -53,7 +53,11 @@ def render_profile(
     field_transport = transport == "lan2lan"
     default_morai_ip = "127.0.0.1" if field_transport else morai_ip
     default_autonav_ip = "127.0.0.1" if field_transport else autonav_ip
-    ctrl_found = status_found = collision_found = False
+    ctrl_found = collision_found = False
+    status_pubsub = channels["competition_vehicle_status"].get(
+        "morai_pubsub_type_by_release", {}
+    ).get(release)
+    status_found = status_pubsub is None
     ego_status_found = False
     ego_status_pubsub = channels["ego_vehicle_status"][
         "morai_pubsub_type_by_release"
@@ -80,7 +84,7 @@ def render_profile(
             ctrl_found = True
 
         pubsub = entry.get("PUBSUB_TYPE")
-        if pubsub == channels["competition_vehicle_status"]["morai_pubsub_type"]:
+        if status_pubsub is not None and pubsub == status_pubsub:
             udp = entry["config"]["udpConfig"]
             _rewrite_udp_ips(entry["config"], morai_ip, autonav_ip)
             udp["hostPort"] = channels["competition_vehicle_status"]["host_port"]

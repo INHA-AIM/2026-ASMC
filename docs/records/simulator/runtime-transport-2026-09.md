@@ -144,3 +144,17 @@ ID 5/11, GPS와 IMU는 advertise되지 않았다. `/Ego_topic`도 MORAI payload�
   생성하지 않는다.
 - direct ROS GT와 Streaming GT를 신규 기본 경로로 사용하지 않는다.
 - `asmc-ros-noetic`과 내부 ROS bridge는 대회 UDP 정규화와 재현 평가를 위해 유지한다.
+
+## 7. 2026-09-23 MolitComp03 v3 local live
+
+대회판 simulator에 `ASMC_network_set_molitcomp03_local.json`과
+`ASMC_sensor_set_v3_local.json`을 import했다. 카메라·GPS·IMU·LiDAR raw UDP는 수신됐다.
+LiDAR는 고정 75 packet 조립에서 약 7.86 Hz였으나 packet azimuth wrap 기준 조립으로 바꾼 뒤
+약 12.01 Hz였다. raw 약 600 packet/s, 50 packet/revolution이고 device timestamp 기준 물리
+회전율도 약 11.85~12.1 Hz였으므로 목표 15 Hz의 14~16 Hz gate는 실패했다.
+
+Network UDP `7502`의 live header는 `#TrafficLight$`였다. enum과 현장 export를 대조해 type
+258의 TrafficLight status임을 확인했고, MolitComp Competition Vehicle Status는 type 787,
+`9797→9798`로 정정했다. `9798`은 이 정지 장면의 8초 표본에서 packet을 내지 않았다. 정적
+fixture decoder의 성공과 competition mode live 채널 승인을 구분한다. 세부 조건과 재검증
+명령은 [P3-E baseline](../baselines/bridge-p3e-local-live-v1.md)에 보존한다.

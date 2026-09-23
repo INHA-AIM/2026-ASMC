@@ -24,6 +24,11 @@ Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127
 6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh`
 7. 확인: `rostopic hz /Ego_topic` · `/Competition_topic` · `/velodyne_points`
 
+26.R1에는 `/Competition_topic`의 원천인 type 787이 없다. 26.R1을 검사할 때는
+`./scripts/docker_ros_up.sh verify 8 26r1`, MolitComp03은 기본값인
+`./scripts/docker_ros_up.sh verify 8 molitcomp03`을 사용한다. 이 release 인자는 bridge 선택이
+아니라 검증할 필수 토픽 inventory만 바꾼다.
+
 **LiDAR만 0이고 cam/gps/imu는 될 때:** `docker_ros_up.sh status`의 host mode, MORAI
 Connect/Dest 9299와 다른 9299 listener를 순서대로 확인한다. 개별 Docker port forwarding은
 사용하지 않는다. **9299를 다른 포트로 옮기지 말 것.** 상세:
@@ -60,9 +65,14 @@ Mode:     2
 | 채널 | Dest | (참고 Host) |
 |------|------|-------------|
 | Ego Vehicle Status | **9099** | 9088 |
-| Competition Vehicle Status | **7502** | 7603 |
+| Competition Vehicle Status (MolitComp only) | **9798** | 9797 |
+| TrafficLight status oracle | **7502** | 7603 |
 | Object Info | **7505** | 7605 |
 | Collision Data | **9092** | 9091 |
+
+TrafficLight status(type 258)는 simulator oracle이며 `GetTrafficLightStatus` 조회 서비스와 다른
+채널이다. 조사한 MolitComp03/26.R1 export에는 type 778 MoraiTLServiceProvider가 없으므로
+GetTrafficLight를 필수 채널로 가정하거나 본선 planning 입력으로 사용하지 않는다.
 
 ---
 

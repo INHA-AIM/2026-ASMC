@@ -22,6 +22,7 @@ bridge 구현을 개발·검증하고 Phase 3에서 안전하게 통합하는 �
 | Competition Vehicle Status decoder | P3-B 정적 계약·fixture 완료 | live capture gate 대기 |
 | stream allowlist·sensor IP 파생본 | P3-C 구현 | live LAN gate 대기 |
 | 단일 launch façade·vehicle state composition | P3-D 구현 | package 물리 이전·삭제 대기 |
+| local MolitComp03 수신·LiDAR frame gate | P3-E 실측 | v3 15 Hz·Competition status 미승인 |
 
 P3-D는 launch composition만 `asmc_bridge`로 승격했다. 구현 node와 호환 launch는 bag replay,
 packet fixture, producer/consumer build와 실제 MORAI 검증을 모두 통과할 때까지 이동·삭제하지
@@ -48,7 +49,8 @@ interface는 가능한 한 `asmc_msgs`를 사용하되, Phase 3 전환 PR에서 
 | 방향 | 현재 UDP | ROS topic·type | 비고 |
 |---|---:|---|---|
 | MORAI→팀 | Ego Host/Dest `9088/9099` | `/Ego_topic`, `morai_msgs/EgoVehicleStatus` | 현재 공통 상태 입력 |
-| MORAI→팀 | Competition Host/Dest `7603/7502` | `/Competition_topic`, `morai_msgs/EgoVehicleStatus` | 정적 decoder 완료, live capture 대기 |
+| MORAI→팀 | MolitComp Competition `9797/9798`, type 787 | `/Competition_topic`, `morai_msgs/EgoVehicleStatus` | 정적 decoder 완료; competition mode live emission 대기 |
+| MORAI→팀 | TrafficLight `7603/7502`, type 258 | 발행하지 않음 | simulator oracle, production bridge 비소비 |
 | MORAI→팀 | Object Dest `7505` | `/Object_topic`, `morai_msgs/ObjectStatusList` | privileged 개발 oracle |
 | MORAI→팀 | Collision Dest `9092` | `/CollisionData`, `morai_msgs/CollisionData` | 충돌 때만 publish |
 | 팀→MORAI | Ctrl Host `9093` | subscribe `/ctrl_cmd`, `morai_msgs/CtrlCmd` | Dest metadata 9094, mode 2, D gear packet |
@@ -57,6 +59,11 @@ Ego UDP velocity는 ROS에서 m/s로 변환한다. Object velocity는 현재 `mo
 km/h다. Ctrl steering 입력은 radian이며 ±40°를 ±1로 정규화한다. 이 단위를 topic 이름만 보고
 추정하지 않는다. 실측에서 `/Ego_topic.position`이 `(0,0)`인 대회 packet도 있었으므로 이를
 authoritative map pose나 GPS/IMU fallback으로 사용하지 않는다.
+
+TrafficLight type 258은 연속 status publisher이고 `GetTrafficLightStatus` 조회 서비스가 아니다.
+검사한 MolitComp03/26.R1 export에는 MoraiTLServiceProvider type 778이 없으므로, bridge와
+production planner는 GetTrafficLight를 필수 입력으로 요구하지 않는다. 26.R1의 gRPC proto가
+존재해도 실행판의 API 제공 여부는 별도 live gate다.
 
 ### Sensor bridge
 
@@ -72,6 +79,11 @@ authoritative map pose나 GPS/IMU fallback으로 사용하지 않는다.
 기본 `competition` stream profile은 Object/Semantic/Instance socket과 publisher를 생성하지 않는다.
 `development`는 이 입력을 추가하지만 local transport에서만 허용된다. CLI를 우회해
 launch를 직접 실행해도 bridge node가 `lan2lan + development`를 거부한다.
+
+VLP16은 기본 `lidar_frame_mode=azimuth`로 packet의 물리 회전 경계를 검출한다. 고정 75 packet
+조립은 v3에서 약 8 Hz로 잘못 보였고, azimuth 조립 뒤 약 12 Hz로 측정됐다. 이는 프레이밍은
+바로잡았지만 v3의 목표 15 Hz는 아직 실패했다는 뜻이다. diagnostics의 `raw_packet_hz`,
+`packets_per_frame_median`, `interval_hz`를 함께 확인한다.
 
 GPS/IMU 원본 datagram은 기본값으로 `127.0.0.1:9401/9403`에도 복제된다. 이는 단일 MORAI UDP를
 동시에 소비하던 standalone planner 호환 경로다. 현재 consumer가 이를 요구하는지 Phase 3
@@ -138,6 +150,11 @@ release별 MORAI import는 UI에서 선택하고, bridge에서는 transport만 �
 기동해 Network/Sensor bridge와 GPS/IMU `/vehicle/state`를 함께 연다. 두 release에 대응하는 generated
 MORAI JSON 경로와 Ctrl 대상 IP를 출력하며 diagnostics에도 transport 이름을 남긴다.
 
+수신 socket은 어느 profile에서도 같은 port의 `0.0.0.0`에 bind한다. 명시적 transport는 주로
+Ctrl 송신 목적지를 `127.0.0.1` 또는 `192.168.0.1`로 결정하고 잘못된 현장 송신을 fail-closed로
+막기 위한 것이다. 수신 sender를 보고 자동 선택하면 첫 packet 전 제어, mirrored/NAT와 다중
+NIC에서 모호하므로 사용하지 않는다.
+
 다른 터미널에서:
 
 ```bash
@@ -148,7 +165,7 @@ rostopic echo /vehicle/state -n1
 ```
 
 diagnostics의 `interval_hz`, `last_message_age_sec`, parse error, processing/assembly p95와 timestamp
-fallback을 함께 본다. topic rate 하나만으로 Windows ingress, UDP loss, decoder와 ROS scheduling
+fallback을 함께 본다. LiDAR는 `raw_packet_hz`와 `packets_per_frame_median`도 본다. topic rate 하나만으로 Windows ingress, UDP loss, decoder와 ROS scheduling
 중 어디서 손실됐는지 단정하지 않는다.
 
 ## 6. build와 회귀 검사
@@ -198,7 +215,9 @@ make target”으로 실패할 수 있다.
 
 - 개발·현장의 채널과 포트는 같고 IP만 profile로 분리한다.
 - Ctrl `9093/9094`, mode 2
-- Competition Vehicle Status `7603/7502`
+- MolitComp Competition Vehicle Status `9797/9798`, type 787
+- TrafficLight status `7603/7502`, type 258은 simulator oracle이며 bridge 입력이 아님
+- GetTrafficLight/MoraiTLServiceProvider type 778은 조사한 export에 없고 필수 계약이 아님
 - CollisionData `9091/9092`
 - Autonav v2 sensor `9290~9303`
 - 개발 IP 양쪽 `127.0.0.1`

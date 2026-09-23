@@ -189,12 +189,19 @@ echo "                   26r1       -> ${NETWORK_PRESET_26R1}"
 echo "                   competition -> ${NETWORK_PRESET_COMP}"
 echo "  Sensor preset  : v2 -> ${SENSOR_PRESET_V2}"
 echo "                   v3 -> ${SENSOR_PRESET_V3} (15 Hz candidate)"
-CMD_IP="${MORAI_CMD_IP:-$TRANSPORT_CMD_IP}"
-# If caller already passed cmd_ip:=..., do not override.
+# Receive sockets bind the same ports for both transports. Only the outgoing
+# Ctrl destination changes, so derive it from the explicit transport instead
+# of a container-wide environment value that could silently keep LAN2LAN on
+# 127.0.0.1.
+CMD_IP="$TRANSPORT_CMD_IP"
+# If caller already passed cmd_ip:=..., use that explicit override.
 has_cmd_ip=0
 for a in "${LAUNCH_ARGS[@]}"; do
   case "$a" in
-    cmd_ip:=*) has_cmd_ip=1 ;;
+    cmd_ip:=*)
+      has_cmd_ip=1
+      CMD_IP="${a#*=}"
+      ;;
   esac
 done
 EXTRA=()
@@ -207,7 +214,8 @@ EXTRA+=( "stream_profile:=${STREAM_PROFILE}" )
 echo "  cmd_ip         : ${CMD_IP} (Ctrl → Windows MORAI Host PORT)"
 echo "  Ctrl default   : 9093/9094, mode 2"
 echo "  Ego status     : 9088/9099 (both MORAI releases normalized)"
-echo "  Competition    : 7603/7502 -> /Competition_topic"
+echo "  Competition    : 9797/9798 (type 787) -> /Competition_topic"
+echo "  TrafficLight GT: 7603/7502 (type 258; not consumed)"
 echo "  Vehicle state  : GPS/IMU -> /vehicle/state"
 echo "  Sensor ports   : competition allowlist 9291..9303"
 if [ "$STREAM_PROFILE" = "development" ]; then
@@ -222,7 +230,8 @@ if [ "$STREAM_PROFILE" = "development" ]; then
   echo "                  rostopic hz /sem_front/image_jpeg/compressed"
   echo "                  rostopic hz /velodyne_points_instance"
 else
-  echo "                  python3 scripts/verify_morai_topics.py --profile competition"
+  echo "                  python3 scripts/verify_morai_topics.py --profile competition --simulator-release molitcomp03"
+  echo "                  (26.R1 verifier inventory: --simulator-release 26r1)"
 fi
 echo "=========================================="
 echo ""

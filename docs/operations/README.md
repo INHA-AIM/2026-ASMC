@@ -22,17 +22,25 @@ live acceptance가 끝난 것을 구분한다.
 | 개발 IP | Host/Destination `127.0.0.1` | 동일 |
 | 현장 IP | profile 계약·생성본: MORAI `192.168.0.1`, Autonav `192.168.0.10` | 실제 두 PC 리허설 |
 | Ego Ctrl Cmd | `9093/9094`, type 1, mode 2 | 실제 Ctrl 응답·packet capture |
-| 차량 상태 | Ego `9088/9099`, Competition `7603/7502` 별도 topic | Competition live capture·field 교차 검증 |
+| 차량 상태 | Ego `9088/9099`; MolitComp Competition `9797/9798` | Competition mode live packet·field 확인 |
+| TrafficLight simulator oracle | `258`, `7603/7502` | team production bridge에서 소비 금지 |
 | CollisionData | destination `9092` | `9091/9092` pair |
 | ObjectInfo | `7505`, 임시 개발 oracle | competition profile에서 제거 |
 | 센서 | v2/v3 local·lan2lan 파생본, `9290~9303` | 실제 LAN packet rate |
 | privileged stream | 기본 차단, local `development`에서만 활성 | 본선 launch topic absence 재확인 |
-| VLP16 | v2 10 Hz 회귀 기준, v3 UI 저장본 15 Hz | 30초 실측 14~16 Hz와 tracking 비교 |
+| VLP16 | v2 10 Hz 회귀 기준, v3 UI 저장본 15 Hz 후보 | local 실측 약 12 Hz; 30초 14~16 Hz와 tracking 재검증 |
 
 정본은 [`bridge_profiles_v1.json`](../../config/bridge/bridge_profiles_v1.json)이다. generated
-network/sensor JSON·decoder·synthetic UDP publish·allowlist 계약은 검증하지만
-Competition live capture와 실제 LAN 검증은 아직 남았다. v3도 파일 기준 15 Hz 후보이지
-배포 승인이 아니다.
+network/sensor JSON·decoder·synthetic UDP publish·allowlist 계약은 검증하지만,
+실측된 `7502` packet은 Competition이 아닌 `#TrafficLight$`였다. 실제 Competition type 787의
+`9798`은 아직 0건이므로 차단 상태다. 실제 LAN 검증도 남았다. v3는 파일 기준 15 Hz 후보이나
+약 12 Hz만 실측돼 배포 승인이 아니다.
+
+type 258 TrafficLight status와 `GetTrafficLightStatus` 조회 서비스는 서로 다르다. 조사한 주최
+MolitComp03, 팀 MolitComp03, 26.R1 network export에는 type 778 MoraiTLServiceProvider가 없고
+참가팀 MolitComp UI에도 GetTrafficLight 항목이 없었다. 26.R1의 gRPC 연결 항목이나 저장소 proto
+존재만으로 query 가능성을 가정하지 않는다. production 신호등 입력은 카메라 인지 결과이며,
+TrafficLight oracle/GetTrafficLight는 bridge 필수 토픽이 아니다.
 
 ## 2. 런타임 경계
 
@@ -95,7 +103,8 @@ Compose는 `network_mode: host`이고 개별 `ports:` forwarding을 사용하지
 | 채널 | 현재 포트 | ROS/소비자 |
 |---|---:|---|
 | Ego Vehicle Status | Host/Dest `9088/9099` | `/Ego_topic` |
-| Competition Vehicle Status | Host/Dest `7603/7502` | `/Competition_topic` |
+| Competition Vehicle Status | MolitComp Host/Dest `9797/9798`, type 787 | `/Competition_topic`; 26r1 export에는 없음 |
+| TrafficLight status | Host/Dest `7603/7502`, type 258 | simulator oracle; canonical bridge가 소비하지 않음 |
 | Object Info | Dest `7505` | `/Object_topic`, 임시 oracle |
 | Collision Data | Host/Dest `9091/9092` | `/CollisionData` |
 | Ego Ctrl Cmd | Host/Dest `9093/9094`, mode 2 | `morai_udp_bridge`가 `/ctrl_cmd`를 UDP로 전송 |
@@ -143,6 +152,10 @@ source devel/setup.bash
 ./scripts/udp_bridge.sh --transport lan2lan
 ```
 
+수신 port와 bridge 구현은 두 transport가 같다. transport 인자는 Ctrl 송신 IP를 local
+`127.0.0.1` 또는 현장 `192.168.0.1`로 안전하게 확정한다. sender IP 기반 자동 판정은 첫 수신
+전에는 결정할 수 없고 WSL mirrored/NAT·다중 NIC에서 오판할 수 있어 제공하지 않는다.
+
 기본 명령은 `local + competition`이다. Object/Semantic/Instance가 필요한 개발 실험만
 `./scripts/udp_bridge.sh --streams development`로 실행한다. development와 lan2lan을 결합하면
 스크립트와 두 bridge node가 모두 기동을 거부한다.
@@ -150,7 +163,9 @@ source devel/setup.bash
 다른 터미널에서:
 
 ```bash
-./scripts/docker_ros_up.sh verify 8
+./scripts/docker_ros_up.sh verify 8 molitcomp03
+# 26.R1은 type 787 Competition publisher가 없으므로:
+./scripts/docker_ros_up.sh verify 8 26r1
 
 rostopic hz /Ego_topic
 rostopic hz /Competition_topic
@@ -161,9 +176,19 @@ rostopic hz /imu
 rostopic echo /Ego_topic -n1
 ```
 
-`verify`는 Ego/Competition, RGB 4대, LiDAR, GPS, IMU의 count/rate와 privileged publisher
-부재를 확인한다. GT 실험 재현에서만 `--streams development`와 `verify-gt 20`을
-함께 사용한다.
+`verify`는 release inventory에 맞춰 RGB 4대, LiDAR, GPS, IMU, Ego와 privileged publisher
+부재를 확인한다. MolitComp03에서만 type 787 기반 Competition을 필수로 검사한다. 두 번째
+인자는 bridge 동작을 바꾸지 않고 검증 목록만 선택한다. GT 실험 재현에서만 `--streams
+development`와 `verify-gt 20 molitcomp03`을 함께 사용한다.
+
+v3 LiDAR 목표를 별도로 검사할 때는 다음처럼 실행한다. 현재 MolitComp03 local 표본은 약
+12 Hz라 이 명령이 실패하는 것이 정상이며, 15 Hz가 실제로 확인되기 전 gate를 낮추지 않는다.
+
+```bash
+python3 scripts/verify_morai_topics.py \
+  --duration 30 --required-topic /velodyne_points \
+  --lidar-target-hz 15 --strict-thresholds
+```
 
 설정 Hz보다 낮은 관측값을 바로 packet loss로 단정하지 않는다. sequence가 없는 stream은
 SIM 송신 cadence, Windows ingress, UDP, bridge와 ROS scheduling을 단일 rate만으로 분리할 수
@@ -179,6 +204,8 @@ SIM 송신 cadence, Windows ingress, UDP, bridge와 ROS scheduling을 단일 rat
 3. MORAI LiDAR Connect와 `127.0.0.1:9299`를 확인한다.
 4. `ss -lunp`로 다른 9299 bind가 없는지 확인한다.
 5. bridge foreground의 `rx ... lidar=...`와 diagnostics를 확인한다.
+6. diagnostics에서 `raw_packet_hz≈packet/frame×frame Hz`인지 확인한다. v3 local P3-E 표본은
+   약 `600 packet/s`, `50 packet/frame`, `12 Hz`였고 승인 범위 밖이다.
 
 ### ROS master 충돌
 
@@ -244,8 +271,9 @@ asmc-ros-gui rviz -d /root/ws/<config>.rviz
 Phase 3에서 현재값을 바꿀 때 다음을 한 변경으로 검증한다.
 
 1. `local`과 `lan2lan`의 port·channel·Ctrl mode가 같고 IP만 다른지 확인한다.
-2. Ctrl `9093/9094`, Ego Vehicle Status `9088/9099`, Competition Vehicle Status
-   `7603/7502`, Collision `9091/9092` packet 방향을 UI와 capture로 확인한다.
+2. Ctrl `9093/9094`, Ego Vehicle Status `9088/9099`, MolitComp Competition Vehicle Status
+   `9797/9798`, Collision `9091/9092` packet 방향을 UI와 capture로 확인한다. `7603/7502`는
+   TrafficLight status이며 Competition Vehicle Status로 해석하지 않는다.
 3. MORAI UI에서 VLP16 15 Hz로 저장하고 `sensorPeriod`·`frequencyIndex`를 비교한다.
 4. `/velodyne_points`를 30초 이상 측정해 평균 14~16 Hz와 packet/parse 오류를 확인한다.
 5. 10 Hz baseline 대비 손재호 tracking, latency와 CPU/GPU를 비교한다.

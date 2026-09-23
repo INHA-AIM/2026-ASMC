@@ -11,6 +11,8 @@ lidar_format: bin_xyzi
 notes: |
   Do NOT use as default long sessions. Prefer perception_core.
   max_frames=300 soft-cap for safety (override with ~max_frames).
+  GetTrafficLightStatus is an optional development oracle and is not promised by either
+  MolitComp03 or 26.R1; missing[] is expected when the simulator does not expose it.
 
 channels:
   ego: true

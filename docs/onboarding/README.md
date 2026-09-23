@@ -110,7 +110,8 @@ ROS topic·bridge·runtime 검증은 ROS image를 사용한다.
 
 ```bash
 git status --short
-./scripts/docker_ros_up.sh verify
+./scripts/docker_ros_up.sh verify 8 molitcomp03  # 대회판
+# ./scripts/docker_ros_up.sh verify 8 26r1      # 26.R1 개발판
 ```
 
 | 작업 | 다음 문서 |

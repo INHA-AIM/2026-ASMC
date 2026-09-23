@@ -198,7 +198,7 @@ class MoraiUdpBridge(object):
     def __init__(self):
         p = rospy.get_param
         self.ego_port = p("~ego_port", 9099)
-        self.competition_port = p("~competition_port", 7502)
+        self.competition_port = p("~competition_port", 9798)
         self.obj_port = p("~object_port", 9021)
         self.col_port = p("~collision_port", 9031)
         self.cmd_ip = p("~cmd_ip", "127.0.0.1")

@@ -2,6 +2,10 @@
 
 > 기준일: 2026-09-23
 > 기계 판독 정본: [`config/bridge/bridge_profiles_v1.json`](../../../config/bridge/bridge_profiles_v1.json)
+>
+> **P3-E 정정:** 당시 `7603/7502`를 Competition Vehicle Status로 해석했으나 live packet과
+> enum 대조 결과 type 258 TrafficLight status였다. 실제 MolitComp Competition Vehicle
+> Status는 type 787, `9797/9798`이다. 아래 본문은 P3-A 당시 판단 기록으로 보존한다.
 
 ## 동결한 결정
 

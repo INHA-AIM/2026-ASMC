@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the P3-B bridge baseline, transport profiles, and MORAI presets."""
+"""Validate the P3-E bridge baseline, transport profiles, and live gates."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ from render_morai_sensor_profiles import (  # noqa: E402
 
 
 class ContractError(RuntimeError):
-    """Raised when the committed P3-B contract and implementation diverge."""
+    """Raised when the committed bridge contract and implementation diverge."""
 
 
 def _require(condition: bool, message: str) -> None:
@@ -63,11 +63,15 @@ def _validate_generated_ips(
 ) -> None:
     profile = contract["transport_profiles"][transport]
     field = transport == "lan2lan"
+    competition_pubsub = contract["channels"]["competition_vehicle_status"].get(
+        "morai_pubsub_type_by_release", {}
+    ).get(release)
     allowed_pubsub = {
-        contract["channels"]["competition_vehicle_status"]["morai_pubsub_type"],
         contract["channels"]["collision_data"]["morai_pubsub_type"],
         contract["channels"]["ego_vehicle_status"]["morai_pubsub_type_by_release"][release],
     }
+    if competition_pubsub is not None:
+        allowed_pubsub.add(competition_pubsub)
     for entry in _network_entries(document):
         config_udp = entry.get("config", {}).get("udpConfig", {})
         ctrl_udp = entry.get("EgoCtrlConfig", {}).get("udpConfig", {})
@@ -216,18 +220,22 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     )
     competition_status = contract["channels"]["competition_vehicle_status"]
     _require(
+        competition_status["morai_pubsub_type_by_release"] == {"molitcomp03": 787},
+        "Competition Vehicle Status release mapping changed",
+    )
+    _require(
         (
             competition_status["host_port"],
             competition_status["destination_port"],
             competition_status["runtime_bridge_bind_port"],
         )
-        == (7603, 7502, 7502),
-        "Competition Vehicle Status must use 7603/7502",
+        == (9797, 9798, 9798),
+        "Competition Vehicle Status must use 9797/9798",
     )
     _require(
         competition_status["state"]
-        == "static_decoder_active_live_capture_pending",
-        "Competition decoder acceptance state changed",
+        == "static_decoder_active_live_stream_not_emitted",
+        "Competition decoder live-block state changed",
     )
     packet_contract = competition_status["packet_contract"]
     _require(
@@ -243,6 +251,36 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         _sha256(REPO_ROOT / packet_contract["fixture_path"])
         == packet_contract["fixture_sha256"],
         "Competition packet fixture SHA changed",
+    )
+    _require(
+        packet_contract["live_acceptance"]
+        == "pending_molitcomp03_competition_mode_packet_capture",
+        "Competition live acceptance state changed",
+    )
+    traffic_light = contract["channels"]["traffic_light_status_oracle"]
+    _require(
+        (
+            traffic_light["morai_pubsub_type"],
+            traffic_light["host_port"],
+            traffic_light["destination_port"],
+        )
+        == (258, 7603, 7502),
+        "TrafficLight status evidence mapping changed",
+    )
+    traffic_light_query = contract["channels"]["traffic_light_query_oracle"]
+    _require(
+        traffic_light_query
+        == {
+            "morai_pubsub_type": 778,
+            "required": False,
+            "source_export_presence": {
+                "26r1": False,
+                "molitcomp03": False,
+                "organizer_molitcomp03": False,
+            },
+            "state": "absent_from_inspected_exports_not_a_runtime_contract",
+        },
+        "GetTrafficLight/MoraiTLServiceProvider must remain optional and absent",
     )
     _require(
         contract["transport_profiles"]["local"]
@@ -261,6 +299,52 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     )
 
     for release, spec in contract["network_templates"].items():
+        expected_source = {
+            "26r1": (
+                23,
+                False,
+                "5b57d2c95b57548f6fda2d574f8db77e1748239cb39056c705516dd79fe93006",
+            ),
+            "molitcomp03": (
+                12,
+                True,
+                "182fdaa802d59a41a343fbff7344d233031153b0435402ccbaa8ea1fbd7f4b51",
+            ),
+        }[release]
+        _require(
+            (
+                spec["source_entry_count"],
+                spec["competition_vehicle_status_available"],
+                spec["source_export_sha256"],
+            )
+            == expected_source,
+            f"{release} source export provenance changed",
+        )
+        expected_primary_types = {
+            "26r1": [
+                786, 258, 261, 265, 263, 267, 271, 770, 772, 779, 259,
+                262, 264, 266, 776, 783, 269, 270, 274, 275, 780, 782,
+            ],
+            "molitcomp03": [
+                771, 261, 267, 295, 770, 772, 258, 787, 259, 266, 783, 780,
+            ],
+        }[release]
+        expected_auxiliary_types = {"26r1": [4865], "molitcomp03": []}[release]
+        _require(
+            spec["source_primary_ego_pubsub_types"] == expected_primary_types
+            and spec["source_auxiliary_pubsub_types"] == expected_auxiliary_types,
+            f"{release} source PUBSUB inventory changed",
+        )
+        if release == "molitcomp03":
+            organizer = spec["organizer_reference"]
+            _require(
+                organizer["source_export_sha256"]
+                == "68b5bd089b38449819ec064a67e9f821e3280068c1171e751c77e13282b57577"
+                and organizer["source_entry_count"] == 10
+                and organizer["source_primary_ego_pubsub_types"]
+                == [771, 258, 261, 267, 295, 787, 770, 772, 259, 780],
+                "organizer MolitComp03 network provenance changed",
+            )
         template_path = REPO_ROOT / spec["template"]
         _require(
             _sha256(template_path) == spec["template_sha256"],
@@ -294,21 +378,28 @@ def validate(contract_path: Path) -> Dict[str, Any]:
                 (ego_udp["hostPort"], ego_udp["destinationPort"]) == (9088, 9099),
                 f"{release}/{transport} Ego Vehicle Status ports changed",
             )
+            status_pubsub = competition_status["morai_pubsub_type_by_release"].get(release)
             competition_entries = [
                 entry
                 for entry in _network_entries(generated_document)
-                if entry.get("PUBSUB_TYPE") == competition_status["morai_pubsub_type"]
+                if status_pubsub is not None and entry.get("PUBSUB_TYPE") == status_pubsub
             ]
-            _require(
-                len(competition_entries) == 1,
-                f"{release} must contain one Competition Vehicle Status",
-            )
-            competition_udp = competition_entries[0]["config"]["udpConfig"]
-            _require(
-                (competition_udp["hostPort"], competition_udp["destinationPort"])
-                == (7603, 7502),
-                f"{release}/{transport} Competition Vehicle Status ports changed",
-            )
+            if status_pubsub is None:
+                _require(
+                    not competition_entries,
+                    f"{release} unexpectedly gained a Competition Vehicle Status mapping",
+                )
+            else:
+                _require(
+                    len(competition_entries) == 1,
+                    f"{release} must contain one Competition Vehicle Status",
+                )
+                competition_udp = competition_entries[0]["config"]["udpConfig"]
+                _require(
+                    (competition_udp["hostPort"], competition_udp["destinationPort"])
+                    == (9797, 9798),
+                    f"{release}/{transport} Competition Vehicle Status ports changed",
+                )
     try:
         check_all(contract)
     except ProfileError as exc:
@@ -335,6 +426,11 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     _require(_launch_arg(integration, "stream_profile") == "competition", "integration stream default changed")
     _require(_launch_arg(udp_launch, "stream_profile") == "competition", "UDP stream default changed")
     _require(_launch_arg(sensor_launch, "stream_profile") == "competition", "sensor stream default changed")
+    for launch_path in (facade, integration, sensor_launch):
+        _require(
+            _launch_arg(launch_path, "lidar_frame_mode") == "azimuth",
+            f"{launch_path.relative_to(REPO_ROOT)} LiDAR framing is not azimuth-based",
+        )
     expected_development_eval = "$(eval arg('stream_profile') == 'development')"
     _require(
         _launch_arg(integration, "enable_object") == expected_development_eval,
@@ -354,12 +450,12 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     _require(_launch_arg(udp_launch, "cmd_port") == "9093", "UDP Ctrl default is not 9093")
     _require(_launch_arg(udp_launch, "ego_port") == "9099", "Ego status bind port is not 9099")
     _require(
-        _launch_arg(integration, "competition_port") == "7502",
-        "integration Competition status bind port is not 7502",
+        _launch_arg(integration, "competition_port") == "9798",
+        "integration Competition status bind port is not 9798",
     )
     _require(
-        _launch_arg(udp_launch, "competition_port") == "7502",
-        "UDP Competition status bind port is not 7502",
+        _launch_arg(udp_launch, "competition_port") == "9798",
+        "UDP Competition status bind port is not 9798",
     )
     entrypoint_text = (REPO_ROOT / "scripts/udp_bridge.sh").read_text(encoding="utf-8")
     _require(
@@ -379,6 +475,17 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "exec roslaunch asmc_bridge bridge.launch" in entrypoint_text,
         "bridge CLI must use the canonical asmc_bridge facade",
     )
+    _require(
+        'CMD_IP="$TRANSPORT_CMD_IP"' in entrypoint_text,
+        "bridge CLI must derive Ctrl destination from the selected transport",
+    )
+    compose_text = (REPO_ROOT / "docker/ros-noetic/docker-compose.yaml").read_text(
+        encoding="utf-8"
+    )
+    _require(
+        "MORAI_CMD_IP=" not in compose_text,
+        "compose must not override the selected transport Ctrl destination",
+    )
     composition = contract["composition"]
     _require(
         composition
@@ -387,6 +494,7 @@ def validate(contract_path: Path) -> Dict[str, Any]:
             "canonical_launch": "bridge.launch",
             "vehicle_state_default": True,
             "vehicle_state_source": "gps_imu",
+            "lidar_frame_mode": "azimuth",
             "compatibility_launch": "integration_launch/morai_udp_bridges.launch",
             "legacy_packages_retained_for_rollback": True,
         },
@@ -448,9 +556,38 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     _require(summaries["v2"]["lidar_frequency_index"] == 1, "v2 frequencyIndex changed")
     _require(math.isclose(summaries["v3"]["lidar_period_s"], 1.0 / 15.0, abs_tol=1e-6), "v3 is not 15 Hz")
     _require(summaries["v3"]["lidar_frequency_index"] == 2, "v3 frequencyIndex changed")
+    _require(
+        contract["sensor_sets"]["v3"]["live_acceptance"]
+        == "failed_2026_09_23_measured_about_12hz_target_14_to_16hz",
+        "v3 live 15 Hz failure must remain explicit until re-accepted",
+    )
     _require(summaries["v2"]["lidar_ports"] == [9298, 9299], "v2 LiDAR ports changed")
     _require(summaries["v3"]["lidar_ports"] == [9298, 9299], "v3 LiDAR ports changed")
     _require((summaries["GT"]["cameras"], summaries["GT"]["lidars"]) == (7, 2), "GT sensor inventory changed")
+
+    live = contract["live_observations"]
+    _require(live["date"] == "2026-09-23", "P3-E live observation date changed")
+    _require(live["simulator_release"] == "molitcomp03", "P3-E simulator changed")
+    _require(live["transport_profile"] == "local", "P3-E transport changed")
+    _require(live["sensor_set"] == "v3", "P3-E sensor set changed")
+    lidar_live = live["lidar"]
+    _require(lidar_live["packets_per_revolution"] == 50, "live LiDAR packet grouping changed")
+    _require(lidar_live["acceptance_range_hz"] == [14.0, 16.0], "LiDAR gate changed")
+    _require(not lidar_live["accepted"], "failed v3 live rate must not be accepted")
+    competition_live = live["competition_udp_9798"]
+    _require(
+        competition_live["configured_pubsub_type"] == 787
+        and competition_live["observed_packets_in_8_seconds"] == 0
+        and not competition_live["accepted"],
+        "UDP 9798 live Competition stream must remain pending",
+    )
+    traffic_light_live = live["traffic_light_udp_7502"]
+    _require(
+        traffic_light_live["configured_pubsub_type"] == 258
+        and traffic_light_live["observed_header_ascii"] == "#TrafficLight$"
+        and not traffic_light_live["consumed_by_bridge"],
+        "UDP 7502 TrafficLight evidence changed",
+    )
 
     return {
         "baseline_id": contract["baseline_id"],
@@ -469,7 +606,9 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "published_topic_count": len(implementation["published_topics"]),
         "ctrl": "9093/9094 mode 2",
         "ego_status": "9088/9099",
-        "competition_status": "7603/7502 static decoder; live capture pending",
+        "competition_status": "9797/9798 type 787; live emission pending",
+        "lidar_frame_mode": composition["lidar_frame_mode"],
+        "v3_live_rate_accepted": lidar_live["accepted"],
         "sensor_sets": summaries,
     }
 
@@ -478,7 +617,7 @@ def main() -> None:
     contract_path = REPO_ROOT / "config/bridge/bridge_profiles_v1.json"
     result = validate(contract_path)
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
-    print("P3-D bridge profile contract: PASS")
+    print("P3-E bridge profile contract: PASS")
 
 
 if __name__ == "__main__":

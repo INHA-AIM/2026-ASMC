@@ -11,9 +11,8 @@ import time
 from pathlib import Path
 
 
-COMPETITION_REQUIRED_TOPICS = (
+COMPETITION_COMMON_REQUIRED_TOPICS = (
     "/Ego_topic",
-    "/Competition_topic",
     "/image_jpeg/compressed",
     "/cam_left/image_jpeg/compressed",
     "/cam_right/image_jpeg/compressed",
@@ -24,7 +23,7 @@ COMPETITION_REQUIRED_TOPICS = (
     "/vehicle/state",
 )
 
-DEVELOPMENT_REQUIRED_TOPICS = COMPETITION_REQUIRED_TOPICS + (
+DEVELOPMENT_EXTRA_TOPICS = (
     "/Object_topic",
     "/sem_front/image_jpeg/compressed",
     "/sem_left/image_jpeg/compressed",
@@ -80,6 +79,17 @@ def parse_args():
     parser.add_argument(
         "--strict-thresholds", action="store_true",
         help="also fail the documented GT rate and source-pairing gates",
+    )
+    parser.add_argument(
+        "--lidar-target-hz", type=float,
+        help="expected LiDAR output rate; for v3 use 15 and combine with --strict-thresholds",
+    )
+    parser.add_argument(
+        "--simulator-release",
+        choices=("molitcomp03", "26r1"),
+        default="molitcomp03",
+        help=("verification inventory only: MolitComp03 requires type-787 "
+              "/Competition_topic; 26r1 export has no such publisher"),
     )
     return parser.parse_args()
 
@@ -148,6 +158,8 @@ def main():
         raise SystemExit("--duration must be positive")
     if args.min_messages < 1:
         raise SystemExit("--min-messages must be at least 1")
+    if args.lidar_target_hz is not None and args.lidar_target_hz <= 0:
+        raise SystemExit("--lidar-target-hz must be positive")
 
     try:
         import rospy
@@ -163,11 +175,14 @@ def main():
     profile = {"runtime": "competition", "gt": "development"}.get(
         args.profile, args.profile
     )
-    defaults = (
-        DEVELOPMENT_REQUIRED_TOPICS
-        if profile == "development"
-        else COMPETITION_REQUIRED_TOPICS
+    release_topics = (
+        ("/Competition_topic",)
+        if args.simulator_release == "molitcomp03"
+        else ()
     )
+    defaults = COMPETITION_COMMON_REQUIRED_TOPICS + release_topics
+    if profile == "development":
+        defaults += DEVELOPMENT_EXTRA_TOPICS
     topics = tuple(args.required_topics or defaults)
     lock = threading.Lock()
     samples = {topic: [] for topic in topics}
@@ -251,11 +266,17 @@ def main():
     finished = time.monotonic()
     report = {
         "stream_profile": profile,
+        "simulator_release": args.simulator_release,
         "duration_seconds": round(finished - started, 6),
         "min_messages": args.min_messages,
         "topics": {},
     }
     failures = []
+    missing_topics = []
+    nominal_rates = dict(NOMINAL_RATES_HZ)
+    if args.lidar_target_hz is not None:
+        nominal_rates["/velodyne_points"] = args.lidar_target_hz
+        nominal_rates["/velodyne_points_instance"] = args.lidar_target_hz
     with lock:
         snapshot = {topic: list(values) for topic, values in samples.items()}
 
@@ -289,13 +310,14 @@ def main():
         ok = count >= args.min_messages
         if not ok:
             failures.append(topic)
+            missing_topics.append(topic)
         report["topics"][topic] = {
             "count": count,
             "rate_hz": round(rate, 3),
-            "nominal_rate_hz": NOMINAL_RATES_HZ.get(topic),
+            "nominal_rate_hz": nominal_rates.get(topic),
             "nominal_rate_ratio": (
-                None if not NOMINAL_RATES_HZ.get(topic)
-                else round(rate / NOMINAL_RATES_HZ[topic], 4)
+                None if not nominal_rates.get(topic)
+                else round(rate / nominal_rates[topic], 4)
             ),
             "arrival_intervals": interval_summary(values),
             "header_age_ms": {
@@ -322,7 +344,7 @@ def main():
         subscriber.unregister()
 
     report["ok"] = not failures
-    report["missing_topics"] = failures
+    report["missing_topics"] = missing_topics
     report["bridge_diagnostics"] = bridge_diagnostics
     report["interpretation"] = {
         "nominal_rate_shortfall": (
@@ -337,6 +359,18 @@ def main():
             "subscriber age in source timestamp mode"
         ),
     }
+    if args.lidar_target_hz is not None and "/velodyne_points" in report["topics"]:
+        lidar_rate = report["topics"]["/velodyne_points"]["rate_hz"]
+        lidar_target_ok = abs(lidar_rate - args.lidar_target_hz) <= 1.0
+        report["lidar_target_gate"] = {
+            "target_hz": args.lidar_target_hz,
+            "tolerance_hz": 1.0,
+            "measured_hz": lidar_rate,
+            "ok": lidar_target_ok,
+        }
+        if args.strict_thresholds and not lidar_target_ok:
+            failures.append("threshold:lidar_target_hz")
+            report["ok"] = False
     if profile == "development":
         schema = pointcloud_fields.get("/velodyne_points_instance", {})
         schema_ok = schema.get("instance_id") == 6 and "intensity" not in schema
@@ -391,6 +425,9 @@ def main():
                 if not ok:
                     failures.append("threshold:" + name)
             report["ok"] = not failures
+    report["failures"] = failures
+    report["missing_topics"] = missing_topics
+    report["ok"] = not failures
     if args.json_out:
         output = Path(args.json_out)
         output.parent.mkdir(parents=True, exist_ok=True)

@@ -103,6 +103,79 @@ def parse_camera_packet(block):
     return sec, nsec, index, block[19:19 + size], tail == b"EI"
 
 
+def velodyne_packet_azimuth(packet):
+    """Return the first firing-block azimuth in hundredths of a degree."""
+    if len(packet) < 4:
+        raise ValueError("Velodyne packet is too short for an azimuth")
+    return struct.unpack_from("<H", packet, 2)[0]
+
+
+class VelodyneFrameAssembler(object):
+    """Group raw packets by physical revolution or a legacy fixed count."""
+
+    def __init__(self, mode, packets_per_frame):
+        if mode not in ("azimuth", "packet_count"):
+            raise ValueError("lidar_frame_mode must be azimuth or packet_count")
+        self.mode = mode
+        self.packets_per_frame = max(1, int(packets_per_frame))
+        self.minimum_packets = max(12, self.packets_per_frame // 4)
+        self.chunks = []
+        self.device_times = []
+        self.started_ns = None
+        self.previous_azimuth = None
+        self.synchronized = mode == "packet_count"
+
+    def _take(self):
+        completed = (self.chunks, self.device_times, self.started_ns)
+        self.chunks = []
+        self.device_times = []
+        self.started_ns = None
+        return completed
+
+    def push(self, packet, device_time, arrival_ns):
+        azimuth = velodyne_packet_azimuth(packet)
+        completed = None
+        wrapped = (
+            self.previous_azimuth is not None
+            and self.previous_azimuth - azimuth > 18000
+        )
+        if self.mode == "azimuth" and wrapped:
+            if self.synchronized and len(self.chunks) >= self.minimum_packets:
+                completed = self._take()
+            else:
+                self.chunks = []
+                self.device_times = []
+                self.started_ns = None
+            # The packet after this boundary starts a complete revolution.
+            self.synchronized = True
+
+        if not self.chunks:
+            self.started_ns = arrival_ns
+        self.chunks.append(packet)
+        self.device_times.append(device_time)
+        self.previous_azimuth = azimuth
+
+        if (self.mode == "packet_count"
+                and len(self.chunks) >= self.packets_per_frame):
+            completed = self._take()
+        return completed
+
+    def flush(self):
+        completed = None
+        if self.synchronized and len(self.chunks) >= self.minimum_packets:
+            completed = self._take()
+        else:
+            self.chunks = []
+            self.device_times = []
+            self.started_ns = None
+        if self.mode == "azimuth":
+            # A timeout loses the physical revolution boundary. Resynchronize
+            # at the next wrap instead of joining two partial revolutions.
+            self.synchronized = False
+        self.previous_azimuth = None
+        return completed
+
+
 class SensorBridge(object):
 
     def __init__(self):
@@ -168,6 +241,8 @@ class SensorBridge(object):
         self.timestamp_regressions = {}
         self.processing_ms = {}
         self.assembly_ms = {}
+        self.raw_packet_stats = {}
+        self.frame_packet_counts = {}
         self.last_received_monotonic = {}
         # Only the explicit local development profile starts GT-only streams;
         # verify-gt then promotes them to required inputs for that run.
@@ -176,6 +251,7 @@ class SensorBridge(object):
         self._started_monotonic = time.monotonic()
         self._last_report_monotonic = self._started_monotonic
         self._last_report_stats = {}
+        self._last_report_raw_packet_stats = {}
         self.pub_diagnostics = rospy.Publisher(
             "/morai_sensor_bridge/diagnostics", DiagnosticArray, queue_size=1
         )
@@ -213,12 +289,20 @@ class SensorBridge(object):
                     channel = len(VERTICAL_ANGLES[model])
                     per_pkt = 24 if channel == 16 else 12
                     n = max(1, int(round((36000.0 / (rate * 2.0)) / per_pkt)))
+                frame_mode = str(
+                    p("~lidar_frame_mode", "azimuth")
+                ).strip().lower()
+                if frame_mode not in ("azimuth", "packet_count"):
+                    raise ValueError(
+                        "lidar_frame_mode must be azimuth or packet_count"
+                    )
                 self._start_lidar({
                     "name": "lidar",
                     "port": int(p("~lidar_port", 9299)),
                     "topic": str(p("~lidar_topic", "/velodyne_points")),
                     "model": model,
                     "packets_per_frame": n,
+                    "frame_mode": frame_mode,
                     "value_field": "intensity",
                 })
 
@@ -232,6 +316,7 @@ class SensorBridge(object):
                         "topic": str(p("~lidar_host_topic", "/velodyne_points_host")),
                         "model": model,
                         "packets_per_frame": n,
+                        "frame_mode": frame_mode,
                         "value_field": "intensity",
                     })
 
@@ -248,6 +333,7 @@ class SensorBridge(object):
                         ),
                         "model": model,
                         "packets_per_frame": n,
+                        "frame_mode": frame_mode,
                         "value_field": "instance_id",
                     })
 
@@ -288,10 +374,11 @@ class SensorBridge(object):
         channel = vertical.shape[1]
         publisher = rospy.Publisher(config["topic"], PointCloud2, queue_size=1)
         rospy.loginfo(
-            "%s model=%s ch=%d packets_per_frame=%d udp/%d -> %s field=%s",
+            "%s model=%s ch=%d frame_mode=%s fallback_packets=%d udp/%d -> %s field=%s",
             config["name"],
             model,
             channel,
+            config["frame_mode"],
             config["packets_per_frame"],
             config["port"],
             config["topic"],
@@ -305,6 +392,7 @@ class SensorBridge(object):
                 publisher,
                 vertical,
                 int(config["packets_per_frame"]),
+                config["frame_mode"],
                 config["value_field"],
             )
 
@@ -324,8 +412,11 @@ class SensorBridge(object):
         self.timestamp_regressions[name] = 0
         self.processing_ms[name] = deque(maxlen=4096)
         self.assembly_ms[name] = deque(maxlen=4096)
+        self.raw_packet_stats[name] = 0
+        self.frame_packet_counts[name] = deque(maxlen=4096)
         self.last_received_monotonic[name] = None
         self._last_report_stats[name] = 0
+        self._last_report_raw_packet_stats[name] = 0
         t = threading.Thread(target=self._guard, args=(name, port, fn))
         t.daemon = True
         t.start()
@@ -422,33 +513,29 @@ class SensorBridge(object):
             self._mark_message(name)
 
     def _lidar_loop(self, sock, name, publisher, vertical,
-                    packets_per_frame, value_field):
+                    packets_per_frame, frame_mode, value_field):
         """Velodyne UDP. 패킷을 모으되 타임아웃 시에도 부분 프레임을 살린다."""
         ch = vertical.shape[1]
         cos_v = np.cos(np.deg2rad(vertical))
         sin_v = np.sin(np.deg2rad(vertical))
-        need = packets_per_frame
-        min_pkts = max(12, need // 4)  # 최소 이만큼이면 한 프레임으로 발행
-        chunks = []
-        device_times = []
-        assembly_started_ns = None
+        assembler = VelodyneFrameAssembler(frame_mode, packets_per_frame)
         raw_seen = 0
 
         while not rospy.is_shutdown():
             try:
                 pkt, _ = sock.recvfrom(2048)
             except socket.timeout:
-                if len(chunks) >= min_pkts:
+                completed = assembler.flush()
+                if completed is not None:
+                    chunks, device_times, assembly_started_ns = completed
                     self._lidar_publish(
                         chunks, device_times, name, publisher,
                         ch, cos_v, sin_v, value_field, assembly_started_ns
                     )
-                    chunks = []
-                    device_times = []
-                    assembly_started_ns = None
                 continue
 
             raw_seen += 1
+            self.raw_packet_stats[name] += 1
             if raw_seen == 1:
                 preview = "".join(chr(b) if 32 <= b < 127 else "."
                                   for b in pkt[:min(40, len(pkt))])
@@ -467,22 +554,20 @@ class SensorBridge(object):
                 self.errors[name] += 1
                 continue
             # 1200B 데이터부 (표준 1206 = 1200 + 6 timestamp)
-            if not chunks:
-                assembly_started_ns = time.perf_counter_ns()
-            chunks.append(pkt[:1200] if len(pkt) >= 1200 else pkt.ljust(1200, b"\x00")[:1200])
+            chunk = pkt[:1200] if len(pkt) >= 1200 else pkt.ljust(1200, b"\x00")[:1200]
             if len(pkt) >= 1204:
-                device_times.append(struct.unpack("<I", pkt[1200:1204])[0])
+                device_time = struct.unpack("<I", pkt[1200:1204])[0]
             else:
-                device_times.append(None)
-
-            if len(chunks) >= need:
+                device_time = None
+            completed = assembler.push(
+                chunk, device_time, time.perf_counter_ns()
+            )
+            if completed is not None:
+                chunks, device_times, assembly_started_ns = completed
                 self._lidar_publish(
                     chunks, device_times, name, publisher,
                     ch, cos_v, sin_v, value_field, assembly_started_ns
                 )
-                chunks = []
-                device_times = []
-                assembly_started_ns = None
 
     def _lidar_publish(self, chunks, device_times, name, publisher,
                        ch, cos_v, sin_v, value_field,
@@ -530,6 +615,7 @@ class SensorBridge(object):
         )
         completed_ns = time.perf_counter_ns()
         self._record_processing(name, processing_started_ns, completed_ns)
+        self.frame_packet_counts[name].append(len(chunks))
         if assembly_started_ns is not None:
             self.assembly_ms[name].append(
                 (completed_ns - assembly_started_ns) / 1000000.0
@@ -773,9 +859,14 @@ class SensorBridge(object):
         now = time.monotonic()
         report_elapsed = max(1e-6, now - self._last_report_monotonic)
         interval_rates = {}
+        raw_interval_rates = {}
         for name, count in self.stats.items():
             previous = self._last_report_stats.get(name, 0)
             interval_rates[name] = max(0, count - previous) / report_elapsed
+            previous_raw = self._last_report_raw_packet_stats.get(name, 0)
+            raw_interval_rates[name] = max(
+                0, self.raw_packet_stats.get(name, 0) - previous_raw
+            ) / report_elapsed
         rospy.loginfo(
             "rx " + "  ".join(
                 "%s=%d(%.1fHz)" % (name, count, interval_rates[name])
@@ -783,7 +874,18 @@ class SensorBridge(object):
             )
         )
         self._last_report_stats = dict(self.stats)
+        self._last_report_raw_packet_stats = dict(self.raw_packet_stats)
         self._last_report_monotonic = now
+        for name in sorted(self.frame_packet_counts):
+            counts = self.frame_packet_counts[name]
+            if counts:
+                rospy.loginfo(
+                    "%s raw=%.1f packets/s frame=%.1fHz packets/frame median=%.1f",
+                    name,
+                    raw_interval_rates[name],
+                    interval_rates[name],
+                    float(np.median(counts)),
+                )
         for k, v in self.stats.items():
             if v == 0 and k not in self.optional_streams:
                 rospy.logwarn_throttle(
@@ -843,6 +945,20 @@ class SensorBridge(object):
                     str(self.timestamp_regressions.get(name, 0)),
                 ),
             ]
+            if name.startswith("lidar"):
+                status.values.extend([
+                    KeyValue(
+                        "raw_packet_hz",
+                        "{:.3f}".format(raw_interval_rates[name]),
+                    ),
+                    KeyValue(
+                        "packets_per_frame_median",
+                        "{:.3f}".format(
+                            float(np.median(self.frame_packet_counts[name]))
+                            if self.frame_packet_counts[name] else 0.0
+                        ),
+                    ),
+                ])
             message.status.append(status)
         self.pub_diagnostics.publish(message)
 

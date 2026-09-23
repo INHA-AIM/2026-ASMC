@@ -11,7 +11,9 @@ lidar_format: bin_xyzi
 notes: |
   Mount competition sensors in SIM (cam×3+1, VLP16@≤10Hz, GPS≤30, IMU≤50).
   Remap cam topics if sensor bridge uses one JPEG port per camera.
-  tl_status often missing on competition ROS UI — leave enabled; frames record missing[].
+  GetTrafficLightStatus is absent from the inspected MolitComp03/26.R1 network exports and is
+  never a required runtime input. This development collector may leave it enabled; frames record
+  missing[] instead of treating absence as a bridge failure.
 
 channels:
   ego: true

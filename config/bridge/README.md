@@ -7,6 +7,8 @@ P3-C에서 `competition`/`development` stream policy와 v2/v3 sensor transport �
 추가했다.
 P3-D에서 `asmc_bridge/bridge.launch`를 canonical façade로 추가해 Network, Sensor,
 GPS/IMU `/vehicle/state`를 한 번에 기동한다. 기존 패키지는 rollback 기준으로 보존한다.
+P3-E local 실측에서 v3 LiDAR 프레이밍을 물리 회전 기준으로 고쳤고, 실제 약 12 Hz 및
+UDP `7502`의 `#TrafficLight$` header를 미승인 gate로 기록했다.
 
 - runtime protocol은 `morai_udp` 하나다. 26.R1.H3와 25.S4.MolitComp03 때문에 bridge code를
   분기하지 않는다.
@@ -16,11 +18,15 @@ GPS/IMU `/vehicle/state`를 한 번에 기동한다. 기존 패키지는 rollbac
   실행 인자가 아니라 MORAI UI에 import할 JSON을 고를 때만 사용한다.
 - Ctrl은 지금부터 `9093/9094`, mode 2가 기본이다. `9111/9112`는 archive 재현에만 쓴다.
 - Ego Vehicle Status는 release별 PUBSUB 값만 다르고 포트는 `9088/9099`로 통일한다.
-- Competition Vehicle Status `7603/7502`는 별도 채널이며 `/Competition_topic`으로
-  발행한다. 정적 바이너리 계약과 synthetic fixture는 검증했지만 대회 시뮬레이터
-  live packet capture는 배포 승인 gate로 남아 있다.
-- v3의 15 Hz는 UI 저장 값이 확인된 후보지만, 30초 실측 14~16 Hz와 손재호 tracking 비교 전에는
-  본선 승인으로 간주하지 않는다.
+- Competition Vehicle Status는 MolitComp03의 `787 / 9797→9798` 항목이다. decoder와
+  synthetic fixture는 `#MoraiInfo$` 계약을 검증하지만 competition mode live packet은 아직
+  발생하지 않아 `/Competition_topic` 배포 gate가 남아 있다.
+- `258 / 7603→7502`는 live `#TrafficLight$`인 simulator oracle이며 Competition Vehicle
+  Status로 해석하거나 canonical bridge에서 소비하지 않는다.
+- type 258과 GetTrafficLight query는 별개다. 조사한 두 release와 주최 export에는
+  MoraiTLServiceProvider type 778이 없으므로 query를 필수 계약으로 두지 않는다.
+- v3의 15 Hz는 UI 저장 값이 확인된 후보지만 local raw UDP 실측은 약 12 Hz였다. 30초
+  14~16 Hz와 손재호 tracking 비교 전에는 본선 승인으로 간주하지 않는다.
 - 기본 `competition`은 Object/Semantic/Instance publisher를 생성하지 않는다. 이 입력은
   local `development`에서만 활성화하며 LAN2LAN과의 결합은 거부한다.
 - `sensors/generated/` v2/v3 파생본은 UDP IP만 transport에 맞게 바꾸며 GT LAN2LAN은
@@ -31,6 +37,7 @@ python3 tools/audit/validate_bridge_profiles.py
 python3 tools/bridge/render_morai_sensor_profiles.py --check
 ```
 
-현재 `competition_vehicle_status`는 정적 decoder·fixture·ROS publish 회귀 기준까지 적용됐다.
-competition JSON이 생성되고 synthetic UDP test가 통과했다는 사실만으로 현장 bridge가
-승인됐다고 판단하지 않고 live capture와 실제 두 PC 검증을 별도로 남긴다.
+현재 `competition_vehicle_status`는 정적 decoder·fixture·ROS publish 회귀 기준까지만
+적용됐다. local live 불일치는
+[P3-E 기록](../../docs/records/baselines/bridge-p3e-local-live-v1.md)에 남겼다. generated JSON과
+synthetic test의 성공을 현장 승인으로 해석하지 않는다.

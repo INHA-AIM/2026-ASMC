@@ -74,9 +74,10 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 | [repository-consolidation-roadmap.md](./architecture/consolidation-roadmap.md) | msg·bridge·HD Map·perception 4-패키지 통합, 체크포인트/미션, 현장 배포 단계 | Working Proposal |
 | [baselines/runtime-baseline-v1.md](./records/baselines/runtime-v1.md) | P1-A 당시 package/topic/message/sensor/bag/HD Map snapshot | Frozen Snapshot (`73c0a8c`) |
 | [P3-A bridge baseline](./records/baselines/bridge-p3a-v1.md) | 공통 `morai_udp`, transport/network/sensor profile과 bridge source/topic SHA | Frozen P3-A Baseline |
-| [P3-B Competition status baseline](./records/baselines/bridge-p3b-v1.md) | `7603/7502` decoder·fixture·`/Competition_topic`과 live acceptance gate | Frozen P3-B Baseline |
+| [P3-B Competition status baseline](./records/baselines/bridge-p3b-v1.md) | decoder·fixture와 당시 잘못된 port 해석; P3-E 정정 포함 | Frozen P3-B Baseline |
 | [P3-C stream/sensor transport baseline](./records/baselines/bridge-p3c-v1.md) | 본선 allowlist, local-only oracle, v2/v3 sensor IP 파생 계약 | Frozen P3-C Baseline |
-| [P3-D bridge façade baseline](./records/baselines/bridge-p3d-v1.md) | Network·Sensor·VehicleState 단일 launch와 rollback 경계 | Active Baseline |
+| [P3-D bridge façade baseline](./records/baselines/bridge-p3d-v1.md) | Network·Sensor·VehicleState 단일 launch와 rollback 경계 | Frozen P3-D Baseline |
+| [P3-E local live baseline](./records/baselines/bridge-p3e-local-live-v1.md) | MolitComp03 v3 rate, azimuth framing과 Competition header 차단 gate | Active Baseline |
 | [contracts/hd-map-topic-contract-v1.md](./contracts/hd-map/topic-v1.md) | P1-B `asmc_msgs` HD Map·체크포인트·미션 message/topic 계약 | Frozen Interface |
 | [contracts/kcity2025-competition-metadata-v1.md](./contracts/competition/kcity2025-metadata-v1.md) | P1-C 공식 체크포인트 projection과 권위별 mission-zone 정본 | Frozen Metadata |
 | [contracts/hd-map-runtime-visualization-v1.md](./contracts/hd-map/runtime-v1.md) | 2단계 global/local ROS publisher, RViz와 paint-gap 소비 규칙 | Active Runtime |
