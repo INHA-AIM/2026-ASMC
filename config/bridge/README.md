@@ -14,6 +14,9 @@ P3-F에서 local sensor/state, Ctrl closed loop와 bag replay parity를 근거�
 VehicleState와 component launch를 `asmc_bridge` 한 패키지로 물리 통합했다.
 P3-G에서 참가팀 local과 주최 현장 수락 조건을 분리해 Competition Vehicle Status는 local에서
 선택, `--require-competition-status`를 준 현장 gate에서만 필수로 고정했다.
+P3 closeout 정리에서 중간 `morai_udp_bridges.launch`를 제거하고 canonical `bridge.launch`가
+Network/Sensor component와 VehicleState를 직접 조합하도록 단순화했다. 일반 사용자는
+`bridge.launch`만 실행하고 component launch는 단위 시험과 선택적 include에만 사용한다.
 
 - runtime protocol은 `morai_udp` 하나다. 26.R1.H3와 25.S4.MolitComp03 때문에 bridge code를
   분기하지 않는다.

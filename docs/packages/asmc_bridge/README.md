@@ -26,8 +26,10 @@ bridge 구현을 개발·검증하고 Phase 3에서 안전하게 통합하는 �
 | local/field Competition gate | P3-G 완료 | local 선택, 현장 `--require-competition-status` 명시 |
 
 P3-F는 node 이름, ROS topic/type, diagnostics 이름과 binary packet 계약을 유지하면서 구현을
-한 패키지로 옮겼다. `morai_udp_bridges.launch`도 `asmc_bridge` 안에 남겨 component 조합과
-canonical `bridge.launch`를 모두 제공한다. 이전 package 경로는 더 이상 runtime 계약이 아니다.
+한 패키지로 옮겼다. 공개 전체 실행 진입점은 canonical `bridge.launch` 하나이며, 이 파일이
+Network/Sensor component와 기본 VehicleState를 직접 include한다. 단위 시험용 component launch는
+보존하되 이전 `integration_launch`의 중간 조합 파일 `morai_udp_bridges.launch`는 제거했다.
+이전 package 경로는 더 이상 runtime 계약이 아니다.
 
 ## 2. 현재 데이터 흐름
 

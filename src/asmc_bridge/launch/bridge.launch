@@ -12,17 +12,26 @@
   <arg name="competition_status_required" default="false"/>
   <arg name="enable_vehicle_state" default="true"/>
 
-  <include file="$(find asmc_bridge)/launch/morai_udp_bridges.launch">
+  <!-- Network/control and sensor receivers remain separate components so each
+       can be tested in isolation. This file is the only full-stack entrypoint. -->
+  <include file="$(find asmc_bridge)/launch/morai_udp_bridge.launch">
+    <arg name="runtime_profile" value="$(arg runtime_profile)"/>
+    <arg name="transport_profile" value="$(arg transport_profile)"/>
+    <arg name="stream_profile" value="$(arg stream_profile)"/>
+    <arg name="timestamp_mode" value="$(arg timestamp_mode)"/>
+    <arg name="cmd_ip" value="$(arg cmd_ip)"/>
+    <arg name="cmd_port" value="$(arg cmd_port)"/>
+    <arg name="competition_port" value="$(arg competition_port)"/>
+    <arg name="competition_status_required" value="$(arg competition_status_required)"/>
+  </include>
+
+  <include file="$(find asmc_bridge)/launch/morai_sensor_bridge.launch">
     <arg name="runtime_profile" value="$(arg runtime_profile)"/>
     <arg name="transport_profile" value="$(arg transport_profile)"/>
     <arg name="stream_profile" value="$(arg stream_profile)"/>
     <arg name="timestamp_mode" value="$(arg timestamp_mode)"/>
     <arg name="publish_map_tf" value="$(arg publish_map_tf)"/>
     <arg name="lidar_frame_mode" value="$(arg lidar_frame_mode)"/>
-    <arg name="cmd_ip" value="$(arg cmd_ip)"/>
-    <arg name="cmd_port" value="$(arg cmd_port)"/>
-    <arg name="competition_port" value="$(arg competition_port)"/>
-    <arg name="competition_status_required" value="$(arg competition_status_required)"/>
   </include>
 
   <include if="$(arg enable_vehicle_state)"

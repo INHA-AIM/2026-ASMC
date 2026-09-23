@@ -64,7 +64,7 @@
     "artifacts": {
       "facade_launch": {
         "path": "src/asmc_bridge/launch/bridge.launch",
-        "sha256": "be86bc32baceb59166272b88dbc50b7894110fe9febd4d6154ad13596bad8153"
+        "sha256": "49e4042230e6d37f31d1ea0d4c5c88fecf5a8182684bdac3de7db01151a41637"
       },
       "facade_package": {
         "path": "src/asmc_bridge/package.xml",
@@ -73,10 +73,6 @@
       "entrypoint": {
         "path": "scripts/udp_bridge.sh",
         "sha256": "826c86dfa07b322f9a016e502fec6adc7dc487656226018a8019783a40c7a0e9"
-      },
-      "component_launch": {
-        "path": "src/asmc_bridge/launch/morai_udp_bridges.launch",
-        "sha256": "5fc61a6102664e7311da7a6697b82d1fd6ca10924e2220739c1a22d75ff72b7b"
       },
       "network_launch": {
         "path": "src/asmc_bridge/launch/morai_udp_bridge.launch",
@@ -155,7 +151,6 @@
     "vehicle_state_source": "gps_imu",
     "lidar_frame_mode": "azimuth",
     "competition_status_required_default": false,
-    "compatibility_launch": "asmc_bridge/morai_udp_bridges.launch",
     "legacy_packages_retained_for_rollback": false
   },
   "transport_profiles": {
