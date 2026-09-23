@@ -12,6 +12,8 @@ P3-E local 실측에서 v3 LiDAR 프레이밍을 물리 회전 기준으로 고�
 Competition Vehicle Status와 분리해 기록했다.
 P3-F에서 local sensor/state, Ctrl closed loop와 bag replay parity를 근거로 Network/Sensor/
 VehicleState와 component launch를 `asmc_bridge` 한 패키지로 물리 통합했다.
+P3-G에서 참가팀 local과 주최 현장 수락 조건을 분리해 Competition Vehicle Status는 local에서
+선택, `--require-competition-status`를 준 현장 gate에서만 필수로 고정했다.
 
 - runtime protocol은 `morai_udp` 하나다. 26.R1.H3와 25.S4.MolitComp03 때문에 bridge code를
   분기하지 않는다.
@@ -22,9 +24,9 @@ VehicleState와 component launch를 `asmc_bridge` 한 패키지로 물리 통합
   import할 JSON을 고를 때만 사용한다.
 - Ctrl은 지금부터 `9093/9094`, mode 2가 기본이다. `9111/9112`는 archive 재현에만 쓴다.
 - Ego Vehicle Status는 release별 PUBSUB 값만 다르고 포트는 `9088/9099`로 통일한다.
-- Competition Vehicle Status는 MolitComp03의 `787 / 9797→9798` 항목이다. decoder와
-  synthetic fixture는 `#MoraiInfo$` 계약을 검증하지만 competition mode live packet은 아직
-  발생하지 않아 `/Competition_topic` 배포 gate가 남아 있다.
+- Competition Vehicle Status는 MolitComp03의 `787 / 9797→9798` 항목이다. 참가팀 local
+  검증에서는 선택 사항이며 decoder와 topic은 그대로 연다. 주최 현장 수락에서만
+  `--require-competition-status`로 필수화하며 live packet gate는 아직 남아 있다.
 - `258 / 7603→7502`는 live `#TrafficLight$`인 simulator oracle이며 Competition Vehicle
   Status로 해석하거나 canonical bridge에서 소비하지 않는다.
 - type 258과 GetTrafficLight query는 별개다. 조사한 두 release와 주최 export에는
@@ -43,6 +45,7 @@ python3 tools/bridge/render_morai_sensor_profiles.py --check
 
 현재 `competition_vehicle_status`는 정적 decoder·fixture·ROS publish 회귀 기준까지만
 적용됐다. local live 불일치는
-[P3-E 기록](../../docs/records/baselines/bridge-p3e-local-live-v1.md)에 남겼다. P3-F의 물리 통합과
-post-move 검증은 [P3-F 기록](../../docs/records/baselines/bridge-p3f-consolidated-v1.md)에 남겼다. generated JSON과
+[P3-E 기록](../../docs/records/baselines/bridge-p3e-local-live-v1.md), 물리 통합은
+[P3-F 기록](../../docs/records/baselines/bridge-p3f-consolidated-v1.md), local/field 요구 분리는
+[P3-G 기록](../../docs/records/baselines/bridge-p3g-local-closeout-v1.md)에 남겼다. generated JSON과
 synthetic test의 성공을 현장 승인으로 해석하지 않는다.

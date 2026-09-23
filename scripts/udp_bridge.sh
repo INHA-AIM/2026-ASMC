@@ -15,7 +15,7 @@ source "$SCRIPT_DIR/asmc_env.sh"
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/udp_bridge.sh [--transport local|lan2lan] [--streams competition|development] [roslaunch overrides]
+Usage: ./scripts/udp_bridge.sh [--transport local|lan2lan] [--streams competition|development] [--require-competition-status] [roslaunch overrides]
 
 Transport profiles:
   local   MORAI and Autonav bridge on one workstation via 127.0.0.1 (default)
@@ -26,12 +26,17 @@ Stream profiles:
   development  adds Object/Semantic/Instance; local transport only
 
 The script does not change MORAI UI settings. Import the generated sensor JSON
-matching the selected transport. v3 remains a 15 Hz candidate until live gate.
+matching the selected transport. v3 is the 15 Hz deployment setting; complete
+scans near 12 Hz are accepted.
+
+Competition Vehicle Status is optional in the participant simulator. Use
+--require-competition-status only for the organizer/field acceptance gate.
 
 Examples:
   ./scripts/udp_bridge.sh
   ./scripts/udp_bridge.sh --streams development
   ./scripts/udp_bridge.sh --transport lan2lan
+  ./scripts/udp_bridge.sh --transport lan2lan --require-competition-status
   ./scripts/udp_bridge.sh timestamp_mode:=source
 EOF
 }
@@ -39,6 +44,7 @@ EOF
 RUNTIME_PROFILE="morai_udp"
 TRANSPORT="${ASMC_TRANSPORT:-local}"
 STREAMS="${ASMC_STREAMS:-competition}"
+REQUIRE_COMPETITION_STATUS=false
 LAUNCH_ARGS=()
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -64,6 +70,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --streams=*)
       STREAMS="${1#*=}"
+      shift
+      ;;
+    --require-competition-status)
+      REQUIRE_COMPETITION_STATUS=true
       shift
       ;;
     -h|--help)
@@ -127,6 +137,10 @@ case "${STREAMS,,}" in
     exit 2
     ;;
 esac
+if [ "$REQUIRE_COMPETITION_STATUS" = true ] && [ "$STREAM_PROFILE" != "competition" ]; then
+  echo "[udp_bridge] ERROR: Competition Vehicle Status gate requires competition streams." >&2
+  exit 2
+fi
 NETWORK_PRESET_26R1="config/morai/network/generated/ASMC_network_set_26r1_${TRANSPORT_PROFILE}.json"
 NETWORK_PRESET_COMP="config/morai/network/generated/ASMC_network_set_molitcomp03_${TRANSPORT_PROFILE}.json"
 SENSOR_PRESET_V2="config/morai/sensors/generated/ASMC_sensor_set_v2_${TRANSPORT_PROFILE}.json"
@@ -210,10 +224,12 @@ fi
 EXTRA+=( "runtime_profile:=${RUNTIME_PROFILE}" )
 EXTRA+=( "transport_profile:=${TRANSPORT_PROFILE}" )
 EXTRA+=( "stream_profile:=${STREAM_PROFILE}" )
+EXTRA+=( "competition_status_required:=${REQUIRE_COMPETITION_STATUS}" )
 echo "  cmd_ip         : ${CMD_IP} (Ctrl → Windows MORAI Host PORT)"
 echo "  Ctrl default   : 9093/9094, mode 2"
 echo "  Ego status     : 9088/9099 (both MORAI releases normalized)"
 echo "  Competition    : 9797/9798 (type 787) -> /Competition_topic"
+echo "                   required=${REQUIRE_COMPETITION_STATUS} (participant local default: optional)"
 echo "  TrafficLight GT: 7603/7502 (type 258; not consumed)"
 echo "  Vehicle state  : GPS/IMU -> /vehicle/state"
 echo "  Sensor ports   : competition allowlist 9291..9303"
@@ -229,8 +245,8 @@ if [ "$STREAM_PROFILE" = "development" ]; then
   echo "                  rostopic hz /sem_front/image_jpeg/compressed"
   echo "                  rostopic hz /velodyne_points_instance"
 else
-  echo "                  python3 scripts/verify_morai_topics.py --profile competition --simulator-release molitcomp03"
-  echo "                  (26.R1 verifier inventory: --simulator-release 26r1)"
+  echo "                  python3 scripts/verify_morai_topics.py --profile competition"
+  echo "                  field gate: add --require-competition-status"
 fi
 echo "=========================================="
 echo ""

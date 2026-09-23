@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the P3-F consolidated bridge contract and retained live gates."""
+"""Validate the P3-G local-closeout bridge contract and retained field gates."""
 
 from __future__ import annotations
 
@@ -139,8 +139,9 @@ def validate(contract_path: Path) -> Dict[str, Any]:
             "transport_profile": "local",
             "stream_profile": "competition",
             "sensor_set": "v3",
+            "competition_status_required": False,
         },
-        "runtime defaults must remain release-independent local + competition + v3",
+        "runtime defaults must remain local + competition + v3 with optional field status",
     )
     stream_profiles = contract["stream_profiles"]
     _require(
@@ -227,8 +228,14 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     )
     _require(
         competition_status["state"]
-        == "static_decoder_active_live_stream_not_emitted",
-        "Competition decoder live-block state changed",
+        == "decoder_active_participant_optional_field_pending",
+        "Competition decoder acceptance state changed",
+    )
+    _require(
+        competition_status["local_requirement"] == "optional_participant_simulator"
+        and competition_status["field_requirement"]
+        == "explicit_gate_pending_live_acceptance",
+        "Competition local/field requirement split changed",
     )
     packet_contract = competition_status["packet_contract"]
     _require(
@@ -410,6 +417,10 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     _require(_launch_arg(facade, "transport_profile") == "local", "facade transport default changed")
     _require(_launch_arg(facade, "stream_profile") == "competition", "facade stream default changed")
     _require(_launch_arg(facade, "enable_vehicle_state") == "true", "facade vehicle state default changed")
+    _require(
+        _launch_arg(facade, "competition_status_required") == "false",
+        "facade must keep Competition status optional by default",
+    )
     _require(_launch_arg(components, "runtime_profile") == "morai_udp", "component runtime profile split")
     _require(_launch_arg(udp_launch, "runtime_profile") == "morai_udp", "UDP runtime profile split")
     _require(_launch_arg(sensor_launch, "runtime_profile") == "morai_udp", "sensor runtime profile split")
@@ -419,6 +430,14 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     _require(_launch_arg(components, "stream_profile") == "competition", "component stream default changed")
     _require(_launch_arg(udp_launch, "stream_profile") == "competition", "UDP stream default changed")
     _require(_launch_arg(sensor_launch, "stream_profile") == "competition", "sensor stream default changed")
+    _require(
+        _launch_arg(components, "competition_status_required") == "false",
+        "component must keep Competition status optional by default",
+    )
+    _require(
+        _launch_arg(udp_launch, "competition_status_required") == "false",
+        "UDP bridge must keep Competition status optional by default",
+    )
     for launch_path in (facade, components, sensor_launch):
         _require(
             _launch_arg(launch_path, "lidar_frame_mode") == "azimuth",
@@ -457,6 +476,10 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "bridge CLI must expose transport and streams without a simulator selector",
     )
     _require(
+        "--require-competition-status" in entrypoint_text,
+        "bridge CLI must expose the explicit organizer/field status gate",
+    )
+    _require(
         'SIMULATOR="${ASMC_SIMULATOR' not in entrypoint_text,
         "bridge CLI must not select a simulator release",
     )
@@ -488,6 +511,7 @@ def validate(contract_path: Path) -> Dict[str, Any]:
             "vehicle_state_default": True,
             "vehicle_state_source": "gps_imu",
             "lidar_frame_mode": "azimuth",
+            "competition_status_required_default": False,
             "compatibility_launch": "asmc_bridge/morai_udp_bridges.launch",
             "legacy_packages_retained_for_rollback": False,
         },
@@ -595,6 +619,21 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         and not traffic_light_live["consumed_by_bridge"],
         "UDP 7502 TrafficLight evidence changed",
     )
+    local_closeout = live["p3g_local_closeout"]
+    _require(
+        local_closeout
+        == {
+            "participant_required_topic_count": 9,
+            "competition_status_required": False,
+            "competition_packets_observed": 0,
+            "verifier_accepted": True,
+            "explicit_field_gate_missing_status_exit_code": 2,
+            "full_graph_tests": 674,
+            "errors": 0,
+            "failures": 0,
+        },
+        "P3-G local closeout evidence changed",
+    )
 
     return {
         "baseline_id": contract["baseline_id"],
@@ -608,14 +647,18 @@ def validate(contract_path: Path) -> Dict[str, Any]:
             for spec in contract["sensor_sets"].values()
         ),
         "default_stream_profile": contract["defaults"]["stream_profile"],
+        "competition_status_required_default": contract["defaults"][
+            "competition_status_required"
+        ],
         "canonical_launch": "asmc_bridge/bridge.launch",
         "packages": implementation["packages"],
         "published_topic_count": len(implementation["published_topics"]),
         "ctrl": "9093/9094 mode 2",
         "ego_status": "9088/9099",
-        "competition_status": "9797/9798 type 787; live emission pending",
+        "competition_status": "9797/9798 type 787; local optional, field gate pending",
         "lidar_frame_mode": composition["lidar_frame_mode"],
         "v3_configured_cycle_accepted": lidar_live["accepted"],
+        "full_graph_tests": local_closeout["full_graph_tests"],
         "sensor_sets": summaries,
     }
 
@@ -624,7 +667,7 @@ def main() -> None:
     contract_path = REPO_ROOT / "config/bridge/bridge_profiles_v1.json"
     result = validate(contract_path)
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
-    print("P3-F consolidated bridge profile contract: PASS")
+    print("P3-G local-closeout bridge profile contract: PASS")
 
 
 if __name__ == "__main__":

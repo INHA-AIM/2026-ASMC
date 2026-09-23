@@ -2,7 +2,7 @@
 
 > **문서 역할:** Working Proposal — 패키지 통합과 본선 배포를 위한 단계별 실행 계획
 > **작성 기준:** 2026-09-20 저장소와 현장 점검 반출 자료의 read-only 감사
-> **진행 상태:** 1단계 P1-A~P1-D 완료, 2단계 P2-A/P2-B compact geometry 완료
+> **진행 상태:** 1·2단계 완료, 3단계 P3-G local closeout 완료. 다음은 P4-A perception baseline
 > **보호 범위:** `behavior_planner`, `frenet_planner`, `mpc_controller`,
 > `planning_control/lane_boundary_adapter` 및 planning 소유 launch는 이 계획의 일방적 이동·삭제 대상이 아니다.
 
@@ -351,11 +351,10 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
   `9093/9094`로 전환했다. Ego Vehicle Status는 release별 PUBSUB 차이를 유지하면서 포트를
   `9088/9099`로 통일했다. P3-B 당시 Competition Vehicle Status를 `7603/7502`로 해석했으나
   P3-E live/enum 대조에서 type 258 TrafficLight status임을 확인했다. 실제 MolitComp
-  Competition Vehicle Status는 type 787, `9797/9798`이며 정적 decoder·fixture와 별도
-  `/Competition_topic`의 live field 교차 검증 뒤 상태 입력 우선순위를 확정한다.
-- 현행 v2/제출 Autonav의 VLP16 10 Hz를 손재호 LiDAR runtime 요구에 따라 v3 설정 15 Hz로
-  바꾼다. JSON 수치만 추측하지 않고 MORAI UI 저장본의 `sensorPeriod`와 `frequencyIndex`,
-  손재호 코드의 소비 loop 15 Hz를 확인한다. 실제 완성 scan은 약 12 Hz여도 허용하며,
+  Competition Vehicle Status는 type 787, `9797/9798`이며 참가팀 local에서는 선택 사항이다.
+  정적 decoder·fixture와 ROS topic은 유지하고 주최 현장 수락에서만 explicit gate로 요구한다.
+- 현행 본선 sensor 정본은 v3 설정 15 Hz다. MORAI UI 저장본의 `sensorPeriod`와
+  `frequencyIndex`, 손재호 코드의 소비 loop 15 Hz를 확인했다. 실제 완성 scan은 약 12 Hz여도 허용하며,
   packet/parse 오류, latency/CPU와 tracking 품질을 계속 관찰한다. 없는 scan을 복제하지 않는다.
 - planning consumer launch는 P3-F에서 `asmc_bridge` component launch를 include하도록 전환했다.
   이후 launch 계약 변경에는 판제 리뷰를 계속 요구한다.
@@ -411,20 +410,21 @@ lane/area, checkpoint 3 m radius, active mission, topic rate/staleness를 한 la
 - 시뮬 PC `192.168.0.1` → 참가팀 PC `192.168.0.10`인 LAN profile
 
 현장 센서 폴더에는 다른 팀 설정도 섞여 있다. 우리 팀은 **Autonav**이며,
-`0918sensors.json`을 Autonav 설정 근거로 사용하지 않는다. 현재 실행 정본은
-`config/morai/sensors/ASMC_sensor_set_v2.json`, 현장 `Autonav_sensor_submitted.json`은 제출 이력 확인용이다.
+`0918sensors.json`을 Autonav 설정 근거로 사용하지 않는다. 현재 본선 실행 정본은
+`config/morai/sensors/ASMC_sensor_set_v3.json`, v2는 10 Hz 회귀 비교용이고 현장
+`Autonav_sensor_submitted.json`은 제출 이력 확인용이다.
 
 두 Autonav 파일의 sensor 구성·주기·UDP 포트는 다음과 같이 동일하다.
 
 | 입력 | 시뮬 host | 팀 PC destination | 주기 |
 |---|---:|---:|---:|
 | Camera 1/2/3/4 | 9290/9292/9294/9296 | 9291/9293/9295/9297 | 20/20/20/10 Hz |
-| VLP16 | 9298 | 9299 | 10 Hz(현재), 15 Hz(3단계 목표) |
+| VLP16 | 9298 | 9299 | v3 설정·소비 15 Hz, 실제 완성 scan 약 12 Hz 허용 |
 | GPS | 9300 | 9301 | 5 Hz |
 | IMU | 9302 | 9303 | 50 Hz |
 
-semantic 차이는 자유 카메라 4번 pitch가 현재 v2 `328°`, 제출본 `340°`인 한 항목뿐이다.
-현재 실행 기준은 v2 `328°`를 유지한다.
+semantic 차이는 자유 카메라 4번 pitch가 v2/v3 `328°`, 제출본 `340°`인 한 항목뿐이다.
+현재 실행 기준은 v3 `328°`를 유지한다.
 
 현장 `2026_molit_comp_network.json`의 Ctrl profile에는 Host `192.168.0.1:9093`, Destination
 `192.168.0.10:9094`가 들어 있고, Competition Vehicle Status `9797/9798`, TrafficLight status
@@ -434,7 +434,8 @@ semantic 차이는 자유 카메라 4번 pitch가 현재 v2 `328°`, 제출본 `
 
 P3-A에서 개발 Ctrl도 `9093/9094`로 맞추고 `local`과 `lan2lan` network JSON을
 release별 template에서 생성하도록 했다. 두 transport는 포트·mode가 같고 IP만 다르다.
-Competition Vehicle Status의 live capture 승인과 실제 두 PC 검증은 아직 남았다.
+Competition Vehicle Status는 참가팀 local에서 선택 사항으로 닫았고, 주최판 live capture 승인과
+실제 두 PC 검증은 아직 남았다.
 정적 decoder·fixture·ROS publish 계약은 P3-B, privileged stream allowlist와 v2/v3
 sensor local/lan2lan IP 파생본은 P3-C에서 적용했다.
 P3-D에서 `asmc_bridge` canonical launch façade와 기본 GPS/IMU `/vehicle/state` composition을
@@ -489,8 +490,12 @@ rosbag, model checkpoint와 주최 배포 원본은 repo로 옮기지 않고 `$A
 
 ## 9. 다음 착수점
 
-**P1-A~P1-D와 P2-A~P2-D를 포함한 2단계는 완료됐다.** `asmc_hd_map`은 최종 차선,
-주행가능영역, metadata, global/local runtime publisher, 검증기와 개발 source 비교 화면을
-소유한다. 다음 작업은 3단계 `asmc_bridge` 통합과 dev/competition 네트워크·센서 profile이다.
-이때 현장 동일 포트와 LiDAR 15 Hz 요구를 적용하되, 기존 bridge는 bag replay와 packet test를
-통과하기 전까지 삭제하지 않는다. LAN2LAN 실제 두 PC 리허설은 6단계 gate에서 진행한다.
+**P1-A~P1-D, P2-A~P2-D와 P3-A~P3-G의 local 범위는 완료됐다.** `asmc_hd_map`과
+`asmc_bridge`는 각각 단일 package/runtime 계약을 소유한다. 다음 작업은 패키지를 옮기기 전
+`P4-A perception runtime baseline`이다. camera, LiDAR, traffic-light, BEV, fitting, fusion,
+recorder의 package/topic/type/frame/timestamp/model SHA와 배포 금지 oracle을 먼저 동결한다.
+그 뒤 façade와 물리 이관, 중복 `Msg`/`morai_msgs` 및 `learning*` 제거 gate를 순서대로 진행한다.
+
+실제 두 PC LAN2LAN은 팀원 측 코드 준비와 perception 통합, 최소 단일 실행 진입점 이후 Phase 6
+리허설에서 수행한다. P3-G의 `--require-competition-status`는 그때 주최판 type 787 수락 gate로
+사용하며 local 개발 완료를 막지 않는다.

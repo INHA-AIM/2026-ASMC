@@ -133,12 +133,14 @@ UDP enabled이고 Ctrl mode가 각각 2/1이다. 생성본은 release별 구조�
 release별 type 786/771과 무관하게 `9093/9094 mode 2`로 만들고, Ego는 release별 type
 770/295를 공통 `9088/9099`로 정규화한다. type 787 Competition은 MolitComp에서만 생성한다.
 
-검증기는 release별 필수 토픽을 구분한다. MolitComp03은 `/Competition_topic`을 요구하고,
-type 787이 없는 26.R1은 요구하지 않는다.
+> **P3-G 정정:** JSON에 type 787 항목이 있어도 참가팀 MolitComp03 local에서는 packet이
+> 나오지 않았다. 현재 검증기는 release 이름으로 `/Competition_topic`을 필수화하지 않으며,
+> 주최 현장 수락에서만 명시적 `--require-competition-status`를 사용한다.
 
 ```bash
 ./scripts/docker_ros_up.sh verify 8 molitcomp03
 ./scripts/docker_ros_up.sh verify 8 26r1
+./scripts/docker_ros_up.sh verify-field 30 molitcomp03
 ```
 
-이 인자는 bridge runtime을 분기하지 않고 verifier inventory만 선택한다.
+release 인자는 bridge runtime을 분기하지 않고 측정 provenance만 기록한다.

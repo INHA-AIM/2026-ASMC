@@ -58,6 +58,21 @@ NOMINAL_RATES_HZ = {
 }
 
 
+def default_required_topics(profile, require_competition_status=False):
+    """Build a capability-based topic gate, independent of MORAI release."""
+    normalized = {"runtime": "competition", "gt": "development"}.get(
+        profile, profile
+    )
+    if normalized not in ("competition", "development"):
+        raise ValueError("profile must be competition or development")
+    topics = COMPETITION_COMMON_REQUIRED_TOPICS
+    if require_competition_status:
+        topics += ("/Competition_topic",)
+    if normalized == "development":
+        topics += DEVELOPMENT_EXTRA_TOPICS
+    return normalized, topics
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--duration", type=float, default=8.0)
@@ -90,8 +105,14 @@ def parse_args():
         "--simulator-release",
         choices=("molitcomp03", "26r1"),
         default="molitcomp03",
-        help=("verification inventory only: MolitComp03 requires type-787 "
-              "/Competition_topic; 26r1 export has no such publisher"),
+        help=("provenance label only; release does not prove that optional "
+              "Competition Vehicle Status is emitted"),
+    )
+    parser.add_argument(
+        "--require-competition-status",
+        action="store_true",
+        help=("field-only gate: require type-787 /Competition_topic in addition "
+              "to the participant runtime topics"),
     )
     return parser.parse_args()
 
@@ -174,18 +195,11 @@ def main():
             "ROS message packages are required; run this inside asmc-ros-noetic"
         ) from exc
 
-    profile = {"runtime": "competition", "gt": "development"}.get(
-        args.profile, args.profile
+    profile, defaults = default_required_topics(
+        args.profile, args.require_competition_status
     )
-    release_topics = (
-        ("/Competition_topic",)
-        if args.simulator_release == "molitcomp03"
-        else ()
-    )
-    defaults = COMPETITION_COMMON_REQUIRED_TOPICS + release_topics
-    if profile == "development":
-        defaults += DEVELOPMENT_EXTRA_TOPICS
     topics = tuple(args.required_topics or defaults)
+    competition_status_required = "/Competition_topic" in topics
     lock = threading.Lock()
     samples = {topic: [] for topic in topics}
     source_stamps = {topic: [] for topic in topics}
@@ -269,6 +283,7 @@ def main():
     report = {
         "stream_profile": profile,
         "simulator_release": args.simulator_release,
+        "competition_status_required": competition_status_required,
         "duration_seconds": round(finished - started, 6),
         "min_messages": args.min_messages,
         "topics": {},

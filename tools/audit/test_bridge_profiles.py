@@ -13,16 +13,18 @@ from validate_bridge_profiles import validate  # noqa: E402
 class BridgeProfileContractTest(unittest.TestCase):
     def test_repository_contract_is_valid(self):
         result = validate(REPO_ROOT / "config/bridge/bridge_profiles_v1.json")
-        self.assertEqual("p3f_bridge_consolidated_v1", result["baseline_id"])
+        self.assertEqual("p3g_bridge_local_closeout_v1", result["baseline_id"])
         self.assertEqual("morai_udp", result["runtime_protocol"])
         self.assertEqual("9093/9094 mode 2", result["ctrl"])
         self.assertEqual("9088/9099", result["ego_status"])
         self.assertEqual(
-            "9797/9798 type 787; live emission pending",
+            "9797/9798 type 787; local optional, field gate pending",
             result["competition_status"],
         )
+        self.assertFalse(result["competition_status_required_default"])
         self.assertEqual("azimuth", result["lidar_frame_mode"])
         self.assertTrue(result["v3_configured_cycle_accepted"])
+        self.assertEqual(674, result["full_graph_tests"])
         self.assertEqual(["lan2lan", "local"], result["transport_profiles"])
         self.assertEqual(4, result["network_profiles"])
         self.assertEqual(4, result["sensor_transport_profiles"])

@@ -2,7 +2,7 @@
 
 > **문서 역할:** Active Package-Group Guide — 현재 bridge/state 구현과 Phase 3 통합 gate
 >
-> **현재 상태:** P3-F에서 Network/Sensor/VehicleState/launch를 `asmc_bridge` 하나로 물리 통합
+> **현재 상태:** P3-G local closeout 완료. Network/Sensor/VehicleState/launch는 `asmc_bridge` 하나
 
 Docker·MORAI UI·현재 포트로 실행하는 절차는 [운영 가이드](../../operations/README.md),
 대회 허용 센서와 현장 조건은 [대회 환경](../../competition/README.md), 외부 message 호환은
@@ -22,7 +22,8 @@ bridge 구현을 개발·검증하고 Phase 3에서 안전하게 통합하는 �
 | stream allowlist·sensor IP 파생본 | P3-C 구현 | live LAN gate 대기 |
 | 단일 launch façade·vehicle state composition | P3-D 구현 | P3-F 물리 이전 완료 |
 | local MolitComp03 수신·LiDAR frame gate | P3-E 실측 | 설정·소비 15 Hz 승인, Competition status 현장 대기 |
-| 네 package→`asmc_bridge` | P3-F 완료 | full build·현재 graph 559 tests·post-move live/정지 Ctrl smoke 통과 |
+| 네 package→`asmc_bridge` | P3-F 완료 | full build·post-move live/정지 Ctrl smoke 통과 |
+| local/field Competition gate | P3-G 완료 | local 선택, 현장 `--require-competition-status` 명시 |
 
 P3-F는 node 이름, ROS topic/type, diagnostics 이름과 binary packet 계약을 유지하면서 구현을
 한 패키지로 옮겼다. `morai_udp_bridges.launch`도 `asmc_bridge` 안에 남겨 component 조합과
@@ -49,7 +50,7 @@ interface는 가능한 한 `asmc_msgs`를 사용하되, Phase 3 전환 PR에서 
 | 방향 | 현재 UDP | ROS topic·type | 비고 |
 |---|---:|---|---|
 | MORAI→팀 | Ego Host/Dest `9088/9099` | `/Ego_topic`, `morai_msgs/EgoVehicleStatus` | 현재 공통 상태 입력 |
-| MORAI→팀 | MolitComp Competition `9797/9798`, type 787 | `/Competition_topic`, `morai_msgs/EgoVehicleStatus` | 정적 decoder 완료; competition mode live emission 대기 |
+| MORAI→팀 | MolitComp Competition `9797/9798`, type 787 | `/Competition_topic`, `morai_msgs/EgoVehicleStatus` | local 선택; 주최 현장 explicit gate·live emission 대기 |
 | MORAI→팀 | TrafficLight `7603/7502`, type 258 | 발행하지 않음 | simulator oracle, production bridge 비소비 |
 | MORAI→팀 | Object Dest `7505` | `/Object_topic`, `morai_msgs/ObjectStatusList` | privileged 개발 oracle |
 | MORAI→팀 | Collision Dest `9092` | `/CollisionData`, `morai_msgs/CollisionData` | 충돌 때만 publish |
@@ -156,6 +157,16 @@ Ctrl 송신 목적지를 `127.0.0.1` 또는 `192.168.0.1`로 결정하고 잘못
 막기 위한 것이다. 수신 sender를 보고 자동 선택하면 첫 packet 전 제어, mirrored/NAT와 다중
 NIC에서 모호하므로 사용하지 않는다.
 
+기본 local에서는 Competition 입력을 열어 두되 packet이 없으면 diagnostics를
+`OK: optional; no data`로 낸다. 주최 현장판을 검사할 때만 다음처럼 필수화한다.
+
+```bash
+./scripts/udp_bridge.sh --transport lan2lan --require-competition-status
+./scripts/docker_ros_up.sh verify-field 30 molitcomp03
+```
+
+`/vehicle/state`는 GPS+IMU에서 만든 독립 팀 메시지이므로 `/Competition_topic` 부재와 무관하다.
+
 다른 터미널에서:
 
 ```bash
@@ -234,15 +245,19 @@ JSON의 `sensorPeriod`만 추측해 고치지 않는다. 10 Hz baseline과 손�
 loss, processing latency와 CPU/GPU를 비교한다. 현장 실제 두 PC, firewall·route·restart·offline
 복구는 Phase 6 gate이며 개발 PC loopback 성공으로 대신하지 않는다.
 
-## 8. P3-F 이관 결과와 남은 gate
+## 8. P3-G local closeout 결과와 남은 gate
 
 1. package/topic/port/timestamp baseline과 local live 결과를 P3-E에서 캡처했다.
 2. parser, sensor decoder, state core와 fixture/test를 동작 변경 없이 `asmc_bridge`로 옮겼다.
 3. planning launch dependency도 `asmc_bridge`로 전환했다.
-4. full build, 현재 graph 559 tests, local live topic과 정지 Ctrl post-move smoke를 통과해 P3-F를 닫았다.
-5. Competition Vehicle Status packet과 실제 두 PC LAN2LAN은 별도 현장 gate로 남긴다.
+4. full build, local live topic과 정지 Ctrl post-move smoke를 통과해 P3-F를 닫았다.
+5. 참가팀 local은 `/Competition_topic`을 선택 사항으로 닫고, 주최판에서만 명시적으로
+   필수화하는 P3-G 계약과 회귀 검사를 추가했다.
+6. Competition Vehicle Status 실제 packet과 두 PC LAN2LAN은 별도 현장 gate로 남긴다.
+
+P3-G HEAD의 현재 graph는 `674 tests, 0 errors, 0 failures`이며 `asmc_bridge` 자체는 14개다.
 
 단일 패키지 안에서도 Network/Sensor/VehicleState는 별도 node·소스 디렉터리·테스트로 실패
 경계를 유지한다. 배포 단위만 하나이며 diagnostics topic 이름도 기존 소비자 호환을 보존한다.
-상세 증거는 [P3-F consolidated baseline](../../records/baselines/bridge-p3f-consolidated-v1.md)에
-보존한다.
+물리 통합 증거는 [P3-F baseline](../../records/baselines/bridge-p3f-consolidated-v1.md), local
+closeout 판단은 [P3-G baseline](../../records/baselines/bridge-p3g-local-closeout-v1.md)에 보존한다.

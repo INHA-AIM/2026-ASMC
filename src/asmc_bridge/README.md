@@ -31,3 +31,13 @@ v3는 MORAI 저장 설정과 손재호 소비 loop가 15 Hz이며 완성 scan �
 bridge는 azimuth wrap으로 실제 회전을 조립하고 중복 cloud를 만들지 않는다. MolitComp
 Competition Vehicle Status는 type 787 `9797→9798`이고, type 258 `7603→7502`는
 TrafficLight oracle이라 production bridge에서 소비하지 않는다.
+
+참가팀 local에서는 type 787 packet이 나오지 않아도 정상이다. decoder와
+`/Competition_topic` publisher는 유지하며, 주최 현장판을 검사할 때만 다음처럼 필수화한다.
+
+```bash
+./scripts/udp_bridge.sh --transport lan2lan --require-competition-status
+./scripts/docker_ros_up.sh verify-field 30 molitcomp03
+```
+
+기본 diagnostics는 미수신 Competition 입력을 `optional; no data`로 표시한다.

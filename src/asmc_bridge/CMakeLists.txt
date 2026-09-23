@@ -49,6 +49,7 @@ target_link_libraries(ego_vehicle_state_dev_node
 if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_udp_bridge.py)
   catkin_add_nosetests(test/test_sensor_bridge.py)
+  catkin_add_nosetests(test/test_topic_verifier.py)
 
   add_executable(vehicle_state_adapter_test
     test/vehicle_state_adapter_test.cpp)

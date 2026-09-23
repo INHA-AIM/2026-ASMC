@@ -52,6 +52,16 @@ class VehicleStatusPacketTest(unittest.TestCase):
             MODULE.decode_vehicle_status_packet(packet)
 
 
+class InputRequirementTest(unittest.TestCase):
+    def test_competition_status_is_optional_by_default(self):
+        self.assertFalse(MODULE.input_required("competition"))
+        self.assertTrue(MODULE.input_required("ego"))
+        self.assertTrue(MODULE.input_required("col"))
+
+    def test_field_gate_can_require_competition_status(self):
+        self.assertTrue(MODULE.input_required("competition", True))
+
+
 class SourceTimestampTest(unittest.TestCase):
     def bridge(self):
         value = MODULE.MoraiUdpBridge.__new__(MODULE.MoraiUdpBridge)

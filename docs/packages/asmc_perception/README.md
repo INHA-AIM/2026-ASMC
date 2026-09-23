@@ -117,7 +117,8 @@ Camera semantic 입력·출력의 정확한 목록과 실행 인자는
 LiDAR runtime은 독립 nested catkin workspace다. outer workspace의 sensor bridge를 먼저 띄우고
 별도로 build/run한다. current object topic, time matching, class hysteresis, GPU 세대별 실행과
 RViz 절차는 [sensor-fusion guide](../../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)가 정본이다.
-Phase 3에서 VLP16을 15 Hz로 바꾸기 전까지 현재 회귀 기준은 10 Hz이며 두 값을 혼동하지 않는다.
+본선 v3 VLP16 설정과 손재호 소비 loop는 15 Hz이고 실제 완성 cloud 약 12 Hz는 허용한다.
+v2 10 Hz는 과거 비교·회귀 기준이므로 본선 입력과 혼동하지 않는다.
 
 현재 파이프라인의 단계별 완성도, 증상별 원인, GT → 센서 전환에서 판제 쪽에도 필요한 변경과
 개선 우선순위는 [LiDAR assessment](./lidar-assessment-and-roadmap.md)에 있다. 실행 절차가 아니라

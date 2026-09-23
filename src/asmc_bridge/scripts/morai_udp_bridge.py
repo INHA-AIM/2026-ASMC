@@ -35,6 +35,11 @@ KMH2MS = 1.0 / 3.6
 AUX = 4 + 12
 TAIL = 2
 
+
+def input_required(kind, competition_status_required=False):
+    """Return whether missing data for an enabled input is a fault."""
+    return kind != "competition" or bool(competition_status_required)
+
 # --------------------------------------------------------------------------
 # Ego Vehicle Status
 #   body 공통부 (offset)
@@ -221,6 +226,14 @@ class MoraiUdpBridge(object):
             "obj": bool(p("~enable_object", False)),
             "col": bool(p("~enable_collision", True)),
         }
+        self.competition_status_required = bool(
+            p("~competition_status_required", False)
+        )
+        if (self.competition_status_required
+                and not self.enabled_inputs["competition"]):
+            raise ValueError(
+                "competition_status_required needs enable_competition_status"
+            )
         if self.stream_profile == "competition" and self.enabled_inputs["obj"]:
             raise ValueError("competition stream profile forbids ObjectInfo")
         self.timestamp_mode = str(p("~timestamp_mode", "receive")).strip().lower()
@@ -551,9 +564,15 @@ class MoraiUdpBridge(object):
         if self.stats.get("ego") == 0:
             rospy.logwarn("Ego 수신 0건. MORAI Destination PORT 와 "
                           "~ego_port 가 같은지 확인하세요.")
-        if self.stats.get("competition") == 0:
+        if (self.stats.get("competition") == 0
+                and self.competition_status_required):
             rospy.logwarn("Competition status 수신 0건. MORAI Destination PORT 와 "
                           "~competition_port 가 같은지 확인하세요.")
+        elif self.stats.get("competition") == 0:
+            rospy.loginfo_once(
+                "Competition status is optional in the local participant "
+                "simulator and has not emitted data"
+            )
         message = DiagnosticArray()
         message.header.stamp = rospy.Time.now()
         elapsed = max(1e-6, now - self._started_monotonic)
@@ -566,20 +585,35 @@ class MoraiUdpBridge(object):
             status = DiagnosticStatus()
             status.name = "morai_udp_bridge/{}".format(kind)
             status.hardware_id = "morai_udp"
+            optional_without_data = (
+                not input_required(kind, self.competition_status_required)
+                and self.stats[kind] == 0
+            )
             status.level = (
-                DiagnosticStatus.OK if self.stats[kind] > 0 or kind == "cmd"
+                DiagnosticStatus.OK
+                if self.stats[kind] > 0 or kind == "cmd" or optional_without_data
                 else DiagnosticStatus.WARN
             )
             if self.stats[kind] > 0:
                 status.message = "active"
             elif kind == "cmd":
                 status.message = "no control command"
+            elif optional_without_data:
+                status.message = "optional; no data"
             else:
                 status.message = "no data"
             status.values = [
                 KeyValue("runtime_profile", self.runtime_profile),
                 KeyValue("transport_profile", self.transport_profile),
                 KeyValue("stream_profile", self.stream_profile),
+                KeyValue(
+                    "required",
+                    str(
+                        input_required(
+                            kind, self.competition_status_required
+                        )
+                    ).lower(),
+                ),
                 KeyValue("timestamp_mode", self.timestamp_mode),
                 KeyValue(
                     "direction",

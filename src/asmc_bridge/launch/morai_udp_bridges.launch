@@ -25,6 +25,7 @@
   <arg name="cmd_ip" default="$(optenv MORAI_CMD_IP 127.0.0.1)"/>
   <arg name="cmd_port" default="9093"/>
   <arg name="competition_port" default="9798"/>
+  <arg name="competition_status_required" default="false"/>
   <include file="$(find asmc_bridge)/launch/morai_udp_bridge.launch">
     <arg name="runtime_profile" value="$(arg runtime_profile)"/>
     <arg name="transport_profile" value="$(arg transport_profile)"/>
@@ -33,6 +34,7 @@
     <arg name="cmd_ip" value="$(arg cmd_ip)"/>
     <arg name="cmd_port" value="$(arg cmd_port)"/>
     <arg name="competition_port" value="$(arg competition_port)"/>
+    <arg name="competition_status_required" value="$(arg competition_status_required)"/>
     <arg name="timestamp_mode" value="$(arg timestamp_mode)"/>
   </include>
   <include file="$(find asmc_bridge)/launch/morai_sensor_bridge.launch">

@@ -22,12 +22,13 @@ Docker·Dockerfile에 **개인 IP를 넣을 필요 없음** (Host/Dest IP = `127
    (현재 bridge 호환 Ego **9099** · Object **7505** · Collision **9092** 포함)
 5. **Cmd Control**: 타입 **Ego Ctrl Cmd**, Host/Dest **9093 / 9094**, mode **2**
 6. 컨테이너: `source devel/setup.bash && ./scripts/udp_bridge.sh`
-7. 확인: `rostopic hz /Ego_topic` · `/Competition_topic` · `/velodyne_points`
+7. 확인: `rostopic hz /Ego_topic` · `/velodyne_points` · `/vehicle/state`
 
-26.R1에는 `/Competition_topic`의 원천인 type 787이 없다. 26.R1을 검사할 때는
-`./scripts/docker_ros_up.sh verify 8 26r1`, MolitComp03은 기본값인
-`./scripts/docker_ros_up.sh verify 8 molitcomp03`을 사용한다. 이 release 인자는 bridge 선택이
-아니라 검증할 필수 토픽 inventory만 바꾼다.
+26.R1에는 `/Competition_topic`의 원천인 type 787이 없고, 참가팀 MolitComp03 local은 JSON에
+type 787 항목이 있어도 packet을 발행하지 않았다. 두 release의 local 검사는
+`./scripts/docker_ros_up.sh verify 8 <release>`를 사용한다. 주최 현장판 type 787 수락에서만
+`./scripts/docker_ros_up.sh verify-field 30 molitcomp03`을 사용한다. release 인자는 provenance
+label이며 bridge 동작이나 필수 토픽을 자동 변경하지 않는다.
 
 **LiDAR만 0이고 cam/gps/imu는 될 때:** `docker_ros_up.sh status`의 host mode, MORAI
 Connect/Dest 9299와 다른 9299 listener를 순서대로 확인한다. 개별 Docker port forwarding은

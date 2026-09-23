@@ -63,6 +63,11 @@ MolitComp, 팀 MolitComp, 26.R1 export 모두 type 778 MoraiTLServiceProvider를
 판단은 카메라 인지 결과를 사용한다. 주최 network에 있는 항목 전체를 팀 runtime 필수 입력으로
 해석하지 않는다.
 
+팀 MolitComp 직접 저장본과 주최 저장본 모두 type 787 항목을 포함하지만 참가팀 local live에서는
+UDP 9798 packet이 관측되지 않았다. 그래서 일반 `verify`는 이를 요구하지 않고, 주최 현장판을
+검사할 때만 `verify-field` 또는 `--require-competition-status`를 사용한다. JSON 항목 존재와
+runtime 발행은 별도 증거다.
+
 정확한 원본 inventory는 다음과 같다. `Division_TYPE` 1/2/3/4는 각각 publisher,
 subscriber, controller, service다.
 
