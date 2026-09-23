@@ -40,7 +40,7 @@ source devel/setup.bash
 
 ```bash
 catkin_make --only-pkg-with-deps \
-  behavior_planner frenet_planner mpc_controller vehicle_state
+  behavior_planner frenet_planner mpc_controller asmc_bridge
 source devel/setup.bash
 ```
 
@@ -55,7 +55,7 @@ executable 이름을 가리키므로 현재 정본 명령이 아니다. Phase 5 
 ```bash
 cd /root/ws
 source devel/setup.bash
-./scripts/udp_bridge.sh --simulator 26r1
+./scripts/udp_bridge.sh
 ```
 
 터미널 2에서 v2 planning chain을 실행한다.

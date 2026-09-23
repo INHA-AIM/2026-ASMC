@@ -26,6 +26,10 @@
 | 기록 | 시점·식별자 | 보존하는 사실 | 현재 권위 |
 |---|---|---|---|
 | [P1-A runtime v1](./baselines/runtime-v1.md) | content commit `73c0a8c` | 당시 24 packages, 33 runtime messages, sensor/bag/HD Map snapshot | 현재 구조는 package guide와 contracts |
+| [P3-A bridge v1](./baselines/bridge-p3a-v1.md) | 2026-09-23, `p3a_bridge_profiles_v1` | bridge source/topic SHA, 공통 runtime, transport/network/sensor profile | [bridge profile contract](../../config/bridge/bridge_profiles_v1.json) |
+| [P3-E local live v1](./baselines/bridge-p3e-local-live-v1.md) | 2026-09-23, `p3e_bridge_local_live_v1` | MolitComp03 v3 packet/rate, azimuth framing, Competition header 불일치 | [bridge profile contract](../../config/bridge/bridge_profiles_v1.json) |
+| [P3-F consolidated v1](./baselines/bridge-p3f-consolidated-v1.md) | 2026-09-23, `p3f_bridge_consolidated_v1` | bridge 4→1 package 이관, 663 tests와 post-move local smoke | [bridge package guide](../packages/asmc_bridge/README.md) |
+| [P3-G local closeout v1](./baselines/bridge-p3g-local-closeout-v1.md) | 2026-09-23, `p3g_bridge_local_closeout_v1` | 참가팀 local 선택 status와 주최 현장 explicit gate | [bridge profile contract](../../config/bridge/bridge_profiles_v1.json) |
 | [P2-A drivable input](./baselines/kcity2025-drivable-input-v1.md) | P2-A, stage14 SHA | link별 clip/guard 입력 판정 | P2-B 결과가 후속 product |
 | [P2-B compact drivable](./baselines/kcity2025-compact-drivable-v1.md) | `kcity2025_roundabout_extended_drivable_v5` | Lane/vector/grid 개수와 product SHA | [HD Map runtime contract](../contracts/hd-map/runtime-v1.md)와 현 product hash |
 | [route curation 2026-09-17](./hd-map/kcity2025-route-curation-20260917.md) | stage01~14 audit | source별 선택, 사용자 검수와 링크별 보정 근거 | machine policy와 current package guide |
@@ -45,7 +49,7 @@ P2-A는 P2-B 이전의 입력 감사이므로 문서 끝의 “다음 gate”를
 |---|---|---|---|
 | [TwinLiteNet+ v4](./perception/twinlitenet-v4-evaluation.md) | 2026-09-04~05, v4 val 1,404 samples | epoch 10/18 학습·평가와 한계 | [Perception guide](../packages/asmc_perception/README.md) |
 | [MORAI message versions](./simulator/morai-msgs-versions.md) | 최종 조사 2026-09-15 | `beta_drive`·26.R1 field 차이와 direct ROS 실패 | [simulator contract](../contracts/simulator/morai-msgs-beta-policy.md) |
-| [runtime transport](./simulator/runtime-transport-2026-09.md) | 2026-09-05~15 | host network, rate/latency, bag, 종료된 GT 실험 | [운영 가이드](../operations/README.md) |
+| [runtime transport](./simulator/runtime-transport-2026-09.md) | 2026-09-05~23 | host network, rate/latency, bag, 종료된 GT와 P3-E live 실험 | [운영 가이드](../operations/README.md) |
 
 성능값은 dataset, checkpoint, simulator profile과 측정 창을 함께 인용한다. 예를 들어 당시
 LiDAR `8.x Hz` 관측은 현재 10 Hz baseline이나 승인된 15 Hz 목표를 대체하지 않는다.

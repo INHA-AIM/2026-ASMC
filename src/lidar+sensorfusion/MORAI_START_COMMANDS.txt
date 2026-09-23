@@ -4,13 +4,13 @@
 [Sensor configuration]
 
 Import the outer repository file in MORAI:
-  config/ASMC_sensor_set_v1.json
+  config/morai/sensors/ASMC_sensor_set_v1.json
 
 Front camera: xyz=(1.90, 0.00, 1.20)m, rpy=(0, 2, 0)deg,
               1280x720, horizontal FOV=90deg
 3D LiDAR   : xyz=(0.80, 0.00, 1.45)m, rpy=(0, 0, 0)deg, VLP-16
 
-The outer morai_sensor_bridge owns UDP ports and publishes:
+The outer asmc_bridge sensor node owns UDP ports and publishes:
   /image_jpeg/compressed
   /velodyne_points
   /gps
@@ -75,7 +75,7 @@ Add these displays:
 
 [Direct Velodyne mode]
 
-Only when morai_sensor_bridge is NOT running and Main must own UDP 9299:
+Only when the asmc_bridge sensor node is NOT running and Main must own UDP 9299:
   START_VELODYNE_DRIVER=true ./start_main.sh
 
 Never run both UDP receivers on port 9299 at the same time.

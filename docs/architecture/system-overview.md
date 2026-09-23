@@ -46,7 +46,7 @@ ego-BEV → lane/topology + safe drivable + object/lane context
 | SA_plan | BEV̂ → τ | `src/learning_by_cheating/` | 안승현 |
 | Behavior + Frenet + MPC | ROS command→trajectory→control; bridge가 Ctrl UDP 전송 | `src/behavior_planner/`, `src/frenet_planner/`, `src/mpc_controller/` | 정윤태·양서준·이강태 |
 | Scenario / gRPC | 시나리오·시뮬 API | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |
-| Bridge | MORAI UDP 경계·내부 ROS 변환 | `src/morai_*_bridge/`, `scripts/udp_bridge.sh` | 이강태, 안승현 |
+| Bridge | MORAI UDP 경계·내부 ROS 변환 | `src/asmc_bridge/` 단일 패키지 | 이강태, 안승현 |
 
 ## 5. Planning/Control
 

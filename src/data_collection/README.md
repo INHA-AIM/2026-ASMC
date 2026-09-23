@@ -144,8 +144,8 @@ pairing과 GNSS 반복 여부를 먼저 검사한다.
 SIM 버전과 transport가 metadata에서 구분되도록 Real Time UDP 운용 profile을 실행한다.
 
 ```bash
-./scripts/udp_bridge.sh --simulator 26r1
-./scripts/udp_bridge.sh --simulator competition
+./scripts/udp_bridge.sh
+./scripts/udp_bridge.sh --transport lan2lan
 ```
 
 기본 녹화는 scenario와 controller만 입력한다. KST 시작 시각, 초기 날씨·시뮬레이션 시간,
@@ -248,8 +248,9 @@ Docker에서는 ROS 컨테이너에 `/data`로 쓰기 가능, 학습 컨테이�
 
 ### 준비
 
-1. MORAI 26.R1.H3에서 K-City 2025와 일반 수집은 `config/ASMC_sensor_set_v2.json`,
-   Semantic/Instance GT 수집은 `config/ASMC_sensor_set_GT.json`을 로드한다.
+1. MORAI 26.R1.H3에서 K-City 2025와 일반 수집은
+   `config/morai/sensors/ASMC_sensor_set_v2.json`, Semantic/Instance GT 수집은
+   `config/morai/sensors/ASMC_sensor_set_GT.json`을 로드한다.
 2. Sensor Capture Mode를 활성화한다.
 3. 아래 둘 중 하나를 연결한다.
    - 권장: MORAI gRPC server `7789` — 성공/실패 응답과 sim time을 받을 수 있다.
@@ -261,9 +262,10 @@ Docker에서는 ROS 컨테이너에 `/data`로 쓰기 가능, 학습 컨테이�
 
 | 파일 | 용도 |
 |---|---|
-| `config/ASMC_sensor_set_v1.json` | 과거 run 재현용 |
-| `config/ASMC_sensor_set_v2.json` | 현재 26.R1.H3 개발 기본값 |
-| `config/ASMC_sensor_set_GT.json` | v2 + Semantic Camera×3 + Instance LiDAR, 개발·학습 전용 |
+| `config/morai/sensors/ASMC_sensor_set_v1.json` | 과거 run 재현용 |
+| `config/morai/sensors/ASMC_sensor_set_v2.json` | 현재 10 Hz 회귀 기본값 |
+| `config/morai/sensors/ASMC_sensor_set_v3.json` | 15 Hz 현장 후보, live acceptance 전 |
+| `config/morai/sensors/ASMC_sensor_set_GT.json` | v2 + Semantic Camera×3 + Instance LiDAR, 개발·학습 전용 |
 
 v1→v2의 유효 변경은 rear camera pitch `340°→328°`다. GT 센서셋의 LiDAR는 다음처럼
 동일 위치·주기에서 입력과 정답을 분리한다.

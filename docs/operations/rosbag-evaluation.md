@@ -70,7 +70,7 @@ raw는 무압축, result는 LZ4, split은 4 GiB, buffer는 1 GiB이며 시작 �
 먼저 receive mode bridge를 실행한다.
 
 ```bash
-./scripts/udp_bridge.sh --simulator 26r1
+./scripts/udp_bridge.sh
 
 roslaunch data_collection bag_recorder.launch \
   profile:=full_raw scenario:=comp_sample controller:=wheel

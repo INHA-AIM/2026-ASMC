@@ -270,7 +270,7 @@ nuScenes(32ch)보다 훨씬 희소하다. 이는 두 가지를 뜻한다.
       -> Frenet / Behavior
 
   MORAI GT (/Ego_topic)
-      -> vehicle_state/src/ego_vehicle_state_dev_node.cpp
+      -> asmc_bridge/src/vehicle_state/ego_vehicle_state_dev_node.cpp
       -> /vehicle/state
 
   LiDAR 패키지
@@ -282,7 +282,7 @@ nuScenes(32ch)보다 훨씬 희소하다. 이는 두 가지를 뜻한다.
 ```text
 [대회 구성 - 목표]
   LiDAR + 카메라  -> /perception/objects   (asmc_msgs/DetectedObjectArray)
-  GPS + IMU       -> /vehicle/state        (vehicle_state/src/vehicle_state_node.cpp)
+  GPS + IMU       -> /vehicle/state        (asmc_bridge/src/vehicle_state/vehicle_state_node.cpp)
 ```
 
 **좋은 소식이 하나 있다.** `/vehicle/state`는 **센서 기반 경로가 이미 구현되어 있다.**

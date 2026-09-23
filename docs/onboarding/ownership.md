@@ -25,8 +25,7 @@
 | Frenet | `src/frenet_planner/` | 이강태·정윤태 |
 | MPC | `src/mpc_controller/` | 정윤태·양서준 |
 | Planning adapter | `src/planning_control/` | 통합·판제 공동 |
-| 통합 launch | `src/integration_launch/` | 정윤태·통합 공동 |
-| UDP/sensor bridge | `src/morai_udp_bridge/`, `src/morai_sensor_bridge/`, `src/vehicle_state/`; [개발 가이드](../packages/asmc_bridge/README.md) | 이강태·안승현 |
+| UDP/sensor/state bridge와 통합 launch | `src/asmc_bridge/`; [개발 가이드](../packages/asmc_bridge/README.md) | 이강태·안승현, planning consumer 공동 리뷰 |
 | Camera/BEV | `src/perception/camera_semantic_perception/`, `drivable_bev/`, `twinlite_morai/` | 안승현, perception 공동 리뷰 |
 | LiDAR/3D | `src/perception/morai_3d_detection/`, `src/lidar+sensorfusion/` | 손재호, 통합 공동 리뷰 |
 | 데이터 수집 | `src/data_collection/` | 안승현, perception 공동 리뷰 |

@@ -17,11 +17,9 @@
   <depend>yaml-cpp</depend>
 
   <!-- Launch-only dependencies for obstacle-free MORAI KEEP verification. -->
+  <exec_depend>asmc_bridge</exec_depend>
   <exec_depend>behavior_planner</exec_depend>
-  <exec_depend>morai_sensor_bridge</exec_depend>
-  <exec_depend>morai_udp_bridge</exec_depend>
   <exec_depend>mpc_controller</exec_depend>
-  <exec_depend>vehicle_state</exec_depend>
 
   <export/>
 </package>

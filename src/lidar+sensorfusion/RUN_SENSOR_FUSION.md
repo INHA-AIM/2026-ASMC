@@ -17,7 +17,7 @@ The authoritative ASMC v1 poses are:
 - GPS: `xyz=(0.35, 0.00, 1.25)m`
 
 The runtime copy is in `src/Main/setting.yaml`; the simulator source is the
-outer repository's `config/ASMC_sensor_set_v1.json`.
+outer repository's `config/morai/sensors/ASMC_sensor_set_v1.json`.
 
 ## Build
 
@@ -41,7 +41,7 @@ Start the outer sensor bridge first:
 cd /path/to/2026-ASMC
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-./scripts/udp_bridge.sh --simulator 26r1 publish_map_tf:=true
+./scripts/udp_bridge.sh publish_map_tf:=true
 ```
 
 `publish_map_tf:=true` is an opt-in raw GPS + latest IMU transform used by

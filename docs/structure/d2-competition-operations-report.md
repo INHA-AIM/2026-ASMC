@@ -31,7 +31,7 @@
 - 규정 v1.1의 PC, UDP 제한, 차량·센서, 미션·패널티, 주행 불능과 당일 절차를 보존했다.
 - 공개 asset 4개, MGeo 원본, 전역경로 4,429점, 길이 2,184.61 m, 5% 109.23 m와
   체크포인트 16개·3 m 기준을 보존했다.
-- 실행 센서셋은 `ASMC_sensor_set_v2.json`, 현장 `Autonav_sensor.json`은 이전 제출 provenance,
+- 실행 센서셋은 `config/morai/sensors/ASMC_sensor_set_v2.json`, 현장 `Autonav_sensor.json`은 이전 제출 provenance,
   다른 팀 센서셋은 비정본이라는 경계를 명시했다.
 - 현재 개발값 `127.0.0.1`, Ctrl `9111/9112`, Ego `909`, LiDAR 10 Hz와 승인됐지만 미적용인
   Phase 3 목표 `9093/9094`, Status `7603/7502`, field IP, LiDAR 15 Hz를 한 표에서 분리했다.

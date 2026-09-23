@@ -10,6 +10,6 @@ timeouts:
   trajectory: 0.25
   vehicle_state: 0.20
 
-# Must match morai_udp_bridge max_steer_deg and the physical vehicle limit.
+# Must match asmc_bridge network node max_steer_deg and the physical vehicle limit.
 vehicle:
   max_steer_deg: 40.0

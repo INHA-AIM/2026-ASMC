@@ -2,33 +2,40 @@
 
 > **문서 역할:** Active Package-Group Guide — 현재 bridge/state 구현과 Phase 3 통합 gate
 >
-> **현재 상태:** `asmc_bridge` 패키지는 아직 없으며 세 runtime 패키지와 launch 패키지가 운영 중
+> **현재 상태:** P3-G local closeout 완료. Network/Sensor/VehicleState/launch는 `asmc_bridge` 하나
 
 Docker·MORAI UI·현재 포트로 실행하는 절차는 [운영 가이드](../../operations/README.md),
 대회 허용 센서와 현장 조건은 [대회 환경](../../competition/README.md), 외부 message 호환은
 [MORAI message 정책](../../contracts/simulator/morai-msgs-beta-policy.md)이 우선한다. 이 문서는
 bridge 구현을 개발·검증하고 Phase 3에서 안전하게 통합하는 방법을 설명한다.
 
-## 1. 현재 구현과 목표를 구분한다
+## 1. 현재 구현
 
 | 역할 | 현재 경로 | 상태 |
 |---|---|---|
-| Network UDP와 Ctrl | `src/morai_udp_bridge/` | 운영 중 |
-| Camera/LiDAR/GPS/IMU decode | `src/morai_sensor_bridge/` | 운영 중 |
-| GPS/IMU→팀 내부 차량 상태 | `src/vehicle_state/` | 운영 중 |
-| 두 UDP bridge 동시 기동 | `src/integration_launch/` | 운영 중, planning 공동 소유 |
-| 단일 `asmc_bridge` | 존재하지 않음 | Phase 3 목표 |
-| `dev_local`/`competition_lan` profile | 존재하지 않음 | Phase 3 목표 |
+| Network UDP와 Ctrl | `src/asmc_bridge/scripts/morai_udp_bridge.py` | 통합 완료 |
+| Camera/LiDAR/GPS/IMU decode | `src/asmc_bridge/scripts/morai_sensor_bridge.py` | 통합 완료 |
+| GPS/IMU→팀 내부 차량 상태 | `src/asmc_bridge/src/vehicle_state/` | 통합 완료 |
+| component/canonical launch | `src/asmc_bridge/launch/` | 통합 완료, 기본 `/vehicle/state` 포함 |
+| `local`/`lan2lan` 계약·MORAI JSON | P3-A 완료 | live LAN gate 대기 |
+| Competition Vehicle Status decoder | P3-B 정적 계약·fixture 완료 | live capture gate 대기 |
+| stream allowlist·sensor IP 파생본 | P3-C 구현 | live LAN gate 대기 |
+| 단일 launch façade·vehicle state composition | P3-D 구현 | P3-F 물리 이전 완료 |
+| local MolitComp03 수신·LiDAR frame gate | P3-E 실측 | 설정·소비 15 Hz 승인, Competition status 현장 대기 |
+| 네 package→`asmc_bridge` | P3-F 완료 | full build·post-move live/정지 Ctrl smoke 통과 |
+| local/field Competition gate | P3-G 완료 | local 선택, 현장 `--require-competition-status` 명시 |
 
-Phase 3 전에는 현재 패키지 이름과 launch를 사용한다. 문서상의 목표 구조를 근거로 경로를 먼저
-옮기거나 기존 패키지를 삭제하지 않는다. `asmc_bridge` 승격은 bag replay, packet fixture,
-producer/consumer build와 실제 MORAI 검증을 모두 통과한 뒤에만 한다.
+P3-F는 node 이름, ROS topic/type, diagnostics 이름과 binary packet 계약을 유지하면서 구현을
+한 패키지로 옮겼다. 공개 전체 실행 진입점은 canonical `bridge.launch` 하나이며, 이 파일이
+Network/Sensor component와 기본 VehicleState를 직접 include한다. 단위 시험용 component launch는
+보존하되 이전 `integration_launch`의 중간 조합 파일 `morai_udp_bridges.launch`는 제거했다.
+이전 package 경로는 더 이상 runtime 계약이 아니다.
 
 ## 2. 현재 데이터 흐름
 
 ```text
-MORAI Network UDP ──> morai_udp_bridge ──> /Ego_topic, /Object_topic,
-       │                                      /CollisionData
+MORAI Network UDP ──> morai_udp_bridge ──> /Ego_topic, /Competition_topic,
+       │                                      /Object_topic, /CollisionData
        └─< /ctrl_cmd ───────────────────── Ctrl UDP
 
 MORAI Sensor UDP ──> morai_sensor_bridge ──> camera, PointCloud2, /gps, /imu
@@ -44,15 +51,22 @@ interface는 가능한 한 `asmc_msgs`를 사용하되, Phase 3 전환 PR에서 
 
 | 방향 | 현재 UDP | ROS topic·type | 비고 |
 |---|---:|---|---|
-| MORAI→팀 | Ego Dest `909` | `/Ego_topic`, `morai_msgs/EgoVehicleStatus` | 개발 상태·debug |
+| MORAI→팀 | Ego Host/Dest `9088/9099` | `/Ego_topic`, `morai_msgs/EgoVehicleStatus` | 현재 공통 상태 입력 |
+| MORAI→팀 | MolitComp Competition `9797/9798`, type 787 | `/Competition_topic`, `morai_msgs/EgoVehicleStatus` | local 선택; 주최 현장 explicit gate·live emission 대기 |
+| MORAI→팀 | TrafficLight `7603/7502`, type 258 | 발행하지 않음 | simulator oracle, production bridge 비소비 |
 | MORAI→팀 | Object Dest `7505` | `/Object_topic`, `morai_msgs/ObjectStatusList` | privileged 개발 oracle |
 | MORAI→팀 | Collision Dest `9092` | `/CollisionData`, `morai_msgs/CollisionData` | 충돌 때만 publish |
-| 팀→MORAI | Ctrl Host `9111` | subscribe `/ctrl_cmd`, `morai_msgs/CtrlCmd` | mode 2, D gear packet |
+| 팀→MORAI | Ctrl Host `9093` | subscribe `/ctrl_cmd`, `morai_msgs/CtrlCmd` | Dest metadata 9094, mode 2, D gear packet |
 
 Ego UDP velocity는 ROS에서 m/s로 변환한다. Object velocity는 현재 `morai_msgs` 관례에 따라
 km/h다. Ctrl steering 입력은 radian이며 ±40°를 ±1로 정규화한다. 이 단위를 topic 이름만 보고
 추정하지 않는다. 실측에서 `/Ego_topic.position`이 `(0,0)`인 대회 packet도 있었으므로 이를
 authoritative map pose나 GPS/IMU fallback으로 사용하지 않는다.
+
+TrafficLight type 258은 연속 status publisher이고 `GetTrafficLightStatus` 조회 서비스가 아니다.
+검사한 MolitComp03/26.R1 export에는 MoraiTLServiceProvider type 778이 없으므로, bridge와
+production planner는 GetTrafficLight를 필수 입력으로 요구하지 않는다. 26.R1의 gRPC proto가
+존재해도 실행판의 API 제공 여부는 별도 live gate다.
 
 ### Sensor bridge
 
@@ -65,9 +79,15 @@ authoritative map pose나 GPS/IMU fallback으로 사용하지 않는다.
 | Semantic camera 3대 | `9305/9307/9309` | `/sem_*/image_jpeg/compressed` | 개발 GT 전용 |
 | Instance LiDAR | `9311` | `/velodyne_points_instance` | 개발 GT 전용 |
 
-기본 launch는 v2와 GT 포트의 합집합을 열어 optional GT stream이 없으면 idle로 둔다. 이는 개발
-편의를 위한 현재 구현이지 본선 allowlist 보장을 의미하지 않는다. competition launch에서는
-Object/Semantic/Instance 입력을 시작하지 않는 별도 profile이 Phase 3에 필요하다.
+기본 `competition` stream profile은 Object/Semantic/Instance socket과 publisher를 생성하지 않는다.
+`development`는 이 입력을 추가하지만 local transport에서만 허용된다. CLI를 우회해
+launch를 직접 실행해도 bridge node가 `lan2lan + development`를 거부한다.
+
+VLP16은 기본 `lidar_frame_mode=azimuth`로 packet의 물리 회전 경계를 검출한다. 고정 75 packet
+조립은 v3에서 약 8 Hz로 잘못 보였고, azimuth 조립 뒤 약 12 Hz로 측정됐다. 이는 프레이밍은
+바로잡은 결과다. v3 설정과 손재호 소비 loop는 15 Hz이고 실제 완성 scan 약 12 Hz는 허용한다.
+없는 scan을 복제하지 않으며 diagnostics의 `raw_packet_hz`, `packets_per_frame_median`,
+`interval_hz`를 함께 확인한다.
 
 GPS/IMU 원본 datagram은 기본값으로 `127.0.0.1:9401/9403`에도 복제된다. 이는 단일 MORAI UDP를
 동시에 소비하던 standalone planner 호환 경로다. 현재 consumer가 이를 요구하는지 Phase 3
@@ -91,7 +111,7 @@ GPS/IMU 원본 datagram은 기본값으로 `127.0.0.1:9401/9403`에도 복제된
 
 - GPS offset은 UTM52N에서 `(302595, 4124145) m`를 뺀 K-City `map` 좌표다.
 - `GPSMessage.eastOffset/northOffset`에 같은 값을 넣어 consumer 변환과 일치시킨다.
-- `base_link→velodyne` static TF는 기본 발행하며 v2 pose `(0.80, 0, 1.45) m`를 쓴다.
+- `base_link→velodyne` static TF는 기본 발행하며 v2/v3 공통 pose `(0.80, 0, 1.45) m`를 쓴다.
 - raw GPS+latest IMU의 `map→base_link`는 `publish_map_tf=false`가 기본이다.
 - localization이 authoritative `map→base_link`를 발행할 때 sensor bridge TF를 동시에 켜지 않는다.
 
@@ -100,7 +120,7 @@ GPS/IMU 원본 datagram은 기본값으로 `127.0.0.1:9401/9403`에도 복제된
 본선 후보 source는 GPS+IMU adapter다.
 
 ```bash
-roslaunch vehicle_state vehicle_state.launch
+roslaunch asmc_bridge vehicle_state.launch
 ```
 
 | 항목 | 현재 계약 |
@@ -124,14 +144,30 @@ fallback으로 자동 선택하지 않는다.
 ```bash
 cd /root/ws
 source devel/setup.bash
-./scripts/udp_bridge.sh --simulator 26r1
-roslaunch vehicle_state vehicle_state.launch
+./scripts/udp_bridge.sh
 ```
 
-`--simulator 26r1|competition`은 현재 `simulator_profile` 진단 라벨과 packet provenance만
-선택한다. 포트·IP·허용 stream을 바꾸는 transport profile이 아니다. 특히
-`--simulator competition`만으로 현장 IP, `9093/9094`, Competition Vehicle Status 또는 GT
-비활성화가 적용되지 않는다.
+26r1과 대회판 모두 `morai_udp` runtime을 쓰므로 bridge 명령에서 simulator를 선택하지 않는다.
+release별 MORAI import는 UI에서 선택하고, bridge에서는 transport만 선택한다.
+
+현장 후보에서는 `--transport lan2lan`을 지정한다. 스크립트는 `asmc_bridge/bridge.launch`를
+기동해 Network/Sensor bridge와 GPS/IMU `/vehicle/state`를 함께 연다. 두 release에 대응하는 generated
+MORAI JSON 경로와 Ctrl 대상 IP를 출력하며 diagnostics에도 transport 이름을 남긴다.
+
+수신 socket은 어느 profile에서도 같은 port의 `0.0.0.0`에 bind한다. 명시적 transport는 주로
+Ctrl 송신 목적지를 `127.0.0.1` 또는 `192.168.0.1`로 결정하고 잘못된 현장 송신을 fail-closed로
+막기 위한 것이다. 수신 sender를 보고 자동 선택하면 첫 packet 전 제어, mirrored/NAT와 다중
+NIC에서 모호하므로 사용하지 않는다.
+
+기본 local에서는 Competition 입력을 열어 두되 packet이 없으면 diagnostics를
+`OK: optional; no data`로 낸다. 주최 현장판을 검사할 때만 다음처럼 필수화한다.
+
+```bash
+./scripts/udp_bridge.sh --transport lan2lan --require-competition-status
+./scripts/docker_ros_up.sh verify-field 30 molitcomp03
+```
+
+`/vehicle/state`는 GPS+IMU에서 만든 독립 팀 메시지이므로 `/Competition_topic` 부재와 무관하다.
 
 다른 터미널에서:
 
@@ -143,7 +179,7 @@ rostopic echo /vehicle/state -n1
 ```
 
 diagnostics의 `interval_hz`, `last_message_age_sec`, parse error, processing/assembly p95와 timestamp
-fallback을 함께 본다. topic rate 하나만으로 Windows ingress, UDP loss, decoder와 ROS scheduling
+fallback을 함께 본다. LiDAR는 `raw_packet_hz`와 `packets_per_frame_median`도 본다. topic rate 하나만으로 Windows ingress, UDP loss, decoder와 ROS scheduling
 중 어디서 손실됐는지 단정하지 않는다.
 
 ## 6. build와 회귀 검사
@@ -152,8 +188,8 @@ ROS Noetic container에서:
 
 ```bash
 ./scripts/build_ws.sh
-catkin_make run_tests_morai_udp_bridge run_tests_morai_sensor_bridge
-./devel/lib/vehicle_state/vehicle_state_adapter_test
+catkin_make run_tests_asmc_bridge
+./devel/lib/asmc_bridge/vehicle_state_adapter_test
 ```
 
 이전에 `CATKIN_WHITELIST_PACKAGES`로 일부 package만 configure한 workspace라면 먼저 whitelist를
@@ -178,41 +214,52 @@ make target”으로 실패할 수 있다.
 실제 rate·latency 값은 [transport 기록](../../records/simulator/runtime-transport-2026-09.md)에
 날짜와 환경을 붙여 남긴다. 특정 측정값을 package guide의 영구 성능으로 복사하지 않는다.
 
-## 7. Phase 3 통합 설계 경계
+## 7. Phase 3 계약 경계
 
-목표 조합은 `simulator_profile × transport_profile × sensor_profile`이다.
+계약 조합은 `runtime_protocol × simulator_release × transport_profile × sensor_set`이다.
 
 | 축 | 예 | 책임 |
 |---|---|---|
-| simulator | `26r1_h3`, `25s4_molitcomp03` | packet/message 호환과 provenance |
-| transport | `dev_local`, `competition_lan` | IP, port, direction, allowlist |
-| sensor | `autonav_v2`, `autonav_competition_15hz`, `dev_gt` | pose, rate와 센서 종류 |
+| runtime | `morai_udp` | 공통 packet adapter와 ROS topic |
+| simulator release | `26r1`, `molitcomp03` | MORAI import schema와 provenance |
+| transport | `local`, `lan2lan` | IP, port, direction, allowlist |
+| sensor | `ASMC_sensor_set_v1/v2/v3/GT` | pose, rate와 센서 종류 |
 
 확정된 목표:
 
 - 개발·현장의 채널과 포트는 같고 IP만 profile로 분리한다.
 - Ctrl `9093/9094`, mode 2
-- Competition Vehicle Status `7603/7502`
+- MolitComp Competition Vehicle Status `9797/9798`, type 787
+- TrafficLight status `7603/7502`, type 258은 simulator oracle이며 bridge 입력이 아님
+- GetTrafficLight/MoraiTLServiceProvider type 778은 조사한 export에 없고 필수 계약이 아님
 - CollisionData `9091/9092`
 - Autonav v2 sensor `9290~9303`
 - 개발 IP 양쪽 `127.0.0.1`
 - 현장 MORAI `192.168.0.1`, Autonav `192.168.0.10`
-- VLP16은 MORAI UI 저장본으로 15 Hz를 만들고 30초 평균 14~16 Hz를 확인한다.
+- VLP16은 MORAI UI 저장본과 손재호 소비 loop를 15 Hz로 유지한다. 실제 완성 scan 약 12 Hz는
+  허용하며 중복 재발행하지 않는다.
+
+P3-A/P3-B 산출물은 [`config/bridge`](../../../config/bridge/)와
+[`config/morai`](../../../config/morai/)에 있다. 26r1/대회판 raw export는 entry 수와
+`PUBSUB_TYPE`이 달라 template을 분리하고, transport별 IP는 generator가 일괄 적용한다.
 
 JSON의 `sensorPeriod`만 추측해 고치지 않는다. 10 Hz baseline과 손재호 tracking 결과, packet
 loss, processing latency와 CPU/GPU를 비교한다. 현장 실제 두 PC, firewall·route·restart·offline
 복구는 Phase 6 gate이며 개발 PC loopback 성공으로 대신하지 않는다.
 
-## 8. 이관·삭제 gate
+## 8. P3-G local closeout 결과와 남은 gate
 
-1. 현재 package/topic/port/timestamp baseline을 다시 캡처한다.
-2. 새 profile schema와 packet fixture를 추가하되 기존 launch는 유지한다.
-3. parser와 vehicle-state core를 동작 변경 없이 새 namespace로 이식한다.
-4. raw bag replay에서 topic type/count/rate/frame/unit parity를 확인한다.
-5. dev MORAI에서 sensor, 상태와 Ctrl closed-loop를 검증한다.
-6. competition allowlist와 15 Hz를 별도 승인한다.
-7. planning 공동 소유 `integration_launch` 변경을 판제와 리뷰한다.
-8. 한 릴리스의 rollback 경로 뒤 기존 세 package 삭제 여부를 결정한다.
+1. package/topic/port/timestamp baseline과 local live 결과를 P3-E에서 캡처했다.
+2. parser, sensor decoder, state core와 fixture/test를 동작 변경 없이 `asmc_bridge`로 옮겼다.
+3. planning launch dependency도 `asmc_bridge`로 전환했다.
+4. full build, local live topic과 정지 Ctrl post-move smoke를 통과해 P3-F를 닫았다.
+5. 참가팀 local은 `/Competition_topic`을 선택 사항으로 닫고, 주최판에서만 명시적으로
+   필수화하는 P3-G 계약과 회귀 검사를 추가했다.
+6. Competition Vehicle Status 실제 packet과 두 PC LAN2LAN은 별도 현장 gate로 남긴다.
 
-단일 패키지가 만들어졌다는 이유만으로 기존 bridge를 삭제하지 않는다. packet format, sensor
-decode와 상태 추정은 서로 다른 실패 경계를 가지므로 내부 모듈과 테스트도 그 경계를 유지한다.
+P3-G HEAD의 현재 graph는 `674 tests, 0 errors, 0 failures`이며 `asmc_bridge` 자체는 14개다.
+
+단일 패키지 안에서도 Network/Sensor/VehicleState는 별도 node·소스 디렉터리·테스트로 실패
+경계를 유지한다. 배포 단위만 하나이며 diagnostics topic 이름도 기존 소비자 호환을 보존한다.
+물리 통합 증거는 [P3-F baseline](../../records/baselines/bridge-p3f-consolidated-v1.md), local
+closeout 판단은 [P3-G baseline](../../records/baselines/bridge-p3g-local-closeout-v1.md)에 보존한다.

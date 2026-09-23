@@ -1,4 +1,4 @@
-source_sensor_set: ASMC_sensor_set_v2.json
+source_sensor_set: config/morai/sensors/ASMC_sensor_set_v2.json
 source_sha256: 0fa5c92f1e94903be03ff50916155b3d6f49d990658d1e87a0e05c50f37a7428
 
 # MORAI mounts are expressed from the rear-axle-centre vehicle reference.

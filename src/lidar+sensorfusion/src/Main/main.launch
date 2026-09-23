@@ -1,7 +1,7 @@
 <launch>
   <!-- MORAI sends VLP-16 packets (Velodyne product ID 0x22). -->
   <arg name="lidar_port" default="9299"/>
-  <!-- Keep this false when 2026-ASMC/morai_sensor_bridge publishes
+  <!-- Keep this false when 2026-ASMC/asmc_bridge sensor node publishes
        /velodyne_points. Set true only for direct raw Velodyne UDP input. -->
   <arg name="start_velodyne_driver" default="false"/>
   <arg name="rviz" default="false"/>

@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 
-DEFAULT_REQUIRED_TOPICS = (
+COMPETITION_COMMON_REQUIRED_TOPICS = (
     "/Ego_topic",
     "/image_jpeg/compressed",
     "/cam_left/image_jpeg/compressed",
@@ -20,9 +20,18 @@ DEFAULT_REQUIRED_TOPICS = (
     "/velodyne_points",
     "/gps",
     "/imu",
+    "/vehicle/state",
 )
 
-GT_REQUIRED_TOPICS = DEFAULT_REQUIRED_TOPICS + (
+DEVELOPMENT_EXTRA_TOPICS = (
+    "/Object_topic",
+    "/sem_front/image_jpeg/compressed",
+    "/sem_left/image_jpeg/compressed",
+    "/sem_right/image_jpeg/compressed",
+    "/velodyne_points_instance",
+)
+
+COMPETITION_FORBIDDEN_TOPICS = (
     "/Object_topic",
     "/sem_front/image_jpeg/compressed",
     "/sem_left/image_jpeg/compressed",
@@ -32,6 +41,7 @@ GT_REQUIRED_TOPICS = DEFAULT_REQUIRED_TOPICS + (
 
 NOMINAL_RATES_HZ = {
     "/Ego_topic": 50.0,
+    "/Competition_topic": 50.0,
     "/Object_topic": 50.0,
     "/image_jpeg/compressed": 20.0,
     "/cam_left/image_jpeg/compressed": 20.0,
@@ -44,7 +54,23 @@ NOMINAL_RATES_HZ = {
     "/velodyne_points_instance": 10.0,
     "/gps": 5.0,
     "/imu": 50.0,
+    "/vehicle/state": 50.0,
 }
+
+
+def default_required_topics(profile, require_competition_status=False):
+    """Build a capability-based topic gate, independent of MORAI release."""
+    normalized = {"runtime": "competition", "gt": "development"}.get(
+        profile, profile
+    )
+    if normalized not in ("competition", "development"):
+        raise ValueError("profile must be competition or development")
+    topics = COMPETITION_COMMON_REQUIRED_TOPICS
+    if require_competition_status:
+        topics += ("/Competition_topic",)
+    if normalized == "development":
+        topics += DEVELOPMENT_EXTRA_TOPICS
+    return normalized, topics
 
 
 def parse_args():
@@ -52,8 +78,11 @@ def parse_args():
     parser.add_argument("--duration", type=float, default=8.0)
     parser.add_argument("--min-messages", type=int, default=2)
     parser.add_argument(
-        "--profile", choices=("runtime", "gt"), default="runtime",
-        help="runtime checks v2 inputs; gt also checks privileged streaming topics",
+        "--profile",
+        choices=("competition", "development", "runtime", "gt"),
+        default="competition",
+        help=("competition checks the deployment allowlist and absence of privileged "
+              "publishers; development adds Object/Semantic/Instance. runtime/gt are aliases"),
     )
     parser.add_argument(
         "--required-topic",
@@ -65,6 +94,25 @@ def parse_args():
     parser.add_argument(
         "--strict-thresholds", action="store_true",
         help="also fail the documented GT rate and source-pairing gates",
+    )
+    parser.add_argument(
+        "--lidar-target-hz", type=float,
+        help=("optional exact-arrival diagnostic; do not use this to validate the "
+              "v3 configured/consumer 15 Hz requirement because complete scans may "
+              "arrive at about 12 Hz"),
+    )
+    parser.add_argument(
+        "--simulator-release",
+        choices=("molitcomp03", "26r1"),
+        default="molitcomp03",
+        help=("provenance label only; release does not prove that optional "
+              "Competition Vehicle Status is emitted"),
+    )
+    parser.add_argument(
+        "--require-competition-status",
+        action="store_true",
+        help=("field-only gate: require type-787 /Competition_topic in addition "
+              "to the participant runtime topics"),
     )
     return parser.parse_args()
 
@@ -133,9 +181,12 @@ def main():
         raise SystemExit("--duration must be positive")
     if args.min_messages < 1:
         raise SystemExit("--min-messages must be at least 1")
+    if args.lidar_target_hz is not None and args.lidar_target_hz <= 0:
+        raise SystemExit("--lidar-target-hz must be positive")
 
     try:
         import rospy
+        from asmc_msgs.msg import VehicleState
         from morai_msgs.msg import EgoVehicleStatus, GPSMessage, ObjectStatusList
         from diagnostic_msgs.msg import DiagnosticArray
         from sensor_msgs.msg import CompressedImage, Imu, PointCloud2
@@ -144,18 +195,23 @@ def main():
             "ROS message packages are required; run this inside asmc-ros-noetic"
         ) from exc
 
-    defaults = GT_REQUIRED_TOPICS if args.profile == "gt" else DEFAULT_REQUIRED_TOPICS
+    profile, defaults = default_required_topics(
+        args.profile, args.require_competition_status
+    )
     topics = tuple(args.required_topics or defaults)
+    competition_status_required = "/Competition_topic" in topics
     lock = threading.Lock()
     samples = {topic: [] for topic in topics}
     source_stamps = {topic: [] for topic in topics}
     header_ages_ms = {topic: [] for topic in topics}
     source_regressions = {topic: 0 for topic in topics}
     pointcloud_fields = {}
+    valid_vehicle_states = 0
     bridge_diagnostics = {}
     started = time.monotonic()
 
     def callback(message, topic_name):
+        nonlocal valid_vehicle_states
         now = time.monotonic()
         wall_now = time.time()
         with lock:
@@ -172,6 +228,8 @@ def main():
                 pointcloud_fields[topic_name] = {
                     field.name: field.datatype for field in message.fields
                 }
+            if topic_name == "/vehicle/state" and getattr(message, "valid", False):
+                valid_vehicle_states += 1
 
     def diagnostics_callback(message, topic_name):
         values = {}
@@ -188,11 +246,13 @@ def main():
     subscribers = []
     typed_messages = {
         "/Ego_topic": EgoVehicleStatus,
+        "/Competition_topic": EgoVehicleStatus,
         "/Object_topic": ObjectStatusList,
         "/gps": GPSMessage,
         "/imu": Imu,
         "/velodyne_points": PointCloud2,
         "/velodyne_points_instance": PointCloud2,
+        "/vehicle/state": VehicleState,
     }
     for topic in topics:
         message_type = (
@@ -221,13 +281,41 @@ def main():
 
     finished = time.monotonic()
     report = {
+        "stream_profile": profile,
+        "simulator_release": args.simulator_release,
+        "competition_status_required": competition_status_required,
         "duration_seconds": round(finished - started, 6),
         "min_messages": args.min_messages,
         "topics": {},
     }
     failures = []
+    missing_topics = []
+    nominal_rates = dict(NOMINAL_RATES_HZ)
+    if args.lidar_target_hz is not None:
+        nominal_rates["/velodyne_points"] = args.lidar_target_hz
+        nominal_rates["/velodyne_points_instance"] = args.lidar_target_hz
     with lock:
         snapshot = {topic: list(values) for topic, values in samples.items()}
+
+    published_topics = dict(rospy.get_published_topics())
+    forbidden_publishers = (
+        sorted(
+            topic for topic in COMPETITION_FORBIDDEN_TOPICS
+            if topic in published_topics
+        )
+        if profile == "competition" else []
+    )
+    report["forbidden_topic_publishers"] = forbidden_publishers
+    report["valid_vehicle_state_messages"] = valid_vehicle_states
+    if forbidden_publishers:
+        failures.append("privileged:" + ",".join(forbidden_publishers))
+        print(
+            "[FAIL] competition profile exposes privileged publishers: "
+            + ", ".join(forbidden_publishers)
+        )
+    if "/vehicle/state" in topics and valid_vehicle_states == 0:
+        failures.append("/vehicle/state:valid")
+        print("[FAIL] /vehicle/state was never valid during the measurement window")
 
     print("TOPIC                                             COUNT   RATE(Hz)   STATUS")
     for topic in topics:
@@ -239,13 +327,14 @@ def main():
         ok = count >= args.min_messages
         if not ok:
             failures.append(topic)
+            missing_topics.append(topic)
         report["topics"][topic] = {
             "count": count,
             "rate_hz": round(rate, 3),
-            "nominal_rate_hz": NOMINAL_RATES_HZ.get(topic),
+            "nominal_rate_hz": nominal_rates.get(topic),
             "nominal_rate_ratio": (
-                None if not NOMINAL_RATES_HZ.get(topic)
-                else round(rate / NOMINAL_RATES_HZ[topic], 4)
+                None if not nominal_rates.get(topic)
+                else round(rate / nominal_rates[topic], 4)
             ),
             "arrival_intervals": interval_summary(values),
             "header_age_ms": {
@@ -272,7 +361,7 @@ def main():
         subscriber.unregister()
 
     report["ok"] = not failures
-    report["missing_topics"] = failures
+    report["missing_topics"] = missing_topics
     report["bridge_diagnostics"] = bridge_diagnostics
     report["interpretation"] = {
         "nominal_rate_shortfall": (
@@ -287,7 +376,19 @@ def main():
             "subscriber age in source timestamp mode"
         ),
     }
-    if args.profile == "gt":
+    if args.lidar_target_hz is not None and "/velodyne_points" in report["topics"]:
+        lidar_rate = report["topics"]["/velodyne_points"]["rate_hz"]
+        lidar_target_ok = abs(lidar_rate - args.lidar_target_hz) <= 1.0
+        report["lidar_target_gate"] = {
+            "target_hz": args.lidar_target_hz,
+            "tolerance_hz": 1.0,
+            "measured_hz": lidar_rate,
+            "ok": lidar_target_ok,
+        }
+        if args.strict_thresholds and not lidar_target_ok:
+            failures.append("threshold:lidar_target_hz")
+            report["ok"] = False
+    if profile == "development":
         schema = pointcloud_fields.get("/velodyne_points_instance", {})
         schema_ok = schema.get("instance_id") == 6 and "intensity" not in schema
         report["instance_lidar_schema"] = {
@@ -341,6 +442,9 @@ def main():
                 if not ok:
                     failures.append("threshold:" + name)
             report["ok"] = not failures
+    report["failures"] = failures
+    report["missing_topics"] = missing_topics
+    report["ok"] = not failures
     if args.json_out:
         output = Path(args.json_out)
         output.parent.mkdir(parents=True, exist_ok=True)

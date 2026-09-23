@@ -50,7 +50,7 @@ staleness, latency와 자원 사용량을 측정한다.
 |---|---|---|
 | GPS | 1, 최대 30 Hz | 5 Hz |
 | IMU | 1, 최대 50 Hz | 50 Hz |
-| 3D LiDAR | VLP16 Intensity 1, 최대 15 Hz | v2는 10 Hz; 3단계 승인 목표 15 Hz |
+| 3D LiDAR | VLP16 Intensity 1, 최대 15 Hz | v3 설정·손재호 소비 loop 15 Hz; 실제 scan 약 12 Hz 허용 |
 | Camera | 고정 3 + 자유 1, 최대 30 Hz, GT None | 20/20/20/10 Hz |
 
 고정 카메라:
@@ -66,9 +66,9 @@ staleness, latency와 자원 사용량을 측정한다.
 - 차량 제어: Ego Ctrl Cmd, `cmd type 1`, `ctrl mode 2`
 - 상태: Competition Vehicle Status와 CollisionData
 
-LiDAR 15 Hz와 현장 동일 포트는 승인된 후속 요구지만 아직 설정에 적용하지 않았다. 숫자를
-JSON에서 추측해 바꾸지 않고 3단계 `asmc_bridge`에서 MORAI UI 저장본과 30초 이상 실측으로
-검증한다.
+현장 동일 포트·IP 파생 계약과 v3 15 Hz UI 저장본은 적용됐다. 다만 v3는 30초
+실제 완성 scan은 약 12 Hz로 관측됐고 팀 요구상 허용된다. 없는 scan을 복제하지 않으며
+packet/latency/resource와 손재호 tracking 품질을 계속 관찰한다.
 규정의 10 Hz 이하 권장은 의무 상한이 아니며 공식 최대 15 Hz 안에서 팀 목표를 검증한다.
 
 ## 3. 공개 자산과 로컬 배치
@@ -92,13 +92,15 @@ ls "$ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_"*
 
 | 저장소 센서셋 | 용도 |
 |---|---|
-| `config/ASMC_sensor_set_v2.json` | 26.R1.H3 현재 개발·LAN2LAN 이식 기준 |
-| `config/ASMC_sensor_set_GT.json` | Semantic×3 + Instance LiDAR 개발 정답 전용 |
-| `config/ASMC_sensor_set_v1.json` | 과거 재현 전용 |
+| `config/morai/sensors/ASMC_sensor_set_v2.json` | 26.R1.H3 현재 10 Hz 회귀 기준 |
+| `config/morai/sensors/ASMC_sensor_set_v3.json` | 설정·소비 15 Hz 본선본, 실제 scan 약 12 Hz 허용 |
+| `config/morai/sensors/ASMC_sensor_set_GT.json` | Semantic×3 + Instance LiDAR 개발 정답 전용 |
+| `config/morai/sensors/ASMC_sensor_set_v1.json` | 과거 재현 전용 |
 
-현장 자료의 `Autonav_sensor.json`은 이전 제출본 provenance이고 다른 팀 센서셋은 사용하지
-않는다. v2와 이전 Autonav의 의미 있는 차이는 자유 카메라 pitch `328°` 대 `340°`이며 현재
-실행 정본은 v2다. GT 센서셋은 본선 profile에서 사용할 수 없다.
+현장 자료의 `Autonav_sensor_submitted.json`은 이전 제출본 provenance이고 다른 팀 센서셋은 사용하지
+않는다. v2와 이전 Autonav의 의미 있는 차이는 자유 카메라 pitch `328°` 대 `340°`다. 현재
+본선 정본은 같은 pose에서 LiDAR 설정을 15 Hz로 저장한 v3이며, v2는 10 Hz 회귀용이다. GT
+센서셋은 본선 profile에서 사용할 수 없다.
 
 ## 4. 전역경로·체크포인트·HD Map
 

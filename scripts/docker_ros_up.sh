@@ -135,10 +135,23 @@ verify_topics() {
   assert_host_mode
   local duration="${1:-8}"
   local profile="${2:-runtime}"
+  local simulator_release="${3:-molitcomp03}"
+  local require_competition_status="${4:-false}"
   [[ "$duration" =~ ^[0-9]+([.][0-9]+)?$ ]] \
     || die "duration must be a positive number"
+  [[ "$simulator_release" == "molitcomp03" || "$simulator_release" == "26r1" ]] \
+    || die "simulator release must be molitcomp03 or 26r1"
+  [[ "$require_competition_status" == "true" || "$require_competition_status" == "false" ]] \
+    || die "require_competition_status must be true or false"
+  if [ "$require_competition_status" = "true" ] && [ "$simulator_release" != "molitcomp03" ]; then
+    die "Competition Vehicle Status field gate is only defined for molitcomp03"
+  fi
+  local competition_arg=""
+  if [ "$require_competition_status" = "true" ]; then
+    competition_arg="--require-competition-status"
+  fi
   docker exec "$CONTAINER" bash -lc \
-    "cd /root/ws && source /opt/ros/noetic/setup.bash && source devel/setup.bash && python3 scripts/verify_morai_topics.py --profile $profile --duration $duration"
+    "cd /root/ws && source /opt/ros/noetic/setup.bash && source devel/setup.bash && python3 scripts/verify_morai_topics.py --profile $profile --duration $duration --simulator-release $simulator_release $competition_arg"
 }
 
 print_next() {
@@ -146,10 +159,10 @@ print_next() {
 [NEXT] Start the UDP bridge in a separate foreground terminal:
   docker exec -it asmc-ros-noetic bash
   source devel/setup.bash
-  ./scripts/udp_bridge.sh --simulator 26r1
+  ./scripts/udp_bridge.sh
 
 Keep MORAI Host/Destination IP at 127.0.0.1 and keep every port unchanged.
-For the competition simulator, select: ./scripts/udp_bridge.sh --simulator competition
+Field candidate: ./scripts/udp_bridge.sh --transport lan2lan
 EOF
 }
 
@@ -176,10 +189,13 @@ case "$cmd" in
     check_udp_loopback "${2:-39199}"
     ;;
   verify)
-    verify_topics "${2:-8}" runtime
+    verify_topics "${2:-8}" competition "${3:-molitcomp03}" false
+    ;;
+  verify-field)
+    verify_topics "${2:-8}" competition "${3:-molitcomp03}" true
     ;;
   verify-gt)
-    verify_topics "${2:-8}" gt
+    verify_topics "${2:-8}" development "${3:-molitcomp03}"
     ;;
   down)
     "${COMPOSE[@]}" down
@@ -217,7 +233,7 @@ case "$cmd" in
     print_next
     ;;
   *)
-    echo "Usage: $0 {config [show]|build|up|rebuild|build-rtx50|up-rtx50|rebuild-rtx50|status|check [port]|verify [seconds]|verify-gt [seconds]|down}"
+    echo "Usage: $0 {config [show]|build|up|rebuild|build-rtx50|up-rtx50|rebuild-rtx50|status|check [port]|verify [seconds] [molitcomp03|26r1]|verify-field [seconds] [molitcomp03]|verify-gt [seconds] [molitcomp03|26r1]|down}"
     exit 2
     ;;
 esac

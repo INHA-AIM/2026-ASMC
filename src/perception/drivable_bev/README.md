@@ -151,7 +151,7 @@ mosaic는 `publish_per_view_mosaic:=true`일 때만 발행한다. JPEG debug는 
 
 ## Calibration
 
-`config/cameras_v2.yaml`은 `ASMC_sensor_set_v2.json`의 최소 calibration snapshot이다.
+`config/cameras_v2.yaml`은 `config/morai/sensors/ASMC_sensor_set_v2.json`의 최소 calibration snapshot이다.
 기본 launch는 sensor-set SHA-256과 센서 ID, 해상도, FOV, pose를 검사하고 다르면
 시작을 중단한다.
 

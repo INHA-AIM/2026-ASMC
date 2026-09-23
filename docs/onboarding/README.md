@@ -72,7 +72,7 @@ Docker 상태는 network mode가 `host`이고 published port가 없는 상태다
 개발 MORAI 26.R1 프로필은 다음처럼 실행한다.
 
 ```bash
-./scripts/udp_bridge.sh --simulator 26r1
+./scripts/udp_bridge.sh
 ```
 
 현재 개발 설정의 Host/Destination IP는 `127.0.0.1`이다. 현장 IP·9093/9094 등의 승인된
@@ -110,7 +110,8 @@ ROS topic·bridge·runtime 검증은 ROS image를 사용한다.
 
 ```bash
 git status --short
-./scripts/docker_ros_up.sh verify
+./scripts/docker_ros_up.sh verify 8 molitcomp03  # 대회판
+# ./scripts/docker_ros_up.sh verify 8 26r1      # 26.R1 개발판
 ```
 
 | 작업 | 다음 문서 |

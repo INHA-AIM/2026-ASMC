@@ -2,7 +2,7 @@
 
 > **문서 역할:** Working Proposal — 패키지 통합과 본선 배포를 위한 단계별 실행 계획
 > **작성 기준:** 2026-09-20 저장소와 현장 점검 반출 자료의 read-only 감사
-> **진행 상태:** 1단계 P1-A~P1-D 완료, 2단계 P2-A/P2-B compact geometry 완료
+> **진행 상태:** 1·2단계 완료, 3단계 P3-G local closeout 완료. 다음은 P4-A perception baseline
 > **보호 범위:** `behavior_planner`, `frenet_planner`, `mpc_controller`,
 > `planning_control/lane_boundary_adapter` 및 planning 소유 launch는 이 계획의 일방적 이동·삭제 대상이 아니다.
 
@@ -41,8 +41,8 @@
 | `asmc_msgs` | 공용 메시지 25개(기존 동결 13 + additive 12), 현재 정본 | 유지·호환 검증 |
 | `behavior_planner/msg` | planning 소유이며 공용 메시지와 일부 중복 | 1단계에서 수정 금지. planning 협의 후 adapter 또는 별도 이관 |
 | `lidar+sensorfusion/src/Msg` | `TrackedObject*`, `Yolo_bbox*` 4개가 별도 메시지 패키지 | 소비자 이관과 함께 `asmc_msgs`로 흡수 |
-| `morai_udp_bridge` + `morai_sensor_bridge` + `vehicle_state` | 한 외부 경계가 세 패키지로 분산 | `asmc_bridge`로 통합 |
-| `integration_launch` | planning 공동 소유 | 이동하지 않고 새 bridge launch를 include하는 호환 계층만 협의 |
+| `morai_udp_bridge` + `morai_sensor_bridge` + `vehicle_state` | P3-F 이전 세 패키지로 분산 | `asmc_bridge`로 물리 통합 완료 |
+| `integration_launch` | P3-F 이전 planning 공동 launch | consumer launch를 갱신하고 `asmc_bridge/launch`로 통합 완료 |
 | `asmc_hd_map` + `mgeo_toolkit` | runtime·builder는 통합 완료, 외부 toolkit은 provenance 입력 | geometry parity 후 toolkit 의존 축소 |
 | `camera_semantic_perception` + `drivable_bev` + `traffic_light` | 한 camera pipeline이 세 패키지로 분산 | `asmc_perception`의 하위 모듈로 통합 |
 | `morai_3d_detection` + `lidar+sensorfusion/src/Main` | 학습·검증 산출물·runtime·vendor가 혼재 | runtime만 `asmc_perception`으로 이식, offline은 `tools/perception`으로 분리 |
@@ -63,7 +63,7 @@ src/
 ├── asmc_msgs/                 # 팀 내부 message만
 ├── asmc_bridge/
 │   ├── src/asmc_bridge/       # network, sensor, vehicle_state
-│   ├── config/profiles/       # dev_local, competition_lan
+│   ├── config/profiles/       # local, lan2lan
 │   ├── launch/
 │   └── test/
 ├── asmc_hd_map/
@@ -80,7 +80,6 @@ src/
 ├── behavior_planner/          # 판제 소유, 현 위치 유지
 ├── frenet_planner/            # 판제 소유, 현 위치 유지
 ├── mpc_controller/            # 판제 소유, 현 위치 유지
-├── integration_launch/        # 소유자 협의 전 유지
 ├── planning_control/          # 판제 adapter, 현 위치 유지
 └── MORAI-ROS_morai_msgs/      # pinned external dependency
 
@@ -342,20 +341,23 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
 아키텍처이며 현재 `asmc_bridge` package나 환경 profile이 이미 있다는 뜻이 아니다.
 
 - UDP network/sensor decode와 `vehicle_state` 정규화를 한 패키지에 둔다.
-- simulator profile과 transport profile을 분리한다. 예:
-  `25s4_molitcomp03 + competition_lan`, `26r1_h3 + dev_local`.
+- 공통 runtime protocol `morai_udp`와 simulator release, transport profile을 분리한다. 예:
+  `morai_udp + molitcomp03 + lan2lan`, `morai_udp + 26r1 + local`.
 - 외부 `morai_msgs`는 wire adapter에서만 보이고, 내부 node는 가능한 한 `asmc_msgs`를 쓴다.
 - privileged Object/GT 토픽은 개발 profile에서만 허용하며 competition launch에서 시작하지 않는다.
 - 개발과 현장의 **포트와 채널은 동일하게** 만들고 IP만 profile로 바꾼다. 목표 포트는 Ctrl
-  `9093/9094`(mode 2), Competition Vehicle Status `7603/7502`, CollisionData `9091/9092`,
-  v2 sensor `9290~9303`이다. 기존 개발값 Ctrl `9111/9112`, Ego Status `909`는 3단계 전환이
-  검증된 뒤 폐기한다.
-- 현행 v2/제출 Autonav의 VLP16 10 Hz를 손재호 LiDAR runtime 요구에 따라 15 Hz로 바꾼다.
-  JSON 수치만 추측해 고치지 않고 MORAI UI에서 15 Hz 설정 후 재저장해 `sensorPeriod`와
-  `frequencyIndex`를 확인한다. 30초 이상 `/velodyne_points` 평균 14~16 Hz, packet loss,
-  latency/CPU와 tracking 결과를 10 Hz baseline과 비교해야 한다.
-- planning 공동 소유 `integration_launch`는 새 launch를 include하도록 별도 승인받고, 그 전에는
-  변경하지 않는다.
+  `9093/9094`(mode 2), MolitComp Competition Vehicle Status `9797/9798`, CollisionData `9091/9092`,
+  v2/v3 sensor `9290~9303`이다. Ctrl `9111/9112`는 P3-A에서 archive로 격리하고 기본값을
+  `9093/9094`로 전환했다. Ego Vehicle Status는 release별 PUBSUB 차이를 유지하면서 포트를
+  `9088/9099`로 통일했다. P3-B 당시 Competition Vehicle Status를 `7603/7502`로 해석했으나
+  P3-E live/enum 대조에서 type 258 TrafficLight status임을 확인했다. 실제 MolitComp
+  Competition Vehicle Status는 type 787, `9797/9798`이며 참가팀 local에서는 선택 사항이다.
+  정적 decoder·fixture와 ROS topic은 유지하고 주최 현장 수락에서만 explicit gate로 요구한다.
+- 현행 본선 sensor 정본은 v3 설정 15 Hz다. MORAI UI 저장본의 `sensorPeriod`와
+  `frequencyIndex`, 손재호 코드의 소비 loop 15 Hz를 확인했다. 실제 완성 scan은 약 12 Hz여도 허용하며,
+  packet/parse 오류, latency/CPU와 tracking 품질을 계속 관찰한다. 없는 scan을 복제하지 않는다.
+- planning consumer launch는 P3-F에서 `asmc_bridge` component launch를 include하도록 전환했다.
+  이후 launch 계약 변경에는 판제 리뷰를 계속 요구한다.
 
 ### 6.3 `asmc_perception`과 `learning*` 정리
 
@@ -379,8 +381,8 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
 
 ```bash
 ./scripts/asmc build
-./scripts/asmc sim up --profile dev_local
-./scripts/asmc bridge run --profile competition_lan
+./scripts/asmc sim up --profile local
+./scripts/asmc bridge run --profile lan2lan
 ./scripts/asmc map run
 ./scripts/asmc perception run
 ./scripts/asmc debug rviz
@@ -408,37 +410,47 @@ lane/area, checkpoint 3 m radius, active mission, topic rate/staleness를 한 la
 - 시뮬 PC `192.168.0.1` → 참가팀 PC `192.168.0.10`인 LAN profile
 
 현장 센서 폴더에는 다른 팀 설정도 섞여 있다. 우리 팀은 **Autonav**이며,
-`0918sensors.json`을 Autonav 설정 근거로 사용하지 않는다. 현재 실행 정본은
-`config/ASMC_sensor_set_v2.json`, 현장 `Autonav_sensor.json`은 제출 이력 확인용이다.
+`0918sensors.json`을 Autonav 설정 근거로 사용하지 않는다. 현재 본선 실행 정본은
+`config/morai/sensors/ASMC_sensor_set_v3.json`, v2는 10 Hz 회귀 비교용이고 현장
+`Autonav_sensor_submitted.json`은 제출 이력 확인용이다.
 
 두 Autonav 파일의 sensor 구성·주기·UDP 포트는 다음과 같이 동일하다.
 
 | 입력 | 시뮬 host | 팀 PC destination | 주기 |
 |---|---:|---:|---:|
 | Camera 1/2/3/4 | 9290/9292/9294/9296 | 9291/9293/9295/9297 | 20/20/20/10 Hz |
-| VLP16 | 9298 | 9299 | 10 Hz(현재), 15 Hz(3단계 목표) |
+| VLP16 | 9298 | 9299 | v3 설정·소비 15 Hz, 실제 완성 scan 약 12 Hz 허용 |
 | GPS | 9300 | 9301 | 5 Hz |
 | IMU | 9302 | 9303 | 50 Hz |
 
-semantic 차이는 자유 카메라 4번 pitch가 현재 v2 `328°`, 제출본 `340°`인 한 항목뿐이다.
-현재 실행 기준은 v2 `328°`를 유지한다.
+semantic 차이는 자유 카메라 4번 pitch가 v2/v3 `328°`, 제출본 `340°`인 한 항목뿐이다.
+현재 실행 기준은 v3 `328°`를 유지한다.
 
 현장 `2026_molit_comp_network.json`의 Ctrl profile에는 Host `192.168.0.1:9093`, Destination
-`192.168.0.10:9094`가 들어 있고, Competition Vehicle Status `7603/7502`, Collision
-`9091/9092` 등 non-loopback port pair가 저장돼 있다. Ctrl은 팀 PC에서 시뮬 Host로 보내는
+`192.168.0.10:9094`가 들어 있고, Competition Vehicle Status `9797/9798`, TrafficLight status
+`7603/7502`, Collision `9091/9092` 등 non-loopback port pair가 저장돼 있다. Ctrl은 팀 PC에서 시뮬 Host로 보내는
 채널이므로 JSON 필드의 나열 순서를 패킷 진행 방향으로 해석하지 않는다. PUBSUB enum과 UI
 이름은 실제 simulator 화면에서 다시 대조한다.
 
-3단계에서 개발도 이 포트를 사용하도록 맞춘다. `dev_local`은 양쪽 IP가 `127.0.0.1`,
-`competition_lan`은 시뮬 `192.168.0.1`과 팀 PC `192.168.0.10`이며 **IP만 다르다**. 이 변경은
-P1-A 범위가 아니므로 현재 bridge·sensor/network config에는 아직 적용하지 않았다.
+P3-A에서 개발 Ctrl도 `9093/9094`로 맞추고 `local`과 `lan2lan` network JSON을
+release별 template에서 생성하도록 했다. 두 transport는 포트·mode가 같고 IP만 다르다.
+Competition Vehicle Status는 참가팀 local에서 선택 사항으로 닫았고, 주최판 live capture 승인과
+실제 두 PC 검증은 아직 남았다.
+정적 decoder·fixture·ROS publish 계약은 P3-B, privileged stream allowlist와 v2/v3
+sensor local/lan2lan IP 파생본은 P3-C에서 적용했다.
+P3-D에서 `asmc_bridge` canonical launch façade와 기본 GPS/IMU `/vehicle/state` composition을
+추가했다. P3-E에서 local sensor/state, Ctrl closed loop와 bag replay parity를 확인한 뒤 P3-F에서
+기존 세 node package와 `integration_launch`를 `asmc_bridge` 하나로 물리 통합했다. node/topic/
+diagnostics 이름은 소비자 호환을 위해 유지한다.
 
 ### 7.2 배포 원칙
 
-- `dev_local`과 `competition_lan`을 명시적으로 선택하며 자동 IP 추측을 금지한다.
+- `local`과 `lan2lan`을 명시적으로 선택하며 자동 IP 추측을 금지한다.
 - 3단계에서 생성한 두 profile은 포트·채널·Ctrl mode가 같고 Host/Destination IP만 달라야 한다.
-- 본선 팀 PC에서는 native Linux Docker `network_mode: host`를 우선 후보로 검증한다.
-  WSL/Docker Desktop host networking의 localhost 실측을 LAN ingress 보장으로 간주하지 않는다.
+- Windows 개발·현장점검 PC에서는 WSL mirrored networking과 Docker Desktop host networking을
+  조합해 Windows LAN IP와 동일 UDP port가 WSL/container까지 유지되는지 검증한다. 최종 본선
+  팀 PC가 native Linux라면 같은 port 계약으로 `network_mode: host`를 다시 검증한다. 어느 쪽도
+  localhost 실측만으로 LAN ingress를 보장했다고 간주하지 않는다.
 - NIC 고정 IP·netmask·route는 운영 요원 확인값을 사용하고 Wi-Fi/다중 route 간섭을 제거한다.
 - 필요한 UDP만 host firewall에 허용하고, bind 충돌은 시작 전에 `ss`로 검사한다.
 - 이미지 tag, image digest, git commit, map bundle hash, model hash, network profile hash를 한
@@ -455,8 +467,8 @@ P1-A 범위가 아니므로 현재 bridge·sensor/network config에는 아직 �
 6. 15분 이상 full stack 주행, CPU/GPU/RAM/packet drop 기록
 7. bridge 또는 perception node 단독 재시작 후 복구 확인
 8. 네트워크 단절·시뮬 reset·checkpoint respawn 절차 확인
-9. VLP16을 30초 이상 측정해 `/velodyne_points` 평균 14~16 Hz, packet loss와 손재호 tracking
-   결과를 확인하고 10 Hz baseline과 비교
+9. VLP16 설정·손재호 소비 loop 15 Hz와 `/velodyne_points` 실제 완성 scan률을 함께 기록하고,
+   packet/parse 오류와 tracking 품질을 확인한다. 약 12 Hz 실제 입력은 허용한다.
 
 결과가 통과하면 `operations/README.md`의 competition 절과 UDP 치트시트를 현장 profile로
 갱신한다. 개발 profile의 localhost 값은 별도 절에 보존한다.
@@ -468,7 +480,7 @@ P1-A 범위가 아니므로 현재 bridge·sensor/network config에는 아직 �
 | `src/learning` | 문서 index와 README 참조 0 |
 | `src/learning_by_cheating` | scenario runner·진단·문서 참조 0, BEV/map 기능 parity |
 | `src/asmc_hd_map/development/won_tae_link_node` | H5 provenance를 외부 immutable artifact로 보관하고 compact map 재생성 parity 통과 |
-| `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state` | `asmc_bridge` bag replay + 현장 profile smoke 통과 |
+| `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`, `integration_launch` | P3-E local live·Ctrl·bag replay 통과 후 P3-F에서 제거 완료; LAN2LAN은 별도 Phase 6 gate |
 | `camera_semantic_perception`, `drivable_bev`, `traffic_light`, `data_collection` | 새 launch topic/latency/output parity 통과 |
 | 중복 `Msg`, 중복 `morai_msgs` | 모든 consumer include/import 교체 및 clean build |
 | 루트 legacy scripts | `scripts/asmc` 대응 명령·문서·CI가 존재하고 호환 기간 종료 |
@@ -478,8 +490,12 @@ rosbag, model checkpoint와 주최 배포 원본은 repo로 옮기지 않고 `$A
 
 ## 9. 다음 착수점
 
-**P1-A~P1-D와 P2-A~P2-D를 포함한 2단계는 완료됐다.** `asmc_hd_map`은 최종 차선,
-주행가능영역, metadata, global/local runtime publisher, 검증기와 개발 source 비교 화면을
-소유한다. 다음 작업은 3단계 `asmc_bridge` 통합과 dev/competition 네트워크·센서 profile이다.
-이때 현장 동일 포트와 LiDAR 15 Hz 요구를 적용하되, 기존 bridge는 bag replay와 packet test를
-통과하기 전까지 삭제하지 않는다. LAN2LAN 실제 두 PC 리허설은 6단계 gate에서 진행한다.
+**P1-A~P1-D, P2-A~P2-D와 P3-A~P3-G의 local 범위는 완료됐다.** `asmc_hd_map`과
+`asmc_bridge`는 각각 단일 package/runtime 계약을 소유한다. 다음 작업은 패키지를 옮기기 전
+`P4-A perception runtime baseline`이다. camera, LiDAR, traffic-light, BEV, fitting, fusion,
+recorder의 package/topic/type/frame/timestamp/model SHA와 배포 금지 oracle을 먼저 동결한다.
+그 뒤 façade와 물리 이관, 중복 `Msg`/`morai_msgs` 및 `learning*` 제거 gate를 순서대로 진행한다.
+
+실제 두 PC LAN2LAN은 팀원 측 코드 준비와 perception 통합, 최소 단일 실행 진입점 이후 Phase 6
+리허설에서 수행한다. P3-G의 `--require-competition-status`는 그때 주최판 type 787 수락 gate로
+사용하며 local 개발 완료를 막지 않는다.

@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>asmc_bridge</name>
+  <version>0.1.0</version>
+  <description>Canonical ASMC MORAI network/sensor UDP bridge and normalized vehicle state.</description>
+
+  <maintainer email="autonav@todo.todo">autonav</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>asmc_msgs</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>morai_msgs</depend>
+  <depend>roscpp</depend>
+  <depend>rospy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <exec_depend>tf2_ros</exec_depend>
+
+  <export/>
+</package>

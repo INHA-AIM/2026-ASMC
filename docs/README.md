@@ -41,7 +41,7 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 |---|---|---|
 | 대회 규정·공개 자산 | 주최 측 최신 원문 → [대회 요약](./competition/README.md) | 공식 원문이 항상 우선. 요약 문서를 함께 갱신 |
 | Docker·시뮬 통신·포트 | [운영 가이드](./operations/README.md) | 현재 적용값과 3단계 목표를 혼용하지 않음 |
-| bridge 구현·통합 gate | [MORAI bridge guide](./packages/asmc_bridge/README.md) | 현재 세 패키지와 아직 없는 `asmc_bridge`를 구분 |
+| bridge 구현·통합 gate | [MORAI bridge guide](./packages/asmc_bridge/README.md) | `asmc_bridge` façade와 보존된 하위 패키지를 구분 |
 | perception 구현·통합 gate | [Perception package-group guide](./packages/asmc_perception/README.md) | 현재 분산 패키지와 아직 없는 `asmc_perception`을 구분 |
 | Git·ownership | [협업 규칙](./governance/README.md)과 [ownership](./onboarding/ownership.md) | 과거 Phase 0/Path A 문서보다 우선 |
 | 공용 계약 탐색·변경 gate | [계약 문서 허브](./contracts/README.md) | 실제 구현은 링크된 개별 계약과 기계 정본을 함께 확인 |
@@ -73,6 +73,13 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 | [architecture-overview.md](./architecture/system-overview.md) | 전체 모듈과 현재 목표 구조 요약 | Working Overview |
 | [repository-consolidation-roadmap.md](./architecture/consolidation-roadmap.md) | msg·bridge·HD Map·perception 4-패키지 통합, 체크포인트/미션, 현장 배포 단계 | Working Proposal |
 | [baselines/runtime-baseline-v1.md](./records/baselines/runtime-v1.md) | P1-A 당시 package/topic/message/sensor/bag/HD Map snapshot | Frozen Snapshot (`73c0a8c`) |
+| [P3-A bridge baseline](./records/baselines/bridge-p3a-v1.md) | 공통 `morai_udp`, transport/network/sensor profile과 bridge source/topic SHA | Frozen P3-A Baseline |
+| [P3-B Competition status baseline](./records/baselines/bridge-p3b-v1.md) | decoder·fixture와 당시 잘못된 port 해석; P3-E 정정 포함 | Frozen P3-B Baseline |
+| [P3-C stream/sensor transport baseline](./records/baselines/bridge-p3c-v1.md) | 본선 allowlist, local-only oracle, v2/v3 sensor IP 파생 계약 | Frozen P3-C Baseline |
+| [P3-D bridge façade baseline](./records/baselines/bridge-p3d-v1.md) | Network·Sensor·VehicleState 단일 launch와 rollback 경계 | Frozen P3-D Baseline |
+| [P3-E local live baseline](./records/baselines/bridge-p3e-local-live-v1.md) | MolitComp03 v3 rate, azimuth framing과 Competition header 차단 gate | Active Baseline |
+| [P3-F consolidated baseline](./records/baselines/bridge-p3f-consolidated-v1.md) | bridge 4→1 package 이관, build/test와 post-move local smoke | Active Baseline |
+| [P3-G local closeout baseline](./records/baselines/bridge-p3g-local-closeout-v1.md) | 참가팀 local과 주최 현장 Competition status gate 분리 | Active Baseline |
 | [contracts/hd-map-topic-contract-v1.md](./contracts/hd-map/topic-v1.md) | P1-B `asmc_msgs` HD Map·체크포인트·미션 message/topic 계약 | Frozen Interface |
 | [contracts/kcity2025-competition-metadata-v1.md](./contracts/competition/kcity2025-metadata-v1.md) | P1-C 공식 체크포인트 projection과 권위별 mission-zone 정본 | Frozen Metadata |
 | [contracts/hd-map-runtime-visualization-v1.md](./contracts/hd-map/runtime-v1.md) | 2단계 global/local ROS publisher, RViz와 paint-gap 소비 규칙 | Active Runtime |
@@ -93,9 +100,10 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 | [morai-msgs-versions.md](./records/simulator/morai-msgs-versions.md) | 26.R1과 대회 msg 차이 조사 기록 | Version Reference |
 | [2026-09 transport 검증](./records/simulator/runtime-transport-2026-09.md) | host network, rate/latency와 종료된 GT 실험 | Experiment Record |
 | [MORAI bridge 개발·통합](./packages/asmc_bridge/README.md) | 현재 parser/state 경계와 Phase 3 이관 gate | Active Package-Group Guide |
+| [Bridge profile contract](../config/bridge/README.md) | release×transport network 생성, Ctrl 9093/9094, 센서셋 v1/v2/v3/GT | Machine Contract Guide |
 
 MORAI 화면에 입력할 값만 필요하면
-[UDP 치트시트](../config/morai_udp_sim_cheat_sheet.md)를 사용한다. 상세 설명과 장애 대응은
+[UDP 치트시트](../config/morai/udp-sim-cheat-sheet.md)를 사용한다. 상세 설명과 장애 대응은
 치트시트가 아니라 운영 가이드에서 관리한다.
 
 ### 3.4 Planning/Control
@@ -155,7 +163,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | 하려는 작업 | 먼저 볼 문서 | 다음 문서 |
 |---|---|---|
 | 처음 실행 | [개발 시작](./onboarding/README.md) | [운영 가이드](./operations/README.md) |
-| UDP 센서가 안 들어옴 | [운영 가이드](./operations/README.md) | [UDP 치트시트](../config/morai_udp_sim_cheat_sheet.md) |
+| UDP 센서가 안 들어옴 | [운영 가이드](./operations/README.md) | [UDP 치트시트](../config/morai/udp-sim-cheat-sheet.md) |
 | bridge parser·timestamp·vehicle state 수정 | [MORAI bridge guide](./packages/asmc_bridge/README.md) | [운영 gate](./operations/README.md#7-변경-범위별-시뮬-검증) |
 | Git 작업·PR | [협업 규칙](./governance/README.md) | [ownership](./onboarding/ownership.md), [CONTRIBUTING](../CONTRIBUTING.md) |
 | 본선 허용 여부 판단 | [대회 환경](./competition/README.md) | [운영 가이드](./operations/README.md) |
@@ -184,14 +192,12 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | [asmc_hd_map guide](../src/asmc_hd_map/README.md) | HD Map builder/runtime/source comparison 개발·검증 |
 | [asmc_msgs guide](../src/asmc_msgs/README.md) | 공용 ROS1 message 소유·호환·추가 절차 |
 | [MORAI bridge guide](./packages/asmc_bridge/README.md) | 현재 bridge/state 구현과 Phase 3 통합 gate |
+| [asmc_bridge quick start](../src/asmc_bridge/README.md) | 단일 bridge 패키지 실행·component launch |
 | [Perception package-group guide](./packages/asmc_perception/README.md) | 현재 camera/BEV/LiDAR/traffic/data 경계와 Phase 4 gate |
 | [Planning/Control package-group guide](./packages/planning-control/README.md) | 현재 Behavior/Frenet/MPC 경계, legacy와 변경 gate |
 | [Handoff index](./handoffs/README.md) | 파트 간 인수 조건과 deployment/legacy 상태 |
 | [Records index](./records/README.md) | 특정 시점의 baseline·실험·검수 결과와 현재 권위 |
 | [Archive index](./archive/README.md) | 현재 실행 금지인 과거 설계와 대체 문서 |
-| [morai_udp_bridge](../src/morai_udp_bridge/README.md) | Network UDP·Ctrl 빠른 시작 |
-| [morai_sensor_bridge](../src/morai_sensor_bridge/README.md) | Sensor UDP decode 빠른 시작 |
-| [vehicle_state](../src/vehicle_state/README.md) | GPS/IMU 상태 정규화와 배타적 source |
 | [src/perception](../src/perception/README.md) | 인지 파트 상태·코드·문서 지도 |
 | [twinlite_morai](../src/perception/twinlite_morai/README.md) | binary/4-class 2-head 학습 adapter와 현재 후보 |
 | [drivable_bev](../src/perception/drivable_bev/README.md) | 3-camera fused metric BEV, 범위 audit와 calibration/live gate |

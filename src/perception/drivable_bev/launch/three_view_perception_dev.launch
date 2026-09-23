@@ -6,7 +6,7 @@
   <arg name="batch_wait_ms" default="20.0"/>
   <arg name="verify_sensor_set" default="true"/>
   <arg name="sensor_set_path"
-       default="$(find drivable_bev)/../../../config/ASMC_sensor_set_v2.json"/>
+       default="$(find drivable_bev)/../../../config/morai/sensors/ASMC_sensor_set_v2.json"/>
   <arg name="bev_grid_config"
        default="$(find drivable_bev)/config/bev_grid_dev.yaml"/>
   <arg name="visualization_config"
