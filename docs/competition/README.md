@@ -98,8 +98,9 @@ ls "$ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_"*
 | `config/morai/sensors/ASMC_sensor_set_v1.json` | 과거 재현 전용 |
 
 현장 자료의 `Autonav_sensor_submitted.json`은 이전 제출본 provenance이고 다른 팀 센서셋은 사용하지
-않는다. v2와 이전 Autonav의 의미 있는 차이는 자유 카메라 pitch `328°` 대 `340°`이며 현재
-실행 정본은 v2다. GT 센서셋은 본선 profile에서 사용할 수 없다.
+않는다. v2와 이전 Autonav의 의미 있는 차이는 자유 카메라 pitch `328°` 대 `340°`다. 현재
+본선 정본은 같은 pose에서 LiDAR 설정을 15 Hz로 저장한 v3이며, v2는 10 Hz 회귀용이다. GT
+센서셋은 본선 profile에서 사용할 수 없다.
 
 ## 4. 전역경로·체크포인트·HD Map
 

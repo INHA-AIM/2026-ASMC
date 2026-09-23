@@ -19,7 +19,7 @@ fi
 if [[ "$start_velodyne_driver" == "true" ]] &&
    ss -H -lun "sport = :9299" 2>/dev/null | grep -q .; then
     echo "ERROR: UDP 9299 is already in use." >&2
-    echo "Use morai_sensor_bridge with START_VELODYNE_DRIVER=false," >&2
+    echo "Use the asmc_bridge sensor node with START_VELODYNE_DRIVER=false," >&2
     echo "or stop the other UDP receiver before enabling the local driver." >&2
     exit 1
 fi

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "baseline_id": "p3e_bridge_local_live_v1",
+  "baseline_id": "p3f_bridge_consolidated_v1",
   "runtime_protocol": {
     "id": "morai_udp",
     "release_behavior_split": false,
@@ -13,7 +13,7 @@
   "defaults": {
     "transport_profile": "local",
     "stream_profile": "competition",
-    "sensor_set": "v2"
+    "sensor_set": "v3"
   },
   "stream_profiles": {
     "competition": {
@@ -58,43 +58,39 @@
   },
   "implementation_baseline": {
     "packages": [
-      "asmc_bridge",
-      "integration_launch",
-      "morai_udp_bridge",
-      "morai_sensor_bridge",
-      "vehicle_state"
+      "asmc_bridge"
     ],
     "artifacts": {
       "facade_launch": {
         "path": "src/asmc_bridge/launch/bridge.launch",
-        "sha256": "60451a46223541a56fced7e687e6e8250ef4b8c887cce9fc4bb59892b03c7ebd"
+        "sha256": "69ed73e32210ac9e968c7b33f92dcb343932f5f513206cf9ec64a11c85ab0db2"
       },
       "facade_package": {
         "path": "src/asmc_bridge/package.xml",
-        "sha256": "1d99ce237d69bad39f932b811ded7c206233f4e8c08b95a232bf2e2801df1269"
+        "sha256": "f2a36e65654b9eb326f04d8502add3dc94d7f22367247d99880b86a0aec4eb13"
       },
       "entrypoint": {
         "path": "scripts/udp_bridge.sh",
-        "sha256": "e5c55d022ce3a2bf106c2bc44bef1371b53773a1c040d2edfbef53826d76be95"
+        "sha256": "0df5a840460b3937f233eeacf24df2fd7c736012eb094daa9198a068a266260d"
       },
-      "integration_launch": {
-        "path": "src/integration_launch/launch/morai_udp_bridges.launch",
-        "sha256": "af2c186b58538467f757b22da337f98ba03ba76017e63ecc4b8eca2450f81741"
+      "component_launch": {
+        "path": "src/asmc_bridge/launch/morai_udp_bridges.launch",
+        "sha256": "20a099916693068cfc240045bd74582a706d5337d5a586e5bead50e499276b0f"
       },
       "network_launch": {
-        "path": "src/morai_udp_bridge/launch/morai_udp_bridge.launch",
-        "sha256": "cc38aec15c6cbba92dbc1e97807e330d29ce3b2ce3827f0ac409f7cfc9475f6d"
+        "path": "src/asmc_bridge/launch/morai_udp_bridge.launch",
+        "sha256": "41debd8a5511d9e0f8ec897475a4bc931dcdba114476ce8b3e3745c0941467d0"
       },
       "network_node": {
-        "path": "src/morai_udp_bridge/scripts/morai_udp_bridge.py",
+        "path": "src/asmc_bridge/scripts/morai_udp_bridge.py",
         "sha256": "341fd06f596e8640071cf6dc6f9102cde42d6ad479714c96e745443149aad2fa"
       },
       "sensor_launch": {
-        "path": "src/morai_sensor_bridge/launch/morai_sensor_bridge.launch",
-        "sha256": "90cd66f1869de19ab481b17bd9d6802fb9bcd76c1181aeb3347a99fa40687066"
+        "path": "src/asmc_bridge/launch/morai_sensor_bridge.launch",
+        "sha256": "75cb79410bfd0b2621a71d55a703cdaa045249193a3301a6909d567336a9ee0f"
       },
       "sensor_node": {
-        "path": "src/morai_sensor_bridge/scripts/morai_sensor_bridge.py",
+        "path": "src/asmc_bridge/scripts/morai_sensor_bridge.py",
         "sha256": "f1ac1522a04f9f07a1569844768de3e73f8f045ab260822986b290227a5ea321"
       },
       "docker_entrypoint": {
@@ -114,12 +110,12 @@
         "sha256": "04b99b06ecfcf07be4588b4f2bd4517c46862d397b36c9609f14c7c339674e1d"
       },
       "vehicle_state_launch": {
-        "path": "src/vehicle_state/launch/vehicle_state.launch",
-        "sha256": "d9ea6e3d3c7cdaed56cd08a36f5f8fbd26bc534ca05838439ed3185ef7ddfc51"
+        "path": "src/asmc_bridge/launch/vehicle_state.launch",
+        "sha256": "2d5384f34f6f3b34ce74f0cd8be93e161fa77690ab092f2f00a418388f358fab"
       },
       "vehicle_state_node": {
-        "path": "src/vehicle_state/src/vehicle_state_node.cpp",
-        "sha256": "e0151fbf595ba7502844aacc927a479aa55633f64b2fd3c204b2a37b235d10e2"
+        "path": "src/asmc_bridge/src/vehicle_state/vehicle_state_node.cpp",
+        "sha256": "1ee1e2e4693e0486b3f98f2299896942a266fe7a743f6b6d531bee1378f75f14"
       }
     },
     "subscribed_topics": {
@@ -157,8 +153,8 @@
     "vehicle_state_default": true,
     "vehicle_state_source": "gps_imu",
     "lidar_frame_mode": "azimuth",
-    "compatibility_launch": "integration_launch/morai_udp_bridges.launch",
-    "legacy_packages_retained_for_rollback": true
+    "compatibility_launch": "asmc_bridge/morai_udp_bridges.launch",
+    "legacy_packages_retained_for_rollback": false
   },
   "transport_profiles": {
     "local": {
@@ -195,7 +191,7 @@
         "payload_bytes": 152,
         "datagram_bytes": 181,
         "evidence": "on_site_competition_assembly_static_inspection",
-        "fixture_path": "src/morai_udp_bridge/test/fixtures/competition_vehicle_status_181.hex",
+        "fixture_path": "src/asmc_bridge/test/fixtures/competition_vehicle_status_181.hex",
         "fixture_sha256": "8e63bb46396ff4d1919206973380b6c1042bc532f68464961ab9fcd504efb80f",
         "live_acceptance": "pending_molitcomp03_competition_mode_packet_capture"
       }

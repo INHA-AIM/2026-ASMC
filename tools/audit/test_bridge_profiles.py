@@ -13,7 +13,7 @@ from validate_bridge_profiles import validate  # noqa: E402
 class BridgeProfileContractTest(unittest.TestCase):
     def test_repository_contract_is_valid(self):
         result = validate(REPO_ROOT / "config/bridge/bridge_profiles_v1.json")
-        self.assertEqual("p3e_bridge_local_live_v1", result["baseline_id"])
+        self.assertEqual("p3f_bridge_consolidated_v1", result["baseline_id"])
         self.assertEqual("morai_udp", result["runtime_protocol"])
         self.assertEqual("9093/9094 mode 2", result["ctrl"])
         self.assertEqual("9088/9099", result["ego_status"])
@@ -29,18 +29,9 @@ class BridgeProfileContractTest(unittest.TestCase):
         self.assertEqual("competition", result["default_stream_profile"])
         self.assertEqual("asmc_bridge/bridge.launch", result["canonical_launch"])
         self.assertEqual(14, result["published_topic_count"])
-        self.assertEqual(
-            [
-                "asmc_bridge",
-                "integration_launch",
-                "morai_udp_bridge",
-                "morai_sensor_bridge",
-                "vehicle_state",
-            ],
-            result["packages"],
-        )
+        self.assertEqual(["asmc_bridge"], result["packages"])
 
-    def test_10hz_baseline_and_15hz_candidate_are_distinct(self):
+    def test_10hz_regression_and_15hz_deployment_are_distinct(self):
         result = validate(REPO_ROOT / "config/bridge/bridge_profiles_v1.json")
         self.assertAlmostEqual(0.1, result["sensor_sets"]["v2"]["lidar_period_s"])
         self.assertAlmostEqual(1.0 / 15.0, result["sensor_sets"]["v3"]["lidar_period_s"])

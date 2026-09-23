@@ -65,7 +65,7 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | Behavior planner | `src/behavior_planner/` | 정윤태·양서준 | @yuntae12-sudo · @yangseojun |
 | MPC (`mpc_controller_node`, ROS+core) | `src/mpc_controller/` | 정윤태·양서준 | @yuntae12-sudo · @yangseojun |
 | Frenet planner (`frenet_planner_node`, ROS+core) | `src/frenet_planner/` | 이강태 | @kante2 |
-| ROS bridge launch | `src/integration_launch/` | 정윤태 | @yuntae12-sudo |
+| MORAI bridge | `src/asmc_bridge/` | 이강태·안승현 | @kante2 · @ahnsh03 |
 
 현재 개발 경계는 [Planning/Control guide](../packages/planning-control/README.md), 실행 흐름은
 [운영 규약](../operations/planning-control.md)을 따른다. v1 설계와 standalone UDP 기준선은
@@ -76,15 +76,11 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 
 | 경로 | 역할 | 담당 |
 |---|---|---|
-| `src/morai_udp_bridge/` | Network UDP·Ctrl adapter | 이강태·안승현 |
-| `src/morai_sensor_bridge/` | Camera/LiDAR/GPS/IMU decoder | 이강태·안승현 |
-| `src/vehicle_state/` | GPS/IMU→`asmc_msgs/VehicleState` | 통합·판제 공동 |
-| `src/integration_launch/` | 현재 bridge 공동 launch, planning 공동 소유 | 정윤태·통합 공동 |
+| `src/asmc_bridge/` | Network/Sensor UDP, VehicleState, 공동 launch | 이강태·안승현; planning consumer 공동 리뷰 |
 | `src/asmc_hd_map/` | reviewed HD Map과 runtime | 안승현 |
 
-현재 bridge 구조와 Phase 3 이관 gate는 [MORAI bridge guide](../packages/asmc_bridge/README.md)를
-따른다. `src/asmc_bridge` canonical launch façade와 환경 profile은 P3-D까지 구현됐으며,
-하위 node의 물리 이전·삭제는 live parity 검증 후로 보류한다.
+현재 bridge 구조와 Phase 3 이관 결과는 [MORAI bridge guide](../packages/asmc_bridge/README.md)를
+따른다. P3-F에서 하위 node와 공동 launch를 `src/asmc_bridge/`로 물리 통합했다.
 
 ### learning (✅ PR #2)
 
@@ -132,11 +128,10 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `src/behavior_planner/` | ✅ | ✅ | 👀 | 👀 | — | — |
 | `src/mpc_controller/` | ✅ | ✅ | 👀 | 👀 | — | — |
 | `src/frenet_planner/` | 👀 | 👀 | ✅ | 👀 | — | — |
-| `src/integration_launch/` | ✅ | 👀 | 👀 | 👀 | — | — |
 | `src/asmc_bridge/` | 👀 | 👀 | ✅ | ✅ | — | 👀 |
 | `src/learning_by_cheating/` | — | — | — | ✅ | — | — |
 | `scripts/rosbridge.sh` | 👀 | 👀 | 👀 | ✅ | — | — |
-| `scripts/udp_bridge.sh` · `src/morai_*_bridge/` | 👀 | 👀 | ✅ | ✅ | — | — |
+| `scripts/udp_bridge.sh` · `src/asmc_bridge/` | 👀 | 👀 | ✅ | ✅ | — | 👀 |
 | `tools/aim_scenario_runner/` | — | — | — | 👀 | ✅ | 👀 |
 | `tools/grpc_inha_univ/` | — | — | — | 👀 | ✅ | — |
 | `src/perception/morai_3d_detection/` | — | — | — | 👀 | 👀 | ✅ |

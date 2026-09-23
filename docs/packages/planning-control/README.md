@@ -16,10 +16,10 @@
 | Behavior/FSM | `src/behavior_planner/` | ROS node, v2 command가 현재 경로; v1 호환 가능 |
 | Frenet trajectory | `src/frenet_planner/` | ROS node + transport-independent C++ core |
 | MPC control | `src/mpc_controller/` | ROS node + transport-independent C++ core |
-| state source | `src/vehicle_state/` | GPS/IMU→`asmc_msgs/VehicleState` |
-| MORAI bridge | `src/morai_udp_bridge/`, `src/morai_sensor_bridge/` | 외부 UDP↔내부 ROS |
+| state source | `src/asmc_bridge/src/vehicle_state/` | GPS/IMU→`asmc_msgs/VehicleState` |
+| MORAI bridge | `src/asmc_bridge/` | 외부 UDP↔내부 ROS |
 | camera lane pilot | `src/planning_control/lane_boundary_adapter/` | read-only ROS debug, 제어 미연결 |
-| bridge-only launch | `src/integration_launch/` | planning launch가 아니라 bridge 공동 기동 |
+| bridge-only launch | `src/asmc_bridge/launch/` | planning launch가 아니라 bridge 공동 기동 |
 
 `src/planning_control/`은 현재 논리 그룹과 read-only adapter 경로이며 Behavior/Frenet/MPC를
 감싸는 단일 catkin package가 아니다. 세 package를 임의로 이동하거나 이름을 바꾸지 않는다.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Start MORAI UDP ↔ ROS bridges (NOT rosbridge / WebSocket).
-# Packages: morai_udp_bridge + morai_sensor_bridge
+# Package: asmc_bridge (network UDP + sensor UDP + vehicle state)
 #
 # Both supported MORAI releases run the same morai_udp protocol and canonical
 # ROS topics. Release selection belongs to the JSON imported in the MORAI UI,
@@ -149,12 +149,10 @@ source devel/setup.bash 2>/dev/null || true
 export ROS_MASTER_URI="${ROS_MASTER_URI:-http://127.0.0.1:11311}"
 export ROS_IP="${ROS_IP:-127.0.0.1}"
 
-if ! rospack find asmc_bridge >/dev/null 2>&1 \
-  || ! rospack find morai_udp_bridge >/dev/null 2>&1 \
-  || ! rospack find morai_sensor_bridge >/dev/null 2>&1; then
-  echo "[udp_bridge] packages not found — build first:"
+if ! rospack find asmc_bridge >/dev/null 2>&1; then
+  echo "[udp_bridge] asmc_bridge package not found — build first:"
   echo "  ./scripts/build_ws.sh"
-  echo "  # or: catkin_make --pkg asmc_bridge morai_udp_bridge morai_sensor_bridge vehicle_state"
+  echo "  # or: catkin_make --pkg asmc_bridge"
   exit 1
 fi
 
@@ -187,9 +185,9 @@ echo "  Streams        : ${STREAM_PROFILE}"
 echo "  MORAI preset   : import ONE file matching the installed release"
 echo "                   26r1       -> ${NETWORK_PRESET_26R1}"
 echo "                   competition -> ${NETWORK_PRESET_COMP}"
-echo "  Sensor preset  : v2 -> ${SENSOR_PRESET_V2}"
-echo "                   v3 -> ${SENSOR_PRESET_V3}"
+echo "  Sensor preset  : v3 deployment -> ${SENSOR_PRESET_V3}"
 echo "                        configured 15 Hz; complete scans near 12 Hz are accepted"
+echo "                   v2 regression -> ${SENSOR_PRESET_V2}"
 # Receive sockets bind the same ports for both transports. Only the outgoing
 # Ctrl destination changes, so derive it from the explicit transport instead
 # of a container-wide environment value that could silently keep LAN2LAN on

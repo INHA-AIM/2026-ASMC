@@ -2,7 +2,7 @@
 
 > **문서 역할:** Canonical — Docker, MORAI UDP profile, bridge 기동과 시뮬 검증
 >
-> **현재 기준:** 공통 `morai_udp` bridge + `ASMC_sensor_set_v2.json` + ROS1 Noetic + Docker host network
+> **현재 기준:** 공통 `morai_udp` bridge + 본선 `ASMC_sensor_set_v3.json` + ROS1 Noetic + Docker host network
 
 대회 허용 범위는 [대회 환경](../competition/README.md), Planning/Control의 실행은
 [Planning/Control 규약](./planning-control.md), bag 기록·재생은
@@ -45,8 +45,8 @@ TrafficLight oracle/GetTrafficLight는 bridge 필수 토픽이 아니다.
 ## 2. 런타임 경계
 
 ```text
-MORAI --UDP--> morai_sensor_bridge/morai_udp_bridge --> 팀 내부 ROS topic
-MORAI <--UDP-- morai_udp_bridge <--ROS-- /ctrl_cmd
+MORAI --UDP--> asmc_bridge의 sensor/network node --> 팀 내부 ROS topic
+MORAI <--UDP-- asmc_bridge network node <--ROS-- /ctrl_cmd
 
 /vehicle/state + perception --> Behavior/FSM --> Frenet --> MPC --> /ctrl_cmd
 ```
@@ -56,8 +56,8 @@ MORAI <--UDP-- morai_udp_bridge <--ROS-- /ctrl_cmd
 - Behavior/Frenet/MPC도 현재 내부 ROS topic으로 연결되며 직접 UDP socket을 열지 않는다.
 - `rosbridge.sh` direct WebSocket 실험은 종료됐으며 현재 개발·본선 경로가 아니다.
 - gRPC scenario runner와 GT topic은 개발·데이터 수집 전용이다.
-- `asmc_bridge/bridge.launch`가 `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`를 한 번에
-  기동한다. 구현 패키지와 `integration_launch`는 rollback·parity 기준으로 유지한다.
+- `asmc_bridge/bridge.launch`가 Network UDP, Sensor UDP, VehicleState node를 한 번에 기동한다.
+  P3-F부터 세 구현과 component launch도 모두 `asmc_bridge` 패키지 안에 있다.
 - 두 simulator release는 `morai_udp` runtime 하나를 쓴다. release는 MORAI UI에 import할 JSON으로,
   transport는 `udp_bridge.sh`의 `local`/`lan2lan`으로 선택한다.
 - stream policy는 `competition`(기본)과 `development`(로컬 oracle)로 나뉘며 release와 독립적이다.
@@ -107,7 +107,7 @@ Compose는 `network_mode: host`이고 개별 `ports:` forwarding을 사용하지
 | TrafficLight status | Host/Dest `7603/7502`, type 258 | simulator oracle; canonical bridge가 소비하지 않음 |
 | Object Info | Dest `7505` | `/Object_topic`, 임시 oracle |
 | Collision Data | Host/Dest `9091/9092` | `/CollisionData` |
-| Ego Ctrl Cmd | Host/Dest `9093/9094`, mode 2 | `morai_udp_bridge`가 `/ctrl_cmd`를 UDP로 전송 |
+| Ego Ctrl Cmd | Host/Dest `9093/9094`, mode 2 | `asmc_bridge` network node가 `/ctrl_cmd`를 UDP로 전송 |
 
 ### 센서
 

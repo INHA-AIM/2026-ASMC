@@ -99,7 +99,7 @@ Map:
 
 Camera:
   # 0 : UDP, 1 : ROS
-  # The repository's morai_sensor_bridge owns the UDP ports and publishes
+  # The repository's asmc_bridge sensor node owns the UDP ports and publishes
   # /image_jpeg/compressed. Main therefore consumes the ROS topic.
   CameraMode: 1
   Display: 1

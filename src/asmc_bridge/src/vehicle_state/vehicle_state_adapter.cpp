@@ -1,10 +1,10 @@
-#include "vehicle_state/vehicle_state_adapter.hpp"
+#include "asmc_bridge/vehicle_state_adapter.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-#include "vehicle_state/gps_transform.hpp"
-#include "vehicle_state/steady_freshness.hpp"
+#include "asmc_bridge/gps_transform.hpp"
+#include "asmc_bridge/steady_freshness.hpp"
 
 namespace frenet_planner_ros {
 namespace {

@@ -12,7 +12,7 @@
 흐름은 다음과 같다.
 
 ```text
-MORAI sensors --UDP--> morai_sensor_bridge --ROS--> camera perception
+MORAI sensors --UDP--> asmc_bridge sensor node --ROS--> camera perception
   ├─/perception/lane/boundary_observations─> independent pilot
   └─/perception/lane/boundary_family───────> shared-family candidate adapter
        --ROS debug only--> MarkerArray + DiagnosticArray

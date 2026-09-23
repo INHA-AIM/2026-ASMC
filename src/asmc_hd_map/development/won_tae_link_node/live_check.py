@@ -42,7 +42,7 @@ from mapbake.raster import RasterGrid
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_H5 = Path(__file__).resolve().parent / 'out' / 'link_node_map.h5'
 
-# --- MORAI Ego UDP 패킷 (src/morai_udp_bridge/scripts/morai_udp_bridge.py 와 동일) ---
+# --- MORAI Ego UDP 패킷 (src/asmc_bridge/scripts/morai_udp_bridge.py 와 동일) ---
 EGO_HDR = b'#MoraiInfo$'
 EGO_PRE = len(EGO_HDR) + 4 + 12   # 27
 TAIL = 2

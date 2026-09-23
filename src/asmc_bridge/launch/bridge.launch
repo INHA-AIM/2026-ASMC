@@ -1,9 +1,4 @@
-<!--
-  Canonical ASMC bridge facade.
-
-  The implementation packages remain separate during P3-D rollback/parity.
-  This launch owns only composition and the deployment-safe defaults.
--->
+<!-- Canonical ASMC bridge composition. All runtime nodes live in this package. -->
 <launch>
   <arg name="runtime_profile" default="morai_udp"/>
   <arg name="transport_profile" default="local"/>
@@ -16,7 +11,7 @@
   <arg name="competition_port" default="9798"/>
   <arg name="enable_vehicle_state" default="true"/>
 
-  <include file="$(find integration_launch)/launch/morai_udp_bridges.launch">
+  <include file="$(find asmc_bridge)/launch/morai_udp_bridges.launch">
     <arg name="runtime_profile" value="$(arg runtime_profile)"/>
     <arg name="transport_profile" value="$(arg transport_profile)"/>
     <arg name="stream_profile" value="$(arg stream_profile)"/>
@@ -29,5 +24,5 @@
   </include>
 
   <include if="$(arg enable_vehicle_state)"
-           file="$(find vehicle_state)/launch/vehicle_state.launch"/>
+           file="$(find asmc_bridge)/launch/vehicle_state.launch"/>
 </launch>

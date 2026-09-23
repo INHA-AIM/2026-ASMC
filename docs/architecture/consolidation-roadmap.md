@@ -41,8 +41,8 @@
 | `asmc_msgs` | 공용 메시지 25개(기존 동결 13 + additive 12), 현재 정본 | 유지·호환 검증 |
 | `behavior_planner/msg` | planning 소유이며 공용 메시지와 일부 중복 | 1단계에서 수정 금지. planning 협의 후 adapter 또는 별도 이관 |
 | `lidar+sensorfusion/src/Msg` | `TrackedObject*`, `Yolo_bbox*` 4개가 별도 메시지 패키지 | 소비자 이관과 함께 `asmc_msgs`로 흡수 |
-| `morai_udp_bridge` + `morai_sensor_bridge` + `vehicle_state` | 한 외부 경계가 세 패키지로 분산 | `asmc_bridge`로 통합 |
-| `integration_launch` | planning 공동 소유 | 이동하지 않고 새 bridge launch를 include하는 호환 계층만 협의 |
+| `morai_udp_bridge` + `morai_sensor_bridge` + `vehicle_state` | P3-F 이전 세 패키지로 분산 | `asmc_bridge`로 물리 통합 완료 |
+| `integration_launch` | P3-F 이전 planning 공동 launch | consumer launch를 갱신하고 `asmc_bridge/launch`로 통합 완료 |
 | `asmc_hd_map` + `mgeo_toolkit` | runtime·builder는 통합 완료, 외부 toolkit은 provenance 입력 | geometry parity 후 toolkit 의존 축소 |
 | `camera_semantic_perception` + `drivable_bev` + `traffic_light` | 한 camera pipeline이 세 패키지로 분산 | `asmc_perception`의 하위 모듈로 통합 |
 | `morai_3d_detection` + `lidar+sensorfusion/src/Main` | 학습·검증 산출물·runtime·vendor가 혼재 | runtime만 `asmc_perception`으로 이식, offline은 `tools/perception`으로 분리 |
@@ -80,7 +80,6 @@ src/
 ├── behavior_planner/          # 판제 소유, 현 위치 유지
 ├── frenet_planner/            # 판제 소유, 현 위치 유지
 ├── mpc_controller/            # 판제 소유, 현 위치 유지
-├── integration_launch/        # 소유자 협의 전 유지
 ├── planning_control/          # 판제 adapter, 현 위치 유지
 └── MORAI-ROS_morai_msgs/      # pinned external dependency
 
@@ -358,8 +357,8 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
   바꾼다. JSON 수치만 추측하지 않고 MORAI UI 저장본의 `sensorPeriod`와 `frequencyIndex`,
   손재호 코드의 소비 loop 15 Hz를 확인한다. 실제 완성 scan은 약 12 Hz여도 허용하며,
   packet/parse 오류, latency/CPU와 tracking 품질을 계속 관찰한다. 없는 scan을 복제하지 않는다.
-- planning 공동 소유 `integration_launch`는 새 launch를 include하도록 별도 승인받고, 그 전에는
-  변경하지 않는다.
+- planning consumer launch는 P3-F에서 `asmc_bridge` component launch를 include하도록 전환했다.
+  이후 launch 계약 변경에는 판제 리뷰를 계속 요구한다.
 
 ### 6.3 `asmc_perception`과 `learning*` 정리
 
@@ -439,7 +438,9 @@ Competition Vehicle Status의 live capture 승인과 실제 두 PC 검증은 아
 정적 decoder·fixture·ROS publish 계약은 P3-B, privileged stream allowlist와 v2/v3
 sensor local/lan2lan IP 파생본은 P3-C에서 적용했다.
 P3-D에서 `asmc_bridge` canonical launch façade와 기본 GPS/IMU `/vehicle/state` composition을
-추가했다. 기존 node package와 `integration_launch`는 live parity·rollback을 위해 유지한다.
+추가했다. P3-E에서 local sensor/state, Ctrl closed loop와 bag replay parity를 확인한 뒤 P3-F에서
+기존 세 node package와 `integration_launch`를 `asmc_bridge` 하나로 물리 통합했다. node/topic/
+diagnostics 이름은 소비자 호환을 위해 유지한다.
 
 ### 7.2 배포 원칙
 
@@ -478,7 +479,7 @@ P3-D에서 `asmc_bridge` canonical launch façade와 기본 GPS/IMU `/vehicle/st
 | `src/learning` | 문서 index와 README 참조 0 |
 | `src/learning_by_cheating` | scenario runner·진단·문서 참조 0, BEV/map 기능 parity |
 | `src/asmc_hd_map/development/won_tae_link_node` | H5 provenance를 외부 immutable artifact로 보관하고 compact map 재생성 parity 통과 |
-| `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state` | `asmc_bridge` bag replay + 현장 profile smoke 통과 |
+| `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`, `integration_launch` | P3-E local live·Ctrl·bag replay 통과 후 P3-F에서 제거 완료; LAN2LAN은 별도 Phase 6 gate |
 | `camera_semantic_perception`, `drivable_bev`, `traffic_light`, `data_collection` | 새 launch topic/latency/output parity 통과 |
 | 중복 `Msg`, 중복 `morai_msgs` | 모든 consumer include/import 교체 및 clean build |
 | 루트 legacy scripts | `scripts/asmc` 대응 명령·문서·CI가 존재하고 호환 기간 종료 |

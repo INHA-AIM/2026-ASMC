@@ -18,6 +18,6 @@
   <exec_depend>traffic_light</exec_depend>
   <exec_depend>frenet_planner</exec_depend>
   <exec_depend>mpc_controller</exec_depend>
-  <exec_depend>vehicle_state</exec_depend>
+  <exec_depend>asmc_bridge</exec_depend>
   <export/>
 </package>

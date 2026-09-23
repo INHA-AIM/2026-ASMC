@@ -68,11 +68,11 @@ route seed 및 LiDAR occupancy를 가진 판제·퓨전이 소유하는 방향�
 ```text
 MORAI
   └─ allowed UDP
-       ├─ morai_sensor_bridge ─ Camera/LiDAR/GPS/IMU ROS topics
-       └─ morai_udp_bridge    ─ Competition Vehicle Status/Collision ROS topics
+       ├─ asmc_bridge sensor node  ─ Camera/LiDAR/GPS/IMU ROS topics
+       └─ asmc_bridge network node ─ Competition Vehicle Status/Collision ROS topics
 
 internal ROS modules
-  └─ /ctrl_cmd ─ morai_udp_bridge ─ Ego Ctrl Cmd UDP ─ MORAI
+  └─ /ctrl_cmd ─ asmc_bridge network node ─ Ego Ctrl Cmd UDP ─ MORAI
 ```
 
 배포 경로에서는 다음을 사용하지 않는다.

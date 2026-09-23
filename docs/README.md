@@ -78,6 +78,7 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 | [P3-C stream/sensor transport baseline](./records/baselines/bridge-p3c-v1.md) | 본선 allowlist, local-only oracle, v2/v3 sensor IP 파생 계약 | Frozen P3-C Baseline |
 | [P3-D bridge façade baseline](./records/baselines/bridge-p3d-v1.md) | Network·Sensor·VehicleState 단일 launch와 rollback 경계 | Frozen P3-D Baseline |
 | [P3-E local live baseline](./records/baselines/bridge-p3e-local-live-v1.md) | MolitComp03 v3 rate, azimuth framing과 Competition header 차단 gate | Active Baseline |
+| [P3-F consolidated baseline](./records/baselines/bridge-p3f-consolidated-v1.md) | bridge 4→1 package 이관, build/test와 post-move local smoke | Active Baseline |
 | [contracts/hd-map-topic-contract-v1.md](./contracts/hd-map/topic-v1.md) | P1-B `asmc_msgs` HD Map·체크포인트·미션 message/topic 계약 | Frozen Interface |
 | [contracts/kcity2025-competition-metadata-v1.md](./contracts/competition/kcity2025-metadata-v1.md) | P1-C 공식 체크포인트 projection과 권위별 mission-zone 정본 | Frozen Metadata |
 | [contracts/hd-map-runtime-visualization-v1.md](./contracts/hd-map/runtime-v1.md) | 2단계 global/local ROS publisher, RViz와 paint-gap 소비 규칙 | Active Runtime |
@@ -190,14 +191,12 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | [asmc_hd_map guide](../src/asmc_hd_map/README.md) | HD Map builder/runtime/source comparison 개발·검증 |
 | [asmc_msgs guide](../src/asmc_msgs/README.md) | 공용 ROS1 message 소유·호환·추가 절차 |
 | [MORAI bridge guide](./packages/asmc_bridge/README.md) | 현재 bridge/state 구현과 Phase 3 통합 gate |
+| [asmc_bridge quick start](../src/asmc_bridge/README.md) | 단일 bridge 패키지 실행·component launch |
 | [Perception package-group guide](./packages/asmc_perception/README.md) | 현재 camera/BEV/LiDAR/traffic/data 경계와 Phase 4 gate |
 | [Planning/Control package-group guide](./packages/planning-control/README.md) | 현재 Behavior/Frenet/MPC 경계, legacy와 변경 gate |
 | [Handoff index](./handoffs/README.md) | 파트 간 인수 조건과 deployment/legacy 상태 |
 | [Records index](./records/README.md) | 특정 시점의 baseline·실험·검수 결과와 현재 권위 |
 | [Archive index](./archive/README.md) | 현재 실행 금지인 과거 설계와 대체 문서 |
-| [morai_udp_bridge](../src/morai_udp_bridge/README.md) | Network UDP·Ctrl 빠른 시작 |
-| [morai_sensor_bridge](../src/morai_sensor_bridge/README.md) | Sensor UDP decode 빠른 시작 |
-| [vehicle_state](../src/vehicle_state/README.md) | GPS/IMU 상태 정규화와 배타적 source |
 | [src/perception](../src/perception/README.md) | 인지 파트 상태·코드·문서 지도 |
 | [twinlite_morai](../src/perception/twinlite_morai/README.md) | binary/4-class 2-head 학습 adapter와 현재 후보 |
 | [drivable_bev](../src/perception/drivable_bev/README.md) | 3-camera fused metric BEV, 범위 audit와 calibration/live gate |

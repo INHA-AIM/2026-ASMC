@@ -2,7 +2,7 @@
 #include <morai_msgs/EgoVehicleStatus.h>
 #include <ros/ros.h>
 
-#include "vehicle_state/vehicle_state_adapter.hpp"
+#include "asmc_bridge/vehicle_state_adapter.hpp"
 
 namespace {
 class EgoVehicleStateDevNode {

@@ -33,7 +33,7 @@
   <!-- azimuth detects physical revolutions and works with both v2 and v3. -->
   <arg name="lidar_frame_mode" default="azimuth"/>
   <arg name="publish_lidar_tf" default="true"/>
-  <!-- config/morai/sensors/ASMC_sensor_set_v2.json Lidar3D pose -->
+  <!-- v2/v3 share this config/morai/sensors Lidar3D pose. -->
   <arg name="lidar_x" default="0.80"/>
   <arg name="lidar_y" default="0.0"/>
   <arg name="lidar_z" default="1.45"/>
@@ -41,7 +41,7 @@
   <arg name="lidar_pitch" default="0.0"/>
   <arg name="lidar_yaw" default="0.0"/>
 
-  <node pkg="morai_sensor_bridge" type="morai_sensor_bridge.py"
+  <node pkg="asmc_bridge" type="morai_sensor_bridge.py"
         name="morai_sensor_bridge" output="screen">
     <param name="runtime_profile" value="$(arg runtime_profile)"/>
     <param name="transport_profile" value="$(arg transport_profile)"/>

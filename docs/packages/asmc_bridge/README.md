@@ -2,31 +2,31 @@
 
 > **문서 역할:** Active Package-Group Guide — 현재 bridge/state 구현과 Phase 3 통합 gate
 >
-> **현재 상태:** `asmc_bridge` canonical launch façade와 기존 세 runtime 패키지가 함께 운영 중
+> **현재 상태:** P3-F에서 Network/Sensor/VehicleState/launch를 `asmc_bridge` 하나로 물리 통합
 
 Docker·MORAI UI·현재 포트로 실행하는 절차는 [운영 가이드](../../operations/README.md),
 대회 허용 센서와 현장 조건은 [대회 환경](../../competition/README.md), 외부 message 호환은
 [MORAI message 정책](../../contracts/simulator/morai-msgs-beta-policy.md)이 우선한다. 이 문서는
 bridge 구현을 개발·검증하고 Phase 3에서 안전하게 통합하는 방법을 설명한다.
 
-## 1. 현재 구현과 목표를 구분한다
+## 1. 현재 구현
 
 | 역할 | 현재 경로 | 상태 |
 |---|---|---|
-| Network UDP와 Ctrl | `src/morai_udp_bridge/` | 운영 중 |
-| Camera/LiDAR/GPS/IMU decode | `src/morai_sensor_bridge/` | 운영 중 |
-| GPS/IMU→팀 내부 차량 상태 | `src/vehicle_state/` | 운영 중 |
-| 호환 UDP composition | `src/integration_launch/` | rollback·parity 기준, planning 공동 소유 |
-| canonical `asmc_bridge` launch | `src/asmc_bridge/` | P3-D façade, 기본 `/vehicle/state` 포함 |
+| Network UDP와 Ctrl | `src/asmc_bridge/scripts/morai_udp_bridge.py` | 통합 완료 |
+| Camera/LiDAR/GPS/IMU decode | `src/asmc_bridge/scripts/morai_sensor_bridge.py` | 통합 완료 |
+| GPS/IMU→팀 내부 차량 상태 | `src/asmc_bridge/src/vehicle_state/` | 통합 완료 |
+| component/canonical launch | `src/asmc_bridge/launch/` | 통합 완료, 기본 `/vehicle/state` 포함 |
 | `local`/`lan2lan` 계약·MORAI JSON | P3-A 완료 | live LAN gate 대기 |
 | Competition Vehicle Status decoder | P3-B 정적 계약·fixture 완료 | live capture gate 대기 |
 | stream allowlist·sensor IP 파생본 | P3-C 구현 | live LAN gate 대기 |
-| 단일 launch façade·vehicle state composition | P3-D 구현 | package 물리 이전·삭제 대기 |
+| 단일 launch façade·vehicle state composition | P3-D 구현 | P3-F 물리 이전 완료 |
 | local MolitComp03 수신·LiDAR frame gate | P3-E 실측 | 설정·소비 15 Hz 승인, Competition status 현장 대기 |
+| 네 package→`asmc_bridge` | P3-F 완료 | full build·현재 graph 559 tests·post-move live/정지 Ctrl smoke 통과 |
 
-P3-D는 launch composition만 `asmc_bridge`로 승격했다. 구현 node와 호환 launch는 bag replay,
-packet fixture, producer/consumer build와 실제 MORAI 검증을 모두 통과할 때까지 이동·삭제하지
-않는다. rollback은 `integration_launch/morai_udp_bridges.launch`로 가능하다.
+P3-F는 node 이름, ROS topic/type, diagnostics 이름과 binary packet 계약을 유지하면서 구현을
+한 패키지로 옮겼다. `morai_udp_bridges.launch`도 `asmc_bridge` 안에 남겨 component 조합과
+canonical `bridge.launch`를 모두 제공한다. 이전 package 경로는 더 이상 runtime 계약이 아니다.
 
 ## 2. 현재 데이터 흐름
 
@@ -108,7 +108,7 @@ GPS/IMU 원본 datagram은 기본값으로 `127.0.0.1:9401/9403`에도 복제된
 
 - GPS offset은 UTM52N에서 `(302595, 4124145) m`를 뺀 K-City `map` 좌표다.
 - `GPSMessage.eastOffset/northOffset`에 같은 값을 넣어 consumer 변환과 일치시킨다.
-- `base_link→velodyne` static TF는 기본 발행하며 v2 pose `(0.80, 0, 1.45) m`를 쓴다.
+- `base_link→velodyne` static TF는 기본 발행하며 v2/v3 공통 pose `(0.80, 0, 1.45) m`를 쓴다.
 - raw GPS+latest IMU의 `map→base_link`는 `publish_map_tf=false`가 기본이다.
 - localization이 authoritative `map→base_link`를 발행할 때 sensor bridge TF를 동시에 켜지 않는다.
 
@@ -117,7 +117,7 @@ GPS/IMU 원본 datagram은 기본값으로 `127.0.0.1:9401/9403`에도 복제된
 본선 후보 source는 GPS+IMU adapter다.
 
 ```bash
-roslaunch vehicle_state vehicle_state.launch
+roslaunch asmc_bridge vehicle_state.launch
 ```
 
 | 항목 | 현재 계약 |
@@ -175,8 +175,8 @@ ROS Noetic container에서:
 
 ```bash
 ./scripts/build_ws.sh
-catkin_make run_tests_morai_udp_bridge run_tests_morai_sensor_bridge
-./devel/lib/vehicle_state/vehicle_state_adapter_test
+catkin_make run_tests_asmc_bridge
+./devel/lib/asmc_bridge/vehicle_state_adapter_test
 ```
 
 이전에 `CATKIN_WHITELIST_PACKAGES`로 일부 package만 configure한 workspace라면 먼저 whitelist를
@@ -201,7 +201,7 @@ make target”으로 실패할 수 있다.
 실제 rate·latency 값은 [transport 기록](../../records/simulator/runtime-transport-2026-09.md)에
 날짜와 환경을 붙여 남긴다. 특정 측정값을 package guide의 영구 성능으로 복사하지 않는다.
 
-## 7. Phase 3 통합 설계 경계
+## 7. Phase 3 계약 경계
 
 계약 조합은 `runtime_protocol × simulator_release × transport_profile × sensor_set`이다.
 
@@ -234,16 +234,15 @@ JSON의 `sensorPeriod`만 추측해 고치지 않는다. 10 Hz baseline과 손�
 loss, processing latency와 CPU/GPU를 비교한다. 현장 실제 두 PC, firewall·route·restart·offline
 복구는 Phase 6 gate이며 개발 PC loopback 성공으로 대신하지 않는다.
 
-## 8. 이관·삭제 gate
+## 8. P3-F 이관 결과와 남은 gate
 
-1. 현재 package/topic/port/timestamp baseline을 다시 캡처한다.
-2. 새 profile schema와 packet fixture를 추가하되 기존 launch는 유지한다.
-3. parser와 vehicle-state core를 동작 변경 없이 새 namespace로 이식한다.
-4. raw bag replay에서 topic type/count/rate/frame/unit parity를 확인한다.
-5. dev MORAI에서 sensor, 상태와 Ctrl closed-loop를 검증한다.
-6. competition allowlist와 실제 두 PC LAN2LAN을 별도 승인한다.
-7. planning 공동 소유 `integration_launch` 변경을 판제와 리뷰한다.
-8. 한 릴리스의 rollback 경로 뒤 기존 세 package 삭제 여부를 결정한다.
+1. package/topic/port/timestamp baseline과 local live 결과를 P3-E에서 캡처했다.
+2. parser, sensor decoder, state core와 fixture/test를 동작 변경 없이 `asmc_bridge`로 옮겼다.
+3. planning launch dependency도 `asmc_bridge`로 전환했다.
+4. full build, 현재 graph 559 tests, local live topic과 정지 Ctrl post-move smoke를 통과해 P3-F를 닫았다.
+5. Competition Vehicle Status packet과 실제 두 PC LAN2LAN은 별도 현장 gate로 남긴다.
 
-단일 패키지가 만들어졌다는 이유만으로 기존 bridge를 삭제하지 않는다. packet format, sensor
-decode와 상태 추정은 서로 다른 실패 경계를 가지므로 내부 모듈과 테스트도 그 경계를 유지한다.
+단일 패키지 안에서도 Network/Sensor/VehicleState는 별도 node·소스 디렉터리·테스트로 실패
+경계를 유지한다. 배포 단위만 하나이며 diagnostics topic 이름도 기존 소비자 호환을 보존한다.
+상세 증거는 [P3-F consolidated baseline](../../records/baselines/bridge-p3f-consolidated-v1.md)에
+보존한다.

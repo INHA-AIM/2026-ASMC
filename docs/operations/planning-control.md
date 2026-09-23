@@ -40,7 +40,7 @@ source devel/setup.bash
 
 ```bash
 catkin_make --only-pkg-with-deps \
-  behavior_planner frenet_planner mpc_controller vehicle_state
+  behavior_planner frenet_planner mpc_controller asmc_bridge
 source devel/setup.bash
 ```
 

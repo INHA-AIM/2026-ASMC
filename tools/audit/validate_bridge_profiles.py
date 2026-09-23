@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the P3-E bridge baseline, transport profiles, and live gates."""
+"""Validate the P3-F consolidated bridge contract and retained live gates."""
 
 from __future__ import annotations
 
@@ -138,9 +138,9 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         == {
             "transport_profile": "local",
             "stream_profile": "competition",
-            "sensor_set": "v2",
+            "sensor_set": "v3",
         },
-        "runtime defaults must remain release-independent local + competition + v2",
+        "runtime defaults must remain release-independent local + competition + v3",
     )
     stream_profiles = contract["stream_profiles"]
     _require(
@@ -169,14 +169,7 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     )
     implementation = contract["implementation_baseline"]
     _require(
-        implementation["packages"]
-        == [
-            "asmc_bridge",
-            "integration_launch",
-            "morai_udp_bridge",
-            "morai_sensor_bridge",
-            "vehicle_state",
-        ],
+        implementation["packages"] == ["asmc_bridge"],
         "bridge package baseline changed",
     )
     for name, spec in implementation["artifacts"].items():
@@ -410,48 +403,48 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         raise ContractError(str(exc)) from exc
 
     facade = REPO_ROOT / "src/asmc_bridge/launch/bridge.launch"
-    integration = REPO_ROOT / "src/integration_launch/launch/morai_udp_bridges.launch"
-    udp_launch = REPO_ROOT / "src/morai_udp_bridge/launch/morai_udp_bridge.launch"
-    sensor_launch = REPO_ROOT / "src/morai_sensor_bridge/launch/morai_sensor_bridge.launch"
+    components = REPO_ROOT / "src/asmc_bridge/launch/morai_udp_bridges.launch"
+    udp_launch = REPO_ROOT / "src/asmc_bridge/launch/morai_udp_bridge.launch"
+    sensor_launch = REPO_ROOT / "src/asmc_bridge/launch/morai_sensor_bridge.launch"
     _require(_launch_arg(facade, "runtime_profile") == "morai_udp", "facade runtime profile split")
     _require(_launch_arg(facade, "transport_profile") == "local", "facade transport default changed")
     _require(_launch_arg(facade, "stream_profile") == "competition", "facade stream default changed")
     _require(_launch_arg(facade, "enable_vehicle_state") == "true", "facade vehicle state default changed")
-    _require(_launch_arg(integration, "runtime_profile") == "morai_udp", "integration runtime profile split")
+    _require(_launch_arg(components, "runtime_profile") == "morai_udp", "component runtime profile split")
     _require(_launch_arg(udp_launch, "runtime_profile") == "morai_udp", "UDP runtime profile split")
     _require(_launch_arg(sensor_launch, "runtime_profile") == "morai_udp", "sensor runtime profile split")
-    _require(_launch_arg(integration, "transport_profile") == "local", "integration transport default changed")
+    _require(_launch_arg(components, "transport_profile") == "local", "component transport default changed")
     _require(_launch_arg(udp_launch, "transport_profile") == "local", "UDP transport default changed")
     _require(_launch_arg(sensor_launch, "transport_profile") == "local", "sensor transport default changed")
-    _require(_launch_arg(integration, "stream_profile") == "competition", "integration stream default changed")
+    _require(_launch_arg(components, "stream_profile") == "competition", "component stream default changed")
     _require(_launch_arg(udp_launch, "stream_profile") == "competition", "UDP stream default changed")
     _require(_launch_arg(sensor_launch, "stream_profile") == "competition", "sensor stream default changed")
-    for launch_path in (facade, integration, sensor_launch):
+    for launch_path in (facade, components, sensor_launch):
         _require(
             _launch_arg(launch_path, "lidar_frame_mode") == "azimuth",
             f"{launch_path.relative_to(REPO_ROOT)} LiDAR framing is not azimuth-based",
         )
     expected_development_eval = "$(eval arg('stream_profile') == 'development')"
     _require(
-        _launch_arg(integration, "enable_object") == expected_development_eval,
-        "integration Object allowlist is not stream-profile controlled",
+        _launch_arg(components, "enable_object") == expected_development_eval,
+        "component Object allowlist is not stream-profile controlled",
     )
     _require(
-        _launch_arg(integration, "enable_semantic_camera")
+        _launch_arg(components, "enable_semantic_camera")
         == expected_development_eval,
-        "integration Semantic allowlist is not stream-profile controlled",
+        "component Semantic allowlist is not stream-profile controlled",
     )
     _require(
-        _launch_arg(integration, "enable_instance_lidar")
+        _launch_arg(components, "enable_instance_lidar")
         == expected_development_eval,
-        "integration Instance allowlist is not stream-profile controlled",
+        "component Instance allowlist is not stream-profile controlled",
     )
-    _require(_launch_arg(integration, "cmd_port") == "9093", "integration Ctrl default is not 9093")
+    _require(_launch_arg(components, "cmd_port") == "9093", "component Ctrl default is not 9093")
     _require(_launch_arg(udp_launch, "cmd_port") == "9093", "UDP Ctrl default is not 9093")
     _require(_launch_arg(udp_launch, "ego_port") == "9099", "Ego status bind port is not 9099")
     _require(
-        _launch_arg(integration, "competition_port") == "9798",
-        "integration Competition status bind port is not 9798",
+        _launch_arg(components, "competition_port") == "9798",
+        "component Competition status bind port is not 9798",
     )
     _require(
         _launch_arg(udp_launch, "competition_port") == "9798",
@@ -495,8 +488,8 @@ def validate(contract_path: Path) -> Dict[str, Any]:
             "vehicle_state_default": True,
             "vehicle_state_source": "gps_imu",
             "lidar_frame_mode": "azimuth",
-            "compatibility_launch": "integration_launch/morai_udp_bridges.launch",
-            "legacy_packages_retained_for_rollback": True,
+            "compatibility_launch": "asmc_bridge/morai_udp_bridges.launch",
+            "legacy_packages_retained_for_rollback": False,
         },
         "bridge composition contract changed",
     )
@@ -631,7 +624,7 @@ def main() -> None:
     contract_path = REPO_ROOT / "config/bridge/bridge_profiles_v1.json"
     result = validate(contract_path)
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
-    print("P3-E bridge profile contract: PASS")
+    print("P3-F consolidated bridge profile contract: PASS")
 
 
 if __name__ == "__main__":
