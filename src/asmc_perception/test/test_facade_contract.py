@@ -99,6 +99,13 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         traffic = self.runtime["components"]["traffic_light"]
         lidar = self.runtime["components"]["lidar_fusion"]
         self.assertEqual("active_parallel_p4c", traffic["canonical_producer_status"])
+        self.assertEqual(
+            "config/baselines/perception_traffic_light_parity_v1.yaml",
+            traffic["parity_evidence"],
+        )
+        self.assertEqual(
+            "pending_owner_integration", traffic["planning_consumer_cutover_status"]
+        )
         self.assertEqual("declared_not_published_p4b", lidar["canonical_producer_status"])
         self.assertTrue(self.runtime["compatibility"]["preserve_legacy_topics"])
         self.assertFalse(self.runtime["compatibility"]["physical_source_moves"])
@@ -118,6 +125,15 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         node_types = {item.get("type") for item in visualizer.iter("node")}
         self.assertIn("camera_bev_visualizer_node.py", node_types)
         self.assertIn("lane_vector_visualizer_node.py", node_types)
+
+    def test_parity_launch_compares_reference_canonical_and_typed_outputs(self):
+        audit = ET.parse(
+            PACKAGE_ROOT / "launch" / "traffic_light_parity.launch"
+        ).getroot()
+        nodes = {(item.get("pkg"), item.get("type")) for item in audit.iter("node")}
+        self.assertIn(("traffic_light", "live_infer.py"), nodes)
+        self.assertIn(("asmc_perception", "traffic_light_node.py"), nodes)
+        self.assertIn(("asmc_perception", "traffic_light_parity_audit.py"), nodes)
 
 
 if __name__ == "__main__":

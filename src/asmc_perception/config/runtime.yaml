@@ -14,6 +14,9 @@ components:
     canonical_topic: /perception/traffic_light/detection
     implementation: asmc_perception/traffic_light_node.py
     canonical_producer_status: active_parallel_p4c
+    parity_evidence: config/baselines/perception_traffic_light_parity_v1.yaml
+    planning_consumer_cutover_status: pending_owner_integration
+    mission_activation_status: pending_hd_map_zone_integration
   lidar_fusion:
     enabled_by_default: false
     workspace: nested_legacy_overlay

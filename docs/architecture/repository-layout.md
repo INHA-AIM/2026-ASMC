@@ -27,7 +27,7 @@ gate는 [저장소 통합 로드맵](./consolidation-roadmap.md)을 따른다. p
 │   └── audit/            # package/topic/message/sensor/bag/HD Map baseline 생성
 ├── scripts/              # bridge, build, docker 헬퍼
 ├── config/               # simulator 설정과 기계 판독 baseline/contract
-│   ├── baselines/        # runtime_baseline_v1.yaml
+│   ├── baselines/        # runtime·perception 이관과 producer parity 기준
 │   └── contracts/        # HD Map·perception message/topic contract와 registry
 ├── mgeo_toolkit/         # 기존 HD map bake 도구
 ├── R_KR_PG_KATRI/        # 기존 KATRI 맵 자산; K-City 대회 데이터는 $ASMC_DATA
@@ -91,7 +91,7 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `scripts/rosbridge.sh`, `config/morai_rosbridge.env` | 종료된 direct ROS 실험 보존 | @ahnsh03 |
 | `mgeo_toolkit/`, `R_KR_PG_KATRI/` | 안승현 | @ahnsh03 |
 
-### perception · scenario (P4-C1 runtime + 분산 source 병행)
+### perception · scenario (P4-C2 producer parity + 분산 source 병행)
 
 | 경로 | 담당 | GitHub |
 |------|------|--------|
@@ -107,7 +107,7 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `tools/grpc_inha_univ/` | 장원태 | @wkddnjsxo |
 
 현재 package 경계, 본선 입력 규칙과 Phase 4 이관 gate는
-[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. P4-C1 runtime은
+[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. P4-C2 runtime은
 구현됐지만 실제 runtime source는 기존 package에 남아 있으며 후속 parity PR 전에는 삭제하지 않는다.
 
 ### interfaces (⬜ 합의 중)

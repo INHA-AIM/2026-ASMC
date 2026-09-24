@@ -42,7 +42,7 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 | 대회 규정·공개 자산 | 주최 측 최신 원문 → [대회 요약](./competition/README.md) | 공식 원문이 항상 우선. 요약 문서를 함께 갱신 |
 | Docker·시뮬 통신·포트 | [운영 가이드](./operations/README.md) | 현재 적용값과 3단계 목표를 혼용하지 않음 |
 | bridge 구현·통합 gate | [MORAI bridge guide](./packages/asmc_bridge/README.md) | `asmc_bridge` façade와 보존된 하위 패키지를 구분 |
-| perception 구현·통합 gate | [Perception package-group guide](./packages/asmc_perception/README.md) | P4-C1 runtime과 아직 분산된 source를 구분 |
+| perception 구현·통합 gate | [Perception package-group guide](./packages/asmc_perception/README.md) | P4-C2 producer parity와 아직 분산된 source를 구분 |
 | Git·ownership | [협업 규칙](./governance/README.md)과 [ownership](./onboarding/ownership.md) | 과거 Phase 0/Path A 문서보다 우선 |
 | 공용 계약 탐색·변경 gate | [계약 문서 허브](./contracts/README.md) | 실제 구현은 링크된 개별 계약과 기계 정본을 함께 확인 |
 | Planning/Control 실행 | [Planning/Control 운영 규약](./operations/planning-control.md) | standalone UDP와 v1 handoff를 현재 경로로 사용하지 않음 |

@@ -121,6 +121,13 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
                 f"unexpected producer status for {topic}: "
                 f"{definition.get('producer_status')}"
             )
+        if topic == "/perception/traffic_light/detection":
+            if definition.get("parity_evidence") != (
+                "config/baselines/perception_traffic_light_parity_v1.yaml"
+            ):
+                raise ContractError("traffic-light parity evidence is not pinned")
+            if definition.get("consumer_cutover_status") != "pending_owner_integration":
+                raise ContractError("traffic-light consumer cutover status is ambiguous")
 
     compatibility = _mapping(
         contract.get("compatibility_topics"), "compatibility_topics"

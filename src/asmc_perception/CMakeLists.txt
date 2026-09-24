@@ -20,12 +20,14 @@ catkin_package(
 
 catkin_install_python(PROGRAMS
   scripts/traffic_light_node.py
+  scripts/traffic_light_parity_audit.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_facade_contract.py)
   catkin_add_nosetests(test/test_traffic_light_contract.py)
+  catkin_add_nosetests(test/test_traffic_light_parity.py)
 endif()
 
 install(DIRECTORY config launch

@@ -49,6 +49,8 @@ canonical_topics:
     queue_size: 1
     latch: false
     producer_status: active_parallel_p4c
+    parity_evidence: config/baselines/perception_traffic_light_parity_v1.yaml
+    consumer_cutover_status: pending_owner_integration
   /perception/lidar/tracked_objects:
     type: asmc_msgs/TrackedObjectArray
     md5: e127b2aabd7494ad01a5a56b005bf07e

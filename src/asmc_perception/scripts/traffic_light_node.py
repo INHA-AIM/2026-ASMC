@@ -19,7 +19,6 @@ import torch.nn.functional as F
 from PIL import Image
 
 from asmc_perception.traffic_light_contract import (
-    ordered_candidates,
     populate_detection,
 )
 from asmc_perception.traffic_light_model import (
@@ -129,7 +128,9 @@ def main(argv=None):
     std = torch.tensor(IMAGENET_STD, device=device).view(1, 3, 1, 1)
 
     def preprocess(image):
-        value = torch.from_numpy(np.asarray(image, dtype=np.uint8)).to(device)
+        value = torch.from_numpy(
+            np.array(image, dtype=np.uint8, copy=True)
+        ).to(device)
         value = value.permute(2, 0, 1).unsqueeze(0).float().div_(255.0)
         value = F.interpolate(
             value,
@@ -235,9 +236,15 @@ def main(argv=None):
 
             inference_ms = (time.perf_counter() - loop_started) * 1000.0
             label, confidence = decide(probabilities, classes, args.min_detect)
-            candidate_labels, candidate_confidences = ordered_candidates(
-                classes, probabilities.tolist(), args.topk
+            candidate_values, candidate_indices = probabilities.topk(
+                min(args.topk, len(classes))
             )
+            candidate_labels = [
+                classes[int(index)] for index in candidate_indices
+            ]
+            candidate_confidences = [
+                float(value) for value in candidate_values
+            ]
             detail = {
                 "label": label,
                 "prob": round(float(confidence), 4),

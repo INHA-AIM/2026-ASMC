@@ -190,13 +190,15 @@ P4-B에서 canonical `asmc_perception` façade와 additive interface를 추가�
 [package README](../../../src/asmc_perception/README.md), typed topic의 frame/stamp/freshness 및
 cutover gate는 [Perception runtime contract v1](../../contracts/perception/runtime-v1.md)이 정본이다.
 traffic-light String과 LiDAR `Msg/TrackedObject*`는 그대로 유지된다. 신호등 typed topic은
-P4-C1에서 source image header를 보존해 병행 발행하며 LiDAR typed topic은 아직
+P4-C1에서 source image header를 보존해 병행 발행하며 P4-C2에서 대표 bag의 기존/new
+String·typed·stale·recovery parity를 통과했다. LiDAR typed topic은 아직
 `declared_not_published_p4b`다.
 
 P4-C는 camera/BEV/traffic-light/recorder runtime을 한 단위씩 이식한다. P4-C1은
 traffic-light가 실제 추론 입력 image header를 `TrafficLightDetection`에 보존해 legacy String과
-병행 발행하고 GPU 컨테이너 실행·시각화 진입점을 고정한다. 다음은 대표 bag parity 후
-camera/BEV와 recorder의 물리 이식이다. LiDAR 이식과 구 road-mask 교체는 별도 P4-D로 분리한다.
+병행 발행하고 GPU 컨테이너 실행·시각화 진입점을 고정했다. P4-C2는 producer parity를
+`config/baselines/perception_traffic_light_parity_v1.yaml`로 고정했다. 다음은 판제 consumer
+cutover와 camera/BEV·recorder 물리 이식이다. LiDAR 이식과 구 road-mask 교체는 별도 P4-D로 분리한다.
 
 ## 10. 이번 문서 통합에서 보존한 것
 

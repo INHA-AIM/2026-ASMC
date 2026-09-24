@@ -1,6 +1,6 @@
 # `asmc_perception` runtime
 
-> **상태:** P4-C1 — compatibility façade + canonical traffic-light producer
+> **상태:** P4-C2 — canonical traffic-light producer + bag parity baseline
 
 분산된 camera semantic, metric BEV/lane, traffic-light, nested LiDAR/fusion과 recorder를
 하나의 운영 진입점에서 조합한다. camera/BEV/recorder는 아직 기존 executable을 사용하며,
@@ -9,10 +9,21 @@
 ## 실행
 
 기본값은 competition-legal 3-camera lane pipeline만 실행한다. CUDA, `twinlite_morai`, 외부
-TwinLite 소스가 필요한 까닭에 WSL/Linux host에서 다음 wrapper를 사용하는 것이 정본이다.
+TwinLite 소스가 필요한 까닭에 WSL/Linux host에서는 다음 wrapper를 사용할 수 있다.
 
 ```bash
 ./scripts/perception.sh
+```
+
+이 wrapper는 runtime 기능이 아니라 편의·오실행 방지 도구다. GPU 컨테이너가 꺼져 있으면
+시작하고 그 안에서 아래 `roslaunch`를 실행할 뿐이며, 어떤 component를 켤지는 전달한
+launch argument가 결정한다. 지금까지처럼 컨테이너에 직접 들어가 실행해도 결과는 같다.
+
+```bash
+docker exec -it asmc-perception-train bash
+source /opt/ros/noetic/setup.bash
+source /root/ws/devel/setup.bash
+roslaunch asmc_perception perception.launch
 ```
 
 `roslaunch asmc_perception perception.launch`를 직접 실행하려면 반드시
@@ -61,6 +72,11 @@ asmc-ros-gui rqt-image /perception/lane/debug/camera_reprojection_mosaic
 
 `rqt_image_view`는 한 창에 한 topic을 선택한다. 추론 자체만 확인할 때는 camera mosaic,
 차로 fitting은 `boundaries_bev`, 카메라 정합은 `camera_reprojection_mosaic`가 가장 직접적이다.
+`start_visualization`은 개발·검수용이고 기본값은 false다. 평상시 주행에는 필요하지 않다.
+
+`start_traffic_light`은 실제 producer를 켜는 옵션이다. 현재는 true로 켜면 전 구간에서 계속
+추론하며, HD맵의 `TRAFFIC_LIGHT_REQUIRED` 구간(A236~A308)에 따른 process/compute 활성화는
+판제 supervisor와 함께 연결할 후속 항목이다.
 
 ## P4-C1 경계
 
@@ -75,6 +91,23 @@ asmc-ros-gui rqt-image /perception/lane/debug/camera_reprojection_mosaic
 - 기존 `traffic_light` package는 대표 bag parity와 consumer cutover 전까지 삭제하지 않는다.
 - Capture/gRPC GT, simulator object/traffic truth는 deployment 입력으로 사용하지 않는다.
 
+## P4-C2 parity 회귀
+
+대표 raw bag의 `camera_extra` 프레임을 기존 producer와 canonical producer에 한 장씩 같은
+순서로 넣어 legacy String, typed result, source header, stale 전환과 복구를 비교한다.
+
+```bash
+# asmc-perception-train 컨테이너
+roslaunch asmc_perception traffic_light_parity.launch \
+  bag_path:=/data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+
+# host
+python3 tools/audit/validate_traffic_light_parity.py --check-artifacts
+```
+
+기준 결과는 `config/baselines/perception_traffic_light_parity_v1.yaml`이다. 이 통과는 producer
+병행 발행의 근거이며 판제 consumer cutover 완료를 뜻하지는 않는다.
+
 기계 판독 상태는 `config/runtime.yaml`, 파트 간 topic·message 정본은
 [`perception_runtime_topic_contract_v1.yaml`](../../config/contracts/perception_runtime_topic_contract_v1.yaml),
 전체 이관 gate는 [Perception 개발·통합 가이드](../../docs/packages/asmc_perception/README.md)를 따른다.
@@ -84,7 +117,9 @@ asmc-ros-gui rqt-image /perception/lane/debug/camera_reprojection_mosaic
 ```bash
 python3 -m unittest src/asmc_perception/test/test_facade_contract.py
 python3 -m unittest src/asmc_perception/test/test_traffic_light_contract.py
+python3 -m unittest src/asmc_perception/test/test_traffic_light_parity.py
 python3 tools/audit/validate_perception_contract.py
+python3 tools/audit/validate_traffic_light_parity.py --check-artifacts
 roslaunch --nodes asmc_perception perception.launch
 ```
 

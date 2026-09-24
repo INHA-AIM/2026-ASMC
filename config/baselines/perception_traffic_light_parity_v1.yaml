@@ -1,0 +1,37 @@
+schema_version: 1
+audit_id: p4c2_traffic_light_parity_v1
+status: pass
+source:
+  bag: $ASMC_DATA/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+  topic: /cam_extra/image_jpeg/compressed
+  sampling: uniform_topic_extent
+  topic_message_count: 1758
+  size_bytes: 1722857081
+  sha256: a8f360e666f58358062e83cedbc6b51f94e8dc897402a2605eed7761a7880268
+checkpoint:
+  path: src/traffic_light/best.pt
+  sha256: 70ddaf222e7bc6ff2b4748c4b07c1b24dec72a2671f39bc18e0b243ddd93c0d5
+acceptance:
+  requested_fresh_frames: 24
+  initial_fresh_frames_compared: 24
+  recovery_fresh_frames_compared: 1
+  total_fresh_frames_compared: 25
+  configured_stale_sec: 1.0
+  stale_transition_passed: true
+  recovery_transition_passed: true
+  probability_tolerance: 0.0001
+  maximum_probability_delta: 4.862e-05
+  maximum_candidate_confidence_delta: 4.99e-05
+  source_stamp_and_frame_mismatches: 0
+observed:
+  labels:
+    not_detected: 22
+    red: 2
+    red_yellow: 1
+  reference_latency_ms:
+    median: 12.4
+    p95: 22.0
+  canonical_latency_ms:
+    median: 10.61
+    p95: 22.124
+errors: []
