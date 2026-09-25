@@ -412,15 +412,17 @@ bridge와 검사할 perception/planning process를 먼저 각자의 foreground t
 |---|---|
 | `--duration SEC` | 측정 시간, 기본 15초 |
 | `--max-stale-sec SEC` | 일반 topic의 마지막 수신 허용 age, 기본 1초 |
+| `--master-timeout-sec SEC` | ROS master XML-RPC 호출 제한, 기본 3초; master가 없을 때 무한 대기 방지 |
 | `--traffic-light` | typed detection과 legacy state/detail producer 검사 |
 | `--visualization` | subscriber-lazy인 canonical mosaic/comparison 2종 검사 |
 | `--require-planning` | `/behavior_planner`의 typed/legacy 신호등 구독 검사; `--traffic-light` 필수 |
-| `--require-lane-adapter` | `/lane_boundary_monitor`의 typed lane 구독 검사 |
+| `--require-lane-adapter` | `/boundary_family_monitor`의 canonical `boundary_family` 구독 검사 |
 | `--allow-opt-in-debug` | 의도적으로 켠 기본-OFF debug publisher를 정보로만 보고 실패시키지 않음 |
 | `--yaml-out PATH` | machine-readable 결과 저장; ROS container 안의 경로 |
 
 기본 검사는 node, message type, 유일 publisher, 필수 내부 subscriber, rate, source stamp,
-`frame_id`, staleness와 diagnostics ERROR를 함께 본다. P5-B에서 기본-OFF로 바꾼 19개 topic이
+`frame_id`, staleness와 diagnostics ERROR를 함께 본다. P5-B와 shared-family closeout에서
+기본-OFF로 정한 20개 topic이
 옵션 없이 다시 광고되어도 실패한다. 계약 정본과 판제/launch 경로의 정적 연결만 빠르게
 확인하려면 다음을 실행한다.
 

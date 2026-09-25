@@ -72,6 +72,29 @@ def snapshot_samples(samples: Mapping[str, Mapping[str, object]]):
     }
 
 
+def call_with_timeout(label, callback, timeout_sec: float):
+    """Run a ROS-master XML-RPC call without allowing an infinite hang."""
+    result = {}
+    failure = {}
+
+    def invoke():
+        try:
+            result["value"] = callback()
+        except Exception as exc:  # ROS XML-RPC raises several exception types.
+            failure["error"] = exc
+
+    worker = threading.Thread(target=invoke, daemon=True)
+    worker.start()
+    worker.join(float(timeout_sec))
+    if worker.is_alive():
+        raise TimeoutError(f"{label} timed out after {timeout_sec:.1f}s")
+    if "error" in failure:
+        raise RuntimeError(f"{label} failed: {failure['error']}") from failure[
+            "error"
+        ]
+    return result.get("value")
+
+
 def parse_args(argv: Optional[Sequence[str]] = None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -81,6 +104,7 @@ def parse_args(argv: Optional[Sequence[str]] = None):
     )
     parser.add_argument("--duration", type=float)
     parser.add_argument("--max-stale-sec", type=float, default=1.0)
+    parser.add_argument("--master-timeout-sec", type=float, default=3.0)
     parser.add_argument(
         "--traffic-light",
         action="store_true",
@@ -99,7 +123,7 @@ def parse_args(argv: Optional[Sequence[str]] = None):
     parser.add_argument(
         "--require-lane-adapter",
         action="store_true",
-        help="require the provisional lane-boundary monitor subscription",
+        help="require the read-only shared-family adapter subscription",
     )
     parser.add_argument(
         "--allow-opt-in-debug",
@@ -140,8 +164,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if args.duration is not None
         else contract["default_duration_sec"]
     )
-    if duration <= 0.0 or args.max_stale_sec <= 0.0:
-        raise SystemExit("--duration and --max-stale-sec must be positive")
+    if (
+        duration <= 0.0
+        or args.max_stale_sec <= 0.0
+        or args.master_timeout_sec <= 0.0
+    ):
+        raise SystemExit(
+            "--duration, --max-stale-sec and --master-timeout-sec must be positive"
+        )
     if args.require_planning and not args.traffic_light:
         raise SystemExit("--require-planning also requires --traffic-light")
 
@@ -179,6 +209,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         raise SystemExit(
             "ROS Python packages are required; run through scripts/verify_perception.sh"
         ) from exc
+
+    try:
+        call_with_timeout(
+            "ROS master preflight",
+            rosgraph.Master("/perception_runtime_acceptance_preflight").getPid,
+            args.master_timeout_sec,
+        )
+    except (RuntimeError, TimeoutError) as exc:
+        print(f"[FAIL] {exc}")
+        return 2
 
     rospy.init_node(
         "perception_runtime_acceptance", anonymous=True, disable_signals=True
@@ -245,15 +285,35 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     finished = time.monotonic()
 
     master = rosgraph.Master(rospy.get_name())
-    publishers_state, subscribers_state, _services = master.getSystemState()
+    try:
+        publishers_state, subscribers_state, _services = call_with_timeout(
+            "ROS master system-state query",
+            master.getSystemState,
+            args.master_timeout_sec,
+        )
+        published_topics = call_with_timeout(
+            "ROS master published-topic query",
+            rospy.get_published_topics,
+            args.master_timeout_sec,
+        )
+        node_names = call_with_timeout(
+            "ROS master node query",
+            rosnode.get_node_names,
+            args.master_timeout_sec,
+        )
+    except (RuntimeError, TimeoutError) as exc:
+        for subscriber in subscribers:
+            subscriber.unregister()
+        print(f"[FAIL] {exc}")
+        return 2
     publishers_by_topic = {
         topic: sorted(nodes) for topic, nodes in publishers_state
     }
     subscribers_by_topic = {
         topic: sorted(nodes) for topic, nodes in subscribers_state
     }
-    published_types = dict(rospy.get_published_topics())
-    live_nodes = set(rosnode.get_node_names())
+    published_types = dict(published_topics)
+    live_nodes = set(node_names)
 
     failures = []
     missing_nodes = sorted(required_nodes - live_nodes)

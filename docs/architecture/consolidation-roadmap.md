@@ -436,7 +436,8 @@ pipeline audit도 `lane_publish_pipeline_audit` opt-in으로 전환했고 result
 기본 camera→BEV→lane 33개 토픽과 선택적 traffic-light 3개, rqt 2개를 node/type/유일
 publisher/필수 subscriber/rate/stamp/frame 기준으로 검사한다. 판제 실행 시에는
 `behavior_planner`가 typed `/perception/traffic_light/detection`과 호환
-`/traffic_light/state`를 모두 구독하는지도 별도 gate로 검사한다. 기본-OFF 19개 토픽이
+`/traffic_light/state`를 모두 구독하는지도 별도 gate로 검사한다. shared-family closeout 뒤
+기본-OFF 20개 토픽이
 실수로 다시 광고되면 실패한다. source·launch·config 경로 anchor도 함께 검사해 package 이동 뒤
 연결이 조용히 깨지는 것을 막는다. LiDAR canonical topic은 담당 구현 handoff 전이므로 여기서
 필수화하지 않는다.

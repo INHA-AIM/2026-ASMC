@@ -87,8 +87,8 @@ topic_groups:
         frame_id: base_link
         min_rate_hz: 5.0
         require_nonzero_stamp: true
-      - pattern: /perception/lane/boundary_observations
-        type: asmc_msgs/LaneBoundaryObservationArray
+      - pattern: /perception/lane/boundary_family
+        type: asmc_msgs/LaneBoundaryFamily
         publisher: /camera_lane_vectorizer
         frame_id: base_link
         min_rate_hz: 5.0
@@ -157,14 +157,15 @@ optional_consumer_gates:
         subscribers: [/behavior_planner]
   lane_adapter:
     topics:
-      - pattern: /perception/lane/boundary_observations
-        subscribers: [/lane_boundary_monitor]
+      - pattern: /perception/lane/boundary_family
+        subscribers: [/boundary_family_monitor]
 
 default_forbidden_topics:
   - /perception/bev/debug/{view}/coverage
   - /perception/bev/camera/source_count
   - /perception/bev/debug/source_view
   - /perception/lane/pipeline_audit
+  - /perception/lane/boundary_observations
   - /perception/camera/{view}/debug/panel/compressed
   - /perception/bev/debug/fused/compressed
   - /perception/bev/debug/fused_quality/compressed
@@ -176,11 +177,11 @@ default_forbidden_topics:
   - /perception/bev/debug/{view}/camera_grid_overlay/compressed
 
 static_bindings:
-  - id: host_perception_entrypoint
-    file: scripts/perception.sh
+  - id: ros_runtime_inference_environment
+    file: docker/ros-noetic/docker-compose.yaml
     anchors:
-      - asmc-perception-train
-      - roslaunch asmc_perception perception.launch
+      - TWINLITE_ROOT=/opt/baselines/TwinLiteNetPlus
+      - /opt/baselines/TwinLiteNetPlus:ro
   - id: canonical_perception_launch
     file: src/asmc_perception/launch/perception.launch
     anchors:
@@ -188,6 +189,8 @@ static_bindings:
       - pkg="asmc_perception" type="camera_bev_fusion_node.py"
       - pkg="asmc_perception" type="lane_vectorizer_node.py"
       - pkg="asmc_perception" type="traffic_light_node.py"
+      - '<arg name="lane_enable_boundary_family_candidate" default="true"/>'
+      - '<arg name="lane_enable_independent_boundary_pipeline" default="false"/>'
   - id: semantic_launch
     file: src/asmc_perception/launch/camera_lane.launch
     anchors:
@@ -208,13 +211,13 @@ static_bindings:
       - 'typed_topic: "/perception/traffic_light/detection"'
       - 'topic: "/traffic_light/state"'
   - id: lane_adapter_config
-    file: src/lane_boundary_adapter/config/shadow_lane_consumer.yaml
+    file: src/lane_boundary_adapter/config/shadow_boundary_family_consumer.yaml
     anchors:
-      - 'input: /perception/lane/boundary_observations'
+      - 'input: /perception/lane/boundary_family'
   - id: lane_adapter_source
-    file: src/lane_boundary_adapter/src/lane_boundary_monitor_node.cpp
+    file: src/lane_boundary_adapter/src/boundary_family_monitor_node.cpp
     anchors:
-      - /perception/lane/boundary_observations
+      - /perception/lane/boundary_family
 
 deferred_components:
   - id: lidar_canonical_runtime

@@ -65,4 +65,5 @@ P5-C 실행 수락 정본은
 P5-A의 정적 inventory와 달리 현재 ROS graph의 node, topic type, 유일 producer, 필수 subscriber,
 rate, source stamp, frame과 기본-OFF topic 부재를 측정한다. 신호등·판제·시각화·임시 lane adapter는
 함께 실행할 때만 명시적인 verifier 옵션으로 gate에 포함한다. 이 계약은 기존 topic을 rename하지
-않고 현재 연결을 회귀 기준으로 고정한다.
+않고 현재 연결을 회귀 기준으로 고정한다. lane 정본은 shared
+`/perception/lane/boundary_family`이며 legacy `boundary_observations`는 기본-OFF 호환 경로다.
