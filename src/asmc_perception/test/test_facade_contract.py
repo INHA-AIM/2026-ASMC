@@ -52,6 +52,9 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             "start_camera_lane": "true",
             "start_traffic_light": "false",
             "start_visualization": "false",
+            "visualization_legacy_rqt": "false",
+            "visualization_calibration_grid": "false",
+            "publish_bev_debug_metadata": "$(arg visualization_legacy_rqt)",
         }
         for name, default in expected.items():
             self.assertIn(name, arguments)
@@ -210,13 +213,66 @@ class PerceptionFacadeContractTest(unittest.TestCase):
 
     def test_visualization_launch_uses_v3_calibration(self):
         visualizer = ET.parse(PACKAGE_ROOT / "launch" / "visualization.launch").getroot()
-        values = [item.get("default", "") for item in visualizer.findall("arg")]
+        arguments = {
+            item.get("name"): item.get("default", "")
+            for item in visualizer.findall("arg")
+        }
+        values = list(arguments.values())
         self.assertTrue(any("cameras_v3.yaml" in value for value in values))
+        self.assertEqual("false", arguments["legacy_rqt"])
+        self.assertEqual("false", arguments["calibration_grid"])
         node_types = {item.get("type") for item in visualizer.iter("node")}
         node_packages = {item.get("pkg") for item in visualizer.iter("node")}
         self.assertIn("camera_bev_visualizer_node.py", node_types)
         self.assertIn("lane_vector_visualizer_node.py", node_types)
         self.assertEqual({"asmc_perception"}, node_packages)
+
+    def test_runtime_visualization_defaults_are_compact(self):
+        visualization = self.runtime["components"]["visualization"]
+        self.assertEqual(
+            [
+                "/perception/camera/debug/mosaic/compressed",
+                "/perception/bev/debug/comparison/compressed",
+            ],
+            visualization["image_topics"],
+        )
+        self.assertFalse(visualization["legacy_rqt"]["enabled_by_default"])
+        self.assertEqual(
+            "visualization_legacy_rqt",
+            visualization["legacy_rqt"]["launch_argument"],
+        )
+        self.assertFalse(visualization["calibration_grid"]["enabled_by_default"])
+        metadata = self.runtime["components"]["camera_lane"]["bev_debug_metadata"]
+        self.assertFalse(metadata["enabled_by_default"])
+        self.assertEqual("publish_bev_debug_metadata", metadata["launch_argument"])
+        self.assertEqual(5, len(metadata["topics"]))
+
+    def test_bev_debug_metadata_is_opt_in_at_both_producers(self):
+        camera_bev = next(
+            node
+            for node in self.launch_root.iter("node")
+            if node.get("name") == "camera_bev"
+        )
+        fusion = next(
+            node
+            for node in self.launch_root.iter("node")
+            if node.get("name") == "camera_bev_fusion"
+        )
+        camera_params = {
+            item.get("name"): item.get("value")
+            for item in camera_bev.findall("param")
+        }
+        fusion_params = {
+            item.get("name"): item.get("value")
+            for item in fusion.findall("param")
+        }
+        self.assertEqual(
+            "$(arg publish_bev_debug_metadata)", camera_params["publish_coverage"]
+        )
+        self.assertEqual(
+            "$(arg publish_bev_debug_metadata)",
+            fusion_params["publish_debug_metadata"],
+        )
 
     def test_closed_loop_acceptance_is_isolated_from_control_outputs(self):
         launch = ET.parse(

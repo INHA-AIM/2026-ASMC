@@ -109,7 +109,7 @@ topic_families:
       - {pattern: '/perception/bev/debug/{view}/coverage', type: sensor_msgs/Image}
     producer:
       file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_node.py
-      anchors: ['"coverage": rospy.Publisher', 'latch=True']
+      anchors: ['publishers["coverage"] = rospy.Publisher', 'latch=True']
     consumers:
       - file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_visualizer_node.py
         anchor: 'if self.publish_per_view_mosaic:'
@@ -431,3 +431,11 @@ p5b_order:
   - Remove camera-grid overlay from the normal visualization preset; retain an explicit calibration-review path.
   - Keep old image topics for one compatibility interval and record side-by-side pixel/timestamp parity before retirement.
   - Do not rename required internal transports in the same change as visualization consolidation.
+
+p5b_runtime_overrides:
+  - family_ids: [per_view_projected_coverage, fused_bev_source_count, fused_bev_source_view]
+    current_mode: explicit_argument
+    launch_argument: publish_bev_debug_metadata
+    default: false
+    compatibility_default: visualization_legacy_rqt
+    reason: User-approved runtime declutter after the compact rqt comparison was validated.

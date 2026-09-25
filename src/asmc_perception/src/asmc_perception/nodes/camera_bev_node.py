@@ -100,13 +100,14 @@ class CameraBevNode:
         self.last_input_stamp_ns = {view: 0 for view in self.views}
         self.next_output_stamp_ns = {view: 0 for view in self.views}
         self.timestamp_resets = {view: 0 for view in self.views}
+        self.publish_coverage = bool(rospy.get_param("~publish_coverage", False))
         self.publishers = {}
         self.subscribers = []
         self.synchronizers = []
 
         for view in self.views:
             namespace = "/perception/bev/debug/{}".format(view)
-            self.publishers[view] = {
+            publishers = {
                 "drivable": rospy.Publisher(
                     namespace + "/drivable_probability", Image, queue_size=1
                 ),
@@ -116,10 +117,12 @@ class CameraBevNode:
                 "road_marking_confidence": rospy.Publisher(
                     namespace + "/road_marking/confidence", Image, queue_size=1
                 ),
-                "coverage": rospy.Publisher(
-                    namespace + "/coverage", Image, queue_size=1, latch=True
-                ),
             }
+            if self.publish_coverage:
+                publishers["coverage"] = rospy.Publisher(
+                    namespace + "/coverage", Image, queue_size=1, latch=True
+                )
+            self.publishers[view] = publishers
             camera = self.cameras[view]
             drivable_subscriber = message_filters.Subscriber(
                 camera.drivable_topic, Image, queue_size=2
@@ -149,7 +152,7 @@ class CameraBevNode:
         )
         rospy.loginfo(
             "camera BEV ready views=%s grid=%dx%d x=[%.1f,%.1f] y=[%.1f,%.1f] "
-            "resolution=%.3f max_hz=%.1f",
+            "resolution=%.3f max_hz=%.1f coverage=%s",
             self.views,
             self.grid.width_px,
             self.grid.height_px,
@@ -159,6 +162,7 @@ class CameraBevNode:
             self.grid.y_max_m,
             self.grid.resolution_m,
             self.max_publish_hz,
+            self.publish_coverage,
         )
 
     def _callback(
@@ -219,9 +223,11 @@ class CameraBevNode:
             self.publishers[view]["road_marking_confidence"].publish(
                 self._image_message(projected.road_marking_confidence, header)
             )
-            self.publishers[view]["coverage"].publish(
-                self._image_message(projected.coverage, header)
-            )
+            coverage_publisher = self.publishers[view].get("coverage")
+            if coverage_publisher is not None:
+                coverage_publisher.publish(
+                    self._image_message(projected.coverage, header)
+                )
             publish_ms = (time.perf_counter() - started) * 1000.0
         except Exception as exc:
             # message_filters callbacks can finish after rospy has closed the

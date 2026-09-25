@@ -15,6 +15,8 @@ from asmc_perception.bev.visualization import (
     draw_metric_lanes,
     draw_stateful_lane_family,
     draw_ground_grid_overlay,
+    fuse_projected_rgb,
+    render_bev_comparison,
     render_fused_bev,
     render_fused_quality,
 )
@@ -80,6 +82,60 @@ class VisualizationTest(unittest.TestCase):
         self.assertEqual((*self.grid.shape, 3), rendered.shape)
         self.assertGreater(np.count_nonzero(rendered), 0)
         self.assertGreater(np.count_nonzero(rendered[:, :, 1]), 0)
+
+    def test_projected_rgb_fusion_uses_quality_weights(self):
+        left = np.zeros((2, 3, 3), dtype=np.uint8)
+        right = np.zeros((2, 3, 3), dtype=np.uint8)
+        left[:, :, 2] = 200
+        right[:, :, 0] = 100
+        quality = {
+            "left": np.full((2, 3), 3.0, dtype=np.float32),
+            "right": np.full((2, 3), 1.0, dtype=np.float32),
+        }
+        fused = fuse_projected_rgb(
+            {"left": left, "right": right}, quality
+        )
+        self.assertEqual((2, 3, 3), fused.shape)
+        self.assertEqual((25, 0, 150), tuple(fused[0, 0]))
+
+    def test_bev_comparison_places_rgb_and_semantic_side_by_side(self):
+        rgb = np.full((*self.grid.shape, 3), 32, dtype=np.uint8)
+        mono = np.zeros(self.grid.shape, dtype=np.uint8)
+        coverage = np.full(self.grid.shape, 255, dtype=np.uint8)
+        comparison = render_bev_comparison(
+            rgb,
+            mono,
+            mono,
+            coverage,
+            self.grid,
+            panel_size=(160, 250),
+        )
+        self.assertEqual((250, 320, 3), comparison.shape)
+        self.assertGreater(np.count_nonzero(comparison[:, :160]), 0)
+
+    def test_compact_semantic_view_does_not_encode_probability_brightness(self):
+        drivable = np.asarray([[0, 127], [128, 255]], dtype=np.uint8)
+        marking = np.zeros((2, 2), dtype=np.uint8)
+        confidence = np.asarray([[0, 10], [100, 255]], dtype=np.uint8)
+        coverage = np.full((2, 2), 255, dtype=np.uint8)
+        source_count = np.ones((2, 2), dtype=np.uint8)
+        grid = BevGridSpec(0.0, 2.0, 0.0, 2.0, 1.0, "base_link")
+        rendered = render_fused_bev(
+            drivable,
+            marking,
+            confidence,
+            coverage,
+            source_count,
+            grid,
+            draw_grid_lines=False,
+            draw_label=False,
+            encode_probability_strength=False,
+            drivable_threshold=0.5,
+        )
+        self.assertEqual(0, int(rendered[0, 0, 1]))
+        self.assertEqual(0, int(rendered[0, 1, 1]))
+        self.assertEqual(184, int(rendered[1, 0, 1]))
+        self.assertEqual(184, int(rendered[1, 1, 1]))
 
     def test_invalid_road_class_is_rejected(self):
         with self.assertRaises(ValueError):
