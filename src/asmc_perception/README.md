@@ -49,6 +49,19 @@ roslaunch data_collection bag_recorder.launch profile:=full_raw
 LiDAR/fusion은 별도 nested workspace의 `Main`, `Msg`와 Velodyne overlay를 사용하며 담당 팀원
 handoff 전에는 `asmc_perception` launch에 포함하지 않는다.
 
+### `camera_bev`와 `camera_bev_fusion`
+
+`camera_bev` 노드는 front/left/right 카메라의 semantic probability·road-marking을
+카메라별 calibration으로 `base_link` 평면에 각각 투영한다. 출력은
+`/perception/bev/debug/{view}/*`이며, 현재는 후단 fusion의 내부 입력이자 개발
+비교 계층이다.
+
+`camera_bev_fusion`은 세 투영 결과의 source timestamp를 맞추고, calibration 품질·
+가시 영역 가중치로 겹침을 해결해 하나의 `/perception/bev/camera/*`를 만든다.
+`coverage`, `source_count`도 이 단계에서 만들며 lane vectorizer가 소비할 운영 정본은
+이 fused output이다. 두 노드는 중복 알고리즘이 아니라 **카메라별 투영 → 다중
+카메라 융합**의 순차 단계다.
+
 ## 시각화
 
 debug image publisher를 함께 켠다.

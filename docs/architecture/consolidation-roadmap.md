@@ -390,7 +390,12 @@ semantic, metric BEV/lane family, traffic light의 runtime·offline·training을
 
 ### 6.4 스크립트와 시각화
 
-루트에는 사람이 기억할 진입점 하나만 둔다.
+실행 명령의 현재 정본은 [실행 명령어 모음](../runtime-commands.md)이다. Phase 5는
+모든 process를 하나의 스크립트로 숨기지 않는다. UDP bridge는 별도 foreground
+terminal에서 log·Hz·diagnostics를 계속 볼 수 있게 `udp_bridge.sh`를 단독 진입점으로
+유지한다. 통합 편의 명령은 인지 runtime과 debug UI 정도로 한정한다.
+
+초기 안의 예시는 아래였으며, 구현 전에 필요한 부분만 채택한다.
 
 ```bash
 ./scripts/asmc build
@@ -401,6 +406,17 @@ semantic, metric BEV/lane family, traffic light의 runtime·offline·training을
 ./scripts/asmc debug rviz
 ./scripts/asmc verify field
 ```
+
+Phase 5의 우선순위는 wrapper 수를 늘리는 것이 아니라 perception 출력과 시각화를
+줄이는 것이다.
+
+1. consumer가 없는 grid·debug topic은 기본 발행을 끄고 opt-in으로 돌린다.
+2. BEV debug는 중복 창 대신 원본/투영 BEV와 최종 인지·융합 BEV를 나란히
+   보여주는 하나의 비교 화면으로 정리한다.
+3. 의미가 같은 topic은 publisher·consumer·bag 감사 후 정본 하나를 선택하고, 즉시
+   삭제가 아닌 호환 기간을 거친다.
+4. HD Map·perception·topic health는 RViz/rqt에서 먼저 정리하고 그 계약이 안정된
+   뒤에만 read-only web console로 확장한다.
 
 기존 30개 스크립트는 `container`, `runtime`, `data`, `train/eval`, `diagnostic`으로 분류한다.
 package node는 각 package `scripts/`, offline·research job은 `tools/`에 둔다.

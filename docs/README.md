@@ -26,10 +26,11 @@
 아래 문서를 순서대로 읽고 필요한 파트의 상세 문서로 이동한다.
 
 1. [개발 시작](./onboarding/README.md) — clone, Docker, 환경과 첫 빌드
-2. [팀 ownership](./onboarding/ownership.md) — 담당 경로와 검증 책임
-3. [협업 규칙](./governance/README.md) — 브랜치, PR과 리뷰 기준
-4. [대회 환경·규정](./competition/README.md) — 허용 입력과 당일 제약
-5. [팀 아키텍처](./architecture/system-overview.md) — 현재 시스템 경계
+2. [실행 명령어 모음](./runtime-commands.md) — runtime 순서, 기본값·옵션, LAN2LAN 준비
+3. [팀 ownership](./onboarding/ownership.md) — 담당 경로와 검증 책임
+4. [협업 규칙](./governance/README.md) — 브랜치, PR과 리뷰 기준
+5. [대회 환경·규정](./competition/README.md) — 허용 입력과 당일 제약
+6. [팀 아키텍처](./architecture/system-overview.md) — 현재 시스템 경계
 
 현재 인지 개발자는 [Perception 개발·통합 가이드](./packages/asmc_perception/README.md),
 planning/control 개발자는 [Planning/Control 개발 가이드](./packages/planning-control/README.md)를 이어서
