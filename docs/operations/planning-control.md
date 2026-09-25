@@ -50,6 +50,10 @@ P4-C6에서 현재 catkin target과 맞지 않던 이전 standalone build/run sc
 
 ## 3. 개발 실행
 
+> **판제 오너십 주의:** P5-D에서 perception 통합 측이 변경한 항목은 planning launch의 신호등
+> producer 기본값뿐이다. 목적은 중복 publisher 방지이며 판제 정책 변경이 아니다. 호환 include
+> 제거와 consumer 정책 변경은 판제 오너가 리뷰·승인한다.
+
 터미널 1에서 현재 개발 bridge를 실행한다.
 
 ```bash

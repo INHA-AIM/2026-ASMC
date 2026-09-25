@@ -113,6 +113,10 @@ LiDAR object producer, HD Map 정본, mission orchestration과 closed-loop full 
 
 ## 7. Camera lane handoff
 
+> **교차팀 변경 경계:** perception 측 P5-D 작업은 typed 입력 계약, 중복 producer 방지 기본값과
+> reference adapter 근거만 기록한다. 판제 package의 정책·구조 소유권은 판제 팀에 있으며,
+> adapter 흡수·삭제와 호환 경로 종료는 판제 오너가 결정한다.
+
 `lane_boundary_adapter`는 `/perception/lane/*`를 Marker와 diagnostics로만 변환한다.
 `BehaviorCommand`, `Trajectory`, `/ctrl_cmd`를 발행하지 않으며 camera lane에 제어 권한을
 부여하지 않는다. 음영구간 소비 조건은

@@ -172,13 +172,22 @@ def _validate_p5_closeout(
         launch = ET.parse(
             repo_root / "src/behavior_planner/launch" / launch_name
         ).getroot()
+        argument_nodes = {
+            item.get("name"): item for item in launch.findall("arg")
+        }
         arguments = {
-            item.get("name"): item.get("default", "")
-            for item in launch.findall("arg")
+            name: item.get("default", "")
+            for name, item in argument_nodes.items()
         }
         if arguments.get("traffic_light") != "false":
             raise AcceptanceContractError(
                 f"{launch_name} must not start the perception producer by default"
+            )
+        if "planning-owner review" not in argument_nodes["traffic_light"].get(
+            "doc", ""
+        ):
+            raise AcceptanceContractError(
+                f"{launch_name} lost the cross-team planning ownership note"
             )
         nodes = {
             (item.get("pkg"), item.get("type")) for item in launch.iter("node")

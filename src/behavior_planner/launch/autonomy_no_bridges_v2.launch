@@ -3,18 +3,23 @@
        opt-in, matching autonomy_no_bridges.launch defaults. -->
   <arg name="state_source" default="gps_imu" doc="gps_imu or ego_dev"/>
   <arg name="dashboard" default="false"/>
-  <!-- Perception owns the canonical producer. Keep this compatibility include
-       opt-in so starting the planning chain cannot create a second publisher. -->
-  <arg name="traffic_light" default="false"/>
+  <!-- CROSS-TEAM P5-D HANDOFF NOTE:
+       This default was changed by perception integration, not by the planning
+       owner. It only prevents a duplicate traffic-light publisher when the
+       canonical asmc_perception runtime is active. Keep the opt-in include;
+       retirement or policy changes require planning-owner review. -->
+  <arg name="traffic_light" default="false"
+       doc="Cross-team duplicate-producer guard; planning-owner review required before retirement."/>
   <arg name="traffic_light_device" default="auto"/>
   <arg name="camera_topic" default="/cam_extra/image_jpeg/compressed"/>
   <arg name="traffic_light_checkpoint"
        default="$(find asmc_perception)/models/traffic_light/best.pt"/>
 
   <group if="$(arg traffic_light)">
-    <!-- P4-C3 migration: executable ownership moved from
-         traffic_light/live_infer.py to asmc_perception. Legacy String topics
-         are intentionally still emitted beside the typed topic. -->
+    <!-- CROSS-TEAM COMPATIBILITY NOTE: P4-C3 moved executable ownership from
+         traffic_light/live_infer.py to asmc_perception. This planning-owned
+         launch keeps the opt-in wrapper and legacy String topics until the
+         planning owner approves their removal. -->
     <node pkg="asmc_perception" type="traffic_light_node.py"
           name="traffic_light_infer" output="screen"
           args="--ckpt $(arg traffic_light_checkpoint) --image-topic $(arg camera_topic) --state-topic /traffic_light/state --detail-topic /traffic_light/detail --typed-topic /perception/traffic_light/detection --device $(arg traffic_light_device)"/>

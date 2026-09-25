@@ -32,6 +32,10 @@ route station과 mission 의미를 대조하지 않고 package-local map을 삭�
 
 ## 실행
 
+> **교차팀 P5-D 변경 메모:** 아래 `traffic_light` 기본값 변경은 perception 통합 측에서 중복
+> publisher만 막기 위해 적용했다. 판제 정책·consumer 로직의 소유권을 가져온 것이 아니며,
+> 호환 include와 legacy topic의 수정·삭제는 판제 오너 검토 후 결정한다.
+
 bridge는 별도 터미널에서 먼저 실행한다. 현재 v2 개발 chain:
 
 ```bash

@@ -420,6 +420,12 @@ class PerceptionFacadeContractTest(unittest.TestCase):
                 arguments["traffic_light"],
                 name + " must not start a duplicate perception producer",
             )
+            traffic_arg = next(
+                item
+                for item in launch.findall("arg")
+                if item.get("name") == "traffic_light"
+            )
+            self.assertIn("planning-owner review", traffic_arg.get("doc", ""), name)
 
         package = ET.parse(behavior_root / "package.xml").getroot()
         dependencies = {
