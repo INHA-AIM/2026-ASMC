@@ -2,7 +2,8 @@
 
 > **문서 역할:** Working Proposal — 패키지 통합과 본선 배포를 위한 단계별 실행 계획
 > **작성 기준:** 2026-09-20 저장소와 현장 점검 반출 자료의 read-only 감사
-> **진행 상태:** 1·2단계, 3단계 P3-G local closeout, P4-A·P4-B·P4-C1~C6 완료. 다음은 P4 closeout PR 후 5단계 단일 실행·통합 시각화
+> **진행 상태:** 1·2단계, 3단계 P3-G local closeout, P4-A·P4-B·P4-C1~C6,
+> 5단계 P5-A·P5-B·P5-C 완료. 다음은 P5-D consumer handoff
 > **보호 범위:** `behavior_planner`, `frenet_planner`, `mpc_controller`,
 > planning 소유 Behavior/Frenet/MPC package는 이 계획의 일방적 이동·삭제 대상이 아니다.
 > read-only `lane_boundary_adapter`는 역할이 드러나도록 `src/lane_boundary_adapter/`로 이동했다.
@@ -109,7 +110,7 @@ catkin package 하나를 유지하면서도 실행 이미지가 학습 산출물
 | **2** | `asmc_hd_map` 제품화 | 최종 lane/lane-area/drivable bundle, global/local publisher, checkpoint·mission RViz | `link_node`는 parity 통과 뒤 가능 |
 | **3** | `asmc_bridge` 통합 | UDP·sensor·vehicle state 단일 package, dev/competition profile | 구 bridge는 field replay 통과 뒤 가능 |
 | **4** | `asmc_perception` 통합 | camera/LiDAR/traffic-light/BEV runtime 하나, offline tool 분리 | `learning*`, 중복 `Msg`·`morai_msgs`는 gate 뒤 가능 |
-| **5** | 실행·시각화 정리 | `scripts/asmc`, 통합 launch/RViz/rqt, 이후 read-only perception web console | 호환 wrapper 만료 뒤 가능 |
+| **5** | 실행·시각화 정리 | 유지 가능한 실행 진입점, RViz/rqt, runtime 수락검증과 consumer handoff | 호환 wrapper 만료 뒤 가능 |
 | **6** | 현장 LAN2LAN·Docker 동결 | competition image, network profile, rehearsal report, 당일 runbook | 본선 직전 기능 삭제 금지 |
 
 각 단계는 별도 PR로 진행한다. rename과 동작 변경을 같은 PR에 넣지 않으며, 이전 경로를
@@ -430,13 +431,34 @@ pipeline audit도 `lane_publish_pipeline_audit` opt-in으로 전환했고 result
 명시적으로 다시 켠다. 다음 묶음은 기본 runtime diagnostics·topic health를 유지하면서
 중복 compatibility output의 실제 consumer 만료 여부를 검토한다.
 
+**P5-C runtime acceptance 완료:** 기존 topic 이름은 변경하지 않는다. 기계 정본
+[`perception_runtime_acceptance_v1.yaml`](../../config/contracts/perception_runtime_acceptance_v1.yaml)은
+기본 camera→BEV→lane 33개 토픽과 선택적 traffic-light 3개, rqt 2개를 node/type/유일
+publisher/필수 subscriber/rate/stamp/frame 기준으로 검사한다. 판제 실행 시에는
+`behavior_planner`가 typed `/perception/traffic_light/detection`과 호환
+`/traffic_light/state`를 모두 구독하는지도 별도 gate로 검사한다. 기본-OFF 19개 토픽이
+실수로 다시 광고되면 실패한다. source·launch·config 경로 anchor도 함께 검사해 package 이동 뒤
+연결이 조용히 깨지는 것을 막는다. LiDAR canonical topic은 담당 구현 handoff 전이므로 여기서
+필수화하지 않는다.
+
+P5의 남은 경계는 다음과 같다.
+
+1. **P5-D consumer handoff:** P5-C live 결과와 대표 bag을 근거로 신호등 typed/legacy의 실제
+   consumer를 재감사한다. 호환 String topic은 판제 전환이 확인되기 전에는 삭제하지 않는다.
+   `lane_boundary_adapter`도 판제 팀원이 흡수·삭제를 결정하므로 이 단계에서 유지한다.
+2. **P5-E 운영 closeout:** 실행 명령·rqt/RViz preset·진단/수락 명령을 최종 교차검증하고,
+   package 이동표와 인수 조건을 한 곳에서 찾을 수 있게 닫는다. bridge는 Hz 관찰을 위해 계속
+   별도 foreground process로 둔다.
+3. **웹 콘솔 보류:** 현재 RViz/rqt와 구조화 diagnostics로 필요한 검수가 가능하므로 구현하지
+   않는다. 실제 원격 다중 사용자 수요가 생길 때 별도 제안과 threat model을 거쳐 연다.
+
 1. consumer가 없는 grid·debug topic은 기본 발행을 끄고 opt-in으로 돌린다.
 2. BEV debug는 중복 창 대신 원본/투영 BEV와 최종 인지·융합 BEV를 나란히
    보여주는 하나의 비교 화면으로 정리한다.
 3. 의미가 같은 topic은 publisher·consumer·bag 감사 후 정본 하나를 선택하고, 즉시
    삭제가 아닌 호환 기간을 거친다.
-4. HD Map·perception·topic health는 RViz/rqt에서 먼저 정리하고 그 계약이 안정된
-   뒤에만 read-only web console로 확장한다.
+4. HD Map·perception·topic health는 RViz/rqt와 runtime verifier에서 먼저 정리한다.
+   read-only web console은 실제 운영 수요가 확인될 때까지 backlog로 둔다.
 
 기존 30개 스크립트는 `container`, `runtime`, `data`, `train/eval`, `diagnostic`으로 분류한다.
 package node는 각 package `scripts/`, offline·research job은 `tools/`에 둔다.
@@ -446,8 +468,15 @@ wrapper로만 둔다.
 
 시각화는 먼저 RViz/rqt에 통합한다. raw PV, semantic result, metric BEV, lane fitting, HD Map
 lane/area, checkpoint 3 m radius, active mission, topic rate/staleness를 한 launch로 확인한다.
-그 토픽 계약이 안정된 뒤 perception 전용 read-only web console을 만든다. 웹에서 차량 제어·
-파라미터 변경은 하지 않는다.
+웹 콘솔은 Phase 5 완료 조건이 아니다. 원격 다중 사용자 관찰 수요가 확인되면 별도 단계로
+검토하며, 그때도 차량 제어·파라미터 변경은 포함하지 않는다.
+
+P5-E 뒤의 우선순위는 LAN2LAN 현장 리허설에 바로 들어가기보다 담당자와 함께 LiDAR/fusion
+기준선을 먼저 계측하고 개선 범위를 합의하는 것이다. 정본 Working Proposal은
+[LiDAR assessment](../packages/asmc_perception/lidar-assessment-and-roadmap.md)이며, 지면 제거,
+터널 벽·천장 억제, 거리 적응형 clustering, 추적 안정화와 HD Map 기반 고주로 차로 귀속을
+우선 검토한다. 담당자가 개발 중인 nested workspace는 합의·baseline 없이 이동하거나
+`asmc_perception`에 흡수하지 않는다. LAN2LAN 리허설은 이 통합의 안정 지점 뒤에 수행한다.
 
 ## 7. 현장 LAN2LAN·Docker 단계
 

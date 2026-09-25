@@ -14,6 +14,20 @@
 판제가 소비하는 메시지 계약을 바꾸는 항목은 [`src/interfaces/`](../../../src/interfaces/README.md)에서
 합의한 뒤에만 승격한다.
 
+> **2026-09-25 진행 순서 메모:** P5-E 인지 운영 closeout 뒤 LAN2LAN 리허설보다 이 문서의
+> LiDAR/fusion 기준선 계측과 담당자 공동 개선을 먼저 진행한다. 우선순위는 (1) 센서 frame과
+> latency 기준선, (2) 지면 제거, (3) 음영구간 터널 벽·천장 제거, (4) 거리 적응형 clustering과
+> tracking 안정화, (5) HD Map polygon을 이용한 고주로 주행 차로 귀속이다. 기존 nested
+> workspace와 메시지는 담당자 handoff 없이 이동·삭제하지 않는다. 아래 분석과 외부 연구
+> 구현은 후보를 고르는 근거이며, 현재 코드를 곧바로 교체하라는 결정은 아니다.
+
+로컬 조사 checkout은 팀 repository 밖의
+`../external/baselines/`에 있으며 `patchwork-plusplus(-ros)`,
+`linefit_ground_segmentation`, `depth_clustering`, `SimpleTrack`, `AB3DMOT`, `FastPillars`,
+`CenterPoint`, `OpenPCDet`, `Lidar_AI_Solution` 등이 준비돼 있다. 이 디렉터리는 읽기·benchmark
+참고용이지 현재 build dependency가 아니다. 코드를 채택할 때는 license, upstream revision,
+VLP-16/15 Hz 실측과 우리 좌표·message adapter를 먼저 별도 manifest로 고정한다.
+
 ---
 
 ## 1. 이 평가의 범위와 한계

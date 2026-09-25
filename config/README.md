@@ -36,6 +36,8 @@ python3 tools/audit/validate_perception_contract.py
 python3 -m unittest tools/audit/test_perception_contract.py
 python3 tools/audit/validate_perception_topic_policy.py
 python3 -m unittest tools/audit/test_perception_topic_policy.py
+python3 tools/audit/validate_perception_runtime_acceptance.py
+python3 -m unittest tools/audit/test_perception_runtime_acceptance.py
 python3 tools/audit/validate_traffic_light_parity.py --check-artifacts
 python3 -m unittest tools/audit/test_traffic_light_parity_report.py
 ```
@@ -57,3 +59,10 @@ typed 우선·legacy fallback·invalid/stale fail-safe 규칙을 함께 고정�
 P5-A topic policy는 이름에 `debug`·`grid`가 있어도 fusion/lane의 필수 내부 입력인 토픽과
 실제 opt-in 후보를 구분한다. `perception_topic_policy_v1.yaml`을 먼저 갱신하지 않고 runtime
 publisher, subscriber 또는 result bag profile을 제거하지 않는다.
+
+P5-C 실행 수락 정본은
+[`contracts/perception_runtime_acceptance_v1.yaml`](./contracts/perception_runtime_acceptance_v1.yaml)이다.
+P5-A의 정적 inventory와 달리 현재 ROS graph의 node, topic type, 유일 producer, 필수 subscriber,
+rate, source stamp, frame과 기본-OFF topic 부재를 측정한다. 신호등·판제·시각화·임시 lane adapter는
+함께 실행할 때만 명시적인 verifier 옵션으로 gate에 포함한다. 이 계약은 기존 topic을 rename하지
+않고 현재 연결을 회귀 기준으로 고정한다.
