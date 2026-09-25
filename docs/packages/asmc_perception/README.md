@@ -93,14 +93,16 @@ Camera semantic 입력·출력의 정확한 목록과 실행 인자는
 /perception/bev/camera/road_marking/class_id
 /perception/bev/camera/road_marking/confidence
 /perception/bev/camera/coverage
-/perception/bev/camera/source_count
 /perception/bev/diagnostics
 ```
+
+`/perception/bev/camera/source_count`, `/perception/bev/debug/source_view`와 per-view
+projected coverage는 `publish_bev_debug_metadata:=true`인 평가·검수 실행에서만 발행한다.
 
 P5-A 감사 결과 `/perception/bev/debug/{view}`의 drivable·road-marking 3종은 이름과 달리
 fusion의 필수 내부 입력이다. `model_grid` 2종도 lane vectorizer 입력이다. 실제 default-off
 후보와 bag 영향은 [topic policy](../../../config/contracts/perception_topic_policy_v1.yaml)를
-따르며 debug prefix만 보고 producer를 끄지 않는다.
+따르며 debug prefix만 보고 필수 transport producer를 끄지 않는다.
 
 음영구간 typed 후보는 다음 토픽이다.
 

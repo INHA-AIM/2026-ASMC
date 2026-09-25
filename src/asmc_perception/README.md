@@ -80,16 +80,25 @@ debug image publisher를 함께 켠다.
 `docker exec -it asmc-ros-noetic bash`로 들어간 각각의 터미널에서 실행한다.
 
 ```bash
-asmc-ros-gui rqt-image /perception/camera/debug/mosaic
-asmc-ros-gui rqt-image /perception/bev/debug/fused
-asmc-ros-gui rqt-image /perception/bev/debug/fused_quality
-asmc-ros-gui rqt-image /perception/lane/debug/boundaries_bev
-asmc-ros-gui rqt-image /perception/lane/debug/camera_reprojection_mosaic
+asmc-ros-gui rqt-image /perception/camera/debug/mosaic/compressed
+asmc-ros-gui rqt-image /perception/bev/debug/comparison/compressed
 ```
 
-`rqt_image_view`는 한 창에 한 topic을 선택한다. 추론 자체만 확인할 때는 camera mosaic,
-차로 fitting은 `boundaries_bev`, 카메라 정합은 `camera_reprojection_mosaic`가 가장 직접적이다.
+첫 topic은 좌·전방·우의 원본·주행가능·road-marking을 모은 9칸 영상이다. 두 번째는
+calibration으로 투영·융합한 원본 RGB BEV와 fused semantic BEV를 같은 범위로 나란히
+보여준다. semantic 쪽은 0.5 기준 이진 주행가능 영역과 고정 색상의 차선 class만
+표시하며 확률·confidence 밝기를 인코딩하지 않는다. 둘 다 subscriber가 있을 때만
+렌더링하고 JPEG를 발행한다.
 `start_visualization`은 개발·검수용이고 기본값은 false다. 평상시 주행에는 필요하지 않다.
+
+이전 camera별 panel, fused/fused-quality, lane evidence/fitted/boundary/reprojection 영상이
+필요한 한시적 비교에서는 `visualization_legacy_rqt:=true`를 추가한다. camera별 지면
+calibration grid는 별도 `visualization_calibration_grid:=true`로만 켠다. RViz marker는
+이 rqt 간소화의 변경 대상이 아니다.
+
+per-view projected coverage와 fused source count/view도 기본 off다. 평가 bag이나
+overlap 분석에서 필요하면 `publish_bev_debug_metadata:=true`를 지정한다. legacy rqt를
+켜면 이 metadata도 호환 기본값으로 함께 켜진다.
 
 `start_traffic_light`은 실제 producer를 켜는 옵션이다. 현재는 true로 켜면 전 구간에서 계속
 추론하며, HD맵의 `TRAFFIC_LIGHT_REQUIRED` 구간(A236~A308)에 따른 process/compute 활성화는
@@ -166,10 +175,8 @@ rostopic echo -n 1 /planning/diagnostics/lane_boundary_family_adapter
 시각화는 각각 별도 `asmc-ros-noetic` 터미널에서 연다.
 
 ```bash
-asmc-ros-gui rqt-image /perception/camera/debug/mosaic
-asmc-ros-gui rqt-image /perception/bev/debug/fused
-asmc-ros-gui rqt-image /perception/lane/debug/boundaries_bev
-asmc-ros-gui rqt-image /perception/lane/debug/camera_reprojection_mosaic
+asmc-ros-gui rqt-image /perception/camera/debug/mosaic/compressed
+asmc-ros-gui rqt-image /perception/bev/debug/comparison/compressed
 asmc-ros-gui rviz
 ```
 

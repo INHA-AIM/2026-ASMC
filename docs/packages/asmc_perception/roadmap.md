@@ -511,6 +511,12 @@ MORAI 1280×720 입력에서 front panel과 1920×360 3-view mosaic를 확인했
 RGB/drivable/road-marking 3행으로 표시하며 road-marking class를 서로 다른 색으로
 구분한다. condition label과 threshold는 runtime ROS parameter로 조정할 수 있다.
 
+**2026-09-25 P5-B rqt 간소화:** 운영 검수의 기본 화면은 기존 9칸 camera mosaic와
+`RGB BEV | fused semantic BEV` 비교 영상 두 개로 줄였다. 개별 camera panel, 확률·품질,
+lane fitting 중간 영상과 camera calibration grid는 삭제하지 않고 각각 legacy/calibration
+opt-in으로 분리했다. 이 변경은 시각화 publisher에만 적용되며 lane vectorizer와 fusion이
+소비하는 `model_grid` 및 per-view semantic raster는 유지한다.
+
 ### Stage C3 — 성능계측
 
 - input/output FPS, drop/stale count와 camera timestamp skew

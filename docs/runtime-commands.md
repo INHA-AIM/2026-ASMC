@@ -232,6 +232,9 @@ roslaunch asmc_perception perception.launch [arg:=value ...]
 | `start_camera_lane` | `true` | semantic, per-view BEV, fused BEV, lane vectorizer 실행 |
 | `start_traffic_light` | `false` | extra camera 신호등 추론 |
 | `start_visualization` | `false` | debug image publisher 실행; GUI 창을 자동으로 열지 않음 |
+| `visualization_legacy_rqt` | `false` | 개별 camera·중간/fitting BEV 등 이전 rqt 영상 호환 발행 |
+| `visualization_calibration_grid` | `false` | camera별 지면 calibration grid overlay 발행 |
+| `publish_bev_debug_metadata` | legacy rqt값(기본 `false`) | per-view coverage, source count/view 발행; 평가·bag·구 시각화용 |
 | `camera_checkpoint` | v6 `best_mean.pt` | camera semantic checkpoint |
 | `camera_device` | `cuda` | inference device |
 | `camera_warmup_iterations` | `1` | model warm-up 횟수 |
@@ -275,16 +278,82 @@ roslaunch asmc_perception perception.launch \
 
 ### rqt/RViz 표시
 
-GUI는 `asmc-ros-noetic` container에서 연다.
+먼저 perception을 시각화 publisher와 함께 실행한다. 이 명령은 GUI 창을 직접 열지는
+않는다.
 
 ```bash
-asmc-ros-gui rqt-image /perception/camera/debug/mosaic
-asmc-ros-gui rqt-image /perception/bev/debug/fused
-asmc-ros-gui rqt-image /perception/bev/debug/fused_quality
-asmc-ros-gui rqt-image /perception/lane/debug/boundaries_bev
-asmc-ros-gui rqt-image /perception/lane/debug/camera_reprojection_mosaic
+# repository root의 host terminal
+./scripts/perception.sh start_visualization:=true
+```
+
+팀 공통 rqt 확인 대상은 아래 두 영상이다.
+
+| rqt topic | 확인 내용 |
+|---|---|
+| `/perception/camera/debug/mosaic/compressed` | 좌·전방·우 camera의 원본·주행가능·road-marking 9칸 영상 |
+| `/perception/bev/debug/comparison/compressed` | 원본 RGB BEV와 fused semantic BEV의 좌우 비교 영상 |
+
+GUI는 `asmc-ros-noetic` container에서 연다. 두 rqt 창과 RViz는 각각 프로세스를 점유하므로
+필요한 창마다 별도 host terminal을 열고 다음 공통 준비를 수행한다.
+
+```bash
+docker exec -it asmc-ros-noetic bash
+cd /root/ws
+```
+
+각 terminal에서 원하는 명령 하나를 실행한다.
+
+```bash
+# rqt: camera 9-panel mosaic
+asmc-ros-gui rqt-image /perception/camera/debug/mosaic/compressed
+
+# rqt: RGB BEV | semantic BEV comparison
+asmc-ros-gui rqt-image /perception/bev/debug/comparison/compressed
+
+# RViz: 기존 marker 확인 방식은 변경 없음
 asmc-ros-gui rviz
 ```
+
+- `camera/debug/mosaic/compressed`: 좌·전방·우 각각의 원본·주행가능·road-marking,
+  총 9칸이다.
+- `bev/debug/comparison/compressed`: 같은 metric crop의 원본 RGB BEV(왼쪽)와 fused semantic
+  결과(오른쪽)다. 오른쪽은 주행가능 확률을 0.5에서 이진화하고 차선 class를 고정
+  색으로 그리므로 확률·confidence 밝기를 표현하지 않는다. 별도 확률/품질·fitting·
+  grid 영상은 기본으로 광고하지 않는다.
+- image publisher는 subscriber-lazy이므로 rqt 창을 열기 전 `rostopic hz`에 아무 값이
+  없어도 정상이다.
+
+이전 개별·중간 영상을 잠시 비교해야 할 때만 호환 profile을 켠다.
+
+```bash
+./scripts/perception.sh \
+  start_visualization:=true \
+  visualization_legacy_rqt:=true
+```
+
+이 옵션은 camera별 panel, 기존 fused/fused-quality와 lane evidence/fitted/boundary/
+reprojection 영상을 다시 광고한다. camera calibration grid는 호환 profile과 분리되어
+있으며 다음처럼 명시적으로 켠다.
+
+```bash
+./scripts/perception.sh \
+  start_visualization:=true \
+  visualization_calibration_grid:=true
+```
+
+RViz marker 구성은 이번 rqt 정리에서 변경하지 않았다.
+
+기본 실행에서는 per-view projected `coverage`, fused `source_count`, `source_view`도
+광고하지 않는다. 평가 bag이나 overlap/calibration 분석에서 필요하면 다음처럼 독립적으로
+다시 켠다. `visualization_legacy_rqt:=true`를 사용하면 이 값도 기본 true가 된다.
+
+```bash
+./scripts/perception.sh publish_bev_debug_metadata:=true
+```
+
+`road_marking/model_grid/*`와 `/perception/bev/debug/{view}`의 semantic raster는 이름에
+`grid`·`debug`가 있어도 rqt 화면이 아니라 각각 lane vectorizer와 camera fusion의 내부
+입력이다. `rostopic list`에 계속 보이는 것이 정상이며 시각화 정리 목적으로 끄지 않는다.
 
 ## 6. Planning/Control 옵션
 
