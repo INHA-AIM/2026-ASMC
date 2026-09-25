@@ -39,3 +39,8 @@ python3 -m unittest tools/audit/test_traffic_light_parity_report.py
 `perception_traffic_light_parity_v1.yaml`은 대표 bag을 기존·canonical producer에 같은 순서로
 공급해 String/typed/source-header/stale/recovery parity를 통과한 P4-C2 근거다. bag은
 복사하지 않고 `$ASMC_DATA` 상대 경로·크기·SHA만 보존한다.
+
+P4-C3 consumer binding은 별도 topic을 다시 만들지 않는다. 기계 정본의
+`consumer_bindings.behavior_planner`와 `src/behavior_planner/src/config/behavior_params.yaml`이
+typed 우선·legacy fallback·invalid/stale fail-safe 규칙을 함께 고정하며
+`validate_perception_contract.py`가 두 launch의 canonical producer 경로까지 검사한다.

@@ -1,6 +1,6 @@
 # `asmc_perception` runtime
 
-> **상태:** P4-C2 — canonical traffic-light producer + bag parity baseline
+> **상태:** P4-C3 — canonical traffic-light producer + typed planning consumer
 
 분산된 camera semantic, metric BEV/lane, traffic-light, nested LiDAR/fusion과 recorder를
 하나의 운영 진입점에서 조합한다. camera/BEV/recorder는 아직 기존 executable을 사용하며,
@@ -108,6 +108,22 @@ python3 tools/audit/validate_traffic_light_parity.py --check-artifacts
 기준 결과는 `config/baselines/perception_traffic_light_parity_v1.yaml`이다. 이 통과는 producer
 병행 발행의 근거이며 판제 consumer cutover 완료를 뜻하지는 않는다.
 
+## P4-C3 판제 consumer
+
+`behavior_planner`는 이제 `/perception/traffic_light/detection`을 권위 입력으로 구독한다. 기존
+`/traffic_light/state` 구독도 유지하지만 typed message를 한 번도 받지 못한 구 실행을 위한
+fallback일 뿐이다. typed message를 받은 뒤에는 다음 규칙을 적용한다.
+
+- `valid=false` 또는 `stale=true`: `UNKNOWN`, legacy String으로 우회하지 않음
+- typed 수신이 local stale timeout을 넘김: `UNKNOWN`, legacy String으로 우회하지 않음
+- typed producer를 한 번도 보지 못함: fresh legacy String 사용
+
+기존 판제 통합 launch가 시작하는 executable은
+`traffic_light/live_infer.py`에서 `asmc_perception/traffic_light_node.py`로 바뀌었다. topic 이름은
+삭제하거나 remap하지 않았으며 producer 경로 변경은 두 launch 파일의 migration 주석과
+`behavior_planner/README.md`에 기록돼 있다. unit/build와 live ROS 연결은 통과했지만 실제
+적·녹 신호 closed-loop 정지/재출발 검수 전에는 legacy topic을 제거하지 않는다.
+
 기계 판독 상태는 `config/runtime.yaml`, 파트 간 topic·message 정본은
 [`perception_runtime_topic_contract_v1.yaml`](../../config/contracts/perception_runtime_topic_contract_v1.yaml),
 전체 이관 gate는 [Perception 개발·통합 가이드](../../docs/packages/asmc_perception/README.md)를 따른다.
@@ -123,4 +139,5 @@ python3 tools/audit/validate_traffic_light_parity.py --check-artifacts
 roslaunch --nodes asmc_perception perception.launch
 ```
 
-P4-C parity 완료 전에는 기존 package를 삭제하거나 legacy topic을 remap해서 숨기지 않는다.
+P4-C physical migration과 closed-loop 검수 전에는 기존 package를 삭제하거나 legacy topic을
+remap해서 숨기지 않는다.

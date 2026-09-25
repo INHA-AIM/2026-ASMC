@@ -16,6 +16,9 @@
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>rviz</exec_depend>
   <exec_depend>traffic_light</exec_depend>
+  <!-- P4-C3 runtime producer moved here; traffic_light remains temporarily
+       because the model artifact and compatibility audit still live there. -->
+  <exec_depend>asmc_perception</exec_depend>
   <exec_depend>frenet_planner</exec_depend>
   <exec_depend>mpc_controller</exec_depend>
   <exec_depend>asmc_bridge</exec_depend>

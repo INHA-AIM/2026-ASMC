@@ -1,16 +1,24 @@
-# 신호등 인지 — ROS 추론 배포판
+# 신호등 인지 — P4-C 호환 기준 구현
 
-> **역할:** Active Standalone Package Guide
+> **역할:** Compatibility Reference Package Guide
 >
 > 통합 경계는 [Perception 개발·통합 가이드](../../docs/packages/asmc_perception/README.md)를
 > 따른다. HD Map의 신호등 필요 구간 metadata와 이 추론 process를 연결하는 구간별
 > orchestration은 아직 구현된 기능으로 간주하지 않는다.
 
+P4-C1부터 운영 producer는 `src/asmc_perception/scripts/traffic_light_node.py`이고 P4-C3 판제
+consumer는 `/perception/traffic_light/detection`을 우선 사용한다. 이 디렉터리의
+`live_infer.py`는 parity 기준 구현, `best.pt` artifact 위치와 구 String consumer 호환을 위해
+보존한다. `/traffic_light/state`, `/traffic_light/detail` 이름은 변경되지 않았으므로 기존 도구는
+계속 연결되지만 새 판제 코드는
+[perception runtime 계약](../../docs/contracts/perception/runtime-v1.md)을 따라야 한다.
+
 MORAI의 ROS compressed image를 받아 신호등 상태를 추론하고 결과를 다시 ROS
 토픽으로 발행한다. 기본 입력은 `/cam_extra/image_jpeg/compressed`이다.
 
-정상 배포 구성에서는 `live_infer.py` 프로세스 하나가 모델 로드, 이미지 구독,
-GPU 추론, 결과 발행을 모두 담당한다.
+현재 통합 배포에서는 `asmc_perception/traffic_light_node.py` 프로세스 하나가 모델 로드, 이미지
+구독, GPU 추론과 typed·legacy 결과 병행 발행을 담당한다. 아래 standalone 명령은 기준 구현
+재현과 호환 점검용으로 남긴다.
 
 ## 데이터 흐름
 

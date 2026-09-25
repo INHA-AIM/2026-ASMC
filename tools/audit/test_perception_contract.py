@@ -26,6 +26,7 @@ class PerceptionContractTest(unittest.TestCase):
         self.assertEqual(3, result["message_count"])
         self.assertEqual(3, result["canonical_topic_count"])
         self.assertEqual(4, result["compatibility_topic_count"])
+        self.assertEqual(1, result["consumer_binding_count"])
         self.assertEqual(
             "6c96135eb03a3ee93bba474fa835f57d",
             result["message_md5"]["asmc_msgs/TrackedObject"],

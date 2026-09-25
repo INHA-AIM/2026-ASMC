@@ -104,13 +104,19 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             traffic["parity_evidence"],
         )
         self.assertEqual(
-            "pending_owner_integration", traffic["planning_consumer_cutover_status"]
+            "typed_preferred_legacy_fallback_p4c3",
+            traffic["planning_consumer_cutover_status"],
         )
         self.assertEqual("declared_not_published_p4b", lidar["canonical_producer_status"])
         self.assertTrue(self.runtime["compatibility"]["preserve_legacy_topics"])
         self.assertFalse(self.runtime["compatibility"]["physical_source_moves"])
         self.assertFalse(self.runtime["compatibility"]["package_deletions"])
         self.assertFalse(self.runtime["compatibility"]["oracle_inputs_allowed"])
+        consumer = self.runtime["compatibility"]["planning_consumer"]
+        self.assertEqual(
+            "/perception/traffic_light/detection", consumer["canonical_topic"]
+        )
+        self.assertEqual("unknown_without_fallback", consumer["invalid_or_stale_policy"])
 
     def test_host_entrypoint_selects_the_gpu_container(self):
         script = (REPO_ROOT / "scripts" / "perception.sh").read_text(encoding="utf-8")

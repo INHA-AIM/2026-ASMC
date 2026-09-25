@@ -126,7 +126,9 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
                 "config/baselines/perception_traffic_light_parity_v1.yaml"
             ):
                 raise ContractError("traffic-light parity evidence is not pinned")
-            if definition.get("consumer_cutover_status") != "pending_owner_integration":
+            if definition.get("consumer_cutover_status") != (
+                "typed_preferred_legacy_fallback_p4c3"
+            ):
                 raise ContractError("traffic-light consumer cutover status is ambiguous")
 
     compatibility = _mapping(
@@ -138,6 +140,48 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
         definition = _mapping(raw_definition, f"compatibility_topics.{topic}")
         if not definition.get("retire_gate"):
             raise ContractError(f"compatibility topic lacks retire gate: {topic}")
+
+    bindings = _mapping(contract.get("consumer_bindings"), "consumer_bindings")
+    behavior = _mapping(bindings.get("behavior_planner"), "behavior binding")
+    expected_binding = {
+        "canonical_topic": "/perception/traffic_light/detection",
+        "compatibility_topic": "/traffic_light/state",
+        "selection_policy": "typed_authoritative_after_first_message",
+        "invalid_or_stale_policy": "unknown_without_legacy_fallback",
+    }
+    for key, expected in expected_binding.items():
+        if behavior.get(key) != expected:
+            raise ContractError(
+                f"behavior traffic-light binding {key} changed: {behavior.get(key)}"
+            )
+
+    behavior_config_path = (
+        repo_root / "src/behavior_planner/src/config/behavior_params.yaml"
+    )
+    behavior_config = _mapping(
+        yaml.safe_load(behavior_config_path.read_text(encoding="utf-8")),
+        "behavior config",
+    )
+    traffic_config = _mapping(
+        behavior_config.get("traffic_light"), "behavior traffic_light config"
+    )
+    if traffic_config.get("typed_topic") != expected_binding["canonical_topic"]:
+        raise ContractError("behavior planner canonical traffic-light topic drifted")
+    if traffic_config.get("topic") != expected_binding["compatibility_topic"]:
+        raise ContractError("behavior planner compatibility topic drifted")
+
+    for filename in ("autonomy_no_bridges.launch", "autonomy_no_bridges_v2.launch"):
+        behavior_launch = ET.parse(
+            repo_root / "src/behavior_planner/launch" / filename
+        ).getroot()
+        nodes = {
+            (item.get("pkg"), item.get("type"))
+            for item in behavior_launch.iter("node")
+        }
+        if ("asmc_perception", "traffic_light_node.py") not in nodes:
+            raise ContractError(f"{filename} does not start canonical producer")
+        if ("traffic_light", "live_infer.py") in nodes:
+            raise ContractError(f"{filename} regressed to legacy producer")
 
     launch_path = repo_root / "src" / "asmc_perception" / "launch" / "perception.launch"
     root = ET.parse(launch_path).getroot()
@@ -157,6 +201,7 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
         "message_count": len(declared),
         "canonical_topic_count": len(canonical),
         "compatibility_topic_count": len(compatibility),
+        "consumer_binding_count": len(bindings),
         "message_md5": {
             f"asmc_msgs/{name}": md5s[name] for name in sorted(REQUIRED_MESSAGES)
         },

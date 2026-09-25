@@ -25,6 +25,61 @@ TEST(TrafficLightLabelTest, SelectsAspectForRouteMovement) {
             InterpretTrafficLightLabel("not_detected", SignalMovement::LEFT));
 }
 
+TEST(TrafficLightSourceTest, UsesLegacyOnlyBeforeTypedProducerAppears) {
+  TrafficLightSample typed;
+  TrafficLightSample legacy;
+  legacy.received = true;
+  legacy.fresh = true;
+  legacy.valid = true;
+  legacy.label = "green";
+
+  auto selected = ResolveTrafficLightSample(typed, legacy);
+  EXPECT_EQ("legacy", selected.source);
+  EXPECT_EQ("green", selected.label);
+  EXPECT_TRUE(selected.actionable);
+
+  typed.received = true;
+  typed.fresh = true;
+  typed.valid = true;
+  typed.label = "red";
+  selected = ResolveTrafficLightSample(typed, legacy);
+  EXPECT_EQ("typed", selected.source);
+  EXPECT_EQ("red", selected.label);
+  EXPECT_TRUE(selected.actionable);
+}
+
+TEST(TrafficLightSourceTest, TypedInvalidAndStaleNeverFallBackToLegacy) {
+  TrafficLightSample typed;
+  typed.received = true;
+  typed.fresh = true;
+  typed.valid = false;
+  typed.label = "not_detected";
+  TrafficLightSample legacy;
+  legacy.received = true;
+  legacy.fresh = true;
+  legacy.valid = true;
+  legacy.label = "green";
+
+  auto selected = ResolveTrafficLightSample(typed, legacy);
+  EXPECT_EQ("typed", selected.source);
+  EXPECT_EQ("not_detected", selected.label);
+  EXPECT_FALSE(selected.actionable);
+
+  typed.valid = true;
+  typed.stale = true;
+  selected = ResolveTrafficLightSample(typed, legacy);
+  EXPECT_EQ("typed", selected.source);
+  EXPECT_EQ("stale", selected.label);
+  EXPECT_FALSE(selected.actionable);
+
+  typed.stale = false;
+  typed.fresh = false;
+  selected = ResolveTrafficLightSample(typed, legacy);
+  EXPECT_EQ("typed", selected.source);
+  EXPECT_EQ("stale", selected.label);
+  EXPECT_FALSE(selected.actionable);
+}
+
 TEST(V2CommandManagerTest, KeepFreezesDerivedSpeedUntilIntentChanges) {
   behavior_planner::V2CommandManager manager;
   behavior_planner::BehaviorContextData context;

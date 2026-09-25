@@ -2,7 +2,7 @@
 
 > **문서 역할:** Active Package-Group Guide — 현재 인지 코드 경계, 문서 권위와 Phase 4 이관 gate
 >
-> **현재 상태:** P4-B `asmc_perception` compatibility façade가 존재하며 기존 runtime·학습·수집 패키지를 병행 운영 중
+> **현재 상태:** P4-C3 typed 신호등 producer·planning consumer 연결 완료, 기존 runtime·학습·수집 패키지 병행 운영 중
 
 이 문서는 긴 인지 설계·실험 문서를 대체하거나 요약 폐기하기 위한 문서가 아니다. 현재 어떤
 코드와 문서를 먼저 사용해야 하는지 안내하는 진입점이다. 날짜별 분석, 수치, 실패 원인과 후보
@@ -36,7 +36,7 @@ proposal, 날짜별 record 순으로 판단한다. roadmap의 과거 `candidate`
 | TwinLiteNet+ adapter | `src/perception/twinlite_morai/` | 학습·평가·checkpoint loader; runtime package 아님 |
 | camera 3D 연구 | `src/perception/morai_3d_detection/` | 별도 연구 구현, 통합 runtime 미승격 |
 | LiDAR와 camera fusion | `src/lidar+sensorfusion/` | outer catkin에서 제외된 독립 nested workspace |
-| traffic-light runtime | `src/traffic_light/` | extra camera 기반 독립 ROS inference |
+| traffic-light runtime | `src/asmc_perception/` | P4-C canonical producer; `src/traffic_light/`는 model artifact·parity reference·호환 문서 보존 |
 | 수집·bag·dataset 도구 | `src/data_collection/` | ROS recorder와 offline dataset 작업이 한 package에 공존 |
 | 정적 도로·mission context | `src/asmc_hd_map/` | 완성된 별도 package, `/hd_map/*`를 통해 소비 |
 | 통합 `asmc_perception` | `src/asmc_perception/` | P4-B 단일 launch/config·additive interface façade; runtime source 이식 전 |
@@ -109,10 +109,12 @@ Camera semantic 입력·출력의 정확한 목록과 실행 인자는
 
 ## 5. Traffic light와 LiDAR 경계
 
-`traffic_light`는 현재 `/cam_extra/image_jpeg/compressed`를 구독해 문자열 state와 JSON detail을
-발행하는 독립 package다. K-City HD Map에는 신호등 필요 구간이 metadata로 들어 있지만, 그
+`asmc_perception`의 traffic-light producer는 `/cam_extra/image_jpeg/compressed`를 구독해 typed
+detection과 기존 문자열 state·JSON detail을 병행 발행한다. `behavior_planner`는 typed 입력을
+우선 사용하고 producer가 전혀 없는 구 배포에서만 String으로 fallback한다. K-City HD Map에는
+신호등 필요 구간이 metadata로 들어 있지만, 그
 구간에서만 inference process를 켜고 끄는 orchestration은 아직 구현됐다고 간주하지 않는다.
-실행과 stale 처리 계약은 [traffic-light README](../../../src/traffic_light/README.md)를 따른다.
+실행과 stale 처리 계약은 [runtime contract](../../contracts/perception/runtime-v1.md)를 따른다.
 
 LiDAR runtime은 독립 nested catkin workspace다. outer workspace의 sensor bridge를 먼저 띄우고
 별도로 build/run한다. current object topic, time matching, class hysteresis, GPU 세대별 실행과
@@ -197,8 +199,10 @@ String·typed·stale·recovery parity를 통과했다. LiDAR typed topic은 아�
 P4-C는 camera/BEV/traffic-light/recorder runtime을 한 단위씩 이식한다. P4-C1은
 traffic-light가 실제 추론 입력 image header를 `TrafficLightDetection`에 보존해 legacy String과
 병행 발행하고 GPU 컨테이너 실행·시각화 진입점을 고정했다. P4-C2는 producer parity를
-`config/baselines/perception_traffic_light_parity_v1.yaml`로 고정했다. 다음은 판제 consumer
-cutover와 camera/BEV·recorder 물리 이식이다. LiDAR 이식과 구 road-mask 교체는 별도 P4-D로 분리한다.
+`config/baselines/perception_traffic_light_parity_v1.yaml`로 고정했다. P4-C3는
+`behavior_planner`를 typed 우선·legacy fallback으로 연결하고 invalid/stale fail-safe와 실제 ROS
+연결을 검증했다. 다음은 적·녹 신호 closed-loop 수락시험과 camera/BEV·recorder 물리 이식이다.
+LiDAR 이식과 구 road-mask 교체는 별도 P4-D로 분리한다.
 
 ## 10. 이번 문서 통합에서 보존한 것
 

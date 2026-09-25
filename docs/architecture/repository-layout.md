@@ -91,7 +91,7 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `scripts/rosbridge.sh`, `config/morai_rosbridge.env` | 종료된 direct ROS 실험 보존 | @ahnsh03 |
 | `mgeo_toolkit/`, `R_KR_PG_KATRI/` | 안승현 | @ahnsh03 |
 
-### perception · scenario (P4-C2 producer parity + 분산 source 병행)
+### perception · scenario (P4-C3 typed planning consumer + 분산 source 병행)
 
 | 경로 | 담당 | GitHub |
 |------|------|--------|
@@ -100,15 +100,16 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `src/perception/twinlite_morai/` | 안승현 | @ahnsh03 |
 | `src/perception/camera_semantic_perception/` | 1/3-camera semantic runtime | @ahnsh03 |
 | `src/perception/drivable_bev/` | 3-camera BEV·음영 lane-family v3; 전역 map 결합 후보 | @ahnsh03 주관 협의 |
-| `src/traffic_light/` | extra camera 신호등 runtime | 장원태·통합 공동 리뷰 |
+| `src/traffic_light/` | P4-C parity reference·model artifact·legacy helper; canonical runtime은 `asmc_perception` | 장원태·통합 공동 리뷰 |
 | `src/lidar+sensorfusion/` | 독립 nested LiDAR·camera fusion workspace | @sonshiny·통합 공동 리뷰 |
 | `src/data_collection/` | Capture GT·mask·dataset·Real Time raw/result bag | @ahnsh03 |
 | `tools/aim_scenario_runner/` | 장원태 | @wkddnjsxo |
 | `tools/grpc_inha_univ/` | 장원태 | @wkddnjsxo |
 
 현재 package 경계, 본선 입력 규칙과 Phase 4 이관 gate는
-[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. P4-C2 runtime은
-구현됐지만 실제 runtime source는 기존 package에 남아 있으며 후속 parity PR 전에는 삭제하지 않는다.
+[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. P4-C3에서
+behavior planner는 typed 신호등을 우선 소비하지만 실제 camera/BEV/recorder source는 기존
+package에 남아 있으며 후속 parity PR 전에는 삭제하지 않는다.
 
 ### interfaces (⬜ 합의 중)
 

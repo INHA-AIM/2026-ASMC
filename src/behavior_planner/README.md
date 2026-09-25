@@ -14,7 +14,8 @@ v2 transaction의 정확한 규칙은 [frozen contract](../../docs/contracts/pla
 |---|---|---|---|
 | subscribe | `/vehicle/state` | `asmc_msgs/VehicleState` | authoritative ego |
 | subscribe | `/Object_topic` | `morai_msgs/ObjectStatusList` | 현재 개발 경계, 본선 교체 필요 |
-| subscribe | `/traffic_light/state` | `std_msgs/String` | stale 검사 |
+| subscribe | `/perception/traffic_light/detection` | `asmc_msgs/TrafficLightDetection` | P4-C3 권위 입력, `valid/stale` fail-safe |
+| subscribe | `/traffic_light/state` | `std_msgs/String` | typed producer가 한 번도 나타나지 않은 구 배포용 fallback |
 | subscribe | `/planning/frenet_feedback_v2` | `asmc_msgs/FrenetFeedback` | v2 선택 시 |
 | publish | `/behavior/command_v2` | `asmc_msgs/BehaviorCommand` | v2 선택 시 |
 | publish | `/behavior/feature_debug` | `behavior_planner/UrbanFeatureDebug` | debug |
@@ -42,6 +43,14 @@ roslaunch behavior_planner autonomy_no_bridges_v2.launch
 이 launch는 `/Object_topic` 개발 oracle을 `/perception/objects`로 변환한다. 본선 sensor-only
 launch가 아니며, traffic-light weight가 준비되지 않은 배관 시험은
 `traffic_light:=false`로 명시할 수 있다.
+
+P4-C3부터 이 launch가 시작하는 신호등 executable은 기존
+`src/traffic_light/live_infer.py`가 아니라
+`src/asmc_perception/scripts/traffic_light_node.py`다. 기존
+`/traffic_light/state`, `/traffic_light/detail`은 바뀌지 않았으며 typed
+`/perception/traffic_light/detection`이 추가로 발행된다. 판제 adapter는 typed 결과를 우선하고,
+typed publisher를 한 번도 받지 못한 구 실행에서만 String을 사용한다. typed 결과가 invalid 또는
+stale이면 String으로 우회하지 않고 UNKNOWN으로 처리한다.
 
 단독 node:
 

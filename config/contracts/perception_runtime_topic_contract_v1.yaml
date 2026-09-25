@@ -50,7 +50,7 @@ canonical_topics:
     latch: false
     producer_status: active_parallel_p4c
     parity_evidence: config/baselines/perception_traffic_light_parity_v1.yaml
-    consumer_cutover_status: pending_owner_integration
+    consumer_cutover_status: typed_preferred_legacy_fallback_p4c3
   /perception/lidar/tracked_objects:
     type: asmc_msgs/TrackedObjectArray
     md5: e127b2aabd7494ad01a5a56b005bf07e
@@ -90,6 +90,15 @@ compatibility_topics:
     producer_status: active_nested_workspace
     retire_gate: hd_map_filter_parity_and_all_consumers_use_asmc_msgs
 
+consumer_bindings:
+  behavior_planner:
+    implementation: src/behavior_planner/src/signal/ros_traffic_light_provider.cpp
+    canonical_topic: /perception/traffic_light/detection
+    compatibility_topic: /traffic_light/state
+    selection_policy: typed_authoritative_after_first_message
+    invalid_or_stale_policy: unknown_without_legacy_fallback
+    status: live_connection_verified_closed_loop_pending
+
 consumer_rules:
   - TrafficLightDetection.header must be copied from the exact camera image used for inference; adapter receipt time is not an acceptable substitute.
   - TrafficLightDetection.valid=false or stale=true must never activate a signal rule.
@@ -104,7 +113,8 @@ cutover_gates:
   traffic_light:
     - source camera header propagated without approximation
     - String and typed label/confidence/stale parity on representative bag
-    - planning consumer changed and stale behavior tested
+    - behavior planner prefers typed input and invalid/stale behavior is tested
+    - closed-loop signal-stop scenario is verified before retiring legacy topics
   lidar:
     - nested Msg and asmc_msgs field/unit/frame parity
     - raw/result bag object count, ID, OBB, velocity and dynamic-state parity
