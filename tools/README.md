@@ -30,10 +30,12 @@ repository freeze는 output 이름과 baseline ID를 v2로 올리는 별도 변�
 ```bash
 python3 tools/audit/validate_p1b_contract.py
 python3 tools/audit/validate_perception_contract.py
+python3 tools/audit/validate_perception_topic_policy.py
 python3 tools/audit/validate_bridge_profiles.py
 python3 -m unittest tools/audit/test_bridge_profiles.py
 python3 -m unittest tools/audit/test_p1b_contract.py
 python3 -m unittest tools/audit/test_perception_contract.py
+python3 -m unittest tools/audit/test_perception_topic_policy.py
 python3 tools/audit/check_documentation_migration.py
 python3 -m unittest tools/audit/test_perception_runtime_baseline.py
 # D1 이전 commit 이력이 있는 clone에서 원문 inventory와 byte 이동까지 확인

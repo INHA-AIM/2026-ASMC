@@ -62,6 +62,12 @@ handoff 전에는 `asmc_perception` launch에 포함하지 않는다.
 이 fused output이다. 두 노드는 중복 알고리즘이 아니라 **카메라별 투영 → 다중
 카메라 융합**의 순차 단계다.
 
+P5-A의 producer·subscriber·bag 감사 정본은
+[`perception_topic_policy_v1.yaml`](../../config/contracts/perception_topic_policy_v1.yaml)이다.
+`debug/{view}` semantic 3종과 `model_grid` 2종은 후단 계산 입력이므로 일반 debug image처럼
+끄지 않는다. per-view coverage와 fused source-view만 첫 default-off 후보이며 실제 전환은
+P5-B 호환 변경에서 수행한다.
+
 ## 시각화
 
 debug image publisher를 함께 켠다.
