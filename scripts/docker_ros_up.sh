@@ -10,6 +10,7 @@ CONTAINER="asmc-ros-noetic"
 
 export ASMC="${ASMC:-$REPO_ROOT}"
 export ASMC_DATA="${ASMC_DATA:-$(dirname "$REPO_ROOT")/data}"
+export TWINLITE_SOURCE="${TWINLITE_SOURCE:-$(dirname "$REPO_ROOT")/external/baselines/TwinLiteNetPlus}"
 mkdir -p "$ASMC_DATA"
 
 COMPOSE=(docker compose -f "$COMPOSE_FILE")
@@ -43,10 +44,21 @@ render_config() {
   if grep -q '^    ports:$' <<<"$rendered"; then
     die "host-mode compose must not publish ports"
   fi
-  echo "[OK] compose uses host mode without published ports"
+  grep -q '^      TWINLITE_ROOT: /opt/baselines/TwinLiteNetPlus$' <<<"$rendered" \
+    || die "compose does not set the TwinLite runtime root"
+  grep -q '^        target: /opt/baselines/TwinLiteNetPlus$' <<<"$rendered" \
+    || die "compose does not mount the TwinLite runtime source"
+  echo "[OK] compose uses host mode, no published ports, and the TwinLite runtime mount"
   if [ "${1:-}" = "show" ]; then
     printf '%s\n' "$rendered"
   fi
+}
+
+require_twinlite_source() {
+  [ -d "$TWINLITE_SOURCE" ] \
+    || die "TwinLite source does not exist: $TWINLITE_SOURCE"
+  [ -f "$TWINLITE_SOURCE/model/model.py" ] \
+    || die "TwinLite source is incomplete (missing model/model.py): $TWINLITE_SOURCE"
 }
 
 render_rtx50_config() {
@@ -168,6 +180,7 @@ EOF
 
 cmd="${1:-up}"
 echo "[DATA] $ASMC_DATA -> /data (rw)"
+echo "[TWINLITE] $TWINLITE_SOURCE -> /opt/baselines/TwinLiteNetPlus (ro)"
 case "$cmd" in
   config)
     render_config "${2:-}"
@@ -178,6 +191,7 @@ case "$cmd" in
     ;;
   up)
     render_config
+    require_twinlite_source
     "${COMPOSE[@]}" up -d --force-recreate
     inspect_mode
     print_next
@@ -202,6 +216,7 @@ case "$cmd" in
     ;;
   rebuild)
     render_config
+    require_twinlite_source
     "${COMPOSE[@]}" build --no-cache
     "${COMPOSE[@]}" up -d --force-recreate
     inspect_mode
@@ -218,6 +233,7 @@ case "$cmd" in
   up-rtx50)
     render_config
     render_rtx50_config
+    require_twinlite_source
     "${COMPOSE_RTX50[@]}" up -d --force-recreate
     inspect_mode
     print_next
@@ -225,6 +241,7 @@ case "$cmd" in
   rebuild-rtx50)
     render_config
     render_rtx50_config
+    require_twinlite_source
     # 공용 RTX 40 이미지를 먼저 만든 뒤 RTX 50 파생 이미지를 no-cache로 만든다.
     "${COMPOSE[@]}" build
     "${COMPOSE_RTX50[@]}" build --no-cache

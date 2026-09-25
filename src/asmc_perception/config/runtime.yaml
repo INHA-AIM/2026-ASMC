@@ -28,6 +28,16 @@ components:
       launch_argument: lane_publish_pipeline_audit
       topic: /perception/lane/pipeline_audit
       enable_for: result_bag_evaluation
+    lane_family:
+      enabled_by_default: true
+      canonical_topic: /perception/lane/boundary_family
+      operating_domain: shadow_two_way_v1
+      shared_family_debug_enabled_by_default: true
+      shared_family_debug_topic: /perception/lane/debug/shared_family/markers
+      compatibility_topic: /perception/lane/boundary_observations
+      compatibility_topic_policy: noncanonical_diagnostic_only
+      compatibility_topic_enabled_by_default: false
+      compatibility_launch_argument: lane_enable_independent_boundary_pipeline
   traffic_light:
     enabled_by_default: false
     activation_zone: TRAFFIC_LIGHT_REQUIRED

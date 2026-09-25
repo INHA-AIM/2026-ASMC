@@ -19,6 +19,9 @@ services:
       # Host $ASMC_DATA is mounted here. Collectors use this instead of a
       # container-local fallback, so manifests survive container recreation.
       - ASMC_DATA=/data
+      # Runtime inference uses the pinned upstream model source read-only.
+      # Training remains in the separate asmc-perception-train container.
+      - TWINLITE_ROOT=/opt/baselines/TwinLiteNetPlus
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
       - __NV_PRIME_RENDER_OFFLOAD=1
@@ -35,6 +38,9 @@ services:
       # Default is the data directory next to the 2026-ASMC repository.
       # ROS owns collection/writer processes, so this mount must be writable.
       - ${ASMC_DATA:-../../../data}:/data:rw
+      # Official TwinLite source stays outside team Git and is never mutated by
+      # the ROS runtime container.
+      - ${TWINLITE_SOURCE:-../../../external/baselines/TwinLiteNetPlus}:/opt/baselines/TwinLiteNetPlus:ro
     shm_size: "2gb"
     stdin_open: true
     tty: true

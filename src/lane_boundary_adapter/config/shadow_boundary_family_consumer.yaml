@@ -1,4 +1,7 @@
-# Read-only consumer for the provisional shared-family candidate.
+# Read-only reference consumer for the canonical shadow-lane shared family.
+# The family remains deployment-disallowed until planning performs its own
+# route/HD-map fusion and safety gates; "canonical" here identifies the
+# perception handoff topic, not a vehicle-control authorization.
 # It emits debug strips and diagnostics only. It never publishes a trajectory,
 # behavior decision, or vehicle command.
 topics:
@@ -12,9 +15,15 @@ adapter:
   expected_algorithm_id: twinlite_v6_shadow_boundary_family_candidate_v3
   expected_representation: shared_parametric_bspline_normal_offsets_v2
   expected_boundary_count: 3
-  # Bounded read-only audit window, not a permanent perception or planning
-  # horizon. The producer retains per-sample support over its full configured
-  # polyline; extend this only after a new accuracy/support audit.
+  # Bounded read-only adapter/audit window, not a permanent perception or
+  # planning horizon. /perception/lane/boundary_family still carries the full
+  # producer polyline and per-sample OBSERVED/STRUCTURE_INFERRED/INVALID state.
+  # The shorter /planning/debug/lane_boundary_family/strips MarkerArray is only
+  # a visualization of the intervals this reference adapter accepted; it is
+  # not a truncated replacement planning message. A planning-owned consumer
+  # may choose its own horizon from the typed family, but must preserve the
+  # freshness, INVALID hard-split, width and support gates and must audit any
+  # extension beyond 15 m before enabling it in control.
   consumer_x_min_m: 0.0
   consumer_x_max_m: 15.0
   min_segment_length_m: 0.25

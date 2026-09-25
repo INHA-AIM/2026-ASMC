@@ -72,7 +72,9 @@ def select_device(requested):
         return torch.device("cpu")
     if not torch.cuda.is_available():
         if requested == "cuda":
-            raise RuntimeError("CUDA requested but unavailable; use scripts/perception.sh")
+            raise RuntimeError(
+                "CUDA requested but unavailable in the asmc-ros-noetic runtime"
+            )
         return torch.device("cpu")
     major, minor = torch.cuda.get_device_capability(0)
     built_majors = set()

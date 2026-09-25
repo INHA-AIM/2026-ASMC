@@ -212,6 +212,7 @@ def commands_for(item, args):
         "lane_enable_boundary_family_candidate:={}".format(
             "true" if args.enable_boundary_family_candidate else "false"
         ),
+        "lane_enable_independent_boundary_pipeline:=true",
     ]
     recorder = [
         "roslaunch", "data_collection", "bag_recorder.launch",
