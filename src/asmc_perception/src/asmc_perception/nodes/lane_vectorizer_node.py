@@ -227,6 +227,9 @@ class LaneVectorizerNode:
         self.boundary_family_candidate_enabled = bool(
             rospy.get_param("~enable_boundary_family_candidate", False)
         )
+        self.publish_pipeline_audit = bool(
+            rospy.get_param("~publish_pipeline_audit", False)
+        )
         self.boundary_family_algorithm_id = str(
             rospy.get_param(
                 "~boundary_family_algorithm_id",
@@ -411,7 +414,9 @@ class LaneVectorizerNode:
         self.boundary_publish_ms = deque(maxlen=512)
         self.end_to_end_ms = deque(maxlen=512)
         self.output_times = deque(maxlen=256)
-        self.pipeline_audit = PipelineAuditAccumulator()
+        self.pipeline_audit = (
+            PipelineAuditAccumulator() if self.publish_pipeline_audit else None
+        )
         self.active_candidate_marker_keys = set()
         self.active_boundary_marker_keys = set()
         self.active_shared_family_marker_keys = set()
@@ -454,9 +459,11 @@ class LaneVectorizerNode:
         self.diagnostics_publisher = rospy.Publisher(
             "/perception/lane/diagnostics", DiagnosticArray, queue_size=1
         )
-        self.pipeline_audit_publisher = rospy.Publisher(
-            "/perception/lane/pipeline_audit", DiagnosticArray, queue_size=10
-        )
+        self.pipeline_audit_publisher = None
+        if self.publish_pipeline_audit:
+            self.pipeline_audit_publisher = rospy.Publisher(
+                "/perception/lane/pipeline_audit", DiagnosticArray, queue_size=10
+            )
         self.shared_family_marker_publisher = rospy.Publisher(
             "/perception/lane/debug/shared_family/markers",
             MarkerArray,
@@ -492,13 +499,15 @@ class LaneVectorizerNode:
         )
         rospy.loginfo(
             "lane vector pilot ready views=%s model_hw=%s thresholds=%s "
-            "skew<=%.1fms shared_family_debug=%s boundary_family_candidate=%s",
+            "skew<=%.1fms shared_family_debug=%s boundary_family_candidate=%s "
+            "pipeline_audit=%s",
             self.views,
             model_hw,
             self.confidence_by_class,
             self.max_skew_ns / 1e6,
             self.shared_family_debug_enabled,
             self.boundary_family_candidate_enabled,
+            self.publish_pipeline_audit,
         )
 
     def _view_callback(self, view, class_message, confidence_message):
@@ -582,15 +591,16 @@ class LaneVectorizerNode:
                 view_evidence = []
                 for view in self.views:
                     projector = self.projectors[view]
-                    frame_audit["projection"][view] = _measure(
-                        timings,
-                        "projection_audit",
-                        lambda projector=projector, view=view: projector.selection_audit(
-                            frames[view].class_id,
-                            frames[view].confidence,
-                            self.confidence_by_class,
-                        ),
-                    )
+                    if self.publish_pipeline_audit:
+                        frame_audit["projection"][view] = _measure(
+                            timings,
+                            "projection_audit",
+                            lambda projector=projector, view=view: projector.selection_audit(
+                                frames[view].class_id,
+                                frames[view].confidence,
+                                self.confidence_by_class,
+                            ),
+                        )
                     view_evidence.append(
                         _measure(
                             timings,
@@ -815,28 +825,22 @@ class LaneVectorizerNode:
                     )
             except Exception as exc:
                 self.errors += 1
-                frame_audit["error"] = "{}: {}".format(type(exc).__name__, exc)
-                frame_audit["counts"] = dict(frame_audit.get("counts") or {})
                 timings["profiled_body"] = (
                     time.perf_counter() - started
                 ) * 1000.0
-                frame_audit["runtime_profile_schema"] = RUNTIME_PROFILE_SCHEMA
-                frame_audit["timing_ms"] = dict(timings)
-                audit_snapshot = _measure(
-                    timings,
-                    "pipeline_audit_update",
-                    lambda: self.pipeline_audit.update(frame_audit),
-                )
                 newest_header = max(
                     frames.values(), key=lambda value: value.stamp_ns
                 ).header
-                _measure(
-                    timings,
-                    "pipeline_audit_message_publish",
-                    lambda: self.pipeline_audit_publisher.publish(
-                        self._pipeline_audit_message(audit_snapshot, newest_header)
-                    ),
-                )
+                if self.publish_pipeline_audit:
+                    frame_audit["error"] = "{}: {}".format(
+                        type(exc).__name__, exc
+                    )
+                    frame_audit["counts"] = dict(
+                        frame_audit.get("counts") or {}
+                    )
+                    self._publish_pipeline_audit(
+                        frame_audit, timings, newest_header
+                    )
                 timings["callback_total"] = (
                     time.perf_counter() - started
                 ) * 1000.0
@@ -943,59 +947,47 @@ class LaneVectorizerNode:
                     family_candidate_published
                 ),
             }
-            frame_audit["counts"] = {
-                "model_marking_pixels": int(
-                    sum(
-                        value["model_marking_pixels"]
-                        for value in frame_audit["projection"].values()
-                    )
-                ),
-                "evidence": int(len(evidence.xy)),
-                "nodes": int(len(nodes)),
-                "tracks": int(len(tracks)),
-                "prefit_tracks": int(len(fitted_tracks)),
-                "lanes": int(len(lanes)),
-                "observations": int(
-                    frame_audit["boundary_selection"].get(
-                        "selected_boundaries", 0
-                    )
-                ),
-                "boundaries": int(len(tracked_boundaries)),
-                "yellow_boundaries": int(
-                    sum(
-                        item.observation.lane.class_id == 2
-                        for item in tracked_boundaries
-                    )
-                ),
-                "complete": False,
-                "boundary_completeness": int(boundary_output.completeness),
-                "shared_family_available": bool(shared_family is not None),
-                "shared_family_distributed": bool(
-                    self.last_shared_family_audit.get("acceptance_mode")
-                    == "distributed_multi_role"
-                ),
-            }
-            frame_audit["counts"]["complete"] = bool(
-                boundary_output.completeness == COMPLETENESS_COMPLETE
-                and len(boundary_output.boundaries) == self.expected_boundary_count
-            )
-            frame_audit["runtime_profile_schema"] = RUNTIME_PROFILE_SCHEMA
-            frame_audit["timing_ms"] = dict(timings)
-            audit_snapshot = _measure(
-                timings,
-                "pipeline_audit_update",
-                lambda: self.pipeline_audit.update(frame_audit),
-            )
-            newest_header = max(
-                frames.values(), key=lambda value: value.stamp_ns
-            ).header
-            _measure(
-                timings,
-                "pipeline_audit_message_publish",
-                lambda: self.pipeline_audit_publisher.publish(
-                    self._pipeline_audit_message(audit_snapshot, newest_header)
-                ),
-            )
+            if self.publish_pipeline_audit:
+                frame_audit["counts"] = {
+                    "model_marking_pixels": int(
+                        sum(
+                            value["model_marking_pixels"]
+                            for value in frame_audit["projection"].values()
+                        )
+                    ),
+                    "evidence": int(len(evidence.xy)),
+                    "nodes": int(len(nodes)),
+                    "tracks": int(len(tracks)),
+                    "prefit_tracks": int(len(fitted_tracks)),
+                    "lanes": int(len(lanes)),
+                    "observations": int(
+                        frame_audit["boundary_selection"].get(
+                            "selected_boundaries", 0
+                        )
+                    ),
+                    "boundaries": int(len(tracked_boundaries)),
+                    "yellow_boundaries": int(
+                        sum(
+                            item.observation.lane.class_id == 2
+                            for item in tracked_boundaries
+                        )
+                    ),
+                    "complete": bool(
+                        boundary_output.completeness == COMPLETENESS_COMPLETE
+                        and len(boundary_output.boundaries)
+                        == self.expected_boundary_count
+                    ),
+                    "boundary_completeness": int(boundary_output.completeness),
+                    "shared_family_available": bool(shared_family is not None),
+                    "shared_family_distributed": bool(
+                        self.last_shared_family_audit.get("acceptance_mode")
+                        == "distributed_multi_role"
+                    ),
+                }
+                newest_header = max(
+                    frames.values(), key=lambda value: value.stamp_ns
+                ).header
+                self._publish_pipeline_audit(frame_audit, timings, newest_header)
             timings["callback_total"] = (
                 time.perf_counter() - started
             ) * 1000.0
@@ -1011,6 +1003,24 @@ class LaneVectorizerNode:
             value = float(timings.get(stage, 0.0))
             if np.isfinite(value) and value >= 0.0:
                 self.runtime_stage_ms[stage].append(value)
+
+    def _publish_pipeline_audit(self, frame_audit, timings, source_header):
+        if not self.publish_pipeline_audit:
+            return
+        frame_audit["runtime_profile_schema"] = RUNTIME_PROFILE_SCHEMA
+        frame_audit["timing_ms"] = dict(timings)
+        audit_snapshot = _measure(
+            timings,
+            "pipeline_audit_update",
+            lambda: self.pipeline_audit.update(frame_audit),
+        )
+        _measure(
+            timings,
+            "pipeline_audit_message_publish",
+            lambda: self.pipeline_audit_publisher.publish(
+                self._pipeline_audit_message(audit_snapshot, source_header)
+            ),
+        )
 
     def _point_cloud(self, evidence, source_header):
         header = Header(stamp=source_header.stamp, frame_id=self.frame_id)
@@ -1637,7 +1647,12 @@ class LaneVectorizerNode:
             "boundary_algorithm_id": self.algorithm_id,
             "boundary_config_sha256": self.boundary_config_sha256,
             "boundary_expected_count": self.expected_boundary_count,
-            "pipeline_audit": self.pipeline_audit.snapshot(),
+            "pipeline_audit_enabled": self.publish_pipeline_audit,
+            "pipeline_audit": (
+                self.pipeline_audit.snapshot()
+                if self.pipeline_audit is not None
+                else {"enabled": False}
+            ),
             "marker_policy": "explicit_delete_missing_ids",
             "marker_delete_counts": self.marker_delete_counts,
         }

@@ -23,6 +23,11 @@ components:
         - /perception/bev/debug/right/coverage
         - /perception/bev/camera/source_count
         - /perception/bev/debug/source_view
+    lane_pipeline_audit:
+      enabled_by_default: false
+      launch_argument: lane_publish_pipeline_audit
+      topic: /perception/lane/pipeline_audit
+      enable_for: result_bag_evaluation
   traffic_light:
     enabled_by_default: false
     activation_zone: TRAFFIC_LIGHT_REQUIRED

@@ -247,6 +247,7 @@ roslaunch asmc_perception perception.launch [arg:=value ...]
 | `lane_algorithm_id` | `twinlite_v6_shadow_boundary_contract_v1` | algorithm/version ID |
 | `lane_enable_shared_family_debug` | `false` | shared-family debug fitting·marker |
 | `lane_enable_boundary_family_candidate` | shared debug값 | provisional typed family candidate 발행 |
+| `lane_publish_pipeline_audit` | `false` | frame별 상세 lane audit; 평가·result bag에서만 명시적으로 활성화 |
 | `traffic_light_checkpoint` | package `models/traffic_light/best.pt` | 신호등 checkpoint |
 | `traffic_light_device` | `auto` | `auto`, CPU/GPU device override |
 | `traffic_light_image_topic` | `/cam_extra/image_jpeg/compressed` | 신호등 camera input |
@@ -354,6 +355,13 @@ RViz marker 구성은 이번 rqt 정리에서 변경하지 않았다.
 `road_marking/model_grid/*`와 `/perception/bev/debug/{view}`의 semantic raster는 이름에
 `grid`·`debug`가 있어도 rqt 화면이 아니라 각각 lane vectorizer와 camera fusion의 내부
 입력이다. `rostopic list`에 계속 보이는 것이 정상이며 시각화 정리 목적으로 끄지 않는다.
+
+`/perception/lane/pipeline_audit`도 일반 주행에서는 광고하지 않는다. raw bag 평가나
+rejection 원인 분석에서만 다음처럼 켠다. 공식 batch 도구는 이 인자를 자동으로 전달한다.
+
+```bash
+./scripts/perception.sh lane_publish_pipeline_audit:=true
+```
 
 ## 6. Planning/Control 옵션
 

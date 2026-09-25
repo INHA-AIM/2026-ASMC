@@ -52,7 +52,18 @@ coverage와 source count/view는 `publish_bev_debug_metadata:=true`로 독립 �
 
 검증 명령과 opt-in 옵션의 정본은 [실행 명령어 모음](../../runtime-commands.md)에 있다.
 
-## 남은 P5-B 경계
+## P5-B runtime closeout
 
 per-view coverage와 fused source count/view의 production default-off까지 적용했다.
-P5-A에서 지정한 frame-level pipeline audit의 opt-in 전환은 별도 변경·bag 회귀로 진행한다.
+P5-A에서 지정한 frame-level `/perception/lane/pipeline_audit`도
+`lane_publish_pipeline_audit:=true`에서만 광고한다. 기본 실행에서는 별도 projection
+selection audit, 누적 집계와 큰 frame DiagnosticArray 직렬화를 건너뛴다. 정상 lane
+boundary·diagnostics 출력과 핵심 알고리즘은 유지한다.
+
+`run_shadow_lane_bag_batch.py`는 상세 rejection 분석이 필요한 기존 result/evaluation
+profile을 위해 audit와 BEV debug metadata를 명시적으로 다시 켠다. 따라서 production
+기본값 축소와 평가 bag 계약을 분리했다.
+
+Closeout 검증은 ROS Noetic 전체 catkin build와 관련 회귀 테스트 48개를 통과했다. 운영
+graph와 분리한 임시 ROS master에서 같은 lane vectorizer를 두 번 실행해 기본값에서는
+`/perception/lane/pipeline_audit`가 광고되지 않고, opt-in에서는 광고되는 것도 확인했다.

@@ -417,7 +417,7 @@ lane vectorizer와 fusion의 필수 내부 transport라서 이름만 보고 끌 
 바꾸지 않았으며 P5-B는 per-view coverage, source-view, frame-level pipeline audit의 opt-in
 전환과 단일 BEV 비교 화면부터 진행한다.
 
-**P5-B rqt 1차 완료:** 일반 `start_visualization:=true` 경로는 9칸 camera semantic
+**P5-B 완료:** 일반 `start_visualization:=true` 경로는 9칸 camera semantic
 mosaic와 원본 RGB/fused semantic BEV 좌우 비교 화면만 광고한다. 개별 camera panel,
 기존 fused/fused-quality와 lane 중간 영상은 `visualization_legacy_rqt:=true`, camera
 calibration grid는 `visualization_calibration_grid:=true`에서만 생성한다. 두 기본 영상도
@@ -426,7 +426,9 @@ subscriber가 없으면 렌더링·JPEG 직렬화를 하지 않는다. live MORA
 [P5-B rqt 기준 기록](../records/baselines/perception-p5b-rqt-v1.md)에 있다. 이 작업은
 RViz marker 구성과 planning 소유 adapter를 바꾸지 않았다. 이어서 per-view coverage와
 fused source count/view를 `publish_bev_debug_metadata` opt-in으로 전환했다. frame-level
-pipeline audit의 production default-off는 다음 P5-B 묶음이다.
+pipeline audit도 `lane_publish_pipeline_audit` opt-in으로 전환했고 result-bag batch가 이를
+명시적으로 다시 켠다. 다음 묶음은 기본 runtime diagnostics·topic health를 유지하면서
+중복 compatibility output의 실제 consumer 만료 여부를 검토한다.
 
 1. consumer가 없는 grid·debug topic은 기본 발행을 끄고 opt-in으로 돌린다.
 2. BEV debug는 중복 창 대신 원본/투영 BEV와 최종 인지·융합 BEV를 나란히

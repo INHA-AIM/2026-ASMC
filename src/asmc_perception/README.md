@@ -65,8 +65,8 @@ handoff 전에는 `asmc_perception` launch에 포함하지 않는다.
 P5-A의 producer·subscriber·bag 감사 정본은
 [`perception_topic_policy_v1.yaml`](../../config/contracts/perception_topic_policy_v1.yaml)이다.
 `debug/{view}` semantic 3종과 `model_grid` 2종은 후단 계산 입력이므로 일반 debug image처럼
-끄지 않는다. per-view coverage와 fused source-view만 첫 default-off 후보이며 실제 전환은
-P5-B 호환 변경에서 수행한다.
+끄지 않는다. per-view coverage, fused source count/view와 frame-level lane pipeline audit은
+P5-B에서 명시적 평가 옵션으로 전환했다.
 
 ## 시각화
 
@@ -99,6 +99,10 @@ calibration grid는 별도 `visualization_calibration_grid:=true`로만 켠다. 
 per-view projected coverage와 fused source count/view도 기본 off다. 평가 bag이나
 overlap 분석에서 필요하면 `publish_bev_debug_metadata:=true`를 지정한다. legacy rqt를
 켜면 이 metadata도 호환 기본값으로 함께 켜진다.
+
+큰 frame별 `/perception/lane/pipeline_audit`도 일반 주행에서는 광고·누적하지 않는다.
+rejection 원인 분석이나 result bag replay에서는 `lane_publish_pipeline_audit:=true`를
+지정한다. `run_shadow_lane_bag_batch.py`는 기존 평가 계약을 위해 이 값을 자동으로 켠다.
 
 `start_traffic_light`은 실제 producer를 켜는 옵션이다. 현재는 true로 켜면 전 구간에서 계속
 추론하며, HD맵의 `TRAFFIC_LIGHT_REQUIRED` 구간(A236~A308)에 따른 process/compute 활성화는

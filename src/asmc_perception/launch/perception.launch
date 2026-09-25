@@ -27,6 +27,7 @@
   <arg name="lane_enable_shared_family_debug" default="false"/>
   <arg name="lane_enable_boundary_family_candidate"
        default="$(arg lane_enable_shared_family_debug)"/>
+  <arg name="lane_publish_pipeline_audit" default="false"/>
 
   <arg name="traffic_light_checkpoint"
        default="$(find asmc_perception)/models/traffic_light/best.pt"/>
@@ -81,6 +82,8 @@
              value="$(arg lane_enable_shared_family_debug)"/>
       <param name="enable_boundary_family_candidate"
              value="$(arg lane_enable_boundary_family_candidate)"/>
+      <param name="publish_pipeline_audit"
+             value="$(arg lane_publish_pipeline_audit)"/>
     </node>
   </group>
 

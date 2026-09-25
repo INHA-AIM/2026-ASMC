@@ -55,6 +55,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             "visualization_legacy_rqt": "false",
             "visualization_calibration_grid": "false",
             "publish_bev_debug_metadata": "$(arg visualization_legacy_rqt)",
+            "lane_publish_pipeline_audit": "false",
         }
         for name, default in expected.items():
             self.assertIn(name, arguments)
@@ -246,6 +247,10 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         self.assertFalse(metadata["enabled_by_default"])
         self.assertEqual("publish_bev_debug_metadata", metadata["launch_argument"])
         self.assertEqual(5, len(metadata["topics"]))
+        audit = self.runtime["components"]["camera_lane"]["lane_pipeline_audit"]
+        self.assertFalse(audit["enabled_by_default"])
+        self.assertEqual("lane_publish_pipeline_audit", audit["launch_argument"])
+        self.assertEqual("/perception/lane/pipeline_audit", audit["topic"])
 
     def test_bev_debug_metadata_is_opt_in_at_both_producers(self):
         camera_bev = next(
@@ -273,6 +278,32 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             "$(arg publish_bev_debug_metadata)",
             fusion_params["publish_debug_metadata"],
         )
+
+    def test_lane_pipeline_audit_is_evaluation_opt_in(self):
+        vectorizer = next(
+            node
+            for node in self.launch_root.iter("node")
+            if node.get("name") == "camera_lane_vectorizer"
+        )
+        params = {
+            item.get("name"): item.get("value")
+            for item in vectorizer.findall("param")
+        }
+        self.assertEqual(
+            "$(arg lane_publish_pipeline_audit)",
+            params["publish_pipeline_audit"],
+        )
+        node_body = (
+            PACKAGE_ROOT
+            / "src/asmc_perception/nodes/lane_vectorizer_node.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            'rospy.get_param("~publish_pipeline_audit", False)', node_body
+        )
+        batch_body = (
+            PACKAGE_ROOT / "tools/bev/run_shadow_lane_bag_batch.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn('"lane_publish_pipeline_audit:=true"', batch_body)
 
     def test_closed_loop_acceptance_is_isolated_from_control_outputs(self):
         launch = ET.parse(

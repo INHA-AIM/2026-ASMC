@@ -219,7 +219,8 @@ source /root/ws/devel/setup.bash
 roslaunch asmc_perception perception.launch \
   camera_checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
   lane_enable_boundary_family_candidate:=true \
-  lane_enable_shared_family_debug:=false
+  lane_enable_shared_family_debug:=false \
+  lane_publish_pipeline_audit:=true
 ```
 
 UDP bridge와 read-only adapter는 `asmc-ros-noetic`에서 실행한다. adapter는 선택 사항이며

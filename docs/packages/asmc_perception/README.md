@@ -2,7 +2,7 @@
 
 > **문서 역할:** Active Package-Group Guide — 현재 인지 코드 경계, 문서 권위와 Phase 4 이관 gate
 >
-> **현재 상태:** P4-C6 camera/BEV/lane/traffic runtime·offline·training 통합과 구 package closeout 완료
+> **현재 상태:** P4-C6 package 통합과 P5-B runtime/rqt 출력 정리 완료
 
 이 문서는 긴 인지 설계·실험 문서를 대체하거나 요약 폐기하기 위한 문서가 아니다. 현재 어떤
 코드와 문서를 먼저 사용해야 하는지 안내하는 진입점이다. 날짜별 분석, 수치, 실패 원인과 후보
@@ -98,6 +98,9 @@ Camera semantic 입력·출력의 정확한 목록과 실행 인자는
 
 `/perception/bev/camera/source_count`, `/perception/bev/debug/source_view`와 per-view
 projected coverage는 `publish_bev_debug_metadata:=true`인 평가·검수 실행에서만 발행한다.
+frame별 상세 `/perception/lane/pipeline_audit`도
+`lane_publish_pipeline_audit:=true`인 result-bag 평가에서만 발행한다. 일반 주행에서 유지되는
+`/perception/lane/diagnostics`와 혼동하지 않는다.
 
 P5-A 감사 결과 `/perception/bev/debug/{view}`의 drivable·road-marking 3종은 이름과 달리
 fusion의 필수 내부 입력이다. `model_grid` 2종도 lane vectorizer 입력이다. 실제 default-off

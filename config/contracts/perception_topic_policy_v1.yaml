@@ -296,7 +296,7 @@ topic_families:
       - shadow_camera_perception_handoff_result.yaml
       - shadow_runtime_profile_result.yaml
     classification: audit_opt_in
-    current_mode: default_on
+    current_mode: explicit_argument
     p5b_action: opt_in_p5b
     rationale: Frame-level detailed audit is needed for evaluation bags, not every production run.
 
@@ -439,3 +439,9 @@ p5b_runtime_overrides:
     default: false
     compatibility_default: visualization_legacy_rqt
     reason: User-approved runtime declutter after the compact rqt comparison was validated.
+  - family_ids: [lane_pipeline_audit]
+    current_mode: explicit_argument
+    launch_argument: lane_publish_pipeline_audit
+    default: false
+    evaluation_entrypoint: src/asmc_perception/tools/bev/run_shadow_lane_bag_batch.py
+    reason: Preserve detailed frame audit for result bags without paying its production projection, accumulation, and wire costs.
