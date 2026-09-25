@@ -13,19 +13,21 @@
 
 ```text
 MORAI sensors --UDP--> asmc_bridge sensor node --ROS--> camera perception
-  ├─/perception/lane/boundary_observations─> independent pilot
-  └─/perception/lane/boundary_family───────> shared-family candidate adapter
-       --ROS debug only--> MarkerArray + DiagnosticArray
+  ├─/perception/lane/boundary_family───────> canonical shadow-lane handoff
+  │    └─> shared-family read-only adapter --> MarkerArray + DiagnosticArray
+  └─/perception/lane/boundary_observations─> compatibility/diagnostic pilot only
 ```
 
 이 패키지는 `behavior_planner`, `frenet_planner`, `mpc_controller`, UDP 명령 송신 코드를
 수정하거나 호출하지 않는다. `BehaviorCommand`, `Trajectory` 및 차량 제어 명령도 발행하지
 않는다. 따라서 판제 파트가 현재 작업 중인 실행 경로와 독립적으로 빌드·검토할 수 있다.
 
-두 입력은 아직 A/B를 위한 별도 경로다. independent pilot은 개별 spline의 관측 연속성을
-검증하고, shared-family candidate adapter는 공동 피팅 결과의 sample별 support를 보존한 채
-두 인접 경계 사이를 strip/centerline segment로 변환한다. 어느 쪽도 production planning
-source로 승격되지 않았다.
+`boundary_family`가 현재 음영구간 판제 인수 정본이다. shared-family adapter는
+공동 피팅 결과의 sample별 support를 보존한 채 두 인접 경계 사이를
+strip/centerline segment로 변환한다. independent pilot과
+`boundary_observations`는 기존 호환·진단 재현용으로만 남겨 신규 판제 consumer가
+사용하지 않는다. 이 package의 node 자체는 여전히 read-only monitor이며
+제어 승격을 의미하지 않는다.
 
 shared-family C++ core는 향후 판제가 재사용할 수 있지만 현재 node는 계속 read-only monitor다.
 음영구간 on/off, route 의미, camera drivable threshold, LiDAR occupancy 차감과 fallback은 이
@@ -59,7 +61,7 @@ route/mission 문맥·LiDAR occupancy·corridor 후보를 함께 소유할 판�
 이때도 canonical perception topic인 `/perception/lane/boundary_family`와
 `/perception/bev/camera/*`를 삭제한다는 뜻은 아니다.
 
-## 현재 범위
+## Legacy independent 범위
 
 - 입력: `/perception/lane/boundary_observations`
   (`asmc_msgs/LaneBoundaryObservationArray`)
@@ -91,7 +93,7 @@ adapter는 한 frame의 경계들이 동일한 reference x를 공유하는지 �
 0.65를 곱한다. perception 원본 메시지에는 합성 경계를 넣지 않고, 한 경계 이하이거나
 전체 가림이면 fallback하지 않는다.
 
-### Shared-family 후보 소비 정책
+### Canonical shared-family 소비 정책
 
 - 입력: `/perception/lane/boundary_family` (`asmc_msgs/LaneBoundaryFamily`)
 - 출력:
@@ -101,6 +103,13 @@ adapter는 한 frame의 경계들이 동일한 reference x를 공유하는지 �
     (`diagnostic_msgs/DiagnosticArray`)
 - 현재 read-only audit ROI: `x[0,15]m`; producer의 `valid_x`와 교집합만 사용
 - `deployment_allowed=false`인 `shadow_two_way_v1` 후보만 수용
+
+`/planning/debug/lane_boundary_family/strips`는 위 reference adapter가 수락한 구간을 보여주는
+시각화 MarkerArray이지, 길이가 잘린 planning message가 아니다. 정본
+`/perception/lane/boundary_family`에는 producer 전체 polyline과 sample별
+`OBSERVED/STRUCTURE_INFERRED/INVALID`가 그대로 들어간다. 판제는 typed family에서 별도 horizon을
+선택할 수 있지만 freshness·`INVALID` hard split·폭/support gate를 그대로 유지해야 한다.
+15m 밖을 제어에 사용하려면 far-range 정확도와 연속 support를 별도 audit한 뒤 확장한다.
 
 adapter는 shared-family의 공통 sample index를 직접 사용하며 raster로 되돌리거나 새 spline을
 피팅하지 않는다. 인접한 두 sample 사이의 네 support 값(왼쪽 경계 두 점과 오른쪽 경계 두
@@ -151,12 +160,11 @@ roslaunch lane_boundary_adapter shadow_lane_consumer_pilot.launch
 
 ```bash
 roslaunch asmc_perception perception.launch \
-  camera_checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
-  lane_enable_shared_family_debug:=true \
-  lane_enable_boundary_family_candidate:=true
+  camera_checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
 ```
 
 shared-family read-only adapter는 ROS Noetic 컨테이너의 별도 터미널에서 실행한다.
+기본값으로 `base_link` 전용 RViz preset도 함께 열린다.
 
 ```bash
 cd /root/ws
@@ -164,14 +172,17 @@ source devel/setup.bash
 roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch
 ```
 
+GUI가 필요 없는 bag replay·성능 측정에서는 명시적으로 끈다.
+
+```bash
+roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch rviz:=false
+```
+
 검사:
 
 ```bash
-rostopic hz /perception/lane/boundary_observations
-rostopic echo /planning/lane_observation/diagnostics -n1
 rostopic hz /perception/lane/boundary_family
 rostopic echo /planning/diagnostics/lane_boundary_family_adapter -n1
-rviz
 ```
 
 RViz에서 `MarkerArray` display를 추가하고
@@ -179,11 +190,16 @@ RViz에서 `MarkerArray` display를 추가하고
 관측 띠, 파란색은 나머지 관측 띠다. 추정 중앙선을 사용한 degraded 띠는 주황색과
 `[DEGRADED inferred center]` label로 구별한다. 이것은 경로 선택이나 제어 권고가 아니다.
 
-shared-family adapter의 RViz `MarkerArray`는
-`/planning/debug/lane_boundary_family/strips`를 선택한다. 청록 segment는 observed, 주황
-segment는 structure-inferred다. invalid 구간은 빨간 선으로 그리지 않고 실제 공백으로
-표현한다. producer 자체의 경계와 붉은 invalid support를 함께 보려면
-`/perception/lane/debug/shared_family/markers`를 겹쳐 본다.
+자동 RViz preset의 Fixed Frame은 `base_link`다. shared-family adapter의
+`/planning/debug/lane_boundary_family/strips`와 producer의
+`/perception/lane/debug/shared_family/markers`가 기본으로 겹쳐 표시된다. 청록 segment는
+observed, 주황 segment는 structure-inferred다. invalid 구간은 빨간 선으로 연결하지 않고
+실제 공백으로 표현하며 producer marker에서 그 근거를 비교할 수 있다. 기존 independent
+경계 marker는 preset에 포함하되 기본 비활성화했다.
+
+producer marker는 전체 fitting 범위의 세 경계와 support 상태를 보여주므로 adapter strip보다
+앞뒤로 길 수 있다. strip은 `x[0,15]m` 안에서 인접 경계 두 개가 동시에 usable한 interval만
+면으로 만든다. 두 표시의 길이 차이는 의도된 품질 gate이며 인지 메시지의 정보 손실이 아니다.
 
 같은 MarkerArray에는 실제 차량 제원의 반투명 파란 footprint가 함께 표시된다. `base_link`는
 후륜축 중앙의 빨간 점이고, 주황 가로선은 후륜축 `x=0`, 녹색 가로선은 전륜축 `x=3.0m`다.

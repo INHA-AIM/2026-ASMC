@@ -23,6 +23,7 @@ from validate_perception_runtime_acceptance import (  # noqa: E402
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from verify_perception_runtime import (  # noqa: E402
+    call_with_timeout,
     interval_summary,
     snapshot_samples,
 )
@@ -49,7 +50,7 @@ class PerceptionRuntimeAcceptanceTest(unittest.TestCase):
         result = validate_contract(REPO_ROOT, self.path)
         self.assertEqual(33, result["camera_lane_topic_count"])
         self.assertEqual(38, result["all_topic_count"])
-        self.assertEqual(19, result["default_forbidden_topic_count"])
+        self.assertEqual(20, result["default_forbidden_topic_count"])
         self.assertEqual(8, result["static_binding_count"])
         self.assertEqual(2, result["optional_consumer_gate_count"])
         self.assertEqual(2, result["deferred_topic_count"])
@@ -67,7 +68,8 @@ class PerceptionRuntimeAcceptanceTest(unittest.TestCase):
             "/perception/bev/debug/right/road_marking/confidence", topics
         )
         self.assertIn("/perception/bev/camera/drivable_probability", topics)
-        self.assertIn("/perception/lane/boundary_observations", topics)
+        self.assertIn("/perception/lane/boundary_family", topics)
+        self.assertNotIn("/perception/lane/boundary_observations", topics)
 
     def test_default_off_topics_do_not_hide_internal_transport(self):
         required = {
@@ -78,6 +80,7 @@ class PerceptionRuntimeAcceptanceTest(unittest.TestCase):
         self.assertFalse(required & forbidden)
         self.assertIn("/perception/lane/pipeline_audit", forbidden)
         self.assertIn("/perception/bev/camera/source_count", forbidden)
+        self.assertIn("/perception/lane/boundary_observations", forbidden)
 
     def test_stale_planning_anchor_fails_closed(self):
         broken = copy.deepcopy(self.contract)
@@ -113,6 +116,25 @@ class PerceptionRuntimeAcceptanceTest(unittest.TestCase):
         self.assertIn('"${verifier_args[@]}"', body)
         self.assertNotIn("scripts/perception.sh", body)
 
+    def test_runtime_binding_uses_ros_container_and_shared_family(self):
+        bindings = {
+            item["id"]: item for item in self.contract["static_bindings"]
+        }
+        self.assertNotIn("host_perception_entrypoint", bindings)
+        self.assertEqual(
+            "docker/ros-noetic/docker-compose.yaml",
+            bindings["ros_runtime_inference_environment"]["file"],
+        )
+        gate = self.contract["optional_consumer_gates"]["lane_adapter"]
+        self.assertEqual(
+            "/perception/lane/boundary_family",
+            gate["topics"][0]["pattern"],
+        )
+        self.assertEqual(
+            ["/boundary_family_monitor"],
+            gate["topics"][0]["subscribers"],
+        )
+
     def test_interval_summary_is_deterministic(self):
         self.assertEqual(
             {
@@ -123,6 +145,11 @@ class PerceptionRuntimeAcceptanceTest(unittest.TestCase):
             },
             interval_summary([1.0, 1.1, 1.3, 1.4]),
         )
+
+    def test_ros_master_calls_have_a_bounded_wait(self):
+        self.assertEqual("ok", call_with_timeout("quick", lambda: "ok", 0.1))
+        with self.assertRaises(TimeoutError):
+            call_with_timeout("blocked", lambda: __import__("time").sleep(1), 0.01)
 
     def test_sample_snapshot_preserves_scalar_counters(self):
         result = snapshot_samples(

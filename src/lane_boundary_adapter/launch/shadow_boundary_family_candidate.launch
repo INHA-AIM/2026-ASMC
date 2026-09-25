@@ -1,6 +1,9 @@
 <launch>
   <arg name="config"
        default="$(find lane_boundary_adapter)/config/shadow_boundary_family_consumer.yaml"/>
+  <arg name="rviz" default="true"/>
+  <arg name="rviz_config"
+       default="$(find lane_boundary_adapter)/rviz/shadow_boundary_family_candidate.rviz"/>
 
   <node pkg="lane_boundary_adapter"
         type="boundary_family_monitor_node"
@@ -9,4 +12,10 @@
         required="true">
     <rosparam command="load" file="$(arg config)"/>
   </node>
+
+  <!-- Development handoff preset. The adapter remains read-only; this only
+       visualizes its MarkerArray and the perception-side support markers. -->
+  <node if="$(arg rviz)" pkg="rviz" type="rviz"
+        name="shadow_boundary_family_candidate_rviz"
+        args="-d $(arg rviz_config)"/>
 </launch>

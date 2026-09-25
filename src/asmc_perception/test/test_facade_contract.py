@@ -55,6 +55,9 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             "visualization_legacy_rqt": "false",
             "visualization_calibration_grid": "false",
             "publish_bev_debug_metadata": "$(arg visualization_legacy_rqt)",
+            "lane_enable_shared_family_debug": "true",
+            "lane_enable_boundary_family_candidate": "true",
+            "lane_enable_independent_boundary_pipeline": "false",
             "lane_publish_pipeline_audit": "false",
         }
         for name, default in expected.items():
@@ -163,6 +166,22 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         self.assertEqual(values[0], values[1])
 
     def test_typed_topic_cutover_status_matches_runtime(self):
+        lane_family = self.runtime["components"]["camera_lane"]["lane_family"]
+        self.assertTrue(lane_family["enabled_by_default"])
+        self.assertEqual(
+            "/perception/lane/boundary_family", lane_family["canonical_topic"]
+        )
+        self.assertTrue(lane_family["shared_family_debug_enabled_by_default"])
+        self.assertEqual(
+            "noncanonical_diagnostic_only",
+            lane_family["compatibility_topic_policy"],
+        )
+        self.assertFalse(lane_family["compatibility_topic_enabled_by_default"])
+        self.assertEqual(
+            "lane_enable_independent_boundary_pipeline",
+            lane_family["compatibility_launch_argument"],
+        )
+
         traffic = self.runtime["components"]["traffic_light"]
         self.assertEqual("active_parallel_p4c", traffic["canonical_producer_status"])
         self.assertEqual(
@@ -206,11 +225,41 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             "passed_p4c5", self.runtime["compatibility"]["representative_bag_parity"]
         )
 
-    def test_host_entrypoint_selects_the_gpu_container(self):
-        script = (REPO_ROOT / "scripts" / "perception.sh").read_text(encoding="utf-8")
-        self.assertIn("asmc-perception-train", script)
-        self.assertIn("docker_perception_up.sh", script)
-        self.assertIn("roslaunch asmc_perception perception.launch", script)
+    def test_runtime_inference_is_owned_by_ros_container(self):
+        compose = yaml.safe_load(
+            (
+                REPO_ROOT / "docker" / "ros-noetic" / "docker-compose.yaml"
+            ).read_text(encoding="utf-8")
+        )
+        service = compose["services"]["asmc-ros-noetic"]
+        self.assertEqual("all", service["gpus"])
+        self.assertIn(
+            "TWINLITE_ROOT=/opt/baselines/TwinLiteNetPlus",
+            service["environment"],
+        )
+        self.assertTrue(
+            any(
+                item.endswith(
+                    ":/opt/baselines/TwinLiteNetPlus:ro"
+                )
+                for item in service["volumes"]
+            )
+        )
+        self.assertFalse((REPO_ROOT / "scripts" / "perception.sh").exists())
+
+        training_compose = yaml.safe_load(
+            (
+                REPO_ROOT / "docker" / "perception-train" / "docker-compose.yaml"
+            ).read_text(encoding="utf-8")
+        )
+        training = training_compose["services"]["asmc-perception-train"]
+        self.assertNotEqual("host", training.get("network_mode"))
+        self.assertFalse(
+            any(
+                item.startswith(("ROS_MASTER_URI=", "ROS_IP="))
+                for item in training["environment"]
+            )
+        )
 
     def test_visualization_launch_uses_v3_calibration(self):
         visualizer = ET.parse(PACKAGE_ROOT / "launch" / "visualization.launch").getroot()

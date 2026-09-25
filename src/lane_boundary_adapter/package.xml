@@ -18,7 +18,10 @@
   <depend>std_msgs</depend>
   <depend>visualization_msgs</depend>
 
+  <exec_depend>rviz</exec_depend>
+
   <test_depend>rostest</test_depend>
+  <test_depend>python3-yaml</test_depend>
 
   <export/>
 </package>

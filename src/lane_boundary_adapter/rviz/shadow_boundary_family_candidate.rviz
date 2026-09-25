@@ -1,0 +1,57 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+  - Class: rviz/Selection
+    Name: Selection
+  - Class: rviz/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.45
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 70; 78; 88
+      Enabled: true
+      Name: Base-link metric grid
+      Plane: XY
+      Reference Frame: base_link
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /planning/debug/lane_boundary_family/strips
+      Name: Planner-facing accepted strips
+      Queue Size: 10
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /perception/lane/debug/shared_family/markers
+      Name: Perception family support and gaps
+      Queue Size: 10
+    - Class: rviz/MarkerArray
+      Enabled: false
+      Marker Topic: /perception/lane/debug/markers
+      Name: Legacy independent boundary evidence
+      Queue Size: 10
+  Enabled: true
+  Global Options:
+    Background Color: 12; 15; 20
+    Fixed Frame: base_link
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+  Views:
+    Current:
+      Angle: 3.141592653589793
+      Class: rviz/TopDownOrtho
+      Name: Shadow lane family top-down
+      Scale: 45
+      Target Frame: base_link
+      X: 7.5
+      Y: 0
+Window Geometry:
+  Height: 900
+  Width: 1450

@@ -90,8 +90,11 @@ Dockerfile/requirements가 바뀌었을 때만 `rebuild`를 사용한다. `up`�
 종료할 때는 `./scripts/docker_ros_up.sh down`과 `xhost -local:docker`를 실행한다. 데이터는
 저장소 밖 `$ASMC_DATA`를 ROS 컨테이너 `/data`에 rw, 학습 컨테이너에는 ro로 마운트한다.
 미설정 시 스크립트는 저장소와 나란한 `data/`를 사용한다. TwinLiteNet+ upstream은
-`external/baselines/TwinLiteNetPlus`에서 학습 컨테이너 `/opt/baselines/TwinLiteNetPlus`로
-read-only 마운트하고 loader가 pinned commit을 검사한다. NVIDIA driver는 호스트에만 설치한다.
+`external/baselines/TwinLiteNetPlus`에서 ROS runtime과 학습 컨테이너의
+`/opt/baselines/TwinLiteNetPlus`로 모두 read-only 마운트하고 loader가 pinned commit을
+검사한다. live와 bag replay ROS 추론은 `asmc-ros-noetic`, 모델 학습과 학습 중
+validation은 `asmc-perception-train`에서 실행한다. 학습 컨테이너는 host ROS master와
+분리한다. NVIDIA driver는 호스트에만 설치한다.
 
 ## 4. 현재 개발 UDP profile
 

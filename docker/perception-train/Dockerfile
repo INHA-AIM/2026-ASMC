@@ -1,5 +1,5 @@
-# 팀 ML 학습 컨테이너 (3D detection, BEV 학습 등)
-# 베이스: Ubuntu 20.04 + CUDA 11.8 (morai-3d-detection 검증 환경 기준)
+# 팀 ML 모델 학습·validation 컨테이너
+# 실시간 또는 bag replay ROS 추론은 asmc-ros-noetic에서 실행한다.
 FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04
 
 ENV DEBIAN_FRONTEND=noninteractive

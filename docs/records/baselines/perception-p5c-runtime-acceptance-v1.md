@@ -28,16 +28,17 @@ LiDAR canonical runtime은 담당 팀원의 구현과 handoff가 끝나지 않�
 | camera/BEV/lane | 33 | 기본 검사 |
 | traffic light | 3 | `--traffic-light` |
 | canonical rqt | 2 | `--visualization` |
-| 기본-OFF debug | 19 | 기본적으로 광고되지 않아야 함 |
+| 기본-OFF debug·compatibility | 20 | 기본적으로 광고되지 않아야 함 |
 
 각 필수 topic에서 type, 유일 publisher, 필요한 내부 subscriber, 최소 rate, source stamp 역행,
 마지막 수신 age와 지정된 `frame_id`를 확인한다. diagnostics에 ERROR가 있으면 실패한다.
 `--require-planning`은 `/behavior_planner`가 typed와 legacy state를 모두 구독하는지 확인하고,
-`--require-lane-adapter`는 `/lane_boundary_monitor` 연결을 확인한다. 두 consumer gate는 해당
+`--require-lane-adapter`는 canonical family를 받는 `/boundary_family_monitor` 연결을 확인한다. 두 consumer gate는 해당
 프로세스를 함께 실행한 수락시험에서만 사용한다.
 
-정적 검사는 host wrapper, canonical launch, semantic include, 판제 source/config와 adapter
-source/config의 anchor를 확인한다. 이동이나 topic 오타가 생기면 live 시험 전 CI에서 실패한다.
+정적 검사는 ROS runtime container의 TwinLite mount, canonical launch, semantic include,
+판제 source/config와 shared-family adapter source/config의 anchor를 확인한다. 이동이나 topic
+오타가 생기면 live 시험 전 CI에서 실패한다. 운영 추론을 시작하는 host wrapper는 두지 않는다.
 
 ## 3. 실행
 
@@ -58,12 +59,15 @@ verifier는 프로세스를 대신 시작하지 않는다.
 ./scripts/verify_perception.sh --require-lane-adapter
 ```
 
-측정 창은 기본 15초다. `--duration 30`으로 늘릴 수 있다. 기계 판독 결과를 남길 때
+측정 창은 기본 15초다. `--duration 30`으로 늘릴 수 있다. ROS master preflight와 측정 뒤
+XML-RPC 조회는 기본 3초 timeout으로 fail-closed하므로 master가 없을 때 무한 대기하지 않는다.
+기계 판독 결과를 남길 때
 `--yaml-out /root/ws/artifacts/...yaml`을 사용하며, 경로는 ROS container 안의 경로다.
 
 ## 4. 구현 시점 검증
 
-다음 정적 검사는 2026-09-25 working tree에서 통과했다.
+아래는 P5-C가 처음 동결된 2026-09-25 working tree의 이력이다. 당시에는 legacy
+`boundary_observations`가 기본 lane 출력이었으므로 현재 gate의 live 결과로 해석하지 않는다.
 
 ```text
 camera_lane topics       33
@@ -84,7 +88,7 @@ asmc_perception tests    205 passed
 | model-grid road marking, 각 view | 11.29~11.30 Hz | PASS |
 | projected BEV semantic, 각 view/layer | 14.76~14.92 Hz | PASS |
 | fused BEV 4종 | 9.93 Hz | PASS |
-| lane boundary observations | 11.21 Hz | PASS |
+| legacy lane boundary observations | 11.21 Hz | PASS |
 | diagnostics 4종 | 0.49~0.50 Hz | PASS |
 
 33개 topic 모두 type, 유일 publisher, 필수 subscriber, nonzero/non-regressing stamp, 지정 frame,
@@ -92,6 +96,12 @@ staleness와 diagnostics ERROR 검사를 통과했고 기본-OFF publisher 19개
 실행은 camera/BEV/lane 기본 graph만 검증했다. 신호등·판제·rqt·lane adapter 선택 모드는 해당
 process를 함께 띄운 수락시험에서 각각 별도로 수행해야 하며, 기본 live 통과를 그 결과로
 확대 해석하지 않는다.
+
+2026-09-26 shared-family/runtime closeout 뒤 기계 계약은 필수 lane 출력을
+`/perception/lane/boundary_family`로 바꾸고 legacy `boundary_observations`를 기본-OFF 목록에
+추가했다. static binding도 삭제된 `scripts/perception.sh` 대신 `asmc-ros-noetic`의 read-only
+TwinLite mount와 canonical launch를 검사한다. 따라서 현재 수치는 `default-off topics 20`,
+unit tests 10개이며, 새 live 수락 결과는 위 명령으로 다시 측정해 판정한다.
 
 ## 5. 다음 gate
 

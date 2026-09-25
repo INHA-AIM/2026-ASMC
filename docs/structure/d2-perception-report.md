@@ -3,6 +3,11 @@
 > **상태:** 2026-09-22 package-group 진입점 통합 완료
 >
 > **범위:** `packages/asmc_perception/`, 관련 package README·handoff·contract·record의 역할 정리
+>
+> **시점 주의:** 이 문서는 D2 당시 구조화 판단을 보존한 기록이다. 이후 P4-C6에서
+> `asmc_perception` 통합과 구 package 제거가 완료됐으므로 현재 경로·실행법·topic 정본은
+> [Perception 개발·통합 가이드](../packages/asmc_perception/README.md)와
+> [runtime 명령](../runtime-commands.md)을 우선한다. 아래 당시 문장은 소급 수정하지 않는다.
 
 ## 결과
 

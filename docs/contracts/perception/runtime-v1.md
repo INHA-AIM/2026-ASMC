@@ -80,8 +80,12 @@ frame에서 객체 수, ID, OBB, 속도, dynamic state 및 신호 label/confiden
 ## 4. Façade 실행 경계
 
 ```bash
-./scripts/perception.sh
-./scripts/perception.sh start_visualization:=true
+docker exec -it asmc-ros-noetic bash
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+roslaunch asmc_perception perception.launch
+roslaunch asmc_perception perception.launch start_visualization:=true
 ```
 
 기본 실행은 v3 sensor-set provenance를 가진 3-camera lane pipeline이며 traffic-light만 선택적으로

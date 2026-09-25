@@ -92,7 +92,7 @@
       },
       "docker_entrypoint": {
         "path": "scripts/docker_ros_up.sh",
-        "sha256": "8d7a7232d4648febab408fcd52ffc058b0ef71ad5909d4e48b5e071c9332ffc2"
+        "sha256": "96b47f6260e7673167923c38adba35c32192356f93510a820088dd1a61317c78"
       },
       "topic_verifier": {
         "path": "scripts/verify_morai_topics.py",

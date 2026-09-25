@@ -227,6 +227,9 @@ class LaneVectorizerNode:
         self.boundary_family_candidate_enabled = bool(
             rospy.get_param("~enable_boundary_family_candidate", False)
         )
+        self.independent_boundary_pipeline_enabled = bool(
+            rospy.get_param("~enable_independent_boundary_pipeline", False)
+        )
         self.publish_pipeline_audit = bool(
             rospy.get_param("~publish_pipeline_audit", False)
         )
@@ -446,11 +449,13 @@ class LaneVectorizerNode:
         self.legacy_boundary_publisher = rospy.Publisher(
             "/perception/lane/boundaries", MarkerArray, queue_size=1
         )
-        self.boundary_observation_publisher = rospy.Publisher(
-            "/perception/lane/boundary_observations",
-            LaneBoundaryObservationArray,
-            queue_size=1,
-        )
+        self.boundary_observation_publisher = None
+        if self.independent_boundary_pipeline_enabled:
+            self.boundary_observation_publisher = rospy.Publisher(
+                "/perception/lane/boundary_observations",
+                LaneBoundaryObservationArray,
+                queue_size=1,
+            )
         self.boundary_family_publisher = rospy.Publisher(
             "/perception/lane/boundary_family",
             LaneBoundaryFamily,
@@ -722,13 +727,25 @@ class LaneVectorizerNode:
                     self.boundary_family_outputs += 1
                     if not family_output.valid:
                         self.boundary_family_invalid_outputs += 1
-                lanes, frame_audit["spline"] = _measure(
-                    timings,
-                    "independent_spline_fit",
-                    lambda: fit_lane_tracks_with_audit(
-                        fitted_tracks, **self.spline_parameters
-                    ),
+                independent_pipeline_needed = bool(
+                    self.independent_boundary_pipeline_enabled
+                    or self.publish_pipeline_audit
+                    or self.marker_publisher.get_num_connections() > 0
+                    or self.legacy_boundary_publisher.get_num_connections() > 0
                 )
+                lanes = ()
+                frame_audit["spline"] = {
+                    "enabled": False,
+                    "reason": "canonical_shared_family_only",
+                }
+                if independent_pipeline_needed:
+                    lanes, frame_audit["spline"] = _measure(
+                        timings,
+                        "independent_spline_fit",
+                        lambda: fit_lane_tracks_with_audit(
+                            fitted_tracks, **self.spline_parameters
+                        ),
+                    )
                 if self.evidence_publisher.get_num_connections() > 0:
                     _measure(
                         timings,
@@ -772,7 +789,7 @@ class LaneVectorizerNode:
                 boundary_output = BoundaryOutputFrame(
                     COMPLETENESS_EMPTY, self.expected_boundary_count, ()
                 )
-                if self.shadow_boundary_enabled:
+                if self.shadow_boundary_enabled and independent_pipeline_needed:
                     observations, frame_audit["boundary_selection"] = _measure(
                         timings,
                         "boundary_selection",
@@ -810,19 +827,20 @@ class LaneVectorizerNode:
                                 self._boundary_markers(tracked_boundaries, header)
                             ),
                         )
-                    publish_started = time.perf_counter()
-                    _measure(
-                        timings,
-                        "typed_boundary_message_publish",
-                        lambda: self.boundary_observation_publisher.publish(
-                            self._boundary_observation_array(
-                                boundary_output, header, valid=True
-                            )
-                        ),
-                    )
-                    self.boundary_publish_ms.append(
-                        (time.perf_counter() - publish_started) * 1000.0
-                    )
+                    if self.independent_boundary_pipeline_enabled:
+                        publish_started = time.perf_counter()
+                        _measure(
+                            timings,
+                            "typed_boundary_message_publish",
+                            lambda: self.boundary_observation_publisher.publish(
+                                self._boundary_observation_array(
+                                    boundary_output, header, valid=True
+                                )
+                            ),
+                        )
+                        self.boundary_publish_ms.append(
+                            (time.perf_counter() - publish_started) * 1000.0
+                        )
             except Exception as exc:
                 self.errors += 1
                 timings["profiled_body"] = (
@@ -878,7 +896,10 @@ class LaneVectorizerNode:
                             "failed to publish invalid boundary-family candidate: %s",
                             publish_exc,
                         )
-                if self.shadow_boundary_enabled:
+                if (
+                    self.shadow_boundary_enabled
+                    and self.independent_boundary_pipeline_enabled
+                ):
                     newest_header = max(
                         frames.values(), key=lambda value: value.stamp_ns
                     ).header
@@ -1619,6 +1640,9 @@ class LaneVectorizerNode:
             "shared_family_errors": self.shared_family_errors,
             "boundary_family_candidate_enabled": self.boundary_family_candidate_enabled,
             "boundary_family_topic": "/perception/lane/boundary_family",
+            "independent_boundary_pipeline_enabled": (
+                self.independent_boundary_pipeline_enabled
+            ),
             "boundary_family_outputs": self.boundary_family_outputs,
             "boundary_family_invalid_outputs": self.boundary_family_invalid_outputs,
             "boundary_family_algorithm_id": self.boundary_family_algorithm_id,

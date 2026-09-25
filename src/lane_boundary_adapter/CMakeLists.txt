@@ -55,6 +55,8 @@ target_link_libraries(boundary_family_monitor_node
 )
 
 if(CATKIN_ENABLE_TESTING)
+  catkin_add_nosetests(test/test_rviz_launch_contract.py)
+
   catkin_add_gtest(lane_boundary_adapter_test
     test/lane_boundary_adapter_test.cpp
   )
@@ -92,6 +94,6 @@ install(DIRECTORY include/${PROJECT_NAME}/
   FILES_MATCHING PATTERN "*.hpp"
 )
 
-install(DIRECTORY config launch
+install(DIRECTORY config launch rviz
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )

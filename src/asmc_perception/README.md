@@ -11,32 +11,24 @@ TwinLite 학습 adapter와 offline BEV audit은 이 패키지가 소유한다. P
 
 ## 실행
 
-기본값은 competition-legal 3-camera lane pipeline만 실행한다. CUDA, `twinlite_morai`, 외부
-TwinLite 소스가 필요한 까닭에 WSL/Linux host에서는 다음 wrapper를 사용할 수 있다.
+기본값은 competition-legal 3-camera lane pipeline만 실행한다. 실시간 ROS
+추론은 bridge·GUI와 같은 `asmc-ros-noetic` 컨테이너에서 직접 실행한다.
+ROS image가 CUDA/PyTorch/OpenCV를 소유하고 공식 TwinLite 소스는 read-only로
+마운트된다. bag replay ROS 추론도 이 컨테이너에서 실행한다.
+`asmc-perception-train`은 모델 학습과 학습 중 validation 전용이다.
 
 ```bash
-./scripts/perception.sh
-```
-
-이 wrapper는 runtime 기능이 아니라 편의·오실행 방지 도구다. GPU 컨테이너가 꺼져 있으면
-시작하고 그 안에서 아래 `roslaunch`를 실행할 뿐이며, 어떤 component를 켤지는 전달한
-launch argument가 결정한다. 지금까지처럼 컨테이너에 직접 들어가 실행해도 결과는 같다.
-
-```bash
-docker exec -it asmc-perception-train bash
+docker exec -it asmc-ros-noetic bash
+cd /root/ws
 source /opt/ros/noetic/setup.bash
-source /root/ws/devel/setup.bash
+source devel/setup.bash
 roslaunch asmc_perception perception.launch
 ```
-
-`roslaunch asmc_perception perception.launch`를 직접 실행하려면 반드시
-`asmc-perception-train` 컨테이너 안에서 실행한다. `asmc-ros-noetic`은 bridge, build와 GUI용이며
-camera inference 실행 환경이 아니다.
 
 신호등이 필요한 경우에만 명시적으로 추가한다.
 
 ```bash
-./scripts/perception.sh \
+roslaunch asmc_perception perception.launch \
   start_traffic_light:=true
 ```
 
@@ -89,7 +81,7 @@ process를 먼저 실행한 뒤 저장소 루트 host에서 다음을 사용한�
 debug image publisher를 함께 켠다.
 
 ```bash
-./scripts/perception.sh start_visualization:=true
+roslaunch asmc_perception perception.launch start_visualization:=true
 ```
 
 화면은 GUI 환경이 있는 `asmc-ros-noetic` 컨테이너에서 연다. 아래 명령은 먼저
@@ -136,13 +128,14 @@ docker exec -it asmc-ros-noetic bash
 cd /root/ws
 ./scripts/udp_bridge.sh
 
-# Terminal B — WSL/Linux host (container 안이 아님), canonical perception
-cd /home/aim06/projects/2026-ai-sw-mobility-competition/2026-ASMC
-./scripts/perception.sh \
+# Terminal B — asmc-ros-noetic container, canonical perception
+docker exec -it asmc-ros-noetic bash
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+roslaunch asmc_perception perception.launch \
   start_traffic_light:=true \
-  start_visualization:=true \
-  lane_enable_shared_family_debug:=true \
-  lane_enable_boundary_family_candidate:=true
+  start_visualization:=true
 ```
 
 별도 터미널에서 ROS 토픽을 확인한다. `rostopic hz`는 계속 대기하므로 항목별로
@@ -164,7 +157,6 @@ rostopic hz /cam_extra/image_jpeg/compressed
 # canonical runtime output: GPU 상태에 따라 입력보다 느릴 수 있지만 계속 갱신되어야 함
 rostopic hz /perception/camera/front/drivable/probability
 rostopic hz /perception/bev/camera/drivable_probability
-rostopic hz /perception/lane/boundary_observations
 rostopic hz /perception/lane/boundary_family
 rostopic hz /perception/traffic_light/detection
 
@@ -177,6 +169,11 @@ rostopic echo -n 1 /perception/lane/diagnostics
 rostopic echo -n 1 /perception/bev/diagnostics
 rostopic echo -n 1 /perception/traffic_light/detection
 ```
+
+`/perception/lane/boundary_family`는 음영구간 판제 소비 정본이며 무옵션
+`roslaunch asmc_perception perception.launch`에서도 기본 발행된다. legacy 개별 spline·tracker와
+`/perception/lane/boundary_observations`는 기본 비활성화다. 기존 호환·진단용으로
+필요할 때만 `lane_enable_independent_boundary_pipeline:=true`를 사용한다.
 
 음영구간 adapter는 제어와 연결하지 않고 별도로 켠다.
 
@@ -192,17 +189,19 @@ rostopic hz /planning/debug/lane_boundary_family/strips
 rostopic echo -n 1 /planning/diagnostics/lane_boundary_family_adapter
 ```
 
-시각화는 각각 별도 `asmc-ros-noetic` 터미널에서 연다.
+adapter launch는 `base_link` 전용 RViz를 자동으로 열고
+`/perception/lane/debug/shared_family/markers`와
+`/planning/debug/lane_boundary_family/strips`를 기본 표시한다. headless replay나 성능
+측정에서는 `rviz:=false`를 지정한다.
+
+rqt 영상이 필요할 때만 각각 별도 `asmc-ros-noetic` 터미널에서 연다.
 
 ```bash
 asmc-ros-gui rqt-image /perception/camera/debug/mosaic/compressed
 asmc-ros-gui rqt-image /perception/bev/debug/comparison/compressed
-asmc-ros-gui rviz
 ```
 
-RViz의 Fixed Frame을 `base_link`로 두고 MarkerArray
-`/perception/lane/debug/shared_family/markers`와
-`/planning/debug/lane_boundary_family/strips`를 추가한다. 음영 ODD 밖의
+자동 RViz의 음영 ODD 밖에서
 `valid=false` 또는 정지·disconnect 후 stale/marker clear는 정상 fail-safe다.
 음영구간은 A448 종료 후부터 A126 종료까지이며 회피용 반대 차로는 A131이다.
 이 구간에서는
