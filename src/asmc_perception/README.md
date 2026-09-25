@@ -68,6 +68,22 @@ P5-A의 producer·subscriber·bag 감사 정본은
 끄지 않는다. per-view coverage, fused source count/view와 frame-level lane pipeline audit은
 P5-B에서 명시적 평가 옵션으로 전환했다.
 
+P5-C는 topic을 다시 바꾸지 않고 현재 연결을 실행 중 검사한다. perception과 필요한 선택
+process를 먼저 실행한 뒤 저장소 루트 host에서 다음을 사용한다.
+
+```bash
+./scripts/verify_perception.sh
+./scripts/verify_perception.sh --traffic-light --visualization
+./scripts/verify_perception.sh --traffic-light --require-planning
+```
+
+첫 명령은 camera→BEV→lane의 node/type/producer/subscriber/rate/stamp/frame을 검사한다.
+두 번째는 신호등과 canonical rqt 두 topic, 세 번째는 판제의 typed/legacy 신호등 구독까지
+확인한다. `lane_boundary_adapter`를 함께 띄운 검수에는 `--require-lane-adapter`를 별도로 쓴다.
+정확한 옵션과 실패 해석은
+[`perception-p5c-runtime-acceptance-v1.md`](../../docs/records/baselines/perception-p5c-runtime-acceptance-v1.md)를
+따른다.
+
 ## 시각화
 
 debug image publisher를 함께 켠다.

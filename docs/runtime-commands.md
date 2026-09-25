@@ -363,6 +363,49 @@ rejection 원인 분석에서만 다음처럼 켠다. 공식 batch 도구는 이
 ./scripts/perception.sh lane_publish_pipeline_audit:=true
 ```
 
+### Perception runtime 수락검사
+
+bridge와 검사할 perception/planning process를 먼저 각자의 foreground terminal에서 실행한다.
+아래 verifier는 인지 노드를 자동 시작하지 않으며, 현재 ROS graph를 15초간 측정한다.
+
+```bash
+# 기본 camera semantic → per-view BEV → fused BEV → lane graph
+./scripts/verify_perception.sh
+
+# 신호등 producer와 canonical rqt 두 화면도 함께 실행했을 때
+./scripts/verify_perception.sh --traffic-light --visualization
+
+# behavior_planner까지 실행한 상태에서 typed + legacy 신호등 구독 확인
+./scripts/verify_perception.sh --traffic-light --require-planning
+
+# 판제 팀원이 read-only adapter를 함께 검토할 때만
+./scripts/verify_perception.sh --require-lane-adapter
+```
+
+| verifier 옵션 | 의미 |
+|---|---|
+| `--duration SEC` | 측정 시간, 기본 15초 |
+| `--max-stale-sec SEC` | 일반 topic의 마지막 수신 허용 age, 기본 1초 |
+| `--traffic-light` | typed detection과 legacy state/detail producer 검사 |
+| `--visualization` | subscriber-lazy인 canonical mosaic/comparison 2종 검사 |
+| `--require-planning` | `/behavior_planner`의 typed/legacy 신호등 구독 검사; `--traffic-light` 필수 |
+| `--require-lane-adapter` | `/lane_boundary_monitor`의 typed lane 구독 검사 |
+| `--allow-opt-in-debug` | 의도적으로 켠 기본-OFF debug publisher를 정보로만 보고 실패시키지 않음 |
+| `--yaml-out PATH` | machine-readable 결과 저장; ROS container 안의 경로 |
+
+기본 검사는 node, message type, 유일 publisher, 필수 내부 subscriber, rate, source stamp,
+`frame_id`, staleness와 diagnostics ERROR를 함께 본다. P5-B에서 기본-OFF로 바꾼 19개 topic이
+옵션 없이 다시 광고되어도 실패한다. 계약 정본과 판제/launch 경로의 정적 연결만 빠르게
+확인하려면 다음을 실행한다.
+
+```bash
+python3 tools/audit/validate_perception_runtime_acceptance.py
+python3 -m unittest tools/audit/test_perception_runtime_acceptance.py
+```
+
+세부 기준과 해석은
+[P5-C runtime acceptance](./records/baselines/perception-p5c-runtime-acceptance-v1.md)를 따른다.
+
 ## 6. Planning/Control 옵션
 
 ```bash

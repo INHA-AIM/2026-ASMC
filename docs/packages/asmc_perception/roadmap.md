@@ -522,6 +522,14 @@ frame-level `/perception/lane/pipeline_audit`를 production 기본 off로 전환
 audit가 꺼진 경우 별도 projection selection audit, 누적 집계와 큰 DiagnosticArray 직렬화를
 건너뛴다. result-bag batch는 launch 인자를 명시해 기존 평가 산출물을 계속 기록한다.
 
+**2026-09-25 P5-C runtime acceptance:** topic을 rename하지 않고 camera→BEV→lane 33개
+topic의 type, 유일 producer, 필수 subscriber, rate, source stamp, frame과 diagnostics를
+15초 live graph에서 검사하는 수락 도구를 추가했다. 연결된 MORAI 입력에서 semantic 약
+19.2 Hz, projected BEV 약 14.8 Hz, fused BEV 약 9.9 Hz, lane 약 11.2 Hz로 전 항목을
+통과했다. 선택적 traffic-light·planning·rqt·lane adapter gate는 해당 process를 함께 실행할
+때만 검사한다. 세부 계약과 명령은
+[P5-C record](../../records/baselines/perception-p5c-runtime-acceptance-v1.md)를 따른다.
+
 ### Stage C3 — 성능계측
 
 - input/output FPS, drop/stale count와 camera timestamp skew

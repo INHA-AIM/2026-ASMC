@@ -2,7 +2,7 @@
 
 > **문서 역할:** Active Package-Group Guide — 현재 인지 코드 경계, 문서 권위와 Phase 4 이관 gate
 >
-> **현재 상태:** P4-C6 package 통합과 P5-B runtime/rqt 출력 정리 완료
+> **현재 상태:** P4-C6 package 통합과 P5-A/P5-B topic·rqt 정리, P5-C runtime acceptance 완료
 
 이 문서는 긴 인지 설계·실험 문서를 대체하거나 요약 폐기하기 위한 문서가 아니다. 현재 어떤
 코드와 문서를 먼저 사용해야 하는지 안내하는 진입점이다. 날짜별 분석, 수치, 실패 원인과 후보
@@ -23,6 +23,7 @@
 | LiDAR 패키지의 현재 완성도와 개선 계획 | [LiDAR assessment](./lidar-assessment-and-roadmap.md) | Assessment Record + Working Proposal |
 | 특정 checkpoint의 학습 결과 | [v4 evaluation](../../records/perception/twinlitenet-v4-evaluation.md) | Experiment Record |
 | 현재 topic 소비·bag 사용과 P5 정리 gate | [P5-A topic audit](../../records/baselines/perception-p5a-topic-audit-v1.md) | Frozen Input Audit |
+| 실행 중 node/topic/rate/stamp/frame/consumer 검증 | [P5-C runtime acceptance](../../records/baselines/perception-p5c-runtime-acceptance-v1.md) | Active Acceptance Gate |
 
 충돌할 때는 공식 규정, 동결된 contract, 현재 package source와 launch, handoff, working
 proposal, 날짜별 record 순으로 판단한다. roadmap의 과거 `candidate`, `미구현`,
