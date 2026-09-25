@@ -9,8 +9,8 @@
 병행 연결했으며 P4-C2에서 대표 bag·stale·recovery parity를 검증했다. P4-C3에서 판제
 `behavior_planner`가 typed 결과를 우선 소비하도록 연결했다. P4-C4에서 실제 ROS
 `behavior_node`를 사용한 `GREEN→KEEP→RED→STOP→GREEN→KEEP` 판단 loop를 고정하고, 별도 opt-in
-시험으로 Frenet/MPC/UDP와 실제 MORAI 차량 정지·재출발까지 확인했다. P4-C5에서 camera/BEV/
-recorder runtime support와 config 소유권을 `asmc_perception`으로 옮기고 representative bag의
+시험으로 Frenet/MPC/UDP와 실제 MORAI 차량 정지·재출발까지 확인했다. P4-C5에서 camera/BEV/lane
+runtime support와 config 소유권을 `asmc_perception`으로 옮기고 representative bag의
 canonical/compatibility payload parity를 통과했다. LiDAR canonical
 topic은 여전히 **발행된다고 가정하면 안 되며** 기계 정본의
 `producer_status`가 실제 producer 상태의 권위다.
@@ -82,9 +82,10 @@ frame에서 객체 수, ID, OBB, 속도, dynamic state 및 신호 label/confiden
 ./scripts/perception.sh start_visualization:=true
 ```
 
-기본 실행은 v3 sensor-set provenance를 가진 3-camera lane pipeline이다. traffic-light,
-LiDAR/fusion, recorder는 명시적으로 켠다. LiDAR는 아직 nested workspace overlay가 필요하며
-P4-C1 runtime이 `Main`, `Msg`, 중복 `morai_msgs`를 소유하거나 삭제하지 않는다.
+기본 실행은 v3 sensor-set provenance를 가진 3-camera lane pipeline이며 traffic-light만 선택적으로
+추가한다. LiDAR/fusion은 아직 nested workspace, recorder는 `data_collection`이 독립적으로
+소유한다. `asmc_perception`은 두 component를 시작하거나 `Main`, `Msg`, 중복 `morai_msgs`를
+소유·삭제하지 않는다.
 
 v2와 v3는 VLP-16 주기가 다르지만 네 camera의 pose, intrinsics, period와 UDP 설정은 같다.
 `cameras_v3.yaml`은 v3 원본 전체 SHA를 기록하고 unit test가 camera parity를 고정한다.

@@ -51,8 +51,6 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         expected = {
             "start_camera_lane": "true",
             "start_traffic_light": "false",
-            "start_lidar_fusion": "false",
-            "start_recorder": "false",
             "start_visualization": "false",
         }
         for name, default in expected.items():
@@ -75,11 +73,9 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         )
         includes = {item.get("file", "") for item in self.launch_root.iter("include")}
         self.assertTrue(any("camera_lane.launch" in item for item in includes))
-        self.assertTrue(any("lidar_legacy_launch" in item for item in includes))
-        self.assertTrue(any("recorder.launch" in item for item in includes))
         self.assertTrue(any("visualization.launch" in item for item in includes))
 
-    def test_camera_bev_and_recorder_implementations_are_physically_owned(self):
+    def test_camera_bev_lane_implementations_are_physically_owned(self):
         implementations = {
             "semantic_inference_node.py",
             "semantic_visualizer_node.py",
@@ -88,7 +84,6 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             "camera_bev_visualizer_node.py",
             "lane_vectorizer_node.py",
             "lane_vector_visualizer_node.py",
-            "bag_recorder_node.py",
         }
         canonical_root = PACKAGE_ROOT / "src" / "asmc_perception" / "nodes"
         for filename in implementations:
@@ -107,7 +102,6 @@ class PerceptionFacadeContractTest(unittest.TestCase):
                 "lane_vectorizer_node.py",
                 "lane_vector_visualizer_node.py",
             },
-            REPO_ROOT / "src/data_collection/scripts": {"bag_recorder_node.py"},
         }
         for root, filenames in compatibility_paths.items():
             for filename in filenames:
@@ -119,7 +113,6 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         expected_support = {
             "camera": 8,
             "bev": 19,
-            "recorder": 5,
         }
         for namespace, expected_count in expected_support.items():
             files = list((canonical_root / namespace).rglob("*.py"))
@@ -131,21 +124,14 @@ class PerceptionFacadeContractTest(unittest.TestCase):
                 self.assertNotIn("from data_collection", body, str(path))
 
         launch_body = self.launch_path.read_text(encoding="utf-8")
-        for package in (
-            "camera_semantic_perception",
-            "drivable_bev",
-            "data_collection",
-        ):
+        for package in ("camera_semantic_perception", "drivable_bev"):
             self.assertNotIn("$(find {})".format(package), launch_body)
 
         package_root = ET.parse(PACKAGE_ROOT / "package.xml").getroot()
         dependencies = {
             item.text for item in package_root if item.tag.endswith("depend")
         }
-        self.assertFalse(
-            dependencies
-            & {"camera_semantic_perception", "drivable_bev", "data_collection"}
-        )
+        self.assertFalse(dependencies & {"camera_semantic_perception", "drivable_bev"})
 
     def test_compatibility_config_mirrors_are_byte_identical(self):
         evidence = yaml.safe_load(
@@ -158,7 +144,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             "p4c5_perception_support_config_ownership_v1",
             evidence["acceptance_id"],
         )
-        self.assertEqual(21, len(evidence["config_mirrors"]))
+        self.assertEqual(10, len(evidence["config_mirrors"]))
         for item in evidence["config_mirrors"]:
             canonical = (REPO_ROOT / item["canonical"]).read_bytes()
             compatibility = (REPO_ROOT / item["compatibility"]).read_bytes()
@@ -185,7 +171,6 @@ class PerceptionFacadeContractTest(unittest.TestCase):
 
     def test_typed_topic_cutover_status_matches_runtime(self):
         traffic = self.runtime["components"]["traffic_light"]
-        lidar = self.runtime["components"]["lidar_fusion"]
         self.assertEqual("active_parallel_p4c", traffic["canonical_producer_status"])
         self.assertEqual(
             "config/baselines/perception_traffic_light_parity_v1.yaml",
@@ -195,7 +180,6 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             "typed_preferred_legacy_fallback_p4c3",
             traffic["planning_consumer_cutover_status"],
         )
-        self.assertEqual("declared_not_published_p4b", lidar["canonical_producer_status"])
         self.assertTrue(self.runtime["compatibility"]["preserve_legacy_topics"])
         self.assertTrue(self.runtime["compatibility"]["physical_source_moves"])
         self.assertFalse(self.runtime["compatibility"]["package_deletions"])
@@ -214,15 +198,16 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             traffic["vehicle_closed_loop_acceptance"],
         )
         self.assertEqual(
-            "config/baselines/perception_runtime_move_smoke_v1.yaml",
-            self.runtime["components"]["recorder"]["live_smoke_evidence"],
-        )
-        self.assertEqual(
             "asmc_perception",
             self.runtime["components"]["camera_lane"]["support_library_owner"],
         )
         self.assertEqual(
-            "asmc_perception", self.runtime["components"]["recorder"]["profile_owner"]
+            "data_collection",
+            self.runtime["external_components"]["recorder"]["owner_package"],
+        )
+        self.assertEqual(
+            "src/lidar+sensorfusion",
+            self.runtime["external_components"]["lidar_fusion"]["owner_workspace"],
         )
         self.assertEqual(
             "passed_p4c5", self.runtime["compatibility"]["representative_bag_parity"]

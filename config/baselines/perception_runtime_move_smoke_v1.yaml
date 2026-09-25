@@ -1,5 +1,5 @@
 schema_version: 1
-acceptance_id: p4c4_camera_bev_recorder_physical_move_v1
+acceptance_id: p4c4_camera_bev_lane_physical_move_v1
 status: passed
 verified_at: "2026-09-25"
 
@@ -12,7 +12,6 @@ moved_nodes:
   - camera_bev_visualizer_node.py
   - lane_vectorizer_node.py
   - lane_vector_visualizer_node.py
-  - bag_recorder_node.py
 compatibility_policy:
   old_executables: thin_forwarders
   support_libraries_and_configs: canonical_asmc_perception_with_verified_legacy_forwarders_and_mirrors_p4c5
@@ -29,17 +28,6 @@ live_camera_bev_lane:
     /perception/lane/boundary_observations: 9.20
   decode_or_inference_errors: 0
 
-recorder:
-  profile: camera_raw
-  run_id: p4c4_camera_recorder_smoke_v1
-  status: complete
-  duration_s: 18.098104
-  messages: 2914
-  bytes: 75852751
-  bag_sha256: f08d69c66d884c8aeb7c90c6afe4eb6d2448344852831388c752811fdbb1921e
-  indexed: true
-  required_topic_counts:
-    /image_jpeg/compressed: 362
-    /cam_left/image_jpeg/compressed: 362
-    /cam_right/image_jpeg/compressed: 362
-    /Ego_topic: 905
+scope_exclusions:
+  recorder_owner: data_collection
+  lidar_owner: src/lidar+sensorfusion

@@ -1,10 +1,9 @@
 <launch>
-  <!-- P4-C5 runtime entrypoint. Camera/BEV/recorder implementation, support
-       modules and runtime config are owned here. Topics/nodes are unchanged. -->
+  <!-- P4-C5 runtime entrypoint. Camera/BEV/lane and traffic-light implementation,
+       support modules and runtime config are owned here. Topics/nodes are unchanged.
+       LiDAR/fusion and data collection remain independent packages. -->
   <arg name="start_camera_lane" default="true"/>
   <arg name="start_traffic_light" default="false"/>
-  <arg name="start_lidar_fusion" default="false"/>
-  <arg name="start_recorder" default="false"/>
   <arg name="start_visualization" default="false"/>
 
   <arg name="camera_checkpoint"
@@ -32,17 +31,6 @@
   <arg name="traffic_light_hz" default="10.0"/>
   <arg name="traffic_light_min_detect" default="0.40"/>
   <arg name="traffic_light_stale_sec" default="1.0"/>
-
-  <arg name="lidar_legacy_launch"
-       default="$(find asmc_perception)/../lidar+sensorfusion/src/Main/main.launch"/>
-  <arg name="lidar_start_velodyne_driver" default="false"/>
-  <arg name="lidar_enable_sensor_fusion" default="true"/>
-  <arg name="lidar_rviz" default="false"/>
-
-  <arg name="recorder_profile" default="full_raw"/>
-  <arg name="recorder_scenario" default=""/>
-  <arg name="recorder_run_id" default=""/>
-  <arg name="recorder_rosbag_root" default=""/>
 
   <group if="$(arg start_camera_lane)">
     <include file="$(find asmc_perception)/launch/camera_lane.launch">
@@ -98,21 +86,4 @@
     </include>
   </group>
 
-  <group if="$(arg start_lidar_fusion)">
-    <!-- Requires the legacy nested workspace overlay until P4-D migration. -->
-    <include file="$(arg lidar_legacy_launch)">
-      <arg name="start_velodyne_driver" value="$(arg lidar_start_velodyne_driver)"/>
-      <arg name="enable_sensor_fusion" value="$(arg lidar_enable_sensor_fusion)"/>
-      <arg name="rviz" value="$(arg lidar_rviz)"/>
-    </include>
-  </group>
-
-  <group if="$(arg start_recorder)">
-    <include file="$(find asmc_perception)/launch/recorder.launch">
-      <arg name="profile" value="$(arg recorder_profile)"/>
-      <arg name="scenario" value="$(arg recorder_scenario)"/>
-      <arg name="run_id" value="$(arg recorder_run_id)"/>
-      <arg name="rosbag_root" value="$(arg recorder_rosbag_root)"/>
-    </include>
-  </group>
 </launch>

@@ -77,7 +77,7 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
     )
     if (
         runtime_move.get("acceptance_id")
-        != "p4c4_camera_bev_recorder_physical_move_v1"
+        != "p4c4_camera_bev_lane_physical_move_v1"
         or runtime_move.get("status") != "passed"
     ):
         raise ContractError("perception runtime move evidence did not pass")
@@ -101,7 +101,7 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
     ):
         raise ContractError("perception support/config evidence did not pass")
     config_mirrors = support_config.get("config_mirrors", [])
-    if not isinstance(config_mirrors, list) or len(config_mirrors) != 21:
+    if not isinstance(config_mirrors, list) or len(config_mirrors) != 10:
         raise ContractError("perception config mirror inventory changed")
     for index, raw_mirror in enumerate(config_mirrors):
         mirror = _mapping(raw_mirror, f"config_mirrors[{index}]")
@@ -321,8 +321,6 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
     for name in (
         "start_camera_lane",
         "start_traffic_light",
-        "start_lidar_fusion",
-        "start_recorder",
         "start_visualization",
     ):
         if name not in arguments:

@@ -46,7 +46,7 @@
 | `asmc_hd_map` + `mgeo_toolkit` | runtime·builder는 통합 완료, 외부 toolkit은 provenance 입력 | geometry parity 후 toolkit 의존 축소 |
 | `camera_semantic_perception` + `drivable_bev` + `traffic_light` | 한 camera pipeline이 세 패키지로 분산 | `asmc_perception`의 하위 모듈로 통합 |
 | `morai_3d_detection` + `lidar+sensorfusion/src/Main` | 학습·검증 산출물·runtime·vendor가 혼재 | runtime만 `asmc_perception`으로 이식, offline은 `tools/perception`으로 분리 |
-| `data_collection` | ROS runtime recorder와 dataset 도구가 혼재 | recorder는 `asmc_perception`, offline 도구는 `tools/perception` |
+| `data_collection` | recorder·bag profile·replay와 dataset 도구 | 독립 package로 유지하고 내부 runtime/offline 경계만 정리 |
 | `src/learning` | README 1개뿐인 논리 폴더 | 문서 링크 이관 후 삭제 |
 | `src/learning_by_cheating` | catkin 패키지는 아니나 38개 tracked file과 실행 참조가 남음 | 즉시 삭제 금지. 유효 참조 제거 후 git 이력에만 보존하고 삭제 |
 | `src/lidar+sensorfusion` 내부 `build/`, `devel/` | 중첩 workspace 산출물 | source 이식 확인 후 로컬 산출물 제거·ignore 강화 |
@@ -485,7 +485,7 @@ diagnostics 이름은 소비자 호환을 위해 유지한다.
 | `src/learning_by_cheating` | scenario runner·진단·문서 참조 0, BEV/map 기능 parity |
 | `src/asmc_hd_map/development/won_tae_link_node` | H5 provenance를 외부 immutable artifact로 보관하고 compact map 재생성 parity 통과 |
 | `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`, `integration_launch` | P3-E local live·Ctrl·bag replay 통과 후 P3-F에서 제거 완료; LAN2LAN은 별도 Phase 6 gate |
-| `camera_semantic_perception`, `drivable_bev`, `traffic_light`, `data_collection` | 새 launch topic/latency/output parity 통과 |
+| `camera_semantic_perception`, `drivable_bev`, `traffic_light` | 새 launch topic/latency/output parity 통과 |
 | 중복 `Msg`, 중복 `morai_msgs` | 모든 consumer include/import 교체 및 clean build |
 | 루트 legacy scripts | `scripts/asmc` 대응 명령·문서·CI가 존재하고 호환 기간 종료 |
 
@@ -509,16 +509,19 @@ GPU container wrapper와 camera/BEV/lane debug 시각화 진입점을 추가했�
 기존/new String·typed parity, stale fail-safe와 입력 복구를 고정했다. P4-C3는 판제
 `behavior_planner`를 typed 우선·legacy fallback으로 연결하고 invalid/stale fail-safe와 live ROS
 연결을 검증했다. P4-C4는 production behavior node와 지도/route를 사용하는 격리 ROS loop에서
-적색 STOP·녹색 새 KEEP을 검증하고 camera/BEV/recorder ROS node 구현을 `asmc_perception`으로
-물리 이식했다. 이어서 guarded MORAI 시험에서 Frenet/MPC/UDP 차량 제동·재출발과 원상 복구,
-canonical recorder의 live camera bag 기록을 통과했다. P4-C5는 runtime camera/BEV/recorder
-support와 config·bag profile 정본을 `asmc_perception`으로 옮기고 기존 import/executable과 YAML
+적색 STOP·녹색 새 KEEP을 검증하고 camera/BEV/lane ROS node 구현을 `asmc_perception`으로
+물리 이식했다. 이어서 guarded MORAI 시험에서 Frenet/MPC/UDP 차량 제동·재출발과 원상 복구를
+통과했다. P4-C5는 runtime camera/BEV/lane support와 config 정본을 `asmc_perception`으로 옮기고
+기존 import/executable과 YAML
 경로를 호환 전달자·SHA mirror로 남겼다. 동일 raw bag의 canonical/compatibility 출력은 source
 stamp별 payload mismatch 0으로 통과했다. 다음은 P4-C6에서
-`camera_semantic_perception`, `drivable_bev`, `data_collection`, `traffic_light`에 남은 항목을
+`camera_semantic_perception`, `drivable_bev`, `traffic_light`에 남은 항목을
 runtime 호환 전달자와 offline·학습·dataset 도구로 분류하고, named consumer와 launch 참조를
 감사하는 작업이다. 이 결과를 바탕으로 runtime 역할이 끝난 구 package를 한 릴리스 호환 경로로
 남길지, `tools/perception`으로 옮긴 뒤 제거할지를 package별로 결정한다.
+
+`data_collection`은 recorder, bag profile, replay, Capture와 dataset lifecycle을 소유하는 독립
+package로 유지하며 `asmc_perception` 통합·삭제 대상에 포함하지 않는다.
 
 `src/lidar+sensorfusion`은 담당 팀원이 개발 중인 독립 nested workspace이므로 P4-C6에서 파일,
 package, 중복 `Msg`·`morai_msgs`를 이동하거나 삭제하지 않는다. LiDAR/fusion 구현이 완료되고

@@ -2,7 +2,7 @@
 
 > **문서 역할:** Active Package-Group Guide — 현재 인지 코드 경계, 문서 권위와 Phase 4 이관 gate
 >
-> **현재 상태:** P4-C5 신호 MORAI 차량 loop와 camera/BEV/recorder runtime·support·config 이식 및 bag parity 완료, offline/LiDAR 호환 패키지 병행 운영 중
+> **현재 상태:** P4-C5 신호 MORAI 차량 loop와 camera/BEV/lane runtime·support·config 이식 및 bag parity 완료, 구 perception 호환 패키지 병행 운영 중
 
 이 문서는 긴 인지 설계·실험 문서를 대체하거나 요약 폐기하기 위한 문서가 아니다. 현재 어떤
 코드와 문서를 먼저 사용해야 하는지 안내하는 진입점이다. 날짜별 분석, 수치, 실패 원인과 후보
@@ -39,10 +39,9 @@ proposal, 날짜별 record 순으로 판단한다. roadmap의 과거 `candidate`
 | camera 3D 연구 | `src/perception/morai_3d_detection/` | 별도 연구 구현, 통합 runtime 미승격 |
 | LiDAR와 camera fusion | `src/lidar+sensorfusion/` | outer catkin에서 제외된 독립 nested workspace |
 | traffic-light runtime | `src/asmc_perception/` | P4-C canonical producer; `src/traffic_light/`는 model artifact·parity reference·호환 문서 보존 |
-| runtime recorder·bag profile | `src/asmc_perception/` | canonical node, `asmc_perception.recorder`, runtime profile 정본 |
-| replay·Capture·dataset 도구 | `src/data_collection/` | profile mirror, replay, Capture와 offline dataset 작업 |
+| recorder·bag profile·replay·Capture·dataset | `src/data_collection/` | 인지 runtime과 분리한 데이터 수집 package |
 | 정적 도로·mission context | `src/asmc_hd_map/` | 완성된 별도 package, `/hd_map/*`를 통해 소비 |
-| 통합 `asmc_perception` | `src/asmc_perception/` | P4-C5 단일 launch와 camera/BEV/traffic/recorder runtime 전체 소유 |
+| 통합 `asmc_perception` | `src/asmc_perception/` | P4-C5 단일 launch와 camera/BEV/lane/traffic runtime 소유 |
 
 현재 경로를 목표 경로처럼 부르거나 먼저 삭제하지 않는다. 특히 `src/lidar+sensorfusion/`에는
 `Main`, 중복 `Msg`·`morai_msgs`와 vendor Velodyne package가 함께 있으므로 한 번에 이동할 수
@@ -199,16 +198,16 @@ P4-C1에서 source image header를 보존해 병행 발행하며 P4-C2에서 대
 String·typed·stale·recovery parity를 통과했다. LiDAR typed topic은 아직
 `declared_not_published_p4b`다.
 
-P4-C는 camera/BEV/traffic-light/recorder runtime을 한 단위씩 이식한다. P4-C1은
+P4-C는 camera/BEV/lane/traffic-light runtime을 한 단위씩 이식한다. P4-C1은
 traffic-light가 실제 추론 입력 image header를 `TrafficLightDetection`에 보존해 legacy String과
 병행 발행하고 GPU 컨테이너 실행·시각화 진입점을 고정했다. P4-C2는 producer parity를
 `config/baselines/perception_traffic_light_parity_v1.yaml`로 고정했다. P4-C3는
 `behavior_planner`를 typed 우선·legacy fallback으로 연결하고 invalid/stale fail-safe와 실제 ROS
 연결을 검증했다. P4-C4는 production behavior node와 현재 지도/route를 쓰는 격리 ROS loop에서
-`GREEN→KEEP→RED→STOP→GREEN→KEEP`을 확인하고 camera/BEV·recorder node 구현을 물리 이식했다.
+`GREEN→KEEP→RED→STOP→GREEN→KEEP`을 확인하고 camera/BEV/lane node 구현을 물리 이식했다.
 별도 guarded 시험은 Frenet/MPC/UDP를 거쳐 물리 정지선 5.21 m 전 정지와 녹색 재출발, 원래
-Ego 상태 복원을 확인했다. live camera/BEV/lane과 canonical recorder bag도 검사했다. P4-C5는
-runtime support/config/bag profile을 canonical package로 이관하고 기존 import·config 경로를
+Ego 상태 복원을 확인했다. live camera/BEV/lane도 검사했다. P4-C5는
+runtime support/config를 canonical package로 이관하고 기존 import·config 경로를
 호환 전달자와 SHA mirror로 고정했다. 동일 raw bag 재생에서 front class-ID, fused BEV와 lane
 observation의 공통 source-stamp payload mismatch가 0임을 확인했다. 상세 근거는
 `config/baselines/perception_traffic_light_vehicle_closed_loop_v1.yaml`과
@@ -216,6 +215,7 @@ observation의 공통 source-stamp payload mismatch가 0임을 확인했다. 상
 `config/baselines/perception_support_config_parity_v1.yaml`이다. 기존 offline 도구와
 executable 호환 경로는 모든 consumer 전환과 blocking reference 0까지 보존한다. 다음 P4-C6은
 이 호환 package들의 남은 runtime 참조와 offline 자산을 분류하고 package별 제거 gate를 만든다.
+`data_collection`은 recorder와 bag profile을 계속 소유하는 별도 package이며 P4-C6 제거 대상이 아니다.
 담당 팀원이 개발 중인 `src/lidar+sensorfusion`과 그 내부 `Msg`·`morai_msgs`는 이 범위에서
 변경하지 않는다. LiDAR 완료·handoff 뒤 canonical adapter와 message 전환을 별도 P4-D로 진행한다.
 

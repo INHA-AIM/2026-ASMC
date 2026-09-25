@@ -10,7 +10,6 @@ setup_args = generate_distutils_setup(
         "asmc_perception.camera",
         "asmc_perception.camera.backends",
         "asmc_perception.nodes",
-        "asmc_perception.recorder",
     ],
     package_dir={"": "src"},
 )

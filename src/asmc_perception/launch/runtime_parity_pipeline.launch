@@ -21,8 +21,6 @@
              file="$(find asmc_perception)/launch/perception.launch">
       <arg name="start_camera_lane" value="true"/>
       <arg name="start_traffic_light" value="false"/>
-      <arg name="start_lidar_fusion" value="false"/>
-      <arg name="start_recorder" value="false"/>
       <arg name="start_visualization" value="false"/>
       <arg name="camera_checkpoint" value="$(arg checkpoint)"/>
       <arg name="camera_sensor_set_path" value="$(arg sensor_set_path)"/>

@@ -1,13 +1,13 @@
 # `asmc_perception` runtime
 
-> **상태:** P4-C5 — 신호 차량 loop 수락 + camera/BEV/recorder runtime·support·config 통합
+> **상태:** P4-C5 — 신호 차량 loop 수락 + camera/BEV/lane runtime·support·config 통합
 
-분산된 camera semantic, metric BEV/lane, traffic-light, nested LiDAR/fusion과 recorder를
-하나의 운영 진입점에서 조합한다. camera semantic, BEV/fusion/lane, recorder와 신호등 ROS node
-구현과 실행 support library·config·bag profile은 이 패키지가 소유한다. 기존 package의 같은
+분산된 camera semantic, metric BEV/lane과 traffic-light를 하나의 인지 실행 경계로 조합한다.
+camera semantic, BEV/fusion/lane과 신호등 ROS node 구현 및 실행 support library·config는 이
+패키지가 소유한다. 기존 package의 같은
 executable과 Python import는 호환 전달자로, 기존 config 경로는 SHA로 고정한 mirror로 보존하며
-topic과 node 이름은 바꾸지 않았다. 연구·학습·Capture·dataset·offline audit 도구와 상세 기록은
-삭제 gate 전까지 기존 package에 남는다.
+topic과 node 이름은 바꾸지 않았다. `data_collection`과 팀원 개발 중인 LiDAR/fusion은 독립
+패키지·workspace이며 이 launch가 소유하거나 시작하지 않는다.
 
 ## 실행
 
@@ -33,26 +33,21 @@ roslaunch asmc_perception perception.launch
 `asmc-perception-train` 컨테이너 안에서 실행한다. `asmc-ros-noetic`은 bridge, build와 GUI용이며
 camera inference 실행 환경이 아니다.
 
-필요한 component만 명시적으로 추가한다.
+신호등이 필요한 경우에만 명시적으로 추가한다.
 
 ```bash
 ./scripts/perception.sh \
   start_traffic_light:=true
-
-./scripts/perception.sh \
-  start_camera_lane:=false \
-  start_recorder:=true \
-  recorder_profile:=full_raw
 ```
 
-LiDAR/fusion은 아직 별도 nested workspace의 `Main`, `Msg`와 Velodyne overlay를 요구한다.
-그 overlay를 먼저 source한 환경에서만 다음처럼 켠다.
+bag 기록·재생은 별도 `data_collection` 진입점을 사용한다.
 
 ```bash
-./scripts/perception.sh \
-  start_camera_lane:=false \
-  start_lidar_fusion:=true
+roslaunch data_collection bag_recorder.launch profile:=full_raw
 ```
+
+LiDAR/fusion은 별도 nested workspace의 `Main`, `Msg`와 Velodyne overlay를 사용하며 담당 팀원
+handoff 전에는 `asmc_perception` launch에 포함하지 않는다.
 
 ## 시각화
 
@@ -169,25 +164,21 @@ typed 신호 이후 제어 loop 수락이며 camera 분류 정확도 시험은 �
 - camera semantic inference와 visualizer
 - per-view BEV, 3-view fusion과 BEV visualizer
 - lane vectorizer와 lane visualizer
-- profile 기반 bag recorder
 
 canonical launch는 모두 `pkg="asmc_perception"`으로 실행한다. 기존
-`camera_semantic_perception`, `drivable_bev`, `data_collection` executable은 같은 이름의 얇은
-호환 전달자다. P4-C5에서 camera backend, runtime BEV/lane 수학, recorder support와 runtime
-config의 정본도 각각 `asmc_perception.camera`, `asmc_perception.bev`,
-`asmc_perception.recorder`, `asmc_perception/config`으로 옮겼다. 기존 Python namespace는 canonical
+`camera_semantic_perception`, `drivable_bev` executable은 같은 이름의 얇은 호환 전달자다.
+P4-C5에서 camera backend, runtime BEV/lane 수학과 config 정본도 각각
+`asmc_perception.camera`, `asmc_perception.bev`, `asmc_perception/config`으로 옮겼다. 기존 Python namespace는 canonical
 symbol을 다시 export하고 기존 YAML은 byte-identical mirror로 유지한다.
 
-live 3-camera→BEV→lane 출력과 canonical recorder의 `camera_raw` 18.10초 기록도 통과했다.
-recorder artifact는 2,914 messages, 75,852,751 bytes, indexed bag이며 세 camera 각 362 frame과
-Ego 905 message를 포함했다. 수치와 SHA는
-`config/baselines/perception_runtime_move_smoke_v1.yaml`에 고정한다.
+live 3-camera→BEV→lane 출력은 `config/baselines/perception_runtime_move_smoke_v1.yaml`에
+고정한다. 입력 bag과 recorder의 소유권은 계속 `data_collection`에 있다.
 
 P4-C5 representative raw bag을 0.5배속으로 두 진입점에 각각 재생한 결과 front class-ID 79,
 fused BEV 38, lane observation 43개의 공통 source stamp에서 payload mismatch가 모두 0이었다.
 ROS connection-local `header.seq`만 비교에서 제외하고 frame·stamp·config SHA와 전체 payload는
 그대로 비교한다. 실행 도구는 `tools/audit/run_perception_runtime_parity.py`, ownership·config SHA와
-recorder 재검증 근거는 `config/baselines/perception_support_config_parity_v1.yaml`이다.
+재검증 근거는 `config/baselines/perception_support_config_parity_v1.yaml`이다.
 
 기계 판독 상태는 `config/runtime.yaml`, 파트 간 topic·message 정본은
 [`perception_runtime_topic_contract_v1.yaml`](../../config/contracts/perception_runtime_topic_contract_v1.yaml),
@@ -213,7 +204,8 @@ roslaunch asmc_perception traffic_light_vehicle_acceptance_stack.launch \
 
 support/config parity는 완료됐지만 offline 도구 이관과 모든 legacy consumer 전환은 남아 있다.
 따라서 기존 package를 아직 삭제하거나 legacy topic을 remap해서 숨기지 않는다. 다음 P4-C6은
-기존 camera/BEV/recorder/traffic package의 남은 runtime 참조와 offline 자산을 분류해 호환 package
-closeout 조건을 확정한다. `src/lidar+sensorfusion`은 담당 팀원이 개발 중인 독립 workspace이므로
+기존 camera/BEV/traffic package의 남은 runtime 참조와 offline 자산을 분류해 호환 package
+closeout 조건을 확정한다. `data_collection`은 독립 package로 유지한다.
+`src/lidar+sensorfusion`은 담당 팀원이 개발 중인 독립 workspace이므로
 그 파일과 내부 `Msg`·`morai_msgs`는 건드리지 않는다. LiDAR 완성·handoff 뒤에만 별도 P4-D로
 canonical adapter와 message 전환을 진행한다.
