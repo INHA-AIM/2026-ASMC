@@ -134,6 +134,9 @@ class CameraBevFusionNode:
         self.fusion_ms = deque(maxlen=512)
         self.end_to_end_ms = deque(maxlen=512)
         self.output_times = deque(maxlen=256)
+        self.publish_debug_metadata = bool(
+            rospy.get_param("~publish_debug_metadata", False)
+        )
 
         base = "/perception/bev/camera"
         self.publishers = {
@@ -147,13 +150,14 @@ class CameraBevFusionNode:
                 base + "/road_marking/confidence", Image, queue_size=1
             ),
             "coverage": rospy.Publisher(base + "/coverage", Image, queue_size=1),
-            "source_count": rospy.Publisher(
-                base + "/source_count", Image, queue_size=1
-            ),
-            "source_view": rospy.Publisher(
-                "/perception/bev/debug/source_view", Image, queue_size=1
-            ),
         }
+        if self.publish_debug_metadata:
+            self.publishers["source_count"] = rospy.Publisher(
+                base + "/source_count", Image, queue_size=1
+            )
+            self.publishers["source_view"] = rospy.Publisher(
+                "/perception/bev/debug/source_view", Image, queue_size=1
+            )
 
         self.subscribers = []
         self.synchronizers = []
@@ -187,13 +191,14 @@ class CameraBevFusionNode:
         coverage_count = np.count_nonzero(np.stack(list(quality.values())) > 0.0, axis=0)
         rospy.loginfo(
             "camera BEV fusion ready views=%s grid=%dx%d skew<=%.1fms "
-            "union=%.4f overlap2=%.4f",
+            "union=%.4f overlap2=%.4f debug_metadata=%s",
             self.views,
             self.grid.width_px,
             self.grid.height_px,
             self.max_skew_ns / 1e6,
             float(np.mean(coverage_count > 0)),
             float(np.mean(coverage_count >= 2)),
+            self.publish_debug_metadata,
         )
 
     def _view_callback(
@@ -276,9 +281,10 @@ class CameraBevFusionNode:
                     "road_marking": fused.road_marking_class_id,
                     "road_marking_confidence": fused.road_marking_confidence,
                     "coverage": fused.coverage,
-                    "source_count": fused.source_count,
-                    "source_view": fused.source_view,
                 }
+                if self.publish_debug_metadata:
+                    messages["source_count"] = fused.source_count
+                    messages["source_view"] = fused.source_view
                 for name, value in messages.items():
                     self.publishers[name].publish(self._message(value, header))
             except Exception as exc:

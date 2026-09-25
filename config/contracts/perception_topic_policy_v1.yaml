@@ -109,7 +109,7 @@ topic_families:
       - {pattern: '/perception/bev/debug/{view}/coverage', type: sensor_msgs/Image}
     producer:
       file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_node.py
-      anchors: ['"coverage": rospy.Publisher', 'latch=True']
+      anchors: ['publishers["coverage"] = rospy.Publisher', 'latch=True']
     consumers:
       - file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_visualizer_node.py
         anchor: 'if self.publish_per_view_mosaic:'
@@ -296,7 +296,7 @@ topic_families:
       - shadow_camera_perception_handoff_result.yaml
       - shadow_runtime_profile_result.yaml
     classification: audit_opt_in
-    current_mode: default_on
+    current_mode: explicit_argument
     p5b_action: opt_in_p5b
     rationale: Frame-level detailed audit is needed for evaluation bags, not every production run.
 
@@ -431,3 +431,17 @@ p5b_order:
   - Remove camera-grid overlay from the normal visualization preset; retain an explicit calibration-review path.
   - Keep old image topics for one compatibility interval and record side-by-side pixel/timestamp parity before retirement.
   - Do not rename required internal transports in the same change as visualization consolidation.
+
+p5b_runtime_overrides:
+  - family_ids: [per_view_projected_coverage, fused_bev_source_count, fused_bev_source_view]
+    current_mode: explicit_argument
+    launch_argument: publish_bev_debug_metadata
+    default: false
+    compatibility_default: visualization_legacy_rqt
+    reason: User-approved runtime declutter after the compact rqt comparison was validated.
+  - family_ids: [lane_pipeline_audit]
+    current_mode: explicit_argument
+    launch_argument: lane_publish_pipeline_audit
+    default: false
+    evaluation_entrypoint: src/asmc_perception/tools/bev/run_shadow_lane_bag_batch.py
+    reason: Preserve detailed frame audit for result bags without paying its production projection, accumulation, and wire costs.

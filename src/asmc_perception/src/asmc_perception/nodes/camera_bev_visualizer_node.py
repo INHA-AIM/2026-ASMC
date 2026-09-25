@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Visualize per-view camera BEV layers and camera-ground calibration grids."""
+"""Publish a compact RGB/semantic BEV comparison and optional legacy debug views."""
 
 from __future__ import annotations
 
 import threading
 import time
+from collections import deque
 from functools import partial
 
 import cv2
@@ -14,11 +15,15 @@ import rospy
 from sensor_msgs.msg import CompressedImage, Image
 
 from asmc_perception.bev.calibration import calibrations_from_dict
+from asmc_perception.bev.fusion import build_quality_maps
 from asmc_perception.bev.grid import BevGridSpec
+from asmc_perception.bev.projector import CameraBevProjector
 from asmc_perception.bev.visualization import (
     build_bev_mosaic,
     crop_bev_layers,
     draw_ground_grid_overlay,
+    fuse_projected_rgb,
+    render_bev_comparison,
     render_fused_bev,
     render_fused_quality,
 )
@@ -68,10 +73,41 @@ class CameraBevVisualizerNode:
         self.cameras = {view: all_cameras[view] for view in self.views}
         self.view_order = [view for view in ("left", "front", "right") if view in self.views]
 
+        max_ground_range = float(rospy.get_param("~max_ground_range_m", 22.0))
+        min_camera_depth = float(rospy.get_param("~min_camera_depth_m", 0.1))
+        self.projectors = {
+            view: CameraBevProjector(
+                self.cameras[view],
+                self.grid,
+                max_ground_range_m=max_ground_range,
+                min_camera_depth_m=min_camera_depth,
+            )
+            for view in self.views
+        }
+        self.rgb_quality = build_quality_maps(
+            self.projectors,
+            self.grid,
+            edge_taper_fraction=float(rospy.get_param("~edge_taper_fraction", 0.12)),
+            forward_fade_start_m=float(
+                rospy.get_param("~forward_fade_start_m", 15.0)
+            ),
+            lateral_fade_start_m=float(
+                rospy.get_param("~lateral_fade_start_m", 6.0)
+            ),
+            rear_fade_start_m=float(rospy.get_param("~rear_fade_start_m", -4.0)),
+            boundary_weight=float(rospy.get_param("~boundary_weight", 0.20)),
+        )
+
         self.jpeg_quality = int(rospy.get_param("~jpeg_quality", 85))
+        self.publish_legacy_outputs = bool(
+            rospy.get_param("~publish_legacy_outputs", False)
+        )
+        self.publish_calibration_grid = bool(
+            rospy.get_param("~publish_calibration_grid", False)
+        )
         self.publish_per_view_mosaic = bool(
             rospy.get_param("~publish_per_view_mosaic", False)
-        )
+        ) and self.publish_legacy_outputs
         self.fused_size = (
             int(rospy.get_param("~fused_width", 672)),
             int(rospy.get_param("~fused_height", 1050)),
@@ -79,6 +115,19 @@ class CameraBevVisualizerNode:
         if min(self.fused_size) <= 0:
             raise ValueError("fused visualization dimensions must be positive")
         self.display_label = str(rospy.get_param("~display_label", "FUSED"))
+        self.comparison_drivable_threshold = float(
+            rospy.get_param("~comparison_drivable_threshold", 0.5)
+        )
+        if not 0.0 <= self.comparison_drivable_threshold <= 1.0:
+            raise ValueError("comparison_drivable_threshold must lie in [0,1]")
+        self.raw_comparison_max_skew_ns = int(
+            round(float(rospy.get_param("~raw_comparison_max_skew_ms", 100.0)) * 1e6)
+        )
+        if self.raw_comparison_max_skew_ns < 0:
+            raise ValueError("raw_comparison_max_skew_ms cannot be negative")
+        self.raw_history_size = int(rospy.get_param("~raw_comparison_history_size", 40))
+        if self.raw_history_size <= 0:
+            raise ValueError("raw_comparison_history_size must be positive")
         self.tile_size = (
             int(rospy.get_param("~tile_width", 300)),
             int(rospy.get_param("~tile_height", 600)),
@@ -99,6 +148,9 @@ class CameraBevVisualizerNode:
         self.fused_layers = None
         self.fused_stamp = rospy.Time()
         self.fused_dirty = False
+        self.raw_frames = {
+            view: deque(maxlen=self.raw_history_size) for view in self.views
+        }
         self.lock = threading.Lock()
         self.subscribers = []
         self.synchronizers = []
@@ -122,11 +174,12 @@ class CameraBevVisualizerNode:
                 self.subscribers.extend([drivable, marking, coverage])
                 self.synchronizers.append(sync)
 
-            self.grid_publishers[view] = rospy.Publisher(
-                namespace + "/camera_grid_overlay/compressed",
-                CompressedImage,
-                queue_size=1,
-            )
+            if self.publish_calibration_grid:
+                self.grid_publishers[view] = rospy.Publisher(
+                    namespace + "/camera_grid_overlay/compressed",
+                    CompressedImage,
+                    queue_size=1,
+                )
             self.subscribers.append(
                 rospy.Subscriber(
                     self.cameras[view].image_topic,
@@ -141,10 +194,15 @@ class CameraBevVisualizerNode:
         fused_topics = [
             fused_namespace + "/drivable_probability",
             fused_namespace + "/road_marking/class_id",
-            fused_namespace + "/road_marking/confidence",
             fused_namespace + "/coverage",
-            fused_namespace + "/source_count",
         ]
+        if self.publish_legacy_outputs:
+            fused_topics.extend(
+                [
+                    fused_namespace + "/road_marking/confidence",
+                    fused_namespace + "/source_count",
+                ]
+            )
         fused_subscribers = [
             message_filters.Subscriber(topic, Image, queue_size=2)
             for topic in fused_topics
@@ -152,20 +210,34 @@ class CameraBevVisualizerNode:
         fused_sync = message_filters.TimeSynchronizer(
             fused_subscribers, queue_size=4
         )
-        fused_sync.registerCallback(self._fused_callback)
+        fused_sync.registerCallback(
+            self._legacy_fused_callback
+            if self.publish_legacy_outputs
+            else self._compact_fused_callback
+        )
         self.subscribers.extend(fused_subscribers)
         self.synchronizers.append(fused_sync)
-        self.fused_publisher = rospy.Publisher(
-            "/perception/bev/debug/fused/compressed", CompressedImage, queue_size=1
-        )
-        self.quality_publisher = rospy.Publisher(
-            "/perception/bev/debug/fused_quality/compressed",
+        self.comparison_publisher = rospy.Publisher(
+            "/perception/bev/debug/comparison/compressed",
             CompressedImage,
             queue_size=1,
         )
+        self.fused_publisher = None
+        self.quality_publisher = None
+        if self.publish_legacy_outputs:
+            self.fused_publisher = rospy.Publisher(
+                "/perception/bev/debug/fused/compressed",
+                CompressedImage,
+                queue_size=1,
+            )
+            self.quality_publisher = rospy.Publisher(
+                "/perception/bev/debug/fused_quality/compressed",
+                CompressedImage,
+                queue_size=1,
+            )
         fused_hz = float(rospy.get_param("~fused_max_hz", 5.0))
         self.fused_timer = rospy.Timer(
-            rospy.Duration(1.0 / max(0.1, fused_hz)), self._publish_fused
+            rospy.Duration(1.0 / max(0.1, fused_hz)), self._publish_outputs
         )
 
         self.mosaic_publisher = None
@@ -181,29 +253,63 @@ class CameraBevVisualizerNode:
                 rospy.Duration(1.0 / max(0.1, mosaic_hz)), self._publish_mosaic
             )
         rospy.loginfo(
-            "camera BEV visualizer ready views=%s fused=%sx%s per_view_mosaic=%s",
+            "camera BEV visualizer ready views=%s comparison=2x%sx%s "
+            "legacy=%s calibration_grid=%s per_view_mosaic=%s raw_history=%d",
             self.views,
             self.fused_size[0],
             self.fused_size[1],
+            self.publish_legacy_outputs,
+            self.publish_calibration_grid,
             self.publish_per_view_mosaic,
+            self.raw_history_size,
         )
 
-    def _fused_callback(
+    def _compact_fused_callback(
         self,
         drivable: Image,
         marking: Image,
-        confidence: Image,
         coverage: Image,
+    ) -> None:
+        self._store_fused_layers(drivable, marking, coverage)
+
+    def _legacy_fused_callback(
+        self,
+        drivable: Image,
+        marking: Image,
+        coverage: Image,
+        confidence: Image,
         source_count: Image,
+    ) -> None:
+        self._store_fused_layers(
+            drivable,
+            marking,
+            coverage,
+            confidence=confidence,
+            source_count=source_count,
+        )
+
+    def _store_fused_layers(
+        self,
+        drivable: Image,
+        marking: Image,
+        coverage: Image,
+        confidence: Image = None,
+        source_count: Image = None,
     ) -> None:
         try:
             layers = {
                 "drivable": self._mono8_array(drivable, self.grid.shape),
                 "road_marking": self._mono8_array(marking, self.grid.shape),
-                "confidence": self._mono8_array(confidence, self.grid.shape),
                 "coverage": self._mono8_array(coverage, self.grid.shape),
-                "source_count": self._mono8_array(source_count, self.grid.shape),
             }
+            if confidence is not None:
+                layers["confidence"] = self._mono8_array(
+                    confidence, self.grid.shape
+                )
+            if source_count is not None:
+                layers["source_count"] = self._mono8_array(
+                    source_count, self.grid.shape
+                )
         except Exception as exc:
             rospy.logwarn_throttle(2.0, "fused BEV visualization input invalid: %s", exc)
             return
@@ -230,7 +336,24 @@ class CameraBevVisualizerNode:
             self.dirty = True
 
     def _camera_callback(self, view: str, message: CompressedImage) -> None:
-        if self.grid_publishers[view].get_num_connections() == 0:
+        comparison_requested = self.comparison_publisher.get_num_connections() > 0
+        grid_publisher = self.grid_publishers.get(view)
+        grid_requested = (
+            grid_publisher is not None
+            and grid_publisher.get_num_connections() > 0
+        )
+        if not comparison_requested and not grid_requested:
+            return
+        if comparison_requested:
+            with self.lock:
+                self.raw_frames[view].append(
+                    (
+                        bytes(message.data),
+                        message.header.stamp,
+                        message.header.frame_id,
+                    )
+                )
+        if not grid_requested:
             return
         now = time.monotonic()
         if now - self.last_grid_output[view] < self.camera_grid_period:
@@ -255,7 +378,7 @@ class CameraBevVisualizerNode:
         except Exception as exc:
             rospy.logwarn_throttle(2.0, "%s calibration overlay failed: %s", view, exc)
             return
-        self.grid_publishers[view].publish(
+        grid_publisher.publish(
             self._compressed(overlay, message.header.stamp, message.header.frame_id)
         )
         self.last_grid_output[view] = now
@@ -283,19 +406,46 @@ class CameraBevVisualizerNode:
             self._compressed(mosaic, stamp, self.grid.frame_id)
         )
 
-    def _publish_fused(self, _event) -> None:
-        publish_fused = self.fused_publisher.get_num_connections() > 0
-        publish_quality = self.quality_publisher.get_num_connections() > 0
-        if not publish_fused and not publish_quality:
+    def _publish_outputs(self, _event) -> None:
+        publish_comparison = self.comparison_publisher.get_num_connections() > 0
+        publish_fused = (
+            self.fused_publisher is not None
+            and self.fused_publisher.get_num_connections() > 0
+        )
+        publish_quality = (
+            self.quality_publisher is not None
+            and self.quality_publisher.get_num_connections() > 0
+        )
+        if not publish_comparison and not publish_fused and not publish_quality:
             return
         with self.lock:
             if not self.fused_dirty or self.fused_layers is None:
                 return
             layers = dict(self.fused_layers)
             stamp = self.fused_stamp
+            raw_frames = {
+                view: tuple(history) for view, history in self.raw_frames.items()
+            }
             self.fused_dirty = False
         try:
             layers = crop_bev_layers(layers, self.grid, self.display_grid)
+            if publish_comparison:
+                rgb_bev = self._build_rgb_bev(raw_frames, stamp)
+                rgb_bev = crop_bev_layers(
+                    {"rgb": rgb_bev}, self.grid, self.display_grid
+                )["rgb"]
+                comparison = render_bev_comparison(
+                    rgb_bev,
+                    layers["drivable"],
+                    layers["road_marking"],
+                    layers["coverage"],
+                    self.display_grid,
+                    panel_size=self.fused_size,
+                    drivable_threshold=self.comparison_drivable_threshold,
+                )
+                self.comparison_publisher.publish(
+                    self._compressed(comparison, stamp, self.grid.frame_id)
+                )
             if publish_fused:
                 image = render_fused_bev(
                     layers["drivable"],
@@ -332,8 +482,56 @@ class CameraBevVisualizerNode:
                     self._compressed(quality, stamp, self.grid.frame_id)
                 )
         except Exception as exc:
-            rospy.logwarn_throttle(2.0, "fused BEV render failed: %s", exc)
+            rospy.logwarn_throttle(2.0, "BEV comparison render failed: %s", exc)
             return
+
+    def _build_rgb_bev(self, raw_frames, fused_stamp):
+        missing = [view for view in self.views if not raw_frames.get(view)]
+        if missing:
+            raise ValueError("raw camera frames are missing: {}".format(missing))
+        fused_stamp_ns = int(fused_stamp.to_nsec())
+        if fused_stamp_ns <= 0:
+            raise ValueError("fused BEV stamp is invalid")
+        stamps_ns = [fused_stamp_ns]
+        projected = {}
+        size = (self.grid.width_px, self.grid.height_px)
+        for view in self.views:
+            valid_history = [
+                entry for entry in raw_frames[view] if int(entry[1].to_nsec()) > 0
+            ]
+            if not valid_history:
+                raise ValueError("{} raw camera history has no valid stamp".format(view))
+            payload, stamp, _frame_id = min(
+                valid_history,
+                key=lambda entry: abs(int(entry[1].to_nsec()) - fused_stamp_ns),
+            )
+            stamp_ns = int(stamp.to_nsec())
+            stamps_ns.append(stamp_ns)
+            image = cv2.imdecode(
+                np.frombuffer(payload, dtype=np.uint8), cv2.IMREAD_COLOR
+            )
+            camera = self.cameras[view]
+            expected = (camera.height, camera.width, 3)
+            if image is None or image.shape != expected:
+                raise ValueError(
+                    "{} raw camera image must be {}".format(view, expected)
+                )
+            projected[view] = cv2.warpPerspective(
+                image,
+                self.projectors[view].homography.bev_from_image,
+                size,
+                flags=cv2.INTER_LINEAR,
+                borderMode=cv2.BORDER_CONSTANT,
+                borderValue=(0, 0, 0),
+            )
+        if max(stamps_ns) - min(stamps_ns) > self.raw_comparison_max_skew_ns:
+            raise ValueError(
+                "raw/fused timestamp skew {:.1f}ms exceeds {:.1f}ms".format(
+                    (max(stamps_ns) - min(stamps_ns)) / 1e6,
+                    self.raw_comparison_max_skew_ns / 1e6,
+                )
+            )
+        return fuse_projected_rgb(projected, self.rgb_quality)
 
     @staticmethod
     def _mono8_array(message: Image, expected_shape) -> np.ndarray:

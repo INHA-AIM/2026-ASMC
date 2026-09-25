@@ -63,9 +63,10 @@ adapter README의 bag/closed-loop parity를 통과해야 한다. standalone pack
 | `/perception/bev/camera/drivable_probability` | `sensor_msgs/Image` | 카메라 기반 주행가능 score `0~255` | coverage와 함께 사용 |
 | `/perception/bev/camera/coverage` | `sensor_msgs/Image` | 한 카메라 이상이 기하적으로 관측한 cell은 255 | 0은 non-drivable이 아니라 unknown |
 
-보조 토픽은 `/perception/bev/camera/source_count`, `/perception/bev/diagnostics`,
-`/perception/lane/diagnostics`다. road-marking raster와 Marker는 분석·시각화용이며 판제의
-최소 입력 계약이 아니다.
+보조 토픽은 `/perception/bev/diagnostics`, `/perception/lane/diagnostics`다.
+`/perception/bev/camera/source_count`는 기본 off이며 overlap 검수에서
+`publish_bev_debug_metadata:=true`로 켠다. road-marking raster와 Marker는 분석·시각화용이며
+판제의 최소 입력 계약이 아니다.
 
 모든 최소 출력은 `header.frame_id=base_link`이고 x-forward, y-left다. timestamp는 callback
 수신 시각이 아니라 세 카메라 입력 묶음의 최신 source stamp다. BEV fusion은 세 view의
@@ -180,8 +181,8 @@ metadata topic은 MGeo/LiDAR 계약을 함께 합의할 때 결정하며, 이번
 - `coverage=0`, score=0: 카메라가 관측하지 못한 unknown
 
 따라서 coverage 없이 score만 threshold하면 unknown을 장애물 또는 도로 밖으로 잘못
-확정한다. `source_count`는 같은 cell을 본 카메라 수 `0~3`이며 overlap seam 디버그와
-선택적 신뢰도 조정에 사용할 수 있다.
+확정한다. opt-in `source_count`는 같은 cell을 본 카메라 수 `0~3`이며 overlap seam
+디버그와 선택적 신뢰도 조정에 사용할 수 있다.
 
 이 모델은 actor-negative 정책으로 학습되어 차량·보행자·장애물 위치가 낮은 drivable
 score 또는 hole로 보일 수 있다. 그러나 object detector나 occupancy sensor가 아니므로 모든
@@ -218,7 +219,8 @@ source /root/ws/devel/setup.bash
 roslaunch asmc_perception perception.launch \
   camera_checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
   lane_enable_boundary_family_candidate:=true \
-  lane_enable_shared_family_debug:=false
+  lane_enable_shared_family_debug:=false \
+  lane_publish_pipeline_audit:=true
 ```
 
 UDP bridge와 read-only adapter는 `asmc-ros-noetic`에서 실행한다. adapter는 선택 사항이며

@@ -13,6 +13,21 @@ components:
       - asmc_perception.camera
       - asmc_perception.bev
     support_config_evidence: config/baselines/perception_support_config_parity_v1.yaml
+    bev_debug_metadata:
+      enabled_by_default: false
+      launch_argument: publish_bev_debug_metadata
+      enabled_by_legacy_rqt: true
+      topics:
+        - /perception/bev/debug/front/coverage
+        - /perception/bev/debug/left/coverage
+        - /perception/bev/debug/right/coverage
+        - /perception/bev/camera/source_count
+        - /perception/bev/debug/source_view
+    lane_pipeline_audit:
+      enabled_by_default: false
+      launch_argument: lane_publish_pipeline_audit
+      topic: /perception/lane/pipeline_audit
+      enable_for: result_bag_evaluation
   traffic_light:
     enabled_by_default: false
     activation_zone: TRAFFIC_LIGHT_REQUIRED
@@ -29,12 +44,24 @@ components:
     enabled_by_default: false
     image_topics:
       - /perception/camera/debug/mosaic/compressed
-      - /perception/bev/debug/fused/compressed
-      - /perception/bev/debug/fused_quality/compressed
-      - /perception/lane/debug/evidence_bev/compressed
-      - /perception/lane/debug/fitted_bev/compressed
-      - /perception/lane/debug/boundaries_bev/compressed
-      - /perception/lane/debug/camera_reprojection_mosaic/compressed
+      - /perception/bev/debug/comparison/compressed
+    legacy_rqt:
+      enabled_by_default: false
+      launch_argument: visualization_legacy_rqt
+      image_topics:
+        - /perception/camera/front/debug/panel/compressed
+        - /perception/camera/left/debug/panel/compressed
+        - /perception/camera/right/debug/panel/compressed
+        - /perception/bev/debug/fused/compressed
+        - /perception/bev/debug/fused_quality/compressed
+        - /perception/lane/debug/evidence_bev/compressed
+        - /perception/lane/debug/fitted_bev/compressed
+        - /perception/lane/debug/boundaries_bev/compressed
+        - /perception/lane/debug/shared_family_bev/compressed
+        - /perception/lane/debug/camera_reprojection_mosaic/compressed
+    calibration_grid:
+      enabled_by_default: false
+      launch_argument: visualization_calibration_grid
 
 compatibility:
   preserve_legacy_topics: true

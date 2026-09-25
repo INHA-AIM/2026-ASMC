@@ -53,15 +53,20 @@ class SemanticVisualizerNode:
         if not 1 <= self.jpeg_quality <= 100:
             raise ValueError("jpeg_quality must be between 1 and 100")
         self.minimum_period = 1.0 / self.publish_hz
+        self.publish_per_view_panels = bool(
+            rospy.get_param("~publish_per_view_panels", False)
+        )
 
-        self.panel_publishers = {
-            view: rospy.Publisher(
-                "/perception/camera/{}/debug/panel/compressed".format(view),
-                CompressedImage,
-                queue_size=1,
-            )
-            for view in self.views
-        }
+        self.panel_publishers = {}
+        if self.publish_per_view_panels:
+            self.panel_publishers = {
+                view: rospy.Publisher(
+                    "/perception/camera/{}/debug/panel/compressed".format(view),
+                    CompressedImage,
+                    queue_size=1,
+                )
+                for view in self.views
+            }
         self.mosaic_publisher = rospy.Publisher(
             "/perception/camera/debug/mosaic/compressed",
             CompressedImage,
@@ -111,13 +116,14 @@ class SemanticVisualizerNode:
         rospy.loginfo(
             "camera semantic visualizer views=%s secondary_mode=%s "
             "publish_hz=%.2f panel_width=%d "
-            "mosaic_view_width=%d jpeg_quality=%d",
+            "mosaic_view_width=%d jpeg_quality=%d per_view_panels=%s",
             self.views,
             self.secondary_mode,
             self.publish_hz,
             self.panel_width,
             self.mosaic_view_width,
             self.jpeg_quality,
+            self.publish_per_view_panels,
         )
 
     def _callback(
@@ -128,7 +134,11 @@ class SemanticVisualizerNode:
         view: str,
     ) -> None:
         self.callback_counts[view] += 1
-        publish_panel = self.panel_publishers[view].get_num_connections() > 0
+        panel_publisher = self.panel_publishers.get(view)
+        publish_panel = (
+            panel_publisher is not None
+            and panel_publisher.get_num_connections() > 0
+        )
         publish_mosaic = self.mosaic_publisher.get_num_connections() > 0
         if not publish_panel and not publish_mosaic:
             self._maybe_log(time.monotonic())
@@ -183,7 +193,7 @@ class SemanticVisualizerNode:
             encoded = self._compressed_message(panel, rgb_message.header)
             if encoded is None:
                 return
-            self.panel_publishers[view].publish(encoded)
+            panel_publisher.publish(encoded)
         self.last_panel_wall[view] = now
         self.render_counts[view] += 1
 

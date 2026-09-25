@@ -5,6 +5,10 @@
   <arg name="start_camera_lane" default="true"/>
   <arg name="start_traffic_light" default="false"/>
   <arg name="start_visualization" default="false"/>
+  <arg name="visualization_legacy_rqt" default="false"/>
+  <arg name="visualization_calibration_grid" default="false"/>
+  <arg name="publish_bev_debug_metadata"
+       default="$(arg visualization_legacy_rqt)"/>
 
   <arg name="camera_checkpoint"
        default="$(find asmc_perception)/../../artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt"/>
@@ -23,6 +27,7 @@
   <arg name="lane_enable_shared_family_debug" default="false"/>
   <arg name="lane_enable_boundary_family_candidate"
        default="$(arg lane_enable_shared_family_debug)"/>
+  <arg name="lane_publish_pipeline_audit" default="false"/>
 
   <arg name="traffic_light_checkpoint"
        default="$(find asmc_perception)/models/traffic_light/best.pt"/>
@@ -53,6 +58,7 @@
       <rosparam param="enabled_views">[front, left, right]</rosparam>
       <param name="verify_sensor_set" value="true"/>
       <param name="sensor_set_path" value="$(arg camera_sensor_set_path)"/>
+      <param name="publish_coverage" value="$(arg publish_bev_debug_metadata)"/>
     </node>
 
     <node pkg="asmc_perception" type="camera_bev_fusion_node.py"
@@ -61,6 +67,8 @@
       <rosparam command="load" file="$(arg camera_calibration_config)"/>
       <rosparam command="load" file="$(find asmc_perception)/config/bev/fusion.yaml"/>
       <rosparam param="views">[front, left, right]</rosparam>
+      <param name="publish_debug_metadata"
+             value="$(arg publish_bev_debug_metadata)"/>
     </node>
 
     <node pkg="asmc_perception" type="lane_vectorizer_node.py"
@@ -74,6 +82,8 @@
              value="$(arg lane_enable_shared_family_debug)"/>
       <param name="enable_boundary_family_candidate"
              value="$(arg lane_enable_boundary_family_candidate)"/>
+      <param name="publish_pipeline_audit"
+             value="$(arg lane_publish_pipeline_audit)"/>
     </node>
   </group>
 
@@ -89,6 +99,8 @@
     <include file="$(find asmc_perception)/launch/visualization.launch">
       <arg name="camera_calibration_config" value="$(arg camera_calibration_config)"/>
       <arg name="bev_grid_config" value="$(arg bev_grid_config)"/>
+      <arg name="legacy_rqt" value="$(arg visualization_legacy_rqt)"/>
+      <arg name="calibration_grid" value="$(arg visualization_calibration_grid)"/>
     </include>
   </group>
 

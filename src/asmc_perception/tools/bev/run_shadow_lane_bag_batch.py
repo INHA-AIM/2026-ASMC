@@ -202,6 +202,8 @@ def commands_for(item, args):
         "start_camera_lane:=true",
         "start_traffic_light:=false",
         "start_visualization:=false",
+        "publish_bev_debug_metadata:=true",
+        "lane_publish_pipeline_audit:=true",
         "camera_checkpoint:={}".format(Path(args.checkpoint).expanduser().resolve()),
         "camera_device:={}".format(args.device),
         "lane_enable_shared_family_debug:={}".format(

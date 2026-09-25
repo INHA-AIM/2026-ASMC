@@ -71,6 +71,39 @@ def colorize_road_marking(class_ids: np.ndarray) -> np.ndarray:
     return canvas
 
 
+def fuse_projected_rgb(
+    projected_by_view: Mapping[str, np.ndarray],
+    quality_by_view: Mapping[str, np.ndarray],
+) -> np.ndarray:
+    """Blend already projected BGR camera images with static fusion weights."""
+    if not projected_by_view or set(projected_by_view) != set(quality_by_view):
+        raise ValueError("projected RGB views and quality maps must match")
+    views = tuple(projected_by_view)
+    first = np.asarray(projected_by_view[views[0]])
+    if first.ndim != 3 or first.shape[2] != 3 or first.dtype != np.uint8:
+        raise ValueError("projected RGB images must be HxWx3 uint8")
+    shape = first.shape[:2]
+    weighted = np.zeros((*shape, 3), dtype=np.float64)
+    weight_sum = np.zeros(shape, dtype=np.float64)
+    for view in views:
+        image = np.asarray(projected_by_view[view])
+        quality = np.asarray(quality_by_view[view], dtype=np.float64)
+        if image.shape != first.shape or image.dtype != np.uint8:
+            raise ValueError("all projected RGB images must share shape and dtype")
+        if quality.shape != shape or not np.isfinite(quality).all():
+            raise ValueError("RGB fusion quality map is invalid")
+        if np.any(quality < 0.0):
+            raise ValueError("RGB fusion quality cannot be negative")
+        weighted += image.astype(np.float64) * quality[:, :, None]
+        weight_sum += quality
+    output = np.zeros_like(first)
+    valid = weight_sum > 0.0
+    output[valid] = np.clip(
+        np.rint(weighted[valid] / weight_sum[valid][:, None]), 0.0, 255.0
+    ).astype(np.uint8)
+    return np.ascontiguousarray(output)
+
+
 def render_fused_bev(
     drivable_probability: np.ndarray,
     road_marking_class_id: np.ndarray,
@@ -79,6 +112,10 @@ def render_fused_bev(
     source_count: np.ndarray,
     grid: BevGridSpec,
     label_prefix: str = "FUSED",
+    draw_grid_lines: bool = True,
+    draw_label: bool = True,
+    encode_probability_strength: bool = True,
+    drivable_threshold: float = 0.5,
 ) -> np.ndarray:
     """Render one metric BEV with fused semantics and an unambiguous extent label."""
     drivable = _mono8(drivable_probability, "drivable probability")
@@ -91,30 +128,86 @@ def render_fused_bev(
             raise ValueError("fused BEV layer shape does not match grid")
     if np.any(marking > 3) or np.any(count > 3):
         raise ValueError("invalid fused class or source-count value")
+    if not 0.0 <= float(drivable_threshold) <= 1.0:
+        raise ValueError("drivable threshold must lie in [0,1]")
 
     canvas = np.zeros((*grid.shape, 3), dtype=np.uint8)
-    canvas[:, :, 1] = np.rint(drivable.astype(np.float32) * 0.72).astype(np.uint8)
+    if encode_probability_strength:
+        canvas[:, :, 1] = np.rint(
+            drivable.astype(np.float32) * 0.72
+        ).astype(np.uint8)
+    else:
+        selected_drivable = drivable >= int(round(float(drivable_threshold) * 255.0))
+        canvas[selected_drivable, 1] = 184
     canvas[~valid] = 0
     for class_id, color in ROAD_MARKING_COLORS_BGR.items():
         selected = (marking == class_id) & valid
         if not np.any(selected):
             continue
-        strength = 0.45 + 0.55 * confidence[selected].astype(np.float32) / 255.0
-        canvas[selected] = np.rint(
-            np.asarray(color, dtype=np.float32)[None, :] * strength[:, None]
-        ).astype(np.uint8)
+        if encode_probability_strength:
+            strength = 0.45 + 0.55 * confidence[selected].astype(np.float32) / 255.0
+            canvas[selected] = np.rint(
+                np.asarray(color, dtype=np.float32)[None, :] * strength[:, None]
+            ).astype(np.uint8)
+        else:
+            canvas[selected] = color
 
-    draw_metric_grid(canvas, grid, major_step_m=5.0, minor_step_m=2.0)
-    label = "{}  x[{:.0f},{:.0f}]m  y[{:.0f},{:.0f}]m  {:.2f}m/cell".format(
-        str(label_prefix),
-        grid.x_min_m,
-        grid.x_max_m,
-        grid.y_min_m,
-        grid.y_max_m,
-        grid.resolution_m,
-    )
-    _label(canvas, label)
+    if draw_grid_lines:
+        draw_metric_grid(canvas, grid, major_step_m=5.0, minor_step_m=2.0)
+    if draw_label:
+        label = "{}  x[{:.0f},{:.0f}]m  y[{:.0f},{:.0f}]m  {:.2f}m/cell".format(
+            str(label_prefix),
+            grid.x_min_m,
+            grid.x_max_m,
+            grid.y_min_m,
+            grid.y_max_m,
+            grid.resolution_m,
+        )
+        _label(canvas, label)
     return canvas
+
+
+def render_bev_comparison(
+    rgb_bev: np.ndarray,
+    drivable_probability: np.ndarray,
+    road_marking_class_id: np.ndarray,
+    coverage: np.ndarray,
+    grid: BevGridSpec,
+    panel_size: Tuple[int, int] = None,
+    drivable_threshold: float = 0.5,
+) -> np.ndarray:
+    """Render calibrated RGB BEV beside the fused semantic result."""
+    rgb = np.asarray(rgb_bev)
+    if rgb.shape != (*grid.shape, 3) or rgb.dtype != np.uint8:
+        raise ValueError("RGB BEV must be uint8 and match the metric grid")
+    original = np.ascontiguousarray(rgb.copy())
+    semantic = render_fused_bev(
+        drivable_probability,
+        road_marking_class_id,
+        np.zeros(grid.shape, dtype=np.uint8),
+        coverage,
+        np.ones(grid.shape, dtype=np.uint8),
+        grid,
+        label_prefix="SEMANTIC BEV",
+        draw_grid_lines=False,
+        draw_label=False,
+        encode_probability_strength=False,
+        drivable_threshold=drivable_threshold,
+    )
+    if panel_size is not None:
+        width, height = (int(panel_size[0]), int(panel_size[1]))
+        if width <= 0 or height <= 0:
+            raise ValueError("comparison panel dimensions must be positive")
+        original = cv2.resize(original, (width, height), interpolation=cv2.INTER_LINEAR)
+        semantic = cv2.resize(
+            semantic, (width, height), interpolation=cv2.INTER_NEAREST
+        )
+    extent = "x[{:.0f},{:.0f}]m y[{:.0f},{:.0f}]m".format(
+        grid.x_min_m, grid.x_max_m, grid.y_min_m, grid.y_max_m
+    )
+    _label(original, "RGB BEV  {}".format(extent))
+    _label(semantic, "SEMANTIC BEV  {}".format(extent))
+    return np.concatenate([original, semantic], axis=1)
 
 
 def render_fused_quality(
