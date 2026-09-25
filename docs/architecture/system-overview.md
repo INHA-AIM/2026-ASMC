@@ -38,12 +38,12 @@ ego-BEV → lane/topology + safe drivable + object/lane context
 | 모듈 | 역할 | ASMC 경로 | 담당 |
 |------|------|-----------|------|
 | Expert / Behavior | rule + route, τ* 로깅 | `src/behavior_planner/` (+ LBC 학습 경로) | 정윤태·양서준 / 안승현 |
-| PA | GT BEV → τ (teacher) | `src/learning_by_cheating/` | 안승현 |
+| LBC teacher BEV | privileged simulator state → GT BEV | `tools/research/lbc_teacher_bev/` | 안승현 |
 | 차선·주행가능영역·eval | 카메라 학습·live 추론·음영 lane-family v3 | `src/asmc_perception/` runtime + offline/training | 안승현 |
 | MGeo map prior | current Node/Link vector 후보·offline bake, pose 기반 local crop | `src/asmc_hd_map/` 후보와 기존 `src/asmc_hd_map/development/won_tae_link_node/` | 안승현·장원태 협의 |
 | 공통 BEV·차로 문맥 | map/camera/LiDAR layer와 object association | `src/asmc_perception/` camera layer; LiDAR handoff 후 공통 계약 | 인지·맵·LiDAR 공동 |
 | LiDAR 장애물 | clustering·OBB·tracking·카메라 보조 분류 | `src/lidar+sensorfusion/` | 손재호, 정윤태 |
-| SA_plan | BEV̂ → τ | `src/learning_by_cheating/` | 안승현 |
+| PA/SA_plan 구 학습 실험 | 현재 runtime 미사용 | Git history | 안승현 |
 | Behavior + Frenet + MPC | ROS command→trajectory→control; bridge가 Ctrl UDP 전송 | `src/behavior_planner/`, `src/frenet_planner/`, `src/mpc_controller/` | 정윤태·양서준·이강태 |
 | Scenario / gRPC | 시나리오·시뮬 API | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |
 | Bridge | MORAI UDP 경계·내부 ROS 변환 | `src/asmc_bridge/` 단일 패키지 | 이강태, 안승현 |

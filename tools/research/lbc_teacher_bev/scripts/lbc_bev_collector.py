@@ -30,6 +30,7 @@ from lbc_bev.morai_adapters import (
     setup_morai_event_cmd_turn_signal_polling,
 )
 from lbc_bev.static_layers import compute_bev_affine_matrix
+from lbc_bev.ws_root import asmc_ws_root, lbc_data_root
 
 PUBLISH_HZ = 10.0
 SAVE_INTERVAL_S = 1.0
@@ -38,17 +39,16 @@ SAVE_INTERVAL_S = 1.0
 class LBCBEVCollector:
     def __init__(self):
         rospy.init_node("lbc_bev_collector", anonymous=False)
-        bridge_ip = os.environ.get("MORAI_BRIDGE_IP", "127.0.0.1")
-        bridge_port = os.environ.get("MORAI_BRIDGE_PORT", "9090")
         rospy.loginfo(
-            "[LBCBEV] ROS_MASTER_URI=%s | MORAI bridge %s:%s",
+            "[LBCBEV] ROS_MASTER_URI=%s | data_root=%s",
             os.environ.get("ROS_MASTER_URI", "(unset)"),
-            bridge_ip,
-            bridge_port,
+            lbc_data_root(),
         )
-        ws_root = os.path.expanduser(rospy.get_param("~aim_ws_root", "~/aim_ws"))
+        ws_root = os.path.expanduser(
+            rospy.get_param("~aim_ws_root", str(asmc_ws_root()))
+        )
         self.renderer = LBCRenderer(ws_root)
-        ws = Path(os.path.expanduser(rospy.get_param("~aim_ws_root", "~/aim_ws")))
+        ws = Path(ws_root)
         self._tl_catalog = load_traffic_light_catalog(self.renderer.tl_json, vehicle_only=True)
         self._intscn_catalog = load_intscn_traffic_light_map(
             ws / "R_KR_PG_KATRI/synced_traffic_light_set.json",
@@ -58,7 +58,7 @@ class LBCBEVCollector:
         self.ego_pose = None
         self.latest_obj = None
         self._tl_cache = TrafficLightStateCache()
-        synced = Path(os.path.expanduser(rospy.get_param("~aim_ws_root", "~/aim_ws"))) / "R_KR_PG_KATRI/synced_traffic_light_set.json"
+        synced = ws / "R_KR_PG_KATRI/synced_traffic_light_set.json"
         self._tl_cache.set_traffic_groups(
             load_intersection_traffic_groups(synced, set(self._tl_catalog.keys()))
         )
@@ -125,8 +125,11 @@ class LBCBEVCollector:
             rospy.logwarn("[LBCBEV] traffic light subscribe skipped: %s", exc)
 
     def _init_bev_save_dir(self):
-        ws_root = os.path.expanduser("~/aim_ws")
-        base_dir = os.path.join(ws_root, "src", "learning_by_cheating", "data", "bev_map")
+        base_dir = Path(
+            os.path.expanduser(
+                rospy.get_param("~data_root", str(lbc_data_root()))
+            )
+        ) / "bev_map"
         common_timestamp = os.environ.get("COMMON_TIMESTAMP")
         if common_timestamp:
             timestamp_str = common_timestamp
@@ -134,8 +137,8 @@ class LBCBEVCollector:
         else:
             timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
             rospy.logwarn("[LBCBEV] COMMON_TIMESTAMP unset, using %s", timestamp_str)
-        scenario_dir = os.path.join(base_dir, f"LBC_{timestamp_str}")
-        os.makedirs(scenario_dir, exist_ok=True)
+        scenario_dir = base_dir / f"LBC_{timestamp_str}"
+        scenario_dir.mkdir(parents=True, exist_ok=True)
         return scenario_dir
 
     def _ego_cb(self, msg):
@@ -207,15 +210,15 @@ class LBCBEVCollector:
 
         try:
             ts = stamp.secs + stamp.nsecs / 1e9
-            path = os.path.join(self.bev_save_dir, f"{ts:.6f}.npz")
+            path = self.bev_save_dir / f"{ts:.6f}.npz"
             np.savez_compressed(
                 path,
                 bev_map=birdview,
                 birdview_cropped=cropped,
             )
             if self.save_visualization and visualization is not None:
-                vis_path = os.path.join(self.bev_save_dir, f"{ts:.6f}_vis.png")
-                cv2.imwrite(vis_path, cv2.cvtColor(visualization, cv2.COLOR_RGB2BGR))
+                vis_path = self.bev_save_dir / f"{ts:.6f}_vis.png"
+                cv2.imwrite(str(vis_path), cv2.cvtColor(visualization, cv2.COLOR_RGB2BGR))
             rospy.logdebug("[LBCBEV] saved %s shape=%s", path, birdview.shape)
         except Exception as exc:
             rospy.logerr("[LBCBEV] save failed: %s", exc)

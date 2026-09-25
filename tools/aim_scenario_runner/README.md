@@ -26,7 +26,8 @@ jang `aim_scenario_runner` — MORAI gRPC 시나리오 자동화. **LBC route BE
 
 ## route BEV visualizer (선택)
 
-`config/urban_scenarios.yaml`에서 `route_bev_visualizer_enabled: true` 시 va `learning_by_cheating` visualizer를 subprocess로 띄움.  
+`config/urban_scenarios.yaml`에서 `route_bev_visualizer_enabled: true`로 설정하면
+`tools/research/lbc_teacher_bev` visualizer를 subprocess로 띄운다.
 **대회·통합 기본값은 false.** gRPC multi-TL 검증(D-09) 전에는 켜지 않는 것을 권장.
 
 ## 시뮬 검증

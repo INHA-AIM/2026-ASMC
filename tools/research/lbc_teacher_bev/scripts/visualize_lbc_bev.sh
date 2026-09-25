@@ -17,7 +17,6 @@ _ensure_scipy() {
 cd "$WS_ROOT"
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-[ -f "$MORAI_BRIDGE_ENV" ] && source "$MORAI_BRIDGE_ENV"
 export ROS_MASTER_URI="${ROS_MASTER_URI:-http://127.0.0.1:11311}"
 
 if [ -z "${DISPLAY:-}" ]; then

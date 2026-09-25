@@ -79,12 +79,12 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 │   ├── asmc_hd_map/           # HD Map builder/runtime/검수
 │   ├── asmc_perception/       # camera·BEV·lane·traffic runtime + offline/training
 │   ├── lane_boundary_adapter/ # read-only perception→planning adapter
-│   ├── learning_by_cheating/  # legacy LBC research; runtime 참조 제거 후 정리
 │   ├── data_collection/        # Capture GT · mask · dataset ✅
 │   ├── lidar+sensorfusion/     # 독립 nested LiDAR/fusion workspace
 │   └── MORAI-ROS_morai_msgs/  # submodule beta_drive
 ├── tools/
 │   ├── aim_scenario_runner/   # scenario ✅
+│   ├── research/lbc_teacher_bev/ # privileged GT/teacher BEV 연구 도구
 │   └── grpc_inha_univ/        # gRPC ✅
 ├── scripts/
 │   ├── rosbridge.sh           # 종료된 direct ROS 실험 재현용(본선/현재 개발 금지)

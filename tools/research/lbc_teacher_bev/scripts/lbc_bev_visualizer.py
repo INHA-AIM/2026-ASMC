@@ -51,6 +51,7 @@ from lbc_bev.static_layers import (
     filter_dynamic_states_to_bev,
     world_points_to_bev_pixels,
 )
+from lbc_bev.ws_root import asmc_ws_root, lbc_data_root
 
 PUBLISH_HZ = 10.0
 DEFAULT_TL_TOPICS = (
@@ -85,14 +86,18 @@ class LBCBEVVisualizer:
             os.path.expanduser(
                 rospy.get_param(
                     "~snapshot_dir",
-                    "~/aim_ws/src/learning_by_cheating/data/diag/live",
+                    str(lbc_data_root() / "diag" / "live"),
                 )
             )
         )
 
         rospy.loginfo("[LBCBEV-Viz] ROS_MASTER_URI=%s", os.environ.get("ROS_MASTER_URI", "(unset)"))
 
-        ws_root = Path(os.path.expanduser(rospy.get_param("~aim_ws_root", "~/aim_ws")))
+        ws_root = Path(
+            os.path.expanduser(
+                rospy.get_param("~aim_ws_root", str(asmc_ws_root()))
+            )
+        )
         rospy.loginfo("[LBCBEV-Viz] Loading HD map (~3s)...")
         t0 = time.time()
         self.renderer = LBCRenderer(ws_root, pixels_ahead=self._pixels_ahead)

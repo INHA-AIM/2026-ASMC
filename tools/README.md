@@ -8,6 +8,7 @@ catkin이 아닌 **Python·gRPC·시나리오** 도구.
 | `grpc_inha_univ/` | 장원태 | `run_mode.sh`, `src/api/morai_sim_client.py` |
 | `audit/` | 통합 회귀·계약 기준 | `build_runtime_baseline.py`, `build_perception_runtime_baseline.py`, `validate_p1b_contract.py`, `validate_perception_contract.py`, `validate_bridge_profiles.py` |
 | `bridge/` | MORAI release template에서 transport별 import 생성 | `render_morai_network_profiles.py --write\|--check` |
+| `research/lbc_teacher_bev/` | privileged MORAI state 기반 GT/teacher BEV 연구 도구 | `scripts/visualize_lbc_bev.sh`, `scripts/collect_lbc_bev.sh` |
 
 설정: `aim_scenario_runner/config/runtime.yaml` (gRPC host)  
 담당과 리뷰 경계: [팀 ownership](../docs/onboarding/ownership.md)

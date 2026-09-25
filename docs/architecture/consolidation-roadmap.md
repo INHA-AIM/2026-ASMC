@@ -51,13 +51,14 @@ Phase 5 범위다.
 | `lidar+sensorfusion/src/Main` | 라이다 팀원이 개발 중인 nested workspace | handoff 전까지 위치·내부 `Msg`/`morai_msgs`를 그대로 유지 |
 | `data_collection` | recorder·bag profile·replay와 dataset 도구 | 독립 package로 유지하고 내부 runtime/offline 경계만 정리 |
 | `src/learning` | README 1개뿐이던 빈 논리 폴더 | P4-C6에서 문서 이관 후 삭제 완료 |
-| `src/learning_by_cheating` | catkin 패키지는 아니나 38개 tracked file과 실행 참조가 남음 | 즉시 삭제 금지. 유효 참조 제거 후 git 이력에만 보존하고 삭제 |
+| `src/learning_by_cheating` | runtime·구 3-channel 학습·teacher BEV가 혼재했던 비-catkin 폴더 | 사용 중인 7-channel teacher BEV만 `tools/research/lbc_teacher_bev` 이관, 나머지는 Git 이력으로 보존 |
 | `src/lidar+sensorfusion` 내부 `build/`, `devel/` | 중첩 workspace 산출물 | source 이식 확인 후 로컬 산출물 제거·ignore 강화 |
 
-`learning_by_cheating`은 현재 배포 경로의 필수 패키지는 아니지만 바로 삭제할 수는 없다.
-`tools/aim_scenario_runner`가 LBC visualizer를 실행하고, 진단 스크립트와 여러 문서가 경로를
-직접 참조한다. `lbc_bev`의 map crop/renderer 기능이 새 HD Map·BEV 코드로 대체됐는지 테스트한
-후 삭제해야 한다. 비어 있던 `src/learning`은 P4-C6에서 제거했다.
+`learning_by_cheating`은 production runtime이 아니라 privileged simulator state로 GT/teacher
+BEV를 만드는 연구 도구였다. 실제 사용 중이던 renderer·scenario visualizer·collector·진단만
+`tools/research/lbc_teacher_bev`로 이관했다. 7-channel collector와 호환되지 않던
+3-channel PA 학습기, 미검증 제어 prototype와 빈 파일은 Git 이력으로만 보존한다.
+비어 있던 `src/learning`도 P4-C6에서 제거했다.
 
 ## 3. 목표 디렉터리
 
@@ -378,9 +379,9 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
 - train/eval/bake/curation 스크립트는 `tools/perception`으로 옮긴다.
 - `Msg/TrackedObject*`의 실제 consumer를 `asmc_msgs`로 바꾼 뒤 중복 `Msg` 패키지를 제거한다.
 - 중복 `lidar+sensorfusion/src/morai_msgs`를 제거하고 pinned submodule 하나만 사용한다.
-- LBC visualizer를 새 HD Map/BEV debug node로 교체하고 scenario runner·문서·진단 스크립트의
-  참조가 0이 된 뒤 `src/learning`과 `src/learning_by_cheating`을 삭제한다. 별도 `legacy/`
-  폴더로 다시 복사하지 않고 git tag/이력으로 보존한다.
+- **완료:** LBC teacher BEV는 `tools/research/lbc_teacher_bev`로 경계를 옮기고
+  scenario runner·문서·진단 참조를 갱신했다. `src/learning*`는 제거했고 구 코드는
+  별도 `legacy/` 복사 없이 Git 이력으로만 보존한다.
 
 ### 6.4 스크립트와 시각화
 
@@ -397,8 +398,10 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
 ```
 
 기존 30개 스크립트는 `container`, `runtime`, `data`, `train/eval`, `diagnostic`으로 분류한다.
-package node는 각 package `scripts/`, offline job은 `tools/`, 사용 중단된 rosbridge/LBC 경로는
-호환 기간 뒤 삭제한다. 기존 명령은 한 단계 동안 deprecation warning을 내는 wrapper로만 둔다.
+package node는 각 package `scripts/`, offline·research job은 `tools/`에 둔다.
+LBC teacher BEV는 `tools/research/lbc_teacher_bev`로 이관했고, 사용 중단된 direct rosbridge
+경로만 호환 기간 뒤 삭제한다. 기존 명령은 한 단계 동안 deprecation warning을 내는
+wrapper로만 둔다.
 
 시각화는 먼저 RViz/rqt에 통합한다. raw PV, semantic result, metric BEV, lane fitting, HD Map
 lane/area, checkpoint 3 m radius, active mission, topic rate/staleness를 한 launch로 확인한다.
@@ -485,7 +488,7 @@ diagnostics 이름은 소비자 호환을 위해 유지한다.
 | 제거 대상 | 선행 조건 |
 |---|---|
 | `src/learning` | **P4-C6 제거 완료:** placeholder 문서 참조를 현재 경로로 이관 |
-| `src/learning_by_cheating` | scenario runner·진단·문서 참조 0, BEV/map 기능 parity |
+| `src/learning_by_cheating` | **제거 완료:** 필요 기능을 `tools/research/lbc_teacher_bev`로 이관하고 scenario/debug 참조 전환 |
 | `src/asmc_hd_map/development/won_tae_link_node` | H5 provenance를 외부 immutable artifact로 보관하고 compact map 재생성 parity 통과 |
 | `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`, `integration_launch` | P3-E local live·Ctrl·bag replay 통과 후 P3-F에서 제거 완료; LAN2LAN은 별도 Phase 6 gate |
 | `camera_semantic_perception`, `drivable_bev`, `traffic_light` | **P4-C6 제거 완료:** 새 launch topic/latency/output parity와 model/config SHA 통과 |

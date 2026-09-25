@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 # shellcheck source=lbc_env.sh
 source "$SCRIPT_DIR/lbc_env.sh"
-OUT_DIR="$LBC_DIR/data/diag/live"
+OUT_DIR="$LBC_DATA_ROOT/diag/live"
 WAIT_SEC="${1:-30}"
 
 cd "$WS_ROOT"

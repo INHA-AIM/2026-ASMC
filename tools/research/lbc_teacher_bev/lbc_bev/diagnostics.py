@@ -8,9 +8,11 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import List, Optional
 
 import numpy as np
+
+from .ws_root import asmc_ws_root
 
 Lines = List[str]
 
@@ -41,8 +43,7 @@ def collect_env_lines() -> Lines:
     for key in (
         "ROS_MASTER_URI",
         "ROS_IP",
-        "MORAI_BRIDGE_IP",
-        "MORAI_BRIDGE_PORT",
+        "ASMC_DATA",
         "DISPLAY",
         "PYTHONPATH",
     ):
@@ -58,24 +59,12 @@ def collect_ros_lines(timeout_sec: float = 3.0) -> Lines:
 
     listing = _run(["rostopic", "list"], timeout=timeout_sec).strip()
     if not listing or "ERROR" in listing:
-        lines.append("[FAIL] rostopic list — is roscore running? (./bridge.sh)")
+        lines.append("[FAIL] rostopic list — is roscore/asmc_bridge running?")
         return lines
 
     lines.append("[OK] roscore reachable")
     topics = [t.strip() for t in listing.splitlines() if t.strip().startswith("/")]
     lines.append(f"topic count     : {len(topics)}")
-
-    lines.append("")
-    lines.append("--- rosbridge /connected_clients ---")
-    clients = _run(
-        ["bash", "-lc", f"timeout {int(timeout_sec)} rostopic echo /connected_clients -n 1"],
-        timeout=timeout_sec + 2,
-    ).strip()
-    lines.append(clients or "(no data)")
-    if "clients: []" in clients:
-        lines.append("[FAIL] MORAI WebSocket not connected to rosbridge")
-    elif "clients:" in clients:
-        lines.append("[OK] rosbridge has client(s)")
 
     morai_expected = (
         "/Ego_topic",
@@ -211,45 +200,26 @@ def collect_render_lines(ws_root: Path, ego_xyz: Optional[tuple]) -> Lines:
     return lines
 
 
-def collect_network_lines() -> Lines:
-    lines = _section("6. Network (port 9090)")
-    ss = _run(["bash", "-lc", "ss -tln 2>/dev/null | grep 9090 || netstat -tln 2>/dev/null | grep 9090"])
-    if "9090" in ss:
-        lines.append("[OK] port 9090 listening")
-        lines.append(ss.strip())
-    else:
-        lines.append("[FAIL] port 9090 not listening — run ./bridge.sh")
-    return lines
-
-
 def build_report(
     ws_root: Optional[Path] = None,
     ego_timeout: float = 5.0,
 ) -> str:
-    ws = Path(ws_root or os.path.expanduser("~/aim_ws"))
+    ws = Path(ws_root or asmc_ws_root())
     all_lines: Lines = []
     all_lines.append("LBC BEV + MORAI Diagnostic Report")
     all_lines.append("(send this file to your mentor / agent)")
     all_lines.extend(collect_env_lines())
-    all_lines.extend(collect_network_lines())
     all_lines.extend(collect_ros_lines())
     ego_lines, ego = collect_ego_sample(ego_timeout)
     all_lines.extend(ego_lines)
     all_lines.extend(collect_map_lines(ws))
     all_lines.extend(collect_render_lines(ws, ego))
 
-    all_lines.extend(_section("7. Windows MORAI + Docker Desktop"))
-    all_lines.append("  192.168.65.x is Docker VM internal — NOT reachable from Windows PowerShell.")
-    all_lines.append("  PowerShell: Test-NetConnection 127.0.0.1 -Port 9090")
-    all_lines.append("  Or WSL IP: wsl hostname -I  then Test-NetConnection <ip> -Port 9090")
-    all_lines.append("  Fix: docker-compose -f docker-compose.pc.morai-ports.yaml (see show_morai_bridge_ip.sh)")
-    all_lines.extend(_section("8. Next steps for RViz"))
-    all_lines.append("  1) Terminal A: cd ~/aim_ws && ./bridge.sh")
-    all_lines.append("  2) MORAI: Bridge IP per show_morai_bridge_ip.sh, PORT 9090, both tabs Connected")
-    all_lines.append("  3) MORAI: Play -> Connect BOTH tabs")
-    all_lines.append("  4) ./diagnose_morai_bridge.sh  (clients not [])")
-    all_lines.append("  5) cd src/learning_by_cheating && python3 scripts/lbc_bev_diagnose.py")
-    all_lines.append("  6) ./scripts/start_lbc_rviz.sh")
+    all_lines.extend(_section("6. Next steps for visualization"))
+    all_lines.append("  1) Terminal A: cd /root/ws && ./scripts/udp_bridge.sh")
+    all_lines.append("  2) MORAI: Play and connect the configured UDP Network/Sensor entries")
+    all_lines.append("  3) Confirm /Ego_topic and /Object_topic above")
+    all_lines.append("  4) tools/research/lbc_teacher_bev/scripts/visualize_lbc_bev_rviz.sh")
     all_lines.append("  RViz: Add Image -> /lbc_bev/image_full or use config/lbc_bev.rviz")
     return "\n".join(all_lines) + "\n"
 

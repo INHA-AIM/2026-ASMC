@@ -26,8 +26,8 @@
 /src/asmc_perception/                  @sonshiny @ahnsh03
 /src/lidar+sensorfusion/               @sonshiny @ahnsh03
 
-# Legacy LBC path remains owned until its runtime references are replaced
-/src/learning_by_cheating/             @ahnsh03
+# Privileged simulator teacher/research tools (not production runtime)
+/tools/research/lbc_teacher_bev/       @ahnsh03
 
 # Scenario, gRPC and evaluation tools
 /tools/aim_scenario_runner/            @wkddnjsxo

@@ -185,7 +185,8 @@ P4-A 기준선은 완료됐다. 기계 정본은
 6. nested `Msg` consumer를 `asmc_msgs`로, 중복 `morai_msgs`를 pinned submodule로 전환한다.
 7. **완료:** 학습 adapter와 offline BEV 분석을 `asmc_perception`의 명시적 비-runtime 경계로 옮기고 import 경계를 시험한다.
 8. **완료:** planning adapter와 simulator smoke, package reference gate 후 기존 camera/BEV/traffic package를 제거한다.
-9. `learning_by_cheating`은 아직 scenario/debug 참조가 있으므로 대체 경로 확인 뒤 별도 정리한다.
+9. **완료:** `learning_by_cheating`의 production과 무관한 privileged teacher/debug 기능만
+   `tools/research/lbc_teacher_bev`로 이관하고 구 학습·제어 prototype을 제거했다.
 
 Vendor Velodyne driver는 팀 인지 runtime과 같은 package로 합치지 않는다. 단일 package라는 목표가
 실패 경계와 upstream ownership을 없앤다는 뜻은 아니다.

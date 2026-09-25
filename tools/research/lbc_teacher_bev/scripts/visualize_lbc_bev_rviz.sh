@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 # shellcheck source=lbc_env.sh
 source "$SCRIPT_DIR/lbc_env.sh"
-RVIZ_CFG="$LBC_DIR/config/lbc_bev.rviz"
+RVIZ_CFG="$LBC_TOOL_ROOT/config/lbc_bev.rviz"
 WAIT_SEC="${1:-120}"
 VIEWER="${VIEWER:-none}"
 LAUNCH_GUI="${LAUNCH_GUI:-1}"
@@ -20,7 +20,6 @@ _ensure_scipy() {
 cd "$WS_ROOT"
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-[ -f "$MORAI_BRIDGE_ENV" ] && source "$MORAI_BRIDGE_ENV"
 export ROS_MASTER_URI="${ROS_MASTER_URI:-http://127.0.0.1:11311}"
 
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp/runtime-root}"
@@ -33,7 +32,7 @@ _ensure_scipy
 echo "=============================================="
 echo " LBC BEV (official colors, no ego marker)"
 echo "=============================================="
-echo "  No GUI: ./scripts/start_lbc_snapshot.sh"
+echo "  No GUI: ./scripts/snapshot_lbc_bev.sh"
 echo "  VIEWER=rviz|rqt|none"
 echo "=============================================="
 

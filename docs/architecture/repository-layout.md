@@ -83,11 +83,11 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 현재 bridge 구조와 Phase 3 이관 결과는 [MORAI bridge guide](../packages/asmc_bridge/README.md)를
 따른다. P3-F에서 하위 node와 공동 launch를 `src/asmc_bridge/`로 물리 통합했다.
 
-### learning (✅ PR #2)
+### LBC teacher BEV research
 
 | 경로 | 담당 | GitHub |
 |------|------|--------|
-| `src/learning_by_cheating/` | 안승현 | @ahnsh03 |
+| `tools/research/lbc_teacher_bev/` | privileged GT/teacher BEV renderer·scenario debug | @ahnsh03 |
 | `scripts/rosbridge.sh`, `config/morai_rosbridge.env` | 종료된 direct ROS 실험 보존 | @ahnsh03 |
 | `mgeo_toolkit/`, `R_KR_PG_KATRI/` | 안승현 | @ahnsh03 |
 
@@ -130,7 +130,7 @@ package는 Git history를 남기고 제거했다.
 | `src/mpc_controller/` | ✅ | ✅ | 👀 | 👀 | — | — |
 | `src/frenet_planner/` | 👀 | 👀 | ✅ | 👀 | — | — |
 | `src/asmc_bridge/` | 👀 | 👀 | ✅ | ✅ | — | 👀 |
-| `src/learning_by_cheating/` | — | — | — | ✅ | — | — |
+| `tools/research/lbc_teacher_bev/` | — | — | — | ✅ | — | — |
 | `scripts/rosbridge.sh` | 👀 | 👀 | 👀 | ✅ | — | — |
 | `scripts/udp_bridge.sh` · `src/asmc_bridge/` | 👀 | 👀 | ✅ | ✅ | — | 👀 |
 | `tools/aim_scenario_runner/` | — | — | — | 👀 | ✅ | 👀 |
@@ -170,7 +170,7 @@ CODEOWNERS 자동 리뷰: [.github/CODEOWNERS](../../.github/CODEOWNERS)
 | LiDAR/3D perception | `src/lidar+sensorfusion/` |
 | 공통 BEV | camera v3는 `src/asmc_perception/`; 전역 map/LiDAR 결합 규격은 합의 중 |
 | Capture·dataset | `src/data_collection/`, `scripts/*perception*`, `scripts/*twinlite*` |
-| SA_plan / LBC | `src/learning_by_cheating/` |
+| LBC GT/teacher BEV | `tools/research/lbc_teacher_bev/` |
 | Scenario / gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` |
 | Bridge | `scripts/udp_bridge.sh` (현행 UDP) · `scripts/rosbridge.sh` (종료된 direct ROS 실험 재현용) |
 

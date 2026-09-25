@@ -75,7 +75,7 @@ done
 
 if rostopic list 2>/dev/null | grep -F "/Ego_topic" >/dev/null; then
   echo ""
-  echo "Ready: ./src/learning_by_cheating/scripts/start_lbc_morai.sh"
+  echo "Ready: ./tools/research/lbc_teacher_bev/scripts/collect_lbc_bev.sh"
   exit 0
 fi
 echo ""

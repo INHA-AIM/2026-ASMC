@@ -42,7 +42,7 @@
 | `asmc_hd_map` | 2단계 완료. 운영 map과 global/local topic 사용 |
 | `asmc_bridge` | 3단계 예정. [현재 세 bridge/state 패키지와 이관 gate](../packages/asmc_bridge/README.md)를 검증 후 통합 |
 | `asmc_perception` | P4-C6 camera/BEV/lane/traffic runtime·offline·training 통합과 기존 package closeout 완료. `data_collection`은 독립 package이며 팀원 개발 중인 `src/lidar+sensorfusion`은 handoff 전 변경 금지 |
-| `learning*` 정리 | 빈 `src/learning` 제거 완료. `learning_by_cheating`은 scenario/debug 참조 대체 후 별도 정리 |
+| `learning*` 정리 | 완료. LBC teacher/debug 필요 기능만 `tools/research/lbc_teacher_bev` 이관 |
 | 단일 실행·시각화 | 5단계 예정 |
 | LAN2LAN 현장 리허설 | 6단계 예정 |
 

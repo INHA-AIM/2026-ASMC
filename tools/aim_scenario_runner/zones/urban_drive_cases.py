@@ -498,7 +498,7 @@ class UrbanRouteDriveCase(ScenarioBase):
         }
 
     def export_route_bev_route(self):
-        if not self.cfg.get("route_bev_visualizer_enabled", True):
+        if not self.cfg.get("route_bev_visualizer_enabled", False):
             return
 
         route_json = self.route_bev_route_json_path()
@@ -623,7 +623,7 @@ class UrbanRouteDriveCase(ScenarioBase):
         self.scene_collection_name = None
 
     def ensure_route_bev_visualizer(self):
-        if not self.cfg.get("route_bev_visualizer_enabled", True):
+        if not self.cfg.get("route_bev_visualizer_enabled", False):
             return
 
         if getattr(self, "route_bev_visualizer", None) is None:
