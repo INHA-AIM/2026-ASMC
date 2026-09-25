@@ -1,6 +1,6 @@
 # Perception runtime topic contract v1
 
-> **상태:** Frozen additive interface; P4-C5 runtime ownership·bag parity와 MORAI 차량 loop 검수 완료
+> **상태:** Frozen additive interface; P4-C6 package closeout, bag parity와 MORAI 차량 loop 검수 완료
 > **기계 정본:** `config/contracts/perception_runtime_topic_contract_v1.yaml`
 > **실행 façade:** `src/asmc_perception/launch/perception.launch`
 
@@ -11,7 +11,9 @@
 `behavior_node`를 사용한 `GREEN→KEEP→RED→STOP→GREEN→KEEP` 판단 loop를 고정하고, 별도 opt-in
 시험으로 Frenet/MPC/UDP와 실제 MORAI 차량 정지·재출발까지 확인했다. P4-C5에서 camera/BEV/lane
 runtime support와 config 소유권을 `asmc_perception`으로 옮기고 representative bag의
-canonical/compatibility payload parity를 통과했다. LiDAR canonical
+canonical/compatibility payload parity를 통과했다. P4-C6에서 offline·training·model
+자산까지 `asmc_perception`으로 이관하고 구 camera/BEV/traffic package를 제거했지만,
+topic·node·message 계약은 그대로 유지했다. LiDAR canonical
 topic은 여전히 **발행된다고 가정하면 안 되며** 기계 정본의
 `producer_status`가 실제 producer 상태의 권위다.
 

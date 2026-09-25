@@ -96,6 +96,16 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 
 팀원별 **어느 폴더를 고칠지:** [docs/onboarding/ownership.md](docs/onboarding/ownership.md)
 
+### Perception 경로 안내
+
+P4-C6부터 camera semantic, camera BEV/lane, traffic-light의 실행·offline·학습
+정본은 모두 `src/asmc_perception/`이다. 기존
+`camera_semantic_perception`, `drivable_bev`, `traffic_light`, `src/perception/` 경로는
+제거했으며 topic과 node 이름은 호환성을 위해 유지했다. 실행은
+`./scripts/perception.sh`, 세부 경로와 인수 경계는
+[Perception package README](src/asmc_perception/README.md)를 따른다. `src/data_collection/`과
+`src/lidar+sensorfusion/`은 독립 경계로 남아 있다.
+
 ## Git과 PR
 
 - 최신 `main`에서 짧은 브랜치를 만든다.

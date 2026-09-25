@@ -369,16 +369,21 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
 
 ### 6.3 `asmc_perception`과 `learning*` 정리
 
-현재 분산 package와 문서·runtime 경계의 상세 인벤토리는
-[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. 이 절은 Phase 4
-목표이며 `asmc_perception` package가 이미 존재하거나 기존 package를 지금 삭제한다는 뜻이 아니다.
+현재 package와 문서·runtime 경계의 상세 인벤토리는
+[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. P4-C6에서 camera
+semantic, metric BEV/lane family, traffic light의 runtime·offline·training을
+`asmc_perception`으로 물리 통합했고 구 package를 제거했다. topic과 node 이름은
+호환성을 위해 유지한다.
 
-- camera semantic, metric BEV/lane family, traffic light, LiDAR runtime, fusion을 하위 Python/C++
-  namespace로 이식한다.
-- model weight는 repo 밖 artifact로 유지하고 package에는 manifest/SHA/config만 둔다.
-- train/eval/bake/curation 스크립트는 `tools/perception`으로 옮긴다.
-- `Msg/TrackedObject*`의 실제 consumer를 `asmc_msgs`로 바꾼 뒤 중복 `Msg` 패키지를 제거한다.
-- 중복 `lidar+sensorfusion/src/morai_msgs`를 제거하고 pinned submodule 하나만 사용한다.
+- **완료:** camera semantic, metric BEV/lane family, traffic light를 하위 Python
+  namespace와 하나의 ROS package로 이식했다.
+- model weight, manifest/SHA/config의 현재 배치는
+  [`asmc_perception` README](../../src/asmc_perception/README.md)를 따른다.
+- **완료:** train/eval adapter는 `asmc_perception/training`, offline BEV audit은
+  `asmc_perception/offline`으로 구분해 이식했다.
+- **P4-D 보류:** `src/lidar+sensorfusion/`은 팀원의 미완성 nested workspace로 유지한다.
+  handoff 전에 `Msg/TrackedObject*`, 중복 `morai_msgs`, vendor driver를 임의로 옮기거나
+  삭제하지 않는다.
 - **완료:** LBC teacher BEV는 `tools/research/lbc_teacher_bev`로 경계를 옮기고
   scenario runner·문서·진단 참조를 갱신했다. `src/learning*`는 제거했고 구 코드는
   별도 `legacy/` 복사 없이 Git 이력으로만 보존한다.

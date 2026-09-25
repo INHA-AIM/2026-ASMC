@@ -1,7 +1,7 @@
 <launch>
-  <!-- P4-C5 runtime entrypoint. Camera/BEV/lane and traffic-light implementation,
-       support modules and runtime config are owned here. Topics/nodes are unchanged.
-       LiDAR/fusion and data collection remain independent packages. -->
+  <!-- P4-C6 canonical entrypoint. Camera/BEV/lane and traffic-light runtime,
+       offline/training support, models and config are owned by asmc_perception.
+       Topics/nodes are unchanged; LiDAR/fusion and data collection remain independent. -->
   <arg name="start_camera_lane" default="true"/>
   <arg name="start_traffic_light" default="false"/>
   <arg name="start_visualization" default="false"/>

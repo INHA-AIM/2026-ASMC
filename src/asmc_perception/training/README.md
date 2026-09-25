@@ -311,7 +311,8 @@ live 추론과 시각화 기본값은 v5 B binary 모델을 유지한다.
 
 ## live 패키지와의 경계
 
-이 모듈은 TwinLiteNet+ 전용 model/checkpoint/output adapter를 제공한다. 다음에 만들
-`camera_semantic_perception` ROS 패키지는 영상 구독, view 선택, latest-only buffer,
-성능계측과 표준 probability topic을 담당한다. 모델을 교체할 때 ROS node를 다시 쓰지 않고
-backend adapter만 추가하는 구조를 사용한다.
+이 모듈은 TwinLiteNet+ 전용 model/checkpoint/output adapter를 제공한다. ROS runtime은
+`asmc_perception.camera`와 `src/asmc_perception/scripts/camera_semantic_node.py`가 영상 구독,
+view 선택, latest-only buffer, 성능 계측과 표준 probability topic을 담당한다.
+모델을 교체할 때 ROS node를 다시 쓰지 않고 backend adapter만 추가하는 구조는
+통합 후에도 유지한다.

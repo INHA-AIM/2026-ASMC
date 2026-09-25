@@ -477,7 +477,7 @@ runtime:
 |---|---|---|
 | 래스터 도로 마스크 | `src/link_node/out/road_mask.png` | 5 px/m = 0.2 m/cell, map frame |
 | 벡터 차로·주행영역 | `/hd_map/global/*` (`asmc_msgs/DrivableArea`, `Lane`) | map frame 폴리곤 |
-| 카메라 BEV 주행가능확률 | `drivable_bev` 융합 출력 | base_link, 0.1 m/cell |
+| 카메라 BEV 주행가능확률 | `asmc_perception` 정본 `/perception/bev/camera/drivable_probability` | base_link, 0.1 m/cell |
 | 차선 경계 | `/perception/lane/boundaries`, `boundary_family` | 음영구간 포함 |
 
 **제안 구조.** `Roi()` 내부에서 점 단위 마스크 조회를 수행한다.
@@ -1327,7 +1327,8 @@ ego yaw 보정 문제이고, 속도에 비례해 커지면 상대속도 차분 �
 7. **`vehicle_state`의 GPS/IMU 경로 품질.** 6.5 변경 1(map frame 추적)과 6.0.5(관측 지평)
    둘 다 측위에 의존한다. 음영구간 드리프트를 먼저 계측해야 두 항목의 설계가 정해진다.
 8. **관측 지평을 LiDAR만으로 계산할지, 카메라 BEV coverage와 합칠지.**
-   `drivable_bev`가 이미 카메라별 coverage를 산출한다. 합치면 음영구간에서 더 멀리 보지만
+   `asmc_perception` camera BEV runtime이 카메라별 coverage를 산출한다. 합치면
+   음영구간에서 더 멀리 보지만
    계약이 커진다. 6.0.5 합의 시 함께 결정한다.
 
 ---

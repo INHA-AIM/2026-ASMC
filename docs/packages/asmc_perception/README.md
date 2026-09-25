@@ -41,7 +41,7 @@ proposal, 날짜별 record 순으로 판단한다. roadmap의 과거 `candidate`
 | traffic-light runtime·model | `src/asmc_perception/` | canonical producer와 `models/traffic_light/best.pt`; legacy String topic 병행 |
 | recorder·bag profile·replay·Capture·dataset | `src/data_collection/` | 인지 runtime과 분리한 데이터 수집 package |
 | 정적 도로·mission context | `src/asmc_hd_map/` | 완성된 별도 package, `/hd_map/*`를 통해 소비 |
-| 통합 `asmc_perception` | `src/asmc_perception/` | P4-C5 단일 launch와 camera/BEV/lane/traffic runtime 소유 |
+| 통합 `asmc_perception` | `src/asmc_perception/` | P4-C6 단일 launch와 camera/BEV/lane/traffic runtime·offline·training 소유 |
 
 현재 경로를 목표 경로처럼 부르거나 먼저 삭제하지 않는다. 특히 `src/lidar+sensorfusion/`에는
 `Main`, 중복 `Msg`·`morai_msgs`와 vendor Velodyne package가 함께 있으므로 한 번에 이동할 수

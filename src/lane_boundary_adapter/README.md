@@ -219,7 +219,7 @@ bag replay에서는 `/use_sim_time=true`와 `rosbag play --clock`을 사용해�
 ### 2026-09-12 최초 typed smoke
 
 - C++ core: 12개 geometry/contract 단위 테스트 통과
-- typed producer를 포함한 `drivable_bev`: 80개 테스트 통과
+- 당시 구 `drivable_bev` typed producer: 80개 테스트 통과
 - launch smoke: 3개 경계에서 2개 strip, y=0을 포함한 strip index 1 생성 확인
 - 실제 Foggy 11시 `shadow_clear` typed smoke bag 1배속 replay:
   - bag 기록 240 frame, 마지막 측정에서 subscriber 239 frame 수신

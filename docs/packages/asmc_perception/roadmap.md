@@ -18,6 +18,19 @@
 > package README·동결 contract가 우선한다. 과거 분석은 삭제하거나 최신 상태로 재작성하지
 > 않았다.
 
+### 현재 경로 대응표
+
+본문의 옛 경로는 당시 판단과 수치를 보존하기 위한 역사 기록이다. 새 코드나
+실행 명령에 그대로 복사하지 말고 아래 현재 경로를 사용한다.
+
+| 과거 표기 | 현재 위치·처리 |
+|---|---|
+| `camera_semantic_perception`, `drivable_bev`, `traffic_light`, `src/perception/` | `src/asmc_perception/` runtime·offline·training으로 통합 |
+| `learning_by_cheating` teacher/debug | `tools/research/lbc_teacher_bev/` |
+| `src/perception/morai_3d_detection/` | 미사용으로 제거; 필요할 때만 Git history에서 조회 |
+| `src/data_collection/` | 독립 recorder·dataset package로 유지 |
+| `src/lidar+sensorfusion/` | 팀원 개발 중인 독립 nested workspace로 유지 |
+
 ### 제안·구현 출처와 현재 통합 기준
 
 이 문서의 전체 우선순위와 파트 경계는 **안승현의 현행 통합안**을 기준으로 정리했다.
