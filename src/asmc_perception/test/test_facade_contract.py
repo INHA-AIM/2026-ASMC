@@ -415,6 +415,11 @@ class PerceptionFacadeContractTest(unittest.TestCase):
                 for item in launch.findall("arg")
             }
             self.assertEqual(expected, arguments["traffic_light_checkpoint"], name)
+            self.assertEqual(
+                "false",
+                arguments["traffic_light"],
+                name + " must not start a duplicate perception producer",
+            )
 
         package = ET.parse(behavior_root / "package.xml").getroot()
         dependencies = {

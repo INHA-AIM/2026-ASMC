@@ -2,7 +2,9 @@
   <!-- Obstacle-free KEEP E2E based on keep_morai_no_obstacles.launch. -->
   <arg name="state_source" default="gps_imu" doc="gps_imu or ego_dev"/>
   <arg name="dashboard" default="false"/>
-  <arg name="traffic_light" default="true"/>
+  <!-- Perception owns the canonical producer. Keep this compatibility include
+       opt-in so starting the planning chain cannot create a second publisher. -->
+  <arg name="traffic_light" default="false"/>
   <arg name="traffic_light_device" default="auto"/>
   <arg name="camera_topic" default="/cam_extra/image_jpeg/compressed"/>
   <arg name="traffic_light_checkpoint"

@@ -54,6 +54,50 @@ class PerceptionRuntimeAcceptanceTest(unittest.TestCase):
         self.assertEqual(8, result["static_binding_count"])
         self.assertEqual(2, result["optional_consumer_gate_count"])
         self.assertEqual(2, result["deferred_topic_count"])
+        self.assertEqual(3, result["p5_closeout"]["phase_count"])
+        self.assertEqual(2, result["p5_closeout"]["consumer_count"])
+        self.assertEqual(
+            293,
+            result["p5_closeout"]["representative_lane_family_messages"],
+        )
+
+    def test_p5_handoff_keeps_typed_inputs_authoritative(self):
+        handoff = self.contract["consumer_handoff"]
+        self.assertEqual(
+            "typed_authoritative_after_first_message",
+            handoff["traffic_light"]["selection_policy"],
+        )
+        self.assertFalse(
+            handoff["traffic_light"][
+                "planning_launch_starts_producer_by_default"
+            ]
+        )
+        self.assertEqual(
+            "typed_family", handoff["lane_family"]["planning_input"]
+        )
+        self.assertFalse(handoff["lane_family"]["debug_is_planning_input"])
+
+    def test_incomplete_p5_phase_cannot_claim_closeout(self):
+        broken = copy.deepcopy(self.contract)
+        broken["phase_status"]["p5e_operational_closeout"] = "in_progress"
+        with self.assertRaises(AcceptanceContractError):
+            self.validate_copy(broken)
+
+    def test_debug_marker_cannot_be_promoted_to_planning_input(self):
+        broken = copy.deepcopy(self.contract)
+        broken["consumer_handoff"]["lane_family"][
+            "debug_is_planning_input"
+        ] = True
+        with self.assertRaises(AcceptanceContractError):
+            self.validate_copy(broken)
+
+    def test_operational_command_drift_fails_closeout(self):
+        broken = copy.deepcopy(self.contract)
+        broken["operational_closeout"]["commands"]["perception"] = (
+            "./scripts/perception.sh"
+        )
+        with self.assertRaises(AcceptanceContractError):
+            self.validate_copy(broken)
 
     def test_internal_transport_and_canonical_outputs_are_required(self):
         topics = {

@@ -4,6 +4,58 @@ status: active
 default_duration_sec: 15.0
 views: [front, left, right]
 
+phase_status:
+  p5c_runtime_acceptance: complete
+  p5d_consumer_handoff: complete
+  p5e_operational_closeout: complete
+  next_development: lidar_fusion_baseline
+
+consumer_handoff:
+  traffic_light:
+    producer_owner: asmc_perception
+    canonical_topic: /perception/traffic_light/detection
+    compatibility_topic: /traffic_light/state
+    consumer_node: /behavior_planner
+    selection_policy: typed_authoritative_after_first_message
+    invalid_or_stale_policy: unknown_without_legacy_fallback
+    planning_launch_starts_producer_by_default: false
+    compatibility_retirement: deferred_until_all_consumers_are_typed
+    evidence:
+      - config/baselines/perception_traffic_light_parity_v1.yaml
+      - config/baselines/perception_traffic_light_closed_loop_v1.yaml
+      - config/baselines/perception_traffic_light_vehicle_closed_loop_v1.yaml
+  lane_family:
+    producer_owner: asmc_perception
+    canonical_topic: /perception/lane/boundary_family
+    compatibility_topic: /perception/lane/boundary_observations
+    reference_consumer_node: /boundary_family_monitor
+    planning_input: typed_family
+    debug_topic: /planning/debug/lane_boundary_family/strips
+    debug_is_planning_input: false
+    compatibility_enabled_by_default: false
+    adapter_retirement_owner: planning
+    evidence:
+      - config/baselines/runtime_baseline_v1.yaml
+      - src/data_collection/config/bag_profiles/shadow_camera_perception_handoff_result.yaml
+      - src/data_collection/config/bag_profiles/shadow_boundary_family_adapter_result.yaml
+
+operational_closeout:
+  runtime_inference_container: asmc-ros-noetic
+  training_container: asmc-perception-train
+  bridge_process_policy: separate_foreground_for_rate_monitoring
+  web_console: deferred_until_operational_demand
+  commands:
+    bridge: ./scripts/udp_bridge.sh
+    perception: roslaunch asmc_perception perception.launch start_traffic_light:=true
+    lane_adapter: roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch
+    runtime_acceptance: ./scripts/verify_perception.sh
+  visualization:
+    rqt_topics:
+      - /perception/camera/debug/mosaic/compressed
+      - /perception/bev/debug/comparison/compressed
+    lane_rviz_fixed_frame: base_link
+    lane_rviz_config: src/lane_boundary_adapter/rviz/shadow_boundary_family_candidate.rviz
+
 topic_groups:
   camera_lane:
     required_nodes:

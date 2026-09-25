@@ -1,5 +1,5 @@
 name: shadow_boundary_family_adapter_result
-description: Read-only planning adapter audit for the provisional shared lane-boundary family.
+description: Read-only planning adapter audit for the canonical shared lane-boundary handoff.
 kind: result
 transport: replay
 timestamp_mode: replay
@@ -11,8 +11,9 @@ sensor_set: replay_parent
 map: kcity2025
 compression: lz4
 privileged_gt: false
-# The producer and this adapter are both non-deployment candidates. This bag
-# must not be selected as an authoritative planning source.
+# The typed family is the canonical perception handoff, but this reference
+# adapter remains read-only and deployment-disallowed until planning absorbs
+# the freshness/support gates and owns the final corridor decision.
 deployment_allowed: false
 required_topics:
   - /perception/lane/boundary_family
