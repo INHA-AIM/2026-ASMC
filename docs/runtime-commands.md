@@ -406,6 +406,10 @@ bridge와 검사할 perception/planning process를 먼저 각자의 foreground t
 
 # 판제 팀원이 read-only adapter를 함께 검토할 때만
 ./scripts/verify_perception.sh --require-lane-adapter
+
+# perception·신호등·rqt·planning·lane adapter를 모두 띄운 최종 P5 gate
+./scripts/verify_perception.sh \
+  --traffic-light --visualization --require-planning --require-lane-adapter
 ```
 
 | verifier 옵션 | 의미 |
@@ -432,7 +436,8 @@ python3 -m unittest tools/audit/test_perception_runtime_acceptance.py
 ```
 
 세부 기준과 해석은
-[P5-C runtime acceptance](./records/baselines/perception-p5c-runtime-acceptance-v1.md)를 따른다.
+[P5-C runtime acceptance](./records/baselines/perception-p5c-runtime-acceptance-v1.md)와
+[P5-D/E closeout](./records/baselines/perception-p5de-closeout-v1.md)을 따른다.
 
 ## 6. Planning/Control 옵션
 
@@ -444,13 +449,14 @@ roslaunch behavior_planner autonomy_no_bridges_v2.launch [arg:=value ...]
 |---|---:|---|
 | `state_source` | `gps_imu` | `gps_imu`, local 개발용 `ego_dev` |
 | `dashboard` | `false` | behavior dashboard |
-| `traffic_light` | `true` | 판제 launch가 신호등 producer를 시작할지 |
+| `traffic_light` | `false` | 독립 호환 시험에서만 판제 launch가 신호등 producer를 시작할지 |
 | `traffic_light_device` | `auto` | 신호등 inference device |
 | `camera_topic` | `/cam_extra/image_jpeg/compressed` | 신호등 input |
 | `traffic_light_checkpoint` | `asmc_perception/models/traffic_light/best.pt` | checkpoint |
 
-`asmc_perception` runtime에서 신호등을 켰다면 반드시 `traffic_light:=false`로 중복
-producer를 막는다. bridge와 `/vehicle/state` producer도 중복으로 켜지 않는다.
+신호등 producer의 운영 소유자는 `asmc_perception`이고 planning launch 기본값은 `false`다.
+`traffic_light:=true`는 perception launch를 켜지 않은 독립 호환 시험에서만 사용한다. bridge와
+`/vehicle/state` producer도 중복으로 켜지 않는다.
 
 ## 7. Bag 녹화·재생
 

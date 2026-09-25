@@ -123,6 +123,11 @@ shared-family 검수 launch는 `base_link` 전용 RViz preset을 기본으로 �
 accepted strip과 perception-side support marker를 한 화면에서 보며, headless replay에서는
 `rviz:=false`로 끈다. 이 자동 시각화도 planning input이나 제어 연결을 의미하지 않는다.
 
+P5-D 인계 이후 판제 정본 lane 입력은 typed `/perception/lane/boundary_family`이고 legacy
+`boundary_observations`는 기본-OFF다. 신호등 producer는 `asmc_perception`이 소유하므로 planning
+통합 launch의 `traffic_light` 기본값도 `false`다. planning은 typed detection을 한 번 받은 뒤
+invalid/stale 상태를 legacy String으로 우회하지 않는다.
+
 이 package는 음영구간 판제 개발을 위한 임시 read-only reference 경계다. 판제가
 canonical `LaneBoundaryFamily`·camera drivable BEV를 직접 소비하게 되면
 message→strip core, freshness/invalid 규칙, 설정과 테스트를 판제 소유 모듈에

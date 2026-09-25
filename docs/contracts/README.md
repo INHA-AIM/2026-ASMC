@@ -15,7 +15,7 @@
 | 인지 원본·라벨·split | [dataset 계약](./perception/dataset-labeling-split.md) | Canonical Data Contract | versioned manifest와 `$ASMC_DATA` artifact |
 | 인지 runtime typed topic | [Perception runtime v1](./perception/runtime-v1.md) | Frozen Additive Interface | `config/contracts/perception_runtime_topic_contract_v1.yaml`, `src/asmc_msgs/msg/` |
 | 인지 runtime/debug 발행 정책 | [P5-A topic 감사](../records/baselines/perception-p5a-topic-audit-v1.md) | Frozen Input Audit | `config/contracts/perception_topic_policy_v1.yaml` |
-| 인지 live producer·consumer·rate·frame | [P5-C runtime acceptance](../records/baselines/perception-p5c-runtime-acceptance-v1.md) | Active Acceptance Gate | `config/contracts/perception_runtime_acceptance_v1.yaml` |
+| 인지 live producer·consumer·rate·frame | [P5-C runtime acceptance](../records/baselines/perception-p5c-runtime-acceptance-v1.md)·[P5-D/E closeout](../records/baselines/perception-p5de-closeout-v1.md) | Active Acceptance Gate | `config/contracts/perception_runtime_acceptance_v1.yaml` |
 | MORAI message 호환 | [`beta_drive` 정책](./simulator/morai-msgs-beta-policy.md) | Canonical until competition port | pinned submodule `45c6baf` |
 
 문서가 길다는 이유로 서로 다른 계약을 한 파일에 합치지 않는다. HD Map, planning transaction,

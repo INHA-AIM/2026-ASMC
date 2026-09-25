@@ -530,6 +530,15 @@ topic의 type, 유일 producer, 필수 subscriber, rate, source stamp, frame과 
 때만 검사한다. 세부 계약과 명령은
 [P5-C record](../../records/baselines/perception-p5c-runtime-acceptance-v1.md)를 따른다.
 
+**2026-09-26 P5-D/E closeout:** 신호등과 음영구간 lane-family의 실제 consumer를 다시
+감사해 typed 입력을 정본으로 고정했다. planning 통합 launch는 중복 신호등 producer를 만들지
+않도록 기본값을 off로 바꿨고, typed 신호등 invalid/stale은 legacy 우회 없이 fail-closed한다.
+대표 result bag에서 family 293개를 reference adapter로 재생해 diagnostics와 accepted strip을
+확인했다. 운영 추론은 `asmc-ros-noetic` 직접 launch, bridge는 별도 foreground, rqt는 mosaic와
+BEV comparison 두 화면으로 닫았다. topic rename이나 `asmc_msgs` 변경은 없다. 상세 근거와
+남겨 둔 호환 경계는
+[P5-D/E closeout](../../records/baselines/perception-p5de-closeout-v1.md)을 따른다.
+
 ### Stage C3 — 성능계측
 
 - input/output FPS, drop/stale count와 camera timestamp skew

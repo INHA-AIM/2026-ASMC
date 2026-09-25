@@ -2,7 +2,7 @@
 
 > **문서 역할:** Active Package-Group Guide — 현재 인지 코드 경계, 문서 권위와 Phase 4 이관 gate
 >
-> **현재 상태:** P4-C6 package 통합, P5-A/P5-B topic·rqt 정리, P5-C runtime acceptance와 shared-family closeout 완료
+> **현재 상태:** P4-C6 package 통합과 P5-A~P5-E topic·시각화·consumer handoff·운영 closeout 완료
 
 이 문서는 긴 인지 설계·실험 문서를 대체하거나 요약 폐기하기 위한 문서가 아니다. 현재 어떤
 코드와 문서를 먼저 사용해야 하는지 안내하는 진입점이다. 날짜별 분석, 수치, 실패 원인과 후보
@@ -24,6 +24,7 @@
 | 특정 checkpoint의 학습 결과 | [v4 evaluation](../../records/perception/twinlitenet-v4-evaluation.md) | Experiment Record |
 | 현재 topic 소비·bag 사용과 P5 정리 gate | [P5-A topic audit](../../records/baselines/perception-p5a-topic-audit-v1.md) | Frozen Input Audit |
 | 실행 중 node/topic/rate/stamp/frame/consumer 검증 | [P5-C runtime acceptance](../../records/baselines/perception-p5c-runtime-acceptance-v1.md) | Active Acceptance Gate |
+| typed consumer 인계와 최종 운영 경계 | [P5-D/E closeout](../../records/baselines/perception-p5de-closeout-v1.md) | Active Closeout Record |
 
 충돌할 때는 공식 규정, 동결된 contract, 현재 package source와 launch, handoff, working
 proposal, 날짜별 record 순으로 판단한다. roadmap의 과거 `candidate`, `미구현`,
@@ -134,6 +135,9 @@ detection과 기존 문자열 state·JSON detail을 병행 발행한다. `behavi
 신호등 필요 구간이 metadata로 들어 있지만, 그
 구간에서만 inference process를 켜고 끄는 orchestration은 아직 구현됐다고 간주하지 않는다.
 실행과 stale 처리 계약은 [runtime contract](../../contracts/perception/runtime-v1.md)를 따른다.
+통합 planning launch는 이 producer를 기본으로 다시 시작하지 않는다. 일반 운행에서는
+`asmc_perception` launch가 유일한 producer이고, planning 쪽 `traffic_light:=true`는 독립 호환
+시험에만 사용한다.
 
 LiDAR runtime은 독립 nested catkin workspace다. outer workspace의 sensor bridge를 먼저 띄우고
 별도로 build/run한다. current object topic, time matching, class hysteresis, GPU 세대별 실행과

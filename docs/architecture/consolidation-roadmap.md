@@ -3,7 +3,7 @@
 > **문서 역할:** Working Proposal — 패키지 통합과 본선 배포를 위한 단계별 실행 계획
 > **작성 기준:** 2026-09-20 저장소와 현장 점검 반출 자료의 read-only 감사
 > **진행 상태:** 1·2단계, 3단계 P3-G local closeout, P4-A·P4-B·P4-C1~C6,
-> 5단계 P5-A·P5-B·P5-C 완료. 다음은 P5-D consumer handoff
+> 5단계 P5-A~P5-E 완료. 다음은 LiDAR/fusion 기준선 계측과 담당자 공동 개선
 > **보호 범위:** `behavior_planner`, `frenet_planner`, `mpc_controller`,
 > planning 소유 Behavior/Frenet/MPC package는 이 계획의 일방적 이동·삭제 대상이 아니다.
 > read-only `lane_boundary_adapter`는 역할이 드러나도록 `src/lane_boundary_adapter/`로 이동했다.
@@ -451,16 +451,28 @@ publisher/필수 subscriber/rate/stamp/frame 기준으로 검사한다. 판제 �
 `base_link` RViz를 함께 열어 full support와 판제 수락 구간인 0~15 m strip을 동시에 보여준다.
 이 strip은 검토용 MarkerArray이며 판제의 planning horizon이나 typed geometry를 제한하지 않는다.
 
-P5의 남은 경계는 다음과 같다.
+**P5-D consumer handoff 완료:** 신호등 producer의 소유자는 `asmc_perception`, 판제 정본 입력은
+typed `/perception/traffic_light/detection`으로 고정했다. Behavior는 typed 메시지를 한 번 받은 뒤
+invalid/stale 상태에서 legacy String으로 우회하지 않고 UNKNOWN으로 fail-closed한다. planning
+통합 launch는 중복 publisher를 막기 위해 신호등 producer를 기본으로 시작하지 않으며,
+`traffic_light:=true`는 독립 호환 시험에서만 사용한다. legacy String은 모든 소비자가 typed로
+전환될 때까지 삭제하지 않는다.
 
-1. **P5-D consumer handoff:** P5-C live 결과와 대표 bag을 근거로 신호등 typed/legacy의 실제
-   consumer를 재감사한다. 호환 String topic은 판제 전환이 확인되기 전에는 삭제하지 않는다.
-   `lane_boundary_adapter`도 판제 팀원이 흡수·삭제를 결정하므로 이 단계에서 유지한다.
-2. **P5-E 운영 closeout:** 실행 명령·rqt/RViz preset·진단/수락 명령을 최종 교차검증하고,
-   package 이동표와 인수 조건을 한 곳에서 찾을 수 있게 닫는다. bridge는 Hz 관찰을 위해 계속
-   별도 foreground process로 둔다.
-3. **웹 콘솔 보류:** 현재 RViz/rqt와 구조화 diagnostics로 필요한 검수가 가능하므로 구현하지
-   않는다. 실제 원격 다중 사용자 수요가 생길 때 별도 제안과 threat model을 거쳐 연다.
+음영구간 차선의 판제 정본은 `/perception/lane/boundary_family`다. 대표 result bag의 typed family
+293개와 reference adapter 연결을 인수 근거로 고정했고, 과거 개별
+`boundary_observations`는 기본-OFF 호환 출력으로 남겼다. adapter의 0~15 m strip Marker는 검수용일
+뿐 planning 입력이나 family 유효거리 제한이 아니다. `lane_boundary_adapter` 흡수·삭제 시점은
+판제 담당자가 결정한다.
+
+**P5-E 운영 closeout 완료:** bridge는 packet/HZ를 사람이 계속 볼 수 있도록 별도 foreground
+process로 유지한다. live·bag inference는 `asmc-ros-noetic`에서 직접 실행하고 학습은
+`asmc-perception-train`에 격리한다. rqt 기본 화면은 camera mosaic와 BEV comparison 두 개,
+lane 검수는 `base_link` RViz를 자동으로 여는 adapter launch, graph 수락은
+`verify_perception.sh`로 고정했다. 상세 인수표와 증거는
+[P5-D/E closeout](../records/baselines/perception-p5de-closeout-v1.md)에 있다.
+
+**웹 콘솔 보류:** 현재 RViz/rqt와 구조화 diagnostics로 필요한 검수가 가능하므로 구현하지
+않는다. 실제 원격 다중 사용자 수요가 생길 때 별도 제안과 threat model을 거쳐 연다.
 
 1. consumer가 없는 grid·debug topic은 기본 발행을 끄고 opt-in으로 돌린다.
 2. BEV debug는 중복 창 대신 원본/투영 BEV와 최종 인지·융합 BEV를 나란히
@@ -482,7 +494,8 @@ lane/area, checkpoint 3 m radius, active mission, topic rate/staleness를 한 la
 웹 콘솔은 Phase 5 완료 조건이 아니다. 원격 다중 사용자 관찰 수요가 확인되면 별도 단계로
 검토하며, 그때도 차량 제어·파라미터 변경은 포함하지 않는다.
 
-P5-E 뒤의 우선순위는 LAN2LAN 현장 리허설에 바로 들어가기보다 담당자와 함께 LiDAR/fusion
+Phase 5는 P5-A~P5-E까지 완료됐다. 다음 우선순위는 LAN2LAN 현장 리허설에 바로 들어가기보다
+담당자와 함께 LiDAR/fusion
 기준선을 먼저 계측하고 개선 범위를 합의하는 것이다. 정본 Working Proposal은
 [LiDAR assessment](../packages/asmc_perception/lidar-assessment-and-roadmap.md)이며, 지면 제거,
 터널 벽·천장 억제, 거리 적응형 clustering, 추적 안정화와 HD Map 기반 고주로 차로 귀속을

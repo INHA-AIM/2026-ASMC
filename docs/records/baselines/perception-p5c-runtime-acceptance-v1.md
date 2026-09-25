@@ -103,10 +103,10 @@ process를 함께 띄운 수락시험에서 각각 별도로 수행해야 하며
 TwinLite mount와 canonical launch를 검사한다. 따라서 현재 수치는 `default-off topics 20`,
 unit tests 10개이며, 새 live 수락 결과는 위 명령으로 다시 측정해 판정한다.
 
-## 5. 다음 gate
+## 5. 후속 closeout
 
-- P5-D에서 live 결과와 대표 bag을 이용해 compatibility consumer를 다시 감사한다.
-- legacy traffic-light String은 모든 consumer 전환 전 삭제하지 않는다.
-- `lane_boundary_adapter`는 판제 담당자가 흡수 여부와 삭제 시점을 결정한다.
-- P5-E에서 실행 문서·RViz/rqt·acceptance 명령과 package 이동 인수표를 최종 교차검증한다.
-- 웹 콘솔은 실제 수요가 생길 때까지 보류한다.
+P5-D consumer handoff와 P5-E 운영 closeout은 2026-09-26 완료됐다. 현재 결론과 대표 bag,
+중복 producer 방지 및 운영 명령의 정본은
+[P5-D/E closeout](./perception-p5de-closeout-v1.md)을 따른다. legacy traffic-light String은 모든
+consumer가 typed로 전환되기 전까지 유지하고, `lane_boundary_adapter`의 흡수·삭제는 판제
+담당자가 결정한다. 웹 콘솔은 실제 수요가 생길 때까지 보류한다.
