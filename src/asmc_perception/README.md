@@ -76,6 +76,98 @@ asmc-ros-gui rqt-image /perception/lane/debug/camera_reprojection_mosaic
 추론하며, HD맵의 `TRAFFIC_LIGHT_REQUIRED` 구간(A236~A308)에 따른 process/compute 활성화는
 판제 supervisor와 함께 연결할 후속 항목이다.
 
+## P4 closeout MORAI live 확인
+
+이 절은 package 통합 PR 전 사람이 MORAI를 주행하며 확인하는 최소 절차다.
+MORAI UI에서 실행 release에 맞는 `*_local.json`과
+`ASMC_sensor_set_v3_local.json`을 불러온 뒤 Play/Connect한다.
+
+```bash
+# Terminal A — asmc-ros-noetic container, local UDP bridge
+docker exec -it asmc-ros-noetic bash
+cd /root/ws
+./scripts/udp_bridge.sh
+
+# Terminal B — WSL/Linux host (container 안이 아님), canonical perception
+cd /home/aim06/projects/2026-ai-sw-mobility-competition/2026-ASMC
+./scripts/perception.sh \
+  start_traffic_light:=true \
+  start_visualization:=true \
+  lane_enable_shared_family_debug:=true \
+  lane_enable_boundary_family_candidate:=true
+```
+
+별도 터미널에서 ROS 토픽을 확인한다. `rostopic hz`는 계속 대기하므로 항목별로
+`Ctrl+C`로 나오거나 터미널을 나눠 실행한다.
+
+```bash
+# Terminal C — asmc-ros-noetic container
+docker exec -it asmc-ros-noetic bash
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+
+# MORAI v3 camera input: front/left/right 약 20 Hz, extra 약 10 Hz
+rostopic hz /image_jpeg/compressed
+rostopic hz /cam_left/image_jpeg/compressed
+rostopic hz /cam_right/image_jpeg/compressed
+rostopic hz /cam_extra/image_jpeg/compressed
+
+# canonical runtime output: GPU 상태에 따라 입력보다 느릴 수 있지만 계속 갱신되어야 함
+rostopic hz /perception/camera/front/drivable/probability
+rostopic hz /perception/bev/camera/drivable_probability
+rostopic hz /perception/lane/boundary_observations
+rostopic hz /perception/lane/boundary_family
+rostopic hz /perception/traffic_light/detection
+
+# 계약·상태 sample
+rostopic echo -n 1 /perception/lane/boundary_family/header
+rostopic echo -n 1 /perception/lane/boundary_family/operating_domain
+rostopic echo -n 1 /perception/lane/boundary_family/algorithm_id
+rostopic echo -n 1 /perception/lane/boundary_family/deployment_allowed
+rostopic echo -n 1 /perception/lane/diagnostics
+rostopic echo -n 1 /perception/bev/diagnostics
+rostopic echo -n 1 /perception/traffic_light/detection
+```
+
+음영구간 adapter는 제어와 연결하지 않고 별도로 켠다.
+
+```bash
+# Terminal D — asmc-ros-noetic container
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch
+
+# Terminal E — adapter output
+rostopic hz /planning/debug/lane_boundary_family/strips
+rostopic echo -n 1 /planning/diagnostics/lane_boundary_family_adapter
+```
+
+시각화는 각각 별도 `asmc-ros-noetic` 터미널에서 연다.
+
+```bash
+asmc-ros-gui rqt-image /perception/camera/debug/mosaic
+asmc-ros-gui rqt-image /perception/bev/debug/fused
+asmc-ros-gui rqt-image /perception/lane/debug/boundaries_bev
+asmc-ros-gui rqt-image /perception/lane/debug/camera_reprojection_mosaic
+asmc-ros-gui rviz
+```
+
+RViz의 Fixed Frame을 `base_link`로 두고 MarkerArray
+`/perception/lane/debug/shared_family/markers`와
+`/planning/debug/lane_boundary_family/strips`를 추가한다. 음영 ODD 밖의
+`valid=false` 또는 정지·disconnect 후 stale/marker clear는 정상 fail-safe다.
+음영구간은 A448 종료 후부터 A126 종료까지이며 회피용 반대 차로는 A131이다.
+이 구간에서는
+`frame_id=base_link`, `operating_domain=shadow_two_way_v1`, 동결 algorithm ID,
+`deployment_allowed=false`를 확인한다. observed는 청록, structure-inferred는 주황,
+invalid는 연결하지 않은 실제 공백으로 보여야 한다.
+
+신호등은 A236~A308에서 실제 색과 typed
+`/perception/traffic_light/detection`, 호환 `/traffic_light/state`의 전환을 같이 확인한다.
+이 live 검사에서는 `/ctrl_cmd`를 발행하지 않으므로 수동 주행 중에 사용해도 된다.
+
 ## P4-C1 경계
 
 - camera lane은 v3 센서셋과 SHA로 고정한 `cameras_v3.yaml`을 사용한다.

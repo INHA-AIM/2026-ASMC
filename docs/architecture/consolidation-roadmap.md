@@ -2,7 +2,7 @@
 
 > **문서 역할:** Working Proposal — 패키지 통합과 본선 배포를 위한 단계별 실행 계획
 > **작성 기준:** 2026-09-20 저장소와 현장 점검 반출 자료의 read-only 감사
-> **진행 상태:** 1·2단계, 3단계 P3-G local closeout, P4-A·P4-B와 P4-C1~C5 완료. 다음은 P4-C6 기존 perception 호환 패키지 closeout
+> **진행 상태:** 1·2단계, 3단계 P3-G local closeout, P4-A·P4-B·P4-C1~C6 완료. 다음은 P4 closeout PR 후 5단계 단일 실행·통합 시각화
 > **보호 범위:** `behavior_planner`, `frenet_planner`, `mpc_controller`,
 > planning 소유 Behavior/Frenet/MPC package는 이 계획의 일방적 이동·삭제 대상이 아니다.
 > read-only `lane_boundary_adapter`는 역할이 드러나도록 `src/lane_boundary_adapter/`로 이동했다.

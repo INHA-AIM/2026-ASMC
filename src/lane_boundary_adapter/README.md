@@ -31,6 +31,34 @@ shared-family C++ core는 향후 판제가 재사용할 수 있지만 현재 nod
 음영구간 on/off, route 의미, camera drivable threshold, LiDAR occupancy 차감과 fallback은 이
 패키지에 추가하지 않는다. 그 정책과 연결·closed-loop 검증은 판제 파트가 소유한다.
 
+## 수명주기와 판제 흡수 조건
+
+이 package는 최종 배포 구조가 아니라 perception→planning 계약을 검증하는
+임시 reference implementation이다. 판제가 음영구간 lane/corridor consumer를 구현할 때
+다음 자산을 판제 소유 module로 흡수한다.
+
+- `BuildBoundaryFamilyStripContext()`를 포함한 message→strip 변환 core
+- frame·ODD·algorithm·representation·freshness 검사
+- `OBSERVED`/`STRUCTURE_INFERRED`/`INVALID` 권한과 invalid hard-split
+- consumer horizon, 차로폭·순서·교차 검사 설정값과 C++ 회귀 테스트
+- Marker/diagnostics 중 판제 개발·운영에 필요한 read-only 관측 항목
+
+최종 소유 package를 `behavior_planner` 또는 `frenet_planner`로 미리 고정하지 않는다.
+route/mission 문맥·LiDAR occupancy·corridor 후보를 함께 소유할 판제 경계를
+팀이 합의한 뒤 그 모듈에 흡수한다. 다음 gate를 모두 통과하기 전에는
+`lane_boundary_adapter`를 삭제하거나 production planning source로 연결하지 않는다.
+
+1. 판제 feature flag 기본값 `off`, 음영 ODD 진입·이탈과 stale/fallback 정책 합의
+2. 현 C++ core test를 흡수 모듈에서 동일하게 통과
+3. 동일 4개 maneuver bag의 strip/degraded/gap·diagnostics parity
+4. read-only live shadow 주행에서 차로 이탈·반대 차로 회피·복귀 관찰
+5. feature off/on closed-loop와 perception missing/stale/invalid fallback 통과
+6. 대체 launch·문서·diagnostics 확정, 외부 참조 0과 rollback 경로 확인
+
+삭제는 흡수 코드와 parity 기록을 먼저 merge한 뒤 별도 commit/PR로 수행한다.
+이때도 canonical perception topic인 `/perception/lane/boundary_family`와
+`/perception/bev/camera/*`를 삭제한다는 뜻은 아니다.
+
 ## 현재 범위
 
 - 입력: `/perception/lane/boundary_observations`

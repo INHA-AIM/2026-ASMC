@@ -48,6 +48,13 @@ MORAI RGB ×3 --UDP--> bridge --ROS--> TwinLiteNet+ v6
 기본 disabled feature flag와 ODD gate를 별도로 두는 것이 권장되지만, 그 flag와 연결 코드는
 이 인수 작업의 범위가 아니다.
 
+`lane_boundary_adapter`는 이 계약을 검증하기 위한 임시 read-only reference package다.
+최종 판제는 가능하면 그 node를 별도 프로세스로 영구 유지하지 않고,
+`BuildBoundaryFamilyStripContext()`·freshness/invalid gate·관련 테스트를
+planning-owned lane/corridor module에 흡수한다. 흡수 전에는 아래 8절 인수 체크리스트와
+adapter README의 bag/closed-loop parity를 통과해야 한다. standalone package 삭제는
+대체 consumer merge 후 별도 PR에서만 수행한다.
+
 ## 2. 판제가 읽을 최소 토픽
 
 | 토픽 | 타입 | 의미 | 필수 해석 |
@@ -301,3 +308,5 @@ headless 판제 입력 기준선은 위 result-topic rate다.
 - [ ] 같은 raw/result bag으로 feature off/on과 fallback을 비교한다.
 - [ ] 실제 planning 부하에서 출력률·stale·closed-loop trajectory를 검증한다.
 - [ ] 대회판 simulator에서 별도 회귀 검증 전 production 승격으로 표시하지 않는다.
+- [ ] adapter core·config·test 흡수 후 동일 bag에서 strip/degraded/gap·diagnostics parity를 확인한다.
+- [ ] standalone package 삭제 전 외부 launch·code·문서 참조 0, rollback 경로와 판제 owner 리뷰를 확인한다.

@@ -119,6 +119,13 @@ LiDAR object producer, HD Map 정본, mission orchestration과 closed-loop full 
 [shadow camera handoff](../../handoffs/perception/shadow-camera.md), adapter 구현은
 [package README](../../../src/lane_boundary_adapter/README.md)를 따른다.
 
+이 package는 음영구간 판제 개발을 위한 임시 read-only reference 경계다. 판제가
+canonical `LaneBoundaryFamily`·camera drivable BEV를 직접 소비하게 되면
+message→strip core, freshness/invalid 규칙, 설정과 테스트를 판제 소유 모듈에
+흡수한다. 동일 bag parity, feature-off/on closed-loop, fallback·rollback과 외부 참조 0을
+확인한 뒤에만 standalone `lane_boundary_adapter` package를 별도 PR에서 삭제한다.
+흡수 전까지는 현 package를 production control source로 승격하지 않는다.
+
 ## 8. 변경 gate
 
 | 변경 | 최소 확인 |
