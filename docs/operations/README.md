@@ -256,7 +256,8 @@ asmc-ros-gui rviz -d /root/ws/<config>.rviz
   route 시각화는 본선 profile의 gate가 아니다.
 
 검증 결과에는 환경, MORAI/profile, Git commit, 실행 명령, PASS/FAIL, 로그와 미검증 항목을
-남긴다. LBC와 direct rosbridge는 회귀 재현용일 뿐 현재 full-stack gate가 아니다.
+남긴다. LBC teacher BEV는 privileged-state 연구·검수 도구이고 direct rosbridge는
+회귀 재현용일 뿐, 둘 다 현재 full-stack gate가 아니다.
 
 ```markdown
 ## Sim verify — <파트> — <이름> — <날짜>

@@ -42,8 +42,9 @@ class RouteBEVVisualizerController:
 
         script = os.path.join(
             self.workspace_root,
-            "src",
-            "learning_by_cheating",
+            "tools",
+            "research",
+            "lbc_teacher_bev",
             "scripts",
             "lbc_bev_visualizer.py",
         )

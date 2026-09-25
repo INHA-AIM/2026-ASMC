@@ -13,6 +13,7 @@
 | 체크포인트·미션·속도 구간 | [K-City metadata v1](./competition/kcity2025-metadata-v1.md) | Frozen Metadata | `src/asmc_hd_map/config/kcity2025_competition_metadata*.yaml` |
 | Behavior/FSM ↔ Frenet | [FSM↔Frenet v2](./planning/fsm-frenet-v2.md) | Frozen Interface | `BehaviorCommand.msg`, `FrenetFeedback.msg`, `src/frenet_planner/` |
 | 인지 원본·라벨·split | [dataset 계약](./perception/dataset-labeling-split.md) | Canonical Data Contract | versioned manifest와 `$ASMC_DATA` artifact |
+| 인지 runtime typed topic | [Perception runtime v1](./perception/runtime-v1.md) | Frozen Additive Interface | `config/contracts/perception_runtime_topic_contract_v1.yaml`, `src/asmc_msgs/msg/` |
 | MORAI message 호환 | [`beta_drive` 정책](./simulator/morai-msgs-beta-policy.md) | Canonical until competition port | pinned submodule `45c6baf` |
 
 문서가 길다는 이유로 서로 다른 계약을 한 파일에 합치지 않는다. HD Map, planning transaction,

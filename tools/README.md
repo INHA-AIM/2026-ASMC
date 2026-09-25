@@ -6,8 +6,9 @@ catkin이 아닌 **Python·gRPC·시나리오** 도구.
 |------|------|--------|
 | `aim_scenario_runner/` | 장원태 | `run.sh`, `scenario_launcher.py` |
 | `grpc_inha_univ/` | 장원태 | `run_mode.sh`, `src/api/morai_sim_client.py` |
-| `audit/` | 통합 회귀·계약 기준 | `build_runtime_baseline.py`, `build_perception_runtime_baseline.py`, `validate_p1b_contract.py`, `validate_bridge_profiles.py` |
+| `audit/` | 통합 회귀·계약 기준 | `build_runtime_baseline.py`, `build_perception_runtime_baseline.py`, `validate_p1b_contract.py`, `validate_perception_contract.py`, `validate_bridge_profiles.py` |
 | `bridge/` | MORAI release template에서 transport별 import 생성 | `render_morai_network_profiles.py --write\|--check` |
+| `research/lbc_teacher_bev/` | privileged MORAI state 기반 GT/teacher BEV 연구 도구 | `scripts/visualize_lbc_bev.sh`, `scripts/collect_lbc_bev.sh` |
 
 설정: `aim_scenario_runner/config/runtime.yaml` (gRPC host)  
 담당과 리뷰 경계: [팀 ownership](../docs/onboarding/ownership.md)
@@ -28,14 +29,20 @@ repository freeze는 output 이름과 baseline ID를 v2로 올리는 별도 변�
 
 ```bash
 python3 tools/audit/validate_p1b_contract.py
+python3 tools/audit/validate_perception_contract.py
 python3 tools/audit/validate_bridge_profiles.py
 python3 -m unittest tools/audit/test_bridge_profiles.py
 python3 -m unittest tools/audit/test_p1b_contract.py
+python3 -m unittest tools/audit/test_perception_contract.py
 python3 tools/audit/check_documentation_migration.py
-python3 tools/audit/build_perception_runtime_baseline.py --check
 python3 -m unittest tools/audit/test_perception_runtime_baseline.py
 # D1 이전 commit 이력이 있는 clone에서 원문 inventory와 byte 이동까지 확인
 python3 tools/audit/check_documentation_migration.py --with-history
 # ROS Noetic workspace를 build/source한 환경에서 실행
 python3 -m unittest src/asmc_msgs/test/test_message_serialization.py
 ```
+
+`perception_runtime_baseline_v1`도 P4-A 입력 commit `1bd8ec9`의 구조 snapshot이다.
+`build_perception_runtime_baseline.py --check`는 그 commit을 별도 worktree에서 재현할 때만
+사용한다. 현재 HEAD에서는 정본 package closeout과 충돌하므로 frozen manifest의 schema·핵심
+값만 `test_perception_runtime_baseline.py`로 검사한다.

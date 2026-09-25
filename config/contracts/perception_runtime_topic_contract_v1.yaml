@@ -1,0 +1,128 @@
+schema_version: 1
+contract_id: asmc_perception_runtime_topic_contract_v1
+status: frozen
+compatibility_policy: additive_only
+runtime_move_evidence: config/baselines/perception_runtime_move_smoke_v1.yaml
+support_config_evidence: config/baselines/perception_support_config_parity_v1.yaml
+
+messages:
+  asmc_msgs/TrafficLightDetection:
+    md5: 86055e23eb1cd7ce661d0c315d66a05e
+    required_fields:
+      - header
+      - state
+      - label
+      - confidence
+      - valid
+      - stale
+      - inference_latency_ms
+      - model_id
+      - candidate_labels
+      - candidate_confidences
+  asmc_msgs/TrackedObject:
+    md5: 6c96135eb03a3ee93bba474fa835f57d
+    required_fields:
+      - id
+      - type
+      - classification
+      - yolo_class
+      - is_dynamic
+      - age
+      - miss_count
+      - cluster_center
+      - obb_center
+      - obb_corners
+      - obb_yaw
+      - velocity_mps
+      - speed_kph
+      - length
+      - width
+      - height
+  asmc_msgs/TrackedObjectArray:
+    md5: e127b2aabd7494ad01a5a56b005bf07e
+    required_fields: [header, objects]
+
+canonical_topics:
+  /perception/traffic_light/detection:
+    type: asmc_msgs/TrafficLightDetection
+    md5: 86055e23eb1cd7ce661d0c315d66a05e
+    frame: camera_extra
+    stamp: source_camera_header
+    queue_size: 1
+    latch: false
+    producer_status: active_parallel_p4c
+    parity_evidence: config/baselines/perception_traffic_light_parity_v1.yaml
+    consumer_cutover_status: typed_preferred_legacy_fallback_p4c3
+    closed_loop_evidence: config/baselines/perception_traffic_light_closed_loop_v1.yaml
+    vehicle_closed_loop_evidence: config/baselines/perception_traffic_light_vehicle_closed_loop_v1.yaml
+  /perception/lidar/tracked_objects:
+    type: asmc_msgs/TrackedObjectArray
+    md5: e127b2aabd7494ad01a5a56b005bf07e
+    frame: map
+    stamp: lidar_source_header
+    queue_size: 2
+    latch: false
+    producer_status: declared_not_published_p4b
+  /perception/lidar/drivable_tracked_objects:
+    type: asmc_msgs/TrackedObjectArray
+    md5: e127b2aabd7494ad01a5a56b005bf07e
+    frame: map
+    stamp: lidar_source_header
+    queue_size: 2
+    latch: false
+    producer_status: declared_not_published_p4b
+
+compatibility_topics:
+  /traffic_light/state:
+    type: std_msgs/String
+    md5: 992ce8a1687cec8c8bd883ec73ca41d1
+    producer_status: active
+    retire_gate: all_consumers_use_typed_detection
+  /traffic_light/detail:
+    type: std_msgs/String
+    md5: 992ce8a1687cec8c8bd883ec73ca41d1
+    producer_status: active
+    retire_gate: all_consumers_use_typed_detection
+  /lidar/tracked_objects_map:
+    type: Msg/TrackedObjectArray
+    md5: e127b2aabd7494ad01a5a56b005bf07e
+    producer_status: active_nested_workspace
+    retire_gate: bag_parity_and_all_consumers_use_asmc_msgs
+  /last_lidar:
+    type: Msg/TrackedObjectArray
+    md5: e127b2aabd7494ad01a5a56b005bf07e
+    producer_status: active_nested_workspace
+    retire_gate: hd_map_filter_parity_and_all_consumers_use_asmc_msgs
+
+consumer_bindings:
+  behavior_planner:
+    implementation: src/behavior_planner/src/signal/ros_traffic_light_provider.cpp
+    canonical_topic: /perception/traffic_light/detection
+    compatibility_topic: /traffic_light/state
+    selection_policy: typed_authoritative_after_first_message
+    invalid_or_stale_policy: unknown_without_legacy_fallback
+    status: physical_vehicle_closed_loop_verified_p4c4
+
+consumer_rules:
+  - TrafficLightDetection.header must be copied from the exact camera image used for inference; adapter receipt time is not an acceptable substitute.
+  - TrafficLightDetection.valid=false or stale=true must never activate a signal rule.
+  - candidate_labels and candidate_confidences must have equal length and descending confidence order.
+  - TrackedObjectArray.header.frame_id is authoritative for centers, OBB corners, yaw and velocity.
+  - Canonical LiDAR topics use map frame, SI position and velocity; speed_kph is display-only.
+  - The drivable-filtered array must retain the source header and object IDs without reinterpreting geometry.
+  - Canonical and compatibility topics run in parallel until every named consumer and representative bag passes parity.
+  - Declared-not-published topics are contracts, not evidence that a runtime producer exists.
+
+cutover_gates:
+  traffic_light:
+    - source camera header propagated without approximation
+    - String and typed label/confidence/stale parity on representative bag
+    - behavior planner prefers typed input and invalid/stale behavior is tested
+    - deterministic ROS decision loop passes red STOP and green KEEP restart
+    - physical simulator brake-to-stop and launch-on-green passes with guarded controller output and verified Ego restoration
+    - every named consumer and launch leaves compatibility topics before retirement
+  lidar:
+    - nested Msg and asmc_msgs field/unit/frame parity
+    - raw/result bag object count, ID, OBB, velocity and dynamic-state parity
+    - final asmc_hd_map drivable-area filter parity replaces legacy link_node mask
+    - all consumers leave Msg before nested package deletion

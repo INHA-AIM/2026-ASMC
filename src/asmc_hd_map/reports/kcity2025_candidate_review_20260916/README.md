@@ -1,5 +1,10 @@
 # K-City 2025 HD맵 주행 검수 묶음
 
+> **경로 주의:** 이 보고서의 build 명령은 2026-09-16 검수 환경을 재현하는
+> 역사 기록이다. P4-C6에서 camera/BEV/traffic은 `asmc_perception`으로 통합됐으므로
+> 새 workspace에서 아래 whitelist를 복사하지 말고 `./scripts/build_ws.sh`와
+> [`asmc_perception` README](../../../asmc_perception/README.md)를 사용한다.
+
 현재 K-City 2025 node/link, 원태 직접 관측으로 보정한 후보, origin만 맞춘 구 KATRI
 MGeo와 주행 검수 후 만든 v3 hybrid 차선 후보를 한 화면에서 비교한다. 이 묶음은
 **review-only** 산출물이며 `operational=false`다.

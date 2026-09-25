@@ -7,9 +7,9 @@
 >
 > **적용 ODD:** `shadow_two_way_v1`
 >
-> **상세 실험:** [drivable_bev README](../../../src/perception/drivable_bev/README.md)
+> **상세 실험:** [BEV 개발 이력](../../../src/asmc_perception/docs/bev-development-history.md)
 > **실행 계약:** [asmc_msgs](../../../src/asmc_msgs/msg/LaneBoundaryFamily.msg),
-> [lane_boundary_adapter](../../../src/planning_control/lane_boundary_adapter/README.md)
+> [lane_boundary_adapter](../../../src/lane_boundary_adapter/README.md)
 > **Planning 경계:** [Planning/Control 개발 가이드](../../packages/planning-control/README.md)
 
 이 문서는 음영 왕복 2차로에서 카메라가 제공하는 차선 family와 주행가능영역을 판제가
@@ -47,6 +47,13 @@ MORAI RGB ×3 --UDP--> bridge --ROS--> TwinLiteNet+ v6
 카메라 모듈이 켜져 있는 것과 판제가 그 결과에 제어 권한을 주는 것은 별개다. 판제는
 기본 disabled feature flag와 ODD gate를 별도로 두는 것이 권장되지만, 그 flag와 연결 코드는
 이 인수 작업의 범위가 아니다.
+
+`lane_boundary_adapter`는 이 계약을 검증하기 위한 임시 read-only reference package다.
+최종 판제는 가능하면 그 node를 별도 프로세스로 영구 유지하지 않고,
+`BuildBoundaryFamilyStripContext()`·freshness/invalid gate·관련 테스트를
+planning-owned lane/corridor module에 흡수한다. 흡수 전에는 아래 8절 인수 체크리스트와
+adapter README의 bag/closed-loop parity를 통과해야 한다. standalone package 삭제는
+대체 consumer merge 후 별도 PR에서만 수행한다.
 
 ## 2. 판제가 읽을 최소 토픽
 
@@ -150,7 +157,7 @@ column:     (8 - y) / 0.10
 
 현재 raster는 `sensor_msgs/Image`이므로 메시지 자체에는 metric 원점과 해상도가 들어 있지
 않다. 이는 음영구간 v3의 **동결된 임시 전송 envelope**이며, 판제 consumer는
-[`bev_grid.yaml`](../../../src/perception/drivable_bev/config/bev_grid.yaml)과 동결 기록의 SHA-256
+[`bev_grid.yaml`](../../../src/asmc_perception/config/bev/bev_grid.yaml)과 동결 기록의 SHA-256
 `8bad13875a2b7d9eec4a35687433446b1a57112257ec34520cf5c1d6e47e0ad3`을 함께 pin해야 한다.
 다른 grid를 같은 토픽 이름으로 조용히 해석해서는 안 된다. 공통 BEV custom message와
 metadata topic은 MGeo/LiDAR 계약을 함께 합의할 때 결정하며, 이번 v3 인수에서 선행 확정하지
@@ -208,10 +215,10 @@ drivable과 lane family는 근거를 제공하고 최종 corridor 생성은 판�
 ```bash
 source /opt/ros/noetic/setup.bash
 source /root/ws/devel/setup.bash
-roslaunch drivable_bev three_view_lane_pipeline.launch \
-  checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
-  enable_boundary_family_candidate:=true \
-  enable_shared_family_debug:=false
+roslaunch asmc_perception perception.launch \
+  camera_checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
+  lane_enable_boundary_family_candidate:=true \
+  lane_enable_shared_family_debug:=false
 ```
 
 UDP bridge와 read-only adapter는 `asmc-ros-noetic`에서 실행한다. adapter는 선택 사항이며
@@ -227,7 +234,7 @@ roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch
 `shadow_camera_perception_handoff_result`를 쓴다.
 
 ```bash
-python3 $(rospack find drivable_bev)/scripts/run_shadow_lane_bag_batch.py \
+rosrun asmc_perception run_shadow_lane_bag_batch.py \
   --selection /root/ws/artifacts/perception_eval/analysis/shadow_maneuver_20260913/selection.yaml \
   --checkpoint /root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
   --model-id <unique-v3-handoff-model-id> \
@@ -301,3 +308,5 @@ headless 판제 입력 기준선은 위 result-topic rate다.
 - [ ] 같은 raw/result bag으로 feature off/on과 fallback을 비교한다.
 - [ ] 실제 planning 부하에서 출력률·stale·closed-loop trajectory를 검증한다.
 - [ ] 대회판 simulator에서 별도 회귀 검증 전 production 승격으로 표시하지 않는다.
+- [ ] adapter core·config·test 흡수 후 동일 bag에서 strip/degraded/gap·diagnostics parity를 확인한다.
+- [ ] standalone package 삭제 전 외부 launch·code·문서 참조 0, rollback 경로와 판제 owner 리뷰를 확인한다.

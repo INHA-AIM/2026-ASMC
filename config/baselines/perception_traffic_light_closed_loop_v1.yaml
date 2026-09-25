@@ -1,0 +1,40 @@
+schema_version: 1
+acceptance_id: p4c4_traffic_light_behavior_closed_loop_v1
+status: passed
+verified_at: "2026-09-25"
+scope: isolated_ros_decision_loop
+excluded_scope:
+  - frenet_trajectory_generation
+  - mpc_actuation
+  - udp_vehicle_control
+
+fixture:
+  pose_frame: map
+  pose: {x: -60.10581400350202, y: -43.4557633921504, yaw: 1.5764114027309468}
+  current_link_id: A2256W000728
+  stop_line_distance_m: 8.945722813478959
+  traffic_light_id: C1256W000016
+  movement: straight
+  signal_controlled_link_id: A2256W000599
+
+required_transitions:
+  - input: {label: green, typed_state: 4, valid: true, stale: false}
+    output: {maneuver_type: 0, maneuver_name: KEEP, has_target_pose: false}
+  - input: {label: red, typed_state: 2, valid: true, stale: false}
+    output: {maneuver_type: 5, maneuver_name: STOP, has_target_pose: true}
+  - input: {label: green, typed_state: 4, valid: true, stale: false}
+    output: {maneuver_type: 0, maneuver_name: KEEP, has_target_pose: false}
+
+observed:
+  command_ids: [1, 2, 3]
+  red_stop_target_map: {x: -60.12796942029857, y: -39.51010278100862}
+  source_link_id: A2256W000728
+
+reproduce:
+  command: roslaunch asmc_perception traffic_light_closed_loop_acceptance.launch
+  report: /tmp/asmc_traffic_light_closed_loop_acceptance.json
+
+retirement_gate:
+  legacy_traffic_light_topics: still_preserved
+  reason: physical vehicle gate passed separately; retire only after every named consumer and launch leaves the compatibility topics
+  physical_vehicle_evidence: config/baselines/perception_traffic_light_vehicle_closed_loop_v1.yaml

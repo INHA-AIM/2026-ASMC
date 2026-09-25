@@ -27,8 +27,8 @@ gate는 [저장소 통합 로드맵](./consolidation-roadmap.md)을 따른다. p
 │   └── audit/            # package/topic/message/sensor/bag/HD Map baseline 생성
 ├── scripts/              # bridge, build, docker 헬퍼
 ├── config/               # simulator 설정과 기계 판독 baseline/contract
-│   ├── baselines/        # runtime_baseline_v1.yaml
-│   └── contracts/        # HD Map message/topic contract v1
+│   ├── baselines/        # runtime·perception 이관과 producer parity 기준
+│   └── contracts/        # HD Map·perception message/topic contract와 registry
 ├── mgeo_toolkit/         # 기존 HD map bake 도구
 ├── R_KR_PG_KATRI/        # 기존 KATRI 맵 자산; K-City 대회 데이터는 $ASMC_DATA
 ├── CONTRIBUTING.md
@@ -45,6 +45,7 @@ P1-A 당시 snapshot은 [runtime-baseline-v1.md](../records/baselines/runtime-v1
 
 ```bash
 python3 tools/audit/validate_p1b_contract.py
+python3 tools/audit/validate_perception_contract.py
 python3 src/asmc_hd_map/scripts/build_competition_metadata.py --check
 PYTHONPATH=src/asmc_hd_map/src python3 src/asmc_hd_map/scripts/build_drivable_area_input_audit.py --check
 PYTHONPATH=src/asmc_hd_map/src python3 src/asmc_hd_map/scripts/build_compact_drivable_map.py --repo-root "$PWD" --check
@@ -82,31 +83,31 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 현재 bridge 구조와 Phase 3 이관 결과는 [MORAI bridge guide](../packages/asmc_bridge/README.md)를
 따른다. P3-F에서 하위 node와 공동 launch를 `src/asmc_bridge/`로 물리 통합했다.
 
-### learning (✅ PR #2)
+### LBC teacher BEV research
 
 | 경로 | 담당 | GitHub |
 |------|------|--------|
-| `src/learning_by_cheating/` | 안승현 | @ahnsh03 |
+| `tools/research/lbc_teacher_bev/` | privileged GT/teacher BEV renderer·scenario debug | @ahnsh03 |
 | `scripts/rosbridge.sh`, `config/morai_rosbridge.env` | 종료된 direct ROS 실험 보존 | @ahnsh03 |
 | `mgeo_toolkit/`, `R_KR_PG_KATRI/` | 안승현 | @ahnsh03 |
 
-### perception · scenario (분산 package 운영 중)
+### perception · scenario (P4-C6 camera/BEV/traffic 통합 완료)
 
 | 경로 | 담당 | GitHub |
 |------|------|--------|
-| `src/perception/morai_3d_detection/` | 손재호 | @sonshiny |
-| `src/perception/twinlite_morai/` | 안승현 | @ahnsh03 |
-| `src/perception/camera_semantic_perception/` | 1/3-camera semantic runtime | @ahnsh03 |
-| `src/perception/drivable_bev/` | 3-camera BEV·음영 lane-family v3; 전역 map 결합 후보 | @ahnsh03 주관 협의 |
-| `src/traffic_light/` | extra camera 신호등 runtime | 장원태·통합 공동 리뷰 |
+| `src/asmc_perception/` | camera/BEV/lane/traffic runtime·support·config·model + 분리된 offline/training | @ahnsh03 주관, perception·planning 공동 리뷰 |
+| `src/lane_boundary_adapter/` | camera lane typed 출력을 검토하는 read-only planning adapter | 통합·판제 공동 리뷰 |
 | `src/lidar+sensorfusion/` | 독립 nested LiDAR·camera fusion workspace | @sonshiny·통합 공동 리뷰 |
-| `src/data_collection/` | Capture GT·mask·dataset·Real Time raw/result bag | @ahnsh03 |
+| `src/data_collection/` | recorder·bag profile/replay, Capture GT·mask·dataset의 독립 package | @ahnsh03 |
 | `tools/aim_scenario_runner/` | 장원태 | @wkddnjsxo |
 | `tools/grpc_inha_univ/` | 장원태 | @wkddnjsxo |
 
 현재 package 경계, 본선 입력 규칙과 Phase 4 이관 gate는
-[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. 단일
-`asmc_perception`은 아직 구현되지 않았다.
+[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. P4-C6에서
+camera/BEV/lane/traffic ROS node, runtime support/config/model과 가치 있는 학습·offline audit를
+`asmc_perception` 안의 명시적 경계로 통합했다. 실행·참조가 없는 camera 3D 연구와 기존 호환
+package는 Git history를 남기고 제거했다.
+`data_collection`과 `lidar+sensorfusion`은 통합 대상이 아닌 독립 경계다.
 
 ### interfaces (⬜ 합의 중)
 
@@ -129,14 +130,14 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `src/mpc_controller/` | ✅ | ✅ | 👀 | 👀 | — | — |
 | `src/frenet_planner/` | 👀 | 👀 | ✅ | 👀 | — | — |
 | `src/asmc_bridge/` | 👀 | 👀 | ✅ | ✅ | — | 👀 |
-| `src/learning_by_cheating/` | — | — | — | ✅ | — | — |
+| `tools/research/lbc_teacher_bev/` | — | — | — | ✅ | — | — |
 | `scripts/rosbridge.sh` | 👀 | 👀 | 👀 | ✅ | — | — |
 | `scripts/udp_bridge.sh` · `src/asmc_bridge/` | 👀 | 👀 | ✅ | ✅ | — | 👀 |
 | `tools/aim_scenario_runner/` | — | — | — | 👀 | ✅ | 👀 |
 | `tools/grpc_inha_univ/` | — | — | — | 👀 | ✅ | — |
-| `src/perception/morai_3d_detection/` | — | — | — | 👀 | 👀 | ✅ |
-| `src/perception/twinlite_morai/` · `src/data_collection/` | — | — | — | ✅ | 👀 | 👀 |
-| `src/perception/drivable_bev/` | 👀 | 👀 | 👀 | ✅ 주관 | ✅ 합의 | ✅ 합의 |
+| `src/asmc_perception/` | 👀 | 👀 | 👀 | ✅ 주관 | ✅ traffic 협의 | ✅ LiDAR interface 협의 |
+| `src/lane_boundary_adapter/` | ✅ 합의 | ✅ 합의 | 👀 | ✅ 주관 | — | 👀 |
+| `src/data_collection/` | — | — | — | ✅ | 👀 | 👀 |
 | `src/asmc_hd_map/` | 👀 | 👀 | 👀 | ✅ 주관 | ✅ 관측 자료 협의 | 👀 |
 | `docker/` | 👀 | 👀 | 👀 | ✅ | 👀 | ✅ train |
 | `docs/` | 👀 | 👀 | 👀 | ✅ | 👀 | 👀 |
@@ -165,11 +166,11 @@ CODEOWNERS 자동 리뷰: [.github/CODEOWNERS](../../.github/CODEOWNERS)
 | 모듈 | ASMC 경로 |
 |------|-----------|
 | Behavior / Frenet / MPC | `src/behavior_planner/`, `frenet_planner/`, `mpc_controller/` (v2 ROS 연결) |
-| Camera lane/drivable | `src/perception/twinlite_morai/`, `camera_semantic_perception/`, `drivable_bev/` |
-| LiDAR/3D perception | `src/perception/morai_3d_detection/`, `src/lidar+sensorfusion/` |
-| 공통 BEV | camera v3는 `src/perception/drivable_bev/`; 전역 map/LiDAR 결합 규격은 합의 중 |
+| Camera lane/drivable/traffic | `src/asmc_perception/` |
+| LiDAR/3D perception | `src/lidar+sensorfusion/` |
+| 공통 BEV | camera v3는 `src/asmc_perception/`; 전역 map/LiDAR 결합 규격은 합의 중 |
 | Capture·dataset | `src/data_collection/`, `scripts/*perception*`, `scripts/*twinlite*` |
-| SA_plan / LBC | `src/learning_by_cheating/` |
+| LBC GT/teacher BEV | `tools/research/lbc_teacher_bev/` |
 | Scenario / gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` |
 | Bridge | `scripts/udp_bridge.sh` (현행 UDP) · `scripts/rosbridge.sh` (종료된 direct ROS 실험 재현용) |
 

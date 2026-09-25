@@ -38,10 +38,10 @@ venv/
 
 # Submodule: morai_msgs (beta_drive @ 45c6baf)
 
-# Learning by Cheating data (not in git)
-src/learning_by_cheating/data/
-src/learning_by_cheating/checkpoints/
-src/learning_by_cheating/logs/
+# LBC teacher-BEV artifacts live under $ASMC_DATA/lbc_teacher_bev, never here.
+tools/research/lbc_teacher_bev/data/
+tools/research/lbc_teacher_bev/checkpoints/
+tools/research/lbc_teacher_bev/logs/
 
 # KATRI map Unity meta (not needed at runtime)
 R_KR_PG_KATRI/*.meta

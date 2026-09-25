@@ -18,11 +18,12 @@
 | MPC control | `src/mpc_controller/` | ROS node + transport-independent C++ core |
 | state source | `src/asmc_bridge/src/vehicle_state/` | GPS/IMU→`asmc_msgs/VehicleState` |
 | MORAI bridge | `src/asmc_bridge/` | 외부 UDP↔내부 ROS |
-| camera lane pilot | `src/planning_control/lane_boundary_adapter/` | read-only ROS debug, 제어 미연결 |
+| camera lane pilot | `src/lane_boundary_adapter/` | read-only ROS debug, 제어 미연결 |
 | bridge-only launch | `src/asmc_bridge/launch/` | planning launch가 아니라 bridge 공동 기동 |
 
-`src/planning_control/`은 현재 논리 그룹과 read-only adapter 경로이며 Behavior/Frenet/MPC를
-감싸는 단일 catkin package가 아니다. 세 package를 임의로 이동하거나 이름을 바꾸지 않는다.
+`lane_boundary_adapter`는 이름 그대로 perception→planning read-only adapter이며
+Behavior/Frenet/MPC를 감싸는 `planning_control` package가 아니다. 세 planning package를
+임의로 이동하거나 이름을 바꾸지 않는다.
 
 ## 2. 현재 데이터 흐름
 
@@ -116,7 +117,14 @@ LiDAR object producer, HD Map 정본, mission orchestration과 closed-loop full 
 `BehaviorCommand`, `Trajectory`, `/ctrl_cmd`를 발행하지 않으며 camera lane에 제어 권한을
 부여하지 않는다. 음영구간 소비 조건은
 [shadow camera handoff](../../handoffs/perception/shadow-camera.md), adapter 구현은
-[package README](../../../src/planning_control/lane_boundary_adapter/README.md)를 따른다.
+[package README](../../../src/lane_boundary_adapter/README.md)를 따른다.
+
+이 package는 음영구간 판제 개발을 위한 임시 read-only reference 경계다. 판제가
+canonical `LaneBoundaryFamily`·camera drivable BEV를 직접 소비하게 되면
+message→strip core, freshness/invalid 규칙, 설정과 테스트를 판제 소유 모듈에
+흡수한다. 동일 bag parity, feature-off/on closed-loop, fallback·rollback과 외부 참조 0을
+확인한 뒤에만 standalone `lane_boundary_adapter` package를 별도 PR에서 삭제한다.
+흡수 전까지는 현 package를 production control source로 승격하지 않는다.
 
 ## 8. 변경 gate
 
@@ -136,9 +144,8 @@ LiDAR object producer, HD Map 정본, mission orchestration과 closed-loop full 
 
 ## 9. 알려진 정리 대상
 
-- `scripts/build_planning_control.sh`와 `run_planner_controller.sh`는 이전 standalone 경로를
-  가리키며 현재 정본 명령이 아니다. Phase 5 script 정리에서 제거 또는 명시적 legacy
-  wrapper로 처리한다.
+- 이전 standalone planning/control build/run script는 현재 catkin target과 맞지 않아
+  P4-C6에서 제거했다. 빌드는 `scripts/build_ws.sh`, 실행은 package launch를 사용한다.
 - Behavior의 raw `/Object_topic`과 local map copy를 공용 perception/HD Map contract로 옮겨야 한다.
 - v1 제거는 v2 full-stack·rollback gate와 consumer 참조 0을 확인한 뒤 수행한다.
 - LANE_CHANGE의 runtime reference handoff와 MERGE production gate는 별도 검증 대상이다.

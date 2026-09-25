@@ -477,7 +477,7 @@ runtime:
 |---|---|---|
 | 래스터 도로 마스크 | `src/link_node/out/road_mask.png` | 5 px/m = 0.2 m/cell, map frame |
 | 벡터 차로·주행영역 | `/hd_map/global/*` (`asmc_msgs/DrivableArea`, `Lane`) | map frame 폴리곤 |
-| 카메라 BEV 주행가능확률 | `drivable_bev` 융합 출력 | base_link, 0.1 m/cell |
+| 카메라 BEV 주행가능확률 | `asmc_perception` 정본 `/perception/bev/camera/drivable_probability` | base_link, 0.1 m/cell |
 | 차선 경계 | `/perception/lane/boundaries`, `boundary_family` | 음영구간 포함 |
 
 **제안 구조.** `Roi()` 내부에서 점 단위 마스크 조회를 수행한다.
@@ -1043,7 +1043,8 @@ run id를 유지하므로, 매핑은 프레임 집합 포함관계로 유도한�
 
 - 격자 범위를 voxel 크기로 나눈 값이 **16의 배수**가 되도록 맞춘다(OpenPCDet 요구사항)
 - **클래스 불균형을 먼저 확인한다.** 보행자 프레임이 적으면 보행자 검출은 학습해도 쓸 수 없다.
-  `src/perception/morai_3d_detection/analyze_dataset_distribution.py`로 분포를 먼저 본다
+  이전 미사용 `morai_3d_detection` 분석기는 P4-C6에서 제거했으므로, 실제 LiDAR Capture import
+  포맷이 정해진 뒤 `tools/perception`에 manifest 기반 분포 audit를 새로 둔다
 - 학습은 주행 검증과 시간대를 분리한다. RAM 15.5 GiB에서 ROS 스택과 동시 실행하지 않는다
 - **검증 기준을 먼저 정한다.** 기하 파이프라인 대비 어떤 거리 구간에서 얼마나 좋아야
   채택할지 정하지 않고 학습부터 시작하지 않는다
@@ -1326,7 +1327,8 @@ ego yaw 보정 문제이고, 속도에 비례해 커지면 상대속도 차분 �
 7. **`vehicle_state`의 GPS/IMU 경로 품질.** 6.5 변경 1(map frame 추적)과 6.0.5(관측 지평)
    둘 다 측위에 의존한다. 음영구간 드리프트를 먼저 계측해야 두 항목의 설계가 정해진다.
 8. **관측 지평을 LiDAR만으로 계산할지, 카메라 BEV coverage와 합칠지.**
-   `drivable_bev`가 이미 카메라별 coverage를 산출한다. 합치면 음영구간에서 더 멀리 보지만
+   `asmc_perception` camera BEV runtime이 카메라별 coverage를 산출한다. 합치면
+   음영구간에서 더 멀리 보지만
    계약이 커진다. 6.0.5 합의 시 함께 결정한다.
 
 ---

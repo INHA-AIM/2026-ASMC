@@ -24,10 +24,11 @@
 | Behavior | `src/behavior_planner/` | 정윤태·양서준 |
 | Frenet | `src/frenet_planner/` | 이강태·정윤태 |
 | MPC | `src/mpc_controller/` | 정윤태·양서준 |
-| Planning adapter | `src/planning_control/` | 통합·판제 공동 |
+| Planning adapter | `src/lane_boundary_adapter/` | 통합·판제 공동; 판제 consumer 흡수 후 삭제 gate |
 | UDP/sensor/state bridge와 통합 launch | `src/asmc_bridge/`; [개발 가이드](../packages/asmc_bridge/README.md) | 이강태·안승현, planning consumer 공동 리뷰 |
-| Camera/BEV | `src/perception/camera_semantic_perception/`, `drivable_bev/`, `twinlite_morai/` | 안승현, perception 공동 리뷰 |
-| LiDAR/3D | `src/perception/morai_3d_detection/`, `src/lidar+sensorfusion/` | 손재호, 통합 공동 리뷰 |
+| Perception façade와 typed 계약 | `src/asmc_perception/`; [runtime 계약](../contracts/perception/runtime-v1.md) | 안승현 주관, 손재호·장원태·planning consumer 공동 리뷰 |
+| Camera/BEV/traffic | `src/asmc_perception/` | 안승현, perception·planning consumer 공동 리뷰 |
+| LiDAR/3D | `src/lidar+sensorfusion/` | 손재호, 통합 공동 리뷰 |
 | 데이터 수집 | `src/data_collection/` | 안승현, perception 공동 리뷰 |
 | Scenario/gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |
 | 공용 infra | `docker/`, `.github/`, `docs/`, `scripts/` 공용 진입점 | 통합 리뷰 필수 |
@@ -39,9 +40,9 @@
 | 목표 | 현재 상태 |
 |---|---|
 | `asmc_hd_map` | 2단계 완료. 운영 map과 global/local topic 사용 |
-| `asmc_bridge` | 3단계 예정. [현재 세 bridge/state 패키지와 이관 gate](../packages/asmc_bridge/README.md)를 검증 후 통합 |
-| `asmc_perception` | 4단계 예정. [현재 package-group 경계와 이관 gate](../packages/asmc_perception/README.md)를 검증하며 perception/LiDAR/data 패키지는 삭제하지 않음 |
-| `learning*` 정리 | 4단계 gate 전 삭제 금지. `src/learning`은 링크 이관 후 제거 후보 |
+| `asmc_bridge` | P3-G local closeout 완료. 실제 두 PC LAN2LAN은 6단계 현장 리허설에서 검증 |
+| `asmc_perception` | P4-C6 camera/BEV/lane/traffic runtime·offline·training 통합과 기존 package closeout 완료. `data_collection`은 독립 package이며 팀원 개발 중인 `src/lidar+sensorfusion`은 handoff 전 변경 금지 |
+| `learning*` 정리 | 완료. LBC teacher/debug 필요 기능만 `tools/research/lbc_teacher_bev` 이관 |
 | 단일 실행·시각화 | 5단계 예정 |
 | LAN2LAN 현장 리허설 | 6단계 예정 |
 

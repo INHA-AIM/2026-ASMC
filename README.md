@@ -77,17 +77,14 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 │   ├── asmc_msgs/             # 팀 내부 ROS1 공용 message 계약
 │   ├── asmc_bridge/           # MORAI Network/Sensor UDP + VehicleState
 │   ├── asmc_hd_map/           # HD Map builder/runtime/검수
-│   ├── learning_by_cheating/  # learning ✅
+│   ├── asmc_perception/       # camera·BEV·lane·traffic runtime + offline/training
+│   ├── lane_boundary_adapter/ # read-only perception→planning adapter
 │   ├── data_collection/        # Capture GT · mask · dataset ✅
-│   ├── perception/camera_semantic_perception/ # camera ROS live inference ✅
-│   ├── perception/drivable_bev/          # metric BEV · lane observation ✅
-│   ├── perception/twinlite_morai/        # camera 2-head binary/4-class 학습·평가 ✅
-│   ├── perception/morai_3d_detection/  # perception ✅
-│   ├── traffic_light/          # camera traffic-light inference ✅
 │   ├── lidar+sensorfusion/     # 독립 nested LiDAR/fusion workspace
 │   └── MORAI-ROS_morai_msgs/  # submodule beta_drive
 ├── tools/
 │   ├── aim_scenario_runner/   # scenario ✅
+│   ├── research/lbc_teacher_bev/ # privileged GT/teacher BEV 연구 도구
 │   └── grpc_inha_univ/        # gRPC ✅
 ├── scripts/
 │   ├── rosbridge.sh           # 종료된 direct ROS 실험 재현용(본선/현재 개발 금지)
@@ -98,6 +95,16 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 ```
 
 팀원별 **어느 폴더를 고칠지:** [docs/onboarding/ownership.md](docs/onboarding/ownership.md)
+
+### Perception 경로 안내
+
+P4-C6부터 camera semantic, camera BEV/lane, traffic-light의 실행·offline·학습
+정본은 모두 `src/asmc_perception/`이다. 기존
+`camera_semantic_perception`, `drivable_bev`, `traffic_light`, `src/perception/` 경로는
+제거했으며 topic과 node 이름은 호환성을 위해 유지했다. 실행은
+`./scripts/perception.sh`, 세부 경로와 인수 경계는
+[Perception package README](src/asmc_perception/README.md)를 따른다. `src/data_collection/`과
+`src/lidar+sensorfusion/`은 독립 경계로 남아 있다.
 
 ## Git과 PR
 

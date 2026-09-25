@@ -15,7 +15,8 @@
   <depend>visualization_msgs</depend><depend>morai_msgs</depend><depend>yaml-cpp</depend>
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>rviz</exec_depend>
-  <exec_depend>traffic_light</exec_depend>
+  <!-- P4-C3 runtime producer and P4-C6 model artifact live here. -->
+  <exec_depend>asmc_perception</exec_depend>
   <exec_depend>frenet_planner</exec_depend>
   <exec_depend>mpc_controller</exec_depend>
   <exec_depend>asmc_bridge</exec_depend>

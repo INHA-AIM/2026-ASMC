@@ -1,13 +1,16 @@
 # `asmc_msgs` 개발·호환 가이드
 
 ASMC 내부 ROS1 메시지의 정본 패키지다. 패키지 버전 `1.0.0`부터 기존 planning/perception
-메시지 13개와 HD Map·competition metadata 메시지 12개의 MD5를 동결한다.
+메시지 13개와 HD Map·competition metadata 메시지 12개의 MD5를 동결하며, P4-B에서
+perception runtime 메시지 3개를 additive하게 추가했다.
 
 > **문서 역할:** Active Package Guide — 팀 내부 ROS1 typed message의 소유·변경·검증 규칙
 
 - 공용 계약 허브: [contracts/README.md](../../docs/contracts/README.md)
 - 사람이 읽는 규약: [HD Map topic contract v1](../../docs/contracts/hd-map/topic-v1.md)
+- perception 규약: [Perception runtime topic contract v1](../../docs/contracts/perception/runtime-v1.md)
 - 기계 판독 규약: [hd_map_topic_contract_v1.yaml](../../config/contracts/hd_map_topic_contract_v1.yaml)
+- message registry: [asmc_msgs_contract_registry_v1.yaml](../../config/contracts/asmc_msgs_contract_registry_v1.yaml)
 - 검증: `python3 tools/audit/validate_p1b_contract.py`
 
 필드와 topic 의미는 공용 계약 허브의 개별 Frozen contract가 정본이다. 이 README는 message
@@ -20,7 +23,8 @@ publisher나 변환 로직은 포함하지 않는다.
 
 - 기존 planning/perception 타입: 13개, ROS1 MD5 동결
 - HD Map/competition 타입: 12개
-- 합계: 25개
+- perception runtime additive 타입: 3개
+- 합계: 28개
 - 외부 MORAI wire type: pinned `src/MORAI-ROS_morai_msgs`, 이 패키지로 복사하지 않음
 - 중복 `Msg` package: consumer 이관과 clean build 전까지 삭제하지 않음
 
@@ -31,6 +35,7 @@ publisher나 변환 로직은 포함하지 않는다.
 | planning v1/v2 | `BehaviorContext`, `PlanFeedback`, `BehaviorCommand`, `FrenetFeedback`, `Trajectory*` |
 | HD Map | `HdMapMeta`, `LaneMarking*`, `Lane*`, `LaneAssociation`, `DrivableArea*` |
 | competition | `CompetitionCheckpoint*`, `MissionZone*` |
+| perception runtime v1 | `TrafficLightDetection`, `TrackedObject*` |
 
 현재 전체 목록은 `msg/`, 등록 순서는 `CMakeLists.txt`가 구현 정본이다.
 
@@ -61,7 +66,9 @@ ROS1 MD5는 `.msg` 파일 SHA가 아니다. 주석과 공백을 제외한 상수
 
 | 정본 | 역할 |
 |---|---|
-| `config/contracts/hd_map_topic_contract_v1.yaml` | 25개 message MD5, 필수 필드와 11개 HD Map topic |
+| `config/contracts/asmc_msgs_contract_registry_v1.yaml` | 전체 28개 message와 소유 계약의 일대일 대응 |
+| `config/contracts/hd_map_topic_contract_v1.yaml` | 기존·HD Map 25개 message MD5, 필수 필드와 11개 HD Map topic |
+| `config/contracts/perception_runtime_topic_contract_v1.yaml` | perception additive 3개 message와 canonical/compatibility topic |
 | `config/baselines/runtime_baseline_v1.yaml` | P1-A 당시 package/topic/message 회귀 snapshot |
 | `src/asmc_msgs/test/test_message_serialization.py` | generated ROS type MD5와 serialization 왕복 |
 | `tools/audit/validate_p1b_contract.py` | ROS 설치 없이 source contract 검증 |
@@ -76,7 +83,9 @@ ROS 없이 source contract를 검사한다.
 
 ```bash
 python3 tools/audit/validate_p1b_contract.py
+python3 tools/audit/validate_perception_contract.py
 python3 -m unittest tools/audit/test_p1b_contract.py
+python3 -m unittest tools/audit/test_perception_contract.py
 ```
 
 ROS Noetic 환경의 단독 build 명령은 다음과 같다.

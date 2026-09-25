@@ -6,11 +6,16 @@
   <arg name="traffic_light" default="true"/>
   <arg name="traffic_light_device" default="auto"/>
   <arg name="camera_topic" default="/cam_extra/image_jpeg/compressed"/>
+  <arg name="traffic_light_checkpoint"
+       default="$(find asmc_perception)/models/traffic_light/best.pt"/>
 
   <group if="$(arg traffic_light)">
-    <node pkg="traffic_light" type="live_infer.py"
+    <!-- P4-C3 migration: executable ownership moved from
+         traffic_light/live_infer.py to asmc_perception. Legacy String topics
+         are intentionally still emitted beside the typed topic. -->
+    <node pkg="asmc_perception" type="traffic_light_node.py"
           name="traffic_light_infer" output="screen"
-          args="--image-topic $(arg camera_topic) --state-topic /traffic_light/state --detail-topic /traffic_light/detail --device $(arg traffic_light_device)"/>
+          args="--ckpt $(arg traffic_light_checkpoint) --image-topic $(arg camera_topic) --state-topic /traffic_light/state --detail-topic /traffic_light/detail --typed-topic /perception/traffic_light/detection --device $(arg traffic_light_device)"/>
   </group>
 
   <include if="$(eval arg('state_source') == 'gps_imu')"
