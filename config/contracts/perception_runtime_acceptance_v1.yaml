@@ -1,0 +1,224 @@
+schema_version: 1
+contract_id: asmc_perception_runtime_acceptance_v1
+status: active
+default_duration_sec: 15.0
+views: [front, left, right]
+
+topic_groups:
+  camera_lane:
+    required_nodes:
+      - /camera_semantic_inference
+      - /camera_bev
+      - /camera_bev_fusion
+      - /camera_lane_vectorizer
+    topics:
+      - pattern: /perception/camera/{view}/drivable/probability
+        type: sensor_msgs/Image
+        publisher: /camera_semantic_inference
+        subscribers: [/camera_bev]
+        min_rate_hz: 5.0
+        require_nonzero_stamp: true
+      - pattern: /perception/camera/{view}/road_marking/class_id
+        type: sensor_msgs/Image
+        publisher: /camera_semantic_inference
+        subscribers: [/camera_bev]
+        min_rate_hz: 5.0
+        require_nonzero_stamp: true
+      - pattern: /perception/camera/{view}/road_marking/confidence
+        type: sensor_msgs/Image
+        publisher: /camera_semantic_inference
+        subscribers: [/camera_bev]
+        min_rate_hz: 5.0
+        require_nonzero_stamp: true
+      - pattern: /perception/camera/{view}/road_marking/model_grid/class_id
+        type: sensor_msgs/Image
+        publisher: /camera_semantic_inference
+        subscribers: [/camera_lane_vectorizer]
+        min_rate_hz: 5.0
+        require_nonzero_stamp: true
+      - pattern: /perception/camera/{view}/road_marking/model_grid/confidence
+        type: sensor_msgs/Image
+        publisher: /camera_semantic_inference
+        subscribers: [/camera_lane_vectorizer]
+        min_rate_hz: 5.0
+        require_nonzero_stamp: true
+      - pattern: /perception/bev/debug/{view}/drivable_probability
+        type: sensor_msgs/Image
+        publisher: /camera_bev
+        subscribers: [/camera_bev_fusion]
+        frame_id: base_link
+        min_rate_hz: 5.0
+        require_nonzero_stamp: true
+      - pattern: /perception/bev/debug/{view}/road_marking/class_id
+        type: sensor_msgs/Image
+        publisher: /camera_bev
+        subscribers: [/camera_bev_fusion]
+        frame_id: base_link
+        min_rate_hz: 5.0
+        require_nonzero_stamp: true
+      - pattern: /perception/bev/debug/{view}/road_marking/confidence
+        type: sensor_msgs/Image
+        publisher: /camera_bev
+        subscribers: [/camera_bev_fusion]
+        frame_id: base_link
+        min_rate_hz: 5.0
+        require_nonzero_stamp: true
+      - pattern: /perception/bev/camera/drivable_probability
+        type: sensor_msgs/Image
+        publisher: /camera_bev_fusion
+        frame_id: base_link
+        min_rate_hz: 5.0
+        require_nonzero_stamp: true
+      - pattern: /perception/bev/camera/road_marking/class_id
+        type: sensor_msgs/Image
+        publisher: /camera_bev_fusion
+        frame_id: base_link
+        min_rate_hz: 5.0
+        require_nonzero_stamp: true
+      - pattern: /perception/bev/camera/road_marking/confidence
+        type: sensor_msgs/Image
+        publisher: /camera_bev_fusion
+        frame_id: base_link
+        min_rate_hz: 5.0
+        require_nonzero_stamp: true
+      - pattern: /perception/bev/camera/coverage
+        type: sensor_msgs/Image
+        publisher: /camera_bev_fusion
+        frame_id: base_link
+        min_rate_hz: 5.0
+        require_nonzero_stamp: true
+      - pattern: /perception/lane/boundary_observations
+        type: asmc_msgs/LaneBoundaryObservationArray
+        publisher: /camera_lane_vectorizer
+        frame_id: base_link
+        min_rate_hz: 5.0
+        require_nonzero_stamp: true
+      - pattern: /perception/camera/diagnostics
+        type: diagnostic_msgs/DiagnosticArray
+        publisher: /camera_semantic_inference
+        min_messages: 2
+        max_stale_sec: 3.0
+      - pattern: /perception/bev/debug/diagnostics
+        type: diagnostic_msgs/DiagnosticArray
+        publisher: /camera_bev
+        min_messages: 2
+        max_stale_sec: 3.0
+      - pattern: /perception/bev/diagnostics
+        type: diagnostic_msgs/DiagnosticArray
+        publisher: /camera_bev_fusion
+        min_messages: 2
+        max_stale_sec: 3.0
+      - pattern: /perception/lane/diagnostics
+        type: diagnostic_msgs/DiagnosticArray
+        publisher: /camera_lane_vectorizer
+        min_messages: 2
+        max_stale_sec: 3.0
+
+  traffic_light:
+    required_nodes: [/traffic_light_infer]
+    topics:
+      - pattern: /perception/traffic_light/detection
+        type: asmc_msgs/TrafficLightDetection
+        publisher: /traffic_light_infer
+        min_rate_hz: 1.0
+        require_nonzero_stamp: true
+      - pattern: /traffic_light/state
+        type: std_msgs/String
+        publisher: /traffic_light_infer
+        min_rate_hz: 1.0
+      - pattern: /traffic_light/detail
+        type: std_msgs/String
+        publisher: /traffic_light_infer
+        min_rate_hz: 1.0
+
+  visualization:
+    required_nodes:
+      - /camera_semantic_visualizer
+      - /camera_bev_visualizer
+    topics:
+      - pattern: /perception/camera/debug/mosaic/compressed
+        type: sensor_msgs/CompressedImage
+        publisher: /camera_semantic_visualizer
+        min_rate_hz: 1.0
+        require_nonzero_stamp: true
+      - pattern: /perception/bev/debug/comparison/compressed
+        type: sensor_msgs/CompressedImage
+        publisher: /camera_bev_visualizer
+        frame_id: base_link
+        min_rate_hz: 1.0
+        require_nonzero_stamp: true
+
+optional_consumer_gates:
+  planning_traffic_light:
+    topics:
+      - pattern: /perception/traffic_light/detection
+        subscribers: [/behavior_planner]
+      - pattern: /traffic_light/state
+        subscribers: [/behavior_planner]
+  lane_adapter:
+    topics:
+      - pattern: /perception/lane/boundary_observations
+        subscribers: [/lane_boundary_monitor]
+
+default_forbidden_topics:
+  - /perception/bev/debug/{view}/coverage
+  - /perception/bev/camera/source_count
+  - /perception/bev/debug/source_view
+  - /perception/lane/pipeline_audit
+  - /perception/camera/{view}/debug/panel/compressed
+  - /perception/bev/debug/fused/compressed
+  - /perception/bev/debug/fused_quality/compressed
+  - /perception/lane/debug/evidence_bev/compressed
+  - /perception/lane/debug/fitted_bev/compressed
+  - /perception/lane/debug/boundaries_bev/compressed
+  - /perception/lane/debug/shared_family_bev/compressed
+  - /perception/lane/debug/camera_reprojection_mosaic/compressed
+  - /perception/bev/debug/{view}/camera_grid_overlay/compressed
+
+static_bindings:
+  - id: host_perception_entrypoint
+    file: scripts/perception.sh
+    anchors:
+      - asmc-perception-train
+      - roslaunch asmc_perception perception.launch
+  - id: canonical_perception_launch
+    file: src/asmc_perception/launch/perception.launch
+    anchors:
+      - pkg="asmc_perception" type="camera_bev_node.py"
+      - pkg="asmc_perception" type="camera_bev_fusion_node.py"
+      - pkg="asmc_perception" type="lane_vectorizer_node.py"
+      - pkg="asmc_perception" type="traffic_light_node.py"
+  - id: semantic_launch
+    file: src/asmc_perception/launch/camera_lane.launch
+    anchors:
+      - pkg="asmc_perception" type="semantic_inference_node.py"
+  - id: planning_traffic_light_topics
+    file: src/behavior_planner/src/node/behavior_node.cpp
+    anchors:
+      - /perception/traffic_light/detection
+      - /traffic_light/state
+  - id: planning_traffic_light_provider
+    file: src/behavior_planner/src/signal/ros_traffic_light_provider.cpp
+    anchors:
+      - typed_subscriber_ = nh.subscribe
+      - legacy_subscriber_ = nh.subscribe
+  - id: planning_traffic_light_config
+    file: src/behavior_planner/src/config/behavior_params.yaml
+    anchors:
+      - 'typed_topic: "/perception/traffic_light/detection"'
+      - 'topic: "/traffic_light/state"'
+  - id: lane_adapter_config
+    file: src/lane_boundary_adapter/config/shadow_lane_consumer.yaml
+    anchors:
+      - 'input: /perception/lane/boundary_observations'
+  - id: lane_adapter_source
+    file: src/lane_boundary_adapter/src/lane_boundary_monitor_node.cpp
+    anchors:
+      - /perception/lane/boundary_observations
+
+deferred_components:
+  - id: lidar_canonical_runtime
+    reason: team-owned nested workspace has not completed P4-D handoff
+    topics:
+      - /perception/lidar/tracked_objects
+      - /perception/lidar/drivable_tracked_objects
