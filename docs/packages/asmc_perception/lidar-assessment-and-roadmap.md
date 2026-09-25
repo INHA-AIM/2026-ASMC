@@ -1043,7 +1043,8 @@ run id를 유지하므로, 매핑은 프레임 집합 포함관계로 유도한�
 
 - 격자 범위를 voxel 크기로 나눈 값이 **16의 배수**가 되도록 맞춘다(OpenPCDet 요구사항)
 - **클래스 불균형을 먼저 확인한다.** 보행자 프레임이 적으면 보행자 검출은 학습해도 쓸 수 없다.
-  `src/perception/morai_3d_detection/analyze_dataset_distribution.py`로 분포를 먼저 본다
+  이전 미사용 `morai_3d_detection` 분석기는 P4-C6에서 제거했으므로, 실제 LiDAR Capture import
+  포맷이 정해진 뒤 `tools/perception`에 manifest 기반 분포 audit를 새로 둔다
 - 학습은 주행 검증과 시간대를 분리한다. RAM 15.5 GiB에서 ROS 스택과 동시 실행하지 않는다
 - **검증 기준을 먼저 정한다.** 기하 파이프라인 대비 어떤 거리 구간에서 얼마나 좋아야
   채택할지 정하지 않고 학습부터 시작하지 않는다

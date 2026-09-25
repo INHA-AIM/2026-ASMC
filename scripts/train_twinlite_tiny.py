@@ -21,10 +21,10 @@ from torch.utils.data import DataLoader
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PERCEPTION_SRC = REPO_ROOT / "src" / "perception"
+PERCEPTION_SRC = REPO_ROOT / "src" / "asmc_perception" / "src"
 sys.path.insert(0, str(PERCEPTION_SRC))
 
-from twinlite_morai import (  # noqa: E402
+from asmc_perception.training.twinlite import (  # noqa: E402
     MaskedTwinLiteLoss,
     MoraiTwinLiteDataset,
     ROAD_MARKING_TASK,

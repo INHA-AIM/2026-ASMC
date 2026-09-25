@@ -66,8 +66,8 @@ source devel/setup.bash
 ```
 
 Behavior/Frenet/MPC도 현재 catkin package이므로 `build_ws.sh`에서 함께 빌드한다.
-`build_planning_control.sh`는 이전 standalone 기준선용이며 현재 실행 경로가 아니다. 정상적인
-Docker 상태는 network mode가 `host`이고 published port가 없는 상태다.
+이전 standalone planning/control build script는 P4-C6에서 제거했다. 정상적인 Docker
+상태는 network mode가 `host`이고 published port가 없는 상태다.
 
 개발 MORAI 26.R1 프로필은 다음처럼 실행한다.
 

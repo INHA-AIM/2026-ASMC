@@ -39,11 +39,12 @@ components:
 compatibility:
   preserve_legacy_topics: true
   physical_source_moves: true
-  physical_source_move_scope: camera_bev_lane_runtime_nodes_support_and_config
-  compatibility_python_namespaces: thin_forwarders
-  compatibility_config_paths: byte_identical_guarded_mirrors
+  physical_source_move_scope: camera_bev_lane_runtime_offline_training_and_config
+  compatibility_python_namespaces: removed_p4c6
+  compatibility_config_paths: removed_after_hash_guarded_migration
   representative_bag_parity: passed_p4c5
-  package_deletions: false
+  package_deletions: true
+  removed_packages: [camera_semantic_perception, drivable_bev, traffic_light]
   oracle_inputs_allowed: false
   planning_consumer:
     package: behavior_planner

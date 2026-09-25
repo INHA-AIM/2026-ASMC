@@ -90,23 +90,14 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             body = (canonical_root / filename).read_text(encoding="utf-8")
             self.assertIn("def main", body, filename)
 
-        compatibility_paths = {
-            REPO_ROOT / "src/perception/camera_semantic_perception/scripts": {
-                "semantic_inference_node.py",
-                "semantic_visualizer_node.py",
-            },
-            REPO_ROOT / "src/perception/drivable_bev/scripts": {
-                "camera_bev_node.py",
-                "camera_bev_fusion_node.py",
-                "camera_bev_visualizer_node.py",
-                "lane_vectorizer_node.py",
-                "lane_vector_visualizer_node.py",
-            },
-        }
-        for root, filenames in compatibility_paths.items():
-            for filename in filenames:
-                body = (root / filename).read_text(encoding="utf-8")
-                self.assertIn("asmc_perception.nodes", body, str(root / filename))
+        self.assertFalse((REPO_ROOT / "src/perception").exists())
+        self.assertFalse((REPO_ROOT / "src/traffic_light").exists())
+        self.assertTrue(
+            (canonical_root.parent / "training" / "twinlite" / "training.py").is_file()
+        )
+        self.assertTrue(
+            (canonical_root.parent / "offline" / "bev" / "bag_batch.py").is_file()
+        )
 
     def test_runtime_support_and_config_are_canonically_owned(self):
         canonical_root = PACKAGE_ROOT / "src" / "asmc_perception"
@@ -133,7 +124,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         }
         self.assertFalse(dependencies & {"camera_semantic_perception", "drivable_bev"})
 
-    def test_compatibility_config_mirrors_are_byte_identical(self):
+    def test_canonical_config_inventory_is_hash_guarded(self):
         evidence = yaml.safe_load(
             (
                 REPO_ROOT
@@ -141,14 +132,12 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             ).read_text(encoding="utf-8")
         )
         self.assertEqual(
-            "p4c5_perception_support_config_ownership_v1",
+            "p4c6_perception_package_closeout_v1",
             evidence["acceptance_id"],
         )
-        self.assertEqual(10, len(evidence["config_mirrors"]))
-        for item in evidence["config_mirrors"]:
-            canonical = (REPO_ROOT / item["canonical"]).read_bytes()
-            compatibility = (REPO_ROOT / item["compatibility"]).read_bytes()
-            self.assertEqual(canonical, compatibility, item["canonical"])
+        self.assertEqual(12, len(evidence["canonical_configs"]))
+        for item in evidence["canonical_configs"]:
+            canonical = (REPO_ROOT / item["path"]).read_bytes()
             self.assertEqual(
                 item["sha256"], hashlib.sha256(canonical).hexdigest()
             )
@@ -182,7 +171,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         )
         self.assertTrue(self.runtime["compatibility"]["preserve_legacy_topics"])
         self.assertTrue(self.runtime["compatibility"]["physical_source_moves"])
-        self.assertFalse(self.runtime["compatibility"]["package_deletions"])
+        self.assertTrue(self.runtime["compatibility"]["package_deletions"])
         self.assertFalse(self.runtime["compatibility"]["oracle_inputs_allowed"])
         consumer = self.runtime["compatibility"]["planning_consumer"]
         self.assertEqual(
@@ -262,14 +251,41 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         self.assertIn('default="false"', rendered)
         self.assertIn('name="allow_vehicle_control"', rendered)
 
-    def test_parity_launch_compares_reference_canonical_and_typed_outputs(self):
-        audit = ET.parse(
-            PACKAGE_ROOT / "launch" / "traffic_light_parity.launch"
-        ).getroot()
-        nodes = {(item.get("pkg"), item.get("type")) for item in audit.iter("node")}
-        self.assertIn(("traffic_light", "live_infer.py"), nodes)
-        self.assertIn(("asmc_perception", "traffic_light_node.py"), nodes)
-        self.assertIn(("asmc_perception", "traffic_light_parity_audit.py"), nodes)
+    def test_traffic_light_model_is_canonically_owned(self):
+        model = PACKAGE_ROOT / "models" / "traffic_light" / "best.pt"
+        self.assertTrue(model.is_file())
+        evidence = yaml.safe_load(
+            (
+                REPO_ROOT
+                / "config/baselines/perception_traffic_light_parity_v1.yaml"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            "src/asmc_perception/models/traffic_light/best.pt",
+            evidence["checkpoint"]["path"],
+        )
+        self.assertEqual(
+            evidence["checkpoint"]["sha256"],
+            hashlib.sha256(model.read_bytes()).hexdigest(),
+        )
+
+    def test_planning_launches_use_the_canonical_traffic_light_model(self):
+        behavior_root = REPO_ROOT / "src" / "behavior_planner"
+        expected = "$(find asmc_perception)/models/traffic_light/best.pt"
+        for name in ("autonomy_no_bridges.launch", "autonomy_no_bridges_v2.launch"):
+            launch = ET.parse(behavior_root / "launch" / name).getroot()
+            arguments = {
+                item.get("name"): item.get("default", "")
+                for item in launch.findall("arg")
+            }
+            self.assertEqual(expected, arguments["traffic_light_checkpoint"], name)
+
+        package = ET.parse(behavior_root / "package.xml").getroot()
+        dependencies = {
+            item.text for item in package if item.tag.endswith("depend")
+        }
+        self.assertIn("asmc_perception", dependencies)
+        self.assertNotIn("traffic_light", dependencies)
 
 
 if __name__ == "__main__":

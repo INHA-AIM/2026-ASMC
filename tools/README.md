@@ -34,10 +34,14 @@ python3 -m unittest tools/audit/test_bridge_profiles.py
 python3 -m unittest tools/audit/test_p1b_contract.py
 python3 -m unittest tools/audit/test_perception_contract.py
 python3 tools/audit/check_documentation_migration.py
-python3 tools/audit/build_perception_runtime_baseline.py --check
 python3 -m unittest tools/audit/test_perception_runtime_baseline.py
 # D1 이전 commit 이력이 있는 clone에서 원문 inventory와 byte 이동까지 확인
 python3 tools/audit/check_documentation_migration.py --with-history
 # ROS Noetic workspace를 build/source한 환경에서 실행
 python3 -m unittest src/asmc_msgs/test/test_message_serialization.py
 ```
+
+`perception_runtime_baseline_v1`도 P4-A 입력 commit `1bd8ec9`의 구조 snapshot이다.
+`build_perception_runtime_baseline.py --check`는 그 commit을 별도 worktree에서 재현할 때만
+사용한다. 현재 HEAD에서는 정본 package closeout과 충돌하므로 frozen manifest의 schema·핵심
+값만 `test_perception_runtime_baseline.py`로 검사한다.

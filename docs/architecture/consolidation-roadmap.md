@@ -4,7 +4,8 @@
 > **작성 기준:** 2026-09-20 저장소와 현장 점검 반출 자료의 read-only 감사
 > **진행 상태:** 1·2단계, 3단계 P3-G local closeout, P4-A·P4-B와 P4-C1~C5 완료. 다음은 P4-C6 기존 perception 호환 패키지 closeout
 > **보호 범위:** `behavior_planner`, `frenet_planner`, `mpc_controller`,
-> `planning_control/lane_boundary_adapter` 및 planning 소유 launch는 이 계획의 일방적 이동·삭제 대상이 아니다.
+> planning 소유 Behavior/Frenet/MPC package는 이 계획의 일방적 이동·삭제 대상이 아니다.
+> read-only `lane_boundary_adapter`는 역할이 드러나도록 `src/lane_boundary_adapter/`로 이동했다.
 
 ## 1. 결론
 
@@ -32,9 +33,10 @@
 
 ## 2. 현재 감사 결과
 
-2026-09-19 기준 `src/`에는 `package.xml`이 24개 있다. 이 수에는 팀 패키지뿐 아니라 중복
-`morai_msgs`, `Msg`, 여섯 Velodyne 패키지가 포함된다. 루트 `scripts/`에는 실행·학습·분석
-스크립트 30개가 한 수준에 섞여 있다.
+2026-09-25 P4-C6 기준 `src/`에는 `package.xml`이 19개 있다. 이 수에는 팀 패키지뿐
+아니라 LiDAR nested workspace의 `morai_msgs`, `Msg`, 여섯 Velodyne 패키지가 포함된다.
+루트 `scripts/`에는 실행·학습·분석 진입점 29개가 남아 있으며, 단일 CLI 정리는
+Phase 5 범위다.
 
 | 현재 영역 | 판단 | 처리 방향 |
 |---|---|---|
@@ -44,17 +46,18 @@
 | `morai_udp_bridge` + `morai_sensor_bridge` + `vehicle_state` | P3-F 이전 세 패키지로 분산 | `asmc_bridge`로 물리 통합 완료 |
 | `integration_launch` | P3-F 이전 planning 공동 launch | consumer launch를 갱신하고 `asmc_bridge/launch`로 통합 완료 |
 | `asmc_hd_map` + `mgeo_toolkit` | runtime·builder는 통합 완료, 외부 toolkit은 provenance 입력 | geometry parity 후 toolkit 의존 축소 |
-| `camera_semantic_perception` + `drivable_bev` + `traffic_light` | 한 camera pipeline이 세 패키지로 분산 | `asmc_perception`의 하위 모듈로 통합 |
-| `morai_3d_detection` + `lidar+sensorfusion/src/Main` | 학습·검증 산출물·runtime·vendor가 혼재 | runtime만 `asmc_perception`으로 이식, offline은 `tools/perception`으로 분리 |
+| `camera_semantic_perception` + `drivable_bev` + `traffic_light` | P4-C6 통합·검증 완료 | `asmc_perception` runtime/offline/training으로 이관하고 기존 ROS package 제거 |
+| `morai_3d_detection` | 실행·참조 0인 중단된 camera 3D 연구 | P4-C6에서 제거, 필요 시 Git history에서만 복원 |
+| `lidar+sensorfusion/src/Main` | 라이다 팀원이 개발 중인 nested workspace | handoff 전까지 위치·내부 `Msg`/`morai_msgs`를 그대로 유지 |
 | `data_collection` | recorder·bag profile·replay와 dataset 도구 | 독립 package로 유지하고 내부 runtime/offline 경계만 정리 |
-| `src/learning` | README 1개뿐인 논리 폴더 | 문서 링크 이관 후 삭제 |
+| `src/learning` | README 1개뿐이던 빈 논리 폴더 | P4-C6에서 문서 이관 후 삭제 완료 |
 | `src/learning_by_cheating` | catkin 패키지는 아니나 38개 tracked file과 실행 참조가 남음 | 즉시 삭제 금지. 유효 참조 제거 후 git 이력에만 보존하고 삭제 |
 | `src/lidar+sensorfusion` 내부 `build/`, `devel/` | 중첩 workspace 산출물 | source 이식 확인 후 로컬 산출물 제거·ignore 강화 |
 
 `learning_by_cheating`은 현재 배포 경로의 필수 패키지는 아니지만 바로 삭제할 수는 없다.
 `tools/aim_scenario_runner`가 LBC visualizer를 실행하고, 진단 스크립트와 여러 문서가 경로를
 직접 참조한다. `lbc_bev`의 map crop/renderer 기능이 새 HD Map·BEV 코드로 대체됐는지 테스트한
-후 삭제해야 한다. 반면 비어 있는 `src/learning`은 참조 문서만 고치면 제거 가능하다.
+후 삭제해야 한다. 비어 있던 `src/learning`은 P4-C6에서 제거했다.
 
 ## 3. 목표 디렉터리
 
@@ -80,7 +83,7 @@ src/
 ├── behavior_planner/          # 판제 소유, 현 위치 유지
 ├── frenet_planner/            # 판제 소유, 현 위치 유지
 ├── mpc_controller/            # 판제 소유, 현 위치 유지
-├── planning_control/          # 판제 adapter, 현 위치 유지
+├── lane_boundary_adapter/     # 음영구간 차선 경계 read-only adapter
 └── MORAI-ROS_morai_msgs/      # pinned external dependency
 
 tools/
@@ -481,11 +484,11 @@ diagnostics 이름은 소비자 호환을 위해 유지한다.
 
 | 제거 대상 | 선행 조건 |
 |---|---|
-| `src/learning` | 문서 index와 README 참조 0 |
+| `src/learning` | **P4-C6 제거 완료:** placeholder 문서 참조를 현재 경로로 이관 |
 | `src/learning_by_cheating` | scenario runner·진단·문서 참조 0, BEV/map 기능 parity |
 | `src/asmc_hd_map/development/won_tae_link_node` | H5 provenance를 외부 immutable artifact로 보관하고 compact map 재생성 parity 통과 |
 | `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`, `integration_launch` | P3-E local live·Ctrl·bag replay 통과 후 P3-F에서 제거 완료; LAN2LAN은 별도 Phase 6 gate |
-| `camera_semantic_perception`, `drivable_bev`, `traffic_light` | 새 launch topic/latency/output parity 통과 |
+| `camera_semantic_perception`, `drivable_bev`, `traffic_light` | **P4-C6 제거 완료:** 새 launch topic/latency/output parity와 model/config SHA 통과 |
 | 중복 `Msg`, 중복 `morai_msgs` | 모든 consumer include/import 교체 및 clean build |
 | 루트 legacy scripts | `scripts/asmc` 대응 명령·문서·CI가 존재하고 호환 기간 종료 |
 
@@ -501,8 +504,8 @@ bag profile과 배포 금지 oracle을
 [`p4a_perception_runtime_v1`](../records/baselines/perception-p4a-runtime-v1.md)로 동결했다.
 
 P4-B에서 canonical `asmc_perception` package와 단일 compatibility launch, v3 camera calibration,
-traffic-light/LiDAR additive message·topic 계약을 추가했다. 기존 runtime source와 legacy topic은
-이동·삭제하지 않았고 canonical typed producer는 아직 미연결 상태로 명시했다.
+traffic-light/LiDAR additive message·topic 계약을 추가했다. 당시에는 기존 runtime source와
+legacy topic을 이동·삭제하지 않고 canonical typed producer를 미연결 상태로 명시했다.
 
 P4-C1에서 traffic-light가 실제 추론 image header를 typed 결과에 전달하도록 병행 발행하고,
 GPU container wrapper와 camera/BEV/lane debug 시각화 진입점을 추가했다. P4-C2는 대표 bag에서
@@ -512,18 +515,17 @@ GPU container wrapper와 camera/BEV/lane debug 시각화 진입점을 추가했�
 적색 STOP·녹색 새 KEEP을 검증하고 camera/BEV/lane ROS node 구현을 `asmc_perception`으로
 물리 이식했다. 이어서 guarded MORAI 시험에서 Frenet/MPC/UDP 차량 제동·재출발과 원상 복구를
 통과했다. P4-C5는 runtime camera/BEV/lane support와 config 정본을 `asmc_perception`으로 옮기고
-기존 import/executable과 YAML
-경로를 호환 전달자·SHA mirror로 남겼다. 동일 raw bag의 canonical/compatibility 출력은 source
-stamp별 payload mismatch 0으로 통과했다. 다음은 P4-C6에서
-`camera_semantic_perception`, `drivable_bev`, `traffic_light`에 남은 항목을
-runtime 호환 전달자와 offline·학습·dataset 도구로 분류하고, named consumer와 launch 참조를
-감사하는 작업이다. 이 결과를 바탕으로 runtime 역할이 끝난 구 package를 한 릴리스 호환 경로로
-남길지, `tools/perception`으로 옮긴 뒤 제거할지를 package별로 결정한다.
+기존 import/executable과 YAML 경로를 호환 전달자·SHA mirror로 남겼다. 동일 raw bag의
+canonical/compatibility 출력은 source stamp별 payload mismatch 0으로 통과했다. P4-C6은
+TwinLite 학습 adapter, BEV offline audit와 traffic-light model을 역할별 canonical 경계로 옮기고
+`camera_semantic_perception`, `drivable_bev`, `traffic_light`, 미사용 `morai_3d_detection`과 빈
+`learning` placeholder를 제거했다. 긴 실험 기록은 `src/asmc_perception/docs/`에 원문으로 보존했다.
 
 `data_collection`은 recorder, bag profile, replay, Capture와 dataset lifecycle을 소유하는 독립
 package로 유지하며 `asmc_perception` 통합·삭제 대상에 포함하지 않는다.
 
-`src/lidar+sensorfusion`은 담당 팀원이 개발 중인 독립 nested workspace이므로 P4-C6에서 파일,
+다음 P4-D는 LiDAR 담당자 handoff 이후의 adapter/message 통합이다. `src/lidar+sensorfusion`은
+담당 팀원이 개발 중인 독립 nested workspace이므로 P4-C6에서 파일,
 package, 중복 `Msg`·`morai_msgs`를 이동하거나 삭제하지 않는다. LiDAR/fusion 구현이 완료되고
 담당자 handoff와 대표 bag이 준비된 뒤에만 별도 P4-D gate로 canonical topic/message adapter를
 연결한다. `asmc_msgs`는 이미 공용 메시지 정본이지만 nested LiDAR `Msg`를 즉시 대체한다는 뜻은

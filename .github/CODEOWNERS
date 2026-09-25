@@ -17,21 +17,16 @@
 /src/behavior_planner/                 @yuntae12-sudo @yangseojun
 /src/frenet_planner/                   @kante2 @yuntae12-sudo
 /src/mpc_controller/                   @yuntae12-sudo @yangseojun
-/src/planning_control/                 @ahnsh03 @yuntae12-sudo @kante2
+/src/lane_boundary_adapter/            @ahnsh03 @yuntae12-sudo @kante2
 
 # Bridge and vehicle state
-/src/morai_sensor_bridge/              @kante2 @ahnsh03
-/src/morai_udp_bridge/                 @kante2 @ahnsh03
-/src/vehicle_state/                    @kante2 @ahnsh03
+/src/asmc_bridge/                      @kante2 @ahnsh03
 
 # Perception
 /src/asmc_perception/                  @sonshiny @ahnsh03
-/src/perception/                       @sonshiny @ahnsh03
 /src/lidar+sensorfusion/               @sonshiny @ahnsh03
-/src/traffic_light/                    @wkddnjsxo @ahnsh03
 
-# Legacy learning paths remain owned until the Phase 4 parity gate
-/src/learning/                         @ahnsh03
+# Legacy LBC path remains owned until its runtime references are replaced
 /src/learning_by_cheating/             @ahnsh03
 
 # Scenario, gRPC and evaluation tools

@@ -10,6 +10,10 @@ setup_args = generate_distutils_setup(
         "asmc_perception.camera",
         "asmc_perception.camera.backends",
         "asmc_perception.nodes",
+        "asmc_perception.offline",
+        "asmc_perception.offline.bev",
+        "asmc_perception.training",
+        "asmc_perception.training.twinlite",
     ],
     package_dir={"": "src"},
 )

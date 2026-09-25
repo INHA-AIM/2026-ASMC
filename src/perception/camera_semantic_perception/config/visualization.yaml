@@ -1,9 +1,0 @@
-publish_hz: 10.0
-jpeg_quality: 80
-panel_width: 640
-mosaic_view_width: 640
-sync_queue_size: 30
-
-drivable_threshold: 0.5
-lane_threshold: 0.5
-condition_label: ""

@@ -44,9 +44,9 @@ catkin_make --only-pkg-with-deps \
 source devel/setup.bash
 ```
 
-`scripts/build_planning_control.sh`와 `run_planner_controller.sh`는 이전 standalone 구조와
-executable 이름을 가리키므로 현재 정본 명령이 아니다. Phase 5 script 정리 전까지 실행하지
-않는다.
+P4-C6에서 현재 catkin target과 맞지 않던 이전 standalone build/run script를
+제거했다. 전체 workspace는 `scripts/build_ws.sh`, 실행은 아래의 canonical launch를
+사용한다.
 
 ## 3. 개발 실행
 

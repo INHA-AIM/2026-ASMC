@@ -62,9 +62,9 @@ LiDAR `8.x Hz` 관측은 현재 10 Hz baseline이나 승인된 15 Hz 목표를 �
 
 | 위치 | 내용 | 유지 이유 |
 |---|---|---|
-| `src/perception/drivable_bev/README.md` | 2026-09-10~15 calibration, replay, lane-family와 runtime profile | 현재 명령·topic·handoff 판단과 절 단위로 연결 |
-| `src/perception/camera_semantic_perception/README.md` | 2026-09-05 live 실측 | live 실행·진단 문맥에 인접 |
-| `src/perception/twinlite_morai/README.md` | v1~v4 학습 변화와 actor 정책 | adapter·loss·배포 후보 설명과 연결 |
+| `src/asmc_perception/docs/bev-development-history.md` | 2026-09-10~15 calibration, replay, lane-family와 runtime profile | 당시 명령은 이력으로 보존하고 현재 실행 정본을 상단에 연결 |
+| `src/asmc_perception/docs/camera-semantic-history.md` | 2026-09-05 live 실측 | live 실행·진단 문맥에 인접 |
+| `src/asmc_perception/training/README.md` | v1~v4 학습 변화와 actor 정책 | adapter·loss·배포 후보 설명과 연결 |
 | `src/data_collection/README.md` | Capture·bag·cache·manifest 구현 기록 | 현재 수집 절차와 동일 파일에서 관리 |
 | `docs/packages/asmc_perception/roadmap.md` | camera/BEV/GT 후보의 시간순 결정 | Working Proposal의 결정 근거 |
 

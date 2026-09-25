@@ -77,14 +77,10 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 │   ├── asmc_msgs/             # 팀 내부 ROS1 공용 message 계약
 │   ├── asmc_bridge/           # MORAI Network/Sensor UDP + VehicleState
 │   ├── asmc_hd_map/           # HD Map builder/runtime/검수
-│   ├── asmc_perception/       # P4-C2 통합 launch/시각화/typed 신호등 parity
-│   ├── learning_by_cheating/  # learning ✅
+│   ├── asmc_perception/       # camera·BEV·lane·traffic runtime + offline/training
+│   ├── lane_boundary_adapter/ # read-only perception→planning adapter
+│   ├── learning_by_cheating/  # legacy LBC research; runtime 참조 제거 후 정리
 │   ├── data_collection/        # Capture GT · mask · dataset ✅
-│   ├── perception/camera_semantic_perception/ # camera ROS live inference ✅
-│   ├── perception/drivable_bev/          # metric BEV · lane observation ✅
-│   ├── perception/twinlite_morai/        # camera 2-head binary/4-class 학습·평가 ✅
-│   ├── perception/morai_3d_detection/  # perception ✅
-│   ├── traffic_light/          # camera traffic-light inference ✅
 │   ├── lidar+sensorfusion/     # 독립 nested LiDAR/fusion workspace
 │   └── MORAI-ROS_morai_msgs/  # submodule beta_drive
 ├── tools/

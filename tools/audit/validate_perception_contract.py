@@ -96,27 +96,43 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
     )
     if (
         support_config.get("acceptance_id")
-        != "p4c5_perception_support_config_ownership_v1"
+        != "p4c6_perception_package_closeout_v1"
         or support_config.get("status") != "passed"
     ):
         raise ContractError("perception support/config evidence did not pass")
-    config_mirrors = support_config.get("config_mirrors", [])
-    if not isinstance(config_mirrors, list) or len(config_mirrors) != 10:
-        raise ContractError("perception config mirror inventory changed")
-    for index, raw_mirror in enumerate(config_mirrors):
-        mirror = _mapping(raw_mirror, f"config_mirrors[{index}]")
-        canonical_path = repo_root / str(mirror.get("canonical", ""))
-        compatibility_path = repo_root / str(mirror.get("compatibility", ""))
-        if not canonical_path.is_file() or not compatibility_path.is_file():
-            raise ContractError(f"config mirror file missing: {mirror}")
+    canonical_configs = support_config.get("canonical_configs", [])
+    if not isinstance(canonical_configs, list) or len(canonical_configs) != 12:
+        raise ContractError("perception canonical config inventory changed")
+    for index, raw_config in enumerate(canonical_configs):
+        config = _mapping(raw_config, f"canonical_configs[{index}]")
+        canonical_path = repo_root / str(config.get("path", ""))
+        if not canonical_path.is_file():
+            raise ContractError(f"canonical config file missing: {config}")
         canonical_bytes = canonical_path.read_bytes()
-        if canonical_bytes != compatibility_path.read_bytes():
-            raise ContractError(
-                f"config compatibility mirror drifted: {compatibility_path}"
-            )
         digest = hashlib.sha256(canonical_bytes).hexdigest()
-        if digest != mirror.get("sha256"):
+        if digest != config.get("sha256"):
             raise ContractError(f"canonical config SHA drifted: {canonical_path}")
+
+    removed_package_paths = {
+        "camera_semantic_perception": repo_root / "src/perception/camera_semantic_perception",
+        "drivable_bev": repo_root / "src/perception/drivable_bev",
+        "traffic_light": repo_root / "src/traffic_light",
+    }
+    for removed_package, removed_path in removed_package_paths.items():
+        if removed_path.exists():
+            raise ContractError(
+                f"retired perception package still exists: {removed_package}"
+            )
+
+    artifacts = support_config.get("canonical_artifacts", [])
+    if not isinstance(artifacts, list) or len(artifacts) != 1:
+        raise ContractError("perception canonical artifact inventory changed")
+    artifact = _mapping(artifacts[0], "canonical_artifacts[0]")
+    artifact_path = repo_root / str(artifact.get("path", ""))
+    if not artifact_path.is_file():
+        raise ContractError(f"canonical perception artifact missing: {artifact_path}")
+    if hashlib.sha256(artifact_path.read_bytes()).hexdigest() != artifact.get("sha256"):
+        raise ContractError(f"canonical perception artifact SHA drifted: {artifact_path}")
 
     representative = _mapping(
         support_config.get("representative_bag_parity"),
@@ -356,7 +372,7 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
         "canonical_topic_count": len(canonical),
         "compatibility_topic_count": len(compatibility),
         "consumer_binding_count": len(bindings),
-        "config_mirror_count": len(config_mirrors),
+        "guarded_config_count": len(canonical_configs),
         "message_md5": {
             f"asmc_msgs/{name}": md5s[name] for name in sorted(REQUIRED_MESSAGES)
         },
@@ -385,7 +401,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         f"{result['message_count']} messages, "
         f"{result['canonical_topic_count']} canonical topics, "
         f"{result['compatibility_topic_count']} compatibility topics, "
-        f"{result['config_mirror_count']} guarded config mirrors"
+        f"{result['guarded_config_count']} guarded canonical configs"
     )
     return 0
 

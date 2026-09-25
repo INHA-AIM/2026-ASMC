@@ -91,26 +91,22 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `scripts/rosbridge.sh`, `config/morai_rosbridge.env` | 종료된 direct ROS 실험 보존 | @ahnsh03 |
 | `mgeo_toolkit/`, `R_KR_PG_KATRI/` | 안승현 | @ahnsh03 |
 
-### perception · scenario (P4-C5 runtime/support/config 이식·bag parity + 호환 package 병행)
+### perception · scenario (P4-C6 camera/BEV/traffic 통합 완료)
 
 | 경로 | 담당 | GitHub |
 |------|------|--------|
-| `src/asmc_perception/` | camera/BEV/lane/traffic runtime·support·config, 단일 launch와 additive interface | @sonshiny·@ahnsh03 |
-| `src/perception/morai_3d_detection/` | 손재호 | @sonshiny |
-| `src/perception/twinlite_morai/` | 안승현 | @ahnsh03 |
-| `src/perception/camera_semantic_perception/` | camera 기존 launch/import/config 호환과 상세 실험 기록 | @ahnsh03 |
-| `src/perception/drivable_bev/` | BEV/lane 호환 namespace/launch와 offline audit·실험 기록 | @ahnsh03 주관 협의 |
-| `src/traffic_light/` | P4-C parity reference·model artifact·legacy helper; canonical runtime은 `asmc_perception` | 장원태·통합 공동 리뷰 |
+| `src/asmc_perception/` | camera/BEV/lane/traffic runtime·support·config·model + 분리된 offline/training | @ahnsh03 주관, perception·planning 공동 리뷰 |
+| `src/lane_boundary_adapter/` | camera lane typed 출력을 검토하는 read-only planning adapter | 통합·판제 공동 리뷰 |
 | `src/lidar+sensorfusion/` | 독립 nested LiDAR·camera fusion workspace | @sonshiny·통합 공동 리뷰 |
 | `src/data_collection/` | recorder·bag profile/replay, Capture GT·mask·dataset의 독립 package | @ahnsh03 |
 | `tools/aim_scenario_runner/` | 장원태 | @wkddnjsxo |
 | `tools/grpc_inha_univ/` | 장원태 | @wkddnjsxo |
 
 현재 package 경계, 본선 입력 규칙과 Phase 4 이관 gate는
-[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. P4-C5에서
-camera/BEV/lane ROS node와 runtime support library·config 정본은 `asmc_perception`으로 옮겼지만
-연구·학습·offline audit 도구는 기존 perception package에 남아 있다. 기존 executable도 호환
-전달자이므로 모든 consumer 전환과 blocking reference 0 확인 전에는 package를 삭제하지 않는다.
+[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. P4-C6에서
+camera/BEV/lane/traffic ROS node, runtime support/config/model과 가치 있는 학습·offline audit를
+`asmc_perception` 안의 명시적 경계로 통합했다. 실행·참조가 없는 camera 3D 연구와 기존 호환
+package는 Git history를 남기고 제거했다.
 `data_collection`과 `lidar+sensorfusion`은 통합 대상이 아닌 독립 경계다.
 
 ### interfaces (⬜ 합의 중)
@@ -139,9 +135,9 @@ camera/BEV/lane ROS node와 runtime support library·config 정본은 `asmc_perc
 | `scripts/udp_bridge.sh` · `src/asmc_bridge/` | 👀 | 👀 | ✅ | ✅ | — | 👀 |
 | `tools/aim_scenario_runner/` | — | — | — | 👀 | ✅ | 👀 |
 | `tools/grpc_inha_univ/` | — | — | — | 👀 | ✅ | — |
-| `src/perception/morai_3d_detection/` | — | — | — | 👀 | 👀 | ✅ |
-| `src/perception/twinlite_morai/` · `src/data_collection/` | — | — | — | ✅ | 👀 | 👀 |
-| `src/perception/drivable_bev/` | 👀 | 👀 | 👀 | ✅ 주관 | ✅ 합의 | ✅ 합의 |
+| `src/asmc_perception/` | 👀 | 👀 | 👀 | ✅ 주관 | ✅ traffic 협의 | ✅ LiDAR interface 협의 |
+| `src/lane_boundary_adapter/` | ✅ 합의 | ✅ 합의 | 👀 | ✅ 주관 | — | 👀 |
+| `src/data_collection/` | — | — | — | ✅ | 👀 | 👀 |
 | `src/asmc_hd_map/` | 👀 | 👀 | 👀 | ✅ 주관 | ✅ 관측 자료 협의 | 👀 |
 | `docker/` | 👀 | 👀 | 👀 | ✅ | 👀 | ✅ train |
 | `docs/` | 👀 | 👀 | 👀 | ✅ | 👀 | 👀 |
@@ -170,9 +166,9 @@ CODEOWNERS 자동 리뷰: [.github/CODEOWNERS](../../.github/CODEOWNERS)
 | 모듈 | ASMC 경로 |
 |------|-----------|
 | Behavior / Frenet / MPC | `src/behavior_planner/`, `frenet_planner/`, `mpc_controller/` (v2 ROS 연결) |
-| Camera lane/drivable | `src/perception/twinlite_morai/`, `camera_semantic_perception/`, `drivable_bev/` |
-| LiDAR/3D perception | `src/perception/morai_3d_detection/`, `src/lidar+sensorfusion/` |
-| 공통 BEV | camera v3는 `src/perception/drivable_bev/`; 전역 map/LiDAR 결합 규격은 합의 중 |
+| Camera lane/drivable/traffic | `src/asmc_perception/` |
+| LiDAR/3D perception | `src/lidar+sensorfusion/` |
+| 공통 BEV | camera v3는 `src/asmc_perception/`; 전역 map/LiDAR 결합 규격은 합의 중 |
 | Capture·dataset | `src/data_collection/`, `scripts/*perception*`, `scripts/*twinlite*` |
 | SA_plan / LBC | `src/learning_by_cheating/` |
 | Scenario / gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` |

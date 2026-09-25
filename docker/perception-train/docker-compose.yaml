@@ -14,7 +14,7 @@ services:
       - TWINLITE_ROOT=/opt/baselines/TwinLiteNetPlus
       - ROS_MASTER_URI=http://127.0.0.1:11311
       - ROS_IP=127.0.0.1
-      - PYTHONPATH=/root/ws/src/perception
+      - PYTHONPATH=/root/ws/src/asmc_perception/src
     volumes:
       - ../..:/root/ws:rw
       # Training consumes the external dataset but must not mutate the source.

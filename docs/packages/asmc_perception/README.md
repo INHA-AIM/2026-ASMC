@@ -2,7 +2,7 @@
 
 > **문서 역할:** Active Package-Group Guide — 현재 인지 코드 경계, 문서 권위와 Phase 4 이관 gate
 >
-> **현재 상태:** P4-C5 신호 MORAI 차량 loop와 camera/BEV/lane runtime·support·config 이식 및 bag parity 완료, 구 perception 호환 패키지 병행 운영 중
+> **현재 상태:** P4-C6 camera/BEV/lane/traffic runtime·offline·training 통합과 구 package closeout 완료
 
 이 문서는 긴 인지 설계·실험 문서를 대체하거나 요약 폐기하기 위한 문서가 아니다. 현재 어떤
 코드와 문서를 먼저 사용해야 하는지 안내하는 진입점이다. 날짜별 분석, 수치, 실패 원인과 후보
@@ -32,13 +32,13 @@ proposal, 날짜별 record 순으로 판단한다. roadmap의 과거 `candidate`
 | 역할 | 현재 경로 | 현재 경계 |
 |---|---|---|
 | camera semantic runtime·backend·config | `src/asmc_perception/` | canonical 1/3-camera 추론·시각화, `asmc_perception.camera` |
-| camera 호환·기록 | `src/perception/camera_semantic_perception/` | 기존 executable/import/YAML 호환과 상세 실험 기록 |
+| camera 상세 기록 | `src/asmc_perception/docs/camera-semantic-history.md` | 이전 live 측정·실험 이력; 현재 실행 정본 아님 |
 | camera BEV/lane runtime·수학·config | `src/asmc_perception/` | `base_link` raster, fusion, lane-vector, `asmc_perception.bev` |
-| BEV/lane offline audit | `src/perception/drivable_bev/` | 호환 namespace/launch와 음영 lane-family offline audit |
-| TwinLiteNet+ adapter | `src/perception/twinlite_morai/` | 학습·평가·checkpoint loader; runtime package 아님 |
-| camera 3D 연구 | `src/perception/morai_3d_detection/` | 별도 연구 구현, 통합 runtime 미승격 |
+| BEV/lane offline audit | `src/asmc_perception/src/asmc_perception/offline/bev/`, `tools/bev/` | 음영 lane-family replay·pseudo-GT·audit; runtime에서 미기동 |
+| TwinLiteNet+ adapter | `src/asmc_perception/src/asmc_perception/training/twinlite/` | 학습·평가·checkpoint loader; runtime에서 미기동 |
+| 폐기한 camera 3D 연구 | Git history의 `src/perception/morai_3d_detection/` | 실행·참조가 없어 P4-C6에서 제거 |
 | LiDAR와 camera fusion | `src/lidar+sensorfusion/` | outer catkin에서 제외된 독립 nested workspace |
-| traffic-light runtime | `src/asmc_perception/` | P4-C canonical producer; `src/traffic_light/`는 model artifact·parity reference·호환 문서 보존 |
+| traffic-light runtime·model | `src/asmc_perception/` | canonical producer와 `models/traffic_light/best.pt`; legacy String topic 병행 |
 | recorder·bag profile·replay·Capture·dataset | `src/data_collection/` | 인지 runtime과 분리한 데이터 수집 package |
 | 정적 도로·mission context | `src/asmc_hd_map/` | 완성된 별도 package, `/hd_map/*`를 통해 소비 |
 | 통합 `asmc_perception` | `src/asmc_perception/` | P4-C5 단일 launch와 camera/BEV/lane/traffic runtime 소유 |
@@ -51,9 +51,9 @@ proposal, 날짜별 record 순으로 판단한다. roadmap의 과거 `candidate`
 
 ```text
 allowed camera topics
-  └─ camera_semantic_perception
+  └─ asmc_perception.camera
        ├─ per-view drivable / road-marking
-       └─ drivable_bev
+       └─ asmc_perception.bev
             ├─ fused camera BEV
             └─ provisional lane boundary observations ──> planning adapter
 
@@ -61,7 +61,7 @@ allowed VLP16
   └─ lidar+sensorfusion ──> object detection / tracking / camera class fusion
 
 extra camera
-  └─ traffic_light ──> state + detail
+  └─ asmc_perception traffic_light ──> typed detection + legacy state/detail
 
 /hd_map/* ──> static lane, drivable area, checkpoint and mission context
 ```
@@ -76,7 +76,7 @@ Camera BEV와 HD Map 주행가능영역은 같은 정보가 아니다.
 ## 4. 현재 camera·BEV interface
 
 Camera semantic 입력·출력의 정확한 목록과 실행 인자는
-[camera package README](../../../src/perception/camera_semantic_perception/README.md)를 따른다.
+[asmc_perception package README](../../../src/asmc_perception/README.md)를 따른다.
 주요 per-view 출력은 원본 timestamp를 보존한다.
 
 ```text
@@ -107,7 +107,7 @@ Camera semantic 입력·출력의 정확한 목록과 실행 인자는
 공통 `reference_x_m`, `order_valid`, source time, support와 score를 확인한 뒤 route/HD Map
 문맥을 결합해야 한다. 상세 필드, invalid 상태와 판제 변환법은
 [shadow camera handoff](../../handoffs/perception/shadow-camera.md)가 우선한다. 날짜별 threshold와
-평가 근거는 [drivable_bev README](../../../src/perception/drivable_bev/README.md)에 보존돼 있다.
+평가 근거는 [BEV 개발 이력](../../../src/asmc_perception/docs/bev-development-history.md)에 보존돼 있다.
 
 ## 5. Traffic light와 LiDAR 경계
 
@@ -159,12 +159,12 @@ GT를 사용한 artifact를 일반 raw/result bag과 이름만으로 구분하�
 
 | 작업 | 실행 문서 |
 |---|---|
-| camera live inference·mosaic | [camera README](../../../src/perception/camera_semantic_perception/README.md) |
-| 3-camera BEV·lane pipeline·audit | [drivable_bev README](../../../src/perception/drivable_bev/README.md) |
-| 학습 adapter·checkpoint 연결 | [twinlite README](../../../src/perception/twinlite_morai/README.md) |
+| camera live inference·mosaic | [asmc_perception README](../../../src/asmc_perception/README.md) |
+| 3-camera BEV·lane pipeline·audit | [BEV 개발 이력](../../../src/asmc_perception/docs/bev-development-history.md) |
+| 학습 adapter·checkpoint 연결 | [TwinLite training README](../../../src/asmc_perception/training/README.md) |
 | raw/result bag·Capture·dataset | [data collection README](../../../src/data_collection/README.md) |
 | LiDAR+camera fusion | [sensor-fusion guide](../../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md) |
-| traffic light | [traffic-light README](../../../src/traffic_light/README.md) |
+| traffic light | [asmc_perception README](../../../src/asmc_perception/README.md) · [이전 상세 기록](../../../src/asmc_perception/docs/traffic-light-history.md) |
 
 소스나 interface를 바꾸면 최소한 해당 unit test, raw bag replay, topic type/rate/frame/stamp,
 invalid·stale 처리와 downstream adapter를 같이 확인한다. 모델 수치가 좋아졌다는 이유만으로
@@ -178,14 +178,14 @@ P4-A 기준선은 완료됐다. 기계 정본은
 이 기준선은 현 구조를 목표로 승인하지 않고 안전한 이관을 위한 비교점으로만 사용한다.
 
 1. **완료:** 현재 package, launch, topic/type/frame/stamp와 model artifact baseline을 기록한다.
-2. camera, BEV, LiDAR, traffic-light의 runtime 코드와 offline train/eval/curation을 분류한다.
+2. **완료:** camera, BEV, traffic-light runtime과 offline train/eval/curation을 분류한다.
 3. 공용 message 변경은 `asmc_msgs` consumer와 MD5 영향을 먼저 검토한다.
-4. 새 namespace로 runtime을 이식하되 기존 launch와 bag replay를 병행한다.
-5. 대표 raw/result bag에서 output parity, rate/latency와 invalid/stale 동작을 비교한다.
+4. **완료:** 새 namespace로 runtime을 이식하고 기존 launch와 bag replay를 병행 검증한다.
+5. **완료:** 대표 raw/result bag에서 output parity, rate/latency와 invalid/stale 동작을 비교한다.
 6. nested `Msg` consumer를 `asmc_msgs`로, 중복 `morai_msgs`를 pinned submodule로 전환한다.
-7. 학습·dataset bake·일회성 분석은 `tools/perception/`으로 옮기고 runtime import 경계를 시험한다.
-8. planning adapter와 실제 simulator smoke를 통과한 뒤에만 기존 package 삭제를 논의한다.
-9. `learning*`은 참조가 0이고 HD Map/BEV debug 대체 경로가 확인된 뒤 Git 이력으로 보존하며 제거한다.
+7. **완료:** 학습 adapter와 offline BEV 분석을 `asmc_perception`의 명시적 비-runtime 경계로 옮기고 import 경계를 시험한다.
+8. **완료:** planning adapter와 simulator smoke, package reference gate 후 기존 camera/BEV/traffic package를 제거한다.
+9. `learning_by_cheating`은 아직 scenario/debug 참조가 있으므로 대체 경로 확인 뒤 별도 정리한다.
 
 Vendor Velodyne driver는 팀 인지 runtime과 같은 package로 합치지 않는다. 단일 package라는 목표가
 실패 경계와 upstream ownership을 없앤다는 뜻은 아니다.
@@ -212,9 +212,10 @@ runtime support/config를 canonical package로 이관하고 기존 import·confi
 observation의 공통 source-stamp payload mismatch가 0임을 확인했다. 상세 근거는
 `config/baselines/perception_traffic_light_vehicle_closed_loop_v1.yaml`과
 `config/baselines/perception_runtime_move_smoke_v1.yaml`,
-`config/baselines/perception_support_config_parity_v1.yaml`이다. 기존 offline 도구와
-executable 호환 경로는 모든 consumer 전환과 blocking reference 0까지 보존한다. 다음 P4-C6은
-이 호환 package들의 남은 runtime 참조와 offline 자산을 분류하고 package별 제거 gate를 만든다.
+`config/baselines/perception_support_config_parity_v1.yaml`이다. P4-C6은 offline·training·model
+자산을 역할별 하위 경계로 이관하고 `camera_semantic_perception`, `drivable_bev`, `traffic_light`,
+`src/perception/morai_3d_detection` 및 빈 `src/learning` placeholder를 제거했다. topic 호환은
+유지하며 과거 A/B parity 수치는 동결 baseline과 Git history로 보존한다.
 `data_collection`은 recorder와 bag profile을 계속 소유하는 별도 package이며 P4-C6 제거 대상이 아니다.
 담당 팀원이 개발 중인 `src/lidar+sensorfusion`과 그 내부 `Msg`·`morai_msgs`는 이 범위에서
 변경하지 않는다. LiDAR 완료·handoff 뒤 canonical adapter와 message 전환을 별도 P4-D로 진행한다.

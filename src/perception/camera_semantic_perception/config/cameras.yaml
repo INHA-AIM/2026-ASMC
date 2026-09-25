@@ -1,9 +1,0 @@
-camera_topics:
-  front: /image_jpeg/compressed
-  left: /cam_left/image_jpeg/compressed
-  right: /cam_right/image_jpeg/compressed
-
-subscriber_buffer_bytes: 16777216
-batch_wait_ms: 4.0
-restore_original: true
-log_interval_sec: 2.0

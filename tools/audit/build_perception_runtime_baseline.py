@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Build and verify the deterministic P4-A perception runtime baseline.
 
+This generator belongs to input commit ``1bd8ec9``.  After P4-C6 package
+closeout it is retained only to reproduce that historical commit in a
+separate worktree; it is not a current-tree inventory generator.
+
 P4-A is an inventory-only gate.  It must not move packages, rewrite launch
 files, change model artifacts, or alter runtime behavior.  The manifest makes
 the current split runtime and its known migration risks reviewable before the

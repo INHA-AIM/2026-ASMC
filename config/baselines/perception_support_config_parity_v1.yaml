@@ -1,5 +1,5 @@
 schema_version: 1
-acceptance_id: p4c5_perception_support_config_ownership_v1
+acceptance_id: p4c6_perception_package_closeout_v1
 status: passed
 verified_at: "2026-09-25"
 
@@ -13,44 +13,44 @@ runtime_support:
     python_file_count: 19
 
 compatibility_policy:
-  legacy_python_namespaces: thin_forwarders
-  legacy_executables: thin_forwarders
-  legacy_runtime_launches: canonical_config_paths
-  legacy_config_paths: byte_identical_mirrors_until_package_retirement
+  legacy_python_namespaces: removed
+  legacy_executables: removed
+  legacy_runtime_launches: removed
+  legacy_config_paths: removed_after_hash_guarded_migration
   canonical_runtime_depends_on_legacy_packages: false
   topic_names_changed: false
+  removed_ros_packages: [camera_semantic_perception, drivable_bev, traffic_light]
+  preserved_external_packages: [data_collection, lidar+sensorfusion]
 
-config_mirrors:
-  - canonical: src/asmc_perception/config/camera/cameras.yaml
-    compatibility: src/perception/camera_semantic_perception/config/cameras.yaml
+canonical_artifacts:
+  - path: src/asmc_perception/models/traffic_light/best.pt
+    sha256: 70ddaf222e7bc6ff2b4748c4b07c1b24dec72a2671f39bc18e0b243ddd93c0d5
+
+canonical_configs:
+  - path: src/asmc_perception/config/camera/cameras.yaml
     sha256: 67741f269c4fc59b123e3a1c12bfa312db580e725c28592d33a184b7fc056d07
-  - canonical: src/asmc_perception/config/camera/twinlite_medium.yaml
-    compatibility: src/perception/camera_semantic_perception/config/twinlite_medium.yaml
+  - path: src/asmc_perception/config/camera/twinlite_medium.yaml
     sha256: 4f8ab7228971b84a31324f8448b5aa90c22e6e9d106afedf638015ba4d1536dd
-  - canonical: src/asmc_perception/config/camera/visualization.yaml
-    compatibility: src/perception/camera_semantic_perception/config/visualization.yaml
+  - path: src/asmc_perception/config/camera/visualization.yaml
     sha256: da013db2e5c5333a0c969c883b57735a4f6704cdc7db879743076d8fa2fa32d3
-  - canonical: src/asmc_perception/config/bev/bev_grid.yaml
-    compatibility: src/perception/drivable_bev/config/bev_grid.yaml
+  - path: src/asmc_perception/config/bev/bev_grid.yaml
     sha256: 8bad13875a2b7d9eec4a35687433446b1a57112257ec34520cf5c1d6e47e0ad3
-  - canonical: src/asmc_perception/config/bev/bev_grid_dev.yaml
-    compatibility: src/perception/drivable_bev/config/bev_grid_dev.yaml
+  - path: src/asmc_perception/config/bev/bev_grid_dev.yaml
     sha256: 12c9cc1ab434d98a7720033bd75e871a9d8ed89490b6ca4e0f87acca9f912540
-  - canonical: src/asmc_perception/config/bev/cameras_v2.yaml
-    compatibility: src/perception/drivable_bev/config/cameras_v2.yaml
+  - path: src/asmc_perception/config/bev/cameras_v2.yaml
     sha256: 79067010d2680c7ed56a04240a3e75559ccf5169d1c038f6ea7c5a6d10dfeed2
-  - canonical: src/asmc_perception/config/bev/fusion.yaml
-    compatibility: src/perception/drivable_bev/config/fusion.yaml
+  - path: src/asmc_perception/config/bev/fusion.yaml
     sha256: 9b8a11f2c4849df99675df64b5ceec823b05c12ee82bfb0fc2e496a76982706c
-  - canonical: src/asmc_perception/config/bev/lane_fitting.yaml
-    compatibility: src/perception/drivable_bev/config/lane_fitting.yaml
+  - path: src/asmc_perception/config/bev/lane_fitting.yaml
     sha256: 00b0909db8813e8bda08e9c9efa079bc6556b98d56511c9b532da79aec060a9d
-  - canonical: src/asmc_perception/config/bev/visualization.yaml
-    compatibility: src/perception/drivable_bev/config/visualization.yaml
+  - path: src/asmc_perception/config/bev/visualization.yaml
     sha256: 497286b20abb22e16464596d8f1354d6a19958129300f04c2a0b12c8f4bda5e8
-  - canonical: src/asmc_perception/config/bev/visualization_dev.yaml
-    compatibility: src/perception/drivable_bev/config/visualization_dev.yaml
+  - path: src/asmc_perception/config/bev/visualization_dev.yaml
     sha256: dd5f1ca51182ba792b4a97e3ce75595729ea163a0dd2e967bbfa2701a7b04bc7
+  - path: src/asmc_perception/config/offline/bev/shadow_map_rgb_bev.yaml
+    sha256: 4fe28a08fa121d30cd38f38a504dbb0facb34c41e2c1d6acda7d94216e52629b
+  - path: src/asmc_perception/config/offline/bev/shadow_zone_kcity2025.yaml
+    sha256: 8f26ca53c0775aaf7713c6fd93990f1cb7c42ddf4f03f20431e644b6b577a177
 runtime_validation:
   build: passed
   unit_and_contract_tests: passed
@@ -61,7 +61,7 @@ runtime_validation:
       /perception/bev/camera/road_marking/class_id: 8.82
       /perception/lane/boundary_observations: 8.84
     decode_or_inference_errors: 0
-  legacy_import_compatibility: passed_symbol_identity
+  legacy_package_closeout: passed_after_runtime_config_and_model_migration
   scope_exclusions:
     recorder_owner: data_collection
     lidar_owner: src/lidar+sensorfusion
@@ -70,7 +70,8 @@ runtime_validation:
 representative_bag_parity:
   acceptance_id: p4c5_representative_bag_output_parity_v1
   status: passed
-  tool: tools/audit/run_perception_runtime_parity.py
+  tool_status: retired_after_compatibility_package_removal
+  evidence_commit: 083ade9
   input_bag_sha256: 4c7eb3182ddb10f09d9474883a22be4415ece8e6c9b4c11be50fa002f8b67dc4
   playback_rate: 0.5
   playback_duration_s: 4.0

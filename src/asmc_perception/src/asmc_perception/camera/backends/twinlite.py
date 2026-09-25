@@ -33,7 +33,7 @@ class TwinLiteBackend(SemanticBackend):
     ) -> None:
         import torch
 
-        from twinlite_morai import (
+        from asmc_perception.training.twinlite import (
             adapt_twinlite_outputs,
             configure_twinlite_task,
             load_external_twinlite,

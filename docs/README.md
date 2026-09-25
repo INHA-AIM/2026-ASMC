@@ -173,10 +173,10 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | Behavior/Frenet/MPC 실행 | [Planning/Control 운영 규약](./operations/planning-control.md) | [package-group guide](./packages/planning-control/README.md) |
 | Capture/마스크/학습 데이터 | [dataset contract](./contracts/perception/dataset-labeling-split.md) | [data_collection README](../src/data_collection/README.md) |
 | raw bag 녹화·재생·모델 A/B | [rosbag 재현 평가 guide](./operations/rosbag-evaluation.md) | [data_collection README](../src/data_collection/README.md) |
-| 카메라 live 추론 | [Perception package-group guide](./packages/asmc_perception/README.md#8-실행검증-진입점) | [camera README](../src/perception/camera_semantic_perception/README.md) |
+| 카메라 live 추론 | [Perception package-group guide](./packages/asmc_perception/README.md#8-실행검증-진입점) | [asmc_perception README](../src/asmc_perception/README.md) |
 | 카메라–LiDAR 객체 분류 | [object detector handoff](./handoffs/perception/camera-object-detection.md) | [sensor-fusion 실행](../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md), [rosbag 평가](./operations/rosbag-evaluation.md) |
 | HD Map·카메라·LiDAR 문맥 | [Perception package-group guide](./packages/asmc_perception/README.md) | [fusion roadmap](./packages/asmc_perception/roadmap.md), [BEV design note](./packages/asmc_perception/bev-lane-interface-plan.md) |
-| 음영구간 카메라 출력을 판제에 연결 | [shadow camera handoff](./handoffs/perception/shadow-camera.md) | [lane boundary adapter](../src/planning_control/lane_boundary_adapter/README.md) |
+| 음영구간 카메라 출력을 판제에 연결 | [shadow camera handoff](./handoffs/perception/shadow-camera.md) | [lane boundary adapter](../src/lane_boundary_adapter/README.md) |
 | P1-A 당시 package/topic/HD Map snapshot 확인 | [records index](./records/README.md) | [P1-A runtime v1](./records/baselines/runtime-v1.md) |
 | 날짜별 수치·과거 결정 근거를 찾기 | [records index](./records/README.md) | [archive index](./archive/README.md) |
 | HD Map·체크포인트 토픽을 구현/소비 | [P1-B topic contract](./contracts/hd-map/topic-v1.md) | [asmc_msgs README](../src/asmc_msgs/README.md), [통합 로드맵](./architecture/consolidation-roadmap.md) |
@@ -196,21 +196,19 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | [asmc_msgs guide](../src/asmc_msgs/README.md) | 공용 ROS1 message 소유·호환·추가 절차 |
 | [MORAI bridge guide](./packages/asmc_bridge/README.md) | 현재 bridge/state 구현과 Phase 3 통합 gate |
 | [asmc_bridge quick start](../src/asmc_bridge/README.md) | 단일 bridge 패키지 실행·component launch |
-| [asmc_perception façade](../src/asmc_perception/README.md) | P4-B 단일 launch, v3 camera provenance와 미이식 경계 |
+| [asmc_perception](../src/asmc_perception/README.md) | camera·BEV·lane·traffic runtime, offline audit와 training 경계 |
 | [Perception package-group guide](./packages/asmc_perception/README.md) | 현재 camera/BEV/LiDAR/traffic/data 경계와 Phase 4 gate |
 | [Planning/Control package-group guide](./packages/planning-control/README.md) | 현재 Behavior/Frenet/MPC 경계, legacy와 변경 gate |
 | [Handoff index](./handoffs/README.md) | 파트 간 인수 조건과 deployment/legacy 상태 |
 | [Records index](./records/README.md) | 특정 시점의 baseline·실험·검수 결과와 현재 권위 |
 | [Archive index](./archive/README.md) | 현재 실행 금지인 과거 설계와 대체 문서 |
-| [src/perception](../src/perception/README.md) | 인지 파트 상태·코드·문서 지도 |
-| [twinlite_morai](../src/perception/twinlite_morai/README.md) | binary/4-class 2-head 학습 adapter와 현재 후보 |
-| [drivable_bev](../src/perception/drivable_bev/README.md) | 3-camera fused metric BEV, 범위 audit와 calibration/live gate |
+| [TwinLite training](../src/asmc_perception/training/README.md) | binary/4-class 2-head 학습 adapter와 현재 후보 |
+| [BEV 개발 이력](../src/asmc_perception/docs/bev-development-history.md) | 3-camera fused metric BEV, 범위 audit와 calibration/live gate |
 | [data_collection](../src/data_collection/README.md) | Capture, sync, mask/cache와 dataset 실행법 |
 | [frenet_planner](../src/frenet_planner/README.md) | Frenet Planner 책임, runtime I/O, core 폴더 지도, 빌드/테스트 |
 | [interfaces](../src/interfaces/README.md) | provisional topic과 합의된 계약의 승격 위치 |
-| [lane_boundary_adapter](../src/planning_control/lane_boundary_adapter/README.md) | 카메라 metric 경계를 판제와 검토하는 read-only C++ consumer pilot |
+| [lane_boundary_adapter](../src/lane_boundary_adapter/README.md) | 카메라 metric 경계를 판제와 검토하는 read-only C++ consumer pilot |
 | [integration](../src/integration/README.md) | UDP bridge와 내부 ROS 진입점 |
-| [learning](../src/learning/README.md) | 기존 LBC 연구 경로와 현재 인지 경로 구분 |
 
 모듈 README에는 실행법과 현재 상태를 두고, 배경 설명·팀 규약·실험 이력은 `docs/`의 해당
 문서로 연결한다.

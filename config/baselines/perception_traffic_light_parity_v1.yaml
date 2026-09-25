@@ -9,7 +9,7 @@ source:
   size_bytes: 1722857081
   sha256: a8f360e666f58358062e83cedbc6b51f94e8dc897402a2605eed7761a7880268
 checkpoint:
-  path: src/traffic_light/best.pt
+  path: src/asmc_perception/models/traffic_light/best.pt
   sha256: 70ddaf222e7bc6ff2b4748c4b07c1b24dec72a2671f39bc18e0b243ddd93c0d5
 acceptance:
   requested_fresh_frames: 24

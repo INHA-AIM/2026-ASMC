@@ -19,23 +19,23 @@ import torch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src" / "perception"))
+sys.path.insert(0, str(REPO_ROOT / "src" / "asmc_perception" / "src"))
 sys.path.insert(
-    0, str(REPO_ROOT / "src" / "perception" / "camera_semantic_perception" / "src")
+    0, str(REPO_ROOT / "src" / "asmc_perception" / "src")
 )
-sys.path.insert(0, str(REPO_ROOT / "src" / "perception" / "drivable_bev" / "src"))
+sys.path.insert(0, str(REPO_ROOT / "src" / "asmc_perception" / "src"))
 
-from camera_semantic_perception.geometry import (  # noqa: E402
+from asmc_perception.camera.geometry import (  # noqa: E402
     LetterboxGeometry,
     restore_categorical_probabilities,
     restore_class_ids,
     restore_probability,
 )
-from drivable_bev.calibration import load_calibration_snapshot  # noqa: E402
-from drivable_bev.fusion import CameraBevFusion, build_quality_maps  # noqa: E402
-from drivable_bev.grid import BevGridSpec  # noqa: E402
-from drivable_bev.projector import CameraBevProjector  # noqa: E402
-from twinlite_morai import (  # noqa: E402
+from asmc_perception.bev.calibration import load_calibration_snapshot  # noqa: E402
+from asmc_perception.bev.fusion import CameraBevFusion, build_quality_maps  # noqa: E402
+from asmc_perception.bev.grid import BevGridSpec  # noqa: E402
+from asmc_perception.bev.projector import CameraBevProjector  # noqa: E402
+from asmc_perception.training.twinlite import (  # noqa: E402
     MoraiTwinLiteDataset,
     adapt_twinlite_outputs,
     configure_twinlite_task,
@@ -306,7 +306,7 @@ def main():
     model = model.to(device).eval()
 
     calibration_path = (
-        REPO_ROOT / "src/perception/drivable_bev/config/cameras_v2.yaml"
+        REPO_ROOT / "src/asmc_perception/config/bev/cameras_v2.yaml"
     )
     _, cameras = load_calibration_snapshot(calibration_path)
     grid = BevGridSpec(-5.0, 30.0, -12.0, 12.0, 0.1)

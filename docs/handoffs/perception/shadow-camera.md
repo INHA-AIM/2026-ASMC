@@ -7,9 +7,9 @@
 >
 > **적용 ODD:** `shadow_two_way_v1`
 >
-> **상세 실험:** [drivable_bev README](../../../src/perception/drivable_bev/README.md)
+> **상세 실험:** [BEV 개발 이력](../../../src/asmc_perception/docs/bev-development-history.md)
 > **실행 계약:** [asmc_msgs](../../../src/asmc_msgs/msg/LaneBoundaryFamily.msg),
-> [lane_boundary_adapter](../../../src/planning_control/lane_boundary_adapter/README.md)
+> [lane_boundary_adapter](../../../src/lane_boundary_adapter/README.md)
 > **Planning 경계:** [Planning/Control 개발 가이드](../../packages/planning-control/README.md)
 
 이 문서는 음영 왕복 2차로에서 카메라가 제공하는 차선 family와 주행가능영역을 판제가
@@ -150,7 +150,7 @@ column:     (8 - y) / 0.10
 
 현재 raster는 `sensor_msgs/Image`이므로 메시지 자체에는 metric 원점과 해상도가 들어 있지
 않다. 이는 음영구간 v3의 **동결된 임시 전송 envelope**이며, 판제 consumer는
-[`bev_grid.yaml`](../../../src/perception/drivable_bev/config/bev_grid.yaml)과 동결 기록의 SHA-256
+[`bev_grid.yaml`](../../../src/asmc_perception/config/bev/bev_grid.yaml)과 동결 기록의 SHA-256
 `8bad13875a2b7d9eec4a35687433446b1a57112257ec34520cf5c1d6e47e0ad3`을 함께 pin해야 한다.
 다른 grid를 같은 토픽 이름으로 조용히 해석해서는 안 된다. 공통 BEV custom message와
 metadata topic은 MGeo/LiDAR 계약을 함께 합의할 때 결정하며, 이번 v3 인수에서 선행 확정하지
@@ -208,10 +208,10 @@ drivable과 lane family는 근거를 제공하고 최종 corridor 생성은 판�
 ```bash
 source /opt/ros/noetic/setup.bash
 source /root/ws/devel/setup.bash
-roslaunch drivable_bev three_view_lane_pipeline.launch \
-  checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
-  enable_boundary_family_candidate:=true \
-  enable_shared_family_debug:=false
+roslaunch asmc_perception perception.launch \
+  camera_checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
+  lane_enable_boundary_family_candidate:=true \
+  lane_enable_shared_family_debug:=false
 ```
 
 UDP bridge와 read-only adapter는 `asmc-ros-noetic`에서 실행한다. adapter는 선택 사항이며
@@ -227,7 +227,7 @@ roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch
 `shadow_camera_perception_handoff_result`를 쓴다.
 
 ```bash
-python3 $(rospack find drivable_bev)/scripts/run_shadow_lane_bag_batch.py \
+rosrun asmc_perception run_shadow_lane_bag_batch.py \
   --selection /root/ws/artifacts/perception_eval/analysis/shadow_maneuver_20260913/selection.yaml \
   --checkpoint /root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
   --model-id <unique-v3-handoff-model-id> \
