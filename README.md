@@ -15,6 +15,7 @@
 |------|------|
 | [문서 허브](docs/README.md) | 정본·가이드·설계안·기록의 전체 색인 |
 | [개발 시작](docs/onboarding/README.md) | clone, Docker, 빌드와 환경 기준 |
+| [실행 명령어 모음](docs/runtime-commands.md) | bridge·HD Map·perception·planning·bag 명령, 모든 공개 옵션과 LAN2LAN 준비 |
 | [팀 ownership](docs/onboarding/ownership.md) | 담당 경로와 검증 책임 |
 | [협업 규칙](docs/governance/README.md) | 브랜치, PR, 리뷰와 main 안정성 |
 | [시스템 개요](docs/architecture/system-overview.md) | 현재 아키텍처와 모듈 경계 |
