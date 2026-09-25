@@ -441,6 +441,15 @@ publisher/필수 subscriber/rate/stamp/frame 기준으로 검사한다. 판제 �
 연결이 조용히 깨지는 것을 막는다. LiDAR canonical topic은 담당 구현 handoff 전이므로 여기서
 필수화하지 않는다.
 
+**P5 runtime·shared-family closeout 완료:** live와 bag replay ROS 추론은 모두
+`asmc-ros-noetic`에서 직접 `roslaunch asmc_perception perception.launch`로 실행한다.
+`scripts/perception.sh`는 혼선을 막기 위해 제거했고 `asmc-perception-train`은 모델 학습·검증에만
+사용하며 host ROS network에서 격리한다. 음영구간 차선은 typed
+`/perception/lane/boundary_family`와 full-support marker를 기본 발행하고, 기존 개별
+`boundary_observations` pipeline은 명시적 호환 옵션으로만 남긴다. adapter launch는
+`base_link` RViz를 함께 열어 full support와 판제 수락 구간인 0~15 m strip을 동시에 보여준다.
+이 strip은 검토용 MarkerArray이며 판제의 planning horizon이나 typed geometry를 제한하지 않는다.
+
 P5의 남은 경계는 다음과 같다.
 
 1. **P5-D consumer handoff:** P5-C live 결과와 대표 bag을 근거로 신호등 typed/legacy의 실제
@@ -463,8 +472,9 @@ P5의 남은 경계는 다음과 같다.
 기존 30개 스크립트는 `container`, `runtime`, `data`, `train/eval`, `diagnostic`으로 분류한다.
 package node는 각 package `scripts/`, offline·research job은 `tools/`에 둔다.
 LBC teacher BEV는 `tools/research/lbc_teacher_bev`로 이관했고, 사용 중단된 direct rosbridge
-경로만 호환 기간 뒤 삭제한다. 기존 명령은 한 단계 동안 deprecation warning을 내는
-wrapper로만 둔다.
+경로만 호환 기간 뒤 삭제한다. 외부 참조가 확인된 기존 명령만 한 단계 동안 deprecation
+warning을 내는 wrapper로 둔다. 팀 합의로 실행 경로를 단일화한 `scripts/perception.sh`는
+wrapper를 유지하지 않고 제거했으며, 활성 문서는 ROS runtime container 직접 실행만 안내한다.
 
 시각화는 먼저 RViz/rqt에 통합한다. raw PV, semantic result, metric BEV, lane fitting, HD Map
 lane/area, checkpoint 3 m radius, active mission, topic rate/staleness를 한 launch로 확인한다.
@@ -581,7 +591,9 @@ traffic-light/LiDAR additive message·topic 계약을 추가했다. 당시에는
 legacy topic을 이동·삭제하지 않고 canonical typed producer를 미연결 상태로 명시했다.
 
 P4-C1에서 traffic-light가 실제 추론 image header를 typed 결과에 전달하도록 병행 발행하고,
-GPU container wrapper와 camera/BEV/lane debug 시각화 진입점을 추가했다. P4-C2는 대표 bag에서
+당시 GPU container wrapper와 camera/BEV/lane debug 시각화 진입점을 추가했다. 이후 P5
+closeout에서 wrapper는 제거하고 live ROS 추론을 `asmc-ros-noetic` 직접 실행으로 통일했다.
+P4-C2는 대표 bag에서
 기존/new String·typed parity, stale fail-safe와 입력 복구를 고정했다. P4-C3는 판제
 `behavior_planner`를 typed 우선·legacy fallback으로 연결하고 invalid/stale fail-safe와 live ROS
 연결을 검증했다. P4-C4는 production behavior node와 지도/route를 사용하는 격리 ROS loop에서

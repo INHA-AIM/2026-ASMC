@@ -68,6 +68,12 @@ adapter README의 bag/closed-loop parity를 통과해야 한다. standalone pack
 `publish_bev_debug_metadata:=true`로 켠다. road-marking raster와 Marker는 분석·시각화용이며
 판제의 최소 입력 계약이 아니다.
 
+특히 `/planning/debug/lane_boundary_family/strips`는 reference adapter가 `x[0,15]m`에서
+수락한 interval만 그리는 MarkerArray다. 이를 planning 데이터로 구독하거나 짧은 길이를
+`boundary_family`의 유효거리로 해석하지 않는다. 정본 typed family는 전체 polyline과 sample별
+support를 보존한다. 판제가 더 긴 horizon을 선택할 때도 `INVALID`를 연결하거나 추정으로
+승격하지 말고, freshness·폭·support gate와 별도 far-range audit를 적용한다.
+
 모든 최소 출력은 `header.frame_id=base_link`이고 x-forward, y-left다. timestamp는 callback
 수신 시각이 아니라 세 카메라 입력 묶음의 최신 source stamp다. BEV fusion은 세 view의
 stamp 차이가 35ms 이내일 때 최대 10Hz로 발행한다. 한 view가 빠지면 오래된 raster를 다시
@@ -211,24 +217,38 @@ drivable과 lane family는 근거를 제공하고 최종 corridor 생성은 판�
 
 ## 6. 실행과 기록
 
-인지 출력은 `asmc-perception-train` 컨테이너에서 실행한다.
+인지 출력은 bridge·GUI와 같은 `asmc-ros-noetic` 컨테이너의 별도
+terminal에서 실행한다. bag replay ROS 추론도 같은 컨테이너를 사용한다.
+`asmc-perception-train`은 모델 학습과 학습 중 validation 전용이다.
 
 ```bash
 source /opt/ros/noetic/setup.bash
 source /root/ws/devel/setup.bash
 roslaunch asmc_perception perception.launch \
   camera_checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
-  lane_enable_boundary_family_candidate:=true \
-  lane_enable_shared_family_debug:=false \
   lane_publish_pipeline_audit:=true
 ```
 
+`boundary_family` 보강 fitting과 정본 발행은 운영 기본값이다. 성능 측정에서 marker
+생성 비용만 빼려면 `lane_enable_shared_family_debug:=false`를 추가하고
+`lane_enable_boundary_family_candidate` 기본값은 유지한다. 기존
+`boundary_observations`는 호환·진단용 비정본이며 운영 기본에서는 발행하지
+않는다. 기존 A/B 재현에서만
+`lane_enable_independent_boundary_pipeline:=true`로 개별 spline·tracker와 함께 켠다.
+
 UDP bridge와 read-only adapter는 `asmc-ros-noetic`에서 실행한다. adapter는 선택 사항이며
-차량 제어를 발행하지 않는다.
+차량 제어를 발행하지 않는다. 아래 기본 명령은 `base_link` RViz와 최종 strip/perception
+support marker를 자동으로 연다.
 
 ```bash
 source /root/ws/devel/setup.bash
 roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch
+```
+
+bag replay나 처리시간 측정에서는 RViz 부하를 제외한다.
+
+```bash
+roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch rviz:=false
 ```
 
 성능 측정에는 raster/Marker를 기록하지 않는 `shadow_runtime_profile_result`를 쓴다. 판제
@@ -245,8 +265,8 @@ rosrun asmc_perception run_shadow_lane_bag_batch.py \
   --external-pipeline
 ```
 
-위 runner는 `asmc-ros-noetic`, 앞의 inference pipeline은 `asmc-perception-train`에서 같은
-ROS master를 사용해 실행한다. `--external-pipeline`은 ROS 컨테이너가 모델을 중복으로
+위 runner와 inference pipeline은 `asmc-ros-noetic`의 별도 terminal에서 같은 ROS
+master를 사용해 실행한다. `--external-pipeline`은 runner가 모델을 중복으로
 띄우지 않고 recorder/replay만 소유하게 한다.
 
 raw bag은 변경하지 않고 결과를

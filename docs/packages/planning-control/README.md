@@ -119,6 +119,10 @@ LiDAR object producer, HD Map 정본, mission orchestration과 closed-loop full 
 [shadow camera handoff](../../handoffs/perception/shadow-camera.md), adapter 구현은
 [package README](../../../src/lane_boundary_adapter/README.md)를 따른다.
 
+shared-family 검수 launch는 `base_link` 전용 RViz preset을 기본으로 함께 실행한다. 최종
+accepted strip과 perception-side support marker를 한 화면에서 보며, headless replay에서는
+`rviz:=false`로 끈다. 이 자동 시각화도 planning input이나 제어 연결을 의미하지 않는다.
+
 이 package는 음영구간 판제 개발을 위한 임시 read-only reference 경계다. 판제가
 canonical `LaneBoundaryFamily`·camera drivable BEV를 직접 소비하게 되면
 message→strip core, freshness/invalid 규칙, 설정과 테스트를 판제 소유 모듈에

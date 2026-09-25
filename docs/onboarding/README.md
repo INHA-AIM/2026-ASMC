@@ -81,6 +81,10 @@ Behavior/Frenet/MPC도 현재 catkin package이므로 `build_ws.sh`에서 함께
 
 ## 4. 인지 학습 컨테이너
 
+실시간 인지 추론은 앞의 `asmc-ros-noetic`에서 실행한다. 아래
+컨테이너는 모델 학습과 학습 중 validation이 필요할 때만 기동한다. bag replay를 포함한
+ROS 추론·시각화는 여기서 실행하지 않는다.
+
 ```bash
 ./scripts/docker_perception_up.sh build
 ./scripts/docker_perception_up.sh up

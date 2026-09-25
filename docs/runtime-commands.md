@@ -18,7 +18,6 @@ cd /home/aim06/projects/2026-ai-sw-mobility-competition/2026-ASMC
 xhost +local:docker
 
 ./scripts/docker_ros_up.sh up
-./scripts/docker_perception_up.sh up
 ```
 
 ### Terminal A — UDP bridge는 단독 foreground로 유지
@@ -64,7 +63,7 @@ roslaunch asmc_hd_map competition_map.launch rviz:=true
 ### Terminal C — camera·BEV·lane perception
 
 ```bash
-docker exec -it asmc-perception-train bash
+docker exec -it asmc-ros-noetic bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
@@ -76,8 +75,7 @@ roslaunch asmc_perception perception.launch
 ```bash
 roslaunch asmc_perception perception.launch \
   start_traffic_light:=true \
-  start_visualization:=true \
-  lane_enable_shared_family_debug:=true
+  start_visualization:=true
 ```
 
 ### Terminal D — Planning/Control
@@ -117,14 +115,15 @@ roslaunch behavior_planner autonomy_no_bridges_v2.launch traffic_light:=false
 | `verify-gt [seconds] [molitcomp03\|26r1]` | local development oracle topic 검사 |
 | `down` | ROS container 종료·제거 |
 
-### Perception GPU container
+### Perception training container
 
 ```bash
 ./scripts/docker_perception_up.sh <build|up|down|rebuild>
 ```
 
-`rebuild`는 no-cache build다. 소스만 바뀐 경우 container 안의 catkin build만 다시
-실행하며 image를 불필요하게 rebuild하지 않는다.
+`rebuild`는 no-cache build다. 이 컨테이너는 모델 학습과 학습 중 validation만 담당한다.
+live 또는 bag replay ROS 추론·시각화는 모두 `asmc-ros-noetic`에서 실행한다. 학습
+컨테이너는 host ROS master에 연결하지 않는다.
 
 ### ROS workspace build
 
@@ -211,16 +210,11 @@ planning data로 사용하지 않는다.
 
 ## 5. Perception 옵션
 
-Host wrapper:
+운영 추론은 bridge·GUI와 같은 `asmc-ros-noetic` 컨테이너의 별도 terminal에서 직접
+실행한다.
 
 ```bash
-./scripts/perception.sh [perception.launch arg:=value ...]
-```
-
-container 직접 실행:
-
-```bash
-docker exec -it asmc-perception-train bash
+docker exec -it asmc-ros-noetic bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
@@ -245,8 +239,9 @@ roslaunch asmc_perception perception.launch [arg:=value ...]
 | `bev_grid_config` | `config/bev/bev_grid.yaml` | `base_link` BEV 범위·해상도 |
 | `lane_operating_domain` | `shadow_two_way_v1` | typed lane-family ODD ID |
 | `lane_algorithm_id` | `twinlite_v6_shadow_boundary_contract_v1` | algorithm/version ID |
-| `lane_enable_shared_family_debug` | `false` | shared-family debug fitting·marker |
-| `lane_enable_boundary_family_candidate` | shared debug값 | provisional typed family candidate 발행 |
+| `lane_enable_shared_family_debug` | `true` | 음영구간 shared-family 보강 fitting·근거 marker; 성능 측정에서만 `false` |
+| `lane_enable_boundary_family_candidate` | `true` | 판제 소비 정본 `/perception/lane/boundary_family` 발행 |
+| `lane_enable_independent_boundary_pipeline` | `false` | legacy 개별 spline·tracker·`boundary_observations`; 호환 평가에서만 `true` |
 | `lane_publish_pipeline_audit` | `false` | frame별 상세 lane audit; 평가·result bag에서만 명시적으로 활성화 |
 | `traffic_light_checkpoint` | package `models/traffic_light/best.pt` | 신호등 checkpoint |
 | `traffic_light_device` | `auto` | `auto`, CPU/GPU device override |
@@ -277,14 +272,45 @@ roslaunch asmc_perception perception.launch \
 `camera_lane.launch`는 전체 lane chain이 아니라 semantic inference node만 실행한다.
 일반 주행에서는 항상 최상위 `perception.launch`를 사용한다.
 
+### 음영구간 shared-family와 판제 adapter RViz
+
+일반 `perception.launch`를 옵션 없이 실행해도 음영구간 보강
+`/perception/lane/boundary_family`와 그 근거 marker가 기본 생성된다. 판제는 이 family를
+차선 인지 정본으로 사용한다. legacy 개별 spline·tracker와
+`/perception/lane/boundary_observations`는 기본 비활성화다. 기존 호환·진단 재현이
+필요할 때만 `lane_enable_independent_boundary_pipeline:=true`로 켠다.
+
+```bash
+# asmc-ros-noetic container
+roslaunch asmc_perception perception.launch
+```
+
+bag 처리시간 비교처럼 family 근거 marker 비용을 제외하려면
+`lane_enable_shared_family_debug:=false`만 주고, family 출력은 그대로 유지한다.
+
+별도 `asmc-ros-noetic` terminal에서 adapter를 실행하면 Fixed Frame이 `base_link`인 전용
+RViz가 자동으로 열린다. 최종 accepted strip과 perception support/gap marker가 이미 등록돼
+있어 별도 RViz terminal이나 display 추가가 필요 없다.
+
+```bash
+docker exec -it asmc-ros-noetic bash
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch
+```
+
+bag replay·처리시간 측정처럼 GUI가 필요 없을 때만 `rviz:=false`를 추가한다. adapter와 RViz는
+read-only이며 Behavior/Frenet/제어 명령을 발행하지 않는다.
+
 ### rqt/RViz 표시
 
 먼저 perception을 시각화 publisher와 함께 실행한다. 이 명령은 GUI 창을 직접 열지는
 않는다.
 
 ```bash
-# repository root의 host terminal
-./scripts/perception.sh start_visualization:=true
+# asmc-ros-noetic container
+roslaunch asmc_perception perception.launch start_visualization:=true
 ```
 
 팀 공통 rqt 확인 대상은 아래 두 영상이다.
@@ -327,7 +353,7 @@ asmc-ros-gui rviz
 이전 개별·중간 영상을 잠시 비교해야 할 때만 호환 profile을 켠다.
 
 ```bash
-./scripts/perception.sh \
+roslaunch asmc_perception perception.launch \
   start_visualization:=true \
   visualization_legacy_rqt:=true
 ```
@@ -337,7 +363,7 @@ reprojection 영상을 다시 광고한다. camera calibration grid는 호환 pr
 있으며 다음처럼 명시적으로 켠다.
 
 ```bash
-./scripts/perception.sh \
+roslaunch asmc_perception perception.launch \
   start_visualization:=true \
   visualization_calibration_grid:=true
 ```
@@ -349,7 +375,7 @@ RViz marker 구성은 이번 rqt 정리에서 변경하지 않았다.
 다시 켠다. `visualization_legacy_rqt:=true`를 사용하면 이 값도 기본 true가 된다.
 
 ```bash
-./scripts/perception.sh publish_bev_debug_metadata:=true
+roslaunch asmc_perception perception.launch publish_bev_debug_metadata:=true
 ```
 
 `road_marking/model_grid/*`와 `/perception/bev/debug/{view}`의 semantic raster는 이름에
@@ -360,7 +386,7 @@ RViz marker 구성은 이번 rqt 정리에서 변경하지 않았다.
 rejection 원인 분석에서만 다음처럼 켠다. 공식 batch 도구는 이 인자를 자동으로 전달한다.
 
 ```bash
-./scripts/perception.sh lane_publish_pipeline_audit:=true
+roslaunch asmc_perception perception.launch lane_publish_pipeline_audit:=true
 ```
 
 ### Perception runtime 수락검사
@@ -578,6 +604,7 @@ local로 돌아갈 때는 MORAI에 `*_local.json`을 다시 import하고 bridge�
 각 foreground `roslaunch`는 해당 terminal에서 `Ctrl+C`로 종료한다. container를 내릴 때:
 
 ```bash
+# 학습 container를 별도로 실행했을 때만:
 ./scripts/docker_perception_up.sh down
 ./scripts/docker_ros_up.sh down
 xhost -local:docker

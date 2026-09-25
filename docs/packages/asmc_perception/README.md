@@ -2,7 +2,7 @@
 
 > **문서 역할:** Active Package-Group Guide — 현재 인지 코드 경계, 문서 권위와 Phase 4 이관 gate
 >
-> **현재 상태:** P4-C6 package 통합과 P5-A/P5-B topic·rqt 정리, P5-C runtime acceptance 완료
+> **현재 상태:** P4-C6 package 통합, P5-A/P5-B topic·rqt 정리, P5-C runtime acceptance와 shared-family closeout 완료
 
 이 문서는 긴 인지 설계·실험 문서를 대체하거나 요약 폐기하기 위한 문서가 아니다. 현재 어떤
 코드와 문서를 먼저 사용해야 하는지 안내하는 진입점이다. 날짜별 분석, 수치, 실패 원인과 후보
@@ -57,7 +57,7 @@ allowed camera topics
        ├─ per-view drivable / road-marking
        └─ asmc_perception.bev
             ├─ fused camera BEV
-            └─ provisional lane boundary observations ──> planning adapter
+            └─ canonical shared lane-boundary family ──> planning consumer
 
 allowed VLP16
   └─ lidar+sensorfusion ──> object detection / tracking / camera class fusion
@@ -108,16 +108,21 @@ fusion의 필수 내부 입력이다. `model_grid` 2종도 lane vectorizer 입�
 후보와 bag 영향은 [topic policy](../../../config/contracts/perception_topic_policy_v1.yaml)를
 따르며 debug prefix만 보고 필수 transport producer를 끄지 않는다.
 
-음영구간 typed 후보는 다음 토픽이다.
+음영구간 판제 인수 정본은 다음 토픽이다.
 
 ```text
-/perception/lane/boundary_observations
-  asmc_msgs/LaneBoundaryObservationArray
+/perception/lane/boundary_family
+  asmc_msgs/LaneBoundaryFamily
 ```
 
-이 observation에는 절대 차로 번호, `home_lane`이나 `opposing_lane` 의미가 없다. consumer는
-공통 `reference_x_m`, `order_valid`, source time, support와 score를 확인한 뒤 route/HD Map
-문맥을 결합해야 한다. 상세 필드, invalid 상태와 판제 변환법은
+이 family에는 세 경계의 전체 metric polyline과 sample별
+`OBSERVED/STRUCTURE_INFERRED/INVALID` support가 들어가지만 절대 차로 번호,
+`home_lane`이나 `opposing_lane` 의미는 없다. consumer는 source time, ODD/algorithm,
+freshness와 support를 확인한 뒤 route/HD Map 문맥을 결합해야 한다. reference adapter의
+`/planning/debug/lane_boundary_family/strips`는 `x[0,15]m` 수락 구간 시각화일 뿐 별도
+planning message나 family의 최대 유효거리가 아니다. legacy
+`/perception/lane/boundary_observations`는 기본 off인 호환·진단 경로다. 상세 필드, invalid
+상태와 판제 변환법은
 [shadow camera handoff](../../handoffs/perception/shadow-camera.md)가 우선한다. 날짜별 threshold와
 평가 근거는 [BEV 개발 이력](../../../src/asmc_perception/docs/bev-development-history.md)에 보존돼 있다.
 
