@@ -1,5 +1,12 @@
 # Camera semantic perception
 
+> **P4-C 호환 패키지:** ROS node 구현은
+> `src/asmc_perception/src/asmc_perception/nodes/`로 이식됐다. 이 패키지의 기존 launch와
+> executable 이름은 호환 전달자로 유지되며 topic/node 이름은 바뀌지 않았다. 신규 통합 실행은
+> `roslaunch asmc_perception perception.launch`를 사용한다. P4-C5부터 backend library와 runtime
+> config 정본은 `asmc_perception.camera`와 `asmc_perception/config/camera`다. 이 경로의 import와
+> YAML은 호환 전달자·검증된 mirror이며, 아래 상세 실험 기록은 계속 보존한다.
+>
 > 상태: Stage C1·C2 완료, Stage C3 구조화 diagnostics 구현
 >
 > 현재 인지 package 경계와 본선 입력 규칙은

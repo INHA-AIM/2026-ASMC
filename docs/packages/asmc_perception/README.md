@@ -2,7 +2,7 @@
 
 > **문서 역할:** Active Package-Group Guide — 현재 인지 코드 경계, 문서 권위와 Phase 4 이관 gate
 >
-> **현재 상태:** P4-C3 typed 신호등 producer·planning consumer 연결 완료, 기존 runtime·학습·수집 패키지 병행 운영 중
+> **현재 상태:** P4-C5 신호 MORAI 차량 loop와 camera/BEV/recorder runtime·support·config 이식 및 bag parity 완료, offline/LiDAR 호환 패키지 병행 운영 중
 
 이 문서는 긴 인지 설계·실험 문서를 대체하거나 요약 폐기하기 위한 문서가 아니다. 현재 어떤
 코드와 문서를 먼저 사용해야 하는지 안내하는 진입점이다. 날짜별 분석, 수치, 실패 원인과 후보
@@ -31,15 +31,18 @@ proposal, 날짜별 record 순으로 판단한다. roadmap의 과거 `candidate`
 
 | 역할 | 현재 경로 | 현재 경계 |
 |---|---|---|
-| camera semantic runtime | `src/perception/camera_semantic_perception/` | 모델 독립 1/3-camera ROS 추론·시각화·diagnostics |
-| camera metric BEV와 lane vector | `src/perception/drivable_bev/` | `base_link` raster, 음영 lane-family 후보와 offline audit |
+| camera semantic runtime·backend·config | `src/asmc_perception/` | canonical 1/3-camera 추론·시각화, `asmc_perception.camera` |
+| camera 호환·기록 | `src/perception/camera_semantic_perception/` | 기존 executable/import/YAML 호환과 상세 실험 기록 |
+| camera BEV/lane runtime·수학·config | `src/asmc_perception/` | `base_link` raster, fusion, lane-vector, `asmc_perception.bev` |
+| BEV/lane offline audit | `src/perception/drivable_bev/` | 호환 namespace/launch와 음영 lane-family offline audit |
 | TwinLiteNet+ adapter | `src/perception/twinlite_morai/` | 학습·평가·checkpoint loader; runtime package 아님 |
 | camera 3D 연구 | `src/perception/morai_3d_detection/` | 별도 연구 구현, 통합 runtime 미승격 |
 | LiDAR와 camera fusion | `src/lidar+sensorfusion/` | outer catkin에서 제외된 독립 nested workspace |
 | traffic-light runtime | `src/asmc_perception/` | P4-C canonical producer; `src/traffic_light/`는 model artifact·parity reference·호환 문서 보존 |
-| 수집·bag·dataset 도구 | `src/data_collection/` | ROS recorder와 offline dataset 작업이 한 package에 공존 |
+| runtime recorder·bag profile | `src/asmc_perception/` | canonical node, `asmc_perception.recorder`, runtime profile 정본 |
+| replay·Capture·dataset 도구 | `src/data_collection/` | profile mirror, replay, Capture와 offline dataset 작업 |
 | 정적 도로·mission context | `src/asmc_hd_map/` | 완성된 별도 package, `/hd_map/*`를 통해 소비 |
-| 통합 `asmc_perception` | `src/asmc_perception/` | P4-B 단일 launch/config·additive interface façade; runtime source 이식 전 |
+| 통합 `asmc_perception` | `src/asmc_perception/` | P4-C5 단일 launch와 camera/BEV/traffic/recorder runtime 전체 소유 |
 
 현재 경로를 목표 경로처럼 부르거나 먼저 삭제하지 않는다. 특히 `src/lidar+sensorfusion/`에는
 `Main`, 중복 `Msg`·`morai_msgs`와 vendor Velodyne package가 함께 있으므로 한 번에 이동할 수
@@ -201,8 +204,20 @@ traffic-light가 실제 추론 입력 image header를 `TrafficLightDetection`에
 병행 발행하고 GPU 컨테이너 실행·시각화 진입점을 고정했다. P4-C2는 producer parity를
 `config/baselines/perception_traffic_light_parity_v1.yaml`로 고정했다. P4-C3는
 `behavior_planner`를 typed 우선·legacy fallback으로 연결하고 invalid/stale fail-safe와 실제 ROS
-연결을 검증했다. 다음은 적·녹 신호 closed-loop 수락시험과 camera/BEV·recorder 물리 이식이다.
-LiDAR 이식과 구 road-mask 교체는 별도 P4-D로 분리한다.
+연결을 검증했다. P4-C4는 production behavior node와 현재 지도/route를 쓰는 격리 ROS loop에서
+`GREEN→KEEP→RED→STOP→GREEN→KEEP`을 확인하고 camera/BEV·recorder node 구현을 물리 이식했다.
+별도 guarded 시험은 Frenet/MPC/UDP를 거쳐 물리 정지선 5.21 m 전 정지와 녹색 재출발, 원래
+Ego 상태 복원을 확인했다. live camera/BEV/lane과 canonical recorder bag도 검사했다. P4-C5는
+runtime support/config/bag profile을 canonical package로 이관하고 기존 import·config 경로를
+호환 전달자와 SHA mirror로 고정했다. 동일 raw bag 재생에서 front class-ID, fused BEV와 lane
+observation의 공통 source-stamp payload mismatch가 0임을 확인했다. 상세 근거는
+`config/baselines/perception_traffic_light_vehicle_closed_loop_v1.yaml`과
+`config/baselines/perception_runtime_move_smoke_v1.yaml`,
+`config/baselines/perception_support_config_parity_v1.yaml`이다. 기존 offline 도구와
+executable 호환 경로는 모든 consumer 전환과 blocking reference 0까지 보존한다. 다음 P4-C6은
+이 호환 package들의 남은 runtime 참조와 offline 자산을 분류하고 package별 제거 gate를 만든다.
+담당 팀원이 개발 중인 `src/lidar+sensorfusion`과 그 내부 `Msg`·`morai_msgs`는 이 범위에서
+변경하지 않는다. LiDAR 완료·handoff 뒤 canonical adapter와 message 전환을 별도 P4-D로 진행한다.
 
 ## 10. 이번 문서 통합에서 보존한 것
 

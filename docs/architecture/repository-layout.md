@@ -91,25 +91,27 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | `scripts/rosbridge.sh`, `config/morai_rosbridge.env` | 종료된 direct ROS 실험 보존 | @ahnsh03 |
 | `mgeo_toolkit/`, `R_KR_PG_KATRI/` | 안승현 | @ahnsh03 |
 
-### perception · scenario (P4-C3 typed planning consumer + 분산 source 병행)
+### perception · scenario (P4-C5 runtime/support/config 이식·bag parity + 호환 package 병행)
 
 | 경로 | 담당 | GitHub |
 |------|------|--------|
-| `src/asmc_perception/` | 단일 launch/config와 additive interface façade | @sonshiny·@ahnsh03 |
+| `src/asmc_perception/` | camera/BEV/recorder/traffic runtime·support·config, 단일 launch와 additive interface | @sonshiny·@ahnsh03 |
 | `src/perception/morai_3d_detection/` | 손재호 | @sonshiny |
 | `src/perception/twinlite_morai/` | 안승현 | @ahnsh03 |
-| `src/perception/camera_semantic_perception/` | 1/3-camera semantic runtime | @ahnsh03 |
-| `src/perception/drivable_bev/` | 3-camera BEV·음영 lane-family v3; 전역 map 결합 후보 | @ahnsh03 주관 협의 |
+| `src/perception/camera_semantic_perception/` | camera 기존 launch/import/config 호환과 상세 실험 기록 | @ahnsh03 |
+| `src/perception/drivable_bev/` | BEV/lane 호환 namespace/launch와 offline audit·실험 기록 | @ahnsh03 주관 협의 |
 | `src/traffic_light/` | P4-C parity reference·model artifact·legacy helper; canonical runtime은 `asmc_perception` | 장원태·통합 공동 리뷰 |
 | `src/lidar+sensorfusion/` | 독립 nested LiDAR·camera fusion workspace | @sonshiny·통합 공동 리뷰 |
-| `src/data_collection/` | Capture GT·mask·dataset·Real Time raw/result bag | @ahnsh03 |
+| `src/data_collection/` | bag profile mirror/replay, Capture GT·mask·dataset; recorder 호환 경로 | @ahnsh03 |
 | `tools/aim_scenario_runner/` | 장원태 | @wkddnjsxo |
 | `tools/grpc_inha_univ/` | 장원태 | @wkddnjsxo |
 
 현재 package 경계, 본선 입력 규칙과 Phase 4 이관 gate는
-[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. P4-C3에서
-behavior planner는 typed 신호등을 우선 소비하지만 실제 camera/BEV/recorder source는 기존
-package에 남아 있으며 후속 parity PR 전에는 삭제하지 않는다.
+[Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. P4-C5에서
+camera/BEV/recorder ROS node와 runtime support library·config·bag profile 정본은
+`asmc_perception`으로 옮겼지만 연구·Capture·dataset·offline audit 도구는 기존 package에 남아
+있다. 기존 executable도 호환 전달자이므로 모든 consumer 전환과 blocking reference 0 확인
+전에는 package를 삭제하지 않는다.
 
 ### interfaces (⬜ 합의 중)
 

@@ -1,10 +1,13 @@
 # `asmc_perception` runtime
 
-> **상태:** P4-C3 — canonical traffic-light producer + typed planning consumer
+> **상태:** P4-C5 — 신호 차량 loop 수락 + camera/BEV/recorder runtime·support·config 통합
 
 분산된 camera semantic, metric BEV/lane, traffic-light, nested LiDAR/fusion과 recorder를
-하나의 운영 진입점에서 조합한다. camera/BEV/recorder는 아직 기존 executable을 사용하며,
-신호등 producer는 이 패키지로 먼저 이식됐다. 기존 executable·topic은 parity 확인 전까지 보존한다.
+하나의 운영 진입점에서 조합한다. camera semantic, BEV/fusion/lane, recorder와 신호등 ROS node
+구현과 실행 support library·config·bag profile은 이 패키지가 소유한다. 기존 package의 같은
+executable과 Python import는 호환 전달자로, 기존 config 경로는 SHA로 고정한 mirror로 보존하며
+topic과 node 이름은 바꾸지 않았다. 연구·학습·Capture·dataset·offline audit 도구와 상세 기록은
+삭제 gate 전까지 기존 package에 남는다.
 
 ## 실행
 
@@ -121,8 +124,70 @@ fallback일 뿐이다. typed message를 받은 뒤에는 다음 규칙을 적용
 기존 판제 통합 launch가 시작하는 executable은
 `traffic_light/live_infer.py`에서 `asmc_perception/traffic_light_node.py`로 바뀌었다. topic 이름은
 삭제하거나 remap하지 않았으며 producer 경로 변경은 두 launch 파일의 migration 주석과
-`behavior_planner/README.md`에 기록돼 있다. unit/build와 live ROS 연결은 통과했지만 실제
-적·녹 신호 closed-loop 정지/재출발 검수 전에는 legacy topic을 제거하지 않는다.
+`behavior_planner/README.md`에 기록돼 있다. unit/build, live ROS 연결과 MORAI 차량
+정지·재출발까지 통과했다. 다만 모든 consumer/launch의 legacy 참조가 없어지기 전에는 기존
+topic을 제거하지 않는다.
+
+## P4-C4 신호 수락시험
+
+production `behavior_node`, 현재 MGeo와 전역경로를 쓰되 Frenet/MPC/UDP 출력은 시작하지 않는
+격리된 ROS decision-loop 시험을 제공한다.
+
+```bash
+# asmc-ros-noetic 컨테이너
+roslaunch asmc_perception traffic_light_closed_loop_acceptance.launch
+cat /tmp/asmc_traffic_light_closed_loop_acceptance.json
+```
+
+고정 pose는 A728 정지선 8.95 m 전방이다. 시험은 같은 typed stream에서
+`GREEN → KEEP`, `RED → STOP(map 목표점 포함)`, `GREEN → 새 KEEP command_id`를 검사한다.
+기준은 `config/baselines/perception_traffic_light_closed_loop_v1.yaml`이다. 이 시험은 판제 판단
+loop의 수락 근거이며 실제 simulator의 제동거리·MPC·UDP actuator까지 통과했다는 뜻은 아니다.
+
+실제 `behavior → Frenet → MPC → /ctrl_cmd → UDP → MORAI` 차량 시험은 다음처럼 별도 opt-in한다.
+기본 launch는 제어가 잠겨 있으며 아래 두 flag가 모두 있어야 Ego를 텔레포트하고 움직인다.
+
+```bash
+# controlled simulator only
+roslaunch asmc_perception traffic_light_vehicle_acceptance_stack.launch \
+  run_acceptance:=true allow_vehicle_control:=true \
+  repo_root:=/root/ws grpc_host:=host.docker.internal
+cat /tmp/asmc_traffic_light_vehicle_acceptance.json
+```
+
+MPC 출력은 `/acceptance/ctrl_cmd`에 격리되고 시험 node가 원래 Ego 상태를 저장한 뒤에만
+`/ctrl_cmd`로 전달한다. 종료 시 full brake, gate close, pose·speed·gear·control mode 복원을
+수행한다. 26.R1 local 실측에서 적색은 물리 정지선 5.21 m 전에 `0.0 m/s`로 멈췄고, 녹색에서
+1.33 m 재진행·2.27 m/s를 확인했다. 근거는
+`config/baselines/perception_traffic_light_vehicle_closed_loop_v1.yaml`이다. 이 결과는 synthetic
+typed 신호 이후 제어 loop 수락이며 camera 분류 정확도 시험은 아니다.
+
+## P4-C4/C5 물리 이식 경계
+
+다음 실제 node 구현은 `src/asmc_perception/src/asmc_perception/nodes/`로 이동했다.
+
+- camera semantic inference와 visualizer
+- per-view BEV, 3-view fusion과 BEV visualizer
+- lane vectorizer와 lane visualizer
+- profile 기반 bag recorder
+
+canonical launch는 모두 `pkg="asmc_perception"`으로 실행한다. 기존
+`camera_semantic_perception`, `drivable_bev`, `data_collection` executable은 같은 이름의 얇은
+호환 전달자다. P4-C5에서 camera backend, runtime BEV/lane 수학, recorder support와 runtime
+config의 정본도 각각 `asmc_perception.camera`, `asmc_perception.bev`,
+`asmc_perception.recorder`, `asmc_perception/config`으로 옮겼다. 기존 Python namespace는 canonical
+symbol을 다시 export하고 기존 YAML은 byte-identical mirror로 유지한다.
+
+live 3-camera→BEV→lane 출력과 canonical recorder의 `camera_raw` 18.10초 기록도 통과했다.
+recorder artifact는 2,914 messages, 75,852,751 bytes, indexed bag이며 세 camera 각 362 frame과
+Ego 905 message를 포함했다. 수치와 SHA는
+`config/baselines/perception_runtime_move_smoke_v1.yaml`에 고정한다.
+
+P4-C5 representative raw bag을 0.5배속으로 두 진입점에 각각 재생한 결과 front class-ID 79,
+fused BEV 38, lane observation 43개의 공통 source stamp에서 payload mismatch가 모두 0이었다.
+ROS connection-local `header.seq`만 비교에서 제외하고 frame·stamp·config SHA와 전체 payload는
+그대로 비교한다. 실행 도구는 `tools/audit/run_perception_runtime_parity.py`, ownership·config SHA와
+recorder 재검증 근거는 `config/baselines/perception_support_config_parity_v1.yaml`이다.
 
 기계 판독 상태는 `config/runtime.yaml`, 파트 간 topic·message 정본은
 [`perception_runtime_topic_contract_v1.yaml`](../../config/contracts/perception_runtime_topic_contract_v1.yaml),
@@ -137,7 +202,18 @@ python3 -m unittest src/asmc_perception/test/test_traffic_light_parity.py
 python3 tools/audit/validate_perception_contract.py
 python3 tools/audit/validate_traffic_light_parity.py --check-artifacts
 roslaunch --nodes asmc_perception perception.launch
+# GPU container; choose a new output directory on every run
+python3 tools/audit/run_perception_runtime_parity.py \
+  --bag /path/to/camera_raw.bag --output-dir /tmp/asmc_p4c5_parity
+roslaunch asmc_perception traffic_light_closed_loop_acceptance.launch
+# controlled simulator only; explicit opt-in required
+roslaunch asmc_perception traffic_light_vehicle_acceptance_stack.launch \
+  run_acceptance:=true allow_vehicle_control:=true
 ```
 
-P4-C physical migration과 closed-loop 검수 전에는 기존 package를 삭제하거나 legacy topic을
-remap해서 숨기지 않는다.
+support/config parity는 완료됐지만 offline 도구 이관과 모든 legacy consumer 전환은 남아 있다.
+따라서 기존 package를 아직 삭제하거나 legacy topic을 remap해서 숨기지 않는다. 다음 P4-C6은
+기존 camera/BEV/recorder/traffic package의 남은 runtime 참조와 offline 자산을 분류해 호환 package
+closeout 조건을 확정한다. `src/lidar+sensorfusion`은 담당 팀원이 개발 중인 독립 workspace이므로
+그 파일과 내부 `Msg`·`morai_msgs`는 건드리지 않는다. LiDAR 완성·handoff 뒤에만 별도 P4-D로
+canonical adapter와 message 전환을 진행한다.

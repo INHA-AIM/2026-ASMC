@@ -1,5 +1,11 @@
 # data_collection — Capture·rosbag·동기화·인지 데이터셋
 
+> **P4-C recorder 이식:** `bag_recorder_node.py` 구현은 `asmc_perception`으로 이동했다. 기존
+> `data_collection/bag_recorder.launch`와 executable은 호환 전달자다. P4-C5부터 recorder support와
+> runtime bag profile 정본은 `asmc_perception.recorder`와 `asmc_perception/config/bag_profiles`다.
+> 기존 profile은 SHA로 검증한 mirror이며 replay·Capture·dataset/offline 도구는 이 패키지에 남는다.
+> 신규 통합 recorder는 `asmc_perception/recorder.launch`가 정본이다.
+>
 > **역할:** Active Package Guide — 현재 수집·bag·dataset 재현 절차
 >
 > 인지 전체 경계는 [Perception 개발·통합 가이드](../../docs/packages/asmc_perception/README.md),

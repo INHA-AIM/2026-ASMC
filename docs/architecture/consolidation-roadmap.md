@@ -2,7 +2,7 @@
 
 > **문서 역할:** Working Proposal — 패키지 통합과 본선 배포를 위한 단계별 실행 계획
 > **작성 기준:** 2026-09-20 저장소와 현장 점검 반출 자료의 read-only 감사
-> **진행 상태:** 1·2단계, 3단계 P3-G local closeout, P4-A·P4-B와 P4-C1~C3 완료. 다음은 camera/BEV/recorder 물리 이식과 closed-loop 신호 검수
+> **진행 상태:** 1·2단계, 3단계 P3-G local closeout, P4-A·P4-B와 P4-C1~C5 완료. 다음은 P4-C6 기존 perception 호환 패키지 closeout
 > **보호 범위:** `behavior_planner`, `frenet_planner`, `mpc_controller`,
 > `planning_control/lane_boundary_adapter` 및 planning 소유 launch는 이 계획의 일방적 이동·삭제 대상이 아니다.
 
@@ -508,9 +508,24 @@ P4-C1에서 traffic-light가 실제 추론 image header를 typed 결과에 전�
 GPU container wrapper와 camera/BEV/lane debug 시각화 진입점을 추가했다. P4-C2는 대표 bag에서
 기존/new String·typed parity, stale fail-safe와 입력 복구를 고정했다. P4-C3는 판제
 `behavior_planner`를 typed 우선·legacy fallback으로 연결하고 invalid/stale fail-safe와 live ROS
-연결을 검증했다. 다음은 closed-loop 신호 정지 검수와 camera/BEV 실행 코드·recorder를 새 package
-namespace로 한 단위씩 옮기는 작업이다. LiDAR/`Msg`/구 road mask 이식은 별도 P4-D로 유지한다. 중복 `Msg`/`morai_msgs` 및
-`learning*` 삭제는 clean build, bag parity와 blocking reference zero 이후에만 수행한다.
+연결을 검증했다. P4-C4는 production behavior node와 지도/route를 사용하는 격리 ROS loop에서
+적색 STOP·녹색 새 KEEP을 검증하고 camera/BEV/recorder ROS node 구현을 `asmc_perception`으로
+물리 이식했다. 이어서 guarded MORAI 시험에서 Frenet/MPC/UDP 차량 제동·재출발과 원상 복구,
+canonical recorder의 live camera bag 기록을 통과했다. P4-C5는 runtime camera/BEV/recorder
+support와 config·bag profile 정본을 `asmc_perception`으로 옮기고 기존 import/executable과 YAML
+경로를 호환 전달자·SHA mirror로 남겼다. 동일 raw bag의 canonical/compatibility 출력은 source
+stamp별 payload mismatch 0으로 통과했다. 다음은 P4-C6에서
+`camera_semantic_perception`, `drivable_bev`, `data_collection`, `traffic_light`에 남은 항목을
+runtime 호환 전달자와 offline·학습·dataset 도구로 분류하고, named consumer와 launch 참조를
+감사하는 작업이다. 이 결과를 바탕으로 runtime 역할이 끝난 구 package를 한 릴리스 호환 경로로
+남길지, `tools/perception`으로 옮긴 뒤 제거할지를 package별로 결정한다.
+
+`src/lidar+sensorfusion`은 담당 팀원이 개발 중인 독립 nested workspace이므로 P4-C6에서 파일,
+package, 중복 `Msg`·`morai_msgs`를 이동하거나 삭제하지 않는다. LiDAR/fusion 구현이 완료되고
+담당자 handoff와 대표 bag이 준비된 뒤에만 별도 P4-D gate로 canonical topic/message adapter를
+연결한다. `asmc_msgs`는 이미 공용 메시지 정본이지만 nested LiDAR `Msg`를 즉시 대체한다는 뜻은
+아니다. 중복 message 전환은 모든 LiDAR consumer include/import 교체, clean build와 bag parity가
+동시에 통과해야 한다. `learning*` 삭제도 blocking reference zero 이후에만 수행한다.
 
 실제 두 PC LAN2LAN은 팀원 측 코드 준비와 perception 통합, 최소 단일 실행 진입점 이후 Phase 6
 리허설에서 수행한다. P3-G의 `--require-competition-status`는 그때 주최판 type 787 수락 gate로

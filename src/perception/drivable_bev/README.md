@@ -1,5 +1,11 @@
 # drivable_bev
 
+> **P4-C 호환 패키지:** camera BEV/fusion/lane 및 개발 시각화 ROS node 구현은
+> `src/asmc_perception/src/asmc_perception/nodes/`로 이식됐다. 기존 launch/executable은 같은
+> topic·node 이름을 유지하는 호환 경로다. P4-C5부터 runtime 수학 library와 config 정본은
+> `asmc_perception.bev`와 `asmc_perception/config/bev`다. 이 패키지에는 Python/YAML 호환 경로와
+> 음영 평가·offline audit, 상세 실험 기록을 보존한다.
+>
 > 상태: 3-camera fused metric BEV + metric lane-vector pilot + GPS 음영구간
 > boundary selector. 12-run provisional gate와 typed provisional handoff 구현을 완료했으며,
 > 전 구간 topology/판제 정본 계약은 아직 합의 전이다.

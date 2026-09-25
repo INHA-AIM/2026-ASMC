@@ -41,7 +41,7 @@
 |---|---|
 | `asmc_hd_map` | 2단계 완료. 운영 map과 global/local topic 사용 |
 | `asmc_bridge` | 3단계 예정. [현재 세 bridge/state 패키지와 이관 gate](../packages/asmc_bridge/README.md)를 검증 후 통합 |
-| `asmc_perception` | P4-C3 typed 신호등 producer·behavior consumer 연결 완료, closed-loop 및 physical source 이식 대기. [현재 package-group 경계와 이관 gate](../packages/asmc_perception/README.md)를 검증하며 parity 전에는 perception/LiDAR/data 패키지를 삭제하지 않음 |
+| `asmc_perception` | P4-C5 behavior·MORAI 차량 loop와 camera/BEV/recorder runtime·support·config 이식 및 bag parity 완료. P4-C6 legacy consumer/offline 분류 대기. [현재 package-group 경계와 이관 gate](../packages/asmc_perception/README.md)를 검증하며 consumer/offline parity 전에는 호환/data 패키지를 삭제하지 않음. 팀원 개발 중인 `src/lidar+sensorfusion`은 handoff 전 변경 금지 |
 | `learning*` 정리 | 4단계 gate 전 삭제 금지. `src/learning`은 링크 이관 후 제거 후보 |
 | 단일 실행·시각화 | 5단계 예정 |
 | LAN2LAN 현장 리허설 | 6단계 예정 |

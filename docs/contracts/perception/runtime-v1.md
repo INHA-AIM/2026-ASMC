@@ -1,13 +1,17 @@
 # Perception runtime topic contract v1
 
-> **상태:** Frozen additive interface; typed planning consumer 연결 완료 (P4-C3)
+> **상태:** Frozen additive interface; P4-C5 runtime ownership·bag parity와 MORAI 차량 loop 검수 완료
 > **기계 정본:** `config/contracts/perception_runtime_topic_contract_v1.yaml`
 > **실행 façade:** `src/asmc_perception/launch/perception.launch`
 
 이 계약은 신호등과 LiDAR 객체 결과를 판제가 소비할 canonical ROS1 타입으로 옮기기 위한
 경계다. P4-B에서 타입과 topic 의미를 먼저 고정했고 P4-C1에서 신호등 typed producer를
 병행 연결했으며 P4-C2에서 대표 bag·stale·recovery parity를 검증했다. P4-C3에서 판제
-`behavior_planner`가 typed 결과를 우선 소비하도록 연결했다. LiDAR canonical
+`behavior_planner`가 typed 결과를 우선 소비하도록 연결했다. P4-C4에서 실제 ROS
+`behavior_node`를 사용한 `GREEN→KEEP→RED→STOP→GREEN→KEEP` 판단 loop를 고정하고, 별도 opt-in
+시험으로 Frenet/MPC/UDP와 실제 MORAI 차량 정지·재출발까지 확인했다. P4-C5에서 camera/BEV/
+recorder runtime support와 config 소유권을 `asmc_perception`으로 옮기고 representative bag의
+canonical/compatibility payload parity를 통과했다. LiDAR canonical
 topic은 여전히 **발행된다고 가정하면 안 되며** 기계 정본의
 `producer_status`가 실제 producer 상태의 권위다.
 
@@ -45,7 +49,7 @@ consumer와 비교하기 위한 사람이 읽는 값이지 enum 대신 사용하
 
 | Topic | Type | Frame/stamp | 현재 상태 |
 |---|---|---|---|
-| `/perception/traffic_light/detection` | `asmc_msgs/TrafficLightDetection` | `camera_extra`, 실제 입력 image header | P4-C3 behavior typed 우선, closed-loop 검수 대기 |
+| `/perception/traffic_light/detection` | `asmc_msgs/TrafficLightDetection` | `camera_extra`, 실제 입력 image header | P4-C4 behavior 및 MORAI actuator closed-loop 통과 |
 | `/perception/lidar/tracked_objects` | `asmc_msgs/TrackedObjectArray` | `map`, LiDAR source stamp | 선언됨, 미발행 |
 | `/perception/lidar/drivable_tracked_objects` | `asmc_msgs/TrackedObjectArray` | `map`, 같은 source stamp | 선언됨, 미발행 |
 
@@ -92,12 +96,19 @@ Traffic-light producer 전환:
 1. **완료:** 실제 추론 image header를 typed 결과에 복사한다.
 2. **완료:** representative bag에서 기존/new String과 typed label/confidence/stale/recovery parity를 검증한다.
 3. **완료:** 판제 consumer를 typed 우선으로 바꾸고 invalid/stale 시 legacy로 우회하지 않는 unit·live 연결을 확인한다.
-4. 적·녹 신호 closed-loop 정지/재출발을 확인한 뒤 legacy topic retire 여부를 결정한다.
+4. **완료:** 격리된 실제 ROS behavior decision loop에서 적색 STOP·녹색 새 KEEP을 확인한다.
+5. **완료:** 실제 simulator에서 Frenet/MPC/UDP를 포함한 제동 정지·재출발과 원상 복구를 확인한다.
+6. 모든 named consumer와 launch의 compatibility topic 참조가 0인 뒤 retire 여부를 결정한다.
 
 2번의 기계 판독 근거는
 `config/baselines/perception_traffic_light_parity_v1.yaml`이다. 3번의 구현 위치는
 `behavior_planner/src/signal/ros_traffic_light_provider.*`이며, 4번은 제어 명령까지 연결하는
-별도 수락시험이므로 producer·adapter 통합과 구분한다.
+별도 수락시험이므로 producer·adapter 통합과 구분한다. 4번 근거는
+`config/baselines/perception_traffic_light_closed_loop_v1.yaml`이며 trajectory/controller/UDP는
+명시적으로 제외한다. 5번 근거는
+`config/baselines/perception_traffic_light_vehicle_closed_loop_v1.yaml`이다. 실제 controller 출력은
+저장 전 `/acceptance/ctrl_cmd`로 격리하고, 명시적 gate를 연 뒤에만 bridge `/ctrl_cmd`로 전달한다.
+이 시험의 입력은 synthetic typed detection이므로 camera classifier 정확도 근거로 사용하지 않는다.
 
 LiDAR producer 전환:
 
