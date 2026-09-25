@@ -410,6 +410,13 @@ terminal에서 log·Hz·diagnostics를 계속 볼 수 있게 `udp_bridge.sh`를 
 Phase 5의 우선순위는 wrapper 수를 늘리는 것이 아니라 perception 출력과 시각화를
 줄이는 것이다.
 
+**P5-A 완료:** [`perception_topic_policy_v1.yaml`](../../config/contracts/perception_topic_policy_v1.yaml)과
+[감사 기록](../records/baselines/perception-p5a-topic-audit-v1.md)에 24 family, 펼친 63 topic의
+publisher·runtime subscriber·bag profile을 동결했다. `model_grid`와 per-view BEV 3종은 각각
+lane vectorizer와 fusion의 필수 내부 transport라서 이름만 보고 끌 수 없다. runtime 동작은
+바꾸지 않았으며 P5-B는 per-view coverage, source-view, frame-level pipeline audit의 opt-in
+전환과 단일 BEV 비교 화면부터 진행한다.
+
 1. consumer가 없는 grid·debug topic은 기본 발행을 끄고 opt-in으로 돌린다.
 2. BEV debug는 중복 창 대신 원본/투영 BEV와 최종 인지·융합 BEV를 나란히
    보여주는 하나의 비교 화면으로 정리한다.

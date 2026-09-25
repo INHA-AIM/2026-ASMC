@@ -34,6 +34,8 @@ bag profile과 oracle 금지선을 기록한 **동결 snapshot**이다. 현재 �
 python3 -m unittest tools/audit/test_perception_runtime_baseline.py
 python3 tools/audit/validate_perception_contract.py
 python3 -m unittest tools/audit/test_perception_contract.py
+python3 tools/audit/validate_perception_topic_policy.py
+python3 -m unittest tools/audit/test_perception_topic_policy.py
 python3 tools/audit/validate_traffic_light_parity.py --check-artifacts
 python3 -m unittest tools/audit/test_traffic_light_parity_report.py
 ```
@@ -51,3 +53,7 @@ P4-C3 consumer binding은 별도 topic을 다시 만들지 않는다. 기계 정
 `consumer_bindings.behavior_planner`와 `src/behavior_planner/src/config/behavior_params.yaml`이
 typed 우선·legacy fallback·invalid/stale fail-safe 규칙을 함께 고정하며
 `validate_perception_contract.py`가 두 launch의 canonical producer 경로까지 검사한다.
+
+P5-A topic policy는 이름에 `debug`·`grid`가 있어도 fusion/lane의 필수 내부 입력인 토픽과
+실제 opt-in 후보를 구분한다. `perception_topic_policy_v1.yaml`을 먼저 갱신하지 않고 runtime
+publisher, subscriber 또는 result bag profile을 제거하지 않는다.

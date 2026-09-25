@@ -1,0 +1,433 @@
+schema_version: 1
+policy_id: asmc_perception_topic_policy_v1
+audit_id: p5a_perception_topic_audit_v1
+status: frozen_for_p5b
+audited_base_commit: 64cd315f200a9902c9e61327f2eb97ccbded0e36
+audited_at: "2026-09-25"
+
+scope:
+  package: asmc_perception
+  launch: src/asmc_perception/launch/perception.launch
+  views: [front, left, right]
+  bag_profile_root: src/data_collection/config/bag_profiles
+  runtime_behavior_changed: false
+  excluded_owners:
+    - component: UDP bridge and transport diagnostics
+      owner: asmc_bridge
+      reason: bridge remains a separate foreground process
+    - component: lane_boundary_adapter
+      owner: planning
+      reason: planning team controls its adoption and retirement
+    - component: LiDAR and sensor fusion
+      owner: lidar+sensorfusion
+      reason: team-owned implementation is not complete
+
+launch_defaults:
+  source: src/asmc_perception/launch/perception.launch
+  anchors:
+    - '<arg name="start_camera_lane" default="true"/>'
+    - '<arg name="start_traffic_light" default="false"/>'
+    - '<arg name="start_visualization" default="false"/>'
+
+# `bag_profiles` is the exact set of committed data_collection profiles that
+# currently names every expanded topic in the family. It is evidence of use,
+# not permission to expose a debug topic as a planning contract.
+topic_families:
+  - id: camera_semantic_full_resolution
+    topics:
+      - {pattern: '/perception/camera/{view}/drivable/probability', type: sensor_msgs/Image}
+      - {pattern: '/perception/camera/{view}/road_marking/class_id', type: sensor_msgs/Image}
+      - {pattern: '/perception/camera/{view}/road_marking/confidence', type: sensor_msgs/Image}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/semantic_inference_node.py
+      anchors: ['return "/perception/camera/{}/{}/{}".format', 'self.confidence_publishers']
+    consumers:
+      - file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_node.py
+        anchor: camera.drivable_topic
+      - file: src/asmc_perception/src/asmc_perception/nodes/semantic_visualizer_node.py
+        anchor: '"/perception/camera/{}/drivable/probability".format(view)'
+    bag_profiles: [camera_semantic_result.yaml]
+    classification: canonical_runtime
+    current_mode: default_on
+    p5b_action: keep
+    rationale: Camera semantic output and input to metric projection.
+
+  - id: camera_semantic_model_grid
+    topics:
+      - {pattern: '/perception/camera/{view}/road_marking/model_grid/class_id', type: sensor_msgs/Image}
+      - {pattern: '/perception/camera/{view}/road_marking/model_grid/confidence', type: sensor_msgs/Image}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/semantic_inference_node.py
+      anchors: ['namespace = "/perception/camera/{}/road_marking/model_grid".format', 'self.model_grid_publishers']
+    consumers:
+      - file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
+        anchor: 'base = "/perception/camera/{}/road_marking/model_grid".format(view)'
+    bag_profiles: [camera_semantic_result.yaml]
+    classification: required_internal_transport
+    current_mode: default_on
+    p5b_action: preserve_until_migration
+    rationale: Despite its name, this is the lane vectorizer's lossless model-grid input, not a display grid.
+
+  - id: camera_diagnostics
+    topics:
+      - {pattern: /perception/camera/diagnostics, type: diagnostic_msgs/DiagnosticArray}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/semantic_inference_node.py
+      anchors: ['"/perception/camera/diagnostics"']
+    consumers:
+      - file: src/data_collection/scripts/monitor_transport_pilot.py
+        anchor: '"/perception/camera/diagnostics"'
+    bag_profiles:
+      - camera_semantic_result.yaml
+      - shadow_boundary_result.yaml
+      - shadow_camera_perception_handoff_result.yaml
+      - shadow_runtime_profile_result.yaml
+    classification: operational_diagnostics
+    current_mode: default_on
+    p5b_action: keep
+    rationale: Rate, latency, model identity, timestamp and error health.
+
+  - id: per_view_projected_semantics
+    topics:
+      - {pattern: '/perception/bev/debug/{view}/drivable_probability', type: sensor_msgs/Image}
+      - {pattern: '/perception/bev/debug/{view}/road_marking/class_id', type: sensor_msgs/Image}
+      - {pattern: '/perception/bev/debug/{view}/road_marking/confidence', type: sensor_msgs/Image}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_node.py
+      anchors: ['namespace = "/perception/bev/debug/{}".format(view)', '"road_marking_confidence": rospy.Publisher']
+    consumers:
+      - file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_fusion_node.py
+        anchor: 'namespace = "/perception/bev/debug/{}".format(view)'
+    bag_profiles: [camera_semantic_result.yaml]
+    classification: required_internal_transport
+    current_mode: default_on
+    p5b_action: preserve_until_migration
+    rationale: The debug namespace is misleading; all three layers are required camera-fusion inputs.
+
+  - id: per_view_projected_coverage
+    topics:
+      - {pattern: '/perception/bev/debug/{view}/coverage', type: sensor_msgs/Image}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_node.py
+      anchors: ['"coverage": rospy.Publisher', 'latch=True']
+    consumers:
+      - file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_visualizer_node.py
+        anchor: 'if self.publish_per_view_mosaic:'
+    bag_profiles: [camera_semantic_result.yaml]
+    classification: debug_opt_in
+    current_mode: default_on
+    p5b_action: default_off_p5b
+    rationale: Static calibration coverage is not consumed by fusion and is only used by the optional per-view mosaic.
+
+  - id: per_view_projection_diagnostics
+    topics:
+      - {pattern: /perception/bev/debug/diagnostics, type: diagnostic_msgs/DiagnosticArray}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_node.py
+      anchors: ['"/perception/bev/debug/diagnostics"']
+    consumers: []
+    bag_profiles: []
+    classification: operational_diagnostics
+    current_mode: default_on
+    p5b_action: keep
+    rationale: Per-camera projection health is distinct from fused BEV health.
+
+  - id: fused_bev_semantics
+    topics:
+      - {pattern: /perception/bev/camera/drivable_probability, type: sensor_msgs/Image}
+      - {pattern: /perception/bev/camera/road_marking/class_id, type: sensor_msgs/Image}
+      - {pattern: /perception/bev/camera/road_marking/confidence, type: sensor_msgs/Image}
+      - {pattern: /perception/bev/camera/coverage, type: sensor_msgs/Image}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_fusion_node.py
+      anchors: ['base = "/perception/bev/camera"', '"coverage": rospy.Publisher']
+    consumers:
+      - file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_visualizer_node.py
+        anchor: 'fused_namespace = "/perception/bev/camera"'
+      - file: src/asmc_perception/src/asmc_perception/nodes/lane_vector_visualizer_node.py
+        anchor: 'fused_base = "/perception/bev/camera"'
+    bag_profiles: [camera_semantic_result.yaml, shadow_camera_perception_handoff_result.yaml]
+    classification: canonical_runtime
+    current_mode: default_on
+    p5b_action: keep
+    rationale: Canonical fused camera BEV and validity mask for downstream handoff.
+
+  - id: fused_bev_source_count
+    topics:
+      - {pattern: /perception/bev/camera/source_count, type: sensor_msgs/Image}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_fusion_node.py
+      anchors: ['base + "/source_count"']
+    consumers:
+      - file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_visualizer_node.py
+        anchor: 'fused_namespace + "/source_count"'
+      - file: src/asmc_perception/src/asmc_perception/nodes/lane_vector_visualizer_node.py
+        anchor: 'fused_base + "/source_count"'
+    bag_profiles: [camera_semantic_result.yaml, shadow_camera_perception_handoff_result.yaml]
+    classification: canonical_quality_metadata
+    current_mode: default_on
+    p5b_action: review_after_planner_handoff
+    rationale: Useful overlap quality, but no current planning subscriber; do not remove before handoff review.
+
+  - id: fused_bev_source_view
+    topics:
+      - {pattern: /perception/bev/debug/source_view, type: sensor_msgs/Image}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_fusion_node.py
+      anchors: ['"/perception/bev/debug/source_view"']
+    consumers: []
+    bag_profiles: []
+    classification: debug_opt_in
+    current_mode: default_on
+    p5b_action: default_off_p5b
+    rationale: Per-pixel dominant-camera debug has no committed runtime or bag consumer.
+
+  - id: fused_bev_diagnostics
+    topics:
+      - {pattern: /perception/bev/diagnostics, type: diagnostic_msgs/DiagnosticArray}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_fusion_node.py
+      anchors: ['"/perception/bev/diagnostics"']
+    consumers: []
+    bag_profiles:
+      - camera_semantic_result.yaml
+      - shadow_boundary_result.yaml
+      - shadow_camera_perception_handoff_result.yaml
+      - shadow_runtime_profile_result.yaml
+    classification: operational_diagnostics
+    current_mode: default_on
+    p5b_action: keep
+    rationale: Fusion skew, drop, rate and latency health.
+
+  - id: lane_boundary_observations
+    topics:
+      - {pattern: /perception/lane/boundary_observations, type: asmc_msgs/LaneBoundaryObservationArray}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
+      anchors: ['"/perception/lane/boundary_observations"']
+    consumers:
+      - file: src/lane_boundary_adapter/src/lane_boundary_monitor_node.cpp
+        anchor: '"/perception/lane/boundary_observations"'
+    bag_profiles: [camera_semantic_result.yaml, shadow_boundary_result.yaml, shadow_runtime_profile_result.yaml]
+    classification: canonical_runtime
+    current_mode: default_on
+    p5b_action: keep
+    rationale: Current typed independent-boundary handoff.
+
+  - id: lane_boundary_family_candidate
+    topics:
+      - {pattern: /perception/lane/boundary_family, type: asmc_msgs/LaneBoundaryFamily}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
+      anchors: ['"/perception/lane/boundary_family"']
+    consumers:
+      - file: src/lane_boundary_adapter/src/boundary_family_monitor_node.cpp
+        anchor: '"/perception/lane/boundary_family"'
+    bag_profiles:
+      - camera_semantic_result.yaml
+      - shadow_boundary_family_adapter_result.yaml
+      - shadow_boundary_result.yaml
+      - shadow_camera_perception_handoff_result.yaml
+      - shadow_runtime_profile_result.yaml
+    classification: candidate_contract
+    current_mode: explicit_argument
+    p5b_action: defer_owner
+    rationale: Planning-owned candidate remains opt-in; P5 must not adopt or delete its adapter.
+
+  - id: lane_compatibility_markers
+    topics:
+      - {pattern: /perception/lane/boundaries, type: visualization_msgs/MarkerArray}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
+      anchors: ['"/perception/lane/boundaries"']
+    consumers:
+      - file: src/asmc_perception/src/asmc_perception/nodes/lane_vector_visualizer_node.py
+        anchor: '"/perception/lane/boundaries"'
+    bag_profiles: [camera_semantic_result.yaml]
+    classification: compatibility
+    current_mode: subscriber_lazy
+    p5b_action: retire_after_consumer_gate
+    rationale: Legacy MarkerArray is serialized only when subscribed; retain until typed consumers replace it.
+
+  - id: lane_debug_geometry
+    topics:
+      - {pattern: /perception/lane/debug/evidence_points, type: sensor_msgs/PointCloud2}
+      - {pattern: /perception/lane/debug/markers, type: visualization_msgs/MarkerArray}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
+      anchors: ['"/perception/lane/debug/evidence_points"', '"/perception/lane/debug/markers"']
+    consumers:
+      - file: src/asmc_perception/src/asmc_perception/nodes/lane_vector_visualizer_node.py
+        anchor: 'self._update_debug_subscribers(any(requested.values()))'
+    bag_profiles: [camera_semantic_result.yaml]
+    classification: debug_opt_in
+    current_mode: subscriber_lazy
+    p5b_action: keep
+    rationale: Serialization and visualizer subscriptions are already connection-gated.
+
+  - id: lane_diagnostics
+    topics:
+      - {pattern: /perception/lane/diagnostics, type: diagnostic_msgs/DiagnosticArray}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
+      anchors: ['"/perception/lane/diagnostics"']
+    consumers: []
+    bag_profiles:
+      - camera_semantic_result.yaml
+      - shadow_boundary_result.yaml
+      - shadow_camera_perception_handoff_result.yaml
+      - shadow_runtime_profile_result.yaml
+    classification: operational_diagnostics
+    current_mode: default_on
+    p5b_action: keep
+    rationale: Lane synchronization, output rate, fit and error health.
+
+  - id: lane_pipeline_audit
+    topics:
+      - {pattern: /perception/lane/pipeline_audit, type: diagnostic_msgs/DiagnosticArray}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
+      anchors: ['"/perception/lane/pipeline_audit"']
+    consumers: []
+    bag_profiles:
+      - camera_semantic_result.yaml
+      - shadow_boundary_family_adapter_result.yaml
+      - shadow_boundary_result.yaml
+      - shadow_camera_perception_handoff_result.yaml
+      - shadow_runtime_profile_result.yaml
+    classification: audit_opt_in
+    current_mode: default_on
+    p5b_action: opt_in_p5b
+    rationale: Frame-level detailed audit is needed for evaluation bags, not every production run.
+
+  - id: lane_shared_family_diagnostics
+    topics:
+      - {pattern: /perception/lane/debug/shared_family/diagnostics, type: diagnostic_msgs/DiagnosticArray}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
+      anchors: ['"/perception/lane/debug/shared_family/diagnostics"']
+    consumers:
+      - file: src/asmc_perception/src/asmc_perception/nodes/lane_vector_visualizer_node.py
+        anchor: '"/perception/lane/debug/shared_family/diagnostics"'
+    bag_profiles:
+      - camera_semantic_result.yaml
+      - shadow_boundary_family_adapter_result.yaml
+      - shadow_boundary_result.yaml
+      - shadow_camera_perception_handoff_result.yaml
+      - shadow_runtime_profile_result.yaml
+    classification: candidate_contract
+    current_mode: explicit_argument
+    p5b_action: defer_owner
+    rationale: Exists only when shared-family debug or candidate output is explicitly enabled.
+
+  - id: lane_shared_family_markers
+    topics:
+      - {pattern: /perception/lane/debug/shared_family/markers, type: visualization_msgs/MarkerArray}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
+      anchors: ['"/perception/lane/debug/shared_family/markers"']
+    consumers:
+      - file: src/asmc_perception/src/asmc_perception/nodes/lane_vector_visualizer_node.py
+        anchor: '"/perception/lane/debug/shared_family/markers"'
+    bag_profiles: [camera_semantic_result.yaml, shadow_boundary_result.yaml]
+    classification: debug_opt_in
+    current_mode: subscriber_lazy
+    p5b_action: defer_owner
+    rationale: Candidate debug output is both argument- and connection-gated.
+
+  - id: semantic_visualization
+    topics:
+      - {pattern: '/perception/camera/{view}/debug/panel/compressed', type: sensor_msgs/CompressedImage}
+      - {pattern: /perception/camera/debug/mosaic/compressed, type: sensor_msgs/CompressedImage}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/semantic_visualizer_node.py
+      anchors: ['"/perception/camera/{}/debug/panel/compressed".format(view)', '"/perception/camera/debug/mosaic/compressed"']
+    consumers: []
+    bag_profiles: []
+    classification: debug_opt_in
+    current_mode: visualization_launch_and_subscriber_lazy
+    p5b_action: keep
+    rationale: Raw camera plus semantic result remains the primary inference check.
+
+  - id: camera_grid_visualization
+    topics:
+      - {pattern: '/perception/bev/debug/{view}/camera_grid_overlay/compressed', type: sensor_msgs/CompressedImage}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_visualizer_node.py
+      anchors: ['namespace + "/camera_grid_overlay/compressed"', 'get_num_connections() == 0']
+    consumers: []
+    bag_profiles: []
+    classification: debug_opt_in
+    current_mode: visualization_launch_and_subscriber_lazy
+    p5b_action: retire_after_comparison
+    rationale: Development calibration grid is not an operating output and should leave the normal visualization preset.
+
+  - id: bev_visualization
+    topics:
+      - {pattern: /perception/bev/debug/fused/compressed, type: sensor_msgs/CompressedImage}
+      - {pattern: /perception/bev/debug/fused_quality/compressed, type: sensor_msgs/CompressedImage}
+      - {pattern: /perception/bev/debug/mosaic/compressed, type: sensor_msgs/CompressedImage}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_visualizer_node.py
+      anchors: ['"/perception/bev/debug/fused/compressed"', '"/perception/bev/debug/fused_quality/compressed"']
+    consumers: []
+    bag_profiles: []
+    classification: debug_opt_in
+    current_mode: visualization_launch_and_subscriber_lazy
+    p5b_action: consolidate_p5b
+    rationale: Replace multiple windows with one original/projected versus fused perception comparison image.
+
+  - id: lane_visualization
+    topics:
+      - {pattern: /perception/lane/debug/evidence_bev/compressed, type: sensor_msgs/CompressedImage}
+      - {pattern: /perception/lane/debug/fitted_bev/compressed, type: sensor_msgs/CompressedImage}
+      - {pattern: /perception/lane/debug/boundaries_bev/compressed, type: sensor_msgs/CompressedImage}
+      - {pattern: /perception/lane/debug/shared_family_bev/compressed, type: sensor_msgs/CompressedImage}
+      - {pattern: /perception/lane/debug/camera_reprojection_mosaic/compressed, type: sensor_msgs/CompressedImage}
+    producer:
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vector_visualizer_node.py
+      anchors: ['base = "/perception/lane/debug"', 'requested = {']
+    consumers: []
+    bag_profiles: []
+    classification: debug_opt_in
+    current_mode: visualization_launch_and_subscriber_lazy
+    p5b_action: consolidate_p5b
+    rationale: Keep boundaries and reprojection available while grouping secondary stages behind a comparison preset.
+
+  - id: traffic_light_typed
+    topics:
+      - {pattern: /perception/traffic_light/detection, type: asmc_msgs/TrafficLightDetection}
+    producer:
+      file: src/asmc_perception/scripts/traffic_light_node.py
+      anchors: ['parser.add_argument("--typed-topic", default="/perception/traffic_light/detection")']
+    consumers:
+      - file: src/behavior_planner/src/node/behavior_node.cpp
+        anchor: '"/perception/traffic_light/detection"'
+    bag_profiles: []
+    classification: canonical_runtime
+    current_mode: explicit_argument
+    p5b_action: keep
+    rationale: Typed canonical result; later supervisor activation is limited to the HD-map traffic-light zone.
+
+  - id: traffic_light_legacy
+    topics:
+      - {pattern: /traffic_light/state, type: std_msgs/String}
+      - {pattern: /traffic_light/detail, type: std_msgs/String}
+    producer:
+      file: src/asmc_perception/scripts/traffic_light_node.py
+      anchors: ['parser.add_argument("--state-topic", default="/traffic_light/state")', 'parser.add_argument("--detail-topic", default="/traffic_light/detail")']
+    consumers:
+      - file: src/behavior_planner/src/node/behavior_node.cpp
+        anchor: 'std::string traffic_light_legacy_topic = "/traffic_light/state";'
+    bag_profiles: []
+    classification: compatibility
+    current_mode: explicit_argument
+    p5b_action: retire_after_consumer_gate
+    rationale: Preserve until every consumer has completed the typed-topic cutover.
+
+p5b_order:
+  - Add explicit publish flags; default off per-view coverage, source_view and frame-level pipeline_audit in the production launch while result/evaluation profiles opt in.
+  - Add one subscriber-lazy BEV comparison topic showing projected semantic input beside the fused perception result.
+  - Remove camera-grid overlay from the normal visualization preset; retain an explicit calibration-review path.
+  - Keep old image topics for one compatibility interval and record side-by-side pixel/timestamp parity before retirement.
+  - Do not rename required internal transports in the same change as visualization consolidation.

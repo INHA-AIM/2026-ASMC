@@ -22,6 +22,7 @@
 | camera/map/LiDAR 개발 과정과 열린 결정 | [fusion roadmap](./roadmap.md) | Working Proposal + Chronological Record |
 | LiDAR 패키지의 현재 완성도와 개선 계획 | [LiDAR assessment](./lidar-assessment-and-roadmap.md) | Assessment Record + Working Proposal |
 | 특정 checkpoint의 학습 결과 | [v4 evaluation](../../records/perception/twinlitenet-v4-evaluation.md) | Experiment Record |
+| 현재 topic 소비·bag 사용과 P5 정리 gate | [P5-A topic audit](../../records/baselines/perception-p5a-topic-audit-v1.md) | Frozen Input Audit |
 
 충돌할 때는 공식 규정, 동결된 contract, 현재 package source와 launch, handoff, working
 proposal, 날짜별 record 순으로 판단한다. roadmap의 과거 `candidate`, `미구현`,
@@ -95,6 +96,11 @@ Camera semantic 입력·출력의 정확한 목록과 실행 인자는
 /perception/bev/camera/source_count
 /perception/bev/diagnostics
 ```
+
+P5-A 감사 결과 `/perception/bev/debug/{view}`의 drivable·road-marking 3종은 이름과 달리
+fusion의 필수 내부 입력이다. `model_grid` 2종도 lane vectorizer 입력이다. 실제 default-off
+후보와 bag 영향은 [topic policy](../../../config/contracts/perception_topic_policy_v1.yaml)를
+따르며 debug prefix만 보고 producer를 끄지 않는다.
 
 음영구간 typed 후보는 다음 토픽이다.
 

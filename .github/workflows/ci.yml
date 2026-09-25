@@ -45,8 +45,10 @@ jobs:
         run: |
           python3 tools/audit/validate_p1b_contract.py
           python3 tools/audit/validate_perception_contract.py
+          python3 tools/audit/validate_perception_topic_policy.py
           python3 -m unittest tools/audit/test_p1b_contract.py
           python3 -m unittest tools/audit/test_perception_contract.py
+          python3 -m unittest tools/audit/test_perception_topic_policy.py
 
       - name: catkin_make
         run: |
