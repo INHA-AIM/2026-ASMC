@@ -7,6 +7,12 @@ components:
     sensor_set: ASMC_sensor_set_v3
     output_frame: base_link
     source_stamp_policy: newest_synchronized_camera_source
+    implementation_owner: asmc_perception
+    support_library_owner: asmc_perception
+    support_library_namespaces:
+      - asmc_perception.camera
+      - asmc_perception.bev
+    support_config_evidence: config/baselines/perception_support_config_parity_v1.yaml
   traffic_light:
     enabled_by_default: false
     activation_zone: TRAFFIC_LIGHT_REQUIRED
@@ -16,6 +22,8 @@ components:
     canonical_producer_status: active_parallel_p4c
     parity_evidence: config/baselines/perception_traffic_light_parity_v1.yaml
     planning_consumer_cutover_status: typed_preferred_legacy_fallback_p4c3
+    decision_closed_loop_acceptance: p4c4_traffic_light_behavior_closed_loop_v1
+    vehicle_closed_loop_acceptance: p4c4_traffic_light_vehicle_closed_loop_v1
     mission_activation_status: pending_hd_map_zone_integration
   lidar_fusion:
     enabled_by_default: false
@@ -27,6 +35,10 @@ components:
     canonical_producer_status: declared_not_published_p4b
   recorder:
     enabled_by_default: false
+    implementation_owner: asmc_perception
+    support_library: asmc_perception.recorder
+    profile_owner: asmc_perception
+    live_smoke_evidence: config/baselines/perception_runtime_move_smoke_v1.yaml
   visualization:
     enabled_by_default: false
     image_topics:
@@ -40,7 +52,11 @@ components:
 
 compatibility:
   preserve_legacy_topics: true
-  physical_source_moves: false
+  physical_source_moves: true
+  physical_source_move_scope: camera_bev_recorder_runtime_nodes_support_and_config
+  compatibility_python_namespaces: thin_forwarders
+  compatibility_config_paths: byte_identical_guarded_mirrors
+  representative_bag_parity: passed_p4c5
   package_deletions: false
   oracle_inputs_allowed: false
   planning_consumer:
@@ -48,4 +64,5 @@ compatibility:
     canonical_topic: /perception/traffic_light/detection
     legacy_fallback_topic: /traffic_light/state
     invalid_or_stale_policy: unknown_without_fallback
-    closed_loop_status: pending
+    closed_loop_status: physical_vehicle_closed_loop_p4c4
+    closed_loop_scope: behavior_frenet_mpc_ctrl_udp_morai_motion

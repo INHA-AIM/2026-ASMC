@@ -13,9 +13,9 @@
   <arg name="sensor_set_path"
        default="$(find drivable_bev)/../../../config/morai/sensors/ASMC_sensor_set_v2.json"/>
   <arg name="bev_grid_config"
-       default="$(find drivable_bev)/config/bev_grid.yaml"/>
+       default="$(find asmc_perception)/config/bev/bev_grid.yaml"/>
   <arg name="visualization_config"
-       default="$(find drivable_bev)/config/visualization.yaml"/>
+       default="$(find asmc_perception)/config/bev/visualization.yaml"/>
 
   <include if="$(arg start_inference)"
            file="$(find camera_semantic_perception)/launch/three_view.launch">

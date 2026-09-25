@@ -8,16 +8,16 @@
   <arg name="enable_boundary_family_candidate"
        default="$(arg enable_shared_family_debug)"/>
   <arg name="bev_grid_config"
-       default="$(find drivable_bev)/config/bev_grid.yaml"/>
+       default="$(find asmc_perception)/config/bev/bev_grid.yaml"/>
   <arg name="visualization_config"
-       default="$(find drivable_bev)/config/visualization.yaml"/>
+       default="$(find asmc_perception)/config/bev/visualization.yaml"/>
   <arg name="operating_domain" default="shadow_two_way_v1"/>
   <arg name="algorithm_id" default="twinlite_v6_shadow_boundary_contract_v1"/>
 
   <node pkg="drivable_bev" type="lane_vectorizer_node.py"
         name="camera_lane_vectorizer" output="screen" required="true">
-    <rosparam command="load" file="$(find drivable_bev)/config/cameras_v2.yaml"/>
-    <rosparam command="load" file="$(find drivable_bev)/config/lane_fitting.yaml"/>
+    <rosparam command="load" file="$(find asmc_perception)/config/bev/cameras_v2.yaml"/>
+    <rosparam command="load" file="$(find asmc_perception)/config/bev/lane_fitting.yaml"/>
     <rosparam param="views" subst_value="true">[$(arg views)]</rosparam>
     <param name="operating_domain" value="$(arg operating_domain)"/>
     <param name="algorithm_id" value="$(arg algorithm_id)"/>
@@ -31,7 +31,7 @@
         pkg="drivable_bev" type="lane_vector_visualizer_node.py"
         name="camera_lane_vector_visualizer" output="screen" required="true">
     <rosparam command="load" file="$(arg bev_grid_config)"/>
-    <rosparam command="load" file="$(find drivable_bev)/config/cameras_v2.yaml"/>
+    <rosparam command="load" file="$(find asmc_perception)/config/bev/cameras_v2.yaml"/>
     <rosparam command="load" file="$(arg visualization_config)"/>
   </node>
 </launch>

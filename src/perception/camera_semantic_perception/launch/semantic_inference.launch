@@ -8,10 +8,12 @@
   <arg name="publish_model_grid_road_marking" default="false"/>
   <arg name="model_grid_max_hz" default="10.0"/>
 
+  <!-- P4-C compatibility path: this executable forwards to the implementation
+       owned by asmc_perception. Topic and node names intentionally stay fixed. -->
   <node pkg="camera_semantic_perception" type="semantic_inference_node.py"
         name="camera_semantic_inference" output="screen" required="true">
-    <rosparam command="load" file="$(find camera_semantic_perception)/config/cameras.yaml"/>
-    <rosparam command="load" file="$(find camera_semantic_perception)/config/twinlite_medium.yaml"/>
+    <rosparam command="load" file="$(find asmc_perception)/config/camera/cameras.yaml"/>
+    <rosparam command="load" file="$(find asmc_perception)/config/camera/twinlite_medium.yaml"/>
     <rosparam param="views" subst_value="true">[$(arg views)]</rosparam>
     <param name="checkpoint" value="$(arg checkpoint)"/>
     <param name="device" value="$(arg device)"/>

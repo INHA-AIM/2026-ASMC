@@ -8,9 +8,9 @@
   <arg name="sensor_set_path"
        default="$(find drivable_bev)/../../../config/morai/sensors/ASMC_sensor_set_v2.json"/>
   <arg name="bev_grid_config"
-       default="$(find drivable_bev)/config/bev_grid_dev.yaml"/>
+       default="$(find asmc_perception)/config/bev/bev_grid_dev.yaml"/>
   <arg name="visualization_config"
-       default="$(find drivable_bev)/config/visualization_dev.yaml"/>
+       default="$(find asmc_perception)/config/bev/visualization_dev.yaml"/>
 
   <include file="$(find drivable_bev)/launch/three_view_bev_pilot.launch">
     <arg name="checkpoint" value="$(arg checkpoint)"/>

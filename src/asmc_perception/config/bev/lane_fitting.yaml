@@ -1,0 +1,155 @@
+# Debug-only v6 metric lane-vector pilot. Values remain provisional until the
+# native-GT parameter and range audits have completed.
+model_input_hw: [384, 640]
+source_masks:
+  front: 1
+  left: 2
+  right: 4
+
+frame_id: base_link
+operating_domain: shadow_two_way_v1
+algorithm_id: twinlite_v6_shadow_boundary_contract_v1
+expected_boundary_count: 3
+evidence_x_min_m: -5.0
+evidence_x_max_m: 20.0
+evidence_y_min_m: -8.0
+evidence_y_max_m: 8.0
+max_ground_range_m: 22.0
+min_camera_depth_m: 0.10
+edge_taper_fraction: 0.08
+forward_fade_start_m: 15.0
+max_timestamp_skew_ms: 35.0
+sync_queue_size: 12
+diagnostics_interval_sec: 2.0
+
+# RViz debug reference only. base_link is the rear-axle centre; these values
+# do not participate in evidence extraction, fitting, or candidate output.
+vehicle_footprint:
+  length_m: 4.635
+  width_m: 1.892
+  rear_overhang_m: 0.790
+  wheelbase_m: 3.000
+  marker_height_m: 0.12
+
+confidence_by_class:
+  white: 0.50
+  yellow: 0.50
+
+x_bin_m: 0.25
+lateral_cluster_gap_m: 0.30
+max_track_gap_m: 2.0
+max_lateral_residual_m: 0.45
+max_heading_change_deg: 20.0
+min_track_nodes: 4
+min_observed_span_m: 2.0
+
+spline_smoothing: 0.05
+spline_sample_spacing_m: 0.25
+spline_robust_iterations: 3
+spline_outlier_scale: 2.5
+spline_control_spacing_m: 2.0
+
+# Shared-family passed the representative and full 12+4 offline gates. It is
+# available as an explicitly enabled runtime debug sidecar and typed candidate;
+# the established independent boundary contract remains unchanged.
+shared_lane_family:
+  runtime_debug_enabled: false
+  deployment_allowed: false
+  representation: shared_parametric_bspline_normal_offsets_v2
+  reference_x_m: 5.0
+  nominal_left_width_m: 3.48
+  nominal_right_width_m: 3.52
+  lane_width_min_m: 2.40
+  lane_width_max_m: 4.60
+  width_prior_strength: 0.35
+  spline_smoothing: 0.08
+  control_spacing_m: 2.5
+  sample_spacing_m: 0.25
+  robust_iterations: 5
+  robust_scale_m: 0.15
+  outlier_scale: 2.5
+  min_observed_roles: 2
+  min_family_span_m: 3.0
+  observed_support_radius_m: 0.45
+  support_residual_max_m: 0.35
+  min_local_support_roles: 2
+  max_structure_bridge_m: 0.75
+  min_observed_segment_m: 0.50
+  inferred_confidence_scale: 0.60
+  # Fail-soft handoff for the time-limited shadow-road integration. A family
+  # must still pass the normal multi-role same-frame fit first. Within this
+  # window only, unsupported fitted samples are exposed as degraded
+  # STRUCTURE_INFERRED geometry; they are never relabelled OBSERVED. The far
+  # 15-20m debug tail remains INVALID.
+  same_frame_completion_enabled: true
+  same_frame_completion_x_min_m: 0.0
+  same_frame_completion_x_max_m: 15.0
+  # Candidate-v3 recovery for same-frame roles whose longitudinal supports do
+  # not overlap enough for the strict local-support gate. This is deliberately
+  # narrower than a one-line fallback: at least two independently assigned
+  # roles must each contribute >=2m, their union must span >=6m inside x[0,15],
+  # and heading/residual/outlier/curvature gates must all pass. Strictly
+  # accepted frames never enter this branch and therefore remain unchanged.
+  distributed_support_enabled: true
+  distributed_support_x_min_m: 0.0
+  distributed_support_x_max_m: 15.0
+  distributed_min_role_support_m: 2.0
+  distributed_min_union_support_m: 6.0
+  distributed_max_internal_gap_m: 3.0
+  distributed_max_heading_delta_deg: 15.0
+  distributed_max_inlier_residual_p95_m: 0.30
+  distributed_max_outlier_rate: 0.35
+  distributed_max_curvature_inv_m: 0.12
+
+# Audit-only taxonomy for the mathematical family samples that remain INVALID.
+# The control/preview extents are read from the named planning-usability zones,
+# so a later checkpoint can extend the useful range through configuration.
+# This block never promotes support or grants control authority.
+invalid_support_classification:
+  control_zone: planning_consumer
+  vehicle_zone: vehicle_envelope
+  near_zone: near_ahead
+  mid_zone: mid_ahead
+  preview_zone: far_debug
+  strip: both_strips
+  gap_tolerance_m: 0.26
+  whole_support_min_coverage_ratio: 0.80
+
+# Current v6 measurement horizons. A later checkpoint may extend these bounds
+# after a fresh accuracy/support audit; classifier code and message fields do
+# not need to change.
+planning_usability_zones:
+  - {name: planning_consumer, x_min_m: 0.0, x_max_m: 15.0}
+  - {name: vehicle_envelope, x_min_m: -0.790, x_max_m: 3.845}
+  - {name: near_ahead, x_min_m: 3.845, x_max_m: 10.0}
+  - {name: mid_ahead, x_min_m: 10.0, x_max_m: 15.0}
+  - {name: far_debug, x_min_m: 15.0, x_max_m: 20.0}
+
+# Provisional two-way GPS-shadow ODD. This filters colour-marking splines into
+# one yellow centre boundary and visible white outer boundaries. It deliberately
+# does not assign home/opposing-lane semantics.
+shadow_boundary:
+  enabled: true
+  reference_x_m: 5.0
+  min_confidence: 0.50
+  min_longitudinal_span_m: 3.0
+  min_observed_length_m: 3.0
+  max_bridged_ratio: 0.45
+  max_residual_p95_m: 0.30
+  max_abs_heading_deg: 50.0
+  max_abs_lateral_m: 7.0
+  lane_width_min_m: 2.4
+  lane_width_max_m: 4.6
+  expected_lane_width_m: 3.55
+  max_white_without_yellow: 2
+  temporal_max_lateral_residual_m: 0.65
+  temporal_max_missed_frames: 8
+  temporal_reset_gap_sec: 0.75
+  temporal_velocity_smoothing: 0.50
+  temporal_max_lateral_speed_mps: 4.0
+
+# Initial evaluation-only core. It is not a controller contract.
+core_x_min_m: 0.0
+core_x_max_m: 15.0
+core_y_min_m: -6.0
+core_y_max_m: 6.0

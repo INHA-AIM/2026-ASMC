@@ -1,0 +1,136 @@
+schema_version: 1
+acceptance_id: p4c5_perception_support_config_ownership_v1
+status: passed
+verified_at: "2026-09-25"
+
+canonical_owner: asmc_perception
+runtime_support:
+  camera:
+    namespace: asmc_perception.camera
+    python_file_count: 8
+  bev_lane:
+    namespace: asmc_perception.bev
+    python_file_count: 19
+  recorder:
+    namespace: asmc_perception.recorder
+    python_file_count: 5
+
+compatibility_policy:
+  legacy_python_namespaces: thin_forwarders
+  legacy_executables: thin_forwarders
+  legacy_runtime_launches: canonical_config_paths
+  legacy_config_paths: byte_identical_mirrors_until_package_retirement
+  canonical_runtime_depends_on_legacy_packages: false
+  topic_names_changed: false
+
+config_mirrors:
+  - canonical: src/asmc_perception/config/camera/cameras.yaml
+    compatibility: src/perception/camera_semantic_perception/config/cameras.yaml
+    sha256: 67741f269c4fc59b123e3a1c12bfa312db580e725c28592d33a184b7fc056d07
+  - canonical: src/asmc_perception/config/camera/twinlite_medium.yaml
+    compatibility: src/perception/camera_semantic_perception/config/twinlite_medium.yaml
+    sha256: 4f8ab7228971b84a31324f8448b5aa90c22e6e9d106afedf638015ba4d1536dd
+  - canonical: src/asmc_perception/config/camera/visualization.yaml
+    compatibility: src/perception/camera_semantic_perception/config/visualization.yaml
+    sha256: da013db2e5c5333a0c969c883b57735a4f6704cdc7db879743076d8fa2fa32d3
+  - canonical: src/asmc_perception/config/bev/bev_grid.yaml
+    compatibility: src/perception/drivable_bev/config/bev_grid.yaml
+    sha256: 8bad13875a2b7d9eec4a35687433446b1a57112257ec34520cf5c1d6e47e0ad3
+  - canonical: src/asmc_perception/config/bev/bev_grid_dev.yaml
+    compatibility: src/perception/drivable_bev/config/bev_grid_dev.yaml
+    sha256: 12c9cc1ab434d98a7720033bd75e871a9d8ed89490b6ca4e0f87acca9f912540
+  - canonical: src/asmc_perception/config/bev/cameras_v2.yaml
+    compatibility: src/perception/drivable_bev/config/cameras_v2.yaml
+    sha256: 79067010d2680c7ed56a04240a3e75559ccf5169d1c038f6ea7c5a6d10dfeed2
+  - canonical: src/asmc_perception/config/bev/fusion.yaml
+    compatibility: src/perception/drivable_bev/config/fusion.yaml
+    sha256: 9b8a11f2c4849df99675df64b5ceec823b05c12ee82bfb0fc2e496a76982706c
+  - canonical: src/asmc_perception/config/bev/lane_fitting.yaml
+    compatibility: src/perception/drivable_bev/config/lane_fitting.yaml
+    sha256: 00b0909db8813e8bda08e9c9efa079bc6556b98d56511c9b532da79aec060a9d
+  - canonical: src/asmc_perception/config/bev/visualization.yaml
+    compatibility: src/perception/drivable_bev/config/visualization.yaml
+    sha256: 497286b20abb22e16464596d8f1354d6a19958129300f04c2a0b12c8f4bda5e8
+  - canonical: src/asmc_perception/config/bev/visualization_dev.yaml
+    compatibility: src/perception/drivable_bev/config/visualization_dev.yaml
+    sha256: dd5f1ca51182ba792b4a97e3ce75595729ea163a0dd2e967bbfa2701a7b04bc7
+  - canonical: src/asmc_perception/config/bag_profiles/camera_raw.yaml
+    compatibility: src/data_collection/config/bag_profiles/camera_raw.yaml
+    sha256: 531be87143ace05bd413b5945d7549ee5d5e69632af2025c9cbbc094db4ac7b8
+  - canonical: src/asmc_perception/config/bag_profiles/camera_semantic_result.yaml
+    compatibility: src/data_collection/config/bag_profiles/camera_semantic_result.yaml
+    sha256: c0afc665af3f1357c7911127318dcd45336e58d589a55dc7f1c8f36803af584a
+  - canonical: src/asmc_perception/config/bag_profiles/dev_oracle_raw.yaml
+    compatibility: src/data_collection/config/bag_profiles/dev_oracle_raw.yaml
+    sha256: 9b7847e7244085b669bdcc9e590c9c25f9e27e480d9674429884016a4d468246
+  - canonical: src/asmc_perception/config/bag_profiles/dev_oracle_udp.yaml
+    compatibility: src/data_collection/config/bag_profiles/dev_oracle_udp.yaml
+    sha256: c9999bb3f51b73beb066efe7e4842de3b0c7e43619289a948430134131d1e143
+  - canonical: src/asmc_perception/config/bag_profiles/full_raw.yaml
+    compatibility: src/data_collection/config/bag_profiles/full_raw.yaml
+    sha256: 39795e2f90a6fa958091222e62a3d9ef8db21b9d4077516daf427167254d0b42
+  - canonical: src/asmc_perception/config/bag_profiles/lidar_dev_gt_udp.yaml
+    compatibility: src/data_collection/config/bag_profiles/lidar_dev_gt_udp.yaml
+    sha256: 3f6023fabe2b0dae9f636430164cc2cf65f4f807c0666225cd7cd8e3d6eb4d14
+  - canonical: src/asmc_perception/config/bag_profiles/lidar_raw.yaml
+    compatibility: src/data_collection/config/bag_profiles/lidar_raw.yaml
+    sha256: 66fa6e81290a5282e1d348e5b06e5aa77a450f3f3dbf84c01f9d81f2788c7a4c
+  - canonical: src/asmc_perception/config/bag_profiles/shadow_boundary_family_adapter_result.yaml
+    compatibility: src/data_collection/config/bag_profiles/shadow_boundary_family_adapter_result.yaml
+    sha256: 2cb969e727f1bb5b0e80f2132dcf87750605d6dd15f14a50d07fc141a227e16b
+  - canonical: src/asmc_perception/config/bag_profiles/shadow_boundary_result.yaml
+    compatibility: src/data_collection/config/bag_profiles/shadow_boundary_result.yaml
+    sha256: 2454056030134cacf2a668e21ab86112bcad75efe31162adccac0a49ca7a704b
+  - canonical: src/asmc_perception/config/bag_profiles/shadow_camera_perception_handoff_result.yaml
+    compatibility: src/data_collection/config/bag_profiles/shadow_camera_perception_handoff_result.yaml
+    sha256: 4059f390ffbfadc9d0bec3d8a2f2f0ea88bb8299600cb8c5b61d69d6460b94cf
+  - canonical: src/asmc_perception/config/bag_profiles/shadow_runtime_profile_result.yaml
+    compatibility: src/data_collection/config/bag_profiles/shadow_runtime_profile_result.yaml
+    sha256: 93d6c50a6ed347882775967e8eddaf535d45a37d893e57e68a12c017f800d465
+
+runtime_validation:
+  build: passed
+  unit_and_contract_tests: passed
+  canonical_camera_bev_lane:
+    status: passed
+    observed_hz:
+      /perception/camera/front/road_marking/class_id: 12.48
+      /perception/bev/camera/road_marking/class_id: 8.82
+      /perception/lane/boundary_observations: 8.84
+    decode_or_inference_errors: 0
+  legacy_import_compatibility: passed_symbol_identity
+  recorder_profile_resolution:
+    status: passed
+    profile_source: src/asmc_perception/config/bag_profiles/camera_raw.yaml
+    duration_s: 13.279588
+    messages: 2062
+    bytes: 55848206
+    bag_sha256: 4c7eb3182ddb10f09d9474883a22be4415ece8e6c9b4c11be50fa002f8b67dc4
+    indexed: true
+  reference: config/baselines/perception_runtime_move_smoke_v1.yaml
+
+representative_bag_parity:
+  acceptance_id: p4c5_representative_bag_output_parity_v1
+  status: passed
+  tool: tools/audit/run_perception_runtime_parity.py
+  input_bag_sha256: 4c7eb3182ddb10f09d9474883a22be4415ece8e6c9b4c11be50fa002f8b67dc4
+  playback_rate: 0.5
+  playback_duration_s: 4.0
+  comparison_key: source_header_stamp
+  normalized_fields: [header.seq]
+  topics:
+    /perception/camera/front/road_marking/class_id:
+      canonical_messages: 80
+      compatibility_messages: 79
+      common_source_stamps: 79
+      payload_mismatches: 0
+    /perception/bev/camera/road_marking/class_id:
+      canonical_messages: 39
+      compatibility_messages: 39
+      common_source_stamps: 38
+      payload_mismatches: 0
+    /perception/lane/boundary_observations:
+      canonical_messages: 44
+      compatibility_messages: 44
+      common_source_stamps: 43
+      payload_mismatches: 0

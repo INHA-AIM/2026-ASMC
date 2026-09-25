@@ -1,0 +1,28 @@
+name: camera_raw
+description: Three RGB views and vehicle state for camera model evaluation.
+kind: raw
+transport: udp
+timestamp_mode: receive
+sensor_set: ASMC_sensor_set_v2
+map: kcity2025
+compression: none
+privileged_gt: false
+deployment_allowed: true
+required_topics:
+  - /image_jpeg/compressed
+  - /cam_left/image_jpeg/compressed
+  - /cam_right/image_jpeg/compressed
+  - /Ego_topic
+optional_topics:
+  - /gps
+  - /imu
+  - /ctrl_cmd
+  - /tf
+  - /tf_static
+  - /morai_sensor_bridge/diagnostics
+  - /morai_udp_bridge/diagnostics
+expected_types:
+  /image_jpeg/compressed: sensor_msgs/CompressedImage
+  /cam_left/image_jpeg/compressed: sensor_msgs/CompressedImage
+  /cam_right/image_jpeg/compressed: sensor_msgs/CompressedImage
+  /Ego_topic: morai_msgs/EgoVehicleStatus

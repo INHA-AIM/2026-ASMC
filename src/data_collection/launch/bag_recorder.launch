@@ -20,6 +20,8 @@
   <arg name="split_gb" default="4.0"/>
   <arg name="buffer_mb" default="1024"/>
 
+  <!-- P4-C compatibility path; recorder implementation and canonical bag
+       profiles are in asmc_perception. This package keeps the old entrypoint. -->
   <node pkg="data_collection" type="bag_recorder_node.py"
         name="asmc_bag_recorder" output="screen" required="true">
     <param name="profile" value="$(arg profile)"/>

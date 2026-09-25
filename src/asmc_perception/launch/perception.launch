@@ -1,6 +1,6 @@
 <launch>
-  <!-- P4-C1 runtime entrypoint. Camera/BEV still compose the proven legacy
-       executables; traffic-light is canonical here and legacy topics remain. -->
+  <!-- P4-C5 runtime entrypoint. Camera/BEV/recorder implementation, support
+       modules and runtime config are owned here. Topics/nodes are unchanged. -->
   <arg name="start_camera_lane" default="true"/>
   <arg name="start_traffic_light" default="false"/>
   <arg name="start_lidar_fusion" default="false"/>
@@ -18,7 +18,7 @@
   <arg name="camera_calibration_config"
        default="$(find asmc_perception)/config/cameras_v3.yaml"/>
   <arg name="bev_grid_config"
-       default="$(find drivable_bev)/config/bev_grid.yaml"/>
+       default="$(find asmc_perception)/config/bev/bev_grid.yaml"/>
   <arg name="lane_operating_domain" default="shadow_two_way_v1"/>
   <arg name="lane_algorithm_id" default="twinlite_v6_shadow_boundary_contract_v1"/>
 
@@ -45,7 +45,7 @@
   <arg name="recorder_rosbag_root" default=""/>
 
   <group if="$(arg start_camera_lane)">
-    <include file="$(find camera_semantic_perception)/launch/three_view.launch">
+    <include file="$(find asmc_perception)/launch/camera_lane.launch">
       <arg name="checkpoint" value="$(arg camera_checkpoint)"/>
       <arg name="device" value="$(arg camera_device)"/>
       <arg name="warmup_iterations" value="$(arg camera_warmup_iterations)"/>
@@ -54,7 +54,7 @@
       <arg name="model_grid_max_hz" value="$(arg camera_model_grid_max_hz)"/>
     </include>
 
-    <node pkg="drivable_bev" type="camera_bev_node.py"
+    <node pkg="asmc_perception" type="camera_bev_node.py"
           name="camera_bev" output="screen" required="true">
       <rosparam command="load" file="$(arg bev_grid_config)"/>
       <rosparam command="load" file="$(arg camera_calibration_config)"/>
@@ -63,18 +63,18 @@
       <param name="sensor_set_path" value="$(arg camera_sensor_set_path)"/>
     </node>
 
-    <node pkg="drivable_bev" type="camera_bev_fusion_node.py"
+    <node pkg="asmc_perception" type="camera_bev_fusion_node.py"
           name="camera_bev_fusion" output="screen" required="true">
       <rosparam command="load" file="$(arg bev_grid_config)"/>
       <rosparam command="load" file="$(arg camera_calibration_config)"/>
-      <rosparam command="load" file="$(find drivable_bev)/config/fusion.yaml"/>
+      <rosparam command="load" file="$(find asmc_perception)/config/bev/fusion.yaml"/>
       <rosparam param="views">[front, left, right]</rosparam>
     </node>
 
-    <node pkg="drivable_bev" type="lane_vectorizer_node.py"
+    <node pkg="asmc_perception" type="lane_vectorizer_node.py"
           name="camera_lane_vectorizer" output="screen" required="true">
       <rosparam command="load" file="$(arg camera_calibration_config)"/>
-      <rosparam command="load" file="$(find drivable_bev)/config/lane_fitting.yaml"/>
+      <rosparam command="load" file="$(find asmc_perception)/config/bev/lane_fitting.yaml"/>
       <rosparam param="views">[front, left, right]</rosparam>
       <param name="operating_domain" value="$(arg lane_operating_domain)"/>
       <param name="algorithm_id" value="$(arg lane_algorithm_id)"/>
@@ -108,7 +108,7 @@
   </group>
 
   <group if="$(arg start_recorder)">
-    <include file="$(find data_collection)/launch/bag_recorder.launch">
+    <include file="$(find asmc_perception)/launch/recorder.launch">
       <arg name="profile" value="$(arg recorder_profile)"/>
       <arg name="scenario" value="$(arg recorder_scenario)"/>
       <arg name="run_id" value="$(arg recorder_run_id)"/>

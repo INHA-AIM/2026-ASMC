@@ -21,7 +21,7 @@
 
   <node pkg="drivable_bev" type="shadow_lane_family_offline_node.py"
         name="shadow_lane_family_offline" output="screen" required="true">
-    <rosparam command="load" file="$(find drivable_bev)/config/lane_fitting.yaml"/>
+    <rosparam command="load" file="$(find asmc_perception)/config/bev/lane_fitting.yaml"/>
     <param name="run_id" value="$(arg run_id)"/>
     <param name="output_dir" value="$(arg output_dir)"/>
     <param name="pseudo_gt_path" value="$(arg pseudo_gt_path)"/>

@@ -9,6 +9,9 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
+  <!-- Compatibility package: runtime implementation/config moved to asmc_perception. -->
+  <exec_depend>asmc_perception</exec_depend>
+
   <depend>rospy</depend>
   <depend>sensor_msgs</depend>
   <depend>diagnostic_msgs</depend>

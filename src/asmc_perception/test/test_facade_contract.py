@@ -59,25 +59,113 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             self.assertIn(name, arguments)
             self.assertEqual(default, arguments[name].get("default"))
 
-    def test_facade_reuses_existing_runtime_executables(self):
+    def test_facade_uses_canonical_runtime_executables(self):
         nodes = {
             (node.get("pkg"), node.get("type"))
             for node in self.launch_root.iter("node")
         }
         self.assertEqual(
             {
-                ("drivable_bev", "camera_bev_node.py"),
-                ("drivable_bev", "camera_bev_fusion_node.py"),
-                ("drivable_bev", "lane_vectorizer_node.py"),
+                ("asmc_perception", "camera_bev_node.py"),
+                ("asmc_perception", "camera_bev_fusion_node.py"),
+                ("asmc_perception", "lane_vectorizer_node.py"),
                 ("asmc_perception", "traffic_light_node.py"),
             },
             nodes,
         )
         includes = {item.get("file", "") for item in self.launch_root.iter("include")}
-        self.assertTrue(any("camera_semantic_perception" in item for item in includes))
+        self.assertTrue(any("camera_lane.launch" in item for item in includes))
         self.assertTrue(any("lidar_legacy_launch" in item for item in includes))
-        self.assertTrue(any("data_collection" in item for item in includes))
+        self.assertTrue(any("recorder.launch" in item for item in includes))
         self.assertTrue(any("visualization.launch" in item for item in includes))
+
+    def test_camera_bev_and_recorder_implementations_are_physically_owned(self):
+        implementations = {
+            "semantic_inference_node.py",
+            "semantic_visualizer_node.py",
+            "camera_bev_node.py",
+            "camera_bev_fusion_node.py",
+            "camera_bev_visualizer_node.py",
+            "lane_vectorizer_node.py",
+            "lane_vector_visualizer_node.py",
+            "bag_recorder_node.py",
+        }
+        canonical_root = PACKAGE_ROOT / "src" / "asmc_perception" / "nodes"
+        for filename in implementations:
+            body = (canonical_root / filename).read_text(encoding="utf-8")
+            self.assertIn("def main", body, filename)
+
+        compatibility_paths = {
+            REPO_ROOT / "src/perception/camera_semantic_perception/scripts": {
+                "semantic_inference_node.py",
+                "semantic_visualizer_node.py",
+            },
+            REPO_ROOT / "src/perception/drivable_bev/scripts": {
+                "camera_bev_node.py",
+                "camera_bev_fusion_node.py",
+                "camera_bev_visualizer_node.py",
+                "lane_vectorizer_node.py",
+                "lane_vector_visualizer_node.py",
+            },
+            REPO_ROOT / "src/data_collection/scripts": {"bag_recorder_node.py"},
+        }
+        for root, filenames in compatibility_paths.items():
+            for filename in filenames:
+                body = (root / filename).read_text(encoding="utf-8")
+                self.assertIn("asmc_perception.nodes", body, str(root / filename))
+
+    def test_runtime_support_and_config_are_canonically_owned(self):
+        canonical_root = PACKAGE_ROOT / "src" / "asmc_perception"
+        expected_support = {
+            "camera": 8,
+            "bev": 19,
+            "recorder": 5,
+        }
+        for namespace, expected_count in expected_support.items():
+            files = list((canonical_root / namespace).rglob("*.py"))
+            self.assertEqual(expected_count, len(files), namespace)
+            for path in files:
+                body = path.read_text(encoding="utf-8")
+                self.assertNotIn("from camera_semantic_perception", body, str(path))
+                self.assertNotIn("from drivable_bev", body, str(path))
+                self.assertNotIn("from data_collection", body, str(path))
+
+        launch_body = self.launch_path.read_text(encoding="utf-8")
+        for package in (
+            "camera_semantic_perception",
+            "drivable_bev",
+            "data_collection",
+        ):
+            self.assertNotIn("$(find {})".format(package), launch_body)
+
+        package_root = ET.parse(PACKAGE_ROOT / "package.xml").getroot()
+        dependencies = {
+            item.text for item in package_root if item.tag.endswith("depend")
+        }
+        self.assertFalse(
+            dependencies
+            & {"camera_semantic_perception", "drivable_bev", "data_collection"}
+        )
+
+    def test_compatibility_config_mirrors_are_byte_identical(self):
+        evidence = yaml.safe_load(
+            (
+                REPO_ROOT
+                / "config/baselines/perception_support_config_parity_v1.yaml"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            "p4c5_perception_support_config_ownership_v1",
+            evidence["acceptance_id"],
+        )
+        self.assertEqual(21, len(evidence["config_mirrors"]))
+        for item in evidence["config_mirrors"]:
+            canonical = (REPO_ROOT / item["canonical"]).read_bytes()
+            compatibility = (REPO_ROOT / item["compatibility"]).read_bytes()
+            self.assertEqual(canonical, compatibility, item["canonical"])
+            self.assertEqual(
+                item["sha256"], hashlib.sha256(canonical).hexdigest()
+            )
 
     def test_v3_calibration_is_bound_to_exact_sensor_artifact(self):
         sensor_path = SENSOR_ROOT / "ASMC_sensor_set_v3.json"
@@ -109,7 +197,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         )
         self.assertEqual("declared_not_published_p4b", lidar["canonical_producer_status"])
         self.assertTrue(self.runtime["compatibility"]["preserve_legacy_topics"])
-        self.assertFalse(self.runtime["compatibility"]["physical_source_moves"])
+        self.assertTrue(self.runtime["compatibility"]["physical_source_moves"])
         self.assertFalse(self.runtime["compatibility"]["package_deletions"])
         self.assertFalse(self.runtime["compatibility"]["oracle_inputs_allowed"])
         consumer = self.runtime["compatibility"]["planning_consumer"]
@@ -117,6 +205,28 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             "/perception/traffic_light/detection", consumer["canonical_topic"]
         )
         self.assertEqual("unknown_without_fallback", consumer["invalid_or_stale_policy"])
+        self.assertEqual(
+            "physical_vehicle_closed_loop_p4c4",
+            consumer["closed_loop_status"],
+        )
+        self.assertEqual(
+            "p4c4_traffic_light_vehicle_closed_loop_v1",
+            traffic["vehicle_closed_loop_acceptance"],
+        )
+        self.assertEqual(
+            "config/baselines/perception_runtime_move_smoke_v1.yaml",
+            self.runtime["components"]["recorder"]["live_smoke_evidence"],
+        )
+        self.assertEqual(
+            "asmc_perception",
+            self.runtime["components"]["camera_lane"]["support_library_owner"],
+        )
+        self.assertEqual(
+            "asmc_perception", self.runtime["components"]["recorder"]["profile_owner"]
+        )
+        self.assertEqual(
+            "passed_p4c5", self.runtime["compatibility"]["representative_bag_parity"]
+        )
 
     def test_host_entrypoint_selects_the_gpu_container(self):
         script = (REPO_ROOT / "scripts" / "perception.sh").read_text(encoding="utf-8")
@@ -129,8 +239,43 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         values = [item.get("default", "") for item in visualizer.findall("arg")]
         self.assertTrue(any("cameras_v3.yaml" in value for value in values))
         node_types = {item.get("type") for item in visualizer.iter("node")}
+        node_packages = {item.get("pkg") for item in visualizer.iter("node")}
         self.assertIn("camera_bev_visualizer_node.py", node_types)
         self.assertIn("lane_vector_visualizer_node.py", node_types)
+        self.assertEqual({"asmc_perception"}, node_packages)
+
+    def test_closed_loop_acceptance_is_isolated_from_control_outputs(self):
+        launch = ET.parse(
+            PACKAGE_ROOT / "launch" / "traffic_light_closed_loop_acceptance.launch"
+        ).getroot()
+        nodes = {(item.get("pkg"), item.get("type")) for item in launch.iter("node")}
+        self.assertEqual(
+            {
+                ("behavior_planner", "behavior_node"),
+                ("asmc_perception", "traffic_light_closed_loop_acceptance.py"),
+            },
+            nodes,
+        )
+        rendered = ET.tostring(launch, encoding="unicode")
+        self.assertNotIn("mpc_controller", rendered)
+        self.assertNotIn("frenet_planner", rendered)
+        self.assertNotIn("asmc_bridge", rendered)
+
+    def test_vehicle_acceptance_stack_never_starts_a_bridge(self):
+        launch = ET.parse(
+            PACKAGE_ROOT
+            / "launch"
+            / "traffic_light_vehicle_acceptance_stack.launch"
+        ).getroot()
+        rendered = ET.tostring(launch, encoding="unicode")
+        self.assertIn("behavior_node_v2.launch", rendered)
+        self.assertIn("frenet_planner.launch", rendered)
+        self.assertIn("mpc_controller.launch", rendered)
+        self.assertNotIn("asmc_bridge", rendered)
+        self.assertIn("traffic_light_vehicle_acceptance.py", rendered)
+        self.assertIn('/acceptance/ctrl_cmd', rendered)
+        self.assertIn('default="false"', rendered)
+        self.assertIn('name="allow_vehicle_control"', rendered)
 
     def test_parity_launch_compares_reference_canonical_and_typed_outputs(self):
         audit = ET.parse(

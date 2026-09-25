@@ -19,7 +19,17 @@ catkin_package(
 )
 
 catkin_install_python(PROGRAMS
+  scripts/bag_recorder_node.py
+  scripts/camera_bev_fusion_node.py
+  scripts/camera_bev_node.py
+  scripts/camera_bev_visualizer_node.py
+  scripts/lane_vector_visualizer_node.py
+  scripts/lane_vectorizer_node.py
+  scripts/semantic_inference_node.py
+  scripts/semantic_visualizer_node.py
   scripts/traffic_light_node.py
+  scripts/traffic_light_closed_loop_acceptance.py
+  scripts/traffic_light_vehicle_acceptance.py
   scripts/traffic_light_parity_audit.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

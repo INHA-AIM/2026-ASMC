@@ -2,7 +2,7 @@
 <package format="2">
   <name>asmc_perception</name>
   <version>0.1.0</version>
-  <description>Canonical launch and interface facade for ASMC perception runtime components.</description>
+  <description>Canonical ASMC camera, BEV, traffic-light and recorder runtime.</description>
 
   <maintainer email="autonav@todo.todo">autonav</maintainer>
   <license>MIT</license>
@@ -14,12 +14,18 @@
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
 
-  <exec_depend>camera_semantic_perception</exec_depend>
-  <exec_depend>data_collection</exec_depend>
   <exec_depend>diagnostic_msgs</exec_depend>
-  <exec_depend>drivable_bev</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>message_filters</exec_depend>
+  <exec_depend>morai_msgs</exec_depend>
+  <exec_depend>rosbag</exec_depend>
+  <exec_depend>rosgraph</exec_depend>
+  <exec_depend>rospkg</exec_depend>
   <exec_depend>traffic_light</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
 
   <test_depend>python3-nose</test_depend>
   <test_depend>python3-yaml</test_depend>

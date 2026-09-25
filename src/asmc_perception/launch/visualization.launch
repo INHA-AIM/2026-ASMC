@@ -4,27 +4,33 @@
   <arg name="camera_calibration_config"
        default="$(find asmc_perception)/config/cameras_v3.yaml"/>
   <arg name="bev_grid_config"
-       default="$(find drivable_bev)/config/bev_grid.yaml"/>
+       default="$(find asmc_perception)/config/bev/bev_grid.yaml"/>
   <arg name="secondary_mode" default="road_marking"/>
   <arg name="publish_per_view_bev" default="false"/>
 
-  <include file="$(find camera_semantic_perception)/launch/three_view_visualizer.launch">
-    <arg name="secondary_mode" value="$(arg secondary_mode)"/>
-  </include>
+  <node pkg="asmc_perception" type="semantic_visualizer_node.py"
+        name="camera_semantic_visualizer" output="screen" required="true">
+    <rosparam command="load"
+              file="$(find asmc_perception)/config/camera/cameras.yaml"/>
+    <rosparam command="load"
+              file="$(find asmc_perception)/config/camera/visualization.yaml"/>
+    <rosparam param="views">[left, front, right]</rosparam>
+    <param name="secondary_mode" value="$(arg secondary_mode)"/>
+  </node>
 
-  <node pkg="drivable_bev" type="camera_bev_visualizer_node.py"
+  <node pkg="asmc_perception" type="camera_bev_visualizer_node.py"
         name="camera_bev_visualizer" output="screen" required="true">
     <rosparam command="load" file="$(arg bev_grid_config)"/>
     <rosparam command="load" file="$(arg camera_calibration_config)"/>
-    <rosparam command="load" file="$(find drivable_bev)/config/visualization.yaml"/>
+    <rosparam command="load" file="$(find asmc_perception)/config/bev/visualization.yaml"/>
     <rosparam param="enabled_views">[front, left, right]</rosparam>
     <param name="publish_per_view_mosaic" value="$(arg publish_per_view_bev)"/>
   </node>
 
-  <node pkg="drivable_bev" type="lane_vector_visualizer_node.py"
+  <node pkg="asmc_perception" type="lane_vector_visualizer_node.py"
         name="camera_lane_vector_visualizer" output="screen" required="true">
     <rosparam command="load" file="$(arg bev_grid_config)"/>
     <rosparam command="load" file="$(arg camera_calibration_config)"/>
-    <rosparam command="load" file="$(find drivable_bev)/config/visualization.yaml"/>
+    <rosparam command="load" file="$(find asmc_perception)/config/bev/visualization.yaml"/>
   </node>
 </launch>

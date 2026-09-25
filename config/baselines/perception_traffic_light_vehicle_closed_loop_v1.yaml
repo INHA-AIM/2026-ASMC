@@ -1,0 +1,57 @@
+schema_version: 1
+acceptance_id: p4c4_traffic_light_vehicle_closed_loop_v1
+status: passed
+verified_at: "2026-09-25"
+simulator: 26r1
+transport: local
+scope:
+  - typed_traffic_light_detection
+  - production_behavior_planner
+  - production_frenet_planner
+  - production_mpc_controller
+  - ctrl_cmd_udp_bridge
+  - morai_vehicle_motion
+excluded_scope:
+  - camera_traffic_light_classification_accuracy
+
+fixture:
+  start_link_id: A2256W000202
+  stopline_link_id: A2256W000728
+  signal_controlled_link_id: A2256W000599
+  traffic_light_id: C1256W000016
+  start_map: {x: -59.98509757156367, y: -66.53153144890034, yaw_deg: 90.3183423}
+  physical_stopline_map: {x: -60.15604465093929, y: -34.51018160348758}
+
+observed:
+  command_ids: {initial_keep: 1, red_stop: 2, green_restart_keep: 4}
+  peak_initial_green_speed_mps: 2.278743609657202
+  red_stop:
+    speed_mps: 0.0
+    map: {x: -60.054257533163764, y: -39.721648475620896}
+    physical_stopline_clearance_m: 5.212460798575663
+    route_stopline_distance_m: 5.2119562553692855
+  green_restart:
+    progress_m: 1.328248717903971
+    speed_mps: 2.265381519730498
+
+safety:
+  opt_in_required: true
+  controller_output_topic: /acceptance/ctrl_cmd
+  bridge_output_gate: /ctrl_cmd
+  original_state_captured_before_gate_open: true
+  final_state:
+    link_id: A2256W000213
+    control_mode: keyboard
+    control_mode_value: 1
+    gear: park
+    gear_value: 1
+    speed_mps: 0.00006370721120488732
+  ctrl_cmd_publishers_after_test: 0
+
+reproduce:
+  command: >-
+    roslaunch asmc_perception traffic_light_vehicle_acceptance_stack.launch
+    run_acceptance:=true allow_vehicle_control:=true repo_root:=/root/ws
+    grpc_host:=host.docker.internal
+  report: /tmp/asmc_traffic_light_vehicle_acceptance.json
+  warning: controlled simulator only; this launch teleports and actuates Ego

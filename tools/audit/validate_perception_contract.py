@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -62,6 +63,101 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
         raise ContractError("perception contract must be schema_version 1 and frozen")
     if contract.get("compatibility_policy") != "additive_only":
         raise ContractError("perception contract must be additive_only")
+    runtime_move_path = contract.get("runtime_move_evidence")
+    expected_runtime_move = (
+        "config/baselines/perception_runtime_move_smoke_v1.yaml"
+    )
+    if runtime_move_path != expected_runtime_move:
+        raise ContractError("perception runtime move evidence is not pinned")
+    runtime_move = _mapping(
+        yaml.safe_load(
+            (repo_root / expected_runtime_move).read_text(encoding="utf-8")
+        ),
+        "perception runtime move evidence",
+    )
+    if (
+        runtime_move.get("acceptance_id")
+        != "p4c4_camera_bev_recorder_physical_move_v1"
+        or runtime_move.get("status") != "passed"
+    ):
+        raise ContractError("perception runtime move evidence did not pass")
+
+    support_config_path = contract.get("support_config_evidence")
+    expected_support_config = (
+        "config/baselines/perception_support_config_parity_v1.yaml"
+    )
+    if support_config_path != expected_support_config:
+        raise ContractError("perception support/config evidence is not pinned")
+    support_config = _mapping(
+        yaml.safe_load(
+            (repo_root / expected_support_config).read_text(encoding="utf-8")
+        ),
+        "perception support/config evidence",
+    )
+    if (
+        support_config.get("acceptance_id")
+        != "p4c5_perception_support_config_ownership_v1"
+        or support_config.get("status") != "passed"
+    ):
+        raise ContractError("perception support/config evidence did not pass")
+    config_mirrors = support_config.get("config_mirrors", [])
+    if not isinstance(config_mirrors, list) or len(config_mirrors) != 21:
+        raise ContractError("perception config mirror inventory changed")
+    for index, raw_mirror in enumerate(config_mirrors):
+        mirror = _mapping(raw_mirror, f"config_mirrors[{index}]")
+        canonical_path = repo_root / str(mirror.get("canonical", ""))
+        compatibility_path = repo_root / str(mirror.get("compatibility", ""))
+        if not canonical_path.is_file() or not compatibility_path.is_file():
+            raise ContractError(f"config mirror file missing: {mirror}")
+        canonical_bytes = canonical_path.read_bytes()
+        if canonical_bytes != compatibility_path.read_bytes():
+            raise ContractError(
+                f"config compatibility mirror drifted: {compatibility_path}"
+            )
+        digest = hashlib.sha256(canonical_bytes).hexdigest()
+        if digest != mirror.get("sha256"):
+            raise ContractError(f"canonical config SHA drifted: {canonical_path}")
+
+    representative = _mapping(
+        support_config.get("representative_bag_parity"),
+        "representative_bag_parity",
+    )
+    if (
+        representative.get("acceptance_id")
+        != "p4c5_representative_bag_output_parity_v1"
+        or representative.get("status") != "passed"
+    ):
+        raise ContractError("representative perception bag parity did not pass")
+    parity_topics = _mapping(representative.get("topics"), "parity topics")
+    expected_parity_topics = {
+        "/perception/camera/front/road_marking/class_id",
+        "/perception/bev/camera/road_marking/class_id",
+        "/perception/lane/boundary_observations",
+    }
+    if set(parity_topics) != expected_parity_topics:
+        raise ContractError("representative perception parity topics changed")
+    for topic, raw_result in parity_topics.items():
+        result = _mapping(raw_result, f"parity topic {topic}")
+        if int(result.get("common_source_stamps", 0)) < 8:
+            raise ContractError(f"insufficient common parity frames: {topic}")
+        if int(result.get("payload_mismatches", -1)) != 0:
+            raise ContractError(f"perception payload parity regressed: {topic}")
+
+    canonical_source = repo_root / "src/asmc_perception/src/asmc_perception"
+    forbidden_imports = (
+        "from camera_semantic_perception",
+        "import camera_semantic_perception",
+        "from drivable_bev",
+        "import drivable_bev",
+        "from data_collection",
+        "import data_collection",
+    )
+    for source_path in canonical_source.rglob("*.py"):
+        body = source_path.read_text(encoding="utf-8")
+        if any(value in body for value in forbidden_imports):
+            raise ContractError(
+                f"canonical perception still imports a compatibility package: {source_path}"
+            )
 
     message_dir = repo_root / "src" / "asmc_msgs" / "msg"
     specs = load_message_specs(message_dir)
@@ -130,6 +226,42 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
                 "typed_preferred_legacy_fallback_p4c3"
             ):
                 raise ContractError("traffic-light consumer cutover status is ambiguous")
+            closed_loop_path = definition.get("closed_loop_evidence")
+            expected_closed_loop = (
+                "config/baselines/perception_traffic_light_closed_loop_v1.yaml"
+            )
+            if closed_loop_path != expected_closed_loop:
+                raise ContractError("traffic-light closed-loop evidence is not pinned")
+            closed_loop = _mapping(
+                yaml.safe_load(
+                    (repo_root / expected_closed_loop).read_text(encoding="utf-8")
+                ),
+                "traffic-light closed-loop evidence",
+            )
+            if (
+                closed_loop.get("acceptance_id")
+                != "p4c4_traffic_light_behavior_closed_loop_v1"
+                or closed_loop.get("status") != "passed"
+            ):
+                raise ContractError("traffic-light closed-loop evidence did not pass")
+            vehicle_path = definition.get("vehicle_closed_loop_evidence")
+            expected_vehicle = (
+                "config/baselines/perception_traffic_light_vehicle_closed_loop_v1.yaml"
+            )
+            if vehicle_path != expected_vehicle:
+                raise ContractError("traffic-light vehicle evidence is not pinned")
+            vehicle = _mapping(
+                yaml.safe_load(
+                    (repo_root / expected_vehicle).read_text(encoding="utf-8")
+                ),
+                "traffic-light vehicle closed-loop evidence",
+            )
+            if (
+                vehicle.get("acceptance_id")
+                != "p4c4_traffic_light_vehicle_closed_loop_v1"
+                or vehicle.get("status") != "passed"
+            ):
+                raise ContractError("traffic-light vehicle evidence did not pass")
 
     compatibility = _mapping(
         contract.get("compatibility_topics"), "compatibility_topics"
@@ -196,12 +328,37 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
         if name not in arguments:
             raise ContractError(f"facade launch is missing {name}")
 
+    runtime_nodes = {
+        (item.get("pkg"), item.get("type")) for item in root.iter("node")
+    }
+    for executable in (
+        "camera_bev_node.py",
+        "camera_bev_fusion_node.py",
+        "lane_vectorizer_node.py",
+        "traffic_light_node.py",
+    ):
+        if ("asmc_perception", executable) not in runtime_nodes:
+            raise ContractError(
+                f"facade launch does not use canonical executable: {executable}"
+            )
+    launch_body = launch_path.read_text(encoding="utf-8")
+    for package_name in (
+        "camera_semantic_perception",
+        "drivable_bev",
+        "data_collection",
+    ):
+        if f"$(find {package_name})" in launch_body:
+            raise ContractError(
+                f"facade launch still loads compatibility package {package_name}"
+            )
+
     return {
         "contract_id": contract.get("contract_id"),
         "message_count": len(declared),
         "canonical_topic_count": len(canonical),
         "compatibility_topic_count": len(compatibility),
         "consumer_binding_count": len(bindings),
+        "config_mirror_count": len(config_mirrors),
         "message_md5": {
             f"asmc_msgs/{name}": md5s[name] for name in sorted(REQUIRED_MESSAGES)
         },
@@ -229,7 +386,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "Perception contract valid: "
         f"{result['message_count']} messages, "
         f"{result['canonical_topic_count']} canonical topics, "
-        f"{result['compatibility_topic_count']} compatibility topics"
+        f"{result['compatibility_topic_count']} compatibility topics, "
+        f"{result['config_mirror_count']} guarded config mirrors"
     )
     return 0
 

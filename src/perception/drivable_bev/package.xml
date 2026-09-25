@@ -9,6 +9,9 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
+  <!-- Compatibility/offline package: runtime support moved to asmc_perception. -->
+  <exec_depend>asmc_perception</exec_depend>
+
   <depend>diagnostic_msgs</depend>
   <depend>asmc_msgs</depend>
   <depend>camera_semantic_perception</depend>

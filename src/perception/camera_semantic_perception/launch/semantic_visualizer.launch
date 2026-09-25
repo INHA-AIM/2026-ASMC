@@ -2,10 +2,11 @@
   <arg name="views" default="front"/>
   <arg name="secondary_mode" default="lane"/>
 
+  <!-- P4-C compatibility path; implementation is in asmc_perception. -->
   <node pkg="camera_semantic_perception" type="semantic_visualizer_node.py"
         name="camera_semantic_visualizer" output="screen" required="true">
-    <rosparam command="load" file="$(find camera_semantic_perception)/config/cameras.yaml"/>
-    <rosparam command="load" file="$(find camera_semantic_perception)/config/visualization.yaml"/>
+    <rosparam command="load" file="$(find asmc_perception)/config/camera/cameras.yaml"/>
+    <rosparam command="load" file="$(find asmc_perception)/config/camera/visualization.yaml"/>
     <rosparam param="views" subst_value="true">[$(arg views)]</rosparam>
     <param name="secondary_mode" value="$(arg secondary_mode)"/>
   </node>
