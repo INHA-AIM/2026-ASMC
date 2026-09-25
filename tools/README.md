@@ -46,8 +46,10 @@ python3 tools/audit/check_documentation_migration.py --with-history
 python3 -m unittest src/asmc_msgs/test/test_message_serialization.py
 ```
 
-`validate_perception_runtime_acceptance.py`는 source·launch·판제 consumer 경로가 계약에서 벗어나지
-않았는지 ROS 없이 검사한다. 실행 중 rate·stamp·frame·publisher/subscriber 검사는 perception을
+`validate_perception_runtime_acceptance.py`는 source·launch·판제 consumer 경로뿐 아니라 P5-D/E
+handoff 상태, planning의 중복 신호등 방지 기본값, representative lane-family 근거와 운영
+container·시각화 진입점이 계약에서 벗어나지 않았는지 ROS 없이 검사한다. 실행 중
+rate·stamp·frame·publisher/subscriber 검사는 perception을
 먼저 실행한 뒤 저장소 루트의 `./scripts/verify_perception.sh`로 수행한다. verifier 자체가 인지
 노드를 대신 시작하지 않으므로, 실패가 숨겨지거나 중복 producer가 생기지 않는다.
 

@@ -1,6 +1,6 @@
 # Perception runtime topic contract v1
 
-> **상태:** Frozen additive interface; P4-C6 package closeout, bag parity와 MORAI 차량 loop 검수 완료
+> **상태:** Frozen additive interface; P4-C6 package와 P5-D/E consumer·운영 closeout 완료
 > **기계 정본:** `config/contracts/perception_runtime_topic_contract_v1.yaml`
 > **실행 façade:** `src/asmc_perception/launch/perception.launch`
 
@@ -16,6 +16,11 @@ canonical/compatibility payload parity를 통과했다. P4-C6에서 offline·tra
 topic·node·message 계약은 그대로 유지했다. LiDAR canonical
 topic은 여전히 **발행된다고 가정하면 안 되며** 기계 정본의
 `producer_status`가 실제 producer 상태의 권위다.
+
+P5-D/E에서 신호등 producer 운영 소유자를 `asmc_perception`으로 확정하고 planning launch의
+호환 include를 기본 off로 바꿨다. typed consumer 정책과 topic은 바뀌지 않았다. 음영구간
+lane-family 및 운영 명령은 별도
+[P5-D/E closeout](../../records/baselines/perception-p5de-closeout-v1.md)에 기록한다.
 
 ## 1. 메시지
 

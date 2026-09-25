@@ -128,6 +128,7 @@ MORAI 화면에 입력할 값만 필요하면
 |---|---|---|
 | [Perception 개발·통합](./packages/asmc_perception/README.md) | 현재 코드·문서 경계, runtime interface와 Phase 4 gate | Active Package-Group Guide |
 | [Perception runtime topic v1](./contracts/perception/runtime-v1.md) | typed 신호등·LiDAR 객체 frame/stamp/freshness와 legacy 종료 gate | Frozen Additive Interface |
+| [P5-D/E perception closeout](./records/baselines/perception-p5de-closeout-v1.md) | typed consumer 인계, 대표 lane-family bag과 최종 운영 경계 | Active Closeout Record |
 | [perception-map-fusion-roadmap.md](./packages/asmc_perception/roadmap.md) | camera/MGeo/LiDAR 전체 전략과 시간순 개발 근거 | Working Proposal + Chronological Record |
 | [lidar-assessment-and-roadmap.md](./packages/asmc_perception/lidar-assessment-and-roadmap.md) | LiDAR 패키지 완성도 평가와 증상별 원인, GT→센서 전환 간극과 판제 측 변경 제안, 개선 우선순위 | Assessment Record + Working Proposal |
 | [shadow-camera-perception-handoff.md](./handoffs/perception/shadow-camera.md) | 음영구간 v3 lane-family·drivable 판제 소비 계약과 성능 동결 | Active Handoff Guide |

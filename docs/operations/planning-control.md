@@ -50,6 +50,10 @@ P4-C6에서 현재 catkin target과 맞지 않던 이전 standalone build/run sc
 
 ## 3. 개발 실행
 
+> **판제 오너십 주의:** P5-D에서 perception 통합 측이 변경한 항목은 planning launch의 신호등
+> producer 기본값뿐이다. 목적은 중복 publisher 방지이며 판제 정책 변경이 아니다. 호환 include
+> 제거와 consumer 정책 변경은 판제 오너가 리뷰·승인한다.
+
 터미널 1에서 현재 개발 bridge를 실행한다.
 
 ```bash
@@ -71,13 +75,14 @@ roslaunch behavior_planner autonomy_no_bridges_v2.launch
 - GPS/IMU 또는 개발 Ego source 기반 `vehicle_state`
 - `/Object_topic`→`/perception/objects` 임시 adapter
 - Behavior v2, Frenet과 MPC
-- 기본값으로 traffic-light camera inference
+- 신호등 typed/legacy consumer; camera inference producer는 기본으로 시작하지 않음
 
-체크포인트가 없는 배관 시험에서는 신호등 node를 명시적으로 끌 수 있다.
+신호등 producer는 별도 `asmc_perception` runtime이 소유한다. 독립 planning 호환 시험에서만
+아래처럼 명시적으로 켤 수 있으며, perception launch와 동시에 켜지 않는다.
 
 ```bash
 roslaunch behavior_planner autonomy_no_bridges_v2.launch \
-  traffic_light:=false dashboard:=false
+  traffic_light:=true dashboard:=false
 ```
 
 이것은 개발용 launch다. `/Object_topic`은 privileged simulator oracle이므로 본선 허용

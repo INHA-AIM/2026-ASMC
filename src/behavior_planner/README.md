@@ -32,6 +32,10 @@ route station과 mission 의미를 대조하지 않고 package-local map을 삭�
 
 ## 실행
 
+> **교차팀 P5-D 변경 메모:** 아래 `traffic_light` 기본값 변경은 perception 통합 측에서 중복
+> publisher만 막기 위해 적용했다. 판제 정책·consumer 로직의 소유권을 가져온 것이 아니며,
+> 호환 include와 legacy topic의 수정·삭제는 판제 오너 검토 후 결정한다.
+
 bridge는 별도 터미널에서 먼저 실행한다. 현재 v2 개발 chain:
 
 ```bash
@@ -41,10 +45,11 @@ roslaunch behavior_planner autonomy_no_bridges_v2.launch
 ```
 
 이 launch는 `/Object_topic` 개발 oracle을 `/perception/objects`로 변환한다. 본선 sensor-only
-launch가 아니며, traffic-light weight가 준비되지 않은 배관 시험은
-`traffic_light:=false`로 명시할 수 있다.
+launch가 아니다. 신호등 producer는 `asmc_perception` runtime이 소유하므로 이 launch의
+`traffic_light` 기본값은 `false`다. 독립 호환 시험에서만 `traffic_light:=true`로 같은
+canonical executable을 포함하며, perception launch와 동시에 켜 중복 publisher를 만들지 않는다.
 
-P4-C3부터 이 launch가 시작하는 신호등 executable은 기존
+P4-C3부터 호환 옵션으로 이 launch가 시작할 수 있는 신호등 executable은 기존
 `src/traffic_light/live_infer.py`가 아니라
 `src/asmc_perception/scripts/traffic_light_node.py`다. 기존
 `/traffic_light/state`, `/traffic_light/detail`은 바뀌지 않았으며 typed

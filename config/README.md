@@ -67,3 +67,7 @@ rate, source stamp, frame과 기본-OFF topic 부재를 측정한다. 신호등�
 함께 실행할 때만 명시적인 verifier 옵션으로 gate에 포함한다. 이 계약은 기존 topic을 rename하지
 않고 현재 연결을 회귀 기준으로 고정한다. lane 정본은 shared
 `/perception/lane/boundary_family`이며 legacy `boundary_observations`는 기본-OFF 호환 경로다.
+같은 파일의 `phase_status`, `consumer_handoff`, `operational_closeout`이 P5-D/E까지 고정한다.
+신호등 producer 소유권·typed fail-closed 정책, lane-family 정본, planning launch 기본값, 컨테이너
+경계와 rqt/RViz 진입점은 별도 임의 설정이 아니라 이 계약과
+[closeout 기록](../docs/records/baselines/perception-p5de-closeout-v1.md)을 함께 따른다.

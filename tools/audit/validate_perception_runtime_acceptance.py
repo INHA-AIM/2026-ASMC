@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence
 
@@ -102,6 +103,200 @@ def _validate_topic_spec(raw: object, label: str) -> Mapping[str, object]:
                 f"{label}.subscribers must be absolute node names"
             )
     return spec
+
+
+def _load_repository_yaml(repo_root: Path, relative: str) -> Mapping[str, object]:
+    path = repo_root / relative
+    if not path.is_file():
+        raise AcceptanceContractError(f"closeout evidence is missing: {relative}")
+    return _mapping(yaml.safe_load(path.read_text(encoding="utf-8")), relative)
+
+
+def _validate_p5_closeout(
+    repo_root: Path, contract: Mapping[str, object]
+) -> Mapping[str, object]:
+    expected_phases = {
+        "p5c_runtime_acceptance": "complete",
+        "p5d_consumer_handoff": "complete",
+        "p5e_operational_closeout": "complete",
+        "next_development": "lidar_fusion_baseline",
+    }
+    phases = _mapping(contract.get("phase_status"), "phase_status")
+    if dict(phases) != expected_phases:
+        raise AcceptanceContractError("P5 phase status or next development changed")
+
+    handoff = _mapping(contract.get("consumer_handoff"), "consumer_handoff")
+    traffic = _mapping(handoff.get("traffic_light"), "consumer_handoff.traffic_light")
+    expected_traffic = {
+        "producer_owner": "asmc_perception",
+        "canonical_topic": "/perception/traffic_light/detection",
+        "compatibility_topic": "/traffic_light/state",
+        "consumer_node": "/behavior_planner",
+        "selection_policy": "typed_authoritative_after_first_message",
+        "invalid_or_stale_policy": "unknown_without_legacy_fallback",
+        "planning_launch_starts_producer_by_default": False,
+        "compatibility_retirement": "deferred_until_all_consumers_are_typed",
+    }
+    for key, expected in expected_traffic.items():
+        if traffic.get(key) != expected:
+            raise AcceptanceContractError(f"traffic-light handoff {key} changed")
+
+    lane = _mapping(handoff.get("lane_family"), "consumer_handoff.lane_family")
+    expected_lane = {
+        "producer_owner": "asmc_perception",
+        "canonical_topic": "/perception/lane/boundary_family",
+        "compatibility_topic": "/perception/lane/boundary_observations",
+        "reference_consumer_node": "/boundary_family_monitor",
+        "planning_input": "typed_family",
+        "debug_topic": "/planning/debug/lane_boundary_family/strips",
+        "debug_is_planning_input": False,
+        "compatibility_enabled_by_default": False,
+        "adapter_retirement_owner": "planning",
+    }
+    for key, expected in expected_lane.items():
+        if lane.get(key) != expected:
+            raise AcceptanceContractError(f"lane-family handoff {key} changed")
+
+    evidence_paths = [
+        str(value)
+        for section in (traffic, lane)
+        for value in _list(section.get("evidence"), "consumer evidence")
+    ]
+    for relative in evidence_paths:
+        if not (repo_root / relative).is_file():
+            raise AcceptanceContractError(
+                f"consumer handoff evidence is missing: {relative}"
+            )
+
+    for launch_name in ("autonomy_no_bridges.launch", "autonomy_no_bridges_v2.launch"):
+        launch = ET.parse(
+            repo_root / "src/behavior_planner/launch" / launch_name
+        ).getroot()
+        argument_nodes = {
+            item.get("name"): item for item in launch.findall("arg")
+        }
+        arguments = {
+            name: item.get("default", "")
+            for name, item in argument_nodes.items()
+        }
+        if arguments.get("traffic_light") != "false":
+            raise AcceptanceContractError(
+                f"{launch_name} must not start the perception producer by default"
+            )
+        if "planning-owner review" not in argument_nodes["traffic_light"].get(
+            "doc", ""
+        ):
+            raise AcceptanceContractError(
+                f"{launch_name} lost the cross-team planning ownership note"
+            )
+        nodes = {
+            (item.get("pkg"), item.get("type")) for item in launch.iter("node")
+        }
+        if ("asmc_perception", "traffic_light_node.py") not in nodes:
+            raise AcceptanceContractError(
+                f"{launch_name} lost its explicit compatibility opt-in"
+            )
+
+    shadow_result = _load_repository_yaml(
+        repo_root,
+        "src/data_collection/config/bag_profiles/shadow_boundary_result.yaml",
+    )
+    required = set(shadow_result.get("required_topics") or [])
+    optional = set(shadow_result.get("optional_topics") or [])
+    if "/perception/lane/boundary_family" not in required:
+        raise AcceptanceContractError("shadow handoff bag must require boundary_family")
+    if "/perception/lane/boundary_observations" in required:
+        raise AcceptanceContractError("shadow handoff bag still requires legacy observations")
+    if "/perception/lane/boundary_observations" not in optional:
+        raise AcceptanceContractError("legacy observations must remain optional for A/B replay")
+
+    adapter_result = _load_repository_yaml(
+        repo_root,
+        "src/data_collection/config/bag_profiles/shadow_boundary_family_adapter_result.yaml",
+    )
+    adapter_required = set(adapter_result.get("required_topics") or [])
+    if adapter_required != {
+        "/perception/lane/boundary_family",
+        "/planning/diagnostics/lane_boundary_family_adapter",
+    }:
+        raise AcceptanceContractError(
+            "lane adapter result must require only canonical family and diagnostics"
+        )
+
+    baseline = _load_repository_yaml(
+        repo_root, "config/baselines/runtime_baseline_v1.yaml"
+    )
+    result_bag = _mapping(
+        _mapping(baseline.get("representative_bags"), "representative_bags").get(
+            "result"
+        ),
+        "representative_bags.result",
+    )
+    family_topic = next(
+        (
+            item
+            for item in result_bag.get("topics") or []
+            if item.get("topic") == "/perception/lane/boundary_family"
+        ),
+        None,
+    )
+    if family_topic is None or int(family_topic.get("messages", 0)) < 1:
+        raise AcceptanceContractError("representative result bag lacks boundary_family")
+
+    closeout = _mapping(contract.get("operational_closeout"), "operational_closeout")
+    expected_closeout = {
+        "runtime_inference_container": "asmc-ros-noetic",
+        "training_container": "asmc-perception-train",
+        "bridge_process_policy": "separate_foreground_for_rate_monitoring",
+        "web_console": "deferred_until_operational_demand",
+    }
+    for key, expected in expected_closeout.items():
+        if closeout.get(key) != expected:
+            raise AcceptanceContractError(f"operational closeout {key} changed")
+    if (repo_root / "scripts/perception.sh").exists():
+        raise AcceptanceContractError("removed perception wrapper was reintroduced")
+
+    commands = _mapping(closeout.get("commands"), "operational closeout commands")
+    expected_commands = {
+        "bridge": "./scripts/udp_bridge.sh",
+        "perception": (
+            "roslaunch asmc_perception perception.launch start_traffic_light:=true"
+        ),
+        "lane_adapter": (
+            "roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch"
+        ),
+        "runtime_acceptance": "./scripts/verify_perception.sh",
+    }
+    if dict(commands) != expected_commands:
+        raise AcceptanceContractError("canonical P5 operational commands changed")
+    for relative in ("scripts/udp_bridge.sh", "scripts/verify_perception.sh"):
+        if not (repo_root / relative).is_file():
+            raise AcceptanceContractError(f"operational entrypoint is missing: {relative}")
+    for relative in (
+        "src/asmc_perception/launch/perception.launch",
+        "src/lane_boundary_adapter/launch/shadow_boundary_family_candidate.launch",
+    ):
+        if not (repo_root / relative).is_file():
+            raise AcceptanceContractError(f"operational launch is missing: {relative}")
+
+    visualization = _mapping(closeout.get("visualization"), "closeout visualization")
+    if visualization.get("rqt_topics") != [
+        "/perception/camera/debug/mosaic/compressed",
+        "/perception/bev/debug/comparison/compressed",
+    ]:
+        raise AcceptanceContractError("canonical rqt topic pair changed")
+    rviz_path = str(visualization.get("lane_rviz_config", ""))
+    if visualization.get("lane_rviz_fixed_frame") != "base_link" or not (
+        repo_root / rviz_path
+    ).is_file():
+        raise AcceptanceContractError("lane RViz closeout binding is invalid")
+
+    return {
+        "phase_count": 3,
+        "consumer_count": len(handoff),
+        "evidence_count": len(evidence_paths),
+        "representative_lane_family_messages": int(family_topic["messages"]),
+    }
 
 
 def validate_contract(
@@ -227,6 +422,7 @@ def validate_contract(
             "deferred topics cannot be runtime requirements: {}".format(conflict)
         )
 
+    closeout_result = _validate_p5_closeout(repo_root, contract)
     return {
         "contract_id": CONTRACT_ID,
         "topic_group_count": len(groups),
@@ -238,6 +434,7 @@ def validate_contract(
         "static_binding_count": len(bindings),
         "optional_consumer_gate_count": len(gates),
         "deferred_topic_count": len(deferred_topics),
+        "p5_closeout": closeout_result,
     }
 
 
