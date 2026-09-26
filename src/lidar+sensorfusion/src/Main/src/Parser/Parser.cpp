@@ -263,6 +263,11 @@ void *ParseGPS(void *pst_NodeHandle)
 
 void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
 {
+    static constexpr int32 kTunnelConfirmMessages = 3;
+    static int32 s32_InvalidCount = 0;
+    static int32 s32_ValidCount = 0;
+    static bool b_IsTunnel = false;
+
     GPS_DATA st_GPSData;
     float64 f64_X, f64_Y, f64_Z, f64_Dx, f64_Dy, f64_Dz, f64_Latitude, f64_Longitude, f64_Altitude;
     float64 f64_Phi, f64_Lambda, f64_N;
@@ -270,7 +275,28 @@ void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
     st_GPSData.f64_Latitude = st_Msg->latitude;
     st_GPSData.f64_Longitude = st_Msg->longitude;
     st_GPSData.f64_Altitude = st_Msg->altitude;
-    st_GPSData.b_isJamming = (st_Msg->status == 0);
+    const bool b_ZeroCoordinates =
+        st_Msg->latitude == 0.0 && st_Msg->longitude == 0.0 &&
+        st_Msg->altitude == 0.0;
+    const bool b_InvalidGPS = st_Msg->status == 0 || b_ZeroCoordinates;
+    st_GPSData.b_isJamming = b_InvalidGPS;
+
+    if (b_InvalidGPS) {
+        s32_InvalidCount = std::min(
+            s32_InvalidCount + 1, kTunnelConfirmMessages);
+        s32_ValidCount = 0;
+        if (s32_InvalidCount >= kTunnelConfirmMessages) {
+            b_IsTunnel = true;
+        }
+    } else {
+        s32_ValidCount = std::min(
+            s32_ValidCount + 1, kTunnelConfirmMessages);
+        s32_InvalidCount = 0;
+        if (s32_ValidCount >= kTunnelConfirmMessages) {
+            b_IsTunnel = false;
+        }
+    }
+    st_GPSData.b_isTunnel = b_IsTunnel;
 
     int32 s32_Zone = 52;
     bool b_North = true;

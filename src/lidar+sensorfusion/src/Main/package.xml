@@ -40,6 +40,13 @@
   <build_export_depend>visualization_msgs</build_export_depend>
   <exec_depend>visualization_msgs</exec_depend>
 
+  <!-- 터널 실험 필터 진단 토픽 / 오프라인 평가기 -->
+  <build_depend>diagnostic_msgs</build_depend>
+  <build_export_depend>diagnostic_msgs</build_export_depend>
+  <exec_depend>diagnostic_msgs</exec_depend>
+  <build_depend>rosbag</build_depend>
+  <exec_depend>rosbag</exec_depend>
+
   <build_depend>message_generation</build_depend>
   <exec_depend>message_runtime</exec_depend>
 

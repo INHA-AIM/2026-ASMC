@@ -34,6 +34,7 @@ struct PlannerObject {
     PlannerPoint3D cluster_center_lidar;
     PlannerPoint3D obb_center_lidar;
     std::array<PlannerPoint3D, 8> obb_corners_lidar{};
+    double obb_yaw_lidar_rad = 0.0;
     PlannerPoint3D velocity_lidar_mps;
 
     PlannerPoint3D velocity_map_mps;

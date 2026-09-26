@@ -2,6 +2,7 @@
 
 #include <PlannerInterface/PlannerObjectAdapter.hpp>
 #include <Lidar/Tracking/MotionClassifier.hpp>
+#include <Lidar/TunnelFilter/TunnelFilterCore.hpp>
 
 #include <Msg/TrackedObject.h>
 #include <Msg/TrackedObjectArray.h>
@@ -36,6 +37,13 @@ std_msgs::Header MapHeader(const ros::Time& stamp) {
     std_msgs::Header header;
     header.stamp = stamp.isZero() ? ros::Time::now() : stamp;
     header.frame_id = "map";
+    return header;
+}
+
+std_msgs::Header LidarHeader(const ros::Time& stamp) {
+    std_msgs::Header header;
+    header.stamp = stamp.isZero() ? ros::Time::now() : stamp;
+    header.frame_id = "velodyne";
     return header;
 }
 
@@ -76,6 +84,59 @@ Msg::TrackedObject ToRosObject(const PlannerObject& object) {
     message.width = object.width;
     message.height = object.height;
     return message;
+}
+
+Msg::TrackedObject ToRosLidarObject(const PlannerObject& object) {
+    Msg::TrackedObject message;
+    message.id = object.id;
+    message.type = object.type;
+    message.classification = object.classification;
+    message.yolo_class = object.yolo_class;
+    message.is_dynamic = object.is_dynamic;
+    message.age = object.age;
+    message.miss_count = object.miss_count;
+    message.cluster_center = ToRosPoint(object.cluster_center_lidar);
+    message.obb_center = ToRosPoint(object.obb_center_lidar);
+    for (std::size_t i = 0; i < object.obb_corners_lidar.size(); ++i) {
+        message.obb_corners[i] = ToRosPoint(object.obb_corners_lidar[i]);
+    }
+    message.obb_yaw = object.obb_yaw_lidar_rad;
+    message.velocity_mps.x = object.velocity_lidar_mps.x;
+    message.velocity_mps.y = object.velocity_lidar_mps.y;
+    message.velocity_mps.z = object.velocity_lidar_mps.z;
+    message.speed_kph = object.speed_kph;
+    message.length = object.length;
+    message.width = object.width;
+    message.height = object.height;
+    return message;
+}
+
+bool IsProtectedRoadUser(const PlannerObject& object) {
+    const auto protected_class = [](const std::string& value) {
+        return value == "car" || value == "truck" || value == "bus" ||
+               value == "person" || value == "pedestrian";
+    };
+    return protected_class(object.classification) ||
+           protected_class(object.yolo_class);
+}
+
+bool IsTunnelStructure(const PlannerObject& object,
+                       double ceiling_center_z_m,
+                       double wall_min_length_m,
+                       double wall_min_aspect_ratio,
+                       double wall_min_abs_y_m) {
+    if (IsProtectedRoadUser(object)) return false;
+
+    const double long_side = std::max(object.length, object.width);
+    const double short_side = std::max(
+        0.05, std::min(object.length, object.width));
+    const bool ceiling =
+        object.obb_center_lidar.z >= ceiling_center_z_m;
+    const bool wall =
+        std::abs(object.obb_center_lidar.y) >= wall_min_abs_y_m &&
+        long_side >= wall_min_length_m &&
+        long_side / short_side >= wall_min_aspect_ratio;
+    return ceiling || wall;
 }
 
 visualization_msgs::Marker MakeObbMarker(
@@ -260,6 +321,18 @@ PlannerObjectRosPublisher::PlannerObjectRosPublisher(
         drivable_ratio_threshold_);
     private_node.param(
         "drivable_samples", drivable_samples_, drivable_samples_);
+    private_node.param(
+        "tunnel_ceiling_center_z_m", tunnel_ceiling_center_z_m_,
+        tunnel_ceiling_center_z_m_);
+    private_node.param(
+        "tunnel_wall_min_length_m", tunnel_wall_min_length_m_,
+        tunnel_wall_min_length_m_);
+    private_node.param(
+        "tunnel_wall_min_aspect_ratio", tunnel_wall_min_aspect_ratio_,
+        tunnel_wall_min_aspect_ratio_);
+    private_node.param(
+        "tunnel_wall_min_abs_y_m", tunnel_wall_min_abs_y_m_,
+        tunnel_wall_min_abs_y_m_);
     max_objects_ = static_cast<std::size_t>(std::max(1, max_objects));
     velocity_arrow_seconds_ = std::max(0.05, velocity_arrow_seconds_);
     drivable_ratio_threshold_ = std::max(
@@ -288,6 +361,11 @@ PlannerObjectRosPublisher::PlannerObjectRosPublisher(
     last_markers_publisher_ =
         node_handle.advertise<visualization_msgs::MarkerArray>(
             "/last_lidar_markers", 2);
+    nogps_objects_publisher_ = node_handle.advertise<Msg::TrackedObjectArray>(
+        "/lidar_nogps", 2);
+    nogps_markers_publisher_ =
+        node_handle.advertise<visualization_msgs::MarkerArray>(
+            "/lidar_nogps_markers", 2);
 }
 
 void PlannerObjectRosPublisher::LoadDrivableMask(
@@ -377,19 +455,46 @@ void PlannerObjectRosPublisher::Publish(
 
     Msg::TrackedObjectArray last_object_array;
     last_object_array.header = header;
+    Msg::TrackedObjectArray nogps_object_array;
+    nogps_object_array.header = LidarHeader(header.stamp);
     visualization_msgs::MarkerArray last_markers;
     visualization_msgs::Marker last_clear;
     last_clear.header.stamp = header.stamp;
     last_clear.header.frame_id = "velodyne";
     last_clear.action = visualization_msgs::Marker::DELETEALL;
     last_markers.markers.push_back(last_clear);
+    visualization_msgs::MarkerArray nogps_markers;
+    visualization_msgs::Marker nogps_clear;
+    nogps_clear.header = nogps_object_array.header;
+    nogps_clear.action = visualization_msgs::Marker::DELETEALL;
+    nogps_markers.markers.push_back(nogps_clear);
     const std_msgs::Header lidar_header = [] (const ros::Time& stamp) {
         std_msgs::Header value;
         value.stamp = stamp;
         value.frame_id = "velodyne";
         return value;
     }(header.stamp);
+    // Enter immediately on an invalid GPS sample so zero coordinates never
+    // reach /last_lidar. Keep tunnel mode until three consecutive valid GPS
+    // messages have arrived (b_isTunnel exit hysteresis).
+    const bool tunnel_mode = tunnel_filter::IsGpsDenied(
+        gps_imu.st_GPS.b_isJamming, gps_imu.st_GPS.b_isTunnel);
     for (const auto& object : objects) {
+        if (tunnel_mode) {
+            if (IsTunnelStructure(
+                    object, tunnel_ceiling_center_z_m_,
+                    tunnel_wall_min_length_m_,
+                    tunnel_wall_min_aspect_ratio_,
+                    tunnel_wall_min_abs_y_m_)) {
+                continue;
+            }
+            nogps_object_array.objects.push_back(ToRosLidarObject(object));
+            nogps_markers.markers.push_back(
+                MakeLastObbMarker(object, nogps_object_array.header));
+            nogps_markers.markers.push_back(
+                MakeLastVelocityMarker(object, nogps_object_array.header));
+            continue;
+        }
         const double road_ratio = DrivableRatio(object);
         if (road_ratio < drivable_ratio_threshold_) continue;
         last_object_array.objects.push_back(ToRosObject(object));
@@ -423,6 +528,8 @@ void PlannerObjectRosPublisher::Publish(
     }
     last_objects_publisher_.publish(last_object_array);
     last_markers_publisher_.publish(last_markers);
+    nogps_objects_publisher_.publish(nogps_object_array);
+    nogps_markers_publisher_.publish(nogps_markers);
 
     visualization_msgs::MarkerArray markers;
     visualization_msgs::Marker clear;

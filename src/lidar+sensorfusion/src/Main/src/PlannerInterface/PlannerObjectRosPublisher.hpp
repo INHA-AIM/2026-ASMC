@@ -28,6 +28,8 @@ private:
     ros::Publisher markers_publisher_;
     ros::Publisher last_objects_publisher_;
     ros::Publisher last_markers_publisher_;
+    ros::Publisher nogps_objects_publisher_;
+    ros::Publisher nogps_markers_publisher_;
     std::size_t max_objects_ = 200;
     double velocity_arrow_seconds_ = 1.0;
     cv::Mat drivable_mask_;
@@ -36,5 +38,9 @@ private:
     double world_offset_y_ = 0.0;
     double drivable_ratio_threshold_ = 0.3;
     int drivable_samples_ = 5;
+    double tunnel_ceiling_center_z_m_ = 1.3;
+    double tunnel_wall_min_length_m_ = 15.0;
+    double tunnel_wall_min_aspect_ratio_ = 6.0;
+    double tunnel_wall_min_abs_y_m_ = 4.0;
     ros::Time last_stamp_;
 };

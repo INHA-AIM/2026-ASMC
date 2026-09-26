@@ -212,6 +212,7 @@ struct GPS_DATA
     float64 f64_N;
     float64 f64_U;
     bool b_isJamming;
+    bool b_isTunnel;
 };
 
 struct IMU_DATA

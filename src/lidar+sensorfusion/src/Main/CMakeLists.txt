@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
   tf2_geometry_msgs
   visualization_msgs
+  diagnostic_msgs
 )
 
 find_package(OpenCV REQUIRED)
@@ -24,7 +25,7 @@ find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
 
 catkin_package(
-  CATKIN_DEPENDS roscpp roslib std_msgs geometry_msgs tf2 tf2_ros tf2_geometry_msgs visualization_msgs morai_msgs Msg
+  CATKIN_DEPENDS roscpp roslib std_msgs geometry_msgs tf2 tf2_ros tf2_geometry_msgs visualization_msgs diagnostic_msgs morai_msgs Msg
 )
 
 include_directories(
@@ -58,6 +59,8 @@ add_library(myHeader
   src/Lidar/ImuRansac/Ransac.cpp
   src/Lidar/HungarianAlg/HungarianAlg.cpp
   src/Lidar/IMMFilter/IMMFilter.cpp
+  src/Lidar/TunnelFilter/TunnelFilterCore.cpp
+  src/Lidar/TunnelFilter/TunnelFilterRos.cpp
   src/SensorFusion/SensorFusion.cpp
   src/SensorFusion/FusionCamera.cpp
   src/SensorFusion/FusionLiDAR.cpp
@@ -99,6 +102,33 @@ if(CATKIN_ENABLE_TESTING)
   if(TARGET test_fusion_time_matcher)
     target_link_libraries(test_fusion_time_matcher ${catkin_LIBRARIES})
   endif()
+  # 터널 실험 필터의 순수 로직(ROS 비의존) 단위 테스트.
+  catkin_add_gtest(test_tunnel_filter_core
+    test/test_tunnel_filter_core.cpp
+    src/Lidar/TunnelFilter/TunnelFilterCore.cpp
+  )
+  if(TARGET test_tunnel_filter_core)
+    target_link_libraries(test_tunnel_filter_core ${PCL_LIBRARIES})
+  endif()
+endif()
+
+# 터널 실험 필터 결정론적 오프라인 평가기 (원본 bag 읽기 전용).
+# 실시간 Main과 같은 라이브러리 함수를 bag 순서대로 호출한다.
+find_package(rosbag QUIET)
+if(rosbag_FOUND)
+  add_executable(tunnel_filter_offline_eval tools/tunnel_filter_offline_eval.cpp)
+  add_dependencies(tunnel_filter_offline_eval myHeader
+    ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+  target_include_directories(tunnel_filter_offline_eval PRIVATE
+    ${rosbag_INCLUDE_DIRS})
+  target_link_libraries(tunnel_filter_offline_eval myHeader
+    ${catkin_LIBRARIES}
+    ${rosbag_LIBRARIES}
+    ${OpenCV_LIBRARIES}
+    ${PCL_LIBRARIES}
+    yaml-cpp
+    Geographic
+  )
 endif()
 
 catkin_install_python(PROGRAMS

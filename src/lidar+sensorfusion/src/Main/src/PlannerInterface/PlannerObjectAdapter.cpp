@@ -161,6 +161,7 @@ std::vector<PlannerObject> MakePlannerObjects(
         planner_object.obb_center_lidar = {
             object.f32_OBB_CenterX, object.f32_OBB_CenterY,
             object.f32_OBB_CenterZ};
+        planner_object.obb_yaw_lidar_rad = object.f32_OBB_YawRad;
 
         // OBB의 긴 축(+x)을 회전시켜 map XY에 투영한다. 위치 translation과
         // 속도 방향을 OBB heading에 섞지 않는다.

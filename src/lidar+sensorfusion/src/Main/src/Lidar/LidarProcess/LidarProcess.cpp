@@ -1,6 +1,7 @@
 #include <Lidar/LidarProcess/LidarProcess.hpp>
 #include <Lidar/LidarProcess/PipelineProfile.hpp>
 #include <Lidar/Tracking/MotionClassifier.hpp>
+#include <Lidar/TunnelFilter/TunnelFilterRos.hpp>
 #include <PlannerInterface/PlannerObjectAdapter.hpp>
 
 
@@ -197,12 +198,56 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
     // PublishCloud(pcl_RawCloud, st_RawLiDAR, "map");
 
     LIDAR_STAGE(roi_ms, Roi(pcl_RawCloud, roi_cloud, st_LiDAR, st_VehicleSpec));
+
+    // GPS 음영에서만 터널 전용 ROI를 적용한다. 전역 st_LiDAR 설정을 바꾸지
+    // 않으므로 GPS가 복구된 다음 프레임부터 일반 ROI가 자동으로 사용된다.
+    if (tunnel_filter::TunnelExperimentEnabled()) {
+        const tunnel_filter::Params& tunnel_params =
+            tunnel_filter::TunnelExperimentParams();
+        const bool tunnel_roi_active = tunnel_params.dynamic_roi_enable &&
+            tunnel_filter::IsGpsDenied(st_GPSIMU.st_GPS.b_isJamming,
+                                       st_GPSIMU.st_GPS.b_isTunnel);
+        if (tunnel_roi_active) {
+            const auto first_removed = std::remove_if(
+                roi_cloud->points.begin(), roi_cloud->points.end(),
+                [&tunnel_params](const pcl::PointXYZI& point) {
+                    return point.x < tunnel_params.roi_min_x_m ||
+                           point.x > tunnel_params.roi_max_x_m ||
+                           point.y < tunnel_params.roi_min_y_m ||
+                           point.y > tunnel_params.roi_max_y_m ||
+                           point.z < tunnel_params.roi_min_z_m ||
+                           point.z > tunnel_params.roi_max_z_m;
+                });
+            roi_cloud->points.erase(first_removed, roi_cloud->points.end());
+            roi_cloud->width = static_cast<std::uint32_t>(roi_cloud->points.size());
+            roi_cloud->height = 1;
+        }
+
+        static bool previous_tunnel_roi_active = false;
+        if (tunnel_roi_active != previous_tunnel_roi_active) {
+            if (tunnel_roi_active) {
+                ROS_INFO("Tunnel ROI active: x=[%.1f,%.1f] y=[%.1f,%.1f] z=[%.1f,%.1f]",
+                         tunnel_params.roi_min_x_m, tunnel_params.roi_max_x_m,
+                         tunnel_params.roi_min_y_m, tunnel_params.roi_max_y_m,
+                         tunnel_params.roi_min_z_m, tunnel_params.roi_max_z_m);
+            } else {
+                ROS_INFO("Tunnel ROI inactive: restored normal LiDAR ROI");
+            }
+            previous_tunnel_roi_active = tunnel_roi_active;
+        }
+    }
     g_LidarStageProfile.roi_points = static_cast<int>(roi_cloud->points.size());
     LIDAR_STAGE(roi_pub_ms,
                 PublishCloudWithPub(roi_cloud, st_RawLiDAR, "velodyne", RoiPub()));
     LIDAR_STAGE(voxel_ms, Voxel(roi_cloud, voxeled_cloud));
     g_LidarStageProfile.voxel_points =
         static_cast<int>(voxeled_cloud->points.size());
+    // 터널 실험 필터(기본 OFF): GPS 음영일 때 Voxel 결과 포인터만 넘겨둔다.
+    // 실제 처리는 TemporalThread가 기존 출력을 모두 낸 뒤 수행한다.
+    if (tunnel_filter::TunnelExperimentEnabled()) {
+        tunnel_filter::TunnelExperimentCapture(voxeled_cloud, ts_CurrTime,
+                                               st_GPSIMU);
+    }
     LIDAR_STAGE(imu_correct_ms,
                 CorrectingPoints(voxeled_cloud, imu_compensation_cloud, st_GPSIMU));
     LIDAR_STAGE(ransac_ms,

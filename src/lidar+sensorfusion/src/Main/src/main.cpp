@@ -7,6 +7,7 @@
 #include <SensorFusion/SensorFusion.hpp>
 #include <PlannerInterface/PlannerObjectSender.hpp>
 #include <PlannerInterface/PlannerObjectRosPublisher.hpp>
+#include <Lidar/TunnelFilter/TunnelFilterRos.hpp>
 #include <ros/package.h>
 #include <algorithm>
 #include <chrono>
@@ -194,7 +195,12 @@ void InitPlannerInterface()
 {
     YAML::Node config = YAML::LoadFile(YamlURL);
     const YAML::Node planner = config["PlannerInterface"];
-    if (!planner || !planner["Enabled"].as<bool>(false)) {
+    bool planner_enabled = planner && planner["Enabled"].as<bool>(false);
+    // setting.yaml 값이 기본이다. 별도 ROS master에서 bag을 재생해 검증할 때
+    // 실행 중인 플래너 UDP 포트로 객체가 나가지 않도록 끌 수 있게만 한다.
+    ros::NodeHandle("~").param(
+        "planner_udp_enabled", planner_enabled, planner_enabled);
+    if (!planner_enabled) {
         ROS_INFO("Planner object interface disabled");
         return;
     }
@@ -429,6 +435,10 @@ void *TemporalThread(void *p_Arg)
         if (st_PlannerObjectSender) {
             st_PlannerObjectSender->Send(st_LiDAR, st_GPSIMU, st_VehicleSpec);
         }
+        // 터널 실험 필터(기본 OFF): 기존 출력을 모두 낸 다음에만 처리한다.
+        if (tunnel_filter::TunnelExperimentEnabled()) {
+            tunnel_filter::TunnelExperimentRun();
+        }
 
         // 인지 전용: PlanningProcess/ControlProcess 호출 제거 (소스 부재)
         pthread_mutex_lock(&st_CopyMutex);
@@ -481,6 +491,19 @@ int main(int argc, char **argv)
     InitGlobal(st_NodeHandle, &th_GPS);
     InitIMU(st_NodeHandle, &th_IMU);
     InitializeCamera(st_NodeHandle, &th_Camera);
+    {
+        // 보호점 투영은 기존 퓨전과 같은 projection matrix/이미지 크기를 쓴다.
+        YAML::Node config = YAML::LoadFile(YamlURL);
+        double image_width =
+            config["Vehicle"]["Camera"]["ImageWidth"].as<double>(1280.0);
+        double image_height =
+            config["Vehicle"]["Camera"]["ImageHeight"].as<double>(720.0);
+        ros::param::param("~fusion_image_width", image_width, image_width);
+        ros::param::param("~fusion_image_height", image_height, image_height);
+        tunnel_filter::InitTunnelExperiment(
+            st_NodeHandle, st_PrivateNodeHandle, st_Camera,
+            static_cast<int>(image_width), static_cast<int>(image_height));
+    }
 
     InitLidarViz(st_NodeHandle);
     if (b_EnableSensorFusion) {
