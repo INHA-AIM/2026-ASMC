@@ -1047,4 +1047,10 @@ const Params& TunnelExperimentParams() {
     return g_state ? g_state->params : kDefaultParams;
 }
 
+bool TunnelExperimentOutputReady(const ros::Time& stamp) {
+    if (!g_state || stamp.isZero()) return false;
+    const ExperimentFrame& frame = g_state->last;
+    return frame.active && frame.result != nullptr && frame.stamp == stamp;
+}
+
 }  // namespace tunnel_filter

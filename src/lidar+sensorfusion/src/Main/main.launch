@@ -23,9 +23,9 @@
   <arg name="benchmark_lidar_pipeline" default="false"/>
   <arg name="benchmark_warmup_frames" default="30"/>
   <arg name="benchmark_sample_frames" default="200"/>
-  <!-- GPS 음영(터널) 전용 LiDAR 구조물 제거 실험 파이프라인. 기본 OFF.
-       true여도 GPS가 정상인 프레임에서는 실행되지 않고, 결과는
-       /lidar/tunnel/* 전용 토픽으로만 나간다 (/last_lidar, /lidar_nogps 불변). -->
+  <!-- GPS 음영(터널) 전용 LiDAR 구조물 제거 파이프라인. 기본 OFF.
+       true이면 GPS 음영 프레임의 생존 cluster가 기존 tracker를 거쳐 최종
+       /lidar_nogps로 나간다. /lidar/tunnel/*는 단계별 진단 토픽이다. -->
   <arg name="enable_tunnel_experimental_filter" default="false"/>
   <arg name="tunnel_dynamic_roi_enable" default="true"/>
   <arg name="tunnel_roi_min_x_m" default="-30.0"/>
@@ -99,8 +99,8 @@
     <param name="tunnel_wall_min_length_m" value="15.0"/>
     <param name="tunnel_wall_min_aspect_ratio" value="6.0"/>
     <param name="tunnel_wall_min_abs_y_m" value="4.0"/>
-    <!-- ===== 터널 실험 필터 (/lidar/tunnel/*, 기본 OFF) =====
-         위 /lidar_nogps OBB 필터와는 별개의 병렬 실험 경로다.
+    <!-- ===== 터널 구조물 필터 (/lidar/tunnel/* 진단, 기본 OFF) =====
+         GPS 음영에서는 생존 cluster를 기존 tracker와 /lidar_nogps에 연결한다.
          순서: ROI+Voxel -> IMU roll/pitch 수평화 -> 천장 제거 -> 지면 RANSAC
          -> 지면 시간 안정화 -> 좌우 벽 평면 -> 클러스터링 -> OBB -> OBB 안전 필터. -->
     <param name="enable_tunnel_experimental_filter"

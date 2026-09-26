@@ -435,10 +435,8 @@ void *TemporalThread(void *p_Arg)
         if (st_PlannerObjectSender) {
             st_PlannerObjectSender->Send(st_LiDAR, st_GPSIMU, st_VehicleSpec);
         }
-        // 터널 실험 필터(기본 OFF): 기존 출력을 모두 낸 다음에만 처리한다.
-        if (tunnel_filter::TunnelExperimentEnabled()) {
-            tunnel_filter::TunnelExperimentRun();
-        }
+        // 터널 필터는 LidarProcess 안에서 동기 실행되어 생존 cluster가 기존
+        // tracker와 위의 단일 /lidar_nogps publisher까지 같은 프레임에 도달한다.
 
         // 인지 전용: PlanningProcess/ControlProcess 호출 제거 (소스 부재)
         pthread_mutex_lock(&st_CopyMutex);

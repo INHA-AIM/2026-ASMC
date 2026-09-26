@@ -1,8 +1,8 @@
 // 터널 실험 필터 결정론적 오프라인 평가기.
 //
 // 원본 bag을 읽기 전용으로 열고, 실시간 Main과 같은 라이브러리 함수
-// (Parser 콜백 -> DeadReckoning -> LidarProcess -> FusionProcess ->
-// PlannerObjectRosPublisher -> TunnelExperimentRun)를 bag 기록 순서대로
+// (Parser 콜백 -> DeadReckoning -> LidarProcess(터널 필터 포함) ->
+// FusionProcess -> PlannerObjectRosPublisher)를 bag 기록 순서대로
 // 호출한다. 멀티스레드 타이밍 대신 "스캔 stamp + processing_delay 시점까지의
 // 메시지를 먼저 반영한 뒤 그 스캔을 처리"하는 방식으로 실시간 지연을 재현하며,
 // 모든 스캔을 빠짐없이 처리한다.
@@ -71,6 +71,7 @@ inline const ExperimentFrame& TunnelExperimentLastFrame() {
     static ExperimentFrame frame;
     return frame;
 }
+inline bool TunnelExperimentOutputReady(const ros::Time&) { return false; }
 inline const Params& TunnelExperimentParams() {
     static Params params;
     return params;
@@ -669,9 +670,11 @@ int main(int argc, char** argv) {
         const auto publish_start = Clock::now();
         planner_publisher->Publish(st_LiDAR, st_GPSIMU, st_VehicleSpec, ts_CurrTime);
         const double publish_ms = ElapsedMs(publish_start);
-        const auto tunnel_start = Clock::now();
-        if (experiment) tunnel_filter::TunnelExperimentRun();
-        const double tunnel_ms = ElapsedMs(tunnel_start);
+        // 터널 필터는 LidarProcess 안에서 동기 실행된다. last frame에 기록된
+        // 전체 처리 시간을 별도 지표로 유지한다.
+        const double tunnel_ms = experiment &&
+                tunnel_filter::TunnelExperimentOutputReady(ts_CurrTime)
+            ? tunnel_filter::TunnelExperimentLastFrame().total_ms : 0.0;
         // 같은 프로세스 구독이라도 전달 시점이 늦을 수 있으므로, 이번 스캔의
         // /last_lidar(항상 발행)을 받을 때까지 최대 100 ms 콜백을 처리한다.
         // 파이프라인 결과에는 영향이 없고 측정 누락만 막는다.

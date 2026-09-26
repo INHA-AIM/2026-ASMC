@@ -7,9 +7,9 @@
 // 않고, Capture/Run은 불리언 하나만 확인하고 돌아간다. true여도 GPS가 정상인
 // 프레임에서는 캡처만 건너뛰므로 기존 파이프라인만 동작한다.
 //
-// 실험 결과는 /lidar/tunnel/* 전용 토픽으로만 나간다. 기존 /last_lidar,
-// /lidar_nogps, 추적기 입력은 바꾸지 않는다. 검증 후 연결할 함수 경계는
-// tunnel_filter::TunnelPipeline::Process()의 kept_indices/objects다.
+// /lidar/tunnel/* 토픽은 단계별 진단용이다. GPS 음영 프레임에서는 Run 결과의
+// 생존 클러스터를 LidarProcess가 기존 추적기에 넣고, 단일 기존 publisher가
+// 최종 결과를 /lidar_nogps로 발행한다. GPS 정상 프레임은 기존 경로만 사용한다.
 
 #include <Global/Global.hpp>
 #include <Lidar/TunnelFilter/TunnelFilterCore.hpp>
@@ -60,6 +60,10 @@ void TunnelExperimentIngestYolo(const ros::Time& image_stamp,
 
 const ExperimentFrame& TunnelExperimentLastFrame();
 const Params& TunnelExperimentParams();
+
+// 이 stamp에 대해 GPS 음영 필터 결과가 준비됐는지 확인한다. Publisher는 true일
+// 때 이미 구조물 필터를 통과한 추적 결과를 다시 레거시 OBB 필터링하지 않는다.
+bool TunnelExperimentOutputReady(const ros::Time& stamp);
 
 // 기존 추적기와 같은 L-shape OBB(Objectinfo_for_km)를 쓰는 OBB 계산기.
 ObbFunction MakeTrackingObbFunction();

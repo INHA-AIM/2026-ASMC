@@ -3,6 +3,7 @@
 #include <PlannerInterface/PlannerObjectAdapter.hpp>
 #include <Lidar/Tracking/MotionClassifier.hpp>
 #include <Lidar/TunnelFilter/TunnelFilterCore.hpp>
+#include <Lidar/TunnelFilter/TunnelFilterRos.hpp>
 
 #include <Msg/TrackedObject.h>
 #include <Msg/TrackedObjectArray.h>
@@ -481,7 +482,11 @@ void PlannerObjectRosPublisher::Publish(
         gps_imu.st_GPS.b_isJamming, gps_imu.st_GPS.b_isTunnel);
     for (const auto& object : objects) {
         if (tunnel_mode) {
-            if (IsTunnelStructure(
+            // 통합 터널 필터 결과는 이미 점 단위 벽/천장/지면 제거와 OBB 안전
+            // 필터를 통과했다. 레거시 OBB 규칙을 다시 적용하면 긴 차량을 벽으로
+            // 오인할 수 있으므로, 통합 결과가 없는 fallback에서만 사용한다.
+            if (!tunnel_filter::TunnelExperimentOutputReady(header.stamp) &&
+                IsTunnelStructure(
                     object, tunnel_ceiling_center_z_m_,
                     tunnel_wall_min_length_m_,
                     tunnel_wall_min_aspect_ratio_,

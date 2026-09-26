@@ -242,20 +242,98 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
     LIDAR_STAGE(voxel_ms, Voxel(roi_cloud, voxeled_cloud));
     g_LidarStageProfile.voxel_points =
         static_cast<int>(voxeled_cloud->points.size());
-    // 터널 실험 필터(기본 OFF): GPS 음영일 때 Voxel 결과 포인터만 넘겨둔다.
-    // 실제 처리는 TemporalThread가 기존 출력을 모두 낸 뒤 수행한다.
+    // GPS 음영에서는 터널 필터를 먼저 끝내고, 그 생존 클러스터를 아래의 기존
+    // FrameFilter/MotionClassifier에 넣는다. 진단 토픽과 /lidar_nogps가 같은
+    // 프레임의 같은 필터 결과를 사용하도록 여기서 동기 처리한다.
+    bool tunnel_output_ready = false;
     if (tunnel_filter::TunnelExperimentEnabled()) {
         tunnel_filter::TunnelExperimentCapture(voxeled_cloud, ts_CurrTime,
                                                st_GPSIMU);
+        tunnel_filter::TunnelExperimentRun();
+        tunnel_output_ready =
+            tunnel_filter::TunnelExperimentOutputReady(ts_CurrTime);
     }
-    LIDAR_STAGE(imu_correct_ms,
-                CorrectingPoints(voxeled_cloud, imu_compensation_cloud, st_GPSIMU));
-    LIDAR_STAGE(ransac_ms,
-                NormalVectorFiltering(imu_compensation_cloud, ransac_cloud, st_GPSIMU));
-    g_LidarStageProfile.ransac_points =
-        static_cast<int>(ransac_cloud->points.size());
+
+    pcl::PointCloud<pcl::PointXYZI>::Ptr object_source_cloud = ransac_cloud;
+    std::vector<std::string> tunnel_yolo_classes;
+    if (tunnel_output_ready) {
+        const auto& frame = tunnel_filter::TunnelExperimentLastFrame();
+        const auto& result = *frame.result;
+        object_source_cloud = result.leveled;
+        imu_compensation_cloud = result.leveled;
+
+        // /lidar/debug_ransac은 터널 모드에서는 지면·벽·천장을 모두 제거한 최종
+        // 점군을 보여준다. 객체 생성용 cluster index는 원본 leveled cloud 기준을
+        // 유지하므로 object_source_cloud와 분리한다.
+        ransac_cloud->points.reserve(result.kept_indices.size());
+        for (const int index : result.kept_indices) {
+            ransac_cloud->points.push_back(
+                result.leveled->points[static_cast<std::size_t>(index)]);
+        }
+        ransac_cloud->width =
+            static_cast<std::uint32_t>(ransac_cloud->points.size());
+        ransac_cloud->height = 1;
+        ransac_cloud->is_dense = false;
+
+        // OBB 안전 필터에서 제거되지 않은 cluster만 기존 tracker에 전달한다.
+        // centroid 순서와 cluster 순서는 Objectinfo_for_km의 계약상 같아야 한다.
+        for (std::size_t i = 0;
+             i < result.clusters.size() && i < result.objects.size(); ++i) {
+            const auto& tunnel_object = result.objects[i];
+            if (tunnel_object.flags.removed) continue;
+            all_cluster_indices.push_back(result.clusters[i]);
+            pcl::PointXYZI centroid;
+            centroid.x = centroid.y = centroid.z = 0.0f;
+            centroid.intensity = 0.0f;
+            for (const int index : result.clusters[i].indices) {
+                const auto& point =
+                    result.leveled->points[static_cast<std::size_t>(index)];
+                centroid.x += point.x;
+                centroid.y += point.y;
+                centroid.z += point.z;
+            }
+            const float point_count = static_cast<float>(
+                std::max<std::size_t>(1, result.clusters[i].indices.size()));
+            centroid.x /= point_count;
+            centroid.y /= point_count;
+            centroid.z /= point_count;
+            clustering_cloud->points.push_back(centroid);
+            tunnel_yolo_classes.push_back(
+                tunnel_object.is_protected
+                    ? tunnel_filter::ProtectClassName(
+                          tunnel_object.protect_class)
+                    : "unknown");
+        }
+        clustering_cloud->width =
+            static_cast<std::uint32_t>(clustering_cloud->points.size());
+        clustering_cloud->height = 1;
+        clustering_cloud->is_dense = false;
+        g_LidarStageProfile.ransac_points =
+            static_cast<int>(ransac_cloud->points.size());
+        g_LidarStageProfile.cluster_points =
+            static_cast<int>(clustering_cloud->points.size());
+        g_LidarStageProfile.clusters =
+            static_cast<int>(all_cluster_indices.size());
+    } else {
+        LIDAR_STAGE(imu_correct_ms,
+                    CorrectingPoints(voxeled_cloud, imu_compensation_cloud,
+                                     st_GPSIMU));
+        LIDAR_STAGE(ransac_ms,
+                    NormalVectorFiltering(imu_compensation_cloud, ransac_cloud,
+                                          st_GPSIMU));
+        g_LidarStageProfile.ransac_points =
+            static_cast<int>(ransac_cloud->points.size());
+        LIDAR_STAGE(cluster_ms,
+                    Clustering(ransac_cloud, clustering_cloud,
+                               all_cluster_indices, st_GPSIMU));
+        g_LidarStageProfile.cluster_points =
+            static_cast<int>(clustering_cloud->points.size());
+        g_LidarStageProfile.clusters =
+            static_cast<int>(all_cluster_indices.size());
+    }
     LIDAR_STAGE(ransac_pub_ms,
-                PublishCloudWithPub(ransac_cloud, st_RawLiDAR, "velodyne", RansacPub()));
+                PublishCloudWithPub(ransac_cloud, st_RawLiDAR, "velodyne",
+                                    RansacPub()));
 
 
     // for (const auto& pt : ransac_cloud->points)
@@ -280,12 +358,6 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
     // inout_cloud->width  = static_cast<uint32_t>(inout_cloud->points.size());
     // inout_cloud->height = 1;   // unorganized
     // inout_cloud->is_dense = false;
-    LIDAR_STAGE(cluster_ms,
-                Clustering(ransac_cloud, clustering_cloud, all_cluster_indices,
-                           st_GPSIMU));
-    g_LidarStageProfile.cluster_points =
-        static_cast<int>(clustering_cloud->points.size());
-    g_LidarStageProfile.clusters = static_cast<int>(all_cluster_indices.size());
     LIDAR_STAGE(cluster_pub_ms,
                 PublishCloudWithPub(clustering_cloud, st_RawLiDAR, "velodyne",
                                     ClusterPub()));
@@ -295,8 +367,29 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
                     st_RawLiDAR, "map", MapClusterPub()));
 
     LIDAR_STAGE(objectinfo_ms,
-                Objectinfo_for_km(object, ransac_cloud, clustering_cloud,
+                Objectinfo_for_km(object, object_source_cloud, clustering_cloud,
                                   all_cluster_indices, st_GPSIMU, st_VehicleSpec));
+
+    // 새 터널 필터의 YOLO 보호 결과를 추적 객체 초기 분류에 보존한다. 이후의
+    // 기존 sensor fusion은 정상적으로 같은 객체를 갱신할 수 있다.
+    if (tunnel_output_ready) {
+        for (std::size_t i = 0;
+             i < object.size() && i < tunnel_yolo_classes.size(); ++i) {
+            if (tunnel_yolo_classes[i] == "unknown") continue;
+            object[i].str_ObjectClass = tunnel_yolo_classes[i];
+            object[i].str_YoloClass = tunnel_yolo_classes[i];
+        }
+    }
+
+    // 일반/터널 검출기가 바뀌는 경계에서는 서로 다른 cluster geometry를 같은
+    // track으로 오인하지 않도록 이전 queue만 비운다. 새 ID는 전역 증가값을 써서
+    // 재사용되지 않고, 터널 내부에서는 이후 프레임부터 안정적으로 유지된다.
+    static bool previous_tunnel_output_ready = false;
+    if (tunnel_output_ready != previous_tunnel_output_ready) {
+        prev_objects_queue.clear();
+        st_LiDAR.Prev_Objects_Queue.clear();
+        previous_tunnel_output_ready = tunnel_output_ready;
+    }
     LIDAR_STAGE(framefilter_ms,
                 FrameFilter(prev_objects_queue, object, st_GPSIMU, st_VehicleSpec));
     
