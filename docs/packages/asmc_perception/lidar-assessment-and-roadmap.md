@@ -238,8 +238,9 @@ Capture 자료는 검증된 단일 프레임 검출 실험에 먼저 쓰고, 연
 | 단계 | 범위 | 완료 조건 |
 |---|---|---|
 | **L1-A 기준선 마감** | main/손재호/서준 consumer·센서·자료 감사, isolated build/test, live/offline 계측 | [검증 보고서](./lidar-l1a-validation-20260926.md), [manifest](../../../config/baselines/lidar_l1a_20260926.yaml), [소비 계약](../../contracts/perception/lidar-planning-consumer-v1.md)로 재현 가능. 전체 미션 수락은 아님 |
-| **L1-B1: 좌표·시간 코어** | sensor/leveled/base_link/map 정합, 관측 stamp·processing·receipt 분리 | 격리 구현·시험 완료, [결과와 한계](./lidar-l1b1-validation-20260927.md) 검토 대기. 운영 연결·연속 주행 수락은 미완료 |
-| **다음 단위 2~3: GPS 전환·camera 매칭** | stale/NaN/점프·복구, 50ms 매칭 실패와 missing/empty/OFF | 연속 입력 및 동일 scan deterministic replay로 수락; 이전 단위 통과 전 기본 경로 교체 금지 |
+| **L1-B1: 좌표·시간 코어** | sensor/leveled/base_link/map 정합, 관측 stamp·processing·receipt 분리 | 격리 구현·시험 완료, [결과와 한계](./lidar-l1b1-validation-20260927.md). 운영 연결·연속 주행 수락은 미완료 |
+| **L1-B2: GPS 전환·출력 선택** | status/좌표/stale/NaN/점프·복구, local/map/판제 가용성 분리 | [격리 후보와 실제 bag 감사](./lidar-l1b2-validation-20260927.md) 완료. 연속 주행·관측 pose·판제 전환은 미수락 |
+| **다음 단위 L1-B3: camera 매칭** | 50ms 매칭 실패와 missing/empty/OFF를 동일 scan으로 구분 | 벽 근접 차량 보존과 벽 잔여·처리 지연을 함께 비교; 기본 경로 교체 금지 |
 | **L2 ROI·ground·clustering 비교** | boundary-family envelope와 fallback, 기존/linefit/Patchwork++ 등 지면 후보, range-adaptive/range-image clustering | 동일 bag에서 가까운 차량/낮은 장애물 recall 악화 없이 벽·천장 FP 감소; count·지연·자원 보고 |
 | **L3 추적 안정화** | ego-motion 품질에 맞는 상태 좌표, 관측 앵커·연관·생애주기·불확실도 | 정상↔음영 ID 연속성, 정지/기동 객체 속도오차, 가림 후 복귀, 고주로 p95 지연 검증 |
 | **L4 HD맵 차로 귀속·선택적 퓨전** | footprint overlap/ambiguity, YOLO 선택적 semantic 보조, 판제 인계 | 차로 경계/변경·진입 객체 유지, 클래스 없이도 장애물 보존, consumer joint replay |
@@ -292,8 +293,9 @@ ROS2/SLAM 의존성이 아니다. 지면 첫 추가 비교는 **linefit**, Patch
 재검증, SimpleTrack은 연관/생애주기 참고다. GroundGrid는 유효 odometry, DipG-Seg는
 VLP16 투영 검증이 선행이다. 학습 검출기/MOS는 후순위다.
 
-여기서 사용자 검토를 받는다. 다음 단위는 GPS 유효성·출력 전환과 추적 상태 분리이며,
-기존 planner 입력을 자동 교체하지 않는다.
+L1-B1 검토 후 다음 단위 L1-B2의 격리 결과는
+[별도 기록](./lidar-l1b2-validation-20260927.md)에 남겼다. 기존 planner 입력은
+자동 교체하지 않았다.
 
 ---
 

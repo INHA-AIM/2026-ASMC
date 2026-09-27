@@ -81,3 +81,21 @@ LiDAR 회귀 개선이 입증된 뒤에만 제거 후보이며, 기동 안전 �
 
 `frame_time_eval`은 JSONL만 생성한다. 통과해도 planner 입력을 대체하거나 GPS 상태 전환을
 구현한 것은 아니다. 운영 연결은 차량 상태·trajectory까지 함께 후속 합의한다.
+
+## L1-B2 GPS/출력 격리 후보 — 운영 미연결
+
+[L1-B2 보고서](../../packages/asmc_perception/lidar-l1b2-validation-20260927.md)와
+[재실행](../../../tools/lidar/gps_transition/README.md)은 raw GPS 건강 상태,
+관측 시점 map pose, planner 차량 상태·trajectory를 **별도 가용성**으로 검사한다.
+정차 bag의 두 음영 window는 `status=1`이어도 위도·경도 0이므로 invalid다.
+GPS가 invalid/stale/recovering/jump-rejected여도 유효한 `base_link` 객체 ID·3D 코너·
+원본 stamp를 GPS gate만으로 폐기하거나 현재시각으로 갱신하지 않는다. 그러나 판제의
+현행 map 계약에 local 객체를 무변환으로 흘려보내지 않는다.
+
+`observed_empty`는 detector가 **그 관측을 정상 처리했다는 증거**가 있을 때만 허용한다.
+detector 미실행·센서 누락·잘못된 stamp/pose·비활성 출력은 다른 상태다. 현재 운영
+ROS 메시지에는 이 상태 필드가 없으므로 추후 versioned message/호환 adapter가 필요하다.
+격리 selector는 실제 tracker/판제 코드에 연결하지 않았으며, 정차 bag에는 관측시각
+rear-axle pose가 없어 map OBB·음영 전환 제어를 검증하지 못했다. 점프 gate 수치는
+실험 가설이고 텔레포트에서는 의도적으로 거부된다. 운영 변경과 판제 fallback 제거는
+연속 주행·상태/trajectory 합동 수락 뒤 별도 결정한다.

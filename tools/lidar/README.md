@@ -158,3 +158,10 @@ camera 경계 및 좌표·속도 기댓값을 고정하며 `test_contract_fixtur
 수평화 역변환·장착·map pose·속도 의미·정수 ns를 검증한다. 운영 토픽을 발행하지 않는다.
 [결과와 한계](../../docs/packages/asmc_perception/lidar-l1b1-validation-20260927.md),
 [고정 manifest](../../config/baselines/lidar_l1b1_20260927.yaml)를 함께 읽는다.
+
+## L1-B2 GPS 전환·출력 선택 격리 후보
+
+[`gps_transition/README.md`](./gps_transition/README.md)는 GPS fix·stale·복구·점프와
+`base_link`/`map` 출력 및 판제 상태를 분리한 독립 평가다. 실제 LiDAR/bridge/판제
+토픽을 변경하지 않는다. [고정 결과](../../docs/packages/asmc_perception/lidar-l1b2-validation-20260927.md)와
+[manifest](../../config/baselines/lidar_l1b2_20260927.yaml)를 따른다.
