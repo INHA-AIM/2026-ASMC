@@ -1,0 +1,44 @@
+# Design-level deterministic input for the FIRST frame/time implementation unit.
+# Not a claim that Son's current runtime passes. No simulator or ROS master needed.
+schema: asmc-lidar-contract-fixture-v1
+coordinate_case:
+  observation_time_s: 100.50
+  processing_time_s: 100.62
+  receipt_time_s: 100.66
+  sensor_mount_base_m: [0.80, 0.0, 1.45]
+  sensor_mount_rotation_rpy_deg: [0.0, 0.0, 0.0]
+  ego_pose_map_m: [12.0, -7.0, 1.0]
+  ego_pose_rpy_deg: [7.0, -4.0, 35.0]
+  object_center_sensor_m: [5.0, 1.2, -1.70]
+  object_obb_dimensions_m: [2.0, 1.8, 1.5]
+  object_obb_yaw_sensor_deg: 0.0
+  object_velocity_base_relative_mps: [0.0, 0.0, 0.0]
+  ego_linear_velocity_base_mps: [2.0, 0.0, 0.0]
+  ego_yaw_rate_rps: 0.10
+  expected_center_base_m: [5.8, 1.2, -0.25]
+  expected_center_map_m: [16.044694115489, -2.676670797072, 1.302942428912]
+  expected_negative_local_axes_corner_map_m: [15.736286230037, -3.871546683212, 0.381174457614]
+  expected_absolute_velocity_map_mps: [1.202020859237, 1.544435636379, 0.201654206609]
+  expected_observation_stamp_s: 100.50
+gps_cases:
+  pose_freshness_limit_s_for_fixture: 0.50
+  cases:
+    - {id: valid, status: 1, pose_age_s: 0.01, pose_finite: true, jump_m: 0.0, expected_map_available: true}
+    - {id: explicit_invalid, status: 0, pose_age_s: 0.01, pose_finite: true, jump_m: 0.0, expected_map_available: false}
+    - {id: stopped_receiving, status: 1, pose_age_s: 0.70, pose_finite: true, jump_m: 0.0, expected_map_available: false}
+    - {id: nan, status: 1, pose_age_s: 0.01, pose_finite: false, jump_m: 0.0, expected_map_available: false}
+    - {id: recovery_jump, status: 1, pose_age_s: 0.01, pose_finite: true, jump_m: 12.0, expected_map_available: false, expected_state: recovering}
+camera_cases:
+  match_limit_ns_for_fixture: 50000000
+  cases:
+    - {id: matched, input_state: detections, delta_ns: 49999999, expected_state: valid_detections}
+    - {id: boundary, input_state: detections, delta_ns: 50000000, expected_state: valid_detections}
+    - {id: late, input_state: detections, delta_ns: 50000001, expected_state: stale}
+    - {id: valid_empty, input_state: empty, delta_ns: 12000000, expected_state: valid_empty}
+    - {id: missing, input_state: missing, delta_ns: null, expected_state: missing}
+    - {id: disabled, input_state: disabled, delta_ns: null, expected_state: disabled}
+status_cases:
+  observed_empty: fresh_scan_without_objects
+  inactive: mode_not_publishing_this_fixed_frame
+  sensor_missing: no_fresh_scan
+  pose_invalid: local_observation_exists_but_map_projection_forbidden
