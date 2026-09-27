@@ -5,16 +5,16 @@
 > **범위:** 본선·local 공통 실행 진입점. 학습·offline 분석·HD Map 생성용 내부
 > launch는 각 package README를 따른다.
 
-명령은 저장소 root가 host에서
-`/home/aim06/projects/2026-ai-sw-mobility-competition/2026-ASMC`, container에서
-`/root/ws`인 기준이다. ROS launch 인자는 `name:=value` 형태로 덮어쓴다.
+명령은 host의 팀 저장소 root `$ASMC`와 container의 `/root/ws`를 기준으로 한다.
+host의 `$ASMC`는 실제 checkout한 `2026-ASMC`를 가리켜야 한다.
+ROS launch 인자는 `name:=value` 형태로 덮어쓴다.
 
 ## 1. 가장 빠른 local 실행
 
 ### Host — container 준비
 
 ```bash
-cd /home/aim06/projects/2026-ai-sw-mobility-competition/2026-ASMC
+cd "$ASMC"
 xhost +local:docker
 
 ./scripts/docker_ros_up.sh up
