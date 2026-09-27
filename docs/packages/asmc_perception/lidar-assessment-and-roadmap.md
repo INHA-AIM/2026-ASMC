@@ -1,18 +1,23 @@
 # LiDAR 인지 패키지 완성도 평가와 개선 로드맵
 
 > **문서 상태:** Assessment Record + Working Proposal
-> **최종 정리:** 2026-09-21
+> **최종 정리:** 2026-09-27 (L1-B1 격리 좌표·시간 회귀, 운영 미연결)
 > **대상:** LiDAR 인지 담당 · 판단제어 파트 · 인지 통합
 > **대상 코드:** [`src/lidar+sensorfusion/`](../../../src/lidar+sensorfusion/)
-> **배치:** 2026-09-21 작성. 문서 계층 이관으로 2026-09-23에 이 경로로 옮겼으며 본문은 동일하다.
+> **읽는 순서:** 0장은 2026-09-26의 현재 판단과 착수 순서다. 1~13장은 2026-09-21의
+> main 계열 소스 분석·문헌 검토 기록을 보존하며, 후속 브랜치에 그대로 적용하지 않는다.
+> 실행 정책이 달라진 과거 제안에는 정정 표시를 붙였다.
 
 이 문서는 LiDAR 패키지의 현재 완성도를 단계별로 평가하고, 판단제어 파트에서 보완로직으로
 메우고 있는 증상들의 코드상 원인을 특정한 뒤, 개선안을 학습 필요 여부로 나누어 정리한다.
 
 인지 전체 방향은 [카메라·MGeo·LiDAR 융합 로드맵](./roadmap.md)이 정본이다.
-이 문서는 그 로드맵의 LiDAR 항목을 상세화한 Working Proposal이며, 확정 계약이 아니다.
+이 문서는 그 로드맵의 LiDAR 항목을 상세화한 Working Proposal이다. 현재 판제 공통
+소비 의미는 [L1-A 계약](../../contracts/perception/lidar-planning-consumer-v1.md)에
+설계 기준으로 고정했다. 운영 토픽/메시지 변경이 승인된 것은 아니다.
 판제가 소비하는 메시지 계약을 바꾸는 항목은 [`src/interfaces/`](../../../src/interfaces/README.md)에서
-합의한 뒤에만 승격한다.
+합의한 뒤에만 승격한다. 이 문서의 분석·후보 선택은 판제 패키지 수정이나 팀원 브랜치의
+병합을 의미하지 않는다.
 
 > **2026-09-25 진행 순서 메모:** P5-E 인지 운영 closeout 뒤 LAN2LAN 리허설보다 이 문서의
 > LiDAR/fusion 기준선 계측과 담당자 공동 개선을 먼저 진행한다. 우선순위는 (1) 센서 frame과
@@ -30,7 +35,273 @@ VLP-16/15 Hz 실측과 우리 좌표·message adapter를 먼저 별도 manifest�
 
 ---
 
-## 1. 이 평가의 범위와 한계
+## 0. 현재 기준선과 개선 착수 순서 — 2026-09-26
+
+### 0.1 기준 commit, 담당 경계, 개발 환경
+
+P5-E는 PR #56으로 `main`의 `1ce434d`에 반영됐다. 다음 개발은 LiDAR/fusion 개선이며,
+LAN2LAN 리허설은 패키지·인지 계약과 기능 검증 뒤에 진행한다. HD맵 geometry와 카메라
+차선·주행가능영역은 이미 마련된 입력으로 사용하고, LiDAR는 장애물 검출·추적 품질에 집중한다.
+
+| 비교 대상 | 고정 revision / 작성자 | 이번 판단에서의 역할 |
+|---|---|---|
+| 팀 main | `1ce434d` | P5 완료 후 공통 기준선 |
+| `feature/lidar-structural-surface-filter` | `6435af1`, `sonshiny`(손재호) | 현재 터널 구조물 제거·`/lidar_nogps` 인계 후보 |
+| 같은 브랜치의 선행 commit | `77c6c2c`, `sonshiny` | 순수 PCL 코어·ROS 연결·합성 테스트·bag 평가기 추가 |
+| `feature/lidar-center-drivable-filter` | `003edf1`, `sonshiny` | 이전 도로 overlap 필터 작업 이력 |
+| `feature/unknown-only-drivable-boundary` | `8b3f0b1`, `ysj20030825-lab`(양서준) | 별도 판제 변경; 손재호 브랜치와 메시지 차이 확인 필요 |
+
+손재호의 두 commit은 `1ce434d`에서 직접 분기했다. 코드 검토는 이 revision으로 고정하며
+브랜치 최신화 여부를 실험 기록에 남긴다. 음영구간 판단제어 담당은 사용자 설명상 이강태다.
+서준의 공개 브랜치를 강태의 작업으로 간주하거나, 아직 push되지 않은 작업까지 확인했다고
+해석하지 않는다. 팀원 작업을 분석용 checkout으로 읽고, 개선 후보는 별도 실험에서 비교한다.
+
+서준 브랜치는 `Msg/TrackedObject.msg`와 `asmc_msgs/DetectedObject.msg`에
+`motion_state`와 enum 상수를 추가한다. ROS1 MD5가 달라지므로 소스 일부만 가져오거나
+다른 브랜치의 `devel`을 overlay해 연결하면 통신 호환성이 깨질 수 있다. main/서준의
+현재 MD5와 실제 consumer 요구는 [L1-A 계약](../../contracts/perception/lidar-planning-consumer-v1.md)에
+고정했다. 후속 구현 전 producer/consumer의 새 버전·호환 adapter를 합의한다.
+
+개발 실험은 사용자가 제공한 **26r1**을 기본으로 한다. gRPC, 객체/instance GT와 제어 가능한
+시나리오는 재현·채점에 유용하다. GT는 평가기와 개발용 제어에만 사용하고, 인지 runtime의
+ROI·검출·추적 입력에 섞지 않는다. 최종 수락에는 참가팀 배포 **MolitComp에서 GT 없이**
+동일 센서·토픽 계약으로 실행되는 검증을 포함한다. 26r1에서 성공했다는 이유만으로 그 검증을
+대체하지 않는다.
+
+현재 장비는 i5-14600K(20 logical CPUs), 컨테이너 가용 메모리 약 15 GiB,
+RTX 4060 Ti 8 GiB다. 현재 로컬 실험에서는 MORAI도 같은 GPU 자원을 공유한다.
+5장의 VRAM 분할·25 ms 목표는 당시의 예산 제안이며 측정 결과가 아니다. CPU/GPU 사용량,
+입력 cloud 수 대비 처리 수, capture-to-output 지연을 camera/HD맵과 동시 실행하며 측정한다.
+센서 설정 목표는 15 Hz이고, 손재호의 확인에 따라 완성 cloud 약 12 Hz 입력도 허용한다.
+출력을 억지로 15 Hz로 복제하거나 오래된 관측의 stamp를 갱신하지 않는다.
+
+### 0.2 손재호 인계 메시지와 실제 코드의 일치 여부
+
+인계한 `Main main.launch`에서 `start_velodyne_driver:=false`,
+`enable_sensor_fusion:=true`, `enable_tunnel_experimental_filter:=true`,
+`tunnel_dynamic_roi_enable:=true`, `tunnel_wall_search_min_abs_y_m:=1.75`,
+`tunnel_wall_remove_distance_m:=0.25`를 사용하면 의도한 새 경로가 실행된다.
+
+| 출력 | GPS 정상 | GPS 음영 | 실제 의미 |
+|---|---|---|---|
+| `/last_lidar` | 도로 overlap 필터를 통과한 객체 | 빈 배열 | `Msg/TrackedObjectArray`, `map` 좌표 |
+| `/lidar_nogps` | 빈 배열 | 새 터널 필터와 기존 tracker를 통과한 객체 | 같은 message, 헤더 `velodyne`; `base_link` 아님 |
+| `/lidar/tracked_objects_map` | 전체 객체 | **여전히 map 객체 발행** | GPS 유효성 gate 없는 진단/기존 경로; 음영구간 정본으로 사용 불가 |
+| `/lidar/tunnel/objects` | 비활성/clear | 필터 단계의 객체 | 프레임별 진단 결과; 최종 persistent track 인계 토픽 아님 |
+
+새 코드는 `ROI+Voxel → roll/pitch 수평화 → 천장 컷 → 지면 후보/재적합/시간 재사용 →
+좌우 벽 segment 검증 → 1.0 m clustering → OBB 필터`의 생존 cluster를 기존 tracker에
+넣는다. 따라서 단순 시각화 실험이 아니라 실제 `/lidar_nogps` 출력까지 연결돼 있다.
+GPS 정상에서는 기존 pitch-only 보정·0.3 m 지면 RANSAC·1.5 m clustering 경로가 유지된다.
+
+긍정적인 변경은 코어와 ROS의 분리, 지면 높이·기울기 검사와 refit, 벽의 독립적인 좌우
+추정·지속성·ego-motion 보정, intensity 보존, 보호 객체 검사, 단계별 diagnostics다.
+이 브랜치는 로컬 컨테이너 빌드와 **27개 합성 테스트**를 통과했다. catkin 집계의 54는
+중첩된 JUnit 결과를 중복 집계한 값으로, 독립 테스트 수는 27개다. 실주행 정확도나
+손재호가 보고한 **추가 17 ms**는 이 합성 테스트로 입증되지 않으며 별도 실험 지표로 관리한다.
+
+### 0.3 먼저 해결할 계약·구조 문제
+
+아래 위치는 모두 `6435af1`의 `src/lidar+sensorfusion/src/Main/` 기준이다.
+발생 빈도는 실험으로 판단하되, 코드상 좌표·상태 의미의 차이는 먼저 동결한다.
+
+| 우선 문제 | 소스 근거 | 개선 시 지켜야 할 조건 |
+|---|---|---|
+| 수평화된 좌표를 raw sensor frame으로 표기 | `TunnelFilterCore.hpp:10`, `TunnelFilterCore.cpp:502`, `PlannerObjectRosPublisher.cpp:44` | 실제 처리 frame을 명시하고 inverse-leveling과 sensor→base extrinsic을 한 번만 적용 |
+| 새 roll 보정과 map adapter 불일치 | `PlannerObjectAdapter.cpp:57`은 pitch만 역보정 | roll/pitch가 모두 있는 synthetic roundtrip으로 정상·터널 경로 검증 |
+| mount 높이와 실제 노면 높이를 혼동 | `TunnelFilterCore.hpp:79`의 예상 지면 `-1.45`; `setting.yaml:14`의 mount `+1.45` | rear-axle 원점의 노면 상대 높이를 포함해 ground prior·fallback·height cut을 검증 |
+| 무효 GPS가 map 출력과 로컬 객체 생성에 남음 | `PlannerObjectRosPublisher.cpp:449`는 GPS gate보다 먼저 발행; `PlannerObjectAdapter.cpp:211`은 map 유한성 실패 시 객체 제외 | 로컬 geometry를 map 변환 실패와 분리; map projection은 fresh pose가 있을 때만 허용 |
+| GPS dropout/단발 불량에서 mode 전환 불안정 | `Parser.cpp:278`은 status/zero만 검사, latch는 invalid 3회 뒤 설정 | age·finite·range 검사; 진입·복구·미수신 정책과 상태를 명시 |
+| 정상↔음영에서 ID와 운동 이력 초기화 | `LidarProcess.cpp:384`에서 tracker queue clear | 모드 전환을 메시지 routing과 내부 tracker 좌표 변경으로 혼동하지 않음 |
+| 시간 정렬과 ego-motion 정보 부족 | `main.cpp:358`의 latest buffer 복사, `DeadReckoning.cpp:4`의 단순 memcpy | cloud 관측 시각의 pose/IMU/속도, 최대 age와 gap을 함께 기록 |
+| GPS 음영인데 motion classifier가 ENU 이동량 사용 | `MotionClassifier.cpp:358` 및 `FrameFilter.cpp:46` | map evidence 유효성을 별도 gate하고 local 상대/절대속도의 의미를 명시 |
+| fusion ON/OFF가 위치 자체를 바꿈 | `FusionLiDAR.cpp:127`의 CoreX/Y/Z AABB 덮어쓰기 | 클래스 실험에서 기하/추적 추정치를 동일하게 유지 |
+
+현재 LiDAR mount는 rear-axle 기준 `(0.80, 0, 1.45)m`이다(`setting.yaml:10`).
+`/lidar_nogps`를 `base_link`라고 이름만 바꾸면 0.8 m 종방향 offset이 빠진다.
+기존 출력에는 roll/pitch 수평화까지 들어 있으므로 단순 static TF만 적용하는 것으로도
+충분하지 않다. 이 차이를 확인한 상태에서 legacy output은 호환 adapter로 보존한다.
+
+**장착 높이 1.45 m는 센서와 노면 사이 높이가 아니다.** `base_link`는 rear-axle 원점이며
+노면 위에 있다. 기존 카메라 보정 파일
+[`cameras_v2.yaml`](../../../src/asmc_perception/config/bev/cameras_v2.yaml)은 당시 LiDAR fit의
+base-link 노면 높이 `-0.354 m`/`-0.346 m`를 기록하고, v2/v3 카메라 설정은 `-0.35 m`를
+명시적으로 사용한다. 수평·무회전 근사에서는 `z_ground_sensor = z_ground_base - 1.45`이므로
+약 `-1.80 m`가 되며, `-1.45 m`를 바로 지면으로 놓는 가정과 다르다.
+
+L1-A의 예비 offline 첫 프레임에서 터널 기준 지면은 약 `-1.8376 m`, 기존 RANSAC fit은
+약 `-1.8403 m`였다. 이는 한 프레임의 관측이며 전 구간의 일정 offset이나 slope를 확정하는
+값이 아니다. 동시각 자세·노면 위치·차량 높이와 여러 장면의 plane 분포를 보고 prior를 정한다.
+이 프레임의 평면 원점 높이를 예로 들면 다음 차이가 생긴다.
+
+| 현재 상수/정책 | 예비 지면 높이 기준 의미 | 확인할 실패 모드 |
+|---|---|---|
+| 첫 유효 fit 전 fallback `-1.45+0.20=-1.25 m` 이하 제거 | 노면에서 약 `0.59 m` 높이까지 제거 | 낮은 장애물 점을 지면으로 버릴 가능성 |
+| `CoreZ<=-1.3` ground-noise 분류 | centroid가 노면 위 약 `0.54 m` 이하여도 noise 후보 | 기존 문서의 약15cm 기준 설명보다 넓은 영향; 낮은 물체/차량 밑단 검증 |
+| ground 후보/원점 높이 하한 `-1.90 m` | 예비 평면보다 아래 여유가 약 `6 cm` | 경사·자세·차량 높이 변화로 support가 잘리거나 fit 거부 |
+| 선제 천장 cut `z_sensor>2.55 m` | 노면 기준 약 `4.39 m` | sensor-relative 컷과 road-relative OBB 필터의 서로 다른 높이 의미 |
+
+fallback은 **이전에 유효 fit이 없을 때** 위 예상 높이를 사용하며, 유효 이력이 있으면 마지막
+높이를 재사용한다(`TunnelFilterCore.cpp:784`). 성공한 fit을 매번 `-1.45 m`로 덮어쓰는
+코드는 아니다. 천장 컷도 측정 offset만큼 일괄 낮추지 않는다. 노면 상대 높이·천장 구조·
+대형 차량 보존을 함께 확인한다. 이 높이 계약을 후속 낮은 장애물/경사/높은 차량 회귀에 넣는다.
+
+`DeadReckoning.cpp`라는 파일명이 강건한 no-GPS odometry 구현을 뜻하지 않는다.
+**연속 `odom` 좌표계에서 추적하고 fresh pose로 map에 투영하는 구조는 제안**이며,
+음영구간에서 사용할 wheel/CAN 속도·IMU yaw의 가용성, 지연, drift, simulator release별
+제약을 먼저 확인해야 한다. 해당 근거가 부족하면 ego-motion을 보상한 local tracking과
+품질 상태를 우선 제공하고, 검증되지 않은 절대속도를 만들어내지 않는다.
+
+### 0.4 벽과 장애물이 함께 남는 이유와 ROI 설계
+
+손재호의 `dynamic_roi`는 GPS 모드에 따라 `x[-30,40], y[-10,10], z[-2,3]` 박스를
+추가 적용하는 기능이다. HD맵·카메라 인지 결과로 경계를 만드는 기능은 아직 없다.
+일반도로의 후단 필터도 `main.launch:88`의 원태 구 bake를 읽으므로, 완성된 operational
+HD맵 polygon과 동일한 영역을 사용한다고 해석하면 안 된다.
+
+벽 잔여점에는 다음과 같은 구조적 상호작용이 있다.
+
+1. `TunnelFilterRos.cpp:203`은 YOLO 박스를 10%+8px 확대하고, 가까운 거리 분위수를
+   기준으로 차량은 6 m 깊이까지 보호한다. 같은 박스·깊이의 벽점도 보호될 수 있다.
+2. 보호점은 벽 적합과 제거에서 제외된다(`TunnelFilterCore.cpp:1004,1274`). 이후
+   1.0 m clustering이 벽 잔여점과 차량을 합치면 보호 비율을 충족한 큰 OBB도 남을 수 있다.
+3. YOLO timestamp가 50 ms 안에 맞지 않으면 전방 FOV·30 m 안의 점을 ambiguous로
+   남긴다. 보호 기능을 명시적으로 꺼도 `ComputeProtection`이 ambiguous를 계산하므로
+   LiDAR-only 실험에 같은 fallback이 남는다(`TunnelFilterRos.cpp:981`).
+
+따라서 벽 제거 거리만 키우는 실험으로 결론을 내리지 않는다. YOLO available/valid-empty/
+stale/disabled, protected/ambiguous 점 수, 차량에 붙은 벽 비율과 차량점 보존률을 함께 본다.
+
+새 ROI는 아래 원칙으로 설계한다.
+
+- GPS 정상: 현재 operational HD맵의 차로·주행영역과 fresh pose로 **여유를 둔 관심 영역**을
+  구성한다. 도로 진입 차량·횡단 객체·경계에 걸친 물체의 관측과 기존 track을 보존한다.
+- 음영구간: `/perception/lane/boundary_family`에서 support·confidence·유효 구간을
+  확인한 외곽 경계 사이의 envelope를 사용하고, 위치/피팅 오차를 반영한 margin을 둔다.
+  단일 프레임 변화로 ROI가 급격히 수축하지 않도록 시간 정책을 둔다.
+- 카메라 drivable semantic은 장애물 픽셀을 non-drivable로 만들 수 있다. **semantic mask의
+  구멍을 LiDAR 장애물 삭제 마스크로 사용하지 않는다.** 경계 기반 corridor와 coverage,
+  ground/support 증거로 사용하고, 장애물의 footprint와 수직 점들은 유지한다.
+- 카메라 coverage 밖, 경계 누락, 낮은 confidence, stale 입력은 unknown이다.
+  지원하지 않는 구간을 직선 외삽해 확정 ROI로 만들거나 free로 간주하지 않는다.
+  검증된 넓은 fallback ROI로 복귀하며 상태를 진단한다.
+- 지면 높이와 유효 외곽 경계로 벽/천장 후보를 줄이되, 높이·평면 구조 검증과 실제
+  차량·보행자 보존 검사를 함께 둔다. 정적 장애물도 추적 실패만으로 사라지면 안 된다.
+
+### 0.5 판제에 넘길 정보와 고주로 차로 귀속
+
+LiDAR는 관측 시각의 장애물 위치·footprint/OBB·속도 의미·ID·추적 품질을 일관되게 만든다.
+GPS 정상 소비자는 검증된 map projection을 사용할 수 있고, 음영구간 소비자는 rear-axle
+`base_link` 기준 정보를 사용할 수 있어야 한다. 내부 tracker를 GPS 상태마다 바꾸거나
+map→body→map 변환을 반복할 필요가 없는 의미를 [소비 계약](../../contracts/perception/lidar-planning-consumer-v1.md)에
+설계 기준으로 고정했으며, 구현은 다음 단위에서 검증한다.
+
+현재 `/last_lidar`, `/lidar_nogps`, `Msg/*`는 담당자 인계 경계다. 새 canonical candidate와
+legacy adapter를 분리하고, field·MD5·stamp·frame·속도 정의와 active-mode 상태를 명시한다.
+토픽 삭제·message 필드 추가·판제 fallback 변경은 이 문서만으로 진행하지 않는다.
+특히 빈 배열은 **정상 관측 결과 객체가 없음**, 무발행/invalid는 **센서 또는 처리 상태 문제**다.
+둘을 새 stamp의 빈 배열로 합치면 장애물이 사라진 것처럼 보인다.
+
+고주로 차량의 차로 귀속은 `Lane.id/link_id/lane_number`와 객체 footprint의 겹침을 활용한다.
+중심점 포함 여부 하나로 확정하지 않고 OBB footprint-overlap, 인접 차로 후보, 진행 방향,
+이전 귀속과 hysteresis를 함께 평가한다. 차선을 밟거나 차로 변경 중이면 복수 후보/ambiguous
+상태를 남긴다. 차로 번호는 HD맵의 competition-driving scope를 따르고, A433 연결 버스전용
+차로처럼 대회 주행 밖의 차로를 단순 좌우 순번으로 다시 번호 매기지 않는다.
+객체가 주행영역 밖이라는 사실과 감지할 필요가 없다는 판단은 분리한다.
+
+gap/TTC·차선변경 실행 결정은 판제 책임이다. 기존 판제의 projection 계층과 중복되지 않도록
+인지가 제공할 차로 귀속 진단/계약과 판제가 계산할 feature를 먼저 확인한다.
+
+### 0.6 새 실험 기록과 기존 문헌의 사용 범위
+
+새 실험 기록은 source commit, 실행 명령, 센서/profile SHA, bag SHA, 입력/출력 count,
+frame/MD5/stamp audit, CPU/GPU·지연 percentile, GT/라벨 가용 여부를 각각 남긴다.
+runtime smoke, 합성 테스트, replay 구조물 억제, GT 정확도를 서로 같은 수락 결과로
+표현하지 않는다. Live/replay 수치와 미검증 범위는 [L1-A 검증 보고서](./lidar-l1a-validation-20260926.md)와
+[기계 판독 기준선](../../../config/baselines/lidar_l1a_20260926.yaml)에서 관리하고,
+이 문서에는 결론과 착수 gate만 반영한다.
+
+외부 레포의 revision·license·추가/유지/보류 근거는 워크스페이스 문서
+`docs/papers/lidar-reference-readiness-20260926.md`에서 관리한다(팀 레포 밖).
+현재 참고 checkout은 build dependency가 아니며, 필요한 후보만 isolated 환경에서 실행한다.
+1~13장의 다른 센서·CPU·데이터셋 FPS를 우리 VLP-16 점 수 비율로 나누어 runtime 성능으로
+간주하지 않는다. 예전의 `TRAVEL 제외`, `SimpleTrack 코드 사용 불가`, 고정 DNN VRAM
+예산 등은 당시 비교 후보 선정 기록이며, 동일 입력·환경의 실험 없이 절대 결론으로 쓰지 않는다.
+
+학습은 라벨·시간 축·sensor extrinsic 감사와 holdout scenario 분리 후 착수한다.
+Capture 자료는 검증된 단일 프레임 검출 실험에 먼저 쓰고, 연속 tracking·속도 평가는
+실제 시뮬 경과시간과 동기화가 확인된 자료를 사용한다. backbone 교체는 허용된 연구 후보지만,
+불명확한 frame/stamp 계약을 가리기 위해 큰 모델을 먼저 도입하지 않는다.
+
+### 0.7 실행할 개발 단계와 완료 gate
+
+| 단계 | 범위 | 완료 조건 |
+|---|---|---|
+| **L1-A 기준선 마감** | main/손재호/서준 consumer·센서·자료 감사, isolated build/test, live/offline 계측 | [검증 보고서](./lidar-l1a-validation-20260926.md), [manifest](../../../config/baselines/lidar_l1a_20260926.yaml), [소비 계약](../../contracts/perception/lidar-planning-consumer-v1.md)로 재현 가능. 전체 미션 수락은 아님 |
+| **L1-B1: 좌표·시간 코어** | sensor/leveled/base_link/map 정합, 관측 stamp·processing·receipt 분리 | 격리 구현·시험 완료, [결과와 한계](./lidar-l1b1-validation-20260927.md) 검토 대기. 운영 연결·연속 주행 수락은 미완료 |
+| **다음 단위 2~3: GPS 전환·camera 매칭** | stale/NaN/점프·복구, 50ms 매칭 실패와 missing/empty/OFF | 연속 입력 및 동일 scan deterministic replay로 수락; 이전 단위 통과 전 기본 경로 교체 금지 |
+| **L2 ROI·ground·clustering 비교** | boundary-family envelope와 fallback, 기존/linefit/Patchwork++ 등 지면 후보, range-adaptive/range-image clustering | 동일 bag에서 가까운 차량/낮은 장애물 recall 악화 없이 벽·천장 FP 감소; count·지연·자원 보고 |
+| **L3 추적 안정화** | ego-motion 품질에 맞는 상태 좌표, 관측 앵커·연관·생애주기·불확실도 | 정상↔음영 ID 연속성, 정지/기동 객체 속도오차, 가림 후 복귀, 고주로 p95 지연 검증 |
+| **L4 HD맵 차로 귀속·선택적 퓨전** | footprint overlap/ambiguity, YOLO 선택적 semantic 보조, 판제 인계 | 차로 경계/변경·진입 객체 유지, 클래스 없이도 장애물 보존, consumer joint replay |
+| **L5 필요 시 학습 후보** | capture 라벨 검증, 단일-sweep 경량 검출 baseline, 별도 training 컨테이너 | holdout 개선 및 동시 runtime 예산 충족; 기하 baseline과 OOD/unknown 비교 |
+| **후속 배포** | MolitComp no-GT 수락, 담당자 검토/PR, LAN2LAN 리허설 | GT 의존 없는 실행·rollback·네트워크 현장 검증 |
+
+좌표·시간 및 GPS 전환 계약을 통과하기 전에는 L2 알고리즘을 기본 경로로 교체하지 않는다. 판제의 정지/보수 동작을
+완화하거나 오래된 관측을 fresh하게 위장해서 성능 지표를 높이지 않는다. 기존 안전 동작의
+변경은 degraded 상태·관측 age·unknown 처리와 함께 판제 담당자가 결정한다.
+
+### 0.8 L1-B1 결과와 운동보정의 경계 — 2026-09-27
+
+지면 제거→전처리→ROI→객체→추적의 품질을 개선하되 같은 관측의 좌표·시간을 먼저
+고정해야 비교가 공정하다. 이번에는 **독립 C++/Eigen 코어**만 추가했다. 결과·재실행·SHA는
+[L1-B1 보고서](./lidar-l1b1-validation-20260927.md)와 [manifest](../../../config/baselines/lidar_l1b1_20260927.yaml)에 있다.
+운영 패키지·판제·메시지는 수정하지 않았다.
+
+| 기능 | 의미·필요 정보 | 이번 범위 |
+|---|---|---|
+| 장착 변환 | sensor를 rear-axle body frame으로 옮기는 고정 회전·이동 | 코어 구현. GPS 안테나 lever arm과 별개 |
+| roll/pitch 수평화 | 다이브/스쿼트에 따른 pitch·롤을 중력 기준으로 표현. 상하 이동 자체나 스캔 왜곡은 해결하지 않음 | 이미 적용한 행렬을 역변환해 body로 복원. 새 지면 처리 미연결 |
+| 스캔 deskew | 점마다 다른 취득 시각·차량 pose로 한 기준 시각에 정렬 | 보류. 현재 XYZI에는 점별 time/ring이 없고 MORAI 생성 방식 미확인 |
+| 프레임 간 자차 운동보상 | 연속 scan/track 관측을 같은 시간·상태 기준으로 비교 | 후속 GPS/twist/추적 단위. 이번 단일 관측 변환과 다름 |
+
+`base_link`는 차체와 함께 기울어진다. 수평화 좌표를 `base_link`라고 부르면 카메라·맵·GT와
+어긋난다. `p_base = T_base_sensor · L_applied⁻¹ · p_leveled`,
+`p_map = T_map_base(t_obs) · p_base`이며 raw에는 `L⁻¹`을 쓰지 않는다.
+중심과 8개 코너에 동일 변환을 적용하고 3D 코너를 yaw-only 박스로 재생성하지 않는다.
+GT도 API별 sensor/GPS/차량 중심·rear-axle 원점을 확인해 평가 기준으로 변환해야 한다.
+이번에 gRPC 중심 원점을 추정하거나 비동기 GT를 동기 정답으로 사용하지 않았다.
+
+강체 변환은 점 수·intensity를 줄이지 않는다. 부동소수 반올림은 있지만 voxel처럼 여러
+점을 대표값으로 합치는 정보 축약은 아니다. 5개 raw cloud와 100개 이미 ROI 처리된
+Capture cloud의 count/intensity·roundtrip을 검사했다. 원본 2,562 scan은 stamp/도착 순서
+검사 대상이지 전부의 XYZ 성능 평가가 아니다. 기존 **약 0.35 ms** 자세 보정은 ROI+voxel
+이후 계측이며 raw 전체 deskew 비용으로 일반화하지 않는다.
+
+카메라와 LiDAR의 시간·자세 이력 공유는 유용하다. 촬영 시각의 BEV 지면 투영은 별도
+검증하며 IMU만으로 노면 경사·차체 상하 이동을 모두 알 수는 없다. 동시각 센서 간 고정
+extrinsic 투영에 전역 자세를 중복 적용하지 않는다.
+
+기존 adapter는 pitch-only 합성 입력에서는 일치하지만 roll 추가 시 이 fixture에서 중심
+약 **0.250 m**, 코너 최대 **0.387 m** 차이가 난다. 후보 double 합성 오차는 `3.56e-15`
+이하다. 코드 원인의 재현이지 전 구간 주행 오차 측정은 아니다. 실제 bag에 당시 수평화
+행렬/pose snapshot이 없어 정확한 legacy 전후 재현이라고 하지 않는다.
+
+기존 24개 + Autoware distortion corrector/LIO-SAM 2개를 고정 SHA로 목록화하고
+열람·주요 입출력 코드 검사·빌드·실험을 분리했다. 새 2개는 sparse checkout 참고용이며
+ROS2/SLAM 의존성이 아니다. 지면 첫 추가 비교는 **linefit**, Patchwork++는 동일 조건
+재검증, SimpleTrack은 연관/생애주기 참고다. GroundGrid는 유효 odometry, DipG-Seg는
+VLP16 투영 검증이 선행이다. 학습 검출기/MOS는 후순위다.
+
+여기서 사용자 검토를 받는다. 다음 단위는 GPS 유효성·출력 전환과 추적 상태 분리이며,
+기존 planner 입력을 자동 교체하지 않는다.
+
+---
+
+## 1. 이전 평가의 범위와 한계 — 2026-09-21 기록
+
+> 아래 1~13장의 "현재"는 최초 소스 분석 시점을 가리킨다. 일반도로/main 계열 결함의
+> 근거와 후보 설계의 상세 논의는 보존하지만, 현재 실행 순서와 승격 기준은 0장을 따른다.
+> 소스 감사에서 도출한 원인 가설과 타 데이터셋 논문 수치를 대회 시나리오의 실측으로 읽지 않는다.
 
 - **방법:** 소스 정독과 문헌 조사. **실행·계측은 하지 않았다.**
 - `main.launch`의 `benchmark_lidar_pipeline`으로 단계별 계측 기능이 이미 구현되어 있으나
@@ -147,6 +418,11 @@ LiDAR 장착 높이가 1.45 m이므로 지면은 센서 좌표로 약 -1.45 m다
 `PlannerObjectAdapter`의 `IsNoise()`가 판제로 내보내지 않는다. "정적 장애물이 사라진다"의
 직접 원인이다.
 
+> **2026-09-26 정정:** 위 높이 환산은 mount 기준 원점과 노면을 같다고 가정한 초판의 오류다.
+> 1.45 m는 rear-axle 기준 mount이고 노면은 base_link 아래다. 0.3의 기존 카메라 ground
+> calibration과 예비 LiDAR fit을 참조한다. `CoreZ` 하드컷은 여전히 문제 후보지만 실제 삭제
+> 높이는 지면 fit·객체 형상·후단 클래스 갱신에 따라 측정해야 한다.
+
 ### 4.2 장애물 속도가 부정확하다
 
 **(a) 절대속도 공식이 종방향 1차원 가정이다.**
@@ -232,7 +508,10 @@ RANSAC, 클러스터링, 트래킹, 퓨전을 **전부 수행한 뒤**에 적용
 
 ---
 
-## 5. 실행 환경 전제
+## 5. 이전 실행 환경 예산 가정
+
+> **2026-09-26 정정:** 아래는 시뮬레이터가 별도 PC일 때의 배포 가정과 미측정 예산이다.
+> 현재 로컬 26r1은 GPU를 함께 사용하며, 실제 자원 조건은 0.1과 L1-A 보고서를 따른다.
 
 대회 현장과 개발 환경 모두 **시뮬레이터는 별도 PC에서 구동하고 LAN으로 연결**한다.
 따라서 이 PC의 자원은 전부 우리 코드 실행에 쓴다.
@@ -364,9 +643,12 @@ GT 입력에서는 변환 실패가 곧 소프트웨어 버그이므로 정지�
 (`min_xy_area = 1e-6`, `duplicate_epsilon = 1e-6`). **그러나 ID 유일성 검사는 어느 쪽에도
 없다.** 그리고 어떤 방어도 100 %가 아니므로, "한 번 실패 = 급정지"라는 결합 자체를 끊어야 한다.
 
-#### 6.0.4 제안: 판제 측 변경 3가지 (작지만 필수)
+#### 6.0.4 과거 제안: 판제 측 변경 3가지 — 자동 적용하지 않음
 
-LiDAR 품질 개선과 **독립적으로** 필요하다. 셋 다 국소 변경이다.
+> **2026-09-26 정정:** 아래 P1~P3는 당시 제안이며 판제 담당자의 확정 정책이 아니다.
+> 특히 malformed 객체를 조용히 버리거나 stale 목록을 재사용하면서 정상 입력으로 표시하면
+> 실제 장애물을 잃을 수 있다. 오류 종류·관측 age·unknown/degraded 상태와 소비자 동작을
+> 먼저 합의한다. fail-closed 정지는 인지 통합이 임의로 완화할 대상이 아니다.
 
 | ID | 변경 | 위치 | 이유 |
 |---|---|---|---|
@@ -374,8 +656,9 @@ LiDAR 품질 개선과 **독립적으로** 필요하다. 셋 다 국소 변경�
 | **P2** | `yaw_rate`를 heading 이력이 아니라 **속도 벡터에서 유도**한다(속도 임계 이상일 때). 저속에서는 0으로 두고 CTRV 대신 직선 예측 | `MergeGapEvaluator.cpp` 및 yaw_rate 추정부 | 6.0.3의 4번. 잡음 증폭 차단 |
 | **P3** | AVOID 대상과 FOLLOW leader를 **ID 단독이 아니라 (ID, 위치·속도 근접성)** 으로 재획득. ID가 바뀌어도 같은 물체면 이어서 추적 | `AvoidTargetResolver.cpp` | 6.0.3의 2번. ID 이탈 내성 |
 
-**P1은 타협 대상이 아니다.** 나머지 개선을 아무리 잘해도, 한 프레임의 객체 하나가 급정지를
-일으키는 구조가 남아 있으면 대회 주행이 성립하지 않는다.
+초판은 P1을 필수 완화로 단정했으나 이 권고는 철회한다. 변환 거부율을 낮추는 producer
+품질 개선은 진행하고, consumer의 정지·grace·부분 수락 정책은 오류가 가리는 위험까지
+측정한 뒤 판제 오너와 결정한다. P2/P3 또한 실제 입력 계약과 회귀 검증이 필요하다.
 
 #### 6.0.5 제안: 미관측 영역 전달 — 이번 전환의 가장 큰 안전 간극
 
@@ -390,15 +673,19 @@ LiDAR 품질 개선과 **독립적으로** 필요하다. 셋 다 국소 변경�
 | (a) 3-state 점유 격자 | `nav_msgs/OccupancyGrid`로 free / occupied / unknown BEV 발행 | 신규 토픽 + 판제가 격자 샘플링 로직 신설 |
 | **(b) 차로별 관측 지평 (권장)** | **각 차로 중심선을 따라 "가림 없이 관측된 최대 거리"** 하나를 발행 | 신규 토픽 1개 + 판제는 속도 상한 한 줄 |
 
-**(b)를 권하는 이유.**
+> **2026-09-26 보완:** 아래 관측 지평은 연구 후보다. 가장 먼 return이나 camera coverage가
+> 그 사이의 자유공간을 보장하지 않는다. 빔 사이·가림·높이·센서 최소 검출 크기와 방향별
+> support를 고려해야 하고, 스칼라 축약이 항상 보수적으로 틀린다는 보장은 없다.
+
+**당시 (b)를 권한 이유.**
 
 - **Frenet과 자연스럽게 맞는다.** 결과가 차로별 스칼라 `s_observed` 하나다. 판제는
   "제동거리가 관측거리를 넘지 않도록" 속도를 제한하면 된다. 고전적인 *assured clear distance*
   원칙이고, 판제 변경은 속도 상한 계산 한 곳이다.
-- **LiDAR 쪽 구현이 매우 단순하다.** range-image(6.3)를 쓰면 방위각별 최대 관측 거리가
-  **이미 계산되어 있다.** 그걸 HD Map 차로 중심선 샘플에 투영하면 끝이다. 별도 알고리즘이 없다.
-- **격자보다 강건하다.** 격자는 해상도·누적·감쇠 파라미터가 많고 튜닝 표면이 넓다.
-  스칼라는 틀려도 보수적인 방향(속도 낮춤)으로만 틀린다.
+- range-image 최대 return을 차로에 투영하는 구상은 간단하지만 중간 free-space의 증명이
+  아니다. 가림·빔 사이·검출 크기 검증이 추가로 필요하다(2026-09-27 정정).
+- 스칼라 과대 추정은 안전하지 않다. 격자보다 항상 강건하거나 보수적이라는 종전 주장은
+  철회한다. 검증된 연속 관측 구간을 어떻게 축약할지 비교해야 한다.
 - **정적 장애물 표현과 독립이다.** 6.4의 정적 객체 발행과 겹치지 않고 보완한다.
 
 메시지는 기존 `asmc_msgs` 스타일로 작게 잡는다.
@@ -437,14 +724,15 @@ runtime:
 - `PlannerObjectRosPublisher::Publish()`는 `stamp == last_stamp_`이면 **발행하지 않는다**
 - 즉 UDP 유실, 중복 프레임, WSL 스케줄링 지터가 그대로 미발행으로 이어진다
 
-> **조치 L1 (LiDAR 측, 필수): 매 주기 heartbeat를 발행한다.**
-> 유효 객체가 없어도 **빈 배열을 유효한 stamp로 발행**한다. 그래야 "관측 결과 아무것도
-> 없음"과 "인지가 죽음"이 구별된다. 현재는 둘 다 미발행으로 같아 보인다.
+> **2026-09-26 정정 — 조치 L1:** 새 유효 cloud를 처리해 객체가 없을 때만 해당 **관측
+> stamp**의 빈 배열을 발행한다. 센서 미수신·invalid cloud·처리 실패를 새 stamp의 빈 배열로
+> 바꾸지 않는다. heartbeat가 필요하면 별도 health/diagnostics로 last-observation age와
+> 실패 이유를 발행한다. 기존 객체의 stamp를 반복 갱신해 timeout을 피하는 방안은 채택하지 않는다.
 
-> **조치 L2 (LiDAR 측, 필수): 5장의 25 ms 목표는 선택이 아니라 제약이다.**
-> 파이프라인이 0.30 s를 넘기는 순간 **주행이 정지한다.** M-detector(약 14 ms 추정),
-> 이중 임계 2단계 연관, 3D 검출기를 얹을 때마다 이 예산을 확인한다. 10장 계측에
-> **p99 지연**을 반드시 포함한다. 평균이 아니라 최악값이 정지를 만든다.
+> **2026-09-26 정정 — 조치 L2:** 25 ms는 제안 목표이고 0.30 s는 당시 consumer timeout이다.
+> 알고리즘 시간·scan age·queue 지연·발행 간격은 다른 값이므로 end-to-end p95/p99와
+> consumer age를 따로 측정한다. 타 논문 점 수를 나눈 M-detector 약14 ms 추정 등을
+> 예산이 충족됐다는 근거로 사용하지 않는다.
 
 **(2) 객체 위치에 지연 보상이 없다.**
 
@@ -457,13 +745,13 @@ runtime:
 | GT 어댑터 | 거의 0 | 무시 가능 |
 | LiDAR | 스캔 주기 + 파이프라인 = **60 ~ 100 ms 추정** | **1.7 ~ 2.8 m** |
 
-> **조치 L3 (LiDAR 측, 권장): 발행 시점으로 전방 예측해서 내보낸다.**
-> Kalman 상태가 이미 있으므로 `dt = publish_time - lidar_stamp`만큼 등속 전파하면 된다.
-> **판제 수정 0이고 몇 줄이다.** 단 `header.stamp`는 예측한 시각으로 정직하게 적는다.
-> 지연을 먼저 계측해 실제로 의미 있는 크기인지 확인한 뒤 적용한다.
+> **2026-09-26 정정 — 조치 L3:** publish-time 예측은 자동 적용하지 않는다. 관측 시각과
+> state-estimate 시각, 예측 horizon·uncertainty·실측 여부를 구분하는 계약이 필요하다.
+> OBB corner·center·속도도 같은 시각으로 변환해야 한다. 기존 message가 이를 표현하지
+> 못하면 원본 관측 stamp를 유지하고 consumer와 보상 책임을 먼저 정한다.
 
-이 세 가지(L1 ~ L3)는 **GT를 쓰는 동안에는 절대 드러나지 않는다.** 전환 후 원인 불명의
-급정지나 미세한 추종 오차로 나타나므로, 전환 전에 미리 넣어두는 편이 훨씬 싸다.
+이 세 항목의 현행 수락 조건은 0.7의 L1-B로 묶는다. GT 실행에서도 지연·누락 문제는
+발생할 수 있으며, 센서 전환 실험에서 드러난 문제를 관측 freshness 위장으로 숨기지 않는다.
 
 #### 6.0.7 통합 작업 순서
 
@@ -476,8 +764,9 @@ runtime:
 | I5 | **P3** ID 이탈 내성 | 판제 | 필요 |
 | I6 | 관측 지평 (6.0.5 (b)) | 양쪽 | 필요, 계약 합의 |
 
-**I1은 판제 수정 없이 오늘 가능하다.** `MakePlannerObjects()`가 만드는 `PlannerObject`는
-필요한 값을 이미 전부 갖고 있다. 직렬화 함수 하나만 추가하면 된다.
+> **2026-09-26 정정:** I1은 직렬화만의 문제가 아니다. frame·속도·yaw-rate·ID·관측
+> 유효성 의미와 branch별 MD5가 일치하는 adapter 계약 및 replay를 먼저 통과해야 한다.
+> 아래 I/P 순서는 과거 제안이며 현재 순서는 L1-A→L1-B→L2 이후다.
 
 **I1을 먼저 하면 평가 기준선이 공짜로 생긴다.** GT 어댑터를 지우지 말고 남겨두면 같은 bag에서
 정답값 대비 판제 거동을 직접 비교할 수 있다. 10장의 계측과 8.6의 결정 실험에 그대로 쓴다.
@@ -485,16 +774,21 @@ runtime:
 
 ### 6.1 ROI를 파이프라인 맨 앞으로 (HD Map ∪ 카메라 BEV)
 
-비용 대비 효과가 가장 크다. 재료가 이미 전부 있다.
+> **2026-09-26 수정:** 아래 단순 OR mask와 기대효과는 당시 가설이다. 이를 점 단위 hard
+> 삭제식으로 바로 구현하지 않는다. 카메라 non-drivable hole은 바로 감지할 장애물일 수
+> 있고, union도 두 입력이 함께 누락한 영역은 복구하지 못한다. 현재 설계는 0.4의
+> boundary envelope·margin·support/age gate·unknown/fallback·도로 진입 객체 보존이다.
+
+당시 이용 가능한 입력과 제안식을 비교 기록으로 남긴다.
 
 | 재료 | 위치 | 형식 |
 |---|---|---|
-| 래스터 도로 마스크 | `src/link_node/out/road_mask.png` | 5 px/m = 0.2 m/cell, map frame |
+| 구 bake 래스터 도로 마스크 | 당시 `src/link_node/out/road_mask.png`; 현재 `src/asmc_hd_map/development/won_tae_link_node/out/road_mask.png` | 5 px/m = 0.2 m/cell, map frame; 최종 operational geometry와 구분 |
 | 벡터 차로·주행영역 | `/hd_map/global/*` (`asmc_msgs/DrivableArea`, `Lane`) | map frame 폴리곤 |
 | 카메라 BEV 주행가능확률 | `asmc_perception` 정본 `/perception/bev/camera/drivable_probability` | base_link, 0.1 m/cell |
-| 차선 경계 | `/perception/lane/boundaries`, `boundary_family` | 음영구간 포함 |
+| 차선 경계 | 현행 정본 `/perception/lane/boundary_family` | 음영구간 포함; legacy 개별 관측은 기본 OFF |
 
-**제안 구조.** `Roi()` 내부에서 점 단위 마스크 조회를 수행한다.
+**초기 제안식 — 아래 식만으로 장애물 삭제 여부를 결정하지 않는다.**
 
 ```text
 keep(p) = HDMap_drivable(p, margin)  OR  CameraBEV_drivable(p)  OR  NearFieldBand(p)
@@ -527,7 +821,8 @@ GPS 헤딩 오차 1도면 50 m 지점에서 0.9 m가 밀린다. 현재 `drivable
 
 단일 평면 RANSAC을 **동심 구역 모델** 기반으로 바꾸는 것이 정석이다.
 
-**Patchwork++** (IROS 2022, KAIST) 를 1순위로 제안한다.
+당시에는 **Patchwork++** (IROS 2022, KAIST)를 1순위로 제안했다. 현재 첫 추가 비교는
+linefit이며 아래 설계 장점과 Patchwork++ 기존 결과를 동일 조건으로 재검증한다(0.8).
 
 - 거리·방위별 구역마다 개별 평면을 적합 → 종/횡 경사, 언덕, 캔트 모두 대응
 - **A-GLE**: 직전 프레임 결과로 파라미터를 자동 적응 (튜닝 노동 제거)
@@ -548,9 +843,9 @@ GPS 헤딩 오차 1도면 50 m 지점에서 0.9 m가 밀린다. 현재 `drivable
 | **RANSAC (현재 방식)** | **15.43 Hz** | **벤치마크 중 가장 느린 축** |
 | CascadedSeg | 13.07 Hz | |
 
-**현재의 단일 평면 RANSAC은 비교 대상 중 가장 느리면서 가장 부정확하다.** Patchwork++로
-바꾸면 정확도와 속도를 동시에 얻는다. 64ch에서 54.85 Hz면 점 수가 약 1/6인 VLP-16에서는
-훨씬 여유롭다.
+**2026-09-27 정정:** 표의 RANSAC은 인용 논문의 구현/64ch 조건이지 우리 실행 속도가 아니다.
+Patchwork++로 정확도·속도가 함께 개선된다고 확정하지 않는다. L1-A에서는 낮은 장애물
+보존과 보행자 보존의 상충이 있었다. 점 수 1/6으로 실행시간을 환산하지 않는다.
 
 **대안:** `linefit_ground_segmentation`은 ROS1 네이티브이고 의존성이 더 가볍다. 위 표에서
 가장 빠르며, 논문(Himmelsbach, IV 2010)의 핵심은 **국소 직선 적합으로 경사 지형을 다루는
@@ -584,11 +879,12 @@ tol(r) = clamp(0.25 + 0.02 * r, 0.30, 0.90)      r = 센서 거리 [m]
 |---|---|---|
 | **Range-image BFS** (Bogoslavskyi & Stachniss, IROS 2016) | **16-beam 2.4 ms** (모바일 i5-5200U) / **1.5 ms** (i7-4770K). 64-beam 8.6 / 4.7 ms | **1순위** |
 | Curved-Voxel Clustering (CVC) | VLP-16 실데이터에서 **20 Hz 이상**, 합성 데이터 30 Hz 이상 (= 33 ~ 50 ms) | 후순위 |
-| TRAVEL | **20 ~ 30 Hz** (= 33 ~ 50 ms) | 예산 초과 |
+| TRAVEL | **20 ~ 30 Hz** (= 33 ~ 50 ms, 기존 인용 조건) | 후순위 비교 후보; 우리 예산 초과는 미측정 |
 
 **세 가지 근거로 range-image 방식을 택한다.**
 
-1. **속도.** 16-beam에서 2.4 ms다. i5-14600K에서는 1 ms 미만이 예상된다. 논문은 PCL
+1. **속도 후보 근거.** 인용 조건의 16-beam에서 2.4 ms다. i5-14600K의 1 ms 미만은
+   미검증 추정이며 채택 근거로 쓰지 않는다. 논문은 PCL
    Euclidean 대비 **"세 자릿수 배 빠르다(4 ms vs 4 s per scan, 64-beam)"** 고 보고한다.
    현재 코드가 쓰는 것이 바로 그 PCL Euclidean이다.
 2. **과병합 해소가 논문에서 직접 확인된다.** 논문 Fig. 8은 **VLP-16 실외 장면에서 서로 가까이
@@ -599,11 +895,10 @@ tol(r) = clamp(0.25 + 0.02 * r, 0.30, 0.90)      r = 센서 거리 [m]
 같은 논문의 파이프라인은 각도 기반 지면 제거도 포함하므로, 6.2와 6.3을 함께 대체하는
 경로로도 검토할 수 있다.
 
-**CVC와 TRAVEL은 격하한다.** CVC 논문은 이미 VLP-16 데이터(L-CAS, 실내 hall/office)로
-평가했고 결과는 20 ~ 30 Hz대다. 보행자 분리 정확도는 좋지만 range-image보다 한 자릿수 느리고,
-평가 환경이 실내라 도로 장면 일반화가 확인되지 않았다. TRAVEL은 지면과 객체를 한 번에
-처리하는 장점이 있으나 논문 실측이 20 ~ 30 Hz여서 **LiDAR 체인 전체 25 ms 목표와 충돌한다.**
-"두 단계를 한 번에 교체"하는 매력 때문에 예산을 넘기지 않는다.
+**CVC와 TRAVEL은 후순위 비교 후보로 유지한다(2026-09-27 정정).** 종전에는 CVC의
+L-CAS 실내 VLP-16 및 TRAVEL의 20~30 Hz 인용으로 25 ms 예산 초과라고 판단했으나,
+입력·CPU·계측 범위가 달라 직접 비교할 수 없다. range-image도 우리 장면에서 검증한다.
+TRAVEL은 두 단계를 함께 변경하므로 개별 알고리즘 평가 이후에 검토한다.
 
 **C-ARC는 비반복 스캔(Livox Mid-360) 대상**이므로 반복 스캔인 VLP-16에는 직접 적용 대상이
 아니다. 참고 자료로만 둔다.
@@ -611,8 +906,8 @@ tol(r) = clamp(0.25 + 0.02 * r, 0.30, 0.90)      r = 센서 거리 [m]
 ### 6.4 정적·동적 이중 경로 아키텍처 (신규 제안)
 
 현재는 모든 장애물이 "클러스터 → OBB → 트랙 → ID"라는 단일 경로를 통과한다. 그래서
-클러스터링이나 ID 관리가 실패하면 **정적 장애물까지 같이 사라진다.** 정적 물체에는 ID도
-속도도 필요 없는데 동적 물체용 파이프라인의 실패 모드를 전부 공유하고 있다.
+클러스터링이나 ID 관리가 실패하면 **정적 장애물까지 같이 사라질 수 있다.** 다만 정적
+객체에도 판제 대상 유지용 ID가 필요할 수 있고 정적 분류가 관측 속도 0의 확정은 아니다.
 
 **제안: 경로를 둘로 나눈다.**
 
@@ -644,10 +939,10 @@ tol(r) = clamp(0.25 + 0.02 * r, 0.30, 0.90)      r = 센서 거리 [m]
 점유 격자는 신규 메시지를 요구하므로 판제 작업이 따라온다. 그 전에 **같은 목적을 기존 계약
 안에서 달성할 수 있다.**
 
-> **정적 클러스터를 `vx = vy = 0`인 `DetectedObject`로 그냥 발행한다.**
-> `type = 3`(STATIC_OBSTACLE)을 쓰면 `behavior_planner`의 `feature_builder`가 이미
-> `ObjectType::STATIC_OBSTACLE` 분기를 갖고 있어 그대로 소비된다. 판제는 `obb_corners`로
-> 충돌검사를 하므로 클래스가 없어도 회피가 성립한다.
+> **2026-09-27 철회:** 정적/UNKNOWN이라는 이유만으로 `vx=vy=0`, `type=3`을 강제하지
+> 않는다. 기존 STATIC_OBSTACLE 분기와 OBB 충돌 검사는 재사용 가능하지만 motion 근거와
+> 속도 유효성을 구분해야 한다. 의미 불명확한 속도는 unknown이며 현재 wire/consumer에
+> 이를 전달할 계약을 합의하기 전에는 운영 발행하지 않는다.
 
 "정적 장애물이 사라진다"는 증상의 실제 원인은 4.1의 지면제거·높이컷이지 표현 형식이 아니다.
 **그 원인을 고치고 정적 객체를 버리지 않고 내보내는 것만으로 대부분 해결된다.**
@@ -673,15 +968,21 @@ tol(r) = clamp(0.25 + 0.02 * r, 0.30, 0.90)      r = 센서 거리 [m]
 
 판제 보완로직을 제거하기 위한 핵심 항목이다.
 
-**변경 1: 추적을 map/ENU 프레임에서 수행한다.**
+**변경 1의 과거 제안: 추적을 map/ENU 프레임에서 수행한다.**
+
+> **2026-09-26 대체:** map tracking만으로 정지 물체 속도가 정확히0이 되거나 보완 계층이
+> 불필요해지는 것은 아니다. pose 시간 오차·GPS 복귀 jump·검출 geometry 변화가 남는다.
+> 현재 제안은 0.3의 연속 local/odom 추적과 선택적 fresh-map projection이며, no-GPS
+> wheel/IMU 품질 검증이 선행이다. 아래 map/ENU·body fallback은 당시의 비교안으로 보존한다.
 
 `Body2ENU`, `TransformLidarPointToMap`이 이미 구현되어 있다. 관측을 map 좌표로 올린 뒤
 Kalman을 돌리면
 
-- 자차 운동이 **추정이 아니라 측위로 정확히 제거**된다 → 정지 물체 속도가 구조적으로 0
-- 곡선·요레이트 과도응답이 소멸한다 → 가드레일·전봇대의 가짜 동적 판정 소멸
-- 속도가 처음부터 절대속도다 → CAN 속도 가산 불필요
-- `MotionClassifier`가 하는 일의 대부분이 불필요해진다
+- 유효한 관측 시각 pose가 있으면 자차 운동을 보상할 수 있지만 측위/시간/검출 오차가 남는다.
+- 곡선·회전 항 누락을 줄여도 가드레일 등의 가짜 동적 판정이 자동 소멸하지 않는다.
+- 이미 절대속도로 추정한 값에는 CAN을 다시 더하지 않는다. frame 이름만으로 속도의
+  의미가 확정되지는 않는다.
+- `MotionClassifier`/판제 보완 제거는 실제 회귀가 확보된 뒤 판단한다.
 
 **전제 조건:** GPS/DR 품질. `DeadReckoning.cpp`가 36줄뿐이라 음영구간 드리프트가 관건이다.
 **하이브리드를 권한다.** 연관(association)은 body frame에서, 상태 추정은 map frame에서
@@ -796,8 +1097,8 @@ SimpleTrack의 2단계 연관은 "저신뢰 검출이라도 운동 예측과 일
                                                    (신규 트랙 생성 금지)
 ```
 
-range-image BFS는 2.4 ms이므로 **두 번 돌려도 5 ms 미만**이다. 이것이 희소한 VLP-16에서
-조기 종료를 줄이는 가장 직접적인 수단이다.
+두 임계 비교는 조기 종료를 줄이는 후보지만, 논문의 2.4 ms를 두 배 해 **5 ms 미만이라고
+보장하지 않는다**(2026-09-27 정정). 점 공유/중복 검출·연관 비용까지 실제로 측정한다.
 
 **(d) 생애주기에 tentative / confirmed 상태를 도입한다.** 현재는 미매칭 검출에 즉시 새 ID를
 발급한다. M-of-N(예: 3/5) 확정 전에는 판제로 내보내지 않는다. **이것은 (b)의 수명 연장과
@@ -809,12 +1110,12 @@ range-image BFS는 2.4 ms이므로 **두 번 돌려도 5 ms 미만**이다. 이�
 |---|---|---|
 | **AB3DMOT** | **207.4 FPS** (KITTI, GPU 불필요) | 가장 저렴한 출발점 |
 | **Fast-Poly** | **34.2 FPS** (nuScenes, CPU 전용), 75.8 % AMOTA | 실행 가능한 상위 대안 |
-| Poly-MOT | **3 FPS** | 사용 불가 |
-| SimpleTrack | **0.51 FPS** | **코드 사용 불가** |
+| Poly-MOT | **3 FPS** (기존 인용 조건) | 지역 평가 미실행; 이 수치만으로 제외하지 않음 |
+| SimpleTrack | **0.51 FPS** (기존 인용 조건) | 연관·생애주기 참고; 지역 성능은 미측정 |
 
-**SimpleTrack은 설계 원칙만 차용하고 코드를 가져오지 않는다.** 위 GIoU, 2단계 연관, 생애주기
-분석은 전부 C++로 직접 구현해도 비용이 거의 없는 항목이다. 실행 가능한 구현이 필요하면
-AB3DMOT에서 시작해 Fast-Poly의 A-gIoU(지연 73 % 감소)를 참고한다.
+**2026-09-27 정정:** SimpleTrack의 연관·생애주기를 우선 참고하되 타 데이터셋 FPS로 코드
+사용 불가 판정을 내리지 않는다. 후보별 동일 box sequence에서 계측한다. C++ 재구현도
+비용이 없지 않으며 AB3DMOT는 비상업 연구 license, FastPoly는 별도 LICENSE 확인이 필요하다.
 
 ### 6.6 카메라 퓨전 보강
 
@@ -854,7 +1155,11 @@ if (iou > FUSION_IOU_THRESHOLD)   // 0.25
 
 ### 6.7 고주로 차로별 점유와 추월
 
-트랙을 차로에 배정하는 레이어 하나만 추가하면 된다.
+> **2026-09-26 보완:** 중심점 point-in-polygon만으로 차로를 확정하지 않는다. 0.5의
+> footprint overlap·복수 후보·hysteresis를 적용하고, 실제 판제 feature와 중복 여부를
+> 먼저 확인한다. 후방 ROI의 숫자도 검출거리·상대속도·센서 가용성을 측정한 뒤 정한다.
+
+아래는 당시의 간단한 연계안과 계약 검토 기록이다.
 
 **먼저 할 것: 이 레이어는 LiDAR가 아니라 판제 쪽에 두는 것이 맞을 수 있다 (판제 수정 0).**
 
@@ -924,23 +1229,24 @@ float64 occlusion_ratio      # 해당 차로 중 미관측 비율
 | **CenterPoint-Pillar** | 1순위 동급 | 앵커 프리라 방향 추정이 안정적. 논문 전체 시스템 11 ~ 16 FPS(Waymo/nuScenes). **속도 헤드는 아래 주의사항 참조** |
 | FastPillars | 여유 있을 때 | SPConv 없이 TensorRT 친화. **MAPE 모듈이 소형 3D 객체(보행자) 강화** 목적으로 설계됨 |
 | PillarNeXt | 참고 | Waymo, TITAN RTX 실측: Pillar-S **79 ms** vs Voxel-S **169 ms**, 정확도는 동급(3D APH 63.18 vs 64.67, 보행자 BEV는 Pillar 우위). 대범위 Waymo 설정 수치이므로 우리 설정에 그대로 대입하지 않는다 |
-| BEVFusion / VoxelNeXt | 제외 | 8 GB 환경에 과하고 SPConv 의존이 배포를 어렵게 한다 |
+| BEVFusion / VoxelNeXt | 후순위 | 8 GB 공유 환경에서 자원·의존성 검증 필요; 실행하지 않고 무조건 불가로 판정하지 않음 |
 
 **SPConv 회피가 Pillar 계열을 택하는 핵심 이유다.** FastPillars 논문은 SPConv의 배포 문제를
 세 가지로 정리한다. (1) TensorRT 내장 연산이 아니라 커스텀 플러그인을 직접 써야 하고,
 (2) 양자화 배포가 까다로우며, (3) 최신 하드웨어에서 최적화가 어렵다. **CenterPoint의 표준
 voxel 백본은 SPConv를 쓰므로, 반드시 Pillar 변형을 선택해야 한다.**
 
-> **주의: CenterPoint의 속도 회귀 헤드는 단일 스윕으로 학습할 수 없다.**
-> 논문은 "속도 추정은 특별하다. **현재와 이전 시점의 두 map-view를 입력으로 요구**하며,
-> 현재 프레임과 과거 프레임 사이의 객체 위치 차이를 예측한다"고 명시한다.
-> 7.2의 Capture Mode 제약과 직접 충돌한다. 상세는 7.2를 참조한다.
+> **2026-09-27 재정정:** 특정 시간 입력 구성을 모든 CenterPoint 구현의 필수 조건으로
+> 일반화했던 설명은 잘못이다. 고정 upstream의 `center_head.py`는 `forward(x)`와 설정별
+> velocity branch, loader는 sweep/time-lag를 사용한다. 단일 스윕 라벨 회귀의 구성 가능성과
+> 운동의 관측 가능성은 별개다. Capture 시계열·속도 label 품질을 확인하기 전 학습을 승인하지 않는다.
 
 **연산 예산 산정**
 
 - Pillar 격자를 `x [-60, 80] m`, `y [-20, 20] m`, 0.2 m로 잡으면 700 × 200 = 14만 pillar
-- 2만 점 입력이면 비어 있는 pillar가 대부분이라 실제 연산은 격자 크기보다 훨씬 작다
-- FP16 TensorRT 기준 **10 ~ 20 ms, VRAM 2 GB 이내**로 추정한다. 15 Hz 예산 안에 들어간다
+- sparse point/pillar 전처리와 dense BEV backbone 비용을 구분한다. 점이 적어도 격자 비용은 남는다.
+- 과거 **10~20 ms, VRAM 2 GB 이내** 추정은 미측정 예산 가설이다. 실제 15 Hz 예산 충족이나
+  다른 모델의 8 GB 초과를 이 숫자로 판정하지 않는다.
 
 **정직한 한계.** VLP-16 단일 스윕으로 50 m 밖 차량에 맺히는 점은 수십 개 수준이다.
 DNN 검출의 신뢰 구간은 현실적으로 **차량 40 ~ 50 m, 보행자 25 ~ 30 m** 정도로 잡아야 한다.
@@ -955,16 +1261,16 @@ ROI를 넓히는 설계는 하지 않는다.**
 
 ### 7.1 학습 불필요 — 우선 적용
 
-우선순위는 **문헌 실측값 검증 후** 조정한 결과다. 실측이 있는 항목은 출처를 함께 적는다.
-**아래 항목은 전부 LiDAR 패키지 안에서 끝나며 판제 코드 수정이 필요 없다.**
-판제 측에도 필요한 변경(P1 ~ P3)과 양측 합의가 필요한 항목(관측 지평)은 **6.0을 참조한다.**
-그쪽은 이 표와 별개로 진행해야 하며, 특히 **P1은 LiDAR 품질과 무관하게 필수다.**
+이 표는 **2026-09-21의 후보 우선순위 기록**이다. 실측 열은 인용 논문의 조건이며
+우리 runtime의 측정값이 아니다. 새 timestamp heartbeat, 즉시 message 필드 추가,
+무조건 map 추적, hard semantic ROI 권고는 앞 절의 2026-09-26 정정으로 대체됐다.
+현재 구현 순서는 0.7이며 판제 수정·message 호환 비용은 L1-B에서 재확인한다.
 
 | # | 항목 | 대응 증상 | 난이도 | 실측·비고 |
 |---|---|---|---|---|
 | **0** | **`/perception/objects`에 `asmc_msgs/DetectedObjectArray` 발행** | 통합 | **낮음** | **판제 수정 0.** `MakePlannerObjects()`가 필요한 값을 이미 전부 보유. GT 어댑터와 A/B 가능 (6.0) |
-| **L1** | **매 주기 heartbeat 발행** (빈 배열이라도) | GT 전환 | **매우 낮음** | **필수.** 미발행 0.30 s = 판제 정지 (6.0.6) |
-| **L3** | 발행 시점으로 등속 전방 예측 | GT 전환 | **매우 낮음** | 지연 60~100 ms 추정. 계측 후 적용 (6.0.6) |
+| **L1** | 별도 health + 유효 관측만 원래 stamp로 발행 | GT 전환 | 계약 검토 | 새 stamp 빈 배열 heartbeat 권고 철회; 6.0.6 정정 |
+| **L3** | 관측 시각/예측 시각 분리 검토 | GT 전환 | 계약 검토 | publish-time 재표기를 단순 수정으로 권하지 않음; 6.0.6 정정 |
 | 1 | 거리 적응 클러스터 tolerance + yaml 배선 | 4.3 | **매우 낮음** | **Zhang 논문 Alg.1이 이미 거리 비례 탐색 반경을 규정.** 코드가 채택한 논문의 미구현 절반 |
 | 2 | RANSAC threshold/iteration 조정, 3구역 분할 | 4.1 | **매우 낮음** | 상수 변경 |
 | 3 | `f32_CoreZ <= -1.3` 하드컷 제거 | 4.1 | **매우 낮음** | 지면평면 상대 높이 기준으로 대체 |
@@ -977,16 +1283,16 @@ ROI를 넓히는 설계는 하지 않는다.**
 | 10 | **연관 비용을 BEV GIoU로 교체** | 4.3 | 낮음 | **현재의 거리지배 비용 + Hungarian이 SimpleTrack이 지목한 최악 조합** |
 | 11 | **Patchwork++** 지면 분할 | 4.1 | 중간 | **54.85 Hz** (i7-7700K, 64ch). 현재 RANSAC은 **15.43 Hz** |
 | 12 | **Range-image BFS 클러스터링** | 4.3, 연산량 | 중간 | **16-beam 2.4 ms**(모바일 i5). PCL Euclidean 대비 세 자릿수 배 |
-| 13 | **클러스터링 이중 임계 2단계 연관** | 4.3 | 중간 | ID 스위치의 **95 %가 조기 종료**(SimpleTrack). 12번이 있으면 5 ms 미만 |
+| 13 | **클러스터링 이중 임계 2단계 연관** | 4.3 | 중간 | 95%는 인용 데이터 조건. 5 ms 미만·우리 ID 개선 모두 실측 필요 |
 | 14 | L-Shape 코너 앵커 + size lock + 앵커 스위칭 | 4.1, 4.2 | 중간 | T-IV 2021이 "코너가 더 안정적"이라고 명시 |
 | 15 | map frame 추적 (하이브리드 폴백 포함) | 4.2 | 중간 | `Body2ENU` 기보유 |
 | 16 | tentative / confirmed 생애주기 | 4.3 | 중간 | 생성은 보수적으로, 종료는 관대하게 |
 | 17 | point-in-box 프러스텀 연관 + 클래스 확률 | 4.4 | 중간 | |
-| 18 | **정적 클러스터를 `vx=vy=0`, `type=3`으로 발행** | 4.1, 4.3 | 중간 | **판제 수정 0.** 점유 격자(6.4)는 이 대안의 한계 확인 후로 미룬다 |
-| 19 | **M-detector** 동적 점 검출 | 4.2 | 중간 | **학습 불필요.** KITTI 64ch에서 84.5 ms 실측 → VLP-16 환산 약 14 ms 추정 |
+| 18 | 정적/UNKNOWN의 geometry·속도 유효성 보존 | 4.1, 4.3 | 계약 검토 | 0 강제 권고 철회. unknown 인계와 consumer 호환을 먼저 합의(6.4) |
+| 19 | **M-detector** 동적 점 검출 | 4.2 | 중간 | **학습 불필요.** KITTI 인용 84.5 ms. VLP-16 약14 ms 비례 환산 철회; pose/time 전제 후 계측 |
 | 20 | 고주로 전용 ROI 프로파일 (후방 −60 m) | 고주로 추월 | 낮음 | **판제 수정 0.** 차로 점유·gap 계산은 판제의 기존 feature 레이어에 둔다 (6.7) |
 | - | ~~CTRA/IMM 운동 모델~~ | - | - | **하향 조정.** SimpleTrack 실측상 KF와 CV 차이 미미 (6.5 변경 3) |
-| - | ~~TRAVEL~~ | - | - | **제외.** 20 ~ 30 Hz로 예산 초과 (6.3) |
+| - | TRAVEL | - | - | 후순위 비교. 20~30 Hz 타 환경 수치로 제외하지 않음(6.3 정정) |
 | - | ~~Curved-Voxel Clustering~~ | - | - | **후순위.** VLP-16에서 20 ~ 30 Hz, range-image보다 한 자릿수 느림 |
 | - | ~~BEV 점유 격자 / `LaneOccupancy` / 클래스 확률 스키마~~ | - | - | **판제 수정 필요.** 각 절의 계약 안 대안을 먼저 적용하고, 한계 확인 후 재논의 |
 
@@ -1000,11 +1306,11 @@ ROI를 넓히는 설계는 하지 않는다.**
 
 주차 차량, 정차 중인 버스를 정적으로 유지해야 하는 우리 상황에 정확히 맞는 성질이다.
 다만 **공짜가 아니다.** 논문의 KITTI seq 00 실측이 프레임당 84.48 ms(10 Hz 주기 100 ms 대비)
-이므로, VLP-16 환산 추정치 약 14 ms를 예산에 반영하고 도입 전 실측한다.
+이다. 과거 VLP-16 환산 약14 ms를 예산에 넣었던 제안은 철회하며, pose/시간축 조건을
+확보한 뒤 실제 입력으로 계측한다.
 
-**구현체 도입 시 주의 (7.1 항목 10, 13, 16 관련).** SimpleTrack은 **설계 원칙만** 가져온다.
-공개 구현의 실측 속도는 SimpleTrack 0.51 FPS, Poly-MOT 3 FPS로 사용 불가이며, 실행 가능한
-구현은 AB3DMOT(207 FPS, GPU 불필요)와 Fast-Poly(34.2 FPS, CPU 전용)다. 상세는 6.5 (e).
+**구현체 도입 시 주의 (7.1 항목 10, 13, 16 관련).** SimpleTrack/Poly-MOT의 타 환경 FPS로
+사용 불가 판정하지 않는다. AB3DMOT/FastPoly도 우리 자원·license·입력 조건 검증이 필요하다(6.5(e)).
 
 ### 7.2 경량 학습 트랙 — Capture / 동기 수집 데이터 활용
 
@@ -1019,19 +1325,18 @@ Capture Mode는 저장 중 시뮬레이터를 정지시킨다. 측정 결과 연
 | 단일 스윕 3D 검출 (박스, 치수, heading) | **가능** | 프레임별 라벨은 정확한 순간 진리값 |
 | 세그멘테이션 | **가능** | 동일 |
 | 단일 프레임에서 라벨 속도를 회귀 | 원리적으로는 가능 | 라벨의 박스별 상대속도가 정확하다. 다만 단일 스윕에서 속도를 추론하는 것은 본질적으로 어려운 과제다 |
-| **CenterPoint 방식 velocity head** | **불가** | **두 프레임의 map-view를 입력으로 요구**하는데, 캡처 프레임 간 변위가 실제 궤적이 아니다 |
+| **CenterPoint 방식 velocity head** | 구성·라벨에 따라 조건부 | 모든 구현이 두 map-view를 요구하지 않음. 시간 누적/속도 label 의미·정확도는 별도 검증 필요 |
 | **다중 스윕 누적 입력** | **불가** | 동일 |
 | 트래킹·오도메트리·스캔 정합 학습 | **불가** | 동일 |
 
-> **정정.** 이 문서 초판은 "프레임당 속도 회귀(CenterPoint velocity head) — 가능"이라고
-> 적었다. **틀렸다.** CenterPoint 논문은 속도 헤드가 현재와 이전 두 시점의 map-view를 입력으로
-> 받아 **프레임 간 위치 차이**를 예측한다고 명시한다. Capture Mode는 저장 중 시뮬을 정지시켜
-> 프레임 간 변위를 무효화하므로 이 헤드는 학습할 수 없다. "단일 스윕 CenterPoint를 쓰되
-> 속도 헤드로 4.2를 해결한다"는 조합은 성립하지 않는다.
+> **2026-09-27 검수:** 초판의 무조건 가능도, 이전 정정의 무조건 불가도 과도했다.
+> `CenterPoint@3cf7d87` head/loader를 구분해 검사했다. 단일 입력으로 velocity label을
+> 회귀할 수 있는 구성과 실제 동작을 관측하는 능력은 다르다. 현재 Capture를 연속 시간축
+> 평가로 승인하지 않는 결론은 유지하되 모든 velocity head의 입력을 동일하다고 하지 않는다.
 
-**따라서 속도는 검출기가 아니라 트래커에서 얻는다.** 검출기는 박스·치수·heading만 담당하고,
-속도는 6.5(map frame 추적 + 코너 앵커 + 거리 의존 R)가 책임진다. 이 분담이 Capture 데이터
-제약과 일관된다.
+**첫 비교에서는 검출기 속도 head로 문제를 해결했다고 가정하지 않는다.** 박스 검출과
+시간축/자차 운동이 유효한 추적을 분리 평가한다. 추적 또한 map 이름만으로 절대속도가
+보장되지 않는다(6.5 정정). Capture 정차 간격으로 속도를 평가하지 않는다.
 
 시계열 학습이 꼭 필요해지면 **rosbag 기반 동기 수집 데이터**를 별도로 확보한다.
 자차 속도를 캡처 프레임 간 차분으로 구하지 않는다. 라벨의 ego velocity를 쓰되 그 값은
@@ -1210,10 +1515,13 @@ z 하드컷에서 만들어진다. 4.1(d)를 수정할 때 이 함수의 존치 
 
 ---
 
-## 9. 로드맵
+## 9. 이전 로드맵 — 2026-09-21 설계 기록
 
-**두 트랙을 병렬로 간다.** LiDAR 품질(L)과 GT → 센서 전환(I·P)은 서로 기다리지 않는다.
-특히 **P1은 LiDAR 진척과 무관하게 지금 시작할 수 있고, 시작해야 한다.**
+> 이 장의 Phase 0~3와 기간은 당시 제안이다. P1 변환 실패 완화와 L1 heartbeat의
+> 무조건 적용은 철회했고, 나머지 후보도 일괄 적용하지 않는다. **현재 개발 순서는 0.7의
+> L1-A, L1-B, L2~L5**이며 판제 오너십·실험 수락·message 호환 gate를 따른다.
+
+초기에는 LiDAR 품질(L)과 GT→센서 전환(I·P)을 병렬로 진행하는 안을 다음과 같이 제안했다.
 
 ```text
 LiDAR 트랙 :  Phase 0 --------- Phase 1 --------- Phase 2 --------- Phase 3
@@ -1260,7 +1568,7 @@ LiDAR 개선 효과를 왜곡 없이 관측할 수 있다.
 - 거리 의존 R, OBB 각도 탐색 범위 축소
 - 클러스터링 이중 임계 2단계 연관 + tentative / confirmed 생애주기
 - 퓨전을 point-in-box + Hungarian + 클래스 확률(내부)로 교체
-- 정적 클러스터를 `vx=vy=0`, `type=3` 객체로 발행
+- 정적/UNKNOWN 객체의 geometry와 관측 속도 유효성을 보존(0 강제 발행 권고 철회, 6.4)
 
 **양측 합의 항목**
 
@@ -1291,7 +1599,10 @@ LiDAR 개선 효과를 왜곡 없이 관측할 수 있다.
 
 ## 10. 검증 항목
 
-개선 전후로 반드시 같은 기준으로 계측한다.
+아래는 이전 검증 지표/목표 기록이며, 현재의 정량 수락 임계는 L1-A 계측과 담당자 검토로
+확정한다. 25 ms 알고리즘 목표와 0.30 s consumer freshness를 혼동하지 않는다.
+입력 누락을 heartbeat로 숨기지 않고 원래 stamp 기준 처리율·관측 age·end-to-end 지연을
+함께 기록한다.
 
 | 항목 | 측정 방법 | 목표 |
 |---|---|---|
@@ -1429,13 +1740,13 @@ ego yaw 보정 문제이고, 속도에 비례해 커지면 상대속도 차분 �
 
 | # | 초판 서술 | 원문 확인 결과 | 조치 |
 |---|---|---|---|
-| 1 | CenterPoint 속도 헤드를 Capture 데이터로 학습 가능 | 속도 헤드는 **현재+이전 두 map-view를 입력으로 요구**한다 | 7.2 정정. 속도는 검출기가 아니라 트래커가 담당하도록 분담 변경 |
+| 1 | CenterPoint 속도 헤드를 Capture 데이터로 학습 가능 | 당시 두 map-view 필수라고 정정했으나 **이 일반화도 오류** | 2026-09-27 6.8/7.2 재정정. head 구성·label 의미·실제 시간축을 따로 검증 |
 | 2 | 유령 트랙 수명을 25 → 10프레임으로 축소 | ID 스위치의 **95 %(차량) / 91 %(보행자)가 조기 종료** 때문 | 6.5 (b)에서 권고 철회. 수명 유지 또는 연장 |
 | 3 | Curved-Voxel Clustering 15 ~ 17 ms (64ch) | 논문은 **이미 VLP-16**으로 평가했고 **20 ~ 30 Hz(33 ~ 50 ms)** | 6.3에서 후순위로 격하 |
-| 4 | TRAVEL로 6.2와 6.3을 한 번에 교체 | 논문 실측 **20 ~ 30 Hz**. 25 ms 예산과 충돌 | 6.3에서 제외 |
+| 4 | TRAVEL로 6.2와 6.3을 한 번에 교체 | 당시 논문 20~30 Hz로 예산 초과 판정 | 2026-09-27: 다른 환경 FPS만으로 제외한 판단 철회, 후순위 비교 |
 | 5 | PointPillars "PyTorch 42.4 Hz → TRT 105 Hz" | 논문은 **62 Hz(기본) / 105 Hz(경량)**. 42.4는 검색 요약의 오류 | 6.8 정정 |
 | 6 | CTRA/IMM 운동 모델을 중간 우선순위로 | SimpleTrack 실측상 **KF와 CV의 성능 차이가 미미** | 6.5 변경 3에서 하향 |
-| 7 | SimpleTrack·Poly-MOT를 구현체로 도입 | 실측 **0.51 FPS / 3 FPS**로 사용 불가 | 6.5 (e)에서 "설계만 차용" 으로 한정 |
+| 7 | SimpleTrack·Poly-MOT를 구현체로 도입 | 당시 인용 0.51/3 FPS로 사용 불가 판정 | 2026-09-27: 타 조건 수치로 사용 불가 판정 철회, 동일 입력 별도 평가 |
 | 8 | 개선안의 판제 측 비용을 명시하지 않음 | **LiDAR 출력과 판제 입력이 아직 연결조차 되어 있지 않았다.** 판제는 `/perception/objects`를 구독하고 현재 MORAI GT 어댑터가 이를 발행한다 | **6.0 신설** 후, GT → 센서 전환 관점으로 전면 재작성 |
 | 9 | 점유 격자·`LaneOccupancy`·클래스 확률을 판제 비용 언급 없이 제안 | 셋 다 신규 메시지 또는 스키마 변경을 요구 | 6.4 / 6.6 / 6.7에 **계약 안 대안**을 각각 추가하고 원안은 후순위로 |
 | 10 | 판제가 GT 전제로 만들어졌다는 점을 분석하지 않음 | **변환 실패 시 판제가 급정지**를 낸다. ID로 AVOID 대상을 추적한다. `yaw_rate`를 heading 이력으로 추정해 CTRV 예측에 넣는다. **가림을 표현할 수단이 계약에 없다** | 6.0.3 표, 6.0.4의 P1 ~ P3, 6.0.5의 관측 지평 제안 |
@@ -1472,3 +1783,26 @@ ego yaw 보정 문제이고, 속도에 비례해 커지면 상대속도 차분 �
 
 **아직 검증하지 않은 것.** 이 문서의 연산량 추정치(ROI 축소 효과, VLP-16 환산 지연)는 여전히
 추정이다. 10장의 계측을 수행하기 전까지는 근거가 아니라 가설로 취급한다.
+
+### 13.1 L1-B1 재검수 기록 — 원 주장과 정정 이유 보존
+
+상세 설계와 이전 수치는 삭제하지 않고 해당 위치의 판단을 수정했다. 아래는 이번 변경의
+대조표다. 논문 전체를 새로 재현했다는 뜻이 아니라, 고정 참고 코드의 입력·시간·좌표 전제와
+L1-A/B1 실험 근거가 허용하는 결론으로 낮춘 것이다.
+
+| 이전 주장 | 정정·이유 | 반영 위치 |
+|---|---|---|
+| TRAVEL 20~30 Hz라 제외, SimpleTrack 0.51 FPS/Poly-MOT 3 FPS라 사용 불가 | 데이터·객체 수·하드웨어·측정 범위가 다름. 동일 입력 성능 비교 미실행 | 6.3, 6.5(e), 7.1, 13 |
+| RANSAC은 가장 느리고 부정확, Patchwork++면 둘 다 개선 | 표는 타 환경. L1-A에서 낮은 장애물/보행자 보존 상충 확인 | 6.2, 0.8 |
+| VLP16 점 수 1/6이니 M-detector 약14 ms, DNN 10~20 ms/2 GB | 고정 비용·dense BEV·시간 이력·copy 비용을 무시. 미측정 수치로 예산 확보 불가 | 6.2, 6.8, 7.1 |
+| range BFS 두 번이면 5 ms 미만 | 인용 환경의 단일 알고리즘 시간을 우리 연관 포함 체인에 환산 불가 | 6.3, 6.5(c), 7.1 |
+| map 추적이면 정지 속도 0, 회전 과도응답·classifier 필요성 소멸 | 관측 시각/pose/검출 변동·복귀 점프가 남음. 속도 의미와 운동 항부터 확인 | 6.5, 공통 소비 계약 |
+| 관측 지평 스칼라는 항상 보수적, 최대 return이면 끝 | beam 사이·가림에 의해 free-space 과대 판정 가능 | 6.0.5 |
+| 모든 CenterPoint velocity head는 두 map-view 필수라 단일 sweep 불가 | `center_head.py`와 loader의 역할이 다름. 구성 가능성과 운동 관측 가능성을 구별 | 6.8, 7.2, 13 |
+| 정적 클러스터는 ID/속도 불필요, type=3/속도0이면 판제 수정0 | ID는 대상 유지에 필요할 수 있음. UNKNOWN/정적 class가 정지 motion 근거 아님 | 6.4, 7.1, 9 |
+| 자세 보정 약0.35 ms를 raw 운동보정 비용으로 사용 | ROI+voxel 후 특정 단계 계측. B1은 raw 강체 변환과 copy만 별도 계측; deskew 아님 | 0.8, B1 보고서 |
+
+코어·참고 자료의 SHA와 선택된 코드 경로는 B1 manifest/reference audit에 기록했다.
+신규 공식 참고는 [Autoware distortion corrector](https://autowarefoundation.github.io/autoware_universe/main/sensing/autoware_pointcloud_preprocessor/docs/distortion-corrector/)와
+[LIO-SAM 점별 시간 안내](https://github.com/TixiaoShan/LIO-SAM#prepare-lidar-data)다.
+각각 `time_stamp`/twist/IMU, `time`/ring/IMU 입력이 필요하며 현재 XYZI에 추측해서 붙이지 않는다.

@@ -131,6 +131,8 @@ MORAI 화면에 입력할 값만 필요하면
 | [P5-D/E perception closeout](./records/baselines/perception-p5de-closeout-v1.md) | typed consumer 인계, 대표 lane-family bag과 최종 운영 경계 | Active Closeout Record |
 | [perception-map-fusion-roadmap.md](./packages/asmc_perception/roadmap.md) | camera/MGeo/LiDAR 전체 전략과 시간순 개발 근거 | Working Proposal + Chronological Record |
 | [lidar-assessment-and-roadmap.md](./packages/asmc_perception/lidar-assessment-and-roadmap.md) | LiDAR 패키지 완성도 평가와 증상별 원인, GT→센서 전환 간극과 판제 측 변경 제안, 개선 우선순위 | Assessment Record + Working Proposal |
+| [LiDAR L1-A 실험·소비 기준선](./packages/asmc_perception/lidar-l1a-validation-20260926.md) | 26R1 정차/live↔offline 결과, 입력 SHA, 미션별 공백, Behavior/Frenet/MPC 계약 링크 | Pinned Experiment Record |
+| [LiDAR L1-B1 좌표·시간 코어](./packages/asmc_perception/lidar-l1b1-validation-20260927.md) | 격리 변환·정수 ns·회귀 결과, 재실행, 원본/후보 차이와 미검증 범위 | Isolated Validation · Review Pending |
 | [shadow-camera-perception-handoff.md](./handoffs/perception/shadow-camera.md) | 음영구간 v3 lane-family·drivable 판제 소비 계약과 성능 동결 | Active Handoff Guide |
 | [camera-object-detection-handoff.md](./handoffs/perception/camera-object-detection.md) | 손재호용 YOLO 즉시 사용·경량 후보·NAS fine-tune 인수 가이드 | Active Guide |
 | [rosbag 기록·재생·평가](./operations/rosbag-evaluation.md) | Real Time UDP raw/result bag과 lineage | Active Guide |

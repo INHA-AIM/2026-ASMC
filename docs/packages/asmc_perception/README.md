@@ -21,6 +21,8 @@
 | GT·BEV·lane 정책의 상세 근거 | [BEV/lane design note](./bev-lane-interface-plan.md) | Dated Detailed Design Note |
 | camera/map/LiDAR 개발 과정과 열린 결정 | [fusion roadmap](./roadmap.md) | Working Proposal + Chronological Record |
 | LiDAR 패키지의 현재 완성도와 개선 계획 | [LiDAR assessment](./lidar-assessment-and-roadmap.md) | Assessment Record + Working Proposal |
+| LiDAR 정차·오프라인 평가와 판제 인계 기준선 | [L1-A 검증 기록](./lidar-l1a-validation-20260926.md) · [소비 계약](../../contracts/perception/lidar-planning-consumer-v1.md) | Pinned Experiment Record · Design Frozen |
+| 격리 좌표·시간 변환 코어와 전후 비교 | [L1-B1 검증 기록](./lidar-l1b1-validation-20260927.md) · [재실행](../../../tools/lidar/frame_time/README.md) | Isolated Validation · 운영 미연결 |
 | 특정 checkpoint의 학습 결과 | [v4 evaluation](../../records/perception/twinlitenet-v4-evaluation.md) | Experiment Record |
 | 현재 topic 소비·bag 사용과 P5 정리 gate | [P5-A topic audit](../../records/baselines/perception-p5a-topic-audit-v1.md) | Frozen Input Audit |
 | 실행 중 node/topic/rate/stamp/frame/consumer 검증 | [P5-C runtime acceptance](../../records/baselines/perception-p5c-runtime-acceptance-v1.md) | Active Acceptance Gate |
