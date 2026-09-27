@@ -318,6 +318,46 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
         LIDAR_STAGE(imu_correct_ms,
                     CorrectingPoints(voxeled_cloud, imu_compensation_cloud,
                                      st_GPSIMU));
+
+        // 터널 지붕은 GPS가 무효가 되기 전에 먼저 보인다. 터널 기능을 켠
+        // 실행에서는 GPS 정상 경로도 동일한 z 상한을 RANSAC 전에 적용해
+        // /last_lidar가 입구 천장을 장애물로 만들지 않게 한다. 벽/지면 전용
+        // 필터는 여전히 GPS 음영일 때만 실행한다.
+        if (tunnel_filter::TunnelExperimentEnabled()) {
+            const auto& tunnel_params =
+                tunnel_filter::TunnelExperimentParams();
+            if (tunnel_params.pre_gps_ceiling_filter_enable) {
+                std::vector<std::uint8_t> labels(
+                    imu_compensation_cloud->points.size(),
+                    tunnel_filter::kKept);
+                const int ceiling_removed = tunnel_filter::MarkCeiling(
+                    *imu_compensation_cloud,
+                    tunnel_params.ceiling_max_z_lidar_m, &labels);
+                if (ceiling_removed > 0) {
+                    pcl::PointCloud<pcl::PointXYZI>::Ptr ceiling_filtered(
+                        new pcl::PointCloud<pcl::PointXYZI>());
+                    ceiling_filtered->points.reserve(
+                        imu_compensation_cloud->points.size() -
+                        static_cast<std::size_t>(ceiling_removed));
+                    for (std::size_t i = 0;
+                         i < imu_compensation_cloud->points.size(); ++i) {
+                        if (labels[i] == tunnel_filter::kCeiling) continue;
+                        ceiling_filtered->points.push_back(
+                            imu_compensation_cloud->points[i]);
+                    }
+                    ceiling_filtered->width = static_cast<std::uint32_t>(
+                        ceiling_filtered->points.size());
+                    ceiling_filtered->height = 1;
+                    ceiling_filtered->is_dense = false;
+                    imu_compensation_cloud = ceiling_filtered;
+                    ROS_INFO_THROTTLE(
+                        2.0,
+                        "Pre-GPS ceiling filter removed %d points above z=%.2fm",
+                        ceiling_removed,
+                        tunnel_params.ceiling_max_z_lidar_m);
+                }
+            }
+        }
         LIDAR_STAGE(ransac_ms,
                     NormalVectorFiltering(imu_compensation_cloud, ransac_cloud,
                                           st_GPSIMU));
@@ -378,6 +418,32 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
             if (tunnel_yolo_classes[i] == "unknown") continue;
             object[i].str_ObjectClass = tunnel_yolo_classes[i];
             object[i].str_YoloClass = tunnel_yolo_classes[i];
+        }
+    }
+
+    // GPS가 끊기기 직전에는 z 상한으로 천장 윗부분을 잘라도, 남은 천장과
+    // 양쪽 벽이 도로 전체를 가로지르는 하나의 거대 OBB로 합쳐질 수 있다.
+    // 터널 기능을 명시적으로 켠 GPS 정상 경로에서만, 세 축이 모두 구조물
+    // 크기인 OBB를 tracker와 /last_lidar에 들어가기 전에 제거한다.
+    if (!tunnel_output_ready && tunnel_filter::TunnelExperimentEnabled()) {
+        const auto& tunnel_params = tunnel_filter::TunnelExperimentParams();
+        const auto before = object.size();
+        object.erase(
+            std::remove_if(
+                object.begin(), object.end(),
+                [&](const LiDARObjectInfo& value) {
+                    return tunnel_filter::IsPreGpsStructuralObb(
+                        value.f32_OBB_Width, value.f32_OBB_Height,
+                        value.f32_OBB_ZMax - value.f32_OBB_ZMin,
+                        tunnel_params);
+                }),
+            object.end());
+        const auto removed = before - object.size();
+        if (removed > 0) {
+            ROS_WARN_THROTTLE(
+                1.0,
+                "Pre-GPS structural OBB guard removed %zu tunnel-size objects",
+                removed);
         }
     }
 

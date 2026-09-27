@@ -822,6 +822,20 @@ int main(int argc, char** argv) {
         json.Key("last_lidar").Int(last_lastlidar &&
             std::fabs(last_lastlidar->header.stamp.toSec() - ts_CurrTime.toSec()) < 1e-3
             ? static_cast<long long>(last_lastlidar->objects.size()) : -1);
+        json.Key("last_lidar_objects").Open('[');
+        if (last_lastlidar &&
+            std::fabs(last_lastlidar->header.stamp.toSec() -
+                      ts_CurrTime.toSec()) < 1e-3) {
+            for (const auto& o : last_lastlidar->objects) {
+                json.Open('[').Int(o.id).Str(o.classification)
+                    .Num(o.obb_center.x, 2).Num(o.obb_center.y, 2)
+                    .Num(o.obb_center.z, 2)
+                    .Num(std::max(o.length, o.width), 2)
+                    .Num(std::min(o.length, o.width), 2)
+                    .Num(o.height, 2).Close(']');
+            }
+        }
+        json.Close(']');
         json.Close('}');
 
         // --- B: 실험 파이프라인 (주 설정)

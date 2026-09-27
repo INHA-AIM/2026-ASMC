@@ -488,6 +488,16 @@ ObbStructureFlags ClassifyObb(const Obb& obb, float z_min_road,
     return flags;
 }
 
+bool IsPreGpsStructuralObb(float horizontal_a_m, float horizontal_b_m,
+                           float vertical_height_m, const Params& params) {
+    if (!params.pre_gps_structural_obb_filter_enable) return false;
+    const float long_side = std::max(horizontal_a_m, horizontal_b_m);
+    const float short_side = std::min(horizontal_a_m, horizontal_b_m);
+    return long_side >= params.pre_gps_structural_obb_min_length_m &&
+           short_side >= params.pre_gps_structural_obb_min_width_m &&
+           vertical_height_m >= params.pre_gps_structural_obb_min_height_m;
+}
+
 void WallEndpoint(const WallSegment& segment, float s, float z, float* x,
                   float* y) {
     const Plane& plane = segment.plane;

@@ -73,7 +73,17 @@ struct Params {
     bool level_pitch = true;
 
     // --- 천장 선제 제거 (수평화된 velodyne z 기준) ---
+    // GPS가 아직 정상인 터널 입구에서도 같은 높이 컷을 기존 경로의 RANSAC
+    // 직전에 적용한다. false면 GPS 음영 터널 파이프라인 안에서만 제거한다.
+    bool pre_gps_ceiling_filter_enable = true;
     float ceiling_max_z_lidar_m = 2.55f;
+    // z 상한으로 잘린 천장과 양쪽 벽이 하나의 거대 cluster로 다시 합쳐지는
+    // 터널 입구 사례를 /last_lidar 직전에서 한 번 더 막는다. 최소 폭 6 m는
+    // 일반 승용차·버스·트럭 OBB와 터널 횡단 구조물을 구분하는 안전 조건이다.
+    bool pre_gps_structural_obb_filter_enable = true;
+    float pre_gps_structural_obb_min_length_m = 15.0f;
+    float pre_gps_structural_obb_min_width_m = 6.0f;
+    float pre_gps_structural_obb_min_height_m = 3.0f;
 
     // --- 터널 전용 지면 RANSAC ---
     float expected_ground_z_lidar_m = -1.45f;
@@ -427,6 +437,11 @@ struct ObbStructureFlags {
 ObbStructureFlags ClassifyObb(const Obb& obb, float z_min_road,
                               float z_max_road, bool is_protected,
                               bool wall_attached, const Params& params);
+
+// GPS 정상 경로에서 천장/양쪽 벽이 합쳐진 비정상적으로 큰 OBB인지 판정한다.
+// 세 축 조건을 모두 만족해야 하므로 긴 버스·트럭 하나만으로는 제거되지 않는다.
+bool IsPreGpsStructuralObb(float horizontal_a_m, float horizontal_b_m,
+                           float vertical_height_m, const Params& params);
 
 // 벽 구간 끝점(평면 위, 주어진 높이)의 xy.
 void WallEndpoint(const WallSegment& segment, float s, float z, float* x,

@@ -811,6 +811,19 @@ TEST(TunnelFilterPipeline, EndToEndSyntheticTunnelKeepsCar) {
     EXPECT_EQ(1, car_objects);
 }
 
+TEST(TunnelFilterPreGpsGuard, RemovesOnlyTunnelSpanningObb) {
+    Params params = TestParams();
+    EXPECT_TRUE(IsPreGpsStructuralObb(44.15f, 12.36f, 4.36f, params));
+
+    // 긴 버스/트럭이어도 폭과 높이가 구조물 기준보다 작으면 보존한다.
+    EXPECT_FALSE(IsPreGpsStructuralObb(18.0f, 2.8f, 3.8f, params));
+    // 넓은 차량 군집도 터널처럼 길지 않으면 보존한다.
+    EXPECT_FALSE(IsPreGpsStructuralObb(10.0f, 7.0f, 3.5f, params));
+    // 필터를 끄면 같은 구조물 OBB도 보존한다.
+    params.pre_gps_structural_obb_filter_enable = false;
+    EXPECT_FALSE(IsPreGpsStructuralObb(44.15f, 12.36f, 4.36f, params));
+}
+
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

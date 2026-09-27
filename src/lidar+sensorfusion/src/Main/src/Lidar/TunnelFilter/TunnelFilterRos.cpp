@@ -674,6 +674,16 @@ Params LoadParams(ros::NodeHandle& node, const Params& base) {
     ParamFloat(node, "tunnel_roi_max_z_m", &p.roi_max_z_m);
     Param(node, "tunnel_level_roll", &p.level_roll);
     Param(node, "tunnel_level_pitch", &p.level_pitch);
+    Param(node, "tunnel_pre_gps_ceiling_filter_enable",
+          &p.pre_gps_ceiling_filter_enable);
+    Param(node, "tunnel_pre_gps_structural_obb_filter_enable",
+          &p.pre_gps_structural_obb_filter_enable);
+    ParamFloat(node, "tunnel_pre_gps_structural_obb_min_length_m",
+               &p.pre_gps_structural_obb_min_length_m);
+    ParamFloat(node, "tunnel_pre_gps_structural_obb_min_width_m",
+               &p.pre_gps_structural_obb_min_width_m);
+    ParamFloat(node, "tunnel_pre_gps_structural_obb_min_height_m",
+               &p.pre_gps_structural_obb_min_height_m);
     ParamFloat(node, "tunnel_ceiling_max_z_lidar_m", &p.ceiling_max_z_lidar_m);
     ParamFloat(node, "tunnel_expected_ground_z_lidar_m", &p.expected_ground_z_lidar_m);
     ParamFloat(node, "tunnel_ground_candidate_z_min_m", &p.ground_candidate_z_min_m);
