@@ -165,3 +165,12 @@ camera 경계 및 좌표·속도 기댓값을 고정하며 `test_contract_fixtur
 `base_link`/`map` 출력 및 판제 상태를 분리한 독립 평가다. 실제 LiDAR/bridge/판제
 토픽을 변경하지 않는다. [고정 결과](../../docs/packages/asmc_perception/lidar-l1b2-validation-20260927.md)와
 [manifest](../../config/baselines/lidar_l1b2_20260927.yaml)를 따른다.
+
+## L1-B3 YOLO/LiDAR 카메라 보호 매칭 격리 평가
+
+[`camera_sync/README.md`](./camera_sync/README.md)는 고정 정차 bag의
+`/YOLO/BBox` 도착 순서를 재생해 즉시/25ms 매칭과 유효 빈 검출·
+timeout을 구분한다. [결과](../../docs/packages/asmc_perception/lidar-l1b3-validation-20260928.md)는
+25ms에 304 scan이 추가 매칭됐지만 실제 필터 geometry가 아직 미검증이라
+운영에는 연결하지 않았음을 명시한다. [manifest](../../config/baselines/lidar_l1b3_20260928.yaml)는
+입력/산출물 SHA와 재실행 gate를 고정한다.

@@ -99,3 +99,19 @@ ROS 메시지에는 이 상태 필드가 없으므로 추후 versioned message/�
 rear-axle pose가 없어 map OBB·음영 전환 제어를 검증하지 못했다. 점프 gate 수치는
 실험 가설이고 텔레포트에서는 의도적으로 거부된다. 운영 변경과 판제 fallback 제거는
 연속 주행·상태/trajectory 합동 수락 뒤 별도 결정한다.
+
+## L1-B3 카메라 보호 매칭 격리 후보 — 운영 미연결
+
+[YOLO/LiDAR 매칭 결과](../../packages/asmc_perception/lidar-l1b3-validation-20260928.md)는
+객체 클래스 퓨전의 최대 200ms 대기와 터널 벽 제거 보호점의 **즉시 50ms
+stamp 매칭**이 별개임을 확인한다. 후자는 `/YOLO/BBox`의 YOLO11m
+객체 box를 사용하며 TwinLite 차선·주행가능영역을 뜻하지 않는다.
+25ms 후보는 유효 빈 검출, 아직 미도착, 시간창 밖, timeout, 잘못된
+stamp, 보호 OFF를 구분한다. `matched_empty`는 객체가 검출되지
+않았다는 뜻일 뿐 LiDAR 장면에 장애물이 없다는 판정이 아니다.
+
+같은 정차 bag에서 추가 매칭 304 scan은 causal replay 결과지만 실제
+25ms 터널 filter를 거친 객체/벽 geometry는 아직 평가하지 않았다.
+따라서 이 후보를 판제 소비 계약으로 승격하거나 LiDAR 출력의 신뢰도를
+높였다고 표현하지 않는다. 기하·연속주행 수락 전까지 판제는 기존
+`/last_lidar`와 `/lidar_nogps`의 frame·stale 제약을 유지해야 한다.

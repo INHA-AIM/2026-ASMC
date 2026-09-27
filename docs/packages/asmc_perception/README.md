@@ -24,6 +24,7 @@
 | LiDAR 정차·오프라인 평가와 판제 인계 기준선 | [L1-A 검증 기록](./lidar-l1a-validation-20260926.md) · [소비 계약](../../contracts/perception/lidar-planning-consumer-v1.md) | Pinned Experiment Record · Design Frozen |
 | 격리 좌표·시간 변환 코어와 전후 비교 | [L1-B1 검증 기록](./lidar-l1b1-validation-20260927.md) · [재실행](../../../tools/lidar/frame_time/README.md) | Isolated Validation · 운영 미연결 |
 | LiDAR GPS 건강 상태·local/map 출력 선택 | [L1-B2 검증 기록](./lidar-l1b2-validation-20260927.md) · [재실행](../../../tools/lidar/gps_transition/README.md) | Isolated Candidate · 운영 미연결 |
+| LiDAR YOLO11m 도착 지연·보호 매칭 | [L1-B3 검증 기록](./lidar-l1b3-validation-20260928.md) · [재실행](../../../tools/lidar/camera_sync/README.md) | Causal scheduler validated · geometry/운영 미수락 |
 | 특정 checkpoint의 학습 결과 | [v4 evaluation](../../records/perception/twinlitenet-v4-evaluation.md) | Experiment Record |
 | 현재 topic 소비·bag 사용과 P5 정리 gate | [P5-A topic audit](../../records/baselines/perception-p5a-topic-audit-v1.md) | Frozen Input Audit |
 | 실행 중 node/topic/rate/stamp/frame/consumer 검증 | [P5-C runtime acceptance](../../records/baselines/perception-p5c-runtime-acceptance-v1.md) | Active Acceptance Gate |
