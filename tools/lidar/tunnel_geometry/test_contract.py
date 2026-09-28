@@ -1,11 +1,15 @@
 import unittest
+import os
+from pathlib import Path
 import numpy as np
 if __package__:
     from .evidence import camera_evidence
     from .metrics import score, promotion_gate
+    from .git_evidence import git_output
 else:
     from evidence import camera_evidence
     from metrics import score, promotion_gate
+    from git_evidence import git_output
 
 
 def decision(boxes=(), selected=True, **kw):
@@ -66,6 +70,15 @@ class MetricsTest(unittest.TestCase):
 
     def test_missing_required_case_cannot_pass(self):
         self.assertFalse(promotion_gate({}, 0)["passed"])
+
+
+class ProvenanceTest(unittest.TestCase):
+    def test_readonly_revision_preserves_environment(self):
+        environment = dict(os.environ)
+        repo = Path(__file__).resolve().parents[3]
+        revision = git_output(repo, ["rev-parse", "HEAD"]).strip()
+        self.assertRegex(revision, r"^[0-9a-f]{40}$")
+        self.assertEqual(dict(os.environ), environment)
 
 
 if __name__ == "__main__":
