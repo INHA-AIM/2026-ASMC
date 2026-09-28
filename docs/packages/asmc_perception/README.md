@@ -26,6 +26,7 @@
 | LiDAR GPS 건강 상태·local/map 출력 선택 | [L1-B2 검증 기록](./lidar-l1b2-validation-20260927.md) · [재실행](../../../tools/lidar/gps_transition/README.md) | Isolated Candidate · 운영 미연결 |
 | LiDAR YOLO11m 도착 지연·보호 매칭 | [L1-B3 검증 기록](./lidar-l1b3-validation-20260928.md) · [재실행](../../../tools/lidar/camera_sync/README.md) | Causal scheduler validated · geometry/운영 미수락 |
 | LiDAR 보호 매칭 filter geometry와 AIM 자료 적합성 | [L1-B3-G](./lidar-l1b3g-validation-20260928.md) · [평가기](../../../tools/lidar/camera_sync/README.md) | 격리 replay 완료 · valid-empty fallback 위험 · 운영 미채택 |
+| 독립 벽 기하 보호·객체/OBB 분리 비교 | [L1-B4-A](./lidar-l1b4-validation-20260929.md) · [재실행](../../../tools/lidar/tunnel_geometry/README.md) | 합성 진급 통과 · 실제 구조물 조각 문제 · 운영 미채택 |
 | 특정 checkpoint의 학습 결과 | [v4 evaluation](../../records/perception/twinlitenet-v4-evaluation.md) | Experiment Record |
 | 현재 topic 소비·bag 사용과 P5 정리 gate | [P5-A topic audit](../../records/baselines/perception-p5a-topic-audit-v1.md) | Frozen Input Audit |
 | 실행 중 node/topic/rate/stamp/frame/consumer 검증 | [P5-C runtime acceptance](../../records/baselines/perception-p5c-runtime-acceptance-v1.md) | Active Acceptance Gate |

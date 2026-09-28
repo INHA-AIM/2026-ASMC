@@ -1,5 +1,18 @@
 # LiDAR read-only 평가 도구
 
+## 최신 독립 실험: L1-B4-A
+
+[벽·장애물 분리 평가기](./tunnel_geometry/README.md)는 pinned `6435af1`과
+독립 기하 보호를 비교한다. [결과](../../docs/packages/asmc_perception/lidar-l1b4-validation-20260929.md)는
+합성 진급 통과와 실제 구조물 조각 위험을 구분한다. 운영 연결·publisher·토픽 변경은 없다.
+아래 후처리는 고정 OBB의 형태·벽 지지 구간 근접도를 조사하며 GT 정확도나 삭제 정책이 아니다.
+
+```bash
+python3 -B tools/lidar/analyze_l1b4_fragments.py \
+  --run ../data/lidar_assessment/20260929/l1b4_autonav_v2 \
+  --output /tmp/<new-l1b4-fragment-report>
+```
+
 L1-A의 pinned 실험 입력, 손재호/서준 revision과 ROS1 wire MD5는
 [`config/baselines/lidar_l1a_20260926.yaml`](../../config/baselines/lidar_l1a_20260926.yaml)에
 기록했다. [검증 보고서](../../docs/packages/asmc_perception/lidar-l1a-validation-20260926.md)는

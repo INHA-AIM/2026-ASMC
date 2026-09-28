@@ -86,10 +86,15 @@ ambiguous-wall fallback으로 점을 남기지 않았다. 결과는 벽점 제�
 세 조건은 fallback을 꺼 객체 점 중 벽으로 처리된 점이 car +402, person +92, low-unknown +20
 늘어나는 pinned 동작을 재현했다. 이는 analytic fixture이지 simulator 정확도나 GT 점수가 아니다.
 
-**판정:** 다음 정책 후보는 YOLO 결과를 valid-boxes, valid-empty, unavailable/stale, invalid로 분리하고
+**당시 판정(2026-09-28):** 다음 정책 후보는 YOLO 결과를 valid-boxes, valid-empty, unavailable/stale, invalid로 분리하고
 empty가 보호 fallback을 끄는 게 맞는지 담당자와 결정하는 것이다. positive box, empty, timeout을
 동일 입력으로 재생하여 벽 근접 객체와 wall residual을 회귀한다. Son 운영 코드와 판제 보완 로직은
 이번에 수정하지 않았다.
+
+**후속(2026-09-29):** 개발 일정이 다른 손재호와 각자 독립 브랜치에서 비교하기로 했다.
+[L1-B4-A](./lidar-l1b4-validation-20260929.md)는 이 정책과 벽 기하 보호를 격리 구현했다.
+합성 개선과 실제 구조물 조각의 다수 객체 출력을 함께 기록하며 운영에는 채택하지 않았다.
+위 당시 논의와 L1-B3-G 원본 산출물은 보존한다.
 
 ## AIM 자료 적합성
 

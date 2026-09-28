@@ -110,8 +110,27 @@ stamp 매칭**이 별개임을 확인한다. 후자는 `/YOLO/BBox`의 YOLO11m
 stamp, 보호 OFF를 구분한다. `matched_empty`는 객체가 검출되지
 않았다는 뜻일 뿐 LiDAR 장면에 장애물이 없다는 판정이 아니다.
 
-같은 정차 bag에서 추가 매칭 304 scan은 causal replay 결과지만 실제
-25ms 터널 filter를 거친 객체/벽 geometry는 아직 평가하지 않았다.
-따라서 이 후보를 판제 소비 계약으로 승격하거나 LiDAR 출력의 신뢰도를
-높였다고 표현하지 않는다. 기하·연속주행 수락 전까지 판제는 기존
+후속 [L1-B3-G](../../packages/asmc_perception/lidar-l1b3g-validation-20260928.md)에서
+같은 2,562 scan 중 1,011 valid filter 입력으로 geometry까지 재생했다.
+107건의 geometry 변화 중 음영 99건은 모두 valid-empty 선택으로 broad FOV
+보존이 꺼진 결과다. 추가 매칭 304건을 검출 정확도 향상으로 바꾸지 않으며,
+25ms 후보는 운영 미채택이다. 기하·연속주행 수락 전까지 판제는 기존
 `/last_lidar`와 `/lidar_nogps`의 frame·stale 제약을 유지해야 한다.
+
+## L1-B4-A 기하 보호 비교 — 소비 인터페이스 변경 없음
+
+[격리 결과](../../packages/asmc_perception/lidar-l1b4-validation-20260929.md)는
+독립 브랜치의 삭제 정책 실험이며 새로운 운영 publisher가 아니다.
+valid-positive, valid-empty, unsupported-only, 미수신/시간 초과,
+잘못된 stamp, 보호 OFF를 구분하고, 메시지 수신과 실제 보호점 생성도 구분한다.
+빈 camera 결과는 LiDAR 공간에 장애물이 없다는 근거가 아니다.
+
+camera semantic 보호와 geometry foreground 보호는 별도 마스크다.
+기하 보호점을 car/person으로 표기하거나 후단 OBB 거부를 우회하지 않는다.
+벽과 분리할 증거가 부족하면 uncertain으로 남기며 낮은 점 수·카메라 미검출만으로
+점 삭제를 정당화하지 않는다. 이 진단은 격리 JSONL에만 있고 기존 ROS wire에 추가하지 않았다.
+
+합성에서는 객체 분리가 개선됐지만 실제 정차 입력에서는 벽 근처 구조물 조각이
+다수의 최종 객체로 남는 위험이 확인됐다. 따라서 후보는 운영 미채택이며
+판제 fragment 억제/ID 재연결/소실 유예를 제거할 근거가 아니다.
+local/map 좌표·GPS 상태·관측 stamp의 설계 계약도 이 실험으로 자동 연결되지 않는다.

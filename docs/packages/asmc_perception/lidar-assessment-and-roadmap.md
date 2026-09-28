@@ -1,10 +1,10 @@
 # LiDAR 인지 패키지 완성도 평가와 개선 로드맵
 
 > **문서 상태:** Assessment Record + Working Proposal
-> **최종 정리:** 2026-09-28 (L1-B3-G 기하 비교와 AIM 적합성 감사, 운영 미연결)
+> **최종 정리:** 2026-09-29 (L1-B4-A 독립 기하 보호 후보 비교, 운영 미연결)
 > **대상:** LiDAR 인지 담당 · 판단제어 파트 · 인지 통합
 > **대상 코드:** [`src/lidar+sensorfusion/`](../../../src/lidar+sensorfusion/)
-> **읽는 순서:** 0장은 2026-09-26의 현재 판단과 착수 순서다. 1~13장은 2026-09-21의
+> **읽는 순서:** 0장은 2026-09-26~29의 판단과 착수 순서다. 1~13장은 2026-09-21의
 > main 계열 소스 분석·문헌 검토 기록을 보존하며, 후속 브랜치에 그대로 적용하지 않는다.
 > 실행 정책이 달라진 과거 제안에는 정정 표시를 붙였다.
 
@@ -25,6 +25,11 @@
 > tracking 안정화, (5) HD Map polygon을 이용한 고주로 주행 차로 귀속이다. 기존 nested
 > workspace와 메시지는 담당자 handoff 없이 이동·삭제하지 않는다. 아래 분석과 외부 연구
 > 구현은 후보를 고르는 근거이며, 현재 코드를 곧바로 교체하라는 결정은 아니다.
+
+이 메모의 공동 개발 방식은 2026-09-29 사용자 결정으로 갱신됐다. 손재호와 개발 시간이
+맞지 않으므로 각자 독립 브랜치에서 개선하고 고정 입력·revision으로 비교해 선택한다.
+팀원 변경이나 승인을 기다리는 것을 격리 실험의 선행조건으로 두지 않으며, 운영 인계와
+판제 계약 변경은 여전히 별도 검토한다. 이전 메모는 당시 결정 이력으로 보존한다.
 
 로컬 조사 checkout은 팀 repository 밖의
 `../external/baselines/`에 있으며 `patchwork-plusplus(-ros)`,
@@ -55,6 +60,10 @@ LAN2LAN 리허설은 패키지·인지 계약과 기능 검증 뒤에 진행한�
 브랜치 최신화 여부를 실험 기록에 남긴다. 음영구간 판단제어 담당은 사용자 설명상 이강태다.
 서준의 공개 브랜치를 강태의 작업으로 간주하거나, 아직 push되지 않은 작업까지 확인했다고
 해석하지 않는다. 팀원 작업을 분석용 checkout으로 읽고, 개선 후보는 별도 실험에서 비교한다.
+
+L1-B4-A는 분석 완료점 `c536c3c`에서 `feat/lidar-l1b4-geometry`로 독립 분기했다.
+손재호 `6435af1`은 읽기 전용 비교 기준이고 향후 변경은 다른 revision의 실험으로 기록한다.
+후보는 `tools/lidar/tunnel_geometry/`에만 있으며 운영 nested workspace를 수정하지 않는다.
 
 서준 브랜치는 `Msg/TrackedObject.msg`와 `asmc_msgs/DetectedObject.msg`에
 `motion_state`와 enum 상수를 추가한다. ROS1 MD5가 달라지므로 소스 일부만 가져오거나
@@ -242,7 +251,8 @@ Capture 자료는 검증된 단일 프레임 검출 실험에 먼저 쓰고, 연
 | **L1-B2: GPS 전환·출력 선택** | status/좌표/stale/NaN/점프·복구, local/map/판제 가용성 분리 | [격리 후보와 실제 bag 감사](./lidar-l1b2-validation-20260927.md) 완료. 연속 주행·관측 pose·판제 전환은 미수락 |
 | **L1-B3: camera 매칭** | YOLO11m /YOLO/BBox의 50ms stamp와 0/25ms 도착 순서 비교 | [스케줄러](./lidar-l1b3-validation-20260928.md)·[L1-B3-G](./lidar-l1b3g-validation-20260928.md): 2,562 scan에서 1,149→1,453(+304), timeout 1,109. same-scan geometry도 재생했으나 valid-empty fallback 위험으로 운영 미채택 |
 | **L1-B3-G: 기하·AIM 감사** | 고정 same-scan geometry로 pinned filter 비교, AIM session/frame/time/GT 적합성 | 1,011 valid scans 중 geometry 107건 변화; 음영 99건 모두 valid-empty 선택. AIM 174 sessions, LiDAR 35/카메라 28 표본 확인; GT·실동시성 승인 없음 |
-| **후속 camera 보호 정책** | valid boxes / valid empty / unavailable-stale / invalid 구분과 ambiguous-wall fallback 결합 | 별도 합성·bag 회귀와 담당자 검토 후 결정. 운영 경로 유지 |
+| **L1-B4-A: 독립 기하 보호** | camera 상태/보호 근거 분리, 관측 벽 지지 구간·잔차·국소 돌출부 보호 | [비교 기록](./lidar-l1b4-validation-20260929.md). 합성 진급 기준 통과와 실제 구조물 조각의 다수 객체 출력을 구분; 운영 미채택 |
+| **L1-B4-B: Autonav 실제 배치·주행** | 벽 근접 car/person/낮은 일반 장애물의 관측/GT 근거 확보, 단차·가림·연속 주행 | 실제 벽/객체 구분과 단계별 소실 원인 검증 후 다음 수정 하나 선택. 현재 후보를 자동 연결하지 않음 |
 | **독립 COCO 객체 모델 비교** | YOLO11m ↔ 11n/s ↔ 26n/s/m, 동일 이미지/옵션/weight SHA와 동시 부하 | 클래스·box·stamp 호환 및 차량/보행자 정확도와 매칭률·GPU/CPU/지연 수락; FP16/TensorRT는 그 후 별도 변수 |
 | **L2 ROI·ground·clustering 비교** | boundary-family envelope와 fallback, 기존/linefit/Patchwork++ 등 지면 후보, range-adaptive/range-image clustering | 동일 bag에서 가까운 차량/낮은 장애물 recall 악화 없이 벽·천장 FP 감소; count·지연·자원 보고 |
 | **L3 추적 안정화** | ego-motion 품질에 맞는 상태 좌표, 관측 앵커·연관·생애주기·불확실도 | 정상↔음영 ID 연속성, 정지/기동 객체 속도오차, 가림 후 복귀, 고주로 p95 지연 검증 |
@@ -304,6 +314,29 @@ filter inputs 중 107개 geometry가 달라졌다. 음영 변화 99건은 모두
 ambiguous-wall fallback 비활성화였다. 대기 후보는 운영에 연결하지 않는다. AIM의 대표 payload
 format은 확인했지만 physical simultaneity, route별 map 대응, 객체 GT 정확도는 미수락이다.
 기존 planner 입력은 교체하지 않았다.
+
+### 0.9 L1-B4-A 독립 벽·장애물 분리 비교 — 2026-09-29
+
+[비교 보고서](./lidar-l1b4-validation-20260929.md)와
+[도구/재실행](../../../tools/lidar/tunnel_geometry/README.md)에 고정 입력·SHA와 세 비교군을
+남겼다. 카메라 valid-empty를 미수신처럼 취급하는 대조군, pinned 기준선, 벽 잔차·지지 구간과
+국소 전경 연결성을 사용하는 후보를 비교한다. 양성 camera 보호와 기하 보호는 별도이며
+기하 점을 car/person class로 위장하지 않는다. 원래 ground/voxel/wall fit/군집/L-shape OBB와
+제거 조건은 변경하지 않았다. 기존 36조건에 희소 first-return·양쪽 벽·단차/곡면·가림 등을
+추가한 116조건/580 frame을 같은 입력으로 재생했다.
+
+핵심 합성 car/person/low-unknown 세 사례는 wall-stage 객체점 100% 보존,
+final completeness/purity 100%와 미수신 기준 잔여 벽 100% 감소를 보였다.
+하지만 실제 음영 정차 입력에서는 후보의 최종 객체가 평균 약 17~19개/scan으로
+늘고 벽 근처의 좁고 높은 OBB가 다수 남았다. 정답 없는 객체 수를 오탐률로
+치환하지는 않지만, 합성 통과만으로 안전한 장애물 출력을 수락할 근거도 없다.
+현재 후보는 **운영 미채택**이며 실제 구조물과 장애물을 구분할 후속 실험을 요구한다.
+
+희소 입력 중 낮은 장애물 반환점이 0인 사례는 검출 성공으로 세지 않는다.
+입력 관측 부족, ground/ceiling 선행 삭제, wall 삭제, cluster 병합·최소점, OBB 제거를
+구분해야 한다. AIM 7개 표본의 형식·장착 roundtrip만 추가 확인했고, attitude/차량 기준점
+미확인으로 filter replay 승인은 0이다. YOLO 교체, tracker/ground 변경, GPS 운영 연결은
+이 실험 결과에 섞지 않았다.
 
 ---
 
