@@ -1,0 +1,52 @@
+schema: asmc-lidar-l1b4-v1
+runtime_connected: false
+base_revision: c536c3c
+branch: feat/lidar-l1b4-geometry
+reference_revision: 6435af10671235e735e4a9ed1bd747bd8d8389ac
+comparison:
+  decision: baseline
+  wait_ns: 0
+  stages_frozen: [roi, voxel, leveling, ceiling, ground, wall_fit, wall_persistence]
+  cluster_and_obb: unchanged_pinned_lshape
+  modes: [baseline, policy_only, geometry, candidate_off]
+geometry:
+  wall_band_min_m: 0.05
+  wall_band_max_m: 0.15
+  wall_band_mad_scale: 3.0
+  connection_radius_m: 0.20
+  local_expansion_max_m: 0.30
+  fit_residual_definition: median_abs_residual_plus_3_scaled_MAD
+  mad_normal_scale: 1.4826
+  sensor_normal_orientation: inward_positive_at_sensor_origin
+  min_component_points_to_preserve: 1
+  camera_geometry_protection_masks_separate: true
+  semantic_class_from_geometry: false
+acceptance:
+  target_preservation_min: 0.95
+  final_cluster_completeness_min: 0.80
+  final_cluster_purity_min: 0.90
+  wall_reduction_vs_missing_min: 0.50
+  baseline_success_losses_max: 0
+  negative_camera_mask_differences_max: 0
+  future_data_uses_max: 0
+  repeat_geometry_differences_max: 0
+  required_key_cases: [car, person, low_unknown]
+data:
+  historical_geometry:
+    path: lidar_assessment/20260928/l1b3g_geometry_v7/snapshots.jsonl
+    sha256: 31d400e0534c36219590a44ed00880e24b80bab34a83cb42fc59c0dbb7a13b20
+  historical_synthetic:
+    path: lidar_assessment/20260928/l1b3g_synthetic_v6/snapshots.jsonl
+    sha256: bc26197838f083cae32e30e342642b5b5551550c08e7317f246a0ee7202158a7
+  stationary_bag:
+    path: lidar_assessment/20260926/stationary_v2/stationary_0.bag
+    sha256: c4ce3c2afe53167c38dba3f284fe166ef5ebc6cb755581815ea1200eb6c8b076
+  resolved_params:
+    path: lidar_assessment/20260926/offline_v2/resolved_params.yaml
+    sha256: 9685240ccdf50a073baae24b627730d5f8a7adf18387b4d9936b42dda12e51e7
+limits:
+  - Stationary bag does not certify moving-object detection or tracking.
+  - Filter wall labels are not ground truth.
+  - Analytic first-return rays are not a VLP16 simulator.
+  - AIM unapproved object boxes are not accuracy ground truth.
+  - OFF parity must pass before evaluating candidate improvements.
