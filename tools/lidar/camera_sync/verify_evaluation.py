@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -26,7 +27,13 @@ def verify(data_root=None):
     assert fixed["runtime_connected"] is False
     assert fixed["acceptance"]["actual_25ms_geometry_test_passed"] is False
     for rel, expected in fixed["source_sha256"].items():
-        assert sha(REPO / rel) == expected, rel
+        revision = fixed.get("historical_source_revision")
+        if revision:
+            content = subprocess.check_output(["git", "--git-dir=" + str(REPO / ".git"),
+                                               "show", revision + ":" + rel])
+            assert hashlib.sha256(content).hexdigest() == expected, rel
+        else:
+            assert sha(REPO / rel) == expected, rel
     if data_root is None:
         return "source and non-deployment contract verified (data skipped)"
     data = fixed["evaluation"]

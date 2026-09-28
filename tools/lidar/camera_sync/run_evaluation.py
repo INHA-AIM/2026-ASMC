@@ -66,7 +66,9 @@ def read_events(bag_path):
                                 stamp_ns=message.header.stamp.to_nsec(),
                                 source_index=source_index,
                                 box_count=details[source_index].get("box_count", 0),
-                                payload_digest=digest_message(message)))
+                                payload_digest=digest_message(message),
+                                effective_stamp_ns=(message.header.stamp.to_nsec() // 1_000_000)
+                                * 1_000_000 if kind == "scan" else None))
     return events, details
 
 
@@ -95,7 +97,7 @@ def load_reference(path, scan_events):
             for name in ("baseline", "camera_missing"):
                 data = sweep.get(name)
                 if data:
-                    ref[name] = {"wall_residual": data["q"][0],
+                    ref[name] = {"reference_plane_band_remaining_points": data["q"][0],
                                  "clusters": data["c"][5],
                                  "kept_points": data["c"][4],
                                  "processing_ms": data["q"][2]}
@@ -126,8 +128,8 @@ def summarise(rows, invalid):
             ref = row.get("offline_130ms_reference", {})
             if "baseline" in ref and "camera_missing" in ref:
                 potential.append(
-                    ref["camera_missing"]["wall_residual"] -
-                    ref["baseline"]["wall_residual"])
+                    ref["camera_missing"]["reference_plane_band_remaining_points"] -
+                    ref["baseline"]["reference_plane_band_remaining_points"])
         return {"scans": len(group), "candidate_reasons": dict(sorted(counts.items())),
                 "candidate_unmatched_causes": dict(sorted(causes.items())),
                 "offline_130ms_filter_processing_reference_ms": {
@@ -140,9 +142,9 @@ def summarise(rows, invalid):
                 "wait_ms": {str(p): percentile(waited, p) for p in (50, 95, 99)},
                 "recovered_conditional_130ms_reference": {
                     "available_scans": len(potential),
-                    "missing_minus_protected_wall_residual_p50": percentile(potential, 50),
+                    "missing_minus_protected_plane_band_remaining_p50": percentile(potential, 50),
                     "scope": "not an actual 25ms geometry replay"}}
-    return {"all": one(rows), "by_scene": {key: one(value)
+    return {"schema": "asmc-camera-sync-fifo-v2", "all": one(rows), "by_scene": {key: one(value)
             for key, value in sorted(by_scene.items())},
             "invalid_yolo": invalid,
             "future_yolo_use": sum(row[mode]["selected_yolo_arrival_ns"] is not None and
@@ -218,7 +220,10 @@ def main():
         "reference_130ms_sha256": digest_file(args.reference_130ms)
                                   if args.reference_130ms else None,
         "comparison": {"baseline_wait_ms": 0, "candidate_wait_ms": 25,
-                       "stamp_window_ms": 50, "queue_max_scans": 2},
+                       "stamp_window_ms": 50, "queue_max_scans": 2,
+                       "scan_match_stamp": "legacy_integer_millisecond_floor",
+                       "same_time_policy": "bag_source_order_then_deadline",
+                       "history_policy": "positive_stamps_sorted_keep_64_within_2s"},
         "limitations": [
             "ROS bag arrival order is replayed; actual live internal state was not captured",
             "LiDAR point cloud and leveling are not recalculated",

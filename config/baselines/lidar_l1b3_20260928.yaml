@@ -1,5 +1,11 @@
 schema: asmc-lidar-l1b3-isolated-v1
 status: scheduler_validated_geometry_not_accepted
+historical_source_revision: f419836
+superseded_by: lidar_l1b3g_20260928.yaml
+corrections:
+  - q0_is_reference_plane_band_remaining_not_wall_residual
+  - original_scheduler_sorted_decisions_and_could_hide_fifo_inversion
+  - corrected_comparison_uses_legacy_millisecond_scan_stamp
 runtime_connected: false
 revisions:
   main: 1ce434d0082e3aec6cf79145c05484e1f66fac1c

@@ -3,13 +3,18 @@
 이 디렉터리는 운영 노드가 아니다. `/YOLO/BBox`는 YOLO11m 객체 box이고,
 TwinLite 차선·주행가능영역이나 신호등 결과가 아니다. 손재호
 `6435af1`의 보호점 계산·터널 필터 원본은 변경하지 않는다. 이 평가기의
-25ms 후보는 **스케줄러**만 시험하며, 실제 25ms 후보의 터널 점군을 다시
-처리하지 않는다. 130ms offline sweep의 벽·cluster 수치는 같은 scan의
+`run_evaluation.py`의 25ms 후보는 **스케줄러**만 시험하며, 실제 25ms 후보의 터널 점군을 다시
+처리하지 않는다. 130ms offline sweep의 지면 평면 주변 잔여점·cluster 수치는 같은 scan의
 조건부 참고값이지 후보의 before/after geometry가 아니다.
 
 [결과](../../../docs/packages/asmc_perception/lidar-l1b3-validation-20260928.md) ·
 [고정 기준](../../../config/baselines/lidar_l1b3_20260928.yaml) ·
 [공통 소비 계약](../../../docs/contracts/perception/lidar-planning-consumer-v1.md)
+
+v1 산출물과 source SHA는 historical revision에서 검사한다. 현재 스케줄러는
+결과 정렬 없이 FIFO를 유지하며, 중복/역행 양수 YOLO stamp는 원본과 같이
+수용한다. 원본 scan stamp와 밀리초 절삭 matching stamp를 분리한다.
+`q[0]`을 벽 잔여점으로 이름 붙였던 해석은 정정되었다.
 
 ## 재실행
 

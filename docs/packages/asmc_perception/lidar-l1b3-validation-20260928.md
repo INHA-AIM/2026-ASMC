@@ -1,12 +1,32 @@
 # L1-B3: YOLO 도착 지연과 터널 보호 매칭 격리 평가
 
-**상태: 스케줄러 검증 완료, 운영 연결 보류.** 원본 LiDAR·bridge·판제,
+**상태: 과거 v1 기록 보존, L1-B3-G 정정 대상, 운영 연결 보류.** 원본 LiDAR·bridge·판제,
 ROS topic/MD5, HD맵, 모델 weight는 변경하지 않았다.
 [기계 판독 기준](../../../config/baselines/lidar_l1b3_20260928.yaml)과
 [재실행 방법](../../../tools/lidar/camera_sync/README.md)이 정본이다.
 손재호의 `6435af1`에서 `TunnelFilterRos.cpp`는 YOLO 결과를
 스캔 처리 시 즉시 최근접 stamp로 선택하고 50ms 이내만 인정한다.
 200ms까지 기다리는 객체 클래스 퓨전과는 별도 경로다.
+
+## 2026-09-28 평가기 검수 정정
+
+아래 표와 SHA는 `f419836` 당시 산출물을 보존한 기록이다. 현재 평가기는
+FIFO 결정 순서를 직접 검증하며, 기존 Parser와 같이 LiDAR stamp를 밀리초로
+절삭한 별도 matching stamp를 사용한다. 원본 ns는 그대로 보존한다.
+양수 YOLO stamp의 중복/역행은 원본 코드처럼 수용하면서 진단하며,
+동일 offset이면 timestamp 정렬상 앞쪽 frame을 선택한다.
+정정 재생에서는 즉시 1,149, 25ms 1,453(+304), boxes 82, empty 1,371,
+timeout 1,109로 바뀌었다. 과거 표의 수치를 새 결과로 덮어쓰지 않는다.
+
+이전 스케줄러는 최종 정렬로 FIFO 위반을 숨길 수 있었다. 실제 bag의 25ms
+비교에서는 scan 간격이 충분하여 해당 역전이 확인되지 않았지만, burst 합성
+입력에서 재현되므로 이전 일반적인 FIFO 수락 주장은 철회한다.
+
+`sweep.q[0]`은 **기준 지면 평면 ±0.15m / 30m 이내의 잔여점**이다.
+기존 평가기가 이를 `wall_residual`로 잘못 이름 붙였다. 아래의 19/0점은
+벽 잔여점 감소 근거가 아니며, 벽 제거 효과 해석을 철회한다. 참고 지표 자체와
+원본 아티팩트는 보존한다. 실제 필터 비교·AIM 자료 적합성은 L1-B3-G에서
+별도로 기록한다.
 
 ## 입력·재현성
 
@@ -63,9 +83,9 @@ p50/p95/p99는 **13.0/25/25ms**다.
 실제 25ms 변환 결과로 가장하지 않았다. 같은 scan의
 130ms sweep에서 `baseline`(보호 이용)과
 `camera_missing`(보호 없음 + ambiguous fallback)이 남긴
-벽 잔여·cluster·처리 시간을 **조건부 참고값**으로만
+기준 지면 평면 주변 잔여점·cluster·처리 시간을 **조건부 참고값**으로만
 JSONL에 덧붙였다. 터널 진입 추가 매칭 58 scan의
-missing-minus-protected 벽 잔여 p50은 19점, 터널 중간
+missing-minus-protected 지면 평면 주변 잔여 p50은 19점, 터널 중간
 41 scan은 0점이다. 그러나 실제 후보가 이 geometry를
 재현했다고 주장할 수 없다. 130ms sweep의 필터 처리시간
 참고 p50/p95/p99는 **5.83/7.78/9.66ms**이며 25ms
