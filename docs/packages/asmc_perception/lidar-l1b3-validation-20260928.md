@@ -1,12 +1,25 @@
 # L1-B3: YOLO 도착 지연과 터널 보호 매칭 격리 평가
 
-**상태: 과거 v1 기록 보존, L1-B3-G 정정 대상, 운영 연결 보류.** 원본 LiDAR·bridge·판제,
+**상태: v1 기록 보존, L1-B3-G 후속 실기하/AIM 감사 추가 완료, 운영 연결 보류.** 원본 LiDAR·bridge·판제,
 ROS topic/MD5, HD맵, 모델 weight는 변경하지 않았다.
 [기계 판독 기준](../../../config/baselines/lidar_l1b3_20260928.yaml)과
 [재실행 방법](../../../tools/lidar/camera_sync/README.md)이 정본이다.
 손재호의 `6435af1`에서 `TunnelFilterRos.cpp`는 YOLO 결과를
 스캔 처리 시 즉시 최근접 stamp로 선택하고 50ms 이내만 인정한다.
 200ms까지 기다리는 객체 클래스 퓨전과는 별도 경로다.
+
+## 후속 정정 — L1-B3-G 현재 결과
+
+아래 v1 표와 산출물은 당시 기록으로 보존한다. corrected FIFO 결과는 candidate 1,453 /
+baseline 1,149 / timeout 1,109이며, 실제 pinned tunnel filter geometry도 재실행했다. 이전
+1,148 / 1,452 / 1,110은 현재 결과로 인용하지 않는다.
+
+음영 filter가 유효했던 1,011 scan 중 geometry가 달라진 것은 107건이다. 공식 음영 measurement
+99건(진입 58, 중간 41)은 모두 timeout 대신 valid-empty detection을 선택한 경우였다. 빈 결과에서
+ambiguous-wall fallback이 꺼져 벽 제거 수가 늘고 유지점·filter 객체 출력이 줄었다. 객체 출력
+count는 정답 recall이 아니다. 36개 합성 조건에서도 same-box-within-wait은 통과했지만 valid-empty
+fallback 변화가 재현됐다. 25ms scheduler는 운영 미채택이다. 상세 수치와 AIM 적합성은
+[L1-B3-G 결과](./lidar-l1b3g-validation-20260928.md)를 참조한다.
 
 ## 2026-09-28 평가기 검수 정정
 

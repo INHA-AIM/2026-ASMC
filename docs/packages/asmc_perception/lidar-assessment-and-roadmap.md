@@ -1,7 +1,7 @@
 # LiDAR 인지 패키지 완성도 평가와 개선 로드맵
 
 > **문서 상태:** Assessment Record + Working Proposal
-> **최종 정리:** 2026-09-28 (L1-B3 카메라 매칭 격리 평가, 운영 미연결)
+> **최종 정리:** 2026-09-28 (L1-B3-G 기하 비교와 AIM 적합성 감사, 운영 미연결)
 > **대상:** LiDAR 인지 담당 · 판단제어 파트 · 인지 통합
 > **대상 코드:** [`src/lidar+sensorfusion/`](../../../src/lidar+sensorfusion/)
 > **읽는 순서:** 0장은 2026-09-26의 현재 판단과 착수 순서다. 1~13장은 2026-09-21의
@@ -240,8 +240,9 @@ Capture 자료는 검증된 단일 프레임 검출 실험에 먼저 쓰고, 연
 | **L1-A 기준선 마감** | main/손재호/서준 consumer·센서·자료 감사, isolated build/test, live/offline 계측 | [검증 보고서](./lidar-l1a-validation-20260926.md), [manifest](../../../config/baselines/lidar_l1a_20260926.yaml), [소비 계약](../../contracts/perception/lidar-planning-consumer-v1.md)로 재현 가능. 전체 미션 수락은 아님 |
 | **L1-B1: 좌표·시간 코어** | sensor/leveled/base_link/map 정합, 관측 stamp·processing·receipt 분리 | 격리 구현·시험 완료, [결과와 한계](./lidar-l1b1-validation-20260927.md). 운영 연결·연속 주행 수락은 미완료 |
 | **L1-B2: GPS 전환·출력 선택** | status/좌표/stale/NaN/점프·복구, local/map/판제 가용성 분리 | [격리 후보와 실제 bag 감사](./lidar-l1b2-validation-20260927.md) 완료. 연속 주행·관측 pose·판제 전환은 미수락 |
-| **L1-B3: camera 매칭** | YOLO11m `/YOLO/BBox`의 50ms stamp와 0/25ms 도착 순서 비교 | [스케줄러 검증](./lidar-l1b3-validation-20260928.md): 2,562 scan 중 304개 추가 매칭, 1,110개 timeout. 실제 25ms 보호점·벽 geometry와 통합 지연은 미검증; 운영 연결 보류 |
-| **L1-B3 후속 기하 수락** | 같은 scan의 점군·수신시점 pose·수평화 고정, 실제 선택 box로 터널 필터 양쪽 실행 | 벽 잔여/cluster/벽 근접 객체 보존과 종단 p95/p99를 직접 비교한 후 채택·미채택 |
+| **L1-B3: camera 매칭** | YOLO11m /YOLO/BBox의 50ms stamp와 0/25ms 도착 순서 비교 | [스케줄러](./lidar-l1b3-validation-20260928.md)·[L1-B3-G](./lidar-l1b3g-validation-20260928.md): 2,562 scan에서 1,149→1,453(+304), timeout 1,109. same-scan geometry도 재생했으나 valid-empty fallback 위험으로 운영 미채택 |
+| **L1-B3-G: 기하·AIM 감사** | 고정 same-scan geometry로 pinned filter 비교, AIM session/frame/time/GT 적합성 | 1,011 valid scans 중 geometry 107건 변화; 음영 99건 모두 valid-empty 선택. AIM 174 sessions, LiDAR 35/카메라 28 표본 확인; GT·실동시성 승인 없음 |
+| **후속 camera 보호 정책** | valid boxes / valid empty / unavailable-stale / invalid 구분과 ambiguous-wall fallback 결합 | 별도 합성·bag 회귀와 담당자 검토 후 결정. 운영 경로 유지 |
 | **독립 COCO 객체 모델 비교** | YOLO11m ↔ 11n/s ↔ 26n/s/m, 동일 이미지/옵션/weight SHA와 동시 부하 | 클래스·box·stamp 호환 및 차량/보행자 정확도와 매칭률·GPU/CPU/지연 수락; FP16/TensorRT는 그 후 별도 변수 |
 | **L2 ROI·ground·clustering 비교** | boundary-family envelope와 fallback, 기존/linefit/Patchwork++ 등 지면 후보, range-adaptive/range-image clustering | 동일 bag에서 가까운 차량/낮은 장애물 recall 악화 없이 벽·천장 FP 감소; count·지연·자원 보고 |
 | **L3 추적 안정화** | ego-motion 품질에 맞는 상태 좌표, 관측 앵커·연관·생애주기·불확실도 | 정상↔음영 ID 연속성, 정지/기동 객체 속도오차, 가림 후 복귀, 고주로 p95 지연 검증 |
@@ -295,13 +296,14 @@ ROS2/SLAM 의존성이 아니다. 지면 첫 추가 비교는 **linefit**, Patch
 재검증, SimpleTrack은 연관/생애주기 참고다. GroundGrid는 유효 odometry, DipG-Seg는
 VLP16 투영 검증이 선행이다. 학습 검출기/MOS는 후순위다.
 
-L1-B2의 격리 결과는 [별도 기록](./lidar-l1b2-validation-20260927.md)에
-남겼다. 이어서 YOLO11m 객체 box의 즉시/25ms 매칭을 같은 정차 bag 도착 순서로
-비교한 [L1-B3 기록](./lidar-l1b3-validation-20260928.md)을 추가했다. 25ms 후보는
-304 scan을 더 매칭했지만 1,110 scan은 여전히 시간창 밖이고, 터널에서 추가
-매칭된 결과는 모두 유효 빈 검출이다. 130ms offline sweep geometry는 보호
-매칭 선택과 자세 상태가 달라질 수 있으므로 실제 25ms 전후 효과로 간주하지
-않는다. 기존 planner 입력은 자동 교체하지 않았다.
+L1-B2의 격리 결과는 [별도 기록](./lidar-l1b2-validation-20260927.md)에 남겼다. YOLO11m 객체
+box의 즉시/25ms scheduler, 실제 same-scan filter geometry와 AIM 적합성은 각각
+[L1-B3](./lidar-l1b3-validation-20260928.md) 및 [L1-B3-G](./lidar-l1b3g-validation-20260928.md)에
+나눠 기록했다. corrected run은 2,562 scan에서 304개 추가 매칭, timeout 1,109이며 1,011 valid
+filter inputs 중 107개 geometry가 달라졌다. 음영 변화 99건은 모두 valid-empty에 따른
+ambiguous-wall fallback 비활성화였다. 대기 후보는 운영에 연결하지 않는다. AIM의 대표 payload
+format은 확인했지만 physical simultaneity, route별 map 대응, 객체 GT 정확도는 미수락이다.
+기존 planner 입력은 교체하지 않았다.
 
 ---
 
