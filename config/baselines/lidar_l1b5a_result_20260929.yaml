@@ -32,8 +32,8 @@ capture:
 synthetic:
   run: l1b5a_synthetic_final_v1/run
   repeat: l1b5a_synthetic_repeat_final_v1/run
-  scores: l1b5a_synthetic_final_v1/run_scores_v3
-  repeat_scores: l1b5a_synthetic_repeat_final_v1/run_scores_v3
+  scores: l1b5a_synthetic_final_v1/run_scores_v4
+  repeat_scores: l1b5a_synthetic_repeat_final_v1/run_scores_v4
   score_summary_sha256: 6007933eed1905da7c7419c7645e6447fafc830e97a32a2a5131e4b5635b4504
   stable_geometry_sha256: e43cc8c2dcde6d6433e8c0f5b8cac9b856882e93fc4c255649326ab78c471d1b
   calls: 580
@@ -44,8 +44,8 @@ synthetic:
 extra:
   run: l1b5a_extra_final_v1/run
   repeat: l1b5a_extra_repeat_final_v1/run
-  scores: l1b5a_extra_final_v1/run_scores_v3
-  repeat_scores: l1b5a_extra_repeat_final_v1/run_scores_v3
+  scores: l1b5a_extra_final_v1/run_scores_v4
+  repeat_scores: l1b5a_extra_repeat_final_v1/run_scores_v4
   score_summary_sha256: 89118e32d2479141ab251ff5a9a2810f41847f8f5ed4451642e6fb3e99a1943a
   stable_geometry_sha256: 99ae784509f156f13b14e92b84748e63d5245f05cb3c8708289bd7e507733ab1
   calls: 80

@@ -81,6 +81,8 @@ class AdmissionAndScoring(unittest.TestCase):
             with redirect_stdout(io.StringIO()):
                 score_run(SimpleNamespace(kind="synthetic",run=d,truth=truth,output=d/"scores"))
             self.assertEqual(json.loads((d/"scores/summary.json").read_text())["measured_frames"],1)
+            observation = json.loads((d/"scores/objects.jsonl").read_text())
+            self.assertIsNone(observation["distance_m"])
 
 
 if __name__ == "__main__":

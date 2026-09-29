@@ -49,7 +49,8 @@ def run(args):
         s = source[r["input_id"]]
         t = truth[s["capture_key"]] if capture else truth[r["input_id"]]
         ids = np.fromfile(args.truth.parent / t["instance_path"], dtype="<i4") if capture else np.asarray(t["labels"])
-        boxes = t["boxes"] if capture else [{"id": int(k), "class": t.get("kind") or "negative", "distance_m": 0}
+        boxes = t["boxes"] if capture else [{"id": int(k), "class": t.get("kind") or "negative",
+                                            "distance_m": t.get("distance_m")}
                                             for k in sorted(set(ids) - {0, 1, 2, 4})]
         mapping = np.fromfile(args.run / "clouds" / (r["input_id"] + ".indices.bin"), dtype="<i4")
         pre = np.asarray(r["pre_wall_labels"])

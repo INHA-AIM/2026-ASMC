@@ -85,6 +85,28 @@ ROI 밖·희소 관측은 이 22개와 분리한다. sequence 28의 VehicleID 2�
 3D 최단거리가 약 1.062m인 기존 사례는 raw에서도 남는다. 1m 군집 연결 기준은 유지했다.
 단순 voxel 해제나 벽 보호 강화로 해결됐다고 주장할 근거가 없다.
 
+거리·관측량을 분리하면 다음과 같다. 충분한 관측량의 대상만 분모로 사용했으며,
+아래 거리 값은 기존 GT metadata 기준이다. 원본/voxel 두 군집군의 결과가 같다.
+같은 장면의 반복·class별 분포 차이가 있으므로 인과관계나 일반화 성능으로 단정하지 않는다.
+
+| Capture 거리 | 차량 성공 / 관측 | 장애물 성공 / 관측 |
+|---|---:|---:|
+| <10m | 24 / 24 | 11 / 11 |
+| 10~20m | 25 / 28 | 17 / 17 |
+| 20~40m | 20 / 39 | 13 / 13 |
+
+| wall-stage 대상 voxel 수 | 차량 성공 / 관측 | 장애물 성공 / 관측 |
+|---|---:|---:|
+| 10~29 | 16 / 33 | 15 / 15 |
+| 30~99 | 25 / 30 | 21 / 21 |
+| ≥100 | 28 / 28 | 5 / 5 |
+
+차량 실패의 19/22가 20~40m, 17/22가 10~29 voxel에 있다. 범위/빔 간격과 고정 3D
+연결의 상호작용을 다음 후보에서 검토할 근거이지, 단순 tolerance 확대의 채택 근거는 아니다.
+40m 이상 충분한 대상은 이 입력에 없다. 부분 가림은 합성 `occluded` 조건과 점 지원량으로
+분리하며 실제 Capture의 가림 수준은 정량 GT가 없어 임의 등급을 부여하지 않았다.
+합성 객체의 거리 metadata가 없으면 unknown(null)으로 남기고 0m로 채우지 않는다.
+
 ## 4. 합성: 개선과 회귀를 함께 기록
 
 기존 580호출의 116 측정 중 nominal sensor ray를 확인할 수 있는 60조건에서만 AOS를
@@ -158,10 +180,10 @@ bag·external 레포를 복사해 팀 repo에 넣지 않는다.
 | 정본 산출물 | 상대 경로 |
 |---|---|
 | Capture run/repeat, 후처리 점 점수 | `l1b5a_capture_final_v1/{run,repeat,run_scores,repeat_scores}` |
-| 기존 합성 run, 점 점수 | `l1b5a_synthetic_final_v1/{run,run_scores_v3}` |
-| 기존 합성 repeat, 점 점수 | `l1b5a_synthetic_repeat_final_v1/{run,run_scores_v3}` |
-| 추가 합성 input/run/점 점수 | `l1b5a_extra_fixtures_v1`, `l1b5a_extra_final_v1/{run,run_scores_v3}` |
-| 추가 합성 repeat/점 점수 | `l1b5a_extra_repeat_final_v1/{run,run_scores_v3}` |
+| 기존 합성 run, 점 점수 | `l1b5a_synthetic_final_v1/{run,run_scores_v4}` |
+| 기존 합성 repeat, 점 점수 | `l1b5a_synthetic_repeat_final_v1/{run,run_scores_v4}` |
+| 추가 합성 input/run/점 점수 | `l1b5a_extra_fixtures_v1`, `l1b5a_extra_final_v1/{run,run_scores_v4}` |
+| 추가 합성 repeat/점 점수 | `l1b5a_extra_repeat_final_v1/{run,run_scores_v4}` |
 | 기존 bag snapshot 재처리·parity | `l1b5a_stationary_final_v1/{run,parity.json}` |
 | BEV/측면 비교 | `l1b5a_figures_v1/*.png`와 대응 SHA sidecar |
 
@@ -175,7 +197,8 @@ point-score 성공만으로 전체 차량 box가 정확하다고 수락하지 �
 Ubuntu Git 2.25의 command-scope safe.directory 미지원으로 metadata 마감에서 실패했고,
 기존 private temporary XDG helper로 정정했다. synthetic score의 NumPy ID 직렬화 결함은
 int 변환과 end-to-end 시험으로 수정했다. 이 초기 산출물은 삭제/덮어쓰기하지 않았으며
-수정된 후처리는 새 v3 폴더로 저장했다. 이 정정은 mask·군집 threshold 튜닝이 아니다.
+수정된 후처리는 새 v3 폴더로 저장했고, 합성의 거리 metadata 보존/unknown 정정은
+v4로 별도 저장했다. 군집 성능 summary는 v3/v4가 같다. 이 정정은 mask·군집 threshold 튜닝이 아니다.
 
 ## 7. 다음 사용자 검토 지점
 
