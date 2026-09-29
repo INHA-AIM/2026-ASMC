@@ -64,6 +64,9 @@ def run(args):
     if args.output.exists():
         raise ValueError("output exists; preserve previous experiment")
     config = yaml.safe_load(args.config.read_text())
+    repo = Path(__file__).resolve().parents[3]
+    tool_commit = git_output(repo, ["rev-parse", "HEAD"]).strip()
+    tools_at_start = {p.name: sha(p) for p in Path(__file__).parent.iterdir() if p.is_file()}
     capture_ok = admission(args.kind, args.projection_audit, args.config, args.source_manifest)
     source_rows = [json.loads(s) for s in args.snapshots.open()]
     if len({r["input_id"] for r in source_rows}) != len(source_rows):
@@ -174,10 +177,9 @@ def run(args):
     manifest = {"schema": "asmc-l1b5a-run-manifest-v1", "runtime_connected": False,
                 "kind": args.kind, "inputs": {k: {"path": str(p), "sha256": sha(p)} for k, p in bound.items()},
                 "source_clouds": clouds, "artifacts": artifacts,
-                "tool_sha256": {p.name: sha(p) for p in Path(__file__).parent.iterdir() if p.is_file()}}
+                "tool_sha256": tools_at_start}
     manifest["reference_provenance"] = json.loads(bound["reference_provenance"].read_text())
-    repo = Path(__file__).resolve().parents[3]
-    manifest["tool_commit"] = git_output(repo, ["rev-parse", "HEAD"]).strip()
+    manifest["tool_commit"] = tool_commit
     (args.output / "manifest.json").write_text(json.dumps(manifest, sort_keys=True, indent=2) + "\n")
     print(canonical(summary))
     if not summary["passed_preservation_and_parity"]:

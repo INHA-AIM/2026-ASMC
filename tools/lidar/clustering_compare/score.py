@@ -13,6 +13,11 @@ from tools.lidar.capture_validation.score import object_metrics, cluster_composi
 from tools.lidar.clustering_compare.projection import canonical, sha
 
 
+def json_rows(path):
+    with path.open() as stream:
+        yield from map(json.loads, stream)
+
+
 def raw_score(key, ids, mapping, pre, mode):
     roi = mapping >= 0
     expanded = np.full(len(mapping), 255, dtype=int)
@@ -33,29 +38,38 @@ def run(args):
     if args.output.exists():
         raise ValueError("output exists")
     args.output.mkdir(parents=True)
-    source = {r["input_id"]: r for r in map(json.loads, (args.run / "snapshots.jsonl").open())}
+    source = {r["input_id"]: r for r in json_rows(args.run / "snapshots.jsonl")}
     capture = args.kind == "capture"
-    truth = {r["capture_key"] if capture else r["input_id"]: r for r in map(json.loads, args.truth.open())}
+    truth = {r["capture_key"] if capture else r["input_id"]: r for r in json_rows(args.truth)}
     groups, transitions, totals = defaultdict(Counter), Counter(), defaultdict(Counter)
     object_rows, frames = [], []
-    for r in map(json.loads, (args.run / "geometry.jsonl").open()):
+    for r in json_rows(args.run / "geometry.jsonl"):
         if not r["measurement"] or "skipped_reason" in r:
             continue
         s = source[r["input_id"]]
         t = truth[s["capture_key"]] if capture else truth[r["input_id"]]
         ids = np.fromfile(args.truth.parent / t["instance_path"], dtype="<i4") if capture else np.asarray(t["labels"])
-        boxes = t["boxes"] if capture else [{"id": k, "class": t.get("kind") or "negative", "distance_m": 0}
+        boxes = t["boxes"] if capture else [{"id": int(k), "class": t.get("kind") or "negative", "distance_m": 0}
                                             for k in sorted(set(ids) - {0, 1, 2, 4})]
         mapping = np.fromfile(args.run / "clouds" / (r["input_id"] + ".indices.bin"), dtype="<i4")
         pre = np.asarray(r["pre_wall_labels"])
         if len(ids) != len(mapping):
             raise ValueError("truth/lineage differs")
-        state = s.get("controlled_camera_state", s.get("camera_state", s.get("scene", "unknown")))
+        state = s.get("controlled_camera_state", s.get("camera_state", t.get("camera_result", s.get("scene", "unknown"))))
         modes = ("baseline", "raw_euclidean") + (("travel_aos",) if r["travel_aos"]["status"] == "evaluated" else ())
         for b in boxes:
             scores = {m: object_metrics(b["id"], ids, mapping, pre, r[m]) if m == "baseline"
                       else raw_score(b["id"], ids, mapping, pre, r[m]) for m in modes}
             before = scores["baseline"]
+            for m in modes:
+                if m != "baseline":
+                    reasons = np.asarray(r[m]["projection_reasons"])
+                    roi = mapping >= 0
+                    pre_raw = np.full(len(mapping), 255)
+                    pre_raw[roi] = pre[mapping[roi]]
+                    target = (ids == b["id"]) & (pre_raw == 0)
+                    scores[m]["target_projection_reasons"] = {str(k): int((target & (reasons == k)).sum())
+                                                               for k in sorted(set(reasons[target]))}
             for m, v in scores.items():
                 c = groups[(state, b["class"], m)]
                 c["observations"] += 1

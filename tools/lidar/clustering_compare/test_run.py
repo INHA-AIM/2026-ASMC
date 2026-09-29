@@ -1,7 +1,10 @@
 import json
+from contextlib import redirect_stdout
+import io
 from pathlib import Path
 import tempfile
 import unittest
+from types import SimpleNamespace
 
 import numpy as np
 import yaml
@@ -9,6 +12,7 @@ import yaml
 from .projection import sha
 from .run import admission, analytic_admitted, stable
 from .score import raw_score
+from .score import run as score_run
 from .fixtures import cloud, CASES
 
 CONFIG = Path(__file__).resolve().parents[3] / "config/baselines/lidar_l1b5a_clustering_20260929.yaml"
@@ -59,6 +63,24 @@ class AdmissionAndScoring(unittest.TestCase):
             self.assertTrue(np.all(points[:, 3] == 10))
             self.assertTrue(analytic_admitted({"fixture_family": "l1b5_analytic_first_return"}, points, config))
             self.assertLessEqual(np.unique(labels).size, 6)
+
+    def test_synthetic_scores_are_json_serializable(self):
+        with tempfile.TemporaryDirectory() as folder:
+            d = Path(folder)
+            (d / "clouds").mkdir()
+            np.arange(20,dtype="<i4").tofile(d / "clouds/fixture.indices.bin")
+            (d / "snapshots.jsonl").write_text(json.dumps({"input_id":"fixture","camera_state":"empty"})+"\n")
+            mode = {"labels":[0]*20,"cluster_id":[0]*20,"projection_reasons":[1]*20,
+                    "objects":[{"removed":False,"center":[0,0,0],"dimensions":[1,1,1]}]}
+            row = {"input_id":"fixture","measurement":True,"pre_wall_labels":[0]*20,
+                   "baseline":mode,"raw_euclidean":mode,"travel_aos":{"status":"blocked_projection_admission"}}
+            (d / "geometry.jsonl").write_text(json.dumps(row)+"\n")
+            (d / "manifest.json").write_text("{}")
+            truth = d / "truth.jsonl"
+            truth.write_text(json.dumps({"input_id":"fixture","kind":"car","labels":[3]*20})+"\n")
+            with redirect_stdout(io.StringIO()):
+                score_run(SimpleNamespace(kind="synthetic",run=d,truth=truth,output=d/"scores"))
+            self.assertEqual(json.loads((d/"scores/summary.json").read_text())["measured_frames"],1)
 
 
 if __name__ == "__main__":
