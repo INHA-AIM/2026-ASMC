@@ -6,9 +6,13 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 import numpy as np
 import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from tools.lidar.tunnel_geometry.git_evidence import git_output
 
 if __package__:
     from .projection import canonical, project, sha
@@ -173,8 +177,7 @@ def run(args):
                 "tool_sha256": {p.name: sha(p) for p in Path(__file__).parent.iterdir() if p.is_file()}}
     manifest["reference_provenance"] = json.loads(bound["reference_provenance"].read_text())
     repo = Path(__file__).resolve().parents[3]
-    manifest["tool_commit"] = subprocess.check_output(
-        ["git", "-C", str(repo), "-c", "safe.directory=" + str(repo), "rev-parse", "HEAD"], text=True).strip()
+    manifest["tool_commit"] = git_output(repo, ["rev-parse", "HEAD"]).strip()
     (args.output / "manifest.json").write_text(json.dumps(manifest, sort_keys=True, indent=2) + "\n")
     print(canonical(summary))
     if not summary["passed_preservation_and_parity"]:
