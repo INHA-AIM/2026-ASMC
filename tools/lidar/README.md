@@ -1,6 +1,17 @@
 # LiDAR read-only 평가 도구
 
-## 최신 독립 실험: L1-B4-B
+## 최신 독립 실험: L1-B5-A
+
+[군집화 제어군·AOS 비교](./clustering_compare/README.md)는 기존 제거 마스크와 OBB를
+유지한다. [결과](../../docs/packages/asmc_perception/lidar-l1b5a-clustering-validation-20260929.md):
+raw 복원만으로 차량 22실패는 개선되지 않았고, Capture 투영 전제 8장면 미충족으로 AOS는
+전량 차단했다. 합성 회귀도 있어 미채택이며, 운영 ROS/판제 입력은 변경하지 않았다.
+
+```bash
+python3 -B tools/lidar/check_l1b5a_baseline.py --data-root ../data
+```
+
+## 이전 독립 실험: L1-B4-B
 
 [Capture GT 비교](./capture_validation/README.md)는 새 Autonav 105장면의 Intensity를
 실제 pinned filter로 처리하고 Instance 점 계보로 객체 소실·군집 품질을 채점한다.

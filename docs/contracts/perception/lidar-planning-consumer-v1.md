@@ -147,3 +147,17 @@ GT와 camera missing/empty fixture는 격리 평가 전용이다. Capture의 tri
 5회 정차 warmup, native IMU 시간 오류를 실제 관측 시각·tracking·GPS 전환 수락으로 쓰지 않는다.
 다음 비교는 충분한 관측점의 군집 분할/누락 후보 한 단위이며 ground/ROI/wall/OBB 또는
 판제 메시지 연결을 동시에 변경하지 않는다.
+
+## L1-B5-A 군집 비교 — 운영 출력 교체 없음
+
+[격리 결과](../../packages/asmc_perception/lidar-l1b5a-clustering-validation-20260929.md)는
+같은 wall-stage mask·원본 point lineage에서 voxel/raw Euclidean과 AOS를 비교했다.
+최소 관측량은 기존 voxel 수로 유지한다. Capture 전체의 projection contract가 통과하지
+못해 AOS는 `blocked_projection_admission`이고, 합성에서도 추가 성공 소실이 있어 미채택이다.
+이 상태를 객체 0개, 정상 empty, free-space로 해석하지 않는다.
+
+JSONL의 `projection_reasons`, pre-gate cluster, 최종 cluster/OBB와 masked labels는
+**평가 전용**이다. `labels=kept`라도 투영 제외/관측량 gate/OBB 제거로 최종 객체에 포함되지
+않을 수 있다. 인지의 안정성 보완을 판제가 없앨 근거는 아니며 `/last_lidar`·`/lidar_nogps`의
+frame/stamp·MD5·빈 배열 처리도 바꾸지 않는다. AOS를 통과한 적 없는 Capture에 대해
+정확도 개선·GPS 전환·연속 tracking·차로 귀속 수락을 주장하지 않는다.

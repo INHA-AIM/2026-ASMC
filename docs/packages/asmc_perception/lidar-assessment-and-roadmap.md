@@ -253,7 +253,7 @@ Capture 자료는 검증된 단일 프레임 검출 실험에 먼저 쓰고, 연
 | **L1-B3-G: 기하·AIM 감사** | 고정 same-scan geometry로 pinned filter 비교, AIM session/frame/time/GT 적합성 | 1,011 valid scans 중 geometry 107건 변화; 음영 99건 모두 valid-empty 선택. AIM 174 sessions, LiDAR 35/카메라 28 표본 확인; GT·실동시성 승인 없음 |
 | **L1-B4-A: 독립 기하 보호** | camera 상태/보호 근거 분리, 관측 벽 지지 구간·잔차·국소 돌출부 보호 | [비교 기록](./lidar-l1b4-validation-20260929.md). 합성 진급 기준 통과와 실제 구조물 조각의 다수 객체 출력을 구분; 운영 미채택 |
 | **L1-B4-B: Autonav 실제 GT 비교** | 새 Capture 105개의 점 보존·군집·OBB 단계별 비교, 실제 배치 우선 | [격리 검증](./lidar-l1b4b-capture-validation-20260929.md) 완료. 기존 wall-stage 대상점 100% 보존, 후보 조각 증가로 운영 미채택 유지. 보행자/연속 주행 수락은 미완료 |
-| **L1-B5-A: 관측 객체 군집화** | 충분한 점의 차량 22개 실패와 기존 성공/구조물 합침 회귀를 고정, 후보 하나만 비교 | 다음 승인 단위. ROI·ground·wall·OBB를 동시에 변경하지 않고 완전성/순도·합침·비용 비교; 운영 미연결 |
+| **L1-B5-A: 관측 객체 군집화** | voxel Euclidean/raw Euclidean/TRAVEL AOS를 같은 기존 제거 마스크·OBB로 격리 비교 | [결과](./lidar-l1b5a-clustering-validation-20260929.md): raw 제어군은 실패 회복 0. Capture AOS는 투영 계약 8장면 미충족으로 전량 차단. 합성 회귀도 있어 미채택; 다음은 투영 전제 확인 후 별도 군집 후보 |
 | **독립 COCO 객체 모델 비교** | YOLO11m ↔ 11n/s ↔ 26n/s/m, 동일 이미지/옵션/weight SHA와 동시 부하 | 클래스·box·stamp 호환 및 차량/보행자 정확도와 매칭률·GPU/CPU/지연 수락; FP16/TensorRT는 그 후 별도 변수 |
 | **L2 ROI·ground·clustering 비교** | boundary-family envelope와 fallback, 기존/linefit/Patchwork++ 등 지면 후보, range-adaptive/range-image clustering | 동일 bag에서 가까운 차량/낮은 장애물 recall 악화 없이 벽·천장 FP 감소; count·지연·자원 보고 |
 | **L3 추적 안정화** | ego-motion 품질에 맞는 상태 좌표, 관측 앵커·연관·생애주기·불확실도 | 정상↔음영 ID 연속성, 정지/기동 객체 속도오차, 가림 후 복귀, 고주로 p95 지연 검증 |
@@ -354,9 +354,37 @@ GT box 불일치 43관측과 잘못된 native IMU nSecs 81개는 제한으로 �
 1,549개로 늘었다. GT 없는 구조물 조각을 측정 FP로 단정하지 않지만 운영 채택 근거는 없다.
 충분한 voxel이 있는 Vehicle 91관측 중 19개는 불완전한 군집, 3개는 군집 미생성이다.
 따라서 극단적 벽 근접 배치 추가 수집보다 **기존 자료의 군집 분할·누락 비교 L1-B5-A**를
-다음 독립 수정으로 제안한다. 거리 적응형/높이 제약 XY 후보는 실패 간격 분석 후 하나를 선정한다.
+당시 다음 독립 수정으로 제안했다. 승인된 TRAVEL AOS 격리 결과는 아래 0.11에 기록한다.
 보행자/낮은 물체·실제 YOLO 부하·연속 주행·GPS 전환 수락과 운영 연결은 여전히 미완료다.
 이전 상세 기록은 그대로 보존한다.
+
+---
+
+### 0.11 L1-B5-A 군집화 제어군·TRAVEL AOS 결과 — 2026-09-29
+
+[상세 비교](./lidar-l1b5a-clustering-validation-20260929.md),
+[격리 도구](../../../tools/lidar/clustering_compare/README.md),
+[결과 manifest](../../../config/baselines/lidar_l1b5a_result_20260929.yaml)를 추가했다.
+raw 복원은 같은 voxel 삭제 마스크와 최소 10 unique-voxel gate를 사용했다. Capture에서
+기존 성공 차량 69/장애물 41관측은 유지했지만 차량 실패 22관측의 회복은 0이었다.
+
+Capture 수직각/channel·방위각 대응 gate는 97/105 통과, 전체 승인 실패다. 8장면을 빼고
+AOS를 평가하거나 임의 extrinsic/ring을 만들어 진행하지 않았다. 전체 Capture AOS 호출은
+0이며 이는 fresh empty 또는 검출률 0%가 아니다. 자료 자체의 오류 원인은 아직 미확인이다.
+
+검증 가능한 합성 입력에서 AOS를 빌드·실행했다. 기존 0.25° 합성과 1,200-column 고정
+투영의 셀 중복 제외·작은 군집 gate로 기존 차량 성공 4관측이 탈락했다. 추가 인접 차량
+합성에서는 두 관측 개선과 azimuth seam 한 관측 회귀가 함께 있었다. 따라서 현재 설정의
+AOS는 **미채택**이다. 지면/벽/OBB/tracker/YOLO를 함께 바꿔 진급 기준을 낮추지 않았다.
+
+TRAVEL의 `TravelGroundSeg`/`ObjectCluster`는 분리돼 AOS만 비교할 수 있다. 6.3의
+종전 "두 단계를 함께 변경" 설명을 이 코드 근거로 정정한다. 고정 external 원본은 그대로이며
+boundary/계측 adapter는 generated build copy에만 있다. 기존 문헌 FPS 배제 판단도 되살리지 않는다.
+
+원본 stamp·점/Intensity 계보·OFF/과거 baseline parity와 반복 결과는 보존됐다.
+현재 운영 ROS·MD5·판제 입력은 그대로다. 다음은 원본 Capture 센서 원점·beam 투영 계약을
+확인하는 작은 단위가 우선이고, 그 뒤 depth_clustering 또는 투영 불필요 거리 적응형 대조군을
+별도 승인 후 비교한다. 구조물·주행 관련성→linefit/Patchwork++→추적→차로 귀속은 독립 단위로 남긴다.
 
 ---
 
@@ -961,7 +989,11 @@ tol(r) = clamp(0.25 + 0.02 * r, 0.30, 0.90)      r = 센서 거리 [m]
 **CVC와 TRAVEL은 후순위 비교 후보로 유지한다(2026-09-27 정정).** 종전에는 CVC의
 L-CAS 실내 VLP-16 및 TRAVEL의 20~30 Hz 인용으로 25 ms 예산 초과라고 판단했으나,
 입력·CPU·계측 범위가 달라 직접 비교할 수 없다. range-image도 우리 장면에서 검증한다.
-TRAVEL은 두 단계를 함께 변경하므로 개별 알고리즘 평가 이후에 검토한다.
+종전에는 "TRAVEL은 두 단계를 함께 변경"한다고 적었지만 **2026-09-29 정정**:
+현재 checkout의 `TravelGroundSeg`와 `ObjectCluster`가 분리돼 AOS만 평가할 수 있다.
+[L1-B5-A](./lidar-l1b5a-clustering-validation-20260929.md)에서 지면은 유지하고 AOS만 비교했다.
+Capture 투영 전제 미충족과 합성 회귀로 이번 설정은 미채택이며, 이것은 mandatory 통합 교체나
+타 환경 FPS로 제외한다는 근거가 아니다. 당시 주장과 정정 이유는 0.11에도 보존한다.
 
 **C-ARC는 비반복 스캔(Livox Mid-360) 대상**이므로 반복 스캔인 VLP-16에는 직접 적용 대상이
 아니다. 참고 자료로만 둔다.
@@ -1355,7 +1387,7 @@ ROI를 넓히는 설계는 하지 않는다.**
 | 19 | **M-detector** 동적 점 검출 | 4.2 | 중간 | **학습 불필요.** KITTI 인용 84.5 ms. VLP-16 약14 ms 비례 환산 철회; pose/time 전제 후 계측 |
 | 20 | 고주로 전용 ROI 프로파일 (후방 −60 m) | 고주로 추월 | 낮음 | **판제 수정 0.** 차로 점유·gap 계산은 판제의 기존 feature 레이어에 둔다 (6.7) |
 | - | ~~CTRA/IMM 운동 모델~~ | - | - | **하향 조정.** SimpleTrack 실측상 KF와 CV 차이 미미 (6.5 변경 3) |
-| - | TRAVEL | - | - | 후순위 비교. 20~30 Hz 타 환경 수치로 제외하지 않음(6.3 정정) |
+| - | TRAVEL | - | - | L1-B5-A AOS-only 격리 비교 완료, 이번 설정 미채택. mandatory ground 교체 설명 철회; 타 환경 FPS로 제외하지 않음(0.11/6.3 정정) |
 | - | ~~Curved-Voxel Clustering~~ | - | - | **후순위.** VLP-16에서 20 ~ 30 Hz, range-image보다 한 자릿수 느림 |
 | - | ~~BEV 점유 격자 / `LaneOccupancy` / 클래스 확률 스키마~~ | - | - | **판제 수정 필요.** 각 절의 계약 안 대안을 먼저 적용하고, 한계 확인 후 재논의 |
 
