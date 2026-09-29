@@ -134,3 +134,16 @@ camera semantic 보호와 geometry foreground 보호는 별도 마스크다.
 다수의 최종 객체로 남는 위험이 확인됐다. 따라서 후보는 운영 미채택이며
 판제 fragment 억제/ID 재연결/소실 유예를 제거할 근거가 아니다.
 local/map 좌표·GPS 상태·관측 stamp의 설계 계약도 이 실험으로 자동 연결되지 않는다.
+
+## L1-B4-B Capture 비교 — 운영 소비 계약 유지
+
+[새 실제 GT 비교](../../packages/asmc_perception/lidar-l1b4b-capture-validation-20260929.md)는
+105장면의 raw→voxel→cluster 점 계보를 검사했다. 기존 wall-stage 대상점 보존이 이미 100%였고
+기하 후보는 labelled target 지원 객체를 늘리지 못하면서 구조물 조각 출력을 늘렸다.
+따라서 `/last_lidar`, `/lidar_nogps`의 운영 producer와 frame·stamp 의미를 바꾸지 않는다.
+판제의 안정화 보완 로직을 제거할 근거도 아니다.
+
+GT와 camera missing/empty fixture는 격리 평가 전용이다. Capture의 trigger surrogate stamp,
+5회 정차 warmup, native IMU 시간 오류를 실제 관측 시각·tracking·GPS 전환 수락으로 쓰지 않는다.
+다음 비교는 충분한 관측점의 군집 분할/누락 후보 한 단위이며 ground/ROI/wall/OBB 또는
+판제 메시지 연결을 동시에 변경하지 않는다.

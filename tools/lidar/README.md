@@ -1,6 +1,18 @@
 # LiDAR read-only 평가 도구
 
-## 최신 독립 실험: L1-B4-A
+## 최신 독립 실험: L1-B4-B
+
+[Capture GT 비교](./capture_validation/README.md)는 새 Autonav 105장면의 Intensity를
+실제 pinned filter로 처리하고 Instance 점 계보로 객체 소실·군집 품질을 채점한다.
+[결과](../../docs/packages/asmc_perception/lidar-l1b4b-capture-validation-20260929.md)에서
+기존 대상점 보존과 후보 구조물 조각 증가, 다음 군집화 비교 단위를 구분한다.
+GT는 평가 전용이며 Capture를 연속 tracking이나 실제 YOLO latency로 취급하지 않는다.
+
+```bash
+python3 -B tools/lidar/check_l1b4b_baseline.py --data-root ../data
+```
+
+## 이전 독립 실험: L1-B4-A
 
 [벽·장애물 분리 평가기](./tunnel_geometry/README.md)는 pinned `6435af1`과
 독립 기하 보호를 비교한다. [결과](../../docs/packages/asmc_perception/lidar-l1b4-validation-20260929.md)는

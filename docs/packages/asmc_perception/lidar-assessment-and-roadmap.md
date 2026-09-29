@@ -1,7 +1,7 @@
 # LiDAR 인지 패키지 완성도 평가와 개선 로드맵
 
 > **문서 상태:** Assessment Record + Working Proposal
-> **최종 정리:** 2026-09-29 (L1-B4-A 독립 기하 보호 후보 비교, 운영 미연결)
+> **최종 정리:** 2026-09-29 (L1-B4-B 실제 Capture GT 비교, 군집화 후속 단위 선정, 운영 미연결)
 > **대상:** LiDAR 인지 담당 · 판단제어 파트 · 인지 통합
 > **대상 코드:** [`src/lidar+sensorfusion/`](../../../src/lidar+sensorfusion/)
 > **읽는 순서:** 0장은 2026-09-26~29의 판단과 착수 순서다. 1~13장은 2026-09-21의
@@ -252,7 +252,8 @@ Capture 자료는 검증된 단일 프레임 검출 실험에 먼저 쓰고, 연
 | **L1-B3: camera 매칭** | YOLO11m /YOLO/BBox의 50ms stamp와 0/25ms 도착 순서 비교 | [스케줄러](./lidar-l1b3-validation-20260928.md)·[L1-B3-G](./lidar-l1b3g-validation-20260928.md): 2,562 scan에서 1,149→1,453(+304), timeout 1,109. same-scan geometry도 재생했으나 valid-empty fallback 위험으로 운영 미채택 |
 | **L1-B3-G: 기하·AIM 감사** | 고정 same-scan geometry로 pinned filter 비교, AIM session/frame/time/GT 적합성 | 1,011 valid scans 중 geometry 107건 변화; 음영 99건 모두 valid-empty 선택. AIM 174 sessions, LiDAR 35/카메라 28 표본 확인; GT·실동시성 승인 없음 |
 | **L1-B4-A: 독립 기하 보호** | camera 상태/보호 근거 분리, 관측 벽 지지 구간·잔차·국소 돌출부 보호 | [비교 기록](./lidar-l1b4-validation-20260929.md). 합성 진급 기준 통과와 실제 구조물 조각의 다수 객체 출력을 구분; 운영 미채택 |
-| **L1-B4-B: Autonav 실제 배치·주행** | 벽 근접 car/person/낮은 일반 장애물의 관측/GT 근거 확보, 단차·가림·연속 주행 | 실제 벽/객체 구분과 단계별 소실 원인 검증 후 다음 수정 하나 선택. 현재 후보를 자동 연결하지 않음 |
+| **L1-B4-B: Autonav 실제 GT 비교** | 새 Capture 105개의 점 보존·군집·OBB 단계별 비교, 실제 배치 우선 | [격리 검증](./lidar-l1b4b-capture-validation-20260929.md) 완료. 기존 wall-stage 대상점 100% 보존, 후보 조각 증가로 운영 미채택 유지. 보행자/연속 주행 수락은 미완료 |
+| **L1-B5-A: 관측 객체 군집화** | 충분한 점의 차량 22개 실패와 기존 성공/구조물 합침 회귀를 고정, 후보 하나만 비교 | 다음 승인 단위. ROI·ground·wall·OBB를 동시에 변경하지 않고 완전성/순도·합침·비용 비교; 운영 미연결 |
 | **독립 COCO 객체 모델 비교** | YOLO11m ↔ 11n/s ↔ 26n/s/m, 동일 이미지/옵션/weight SHA와 동시 부하 | 클래스·box·stamp 호환 및 차량/보행자 정확도와 매칭률·GPU/CPU/지연 수락; FP16/TensorRT는 그 후 별도 변수 |
 | **L2 ROI·ground·clustering 비교** | boundary-family envelope와 fallback, 기존/linefit/Patchwork++ 등 지면 후보, range-adaptive/range-image clustering | 동일 bag에서 가까운 차량/낮은 장애물 recall 악화 없이 벽·천장 FP 감소; count·지연·자원 보고 |
 | **L3 추적 안정화** | ego-motion 품질에 맞는 상태 좌표, 관측 앵커·연관·생애주기·불확실도 | 정상↔음영 ID 연속성, 정지/기동 객체 속도오차, 가림 후 복귀, 고주로 p95 지연 검증 |
@@ -337,6 +338,25 @@ final completeness/purity 100%와 미수신 기준 잔여 벽 100% 감소를 보
 구분해야 한다. AIM 7개 표본의 형식·장착 roundtrip만 추가 확인했고, attitude/차량 기준점
 미확인으로 filter replay 승인은 0이다. YOLO 교체, tracker/ground 변경, GPS 운영 연결은
 이 실험 결과에 섞지 않았다.
+
+---
+
+### 0.10 L1-B4-B 실제 Capture GT 결과 — 2026-09-29
+
+[상세 보고서](./lidar-l1b4b-capture-validation-20260929.md)와
+[재실행 도구](../../../tools/lidar/capture_validation/README.md)는 새 Capture 105개를
+Instance 점 GT로 채점한다. camera missing/empty는 통제 조건이며 실제 YOLO 도착 기록이 아니다.
+각 장면 5회 정차 warmup·독립 reset으로 비교했고 같은 관측을 연속 tracking으로 해석하지 않았다.
+GT box 불일치 43관측과 잘못된 native IMU nSecs 81개는 제한으로 남겼다.
+
+현재 실제 배치에서 baseline도 wall-stage Vehicle/Obstacle 점 20,120개를 모두 보존했다.
+후보가 labelled target 지원 객체를 늘리지 못한 반면 최종 출력은 empty baseline 312개에서
+1,549개로 늘었다. GT 없는 구조물 조각을 측정 FP로 단정하지 않지만 운영 채택 근거는 없다.
+충분한 voxel이 있는 Vehicle 91관측 중 19개는 불완전한 군집, 3개는 군집 미생성이다.
+따라서 극단적 벽 근접 배치 추가 수집보다 **기존 자료의 군집 분할·누락 비교 L1-B5-A**를
+다음 독립 수정으로 제안한다. 거리 적응형/높이 제약 XY 후보는 실패 간격 분석 후 하나를 선정한다.
+보행자/낮은 물체·실제 YOLO 부하·연속 주행·GPS 전환 수락과 운영 연결은 여전히 미완료다.
+이전 상세 기록은 그대로 보존한다.
 
 ---
 
