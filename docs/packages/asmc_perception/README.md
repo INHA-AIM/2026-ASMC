@@ -29,6 +29,7 @@
 | 독립 벽 기하 보호·객체/OBB 분리 비교 | [L1-B4-A](./lidar-l1b4-validation-20260929.md) · [재실행](../../../tools/lidar/tunnel_geometry/README.md) | 합성 진급 통과 · 실제 구조물 조각 문제 · 운영 미채택 |
 | 실제 Autonav Capture GT 객체점·군집 비교 | [L1-B4-B](./lidar-l1b4b-capture-validation-20260929.md) · [재실행](../../../tools/lidar/capture_validation/README.md) | 105장면 격리/반복 검증 · 기하 후보 미채택 유지 · 다음은 군집화 비교 |
 | 고정 제거 마스크의 raw Euclidean/TRAVEL AOS 비교 | [L1-B5-A](./lidar-l1b5a-clustering-validation-20260929.md) · [재실행](../../../tools/lidar/clustering_compare/README.md) | Capture 투영 gate 차단 · 합성 회귀 · 운영 미채택 |
+| 독립 LiDAR 기준선·Patchwork++ adapter | [L2-A1 검증](../asmc_lidar/l2a1-runtime-review-20261002.md) · [새 패키지](../../../src/asmc_lidar/README.md) | Capture 210조건 기준선 parity · 운영 토픽 미연결 |
 | 특정 checkpoint의 학습 결과 | [v4 evaluation](../../records/perception/twinlitenet-v4-evaluation.md) | Experiment Record |
 | 현재 topic 소비·bag 사용과 P5 정리 gate | [P5-A topic audit](../../records/baselines/perception-p5a-topic-audit-v1.md) | Frozen Input Audit |
 | 실행 중 node/topic/rate/stamp/frame/consumer 검증 | [P5-C runtime acceptance](../../records/baselines/perception-p5c-runtime-acceptance-v1.md) | Active Acceptance Gate |
@@ -147,7 +148,8 @@ detection과 기존 문자열 state·JSON detail을 병행 발행한다. `behavi
 `asmc_perception` launch가 유일한 producer이고, planning 쪽 `traffic_light:=true`는 독립 호환
 시험에만 사용한다.
 
-LiDAR runtime은 독립 nested catkin workspace다. outer workspace의 sensor bridge를 먼저 띄우고
+현재 운영 LiDAR runtime은 독립 nested catkin workspace다. `asmc_lidar`는 별도 격리
+review 패키지이며 판제 입력을 대체하지 않는다. outer workspace의 sensor bridge를 먼저 띄우고
 별도로 build/run한다. current object topic, time matching, class hysteresis, GPU 세대별 실행과
 RViz 절차는 [sensor-fusion guide](../../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)가 정본이다.
 본선 v3 VLP16 설정과 손재호 소비 loop는 15 Hz이고 실제 완성 cloud 약 12 Hz는 허용한다.

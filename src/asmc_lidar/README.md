@@ -21,7 +21,7 @@ roslaunch asmc_lidar review.launch mode:=ground_review rviz:=true
 입력은 기존 bridge가 발행하는 `/velodyne_points`와 `/imu`다. 이번 실행기는
 IMU가 관측 시각보다 늦지 않고 100ms 이내인 경우에만 계산한다. 구독
 이름은 `cloud_topic`, `imu_topic` 인자로 바꿀 수 있다. 일반도로의
-1.5m 군집 기준을 검토하려면 `profile:=general`을 추가한다. 기본
+1.5m 군집 기준을 검토하려면 `profile:=general`을 추가한다. 이 경로는 고정 일반도로 출력 fixture가 없어 수치 parity를 아직 승인하지 않았다. 기본
 `profile:=tunnel`은 Capture 검증에서 고정한 1.0m 터널 기준이다.
 
 실행 중인 운영 ROS master와 분리해 bag을 검증할 때에는 `ROS_MASTER_URI`를
@@ -52,6 +52,7 @@ RViz의 `ground`와 `nonground`는 모드에 따라 출처가 달라진다. `gro
 지정한다. `$ASMC_DATA`는 팀 저장소와 나란한 `data` 디렉터리다.
 
 ```bash
+export ASMC_DATA=/data  # 데이터가 이 경로에 마운트된 컨테이너의 예
 python3 -B tools/lidar/l2a1/check_manifest.py --repo-root . --data-root "$ASMC_DATA"
 /root/ws/devel/lib/asmc_lidar/asmc_lidar_offline \
   "$ASMC_DATA/lidar_assessment/20260929/l1b4b_capture_gt/inputs_v4/snapshots.jsonl" \
@@ -63,7 +64,7 @@ python3 -B tools/lidar/l2a1/verify.py \
   --snapshots "$ASMC_DATA/lidar_assessment/20260929/l1b4b_capture_gt/inputs_v4/snapshots.jsonl"
 ```
 
-`ground_review`도 같은 재생 명령의 mode만 교체한다. 오프라인 결과에는
+`ground_review`도 같은 재생 명령의 mode만 교체한다. 비용 비교는 `catkin_make --only-pkg-with-deps asmc_lidar -j2 -DCMAKE_BUILD_TYPE=Release`로 빌드한 뒤 `python3 -B tools/lidar/l2a1/summarize.py --candidate <output.jsonl> --snapshots <snapshots.jsonl>`을 실행한다. 오프라인 결과에는
 원본 점→voxel 인덱스, 기준선 label·OBB, Patchwork++ 원본 인덱스 분류,
 단계별 비용이 있다. 정차 warmup에만 동일 stamp 반복을 허용하며 실시간
 중복 stamp는 거부한다. Capture 105장면은 반복 관측을 포함하므로 독립
@@ -73,4 +74,4 @@ python3 -B tools/lidar/l2a1/verify.py \
 [회귀 보고서](../../docs/packages/asmc_lidar/l2a1-runtime-review-20261002.md),
 [판제 소비 계약](../../docs/contracts/perception/lidar-planning-consumer-v1.md)에 기록한다.
 이 패키지의 기준 코드와 Patchwork++의 SHA·라이선스는 `vendor/`와 manifest를
-함께 확인한다. `tools/lidar/frame_time`의 B1 구현은 한 소스로 빌드한다.
+함께 확인한다. vendored Patchwork++ 파일은 BSD-2-Clause이며 패키지 자체의 MIT 표기와 구분한다. `tools/lidar/frame_time`의 B1 구현은 한 소스로 빌드한다.

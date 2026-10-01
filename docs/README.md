@@ -131,6 +131,7 @@ MORAI 화면에 입력할 값만 필요하면
 | [P5-D/E perception closeout](./records/baselines/perception-p5de-closeout-v1.md) | typed consumer 인계, 대표 lane-family bag과 최종 운영 경계 | Active Closeout Record |
 | [perception-map-fusion-roadmap.md](./packages/asmc_perception/roadmap.md) | camera/MGeo/LiDAR 전체 전략과 시간순 개발 근거 | Working Proposal + Chronological Record |
 | [lidar-assessment-and-roadmap.md](./packages/asmc_perception/lidar-assessment-and-roadmap.md) | LiDAR 패키지 완성도 평가와 증상별 원인, GT→센서 전환 간극과 판제 측 변경 제안, 개선 우선순위 | Assessment Record + Working Proposal |
+| [LiDAR L2-A1 실행·Patchwork++ 검증](./packages/asmc_lidar/l2a1-runtime-review-20261002.md) | 새 asmc_lidar 격리 기준선, Capture parity, Patchwork++ 계보·비용, 운영 미채택 경계 | Isolated Validation |
 | [LiDAR L1-A 실험·소비 기준선](./packages/asmc_perception/lidar-l1a-validation-20260926.md) | 26R1 정차/live↔offline 결과, 입력 SHA, 미션별 공백, Behavior/Frenet/MPC 계약 링크 | Pinned Experiment Record |
 | [LiDAR L1-B1 좌표·시간 코어](./packages/asmc_perception/lidar-l1b1-validation-20260927.md) | 격리 변환·정수 ns·회귀 결과, 재실행, 원본/후보 차이와 미검증 범위 | Isolated Validation · Review Pending |
 | [shadow-camera-perception-handoff.md](./handoffs/perception/shadow-camera.md) | 음영구간 v3 lane-family·drivable 판제 소비 계약과 성능 동결 | Active Handoff Guide |
@@ -201,6 +202,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | [MORAI bridge guide](./packages/asmc_bridge/README.md) | 현재 bridge/state 구현과 Phase 3 통합 gate |
 | [asmc_bridge quick start](../src/asmc_bridge/README.md) | 단일 bridge 패키지 실행·component launch |
 | [asmc_perception](../src/asmc_perception/README.md) | camera·BEV·lane·traffic runtime, offline audit와 training 경계 |
+| [asmc_lidar](../src/asmc_lidar/README.md) | 독립 LiDAR 기준선·Patchwork++ review 실행, 운영 토픽 미연결 |
 | [Perception package-group guide](./packages/asmc_perception/README.md) | 현재 camera/BEV/LiDAR/traffic/data 경계와 Phase 4 gate |
 | [Planning/Control package-group guide](./packages/planning-control/README.md) | 현재 Behavior/Frenet/MPC 경계, legacy와 변경 gate |
 | [Handoff index](./handoffs/README.md) | 파트 간 인수 조건과 deployment/legacy 상태 |
