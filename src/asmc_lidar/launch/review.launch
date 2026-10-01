@@ -1,0 +1,17 @@
+<launch>
+  <arg name="mode" default="reference"/>
+  <arg name="profile" default="tunnel"/>
+  <arg name="rviz" default="true"/>
+  <arg name="cloud_topic" default="/velodyne_points"/>
+  <arg name="imu_topic" default="/imu"/>
+  <node pkg="asmc_lidar" type="asmc_lidar_review_node" name="asmc_lidar_review" output="screen" required="true">
+    <param name="mode" value="$(arg mode)"/>
+    <param name="profile" value="$(arg profile)"/>
+    <param name="cloud_topic" value="$(arg cloud_topic)"/>
+    <param name="imu_topic" value="$(arg imu_topic)"/>
+    <param name="calibration_path" value="$(find asmc_lidar)/config/autonav_v3.yaml"/>
+    <param name="reference_path" value="$(find asmc_lidar)/config/reference_tunnel.yaml"/>
+  </node>
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="asmc_lidar_review_rviz"
+        args="-d $(find asmc_lidar)/rviz/review.rviz"/>
+</launch>

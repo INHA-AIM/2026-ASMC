@@ -1,0 +1,80 @@
+#include <asmc_lidar/general.hpp>
+#include <asmc_lidar/core.hpp>
+#include <pcl/ModelCoefficients.h>
+#include <pcl/search/kdtree.h>
+#include <pcl/segmentation/extract_clusters.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+
+namespace asmc_lidar {
+tunnel_filter::FrameResult ProcessGeneralReference(const Cloud& voxel,float pitch,
+    const tunnel_filter::ObbFunction& obb_function) {
+  using Clock=std::chrono::steady_clock;
+  const auto started=Clock::now();
+  tunnel_filter::FrameResult result;
+  result.input_points=voxel.size();
+  result.leveling=tunnel_filter::LevelingRotation(0,pitch,false,true);
+  result.roll_rad=0;result.pitch_rad=pitch;
+  result.leveled.reset(new Cloud);
+  tunnel_filter::ApplyRotation(voxel,result.leveling,result.leveled.get());
+  result.labels.assign(voxel.size(),tunnel_filter::kKept);
+  result.cluster_id.assign(voxel.size(),-1);
+  std::vector<int> remaining;
+  remaining.reserve(voxel.size());
+  for(std::size_t i=0;i<voxel.size();++i)remaining.push_back(int(i));
+  bool ground_found=false;
+  for(int attempt=0;attempt<3&&remaining.size()>=3;++attempt) {
+    Cloud::Ptr candidate(new Cloud);candidate->reserve(remaining.size());
+    for(int idx:remaining)candidate->push_back(result.leveled->at(std::size_t(idx)));
+    pcl::SACSegmentation<pcl::PointXYZI> segment;
+    segment.setOptimizeCoefficients(true);
+    segment.setModelType(pcl::SACMODEL_PLANE);segment.setMethodType(pcl::SAC_RANSAC);
+    segment.setMaxIterations(20);segment.setDistanceThreshold(.3);
+    segment.setInputCloud(candidate);
+    pcl::PointIndices inliers;pcl::ModelCoefficients coefficients;
+    segment.segment(inliers,coefficients);
+    if(inliers.indices.empty()||coefficients.values.size()<4)break;
+    const auto& c=coefficients.values;
+    const double norm=std::sqrt(double(c[0])*c[0]+double(c[1])*c[1]+double(c[2])*c[2]);
+    const bool ground=norm>1e-6&&std::abs(c[2]/norm)>=.82;
+    std::vector<std::uint8_t> remove(remaining.size(),0);
+    for(int index:inliers.indices) {
+      result.labels[std::size_t(remaining.at(std::size_t(index)))]=
+          ground?tunnel_filter::kGround:tunnel_filter::kWall;
+      remove[std::size_t(index)]=1;
+    }
+    std::vector<int> next;next.reserve(remaining.size());
+    for(std::size_t i=0;i<remaining.size();++i)if(!remove[i])next.push_back(remaining[i]);
+    remaining.swap(next);
+    if(ground){ground_found=true;break;}
+  }
+  result.ground_removed=std::count(result.labels.begin(),result.labels.end(),tunnel_filter::kGround);
+  result.wall_removed=std::count(result.labels.begin(),result.labels.end(),tunnel_filter::kWall);
+  result.ground_fallback_used=!ground_found;
+  result.kept_indices=remaining;
+  result.kept_points=remaining.size();
+  Cloud::Ptr kept(new Cloud);kept->reserve(remaining.size());
+  for(int idx:remaining)kept->push_back(result.leveled->at(std::size_t(idx)));
+  if(kept->size()>=10) {
+    pcl::search::KdTree<pcl::PointXYZI>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZI>);
+    tree->setInputCloud(kept);
+    pcl::EuclideanClusterExtraction<pcl::PointXYZI> extraction;
+    extraction.setClusterTolerance(1.5);extraction.setMinClusterSize(10);
+    extraction.setMaxClusterSize(10000);extraction.setSearchMethod(tree);
+    extraction.setInputCloud(kept);extraction.extract(result.clusters);
+    std::vector<tunnel_filter::Obb> obbs;
+    obb_function(kept,result.clusters,&obbs);
+    for(std::size_t i=0;i<result.clusters.size();++i) {
+      for(int index:result.clusters[i].indices)
+        result.cluster_id[std::size_t(remaining.at(std::size_t(index)))]=int(i);
+      tunnel_filter::TunnelObject object;object.obb=obbs.at(i);
+      object.point_count=result.clusters[i].indices.size();
+      result.objects.push_back(object);
+    }
+  }
+  result.timings.total_ms=std::chrono::duration<double,std::milli>(Clock::now()-started).count();
+  return result;
+}
+}  // namespace asmc_lidar

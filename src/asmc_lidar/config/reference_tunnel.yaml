@@ -1,0 +1,22 @@
+# Pinned Son 6435af1 tunnel-stage settings; remaining values use that pinned
+# core's Params defaults. These are frame-level review settings, not a new
+# operating profile for the planner.
+tunnel_dynamic_roi_enable: true
+tunnel_roi_min_x_m: -30.0
+tunnel_roi_max_x_m: 40.0
+tunnel_roi_min_y_m: -10.0
+tunnel_roi_max_y_m: 10.0
+tunnel_roi_min_z_m: -2.0
+tunnel_roi_max_z_m: 3.0
+tunnel_level_roll: true
+tunnel_level_pitch: true
+tunnel_ceiling_max_z_lidar_m: 2.55
+tunnel_ground_refit_enable: true
+tunnel_ground_remove_distance_m: 0.18
+tunnel_wall_search_min_abs_y_m: 1.75
+tunnel_wall_remove_distance_m: 0.25
+tunnel_cluster_tolerance_m: 1.0
+tunnel_cluster_min_points: 10
+tunnel_cluster_max_points: 30000
+tunnel_obb_filter_enable: true
+tunnel_obb_remove_ground_residual: false
