@@ -33,7 +33,12 @@ target_link_libraries(asmc_lidar_offline PRIVATE asmc_lidar_core)
 if(CATKIN_ENABLE_TESTING)
   add_executable(asmc_lidar_core_test test/core_test.cpp)
   target_link_libraries(asmc_lidar_core_test PRIVATE asmc_lidar_core)
+  target_compile_options(asmc_lidar_core_test PRIVATE -UNDEBUG)
   add_test(NAME asmc_lidar_core_test COMMAND asmc_lidar_core_test)
+  add_executable(asmc_lidar_frame_contract_test test/frame_contract_test.cpp)
+  target_link_libraries(asmc_lidar_frame_contract_test PRIVATE asmc_lidar_core)
+  target_compile_options(asmc_lidar_frame_contract_test PRIVATE -UNDEBUG)
+  add_test(NAME asmc_lidar_frame_contract_test COMMAND asmc_lidar_frame_contract_test)
 endif()
 
 install(TARGETS asmc_lidar_core asmc_lidar_review_node asmc_lidar_offline

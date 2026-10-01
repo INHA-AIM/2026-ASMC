@@ -63,6 +63,8 @@ class Node {
       diagnostic_msgs::KeyValue kv;kv.key=std::move(key);kv.value=std::move(value);item.values.push_back(kv);
     };
     field("source_stamp_ns",std::to_string(header.stamp.toNSec()));
+    field("receipt_ros_ns",std::to_string(last_message_.toNSec()));
+    field("stamp_provenance","bridge_receive_not_beam_time");
     field("frame","base_link");field("raw_points",std::to_string(raw));
     field("roi_points",std::to_string(roi));field("voxel_points",std::to_string(voxel));
     field("camera","missing");field("map_pose","unavailable_in_L2_A1");

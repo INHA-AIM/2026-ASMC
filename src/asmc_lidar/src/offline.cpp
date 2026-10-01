@@ -76,7 +76,10 @@ int main(int argc,char** argv) try {
     const auto result=processor.Process(frame);
     out<<"{\"input_id\":";String(out,row["input_id"]?row["input_id"].as<std::string>():rel);
     out<<",\"phase\":";String(out,phase);
-    out<<",\"stamp_ns\":"<<result.stamp_ns<<",\"status\":";String(out,result.status);
+    out<<",\"stamp_ns\":"<<result.stamp_ns<<",\"receipt_ns\":"<<frame.receipt_ns;
+    out<<",\"stamp_provenance\":";String(out,frame.stamp_provenance);
+    out<<",\"clock\":";String(out,frame.clock);
+    out<<",\"status\":";String(out,result.status);
     out<<",\"camera_state\":";String(out,result.camera_state);
     out<<",\"raw_points\":"<<result.raw_points<<",\"roi_points\":"<<result.roi_points;
     out<<",\"voxel_points\":"<<result.voxel_points<<",\"frozen_voxel_fnv1a64\":";
@@ -91,7 +94,10 @@ int main(int argc,char** argv) try {
         if(j)out<<',';out<<'['<<b.corners[j].x<<','<<b.corners[j].y<<','<<b.corners[j].z<<']';
       }out<<"]}";
     }
-    out<<"],\"patchwork_classes\":";
+    out<<"],\"patchwork_roi_to_original\":";
+    Array(out,result.patchwork.roi_to_original);
+    out<<",\"patchwork_reason\":";String(out,result.patchwork.reason);
+    out<<",\"patchwork_classes\":";
     std::vector<unsigned> classes;classes.reserve(result.patchwork.by_original.size());
     for(auto value:result.patchwork.by_original)classes.push_back(unsigned(value));
     Array(out,classes);
