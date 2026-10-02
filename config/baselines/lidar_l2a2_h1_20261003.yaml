@@ -1,0 +1,32 @@
+schema: asmc-lidar-height-review-v1
+basis_commit: cb0ccb97de180f6ddbe5065863d99423c0568799
+branch: feat/asmc-lidar-runtime
+operational_change: false
+patchwork_adopted: false
+data_root_variable: ASMC_DATA
+inputs:
+  path: lidar_assessment/20261003_l2a2_h1/inputs/manifest.json
+  sha256: f2812dd3700e448fe80101f422d4f742ae2ca1d04d4c25f6e2827145e0b63da4
+  manual_scans: 644
+  stationary_snapshots: 129
+  historical_capture_scenes: 62
+audit:
+  path: lidar_assessment/20261003_l2a2_h1/input_audit.json
+  sha256: 0cea1640df5653788bc922472955917a2d252f0d6da01b319ebe9a96f93eaaad
+fixed_configuration:
+  sensor_height_m: 1.80
+  mount_z_base_link_m: 1.45
+  range_m: [1.0, 60.0]
+  voxel_m: 0.10
+  rnr: false
+  primary_attitude: pitch
+  secondary_attitude: roll_pitch
+  policies: [jaeho, original, singleton, fixed]
+  fixed_keeps_local_elevation_and_flatness_learning: true
+  minimum_elevation_history_candidate: 2
+scope:
+  no_clustering_or_structure_policy_change: true
+  no_runtime_default_change: true
+  no_new_height_estimator: true
+  no_gt_used_for_algorithm_decisions: true
+  no_push_or_pr: true
