@@ -132,6 +132,7 @@ MORAI 화면에 입력할 값만 필요하면
 | [perception-map-fusion-roadmap.md](./packages/asmc_perception/roadmap.md) | camera/MGeo/LiDAR 전체 전략과 시간순 개발 근거 | Working Proposal + Chronological Record |
 | [lidar-assessment-and-roadmap.md](./packages/asmc_perception/lidar-assessment-and-roadmap.md) | LiDAR 패키지 완성도 평가와 증상별 원인, GT→센서 전환 간극과 판제 측 변경 제안, 개선 우선순위 | Assessment Record + Working Proposal |
 | [LiDAR L2-A1 실행·Patchwork++ 검증](./packages/asmc_lidar/l2a1-runtime-review-20261002.md) | 새 asmc_lidar 격리 기준선, Capture parity, Patchwork++ 계보·비용, 운영 미채택 경계 | Isolated Validation |
+| [LiDAR L2-A2 네 조건 지면 비교](./packages/asmc_lidar/l2a2-ground-comparison-20261002.md) | 기존/Patchwork++ × voxel/원본점, GT·시간·실패 그림과 현재 고정 설정 미채택 판정 | Isolated Validation |
 | [LiDAR L1-A 실험·소비 기준선](./packages/asmc_perception/lidar-l1a-validation-20260926.md) | 26R1 정차/live↔offline 결과, 입력 SHA, 미션별 공백, Behavior/Frenet/MPC 계약 링크 | Pinned Experiment Record |
 | [LiDAR L1-B1 좌표·시간 코어](./packages/asmc_perception/lidar-l1b1-validation-20260927.md) | 격리 변환·정수 ns·회귀 결과, 재실행, 원본/후보 차이와 미검증 범위 | Isolated Validation · Review Pending |
 | [shadow-camera-perception-handoff.md](./handoffs/perception/shadow-camera.md) | 음영구간 v3 lane-family·drivable 판제 소비 계약과 성능 동결 | Active Handoff Guide |

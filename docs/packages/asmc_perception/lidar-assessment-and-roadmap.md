@@ -1,10 +1,11 @@
 # LiDAR 인지 패키지 완성도 평가와 개선 로드맵
 
 > **문서 상태:** Assessment Record + Working Proposal
-> **최종 정리:** 2026-09-29 (L1-B4-B 실제 Capture GT 비교, 군집화 후속 단위 선정, 운영 미연결)
+> **최종 정리:** 2026-10-02 (L2-A2 동일 조건 지면 비교 완료, Patchwork++ 현재 설정 미채택)
 > **대상:** LiDAR 인지 담당 · 판단제어 파트 · 인지 통합
-> **대상 코드:** [`src/lidar+sensorfusion/`](../../../src/lidar+sensorfusion/)
-> **읽는 순서:** 0장은 2026-09-26~29의 판단과 착수 순서다. 1~13장은 2026-09-21의
+> **대상 코드:** [독립 후보 `src/asmc_lidar/`](../../../src/asmc_lidar/README.md) 및
+> [손재호 소유 `src/lidar+sensorfusion/`](../../../src/lidar+sensorfusion/) (읽기 전용 비교)
+> **읽는 순서:** 아래 최신 우선순위와 0장의 갱신 항목을 먼저 본다. 1~13장은 2026-09-21의
 > main 계열 소스 분석·문헌 검토 기록을 보존하며, 후속 브랜치에 그대로 적용하지 않는다.
 > 실행 정책이 달라진 과거 제안에는 정정 표시를 붙였다.
 
@@ -37,6 +38,22 @@
 `CenterPoint`, `OpenPCDet`, `Lidar_AI_Solution` 등이 준비돼 있다. 이 디렉터리는 읽기·benchmark
 참고용이지 현재 build dependency가 아니다. 코드를 채택할 때는 license, upstream revision,
 VLP-16/15 Hz 실측과 우리 좌표·message adapter를 먼저 별도 manifest로 고정한다.
+
+### 현재 실행 우선순위 — 2026-10-02
+
+| 순서 | 단위 | 현재 판단 |
+|---|---|---|
+| 완료 | L2-A1 기준선·Patchwork++ 원본점 계보 | 터널 측정 210조건 parity, 운영 미연결 |
+| 완료 | L2-A2 네 조건 지면 비교 | [보고서](../asmc_lidar/l2a2-ground-comparison-20261002.md): 현재 고정 Patchwork++ 설정 미채택 |
+| 다음 | L2-A3 군집 분할·누락 | 기존 성공 차량 69·장애물 41관측 보존, 실패 차량 22관측 개선 |
+| 그다음 | L2-B 구조물 분리와 지면 결과 후단 결합 | 객체점 삭제·구조물 조각 증가를 분리 평가 |
+| 후속 | L3 추적/자차 운동/GPS 전환 → L4 차로·주행 관련성/판제 인계 | 관측·예측·stale, 인접·횡단 객체 보존 |
+| 배포 gate | GT 없는 전 미션 연속 주행·동시 부하·LAN2LAN | 연구 후보를 전부 기다리지 않고 검증된 기준선으로 수락 가능 |
+
+YOLO 모델 교체, linefit 추가, 투영 계약이 미해결인 TRAVEL AOS·depth_clustering,
+극단적 벽 근접 배치, 학습 검출기/MOS는 이번 필수 경로가 아니다. 필요성이 지표로
+확인되면 각각 독립 실험으로 연다. 손재호 nested 패키지, 판제 입력·ROS1 MD5,
+센서·HD맵은 이 격리 연구에서 변경하지 않는다. 아래 과거 분석은 판단 이력으로 보존한다.
 
 ---
 
@@ -254,9 +271,11 @@ Capture 자료는 검증된 단일 프레임 검출 실험에 먼저 쓰고, 연
 | **L1-B4-A: 독립 기하 보호** | camera 상태/보호 근거 분리, 관측 벽 지지 구간·잔차·국소 돌출부 보호 | [비교 기록](./lidar-l1b4-validation-20260929.md). 합성 진급 기준 통과와 실제 구조물 조각의 다수 객체 출력을 구분; 운영 미채택 |
 | **L1-B4-B: Autonav 실제 GT 비교** | 새 Capture 105개의 점 보존·군집·OBB 단계별 비교, 실제 배치 우선 | [격리 검증](./lidar-l1b4b-capture-validation-20260929.md) 완료. 기존 wall-stage 대상점 100% 보존, 후보 조각 증가로 운영 미채택 유지. 보행자/연속 주행 수락은 미완료 |
 | **L1-B5-A: 관측 객체 군집화** | voxel Euclidean/raw Euclidean/TRAVEL AOS를 같은 기존 제거 마스크·OBB로 격리 비교 | [결과](./lidar-l1b5a-clustering-validation-20260929.md): raw 제어군은 실패 회복 0. Capture AOS는 투영 계약 8장면 미충족으로 전량 차단. 합성 회귀도 있어 미채택; 다음은 투영 전제 확인 후 별도 군집 후보 |
-| **L2-A1: 독립 asmc_lidar 기준선·Patchwork++ 어댑터** | 손재호 고정 코어의 터널 결과 재현, 원본점 계보와 지면 분류 독립 비교 | [격리 검증](../asmc_lidar/l2a1-runtime-review-20261002.md): Capture 측정 210/210 parity, Patchwork++ ROI 0점 미분류, Release 비용 측정. 운영 미연결; 다음은 A2 동일 조건 정확도 비교 |
-| **독립 COCO 객체 모델 비교** | YOLO11m ↔ 11n/s ↔ 26n/s/m, 동일 이미지/옵션/weight SHA와 동시 부하 | 클래스·box·stamp 호환 및 차량/보행자 정확도와 매칭률·GPU/CPU/지연 수락; FP16/TensorRT는 그 후 별도 변수 |
-| **L2 ROI·ground·clustering 비교** | boundary-family envelope와 fallback, 기존/Patchwork++(A2), linefit(후순위) 지면 후보, range-adaptive/range-image clustering | 동일 bag에서 가까운 차량/낮은 장애물 recall 악화 없이 벽·천장 FP 감소; count·지연·자원 보고 |
+| **L2-A1: 독립 asmc_lidar 기준선·Patchwork++ 어댑터** | 손재호 고정 코어의 터널 결과 재현, 원본점 계보와 지면 분류 독립 비교 | [격리 검증](../asmc_lidar/l2a1-runtime-review-20261002.md): Capture 측정 210/210 parity, Patchwork++ ROI 0점 미분류, Release 비용 측정. 운영 미연결 |
+| **L2-A2: 지면 동일 조건 비교** | 기존/PP × voxel/원본 ROI의 네 조건과 GT 점·비용 분리 | [비교](../asmc_lidar/l2a2-ground-comparison-20261002.md): PP는 같은 점 표현에서 객체 보존·지면 제거 모두 악화, 현재 설정 미채택. 일반도로 source 지면 mask parity 100 frame만 확인 |
+| **L2-A3: 다음 군집 개선** | 성공 69차량·41장애물 유지, 차량 실패 22관측의 군집 분할·누락 진단 | 지면 설정 고정, 거리·점 수·가림별 동일 입력 회귀; PP 튜닝과 혼합 금지 |
+| **L2-B: 구조물 분리·지면 후단 결합** | 실제 벽·천장 지지구간, 객체·구조물 조각, 지면 지역 평면과 후단 계약 | 객체 보존과 구조물 억제를 함께 수락; 현재 PP를 기존 단일평면 벽 필터에 직접 주입 금지 |
+| **조건부 COCO 객체 모델 비교** | YOLO11m ↔ 11n/s ↔ 26n/s/m, 동일 이미지/옵션/weight SHA와 동시 부하 | 통합 지연·분류 병목 확인 시만 실행; FP16/TensorRT는 별도 변수 |
 | **L3 추적 안정화** | ego-motion 품질에 맞는 상태 좌표, 관측 앵커·연관·생애주기·불확실도 | 정상↔음영 ID 연속성, 정지/기동 객체 속도오차, 가림 후 복귀, 고주로 p95 지연 검증 |
 | **L4 HD맵 차로 귀속·선택적 퓨전** | footprint overlap/ambiguity, YOLO 선택적 semantic 보조, 판제 인계 | 차로 경계/변경·진입 객체 유지, 클래스 없이도 장애물 보존, consumer joint replay |
 | **L5 필요 시 학습 후보** | capture 라벨 검증, 단일-sweep 경량 검출 baseline, 별도 training 컨테이너 | holdout 개선 및 동시 runtime 예산 충족; 기하 baseline과 OOD/unknown 비교 |
@@ -358,6 +377,19 @@ GT box 불일치 43관측과 잘못된 native IMU nSecs 81개는 제한으로 �
 보행자/낮은 물체·실제 YOLO 부하·연속 주행·GPS 전환 수락과 운영 연결은 여전히 미완료다.
 이전 상세 기록은 그대로 보존한다.
 
+### 0.13 L2-A2 동일 입력 지면 비교 — 2026-10-02
+
+[고정 manifest](../../../config/baselines/lidar_l2a2_ground_20261002.yaml)와
+[상세 보고서](../asmc_lidar/l2a2-ground-comparison-20261002.md)가 네 조건, 원본점
+계보·GT·반복 재생·Release 처리시간·대표 실패 그림을 보존한다. v3 Capture 105개의
+상관된 정차 장면에서 기존 기준선의 객체점 보존은 voxel 97.49%/raw 97.59%,
+PP는 64.64%/65.03%였고 지면 제거도 PP가 낮았다. 충분 관측 box의 추가
+완전 소실 10/9관측이 있어 현재 1.80 m 고정 설정은 **미채택**이다.
+과거 100-frame의 낮은 장애물 이점·보행자 손실은 별도 센서/처리 조건의 기록이다.
+이번 v3 자료에는 보행자 수락 데이터가 없으며 일반도로 전체 출력,
+연속 주행·추적·판제 소비도 미검증이다. 지면 비교와 관계없이 다음은
+**L2-A3 군집 분할·누락**이고, 구조물·지면 후단 결합은 L2-B로 분리한다.
+
 ---
 
 ### 0.11 L1-B5-A 군집화 제어군·TRAVEL AOS 결과 — 2026-09-29
@@ -388,7 +420,7 @@ boundary/계측 adapter는 generated build copy에만 있다. 기존 문헌 FPS 
 
 ### 0.12 L2-A1 독립 실행 기준선과 Patchwork++ 어댑터 — 2026-10-02
 
-[검증 보고서](../asmc_lidar/l2a1-runtime-review-20261002.md)와 고정 manifest에 소스 SHA, 빌드·재생 명령, 좌표·시간 계약, Capture 210조건 parity, Patchwork++ 원본 인덱스 coverage와 Release 처리시간을 남겼다. 기존 손재호 터널 필터 출력은 재현했으나 일반도로 출력 fixture·양성 YOLO 보호·연속 주행은 미검증이다. Patchwork++는 기준선과 독립적으로 실행하며 기존 벽 필터나 판제 토픽에 연결하지 않았다. 첫 다음 비교는 **L2-A2 Patchwork++ 동일 조건 정확도 시험**이고 linefit은 이후 대조군이다.
+[검증 보고서](../asmc_lidar/l2a1-runtime-review-20261002.md)와 고정 manifest에 소스 SHA, 빌드·재생 명령, 좌표·시간 계약, Capture 210조건 parity, Patchwork++ 원본 인덱스 coverage와 Release 처리시간을 남겼다. 기존 손재호 터널 필터 출력은 재현했으나 일반도로 전체 출력 fixture·양성 YOLO 보호·연속 주행은 미검증이다. Patchwork++는 기준선과 독립적으로 실행하며 기존 벽 필터나 판제 토픽에 연결하지 않았다. 당시 다음 단위로 정했던 A2 비교는 아래 0.13에서 완료했다.
 
 ---
 

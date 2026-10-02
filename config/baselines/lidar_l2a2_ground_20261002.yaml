@@ -1,0 +1,84 @@
+schema_version: 1
+purpose: isolated_four_way_ground_classification_comparison
+branch: feat/asmc-lidar-runtime
+branch_base: e638fc6
+source_and_sensor_manifest: config/baselines/lidar_l2a1_runtime_20261002.yaml
+operational_topics_or_ros_messages_changed: false
+runtime_candidate_adopted: false
+reference:
+  teammate_revision: 6435af10671235e735e4a9ed1bd747bd8d8389ac
+  patchwork_revision: 3e6903a1d5537a4cc2ace897b0bbb98a92d6014c
+  profile: tunnel
+  input_condition: finite_common_roi_before_ground_and_common_ceiling_exclusion
+  camera_states: [missing, valid_empty]
+  imu_attitude_source: fixed_snapshot_record_not_live_history_reconstruction
+  sensor_height_hypothesis_m: 1.80
+  patchwork_range_m: [1.0, 60.0]
+  patchwork_rnr: false
+  voxel_leaf_m: 0.10
+  modes:
+    - ref_voxel
+    - patch_voxel
+    - ref_raw
+    - patch_raw
+  reset: each_stationary_snapshot_condition
+  stationary_warmup_replays_per_condition: 5
+data:
+  root_environment: ASMC_DATA
+  capture_snapshot:
+    path: lidar_assessment/20260929/l1b4b_capture_gt/inputs_v4/snapshots.jsonl
+    sha256: b84b33ba772047f5db74c1f0ab58aed12444361e93fba4a8717f377432a70163
+  capture_truth:
+    path: lidar_assessment/20260929/l1b4b_capture_gt/inputs_v4/truth.jsonl
+    sha256: 6ff5f2dc2e026089c860ebfaba03ef2a429e31c4bfc3e7af91b84bd3dc101c85
+  capture_admission:
+    path: lidar_assessment/20260929/l1b4b_capture_gt/inputs_v4/manifest.json
+    sha256: c27eb06babb299bbbc24e08f5e6f2f0d8f46669b5a1630a4050b54f09ea2026b
+  frozen_reference:
+    path: lidar_assessment/20260929/l1b5a_capture_final_v1/run/geometry.jsonl
+    sha256: 7be335249003b5f9228f4f56fd4a6f7a3467616411c0bdfbdc09356cfc275783
+  comparison:
+    path: lidar_assessment/20261002_l2a2_ground_compare/capture_tunnel_four_way_v2.jsonl
+    sha256: ce6a100746e54a392606eb11a2aaf2624d96e7eb42386098424a1e3fe67d7946
+  repeated_comparison:
+    path: lidar_assessment/20261002_l2a2_ground_compare/capture_tunnel_four_way_repeat_v1.jsonl
+    sha256: aec634ac2859047d2184f5414ac3a0f7225be52fcd9636d22f35a1350018ff84
+  summary:
+    path: lidar_assessment/20261002_l2a2_ground_compare/score_v3/summary.json
+    sha256: 5a73cd0172047b903ef39c9db146cc48906f5137828eeda97f5b9fe0aa419909
+  score_manifest:
+    path: lidar_assessment/20261002_l2a2_ground_compare/score_v3/manifest.json
+    sha256: 6181e8f41372bab9e6df47eb1fd323c0c75665943bcc58c0fe91d54e6c613efc
+  general_source_parity:
+    path: lidar_assessment/20261002_l2a2_ground_compare/general_source_parity_v1.json
+    sha256: f1e568a0fc755126cae8c42ce941350a239c5ce07a7ba224e0953c225a79d60f
+  deterministic_repeat:
+    path: lidar_assessment/20261002_l2a2_ground_compare/repeat_check_v2.json
+    sha256: 602dabc8352a54876915c865cb6343d628ebbe2514c34a8190eedb4674917791
+  admitted_figure_cases:
+    path: lidar_assessment/20261002_l2a2_ground_compare/figures_v2/cases.json
+    sha256: 2dc72d096c2da6cb33880358566154c0889ad9070cb3414a528ed29aa939cbd3
+  admitted_figure_020:
+    path: lidar_assessment/20261002_l2a2_ground_compare/figures_v2/kcity_capture_20260929T052220_840_000020_id2.png
+    sha256: 9e08a145829c7928e7b4e79965626de43dc388af46fcde940799fcc7adc60c1a
+  admitted_figure_022:
+    path: lidar_assessment/20261002_l2a2_ground_compare/figures_v2/kcity_capture_20260929T052220_840_000022_id2.png
+    sha256: 3f682ce30d527eec6ebd3db20e5cd0bc7efa17960d5afefe28220a970dedabff
+  admitted_figure_023:
+    path: lidar_assessment/20261002_l2a2_ground_compare/figures_v2/kcity_capture_20260929T052220_840_000023_id2.png
+    sha256: 03cf2d3c59c7e539ed68dc4aed44eb2ea93da96a37864d7fc5e57241f8c1f502
+evaluation:
+  unique_correlated_capture_snapshots: 105
+  measured_camera_conditions: 210
+  replay_rows: 1050
+  scoring_camera_condition: missing
+  target_semantics: [125, 164]
+  ground_semantics: [85, 127, 128, 136, 144, 170, 255]
+  standing_object_109_role: structure_context_not_actor_truth
+  point_label_and_instance_contract: admitted_capture_only
+  labels_missing_in_v3_capture: pedestrian
+decision:
+  patchwork_fixed_configuration: not_adopted
+  reason: reduced_vehicle_and_obstacle_retention_and_ground_removal_in_both_equal_representation_pairs
+  next_gate: L2-A3_clustering
+  no_operational_wiring: true

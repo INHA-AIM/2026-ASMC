@@ -1,4 +1,4 @@
-# asmc_lidar — L2-A1 실행·검토 패키지
+# asmc_lidar — 독립 LiDAR 실행·검토 패키지 (L2-A1/A2)
 
 손재호 `6435af1`의 **프레임별** 터널 제거·군집·L-shape OBB를 재현하고,
 동일 입력에 Patchwork++ 지면 분할을 독립적으로 돌린다. 운영 LiDAR의
@@ -21,7 +21,7 @@ roslaunch asmc_lidar review.launch mode:=ground_review rviz:=true
 입력은 기존 bridge가 발행하는 `/velodyne_points`와 `/imu`다. 이번 실행기는
 IMU가 관측 시각보다 늦지 않고 100ms 이내인 경우에만 계산한다. 구독
 이름은 `cloud_topic`, `imu_topic` 인자로 바꿀 수 있다. 일반도로의
-1.5m 군집 기준을 검토하려면 `profile:=general`을 추가한다. 이 경로는 고정 일반도로 출력 fixture가 없어 수치 parity를 아직 승인하지 않았다. 기본
+1.5m 군집 기준을 검토하려면 `profile:=general`을 추가한다. 일반도로의 분리된 지면 소스 단계는 100-frame mask parity를 확인했지만 전체 출력 parity는 아직 승인하지 않았다. 기본
 `profile:=tunnel`은 Capture 검증에서 고정한 1.0m 터널 기준이다.
 
 실행 중인 운영 ROS master와 분리해 bag을 검증할 때에는 `ROS_MASTER_URI`를
@@ -75,3 +75,34 @@ python3 -B tools/lidar/l2a1/verify.py \
 [판제 소비 계약](../../docs/contracts/perception/lidar-planning-consumer-v1.md)에 기록한다.
 이 패키지의 기준 코드와 Patchwork++의 SHA·라이선스는 `vendor/`와 manifest를
 함께 확인한다. vendored Patchwork++ 파일은 BSD-2-Clause이며 패키지 자체의 MIT 표기와 구분한다. `tools/lidar/frame_time`의 B1 구현은 한 소스로 빌드한다.
+
+## L2-A2 네 조건 지면 비교
+
+`ground_review` ROS 시각화는 여전히 **비교용**이다. 현재 고정 설정의
+Patchwork++는 v3 Capture에서 같은 점 표현의 기존 지면 처리보다
+차량·일반 장애물 점 보존과 지면 제거가 모두 낮아 **운영 미채택**으로
+판정했다. 군집·추적·판제 입력은 그대로다. 상세 수치, 지표의 분모,
+그림, 일반도로 source-stage parity와 기존 100-frame 보조 자료는
+[L2-A2 보고서](../../docs/packages/asmc_lidar/l2a2-ground-comparison-20261002.md),
+원본 SHA는 [L2-A2 manifest](../../config/baselines/lidar_l2a2_ground_20261002.yaml)를 본다.
+
+```bash
+export ASMC_DATA=/data
+SNAP="$ASMC_DATA/lidar_assessment/20260929/l1b4b_capture_gt/inputs_v4"
+OUT="$ASMC_DATA/lidar_assessment/20261002_l2a2_ground_compare"
+./devel/lib/asmc_lidar/asmc_lidar_ground_compare "$SNAP/snapshots.jsonl" \
+  src/asmc_lidar/config/autonav_v3.yaml src/asmc_lidar/config/reference_tunnel.yaml \
+  tunnel "$OUT/new_four_way.jsonl"
+python3 -B tools/lidar/l2a2/score.py --comparison "$OUT/new_four_way.jsonl" \
+  --admission "$SNAP" --output "$OUT/new_score"
+python3 -B tools/lidar/l2a2/test_offline_inputs.py \
+  --binary ./devel/lib/asmc_lidar/asmc_lidar_offline \
+  --snapshots "$SNAP/snapshots.jsonl" \
+  --calibration src/asmc_lidar/config/autonav_v3.yaml \
+  --reference src/asmc_lidar/config/reference_tunnel.yaml
+```
+
+새 출력 경로를 지정하고 기존 `$ASMC_DATA` 결과는 덮어쓰지 않는다. 지면
+마스크의 `nonground`는 장애물 확정이 아니며 `StandingOBJ(109)`는
+차량/보행자 recall 분모가 아니다. 다음 변경 단위는 **L2-A3 군집 분할·누락**
+이고 Patchwork++ 파라미터를 통과할 때까지 임의 튜닝하지 않는다.

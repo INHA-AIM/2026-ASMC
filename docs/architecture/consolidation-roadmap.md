@@ -1,25 +1,28 @@
-# 저장소 4-패키지 통합·HD Map 메타데이터·현장 배포 로드맵
+# 저장소 패키지 경계·HD Map 메타데이터·현장 배포 로드맵
 
 > **문서 역할:** Working Proposal — 패키지 통합과 본선 배포를 위한 단계별 실행 계획
 > **작성 기준:** 2026-09-20 저장소와 현장 점검 반출 자료의 read-only 감사
-> **진행 상태:** 1·2단계, 3단계 P3-G local closeout, P4-A·P4-B·P4-C1~C6,
-> 5단계 P5-A~P5-E 완료. 다음은 LiDAR/fusion 기준선 계측과 담당자 공동 개선
+> **진행 상태 (2026-10-02):** P1~P5-E와 bridge local closeout 완료. 별도 `asmc_lidar`
+> L2-A1 실행 기준선·L2-A2 지면 비교 완료; 다음은 L2-A3 군집화. LAN2LAN은 추후 현장 수락 단계.
 > **보호 범위:** `behavior_planner`, `frenet_planner`, `mpc_controller`,
 > planning 소유 Behavior/Frenet/MPC package는 이 계획의 일방적 이동·삭제 대상이 아니다.
 > read-only `lane_boundary_adapter`는 역할이 드러나도록 `src/lane_boundary_adapter/`로 이동했다.
 
 ## 1. 결론
 
-팀이 직접 유지하는 ROS 코드는 다음 네 패키지를 정본으로 수렴시킨다.
+현재 팀 공용·인지의 책임은 다음 다섯 ROS 패키지로 나눈다. 과거의 “네 패키지 통합”은
+P1 착수 시점의 설계안이며 LiDAR를 카메라 패키지에 흡수하지 않는다.
 
 | 정본 패키지 | 책임 |
 |---|---|
-| `asmc_msgs` | 팀 내부 typed message의 유일한 공용 패키지 |
+| `asmc_msgs` | 팀 내부 typed message의 공용 계약 |
 | `asmc_bridge` | MORAI UDP 수신·제어 송신, sensor decode, 외부→내부 상태 정규화 |
 | `asmc_hd_map` | HD Map build/runtime, 차선·차로·주행가능영역, 체크포인트·미션 메타데이터 |
-| `asmc_perception` | camera/LiDAR/traffic-light inference, BEV·후처리·fusion, runtime 기록 |
+| `asmc_perception` | camera/traffic-light inference, BEV·차선 후처리·해당 융합 |
+| `asmc_lidar` | 독립 LiDAR 좌표·시간·지면·구조물·군집·OBB, 후속 추적 후보 |
 
-여기서 “네 패키지”는 **팀 소유 공용·인지 코드의 경계**다. 다음은 예외로 남긴다.
+`data_collection`은 수집·재생 용도의 **별도 패키지**다. 판제 소유 코드와 아래 외부
+의존성 역시 이 다섯 패키지로 강제 병합하지 않는다.
 
 - 판제 소유 패키지는 현재 이름과 경로를 유지한다.
 - `MORAI-ROS_morai_msgs`는 외부 wire contract이므로 `asmc_msgs`로 복사하지 않고 핀된
@@ -34,10 +37,10 @@
 
 ## 2. 현재 감사 결과
 
-2026-09-25 P4-C6 기준 `src/`에는 `package.xml`이 19개 있다. 이 수에는 팀 패키지뿐
-아니라 LiDAR nested workspace의 `morai_msgs`, `Msg`, 여섯 Velodyne 패키지가 포함된다.
-루트 `scripts/`에는 실행·학습·분석 진입점 29개가 남아 있으며, 단일 CLI 정리는
-Phase 5 범위다.
+아래 수량은 **2026-09-25 P4-C6 당시 감사 기록**이다. 그때 `src/`에는
+`package.xml`이 19개였고 LiDAR nested workspace의 `morai_msgs`, `Msg`,
+여섯 Velodyne 패키지도 포함됐다. 단일 CLI 통합은 이후 채택하지 않았다.
+현 실행 명령은 [실행 명령어 모음](../runtime-commands.md)을 따른다.
 
 | 현재 영역 | 판단 | 처리 방향 |
 |---|---|---|
@@ -49,7 +52,7 @@ Phase 5 범위다.
 | `asmc_hd_map` + `mgeo_toolkit` | runtime·builder는 통합 완료, 외부 toolkit은 provenance 입력 | geometry parity 후 toolkit 의존 축소 |
 | `camera_semantic_perception` + `drivable_bev` + `traffic_light` | P4-C6 통합·검증 완료 | `asmc_perception` runtime/offline/training으로 이관하고 기존 ROS package 제거 |
 | `morai_3d_detection` | 실행·참조 0인 중단된 camera 3D 연구 | P4-C6에서 제거, 필요 시 Git history에서만 복원 |
-| `lidar+sensorfusion/src/Main` | 라이다 팀원이 개발 중인 nested workspace | handoff 전까지 위치·내부 `Msg`/`morai_msgs`를 그대로 유지 |
+| `lidar+sensorfusion/src/Main` | 손재호 소유 nested workspace, 읽기 전용 비교 기준 | handoff 전 위치·내부 `Msg`/`morai_msgs` 유지; `asmc_lidar`는 별도 격리 후보 |
 | `data_collection` | recorder·bag profile·replay와 dataset 도구 | 독립 package로 유지하고 내부 runtime/offline 경계만 정리 |
 | `src/learning` | README 1개뿐이던 빈 논리 폴더 | P4-C6에서 문서 이관 후 삭제 완료 |
 | `src/learning_by_cheating` | runtime·구 3-channel 학습·teacher BEV가 혼재했던 비-catkin 폴더 | 사용 중인 7-channel teacher BEV만 `tools/research/lbc_teacher_bev` 이관, 나머지는 Git 이력으로 보존 |
@@ -77,11 +80,10 @@ src/
 │   ├── maps/kcity2025/        # 작고 versioned인 최종 bundle/manifest
 │   ├── launch/ · rviz/
 │   └── test/
-├── asmc_perception/
-│   ├── src/asmc_perception/   # camera, lidar, traffic_light, bev, fusion
-│   ├── config/ · launch/ · rviz/
-│   ├── scripts/               # ROS node entrypoint만
-│   └── test/
+├── asmc_perception/           # camera, traffic_light, BEV/lane
+├── asmc_lidar/                # 독립 LiDAR 기준선·후속 알고리즘
+├── data_collection/           # 독립 수집·재생
+├── lidar+sensorfusion/        # 손재호 소유 nested workspace, handoff 전 유지
 ├── behavior_planner/          # 판제 소유, 현 위치 유지
 ├── frenet_planner/            # 판제 소유, 현 위치 유지
 ├── mpc_controller/            # 판제 소유, 현 위치 유지
@@ -90,17 +92,18 @@ src/
 
 tools/
 ├── perception/                # train/eval/dataset/bake/analysis
+├── lidar/                     # 격리 평가·재현 도구
 ├── hd_map/                    # 대용량 원본 검사·one-shot migration
 └── field/                     # 현장 profile 검사·packet audit
 
 vendor/                        # 소스 설치가 꼭 필요한 upstream만 격리
 scripts/
-└── asmc                       # 사람이 사용하는 단일 command entrypoint
+├── udp_bridge.sh              # 별도 foreground, Hz/diagnostics 지속 확인
+└── 기타 기능별 진입점          # 현재 명령은 runtime-commands.md가 정본
 ```
 
-`asmc_perception` 하나에 모든 연구 파일을 넣는다는 뜻은 아니다. `src/`에는 대회 runtime만
-두고 학습과 분석은 `tools/perception`에서 같은 Python library를 import한다. 이 구분이 있어야
-catkin package 하나를 유지하면서도 실행 이미지가 학습 산출물로 비대해지지 않는다.
+LiDAR는 별도 `asmc_lidar`에서 검증한다. 학습·분석 도구는 실행 패키지 밖에 두고,
+기존 nested LiDAR와 메시지는 소비 계약·성능 회귀 및 담당자 인계 전까지 삭제하지 않는다.
 
 ## 4. 개발 단계
 
@@ -109,7 +112,7 @@ catkin package 하나를 유지하면서도 실행 이미지가 학습 산출물
 | **1** | 계약·메타데이터 동결과 이동 안전망 | `asmc_msgs` v1, topic contract, 체크포인트/미션 schema, baseline manifest/tests | 없음 |
 | **2** | `asmc_hd_map` 제품화 | 최종 lane/lane-area/drivable bundle, global/local publisher, checkpoint·mission RViz | `link_node`는 parity 통과 뒤 가능 |
 | **3** | `asmc_bridge` 통합 | UDP·sensor·vehicle state 단일 package, dev/competition profile | 구 bridge는 field replay 통과 뒤 가능 |
-| **4** | `asmc_perception` 통합 | camera/LiDAR/traffic-light/BEV runtime 하나, offline tool 분리 | `learning*`, 중복 `Msg`·`morai_msgs`는 gate 뒤 가능 |
+| **4** | `asmc_perception` 정리 | camera/traffic-light/BEV runtime과 학습·offline 도구 정리; LiDAR는 별도 연구 패키지 | `learning*` 제거 완료, 중복 `Msg`·`morai_msgs`는 담당자 인계 뒤 검토 |
 | **5** | 실행·시각화 정리 | 유지 가능한 실행 진입점, RViz/rqt, runtime 수락검증과 consumer handoff | 호환 wrapper 만료 뒤 가능 |
 | **6** | 현장 LAN2LAN·Docker 동결 | competition image, network profile, rehearsal report, 당일 runbook | 본선 직전 기능 삭제 금지 |
 
@@ -396,17 +399,9 @@ semantic, metric BEV/lane family, traffic light의 runtime·offline·training을
 terminal에서 log·Hz·diagnostics를 계속 볼 수 있게 `udp_bridge.sh`를 단독 진입점으로
 유지한다. 통합 편의 명령은 인지 runtime과 debug UI 정도로 한정한다.
 
-초기 안의 예시는 아래였으며, 구현 전에 필요한 부분만 채택한다.
-
-```bash
-./scripts/asmc build
-./scripts/asmc sim up --profile local
-./scripts/asmc bridge run --profile lan2lan
-./scripts/asmc map run
-./scripts/asmc perception run
-./scripts/asmc debug rviz
-./scripts/asmc verify field
-```
+초기에는 `scripts/asmc` 단일 CLI를 제안했으나 채택하지 않았다. 위
+[실행 명령어 모음](../runtime-commands.md)의 기능별 명령과 각 패키지 README가
+실행 정본이다. bridge는 독립 foreground로 Hz를 모니터링한다.
 
 Phase 5의 우선순위는 wrapper 수를 늘리는 것이 아니라 perception 출력과 시각화를
 줄이는 것이다.
@@ -587,7 +582,7 @@ diagnostics 이름은 소비자 호환을 위해 유지한다.
 | `morai_udp_bridge`, `morai_sensor_bridge`, `vehicle_state`, `integration_launch` | P3-E local live·Ctrl·bag replay 통과 후 P3-F에서 제거 완료; LAN2LAN은 별도 Phase 6 gate |
 | `camera_semantic_perception`, `drivable_bev`, `traffic_light` | **P4-C6 제거 완료:** 새 launch topic/latency/output parity와 model/config SHA 통과 |
 | 중복 `Msg`, 중복 `morai_msgs` | 모든 consumer include/import 교체 및 clean build |
-| 루트 legacy scripts | `scripts/asmc` 대응 명령·문서·CI가 존재하고 호환 기간 종료 |
+| 루트 legacy scripts | 실제 사용 참조·호환 기간을 개별 검증한 뒤만 정리; 단일 `scripts/asmc` 구현은 필수 조건 아님 |
 
 삭제는 `git rm` 전에 대상 파일 목록과 대체 경로를 PR 본문에 적는다. 대용량 simulator,
 rosbag, model checkpoint와 주최 배포 원본은 repo로 옮기지 않고 `$ASMC_DATA`에 유지한다.
