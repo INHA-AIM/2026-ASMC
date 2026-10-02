@@ -1,5 +1,6 @@
 # Build (catkin)
 build/
+/build_*/
 devel/
 install/
 log/

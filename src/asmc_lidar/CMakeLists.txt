@@ -29,6 +29,9 @@ add_dependencies(asmc_lidar_review_node ${catkin_EXPORTED_TARGETS})
 
 add_executable(asmc_lidar_offline src/offline.cpp)
 target_link_libraries(asmc_lidar_offline PRIVATE asmc_lidar_core)
+add_executable(asmc_lidar_ground_compare src/ground_compare.cpp)
+target_link_libraries(asmc_lidar_ground_compare PRIVATE asmc_lidar_core)
+target_compile_options(asmc_lidar_ground_compare PRIVATE -Wall -Wextra)
 
 if(CATKIN_ENABLE_TESTING)
   add_executable(asmc_lidar_core_test test/core_test.cpp)
@@ -39,9 +42,13 @@ if(CATKIN_ENABLE_TESTING)
   target_link_libraries(asmc_lidar_frame_contract_test PRIVATE asmc_lidar_core)
   target_compile_options(asmc_lidar_frame_contract_test PRIVATE -UNDEBUG)
   add_test(NAME asmc_lidar_frame_contract_test COMMAND asmc_lidar_frame_contract_test)
+  add_executable(asmc_lidar_imu_selection_test test/imu_selection_test.cpp)
+  target_link_libraries(asmc_lidar_imu_selection_test PRIVATE asmc_lidar_core)
+  target_compile_options(asmc_lidar_imu_selection_test PRIVATE -UNDEBUG)
+  add_test(NAME asmc_lidar_imu_selection_test COMMAND asmc_lidar_imu_selection_test)
 endif()
 
-install(TARGETS asmc_lidar_core asmc_lidar_review_node asmc_lidar_offline
+install(TARGETS asmc_lidar_core asmc_lidar_review_node asmc_lidar_offline asmc_lidar_ground_compare
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
