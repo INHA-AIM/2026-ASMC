@@ -64,13 +64,19 @@ int main(int argc,char** argv) try {
         row["scan_effective_stamp_ns"].as<std::int64_t>():row["stamp_ns"].as<std::int64_t>();
     frame.receipt_ns=row["scan_arrival_ns"]?
         row["scan_arrival_ns"].as<std::int64_t>():frame.stamp_ns;
-    frame.roll_rad=row["roll"]?row["roll"].as<double>():0;
-    frame.pitch_rad=row["pitch"]?row["pitch"].as<double>():0;
-    frame.imu_valid=row["geometry_valid"]?row["geometry_valid"].as<bool>():true;
+    if(!row["roll"]||!row["pitch"]||!row["geometry_valid"])
+      throw std::runtime_error("snapshot missing roll, pitch, or geometry_valid: "+rel);
+    frame.roll_rad=row["roll"].as<double>();
+    frame.pitch_rad=row["pitch"].as<double>();
+    frame.imu_valid=row["geometry_valid"].as<bool>();
     frame.already_preprocessed=row["already_preprocessed"]?
         row["already_preprocessed"].as<bool>():false;
-    frame.camera_available=row["controlled_camera_state"] &&
-        row["controlled_camera_state"].as<std::string>()=="empty";
+    if(!row["controlled_camera_state"])
+      throw std::runtime_error("snapshot missing controlled_camera_state: "+rel);
+    const auto camera_state=row["controlled_camera_state"].as<std::string>();
+    if(camera_state!="missing"&&camera_state!="empty")
+      throw std::runtime_error("unsupported controlled_camera_state: "+camera_state);
+    frame.camera_available=camera_state=="empty";
     frame.allow_repeated_snapshot=row["repetition_role"] &&
         row["repetition_role"].as<std::string>()=="stationary_snapshot_warmup_not_tracking";
     const auto result=processor.Process(frame);

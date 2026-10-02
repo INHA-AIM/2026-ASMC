@@ -1,4 +1,5 @@
 #include <asmc_lidar/core.hpp>
+#include <asmc_lidar/imu_selection.hpp>
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -41,15 +42,20 @@ class Node {
     ROS_WARN("LiDAR candidate REVIEW ONLY: reference and Patchwork++ outputs are not planner inputs");
   }
  private:
-  struct Imu {std::uint64_t stamp;double roll,pitch;};
   void OnImu(const sensor_msgs::Imu::ConstPtr& msg) {
+    if(msg->header.stamp.isZero()) {++imu_zero_stamp_count_;return;}
     const auto& q=msg->orientation;
-    if(msg->header.stamp.isZero())return;
     Eigen::Quaterniond rotation(q.w,q.x,q.y,q.z);
-    if(!std::isfinite(rotation.squaredNorm())||rotation.squaredNorm()<.9||rotation.squaredNorm()>1.1)return;
-    const auto r=rotation.normalized().toRotationMatrix();
-    Imu e{msg->header.stamp.toNSec(),std::atan2(r(2,1),r(2,2)),std::asin(std::max(-1.,std::min(1.,-r(2,0))))};
-    imu_.push_back(e);while(imu_.size()>100)imu_.pop_front();
+    const double norm=rotation.squaredNorm();
+    asmc_lidar::ImuSample sample;
+    sample.stamp_ns=msg->header.stamp.toNSec();
+    sample.valid=std::isfinite(norm)&&norm>=.9&&norm<=1.1;
+    if(sample.valid) {
+      const auto r=rotation.normalized().toRotationMatrix();
+      sample.roll_rad=std::atan2(r(2,1),r(2,2));
+      sample.pitch_rad=std::asin(std::max(-1.,std::min(1.,-r(2,0))));
+    }
+    imu_.push_back(sample);while(imu_.size()>100)imu_.pop_front();
   }
   void Cloud(ros::Publisher& pub,const asmc_lidar::Cloud& cloud,const std_msgs::Header& h) {
     sensor_msgs::PointCloud2 msg;pcl::toROSMsg(cloud,msg);msg.header=h;msg.header.frame_id="base_link";pub.publish(msg);
@@ -58,13 +64,18 @@ class Node {
                    std::size_t raw,std::size_t roi,std::size_t voxel,double elapsed) {
     diagnostic_msgs::DiagnosticArray message;message.header.stamp=ros::Time::now();
     diagnostic_msgs::DiagnosticStatus item;item.name="asmc_lidar_candidate";item.hardware_id="Autonav v3";
-    item.level=code=="valid"?item.OK:item.WARN;item.message=code;
+    item.level=(code=="valid"&&!last_imu_newer_invalid_)?item.OK:item.WARN;
+    item.message=code=="valid"&&last_imu_newer_invalid_?
+        "valid_with_newer_invalid_imu":code;
     auto field=[&](std::string key,std::string value) {
       diagnostic_msgs::KeyValue kv;kv.key=std::move(key);kv.value=std::move(value);item.values.push_back(kv);
     };
     field("source_stamp_ns",std::to_string(header.stamp.toNSec()));
     field("receipt_ros_ns",std::to_string(last_message_.toNSec()));
     field("stamp_provenance","bridge_receive_not_beam_time");
+    field("imu_selection",last_imu_selection_);
+    field("imu_newer_invalid_seen",last_imu_newer_invalid_?"true":"false");
+    field("imu_zero_stamp_count",std::to_string(imu_zero_stamp_count_));
     field("frame","base_link");field("raw_points",std::to_string(raw));
     field("roi_points",std::to_string(roi));field("voxel_points",std::to_string(voxel));
     field("camera","missing");field("map_pose","unavailable_in_L2_A1");
@@ -82,12 +93,13 @@ class Node {
     input.receipt_ns=last_message_.toNSec();
     asmc_lidar::Cloud::Ptr raw(new asmc_lidar::Cloud);
     pcl::fromROSMsg(*msg,*raw);input.cloud=raw;
-    for(auto it=imu_.rbegin();it!=imu_.rend();++it) {
-      if(it->stamp>std::uint64_t(input.stamp_ns))continue;
-      if(input.stamp_ns-it->stamp<=100000000) {
-        input.roll_rad=it->roll;input.pitch_rad=it->pitch;input.imu_valid=true;
-      }
-      break;
+    const auto selected=asmc_lidar::SelectImu(imu_,std::uint64_t(input.stamp_ns));
+    last_imu_selection_=asmc_lidar::ImuSelectionName(selected.status);
+    last_imu_newer_invalid_=selected.newer_invalid_seen;
+    if(selected.status==asmc_lidar::ImuSelectionStatus::Valid) {
+      input.roll_rad=selected.sample.roll_rad;
+      input.pitch_rad=selected.sample.pitch_rad;
+      input.imu_valid=true;
     }
     asmc_lidar::FrameOutput output;
     try{output=processor_->Process(input);}
@@ -128,7 +140,10 @@ class Node {
   ros::Publisher input_pub_,ground_pub_,nonground_pub_,uncertain_pub_,marker_pub_,diagnostic_pub_;
   ros::Timer timer_;
   ros::Time last_message_;
-  std::deque<Imu> imu_;
+  std::deque<asmc_lidar::ImuSample> imu_;
+  std::string last_imu_selection_="missing";
+  bool last_imu_newer_invalid_=false;
+  std::size_t imu_zero_stamp_count_=0;
   asmc_lidar::ReferenceProfile profile_=asmc_lidar::ReferenceProfile::Tunnel;
   std::unique_ptr<asmc_lidar::Processor> processor_;
 };
