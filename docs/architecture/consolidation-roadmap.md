@@ -3,7 +3,9 @@
 > **문서 역할:** Working Proposal — 패키지 통합과 본선 배포를 위한 단계별 실행 계획
 > **작성 기준:** 2026-09-20 저장소와 현장 점검 반출 자료의 read-only 감사
 > **진행 상태 (2026-10-02):** P1~P5-E와 bridge local closeout 완료. 별도 `asmc_lidar`
-> L2-A1 실행 기준선·L2-A2 지면 비교 완료; 다음은 L2-A3 군집화. LAN2LAN은 추후 현장 수락 단계.
+> L2-A1·L2-A2와 [H1 높이 갱신 비교](../packages/asmc_lidar/l2a2-h1-height-review-20261003.md) 완료.
+> 사용자 요청으로 군집화 전 지면 검토를 지속하며, 원거리 객체의 지역 평면 오분류가 다음 검토 대상이다.
+> Patchwork++ 운영 미채택. LAN2LAN은 추후 현장 수락 단계.
 > **보호 범위:** `behavior_planner`, `frenet_planner`, `mpc_controller`,
 > planning 소유 Behavior/Frenet/MPC package는 이 계획의 일방적 이동·삭제 대상이 아니다.
 > read-only `lane_boundary_adapter`는 역할이 드러나도록 `src/lane_boundary_adapter/`로 이동했다.

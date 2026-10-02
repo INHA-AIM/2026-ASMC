@@ -8,6 +8,10 @@
 
 ## 현재 연결 상태와 메시지 경계
 
+2026-10-03 [L2-A2-H1 격리 지면 평가](../../packages/asmc_lidar/l2a2-h1-height-review-20261003.md)는
+이 소비 계약이나 운영 토픽을 변경하지 않았다. 높이 안정화와 GT 객체점 보존은 별도로 평가하며,
+지면 제거 후 점 보존율을 최종 객체 검출·추적 성능으로 해석하지 않는다. Patchwork++ 운영 채택은 보류다.
+
 `main`의 기본 자율주행 launch는 MORAI `/Object_topic`을 Behavior에 직접 주고,
 `morai_objects_adapter.py`가 typed `/perception/objects`를 Frenet에 준다. 따라서 현재
 공통 자율주행이 손재호 LiDAR를 자동으로 소비한다고 해석하면 안 된다. 서준 브랜치의

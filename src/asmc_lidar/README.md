@@ -104,5 +104,8 @@ python3 -B tools/lidar/l2a2/test_offline_inputs.py \
 
 새 출력 경로를 지정하고 기존 `$ASMC_DATA` 결과는 덮어쓰지 않는다. 지면
 마스크의 `nonground`는 장애물 확정이 아니며 `StandingOBJ(109)`는
-차량/보행자 recall 분모가 아니다. 다음 변경 단위는 **L2-A3 군집 분할·누락**
-이고 Patchwork++ 파라미터를 통과할 때까지 임의 튜닝하지 않는다.
+차량/보행자 recall 분모가 아니다. 2026-10-03 사용자 요청으로 군집화 전 지면 검토를 이어갔다.
+[L2-A2-H1 높이 갱신 비교](../../docs/packages/asmc_lidar/l2a2-h1-height-review-20261003.md)에서는
+격리 fixed-height 후보가 높이 붕괴를 막았지만 차량 2/35 완전 소실이 남았다.
+다음 검토 제안은 원거리 지역 평면의 객체 오분류이며, 아직 군집화를 바꾸거나 이 패키지의
+ground_review 기본값에 H1 후보를 연결하지 않았다. 실행은 기존과 동일하다.
