@@ -1,0 +1,23 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Fixed Frame: base_link
+    Background Color: 24; 24; 24
+    Frame Rate: 15
+  Displays:
+    - Class: rviz/Image
+      Name: BBOX Lane Classification
+      Enabled: true
+      Value: true
+      Image Topic: /planning/camera_bbox_lane/image
+      Transport Hint: raw
+      Queue Size: 1
+      Normalize Range: true
+  Enabled: true
+  Name: root
+Window Geometry:
+  Width: 1400
+  Height: 850

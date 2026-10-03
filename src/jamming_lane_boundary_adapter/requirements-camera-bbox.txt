@@ -1,0 +1,9 @@
+# asmc-perception-train의 기존 torch/cu128, OpenCV, NumPy를 사용한다.
+# 별도 --target 디렉터리에 --no-deps로 설치해 차선 추론 환경을 유지한다.
+ultralytics==8.4.152
+ultralytics-thop==2.1.6
+psutil==7.0.0
+polars==0.20.31
+nvidia-ml-py==12.570.86
+cloudpickle==3.1.1
+filelock==3.16.1

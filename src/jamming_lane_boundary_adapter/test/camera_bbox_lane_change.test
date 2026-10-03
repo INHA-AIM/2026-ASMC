@@ -1,0 +1,4 @@
+<launch>
+  <test pkg="lane_boundary_adapter" type="test_camera_bbox_lane_change.py"
+        test-name="camera_bbox_lane_change_integration" time-limit="180"/>
+</launch>

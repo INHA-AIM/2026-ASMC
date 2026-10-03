@@ -1,5 +1,9 @@
 # Lane Boundary Adapter
 
+현재 카메라 차선 주행·BBOX 기반 반복 차선변경 실행은
+[카메라 차선 변경 안내](CAMERA_BBOX_LANE_CHANGE.md)를 참고한다.
+YOLO 설치와 차로 판정은 [BBOX 판정 안내](CAMERA_BBOX_LANE.md)를 따른다.
+
 > Planning 전체 경계와 제어 승격 gate는
 > [Planning/Control 개발 가이드](../../docs/packages/planning-control/README.md)를 따른다.
 >
@@ -8,7 +12,7 @@
 > 먼저 따른다.
 
 카메라 인지가 발행하는 typed metric 경계 관측을 판제 개발자가 확인할 수 있는 차로 띠
-후보로 바꾸는 **read-only C++ pilot**이다. MORAI UDP 패킷을 직접 다루지 않는다. 데이터
+후보로 바꾸는 C++ adapter와 **read-only monitor**를 제공한다. MORAI UDP 패킷을 직접 다루지 않는다. 데이터
 흐름은 다음과 같다.
 
 ```text
@@ -19,17 +23,20 @@ MORAI sensors --UDP--> asmc_bridge sensor node --ROS--> camera perception
 ```
 
 이 패키지는 `behavior_planner`, `frenet_planner`, `mpc_controller`, UDP 명령 송신 코드를
-수정하거나 호출하지 않는다. `BehaviorCommand`, `Trajectory` 및 차량 제어 명령도 발행하지
+수정하거나 호출하지 않는다. 기존 두 monitor는 `BehaviorCommand`, `Trajectory` 및 차량 제어 명령을 발행하지
 않는다. 따라서 판제 파트가 현재 작업 중인 실행 경로와 독립적으로 빌드·검토할 수 있다.
 
 `boundary_family`가 현재 음영구간 판제 인수 정본이다. shared-family adapter는
 공동 피팅 결과의 sample별 support를 보존한 채 두 인접 경계 사이를
 strip/centerline segment로 변환한다. independent pilot과
 `boundary_observations`는 기존 호환·진단 재현용으로만 남겨 신규 판제 consumer가
-사용하지 않는다. 이 package의 node 자체는 여전히 read-only monitor이며
-제어 승격을 의미하지 않는다.
+사용하지 않는다. 이 관측용 monitor는 read-only이며 제어 승격을 의미하지 않는다.
 
-shared-family C++ core는 향후 판제가 재사용할 수 있지만 현재 node는 계속 read-only monitor다.
+기존 shared-family monitor와 별도로 core를 재사용하는 BBOX 차선변경 노드를 제공한다.
+`camera_bbox_lane_change.launch`는 기본값이 preview이고, `enable_control:=true`일 때만
+MORAI `/ctrl_cmd`를 발행한다. `camera_bbox_detector.launch`의 YOLO 출력과 외부 차선 인식의
+`/perception/lane/boundary_family`를 소비한다. 실행·튜닝은
+[카메라 차선 변경 안내](CAMERA_BBOX_LANE_CHANGE.md)를 따른다.
 음영구간 on/off, route 의미, camera drivable threshold, LiDAR occupancy 차감과 fallback은 이
 패키지에 추가하지 않는다. 그 정책과 연결·closed-loop 검증은 판제 파트가 소유한다.
 
@@ -301,3 +308,8 @@ replay-clock 조건에서 candidate 398개를 모두 usable로 변환했고 cont
    승격 여부를 결정한다.
 
 그 전까지 이 패키지의 출력은 시각화와 계약 검증용이며 차량 제어 입력으로 사용하면 안 된다.
+
+## BBOX 차로 판정
+
+거리 추정 없이 기존 YOLO BBOX를 내 차로/옆 차로/양쪽/판정 불가로 분류하는
+관측 전용 노드와 실행 명령은 [CAMERA_BBOX_LANE.md](CAMERA_BBOX_LANE.md)를 참고한다.
