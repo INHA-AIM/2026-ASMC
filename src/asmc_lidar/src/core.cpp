@@ -1,5 +1,6 @@
 #include <asmc_lidar/core.hpp>
 #include <asmc_lidar/general.hpp>
+#include <asmc_lidar/ground_live.hpp>
 #include <patchwork/patchworkpp.h>
 #include <pcl/filters/voxel_grid.h>
 #include <yaml-cpp/yaml.h>
@@ -70,6 +71,23 @@ std::vector<std::uint8_t> MissingCameraMask(const Cloud& cloud,const Calibration
   return mask;
 }
 }  // namespace
+
+GroundPrepared PrepareGeneralGround(const Cloud& raw,const Calibration& calibration,float pitch) {
+  if(!std::isfinite(pitch))throw std::invalid_argument("invalid pitch");
+  const auto started=Clock::now();GroundPrepared out;std::vector<int> originals;
+  const auto roi=Roi(raw,calibration,tunnel_filter::Params{false},&originals);
+  out.raw_to_voxel.assign(raw.size(),-1);
+  if(!roi->empty()) {
+    pcl::VoxelGrid<pcl::PointXYZI> vg;
+    vg.setInputCloud(roi);vg.setLeafSize(.1f,.1f,.1f);vg.setSaveLeafLayout(true);
+    vg.filter(*out.voxel);
+    for(std::size_t i=0;i<roi->size();++i)
+      out.raw_to_voxel[originals[i]]=vg.getCentroidIndex(roi->at(i));
+  }
+  out.leveling=tunnel_filter::LevelingRotation(0,pitch,false,true);
+  tunnel_filter::ApplyRotation(*out.voxel,out.leveling,out.leveled.get());
+  out.prepare_ms=Ms(started);return out;
+}
 
 struct Processor::Impl {
   Mode mode;

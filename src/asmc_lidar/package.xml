@@ -5,6 +5,9 @@
   <description>Isolated LiDAR reference and ground review runtime.</description>
   <maintainer email="autonav@todo.todo">Autonav</maintainer>
   <license>MIT</license>
+  <!-- Vendored Patchwork++ / linefit retain their upstream licenses. -->
+  <license>BSD-2-Clause</license>
+  <license>BSD-3-Clause</license>
   <buildtool_depend>catkin</buildtool_depend>
   <depend>roscpp</depend>
   <depend>sensor_msgs</depend>
@@ -15,5 +18,9 @@
   <build_depend>libeigen3-dev</build_depend>
   <build_depend>libpcl-dev</build_depend>
   <exec_depend>rviz</exec_depend>
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>asmc_bridge</exec_depend>
   <export/>
 </package>

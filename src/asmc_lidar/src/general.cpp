@@ -9,21 +9,17 @@
 #include <cmath>
 
 namespace asmc_lidar {
-tunnel_filter::FrameResult ProcessGeneralReference(const Cloud& voxel,float pitch,
-    const tunnel_filter::ObbFunction& obb_function) {
+tunnel_filter::FrameResult ProcessGeneralGroundLeveled(const Cloud& leveled) {
   using Clock=std::chrono::steady_clock;
   const auto started=Clock::now();
   tunnel_filter::FrameResult result;
-  result.input_points=voxel.size();
-  result.leveling=tunnel_filter::LevelingRotation(0,pitch,false,true);
-  result.roll_rad=0;result.pitch_rad=pitch;
-  result.leveled.reset(new Cloud);
-  tunnel_filter::ApplyRotation(voxel,result.leveling,result.leveled.get());
-  result.labels.assign(voxel.size(),tunnel_filter::kKept);
-  result.cluster_id.assign(voxel.size(),-1);
+  result.input_points=leveled.size();
+  result.leveled=leveled.makeShared();
+  result.labels.assign(leveled.size(),tunnel_filter::kKept);
+  result.cluster_id.assign(leveled.size(),-1);
   std::vector<int> remaining;
-  remaining.reserve(voxel.size());
-  for(std::size_t i=0;i<voxel.size();++i)remaining.push_back(int(i));
+  remaining.reserve(leveled.size());
+  for(std::size_t i=0;i<leveled.size();++i)remaining.push_back(int(i));
   bool ground_found=false;
   for(int attempt=0;attempt<3&&remaining.size()>=3;++attempt) {
     Cloud::Ptr candidate(new Cloud);candidate->reserve(remaining.size());
@@ -55,6 +51,20 @@ tunnel_filter::FrameResult ProcessGeneralReference(const Cloud& voxel,float pitc
   result.ground_fallback_used=!ground_found;
   result.kept_indices=remaining;
   result.kept_points=remaining.size();
+  result.timings.total_ms=std::chrono::duration<double,std::milli>(Clock::now()-started).count();
+  return result;
+}
+
+tunnel_filter::FrameResult ProcessGeneralReference(const Cloud& voxel,float pitch,
+    const tunnel_filter::ObbFunction& obb_function) {
+  using Clock=std::chrono::steady_clock;
+  const auto started=Clock::now();
+  const auto rotation=tunnel_filter::LevelingRotation(0,pitch,false,true);
+  Cloud leveled;
+  tunnel_filter::ApplyRotation(voxel,rotation,&leveled);
+  auto result=ProcessGeneralGroundLeveled(leveled);
+  result.leveling=rotation;result.roll_rad=0;result.pitch_rad=pitch;
+  const auto& remaining=result.kept_indices;
   Cloud::Ptr kept(new Cloud);kept->reserve(remaining.size());
   for(int idx:remaining)kept->push_back(result.leveled->at(std::size_t(idx)));
   if(kept->size()>=10) {
