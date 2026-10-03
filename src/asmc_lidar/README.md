@@ -8,6 +8,30 @@ TRAVEL AOS는 이 패키지에 채택하지 않았다. 기존 데이터에서 �
 
 ## 빌드와 실행
 
+### 실시간 세 방법 지면 비교
+
+현재 수동주행하며 비교하는 진입점은 `ground_compare_live.launch`다.
+기본은 세 방법 + RViz이며 기존 bridge를 사용한다.
+
+```bash
+source /opt/ros/noetic/setup.bash
+source /root/ws/devel/setup.bash
+roslaunch asmc_lidar ground_compare_live.launch
+# bridge가 없을 때만 start_bridge:=true
+# 한 방법만 계산: method:=jaeho 또는 patchwork 또는 linefit
+```
+
+일반도로 지면 비교이며 군집/OBB/추적은 실행하지 않는다. 모든 출력은 같은
+rear-axle `base_link`이며 GT 없이 작동한다. `nonground`는 장애물 확정이 아니다.
+고정 높이 +25cm 보호 Patchwork++는 `patchwork_variant:=guard25` 기본이고,
+보호 전 고정 높이는 `fixed_height`다. 기존 `review.launch` 기본값은 바꾸지 않는다.
+
+[실행 옵션과 토픽](../../docs/packages/asmc_lidar/ground-method-comparison-visualization.md),
+[객체 하부와 잔여 표면 구조 평가](../../docs/packages/asmc_lidar/l2a2-v1-live-ground-review-20261004.md),
+[재실행 도구](../../tools/lidar/ground_live_review/README.md)를 본다.
+
+### 기존 reference 및 Patchwork 단독 검토
+
 Noetic 컨테이너의 저장소 루트 `/root/ws`에서:
 
 ```bash
