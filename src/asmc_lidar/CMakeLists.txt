@@ -46,7 +46,7 @@ add_library(asmc_ground_live_backend
   vendor/linefit/src/bin.cc vendor/linefit/src/viewer.cc)
 target_compile_definitions(asmc_ground_live_backend PRIVATE patchwork=patchwork_live)
 target_include_directories(asmc_ground_live_backend BEFORE PRIVATE
-  ${LIVE_PP}/include vendor/linefit/include)
+  ${LIVE_PP}/include ${CMAKE_CURRENT_BINARY_DIR}/ground_live_linefit_include vendor/linefit/include)
 target_link_libraries(asmc_ground_live_backend PUBLIC asmc_lidar_core ${PCL_LIBRARIES} pthread)
 target_compile_options(asmc_ground_live_backend PRIVATE -O2)
 add_executable(asmc_lidar_ground_live_node src/ground_live_node.cpp)
@@ -71,6 +71,12 @@ target_link_libraries(asmc_lidar_ground_compare PRIVATE asmc_lidar_core)
 target_compile_options(asmc_lidar_ground_compare PRIVATE -Wall -Wextra)
 
 if(CATKIN_ENABLE_TESTING)
+  add_executable(asmc_lidar_linefit_coverage_test test/linefit_coverage_test.cpp)
+  target_include_directories(asmc_lidar_linefit_coverage_test BEFORE PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}/ground_live_linefit_include vendor/linefit/include)
+  target_link_libraries(asmc_lidar_linefit_coverage_test PRIVATE asmc_ground_live_backend)
+  target_compile_options(asmc_lidar_linefit_coverage_test PRIVATE -UNDEBUG)
+  add_test(NAME asmc_lidar_linefit_coverage_test COMMAND asmc_lidar_linefit_coverage_test)
   add_executable(asmc_lidar_ground_live_test test/ground_live_test.cpp)
   target_link_libraries(asmc_lidar_ground_live_test PRIVATE asmc_ground_live_backend)
   target_compile_options(asmc_lidar_ground_live_test PRIVATE -UNDEBUG)
