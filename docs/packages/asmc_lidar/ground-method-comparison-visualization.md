@@ -23,6 +23,27 @@ roslaunch asmc_lidar ground_compare_live.launch method:=patchwork patchwork_vari
 기존 bridge가 `source` 시각으로 실행 중이면 그 설정을 바꾸지 않고 진단에
 실제 시각 출처를 표시한다. 단순히 launch 기본값을 측정 시각의 증거로 쓰지 않는다.
 
+### 환경 조정 설정 선택
+
+`comparison_config`의 기본은 빈 값이며 기존 V1을 유지한다. 아래는 채택된
+새 기본값이 아니라 **검토용 설정을 명시적으로 선택하는 예시**다.
+
+```bash
+# linefit 처리 누락 수정만 적용. 다른 두 방법의 설정은 기존 그대로.
+roslaunch asmc_lidar ground_compare_live.launch \
+  comparison_config:=/root/ws/src/asmc_lidar/config/ground_v2/lf_covered.yaml
+# Patchwork++ 평면 거리만 12.5cm에서 8cm로 변경한 단일 변수 비교
+roslaunch asmc_lidar ground_compare_live.launch \
+  comparison_config:=/root/ws/src/asmc_lidar/config/ground_v2/pp_dist_0p08.yaml
+```
+
+기존 RViz 토글·토픽·좌표계는 그대로다. `method:=linefit` 또는
+`method:=patchwork`로 계산할 방법을 제한할 수 있다. 잘못된 파일·설정은
+조용히 기본값으로 대체하지 않고 오류로 중단한다. 원인 비트와 전체 후보 목록은
+[환경 조정 실험 안내](../../../tools/lidar/ground_tuning/README.md)를 본다.
+
+### 출력 해석
+
 점군은 `/lidar_candidate/ground_live/{jaeho,patchwork,linefit}/` 아래의
 `ground`, `nonground`, `uncertain`이다. RViz의 세 그룹은 같은 rear-axle
 `base_link` 위치이며 화면용 평행이동이 없다. 한 그룹만 켜거나 여러 그룹을

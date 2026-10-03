@@ -1,4 +1,5 @@
 #include <asmc_lidar/ground_live.hpp>
+#include <asmc_lidar/review_io.hpp>
 #include <yaml-cpp/yaml.h>
 #include <filesystem>
 #include <fstream>
@@ -8,16 +9,6 @@
 namespace fs=std::filesystem;
 template<class T>void Array(std::ostream& out,const std::vector<T>& a){
   out<<'[';for(std::size_t i=0;i<a.size();++i){if(i)out<<',';out<<int(a[i]);}out<<']';
-}
-asmc_lidar::Cloud Read(const fs::path& path){
-  std::ifstream in(path,std::ios::binary|std::ios::ate);
-  if(!in)throw std::runtime_error("missing cloud "+path.string());
-  const auto bytes=in.tellg();if(bytes<0||bytes%16)throw std::runtime_error("invalid XYZI");
-  in.seekg(0);asmc_lidar::Cloud cloud;float f[4];
-  while(in.read(reinterpret_cast<char*>(f),sizeof(f))){
-    pcl::PointXYZI p;p.x=f[0];p.y=f[1];p.z=f[2];p.intensity=f[3];cloud.push_back(p);
-  }
-  return cloud;
 }
 int main(int argc,char** argv)try{
   if(argc<4||argc>7)throw std::runtime_error("usage: ground_live_offline snapshots.jsonl calibration.yaml output.jsonl [guard25|fixed_height] [all|jaeho|patchwork|linefit] [comparison_config.yaml]");
@@ -38,7 +29,7 @@ int main(int argc,char** argv)try{
       throw std::runtime_error("invalid input clock/pose");
     last=stamp;const fs::path rel=row["cloud_path"].as<std::string>();
     if(rel.is_absolute()||rel.string().find("..")!=std::string::npos)throw std::runtime_error("invalid cloud path");
-    const auto cloud=Read(source.parent_path()/rel);
+    const auto cloud=asmc_lidar::ReadReviewCloud(source.parent_path()/rel);
     const auto result=model.Process(cloud,cal,float(pitch));
     const auto id=row["input_id"].as<std::string>();
     if(id.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")!=std::string::npos)

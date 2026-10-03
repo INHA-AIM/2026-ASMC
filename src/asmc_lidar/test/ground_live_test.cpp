@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <filesystem>
 #include <fstream>
+#include <unistd.h>
 
 int main(int argc,char** argv) {
   assert(argc==2);
@@ -57,7 +58,7 @@ int main(int argc,char** argv) {
     }
     if(c.linefit_cover_all)assert(x.methods.at("linefit").events.at("unvisited_sectors")==0);
   }
-  const auto file=std::filesystem::temp_directory_path()/"asmc_ground_config_invalid.yaml";
+  const auto file=std::filesystem::temp_directory_path()/("asmc_ground_config_invalid_"+std::to_string(getpid())+".yaml");
   for(const auto& bad:{"id: test\nlinefit_distance: .nan\n", "id: test\nlinefit_threads: 0\n",
       "id: test\nunknown: 1\n", "id: test\nid: duplicate\n", "id: '../unsafe'\n"}) {
     {std::ofstream out(file);out<<bad;}

@@ -4,10 +4,15 @@ from pathlib import Path
 import tempfile
 import unittest
 import numpy as np
-from score import evaluate
+from score import evaluate,original_topology,identical_group_topology
 
 
 class ScoringTest(unittest.TestCase):
+    def test_identical_subgroup_graph_cache_is_exact(self):
+        rng=np.random.RandomState(9);points=rng.uniform(0,2,(80,3));a=rng.randint(1,4,80)
+        b=a.copy();b[7]=1
+        masks={'first':a,'same':a.copy(),'other':b}
+        self.assertEqual(original_topology(points,masks),identical_group_topology(points,masks))
     def test_object_loss_is_not_clean_ground_success(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)/'input';results=Path(tmp)/'results';out=Path(tmp)/'score'

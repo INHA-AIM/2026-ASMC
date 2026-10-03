@@ -79,6 +79,8 @@ target_link_libraries(asmc_lidar_ground_compare PRIVATE asmc_lidar_core)
 target_compile_options(asmc_lidar_ground_compare PRIVATE -Wall -Wextra)
 
 if(CATKIN_ENABLE_TESTING)
+  add_executable(asmc_lidar_ground_sequence_test test/ground_sequence_test.cpp)
+  target_link_libraries(asmc_lidar_ground_sequence_test PRIVATE asmc_ground_live_backend)
   add_executable(asmc_lidar_linefit_coverage_test test/linefit_coverage_test.cpp)
   target_include_directories(asmc_lidar_linefit_coverage_test BEFORE PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/ground_live_linefit_include vendor/linefit/include)

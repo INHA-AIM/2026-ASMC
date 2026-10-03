@@ -12,7 +12,20 @@ import numpy as np
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'ground_live_review'))
 from metrics import frame_metrics, CLASSES
+import metrics as metric_module
 from evaluate import digest
+
+original_topology=metric_module.topology
+def identical_group_topology(points,masks):
+    """Same GT-group graph and arithmetic; compute identical subgroup masks once."""
+    unique={};keys={};aliases={}
+    for name,mask in masks.items():
+        key=np.asarray(mask,dtype=np.uint8).tobytes()
+        if key not in keys:keys[key]=name;unique[name]=mask
+        aliases[name]=keys[key]
+    results=original_topology(points,unique)
+    return {name:results[aliases[name]] for name in masks}
+metric_module.topology=identical_group_topology
 
 
 def evaluate(root, results, output):
@@ -103,7 +116,7 @@ def evaluate(root, results, output):
                 for k,v in raw.items():
                     if k.endswith('_ms'):times[name][k].append(v)
                 times[name]['prepare_ms'].append(row['prepare_ms'])
-                times[name]['total_core_ms'].append(row['prepare_ms']+sum(raw[k] for k in ('copy_ms','segment_ms','guard_ms','restore_ms')))
+                times[name]['accounted_stage_sum_ms'].append(row['prepare_ms']+sum(raw[k] for k in ('copy_ms','segment_ms','guard_ms','restore_ms')))
             seen+=1
             if seen%100==0: print(json.dumps({'scored':seen,'last':source['input_id']}),flush=True)
     gates={}

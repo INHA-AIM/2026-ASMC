@@ -90,3 +90,36 @@ cd build/asmc_lidar && ctest --output-on-failure
 진단은 분류 분기 변경 없이 build 파생본에 추가한다. 원본 vendor·external을
 수정하지 않는다. 반복 검사는 `compare.py --diagnostics`로 마스크·점 대응·
 stamp·원인·피팅 사건이 동일한지 검사한다. 실행시간은 비교에서 제외한다.
+
+`asmc_lidar_ground_sequence_test <snapshots> <calibration> <profiles_dir>`는
+14개 설정 각각에 독립 인스턴스 두 개를 두고 같은 시퀀스를 재생한다.
+공통 전처리를 한 번만 계산하며 분류·보호 전 결과·진단 사건까지 정확히
+비교한다. 고정 입력의 전체 통계는 `check_v1_scores.py`로 V1과 대조한다.
+
+`manual.py`는 644스캔 무라벨 IMU 자료에서 자세·보호점 수·비용만 기록한다.
+GT 점수가 아니다. `live.py <profile> <new_output>`은 기존 bridge를 보존하고
+생성한 리뷰 노드만 정리한다. `--simulator-smoke`를 명시하면 기존 안전 전제
+검사를 통과한 경우에만 제한 이동 후 원상 복구한다. 복구 RPC를 실행하는
+도중 외부 timeout으로 프로세스를 강제 종료하지 않는다.
+
+최종 입력·소스·결과 SHA 감사는 `build_manifest.py`, 대표 BEV/측면은
+`plot.py`, 계산된 요약표 출력은 `inspect_results.py`를 사용한다.
+
+완료된 raw4,048·동기1,439 전수 결과와 미채택 이유는
+[V2 보고서](../../../docs/packages/asmc_lidar/l2a2-v2-ground-tuning-20261004.md)에
+있다. 644스캔 IMU 자료는 무라벨 보조 진단으로 분리했다.
+두 기록 모두에서 객체 보존과 잔여 구조 조건을 함께 통과한 튜닝 설정은 없다.
+
+```bash
+# 호스트: Git 연결이 유효한 독립 worktree 루트에서 실행.
+# 기존 출력은 덮어쓰지 않으므로 재감사에는 새 파일명을 사용한다.
+python3 -B tools/lidar/ground_tuning/build_manifest.py \
+  --repo . --data "${ASMC_DATA:-../data}" \
+  --output /tmp/lidar_ground_v2_reaudit.json
+```
+
+시간 해석: `accounted_stage_sum_ms`는 전처리·복사·분할·보호·복원의 계측 합이며
+계측 사이의 메모리 관리 등을 모두 포함한 wall time은 아니다. 초기 V2 산출물의
+같은 합은 `total_core_ms`로 표기돼 있어 최종 정리 시 그 이름을 정정한다.
+실제 callback 계산 전체와 수신→발행은 live의 `compute_ms`와
+`receipt_to_publish_ms`를 사용한다. 둘은 sensor/network 전 지연이 아니다.

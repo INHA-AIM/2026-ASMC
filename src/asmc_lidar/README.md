@@ -30,6 +30,20 @@ rear-axle `base_link`이며 GT 없이 작동한다. `nonground`는 장애물 확
 [객체 하부와 잔여 표면 구조 평가](../../docs/packages/asmc_lidar/l2a2-v1-live-ground-review-20261004.md),
 [재실행 도구](../../tools/lidar/ground_live_review/README.md)를 본다.
 
+환경 조정 검토는 선택적인 `comparison_config`로 실행한다. **생략하면 V1을
+그대로 사용하며 튜닝 후보나 linefit 누락 수정을 자동 적용하지 않는다.**
+
+```bash
+# 파라미터 조정 없이 linefit의 sector/점 처리 누락만 수정한 대조군
+roslaunch asmc_lidar ground_compare_live.launch \
+  comparison_config:=/root/ws/src/asmc_lidar/config/ground_v2/lf_covered.yaml
+```
+
+파일이 잘못되거나 알려지지 않은 설정이 있으면 시작을 거부한다. 설정 ID와 SHA는
+`/lidar_candidate/ground_live/status`에 표시한다. 12개 단일 변수 설정과 원인
+진단·재실행은 [V2 실험 안내](../../tools/lidar/ground_tuning/README.md)를 따른다.
+설정 파일을 바꿔 시험할 때에는 노드를 재시작하여 적응 상태를 초기화한다.
+
 ### 기존 reference 및 Patchwork 단독 검토
 
 Noetic 컨테이너의 저장소 루트 `/root/ws`에서:
