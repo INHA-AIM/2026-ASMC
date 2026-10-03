@@ -20,7 +20,8 @@ double Ms(Clock::time_point t){return std::chrono::duration<double,std::milli>(C
 class Node {
  public:
   Node():p_("~") {
-    std::string method,calibration,cloud,imu;
+    std::string method,calibration,cloud,imu,comparison;
+    p_.param<std::string>("comparison_config",comparison,"");
     p_.param<std::string>("method",method,"all");
     p_.param<std::string>("patchwork_variant",variant_,"guard25");
     p_.param<std::string>("calibration_path",calibration,"");
@@ -33,7 +34,7 @@ class Node {
       stamp_provenance_=active_mode=="source"?"simulator_source":
                         active_mode=="receive"?"bridge_receive":"unknown_bridge_mode";
     cal_=asmc_lidar::LoadCalibration(calibration);
-    model_.reset(new asmc_lidar::GroundComparison(method,variant_));
+    model_.reset(new asmc_lidar::GroundComparison(method,variant_,asmc_lidar::LoadGroundComparisonConfig(comparison)));
     for(const auto& name:{"jaeho","patchwork","linefit"}) {
       if(method!="all"&&method!=name)continue;
       for(const auto& kind:{"ground","nonground","uncertain","structural_removed","native_retained"})
@@ -131,7 +132,7 @@ class Node {
     add("source_stamp_ns",r?r->cloud->header.stamp.toNSec():last_header_.stamp.toNSec());
     add("receipt_ros_ns",r?r->receipt_ns:0);
     add("stamp_provenance",stamp_provenance_);add("frame","base_link");
-    add("patchwork_variant",variant_);add("config_id","l2a2_v1_pitch_voxel10_lf90x60_ordered_insert_pp180");
+    add("patchwork_variant",variant_);add("config_id",model_->config().id);add("config_sha256",model_->config().sha256);
     add("queue_wait_ms",wait);add("compute_ms",compute);add("publish_ms",output_ms);
     add("receipt_to_publish_ms",r?Ms(r->arrival):0.);
     if(r){add("imu_stamp_ns",r->imu.sample.stamp_ns);add("imu_pitch",r->imu.sample.pitch_rad);
@@ -143,6 +144,14 @@ class Node {
         add(item.first+"_copy_ms",item.second.copy_ms);
         add(item.first+"_guard_ms",item.second.guard_ms);
         add(item.first+"_restore_ms",item.second.restore_ms);
+        for(const auto& event:item.second.events)add(item.first+"_"+event.first,event.second);
+        std::size_t unknown=0,guard_restored=0;
+        for(std::size_t i=0;i<item.second.labels.size();++i){
+          unknown+=item.second.labels[i]==3;
+          if(item.first=="patchwork"&&!item.second.reasons.empty())guard_restored+=(item.second.reasons[i]&2048)!=0;
+        }
+        add(item.first+"_unclassified_raw_points",unknown);
+        if(item.first=="patchwork")add("patchwork_guard_restored_raw_points",guard_restored);
       }
     }
     array.status.push_back(d);status_.publish(array);

@@ -17,6 +17,7 @@
   <depend>pcl_conversions</depend>
   <build_depend>libeigen3-dev</build_depend>
   <build_depend>libpcl-dev</build_depend>
+  <depend>libssl-dev</depend>
   <exec_depend>rviz</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>

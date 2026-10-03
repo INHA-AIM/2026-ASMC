@@ -1,6 +1,7 @@
 <launch>
   <arg name="method" default="all"/>
   <arg name="patchwork_variant" default="guard25"/>
+  <arg name="comparison_config" default=""/>
   <arg name="rviz" default="true"/>
   <arg name="start_bridge" default="false"/>
   <arg name="transport_profile" default="local"/>
@@ -19,6 +20,7 @@
   <node pkg="asmc_lidar" type="asmc_lidar_ground_live_node" name="ground_compare_live" required="true" output="screen">
     <param name="method" value="$(arg method)"/>
     <param name="patchwork_variant" value="$(arg patchwork_variant)"/>
+    <param name="comparison_config" value="$(arg comparison_config)"/>
     <param name="cloud_topic" value="$(arg cloud_topic)"/>
     <param name="imu_topic" value="$(arg imu_topic)"/>
     <param name="stamp_provenance" value="$(eval 'simulator_source' if arg('timestamp_mode') == 'source' else 'bridge_receive')"/>

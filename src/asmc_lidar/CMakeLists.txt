@@ -8,6 +8,7 @@ find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common filters segmentation search)
 find_package(yaml-cpp REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
+find_package(OpenSSL REQUIRED)
 
 catkin_package(INCLUDE_DIRS include LIBRARIES asmc_lidar_core
   CATKIN_DEPENDS roscpp sensor_msgs visualization_msgs diagnostic_msgs pcl_conversions pcl_ros)
@@ -40,14 +41,21 @@ execute_process(COMMAND ${Python3_EXECUTABLE}
 if(NOT LIVE_LINEFIT_RESULT EQUAL 0)
   message(FATAL_ERROR "Pinned linefit adapter generation failed")
 endif()
+execute_process(COMMAND ${Python3_EXECUTABLE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/lidar/ground_tuning/generate_diagnostics.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/../.. ${LIVE_PP} ${LIVE_LINEFIT}
+  RESULT_VARIABLE DIAGNOSTIC_RESULT)
+if(NOT DIAGNOSTIC_RESULT EQUAL 0)
+  message(FATAL_ERROR "Review diagnostic generation failed")
+endif()
 add_library(asmc_ground_live_backend
-  src/ground_live.cpp ${LIVE_PP}/src/patchworkpp.cpp ${LIVE_PP}/src/plane_fit.cpp
-  ${LIVE_LINEFIT} vendor/linefit/src/segment.cc
+  src/ground_live.cpp src/ground_config.cpp ${LIVE_PP}/src/patchworkpp.cpp ${LIVE_PP}/src/plane_fit.cpp
+  ${LIVE_LINEFIT} ${CMAKE_CURRENT_BINARY_DIR}/ground_live_linefit_segment.cc
   vendor/linefit/src/bin.cc vendor/linefit/src/viewer.cc)
 target_compile_definitions(asmc_ground_live_backend PRIVATE patchwork=patchwork_live)
 target_include_directories(asmc_ground_live_backend BEFORE PRIVATE
   ${LIVE_PP}/include ${CMAKE_CURRENT_BINARY_DIR}/ground_live_linefit_include vendor/linefit/include)
-target_link_libraries(asmc_ground_live_backend PUBLIC asmc_lidar_core ${PCL_LIBRARIES} pthread)
+target_link_libraries(asmc_ground_live_backend PUBLIC asmc_lidar_core ${PCL_LIBRARIES} pthread OpenSSL::Crypto)
 target_compile_options(asmc_ground_live_backend PRIVATE -O2)
 add_executable(asmc_lidar_ground_live_node src/ground_live_node.cpp)
 target_include_directories(asmc_lidar_ground_live_node PRIVATE ${catkin_INCLUDE_DIRS})

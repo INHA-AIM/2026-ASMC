@@ -20,12 +20,12 @@ asmc_lidar::Cloud Read(const fs::path& path){
   return cloud;
 }
 int main(int argc,char** argv)try{
-  if(argc<4||argc>6)throw std::runtime_error("usage: ground_live_offline snapshots.jsonl calibration.yaml output.jsonl [guard25|fixed_height] [all|jaeho|patchwork|linefit]");
+  if(argc<4||argc>7)throw std::runtime_error("usage: ground_live_offline snapshots.jsonl calibration.yaml output.jsonl [guard25|fixed_height] [all|jaeho|patchwork|linefit] [comparison_config.yaml]");
   const fs::path source=argv[1],output=argv[3];
   if(fs::exists(output))throw std::runtime_error("output already exists");
   std::ifstream in(source);if(!in)throw std::runtime_error("missing snapshots");
   const auto cal=asmc_lidar::LoadCalibration(argv[2]);
-  asmc_lidar::GroundComparison model(argc>5?argv[5]:"all",argc>4?argv[4]:"guard25");
+  asmc_lidar::GroundComparison model(argc>5?argv[5]:"all",argc>4?argv[4]:"guard25",asmc_lidar::LoadGroundComparisonConfig(argc>6?argv[6]:""));
   std::ofstream out(output);if(!out)throw std::runtime_error("cannot create output");
   out<<std::setprecision(17);std::string text,phase;std::int64_t last=0;std::size_t count=0;
   while(std::getline(in,text)){
@@ -44,12 +44,18 @@ int main(int argc,char** argv)try{
     if(id.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")!=std::string::npos)
       throw std::runtime_error("unsafe input id");
     out<<"{\"input_id\":\""<<id<<"\",\"stamp_ns\":"<<stamp<<",\"prepare_ms\":"<<result.prepared.prepare_ms;
+    out<<",\"config_id\":\""<<model.config().id<<"\",\"config_sha256\":\""<<model.config().sha256<<'"';
     out<<",\"raw_to_voxel\":";Array(out,result.prepared.raw_to_voxel);
     out<<",\"methods\":{";bool first=true;
     for(const auto& entry:result.methods){
       if(!first)out<<',';first=false;const auto& r=entry.second;
       out<<'"'<<entry.first<<"\":{\"mask\":";Array(out,r.labels);
       out<<",\"structural_removed\":";Array(out,r.structural_removed);
+      out<<",\"pre_guard_mask\":";Array(out,r.pre_guard_labels);
+      out<<",\"reasons\":";Array(out,r.reasons);
+      out<<",\"events\":{";bool first_event=true;
+      for(const auto& e:r.events){if(!first_event)out<<',';first_event=false;out<<'"'<<e.first<<"\":"<<e.second;}
+      out<<'}';
       out<<",\"copy_ms\":"<<r.copy_ms<<",\"segment_ms\":"<<r.segment_ms
          <<",\"guard_ms\":"<<r.guard_ms<<",\"restore_ms\":"<<r.restore_ms<<'}';
     }

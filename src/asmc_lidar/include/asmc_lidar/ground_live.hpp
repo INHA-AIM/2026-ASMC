@@ -15,18 +15,33 @@ struct GroundPrepared {
 GroundPrepared PrepareGeneralGround(const Cloud&, const Calibration&, float pitch);
 struct GroundMethodResult {
   std::vector<std::uint8_t> labels, structural_removed;
+  std::vector<std::uint8_t> pre_guard_labels;
+  std::vector<unsigned> reasons;
+  std::map<std::string, unsigned> events;
   double copy_ms=0, segment_ms=0, guard_ms=0, restore_ms=0;
 };
+// Review profiles only. Empty path preserves V1 defaults, including tail behavior.
+struct GroundComparisonConfig {
+  std::string id="v1", sha256;
+  bool linefit_cover_all=false;
+  int linefit_threads=4, patchwork_min_points=10;
+  double patchwork_distance=.125, patchwork_seeds=.125;
+  double linefit_distance=.05, linefit_search=.1, linefit_long=2.;
+};
+GroundComparisonConfig LoadGroundComparisonConfig(const std::string& path="");
 struct GroundLiveResult {
   GroundPrepared prepared;
   std::map<std::string,GroundMethodResult> methods;
 };
 class GroundComparison {
  public:
-  GroundComparison(std::string method="all", std::string patchwork_variant="guard25");
+  GroundComparison(std::string method="all", std::string patchwork_variant="guard25",
+                   GroundComparisonConfig config=LoadGroundComparisonConfig());
   ~GroundComparison();
   void Reset();
   GroundLiveResult Process(const Cloud&, const Calibration&, float pitch);
+  GroundLiveResult ProcessPrepared(const GroundPrepared&, std::size_t raw_size);
+  const GroundComparisonConfig& config() const;
  private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
