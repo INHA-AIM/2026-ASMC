@@ -1,4 +1,4 @@
-# asmc_lidar — 독립 LiDAR 실행·검토 패키지 (L2-A1/A2/V3)
+# asmc_lidar — 독립 LiDAR 실행·검토 패키지 (L2-A1/A2/V4)
 
 손재호 `6435af1`의 **프레임별** 터널 제거·군집·L-shape OBB를 재현하고,
 동일 입력에 Patchwork++ 지면 분할을 독립적으로 돌린다. 운영 LiDAR의
@@ -7,6 +7,32 @@ TRAVEL AOS는 이 패키지에 채택하지 않았다. 기존 데이터에서 �
 차량 군집을 Patchwork++가 해결했다는 의미도 아니다.
 
 ## 빌드와 실행
+
+### 최신 선택: 재호 평면 높이 검사 + 동일 scan 지원 영역 보완
+
+[V4 보고서](../../docs/packages/asmc_lidar/l2a2-v4-ground-selection-20261005.md)의
+후속 개발 기준은 `jaeho_support`다. **운영 승인/기본값 변경은 아니다.**
+일반도로 RANSAC의 잘못된 지면 선택을 줄였지만 기존 객체 하부 삭제와 터널
+잔여 마스크 변화는 남는다. 전용 터널 필터·군집·tracker 전체의 개선으로 해석하지 않는다.
+
+기존 bridge를 켜둔 Noetic 컨테이너에서, 이전 비교 노드를 종료한 뒤:
+
+```bash
+source /opt/ros/noetic/setup.bash
+source /root/ws/devel/setup.bash
+roslaunch asmc_lidar ground_compare_live.launch method:=jaeho \
+  comparison_config:=/root/ws/src/asmc_lidar/config/ground_v4/jaeho_support.yaml
+```
+
+RViz는 자동 실행된다. 상태의 config_id, ground_anchor_used와 Ground plane fits를
+함께 본다. 보완 평면은 시도 번호 4, 적용 범위는 현재 관측으로 제한한다.
+Patchwork++ 연구 후보는 `method:=patchwork`,
+`ground_v4/patchwork_support.yaml`로 실행한다. 경사 잔여는 줄었지만 추가
+장애물 소실로 미채택했으므로 운영에 사용하지 않는다.
+한 master에서 동일 비교 launch를 여러 개 켜지 않는다.
+
+되돌리기는 `ground_v3/roll_pitch_all.yaml`을 선택한다. 설정 생략은 기존 V1이다.
+출력은 계속 rear-axle base_link이며 기존 Main/판제 입력과 연결되지 않는다.
 
 ### 실시간 세 방법 지면 비교
 

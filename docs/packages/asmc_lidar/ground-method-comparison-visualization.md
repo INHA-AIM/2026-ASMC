@@ -45,6 +45,27 @@ roslaunch asmc_lidar ground_compare_live.launch \
 조용히 기본값으로 대체하지 않고 오류로 중단한다. 원인 비트와 전체 후보 목록은
 [환경 조정 실험 안내](../../../tools/lidar/ground_tuning/README.md)를 본다.
 
+### V4 두 방향 실험 결과 확인
+
+최신 후속 개발 기준은 재호 보완안이다. 이전 비교 launch를 종료하고 하나만 실행한다.
+
+```bash
+roslaunch asmc_lidar ground_compare_live.launch method:=jaeho \
+  comparison_config:=/root/ws/src/asmc_lidar/config/ground_v4/jaeho_support.yaml
+```
+
+Patchwork++ 보완안은 `method:=patchwork`와
+`ground_v4/patchwork_support.yaml`로 바꾼다. 경사 잔여는 줄었지만 추가 객체 소실로
+미채택한 후보다. [V4 보고서](l2a2-v4-ground-selection-20261005.md)를 함께 본다.
+`method:=all`에 재호 설정만 넘기면 Patchwork도 새 보호 규칙으로 바뀌는 것이
+아니다. 두 policy 값은 독립적이다.
+
+재호의 높이 부적합 수평면은 점을 보존하면서 탐색에서만 제외한다. 붉은 평면 화살표가
+곧 구조물 삭제를 뜻하지 않는다. 지원 평면은 시도 번호 4이며 상태에
+`ground_anchor_used`로 표시된다. `valid`는 입력 상태이지 전 영역 지면/객체 검출
+성공이 아니다. 이전 기준은 `ground_v3/roll_pitch_all.yaml`로 복귀한다.
+기본값과 운영 Main/판제 입력은 변경하지 않았다.
+
 ### 출력 해석
 
 점군은 `/lidar_candidate/ground_live/{jaeho,patchwork,linefit}/` 아래의
