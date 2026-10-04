@@ -35,6 +35,9 @@ roslaunch asmc_lidar ground_compare_live.launch \
 # Patchwork++ 평면 거리만 12.5cm에서 8cm로 변경한 단일 변수 비교
 roslaunch asmc_lidar ground_compare_live.launch \
   comparison_config:=/root/ws/src/asmc_lidar/config/ground_v2/pp_dist_0p08.yaml
+# V3: 세 방법에 동일 roll·pitch, linefit 전체 sector 적용 (연구용)
+roslaunch asmc_lidar ground_compare_live.launch \
+  comparison_config:=/root/ws/src/asmc_lidar/config/ground_v3/roll_pitch_all.yaml
 ```
 
 기존 RViz 토글·토픽·좌표계는 그대로다. `method:=linefit` 또는
@@ -49,6 +52,11 @@ roslaunch asmc_lidar ground_compare_live.launch \
 `base_link` 위치이며 화면용 평행이동이 없다. 한 그룹만 켜거나 여러 그룹을
 겹쳐 볼 수 있다. 입력 stamp·intensity·`source_index`가 보존된다.
 `source_index`는 해당 원본 scan 안의 인덱스이지 지속 객체 ID가 아니다.
+V3 설정에서만 `/lidar_candidate/ground_live/fit_markers`의 RANSAC 평면
+법선 화살표를 추가 발행한다. 녹색은 지면 채택, 적색은 거부된 평면이다.
+선택 평면·센서 중단 상태를 같은 scan의 점군과 비교하기 위한 진단이며
+터널 지면 GT가 아니다. [V3 결과](l2a2-v3-attitude-tunnel-selection-20261005.md)를
+함께 확인한다.
 
 재호의 `structural_removed`는 지면 탐색에서 먼저 제거된 수직 평면이고,
 `native_retained`는 이것까지 제외한 기존 후단 입력이다. 공정한 지면 비교에는

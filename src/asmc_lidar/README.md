@@ -1,4 +1,4 @@
-# asmc_lidar — 독립 LiDAR 실행·검토 패키지 (L2-A1/A2)
+# asmc_lidar — 독립 LiDAR 실행·검토 패키지 (L2-A1/A2/V3)
 
 손재호 `6435af1`의 **프레임별** 터널 제거·군집·L-shape OBB를 재현하고,
 동일 입력에 Patchwork++ 지면 분할을 독립적으로 돌린다. 운영 LiDAR의
@@ -43,6 +43,28 @@ roslaunch asmc_lidar ground_compare_live.launch \
 `/lidar_candidate/ground_live/status`에 표시한다. 12개 단일 변수 설정과 원인
 진단·재실행은 [V2 실험 안내](../../tools/lidar/ground_tuning/README.md)를 따른다.
 설정 파일을 바꿔 시험할 때에는 노드를 재시작하여 적응 상태를 초기화한다.
+
+### V3 공통 roll·pitch 및 터널 평면 진단 (연구용)
+
+V3 설정을 **명시적으로** 선택하면 같은 scan의 roll·pitch를 세 방법에
+적용하고 linefit의 모든 sector·점을 처리한다. 생략하면 기존 pitch-only
+V1이며 운영 LiDAR나 판제 토픽은 바뀌지 않는다.
+
+```bash
+roslaunch asmc_lidar ground_compare_live.launch \
+  method:=all rviz:=true \
+  comparison_config:=/root/ws/src/asmc_lidar/config/ground_v3/roll_pitch_all.yaml
+# bridge가 없을 때만 start_bridge:=true 추가
+```
+
+RViz의 `Ground plane fits`에서 선택된 재호 평면의 중심·법선과 거부
+시도를 볼 수 있다. 화면이 지워진 경우에는 `ground_live/status`의
+IMU·센서 중단·queue 상태를 먼저 본다. 2026-10-05 동일 입력 GT 비교에서
+linefit을 **후속 연구용 지면 입력**으로 선택했지만 보도·구조물 잔여와
+실제 v3 터널 연속주행 gate가 남아 운영 채택은 하지 않았다.
+[V3 결과와 미완료 조건](../../docs/packages/asmc_lidar/l2a2-v3-attitude-tunnel-selection-20261005.md),
+[V3 재실행 명령](../../tools/lidar/ground_v3/README.md),
+[고정 입력 manifest](../../config/baselines/lidar_l2a2_v3_20261005.yaml)를 본다.
 
 ### 기존 reference 및 Patchwork 단독 검토
 
