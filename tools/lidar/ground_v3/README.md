@@ -63,3 +63,65 @@ python3 -B tools/lidar/ground_v3/replay_probe.py \
 ```
 
 전체 결과와 미검증 항목은 [V3 보고서](../../../docs/packages/asmc_lidar/l2a2-v3-attitude-tunnel-selection-20261005.md)에 있다.
+
+## 새 실주행 기록 — 2026-10-05
+
+[실주행 보고서](../../../docs/packages/asmc_lidar/l2a2-v3-live-drive-review-20261005.md)와
+[manifest](../../../config/baselines/lidar_l2a2_v3_drive_20261005.yaml)를 함께 본다.
+실제 터널 내부를 수집했으며 경로 밖 첫 시도는 점수에서 제외했다.
+램프에서는 두 후보의 지면 잔여 한계가 드러나 전 구간 승격을 보류했다.
+
+### 사용자가 직접 확인하기
+
+Noetic 컨테이너 `/root/ws`에서 source 후 실행한다. 기존 bridge는 그대로 두고,
+실시간 비교 노드와 기록 재생 노드는 **동시에 실행하지 않는다**.
+
+```bash
+source /opt/ros/noetic/setup.bash
+source /root/ws/devel/setup.bash
+# 지금 시뮬레이터를 직접 움직이며 보기: bridge가 이미 켜져 있으면 추가 실행하지 않음
+roslaunch asmc_lidar ground_compare_live.launch \
+  comparison_config:=/root/ws/src/asmc_lidar/config/ground_v3/roll_pitch_all.yaml
+
+# 위 live 노드를 종료한 뒤, 새로 수집한 실제 터널 내부부터 보기
+roslaunch asmc_lidar ground_compare_recording.launch \
+  bag:=/data/lidar_assessment/20261005_ground_v3_drive/tunnel_path_all/drive_0.bag \
+  start:=110
+
+# 위 재생을 종료한 뒤, 횡경사 램프 기록 보기
+roslaunch asmc_lidar ground_compare_recording.launch \
+  bag:=/data/lidar_assessment/20261005_ground_v3_drive/banked_pi_all/drive_0.bag \
+  start:=20
+```
+
+기록 launch는 기존 RViz와 저장된 `/lidar_candidate/ground_live/` 출력만 재생한다.
+원본 센서·차량 상태·제어·TF·/clock은 재생하지 않아 기존 bridge와 섞이지 않는다.
+기본 반복 재생, `rate:=0.5`로 느리게 보기, `rviz:=false`로 RViz 생략 가능하다.
+`start`는 bag 시작부터의 초다. 알고리즘을 다시 계산하는 것이 아니라 수집 시 출력이다.
+종료는 Ctrl+C다. RViz 세 방법 그룹을 하나씩 토글한다. 모든 점은 동일 base_link다.
+실시간은 `method:=jaeho|patchwork|linefit|all`로 계산할 방법도 제한할 수 있다.
+
+### 수집 자료 재평가
+
+원본을 덮어쓰지 않고 새 디렉터리를 지정한다. capture/source manifest에 기록된
+SHA와 실제 입력을 확인한다. `tunnel_all`, `banked_path_all`은 실패 기록이라 추출기가 거부한다.
+
+```bash
+BASE=/data/lidar_assessment/20261005_ground_v3_drive
+NEW=/data/lidar_assessment/<새-평가-디렉터리>
+python3 -B tools/lidar/ground_v3/extract_drive_gt.py "$BASE/tunnel_path_all" "$NEW/input"
+python3 -B tools/lidar/ground_tuning/run.py "$NEW/input" "$NEW/v1" --profiles v1 lf_covered
+python3 -B tools/lidar/ground_v3/run.py "$NEW/input" "$NEW/v3"
+python3 -B tools/lidar/ground_v3/score.py "$NEW/input" "$NEW/v1" "$NEW/v3" "$NEW/score"
+python3 -B tools/lidar/ground_v3/drive_results.py \
+  "$BASE/tunnel_path_all" "$NEW/input" "$NEW/v3/roll_pitch_all.jsonl" \
+  "$NEW/score" "$NEW/details.json"
+python3 -B tools/lidar/ground_v3/test_drive_input.py
+```
+
+`summarize_drive.py CAPTURE`는 최초 실행 시 영상·자세·구간별 상태를 저장한다.
+이미 생성된 결과는 덮어쓰지 않는다. `collect_live_drive.py`는 **MORAI 전용**
+경로 추종 수집 도구이며 `--confirm-simulator-move`가 필수다. 사용자 정지/키보드
+상태에서만 시작하고 시험 전 위치를 복원한다. 실제 차량·운영 판제용 제어기가 아니다.
+재수집이 필요하면 route/duration/speed와 컨트롤러를 검토한 뒤 사용한다.
+오르막의 simulator speed mode 실패와 최종 PI 시험은 별도 조건으로 보존했다.

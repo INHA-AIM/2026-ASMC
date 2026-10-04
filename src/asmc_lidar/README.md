@@ -62,6 +62,18 @@ RViz의 `Ground plane fits`에서 선택된 재호 평면의 중심·법선과 �
 IMU·센서 중단·queue 상태를 먼저 본다. 2026-10-05 동일 입력 GT 비교에서
 linefit을 **후속 연구용 지면 입력**으로 선택했지만 보도·구조물 잔여와
 실제 v3 터널 연속주행 gate가 남아 운영 채택은 하지 않았다.
+이후 [새 터널·횡경사 주행](../../docs/packages/asmc_lidar/l2a2-v3-live-drive-review-20261005.md)을
+완료했으나 램프 잔여 한계가 확인돼 전 구간 승격은 보류했다. 기존 운영 출력은 유지한다.
+저장된 실제 터널을 기존 RViz로 볼 때는 live 비교 노드를 종료한 뒤 다음을 사용한다.
+
+```bash
+roslaunch asmc_lidar ground_compare_recording.launch \
+  bag:=/data/lidar_assessment/20261005_ground_v3_drive/tunnel_path_all/drive_0.bag \
+  start:=110
+```
+
+기록 launch는 candidate 결과만 재생하므로 기존 bridge를 유지할 수 있다.
+원본 센서·제어·/clock은 재생하지 않는다. 램프 및 재평가 명령은 아래 안내를 본다.
 [V3 결과와 미완료 조건](../../docs/packages/asmc_lidar/l2a2-v3-attitude-tunnel-selection-20261005.md),
 [V3 재실행 명령](../../tools/lidar/ground_v3/README.md),
 [고정 입력 manifest](../../config/baselines/lidar_l2a2_v3_20261005.yaml)를 본다.
