@@ -10,7 +10,8 @@
 
 namespace asmc_lidar {
 tunnel_filter::FrameResult ProcessGeneralGroundLeveled(
-    const Cloud& leveled,std::vector<GroundPlaneAttempt>* review_attempts) {
+    const Cloud& leveled,std::vector<GroundPlaneAttempt>* review_attempts,
+    bool validate_sensor_height) {
   using Clock=std::chrono::steady_clock;
   const auto started=Clock::now();
   tunnel_filter::FrameResult result;
@@ -40,7 +41,10 @@ tunnel_filter::FrameResult ProcessGeneralGroundLeveled(
     }
     const auto& c=coefficients.values;
     const double norm=std::sqrt(double(c[0])*c[0]+double(c[1])*c[1]+double(c[2])*c[2]);
-    const bool ground=norm>1e-6&&std::abs(c[2]/norm)>=.82;
+    const bool horizontal=norm>1e-6&&std::abs(c[2]/norm)>=.82;
+    const double height=std::abs(c[2])>1e-6?-double(c[3])/c[2]:0.;
+    const bool height_ok=std::isfinite(height)&&height>=-2.25&&height<=-1.35;
+    const bool ground=horizontal&&(!validate_sensor_height||height_ok);
     diagnostic.valid=norm>1e-6&&std::isfinite(norm);
     diagnostic.accepted_ground=ground;
     if(diagnostic.valid) {
@@ -53,8 +57,11 @@ tunnel_filter::FrameResult ProcessGeneralGroundLeveled(
     for(int index:inliers.indices) {
       const auto& p=result.leveled->at(std::size_t(remaining.at(std::size_t(index))));
       diagnostic.centroid[0]+=p.x;diagnostic.centroid[1]+=p.y;diagnostic.centroid[2]+=p.z;
+      // Reject an implausible horizontal plane from the SEARCH, not from the
+      // obstacle cloud. The pinned default path retains exactly its old labels.
       result.labels[std::size_t(remaining.at(std::size_t(index)))]=
-          ground?tunnel_filter::kGround:tunnel_filter::kWall;
+          ground?tunnel_filter::kGround:
+          (validate_sensor_height&&horizontal?tunnel_filter::kKept:tunnel_filter::kWall);
       remove[std::size_t(index)]=1;
     }
     for(double& v:diagnostic.centroid)v/=double(inliers.indices.size());
@@ -67,8 +74,11 @@ tunnel_filter::FrameResult ProcessGeneralGroundLeveled(
   result.ground_removed=std::count(result.labels.begin(),result.labels.end(),tunnel_filter::kGround);
   result.wall_removed=std::count(result.labels.begin(),result.labels.end(),tunnel_filter::kWall);
   result.ground_fallback_used=!ground_found;
-  result.kept_indices=remaining;
-  result.kept_points=remaining.size();
+  if(validate_sensor_height) {
+    for(std::size_t i=0;i<result.labels.size();++i)
+      if(result.labels[i]==tunnel_filter::kKept)result.kept_indices.push_back(int(i));
+  } else result.kept_indices=remaining;
+  result.kept_points=result.kept_indices.size();
   result.timings.total_ms=std::chrono::duration<double,std::milli>(Clock::now()-started).count();
   return result;
 }

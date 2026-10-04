@@ -28,6 +28,7 @@ struct GroundMethodResult {
 struct GroundComparisonConfig {
   std::string id="v1", sha256;
   std::string leveling_mode="pitch_only";
+  std::string jaeho_ground_policy="legacy", patchwork_guard_policy="horizontal";
   bool linefit_cover_all=false;
   int linefit_threads=4, patchwork_min_points=10;
   double patchwork_distance=.125, patchwork_seeds=.125;

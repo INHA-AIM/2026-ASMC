@@ -17,7 +17,8 @@ GroundComparisonConfig LoadGroundComparisonConfig(const std::string& path) {
   const auto y=YAML::Load(text);
   if(!y.IsMap()||!y["id"])throw std::invalid_argument("comparison_config must be map with id");
   const std::set<std::string> allowed={"id","leveling_mode","linefit_cover_all","linefit_threads","patchwork_min_points",
-    "patchwork_distance","patchwork_seeds","linefit_distance","linefit_search","linefit_long"};
+    "patchwork_distance","patchwork_seeds","linefit_distance","linefit_search","linefit_long",
+    "jaeho_ground_policy","patchwork_guard_policy"};
   std::set<std::string> seen;
   for(const auto& kv:y) {
     auto k=kv.first.as<std::string>();
@@ -30,10 +31,15 @@ GroundComparisonConfig LoadGroundComparisonConfig(const std::string& path) {
   if(c.leveling_mode!="pitch_only"&&c.leveling_mode!="roll_pitch")
     throw std::invalid_argument("leveling_mode must be pitch_only|roll_pitch");
 #define LOAD(field,type) if(y[#field])c.field=y[#field].as<type>()
+  LOAD(jaeho_ground_policy,std::string);LOAD(patchwork_guard_policy,std::string);
   LOAD(linefit_cover_all,bool);LOAD(linefit_threads,int);LOAD(patchwork_min_points,int);
   LOAD(patchwork_distance,double);LOAD(patchwork_seeds,double);
   LOAD(linefit_distance,double);LOAD(linefit_search,double);LOAD(linefit_long,double);
 #undef LOAD
+  if(c.jaeho_ground_policy!="legacy"&&c.jaeho_ground_policy!="height_gate"&&c.jaeho_ground_policy!="height_support")
+    throw std::invalid_argument("invalid jaeho_ground_policy");
+  if(c.patchwork_guard_policy!="horizontal"&&c.patchwork_guard_policy!="supported_plane")
+    throw std::invalid_argument("invalid patchwork_guard_policy");
   if(c.linefit_threads<1||c.linefit_threads>16||c.patchwork_min_points<3||c.patchwork_min_points>100)
     throw std::invalid_argument("invalid thread/minimum point setting");
   for(double v:{c.patchwork_distance,c.patchwork_seeds,c.linefit_distance,c.linefit_search,c.linefit_long})

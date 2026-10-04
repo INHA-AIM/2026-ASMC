@@ -14,7 +14,8 @@ struct GroundPlaneAttempt {
 // Pinned ground-stage entrypoint; no clustering or OBB.
 tunnel_filter::FrameResult ProcessGeneralGroundLeveled(
     const pcl::PointCloud<pcl::PointXYZI>& leveled,
-    std::vector<GroundPlaneAttempt>* review_attempts=nullptr);
+    std::vector<GroundPlaneAttempt>* review_attempts=nullptr,
+    bool validate_sensor_height=false);
 // Frame-level portion of the pinned Main normal-road path: pitch leveling,
 // at most three plane fits, then 1.5 m Euclidean clusters and L-shape OBB.
 tunnel_filter::FrameResult ProcessGeneralReference(

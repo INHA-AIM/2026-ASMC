@@ -1,5 +1,6 @@
 #include <asmc_lidar/ground_live.hpp>
 #include <asmc_lidar/general.hpp>
+#include <asmc_lidar/road_anchor.hpp>
 #include <ground_segmentation/ground_segmentation.h>
 #include <patchwork/patchworkpp.h>
 #include <chrono>
@@ -66,7 +67,8 @@ GroundLiveResult GroundComparison::ProcessPrepared(const GroundPrepared& prepare
     auto& r=voxel_results["jaeho"];
     const bool review_planes=impl_->config.leveling_mode=="roll_pitch";
     const auto start=Clock::now();
-    const auto ref=ProcessGeneralGroundLeveled(cloud,review_planes?&r.planes:nullptr);
+    const auto ref=ProcessGeneralGroundLeveled(cloud,review_planes?&r.planes:nullptr,
+        impl_->config.jaeho_ground_policy!="legacy");
     r.segment_ms=Ms(start);r.labels.resize(cloud.size(),2);
     if(review_planes){
       r.events["ground_fallback"]=ref.ground_fallback_used?1:0;
@@ -76,6 +78,26 @@ GroundLiveResult GroundComparison::ProcessPrepared(const GroundPrepared& prepare
     for(std::size_t i=0;i<cloud.size();++i) {
       if(ref.labels[i]==tunnel_filter::kGround)r.labels[i]=1;
       if(ref.labels[i]==tunnel_filter::kWall)r.structural_removed[i]=1;
+    }
+    if(ref.ground_fallback_used&&impl_->config.jaeho_ground_policy=="height_support") {
+      const auto fallback_start=Clock::now();const auto anchor=FitRoadAnchor(cloud);
+      r.events["ransac_search_failed"]=1;r.events["ground_anchor_used"]=anchor.valid;
+      if(anchor.valid) {
+        GroundPlaneAttempt plane;plane.attempt=4;plane.candidate_points=anchor.input_points;
+        plane.inlier_points=anchor.inliers;plane.valid=plane.accepted_ground=plane.height_valid=true;
+        plane.height_at_origin_m=anchor.height;
+        for(int i=0;i<3;++i)plane.normal[i]=anchor.plane[i];
+        plane.centroid[0]=(anchor.min_x+anchor.max_x)/2;plane.centroid[1]=(anchor.min_y+anchor.max_y)/2;
+        plane.centroid[2]=anchor.HeightAt(plane.centroid[0],plane.centroid[1]);r.planes.push_back(plane);
+        r.events["ground_fallback"]=0;r.events["ground_anchor_limited_domain"]=1;
+        for(std::size_t i=0;i<cloud.size();++i)if(anchor.Supports(cloud[i])&&!r.structural_removed[i]) {
+          ++r.events["ground_anchor_supported_points"];
+          const double distance=anchor.plane[0]*cloud[i].x+anchor.plane[1]*cloud[i].y+
+              anchor.plane[2]*cloud[i].z+anchor.plane[3];
+          if(std::abs(distance)<=.3)r.labels[i]=1;
+        }
+      }
+      r.segment_ms+=Ms(fallback_start);
     }
   }
   if(impl_->pp) {
@@ -99,8 +121,19 @@ GroundLiveResult GroundComparison::ProcessPrepared(const GroundPrepared& prepare
     }
     const auto guard=Clock::now();
     r.pre_guard_labels=r.labels;
-    if(impl_->variant=="guard25")for(std::size_t i=0;i<cloud.size();++i)
-      if(r.labels[i]==1&&cloud[i].z>float(-1.80+.25)){r.labels[i]=2;r.reasons[i]|=2048;}
+    RoadAnchor anchor;
+    if(impl_->variant=="guard25"&&impl_->config.patchwork_guard_policy=="supported_plane") {
+      anchor=FitRoadAnchor(cloud);
+      r.events["anchor_valid"]=anchor.valid;
+      r.events["anchor_inliers"]=anchor.inliers;
+      r.events["anchor_missing_fallback"]=!anchor.valid;
+    }
+    if(impl_->variant=="guard25")for(std::size_t i=0;i<cloud.size();++i) {
+      const bool supported=anchor.Supports(cloud[i]);
+      const double height=supported?anchor.HeightAt(cloud[i].x,cloud[i].y):-1.80;
+      if(supported)++r.events["anchor_supported_points"];
+      if(r.labels[i]==1&&cloud[i].z>float(height+.25)){r.labels[i]=2;r.reasons[i]|=2048;}
+    }
     r.guard_ms=Ms(guard);
   }
   if(impl_->linefit) {

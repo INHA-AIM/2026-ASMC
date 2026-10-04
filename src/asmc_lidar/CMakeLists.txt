@@ -49,7 +49,7 @@ if(NOT DIAGNOSTIC_RESULT EQUAL 0)
   message(FATAL_ERROR "Review diagnostic generation failed")
 endif()
 add_library(asmc_ground_live_backend
-  src/ground_live.cpp src/ground_config.cpp ${LIVE_PP}/src/patchworkpp.cpp ${LIVE_PP}/src/plane_fit.cpp
+  src/ground_live.cpp src/ground_config.cpp src/road_anchor.cpp ${LIVE_PP}/src/patchworkpp.cpp ${LIVE_PP}/src/plane_fit.cpp
   ${LIVE_LINEFIT} ${CMAKE_CURRENT_BINARY_DIR}/ground_live_linefit_segment.cc
   vendor/linefit/src/bin.cc vendor/linefit/src/viewer.cc)
 target_compile_definitions(asmc_ground_live_backend PRIVATE patchwork=patchwork_live)
@@ -79,6 +79,10 @@ target_link_libraries(asmc_lidar_ground_compare PRIVATE asmc_lidar_core)
 target_compile_options(asmc_lidar_ground_compare PRIVATE -Wall -Wextra)
 
 if(CATKIN_ENABLE_TESTING)
+  add_executable(asmc_lidar_ground_candidate_test test/ground_candidate_test.cpp)
+  target_link_libraries(asmc_lidar_ground_candidate_test PRIVATE asmc_ground_live_backend)
+  target_compile_options(asmc_lidar_ground_candidate_test PRIVATE -UNDEBUG)
+  add_test(NAME asmc_lidar_ground_candidate_test COMMAND asmc_lidar_ground_candidate_test)
   add_executable(asmc_lidar_ground_sequence_test test/ground_sequence_test.cpp)
   target_link_libraries(asmc_lidar_ground_sequence_test PRIVATE asmc_ground_live_backend)
   add_executable(asmc_lidar_linefit_coverage_test test/linefit_coverage_test.cpp)
