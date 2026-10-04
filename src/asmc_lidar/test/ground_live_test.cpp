@@ -60,11 +60,55 @@ int main(int argc,char** argv) {
   }
   const auto file=std::filesystem::temp_directory_path()/("asmc_ground_config_invalid_"+std::to_string(getpid())+".yaml");
   for(const auto& bad:{"id: test\nlinefit_distance: .nan\n", "id: test\nlinefit_threads: 0\n",
+      "id: test\nleveling_mode: yaw_roll\n",
       "id: test\nunknown: 1\n", "id: test\nid: duplicate\n", "id: '../unsafe'\n"}) {
     {std::ofstream out(file);out<<bad;}
     bool rejected=false;try{asmc_lidar::LoadGroundComparisonConfig(file.string());}catch(const std::exception&){rejected=true;}
     assert(rejected);
   }
   std::filesystem::remove(file);
+  const auto v3=asmc_lidar::LoadGroundComparisonConfig(
+      (std::filesystem::path(argv[1]).parent_path()/"ground_v3/roll_pitch_all.yaml").string());
+  assert(v3.leveling_mode=="roll_pitch"&&v3.linefit_cover_all);
+  assert(all.config().leveling_mode=="pitch_only");
+  for(float roll_deg:{0.f,-2.f,2.f,-5.f,5.f})for(float pitch_deg:{0.f,-3.f,3.f}){
+    constexpr float rad=float(M_PI)/180;
+    const auto rotation=tunnel_filter::LevelingRotation(roll_deg*rad,pitch_deg*rad,true,true);
+    asmc_lidar::Cloud shifted;
+    for(int i=0;i<40;++i)for(int j=0;j<14;++j){
+      const float x=5.f+i*.35f,y=-2.6f+j*.4f;
+      for(float z:{-1.8f,-.9f}){
+        // Construct a scan by applying the inverse attitude to a fixed gravity-frame scene.
+        pcl::PointXYZI p;
+        p.x=rotation[0]*x+rotation[3]*y+rotation[6]*z;
+        p.y=rotation[1]*x+rotation[4]*y+rotation[7]*z;
+        p.z=rotation[2]*x+rotation[5]*y+rotation[8]*z;
+        p.intensity=float(i+j);shifted.push_back(p);
+      }
+    }
+    asmc_lidar::GroundComparison corrected("all","guard25",v3);
+    const auto result=corrected.Process(shifted,cal,roll_deg*rad,pitch_deg*rad);
+    assert(result.prepared.raw_to_voxel.size()==shifted.size());
+    for(std::size_t i=0;i<shifted.size();++i){
+      const auto index=result.prepared.raw_to_voxel[i];
+      if(index<0)continue; // Fixed sensor-frame ROI can exclude edge points after rotation.
+      const auto& p=result.prepared.leveled->at(std::size_t(index));
+      assert(std::abs(p.z-(i%2?-.9f:-1.8f))<.03f);
+      assert(std::abs(p.intensity-shifted[i].intensity)<.01f);
+    }
+    assert(result.methods.at("linefit").events.at("unvisited_sectors")==0);
+    const auto& level=result.prepared.leveling;
+    for(std::size_t i=0;i<result.prepared.voxel->size();++i){
+      const auto& a=result.prepared.voxel->at(i);const auto& b=result.prepared.leveled->at(i);
+      assert(std::abs(level[0]*b.x+level[3]*b.y+level[6]*b.z-a.x)<1e-5);
+      assert(std::abs(level[1]*b.x+level[4]*b.y+level[7]*b.z-a.y)<1e-5);
+      assert(std::abs(level[2]*b.x+level[5]*b.y+level[8]*b.z-a.z)<1e-5);
+    }
+  }
+  bool roll_rejected=false;
+  try {asmc_lidar::GroundComparison("all","guard25",v3).Process(
+      cloud,cal,std::numeric_limits<float>::quiet_NaN(),0.f);}
+  catch(const std::invalid_argument&) {roll_rejected=true;}
+  assert(roll_rejected);
   return 0;
 }

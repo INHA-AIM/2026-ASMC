@@ -6,6 +6,7 @@
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
+#include <visualization_msgs/MarkerArray.h>
 #include <chrono>
 #include <condition_variable>
 #include <deque>
@@ -42,6 +43,8 @@ class Node {
             "/lidar_candidate/ground_live/"+std::string(name)+"/"+kind,1);
     }
     status_=nh_.advertise<diagnostic_msgs::DiagnosticArray>("/lidar_candidate/ground_live/status",10);
+    if(model_->config().leveling_mode=="roll_pitch")
+      fit_markers_=nh_.advertise<visualization_msgs::MarkerArray>("/lidar_candidate/ground_live/fit_markers",1);
     cloud_=nh_.subscribe(cloud,1,&Node::Enqueue,this);
     imu_=nh_.subscribe(imu,100,&Node::Imu,this);
     timer_=nh_.createWallTimer(ros::WallDuration(.25),&Node::Timer,this);
@@ -117,6 +120,43 @@ class Node {
   void Clear(const std_msgs::Header& header){
     const auto empty=Cloud(asmc_lidar::Cloud{}, {},header);
     for(auto& pub:pubs_)pub.second.publish(empty);
+    if(fit_markers_) {
+      visualization_msgs::MarkerArray array;visualization_msgs::Marker clear;
+      clear.header=header;clear.header.frame_id="base_link";clear.action=visualization_msgs::Marker::DELETEALL;
+      array.markers.push_back(clear);fit_markers_.publish(array);
+    }
+  }
+  void FitMarkers(const asmc_lidar::GroundLiveResult& result,const std_msgs::Header& header){
+    if(!fit_markers_)return;
+    visualization_msgs::MarkerArray array;
+    visualization_msgs::Marker clear;clear.header=header;clear.header.frame_id="base_link";
+    clear.action=visualization_msgs::Marker::DELETEALL;array.markers.push_back(clear);
+    const auto it=result.methods.find("jaeho");
+    if(it!=result.methods.end()){
+      Eigen::Matrix3d level;
+      for(int i=0;i<3;++i)for(int j=0;j<3;++j)
+        level(i,j)=result.prepared.leveling[3*i+j];
+      for(const auto& plane:it->second.planes){
+        if(!plane.valid||!plane.inlier_points)continue;
+        const Eigen::Vector3d center(plane.centroid[0],plane.centroid[1],plane.centroid[2]);
+        const Eigen::Vector3d normal(plane.normal[0],plane.normal[1],plane.normal[2]);
+        const auto base=cal_.base_from_sensor*(level.transpose()*center);
+        const auto direction=cal_.base_from_sensor.linear()*(level.transpose()*normal);
+        visualization_msgs::Marker marker;
+        marker.header=header;marker.header.frame_id="base_link";marker.ns="ground_plane_attempt";
+        marker.id=plane.attempt;marker.type=visualization_msgs::Marker::ARROW;
+        marker.action=visualization_msgs::Marker::ADD;marker.pose.orientation.w=1;
+        marker.scale.x=.08;marker.scale.y=.18;marker.scale.z=.22;
+        marker.color.r=plane.accepted_ground?.1f:1.f;
+        marker.color.g=plane.accepted_ground?1.f:.2f;
+        marker.color.b=.15f;marker.color.a=.95f;
+        geometry_msgs::Point a,b;
+        a.x=base.x();a.y=base.y();a.z=base.z();
+        b.x=base.x()+direction.x();b.y=base.y()+direction.y();b.z=base.z()+direction.z();
+        marker.points={a,b};array.markers.push_back(marker);
+      }
+    }
+    fit_markers_.publish(array);
   }
   void Status(const std::string& state,const Request* r,
       const asmc_lidar::GroundLiveResult* result,double wait,double compute,double output_ms){
@@ -133,6 +173,7 @@ class Node {
     add("receipt_ros_ns",r?r->receipt_ns:0);
     add("stamp_provenance",stamp_provenance_);add("frame","base_link");
     add("patchwork_variant",variant_);add("config_id",model_->config().id);add("config_sha256",model_->config().sha256);
+    add("leveling_mode",model_->config().leveling_mode);
     add("queue_wait_ms",wait);add("compute_ms",compute);add("publish_ms",output_ms);
     add("receipt_to_publish_ms",r?Ms(r->arrival):0.);
     if(r){add("imu_stamp_ns",r->imu.sample.stamp_ns);add("imu_pitch",r->imu.sample.pitch_rad);
@@ -174,7 +215,7 @@ class Node {
               return f.name==field&&f.datatype==sensor_msgs::PointField::FLOAT32&&f.count==1;}))
               throw std::runtime_error(std::string("missing_float32_field:")+field);
           pcl::fromROSMsg(*r->cloud,cloud);
-          result=model_->Process(cloud,cal_,float(r->imu.sample.pitch_rad));
+          result=model_->Process(cloud,cal_,float(r->imu.sample.roll_rad),float(r->imu.sample.pitch_rad));
           state=cloud.empty()?"observed_empty":result.prepared.voxel->empty()?"roi_empty":"valid";
         }
       }catch(const std::exception& e){state=std::string("processing_error:")+e.what();}
@@ -197,6 +238,7 @@ class Node {
         }
         for(const auto& item:ids)pubs_.at(method.first+"/"+item.first).publish(Cloud(cloud,item.second,r->cloud->header));
       }
+      FitMarkers(result,r->cloud->header);
       Status(state,r.get(),&result,wait,compute,Ms(output));
       ROS_INFO_THROTTLE(5.,"Ground comparison rx=%lu processed=%lu invalid=%lu queue_drop=%lu compute=%.2fms",
           received_,processed_,invalid_,dropped_,compute);
@@ -208,7 +250,7 @@ class Node {
     if(!stale_){Clear(last_header_);stale_=true;}
     Status("sensor_missing",nullptr,nullptr,0,0,0);
   }
-  ros::NodeHandle nh_,p_;ros::Subscriber cloud_,imu_;ros::Publisher status_;
+  ros::NodeHandle nh_,p_;ros::Subscriber cloud_,imu_;ros::Publisher status_,fit_markers_;
   ros::WallTimer timer_;std::map<std::string,ros::Publisher> pubs_;
   asmc_lidar::Calibration cal_;std::unique_ptr<asmc_lidar::GroundComparison> model_;
   std::deque<asmc_lidar::ImuSample> history_;

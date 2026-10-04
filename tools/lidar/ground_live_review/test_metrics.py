@@ -44,5 +44,21 @@ class ShapeMetricsTest(unittest.TestCase):
         self.assertEqual(regions(p,np.full(12,3))["entirely_removed_regions"],0)
         self.assertEqual(regions(p,np.full(12,3))["regions_with_unclassified_points"],1)
 
+    def test_roll_changes_observed_lower_band_not_lineage(self):
+        cloud = np.column_stack((np.zeros(12), np.arange(12)*.1,
+                                 np.zeros(12), np.ones(12))).astype(np.float32)
+        masks = {"candidate": np.array([1]*6+[2]*6, np.uint8)}
+        semantic = np.full(12, 125, np.uint16)
+        instance = np.ones(12, np.uint16)
+        original = frame_metrics(cloud, semantic, instance, masks, 0.0)
+        pitch_only = frame_metrics(cloud, semantic, instance, masks, 0.0, 0.0)
+        corrected = frame_metrics(cloud, semantic, instance, masks, 0.0, np.pi/2)
+        self.assertEqual(original, pitch_only)
+        old = original["candidate"]["objects"][0]
+        new = corrected["candidate"]["objects"][0]
+        self.assertEqual(old["retained_points"], new["retained_points"])
+        self.assertGreater(old["observed_height_bands"]["lower"]["retained_points"], 0)
+        self.assertEqual(new["observed_height_bands"]["lower"]["retained_points"], 0)
+
 if __name__ == "__main__":
     unittest.main()

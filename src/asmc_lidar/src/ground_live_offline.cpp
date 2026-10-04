@@ -30,12 +30,14 @@ int main(int argc,char** argv)try{
     last=stamp;const fs::path rel=row["cloud_path"].as<std::string>();
     if(rel.is_absolute()||rel.string().find("..")!=std::string::npos)throw std::runtime_error("invalid cloud path");
     const auto cloud=asmc_lidar::ReadReviewCloud(source.parent_path()/rel);
-    const auto result=model.Process(cloud,cal,float(pitch));
+    const auto result=model.Process(cloud,cal,float(roll),float(pitch));
     const auto id=row["input_id"].as<std::string>();
     if(id.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")!=std::string::npos)
       throw std::runtime_error("unsafe input id");
     out<<"{\"input_id\":\""<<id<<"\",\"stamp_ns\":"<<stamp<<",\"prepare_ms\":"<<result.prepared.prepare_ms;
     out<<",\"config_id\":\""<<model.config().id<<"\",\"config_sha256\":\""<<model.config().sha256<<'"';
+    if(model.config().leveling_mode!="pitch_only")
+      out<<",\"leveling_mode\":\""<<model.config().leveling_mode<<'"';
     out<<",\"raw_to_voxel\":";Array(out,result.prepared.raw_to_voxel);
     out<<",\"methods\":{";bool first=true;
     for(const auto& entry:result.methods){
@@ -47,6 +49,21 @@ int main(int argc,char** argv)try{
       out<<",\"events\":{";bool first_event=true;
       for(const auto& e:r.events){if(!first_event)out<<',';first_event=false;out<<'"'<<e.first<<"\":"<<e.second;}
       out<<'}';
+      if(entry.first=="jaeho"&&model.config().leveling_mode=="roll_pitch"){
+        out<<",\"plane_attempts\":[";bool first_plane=true;
+        for(const auto& plane:r.planes){
+          if(!first_plane)out<<',';first_plane=false;
+          out<<"{\"attempt\":"<<plane.attempt<<",\"candidate_points\":"<<plane.candidate_points
+             <<",\"inlier_points\":"<<plane.inlier_points
+             <<",\"valid\":"<<(plane.valid?"true":"false")
+             <<",\"accepted_ground\":"<<(plane.accepted_ground?"true":"false")
+             <<",\"height_valid\":"<<(plane.height_valid?"true":"false")
+             <<",\"height_at_origin_m\":"<<plane.height_at_origin_m
+             <<",\"normal\":["<<plane.normal[0]<<','<<plane.normal[1]<<','<<plane.normal[2]
+             <<"],\"centroid\":["<<plane.centroid[0]<<','<<plane.centroid[1]<<','<<plane.centroid[2]<<"]}";
+        }
+        out<<']';
+      }
       out<<",\"copy_ms\":"<<r.copy_ms<<",\"segment_ms\":"<<r.segment_ms
          <<",\"guard_ms\":"<<r.guard_ms<<",\"restore_ms\":"<<r.restore_ms<<'}';
     }

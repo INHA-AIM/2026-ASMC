@@ -73,7 +73,12 @@ std::vector<std::uint8_t> MissingCameraMask(const Cloud& cloud,const Calibration
 }  // namespace
 
 GroundPrepared PrepareGeneralGround(const Cloud& raw,const Calibration& calibration,float pitch) {
-  if(!std::isfinite(pitch))throw std::invalid_argument("invalid pitch");
+  return PrepareGeneralGround(raw,calibration,0.f,pitch,false);
+}
+
+GroundPrepared PrepareGeneralGround(const Cloud& raw,const Calibration& calibration,
+                                    float roll,float pitch,bool level_roll) {
+  if(!std::isfinite(roll)||!std::isfinite(pitch))throw std::invalid_argument("invalid roll/pitch");
   const auto started=Clock::now();GroundPrepared out;std::vector<int> originals;
   const auto roi=Roi(raw,calibration,tunnel_filter::Params{false},&originals);
   out.raw_to_voxel.assign(raw.size(),-1);
@@ -84,7 +89,7 @@ GroundPrepared PrepareGeneralGround(const Cloud& raw,const Calibration& calibrat
     for(std::size_t i=0;i<roi->size();++i)
       out.raw_to_voxel[originals[i]]=vg.getCentroidIndex(roi->at(i));
   }
-  out.leveling=tunnel_filter::LevelingRotation(0,pitch,false,true);
+  out.leveling=tunnel_filter::LevelingRotation(roll,pitch,level_roll,true);
   tunnel_filter::ApplyRotation(*out.voxel,out.leveling,out.leveled.get());
   out.prepare_ms=Ms(started);return out;
 }

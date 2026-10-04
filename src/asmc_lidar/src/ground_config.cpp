@@ -16,7 +16,7 @@ GroundComparisonConfig LoadGroundComparisonConfig(const std::string& path) {
   }
   const auto y=YAML::Load(text);
   if(!y.IsMap()||!y["id"])throw std::invalid_argument("comparison_config must be map with id");
-  const std::set<std::string> allowed={"id","linefit_cover_all","linefit_threads","patchwork_min_points",
+  const std::set<std::string> allowed={"id","leveling_mode","linefit_cover_all","linefit_threads","patchwork_min_points",
     "patchwork_distance","patchwork_seeds","linefit_distance","linefit_search","linefit_long"};
   std::set<std::string> seen;
   for(const auto& kv:y) {
@@ -26,6 +26,9 @@ GroundComparisonConfig LoadGroundComparisonConfig(const std::string& path) {
   c.id=y["id"].as<std::string>();
   if(c.id.empty()||c.id.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")!=std::string::npos)
     throw std::invalid_argument("unsafe config id");
+  if(y["leveling_mode"])c.leveling_mode=y["leveling_mode"].as<std::string>();
+  if(c.leveling_mode!="pitch_only"&&c.leveling_mode!="roll_pitch")
+    throw std::invalid_argument("leveling_mode must be pitch_only|roll_pitch");
 #define LOAD(field,type) if(y[#field])c.field=y[#field].as<type>()
   LOAD(linefit_cover_all,bool);LOAD(linefit_threads,int);LOAD(patchwork_min_points,int);
   LOAD(patchwork_distance,double);LOAD(patchwork_seeds,double);

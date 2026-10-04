@@ -9,7 +9,8 @@
 #include <cmath>
 
 namespace asmc_lidar {
-tunnel_filter::FrameResult ProcessGeneralGroundLeveled(const Cloud& leveled) {
+tunnel_filter::FrameResult ProcessGeneralGroundLeveled(
+    const Cloud& leveled,std::vector<GroundPlaneAttempt>* review_attempts) {
   using Clock=std::chrono::steady_clock;
   const auto started=Clock::now();
   tunnel_filter::FrameResult result;
@@ -22,6 +23,7 @@ tunnel_filter::FrameResult ProcessGeneralGroundLeveled(const Cloud& leveled) {
   for(std::size_t i=0;i<leveled.size();++i)remaining.push_back(int(i));
   bool ground_found=false;
   for(int attempt=0;attempt<3&&remaining.size()>=3;++attempt) {
+    GroundPlaneAttempt diagnostic;diagnostic.attempt=attempt+1;diagnostic.candidate_points=remaining.size();
     Cloud::Ptr candidate(new Cloud);candidate->reserve(remaining.size());
     for(int idx:remaining)candidate->push_back(result.leveled->at(std::size_t(idx)));
     pcl::SACSegmentation<pcl::PointXYZI> segment;
@@ -31,16 +33,32 @@ tunnel_filter::FrameResult ProcessGeneralGroundLeveled(const Cloud& leveled) {
     segment.setInputCloud(candidate);
     pcl::PointIndices inliers;pcl::ModelCoefficients coefficients;
     segment.segment(inliers,coefficients);
-    if(inliers.indices.empty()||coefficients.values.size()<4)break;
+    diagnostic.inlier_points=inliers.indices.size();
+    if(inliers.indices.empty()||coefficients.values.size()<4) {
+      if(review_attempts)review_attempts->push_back(diagnostic);
+      break;
+    }
     const auto& c=coefficients.values;
     const double norm=std::sqrt(double(c[0])*c[0]+double(c[1])*c[1]+double(c[2])*c[2]);
     const bool ground=norm>1e-6&&std::abs(c[2]/norm)>=.82;
+    diagnostic.valid=norm>1e-6&&std::isfinite(norm);
+    diagnostic.accepted_ground=ground;
+    if(diagnostic.valid) {
+      const double sign=c[2]<0?-1.:1.;
+      for(int k=0;k<3;++k)diagnostic.normal[k]=sign*c[k]/norm;
+      diagnostic.height_valid=std::abs(c[2])>1e-6&&std::isfinite(c[3]);
+      if(diagnostic.height_valid)diagnostic.height_at_origin_m=-double(c[3])/c[2];
+    }
     std::vector<std::uint8_t> remove(remaining.size(),0);
     for(int index:inliers.indices) {
+      const auto& p=result.leveled->at(std::size_t(remaining.at(std::size_t(index))));
+      diagnostic.centroid[0]+=p.x;diagnostic.centroid[1]+=p.y;diagnostic.centroid[2]+=p.z;
       result.labels[std::size_t(remaining.at(std::size_t(index)))]=
           ground?tunnel_filter::kGround:tunnel_filter::kWall;
       remove[std::size_t(index)]=1;
     }
+    for(double& v:diagnostic.centroid)v/=double(inliers.indices.size());
+    if(review_attempts)review_attempts->push_back(diagnostic);
     std::vector<int> next;next.reserve(remaining.size());
     for(std::size_t i=0;i<remaining.size();++i)if(!remove[i])next.push_back(remaining[i]);
     remaining.swap(next);

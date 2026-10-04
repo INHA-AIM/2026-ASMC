@@ -52,7 +52,10 @@ GroundComparison::~GroundComparison()=default;
 void GroundComparison::Reset(){impl_->Reset();}
 const GroundComparisonConfig& GroundComparison::config()const{return impl_->config;}
 GroundLiveResult GroundComparison::Process(const Cloud& raw,const Calibration& cal,float pitch) {
-  return ProcessPrepared(PrepareGeneralGround(raw,cal,pitch),raw.size());
+  return Process(raw,cal,0.f,pitch);
+}
+GroundLiveResult GroundComparison::Process(const Cloud& raw,const Calibration& cal,float roll,float pitch) {
+  return ProcessPrepared(PrepareGeneralGround(raw,cal,roll,pitch,impl_->config.leveling_mode=="roll_pitch"),raw.size());
 }
 GroundLiveResult GroundComparison::ProcessPrepared(const GroundPrepared& prepared,std::size_t raw_size) {
   if(prepared.raw_to_voxel.size()!=raw_size)throw std::invalid_argument("lineage size mismatch");
@@ -61,8 +64,14 @@ GroundLiveResult GroundComparison::ProcessPrepared(const GroundPrepared& prepare
   std::map<std::string,GroundMethodResult> voxel_results;
   if(impl_->method=="all"||impl_->method=="jaeho") {
     auto& r=voxel_results["jaeho"];
-    const auto start=Clock::now();const auto ref=ProcessGeneralGroundLeveled(cloud);
+    const bool review_planes=impl_->config.leveling_mode=="roll_pitch";
+    const auto start=Clock::now();
+    const auto ref=ProcessGeneralGroundLeveled(cloud,review_planes?&r.planes:nullptr);
     r.segment_ms=Ms(start);r.labels.resize(cloud.size(),2);
+    if(review_planes){
+      r.events["ground_fallback"]=ref.ground_fallback_used?1:0;
+      r.events["fit_attempts"]=r.planes.size();
+    }
     r.structural_removed.resize(cloud.size(),0);
     for(std::size_t i=0;i<cloud.size();++i) {
       if(ref.labels[i]==tunnel_filter::kGround)r.labels[i]=1;

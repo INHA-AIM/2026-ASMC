@@ -110,7 +110,7 @@ def topology(points, masks):
     return result
 
 
-def frame_metrics(cloud, semantic, instance, masks, pitch):
+def frame_metrics(cloud, semantic, instance, masks, pitch, roll=0.0):
     sizes = [len(cloud), len(semantic), len(instance), *(len(x) for x in masks.values())]
     if len(set(sizes)) != 1:
         raise ValueError("point/GT/mask length mismatch")
@@ -119,8 +119,17 @@ def frame_metrics(cloud, semantic, instance, masks, pitch):
         raise ValueError("method ROI mismatch")
     xyz = cloud[:, :3].astype(float).copy()
     c, s = np.cos(np.float32(pitch)), np.sin(np.float32(pitch))
-    xyz[:, 0] = c*cloud[:, 0]+s*cloud[:, 2]
-    xyz[:, 2] = -s*cloud[:, 0]+c*cloud[:, 2]
+    if roll:
+        cr, sr = np.cos(np.float32(roll)), np.sin(np.float32(roll))
+        rolled_y = cr*cloud[:, 1]-sr*cloud[:, 2]
+        rolled_z = sr*cloud[:, 1]+cr*cloud[:, 2]
+        xyz[:, 0] = c*cloud[:, 0]+s*rolled_z
+        xyz[:, 1] = rolled_y
+        xyz[:, 2] = -s*cloud[:, 0]+c*rolled_z
+    else:
+        # Keep the frozen pitch-only scoring arithmetic exactly unchanged.
+        xyz[:, 0] = c*cloud[:, 0]+s*cloud[:, 2]
+        xyz[:, 2] = -s*cloud[:, 0]+c*cloud[:, 2]
     result = {m: {"classes": {}, "objects": []} for m in masks}
     class_names = np.array([CLASSES.get(int(x), "unmapped_"+str(int(x))) for x in semantic])
     for name in sorted(set(class_names[roi])):
