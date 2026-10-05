@@ -1,7 +1,9 @@
 # LiDAR 인지 패키지 완성도 평가와 개선 로드맵
 
-> 2026-10-05 현재 실행·역할 결정은
-> [독립 asmc_lidar L2-I1 인계](../asmc_lidar/README.md)를 우선한다.
+> 2026-10-05 역할·이전 계획은 [통합 로드맵](../../architecture/consolidation-roadmap.md),
+> 현재 후보의 실행·제한은 [L2-I2 인계](../asmc_lidar/l2i2-handoff-20261005.md)를 우선한다.
+> 손재호가 원본 tracker 기능을 보존하며 asmc_lidar 이전을 마무리한다.
+> camera fusion은 LiDAR 안에 남기고 YOLO 생산자는 향후 asmc_camera로 옮긴다.
 > 이 문서의 아래 분석·논문 비교·추정은 작성 당시의 근거 기록이다.
 > 최신 V4 지면 비교는 [선택 보고서](../asmc_lidar/l2a2-v4-ground-selection-20261005.md)에 있다.
 > 재호 V4를 단일 후보의 기준으로 사용하지만 구조물 자동 억제와 판제 연결은

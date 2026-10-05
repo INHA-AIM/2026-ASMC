@@ -11,15 +11,17 @@
 
 ## 1. 결론
 
-팀이 직접 유지하는 공통 ROS 코드는 다음 다섯 패키지로 나눈다.
+팀이 직접 유지하는 공통 ROS 코드의 **목표**는 다음 다섯 패키지다.
+2026-10-05 현재 카메라의 실제 패키지 이름은 아직 `asmc_perception`이며,
+`asmc_lidar`는 개발 후보다. 아래 목표를 운영 이전 완료로 해석하지 않는다.
 
 | 정본 패키지 | 책임 |
 |---|---|
 | `asmc_msgs` | 팀 내부 typed message의 유일한 공용 패키지 |
 | `asmc_bridge` | MORAI UDP 수신·제어 송신, sensor decode, 외부→내부 상태 정규화 |
 | `asmc_hd_map` | HD Map build/runtime, 차선·차로·주행가능영역, 체크포인트·미션 메타데이터 |
-| `asmc_perception` | 카메라 객체·차선/주행영역·신호등, BEV·카메라 후처리 |
-| `asmc_lidar` | LiDAR+IMU 좌표·시간, 지면/구조물 근거, 군집/OBB와 후보 추적·local/map 어댑터 |
+| `asmc_camera` (현재 `asmc_perception`) | 카메라 객체 검출/YOLO·차선/주행영역·신호등, BEV·카메라 후처리 |
+| `asmc_lidar` | LiDAR+IMU 좌표·시간, 지면/구조물·군집/OBB·추적, 카메라 분류 fusion, 객체 local/map 어댑터 |
 
 이는 **팀 소유 공용·인지 코드의 경계**다. 독립 수집 패키지, 판제 소유 패키지와 음영 차선 어댑터는 별도다.
 
@@ -34,30 +36,152 @@
 패키지 이동보다 먼저 메시지·토픽·정적 데이터 계약을 동결한다. 넓은 rename과 삭제를 먼저
 하면 현재 HD Map 검수 결과, 판제 consumer, UDP 현장 설정 중 무엇이 깨졌는지 분리하기 어렵다.
 
-### 센서별 인지와 fusion의 소유 경계 (2026-10-05 권고)
+### 센서별 인지와 fusion의 소유 경계 (2026-10-05 개정 결정)
 
-현재 `asmc_perception` 이름과 실행 경로를 유지하고 카메라 객체 검출·차선·신호등·
-다중 카메라 BEV를 이 패키지에 둔다. `asmc_camera`로 바꾸는 작업은 기능 개선 없이
-launch/import/문서 경로를 바꾸므로 당장의 인계 범위에 넣지 않는다. LiDAR 지면·
-구조물·군집·OBB·추적은 독립 `asmc_lidar`에 둬 담당자와 빌드 의존성을 나눈다.
+안승현의 요청에 따라 **카메라 목표 이름은 `asmc_camera`, LiDAR 최종 목표는
+`asmc_lidar`**로 정한다. 손재호가 기존 `lidar+sensorfusion`의 기능을 보존하면서
+검증된 수정사항을 반영하고 이전을 마무리한다. 별도 `asmc_fusion`은 만들지 않는다.
+이 결정은 담당자별 구현 계획이며 코드 rename·운영 승격 완료를 뜻하지 않는다.
 
-카메라/LiDAR 공통 소비 계약을 정리할 때 별도 `asmc_fusion`의 필요성을 검토한다.
-이 패키지는 아직 생성하지 않았다. 도입한다면 다음 책임을 갖는다.
+- `asmc_camera`: YOLO 추론·2D box, 차선/주행영역, 신호등, 다중 카메라 BEV.
+- `asmc_lidar`: LiDAR 검출·추적, 카메라 box와의 시각/투영 매칭·클래스 유지,
+  객체 footprint의 차로/주행영역 관계 및 local/map 변환. 선택적 카메라 입력이
+  없어도 LiDAR는 실행하며 YOLO를 중복 로드하거나 카메라 Python 구현을 import하지 않는다.
+- `asmc_hd_map`: 정적 지도·차로·주행영역·미션 제공. GPU 추론이나 동적 객체 fusion은
+  넣지 않는다. map 사용이 불가능하면 객체의 지도 관련성만 unknown이며 local 객체는 남긴다.
+- 공용 wire 계약은 `asmc_msgs`, 추종 대상·회피·정지·기동 유지 정책은 판제 소유다.
+  `camera_bev_fusion`은 카메라끼리의 BEV 결합이므로 카메라 패키지에 남는다.
 
-- 카메라 검출과 LiDAR 객체의 시각·투영 매칭, 의미 클래스 보강 및 출처/품질 전달.
-- 객체 footprint와 HD맵 차로·주행가능영역을 연결한 차로 귀속·주행 관련성.
-- local/map 가용성을 명시하는 공통 객체 출력. LiDAR track ID와 관측 stamp를 보존하고
-  두 번째 tracker를 무심코 추가하지 않는다. 카메라 미수신 시 LiDAR 객체를 유지한다.
+정정 이력: 같은 날짜의 이전 권고는 `asmc_perception` 이름 유지와 별도 fusion 분리를
+검토했다. 담당 경계 명확화와 손재호 인계 비용을 우선한 이번 결정으로 대체한다.
+과거 논문·실험 결과와 당시 후보의 수치는 변경하지 않는다.
 
-`asmc_hd_map`은 지도 제품·차로 topology·미션·정적 질의 기능을 제공한다. 동적 객체
-매칭이나 GPU 추론은 지도 publisher 안에 넣지 않는다. 객체의 차로 귀속 결과는 fusion
-쪽에서 만들며, 지도 패키지는 입력으로만 사용한다. 현재 `camera_bev_fusion`은
-여러 카메라 BEV를 결합하는 카메라 내부 단계이므로 그대로 `asmc_perception`에 둔다.
+### 카메라 이름 변경과 손재호 LiDAR 이전 상세 계획
 
-현재 L2-I2의 선택적 카메라 분류 코드는 `asmc_lidar/tracking.cpp`에 있는 임시 연결이다.
-후속 fusion 분리 시 이 연결을 옮기고 공용 `asmc_msgs`로 통신하며, 기존 토픽·stamp·ID
-회귀를 확인한다. fusion이 계산한 판단 정책을 다시 LiDAR에 되먹여 객체를 지우는
-순환 의존성은 만들지 않는다. 주행 목표·회피 결정은 판제가 소유한다.
+#### A. 현재 상태와 출발점 동결
+
+| 항목 | 현재 | 완료 목표·담당 |
+|---|---|---|
+| 카메라 패키지 | `src/asmc_perception/`; YOLO 원본 실행기는 아직 LiDAR 쪽 | `src/asmc_camera/`; 안승현이 rename 후 YOLO 실행/계약을 별도 통합 |
+| 원본 LiDAR | `src/lidar+sensorfusion/`의 nested `Main`·`Msg` | 손재호가 기존 기능과 개선 패치를 `src/asmc_lidar/`로 이전 |
+| 새 LiDAR 후보 | V4 지면·군집·OBB·후보 CV tracker·상태 메시지·좌표 어댑터 | 검증된 부분을 선별 재사용; 후보 전체를 원본과 동등하다고 승인하지 않음 |
+| 구조물 억제 | 근거 제공, 새 자동 억제 OFF | 손재호의 객체 보존 회귀 이후에만 선택적으로 승격 |
+| 판제 연결 | 후보 토픽 격리, 기존 운영 입력 유지 | Behavior/Frenet/MPC·음영 소비 담당자의 공동 검증 후 전환 |
+
+구현 시작 시 main·손재호 작업 브랜치·통합 브랜치의 실제 SHA, 설정·센서·모델 SHA,
+topic/type/MD5, 실행 인자, 고정 bag과 실패 사례를 기록한다. 문서상의 과거
+`6435af1`·`8dde9b6`을 최신 코드라고 간주하지 않는다. 담당자 브랜치는 대신 덮어쓰지 않는다.
+
+**중요:** L2-I2 후보는 원본 CA tracker·동정적 히스테리시스 대신 CV tracker·단순 기준을
+사용한다. [기능별 이식표와 제한](../packages/asmc_lidar/l2i2-handoff-20261005.md)을
+확인하고, 원본 tracker의 연관·ID 생애주기·OBB 안정화·분류 유지·동정적 정책을 우선
+보존한다. 좌표/시간 오류 때문에 달라져야 하는 결과는 의도적 차이로 별도 시험한다.
+후보 CV tracker로 원본을 조용히 교체하는 것은 이번 이전의 목표가 아니다.
+
+#### B. 안승현 — 카메라 rename과 YOLO 생산자 정리
+
+1. **이름 변경만 먼저:** `package.xml`, CMake/catkin, Python 설치·import, launch의
+   `pkg`/`find`, 스크립트·Docker/CI·RViz/rqt·테스트·학습 경로를 목록화한다.
+   `src/asmc_perception` → `src/asmc_camera`로 옮기되 weight/라벨/기본 추론 옵션은 유지한다.
+   `scripts/perception.sh`, node 이름과 `/perception/*` 토픽은 rename 때문에 바꾸지 않는다.
+2. 새 명령은 rename 구현 후 `roslaunch asmc_camera ...`로 안내한다. 구
+   `roslaunch asmc_perception ...`는 최소 forwarding launch로 한 릴리스 호환을 제공하고,
+   실제 consumer에서 쓰는 Python import도 조사해 필요하면 shim을 둔다. 두 이름을
+   동시에 실행해 중복 노드가 생기지 않도록 안내한다. wrapper 제거는 담당자 확인 후 별도 PR이다.
+3. **YOLO 물리 이전은 별도 변경:** 현재 weight·class mapping·threshold·box/stamp 출력을
+   고정해 camera 쪽 단일 생산자로 옮긴다. 새 모델 비교·FP16/TensorRT·class 확장은
+   이전과 섞지 않는다. LiDAR와 음영 어댑터가 같은 출력을 소비하도록 연결한다.
+4. 공통 검출은 영상 원본 stamp, camera ID, 원본 이미지 크기/픽셀 box, confidence,
+   원본 class와 정규화 class 의미를 보존한다. `person/car/truck/bus`는 호환 기준이다.
+   빈 검출·미수신·stale·미지원 클래스는 구분하고 소비자별 crop/threshold는 어댑터에 명시한다.
+   현재 후보 CameraBox 계약으로 표현이 부족하면 별도 계약 검토하며 기존 MD5를 묵시 변경하지 않는다.
+5. 문서 `docs/packages/asmc_perception/` 이동은 코드 rename 때 링크 점검과 함께 처리한다.
+   날짜가 있는 실험·학습 기록은 과거 이름을 보존한다. 지금은 문서 경로를 옮기지 않는다.
+
+#### C. 손재호 — 원본 기능 보존, 수정 적용, `asmc_lidar` 마무리
+
+1. 원본에 검증된 수정사항을 작은 커밋으로 반영하거나 새 패키지에 원본 단계를 먼저
+   옮겨 동일 입력을 비교한다. 어느 순서든 **물리 이동과 알고리즘 변경은 분리**한다.
+   필요한 소스만 출처·SHA·라이선스·변경 이유와 함께 이식하며 연구 worktree 전체를 복사하지 않는다.
+2. 재호 V4 지면 보완의 선택 평면 높이/지원 영역 처리는 기존 회귀와 대조한다.
+   ROI·voxel·군집·L-shape·tracker 임계값을 동시에 바꾸지 않는다. 이전만으로 기존
+   객체 하부 삭제·군집 분할·큰 OBB가 해결됐다고 판단하지 않는다.
+3. 공개 local 좌표를 후륜축 `base_link`로 통일한다. 실제 적용 수평화의 역변환과
+   센서 장착 변환을 각각 한 번 적용하고 중심·8코너·방향축·속도를 함께 검사한다.
+   내부 센서 원점 수평화 좌표를 `base_link`나 `velodyne`으로 잘못 표기하지 않는다.
+4. 관측 stamp를 보존하고 수신/처리 시각을 분리한다. bridge stamp는 실제 광선 측정시각이
+   아니다. 상대속도와 절대속도 축 변환·자차 병진/회전을 구분하며 CAN 속도를 중복 가산하지 않는다.
+   twist가 없으면 절대속도·동정적 상태를 unknown으로 남긴다.
+5. **모드 없는 단일 검출:** 일반도로→터널→복귀에 같은 단계·설정을 사용한다.
+   GPS·미션으로 검출 알고리즘을 전환하거나 tracker ID를 초기화하지 않는다.
+   기존 터널 분기를 단순 삭제하지 말고 필요한 천장·벽 근거 추출을 공통 경로에서 검증한다.
+   지면이 불확실하면 구조물 판단도 불확실하며 오래된 평면을 무조건 재사용하지 않는다.
+6. 벽·가드레일은 충돌 경계이며 곧바로 “무시 가능”하지 않다. 객체/구조물/미확정을
+   분리하고 새 구조물 자동 억제는 OFF로 출발한다. 차량 측면·벽 근처 장애물·낮은 장애물·
+   인접/횡단 객체 회귀를 통과한 뒤 승격한다. 평평함·긴 OBB·카메라 미검출만으로 삭제하지 않는다.
+7. LiDAR 카메라 fusion은 `asmc_lidar` 내부 모듈로 유지한다. 카메라 지연·누락은
+   분류 품질/상태에 반영하되 검출을 멈추거나 ID를 재생성하지 않는다. HD맵·카메라 문맥은
+   선택 입력이며 잘못된 frame·stale·카메라 영역의 장애물 구멍을 삭제 근거로 쓰지 않는다.
+8. `Main`/`Msg` nested build와 source 없이 상위 catkin에서 빌드·실행되게 정리한다.
+   외부 `morai_msgs`는 그대로 외부 계약으로 두고, 공용 메시지는 `asmc_msgs`를 사용한다.
+   legacy `Msg`는 필요할 때만 켜는 경계 어댑터로 제한한다. 연구 backend/weight/로그가
+   기본 runtime의 필수 의존성이 되지 않게 분리하되 실험 이력은 삭제하지 않는다.
+
+#### D. 공용 메시지·local/map·판제 소비 계약
+
+| 출력/책임 | 이전 시 지킬 의미 |
+|---|---|
+| `/perception/lidar/objects_local` | `base_link` 객체·관측/예측·지속 ID·분류/속도 유효성. GPS 없이 계속 실행 |
+| `/perception/lidar/objects_map` | 동일 ID/관측을 관측시점 유효 pose로 변환. 무효 pose는 정상 빈 관측과 구분 |
+| 카메라 공통 출력 | 현재 후보 `/perception/camera/objects`와 타입을 출발점으로 생산자/소비자 공동 동결. 패키지 rename으로 토픽 rename하지 않음 |
+| 기존 typed/legacy 출력 | 기존 MD5 유지. 표현 가능한 유효 출력만 변환하고 보류 이유·상태를 알림 |
+| 판제 판단 | 객체 관련성과 차로 속성을 받아 대상 선택·충돌 판단·기동 유지. 인지로 정책을 되먹여 객체 삭제하지 않음 |
+
+기존 `TrackedObject*`·`DetectedObject*` MD5와 운영 `/last_lidar`, `/lidar_nogps`,
+`/perception/objects`는 소비자 전환 승인 전까지 유지한다. 새 상태형 `LidarObject*`는
+관측/예측·미확정 속도·입력 무효를 보존한다. 프레임 검출 번호는 지속 track ID가 아니다.
+기존 타입으로 표현할 수 없으면 정상 빈 배열이나 유효한 0속도로 바꾸지 않는다.
+
+map 어댑터는 안테나와 후륜축 offset·HD맵 원점·높이를 검증한 관측시점 pose를 사용한다.
+이미 도착한 유효 pose 사이 최대 100ms 보간, 외삽 금지를 출발 계약으로 유지한다.
+2D `/vehicle/state`만으로 완전한 3D pose를 만들지 않는다. GPS 중단·NaN·stale·복구 점프는
+map 가용성에 반영하며 local 검출·추적 reset 조건으로 사용하지 않는다.
+판제가 local을 사용할지 map을 사용할지는 명시적 어댑터로 정하고 한 토픽 frame을 전환하지 않는다.
+
+기계 정본은 [후보 topic 계약](../../config/contracts/lidar_candidate_topic_contract_v1.yaml),
+현재 시험 상태는 [L2-I2](../packages/asmc_lidar/l2i2-handoff-20261005.md)에서 확인한다.
+서준 고정 브랜치와 main의 메시지 차이, main Behavior GT 경로, 강태 음영 소비 연결은
+아직 남은 통합 항목이다. Frenet 단독 변환 통과를 세 판제 모듈 전체 승인으로 확대하지 않는다.
+
+#### E. 검증·인계·기존 경로 삭제 gate
+
+| 묶음 | 반드시 남길 증거 | 통과 전 금지 |
+|---|---|---|
+| rename/물리 이동 | clean Noetic build, import/launch/설정 탐색, 구/신 명령 smoke, 문서 링크 검사, 동일 입력 결과 | 모델 교체·토픽 이름 변경·구 경로 삭제 |
+| 지면·좌표·시간 패치 | V4 마스크/원본점 계보 parity, 비영점 roll/pitch/yaw·장착 offset·8코너·속도, stamp 오류 회귀 | tracker 임계값 동시 튜닝 |
+| tracker/fusion 이식 | 고정 객체 입력의 ID/연관/생애주기·분류 유지 비교, 의도적 차이 목록, camera empty/missing/stale 시험 | 후보 CV 결과를 원본 parity로 표기 |
+| GPS·모드 분리 | 동일 scan/IMU에 GPS만 바꾼 local 결과 동일성, 정상→음영→복귀, pose 중단/NaN/점프 시험 | local 중단/reset, frame 자동 변경 |
+| 객체·구조물 | 가드레일·벽·차량 측면·낮은/인접/횡단 객체, 억제 OFF 시 새 삭제 0건 | 미검증 자동 억제 ON |
+| 운영 인계 | RViz와 실제 주행, 원본 bag/설정 SHA, 카메라 동시 실행 15Hz 입력의 처리율·drop·대기·p50/p95/p99·CPU/GPU/메모리 | 10~13Hz 또는 가속 재생만으로 15Hz 통과 선언 |
+| 판제 전환 | Behavior/Frenet/MPC 및 음영 소비 담당자의 frame/시간/MD5·stale·보류 시험, rollback 명령 | 기본 planner remap·원본 package/Msg 삭제 |
+
+정량 합격 기준은 실행 전에 고정하고 개선/악화·미검증 조건을 함께 남긴다. 성능 목표를
+못 맞추면 후보와 기존 실행을 병행 가능한 상태로 인계하며 “이전 완료”와 “운영 승인”을 구분한다.
+현재 지면 비교 완료가 추적 정확도·map 가용성·15Hz 통합 부하 통과를 뜻하지 않는다.
+
+커밋/PR은 **카메라 rename → 카메라 검출 생산자 이전**, **LiDAR 원본 기능 이식 →
+좌표/시간·단일 경로 패치 → 공용 메시지/어댑터 → 수락·인계**로 나눈다.
+두 파트는 공통 검출 계약을 먼저 합의하면 병행할 수 있다. 새 문서 계획만으로 PR·운영 전환을
+자동 수행하지 않는다. 패키지 이동 변경에는 import/launch/path 변경표를 반드시 첨부한다.
+
+완료 후 손재호는 `asmc_lidar`에서 구조물 억제·군집·추적·속도 안정성을 계속 개선한다.
+안승현은 개정 규정 HD맵 → camera rename/YOLO 계약·이전 → 동시 부하 → 모델 비교 및
+BDD100K 후 기존 데이터 추가학습을 진행한다. 학습 라벨/head 호환성은 별도 감사한다.
+LAN2LAN은 연구 후보 성공을 모두 기다리지 않고 검증된 기준선으로 리허설한다.
+
+rollback은 후보 출력/어댑터를 종료하고 고정된 원본 실행을 복원하는 것이다. 양쪽이
+동일 운영 토픽을 동시에 발행하지 않게 한다. 구 `lidar+sensorfusion`·`Main`·`Msg` 및
+rename wrapper 삭제는 모든 소비자 이관, 패키지 경로 잔여 참조 감사와 담당자 승인 이후 별도 변경이다.
 
 ## 2. 현재 감사 결과
 
@@ -104,16 +228,16 @@ src/
 │   ├── maps/kcity2025/        # 작고 versioned인 최종 bundle/manifest
 │   ├── launch/ · rviz/
 │   └── test/
-├── asmc_perception/
-│   ├── src/asmc_perception/   # camera objects, lane/road, traffic_light, bev
+├── asmc_camera/              # 목표 이름; 현재 asmc_perception
+│   ├── src/asmc_camera/      # camera objects/YOLO, lane/road, traffic_light, bev
 │   ├── config/ · launch/ · rviz/
 │   ├── scripts/               # ROS node entrypoint만
 │   └── test/
-├── asmc_lidar/                # LiDAR+IMU, 지면/구조물/군집/OBB, 후보 추적·좌표 어댑터
+├── asmc_lidar/                # LiDAR+IMU, 지면/구조물/군집/OBB/추적, camera fusion·좌표 어댑터
 ├── behavior_planner/          # 판제 소유, 현 위치 유지
 ├── frenet_planner/            # 판제 소유, 현 위치 유지
 ├── mpc_controller/            # 판제 소유, 현 위치 유지
-├── lane_boundary_adapter/     # 음영구간 차선 경계 read-only adapter
+├── jamming_lane_boundary_adapter/ # 판제 소유 음영 차선 경계 adapter, 이번 이전 대상 아님
 └── MORAI-ROS_morai_msgs/      # pinned external dependency
 
 tools/
@@ -123,10 +247,11 @@ tools/
 
 vendor/                        # 소스 설치가 꼭 필요한 upstream만 격리
 scripts/
-└── asmc                       # 사람이 사용하는 단일 command entrypoint
+├── udp_bridge.sh             # 별도 foreground 실행·Hz 모니터링
+└── perception.sh             # 기존 호환 진입점; 컨테이너 내 개별 roslaunch도 지원
 ```
 
-`asmc_perception` 하나에 모든 연구 파일을 넣는다는 뜻은 아니다. `src/`에는 대회 runtime만
+목표 `asmc_camera` 하나에 모든 연구 파일을 넣는다는 뜻은 아니다. `src/`에는 대회 runtime만
 두고 학습과 분석은 `tools/perception`에서 같은 Python library를 import한다. 이 구분이 있어야
 catkin package 하나를 유지하면서도 실행 이미지가 학습 산출물로 비대해지지 않는다.
 
@@ -150,11 +275,12 @@ catkin package 하나를 유지하면서도 실행 이미지가 학습 산출물
 LiDAR+IMU 단일 경로는 GPS·미션으로 일반/터널 알고리즘을 바꾸지 않는다.
 후보 tracker·공용 상태 메시지·local/map 어댑터를 연결했지만 구조물 자동 억제는 OFF,
 map 가용성과 객체/속도 품질은 운영 승격 전 추가 수락조건이다. 손재호는 구조물 억제,
-군집·추적·속도 정확도를 단계별 회귀와 함께 개선한다. 기존 nested Main/Msg 및 운영
+원본 기능 이전과 tracker 차이 검증을 먼저 마무리한 뒤 군집·추적·속도 정확도를
+단계별 회귀와 함께 개선한다. 기존 nested Main/Msg 및 운영
 출력은 새 계약이 판제와 검증되기 전까지 유지한다.
 
 사용자 측 독립 작업의 순서는 **개정 규정의 공식 근거 확인과 HD맵 갱신 → 카메라 객체
-검출의 asmc_perception 통합 및 LiDAR/음영 어댑터 공통 소비 계약 → 동시 실행 부하
+검출의 asmc_camera 이전(현재 asmc_perception rename) 및 LiDAR/음영 어댑터 공통 소비 계약 → 동시 실행 부하
 기준선 → YOLO 선택과 BDD100K 다음 기존 데이터로 TwinLiteNet+ 학습 비교 →
 LAN2LAN 리허설**이다. COCO의 person/car/truck/bus는 현재 호환 기준이며 클래스
 확장은 소비자별 시험 뒤 결정한다. BDD100K 라벨을 기존 white/yellow/stopline head에

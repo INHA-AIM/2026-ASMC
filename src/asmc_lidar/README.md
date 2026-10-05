@@ -1,5 +1,11 @@
 # asmc_lidar — 단일 LiDAR 후보 실행과 지면 연구 비교
 
+> **최종 패키지 목표와 현재 후보를 구분:** 손재호가 기존 `lidar+sensorfusion` 기능을
+> 보존하면서 검증된 개선을 반영해 이 패키지의 이전을 마무리한다.
+> [상세 이전 계획](../../docs/architecture/consolidation-roadmap.md)을 따른다.
+> camera fusion은 내부 유지, YOLO 생산자는 향후 `asmc_camera` 소유다.
+> 현재 후보 CV tracker는 원본 CA tracker와 동등한 이식이 아니며 자동 운영 교체하지 않는다.
+
 > **현재 실행·인계 정본:** [L2-I2 인계](../../docs/packages/asmc_lidar/l2i2-handoff-20261005.md).
 > `unified.launch`는 GPS/미션 모드 없이 V4 지면·군집/OBB·후보 추적을 계산하고
 > `base_link` 객체를 발행한다. 검증된 pose가 있으면 별도 노드가 `map` 후보를 발행한다.

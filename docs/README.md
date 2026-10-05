@@ -21,8 +21,10 @@
 이 페이지에서 정본, 작업 중 설계안, 사용 가이드와 과거 기록을 구분한다. 내용이
 충돌하면 아래의 `정본 우선순위`를 적용하고, 기록 문서를 현재 설정으로 해석하지 않는다.
 
-2026-10-05 독립 LiDAR 후보의 현재 실행·출력·손재호 인계는
-[asmc_lidar L2-I1 인계](./packages/asmc_lidar/README.md)를 먼저 본다.
+2026-10-05 패키지 목표는 `asmc_camera`(현재 `asmc_perception`)와 `asmc_lidar`다.
+카메라 YOLO 생산자는 안승현, 기존 LiDAR 기능·camera fusion의 이전 마무리는 손재호가 맡는다.
+[상세 이전 순서·공용 계약·완료 조건](./architecture/consolidation-roadmap.md)을 먼저 보고,
+현재 후보 실행·출력·미검증 항목은 [L2-I2 인계](./packages/asmc_lidar/l2i2-handoff-20261005.md)를 본다.
 과거 LiDAR 분석 문서는 근거 기록이며 새 후보의 운영 승인으로 읽지 않는다.
 
 ## 1. 처음 보는 팀원이 읽을 문서
@@ -76,7 +78,7 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 | [협업과 Git 규칙](./governance/README.md) | 브랜치, PR, review와 main 안정성 | Canonical |
 | [integration-plan.md](./archive/integration/wave1-wave2-plan.md) | Wave 1/2 이식 과정과 당시 판단 | Historical Record |
 | [architecture-overview.md](./architecture/system-overview.md) | 전체 모듈과 현재 목표 구조 요약 | Working Overview |
-| [repository-consolidation-roadmap.md](./architecture/consolidation-roadmap.md) | msg·bridge·HD Map·perception 4-패키지 통합, 체크포인트/미션, 현장 배포 단계 | Working Proposal |
+| [repository-consolidation-roadmap.md](./architecture/consolidation-roadmap.md) | msg·bridge·HD Map·camera·LiDAR 목표 경계, camera rename·재호 기능 이전·소비 검증·현장 배포 | Implementation Plan + Historical Record |
 | [baselines/runtime-baseline-v1.md](./records/baselines/runtime-v1.md) | P1-A 당시 package/topic/message/sensor/bag/HD Map snapshot | Frozen Snapshot (`73c0a8c`) |
 | [P3-A bridge baseline](./records/baselines/bridge-p3a-v1.md) | 공통 `morai_udp`, transport/network/sensor profile과 bridge source/topic SHA | Frozen P3-A Baseline |
 | [P3-B Competition status baseline](./records/baselines/bridge-p3b-v1.md) | decoder·fixture와 당시 잘못된 port 해석; P3-E 정정 포함 | Frozen P3-B Baseline |

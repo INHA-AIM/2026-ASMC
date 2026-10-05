@@ -6,6 +6,12 @@
 
 ## 1. 한 줄 요약
 
+2026-10-05 패키지 목표는 `asmc_camera`(현재 `asmc_perception`)와 `asmc_lidar`다.
+YOLO 추론은 카메라 쪽, LiDAR 객체와 box의 매칭/분류 fusion은 LiDAR 쪽에 둔다.
+HD맵은 정적 문맥을 제공하며 별도 `asmc_fusion`은 만들지 않는다.
+이름 변경·원본 기능 이전은 아직 미완료이며 [통합 로드맵](./consolidation-roadmap.md)의
+담당자별 이전 계획과 gate를 따른다. 아래 과거 Phase B 연구안은 이전 완료 상태가 아니다.
+
 **Hybrid modular (rule-first):** 룰+MPC 뼈대에 camera lane/drivable, MGeo map prior와 LiDAR occupancy를 출처가 분리된 ego-BEV에서 결합한다. 시뮬 경계는 허용 **UDP**, 모듈 내부는 **ROS**다. 세부 인터페이스는 camera live와 map pilot 결과를 확인한 뒤 확정하며 Semi-E2E는 후속 연구로 둔다.
 
 ## 2. 배포 파이프라인 (Phase B 목표)

@@ -9,10 +9,12 @@ TwinLite 학습 adapter와 offline BEV audit은 이 패키지가 소유한다. P
 제거했지만 topic과 node 이름은 바꾸지 않았다. `data_collection`과 팀원 개발 중인 LiDAR/fusion은 독립
 패키지·workspace이며 이 launch가 소유하거나 시작하지 않는다.
 
-2026-10-05 패키지 경계 권고는 [통합 로드맵](../../docs/architecture/consolidation-roadmap.md)의
-센서별 인지·fusion 항목을 따른다. 카메라 runtime의 현재 이름은 `asmc_perception`으로
-유지하고, LiDAR 후보는 `asmc_lidar`가 소유한다. `camera_bev_fusion`은 다중 카메라
-처리이며 향후 카메라/LiDAR 객체 융합용 `asmc_fusion`과 책임이 다르다.
+2026-10-05 이전 계획은 [통합 로드맵](../../docs/architecture/consolidation-roadmap.md)을 따른다.
+**현재 이름은 `asmc_perception`, rename 목표는 `asmc_camera`**다. 안승현이 이름 변경과
+YOLO 생산자 이전을 별도 단계로 진행한다. 기존 `/perception/*` 토픽은 유지한다.
+`camera_bev_fusion`은 다중 카메라 처리로 카메라 쪽에 남고, LiDAR 객체에 카메라 분류를
+결합하는 fusion은 손재호가 이전을 마무리할 `asmc_lidar` 내부에 둔다. 별도 fusion 패키지는
+만들지 않는다. 아직 rename하지 않았으므로 아래 실행 명령은 현재 이름을 사용한다.
 
 ## 실행
 

@@ -4,6 +4,12 @@
 >
 > **현재 상태:** P4-C6 package 통합과 P5-A~P5-E topic·시각화·consumer handoff·운영 closeout 완료
 
+> **2026-10-05 다음 이전 목표:** 이 패키지는 안승현이 `asmc_camera`로 rename하고
+> YOLO 생산자를 별도 단계로 통합한다. 토픽의 `/perception/*` 이름은 유지한다.
+> LiDAR·camera 객체 fusion은 손재호가 `asmc_lidar`로 이전하며 카메라 패키지에 합치지 않는다.
+> [상세 계획과 호환·삭제 gate](../../architecture/consolidation-roadmap.md)를 따른다.
+> 아직 rename하지 않았으므로 아래 현재 명령·경로는 그대로 사용한다.
+
 이 문서는 긴 인지 설계·실험 문서를 대체하거나 요약 폐기하기 위한 문서가 아니다. 현재 어떤
 코드와 문서를 먼저 사용해야 하는지 안내하는 진입점이다. 날짜별 분석, 수치, 실패 원인과 후보
 변화는 원래 문서에 그대로 보존한다.
