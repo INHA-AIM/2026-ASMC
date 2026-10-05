@@ -126,12 +126,12 @@ int main(){
  ego=pose_at(zone.stop_s-7);ego.v=5;ego.yaw+=.08;ego.a=-1;
  FrenetPlanner plain_stop,heading_stop;
  bool stop_init=plain_stop.Init(file.string())&&heading_stop.Init(file.string());
- auto waiting_cmd=cmd;waiting_cmd.mode=STOP;waiting_cmd.stop_position=zone.stop_s+cfg["planner"]["stop"]["stop_buffer"].as<double>();
+ auto waiting_cmd=cmd;waiting_cmd.mode=STOP;waiting_cmd.stop_position=zone.stop_s;
  CartesianPath plain,aligned;
  bool plain_ok=stop_init&&plain_stop.Plan(ego,{},waiting_cmd,plain);
  bool aligned_ok=stop_init&&heading_stop.PlanRoundaboutMerge(ego,{},cmd,404,404,aligned,r);
  expect(plain_ok&&aligned_ok&&!plain.x.empty()&&!aligned.x.empty()&&
-  std::hypot(plain.x.back()-aligned.x.back(),plain.y.back()-aligned.y.back())<.001,
+  std::hypot(zone.waiting_pose.x-aligned.x.back(),zone.waiting_pose.y-aligned.y.back())<.001,
   "waiting heading alignment preserves the selected rear-axle stop position");
  expect(aligned_ok&&aligned.x.size()>2&&
   std::fabs(std::remainder(aligned.yaw.front()-ego.yaw,2*M_PI))<1e-6,
@@ -139,17 +139,71 @@ int main(){
  expect(aligned_ok&&!aligned.x.empty()&&road.PoseClear(aligned.x.back(),aligned.y.back(),aligned.yaw.back(),shape)&&
   road.EvaluatePath(aligned,shape,.1).drivable,
   "waiting heading checks the complete body and the whole approach against the map");
- bool same_schedule=plain.v.size()==aligned.v.size()&&plain.a.size()==aligned.a.size();
- for(size_t i=0;i<plain.v.size()&&same_schedule;++i)
-  same_schedule=std::fabs(plain.v[i]-aligned.v[i])<1e-6&&std::fabs(plain.a[i]-aligned.a[i])<1e-6;
- expect(aligned_ok&&same_schedule&&!plain.yaw.empty()&&!aligned.yaw.empty()&&
-  std::fabs(std::remainder(plain.yaw.back()-aligned.yaw.back(),2*M_PI))>.005,
-  "map-selected waiting yaw changes without changing the selected speed and acceleration schedule");
+ bool waiting_bounds=!aligned.v.empty();
+ for(size_t i=0;i<aligned.v.size();++i)waiting_bounds&=aligned.v[i]>=-1e-6&&
+  aligned.v[i]<=std::max(cmd.target_speed,ego.v)+.05&&
+  aligned.a[i]<=cfg["planner"]["kinematic_limits"]["max_longitudinal_accel"].as<double>()&&
+  aligned.a[i]>=-cfg["planner"]["stop"]["max_service_decel"].as<double>();
+ expect(aligned_ok&&waiting_bounds&&aligned.v.back()<.001,
+  "frontier approach preserves longitudinal bounds and ends stopped at the limit");
  ego=pose_at(zone.stop_s);ego.yaw+=.05;
  heading_stop.ResetRoundaboutMerge();aligned={};
  bool hold_ok=heading_stop.PlanRoundaboutMerge(ego,{},cmd,405,405,aligned,r);
  expect(hold_ok&&aligned.x.size()==1&&std::fabs(std::remainder(aligned.yaw.front()-ego.yaw,2*M_PI))<1e-6,
   "stationary waiting keeps observed yaw instead of rotating in place");
+
+ // PREPARE never crosses the rear-axle frontier, including an approach at
+ // cruise speed. A complete safe traversal can authorize a rolling departure.
+ ego=pose_at(zone.stop_s-12);ego.v=5;ego.a=0;
+ FrenetPlanner frontier_planner;bool frontier_ok=frontier_planner.Init(file.string());
+ CartesianPath frontier;
+ frontier_ok=frontier_ok&&frontier_planner.PlanRoundaboutMerge(ego,{},cmd,406,406,frontier,r);
+ bool behind_line=frontier_ok&&!frontier.x.empty();double hint=zone.stop_s-12;
+ for(size_t i=0;i<frontier.x.size();++i){hint=FindClosestS(ref,frontier.x[i],frontier.y[i],&hint,5);behind_line&=hint<=zone.stop_s+.02;}
+ expect(behind_line&&frontier.v.back()==0,"PREPARE approach stays behind the stopline and includes a complete stop");
+ ego=pose_at(zone.stop_s-3);ego.v=2;ego.a=0;
+ FrenetPlanner rolling_entry;bool rolling_ready=rolling_entry.Init(file.string());
+ for(int i=0;i<3&&rolling_ready;++i)rolling_ready=rolling_entry.PlanRoundaboutMerge(ego,{},cmd,407+i*.1,407+i*.1,frontier,r);
+ expect(rolling_ready&&r.ready&&rolling_entry.CanCommitRoundaboutMerge(r)&&ego.v>0,
+  "full fresh clearance authorizes departure without requiring zero measured speed");
+ auto early_token=r;auto early_candidate=r.candidate_path;
+ auto crossing=o;crossing.id=88;
+ if(!early_candidate.x.empty()){
+  const size_t j=std::min(early_candidate.x.size()-1,static_cast<size_t>((r.entry_time+1)/.1));
+  crossing.x=early_candidate.x[j];crossing.y=early_candidate.y[j];
+  for(int i=0;i<8;++i){double dx[4]={-1,1,1,-1},dy[4]={-1,-1,1,1};crossing.corners[i]={crossing.x+dx[i%4],crossing.y+dy[i%4],double(i/4)};}
+ }
+ rolling_entry.PlanRoundaboutMerge(ego,{crossing},cmd,407.3,407.3,frontier,r);
+ expect(!r.ready&&!rolling_entry.CanCommitRoundaboutMerge(early_token),
+  "new traffic revokes an earlier rolling-departure certificate");
+
+ // Once stopped upstream with traffic blocking the complete departure,
+ // remain at that measured pose instead of creeping to a second stop target.
+ ego=pose_at(zone.stop_s-4);ego.v=0;ego.a=0;
+ FrenetPlanner latched_wait;bool latch_ok=latched_wait.Init(file.string());
+ for(int i=0;i<3&&latch_ok;++i)latch_ok=latched_wait.PlanRoundaboutMerge(ego,{crossing},cmd,408+i*.1,408+i*.1,frontier,r);
+ expect(latch_ok&&!r.ready&&frontier.x.size()==1&&std::hypot(frontier.x[0]-ego.x,frontier.y[0]-ego.y)<1e-6,
+  "a blocked vehicle which already stopped upstream holds that pose until departure is safe");
+ for(int i=0;i<3&&latch_ok;++i)latch_ok=latched_wait.PlanRoundaboutMerge(ego,{},cmd,408.4+i*.1,408.4+i*.1,frontier,r);
+ expect(latch_ok&&r.ready&&latched_wait.CanCommitRoundaboutMerge(r)&&frontier.x.size()==1,
+  "fresh full clearance releases upstream waiting through the commit handshake");
+
+ // A vehicle which already waited upstream can execute its certified
+ // departure directly. Ideal prefix tracking must not re-enter STOP at the line.
+ ego=pose_at(zone.stop_s-4);ego.v=0;ego.a=0;
+ FrenetPlanner once_waited;bool once_ok=once_waited.Init(file.string());
+ for(int i=0;i<3&&once_ok;++i)once_ok=once_waited.PlanRoundaboutMerge(ego,{},cmd,408+i*.1,408+i*.1,frontier,r);
+ bool once_done=false,second_wait=false;
+ if(once_ok&&r.ready)once_waited.ApplyRoundaboutMergeCommit(r);else once_ok=false;
+ for(int i=0;i<200&&once_ok;++i){
+  frontier={};once_ok=once_waited.PlanRoundaboutMerge(ego,{},cmd,409+i*.1,409+i*.1,frontier,r);
+  if(r.maneuver_completed){once_done=true;break;}
+  if(!once_ok||frontier.x.size()<2){once_ok=false;break;}
+  second_wait|=i>5&&frontier.v[1]<.01;
+  ego={frontier.x[1],frontier.y[1],frontier.yaw[1],frontier.kappa[1],frontier.v[1],frontier.a[1]};
+ }
+ expect(once_ok&&once_done&&!second_wait,
+  "an earlier safe waiting pose departs and reaches KEEP without a second mandatory stop");
 
  // Execute the generated prefix repeatedly, rather than treating a fixed
  // historical overspeed pose as the result of the corrected controller.

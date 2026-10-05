@@ -835,6 +835,7 @@ private:
     RoundaboutMergeConfig roundabout_merge_cfg_;
     RoundaboutMergeZone roundabout_zone_;
     bool roundabout_merge_committed_ = false;
+    bool roundabout_waiting_latched_ = false;
     double roundabout_preferred_d_ = 0;
     MergeAccelerationMemory roundabout_acceleration_memory_;
     bool roundabout_bridge_active_ = false, roundabout_bridge_used_ = false;

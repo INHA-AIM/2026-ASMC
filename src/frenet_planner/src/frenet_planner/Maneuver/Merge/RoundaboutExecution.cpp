@@ -70,6 +70,57 @@ bool AlignWaitingApproach(const RefLine& ref,const CartesianState& ego,
     const auto before=road.EvaluatePath(original,shape,dt),after=road.EvaluatePath(aligned,shape,dt);
     return after.drivable&&after.paint_contact_seconds<=before.paint_contact_seconds+1e-6;
 }
+// A waiting certificate is distinct from a departure certificate. Generate
+// complete stops at the rear-axle frontier, rather than velocity-keeping
+// horizons which can extend into the circulating lane. Keep every object.
+bool MakeFrontierWaitingPath(const RefLine& ref,const CartesianState& ego,
+    const FrenetState& start,double s,double d,double stop_s,double cap,
+    const AvoidRoadMap& road,const VehicleShape& shape,const KinematicLimits& limits,
+    const CollisionCheckConfig& collision,const std::vector<TrackedObject>& objects,
+    double service_decel,double dt,double horizon,CartesianPath& selected) {
+    const double span=stop_s-s;
+    if(span<.15||span>45)return false;
+    const auto origin=Interpolate(ref,s);
+    const double slope=(1-origin.kappa*d)*std::tan(std::remainder(ego.yaw-origin.theta,2*M_PI));
+    if(!std::isfinite(slope))return false;
+    const auto lateral=MakeQuintic(d,slope,0,0,0,0,span);
+    PathGeneratorConfig grid{};grid.dt=dt;grid.delta_s={0,0,0};
+    grid.time_horizon={2,std::min(8.0,horizon),.5};
+    auto boundary=start;
+    if(ego.v<.1&&boundary.s_dd<0)boundary.s_dd=0;
+    auto motions=GenerateStoppingCandidates(boundary,stop_s,grid);
+    double best=std::numeric_limits<double>::infinity();
+    for(const auto& motion:motions){
+        CartesianPath path;bool valid=!motion.s.empty();double effort=0;
+        for(size_t i=0;i<motion.s.size()&&valid;++i){
+            if(motion.s[i]<s-1e-6||motion.s[i]>stop_s+1e-6||motion.s_d[i]<-1e-6||
+               (i&&motion.s[i]<motion.s[i-1]-1e-6)||
+               std::fabs(motion.s_ddd[i])>limits.max_longitudinal_jerk) {valid=false;break;}
+            const auto rp=Interpolate(ref,motion.s[i]);const double q=std::clamp(motion.s[i]-s,0.0,span);
+            const auto point=FrenetToCartesian(rp,motion.s[i],motion.s_d[i],motion.s_dd[i],
+                EvalPos(lateral,q),EvalVel(lateral,q),EvalAcc(lateral,q));
+            const double brake_bound=std::max(service_decel,std::max(0.0,-ego.a));
+            if(!std::isfinite(point.kappa)||std::fabs(point.kappa)>limits.max_curvature||
+               point.v>std::max(cap,ego.v)+.05||point.a>limits.max_longitudinal_accel||
+               point.a < -brake_bound||point.v*point.v*std::fabs(point.kappa)>limits.max_lateral_accel)
+                {valid=false;break;}
+            path.x.push_back(point.x);path.y.push_back(point.y);path.yaw.push_back(point.yaw);
+            path.kappa.push_back(point.kappa);path.v.push_back(point.v);path.a.push_back(point.a);
+            effort+=point.a*point.a*dt;
+        }
+        if(!valid)continue;
+        path.v.back()=0;path.a.back()=0;
+        CartesianPath aligned;
+        if(AlignWaitingApproach(ref,ego,road,shape,limits,stop_s,s,d,service_decel,dt,path,aligned))
+            path=std::move(aligned);
+        if(!road.EvaluatePath(path,shape,dt).drivable||
+           !CartesianTrajectoryClear(path,objects,shape,collision,dt))continue;
+        const double cost=motion.t.back()+.1*effort;
+        if(cost<best){best=cost;selected=std::move(path);}
+    }
+    return !selected.x.empty();
+}
+
 // STOP's braking fallback retains the current d. During a long
 // approach that repeatedly freezes a tracking offset instead of correcting it.
 // Rebuild only that constant-offset fallback, retaining its longitudinal stop
@@ -203,6 +254,7 @@ bool MakeMergeProfile(const RefLine& ref, const CartesianState& ego,
 
 void FrenetPlanner::ResetRoundaboutMerge() {
     roundabout_merge_committed_=false;
+    roundabout_waiting_latched_=false;
     roundabout_preferred_d_=0;
     roundabout_acceleration_memory_.Reset();
     roundabout_bridge_active_=roundabout_bridge_used_=false;
@@ -226,6 +278,7 @@ bool FrenetPlanner::CanCommitRoundaboutMerge(const MergePrepareResult& result) c
 }
 void FrenetPlanner::ApplyRoundaboutMergeCommit(const MergePrepareResult&) {
     roundabout_merge_committed_=true;
+    roundabout_waiting_latched_=false;
     stop_=StopContext{};
 }
 bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
@@ -414,7 +467,20 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         last_failure_reason_=braking?PlanFailureReason::NONE:PlanFailureReason::COLLISION_BLOCKED;
         return braking;
     }
-    if(!result.candidate_valid) {
+    // Early departure must also survive straight-velocity prediction. A noisy
+    // estimated turn must not be the only reason an approaching car is safe.
+    bool early_departure_clear=true;
+    if(result.candidate_valid&&ctx.s<roundabout_zone_.stop_s-1.0){
+        auto straight=ctx.predicted_obstacles;
+        for(auto& object:straight)object.yaw_rate=0;
+        const auto conservative=CheckRoundaboutCandidate(result.candidate_path,roundabout_zone_,
+            straight,vehicle_shape_,collision_cfg_,path_cfg_.dt,merge_cfg_.min_front_time_gap,
+            merge_cfg_.min_rear_time_gap,true);
+        early_departure_clear=conservative.safe;
+        if(!conservative.safe&&conservative.blocking_object_id>=0)
+            result.blocking_object_id=conservative.blocking_object_id;
+    }
+    if(!result.candidate_valid||!early_departure_clear) {
         roundabout_safe_observations_=0;roundabout_last_entry_=-1;
     } else if(observation_stamp>roundabout_last_observation_+1e-6) {
         double absolute_entry=planning_time+result.entry_time;
@@ -425,15 +491,63 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         roundabout_safe_observations_=0;roundabout_last_entry_=-1;
     }
     roundabout_last_observation_=observation_stamp;
-    result.ready=result.candidate_valid && roundabout_safe_observations_>=merge_cfg_.safe_confirm_cycles &&
-        ctx.s>=roundabout_zone_.stop_s-1.0;
+    // Restrict early commitment to one body length before the frontier. A
+    // distant forecast is not permission to commit while still approaching.
+    result.ready=result.candidate_valid && early_departure_clear && roundabout_safe_observations_>=merge_cfg_.safe_confirm_cycles &&
+        ctx.s>=roundabout_zone_.stop_s-vehicle_shape_.length &&
+        ctx.s<=roundabout_zone_.stop_s+1.0;
+    // Once actually stopped in the departure zone, hold here until a fresh
+    // full departure is authorized. Do not inch forward just to stop again.
+    if(ego.v<=.1&&ctx.s>=roundabout_zone_.stop_s-vehicle_shape_.length&&
+       ctx.s<=roundabout_zone_.stop_s+.02)roundabout_waiting_latched_=true;
+    if(roundabout_waiting_latched_){
+        PlanExternalStopHold(ego,ctx.s,out_path);
+        last_failure_reason_=PlanFailureReason::NONE;
+        last_roundabout_result_=result;return true;
+    }
     // The PREPARE output remains a stop-capable approach/hold trajectory.
-    // Its target is the rear axle at the map stopline, independent of the
-    // normal traffic-light bumper offset. STOP's small buffer is compensated.
+    // Its target is the rear axle at the map stopline. The frontier generator
+    // checks approach/hold independently from the complete departure candidate.
     PlannerCommand waiting=command;waiting.mode=STOP;waiting.has_target_speed=true;
-    waiting.target_speed=cap;waiting.stop_position=roundabout_zone_.stop_s+stop_cfg_.stop_buffer;
-    bool ok=StopProcess(ego,start,ctx.s,ctx.d,start.s_d,start.s_dd,start.d_d,start.d_dd,
+    waiting.target_speed=cap;waiting.stop_position=roundabout_zone_.stop_s;
+    bool ok=MakeFrontierWaitingPath(ref_,ego,start,ctx.s,ctx.d,
+        roundabout_zone_.stop_s,cap,avoid_road_map_,vehicle_shape_,limits_,collision_cfg_,
+        ctx.predicted_obstacles,stop_cfg_.max_service_decel,path_cfg_.dt,
+        roundabout_merge_cfg_.max_horizon,out_path);
+    if(!ok)ok=StopProcess(ego,start,ctx.s,ctx.d,start.s_d,start.s_dd,start.d_d,start.d_dd,
         obstacles,ctx.predicted_obstacles,cap,waiting,out_path);
+    // The legacy STOP fallback may produce an overshooting horizon. Never
+    // execute it across the waiting frontier before commitment, and check all
+    // objects even if generic STOP scoped them by current longitudinal position.
+    if(ok){double hint=ctx.s;
+        for(size_t i=0;i<out_path.x.size();++i){
+            hint=FindClosestS(ref_,out_path.x[i],out_path.y[i],&hint,5);
+            if(hint>std::max(ctx.s,roundabout_zone_.stop_s)+.02){ok=false;break;}
+        }
+        if(ok&&!CartesianTrajectoryClear(out_path,ctx.predicted_obstacles,vehicle_shape_,
+            collision_cfg_,path_cfg_.dt))ok=false;
+    }
+    if(!ok){
+        // A rejected frontier arrival still needs a steering-capable safe stop.
+        // Reuse the committed service-braking generator, bounded by this line.
+        auto braking_limits=limits_;
+        braking_limits.max_longitudinal_accel=std::max(limits_.max_longitudinal_accel,
+            stop_cfg_.max_service_decel);
+        braking_limits.boundary_condition_accel_fraction=1;
+        for(double settle:{ordinary_settle,6.0}){
+            CartesianPath brake;
+            if(!MakeMergeProfile(ref_,ego,start,0,std::min(8.0,roundabout_merge_cfg_.max_horizon),
+                path_cfg_.dt,curve_speed_cfg_,braking_limits,settle,ctx.d,false,brake))continue;
+            bool bounded=true;double hint=ctx.s;
+            for(size_t i=0;i<brake.x.size();++i){
+                hint=FindClosestS(ref_,brake.x[i],brake.y[i],&hint,5);
+                if(hint>std::max(ctx.s,roundabout_zone_.stop_s)+.02){bounded=false;break;}
+            }
+            if(!bounded||!avoid_road_map_.EvaluatePath(brake,vehicle_shape_,path_cfg_.dt).drivable||
+               !CartesianTrajectoryClear(brake,ctx.predicted_obstacles,vehicle_shape_,collision_cfg_,path_cfg_.dt))continue;
+            out_path=std::move(brake);ok=true;break;
+        }
+    }
     if(ok) {
         CartesianPath centered;
         if(RecenterWaitingFallback(ref_,ego,ctx.s,ctx.d,limits_,
@@ -448,6 +562,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
            CartesianTrajectoryClear(aligned,ctx.predicted_obstacles,vehicle_shape_,
                collision_cfg_,path_cfg_.dt))out_path=std::move(aligned);
     }
+    if(!ok&&result.ready&&ego.v<.1){PlanExternalStopHold(ego,ctx.s,out_path);ok=true;}
     if(!ok)result.ready=false;
     last_roundabout_result_=result;
     return ok;
