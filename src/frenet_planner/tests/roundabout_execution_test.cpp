@@ -121,6 +121,36 @@ int main(){
  expect(fallback_ok&&out.x.size()>1&&std::fabs(terminal_d)<.05&&out.v.back()==0,"long waiting braking fallback recentres instead of freezing lateral error");
  expect(fallback_ok&&!out.yaw.empty()&&std::fabs(std::remainder(out.yaw.front()-ego.yaw,2*M_PI))<.01,"waiting fallback centering preserves observed initial heading");
 
+ // Heading alignment must keep the selected rear-axle endpoint and preserve
+ // the observed starting direction. Compare with the same STOP request.
+ ego=pose_at(zone.stop_s-7);ego.v=5;ego.yaw+=.08;ego.a=-1;
+ FrenetPlanner plain_stop,heading_stop;
+ bool stop_init=plain_stop.Init(file.string())&&heading_stop.Init(file.string());
+ auto waiting_cmd=cmd;waiting_cmd.mode=STOP;waiting_cmd.stop_position=zone.stop_s+cfg["planner"]["stop"]["stop_buffer"].as<double>();
+ CartesianPath plain,aligned;
+ bool plain_ok=stop_init&&plain_stop.Plan(ego,{},waiting_cmd,plain);
+ bool aligned_ok=stop_init&&heading_stop.PlanRoundaboutMerge(ego,{},cmd,404,404,aligned,r);
+ expect(plain_ok&&aligned_ok&&!plain.x.empty()&&!aligned.x.empty()&&
+  std::hypot(plain.x.back()-aligned.x.back(),plain.y.back()-aligned.y.back())<.001,
+  "waiting heading alignment preserves the selected rear-axle stop position");
+ expect(aligned_ok&&aligned.x.size()>2&&
+  std::fabs(std::remainder(aligned.yaw.front()-ego.yaw,2*M_PI))<1e-6,
+  "waiting heading profile starts at observed yaw without an instantaneous turn");
+ expect(aligned_ok&&!aligned.x.empty()&&road.PoseClear(aligned.x.back(),aligned.y.back(),aligned.yaw.back(),shape)&&
+  road.EvaluatePath(aligned,shape,.1).drivable,
+  "waiting heading checks the complete body and the whole approach against the map");
+ bool same_schedule=plain.v.size()==aligned.v.size()&&plain.a.size()==aligned.a.size();
+ for(size_t i=0;i<plain.v.size()&&same_schedule;++i)
+  same_schedule=std::fabs(plain.v[i]-aligned.v[i])<1e-6&&std::fabs(plain.a[i]-aligned.a[i])<1e-6;
+ expect(aligned_ok&&same_schedule&&!plain.yaw.empty()&&!aligned.yaw.empty()&&
+  std::fabs(std::remainder(plain.yaw.back()-aligned.yaw.back(),2*M_PI))>.005,
+  "map-selected waiting yaw changes without changing the selected speed and acceleration schedule");
+ ego=pose_at(zone.stop_s);ego.yaw+=.05;
+ heading_stop.ResetRoundaboutMerge();aligned={};
+ bool hold_ok=heading_stop.PlanRoundaboutMerge(ego,{},cmd,405,405,aligned,r);
+ expect(hold_ok&&aligned.x.size()==1&&std::fabs(std::remainder(aligned.yaw.front()-ego.yaw,2*M_PI))<1e-6,
+  "stationary waiting keeps observed yaw instead of rotating in place");
+
  // Execute the generated prefix repeatedly, rather than treating a fixed
  // historical overspeed pose as the result of the corrected controller.
  FrenetPlanner curve_planner;bool rolling=curve_planner.Init(file.string());

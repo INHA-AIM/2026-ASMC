@@ -9,6 +9,67 @@
 #include <limits>
 
 namespace {
+// Keep the selected stop's rear-axle endpoint and longitudinal schedule. Shape
+// its approach in distance, where a terminal heading remains defined at v=0.
+bool AlignWaitingApproach(const RefLine& ref,const CartesianState& ego,
+    const AvoidRoadMap& road,const VehicleShape& shape,const KinematicLimits& limits,
+    double stop_s,double s,double d,double service_decel,double dt,
+    const CartesianPath& original,CartesianPath& aligned) {
+    if(original.x.size()<2||original.v.back()>.05)return false;
+    std::vector<double> stations;double hint=s;
+    for(size_t i=0;i<original.x.size();++i){
+        hint=FindClosestS(ref,original.x[i],original.y[i],&hint,5);
+        stations.push_back(hint);
+    }
+    const double end=stations.back(),span=end-s;
+    if(span<.15||std::fabs(end-stop_s)>1)return false;
+    const auto goal=Interpolate(ref,end),origin=Interpolate(ref,s);
+    const double target_d=(original.y.back()-goal.y)*std::cos(goal.theta)-
+        (original.x.back()-goal.x)*std::sin(goal.theta);
+    double heading=goal.theta,best=-1;
+    // Bounded map search includes the front/rear body and paint, rather than
+    // aligning just the rear axle with a single centreline tangent.
+    for(int k=-10;k<=10;++k){
+        const double yaw=goal.theta+k*2*M_PI/180;
+        if(!road.PoseClear(original.x.back(),original.y.back(),yaw,shape))continue;
+        // Containment is monotone as the body expands. Binary search the
+        // eight clearance levels to bound map work per heading.
+        int low=0,high=8;
+        while(low<high){
+            const int mid=(low+high+1)/2;const double margin=.05*mid;
+            auto expanded=shape;expanded.width+=2*margin;expanded.length+=2*margin;
+            expanded.rear_overhang+=margin;
+            if(road.PoseClear(original.x.back(),original.y.back(),yaw,expanded))low=mid;
+            else high=mid-1;
+        }
+        const double clearance=.05*low;
+        const double score=clearance-.001*std::abs(k);
+        if(score>best){best=score;heading=yaw;}
+    }
+    if(best<0)return false;
+    const double first=(1-origin.kappa*d)*std::tan(std::remainder(ego.yaw-origin.theta,2*M_PI));
+    const double last=(1-goal.kappa*target_d)*std::tan(std::remainder(heading-goal.theta,2*M_PI));
+    if(!std::isfinite(first)||!std::isfinite(last))return false;
+    const auto lateral=MakeQuintic(d,first,0,target_d,last,0,span);
+    for(size_t i=0;i<stations.size();++i){
+        const auto rp=Interpolate(ref,stations[i]);
+        const double q=std::clamp(stations[i]-s,0.0,span);
+        const double offset=EvalPos(lateral,q),prime=EvalVel(lateral,q),second=EvalAcc(lateral,q);
+        const double metric=std::hypot(1-rp.kappa*offset,prime);
+        if(metric<.1)return false;
+        const double sd=original.v[i]/metric;
+        const auto base=FrenetToCartesian(rp,stations[i],sd,0,offset,prime,second);
+        const auto point=FrenetToCartesian(rp,stations[i],sd,(original.a[i]-base.a)/metric,
+            offset,prime,second);
+        if(!std::isfinite(point.kappa)||std::fabs(point.kappa)>limits.max_curvature||
+           point.v*point.v*std::fabs(point.kappa)>limits.max_lateral_accel||
+           std::fabs(point.a)>std::max(service_decel,limits.max_longitudinal_accel))return false;
+        aligned.x.push_back(point.x);aligned.y.push_back(point.y);aligned.yaw.push_back(point.yaw);
+        aligned.kappa.push_back(point.kappa);aligned.v.push_back(point.v);aligned.a.push_back(point.a);
+    }
+    const auto before=road.EvaluatePath(original,shape,dt),after=road.EvaluatePath(aligned,shape,dt);
+    return after.drivable&&after.paint_contact_seconds<=before.paint_contact_seconds+1e-6;
+}
 // STOP's braking fallback retains the current d. During a long
 // approach that repeatedly freezes a tracking offset instead of correcting it.
 // Rebuild only that constant-offset fallback, retaining its longitudinal stop
@@ -380,6 +441,12 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
            avoid_road_map_.EvaluatePath(centered,vehicle_shape_,path_cfg_.dt).drivable&&
            CartesianTrajectoryClear(centered,ctx.predicted_obstacles,vehicle_shape_,
                 collision_cfg_,path_cfg_.dt))out_path=std::move(centered);
+        CartesianPath aligned;
+        if(AlignWaitingApproach(ref_,ego,avoid_road_map_,vehicle_shape_,limits_,
+            roundabout_zone_.stop_s,ctx.s,ctx.d,stop_cfg_.max_service_decel,
+            path_cfg_.dt,out_path,aligned)&&
+           CartesianTrajectoryClear(aligned,ctx.predicted_obstacles,vehicle_shape_,
+               collision_cfg_,path_cfg_.dt))out_path=std::move(aligned);
     }
     if(!ok)result.ready=false;
     last_roundabout_result_=result;
