@@ -1,0 +1,59 @@
+schema_version: asmc.hd_map.mission_scenario_source/v1
+# Team-editable map from each competition mission zone to the extra lanes a
+# scenario generator may use. Nothing derived from this file is pinned: edit
+# it (or the competition metadata) and the next spec build, publisher start or
+# sampler run uses the new values. Every entry is a starting point for the
+# scenario-generator owner to revise; see
+# docs/handoffs/hd-map/mission-scenario-spec.md.
+
+inputs:
+  competition_metadata: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml
+  compact_drivable: src/asmc_hd_map/config/kcity2025_compact_drivable_map.json
+  compact_grid: src/asmc_hd_map/config/kcity2025_compact_drivable_grid.npz
+  mgeo_link_set: src/behavior_planner/src/config/link_set.json
+
+# Actor links farther than this from their zone's route span are reported as
+# warnings, not errors.
+actor_link_max_distance_m: 100.0
+
+# roles: static_obstacle (fixed object), dynamic_obstacle (moving object or
+# pedestrian crossing the route), npc_vehicle (traffic driving along the link).
+zones:
+  static_obstacle_candidate:
+    maneuver_groups: [static_obstacle_maneuver]
+    actor_sources:
+      - role: static_obstacle
+        link_ids: [A2256W000222]
+        note: ego lane through the A222 junction; avoid via A221/A746/A1212
+
+  dynamic_obstacle_candidate:
+    maneuver_groups: [dynamic_obstacle_maneuver]
+    actor_sources:
+      - role: dynamic_obstacle
+        link_ids: [A2256W000066, A2256W000087, A2256W000206, A2256W000211,
+                   A2256W000636, A2256W001124, A2256W001125]
+        note: non-route links of the A728-A205 junction that cross or join the ego path
+
+  gps_shadow_candidate:
+    maneuver_groups: [gps_shadow_opposite_lane]
+    actor_sources:
+      - role: static_obstacle
+        link_ids: [A2256W000126]
+        note: rule book v1.2 random mission inside the shadow zone is obstacle avoidance only
+      - role: npc_vehicle
+        link_ids: [A2256W000131]
+        note: optional oncoming traffic on the opposite lane used for avoidance
+
+  roundabout_candidate:
+    maneuver_groups: [roundabout_maneuver]
+    actor_sources:
+      - role: npc_vehicle
+        link_ids: [A2256W000147, A2256W000133, A2256W000134]
+        note: west entry and ring links that reach node 0728, where ego enters by A146 and leaves by A151
+
+  surrounding_vehicle_candidate:
+    maneuver_groups: []
+    actor_sources:
+      - role: npc_vehicle
+        adjacent_to_route: left
+        note: every lane left of the high-speed route lanes, collected from compact adjacency
