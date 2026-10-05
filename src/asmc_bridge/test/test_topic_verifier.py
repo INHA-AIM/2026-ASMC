@@ -33,6 +33,7 @@ class RequiredTopicsTest(unittest.TestCase):
         profile, topics = MODULE.default_required_topics("gt")
         self.assertEqual("development", profile)
         self.assertIn("/Object_topic", topics)
+        self.assertIn("/velodyne_points_semantic", topics)
         self.assertIn("/velodyne_points_instance", topics)
         self.assertNotIn("/Competition_topic", topics)
 

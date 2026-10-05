@@ -10,7 +10,7 @@ services:
     container_name: asmc-ros-noetic
     gpus: all
     # Docker Desktop의 개별 UDP 포워딩을 사용하지 않는다. 특히 브릿지를
-    # 재시작해도 runtime LiDAR 9299와 optional Instance GT 9311 포워딩이
+    # 재시작해도 runtime LiDAR 9299와 개발용 Semantic/Instance GT 9311/9313 수신이
     # 사라지지 않도록 host mode를 기본으로 둔다.
     network_mode: host
     environment:

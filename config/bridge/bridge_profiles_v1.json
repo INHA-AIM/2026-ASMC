@@ -38,6 +38,7 @@
         "/sem_front/image_jpeg/compressed",
         "/sem_left/image_jpeg/compressed",
         "/sem_right/image_jpeg/compressed",
+        "/velodyne_points_semantic",
         "/velodyne_points_instance"
       ]
     },
@@ -53,6 +54,7 @@
         "semantic_camera_front",
         "semantic_camera_left",
         "semantic_camera_right",
+        "semantic_lidar",
         "instance_lidar"
       ]
     }
@@ -72,7 +74,7 @@
       },
       "entrypoint": {
         "path": "scripts/udp_bridge.sh",
-        "sha256": "826c86dfa07b322f9a016e502fec6adc7dc487656226018a8019783a40c7a0e9"
+        "sha256": "db82f674f6455f528ce0f1826d7413dd744ef633d01d76189ec6e990f2af809d"
       },
       "network_launch": {
         "path": "src/asmc_bridge/launch/morai_udp_bridge.launch",
@@ -84,19 +86,19 @@
       },
       "sensor_launch": {
         "path": "src/asmc_bridge/launch/morai_sensor_bridge.launch",
-        "sha256": "75cb79410bfd0b2621a71d55a703cdaa045249193a3301a6909d567336a9ee0f"
+        "sha256": "a1ca65fe9949836e369d1b64e13d39d67e575ba910329485a33519def229dcee"
       },
       "sensor_node": {
         "path": "src/asmc_bridge/scripts/morai_sensor_bridge.py",
-        "sha256": "f1ac1522a04f9f07a1569844768de3e73f8f045ab260822986b290227a5ea321"
+        "sha256": "2cd1a865a862f5f223c833558d01155300f55ad08684c0b0d078796d8d6f6b4c"
       },
       "docker_entrypoint": {
         "path": "scripts/docker_ros_up.sh",
-        "sha256": "96b47f6260e7673167923c38adba35c32192356f93510a820088dd1a61317c78"
+        "sha256": "d3d233f0af0fac81f5c7018d15de8f385c9e4ea15739765fea05cad2a4a083b1"
       },
       "topic_verifier": {
         "path": "scripts/verify_morai_topics.py",
-        "sha256": "4e5e4fe7d217287d739ac1f8f719843251f4345e9a2873098845ca49d2aeebda"
+        "sha256": "2877fb73cd7db344b1ea455862c8e1b181930e513940632d343fbb1b0442018e"
       },
       "network_profile_renderer": {
         "path": "tools/bridge/render_morai_network_profiles.py",
@@ -141,7 +143,8 @@
       "/sem_front/image_jpeg/compressed": "sensor_msgs/CompressedImage",
       "/sem_left/image_jpeg/compressed": "sensor_msgs/CompressedImage",
       "/sem_right/image_jpeg/compressed": "sensor_msgs/CompressedImage",
-      "/velodyne_points_instance": "sensor_msgs/PointCloud2"
+      "/velodyne_points_instance": "sensor_msgs/PointCloud2",
+      "/velodyne_points_semantic": "sensor_msgs/PointCloud2"
     }
   },
   "composition": {
@@ -347,10 +350,12 @@
     },
     "GT": {
       "path": "config/morai/sensors/ASMC_sensor_set_GT.json",
-      "sha256": "ef278764593c28db4e2cf29a5e657ac530822fbdad38ddf8c7d7015d2886d801",
+      "sha256": "6af452d0d8af5504715d3a58e00068b9cbf65077fa57acebed6969b5c1c8085b",
       "role": "development_ground_truth_only",
-      "lidar_hz": 10,
-      "live_acceptance": "development_only"
+      "lidar_hz": 15,
+      "live_acceptance": "development_only",
+      "previous_v2_sha256": "ef278764593c28db4e2cf29a5e657ac530822fbdad38ddf8c7d7015d2886d801",
+      "expected_udp_channels": 12
     }
   },
   "live_observations": {

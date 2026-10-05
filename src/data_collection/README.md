@@ -25,7 +25,7 @@
 | 음영구간 v3 판제 인수 replay | `shadow_camera_perception_handoff_result` | family·drivable score·coverage와 3단 diagnostics 필수; 제어 승격과 무관 |
 | 고주기 RGB sequence | v2 + Simulation Time Sensor Record | 장착된 일반 센서만 저장. 시계열 학습·재생 후보 |
 | 고주기 supervised sequence | 최소 RGB+Semantic GT 센서셋 + Simulation Time Sensor Record | 별도 pilot 후 채택. v2 Sensor Record만으로 Semantic GT가 생기지 않음 |
-| 고주기 Streaming GT | GT UDP bridge source-time + privileged bag | 종료된 실험. profile은 재현용으로만 보존 |
+| 고주기 Streaming GT | v3 GT UDP bridge + `lidar_v3_gt_udp` privileged bag | 새 3-LiDAR pilot. Sensor Record/실제 동시 측정의 대체 증거는 아님 |
 
 Capture Mode와 gRPC는 26.R1.h3 개발·학습용이다. 본선 배포 추론은 허용 UDP 센서만
 사용하며 Semantic/Instance GT, Capture gRPC와 oracle 토픽을 사용하지 않는다.
@@ -158,8 +158,19 @@ roslaunch data_collection bag_recorder.launch \
   profile:=full_raw scenario:=comp_sample controller:=wheel
 ```
 
-`lidar_dev_gt_udp`와 `dev_oracle_udp`는 과거 실험을 재현할 때만 사용하며 신규 운용·학습의
-권장 명령에는 포함하지 않는다. direct ROS GT 구현은 현재 `main`에 없고 백업 브랜치에만 있다.
+`lidar_dev_gt_udp`와 `dev_oracle_udp`는 과거 v2 GT 실험 재현용이다. 새 `lidar_v3_gt_udp`와 `dev_oracle_v3_udp`는 local 연구용 15 Hz 세 LiDAR 스트리밍 pilot이며 정식 학습 GT로 승인된 것은 아니다. direct ROS GT 구현은 현재 `main`에 없고 백업 브랜치에만 있다.
+
+```bash
+# MORAI UI: ASMC_sensor_set_GT.json + local network JSON을 Connect
+./scripts/udp_bridge.sh --streams development timestamp_mode:=source
+# 별도 터미널: 연속 raw bag; 세 LiDAR·Ego·GPS·IMU·Object는 필수
+roslaunch data_collection bag_recorder.launch \
+  profile:=lidar_v3_gt_udp scenario:=ground_review controller:=wheel
+# 종료 뒤 schema/rate/source-pairing 감사
+rosrun data_collection audit_rosbag_run.py /data/rosbags/raw/<run_id>
+```
+
+새 v3 GT 프로필은 닫힌 bag의 필수 토픽별 실제 메시지 수를 확인한다. 하나라도 0개이거나 bag 검사에 실패하면 `metadata.yaml`의 `status`가 `incomplete`가 되며, 누락 토픽과 기록된 수가 함께 남는다.
 
 저장 위치는 `/data/rosbags/raw/<auto_run_id>/`이며 raw는 덮어쓰지 않는다. 잘못된 closed
 run은 `reject_bag_run.py --run-id ... --reason ...`으로 `/data/rosbags/rejected/`에 옮긴다.
@@ -213,9 +224,9 @@ snapshot할 뿐 **MORAI 외부 Sync 제어기가 아니다**. 상태·LiDAR 등 
 ### 환경변수
 
 ```bash
-export AIM_PROJECT=~/projects/2026-ai-sw-mobility-competition
-export ASMC=$AIM_PROJECT/2026-ASMC
-export ASMC_DATA=${ASMC_DATA:-$AIM_PROJECT/data}
+# 저장소 루트에서 실행
+export ASMC="$(pwd)"
+export ASMC_DATA="${ASMC_DATA:-$(dirname "$ASMC")/data}"
 ```
 
 선택: `ASMC_COLLECT_ENABLE=cam_extra,gps` / `ASMC_COLLECT_DISABLE=tl_status`
@@ -264,24 +275,25 @@ Docker에서는 ROS 컨테이너에 `/data`로 쓰기 가능, 학습 컨테이�
 |---|---|
 | `config/morai/sensors/ASMC_sensor_set_v1.json` | 과거 run 재현용 |
 | `config/morai/sensors/ASMC_sensor_set_v2.json` | 현재 10 Hz 회귀 기본값 |
-| `config/morai/sensors/ASMC_sensor_set_v3.json` | 15 Hz 현장 후보, live acceptance 전 |
-| `config/morai/sensors/ASMC_sensor_set_GT.json` | v2 + Semantic Camera×3 + Instance LiDAR, 개발·학습 전용 |
+| `config/morai/sensors/ASMC_sensor_set_v3.json` | 설정·소비 15 Hz 본선 기준; 완성 scan 약 12 Hz 수락 |
+| `config/morai/sensors/ASMC_sensor_set_GT.json` | v3 15 Hz + Semantic Camera×3 + Semantic/Instance LiDAR, local 개발 전용 |
 
 v1→v2의 유효 변경은 rear camera pitch `340°→328°`다. GT 센서셋의 LiDAR는 다음처럼
 동일 위치·주기에서 입력과 정답을 분리한다.
 
 | 용도 | Sensor ID | 위치 | 주기 | 타입 | UDP Dest |
 |---|---:|---|---:|---|---:|
-| runtime/학습 입력 | 5 | `(0.8, 0, 1.45)m` | 10 Hz | Intensity (`0`) | 9299 |
-| 학습 정답 | 11 | `(0.8, 0, 1.45)m` | 10 Hz | Instance (`2`) | 9311 |
+| runtime/학습 입력 | 5 | `(0.8, 0, 1.45)m` | 15 Hz | Intensity (`0`) | 9299 |
+| 개발용 지면/클래스 GT | 11 | `(0.8, 0, 1.45)m` | 15 Hz | Semantic (`1`) | 9311 |
+| 개발용 객체 ID/box GT | 12 | `(0.8, 0, 1.45)m` | 15 Hz | Instance (`2`) | 9313 |
 
-ID 5의 실제 intensity만 detector 입력으로 사용하고 ID 11의 instance point와
-`_instance.txt`/`_instance_8Points.txt`는 class, 3D box, 상대속도와 unique ID 정답으로만
-사용한다. GT value를 입력 feature로 사용하지 않는다. 공용 bridge는 9311을
-항상 독립 수신해, GT가 송신할 때 `/velodyne_points_instance`의 `instance_id uint32`로
-발행한다. v2 센서셋에서는 해당 포트가 데이터 없이 대기한다. 과거 Streaming GT에는
-5–11 pairing gap이 있었으므로 detector 학습 정답은 Capture 파일을 사용한다. 일반 Real
-Time raw bag은 clustering/tracking과 통합 성능 재현에 사용한다.
+ID 5의 실제 intensity만 detector 입력으로 사용한다. ID 11의 `semantic_id uint32`는
+노면·클래스 평가용이고 ID 12의 `instance_id uint32` 및 Capture의
+`_instance.txt`/`_instance_8Points.txt`는 객체 ID·box 정답용이다. Instance ID 0을
+지면 라벨로 취급하지 않으며 GT field를 detector 입력 feature로 사용하지 않는다.
+development bridge만 9311/9313을 수신한다. 기존 v2 GT bag은 이전 파일 SHA를
+기준으로 해석한다. 과거 GT UDP에는 pairing gap이 있었으므로 새 v3 3-LiDAR bag도
+source stamp·점 대응 검증 전에는 학습 정답으로 승인하지 않는다.
 
 ### 실행
 

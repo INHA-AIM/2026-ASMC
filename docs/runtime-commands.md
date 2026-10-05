@@ -562,7 +562,7 @@ firewall=true
 9291, 9293, 9295, 9297, 9299, 9301, 9303
 ```
 
-TrafficLight oracle `7502`, Object oracle `7505`, GT `9305/9307/9309/9311`은 본선
+TrafficLight oracle `7502`, Object oracle `7505`, GT `9305/9307/9309/9311/9313`은 본선
 allowlist에 추가하지 않는다.
 
 6. WSL과 container에서 실제 NIC·route·bind를 확인한다.
