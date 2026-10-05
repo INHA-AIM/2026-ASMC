@@ -16,7 +16,7 @@ class FilterContract(unittest.TestCase):
         self.assertEqual(node.get('required'), 'true')
         launch = ET.parse(ROOT / 'src/behavior_planner/launch/autonomy_no_bridges_v2.launch').getroot()
         self.assertEqual(launch.find("arg[@name='lidar_input_topic']").get('default'),
-                         '/lidar/tracked_objects_map')
+                         '/last_lidar')
         for name in ('drivable_mask_image', 'drivable_mask_metadata',
                      'known_static_catalog', 'static_structure_exclusion_config'):
             relative = node.find("param[@name='%s']" % name).get('value')
