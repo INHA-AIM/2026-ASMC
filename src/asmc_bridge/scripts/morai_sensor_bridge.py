@@ -192,6 +192,7 @@ class SensorBridge(object):
             raise ValueError("lan2lan transport only permits the competition stream profile")
         if self.stream_profile == "competition" and (
                 bool(p("~enable_semantic_camera", False))
+                or bool(p("~enable_semantic_lidar", False))
                 or bool(p("~enable_instance_lidar", False))):
             raise ValueError(
                 "competition stream profile forbids Semantic and Instance sensors"
@@ -320,11 +321,25 @@ class SensorBridge(object):
                         "value_field": "intensity",
                     })
 
+                if p("~enable_semantic_lidar", False):
+                    self.optional_streams.add("lidar_semantic")
+                    self._start_lidar({
+                        "name": "lidar_semantic",
+                        "port": int(p("~semantic_lidar_port", 9311)),
+                        "topic": str(p(
+                            "~semantic_lidar_topic", "/velodyne_points_semantic"
+                        )),
+                        "model": model,
+                        "packets_per_frame": n,
+                        "frame_mode": frame_mode,
+                        "value_field": "semantic_id",
+                    })
+
                 if p("~enable_instance_lidar", False):
                     self.optional_streams.add("lidar_instance")
                     self._start_lidar({
                         "name": "lidar_instance",
-                        "port": int(p("~instance_lidar_port", 9311)),
+                        "port": int(p("~instance_lidar_port", 9313)),
                         "topic": str(
                             p(
                                 "~instance_lidar_topic",
@@ -625,7 +640,10 @@ class SensorBridge(object):
 
     def _make_cloud(self, x, y, z, value, stamp, value_field):
         n = int(x.shape[0])
-        value_dtype = np.uint32 if value_field == "instance_id" else np.float32
+        value_dtype = (
+            np.uint32 if value_field in ("semantic_id", "instance_id")
+            else np.float32
+        )
         arr = np.zeros(n, dtype=[("x", np.float32), ("y", np.float32),
                                  ("z", np.float32),
                                  (value_field, value_dtype)])
@@ -644,7 +662,7 @@ class SensorBridge(object):
             PointField(
                 value_field,
                 12,
-                PointField.UINT32 if value_field == "instance_id"
+                PointField.UINT32 if value_field in ("semantic_id", "instance_id")
                 else PointField.FLOAT32,
                 1,
             ),

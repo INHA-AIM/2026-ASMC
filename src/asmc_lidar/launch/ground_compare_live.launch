@@ -1,9 +1,7 @@
 <launch>
   <arg name="method" default="all"/>
   <arg name="patchwork_variant" default="guard25"/>
-  <arg name="comparison_config" default="$(find asmc_lidar)/config/ground_v4/comparison_all.yaml"/>
-  <arg name="publish_unified" default="false"/>
-  <arg name="node_name" default="ground_compare_live"/>
+  <arg name="comparison_config" default=""/>
   <arg name="rviz" default="true"/>
   <arg name="start_bridge" default="false"/>
   <arg name="transport_profile" default="local"/>
@@ -12,7 +10,6 @@
   <arg name="cmd_ip" default="$(eval '192.168.0.1' if arg('transport_profile') == 'lan2lan' else '127.0.0.1')"/>
   <arg name="cloud_topic" default="/velodyne_points"/>
   <arg name="imu_topic" default="/imu"/>
-  <arg name="expected_lidar_frame" default="velodyne"/>
   <!-- Use start_bridge=false with an already running bridge. -->
   <include if="$(arg start_bridge)" file="$(find asmc_bridge)/launch/bridge.launch">
     <arg name="transport_profile" value="$(arg transport_profile)"/>
@@ -20,14 +17,12 @@
     <arg name="timestamp_mode" value="$(arg timestamp_mode)"/>
     <arg name="cmd_ip" value="$(arg cmd_ip)"/>
   </include>
-  <node pkg="asmc_lidar" type="asmc_lidar_ground_live_node" name="$(arg node_name)" required="true" output="screen">
+  <node pkg="asmc_lidar" type="asmc_lidar_ground_live_node" name="ground_compare_live" required="true" output="screen">
     <param name="method" value="$(arg method)"/>
     <param name="patchwork_variant" value="$(arg patchwork_variant)"/>
     <param name="comparison_config" value="$(arg comparison_config)"/>
-    <param name="publish_unified" value="$(arg publish_unified)"/>
     <param name="cloud_topic" value="$(arg cloud_topic)"/>
     <param name="imu_topic" value="$(arg imu_topic)"/>
-    <param name="expected_lidar_frame" value="$(arg expected_lidar_frame)"/>
     <param name="stamp_provenance" value="$(eval 'simulator_source' if arg('timestamp_mode') == 'source' else 'bridge_receive')"/>
     <param name="calibration_path" value="$(find asmc_lidar)/config/autonav_v3.yaml"/>
   </node>

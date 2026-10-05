@@ -28,7 +28,7 @@ release는 runtime 인자가 아니라 MORAI UI에 import한 network JSON schema
 `bridge.launch`가 Network/Sensor component와 기본 VehicleState를 직접 include하므로 전체 실행에
 추가 조합 계층이 필요하지 않다.
 
-Object/Semantic/Instance oracle은 `./scripts/udp_bridge.sh --streams development`로만 열 수 있고
+Object/Semantic-camera/Semantic-LiDAR/Instance-LiDAR oracle은 `./scripts/udp_bridge.sh --streams development`로만 열 수 있고
 LAN2LAN과 함께 사용할 수 없다. `/vehicle/state` authoritative publisher는 하나만 실행한다.
 
 v3는 MORAI 저장 설정과 손재호 소비 loop가 15 Hz이며 완성 scan 약 12 Hz 입력은 허용한다.

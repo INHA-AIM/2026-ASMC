@@ -29,6 +29,15 @@ class BagProfileTest(unittest.TestCase):
             with self.assertRaisesRegex(BagProfileError, "privileged"):
                 load_bag_profile(root, "bad")
 
+    def test_non_gt_profile_rejects_semantic_lidar(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.write(root, "bad", {
+                "privileged_gt": False,
+                "required_topics": ["/velodyne_points_semantic"],
+            })
+            with self.assertRaisesRegex(BagProfileError, "privileged"):
+                load_bag_profile(root, "bad")
+
     def test_alias_keeps_child_name(self):
         with tempfile.TemporaryDirectory() as root:
             self.write(
@@ -40,6 +49,19 @@ class BagProfileTest(unittest.TestCase):
             profile = load_bag_profile(root, "alias")
             self.assertEqual(profile["name"], "alias")
             self.assertEqual(profile["required_topics"], ["/camera"])
+
+    def test_v3_gt_profile_requires_all_three_lidar_topics(self):
+        root = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), "..", "config", "bag_profiles"
+        ))
+        for name in ("lidar_v3_gt_udp", "dev_oracle_v3_udp"):
+            profile = load_bag_profile(root, name)
+            self.assertTrue(profile["privileged_gt"])
+            self.assertFalse(profile["deployment_allowed"])
+            self.assertTrue({
+                "/velodyne_points", "/velodyne_points_semantic",
+                "/velodyne_points_instance",
+            }.issubset(profile["required_topics"]))
 
     def test_repository_profiles_parse_and_keep_runtime_gt_separate(self):
         root = os.path.abspath(
@@ -55,6 +77,7 @@ class BagProfileTest(unittest.TestCase):
             profile = load_bag_profile(root, name)
             listed = set(profile["required_topics"] + profile["optional_topics"])
             if not profile["privileged_gt"]:
+                self.assertNotIn("/velodyne_points_semantic", listed)
                 self.assertNotIn("/velodyne_points_instance", listed)
                 self.assertNotIn("/Object_topic", listed)
                 self.assertFalse(any(topic.startswith("/sem_") for topic in listed))

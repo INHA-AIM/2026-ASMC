@@ -50,6 +50,26 @@ class SensorBridgeProtocolTest(unittest.TestCase):
         )
         np.testing.assert_array_equal(decoded["id"], [0, 7, 255])
 
+    def test_semantic_cloud_has_uint32_fourth_field(self):
+        bridge = MODULE.SensorBridge.__new__(MODULE.SensorBridge)
+        bridge.frame_lidar = "velodyne"
+        cloud = bridge._make_cloud(
+            np.array([1, 2], dtype=np.float32),
+            np.array([3, 4], dtype=np.float32),
+            np.array([5, 6], dtype=np.float32),
+            np.array([7, 255], dtype=np.uint8),
+            rospy.Time(10, 20),
+            "semantic_id",
+        )
+        self.assertEqual(cloud.header.frame_id, "velodyne")
+        self.assertEqual(cloud.fields[-1].name, "semantic_id")
+        self.assertEqual(cloud.fields[-1].datatype, PointField.UINT32)
+        decoded = np.frombuffer(
+            cloud.data,
+            dtype=[("x", "<f4"), ("y", "<f4"), ("z", "<f4"), ("id", "<u4")],
+        )
+        np.testing.assert_array_equal(decoded["id"], [7, 255])
+
     @staticmethod
     def lidar_packet(azimuth):
         packet = bytearray(1200)

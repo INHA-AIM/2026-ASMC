@@ -9,8 +9,11 @@
   <arg name="lidar_topic"     default="/velodyne_points"/>
   <arg name="lidar_host_port" default="0"/>
   <!-- Privileged GT streams are explicit development-only inputs. -->
+  <arg name="enable_semantic_lidar" default="$(eval arg('stream_profile') == 'development')"/>
+  <arg name="semantic_lidar_port" default="9311"/>
+  <arg name="semantic_lidar_topic" default="/velodyne_points_semantic"/>
   <arg name="enable_instance_lidar" default="$(eval arg('stream_profile') == 'development')"/>
-  <arg name="instance_lidar_port" default="9311"/>
+  <arg name="instance_lidar_port" default="9313"/>
   <arg name="instance_lidar_topic" default="/velodyne_points_instance"/>
   <arg name="timestamp_mode" default="receive"/>
   <arg name="gps_port"        default="9301"/>
@@ -29,7 +32,7 @@
   <arg name="enable_lidar" default="true"/>
   <arg name="enable_semantic_camera" default="$(eval arg('stream_profile') == 'development')"/>
   <arg name="lidar_model"  default="VLP-16"/>
-  <arg name="lidar_rotation_rate" default="10.0"/>
+  <arg name="lidar_rotation_rate" default="15.0"/>
   <!-- azimuth detects physical revolutions and works with both v2 and v3. -->
   <arg name="lidar_frame_mode" default="azimuth"/>
   <arg name="publish_lidar_tf" default="true"/>
@@ -64,6 +67,9 @@
     <param name="lidar_port" value="$(arg lidar_port)"/>
     <param name="lidar_topic" value="$(arg lidar_topic)"/>
     <param name="lidar_host_port" value="$(arg lidar_host_port)"/>
+    <param name="enable_semantic_lidar" value="$(arg enable_semantic_lidar)"/>
+    <param name="semantic_lidar_port" value="$(arg semantic_lidar_port)"/>
+    <param name="semantic_lidar_topic" value="$(arg semantic_lidar_topic)"/>
     <param name="enable_instance_lidar" value="$(arg enable_instance_lidar)"/>
     <param name="instance_lidar_port" value="$(arg instance_lidar_port)"/>
     <param name="instance_lidar_topic" value="$(arg instance_lidar_topic)"/>

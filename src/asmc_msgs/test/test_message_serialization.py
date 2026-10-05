@@ -23,10 +23,6 @@ EXPECTED_MD5 = {
     "TrafficLightDetection": "86055e23eb1cd7ce661d0c315d66a05e",
     "TrackedObject": "6c96135eb03a3ee93bba474fa835f57d",
     "TrackedObjectArray": "e127b2aabd7494ad01a5a56b005bf07e",
-    "LidarObject": "b94cf82e0f325e9ce0364bb143df9f06",
-    "LidarObjectArray": "5f774d07dffd4c7dfa93a8d4b62c60b4",
-    "CameraObjectBox": "19dd1d30aebe2394009542ba9f509717",
-    "CameraObjectBoxArray": "ab2b6ea012a198472d8bab05c354e759",
 }
 
 

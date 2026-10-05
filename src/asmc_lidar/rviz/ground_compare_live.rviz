@@ -21,7 +21,7 @@ Visualization Manager:
       Marker Topic: /lidar_candidate/ground_live/fit_markers
       Queue Size: 1
     - Class: rviz/Group
-      Name: jaeho V4 - selected ground baseline
+      Name: jaeho - general ground review
       Enabled: true
       Displays:
         - Class: rviz/PointCloud2
@@ -80,7 +80,7 @@ Visualization Manager:
           Queue Size: 1
           Decay Time: 0
     - Class: rviz/Group
-      Name: patchwork V4 - research only, NOT ADOPTED
+      Name: patchwork - general ground review
       Enabled: true
       Displays:
         - Class: rviz/PointCloud2
@@ -117,7 +117,7 @@ Visualization Manager:
           Queue Size: 1
           Decay Time: 0
     - Class: rviz/Group
-      Name: linefit V4 - research only
+      Name: linefit - general ground review
       Enabled: true
       Displays:
         - Class: rviz/PointCloud2

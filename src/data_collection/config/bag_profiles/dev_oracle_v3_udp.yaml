@@ -1,0 +1,49 @@
+name: dev_oracle_v3_udp
+description: Privileged v3 RGB/Semantic-camera plus three-way LiDAR oracle over UDP.
+kind: raw
+transport: udp
+timestamp_mode: source
+sensor_set: ASMC_sensor_set_GT
+map: kcity2025
+compression: none
+privileged_gt: true
+deployment_allowed: false
+require_nonempty_topics: true
+required_topics:
+  - /image_jpeg/compressed
+  - /cam_left/image_jpeg/compressed
+  - /cam_right/image_jpeg/compressed
+  - /sem_front/image_jpeg/compressed
+  - /sem_left/image_jpeg/compressed
+  - /sem_right/image_jpeg/compressed
+  - /velodyne_points
+  - /velodyne_points_semantic
+  - /velodyne_points_instance
+  - /Object_topic
+  - /gps
+  - /imu
+  - /Ego_topic
+optional_topics:
+  - /cam_extra/image_jpeg/compressed
+  - /CollisionData
+  - /ctrl_cmd
+  - /tf
+  - /tf_static
+  - /morai_sensor_bridge/diagnostics
+  - /morai_udp_bridge/diagnostics
+expected_types:
+  /image_jpeg/compressed: sensor_msgs/CompressedImage
+  /cam_left/image_jpeg/compressed: sensor_msgs/CompressedImage
+  /cam_right/image_jpeg/compressed: sensor_msgs/CompressedImage
+  /sem_front/image_jpeg/compressed: sensor_msgs/CompressedImage
+  /sem_left/image_jpeg/compressed: sensor_msgs/CompressedImage
+  /sem_right/image_jpeg/compressed: sensor_msgs/CompressedImage
+  /velodyne_points: sensor_msgs/PointCloud2
+  /velodyne_points_semantic: sensor_msgs/PointCloud2
+  /velodyne_points_instance: sensor_msgs/PointCloud2
+  /Object_topic: morai_msgs/ObjectStatusList
+timestamp_provenance:
+  camera: morai_packet_source_time
+  lidar: velodyne_device_time_unwrapped
+  imu_ego_object: morai_packet_source_time
+  gps: bridge_receive_time

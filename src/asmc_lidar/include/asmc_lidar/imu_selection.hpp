@@ -8,8 +8,6 @@ struct ImuSample {
   double roll_rad = 0.0;
   double pitch_rad = 0.0;
   bool valid = false;
-  double yaw_rad = 0.0;
-  double yaw_rate_rad_s = 0.0;
 };
 enum class ImuSelectionStatus { Valid, Missing, FutureOnly, Invalid, Stale };
 struct ImuSelection {

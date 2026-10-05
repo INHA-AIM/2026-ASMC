@@ -46,11 +46,6 @@ add_message_files(
   TrafficLightDetection.msg
   TrackedObject.msg
   TrackedObjectArray.msg
-  # L2-I2: explicit observation/pose/velocity validity; existing MD5s stay frozen.
-  LidarObject.msg
-  LidarObjectArray.msg
-  CameraObjectBox.msg
-  CameraObjectBoxArray.msg
 )
 
 generate_messages(
