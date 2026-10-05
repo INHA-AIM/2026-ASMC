@@ -43,7 +43,7 @@ traffic_light:
   # 한 번 시작한 감속은 같은 정지선에 latch된다. RED/YELLOW STOP과는 별도다.
   approach_speed_limit_kph: 25.0
   approach_comfortable_decel: 2.0
-  approach_margin_m: 1.5
+  approach_margin_m: 7
   post_stopline_distance_m: 30.0
   mock_path: "$(find behavior_planner)/src/config/traffic_light_mock.yaml"
 vehicle: {length: 4.635, width: 1.892, wheelbase: 3.0}
