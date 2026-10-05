@@ -12,7 +12,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from asmc_perception.offline.bev.invalid_support_review import (
+from asmc_camera.offline.bev.invalid_support_review import (
     HEALTHY_REVIEW_CATEGORY,
     INVALID_REVIEW_CATEGORIES,
 )

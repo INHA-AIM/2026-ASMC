@@ -2,7 +2,7 @@
 
 import unittest
 
-from asmc_perception.offline.bev.invalid_support_review import (
+from asmc_camera.offline.bev.invalid_support_review import (
     HEALTHY_REVIEW_CATEGORY,
     InvalidSupportReviewSampler,
     invalid_support_review_categories,

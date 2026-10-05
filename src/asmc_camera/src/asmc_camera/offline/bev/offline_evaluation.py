@@ -13,7 +13,7 @@ from typing import Mapping, Optional
 import cv2
 import numpy as np
 
-from asmc_perception.camera.geometry import LetterboxGeometry
+from asmc_camera.camera.geometry import LetterboxGeometry
 
 from ...bev.projector import CameraBevProjector, ProjectedSemantic
 

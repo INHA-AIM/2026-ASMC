@@ -4,8 +4,8 @@ import unittest
 
 import numpy as np
 
-from asmc_perception.bev.lane_evidence import reduce_evidence_to_nodes
-from asmc_perception.bev.model_grid_projection import MetricEvidence
+from asmc_camera.bev.lane_evidence import reduce_evidence_to_nodes
+from asmc_camera.bev.model_grid_projection import MetricEvidence
 
 
 class LaneEvidenceTest(unittest.TestCase):

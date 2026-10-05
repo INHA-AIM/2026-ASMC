@@ -4,16 +4,16 @@ import unittest
 
 import numpy as np
 
-from asmc_perception.bev.boundary_candidates import (
+from asmc_camera.bev.boundary_candidates import (
     TemporalBoundaryTracker,
     select_shadow_lane_tracks,
     select_shadow_lane_tracks_with_audit,
     select_shadow_boundaries,
     select_shadow_boundaries_with_audit,
 )
-from asmc_perception.bev.lane_evidence import LaneNode
-from asmc_perception.bev.lane_tracking import LaneTrack
-from asmc_perception.bev.spline_fitting import FittedLane
+from asmc_camera.bev.lane_evidence import LaneNode
+from asmc_camera.bev.lane_tracking import LaneTrack
+from asmc_camera.bev.spline_fitting import FittedLane
 
 
 def lane(lane_id, class_id, y, x_start=0.0, x_end=15.0, confidence=0.9,

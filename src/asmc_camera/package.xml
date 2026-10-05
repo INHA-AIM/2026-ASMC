@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>asmc_perception</name>
+  <name>asmc_camera</name>
   <version>0.1.0</version>
   <description>Canonical ASMC camera, BEV, lane and traffic-light runtime.</description>
 

@@ -12,23 +12,23 @@ import statistics
 
 import yaml
 
-from asmc_perception.offline.bev.bag_batch import (
+from asmc_camera.offline.bev.bag_batch import (
     diagnostic_values,
     load_bag_selection,
     result_quality_gates,
     sha256_file,
 )
-from asmc_perception.offline.bev.shadow_result_audit import (
+from asmc_camera.offline.bev.shadow_result_audit import (
     robustness_delta,
     summarize_boundary_frames,
     summarize_boundary_run_groups,
     typed_boundary_frame,
 )
-from asmc_perception.offline.bev.shared_runtime_audit import (
+from asmc_camera.offline.bev.shared_runtime_audit import (
     summarize_shared_runtime_frames,
     summarize_shared_runtime_run_groups,
 )
-from asmc_perception.bev.pipeline_audit import (
+from asmc_camera.bev.pipeline_audit import (
     summarize_pipeline_frames,
     summarize_pipeline_run_groups,
 )

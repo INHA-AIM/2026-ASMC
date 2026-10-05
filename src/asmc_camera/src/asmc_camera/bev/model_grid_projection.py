@@ -7,7 +7,7 @@ from typing import Mapping, Tuple
 
 import numpy as np
 
-from asmc_perception.camera.geometry import (
+from asmc_camera.camera.geometry import (
     LetterboxGeometry,
     compute_letterbox_geometry,
 )

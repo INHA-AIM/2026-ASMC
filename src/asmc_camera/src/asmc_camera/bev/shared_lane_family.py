@@ -9,7 +9,7 @@ two white outer boundaries through normal-direction offsets.
 The implementation is original, dependency-light NumPy code.  It borrows the
 general ideas of confidence-weighted least squares and continuous physical
 priors from the papers documented in
-``src/asmc_perception/docs/bev-development-history.md``; no source is copied
+``src/asmc_camera/docs/bev-development-history.md``; no source is copied
 from the research repositories under ``external``.
 """
 

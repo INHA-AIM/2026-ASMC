@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 import yaml
 
-from asmc_perception.offline.bev.shadow_map_gt import build_shadow_lane_pseudo_gt, with_provenance
+from asmc_camera.offline.bev.shadow_map_gt import build_shadow_lane_pseudo_gt, with_provenance
 
 
 def parse_args():

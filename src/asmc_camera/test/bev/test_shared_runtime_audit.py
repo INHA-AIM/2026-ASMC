@@ -2,7 +2,7 @@
 
 import unittest
 
-from asmc_perception.offline.bev.shared_runtime_audit import (
+from asmc_camera.offline.bev.shared_runtime_audit import (
     summarize_shared_runtime_frames,
     summarize_shared_runtime_run_groups,
 )

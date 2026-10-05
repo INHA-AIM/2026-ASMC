@@ -2,8 +2,8 @@
 
 import unittest
 
-from asmc_perception.offline.bev.pose_time_alignment import align_ego_pose, pose_delta
-from asmc_perception.offline.bev.rgb_bev import StampedEgoPose
+from asmc_camera.offline.bev.pose_time_alignment import align_ego_pose, pose_delta
+from asmc_camera.offline.bev.rgb_bev import StampedEgoPose
 
 
 class PoseTimeAlignmentTest(unittest.TestCase):

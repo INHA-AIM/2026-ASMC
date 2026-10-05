@@ -19,7 +19,7 @@ import time
 
 import yaml
 
-from asmc_perception.offline.bev.bag_batch import (
+from asmc_camera.offline.bev.bag_batch import (
     diagnostic_values,
     load_bag_selection,
     result_quality_gates,
@@ -198,7 +198,7 @@ def commands_for(item, args):
         "post_roll_sec:=2.0",
     ]
     pipeline = [
-        "roslaunch", "asmc_perception", "perception.launch",
+        "roslaunch", "asmc_camera", "perception.launch",
         "start_camera_lane:=true",
         "start_traffic_light:=false",
         "start_visualization:=false",

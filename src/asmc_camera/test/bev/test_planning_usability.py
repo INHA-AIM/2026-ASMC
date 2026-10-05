@@ -4,12 +4,12 @@ import unittest
 
 import numpy as np
 
-from asmc_perception.bev.planning_usability import (
+from asmc_camera.bev.planning_usability import (
     LongitudinalZone,
     measure_planning_usability,
     planning_zones_from_config,
 )
-from asmc_perception.bev.shared_lane_family import (
+from asmc_camera.bev.shared_lane_family import (
     LEFT_ROLE,
     RIGHT_ROLE,
     SAMPLE_INVALID,

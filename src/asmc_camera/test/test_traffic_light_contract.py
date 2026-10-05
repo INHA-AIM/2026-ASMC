@@ -8,7 +8,7 @@ from pathlib import Path
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT / "src"))
 
-from asmc_perception.traffic_light_contract import (
+from asmc_camera.traffic_light_contract import (
     ordered_candidates,
     populate_detection,
     state_for_label,

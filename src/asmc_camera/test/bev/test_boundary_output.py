@@ -4,13 +4,13 @@ import unittest
 
 import numpy as np
 
-from asmc_perception.bev.boundary_candidates import (
+from asmc_camera.bev.boundary_candidates import (
     BoundaryObservation,
     TemporalBoundaryTracker,
     TrackedBoundary,
     select_shadow_boundaries,
 )
-from asmc_perception.bev.boundary_output import (
+from asmc_camera.bev.boundary_output import (
     COLOR_WHITE,
     COLOR_YELLOW,
     COMPLETENESS_COMPLETE,
@@ -18,7 +18,7 @@ from asmc_perception.bev.boundary_output import (
     COMPLETENESS_PARTIAL,
     build_shadow_boundary_output,
 )
-from asmc_perception.bev.spline_fitting import FittedLane
+from asmc_camera.bev.spline_fitting import FittedLane
 
 
 def lane(lane_id, class_id, y, x_start=0.0, x_end=15.0):

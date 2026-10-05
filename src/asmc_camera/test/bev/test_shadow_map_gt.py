@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from asmc_perception.offline.bev.shadow_map_gt import (
+from asmc_camera.offline.bev.shadow_map_gt import (
     SCHEMA_VERSION,
     align_opposing_polylines,
     build_shadow_lane_pseudo_gt,

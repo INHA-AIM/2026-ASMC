@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
-from asmc_perception.bev.calibration import (
+from asmc_camera.bev.calibration import (
     GroundPlane,
     calibrations_from_dict,
     load_calibration_snapshot,

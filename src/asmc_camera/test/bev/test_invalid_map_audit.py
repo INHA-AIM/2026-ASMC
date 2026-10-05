@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from asmc_perception.offline.bev.invalid_map_audit import (
+from asmc_camera.offline.bev.invalid_map_audit import (
     InvalidMapReviewSampler,
     invalid_category_masks,
     invalid_distance_band,

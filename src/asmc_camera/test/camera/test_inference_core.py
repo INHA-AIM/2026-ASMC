@@ -6,21 +6,21 @@ import unittest
 
 import numpy as np
 
-from asmc_perception.camera.backend import (
+from asmc_camera.camera.backend import (
     BackendInfo,
     CategoricalOutput,
     SemanticBackend,
 )
-from asmc_perception.camera.backends import create_backend
-from asmc_perception.camera.frame_buffer import EncodedFrame, LatestFrameBuffer
-from asmc_perception.camera.geometry import (
+from asmc_camera.camera.backends import create_backend
+from asmc_camera.camera.frame_buffer import EncodedFrame, LatestFrameBuffer
+from asmc_camera.camera.geometry import (
     compute_letterbox_geometry,
     letterbox_bgr,
     restore_categorical_probabilities,
     restore_class_ids,
     restore_probability,
 )
-from asmc_perception.camera.inference_engine import InferenceEngine
+from asmc_camera.camera.inference_engine import InferenceEngine
 
 
 class DummyBackend(SemanticBackend):

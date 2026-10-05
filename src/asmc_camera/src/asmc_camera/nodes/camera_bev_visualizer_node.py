@@ -14,11 +14,11 @@ import numpy as np
 import rospy
 from sensor_msgs.msg import CompressedImage, Image
 
-from asmc_perception.bev.calibration import calibrations_from_dict
-from asmc_perception.bev.fusion import build_quality_maps
-from asmc_perception.bev.grid import BevGridSpec
-from asmc_perception.bev.projector import CameraBevProjector
-from asmc_perception.bev.visualization import (
+from asmc_camera.bev.calibration import calibrations_from_dict
+from asmc_camera.bev.fusion import build_quality_maps
+from asmc_camera.bev.grid import BevGridSpec
+from asmc_camera.bev.projector import CameraBevProjector
+from asmc_camera.bev.visualization import (
     build_bev_mosaic,
     crop_bev_layers,
     draw_ground_grid_overlay,

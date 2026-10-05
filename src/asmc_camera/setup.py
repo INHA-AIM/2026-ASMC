@@ -5,15 +5,15 @@ from catkin_pkg.python_setup import generate_distutils_setup
 
 setup_args = generate_distutils_setup(
     packages=[
-        "asmc_perception",
-        "asmc_perception.bev",
-        "asmc_perception.camera",
-        "asmc_perception.camera.backends",
-        "asmc_perception.nodes",
-        "asmc_perception.offline",
-        "asmc_perception.offline.bev",
-        "asmc_perception.training",
-        "asmc_perception.training.twinlite",
+        "asmc_camera",
+        "asmc_camera.bev",
+        "asmc_camera.camera",
+        "asmc_camera.camera.backends",
+        "asmc_camera.nodes",
+        "asmc_camera.offline",
+        "asmc_camera.offline.bev",
+        "asmc_camera.training",
+        "asmc_camera.training.twinlite",
     ],
     package_dir={"": "src"},
 )

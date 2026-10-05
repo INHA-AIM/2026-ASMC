@@ -2,7 +2,7 @@
 
 import unittest
 
-from asmc_perception.bev.invalid_support import (
+from asmc_camera.bev.invalid_support import (
     InvalidSupportClassificationConfig,
     classify_invalid_support,
     invalid_support_config_from_dict,

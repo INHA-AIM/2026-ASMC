@@ -3,7 +3,7 @@
 import unittest
 from types import SimpleNamespace
 
-from asmc_perception.offline.bev.shadow_result_audit import (
+from asmc_camera.offline.bev.shadow_result_audit import (
     robustness_delta,
     summarize_boundary_frames,
     summarize_boundary_run_groups,

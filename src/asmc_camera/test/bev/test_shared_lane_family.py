@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from asmc_perception.bev.boundary_family_output import (
+from asmc_camera.bev.boundary_family_output import (
     ROLE_LEFT_OUTER_BOUNDARY,
     ROLE_RIGHT_OUTER_BOUNDARY,
     ROLE_ROAD_CENTRE_BOUNDARY,
@@ -13,9 +13,9 @@ from asmc_perception.bev.boundary_family_output import (
     SUPPORT_STRUCTURE_INFERRED,
     build_boundary_family_output,
 )
-from asmc_perception.bev.lane_evidence import LaneNode
-from asmc_perception.bev.lane_tracking import LaneTrack
-from asmc_perception.bev.shared_lane_family import (
+from asmc_camera.bev.lane_evidence import LaneNode
+from asmc_camera.bev.lane_tracking import LaneTrack
+from asmc_camera.bev.shared_lane_family import (
     LEFT_ROLE,
     OBSERVED,
     RIGHT_ROLE,

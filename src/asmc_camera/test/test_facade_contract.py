@@ -10,7 +10,7 @@ import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-PACKAGE_ROOT = REPO_ROOT / "src" / "asmc_perception"
+PACKAGE_ROOT = REPO_ROOT / "src" / "asmc_camera"
 SENSOR_ROOT = REPO_ROOT / "config" / "morai" / "sensors"
 
 
@@ -71,10 +71,10 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         }
         self.assertEqual(
             {
-                ("asmc_perception", "camera_bev_node.py"),
-                ("asmc_perception", "camera_bev_fusion_node.py"),
-                ("asmc_perception", "lane_vectorizer_node.py"),
-                ("asmc_perception", "traffic_light_node.py"),
+                ("asmc_camera", "camera_bev_node.py"),
+                ("asmc_camera", "camera_bev_fusion_node.py"),
+                ("asmc_camera", "lane_vectorizer_node.py"),
+                ("asmc_camera", "traffic_light_node.py"),
             },
             nodes,
         )
@@ -92,7 +92,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             "lane_vectorizer_node.py",
             "lane_vector_visualizer_node.py",
         }
-        canonical_root = PACKAGE_ROOT / "src" / "asmc_perception" / "nodes"
+        canonical_root = PACKAGE_ROOT / "src" / "asmc_camera" / "nodes"
         for filename in implementations:
             body = (canonical_root / filename).read_text(encoding="utf-8")
             self.assertIn("def main", body, filename)
@@ -107,7 +107,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         )
 
     def test_runtime_support_and_config_are_canonically_owned(self):
-        canonical_root = PACKAGE_ROOT / "src" / "asmc_perception"
+        canonical_root = PACKAGE_ROOT / "src" / "asmc_camera"
         expected_support = {
             "camera": 8,
             "bev": 19,
@@ -210,7 +210,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             traffic["vehicle_closed_loop_acceptance"],
         )
         self.assertEqual(
-            "asmc_perception",
+            "asmc_camera",
             self.runtime["components"]["camera_lane"]["support_library_owner"],
         )
         self.assertEqual(
@@ -275,7 +275,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         node_packages = {item.get("pkg") for item in visualizer.iter("node")}
         self.assertIn("camera_bev_visualizer_node.py", node_types)
         self.assertIn("lane_vector_visualizer_node.py", node_types)
-        self.assertEqual({"asmc_perception"}, node_packages)
+        self.assertEqual({"asmc_camera"}, node_packages)
 
     def test_runtime_visualization_defaults_are_compact(self):
         visualization = self.runtime["components"]["visualization"]
@@ -344,7 +344,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         )
         node_body = (
             PACKAGE_ROOT
-            / "src/asmc_perception/nodes/lane_vectorizer_node.py"
+            / "src/asmc_camera/nodes/lane_vectorizer_node.py"
         ).read_text(encoding="utf-8")
         self.assertIn(
             'rospy.get_param("~publish_pipeline_audit", False)', node_body
@@ -362,7 +362,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         self.assertEqual(
             {
                 ("behavior_planner", "behavior_node"),
-                ("asmc_perception", "traffic_light_closed_loop_acceptance.py"),
+                ("asmc_camera", "traffic_light_closed_loop_acceptance.py"),
             },
             nodes,
         )
@@ -397,7 +397,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             ).read_text(encoding="utf-8")
         )
         self.assertEqual(
-            "src/asmc_perception/models/traffic_light/best.pt",
+            "src/asmc_camera/models/traffic_light/best.pt",
             evidence["checkpoint"]["path"],
         )
         self.assertEqual(
@@ -407,7 +407,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
 
     def test_planning_launches_use_the_canonical_traffic_light_model(self):
         behavior_root = REPO_ROOT / "src" / "behavior_planner"
-        expected = "$(find asmc_perception)/models/traffic_light/best.pt"
+        expected = "$(find asmc_camera)/models/traffic_light/best.pt"
         for name in ("autonomy_no_bridges.launch", "autonomy_no_bridges_v2.launch"):
             launch = ET.parse(behavior_root / "launch" / name).getroot()
             arguments = {
@@ -431,7 +431,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         dependencies = {
             item.text for item in package if item.tag.endswith("depend")
         }
-        self.assertIn("asmc_perception", dependencies)
+        self.assertIn("asmc_camera", dependencies)
         self.assertNotIn("traffic_light", dependencies)
 
 

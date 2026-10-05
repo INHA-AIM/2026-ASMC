@@ -13,16 +13,16 @@ import rospy
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from sensor_msgs.msg import Image
 
-from asmc_perception.bev.calibration import (
+from asmc_camera.bev.calibration import (
     calibrations_from_dict,
     validate_sensor_set_snapshot,
 )
-from asmc_perception.bev.grid import BevGridSpec
-from asmc_perception.bev.performance_monitor import (
+from asmc_camera.bev.grid import BevGridSpec
+from asmc_camera.bev.performance_monitor import (
     PerformanceMonitor,
     source_time_gate_with_reset,
 )
-from asmc_perception.bev.projector import CameraBevProjector
+from asmc_camera.bev.projector import CameraBevProjector
 
 
 def _enabled_views(value):

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import numpy as np
 
-from asmc_perception.bev.invalid_support import (
+from asmc_camera.bev.invalid_support import (
     DEFAULT_INVALID_SUPPORT_CONFIG,
     classify_invalid_support,
 )

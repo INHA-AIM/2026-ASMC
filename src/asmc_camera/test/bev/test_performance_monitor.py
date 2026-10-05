@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import patch
 
-from asmc_perception.bev.performance_monitor import (
+from asmc_camera.bev.performance_monitor import (
     PerformanceMonitor,
     source_time_gate,
     source_time_gate_with_reset,
@@ -59,7 +59,7 @@ class PerformanceMonitorTest(unittest.TestCase):
         monitor.count_error("front")
 
         with patch(
-            "asmc_perception.bev.performance_monitor.time.monotonic",
+            "asmc_camera.bev.performance_monitor.time.monotonic",
             side_effect=[10.0, 10.1],
         ):
             monitor.count_output(

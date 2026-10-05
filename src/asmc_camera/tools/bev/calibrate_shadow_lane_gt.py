@@ -11,7 +11,7 @@ import numpy as np
 import rosbag
 from sensor_msgs import point_cloud2
 
-from asmc_perception.offline.bev.map_lane_calibration import (
+from asmc_camera.offline.bev.map_lane_calibration import (
     BOUNDARY_ORDER,
     BoundaryResidualProjector,
     calibrated_lane_geometry,

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(asmc_perception)
+project(asmc_camera)
 
 find_package(catkin REQUIRED COMPONENTS
   asmc_msgs

@@ -1,4 +1,4 @@
-"""Canonical camera semantic runtime support owned by :mod:`asmc_perception`."""
+"""Canonical camera semantic runtime support owned by :mod:`asmc_camera`."""
 
 from .backend import BackendInfo, CategoricalOutput, SemanticBackend
 from .frame_buffer import EncodedFrame, LatestFrameBuffer

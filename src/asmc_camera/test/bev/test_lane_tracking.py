@@ -4,8 +4,8 @@ import unittest
 
 import numpy as np
 
-from asmc_perception.bev.lane_evidence import LaneNode
-from asmc_perception.bev.lane_tracking import (
+from asmc_camera.bev.lane_evidence import LaneNode
+from asmc_camera.bev.lane_tracking import (
     associate_lane_nodes,
     associate_lane_nodes_with_audit,
 )

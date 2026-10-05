@@ -15,15 +15,15 @@ import rospy
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from sensor_msgs.msg import Image
 
-from asmc_perception.bev.calibration import calibrations_from_dict
-from asmc_perception.bev.fusion import (
+from asmc_camera.bev.calibration import calibrations_from_dict
+from asmc_camera.bev.fusion import (
     CameraBevFusion,
     build_quality_maps,
     timestamp_span_ns,
 )
-from asmc_perception.bev.grid import BevGridSpec
-from asmc_perception.bev.performance_monitor import source_time_gate_with_reset
-from asmc_perception.bev.projector import CameraBevProjector, ProjectedSemantic
+from asmc_camera.bev.grid import BevGridSpec
+from asmc_camera.bev.performance_monitor import source_time_gate_with_reset
+from asmc_camera.bev.projector import CameraBevProjector, ProjectedSemantic
 
 
 @dataclass(frozen=True)

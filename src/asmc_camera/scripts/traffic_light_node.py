@@ -18,10 +18,10 @@ import torch
 import torch.nn.functional as F
 from PIL import Image
 
-from asmc_perception.traffic_light_contract import (
+from asmc_camera.traffic_light_contract import (
     populate_detection,
 )
-from asmc_perception.traffic_light_model import (
+from asmc_camera.traffic_light_model import (
     IMAGENET_MEAN,
     IMAGENET_STD,
     decide,

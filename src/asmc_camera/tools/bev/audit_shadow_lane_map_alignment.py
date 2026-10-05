@@ -15,8 +15,8 @@ import numpy as np
 import rosbag
 from sensor_msgs import point_cloud2
 
-from asmc_perception.bev.calibration import load_calibration_snapshot
-from asmc_perception.offline.bev.shadow_map_gt import (
+from asmc_camera.bev.calibration import load_calibration_snapshot
+from asmc_camera.offline.bev.shadow_map_gt import (
     lidar_paint_alignment,
     map_xy_to_base,
     sha256_file,

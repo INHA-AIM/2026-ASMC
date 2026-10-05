@@ -5,9 +5,9 @@ from pathlib import Path
 
 import numpy as np
 
-from asmc_perception.bev.calibration import load_calibration_snapshot
-from asmc_perception.bev.grid import BevGridSpec
-from asmc_perception.bev.visualization import (
+from asmc_camera.bev.calibration import load_calibration_snapshot
+from asmc_camera.bev.grid import BevGridSpec
+from asmc_camera.bev.visualization import (
     bev_crop_slices,
     build_bev_mosaic,
     colorize_road_marking,

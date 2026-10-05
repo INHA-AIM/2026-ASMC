@@ -4,9 +4,9 @@ import unittest
 
 import numpy as np
 
-from asmc_perception.bev.lane_evidence import LaneNode
-from asmc_perception.bev.lane_tracking import LaneTrack
-from asmc_perception.bev.spline_fitting import (
+from asmc_camera.bev.lane_evidence import LaneNode
+from asmc_camera.bev.lane_tracking import LaneTrack
+from asmc_camera.bev.spline_fitting import (
     bspline_basis,
     fit_lane_track,
     fit_lane_tracks_with_audit,
@@ -15,7 +15,7 @@ from asmc_perception.bev.spline_fitting import (
 
 class SplineFittingTest(unittest.TestCase):
     def test_basis_is_partition_of_unity(self):
-        from asmc_perception.bev.spline_fitting import _open_uniform_knots
+        from asmc_camera.bev.spline_fitting import _open_uniform_knots
 
         knots = _open_uniform_knots(6, 3)
         basis = bspline_basis(np.linspace(0.0, 1.0, 101), knots, 3, 6)

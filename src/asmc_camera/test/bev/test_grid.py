@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from asmc_perception.bev.grid import BevGridSpec
+from asmc_camera.bev.grid import BevGridSpec
 
 
 class BevGridSpecTest(unittest.TestCase):

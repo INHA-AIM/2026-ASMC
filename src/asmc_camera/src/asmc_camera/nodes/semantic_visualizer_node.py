@@ -12,7 +12,7 @@ import numpy as np
 import rospy
 from sensor_msgs.msg import CompressedImage, Image
 
-from asmc_perception.camera.visualization import render_mosaic, render_panel
+from asmc_camera.camera.visualization import render_mosaic, render_panel
 
 
 SUPPORTED_VIEWS = ("front", "left", "right")

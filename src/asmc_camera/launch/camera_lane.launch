@@ -1,6 +1,6 @@
 <launch>
   <!-- Canonical P4-C camera runtime. Implementation, support modules and
-       runtime configuration are owned by asmc_perception. -->
+       runtime configuration are owned by asmc_camera. -->
   <arg name="views" default="front, left, right"/>
   <arg name="checkpoint"
        default="/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v5_actor_negative_init_ema_b12_e18_20260906/best_mean.pt"/>
@@ -11,12 +11,12 @@
   <arg name="publish_model_grid_road_marking" default="false"/>
   <arg name="model_grid_max_hz" default="10.0"/>
 
-  <node pkg="asmc_perception" type="semantic_inference_node.py"
+  <node pkg="asmc_camera" type="semantic_inference_node.py"
         name="camera_semantic_inference" output="screen" required="true">
     <rosparam command="load"
-              file="$(find asmc_perception)/config/camera/cameras.yaml"/>
+              file="$(find asmc_camera)/config/camera/cameras.yaml"/>
     <rosparam command="load"
-              file="$(find asmc_perception)/config/camera/twinlite_medium.yaml"/>
+              file="$(find asmc_camera)/config/camera/twinlite_medium.yaml"/>
     <rosparam param="views" subst_value="true">[$(arg views)]</rosparam>
     <param name="checkpoint" value="$(arg checkpoint)"/>
     <param name="device" value="$(arg device)"/>

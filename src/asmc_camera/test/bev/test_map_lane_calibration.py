@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from asmc_perception.offline.bev.map_lane_calibration import (
+from asmc_camera.offline.bev.map_lane_calibration import (
     BoundaryResidualEstimate,
     BoundaryResidualProjector,
     calibrated_lane_geometry,

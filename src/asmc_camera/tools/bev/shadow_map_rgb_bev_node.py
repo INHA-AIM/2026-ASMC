@@ -18,18 +18,18 @@ import numpy as np
 import rospy
 from sensor_msgs.msg import CompressedImage
 
-from asmc_perception.bev.calibration import calibrations_from_dict
-from asmc_perception.bev.fusion import build_quality_maps, timestamp_span_ns
-from asmc_perception.bev.grid import BevGridSpec
-from asmc_perception.bev.projector import CameraBevProjector
-from asmc_perception.offline.bev.rgb_bev import (
+from asmc_camera.bev.calibration import calibrations_from_dict
+from asmc_camera.bev.fusion import build_quality_maps, timestamp_span_ns
+from asmc_camera.bev.grid import BevGridSpec
+from asmc_camera.bev.projector import CameraBevProjector
+from asmc_camera.offline.bev.rgb_bev import (
     StampedEgoPose,
     fuse_rgb_views,
     nearest_ego_pose,
     overlay_shadow_map_boundaries,
     warp_rgb_to_bev,
 )
-from asmc_perception.offline.bev.shadow_map_gt import map_xy_to_base
+from asmc_camera.offline.bev.shadow_map_gt import map_xy_to_base
 
 
 VIEWS = ("front", "left", "right")

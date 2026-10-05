@@ -1,4 +1,4 @@
-"""Canonical metric BEV and lane runtime support owned by asmc_perception."""
+"""Canonical metric BEV and lane runtime support owned by asmc_camera."""
 
 from .calibration import (
     CameraCalibration,

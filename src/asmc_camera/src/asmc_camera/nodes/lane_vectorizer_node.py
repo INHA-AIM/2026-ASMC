@@ -27,43 +27,43 @@ from sensor_msgs.msg import Image, PointCloud2, PointField
 from std_msgs.msg import Header
 from visualization_msgs.msg import Marker, MarkerArray
 
-from asmc_perception.bev.boundary_candidates import (
+from asmc_camera.bev.boundary_candidates import (
     TemporalBoundaryTracker,
     select_shadow_lane_tracks_with_audit,
     select_shadow_boundaries_with_audit,
 )
-from asmc_perception.bev.boundary_output import (
+from asmc_camera.bev.boundary_output import (
     BoundaryOutputFrame,
     COMPLETENESS_COMPLETE,
     COMPLETENESS_EMPTY,
     build_shadow_boundary_output,
 )
-from asmc_perception.bev.boundary_family_output import build_boundary_family_output
-from asmc_perception.bev.calibration import calibrations_from_dict
-from asmc_perception.bev.invalid_support import (
+from asmc_camera.bev.boundary_family_output import build_boundary_family_output
+from asmc_camera.bev.calibration import calibrations_from_dict
+from asmc_camera.bev.invalid_support import (
     classify_invalid_support,
     invalid_support_config_from_dict,
 )
-from asmc_perception.bev.lane_evidence import reduce_evidence_to_nodes
-from asmc_perception.bev.lane_tracking import associate_lane_nodes_with_audit
-from asmc_perception.bev.model_grid_projection import (
+from asmc_camera.bev.lane_evidence import reduce_evidence_to_nodes
+from asmc_camera.bev.lane_tracking import associate_lane_nodes_with_audit
+from asmc_camera.bev.model_grid_projection import (
     MetricEvidence,
     ModelGridGroundProjector,
 )
-from asmc_perception.bev.pipeline_audit import PipelineAuditAccumulator
-from asmc_perception.bev.planning_usability import (
+from asmc_camera.bev.pipeline_audit import PipelineAuditAccumulator
+from asmc_camera.bev.planning_usability import (
     DEFAULT_PLANNING_ZONES,
     measure_planning_usability,
     planning_zones_from_config,
 )
-from asmc_perception.bev.shared_lane_family import (
+from asmc_camera.bev.shared_lane_family import (
     LEFT_ROLE,
     RIGHT_ROLE,
     YELLOW_ROLE,
     contiguous_sample_state_segments,
     fit_shared_lane_family_with_audit,
 )
-from asmc_perception.bev.spline_fitting import fit_lane_tracks_with_audit
+from asmc_camera.bev.spline_fitting import fit_lane_tracks_with_audit
 
 
 @dataclass(frozen=True)

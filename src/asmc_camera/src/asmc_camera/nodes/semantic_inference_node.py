@@ -13,9 +13,9 @@ import rospy
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from sensor_msgs.msg import CompressedImage, Image
 
-from asmc_perception.camera.backends import create_backend
-from asmc_perception.camera.frame_buffer import EncodedFrame, LatestFrameBuffer
-from asmc_perception.camera.inference_engine import InferenceEngine
+from asmc_camera.camera.backends import create_backend
+from asmc_camera.camera.frame_buffer import EncodedFrame, LatestFrameBuffer
+from asmc_camera.camera.inference_engine import InferenceEngine
 
 
 SUPPORTED_VIEWS = ("front", "left", "right")

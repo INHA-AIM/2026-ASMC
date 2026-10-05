@@ -8,10 +8,10 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from asmc_perception.training.twinlite.dataset import MoraiTwinLiteDataset
-from asmc_perception.training.twinlite.losses import MaskedTwinLiteLoss, adapt_twinlite_outputs
-from asmc_perception.training.twinlite.tasks import ROAD_MARKING_TASK
-from asmc_perception.training.twinlite.training import twinlite_training_step
+from asmc_camera.training.twinlite.dataset import MoraiTwinLiteDataset
+from asmc_camera.training.twinlite.losses import MaskedTwinLiteLoss, adapt_twinlite_outputs
+from asmc_camera.training.twinlite.tasks import ROAD_MARKING_TASK
+from asmc_camera.training.twinlite.training import twinlite_training_step
 
 
 def write_png(path, image):

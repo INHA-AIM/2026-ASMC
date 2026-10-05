@@ -4,8 +4,8 @@ import unittest
 
 import numpy as np
 
-from asmc_perception.bev.grid import BevGridSpec
-from asmc_perception.offline.bev.rgb_bev import (
+from asmc_camera.bev.grid import BevGridSpec
+from asmc_camera.offline.bev.rgb_bev import (
     StampedEgoPose,
     fuse_rgb_views,
     nearest_ego_pose,

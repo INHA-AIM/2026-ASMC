@@ -5,8 +5,8 @@ from pathlib import Path
 
 import numpy as np
 
-from asmc_perception.bev.calibration import load_calibration_snapshot
-from asmc_perception.bev.model_grid_projection import ModelGridGroundProjector
+from asmc_camera.bev.calibration import load_calibration_snapshot
+from asmc_camera.bev.model_grid_projection import ModelGridGroundProjector
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]

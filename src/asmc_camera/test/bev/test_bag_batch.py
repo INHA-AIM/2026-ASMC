@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from asmc_perception.offline.bev.bag_batch import (
+from asmc_camera.offline.bev.bag_batch import (
     diagnostic_values,
     load_bag_selection,
     result_quality_gates,

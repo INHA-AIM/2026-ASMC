@@ -2,7 +2,7 @@
 
 import unittest
 
-from asmc_perception.bev.pipeline_audit import (
+from asmc_camera.bev.pipeline_audit import (
     PipelineAuditAccumulator,
     primary_outcome,
     rejection_counts,

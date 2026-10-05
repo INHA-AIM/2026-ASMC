@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from asmc_perception.training.twinlite.tasks import (
+from asmc_camera.training.twinlite.tasks import (
     BINARY_LANE_TASK,
     ROAD_MARKING_TASK,
     configure_twinlite_task,

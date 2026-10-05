@@ -6,9 +6,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from asmc_perception.bev.calibration import load_calibration_snapshot
-from asmc_perception.bev.grid import BevGridSpec
-from asmc_perception.bev.projector import CameraBevProjector
+from asmc_camera.bev.calibration import load_calibration_snapshot
+from asmc_camera.bev.grid import BevGridSpec
+from asmc_camera.bev.projector import CameraBevProjector
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]

@@ -25,7 +25,7 @@
        not teleport or control Ego.  When enabled, death of the required test
        node shuts down Frenet/MPC before the operator resumes manual driving. -->
   <node if="$(arg run_acceptance)" required="true"
-        pkg="asmc_perception" type="traffic_light_vehicle_acceptance.py"
+        pkg="asmc_camera" type="traffic_light_vehicle_acceptance.py"
         name="traffic_light_vehicle_acceptance" output="screen">
     <param name="allow_vehicle_control" value="$(arg allow_vehicle_control)"/>
     <param name="repo_root" value="$(arg repo_root)"/>

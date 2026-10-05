@@ -24,7 +24,7 @@
     <param name="publish_topics/marker" value="/acceptance/behavior/markers"/>
   </node>
 
-  <node pkg="asmc_perception" type="traffic_light_closed_loop_acceptance.py"
+  <node pkg="asmc_camera" type="traffic_light_closed_loop_acceptance.py"
         name="traffic_light_closed_loop_acceptance" output="screen"
         required="true">
     <param name="report_path" value="$(arg report_path)"/>

@@ -25,37 +25,37 @@ from morai_msgs.msg import EgoVehicleStatus
 from sensor_msgs import point_cloud2
 from sensor_msgs.msg import PointCloud2
 
-from asmc_perception.bev.boundary_candidates import (
+from asmc_camera.bev.boundary_candidates import (
     TemporalBoundaryTracker,
     select_shadow_boundaries_with_audit,
     select_shadow_lane_tracks_with_audit,
 )
-from asmc_perception.bev.lane_evidence import reduce_evidence_to_nodes
-from asmc_perception.bev.lane_tracking import associate_lane_nodes_with_audit
-from asmc_perception.bev.model_grid_projection import MetricEvidence
-from asmc_perception.bev.invalid_support import (
+from asmc_camera.bev.lane_evidence import reduce_evidence_to_nodes
+from asmc_camera.bev.lane_tracking import associate_lane_nodes_with_audit
+from asmc_camera.bev.model_grid_projection import MetricEvidence
+from asmc_camera.bev.invalid_support import (
     classify_invalid_support,
     invalid_support_config_from_dict,
 )
-from asmc_perception.offline.bev.invalid_support_review import InvalidSupportReviewSampler
-from asmc_perception.offline.bev.invalid_map_audit import (
+from asmc_camera.offline.bev.invalid_support_review import InvalidSupportReviewSampler
+from asmc_camera.offline.bev.invalid_map_audit import (
     InvalidMapReviewSampler,
     invalid_category_masks,
     invalid_distance_band,
 )
-from asmc_perception.bev.planning_usability import (
+from asmc_camera.bev.planning_usability import (
     DEFAULT_PLANNING_ZONES,
     measure_planning_usability,
     planning_zones_from_config,
 )
-from asmc_perception.offline.bev.pose_time_alignment import align_ego_pose, pose_delta
-from asmc_perception.offline.bev.rgb_bev import StampedEgoPose
-from asmc_perception.offline.bev.shadow_map_gt import (
+from asmc_camera.offline.bev.pose_time_alignment import align_ego_pose, pose_delta
+from asmc_camera.offline.bev.rgb_bev import StampedEgoPose
+from asmc_camera.offline.bev.shadow_map_gt import (
     map_xy_to_base,
     nearest_polyline_distance,
     nearest_polyline_signed_normal_distance,
 )
-from asmc_perception.bev.shared_lane_family import (
+from asmc_camera.bev.shared_lane_family import (
     LEFT_ROLE,
     RIGHT_ROLE,
     ROLE_ORDER,
@@ -65,7 +65,7 @@ from asmc_perception.bev.shared_lane_family import (
     YELLOW_ROLE,
     fit_shared_lane_family_with_audit,
 )
-from asmc_perception.bev.spline_fitting import fit_lane_tracks_with_audit
+from asmc_camera.bev.spline_fitting import fit_lane_tracks_with_audit
 
 
 SCHEMA_VERSION = "asmc-shadow-lane-family-ab-1.5.0"

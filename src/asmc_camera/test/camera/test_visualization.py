@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from asmc_perception.camera.visualization import (
+from asmc_camera.camera.visualization import (
     DRIVABLE_COLOR_BGR,
     LANE_COLOR_BGR,
     STOPLINE_COLOR_BGR,
