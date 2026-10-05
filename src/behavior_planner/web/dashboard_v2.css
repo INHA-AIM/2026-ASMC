@@ -1,4 +1,9 @@
 /* LiDAR-oriented V2 diagnostics. The legacy V1 page keeps dashboard.css. */
+.map-panel .toolbar {
+  max-width: calc(100% - 24px);
+  flex-wrap: wrap;
+}
+
 .legend-toggle {
   position: absolute;
   left: 12px;
@@ -70,6 +75,27 @@
 .lidar-legend .motion-low { border-color: #39e58c; }
 .lidar-legend .motion-pending { border-color: #ffd447; }
 .lidar-legend .motion-dynamic { border-color: #ff5263; }
+.lidar-legend .filter-keep,
+.lidar-legend .filter-drop {
+  width: 14px;
+  height: 9px;
+  border: 2px solid #d7e8f0;
+  border-radius: 2px;
+  background: transparent;
+}
+.lidar-legend .filter-drop {
+  border-style: dashed;
+  position: relative;
+}
+.lidar-legend .filter-drop::after {
+  content: '×';
+  position: absolute;
+  left: 2px;
+  top: -7px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+}
 .lidar-legend .avoid-target {
   border-color: #fff;
   box-shadow: 0 0 5px #fff;
@@ -111,7 +137,7 @@
 
 .object-row {
   display: grid;
-  grid-template-columns: 68px 72px 92px 1fr;
+  grid-template-columns: 68px 65px 82px 48px 1fr;
   gap: 7px;
   align-items: center;
   padding: 6px 7px;
@@ -119,6 +145,28 @@
   border-radius: 6px;
   background: #0a151e;
   font: 10px ui-monospace, monospace;
+}
+
+.object-row.filter-dropped {
+  border-style: dashed;
+  border-color: #b8c8d2;
+  background: #111820;
+}
+
+.object-row .filter-state {
+  padding: 3px 4px;
+  border: 1px solid #4d6877;
+  border-radius: 4px;
+  color: #9ee7fb;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.object-row.filter-dropped .filter-state {
+  border-style: dashed;
+  border-color: #d7e8f0;
+  color: #fff;
 }
 
 .object-row.avoid-selected {
@@ -164,11 +212,14 @@
   white-space: nowrap;
 }
 .object-row .velocity-detail,
-.object-row .displacement-detail {
+.object-row .displacement-detail,
+.object-row .filter-detail {
   grid-column: 2 / -1;
 }
 .object-row .velocity-detail { color: #d6e4ea; }
 .object-row .displacement-detail { color: #8299a8; }
+.object-row .filter-detail { color: #9ee7fb; }
+.object-row.filter-dropped .filter-detail { color: #f0f6f9; }
 .motion-summary {
   margin-top: 9px;
   padding: 7px 8px;
@@ -177,6 +228,9 @@
   background: #08131b;
   font: 10px ui-monospace, monospace;
 }
+.motion-summary span { display: block; }
+.motion-summary span + span { margin-top: 4px; }
+.motion-summary .summary-filter { color: #9ee7fb; }
 .motion-summary .summary-clear { color: #6debaa; }
 .motion-summary .summary-blocked { color: #ffcf7f; }
 .object-empty { padding: 8px 0; color: #8299a8; font: 11px ui-monospace, monospace; }

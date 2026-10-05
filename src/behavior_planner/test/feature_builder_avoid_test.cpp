@@ -418,6 +418,71 @@ TEST_F(FeatureBuilderAvoidTest,
 }
 
 TEST_F(FeatureBuilderAvoidTest,
+       UniqueFullSizeStaticDuplicateMatchesCurrentLead) {
+  TrackedObject lead = ObjectAt(20.0, 0.0, 2.0);
+  lead.id = 80;
+  lead.type = ObjectType::VEHICLE;
+  lead.motion_state = MotionState::DYNAMIC;
+  lead.length = 4.5;
+  lead.vx = 3.0 * std::cos(lead.yaw);
+  lead.vy = 3.0 * std::sin(lead.yaw);
+  lead.speed = 3.0;
+
+  TrackedObject duplicate = lead;
+  duplicate.id = 81;
+  duplicate.type = ObjectType::UNKNOWN;
+  duplicate.motion_state = MotionState::LOW_THREAT;
+  duplicate.length = 4.3;
+  duplicate.width = 1.9;
+  duplicate.vx = 0.0;
+  duplicate.vy = 0.0;
+  duplicate.speed = 0.0;
+
+  PerceptionObjects objects;
+  objects.vehicles.push_back(lead);
+  objects.obstacles.push_back(duplicate);
+  const UrbanFeature feature = BuildObjects(objects);
+
+  ASSERT_TRUE(feature.surrounding.has_front_vehicle);
+  EXPECT_EQ(80, feature.surrounding.front_vehicle.id);
+  ASSERT_TRUE(feature.risk.static_obstacle_ahead);
+  EXPECT_EQ(81, feature.risk.avoidance_object_id);
+  EXPECT_TRUE(feature.risk.avoid_target_matches_front_lead);
+}
+
+TEST_F(FeatureBuilderAvoidTest,
+       AmbiguousStaticDuplicatesDoNotClaimCurrentLead) {
+  TrackedObject lead = ObjectAt(20.0, 0.0, 2.0);
+  lead.id = 80;
+  lead.type = ObjectType::VEHICLE;
+  lead.motion_state = MotionState::DYNAMIC;
+  lead.length = 4.5;
+  lead.vx = 3.0 * std::cos(lead.yaw);
+  lead.vy = 3.0 * std::sin(lead.yaw);
+  lead.speed = 3.0;
+
+  TrackedObject duplicate_a = lead;
+  duplicate_a.id = 81;
+  duplicate_a.type = ObjectType::UNKNOWN;
+  duplicate_a.motion_state = MotionState::LOW_THREAT;
+  duplicate_a.vx = 0.0;
+  duplicate_a.vy = 0.0;
+  duplicate_a.speed = 0.0;
+  TrackedObject duplicate_b = duplicate_a;
+  duplicate_b.id = 82;
+
+  PerceptionObjects objects;
+  objects.vehicles.push_back(lead);
+  objects.obstacles.push_back(duplicate_a);
+  objects.obstacles.push_back(duplicate_b);
+  const UrbanFeature feature = BuildObjects(objects);
+
+  ASSERT_TRUE(feature.surrounding.has_front_vehicle);
+  ASSERT_TRUE(feature.risk.static_obstacle_ahead);
+  EXPECT_FALSE(feature.risk.avoid_target_matches_front_lead);
+}
+
+TEST_F(FeatureBuilderAvoidTest,
        SeparateSmallObstacleNearLeadRemainsAvoidTarget) {
   TrackedObject lead = ObjectAt(20.0, 0.0, 2.0);
   lead.id = 80;
@@ -443,6 +508,7 @@ TEST_F(FeatureBuilderAvoidTest,
   const UrbanFeature feature = BuildObjects(separated, 2.0);
   EXPECT_TRUE(feature.risk.static_obstacle_ahead);
   EXPECT_EQ(82, feature.risk.avoidance_object_id);
+  EXPECT_FALSE(feature.risk.avoid_target_matches_front_lead);
   EXPECT_DOUBLE_EQ(0.0, feature.extra_values.at("follow_fragment_count"));
 }
 

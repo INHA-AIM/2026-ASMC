@@ -91,6 +91,7 @@ BehaviorContextData BehaviorDecision::decide(
   const bool follow_owns_avoid_target =
       follow_target_id >= 0 && context.enable.avoid &&
       (feature.risk.avoidance_object_id == follow_target_id ||
+       feature.risk.avoid_target_matches_front_lead ||
        (follow_release_grace &&
         feature.risk.avoid_target_matches_recent_lead));
   if (follow_owns_avoid_target) {

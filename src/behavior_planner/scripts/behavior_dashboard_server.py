@@ -175,7 +175,8 @@ def set_lidar_motion_debug(message):
         rospy.logwarn_throttle(2.0, "Invalid LiDAR motion debug JSON: %s", error)
         return
     if (not isinstance(payload, dict) or
-            payload.get("schema") != "lidar_motion_debug_v1" or
+            payload.get("schema") not in {
+                "lidar_motion_debug_v1", "lidar_motion_debug_v2"} or
             payload.get("frame_id") != "map" or
             not isinstance(payload.get("objects"), list)):
         rospy.logwarn_throttle(

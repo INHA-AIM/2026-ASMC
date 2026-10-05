@@ -47,6 +47,46 @@
   const screenToWorld = (x, y) => [(x - view.x) / view.scale, -(y - view.y) / view.scale];
   const typeInfo = value => objectTypes[Number(value)] || {name: `TYPE ${value}`, css: 'unknown', color: '#a8b6c0'};
   const motionInfo = value => motionStates[String(value || 'UNKNOWN')] || motionStates.UNKNOWN;
+  const filterKeep = debug => {
+    if (!debug) return true;
+    if (typeof debug.final_keep === 'boolean') return debug.final_keep;
+    return debug.boundary_keep !== false && debug.known_static_keep !== false &&
+      debug.configured_static_keep !== false &&
+      debug.planning_relevance_keep !== false;
+  };
+  const filterStage = debug => {
+    if (!debug || filterKeep(debug)) return 'keep';
+    if (debug.filter_stage) return String(debug.filter_stage);
+    if (debug.boundary_keep === false) return 'drivable';
+    if (debug.known_static_keep === false) return 'known_static';
+    if (debug.configured_static_keep === false) return 'static_zone';
+    if (debug.planning_relevance_keep === false) return 'planning_relevance';
+    return 'unknown';
+  };
+  const filterStageName = stage => ({
+    keep: 'KEEP', drivable: 'ROAD', known_static: 'CATALOG',
+    static_zone: 'ZONE', planning_relevance: 'RELEVANCE', unknown: 'UNKNOWN'
+  })[String(stage)] || String(stage || 'UNKNOWN').toUpperCase();
+  const debugTypeInfo = debug => {
+    const label = `${debug?.classification || ''} ${debug?.yolo_class || ''}`.toLowerCase();
+    if (/person|pedestrian/.test(label)) return objectTypes[2];
+    if (/car|vehicle|truck|bus/.test(label)) return objectTypes[1];
+    if (/static|obstacle/.test(label)) return objectTypes[3];
+    return objectTypes[0];
+  };
+  const debugAsObject = debug => ({
+    id: debug?.id,
+    type: Number(debug?.type ?? 0),
+    center: {x: Number(debug?.center_x), y: Number(debug?.center_y)},
+    obb_corners: (debug?.obb_corners || []).map(point => ({
+      x: Number(Array.isArray(point) ? point[0] : point?.x),
+      y: Number(Array.isArray(point) ? point[1] : point?.y)
+    })),
+    length: Number(debug?.length),
+    width: Number(debug?.width),
+    vx: Number(debug?.applied_map_vx_mps || 0),
+    vy: Number(debug?.applied_map_vy_mps || 0)
+  });
 
   function resize() {
     const density = devicePixelRatio || 1;
@@ -215,7 +255,61 @@
       ctx.font = 'bold 11px ui-monospace, monospace';
       ctx.fillStyle = selectedAvoidTarget ? '#ffffff' : motion.color;
       const target = selectedAvoidTarget ? ' AVOID TARGET' : '';
-      ctx.fillText(`ID ${object.id} ${info.name}/${motion.name}${target}`, point.x + 7, point.y - 7);
+      const roadRatio = Number(debug?.road_ratio);
+      const road = Number.isFinite(roadRatio) && roadRatio >= 0
+        ? ` road ${Math.round(roadRatio * 100)}%` : '';
+      ctx.fillText(`ID ${object.id} ${info.name}/${motion.name}${road}${target}`, point.x + 7, point.y - 7);
+    }
+  }
+
+  function drawDroppedLidarObject(debug) {
+    const object = debugAsObject(debug);
+    const info = debugTypeInfo(debug);
+    const motion = motionInfo(debug?.motion_state);
+    const hull = convexHull((object.obb_corners || []).map(point => [point.x, point.y]));
+    ctx.save();
+    ctx.setLineDash([7, 5]);
+    if (hull.length >= 3) {
+      ctx.beginPath();
+      let point = worldToScreen(hull[0]);
+      ctx.moveTo(point.x, point.y);
+      for (let i = 1; i < hull.length; ++i) {
+        point = worldToScreen(hull[i]);
+        ctx.lineTo(point.x, point.y);
+      }
+      ctx.closePath();
+      ctx.globalAlpha = 0.08;
+      ctx.fillStyle = motion.color;
+      ctx.fill();
+      ctx.globalAlpha = 0.95;
+      ctx.strokeStyle = '#e7f1f6';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    ctx.restore();
+    if (finite(object.center?.x) && finite(object.center?.y)) {
+      const center = worldToScreen([object.center.x, object.center.y]);
+      ctx.save();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(center.x - 5, center.y - 5);
+      ctx.lineTo(center.x + 5, center.y + 5);
+      ctx.moveTo(center.x + 5, center.y - 5);
+      ctx.lineTo(center.x - 5, center.y + 5);
+      ctx.stroke();
+      ctx.restore();
+      if ($('showVelocity').checked) velocityArrows(object, debug);
+      if ($('showLabels').checked) {
+        ctx.font = 'bold 11px ui-monospace, monospace';
+        ctx.fillStyle = '#ffffff';
+        const roadRatio = Number(debug?.road_ratio);
+        const road = Number.isFinite(roadRatio) && roadRatio >= 0
+          ? ` road ${Math.round(roadRatio * 100)}%` : '';
+        ctx.fillText(
+          `ID ${debug.id} DROP/${filterStageName(filterStage(debug))} ${info.name}/${motion.name}${road}`,
+          center.x + 8, center.y - 8);
+      }
     }
   }
 
@@ -297,7 +391,14 @@
         if (node.on_stop_line && node.traffic_light_id === activeId) drawSignalNode(node, true);
       }
     }
-    if ($('showObjects').checked) for (const object of data.lidarObjects?.objects || []) drawLidarObject(object);
+    if ($('showDroppedObjects').checked) {
+      for (const debug of data.lidarMotionDebug?.objects || []) {
+        if (!filterKeep(debug)) drawDroppedLidarObject(debug);
+      }
+    }
+    if ($('showObjects').checked) {
+      for (const object of data.lidarObjects?.objects || []) drawLidarObject(object);
+    }
 
     if (data.ego) {
       const point = worldToScreen([data.ego.x, data.ego.y]);
@@ -360,8 +461,10 @@
     const objects = message.objects || [];
     const debugMessage = data.lidarMotionDebug || {};
     const debugObjects = debugMessage.objects || [];
+    const outputById = new Map(objects.map(object => [Number(object.id), object]));
     const counts = {vehicle: 0, pedestrian: 0, unknown: 0, static: 0};
     const stateCounts = {UNKNOWN: 0, LOW_THREAT: 0, PENDING: 0, DYNAMIC: 0};
+    const stageCounts = {drivable: 0, known_static: 0, static_zone: 0, planning_relevance: 0, unknown: 0};
     for (const object of objects) {
       const name = typeInfo(object.type).css;
       if (Object.prototype.hasOwnProperty.call(counts, name)) ++counts[name];
@@ -370,7 +473,16 @@
     for (const debug of debugObjects) {
       const state = String(debug.motion_state || 'UNKNOWN');
       stateCounts[state] = (stateCounts[state] || 0) + 1;
+      if (!filterKeep(debug)) {
+        const stage = filterStage(debug);
+        stageCounts[stage] = (stageCounts[stage] || 0) + 1;
+      }
     }
+    const rawCount = debugObjects.length || Number(debugMessage.filter_counts?.raw) || objects.length;
+    const keptCount = debugObjects.length
+      ? debugObjects.filter(filterKeep).length
+      : Number(debugMessage.filter_counts?.kept) || objects.length;
+    const droppedCount = Math.max(0, rawCount - keptCount);
     const sourceStamp = Number(message.header?.stamp);
     const debugStamp = Number(debugMessage.stamp);
     const stampDeltaMs = Number.isFinite(sourceStamp) && Number.isFinite(debugStamp)
@@ -378,10 +490,17 @@
     const avoidTargetId = data.feature?.static_obstacle_ahead
       ? Number(data.feature?.avoidance_object_id) : null;
     const corridorHalfWidth = Number(data.debugConfig?.path_corridor_half_width_m);
+    const boundary = debugMessage.boundary_filter || {};
+    const knownStatic = debugMessage.known_static_filter || {};
+    const staticZone = debugMessage.static_structure_filter || {};
     $('lidarGrid').innerHTML = kv([
       ['Frame', message.header?.frame_id || 'WAIT'],
       ['Source stamp', finite(message.header?.stamp) ? fmt(message.header.stamp, 3) : '–'],
-      ['Objects', objects.length],
+      ['RAW / KEEP / DROP', `${rawCount} / ${keptCount} / ${droppedCount}`],
+      ['DROP road/catalog/zone/relevance', `${stageCounts.drivable}/${stageCounts.known_static}/${stageCounts.static_zone}/${stageCounts.planning_relevance}`],
+      ['Road mask', boundary.available === false ? 'FAIL-OPEN' : `margin ${fmt(boundary.margin_m)}m · ≥${fmt(Number(boundary.road_ratio_threshold) * 100, 0)}%`],
+      ['Fixed filters', `catalog ${knownStatic.available ? 'ON' : 'OFF'} · zones ${staticZone.available ? staticZone.zone_count ?? 0 : 'OFF'}`],
+      ['Output objects', objects.length],
       ['Vehicle / Ped', `${counts.vehicle} / ${counts.pedestrian}`],
       ['Unknown', counts.unknown],
       ['Motion U/L/P/D', `${stateCounts.UNKNOWN}/${stateCounts.LOW_THREAT}/${stateCounts.PENDING}/${stateCounts.DYNAMIC}`],
@@ -393,37 +512,64 @@
       ['Type changes', changeText(lidarChanges.typeChanged)],
       ['Yaw rate', '0 assumed / unmeasured']
     ]);
-    $('motionSummary').innerHTML = avoidTargetId === null
-      ? '<span class="summary-clear">경로 회랑을 막는 UNKNOWN/STATIC 대상 없음</span>'
+    const filterSummary = `<span class="summary-filter">LiDAR raw ${rawCount} → planner 입력 ${objects.length}; 제거 ${droppedCount}</span>`;
+    const behaviorSummary = avoidTargetId === null
+      ? '<span class="summary-clear">Behavior 경로 회랑을 막는 UNKNOWN/STATIC 대상 없음</span>'
       : `<span class="summary-blocked">ID ${esc(avoidTargetId)}가 경로 회랑을 막아 Behavior AVOID 후보로 선택됨</span>`;
-    const sorted = [...objects].sort((left, right) => {
-      const leftTarget = Number(left.id) === avoidTargetId ? 0 : 1;
-      const rightTarget = Number(right.id) === avoidTargetId ? 0 : 1;
+    $('motionSummary').innerHTML = `${filterSummary}${behaviorSummary}`;
+
+    const rows = debugObjects.map(debug => ({
+      id: Number(debug.id), debug, object: outputById.get(Number(debug.id)) || null,
+      keep: filterKeep(debug)
+    }));
+    const debugIds = new Set(rows.map(row => row.id));
+    for (const object of objects) {
+      if (!debugIds.has(Number(object.id))) {
+        rows.push({id: Number(object.id), debug: null, object, keep: true});
+      }
+    }
+    rows.sort((left, right) => {
+      const leftTarget = left.id === avoidTargetId ? 0 : 1;
+      const rightTarget = right.id === avoidTargetId ? 0 : 1;
       if (leftTarget !== rightTarget) return leftTarget - rightTarget;
-      return Number(left.type) - Number(right.type) || Number(left.id) - Number(right.id);
+      if (left.keep !== right.keep) return left.keep ? 1 : -1;
+      return left.id - right.id;
     });
-    $('lidarObjects').innerHTML = sorted.length ? sorted.slice(0, 30).map(object => {
-      const info = typeInfo(object.type);
-      const debug = motionDebugById.get(Number(object.id));
+    $('lidarObjects').innerHTML = rows.length ? rows.slice(0, 50).map(row => {
+      const object = row.object || debugAsObject(row.debug);
+      const debug = row.debug;
+      const info = row.object ? typeInfo(object.type) : debugTypeInfo(debug);
       const motion = motionInfo(debug?.motion_state);
-      const isAvoidTarget = Number(object.id) === avoidTargetId;
+      const isAvoidTarget = row.id === avoidTargetId;
       const speed = Math.hypot(Number(object.vx || 0), Number(object.vy || 0));
       const geometry = `map (${fmt(object.center?.x)}, ${fmt(object.center?.y)})  OBB ${fmt(object.length)}×${fmt(object.width)}m`;
       const velocity = debug
         ? `raw ${fmt(debug.raw_speed_kph)} · judge ${fmt(debug.decision_speed_kph)} · applied ${fmt(debug.applied_speed_kph)} km/h`
         : `applied ${fmt(speed * 3.6)} km/h · motion debug WAIT`;
-      const displacement = debug
-        ? `center ${fmt(debug.map_displacement_speed_kph)}→${fmt(debug.corrected_displacement_speed_kph)} · jump ${fmt(debug.velocity_jump_kph)} km/h · sample ${debug.accepted_samples ?? 0}/${debug.candidate_samples ?? 0} · road ${fmt(Number(debug.road_ratio) * 100, 0)}%`
+      const roadRatio = Number(debug?.road_ratio);
+      const road = Number.isFinite(roadRatio) && roadRatio >= 0
+        ? `${fmt(roadRatio * 100, 0)}%` : 'N/A';
+      const predictedRoadRatio = Number(debug?.predicted_road_ratio);
+      const predictedRoad = Number.isFinite(predictedRoadRatio) && predictedRoadRatio >= 0
+        ? `→${fmt(predictedRoadRatio * 100, 0)}%` : '';
+      const stage = filterStage(debug);
+      const filterDetail = debug
+        ? `filter ${row.keep ? 'KEEP' : `DROP/${filterStageName(stage)}`} · road ${road}${predictedRoad} · h ${fmt(debug.height, 2)}m · confirm ${debug.height_confirmations ?? 0} · ${debug.filter_reason || debug.boundary_reason || '–'}${debug.geometry_clipped ? ' · OBB CLIPPED' : ''}${debug.configured_static_zone ? ` · zone ${debug.configured_static_zone}` : ''}`
         : '–';
-      return `<div class="object-row ${info.css} ${motion.css} ${isAvoidTarget ? 'avoid-selected' : ''}">
-        <span class="object-id">ID ${esc(object.id)}${isAvoidTarget ? '<b>AVOID</b>' : ''}</span>
+      const displacement = debug
+        ? `center ${fmt(debug.map_displacement_speed_kph)}→${fmt(debug.corrected_displacement_speed_kph)} · jump ${fmt(debug.velocity_jump_kph)} km/h · sample ${debug.accepted_samples ?? 0}/${debug.candidate_samples ?? 0}`
+        : '–';
+      return `<div class="object-row ${info.css} ${motion.css} ${row.keep ? 'filter-kept' : 'filter-dropped'} ${isAvoidTarget ? 'avoid-selected' : ''}">
+        <span class="object-id">ID ${esc(row.id)}${isAvoidTarget ? '<b>AVOID</b>' : ''}</span>
         <span class="object-type">${esc(info.name)}</span>
         <span class="motion-state">${esc(motion.name)}</span>
+        <span class="filter-state">${row.keep ? 'KEEP' : 'DROP'}</span>
         <span class="object-detail" title="${esc(geometry)}">${esc(geometry)}</span>
         <span class="object-detail velocity-detail" title="${esc(velocity)}">${esc(velocity)}</span>
         <span class="object-detail displacement-detail" title="${esc(displacement)}">${esc(displacement)}</span>
+        <span class="object-detail filter-detail" title="${esc(filterDetail)}">${esc(filterDetail)}</span>
       </div>`;
-    }).join('') : '<div class="object-empty">유효한 빈 프레임 또는 입력 대기 중입니다.</div>';
+    }).join('') : '<div class="object-empty">LiDAR raw 진단 또는 planner 입력을 기다리는 중입니다.</div>';
   }
 
   function updatePanel() {
@@ -570,7 +716,7 @@
     $('follow').textContent = view.follow ? '추적 중' : 'Ego 추적';
     draw();
   };
-  for (const id of ['showObjects', 'showVelocity', 'showLabels', 'showCorridor', 'showSignals', 'showTrajectory']) $(id).onchange = draw;
+  for (const id of ['showObjects', 'showDroppedObjects', 'showVelocity', 'showLabels', 'showCorridor', 'showSignals', 'showTrajectory']) $(id).onchange = draw;
   window.addEventListener('resize', resize);
 
   async function loadMap() {

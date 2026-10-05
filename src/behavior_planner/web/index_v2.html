@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Planning &amp; LiDAR Debug Console</title>
-  <link rel="stylesheet" href="dashboard.css?v=v2-lidar-4">
-  <link rel="stylesheet" href="dashboard_v2.css?v=v2-lidar-4">
+  <link rel="stylesheet" href="dashboard.css?v=v2-lidar-5">
+  <link rel="stylesheet" href="dashboard_v2.css?v=v2-lidar-5">
 </head>
 <body data-interface="v2">
   <header>
@@ -23,7 +23,8 @@
       <div class="toolbar">
         <button id="fit">전체 지도</button>
         <button id="follow">Ego 추적</button>
-        <label><input id="showObjects" type="checkbox" checked>LiDAR OBB</label>
+        <label><input id="showObjects" type="checkbox" checked>필터 통과 OBB</label>
+        <label><input id="showDroppedObjects" type="checkbox" checked>필터 제거(raw)</label>
         <label><input id="showVelocity" type="checkbox" checked>속도</label>
         <label><input id="showLabels" type="checkbox" checked>ID/type</label>
         <label><input id="showCorridor" type="checkbox" checked>AVOID 회랑</label>
@@ -41,6 +42,8 @@
           <span><i class="motion-low"></i>저위험</span>
           <span><i class="motion-pending"></i>판정보류</span>
           <span><i class="motion-dynamic"></i>동적</span>
+          <span><i class="filter-keep"></i>필터 통과(실선)</span>
+          <span><i class="filter-drop"></i>필터 제거(점선+×)</span>
           <span><i class="corridor"></i>AVOID 회랑</span>
           <span><i class="avoid-target"></i>AVOID 대상</span>
           <span><i class="velocity-raw"></i>KF 속도</span>
@@ -90,6 +93,6 @@
       <section><h2>Topic Health</h2><div id="health" class="kv"></div></section>
     </aside>
   </main>
-  <script src="dashboard_v2.js?v=v2-lidar-4"></script>
+  <script src="dashboard_v2.js?v=v2-lidar-5"></script>
 </body>
 </html>

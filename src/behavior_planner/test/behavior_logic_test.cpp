@@ -634,6 +634,43 @@ TEST(BehaviorDecisionTest, MovingReclassificationSwitchesCommittedAvoidToFollow)
   EXPECT_TRUE(follow.extra_flags.at("cancel_reclassified_avoid"));
 }
 
+TEST(BehaviorDecisionTest,
+     CurrentLeadOwnershipSwitchesCommittedAvoidToFollowAcrossIds) {
+  BehaviorDecision decision;
+  UrbanFeature feature;
+  feature.timestamp = 1.0;
+  feature.route.speed_limit = 10.0;
+  feature.risk.static_obstacle_ahead = true;
+  feature.risk.avoidance_object_id = 31;
+
+  EXPECT_EQ(BehaviorType::AVOID,
+            decision.decide(feature, PlannerFeedbackData{}, 0)
+                .selected_behavior);
+  EXPECT_EQ(BehaviorType::AVOID,
+            decision.decide(feature, PlannerFeedbackData{}, 77)
+                .selected_behavior);
+
+  PlannerFeedbackData executing;
+  executing.valid = true;
+  executing.command_id = 77;
+  executing.execution_state = PlannerExecutionState::EXECUTING;
+  ASSERT_EQ(ManeuverPhase::COMMITTED,
+            decision.decide(feature, executing, 77).maneuver_phase);
+
+  feature.timestamp = 1.1;
+  feature.risk.avoid_target_matches_front_lead = true;
+  feature.surrounding.has_front_vehicle = true;
+  feature.surrounding.front_vehicle.id = 72;
+  feature.surrounding.front_vehicle.gap = 12.0;
+  feature.surrounding.front_vehicle.ttc = 6.0;
+  const BehaviorContextData follow = decision.decide(feature, executing, 77);
+
+  EXPECT_EQ(BehaviorType::FOLLOW, follow.selected_behavior);
+  EXPECT_EQ(ManeuverPhase::NONE, follow.maneuver_phase);
+  EXPECT_EQ(72, follow.target.lead_vehicle_id);
+  EXPECT_TRUE(follow.extra_flags.at("fsm_follow_owns_avoid_target"));
+}
+
 TEST(BehaviorDecisionTest, ChoosesFirstLongitudinalConstraint) {
   UrbanFeature feature;
   feature.route.speed_limit = 10.0;

@@ -26,6 +26,66 @@ bool IsLongitudinalLeadCandidate(const ObjectFeature& object) {
           object.motion_state == MotionState::DYNAMIC);
 }
 
+bool ObbsOverlap(const ObjectFeature& lhs, const ObjectFeature& rhs) {
+  if (!std::isfinite(lhs.x) || !std::isfinite(lhs.y) ||
+      !std::isfinite(lhs.yaw) || !std::isfinite(lhs.length) ||
+      !std::isfinite(lhs.width) || !std::isfinite(rhs.x) ||
+      !std::isfinite(rhs.y) || !std::isfinite(rhs.yaw) ||
+      !std::isfinite(rhs.length) || !std::isfinite(rhs.width) ||
+      lhs.length <= 0.0 || lhs.width <= 0.0 || rhs.length <= 0.0 ||
+      rhs.width <= 0.0) {
+    return false;
+  }
+
+  const double lhs_cos = std::cos(lhs.yaw);
+  const double lhs_sin = std::sin(lhs.yaw);
+  const double rhs_cos = std::cos(rhs.yaw);
+  const double rhs_sin = std::sin(rhs.yaw);
+  const double axes[4][2] = {{lhs_cos, lhs_sin},
+                             {-lhs_sin, lhs_cos},
+                             {rhs_cos, rhs_sin},
+                             {-rhs_sin, rhs_cos}};
+  const double dx = rhs.x - lhs.x;
+  const double dy = rhs.y - lhs.y;
+  constexpr double kOverlapToleranceM = 0.05;
+  for (const auto& axis : axes) {
+    const double center_distance =
+        std::abs(dx * axis[0] + dy * axis[1]);
+    const double lhs_radius =
+        0.5 * lhs.length * std::abs(lhs_cos * axis[0] + lhs_sin * axis[1]) +
+        0.5 * lhs.width * std::abs(-lhs_sin * axis[0] + lhs_cos * axis[1]);
+    const double rhs_radius =
+        0.5 * rhs.length * std::abs(rhs_cos * axis[0] + rhs_sin * axis[1]) +
+        0.5 * rhs.width * std::abs(-rhs_sin * axis[0] + rhs_cos * axis[1]);
+    if (center_distance > lhs_radius + rhs_radius + kOverlapToleranceM) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool IsSpatiallySameTrack(const ObjectFeature& observation,
+                          const ObjectFeature& reference,
+                          const AvoidTargetConfig& config) {
+  const double observation_long_side =
+      std::max(observation.length, observation.width);
+  const double observation_short_side =
+      std::min(observation.length, observation.width);
+  const double reference_long_side =
+      std::max(reference.length, reference.width);
+  const double reference_short_side =
+      std::min(reference.length, reference.width);
+  return std::abs(observation.s - reference.s) <=
+             config.reconnect_max_longitudinal_delta_m &&
+         std::abs(observation.d - reference.d) <=
+             config.reconnect_max_lateral_delta_m &&
+         std::abs(observation_long_side - reference_long_side) <=
+             config.reconnect_max_size_delta_m &&
+         std::abs(observation_short_side - reference_short_side) <=
+             config.reconnect_max_size_delta_m &&
+         ObbsOverlap(observation, reference);
+}
+
 // LiDAR가 한 차량의 반사점을 둘로 나누면, 정상 선두 OBB 옆에 작은
 // UNKNOWN/LOW_THREAT OBB가 동시에 생길 수 있다. 단순 중심거리만 쓰면
 // 선두 바로 옆의 실제 장애물을 삼킬 수 있으므로 다음을 모두 요구한다.
@@ -300,6 +360,31 @@ UrbanFeature FeatureBuilder::build(
   }
   feature.extra_values["follow_fragment_count"] =
       static_cast<double>(current_follow_fragment_ids.size());
+
+  // A moving lead and a static-looking duplicate can coexist in the same
+  // LiDAR frame with different tracker IDs.  Provide only one-to-one spatial
+  // ownership evidence here; Behavior/FSM remains responsible for deciding
+  // whether FOLLOW preempts AVOID.  Requiring OBB overlap in addition to the
+  // normal re-identification limits prevents a nearby real obstacle from being
+  // absorbed into the lead vehicle.
+  int current_lead_static_match_id = -1;
+  int current_lead_static_match_count = 0;
+  if (feature.surrounding.has_front_vehicle) {
+    const ObjectFeature& lead = feature.surrounding.front_vehicle;
+    for (const ObjectFeature& object : projected_objects) {
+      if (!object.valid || !IsStaticAvoidCandidate(object) ||
+          current_id_counts[object.id] != 1 ||
+          current_follow_fragment_ids.count(object.id) != 0U ||
+          !IsSpatiallySameTrack(object, lead, avoid_target_)) {
+        continue;
+      }
+      current_lead_static_match_id = object.id;
+      ++current_lead_static_match_count;
+    }
+  }
+  if (current_lead_static_match_count != 1) {
+    current_lead_static_match_id = -1;
+  }
 
   // ID가 바뀌었더라도 직전 FOLLOW 대상과 같은 물리 객체로 유일하게 연결되는
   // 정적 관측을 찾는다. 여기서는 공간적 동일성만 제공하고 FOLLOW를 유지할지
@@ -677,6 +762,8 @@ UrbanFeature FeatureBuilder::build(
         feature.risk.nearest_obstacle_s = object.s;
         feature.risk.nearest_obstacle_length =
             2.0 * obstacle_longitudinal_half_extent;
+        feature.risk.avoid_target_matches_front_lead =
+            object.id == current_lead_static_match_id;
         feature.risk.avoid_target_matches_recent_lead =
             object.id == recent_lead_static_match_id;
         best_static_obstacle_gap = object.gap;
@@ -749,6 +836,7 @@ UrbanFeature FeatureBuilder::build(
           feature.risk.nearest_obstacle_s = state.last_s;
           feature.risk.nearest_obstacle_length =
               state.last_projected_longitudinal_length;
+          feature.risk.avoid_target_matches_front_lead = false;
           feature.risk.avoid_target_matches_recent_lead = false;
           best_static_obstacle_gap = gap;
         }

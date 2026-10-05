@@ -16,7 +16,7 @@ avoid:
   min_overlap_ratio: 0.20
   # physical overlap / min(OBB projected width, ego width)
   immediate_blocking_ratio: 0.70
-  blocking_enter_ratio: 0.35
+  blocking_enter_ratio: 0.20
   blocking_exit_ratio: 0.15
   overlap_confirm_cycles: 2
   overlap_release_cycles: 3
