@@ -16,7 +16,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -141,13 +141,21 @@ def _boundary_ids(link: Mapping[str, Any], side: str) -> List[str]:
     return [str(value) for value in link.get("lane_mark_%s" % side, [])]
 
 
-def lane_width_polygon(link: Mapping[str, Any], step_m: float) -> List[List[float]]:
+def lane_width_polygon(
+    link: Mapping[str, Any],
+    step_m: float,
+    widening: Optional[Mapping[str, Any]] = None,
+) -> List[List[float]]:
     """Return a link-width polygon cut flat on each endpoint-node normal.
 
     The first and last cross-sections use the local centerline normal, so the
     polygon ends at the link node instead of extending a round half-width cap
     past it. Junction coverage must come from selected topology links rather
     than a cap that paints outside the link boundary.
+
+    A reviewed ``widening`` moves one side outward by a half-sine profile that
+    peaks mid-link and is zero at both nodes, so a turn can cover the inner
+    corner pavement while still meeting the approach and exit lanes flush.
     """
 
     center = _resample_centerline(_xy(link["points"]), step_m)
@@ -157,10 +165,57 @@ def lane_width_polygon(link: Mapping[str, Any], step_m: float) -> List[List[floa
     start_width = float(link.get("width_start") or 3.5)
     end_width = float(link.get("width_end") or start_width)
     half_width = 0.5 * np.linspace(start_width, end_width, len(center))
-    left = center + normal * half_width[:, None]
-    right = center - normal * half_width[:, None]
+    left_offset = half_width.copy()
+    right_offset = half_width.copy()
+    if widening:
+        stations = np.concatenate([[0.0], np.cumsum(np.linalg.norm(np.diff(center, axis=0), axis=1))])
+        extra = float(widening["maximum_extra_m"]) * np.sin(math.pi * stations / max(stations[-1], 1e-9))
+        if widening["side"] == "left":
+            left_offset += extra
+        else:
+            right_offset += extra
+    left = center + normal * left_offset[:, None]
+    right = center - normal * right_offset[:, None]
     ring = np.vstack([left, right[::-1]])
     return [[round(float(x), 4), round(float(y), 4), 0.0] for x, y in ring]
+
+
+def intersection_link_widening(
+    surface_policy: Mapping[str, Any],
+    links: Mapping[str, Mapping[str, Any]],
+    lane_set: Iterable[str],
+    intersection_types: Iterable[str],
+) -> Dict[str, Dict[str, Any]]:
+    """Validate the reviewed per-link widening of selected intersection links."""
+
+    lane_set = set(lane_set)
+    intersection_types = set(intersection_types)
+    widening: Dict[str, Dict[str, Any]] = {}
+    for item in surface_policy.get("intersection_link_widening", []) or []:
+        link_id = str(item.get("link_id", ""))
+        side = str(item.get("side", ""))
+        extra = float(item.get("maximum_extra_m", 0.0))
+        if link_id in widening:
+            raise CompactDrivableError("duplicate intersection widening: %s" % link_id)
+        if link_id not in lane_set:
+            raise CompactDrivableError("widened link is not a selected lane: %s" % link_id)
+        if str(links[link_id].get("link_type")) not in intersection_types:
+            raise CompactDrivableError("widened link is not an intersection link: %s" % link_id)
+        if side not in ("left", "right"):
+            raise CompactDrivableError("widening side must be left or right: %s" % link_id)
+        if not 0.0 < extra <= 3.0:
+            raise CompactDrivableError("widening must be in (0, 3] m: %s" % link_id)
+        if str(item.get("profile", "")) != "half_sine":
+            raise CompactDrivableError("widening profile must be half_sine: %s" % link_id)
+        if not str(item.get("basis", "")).strip():
+            raise CompactDrivableError("widening needs a review basis: %s" % link_id)
+        widening[link_id] = {
+            "side": side,
+            "maximum_extra_m": extra,
+            "profile": "half_sine",
+            "basis": str(item["basis"]).strip(),
+        }
+    return widening
 
 
 def _smooth_offsets(values: np.ndarray, window_points: int) -> np.ndarray:
@@ -754,6 +809,7 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
     boundary_policy = surface_policy["reviewed_boundary_snap"]
     reviewed_boundaries = _reviewed_boundaries_by_link(reviewed, links)
     feature_by_id = {str(item["id"]): item for item in reviewed.get("features", [])}
+    widening_by_link = intersection_link_widening(surface_policy, links, lane_set, intersection_types)
     polygons_by_link: Dict[str, List[List[float]]] = {}
     refinement_by_link: Dict[str, Dict[str, Any]] = {}
     for link_id in lane_ids:
@@ -766,6 +822,10 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
                 link, step_m, reviewed_boundaries.get(link_id, {}),
                 feature_by_id, boundary_policy,
             )
+        elif link_id in widening_by_link:
+            polygon = lane_width_polygon(link, step_m, widening_by_link[link_id])
+            refinement = {"mode": "mgeo_link_width_reviewed_widening"}
+            refinement.update(widening_by_link[link_id])
         else:
             polygon = lane_width_polygon(link, step_m)
             refinement = {"mode": "mgeo_link_width"}
@@ -859,7 +919,7 @@ def build_compact_drivable(repo_root: Path, source_config: Path) -> Tuple[Dict[s
     if missing_checkpoints:
         raise CompactDrivableError("checkpoints outside compact road: %s" % missing_checkpoints)
     product_core = {
-        "schema_version": "asmc.hd_map.compact_drivable/v5",
+        "schema_version": "asmc.hd_map.compact_drivable/v6",
         "build_id": str(config["build_id"]),
         "map_id": str(h5["map_id"]),
         "frame_id": "map",

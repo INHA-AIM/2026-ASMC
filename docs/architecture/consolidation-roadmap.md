@@ -502,6 +502,9 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
   섬을 제외한다. 총 DrivableArea는 102개이며 `OccupancyGrid`는 0.2 m 파생 raster다. 면적은
   14,925.40 m²(legacy 전체의 16.61%)이고 checkpoint 16개를 모두 포함한다. A179·A427과
   명시적 갓길·버스·미사용 toll lane은 제외한다.
+- **P2-B v6 (2026-10-05):** 정적 장애물 교차로에 빠져 있던 `A1212`를 넣고, 우회전 `A226`·`A111`의
+  모서리 안쪽을 최대 1.0 m·1.5 m half-sine으로 넓혀 아스팔트 모서리를 채운다. Lane 71개,
+  DrivableArea 103개(fill 19, H5 patch 13)이며 checkpoint 15개를 모두 포함한다.
 - **P2-C 통합 완료:** stage14 차선 결과를 geometry regression 기준으로 삼아 builder,
   runtime publisher, 검증기와 RViz를 `asmc_hd_map` 한 패키지로 통합했다. 원태의 이전
   standalone 도구/H5는 `development/won_tae_link_node/`에 read-only provenance 자료로

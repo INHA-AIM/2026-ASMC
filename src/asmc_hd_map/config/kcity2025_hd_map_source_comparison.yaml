@@ -37,7 +37,7 @@ source_roles:
     vector_only: true
   latest_drivable:
     description: reviewed compact competition drivable grid derived from the vector product
-    build_id: kcity2025_roundabout_extended_drivable_v5
+    build_id: kcity2025_static_junction_widened_drivable_v6
   legacy_h5_bake:
     description: uncut Won-tae H5 road bake retained only as a visual reference
     comparison_only: true

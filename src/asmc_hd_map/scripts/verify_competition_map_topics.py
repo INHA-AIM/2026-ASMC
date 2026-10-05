@@ -115,9 +115,9 @@ def main() -> int:
         _require(message.header.frame_id == "map", "%s left the map frame" % name)
 
     _require(meta.geometry_sha256 == "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf", "geometry SHA drift")
-    _require(meta.build_id == "kcity2025_roundabout_extended_drivable_v5", "P2-B v5 build ID drift")
+    _require(meta.build_id == "kcity2025_static_junction_widened_drivable_v6", "P2-B v6 build ID drift")
     _require(meta.operational and meta.complete, "P2-B map must be operational and complete")
-    _require(meta.lane_count == 70 and meta.drivable_area_count == 102, "P2-B v5 product count drift")
+    _require(meta.lane_count == 71 and meta.drivable_area_count == 103, "P2-B v6 product count drift")
     _require(
         "compact_drivable_product" in meta.source_ids and "legacy_drivable_h5" in meta.source_ids,
         "P2-B provenance is missing from HdMapMeta",
@@ -127,8 +127,8 @@ def main() -> int:
     _require(markings.build_id == meta.build_id and markings.map_id == meta.map_id,
              "marking/meta identity mismatch")
     _require(markings.geometry_sha256 == meta.geometry_sha256, "marking/meta geometry SHA mismatch")
-    _require(lanes.complete and len(lanes.lanes) == 70, "global lane product is incomplete")
-    _require(areas.complete and len(areas.areas) == 102, "global drivable vector product is incomplete")
+    _require(lanes.complete and len(lanes.lanes) == 71, "global lane product is incomplete")
+    _require(areas.complete and len(areas.areas) == 103, "global drivable vector product is incomplete")
     _require(lanes.build_id == meta.build_id and lanes.map_id == meta.map_id,
              "lane/meta identity mismatch")
     _require(areas.build_id == meta.build_id and areas.map_id == meta.map_id,
@@ -159,7 +159,7 @@ def main() -> int:
         _require(value.width_m > 0.0 and value.source_dataset and value.source_feature_id,
                  "marking width/provenance is incomplete: %s" % value.id)
     lane_by_link = {value.link_id: value for value in lanes.lanes}
-    _require(len(lane_by_link) == 70, "lane link IDs are not unique")
+    _require(len(lane_by_link) == 71, "lane link IDs are not unique")
     _require("A2256W000427" not in lane_by_link, "unused toll lane A427 must remain excluded")
     _require("A2256W000179" not in lane_by_link, "exit-only lane A179 must remain excluded")
     excluded_bus_links = {
@@ -189,7 +189,7 @@ def main() -> int:
         "A2256W000066", "A2256W000087", "A2256W000100", "A2256W000111",
         "A2256W000206", "A2256W000211", "A2256W000221", "A2256W000226",
         "A2256W000227", "A2256W000319", "A2256W000636", "A2256W000746",
-        "A2256W001124", "A2256W001125", "A2256W000134",
+        "A2256W001124", "A2256W001125", "A2256W000134", "A2256W001212",
     }
     route_links = {
         "A2256W000748", "A2256W000182", "A2256W000329", "A2256W000236",
@@ -283,13 +283,13 @@ def main() -> int:
     _require(component_count - 1 == 1, "dynamic junction drivable union is disconnected")
     static_ids = {
         "A2256W000100", "A2256W000111", "A2256W000221", "A2256W000222",
-        "A2256W000226", "A2256W000227", "A2256W000746",
+        "A2256W000226", "A2256W000227", "A2256W000746", "A2256W001212",
     }
     static_areas = [
         value for value in areas.areas
         if value.link_ids and set(value.link_ids).issubset(static_ids)
     ]
-    _require(len(static_areas) == 14, "static surface must contain lanes, bridge, and patches")
+    _require(len(static_areas) == 15, "static surface must contain lanes, bridges, and patches")
     for name, mask in (("static", _rasterized_area_union(static_areas)), ("dynamic", dynamic_mask)):
         component_count, _ = cv2.connectedComponents(mask, connectivity=8)
         _require(component_count - 1 == 1, "%s obstacle surface is disconnected" % name)
@@ -318,10 +318,14 @@ def main() -> int:
 
     _require(grid_value(-102.0, 340.0) == 100, "roundabout center island became drivable")
     _require(grid_value(-102.97, 325.54) == 0, "A134 centerline is not drivable")
+    _require(grid_value(-54.38, -131.38) == 0 and grid_value(-55.07, -149.22) == 0,
+             "A222 junction inner-corner pavement is not drivable")
+    _require(grid_value(-53.72, -130.50) == 100 and grid_value(-54.21, -150.27) == 100,
+             "A222 junction widening crossed the reviewed curb margin")
     source_counts = Counter(value.source_dataset for value in areas.areas)
     _require(
-        source_counts["selected_lane_topology_corridor_fill"] == 18
-        and source_counts["legacy_h5_clipped_to_selected_link_envelope"] == 14,
+        source_counts["selected_lane_topology_corridor_fill"] == 19
+        and source_counts["legacy_h5_clipped_to_selected_link_envelope"] == 13,
         "surface fill source counts drift",
     )
     _require(

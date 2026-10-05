@@ -2,7 +2,7 @@
 
 AutoNav K-City 2025 HD맵의 deterministic builder, 운영 publisher, local cache와 개발 검수
 도구를 소유하는 ROS1 package다. Phase 2 통합이 완료됐으며 운영 제품은
-`kcity2025_roundabout_extended_drivable_v5`다.
+`kcity2025_static_junction_widened_drivable_v6`다.
 
 > **문서 역할:** Active Package Guide — deterministic builder, runtime publisher와 개발 검수
 
@@ -58,8 +58,8 @@ publisher는 입력 SHA나 build 조합이 맞지 않으면 일부 토픽을 내
 | 항목 | 개수·기준 |
 |---|---|
 | 물리 차선·정지선 | 121 + 7 = 128 `LaneMarking` |
-| 차로 | 70 `Lane` |
-| vector 주행가능영역 | 102 `DrivableArea` = Lane 70 + corridor fill 18 + surface patch 14 |
+| 차로 | 71 `Lane` |
+| vector 주행가능영역 | 103 `DrivableArea` = Lane 71 + corridor fill 19 + surface patch 13 |
 | 체크포인트 | 15 (규정집 v1.2), 통과 반경 3 m |
 | mission/policy/speed zone | 15 |
 | raster | 0.2 m/cell, vector product의 파생 lookup |
