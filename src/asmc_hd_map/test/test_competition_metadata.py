@@ -219,11 +219,10 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
         self.assertTrue(all(item["status"] == "team_final" for item in traffic))
         self.assertTrue(all(item["planning_enforcement_allowed"] is True for item in traffic))
         for item in missions.values():
-            payload = json.loads(item["rule_payload_json"])
-            self.assertNotIn("requires_official_boundary_confirmation", payload)
             if item["status"] == "team_final":
+                payload = json.loads(item["rule_payload_json"])
                 self.assertEqual(payload["authority"], "team_final")
-                self.assertEqual(payload["review"]["reviewed_on"], "2026-10-05")
+                self.assertTrue(item["planning_enforcement_allowed"])
         traffic_boundaries = [
             item
             for item in traffic
@@ -249,7 +248,7 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
         with self.assertRaisesRegex(CompetitionMetadataError, "provisional mission"):
             validate_competition_metadata(changed)
 
-    def test_team_final_mission_requires_review_authority(self):
+    def test_team_final_mission_keeps_its_authority_tag(self):
         changed = copy.deepcopy(self.document)
         candidate = next(
             item for item in changed["mission_zones"] if item["status"] == "team_final"
@@ -257,7 +256,7 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
         payload = json.loads(candidate["rule_payload_json"])
         payload.pop("authority")
         candidate["rule_payload_json"] = json.dumps(payload, sort_keys=True)
-        with self.assertRaisesRegex(CompetitionMetadataError, "review authority"):
+        with self.assertRaisesRegex(CompetitionMetadataError, "authority tag"):
             validate_competition_metadata(changed)
 
     def test_missing_authority_status_fails(self):

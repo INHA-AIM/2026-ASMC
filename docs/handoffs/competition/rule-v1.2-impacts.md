@@ -40,7 +40,7 @@ v1.2 2-8: Ego Ctrl Cmd는 `cmd type 1`(accel, brake)과 `ctrl mode 2`만 허용�
 - 지금 60 km/h를 넘지 않는 이유는 Frenet `config/params.yaml:110`의 `target_vel: 13.0` m/s뿐이다.
   이 값을 16.67 m/s 이상으로 올리면 A202·A315에서 19.4 m/s를 지령한다.
 - `asmc_hd_map` metadata의 `route_speed_limits`가 link별 `effective_limit_kph = min(MGeo, 공식 상한)`을
-  제공한다. 미션 구간 15개도 모두 판제 적용 가능 상태다(공식 파생 4, 팀 확정 `authority=team_final` 11). planning이 이 값을 상한으로 쓰고 안전 여유를 둘지 결정한다 (planning @yuntae12-sudo
+  제공한다. 미션 구간 15개도 모두 판제 적용 가능 상태다(공식 파생 4, 팀 기준값 `authority=team_final` 11 — 연동하며 문제가 보이면 HD맵 쪽에서 고친다). planning이 이 값을 상한으로 쓰고 안전 여유를 둘지 결정한다 (planning @yuntae12-sudo
   @yangseojun).
 
 ## 4. 객체 입력

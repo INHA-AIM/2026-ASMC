@@ -52,6 +52,7 @@ catkin_install_python(PROGRAMS
   scripts/build_route_curation.py
   scripts/build_competition_metadata.py
   scripts/build_runtime_pins.py
+  scripts/rebuild_hd_map_artifacts.py
   scripts/build_drivable_area_input_audit.py
   scripts/build_compact_drivable_map.py
   scripts/competition_map_publisher_node.py

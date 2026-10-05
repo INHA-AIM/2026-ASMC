@@ -20,8 +20,8 @@
 | route/link station | derived_official | 공식 path와 검토된 39-link route에 XY 투영 |
 | 기본 60 kph | official | 전역 규칙으로 기록 |
 | 출발 5%, 고주로 link corridor | derived_official | 공식 규칙을 route station으로 계산 |
-| 신호등 상시 인지·GPS 음영·장애물·회전교차로·합류·주변 차량 | team_final | 팀 질의응답·현장 판단 또는 공식 그림의 팀 link 해석. 2026-10-05 경계 sign-off, 판제 적용 가능 |
-| 신호등 경계 5개 | team_final | stage14의 traffic-light ID가 있는 검수 정지선에서 파생, 2026-10-05 sign-off |
+| 신호등 상시 인지·GPS 음영·장애물·회전교차로·합류·주변 차량 | team_final | 팀 질의응답·현장 판단 또는 공식 그림의 팀 link 해석. 2026-10-05 팀 기준값, 판제 적용 가능·수정 가능 |
+| 신호등 경계 5개 | team_final | stage14의 traffic-light ID가 있는 검수 정지선에서 파생, 2026-10-05 팀 기준값 |
 | 링크별 유효 제한속도 | derived_official | MGeo `max_speed`를 공식 속도 구간 상한으로 자른 값 |
 
 GPS 음영 후보는 전역경로 `A126` 구간이며, HD맵 주행면에는 그 옆 반대방향 링크 `A131`을
@@ -94,7 +94,7 @@ traffic-light ID 기준 경계 5개로 분리하며 같은 신호에 속한 인�
 
 정적 장애물은 `A213` 종료 후 `A220` 시작 전 교차로 영역, 즉 `A222`로 한정한다. 동적 장애물은
 `A728→A599→A207→A205` 전 구간이다. 두 경계는 주최 측 수치 공지가 아니라 팀 질의응답과
-상황 검토에 따른 값이며, 2026-10-05 팀 검수로 `team_final` 확정했다.
+상황 검토에 따른 값이며, 2026-10-05 팀 검수 기준값으로 `team_final`에 두었다.
 
 규정집 v1.2의 판정 사실은 각 zone의 `rule_payload_json`에 기록한다. 속도는 Ego Vehicle Status
 속도로 판정하며 초과 즉시 15초, 3초 지속마다 15초가 추가된다. 신호 경계 5개는 앞바퀴가 정지선을
@@ -102,11 +102,22 @@ traffic-light ID 기준 경계 5개로 분리하며 같은 신호에 속한 인�
 실패다. GPS 음영은 GPS 전체 blackout이고 차로 준수 패널티가 없으며, 구간 안의 랜덤 미션은 장애물
 회피뿐이다. 장애물·끼어들기는 CollisionData로 충돌마다 15초다.
 
-`team_final`은 주최 수치는 없지만 팀이 대회용 경계로 확정한 상태다. `planning_enforcement_allowed=true`이고
-`rule_payload_json`에 `authority=team_final`과 `review.reviewed_on`·`review.decision`을 반드시 담는다.
-source에 `review`가 없거나 `requires_official_boundary_confirmation`이 남아 있으면 builder와 validator가
-실패한다. 동결된 `MissionZone` 메시지에는 team-final enum이 없으므로 publisher는 이 zone을
+`team_final`은 주최 수치가 없어 팀이 검수한 **현재 기준값**이다. 판제가 적용할 수 있다는 뜻이며 고정값이라는
+뜻은 아니다. 판제 연동이나 주행 검증에서 문제가 나오면 source의 bounds·payload를 고치고 아래 수정 절차로
+다시 만든다. builder는 `rule_payload_json`에 `authority=team_final`을 자동으로 넣고
+`planning_enforcement_allowed=true`로 둔다. source의 `review`(검수일·결정 등)는 선택 사항이며, 있으면
+payload에 그대로 복사한다. 동결된 `MissionZone` 메시지에는 team-final enum이 없으므로 publisher는 이 zone을
 `STATUS_DERIVED_OFFICIAL`로 발행한다. 근거 수준을 구분해야 하는 consumer는 payload의 `authority`를 읽는다.
+
+### 구간·속도 수정 절차
+
+1. `kcity2025_competition_metadata_source.yaml`의 zone `bounds`, `rule_payload`, `traffic_light_zones`를 고친다.
+   체크포인트 원본이 바뀌면 `input_sha256.official_checkpoints`도 같이 고친다.
+2. `python3 src/asmc_hd_map/scripts/rebuild_hd_map_artifacts.py`를 한 번 실행한다. metadata, P2-A audit의
+   metadata pin, audit, compact product, runtime pin, 문서 이전 manifest의 기록 SHA까지 순서대로 갱신한다.
+3. `git diff`로 바뀐 zone과 station을 검토하고 `asmc_hd_map` 테스트를 돌린다. 현재 값을 그대로 적어 둔
+   테스트(예: 정적 장애물 `A222`)는 의도한 변경이면 같이 고친다.
+4. `--check`로 다시 실행하면 아무것도 쓰지 않고 stale 단계만 보고한다.
 
 `provisional` zone은 지금 없지만 규칙은 유지한다. `planning_enforcement_allowed=false`여야 하며, 이 값이
 true이거나 status가 비어 있으면 validator가 실패한다.

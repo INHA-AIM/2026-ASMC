@@ -101,6 +101,8 @@ GPS 안테나가 아니라 후륜축 중심 `base_link`의 map 좌표를 기준�
 저장소 루트에서 `$ASMC_DATA`를 설정한 뒤 실행한다.
 
 ```bash
+python3 src/asmc_hd_map/scripts/rebuild_hd_map_artifacts.py --check   # 아래 전부와 pin 일치
+
 python3 src/asmc_hd_map/scripts/build_competition_metadata.py --check
 python3 src/asmc_hd_map/scripts/build_runtime_pins.py --check
 
@@ -193,6 +195,14 @@ roslaunch asmc_hd_map hd_map_source_comparison.launch repo_root:=/root/ws
 
 ## 변경 절차와 회귀 gate
 
+미션 구간·속도·체크포인트·주행가능영역은 판제 연동 결과에 따라 계속 바뀔 수 있다. `team_final`도 팀 현재
+기준값일 뿐 수정 금지 상태가 아니다. source를 고친 뒤 생성물 연쇄는 한 번에 다시 만든다.
+
+```bash
+python3 src/asmc_hd_map/scripts/rebuild_hd_map_artifacts.py          # 다시 생성
+python3 src/asmc_hd_map/scripts/rebuild_hd_map_artifacts.py --check  # stale 단계만 보고
+```
+
 1. 바꾸려는 대상이 물리 도색, topology, metadata 또는 drivable surface 중 무엇인지 구분한다.
 2. source policy와 provenance를 수정하고 generated output 직접 편집은 피한다.
 3. builder `--check`, 관련 unit test와 feature count/hash 차이를 검토한다.
@@ -203,7 +213,7 @@ roslaunch asmc_hd_map hd_map_source_comparison.launch repo_root:=/root/ws
 특히 다음은 함께 확인한다.
 
 - checkpoint 15개와 route 순서·3 m 포함
-- speed profile 전 구간 coverage, `route_speed_limits`의 min(MGeo, 공식 상한), provisional enforcement 금지와 `team_final` review 근거
+- speed profile 전 구간 coverage, `route_speed_limits`의 min(MGeo, 공식 상한), provisional enforcement 금지와 `team_final` authority 태그
 - Lane/DrivableArea 연결성, hole·seam과 반대방향/미사용 차로 제외
 - `build_id`, source SHA, geometry hash와 feature count
 - global/local cell parity와 `LaneAssociation` hysteresis

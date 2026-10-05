@@ -22,8 +22,9 @@ SOURCE_SCHEMA_VERSION = "asmc.competition_metadata.source/v1"
 METADATA_SCHEMA_VERSION = "asmc.competition_metadata/v1"
 # Rule book v1.2 (2026-09-30): START/END plus checkpoints 1-14.
 OFFICIAL_CHECKPOINT_COUNT = 15
-# team_final: the organizer gives no numeric boundary, but the team signed the
-# boundary off for the competition, so planning may enforce it. The frozen
+# team_final: the organizer gives no numeric boundary, so the team reviewed the
+# boundary and planning may enforce it. It is the current team baseline, not a
+# lock: edit the source and rebuild whenever planning finds a problem. The frozen
 # MissionZone message carries it as STATUS_DERIVED_OFFICIAL with
 # rule_payload.authority=team_final. Only provisional blocks planning.
 ALLOWED_MISSION_STATUS = {"official", "derived_official", "team_final", "provisional"}
@@ -398,16 +399,13 @@ def _mission_bounds(
     raise CompetitionMetadataError("unsupported mission bounds kind: %s" % kind)
 
 
-def _team_final_payload(
-    label: str, payload: Mapping[str, Any], review: Any
-) -> Dict[str, Any]:
-    if not isinstance(review, dict) or not review.get("reviewed_on") or not review.get("decision"):
-        raise CompetitionMetadataError("team_final %s needs review.reviewed_on and review.decision" % label)
-    if payload.get("requires_official_boundary_confirmation"):
-        raise CompetitionMetadataError("team_final %s still requires boundary confirmation" % label)
+def _team_final_payload(payload: Mapping[str, Any], review: Any) -> Dict[str, Any]:
+    """Tag a team-reviewed zone; review notes are optional provenance."""
+
     result = dict(payload)
     result["authority"] = "team_final"
-    result["review"] = {"reviewed_on": str(review["reviewed_on"]), "decision": str(review["decision"])}
+    if isinstance(review, dict) and review:
+        result["review"] = {str(key): str(value) for key, value in sorted(review.items())}
     return result
 
 
@@ -446,7 +444,7 @@ def _build_authored_missions(
         if not isinstance(payload, dict):
             raise CompetitionMetadataError("mission rule_payload must be a mapping: %s" % mission_id)
         if status == "team_final":
-            payload = _team_final_payload(mission_id, payload, spec.get("review"))
+            payload = _team_final_payload(payload, spec.get("review"))
         has_speed_limit = "speed_limit_kph" in spec
         speed_limit = _finite(spec.get("speed_limit_kph", 0.0), mission_id + ".speed_limit_kph")
         result.append(
@@ -529,7 +527,7 @@ def _build_traffic_light_missions(
             "traffic_light_id": traffic_light_id,
         })
         if status == "team_final":
-            payload = _team_final_payload(traffic_light_id, payload, config.get("review"))
+            payload = _team_final_payload(payload, config.get("review"))
         missions.append(
             {
                 "id": "traffic_light_%s" % traffic_light_id,
@@ -723,10 +721,8 @@ def validate_competition_metadata(document: Mapping[str, Any]) -> Dict[str, Any]
         if status == "team_final" and (
             mission.get("planning_enforcement_allowed") is not True
             or payload.get("authority") != "team_final"
-            or not (payload.get("review") or {}).get("reviewed_on")
-            or payload.get("requires_official_boundary_confirmation")
         ):
-            raise CompetitionMetadataError("team_final mission lacks its review authority: %s" % mission_id)
+            raise CompetitionMetadataError("team_final mission lacks its authority tag: %s" % mission_id)
         if mission.get("mission_type") in ("speed_limit", "high_speed_exception"):
             speed_profile.append(mission)
         if mission.get("mission_type") == "traffic_light":

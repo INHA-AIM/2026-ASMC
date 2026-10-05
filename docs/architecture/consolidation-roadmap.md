@@ -444,9 +444,9 @@ traffic-light ID가 있는 검수 정지선에서 파생한 신호등 경계 5�
 모든 provisional zone은 `planning_enforcement_allowed=false`다. 신호등과 팀 link 해석 후보는
 P1-D에서 표시하지만 사람 승인 전 판제 강제 규칙으로 사용할 수 없다.
 
-2026-10-05 규정집 v1.2 반영 때 11개 후보 경계를 사람 검수로 확정해 `team_final`로 올렸다(현재
+2026-10-05 규정집 v1.2 반영 때 11개 후보 경계를 사람이 검수해 팀 기준값 `team_final`로 올렸다(현재
 `derived_official=4`, `team_final=11`). 메시지는 동결 상태라 `STATUS_DERIVED_OFFICIAL`과 payload
-`authority=team_final`로 전달한다.
+`authority=team_final`로 전달한다. 판제 연동 결과에 따라 source를 고치고 `rebuild_hd_map_artifacts.py`로 다시 만든다.
 
 #### E. 1단계 테스트와 완료 조건
 

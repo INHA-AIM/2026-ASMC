@@ -83,7 +83,7 @@ display는 꺼져 있다.
   authoritative하다는 뜻이다.
 - `MissionZone.status=PROVISIONAL`은 시각화·후보 policy에는 쓸 수 있지만 강제 판제 규칙으로
   승격하면 안 된다. 현재 15개 zone은 모두 `DERIVED_OFFICIAL`로 발행된다. 공식 규칙에서 계산된
-  4개와, 2026-10-05 팀 검수로 확정한 11개(`rule_payload_json.authority=team_final`)다. 메시지가
+  4개와, 2026-10-05 팀 검수 기준값 11개(`rule_payload_json.authority=team_final`, 수정 가능)다. 메시지가
   동결돼 team-final enum은 없으므로 근거 수준은 payload로 구분한다.
 - 혼합 source의 polyline 방향을 억지로 정규화하지 않으므로 `LaneMarking.left_lane_ids`와
   `right_lane_ids`는 현재 비워 둔다. 판제의 정확한 경계 관계는 `Lane.left_boundary_id`와
