@@ -64,7 +64,7 @@ jobs:
       - name: Install nested sensor build dependencies
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends git ca-certificates libyaml-cpp-dev libopencv-dev libpcl-dev libgeographic-dev python3-nose ros-noetic-pcl-conversions ros-noetic-tf2-geometry-msgs ros-noetic-visualization-msgs
+          apt-get install -y --no-install-recommends git ca-certificates libyaml-cpp-dev libopencv-dev libpcl-dev libgeographic-dev python3-nose ros-noetic-pcl-conversions ros-noetic-tf ros-noetic-tf2-geometry-msgs ros-noetic-visualization-msgs
           rm -rf /var/lib/apt/lists/*
       - uses: actions/checkout@v4
         with:
