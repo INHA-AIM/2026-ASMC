@@ -244,7 +244,19 @@ bool MakeMergeProfile(const RefLine& ref, const CartesianState& ego,
         auto base=FrenetToCartesian(rp,start.s+distance,sd,0,d,dp,dpp);
         auto point=FrenetToCartesian(rp,start.s+distance,sd,(accel-base.a)/metric,d,dp,dpp);
         if(!std::isfinite(point.kappa)||std::fabs(point.kappa)>limits.max_curvature||
-           speed*speed*std::fabs(point.kappa)>limits.max_lateral_accel+1e-6)return false;
+           speed*speed*std::fabs(point.kappa)>limits.max_lateral_accel+1e-6) {
+            const double initial=ego.v*ego.v*std::fabs(geometry.points.front().kappa);
+            const double current=speed*speed*std::fabs(point.kappa);
+            const double previous=path.v.empty()?initial:
+                path.v.back()*path.v.back()*std::fabs(path.kappa.back());
+            // This cannot fix the observed initial state retroactively. Retain
+            // steering only while recovering a small, decreasing existing excess
+            // which is removed within half a second. Future curvature stays hard.
+            if(!std::isfinite(point.kappa)||std::fabs(point.kappa)>limits.max_curvature||
+               initial>limits.max_lateral_accel+.15||
+               i*dt>=.5||current>initial+1e-6||current>previous+1e-6||
+               (i>0&&accel>=0))return false;
+        }
         path.x.push_back(point.x);path.y.push_back(point.y);path.yaw.push_back(point.yaw);
         path.kappa.push_back(point.kappa);path.v.push_back(speed);path.a.push_back(accel);
     }
@@ -252,18 +264,28 @@ bool MakeMergeProfile(const RefLine& ref, const CartesianState& ego,
 }
 }
 
-void FrenetPlanner::ResetRoundaboutMerge() {
+void FrenetPlanner::ResetRoundaboutMerge(bool preserve_exit_prediction) {
     roundabout_merge_committed_=false;
     roundabout_waiting_latched_=false;
     roundabout_preferred_d_=0;
     roundabout_acceleration_memory_.Reset();
-    roundabout_prediction_.Reset();
+    if(!preserve_exit_prediction||!roundabout_exit_prediction_active_) {
+        roundabout_prediction_.Reset();
+        roundabout_exit_prediction_active_=false;
+    }
     roundabout_bridge_active_=roundabout_bridge_used_=false;
     roundabout_bridge_travel_=roundabout_bridge_settled_=0;
     roundabout_safe_observations_=0;
     roundabout_last_observation_=roundabout_last_entry_=-1;
     ++roundabout_epoch_;
     last_roundabout_result_=MergePrepareResult{};
+}
+void FrenetPlanner::ObserveRoundaboutExit(const std::vector<TrackedObject>& objects,double stamp) {
+    if(!roundabout_exit_prediction_active_)return;
+    if(!std::isfinite(stamp)||stamp>roundabout_exit_prediction_until_) {
+        roundabout_exit_prediction_active_=false;roundabout_prediction_.Reset();return;
+    }
+    roundabout_prediction_.Observe(objects,stamp,object_tracking_cfg_.yaw_rate_clamp_rad_s);
 }
 void FrenetPlanner::RevokeRoundaboutReadiness() {
     if (roundabout_merge_committed_) return;
@@ -324,6 +346,8 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         bool ok=KeepProcess(ego,start,ctx.s,ctx.d,start.s_d,start.s_dd,start.d_d,start.d_dd,
             obstacles,ctx.predicted_obstacles,cap,keep,out_path);
         result.maneuver_completed=ok;result.progress=ok?1:result.progress;
+        if(ok) {roundabout_exit_prediction_active_=true;
+            roundabout_exit_prediction_until_=observation_stamp+5;}
         last_roundabout_result_=result;return ok;
     }
     // Consume the one bridge episode from actual boundary contact, not from a
@@ -477,7 +501,34 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     // acceleration schedule. Stopped departures still need reliable nearby
     // traffic and independent straight / bounded-turn checks.
     const auto conflict=Interpolate(ref_,roundabout_zone_.conflict_start_s);
-    const int uncertain=roundabout_prediction_.UncertainNear(conflict.x,conflict.y);
+    // Confidence is needed for approaching vehicles. A fragment may stop
+    // delaying departure only after reliable motion and a conservative whole
+    // vehicle stay clear of the mapped conflict corridor for every turn model.
+    const auto passed=[&](int id) {
+        if(!roundabout_prediction_.MovingAwayReliable(id,conflict.x,conflict.y))return false;
+        auto it=std::find_if(obstacles.begin(),obstacles.end(),[&](const auto& o){return o.id==id;});
+        if(it==obstacles.end())return false;
+        VehicleShape bound=vehicle_shape_;bound.length=std::max(6.0,it->length);
+        bound.width=std::max(3.0,it->width);bound.rear_overhang=bound.length/2;
+        for(double change:{0.0,-.15,.15}) {
+            CartesianState pose{};pose.x=it->x;pose.y=it->y;pose.yaw=std::atan2(it->vy,it->vx);
+            const double rate=change==0?0:std::clamp(roundabout_prediction_.Rate(id)+change,
+                -object_tracking_cfg_.yaw_rate_clamp_rad_s,object_tracking_cfg_.yaw_rate_clamp_rad_s);
+            for(double t=0;t<=2.0;t+=.1) {
+                if(roundabout_zone_.Overlaps(pose,bound,collision_cfg_.safety_margin))return false;
+                const double angle=pose.yaw+.05*rate;
+                pose.x+=.1*std::hypot(it->vx,it->vy)*std::cos(angle);
+                pose.y+=.1*std::hypot(it->vx,it->vy)*std::sin(angle);pose.yaw+=.1*rate;
+            }
+        }
+        return true;
+    };
+    int uncertain=roundabout_prediction_.UncertainNear(conflict.x,conflict.y,passed);
+    // UNKNOWN with zero velocity is not evidence of a stationary vehicle.
+    // Gate vehicle-sized observations on the circulating lane until perception
+    // establishes motion/classification. Small roadside fixtures are excluded.
+    if(uncertain<0)uncertain=UnclassifiedCirculatingObject(obstacles,roundabout_zone_,
+        conflict.x,conflict.y);
     bool early_departure_clear=uncertain<0&&(ego.v<=.1||ego.a>=-.5)&&
         planning_time-observation_stamp<=.25&&observation_stamp<=planning_time+.05;
     if(uncertain>=0)result.blocking_object_id=uncertain;

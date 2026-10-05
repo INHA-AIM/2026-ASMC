@@ -44,7 +44,15 @@ int main(){
     expect(history.UncertainNear(0,0)<0,"remote partial objects do not block the local conflict area");
     object.x=2;history.Observe({object},200.2,.6);
     expect(history.UncertainNear(0,0)==3,"a nearby new moving fragment cannot authorize entry");
+    expect(history.UncertainNear(0,0,[](int id){return id==3;})<0,
+        "explicit passed-vehicle certificate excludes only its own uncertainty gate");
+    expect(!history.MovingAwayReliable(3,0,0),"new incomplete motion cannot be called reliably departing");
     history.Reset();
     expect(history.UncertainNear(0,0)<0&&history.Rate(3)==0,"mission reset clears isolated roundabout history");
+    object.id=4;object.x=20;object.y=0;object.vx=5;object.vy=0;
+    object.length=4.5;object.width=1.9;object.motion_state=ObjectMotionState::DYNAMIC;
+    for(int i=0;i<5;++i)history.Observe({object},300+i*.1,.6);
+    expect(history.MovingAwayReliable(4,0,0),"stable receding velocity is distinguished from fragment orientation");
+    expect(!history.MovingAwayReliable(4,40,0),"the same approaching vehicle cannot receive a passed certificate");
     return failures?1:0;
 }

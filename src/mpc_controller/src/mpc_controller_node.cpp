@@ -179,7 +179,7 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
             stop.steering=BrakingSteering(last_successful_steering_,age,
                 stop_state.vx,controller_.params().steering_rate_max);
         }
-        controller_.ResetOnFailSafe();
+        controller_.ResetForPlannerStop(stop.steering);
         control_pub_.publish(stop);
         ROS_WARN_THROTTLE(1.0,"MPC planner STOP braking: steering=%+.3f",stop.steering);
         return;

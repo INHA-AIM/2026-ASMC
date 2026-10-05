@@ -61,6 +61,7 @@ class MpcController {
     // warm-start/정지 데드락 상태를 모두 비워 다음 정상 사이클이 이전
     // 실패의 잔상 없이 새로 시작하게 한다.
     void ResetOnFailSafe();
+    void ResetForPlannerStop(double published_steering);
 
     const MPCParams& params() const { return params_; }
 
@@ -75,3 +76,4 @@ class MpcController {
     int stuck_timeout_cycles_ = 1;
     int recovery_duration_cycles_ = 1;
 };
+

@@ -32,6 +32,13 @@ void MpcController::ResetOnFailSafe() {
     recovery_cycles_left_ = 0;
 }
 
+void MpcController::ResetForPlannerStop(double published_steering) {
+    ResetOnFailSafe();
+    if (std::isfinite(published_steering))
+        last_control_.delta = std::clamp(published_steering,
+            -params_.steering_max, params_.steering_max);
+}
+
 MpcController::Output MpcController::ControlProcess(
     const MPCState& ego_state, const ReferencePath& reference) {
     Output output;
@@ -121,3 +128,4 @@ MpcController::Output MpcController::ControlProcess(
         output.first_used_reference_acceleration;
     return output;
 }
+

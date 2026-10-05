@@ -30,5 +30,17 @@ int main(){
  expect(!check(path,{box(11,0,1.8,0)},false).safe,"initial physical overlap cannot be excused as margin recovery");
  expect(!check(beyond,{},true).safe,"entry candidate must actually traverse the corridor");
  expect(!CheckRoundaboutCandidate(path,zone,{},shape,collision,NAN,1.5,2,true).safe,"invalid sample interval cannot produce safety");
+ auto unknown=box(80,25,0,0);unknown.motion_state=ObjectMotionState::UNKNOWN;
+ expect(UnclassifiedCirculatingObject({unknown},zone,20,0)==80,"new zero-velocity vehicle fragment on circulating lane blocks certification");
+ auto fixture=unknown;fixture.length=.3;fixture.width=.3;
+ expect(UnclassifiedCirculatingObject({fixture},zone,20,0)<0,"small stationary fixtures do not become merge vehicles");
+ auto roadside=unknown;roadside.y=8;for(auto& corner:roadside.corners)corner.y+=8;
+ expect(UnclassifiedCirculatingObject({roadside},zone,20,0)<0,"unknown roadside observations do not gate circulating traffic");
+ auto lane_edge=box(81,25,4.5,0);lane_edge.motion_state=ObjectMotionState::UNKNOWN;
+ expect(UnclassifiedCirculatingObject({lane_edge},zone,20,0)==81,"vehicle fragment just outside lane polygon still needs classification");
+ lane_edge.y+=1;for(auto& corner:lane_edge.corners)corner.y+=1;
+ expect(UnclassifiedCirculatingObject({lane_edge},zone,20,0)<0,"lane observation guard has a bounded two-metre extent");
+ unknown.motion_state=ObjectMotionState::LOW_THREAT;
+ expect(UnclassifiedCirculatingObject({unknown},zone,20,0)<0,"established static classification uses normal collision checks");
  return failures?1:0;
 }

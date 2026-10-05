@@ -88,7 +88,8 @@ public:
         MergePrepareResult& result);
     bool CanCommitRoundaboutMerge(const MergePrepareResult& result) const;
     void ApplyRoundaboutMergeCommit(const MergePrepareResult& result);
-    void ResetRoundaboutMerge();
+    void ResetRoundaboutMerge(bool preserve_exit_prediction = false);
+    void ObserveRoundaboutExit(const std::vector<TrackedObject>& objects, double stamp);
     void RevokeRoundaboutReadiness();
     bool roundabout_merge_committed() const { return roundabout_merge_committed_; }
     const MergePrepareResult& last_roundabout_result() const { return last_roundabout_result_; }
@@ -1297,4 +1298,6 @@ private:
     LaneChangeContext v2_lane_change_{};
     std::unordered_map<int, ObjectTrack> object_tracks_{};
     RoundaboutPrediction roundabout_prediction_{};
+    bool roundabout_exit_prediction_active_=false;
+    double roundabout_exit_prediction_until_=-1;
 };

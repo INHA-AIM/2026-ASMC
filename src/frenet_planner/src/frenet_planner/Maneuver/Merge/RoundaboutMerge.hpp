@@ -44,3 +44,8 @@ MergeCandidateCheck CheckRoundaboutCandidate(
     const std::vector<TrackedObject>& objects, const VehicleShape& shape,
     const CollisionCheckConfig& collision, double dt,
     double front_time_gap, double rear_time_gap, bool entering);
+
+// Vehicle-sized UNKNOWN observations on the mapped circulating lane cannot
+// certify departure from an initial zero-velocity estimate.
+int UnclassifiedCirculatingObject(const std::vector<TrackedObject>& objects,
+    const RoundaboutMergeZone& zone,double conflict_x,double conflict_y);

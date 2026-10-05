@@ -336,3 +336,39 @@ stub 문법 검사를 수행한다. 기록 입력 재생에서는 불안정한 �
 생성되지 않았고, 새로운 회전 예측에서 후행 차량의 미래 안전 여유와 제동
 경로가 겹쳐 거절됐다. 그 검사를 완화하지 않는다. 출발 시점이 달라진 실제
 주행의 출구 정지 여부는 고정 입력에서 확정할 수 없으므로 신규 주행에서 확인한다.
+
+### Exit continuity and departure confidence
+
+Departure continues to check every observed object with both the 1.5 s front
+and 2.0 s rear time buffers. A reliably receding vehicle can stop blocking the
+separate confidence gate only when a conservative 6 m by 3 m body remains outside
+the conflict corridor for two seconds under straight and bounded-turn models.
+This does not remove it from candidate collision checks. Vehicle-sized UNKNOWN
+zero-velocity observations within 25 m of the conflict and within 2 m of its lane
+polygon with authoritative perception geometry block certification until their
+classification/motion is established. Small fixtures and distant roadside objects
+do not acquire vehicle semantics. The observation guard never expands drivable
+pavement.
+
+A small existing lateral-acceleration excess (at most 0.15 m/s²) may retain a
+MERGE path only while the excess decreases under braking and disappears before
+0.5 s. Curvature, road, collision, and future lateral limits remain binding.
+Larger excesses cannot certify traversal. This is recovery of the observed state,
+not a global increase of the 2.6 m/s² limit.
+
+On successful MERGE completion, KEEP retains the sensor-timestamp velocity
+history for at most 5 s or 20 m beyond rear clearance. Other maneuvers and
+cancellation discard it. Runtime feeds the actual object timestamp through
+ObserveRoundaboutExit; repeated observations never fabricate turn samples.
+Validated planner STOP clears MPC optimization and acceleration memory while
+retaining the steering actually published as the next rate-limit reference.
+Invalid input/watchdog/emergency failure still performs the full reset.
+
+Validation uses public-map synthetic candidate/execution/prediction cases,
+controller restart rate-limit tests, existing planner/controller regressions,
+and fixed-input replay of four runs. Replay confirms recovery at the third and
+fourth runs' initial lateral-limit failures and removal of the first run's KEEP
+prediction-handoff blockage. Two isolated first-run exit states still reject
+paths on map containment; those road checks remain active. Historical ego poses
+are fixed inputs, so replay does not prove closed-loop MORAI performance or
+retimed interaction with following vehicles.

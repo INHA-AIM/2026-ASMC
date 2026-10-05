@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <deque>
+#include <functional>
 #include <unordered_map>
 #include <vector>
 
@@ -13,7 +14,7 @@ class RoundaboutPrediction {
     struct Sample { double t, direction, speed, length, width; };
     struct Track {
         std::deque<Sample> samples;
-        double stamp=-1, rate=0, x=0, y=0, speed=0, last_motion=-1;
+        double stamp=-1, rate=0, x=0, y=0, vx=0, vy=0, speed=0, last_motion=-1;
         bool moving=false, reliable=false, complete=false;
     };
     std::unordered_map<int,Track> tracks_;
@@ -30,7 +31,7 @@ public:
             if(track.stamp>=0&&stamp-track.stamp>.5)track=Track{};
             track.stamp=stamp;
             const double speed=std::hypot(object.vx,object.vy);
-            track.x=object.x;track.y=object.y;track.speed=speed;
+            track.x=object.x;track.y=object.y;track.speed=speed;track.vx=object.vx;track.vy=object.vy;
             track.moving=speed>=.5||object.motion_state==ObjectMotionState::DYNAMIC||
                 object.motion_state==ObjectMotionState::DYNAMIC_PENDING;
             if(track.moving)track.last_motion=stamp;
@@ -79,12 +80,19 @@ public:
     }
     // Check vehicles within roughly two seconds of the conflict area. A
     // recently seen moving vehicle which vanishes is retained for one second.
-    int UncertainNear(double x,double y) const {
+    bool MovingAwayReliable(int id,double x,double y) const {
+        auto it=tracks_.find(id);if(it==tracks_.end())return false;
+        const auto& t=it->second;
+        return t.reliable&&stamp_-t.stamp<=1e-6&&t.speed>=.5&&
+            (t.x-x)*t.vx+(t.y-y)*t.vy>.7*t.speed*std::hypot(t.x-x,t.y-y);
+    }
+    int UncertainNear(double x,double y,
+        const std::function<bool(int)>& passed = {}) const {
         for(const auto& item:tracks_){
             const auto& track=item.second;
             if(!track.moving||(track.complete&&stamp_-track.stamp<=1e-6))continue;
             const double radius=12+2*track.speed;
-            if(std::hypot(track.x-x,track.y-y)<=radius)return item.first;
+            if(std::hypot(track.x-x,track.y-y)<=radius&&(!passed||!passed(item.first)))return item.first;
         }
         return -1;
     }

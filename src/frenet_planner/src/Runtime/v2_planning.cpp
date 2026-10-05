@@ -151,7 +151,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     if (acceptance.transaction_started) {
         planner_.ResetExternalAvoidance();
         planner_.ResetExternalLaneChange();
-        planner_.ResetRoundaboutMerge();
+        planner_.ResetRoundaboutMerge(command.maneuver_type == asmc_msgs::BehaviorCommand::KEEP);
     }
 
     // ===== 계획 대상 재결속 (D6-0a) =====
@@ -1608,6 +1608,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 
     // ---- 5. planning ----------------------------------------------------
     CartesianPath path;
+    planner_.ObserveRoundaboutExit(objects, snapshot.objects.header.stamp.toSec());
     const bool plan_ok = planner_.Plan(ego, objects,
                                        planner_command, path);
 

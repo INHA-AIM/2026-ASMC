@@ -626,7 +626,7 @@ bool FrenetPlanner::Plan(const CartesianState& ego,
                          const std::vector<TrackedObject>& obstacles,
                          const PlannerCommand& command,
                          CartesianPath& out_path) {
-    if (command.mode != MERGE) ResetRoundaboutMerge();
+    if (command.mode != MERGE) ResetRoundaboutMerge(command.mode == LANE_KEEPING);
     PlanFailureReason reason = PlanFailureReason::NONE;
     if (!ValidateExternalCommand(command, reason)) {
         speed_profiler_.Reset();
@@ -765,6 +765,13 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
     for (auto& obj : ctx.predicted_obstacles) {
         const auto it = object_yaw_rates.find(obj.id);
         obj.yaw_rate = it == object_yaw_rates.end() ? 0.0 : it->second;
+    }
+
+    if(roundabout_exit_prediction_active_&&external_command.mode==LANE_KEEPING) {
+        if(ctx.s<roundabout_zone_.rear_clear_s-1||ctx.s>roundabout_zone_.rear_clear_s+20) {
+            roundabout_exit_prediction_active_=false;roundabout_prediction_.Reset();
+        } else for(auto& object:ctx.predicted_obstacles)
+            object.yaw_rate=roundabout_prediction_.Rate(object.id);
     }
 
     // TargetSpeedResolver는 공간/상위계층 제한을 합친 raw base cap만

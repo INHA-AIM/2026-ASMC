@@ -256,6 +256,25 @@ int main(){
  expect(braked&&!r.candidate_valid&&out.x.size()>2&&out.v.back()<.05,"blocked traversal under service braking retains a multi-point stop trajectory");
  expect(braked&&CartesianTrajectoryClear(out,{occupying},shape,{.5,.1,3},.1),"steerable service stop still checks the occupying object's physical clearance");
 
+ // Public map geometry: a small observed lateral excess must permit a
+ // checked recovery, while a large excess cannot certify traversal.
+ FrenetPlanner excess_planner;bool excess_init=excess_planner.Init(file.string());
+ ego=pose_at(zone.rear_clear_s-3);ego.a=-2;
+ const double local_curve=std::fabs(Interpolate(ref,zone.rear_clear_s-3).kappa);
+ ego.v=std::sqrt(2.65/std::max(.01,local_curve));
+ excess_planner.ApplyRoundaboutMergeCommit({});out={};
+ bool excess_ok=excess_init&&excess_planner.PlanRoundaboutMerge(ego,{},cmd,650,650,out,r);
+ bool converges=excess_ok&&out.x.size()>6;
+ for(size_t i=0;i<out.v.size();++i) {
+     double ay=out.v[i]*out.v[i]*std::fabs(out.kappa[i]);
+     converges&=ay<=2.75+1e-6&&(i<=5||ay<=2.6+1e-6);
+ }
+ expect(converges,"small existing lateral excess retains steering and converges within half a second");
+ FrenetPlanner excessive_planner;bool excessive_init=excessive_planner.Init(file.string());
+ ego.v=std::sqrt(3.0/std::max(.01,local_curve));excessive_planner.ApplyRoundaboutMergeCommit({});out={};
+ if(excessive_init)excessive_planner.PlanRoundaboutMerge(ego,{},cmd,651,651,out,r);
+ expect(excessive_init&&!r.candidate_valid,"large lateral excess cannot certify a normal traversal");
+
  MergeAccelerationMemory memory;
  expect(memory.Seed(-2.4,1)==-2.4,"first traversal keeps measured braking seed");
  memory.Accept({-2.4,-1.92,-1.44},1,.1);

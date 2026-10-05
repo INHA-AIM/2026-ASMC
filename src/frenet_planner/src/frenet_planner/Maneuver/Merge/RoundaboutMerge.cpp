@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include "frenet_planner/Geometry/PolygonUtils.hpp"
 
 namespace {
 double Cross(geometry::Point2D a, geometry::Point2D b, geometry::Point2D c) {
@@ -154,4 +155,22 @@ MergeCandidateCheck CheckRoundaboutCandidate(const CartesianPath& path,
         }
     }
     result.safe=true;return result;
+}
+
+int UnclassifiedCirculatingObject(const std::vector<TrackedObject>& objects,
+    const RoundaboutMergeZone& zone,double conflict_x,double conflict_y) {
+    if(!zone.valid)return -1;
+    for(const auto& object:objects) {
+        if(object.motion_state!=ObjectMotionState::UNKNOWN||!object.geometry_valid||
+           object.length<2||object.width<.8||std::hypot(object.vx,object.vy)>=.5)continue;
+        if(std::hypot(object.x-conflict_x,object.y-conflict_y)>25)continue;
+        const auto footprint=geometry::ComputeConvexHull(geometry::ProjectCornersToXY(object.corners));
+        for(const auto& area:zone.conflict_areas)
+            // Perception fragments can lie just outside the map lane polygon.
+            // This two-metre observation guard affects confidence only; it
+            // never expands the drivable road or removes collision checking.
+            if(Overlap(footprint,area)||geometry::ConvexPolygonDistance(footprint,area)<=2)
+                return object.id;
+    }
+    return -1;
 }
