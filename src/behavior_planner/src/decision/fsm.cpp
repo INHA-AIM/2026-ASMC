@@ -77,6 +77,17 @@ Fsm::ManeuverOutput Fsm::updateManeuver(
   if (IsLateralManeuver(active_lateral_behavior_)) {
     if (maneuver_command_id_ == 0 && active_command_id != 0) {
       maneuver_command_id_ = active_command_id;
+    } else if (active_command_id != 0 &&
+               active_command_id != maneuver_command_id_ &&
+               (maneuver_phase_ == ManeuverPhase::PREPARE ||
+                maneuver_phase_ == ManeuverPhase::EXECUTE)) {
+      // The wire manager can replace a preparation transaction when its
+      // speed policy changes or a failed transaction is restarted. Bind to
+      // that published command before consuming feedback; an old READY must
+      // not execute a new command. Committed maneuvers retain their binding.
+      maneuver_command_id_ = active_command_id;
+      maneuver_phase_ = ManeuverPhase::PREPARE;
+      avoid_missing_cycles_ = 0;
     }
     const bool feedback_matches =
         feedback.valid && maneuver_command_id_ != 0 &&

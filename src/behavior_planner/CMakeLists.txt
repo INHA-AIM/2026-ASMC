@@ -53,6 +53,14 @@ catkin_install_python(PROGRAMS
 install(DIRECTORY launch src/config web DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(fsm_command_binding_test
+    test/fsm_command_binding_test.cpp
+    src/decision/fsm.cpp)
+  if(TARGET fsm_command_binding_test)
+    target_include_directories(fsm_command_binding_test PRIVATE
+      ${CMAKE_CURRENT_BINARY_DIR}/include)
+  endif()
+
   catkin_add_gtest(detected_msg_converter_test
     test/detected_msg_converter_test.cpp
     src/node/detected_msg_converter.cpp)
