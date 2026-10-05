@@ -62,12 +62,12 @@ planner:
   lane_width: 3.5   # [m] LANE_CHANGE 오프셋, "내 차선" 판정(|d|<=lane_width/2)에 사용
 
   # [s] frenet_planner_node의 planning/frequency 기본값(20Hz)과 동일하게
-  # 유지한다. target speed recovery rate limiter(Phase 2)가 사용하는
-  # replanning 주기이며, path_generator/dt(trajectory 샘플 간격, 아래)와는
-  # 다른 값이다 - 절대 섞어 쓰지 않는다 (fix/yuntae-frenet-speed-continuity).
+  # 유지한다. normal KEEP SpeedProfiler가 jerk/acceleration을
+  # 적분하는 replanning 주기이며, path_generator/dt(trajectory
+  # 샘플 간격, 아래)와는 다른 값이다 - 절대 섞어 쓰지 않는다.
   replanning_period_s: 0.05
-  # [m/s^2] target speed가 이전 cycle보다 증가하는 방향에만 적용하는 초기
-  # safety rate limit. 최종 MORAI tuning 값이 아니다.
+  # [m/s^2] normal KEEP SpeedProfiler의 양의 가속도 한계.
+  # 최종 MORAI tuning 값이 아니다.
   max_target_speed_accel: 2.0
 
   # --- Reference line 구축/조회 (Reference/Reference.cpp) ---------

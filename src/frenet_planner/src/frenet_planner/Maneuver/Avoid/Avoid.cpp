@@ -285,18 +285,15 @@ bool FrenetPlanner::AvoidProcess(
     // 없다"이므로 결과는 WAITING이다(계약 3.3.4절).
     const bool blocked_by_request = avoid_prepare &&
         (result.direction_conflict || result.target_behind_ego);
-    const double prepare_target_gap = avoid_prepare
-        ? ForwardArcDistance(s, v2_avoidance_.obstacle_s, track_length)
-        : std::numeric_limits<double>::infinity();
-
     // 저속에서는 d(t)가 아니라 d(s)인 거리 기반 후보를 사용한다. 기존
     // 구현은 COMMIT 뒤 2초짜리 경로 하나만 만들어, 정지 출발 시 1~2 m
     // 전진한 지점에서 횡이동이 끝나기도 전에 충돌로 모두 탈락했다.
     // PREPARE/COMMIT 모두 여러 target_d와 여러 전환거리를 평가해 저속도
-    // 정상적인 후보 탐색 상태로 만든다. strict margin이 전부 막힌 상태에서
-    // 제한적 탈출 후보가 한 번 승인되면 SHIFT가 끝날 때까지 이 생성기를
-    // 유지한다. 현재 속도만 다시 검사하면 0.5 m/s 경계에서 출발/정지가
-    // 반복되기 때문이다.
+    // 정상적인 후보 탐색 상태로 만든다. margin recovery가 필요한 SHIFT가
+    // 한 번 승인되면 생성기 종류만 SHIFT가 끝날 때까지 유지한다. 충돌
+    // 판정 자체는 phase/속도와 무관하게 일반 후보와 동일한 공용 판정기를
+    // 쓴다. 현재 속도만으로 생성기를 바꾸면 0.5 m/s 경계에서 출발/정지가
+    // 반복될 수 있기 때문이다.
     const bool use_low_speed_candidate_pipeline =
         result.low_speed_context ||
         (avoid_committed && shift_phase &&
@@ -352,12 +349,11 @@ bool FrenetPlanner::AvoidProcess(
             double target_d = 0.0;
             double cost = std::numeric_limits<double>::infinity();
             bool early_return = false;
-            bool kinematically_valid = false;
-            bool strict_clear = false;
-            int strict_blocking_id = -1;
+            bool collision_clear = false;
+            bool margin_recovery_used = false;
+            int blocking_id = -1;
         };
         std::vector<LowSpeedCandidateEvaluation> evaluations;
-        int strict_valid_count = 0;
         for (std::size_t target_index = 0;
              target_index < low_speed_targets.size(); ++target_index) {
             const double target_d = low_speed_targets[target_index];
@@ -392,16 +388,18 @@ bool FrenetPlanner::AvoidProcess(
                 }
 
                 int blocking_id = -1;
-                const int escape_object_id =
-                    (avoid_prepare || shift_phase ||
-                     v2_avoidance_.phase == AvoidPhase::PASS)
+                bool margin_recovery_used = false;
+                // AVOID lifecycle phase와 무관하다. 현재 pose가 target margin
+                // 안에서 시작했는지는 공용 collision checker가 직접 판단한다.
+                const int margin_recovery_object_id =
+                    (avoid_prepare || avoid_committed)
                         ? v2_avoidance_.obstacle_id : -1;
-                const bool strict_clear = kinematically_valid &&
+                const bool collision_clear = kinematically_valid &&
                     CartesianTrajectoryClear(
                         candidate, phase_collision_obstacles, vehicle_shape_,
                         collision_cfg_, path_cfg_.dt, &blocking_id,
-                        escape_object_id);
-                if (strict_clear) ++strict_valid_count;
+                        margin_recovery_object_id,
+                        &margin_recovery_used);
 
                 double cost = transition_distance;
                 if (avoid_committed) {
@@ -417,17 +415,9 @@ bool FrenetPlanner::AvoidProcess(
                 }
                 evaluations.push_back(LowSpeedCandidateEvaluation{
                     std::move(candidate), target_d, cost, is_early_return,
-                    kinematically_valid, strict_clear, blocking_id});
+                    collision_clear, margin_recovery_used, blocking_id});
             }
         }
-
-        // 1차 검사는 항상 기존 safety margin 그대로다. 그 결과가 0개이고,
-        // 이미 COMMIT된 SHIFT를 저속에서 수행 중일 때만 지정 target에 한해
-        // 실제 OBB 비충돌 + 지속적인 횡이격 증가를 2차로 검사한다.
-        const bool committed_escape_recovery_allowed =
-            avoid_committed && shift_phase && strict_valid_count == 0 &&
-            (result.low_speed_context ||
-             v2_avoidance_.escape_recovery_active);
 
         CartesianPath selected;
         double selected_target = execution_target_d;
@@ -436,42 +426,8 @@ bool FrenetPlanner::AvoidProcess(
         bool selected_early_return = false;
         int first_blocking_id = -1;
         for (auto& evaluation : evaluations) {
-            bool clear = evaluation.strict_clear;
-            bool clear_by_recovery = false;
-            int blocking_id = evaluation.strict_blocking_id;
-            // PREPARE에서 복구 후보를 허용하지 않으면 정지한 차량은
-            // READY에 도달하지 못해 COMMIT/SHIFT 자체가 시작되지 않는다.
-            // 단, 지금 COMMIT하면 곧바로 SHIFT가 되는 거리 안의 저속 target에
-            // 한정한다. 먼 대상의 TRACKING 단계에는 기존 strict 정책만 쓴다.
-            const bool prepare_escape_recovery_allowed =
-                avoid_prepare && result.low_speed_context &&
-                strict_valid_count == 0 &&
-                std::isfinite(prepare_target_gap) &&
-                prepare_target_gap > 0.0 &&
-                prepare_target_gap <= EffectiveAvoidShiftStartDistance(
-                    result.ego_speed_mps, d, evaluation.target_d);
-            // 복귀 probe는 다른 SHIFT 후보가 strict margin을 만족하더라도
-            // target과 실제 OBB가 비충돌이고 그 경계 이격이 계속 증가하면
-            // 평가할 수 있어야 한다. 그렇지 않으면 안전한 기존 회피 후보가
-            // 있다는 이유만으로 복귀 검사가 영원히 생략된다.
-            const bool early_return_recovery_allowed =
-                avoid_committed && evaluation.early_return;
-            const bool try_escape_recovery =
-                committed_escape_recovery_allowed ||
-                prepare_escape_recovery_allowed ||
-                early_return_recovery_allowed;
-            if (!clear && try_escape_recovery &&
-                evaluation.kinematically_valid &&
-                evaluation.strict_blocking_id ==
-                    v2_avoidance_.obstacle_id) {
-                blocking_id = -1;
-                clear_by_recovery = CartesianTrajectoryClear(
-                    evaluation.path, phase_collision_obstacles,
-                    vehicle_shape_, collision_cfg_, path_cfg_.dt,
-                    &blocking_id, v2_avoidance_.obstacle_id,
-                    TargetEscapePolicy::CONTINUOUS_OUTWARD_RECOVERY);
-                clear = clear_by_recovery;
-            }
+            const bool clear = evaluation.collision_clear;
+            const int blocking_id = evaluation.blocking_id;
 
             if (!evaluation.path.x.empty()) {
                 last_candidate_paths_.push_back(evaluation.path);
@@ -486,7 +442,8 @@ bool FrenetPlanner::AvoidProcess(
                     selected = evaluation.path;
                     selected_target = evaluation.target_d;
                     selected_cost = evaluation.cost;
-                    selected_from_recovery = clear_by_recovery;
+                    selected_from_recovery =
+                        evaluation.margin_recovery_used;
                     selected_early_return = evaluation.early_return;
                 }
             } else if (first_blocking_id < 0 && blocking_id >= 0) {
@@ -507,7 +464,7 @@ bool FrenetPlanner::AvoidProcess(
             // 아래 maintenance 생성 결과를 그대로 반환한다.
         } else {
             result.escape_recovery_required = selected_from_recovery;
-            if (selected_from_recovery && avoid_committed) {
+            if (selected_from_recovery && avoid_committed && shift_phase) {
                 v2_avoidance_.escape_recovery_active = true;
             }
             if (selected_early_return) {
@@ -578,7 +535,7 @@ bool FrenetPlanner::AvoidProcess(
 
         // wire command의 논리 ID가 아니라 공간 재연결까지 반영한 현재 관측
         // ID를 충돌 스코핑에 사용한다.
-        const int escape_object_id = v2_avoidance_.obstacle_id;
+        const int margin_recovery_object_id = v2_avoidance_.obstacle_id;
 
         const int target_count = avoid_committed
             ? static_cast<int>(committed_targets.size())
@@ -594,9 +551,11 @@ bool FrenetPlanner::AvoidProcess(
             request.lateral.search_tolerance = search_tolerance;
             request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
             request.target_speed = resolved_target_speed;
-            request.collision.escape_object_id = escape_object_id;
+            request.collision.margin_recovery_object_id =
+                margin_recovery_object_id;
             if (approach_phase) {
-                request.collision.coast_exempt_object_id = escape_object_id;
+                request.collision.coast_exempt_object_id =
+                    margin_recovery_object_id;
             }
 
             PlannerDebugStats side_stats;
@@ -678,6 +637,8 @@ bool FrenetPlanner::AvoidProcess(
             // "지정했다 vs 확보했다"와 같은 원칙).
             result.selected_target_d = endpoint_d;
             result.selected_cost = best_candidate->cost_total;
+            result.escape_recovery_required =
+                best_candidate->margin_recovery_used;
             result.candidate_path =
                 ConvertToCartesianPath(*best_candidate, ref_);
             if (!reaches_avoid_target) {

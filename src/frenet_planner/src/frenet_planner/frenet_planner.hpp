@@ -21,6 +21,7 @@
 #include "frenet_planner/Math/FrenetConverter.hpp"
 #include "frenet_planner/Pipeline/PlannerConfigBundle.hpp"
 #include "frenet_planner/Pipeline/TrajectoryPipeline.hpp"
+#include "frenet_planner/Speed/SpeedProfiler.hpp"
 #include "frenet_planner/visualization/planner_debug_writer.hpp"
 
 // Frenet Frame Path Planner: 전역 경로(RefLine)를 기준으로 한 Local Planner.
@@ -133,6 +134,28 @@ public:
     double last_d_dot() const { return last_d_dot_; }
     BehaviorState last_mode() const { return last_mode_; }
     double last_target_speed() const { return last_target_speed_; }
+    double last_raw_speed_cap() const { return last_raw_speed_cap_; }
+    double last_profiled_acceleration() const {
+        return last_profiled_acceleration_;
+    }
+    bool speed_profiler_initialized() const {
+        return speed_profiler_.initialized();
+    }
+    double last_base_target_speed() const {
+        return last_base_target_speed_;
+    }
+    double last_candidate_curvature_speed_cap() const {
+        return last_candidate_curvature_speed_cap_;
+    }
+    double last_candidate_max_abs_curvature() const {
+        return last_candidate_max_abs_curvature_;
+    }
+    double last_candidate_max_lateral_accel() const {
+        return last_candidate_max_lateral_accel_;
+    }
+    int last_candidate_aware_regenerations() const {
+        return last_candidate_aware_regenerations_;
+    }
 
     // 외부 STOP이 HOLD 단계에 도달했는지. ROS 계층이 "정지 완료"를 판단하는
     // 데 쓴다.
@@ -834,10 +857,10 @@ private:
         // 확장될 수 있다. PREPARE에서는 항상 false다.
         bool committed = false;
 
-        // 저속 SHIFT에서 strict margin 후보가 모두 막혔지만 실제 OBB는
-        // 비충돌인 탈출 후보가 승인되었는가. 한 번 켜지면 현재 속도가
-        // low_speed_fallback_v를 넘어도 PASS 진입까지 거리 기반 crawl을
-        // 유지해 출발/정지 진동을 막는다.
+        // 저속 SHIFT에서 공용 margin-recovery 판정을 사용한 후보가
+        // 승인되었는가. 이 값은 충돌 예외를 켜는 phase gate가 아니라,
+        // 속도가 low_speed_fallback_v를 넘어도 PASS 진입까지 거리 기반
+        // 후보 생성기를 유지해 출발/정지 진동을 막는 generator latch다.
         bool escape_recovery_active = false;
 
         // 완료 후에도 새 command_id가 올 때까지 context를 보존한다.
@@ -1117,7 +1140,7 @@ private:
     double LowSpeedLateralTransitionDistance(double from_d,
                                               double to_d) const;
 
-    // ExecuteManeuverPipeline이 참조하는 config 10종을 값 복사 없이 참조로
+    // ExecuteManeuverPipeline이 참조하는 config 11종을 값 복사 없이 참조로
     // 묶어 반환한다 - Pipeline/TrajectoryPipeline으로 이 함수를 분리하기
     // 위한 선행 작업(R3 1/4단계)이며, 이 시점에는 아직 pipeline 내부에서
     // 개별 멤버 접근 대신 이 번들을 통해서만 읽도록 바꾸는 순수 구조
@@ -1148,9 +1171,8 @@ private:
     // 주기를 나타낸다. path_cfg_.dt(trajectory 샘플 간격)와는 다른 개념이다
     // - 절대 섞어 쓰지 않는다(fix/yuntae-frenet-speed-continuity Phase 2).
     double replanning_period_s_;
-    // [m/s^2] target speed가 이전 cycle보다 증가하는 방향에만 적용하는
-    // rate limit. 감속 방향은 curve braking envelope(Phase 1)가 이미
-    // 안전하게 처리하므로 여기서 추가로 막지 않는다.
+    // [m/s^2] normal KEEP SpeedProfiler의 양의 가속도 한계. 기존
+    // parameter의 물리 단위와 tuning 값을 그대로 이어받는다.
     double max_target_speed_accel_;
     bool ref_loaded_ = false;
 
@@ -1161,12 +1183,19 @@ private:
     double last_d_ = 0.0;
     double last_d_dot_ = 0.0;
     BehaviorState last_mode_ = LANE_KEEPING;
+    // 실제 longitudinal candidate generation에 사용한 scalar target. 낮아진
+    // cap은 즉시 반영되고, cap 상승만 SpeedProfiler가 점진적으로 복구한다.
     double last_target_speed_ = 0.0;
-    // 첫 cycle에는 last_target_speed_(초기값 0.0)를 기준으로 rate limit을
-    // 걸면 안 된다 - 실제 ego 속도와 무관하게 0 근처로 묶인다. false인 동안은
-    // resolved_target_speed의 raw 값을 그대로 쓴다
-    // (fix/yuntae-frenet-speed-continuity Phase 2).
-    bool has_target_speed_history_ = false;
+    // true external KEEP 진단. base는 reference curvature/external cap까지,
+    // raw는 selected Cartesian candidate cap까지 반영한다.
+    double last_base_target_speed_ = 0.0;
+    double last_raw_speed_cap_ = 0.0;
+    double last_profiled_acceleration_ = 0.0;
+    double last_candidate_curvature_speed_cap_ = -1.0;
+    double last_candidate_max_abs_curvature_ = -1.0;
+    double last_candidate_max_lateral_accel_ = -1.0;
+    int last_candidate_aware_regenerations_ = 0;
+    SpeedProfiler speed_profiler_;
     PlanFailureReason last_failure_reason_ = PlanFailureReason::NONE;
     std::vector<CartesianPath> last_candidate_paths_;
     std::vector<bool> last_candidate_validity_;

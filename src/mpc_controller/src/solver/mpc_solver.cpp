@@ -169,11 +169,11 @@ MPCResult solveMPC(
     //    warm-start가 없는 첫 solve(또는 fail-safe 직후)에서는 모든 스텝을
     //    prev_control로만 채우면 코너에서 초기 조향 guess가 항상 0에서
     //    출발해 gradient descent가 먼 거리를 걸어야 한다. reference
-    //    curvature 기반 feed-forward로 초기값을 주면 최적해에 더 가까운
-    //    지점에서 시작한다 (Commit C). prev_control은 실제 이전 actuator
-    //    상태이므로 accel은 그대로 이어받고 delta만 feed-forward로 바꾼다 -
-    //    그래야 첫 horizon point가 이전 steering에서 순간이동하지 않는다
-    //    (아래 clipSteeringRate가 prev_control 기준으로 투영).
+    //    curvature/acceleration reference 기반 feed-forward로 초기값을 주면
+    //    최적해에 더 가까운 지점에서 시작한다. 첫 steering은 아래
+    //    clipSteeringRate가 이전 실제 actuator state 기준으로 투영하며,
+    //    acceleration도 clipControl을 거쳐 물리 한계를 지킨다. 유효한
+    //    warm-start가 있으면 기존 shifted sequence를 그대로 우선한다.
     // ====================================
     std::vector<MPCControl> U(N);
     if (static_cast<int>(warm_start.size()) >= N) {
@@ -181,13 +181,17 @@ MPCResult solveMPC(
         U[N - 1] = warm_start[N - 1];
     } else {
         for (int i = 0; i < N; ++i) {
-            const double k_ref_i = (ref.size() > 0)
-                ? ref.k_ref[std::min(static_cast<size_t>(i), ref.size() - 1)]
-                : 0.0;
+            const size_t ref_idx = (ref.size() > 0)
+                ? std::min(static_cast<size_t>(i), ref.size() - 1) : 0;
+            const double k_ref_i =
+                (ref.size() > 0) ? ref.k_ref[ref_idx] : 0.0;
             U[i].delta = SteeringFeedforward(k_ref_i, params.wheelbase,
                                              params.steering_max,
                                              params.steering_curvature_gain);
-            U[i].accel = prev_control.accel;
+            const double raw_a_ref_i = (ref.a_ref.size() > ref_idx)
+                ? ref.a_ref[ref_idx] : 0.0;
+            U[i].accel = clip(
+                raw_a_ref_i, params.accel_min, params.accel_max);
         }
     }
     projectControls(U, prev_control, params);

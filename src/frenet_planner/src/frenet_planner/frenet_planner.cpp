@@ -10,6 +10,7 @@
 #include "frenet_planner/Generator/BoundaryConditionPolicy.hpp"
 #include "frenet_planner/Math/Utils.hpp"
 #include "frenet_planner/Speed/CurveSpeed.hpp"
+#include "frenet_planner/Speed/SpeedProfiler.hpp"
 #include "frenet_planner/Speed/TargetSpeedResolver.hpp"
 
 namespace {
@@ -57,6 +58,12 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
                     yaml_path.c_str(), config_error.c_str());
         return false;
     }
+
+    // Init is also the planner-state reset boundary.  A reused planner object
+    // must not carry a normal KEEP acceleration history into a new reference
+    // or configuration session.
+    speed_profiler_.Reset();
+    last_profiled_acceleration_ = 0.0;
 
     if (!waypoint_file.empty() && waypoint_file.front() != '/') {
         waypoint_file = std::string(FRENET_PACKAGE_SRC_DIR) + "/" + waypoint_file;
@@ -354,7 +361,8 @@ double FrenetPlanner::LowSpeedLateralTransitionDistance(
 PlannerConfigBundle FrenetPlanner::MakePipelineConfigBundle() const {
     return PlannerConfigBundle{
         path_cfg_, limits_, cost_weights_, vehicle_shape_, collision_cfg_,
-        stop_cfg_, merge_cfg_, avoid_cfg_, following_cfg_, lane_width_};
+        stop_cfg_, merge_cfg_, avoid_cfg_, following_cfg_, curve_speed_cfg_,
+        lane_width_};
 }
 
 // Cartesian 정지 목표 -> reference line 종방향 좌표.
@@ -554,6 +562,8 @@ bool FrenetPlanner::Plan(const CartesianState& ego,
                          CartesianPath& out_path) {
     PlanFailureReason reason = PlanFailureReason::NONE;
     if (!ValidateExternalCommand(command, reason)) {
+        speed_profiler_.Reset();
+        last_profiled_acceleration_ = 0.0;
         last_failure_reason_ = reason;
         return false;
     }
@@ -690,10 +700,9 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
         obj.yaw_rate = it == object_yaw_rates.end() ? 0.0 : it->second;
     }
 
-    // R7-B: target speed 조립 순서(curve envelope -> external target cap ->
-    // external max cap -> rate limit)는 TargetSpeedResolver로 옮겼다 - 순서와
-    // 결과는 동일하다. BehaviorState/PlannerCommand 전체를 넘기지 않고 여기서
-    // 필요한 scalar/flag만 해석해서 넘긴다(history는 FrenetPlanner가 소유).
+    // TargetSpeedResolver는 공간/상위계층 제한을 합친 raw base cap만
+    // 계산한다. KEEP의 cycle-to-cycle 연속성은 candidate cap까지 확인한 뒤
+    // SpeedProfiler가 단독으로 적용한다.
     TargetSpeedInput target_speed_input;
     target_speed_input.ego_s = ctx.s;
     target_speed_input.ego_speed = ego.v;
@@ -701,12 +710,8 @@ FrenetPlanner::PlanningContext FrenetPlanner::PreparePlanningContext(
     target_speed_input.external_target_speed = external_command.target_speed;
     target_speed_input.has_external_max_speed = external_command.has_max_speed;
     target_speed_input.external_max_speed = external_command.max_speed;
-    target_speed_input.has_history = has_target_speed_history_;
-    target_speed_input.previous_target_speed = last_target_speed_;
     ctx.resolved_target_speed = ResolveTargetSpeed(
-        ref_, target_speed_input, curve_speed_cfg_, limits_,
-        max_target_speed_accel_, replanning_period_s_);
-    has_target_speed_history_ = true;
+        ref_, target_speed_input, curve_speed_cfg_, limits_);
 
     last_d_ = ctx.d;
 
@@ -768,7 +773,17 @@ bool FrenetPlanner::PlanInternal(
     last_failure_reason_ = PlanFailureReason::NONE;
     last_candidate_paths_.clear();
     last_candidate_validity_.clear();
+    // General SpeedProfiler is a normal external KEEP state.  It must not
+    // leak acceleration history through STOP/EMERGENCY/fail-safe or any other
+    // maneuver.  It is intentionally not tied to command_id, so consecutive
+    // KEEP commands preserve continuity across speed-cap transactions.
+    if (external_command->mode != LANE_KEEPING) {
+        speed_profiler_.Reset();
+        last_profiled_acceleration_ = 0.0;
+    }
     if (!ref_loaded_) {
+        speed_profiler_.Reset();
+        last_profiled_acceleration_ = 0.0;
         last_failure_reason_ = PlanFailureReason::NOT_INITIALIZED;
         return false;
     }
@@ -784,6 +799,14 @@ bool FrenetPlanner::PlanInternal(
     const double d_pprime = ctx.d_pprime;
     std::vector<TrackedObject>& predicted_obstacles = ctx.predicted_obstacles;
     const double resolved_target_speed = ctx.resolved_target_speed;
+    // maneuver가 KEEP 공용 pipeline에 도달하지 않는 cycle에도 이전 KEEP의
+    // candidate-aware 진단이 남아 있지 않게 base/reset 값을 먼저 기록한다.
+    last_base_target_speed_ = resolved_target_speed;
+    last_raw_speed_cap_ = resolved_target_speed;
+    last_candidate_curvature_speed_cap_ = -1.0;
+    last_candidate_max_abs_curvature_ = -1.0;
+    last_candidate_max_lateral_accel_ = -1.0;
+    last_candidate_aware_regenerations_ = 0;
 
     // ===== 이 아래부터는 모드별 dispatch다: EMERGENCY -> AVOID 대상 확보 ->
     // 저속 fallback -> FrenetState boundary 구성 -> AVOID PREPARE/COMMITTED
@@ -901,7 +924,11 @@ bool FrenetPlanner::PlanInternal(
                         s, d, ego.v);
         }
         last_mode_ = external_command->mode;
-        last_target_speed_ = resolved_target_speed;
+        // This bypass is not the normal longitudinal candidate generator.
+        // Re-entering normal KEEP must initialize from the then-current ego
+        // speed instead of stale pre-fallback profile state.
+        speed_profiler_.Reset();
+        last_profiled_acceleration_ = 0.0;
         const bool keep_fallback = external_command->mode == LANE_KEEPING;
         const bool fallback_ok = keep_fallback
             ? PlanCurvatureFeasibleKeepLowSpeedFallback(
@@ -912,6 +939,8 @@ bool FrenetPlanner::PlanInternal(
                   limits_.low_speed_crawl_duration_s,
                   resolved_target_speed);
         if (fallback_ok) {
+            last_target_speed_ = out_path.v.empty()
+                ? 0.0 : out_path.v.back();
             last_candidate_paths_.push_back(out_path);
             last_candidate_validity_.push_back(true);
         } else if (keep_fallback) {

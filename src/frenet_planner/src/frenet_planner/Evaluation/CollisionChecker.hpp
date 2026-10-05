@@ -29,7 +29,9 @@ struct VehicleShape {
 
 struct CollisionCheckConfig {
     double safety_margin;       // 기본 안전마진 [m] (자차 폭/길이에 사방으로 더해짐)
-    double margin_growth_rate;  // 시간에 따라 마진이 커지는 비율 [m/s], margin(t)=safety_margin+rate*t
+    // 미확정/동적 객체의 시간 불확실성 증가율 [m/s]. LOW_THREAT 정적
+    // 객체에는 safety_margin만 적용한다.
+    double margin_growth_rate;
     double reactive_lookahead;  // [s], 논문 기본값 3.0
 };
 
@@ -67,8 +69,29 @@ bool CheckObstacleOverlap(const geometry::Polygon2D& ego_footprint,
                           const TrackedObject& obstacle,
                           double prediction_time);
 
+// 모든 Cartesian/Frenet 후보가 공유하는 충돌 판정 결과다. margin recovery는
+// 회피 대상의 실제 OBB를 통과시키는 예외가 아니라, 현재 pose가 이미 확장
+// safety margin 안에 있을 때 그 margin 밖으로 빠져나가는 과정만 뜻한다.
+struct CartesianCollisionCheckResult {
+    bool clear = true;
+    bool margin_recovery_used = false;
+    int blocking_object_id = -1;
+    int blocking_sample_index = -1;
+};
+
+// 실제 차체 OBB 충돌은 언제나 금지한다. margin_recovery_object_id는 첫
+// sample이 이미 확장 margin 안인 경우에만 실제 이격이 개선되는 탈출을
+// 허용하며, 밖에서 시작한 후보의 margin 진입과 탈출 후 재진입은 금지한다.
+CartesianCollisionCheckResult EvaluateCartesianTrajectorySafety(
+    const CartesianPath& path,
+    const std::vector<TrackedObject>& obstacles,
+    const VehicleShape& ego_shape,
+    const CollisionCheckConfig& cfg,
+    double dt,
+    int margin_recovery_object_id = -1);
+
 // 후보 실제 구간과 reactive coast 구간을 평행이동 polygon으로 검사한다.
-// AVOID escape ID는 시작 시 이미 안전마진과 겹친 경우 실제 OBB 비충돌이며
+// AVOID recovery ID는 시작 시 이미 안전마진과 겹친 경우 실제 OBB 비충돌이며
 // 계속 멀어지는 후보만 탈출할 수 있게 한다. coast exempt ID는 실제 후보
 // 구간에는 적용되지 않고 coast 연장에서만 제외된다.
 void FilterByCollision(std::vector<FrenetPath>& combined,
@@ -77,6 +100,6 @@ void FilterByCollision(std::vector<FrenetPath>& combined,
                         const VehicleShape& ego_shape,
                         const CollisionCheckConfig& cfg,
                         int reactive_coast_exempt_object_id = -1,
-                        int avoid_escape_object_id = -1);
+                        int margin_recovery_object_id = -1);
 
 #endif

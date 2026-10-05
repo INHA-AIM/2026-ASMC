@@ -72,7 +72,8 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   std::string traffic_light_topic = "/traffic_light/state";
   bool use_traffic_light_mock = false;
   double traffic_light_stale_seconds = 1.0;
-  double visible_signal_speed_limit_kph = 20.0;
+  double traffic_light_detection_grace_seconds = 1.0;
+  double intersection_approach_speed_limit_kph = 25.0;
   double stop_target_offset_m = 5.0;
   TrafficStopConfig traffic_stop;
   SafetyConfig safety;
@@ -162,9 +163,21 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   pnh_.param("traffic_light/topic", traffic_light_topic, traffic_light_topic);
   pnh_.param("traffic_light/stale_seconds", traffic_light_stale_seconds,
              traffic_light_stale_seconds);
-  pnh_.param("traffic_light/visible_speed_limit_kph",
-             visible_signal_speed_limit_kph,
-             visible_signal_speed_limit_kph);
+  pnh_.param("traffic_light/detection_grace_seconds",
+             traffic_light_detection_grace_seconds,
+             traffic_light_detection_grace_seconds);
+  pnh_.param("traffic_light/approach_speed_limit_kph",
+             intersection_approach_speed_limit_kph,
+             intersection_approach_speed_limit_kph);
+  pnh_.param("traffic_light/approach_comfortable_decel",
+             traffic_stop.approach_comfortable_decel,
+             traffic_stop.approach_comfortable_decel);
+  pnh_.param("traffic_light/approach_margin_m",
+             traffic_stop.approach_margin,
+             traffic_stop.approach_margin);
+  pnh_.param("traffic_light/post_stopline_distance_m",
+             traffic_stop.post_stopline_distance,
+             traffic_stop.post_stopline_distance);
   pnh_.param("stop/target_offset_m", stop_target_offset_m,
              stop_target_offset_m);
   pnh_.param("stop/red_light_stop_distance",
@@ -194,13 +207,39 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   pnh_.param("safety/emergency_release_hold_s", emergency_release_hold_s,
              emergency_release_hold_s);
 
-  if (!std::isfinite(visible_signal_speed_limit_kph) ||
-      visible_signal_speed_limit_kph <= 0.0) {
-    ROS_WARN("Invalid visible-signal speed limit; using 20.0 km/h");
-    visible_signal_speed_limit_kph = 20.0;
+  if (!std::isfinite(intersection_approach_speed_limit_kph) ||
+      intersection_approach_speed_limit_kph <= 0.0) {
+    ROS_WARN("Invalid intersection approach speed limit; using 25.0 km/h");
+    intersection_approach_speed_limit_kph = 25.0;
   }
-  traffic_stop.visible_signal_speed_limit =
-      visible_signal_speed_limit_kph / 3.6;
+  if (!std::isfinite(traffic_stop.approach_comfortable_decel) ||
+      traffic_stop.approach_comfortable_decel <= 0.0) {
+    ROS_WARN("Invalid intersection approach deceleration; using 2.0 m/s^2");
+    traffic_stop.approach_comfortable_decel = 2.0;
+  }
+  if (!std::isfinite(traffic_stop.approach_margin) ||
+      traffic_stop.approach_margin < 0.0) {
+    ROS_WARN("Invalid intersection approach target offset; using 1.5 m");
+    traffic_stop.approach_margin = 1.5;
+  }
+  if (!std::isfinite(traffic_stop.post_stopline_distance) ||
+      traffic_stop.post_stopline_distance < 0.0) {
+    ROS_WARN("Invalid post-stopline speed-limit distance; using 5.0 m");
+    traffic_stop.post_stopline_distance = 5.0;
+  }
+  traffic_stop.approach_speed_limit =
+      intersection_approach_speed_limit_kph / 3.6;
+
+  if (!std::isfinite(traffic_light_stale_seconds) ||
+      traffic_light_stale_seconds <= 0.0) {
+    ROS_WARN("Invalid traffic-light transport stale timeout; using 1.0 s");
+    traffic_light_stale_seconds = 1.0;
+  }
+  if (!std::isfinite(traffic_light_detection_grace_seconds) ||
+      traffic_light_detection_grace_seconds <= 0.0) {
+    ROS_WARN("Invalid traffic-light detection grace; using 1.0 s");
+    traffic_light_detection_grace_seconds = 1.0;
+  }
 
   if (follow_target.max_distance <= 0.0 ||
       follow_target.max_lateral_offset <= 0.0) {
@@ -278,9 +317,13 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
            traffic_stop.minimum_detection_distance,
            traffic_stop.comfortable_decel, traffic_stop.braking_margin,
            traffic_stop.target_offset, traffic_stop.planner_stop_buffer);
-  ROS_INFO("Behavior visible traffic-signal speed limit: %.1f km/h "
-           "(normal Frenet comfort trajectory; no green-light STOP/E-STOP)",
-           visible_signal_speed_limit_kph);
+  ROS_INFO("Behavior intersection approach: speed=%.1f km/h, "
+           "comfortable_decel=%.2f m/s^2, pre-line=%.1f m, post-line=%.1f m, "
+           "activation=current-speed based with stop-line latch",
+           intersection_approach_speed_limit_kph,
+           traffic_stop.approach_comfortable_decel,
+           traffic_stop.approach_margin,
+           traffic_stop.post_stopline_distance);
   ROS_INFO("Behavior FOLLOW target limits: distance=%.2f m lateral=%.2f m, "
            "release delay=%.2f s, objects stale after %.2f s",
            follow_target.max_distance, follow_target.max_lateral_offset,
@@ -322,9 +365,12 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
              traffic_light_path.c_str());
   } else {
     lights_ = std::make_shared<RosTrafficLightProvider>(
-        nh_, traffic_light_topic, traffic_light_stale_seconds);
-    ROS_INFO("Behavior traffic-light source: %s (stale after %.2f s)",
-             traffic_light_topic.c_str(), traffic_light_stale_seconds);
+        nh_, traffic_light_topic, traffic_light_stale_seconds,
+        traffic_light_detection_grace_seconds);
+    ROS_INFO("Behavior traffic-light source: topic=%s, transport stale=%.2f s, "
+             "detection grace=%.2f s",
+             traffic_light_topic.c_str(), traffic_light_stale_seconds,
+             traffic_light_detection_grace_seconds);
   }
 
   use_v2_interface_ = interface_version == "v2";

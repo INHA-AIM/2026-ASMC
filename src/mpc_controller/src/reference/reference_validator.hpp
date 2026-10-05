@@ -45,5 +45,8 @@ struct ReferenceValidationResult {
 //   속도 범위       params.vel_min / params.vel_max
 //   조향/축거 기반 곡률 한계  atan/tan(params.steering_max) / params.wheelbase
 //   위치 연속성 상한  params.vel_max * params.dt + 작은 보간 여유
+// a_ref는 최종 MPC time grid의 v_ref 미분값이므로 size/finiteness는 검증하되
+// actuator 범위로 reference 정보를 잘라내거나 거부하지 않는다. cost와 fresh
+// solver initialization에서 params.accel_min/max로 clip한 값이 authoritative다.
 ReferenceValidationResult ValidateReference(const ReferencePath& reference,
                                             const MPCParams& params);

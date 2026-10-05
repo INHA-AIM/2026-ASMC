@@ -12,6 +12,12 @@ namespace behavior_planner {
 
 TEST(TrafficLightLabelTest, SelectsAspectForRouteMovement) {
   EXPECT_EQ(TrafficLightState::RED,
+            InterpretTrafficLightLabel("red", SignalMovement::STRAIGHT));
+  EXPECT_EQ(TrafficLightState::GREEN,
+            InterpretTrafficLightLabel("green", SignalMovement::STRAIGHT));
+  EXPECT_EQ(TrafficLightState::YELLOW,
+            InterpretTrafficLightLabel("yellow", SignalMovement::STRAIGHT));
+  EXPECT_EQ(TrafficLightState::RED,
             InterpretTrafficLightLabel("red_left", SignalMovement::STRAIGHT));
   EXPECT_EQ(TrafficLightState::GREEN,
             InterpretTrafficLightLabel("red_left", SignalMovement::LEFT));
@@ -23,6 +29,70 @@ TEST(TrafficLightLabelTest, SelectsAspectForRouteMovement) {
             InterpretTrafficLightLabel("green", SignalMovement::LEFT));
   EXPECT_EQ(TrafficLightState::UNKNOWN,
             InterpretTrafficLightLabel("not_detected", SignalMovement::LEFT));
+}
+
+TEST(TrafficLightLabelTest, RecognizesOnlyClassifierDetectionLabels) {
+  EXPECT_TRUE(IsDetectedTrafficLightLabel("green"));
+  EXPECT_TRUE(IsDetectedTrafficLightLabel(" RED "));
+  EXPECT_TRUE(IsDetectedTrafficLightLabel("yellow"));
+  EXPECT_TRUE(IsDetectedTrafficLightLabel("green_left"));
+  EXPECT_TRUE(IsDetectedTrafficLightLabel("red_yellow"));
+  EXPECT_FALSE(IsDetectedTrafficLightLabel("not_detected"));
+  EXPECT_FALSE(IsDetectedTrafficLightLabel("unknown"));
+  EXPECT_FALSE(IsDetectedTrafficLightLabel(""));
+  EXPECT_FALSE(IsDetectedTrafficLightLabel(" \t\n"));
+  EXPECT_FALSE(IsDetectedTrafficLightLabel("invalid_label"));
+}
+
+TEST(TrafficLightObservationStateTest,
+     DetectionMissPreservesVisibilityButNotSemanticState) {
+  TrafficLightObservationState observation;
+  constexpr double kStaleSeconds = 1.0;
+  constexpr double kGraceSeconds = 1.0;
+
+  observation.update("green", 0.0);
+  EXPECT_EQ(TrafficLightState::GREEN,
+            observation.getState(SignalMovement::STRAIGHT, 0.0,
+                                 kStaleSeconds));
+  EXPECT_TRUE(observation.hasRecentDetection(
+      0.0, kStaleSeconds, kGraceSeconds));
+
+  observation.update("not_detected", 0.1);
+  EXPECT_EQ("not_detected",
+            observation.getRawLabel(0.1, kStaleSeconds));
+  EXPECT_EQ(TrafficLightState::UNKNOWN,
+            observation.getState(SignalMovement::STRAIGHT, 0.1,
+                                 kStaleSeconds));
+  EXPECT_TRUE(observation.hasRecentDetection(
+      0.1, kStaleSeconds, kGraceSeconds));
+
+  observation.update("not_detected", 0.2);
+  EXPECT_EQ(TrafficLightState::UNKNOWN,
+            observation.getState(SignalMovement::STRAIGHT, 0.2,
+                                 kStaleSeconds));
+  EXPECT_TRUE(observation.hasRecentDetection(
+      0.2, kStaleSeconds, kGraceSeconds));
+}
+
+TEST(TrafficLightObservationStateTest, DetectionGraceExpiresDeterministically) {
+  TrafficLightObservationState observation;
+  observation.update("green", 0.0);
+  observation.update("not_detected", 1.01);
+
+  EXPECT_EQ("not_detected", observation.getRawLabel(1.01, 1.0));
+  EXPECT_EQ(TrafficLightState::UNKNOWN,
+            observation.getState(SignalMovement::STRAIGHT, 1.01, 1.0));
+  EXPECT_FALSE(observation.hasRecentDetection(1.01, 1.0, 1.0));
+}
+
+TEST(TrafficLightObservationStateTest, TransportStaleOverridesDetectionGrace) {
+  TrafficLightObservationState observation;
+  observation.update("green", 0.0);
+
+  EXPECT_EQ("stale", observation.getRawLabel(0.6, 0.5));
+  EXPECT_EQ(TrafficLightState::UNKNOWN,
+            observation.getState(SignalMovement::STRAIGHT, 0.6, 0.5));
+  EXPECT_FALSE(observation.hasRecentDetection(0.6, 0.5, 1.0));
 }
 
 TEST(V2CommandManagerTest, KeepFreezesDerivedSpeedUntilIntentChanges) {
@@ -55,7 +125,8 @@ TEST(V2CommandManagerTest, KeepFreezesDerivedSpeedUntilIntentChanges) {
   EXPECT_NE(first.command_id, changed.command_id);
 }
 
-TEST(V2CommandManagerTest, SignalSpeedPolicyRefreshesKeepOnlyOnTransitions) {
+TEST(V2CommandManagerTest,
+     IntersectionApproachRefreshesKeepOnlyAtZoneTransitions) {
   V2CommandManager manager;
   BehaviorContextData context;
   context.timestamp = 1.0;
@@ -66,26 +137,100 @@ TEST(V2CommandManagerTest, SignalSpeedPolicyRefreshesKeepOnlyOnTransitions) {
   const auto cruise =
       manager.update(context, nullptr, ros::Time(11.0), 0.5);
 
-  context.target.desired_speed = 20.0 / 3.6;
-  context.extra_flags["signal_approach_speed_limit"] = true;
+  context.target.desired_speed = 25.0 / 3.6;
+  context.extra_flags["intersection_approach_speed_limit"] = true;
   const auto limited =
       manager.update(context, nullptr, ros::Time(11.1), 0.5);
   EXPECT_NE(cruise.command_id, limited.command_id);
-  EXPECT_NEAR(20.0 / 3.6, limited.desired_speed_mps, 1e-9);
+  EXPECT_NEAR(25.0 / 3.6, limited.desired_speed_mps, 1e-9);
 
-  context.target.desired_speed = 5.4;
-  const auto limited_refresh =
+  // GREEN -> not_detected -> GREEN changes do not affect this map-owned flag,
+  // and therefore cannot churn command identity inside the approach zone.
+  const auto first_detection_miss =
       manager.update(context, nullptr, ros::Time(11.2), 0.5);
-  EXPECT_EQ(limited.command_id, limited_refresh.command_id);
+  const auto second_detection_miss =
+      manager.update(context, nullptr, ros::Time(11.3), 0.5);
+  EXPECT_EQ(limited.command_id, first_detection_miss.command_id);
+  EXPECT_EQ(limited.command_id, second_detection_miss.command_id);
   EXPECT_DOUBLE_EQ(limited.desired_speed_mps,
-                   limited_refresh.desired_speed_mps);
+                   second_detection_miss.desired_speed_mps);
 
   context.target.desired_speed = 13.9;
-  context.extra_flags.erase("signal_approach_speed_limit");
+  context.extra_flags.erase("intersection_approach_speed_limit");
   const auto released =
-      manager.update(context, nullptr, ros::Time(11.3), 0.5);
+      manager.update(context, nullptr, ros::Time(11.4), 0.5);
   EXPECT_NE(limited.command_id, released.command_id);
   EXPECT_DOUBLE_EQ(13.9, released.desired_speed_mps);
+}
+
+TEST(V2CommandManagerTest,
+     CameraLabelsDoNotChurnKeepCommandInsideMapApproachZone) {
+  BehaviorDecision decision;
+  V2CommandManager manager;
+  UrbanFeature feature;
+  feature.timestamp = 1.0;
+  feature.route.current_link_id = "route_link";
+  feature.route.speed_limit = 50.0 / 3.6;
+  feature.ego.speed = 40.0 / 3.6;
+  feature.signal.has_stop_line = true;
+  feature.signal.stop_line_s = 100.0;
+  feature.signal.distance_to_stop_line = 100.0;
+  feature.signal.light_state = TrafficLightState::GREEN;
+  feature.signal.raw_label = "green";
+
+  BehaviorContextData context =
+      decision.decide(feature, asmc_msgs::PlanFeedback{});
+  const auto cruise =
+      manager.update(context, nullptr, ros::Time(12.0), 0.5);
+  EXPECT_NEAR(50.0 / 3.6, cruise.desired_speed_mps, 1e-9);
+
+  feature.timestamp = 1.1;
+  feature.signal.distance_to_stop_line = 20.0;
+  feature.signal.light_state = TrafficLightState::UNKNOWN;
+  feature.signal.raw_label = "not_detected";
+  context = decision.decide(feature, asmc_msgs::PlanFeedback{});
+  const auto entered =
+      manager.update(context, nullptr, ros::Time(12.1), 0.5);
+  EXPECT_NE(cruise.command_id, entered.command_id);
+  EXPECT_NEAR(25.0 / 3.6, entered.desired_speed_mps, 1e-9);
+
+  feature.timestamp = 1.2;
+  feature.signal.distance_to_stop_line = 15.0;
+  feature.signal.light_state = TrafficLightState::GREEN;
+  feature.signal.raw_label = "green";
+  context = decision.decide(feature, asmc_msgs::PlanFeedback{});
+  const auto green =
+      manager.update(context, nullptr, ros::Time(12.2), 0.5);
+  EXPECT_EQ(entered.command_id, green.command_id);
+
+  feature.timestamp = 1.3;
+  feature.signal.distance_to_stop_line = 10.0;
+  feature.signal.light_state = TrafficLightState::UNKNOWN;
+  feature.signal.raw_label = "not_detected";
+  context = decision.decide(feature, asmc_msgs::PlanFeedback{});
+  const auto missed =
+      manager.update(context, nullptr, ros::Time(12.3), 0.5);
+  EXPECT_EQ(entered.command_id, missed.command_id);
+  EXPECT_NEAR(25.0 / 3.6, missed.desired_speed_mps, 1e-9);
+
+  feature.timestamp = 1.4;
+  feature.signal.has_stop_line = false;
+  feature.signal.distance_to_stop_line = -0.1;
+  feature.signal.has_passed_stop_line = true;
+  feature.signal.distance_since_stop_line = 2.0;
+  context = decision.decide(feature, asmc_msgs::PlanFeedback{});
+  const auto passed =
+      manager.update(context, nullptr, ros::Time(12.4), 0.5);
+  EXPECT_EQ(entered.command_id, passed.command_id);
+  EXPECT_NEAR(25.0 / 3.6, passed.desired_speed_mps, 1e-9);
+
+  feature.timestamp = 1.5;
+  feature.signal.distance_since_stop_line = 5.1;
+  context = decision.decide(feature, asmc_msgs::PlanFeedback{});
+  const auto exited =
+      manager.update(context, nullptr, ros::Time(12.5), 0.5);
+  EXPECT_NE(entered.command_id, exited.command_id);
+  EXPECT_NEAR(50.0 / 3.6, exited.desired_speed_mps, 1e-9);
 }
 
 TEST(V2CommandManagerTest, LaneChangeUsesReadyExecuteHandshake) {
@@ -421,43 +566,157 @@ TEST(V2CommandManagerTest, EarlierPlannedStopPreemptsCommittedAvoid) {
   EXPECT_EQ(asmc_msgs::BehaviorCommand::STOP, stop.maneuver_type);
 }
 
-TEST(HardRuleFilterTest, GreenLightUsesTwentyKphLimitWithoutStop) {
-  UrbanFeature feature;
-  feature.signal.has_stop_line = true;
-  feature.signal.distance_to_stop_line = 10.0;
-  feature.signal.stop_line_s = 50.0;
-  feature.signal.light_state = TrafficLightState::GREEN;
-  std::string reason;
-  const HardConstraint hard = HardRuleFilter().apply(feature, &reason);
-  EXPECT_TRUE(hard.stop_line_constraint);
-  EXPECT_FALSE(hard.force_stop);
-  EXPECT_FALSE(hard.planned_stop);
-  EXPECT_TRUE(hard.signal_approach_speed_limit);
-  EXPECT_NEAR(20.0 / 3.6, hard.max_speed, 1e-9);
-  EXPECT_NE(std::string::npos, reason.find("visible_signal_speed_limit"));
+TEST(IntersectionApproachDistanceTest, UsesCurrentFortyKphSpeed) {
+  const double activation = ComputeIntersectionApproachDistance(
+      40.0 / 3.6, 25.0 / 3.6, 2.0, 1.5);
+  EXPECT_NEAR(20.31, activation, 0.02);
 }
 
-TEST(HardRuleFilterTest, UnknownSignalDoesNotApplyApproachSpeedLimit) {
+TEST(IntersectionApproachDistanceTest, EgoOverspeedExtendsActivationDistance) {
+  const double current_forty = ComputeIntersectionApproachDistance(
+      40.0 / 3.6, 25.0 / 3.6, 2.0, 1.5);
   UrbanFeature feature;
-  feature.route.speed_limit = 13.9;
+  feature.route.speed_limit = 50.0 / 3.6;
+  feature.ego.speed = 60.0 / 3.6;
+  const HardConstraint hard = HardRuleFilter().apply(feature, nullptr);
+  EXPECT_GT(hard.intersection_approach_activation_distance, current_forty);
+  EXPECT_NEAR(58.89, hard.intersection_approach_activation_distance, 0.02);
+}
+
+TEST(HardRuleFilterTest, FarStopLineKeepsRouteSpeed) {
+  UrbanFeature feature;
+  feature.route.speed_limit = 50.0 / 3.6;
+  feature.ego.speed = 40.0 / 3.6;
   feature.signal.has_stop_line = true;
-  feature.signal.distance_to_stop_line = 50.0;
-  feature.signal.light_state = TrafficLightState::UNKNOWN;
+  feature.signal.distance_to_stop_line = 100.0;
+  feature.signal.light_state = TrafficLightState::GREEN;
+  feature.signal.recently_visible = true;
 
   const HardConstraint hard = HardRuleFilter().apply(feature, nullptr);
-  EXPECT_FALSE(hard.signal_approach_speed_limit);
-  EXPECT_DOUBLE_EQ(13.9, hard.max_speed);
+  EXPECT_FALSE(hard.intersection_approach_active);
+  EXPECT_NEAR(50.0 / 3.6, hard.max_speed, 1e-9);
+  EXPECT_NEAR(20.31, hard.intersection_approach_activation_distance, 0.02);
 }
 
-TEST(HardRuleFilterTest, VisibleSignalPreservesLowerRouteSpeedLimit) {
+TEST(HardRuleFilterTest, EnteringStopLineApproachZoneCapsAtTwentyFiveKph) {
+  UrbanFeature feature;
+  feature.route.speed_limit = 50.0 / 3.6;
+  feature.ego.speed = 40.0 / 3.6;
+  feature.signal.has_stop_line = true;
+  feature.signal.stop_line_s = 100.0;
+  feature.signal.distance_to_stop_line = 20.0;
+
+  std::string reason;
+  const HardConstraint hard = HardRuleFilter().apply(feature, &reason);
+  EXPECT_TRUE(hard.intersection_approach_active);
+  EXPECT_NEAR(25.0 / 3.6, hard.max_speed, 1e-9);
+  EXPECT_NEAR(25.0 / 3.6, hard.intersection_approach_speed_limit, 1e-9);
+  EXPECT_NE(std::string::npos,
+            reason.find("intersection_approach_speed_limit"));
+}
+
+TEST(HardRuleFilterTest, NoCameraDetectionStillAppliesApproachCapWithoutStop) {
+  UrbanFeature feature;
+  feature.route.speed_limit = 50.0 / 3.6;
+  feature.ego.speed = 40.0 / 3.6;
+  feature.signal.has_stop_line = true;
+  feature.signal.distance_to_stop_line = 20.0;
+  feature.signal.light_state = TrafficLightState::UNKNOWN;
+  feature.signal.raw_label = "not_detected";
+  feature.signal.recently_visible = false;
+
+  const HardConstraint hard = HardRuleFilter().apply(feature, nullptr);
+  EXPECT_TRUE(hard.intersection_approach_active);
+  EXPECT_FALSE(hard.planned_stop);
+  EXPECT_NEAR(25.0 / 3.6, hard.max_speed, 1e-9);
+}
+
+TEST(HardRuleFilterTest, GreenApproachCapsSpeedWithoutStop) {
+  UrbanFeature feature;
+  feature.route.speed_limit = 50.0 / 3.6;
+  feature.ego.speed = 40.0 / 3.6;
+  feature.signal.has_stop_line = true;
+  feature.signal.distance_to_stop_line = 20.0;
+  feature.signal.stop_line_s = 100.0;
+  feature.signal.light_state = TrafficLightState::GREEN;
+
+  const HardConstraint hard = HardRuleFilter().apply(feature, nullptr);
+  EXPECT_TRUE(hard.intersection_approach_active);
+  EXPECT_FALSE(hard.planned_stop);
+  EXPECT_NEAR(25.0 / 3.6, hard.max_speed, 1e-9);
+}
+
+TEST(HardRuleFilterTest, RedApproachCapsSpeedAndPreservesPlannedStop) {
+  UrbanFeature feature;
+  feature.route.speed_limit = 50.0 / 3.6;
+  feature.ego.speed = 40.0 / 3.6;
+  feature.signal.has_stop_line = true;
+  feature.signal.distance_to_stop_line = 20.0;
+  feature.signal.stop_line_s = 100.0;
+  feature.signal.light_state = TrafficLightState::RED;
+
+  const HardConstraint hard = HardRuleFilter().apply(feature, nullptr);
+  EXPECT_TRUE(hard.intersection_approach_active);
+  EXPECT_TRUE(hard.planned_stop);
+  EXPECT_NEAR(25.0 / 3.6, hard.max_speed, 1e-9);
+}
+
+TEST(HardRuleFilterTest, PassedStopLineKeepsCapForFiveMeters) {
+  UrbanFeature feature;
+  feature.route.speed_limit = 50.0 / 3.6;
+  feature.signal.has_passed_stop_line = true;
+  feature.signal.distance_since_stop_line = 4.9;
+
+  std::string reason;
+  const HardConstraint hard = HardRuleFilter().apply(feature, &reason);
+  EXPECT_TRUE(hard.intersection_approach_active);
+  EXPECT_NEAR(25.0 / 3.6, hard.max_speed, 1e-9);
+  EXPECT_NE(std::string::npos,
+            reason.find("intersection_exit_speed_limit"));
+}
+
+TEST(HardRuleFilterTest, PassedStopLineReleasesCapAfterFiveMeters) {
+  UrbanFeature feature;
+  feature.route.speed_limit = 50.0 / 3.6;
+  feature.signal.has_passed_stop_line = true;
+  feature.signal.distance_since_stop_line = 5.1;
+
+  const HardConstraint hard = HardRuleFilter().apply(feature, nullptr);
+  EXPECT_FALSE(hard.intersection_approach_active);
+  EXPECT_NEAR(50.0 / 3.6, hard.max_speed, 1e-9);
+}
+
+TEST(HardRuleFilterTest, StopLineLatchPreventsReleaseWhileDecelerating) {
+  HardRuleFilter filter;
+  UrbanFeature feature;
+  feature.route.speed_limit = 50.0 / 3.6;
+  feature.signal.has_stop_line = true;
+  feature.signal.distance_to_stop_line = 35.0;
+  feature.signal.stop_line_s = 100.0;
+  feature.ego.speed = 50.0 / 3.6;
+
+  const HardConstraint entering = filter.apply(feature, nullptr);
+  ASSERT_TRUE(entering.intersection_approach_active);
+
+  feature.ego.speed = 35.0 / 3.6;
+  feature.signal.distance_to_stop_line = 30.0;
+  std::string reason;
+  const HardConstraint decelerating = filter.apply(feature, &reason);
+  EXPECT_TRUE(decelerating.intersection_approach_active);
+  EXPECT_NEAR(25.0 / 3.6, decelerating.max_speed, 1e-9);
+  EXPECT_NE(std::string::npos,
+            reason.find("intersection_approach_latched_speed_limit"));
+}
+
+TEST(HardRuleFilterTest, ApproachCapPreservesLowerRouteSpeedLimit) {
   UrbanFeature feature;
   feature.route.speed_limit = 4.0;
   feature.signal.has_stop_line = true;
-  feature.signal.distance_to_stop_line = 50.0;
+  feature.signal.distance_to_stop_line = 1.0;
   feature.signal.light_state = TrafficLightState::GREEN;
 
   const HardConstraint hard = HardRuleFilter().apply(feature, nullptr);
-  EXPECT_TRUE(hard.signal_approach_speed_limit);
+  EXPECT_TRUE(hard.intersection_approach_active);
   EXPECT_DOUBLE_EQ(4.0, hard.max_speed);
 }
 
@@ -503,20 +762,24 @@ TEST(HardRuleFilterTest, RedLightDetectionDistanceGrowsWithSpeed) {
 
 TEST(HardRuleFilterTest, UnprotectedRightIgnoresVehicleRedLight) {
   UrbanFeature feature;
+  feature.route.speed_limit = 50.0 / 3.6;
+  feature.ego.speed = 40.0 / 3.6;
   feature.signal.has_stop_line = true;
   feature.signal.distance_to_stop_line = 10.0;
   feature.signal.stop_line_s = 50.0;
   feature.signal.has_required_movement = true;
   feature.signal.required_movement = SignalMovement::RIGHT_UNPROTECTED;
   feature.signal.light_state = TrafficLightState::RED;
+  feature.signal.recently_visible = true;
 
   std::string reason;
   const HardConstraint hard = HardRuleFilter().apply(feature, &reason);
   EXPECT_TRUE(hard.stop_line_constraint);
   EXPECT_FALSE(hard.planned_stop);
   EXPECT_FALSE(hard.force_stop);
-  EXPECT_TRUE(hard.signal_approach_speed_limit);
-  EXPECT_NE(std::string::npos, reason.find("visible_signal_speed_limit"));
+  EXPECT_TRUE(hard.intersection_approach_active);
+  EXPECT_NE(std::string::npos,
+            reason.find("intersection_approach_speed_limit"));
 }
 
 TEST(HardRuleFilterTest, UnprotectedRightStillStopsForPedestrianRisk) {
@@ -540,6 +803,7 @@ TEST(BehaviorDecisionTest, RedLightPublishesPlannedStopTarget) {
   UrbanFeature feature;
   feature.timestamp = 1.0;
   feature.route.speed_limit = 10.0;
+  feature.ego.speed = 10.0;
   feature.signal.has_stop_line = true;
   feature.signal.stop_line_valid = true;
   feature.signal.distance_to_stop_line = 10.0;
@@ -547,14 +811,17 @@ TEST(BehaviorDecisionTest, RedLightPublishesPlannedStopTarget) {
   feature.signal.stop_line_x = 123.4;
   feature.signal.stop_line_y = 567.8;
   feature.signal.light_state = TrafficLightState::RED;
+  feature.signal.raw_label = "red";
+  feature.signal.recently_visible = true;
 
   const BehaviorContextData context =
       BehaviorDecision().decide(feature, asmc_msgs::PlanFeedback{});
   ASSERT_EQ(BehaviorType::STOP, context.selected_behavior);
   EXPECT_FALSE(context.hard.force_stop);
   EXPECT_TRUE(context.target.has_stop_target);
-  EXPECT_NEAR(20.0 / 3.6, context.target.desired_speed, 1e-9);
-  EXPECT_TRUE(context.extra_flags.at("signal_approach_speed_limit"));
+  EXPECT_NEAR(25.0 / 3.6, context.target.desired_speed, 1e-9);
+  EXPECT_TRUE(
+      context.extra_flags.at("intersection_approach_speed_limit"));
 
   const asmc_msgs::BehaviorContext message = MsgConverter::toMsg(context, 1);
   EXPECT_EQ(asmc_msgs::BehaviorContext::STOP, message.selected_behavior);
@@ -570,6 +837,15 @@ TEST(BehaviorDecisionTest, RedLightPublishesPlannedStopTarget) {
   EXPECT_TRUE(debug.has_stop_target);
   EXPECT_DOUBLE_EQ(123.4, debug.stop_x);
   EXPECT_DOUBLE_EQ(567.8, debug.stop_y);
+  EXPECT_EQ("red", debug.traffic_light_raw_label);
+  EXPECT_TRUE(debug.traffic_light_recently_visible);
+  EXPECT_TRUE(debug.intersection_approach_active);
+  EXPECT_GT(debug.intersection_approach_activation_distance,
+            debug.distance_to_stop_line);
+  EXPECT_NEAR(25.0 / 3.6, debug.intersection_approach_speed_limit, 1e-9);
+  EXPECT_NE(std::string::npos,
+            debug.hard_rule_reason.find(
+                "intersection_approach_speed_limit"));
   EXPECT_NE(std::string::npos, debug.hard_rule_reason.find("traffic_light"));
 }
 

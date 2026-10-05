@@ -74,6 +74,9 @@ struct FrenetPath {
     RejectionReason rejection_reason = RejectionReason::NONE;
     int collision_object_id = -1;
     int collision_sample_index = -1;
+    // 현재 pose가 이미 AVOID target의 확장 margin 안에 있어, 실제 OBB
+    // 비충돌 + 이격 개선 규칙으로 margin을 빠져나간 후보인지 표시한다.
+    bool margin_recovery_used = false;
 };
 
 #endif  // PLANNER_COMMON_FRENET_TYPES_HPP

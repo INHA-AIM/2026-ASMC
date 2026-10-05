@@ -204,20 +204,21 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
   const bool restart_terminal_identity =
       terminal_feedback && context.maneuver_phase == ManeuverPhase::PREPARE &&
       sameIdentity(active_command_, candidate);
-  const auto signal_limit_it =
-      context.extra_flags.find("signal_approach_speed_limit");
-  const bool candidate_signal_speed_limit =
-      signal_limit_it != context.extra_flags.end() && signal_limit_it->second;
-  // Speed is otherwise frozen for each wire transaction. A signal-approach
-  // ceiling is a discrete speed-policy transition, so a non-committed command
-  // gets a new identity exactly when the ceiling activates or releases.
+  const auto approach_limit_it =
+      context.extra_flags.find("intersection_approach_speed_limit");
+  const bool candidate_intersection_approach =
+      approach_limit_it != context.extra_flags.end() &&
+      approach_limit_it->second;
+  // Speed is otherwise frozen for each wire transaction. Entering/leaving the
+  // map stop-line approach zone is a discrete speed-policy transition, so a
+  // non-committed command gets a new identity exactly at the zone boundary.
   // A committed lateral maneuver remains immutable and picks up the ceiling
   // when its transaction completes.
-  const bool signal_speed_policy_changed =
+  const bool intersection_approach_policy_changed =
       has_active_command_ &&
-      candidate_signal_speed_limit != active_signal_speed_limit_;
+      candidate_intersection_approach != active_intersection_approach_;
   if (!has_active_command_ || !sameIdentity(active_command_, candidate) ||
-      restart_terminal_identity || signal_speed_policy_changed) {
+      restart_terminal_identity || intersection_approach_policy_changed) {
     if (!active_transaction_locked_ || emergency || fsm_changed_maneuver) {
       ++next_command_id_;
       if (next_command_id_ == 0) ++next_command_id_;
@@ -225,7 +226,7 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
       active_command_ = candidate;
       has_active_command_ = true;
       active_transaction_locked_ = false;
-      active_signal_speed_limit_ = candidate_signal_speed_limit;
+      active_intersection_approach_ = candidate_intersection_approach;
     }
   }
 

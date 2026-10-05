@@ -32,5 +32,10 @@ double ResolveVelocityKeepingBoundaryAcceleration(double raw_s_ddot,
     if (accelerating_intent && raw_s_ddot < 0.0) {
         return 0.0;
     }
+    const bool decelerating_intent =
+        resolved_target_speed < current_s_dot - deadband;
+    if (decelerating_intent && raw_s_ddot > 0.0) {
+        return 0.0;
+    }
     return raw_s_ddot;
 }

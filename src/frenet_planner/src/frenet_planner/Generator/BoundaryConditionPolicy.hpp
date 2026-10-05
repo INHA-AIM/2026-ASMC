@@ -34,12 +34,12 @@ FrenetState ClampInitialBoundaryState(double s, double s_dot, double raw_s_ddot,
 // 올라가는데도 매 cycle 다시 브레이킹 경계조건을 강제해 v_ref가 조금씩 계속
 // 깎이는 것("braking-memory")은 이 boundary가 재주입되기 때문이다.
 //
-// 완화 조건은 세 가지 모두를 만족할 때만 성립한다:
-//   1) 이 후보 생성이 external KEEP/LANE_KEEPING용일 때만 (호출부에서 보장)
-//   2) resolved_target_speed가 현재 속도보다 deadband 이상 높을 때만(가속 의도)
-//   3) 실측 raw_s_ddot이 음수일 때만(제동 경계조건이 실제로 남아있을 때만)
-// 위 조건을 만족하지 않으면(감속 의도, 또는 이미 양의 가속도) raw_s_ddot을
-// 그대로 반환한다 - 진짜 감속 요구의 boundary는 절대 건드리지 않는다.
+// 명확한 속도 의도와 반대 부호인 실측 가속도 memory만 대칭적으로 제거한다:
+//   - target > current + deadband인데 raw_s_ddot < 0이면 0
+//   - target < current - deadband인데 raw_s_ddot > 0이면 0
+// 이미 의도와 같은 부호이거나 deadband 안이면 raw_s_ddot을 유지한다. 이
+// 정책의 적용 범위는 external KEEP/LANE_KEEPING 후보 생성으로 호출부가
+// 제한하며, 센서에서 받은 raw VehicleState acceleration은 수정하지 않는다.
 //
 // 반환값은 "이 velocity-keeping 후보 생성 1회에 한정된 계획용 경계조건"이며,
 // 진단/피드백용 raw_s_ddot 자체를 덮어쓰지 않는다(호출부가 별도 local

@@ -208,9 +208,8 @@ UrbanFeature FeatureBuilder::build(
 
   StopLineInfo stop_line;
   double stop_distance = 1e9;
-  if (route_manager.findNextMapStopLine(
-          feature.route.current_link_id, feature.ego.map_s, 200.0,
-          &stop_line, &stop_distance)) {
+  if (route_manager.findNextSignalizedStopLine(
+          feature.ego.s, 200.0, &stop_line, &stop_distance)) {
     feature.signal.has_stop_line = true;
     feature.signal.stop_line_valid = true;
     feature.signal.stop_line_s = feature.ego.s + stop_distance;
@@ -238,6 +237,16 @@ UrbanFeature FeatureBuilder::build(
     feature.signal.traffic_light_id = stop_line.traffic_light_id;
     feature.signal.light_state = traffic_light_provider.getState(
         stop_line.traffic_light_id, feature.signal.required_movement);
+    feature.signal.recently_visible =
+        traffic_light_provider.hasRecentDetection(stop_line.traffic_light_id);
+  }
+
+  StopLineInfo passed_stop_line;
+  double distance_since_stop_line = 1e9;
+  if (route_manager.findPreviousSignalizedStopLine(
+          feature.ego.s, &passed_stop_line, &distance_since_stop_line)) {
+    feature.signal.has_passed_stop_line = true;
+    feature.signal.distance_since_stop_line = distance_since_stop_line;
   }
 
   std::vector<ObjectFeature> projected_objects;

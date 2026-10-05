@@ -62,6 +62,7 @@ add_library(frenet_planner_core
   src/frenet_planner/Generator/BoundaryConditionPolicy.cpp
   src/frenet_planner/Evaluation/KinematicFilter.cpp
   src/frenet_planner/Speed/CurveSpeed.cpp
+  src/frenet_planner/Speed/SpeedProfiler.cpp
   src/frenet_planner/Speed/TargetSpeedResolver.cpp
   src/frenet_planner/Evaluation/Cost.cpp
   src/frenet_planner/Evaluation/CollisionChecker.cpp
@@ -94,7 +95,7 @@ target_link_libraries(frenet_planner_message_converter
 
 # v2 인터페이스 어댑터. D3-1은 enum 매핑만 담고, D3-2에서 validation과
 # fingerprint가 여기에 추가된다. FSM 계약 경계이므로 planner core가 아니라
-# ROS 계층에 둔다 (docs/contracts/planning/fsm-frenet-v2.md 12.8절).
+# ROS 계층에 둔다 (docs/fsm-frenet-interface-v2.md 12.8절).
 add_library(frenet_behavior_command_adapter
   src/Runtime/behavior_command_adapter.cpp
 )
@@ -107,7 +108,7 @@ target_link_libraries(frenet_behavior_command_adapter
 
 # v2 transaction 관리. adapter가 stateless인 것과 달리 이쪽은 명령들 사이의
 # 관계(transaction / terminal latch / preemption)를 갖는 stateful 계층이다
-# (docs/contracts/planning/fsm-frenet-v2.md 12.8절).
+# (docs/fsm-frenet-interface-v2.md 12.8절).
 add_library(frenet_command_execution_manager
   src/Runtime/command_execution_manager.cpp
 )
@@ -388,10 +389,9 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME curve_speed_envelope_test COMMAND curve_speed_envelope_test)
 
-  # fix/yuntae-frenet-speed-continuity Phase 2: target speed recovery rate
-  # limit 회귀. R7-B: 실제 production ResolveTargetSpeed
-  # (Speed/TargetSpeedResolver.hpp)를 곧은 직선 RefLine으로 호출해 rate-limit
-  # 동작만 분리 검증한다.
+  # Legacy target name retained for build compatibility. The resolver now
+  # owns only stateless raw-cap composition; temporal limits are covered by
+  # speed_profiler_test below.
   add_executable(target_speed_rate_limit_test
     tests/target_speed_rate_limit_test.cpp
   )
@@ -399,6 +399,17 @@ if(CATKIN_ENABLE_TESTING)
     frenet_planner_core
   )
   add_test(NAME target_speed_rate_limit_test COMMAND target_speed_rate_limit_test)
+
+  # General Speed Profiler: raw cap -> jerk/acceleration-limited normal KEEP
+  # applied target. This owns the temporal invariant formerly split between
+  # TargetSpeedResolver and candidate-aware regeneration.
+  add_executable(speed_profiler_test
+    tests/speed_profiler_test.cpp
+  )
+  target_link_libraries(speed_profiler_test
+    frenet_planner_core
+  )
+  add_test(NAME speed_profiler_test COMMAND speed_profiler_test)
 
   # fix/yuntae-frenet-speed-continuity Phase 5: low-speed KEEP candidate
   # starvation handoff 회귀.

@@ -35,31 +35,16 @@ int SynchronizeFollowLeaderFragments(
 // 및 Maneuver/Avoid/AvoidLifecycle.cpp)가 쓴다.
 double ForwardArcDistance(double current_s, double target_s, double s_max);
 
-// 지정 AVOID 대상에만 적용할 충돌 여유 처리 방식.
-//
-// INITIAL_MARGIN_ONLY는 기존 정책이다. 첫 sample부터 이미 확장 safety
-// margin 안에 있으면서 실제 OBB는 겹치지 않을 때에만 바깥으로 빠져나가는
-// 경로를 허용한다.
-//
-// CONTINUOUS_OUTWARD_RECOVERY는 committed AVOID가 정지한 뒤 쓰는 제한적
-// 복구 정책이다. 경로 도중 확장 margin에 들어가더라도 실제 OBB가 한 번도
-// 겹치지 않고, 대상과의 횡방향 거리가 계속 증가할 때만 허용한다. 지정
-// 대상 이외의 객체에는 언제나 기존 확장 margin을 그대로 적용한다.
-enum class TargetEscapePolicy {
-    INITIAL_MARGIN_ONLY,
-    CONTINUOUS_OUTWARD_RECOVERY,
-};
-
 // fresh Cartesian collision recheck. AVOID(저속 crawl/PREPARE,
 // Maneuver/Avoid/Avoid.cpp)와 MERGE(M2: locked replay/commit_pending
-// candidate 검증, Maneuver/Merge/MergeGapEvaluator.cpp)가 쓴다.
+// candidate 검증, Maneuver/Merge/MergeGapEvaluator.cpp)가 쓴다. 내부에서
+// 일반 Frenet 후보와 동일한 EvaluateCartesianTrajectorySafety를 사용한다.
 bool CartesianTrajectoryClear(const CartesianPath& path,
                               const std::vector<TrackedObject>& obstacles,
                               const VehicleShape& ego_shape,
                               const CollisionCheckConfig& collision_cfg,
                               double dt, int* blocking_id = nullptr,
-                              int avoid_escape_object_id = -1,
-                              TargetEscapePolicy escape_policy =
-                                  TargetEscapePolicy::INITIAL_MARGIN_ONLY);
+                              int margin_recovery_object_id = -1,
+                              bool* margin_recovery_used = nullptr);
 
 #endif  // FRENET_MANEUVER_MANEUVER_UTILS_HPP

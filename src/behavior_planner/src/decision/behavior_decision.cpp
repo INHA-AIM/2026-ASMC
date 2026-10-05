@@ -56,10 +56,12 @@ BehaviorContextData BehaviorDecision::decide(
       std::min(feature.route.speed_limit > 0.0 ? feature.route.speed_limit
                                                : 13.9,
                context.hard.max_speed);
-  if (context.hard.signal_approach_speed_limit) {
-    context.extra_flags["signal_approach_speed_limit"] = true;
-    context.extra_values["signal_approach_speed_mps"] =
+  if (context.hard.intersection_approach_active) {
+    context.extra_flags["intersection_approach_speed_limit"] = true;
+    context.extra_values["intersection_approach_speed_mps"] =
         context.hard.max_speed;
+    context.extra_values["intersection_approach_activation_distance_m"] =
+        context.hard.intersection_approach_activation_distance;
   }
   context.target.stop_before_s = context.hard.stop_before_s;
   if (context.hard.planned_stop && feature.signal.stop_line_valid) {

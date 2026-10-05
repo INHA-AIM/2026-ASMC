@@ -321,7 +321,7 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
     if (!obstacles.empty()) {
         FilterByCollision(combined, ref, obstacles, vehicle_shape, collision_cfg,
                           request.collision.coast_exempt_object_id,
-                          request.collision.escape_object_id);
+                          request.collision.margin_recovery_object_id);
     }
     if (stats) {
         for (const auto& p : combined) if (p.valid) stats->combined_valid_after_collision++;

@@ -74,7 +74,8 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
     loadInto(root, "stuck_recovery/launch_accel", p.stuck_launch_accel);
 
     // 비용 가중치
-    loadInto(root, "cost/path_error",     p.weight_path_error);
+    loadInto(root, "cost/contour_error",  p.weight_contour_error);
+    loadInto(root, "cost/lag_error",      p.weight_lag_error);
     loadInto(root, "cost/heading_error",  p.weight_heading_error);
     loadInto(root, "cost/speed_error",    p.weight_speed_error);
     loadInto(root, "cost/control",        p.weight_control);
@@ -123,8 +124,10 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
                 "steer_gain=%.3f freq=%.1fHz\n",
                 p.horizon, p.dt, p.max_iterations, p.wheelbase,
                 p.steering_curvature_gain, p.control_frequency);
-    std::printf("[MPC] Weights: path=%.2f head=%.2f speed=%.2f term=%.2f\n",
-                p.weight_path_error, p.weight_heading_error, p.weight_speed_error,
+    std::printf("[MPC] Weights: contour=%.2f lag=%.2f head=%.2f "
+                "speed=%.2f term=%.2f\n",
+                p.weight_contour_error, p.weight_lag_error,
+                p.weight_heading_error, p.weight_speed_error,
                 p.weight_terminal);
     std::printf("[MPC] MORAI brake mapping: brake=1.0 <-> %.2f m/s^2\n",
                 p.brake_full_decel);

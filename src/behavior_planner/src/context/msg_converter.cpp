@@ -136,10 +136,18 @@ UrbanFeatureDebug MsgConverter::toDebugMsg(
   message.right_rear_gap = feature.surrounding.right_rear_gap;
   message.has_stop_line = feature.signal.has_stop_line;
   message.distance_to_stop_line = feature.signal.distance_to_stop_line;
+  message.intersection_approach_active =
+      context.hard.intersection_approach_active;
+  message.intersection_approach_activation_distance =
+      context.hard.intersection_approach_activation_distance;
+  message.intersection_approach_speed_limit =
+      context.hard.intersection_approach_speed_limit;
   message.traffic_light_id = feature.signal.traffic_light_id;
   message.traffic_light_state =
       static_cast<uint8_t>(feature.signal.light_state);
   message.traffic_light_raw_label = feature.signal.raw_label;
+  message.traffic_light_recently_visible =
+      feature.signal.recently_visible;
   message.has_required_movement = feature.signal.has_required_movement;
   message.required_movement =
       static_cast<uint8_t>(feature.signal.required_movement);

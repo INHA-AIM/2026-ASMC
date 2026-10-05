@@ -69,6 +69,22 @@ RefLine MakeRefLine(double total_s, double step,
     return ref;
 }
 
+CartesianPath MakeCartesianCandidate(double length, double step,
+                                     double speed,
+                                     const std::function<double(double)>&
+                                         kappa_fn) {
+    CartesianPath path;
+    for (double x = 0.0; x <= length + 1e-9; x += step) {
+        path.x.push_back(x);
+        path.y.push_back(0.0);
+        path.yaw.push_back(0.0);
+        path.kappa.push_back(kappa_fn(x));
+        path.v.push_back(speed);
+        path.a.push_back(0.0);
+    }
+    return path;
+}
+
 }  // namespace
 
 // TEST 1 + 3 - 30m 앞 sharp curve, 즉시 corner speed로 떨어지지 않고
@@ -210,12 +226,69 @@ void TestSharperFutureCurveYieldsLowerAllowedSpeed() {
            "speed를 만든다");
 }
 
+// TEST 7 - 실제 selected Cartesian candidate의 곡률을 쓰는 envelope가
+// 직선/안전한 완만한 곡선에서는 기존 target을 불필요하게 낮추지 않는다.
+void TestCandidateEnvelopePreservesSafeKeepSpeed() {
+    const CurveSpeedConfig cfg = MakeCurveCfg();
+    const double max_longitudinal_accel = 3.0;
+    const double max_lateral_accel = 3.0;
+
+    const CartesianPath straight = MakeCartesianCandidate(
+        30.0, 1.0, 10.0, [](double) { return 0.0; });
+    const CandidateCurveSpeedResult straight_result =
+        EvaluateCandidateCurveSpeed(straight, cfg.target_vel, cfg.target_vel, cfg,
+                                    max_longitudinal_accel,
+                                    max_lateral_accel);
+    Expect(straight_result.valid &&
+               std::fabs(straight_result.speed_cap - cfg.target_vel) < 1e-9,
+           "TEST7: straight selected candidate keeps the existing target");
+
+    // budget=3*0.8=2.4m/s^2이고 10m/s, kappa=0.01이면 a_lat=1.0으로
+    // 충분히 안전하다.
+    const CartesianPath mild = MakeCartesianCandidate(
+        30.0, 1.0, 10.0, [](double) { return 0.01; });
+    const CandidateCurveSpeedResult mild_result =
+        EvaluateCandidateCurveSpeed(mild, cfg.target_vel, cfg.target_vel, cfg,
+                                    max_longitudinal_accel,
+                                    max_lateral_accel);
+    Expect(mild_result.valid &&
+               std::fabs(mild_result.speed_cap - cfg.target_vel) < 1e-9,
+           "TEST7: safe mild-curve/lane-center candidate is not slowed");
+}
+
+// TEST 8 - reference가 아니라 actual candidate의 가까운 곡률이 횡가속도
+// budget을 넘으면 braking envelope가 target을 낮춘다. hard reject가 아니라
+// 재생성에 쓸 유한한 speed cap을 반환해야 한다.
+void TestCandidateEnvelopeRequestsRegeneration() {
+    const CurveSpeedConfig cfg = MakeCurveCfg();
+    const double max_longitudinal_accel = 3.0;
+    const double max_lateral_accel = 3.0;
+    const CartesianPath recenter_like = MakeCartesianCandidate(
+        30.0, 1.0, 10.0,
+        [](double x) { return x <= 5.0 ? 0.05 : 0.0; });
+    const CandidateCurveSpeedResult result = EvaluateCandidateCurveSpeed(
+        recenter_like, cfg.target_vel, cfg.target_vel, cfg,
+        max_longitudinal_accel,
+        max_lateral_accel);
+
+    const double expected_local =
+        VelocityFromCurvature(0.05, cfg, max_lateral_accel);
+    Expect(result.valid && result.speed_cap < cfg.target_vel,
+           "TEST8: actual candidate curvature lowers the target speed");
+    Expect(std::fabs(result.speed_cap - expected_local) < 1e-9,
+           "TEST8: curvature at the first sample uses the local safe speed");
+    Expect(std::fabs(result.max_lateral_accel - 5.0) < 1e-9,
+           "TEST8: diagnostics report selected max v^2|kappa|");
+}
+
 int main() {
     TestFarSharpCurveDoesNotForceImmediateCornerSpeed();
     TestTargetSpeedDecreasesMonotonicallyApproachingCurve();
     TestStraightRoadKeepsMaxSpeed();
     TestClosedLoopSeamWrapsCorrectly();
     TestSharperFutureCurveYieldsLowerAllowedSpeed();
+    TestCandidateEnvelopePreservesSafeKeepSpeed();
+    TestCandidateEnvelopeRequestsRegeneration();
 
     if (g_failures == 0) {
         std::cout << "[ALL PASS]\n";

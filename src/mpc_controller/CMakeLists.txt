@@ -53,6 +53,22 @@ if(CATKIN_ENABLE_TESTING)
     target_link_libraries(mpc_controller_test mpc_core)
   endif()
 
+  catkin_add_gtest(path_resampler_test test/path_resampler_test.cpp)
+  if(TARGET path_resampler_test)
+    target_link_libraries(path_resampler_test mpc_core)
+  endif()
+
+  catkin_add_gtest(acceleration_feedforward_test
+    test/acceleration_feedforward_test.cpp)
+  if(TARGET acceleration_feedforward_test)
+    target_link_libraries(acceleration_feedforward_test mpc_core)
+  endif()
+
+  catkin_add_gtest(tracking_error_test test/tracking_error_test.cpp)
+  if(TARGET tracking_error_test)
+    target_link_libraries(tracking_error_test mpc_core)
+  endif()
+
   catkin_add_gtest(steering_feedforward_test test/steering_feedforward_test.cpp)
   if(TARGET steering_feedforward_test)
     target_link_libraries(steering_feedforward_test mpc_core)

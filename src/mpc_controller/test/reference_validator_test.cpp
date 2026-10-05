@@ -24,6 +24,7 @@ ReferencePath MakeStraightReference(double speed, int steps, double dt) {
         ref.y_ref.push_back(0.0);
         ref.yaw_ref.push_back(0.0);
         ref.v_ref.push_back(speed);
+        ref.a_ref.push_back(0.0);
         ref.k_ref.push_back(0.0);
     }
     return ref;
@@ -37,6 +38,7 @@ ReferencePath MakeCurvedReference(double speed, double kappa, int steps, double 
         ref.y_ref.push_back(y);
         ref.yaw_ref.push_back(yaw);
         ref.v_ref.push_back(speed);
+        ref.a_ref.push_back(0.0);
         ref.k_ref.push_back(kappa);
         const double ds = speed * dt;
         x += ds * std::cos(yaw);
@@ -106,6 +108,15 @@ TEST(ReferenceValidatorTest, SizeMismatchIsRejected) {
     EXPECT_EQ(ReferenceValidationStatus::SIZE_MISMATCH, result.status);
 }
 
+TEST(ReferenceValidatorTest, AccelerationSizeMismatchIsRejected) {
+    const MPCParams params = MakeParams();
+    ReferencePath ref = MakeStraightReference(9.0, 10, params.dt);
+    ref.a_ref.pop_back();
+    const auto result = ValidateReference(ref, params);
+    EXPECT_FALSE(result.ok());
+    EXPECT_EQ(ReferenceValidationStatus::SIZE_MISMATCH, result.status);
+}
+
 // Test 6: NaN x -> REJECT.
 TEST(ReferenceValidatorTest, NanXIsRejected) {
     const MPCParams params = MakeParams();
@@ -157,6 +168,16 @@ TEST(ReferenceValidatorTest, NanCurvatureIsRejected) {
     EXPECT_EQ(ReferenceValidationStatus::NON_FINITE, result.status);
 }
 
+TEST(ReferenceValidatorTest, NanAccelerationIsRejected) {
+    const MPCParams params = MakeParams();
+    ReferencePath ref = MakeStraightReference(9.0, 10, params.dt);
+    ref.a_ref[5] = std::numeric_limits<double>::quiet_NaN();
+    const auto result = ValidateReference(ref, params);
+    EXPECT_FALSE(result.ok());
+    EXPECT_EQ(ReferenceValidationStatus::NON_FINITE, result.status);
+    EXPECT_EQ(5u, result.failed_index);
+}
+
 // Test 11: +Inf / -Inf representative cases -> REJECT.
 TEST(ReferenceValidatorTest, InfiniteValuesAreRejected) {
     const MPCParams params = MakeParams();
@@ -168,6 +189,11 @@ TEST(ReferenceValidatorTest, InfiniteValuesAreRejected) {
     {
         ReferencePath ref = MakeStraightReference(9.0, 10, params.dt);
         ref.v_ref[0] = -std::numeric_limits<double>::infinity();
+        EXPECT_FALSE(ValidateReference(ref, params).ok());
+    }
+    {
+        ReferencePath ref = MakeStraightReference(9.0, 10, params.dt);
+        ref.a_ref[0] = std::numeric_limits<double>::infinity();
         EXPECT_FALSE(ValidateReference(ref, params).ok());
     }
 }

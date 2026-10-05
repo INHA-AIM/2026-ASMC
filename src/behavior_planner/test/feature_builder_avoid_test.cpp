@@ -19,6 +19,7 @@ class GreenTrafficLight final : public TrafficLightProvider {
                              SignalMovement) const override {
     return TrafficLightState::GREEN;
   }
+  bool hasRecentDetection(const std::string&) const override { return true; }
 };
 
 class FeatureBuilderAvoidTest : public ::testing::Test {

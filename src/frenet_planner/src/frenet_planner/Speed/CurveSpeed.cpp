@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 double VelocityFromCurvature(double k, const CurveSpeedConfig& cfg, double max_lateral_accel) {
     constexpr double kMinKappaForCalc = 1e-4;      // 0 나누기 방지 (거의 직선)
@@ -74,4 +75,94 @@ double LookaheadTargetSpeed(const RefLine& ref, double s_start, double ego_speed
         envelope_speed = std::min(envelope_speed, current_allowed_speed);
     }
     return clip(envelope_speed, 0.0, cfg.target_vel);
+}
+
+CandidateCurveSpeedResult EvaluateCandidateCurveSpeed(
+    const CartesianPath& candidate,
+    double raw_speed_cap,
+    double applied_target_speed,
+    const CurveSpeedConfig& cfg,
+    double max_longitudinal_accel,
+    double max_lateral_accel) {
+    CandidateCurveSpeedResult result;
+    const std::size_t count = std::min(
+        {candidate.x.size(), candidate.y.size(), candidate.kappa.size(),
+         candidate.v.size()});
+    if (count == 0) return result;
+
+    const double usable_decel = std::max(
+        cfg.min_usable_decel,
+        max_longitudinal_accel * cfg.comfortable_decel_factor);
+    if (!std::isfinite(usable_decel) || usable_decel <= 0.0 ||
+        !std::isfinite(cfg.target_vel) || cfg.target_vel < 0.0 ||
+        !std::isfinite(raw_speed_cap) || raw_speed_cap < 0.0 ||
+        !std::isfinite(applied_target_speed) ||
+        applied_target_speed < 0.0) {
+        return result;
+    }
+
+    double distance = 0.0;
+    // raw_speed_cap is the environmental/upstream ceiling.  It must remain
+    // distinct from applied_target_speed: initializing this cap from the
+    // lower profiled target would feed the profiler output back as its own cap
+    // and permanently prevent recovery on a straight road.
+    double speed_cap = std::min(cfg.target_vel, raw_speed_cap);
+    const double initial_speed = std::fabs(candidate.v.front());
+    for (std::size_t i = 0; i < count; ++i) {
+        if (!std::isfinite(candidate.x[i]) ||
+            !std::isfinite(candidate.y[i]) ||
+            !std::isfinite(candidate.kappa[i]) ||
+            !std::isfinite(candidate.v[i])) {
+            return CandidateCurveSpeedResult{};
+        }
+        if (i > 0) {
+            distance += std::hypot(candidate.x[i] - candidate.x[i - 1],
+                                   candidate.y[i] - candidate.y[i - 1]);
+        }
+
+        const double abs_kappa = std::fabs(candidate.kappa[i]);
+        const double local_curve_speed =
+            VelocityFromCurvature(abs_kappa, cfg, max_lateral_accel);
+        const double current_allowed_speed = std::sqrt(
+            local_curve_speed * local_curve_speed +
+            2.0 * usable_decel * distance);
+        if (current_allowed_speed < speed_cap) {
+            speed_cap = current_allowed_speed;
+            result.limiting_sample_index = i;
+        }
+
+        // current_allowed_speed는 "지금 이 속도라면 감속을 시작해 미래
+        // 곡률에 맞출 수 있는가"를 나타낸다. 하지만 velocity-keeping
+        // quartic이 그 사이에 다시 가속하면 그 envelope를 실제로 따르지
+        // 않을 수 있다. 각 거리에서 comfortable_decel로도 피할 수 없는
+        // 최소속도와 local curve speed 중 큰 값을 sample 허용속도로 삼아,
+        // 실제 candidate가 그보다 빠르면 terminal target을 같은 비율로
+        // 낮춘다. 초기 sample은 minimum_reachable_speed=initial_speed라서
+        // 이미 높은 현재속도의 불가피한 transient를 reject하지 않는다.
+        const double minimum_reachable_speed = std::sqrt(std::max(
+            0.0, initial_speed * initial_speed -
+                     2.0 * usable_decel * distance));
+        const double sample_allowed_speed =
+            std::max(local_curve_speed, minimum_reachable_speed);
+        const double candidate_speed = std::fabs(candidate.v[i]);
+        if (candidate_speed > sample_allowed_speed &&
+            candidate_speed > std::numeric_limits<double>::epsilon()) {
+            const double profile_consistent_target =
+                applied_target_speed * sample_allowed_speed /
+                candidate_speed;
+            if (profile_consistent_target < speed_cap) {
+                speed_cap = profile_consistent_target;
+                result.limiting_sample_index = i;
+            }
+        }
+        result.max_abs_curvature =
+            std::max(result.max_abs_curvature, abs_kappa);
+        result.max_lateral_accel = std::max(
+            result.max_lateral_accel,
+            candidate.v[i] * candidate.v[i] * abs_kappa);
+    }
+
+    result.speed_cap = clip(speed_cap, 0.0, cfg.target_vel);
+    result.valid = std::isfinite(result.speed_cap);
+    return result;
 }

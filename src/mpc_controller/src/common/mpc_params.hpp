@@ -41,7 +41,8 @@ struct MPCParams {
     double stuck_launch_accel = 0.5;    // [m/s^2]
 
     // 비용 가중치
-    double weight_path_error    = 5.0;
+    double weight_contour_error = 6.0;
+    double weight_lag_error     = 0.5;
     double weight_heading_error = 2.0;
     double weight_speed_error   = 0.3;
     double weight_control       = 0.05;

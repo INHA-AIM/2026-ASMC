@@ -1,5 +1,6 @@
 #include "mpc_controller_node.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <cmath>
 #include <stdexcept>
@@ -25,6 +26,24 @@ MPCParams LoadParamsForNode(ros::NodeHandle& private_nh) {
     MPCParams params;
     loadMPCParameters(params_path, params);
     return params;
+}
+
+double SampleDiagnosticCartesianAcceleration(
+    const PlannedPath& path, double start_time_offset) {
+    if (path.empty() || path.dt <= 0.0 ||
+        path.a.size() != path.size() ||
+        !std::isfinite(start_time_offset)) {
+        return 0.0;
+    }
+    const double offset = std::max(0.0, start_time_offset);
+    const double unclipped_index = offset / path.dt;
+    const double index = std::max(
+        0.0, std::min(unclipped_index,
+                      static_cast<double>(path.size() - 1)));
+    const std::size_t first = static_cast<std::size_t>(index);
+    const std::size_t second = std::min(first + 1, path.size() - 1);
+    const double fraction = index - static_cast<double>(first);
+    return path.a[first] + fraction * (path.a[second] - path.a[first]);
 }
 
 }  // namespace
@@ -219,6 +238,39 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
                                           : "solver failure");
         return;
     }
+
+    constexpr double kRadiansToDegrees =
+        180.0 / 3.14159265358979323846;
+    const double raw_cartesian_a0 = SampleDiagnosticCartesianAcceleration(
+        path, start_time_offset);
+    const double v_ref1 = reference.v_ref.size() >= 2
+        ? reference.v_ref[1] : reference.v_ref.front();
+    ROS_INFO_THROTTLE(
+        0.25,
+        "[MPC-LONG] source_path_dt=%.3f mpc_destination_dt=%.3f "
+        "current_v=%.2f v_ref0=%.2f v_ref1=%.2f "
+        "raw_cartesian_a0=%+.2f derived_a_ref0=%+.2f "
+        "clipped_a_ref0=%+.2f a_cmd=%+.2f",
+        path.dt, controller_.params().dt, output.current_speed,
+        output.first_reference_speed, v_ref1, raw_cartesian_a0,
+        output.first_reference_acceleration,
+        output.first_used_reference_acceleration, output.control.accel);
+    ROS_INFO_THROTTLE(
+        0.25,
+        "[MPC-TRACK] contour_cost=%.3f lag_cost=%.3f heading_cost=%.3f "
+        "speed_cost=%.3f control_cost=%.3f rate_cost=%.3f terminal=%.3f "
+        "steer_cmd_deg=%.2f ref_kappa0=%.5f steer_ff_deg=%.2f "
+        "v=%.2f v_ref0=%.2f v_error=%.2f a_ref0=%.2f a_cmd=%.2f "
+        "a_residual=%.2f accel_control_cost=%.3f accel_rate_cost=%.3f",
+        output.cost.contour, output.cost.lag, output.cost.heading,
+        output.cost.speed, output.cost.control, output.cost.control_rate,
+        output.cost.terminal, output.control.delta * kRadiansToDegrees,
+        output.first_reference_curvature,
+        output.first_feedforward_steering * kRadiansToDegrees,
+        output.current_speed, output.first_reference_speed,
+        output.first_speed_error, output.first_used_reference_acceleration,
+        output.control.accel, output.first_acceleration_residual,
+        output.cost.acceleration_control, output.cost.acceleration_rate);
 
     control_pub_.publish(ToRosControlCommand(output.control,
                                              controller_.params()));

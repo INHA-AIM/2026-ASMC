@@ -2516,11 +2516,13 @@ int main() {
     }
 
     {
-        // strict margin 밖에서 시작하지만 전진 중 target margin에 들어가는
-        // committed SHIFT를 재현한다. 실제 OBB 비충돌 탈출이 승인된 뒤에는
-        // 속도가 fallback 임계값을 넘어도 같은 crawl 정책을 유지해야 한다.
+        // 현재 pose가 이미 target의 확장 margin 안이지만 실제 OBB는 겹치지
+        // 않는 committed SHIFT를 재현한다. 공용 margin recovery가 승인된
+        // 뒤에는 속도가 fallback 임계값을 넘어도 같은 crawl 생성기를
+        // 유지해야 한다. margin 밖에서 시작해 나중에 진입하는 경로는 별도
+        // polygon_collision_test에서 금지됨을 검증한다.
         const std::vector<TrackedObject> close_target{
-            MakeObstacle(waypoints, 21, kEgoS + 7.0, 0.0, 0.0,
+            MakeObstacle(waypoints, 21, kEgoS + 0.5, 0.0, -2.0,
                          1.4, 0.1, 0.5 * std::acos(-1.0))};
         const PlannerCommand command =
             MakeAvoidCommand(21, LateralDirection::LEFT);
@@ -2572,7 +2574,7 @@ int main() {
             target_d_ego, close_target, command, pass_path, pass_result);
         Expect(std::string(planner.avoid_phase_name()) == "PASS" &&
                    !planner.avoid_escape_recovery_active(),
-               "escape recovery latch: reaching PASS restores strict policy");
+               "escape recovery latch: reaching PASS releases the crawl generator");
     }
 
     {
@@ -2737,6 +2739,24 @@ int main() {
                        planner, return_path,
                        planner.avoid_target_s() + 10.0)) < 1e-6,
                "early return: the first collision-clear d=0 candidate bypasses the conservative rear-clearance wait");
+
+        // RETURN 진입 직후 LiDAR OBB 폭이 커져 현재 pose가 확장 margin 안에
+        // 들어와도, 실제 OBB가 비충돌이고 종방향 이격이 커지는 저속 복귀는
+        // 같은 공용 margin-recovery 규칙으로 계속되어야 한다.
+        const std::vector<TrackedObject> grown_return_target{
+            MakeObstacle(waypoints, 21, kEgoS + 20.0, 0.0, 0.0,
+                         1.0, 2.0)};
+        const CartesianState stopped_return = MakeEgoAt(
+            waypoints, planner.avoid_target_s() + 1.6, locked, 0.0);
+        CartesianPath stopped_return_path;
+        Prepare stopped_return_result;
+        const bool stopped_return_ok = return_ok && planner.PlanCommittedAvoid(
+            stopped_return, grown_return_target, command,
+            stopped_return_path, stopped_return_result);
+        Expect(stopped_return_ok && stopped_return_result.candidate_valid &&
+                   std::string(planner.avoid_phase_name()) == "RETURN" &&
+                   planner.last_failure_reason() == Reason::NONE,
+               "margin recovery: low-speed RETURN is not blocked by a phase gate");
     }
 
     {

@@ -20,12 +20,14 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <limits>
 #include <unordered_map>
 #include <utility>
 
 #include "frenet_planner/Evaluation/Cost.hpp"
 #include "frenet_planner/Generator/BoundaryConditionPolicy.hpp"
 #include "frenet_planner/Maneuver/ManeuverUtils.hpp"
+#include "frenet_planner/Speed/CurveSpeed.hpp"
 
 namespace {
 
@@ -37,6 +39,24 @@ const char* ModeName(BehaviorState mode) {
         case MERGE: return "MERGE";
         default: return "OTHER";
     }
+}
+
+const char* SpeedIntentName(double ego_speed, double target_speed,
+                            double deadband) {
+    if (target_speed < ego_speed - deadband) return "DECEL";
+    if (target_speed > ego_speed + deadband) return "ACCEL";
+    return "HOLD";
+}
+
+double PathSpeedAtTime(const CartesianPath& path, double sample_dt,
+                       double time_s) {
+    if (path.v.empty() || !std::isfinite(sample_dt) || sample_dt <= 0.0) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+    const std::size_t index = std::min(
+        path.v.size() - 1,
+        static_cast<std::size_t>(std::llround(time_s / sample_dt)));
+    return path.v[index];
 }
 
 }  // namespace
@@ -54,6 +74,10 @@ bool FrenetPlanner::PlanExternalKeepLowSpeedFallback(const CartesianState& ego,
     last_failure_reason_ = fallback_ok
         ? PlanFailureReason::NONE
         : PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+    if (fallback_ok) {
+        last_target_speed_ = out_path.v.empty() ? 0.0 : out_path.v.back();
+        last_raw_speed_cap_ = resolved_target_speed;
+    }
     return fallback_ok;
 }
 
@@ -66,7 +90,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     double resolved_target_speed, const PlannerCommand& command,
     CartesianPath& out_path) {
     // Pipeline/TrajectoryPipeline 분리(R3 1/4단계)를 위한 선행 작업 - 이
-    // pipeline이 참조하는 config 10종을 번들 하나로 묶어 그 필드를 통해서만
+    // pipeline이 참조하는 config 11종을 번들 하나로 묶어 그 필드를 통해서만
     // 읽는다. 값/동작은 기존과 완전히 동일하다(순수 구조 이동).
     const PlannerConfigBundle cfg = MakePipelineConfigBundle();
     const PlannerCommand* external_command = &command;
@@ -115,8 +139,17 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         }
     }
 
+    // STOP APPROACH가 내부적으로 LANE_KEEPING generator를 쓰더라도 이
+    // 정책의 대상은 아니다. 원래 Behavior command가 실제 KEEP인 경우만
+    // selected Cartesian curvature와 longitudinal target을 결합한다.
+    const bool is_true_external_keep =
+        external_command->mode == LANE_KEEPING && !external_stop_mode;
+
     last_mode_ = external_stop_mode ? STOP : cmd.mode;
-    last_target_speed_ = cmd.target_speed;
+    // true KEEP은 아래 bounded regeneration이 끝난 뒤 실제 candidate 생성에
+    // 사용한 최종 target으로 갱신한다. 여기서 base 값을 먼저 기록하면 다음
+    // cycle profiler와 FrenetFeedback이 실제 적용속도보다 높아진다.
+    if (!is_true_external_keep) last_target_speed_ = cmd.target_speed;
 
     // HOLD는 후보 생성/충돌 필터 파이프라인을 거치지 않는다. 이미 정지한
     // 상태이므로 0속도 궤적을 그대로 유지한다.
@@ -178,13 +211,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     // 아니라 실제로 external_command->mode==LANE_KEEPING일 때만 적용한다 -
     // STOP/FOLLOW의 경계조건 semantics는 start.s_dd(raw/진단용, 이 함수
     // 앞부분의 Frenet boundary-state 구성 지점)를 그대로 유지해야 한다.
-    FrenetState maneuver_start = start;
     const bool external_keep_candidates = external_command->mode == LANE_KEEPING;
-    if (external_keep_candidates) {
-        maneuver_start.s_dd = ResolveVelocityKeepingBoundaryAcceleration(
-            start.s_dd, s_dot, resolved_target_speed,
-            cfg.limits.accel_intent_deadband_mps);
-    }
     KinematicLimits maneuver_limits = cfg.limits;
     if (external_stop_mode) {
         // 일반 주행의 가속도 한계는 그대로 두고 STOP 후보에만 서비스 제동
@@ -209,7 +236,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     const TrajectoryPipeline trajectory_pipeline(cfg, ref_);
     const bool append_keep_continuity_candidates =
         external_keep_candidates &&
-        std::fabs(maneuver_start.d) <= cfg.lane_width * 0.5;
+        std::fabs(start.d) <= cfg.lane_width * 0.5;
     // R4-B/C/D, R6-E: 이 함수는 frenet_planner.cpp의 PlanInternal switch(§6
     // 주석 참고)에서 AVOID/LANE_CHANGE가 먼저 가로채고 MERGE가
     // IsSupportedExternalMode에서 이미 걸러진 뒤에만 호출되므로,
@@ -221,8 +248,6 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     // UpdateExternalStopExecution(Stop.cpp)이 소유한다 - 여기서는 그 결과
     // (cmd.mode/target_speed/stop_position/lateral hold)를 Request로
     // 정규화만 한다. HOLD는 이미 위에서 조기 반환하므로 이 분기에 오지 않는다.
-    const bool is_true_external_keep =
-        external_command->mode == LANE_KEEPING && !external_stop_mode;
     const bool is_follow = cmd.mode == FOLLOWING;
     // external_stop_mode에서 cmd.mode는 UpdateExternalStopExecution이
     // APPROACH -> LANE_KEEPING, BRAKING -> STOP(그대로) 로 이미 정해뒀다.
@@ -260,13 +285,127 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         // VELOCITY_KEEPING 요청이다.
         request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
     }
-    std::vector<FrenetPath> candidates = trajectory_pipeline.GenerateCandidates(
-        maneuver_start, request, maneuver_limits, planning_collision_obstacles,
-        append_keep_continuity_candidates, &stats, geometry_mode);
-
     const double lateral_cost_target = cmd.has_stop_lateral_hold
         ? cmd.stop_lateral_hold_d : 0.0;
-    EvaluateCosts(candidates, cfg.cost_weights, lateral_cost_target);
+    const double base_resolved_target_speed = cmd.target_speed;
+    const double previous_profiled_target = speed_profiler_.initialized()
+        ? speed_profiler_.speed() : std::max(0.0, ego.v);
+    const SpeedProfileLimits speed_profile_limits{
+        max_target_speed_accel_,
+        std::max(cfg.curve_speed.min_usable_decel,
+                 cfg.limits.max_longitudinal_accel *
+                     cfg.curve_speed.comfortable_decel_factor),
+        cfg.limits.max_longitudinal_jerk};
+    SpeedProfileInput speed_profile_input{
+        base_resolved_target_speed, ego.v, ego.a, replanning_period_s_};
+    SpeedProfileOutput final_speed_profile;
+    double final_raw_speed_cap = base_resolved_target_speed;
+    double final_applied_target_speed = base_resolved_target_speed;
+    if (is_true_external_keep) {
+        final_speed_profile = speed_profiler_.Preview(
+            speed_profile_input, speed_profile_limits);
+        final_applied_target_speed = final_speed_profile.target_speed;
+    }
+    CandidateCurveSpeedResult selected_speed_envelope;
+    int candidate_aware_regenerations = 0;
+    last_base_target_speed_ = base_resolved_target_speed;
+    last_raw_speed_cap_ = final_raw_speed_cap;
+    last_candidate_curvature_speed_cap_ = -1.0;
+    last_candidate_max_abs_curvature_ = -1.0;
+    last_candidate_max_lateral_accel_ = -1.0;
+    last_candidate_aware_regenerations_ = 0;
+
+    // 1차는 기존 reference-curvature target으로 후보를 고르고, 필요할 때만
+    // 낮아진 target으로 longitudinal polynomial까지 다시 만든다. 속도를
+    // 낮추면 같은 시간 horizon에서 진행거리와 lateral recenter geometry가
+    // 함께 바뀔 수 있으므로 bounded 수렴 확인을 허용한다. 최대 3회 재생성
+    // (최초 generation까지 합쳐 4 pass)으로 제한해 planning 주기를 보장한다.
+    // 각 pass의 profiler 계산은 Preview라 state를 바꾸지 않는다. 마지막으로
+    // 실제 선택된 trajectory를 생성한 출력만 아래 성공 분기에서 commit한다.
+    constexpr int kMaxCandidateAwareRegenerations = 3;
+    const int generation_pass_limit =
+        is_true_external_keep ? 1 + kMaxCandidateAwareRegenerations : 1;
+    constexpr double kRegenerationEpsilon = 1e-9;
+    double selected_planning_s_dd = start.s_dd;
+
+    std::vector<FrenetPath> candidates;
+    for (int generation_pass = 0;
+         generation_pass < generation_pass_limit; ++generation_pass) {
+        FrenetState pass_start = start;
+        if (external_keep_candidates) {
+            // The boundary policy answers whether the upstream/candidate cap
+            // requests acceleration or deceleration.  Use the raw intent here;
+            // using the necessarily-nearby first profiled sample would fall
+            // inside accel_intent_deadband and preserve stale braking memory.
+            // request.target_speed below uses the scalar generator target;
+            // the polynomial from the measured start state owns continuity.
+            pass_start.s_dd = ResolveVelocityKeepingBoundaryAcceleration(
+                start.s_dd, s_dot, final_raw_speed_cap,
+                cfg.limits.accel_intent_deadband_mps);
+        }
+        selected_planning_s_dd = pass_start.s_dd;
+
+        request.target_speed = final_applied_target_speed;
+        PlannerDebugStats pass_stats;
+        candidates = trajectory_pipeline.GenerateCandidates(
+            pass_start, request, maneuver_limits,
+            planning_collision_obstacles,
+            append_keep_continuity_candidates, &pass_stats, geometry_mode);
+        EvaluateCosts(candidates, cfg.cost_weights, lateral_cost_target);
+        stats = pass_stats;
+
+        const FrenetPath* pass_best = external_stop_mode
+            ? SelectBestStoppingPath(candidates)
+            : SelectBestPath(candidates);
+        if (!is_true_external_keep || pass_best == nullptr) break;
+
+        const CartesianPath pass_cartesian =
+            ConvertToCartesianPath(*pass_best, ref_, geometry_mode);
+        selected_speed_envelope = EvaluateCandidateCurveSpeed(
+            pass_cartesian, base_resolved_target_speed,
+            final_applied_target_speed, cfg.curve_speed,
+            cfg.limits.max_longitudinal_accel,
+            cfg.limits.max_lateral_accel);
+        if (!selected_speed_envelope.valid) break;
+
+        const double candidate_raw_speed_cap = std::min(
+            base_resolved_target_speed, selected_speed_envelope.speed_cap);
+        speed_profile_input.raw_speed_cap = candidate_raw_speed_cap;
+        const SpeedProfileOutput candidate_profile = speed_profiler_.Preview(
+            speed_profile_input, speed_profile_limits);
+        const double candidate_planning_s_dd =
+            ResolveVelocityKeepingBoundaryAcceleration(
+                start.s_dd, s_dot, candidate_raw_speed_cap,
+                cfg.limits.accel_intent_deadband_mps);
+        const bool target_changed = std::fabs(
+            candidate_profile.target_speed - final_applied_target_speed) >
+            kRegenerationEpsilon;
+        const bool boundary_changed = std::fabs(
+            candidate_planning_s_dd - pass_start.s_dd) >
+            kRegenerationEpsilon;
+        const bool needs_regeneration = target_changed || boundary_changed;
+        const bool can_regenerate =
+            generation_pass + 1 < generation_pass_limit;
+        if (!needs_regeneration) {
+            // The cap can change while an upward-limited target stays the
+            // same. Reuse is safe only because both the generator target and
+            // intent-corrected initial acceleration are unchanged.
+            final_raw_speed_cap = candidate_raw_speed_cap;
+            final_speed_profile = candidate_profile;
+            break;
+        }
+        if (!can_regenerate) break;
+
+        final_raw_speed_cap = candidate_raw_speed_cap;
+        final_speed_profile = candidate_profile;
+        final_applied_target_speed = candidate_profile.target_speed;
+        ++candidate_aware_regenerations;
+    }
+
+    // 이후 선택/진단/feedback의 authoritative target은 실제 마지막 후보
+    // generation에 사용한 값이다. 외부 target/max cap을 절대 올리지 않으며,
+    // base에서 candidate curvature 때문에 낮아지는 방향만 허용한다.
+    cmd.target_speed = final_applied_target_speed;
 
     if (cmd.mode != prev_mode_) {
         std::printf("[FrenetPlanner] mode: %s -> %s (s=%.2f d=%.3f)\n",
@@ -422,14 +561,50 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         if (external_keep &&
             std::fabs(ego.v) < cfg.limits.near_low_speed_fallback_v &&
             last_failure_reason_ != PlanFailureReason::COLLISION_BLOCKED) {
+            speed_profiler_.Reset();
+            last_profiled_acceleration_ = 0.0;
             return PlanExternalKeepLowSpeedFallback(ego, s, d,
                                                      resolved_target_speed, out_path);
+        }
+        if (external_keep) {
+            speed_profiler_.Reset();
+            last_profiled_acceleration_ = 0.0;
         }
         return false;
     }
 
     CartesianPath selected_cartesian =
         ConvertToCartesianPath(*best, ref_, geometry_mode);
+
+    if (is_true_external_keep) {
+        // 마지막 pass의 선택 후보로 진단을 다시 계산한다. 이 값은 hard reject가
+        // 아니다. 현재 속도가 이미 높은 첫 sample의 불가피한 transient까지
+        // 잘라 모든 후보를 없애는 대신, 다음 cycle에도 final target을 history로
+        // 사용해 실제 감속 trajectory를 계속 재생성한다.
+        selected_speed_envelope = EvaluateCandidateCurveSpeed(
+            selected_cartesian, base_resolved_target_speed,
+            final_applied_target_speed, cfg.curve_speed,
+            cfg.limits.max_longitudinal_accel,
+            cfg.limits.max_lateral_accel);
+        // Exactly one mutation per successful KEEP cycle.  last_target_speed_
+        // and feedback now mean the target that generated selected_cartesian,
+        // never the raw Behavior/reference/candidate cap.
+        speed_profiler_.Commit(final_speed_profile);
+        last_target_speed_ = final_applied_target_speed;
+        last_raw_speed_cap_ = final_raw_speed_cap;
+        last_profiled_acceleration_ =
+            final_speed_profile.target_acceleration;
+        if (selected_speed_envelope.valid) {
+            last_candidate_curvature_speed_cap_ =
+                selected_speed_envelope.speed_cap;
+            last_candidate_max_abs_curvature_ =
+                selected_speed_envelope.max_abs_curvature;
+            last_candidate_max_lateral_accel_ =
+                selected_speed_envelope.max_lateral_accel;
+        }
+        last_candidate_aware_regenerations_ =
+            candidate_aware_regenerations;
+    }
 
     // STOP은 절대 후진하지 않는다. 정지 목표를 이미 지나쳤거나 아주 가까울 때
     // stopping quintic은 목표 s에 "도달"하려고 0을 지나 음수 속도로 내려가
@@ -444,6 +619,38 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     // 필터 후 후보 수를 같은 줄에 남긴다.
     static int state_log_tick = 0;
     if (++state_log_tick % 5 == 0) {
+        if (is_true_external_keep) {
+            std::printf("[FRENET-SPEED] ego_speed=%.2f raw_speed_cap=%.2f "
+                        "previous_target=%.2f generator_target=%.2f "
+                        "speed_intent=%s raw_s_ddot=%+.2f planning_s_ddot=%+.2f "
+                        "v0=%.2f v05=%.2f v10=%.2f base_cap=%.2f "
+                        "candidate_cap=%.2f profiler_accel=%+.2f "
+                        "max_kappa=%.4f max_lat_accel=%.2f regenerations=%d\n",
+                        ego.v,
+                        final_raw_speed_cap,
+                        previous_profiled_target,
+                        final_applied_target_speed,
+                        SpeedIntentName(
+                            ego.v, final_applied_target_speed,
+                            cfg.limits.accel_intent_deadband_mps),
+                        start.s_dd,
+                        selected_planning_s_dd,
+                        PathSpeedAtTime(selected_cartesian, cfg.path.dt, 0.0),
+                        PathSpeedAtTime(selected_cartesian, cfg.path.dt, 0.5),
+                        PathSpeedAtTime(selected_cartesian, cfg.path.dt, 1.0),
+                        base_resolved_target_speed,
+                        selected_speed_envelope.valid
+                            ? selected_speed_envelope.speed_cap
+                            : std::numeric_limits<double>::quiet_NaN(),
+                        final_speed_profile.target_acceleration,
+                        selected_speed_envelope.valid
+                            ? selected_speed_envelope.max_abs_curvature
+                            : std::numeric_limits<double>::quiet_NaN(),
+                        selected_speed_envelope.valid
+                            ? selected_speed_envelope.max_lateral_accel
+                            : std::numeric_limits<double>::quiet_NaN(),
+                        candidate_aware_regenerations);
+        }
         if (cmd.mode == FOLLOWING) {
             const double gap = leader_s - s;
             const double desired_gap = cfg.following.min_gap

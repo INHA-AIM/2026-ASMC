@@ -186,7 +186,8 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     }
 
     // 복구 latch는 장애물 옆으로 이동하는 SHIFT에만 유효하다. 목표 d에
-    // 도달해 PASS가 되면 이후에는 원래 strict margin 검사로 복귀한다.
+    // PASS 이후에는 속도 경계 진동 방지용 거리 기반 generator latch만
+    // 해제한다. margin-recovery 충돌 규칙 자체는 모든 phase에서 동일하다.
     if (v2_avoidance_.phase != AvoidPhase::SHIFT) {
         v2_avoidance_.escape_recovery_active = false;
     }
