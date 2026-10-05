@@ -167,6 +167,32 @@ int main(){
  expect(rolling_ready&&r.ready&&rolling_entry.CanCommitRoundaboutMerge(r)&&ego.v>0,
   "full fresh clearance authorizes departure without requiring zero measured speed");
  auto early_token=r;auto early_candidate=r.candidate_path;
+ // Empty traffic does not justify committing while a strong measured brake
+ // is still changing the planned arrival schedule.
+ FrenetPlanner braking_entry;bool braking_ready=braking_entry.Init(file.string());
+ ego.a=-2;
+ for(int i=0;i<3&&braking_ready;++i)braking_ready=braking_entry.PlanRoundaboutMerge(ego,{},cmd,407+i*.1,407+i*.1,frontier,r);
+ expect(braking_ready&&!r.ready,"strong braking approach retains its stop option instead of authorizing rolling entry");
+ ego.a=0;
+ // A partial moving vehicle close to the conflict is uncertain even when its
+ // instantaneous small box is outside the candidate footprint.
+ FrenetPlanner uncertain_entry;bool uncertain_ok=uncertain_entry.Init(file.string());
+ auto fragment=o;fragment.id=901;fragment.length=.8;fragment.width=.4;
+ fragment.motion_state=ObjectMotionState::DYNAMIC;fragment.vx=0;fragment.vy=3;
+ const auto conflict_pose=pose_at(zone.conflict_start_s);
+ fragment.x=conflict_pose.x-15;fragment.y=conflict_pose.y;
+ for(int i=0;i<8;++i)fragment.corners[i]={fragment.x+(i%4<2?-.4:.4),fragment.y+(i%2?-.2:.2),double(i/4)};
+ for(int i=0;i<4&&uncertain_ok;++i)uncertain_ok=uncertain_entry.PlanRoundaboutMerge(ego,{fragment},cmd,410+i*.1,410+i*.1,frontier,r);
+ expect(uncertain_ok&&r.candidate_valid&&!r.ready&&r.blocking_object_id==901,"nearby partial moving vehicle prevents a departure certificate");
+ ego.v=0;
+ uncertain_ok=uncertain_ok&&uncertain_entry.PlanRoundaboutMerge(ego,{fragment},cmd,410.5,410.5,frontier,r);
+ expect(uncertain_ok&&r.candidate_valid&&!r.ready,"having stopped once does not bypass uncertain nearby vehicle checks");
+ ego.v=2;
+ for(int i=0;i<3&&uncertain_ok;++i)uncertain_ok=uncertain_entry.PlanRoundaboutMerge(ego,{},cmd,412+i*.1,412+i*.1,frontier,r);
+ expect(uncertain_ok&&r.ready,"fresh clearance recovers departure after uncertain traffic has cleared");
+ FrenetPlanner stale_entry;bool stale_ok=stale_entry.Init(file.string());
+ for(int i=0;i<3&&stale_ok;++i)stale_ok=stale_entry.PlanRoundaboutMerge(ego,{},cmd,413+i*.1,412+i*.1,frontier,r);
+ expect(stale_ok&&!r.ready,"fresh confirmation numbers cannot authorize stale sensor observations");
  auto crossing=o;crossing.id=88;
  if(!early_candidate.x.empty()){
   const size_t j=std::min(early_candidate.x.size()-1,static_cast<size_t>((r.entry_time+1)/.1));

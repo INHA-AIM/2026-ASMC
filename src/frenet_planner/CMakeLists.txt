@@ -380,7 +380,7 @@ if(CATKIN_ENABLE_TESTING)
   add_executable(roundabout_merge_shadow tools/roundabout_merge_shadow.cpp)
   target_link_libraries(roundabout_merge_shadow frenet_planner_core yaml-cpp)
 
-  foreach(merge_test roundabout_candidate_test roundabout_execution_test)
+  foreach(merge_test roundabout_candidate_test roundabout_execution_test roundabout_prediction_test)
     add_executable(${merge_test} tests/${merge_test}.cpp)
     target_link_libraries(${merge_test} frenet_planner_core yaml-cpp)
     target_compile_definitions(${merge_test} PRIVATE

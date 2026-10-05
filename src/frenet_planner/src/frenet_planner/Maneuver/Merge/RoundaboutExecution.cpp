@@ -257,6 +257,7 @@ void FrenetPlanner::ResetRoundaboutMerge() {
     roundabout_waiting_latched_=false;
     roundabout_preferred_d_=0;
     roundabout_acceleration_memory_.Reset();
+    roundabout_prediction_.Reset();
     roundabout_bridge_active_=roundabout_bridge_used_=false;
     roundabout_bridge_travel_=roundabout_bridge_settled_=0;
     roundabout_safe_observations_=0;
@@ -302,6 +303,10 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     speed_profiler_.Reset();
     last_profiled_acceleration_=0.0;
     auto ctx=PreparePlanningContext(ego,obstacles,command);
+    roundabout_prediction_.Observe(obstacles,observation_stamp,
+        object_tracking_cfg_.yaw_rate_clamp_rad_s);
+    for(auto& object:ctx.predicted_obstacles)
+        object.yaw_rate=roundabout_prediction_.Rate(object.id);
     last_s_=ctx.s;last_d_=ctx.d;has_last_s_=true;
     double dd,ddd;ArcDerivToTimeDeriv(ctx.s_dot,ctx.s_ddot,ctx.d_prime,ctx.d_pprime,dd,ddd);
     auto start=ClampInitialBoundaryState(ctx.s,ctx.s_dot,ctx.s_ddot,ctx.d,dd,ddd,limits_);
@@ -467,18 +472,30 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         last_failure_reason_=braking?PlanFailureReason::NONE:PlanFailureReason::COLLISION_BLOCKED;
         return braking;
     }
-    // Early departure must also survive straight-velocity prediction. A noisy
-    // estimated turn must not be the only reason an approaching car is safe.
-    bool early_departure_clear=true;
-    if(result.candidate_valid&&ctx.s<roundabout_zone_.stop_s-1.0){
-        auto straight=ctx.predicted_obstacles;
-        for(auto& object:straight)object.yaw_rate=0;
-        const auto conservative=CheckRoundaboutCandidate(result.candidate_path,roundabout_zone_,
-            straight,vehicle_shape_,collision_cfg_,path_cfg_.dt,merge_cfg_.min_front_time_gap,
-            merge_cfg_.min_rear_time_gap,true);
-        early_departure_clear=conservative.safe;
-        if(!conservative.safe&&conservative.blocking_object_id>=0)
-            result.blocking_object_id=conservative.blocking_object_id;
+    // A braking approach has not established its departure timing. Retain its
+    // stop-capable output instead of granting a rolling commit on an optimistic
+    // acceleration schedule. Stopped departures still need reliable nearby
+    // traffic and independent straight / bounded-turn checks.
+    const auto conflict=Interpolate(ref_,roundabout_zone_.conflict_start_s);
+    const int uncertain=roundabout_prediction_.UncertainNear(conflict.x,conflict.y);
+    bool early_departure_clear=uncertain<0&&(ego.v<=.1||ego.a>=-.5)&&
+        planning_time-observation_stamp<=.25&&observation_stamp<=planning_time+.05;
+    if(uncertain>=0)result.blocking_object_id=uncertain;
+    if(result.candidate_valid&&early_departure_clear){
+        for(double perturbation:{0.0,-.15,.15}){
+            auto alternative=ctx.predicted_obstacles;
+            for(auto& object:alternative)object.yaw_rate=perturbation==0||std::hypot(object.vx,object.vy)<.5?0:
+                std::clamp(object.yaw_rate+perturbation,
+                    -object_tracking_cfg_.yaw_rate_clamp_rad_s,object_tracking_cfg_.yaw_rate_clamp_rad_s);
+            const auto conservative=CheckRoundaboutCandidate(result.candidate_path,roundabout_zone_,
+                alternative,vehicle_shape_,collision_cfg_,path_cfg_.dt,merge_cfg_.min_front_time_gap,
+                merge_cfg_.min_rear_time_gap,true);
+            if(!conservative.safe){
+                early_departure_clear=false;
+                if(conservative.blocking_object_id>=0)result.blocking_object_id=conservative.blocking_object_id;
+                break;
+            }
+        }
     }
     if(!result.candidate_valid||!early_departure_clear) {
         roundabout_safe_observations_=0;roundabout_last_entry_=-1;

@@ -8,6 +8,7 @@
 
 #include "frenet_planner/Map/AvoidRoadMap.hpp"
 #include "frenet_planner/Maneuver/Merge/RoundaboutMerge.hpp"
+#include "frenet_planner/Maneuver/Merge/RoundaboutPrediction.hpp"
 #include "frenet_planner/Common/BehaviorTypes.hpp"
 #include "frenet_planner/Common/CartesianTypes.hpp"
 #include "frenet_planner/Common/FrenetTypes.hpp"
@@ -1295,4 +1296,5 @@ private:
     // 외부 command(v2) 전용 LANE_CHANGE 상태.
     LaneChangeContext v2_lane_change_{};
     std::unordered_map<int, ObjectTrack> object_tracks_{};
+    RoundaboutPrediction roundabout_prediction_{};
 };
