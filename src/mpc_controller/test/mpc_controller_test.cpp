@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 
 #include "control/mpc_controller.hpp"
@@ -17,6 +18,7 @@ ReferencePath MakeStraightReference(double target_speed, int steps, double dt) {
         reference.y_ref.push_back(0.0);
         reference.yaw_ref.push_back(0.0);
         reference.v_ref.push_back(target_speed);
+        reference.a_ref.push_back(0.0);
         reference.k_ref.push_back(0.0);
     }
     return reference;
@@ -33,11 +35,39 @@ ReferencePath MakeCurvedReference(double target_speed, double kappa,
         reference.y_ref.push_back(y);
         reference.yaw_ref.push_back(yaw);
         reference.v_ref.push_back(target_speed);
+        reference.a_ref.push_back(0.0);
         reference.k_ref.push_back(kappa);
         const double ds = target_speed * dt;
         x += ds * std::cos(yaw);
         y += ds * std::sin(yaw);
         yaw += ds * kappa;
+    }
+    return reference;
+}
+
+ReferencePath MakeDeceleratingReference(double initial_speed,
+                                        double acceleration,
+                                        double kappa,
+                                        int steps,
+                                        double dt) {
+    ReferencePath reference;
+    double x = 0.0;
+    double y = 0.0;
+    double yaw = 0.0;
+    double speed = initial_speed;
+    for (int i = 0; i < steps; ++i) {
+        reference.x_ref.push_back(x);
+        reference.y_ref.push_back(y);
+        reference.yaw_ref.push_back(yaw);
+        reference.v_ref.push_back(speed);
+        reference.a_ref.push_back(acceleration);
+        reference.k_ref.push_back(kappa);
+
+        const double ds = speed * dt;
+        x += ds * std::cos(yaw);
+        y += ds * std::sin(yaw);
+        yaw += ds * kappa;
+        speed = std::max(0.0, speed + acceleration * dt);
     }
     return reference;
 }
@@ -48,6 +78,49 @@ MPCParams MakeTestParams() {
     params.dt = 0.1;
     params.max_iterations = 25;
     return params;
+}
+
+MPCParams MakeDecoupledTrackingParams() {
+    MPCParams params;
+    params.horizon = 24;
+    params.dt = 0.05;
+    params.max_iterations = 25;
+    params.wheelbase = 3.0;
+    params.steering_curvature_gain = 0.844;
+    params.steering_max = 0.6981317008;
+    params.steering_rate_max = 1.0;
+    params.weight_contour_error = 6.0;
+    params.weight_lag_error = 0.5;
+    params.weight_heading_error = 3.0;
+    params.weight_speed_error = 2.0;
+    params.weight_control = 1.25;
+    params.weight_control_rate = 100.0;
+    params.weight_control_rate_accel = 4.5;
+    params.weight_terminal = 8.0;
+    params.lr_init = 0.20;
+    params.line_search_steps = 7;
+    return params;
+}
+
+MPCResult SolveCurvedTrackingCase(const MPCParams& params,
+                                  const ReferencePath& reference,
+                                  double tangent_offset,
+                                  double normal_offset,
+                                  double ego_speed) {
+    const double yaw = reference.yaw_ref.front();
+    MPCState ego;
+    ego.x = reference.x_ref.front() + tangent_offset * std::cos(yaw) -
+            normal_offset * std::sin(yaw);
+    ego.y = reference.y_ref.front() + tangent_offset * std::sin(yaw) +
+            normal_offset * std::cos(yaw);
+    ego.yaw = yaw;
+    ego.vx = ego_speed;
+
+    MPCControl previous;
+    previous.delta = SteeringFeedforward(
+        reference.k_ref.front(), params.wheelbase, params.steering_max,
+        params.steering_curvature_gain);
+    return solveMPC(ego, reference, previous, {}, params);
 }
 
 }  // namespace
@@ -196,6 +269,165 @@ TEST(SteeringFeedforwardWarmStartTest,
     // 최종 steering이 좌회전(양의 curvature) 방향을 향한다 - solver가 곡선을
     // 따라가려면 결국 양의 delta로 수렴해야 한다.
     EXPECT_GT(result.control.delta, 0.0);
+}
+
+TEST(MpcContourLagSolverTest,
+     EqualLagAndContourOffsetsProduceDifferentSteeringCorrections) {
+    const MPCParams params = MakeDecoupledTrackingParams();
+    constexpr double kappa = 0.04;
+    const ReferencePath reference = MakeCurvedReference(
+        5.0, kappa, params.horizon, params.dt);
+    const double feedforward = SteeringFeedforward(
+        kappa, params.wheelbase, params.steering_max,
+        params.steering_curvature_gain);
+
+    const MPCResult nominal = SolveCurvedTrackingCase(
+        params, reference, 0.0, 0.0, 5.0);
+    const MPCResult lagged = SolveCurvedTrackingCase(
+        params, reference, -1.5, 0.0, 5.0);
+    const MPCResult left_offset = SolveCurvedTrackingCase(
+        params, reference, 0.0, 1.5, 5.0);
+    ASSERT_TRUE(nominal.success);
+    ASSERT_TRUE(lagged.success);
+    ASSERT_TRUE(left_offset.success);
+
+    const double lag_correction =
+        std::fabs(lagged.control.delta - nominal.control.delta);
+    const double contour_correction =
+        std::fabs(left_offset.control.delta - nominal.control.delta);
+    EXPECT_LT(lag_correction, contour_correction)
+        << "equal longitudinal lag must influence steering less than a "
+           "lateral contour error";
+    EXPECT_LT(left_offset.control.delta, lagged.control.delta)
+        << "a left-normal offset on a left curve must request a rightward "
+           "correction relative to the lag-only case";
+
+    for (const MPCResult* result : {&nominal, &lagged, &left_offset}) {
+        EXPECT_LE(std::fabs(result->control.delta - feedforward),
+                  params.steering_rate_max * params.dt + 1e-9);
+    }
+}
+
+TEST(MpcContourLagSolverTest,
+     DeceleratingProgressLagDoesNotReverseCurvatureSteering) {
+    const MPCParams params = MakeDecoupledTrackingParams();
+    constexpr double kappa = 0.04;
+    const ReferencePath faster = MakeCurvedReference(
+        5.0, kappa, params.horizon, params.dt);
+    const ReferencePath decelerating = MakeCurvedReference(
+        3.0, kappa, params.horizon, params.dt);
+    MPCState nominal_ego;
+    nominal_ego.vx = 5.0;
+    MPCState lagged_ego = nominal_ego;
+    lagged_ego.x = -1.0;  // yaw=0 reference tangent direction only
+    lagged_ego.vx = 4.8;
+    MPCState contour_ego = nominal_ego;
+    contour_ego.y = 1.0;
+    contour_ego.vx = 4.8;
+
+    // Use stateful controllers so cycle B consumes cycle A's shifted warm
+    // start and previous steering exactly like runtime.
+    MpcController lag_controller(params);
+    const MpcController::Output before =
+        lag_controller.ControlProcess(nominal_ego, faster);
+    const MpcController::Output after =
+        lag_controller.ControlProcess(lagged_ego, decelerating);
+    MpcController contour_controller(params);
+    ASSERT_TRUE(contour_controller.ControlProcess(nominal_ego, faster).success);
+    const MpcController::Output contour_reference =
+        contour_controller.ControlProcess(contour_ego, decelerating);
+    ASSERT_TRUE(before.success);
+    ASSERT_TRUE(after.success);
+    ASSERT_TRUE(contour_reference.success);
+
+    EXPECT_GT(before.control.delta, 0.0);
+    EXPECT_GT(after.control.delta, 0.0)
+        << "a speed/progress transition with zero initial contour error must "
+           "not reverse steering against positive reference curvature";
+    EXPECT_LE(std::fabs(after.control.delta - before.control.delta),
+              params.steering_rate_max * params.dt + 1e-9)
+        << "cycle-to-cycle steering must retain the physical rate constraint";
+    EXPECT_LT(std::fabs(after.control.delta - before.control.delta),
+              std::fabs(contour_reference.control.delta -
+                        before.control.delta))
+        << "pure progress lag should perturb feed-forward steering less than "
+           "an equal lateral offset";
+}
+
+TEST(MpcAccelerationFeedforwardSolverTest,
+     NegativeReferenceProducesStrongerBrakingThanZeroReference) {
+    const MPCParams params = MakeDecoupledTrackingParams();
+    ReferencePath with_acceleration = MakeDeceleratingReference(
+        /*initial_speed=*/10.0, /*acceleration=*/-2.0,
+        /*kappa=*/0.0, params.horizon, params.dt);
+    ReferencePath without_acceleration = with_acceleration;
+    std::fill(without_acceleration.a_ref.begin(),
+              without_acceleration.a_ref.end(), 0.0);
+
+    MPCState ego;
+    ego.vx = 10.0;
+    const MPCControl previous;
+    const MPCResult baseline = solveMPC(
+        ego, without_acceleration, previous, {}, params);
+    const MPCResult feedforward = solveMPC(
+        ego, with_acceleration, previous, {}, params);
+
+    ASSERT_TRUE(baseline.success);
+    ASSERT_TRUE(feedforward.success);
+    EXPECT_LT(feedforward.control.accel, 0.0);
+    EXPECT_LT(feedforward.control.accel, baseline.control.accel)
+        << "the same decreasing speed/geometry reference must request more "
+           "braking when the final-grid speed derivative is negative";
+}
+
+TEST(MpcAccelerationFeedforwardSolverTest,
+     DeceleratingFixtureHasConsistentSpeedAndAcceleration) {
+    const MPCParams params = MakeDecoupledTrackingParams();
+    const ReferencePath reference = MakeDeceleratingReference(
+        10.0, -2.0, 0.0, params.horizon, params.dt);
+
+    for (std::size_t i = 0; i + 1 < reference.size(); ++i) {
+        EXPECT_NEAR(reference.v_ref[i] +
+                        reference.a_ref[i] * params.dt,
+                    reference.v_ref[i + 1], 1e-12);
+    }
+}
+
+TEST(MpcAccelerationFeedforwardSolverTest,
+     BrakingReferencePreservesCurvatureSteeringAndRateLimit) {
+    const MPCParams params = MakeDecoupledTrackingParams();
+    constexpr double kappa = 0.04;
+    ReferencePath with_acceleration = MakeDeceleratingReference(
+        10.0, -2.0, kappa, params.horizon, params.dt);
+    ReferencePath without_acceleration = with_acceleration;
+    std::fill(without_acceleration.a_ref.begin(),
+              without_acceleration.a_ref.end(), 0.0);
+
+    MPCState ego;
+    ego.vx = 10.0;
+    MPCControl previous;
+    previous.delta = SteeringFeedforward(
+        kappa, params.wheelbase, params.steering_max,
+        params.steering_curvature_gain);
+    const MPCResult baseline = solveMPC(
+        ego, without_acceleration, previous, {}, params);
+    const MPCResult feedforward = solveMPC(
+        ego, with_acceleration, previous, {}, params);
+
+    ASSERT_TRUE(baseline.success);
+    ASSERT_TRUE(feedforward.success);
+    EXPECT_GT(baseline.control.delta, 0.0);
+    EXPECT_GT(feedforward.control.delta, 0.0)
+        << "longitudinal feed-forward must not reverse curve steering";
+    EXPECT_LE(std::fabs(feedforward.control.delta - baseline.control.delta),
+              2.0 * params.steering_rate_max * params.dt + 1e-9);
+
+    double previous_delta = previous.delta;
+    for (const MPCControl& control : feedforward.controls) {
+        EXPECT_LE(std::fabs(control.delta - previous_delta),
+                  params.steering_rate_max * params.dt + 1e-9);
+        previous_delta = control.delta;
+    }
 }
 
 int main(int argc, char** argv) {

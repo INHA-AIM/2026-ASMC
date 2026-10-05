@@ -50,17 +50,18 @@ asmc_msgs::BehaviorContext MakeStopBehavior() {
     return message;
 }
 
-asmc_msgs::DetectedObjectArray MakeEmptyObjects() {
-    asmc_msgs::DetectedObjectArray message;
+planning_inputs::DetectedObjectArray MakeEmptyObjects() {
+    planning_inputs::DetectedObjectArray message;
     message.header.stamp = ros::Time(10, 0);
     message.header.frame_id = "map";
     return message;
 }
 
-asmc_msgs::DetectedObject MakeObject(double center_x, double center_y) {
-    asmc_msgs::DetectedObject object;
+planning_inputs::DetectedObject MakeObject(double center_x, double center_y) {
+    planning_inputs::DetectedObject object;
     object.id = 17;
     object.type = 2;
+    object.motion_state = planning_inputs::DetectedObject::MOTION_DYNAMIC_PENDING;
     object.center.x = center_x;
     object.center.y = center_y;
     object.center.z = 1.0;
@@ -252,6 +253,8 @@ int main() {
                object_message, objects) ==
                ConversionStatus::OK && objects.size() == 1 &&
                objects[0].id == 17 &&
+               objects[0].motion_state ==
+                   ObjectMotionState::DYNAMIC_PENDING &&
                objects[0].vx == 2.0 && objects[0].vy == -0.5 &&
                objects[0].geometry_valid &&
                objects[0].z_valid &&

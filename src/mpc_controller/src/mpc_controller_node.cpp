@@ -1,10 +1,13 @@
 #include "mpc_controller_node.hpp"
 
+#include <algorithm>
+#include <cstdio>
 #include <cmath>
 #include <stdexcept>
 #include <string>
 #include <utility>
 
+#include "control/braking_steering.hpp"
 #include "config/parameter_loader.hpp"
 #include "message_converter.hpp"
 #include "reference/path_resampler.hpp"
@@ -24,6 +27,24 @@ MPCParams LoadParamsForNode(ros::NodeHandle& private_nh) {
     MPCParams params;
     loadMPCParameters(params_path, params);
     return params;
+}
+
+double SampleDiagnosticCartesianAcceleration(
+    const PlannedPath& path, double start_time_offset) {
+    if (path.empty() || path.dt <= 0.0 ||
+        path.a.size() != path.size() ||
+        !std::isfinite(start_time_offset)) {
+        return 0.0;
+    }
+    const double offset = std::max(0.0, start_time_offset);
+    const double unclipped_index = offset / path.dt;
+    const double index = std::max(
+        0.0, std::min(unclipped_index,
+                      static_cast<double>(path.size() - 1)));
+    const std::size_t first = static_cast<std::size_t>(index);
+    const std::size_t second = std::min(first + 1, path.size() - 1);
+    const double fraction = index - static_cast<double>(first);
+    return path.a[first] + fraction * (path.a[second] - path.a[first]);
 }
 
 }  // namespace
@@ -109,6 +130,7 @@ void MpcControllerNode::vehicleStateCallback(
 }
 
 void MpcControllerNode::publishStop(const char* reason) {
+    has_successful_control_ = false;
     controller_.ResetOnFailSafe();
     control_pub_.publish(MakeRosStopCommand());
     ROS_WARN_THROTTLE(1.0, "MPC fail-safe STOP: %s", reason);
@@ -116,6 +138,7 @@ void MpcControllerNode::publishStop(const char* reason) {
 
 void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
     if (emergency_stop_active_) {
+        has_successful_control_ = false;
         controller_.ResetOnFailSafe();
         control_pub_.publish(MakeRosEmergencyStopCommand());
         return;
@@ -145,7 +168,20 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
     PlannedPath path;
     const TrajectoryStatus status = ConvertTrajectory(latest_trajectory_, path);
     if (status == TrajectoryStatus::STOP_TRAJECTORY) {
-        publishStop("valid planner STOP trajectory");
+        MPCState stop_state;
+        if (ConvertVehicleState(latest_vehicle_state_, stop_state) != VehicleStateStatus::OK) {
+            publishStop("invalid vehicle state during planner STOP");
+            return;
+        }
+        auto stop = MakeRosStopCommand();
+        if (has_successful_control_) {
+            const double age=(ros::SteadyTime::now()-last_successful_control_at_).toSec();
+            stop.steering=BrakingSteering(last_successful_steering_,age,
+                stop_state.vx,controller_.params().steering_rate_max);
+        }
+        controller_.ResetForPlannerStop(stop.steering);
+        control_pub_.publish(stop);
+        ROS_WARN_THROTTLE(1.0,"MPC planner STOP braking: steering=%+.3f",stop.steering);
         return;
     }
     if (status != TrajectoryStatus::OK) {
@@ -179,6 +215,22 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
     const ReferenceValidationResult validation =
         ValidateReference(reference, controller_.params());
     if (!validation.ok()) {
+        if (validation.status ==
+                ReferenceValidationStatus::CURVATURE_OUT_OF_RANGE &&
+            validation.failed_index < reference.k_ref.size()) {
+            const MPCParams& params = controller_.params();
+            const double curvature_limit = params.steering_curvature_gain *
+                std::tan(params.steering_max) /
+                std::max(params.wheelbase, 1e-6);
+            char reason[192];
+            std::snprintf(
+                reason, sizeof(reason),
+                "CURVATURE_OUT_OF_RANGE index=%zu reference=%.5f limit=%.5f",
+                validation.failed_index,
+                reference.k_ref[validation.failed_index], curvature_limit);
+            publishStop(reason);
+            return;
+        }
         publishStop(ReferenceValidationStatusName(validation.status));
         return;
     }
@@ -203,8 +255,45 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
         return;
     }
 
+    constexpr double kRadiansToDegrees =
+        180.0 / 3.14159265358979323846;
+    const double raw_cartesian_a0 = SampleDiagnosticCartesianAcceleration(
+        path, start_time_offset);
+    const double v_ref1 = reference.v_ref.size() >= 2
+        ? reference.v_ref[1] : reference.v_ref.front();
+    ROS_INFO_THROTTLE(
+        0.25,
+        "[MPC-LONG] source_path_dt=%.3f mpc_destination_dt=%.3f "
+        "current_v=%.2f v_ref0=%.2f v_ref1=%.2f "
+        "raw_cartesian_a0=%+.2f derived_a_ref0=%+.2f "
+        "clipped_a_ref0=%+.2f a_cmd=%+.2f",
+        path.dt, controller_.params().dt, output.current_speed,
+        output.first_reference_speed, v_ref1, raw_cartesian_a0,
+        output.first_reference_acceleration,
+        output.first_used_reference_acceleration, output.control.accel);
+    ROS_INFO_THROTTLE(
+        0.25,
+        "[MPC-TRACK] contour_cost=%.3f lag_cost=%.3f heading_cost=%.3f "
+        "speed_cost=%.3f control_cost=%.3f rate_cost=%.3f terminal=%.3f "
+        "steer_cmd_deg=%.2f ref_kappa0=%.5f steer_ff_deg=%.2f "
+        "v=%.2f v_ref0=%.2f v_error=%.2f a_ref0=%.2f a_cmd=%.2f "
+        "a_residual=%.2f accel_control_cost=%.3f accel_rate_cost=%.3f",
+        output.cost.contour, output.cost.lag, output.cost.heading,
+        output.cost.speed, output.cost.control, output.cost.control_rate,
+        output.cost.terminal, output.control.delta * kRadiansToDegrees,
+        output.first_reference_curvature,
+        output.first_feedforward_steering * kRadiansToDegrees,
+        output.current_speed, output.first_reference_speed,
+        output.first_speed_error, output.first_used_reference_acceleration,
+        output.control.accel, output.first_acceleration_residual,
+        output.cost.acceleration_control, output.cost.acceleration_rate);
+
+    last_successful_steering_=output.control.delta;
+    last_successful_control_at_=ros::SteadyTime::now();
+    has_successful_control_=true;
     control_pub_.publish(ToRosControlCommand(output.control,
                                              controller_.params()));
 }
 
 }  // namespace mpc_controller_ros
+

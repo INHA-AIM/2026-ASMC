@@ -1,6 +1,9 @@
 #ifndef FRENET_CURVE_SPEED_HPP
 #define FRENET_CURVE_SPEED_HPP
 
+#include <cstddef>
+
+#include "frenet_planner/Common/CartesianTypes.hpp"
 #include "frenet_planner/Reference/Reference.hpp"
 #include "frenet_planner/Config/FrenetConfig.hpp"
 
@@ -21,5 +24,34 @@ double VelocityFromCurvature(double k, const CurveSpeedConfig& cfg, double max_l
 double LookaheadTargetSpeed(const RefLine& ref, double s_start, double ego_speed,
                              const CurveSpeedConfig& cfg, double max_longitudinal_accel,
                              double max_lateral_accel, double max_curvature);
+
+// Backward braking envelope over the complete candidate travel distance plus
+// braking preview. Includes distance for the initial jerk-limited response.
+std::vector<SpeedEnvelopePoint> BuildKeepSpeedEnvelope(
+    const RefLine& ref, double s_start, double ego_speed, double initial_accel,
+    double candidate_duration, double sample_dt, double raw_speed_cap,
+    const CurveSpeedConfig& cfg, double max_longitudinal_accel,
+    double max_lateral_accel, double max_longitudinal_jerk);
+
+// 실제 MPC에 전달되는 Cartesian candidate를 기준으로 한 곡률-속도 envelope.
+// reference line의 kappa가 아니라 selected trajectory의 kappa를 사용하고,
+// 시작점부터 각 sample까지의 실제 Cartesian 호길이로 감속 가능 거리를
+// 계산한다. speed_cap은 "현재부터 감속을 시작할 때 각 미래 곡률 지점의
+// local curve speed에 도달 가능한 최대 목표속도"다.
+struct CandidateCurveSpeedResult {
+    bool valid = false;
+    double speed_cap = 0.0;
+    double max_abs_curvature = 0.0;
+    double max_lateral_accel = 0.0;
+    std::size_t limiting_sample_index = 0;
+};
+
+CandidateCurveSpeedResult EvaluateCandidateCurveSpeed(
+    const CartesianPath& candidate,
+    double raw_speed_cap,
+    double applied_target_speed,
+    const CurveSpeedConfig& cfg,
+    double max_longitudinal_accel,
+    double max_lateral_accel);
 
 #endif

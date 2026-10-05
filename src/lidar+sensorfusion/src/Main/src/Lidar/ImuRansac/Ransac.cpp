@@ -1,125 +1,253 @@
-// #include <ros/ros.h>
-// #include <sensor_msgs/PointCloud2.h>
-// #include <pcl/point_cloud.h>
-// #include <pcl_conversions/pcl_conversions.h>
-
-// #include <pcl/segmentation/sac_segmentation.h>
-// #include <pcl/filters/extract_indices.h>
-// #include <pcl/common/common.h>
-
-// #include <cmath>
-// #include <vector>
-
 #include "ImuRansac.hpp"
-extern VehicleSpec st_VehicleSpec;
-extern Planning st_Planning;
 
+#include <pcl/segmentation/sac_segmentation.h>
 
-// 법선 벡터 내적 필터링ac_cloud,
-void NormalVectorFiltering(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_Cloud3, pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_Cloud4,const GPS_IMU& st_GPSIMU) {
-    if (!pcl_Cloud3 || pcl_Cloud3->points.size() < 3) {
-        pcl_Cloud4->clear();
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdint>
+
+namespace {
+
+constexpr double kPi = 3.14159265358979323846;
+
+struct GroundFilterConfig {
+    double near_threshold_m = 0.30;
+    double far_threshold_m = 0.40;
+    double far_range_m = 50.0;
+    double maximum_tilt_rad = 25.0 * kPi / 180.0;
+    double seed_min_z_m = -2.0;
+    double seed_max_z_m = -0.65;
+    int maximum_iterations = 80;
+    int minimum_seed_points = 30;
+    int fallback_frames = 2;
+};
+
+struct GroundFilterState {
+    GroundFilterConfig config;
+    bool configured = false;
+    bool has_previous_plane = false;
+    std::array<double, 4> previous_plane{{0.0, 0.0, 1.0, 0.0}};
+    int consecutive_failures = 0;
+    GroundPlaneSnapshot current_plane;
+};
+
+GroundFilterState& State() {
+    static GroundFilterState state;
+    return state;
+}
+
+void ConfigureOnce() {
+    GroundFilterState& state = State();
+    if (state.configured) return;
+
+    ros::NodeHandle private_node("~");
+    private_node.param(
+        "ground_distance_threshold_near_m",
+        state.config.near_threshold_m, state.config.near_threshold_m);
+    private_node.param(
+        "ground_distance_threshold_far_m",
+        state.config.far_threshold_m, state.config.far_threshold_m);
+    private_node.param(
+        "ground_threshold_far_range_m",
+        state.config.far_range_m, state.config.far_range_m);
+    double maximum_tilt_deg = 25.0;
+    private_node.param(
+        "ground_max_tilt_deg", maximum_tilt_deg, maximum_tilt_deg);
+    private_node.param(
+        "ground_seed_min_z_m",
+        state.config.seed_min_z_m, state.config.seed_min_z_m);
+    private_node.param(
+        "ground_seed_max_z_m",
+        state.config.seed_max_z_m, state.config.seed_max_z_m);
+    private_node.param(
+        "ground_ransac_maximum_iterations",
+        state.config.maximum_iterations, state.config.maximum_iterations);
+    private_node.param(
+        "ground_minimum_seed_points",
+        state.config.minimum_seed_points, state.config.minimum_seed_points);
+    private_node.param(
+        "ground_fallback_frames",
+        state.config.fallback_frames, state.config.fallback_frames);
+
+    state.config.near_threshold_m = std::max(
+        0.02, state.config.near_threshold_m);
+    state.config.far_threshold_m = std::max(
+        state.config.near_threshold_m, state.config.far_threshold_m);
+    state.config.far_range_m = std::max(1.0, state.config.far_range_m);
+    state.config.maximum_tilt_rad = std::max(
+        1.0, std::min(45.0, maximum_tilt_deg)) * kPi / 180.0;
+    if (state.config.seed_min_z_m > state.config.seed_max_z_m) {
+        std::swap(state.config.seed_min_z_m, state.config.seed_max_z_m);
+    }
+    state.config.maximum_iterations = std::max(
+        20, state.config.maximum_iterations);
+    state.config.minimum_seed_points = std::max(
+        3, state.config.minimum_seed_points);
+    state.config.fallback_frames = std::max(
+        0, state.config.fallback_frames);
+    state.configured = true;
+
+    ROS_INFO(
+        "Ground filter configured: threshold %.2f->%.2fm by %.1fm, tilt<=%.1fdeg, seed_z=[%.2f,%.2f], fallback=%d frames",
+        state.config.near_threshold_m, state.config.far_threshold_m,
+        state.config.far_range_m, maximum_tilt_deg,
+        state.config.seed_min_z_m, state.config.seed_max_z_m,
+        state.config.fallback_frames);
+}
+
+bool NormalizePlane(const pcl::ModelCoefficients& coefficients,
+                    std::array<double, 4>* plane) {
+    if (!plane || coefficients.values.size() < 4) return false;
+    const double a = coefficients.values[0];
+    const double b = coefficients.values[1];
+    const double c = coefficients.values[2];
+    const double d = coefficients.values[3];
+    const double norm = std::sqrt(a * a + b * b + c * c);
+    if (!(norm > 1e-6) || !std::isfinite(norm)) return false;
+    *plane = {{a / norm, b / norm, c / norm, d / norm}};
+    if ((*plane)[2] < 0.0) {
+        for (double& value : *plane) value = -value;
+    }
+    return std::all_of(
+        plane->begin(), plane->end(),
+        [](double value) { return std::isfinite(value); });
+}
+
+bool FitGroundPlane(
+    const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& input,
+    std::array<double, 4>* plane) {
+    const GroundFilterConfig& config = State().config;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr seeds(
+        new pcl::PointCloud<pcl::PointXYZI>);
+    seeds->points.reserve(input->points.size());
+    for (const auto& point : input->points) {
+        if (!std::isfinite(point.x) || !std::isfinite(point.y) ||
+            !std::isfinite(point.z)) {
+            continue;
+        }
+        if (point.z >= config.seed_min_z_m &&
+            point.z <= config.seed_max_z_m) {
+            seeds->points.push_back(point);
+        }
+    }
+    seeds->width = static_cast<std::uint32_t>(seeds->points.size());
+    seeds->height = 1;
+    seeds->is_dense = false;
+    if (static_cast<int>(seeds->points.size()) <
+        config.minimum_seed_points) {
+        return false;
+    }
+
+    pcl::SACSegmentation<pcl::PointXYZI> segmentation;
+    segmentation.setOptimizeCoefficients(true);
+    segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
+    segmentation.setMethodType(pcl::SAC_RANSAC);
+    segmentation.setAxis(Eigen::Vector3f::UnitZ());
+    segmentation.setEpsAngle(config.maximum_tilt_rad);
+    segmentation.setMaxIterations(config.maximum_iterations);
+    segmentation.setDistanceThreshold(config.far_threshold_m);
+    segmentation.setInputCloud(seeds);
+
+    pcl::PointIndices inliers;
+    pcl::ModelCoefficients coefficients;
+    segmentation.segment(inliers, coefficients);
+    if (static_cast<int>(inliers.indices.size()) <
+        config.minimum_seed_points) {
+        return false;
+    }
+    if (!NormalizePlane(coefficients, plane)) return false;
+    const double tilt = std::acos(std::min(1.0, std::abs((*plane)[2])));
+    return std::isfinite(tilt) && tilt <= config.maximum_tilt_rad;
+}
+
+double RangeAdaptiveThreshold(double x, double y) {
+    const GroundFilterConfig& config = State().config;
+    const double ratio = std::min(
+        1.0, std::hypot(x, y) / config.far_range_m);
+    return config.near_threshold_m +
+        ratio * (config.far_threshold_m - config.near_threshold_m);
+}
+
+void CopyFinitePoints(
+    const pcl::PointCloud<pcl::PointXYZI>::ConstPtr& input,
+    pcl::PointCloud<pcl::PointXYZI>::Ptr output) {
+    output->clear();
+    output->points.reserve(input->points.size());
+    for (const auto& point : input->points) {
+        if (std::isfinite(point.x) && std::isfinite(point.y) &&
+            std::isfinite(point.z)) {
+            output->points.push_back(point);
+        }
+    }
+}
+
+}  // namespace
+
+GroundPlaneSnapshot CurrentGroundPlaneSnapshot() {
+    return State().current_plane;
+}
+
+void NormalVectorFiltering(
+    pcl::PointCloud<pcl::PointXYZI>::Ptr input,
+    pcl::PointCloud<pcl::PointXYZI>::Ptr output,
+    const GPS_IMU&) {
+    // Never attach an arbitrarily old plane to a new observation.
+    State().current_plane = GroundPlaneSnapshot{};
+    if (!input || !output || input->points.size() < 3) {
+        if (output) output->clear();
         return;
     }
+    ConfigureOnce();
 
-    pcl::ModelCoefficients::Ptr pcl_Coefficients(new pcl::ModelCoefficients());
-    pcl::PointIndices::Ptr pcl_Inliers(new pcl::PointIndices());
-    pcl::PointIndices::Ptr pcl_Wall_inliers(new pcl::PointIndices());  // 벽면 점을 추적하는 변수
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_Cloud3_4(new pcl::PointCloud<pcl::PointXYZI>(*pcl_Cloud3));
-    pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_Cloud4_4(new pcl::PointCloud<pcl::PointXYZI>);
-    int32 s32_Max_iterations = 3; // 벽이 먼저 잡혀도 지면을 다시 찾을 수 있게 반복
-    int32 s32_Iteration = 0;
-    bool ground_removed = false;
-    
-
-    // RANSAC 세그멘테이션 반복//이거
-    while (s32_Iteration++ < s32_Max_iterations) {
-        // RANSAC 세그멘테이션 초기화
-        pcl::SACSegmentation<pcl::PointXYZI> pcl_Seg;
-        pcl_Seg.setOptimizeCoefficients(true);
-        pcl_Seg.setModelType(pcl::SACMODEL_PLANE);
-        pcl_Seg.setMethodType(pcl::SAC_RANSAC);
-        pcl_Seg.setMaxIterations(20);
-        pcl_Seg.setDistanceThreshold(0.3);  // 허용 거리 20cm
-        pcl_Seg.setInputCloud(pcl_Cloud3_4);
-        pcl_Seg.segment(*pcl_Inliers, *pcl_Coefficients);
-
-        if (pcl_Inliers->indices.empty()) {
-            break;
-        }
-
-        // 법선 벡터를 기준으로 지면인지 벽면인지 판별
-        if (!pcl_Inliers->indices.empty()) { // Z축에 가까운 평면(지면)
-            pcl::PointXYZI pcl_Normal_vector;
-            pcl_Normal_vector.x = pcl_Coefficients->values[0];
-            pcl_Normal_vector.y = pcl_Coefficients->values[1];
-            pcl_Normal_vector.z = pcl_Coefficients->values[2];
-            pcl_Normal_vector.intensity = 0.0f;
-
-
-            // RANSAC 계수를 명시적으로 정규화한 뒤 Z축과 비교한다.
-            // 기존의 abs(dot) > 1 조건은 정규화된 법선에서는 절대로
-            // 성립하지 않아 정상 도로 평면까지 벽으로 처리하고 있었다.
-            const float32 normal_norm = std::sqrt(
-                pcl_Normal_vector.x * pcl_Normal_vector.x +
-                pcl_Normal_vector.y * pcl_Normal_vector.y +
-                pcl_Normal_vector.z * pcl_Normal_vector.z);
-            const float32 f32_Dot_product = normal_norm > 1e-6f
-                ? pcl_Normal_vector.z / normal_norm
-                : 0.0f;
-
-            // Z축에서 약 35도 이내인 평면을 지면으로 인정한다.
-            if (std::fabs(f32_Dot_product) >= 0.82f) {
-
-                // 지면을 제거: pcl_Cloud3에서 해당 pcl_Inliers 점들을 제거
-                pcl::ExtractIndices<pcl::PointXYZI> pcl_Extract;
-                pcl_Extract.setInputCloud(pcl_Cloud3_4);
-                pcl_Extract.setIndices(pcl_Inliers);
-                pcl_Extract.setNegative(true); // true로 설정하면 pcl_Inliers 외 점들만 남김
-                pcl_Extract.filter(*pcl_Cloud3_4);
-                for (const auto& pt : pcl_Cloud3_4->points) {
-                    if (std::isfinite(pt.x) && std::isfinite(pt.y) &&
-                        std::isfinite(pt.z)) {
-                        pcl_Cloud4_4->points.push_back(pt);
-                    }
-                }
-
-                //width/height 메타데이터 갱신
-                pcl_Cloud4_4->width  = static_cast<uint32_t>(pcl_Cloud4_4->points.size());
-                pcl_Cloud4_4->height = 1;   // unorganized
-                pcl_Cloud4_4->is_dense = false;
-                // pcl_cloud4에 남은 점들을 저장
-                *pcl_Cloud4 = *pcl_Cloud4_4;
-                ground_removed = true;
-                break; // 지면을 찾았으므로 반복 종료
-            }
-
-            else { // 벽면을 찾았을 때
-
-                // 벽면을 제외한 점들을 wall_pcl_Inliers에 저장
-                *pcl_Wall_inliers = *pcl_Inliers;
-
-                // 벽면 점들은 다시 RANSAC에서 제외
-                pcl::ExtractIndices<pcl::PointXYZI> pcl_ExtractWall;
-                pcl_ExtractWall.setInputCloud(pcl_Cloud3_4);
-                pcl_ExtractWall.setIndices(pcl_Wall_inliers);
-                pcl_ExtractWall.setNegative(true); // 벽면을 제외
-                pcl_ExtractWall.filter(*pcl_Cloud3_4);
-
-                continue; // 벽면을 제외하고 계속 진행
-            }
+    GroundFilterState& state = State();
+    std::array<double, 4> plane;
+    const bool current_plane_valid = FitGroundPlane(input, &plane);
+    if (current_plane_valid) {
+        state.previous_plane = plane;
+        state.has_previous_plane = true;
+        state.consecutive_failures = 0;
+    } else {
+        ++state.consecutive_failures;
+        if (state.has_previous_plane &&
+            state.consecutive_failures <= state.config.fallback_frames) {
+            plane = state.previous_plane;
+            ROS_WARN_THROTTLE(
+                2.0,
+                "Ground fit missed once; reusing the last valid plane (%d/%d)",
+                state.consecutive_failures, state.config.fallback_frames);
+        } else {
+            CopyFinitePoints(input, output);
+            output->width = static_cast<std::uint32_t>(output->points.size());
+            output->height = 1;
+            output->is_dense = false;
+            ROS_WARN_THROTTLE(
+                2.0,
+                "Ground plane unavailable; preserving finite points for fail-safe processing");
+            return;
         }
     }
 
-    // 지면 모델을 찾지 못했다고 센서 전체를 빈 값으로 만들면 후단
-    // 클러스터링이 완전히 멈춘다. 이 경우 남아 있는 유효점을 전달한다.
-    if (!ground_removed) {
-        *pcl_Cloud4 = *pcl_Cloud3_4;
-        ROS_WARN_THROTTLE(2.0,
-            "Ground plane not found; forwarding non-ground-filtered LiDAR points");
+    state.current_plane.valid = true;
+    state.current_plane.coefficients = plane;
+    state.current_plane.near_threshold_m = state.config.near_threshold_m;
+    state.current_plane.far_threshold_m = state.config.far_threshold_m;
+    state.current_plane.far_range_m = state.config.far_range_m;
+    output->clear();
+    output->points.reserve(input->points.size());
+    for (const auto& point : input->points) {
+        if (!std::isfinite(point.x) || !std::isfinite(point.y) ||
+            !std::isfinite(point.z)) {
+            continue;
+        }
+        const double distance = std::abs(
+            plane[0] * point.x + plane[1] * point.y +
+            plane[2] * point.z + plane[3]);
+        if (distance > RangeAdaptiveThreshold(point.x, point.y)) {
+            output->points.push_back(point);
+        }
     }
-
-    pcl_Cloud4->width = static_cast<uint32_t>(pcl_Cloud4->points.size());
-    pcl_Cloud4->height = 1;
-    pcl_Cloud4->is_dense = false;
+    output->width = static_cast<std::uint32_t>(output->points.size());
+    output->height = 1;
+    output->is_dense = false;
 }

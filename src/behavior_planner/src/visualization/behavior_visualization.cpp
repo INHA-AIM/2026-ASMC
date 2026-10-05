@@ -18,6 +18,7 @@ const char* BehaviorName(BehaviorType behavior) {
     case BehaviorType::YIELD: return "YIELD";
     case BehaviorType::EMERGENCY_STOP: return "EMERGENCY_STOP";
     case BehaviorType::AVOID: return "AVOID";
+    case BehaviorType::MERGE: return "MERGE";
   }
   return "UNKNOWN";
 }
@@ -295,3 +296,4 @@ void BehaviorVisualization::publish(const UrbanFeature& feature,
 }
 
 }  // namespace behavior_planner
+

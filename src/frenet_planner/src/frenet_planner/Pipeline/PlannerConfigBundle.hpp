@@ -23,6 +23,7 @@ struct PlannerConfigBundle {
     const MergeConfig& merge;
     const AvoidConfig& avoid;
     const FollowingConfig& following;
+    const CurveSpeedConfig& curve_speed;
     double lane_width;
 };
 

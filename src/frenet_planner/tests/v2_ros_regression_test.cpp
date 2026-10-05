@@ -39,7 +39,7 @@
 // 계약: docs/contracts/planning/fsm-frenet-v2.md
 
 #include <asmc_msgs/BehaviorCommand.h>
-#include <asmc_msgs/DetectedObjectArray.h>
+#include <planning_inputs/DetectedObjectArray.h>
 #include <asmc_msgs/FrenetFeedback.h>
 #include <asmc_msgs/Trajectory.h>
 #include <asmc_msgs/VehicleState.h>
@@ -206,7 +206,7 @@ class Harness {
         command_pub_ = nh.advertise<Command>("/behavior/command_v2", 1);
         vehicle_pub_ = nh.advertise<asmc_msgs::VehicleState>("/vehicle/state", 1);
         objects_pub_ =
-            nh.advertise<asmc_msgs::DetectedObjectArray>("/perception/objects", 1);
+            nh.advertise<planning_inputs::DetectedObjectArray>("/perception/objects", 1);
     }
 
     // 연결이 성립할 때까지 기다린다. latch 없는 topic이라 이 대기가 없으면
@@ -516,7 +516,7 @@ class Harness {
     }
 
     // FOLLOW 검증용 객체 목록을 설정한다. 다음 PublishInputs부터 반영된다.
-    void SetObjects(const std::vector<asmc_msgs::DetectedObject>& objects) {
+    void SetObjects(const std::vector<planning_inputs::DetectedObject>& objects) {
         objects_ = objects;
     }
 
@@ -585,12 +585,12 @@ class Harness {
     //   d=-0.8 w=2.0 -> target_d 약 +1.73
     //   d=+0.8 w=2.0 -> target_d 약 +3.82
     // 이 차이가 nearest-selector 돌연변이를 잡는다.
-    asmc_msgs::DetectedObject MakeStaticObjectAtOffset(
+    planning_inputs::DetectedObject MakeStaticObjectAtOffset(
         int id, double target_s, double lateral_d, double width,
         double length) const {
         const Pose2D pose = PoseAtOffset(waypoints_, target_s, lateral_d);
         const Pose2D reference = PoseAt(waypoints_, target_s);
-        asmc_msgs::DetectedObject object;
+        planning_inputs::DetectedObject object;
         object.id = id;
         object.center.x = pose.x;
         object.center.y = pose.y;
@@ -738,10 +738,10 @@ class Harness {
 
     // 경로 위 target_s 지점의 차량. FOLLOW 대상 검증(진행 방향/같은 차선/
     // 전방/범위)을 통과하도록 heading과 속도를 맞춘다.
-    asmc_msgs::DetectedObject MakeVehicle(int id, double target_s,
+    planning_inputs::DetectedObject MakeVehicle(int id, double target_s,
                                           double speed) const {
         const Pose2D pose = PoseAt(waypoints_, target_s);
-        asmc_msgs::DetectedObject object;
+        planning_inputs::DetectedObject object;
         object.id = id;
         object.center.x = pose.x;
         object.center.y = pose.y;
@@ -789,7 +789,7 @@ class Harness {
         vehicle.speed = speed;
         vehicle_pub_.publish(vehicle);
 
-        asmc_msgs::DetectedObjectArray objects;
+        planning_inputs::DetectedObjectArray objects;
         objects.header.stamp = stamp;
         objects.header.frame_id = "map";
         objects.objects = objects_;
@@ -810,7 +810,7 @@ class Harness {
     ros::Publisher command_pub_;
     ros::Publisher vehicle_pub_;
     ros::Publisher objects_pub_;
-    std::vector<asmc_msgs::DetectedObject> objects_;
+    std::vector<planning_inputs::DetectedObject> objects_;
     std::vector<Feedback> feedback_;
     std::vector<asmc_msgs::Trajectory> trajectory_;
     int begin_index_ = -1;
@@ -1874,7 +1874,7 @@ int main(int argc, char** argv) {
         // 두면 nearest-selector 돌연변이가 통과한다.
         //
         // 실측(D6-4b): d=-0.8 -> 약 +1.73, d=+0.8 -> 약 +3.82.
-        const std::vector<asmc_msgs::DetectedObject> both = {
+        const std::vector<planning_inputs::DetectedObject> both = {
             harness.MakeStaticObjectAtOffset(17, 240.0, -0.8, 2.0, 4.5),
             harness.MakeStaticObjectAtOffset(21, 255.0, 0.8, 2.0, 4.5),
         };
@@ -2160,21 +2160,29 @@ int main(int argc, char** argv) {
         reset_avoid_state();
     }
 
-    std::printf("\n=== AVOID post-COMMIT long dropout ===\n");
+    std::printf("\n=== AVOID post-COMMIT SHIFT long dropout ===\n");
     {
-        // 계약 8.2.1절. COMMIT 이후에는 대상 소실이 실패 조건이 아니다.
-        // 잠긴 target_d와 context로 기동을 완주한다.
+        // 이미 SHIFT가 시작된 뒤에는 대상 소실만으로 기동을 끊지 않는다.
+        // 잠긴 target_d와 context로 장애물 옆 급복귀 없이 완주한다.
         const uint32_t id = ++command_id;
         double locked_target_d = 0.0;
         const bool executing = drive_to_executing(id, locked_target_d);
         Expect(executing, "AVOID reaches EXECUTING before the dropout");
 
+        // 현재 동적 시작거리 설정에서는 25 m target도 COMMIT 직후 잠깐
+        // TRACKING일 수 있다. target을 관측한 채 5 m 접근해 SHIFT에 먼저
+        // 들어간 뒤 dropout을 만든다.
+        const Pose2D shift_ego = PoseAt(waypoints, kAvoidEgoS + 5.0);
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        Command avoid = make_avoid(id, Command::EXECUTE);
+        harness.BeginWindow();
+        harness.RunCycles(avoid, shift_ego, kCruiseSpeed, 4);
+
         // 대상을 제거하고 유예보다 훨씬 오래 유지한다. ego는 clearance
         // 이전에 고정해 completion이 먼저 일어나지 않게 한다.
         harness.SetObjects({});
-        Command avoid = make_avoid(id, Command::EXECUTE);
         harness.BeginWindow();
-        harness.RunCycles(avoid, avoid_ego, kCruiseSpeed, 25);
+        harness.RunCycles(avoid, shift_ego, kCruiseSpeed, 25);
         const asmc_msgs::Trajectory* locked_ptr =
             harness.LastTrajectoryInWindow();
         const double locked_d = TrajectoryEndpointD(waypoints, locked_ptr);
@@ -2182,7 +2190,7 @@ int main(int argc, char** argv) {
         const bool got = harness.LastFor(id, feedback);
         Expect(got && feedback.execution_state == Feedback::EXECUTING &&
                    feedback.result_code != Feedback::TARGET_OBJECT_LOST,
-               "post-COMMIT dropout does not report TARGET_OBJECT_LOST");
+               "post-COMMIT SHIFT dropout does not report TARGET_OBJECT_LOST");
         Expect(got && feedback.execution_state != Feedback::FAILED &&
                    feedback.trajectory_source == Feedback::TRAJECTORY_LOCKED &&
                    feedback.plan_valid,
@@ -2193,6 +2201,37 @@ int main(int argc, char** argv) {
         Expect(std::isfinite(locked_d) &&
                    std::fabs(locked_d - locked_target_d) < 0.75,
                "post-COMMIT dropout keeps the lateral trajectory");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID post-COMMIT TRACKING long dropout ===\n");
+    {
+        // 횡이동을 시작하기 전 먼 target이 사라지면, 마지막 obstacle_s를
+        // 향해 허공으로 회피하지 않고 유예 뒤 terminal LOST를 올린다.
+        constexpr double kFarObstacleS = kAvoidObstacleS + 55.0;
+        harness.SetObjects({harness.MakeVehicle(21, kFarObstacleS, 0.0)});
+        const uint32_t id = ++command_id;
+        Command avoid = make_avoid(id, Command::PREPARE);
+        Feedback feedback;
+        const bool ready = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::READY, 40, feedback);
+        avoid.execution_request = Command::EXECUTE;
+        const bool committed = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::COMMITTED, 40, feedback);
+        const bool executing = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::EXECUTING, 40, feedback);
+        Expect(ready && committed && executing,
+               "far AVOID reaches EXECUTING while still approaching");
+
+        harness.SetObjects({});
+        harness.BeginWindow();
+        harness.RunCycles(avoid, avoid_ego, kCruiseSpeed, 15);
+        harness.Settle(avoid_ego, kCruiseSpeed, 2);
+        Feedback lost;
+        Expect(harness.LastFor(id, lost) &&
+                   lost.execution_state == Feedback::FAILED &&
+                   lost.result_code == Feedback::TARGET_OBJECT_LOST,
+               "post-COMMIT TRACKING dropout becomes TARGET_OBJECT_LOST");
         reset_avoid_state();
     }
 
@@ -2532,3 +2571,4 @@ int main(int argc, char** argv) {
     std::printf("all v2 ROS regression checks passed\n");
     return 0;
 }
+

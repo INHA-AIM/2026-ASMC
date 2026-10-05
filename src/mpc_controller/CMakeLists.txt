@@ -41,6 +41,10 @@ install(DIRECTORY launch config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(braking_warm_start_test test/braking_warm_start_test.cpp)
+  if(TARGET braking_warm_start_test)
+    target_link_libraries(braking_warm_start_test mpc_core)
+  endif()
   catkin_add_gtest(mpc_ros_converter_test test/message_converter_test.cpp)
   if(TARGET mpc_ros_converter_test)
     add_dependencies(mpc_ros_converter_test ${catkin_EXPORTED_TARGETS})
@@ -48,9 +52,27 @@ if(CATKIN_ENABLE_TESTING)
       mpc_ros_converter mpc_core ${catkin_LIBRARIES})
   endif()
 
+  catkin_add_gtest(braking_steering_test test/braking_steering_test.cpp)
+
   catkin_add_gtest(mpc_controller_test test/mpc_controller_test.cpp)
   if(TARGET mpc_controller_test)
     target_link_libraries(mpc_controller_test mpc_core)
+  endif()
+
+  catkin_add_gtest(path_resampler_test test/path_resampler_test.cpp)
+  if(TARGET path_resampler_test)
+    target_link_libraries(path_resampler_test mpc_core)
+  endif()
+
+  catkin_add_gtest(acceleration_feedforward_test
+    test/acceleration_feedforward_test.cpp)
+  if(TARGET acceleration_feedforward_test)
+    target_link_libraries(acceleration_feedforward_test mpc_core)
+  endif()
+
+  catkin_add_gtest(tracking_error_test test/tracking_error_test.cpp)
+  if(TARGET tracking_error_test)
+    target_link_libraries(tracking_error_test mpc_core)
   endif()
 
   catkin_add_gtest(steering_feedforward_test test/steering_feedforward_test.cpp)
@@ -66,5 +88,9 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(reference_validator_test test/reference_validator_test.cpp)
   if(TARGET reference_validator_test)
     target_link_libraries(reference_validator_test mpc_core)
+  endif()
+  catkin_add_gtest(planner_stop_continuity_test test/planner_stop_continuity_test.cpp)
+  if(TARGET planner_stop_continuity_test)
+    target_link_libraries(planner_stop_continuity_test mpc_core)
   endif()
 endif()

@@ -2,6 +2,8 @@
 
 #include "frenet_planner/Math/Utils.hpp"
 
+#include <cmath>
+
 FrenetState ClampInitialBoundaryState(double s, double s_dot, double raw_s_ddot,
                                        double d, double raw_d_dot,
                                        double raw_d_ddot,
@@ -32,5 +34,25 @@ double ResolveVelocityKeepingBoundaryAcceleration(double raw_s_ddot,
     if (accelerating_intent && raw_s_ddot < 0.0) {
         return 0.0;
     }
+    const bool decelerating_intent =
+        resolved_target_speed < current_s_dot - deadband;
+    if (decelerating_intent && raw_s_ddot > 0.0) {
+        return 0.0;
+    }
     return raw_s_ddot;
+}
+
+double ResolveEnvelopeBoundaryAcceleration(
+    double raw_s_ddot, double current_s_dot, double raw_speed_cap,
+    const std::vector<SpeedEnvelopePoint>& envelope, double deadband) {
+    if (envelope.empty()) return raw_s_ddot;
+    if (envelope.size() > 1 && raw_s_ddot < 0.0 &&
+        envelope[1].speed_squared < envelope[0].speed_squared) {
+        return raw_s_ddot;
+    }
+    const double spatial_cap = std::sqrt(std::max(0.0, envelope.front().speed_squared));
+    const double intent_cap = spatial_cap < current_s_dot - deadband
+        ? spatial_cap : raw_speed_cap;
+    return ResolveVelocityKeepingBoundaryAcceleration(raw_s_ddot, current_s_dot,
+        intent_cap, deadband);
 }

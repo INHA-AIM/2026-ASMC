@@ -22,7 +22,14 @@ class RouteManager {
                   const std::vector<std::string>& route_link_ids);
   bool projectEgo(double x, double y, double* out_s, double* out_d,
                   std::string* out_link_id) const;
+  bool findStopLineByNode(const std::string& node_id, StopLineInfo* out) const;
   bool findNextStopLine(double ego_s, StopLineInfo* out_stop_line) const;
+  bool findNextSignalizedStopLine(double ego_s, double max_distance,
+                                  StopLineInfo* out_stop_line,
+                                  double* out_distance) const;
+  bool findPreviousSignalizedStopLine(double ego_s,
+                                      StopLineInfo* out_stop_line,
+                                      double* out_distance) const;
   bool getCurrentLinkInfo(const std::string& current_link_id,
                           LinkInfo* out) const;
   double getSpeedLimit(const std::string& current_link_id) const;
@@ -65,3 +72,4 @@ class RouteManager {
 };
 
 }  // namespace behavior_planner
+

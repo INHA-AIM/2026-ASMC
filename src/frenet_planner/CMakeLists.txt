@@ -4,6 +4,7 @@ project(frenet_planner)
 add_compile_options(-std=c++17 -O2)
 
 find_package(catkin REQUIRED COMPONENTS
+  planning_inputs
   asmc_msgs
   morai_msgs
   roscpp
@@ -15,7 +16,7 @@ find_package(yaml-cpp REQUIRED)
 catkin_package(
   INCLUDE_DIRS src
   LIBRARIES frenet_planner_core
-  CATKIN_DEPENDS asmc_msgs morai_msgs roscpp sensor_msgs visualization_msgs
+  CATKIN_DEPENDS planning_inputs asmc_msgs morai_msgs roscpp sensor_msgs visualization_msgs
 )
 
 include_directories(
@@ -45,12 +46,16 @@ add_library(frenet_planner_core
   src/frenet_planner/Maneuver/Follow.cpp
   src/frenet_planner/Maneuver/Keep.cpp
   src/frenet_planner/Maneuver/Stop.cpp
+  src/frenet_planner/Map/AvoidRoadMap.cpp
+  src/frenet_planner/Maneuver/Avoid/MapAvoid.cpp
   src/frenet_planner/Maneuver/Avoid/Avoid.cpp
   src/frenet_planner/Maneuver/Avoid/AvoidTargetResolver.cpp
   src/frenet_planner/Maneuver/Avoid/AvoidLifecycle.cpp
   src/frenet_planner/Maneuver/LaneChange/LaneChange.cpp
   src/frenet_planner/Maneuver/LaneChange/LaneChangeLifecycle.cpp
   src/frenet_planner/Maneuver/Merge/MergeGapEvaluator.cpp
+  src/frenet_planner/Maneuver/Merge/RoundaboutMerge.cpp
+  src/frenet_planner/Maneuver/Merge/RoundaboutExecution.cpp
   src/frenet_planner/Config/ConfigLoader.cpp
   src/frenet_planner/Config/ConfigValidator.cpp
   src/frenet_planner/visualization/planner_debug_writer.cpp
@@ -62,6 +67,7 @@ add_library(frenet_planner_core
   src/frenet_planner/Generator/BoundaryConditionPolicy.cpp
   src/frenet_planner/Evaluation/KinematicFilter.cpp
   src/frenet_planner/Speed/CurveSpeed.cpp
+  src/frenet_planner/Speed/SpeedProfiler.cpp
   src/frenet_planner/Speed/TargetSpeedResolver.cpp
   src/frenet_planner/Evaluation/Cost.cpp
   src/frenet_planner/Evaluation/CollisionChecker.cpp
@@ -176,6 +182,11 @@ add_dependencies(lane_change_test_publisher ${catkin_EXPORTED_TARGETS})
 target_link_libraries(lane_change_test_publisher ${catkin_LIBRARIES})
 
 if(CATKIN_ENABLE_TESTING)
+  add_executable(avoid_speed_memory_test tests/avoid_speed_memory_test.cpp)
+  target_include_directories(avoid_speed_memory_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  add_test(NAME avoid_speed_memory_test COMMAND avoid_speed_memory_test)
+
   add_executable(geometry_foundation_test
     tests/geometry_foundation_test.cpp
   )
@@ -366,6 +377,31 @@ if(CATKIN_ENABLE_TESTING)
   add_test(NAME command_execution_manager_test
            COMMAND command_execution_manager_test)
 
+  # Offline shadow tool consumes externally supplied, decoded bag frames.
+  add_executable(roundabout_merge_shadow tools/roundabout_merge_shadow.cpp)
+  target_link_libraries(roundabout_merge_shadow frenet_planner_core yaml-cpp)
+
+  foreach(merge_test roundabout_candidate_test roundabout_execution_test roundabout_prediction_test)
+    add_executable(${merge_test} tests/${merge_test}.cpp)
+    target_link_libraries(${merge_test} frenet_planner_core yaml-cpp)
+    target_compile_definitions(${merge_test} PRIVATE
+      FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+      FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt")
+    add_test(NAME ${merge_test} COMMAND ${merge_test})
+  endforeach()
+
+  add_executable(roundabout_execution_shadow tools/roundabout_execution_shadow.cpp)
+  target_link_libraries(roundabout_execution_shadow frenet_planner_core yaml-cpp)
+
+  # MERGE contract only: does not enable the runtime capability gate.
+  add_executable(merge_contract_test tests/merge_contract_test.cpp)
+  add_dependencies(merge_contract_test ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(merge_contract_test
+    frenet_command_execution_manager
+    ${catkin_LIBRARIES}
+  )
+  add_test(NAME merge_contract_test COMMAND merge_contract_test)
+
   # fix/yuntae-frenet-speed-continuity: longitudinal candidate validity 회귀.
   # negative s_d(reverse) candidate와 excessive jerk candidate가 accel-only
   # 필터를 통과해 valid로 남는지(수정 전) / 걸러지는지(수정 후) 확인한다.
@@ -388,10 +424,15 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME curve_speed_envelope_test COMMAND curve_speed_envelope_test)
 
-  # fix/yuntae-frenet-speed-continuity Phase 2: target speed recovery rate
-  # limit 회귀. R7-B: 실제 production ResolveTargetSpeed
-  # (Speed/TargetSpeedResolver.hpp)를 곧은 직선 RefLine으로 호출해 rate-limit
-  # 동작만 분리 검증한다.
+  # Current curve ceiling must produce braking before the curve, including
+  # repeated 20Hz replanning and the KEEP continuity candidate path.
+  add_executable(spatial_keep_speed_test tests/spatial_keep_speed_test.cpp)
+  target_link_libraries(spatial_keep_speed_test frenet_planner_core)
+  add_test(NAME spatial_keep_speed_test COMMAND spatial_keep_speed_test)
+
+  # Legacy target name retained for build compatibility. The resolver now
+  # owns only stateless raw-cap composition; temporal limits are covered by
+  # speed_profiler_test below.
   add_executable(target_speed_rate_limit_test
     tests/target_speed_rate_limit_test.cpp
   )
@@ -399,6 +440,17 @@ if(CATKIN_ENABLE_TESTING)
     frenet_planner_core
   )
   add_test(NAME target_speed_rate_limit_test COMMAND target_speed_rate_limit_test)
+
+  # General Speed Profiler: raw cap -> jerk/acceleration-limited normal KEEP
+  # applied target. This owns the temporal invariant formerly split between
+  # TargetSpeedResolver and candidate-aware regeneration.
+  add_executable(speed_profiler_test
+    tests/speed_profiler_test.cpp
+  )
+  target_link_libraries(speed_profiler_test
+    frenet_planner_core
+  )
+  add_test(NAME speed_profiler_test COMMAND speed_profiler_test)
 
   # fix/yuntae-frenet-speed-continuity Phase 5: low-speed KEEP candidate
   # starvation handoff 회귀.
@@ -450,6 +502,26 @@ if(CATKIN_ENABLE_TESTING)
     frenet_planner_core
   )
   add_test(NAME keep_candidate_target_test COMMAND keep_candidate_target_test)
+
+  # Recorded AVOID approach failure and low-speed SHIFT continuity regression.
+  add_executable(avoid_tracking_handoff_test tests/avoid_tracking_handoff_test.cpp)
+  target_compile_definitions(avoid_tracking_handoff_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(avoid_tracking_handoff_test frenet_planner_core)
+  add_test(NAME avoid_tracking_handoff_test COMMAND avoid_tracking_handoff_test)
+
+  add_executable(avoid_boundary_recovery_test tests/avoid_boundary_recovery_test.cpp)
+  target_link_libraries(avoid_boundary_recovery_test frenet_planner_core)
+  add_test(NAME avoid_boundary_recovery_test COMMAND avoid_boundary_recovery_test)
+
+  add_executable(avoid_road_constraints_test tests/avoid_road_constraints_test.cpp)
+  target_compile_definitions(avoid_road_constraints_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt")
+  target_link_libraries(avoid_road_constraints_test frenet_planner_core)
+  add_test(NAME avoid_road_constraints_test COMMAND avoid_road_constraints_test)
 
   # R5-F: TrajectoryRequest -> GenerateRequestedCandidates 경계 계약 회귀.
   add_executable(request_native_generator_test
@@ -513,3 +585,4 @@ install(PROGRAMS tools/planner_visualizer.py
 install(DIRECTORY config launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
+

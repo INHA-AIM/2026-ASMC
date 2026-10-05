@@ -1,6 +1,7 @@
 #include "mpc_solver.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 
 #include "math/utils.hpp"
@@ -169,11 +170,11 @@ MPCResult solveMPC(
     //    warm-start가 없는 첫 solve(또는 fail-safe 직후)에서는 모든 스텝을
     //    prev_control로만 채우면 코너에서 초기 조향 guess가 항상 0에서
     //    출발해 gradient descent가 먼 거리를 걸어야 한다. reference
-    //    curvature 기반 feed-forward로 초기값을 주면 최적해에 더 가까운
-    //    지점에서 시작한다 (Commit C). prev_control은 실제 이전 actuator
-    //    상태이므로 accel은 그대로 이어받고 delta만 feed-forward로 바꾼다 -
-    //    그래야 첫 horizon point가 이전 steering에서 순간이동하지 않는다
-    //    (아래 clipSteeringRate가 prev_control 기준으로 투영).
+    //    curvature/acceleration reference 기반 feed-forward로 초기값을 주면
+    //    최적해에 더 가까운 지점에서 시작한다. 첫 steering은 아래
+    //    clipSteeringRate가 이전 실제 actuator state 기준으로 투영하며,
+    //    acceleration도 clipControl을 거쳐 물리 한계를 지킨다. 유효한
+    //    warm-start가 있으면 기존 shifted sequence를 그대로 우선한다.
     // ====================================
     std::vector<MPCControl> U(N);
     if (static_cast<int>(warm_start.size()) >= N) {
@@ -181,13 +182,17 @@ MPCResult solveMPC(
         U[N - 1] = warm_start[N - 1];
     } else {
         for (int i = 0; i < N; ++i) {
-            const double k_ref_i = (ref.size() > 0)
-                ? ref.k_ref[std::min(static_cast<size_t>(i), ref.size() - 1)]
-                : 0.0;
+            const size_t ref_idx = (ref.size() > 0)
+                ? std::min(static_cast<size_t>(i), ref.size() - 1) : 0;
+            const double k_ref_i =
+                (ref.size() > 0) ? ref.k_ref[ref_idx] : 0.0;
             U[i].delta = SteeringFeedforward(k_ref_i, params.wheelbase,
                                              params.steering_max,
                                              params.steering_curvature_gain);
-            U[i].accel = prev_control.accel;
+            const double raw_a_ref_i = (ref.a_ref.size() > ref_idx)
+                ? ref.a_ref[ref_idx] : 0.0;
+            U[i].accel = clip(
+                raw_a_ref_i, params.accel_min, params.accel_max);
         }
     }
     projectControls(U, prev_control, params);
@@ -201,10 +206,41 @@ MPCResult solveMPC(
         x0, U, params.dt, params.wheelbase, params.vel_min, params.vel_max,
         params.steering_curvature_gain);
 
+    double cost_cur = evalCost(x0, U, ref, prev_control, params, &models);
+    if (static_cast<int>(warm_start.size()) >= N) {
+        // Keep shifted steering and the actual previous actuator command.
+        // Only challenge stale acceleration when the new reference brakes.
+        bool stale_braking_seed = false;
+        std::vector<MPCControl> braking_seed = U;
+        for (int i = 0; i < N; ++i) {
+            const size_t ref_idx = std::min(static_cast<size_t>(i), ref.size() - 1);
+            if (ref.a_ref.size() <= ref_idx || !std::isfinite(ref.a_ref[ref_idx]))
+                continue;
+            const double a_ref = clip(ref.a_ref[ref_idx], params.accel_min, params.accel_max);
+            stale_braking_seed |= a_ref < -0.1 && U[i].accel > a_ref + 0.1;
+            braking_seed[i].accel = a_ref;
+        }
+        if (stale_braking_seed) {
+            projectControls(braking_seed, prev_control, params);
+            auto braking_models = buildLTVModels(
+                x0, braking_seed, params.dt, params.wheelbase,
+                params.vel_min, params.vel_max, params.steering_curvature_gain);
+            const double braking_cost = evalCost(
+                x0, braking_seed, ref, prev_control, params, &braking_models);
+            // Near ties retain history. Compare initial costs once; run the
+            // existing optimizer only once, with unchanged rate constraints.
+            const double improvement = 0.01 * std::max(1.0, std::fabs(cost_cur));
+            if (std::isfinite(braking_cost) && braking_cost < cost_cur - improvement) {
+                U = std::move(braking_seed);
+                models = std::move(braking_models);
+                cost_cur = braking_cost;
+            }
+        }
+    }
+
     // ====================================
     // 3) 최적화 루프
     // ====================================
-    double cost_cur = evalCost(x0, U, ref, prev_control, params, &models);
     double lr = params.lr_init;
 
     for (int iter = 0; iter < params.max_iterations; ++iter) {

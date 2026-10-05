@@ -1,12 +1,126 @@
 
 #include "Clustering.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <vector>
+
 extern Planning st_Planning;
 extern VehicleSpec st_VehicleSpec;
 
+namespace {
+
+constexpr float kDefaultClusterTolerance = 0.5F;
+constexpr int kMaximumClusterPoints = 10000;
+
+float PositiveOr(float value, float fallback) {
+    return std::isfinite(value) && value > 0.0F ? value : fallback;
+}
+
+std::vector<pcl::PointIndices> ExtractAdaptiveClusters(
+    const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud,
+    const pcl::search::KdTree<pcl::PointXYZI>::Ptr& tree,
+    const LiDARClustering& config,
+    int min_points) {
+    std::vector<pcl::PointIndices> clusters;
+    if (!cloud || cloud->empty()) return clusters;
+
+    std::vector<std::uint8_t> processed(cloud->size(), 0U);
+    std::vector<int> queue;
+    std::vector<int> neighbors;
+    std::vector<float> squared_distances;
+    queue.reserve(cloud->size());
+
+    for (std::size_t seed = 0; seed < cloud->size(); ++seed) {
+        if (processed[seed] != 0U) continue;
+        const auto& seed_point = cloud->points[seed];
+        if (!std::isfinite(seed_point.x) || !std::isfinite(seed_point.y) ||
+            !std::isfinite(seed_point.z)) {
+            processed[seed] = 1U;
+            continue;
+        }
+
+        queue.clear();
+        queue.push_back(static_cast<int>(seed));
+        processed[seed] = 1U;
+
+        for (std::size_t cursor = 0; cursor < queue.size(); ++cursor) {
+            const int point_index = queue[cursor];
+            const auto& point = cloud->points[point_index];
+            const float point_range = std::hypot(point.x, point.y);
+            const float point_tolerance =
+                AdaptiveClusterTolerance(point_range, config);
+
+            neighbors.clear();
+            squared_distances.clear();
+            if (tree->radiusSearch(
+                    point_index, point_tolerance,
+                    neighbors, squared_distances) <= 0) {
+                continue;
+            }
+            for (std::size_t n = 0; n < neighbors.size(); ++n) {
+                const int neighbor_index = neighbors[n];
+                if (neighbor_index < 0 ||
+                    static_cast<std::size_t>(neighbor_index) >= cloud->size() ||
+                    processed[neighbor_index] != 0U) {
+                    continue;
+                }
+                const auto& neighbor = cloud->points[neighbor_index];
+                const float neighbor_tolerance = AdaptiveClusterTolerance(
+                    std::hypot(neighbor.x, neighbor.y), config);
+                const float symmetric_tolerance =
+                    std::min(point_tolerance, neighbor_tolerance);
+                if (squared_distances[n] >
+                    symmetric_tolerance * symmetric_tolerance) {
+                    continue;
+                }
+                processed[neighbor_index] = 1U;
+                queue.push_back(neighbor_index);
+            }
+        }
+
+        if (static_cast<int>(queue.size()) < min_points ||
+            static_cast<int>(queue.size()) > kMaximumClusterPoints) {
+            continue;
+        }
+        std::sort(queue.begin(), queue.end());
+        pcl::PointIndices indices;
+        indices.indices = queue;
+        clusters.push_back(std::move(indices));
+    }
+    return clusters;
+}
+
+}  // namespace
+
+float AdaptiveClusterTolerance(
+    float horizontal_range_m,
+    const LiDARClustering& config) {
+    const float fixed = PositiveOr(config.f32_Eps, kDefaultClusterTolerance);
+    if (!config.b_Adaptive) return fixed;
+
+    const float near_range = std::max(
+        0.0F, PositiveOr(config.f32_AdaptiveNearRange, 8.0F));
+    const float far_range = std::max(
+        near_range + 1.0F,
+        PositiveOr(config.f32_AdaptiveFarRange, 50.0F));
+    const float near_tolerance = PositiveOr(
+        config.f32_AdaptiveNearEps, fixed);
+    const float far_tolerance = std::max(
+        near_tolerance,
+        PositiveOr(config.f32_AdaptiveFarEps, near_tolerance));
+    const float range = std::isfinite(horizontal_range_m)
+        ? std::max(0.0F, horizontal_range_m) : near_range;
+    const float alpha = std::clamp(
+        (range - near_range) / (far_range - near_range), 0.0F, 1.0F);
+    return near_tolerance + alpha * (far_tolerance - near_tolerance);
+}
+
 //클러스터링
 void Clustering(pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_Cloud4, pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_Cloud5,
-vector<pcl::PointIndices> &vp_AllClusterIndices,const GPS_IMU& st_GPSIMU){
+vector<pcl::PointIndices> &vp_AllClusterIndices,const GPS_IMU& st_GPSIMU,
+const LiDARClustering& config){
     if (pcl_Cloud4->empty()) {
       
       // 빈 결과 하나를 보장
@@ -21,14 +135,25 @@ vector<pcl::PointIndices> &vp_AllClusterIndices,const GPS_IMU& st_GPSIMU){
     pcl::search::KdTree<pcl::PointXYZI>::Ptr pcl_Tree(new pcl::search::KdTree<pcl::PointXYZI>);
     pcl_Tree->setInputCloud (pcl_Cloud4);  //KdTree 생성
     vector<pcl::PointIndices> vp_ClusterIndices;       // 군집화된 결과물의 Index 저장, 다중 군집화 객체는 cluster_indices[0] 순으로 저장
-    // 군집화 오브젝트 생성
-    pcl::EuclideanClusterExtraction<pcl::PointXYZI> pcl_Ec;
-    pcl_Ec.setInputCloud (pcl_Cloud4);       // 입력
-    pcl_Ec.setClusterTolerance (1.5);  // 100cm
-    pcl_Ec.setMinClusterSize (10);     // 최소 포인트 수 / 풀숲에 영향을 줌
-    pcl_Ec.setMaxClusterSize (10000);   // 최대 포인트 수
-    pcl_Ec.setSearchMethod (pcl_Tree);      // 위에서 정의한 탐색 방법 지정
-    pcl_Ec.extract (vp_ClusterIndices);   // 군집화 적용
+    // setting.yaml에서 읽은 값을 실제 군집화에도 사용한다. 원거리의 성긴
+    // 점군에는 조금 큰 반경을, 근거리에는 작은 반경을 적용한다. 하나의
+    // 고정 반경을 크게 키워 가드레일 전체를 합치는 방식은 사용하지 않는다.
+    const float tolerance =
+        std::isfinite(config.f32_Eps) && config.f32_Eps > 0.0F
+            ? config.f32_Eps : kDefaultClusterTolerance;
+    const int min_points = std::max(1, config.s32_MinPoints);
+    if (config.b_Adaptive) {
+        vp_ClusterIndices = ExtractAdaptiveClusters(
+            pcl_Cloud4, pcl_Tree, config, min_points);
+    } else {
+        pcl::EuclideanClusterExtraction<pcl::PointXYZI> pcl_Ec;
+        pcl_Ec.setInputCloud (pcl_Cloud4);
+        pcl_Ec.setClusterTolerance (tolerance);
+        pcl_Ec.setMinClusterSize (min_points);
+        pcl_Ec.setMaxClusterSize (kMaximumClusterPoints);
+        pcl_Ec.setSearchMethod (pcl_Tree);
+        pcl_Ec.extract (vp_ClusterIndices);
+    }
 
     // [LOG C1] 클러스터 요약 (프레임당 1줄)
     int min_pts = INT_MAX, max_pts = 0;
@@ -181,5 +306,3 @@ void merge(vector<objif> &ob , pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_Cloud4,i
     
     
 }*/
-
-

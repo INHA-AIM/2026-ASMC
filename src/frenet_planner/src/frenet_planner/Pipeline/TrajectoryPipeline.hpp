@@ -42,17 +42,21 @@ public:
         const KinematicLimits& maneuver_limits,
         const std::vector<TrackedObject>& planning_collision_obstacles,
         bool append_keep_continuity_candidates,
-        PlannerDebugStats* stats) const;
+        PlannerDebugStats* stats,
+        CartesianGeometryMode geometry_mode =
+            CartesianGeometryMode::HYBRID) const;
 
 private:
     // moderate-speed curvature starvation 완화(Phase B) - Keep.cpp의
     // AppendExternalKeepContinuityCandidates를 그대로 옮긴 것. 현재
     // 오프셋을 유지하는 continuity candidate를 candidates에 추가로
-    // 얹는다(대체가 아니라 추가). target_speed만 필요로 한다(스칼라).
+    // 얹는다(대체가 아니라 추가). 종방향 상한은 정상 후보와 동일하다.
     void AppendKeepContinuityCandidates(
-        const FrenetState& maneuver_start, double target_speed,
+        const FrenetState& maneuver_start, const TrajectoryRequest& request,
+        const KinematicLimits& maneuver_limits,
         const std::vector<TrackedObject>& planning_collision_obstacles,
-        std::vector<FrenetPath>& candidates) const;
+        std::vector<FrenetPath>& candidates,
+        CartesianGeometryMode geometry_mode) const;
 
     PlannerConfigBundle config_;
     const RefLine& ref_;

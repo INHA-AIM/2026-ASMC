@@ -1,0 +1,2601 @@
+[
+  {
+    "t": 169.7,
+    "ego": {
+      "header": {
+        "seq": 8119,
+        "stamp": 1790955105.0761745,
+        "frame_id": "map"
+      },
+      "source": 1,
+      "valid": true,
+      "x": -59.90887633664634,
+      "y": -161.08641673394,
+      "yaw": 1.6674489209100491,
+      "speed": 0.0,
+      "acceleration": 0.0,
+      "yaw_rate": -1.2561245910092111e-07
+    },
+    "objects": [
+      {
+        "id": 99,
+        "type": 0,
+        "motion_state": 1,
+        "center": {
+          "x": -60.963495665206686,
+          "y": -143.01266062686926,
+          "z": -1.038881009427136
+        },
+        "yaw": 0.09664891818155984,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.08684520423412323,
+        "length": 1.4537233114242554,
+        "height": 0.6068187952041626,
+        "obb_corners": [
+          {
+            "x": -61.68345880388356,
+            "y": -143.1260879149166,
+            "z": -1.3406393314284206
+          },
+          {
+            "x": -60.23652349496901,
+            "y": -142.98580640338392,
+            "z": -1.3439400372139187
+          },
+          {
+            "x": -60.24490393068116,
+            "y": -142.8993663001781,
+            "z": -1.3439400375913304
+          },
+          {
+            "x": -61.691839252573345,
+            "y": -143.03964781296898,
+            "z": -1.340639331776228
+          },
+          {
+            "x": -61.682087440788465,
+            "y": -143.1259549575409,
+            "z": -0.7338221003788818
+          },
+          {
+            "x": -60.23515213187392,
+            "y": -142.9856734460082,
+            "z": -0.7371228061643801
+          },
+          {
+            "x": -60.24353256758607,
+            "y": -142.8992333428024,
+            "z": -0.7371228065417919
+          },
+          {
+            "x": -61.69046788947825,
+            "y": -143.0395148555933,
+            "z": -0.7338221007266894
+          }
+        ]
+      }
+    ],
+    "command": {
+      "header": {
+        "seq": 1610,
+        "stamp": 1790955105.0966363,
+        "frame_id": "map"
+      },
+      "command_id": 24,
+      "maneuver_type": 4,
+      "execution_request": 1,
+      "direction": 0,
+      "merge_type": 0,
+      "source_link_id": "A2256W000213",
+      "target_link_id": "",
+      "has_target_pose": false,
+      "target_pose_map": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      },
+      "desired_speed_mps": 13.88888888888889,
+      "primary_object_id": 99,
+      "preferred_front_object_id": -1,
+      "preferred_rear_object_id": -1,
+      "use_custom_follow_gap": false,
+      "desired_time_gap_s": -1.0,
+      "minimum_gap_m": -1.0,
+      "valid_until": 1790955105.5966363,
+      "reason": "highest_enabled_score"
+    },
+    "feature": {
+      "header": {
+        "seq": 1610,
+        "stamp": 1790955105.0761745,
+        "frame_id": "map"
+      },
+      "selected_behavior": 7,
+      "behavior_state": 9,
+      "enable_keep": true,
+      "enable_follow": false,
+      "enable_left_change": false,
+      "enable_right_change": false,
+      "enable_avoid": true,
+      "enable_stop": false,
+      "enable_emergency_stop": false,
+      "planned_stop": false,
+      "force_stop": false,
+      "emergency_stop": false,
+      "forbid_left_change": true,
+      "forbid_right_change": true,
+      "desired_speed": 13.88888888888889,
+      "has_max_speed": true,
+      "max_speed": 13.88888888888889,
+      "has_stop_target": false,
+      "stop_x": 0.0,
+      "stop_y": 0.0,
+      "target_link_id": "",
+      "candidate_link_ids": [],
+      "keep_score": 70.0,
+      "follow_score": -1000000.0,
+      "left_change_score": -1000000.0,
+      "right_change_score": -1000000.0,
+      "avoid_score": 90.0,
+      "stop_score": -1000000.0,
+      "emergency_stop_score": -1000000.0,
+      "decision_reason": "highest_enabled_score",
+      "hard_rule_reason": "no_hard_constraint",
+      "current_link_id": "A2256W000213",
+      "route_required_link_id": "A2256W000213",
+      "ego_s": 310.2163582962621,
+      "ego_d": -0.19793997719567402,
+      "ego_speed": 0.0,
+      "vehicle_state_source": 1,
+      "vehicle_state_valid": true,
+      "has_front_vehicle": false,
+      "front_gap": 1000000000.0,
+      "front_relative_speed": 0.0,
+      "front_ttc": 1000000000.0,
+      "left_lane_safe": false,
+      "right_lane_safe": false,
+      "left_front_gap": 1000000000.0,
+      "left_rear_gap": 1000000000.0,
+      "right_front_gap": 1000000000.0,
+      "right_rear_gap": 1000000000.0,
+      "has_stop_line": true,
+      "distance_to_stop_line": 5.689739845398378,
+      "intersection_approach_active": false,
+      "intersection_approach_activation_distance": 1.5,
+      "intersection_approach_speed_limit": 6.944444444444445,
+      "traffic_light_id": "C1256W000091",
+      "traffic_light_state": 3,
+      "traffic_light_raw_label": "green",
+      "traffic_light_recently_visible": true,
+      "has_required_movement": true,
+      "required_movement": 1,
+      "related_signal": "straight",
+      "signal_controlled_link_id": "A2256W000222",
+      "distance_to_signal_movement": 5.689739845398378,
+      "pedestrian_risk": false,
+      "static_obstacle_ahead": true,
+      "avoidance_object_id": 99,
+      "emergency_risk": false,
+      "min_ttc": 1000000000.0,
+      "predicted_front_ttc": 1000000000.0,
+      "required_deceleration": 0.0
+    }
+  },
+  {
+    "t": 170,
+    "ego": {
+      "header": {
+        "seq": 8134,
+        "stamp": 1790955105.3856938,
+        "frame_id": "map"
+      },
+      "source": 1,
+      "valid": true,
+      "x": -59.908902240343465,
+      "y": -161.08615329675104,
+      "yaw": 1.667440359589648,
+      "speed": 0.009152653753521478,
+      "acceleration": 0.16957880184054375,
+      "yaw_rate": -8.100778359221295e-05
+    },
+    "objects": [
+      {
+        "id": 99,
+        "type": 0,
+        "motion_state": 1,
+        "center": {
+          "x": -60.96279740877187,
+          "y": -143.0109515804876,
+          "z": -0.7367307896989714
+        },
+        "yaw": 0.09664787636149445,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.08560225367546082,
+        "length": 1.4538872241973877,
+        "height": 0.05000000074505806,
+        "obb_corners": [
+          {
+            "x": -61.682224027987054,
+            "y": -143.12370216453635,
+            "z": -0.7384441605516132
+          },
+          {
+            "x": -60.23512551252274,
+            "y": -142.98340669744505,
+            "z": -0.741745931798701
+          },
+          {
+            "x": -60.24338603949852,
+            "y": -142.8982024748797,
+            "z": -0.7417459313324303
+          },
+          {
+            "x": -61.69048438574836,
+            "y": -143.03849984185715,
+            "z": -0.7384441600514943
+          },
+          {
+            "x": -61.68220881896683,
+            "y": -143.12370069006266,
+            "z": -0.7317157075769422
+          },
+          {
+            "x": -60.235110303502516,
+            "y": -142.98340522297136,
+            "z": -0.7350174788240299
+          },
+          {
+            "x": -60.24337083047829,
+            "y": -142.898201000406,
+            "z": -0.7350174783577592
+          },
+          {
+            "x": -61.690469176728136,
+            "y": -143.03849836738345,
+            "z": -0.7317157070768232
+          }
+        ]
+      }
+    ],
+    "command": {
+      "header": {
+        "seq": 1613,
+        "stamp": 1790955105.3974226,
+        "frame_id": "map"
+      },
+      "command_id": 24,
+      "maneuver_type": 4,
+      "execution_request": 1,
+      "direction": 0,
+      "merge_type": 0,
+      "source_link_id": "A2256W000213",
+      "target_link_id": "",
+      "has_target_pose": false,
+      "target_pose_map": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      },
+      "desired_speed_mps": 13.88888888888889,
+      "primary_object_id": 99,
+      "preferred_front_object_id": -1,
+      "preferred_rear_object_id": -1,
+      "use_custom_follow_gap": false,
+      "desired_time_gap_s": -1.0,
+      "minimum_gap_m": -1.0,
+      "valid_until": 1790955105.8974226,
+      "reason": "highest_enabled_score"
+    },
+    "feature": {
+      "header": {
+        "seq": 1613,
+        "stamp": 1790955105.3856938,
+        "frame_id": "map"
+      },
+      "selected_behavior": 7,
+      "behavior_state": 9,
+      "enable_keep": true,
+      "enable_follow": false,
+      "enable_left_change": false,
+      "enable_right_change": false,
+      "enable_avoid": true,
+      "enable_stop": false,
+      "enable_emergency_stop": false,
+      "planned_stop": false,
+      "force_stop": false,
+      "emergency_stop": false,
+      "forbid_left_change": true,
+      "forbid_right_change": true,
+      "desired_speed": 13.88888888888889,
+      "has_max_speed": true,
+      "max_speed": 13.88888888888889,
+      "has_stop_target": false,
+      "stop_x": 0.0,
+      "stop_y": 0.0,
+      "target_link_id": "",
+      "candidate_link_ids": [],
+      "keep_score": 70.0,
+      "follow_score": -1000000.0,
+      "left_change_score": -1000000.0,
+      "right_change_score": -1000000.0,
+      "avoid_score": 90.0,
+      "stop_score": -1000000.0,
+      "emergency_stop_score": -1000000.0,
+      "decision_reason": "highest_enabled_score",
+      "hard_rule_reason": "no_hard_constraint",
+      "current_link_id": "A2256W000213",
+      "route_required_link_id": "A2256W000213",
+      "ego_s": 310.21662006652633,
+      "ego_d": -0.19790065184988176,
+      "ego_speed": 0.009152653753521478,
+      "vehicle_state_source": 1,
+      "vehicle_state_valid": true,
+      "has_front_vehicle": false,
+      "front_gap": 1000000000.0,
+      "front_relative_speed": 0.0,
+      "front_ttc": 1000000000.0,
+      "left_lane_safe": false,
+      "right_lane_safe": false,
+      "left_front_gap": 1000000000.0,
+      "left_rear_gap": 1000000000.0,
+      "right_front_gap": 1000000000.0,
+      "right_rear_gap": 1000000000.0,
+      "has_stop_line": true,
+      "distance_to_stop_line": 5.689478075134161,
+      "intersection_approach_active": false,
+      "intersection_approach_activation_distance": 1.5,
+      "intersection_approach_speed_limit": 6.944444444444445,
+      "traffic_light_id": "C1256W000091",
+      "traffic_light_state": 3,
+      "traffic_light_raw_label": "green",
+      "traffic_light_recently_visible": true,
+      "has_required_movement": true,
+      "required_movement": 1,
+      "related_signal": "straight",
+      "signal_controlled_link_id": "A2256W000222",
+      "distance_to_signal_movement": 5.689478075134161,
+      "pedestrian_risk": false,
+      "static_obstacle_ahead": true,
+      "avoidance_object_id": 99,
+      "emergency_risk": false,
+      "min_ttc": 1000000000.0,
+      "predicted_front_ttc": 1000000000.0,
+      "required_deceleration": 0.0
+    }
+  },
+  {
+    "t": 170.5,
+    "ego": {
+      "header": {
+        "seq": 8159,
+        "stamp": 1790955105.900719,
+        "frame_id": "map"
+      },
+      "source": 1,
+      "valid": true,
+      "x": -59.911479725247645,
+      "y": -161.05983788944255,
+      "yaw": 1.6671035808523866,
+      "speed": 0.1781190102367282,
+      "acceleration": 0.6133121600658427,
+      "yaw_rate": -0.0019813228864222765
+    },
+    "objects": [
+      {
+        "id": 99,
+        "type": 0,
+        "motion_state": 1,
+        "center": {
+          "x": -61.0031260360728,
+          "y": -142.8957178486458,
+          "z": -1.025064588784517
+        },
+        "yaw": 0.1096711486469934,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.30739566683769226,
+        "length": 1.50997793674469,
+        "height": 0.6308600902557373,
+        "obb_corners": [
+          {
+            "x": -61.73745444615437,
+            "y": -143.13119487379112,
+            "z": -1.3388159900844026
+          },
+          {
+            "x": -60.2365520228545,
+            "y": -142.96592553532872,
+            "z": -1.3421807725529575
+          },
+          {
+            "x": -60.27019678903799,
+            "y": -142.66037809998244,
+            "z": -1.3421717112275162
+          },
+          {
+            "x": -61.771099358923976,
+            "y": -142.8256455363725,
+            "z": -1.3388069288419833
+          },
+          {
+            "x": -61.73605506977805,
+            "y": -143.13105949292446,
+            "z": -0.7079574664079326
+          },
+          {
+            "x": -60.23515264647817,
+            "y": -142.9657901544621,
+            "z": -0.7113222488764877
+          },
+          {
+            "x": -60.26879741266166,
+            "y": -142.66024271911581,
+            "z": -0.7113131875510463
+          },
+          {
+            "x": -61.76969998254765,
+            "y": -142.82551015550587,
+            "z": -0.7079484051655133
+          }
+        ]
+      }
+    ],
+    "command": {
+      "header": {
+        "seq": 1618,
+        "stamp": 1790955105.897479,
+        "frame_id": "map"
+      },
+      "command_id": 24,
+      "maneuver_type": 4,
+      "execution_request": 1,
+      "direction": 0,
+      "merge_type": 0,
+      "source_link_id": "A2256W000213",
+      "target_link_id": "",
+      "has_target_pose": false,
+      "target_pose_map": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      },
+      "desired_speed_mps": 13.88888888888889,
+      "primary_object_id": 99,
+      "preferred_front_object_id": -1,
+      "preferred_rear_object_id": -1,
+      "use_custom_follow_gap": false,
+      "desired_time_gap_s": -1.0,
+      "minimum_gap_m": -1.0,
+      "valid_until": 1790955106.397479,
+      "reason": "highest_enabled_score"
+    },
+    "feature": {
+      "header": {
+        "seq": 1618,
+        "stamp": 1790955105.872363,
+        "frame_id": "map"
+      },
+      "selected_behavior": 7,
+      "behavior_state": 9,
+      "enable_keep": true,
+      "enable_follow": false,
+      "enable_left_change": false,
+      "enable_right_change": false,
+      "enable_avoid": true,
+      "enable_stop": false,
+      "enable_emergency_stop": false,
+      "planned_stop": false,
+      "force_stop": false,
+      "emergency_stop": false,
+      "forbid_left_change": true,
+      "forbid_right_change": true,
+      "desired_speed": 13.88888888888889,
+      "has_max_speed": true,
+      "max_speed": 13.88888888888889,
+      "has_stop_target": false,
+      "stop_x": 0.0,
+      "stop_y": 0.0,
+      "target_link_id": "",
+      "candidate_link_ids": [],
+      "keep_score": 70.0,
+      "follow_score": -1000000.0,
+      "left_change_score": -1000000.0,
+      "right_change_score": -1000000.0,
+      "avoid_score": 90.0,
+      "stop_score": -1000000.0,
+      "emergency_stop_score": -1000000.0,
+      "decision_reason": "highest_enabled_score",
+      "hard_rule_reason": "no_hard_constraint",
+      "current_link_id": "A2256W000213",
+      "route_required_link_id": "A2256W000213",
+      "ego_s": 310.23801745649985,
+      "ego_d": -0.19468820947324308,
+      "ego_speed": 0.16072803059578325,
+      "vehicle_state_source": 1,
+      "vehicle_state_valid": true,
+      "has_front_vehicle": false,
+      "front_gap": 1000000000.0,
+      "front_relative_speed": 0.0,
+      "front_ttc": 1000000000.0,
+      "left_lane_safe": false,
+      "right_lane_safe": false,
+      "left_front_gap": 1000000000.0,
+      "left_rear_gap": 1000000000.0,
+      "right_front_gap": 1000000000.0,
+      "right_rear_gap": 1000000000.0,
+      "has_stop_line": true,
+      "distance_to_stop_line": 5.668080685160646,
+      "intersection_approach_active": false,
+      "intersection_approach_activation_distance": 1.5,
+      "intersection_approach_speed_limit": 6.944444444444445,
+      "traffic_light_id": "C1256W000091",
+      "traffic_light_state": 3,
+      "traffic_light_raw_label": "green",
+      "traffic_light_recently_visible": true,
+      "has_required_movement": true,
+      "required_movement": 1,
+      "related_signal": "straight",
+      "signal_controlled_link_id": "A2256W000222",
+      "distance_to_signal_movement": 5.668080685160646,
+      "pedestrian_risk": false,
+      "static_obstacle_ahead": true,
+      "avoidance_object_id": 99,
+      "emergency_risk": false,
+      "min_ttc": 1000000000.0,
+      "predicted_front_ttc": 1000000000.0,
+      "required_deceleration": 0.0
+    }
+  },
+  {
+    "t": 171,
+    "ego": {
+      "header": {
+        "seq": 8184,
+        "stamp": 1790955106.3849776,
+        "frame_id": "map"
+      },
+      "source": 1,
+      "valid": true,
+      "x": -59.90596561842133,
+      "y": -160.89079288938245,
+      "yaw": 1.6662332657219039,
+      "speed": 0.1518419353603246,
+      "acceleration": 0.9187244330774375,
+      "yaw_rate": -0.0004330576048232615
+    },
+    "objects": [
+      {
+        "id": 99,
+        "type": 0,
+        "motion_state": 1,
+        "center": {
+          "x": -60.97564642089532,
+          "y": -142.96561107409767,
+          "z": -0.7379532317544871
+        },
+        "yaw": 0.11110451366660655,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.07175618410110474,
+        "length": 1.4110881090164185,
+        "height": 0.05000000074505806,
+        "obb_corners": [
+          {
+            "x": -61.67286873580436,
+            "y": -143.0794958486748,
+            "z": -0.7397578821976148
+          },
+          {
+            "x": -60.27048521292792,
+            "y": -142.92304113415804,
+            "z": -0.7431995504601626
+          },
+          {
+            "x": -60.27844138016019,
+            "y": -142.85172603721378,
+            "z": -0.7431968096410791
+          },
+          {
+            "x": -61.68082472127042,
+            "y": -143.00818265039845,
+            "z": -0.7397551413785194
+          },
+          {
+            "x": -61.672851621146705,
+            "y": -143.07949421018358,
+            "z": -0.7327096539224301
+          },
+          {
+            "x": -60.27046809827027,
+            "y": -142.9230394956668,
+            "z": -0.7361513221849779
+          },
+          {
+            "x": -60.27842426550254,
+            "y": -142.85172439872255,
+            "z": -0.7361485813658947
+          },
+          {
+            "x": -61.68080760661277,
+            "y": -143.00818101190725,
+            "z": -0.7327069131033348
+          }
+        ]
+      }
+    ],
+    "command": {
+      "header": {
+        "seq": 1623,
+        "stamp": 1790955106.397337,
+        "frame_id": "map"
+      },
+      "command_id": 24,
+      "maneuver_type": 4,
+      "execution_request": 1,
+      "direction": 0,
+      "merge_type": 0,
+      "source_link_id": "A2256W000213",
+      "target_link_id": "",
+      "has_target_pose": false,
+      "target_pose_map": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      },
+      "desired_speed_mps": 13.88888888888889,
+      "primary_object_id": 99,
+      "preferred_front_object_id": -1,
+      "preferred_rear_object_id": -1,
+      "use_custom_follow_gap": false,
+      "desired_time_gap_s": -1.0,
+      "minimum_gap_m": -1.0,
+      "valid_until": 1790955106.897337,
+      "reason": "highest_enabled_score"
+    },
+    "feature": {
+      "header": {
+        "seq": 1623,
+        "stamp": 1790955106.3849776,
+        "frame_id": "map"
+      },
+      "selected_behavior": 7,
+      "behavior_state": 9,
+      "enable_keep": true,
+      "enable_follow": false,
+      "enable_left_change": false,
+      "enable_right_change": false,
+      "enable_avoid": true,
+      "enable_stop": false,
+      "enable_emergency_stop": false,
+      "planned_stop": false,
+      "force_stop": false,
+      "emergency_stop": false,
+      "forbid_left_change": true,
+      "forbid_right_change": true,
+      "desired_speed": 13.88888888888889,
+      "has_max_speed": true,
+      "max_speed": 13.88888888888889,
+      "has_stop_target": false,
+      "stop_x": 0.0,
+      "stop_y": 0.0,
+      "target_link_id": "",
+      "candidate_link_ids": [],
+      "keep_score": 70.0,
+      "follow_score": -1000000.0,
+      "left_change_score": -1000000.0,
+      "right_change_score": -1000000.0,
+      "avoid_score": 90.0,
+      "stop_score": -1000000.0,
+      "emergency_stop_score": -1000000.0,
+      "decision_reason": "highest_enabled_score",
+      "hard_rule_reason": "no_hard_constraint",
+      "current_link_id": "A2256W000213",
+      "route_required_link_id": "A2256W000213",
+      "ego_s": 310.411875470597,
+      "ego_d": -0.19085510738987432,
+      "ego_speed": 0.1518419353603246,
+      "vehicle_state_source": 1,
+      "vehicle_state_valid": true,
+      "has_front_vehicle": false,
+      "front_gap": 1000000000.0,
+      "front_relative_speed": 0.0,
+      "front_ttc": 1000000000.0,
+      "left_lane_safe": false,
+      "right_lane_safe": false,
+      "left_front_gap": 1000000000.0,
+      "left_rear_gap": 1000000000.0,
+      "right_front_gap": 1000000000.0,
+      "right_rear_gap": 1000000000.0,
+      "has_stop_line": true,
+      "distance_to_stop_line": 5.494222671063483,
+      "intersection_approach_active": false,
+      "intersection_approach_activation_distance": 1.5,
+      "intersection_approach_speed_limit": 6.944444444444445,
+      "traffic_light_id": "C1256W000091",
+      "traffic_light_state": 3,
+      "traffic_light_raw_label": "green",
+      "traffic_light_recently_visible": true,
+      "has_required_movement": true,
+      "required_movement": 1,
+      "related_signal": "straight",
+      "signal_controlled_link_id": "A2256W000222",
+      "distance_to_signal_movement": 5.494222671063483,
+      "pedestrian_risk": false,
+      "static_obstacle_ahead": true,
+      "avoidance_object_id": 99,
+      "emergency_risk": false,
+      "min_ttc": 1000000000.0,
+      "predicted_front_ttc": 1000000000.0,
+      "required_deceleration": 0.0
+    }
+  },
+  {
+    "t": 172,
+    "ego": {
+      "header": {
+        "seq": 8234,
+        "stamp": 1790955107.3904145,
+        "frame_id": "map"
+      },
+      "source": 1,
+      "valid": true,
+      "x": -59.90370730374202,
+      "y": -160.46117498244786,
+      "yaw": 1.6635935862945872,
+      "speed": 0.5356674701157732,
+      "acceleration": 0.45426745437127053,
+      "yaw_rate": -0.0010848576202988625
+    },
+    "objects": [
+      {
+        "id": 99,
+        "type": 0,
+        "motion_state": 1,
+        "center": {
+          "x": -60.90752039136554,
+          "y": -142.84662852377397,
+          "z": -0.9460638098394096
+        },
+        "yaw": 0.09991060731882312,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.08245577663183212,
+        "length": 1.3884687423706055,
+        "height": 0.6001737713813782,
+        "obb_corners": [
+          {
+            "x": -61.59480399246318,
+            "y": -142.95695413171313,
+            "z": -1.2446985250308706
+          },
+          {
+            "x": -60.21326241596199,
+            "y": -142.81846292983823,
+            "z": -1.2476027161110015
+          },
+          {
+            "x": -60.22148698140279,
+            "y": -142.7364173785437,
+            "z": -1.2476014934067672
+          },
+          {
+            "x": -61.60302841449517,
+            "y": -142.87491048266384,
+            "z": -1.2446973022565164
+          },
+          {
+            "x": -61.593554011379354,
+            "y": -142.95683777296284,
+            "z": -0.6445260665973984
+          },
+          {
+            "x": -60.21201243487817,
+            "y": -142.8183465710879,
+            "z": -0.6474302576775289
+          },
+          {
+            "x": -60.22023700031897,
+            "y": -142.7363010197934,
+            "z": -0.6474290349732952
+          },
+          {
+            "x": -61.60177843341135,
+            "y": -142.87479412391352,
+            "z": -0.6445248438230439
+          }
+        ]
+      }
+    ],
+    "command": {
+      "header": {
+        "seq": 1633,
+        "stamp": 1790955107.3976326,
+        "frame_id": "map"
+      },
+      "command_id": 24,
+      "maneuver_type": 4,
+      "execution_request": 1,
+      "direction": 0,
+      "merge_type": 0,
+      "source_link_id": "A2256W000213",
+      "target_link_id": "",
+      "has_target_pose": false,
+      "target_pose_map": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      },
+      "desired_speed_mps": 13.88888888888889,
+      "primary_object_id": 99,
+      "preferred_front_object_id": -1,
+      "preferred_rear_object_id": -1,
+      "use_custom_follow_gap": false,
+      "desired_time_gap_s": -1.0,
+      "minimum_gap_m": -1.0,
+      "valid_until": 1790955107.8976326,
+      "reason": "highest_enabled_score"
+    },
+    "feature": {
+      "header": {
+        "seq": 1633,
+        "stamp": 1790955107.3599432,
+        "frame_id": "map"
+      },
+      "selected_behavior": 7,
+      "behavior_state": 9,
+      "enable_keep": true,
+      "enable_follow": false,
+      "enable_left_change": false,
+      "enable_right_change": false,
+      "enable_avoid": true,
+      "enable_stop": false,
+      "enable_emergency_stop": false,
+      "planned_stop": false,
+      "force_stop": false,
+      "emergency_stop": false,
+      "forbid_left_change": true,
+      "forbid_right_change": true,
+      "desired_speed": 13.88888888888889,
+      "has_max_speed": true,
+      "max_speed": 13.88888888888889,
+      "has_stop_target": false,
+      "stop_x": 0.0,
+      "stop_y": 0.0,
+      "target_link_id": "",
+      "candidate_link_ids": [],
+      "keep_score": 70.0,
+      "follow_score": -1000000.0,
+      "left_change_score": -1000000.0,
+      "right_change_score": -1000000.0,
+      "avoid_score": 90.0,
+      "stop_score": -1000000.0,
+      "emergency_stop_score": -1000000.0,
+      "decision_reason": "highest_enabled_score",
+      "hard_rule_reason": "no_hard_constraint",
+      "current_link_id": "A2256W000213",
+      "route_required_link_id": "A2256W000213",
+      "ego_s": 310.8251150701901,
+      "ego_d": -0.17347588785739204,
+      "ego_speed": 0.5210096119636801,
+      "vehicle_state_source": 1,
+      "vehicle_state_valid": true,
+      "has_front_vehicle": false,
+      "front_gap": 1000000000.0,
+      "front_relative_speed": 0.0,
+      "front_ttc": 1000000000.0,
+      "left_lane_safe": false,
+      "right_lane_safe": false,
+      "left_front_gap": 1000000000.0,
+      "left_rear_gap": 1000000000.0,
+      "right_front_gap": 1000000000.0,
+      "right_rear_gap": 1000000000.0,
+      "has_stop_line": true,
+      "distance_to_stop_line": 5.080983071470371,
+      "intersection_approach_active": false,
+      "intersection_approach_activation_distance": 1.5,
+      "intersection_approach_speed_limit": 6.944444444444445,
+      "traffic_light_id": "C1256W000091",
+      "traffic_light_state": 3,
+      "traffic_light_raw_label": "green",
+      "traffic_light_recently_visible": true,
+      "has_required_movement": true,
+      "required_movement": 1,
+      "related_signal": "straight",
+      "signal_controlled_link_id": "A2256W000222",
+      "distance_to_signal_movement": 5.080983071470371,
+      "pedestrian_risk": false,
+      "static_obstacle_ahead": true,
+      "avoidance_object_id": 99,
+      "emergency_risk": false,
+      "min_ttc": 1000000000.0,
+      "predicted_front_ttc": 1000000000.0,
+      "required_deceleration": 0.0
+    }
+  },
+  {
+    "t": 173,
+    "ego": {
+      "header": {
+        "seq": 8284,
+        "stamp": 1790955108.3954809,
+        "frame_id": "map"
+      },
+      "source": 1,
+      "valid": true,
+      "x": -59.89623011210435,
+      "y": -160.32054805221952,
+      "yaw": 1.660253529723586,
+      "speed": 0.0,
+      "acceleration": -0.6110962369442422,
+      "yaw_rate": 0.001323154428973794
+    },
+    "objects": [
+      {
+        "id": 99,
+        "type": 0,
+        "motion_state": 1,
+        "center": {
+          "x": -60.89463622078564,
+          "y": -143.03595730691572,
+          "z": -0.8523429789200293
+        },
+        "yaw": 0.10675498966277304,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.08123646676540375,
+        "length": 1.5059680938720703,
+        "height": 0.05000000074505806,
+        "obb_corners": [
+          {
+            "x": -61.639013760633915,
+            "y": -143.15657668162416,
+            "z": -0.8542307501207084
+          },
+          {
+            "x": -60.14162461243887,
+            "y": -142.99611413186105,
+            "z": -0.8583953179419987
+          },
+          {
+            "x": -60.1502805581343,
+            "y": -142.9153398930386,
+            "z": -0.8583914165660647
+          },
+          {
+            "x": -61.647669706329346,
+            "y": -143.07580244280172,
+            "z": -0.8542268487447742
+          },
+          {
+            "x": -61.63899189827862,
+            "y": -143.15657472212285,
+            "z": -0.8462945412327806
+          },
+          {
+            "x": -60.14160275008357,
+            "y": -142.99611217235974,
+            "z": -0.850459109054071
+          },
+          {
+            "x": -60.150258695778994,
+            "y": -142.9153379335373,
+            "z": -0.8504552076781369
+          },
+          {
+            "x": -61.64764784397404,
+            "y": -143.0758004833004,
+            "z": -0.8462906398568464
+          }
+        ]
+      }
+    ],
+    "command": {
+      "header": {
+        "seq": 1643,
+        "stamp": 1790955108.398075,
+        "frame_id": "map"
+      },
+      "command_id": 24,
+      "maneuver_type": 4,
+      "execution_request": 1,
+      "direction": 0,
+      "merge_type": 0,
+      "source_link_id": "A2256W000213",
+      "target_link_id": "",
+      "has_target_pose": false,
+      "target_pose_map": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      },
+      "desired_speed_mps": 13.88888888888889,
+      "primary_object_id": 99,
+      "preferred_front_object_id": -1,
+      "preferred_rear_object_id": -1,
+      "use_custom_follow_gap": false,
+      "desired_time_gap_s": -1.0,
+      "minimum_gap_m": -1.0,
+      "valid_until": 1790955108.898075,
+      "reason": "highest_enabled_score"
+    },
+    "feature": {
+      "header": {
+        "seq": 1643,
+        "stamp": 1790955108.3660197,
+        "frame_id": "map"
+      },
+      "selected_behavior": 7,
+      "behavior_state": 9,
+      "enable_keep": true,
+      "enable_follow": false,
+      "enable_left_change": false,
+      "enable_right_change": false,
+      "enable_avoid": true,
+      "enable_stop": false,
+      "enable_emergency_stop": false,
+      "planned_stop": false,
+      "force_stop": false,
+      "emergency_stop": false,
+      "forbid_left_change": true,
+      "forbid_right_change": true,
+      "desired_speed": 13.88888888888889,
+      "has_max_speed": true,
+      "max_speed": 13.88888888888889,
+      "has_stop_target": false,
+      "stop_x": 0.0,
+      "stop_y": 0.0,
+      "target_link_id": "",
+      "candidate_link_ids": [],
+      "keep_score": 70.0,
+      "follow_score": -1000000.0,
+      "left_change_score": -1000000.0,
+      "right_change_score": -1000000.0,
+      "avoid_score": 90.0,
+      "stop_score": -1000000.0,
+      "emergency_stop_score": -1000000.0,
+      "decision_reason": "highest_enabled_score",
+      "hard_rule_reason": "no_hard_constraint",
+      "current_link_id": "A2256W000213",
+      "route_required_link_id": "A2256W000213",
+      "ego_s": 310.981873246953,
+      "ego_d": -0.17145177408277387,
+      "ego_speed": 0.0,
+      "vehicle_state_source": 1,
+      "vehicle_state_valid": true,
+      "has_front_vehicle": false,
+      "front_gap": 1000000000.0,
+      "front_relative_speed": 0.0,
+      "front_ttc": 1000000000.0,
+      "left_lane_safe": false,
+      "right_lane_safe": false,
+      "left_front_gap": 1000000000.0,
+      "left_rear_gap": 1000000000.0,
+      "right_front_gap": 1000000000.0,
+      "right_rear_gap": 1000000000.0,
+      "has_stop_line": true,
+      "distance_to_stop_line": 4.924224894707493,
+      "intersection_approach_active": false,
+      "intersection_approach_activation_distance": 1.5,
+      "intersection_approach_speed_limit": 6.944444444444445,
+      "traffic_light_id": "C1256W000091",
+      "traffic_light_state": 3,
+      "traffic_light_raw_label": "green",
+      "traffic_light_recently_visible": true,
+      "has_required_movement": true,
+      "required_movement": 1,
+      "related_signal": "straight",
+      "signal_controlled_link_id": "A2256W000222",
+      "distance_to_signal_movement": 4.924224894707493,
+      "pedestrian_risk": false,
+      "static_obstacle_ahead": true,
+      "avoidance_object_id": 99,
+      "emergency_risk": false,
+      "min_ttc": 1000000000.0,
+      "predicted_front_ttc": 1000000000.0,
+      "required_deceleration": 0.0
+    }
+  },
+  {
+    "t": 174,
+    "ego": {
+      "header": {
+        "seq": 8314,
+        "stamp": 1790955108.9854646,
+        "frame_id": "map"
+      },
+      "source": 1,
+      "valid": true,
+      "x": -59.89756938924532,
+      "y": -160.07375997363334,
+      "yaw": 1.6594252840504822,
+      "speed": 0.620657962211431,
+      "acceleration": 0.8589519547984633,
+      "yaw_rate": -0.00544771971181035
+    },
+    "objects": [
+      {
+        "id": 99,
+        "type": 0,
+        "motion_state": 1,
+        "center": {
+          "x": -60.86695600567365,
+          "y": -142.97645544623433,
+          "z": -1.0597302384740241
+        },
+        "yaw": 0.09973545957260496,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.09828915446996689,
+        "length": 1.4946534633636475,
+        "height": 0.5859962701797485,
+        "obb_corners": [
+          {
+            "x": -61.60635620749297,
+            "y": -143.09982675916535,
+            "z": -1.3509811801529579
+          },
+          {
+            "x": -60.11913436495733,
+            "y": -142.9510048780255,
+            "z": -1.3544764442180532
+          },
+          {
+            "x": -60.128921123243344,
+            "y": -142.85320326698073,
+            "z": -1.3544738451195335
+          },
+          {
+            "x": -61.61614279734951,
+            "y": -143.00202704801805,
+            "z": -1.3509785810544044
+          },
+          {
+            "x": -61.60499111562736,
+            "y": -143.09970573082924,
+            "z": -0.76498651248019
+          },
+          {
+            "x": -60.117769273091724,
+            "y": -142.95088384968938,
+            "z": -0.7684817765452856
+          },
+          {
+            "x": -60.127556031377736,
+            "y": -142.85308223864462,
+            "z": -0.7684791774467659
+          },
+          {
+            "x": -61.6147777054839,
+            "y": -143.00190601968194,
+            "z": -0.7649839133816366
+          }
+        ]
+      }
+    ],
+    "command": {
+      "header": {
+        "seq": 1650,
+        "stamp": 1790955109.5790591,
+        "frame_id": "map"
+      },
+      "command_id": 24,
+      "maneuver_type": 4,
+      "execution_request": 1,
+      "direction": 0,
+      "merge_type": 0,
+      "source_link_id": "A2256W000213",
+      "target_link_id": "",
+      "has_target_pose": false,
+      "target_pose_map": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      },
+      "desired_speed_mps": 13.88888888888889,
+      "primary_object_id": 99,
+      "preferred_front_object_id": -1,
+      "preferred_rear_object_id": -1,
+      "use_custom_follow_gap": false,
+      "desired_time_gap_s": -1.0,
+      "minimum_gap_m": -1.0,
+      "valid_until": 1790955110.0790591,
+      "reason": "highest_enabled_score"
+    },
+    "feature": {
+      "header": {
+        "seq": 1650,
+        "stamp": 1790955109.54732,
+        "frame_id": "map"
+      },
+      "selected_behavior": 7,
+      "behavior_state": 9,
+      "enable_keep": true,
+      "enable_follow": false,
+      "enable_left_change": false,
+      "enable_right_change": false,
+      "enable_avoid": true,
+      "enable_stop": false,
+      "enable_emergency_stop": false,
+      "planned_stop": false,
+      "force_stop": false,
+      "emergency_stop": false,
+      "forbid_left_change": true,
+      "forbid_right_change": true,
+      "desired_speed": 13.88888888888889,
+      "has_max_speed": true,
+      "max_speed": 13.88888888888889,
+      "has_stop_target": false,
+      "stop_x": 0.0,
+      "stop_y": 0.0,
+      "target_link_id": "",
+      "candidate_link_ids": [],
+      "keep_score": 70.0,
+      "follow_score": -1000000.0,
+      "left_change_score": -1000000.0,
+      "right_change_score": -1000000.0,
+      "avoid_score": 90.0,
+      "stop_score": -1000000.0,
+      "emergency_stop_score": -1000000.0,
+      "decision_reason": "highest_enabled_score",
+      "hard_rule_reason": "no_hard_constraint",
+      "current_link_id": "A2256W000213",
+      "route_required_link_id": "A2256W000213",
+      "ego_s": 311.1574904002888,
+      "ego_d": -0.16722938822328115,
+      "ego_speed": 0.28839604124849694,
+      "vehicle_state_source": 1,
+      "vehicle_state_valid": true,
+      "has_front_vehicle": false,
+      "front_gap": 1000000000.0,
+      "front_relative_speed": 0.0,
+      "front_ttc": 1000000000.0,
+      "left_lane_safe": false,
+      "right_lane_safe": false,
+      "left_front_gap": 1000000000.0,
+      "left_rear_gap": 1000000000.0,
+      "right_front_gap": 1000000000.0,
+      "right_rear_gap": 1000000000.0,
+      "has_stop_line": true,
+      "distance_to_stop_line": 4.7486077413717,
+      "intersection_approach_active": false,
+      "intersection_approach_activation_distance": 1.5,
+      "intersection_approach_speed_limit": 6.944444444444445,
+      "traffic_light_id": "C1256W000091",
+      "traffic_light_state": 3,
+      "traffic_light_raw_label": "green",
+      "traffic_light_recently_visible": true,
+      "has_required_movement": true,
+      "required_movement": 1,
+      "related_signal": "straight",
+      "signal_controlled_link_id": "A2256W000222",
+      "distance_to_signal_movement": 4.7486077413717,
+      "pedestrian_risk": false,
+      "static_obstacle_ahead": true,
+      "avoidance_object_id": 99,
+      "emergency_risk": false,
+      "min_ttc": 1000000000.0,
+      "predicted_front_ttc": 1000000000.0,
+      "required_deceleration": 0.0
+    }
+  },
+  {
+    "t": 175,
+    "ego": {
+      "header": {
+        "seq": 8333,
+        "stamp": 1790955109.7096663,
+        "frame_id": "map"
+      },
+      "source": 1,
+      "valid": true,
+      "x": -59.8903146317671,
+      "y": -160.15817777396904,
+      "yaw": 1.6592724242985593,
+      "speed": 0.009964967219457607,
+      "acceleration": 0.4782084709510568,
+      "yaw_rate": 8.489636820740998e-05
+    },
+    "objects": [
+      {
+        "id": 99,
+        "type": 0,
+        "motion_state": 1,
+        "center": {
+          "x": -60.86640444472282,
+          "y": -142.98452024653463,
+          "z": -0.9241812297042837
+        },
+        "yaw": 0.09479935651614062,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.08976315706968307,
+        "length": 1.4913967847824097,
+        "height": 0.5836955308914185,
+        "obb_corners": [
+          {
+            "x": -61.60512553001845,
+            "y": -143.0998406890926,
+            "z": -1.214436066302292
+          },
+          {
+            "x": -60.12042869661629,
+            "y": -142.9586685014625,
+            "z": -1.2176217008868246
+          },
+          {
+            "x": -60.128925383759274,
+            "y": -142.86930988085197,
+            "z": -1.2176204729781017
+          },
+          {
+            "x": -61.613622311332264,
+            "y": -143.01048016200318,
+            "z": -1.2144348385527106
+          },
+          {
+            "x": -61.603883594490384,
+            "y": -143.09973062008785,
+            "z": -0.6307418670304703
+          },
+          {
+            "x": -60.11918676108823,
+            "y": -142.95855843245778,
+            "z": -0.6339275016150031
+          },
+          {
+            "x": -60.12768344823122,
+            "y": -142.86919981184724,
+            "z": -0.63392627370628
+          },
+          {
+            "x": -61.6123803758042,
+            "y": -143.01037009299844,
+            "z": -0.630740639280889
+          }
+        ]
+      },
+      {
+        "id": 144,
+        "type": 0,
+        "motion_state": 0,
+        "center": {
+          "x": -70.57656294289274,
+          "y": -127.20721771708759,
+          "z": 3.2301571416114494
+        },
+        "yaw": 3.1405792054981276,
+        "vx": -0.1750900897794469,
+        "vy": -0.07737523136069648,
+        "yaw_rate": 0.0,
+        "width": 0.05000000074505806,
+        "length": 1.8616551160812378,
+        "height": 0.05000000074505806,
+        "obb_corners": [
+          {
+            "x": -69.64576580616365,
+            "y": -127.1831667800364,
+            "z": 3.203311933849731
+          },
+          {
+            "x": -71.50741537127281,
+            "y": -127.18128130027691,
+            "z": 3.207272639996398
+          },
+          {
+            "x": -71.50746681998335,
+            "y": -127.231278114217,
+            "z": 3.2072821775171385
+          },
+          {
+            "x": -69.64581644312882,
+            "y": -127.23316735168288,
+            "z": 3.20332147035191
+          },
+          {
+            "x": -69.64566001625792,
+            "y": -127.18315740419573,
+            "z": 3.2530318693248224
+          },
+          {
+            "x": -71.50730958136707,
+            "y": -127.18127192443625,
+            "z": 3.256992575471489
+          },
+          {
+            "x": -71.50736103007762,
+            "y": -127.23126873837634,
+            "z": 3.2570021129922297
+          },
+          {
+            "x": -69.64571065322309,
+            "y": -127.2331579758422,
+            "z": 3.2530414058270014
+          }
+        ]
+      }
+    ],
+    "command": {
+      "header": {
+        "seq": 1653,
+        "stamp": 1790955110.4144597,
+        "frame_id": "map"
+      },
+      "command_id": 24,
+      "maneuver_type": 4,
+      "execution_request": 1,
+      "direction": 0,
+      "merge_type": 0,
+      "source_link_id": "A2256W000213",
+      "target_link_id": "",
+      "has_target_pose": false,
+      "target_pose_map": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      },
+      "desired_speed_mps": 13.88888888888889,
+      "primary_object_id": 99,
+      "preferred_front_object_id": -1,
+      "preferred_rear_object_id": -1,
+      "use_custom_follow_gap": false,
+      "desired_time_gap_s": -1.0,
+      "minimum_gap_m": -1.0,
+      "valid_until": 1790955110.9144597,
+      "reason": "highest_enabled_score"
+    },
+    "feature": {
+      "header": {
+        "seq": 1653,
+        "stamp": 1790955109.7096663,
+        "frame_id": "map"
+      },
+      "selected_behavior": 7,
+      "behavior_state": 9,
+      "enable_keep": true,
+      "enable_follow": false,
+      "enable_left_change": false,
+      "enable_right_change": false,
+      "enable_avoid": true,
+      "enable_stop": false,
+      "enable_emergency_stop": false,
+      "planned_stop": false,
+      "force_stop": false,
+      "emergency_stop": false,
+      "forbid_left_change": true,
+      "forbid_right_change": true,
+      "desired_speed": 13.88888888888889,
+      "has_max_speed": true,
+      "max_speed": 13.88888888888889,
+      "has_stop_target": false,
+      "stop_x": 0.0,
+      "stop_y": 0.0,
+      "target_link_id": "",
+      "candidate_link_ids": [],
+      "keep_score": 70.0,
+      "follow_score": -1000000.0,
+      "left_change_score": -1000000.0,
+      "right_change_score": -1000000.0,
+      "avoid_score": 90.0,
+      "stop_score": -1000000.0,
+      "emergency_stop_score": -1000000.0,
+      "decision_reason": "highest_enabled_score",
+      "hard_rule_reason": "no_hard_constraint",
+      "current_link_id": "A2256W000213",
+      "route_required_link_id": "A2256W000213",
+      "ego_s": 311.1443337323191,
+      "ego_d": -0.16906622145232475,
+      "ego_speed": 0.009964967219457607,
+      "vehicle_state_source": 1,
+      "vehicle_state_valid": true,
+      "has_front_vehicle": false,
+      "front_gap": 1000000000.0,
+      "front_relative_speed": 0.0,
+      "front_ttc": 1000000000.0,
+      "left_lane_safe": false,
+      "right_lane_safe": false,
+      "left_front_gap": 1000000000.0,
+      "left_rear_gap": 1000000000.0,
+      "right_front_gap": 1000000000.0,
+      "right_rear_gap": 1000000000.0,
+      "has_stop_line": true,
+      "distance_to_stop_line": 4.761764409341367,
+      "intersection_approach_active": false,
+      "intersection_approach_activation_distance": 1.5,
+      "intersection_approach_speed_limit": 6.944444444444445,
+      "traffic_light_id": "C1256W000091",
+      "traffic_light_state": 3,
+      "traffic_light_raw_label": "green",
+      "traffic_light_recently_visible": true,
+      "has_required_movement": true,
+      "required_movement": 1,
+      "related_signal": "straight",
+      "signal_controlled_link_id": "A2256W000222",
+      "distance_to_signal_movement": 4.761764409341367,
+      "pedestrian_risk": false,
+      "static_obstacle_ahead": true,
+      "avoidance_object_id": 99,
+      "emergency_risk": false,
+      "min_ttc": 1000000000.0,
+      "predicted_front_ttc": 1000000000.0,
+      "required_deceleration": 0.0
+    }
+  },
+  {
+    "t": 176,
+    "ego": {
+      "header": {
+        "seq": 8383,
+        "stamp": 1790955111.4007087,
+        "frame_id": "map"
+      },
+      "source": 1,
+      "valid": true,
+      "x": -60.03126437527754,
+      "y": -159.77898440717507,
+      "yaw": 1.6554406293029444,
+      "speed": 0.23968831331344884,
+      "acceleration": 0.905310196030243,
+      "yaw_rate": -0.0013774787075817585
+    },
+    "objects": [
+      {
+        "id": 99,
+        "type": 0,
+        "motion_state": 1,
+        "center": {
+          "x": -61.01042342922189,
+          "y": -142.93896208857637,
+          "z": -0.9164055331226019
+        },
+        "yaw": 0.09789967130685878,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.08441351354122162,
+        "length": 1.4072518348693848,
+        "height": 0.5730593204498291,
+        "obb_corners": [
+          {
+            "x": -61.707163146038646,
+            "y": -143.04979277891124,
+            "z": -1.2014325400928818
+          },
+          {
+            "x": -60.306652878848716,
+            "y": -142.9122440346939,
+            "z": -1.2044389150207233
+          },
+          {
+            "x": -60.31490370905607,
+            "y": -142.82823500762782,
+            "z": -1.2044365385975604
+          },
+          {
+            "x": -61.715413976246,
+            "y": -142.96578375184515,
+            "z": -1.2014301636697189
+          },
+          {
+            "x": -61.70594317908307,
+            "y": -143.04968917204684,
+            "z": -0.6283745275839696
+          },
+          {
+            "x": -60.30543291189314,
+            "y": -142.9121404278295,
+            "z": -0.6313809025118111
+          },
+          {
+            "x": -60.313683742100494,
+            "y": -142.82813140076343,
+            "z": -0.6313785260886482
+          },
+          {
+            "x": -61.71419400929042,
+            "y": -142.96568014498078,
+            "z": -0.6283721511608066
+          }
+        ]
+      },
+      {
+        "id": 144,
+        "type": 0,
+        "motion_state": 0,
+        "center": {
+          "x": -71.27562211990359,
+          "y": -127.13603912353514,
+          "z": 3.205345056388453
+        },
+        "yaw": -3.114572225203219,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.31989780665341955,
+        "length": 2.2791825702188326,
+        "height": 0.07330539299657168,
+        "obb_corners": [
+          {
+            "x": -70.14076812744145,
+            "y": -126.94536010742183,
+            "z": 3.168692359890167
+          },
+          {
+            "x": -72.41911872863773,
+            "y": -127.00693710327153,
+            "z": 3.168692359890167
+          },
+          {
+            "x": -72.41047607421876,
+            "y": -127.32671813964839,
+            "z": 3.168692359890167
+          },
+          {
+            "x": -70.13212554931641,
+            "y": -127.26514114379881,
+            "z": 3.168692359890167
+          },
+          {
+            "x": -70.14076812744145,
+            "y": -126.94536010742183,
+            "z": 3.2419977528867387
+          },
+          {
+            "x": -72.41911872863773,
+            "y": -127.00693710327153,
+            "z": 3.2419977528867387
+          },
+          {
+            "x": -72.41047607421876,
+            "y": -127.32671813964839,
+            "z": 3.2419977528867387
+          },
+          {
+            "x": -70.13212554931641,
+            "y": -127.26514114379881,
+            "z": 3.2419977528867387
+          }
+        ]
+      }
+    ],
+    "command": {
+      "header": {
+        "seq": 1663,
+        "stamp": 1790955111.4156682,
+        "frame_id": "map"
+      },
+      "command_id": 24,
+      "maneuver_type": 4,
+      "execution_request": 1,
+      "direction": 0,
+      "merge_type": 0,
+      "source_link_id": "A2256W000213",
+      "target_link_id": "",
+      "has_target_pose": false,
+      "target_pose_map": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      },
+      "desired_speed_mps": 13.88888888888889,
+      "primary_object_id": 99,
+      "preferred_front_object_id": -1,
+      "preferred_rear_object_id": -1,
+      "use_custom_follow_gap": false,
+      "desired_time_gap_s": -1.0,
+      "minimum_gap_m": -1.0,
+      "valid_until": 1790955111.9156682,
+      "reason": "highest_enabled_score"
+    },
+    "feature": {
+      "header": {
+        "seq": 1663,
+        "stamp": 1790955111.4007087,
+        "frame_id": "map"
+      },
+      "selected_behavior": 7,
+      "behavior_state": 9,
+      "enable_keep": true,
+      "enable_follow": false,
+      "enable_left_change": false,
+      "enable_right_change": false,
+      "enable_avoid": true,
+      "enable_stop": false,
+      "enable_emergency_stop": false,
+      "planned_stop": false,
+      "force_stop": false,
+      "emergency_stop": false,
+      "forbid_left_change": true,
+      "forbid_right_change": true,
+      "desired_speed": 13.88888888888889,
+      "has_max_speed": true,
+      "max_speed": 13.88888888888889,
+      "has_stop_target": false,
+      "stop_x": 0.0,
+      "stop_y": 0.0,
+      "target_link_id": "",
+      "candidate_link_ids": [],
+      "keep_score": 70.0,
+      "follow_score": -1000000.0,
+      "left_change_score": -1000000.0,
+      "right_change_score": -1000000.0,
+      "avoid_score": 90.0,
+      "stop_score": -1000000.0,
+      "emergency_stop_score": -1000000.0,
+      "decision_reason": "highest_enabled_score",
+      "hard_rule_reason": "no_hard_constraint",
+      "current_link_id": "A2256W000213",
+      "route_required_link_id": "A2256W000213",
+      "ego_s": 311.51583292887443,
+      "ego_d": -0.008932569227127892,
+      "ego_speed": 0.23968831331344884,
+      "vehicle_state_source": 1,
+      "vehicle_state_valid": true,
+      "has_front_vehicle": false,
+      "front_gap": 1000000000.0,
+      "front_relative_speed": 0.0,
+      "front_ttc": 1000000000.0,
+      "left_lane_safe": false,
+      "right_lane_safe": false,
+      "left_front_gap": 1000000000.0,
+      "left_rear_gap": 1000000000.0,
+      "right_front_gap": 1000000000.0,
+      "right_rear_gap": 1000000000.0,
+      "has_stop_line": true,
+      "distance_to_stop_line": 4.390265212786062,
+      "intersection_approach_active": false,
+      "intersection_approach_activation_distance": 1.5,
+      "intersection_approach_speed_limit": 6.944444444444445,
+      "traffic_light_id": "C1256W000091",
+      "traffic_light_state": 3,
+      "traffic_light_raw_label": "green",
+      "traffic_light_recently_visible": true,
+      "has_required_movement": true,
+      "required_movement": 1,
+      "related_signal": "straight",
+      "signal_controlled_link_id": "A2256W000222",
+      "distance_to_signal_movement": 4.390265212786062,
+      "pedestrian_risk": false,
+      "static_obstacle_ahead": true,
+      "avoidance_object_id": 99,
+      "emergency_risk": false,
+      "min_ttc": 1000000000.0,
+      "predicted_front_ttc": 1000000000.0,
+      "required_deceleration": 0.0
+    }
+  },
+  {
+    "t": 177,
+    "ego": {
+      "header": {
+        "seq": 8433,
+        "stamp": 1790955112.4010935,
+        "frame_id": "map"
+      },
+      "source": 1,
+      "valid": true,
+      "x": -60.03056500744296,
+      "y": -159.78878983854932,
+      "yaw": 1.65513750906404,
+      "speed": 0.0,
+      "acceleration": -1.2275438848097535e-09,
+      "yaw_rate": -3.351064515300095e-05
+    },
+    "objects": [
+      {
+        "id": 99,
+        "type": 0,
+        "motion_state": 1,
+        "center": {
+          "x": -60.999749136506736,
+          "y": -143.02090520054952,
+          "z": -0.9470279571309466
+        },
+        "yaw": 0.10064365875614509,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.0827292948961258,
+        "length": 1.3999383449554443,
+        "height": 0.5697572827339172,
+        "obb_corners": [
+          {
+            "x": -61.69262538944791,
+            "y": -143.13244011721994,
+            "z": -1.2304113867339297
+          },
+          {
+            "x": -60.29977434300861,
+            "y": -142.9917831373669,
+            "z": -1.2334033316283752
+          },
+          {
+            "x": -60.30808642985851,
+            "y": -142.909472879657,
+            "z": -1.2334004490307433
+          },
+          {
+            "x": -61.70093747629782,
+            "y": -143.05012985951006,
+            "z": -1.230408504136297
+          },
+          {
+            "x": -61.69141187272434,
+            "y": -143.13233752394189,
+            "z": -0.6606554055629393
+          },
+          {
+            "x": -60.29856082628503,
+            "y": -142.9916805440888,
+            "z": -0.663647350457385
+          },
+          {
+            "x": -60.30687291313494,
+            "y": -142.9093702863789,
+            "z": -0.6636444678597527
+          },
+          {
+            "x": -61.69972395957424,
+            "y": -143.05002726623198,
+            "z": -0.6606525229653071
+          }
+        ]
+      },
+      {
+        "id": 144,
+        "type": 0,
+        "motion_state": 0,
+        "center": {
+          "x": -70.97694580078124,
+          "y": -127.20694564819337,
+          "z": 3.119626111587224
+        },
+        "yaw": -3.08609410580838,
+        "vx": -0.32586817771140725,
+        "vy": -0.20641724892533372,
+        "yaw_rate": 0.0,
+        "width": 0.14206484738142383,
+        "length": 2.48733731722598,
+        "height": 0.0991709130690972,
+        "obb_corners": [
+          {
+            "x": -69.7391320800781,
+            "y": -127.0670362091065,
+            "z": 3.0700406550526758
+          },
+          {
+            "x": -72.22263977050778,
+            "y": -127.20500896453859,
+            "z": 3.0700406550526758
+          },
+          {
+            "x": -72.21475952148438,
+            "y": -127.34685508728023,
+            "z": 3.0700406550526758
+          },
+          {
+            "x": -69.73125183105469,
+            "y": -127.20888233184814,
+            "z": 3.0700406550526758
+          },
+          {
+            "x": -69.7391320800781,
+            "y": -127.0670362091065,
+            "z": 3.169211568121773
+          },
+          {
+            "x": -72.22263977050778,
+            "y": -127.20500896453859,
+            "z": 3.169211568121773
+          },
+          {
+            "x": -72.21475952148438,
+            "y": -127.34685508728023,
+            "z": 3.169211568121773
+          },
+          {
+            "x": -69.73125183105469,
+            "y": -127.20888233184814,
+            "z": 3.169211568121773
+          }
+        ]
+      }
+    ],
+    "command": {
+      "header": {
+        "seq": 1673,
+        "stamp": 1790955112.4160752,
+        "frame_id": "map"
+      },
+      "command_id": 24,
+      "maneuver_type": 4,
+      "execution_request": 1,
+      "direction": 0,
+      "merge_type": 0,
+      "source_link_id": "A2256W000213",
+      "target_link_id": "",
+      "has_target_pose": false,
+      "target_pose_map": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      },
+      "desired_speed_mps": 13.88888888888889,
+      "primary_object_id": 99,
+      "preferred_front_object_id": -1,
+      "preferred_rear_object_id": -1,
+      "use_custom_follow_gap": false,
+      "desired_time_gap_s": -1.0,
+      "minimum_gap_m": -1.0,
+      "valid_until": 1790955112.9160752,
+      "reason": "highest_enabled_score"
+    },
+    "feature": {
+      "header": {
+        "seq": 1673,
+        "stamp": 1790955112.4010935,
+        "frame_id": "map"
+      },
+      "selected_behavior": 7,
+      "behavior_state": 9,
+      "enable_keep": true,
+      "enable_follow": false,
+      "enable_left_change": false,
+      "enable_right_change": false,
+      "enable_avoid": true,
+      "enable_stop": false,
+      "enable_emergency_stop": false,
+      "planned_stop": false,
+      "force_stop": false,
+      "emergency_stop": false,
+      "forbid_left_change": true,
+      "forbid_right_change": true,
+      "desired_speed": 13.88888888888889,
+      "has_max_speed": true,
+      "max_speed": 13.88888888888889,
+      "has_stop_target": false,
+      "stop_x": 0.0,
+      "stop_y": 0.0,
+      "target_link_id": "",
+      "candidate_link_ids": [],
+      "keep_score": 70.0,
+      "follow_score": -1000000.0,
+      "left_change_score": -1000000.0,
+      "right_change_score": -1000000.0,
+      "avoid_score": 90.0,
+      "stop_score": -1000000.0,
+      "emergency_stop_score": -1000000.0,
+      "decision_reason": "highest_enabled_score",
+      "hard_rule_reason": "no_hard_constraint",
+      "current_link_id": "A2256W000213",
+      "route_required_link_id": "A2256W000213",
+      "ego_s": 311.5060760174082,
+      "ego_d": -0.01013185169736705,
+      "ego_speed": 0.0,
+      "vehicle_state_source": 1,
+      "vehicle_state_valid": true,
+      "has_front_vehicle": false,
+      "front_gap": 1000000000.0,
+      "front_relative_speed": 0.0,
+      "front_ttc": 1000000000.0,
+      "left_lane_safe": false,
+      "right_lane_safe": false,
+      "left_front_gap": 1000000000.0,
+      "left_rear_gap": 1000000000.0,
+      "right_front_gap": 1000000000.0,
+      "right_rear_gap": 1000000000.0,
+      "has_stop_line": true,
+      "distance_to_stop_line": 4.4000221242523025,
+      "intersection_approach_active": false,
+      "intersection_approach_activation_distance": 1.5,
+      "intersection_approach_speed_limit": 6.944444444444445,
+      "traffic_light_id": "C1256W000091",
+      "traffic_light_state": 3,
+      "traffic_light_raw_label": "green",
+      "traffic_light_recently_visible": true,
+      "has_required_movement": true,
+      "required_movement": 1,
+      "related_signal": "straight",
+      "signal_controlled_link_id": "A2256W000222",
+      "distance_to_signal_movement": 4.4000221242523025,
+      "pedestrian_risk": false,
+      "static_obstacle_ahead": true,
+      "avoidance_object_id": 99,
+      "emergency_risk": false,
+      "min_ttc": 1000000000.0,
+      "predicted_front_ttc": 1000000000.0,
+      "required_deceleration": 0.0
+    }
+  },
+  {
+    "t": 178,
+    "ego": {
+      "header": {
+        "seq": 8483,
+        "stamp": 1790955113.3861625,
+        "frame_id": "map"
+      },
+      "source": 1,
+      "valid": true,
+      "x": -60.030567261006034,
+      "y": -159.78879002906706,
+      "yaw": 1.6551332169743878,
+      "speed": 0.0,
+      "acceleration": -6.977779121426429e-23,
+      "yaw_rate": -3.0246886240092863e-07
+    },
+    "objects": [
+      {
+        "id": 99,
+        "type": 0,
+        "motion_state": 1,
+        "center": {
+          "x": -60.9996636436441,
+          "y": -143.02080901119436,
+          "z": -0.9472069384204361
+        },
+        "yaw": 0.10167229259405824,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.08148765563964844,
+        "length": 1.3999996185302734,
+        "height": 0.5697581768035889,
+        "obb_corners": [
+          {
+            "x": -61.69251857358135,
+            "y": -143.13244182456097,
+            "z": -1.2305902066187095
+          },
+          {
+            "x": -60.299752003077366,
+            "y": -142.99034647566364,
+            "z": -1.2335835651416276
+          },
+          {
+            "x": -60.30802274472214,
+            "y": -142.90927882655336,
+            "z": -1.2335805443628698
+          },
+          {
+            "x": -61.700789404315145,
+            "y": -143.0513741829817,
+            "z": -1.2305871856487607
+          },
+          {
+            "x": -61.69130451286972,
+            "y": -143.132339193325,
+            "z": -0.6608333325417329
+          },
+          {
+            "x": -60.298537942365726,
+            "y": -142.99024384442768,
+            "z": -0.6638266910646512
+          },
+          {
+            "x": -60.306808684010505,
+            "y": -142.9091761953174,
+            "z": -0.6638236702858934
+          },
+          {
+            "x": -61.69957534360351,
+            "y": -143.05127155174574,
+            "z": -0.6608303115717842
+          }
+        ]
+      },
+      {
+        "id": 144,
+        "type": 0,
+        "motion_state": 1,
+        "center": {
+          "x": -71.03566440582276,
+          "y": -127.23471748352048,
+          "z": 3.122171072230618
+        },
+        "yaw": -3.115283031491399,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.15890623247740243,
+        "length": 2.362353661265368,
+        "height": 0.09199851471721487,
+        "obb_corners": [
+          {
+            "x": -69.85698638916017,
+            "y": -127.12421913146977,
+            "z": 3.0761718148720107
+          },
+          {
+            "x": -72.21852249145508,
+            "y": -127.1863645935058,
+            "z": 3.0761718148720107
+          },
+          {
+            "x": -72.21434234619142,
+            "y": -127.34521583557125,
+            "z": 3.0761718148720107
+          },
+          {
+            "x": -69.85280639648437,
+            "y": -127.28307037353511,
+            "z": 3.0761718148720107
+          },
+          {
+            "x": -69.85698638916017,
+            "y": -127.12421913146977,
+            "z": 3.1681703295892256
+          },
+          {
+            "x": -72.21852249145508,
+            "y": -127.1863645935058,
+            "z": 3.1681703295892256
+          },
+          {
+            "x": -72.21434234619142,
+            "y": -127.34521583557125,
+            "z": 3.1681703295892256
+          },
+          {
+            "x": -69.85280639648437,
+            "y": -127.28307037353511,
+            "z": 3.1681703295892256
+          }
+        ]
+      }
+    ],
+    "command": {
+      "header": {
+        "seq": 1683,
+        "stamp": 1790955113.4160526,
+        "frame_id": "map"
+      },
+      "command_id": 24,
+      "maneuver_type": 4,
+      "execution_request": 1,
+      "direction": 0,
+      "merge_type": 0,
+      "source_link_id": "A2256W000213",
+      "target_link_id": "",
+      "has_target_pose": false,
+      "target_pose_map": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      },
+      "desired_speed_mps": 13.88888888888889,
+      "primary_object_id": 99,
+      "preferred_front_object_id": -1,
+      "preferred_rear_object_id": -1,
+      "use_custom_follow_gap": false,
+      "desired_time_gap_s": -1.0,
+      "minimum_gap_m": -1.0,
+      "valid_until": 1790955113.9160526,
+      "reason": "highest_enabled_score"
+    },
+    "feature": {
+      "header": {
+        "seq": 1683,
+        "stamp": 1790955113.3861625,
+        "frame_id": "map"
+      },
+      "selected_behavior": 7,
+      "behavior_state": 9,
+      "enable_keep": true,
+      "enable_follow": false,
+      "enable_left_change": false,
+      "enable_right_change": false,
+      "enable_avoid": true,
+      "enable_stop": false,
+      "enable_emergency_stop": false,
+      "planned_stop": false,
+      "force_stop": false,
+      "emergency_stop": false,
+      "forbid_left_change": true,
+      "forbid_right_change": true,
+      "desired_speed": 13.88888888888889,
+      "has_max_speed": true,
+      "max_speed": 13.88888888888889,
+      "has_stop_target": false,
+      "stop_x": 0.0,
+      "stop_y": 0.0,
+      "target_link_id": "",
+      "candidate_link_ids": [],
+      "keep_score": 70.0,
+      "follow_score": -1000000.0,
+      "left_change_score": -1000000.0,
+      "right_change_score": -1000000.0,
+      "avoid_score": 90.0,
+      "stop_score": -1000000.0,
+      "emergency_stop_score": -1000000.0,
+      "decision_reason": "highest_enabled_score",
+      "hard_rule_reason": "no_hard_constraint",
+      "current_link_id": "A2256W000213",
+      "route_required_link_id": "A2256W000213",
+      "ego_s": 311.50607571203494,
+      "ego_d": -0.010129610806759693,
+      "ego_speed": 0.0,
+      "vehicle_state_source": 1,
+      "vehicle_state_valid": true,
+      "has_front_vehicle": false,
+      "front_gap": 1000000000.0,
+      "front_relative_speed": 0.0,
+      "front_ttc": 1000000000.0,
+      "left_lane_safe": false,
+      "right_lane_safe": false,
+      "left_front_gap": 1000000000.0,
+      "left_rear_gap": 1000000000.0,
+      "right_front_gap": 1000000000.0,
+      "right_rear_gap": 1000000000.0,
+      "has_stop_line": true,
+      "distance_to_stop_line": 4.400022429625551,
+      "intersection_approach_active": false,
+      "intersection_approach_activation_distance": 1.5,
+      "intersection_approach_speed_limit": 6.944444444444445,
+      "traffic_light_id": "C1256W000091",
+      "traffic_light_state": 3,
+      "traffic_light_raw_label": "green",
+      "traffic_light_recently_visible": true,
+      "has_required_movement": true,
+      "required_movement": 1,
+      "related_signal": "straight",
+      "signal_controlled_link_id": "A2256W000222",
+      "distance_to_signal_movement": 4.400022429625551,
+      "pedestrian_risk": false,
+      "static_obstacle_ahead": true,
+      "avoidance_object_id": 99,
+      "emergency_risk": false,
+      "min_ttc": 1000000000.0,
+      "predicted_front_ttc": 1000000000.0,
+      "required_deceleration": 0.0
+    }
+  },
+  {
+    "t": 179,
+    "ego": {
+      "header": {
+        "seq": 8533,
+        "stamp": 1790955114.3879843,
+        "frame_id": "map"
+      },
+      "source": 1,
+      "valid": true,
+      "x": -60.03056726388223,
+      "y": -159.7887900293102,
+      "yaw": 1.6551332136213337,
+      "speed": 0.0,
+      "acceleration": -4.958010266468043e-37,
+      "yaw_rate": -1.1374521591278608e-07
+    },
+    "objects": [
+      {
+        "id": 99,
+        "type": 0,
+        "motion_state": 1,
+        "center": {
+          "x": -60.999666107707995,
+          "y": -143.02079649382543,
+          "z": -0.9471250582220708
+        },
+        "yaw": 0.1017780433835285,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.08135734498500824,
+        "length": 1.4000056982040405,
+        "height": 0.5697577595710754,
+        "obb_corners": [
+          {
+            "x": -61.692518917243035,
+            "y": -143.13243774911297,
+            "z": -1.230508090986444
+          },
+          {
+            "x": -60.29976131636361,
+            "y": -142.99019383966203,
+            "z": -1.2335014571807916
+          },
+          {
+            "x": -60.30802746790508,
+            "y": -142.90925692192056,
+            "z": -1.2334984226348584
+          },
+          {
+            "x": -61.70078506878451,
+            "y": -143.0515008313715,
+            "z": -1.2305050564405107
+          },
+          {
+            "x": -61.69130485741146,
+            "y": -143.13233511794488,
+            "z": -0.6607516341410479
+          },
+          {
+            "x": -60.29854725653203,
+            "y": -142.99009120849394,
+            "z": -0.6637450003353957
+          },
+          {
+            "x": -60.3068134080735,
+            "y": -142.90915429075247,
+            "z": -0.663741965789462
+          },
+          {
+            "x": -61.69957100895293,
+            "y": -143.0513982002034,
+            "z": -0.6607485995951143
+          }
+        ]
+      },
+      {
+        "id": 144,
+        "type": 0,
+        "motion_state": 1,
+        "center": {
+          "x": -71.03566440582276,
+          "y": -127.23471748352048,
+          "z": 3.122249647748432
+        },
+        "yaw": -3.115283031491399,
+        "vx": 0.0,
+        "vy": 0.0,
+        "yaw_rate": 0.0,
+        "width": 0.15890623247740243,
+        "length": 2.362353661265368,
+        "height": 0.09217110671987916,
+        "obb_corners": [
+          {
+            "x": -69.85698638916017,
+            "y": -127.12421913146977,
+            "z": 3.0761640943884925
+          },
+          {
+            "x": -72.21852249145508,
+            "y": -127.1863645935058,
+            "z": 3.0761640943884925
+          },
+          {
+            "x": -72.21434234619142,
+            "y": -127.34521583557125,
+            "z": 3.0761640943884925
+          },
+          {
+            "x": -69.85280639648437,
+            "y": -127.28307037353511,
+            "z": 3.0761640943884925
+          },
+          {
+            "x": -69.85698638916017,
+            "y": -127.12421913146977,
+            "z": 3.1683352011083716
+          },
+          {
+            "x": -72.21852249145508,
+            "y": -127.1863645935058,
+            "z": 3.1683352011083716
+          },
+          {
+            "x": -72.21434234619142,
+            "y": -127.34521583557125,
+            "z": 3.1683352011083716
+          },
+          {
+            "x": -69.85280639648437,
+            "y": -127.28307037353511,
+            "z": 3.1683352011083716
+          }
+        ]
+      }
+    ],
+    "command": {
+      "header": {
+        "seq": 1693,
+        "stamp": 1790955114.4157565,
+        "frame_id": "map"
+      },
+      "command_id": 24,
+      "maneuver_type": 4,
+      "execution_request": 1,
+      "direction": 0,
+      "merge_type": 0,
+      "source_link_id": "A2256W000213",
+      "target_link_id": "",
+      "has_target_pose": false,
+      "target_pose_map": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      },
+      "desired_speed_mps": 13.88888888888889,
+      "primary_object_id": 99,
+      "preferred_front_object_id": -1,
+      "preferred_rear_object_id": -1,
+      "use_custom_follow_gap": false,
+      "desired_time_gap_s": -1.0,
+      "minimum_gap_m": -1.0,
+      "valid_until": 1790955114.9157565,
+      "reason": "highest_enabled_score"
+    },
+    "feature": {
+      "header": {
+        "seq": 1693,
+        "stamp": 1790955114.3879843,
+        "frame_id": "map"
+      },
+      "selected_behavior": 7,
+      "behavior_state": 9,
+      "enable_keep": true,
+      "enable_follow": false,
+      "enable_left_change": false,
+      "enable_right_change": false,
+      "enable_avoid": true,
+      "enable_stop": false,
+      "enable_emergency_stop": false,
+      "planned_stop": false,
+      "force_stop": false,
+      "emergency_stop": false,
+      "forbid_left_change": true,
+      "forbid_right_change": true,
+      "desired_speed": 13.88888888888889,
+      "has_max_speed": true,
+      "max_speed": 13.88888888888889,
+      "has_stop_target": false,
+      "stop_x": 0.0,
+      "stop_y": 0.0,
+      "target_link_id": "",
+      "candidate_link_ids": [],
+      "keep_score": 70.0,
+      "follow_score": -1000000.0,
+      "left_change_score": -1000000.0,
+      "right_change_score": -1000000.0,
+      "avoid_score": 90.0,
+      "stop_score": -1000000.0,
+      "emergency_stop_score": -1000000.0,
+      "decision_reason": "highest_enabled_score",
+      "hard_rule_reason": "no_hard_constraint",
+      "current_link_id": "A2256W000213",
+      "route_required_link_id": "A2256W000213",
+      "ego_s": 311.50607571164517,
+      "ego_d": -0.010129607946736814,
+      "ego_speed": 0.0,
+      "vehicle_state_source": 1,
+      "vehicle_state_valid": true,
+      "has_front_vehicle": false,
+      "front_gap": 1000000000.0,
+      "front_relative_speed": 0.0,
+      "front_ttc": 1000000000.0,
+      "left_lane_safe": false,
+      "right_lane_safe": false,
+      "left_front_gap": 1000000000.0,
+      "left_rear_gap": 1000000000.0,
+      "right_front_gap": 1000000000.0,
+      "right_rear_gap": 1000000000.0,
+      "has_stop_line": true,
+      "distance_to_stop_line": 4.400022430015326,
+      "intersection_approach_active": false,
+      "intersection_approach_activation_distance": 1.5,
+      "intersection_approach_speed_limit": 6.944444444444445,
+      "traffic_light_id": "C1256W000091",
+      "traffic_light_state": 3,
+      "traffic_light_raw_label": "green",
+      "traffic_light_recently_visible": true,
+      "has_required_movement": true,
+      "required_movement": 1,
+      "related_signal": "straight",
+      "signal_controlled_link_id": "A2256W000222",
+      "distance_to_signal_movement": 4.400022430015326,
+      "pedestrian_risk": false,
+      "static_obstacle_ahead": true,
+      "avoidance_object_id": 99,
+      "emergency_risk": false,
+      "min_ttc": 1000000000.0,
+      "predicted_front_ttc": 1000000000.0,
+      "required_deceleration": 0.0
+    }
+  }
+]

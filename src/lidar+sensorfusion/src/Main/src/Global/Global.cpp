@@ -962,7 +962,12 @@ LiDARTracking st_Tracking = {
     1.0f,     // f32_COST_W_IOU
     0.5f,     // f32_COST_W_DIR 얘는 사실상 안쓰는 중(헤딩에 대한 가중치)
     3.0f,      // f32_COST_THRESHOLD (10 m was permissive enough to swap nearby tracks)
-    9999.0f   // f32_COST_INF
+    9999.0f,  // f32_COST_INF
+    true,     // b_UseMapAssociation
+    0.20f,    // f32_ContinuityBonus
+    0.60f,    // f32_DuplicateCenterDistance
+    0.35f,    // f32_DuplicateIouThreshold
+    0.45f     // f32_MergedTrackRetireDistance
 };
 
 ros::Time ts_RawTime(0,0);

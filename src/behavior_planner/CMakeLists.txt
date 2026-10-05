@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.0.2)
 project(behavior_planner)
 
 add_compile_options(-std=c++17 -Wall -Wextra)
-find_package(catkin REQUIRED COMPONENTS asmc_msgs roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_generation)
+find_package(catkin REQUIRED COMPONENTS planning_inputs asmc_msgs roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_generation)
 find_package(yaml-cpp REQUIRED)
 
 add_message_files(FILES UrbanFeatureDebug.msg)
 generate_messages(DEPENDENCIES std_msgs)
 
-catkin_package(CATKIN_DEPENDS asmc_msgs roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_runtime)
+catkin_package(CATKIN_DEPENDS planning_inputs asmc_msgs roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_runtime)
 # Preserve the requested src/<area> layout while exposing conventional
 # behavior_planner/<area>/... include paths to this target.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -19,6 +19,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/include ${catkin_INCLUDE_DIRS} $
 
 set(BEHAVIOR_NODE_SOURCES
   src/main.cpp src/node/behavior_node.cpp src/node/morai_msg_converter.cpp
+  src/node/detected_msg_converter.cpp
   src/map/mgeo_loader.cpp src/map/route_manager.cpp
   src/feature/feature_builder.cpp src/feature/object_projector.cpp
   src/rule/hard_rule_filter.cpp
@@ -52,6 +53,35 @@ catkin_install_python(PROGRAMS
 install(DIRECTORY launch src/config web DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
+  add_executable(roundabout_transaction_test test/roundabout_transaction_test.cpp
+    src/decision/fsm.cpp src/context/v2_command_manager.cpp
+    src/feature/feature_builder.cpp src/feature/object_projector.cpp
+    src/map/mgeo_loader.cpp src/map/route_manager.cpp
+    src/decision/behavior_decision.cpp src/decision/behavior_scorer.cpp
+    src/rule/hard_rule_filter.cpp)
+  add_dependencies(roundabout_transaction_test ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(roundabout_transaction_test ${catkin_LIBRARIES} yaml-cpp)
+  add_test(NAME roundabout_transaction_test COMMAND roundabout_transaction_test)
+
+  catkin_add_gtest(fsm_command_binding_test
+    test/fsm_command_binding_test.cpp
+    src/decision/fsm.cpp)
+  if(TARGET fsm_command_binding_test)
+    target_include_directories(fsm_command_binding_test PRIVATE
+      ${CMAKE_CURRENT_BINARY_DIR}/include)
+  endif()
+
+  catkin_add_gtest(detected_msg_converter_test
+    test/detected_msg_converter_test.cpp
+    src/node/detected_msg_converter.cpp)
+  if(TARGET detected_msg_converter_test)
+    add_dependencies(detected_msg_converter_test
+      ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+    target_include_directories(detected_msg_converter_test PRIVATE
+      ${CMAKE_CURRENT_BINARY_DIR}/include ${catkin_INCLUDE_DIRS})
+    target_link_libraries(detected_msg_converter_test ${catkin_LIBRARIES})
+  endif()
+
   catkin_add_gtest(behavior_logic_test
     test/behavior_logic_test.cpp
     src/context/msg_converter.cpp
@@ -82,6 +112,24 @@ if(CATKIN_ENABLE_TESTING)
     target_compile_definitions(route_signal_movement_test PRIVATE
       BEHAVIOR_PLANNER_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(route_signal_movement_test
+      ${catkin_LIBRARIES} yaml-cpp)
+  endif()
+
+  catkin_add_gtest(feature_builder_avoid_test
+    test/feature_builder_avoid_test.cpp
+    src/map/mgeo_loader.cpp
+    src/map/route_manager.cpp
+    src/feature/feature_builder.cpp
+    src/feature/object_projector.cpp
+    src/global/utils.cpp)
+  if(TARGET feature_builder_avoid_test)
+    add_dependencies(feature_builder_avoid_test
+      ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+    target_include_directories(feature_builder_avoid_test PRIVATE
+      ${CMAKE_CURRENT_BINARY_DIR}/include ${catkin_INCLUDE_DIRS})
+    target_compile_definitions(feature_builder_avoid_test PRIVATE
+      BEHAVIOR_PLANNER_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(feature_builder_avoid_test
       ${catkin_LIBRARIES} yaml-cpp)
   endif()
 endif()

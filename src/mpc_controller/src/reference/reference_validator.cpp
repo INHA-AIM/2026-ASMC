@@ -6,9 +6,9 @@
 
 namespace {
 
-bool AllFinite(double a, double b, double c, double d, double e) {
+bool AllFinite(double a, double b, double c, double d, double e, double f) {
     return std::isfinite(a) && std::isfinite(b) && std::isfinite(c) &&
-           std::isfinite(d) && std::isfinite(e);
+           std::isfinite(d) && std::isfinite(e) && std::isfinite(f);
 }
 
 }  // namespace
@@ -41,7 +41,8 @@ ReferenceValidationResult ValidateReference(const ReferencePath& reference,
     }
     const std::size_t n = reference.size();
     if (reference.y_ref.size() != n || reference.yaw_ref.size() != n ||
-        reference.v_ref.size() != n || reference.k_ref.size() != n) {
+        reference.v_ref.size() != n || reference.a_ref.size() != n ||
+        reference.k_ref.size() != n) {
         result.status = ReferenceValidationStatus::SIZE_MISMATCH;
         return result;
     }
@@ -85,9 +86,10 @@ ReferenceValidationResult ValidateReference(const ReferencePath& reference,
         const double y = reference.y_ref[i];
         const double yaw = reference.yaw_ref[i];
         const double v = reference.v_ref[i];
+        const double a = reference.a_ref[i];
         const double k = reference.k_ref[i];
 
-        if (!AllFinite(x, y, yaw, v, k)) {
+        if (!AllFinite(x, y, yaw, v, a, k)) {
             result.status = ReferenceValidationStatus::NON_FINITE;
             result.failed_index = i;
             return result;

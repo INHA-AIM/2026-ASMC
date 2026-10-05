@@ -13,8 +13,7 @@
 #include "../FrameFilter/FrameFilter.hpp"
 
 class MotionClassifier;
-
-void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
+bool LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
                   const GPS_IMU& st_GPSIMU,
                   LiDAR& st_LiDAR,
                   MotionClassifier& motion_classifier);

@@ -14,12 +14,15 @@ mpc:
   steering_curvature_gain: 0.844
 
 cost:
-  path_error: 6.0
+  # Structural A/B baseline: keep the former lateral tracking strength while
+  # reducing only longitudinal spatial lag. These are not final MORAI tuning.
+  contour_error: 6.0
+  lag_error: 0.5
   heading_error: 3.0      # 6.0→3.0: 과도한 heading 보정이 오버슈트 유발
   speed_error: 2.0        # 3.0→2.0: 급정거 방지
   control: 1.25            # 2.0→1.0: steer effort 페널티 완화
   control_rate: 100.0     # 90~110 사이의 값으로 조절해야함.
-  control_rate_accel: 4.5
+  control_rate_accel: 2.5
   terminal: 8.0
 
 solver:

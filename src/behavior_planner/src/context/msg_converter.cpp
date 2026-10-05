@@ -47,6 +47,7 @@ asmc_msgs::BehaviorContext MsgConverter::toMsg(
   message.command_id = command_id;
   message.valid = std::isfinite(context.timestamp) && context.timestamp > 0.0;
   switch (context.selected_behavior) {
+    case BehaviorType::MERGE: message.selected_behavior = asmc_msgs::BehaviorContext::MERGE; break;
     case BehaviorType::KEEP: message.selected_behavior = asmc_msgs::BehaviorContext::KEEP; break;
     case BehaviorType::FOLLOW: message.selected_behavior = asmc_msgs::BehaviorContext::FOLLOW; break;
     case BehaviorType::LEFT_CHANGE: message.selected_behavior = asmc_msgs::BehaviorContext::LEFT_CHANGE; break;
@@ -136,10 +137,18 @@ UrbanFeatureDebug MsgConverter::toDebugMsg(
   message.right_rear_gap = feature.surrounding.right_rear_gap;
   message.has_stop_line = feature.signal.has_stop_line;
   message.distance_to_stop_line = feature.signal.distance_to_stop_line;
+  message.intersection_approach_active =
+      context.hard.intersection_approach_active;
+  message.intersection_approach_activation_distance =
+      context.hard.intersection_approach_activation_distance;
+  message.intersection_approach_speed_limit =
+      context.hard.intersection_approach_speed_limit;
   message.traffic_light_id = feature.signal.traffic_light_id;
   message.traffic_light_state =
       static_cast<uint8_t>(feature.signal.light_state);
   message.traffic_light_raw_label = feature.signal.raw_label;
+  message.traffic_light_recently_visible =
+      feature.signal.recently_visible;
   message.has_required_movement = feature.signal.has_required_movement;
   message.required_movement =
       static_cast<uint8_t>(feature.signal.required_movement);
@@ -163,3 +172,4 @@ UrbanFeatureDebug MsgConverter::toDebugMsg(
 }
 
 }  // namespace behavior_planner
+

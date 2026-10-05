@@ -35,6 +35,11 @@ bool CheckZOverlap(const ZRange& a, const ZRange& b,
 bool CheckConvexPolygonOverlapSAT(const Polygon2D& a, const Polygon2D& b,
                                   double epsilon = 1e-9);
 
+// 두 유효 볼록 다각형 경계 사이의 최단 XY 거리. 겹치거나 접하면 0이며,
+// 유효하지 않은 입력도 안전 우선으로 0을 반환한다.
+double ConvexPolygonDistance(const Polygon2D& a, const Polygon2D& b,
+                             double epsilon = 1e-9);
+
 // Applies constant-velocity XY translation. Z and relative corner geometry
 // remain unchanged. Negative time is allowed as mathematical back-projection.
 Corners8 TranslateCorners(const Corners8& corners, double vx, double vy,

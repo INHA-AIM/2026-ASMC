@@ -117,6 +117,15 @@ bool RouteManager::projectEgo(double x, double y, double* out_s, double* out_d,
   return true;
 }
 
+bool RouteManager::findStopLineByNode(const std::string& node_id, StopLineInfo* out) const {
+  if (!out) return false;
+  for (const auto& stop : stops_) if (stop.valid && stop.node_id == node_id) {
+    *out = stop;
+    return true;
+  }
+  return false;
+}
+
 bool RouteManager::findNextStopLine(double ego_s,
                                     StopLineInfo* out_stop_line) const {
   for (const StopLineInfo& stop : stops_) {
@@ -126,6 +135,55 @@ bool RouteManager::findNextStopLine(double ego_s,
     }
   }
   return false;
+}
+
+bool RouteManager::findNextSignalizedStopLine(
+    double ego_s, double max_distance, StopLineInfo* out_stop_line,
+    double* out_distance) const {
+  if (!out_stop_line || !out_distance || !std::isfinite(ego_s) ||
+      !std::isfinite(max_distance) || max_distance < 0.0) {
+    return false;
+  }
+  // stops_ contains only stop-line nodes that are actual end nodes of the
+  // configured route links. Requiring traffic_light_id excludes unrelated
+  // stop marks without coupling map association to camera visibility.
+  for (const StopLineInfo& stop : stops_) {
+    if (!stop.valid || stop.traffic_light_id.empty() ||
+        !std::isfinite(stop.route_s) || stop.route_s < ego_s) {
+      continue;
+    }
+    const double distance = stop.route_s - ego_s;
+    if (distance > max_distance) return false;
+    *out_stop_line = stop;
+    *out_distance = distance;
+    return true;
+  }
+  return false;
+}
+
+bool RouteManager::findPreviousSignalizedStopLine(
+    double ego_s, StopLineInfo* out_stop_line, double* out_distance) const {
+  if (!out_stop_line || !out_distance || !std::isfinite(ego_s)) {
+    return false;
+  }
+
+  // stops_ is ordered by route_s. Keep the nearest signalized stop line at
+  // or behind ego so the speed cap can remain active for a short, explicit
+  // post-intersection zone without changing ownership of the next stop line.
+  const StopLineInfo* previous = nullptr;
+  for (const StopLineInfo& stop : stops_) {
+    if (!stop.valid || stop.traffic_light_id.empty() ||
+        !std::isfinite(stop.route_s)) {
+      continue;
+    }
+    if (stop.route_s > ego_s) break;
+    previous = &stop;
+  }
+  if (!previous) return false;
+
+  *out_stop_line = *previous;
+  *out_distance = ego_s - previous->route_s;
+  return true;
 }
 
 bool RouteManager::getCurrentLinkInfo(const std::string& id,
@@ -276,3 +334,4 @@ bool RouteManager::findNextSignalMovement(
 }
 
 }  // namespace behavior_planner
+

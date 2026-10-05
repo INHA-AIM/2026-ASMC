@@ -62,12 +62,12 @@ planner:
   lane_width: 3.5   # [m] LANE_CHANGE 오프셋, "내 차선" 판정(|d|<=lane_width/2)에 사용
 
   # [s] frenet_planner_node의 planning/frequency 기본값(20Hz)과 동일하게
-  # 유지한다. target speed recovery rate limiter(Phase 2)가 사용하는
-  # replanning 주기이며, path_generator/dt(trajectory 샘플 간격, 아래)와는
-  # 다른 값이다 - 절대 섞어 쓰지 않는다 (fix/yuntae-frenet-speed-continuity).
+  # 유지한다. normal KEEP SpeedProfiler가 jerk/acceleration을
+  # 적분하는 replanning 주기이며, path_generator/dt(trajectory
+  # 샘플 간격, 아래)와는 다른 값이다 - 절대 섞어 쓰지 않는다.
   replanning_period_s: 0.05
-  # [m/s^2] target speed가 이전 cycle보다 증가하는 방향에만 적용하는 초기
-  # safety rate limit. 최종 MORAI tuning 값이 아니다.
+  # [m/s^2] normal KEEP SpeedProfiler의 양의 가속도 한계.
+  # 최종 MORAI tuning 값이 아니다.
   max_target_speed_accel: 2.0
 
   # --- Reference line 구축/조회 (Reference/Reference.cpp) ---------
@@ -107,7 +107,7 @@ planner:
   # 연속 곡률-속도 관계(Speed/CurveSpeed.cpp)만 쓰고, 이산 curve_vel_*/
   # curve_th_* 문턱값은 쓰지 않는다(사용처 없음 확인 후 제거, 2026 리팩토링).
   curve_speed:
-    target_vel: 13.0
+    target_vel: 14.5
     # [m] 속도 기반 필요 제동거리에 더해지는 추가 곡률 preview 거리.
     curve_lookahead_m: 27.0
     # 횡가속도 한계의 80%만 사용(여유폭 확보). v_curve = sqrt(max_lateral_accel
@@ -134,6 +134,7 @@ planner:
 
   # --- AVOID: FSM이 지정한 대상의 유효성 검증 범위와 lateral 회피 ---
   avoid:
+    bypass_speed_cap: 4.0     # [m/s] 10.8 km/h; map-aware bypass only
     detection_distance: 120.0 # [m] KEEP의 8 s reactive horizon보다 넓게 확보해 Behavior/AVOID 사이의 blind band를 없앤다
     avoid_offset: 5.0         # [m] 회피 시 lateral_d1 격자를 밀어낼 크기
     # [m] legacy geometry 기반(target pose 없음) target_d 계산에서 자차/장애물
@@ -167,6 +168,12 @@ planner:
     # PREPARE에서 좌/우 후보 비용이 동률일 때 비선호 방향에 더하는 미세
     # tie-break 가중치.
     direction_tiebreak_cost: 1e-3
+    # 동일 장애물이 프레임 사이에 새 tracker ID를 받더라도, 직전 위치/크기와
+    # 공간적으로 유일하게 맞는 관측이면 진행 중인 AVOID target으로 재연결한다.
+    spatial_reconnect_enabled: true
+    reconnect_max_longitudinal_delta: 2.5 # [m]
+    reconnect_max_lateral_delta: 1.0      # [m]
+    reconnect_max_size_delta: 1.5         # [m]
 
   # --- LANE_CHANGE: FSM이 target_pose_map으로 지정한 인접 차로 목표로의
   # 횡이동 완료 판정(§17). 초기 개발값이며 MORAI 튜닝 대상이다.
@@ -226,7 +233,7 @@ planner:
     stop_buffer: 3.5           # [m] 정지 목표 s=882.26 (자차 반길이+안전마진+추가 여유)
     conflict_radius: 6.0       # [m] 순환차 곡선예측의 충돌점 최근접 허용거리
     min_object_speed: 0.5      # [m/s] 이보다 느린 객체는 순환 차량에서 제외
-    min_front_time_gap: 1.5    # [s] 선행 순환차 통과 후 최소 여유
+    min_front_time_gap: 1.0    # [s] 선행 순환차 통과 후 최소 여유
     min_rear_time_gap: 2.0     # [s] Ego 진입 후 후속 순환차까지 최소 여유
     ego_clear_time: 1.5        # [s] Ego의 conflict zone 통과 시간
     max_wait_time: 10.0        # [s] 진입 gap 탐색 시간범위
@@ -382,3 +389,20 @@ planner:
 # repository 루트의 R_KR_PG_KATRI까지는 항상 3단계 위다
 # (src/frenet_planner/src -> src/frenet_planner -> src -> repo root).
 waypoint_file: "../../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+
+
+# Pinned ahnsh03 main 1ce434d: keep global reference; constrain AVOID only.
+avoid_hd_map:
+  enabled: true
+
+# Both planners enabled together for MORAI driving validation.
+# A single map-defined entry; highway MERGE and lane changes stay separate.
+roundabout_merge:
+  enabled: true
+  source_link: A2256W000148
+  target_link: A2256W000146
+  stop_node: A1256W000709
+  conflict_links: [A2256W000134, A2256W000151]
+  speed_cap_mps: 6.944444444444445
+  preview_distance_m: 45.0
+  max_horizon_s: 10.0

@@ -4,7 +4,7 @@
 import math
 
 import rospy
-from asmc_msgs.msg import DetectedObject, DetectedObjectArray
+from planning_inputs.msg import DetectedObject, DetectedObjectArray
 from geometry_msgs.msg import Point
 from morai_msgs.msg import ObjectStatus, ObjectStatusList
 
@@ -12,7 +12,7 @@ from morai_msgs.msg import ObjectStatus, ObjectStatusList
 class MoraiObjectsAdapter:
     def __init__(self):
         input_topic = rospy.get_param("~input_topic", "/Object_topic")
-        output_topic = rospy.get_param("~output_topic", "/perception/objects")
+        output_topic = rospy.get_param("~output_topic", "/planning/objects")
         self._publisher = rospy.Publisher(
             output_topic, DetectedObjectArray, queue_size=1
         )

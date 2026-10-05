@@ -38,17 +38,41 @@ struct ResolvedTrafficLightSample {
 ResolvedTrafficLightSample ResolveTrafficLightSample(
     const TrafficLightSample& typed, const TrafficLightSample& legacy);
 
+bool IsDetectedTrafficLightLabel(const std::string& label);
+
+// Stores the latest classifier observation independently of ROS time. Tests
+// inject deterministic timestamps; the ROS provider supplies SteadyTime.
+class TrafficLightObservationState {
+ public:
+  void update(const std::string& raw_label, double now_seconds);
+  TrafficLightState getState(SignalMovement movement, double now_seconds,
+                             double stale_seconds) const;
+  std::string getRawLabel(double now_seconds, double stale_seconds) const;
+  bool hasRecentDetection(double now_seconds, double stale_seconds,
+                          double detection_grace_seconds) const;
+
+ private:
+  bool sourceFresh(double now_seconds, double stale_seconds) const;
+
+  std::string latest_label_ = "not_detected";
+  double received_at_seconds_ = 0.0;
+  double last_valid_detection_at_seconds_ = 0.0;
+  bool received_ = false;
+  bool has_valid_detection_ = false;
+};
+
 class RosTrafficLightProvider : public TrafficLightProvider {
  public:
   RosTrafficLightProvider(ros::NodeHandle& nh, const std::string& topic,
-                          double stale_seconds);
+                          double stale_seconds, double detection_grace_seconds = 1.0);
   RosTrafficLightProvider(ros::NodeHandle& nh,
                           const std::string& typed_topic,
                           const std::string& legacy_topic,
-                          double stale_seconds);
+                          double stale_seconds, double detection_grace_seconds = 1.0);
   TrafficLightState getState(
       const std::string& traffic_light_id,
       SignalMovement movement = SignalMovement::UNKNOWN) const override;
+  bool hasRecentDetection(const std::string&) const override;
   std::string getRawLabel() const override;
 
  private:
@@ -65,6 +89,9 @@ class RosTrafficLightProvider : public TrafficLightProvider {
   ros::SteadyTime typed_received_at_;
   ros::SteadyTime legacy_received_at_;
   double stale_seconds_ = 1.0;
+  double detection_grace_seconds_ = 1.0;
+  TrafficLightObservationState typed_observation_;
+  TrafficLightObservationState legacy_observation_;
   bool typed_received_ = false;
   bool typed_valid_ = false;
   bool typed_stale_ = false;
@@ -72,3 +99,4 @@ class RosTrafficLightProvider : public TrafficLightProvider {
 };
 
 }  // namespace behavior_planner
+

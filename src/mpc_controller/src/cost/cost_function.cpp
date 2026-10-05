@@ -1,18 +1,45 @@
 #include "cost_function.hpp"
+
+#include <cmath>
+
 #include "math/utils.hpp"
 #include "model/vehicle_model.hpp"
 
 // ========================================
-// 경로 추종 오차 (수직 거리 ≈ closest point 까지 거리)
+// Reference-frame tracking geometry.
+//
+//   tangent = [ cos(psi_r), sin(psi_r)]
+//   normal  = [-sin(psi_r), cos(psi_r)]  (positive to reference left)
+//
+// lag is the position error along the tangent and contour is the position
+// error along the left normal.  Keeping this transform separate matters only
+// when the two components receive different weights: with equal weights the
+// rotation preserves dx^2 + dy^2 exactly.
 // ========================================
-double computePathErrorCost(const MPCState& state, const ReferencePath& ref,
-                            size_t ref_idx, double weight)
+TrackingError computeTrackingError(const MPCState& state,
+                                   const ReferencePath& ref,
+                                   size_t ref_idx)
 {
-    if (ref.empty()) return 0.0;
+    TrackingError error;
+    if (ref.empty()) return error;
     if (ref_idx >= ref.size()) ref_idx = ref.size() - 1;
-    double dx = state.x - ref.x_ref[ref_idx];
-    double dy = state.y - ref.y_ref[ref_idx];
-    return weight * (dx*dx + dy*dy);
+    const double dx = state.x - ref.x_ref[ref_idx];
+    const double dy = state.y - ref.y_ref[ref_idx];
+    const double cos_yaw = std::cos(ref.yaw_ref[ref_idx]);
+    const double sin_yaw = std::sin(ref.yaw_ref[ref_idx]);
+    error.lag = cos_yaw * dx + sin_yaw * dy;
+    error.contour = -sin_yaw * dx + cos_yaw * dy;
+    return error;
+}
+
+double computeContourErrorCost(const TrackingError& error, double weight)
+{
+    return weight * error.contour * error.contour;
+}
+
+double computeLagErrorCost(const TrackingError& error, double weight)
+{
+    return weight * error.lag * error.lag;
 }
 
 // ========================================
@@ -39,14 +66,18 @@ double computeSpeedErrorCost(const MPCState& state, double v_ref, double weight)
 // ========================================
 // 제어 입력 크기
 //   steer/accel 을 분리해서 weight 적용.
-//   steer는 delta_ff(curvature feed-forward) 대비 잔차를 벌한다 -
-//   delta_ff=0.0(기본값, 직선)이면 기존 delta^2와 동일하다.
+//   steer는 delta_ff(curvature feed-forward), acceleration은 Frenet의
+//   accel_ref 대비 잔차를 벌한다. 두 reference가 0이면 기존 절대 입력
+//   제곱 semantics와 동일하다.
 // ========================================
 double computeControlEffortCost(const MPCControl& u, double w_steer,
-                                double w_accel, double delta_ff)
+                                double w_accel, double delta_ff,
+                                double accel_ref)
 {
     const double steer_residual = u.delta - delta_ff;
-    return w_steer * steer_residual * steer_residual + w_accel * u.accel * u.accel;
+    const double accel_residual = u.accel - accel_ref;
+    return w_steer * steer_residual * steer_residual +
+           w_accel * accel_residual * accel_residual;
 }
 
 // ========================================
@@ -69,7 +100,7 @@ double computeControlRateCost(const MPCControl& u_prev, const MPCControl& u_cur,
 // dt 정규화:
 //   mpc_params.yaml의 모든 stage 가중치는 kTunedDt(=0.1, 최초 튜닝 시점의 dt)를
 //   기준으로 맞춰져 있다. horizon/dt를 바꿔도 물리적으로 같은 궤적이면 cost 균형이
-//   유지되도록, "적분류" 항(path/heading/speed/effort)은 dt에 비례, "미분류" 항
+//   유지되도록, "적분류" 항(contour/lag/heading/speed/effort)은 dt에 비례, "미분류" 항
 //   (control_rate, Δu/Δt의 이산 근사)은 dt에 반비례로 스케일한다.
 //   (dt=kTunedDt인 경우 두 스케일 모두 1.0이라 기존 튜닝 값과 완전히 동일하게 동작)
 // ========================================
@@ -103,7 +134,12 @@ CostBreakdown computeCostBreakdown(
 
         // R==0 분기는 solveMPC가 ref.empty()를 미리 걸러서 실질적으로 도달하지 않음.
         double v_target = (R > 0) ? ref.v_ref[ref_idx] : 0.0;
-        bd.path    += dt_scale * computePathErrorCost   (st, ref, ref_idx, params.weight_path_error);
+        const TrackingError tracking =
+            computeTrackingError(st, ref, ref_idx);
+        bd.contour += dt_scale * computeContourErrorCost(
+            tracking, params.weight_contour_error);
+        bd.lag += dt_scale * computeLagErrorCost(
+            tracking, params.weight_lag_error);
         bd.heading += dt_scale * computeHeadingErrorCost(st, ref, ref_idx, params.weight_heading_error);
         bd.speed   += dt_scale * computeSpeedErrorCost  (st, v_target,     params.weight_speed_error);
 
@@ -116,27 +152,49 @@ CostBreakdown computeCostBreakdown(
         // 자체를 벌하지 않기 위함(Commit C). 직선(k_ref=0)에서는
         // delta_ff=0이라 기존 delta^2와 동일하게 동작한다.
         const double k_ref_i = (R > 0) ? ref.k_ref[ref_idx] : 0.0;
+        const double raw_a_ref_i =
+            (R > 0 && ref.a_ref.size() > ref_idx) ? ref.a_ref[ref_idx] : 0.0;
+        const double a_ref_i = clip(
+            raw_a_ref_i, params.accel_min, params.accel_max);
         const double delta_ff = SteeringFeedforward(
             k_ref_i, params.wheelbase, params.steering_max,
             params.steering_curvature_gain);
-        bd.control += dt_scale * computeControlEffortCost(u_cur,
-                                          params.weight_control,
-                                          params.weight_control * 0.5,
-                                          delta_ff);
+        const double accel_effort_weight = params.weight_control * 0.5;
+        bd.control += dt_scale * computeControlEffortCost(
+            u_cur, params.weight_control, accel_effort_weight, delta_ff,
+            a_ref_i);
+        const double accel_residual = u_cur.accel - a_ref_i;
+        bd.acceleration_control += dt_scale * accel_effort_weight *
+            accel_residual * accel_residual;
 
         const MPCControl& u_prev = (i == 0) ? prev_control : controls[i-1];
         bd.control_rate += rate_scale * computeControlRateCost(u_prev, u_cur,
                                           params.weight_control_rate,
                                           params.weight_control_rate_accel);
+        const double accel_delta = u_cur.accel - u_prev.accel;
+        bd.acceleration_rate += rate_scale *
+            params.weight_control_rate_accel * accel_delta * accel_delta;
     }
 
-    // Terminal cost (마지막 stage와 동일한 시간 인덱스: N-1)
+    // Terminal cost (마지막 stage와 동일한 시간 인덱스: N-1).
+    // Preserve the stage contour/lag ratio instead of reintroducing a 1:1
+    // Euclidean position penalty at the end of the horizon.  The historical
+    // terminal weight remains the contour coefficient; heading and speed keep
+    // their existing 0.5/0.2 multipliers.
     if (S > 0 && R > 0) {
         const MPCState& st = states.back();
         const size_t ref_idx = std::min(N > 0 ? N - 1 : 0, R - 1);
 
         double v_target = ref.v_ref[ref_idx];
-        bd.terminal += computePathErrorCost   (st, ref, ref_idx, params.weight_terminal);
+        const TrackingError tracking =
+            computeTrackingError(st, ref, ref_idx);
+        const double lag_ratio = params.weight_contour_error > 0.0
+            ? params.weight_lag_error / params.weight_contour_error
+            : 0.0;
+        bd.terminal += computeContourErrorCost(
+            tracking, params.weight_terminal);
+        bd.terminal += computeLagErrorCost(
+            tracking, params.weight_terminal * lag_ratio);
         bd.terminal += computeHeadingErrorCost(st, ref, ref_idx, params.weight_terminal * 0.5);
         bd.terminal += computeSpeedErrorCost  (st, v_target,     params.weight_terminal * 0.2);
     }

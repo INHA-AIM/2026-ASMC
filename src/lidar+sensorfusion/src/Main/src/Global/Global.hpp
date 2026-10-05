@@ -2,6 +2,7 @@
 #define GLOBAL_HPP
 
 #include <ros/ros.h>
+#include <Lidar/ImuRansac/GroundEvidence.hpp>
 #include <iostream>
 #include <algorithm>
 #include <cmath>
@@ -496,6 +497,14 @@ struct LiDARClustering
     bool b_Enabled;
     float32 f32_Eps;
     int32 s32_MinPoints;
+    // VLP-16은 거리가 멀수록 인접 점 간격이 커진다. 고정 반경 하나로
+    // 전 구간을 묶으면 근거리 과병합 또는 원거리 과분할 중 하나가 생기므로
+    // 점의 수평 거리에 따라 탐색 반경을 선형 보간한다.
+    bool b_Adaptive;
+    float32 f32_AdaptiveNearRange;
+    float32 f32_AdaptiveFarRange;
+    float32 f32_AdaptiveNearEps;
+    float32 f32_AdaptiveFarEps;
 };
 
 struct LiDARUDP 
@@ -519,6 +528,7 @@ struct LiDARObjectInfo
 
     pcl::PointIndices* objPoints;
     pcl::PointCloud<pcl::PointXYZI> pcl_ClusterPoints;
+    ObjectGroundEvidence ground_evidence;
 	// float64 f64_TsPrev;
     uint16 u16_Idx;
     float32 f32_Yaw;
@@ -572,7 +582,13 @@ struct LiDARObjectInfo
     float32 f32_DecisionVxKPH = 0.0f;
     float32 f32_DecisionVyKPH = 0.0f;
     float32 f32_DecisionSpeedKPH = 0.0f;
+    // Planner-facing velocity after motion-state gating. STATIC is zero;
+    // PENDING blends toward consistent candidate samples instead of either
+    // dropping motion completely or exposing a one-frame raw spike.
+    float32 f32_PlannerVxKPH = 0.0f;
+    float32 f32_PlannerVyKPH = 0.0f;
     float32 f32_MapDisplacementSpeedKPH = 0.0f;
+    float32 f32_CorrectedDisplacementSpeedKPH = 0.0f;
     float32 f32_MotionVelocityJumpKPH = 0.0f;
     int32 s32_MotionState = 0;
     int32 s32_MotionValidObservations = 0;
@@ -617,6 +633,13 @@ struct LiDARTracking
 	float32 f32_COST_W_DIR; // Dir 비용 가중치
 	float32 f32_COST_THRESHOLD; // 게이팅 임계값: 이 값보다 cost가 크면 매칭 후보에서 제외
 	float32 f32_COST_INF; 	// 매칭 불가 표시용 무한대 값
+	// 연관은 자차 기준 좌표 대신 map 중심을 사용한다. 아래 값은 OBB가 같은
+	// XY 점유를 중복 검출했을 때 현재 프레임에서 합치는 보수적 조건이다.
+	bool b_UseMapAssociation;
+	float32 f32_ContinuityBonus;
+	float32 f32_DuplicateCenterDistance;
+	float32 f32_DuplicateIouThreshold;
+	float32 f32_MergedTrackRetireDistance;
 };
 
 struct LiDAR

@@ -12,7 +12,10 @@
 // 쓰이지 않기 때문이다. ControlProcess의 x0(현재 상태)는 별도로 최신
 // /vehicle/state를 ConvertVehicleState로 변환해서 만든다.
 struct PlannedPath {
-    std::vector<double> x, y, yaw, kappa, v, a;  // frenet_planner의 CartesianPath와 동일 필드
+    std::vector<double> x, y, yaw, kappa, v, a;
+    // a는 Frenet CartesianPath의 kinematic/diagnostic acceleration을 그대로
+    // 보존한다. MPC actuator reference는 이 배열이 아니라 ToReferencePath가
+    // 최종 destination grid의 v_ref를 미분해 만드는 ReferencePath::a_ref다.
     double dt = 0.0;      // 샘플 간격 [s] (frenet_planner.sample_dt())
     double d = 0.0;       // 진단용: 차선 중앙 기준 횡방향 오프셋
     double d_dot = 0.0;   // 진단용: 횡방향 속도

@@ -37,6 +37,7 @@ bool FrenetPlanner::CommitAvoid(const AvoidPrepareResult& result) {
 void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     v2_avoidance_.committed = true;
     v2_avoidance_.completed = false;
+    v2_avoidance_.escape_recovery_active = false;
     v2_avoidance_.maneuver_progress = 0.0;
     // 이 시점에 처음 lock한다. PREPARE에서는 사이클마다 좌/우가 바뀔 수
     // 있으므로 잠그지 않았다(계약 12.7.3절).
@@ -44,6 +45,8 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     // 진행률 기준점. maneuver_progress를 (start_d -> target_d) 구간으로
     // 계산한다(D6-3c).
     v2_avoidance_.start_d = last_d_;
+    v2_avoidance_.map_lateral_origin_d = last_d_;
+    v2_avoidance_.map_lateral_started = false;
     // AVOID를 멀리서 확보/COMMIT해도 곧바로 옆으로 흐르지 않는다.
     // TRACKING에서 global path를 유지하다 장애물 기준 진입거리에 도달하면
     // SHIFT로 넘어간다.
@@ -55,20 +58,40 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     // target speed를 써서 저속 차량도 고속 기준으로 너무 일찍 SHIFT했다.
     const double shift_distance = EffectiveAvoidShiftStartDistance(
         result.ego_speed_mps, v2_avoidance_.start_d);
+    v2_avoidance_.map_entry_s = result.map_entry_s;
+    v2_avoidance_.map_transition_distance = result.map_transition_distance;
+    const double entry_gap = ForwardArcDistance(last_s_, result.map_entry_s, track_length);
+    v2_avoidance_.shift_entry_distance = avoid_road_map_.enabled()
+        ? initial_gap - std::max(0.0, entry_gap) : shift_distance;
     v2_avoidance_.phase = std::isfinite(initial_gap) &&
-                                  initial_gap <= shift_distance
+                                  initial_gap <= v2_avoidance_.shift_entry_distance
                               ? AvoidPhase::SHIFT
                               : AvoidPhase::TRACKING;
+    // PREPARE에서 복구 후보로만 READY가 된 transaction은 COMMIT 직후에도
+    // 같은 거리 기반 정책을 이어가야 한다. TRACKING이면 아직 복구가 필요할
+    // 단계가 아니므로 latch하지 않는다.
+    v2_avoidance_.escape_recovery_active =
+        result.escape_recovery_required &&
+        v2_avoidance_.phase == AvoidPhase::SHIFT;
+    v2_avoidance_.spatial_lateral_active =
+        result.spatial_candidate_selected &&
+        v2_avoidance_.phase == AvoidPhase::SHIFT;
 }
 
 double FrenetPlanner::EffectiveAvoidShiftStartDistance(
     double ego_speed, double ego_d) const {
+    return EffectiveAvoidShiftStartDistance(
+        ego_speed, ego_d, v2_avoidance_.target_d);
+}
+
+double FrenetPlanner::EffectiveAvoidShiftStartDistance(
+    double ego_speed, double ego_d, double target_d) const {
     const double min_distance =
         std::max(1.0, avoid_cfg_.min_shift_start_distance);
     const double max_distance =
         std::max(min_distance, avoid_cfg_.max_shift_start_distance);
     const double lateral_distance = std::fabs(
-        v2_avoidance_.target_d - (std::isfinite(ego_d) ? ego_d : 0.0));
+        target_d - (std::isfinite(ego_d) ? ego_d : 0.0));
     // Rest-to-rest quintic의 peak |d_ddot|은 대략 5.77*D/T^2다.
     // 실제 Cartesian 횡가속도 필터와 동일한 한계를 사용해 필요한 최소
     // 횡이동 시간을 구하고, 제어 응답 여유를 더한다.
@@ -84,7 +107,7 @@ double FrenetPlanner::EffectiveAvoidShiftStartDistance(
         avoid_cfg_.rear_overhang, 0.0, vehicle_shape_.length);
     const double front_extent = vehicle_shape_.length - rear_overhang;
     const double geometry_clearance =
-        front_extent + 0.5 * v2_avoidance_.obstacle_length +
+        front_extent + v2_avoidance_.obstacle_longitudinal_half_extent +
         collision_cfg_.safety_margin;
     double dynamic_distance =
         std::max(0.0, ego_speed) * shift_time + geometry_clearance;
@@ -96,11 +119,17 @@ double FrenetPlanner::EffectiveAvoidShiftStartDistance(
         dynamic_distance = std::max(
             dynamic_distance,
             LowSpeedLateralTransitionDistance(
-                ego_d, v2_avoidance_.target_d) + geometry_clearance);
+                ego_d, target_d) + geometry_clearance);
     }
     // min/max는 안전 경계로만 유지하고, 사용자가 실제 시작거리를 직접
     // 튜닝할 수 있는 signed offset은 동적 계산에 명시적으로 적용한다.
-    dynamic_distance += avoid_cfg_.shift_start_distance_offset;
+    // A negative tuning offset cannot consume the distance physically needed
+    // to move sideways and keep the front bumper clear of the observed OBB.
+    const double geometric_minimum =
+        LowSpeedLateralTransitionDistance(ego_d, target_d) + geometry_clearance;
+    dynamic_distance = std::max(
+        dynamic_distance + avoid_cfg_.shift_start_distance_offset,
+        geometric_minimum);
     return clip(dynamic_distance, min_distance, max_distance);
 }
 
@@ -117,30 +146,51 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     const double gap = ForwardArcDistance(
         ego_s, v2_avoidance_.obstacle_s, track_length);
 
+    if (v2_avoidance_.phase == AvoidPhase::TRACKING && !avoid_road_map_.enabled()) {
+        v2_avoidance_.shift_entry_distance = std::max(
+            v2_avoidance_.shift_entry_distance,
+            EffectiveAvoidShiftStartDistance(ego_speed, ego_d));
+    }
     if (!v2_avoidance_.completed &&
         v2_avoidance_.phase == AvoidPhase::TRACKING &&
         std::isfinite(gap) &&
-        gap <= EffectiveAvoidShiftStartDistance(ego_speed, ego_d)) {
+        (avoid_road_map_.enabled()
+             ? ForwardArcDistance(ego_s,v2_avoidance_.map_entry_s,track_length)<=0.0
+             : gap <= v2_avoidance_.shift_entry_distance)) {
         v2_avoidance_.phase = AvoidPhase::SHIFT;
         // 실제 SHIFT가 시작되는 횡위치를 진행률 기준으로 사용한다.
         if (std::isfinite(ego_d)) v2_avoidance_.start_d = ego_d;
     }
-    if (!v2_avoidance_.completed &&
-        v2_avoidance_.phase == AvoidPhase::SHIFT &&
-        std::isfinite(ego_d) && std::isfinite(v2_avoidance_.target_d) &&
-        std::fabs(ego_d - v2_avoidance_.target_d) <=
-            avoid_cfg_.lateral_tolerance) {
-        v2_avoidance_.phase = AvoidPhase::PASS;
-        entered_pass_this_cycle = true;
-    }
-
     // ego_s는 후륜축 위치다. 장애물을 완전히 통과했는지는 차량 반길이가
     // 아니라 후륜축에서 뒤 범퍼까지의 실제 거리로 판정해야 한다.
     const double rear_overhang = clip(
         avoid_cfg_.rear_overhang, 0.0, vehicle_shape_.length);
     const double clear_distance =
-        rear_overhang + 0.5 * v2_avoidance_.obstacle_length +
+        rear_overhang + v2_avoidance_.obstacle_longitudinal_half_extent +
         avoid_cfg_.pass_clearance;
+    const bool longitudinally_cleared =
+        std::isfinite(gap) && std::isfinite(clear_distance) &&
+        clear_distance > kProgressEpsilon && gap < -clear_distance;
+
+    // LiDAR OBB는 접근하며 보이는 면이 늘어 target_d가 바깥쪽으로 확장될
+    // 수 있다. 예전에는 그 목표 d를 끝까지 찍어야 PASS가 되어, 장애물을
+    // 이미 완전히 지난 뒤에도 SHIFT가 남아 복귀가 늦거나 margin 안에서
+    // 정지했다. 종방향으로 차체와 target OBB가 완전히 분리된 경우에는
+    // target_d 미도달과 무관하게 RETURN을 시작한다. RETURN 궤적 자체는
+    // 이후 동일한 전체 OBB 충돌 검사를 거치므로 안전 검사를 우회하지 않는다.
+    if (!v2_avoidance_.completed &&
+        v2_avoidance_.phase == AvoidPhase::SHIFT &&
+        longitudinally_cleared) {
+        v2_avoidance_.phase = AvoidPhase::RETURN;
+    } else if (!v2_avoidance_.completed &&
+               v2_avoidance_.phase == AvoidPhase::SHIFT &&
+               std::isfinite(ego_d) &&
+               std::isfinite(v2_avoidance_.target_d) &&
+               std::fabs(ego_d - v2_avoidance_.target_d) <=
+                   avoid_cfg_.lateral_tolerance) {
+        v2_avoidance_.phase = AvoidPhase::PASS;
+        entered_pass_this_cycle = true;
+    }
     // Resolver는 seam 너머 전방 target을 ego_s + forward gap의 unwrapped
     // obstacle_s로 저장한다. raw subtraction은 ego가 seam을 지난 순간 거의
     // 한 바퀴 양수가 되므로, 기존 signed arc helper로 앞/뒤 의미를 보존한다.
@@ -148,8 +198,7 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     // d=0 복귀가 끝나야 Behavior가 KEEP으로 transaction을 넘길 수 있다.
     if (!v2_avoidance_.completed && !entered_pass_this_cycle &&
         v2_avoidance_.phase == AvoidPhase::PASS &&
-        std::isfinite(gap) && std::isfinite(clear_distance) &&
-        clear_distance > kProgressEpsilon && gap < -clear_distance) {
+        longitudinally_cleared) {
         v2_avoidance_.phase = AvoidPhase::RETURN;
     }
     if (!v2_avoidance_.completed &&
@@ -159,12 +208,22 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
         v2_avoidance_.completed = true;
     }
 
+    // 복구 latch는 장애물 옆으로 이동하는 SHIFT에만 유효하다. 목표 d에
+    // PASS 이후에는 속도 경계 진동 방지용 거리 기반 generator latch만
+    // 해제한다. margin-recovery 충돌 규칙 자체는 모든 phase에서 동일하다.
+    if (v2_avoidance_.phase != AvoidPhase::SHIFT) {
+        v2_avoidance_.escape_recovery_active = false;
+    }
+    if (v2_avoidance_.phase != AvoidPhase::SHIFT &&
+        v2_avoidance_.phase != AvoidPhase::RETURN) {
+        v2_avoidance_.spatial_lateral_active = false;
+    }
+
     double progress = 0.0;
     if (v2_avoidance_.completed) {
         progress = 1.0;
     } else if (v2_avoidance_.phase == AvoidPhase::TRACKING) {
-        const double start_distance =
-            EffectiveAvoidShiftStartDistance(ego_speed, ego_d);
+        const double start_distance = v2_avoidance_.shift_entry_distance;
         const double approach_ratio = std::isfinite(gap)
             ? clip((EffectiveAvoidDetectionDistance() - gap) /
                        std::max(1.0, EffectiveAvoidDetectionDistance() -

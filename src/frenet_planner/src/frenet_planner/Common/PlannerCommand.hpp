@@ -4,6 +4,7 @@
 #define PLANNER_COMMON_PLANNER_COMMAND_HPP
 
 #include <limits>
+#include <string>
 
 #include "frenet_planner/Common/BehaviorTypes.hpp"
 
@@ -66,6 +67,7 @@ struct PlannerCommand {
 
     // MERGE 종류. v2에서는 BehaviorCommand.merge_type을 그대로 옮긴다.
     MergeType merge_type = MergeType::NONE;
+    std::string source_link_id, target_link_id;
 
     // MERGE Gap 선호 차량. FSM이 지정하지 않으면 -1이고, 그때는 planner의
     // gap selector가 자동 선택한다(계약 문서 3.3절).
@@ -184,3 +186,5 @@ struct PlannerCommand {
 };
 
 #endif  // PLANNER_COMMON_PLANNER_COMMAND_HPP
+
+

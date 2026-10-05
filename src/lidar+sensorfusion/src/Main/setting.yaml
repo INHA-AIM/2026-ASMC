@@ -167,9 +167,31 @@ LiDAR: # 라이다
       MaxZ: 3.0
   Clustering:
     Enabled: true
+    # VLP-16 point spacing grows with range. A fixed 0.5 m radius split the
+    # same obstacle into several IDs, while 1.5 m joined guardrails and nearby
+    # structures. Interpolate between these bounded radii instead.
     Eps: 0.5
     MinPoints: 5
     Threshold: 300
+    Adaptive:
+      Enabled: true
+      NearRange: 8.0
+      FarRange: 50.0
+      NearEps: 0.55
+      FarEps: 0.85
+  Tracking:
+    # Static map positions remain stable while body-frame positions move by
+    # almost 1 m per LiDAR frame at 50 km/h.
+    UseMapAssociation: true
+    DistanceWeight: 1.0
+    ShapeWeight: 1.0
+    CostThreshold: 3.0
+    ContinuityBonus: 0.20
+    # Merge only near-identical XY occupancy. This combines vertically split
+    # returns without joining adjacent road users or long guardrails.
+    DuplicateCenterDistance: 0.60
+    DuplicateIouThreshold: 0.35
+    MergedTrackRetireDistance: 0.45
 
 # LiDAR tracked OBB를 Frenet planner의 전용 객체 포트로 전달한다.
 # MORAI 기본 ObjectInfo(7505)와 raw LiDAR input(9299)은 사용하지 않는다.

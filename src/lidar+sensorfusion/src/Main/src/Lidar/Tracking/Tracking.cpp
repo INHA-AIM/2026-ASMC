@@ -1,6 +1,7 @@
 #include <Lidar/Tracking/tracking_utils.hpp>
 #include <Lidar/Kalman/kalman_utils.hpp>
 #include <iomanip>
+#include <cstdint>
 const double DISP_SPIKE = 0.60;  // 프레임 간 위치 점프(m) 스파이크 기준
 const double V_SPIKE    = 6.00;  // 속도 스파이크(m/s) 기준(≈ 21.6 km/h)
 #include <cmath>
@@ -34,6 +35,7 @@ constexpr double kPi = 3.14159265358979323846;
 constexpr double kHalfPi = 0.5 * kPi;
 constexpr double kLShapeAngleStep = kPi / 180.0;  // 1 deg
 constexpr double kClosenessMinDistance = 0.05;    // voxel leaf(0.1 m)의 절반
+constexpr double kMinimumObbSide = 0.05;          // planner OBB 유효성 하한
 constexpr std::size_t kMinLShapePoints = 10;
 constexpr double kYawFilterAlpha = 0.25;
 constexpr double kMinReliableAspectRatio = 1.20;
@@ -104,8 +106,11 @@ inline bool computeOBBAtYaw(
     const double centerV = 0.5 * (vMin + vMax);
     obb2d.cx = centerU * c - centerV * s;
     obb2d.cy = centerU * s + centerV * c;
-    obb2d.w = uMax - uMin;
-    obb2d.h = vMax - vMin;
+    // A distant object can be sampled on only one scan line.  Keep the
+    // measured center, but make the footprint non-degenerate at the same
+    // minimum accepted by PlannerObjectAdapter instead of dropping it.
+    obb2d.w = std::max(uMax - uMin, kMinimumObbSide);
+    obb2d.h = std::max(vMax - vMin, kMinimumObbSide);
     obb2d.yaw = normalizeAxisYaw(yaw);
 
     const double halfW = 0.5 * obb2d.w;
@@ -256,6 +261,182 @@ inline void stabilizeMatchedOBB(
 
 } // namespace obb_util
 
+namespace tracking_association {
+
+bool IsGroundNoiseClass(const std::string& object_class) {
+    return object_class == "noise" || object_class == "지면노이즈";
+}
+
+bool ShouldCarryPreviousClass(const LiDARObjectInfo& previous,
+                              const LiDARObjectInfo& current) {
+    // A low, sparse first return used to label an otherwise valid obstacle as
+    // ground noise for the entire lifetime of the track.  A current
+    // non-noise observation must be allowed to recover immediately.  In the
+    // opposite direction, do not let one noisy measurement downgrade an
+    // already valid UNKNOWN/vehicle/pedestrian track.
+    return !IsGroundNoiseClass(previous.str_ObjectClass) ||
+           IsGroundNoiseClass(current.str_ObjectClass);
+}
+
+float AabbIou(const LiDARObjectInfo& left, const LiDARObjectInfo& right) {
+    const float intersection_width = std::max(
+        0.0F, std::min(left.f32_MaxX, right.f32_MaxX) -
+                  std::max(left.f32_MinX, right.f32_MinX));
+    const float intersection_height = std::max(
+        0.0F, std::min(left.f32_MaxY, right.f32_MaxY) -
+                  std::max(left.f32_MinY, right.f32_MinY));
+    const float intersection = intersection_width * intersection_height;
+    const float left_area = std::max(
+        0.0F, left.f32_MaxX - left.f32_MinX) *
+        std::max(0.0F, left.f32_MaxY - left.f32_MinY);
+    const float right_area = std::max(
+        0.0F, right.f32_MaxX - right.f32_MinX) *
+        std::max(0.0F, right.f32_MaxY - right.f32_MinY);
+    const float union_area = left_area + right_area - intersection;
+    return union_area > 1e-6F ? intersection / union_area : 0.0F;
+}
+
+float ShapeAgreement(const LiDARObjectInfo& left,
+                     const LiDARObjectInfo& right) {
+    const auto side_agreement = [](float lhs, float rhs) {
+        lhs = std::max(lhs, 0.05F);
+        rhs = std::max(rhs, 0.05F);
+        return std::min(lhs, rhs) / std::max(lhs, rhs);
+    };
+    // 직사각형 OBB의 yaw 축은 90도 바뀌어도 같은 점유를 나타낼 수 있다.
+    // 긴 변/짧은 변끼리 비교해 축 교환만으로 연관이 끊기지 않게 한다.
+    const float left_long = std::max(
+        left.f32_OBB_Width, left.f32_OBB_Height);
+    const float left_short = std::min(
+        left.f32_OBB_Width, left.f32_OBB_Height);
+    const float right_long = std::max(
+        right.f32_OBB_Width, right.f32_OBB_Height);
+    const float right_short = std::min(
+        right.f32_OBB_Width, right.f32_OBB_Height);
+    return side_agreement(left_long, right_long) *
+           side_agreement(left_short, right_short);
+}
+
+bool FiniteMapCenter(const LiDARObjectInfo& object) {
+    return std::isfinite(object.f32_CoreE) &&
+           std::isfinite(object.f32_CoreN);
+}
+
+float MapCenterDistance(const LiDARObjectInfo& left,
+                        const LiDARObjectInfo& right) {
+    if (!FiniteMapCenter(left) || !FiniteMapCenter(right)) {
+        return std::numeric_limits<float>::infinity();
+    }
+    return std::hypot(
+        left.f32_CoreE - right.f32_CoreE,
+        left.f32_CoreN - right.f32_CoreN);
+}
+
+void RecomputeGeometry(LiDARObjectInfo& object) {
+    if (object.pcl_ClusterPoints.empty()) return;
+
+    float min_x = std::numeric_limits<float>::infinity();
+    float min_y = std::numeric_limits<float>::infinity();
+    float min_z = std::numeric_limits<float>::infinity();
+    float max_x = -std::numeric_limits<float>::infinity();
+    float max_y = -std::numeric_limits<float>::infinity();
+    float max_z = -std::numeric_limits<float>::infinity();
+    double sum_x = 0.0;
+    double sum_y = 0.0;
+    double sum_z = 0.0;
+    std::size_t valid_points = 0;
+    for (const auto& point : object.pcl_ClusterPoints.points) {
+        if (!std::isfinite(point.x) || !std::isfinite(point.y) ||
+            !std::isfinite(point.z)) {
+            continue;
+        }
+        min_x = std::min(min_x, point.x);
+        min_y = std::min(min_y, point.y);
+        min_z = std::min(min_z, point.z);
+        max_x = std::max(max_x, point.x);
+        max_y = std::max(max_y, point.y);
+        max_z = std::max(max_z, point.z);
+        sum_x += point.x;
+        sum_y += point.y;
+        sum_z += point.z;
+        ++valid_points;
+    }
+    if (valid_points == 0) return;
+
+    object.f32_CoreX = static_cast<float>(sum_x / valid_points);
+    object.f32_CoreY = static_cast<float>(sum_y / valid_points);
+    object.f32_CoreZ = static_cast<float>(sum_z / valid_points);
+    object.f32_MinX = min_x;
+    object.f32_MinY = min_y;
+    object.f32_MinZ = min_z;
+    object.f32_MaxX = max_x;
+    object.f32_MaxY = max_y;
+    object.f32_MaxZ = max_z;
+    object.f32_Dist = std::hypot(object.f32_CoreX, object.f32_CoreY);
+    object.pcl_ClusterPoints.width = static_cast<std::uint32_t>(
+        object.pcl_ClusterPoints.points.size());
+    object.pcl_ClusterPoints.height = 1;
+    object.pcl_ClusterPoints.is_dense = false;
+
+    obb_util::OBB2D obb;
+    double z_min = 0.0;
+    double z_max = 0.0;
+    std::array<obb_util::P3, 8> corners{};
+    obb_util::computeOBB3D_LShape(
+        object.pcl_ClusterPoints, obb, z_min, z_max, corners);
+    obb_util::writeOBBToObject(object, obb, z_min, z_max, corners);
+}
+
+}  // namespace tracking_association
+
+void ConsolidateCurrentDetections(vector<LiDARObjectInfo>& now_object) {
+    if (now_object.size() < 2) return;
+
+    bool merged = true;
+    while (merged) {
+        merged = false;
+        for (std::size_t left_index = 0;
+             left_index < now_object.size() && !merged; ++left_index) {
+            for (std::size_t right_index = left_index + 1;
+                 right_index < now_object.size(); ++right_index) {
+                LiDARObjectInfo& left = now_object[left_index];
+                LiDARObjectInfo& right = now_object[right_index];
+                // 클러스터 평균은 관측되는 면이 달라지면 움직이지만, OBB 중심은
+                // 동일 점유를 비교하기에 더 직접적이다.
+                const float center_distance = std::hypot(
+                    left.f32_OBB_CenterX - right.f32_OBB_CenterX,
+                    left.f32_OBB_CenterY - right.f32_OBB_CenterY);
+                if (center_distance >
+                    st_Tracking.f32_DuplicateCenterDistance) {
+                    continue;
+                }
+                if (tracking_association::AabbIou(left, right) <
+                    st_Tracking.f32_DuplicateIouThreshold) {
+                    continue;
+                }
+
+                std::size_t owner_index = left_index;
+                std::size_t fragment_index = right_index;
+                if (right.pcl_ClusterPoints.size() >
+                    left.pcl_ClusterPoints.size()) {
+                    owner_index = right_index;
+                    fragment_index = left_index;
+                }
+                LiDARObjectInfo& owner = now_object[owner_index];
+                const LiDARObjectInfo& fragment = now_object[fragment_index];
+                owner.pcl_ClusterPoints.points.insert(
+                    owner.pcl_ClusterPoints.points.end(),
+                    fragment.pcl_ClusterPoints.points.begin(),
+                    fragment.pcl_ClusterPoints.points.end());
+                tracking_association::RecomputeGeometry(owner);
+                now_object.erase(now_object.begin() + fragment_index);
+                merged = true;
+                break;
+            }
+        }
+    }
+}
+
 
 
 
@@ -336,10 +517,12 @@ void Objectinfo_for_km(vector<LiDARObjectInfo> &vec_NowObject,
         st_CurrentObj.f32_CoreX = pcl_Centroid.x;
         st_CurrentObj.f32_CoreY = pcl_Centroid.y;
         st_CurrentObj.f32_CoreZ = pcl_Centroid.z;
-        if(st_CurrentObj.f32_CoreZ<=-1.3){ //기존 라이다 일 경우 0.8 최근에 단 천장 라이다이면 1.3
-            st_CurrentObj.str_ObjectClass = "지면노이즈";
-            // cout<<"나왔다:"<<st_CurrentObj.str_ObjectClass<<endl;
-        }
+        // Ground points have already been removed against the fitted plane.
+        // Do not classify the remaining cluster from absolute LiDAR-frame
+        // centroid Z.  At range, a real low obstacle may expose only its
+        // bottom scan line and have the same centroid Z as the road.  The old
+        // <= -1.3 m rule therefore hid valid obstacles and the tracker then
+        // kept that stale label even after their full geometry became visible.
         // L-Shape fitting 기반 OBB
         obb_util::OBB2D obb2d;
         double zMinD, zMaxD;
@@ -412,7 +595,10 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
         vec_PredictedPositions[i].second = pp.second;  // pred_y
     }
 
-    // 2) 비용 행렬 생성 (이전에 하던 대로)
+    // 비용 행렬 생성. body 좌표의 같은 정적 물체는 자차가 움직인 거리만큼
+    // 프레임마다 이동해 보이므로, 동기화된 pose로 만든 map 중심을 우선 쓴다.
+    // OBB의 body-frame AABB IoU 역시 회전/자차 이동에 민감하므로 연관 비용에는
+    // 물체의 두 평면 치수가 얼마나 비슷한지만 사용한다.
     vector<vector<double>> vec_CostMatrix(N, vector<double>(M, st_Tracking.f32_COST_INF));
     for (int32 i = 0; i < N; ++i) {
         // 예측 위치
@@ -424,23 +610,24 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             float32 f32_Det_x = vec_NowObject[j].f32_CoreX;
             float32 f32_Det_y = vec_NowObject[j].f32_CoreY;
 
-            // 1) Euclidean distance
+            // 1) Euclidean distance. map 좌표가 유효하지 않은 프레임에만
+            // 기존 Kalman body-frame 예측으로 되돌아간다.
             float32 f32_Dx = f32_Det_x - f32_Pred_x;
             float32 f32_Dy = f32_Det_y - f32_Pred_y;
             float32 f32_Cost_dist = sqrt(f32_Dx * f32_Dx + f32_Dy * f32_Dy);
+            if (st_Tracking.b_UseMapAssociation &&
+                tracking_association::FiniteMapCenter(vec_Compare[i]) &&
+                tracking_association::FiniteMapCenter(vec_NowObject[j])) {
+                f32_Cost_dist = tracking_association::MapCenterDistance(
+                    vec_Compare[i], vec_NowObject[j]);
+            }
 
-            // 2) 2D IoU 비용
-            float32 f32_Xi1 = max(vec_Compare[i].f32_MinX, vec_NowObject[j].f32_MinX);
-            float32 f32_Yi1 = max(vec_Compare[i].f32_MinY, vec_NowObject[j].f32_MinY);
-            float32 f32_Xi2 = min(vec_Compare[i].f32_MaxX, vec_NowObject[j].f32_MaxX);
-            float32 f32_Yi2 = min(vec_Compare[i].f32_MaxY, vec_NowObject[j].f32_MaxY);
-            float32 f32_Inter_w = max(0.0f, f32_Xi2 - f32_Xi1);
-            float32 f32_Inter_h = max(0.0f, f32_Yi2 - f32_Yi1);
-            float32 f32_Inter = f32_Inter_w * f32_Inter_h;
-            float32 f32_Area_trk = (vec_Compare[i].f32_MaxX - vec_Compare[i].f32_MinX) * (vec_Compare[i].f32_MaxY - vec_Compare[i].f32_MinY);
-            float32 f32_Area_det = (vec_NowObject[j].f32_MaxX - vec_NowObject[j].f32_MinX) * (vec_NowObject[j].f32_MaxY - vec_NowObject[j].f32_MinY);
-            float32 f32_UnionA = f32_Area_trk + f32_Area_det - f32_Inter + 1e-6f;
-            float32 f32_Cost_iou = 1.0f - (f32_Inter / f32_UnionA);
+            // 2) 관측점 수에 따라 OBB 크기가 달라져도 0~1 범위 안에서만
+            // 비용을 더한다. 서로 다른 크기의 인접 물체를 무조건 연결하지
+            // 않으면서, 자차 이동만으로 IoU가 0이 되는 문제를 피한다.
+            const float32 f32_Cost_shape = 1.0F -
+                tracking_association::ShapeAgreement(
+                    vec_Compare[i], vec_NowObject[j]);
 
             // // 3) heading도 고려 (보류)
             // // 이전 객체의 속도 벡터 → 방향 정규화
@@ -464,8 +651,17 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             //float32 f32_angle_cost = 1.0f - dot;
 
             // 최종 비용 계산 및 게이팅
-            float32 f32_Cost=st_Tracking.f32_COST_W_DIST * f32_Cost_dist
-           + st_Tracking.f32_COST_W_IOU  * f32_Cost_iou;
+            float32 f32_Cost =
+                st_Tracking.f32_COST_W_DIST * f32_Cost_dist +
+                st_Tracking.f32_COST_W_IOU * f32_Cost_shape;
+            // 동일 후보가 여럿이면 오래 유지된 실측 트랙을 우선한다. 보너스는
+            // 게이트를 우회할 정도로 커지지 않도록 설정값 이내로 제한한다.
+            const float32 age_ratio = std::clamp(
+                static_cast<float32>(vec_Compare[i].s32_Age) / 30.0F,
+                0.0F, 1.0F);
+            f32_Cost = std::max(
+                0.0F,
+                f32_Cost - st_Tracking.f32_ContinuityBonus * age_ratio);
             
             if (f32_Cost < st_Tracking.f32_COST_THRESHOLD) {
                 vec_CostMatrix[i][j] = f32_Cost;
@@ -512,22 +708,31 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             vec_NowObject[j].Eigen_KfState_CA       = vec_Compare[i].Eigen_KfState_CA;
             vec_NowObject[j].Eigen_KfP_CA          = vec_Compare[i].Eigen_KfP_CA;
             vec_NowObject[j].b_KfInitialized = vec_Compare[i].b_KfInitialized;
+            vec_NowObject[j].s32_KfInitCount = vec_Compare[i].s32_KfInitCount;
             vec_NowObject[j].s32_Id             = vec_Compare[i].s32_Id;
             vec_NowObject[j].s32_Age           = vec_Compare[i].s32_Age+ 1;
             vec_NowObject[j].s32_MissCount     = 0;
             vec_NowObject[j].s32_StaticCount   =vec_Compare[i].s32_StaticCount;
             vec_NowObject[j].s32_DynamicCount  =vec_Compare[i].s32_DynamicCount;
-            vec_NowObject[j].str_ObjectClass = vec_Compare[i].str_ObjectClass;
             vec_NowObject[j].f32_PrevE  = vec_Compare[i].f32_PrevE;
             vec_NowObject[j].f32_PrevN  = vec_Compare[i].f32_PrevN;
             vec_NowObject[j].f32_PrevYaw = vec_Compare[i].f32_PrevYaw ;
 
-            vec_NowObject[j].str_ObjectClass      = vec_Compare[i].str_ObjectClass;
-            vec_NowObject[j].str_YoloClass        = vec_Compare[i].str_YoloClass;
-            vec_NowObject[j].last_seen_class      = vec_Compare[i].last_seen_class;
-            vec_NowObject[j].continuity_counter   = vec_Compare[i].continuity_counter;
-            vec_NowObject[j].class_miss_counter   = vec_Compare[i].class_miss_counter;
-            vec_NowObject[j].is_class_locked      = vec_Compare[i].is_class_locked;
+            if (tracking_association::ShouldCarryPreviousClass(
+                    vec_Compare[i], vec_NowObject[j])) {
+                vec_NowObject[j].str_ObjectClass =
+                    vec_Compare[i].str_ObjectClass;
+                vec_NowObject[j].str_YoloClass =
+                    vec_Compare[i].str_YoloClass;
+                vec_NowObject[j].last_seen_class =
+                    vec_Compare[i].last_seen_class;
+                vec_NowObject[j].continuity_counter =
+                    vec_Compare[i].continuity_counter;
+                vec_NowObject[j].class_miss_counter =
+                    vec_Compare[i].class_miss_counter;
+                vec_NowObject[j].is_class_locked =
+                    vec_Compare[i].is_class_locked;
+            }
 
             obb_util::stabilizeMatchedOBB(
                 vec_Compare[i], vec_NowObject[j],
@@ -618,6 +823,32 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             matched_now[j]  = true;
             matched_prev[i] = true;
             ++matched_count;
+        }
+    }
+
+    // 한 물체가 직전 프레임에 두 트랙으로 분할됐다가 현재 프레임에 다시
+    // 합쳐지면 Hungarian의 1:1 제약 때문에 나머지 트랙은 miss ghost가 된다.
+    // 그 ghost가 다음 프레임에서 ID를 되찾아 가는 현상을 막기 위해, 실제로
+    // 매칭된 현재 관측과 사실상 같은 위치/크기인 이전 중복 트랙은 종료한다.
+    const float32 retire_distance = std::max(
+        0.0F, st_Tracking.f32_MergedTrackRetireDistance);
+    const float32 retire_shape_agreement = std::clamp(
+        st_Tracking.f32_DuplicateIouThreshold * 0.8F, 0.0F, 1.0F);
+    for (int i = 0; i < N; ++i) {
+        if (matched_prev[i]) continue;
+        for (int j = 0; j < M; ++j) {
+            if (!matched_now[j]) continue;
+            if (tracking_association::MapCenterDistance(
+                    vec_Compare[i], vec_NowObject[j]) > retire_distance) {
+                continue;
+            }
+            if (tracking_association::ShapeAgreement(
+                    vec_Compare[i], vec_NowObject[j]) <
+                retire_shape_agreement) {
+                continue;
+            }
+            matched_prev[i] = true;
+            break;
         }
     }
 

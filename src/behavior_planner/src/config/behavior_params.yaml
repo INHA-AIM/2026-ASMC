@@ -4,8 +4,28 @@ v2: {command_validity_seconds: 0.5, feedback_stale_seconds: 1.0}
 # Match Frenet's configured FOLLOW acquisition gate. A previously acquired
 # target is retained briefly across perception dropouts before KEEP release.
 follow: {max_target_distance: 60.0, max_lateral_offset: 1.75, release_delay_s: 0.4}
-avoid: {max_target_distance: 120.0, max_lateral_offset: 1.75}
-objects: {stale_seconds: 0.3}
+# AVOID uses the OBB's lateral overlap with the ego swept corridor. Strong
+# physical intrusion is immediate; boundary/margin intrusion needs a meaningful
+# share for consecutive frames. Height is deliberately not used here.
+avoid:
+  max_target_distance: 120.0
+  max_lateral_offset: 1.75
+  path_margin_m: 0.4
+  min_physical_overlap_m: 0.10
+  min_margin_overlap_m: 0.20
+  min_overlap_ratio: 0.20
+  # physical overlap / min(OBB projected width, ego width)
+  immediate_blocking_ratio: 0.70
+  blocking_enter_ratio: 0.20
+  blocking_exit_ratio: 0.15
+  overlap_confirm_cycles: 2
+  overlap_release_cycles: 3
+  reconnect_grace_cycles: 5
+  reconnect_max_longitudinal_delta_m: 3.0
+  reconnect_max_lateral_delta_m: 0.8
+  reconnect_max_size_delta_m: 1.5
+  release_grace_cycles: 3
+objects: {input_type: "morai", stale_seconds: 0.3}
 map:
   link_set_path: "$(find behavior_planner)/src/config/link_set.json"
   node_set_path: "$(find behavior_planner)/src/config/node_set.json"
@@ -17,8 +37,19 @@ traffic_light:
   typed_topic: "/perception/traffic_light/detection"
   topic: "/traffic_light/state"
   stale_seconds: 1.0
+  # 토픽은 살아 있지만 분류기가 잠깐 not_detected를 낼 때 가시성만 유지한다.
+  # semantic light_state와 raw label은 현재 frame 값을 그대로 사용한다.
+  detection_grace_seconds: 1.0
+  # 카메라 검출 여부와 무관하게 route-associated map stop line에 대해,
+  # 현재 실제 속도에서 comfort 감속하여 물리 정지선 약 1.5 m 전에
+  # 25 km/h에 도달하도록 시작 거리를 계산하고, 통과 뒤 30 m까지 유지한다.
+  # 한 번 시작한 감속은 같은 정지선에 latch된다. RED/YELLOW STOP과는 별도다.
+  approach_speed_limit_kph: 25.0
+  approach_comfortable_decel: 2.0
+  approach_margin_m: 7
+  post_stopline_distance_m: 30.0
   mock_path: "$(find behavior_planner)/src/config/traffic_light_mock.yaml"
-vehicle: {length: 4.7, width: 1.85, wheelbase: 3.0}
+vehicle: {length: 4.635, width: 1.892, wheelbase: 3.0}
 lane: {default_width: 3.5}
 safety:
   front_min_gap: 8.0
@@ -46,3 +77,16 @@ stop:
 score_weight: {safety: 1.0, route: 0.8, efficiency: 0.5, comfort: 0.2}
 topics: {ego: "/vehicle/state", objects: "/Object_topic", plan_feedback: "/planning/feedback", frenet_feedback_v2: "/planning/frenet_feedback_v2"}
 publish_topics: {behavior_context: "/behavior/context", behavior_command_v2: "/behavior/command_v2", feature_debug: "/behavior/feature_debug", marker: "/behavior/markers"}
+
+# Both planners enabled together for MORAI driving validation.
+# A single map-defined entry; highway MERGE and lane changes stay separate.
+roundabout_merge:
+  enabled: true
+  source_link: A2256W000148
+  target_link: A2256W000146
+  stop_node: A1256W000709
+  conflict_links: [A2256W000134, A2256W000151]
+  speed_cap_mps: 6.944444444444445
+  preview_distance_m: 45.0
+  max_horizon_s: 10.0
+

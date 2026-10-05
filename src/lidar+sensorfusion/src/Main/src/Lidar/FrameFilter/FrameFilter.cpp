@@ -19,6 +19,15 @@ void FrameFilter(deque<vector<LiDARObjectInfo>>& prev_ObjectsQueue,
     //     // ROS_INFO_THROTTLE(0.5, "[POSE] car_ENU=(%.3f, %.3f)", car.f32_CoreE, car.f32_CoreN);
     // }
 
+    // 한 물체가 높이 방향 등으로 둘 이상 분할된 경우에는 트랙 ID를 부여하기
+    // 전에 동일 XY 점유를 하나로 합친다. 그 다음 현재 관측의 map 중심을 먼저
+    // 계산해야 자차가 빠르게 움직여도 이전 프레임과 같은 좌표계에서 연관된다.
+    ConsolidateCurrentDetections(vec_Object);
+    for (auto& object : vec_Object) {
+        Body2ENU(st_VehicleSpec, st_GPSIMU, object);
+        MinMax2ENU(st_VehicleSpec, st_GPSIMU, object);
+    }
+
     if (prev_ObjectsQueue.empty()) {
         for (int32 s32_Idx = 0; s32_Idx < static_cast<int>(vec_Object.size()); ++s32_Idx) {
             if (vec_Object[s32_Idx].f32_CoreX == 0.0f &&

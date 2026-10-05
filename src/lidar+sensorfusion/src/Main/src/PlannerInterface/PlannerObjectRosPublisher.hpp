@@ -3,10 +3,13 @@
 #include <cstddef>
 #include <string>
 
-#include <opencv2/core.hpp>
 #include <ros/ros.h>
 
 #include <Global/Global.hpp>
+#include <PlannerInterface/DrivableBoundaryFilter.hpp>
+#include <PlannerInterface/KnownStaticObjectFilter.hpp>
+#include <PlannerInterface/PlanningRelevanceFilter.hpp>
+#include <PlannerInterface/StaticStructureExclusionFilter.hpp>
 
 struct PlannerObject;
 
@@ -18,23 +21,16 @@ public:
                  const VehicleSpec& vehicle, const ros::Time& stamp);
 
 private:
-    void LoadDrivableMask(const std::string& image_path,
-                          const std::string& metadata_path,
-                          const std::string& expected_map_id,
-                          double margin_m);
-    double DrivableRatio(const PlannerObject& object) const;
-
     ros::Publisher objects_publisher_;
     ros::Publisher markers_publisher_;
     ros::Publisher last_objects_publisher_;
     ros::Publisher last_markers_publisher_;
+    ros::Publisher motion_debug_publisher_;
     std::size_t max_objects_ = 200;
     double velocity_arrow_seconds_ = 1.0;
-    cv::Mat drivable_mask_;
-    double pixels_per_meter_ = 0.0;
-    double world_offset_x_ = 0.0;
-    double world_offset_y_ = 0.0;
-    double drivable_ratio_threshold_ = 0.3;
-    int drivable_samples_ = 5;
+    DrivableBoundaryFilter drivable_filter_;
+    KnownStaticObjectFilter known_static_filter_;
+    StaticStructureExclusionFilter static_structure_exclusion_filter_;
+    PlanningRelevanceFilter planning_relevance_filter_;
     ros::Time last_stamp_;
 };

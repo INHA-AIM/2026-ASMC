@@ -49,9 +49,13 @@ float64 right_front_gap
 float64 right_rear_gap
 bool has_stop_line
 float64 distance_to_stop_line
+bool intersection_approach_active
+float64 intersection_approach_activation_distance
+float64 intersection_approach_speed_limit
 string traffic_light_id
 uint8 traffic_light_state
 string traffic_light_raw_label
+bool traffic_light_recently_visible
 bool has_required_movement
 uint8 required_movement
 string related_signal

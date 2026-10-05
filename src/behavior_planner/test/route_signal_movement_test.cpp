@@ -64,6 +64,32 @@ TEST_F(RouteSignalMovementTest, FindsStraightMovement) {
   EXPECT_EQ("A2256W000599", movement.link_id);
 }
 
+TEST_F(RouteSignalMovementTest,
+       FindsOnlyForwardRouteAssociatedSignalizedStopLine) {
+  const double ego_s = RouteSAtLinkStart("A2256W000315") + 1.0;
+  StopLineInfo stop;
+  double distance = 0.0;
+  ASSERT_TRUE(route_.findNextSignalizedStopLine(
+      ego_s, 200.0, &stop, &distance));
+  EXPECT_TRUE(stop.valid);
+  EXPECT_FALSE(stop.traffic_light_id.empty());
+  EXPECT_GE(distance, 0.0);
+  EXPECT_LE(distance, 200.0);
+  EXPECT_NEAR(stop.route_s - ego_s, distance, 1e-9);
+
+  // Once this line is behind the ego, it cannot remain latched as the active
+  // approach owner. With a zero forward window no later line is eligible.
+  StopLineInfo passed_stop;
+  double passed_distance = 0.0;
+  EXPECT_FALSE(route_.findNextSignalizedStopLine(
+      stop.route_s + 0.01, 0.0, &passed_stop, &passed_distance));
+
+  ASSERT_TRUE(route_.findPreviousSignalizedStopLine(
+      stop.route_s + 0.01, &passed_stop, &passed_distance));
+  EXPECT_EQ(stop.traffic_light_id, passed_stop.traffic_light_id);
+  EXPECT_NEAR(0.01, passed_distance, 1e-9);
+}
+
 }  // namespace
 }  // namespace behavior_planner
 

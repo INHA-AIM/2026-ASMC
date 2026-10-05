@@ -7,12 +7,13 @@
 #include "common/mpc_result.hpp"
 #include "common/mpc_state.hpp"
 #include "common/reference_path.hpp"
+#include "cost/cost_function.hpp"
 
-// solver/model/cost/constraint 자체는 그대로 두고(수식 변경 없음), 그
-// 위에서 warm-start/정지 데드락 감지/복구 pulse/last_control 갱신을
-// 소유하는 계층. mpc_controller_node는 이 클래스를 통해서만 solveMPC를
-// 부른다 - trajectory 수신/freshness 검증/ROS 변환/reference resampling/
-// ROS publish/fail-safe만 node에 남고, 그 외 제어 상태는 여기로 옮겼다.
+// Solver/model/cost/constraint 위에서 warm-start/정지 데드락 감지/
+// 복구 pulse/last_control 갱신을 소유하는 계층. mpc_controller_node는
+// 이 클래스를 통해서만 solveMPC를 부른다 - trajectory 수신/freshness
+// 검증/ROS 변환/reference resampling/ROS publish/fail-safe만 node에 남고,
+// 그 외 제어 상태와 최종 solver 진단은 여기서 관리한다.
 class MpcController {
  public:
     explicit MpcController(const MPCParams& params);
@@ -38,6 +39,20 @@ class MpcController {
         double stuck_event_ego_v = 0.0;
         double stuck_event_max_ref_v = 0.0;
         double stuck_event_path_progress = 0.0;
+
+        // Final nonlinear predicted trajectory/control sequence diagnostics.
+        // These describe the accepted solution, never the warm-start guess.
+        CostBreakdown cost;
+        double first_reference_curvature = 0.0;
+        double first_feedforward_steering = 0.0;
+        double first_reference_speed = 0.0;
+        // Raw derivative of final MPC-grid v_ref and the actuator-bounded
+        // value actually used by solver/cost, respectively.
+        double first_reference_acceleration = 0.0;
+        double first_used_reference_acceleration = 0.0;
+        double current_speed = 0.0;
+        double first_speed_error = 0.0;
+        double first_acceleration_residual = 0.0;
     };
     Output ControlProcess(const MPCState& ego_state,
                           const ReferencePath& reference);
@@ -46,6 +61,7 @@ class MpcController {
     // warm-start/정지 데드락 상태를 모두 비워 다음 정상 사이클이 이전
     // 실패의 잔상 없이 새로 시작하게 한다.
     void ResetOnFailSafe();
+    void ResetForPlannerStop(double published_steering);
 
     const MPCParams& params() const { return params_; }
 
@@ -60,3 +76,4 @@ class MpcController {
     int stuck_timeout_cycles_ = 1;
     int recovery_duration_cycles_ = 1;
 };
+

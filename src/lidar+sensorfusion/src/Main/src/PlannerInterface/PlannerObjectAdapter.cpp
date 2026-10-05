@@ -175,16 +175,34 @@ std::vector<PlannerObject> MakePlannerObjects(
         planner_object.width = object.f32_OBB_Height;
         planner_object.height = std::max(
             kMinBoxSide, object.f32_OBB_ZMax - object.f32_OBB_ZMin);
+        planner_object.ground_evidence = object.ground_evidence;
 
-        PlannerPoint3D velocity_lidar{};
+        PlannerPoint3D raw_velocity_lidar{};
         if (std::isfinite(object.f32_AbsVx) &&
             std::isfinite(object.f32_AbsVy)) {
-            velocity_lidar.x = object.f32_AbsVx;
-            velocity_lidar.y = object.f32_AbsVy;
+            raw_velocity_lidar.x = object.f32_AbsVx;
+            raw_velocity_lidar.y = object.f32_AbsVy;
         }
-        planner_object.velocity_lidar_mps = velocity_lidar;
+        planner_object.raw_velocity_lidar_mps = raw_velocity_lidar;
+        planner_object.raw_velocity_map_mps = RotateLidarVectorToMap(
+            raw_velocity_lidar, gps_imu, vehicle);
+        planner_object.raw_speed_kph = kMpsToKph * std::sqrt(
+            planner_object.raw_velocity_map_mps.x *
+                planner_object.raw_velocity_map_mps.x +
+            planner_object.raw_velocity_map_mps.y *
+                planner_object.raw_velocity_map_mps.y +
+            planner_object.raw_velocity_map_mps.z *
+                planner_object.raw_velocity_map_mps.z);
+
+        PlannerPoint3D planner_velocity_lidar{};
+        if (std::isfinite(object.f32_PlannerVxKPH) &&
+            std::isfinite(object.f32_PlannerVyKPH)) {
+            planner_velocity_lidar.x = object.f32_PlannerVxKPH / kMpsToKph;
+            planner_velocity_lidar.y = object.f32_PlannerVyKPH / kMpsToKph;
+        }
+        planner_object.velocity_lidar_mps = planner_velocity_lidar;
         planner_object.velocity_map_mps = RotateLidarVectorToMap(
-            velocity_lidar, gps_imu, vehicle);
+            planner_velocity_lidar, gps_imu, vehicle);
         planner_object.speed_kph = kMpsToKph * std::sqrt(
             planner_object.velocity_map_mps.x *
                 planner_object.velocity_map_mps.x +
@@ -197,6 +215,8 @@ std::vector<PlannerObject> MakePlannerObjects(
         planner_object.decision_speed_kph = object.f32_DecisionSpeedKPH;
         planner_object.map_displacement_speed_kph =
             object.f32_MapDisplacementSpeedKPH;
+        planner_object.corrected_displacement_speed_kph =
+            object.f32_CorrectedDisplacementSpeedKPH;
         planner_object.motion_velocity_jump_kph =
             object.f32_MotionVelocityJumpKPH;
         planner_object.motion_state = object.s32_MotionState;

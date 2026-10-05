@@ -90,6 +90,16 @@ int main() {
            "polygon collision treats boundary touch as collision");
     Expect(CheckObstacleOverlap(ego_footprint, {}, rotated, 0.0),
            "polygon collision detects rotated obstacle");
+    const geometry::Polygon2D separated_footprint =
+        PredictObstacleFootprint(separated, 0.0);
+    const geometry::Polygon2D touching_footprint =
+        PredictObstacleFootprint(touching, 0.0);
+    Expect(std::fabs(geometry::ConvexPolygonDistance(
+                         ego_footprint, separated_footprint) - 1.1) < 1e-9,
+           "polygon distance measures physical boundary clearance");
+    Expect(geometry::ConvexPolygonDistance(
+               ego_footprint, touching_footprint) == 0.0,
+           "polygon distance is zero for touching footprints");
 
     const TrackedObject moving = MakeObstacle(5.0, 0.0, -1.5, 0.0);
     Expect(!CheckObstacleOverlap(ego_footprint, {}, moving, 0.0),
@@ -100,6 +110,38 @@ int main() {
     const geometry::Polygon2D future = PredictObstacleFootprint(moving, 2.0);
     Expect(std::abs(geometry::PolygonArea(current) - geometry::PolygonArea(future)) < 1e-9,
            "future obstacle translation preserves footprint area");
+
+    TrackedObject heading_disagrees = MakeObstacle(
+        5.0, 0.0, -1.5, 0.0, 0.5 * std::acos(-1.0));
+    heading_disagrees.speed = 1.5;
+    const PredictedObjectPose velocity_pose =
+        PredictTrackedObjectPose(heading_disagrees, 2.0);
+    Expect(std::fabs(velocity_pose.x - 2.0) < 1e-9 &&
+               std::fabs(velocity_pose.y) < 1e-9,
+           "object center prediction uses vx/vy rather than OBB heading");
+
+    TrackedObject turning = heading_disagrees;
+    turning.x = 0.0;
+    turning.y = 0.0;
+    turning.vx = 1.0;
+    turning.vy = 0.0;
+    turning.yaw_rate = 0.5 * std::acos(-1.0);
+    const PredictedObjectPose turning_pose =
+        PredictTrackedObjectPose(turning, 1.0);
+    const double expected_turn_radius = 2.0 / std::acos(-1.0);
+    Expect(std::fabs(turning_pose.x - expected_turn_radius) < 1e-9 &&
+               std::fabs(turning_pose.y - expected_turn_radius) < 1e-9,
+           "turn-rate prediction rotates the vx/vy vector, not OBB heading");
+
+    TrackedObject low_threat = moving;
+    low_threat.motion_state = ObjectMotionState::LOW_THREAT;
+    Expect(!CheckObstacleOverlap(ego_footprint, {}, low_threat, 2.0),
+           "LOW_THREAT ignores noisy velocity for future collision");
+    const PredictedObjectPose static_pose =
+        PredictTrackedObjectPose(low_threat, 2.0);
+    Expect(std::fabs(static_pose.x - low_threat.x) < 1e-9 &&
+               std::fabs(static_pose.y - low_threat.y) < 1e-9,
+           "LOW_THREAT center remains stationary while raw velocity is retained");
 
     TrackedObject invalid = moving;
     invalid.geometry_valid = false;
@@ -170,12 +212,12 @@ int main() {
            "avoid target may escape an existing inflated margin");
 
     std::vector<FrenetPath> longitudinal_only{MakePath({0.0, 0.0, 0.0})};
-    longitudinal_only.front().s = {10.0, 11.0, 12.0};
+    longitudinal_only.front().s = {10.0, 12.0, 14.0};
     FilterByCollision(longitudinal_only, straight_ref,
                       {lateral_near_margin}, ego_shape, collision_cfg, -1,
                       lateral_near_margin.id);
-    Expect(!longitudinal_only.front().valid,
-           "longitudinal center-distance growth is not lateral escape");
+    Expect(longitudinal_only.front().valid,
+           "side/rear target may escape by increasing physical OBB clearance");
 
     std::vector<FrenetPath> approaching{MakePath({0.0, 0.2, 0.4})};
     FilterByCollision(approaching, straight_ref, {lateral_near_margin}, ego_shape,
@@ -202,20 +244,101 @@ int main() {
     low_speed_escape.y = {0.0, -0.2, -0.4};
     low_speed_escape.yaw = {0.0, 0.0, 0.0};
     int low_speed_blocking_id = -1;
+    bool low_speed_recovery_used = false;
     Expect(CartesianTrajectoryClear(
                low_speed_escape, {lateral_near_margin}, ego_shape,
                collision_cfg, 0.1, &low_speed_blocking_id,
-               lateral_near_margin.id),
+               lateral_near_margin.id, &low_speed_recovery_used) &&
+               low_speed_recovery_used,
            "low-speed avoid may escape laterally with the standard margin");
 
+    const TrackedObject longitudinal_near_margin = MakeObstacle(2.4, 0.0);
     CartesianPath low_speed_longitudinal = low_speed_escape;
     low_speed_longitudinal.x = {0.0, 0.5, 1.0};
     low_speed_longitudinal.y = {0.0, 0.0, 0.0};
     Expect(!CartesianTrajectoryClear(
-               low_speed_longitudinal, {lateral_near_margin}, ego_shape,
+               low_speed_longitudinal, {longitudinal_near_margin}, ego_shape,
+               collision_cfg, 0.1, &low_speed_blocking_id,
+               longitudinal_near_margin.id),
+           "low-speed motion toward the target is not an avoid escape");
+
+    // margin 밖에서 시작한 후보는 나중에 target margin으로 들어갈 수 없다.
+    // phase/속도별 2차 예외 없이 일반/저속 후보가 같은 규칙을 사용한다.
+    const CollisionCheckConfig growing_margin_cfg{0.5, 2.0, 1.0};
+    const TrackedObject later_margin_target = MakeObstacle(-1.5, 2.6);
+    CartesianPath later_outward_escape;
+    later_outward_escape.x = {0.0, 1.0, 2.0};
+    later_outward_escape.y = {0.0, 0.1, 0.2};
+    later_outward_escape.yaw = {0.0, 0.0, 0.0};
+    Expect(!CartesianTrajectoryClear(
+               later_outward_escape, {later_margin_target}, ego_shape,
+               growing_margin_cfg, 0.1, &low_speed_blocking_id,
+               later_margin_target.id),
+           "margin recovery rejects a path that enters target margin later");
+
+    CartesianPath later_backtracking = later_outward_escape;
+    later_backtracking.x = {0.0, 1.0, 0.5};
+    Expect(!CartesianTrajectoryClear(
+               later_backtracking, {later_margin_target}, ego_shape,
+               growing_margin_cfg, 0.1, &low_speed_blocking_id,
+               later_margin_target.id),
+           "outside-start recovery cannot be enabled by physical clearance");
+
+    CartesianPath exit_then_reenter;
+    exit_then_reenter.x = {0.0, 0.0, 0.0};
+    exit_then_reenter.y = {0.0, -0.6, 0.0};
+    exit_then_reenter.yaw = {0.0, 0.0, 0.0};
+    Expect(!CartesianTrajectoryClear(
+               exit_then_reenter, {lateral_near_margin}, ego_shape,
                collision_cfg, 0.1, &low_speed_blocking_id,
                lateral_near_margin.id),
-           "low-speed longitudinal motion is not an avoid escape");
+           "margin recovery rejects re-entry after leaving the margin");
+
+    CartesianPath no_clearance_progress = low_speed_escape;
+    no_clearance_progress.x = {0.0, 0.0, 0.0};
+    no_clearance_progress.y = {0.0, 0.0, 0.0};
+    Expect(!CartesianTrajectoryClear(
+               no_clearance_progress, {lateral_near_margin}, ego_shape,
+               collision_cfg, 0.1, &low_speed_blocking_id,
+               lateral_near_margin.id),
+           "margin recovery rejects a path without clearance progress");
+
+    TrackedObject later_non_target = later_margin_target;
+    later_non_target.id = 2;
+    Expect(!CartesianTrajectoryClear(
+               later_outward_escape, {later_non_target}, ego_shape,
+               growing_margin_cfg, 0.1, &low_speed_blocking_id,
+               later_margin_target.id),
+           "recovery keeps the full margin for every non-target object");
+
+    Expect(!CartesianTrajectoryClear(
+               low_speed_escape, {lateral_overlapping}, ego_shape,
+               collision_cfg, 0.1, &low_speed_blocking_id,
+               lateral_overlapping.id),
+           "recovery never permits a physical target OBB collision");
+
+    // 확정 정적(LOW_THREAT)은 시간만 흐른다고 safety margin이 커지지
+    // 않는다. 같은 geometry의 미확정 객체에는 성장 margin이 적용된다.
+    CartesianPath stationary_path;
+    stationary_path.x = {0.0, 0.0, 0.0};
+    stationary_path.y = {0.0, 0.0, 0.0};
+    stationary_path.yaw = {0.0, 0.0, 0.0};
+    TrackedObject static_margin_object = MakeObstacle(0.0, 2.7);
+    static_margin_object.motion_state = ObjectMotionState::LOW_THREAT;
+    Expect(CartesianTrajectoryClear(
+               stationary_path, {static_margin_object}, ego_shape,
+               growing_margin_cfg, 0.1),
+           "LOW_THREAT keeps a fixed safety margin over time");
+    TrackedObject uncertain_margin_object = static_margin_object;
+    uncertain_margin_object.motion_state = ObjectMotionState::UNKNOWN;
+    Expect(!CartesianTrajectoryClear(
+               stationary_path, {uncertain_margin_object}, ego_shape,
+               growing_margin_cfg, 0.1),
+           "uncertain motion keeps time-growing safety margin");
+
+    // Frenet과 Cartesian 진입점은 동일한 공용 판정 결과를 내야 한다.
+    Expect(escaping.front().margin_recovery_used,
+           "normal Frenet collision filter reports margin recovery use");
 
     if (g_failures == 0) {
         std::cout << "All polygon collision tests passed\n";

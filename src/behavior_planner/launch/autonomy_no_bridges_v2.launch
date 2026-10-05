@@ -3,15 +3,23 @@
        opt-in, matching autonomy_no_bridges.launch defaults. -->
   <arg name="state_source" default="gps_imu" doc="gps_imu or ego_dev"/>
   <arg name="dashboard" default="false"/>
-  <!-- CROSS-TEAM P5-D HANDOFF NOTE:
-       This default was changed by perception integration, not by the planning
-       owner. It only prevents a duplicate traffic-light publisher when the
-       canonical asmc_perception runtime is active. Keep the opt-in include;
-       retirement or policy changes require planning-owner review. -->
-  <arg name="traffic_light" default="false"
-       doc="Cross-team duplicate-producer guard; planning-owner review required before retirement."/>
+  <!-- Standalone planning starts signal inference by default. Disable with
+       traffic_light:=false when asmc_perception already publishes detections. -->
+  <arg name="traffic_light" default="true"
+       doc="Set false only when an external traffic-light producer is running."/>
   <arg name="traffic_light_device" default="auto"/>
   <arg name="camera_topic" default="/cam_extra/image_jpeg/compressed"/>
+  <arg name="objects_source" default="morai" doc="morai or lidar"/>
+  <arg name="canonical_objects_topic" default="/planning/objects"/>
+  <arg name="state_topic" default="/planning/vehicle/state"/>
+  <arg name="lidar_source_policy" default="validated_lidar" doc="validated_lidar or main_raw"/>
+  <arg name="lidar_input_topic" default="/last_lidar"/>
+  <arg name="dashboard_lidar_objects_topic"
+       default="/planning/objects"/>
+  <arg name="dashboard_lidar_motion_debug_topic"
+       default="/lidar/motion_debug"/>
+  <arg name="avoid_path_margin_m" default="0.4"
+       doc="AVOID swept-corridor margin; use 0.8 for boundary A/B validation"/>
   <arg name="traffic_light_checkpoint"
        default="$(find asmc_perception)/models/traffic_light/best.pt"/>
 
@@ -21,25 +29,54 @@
          launch keeps the opt-in wrapper and legacy String topics until the
          planning owner approves their removal. -->
     <node pkg="asmc_perception" type="traffic_light_node.py"
-          name="traffic_light_infer" output="screen"
+          name="traffic_light_infer" output="screen" required="true"
           args="--ckpt $(arg traffic_light_checkpoint) --image-topic $(arg camera_topic) --state-topic /traffic_light/state --detail-topic /traffic_light/detail --typed-topic /perception/traffic_light/detection --device $(arg traffic_light_device)"/>
   </group>
 
   <include if="$(eval arg('state_source') == 'gps_imu')"
-           file="$(find asmc_bridge)/launch/vehicle_state.launch"/>
-  <include if="$(eval arg('state_source') == 'ego_dev')"
-           file="$(find asmc_bridge)/launch/vehicle_state_ego_dev.launch"/>
-
-  <!-- Temporary MORAI boundary adapter. It preserves ObjectStatus.unique_id so
-       BehaviorCommand.primary_object_id resolves to the same Frenet object. -->
-  <node pkg="behavior_planner" type="morai_objects_adapter.py"
-        name="morai_objects_adapter" output="screen">
-    <param name="input_topic" value="/Object_topic"/>
-    <param name="output_topic" value="/perception/objects"/>
-  </node>
-  <include file="$(find behavior_planner)/launch/behavior_node_v2.launch">
-    <arg name="dashboard" value="$(arg dashboard)"/>
+           file="$(find planning_inputs)/launch/vehicle_state.launch">
+    <arg name="state_topic" value="$(arg state_topic)"/>
   </include>
-  <include file="$(find frenet_planner)/launch/frenet_planner.launch"/>
-  <include file="$(find mpc_controller)/launch/mpc_controller.launch"/>
+  <group if="$(eval arg('state_source') == 'ego_dev')">
+    <remap from="/vehicle/state" to="$(arg state_topic)"/>
+    <include file="$(find asmc_bridge)/launch/vehicle_state_ego_dev.launch"/>
+  </group>
+
+  <!-- The default MORAI path is preserved. lidar mode instead makes the typed
+       canonical main LiDAR conversion the single Behavior/Frenet object source. -->
+  <group if="$(eval arg('objects_source') == 'morai')">
+    <node pkg="behavior_planner" type="morai_objects_adapter.py"
+          name="morai_objects_adapter" output="screen">
+      <param name="input_topic" value="/Object_topic"/>
+      <param name="output_topic" value="$(arg canonical_objects_topic)"/>
+    </node>
+  </group>
+  <group if="$(eval arg('objects_source') == 'lidar')">
+    <include file="$(find planning_inputs)/launch/objects.launch">
+      <arg name="input_topic" value="$(arg lidar_input_topic)"/>
+      <arg name="source_policy" value="$(arg lidar_source_policy)"/>
+      <arg name="state_topic" value="$(arg state_topic)"/>
+      <arg name="output_topic" value="$(arg canonical_objects_topic)"/>
+    </include>
+  </group>
+  <include file="$(find behavior_planner)/launch/behavior_node_v2.launch">
+    <arg name="state_topic" value="$(arg state_topic)"/>
+    <arg name="objects_input_type"
+         value="$(eval 'detected' if arg('objects_source') == 'lidar' else 'morai')"/>
+    <arg name="objects_topic"
+         value="$(eval arg('canonical_objects_topic') if arg('objects_source') == 'lidar' else '/Object_topic')"/>
+    <arg name="dashboard" value="$(arg dashboard)"/>
+    <arg name="dashboard_lidar_objects_topic"
+         value="$(eval arg('canonical_objects_topic') if arg('objects_source') == 'lidar' else arg('dashboard_lidar_objects_topic'))"/>
+    <arg name="dashboard_lidar_motion_debug_topic"
+         value="$(arg dashboard_lidar_motion_debug_topic)"/>
+    <arg name="avoid_path_margin_m" value="$(arg avoid_path_margin_m)"/>
+  </include>
+  <include file="$(find frenet_planner)/launch/frenet_planner.launch">
+    <arg name="state_topic" value="$(arg state_topic)"/>
+    <arg name="objects_topic" value="$(arg canonical_objects_topic)"/>
+  </include>
+  <include file="$(find mpc_controller)/launch/mpc_controller.launch">
+    <arg name="state_topic" value="$(arg state_topic)"/>
+  </include>
 </launch>

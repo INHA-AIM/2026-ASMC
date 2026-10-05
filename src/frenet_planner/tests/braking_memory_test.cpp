@@ -287,17 +287,21 @@ void TestHelperContract() {
     // accelerating intent + negative raw accel -> relaxed to 0.
     Expect(ResolveVelocityKeepingBoundaryAcceleration(-2.4, 5.0, 9.0, 0.3) == 0.0,
            "helper: relaxes to 0 when target > current+deadband and raw accel < 0");
-    // target <= current -> raw accel preserved unchanged.
+    // decelerating intent + positive raw accel -> relaxed to 0.
+    Expect(ResolveVelocityKeepingBoundaryAcceleration(1.0, 10.0, 8.0, 0.3) == 0.0,
+           "helper: relaxes to 0 when target < current-deadband and raw accel > 0");
+    // decelerating intent + negative raw accel already agrees with intent.
     Expect(ResolveVelocityKeepingBoundaryAcceleration(-2.4, 9.0, 5.0, 0.3) == -2.4,
-           "helper: preserves raw accel unchanged when target <= current "
-           "(real deceleration)");
+           "helper: preserves negative raw accel for a real deceleration");
+    // accelerating intent + positive raw accel already agrees with intent.
+    Expect(ResolveVelocityKeepingBoundaryAcceleration(1.0, 5.0, 9.0, 0.3) == 1.0,
+           "helper: preserves positive raw accel for a real acceleration");
     // target within deadband of current -> not treated as accelerating intent.
     Expect(ResolveVelocityKeepingBoundaryAcceleration(-2.4, 8.9, 9.0, 0.3) == -2.4,
            "helper: preserves raw accel when target is within the deadband "
            "of current (not a clear accelerating intent)");
-    // already non-negative raw accel -> unchanged regardless of intent.
-    Expect(ResolveVelocityKeepingBoundaryAcceleration(1.0, 5.0, 9.0, 0.3) == 1.0,
-           "helper: leaves non-negative raw accel unchanged");
+    Expect(ResolveVelocityKeepingBoundaryAcceleration(1.0, 10.0, 9.9, 0.3) == 1.0,
+           "helper: preserves positive raw accel inside the deadband");
 }
 
 int main() {

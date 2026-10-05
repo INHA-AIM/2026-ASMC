@@ -1,5 +1,6 @@
 #include "behavior_planner/node/behavior_node.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 #include <asmc_msgs/BehaviorContext.h>
@@ -8,6 +9,7 @@
 
 #include "behavior_planner/context/msg_converter.hpp"
 #include "behavior_planner/global/utils.hpp"
+#include "behavior_planner/node/detected_msg_converter.hpp"
 #include "behavior_planner/node/morai_msg_converter.hpp"
 
 namespace behavior_planner {
@@ -55,6 +57,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     : nh_(std::move(nh)), pnh_(std::move(pnh)) {
   std::string ego_topic = "/vehicle/state";
   std::string objects_topic = "/Object_topic";
+  std::string objects_input_type = "morai";
   std::string feedback_topic = "/planning/feedback";
   std::string feedback_v2_topic = "/planning/frenet_feedback_v2";
   std::string context_topic = "/behavior/context";
@@ -74,6 +77,8 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   std::string traffic_light_legacy_topic = "/traffic_light/state";
   bool use_traffic_light_mock = false;
   double traffic_light_stale_seconds = 1.0;
+  double traffic_light_detection_grace_seconds = 1.0;
+  double intersection_approach_speed_limit_kph = 25.0;
   double stop_target_offset_m = 5.0;
   TrafficStopConfig traffic_stop;
   SafetyConfig safety;
@@ -82,10 +87,12 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   double emergency_ttc_exit = 3.0;
   double emergency_release_hold_s = 0.5;
   double follow_release_delay_s = 0.4;
+  int avoid_release_grace_cycles = 3;
 
   pnh_.param("behavior/update_rate", rate_, rate_);
   pnh_.param("topics/ego", ego_topic, ego_topic);
   pnh_.param("topics/objects", objects_topic, objects_topic);
+  pnh_.param("objects/input_type", objects_input_type, objects_input_type);
   pnh_.param("topics/plan_feedback", feedback_topic, feedback_topic);
   pnh_.param("topics/frenet_feedback_v2", feedback_v2_topic,
              feedback_v2_topic);
@@ -109,6 +116,47 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
              avoid_target.max_distance);
   pnh_.param("avoid/max_lateral_offset", avoid_target.max_lateral_offset,
              avoid_target.max_lateral_offset);
+  pnh_.param("avoid/path_margin_m", avoid_target.path_margin_m,
+             avoid_target.path_margin_m);
+  pnh_.param("avoid/min_physical_overlap_m",
+             avoid_target.min_physical_overlap_m,
+             avoid_target.min_physical_overlap_m);
+  pnh_.param("avoid/min_margin_overlap_m",
+             avoid_target.min_margin_overlap_m,
+             avoid_target.min_margin_overlap_m);
+  pnh_.param("avoid/min_overlap_ratio", avoid_target.min_overlap_ratio,
+             avoid_target.min_overlap_ratio);
+  pnh_.param("avoid/immediate_blocking_ratio",
+             avoid_target.immediate_blocking_ratio,
+             avoid_target.immediate_blocking_ratio);
+  pnh_.param("avoid/blocking_enter_ratio",
+             avoid_target.blocking_enter_ratio,
+             avoid_target.blocking_enter_ratio);
+  pnh_.param("avoid/blocking_exit_ratio",
+             avoid_target.blocking_exit_ratio,
+             avoid_target.blocking_exit_ratio);
+  pnh_.param("avoid/overlap_confirm_cycles",
+             avoid_target.overlap_confirm_cycles,
+             avoid_target.overlap_confirm_cycles);
+  pnh_.param("avoid/overlap_release_cycles",
+             avoid_target.overlap_release_cycles,
+             avoid_target.overlap_release_cycles);
+  pnh_.param("avoid/reconnect_grace_cycles",
+             avoid_target.reconnect_grace_cycles,
+             avoid_target.reconnect_grace_cycles);
+  pnh_.param("avoid/reconnect_max_longitudinal_delta_m",
+             avoid_target.reconnect_max_longitudinal_delta_m,
+             avoid_target.reconnect_max_longitudinal_delta_m);
+  pnh_.param("avoid/reconnect_max_lateral_delta_m",
+             avoid_target.reconnect_max_lateral_delta_m,
+             avoid_target.reconnect_max_lateral_delta_m);
+  pnh_.param("avoid/reconnect_max_size_delta_m",
+             avoid_target.reconnect_max_size_delta_m,
+             avoid_target.reconnect_max_size_delta_m);
+  pnh_.param("avoid/release_grace_cycles", avoid_release_grace_cycles,
+             avoid_release_grace_cycles);
+  pnh_.param("vehicle/width", avoid_target.ego_width,
+             avoid_target.ego_width);
   pnh_.param("publish_topics/feature_debug", debug_topic, debug_topic);
   pnh_.param("publish_topics/marker", marker_topic, marker_topic);
   pnh_.param("map/link_set_path", link_path, std::string());
@@ -123,6 +171,21 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
              traffic_light_legacy_topic);
   pnh_.param("traffic_light/stale_seconds", traffic_light_stale_seconds,
              traffic_light_stale_seconds);
+  pnh_.param("traffic_light/detection_grace_seconds",
+             traffic_light_detection_grace_seconds,
+             traffic_light_detection_grace_seconds);
+  pnh_.param("traffic_light/approach_speed_limit_kph",
+             intersection_approach_speed_limit_kph,
+             intersection_approach_speed_limit_kph);
+  pnh_.param("traffic_light/approach_comfortable_decel",
+             traffic_stop.approach_comfortable_decel,
+             traffic_stop.approach_comfortable_decel);
+  pnh_.param("traffic_light/approach_margin_m",
+             traffic_stop.approach_margin,
+             traffic_stop.approach_margin);
+  pnh_.param("traffic_light/post_stopline_distance_m",
+             traffic_stop.post_stopline_distance,
+             traffic_stop.post_stopline_distance);
   pnh_.param("stop/target_offset_m", stop_target_offset_m,
              stop_target_offset_m);
   pnh_.param("stop/red_light_stop_distance",
@@ -152,6 +215,40 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   pnh_.param("safety/emergency_release_hold_s", emergency_release_hold_s,
              emergency_release_hold_s);
 
+  if (!std::isfinite(intersection_approach_speed_limit_kph) ||
+      intersection_approach_speed_limit_kph <= 0.0) {
+    ROS_WARN("Invalid intersection approach speed limit; using 25.0 km/h");
+    intersection_approach_speed_limit_kph = 25.0;
+  }
+  if (!std::isfinite(traffic_stop.approach_comfortable_decel) ||
+      traffic_stop.approach_comfortable_decel <= 0.0) {
+    ROS_WARN("Invalid intersection approach deceleration; using 2.0 m/s^2");
+    traffic_stop.approach_comfortable_decel = 2.0;
+  }
+  if (!std::isfinite(traffic_stop.approach_margin) ||
+      traffic_stop.approach_margin < 0.0) {
+    ROS_WARN("Invalid intersection approach target offset; using 1.5 m");
+    traffic_stop.approach_margin = 1.5;
+  }
+  if (!std::isfinite(traffic_stop.post_stopline_distance) ||
+      traffic_stop.post_stopline_distance < 0.0) {
+    ROS_WARN("Invalid post-stopline speed-limit distance; using 5.0 m");
+    traffic_stop.post_stopline_distance = 5.0;
+  }
+  traffic_stop.approach_speed_limit =
+      intersection_approach_speed_limit_kph / 3.6;
+
+  if (!std::isfinite(traffic_light_stale_seconds) ||
+      traffic_light_stale_seconds <= 0.0) {
+    ROS_WARN("Invalid traffic-light transport stale timeout; using 1.0 s");
+    traffic_light_stale_seconds = 1.0;
+  }
+  if (!std::isfinite(traffic_light_detection_grace_seconds) ||
+      traffic_light_detection_grace_seconds <= 0.0) {
+    ROS_WARN("Invalid traffic-light detection grace; using 1.0 s");
+    traffic_light_detection_grace_seconds = 1.0;
+  }
+
   if (follow_target.max_distance <= 0.0 ||
       follow_target.max_lateral_offset <= 0.0) {
     ROS_WARN("Invalid FOLLOW target limits; using 60.0 m / 1.75 m");
@@ -163,12 +260,55 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     objects_stale_seconds_ = 0.30;
   }
   if (avoid_target.max_distance <= 0.0 ||
-      avoid_target.max_lateral_offset <= 0.0) {
-    ROS_WARN("Invalid AVOID target limits; using 120.0 m / 1.75 m");
+      avoid_target.max_lateral_offset <= 0.0 ||
+      avoid_target.ego_width <= 0.0 || avoid_target.path_margin_m < 0.0 ||
+      avoid_target.min_physical_overlap_m <= 0.0 ||
+      avoid_target.min_margin_overlap_m <= 0.0 ||
+      avoid_target.min_overlap_ratio < 0.0 ||
+      avoid_target.min_overlap_ratio > 1.0 ||
+      avoid_target.immediate_blocking_ratio < 0.0 ||
+      avoid_target.immediate_blocking_ratio > 1.0 ||
+      avoid_target.blocking_enter_ratio < 0.0 ||
+      avoid_target.blocking_enter_ratio >
+          avoid_target.immediate_blocking_ratio ||
+      avoid_target.blocking_exit_ratio < 0.0 ||
+      avoid_target.blocking_exit_ratio >=
+          avoid_target.blocking_enter_ratio ||
+      avoid_target.overlap_confirm_cycles < 1 ||
+      avoid_target.overlap_release_cycles < 1 ||
+      avoid_target.reconnect_grace_cycles < 0 ||
+      avoid_target.reconnect_max_longitudinal_delta_m <= 0.0 ||
+      avoid_target.reconnect_max_lateral_delta_m <= 0.0 ||
+      avoid_target.reconnect_max_size_delta_m < 0.0) {
+    ROS_WARN("Invalid AVOID corridor/overlap policy; using 120.0 m / 1.75 m "
+             "ceiling, 1.892 m ego width, 0.40 m margin, "
+             "0.10/0.20 m overlap, margin ratio 0.20, "
+             "blocking ratio 0.70/0.35/0.15, confirm/release 2/3 cycles");
     avoid_target.max_distance = 120.0;
     avoid_target.max_lateral_offset = 1.75;
+    avoid_target.ego_width = 1.892;
+    avoid_target.path_margin_m = 0.4;
+    avoid_target.min_physical_overlap_m = 0.10;
+    avoid_target.min_margin_overlap_m = 0.20;
+    avoid_target.min_overlap_ratio = 0.20;
+    avoid_target.immediate_blocking_ratio = 0.70;
+    avoid_target.blocking_enter_ratio = 0.35;
+    avoid_target.blocking_exit_ratio = 0.15;
+    avoid_target.overlap_confirm_cycles = 2;
+    avoid_target.overlap_release_cycles = 3;
+    avoid_target.reconnect_grace_cycles = 5;
+    avoid_target.reconnect_max_longitudinal_delta_m = 3.0;
+    avoid_target.reconnect_max_lateral_delta_m = 0.8;
+    avoid_target.reconnect_max_size_delta_m = 1.5;
   }
 
+  bool roundabout_enabled=false;
+  std::string roundabout_stop_node, roundabout_source, roundabout_target;
+  pnh_.param("roundabout_merge/enabled",roundabout_enabled,false);
+  pnh_.param<std::string>("roundabout_merge/stop_node",roundabout_stop_node,"A1256W000709");
+  pnh_.param<std::string>("roundabout_merge/source_link",roundabout_source,"A2256W000148");
+  pnh_.param<std::string>("roundabout_merge/target_link",roundabout_target,"A2256W000146");
+  builder_.setRoundaboutMerge(roundabout_enabled,roundabout_stop_node,roundabout_source,roundabout_target);
   if (!map_.load(link_path, node_path)) {
     ROS_ERROR("MGeo loading failed; check map paths");
   }
@@ -184,6 +324,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   decision_.setEmergencyRelease(emergency_ttc_exit,
                                 emergency_release_hold_s);
   decision_.setFollowReleaseDelay(follow_release_delay_s);
+  decision_.setAvoidReleaseGraceCycles(avoid_release_grace_cycles);
   ROS_INFO("Behavior stop target offset: %.2f m behind physical stop line",
            stop_target_offset_m);
   ROS_INFO("Behavior traffic STOP detection: min=%.2f m, dynamic=v^2/(2*%.2f)"
@@ -191,12 +332,43 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
            traffic_stop.minimum_detection_distance,
            traffic_stop.comfortable_decel, traffic_stop.braking_margin,
            traffic_stop.target_offset, traffic_stop.planner_stop_buffer);
+  ROS_INFO("Behavior intersection approach: speed=%.1f km/h, "
+           "comfortable_decel=%.2f m/s^2, pre-line=%.1f m, post-line=%.1f m, "
+           "activation=current-speed based with stop-line latch",
+           intersection_approach_speed_limit_kph,
+           traffic_stop.approach_comfortable_decel,
+           traffic_stop.approach_margin,
+           traffic_stop.post_stopline_distance);
   ROS_INFO("Behavior FOLLOW target limits: distance=%.2f m lateral=%.2f m, "
            "release delay=%.2f s, objects stale after %.2f s",
            follow_target.max_distance, follow_target.max_lateral_offset,
            follow_release_delay_s, objects_stale_seconds_);
-  ROS_INFO("Behavior AVOID target limits: distance=%.2f m lateral=%.2f m",
-           avoid_target.max_distance, avoid_target.max_lateral_offset);
+  ROS_INFO("Behavior AVOID corridor: distance=%.2f m half_width=%.2f m "
+           "(ego_width=%.3f + margin=%.2f, ceiling=%.2f), "
+           "overlap physical=%.2f m margin=%.2f m margin_ratio=%.2f, "
+           "blocking_ratio immediate/enter/exit=%.2f/%.2f/%.2f "
+           "confirm/release=%d/%d, "
+           "reconnect grace=%d ds/dd/size=%.2f/%.2f/%.2f m, "
+           "release grace=%d cycles",
+           avoid_target.max_distance,
+           std::min(avoid_target.max_lateral_offset,
+                    0.5 * avoid_target.ego_width +
+                        avoid_target.path_margin_m),
+           avoid_target.ego_width, avoid_target.path_margin_m,
+           avoid_target.max_lateral_offset,
+           avoid_target.min_physical_overlap_m,
+           avoid_target.min_margin_overlap_m,
+           avoid_target.min_overlap_ratio,
+           avoid_target.immediate_blocking_ratio,
+           avoid_target.blocking_enter_ratio,
+           avoid_target.blocking_exit_ratio,
+           avoid_target.overlap_confirm_cycles,
+           avoid_target.overlap_release_cycles,
+           avoid_target.reconnect_grace_cycles,
+           avoid_target.reconnect_max_longitudinal_delta_m,
+           avoid_target.reconnect_max_lateral_delta_m,
+           avoid_target.reconnect_max_size_delta_m,
+           avoid_release_grace_cycles);
 
   if (use_traffic_light_mock) {
     auto mock = std::make_shared<MockTrafficLightProvider>();
@@ -209,7 +381,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   } else {
     lights_ = std::make_shared<RosTrafficLightProvider>(
         nh_, traffic_light_typed_topic, traffic_light_legacy_topic,
-        traffic_light_stale_seconds);
+        traffic_light_stale_seconds, traffic_light_detection_grace_seconds);
     ROS_INFO("Behavior traffic-light sources: typed=%s legacy_fallback=%s "
              "(stale after %.2f s)",
              traffic_light_typed_topic.c_str(),
@@ -235,8 +407,18 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   visualization_ = BehaviorVisualization(marker_pub_);
 
   ego_sub_ = nh_.subscribe(ego_topic, 5, &BehaviorNode::egoCallback, this);
-  objects_sub_ =
-      nh_.subscribe(objects_topic, 5, &BehaviorNode::objectsCallback, this);
+  if (objects_input_type == "detected") {
+    objects_sub_ = nh_.subscribe(
+        objects_topic, 5, &BehaviorNode::detectedObjectsCallback, this);
+  } else {
+    if (objects_input_type != "morai") {
+      ROS_WARN("Unknown objects/input_type '%s'; using morai",
+               objects_input_type.c_str());
+      objects_input_type = "morai";
+    }
+    objects_sub_ = nh_.subscribe(
+        objects_topic, 5, &BehaviorNode::moraiObjectsCallback, this);
+  }
   if (use_v2_interface_) {
     feedback_sub_ = nh_.subscribe(feedback_v2_topic, 5,
                                   &BehaviorNode::feedbackV2Callback, this);
@@ -253,7 +435,8 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
       ros::WallDuration(1.0 / rate_), &BehaviorNode::timerCallback, this);
 
   ROS_INFO_STREAM("Behavior planner input: ego=" << ego_topic
-                  << ", objects=" << objects_topic);
+                  << ", objects=" << objects_topic
+                  << " (" << objects_input_type << ")");
   ROS_INFO_STREAM("Behavior interface " << (use_v2_interface_ ? "v2" : "v1")
                   << ": "
                   << (use_v2_interface_ ? command_v2_topic : context_topic)
@@ -334,10 +517,23 @@ void BehaviorNode::egoCallback(
   ego_received_ = true;
 }
 
-void BehaviorNode::objectsCallback(
+void BehaviorNode::moraiObjectsCallback(
     const morai_msgs::ObjectStatusList::ConstPtr& message) {
   if (!message) return;
   objects_ = MoraiMsgConverter::toPerceptionObjects(*message);
+  objects_received_at_ = ros::SteadyTime::now();
+  objects_received_ = true;
+}
+
+void BehaviorNode::detectedObjectsCallback(
+    const planning_inputs::DetectedObjectArray::ConstPtr& message) {
+  if (!message) return;
+  if (message->header.stamp.isZero() || message->header.frame_id != "map") {
+    ROS_WARN_THROTTLE(
+        1.0, "Behavior rejected DetectedObjectArray with invalid header");
+    return;
+  }
+  objects_ = DetectedMsgConverter::toPerceptionObjects(*message);
   objects_received_at_ = ros::SteadyTime::now();
   objects_received_ = true;
 }
@@ -356,3 +552,5 @@ void BehaviorNode::feedbackV2Callback(
 }
 
 }  // namespace behavior_planner
+
+

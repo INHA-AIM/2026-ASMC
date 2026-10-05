@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <iterator>
 #include <limits>
+#include <utility>
 
 #include "frenet_planner/Evaluation/Cost.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
@@ -135,10 +136,55 @@ bool FrenetPlanner::AvoidProcess(
     result.low_speed_context = std::fabs(ego.v) < limits_.low_speed_fallback_v;
     result.ego_speed_mps = std::max(0.0, ego.v);
 
+    // COMMIT 뒤에도 실제 관측 OBB와 tracker identity를 갱신한다. 정확한
+    // 현재 ID를 우선하고, 그 ID가 사라졌을 때만 유일한 공간 일치 대상을
+    // 같은 물체로 재연결한다.
+    const TrackedObject* observed_target = nullptr;
+    if (avoid_committed) {
+        const auto exact = std::find_if(
+            predicted_collision_obstacles.begin(),
+            predicted_collision_obstacles.end(),
+            [this](const TrackedObject& object) {
+                return object.id == v2_avoidance_.obstacle_id &&
+                       object.width > 0.0 && object.length > 0.0;
+            });
+        if (exact != predicted_collision_obstacles.end()) {
+            observed_target = &*exact;
+        } else {
+            observed_target = FindSpatialAvoidReplacement(
+                s, predicted_collision_obstacles, v2_avoidance_);
+        }
+        if (observed_target != nullptr) {
+            RefreshAvoidObservation(
+                s, *observed_target, v2_avoidance_,
+                /*refresh_committed_target=*/true);
+        }
+    }
+
     // COMMIT 이후의 종방향 위치와 실제 d를 먼저 반영해야 이번 cycle의
     // 생성 목표가 TRACKING/SHIFT/PASS/RETURN 중 올바른 단계에 맞는다.
     if (avoid_committed) {
         UpdateCommittedAvoidLifecycle(s, d, ego.v, result);
+
+        // 아직 회피를 시작하지 않은 TRACKING에서만 영구 소실을 실패로
+        // 처리한다. SHIFT/PASS 중 관측 누락으로 KEEP에 급복귀하면 더 위험하다.
+        if (v2_avoidance_.phase == AvoidPhase::TRACKING) {
+            if (observed_target != nullptr) {
+                v2_avoidance_.missing_cycles = 0;
+            } else if (++v2_avoidance_.missing_cycles >
+                       avoid_cfg_.dropout_grace_cycles) {
+                last_failure_reason_ = PlanFailureReason::TARGET_OBJECT_LOST;
+                return false;
+            }
+        } else {
+            v2_avoidance_.missing_cycles = 0;
+        }
+    }
+
+    if (avoid_road_map_.enabled()) {
+        return MapAvoidProcess(ego, start, s, d, resolved_target_speed,
+            predicted_collision_obstacles, command, avoid_prepare,
+            avoid_committed, out_path, result);
     }
 
     const bool approach_phase = avoid_committed &&
@@ -151,10 +197,26 @@ bool FrenetPlanner::AvoidProcess(
     const double execution_target_d =
         (approach_phase || return_phase) ? 0.0 : v2_avoidance_.target_d;
 
+    const double track_length =
+        ref_.points.empty() ? 0.0 : ref_.points.back().s;
+    const double committed_target_gap = avoid_committed
+        ? ForwardArcDistance(s, v2_avoidance_.obstacle_s, track_length)
+        : std::numeric_limits<double>::infinity();
+    // LiDAR OBB의 종방향 길이가 커지거나 흔들려도 target 중심을 지난 뒤
+    // d=0 복귀 후보가 전체 OBB 충돌검사를 통과하면 그 후보를 우선한다.
+    // 통과하지 못하면 아래의 잠긴 회피 목표 후보를 그대로 사용하므로
+    // 성급한 phase 변경 때문에 멈추지 않는다.
+    const bool early_return_probe = avoid_committed &&
+        (shift_phase || v2_avoidance_.phase == AvoidPhase::PASS) &&
+        std::isfinite(committed_target_gap) &&
+        committed_target_gap < 0.0;
+
     // COMMIT 목표가 실제 충돌검사에서 막혔을 때 사용할 단방향 복구 목표.
     // 원래 목표를 항상 첫 번째로 검사하고, SHIFT/PASS에서만 장애물 반대편
     // 바깥쪽으로 확장한다. RETURN의 d=0이나 접근 단계에는 적용하지 않는다.
-    std::vector<double> committed_targets{execution_target_d};
+    std::vector<double> committed_targets;
+    if (early_return_probe) committed_targets.push_back(0.0);
+    committed_targets.push_back(execution_target_d);
     if (avoid_committed && (shift_phase ||
                             v2_avoidance_.phase == AvoidPhase::PASS)) {
         double outward_sign = 0.0;
@@ -187,21 +249,10 @@ bool FrenetPlanner::AvoidProcess(
         }
     }
 
-    // TRACKING에서는 의도적으로 대상 장애물 전까지 global path를 유지한다.
-    // 긴 reactive coast가 먼 target까지 닿아 중앙 후보를 미리 제거하지 않도록
-    // 이 단계에서만 지정 target을 충돌 목록에서 제외한다. shift 진입거리
-    // 안에서는 즉시 다시 포함되어 전체 후보 충돌검사를 받는다.
-    std::vector<TrackedObject> phase_collision_obstacles =
+    // TRACKING에서도 실제 후보 구간은 target과 충돌 검사한다. 먼 target까지
+    // 이어지는 가상 reactive coast만 아래 coast-exempt ID로 제외한다.
+    const std::vector<TrackedObject>& phase_collision_obstacles =
         predicted_collision_obstacles;
-    if (approach_phase) {
-        phase_collision_obstacles.erase(
-            std::remove_if(phase_collision_obstacles.begin(),
-                           phase_collision_obstacles.end(),
-                           [this](const TrackedObject& object) {
-                               return object.id == v2_avoidance_.obstacle_id;
-                           }),
-            phase_collision_obstacles.end());
-    }
 
     // ---- target pose sanity: ego 전방이어야 한다 -------------------
     //
@@ -240,13 +291,22 @@ bool FrenetPlanner::AvoidProcess(
     // 없다"이므로 결과는 WAITING이다(계약 3.3.4절).
     const bool blocked_by_request = avoid_prepare &&
         (result.direction_conflict || result.target_behind_ego);
-
     // 저속에서는 d(t)가 아니라 d(s)인 거리 기반 후보를 사용한다. 기존
     // 구현은 COMMIT 뒤 2초짜리 경로 하나만 만들어, 정지 출발 시 1~2 m
     // 전진한 지점에서 횡이동이 끝나기도 전에 충돌로 모두 탈락했다.
     // PREPARE/COMMIT 모두 여러 target_d와 여러 전환거리를 평가해 저속도
-    // 정상적인 후보 탐색 상태로 만든다.
-    if (result.low_speed_context && !blocked_by_request) {
+    // 정상적인 후보 탐색 상태로 만든다. margin recovery가 필요한 SHIFT가
+    // 한 번 승인되면 생성기 종류만 SHIFT가 끝날 때까지 유지한다. 충돌
+    // 판정 자체는 phase/속도와 무관하게 일반 후보와 동일한 공용 판정기를
+    // 쓴다. 현재 속도만으로 생성기를 바꾸면 0.5 m/s 경계에서 출발/정지가
+    // 반복될 수 있기 때문이다.
+    const bool use_low_speed_candidate_pipeline =
+        result.low_speed_context ||
+        (avoid_committed && shortest_lateral_phase &&
+         (std::fabs(ego.v) < limits_.near_low_speed_fallback_v ||
+          v2_avoidance_.spatial_lateral_active ||
+          v2_avoidance_.escape_recovery_active));
+    if (use_low_speed_candidate_pipeline && !blocked_by_request) {
         std::vector<double> low_speed_targets;
         if (avoid_committed) {
             low_speed_targets = committed_targets;
@@ -292,13 +352,21 @@ bool FrenetPlanner::AvoidProcess(
         const double path_extension = std::max(
             0.0, avoid_cfg_.low_speed_path_extension);
 
-        CartesianPath selected;
-        double selected_target = execution_target_d;
-        double selected_cost = std::numeric_limits<double>::infinity();
-        int first_blocking_id = -1;
+        struct LowSpeedCandidateEvaluation {
+            CartesianPath path;
+            double target_d = 0.0;
+            double cost = std::numeric_limits<double>::infinity();
+            bool early_return = false;
+            bool collision_clear = false;
+            bool margin_recovery_used = false;
+            int blocking_id = -1;
+        };
+        std::vector<LowSpeedCandidateEvaluation> evaluations;
         for (std::size_t target_index = 0;
              target_index < low_speed_targets.size(); ++target_index) {
             const double target_d = low_speed_targets[target_index];
+            const bool is_early_return = avoid_committed &&
+                early_return_probe && target_index == 0;
             const double natural_distance =
                 LowSpeedLateralTransitionDistance(d, target_d);
             for (double scale = scale_min;
@@ -328,68 +396,97 @@ bool FrenetPlanner::AvoidProcess(
                 }
 
                 int blocking_id = -1;
-                const int escape_object_id =
-                    (avoid_prepare || shift_phase ||
-                     v2_avoidance_.phase == AvoidPhase::PASS)
+                bool margin_recovery_used = false;
+                // AVOID lifecycle phase와 무관하다. 현재 pose가 target margin
+                // 안에서 시작했는지는 공용 collision checker가 직접 판단한다.
+                const int margin_recovery_object_id =
+                    (avoid_prepare || avoid_committed)
                         ? v2_avoidance_.obstacle_id : -1;
-                const bool clear = kinematically_valid &&
+                const bool collision_clear = kinematically_valid &&
                     CartesianTrajectoryClear(
                         candidate, phase_collision_obstacles, vehicle_shape_,
                         collision_cfg_, path_cfg_.dt, &blocking_id,
-                        escape_object_id);
-                if (!candidate.x.empty()) {
-                    last_candidate_paths_.push_back(candidate);
-                    last_candidate_validity_.push_back(clear);
+                        margin_recovery_object_id,
+                        &margin_recovery_used);
+
+                double cost = transition_distance;
+                if (avoid_committed) {
+                    cost += static_cast<double>(target_index) *
+                            avoid_cfg_.committed_target_index_cost_scale;
+                } else {
+                    const bool is_right =
+                        target_d < v2_avoidance_.obstacle_d;
+                    const bool preferred =
+                        avoid_cfg_.prefer_right_when_equal
+                            ? is_right : !is_right;
+                    if (!preferred) cost += avoid_cfg_.direction_tiebreak_cost;
                 }
-                if (clear) {
-                    ++result.valid_candidate_count;
-                    // 먼저 나열된 target(잠긴 방향), 그 안에서는 가장 짧은
-                    // 물리적으로 유효한 전환거리를 우선한다.
-                    double cost = transition_distance;
-                    if (avoid_committed) {
-                        cost += static_cast<double>(target_index) *
-                                avoid_cfg_.committed_target_index_cost_scale;
-                    } else {
-                        const bool is_right =
-                            target_d < v2_avoidance_.obstacle_d;
-                        const bool preferred =
-                            avoid_cfg_.prefer_right_when_equal
-                                ? is_right : !is_right;
-                        if (!preferred) cost += avoid_cfg_.direction_tiebreak_cost;
-                    }
-                    if (cost < selected_cost) {
-                        selected = candidate;
-                        selected_target = target_d;
-                        selected_cost = cost;
-                    }
-                } else if (first_blocking_id < 0 && blocking_id >= 0) {
-                    first_blocking_id = blocking_id;
+                evaluations.push_back(LowSpeedCandidateEvaluation{
+                    std::move(candidate), target_d, cost, is_early_return,
+                    collision_clear, margin_recovery_used, blocking_id});
+            }
+        }
+
+        CartesianPath selected;
+        double selected_target = execution_target_d;
+        double selected_cost = std::numeric_limits<double>::infinity();
+        bool selected_from_recovery = false;
+        bool selected_early_return = false;
+        int first_blocking_id = -1;
+        for (auto& evaluation : evaluations) {
+            const bool clear = evaluation.collision_clear;
+            const int blocking_id = evaluation.blocking_id;
+
+            if (!evaluation.path.x.empty()) {
+                last_candidate_paths_.push_back(evaluation.path);
+                last_candidate_validity_.push_back(clear);
+            }
+            if (clear) {
+                ++result.valid_candidate_count;
+                // 잠긴 target 목록의 우선순위를 보존하면서, 같은 target
+                // 안에서는 전환거리가 짧아 더 빨리 바깥으로 이격되는
+                // 경로를 우선한다.
+                if (evaluation.cost < selected_cost) {
+                    selected = evaluation.path;
+                    selected_target = evaluation.target_d;
+                    selected_cost = evaluation.cost;
+                    selected_from_recovery =
+                        evaluation.margin_recovery_used;
+                    selected_early_return = evaluation.early_return;
                 }
+            } else if (first_blocking_id < 0 && blocking_id >= 0) {
+                first_blocking_id = blocking_id;
             }
         }
 
         if (selected.x.empty()) {
             result.blocking_object_id = first_blocking_id;
-            if (avoid_committed) {
-                last_mode_ = AVOID;
-                last_failure_reason_ = first_blocking_id >= 0
-                    ? PlanFailureReason::COLLISION_BLOCKED
-                    : PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
-                return false;
-            }
+            // COMMITTED failure also reaches the single SHIFT probe below.
             // PREPARE 후보 없음은 terminal failure가 아니라 WAITING이다.
             // 아래 maintenance 생성 결과를 그대로 반환한다.
         } else {
+            result.escape_recovery_required = selected_from_recovery;
+            if (selected_from_recovery && avoid_committed && shift_phase) {
+                v2_avoidance_.escape_recovery_active = true;
+            }
+            if (selected_early_return) {
+                v2_avoidance_.phase = AvoidPhase::RETURN;
+                v2_avoidance_.escape_recovery_active = false;
+            }
             if (avoid_committed &&
                 std::fabs(selected_target - v2_avoidance_.target_d) > 1e-9 &&
-                !approach_phase && !return_phase) {
+                !approach_phase && !return_phase && !selected_early_return) {
                 v2_avoidance_.target_d = selected_target;
             }
             result.candidate_valid = true;
+            result.spatial_candidate_selected = true;
             result.selected_target_d = selected_target;
             result.selected_cost = selected_cost;
             result.candidate_path = selected;
             if (avoid_committed) {
+                if (shortest_lateral_phase) {
+                    v2_avoidance_.spatial_lateral_active = true;
+                }
                 out_path = std::move(selected);
                 UpdateCommittedAvoidLifecycle(s, d, ego.v, result);
                 last_failure_reason_ = PlanFailureReason::NONE;
@@ -402,11 +499,12 @@ bool FrenetPlanner::AvoidProcess(
     // 것"이라고 가정하면, 실제로 가능한 상황에서도 READY에 도달하지
     // 못한다. 생성을 시도하고 결과로 판단한다 - 저속에서 후보가 0개면
     // low_speed_context이 그 사유를 설명한다.
-    if (!result.low_speed_context && !blocked_by_request &&
+    if (!use_low_speed_candidate_pipeline && !blocked_by_request &&
         v2_avoid_targets_.count > 0) {
         const FrenetPath* best_candidate = nullptr;
         std::vector<FrenetPath> best_set;
         double best_target_d = 0.0;
+        bool best_early_return = false;
         int first_blocking_id = -1;
 
         // ===== COMMIT 이후에는 목표를 정확히 겨냥한다 (D6-3a) =====
@@ -441,13 +539,9 @@ bool FrenetPlanner::AvoidProcess(
         const double search_tolerance =
             v2_avoidance_.committed ? 0.0 : path_cfg_.lateral_target_tolerance;
 
-        // escape_object_id: 접근/통과 구간에서 회피 대상 물체에 대한 충돌
-        // 스코핑을 완화하는 legacy avoid_escape_id와 동일한 입력이다(legacy는
-        // cmd.mode==AVOID일 때 cmd.target_object_id를 그대로 썼다 - command는
-        // FSM이 지정한 target_object_id를 이미 담고 있고 side_cmd가 이를
-        // 바꾸지 않았으므로, 여기서도 command.target_object_id를 그대로
-        // 옮긴다).
-        const int escape_object_id = command.target_object_id;
+        // wire command의 논리 ID가 아니라 공간 재연결까지 반영한 현재 관측
+        // ID를 충돌 스코핑에 사용한다.
+        const int margin_recovery_object_id = v2_avoidance_.obstacle_id;
 
         const int target_count = avoid_committed
             ? static_cast<int>(committed_targets.size())
@@ -455,13 +549,20 @@ bool FrenetPlanner::AvoidProcess(
         for (int index = 0; index < target_count; ++index) {
             const double target_d = avoid_committed
                 ? committed_targets[index] : v2_avoid_targets_.candidates[index];
+            const bool is_early_return = avoid_committed &&
+                early_return_probe && index == 0;
 
             TrajectoryRequest request;
             request.lateral.target_d = target_d;
             request.lateral.search_tolerance = search_tolerance;
             request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
             request.target_speed = resolved_target_speed;
-            request.collision.escape_object_id = escape_object_id;
+            request.collision.margin_recovery_object_id =
+                margin_recovery_object_id;
+            if (approach_phase) {
+                request.collision.coast_exempt_object_id =
+                    margin_recovery_object_id;
+            }
 
             PlannerDebugStats side_stats;
             auto generated = GenerateRequestedCandidates(
@@ -513,6 +614,7 @@ bool FrenetPlanner::AvoidProcess(
                     ? SelectShortestValidPath(best_set)
                     : SelectBestPath(best_set);
                 best_target_d = target_d;
+                best_early_return = is_early_return;
             }
             // COMMIT 복구는 가장 가까운 바깥쪽 유효 목표를 사용한다.
             // 더 먼 목표가 비용상 유리하더라도 불필요하게 회피 폭을 키우지 않는다.
@@ -541,11 +643,16 @@ bool FrenetPlanner::AvoidProcess(
             // "지정했다 vs 확보했다"와 같은 원칙).
             result.selected_target_d = endpoint_d;
             result.selected_cost = best_candidate->cost_total;
+            result.escape_recovery_required =
+                best_candidate->margin_recovery_used;
             result.candidate_path =
                 ConvertToCartesianPath(*best_candidate, ref_);
             if (!reaches_avoid_target) {
                 result.selected_cost = -1.0;
                 result.candidate_path = CartesianPath{};
+            } else if (best_early_return) {
+                v2_avoidance_.phase = AvoidPhase::RETURN;
+                v2_avoidance_.escape_recovery_active = false;
             } else if (avoid_committed && !approach_phase && !return_phase &&
                        std::fabs(endpoint_d - v2_avoidance_.target_d) > 1e-9) {
                 v2_avoidance_.target_d = endpoint_d;
@@ -564,6 +671,48 @@ bool FrenetPlanner::AvoidProcess(
             last_failure_reason_ = result.blocking_object_id >= 0
                 ? PlanFailureReason::COLLISION_BLOCKED
                 : PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+            // A centreline-only approach can be invalid even though the
+            // committed lateral corridor is clear. Do not repeatedly brake
+            // toward a shrinking entry distance: test SHIFT once, using the
+            // same observed ego/OBBs and all normal safety filters. The preview
+            // bounds this promotion; unrelated blocking objects do not trigger
+            // it. PREPARE never takes this branch.
+            const double preview_entry = std::max(
+                v2_avoidance_.shift_entry_distance,
+                EffectiveAvoidShiftStartDistance(
+                    std::max(std::max(0.0, ego.v), resolved_target_speed), d));
+            const bool target_blocks_approach =
+                result.blocking_object_id == v2_avoidance_.obstacle_id;
+            const bool approach_generation_failed =
+                last_failure_reason_ ==
+                    PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+            if (approach_phase && std::isfinite(committed_target_gap) &&
+                committed_target_gap > 0.0 &&
+                committed_target_gap <= preview_entry &&
+                (target_blocks_approach || approach_generation_failed)) {
+                const AvoidanceContext saved_context = v2_avoidance_;
+                const PlanFailureReason saved_failure = last_failure_reason_;
+                v2_avoidance_.phase = AvoidPhase::SHIFT;
+                v2_avoidance_.start_d = d;
+                CartesianPath shift_path;
+                AvoidPrepareResult shift_result;
+                // Recursion is bounded to one probe: its phase is SHIFT, so
+                // approach_phase is false in the nested invocation.
+                if (AvoidProcess(ego, start, s, d, resolved_target_speed,
+                                 predicted_collision_obstacles, command,
+                                 false, true, shift_path, shift_result)) {
+                    shift_result.generated_candidate_count +=
+                        result.generated_candidate_count;
+                    shift_result.valid_candidate_count +=
+                        result.valid_candidate_count;
+                    result = std::move(shift_result);
+                    out_path = std::move(shift_path);
+                    return true;
+                }
+                // Failed SHIFT must not unlock or advance the transaction.
+                v2_avoidance_ = saved_context;
+                last_failure_reason_ = saved_failure;
+            }
             return false;
         }
         out_path = result.candidate_path;

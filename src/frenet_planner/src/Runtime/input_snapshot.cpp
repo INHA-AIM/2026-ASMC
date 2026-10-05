@@ -26,7 +26,7 @@ void FrenetPlannerNode::vehicleCallback(
 }
 
 void FrenetPlannerNode::objectsCallback(
-    const asmc_msgs::DetectedObjectArray::ConstPtr& message) {
+    const planning_inputs::DetectedObjectArray::ConstPtr& message) {
     if (!message) return;
     std::lock_guard<std::mutex> lock(input_mutex_);
     latest_objects_ = *message;

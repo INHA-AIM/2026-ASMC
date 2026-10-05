@@ -4,6 +4,7 @@
 #include <memory>
 #include <asmc_msgs/BehaviorContext.h>
 #include <asmc_msgs/BehaviorCommand.h>
+#include <planning_inputs/DetectedObjectArray.h>
 #include <asmc_msgs/FrenetFeedback.h>
 #include <asmc_msgs/PlanFeedback.h>
 #include <asmc_msgs/VehicleState.h>
@@ -30,7 +31,10 @@ class BehaviorNode {
   void runOnce();
   void timerCallback(const ros::SteadyTimerEvent&);
   void egoCallback(const asmc_msgs::VehicleState::ConstPtr& message);
-  void objectsCallback(const morai_msgs::ObjectStatusList::ConstPtr& message);
+  void moraiObjectsCallback(
+      const morai_msgs::ObjectStatusList::ConstPtr& message);
+  void detectedObjectsCallback(
+      const planning_inputs::DetectedObjectArray::ConstPtr& message);
   void feedbackCallback(const asmc_msgs::PlanFeedback::ConstPtr& message);
   void feedbackV2Callback(const asmc_msgs::FrenetFeedback::ConstPtr& message);
 

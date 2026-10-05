@@ -4,6 +4,7 @@ import copy
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import yaml
@@ -14,6 +15,7 @@ sys.path.insert(0, str(REPO_ROOT / "tools" / "audit"))
 
 from validate_perception_runtime_acceptance import (  # noqa: E402
     AcceptanceContractError,
+    _validate_planning_signal_launch,
     expand_forbidden_topics,
     expand_topic_specs,
     load_contract,
@@ -76,6 +78,58 @@ class PerceptionRuntimeAcceptanceTest(unittest.TestCase):
             "typed_family", handoff["lane_family"]["planning_input"]
         )
         self.assertFalse(handoff["lane_family"]["debug_is_planning_input"])
+
+
+    def test_standalone_signal_launch_defaults(self):
+        for name, default in (
+            ("autonomy_no_bridges.launch", "false"),
+            ("autonomy_no_bridges_v2.launch", "true"),
+        ):
+            launch = ET.parse(REPO_ROOT / "src/behavior_planner/launch" / name).getroot()
+            _validate_planning_signal_launch(launch, name, default)
+
+    def signal_launch(self):
+        return ET.parse(
+            REPO_ROOT / "src/behavior_planner/launch/autonomy_no_bridges_v2.launch"
+        ).getroot()
+
+    def test_v2_signal_default_cannot_be_disabled_silently(self):
+        launch = self.signal_launch()
+        launch.find("./arg[@name='traffic_light']").set("default", "false")
+        with self.assertRaises(AcceptanceContractError):
+            _validate_planning_signal_launch(launch, "autonomy_no_bridges_v2.launch", "true")
+
+    def test_full_perception_pipeline_cannot_be_added_to_planning(self):
+        launch = self.signal_launch()
+        ET.SubElement(launch, "include", file="$(find asmc_perception)/launch/perception.launch")
+        with self.assertRaises(AcceptanceContractError):
+            _validate_planning_signal_launch(launch, "autonomy_no_bridges_v2.launch", "true")
+
+    def test_camera_producer_cannot_be_added_to_planning(self):
+        launch = self.signal_launch()
+        ET.SubElement(launch, "node", pkg="asmc_perception", type="camera_bev_node.py")
+        with self.assertRaises(AcceptanceContractError):
+            _validate_planning_signal_launch(launch, "autonomy_no_bridges_v2.launch", "true")
+
+    def test_external_signal_opt_out_cannot_be_removed(self):
+        launch = self.signal_launch()
+        launch.find("./group[@if='$(arg traffic_light)']").attrib.pop("if")
+        with self.assertRaises(AcceptanceContractError):
+            _validate_planning_signal_launch(launch, "autonomy_no_bridges_v2.launch", "true")
+
+    def test_signal_producer_failure_cannot_be_hidden(self):
+        launch = self.signal_launch()
+        launch.find(".//node[@type='traffic_light_node.py']").set("required", "false")
+        with self.assertRaises(AcceptanceContractError):
+            _validate_planning_signal_launch(launch, "autonomy_no_bridges_v2.launch", "true")
+
+    def test_signal_defaults_contract_cannot_drift(self):
+        broken = copy.deepcopy(self.contract)
+        broken["consumer_handoff"]["traffic_light"]["planning_launch_signal_defaults"][
+            "autonomy_no_bridges_v2.launch"
+        ] = False
+        with self.assertRaises(AcceptanceContractError):
+            self.validate_copy(broken)
 
     def test_incomplete_p5_phase_cannot_claim_closeout(self):
         broken = copy.deepcopy(self.contract)

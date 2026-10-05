@@ -56,6 +56,13 @@ BehaviorContextData BehaviorDecision::decide(
       std::min(feature.route.speed_limit > 0.0 ? feature.route.speed_limit
                                                : 13.9,
                context.hard.max_speed);
+  if (context.hard.intersection_approach_active) {
+    context.extra_flags["intersection_approach_speed_limit"] = true;
+    context.extra_values["intersection_approach_speed_mps"] =
+        context.hard.max_speed;
+    context.extra_values["intersection_approach_activation_distance_m"] =
+        context.hard.intersection_approach_activation_distance;
+  }
   context.target.stop_before_s = context.hard.stop_before_s;
   if (context.hard.planned_stop && feature.signal.stop_line_valid) {
     context.target.has_stop_target = true;
@@ -81,6 +88,23 @@ BehaviorContextData BehaviorDecision::decide(
     context.target.avoidance_object_id = feature.risk.avoidance_object_id;
     context.extra_values["avoidance_object_id"] =
         feature.risk.avoidance_object_id;
+  }
+
+  const bool follow_owns_avoid_target =
+      follow_target_id >= 0 && context.enable.avoid &&
+      (feature.risk.avoidance_object_id == follow_target_id ||
+       feature.risk.avoid_target_matches_front_lead ||
+       (follow_release_grace &&
+        feature.risk.avoid_target_matches_recent_lead));
+  if (follow_owns_avoid_target) {
+    context.extra_flags["fsm_follow_owns_avoid_target"] = true;
+  }
+
+  const bool cancel_reclassified_avoid =
+      feature.risk.avoid_target_reclassified_moving &&
+      !context.enable.avoid;
+  if (cancel_reclassified_avoid) {
+    context.extra_flags["cancel_reclassified_avoid"] = true;
   }
 
   // STOP과 AVOID가 동시에 필요하면 검출 순서나 고정 score가 아니라
@@ -138,14 +162,26 @@ BehaviorContextData BehaviorDecision::decide(
   } else if (avoid_precedes_stop) {
     best = {context.score.avoid, BehaviorType::AVOID, true};
   }
+  if (feature.roundabout.enabled && feature.roundabout.approach &&
+      !context.hard.planned_stop && !context.hard.force_stop && !context.hard.emergency_stop) {
+    best = {0.0, BehaviorType::MERGE, true};
+  }
   const Fsm::ManeuverOutput fsm_output = fsm_.updateManeuver(
       best.behavior, planner_feedback, active_command_id,
-      stop_preempts_avoid);
+      stop_preempts_avoid, cancel_reclassified_avoid,
+      follow_owns_avoid_target);
   context.selected_behavior = fsm_output.behavior;
   context.state = fsm_output.state;
   context.maneuver_phase = fsm_output.phase;
 
   switch (context.selected_behavior) {
+    case BehaviorType::MERGE:
+      context.target.current_link_id = feature.roundabout.source_link_id;
+      context.target.target_link_id = feature.roundabout.target_link_id;
+      context.target.desired_speed = 25.0/3.6;
+      context.target.has_target_pose = false;
+      context.extra_flags["roundabout_merge"] = true;
+      break;
     case BehaviorType::FOLLOW:
       // Behavior owns the maneuver and its cruise-speed ceiling.  The leader
       // ID and requested gap are sent to Frenet, which alone owns the
@@ -179,14 +215,19 @@ BehaviorContextData BehaviorDecision::decide(
       context.target.target_link_id = feature.route.current_link_id;
       break;
   }
-  context.debug.selected_reason = stop_preempts_avoid
-      ? "stop_before_avoid"
-      : (avoid_precedes_stop
-             ? "avoid_before_stop"
-             : (follow_release_grace &&
-                        context.selected_behavior == BehaviorType::FOLLOW
-                    ? "follow_release_grace"
-                    : "highest_enabled_score"));
+  if (follow_owns_avoid_target &&
+      context.selected_behavior == BehaviorType::FOLLOW) {
+    context.debug.selected_reason = "fsm_follow_owns_same_target";
+  } else if (stop_preempts_avoid) {
+    context.debug.selected_reason = "stop_before_avoid";
+  } else if (avoid_precedes_stop) {
+    context.debug.selected_reason = "avoid_before_stop";
+  } else if (follow_release_grace &&
+             context.selected_behavior == BehaviorType::FOLLOW) {
+    context.debug.selected_reason = "follow_release_grace";
+  } else {
+    context.debug.selected_reason = "highest_enabled_score";
+  }
   context.debug.cost_terms = {
       {"keep", context.score.keep},
       {"follow", context.score.follow},
@@ -200,3 +241,4 @@ BehaviorContextData BehaviorDecision::decide(
 }
 
 }  // namespace behavior_planner
+

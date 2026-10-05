@@ -76,6 +76,15 @@ asmc_msgs::BehaviorCommand V2CommandManager::makeCandidate(
     case BehaviorType::KEEP:
       command.maneuver_type = Command::KEEP;
       break;
+    case BehaviorType::MERGE:
+      command.maneuver_type = Command::MERGE;
+      command.merge_type = Command::MERGE_ROUNDABOUT;
+      command.target_link_id = context.target.target_link_id;
+      command.direction = Command::DIRECTION_NONE;
+      command.execution_request = context.maneuver_phase == ManeuverPhase::PREPARE
+          ? Command::PREPARE : Command::EXECUTE;
+      command.has_target_pose = false;
+      break;
     case BehaviorType::FOLLOW:
       command.maneuver_type = Command::FOLLOW;
       command.primary_object_id = context.target.lead_vehicle_id;
@@ -174,6 +183,24 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
       feedback_matches && usesHandshake(active_command_.maneuver_type) &&
       (feedback->execution_state == Feedback::COMPLETED ||
        feedback->execution_state == Feedback::FAILED);
+
+  // 진행 중인 AVOID에서 perception ID가 잠깐 바뀌어도 wire fingerprint와
+  // command_id를 바꾸지 않는다. Frenet resolver가 기존 target geometry와
+  // 유일하게 일치하는 새 관측 ID를 검증해 재연결한다. terminal feedback
+  // 이후에는 새 target으로 정상 transaction을 시작할 수 있다.
+  if (has_active_command_ && !terminal_feedback &&
+      active_command_.maneuver_type == Command::AVOID &&
+      candidate.maneuver_type == Command::AVOID) {
+    candidate.source_link_id = active_command_.source_link_id;
+    candidate.primary_object_id = active_command_.primary_object_id;
+  }
+  if (has_active_command_ && !terminal_feedback &&
+      active_command_.maneuver_type == Command::MERGE && candidate.maneuver_type == Command::MERGE) {
+    candidate = active_command_;
+    candidate.execution_request = context.maneuver_phase == ManeuverPhase::PREPARE
+        ? Command::PREPARE : Command::EXECUTE;
+    candidate.reason = "roundabout_merge";
+  }
   if (terminal_feedback) {
     active_transaction_locked_ = false;
   }
@@ -183,25 +210,39 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
     active_transaction_locked_ = true;
   }
   const bool emergency = candidate.maneuver_type == Command::EMERGENCY_STOP;
-  const auto preempt_it = context.extra_flags.find("stop_preempts_avoid");
-  const bool planned_stop_preempts_avoid =
-      candidate.maneuver_type == Command::STOP &&
-      active_command_.maneuver_type == Command::AVOID &&
-      preempt_it != context.extra_flags.end() && preempt_it->second;
+  // Context.selected_behavior is already the FSM's authoritative output.
+  // A locked transaction may freeze identity changes *within the same
+  // maneuver*, but it must not re-decide and reject an FSM mode transition.
+  const bool fsm_changed_maneuver =
+      has_active_command_ &&
+      candidate.maneuver_type != active_command_.maneuver_type;
 
   const bool restart_terminal_identity =
       terminal_feedback && context.maneuver_phase == ManeuverPhase::PREPARE &&
       sameIdentity(active_command_, candidate);
+  const auto approach_limit_it =
+      context.extra_flags.find("intersection_approach_speed_limit");
+  const bool candidate_intersection_approach =
+      approach_limit_it != context.extra_flags.end() &&
+      approach_limit_it->second;
+  // Speed is otherwise frozen for each wire transaction. Entering/leaving the
+  // map stop-line approach zone is a discrete speed-policy transition, so a
+  // non-committed command gets a new identity exactly at the zone boundary.
+  // A committed lateral maneuver remains immutable and picks up the ceiling
+  // when its transaction completes.
+  const bool intersection_approach_policy_changed =
+      has_active_command_ && candidate.maneuver_type != Command::MERGE &&
+      candidate_intersection_approach != active_intersection_approach_;
   if (!has_active_command_ || !sameIdentity(active_command_, candidate) ||
-      restart_terminal_identity) {
-    if (!active_transaction_locked_ || emergency ||
-        planned_stop_preempts_avoid) {
+      restart_terminal_identity || intersection_approach_policy_changed) {
+    if (!active_transaction_locked_ || emergency || fsm_changed_maneuver) {
       ++next_command_id_;
       if (next_command_id_ == 0) ++next_command_id_;
       candidate.command_id = next_command_id_;
       active_command_ = candidate;
       has_active_command_ = true;
       active_transaction_locked_ = false;
+      active_intersection_approach_ = candidate_intersection_approach;
     }
   }
 
@@ -224,3 +265,4 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
 }
 
 }  // namespace behavior_planner
+

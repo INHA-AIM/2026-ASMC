@@ -18,6 +18,74 @@
   <arg name="roi_max_x" default="50.0"/>
   <arg name="roi_min_y" default="-20.0"/>
   <arg name="roi_max_y" default="20.0"/>
+  <arg name="motion_debug_topic" default="/lidar/motion_debug"/>
+  <!-- Pedestrians remain fail-safe KEEP. Static objects use current road
+       overlap; PENDING/DYNAMIC outside the mask survive only when their
+       predicted OBB enters it. Static planner geometry is clipped to the
+       actual road intersection. -->
+  <arg name="drivable_filter_enabled" default="true"/>
+  <arg name="drivable_margin_m" default="0.0"/>
+  <arg name="drivable_ratio_threshold" default="0.15"/>
+  <arg name="drivable_supersample" default="5"/>
+  <!-- Planner 공용 입력에서 5 cm 지면 파편을 제거한다. UNKNOWN 객체는
+       이 높이를 연속 3프레임 만족해야 /last_lidar에 실린다. 한번
+       confirmed된 동일 track은 5연속 low-height frame에서만 해제한다. -->
+  <arg name="planning_minimum_obstacle_height_m" default="0.10"/>
+  <arg name="planning_confirmation_frames" default="3"/>
+  <arg name="planning_release_frames" default="5"/>
+  <!-- Clean-lap catalog is matched only after OBB tracking and camera fusion,
+       immediately before /last_lidar publication. Limit it to the verified
+       long guardrail beside the global path; everywhere else is fail-safe KEEP.
+       Its long cluster center shifts by about 2 m as visible points change. -->
+  <arg name="known_static_filter_enabled" default="true"/>
+  <arg name="known_static_catalog"
+       default="$(find Main)/known_static_objects.yaml"/>
+  <arg name="known_static_center_tolerance_m" default="2.5"/>
+  <arg name="known_static_application_region_enabled" default="true"/>
+  <arg name="known_static_application_min_x" default="-35.0"/>
+  <arg name="known_static_application_max_x" default="15.0"/>
+  <arg name="known_static_application_min_y" default="108.0"/>
+  <arg name="known_static_application_max_y" default="180.0"/>
+  <!-- The same verified guardrail continues around the following long bend.
+       Keep it as a disjoint region so the area between route sections is not
+       implicitly enabled. -->
+  <arg name="known_static_guardrail_extension_enabled" default="true"/>
+  <arg name="known_static_guardrail_extension_min_x" default="-107.0"/>
+  <arg name="known_static_guardrail_extension_max_x" default="15.0"/>
+  <arg name="known_static_guardrail_extension_min_y" default="175.0"/>
+  <arg name="known_static_guardrail_extension_max_y" default="345.0"/>
+  <!-- Bag-verified, narrowly bounded static structures. This filter is
+       fail-open and applies only to static UNKNOWN objects. -->
+  <arg name="static_structure_exclusion_enabled" default="true"/>
+  <arg name="static_structure_exclusion_config"
+       default="$(find Main)/../../../planning_inputs/config/static_structure_exclusions.yaml"/>
+  <arg name="static_structure_minimum_height_m" default="2.5"/>
+  <arg name="static_structure_minimum_bottom_z_m" default="2.0"/>
+  <!-- Ground segmentation is constrained to near-horizontal, low-height seed
+       points. The far threshold is relaxed without erasing low obstacles near
+       the ego vehicle. -->
+  <arg name="ground_distance_threshold_near_m" default="0.30"/>
+  <arg name="ground_distance_threshold_far_m" default="0.40"/>
+  <arg name="ground_threshold_far_range_m" default="50.0"/>
+  <arg name="ground_max_tilt_deg" default="25.0"/>
+  <arg name="ground_seed_min_z_m" default="-2.0"/>
+  <arg name="ground_seed_max_z_m" default="-0.65"/>
+  <arg name="ground_ransac_maximum_iterations" default="80"/>
+  <arg name="ground_minimum_seed_points" default="30"/>
+  <arg name="ground_fallback_frames" default="2"/>
+  <!-- Reject malformed (0,0), out-of-map and physically impossible GPS
+       jumps before they can displace LiDAR objects in the map frame. -->
+  <arg name="gps_sanity_maximum_speed_mps" default="80.0"/>
+  <arg name="gps_sanity_base_jump_allowance_m" default="3.0"/>
+  <arg name="gps_sanity_reanchor_after_s" default="2.0"/>
+  <!-- LiDAR map projection uses pose resolved at the scan source stamp. Stale
+       pose must drop the scan instead of creating map-frame ghost objects. -->
+  <arg name="lidar_pose_gps_max_age_s" default="0.30"/>
+  <arg name="lidar_pose_imu_max_age_s" default="0.12"/>
+  <arg name="lidar_pose_can_max_age_s" default="0.12"/>
+  <!-- Only absorbs callback-order jitter; source stamps and stale limits stay authoritative. -->
+  <arg name="lidar_pose_wait_timeout_s" default="0.05"/>
+  <arg name="lidar_pose_maximum_speed_mps" default="35.0"/>
   <!-- ROI 폭별 전처리 비용 측정용. 평시에는 꺼져 있고, 켜면 표본을 다 모은
        뒤 집계 로그를 남기고 노드가 스스로 종료한다. -->
   <arg name="benchmark_lidar_pipeline" default="false"/>
@@ -49,28 +117,114 @@
     <param name="benchmark_sample_frames"
            value="$(arg benchmark_sample_frames)"/>
     <!-- Threat-oriented LiDAR-only motion classifier. Tracker velocity remains
-         the unfiltered, current-frame value; these parameters affect only
-         is_dynamic and its diagnostics. -->
+         the unfiltered current-frame value; the planner receives the separate
+         state-gated/provisional velocity produced by this classifier. -->
     <param name="motion_history_size" value="5"/>
     <param name="motion_warmup_observations" value="3"/>
     <param name="motion_low_threat_confirmations" value="3"/>
-    <param name="motion_dynamic_confirmations" value="2"/>
+    <param name="motion_dynamic_confirmations" value="3"/>
+    <param name="motion_pending_static_confirmations" value="3"/>
+    <param name="motion_dynamic_release_confirmations" value="8"/>
+    <param name="motion_pending_max_frames" value="5"/>
     <param name="motion_change_confirmations" value="3"/>
     <param name="motion_short_miss_limit" value="3"/>
-    <param name="motion_lateral_threshold_kph" value="3.0"/>
+    <param name="motion_lateral_threshold_kph" value="4.0"/>
     <param name="motion_longitudinal_threshold_kph" value="10.0"/>
-    <param name="motion_fast_lateral_threshold_kph" value="5.0"/>
+    <param name="motion_fast_lateral_threshold_kph" value="12.0"/>
     <param name="motion_velocity_jump_kph" value="10.0"/>
     <param name="motion_direction_cosine_min" value="0.7"/>
-    <param name="motion_longitudinal_displacement_kph" value="5.0"/>
+    <param name="motion_longitudinal_displacement_kph" value="8.0"/>
+    <param name="motion_lateral_displacement_kph" value="3.0"/>
+    <param name="motion_exit_speed_kph" value="2.5"/>
+    <param name="motion_edge_agreement_tolerance_m" value="0.35"/>
+    <param name="motion_debug_topic" value="$(arg motion_debug_topic)"/>
+    <param name="drivable_filter_enabled"
+           value="$(arg drivable_filter_enabled)"/>
+    <param name="known_static_filter_enabled"
+           value="$(arg known_static_filter_enabled)"/>
+    <param name="known_static_catalog" value="$(arg known_static_catalog)"/>
+    <param name="known_static_center_tolerance_m"
+           value="$(arg known_static_center_tolerance_m)"/>
+    <param name="known_static_application_region_enabled"
+           value="$(arg known_static_application_region_enabled)"/>
+    <param name="known_static_application_min_x"
+           value="$(arg known_static_application_min_x)"/>
+    <param name="known_static_application_max_x"
+           value="$(arg known_static_application_max_x)"/>
+    <param name="known_static_application_min_y"
+           value="$(arg known_static_application_min_y)"/>
+    <param name="known_static_application_max_y"
+           value="$(arg known_static_application_max_y)"/>
+    <param name="known_static_guardrail_extension_enabled"
+           value="$(arg known_static_guardrail_extension_enabled)"/>
+    <param name="known_static_guardrail_extension_min_x"
+           value="$(arg known_static_guardrail_extension_min_x)"/>
+    <param name="known_static_guardrail_extension_max_x"
+           value="$(arg known_static_guardrail_extension_max_x)"/>
+    <param name="known_static_guardrail_extension_min_y"
+           value="$(arg known_static_guardrail_extension_min_y)"/>
+    <param name="known_static_guardrail_extension_max_y"
+           value="$(arg known_static_guardrail_extension_max_y)"/>
+    <param name="static_structure_exclusion_enabled"
+           value="$(arg static_structure_exclusion_enabled)"/>
+    <param name="static_structure_exclusion_config"
+           value="$(arg static_structure_exclusion_config)"/>
+    <param name="static_structure_minimum_height_m"
+           value="$(arg static_structure_minimum_height_m)"/>
+    <param name="static_structure_minimum_bottom_z_m"
+           value="$(arg static_structure_minimum_bottom_z_m)"/>
+    <param name="ground_distance_threshold_near_m"
+           value="$(arg ground_distance_threshold_near_m)"/>
+    <param name="ground_distance_threshold_far_m"
+           value="$(arg ground_distance_threshold_far_m)"/>
+    <param name="ground_threshold_far_range_m"
+           value="$(arg ground_threshold_far_range_m)"/>
+    <param name="ground_max_tilt_deg" value="$(arg ground_max_tilt_deg)"/>
+    <param name="ground_seed_min_z_m" value="$(arg ground_seed_min_z_m)"/>
+    <param name="ground_seed_max_z_m" value="$(arg ground_seed_max_z_m)"/>
+    <param name="ground_ransac_maximum_iterations"
+           value="$(arg ground_ransac_maximum_iterations)"/>
+    <param name="ground_minimum_seed_points"
+           value="$(arg ground_minimum_seed_points)"/>
+    <param name="ground_fallback_frames" value="$(arg ground_fallback_frames)"/>
+    <param name="gps_sanity_min_x" value="-454.5159"/>
+    <param name="gps_sanity_min_y" value="-825.0458"/>
+    <param name="gps_sanity_max_x" value="162.4841"/>
+    <param name="gps_sanity_max_y" value="621.3542"/>
+    <param name="gps_sanity_maximum_speed_mps"
+           value="$(arg gps_sanity_maximum_speed_mps)"/>
+    <param name="gps_sanity_base_jump_allowance_m"
+           value="$(arg gps_sanity_base_jump_allowance_m)"/>
+    <param name="gps_sanity_reanchor_after_s"
+           value="$(arg gps_sanity_reanchor_after_s)"/>
+    <param name="lidar_pose_gps_max_age_s"
+           value="$(arg lidar_pose_gps_max_age_s)"/>
+    <param name="lidar_pose_imu_max_age_s"
+           value="$(arg lidar_pose_imu_max_age_s)"/>
+    <param name="lidar_pose_can_max_age_s"
+           value="$(arg lidar_pose_can_max_age_s)"/>
+    <param name="lidar_pose_wait_timeout_s"
+           value="$(arg lidar_pose_wait_timeout_s)"/>
+    <param name="lidar_pose_maximum_speed_mps"
+           value="$(arg lidar_pose_maximum_speed_mps)"/>
     <param name="drivable_mask_image"
-           value="$(find Main)/../../../link_node/out/road_mask.png"/>
+           value="$(find Main)/../../../planning_inputs/config/validated_0781402/road_mask.png"/>
     <param name="drivable_mask_metadata"
-           value="$(find Main)/../../../link_node/out/road_mask.yaml"/>
+           value="$(find Main)/../../../planning_inputs/config/validated_0781402/road_mask.yaml"/>
     <param name="drivable_map_id" value="waize_katri_2025-10-23"/>
-    <param name="drivable_margin_m" value="1.0"/>
-    <param name="drivable_ratio_threshold" value="0.3"/>
-    <param name="drivable_samples" value="5"/>
+    <param name="drivable_origin_easting" value="302595.0"/>
+    <param name="drivable_origin_northing" value="4124145.0"/>
+    <param name="drivable_origin_altitude" value="0.0"/>
+    <param name="drivable_margin_m" value="$(arg drivable_margin_m)"/>
+    <param name="drivable_ratio_threshold"
+           value="$(arg drivable_ratio_threshold)"/>
+    <param name="drivable_samples" value="$(arg drivable_supersample)"/>
+    <param name="planning_minimum_obstacle_height_m"
+           value="$(arg planning_minimum_obstacle_height_m)"/>
+    <param name="planning_confirmation_frames"
+           value="$(arg planning_confirmation_frames)"/>
+    <param name="planning_release_frames"
+           value="$(arg planning_release_frames)"/>
     <!-- Sensor poses and camera intrinsics come from setting.yaml. The C++
          node still accepts private ROS-parameter overrides for fine tuning. -->
     <param name="fusion_iou_threshold" value="0.25"/>

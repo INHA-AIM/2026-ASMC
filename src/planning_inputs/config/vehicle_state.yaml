@@ -1,0 +1,42 @@
+topics:
+  gps: /gps
+  imu: /imu
+publish_topic: /planning/vehicle/state
+publish_frequency: 50.0
+
+# MORAI ASMC_sensor_set_v2.json GPS mounting position relative to the rear-axle
+# vehicle origin (x forward, y left). The adapter removes this lever arm before
+# publishing /vehicle/state.
+gps_sensor_offset:
+  x: 0.35
+  y: 0.0
+
+timeouts:
+  gps: 0.50
+  imu: 0.30
+
+# GPS is an absolute rear-axle position correction. The innovation is computed
+# against the predicted pose at the same sensor header.stamp, then translated
+# forward to the current predicted pose without rewinding its timestamp.
+position:
+  gps_correction_gain: 1.0
+
+# GPS provides longitudinal speed correction; IMU acceleration predicts between
+# GPS callbacks. Propagation dt always uses sensor header.stamp. Steady receive
+# time is used only by the GPS/IMU freshness watchdog above.
+speed:
+  window_duration: 0.18
+  minimum_baseline: 0.12
+  maximum_mps: 60.0
+  gps_correction_gain: 0.35
+  gps_innovation_limit_mps: 3.0
+  imu_acceleration_filter_alpha: 0.50
+  imu_acceleration_deadband_mps2: 0.10
+  imu_acceleration_min_mps2: -12.0
+  imu_acceleration_max_mps2: 8.0
+  imu_maximum_dt: 0.10
+  stationary_duration: 0.25
+  stationary_distance: 0.05
+  stationary_speed_threshold_mps: 0.50
+  stationary_acceleration_threshold_mps2: 0.20
+

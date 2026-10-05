@@ -1,0 +1,26 @@
+<launch>
+  <arg name="input_topic" default="/last_lidar"/>
+  <arg name="source_policy" default="validated_lidar"/>
+  <arg name="motion_debug_topic" default="/lidar/motion_debug"/>
+  <arg name="output_topic" default="/planning/objects"/>
+  <arg name="state_topic" default="/planning/vehicle/state"/>
+  <node pkg="planning_inputs" type="tracked_wire_bridge.py" name="planning_tracked_wire_bridge" output="screen">
+    <param name="source_policy" value="$(arg source_policy)"/>
+    <param name="motion_debug_topic" value="$(arg motion_debug_topic)"/>
+    <param name="input_topic" value="$(arg input_topic)"/>
+    <param name="output_topic" value="/planning/input/tracked_objects"/>
+  </node>
+  <node pkg="planning_inputs" type="planning_objects_adapter" name="planning_objects_adapter" output="screen" required="true">
+    <rosparam command="load" file="$(find planning_inputs)/config/motion_params.yaml"/>
+    <rosparam command="load" file="$(find planning_inputs)/config/object_filter_params.yaml"/>
+    <param name="drivable_mask_image" value="$(find planning_inputs)/config/validated_0781402/road_mask.png"/>
+    <param name="drivable_mask_metadata" value="$(find planning_inputs)/config/validated_0781402/road_mask.yaml"/>
+    <param name="known_static_catalog" value="$(find planning_inputs)/config/validated_0781402/known_static_objects.yaml"/>
+    <param name="static_structure_exclusion_config" value="$(find planning_inputs)/config/static_structure_exclusions.yaml"/>
+    <param name="source_policy" value="$(arg source_policy)"/>
+    <param name="motion_debug_topic" value="$(arg motion_debug_topic)"/>
+    <param name="input_topic" value="/planning/input/tracked_objects"/>
+    <param name="output_topic" value="$(arg output_topic)"/>
+    <param name="state_topic" value="$(arg state_topic)"/>
+  </node>
+</launch>

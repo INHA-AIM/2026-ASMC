@@ -65,7 +65,18 @@ void CartesianToFrenet(const RefLine& ref, const CartesianState& cs,
 // 처리한다 (0/0=NaN 방지, .cpp 함수 상단 주석 참고).
 // =========================================================
 
-CartesianPath ConvertToCartesianPath(const FrenetPath& path, const RefLine& ref);
+enum class CartesianGeometryMode {
+    // 정상 주행: 충분한 속도에서는 Frenet analytic yaw/kappa를, 정지에 가까운
+    // 샘플에서는 위치 기반 geometric yaw/kappa를 사용한다.
+    HYBRID,
+    // STOP 계열: x/y/v/a는 기존 변환 그대로 두고 yaw/kappa만 모든 샘플에서
+    // 위치 기반 값으로 사용한다. 저속 d_dot/s_dot 증폭을 피하기 위한 정책이다.
+    GEOMETRIC_YAW_CURVATURE,
+};
+
+CartesianPath ConvertToCartesianPath(
+    const FrenetPath& path, const RefLine& ref,
+    CartesianGeometryMode geometry_mode = CartesianGeometryMode::HYBRID);
 
 // =========================================================
 // [저속 대응] 위치(x,y) 기반 기하학적 yaw/kappa 계산.

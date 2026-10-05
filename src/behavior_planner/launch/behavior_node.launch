@@ -1,22 +1,43 @@
 <launch>
+  <arg name="state_topic" default="/vehicle/state"/>
   <arg name="dashboard" default="true"/>
   <arg name="open_dashboard" default="false"/>
   <arg name="dashboard_port" default="8088"/>
   <arg name="rviz" default="false"/>
   <arg name="interface_version" default="v1"/>
+  <arg name="objects_input_type" default="morai"/>
+  <arg name="objects_topic" default="/Object_topic"/>
   <arg name="dashboard_page" default="index.html"/>
+  <arg name="dashboard_lidar_objects_topic"
+       default="/perception/objects_lidar_test"/>
+  <arg name="dashboard_lidar_motion_debug_topic"
+       default="/lidar/motion_debug"/>
+  <!-- Runtime A/B knob for objects flickering at the AVOID corridor edge.
+       The YAML default is 0.4 m; 0.8 m expands the IONIQ 5 swept half-width
+       from about 1.35 m to the configured 1.75 m ceiling. -->
+  <arg name="avoid_path_margin_m" default="0.4"/>
 
   <node pkg="behavior_planner" type="behavior_node" name="behavior_planner" output="screen">
     <rosparam command="load" file="$(find behavior_planner)/src/config/behavior_params.yaml" subst_value="true"/>
+    <!-- Keep this after rosparam load so an explicit launch value wins. -->
+    <param name="avoid/path_margin_m" value="$(arg avoid_path_margin_m)"/>
     <param name="interface_version" value="$(arg interface_version)"/>
+    <param name="objects/input_type" value="$(arg objects_input_type)"/>
+    <param name="topics/ego" value="$(arg state_topic)"/>
+    <param name="topics/objects" value="$(arg objects_topic)"/>
   </node>
 
   <group if="$(arg dashboard)">
     <node pkg="behavior_planner" type="behavior_dashboard_server.py"
           name="behavior_dashboard_server" output="screen">
+      <remap from="/vehicle/state" to="$(arg state_topic)"/>
       <param name="port" value="$(arg dashboard_port)"/>
       <param name="package_path" value="$(find behavior_planner)"/>
       <param name="interface_version" value="$(arg interface_version)"/>
+      <param name="lidar_objects_topic"
+             value="$(arg dashboard_lidar_objects_topic)"/>
+      <param name="lidar_motion_debug_topic"
+             value="$(arg dashboard_lidar_motion_debug_topic)"/>
     </node>
     <node if="$(arg open_dashboard)" pkg="behavior_planner"
           type="open_dashboard.py" name="behavior_dashboard_opener" output="screen">

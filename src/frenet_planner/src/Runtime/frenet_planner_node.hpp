@@ -5,7 +5,7 @@
 
 #include <asmc_msgs/BehaviorCommand.h>
 #include <asmc_msgs/BehaviorContext.h>
-#include <asmc_msgs/DetectedObjectArray.h>
+#include <planning_inputs/DetectedObjectArray.h>
 #include <asmc_msgs/FrenetFeedback.h>
 #include <asmc_msgs/PlanFeedback.h>
 #include <asmc_msgs/Trajectory.h>
@@ -44,7 +44,7 @@ class FrenetPlannerNode {
     // ---- Input snapshot (input_snapshot.cpp) ----
     struct InputSnapshot {
         asmc_msgs::VehicleState vehicle;
-        asmc_msgs::DetectedObjectArray objects;
+        planning_inputs::DetectedObjectArray objects;
         asmc_msgs::BehaviorContext behavior;
         ros::SteadyTime vehicle_received_at;
         ros::SteadyTime objects_received_at;
@@ -55,7 +55,7 @@ class FrenetPlannerNode {
     };
 
     void vehicleCallback(const asmc_msgs::VehicleState::ConstPtr& message);
-    void objectsCallback(const asmc_msgs::DetectedObjectArray::ConstPtr& message);
+    void objectsCallback(const planning_inputs::DetectedObjectArray::ConstPtr& message);
     void behaviorCallback(const asmc_msgs::BehaviorContext::ConstPtr& message);
     void planningTimerCallback(const ros::SteadyTimerEvent& event);
 
@@ -262,7 +262,7 @@ class FrenetPlannerNode {
 
     mutable std::mutex input_mutex_;
     asmc_msgs::VehicleState latest_vehicle_;
-    asmc_msgs::DetectedObjectArray latest_objects_;
+    planning_inputs::DetectedObjectArray latest_objects_;
     asmc_msgs::BehaviorContext latest_behavior_;
     ros::SteadyTime vehicle_received_at_;
     ros::SteadyTime objects_received_at_;

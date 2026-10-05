@@ -56,7 +56,8 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                                          const CollisionCheckConfig& collision_cfg,
                                          const StopConfig& stop_cfg,
                                          const MergeConfig& merge_cfg,
-                                         PlannerDebugStats* stats) {
+                                         PlannerDebugStats* stats,
+                                         CartesianGeometryMode geometry_mode) {
     // 1. lateral 후보. 전 모드에 공유된 [-3,+3]m 격자를 쓰면
     // LANE_KEEPING에서도 먼 장애물을 보고 옆 후보가 선택된다. 모드가
     // 지정한 목표 d 주변의 작은 범위만 생성해 역할을 분리한다.
@@ -218,7 +219,7 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
     // 3. 결합 + 사후 곡률 필터링
     std::vector<FrenetPath> combined = CombineLateralLongitudinal(lateral_set, longitudinal_set);
     if (stats) stats->combined_total = combined.size();
-    FilterByCurvature(combined, ref, limits);
+    FilterByCurvature(combined, ref, limits, geometry_mode);
     if (stats) {
         for (const auto& p : combined) if (p.valid) stats->combined_valid_after_curvature++;
     }
@@ -249,7 +250,8 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
     const std::vector<TrackedObject>& obstacles,
     const VehicleShape& vehicle_shape,
     const CollisionCheckConfig& collision_cfg,
-    PlannerDebugStats* stats) {
+    PlannerDebugStats* stats,
+    CartesianGeometryMode geometry_mode) {
     // 1. lateral 후보. request.lateral이 authoritative input이다 - target_d/
     // search_tolerance를 ResolveLateralOffset이나 cmd.mode로 다시 계산하지
     // 않는다(§5).
@@ -293,8 +295,10 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
 
         case LongitudinalMode::VELOCITY_KEEPING:
         default:
-            longitudinal_set =
-                GenerateVelocityKeepingCandidates(start, request.target_speed, cfg);
+            longitudinal_set = request.speed_envelope.empty()
+                ? GenerateVelocityKeepingCandidates(start, request.target_speed, cfg)
+                : GenerateEnvelopeVelocityCandidates(
+                    start, request.target_speed, request.speed_envelope, cfg, limits);
             break;
     }
 
@@ -307,7 +311,7 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
     // 3. 결합 + 사후 곡률 필터링
     std::vector<FrenetPath> combined = CombineLateralLongitudinal(lateral_set, longitudinal_set);
     if (stats) stats->combined_total = combined.size();
-    FilterByCurvature(combined, ref, limits);
+    FilterByCurvature(combined, ref, limits, geometry_mode);
     if (stats) {
         for (const auto& p : combined) if (p.valid) stats->combined_valid_after_curvature++;
     }
@@ -319,7 +323,7 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
     if (!obstacles.empty()) {
         FilterByCollision(combined, ref, obstacles, vehicle_shape, collision_cfg,
                           request.collision.coast_exempt_object_id,
-                          request.collision.escape_object_id);
+                          request.collision.margin_recovery_object_id);
     }
     if (stats) {
         for (const auto& p : combined) if (p.valid) stats->combined_valid_after_collision++;

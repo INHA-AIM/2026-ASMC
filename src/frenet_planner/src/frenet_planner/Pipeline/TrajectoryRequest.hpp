@@ -1,6 +1,8 @@
 #ifndef FRENET_PIPELINE_TRAJECTORY_REQUEST_HPP
 #define FRENET_PIPELINE_TRAJECTORY_REQUEST_HPP
 
+#include <vector>
+
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
 
 // R4: PlannerCommand와 TrajectoryRequest의 역할을 분리한다.
@@ -87,11 +89,12 @@ struct StopRequest {
 // "지금 FOLLOWING인가"를 보고 coast_exempt를 스스로 정하지 않는다(§3).
 //
 // coast_exempt_object_id: reactive coast 연장 단계에서 장애물로 보지 않을
-// 물체(예: FOLLOW의 leader). escape_object_id: AVOID의 회피 대상처럼, 접근/
-// 통과 구간에서 충돌 스코핑을 완화해야 하는 물체. 둘 다 해당 없으면 -1.
+// 물체(예: FOLLOW의 leader). margin_recovery_object_id: 현재 pose가 이미
+// 확장 margin 안에 있는 AVOID 대상. 실제 OBB 충돌을 허용하는 예외가 아니며
+// 이격을 개선해 margin 밖으로 나가는 후보에만 쓰인다. 둘 다 없으면 -1.
 struct CollisionRequest {
     int coast_exempt_object_id = -1;
-    int escape_object_id = -1;
+    int margin_recovery_object_id = -1;
 };
 
 struct TrajectoryRequest {
@@ -99,6 +102,10 @@ struct TrajectoryRequest {
 
     LongitudinalMode longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
     double target_speed = 0.0;
+
+    // Optional position-dependent ceiling, already resolved by the maneuver.
+    // Empty preserves the existing generator semantics for STOP/FOLLOW/AVOID.
+    std::vector<SpeedEnvelopePoint> speed_envelope;
 
     FollowingRequest following;
     StopRequest stop;

@@ -30,7 +30,9 @@
            file="$(find asmc_bridge)/launch/vehicle_state_ego_dev.launch"/>
 
   <node pkg="frenet_planner" type="empty_objects_test_publisher"
-        name="empty_objects_test_publisher" output="screen"/>
+        name="empty_objects_test_publisher" output="screen">
+    <param name="publish_topic" value="/planning/objects"/>
+  </node>
   <include file="$(find behavior_planner)/launch/behavior_node.launch">
     <arg name="dashboard" value="$(arg dashboard)"/>
   </include>

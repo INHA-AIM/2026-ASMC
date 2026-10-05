@@ -5,6 +5,9 @@
 #include <DeadReckoning/DeadReckoning.hpp>
 #include <Camera/Camera.hpp>
 
+#include <cstdint>
+#include <string>
+
 extern ros::Publisher VizPub;
 extern VehicleSpec st_VehicleSpec;
 extern GPS_IMU st_GPSIMU, st_GPSIMUTemporal;
@@ -18,6 +21,10 @@ extern SENSOR_DATA st_SensorData;
 
 extern pthread_cond_t st_DataTemporalCond;
 extern pthread_mutex_t st_DataTemporal;
+// Monotonic sequence owned by the raw LiDAR callback.  The temporal worker
+// uses it as the condition-variable predicate so one scan is processed at
+// most once and a wake-up cannot be lost while the pipeline is busy.
+extern std::uint64_t u64_LidarFrameGeneration;
 
 extern int32 CANHZ, LiDARHZ, IMUHZ, VisionHZ, GPSHZ, VIEWERHZ;
 
@@ -38,6 +45,10 @@ void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& data); //라
 //==========================GPS========================== // 
 void *ParseGPS(void *pst_NodeHandle);
 void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg);
+void ConfigureSensorPoseHistory(ros::NodeHandle& private_node);
+bool LookupSensorPoseForLidar(std::uint64_t lidar_stamp_ms,
+                              GPS_IMU* pose,
+                              std::string* reason = nullptr);
 //==========================GPS========================== // 
 
 //==========================CAN========================== // 

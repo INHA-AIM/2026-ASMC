@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <cmath>
 
+#include "cost/cost_function.hpp"
+#include "math/utils.hpp"
+#include "model/vehicle_model.hpp"
 #include "solver/mpc_solver.hpp"
 
 namespace {
@@ -27,6 +30,13 @@ void MpcController::ResetOnFailSafe() {
     last_control_ = MPCControl{};
     stuck_cycles_ = 0;
     recovery_cycles_left_ = 0;
+}
+
+void MpcController::ResetForPlannerStop(double published_steering) {
+    ResetOnFailSafe();
+    if (std::isfinite(published_steering))
+        last_control_.delta = std::clamp(published_steering,
+            -params_.steering_max, params_.steering_max);
 }
 
 MpcController::Output MpcController::ControlProcess(
@@ -67,8 +77,10 @@ MpcController::Output MpcController::ControlProcess(
         output.stuck_event_path_progress = path_progress;
     }
 
+    const MPCControl optimization_previous_control = last_control_;
     const MPCResult result = solveMPC(
-        ego_state, reference, last_control_, warm_start_, params_);
+        ego_state, reference, optimization_previous_control, warm_start_,
+        params_);
     if (!result.success ||
         result.controls.size() != static_cast<std::size_t>(params_.horizon) ||
         !std::isfinite(result.control.delta) ||
@@ -80,6 +92,24 @@ MpcController::Output MpcController::ControlProcess(
 
     warm_start_ = result.controls;
     last_control_ = result.control;
+    output.cost = computeCostBreakdown(
+        result.predicted_states, result.controls, reference,
+        optimization_previous_control, params_);
+    output.first_reference_curvature = reference.k_ref.empty()
+        ? 0.0 : reference.k_ref.front();
+    output.first_feedforward_steering = SteeringFeedforward(
+        output.first_reference_curvature, params_.wheelbase,
+        params_.steering_max, params_.steering_curvature_gain);
+    output.first_reference_speed = reference.v_ref.empty()
+        ? 0.0 : reference.v_ref.front();
+    output.first_reference_acceleration = reference.a_ref.empty()
+        ? 0.0 : reference.a_ref.front();
+    output.first_used_reference_acceleration = clip(
+        output.first_reference_acceleration,
+        params_.accel_min, params_.accel_max);
+    output.current_speed = ego_state.vx;
+    output.first_speed_error =
+        output.current_speed - output.first_reference_speed;
     MPCControl output_control = result.control;
     if (recovery_cycles_left_ > 0 && forward_intent && ego_stopped) {
         output_control.accel =
@@ -94,5 +124,8 @@ MpcController::Output MpcController::ControlProcess(
 
     output.success = true;
     output.control = output_control;
+    output.first_acceleration_residual = output.control.accel -
+        output.first_used_reference_acceleration;
     return output;
 }
+

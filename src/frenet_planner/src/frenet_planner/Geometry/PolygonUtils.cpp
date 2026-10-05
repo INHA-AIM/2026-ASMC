@@ -62,6 +62,39 @@ bool HasSeparatingAxis(const Polygon2D& source, const Polygon2D& a,
     return false;
 }
 
+double PointSegmentDistance(const Point2D& point, const Point2D& start,
+                            const Point2D& end, double epsilon) {
+    const double dx = end.x - start.x;
+    const double dy = end.y - start.y;
+    const double length_squared = dx * dx + dy * dy;
+    if (length_squared <= epsilon * epsilon) {
+        return std::hypot(point.x - start.x, point.y - start.y);
+    }
+    const double projection = std::max(
+        0.0, std::min(1.0,
+                      ((point.x - start.x) * dx +
+                       (point.y - start.y) * dy) /
+                          length_squared));
+    const double nearest_x = start.x + projection * dx;
+    const double nearest_y = start.y + projection * dy;
+    return std::hypot(point.x - nearest_x, point.y - nearest_y);
+}
+
+double DirectedPolygonDistance(const Polygon2D& vertices,
+                               const Polygon2D& edges,
+                               double epsilon) {
+    double distance = std::numeric_limits<double>::infinity();
+    for (const Point2D& vertex : vertices) {
+        for (std::size_t i = 0; i < edges.size(); ++i) {
+            distance = std::min(
+                distance,
+                PointSegmentDistance(vertex, edges[i],
+                                     edges[(i + 1) % edges.size()], epsilon));
+        }
+    }
+    return distance;
+}
+
 }  // namespace
 
 bool AreCornersFinite(const Corners8& corners) {
@@ -190,6 +223,18 @@ bool CheckConvexPolygonOverlapSAT(const Polygon2D& a, const Polygon2D& b,
 
     return !HasSeparatingAxis(a, a, b, safe_epsilon) &&
            !HasSeparatingAxis(b, a, b, safe_epsilon);
+}
+
+double ConvexPolygonDistance(const Polygon2D& a, const Polygon2D& b,
+                             double epsilon) {
+    const double safe_epsilon = std::max(0.0, epsilon);
+    if (!IsValidPolygonForSAT(a, safe_epsilon) ||
+        !IsValidPolygonForSAT(b, safe_epsilon)) {
+        return 0.0;
+    }
+    if (CheckConvexPolygonOverlapSAT(a, b, safe_epsilon)) return 0.0;
+    return std::min(DirectedPolygonDistance(a, b, safe_epsilon),
+                    DirectedPolygonDistance(b, a, safe_epsilon));
 }
 
 Corners8 TranslateCorners(const Corners8& corners, double vx, double vy,

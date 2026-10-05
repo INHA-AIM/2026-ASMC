@@ -1,0 +1,236 @@
+/* LiDAR-oriented V2 diagnostics. The legacy V1 page keeps dashboard.css. */
+.map-panel .toolbar {
+  max-width: calc(100% - 24px);
+  flex-wrap: wrap;
+}
+
+.legend-toggle {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 2;
+}
+
+.legend-toggle summary {
+  width: max-content;
+  padding: 7px 10px;
+  border: 1px solid #203342;
+  border-radius: 8px;
+  background: #0a151fdd;
+  color: #a9bac5;
+  cursor: pointer;
+  font-size: 11px;
+  list-style-position: inside;
+  backdrop-filter: blur(8px);
+}
+
+.legend-toggle .legend {
+  left: 0;
+  bottom: 36px;
+  width: min(650px, calc(100vw - 426px));
+}
+
+.hero-v2 {
+  display: grid !important;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 12px 18px;
+  align-items: start !important;
+}
+
+.hero-v2 .state strong { color: #d7e8f0; }
+
+.lidar-legend .ego {
+  width: 0;
+  height: 0;
+  background: transparent;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 11px solid #fff;
+  filter: drop-shadow(0 0 1px #39e58c);
+}
+
+.lidar-legend .object-vehicle,
+.lidar-legend .object-pedestrian,
+.lidar-legend .object-unknown {
+  width: 12px;
+  height: 8px;
+  border: 2px solid;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.lidar-legend .object-vehicle { border-color: #ff9b4a; }
+.lidar-legend .object-pedestrian { border-color: #ff75cc; }
+.lidar-legend .object-unknown { border-color: #a8b6c0; }
+.lidar-legend .motion-low,
+.lidar-legend .motion-pending,
+.lidar-legend .motion-dynamic,
+.lidar-legend .avoid-target {
+  width: 11px;
+  height: 11px;
+  border: 2px solid;
+  border-radius: 50%;
+  background: transparent;
+}
+.lidar-legend .motion-low { border-color: #39e58c; }
+.lidar-legend .motion-pending { border-color: #ffd447; }
+.lidar-legend .motion-dynamic { border-color: #ff5263; }
+.lidar-legend .filter-keep,
+.lidar-legend .filter-drop {
+  width: 14px;
+  height: 9px;
+  border: 2px solid #d7e8f0;
+  border-radius: 2px;
+  background: transparent;
+}
+.lidar-legend .filter-drop {
+  border-style: dashed;
+  position: relative;
+}
+.lidar-legend .filter-drop::after {
+  content: '×';
+  position: absolute;
+  left: 2px;
+  top: -7px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+}
+.lidar-legend .avoid-target {
+  border-color: #fff;
+  box-shadow: 0 0 5px #fff;
+}
+.lidar-legend .corridor {
+  height: 0;
+  border-top: 2px dashed #b784ff;
+  background: transparent;
+}
+.lidar-legend .velocity-raw { background: #ff75cc; }
+.lidar-legend .velocity { background: #39e58c; }
+.lidar-legend .candidate-valid { background: #75bfff; }
+.lidar-legend .candidate-rejected { background: #ff5263; }
+.lidar-legend .trajectory { background: #ffd447; }
+
+.lidar-legend .signal {
+  width: 9px;
+  height: 9px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: #39e58c;
+}
+
+.lidar-legend .stop {
+  width: 9px;
+  height: 9px;
+  border: 1px solid #fff;
+  background: #ff9b4a;
+  transform: rotate(45deg);
+}
+
+.object-list {
+  display: grid;
+  gap: 5px;
+  max-height: 360px;
+  margin-top: 10px;
+  overflow: auto;
+}
+
+.object-row {
+  display: grid;
+  grid-template-columns: 68px 65px 82px 48px 1fr;
+  gap: 7px;
+  align-items: center;
+  padding: 6px 7px;
+  border: 1px solid #1d303d;
+  border-radius: 6px;
+  background: #0a151e;
+  font: 10px ui-monospace, monospace;
+}
+
+.object-row.filter-dropped {
+  border-style: dashed;
+  border-color: #b8c8d2;
+  background: #111820;
+}
+
+.object-row .filter-state {
+  padding: 3px 4px;
+  border: 1px solid #4d6877;
+  border-radius: 4px;
+  color: #9ee7fb;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.object-row.filter-dropped .filter-state {
+  border-style: dashed;
+  border-color: #d7e8f0;
+  color: #fff;
+}
+
+.object-row.avoid-selected {
+  border-color: #fff;
+  box-shadow: 0 0 8px #ffffff55;
+}
+
+.object-row .object-id b {
+  display: block;
+  margin-top: 3px;
+  color: #fff;
+  font-size: 8px;
+  letter-spacing: 0.5px;
+}
+
+.object-row .object-id { color: #dce9ef; font-weight: 800; }
+.object-row .object-type {
+  padding: 3px 4px;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: 800;
+}
+.object-row.vehicle .object-type { background: #4b321e; color: #ffc17f; }
+.object-row.pedestrian .object-type { background: #46243d; color: #ff9bd9; }
+.object-row.unknown .object-type { background: #26343d; color: #c0ccd3; }
+.object-row.static .object-type { background: #4a2329; color: #ff8993; }
+.object-row .motion-state {
+  padding: 3px 4px;
+  border: 1px solid #45545d;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 800;
+}
+.object-row.motion-low .motion-state { border-color: #39e58c; color: #74f2b0; }
+.object-row.motion-pending .motion-state { border-color: #ffd447; color: #ffe58b; }
+.object-row.motion-dynamic .motion-state { border-color: #ff5263; color: #ff8993; }
+.object-row.motion-unknown .motion-state { border-color: #657681; color: #a8b6c0; }
+.object-row .object-detail {
+  overflow: hidden;
+  color: #9fb2be;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.object-row .velocity-detail,
+.object-row .displacement-detail,
+.object-row .filter-detail {
+  grid-column: 2 / -1;
+}
+.object-row .velocity-detail { color: #d6e4ea; }
+.object-row .displacement-detail { color: #8299a8; }
+.object-row .filter-detail { color: #9ee7fb; }
+.object-row.filter-dropped .filter-detail { color: #f0f6f9; }
+.motion-summary {
+  margin-top: 9px;
+  padding: 7px 8px;
+  border: 1px solid #233744;
+  border-radius: 6px;
+  background: #08131b;
+  font: 10px ui-monospace, monospace;
+}
+.motion-summary span { display: block; }
+.motion-summary span + span { margin-top: 4px; }
+.motion-summary .summary-filter { color: #9ee7fb; }
+.motion-summary .summary-clear { color: #6debaa; }
+.motion-summary .summary-blocked { color: #ffcf7f; }
+.object-empty { padding: 8px 0; color: #8299a8; font: 11px ui-monospace, monospace; }

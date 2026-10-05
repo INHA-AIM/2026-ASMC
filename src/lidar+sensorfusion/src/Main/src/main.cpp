@@ -48,6 +48,7 @@ SENSOR_DATA st_CurrentData;
 pthread_mutex_t st_CopyMutex;
 pthread_mutex_t st_DataTemporal;
 pthread_cond_t st_DataTemporalCond;
+std::uint64_t u64_LidarFrameGeneration = 0;
 
 bool b_isRunning = true;
 bool b_EnableSensorFusion = false;
@@ -163,6 +164,7 @@ void InitMutex()
     pthread_mutex_init(&st_SensorData.st_MutexCAN, NULL);
     pthread_mutex_init(&st_SensorData.st_MutexYOLO, NULL);
     pthread_mutex_init(&st_DataTemporal, NULL);
+    pthread_cond_init(&st_DataTemporalCond, NULL);
 }
 
 void InitVehicleSpec()
@@ -325,9 +327,40 @@ void InitLidar(ros::NodeHandle &st_NodeHandle, pthread_t *pth_Lidar)
     st_LiDAR.st_ROI.f32_MinZ = config["LiDAR"]["Filter"]["ROI"]["MinZ"].as<float32>();
     st_LiDAR.st_ROI.f32_MaxZ = config["LiDAR"]["Filter"]["ROI"]["MaxZ"].as<float32>();
 
-    st_LiDAR.st_Clustering.b_Enabled = config["LiDAR"]["Clustering"]["Enabled"].as<bool>();
-    st_LiDAR.st_Clustering.f32_Eps = config["LiDAR"]["Clustering"]["Eps"].as<float32>();
-    st_LiDAR.st_Clustering.s32_MinPoints = config["LiDAR"]["Clustering"]["MinPoints"].as<int32>();
+    const YAML::Node clustering = config["LiDAR"]["Clustering"];
+    st_LiDAR.st_Clustering.b_Enabled = clustering["Enabled"].as<bool>();
+    st_LiDAR.st_Clustering.f32_Eps = clustering["Eps"].as<float32>();
+    st_LiDAR.st_Clustering.s32_MinPoints = clustering["MinPoints"].as<int32>();
+    const YAML::Node adaptive = clustering["Adaptive"];
+    st_LiDAR.st_Clustering.b_Adaptive =
+        adaptive["Enabled"].as<bool>(true);
+    st_LiDAR.st_Clustering.f32_AdaptiveNearRange =
+        adaptive["NearRange"].as<float32>(8.0F);
+    st_LiDAR.st_Clustering.f32_AdaptiveFarRange =
+        adaptive["FarRange"].as<float32>(50.0F);
+    st_LiDAR.st_Clustering.f32_AdaptiveNearEps =
+        adaptive["NearEps"].as<float32>(0.55F);
+    st_LiDAR.st_Clustering.f32_AdaptiveFarEps =
+        adaptive["FarEps"].as<float32>(0.85F);
+
+    const YAML::Node tracking = config["LiDAR"]["Tracking"];
+    st_Tracking.b_UseMapAssociation =
+        tracking["UseMapAssociation"].as<bool>(true);
+    st_Tracking.f32_COST_W_DIST =
+        tracking["DistanceWeight"].as<float32>(1.0F);
+    st_Tracking.f32_COST_W_IOU =
+        tracking["ShapeWeight"].as<float32>(1.0F);
+    st_Tracking.f32_COST_THRESHOLD =
+        tracking["CostThreshold"].as<float32>(3.0F);
+    st_Tracking.f32_ContinuityBonus =
+        tracking["ContinuityBonus"].as<float32>(0.20F);
+    st_Tracking.f32_DuplicateCenterDistance =
+        tracking["DuplicateCenterDistance"].as<float32>(0.60F);
+    st_Tracking.f32_DuplicateIouThreshold =
+        tracking["DuplicateIouThreshold"].as<float32>(0.35F);
+    st_Tracking.f32_MergedTrackRetireDistance =
+        tracking["MergedTrackRetireDistance"].as<float32>(0.45F);
+    st_LiDAR.st_Tracking = st_Tracking;
     ros::NodeHandle private_node("~");
     private_node.param(
         "roi_min_x", st_LiDAR.st_ROI.f32_MinX,
@@ -345,6 +378,21 @@ void InitLidar(ros::NodeHandle &st_NodeHandle, pthread_t *pth_Lidar)
              st_LiDAR.st_ROI.f32_MinX, st_LiDAR.st_ROI.f32_MaxX,
              st_LiDAR.st_ROI.f32_MinY, st_LiDAR.st_ROI.f32_MaxY,
              st_LiDAR.st_ROI.f32_MinZ, st_LiDAR.st_ROI.f32_MaxZ);
+    ROS_INFO(
+        "LiDAR clustering: adaptive=%s range=[%.1f,%.1f]m eps=[%.2f,%.2f]m min_points=%d",
+        st_LiDAR.st_Clustering.b_Adaptive ? "true" : "false",
+        st_LiDAR.st_Clustering.f32_AdaptiveNearRange,
+        st_LiDAR.st_Clustering.f32_AdaptiveFarRange,
+        st_LiDAR.st_Clustering.f32_AdaptiveNearEps,
+        st_LiDAR.st_Clustering.f32_AdaptiveFarEps,
+        st_LiDAR.st_Clustering.s32_MinPoints);
+    ROS_INFO(
+        "LiDAR tracking: map_association=%s gate=%.2f continuity=%.2f duplicate=(%.2fm, iou %.2f)",
+        st_Tracking.b_UseMapAssociation ? "true" : "false",
+        st_Tracking.f32_COST_THRESHOLD,
+        st_Tracking.f32_ContinuityBonus,
+        st_Tracking.f32_DuplicateCenterDistance,
+        st_Tracking.f32_DuplicateIouThreshold);
     pthread_create(pth_Lidar, NULL, ParseLiDAR, (void*)&st_NodeHandle);
 }
 
@@ -388,17 +436,25 @@ void InitCAN(ros::NodeHandle &st_NodeHandle, pthread_t *pth_CAN)
 
 void *TemporalThread(void *p_Arg)
 {
-    // uint64_t u64_StartTime_ms = 0;
+    std::uint64_t processed_lidar_generation = 0;
     while (true)
     {
         pthread_mutex_lock(&st_DataTemporal);
-        pthread_cond_wait(&st_DataTemporalCond, &st_DataTemporal);
+        while (b_isRunning && ros::ok() &&
+               processed_lidar_generation == u64_LidarFrameGeneration) {
+            pthread_cond_wait(&st_DataTemporalCond, &st_DataTemporal);
+        }
         if (!b_isRunning || !ros::ok())
         {
             pthread_mutex_unlock(&st_DataTemporal);
             break;
         }
+        // Latest-frame-wins under overload: CopyData and the generation
+        // snapshot are atomic with respect to the LiDAR callback.  If another
+        // scan arrives while processing, the predicate remains different and
+        // the next loop runs immediately without relying on another signal.
         CopyData(&st_CurrentData);
+        processed_lidar_generation = u64_LidarFrameGeneration;
         pthread_mutex_unlock(&st_DataTemporal);
 
         DeadReckoningProcess(st_CurrentData.st_RawGPS, st_CurrentData.st_RawIMU, st_CurrentData.st_RawCAN, st_GPSIMU);
@@ -406,15 +462,26 @@ void *TemporalThread(void *p_Arg)
 
         const ros::Time previous_lidar_stamp = ts_CurrTime;
         const auto lidar_pipeline_start = std::chrono::steady_clock::now();
-        LidarProcess(st_CurrentData.st_RawLiDAR, st_GPSIMU, st_LiDAR,
-                     *st_MotionClassifier);
-        if (b_EnableSensorFusion) {
+        GPS_IMU lidar_pose = st_GPSIMU;
+        std::string pose_reason;
+        const bool pose_ready = LookupSensorPoseForLidar(
+            st_CurrentData.st_RawLiDAR.u64_Timestamp,
+            &lidar_pose, &pose_reason);
+        if (!pose_ready) {
+            ROS_WARN_THROTTLE(
+                1.0, "Skipping LiDAR frame without synchronized pose: %s",
+                pose_reason.c_str());
+        }
+        const bool lidar_processed = pose_ready && LidarProcess(
+            st_CurrentData.st_RawLiDAR, lidar_pose, st_LiDAR,
+            *st_MotionClassifier);
+        if (lidar_processed && b_EnableSensorFusion) {
             FusionProcess(st_CurrentData.st_RawYOLO, st_LiDAR, st_Camera,
                           ts_CurrTime);
         }
-        if (st_PlannerObjectRosPublisher) {
+        if (lidar_processed && st_PlannerObjectRosPublisher) {
             st_PlannerObjectRosPublisher->Publish(
-                st_LiDAR, st_GPSIMU, st_VehicleSpec, ts_CurrTime);
+                st_LiDAR, lidar_pose, st_VehicleSpec, ts_CurrTime);
         }
         if (b_BenchmarkLidarPipeline && !ts_CurrTime.isZero() &&
             ts_CurrTime != previous_lidar_stamp) {
@@ -426,8 +493,9 @@ void *TemporalThread(void *p_Arg)
                 elapsed_ms, st_CurrentData.st_RawLiDAR.s32_Num,
                 st_LiDAR.vec_Objects.size());
         }
-        if (st_PlannerObjectSender) {
-            st_PlannerObjectSender->Send(st_LiDAR, st_GPSIMU, st_VehicleSpec);
+        if (lidar_processed && st_PlannerObjectSender) {
+            st_PlannerObjectSender->Send(
+                st_LiDAR, lidar_pose, st_VehicleSpec);
         }
 
         // 인지 전용: PlanningProcess/ControlProcess 호출 제거 (소스 부재)
@@ -473,6 +541,7 @@ int main(int argc, char **argv)
 
     InitMutex();
     InitVehicleSpec();
+    ConfigureSensorPoseHistory(st_PrivateNodeHandle);
     st_MotionClassifier =
         std::make_unique<MotionClassifier>(st_PrivateNodeHandle);
     st_PlannerObjectRosPublisher =
@@ -494,10 +563,10 @@ int main(int argc, char **argv)
     InitTemporal(st_NodeHandle, &th_Temporal);
     // InitViewer(st_NodeHandle, &th_Viewer);
     
-    while(ros::ok())
-    {
-        usleep(100);
-    }
+    // Worker threads own the ROS callbacks.  The former 100-us polling loop
+    // woke this thread roughly ten thousand times per second for no work,
+    // competing with LiDAR and pose synchronization during heavy frames.
+    ros::waitForShutdown();
 
     // Wake the temporal worker and wait for every worker to finish before
     // global STL/OpenCV/PCL objects and ROS synchronization objects destruct.

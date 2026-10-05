@@ -118,8 +118,22 @@ void FrenetPlannerNode::publishFeedbackV2(
         feedback.blocking_object_id = -1;
     }
 
+    if (feedback.active_maneuver == asmc_msgs::BehaviorCommand::MERGE && frenet_state_valid) {
+        const auto& merge = planner_.last_roundabout_result();
+        feedback.maneuver_progress = merge.progress;
+        feedback.gap_evaluated = true;
+        feedback.gap_safe = merge.candidate_valid;
+        feedback.estimated_entry_time_s = merge.entry_time;
+        feedback.generated_candidate_count = merge.generated;
+        feedback.valid_candidate_count = merge.valid;
+        feedback.blocking_object_id = merge.blocking_object_id;
+        feedback.applied_speed_mps = trajectory && !trajectory->points.empty()
+            ? trajectory->points.back().velocity : -1.0;
+        feedback.active_leader_id = -1;
+    }
     (void)trajectory;
     feedback_v2_pub_.publish(feedback);
 }
 
 }  // namespace frenet_planner_ros
+

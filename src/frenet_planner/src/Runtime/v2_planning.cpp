@@ -129,9 +129,20 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     // 잘못된 명령을 transaction 규칙에 태우면 그 자체가 새 transaction을
     // 열거나 fingerprint를 흔들 수 있다. 여기서 필요한 것은 "잠긴 기동을 그대로
     // 계속한다"뿐이므로, 이미 만들어 둔 ACTIVE_TRANSACTION 회신을 쓴다.
+    // manager만으로는 committed AVOID의 세부 phase를 알 수 없다. core가
+    // TRACKING이면 아직 횡이동을 시작하지 않았으므로 유효한 새 FSM
+    // transaction으로 교체할 수 있다. SHIFT/PASS/RETURN은 false가 되어 기존
+    // 비선점 안전 잠금을 그대로 유지한다. validation에서 거부된 명령은 이
+    // 경로에 들어오지 않으므로 잘못된 명령이 잠금을 해제하지도 않는다.
+    const bool allow_avoid_tracking_preemption =
+        !has_rejected_acceptance && command_manager_.has_active_command() &&
+        command_manager_.maneuver_type() ==
+            asmc_msgs::BehaviorCommand::AVOID &&
+        command_manager_.command_id() != command.command_id &&
+        planner_.avoid_tracking();
     const CommandAcceptance acceptance = has_rejected_acceptance
         ? rejected_acceptance
-        : command_manager_.Accept(command);
+        : command_manager_.Accept(command, allow_avoid_tracking_preemption);
 
     // manager와 core의 transaction boundary를 맞춘다. 새 AVOID/LANE_CHANGE뿐
     // 아니라 새 KEEP/FOLLOW/STOP/E-STOP도 freshness/conversion 조기 반환
@@ -140,6 +151,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     if (acceptance.transaction_started) {
         planner_.ResetExternalAvoidance();
         planner_.ResetExternalLaneChange();
+        planner_.ResetRoundaboutMerge(command.maneuver_type == asmc_msgs::BehaviorCommand::KEEP);
     }
 
     // ===== 계획 대상 재결속 (D6-0a) =====
@@ -210,6 +222,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // STOP이 HOLD에 도달해 COMPLETED로 latch된 경우, 마지막으로 만든
         // 0속도 HOLD 궤적을 계속 보낸다. 여기서 일괄 안전정지로 빠지면 정지
         // 유지 궤적이 매 사이클 교체되어 MPC 입장에서 불필요한 흔들림이 된다.
+        if (acceptance.transaction_cancelled) planner_.ResetRoundaboutMerge();
         const InputSnapshot latch_snapshot = takeSnapshot();
         if (command_manager_.completed_normally() && has_last_v2_trajectory_ &&
             last_v2_trajectory_command_id_ == command.command_id) {
@@ -293,9 +306,14 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     if (!inputs_ready) {
         // 명령은 정상이므로 transaction을 버리지 않는다. 이 사이클의 planning
         // 만 막고, 입력이 회복되면 같은 transaction으로 계속한다(계약 11.3절).
+        if (command_manager_.maneuver_type() == asmc_msgs::BehaviorCommand::MERGE) {
+            command_manager_.NotifyPlanFailed(false);
+            planner_.RevokeRoundaboutReadiness();
+        }
         command_manager_.NotifyInputDataStale();
         CommandAcceptance stale = acceptance;
         stale.planning_target = PlanningTarget::NONE;
+        stale.execution_state = command_manager_.execution_state();
         // result_code는 RESULT_NONE으로 남는다 - FrenetFeedback.msg에
         // INPUT_DATA_STALE이 없고 기존 코드로 거짓 매핑하지 않는다.
         stale.detail = "ego/object input is not fresh";
@@ -369,6 +387,74 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                           /*plan_valid=*/false);
+        return true;
+    }
+
+    if (planner_command.mode == MERGE) {
+        using Feedback = asmc_msgs::FrenetFeedback;
+        if (command_manager_.execution_state() == Feedback::COMMITTED)
+            command_manager_.NotifyExecutionStarted();
+        FrenetPlanner::MergePrepareResult result;
+        CartesianPath path;
+        bool ok = planner_.PlanRoundaboutMerge(ego, objects, planner_command,
+            snapshot.vehicle.header.stamp.toSec(), snapshot.objects.header.stamp.toSec(), path, result);
+        bool execute = !planner_.roundabout_merge_committed() && result.ready &&
+            command.execution_request == asmc_msgs::BehaviorCommand::EXECUTE;
+        if (execute) path = result.candidate_path;
+        asmc_msgs::Trajectory trajectory;
+        bool converted = ok && ConvertCartesianPath(path, planner_.sample_dt(),
+            snapshot.vehicle, trajectory) == ConversionStatus::OK;
+        if (!converted) {
+            const bool terminal = planner_.last_failure_reason() == FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
+            command_manager_.NotifyPlanFailed(terminal);
+            has_last_v2_trajectory_ = false;
+            CommandAcceptance failed = acceptance;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code = terminal ? Feedback::INVALID_COMMAND : Feedback::TRANSIENT_GENERATION_FAILURE;
+            failed.detail = terminal ? "unsupported roundabout zone/type or gap preference" : "roundabout candidate/maintenance blocked";
+            const auto stop = MakeStopTrajectory(stopReferenceVehicle(snapshot), trajectoryDt(), asmc_msgs::Trajectory::FAILURE_GENERATION);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop, Feedback::TRAJECTORY_SAFE_STOP, false, ego_s_valid, ego_s);
+            return true;
+        }
+        if (!planner_.roundabout_merge_committed()) {
+            if (result.ready) command_manager_.NotifyPlanSucceeded();
+            else command_manager_.NotifyPlanFailed(false);
+            // Conversion, fresh inputs and today's candidate are all checked
+            // before either half of the atomic commit changes state.
+            if (execute) {
+                if (!planner_.CanCommitRoundaboutMerge(result) || !command_manager_.NotifyCommitted()) {
+                    command_manager_.NotifyPlanFailed(false);
+                    has_last_v2_trajectory_ = false;
+                    auto stopped = MakeStopTrajectory(stopReferenceVehicle(snapshot), trajectoryDt(), asmc_msgs::Trajectory::FAILURE_GENERATION);
+                    CommandAcceptance failed = acceptance;
+                    failed.execution_state = command_manager_.execution_state();
+                    failed.detail = "roundabout commit preflight failed";
+                    trajectory_pub_.publish(stopped);
+                    publishFeedbackV2(feedback_command_id, failed, &stopped, Feedback::TRAJECTORY_SAFE_STOP, false);
+                    return true;
+                }
+                planner_.ApplyRoundaboutMergeCommit(result);
+            }
+        } else if (result.maneuver_completed) {
+            command_manager_.NotifyManeuverCompleted();
+        }
+        last_v2_trajectory_ = trajectory;
+        has_last_v2_trajectory_ = true;
+        last_v2_trajectory_command_id_ = command.command_id;
+        v2_plan_fail_streak_ = 0;
+        trajectory_pub_.publish(trajectory);
+        publishDebugMarkersV2(trajectory, command);
+        CommandAcceptance succeeded = acceptance;
+        succeeded.execution_state = command_manager_.execution_state();
+        if (succeeded.result_code == Feedback::RESULT_NONE)
+            succeeded.detail = result.maneuver_completed ? "roundabout rear cleared; KEEP handoff" :
+                (planner_.roundabout_merge_committed() ? (result.candidate_valid ? "roundabout committed" : "roundabout collision braking") :
+                 (result.ready ? "roundabout ready after full traversal recheck" : "roundabout waiting/approaching stopline"));
+        publishFeedbackV2(feedback_command_id, succeeded, &trajectory,
+            planner_.roundabout_merge_committed() ?
+                (result.candidate_valid || result.maneuver_completed ? Feedback::TRAJECTORY_LOCKED : Feedback::TRAJECTORY_SAFE_STOP) : Feedback::TRAJECTORY_NEW,
+            result.candidate_valid || result.maneuver_completed, ego_s_valid, ego_s);
         return true;
     }
 
@@ -737,8 +823,11 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     const CommandFingerprint fingerprint = MakeCommandFingerprint(command);
 
     // ---- 4d. AVOID post-COMMIT (D6-3b) --------------------------------
-    // target observation/pose는 더 이상 실행 조건이 아니다. core의 잠긴
-    // target_d/context만 사용하되 collision geometry는 매 cycle 새로 쓴다.
+    // target pose는 더 이상 실행 조건이 아니다. core의 잠긴
+    // target_d/context를 사용하되 collision geometry는 매 cycle 새로 쓴다.
+    // 단, 아직 횡이동 전인 TRACKING에서는 target의 장기 소실을 terminal
+    // failure로 올린다. SHIFT/PASS 이후에는 중간 급복귀를 막기 위해 잠긴
+    // 기동을 계속한다.
     if (planner_command.mode == AVOID &&
         avoid_route == AvoidPlanningRoute::POST_COMMIT) {
         CartesianPath committed_path;
@@ -751,32 +840,51 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             ++v2_plan_fail_streak_;
             const FrenetPlanner::PlanFailureReason reason =
                 planner_.last_failure_reason();
-            // COMMITTED/EXECUTING에서는 이 통지가 상태를 WAITING으로 낮추지
-            // 않는다. lock/context도 그대로 둔다.
-            command_manager_.NotifyPlanFailed(/*terminal=*/false);
+            const bool terminal_target_lost =
+                reason == FrenetPlanner::PlanFailureReason::TARGET_OBJECT_LOST;
+            const uint8_t result_code = terminal_target_lost
+                ? asmc_msgs::FrenetFeedback::TARGET_OBJECT_LOST
+                : (reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
+                       ? asmc_msgs::FrenetFeedback::COLLISION_BLOCKED
+                       : asmc_msgs::FrenetFeedback::
+                             TRANSIENT_GENERATION_FAILURE);
+            const std::string detail = terminal_target_lost
+                ? "committed avoid target lost before lateral shift"
+                : (reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
+                       ? "committed avoid path blocked by collision"
+                       : "could not generate the committed avoid path");
+            // TRACKING 중 target 장기 소실은 terminal이다. 그 외 post-COMMIT
+            // 생성 실패는 기존대로 transaction/lock을 유지한다.
+            command_manager_.NotifyPlanFailed(
+                terminal_target_lost,
+                terminal_target_lost ? result_code
+                                     : asmc_msgs::FrenetFeedback::RESULT_NONE,
+                terminal_target_lost ? detail : std::string());
             has_last_v2_trajectory_ = false;
             CommandAcceptance failed = acceptance;
             failed.execution_state = command_manager_.execution_state();
-            failed.result_code =
-                reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
-                    ? asmc_msgs::FrenetFeedback::COLLISION_BLOCKED
-                    : asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
-            failed.detail =
-                reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
-                    ? "committed avoid path blocked by collision"
-                    : "could not generate the committed avoid path";
+            failed.result_code = result_code;
+            failed.detail = detail;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
-                reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
-                    ? asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED
-                    : asmc_msgs::Trajectory::FAILURE_GENERATION);
+                terminal_target_lost
+                    ? asmc_msgs::Trajectory::FAILURE_INVALID_INPUT
+                    : (reason == FrenetPlanner::PlanFailureReason::
+                                       COLLISION_BLOCKED
+                           ? asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED
+                           : asmc_msgs::Trajectory::FAILURE_GENERATION));
             trajectory_pub_.publish(stop);
+            // Refresh the RViz/dashboard snapshot on the failing cycle as
+            // well.  Otherwise the last valid candidate remains visible while
+            // feedback already reports 0 valid candidates and SAFE_STOP.
+            publishDebugMarkersV2(stop, command);
 
             // ===== 잠긴 진단은 SAFE_STOP에서도 유지한다 (D6-4b) =====
             //
-            // 여기서 바뀐 것은 **이번 cycle에 MPC로 보낸 궤적**뿐이다. AVOID
-            // transaction과 COMMIT lock은 그대로 살아 있다(계약 8.2.1절):
-            // manager는 EXECUTING이고 core의 v2_avoidance_도 committed다.
+            // 충돌/일시 생성 실패에서는 **이번 cycle에 MPC로 보낸 궤적**만
+            // 바뀌고 AVOID transaction과 COMMIT lock은 그대로 살아 있다.
+            // TRACKING target 소실은 terminal FAILED지만, 실패 피드백에 마지막
+            // 잠금값을 남겨 원인을 진단할 수 있게 하는 목적은 동일하다.
             //
             // 그런데 avoid_fields 없이 발행하면 publishFeedbackV2가 전부
             // sentinel로 채워
@@ -1235,10 +1343,17 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 
         // 5번: 발행 대상 결정.
         //
-        //   COMMIT 성공  -> AVOID candidate를 **처음** MPC로 보낸다
-        //   그 외        -> maintenance만 보낸다 (계약 5.2절)
+        //   COMMIT+SHIFT -> AVOID candidate를 **처음** MPC로 보낸다
+        //   COMMIT+TRACKING / 그 외 -> maintenance만 보낸다
+        //
+        // PREPARE candidate는 즉시 횡이동 경로지만 ApplyAvoidCommit()은 먼
+        // target이면 TRACKING을 선택할 수 있다. 이때 candidate를 한 주기
+        // 보냈다가 다음 주기에 중앙 maintenance로 되돌리면 불필요한 급조향이
+        // 생긴다. 실제 committed phase와 첫 발행 궤적을 일치시킨다.
+        const bool publish_committed_candidate =
+            committed_now && !planner_.avoid_tracking();
         const asmc_msgs::Trajectory& published =
-            committed_now ? avoid_trajectory : trajectory;
+            publish_committed_candidate ? avoid_trajectory : trajectory;
 
         v2_plan_fail_streak_ = 0;
         last_v2_trajectory_ = published;
@@ -1493,6 +1608,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 
     // ---- 5. planning ----------------------------------------------------
     CartesianPath path;
+    planner_.ObserveRoundaboutExit(objects, snapshot.objects.header.stamp.toSec());
     const bool plan_ok = planner_.Plan(ego, objects,
                                        planner_command, path);
 
@@ -1654,3 +1770,4 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 }
 
 }  // namespace frenet_planner_ros
+

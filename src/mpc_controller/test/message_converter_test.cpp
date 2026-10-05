@@ -26,27 +26,36 @@ asmc_msgs::Trajectory MakeTrajectory() {
     first.y = 2.0;
     first.yaw = 0.2;
     first.velocity = 3.0;
+    first.acceleration = 0.0;
     first.curvature = 0.01;
     asmc_msgs::TrajectoryPoint second = first;
     second.x = 2.0;
     second.y = 4.0;
     second.yaw = 0.4;
     second.velocity = 5.0;
+    second.acceleration = -2.0;
     second.curvature = 0.03;
     message.points = {first, second};
     return message;
 }
 
-TEST(TrajectoryConverterTest, ConvertsAndReusesTimeInterpolation) {
+TEST(TrajectoryConverterTest, PreservesDiagnosticAccelerationButDerivesMpcReference) {
     const asmc_msgs::Trajectory message = MakeTrajectory();
     PlannedPath path;
     EXPECT_EQ(TrajectoryStatus::OK, ConvertTrajectory(message, path));
+    ASSERT_EQ(2u, path.a.size());
+    EXPECT_DOUBLE_EQ(0.0, path.a[0]);
+    EXPECT_DOUBLE_EQ(-2.0, path.a[1]);
 
     const ReferencePath reference = ToReferencePath(path, 0.05, 3);
     ASSERT_EQ(3u, reference.size());
     EXPECT_DOUBLE_EQ(1.5, reference.x_ref[1]);
     EXPECT_DOUBLE_EQ(3.0, reference.y_ref[1]);
     EXPECT_DOUBLE_EQ(4.0, reference.v_ref[1]);
+    // Final MPC-grid v_ref is [3, 4, 5] at dt=0.05, so the control-space
+    // acceleration reference is +20 throughout. The diagnostic Cartesian
+    // acceleration [0, -2] above must not leak into this value.
+    EXPECT_DOUBLE_EQ(20.0, reference.a_ref[1]);
 }
 
 TEST(TrajectoryConverterTest, RecognizesValidSinglePointStop) {
@@ -192,6 +201,7 @@ PlannedPath MakeStraightPlannedPath() {
         path.y.push_back(0.0);
         path.yaw.push_back(0.0);
         path.v.push_back(5.0);
+        path.a.push_back(-0.5 * t);
         path.kappa.push_back(0.0);
     }
     return path;
@@ -220,6 +230,7 @@ TEST(ReferencePathOffsetTest, ZeroOffsetMatchesLegacyBehavior) {
     for (std::size_t i = 0; i < legacy.size(); ++i) {
         EXPECT_DOUBLE_EQ(legacy.x_ref[i], explicit_zero.x_ref[i]);
         EXPECT_DOUBLE_EQ(legacy.v_ref[i], explicit_zero.v_ref[i]);
+        EXPECT_DOUBLE_EQ(legacy.a_ref[i], explicit_zero.a_ref[i]);
     }
 }
 

@@ -12,7 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   morai_msgs
   sensor_msgs
+  pcl_conversions
   Msg
+  tf
   tf2
   tf2_ros
   tf2_geometry_msgs
@@ -24,7 +26,7 @@ find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
 
 catkin_package(
-  CATKIN_DEPENDS roscpp roslib std_msgs geometry_msgs tf2 tf2_ros tf2_geometry_msgs visualization_msgs morai_msgs Msg
+  CATKIN_DEPENDS roscpp roslib std_msgs geometry_msgs tf tf2 tf2_ros tf2_geometry_msgs visualization_msgs morai_msgs Msg pcl_conversions
 )
 
 include_directories(
@@ -40,6 +42,8 @@ include_directories(
 add_library(myHeader
   src/Global/Global.cpp
   src/Parser/Parser.cpp
+  src/Parser/GpsSanityFilter.cpp
+  src/Parser/SensorPoseHistory.cpp
   src/Camera/Camera.cpp
   src/Camera/TrafficLight.cpp
   src/Camera/StopLine.cpp
@@ -61,7 +65,12 @@ add_library(myHeader
   src/SensorFusion/SensorFusion.cpp
   src/SensorFusion/FusionCamera.cpp
   src/SensorFusion/FusionLiDAR.cpp
+  src/PlannerInterface/DrivableFootprint.cpp
   src/PlannerInterface/PlannerObjectAdapter.cpp
+  src/PlannerInterface/DrivableBoundaryFilter.cpp
+  src/PlannerInterface/PlanningRelevanceFilter.cpp
+  src/PlannerInterface/KnownStaticObjectFilter.cpp
+  src/PlannerInterface/StaticStructureExclusionFilter.cpp
   src/PlannerInterface/PlannerObjectSender.cpp
   src/PlannerInterface/PlannerObjectRosPublisher.cpp
 )
@@ -80,6 +89,23 @@ target_link_libraries(main myHeader
 )
 
 if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(test_ground_evidence test/test_ground_evidence.cpp)
+  catkin_add_gtest(test_adaptive_clustering
+    test/test_adaptive_clustering.cpp
+    test/test_runtime_globals.cpp
+  )
+  if(TARGET test_adaptive_clustering)
+    target_link_libraries(test_adaptive_clustering
+      myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+  endif()
+  catkin_add_gtest(test_tracking_association
+    test/test_tracking_association.cpp
+    test/test_runtime_globals.cpp
+  )
+  if(TARGET test_tracking_association)
+    target_link_libraries(test_tracking_association
+      myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+  endif()
   catkin_add_gtest(test_motion_classifier
     test/test_motion_classifier.cpp
     src/Lidar/Tracking/MotionClassifier.cpp
@@ -99,10 +125,65 @@ if(CATKIN_ENABLE_TESTING)
   if(TARGET test_fusion_time_matcher)
     target_link_libraries(test_fusion_time_matcher ${catkin_LIBRARIES})
   endif()
+  catkin_add_gtest(test_drivable_footprint
+    test/test_drivable_footprint.cpp
+    src/PlannerInterface/DrivableFootprint.cpp
+  )
+  if(TARGET test_drivable_footprint)
+    target_link_libraries(test_drivable_footprint ${OpenCV_LIBRARIES})
+  endif()
+  catkin_add_gtest(test_drivable_boundary_filter
+    test/test_drivable_boundary_filter.cpp
+    src/PlannerInterface/DrivableBoundaryFilter.cpp
+    src/PlannerInterface/DrivableFootprint.cpp
+  )
+  if(TARGET test_drivable_boundary_filter)
+    target_link_libraries(test_drivable_boundary_filter
+      ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} yaml-cpp)
+  endif()
+  catkin_add_gtest(test_planning_relevance_filter
+    test/test_planning_relevance_filter.cpp
+    src/PlannerInterface/PlanningRelevanceFilter.cpp
+  )
+  if(TARGET test_planning_relevance_filter)
+    target_link_libraries(test_planning_relevance_filter
+      ${catkin_LIBRARIES})
+  endif()
+  catkin_add_gtest(test_known_static_object_filter
+    test/test_known_static_object_filter.cpp
+    src/PlannerInterface/KnownStaticObjectFilter.cpp
+  )
+  if(TARGET test_known_static_object_filter)
+    target_link_libraries(test_known_static_object_filter
+      ${catkin_LIBRARIES} yaml-cpp)
+  endif()
+  catkin_add_gtest(test_static_structure_exclusion_filter
+    test/test_static_structure_exclusion_filter.cpp
+    src/PlannerInterface/StaticStructureExclusionFilter.cpp
+  )
+  if(TARGET test_static_structure_exclusion_filter)
+    target_link_libraries(test_static_structure_exclusion_filter
+      ${catkin_LIBRARIES} yaml-cpp)
+  endif()
+  catkin_add_gtest(test_gps_sanity_filter
+    test/test_gps_sanity_filter.cpp
+    src/Parser/GpsSanityFilter.cpp
+  )
+  if(TARGET test_gps_sanity_filter)
+    target_link_libraries(test_gps_sanity_filter ${catkin_LIBRARIES})
+  endif()
+  catkin_add_gtest(test_sensor_pose_history
+    test/test_sensor_pose_history.cpp
+    src/Parser/SensorPoseHistory.cpp
+  )
+  if(TARGET test_sensor_pose_history)
+    target_link_libraries(test_sensor_pose_history ${catkin_LIBRARIES})
+  endif()
 endif()
 
 catkin_install_python(PROGRAMS
   src/Camera/YOLO/YOLODetection.py
+  scripts/build_known_static_object_catalog.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
