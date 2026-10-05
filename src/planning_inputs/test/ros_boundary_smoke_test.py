@@ -34,7 +34,7 @@ def require(predicate, description, timeout=30):
 def main():
     launch = subprocess.Popen([
         'roslaunch', 'behavior_planner', 'autonomy_no_bridges_v2.launch',
-        'objects_source:=lidar', 'dashboard:=false'], start_new_session=True)
+        'objects_source:=lidar', 'dashboard:=false', 'traffic_light:=false'], start_new_session=True)
     try:
         master = rosgraph.Master('/planning_boundary_test')
         require(lambda: bool(master.getPid()), 'ROS master started')

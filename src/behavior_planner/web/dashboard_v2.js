@@ -46,7 +46,17 @@
   const worldToScreen = point => ({x: point[0] * view.scale + view.x, y: -point[1] * view.scale + view.y});
   const screenToWorld = (x, y) => [(x - view.x) / view.scale, -(y - view.y) / view.scale];
   const typeInfo = value => objectTypes[Number(value)] || {name: `TYPE ${value}`, css: 'unknown', color: '#a8b6c0'};
-  const motionInfo = value => motionStates[String(value || 'UNKNOWN')] || motionStates.UNKNOWN;
+  const motionName = value => {
+    if (value === null || value === undefined || value === '') return 'UNKNOWN';
+    const labels = ['UNKNOWN', 'LOW_THREAT', 'PENDING', 'DYNAMIC'];
+    return labels[Number(value)] || (motionStates[String(value)] ? String(value) : 'UNKNOWN');
+  };
+  const motionInfo = value => motionStates[motionName(value)];
+  const objectMotion = (object, debug) =>
+    motionInfo(object?.motion_state ?? debug?.motion_state);
+  const hasPlanningMotion = () => Boolean(data.lidarObjects &&
+    Array.isArray(data.lidarObjects.objects) &&
+    data.lidarObjects.objects.every(object => object.motion_state !== undefined));
   const filterKeep = debug => {
     if (!debug) return true;
     if (typeof debug.final_keep === 'boolean') return debug.final_keep;
@@ -239,7 +249,7 @@
   function drawLidarObject(object) {
     const info = typeInfo(object.type);
     const debug = motionDebugById.get(Number(object.id));
-    const motion = motionInfo(debug?.motion_state);
+    const motion = objectMotion(object, debug);
     const selectedAvoidTarget = Boolean(data.feature?.static_obstacle_ahead) &&
       Number(data.feature?.avoidance_object_id) === Number(object.id);
     const track = tracks.get(Number(object.id));
@@ -469,10 +479,10 @@
       const name = typeInfo(object.type).css;
       if (Object.prototype.hasOwnProperty.call(counts, name)) ++counts[name];
       else ++counts.unknown;
+      const motion = objectMotion(object, motionDebugById.get(Number(object.id)));
+      ++stateCounts[motion.name];
     }
     for (const debug of debugObjects) {
-      const state = String(debug.motion_state || 'UNKNOWN');
-      stateCounts[state] = (stateCounts[state] || 0) + 1;
       if (!filterKeep(debug)) {
         const stage = filterStage(debug);
         stageCounts[stage] = (stageCounts[stage] || 0) + 1;
@@ -496,10 +506,10 @@
     $('lidarGrid').innerHTML = kv([
       ['Frame', message.header?.frame_id || 'WAIT'],
       ['Source stamp', finite(message.header?.stamp) ? fmt(message.header.stamp, 3) : '–'],
-      ['RAW / KEEP / DROP', `${rawCount} / ${keptCount} / ${droppedCount}`],
+      ['RAW / KEEP / DROP', data.lidarMotionDebug ? `${rawCount} / ${keptCount} / ${droppedCount}` : `– / ${objects.length} / –`],
       ['DROP road/catalog/zone/relevance', `${stageCounts.drivable}/${stageCounts.known_static}/${stageCounts.static_zone}/${stageCounts.planning_relevance}`],
-      ['Road mask', boundary.available === false ? 'FAIL-OPEN' : `margin ${fmt(boundary.margin_m)}m · ≥${fmt(Number(boundary.road_ratio_threshold) * 100, 0)}%`],
-      ['Fixed filters', `catalog ${knownStatic.available ? 'ON' : 'OFF'} · zones ${staticZone.available ? staticZone.zone_count ?? 0 : 'OFF'}`],
+      ['Road mask', !data.lidarMotionDebug ? '진단 없음' : boundary.available === false ? 'FAIL-OPEN' : `margin ${fmt(boundary.margin_m)}m · ≥${fmt(Number(boundary.road_ratio_threshold) * 100, 0)}%`],
+      ['Fixed filters', !data.lidarMotionDebug ? '진단 없음' : `catalog ${knownStatic.available ? 'ON' : 'OFF'} · zones ${staticZone.available ? staticZone.zone_count ?? 0 : 'OFF'}`],
       ['Output objects', objects.length],
       ['Vehicle / Ped', `${counts.vehicle} / ${counts.pedestrian}`],
       ['Unknown', counts.unknown],
@@ -512,7 +522,9 @@
       ['Type changes', changeText(lidarChanges.typeChanged)],
       ['Yaw rate', '0 assumed / unmeasured']
     ]);
-    const filterSummary = `<span class="summary-filter">LiDAR raw ${rawCount} → planner 입력 ${objects.length}; 제거 ${droppedCount}</span>`;
+    const filterSummary = !data.lidarMotionDebug
+      ? `<span class="summary-filter">planner 입력 ${objects.length}; 원시 필터 진단 없음</span>`
+      : `<span class="summary-filter">LiDAR raw ${rawCount} → planner 입력 ${objects.length}; 제거 ${droppedCount}</span>`;
     const behaviorSummary = avoidTargetId === null
       ? '<span class="summary-clear">Behavior 경로 회랑을 막는 UNKNOWN/STATIC 대상 없음</span>'
       : `<span class="summary-blocked">ID ${esc(avoidTargetId)}가 경로 회랑을 막아 Behavior AVOID 후보로 선택됨</span>`;
@@ -539,13 +551,13 @@
       const object = row.object || debugAsObject(row.debug);
       const debug = row.debug;
       const info = row.object ? typeInfo(object.type) : debugTypeInfo(debug);
-      const motion = motionInfo(debug?.motion_state);
+      const motion = objectMotion(row.object, debug);
       const isAvoidTarget = row.id === avoidTargetId;
       const speed = Math.hypot(Number(object.vx || 0), Number(object.vy || 0));
       const geometry = `map (${fmt(object.center?.x)}, ${fmt(object.center?.y)})  OBB ${fmt(object.length)}×${fmt(object.width)}m`;
       const velocity = debug
-        ? `raw ${fmt(debug.raw_speed_kph)} · judge ${fmt(debug.decision_speed_kph)} · applied ${fmt(debug.applied_speed_kph)} km/h`
-        : `applied ${fmt(speed * 3.6)} km/h · motion debug WAIT`;
+        ? `raw ${fmt(debug.raw_speed_kph)} · judge ${fmt(debug.decision_speed_kph)} · planner ${fmt(speed * 3.6)} km/h`
+        : `planner ${fmt(speed * 3.6)} km/h · ${motion.name}`;
       const roadRatio = Number(debug?.road_ratio);
       const road = Number.isFinite(roadRatio) && roadRatio >= 0
         ? `${fmt(roadRatio * 100, 0)}%` : 'N/A';
@@ -661,14 +673,15 @@
 
   function updateHealth() {
     const lidarHealth = health('lidar_objects');
-    const motionHealth = health('lidar_motion_debug');
+    const motionHealth = health(hasPlanningMotion() ? 'lidar_objects' : 'lidar_motion_debug');
     $('lidarStatus').textContent = `LIDAR ${lidarHealth}`;
     $('lidarStatus').className = `chip ${lidarHealth === 'LIVE' ? 'ok' : 'bad'}`;
     $('motionStatus').textContent = `MOTION ${motionHealth}`;
     $('motionStatus').className = `chip ${motionHealth === 'LIVE' ? 'ok' : 'bad'}`;
     $('health').innerHTML = kv([
       ['LiDAR canonical', lidarHealth],
-      ['LiDAR motion debug', motionHealth],
+      ['Planning motion', motionHealth],
+      ['Optional sensor diagnostics', health('lidar_motion_debug')],
       ['BehaviorCommand', health('command')],
       ['FrenetFeedback', health('feedback')],
       ['FeatureDebug', health('feature')],

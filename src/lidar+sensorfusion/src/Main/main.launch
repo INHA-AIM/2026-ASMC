@@ -64,9 +64,9 @@
     <param name="motion_direction_cosine_min" value="0.7"/>
     <param name="motion_longitudinal_displacement_kph" value="5.0"/>
     <param name="drivable_mask_image"
-           value="$(find Main)/../../../link_node/out/road_mask.png"/>
+           value="$(find Main)/../../../asmc_hd_map/development/won_tae_link_node/out/road_mask.png"/>
     <param name="drivable_mask_metadata"
-           value="$(find Main)/../../../link_node/out/road_mask.yaml"/>
+           value="$(find Main)/../../../asmc_hd_map/development/won_tae_link_node/out/road_mask.yaml"/>
     <param name="drivable_map_id" value="waize_katri_2025-10-23"/>
     <param name="drivable_margin_m" value="1.0"/>
     <param name="drivable_ratio_threshold" value="0.3"/>

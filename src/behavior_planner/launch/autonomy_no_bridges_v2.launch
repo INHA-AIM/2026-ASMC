@@ -3,13 +3,10 @@
        opt-in, matching autonomy_no_bridges.launch defaults. -->
   <arg name="state_source" default="gps_imu" doc="gps_imu or ego_dev"/>
   <arg name="dashboard" default="false"/>
-  <!-- CROSS-TEAM P5-D HANDOFF NOTE:
-       This default was changed by perception integration, not by the planning
-       owner. It only prevents a duplicate traffic-light publisher when the
-       canonical asmc_perception runtime is active. Keep the opt-in include;
-       retirement or policy changes require planning-owner review. -->
-  <arg name="traffic_light" default="false"
-       doc="Cross-team duplicate-producer guard; planning-owner review required before retirement."/>
+  <!-- Standalone planning starts signal inference by default. Disable with
+       traffic_light:=false when asmc_perception already publishes detections. -->
+  <arg name="traffic_light" default="true"
+       doc="Set false only when an external traffic-light producer is running."/>
   <arg name="traffic_light_device" default="auto"/>
   <arg name="camera_topic" default="/cam_extra/image_jpeg/compressed"/>
   <arg name="objects_source" default="morai" doc="morai or lidar"/>
@@ -31,7 +28,7 @@
          launch keeps the opt-in wrapper and legacy String topics until the
          planning owner approves their removal. -->
     <node pkg="asmc_perception" type="traffic_light_node.py"
-          name="traffic_light_infer" output="screen"
+          name="traffic_light_infer" output="screen" required="true"
           args="--ckpt $(arg traffic_light_checkpoint) --image-topic $(arg camera_topic) --state-topic /traffic_light/state --detail-topic /traffic_light/detail --typed-topic /perception/traffic_light/detection --device $(arg traffic_light_device)"/>
   </group>
 

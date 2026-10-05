@@ -41,6 +41,16 @@ The `state_source:=ego_dev` option retains main's dev adapter with a scoped
 topic remap. Do not run two control stacks publishing `/ctrl_cmd` concurrently.
 This launch does not start the jamming controller.
 
+Standalone planning starts traffic-light inference by default on
+`/cam_extra/image_jpeg/compressed`. If main perception already runs that
+producer, pass `traffic_light:=false` to avoid duplication. With inference
+enabled, a failed detector terminates this launch rather than silently leaving
+a planning stack without its configured signal producer.
+
+The dashboard reads planning motion states directly from `/planning/objects`.
+`/lidar/motion_debug` is optional sensor diagnostics; its absence does not
+mean the planning motion stream is missing.
+
 ## Messages and recording
 
 `planning_inputs/DetectedObject*` carries the extra motion field. Frozen
