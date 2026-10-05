@@ -1,9 +1,11 @@
 # asmc_lidar — 단일 LiDAR 후보 실행과 지면 연구 비교
 
-> **현재 실행·인계 정본:** [L2-I1 인계](../../docs/packages/asmc_lidar/README.md).
-> `roslaunch asmc_lidar unified.launch`는 GPS/미션 모드 없이 V4 재호 지면+프레임별
-> 군집/OBB를 계산한다. 구조물 새 판정에 의한 자동 억제는 OFF이며 판제 운영 토픽은
-> 바꾸지 않는다. 아래 L2-A1/A2 항목은 상세 연구·재현 이력이다.
+> **현재 실행·인계 정본:** [L2-I2 인계](../../docs/packages/asmc_lidar/l2i2-handoff-20261005.md).
+> `unified.launch`는 GPS/미션 모드 없이 V4 지면·군집/OBB·후보 추적을 계산하고
+> `base_link` 객체를 발행한다. 검증된 pose가 있으면 별도 노드가 `map` 후보를 발행한다.
+> 구조물 자동 억제는 OFF, 판제 운영 `/perception/objects`는 그대로다.
+> 아래 L2-A1/A2 항목은 연구·재현 이력이며, 과거의 “추적 없음” 설명은
+> 연구용 `review.launch`를 가리킨다.
 
 손재호 `6435af1`의 **프레임별** 터널 제거·군집·L-shape OBB를 재현하고,
 동일 입력에 Patchwork++ 지면 분할을 독립적으로 돌린다. 운영 LiDAR의
@@ -148,7 +150,8 @@ RViz의 `ground`와 `nonground`는 모드에 따라 출처가 달라진다. `gro
 `nonground`는 장애물 확정이 아니고, `reference`의 `uncertain`은 벽·천장 등
 기준선이 제외한 점이다. 카메라 입력을 연결하지 않은 실시간 실행은 명시적으로
 `missing`이며 유효 빈 검출이나 보호 OFF로 취급하지 않는다. 위치가 필요한
-판제용 `map` 객체·추적 ID·속도는 발행하지 않는다.
+판제용 `map` 객체·추적 ID·속도는 이 **연구용** `review.launch`에서 발행하지 않는다.
+신규 `unified.launch`의 별도 후보 토픽은 L2-I2 인계를 따른다.
 
 ## 고정 Capture 재생
 

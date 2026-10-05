@@ -19,7 +19,7 @@
 | `asmc_bridge` | MORAI UDP 수신·제어 송신, sensor decode, 외부→내부 상태 정규화 |
 | `asmc_hd_map` | HD Map build/runtime, 차선·차로·주행가능영역, 체크포인트·미션 메타데이터 |
 | `asmc_perception` | 카메라 객체·차선/주행영역·신호등, BEV·카메라 후처리 |
-| `asmc_lidar` | LiDAR+IMU 좌표·시간, 지면/구조물 근거, 군집/OBB와 향후 추적 |
+| `asmc_lidar` | LiDAR+IMU 좌표·시간, 지면/구조물 근거, 군집/OBB와 후보 추적·local/map 어댑터 |
 
 이는 **팀 소유 공용·인지 코드의 경계**다. 독립 수집 패키지, 판제 소유 패키지와 음영 차선 어댑터는 별도다.
 
@@ -84,7 +84,7 @@ src/
 │   ├── config/ · launch/ · rviz/
 │   ├── scripts/               # ROS node entrypoint만
 │   └── test/
-├── asmc_lidar/                # LiDAR+IMU, 지면/구조물/군집/OBB; 추적 확장
+├── asmc_lidar/                # LiDAR+IMU, 지면/구조물/군집/OBB, 후보 추적·좌표 어댑터
 ├── behavior_planner/          # 판제 소유, 현 위치 유지
 ├── frenet_planner/            # 판제 소유, 현 위치 유지
 ├── mpc_controller/            # 판제 소유, 현 위치 유지
@@ -121,10 +121,11 @@ catkin package 하나를 유지하면서도 실행 이미지가 학습 산출물
 
 ### 2026-10-05 이후 역할과 우선순위
 
-독립 LiDAR 후보의 현재 인계 계약은 [L2-I1 문서](../packages/asmc_lidar/README.md)에 있다.
-LiDAR+IMU 단일 경로는 GPS·미션으로 일반/터널 알고리즘을 바꾸지 않는다. 구조물
-근거를 표시하지만 자동 억제는 기본 OFF다. 손재호는 이를 바탕으로 구조물 억제,
-군집·OBB/추적·속도를 단계별 회귀와 함께 개선한다. 기존 nested Main/Msg 및 운영
+독립 LiDAR 후보의 현재 인계 계약은 [L2-I2 문서](../packages/asmc_lidar/l2i2-handoff-20261005.md)에 있다.
+LiDAR+IMU 단일 경로는 GPS·미션으로 일반/터널 알고리즘을 바꾸지 않는다.
+후보 tracker·공용 상태 메시지·local/map 어댑터를 연결했지만 구조물 자동 억제는 OFF,
+map 가용성과 객체/속도 품질은 운영 승격 전 추가 수락조건이다. 손재호는 구조물 억제,
+군집·추적·속도 정확도를 단계별 회귀와 함께 개선한다. 기존 nested Main/Msg 및 운영
 출력은 새 계약이 판제와 검증되기 전까지 유지한다.
 
 사용자 측 독립 작업의 순서는 **개정 규정의 공식 근거 확인과 HD맵 갱신 → 카메라 객체

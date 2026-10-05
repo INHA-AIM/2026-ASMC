@@ -1,4 +1,8 @@
-# `asmc_lidar` L2-I1 인계 — 한 경로, 구조물 억제 기본 OFF
+# `asmc_lidar` L2-I1 당시 인계 — 한 경로, 구조물 억제 기본 OFF
+
+> 이 문서는 **L2-I1 당시 기록**이다. 현재 추적·메시지·map 어댑터의 정본은
+> [L2-I2 인계](./l2i2-handoff-20261005.md)이며, 아래 “추적 미제공” 설명은
+> 현재 `unified.launch`에 더 이상 적용되지 않는다. 연구·회귀 명령은 보존한다.
 
 이 문서는 `feat/asmc-lidar-integration`의 **후속 개발용 실행 기준선**이다. 운영 판제 입력의 교체나 전 구간 인지 성능 승인이 아니다. 기존 `lidar+sensorfusion` nested workspace, `/last_lidar`, `/lidar_nogps`, `/perception/objects`, 메시지 MD5, 센서·브릿지 설정은 그대로 둔다.
 

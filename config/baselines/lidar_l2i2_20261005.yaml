@@ -1,0 +1,65 @@
+schema_version: 1
+baseline_id: asmc_lidar_l2i2_candidate_20261005
+scope: isolated_candidate_not_operational_cutover
+revisions:
+  main_base: 252f83a5e6fc3fd22c2eef438e6731512cfb1c6b
+  jaeho_tracker_and_fusion: 6435af10671235e735e4a9ed1bd747bd8d8389ac
+  jaeho_latest_review: 8dde9b691bebd4f9d5172d0c43bd6b16d2052c2b
+  l2i1_local_parent: 8bb46ba
+inputs:
+  sensor_profile:
+    path: config/morai/sensors/ASMC_sensor_set_v3.json
+    sha256: 4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f
+  ground_profile:
+    path: src/asmc_lidar/config/ground_v4/jaeho_support.yaml
+    sha256: 599eb0440667b22804630b801ec69b4c0b195ca920c46ef6c83867ccb2139b84
+  calibration:
+    path: src/asmc_lidar/config/autonav_v3.yaml
+    sha256: d6515890cd65eefa3d5b087970593396a6a1160120f6f1f20607b50422b9afa7
+  continuous_bag:
+    path_relative_to_ASMC_DATA: lidar_assessment/20261005_ground_v3_drive/tunnel_path_all/drive_0.bag
+    size_bytes: 2939847745
+    sha256: a2f74b0cc7d46e4a93fe6c5d3d053c6f513c4fa40bb0366acd8aad9a5b593a12
+    rosbag_rate_stress: 1.5
+    note: source stamps remain approximately 10.8Hz; replay arrival is approximately 16Hz, not a measured 15Hz sensor run
+contract: config/contracts/lidar_candidate_topic_contract_v1.yaml
+operational_topics_changed: false
+operational_message_md5_changed: false
+observed_replay_results:
+  source_scan_hz_approx: 10.76
+  replay_arrival_scan_hz_approx: 16.14
+  scenario: full_normal_tunnel_recovery
+  before_unsubscribed_debug_cloud_copy_skip:
+    received_scans: 2409
+    processed_scans: 2293
+    queue_dropped: 111
+    compute_ms_p50: 17.19
+    compute_ms_p95: 74.92
+    compute_ms_p99: 88.48
+  after_unsubscribed_debug_cloud_copy_skip:
+    received_scans: 2409
+    processed_scans: 2347
+    queue_dropped: 57
+    compute_ms_p50: 15.95
+    compute_ms_p95: 72.93
+    compute_ms_p99: 75.29
+    local_observed_frames: 2048
+    local_observed_empty_frames: 299
+    local_invalid_frames: 8
+    map_pose_unavailable_frames: 769
+    planner_candidate_frames: 1355
+  interpretation: queue_drop_remains_nonzero_at_16Hz_arrival_so_15Hz_sustained_gate_not_passed
+observed_live_results:
+  simulator: MORAI_26R1
+  window_seconds: 25
+  sensor_scan_hz: 12.80
+  visible_scan_frames: 320
+  pipeline_received_cumulative: 388
+  pipeline_queue_dropped_cumulative: 0
+  compute_ms_p50: 19.90
+  compute_ms_p95: 23.97
+  compute_ms_p99: 25.65
+  local_observed_frames: 320
+  map_observed_frames: 263
+  map_pose_unavailable_frames: 57
+  bounded_grpc_motion_attempt: aborted_before_mutation_because_ego_was_not_stationary
