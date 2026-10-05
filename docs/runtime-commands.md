@@ -5,16 +5,17 @@
 > **범위:** 본선·local 공통 실행 진입점. 학습·offline 분석·HD Map 생성용 내부
 > launch는 각 package README를 따른다.
 
-명령은 저장소 root가 host에서
-`/home/aim06/projects/2026-ai-sw-mobility-competition/2026-ASMC`, container에서
-`/root/ws`인 기준이다. ROS launch 인자는 `name:=value` 형태로 덮어쓴다.
+명령은 host에서 현재 저장소 root를 ASMC로 잡고, container에서는 `/root/ws`인
+기준이다. ROS launch 인자는 `name:=value` 형태로 덮어쓴다.
 
 ## 1. 가장 빠른 local 실행
 
 ### Host — container 준비
 
 ```bash
-cd /home/aim06/projects/2026-ai-sw-mobility-competition/2026-ASMC
+# 먼저 host에서 이 저장소 안의 아무 디렉터리로 이동
+export ASMC=$(git rev-parse --show-toplevel)
+cd "$ASMC"
 xhost +local:docker
 
 ./scripts/docker_ros_up.sh up
@@ -32,6 +33,18 @@ source devel/setup.bash
 
 bridge는 perception·planning 통합 명령에 포함하지 않는다. 항상 별도 terminal의 log와
 diagnostics를 보며 입력 Hz를 검사한다.
+
+### LiDAR 이전용 골격과 현재 실행 경로
+
+`asmc_lidar`는 좌표·시간 라이브러리와 계약 시험만 제공한다. 손재호가 기존
+`lidar+sensorfusion`의 검출·추적·fusion을 이전할 예정이며 현재 객체 publisher는 없다.
+기존 실행은 [원본 sensor-fusion guide](../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md),
+새 골격의 빌드·시험은 [asmc_lidar README](../src/asmc_lidar/README.md),
+이전·삭제 조건은 [LiDAR 인계](./packages/asmc_lidar/README.md)를 따른다.
+이전 개인 연구용 비교·후보 launch는 삭제됐다. 옛 devel에 실행파일이 남아 있어도
+현재 소스에서 지원하는 기능으로 사용하지 않는다.
+
+### 입력 Hz·브릿지 진단 (별도 터미널)
 
 ```bash
 rostopic hz /Ego_topic

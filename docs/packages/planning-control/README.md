@@ -121,7 +121,7 @@ LiDAR object producer, HD Map 정본, mission orchestration과 closed-loop full 
 `BehaviorCommand`, `Trajectory`, `/ctrl_cmd`를 발행하지 않으며 camera lane에 제어 권한을
 부여하지 않는다. 음영구간 소비 조건은
 [shadow camera handoff](../../handoffs/perception/shadow-camera.md), adapter 구현은
-[package README](../../../src/lane_boundary_adapter/README.md)를 따른다.
+[package README](../../../src/jamming_lane_boundary_adapter/README.md)를 따른다.
 
 shared-family 검수 launch는 `base_link` 전용 RViz preset을 기본으로 함께 실행한다. 최종
 accepted strip과 perception-side support marker를 한 화면에서 보며, headless replay에서는

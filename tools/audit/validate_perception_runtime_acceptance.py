@@ -274,7 +274,7 @@ def _validate_p5_closeout(
             raise AcceptanceContractError(f"operational entrypoint is missing: {relative}")
     for relative in (
         "src/asmc_perception/launch/perception.launch",
-        "src/lane_boundary_adapter/launch/shadow_boundary_family_candidate.launch",
+        "src/jamming_lane_boundary_adapter/launch/shadow_boundary_family_candidate.launch",
     ):
         if not (repo_root / relative).is_file():
             raise AcceptanceContractError(f"operational launch is missing: {relative}")

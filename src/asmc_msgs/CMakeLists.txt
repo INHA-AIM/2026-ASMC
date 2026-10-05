@@ -46,6 +46,12 @@ add_message_files(
   TrafficLightDetection.msg
   TrackedObject.msg
   TrackedObjectArray.msg
+  # LiDAR/camera handoff types: explicit validity. Producers are implemented
+  # during Jaeho's migration; existing operational message MD5s stay frozen.
+  LidarObject.msg
+  LidarObjectArray.msg
+  CameraObjectBox.msg
+  CameraObjectBoxArray.msg
 )
 
 generate_messages(

@@ -19,7 +19,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            git ca-certificates libyaml-cpp-dev \
+            git ca-certificates libyaml-cpp-dev libeigen3-dev \
             ros-noetic-tf ros-noetic-tf2-ros
           rm -rf /var/lib/apt/lists/*
 

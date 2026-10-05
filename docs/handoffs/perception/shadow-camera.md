@@ -9,7 +9,7 @@
 >
 > **상세 실험:** [BEV 개발 이력](../../../src/asmc_perception/docs/bev-development-history.md)
 > **실행 계약:** [asmc_msgs](../../../src/asmc_msgs/msg/LaneBoundaryFamily.msg),
-> [lane_boundary_adapter](../../../src/lane_boundary_adapter/README.md)
+> [jamming_lane_boundary_adapter](../../../src/jamming_lane_boundary_adapter/README.md)
 > **Planning 경계:** [Planning/Control 개발 가이드](../../packages/planning-control/README.md)
 
 이 문서는 음영 왕복 2차로에서 카메라가 제공하는 차선 family와 주행가능영역을 판제가

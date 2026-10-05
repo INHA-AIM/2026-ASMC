@@ -107,7 +107,11 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 camera/BEV/lane/traffic ROS node, runtime support/config/model과 가치 있는 학습·offline audit를
 `asmc_perception` 안의 명시적 경계로 통합했다. 실행·참조가 없는 camera 3D 연구와 기존 호환
 package는 Git history를 남기고 제거했다.
-`data_collection`과 `lidar+sensorfusion`은 통합 대상이 아닌 독립 경계다.
+`data_collection`은 독립 경계다. 2026-10-05 후속 결정으로 카메라는 `asmc_camera`로
+rename하고, `lidar+sensorfusion`의 기능은 손재호가 수정사항을 반영하면서 독립
+`asmc_lidar`로 이전한다. camera fusion도 LiDAR 내부에 유지한다. **현재 실행 경로는
+아직 위 표와 같으며 새 asmc_lidar는 좌표·시간 코어만 남긴 골격**이다. 완료·삭제 조건은
+[상세 이전 계획](./consolidation-roadmap.md)을 따른다.
 
 ### interfaces (⬜ 합의 중)
 

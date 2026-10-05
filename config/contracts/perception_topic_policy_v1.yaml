@@ -206,7 +206,7 @@ topic_families:
       file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
       anchors: ['"/perception/lane/boundary_observations"']
     consumers:
-      - file: src/lane_boundary_adapter/src/lane_boundary_monitor_node.cpp
+      - file: src/jamming_lane_boundary_adapter/src/lane_boundary_monitor_node.cpp
         anchor: '"/perception/lane/boundary_observations"'
     bag_profiles: [camera_semantic_result.yaml, shadow_boundary_result.yaml, shadow_runtime_profile_result.yaml]
     classification: canonical_runtime
@@ -221,7 +221,7 @@ topic_families:
       file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
       anchors: ['"/perception/lane/boundary_family"']
     consumers:
-      - file: src/lane_boundary_adapter/src/boundary_family_monitor_node.cpp
+      - file: src/jamming_lane_boundary_adapter/src/boundary_family_monitor_node.cpp
         anchor: '"/perception/lane/boundary_family"'
     bag_profiles:
       - camera_semantic_result.yaml

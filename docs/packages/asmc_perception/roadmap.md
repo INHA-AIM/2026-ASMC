@@ -1,5 +1,11 @@
 # 카메라·MGeo·LiDAR 인지 융합 개발 로드맵
 
+> **2026-10-05 우선 적용할 이전 결정:** [통합 로드맵](../../architecture/consolidation-roadmap.md)의
+> 카메라/LiDAR 상세 계획을 따른다. 목표는 `asmc_camera` + `asmc_lidar`, 객체 fusion은
+> LiDAR 내부, HD맵은 정적 문맥 제공이다. 카메라 rename/YOLO 생산자는 안승현,
+> 기존 LiDAR 기능·좌표/시간·공용 메시지 이전 마무리는 손재호가 맡는다.
+> 아래 상세 분석과 과거 시점의 경로·제안은 근거로 보존하며 현재 운영 승인으로 읽지 않는다.
+
 > **문서 역할:** Working Proposal + Chronological Record — 인지 융합 방향과 단계별 결정 gate
 > **문서 허브:** [README.md](../../README.md)
 > **현재 코드 진입점:** [Perception 개발·통합 가이드](./README.md)
@@ -910,7 +916,7 @@ short-term ID와 품질을 담았고 home/opposing/절대 차로 번호는 넣�
 metric strip과 중심선을 debug Marker/diagnostics로만 만든다. y=0을 포함한 strip 표시는
 기하학적 vehicle projection일 뿐 home/opposing 판정이 아니며, Behavior/Frenet/MPC와 UDP
 명령에는 아직 연결하지 않는다. 실행·실패 안전 기준은
-[`lane_boundary_adapter` README](../../../src/lane_boundary_adapter/README.md)를
+[`lane_boundary_adapter` README (현재 jamming_lane_boundary_adapter)](../../../src/jamming_lane_boundary_adapter/README.md)를
 따른다.
 단일 Foggy 11시 typed smoke bag의 1배속 consumer 검증에서는 239개 수신 frame 중 196개
 (`82.0%`)가 usable strip이었고, 나머지는 `order_invalid` 5개와 보수적 pair gate를 통과하지
@@ -938,7 +944,7 @@ gate를 만족할 때, read-only planning adapter가 두 lane strip의 임시 �
 metric accuracy 합격률이 아니라 판제 인터페이스 연속성 기준선이다. threshold 0.45 실험은
 개선이 없어 기존 white/yellow 0.50을 유지했다. 세부 결과는
 [`drivable_bev` maneuver replay](../../../src/asmc_perception/docs/bev-development-history.md#2026-09-13-차로-이탈회피-maneuver-replay)와
-[`lane_boundary_adapter` README](../../../src/lane_boundary_adapter/README.md#2026-09-13-회피차로-이탈-replay)를
+[`lane_boundary_adapter` README (현재 jamming_lane_boundary_adapter)](../../../src/jamming_lane_boundary_adapter/README.md#2026-09-13-회피차로-이탈-replay)를
 따른다.
 
 ### 8.1 학습용 Capture와 종료된 Streaming GT 조사

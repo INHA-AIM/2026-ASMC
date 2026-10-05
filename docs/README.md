@@ -21,6 +21,12 @@
 이 페이지에서 정본, 작업 중 설계안, 사용 가이드와 과거 기록을 구분한다. 내용이
 충돌하면 아래의 `정본 우선순위`를 적용하고, 기록 문서를 현재 설정으로 해석하지 않는다.
 
+2026-10-05 패키지 목표는 `asmc_camera`(현재 `asmc_perception`)와 `asmc_lidar`다.
+카메라 YOLO 생산자는 안승현, 기존 LiDAR 기능·camera fusion의 이전 마무리는 손재호가 맡는다.
+[상세 이전 순서·공용 계약·완료 조건](./architecture/consolidation-roadmap.md)을 먼저 보고,
+현재 골격과 후속 구현·수락 항목은 [LiDAR 인계](./packages/asmc_lidar/README.md)를 본다.
+개인 LiDAR 연구 코드·보고서는 Git 이력에 보존했고 현재 패키지에는 검출 실행기가 없다.
+
 ## 1. 처음 보는 팀원이 읽을 문서
 
 아래 문서를 순서대로 읽고 필요한 파트의 상세 문서로 이동한다.
@@ -72,7 +78,7 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 | [협업과 Git 규칙](./governance/README.md) | 브랜치, PR, review와 main 안정성 | Canonical |
 | [integration-plan.md](./archive/integration/wave1-wave2-plan.md) | Wave 1/2 이식 과정과 당시 판단 | Historical Record |
 | [architecture-overview.md](./architecture/system-overview.md) | 전체 모듈과 현재 목표 구조 요약 | Working Overview |
-| [repository-consolidation-roadmap.md](./architecture/consolidation-roadmap.md) | msg·bridge·HD Map·perception 4-패키지 통합, 체크포인트/미션, 현장 배포 단계 | Working Proposal |
+| [repository-consolidation-roadmap.md](./architecture/consolidation-roadmap.md) | msg·bridge·HD Map·camera·LiDAR 목표 경계, camera rename·재호 기능 이전·소비 검증·현장 배포 | Implementation Plan + Historical Record |
 | [baselines/runtime-baseline-v1.md](./records/baselines/runtime-v1.md) | P1-A 당시 package/topic/message/sensor/bag/HD Map snapshot | Frozen Snapshot (`73c0a8c`) |
 | [P3-A bridge baseline](./records/baselines/bridge-p3a-v1.md) | 공통 `morai_udp`, transport/network/sensor profile과 bridge source/topic SHA | Frozen P3-A Baseline |
 | [P3-B Competition status baseline](./records/baselines/bridge-p3b-v1.md) | decoder·fixture와 당시 잘못된 port 해석; P3-E 정정 포함 | Frozen P3-B Baseline |
@@ -130,7 +136,7 @@ MORAI 화면에 입력할 값만 필요하면
 | [Perception runtime topic v1](./contracts/perception/runtime-v1.md) | typed 신호등·LiDAR 객체 frame/stamp/freshness와 legacy 종료 gate | Frozen Additive Interface |
 | [P5-D/E perception closeout](./records/baselines/perception-p5de-closeout-v1.md) | typed consumer 인계, 대표 lane-family bag과 최종 운영 경계 | Active Closeout Record |
 | [perception-map-fusion-roadmap.md](./packages/asmc_perception/roadmap.md) | camera/MGeo/LiDAR 전체 전략과 시간순 개발 근거 | Working Proposal + Chronological Record |
-| [lidar-assessment-and-roadmap.md](./packages/asmc_perception/lidar-assessment-and-roadmap.md) | LiDAR 패키지 완성도 평가와 증상별 원인, GT→센서 전환 간극과 판제 측 변경 제안, 개선 우선순위 | Assessment Record + Working Proposal |
+| [LiDAR 이전·인계](./packages/asmc_lidar/README.md) | 손재호 원본 기능 이전, 좌표·시간·공용 메시지·모드 분리와 완료 조건 | Handoff Plan |
 | [shadow-camera-perception-handoff.md](./handoffs/perception/shadow-camera.md) | 음영구간 v3 lane-family·drivable 판제 소비 계약과 성능 동결 | Active Handoff Guide |
 | [camera-object-detection-handoff.md](./handoffs/perception/camera-object-detection.md) | 손재호용 YOLO 즉시 사용·경량 후보·NAS fine-tune 인수 가이드 | Active Guide |
 | [rosbag 기록·재생·평가](./operations/rosbag-evaluation.md) | Real Time UDP raw/result bag과 lineage | Active Guide |
@@ -178,7 +184,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | 카메라 live 추론 | [Perception package-group guide](./packages/asmc_perception/README.md#8-실행검증-진입점) | [asmc_perception README](../src/asmc_perception/README.md) |
 | 카메라–LiDAR 객체 분류 | [object detector handoff](./handoffs/perception/camera-object-detection.md) | [sensor-fusion 실행](../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md), [rosbag 평가](./operations/rosbag-evaluation.md) |
 | HD Map·카메라·LiDAR 문맥 | [Perception package-group guide](./packages/asmc_perception/README.md) | [fusion roadmap](./packages/asmc_perception/roadmap.md), [BEV design note](./packages/asmc_perception/bev-lane-interface-plan.md) |
-| 음영구간 카메라 출력을 판제에 연결 | [shadow camera handoff](./handoffs/perception/shadow-camera.md) | [lane boundary adapter](../src/lane_boundary_adapter/README.md) |
+| 음영구간 카메라 출력을 판제에 연결 | [shadow camera handoff](./handoffs/perception/shadow-camera.md) | [lane boundary adapter](../src/jamming_lane_boundary_adapter/README.md) |
 | P1-A 당시 package/topic/HD Map snapshot 확인 | [records index](./records/README.md) | [P1-A runtime v1](./records/baselines/runtime-v1.md) |
 | 날짜별 수치·과거 결정 근거를 찾기 | [records index](./records/README.md) | [archive index](./archive/README.md) |
 | HD Map·체크포인트 토픽을 구현/소비 | [P1-B topic contract](./contracts/hd-map/topic-v1.md) | [asmc_msgs README](../src/asmc_msgs/README.md), [통합 로드맵](./architecture/consolidation-roadmap.md) |
@@ -199,6 +205,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | [MORAI bridge guide](./packages/asmc_bridge/README.md) | 현재 bridge/state 구현과 Phase 3 통합 gate |
 | [asmc_bridge quick start](../src/asmc_bridge/README.md) | 단일 bridge 패키지 실행·component launch |
 | [asmc_perception](../src/asmc_perception/README.md) | camera·BEV·lane·traffic runtime, offline audit와 training 경계 |
+| [asmc_lidar](../src/asmc_lidar/README.md) | 좌표·시간/IMU 라이브러리 골격, 빌드·계약 시험과 손재호 인계 |
 | [Perception package-group guide](./packages/asmc_perception/README.md) | 현재 camera/BEV/LiDAR/traffic/data 경계와 Phase 4 gate |
 | [Planning/Control package-group guide](./packages/planning-control/README.md) | 현재 Behavior/Frenet/MPC 경계, legacy와 변경 gate |
 | [Handoff index](./handoffs/README.md) | 파트 간 인수 조건과 deployment/legacy 상태 |
@@ -209,7 +216,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | [data_collection](../src/data_collection/README.md) | Capture, sync, mask/cache와 dataset 실행법 |
 | [frenet_planner](../src/frenet_planner/README.md) | Frenet Planner 책임, runtime I/O, core 폴더 지도, 빌드/테스트 |
 | [interfaces](../src/interfaces/README.md) | provisional topic과 합의된 계약의 승격 위치 |
-| [lane_boundary_adapter](../src/lane_boundary_adapter/README.md) | 카메라 metric 경계를 판제와 검토하는 read-only C++ consumer pilot |
+| [jamming_lane_boundary_adapter](../src/jamming_lane_boundary_adapter/README.md) | 카메라 metric 경계를 판제와 검토하는 read-only C++ consumer pilot |
 | [integration](../src/integration/README.md) | UDP bridge와 내부 ROS 진입점 |
 
 모듈 README에는 실행법과 현재 상태를 두고, 배경 설명·팀 규약·실험 이력은 `docs/`의 해당

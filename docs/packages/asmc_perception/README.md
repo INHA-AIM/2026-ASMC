@@ -4,6 +4,12 @@
 >
 > **현재 상태:** P4-C6 package 통합과 P5-A~P5-E topic·시각화·consumer handoff·운영 closeout 완료
 
+> **2026-10-05 다음 이전 목표:** 이 패키지는 안승현이 `asmc_camera`로 rename하고
+> YOLO 생산자를 별도 단계로 통합한다. 토픽의 `/perception/*` 이름은 유지한다.
+> LiDAR·camera 객체 fusion은 손재호가 `asmc_lidar`로 이전하며 카메라 패키지에 합치지 않는다.
+> [상세 계획과 호환·삭제 gate](../../architecture/consolidation-roadmap.md)를 따른다.
+> 아직 rename하지 않았으므로 아래 현재 명령·경로는 그대로 사용한다.
+
 이 문서는 긴 인지 설계·실험 문서를 대체하거나 요약 폐기하기 위한 문서가 아니다. 현재 어떤
 코드와 문서를 먼저 사용해야 하는지 안내하는 진입점이다. 날짜별 분석, 수치, 실패 원인과 후보
 변화는 원래 문서에 그대로 보존한다.
@@ -20,7 +26,7 @@
 | camera–LiDAR 객체 분류 | [object detection handoff](../../handoffs/perception/camera-object-detection.md) | Active Handoff Guide |
 | GT·BEV·lane 정책의 상세 근거 | [BEV/lane design note](./bev-lane-interface-plan.md) | Dated Detailed Design Note |
 | camera/map/LiDAR 개발 과정과 열린 결정 | [fusion roadmap](./roadmap.md) | Working Proposal + Chronological Record |
-| LiDAR 패키지의 현재 완성도와 개선 계획 | [LiDAR assessment](./lidar-assessment-and-roadmap.md) | Assessment Record + Working Proposal |
+| LiDAR 패키지의 이전 계획 | [LiDAR 인계](../asmc_lidar/README.md) | Handoff Plan |
 | 특정 checkpoint의 학습 결과 | [v4 evaluation](../../records/perception/twinlitenet-v4-evaluation.md) | Experiment Record |
 | 현재 topic 소비·bag 사용과 P5 정리 gate | [P5-A topic audit](../../records/baselines/perception-p5a-topic-audit-v1.md) | Frozen Input Audit |
 | 실행 중 node/topic/rate/stamp/frame/consumer 검증 | [P5-C runtime acceptance](../../records/baselines/perception-p5c-runtime-acceptance-v1.md) | Active Acceptance Gate |
@@ -145,9 +151,9 @@ RViz 절차는 [sensor-fusion guide](../../../src/lidar+sensorfusion/RUN_SENSOR_
 본선 v3 VLP16 설정과 손재호 소비 loop는 15 Hz이고 실제 완성 cloud 약 12 Hz는 허용한다.
 v2 10 Hz는 과거 비교·회귀 기준이므로 본선 입력과 혼동하지 않는다.
 
-현재 파이프라인의 단계별 완성도, 증상별 원인, GT → 센서 전환에서 판제 쪽에도 필요한 변경과
-개선 우선순위는 [LiDAR assessment](./lidar-assessment-and-roadmap.md)에 있다. 실행 절차가 아니라
-평가와 제안이므로 `RUN_SENSOR_FUSION.md`의 정본 지위를 대체하지 않는다.
+원본 기능의 이전 순서와 좌표·시간·메시지·소비 수락 기준은
+[LiDAR 인계](../asmc_lidar/README.md)에 있다. 현재 asmc_lidar는 라이브러리 골격이며
+운영 실행 절차는 계속 `RUN_SENSOR_FUSION.md`를 따른다.
 
 ## 6. 개발 입력과 본선 입력을 분리한다
 
