@@ -90,6 +90,16 @@ int main() {
            "polygon collision treats boundary touch as collision");
     Expect(CheckObstacleOverlap(ego_footprint, {}, rotated, 0.0),
            "polygon collision detects rotated obstacle");
+    const geometry::Polygon2D separated_footprint =
+        PredictObstacleFootprint(separated, 0.0);
+    const geometry::Polygon2D touching_footprint =
+        PredictObstacleFootprint(touching, 0.0);
+    Expect(std::fabs(geometry::ConvexPolygonDistance(
+                         ego_footprint, separated_footprint) - 1.1) < 1e-9,
+           "polygon distance measures physical boundary clearance");
+    Expect(geometry::ConvexPolygonDistance(
+               ego_footprint, touching_footprint) == 0.0,
+           "polygon distance is zero for touching footprints");
 
     const TrackedObject moving = MakeObstacle(5.0, 0.0, -1.5, 0.0);
     Expect(!CheckObstacleOverlap(ego_footprint, {}, moving, 0.0),
@@ -202,12 +212,12 @@ int main() {
            "avoid target may escape an existing inflated margin");
 
     std::vector<FrenetPath> longitudinal_only{MakePath({0.0, 0.0, 0.0})};
-    longitudinal_only.front().s = {10.0, 11.0, 12.0};
+    longitudinal_only.front().s = {10.0, 12.0, 14.0};
     FilterByCollision(longitudinal_only, straight_ref,
                       {lateral_near_margin}, ego_shape, collision_cfg, -1,
                       lateral_near_margin.id);
-    Expect(!longitudinal_only.front().valid,
-           "longitudinal center-distance growth is not lateral escape");
+    Expect(longitudinal_only.front().valid,
+           "side/rear target may escape by increasing physical OBB clearance");
 
     std::vector<FrenetPath> approaching{MakePath({0.0, 0.2, 0.4})};
     FilterByCollision(approaching, straight_ref, {lateral_near_margin}, ego_shape,
@@ -240,14 +250,83 @@ int main() {
                lateral_near_margin.id),
            "low-speed avoid may escape laterally with the standard margin");
 
+    const TrackedObject longitudinal_near_margin = MakeObstacle(2.4, 0.0);
     CartesianPath low_speed_longitudinal = low_speed_escape;
     low_speed_longitudinal.x = {0.0, 0.5, 1.0};
     low_speed_longitudinal.y = {0.0, 0.0, 0.0};
     Expect(!CartesianTrajectoryClear(
-               low_speed_longitudinal, {lateral_near_margin}, ego_shape,
+               low_speed_longitudinal, {longitudinal_near_margin}, ego_shape,
                collision_cfg, 0.1, &low_speed_blocking_id,
-               lateral_near_margin.id),
-           "low-speed longitudinal motion is not an avoid escape");
+               longitudinal_near_margin.id),
+           "low-speed motion toward the target is not an avoid escape");
+
+    // 복구 정책은 시작점에서는 margin 밖이지만 시간 증가 margin 안으로
+    // 들어가는 후보도 실제 OBB 사이의 최단 이격이 계속 증가할 때만
+    // 허용한다. 대상이 이미 뒤쪽에 있으면 중심 횡투영과 실제 이격의
+    // 증감 방향이 다를 수 있다.
+    const CollisionCheckConfig growing_margin_cfg{0.5, 2.0, 1.0};
+    const TrackedObject later_margin_target = MakeObstacle(-1.5, 2.6);
+    CartesianPath later_outward_escape;
+    later_outward_escape.x = {0.0, 1.0, 2.0};
+    later_outward_escape.y = {0.0, 0.1, 0.2};
+    later_outward_escape.yaw = {0.0, 0.0, 0.0};
+    Expect(!CartesianTrajectoryClear(
+               later_outward_escape, {later_margin_target}, ego_shape,
+               growing_margin_cfg, 0.1, &low_speed_blocking_id,
+               later_margin_target.id),
+           "strict policy rejects a path that enters target margin later");
+    Expect(CartesianTrajectoryClear(
+               later_outward_escape, {later_margin_target}, ego_shape,
+               growing_margin_cfg, 0.1, &low_speed_blocking_id,
+               later_margin_target.id,
+               TargetEscapePolicy::CONTINUOUS_OUTWARD_RECOVERY),
+           "recovery uses increasing physical OBB clearance");
+
+    CartesianPath later_backtracking = later_outward_escape;
+    later_backtracking.x = {0.0, 1.0, 0.5};
+    Expect(!CartesianTrajectoryClear(
+               later_backtracking, {later_margin_target}, ego_shape,
+               growing_margin_cfg, 0.1, &low_speed_blocking_id,
+               later_margin_target.id,
+               TargetEscapePolicy::CONTINUOUS_OUTWARD_RECOVERY),
+           "recovery rejects physical-clearance backtracking");
+
+    CartesianPath cumulative_backtracking = later_outward_escape;
+    cumulative_backtracking.x = {0.0, 1.0, 0.95, 0.90};
+    cumulative_backtracking.y = {0.0, 0.1, 0.1, 0.1};
+    cumulative_backtracking.yaw = {0.0, 0.0, 0.0, 0.0};
+    Expect(!CartesianTrajectoryClear(
+               cumulative_backtracking, {later_margin_target}, ego_shape,
+               growing_margin_cfg, 0.1, &low_speed_blocking_id,
+               later_margin_target.id,
+               TargetEscapePolicy::CONTINUOUS_OUTWARD_RECOVERY),
+           "recovery does not accumulate small backtracks toward the target");
+
+    CartesianPath later_no_lateral_progress = later_outward_escape;
+    later_no_lateral_progress.x = {0.0, 0.0, 0.0};
+    later_no_lateral_progress.y = {0.0, 0.0, 0.0};
+    Expect(!CartesianTrajectoryClear(
+               later_no_lateral_progress, {later_margin_target}, ego_shape,
+               growing_margin_cfg, 0.1, &low_speed_blocking_id,
+               later_margin_target.id,
+               TargetEscapePolicy::CONTINUOUS_OUTWARD_RECOVERY),
+           "recovery rejects margin entry without physical clearance progress");
+
+    TrackedObject later_non_target = later_margin_target;
+    later_non_target.id = 2;
+    Expect(!CartesianTrajectoryClear(
+               later_outward_escape, {later_non_target}, ego_shape,
+               growing_margin_cfg, 0.1, &low_speed_blocking_id,
+               later_margin_target.id,
+               TargetEscapePolicy::CONTINUOUS_OUTWARD_RECOVERY),
+           "recovery keeps the full margin for every non-target object");
+
+    Expect(!CartesianTrajectoryClear(
+               low_speed_escape, {lateral_overlapping}, ego_shape,
+               collision_cfg, 0.1, &low_speed_blocking_id,
+               lateral_overlapping.id,
+               TargetEscapePolicy::CONTINUOUS_OUTWARD_RECOVERY),
+           "recovery never permits a physical target OBB collision");
 
     if (g_failures == 0) {
         std::cout << "All polygon collision tests passed\n";

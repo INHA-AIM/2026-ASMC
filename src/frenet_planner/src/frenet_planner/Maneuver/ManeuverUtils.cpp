@@ -113,15 +113,24 @@ bool CartesianTrajectoryClear(const CartesianPath& path,
                               const VehicleShape& ego_shape,
                               const CollisionCheckConfig& collision_cfg,
                               double dt, int* blocking_id,
-                              int avoid_escape_object_id) {
+                              int avoid_escape_object_id,
+                              TargetEscapePolicy escape_policy) {
     if (blocking_id) *blocking_id = -1;
     const size_t count = std::min({path.x.size(), path.y.size(), path.yaw.size()});
+    const double recovery_tx = count > 0 ? std::cos(path.yaw.front()) : 1.0;
+    const double recovery_ty = count > 0 ? std::sin(path.yaw.front()) : 0.0;
+    const double recovery_nx = -recovery_ty;
+    const double recovery_ny = recovery_tx;
     bool target_escape_active = false;
     bool target_margin_exited = false;
-    bool target_lateral_progressed = false;
-    double target_initial_lateral_distance = 0.0;
-    double target_previous_lateral_distance = 0.0;
-    const double lateral_backtrack_tolerance =
+    bool target_clearance_progressed = false;
+    bool recovery_target_initialized = false;
+    bool recovery_target_margin_overlap = false;
+    bool target_separation_mode_initialized = false;
+    bool target_uses_physical_clearance = false;
+    double target_initial_clearance = 0.0;
+    double target_max_clearance = 0.0;
+    const double clearance_backtrack_tolerance =
         std::max(1e-4,
                  0.1 * std::max(0.0, collision_cfg.safety_margin));
     for (size_t i = 0; i < count; ++i) {
@@ -137,22 +146,80 @@ bool CartesianTrajectoryClear(const CartesianPath& path,
         for (const auto& obj : obstacles) {
             const bool expanded_overlap =
                 CheckObstacleOverlap(ego_footprint, {}, obj, t);
+            const PredictedObjectPose predicted =
+                PredictTrackedObjectPose(obj, t);
+
+            // 전방 대상은 접근 중 종방향 OBB 간격이 줄어드는 것이 정상이다.
+            // 이때는 최초 경로 법선 방향 중심 이격을 쓴다. 반대로 대상 중심이
+            // 이미 차체 옆/뒤에 있으면 법선 투영이 차체 회전에 따라 역행할 수
+            // 있으므로 실제 두 OBB 경계의 최단 이격을 사용한다.
+            const auto escape_separation =
+                [&](const geometry::Polygon2D& physical_ego) {
+                    if (!target_separation_mode_initialized) {
+                        const double longitudinal =
+                            (predicted.x - ego.x) * recovery_tx +
+                            (predicted.y - ego.y) * recovery_ty;
+                        target_uses_physical_clearance = longitudinal <= 0.0;
+                        target_separation_mode_initialized = true;
+                    }
+                    if (target_uses_physical_clearance) {
+                        return geometry::ConvexPolygonDistance(
+                            physical_ego, PredictObstacleFootprint(obj, t));
+                    }
+                    return std::fabs(
+                        (predicted.x - ego.x) * recovery_nx +
+                        (predicted.y - ego.y) * recovery_ny);
+                };
+
+            // committed 저속 AVOID의 2차 복구 검사. strict 검사와 달리
+            // 경로 시작점이 margin 밖이어도 이후 margin 진입을 허용하지만,
+            // 실제 차체 OBB는 전 구간 비충돌이어야 한다. 전방 접근 중에는
+            // 법선 방향 이격이, 이미 옆/뒤인 경우에는 실제 OBB 최단 이격이
+            // 계속 증가해야 한다. 다른 객체는 이 분기를 타지 않는다.
+            if (obj.id == avoid_escape_object_id &&
+                escape_policy ==
+                    TargetEscapePolicy::CONTINUOUS_OUTWARD_RECOVERY) {
+                const geometry::Polygon2D physical_ego =
+                    MakeEgoFootprint(ego, ego_shape, 0.0);
+                const bool physical_overlap =
+                    CheckObstacleOverlap(physical_ego, {}, obj, t);
+                const double clearance = escape_separation(physical_ego);
+                if (physical_overlap || !std::isfinite(clearance)) {
+                    if (blocking_id) *blocking_id = obj.id;
+                    return false;
+                }
+                if (!recovery_target_initialized) {
+                    recovery_target_initialized = true;
+                    target_initial_clearance = clearance;
+                    target_max_clearance = clearance;
+                } else {
+                    if (clearance + clearance_backtrack_tolerance <
+                        target_max_clearance) {
+                        if (blocking_id) *blocking_id = obj.id;
+                        return false;
+                    }
+                    if (clearance > target_initial_clearance + 1e-6) {
+                        target_clearance_progressed = true;
+                    }
+                    target_max_clearance = std::max(
+                        target_max_clearance, clearance);
+                }
+                recovery_target_margin_overlap =
+                    recovery_target_margin_overlap || expanded_overlap;
+                continue;
+            }
+
             if (!expanded_overlap) {
                 if (obj.id == avoid_escape_object_id &&
                     target_escape_active) {
-                    const PredictedObjectPose predicted =
-                        PredictTrackedObjectPose(obj, t);
-                    const double nx = -std::sin(ego.yaw);
-                    const double ny = std::cos(ego.yaw);
-                    const double lateral_distance = std::fabs(
-                        (predicted.x - ego.x) * nx +
-                        (predicted.y - ego.y) * ny);
-                    if (std::isfinite(lateral_distance) &&
-                        lateral_distance >
-                            target_initial_lateral_distance + 1e-6) {
-                        target_lateral_progressed = true;
+                    const geometry::Polygon2D physical_ego =
+                        MakeEgoFootprint(ego, ego_shape, 0.0);
+                    const double clearance = escape_separation(physical_ego);
+                    if (std::isfinite(clearance) &&
+                        clearance > target_initial_clearance + 1e-6) {
+                        target_clearance_progressed = true;
                     }
-                    if (!target_lateral_progressed) {
+                    if (!target_clearance_progressed) {
                         if (blocking_id) *blocking_id = obj.id;
                         return false;
                     }
@@ -168,28 +235,21 @@ bool CartesianTrajectoryClear(const CartesianPath& path,
                     MakeEgoFootprint(ego, ego_shape, 0.0);
                 const bool physical_overlap =
                     CheckObstacleOverlap(physical_ego, {}, obj, t);
-                const PredictedObjectPose predicted =
-                    PredictTrackedObjectPose(obj, t);
-                const double nx = -std::sin(ego.yaw);
-                const double ny = std::cos(ego.yaw);
-                const double lateral_distance = std::fabs(
-                    (predicted.x - ego.x) * nx +
-                    (predicted.y - ego.y) * ny);
-                if (!physical_overlap && std::isfinite(lateral_distance)) {
+                const double clearance = escape_separation(physical_ego);
+                if (!physical_overlap && std::isfinite(clearance)) {
                     if (i == 0) {
                         target_escape_active = true;
-                        target_initial_lateral_distance = lateral_distance;
-                        target_previous_lateral_distance = lateral_distance;
+                        target_initial_clearance = clearance;
+                        target_max_clearance = clearance;
                         allow_target_escape = true;
                     } else if (target_escape_active &&
-                               lateral_distance +
-                                       lateral_backtrack_tolerance >=
-                                   target_previous_lateral_distance) {
-                        if (lateral_distance >
-                            target_initial_lateral_distance + 1e-6) {
-                            target_lateral_progressed = true;
+                               clearance + clearance_backtrack_tolerance >=
+                                   target_max_clearance) {
+                        if (clearance > target_initial_clearance + 1e-6) {
+                            target_clearance_progressed = true;
                         }
-                        target_previous_lateral_distance = lateral_distance;
+                        target_max_clearance = std::max(
+                            target_max_clearance, clearance);
                         allow_target_escape = true;
                     }
                 }
@@ -200,7 +260,11 @@ bool CartesianTrajectoryClear(const CartesianPath& path,
             }
         }
     }
-    if (target_escape_active && !target_lateral_progressed) {
+    if (target_escape_active && !target_clearance_progressed) {
+        if (blocking_id) *blocking_id = avoid_escape_object_id;
+        return false;
+    }
+    if (recovery_target_margin_overlap && !target_clearance_progressed) {
         if (blocking_id) *blocking_id = avoid_escape_object_id;
         return false;
     }

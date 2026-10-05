@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <iterator>
 #include <limits>
+#include <utility>
 
 #include "frenet_planner/Evaluation/Cost.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
@@ -190,10 +191,26 @@ bool FrenetPlanner::AvoidProcess(
     const double execution_target_d =
         (approach_phase || return_phase) ? 0.0 : v2_avoidance_.target_d;
 
+    const double track_length =
+        ref_.points.empty() ? 0.0 : ref_.points.back().s;
+    const double committed_target_gap = avoid_committed
+        ? ForwardArcDistance(s, v2_avoidance_.obstacle_s, track_length)
+        : std::numeric_limits<double>::infinity();
+    // LiDAR OBB의 종방향 길이가 커지거나 흔들려도 target 중심을 지난 뒤
+    // d=0 복귀 후보가 전체 OBB 충돌검사를 통과하면 그 후보를 우선한다.
+    // 통과하지 못하면 아래의 잠긴 회피 목표 후보를 그대로 사용하므로
+    // 성급한 phase 변경 때문에 멈추지 않는다.
+    const bool early_return_probe = avoid_committed &&
+        (shift_phase || v2_avoidance_.phase == AvoidPhase::PASS) &&
+        std::isfinite(committed_target_gap) &&
+        committed_target_gap < 0.0;
+
     // COMMIT 목표가 실제 충돌검사에서 막혔을 때 사용할 단방향 복구 목표.
     // 원래 목표를 항상 첫 번째로 검사하고, SHIFT/PASS에서만 장애물 반대편
     // 바깥쪽으로 확장한다. RETURN의 d=0이나 접근 단계에는 적용하지 않는다.
-    std::vector<double> committed_targets{execution_target_d};
+    std::vector<double> committed_targets;
+    if (early_return_probe) committed_targets.push_back(0.0);
+    committed_targets.push_back(execution_target_d);
     if (avoid_committed && (shift_phase ||
                             v2_avoidance_.phase == AvoidPhase::PASS)) {
         double outward_sign = 0.0;
@@ -268,13 +285,23 @@ bool FrenetPlanner::AvoidProcess(
     // 없다"이므로 결과는 WAITING이다(계약 3.3.4절).
     const bool blocked_by_request = avoid_prepare &&
         (result.direction_conflict || result.target_behind_ego);
+    const double prepare_target_gap = avoid_prepare
+        ? ForwardArcDistance(s, v2_avoidance_.obstacle_s, track_length)
+        : std::numeric_limits<double>::infinity();
 
     // 저속에서는 d(t)가 아니라 d(s)인 거리 기반 후보를 사용한다. 기존
     // 구현은 COMMIT 뒤 2초짜리 경로 하나만 만들어, 정지 출발 시 1~2 m
     // 전진한 지점에서 횡이동이 끝나기도 전에 충돌로 모두 탈락했다.
     // PREPARE/COMMIT 모두 여러 target_d와 여러 전환거리를 평가해 저속도
-    // 정상적인 후보 탐색 상태로 만든다.
-    if (result.low_speed_context && !blocked_by_request) {
+    // 정상적인 후보 탐색 상태로 만든다. strict margin이 전부 막힌 상태에서
+    // 제한적 탈출 후보가 한 번 승인되면 SHIFT가 끝날 때까지 이 생성기를
+    // 유지한다. 현재 속도만 다시 검사하면 0.5 m/s 경계에서 출발/정지가
+    // 반복되기 때문이다.
+    const bool use_low_speed_candidate_pipeline =
+        result.low_speed_context ||
+        (avoid_committed && shift_phase &&
+         v2_avoidance_.escape_recovery_active);
+    if (use_low_speed_candidate_pipeline && !blocked_by_request) {
         std::vector<double> low_speed_targets;
         if (avoid_committed) {
             low_speed_targets = committed_targets;
@@ -320,13 +347,22 @@ bool FrenetPlanner::AvoidProcess(
         const double path_extension = std::max(
             0.0, avoid_cfg_.low_speed_path_extension);
 
-        CartesianPath selected;
-        double selected_target = execution_target_d;
-        double selected_cost = std::numeric_limits<double>::infinity();
-        int first_blocking_id = -1;
+        struct LowSpeedCandidateEvaluation {
+            CartesianPath path;
+            double target_d = 0.0;
+            double cost = std::numeric_limits<double>::infinity();
+            bool early_return = false;
+            bool kinematically_valid = false;
+            bool strict_clear = false;
+            int strict_blocking_id = -1;
+        };
+        std::vector<LowSpeedCandidateEvaluation> evaluations;
+        int strict_valid_count = 0;
         for (std::size_t target_index = 0;
              target_index < low_speed_targets.size(); ++target_index) {
             const double target_d = low_speed_targets[target_index];
+            const bool is_early_return = avoid_committed &&
+                early_return_probe && target_index == 0;
             const double natural_distance =
                 LowSpeedLateralTransitionDistance(d, target_d);
             for (double scale = scale_min;
@@ -360,39 +396,101 @@ bool FrenetPlanner::AvoidProcess(
                     (avoid_prepare || shift_phase ||
                      v2_avoidance_.phase == AvoidPhase::PASS)
                         ? v2_avoidance_.obstacle_id : -1;
-                const bool clear = kinematically_valid &&
+                const bool strict_clear = kinematically_valid &&
                     CartesianTrajectoryClear(
                         candidate, phase_collision_obstacles, vehicle_shape_,
                         collision_cfg_, path_cfg_.dt, &blocking_id,
                         escape_object_id);
-                if (!candidate.x.empty()) {
-                    last_candidate_paths_.push_back(candidate);
-                    last_candidate_validity_.push_back(clear);
+                if (strict_clear) ++strict_valid_count;
+
+                double cost = transition_distance;
+                if (avoid_committed) {
+                    cost += static_cast<double>(target_index) *
+                            avoid_cfg_.committed_target_index_cost_scale;
+                } else {
+                    const bool is_right =
+                        target_d < v2_avoidance_.obstacle_d;
+                    const bool preferred =
+                        avoid_cfg_.prefer_right_when_equal
+                            ? is_right : !is_right;
+                    if (!preferred) cost += avoid_cfg_.direction_tiebreak_cost;
                 }
-                if (clear) {
-                    ++result.valid_candidate_count;
-                    // 먼저 나열된 target(잠긴 방향), 그 안에서는 가장 짧은
-                    // 물리적으로 유효한 전환거리를 우선한다.
-                    double cost = transition_distance;
-                    if (avoid_committed) {
-                        cost += static_cast<double>(target_index) *
-                                avoid_cfg_.committed_target_index_cost_scale;
-                    } else {
-                        const bool is_right =
-                            target_d < v2_avoidance_.obstacle_d;
-                        const bool preferred =
-                            avoid_cfg_.prefer_right_when_equal
-                                ? is_right : !is_right;
-                        if (!preferred) cost += avoid_cfg_.direction_tiebreak_cost;
-                    }
-                    if (cost < selected_cost) {
-                        selected = candidate;
-                        selected_target = target_d;
-                        selected_cost = cost;
-                    }
-                } else if (first_blocking_id < 0 && blocking_id >= 0) {
-                    first_blocking_id = blocking_id;
+                evaluations.push_back(LowSpeedCandidateEvaluation{
+                    std::move(candidate), target_d, cost, is_early_return,
+                    kinematically_valid, strict_clear, blocking_id});
+            }
+        }
+
+        // 1차 검사는 항상 기존 safety margin 그대로다. 그 결과가 0개이고,
+        // 이미 COMMIT된 SHIFT를 저속에서 수행 중일 때만 지정 target에 한해
+        // 실제 OBB 비충돌 + 지속적인 횡이격 증가를 2차로 검사한다.
+        const bool committed_escape_recovery_allowed =
+            avoid_committed && shift_phase && strict_valid_count == 0 &&
+            (result.low_speed_context ||
+             v2_avoidance_.escape_recovery_active);
+
+        CartesianPath selected;
+        double selected_target = execution_target_d;
+        double selected_cost = std::numeric_limits<double>::infinity();
+        bool selected_from_recovery = false;
+        bool selected_early_return = false;
+        int first_blocking_id = -1;
+        for (auto& evaluation : evaluations) {
+            bool clear = evaluation.strict_clear;
+            bool clear_by_recovery = false;
+            int blocking_id = evaluation.strict_blocking_id;
+            // PREPARE에서 복구 후보를 허용하지 않으면 정지한 차량은
+            // READY에 도달하지 못해 COMMIT/SHIFT 자체가 시작되지 않는다.
+            // 단, 지금 COMMIT하면 곧바로 SHIFT가 되는 거리 안의 저속 target에
+            // 한정한다. 먼 대상의 TRACKING 단계에는 기존 strict 정책만 쓴다.
+            const bool prepare_escape_recovery_allowed =
+                avoid_prepare && result.low_speed_context &&
+                strict_valid_count == 0 &&
+                std::isfinite(prepare_target_gap) &&
+                prepare_target_gap > 0.0 &&
+                prepare_target_gap <= EffectiveAvoidShiftStartDistance(
+                    result.ego_speed_mps, d, evaluation.target_d);
+            // 복귀 probe는 다른 SHIFT 후보가 strict margin을 만족하더라도
+            // target과 실제 OBB가 비충돌이고 그 경계 이격이 계속 증가하면
+            // 평가할 수 있어야 한다. 그렇지 않으면 안전한 기존 회피 후보가
+            // 있다는 이유만으로 복귀 검사가 영원히 생략된다.
+            const bool early_return_recovery_allowed =
+                avoid_committed && evaluation.early_return;
+            const bool try_escape_recovery =
+                committed_escape_recovery_allowed ||
+                prepare_escape_recovery_allowed ||
+                early_return_recovery_allowed;
+            if (!clear && try_escape_recovery &&
+                evaluation.kinematically_valid &&
+                evaluation.strict_blocking_id ==
+                    v2_avoidance_.obstacle_id) {
+                blocking_id = -1;
+                clear_by_recovery = CartesianTrajectoryClear(
+                    evaluation.path, phase_collision_obstacles,
+                    vehicle_shape_, collision_cfg_, path_cfg_.dt,
+                    &blocking_id, v2_avoidance_.obstacle_id,
+                    TargetEscapePolicy::CONTINUOUS_OUTWARD_RECOVERY);
+                clear = clear_by_recovery;
+            }
+
+            if (!evaluation.path.x.empty()) {
+                last_candidate_paths_.push_back(evaluation.path);
+                last_candidate_validity_.push_back(clear);
+            }
+            if (clear) {
+                ++result.valid_candidate_count;
+                // 잠긴 target 목록의 우선순위를 보존하면서, 같은 target
+                // 안에서는 전환거리가 짧아 더 빨리 바깥으로 이격되는
+                // 경로를 우선한다.
+                if (evaluation.cost < selected_cost) {
+                    selected = evaluation.path;
+                    selected_target = evaluation.target_d;
+                    selected_cost = evaluation.cost;
+                    selected_from_recovery = clear_by_recovery;
+                    selected_early_return = evaluation.early_return;
                 }
+            } else if (first_blocking_id < 0 && blocking_id >= 0) {
+                first_blocking_id = blocking_id;
             }
         }
 
@@ -408,9 +506,17 @@ bool FrenetPlanner::AvoidProcess(
             // PREPARE 후보 없음은 terminal failure가 아니라 WAITING이다.
             // 아래 maintenance 생성 결과를 그대로 반환한다.
         } else {
+            result.escape_recovery_required = selected_from_recovery;
+            if (selected_from_recovery && avoid_committed) {
+                v2_avoidance_.escape_recovery_active = true;
+            }
+            if (selected_early_return) {
+                v2_avoidance_.phase = AvoidPhase::RETURN;
+                v2_avoidance_.escape_recovery_active = false;
+            }
             if (avoid_committed &&
                 std::fabs(selected_target - v2_avoidance_.target_d) > 1e-9 &&
-                !approach_phase && !return_phase) {
+                !approach_phase && !return_phase && !selected_early_return) {
                 v2_avoidance_.target_d = selected_target;
             }
             result.candidate_valid = true;
@@ -430,11 +536,12 @@ bool FrenetPlanner::AvoidProcess(
     // 것"이라고 가정하면, 실제로 가능한 상황에서도 READY에 도달하지
     // 못한다. 생성을 시도하고 결과로 판단한다 - 저속에서 후보가 0개면
     // low_speed_context이 그 사유를 설명한다.
-    if (!result.low_speed_context && !blocked_by_request &&
+    if (!use_low_speed_candidate_pipeline && !blocked_by_request &&
         v2_avoid_targets_.count > 0) {
         const FrenetPath* best_candidate = nullptr;
         std::vector<FrenetPath> best_set;
         double best_target_d = 0.0;
+        bool best_early_return = false;
         int first_blocking_id = -1;
 
         // ===== COMMIT 이후에는 목표를 정확히 겨냥한다 (D6-3a) =====
@@ -479,6 +586,8 @@ bool FrenetPlanner::AvoidProcess(
         for (int index = 0; index < target_count; ++index) {
             const double target_d = avoid_committed
                 ? committed_targets[index] : v2_avoid_targets_.candidates[index];
+            const bool is_early_return = avoid_committed &&
+                early_return_probe && index == 0;
 
             TrajectoryRequest request;
             request.lateral.target_d = target_d;
@@ -540,6 +649,7 @@ bool FrenetPlanner::AvoidProcess(
                     ? SelectShortestValidPath(best_set)
                     : SelectBestPath(best_set);
                 best_target_d = target_d;
+                best_early_return = is_early_return;
             }
             // COMMIT 복구는 가장 가까운 바깥쪽 유효 목표를 사용한다.
             // 더 먼 목표가 비용상 유리하더라도 불필요하게 회피 폭을 키우지 않는다.
@@ -573,6 +683,9 @@ bool FrenetPlanner::AvoidProcess(
             if (!reaches_avoid_target) {
                 result.selected_cost = -1.0;
                 result.candidate_path = CartesianPath{};
+            } else if (best_early_return) {
+                v2_avoidance_.phase = AvoidPhase::RETURN;
+                v2_avoidance_.escape_recovery_active = false;
             } else if (avoid_committed && !approach_phase && !return_phase &&
                        std::fabs(endpoint_d - v2_avoidance_.target_d) > 1e-9) {
                 v2_avoidance_.target_d = endpoint_d;

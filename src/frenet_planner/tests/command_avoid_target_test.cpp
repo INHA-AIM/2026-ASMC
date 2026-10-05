@@ -136,25 +136,23 @@ CartesianState MakeEgoAt(const Waypoints& waypoints, double target_s,
     return ego;
 }
 
-// 경로 위 target_s, 횡오프셋 lateral_d 지점에 놓인 객체. authoritative
-// 8-corner OBB를 직접 채운다 - production에 더 이상 legacy geometry
-// synthesizer가 없으므로, 이 fixture가 회전된 직사각형을 두 z 층에
-// 명시적으로 구성한다(실제 perception obb_corners와 같은 형태).
-TrackedObject MakeObstacle(const Waypoints& waypoints, int id, double target_s,
-                        double speed, double lateral_d = 0.0) {
-    const Pose2D pose = PoseAt(waypoints, target_s);
+// map 좌표의 authoritative 8-corner OBB를 직접 채운다. production에 더
+// 이상 legacy geometry synthesizer가 없으므로 회전된 직사각형을 두 z
+// 층에 명시적으로 구성한다(실제 perception obb_corners와 같은 형태).
+TrackedObject MakeMapObstacle(int id, double x, double y, double heading,
+                              double speed, double length, double width,
+                              double height = 1.5) {
     TrackedObject object;
     object.id = id;
-    // Frenet d는 진행 방향 좌측이 양수다. 경로 접선에 수직으로 밀어낸다.
-    object.x = pose.x - lateral_d * std::sin(pose.yaw);
-    object.y = pose.y + lateral_d * std::cos(pose.yaw);
-    object.heading = pose.yaw;
+    object.x = x;
+    object.y = y;
+    object.heading = heading;
     object.speed = speed;
-    object.vx = speed * std::cos(pose.yaw);
-    object.vy = speed * std::sin(pose.yaw);
-    object.width = 2.0;
-    object.length = 4.5;
-    object.height = 1.5;
+    object.vx = speed * std::cos(heading);
+    object.vy = speed * std::sin(heading);
+    object.width = width;
+    object.length = length;
+    object.height = height;
 
     const double half_length = object.length * 0.5;
     const double half_width = object.width * 0.5;
@@ -176,6 +174,23 @@ TrackedObject MakeObstacle(const Waypoints& waypoints, int id, double target_s,
     }
     object.geometry_valid = geometry::ValidateCorners8(object.corners).valid;
     object.z_valid = true;
+    return object;
+}
+
+// 경로 위 target_s, 횡오프셋 lateral_d 지점에 놓인 객체.
+TrackedObject MakeObstacle(const Waypoints& waypoints, int id, double target_s,
+                        double speed, double lateral_d = 0.0,
+                        double length = 4.5, double width = 2.0,
+                        double heading_offset = 0.0) {
+    const Pose2D pose = PoseAt(waypoints, target_s);
+    // Frenet d는 진행 방향 좌측이 양수다. 경로 접선에 수직으로 밀어낸다.
+    TrackedObject object = MakeMapObstacle(
+        id,
+        pose.x - lateral_d * std::sin(pose.yaw),
+        pose.y + lateral_d * std::cos(pose.yaw),
+        pose.yaw + heading_offset, speed, length, width);
+    object.vx = speed * std::cos(pose.yaw);
+    object.vy = speed * std::sin(pose.yaw);
     return object;
 }
 
@@ -1672,6 +1687,75 @@ int main() {
         Expect(max_v > 0.0, "low speed: the crawl has non-zero speed");
     }
     {
+        // 정차 직전 이미 장애물 반대쪽으로 조향한 차량을 재현한다. 거리
+        // 기반 fallback이 d'(0)=0으로 시작하면 첫 후보 자세가 reference
+        // heading으로 순간 회전해 실제로는 분리된 OBB를 충돌로 오판한다.
+        // 후보의 첫 자세는 센서로 관측한 현재 차량 자세와 같아야 한다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        const std::vector<TrackedObject> objects{
+            MakeObstacle(waypoints, 21, kEgoS + 30.0, 0.0)};
+        CartesianState angled_ego =
+            MakeEgo(PoseAt(waypoints, kEgoS), 0.0);
+        angled_ego.yaw -= 12.0 * std::acos(-1.0) / 180.0;
+        CartesianPath maintenance;
+        Prepare result;
+        planner.PrepareAvoid(
+            angled_ego, objects,
+            MakeAvoidCommand(21, LateralDirection::RIGHT),
+            maintenance, result);
+
+        const auto& candidates = planner.last_candidate_paths();
+        bool all_start_at_observed_heading = !candidates.empty();
+        for (const auto& candidate : candidates) {
+            if (candidate.yaw.empty()) {
+                all_start_at_observed_heading = false;
+                break;
+            }
+            const double error = std::atan2(
+                std::sin(candidate.yaw.front() - angled_ego.yaw),
+                std::cos(candidate.yaw.front() - angled_ego.yaw));
+            if (std::fabs(error) > 1e-6) {
+                all_start_at_observed_heading = false;
+                break;
+            }
+        }
+        Expect(all_start_at_observed_heading,
+               "low speed: candidates preserve the observed initial heading");
+    }
+    {
+        // 2026-09-18 실차 정지 장면 회귀: 차량은 이미 상자의 오른쪽으로
+        // 약 12.5 deg 틀어져 있고 실제 두 OBB는 분리돼 있다. 예전
+        // fallback은 후보를 reference heading으로 되돌려 8개 모두를
+        // 충돌 처리했다. GPS->rear-axle 0.35 m 보정이 적용된 좌표다.
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianState scene_ego{};
+        scene_ego.x = -59.6929454797;
+        scene_ego.y = -147.2095163683;
+        scene_ego.yaw = 1.3501566752;
+        scene_ego.v = 0.0;
+        const TrackedObject target = MakeMapObstacle(
+            22052, -60.6822712355, -142.4041907530, 0.1458581234,
+            0.0, 1.428988, 1.040302, 0.5125);
+        double target_s = 0.0;
+        double target_d = 0.0;
+        const bool projected = planner.ProjectPointToFrenet(
+            target.x, target.y, 327.0, 50.0, 20.0, target_s, target_d);
+        CartesianPath maintenance;
+        Prepare result;
+        const bool ok = projected && planner.PrepareAvoid(
+            scene_ego, {target},
+            MakeAvoidCommandWithTargetD(
+                target.id, target_s, -2.57604, LateralDirection::RIGHT),
+            maintenance, result);
+        Expect(projected && target.geometry_valid,
+               "stopped escape scene: recorded geometry is valid");
+        Expect(ok && result.candidate_valid &&
+                   result.valid_candidate_count > 0,
+               "stopped escape scene: a physically clear candidate survives");
+    }
+    {
         // 두 정적 장애물을 함께 검사한다. 지정 대상은 중앙에 있지만 더
         // 가까운 비대상 장애물이 왼쪽 corridor를 막으면, 정지 상태에서도
         // 고정된 첫 경로에 갇히지 않고 오른쪽 후보를 선택해야 한다.
@@ -2432,6 +2516,66 @@ int main() {
     }
 
     {
+        // strict margin 밖에서 시작하지만 전진 중 target margin에 들어가는
+        // committed SHIFT를 재현한다. 실제 OBB 비충돌 탈출이 승인된 뒤에는
+        // 속도가 fallback 임계값을 넘어도 같은 crawl 정책을 유지해야 한다.
+        const std::vector<TrackedObject> close_target{
+            MakeObstacle(waypoints, 21, kEgoS + 7.0, 0.0, 0.0,
+                         1.4, 0.1, 0.5 * std::acos(-1.0))};
+        const PlannerCommand command =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianState stopped_ego = ego;
+        stopped_ego.v = 0.0;
+        CartesianPath maintenance;
+        Prepare prepared;
+        const bool prepare_ok = planner.PrepareAvoid(
+            stopped_ego, close_target, command, maintenance, prepared);
+        Expect(prepare_ok && prepared.candidate_valid &&
+                   prepared.escape_recovery_required &&
+                   !planner.avoid_escape_recovery_active(),
+               "escape recovery latch: low-speed PREPARE breaks the WAITING deadlock");
+        Expect(planner.CommitAvoid(prepared) &&
+                   std::string(planner.avoid_phase_name()) == "SHIFT" &&
+                   planner.avoid_escape_recovery_active(),
+               "escape recovery latch: COMMIT transfers the recovery policy");
+
+        CartesianPath recovery_path;
+        Prepare recovery_result;
+        const bool recovered = planner.PlanCommittedAvoid(
+            stopped_ego, close_target, command, recovery_path,
+            recovery_result);
+        Expect(recovered && planner.avoid_escape_recovery_active(),
+               "escape recovery latch: outward physical-clear path is accepted");
+
+        CartesianState rolling_ego = stopped_ego;
+        rolling_ego.v = 0.8;  // low_speed_fallback_v(0.5)보다 높다.
+        CartesianPath latched_path;
+        Prepare latched_result;
+        const bool latched = planner.PlanCommittedAvoid(
+            rolling_ego, close_target, command, latched_path,
+            latched_result);
+        const double latched_max_speed = latched_path.v.empty()
+            ? std::numeric_limits<double>::infinity()
+            : *std::max_element(latched_path.v.begin(), latched_path.v.end());
+        Expect(latched && !latched_result.low_speed_context &&
+                   planner.avoid_escape_recovery_active() &&
+                   latched_max_speed <= 2.0 + 1e-9,
+               "escape recovery latch: speed threshold crossing keeps capped crawl");
+
+        const CartesianState target_d_ego = MakeEgoAt(
+            waypoints, kEgoS, planner.avoid_locked_target_d(), 0.8);
+        CartesianPath pass_path;
+        Prepare pass_result;
+        planner.PlanCommittedAvoid(
+            target_d_ego, close_target, command, pass_path, pass_result);
+        Expect(std::string(planner.avoid_phase_name()) == "PASS" &&
+                   !planner.avoid_escape_recovery_active(),
+               "escape recovery latch: reaching PASS restores strict policy");
+    }
+
+    {
         // 새 target의 target_d가 현재 d와 우연히 가까워도 종방향 gap이
         // 멀면 TRACKING을 건너뛰지 않는다.
         const std::vector<TrackedObject> initial{
@@ -2482,6 +2626,117 @@ int main() {
         Expect(!lost_ok && planner.last_failure_reason() ==
                                Reason::TARGET_OBJECT_LOST,
                "tracking dropout: long gap reports TARGET_OBJECT_LOST");
+    }
+
+    {
+        // LiDAR OBB는 접근하며 보이는 면이 늘어 COMMIT 뒤 target_d가 더
+        // 바깥쪽으로 확장될 수 있다. 차량이 그 횡목표를 끝까지 찍지
+        // 못했더라도 target OBB를 종방향으로 완전히 지난 뒤에는 SHIFT에
+        // 갇히지 않고 RETURN을 시작해야 한다.
+        const std::vector<TrackedObject> initial{
+            MakeObstacle(waypoints, 21, kEgoS + 20.0, 0.0, 0.0,
+                         1.5, 1.0)};
+        const PlannerCommand command =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        const bool prepared_ok = planner.PrepareAvoid(
+            ego, initial, command, maintenance, prepared);
+        const bool committed = prepared_ok && prepared.candidate_valid &&
+            planner.CommitAvoid(prepared);
+        const double original_target_d = planner.avoid_locked_target_d();
+
+        // 같은 ID의 더 큰 OBB를 관측하면 안전을 위해 횡목표가 바깥쪽으로
+        // 확장된다. 이것이 LiDAR와 안정적인 object topic의 주된 차이다.
+        const std::vector<TrackedObject> grown_observation{
+            MakeObstacle(waypoints, 21, kEgoS + 20.0, 0.0, 0.0,
+                         4.0, 2.5)};
+        CartesianPath growth_path;
+        Prepare growth_result;
+        planner.PlanCommittedAvoid(
+            ego, grown_observation, command, growth_path, growth_result);
+        const double grown_target_d = planner.avoid_locked_target_d();
+
+        const double partial_d = 0.5 * original_target_d;
+        const CartesianState cleared_ego = MakeEgoAt(
+            waypoints, planner.avoid_target_s() + 20.0,
+            partial_d, kEgoSpeed);
+        CartesianPath return_path;
+        Prepare returning;
+        const bool return_ok = committed && planner.PlanCommittedAvoid(
+            cleared_ego, {}, command, return_path, returning);
+        Expect(grown_target_d > original_target_d + 1e-6,
+               "lidar growth: observed OBB can expand the committed target d");
+        Expect(return_ok && !returning.maneuver_completed &&
+                   std::string(planner.avoid_phase_name()) == "RETURN" &&
+                   returning.maneuver_progress >= 0.75,
+               "lidar growth: longitudinal clearance bypasses an unreached expanded d");
+        Expect(std::fabs(EndpointD(
+                       planner, return_path,
+                       planner.avoid_target_s() + 25.0)) < 1e-6,
+               "lidar growth: early RETURN targets the global path");
+    }
+
+    {
+        // LiDAR OBB의 후단 전체를 지날 때까지 기다리지 않아도, target
+        // 중심을 지난 즉시 d=0 복귀 후보를 생성한다. 중심 직후 후보가 실제
+        // OBB 검사에 막히면 기존 회피 경로를 유지하고, 처음으로 안전해지는
+        // 후보를 선택한다. 두 검증 위치 모두 기존의 rear-overhang + obstacle
+        // half-length + pass-clearance 전체 통과 조건보다 앞선 위치다.
+        const std::vector<TrackedObject> initial{
+            MakeObstacle(waypoints, 21, kEgoS + 20.0, 0.0, 0.0,
+                         1.0, 1.0)};
+        const PlannerCommand command =
+            MakeAvoidCommand(21, LateralDirection::LEFT);
+        FrenetPlanner planner;
+        planner.Init(config);
+        CartesianPath maintenance;
+        Prepare prepared;
+        const bool prepared_ok = planner.PrepareAvoid(
+            ego, initial, command, maintenance, prepared);
+        const bool committed = prepared_ok && prepared.candidate_valid &&
+            planner.CommitAvoid(prepared);
+        const double locked = planner.avoid_locked_target_d();
+
+        CartesianPath pass_path;
+        Prepare pass;
+        const CartesianState beside = MakeEgoAt(
+            waypoints, planner.avoid_target_s(), locked, kEgoSpeed);
+        const bool pass_ok = committed && planner.PlanCommittedAvoid(
+            beside, {}, command, pass_path, pass);
+
+        CartesianPath probe_path;
+        Prepare probe;
+        const CartesianState center_passed = MakeEgoAt(
+            waypoints, planner.avoid_target_s() + 1.1,
+            locked, kEgoSpeed);
+        const bool probe_ok = pass_ok && planner.PlanCommittedAvoid(
+            center_passed, {}, command, probe_path, probe);
+        bool generated_center_return = false;
+        for (const auto& candidate : planner.last_candidate_paths()) {
+            const double endpoint_d = EndpointD(
+                planner, candidate, planner.avoid_target_s() + 10.0);
+            generated_center_return = generated_center_return ||
+                (std::isfinite(endpoint_d) && std::fabs(endpoint_d) < 0.1);
+        }
+        Expect(probe_ok && generated_center_return,
+               "early return: passing target center immediately generates a d=0 candidate");
+
+        CartesianPath return_path;
+        Prepare returning;
+        const CartesianState safely_past = MakeEgoAt(
+            waypoints, planner.avoid_target_s() + 1.5,
+            locked, kEgoSpeed);
+        const bool return_ok = probe_ok && planner.PlanCommittedAvoid(
+            safely_past, {}, command, return_path, returning);
+        Expect(return_ok &&
+                   std::string(planner.avoid_phase_name()) == "RETURN" &&
+                   std::fabs(EndpointD(
+                       planner, return_path,
+                       planner.avoid_target_s() + 10.0)) < 1e-6,
+               "early return: the first collision-clear d=0 candidate bypasses the conservative rear-clearance wait");
     }
 
     {
@@ -2789,11 +3044,12 @@ int main() {
         const bool center_ok = pass_ok && planner.PlanCommittedAvoid(
             MakeEgoAt(waypoints, obstacle_after_s, locked, kEgoSpeed), {},
             command, center_path, center);
+        const std::string center_phase = planner.avoid_phase_name();
         Expect(center_ok && !center.maneuver_completed &&
-                   std::string(planner.avoid_phase_name()) == "PASS" &&
+                   (center_phase == "PASS" || center_phase == "RETURN") &&
                    std::isfinite(center.maneuver_progress) &&
                    center.maneuver_progress >= pass.maneuver_progress,
-               "closed-loop lifecycle: crossing seam reaches PASS at obstacle");
+               "closed-loop lifecycle: crossing seam reaches or safely passes the obstacle phase");
         CartesianPath clear_path;
         Prepare clear;
         const bool clear_ok = center_ok && planner.PlanCommittedAvoid(

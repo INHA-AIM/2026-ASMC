@@ -266,6 +266,11 @@ public:
         // 이 필드는 진단·로그에만 쓴다.
         bool low_speed_context = false;
 
+        // strict safety margin 후보는 없었지만, 즉시 SHIFT해야 하는 저속
+        // 상황에서 실제 OBB 비충돌·횡이격 증가 복구 후보를 확보했는가.
+        // PREPARE 결과가 COMMIT될 때 context latch로 전달한다.
+        bool escape_recovery_required = false;
+
         // PREPARE 당시 실제 차량 속도. COMMIT 직후 TRACKING/SHIFT 최초
         // 판정도 이후 lifecycle과 같은 속도 기준을 쓰기 위해 보존한다.
         double ego_speed_mps = 0.0;
@@ -385,6 +390,11 @@ public:
     }
     double avoid_maneuver_progress() const {
         return v2_avoidance_.maneuver_progress;
+    }
+    // committed AVOID가 strict safety margin에서 막힌 뒤, 실제 OBB
+    // 비충돌·횡이격 증가 조건으로 제한된 저속 탈출을 수행 중인지.
+    bool avoid_escape_recovery_active() const {
+        return v2_avoidance_.escape_recovery_active;
     }
 
     // v2 AVOID의 내부 실행 단계 이름. 진단·검증용 문자열이다. 내부 enum을
@@ -599,6 +609,9 @@ private:
     // 정의: Maneuver/Avoid/AvoidLifecycle.cpp (R6-F1).
     double EffectiveAvoidShiftStartDistance(double ego_speed,
                                             double ego_d) const;
+    double EffectiveAvoidShiftStartDistance(double ego_speed,
+                                            double ego_d,
+                                            double target_d) const;
     void UpdateCommittedAvoidLifecycle(double ego_s, double ego_d,
                                        double ego_speed,
                                        AvoidPrepareResult& result);
@@ -820,6 +833,12 @@ private:
         // geometry 기반 target_d는 새 OBB가 커질 때 같은 방향 바깥쪽으로만
         // 확장될 수 있다. PREPARE에서는 항상 false다.
         bool committed = false;
+
+        // 저속 SHIFT에서 strict margin 후보가 모두 막혔지만 실제 OBB는
+        // 비충돌인 탈출 후보가 승인되었는가. 한 번 켜지면 현재 속도가
+        // low_speed_fallback_v를 넘어도 PASS 진입까지 거리 기반 crawl을
+        // 유지해 출발/정지 진동을 막는다.
+        bool escape_recovery_active = false;
 
         // 완료 후에도 새 command_id가 올 때까지 context를 보존한다.
         bool completed = false;

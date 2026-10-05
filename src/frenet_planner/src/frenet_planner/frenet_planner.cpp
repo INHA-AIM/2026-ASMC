@@ -170,6 +170,43 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
             ? std::max(transition_distance, minimum_path_distance)
             : -1.0;
 
+    // The distance-based fallback must start with the vehicle's observed
+    // heading.  Starting every spatial profile with d'=0 snaps the footprint
+    // to the reference-line heading at the first sample.  That is especially
+    // wrong after a stopped vehicle has already steered away from an obstacle:
+    // collision checking then rotates the ego OBB back toward the obstacle.
+    const RefPoint start_ref = Interpolate(ref_, s);
+    const double one_minus_kd = 1.0 - start_ref.kappa * d;
+    const double heading_error = normalizeAngle(ego.yaw - start_ref.theta);
+    const double heading_cosine = std::cos(heading_error);
+    double initial_d_prime = 0.0;
+    if (std::isfinite(one_minus_kd) &&
+        std::isfinite(heading_error) &&
+        std::fabs(heading_cosine) > 1e-3) {
+        initial_d_prime = one_minus_kd * std::tan(heading_error);
+    }
+
+    // Spatial quintic d(ds).  It preserves the observed initial slope while
+    // reaching target_d with zero slope/second derivative.  We deliberately
+    // use zero initial d'' because VehicleState has no reliable steering/
+    // curvature measurement at standstill; inventing it from yaw_rate/v would
+    // reintroduce the low-speed singularity this fallback avoids.
+    const double a0 = d;
+    const double a1 = initial_d_prime * transition_distance;
+    const double a2 = 0.0;
+    const double position_residual = target_d - (a0 + a1 + a2);
+    const double slope_residual = -(a1 + 2.0 * a2);
+    const double curvature_residual = -2.0 * a2;
+    const double a3 = 10.0 * position_residual -
+                      4.0 * slope_residual +
+                      0.5 * curvature_residual;
+    const double a4 = -15.0 * position_residual +
+                      7.0 * slope_residual -
+                      curvature_residual;
+    const double a5 = 6.0 * position_residual -
+                      3.0 * slope_residual +
+                      0.5 * curvature_residual;
+
     out_path = CartesianPath{};
     out_path.x.reserve(minimum_samples); out_path.y.reserve(minimum_samples);
     out_path.yaw.reserve(minimum_samples); out_path.kappa.reserve(minimum_samples);
@@ -191,15 +228,25 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
 
         const double ds = s_i - s;
         const double frac = clip(ds / transition_distance, 0.0, 1.0);
-        // smoothstep(frac) = 0.5*(1+cos(pi*frac)): frac=0 -> d, frac=1 -> 0, 양끝 기울기 0.
-        const double d_error = d - target_d;
-        const double d_i      = target_d + d_error * 0.5 * (1.0 + std::cos(M_PI * frac));
-        const double d_prime  = (ds >= transition_distance) ? 0.0
-                               : d_error * (-0.5 * M_PI / transition_distance) * std::sin(M_PI * frac);
-        const double d_pprime = (ds >= transition_distance) ? 0.0
-                               : d_error * (-0.5 * M_PI * M_PI /
-                                     (transition_distance * transition_distance))
-                                     * std::cos(M_PI * frac);
+        const double frac2 = frac * frac;
+        const double frac3 = frac2 * frac;
+        const double frac4 = frac3 * frac;
+        const double frac5 = frac4 * frac;
+        const bool transition_complete = ds >= transition_distance;
+        const double d_i = transition_complete
+            ? target_d
+            : a0 + a1 * frac + a2 * frac2 + a3 * frac3 +
+                  a4 * frac4 + a5 * frac5;
+        const double d_prime = transition_complete
+            ? 0.0
+            : (a1 + 2.0 * a2 * frac + 3.0 * a3 * frac2 +
+               4.0 * a4 * frac3 + 5.0 * a5 * frac4) /
+                  transition_distance;
+        const double d_pprime = transition_complete
+            ? 0.0
+            : (2.0 * a2 + 6.0 * a3 * frac + 12.0 * a4 * frac2 +
+               20.0 * a5 * frac3) /
+                  (transition_distance * transition_distance);
 
         RefPoint rp = Interpolate(ref_, s_i);
         const double a_i = (v_i < limits_.low_speed_crawl_speed_cap)
