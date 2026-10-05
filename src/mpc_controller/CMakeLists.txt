@@ -41,6 +41,10 @@ install(DIRECTORY launch config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(braking_warm_start_test test/braking_warm_start_test.cpp)
+  if(TARGET braking_warm_start_test)
+    target_link_libraries(braking_warm_start_test mpc_core)
+  endif()
   catkin_add_gtest(mpc_ros_converter_test test/message_converter_test.cpp)
   if(TARGET mpc_ros_converter_test)
     add_dependencies(mpc_ros_converter_test ${catkin_EXPORTED_TARGETS})
@@ -86,4 +90,3 @@ if(CATKIN_ENABLE_TESTING)
     target_link_libraries(reference_validator_test mpc_core)
   endif()
 endif()
-

@@ -1,6 +1,7 @@
 #include "mpc_solver.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 
 #include "math/utils.hpp"
@@ -205,10 +206,41 @@ MPCResult solveMPC(
         x0, U, params.dt, params.wheelbase, params.vel_min, params.vel_max,
         params.steering_curvature_gain);
 
+    double cost_cur = evalCost(x0, U, ref, prev_control, params, &models);
+    if (static_cast<int>(warm_start.size()) >= N) {
+        // Keep shifted steering and the actual previous actuator command.
+        // Only challenge stale acceleration when the new reference brakes.
+        bool stale_braking_seed = false;
+        std::vector<MPCControl> braking_seed = U;
+        for (int i = 0; i < N; ++i) {
+            const size_t ref_idx = std::min(static_cast<size_t>(i), ref.size() - 1);
+            if (ref.a_ref.size() <= ref_idx || !std::isfinite(ref.a_ref[ref_idx]))
+                continue;
+            const double a_ref = clip(ref.a_ref[ref_idx], params.accel_min, params.accel_max);
+            stale_braking_seed |= a_ref < -0.1 && U[i].accel > a_ref + 0.1;
+            braking_seed[i].accel = a_ref;
+        }
+        if (stale_braking_seed) {
+            projectControls(braking_seed, prev_control, params);
+            auto braking_models = buildLTVModels(
+                x0, braking_seed, params.dt, params.wheelbase,
+                params.vel_min, params.vel_max, params.steering_curvature_gain);
+            const double braking_cost = evalCost(
+                x0, braking_seed, ref, prev_control, params, &braking_models);
+            // Near ties retain history. Compare initial costs once; run the
+            // existing optimizer only once, with unchanged rate constraints.
+            const double improvement = 0.01 * std::max(1.0, std::fabs(cost_cur));
+            if (std::isfinite(braking_cost) && braking_cost < cost_cur - improvement) {
+                U = std::move(braking_seed);
+                models = std::move(braking_models);
+                cost_cur = braking_cost;
+            }
+        }
+    }
+
     // ====================================
     // 3) 최적화 루프
     // ====================================
-    double cost_cur = evalCost(x0, U, ref, prev_control, params, &models);
     double lr = params.lr_init;
 
     for (int iter = 0; iter < params.max_iterations; ++iter) {
