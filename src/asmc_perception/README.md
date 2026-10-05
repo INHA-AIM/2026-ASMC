@@ -9,6 +9,11 @@ TwinLite 학습 adapter와 offline BEV audit은 이 패키지가 소유한다. P
 제거했지만 topic과 node 이름은 바꾸지 않았다. `data_collection`과 팀원 개발 중인 LiDAR/fusion은 독립
 패키지·workspace이며 이 launch가 소유하거나 시작하지 않는다.
 
+2026-10-05 패키지 경계 권고는 [통합 로드맵](../../docs/architecture/consolidation-roadmap.md)의
+센서별 인지·fusion 항목을 따른다. 카메라 runtime의 현재 이름은 `asmc_perception`으로
+유지하고, LiDAR 후보는 `asmc_lidar`가 소유한다. `camera_bev_fusion`은 다중 카메라
+처리이며 향후 카메라/LiDAR 객체 융합용 `asmc_fusion`과 책임이 다르다.
+
 ## 실행
 
 기본값은 competition-legal 3-camera lane pipeline만 실행한다. 실시간 ROS
@@ -38,8 +43,9 @@ bag 기록·재생은 별도 `data_collection` 진입점을 사용한다.
 roslaunch data_collection bag_recorder.launch profile:=full_raw
 ```
 
-LiDAR/fusion은 별도 nested workspace의 `Main`, `Msg`와 Velodyne overlay를 사용하며 담당 팀원
-handoff 전에는 `asmc_perception` launch에 포함하지 않는다.
+기존 LiDAR는 nested workspace의 `Main`, `Msg`와 Velodyne overlay를 사용한다.
+새 `asmc_lidar` 후보는 이 overlay 없이 빌드·실행되며, 어느 쪽도
+`asmc_perception` launch가 자동으로 시작하지 않는다.
 
 ### `camera_bev`와 `camera_bev_fusion`
 
