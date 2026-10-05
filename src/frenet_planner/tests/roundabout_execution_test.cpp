@@ -6,6 +6,7 @@
 #include <cmath>
 #include <chrono>
 #include <algorithm>
+#include "frenet_planner/Maneuver/ManeuverUtils.hpp"
 int main(){
  int failures=0;auto expect=[&](bool ok,const char* name){std::cout<<(ok?"[PASS] ":"[FAIL] ")<<name<<'\n';failures+=!ok;};
  const auto root=std::filesystem::path(FRENET_PACKAGE_SRC_DIR).parent_path();
@@ -119,6 +120,31 @@ int main(){
  if(!out.x.empty()){auto rp=Interpolate(ref,FindClosestS(ref,out.x.back(),out.y.back(),nullptr,1e6));terminal_d=(out.y.back()-rp.y)*std::cos(rp.theta)-(out.x.back()-rp.x)*std::sin(rp.theta);}
  expect(fallback_ok&&out.x.size()>1&&std::fabs(terminal_d)<.05&&out.v.back()==0,"long waiting braking fallback recentres instead of freezing lateral error");
  expect(fallback_ok&&!out.yaw.empty()&&std::fabs(std::remainder(out.yaw.front()-ego.yaw,2*M_PI))<.01,"waiting fallback centering preserves observed initial heading");
+
+ // Execute the generated prefix repeatedly, rather than treating a fixed
+ // historical overspeed pose as the result of the corrected controller.
+ FrenetPlanner curve_planner;bool rolling=curve_planner.Init(file.string());
+ ego=pose_at(zone.rear_clear_s-15);ego.x+=std::sin(ego.yaw)*.2;ego.y-=std::cos(ego.yaw)*.2;ego.yaw+=.05;ego.v=25.0/3.6;ego.a=.4;
+ curve_planner.ApplyRoundaboutMergeCommit({});
+ bool early_braking=false,rolling_limits=true,handed_off=false;
+ for(int i=0;i<250&&rolling;++i){
+  out={};rolling=curve_planner.PlanRoundaboutMerge(ego,{},cmd,500+i*.1,500+i*.1,out,r);
+  if(i==0)early_braking=out.v.size()>1&&out.a[1]<ego.a;
+  if(r.maneuver_completed){handed_off=true;break;}
+  if(!rolling||out.x.size()<2){rolling=false;break;}
+  for(size_t j=0;j<out.v.size();++j)rolling_limits&=out.v[j]*out.v[j]*std::fabs(out.kappa[j])<=cfg["planner"]["kinematic_limits"]["max_lateral_accel"].as<double>()+1e-6;
+  ego={out.x[1],out.y[1],out.yaw[1],out.kappa[1],out.v[1],out.a[1]};
+ }
+ expect(early_braking,"actual exit geometry starts reducing acceleration before the bend");
+ expect(rolling&&rolling_limits&&handed_off,"receding-horizon exit traversal keeps steering paths and reaches KEEP handoff");
+ FrenetPlanner brake_planner;bool brake_init=brake_planner.Init(file.string());
+ ego=pose_at(zone.conflict_start_s+6);ego.v=2;ego.a=-4;
+ brake_planner.ApplyRoundaboutMergeCommit({});
+ auto occupying=o;occupying.id=77;auto future=pose_at(zone.conflict_start_s+14);occupying.x=future.x;occupying.y=future.y;
+ for(int i=0;i<8;++i){double dx[4]={-1,1,1,-1},dy[4]={-1,-1,1,1};occupying.corners[i]={occupying.x+dx[i%4],occupying.y+dy[i%4],double(i/4)};}
+ out={};bool braked=brake_init&&brake_planner.PlanRoundaboutMerge(ego,{occupying},cmd,600,600,out,r);
+ expect(braked&&!r.candidate_valid&&out.x.size()>2&&out.v.back()<.05,"blocked traversal under service braking retains a multi-point stop trajectory");
+ expect(braked&&CartesianTrajectoryClear(out,{occupying},shape,{.5,.1,3},.1),"steerable service stop still checks the occupying object's physical clearance");
  cmd.merge_type=MergeType::HIGHWAY;expect(!tick(200,200)&&planner.last_failure_reason()==FrenetPlanner::PlanFailureReason::INVALID_COMMAND,"roundabout implementation cannot silently execute highway merge");
  std::filesystem::remove_all(dir);return failures?1:0;
 }

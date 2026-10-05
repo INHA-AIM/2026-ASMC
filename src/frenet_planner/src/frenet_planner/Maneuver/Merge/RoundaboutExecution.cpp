@@ -1,5 +1,6 @@
 #include "frenet_planner/frenet_planner.hpp"
 #include "frenet_planner/Generator/BoundaryConditionPolicy.hpp"
+#include "frenet_planner/Generator/LongitudinalGenerator.hpp"
 #include "frenet_planner/Speed/CurveSpeed.hpp"
 #include "frenet_planner/Math/Polynomial.hpp"
 #include "frenet_planner/Maneuver/ManeuverUtils.hpp"
@@ -79,52 +80,50 @@ bool MakeMergeProfile(const RefLine& ref, const CartesianState& ego,
         previous_metric=m;
     }
     geometry.length=arc;
+    const double headroom=std::clamp(limits.boundary_condition_accel_fraction,1e-6,1.0);
     auto envelope=BuildKeepSpeedEnvelope(geometry,0,ego.v,release_positive_accel?std::min(0.0,ego.a):ego.a,duration,dt,
         cap,curve,limits.max_longitudinal_accel,limits.max_lateral_accel,
-        limits.max_longitudinal_jerk);
-    if(envelope.empty())return false;
-    auto target_at=[&](double position) {
-        auto it=std::lower_bound(envelope.begin(),envelope.end(),position,
-            [](const SpeedEnvelopePoint& p,double s){return p.s<s;});
-        if(it==envelope.begin())return std::sqrt(it->speed_squared);
-        if(it==envelope.end())return std::sqrt(envelope.back().speed_squared);
-        const auto& before=*(it-1);
-        double f=(position-before.s)/(it->s-before.s);
-        return std::sqrt(std::max(0.0,before.speed_squared+f*(it->speed_squared-before.speed_squared)));
-    };
-    double travelled=0;
-    double distance=0, speed=std::max(0.0,ego.v);
-    double accel=std::clamp(ego.a,-limits.max_longitudinal_accel,limits.max_longitudinal_accel);
-    // Try continuous profiles first. If none is kinematically feasible, drop
-    // positive acceleration memory before escalating to a complete safe stop.
-    if(release_positive_accel)accel=std::min(0.0,accel);
-    double metric=std::hypot(1-origin.kappa*start.d,slope);
-    if(metric<.1)return false;
-    if(speed<.01&&accel<0)accel=0;
-    for(int i=0;i<=static_cast<int>(std::ceil(duration/dt));++i) {
+        limits.max_longitudinal_jerk*headroom);
+    // Use the same spatial-envelope integrator as KEEP. Its feed-forward
+    // acceleration follows the declining v^2 ceiling, instead of waiting for
+    // a speed error in the middle of the curve. Generate in physical arc length.
+    FrenetState motion_start{};motion_start.s_d=std::max(0.0,ego.v);
+    motion_start.s_dd=release_positive_accel?std::min(0.0,ego.a):ego.a;
+    if(motion_start.s_d<.01&&motion_start.s_dd<0)motion_start.s_dd=0;
+    // A measured strong brake near standstill may already be outside the
+    // jerk-limited stopping boundary. Release that initial memory sufficiently
+    // to avoid generating reverse motion; current speed/pose stay unchanged.
+    if(motion_start.s_dd<0)motion_start.s_dd=std::max(motion_start.s_dd,
+        -std::sqrt(2*limits.max_longitudinal_jerk*headroom*motion_start.s_d));
+    PathGeneratorConfig grid{};grid.dt=dt;grid.time_horizon={duration,duration,0};
+    grid.delta_s_dot={0,0,0};
+    auto motions=GenerateEnvelopeVelocityCandidates(motion_start,cap,envelope,grid,limits);
+    if(motions.empty()||!motions.front().valid)return false;
+    const auto& motion=motions.front();
+    for(size_t i=0;i<motion.s.size();++i) {
+        const double travelled=motion.s[i];
+        auto it=std::lower_bound(geometry.points.begin(),geometry.points.end(),travelled,
+            [](const RefPoint& point,double position){return point.s<position;});
+        if(it==geometry.points.end())return false;
+        double distance=0;
+        if(it!=geometry.points.begin()) {
+            const auto index=static_cast<size_t>(it-geometry.points.begin());
+            const auto& before=*(it-1);
+            distance=.25*(index-1)+(travelled-before.s)/(it->s-before.s)*.25;
+        }
         auto rp=Interpolate(ref,start.s+distance);
         double q=std::min(distance,settle);
         double d=EvalPos(lateral,q),dp=EvalVel(lateral,q),dpp=EvalAcc(lateral,q);
-        metric=std::hypot(1-rp.kappa*d,dp);
+        double metric=std::hypot(1-rp.kappa*d,dp);
         if(metric<.1)return false;
+        const double speed=std::max(0.0,motion.s_d[i]),accel=motion.s_dd[i];
         double sd=speed/metric;
         auto base=FrenetToCartesian(rp,start.s+distance,sd,0,d,dp,dpp);
         auto point=FrenetToCartesian(rp,start.s+distance,sd,(accel-base.a)/metric,d,dp,dpp);
-        if(!std::isfinite(point.kappa)||std::fabs(point.kappa)>limits.max_curvature ||
+        if(!std::isfinite(point.kappa)||std::fabs(point.kappa)>limits.max_curvature||
            speed*speed*std::fabs(point.kappa)>limits.max_lateral_accel+1e-6)return false;
         path.x.push_back(point.x);path.y.push_back(point.y);path.yaw.push_back(point.yaw);
         path.kappa.push_back(point.kappa);path.v.push_back(speed);path.a.push_back(accel);
-        double target=std::min(cap,target_at(travelled));
-        double requested=std::clamp(2*(target-speed),-limits.max_longitudinal_accel,limits.max_longitudinal_accel);
-        double next_accel=std::clamp(requested,accel-limits.max_longitudinal_jerk*dt,accel+limits.max_longitudinal_jerk*dt);
-        double next_speed=speed+.5*(accel+next_accel)*dt;
-        // Braking to zero is a valid boundary, not a reverse trajectory.
-        // Once stationary, negative acceleration is no longer a moving state.
-        if(next_speed<0){next_speed=0;next_accel=0;}
-        double step=.5*(speed+next_speed)*dt;
-        travelled+=step;
-        distance+=step/metric;
-        speed=next_speed;accel=next_accel;
     }
     return !path.x.empty();
 }
@@ -293,7 +292,45 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
             out_path=result.candidate_path;last_roundabout_result_=result;return true;
         }
         last_roundabout_result_=result;
-        bool braking=PlanCollisionBrakingPath(ego,ctx.s,ctx.d,ctx.predicted_obstacles,out_path);
+        // Keep a steerable, freshly checked stop trajectory when a complete
+        // traversal is unavailable. This MERGE-only service-brake fallback can
+        // retain an already measured service deceleration; the generic KEEP
+        // fallback rejects |a| above the ordinary acceleration limit.
+        bool braking=false;
+        KinematicLimits braking_limits=limits_;
+        braking_limits.max_longitudinal_accel=std::max(limits_.max_longitudinal_accel,
+            stop_cfg_.max_service_decel);
+        braking_limits.boundary_condition_accel_fraction=1.0;
+        const double duration=std::max(collision_cfg_.reactive_lookahead,
+            ego.v/std::max(.1,stop_cfg_.comfortable_decel)+
+            2*braking_limits.max_longitudinal_accel/braking_limits.max_longitudinal_jerk);
+        for(double settle:{ordinary_settle,6.0,3.0}) {
+            for(double target:{roundabout_preferred_d_,0.0,.35,-.35}) {
+                CartesianPath stop;
+                if(!MakeMergeProfile(ref_,ego,start,0,duration,path_cfg_.dt,
+                    curve_speed_cfg_,braking_limits,settle,target,false,stop))continue;
+                auto road=avoid_road_map_.EvaluatePath(stop,vehicle_shape_,path_cfg_.dt);
+                if(!road.drivable&&(roundabout_bridge_active_||!roundabout_bridge_used_))
+                    road=avoid_road_map_.EvaluateMergeBoundaryBridge(stop,vehicle_shape_,path_cfg_.dt,
+                        6.0-roundabout_bridge_travel_,
+                        roundabout_bridge_active_?5.0-(planning_time-roundabout_bridge_start_time_):5.0,
+                        roundabout_bridge_settled_);
+                if(!road.drivable)continue;
+                auto safety=EvaluateCartesianTrajectorySafety(stop,ctx.predicted_obstacles,
+                    vehicle_shape_,collision_cfg_,path_cfg_.dt);
+                if(!safety.clear&&safety.blocking_sample_index==0)
+                    safety=EvaluateCartesianTrajectorySafety(stop,ctx.predicted_obstacles,
+                        vehicle_shape_,collision_cfg_,path_cfg_.dt,safety.blocking_object_id);
+                if(!safety.clear)continue;
+                out_path=std::move(stop);braking=true;break;
+            }
+            if(braking)break;
+        }
+        // Retain an existing collision-checked braking option when it is
+        // feasible; the new service profiles add alternatives, not a regression
+        // to a one-point stop where the old braking path was still valid.
+        if(!braking)braking=PlanCollisionBrakingPath(ego,ctx.s,ctx.d,
+            ctx.predicted_obstacles,out_path);
         last_failure_reason_=braking?PlanFailureReason::NONE:PlanFailureReason::COLLISION_BLOCKED;
         return braking;
     }
