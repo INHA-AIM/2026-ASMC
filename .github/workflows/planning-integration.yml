@@ -35,3 +35,9 @@ jobs:
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
           ./devel/lib/planning_inputs/planning_motion_test
+
+      - name: Check real ROS planning input boundary
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          python3 src/planning_inputs/test/ros_boundary_smoke_test.py
