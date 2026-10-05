@@ -64,7 +64,7 @@ valid_masks.drivable   bool    [384,640]
 
 ```python
 from torch.utils.data import DataLoader
-from asmc_perception.training.twinlite import (
+from asmc_camera.training.twinlite import (
     MaskedTwinLiteLoss,
     MoraiTwinLiteDataset,
     move_batch_to_device,
@@ -312,7 +312,7 @@ live 추론과 시각화 기본값은 v5 B binary 모델을 유지한다.
 ## live 패키지와의 경계
 
 이 모듈은 TwinLiteNet+ 전용 model/checkpoint/output adapter를 제공한다. ROS runtime은
-`asmc_perception.camera`와 `src/asmc_perception/scripts/camera_semantic_node.py`가 영상 구독,
+`asmc_camera.camera`와 `src/asmc_camera/scripts/camera_semantic_node.py`가 영상 구독,
 view 선택, latest-only buffer, 성능 계측과 표준 probability topic을 담당한다.
 모델을 교체할 때 ROS node를 다시 쓰지 않고 backend adapter만 추가하는 구조는
 통합 후에도 유지한다.

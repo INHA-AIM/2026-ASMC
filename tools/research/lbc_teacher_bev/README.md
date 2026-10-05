@@ -1,7 +1,7 @@
 # LBC teacher BEV research tool
 
 > **경계:** MORAI simulator의 privileged state로 GT/teacher BEV를 만드는 연구·디버그 도구다.
-> `asmc_perception` sensor runtime이나 본선 판제 입력이 아니다.
+> `asmc_camera` sensor runtime이나 본선 판제 입력이 아니다.
 
 기존 `src/learning_by_cheating` 중 실제로 사용되던 7-channel renderer, scenario
 visualizer, NPZ collector, 진단·규격 검사만 이관한 경로다. 외부 연결은
@@ -22,7 +22,7 @@ visualizer, NPZ collector, 진단·규격 검사만 이관한 경로다. 외부 
 | static source | KATRI road mesh·lane boundary |
 | dynamic source | MORAI Ego/Object/traffic-light state |
 
-카메라 추론으로 만드는 `asmc_perception.bev`와는 용도와 입력이 다르다.
+카메라 추론으로 만드는 `asmc_camera.bev`와는 용도와 입력이 다르다.
 이 결과는 학습 teacher, scenario 검수, 디버깅에만 사용한다.
 
 ## 구조

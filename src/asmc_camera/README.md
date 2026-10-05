@@ -1,4 +1,4 @@
-# `asmc_perception` runtime
+# `asmc_camera` runtime
 
 > **상태:** P4-C6 — camera/BEV/lane/traffic runtime·offline·training 패키지 통합 완료
 
@@ -10,11 +10,13 @@ TwinLite 학습 adapter와 offline BEV audit은 이 패키지가 소유한다. P
 패키지·workspace이며 이 launch가 소유하거나 시작하지 않는다.
 
 2026-10-05 이전 계획은 [통합 로드맵](../../docs/architecture/consolidation-roadmap.md)을 따른다.
-**현재 이름은 `asmc_perception`, rename 목표는 `asmc_camera`**다. 안승현이 이름 변경과
-YOLO 생산자 이전을 별도 단계로 진행한다. 기존 `/perception/*` 토픽은 유지한다.
+**2026-10-06 패키지 이름을 `asmc_perception`에서 `asmc_camera`로 바꿨다.** node 이름, `/perception/*`
+토픽, launch 인자와 기본값은 그대로다. 구 패키지는 호환 wrapper 없이 완전히 옮겼으므로
+`roslaunch asmc_perception ...`와 `import asmc_perception`은 동작하지 않는다
+([이전 안내](../asmc_perception/README.md)). YOLO 생산자 이전은 별도 단계로 진행한다.
 `camera_bev_fusion`은 다중 카메라 처리로 카메라 쪽에 남고, LiDAR 객체에 카메라 분류를
 결합하는 fusion은 손재호가 이전을 마무리할 `asmc_lidar` 내부에 둔다. 별도 fusion 패키지는
-만들지 않는다. 아직 rename하지 않았으므로 아래 실행 명령은 현재 이름을 사용한다.
+만들지 않는다.
 
 ## 실행
 
@@ -29,13 +31,13 @@ docker exec -it asmc-ros-noetic bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-roslaunch asmc_perception perception.launch
+roslaunch asmc_camera perception.launch
 ```
 
 신호등이 필요한 경우에만 명시적으로 추가한다.
 
 ```bash
-roslaunch asmc_perception perception.launch \
+roslaunch asmc_camera perception.launch \
   start_traffic_light:=true
 ```
 
@@ -47,7 +49,7 @@ roslaunch data_collection bag_recorder.launch profile:=full_raw
 
 기존 LiDAR는 nested workspace의 `Main`, `Msg`와 Velodyne overlay를 사용한다.
 새 `asmc_lidar` 골격은 이 overlay 없이 라이브러리만 빌드하며, 어느 쪽도
-`asmc_perception` launch가 자동으로 시작하지 않는다.
+`asmc_camera` launch가 자동으로 시작하지 않는다.
 
 ### `camera_bev`와 `camera_bev_fusion`
 
@@ -89,7 +91,7 @@ process를 먼저 실행한 뒤 저장소 루트 host에서 다음을 사용한�
 debug image publisher를 함께 켠다.
 
 ```bash
-roslaunch asmc_perception perception.launch start_visualization:=true
+roslaunch asmc_camera perception.launch start_visualization:=true
 ```
 
 화면은 GUI 환경이 있는 `asmc-ros-noetic` 컨테이너에서 연다. 아래 명령은 먼저
@@ -141,7 +143,7 @@ docker exec -it asmc-ros-noetic bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-roslaunch asmc_perception perception.launch \
+roslaunch asmc_camera perception.launch \
   start_traffic_light:=true \
   start_visualization:=true
 ```
@@ -179,7 +181,7 @@ rostopic echo -n 1 /perception/traffic_light/detection
 ```
 
 `/perception/lane/boundary_family`는 음영구간 판제 소비 정본이며 무옵션
-`roslaunch asmc_perception perception.launch`에서도 기본 발행된다. legacy 개별 spline·tracker와
+`roslaunch asmc_camera perception.launch`에서도 기본 발행된다. legacy 개별 spline·tracker와
 `/perception/lane/boundary_observations`는 기본 비활성화다. 기존 호환·진단용으로
 필요할 때만 `lane_enable_independent_boundary_pipeline:=true`를 사용한다.
 
@@ -259,7 +261,7 @@ fallback일 뿐이다. typed message를 받은 뒤에는 다음 규칙을 적용
 - typed producer를 한 번도 보지 못함: fresh legacy String 사용
 
 기존 판제 통합 launch가 시작하는 executable은
-`traffic_light/live_infer.py`에서 `asmc_perception/traffic_light_node.py`로 바뀌었다. topic 이름은
+`traffic_light/live_infer.py`에서 `asmc_camera/traffic_light_node.py`로 바뀌었다. topic 이름은
 삭제하거나 remap하지 않았으며 producer 경로 변경은 두 launch 파일의 migration 주석과
 `behavior_planner/README.md`에 기록돼 있다. unit/build, live ROS 연결과 MORAI 차량
 정지·재출발까지 통과했다. 다만 모든 consumer/launch의 legacy 참조가 없어지기 전에는 기존
@@ -272,7 +274,7 @@ production `behavior_node`, 현재 MGeo와 전역경로를 쓰되 Frenet/MPC/UDP
 
 ```bash
 # asmc-ros-noetic 컨테이너
-roslaunch asmc_perception traffic_light_closed_loop_acceptance.launch
+roslaunch asmc_camera traffic_light_closed_loop_acceptance.launch
 cat /tmp/asmc_traffic_light_closed_loop_acceptance.json
 ```
 
@@ -286,7 +288,7 @@ loop의 수락 근거이며 실제 simulator의 제동거리·MPC·UDP actuator�
 
 ```bash
 # controlled simulator only
-roslaunch asmc_perception traffic_light_vehicle_acceptance_stack.launch \
+roslaunch asmc_camera traffic_light_vehicle_acceptance_stack.launch \
   run_acceptance:=true allow_vehicle_control:=true \
   repo_root:=/root/ws grpc_host:=host.docker.internal
 cat /tmp/asmc_traffic_light_vehicle_acceptance.json
@@ -301,19 +303,19 @@ typed 신호 이후 제어 loop 수락이며 camera 분류 정확도 시험은 �
 
 ## P4-C4/C5 물리 이식 경계
 
-다음 실제 node 구현은 `src/asmc_perception/src/asmc_perception/nodes/`로 이동했다.
+다음 실제 node 구현은 `src/asmc_camera/src/asmc_camera/nodes/`로 이동했다.
 
 - camera semantic inference와 visualizer
 - per-view BEV, 3-view fusion과 BEV visualizer
 - lane vectorizer와 lane visualizer
 
-canonical launch는 모두 `pkg="asmc_perception"`으로 실행한다. P4-C5에서 camera backend,
+canonical launch는 모두 `pkg="asmc_camera"`로 실행한다. P4-C5에서 camera backend,
 runtime BEV/lane 수학과 config 정본도 각각
-`asmc_perception.camera`, `asmc_perception.bev`, `asmc_perception/config`으로 옮겼다. 기존 Python namespace는 canonical
+`asmc_camera.camera`, `asmc_camera.bev`, `asmc_camera/config`으로 옮겼다. 기존 Python namespace는 canonical
 symbol을 다시 export하던 호환 package와 config mirror는 P4-C6 검증 후 제거했다.
 
-재학습 코드는 `asmc_perception.training.twinlite`, offline replay·pseudo-GT·audit 코드는
-`asmc_perception.offline.bev`와 `tools/bev/`에 분리했다. 이 namespace는 차량 runtime launch가
+재학습 코드는 `asmc_camera.training.twinlite`, offline replay·pseudo-GT·audit 코드는
+`asmc_camera.offline.bev`와 `tools/bev/`에 분리했다. 이 namespace는 차량 runtime launch가
 import하거나 시작하지 않는다. 긴 실험 이력은 `docs/`에 보존한다.
 
 live 3-camera→BEV→lane 출력은 `config/baselines/perception_runtime_move_smoke_v1.yaml`에
@@ -332,14 +334,14 @@ canonical config/model SHA는 `config/baselines/perception_support_config_parity
 ## 검증
 
 ```bash
-python3 -m unittest src/asmc_perception/test/test_facade_contract.py
-python3 -m unittest src/asmc_perception/test/test_traffic_light_contract.py
+python3 -m unittest src/asmc_camera/test/test_facade_contract.py
+python3 -m unittest src/asmc_camera/test/test_traffic_light_contract.py
 python3 tools/audit/validate_perception_contract.py
 python3 tools/audit/validate_traffic_light_parity.py --check-artifacts
-roslaunch --nodes asmc_perception perception.launch
-roslaunch asmc_perception traffic_light_closed_loop_acceptance.launch
+roslaunch --nodes asmc_camera perception.launch
+roslaunch asmc_camera traffic_light_closed_loop_acceptance.launch
 # controlled simulator only; explicit opt-in required
-roslaunch asmc_perception traffic_light_vehicle_acceptance_stack.launch \
+roslaunch asmc_camera traffic_light_vehicle_acceptance_stack.launch \
   run_acceptance:=true allow_vehicle_control:=true
 ```
 

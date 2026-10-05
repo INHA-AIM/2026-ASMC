@@ -1,7 +1,7 @@
 # Traffic-light model artifact
 
 `best.pt` is the deployed ResNet18 checkpoint consumed by
-`asmc_perception/traffic_light_node.py`.
+`asmc_camera/traffic_light_node.py`.
 
 - SHA-256: `70ddaf222e7bc6ff2b4748c4b07c1b24dec72a2671f39bc18e0b243ddd93c0d5`
 - model input size: 384
