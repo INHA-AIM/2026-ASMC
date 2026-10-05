@@ -112,6 +112,62 @@ def _load_repository_yaml(repo_root: Path, relative: str) -> Mapping[str, object
     return _mapping(yaml.safe_load(path.read_text(encoding="utf-8")), relative)
 
 
+def _validate_planning_signal_launch(
+    launch: ET.Element, launch_name: str, expected_default: str
+) -> None:
+    arguments = {item.get("name"): item for item in launch.findall("arg")}
+    signal_arg = arguments.get("traffic_light")
+    if signal_arg is None or signal_arg.get("default") != expected_default:
+        raise AcceptanceContractError(
+            f"{launch_name} traffic_light default must be {expected_default}"
+        )
+    if expected_default == "false":
+        if "planning-owner review" not in signal_arg.get("doc", ""):
+            raise AcceptanceContractError(
+                f"{launch_name} lost the cross-team planning ownership note"
+            )
+    elif "external traffic-light producer" not in signal_arg.get("doc", ""):
+        raise AcceptanceContractError(
+            f"{launch_name} must document disabling duplicate signal inference"
+        )
+
+    # Planning may own standalone signal inference; the complete camera/lane
+    # pipeline remains an independently launched perception graph.
+    for include in launch.iter("include"):
+        if "$(find asmc_perception)" in include.get("file", ""):
+            raise AcceptanceContractError(
+                f"{launch_name} must not include the full perception pipeline"
+            )
+    perception_nodes = [
+        node for node in launch.iter("node")
+        if node.get("pkg") == "asmc_perception"
+    ]
+    if len(perception_nodes) != 1 or perception_nodes[0].get("type") != "traffic_light_node.py":
+        raise AcceptanceContractError(
+            f"{launch_name} must contain only its explicit traffic-light producer"
+        )
+    signal = perception_nodes[0]
+    gated_signal = any(
+        group.get("if") == "$(arg traffic_light)"
+        and signal in list(group.iter("node"))
+        for group in launch.iter("group")
+    )
+    if not gated_signal:
+        raise AcceptanceContractError(
+            f"{launch_name} must allow disabling signal inference via traffic_light"
+        )
+    if expected_default == "true":
+        if signal.get("required") != "true":
+            raise AcceptanceContractError(
+                f"{launch_name} must fail visibly when standalone signal inference dies"
+            )
+        camera = arguments.get("camera_topic")
+        if camera is None or camera.get("default") != "/cam_extra/image_jpeg/compressed":
+            raise AcceptanceContractError(
+                f"{launch_name} must use the bridge traffic-light camera topic"
+            )
+
+
 def _validate_p5_closeout(
     repo_root: Path, contract: Mapping[str, object]
 ) -> Mapping[str, object]:
@@ -168,34 +224,19 @@ def _validate_p5_closeout(
                 f"consumer handoff evidence is missing: {relative}"
             )
 
-    for launch_name in ("autonomy_no_bridges.launch", "autonomy_no_bridges_v2.launch"):
+    expected_defaults = {
+        "autonomy_no_bridges.launch": "false",
+        "autonomy_no_bridges_v2.launch": "true",
+    }
+    if traffic.get("planning_launch_signal_defaults") != {
+        name: default == "true" for name, default in expected_defaults.items()
+    }:
+        raise AcceptanceContractError("planning signal launch defaults changed")
+    for launch_name, default in expected_defaults.items():
         launch = ET.parse(
             repo_root / "src/behavior_planner/launch" / launch_name
         ).getroot()
-        argument_nodes = {
-            item.get("name"): item for item in launch.findall("arg")
-        }
-        arguments = {
-            name: item.get("default", "")
-            for name, item in argument_nodes.items()
-        }
-        if arguments.get("traffic_light") != "false":
-            raise AcceptanceContractError(
-                f"{launch_name} must not start the perception producer by default"
-            )
-        if "planning-owner review" not in argument_nodes["traffic_light"].get(
-            "doc", ""
-        ):
-            raise AcceptanceContractError(
-                f"{launch_name} lost the cross-team planning ownership note"
-            )
-        nodes = {
-            (item.get("pkg"), item.get("type")) for item in launch.iter("node")
-        }
-        if ("asmc_perception", "traffic_light_node.py") not in nodes:
-            raise AcceptanceContractError(
-                f"{launch_name} lost its explicit compatibility opt-in"
-            )
+        _validate_planning_signal_launch(launch, launch_name, default)
 
     shadow_result = _load_repository_yaml(
         repo_root,
