@@ -302,6 +302,40 @@ int main(){
  expect(physical_blocked,"accepted acceleration history cannot bypass a new physical obstacle");
  out={};bool restored=release_planner.PlanRoundaboutMerge(ego,{},cmd,701.4,701.4,out,r);
  expect(restored&&!out.a.empty()&&out.a.front()<0,"after safety rejection the next traversal starts from measured braking");
+ // Public-map crossing fixture: a direct frontier stop is blocked, but
+ // decelerating to a rolling speed lets the crossing vehicle clear first.
+ FrenetPlanner slow_planner;expect(slow_planner.Init(file.string()),"slow approach planner uses the unchanged configuration");
+ ego=pose_at(zone.stop_s-6);ego.v=2;ego.a=0;
+ const auto crossing_ref=Interpolate(ref,zone.stop_s+2);
+ TrackedObject crossing_car{};crossing_car.id=42;crossing_car.geometry_valid=crossing_car.z_valid=true;
+ crossing_car.motion_state=ObjectMotionState::DYNAMIC;crossing_car.length=4;crossing_car.width=1.8;crossing_car.height=1;
+ crossing_car.vx=-4*std::sin(crossing_ref.theta);crossing_car.vy=4*std::cos(crossing_ref.theta);
+ crossing_car.x=crossing_ref.x-crossing_car.vx;crossing_car.y=crossing_ref.y-crossing_car.vy;
+ crossing_car.heading=crossing_ref.theta+M_PI/2;
+ for(int i=0;i<8;++i){const double x=(i%4==0||i%4==3)?-2:2,y=i%4<2?-.9:.9;
+  crossing_car.corners[i]={crossing_car.x+x*std::cos(crossing_car.heading)-y*std::sin(crossing_car.heading),
+   crossing_car.y+x*std::sin(crossing_car.heading)+y*std::cos(crossing_car.heading),double(i/4)};}
+ out={};bool slow_ok=slow_planner.PlanRoundaboutMerge(ego,{crossing_car},cmd,800,800,out,r);
+ double slow_end=-1;if(!out.x.empty())slow_planner.ProjectPointToS(out.x.back(),out.y.back(),zone.stop_s,slow_end);
+ expect(slow_ok&&std::fabs(slow_end-zone.stop_s)<.05,"slower arrival reaches the frontier after crossing traffic clears");
+ expect(slow_ok&&!out.v.empty()&&std::fabs(out.v.front()-ego.v)<.01&&out.v.back()==0,
+  "slow approach preserves initial speed and includes a complete stop tail");
+ CollisionCheckConfig waiting_collision{.5,.1,3};
+ expect(slow_ok&&EvaluateCartesianTrajectorySafety(out,{crossing_car},shape,waiting_collision,planner.sample_dt()).clear,
+  "slower arrival still passes authoritative object collision checks");
+ expect(!r.ready&&!slow_planner.roundabout_merge_committed(),"slow approach does not bypass entry confirmation");
+ bool before_frontier=slow_ok;double projection=zone.stop_s-6;
+ for(size_t i=0;i<out.x.size();++i){double value=projection;
+  if(!slow_planner.ProjectPointToS(out.x[i],out.y[i],projection,value)||value>zone.stop_s+.02)before_frontier=false;
+  projection=value;}
+ expect(before_frontier,"every slow approach sample stays before the frontier");
+ slow_planner.ResetRoundaboutMerge();auto hard_block=crossing_car;hard_block.motion_state=ObjectMotionState::LOW_THREAT;
+ hard_block.vx=hard_block.vy=0;hard_block.x=ego.x;hard_block.y=ego.y;
+ for(int i=0;i<8;++i){const double x=(i%4==0||i%4==3)?-2:2,y=i%4<2?-.9:.9;
+  hard_block.corners[i]={ego.x+x,ego.y+y,double(i/4)};}
+ out={};expect(!slow_planner.PlanRoundaboutMerge(ego,{hard_block},cmd,801,801,out,r),
+  "a physical blocker still rejects all slower progress candidates");
  cmd.merge_type=MergeType::HIGHWAY;expect(!tick(200,200)&&planner.last_failure_reason()==FrenetPlanner::PlanFailureReason::INVALID_COMMAND,"roundabout implementation cannot silently execute highway merge");
  std::filesystem::remove_all(dir);return failures?1:0;
 }
+

@@ -90,7 +90,7 @@ bool MakeFrontierWaitingPath(const RefLine& ref,const CartesianState& ego,
     if(ego.v<.1&&boundary.s_dd<0)boundary.s_dd=0;
     auto motions=GenerateStoppingCandidates(boundary,stop_s,grid);
     double best=std::numeric_limits<double>::infinity();
-    for(const auto& motion:motions){
+    auto evaluate=[&](const decltype(motions)::value_type& motion,bool partial=false){
         CartesianPath path;bool valid=!motion.s.empty();double effort=0;
         for(size_t i=0;i<motion.s.size()&&valid;++i){
             if(motion.s[i]<s-1e-6||motion.s[i]>stop_s+1e-6||motion.s_d[i]<-1e-6||
@@ -108,15 +108,89 @@ bool MakeFrontierWaitingPath(const RefLine& ref,const CartesianState& ego,
             path.kappa.push_back(point.kappa);path.v.push_back(point.v);path.a.push_back(point.a);
             effort+=point.a*point.a*dt;
         }
-        if(!valid)continue;
+        if(!valid)return;
         path.v.back()=0;path.a.back()=0;
         CartesianPath aligned;
         if(AlignWaitingApproach(ref,ego,road,shape,limits,stop_s,s,d,service_decel,dt,path,aligned))
             path=std::move(aligned);
         if(!road.EvaluatePath(path,shape,dt).drivable||
-           !CartesianTrajectoryClear(path,objects,shape,collision,dt))continue;
-        const double cost=motion.t.back()+.1*effort;
+           !CartesianTrajectoryClear(path,objects,shape,collision,dt))return;
+        const double cost=partial?-(motion.s.back()-s)+.01*motion.t.back():motion.t.back()+.1*effort;
         if(cost<best){best=cost;selected=std::move(path);}
+    };
+    for(const auto& motion:motions)evaluate(motion);
+    if(!selected.x.empty())return true;
+    if(motions.empty())return false;
+    const double max_duration=std::min(10.0,horizon);
+    // Decelerate to a low rolling speed, then stop at the same frontier.
+    // Keeping both stages in the checked output avoids an unchecked coast
+    // beyond a short approach horizon. No object or road check is bypassed.
+    for(double crawl:{2.0,1.0,.5}) {
+        if(crawl>cap||crawl>=std::max(.1,boundary.s_d))continue;
+        for(double slow_time:{2.0,3.0}) {
+            const auto approach=MakeQuartic(boundary.s,boundary.s_d,boundary.s_dd,
+                crawl,0,slow_time);
+            const double join_s=EvalPos(approach,slow_time);
+            if(join_s>=stop_s-.15)continue;
+            for(double stop_time=2.0;slow_time+stop_time<=max_duration+1e-6;stop_time+=1.0) {
+                auto motion=motions.front();
+                motion.t.clear();motion.s.clear();motion.s_d.clear();
+                motion.s_dd.clear();motion.s_ddd.clear();
+                const auto finish=MakeQuintic(join_s,crawl,0,stop_s,0,0,stop_time);
+                const int steps=static_cast<int>(std::ceil((slow_time+stop_time)/dt));
+                for(int i=0;i<=steps;++i) {
+                    const double t=std::min(i*dt,slow_time+stop_time);
+                    motion.t.push_back(t);
+                    if(t<=slow_time) {
+                        motion.s.push_back(EvalPos(approach,t));motion.s_d.push_back(EvalVel(approach,t));
+                        motion.s_dd.push_back(EvalAcc(approach,t));motion.s_ddd.push_back(EvalJerk(approach,t));
+                    } else {
+                        const double q=t-slow_time;
+                        if(EvalVel(finish,q)>crawl+.05){motion.s.clear();break;}
+                        motion.s.push_back(EvalPos(finish,q));motion.s_d.push_back(EvalVel(finish,q));
+                        motion.s_dd.push_back(EvalAcc(finish,q));motion.s_ddd.push_back(EvalJerk(finish,q));
+                    }
+                }
+                evaluate(motion);
+            }
+        }
+    }
+    if(!selected.x.empty())return true;
+    // If reaching the frontier is still blocked, certify only safe forward
+    // progress. The rolling segment includes its own jerk-limited stop tail;
+    // every sample remains before the frontier and passes the same checks.
+    for(double crawl:{2.0,1.0,.5}) {
+        if(crawl>cap||crawl>=std::max(.1,boundary.s_d))continue;
+        const double brake_time=std::max(1.0,std::sqrt(6*crawl/limits.max_longitudinal_jerk)*1.2);
+        for(double slow_time:{1.5,2.0,3.0,4.0}) {
+            const auto approach=MakeQuartic(boundary.s,boundary.s_d,boundary.s_dd,crawl,0,slow_time);
+            const double join_s=EvalPos(approach,slow_time);
+            for(double cruise_time:{1.0,2.0}) {
+                const double brake_s=join_s+crawl*cruise_time;
+                const auto brake=MakeQuartic(brake_s,crawl,0,0,0,brake_time);
+                const double end_s=EvalPos(brake,brake_time);
+                const double total=slow_time+cruise_time+brake_time;
+                if(end_s>stop_s||end_s<s+.5||total>max_duration)continue;
+                auto motion=motions.front();motion.t.clear();motion.s.clear();motion.s_d.clear();
+                motion.s_dd.clear();motion.s_ddd.clear();
+                const int steps=static_cast<int>(std::ceil(total/dt));
+                for(int i=0;i<=steps;++i) {
+                    const double t=std::min(i*dt,total);motion.t.push_back(t);
+                    if(t<=slow_time) {
+                        motion.s.push_back(EvalPos(approach,t));motion.s_d.push_back(EvalVel(approach,t));
+                        motion.s_dd.push_back(EvalAcc(approach,t));motion.s_ddd.push_back(EvalJerk(approach,t));
+                    } else if(t<=slow_time+cruise_time) {
+                        motion.s.push_back(join_s+crawl*(t-slow_time));motion.s_d.push_back(crawl);
+                        motion.s_dd.push_back(0);motion.s_ddd.push_back(0);
+                    } else {
+                        const double q=t-slow_time-cruise_time;
+                        motion.s.push_back(EvalPos(brake,q));motion.s_d.push_back(EvalVel(brake,q));
+                        motion.s_dd.push_back(EvalAcc(brake,q));motion.s_ddd.push_back(EvalJerk(brake,q));
+                    }
+                }
+                evaluate(motion,true);
+            }
+        }
     }
     return !selected.x.empty();
 }
@@ -639,3 +713,4 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     last_roundabout_result_=result;
     return ok;
 }
+

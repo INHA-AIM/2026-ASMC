@@ -397,3 +397,30 @@ gap implementation; the standalone build excludes only the YAML map loader.
 The changed execution translation unit passed a syntax check. Full ROS/catkin
 and historical bag replay were not rerun for this change: the prior workspace
 and bag copies were unavailable, and the uploaded bag could not be recovered.
+
+### Slower waiting approaches before braking fallback
+
+If all ordinary frontier-stop candidates fail, waiting approach generation
+tries bounded two-stage profiles: decelerate to 0.5, 1 or 2 m/s, then stop at
+the original map frontier. The second stage cannot accelerate above the chosen
+rolling speed. If those full arrivals also fail, a rolling approach with its
+own complete braking tail may end before the frontier. Among safe partial
+approaches, forward progress is preferred. These are checked whole trajectories,
+not unchecked coasting beyond a truncated horizon.
+
+Additional search occurs only after the existing frontier candidates fail,
+with at most 39 full arrivals and 24 partial approaches within the existing
+horizon, capped at ten seconds. Every candidate retains initial boundary
+conditions and the existing monotonic station, jerk, acceleration, curvature,
+lateral acceleration, map and authoritative-object collision checks. Failed
+search retains the existing STOP/braking fallback. Entry confirmation, waiting
+pose latch, committed traversal and the latest parameter files are unchanged.
+
+Validation includes a public-map crossing fixture where slower arrival reaches
+the frontier after traffic clears, initial speed and final stop preservation,
+collision checks, frontier containment, unchanged entry gating and rejection
+of a physical blocker. Fixed-input comparison of 300 recorded approach states
+recovered one previously failed output with no newly failed outputs or READY
+changes. It does not establish closed-loop elimination of the observed stops;
+many states remain blocked by the existing collision predictions. Diagnostic
+copies and recorded inputs are not committed.
