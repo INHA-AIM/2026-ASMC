@@ -854,6 +854,14 @@ private:
         double shift_entry_distance = 0.0;
         double map_entry_s = 0.0;
         double map_transition_distance = 0.0;
+        // Actual travel budget survives replanning while the body is outside.
+        bool map_recovery_active = false;
+        double map_recovery_last_s = 0.0;
+        double map_recovery_travel_m = 0.0;
+        double map_recovery_overlap_limit_m = 0.0;
+        double map_recovery_settled_travel_m = 0.0;
+        CartesianPath map_recovery_path;
+        double map_recovery_path_target_d = 0.0;
         // Keep an accepted spatial lateral profile through SHIFT/RETURN even
         // when launch speed crosses the normal generator boundary.
         bool spatial_lateral_active = false;

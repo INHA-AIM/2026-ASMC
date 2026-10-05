@@ -479,6 +479,10 @@ if(CATKIN_ENABLE_TESTING)
   target_link_libraries(avoid_tracking_handoff_test frenet_planner_core)
   add_test(NAME avoid_tracking_handoff_test COMMAND avoid_tracking_handoff_test)
 
+  add_executable(avoid_boundary_recovery_test tests/avoid_boundary_recovery_test.cpp)
+  target_link_libraries(avoid_boundary_recovery_test frenet_planner_core)
+  add_test(NAME avoid_boundary_recovery_test COMMAND avoid_boundary_recovery_test)
+
   add_executable(avoid_road_constraints_test tests/avoid_road_constraints_test.cpp)
   target_compile_definitions(avoid_road_constraints_test PRIVATE
     FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
