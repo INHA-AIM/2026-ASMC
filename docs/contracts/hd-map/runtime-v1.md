@@ -181,10 +181,11 @@ marking의 유효한 국소 횡거리로 Lane 외곽을 보정하고 MGeo 인접
   | 동적 장애물 (자홍) | `mission_dynamic_obstacle` | `mission_surface_dynamic_obstacle` | `mission_actors_dynamic_obstacle` |
   | GPS 음영 (보라) | `mission_gps_shadow` | `mission_surface_gps_shadow` | `mission_actors_gps_shadow` |
   | 회전교차로 (파랑) | `mission_roundabout` | `mission_surface_roundabout` | `mission_actors_roundabout` |
-  | 주변 차량 (노랑) | `mission_surrounding_vehicle` | `mission_surface_surrounding_vehicle` | `mission_actors_surrounding_vehicle` |
+  | 주변 차량 (연두) | `mission_surrounding_vehicle` | `mission_surface_surrounding_vehicle` | `mission_actors_surrounding_vehicle` |
   | 신호 정지선 | `mission_boundaries` (station 점) | — | — |
 
-  - actor 선 색: 정적 장애물 빨강, 동적 장애물 분홍, NPC 차량 흰색. 화살표는 진행 방향이다.
+  - 구간 면적 외곽선은 점선이라 실선 차선과 구분된다. 미션 색에는 차선 색(흰색·노랑)을 쓰지 않는다.
+  - actor 후보 링크는 `full`에서만 보인다. 선 색은 정적 장애물 빨강, 동적 장애물 분홍, NPC 차량 흰색이고 화살표는 진행 방향이다.
   - 미션 라벨은 `종류 [DER|TEAM]`, station 범위, actor 링크 요약이다(예: `ROUNDABOUT [TEAM] 859–915 m · NPC A147/A133/A134`).
   - 면적과 actor는 [미션 시나리오 spec](../../handoffs/hd-map/mission-scenario-spec.md)에서 publisher 시작 시
     매번 만든다. spec을 만들 수 없으면 이 두 레이어만 빠지고 경고가 남는다.
@@ -220,15 +221,21 @@ marking의 유효한 국소 횡거리로 Lane 외곽을 보정하고 MGeo 인접
 체크포인트, 속도·미션 레이어만 보낸다. `full`은 차로별 polygon·centerline, 링크 화살표·라벨, station
 눈금, corridor fill·H5 patch·교차로 외곽 같은 HD맵 제작 검수용 레이어를 더한다.
 
-| 항목 | full | lite |
+| 항목 | full | lite (기본) |
 |---|---|---|
-| `/hd_map/debug/markers` | 478 marker, 선 점 17.6만 개, 4.3 MB | 354 marker, 3.9만 개, 1.0 MB |
-| 주행가능영역 면 | 0.2 m grid 22.3M칸 | `/hd_map/debug/drivable_grid_viz` 0.6 m, 2.5M칸 |
+| `/hd_map/debug/markers` | 478 marker, 선 점 17.7만 개, 4.3 MB | 86 marker, 3.6만 개, 0.9 MB |
+| actor 후보 링크(`mission_actors_*`)와 라벨의 링크 목록 | 표시 | 숨김 |
+| 주행가능영역 면 (RViz 기본) | — | ego 주변 120 m 크롭 `/hd_map/local/drivable_grid` (0.2 m, 600×600칸, GPS+IMU) |
 
-marker는 시작할 때 한 번 만들어 둔다. 새 구독자가 붙을 때 바로 보내고, 구독자가 있는 동안만 5초마다
-다시 보낸다(`debug_republish_hz` 0.2, RViz Reset 복구용). RViz가 없으면 만들기만 하고 보내지 않는다.
-planner가 쓰는 `/hd_map/global/drivable_grid`(0.2 m)는 그대로다. RViz의 0.2 m grid display는 무거워서
-기본으로 꺼 두고, 면 표시는 0.6 m 표시용 사본이 맡는다.
+marker는 시작할 때 한 번 만들어 두고 새 구독자가 붙을 때만 보낸다. 고정된 내용을 다시 보내면 RViz가 매번
+다시 만들 뿐이라 주기 전송은 기본으로 끈다(`debug_republish_hz` 0). RViz에서 Reset을 누르면 marker가
+지워지므로, 해당 display 체크를 껐다 켜면 다시 받는다. RViz가 없으면 아무것도 보내지 않는다.
+
+주행가능영역 면은 ego 주변 크롭을 기본으로 그린다. 전체 지도를 텍스처로 올리지 않아도 되고, planner와 같은
+0.2 m 해상도라 경계가 거칠지 않다. 맵 전체 면이 필요하면 `Drivable area overview (0.6 m whole map)`(표시
+전용 0.6 m 사본 `/hd_map/debug/drivable_grid_viz`, 2.5M칸)이나 0.2 m 원본 grid(22.3M칸, 무거움)를 켠다.
+0.6 m 사본은 RViz 표시만을 위한 것이다. planner와 local crop은 항상 0.2 m `/hd_map/global/drivable_grid`를 쓴다.
+차선 도색과 외곽선은 고정 marker라 RViz가 한 번 올린 뒤에는 거의 부하가 없어 따로 크롭하지 않는다.
 
 미션 면적과 전체 주행가능영역 외곽선은 차로 polygon의 합집합이다. 인접 차로 사이 미세한 틈이 만드는
 조각 고리를 없애기 위해 0.2 m closing을 하고, 5 m² 미만 구멍은 버린 뒤 0.1 m로 단순화한다. 벡터 합집합

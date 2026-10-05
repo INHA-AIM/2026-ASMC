@@ -509,8 +509,10 @@ def main() -> int:
     else:
         required.append("drivable_area_outline")
         _require(
-            not namespaces.intersection(review_layers) and "route_link_labels" not in namespaces,
-            "lite debug markers must leave out the per-lane and per-link review layers",
+            not namespaces.intersection(review_layers)
+            and "route_link_labels" not in namespaces
+            and not any(namespace.startswith("mission_actors_") for namespace in namespaces),
+            "lite debug markers must leave out the per-lane, per-link and actor review layers",
         )
     for namespace in required:
         _require(namespace in namespaces, "missing debug namespace: %s" % namespace)
@@ -568,7 +570,7 @@ def main() -> int:
                 "mission_surface_%s" % zone["mission_type"] in namespaces,
                 "zone %s surface outline is missing" % zone["id"],
             )
-        if zone["actor_sources"]:
+        if zone["actor_sources"] and detail == "full":
             _require(
                 sum(value.ns == "mission_actors_%s" % zone["mission_type"]
                     and value.type == Marker.LINE_STRIP for value in debug.markers)

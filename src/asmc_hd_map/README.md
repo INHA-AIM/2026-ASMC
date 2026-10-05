@@ -52,7 +52,7 @@ roslaunch asmc_hd_map competition_map_debug.launch follow_ego:=false \
 
 박스·색·TF 의미는 [runtime contract §4.0](../../docs/contracts/hd-map/runtime-v1.md#40-ego-차량-박스와-base_link-추적)을 본다.
 
-미션 구간은 종류별 namespace(`mission_<type>`, `mission_surface_<type>`, `mission_actors_<type>`)로
+미션 구간은 종류별 namespace(`mission_<type>`, 점선 `mission_surface_<type>`, full 전용 `mission_actors_<type>`)로
 나뉘어 RViz에서 따로 켜고 끌 수 있다. 범례는 [runtime contract §4](../../docs/contracts/hd-map/runtime-v1.md#4-rviz-표시)를 보고,
 구간별 회피 차로·actor 후보와 샘플링 API는 [미션 시나리오 spec](../../docs/handoffs/hd-map/mission-scenario-spec.md)을 본다.
 

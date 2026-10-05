@@ -3,7 +3,7 @@
        may be disabled by launching with rviz:=false (the default). -->
   <arg name="rviz" default="false"/>
   <arg name="data_root" default="/data"/>
-  <arg name="debug_republish_hz" default="0.2"/>
+  <arg name="debug_republish_hz" default="0.0"/>
   <arg name="debug_marker_detail" default="lite"/>
   <arg name="baseline_path" default=""/>
   <arg name="publish_local" default="true"/>

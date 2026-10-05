@@ -413,7 +413,8 @@ MISSION_TYPE_COLORS = {
     "dynamic_obstacle": (1.0, 0.1, 0.7),
     "roundabout": (0.15, 0.65, 1.0),
     "highway_merge": (0.95, 0.65, 0.3),
-    "surrounding_vehicle": (1.0, 0.9, 0.2),
+    # Not yellow or white: those are lane-paint colours on the same map.
+    "surrounding_vehicle": (0.6, 1.0, 0.1),
 }
 ACTOR_ROLE_STYLES = {
     "static_obstacle": ((1.0, 0.25, 0.25), "OBST"),
@@ -519,12 +520,12 @@ def _mission_scenario_markers(scenario: Mapping[str, Any], stamp) -> List[Marker
         mission_type = str(zone["mission_type"])
         surface = zone.get("surface")
         if surface:
+            # Dashed so a zone boundary never reads as a solid lane marking.
             outline = next_marker("mission_surface_%s" % mission_type, Marker.LINE_LIST)
-            outline.scale.x = 0.32
+            outline.scale.x = 0.28
             outline.color = _mission_type_color(mission_type, str(zone["status"]), 0.95)
-            for ring in surface["outlines"]:
-                for start, end in zip(ring, ring[1:]):
-                    outline.points.extend((_point(start, 0.34), _point(end, 0.34)))
+            for start, end in dashed_polyline_segments(surface["outlines"], 1.5, 1.0):
+                outline.points.extend((_point(start, 0.34), _point(end, 0.34)))
             markers.append(outline)
         for source in zone.get("actor_sources") or []:
             rgb, _ = ACTOR_ROLE_STYLES.get(str(source["role"]), ((1.0, 1.0, 1.0), ""))
@@ -565,7 +566,8 @@ LITE_EXCLUDED_NAMESPACES = {
     "route_station",
     "route_station_text",
 }
-LITE_EXCLUDED_PREFIXES = ("drivable_group_",)
+# Actor-source links are scenario-generator review material, not map content.
+LITE_EXCLUDED_PREFIXES = ("drivable_group_", "mission_actors_")
 DEBUG_MARKER_DETAILS = ("lite", "full")
 
 
@@ -914,7 +916,8 @@ def build_debug_markers(
         text.scale.z = 1.05
         text.color = color
         text.text = _mission_label(
-            item, start, end, _actor_summary(scenario_zones.get(str(item["id"]), {}))
+            item, start, end,
+            _actor_summary(scenario_zones.get(str(item["id"]), {})) if detail == "full" else "",
         )
         markers.append(text)
 
@@ -1038,10 +1041,10 @@ class CompetitionMapPublisher:
             )
         # The debug topic follows the P1-B non-latched contract
         # (publication: on_change_or_subscriber). The markers are static, so
-        # they are built once, sent to each new subscriber on connect, and
-        # refreshed slowly only while someone is subscribed (RViz "Reset"
-        # clears markers until the next send). Nothing is built or sent
-        # without a subscriber.
+        # they are built once and sent to each new subscriber on connect;
+        # resending a static set only makes RViz rebuild it. RViz "Reset"
+        # clears markers until the display is toggled (re-subscribes) or
+        # debug_republish_hz > 0 refreshes them while someone is subscribed.
         self.debug_detail = str(rospy.get_param("~debug_marker_detail", "lite")).strip().lower()
         self.debug_markers = None
         self.debug_pub = rospy.Publisher(
@@ -1077,7 +1080,7 @@ class CompetitionMapPublisher:
             bundle, stamp, self.product, self.scenario, self.debug_detail
         )
         self._publish_debug(None)
-        republish_hz = float(rospy.get_param("~debug_republish_hz", 0.2))
+        republish_hz = float(rospy.get_param("~debug_republish_hz", 0.0))
         if republish_hz < 0.0:
             raise RuntimeBundleError("debug_republish_hz must be non-negative")
         self.timer = (

@@ -101,11 +101,12 @@ class RuntimeBundleTest(unittest.TestCase):
             for display in displays
             if display.get("Class") == "rviz/Map"
         }
-        # The global map is shown by default through its coarse display copy; the
-        # 0.2 m planner grid display stays available but off because it is heavy.
-        self.assertTrue(maps["/hd_map/debug/drivable_grid_viz"]["Enabled"])
+        # The drivable fill follows the ego at full 0.2 m resolution through the
+        # GPS+IMU local crop; the whole-map layers stay available but off because
+        # RViz has to texture 2.5M (0.6 m copy) or 22M (planner grid) cells.
+        self.assertTrue(maps["/hd_map/local/drivable_grid"]["Enabled"])
+        self.assertFalse(maps["/hd_map/debug/drivable_grid_viz"]["Enabled"])
         self.assertFalse(maps["/hd_map/global/drivable_grid"]["Enabled"])
-        self.assertFalse(maps["/hd_map/local/drivable_grid"]["Enabled"])
 
     def test_role_and_source_mapping_do_not_infer_ambiguous_boundary(self):
         ambiguous = {

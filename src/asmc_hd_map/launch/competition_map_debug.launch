@@ -5,7 +5,7 @@
   <!-- lite: lane markings, merged drivable outline, checkpoints, speed and
        mission layers. full: adds per-lane/link/surface build-review layers. -->
   <arg name="debug_marker_detail" default="lite"/>
-  <arg name="debug_republish_hz" default="0.2"/>
+  <arg name="debug_republish_hz" default="0.0"/>
   <arg name="map_path"
        default="$(find asmc_hd_map)/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json"/>
   <arg name="metadata_path"

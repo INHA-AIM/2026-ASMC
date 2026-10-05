@@ -103,4 +103,4 @@ pose 규약은 다음과 같다.
 |---|---|
 | `mission_<type>` | 구간의 전역경로 span (종류별 색) |
 | `mission_surface_<type>` | 구간 면적 외곽선 |
-| `mission_actors_<type>` | actor 후보 링크와 진행 방향 화살표 |
+| `mission_actors_<type>` | actor 후보 링크와 진행 방향 화살표 (`debug_marker_detail:=full`에서만) |

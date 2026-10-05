@@ -30,8 +30,8 @@ Visualization Manager:
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: true
-      Enabled: true
-      Name: "Drivable area fill (0.6 m display copy)"
+      Enabled: false
+      Name: "Drivable area overview (0.6 m whole map)"
       Topic: /hd_map/debug/drivable_grid_viz
       Unreliable: false
       Use Timestamp: false
@@ -44,12 +44,12 @@ Visualization Manager:
       Topic: /hd_map/global/drivable_grid
       Unreliable: false
       Use Timestamp: false
-    - Alpha: 0.7
+    - Alpha: 0.4
       Class: rviz/Map
       Color Scheme: map
-      Draw Behind: false
-      Enabled: false
-      Name: "Planner local drivable crop (120 m)"
+      Draw Behind: true
+      Enabled: true
+      Name: "Drivable area near ego (0.2 m, 120 m GPS+IMU crop)"
       Topic: /hd_map/local/drivable_grid
       Unreliable: false
       Use Timestamp: false
