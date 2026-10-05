@@ -14,7 +14,9 @@ Start main's bridge and LiDAR workspace as usual, then run:
 roslaunch behavior_planner autonomy_no_bridges_v2.launch objects_source:=lidar
 ```
 
-The input is main's actual `Msg/TrackedObjectArray` on `/last_lidar`.
+The input is main's actual, unfiltered `Msg/TrackedObjectArray` on
+`/lidar/tracked_objects_map`. Do not override it with `/last_lidar`: main's
+legacy road filter has already deleted observations there.
 The currently reserved `/perception/lidar/*` typed producer is not assumed to
 exist. A wire bridge accepts only the frozen legacy/canonical MD5
 `e127b2aabd7494ad01a5a56b005bf07e`; development messages with an additional
@@ -60,7 +62,7 @@ public topics. Existing speed/merge tuning remains in the planner YAML files.
 The fixed Frenet map snapshot remains under `frenet_planner/config/hd_map`;
 merging main does not switch this planner to a different runtime map.
 
-Record `/planning/vehicle/state`, `/planning/objects`, `/last_lidar`, `/gps`,
+Record `/planning/vehicle/state`, `/planning/objects`, `/planning/objects_debug`, `/lidar/tracked_objects_map`, `/last_lidar`, `/gps`,
 `/imu`, trajectory, command, feedback and `/ctrl_cmd` for post-integration
 validation. Old bags recorded only on `/vehicle/state` and
 `/perception/objects` do not directly exercise this new ROS boundary.
@@ -81,3 +83,26 @@ The pre-rebase reference is branch
 `backup/avoid-merge-validated-20261005`, commit `0781402`.
 The roundabout implementation notes are in
 [roundabout-merge-implementation.md](../../docs/packages/planning-control/roundabout-merge-implementation.md).
+
+## Restored final-publication filters
+
+The 0781402 known-static center catalog, its two disjoint application regions
+and 2.5 m tolerance, static structure zones, raster overlap prediction and
+static boundary OBB clipping now run in the private adapter after motion
+classification. Their portable algorithms and original regression tests are
+carried without policy changes. Explicit UNKNOWN is required for catalog
+deletion; classified vehicles and people do not match it. The old policy
+intentionally matches known background positions even with spurious motion.
+
+The original road raster, metadata and catalog are pinned under
+`config/validated_0781402`; this does not change main's HD map or sensor output.
+Runtime configuration failure terminates the private adapter and its required
+launch rather than silently removing its filters. Per-object keep/drop reasons
+and clipping decisions are published on `/planning/objects_debug`.
+
+This restores a concrete input-policy regression, not the entire old sensor
+pipeline. The old ground-plane evidence and height acquisition/release gate
+cannot be reproduced from frozen TrackedObject fields. Height-only deletion
+is deliberately not substituted: thin elevated obstacle returns would otherwise
+be dropped. Main's clustering/tracking/fusion and motion pre-processing remain
+main-owned. New MORAI driving/bags are still needed to measure those differences.

@@ -2,11 +2,13 @@ cmake_minimum_required(VERSION 3.0.2)
 project(planning_inputs)
 add_compile_options(-std=c++17 -Wall -Wextra)
 find_package(catkin REQUIRED COMPONENTS asmc_msgs geometry_msgs message_generation morai_msgs roscpp sensor_msgs std_msgs)
+find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs)
+find_package(yaml-cpp REQUIRED)
 add_message_files(FILES DetectedObject.msg DetectedObjectArray.msg)
 generate_messages(DEPENDENCIES geometry_msgs std_msgs)
 catkin_package(INCLUDE_DIRS include LIBRARIES planning_motion_core CATKIN_DEPENDS asmc_msgs geometry_msgs message_runtime morai_msgs roscpp sensor_msgs std_msgs)
 catkin_install_python(PROGRAMS scripts/tracked_wire_bridge.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-include_directories(include ${catkin_INCLUDE_DIRS})
+include_directories(include ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 add_library(planning_motion_core src/MotionClassifier.cpp)
 add_library(planning_state_core src/vehicle_state_adapter.cpp src/gps_transform.cpp)
 add_dependencies(planning_state_core ${catkin_EXPORTED_TARGETS})
@@ -14,15 +16,25 @@ target_link_libraries(planning_state_core ${catkin_LIBRARIES})
 add_executable(planning_vehicle_state_node src/vehicle_state_node.cpp)
 add_dependencies(planning_vehicle_state_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(planning_vehicle_state_node planning_state_core ${catkin_LIBRARIES})
-add_executable(planning_objects_adapter src/objects_node.cpp src/converter.cpp)
+add_library(planning_filter_core
+  src/filters/DrivableBoundaryFilter.cpp src/filters/DrivableFootprint.cpp
+  src/filters/KnownStaticObjectFilter.cpp src/filters/StaticStructureExclusionFilter.cpp)
+target_link_libraries(planning_filter_core yaml-cpp ${OpenCV_LIBRARIES})
+add_executable(planning_objects_adapter src/objects_node.cpp src/converter.cpp src/filters/PlanningObjectFilter.cpp)
 add_dependencies(planning_objects_adapter ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(planning_objects_adapter planning_motion_core ${catkin_LIBRARIES})
+target_link_libraries(planning_objects_adapter planning_motion_core planning_filter_core ${catkin_LIBRARIES})
 if(CATKIN_ENABLE_TESTING)
   add_executable(planning_motion_test test/motion_test.cpp)
   target_link_libraries(planning_motion_test planning_motion_core)
   add_test(NAME planning_motion_test COMMAND planning_motion_test)
+  catkin_add_gtest(planning_filter_test
+    test/test_known_static_object_filter.cpp test/test_drivable_boundary_filter.cpp
+    test/test_static_structure_exclusion_filter.cpp)
+  if(TARGET planning_filter_test)
+    target_link_libraries(planning_filter_test planning_filter_core)
+  endif()
 endif()
-install(TARGETS planning_motion_core planning_state_core planning_vehicle_state_node planning_objects_adapter
+install(TARGETS planning_filter_core planning_motion_core planning_state_core planning_vehicle_state_node planning_objects_adapter
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

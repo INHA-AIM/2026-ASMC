@@ -11,6 +11,7 @@
 #include "planning_inputs/converter.hpp"
 #include "planning_inputs/MotionClassifier.hpp"
 #include "planning_inputs/heading_history.hpp"
+#include "planning_inputs/filters/PlanningObjectFilter.hpp"
 
 namespace planning_inputs {
 MotionClassifierConfig LoadMotionConfig(ros::NodeHandle& node) {
@@ -102,7 +103,7 @@ MotionClassifierConfig LoadMotionConfig(ros::NodeHandle& node) {
 
 class ObjectsNode {
  public:
-  ObjectsNode() : private_("~"), classifier_(LoadMotionConfig(private_)) {
+  ObjectsNode() : private_("~"), classifier_(LoadMotionConfig(private_)), filters_(private_) {
     std::string input,output,state;
     private_.param<std::string>("input_topic",input,"/planning/input/tracked_objects");
     private_.param<std::string>("output_topic",output,"/planning/objects");
@@ -136,6 +137,7 @@ class ObjectsNode {
     if(!heading || !fresh) {
       classifier_.Reset();
       ROS_WARN_THROTTLE(1.0,"Planning motion state UNKNOWN: no fresh source-aligned heading");
+      filters_.Apply(*source,&out);
       publisher_.publish(out);return;
     }
     std::vector<MotionObject> motion;motion.reserve(source->objects.size());
@@ -162,12 +164,14 @@ class ObjectsNode {
     }
     // Only confirmed LOW_THREAT has zero private planning velocity. Main's
     // public message and UNKNOWN/PENDING/DYNAMIC velocities remain untouched.
+    filters_.Apply(*source,&out);
     publisher_.publish(out);
   }
   ros::NodeHandle node_,private_;
   ros::Subscriber input_,state_;ros::Publisher publisher_;
   ros::SteadyTime state_received_;
   HeadingHistory headings_; MotionClassifier classifier_;
+  PlanningObjectFilter filters_;
   double last_source_=0;
 };
 }

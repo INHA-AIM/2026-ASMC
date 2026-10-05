@@ -27,7 +27,9 @@ jobs:
         with:
           submodules: recursive
       - name: Check runtime launch contracts
-        run: python3 src/planning_inputs/test/runtime_launch_contract_test.py
+        run: |
+          python3 src/planning_inputs/test/runtime_launch_contract_test.py
+          python3 src/planning_inputs/test/object_filter_contract_test.py
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -42,6 +44,8 @@ jobs:
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
           ./devel/lib/planning_inputs/planning_motion_test
+          catkin_make planning_filter_test
+          ./devel/lib/planning_inputs/planning_filter_test
 
       - name: Check real ROS planning input boundary
         run: |

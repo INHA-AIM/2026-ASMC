@@ -12,7 +12,7 @@
   <arg name="objects_source" default="morai" doc="morai or lidar"/>
   <arg name="canonical_objects_topic" default="/planning/objects"/>
   <arg name="state_topic" default="/planning/vehicle/state"/>
-  <arg name="lidar_input_topic" default="/last_lidar"/>
+  <arg name="lidar_input_topic" default="/lidar/tracked_objects_map"/>
   <arg name="dashboard_lidar_objects_topic"
        default="/planning/objects"/>
   <arg name="dashboard_lidar_motion_debug_topic"

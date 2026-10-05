@@ -1,0 +1,42 @@
+# signal_false_positive.bag (2026-09-16)에서 반복 관측된 고정 신호시설의
+# map ENU 좌표 범위다. 좌표만으로 삭제하지 않고 코드의 다음 조건을 함께 만족해야 한다.
+#   - classification, yolo_class 모두 unknown
+#   - 높이 >= 2.5 m인 기둥 또는 OBB 하단 z >= 2.0 m인 가로대
+# 사람과 정상 분류 객체, 지면 가까운 차량/장애물에는 적용되지 않는다.
+zones:
+  # highway_false_positive.bag (2026-09-16)에서 자차 6.7~44 m 안에 반복해서
+  # 관측된 고속구간 벽/고정 구조물. 낮은 지면 튐은 아래 구조물 형상 조건을
+  # 만족하지 않으므로 보존된다.
+  - name: highway_wall_merge
+    bounds: [68.5, 71.5, -106.0, -102.0]
+    require_infrastructure_shape: false
+  - name: highway_static_center
+    bounds: [70.8, 74.2, -351.0, -346.0]
+  - name: highway_static_west
+    bounds: [66.0, 74.0, -371.5, -356.0]
+  - name: highway_static_east
+    bounds: [75.3, 78.5, -371.5, -356.0]
+  - name: highway_static_east_near
+    bounds: [75.3, 78.5, -351.0, -346.0]
+
+  # 경사면인데 단일 평면 RANSAC에서 빠져 장애물로 남은 구역. 사용자가 이
+  # 위치의 unknown 물체는 높이와 관계없이 제거하도록 지정했다.
+  - name: sloped_ground_artifact_west
+    bounds: [-81.0, -78.4, -45.2, -43.2]
+    require_infrastructure_shape: false
+  - name: signal_far_south_overhead
+    bounds: [-69.9, -69.0, -127.6, -126.0]
+  - name: signal_east_group
+    bounds: [-49.5, -47.2, -18.2, -12.0]
+  - name: signal_center_south
+    bounds: [-58.8, -56.8, -36.7, -32.0]
+  - name: signal_center_middle
+    bounds: [-58.6, -56.0, -27.8, -21.5]
+  - name: signal_center_north
+    bounds: [-58.7, -56.0, -17.3, -11.0]
+  - name: signal_west_south
+    bounds: [-69.6, -67.0, -27.6, -22.8]
+  - name: signal_west_middle
+    bounds: [-69.1, -66.8, -18.1, -11.6]
+  - name: signal_west_north
+    bounds: [-68.2, -66.0, -10.5, -4.7]

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Exercise actual private topic subscriptions and legacy ROS wire conversion."""
+import copy
+import json
 import os
 import signal
 import subprocess
@@ -10,6 +12,7 @@ import rosgraph
 import rospy
 from asmc_msgs.msg import TrackedObject, TrackedObjectArray
 from geometry_msgs.msg import Point
+from std_msgs.msg import String
 from planning_inputs.msg import DetectedObject, DetectedObjectArray
 
 
@@ -61,13 +64,13 @@ def main():
                 ready.set()
         sub = rospy.Subscriber('/planning/objects', DetectedObjectArray,
                                callback, queue_size=2)
-        pub = rospy.Publisher('/last_lidar', LegacyTrackedObjectArray, queue_size=2)
+        pub = rospy.Publisher('/lidar/tracked_objects_map', LegacyTrackedObjectArray, queue_size=2)
         require(lambda: pub.get_num_connections() > 0, 'legacy LiDAR wire subscriber connects')
         frame = LegacyTrackedObjectArray()
         frame.header.frame_id = 'map'
         obj = TrackedObject()
         obj.id, obj.age, obj.miss_count = 731, 1, 0
-        obj.classification = 'car'
+        obj.classification = 'person'
         obj.cluster_center = Point(100, 100, 0.5)
         obj.obb_center = Point(100, 100, 0.5)
         obj.length, obj.width, obj.height = 4, 2, 1
@@ -88,6 +91,37 @@ def main():
         assert output.obb_corners == obj.obb_corners and output.vx == 2.5
         assert output.motion_state == DetectedObject.MOTION_UNKNOWN
         print('PASS legacy wire -> private objects preserves header, OBB and unknown velocity', flush=True)
+        # Exercise private publication filtering with the real pinned catalog.
+        reports = []
+        dbg = rospy.Subscriber('/planning/objects_debug', String,
+                               lambda msg: reports.append(json.loads(msg.data)), queue_size=20)
+        guard = copy.deepcopy(obj)
+        guard.id = 732
+        guard.classification = guard.yolo_class = 'unknown'
+        dx, dy = -4.0633 - obj.cluster_center.x, 134.2587 - obj.cluster_center.y
+        guard.cluster_center.x += dx; guard.cluster_center.y += dy
+        guard.obb_center.x += dx; guard.obb_center.y += dy
+        for point in guard.obb_corners:
+            point.x += dx; point.y += dy
+        frame.objects = [obj, guard]
+        deadline = time.monotonic() + 10
+        matched = None
+        while time.monotonic() < deadline:
+            frame.header.stamp = rospy.Time.now()
+            pub.publish(frame)
+            time.sleep(0.1)
+            for report in reports:
+                match = next((r for r in report['objects'] if r['id'] == 732), None)
+                if match is not None:
+                    matched = match
+            if matched is not None:
+                break
+        assert matched is not None, 'private filter diagnostics missing'
+        assert not matched['keep'] and not matched['known_static_keep']
+        assert matched['reference_id'] >= 0
+        assert all(732 not in [o.id for o in msg.objects] for msg in received)
+        print('PASS real known guardrail is excluded at private ROS publication boundary', flush=True)
+        dbg.unregister()
         pub.unregister()
         sub.unregister()
     finally:
