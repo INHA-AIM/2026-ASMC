@@ -1,25 +1,27 @@
-# 저장소 4-패키지 통합·HD Map 메타데이터·현장 배포 로드맵
+# 저장소 통합·HD Map·인지·현장 배포 로드맵
 
 > **문서 역할:** Working Proposal — 패키지 통합과 본선 배포를 위한 단계별 실행 계획
 > **작성 기준:** 2026-09-20 저장소와 현장 점검 반출 자료의 read-only 감사
 > **진행 상태:** 1·2단계, 3단계 P3-G local closeout, P4-A·P4-B·P4-C1~C6,
-> 5단계 P5-A~P5-E 완료. 다음은 LiDAR/fusion 기준선 계측과 담당자 공동 개선
+> 5단계 P5-A~P5-E 완료. 2026-10-05부터 독립 LiDAR 후보 패키지 경계를 추가한다.
+> 과거 LiDAR의 perception 흡수와 모든 노드 단일 실행기 계획은 현재 결정이 아니다.
 > **보호 범위:** `behavior_planner`, `frenet_planner`, `mpc_controller`,
 > planning 소유 Behavior/Frenet/MPC package는 이 계획의 일방적 이동·삭제 대상이 아니다.
-> read-only `lane_boundary_adapter`는 역할이 드러나도록 `src/lane_boundary_adapter/`로 이동했다.
+> read-only 음영 차선 어댑터는 현재 `src/jamming_lane_boundary_adapter/`에 둔다.
 
 ## 1. 결론
 
-팀이 직접 유지하는 ROS 코드는 다음 네 패키지를 정본으로 수렴시킨다.
+팀이 직접 유지하는 공통 ROS 코드는 다음 다섯 패키지로 나눈다.
 
 | 정본 패키지 | 책임 |
 |---|---|
 | `asmc_msgs` | 팀 내부 typed message의 유일한 공용 패키지 |
 | `asmc_bridge` | MORAI UDP 수신·제어 송신, sensor decode, 외부→내부 상태 정규화 |
 | `asmc_hd_map` | HD Map build/runtime, 차선·차로·주행가능영역, 체크포인트·미션 메타데이터 |
-| `asmc_perception` | camera/LiDAR/traffic-light inference, BEV·후처리·fusion, runtime 기록 |
+| `asmc_perception` | 카메라 객체·차선/주행영역·신호등, BEV·카메라 후처리 |
+| `asmc_lidar` | LiDAR+IMU 좌표·시간, 지면/구조물 근거, 군집/OBB와 향후 추적 |
 
-여기서 “네 패키지”는 **팀 소유 공용·인지 코드의 경계**다. 다음은 예외로 남긴다.
+이는 **팀 소유 공용·인지 코드의 경계**다. 독립 수집 패키지, 판제 소유 패키지와 음영 차선 어댑터는 별도다.
 
 - 판제 소유 패키지는 현재 이름과 경로를 유지한다.
 - `MORAI-ROS_morai_msgs`는 외부 wire contract이므로 `asmc_msgs`로 복사하지 않고 핀된
@@ -49,7 +51,7 @@ Phase 5 범위다.
 | `asmc_hd_map` + `mgeo_toolkit` | runtime·builder는 통합 완료, 외부 toolkit은 provenance 입력 | geometry parity 후 toolkit 의존 축소 |
 | `camera_semantic_perception` + `drivable_bev` + `traffic_light` | P4-C6 통합·검증 완료 | `asmc_perception` runtime/offline/training으로 이관하고 기존 ROS package 제거 |
 | `morai_3d_detection` | 실행·참조 0인 중단된 camera 3D 연구 | P4-C6에서 제거, 필요 시 Git history에서만 복원 |
-| `lidar+sensorfusion/src/Main` | 라이다 팀원이 개발 중인 nested workspace | handoff 전까지 위치·내부 `Msg`/`morai_msgs`를 그대로 유지 |
+| `lidar+sensorfusion/src/Main` | 재호의 기존 운영·비교용 nested workspace | 새 LiDAR 후보 검증·인계 전까지 rollback 기준으로 유지 |
 | `data_collection` | recorder·bag profile·replay와 dataset 도구 | 독립 package로 유지하고 내부 runtime/offline 경계만 정리 |
 | `src/learning` | README 1개뿐이던 빈 논리 폴더 | P4-C6에서 문서 이관 후 삭제 완료 |
 | `src/learning_by_cheating` | runtime·구 3-channel 학습·teacher BEV가 혼재했던 비-catkin 폴더 | 사용 중인 7-channel teacher BEV만 `tools/research/lbc_teacher_bev` 이관, 나머지는 Git 이력으로 보존 |
@@ -78,10 +80,11 @@ src/
 │   ├── launch/ · rviz/
 │   └── test/
 ├── asmc_perception/
-│   ├── src/asmc_perception/   # camera, lidar, traffic_light, bev, fusion
+│   ├── src/asmc_perception/   # camera objects, lane/road, traffic_light, bev
 │   ├── config/ · launch/ · rviz/
 │   ├── scripts/               # ROS node entrypoint만
 │   └── test/
+├── asmc_lidar/                # LiDAR+IMU, 지면/구조물/군집/OBB; 추적 확장
 ├── behavior_planner/          # 판제 소유, 현 위치 유지
 ├── frenet_planner/            # 판제 소유, 현 위치 유지
 ├── mpc_controller/            # 판제 소유, 현 위치 유지
@@ -109,12 +112,28 @@ catkin package 하나를 유지하면서도 실행 이미지가 학습 산출물
 | **1** | 계약·메타데이터 동결과 이동 안전망 | `asmc_msgs` v1, topic contract, 체크포인트/미션 schema, baseline manifest/tests | 없음 |
 | **2** | `asmc_hd_map` 제품화 | 최종 lane/lane-area/drivable bundle, global/local publisher, checkpoint·mission RViz | `link_node`는 parity 통과 뒤 가능 |
 | **3** | `asmc_bridge` 통합 | UDP·sensor·vehicle state 단일 package, dev/competition profile | 구 bridge는 field replay 통과 뒤 가능 |
-| **4** | `asmc_perception` 통합 | camera/LiDAR/traffic-light/BEV runtime 하나, offline tool 분리 | `learning*`, 중복 `Msg`·`morai_msgs`는 gate 뒤 가능 |
+| **4** | `asmc_perception` 통합 | camera/traffic-light/BEV runtime, offline tool 분리 | `learning*` 정리; LiDAR는 별도 패키지 |
 | **5** | 실행·시각화 정리 | 유지 가능한 실행 진입점, RViz/rqt, runtime 수락검증과 consumer handoff | 호환 wrapper 만료 뒤 가능 |
 | **6** | 현장 LAN2LAN·Docker 동결 | competition image, network profile, rehearsal report, 당일 runbook | 본선 직전 기능 삭제 금지 |
 
 각 단계는 별도 PR로 진행한다. rename과 동작 변경을 같은 PR에 넣지 않으며, 이전 경로를
 지우는 PR은 새 경로의 bag replay·launch smoke 결과를 첨부한 뒤 연다.
+
+### 2026-10-05 이후 역할과 우선순위
+
+독립 LiDAR 후보의 현재 인계 계약은 [L2-I1 문서](../packages/asmc_lidar/README.md)에 있다.
+LiDAR+IMU 단일 경로는 GPS·미션으로 일반/터널 알고리즘을 바꾸지 않는다. 구조물
+근거를 표시하지만 자동 억제는 기본 OFF다. 손재호는 이를 바탕으로 구조물 억제,
+군집·OBB/추적·속도를 단계별 회귀와 함께 개선한다. 기존 nested Main/Msg 및 운영
+출력은 새 계약이 판제와 검증되기 전까지 유지한다.
+
+사용자 측 독립 작업의 순서는 **개정 규정의 공식 근거 확인과 HD맵 갱신 → 카메라 객체
+검출의 asmc_perception 통합 및 LiDAR/음영 어댑터 공통 소비 계약 → 동시 실행 부하
+기준선 → YOLO 선택과 BDD100K 다음 기존 데이터로 TwinLiteNet+ 학습 비교 →
+LAN2LAN 리허설**이다. COCO의 person/car/truck/bus는 현재 호환 기준이며 클래스
+확장은 소비자별 시험 뒤 결정한다. BDD100K 라벨을 기존 white/yellow/stopline head에
+강제로 맞추지 않는다. bridge는 인지 실행기에 합치지 않고 별도 foreground Hz 로그를
+유지한다. LAN2LAN은 모든 연구 개선을 기다리지 않고 검증된 기준선으로 시험 가능하다.
 
 ## 5. 1단계 상세 계획 — 계약·메타데이터 동결
 

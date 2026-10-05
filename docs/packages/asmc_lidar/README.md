@@ -4,7 +4,20 @@
 
 ## 실행과 보는 방법
 
-브릿지는 기존처럼 별도 터미널에서 실행한다. Noetic 컨테이너의 `/root/ws`에서 빌드·환경을 올린 뒤:
+브릿지는 기존처럼 별도 터미널에서 실행한다. 이 독립 worktree를 시험하려면
+컨테이너의 `/root/ws`가 `asmc-lidar-integration`을 마운트했는지 먼저 확인한다.
+기존 `asmc-ros-noetic` 컨테이너가 다른 worktree를 마운트했다면 아래 `up`이
+**같은 이름의 컨테이너를 재생성**하므로 실행 중인 노드를 종료하고 전환할 때만 수행한다.
+`ASMC_DATA`와 `TWINLITE_SOURCE`를 별도로 지정했던 환경에서는 그 값을 유지한다.
+
+```bash
+cd /path/to/asmc-lidar-integration
+export ASMC="$PWD"
+./scripts/docker_ros_up.sh up
+docker exec asmc-ros-noetic test -f /root/ws/src/asmc_lidar/launch/unified.launch
+```
+
+이후 Noetic 컨테이너의 `/root/ws`에서 빌드·환경을 올린 뒤:
 
 ```bash
 source /opt/ros/noetic/setup.bash

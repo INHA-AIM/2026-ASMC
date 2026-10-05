@@ -5,16 +5,17 @@
 > **범위:** 본선·local 공통 실행 진입점. 학습·offline 분석·HD Map 생성용 내부
 > launch는 각 package README를 따른다.
 
-명령은 저장소 root가 host에서
-`/home/aim06/projects/2026-ai-sw-mobility-competition/2026-ASMC`, container에서
-`/root/ws`인 기준이다. ROS launch 인자는 `name:=value` 형태로 덮어쓴다.
+명령은 host에서 현재 저장소 root를 ASMC로 잡고, container에서는 `/root/ws`인
+기준이다. ROS launch 인자는 `name:=value` 형태로 덮어쓴다.
 
 ## 1. 가장 빠른 local 실행
 
 ### Host — container 준비
 
 ```bash
-cd /home/aim06/projects/2026-ai-sw-mobility-competition/2026-ASMC
+# 먼저 host에서 이 저장소 안의 아무 디렉터리로 이동
+export ASMC=$(git rev-parse --show-toplevel)
+cd "$ASMC"
 xhost +local:docker
 
 ./scripts/docker_ros_up.sh up
@@ -32,6 +33,31 @@ source devel/setup.bash
 
 bridge는 perception·planning 통합 명령에 포함하지 않는다. 항상 별도 terminal의 log와
 diagnostics를 보며 입력 Hz를 검사한다.
+
+### LiDAR 후보 별도 실행 — 개발·손재호 인계용
+
+현재 판제 입력을 바꾸지 않고 새 후보를 볼 때는 먼저 컨테이너 `/root/ws`가
+`feat/asmc-lidar-integration` worktree인지 확인한다. 다른 worktree를 마운트한
+`asmc-ros-noetic`을 `docker_ros_up.sh up`으로 전환하면 기존 노드가 종료되므로
+실행 중인 작업을 마친 뒤 전환한다. 자세한 절차는 [LiDAR L2-I1 인계](./packages/asmc_lidar/README.md)에 있다.
+bridge가 켜진 뒤 다른 터미널에서:
+
+~~~bash
+docker exec -it asmc-ros-noetic bash
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+roslaunch asmc_lidar unified.launch
+# 화면 없이: rviz:=false
+~~~
+
+이는 LiDAR+IMU만 필요하며 GPS·일반/터널 전환 모드가 없다. RViz의 주황색은 프레임별
+미분류 OBB, 청록색은 미확정 구조물 근거다. 구조물 자동 삭제는 OFF이고 판제의
+perception/objects 대체 입력이 아니다. 세 지면 방법 V4 비교는 단일 후보 launch를
+종료한 뒤 ground_compare_live.launch로 실행한다. Patchwork++는 연구용 미채택이다.
+[LiDAR L2-I1 인계](./packages/asmc_lidar/README.md)에 토픽·회귀·롤백을 정리했다.
+
+### 입력 Hz·브릿지 진단 (별도 터미널)
 
 ```bash
 rostopic hz /Ego_topic
