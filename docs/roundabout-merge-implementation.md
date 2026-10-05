@@ -372,3 +372,28 @@ prediction-handoff blockage. Two isolated first-run exit states still reject
 paths on map containment; those road checks remain active. Historical ego poses
 are fixed inputs, so replay does not prove closed-loop MORAI performance or
 retimed interaction with following vehicles.
+
+### Bounded body memory for partial observations
+
+Departure confidence no longer requires the observed vehicle width to remain
+constant. Reliable motion retains the maximum full-body bounds from up to eight
+observations in the preceding second. Partial observations do not refresh that
+one-second deadline; a sensor gap over 0.5 s resets both motion and body history.
+Invalid geometry, inconsistent fragment position, and partial-only new tracks
+cannot obtain a full-body certificate.
+
+The remembered body centre is propagated with measured velocity rather than
+following a shifting fragment centre. Bounds grow by 0.25 m plus 0.5 m per second
+of body age. These are supplemental planning rectangles: authoritative detected
+corners remain unchanged. Before departure, original objects and supplemental
+bodies must pass the existing straight and two perturbed-turn collision checks,
+including the existing front/rear time buffers. A remembered body therefore
+cannot bypass collision checks merely by restoring observation confidence.
+
+Validation for this change: 27 prediction cases and 27 candidate cases passed,
+including a narrow fragment that clears the route while its remembered body
+correctly rejects departure. Candidate checks use the production collision and
+gap implementation; the standalone build excludes only the YAML map loader.
+The changed execution translation unit passed a syntax check. Full ROS/catkin
+and historical bag replay were not rerun for this change: the prior workspace
+and bag copies were unavailable, and the uploaded bag could not be recovered.

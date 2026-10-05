@@ -1,5 +1,6 @@
 #include "frenet_planner/Maneuver/Merge/RoundaboutMerge.hpp"
 #include <iostream>
+#include "frenet_planner/Maneuver/Merge/RoundaboutPrediction.hpp"
 #include <cmath>
 int main(){
  int failures=0;auto expect=[&](bool ok,const char* name){std::cout<<(ok?"[PASS] ":"[FAIL] ")<<name<<'\n';failures+=!ok;};
@@ -42,5 +43,27 @@ int main(){
  expect(UnclassifiedCirculatingObject({lane_edge},zone,20,0)<0,"lane observation guard has a bounded two-metre extent");
  unknown.motion_state=ObjectMotionState::LOW_THREAT;
  expect(UnclassifiedCirculatingObject({unknown},zone,20,0)<0,"established static classification uses normal collision checks");
+ RoundaboutPrediction remembered;
+ auto body=box(90,25,2.5,0);body.vx=1;body.motion_state=ObjectMotionState::DYNAMIC;
+ auto observe_body=[&](double t,double length,double width,double y) {
+  body.x=25+(t-700);body.y=y;body.length=length;body.width=width;
+  for(int i=0;i<8;++i){double dx=(i%4==0||i%4==3)?-length/2:length/2;
+   double dy=i%4<2?-width/2:width/2;body.corners[i]={body.x+dx,body.y+dy,double(i/4)};}
+  remembered.Observe({body},t,.6);
+ };
+ for(int i=0;i<5;++i)observe_body(700+i*.1,4.8,2.1,2.5);
+ observe_body(700.5,1,.4,2.5);
+ auto envelope=remembered.ConservativeOccupancies({body});
+ expect(envelope.size()==1&&remembered.UncertainNear(25,0)<0,
+  "fresh whole-body history can certify confidence during partial visibility");
+ expect(check(path,{body}).safe,"a narrow visible fragment alone misses the body collision");
+ auto bounded=std::vector<TrackedObject>{body};bounded.insert(bounded.end(),envelope.begin(),envelope.end());
+ expect(!check(path,bounded).safe,"retained full-body occupancy still rejects that candidate through real collision checks");
+ expect(body.length==1&&body.width==.4,"supplemental occupancy preserves authoritative fragment geometry");
+ remembered.Reset();for(int i=0;i<5;++i)observe_body(701+i*.1,4.8,2.1,8);
+ observe_body(701.5,1,.4,8);envelope=remembered.ConservativeOccupancies({body});
+ bounded={body};bounded.insert(bounded.end(),envelope.begin(),envelope.end());
+ expect(envelope.size()==1&&check(path,bounded).safe,
+  "clear remembered body can certify departure without requiring a new full-size view");
  return failures?1:0;
 }

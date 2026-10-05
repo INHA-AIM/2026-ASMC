@@ -533,8 +533,12 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         planning_time-observation_stamp<=.25&&observation_stamp<=planning_time+.05;
     if(uncertain>=0)result.blocking_object_id=uncertain;
     if(result.candidate_valid&&early_departure_clear){
+        // Confidence carried through partial visibility is valid only when the
+        // last full body's conservative occupancy passes the same gap checks.
+        const auto body_bounds=roundabout_prediction_.ConservativeOccupancies(obstacles);
         for(double perturbation:{0.0,-.15,.15}){
             auto alternative=ctx.predicted_obstacles;
+            alternative.insert(alternative.end(),body_bounds.begin(),body_bounds.end());
             for(auto& object:alternative)object.yaw_rate=perturbation==0||std::hypot(object.vx,object.vy)<.5?0:
                 std::clamp(object.yaw_rate+perturbation,
                     -object_tracking_cfg_.yaw_rate_clamp_rad_s,object_tracking_cfg_.yaw_rate_clamp_rad_s);
