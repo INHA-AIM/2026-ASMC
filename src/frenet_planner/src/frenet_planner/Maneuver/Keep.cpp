@@ -579,6 +579,22 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
             return PlanExternalKeepLowSpeedFallback(ego, s, d,
                                                      resolved_target_speed, out_path);
         }
+        // A collision in the coast extension does not imply that braking is
+        // unsafe. Try a fresh, fully checked stopping trajectory so lateral
+        // tracking can continue during deceleration. Never reuse a blocked path.
+        if (external_keep && !external_stop_mode &&
+            last_failure_reason_ == PlanFailureReason::COLLISION_BLOCKED &&
+            PlanCollisionBrakingPath(ego, s, d, predicted_obstacles, out_path)) {
+            speed_profiler_.Reset();
+            last_profiled_acceleration_ = 0.0;
+            last_target_speed_ = 0.0;
+            last_failure_reason_ = PlanFailureReason::NONE;
+            last_candidate_paths_.push_back(out_path);
+            last_candidate_validity_.push_back(true);
+            std::printf("[FrenetPlanner-SAFETY] collision-checked KEEP braking: "
+                        "speed=%.2f samples=%zu\n", ego.v, out_path.v.size());
+            return true;
+        }
         if (external_keep) {
             speed_profiler_.Reset();
             last_profiled_acceleration_ = 0.0;

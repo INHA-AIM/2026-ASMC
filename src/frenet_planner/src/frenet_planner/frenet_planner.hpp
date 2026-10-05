@@ -1156,6 +1156,12 @@ private:
     // 프로파일: v(t) = max(0, v0 - decel*t), s는 사다리꼴 적분, d는 현재
     // 오프셋 유지(정지 직전이라 횡방향 기동을 하지 않는다).
     // 모든 샘플에서 v >= 0이고 마지막 샘플은 v = 0이다.
+    // Fresh collision- and road-checked braking fallback for blocked KEEP.
+    // Includes the stopped footprint through the reactive prediction horizon.
+    bool PlanCollisionBrakingPath(const CartesianState& ego, double s, double d,
+                                 const std::vector<TrackedObject>& obstacles,
+                                 CartesianPath& out_path) const;
+
     bool GenerateDecelToZeroPath(double s, double d, double s_dot,
                                  CartesianPath& out_path) const;
 

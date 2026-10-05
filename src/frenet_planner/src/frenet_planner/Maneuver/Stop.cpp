@@ -15,10 +15,87 @@
 #include "frenet_planner/frenet_planner.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 
 #include "frenet_planner/Maneuver/ManeuverUtils.hpp"
+#include "frenet_planner/Math/Polynomial.hpp"
+
+
+bool FrenetPlanner::PlanCollisionBrakingPath(
+    const CartesianState& ego, double s, double d,
+    const std::vector<TrackedObject>& obstacles, CartesianPath& out_path) const {
+    const double dt = path_cfg_.dt;
+    const double accel = limits_.max_longitudinal_accel;
+    const double jerk = limits_.max_longitudinal_jerk;
+    if (!std::isfinite(ego.v) || !std::isfinite(ego.a) || ego.v <= .1 ||
+        accel <= 0 || jerk <= 0 || dt <= 0 || std::fabs(ego.a) > accel)
+        return false;
+
+    // Exact three-stage jerk-limited stop: ramp to negative acceleration,
+    // hold it if needed, then ramp back to zero at zero velocity.
+    const double peak = std::min(accel, std::sqrt(jerk*ego.v + .5*ego.a*ego.a));
+    const double down = (ego.a + peak)/jerk;
+    const double v1 = ego.v + (ego.a*ego.a - peak*peak)/(2*jerk);
+    const double raw_hold = (v1 - peak*peak/(2*jerk))/peak;
+    if (down < 0 || raw_hold < -1e-8) return false;
+    const double hold = std::max(0.0, raw_hold);
+    const double up = peak/jerk;
+    const double end = down + hold + up;
+    const double d1 = ego.v*down + .5*ego.a*down*down - jerk*down*down*down/6;
+    const double d2 = d1 + v1*hold - .5*peak*hold*hold;
+    const double v2 = v1 - peak*hold;
+    const double stop_distance = d2 + v2*up - .5*peak*up*up + jerk*up*up*up/6;
+    const auto motion = [&](double t) -> std::array<double,3> {
+        if (t < down)
+            return {ego.v*t + .5*ego.a*t*t - jerk*t*t*t/6,
+                    ego.v + ego.a*t - .5*jerk*t*t, ego.a - jerk*t};
+        t -= down;
+        if (t < hold) return {d1 + v1*t - .5*peak*t*t, v1 - peak*t, -peak};
+        t -= hold;
+        if (t < up)
+            return {d2 + v2*t - .5*peak*t*t + jerk*t*t*t/6,
+                    v2 - peak*t + .5*jerk*t*t, -peak + jerk*t};
+        return {stop_distance, 0.0, 0.0};
+    };
+
+    const auto rp0 = Interpolate(ref_, s);
+    const double slope = (1-rp0.kappa*d)*
+        std::tan(std::remainder(ego.yaw-rp0.theta, 2*M_PI));
+    if (!std::isfinite(slope)) return false;
+    // Same gradual centering distance as AVOID's braking maintenance path.
+    const double settle = std::max(10.0, std::min(25.0, ego.v*2.5));
+    const auto lateral = MakeQuintic(d, slope, 0, 0, 0, 0, settle);
+    const double duration = std::max(end+dt, collision_cfg_.reactive_lookahead);
+    if (!std::isfinite(duration) || duration/dt > 1000) return false;
+    const int count = static_cast<int>(std::ceil(duration/dt));
+    CartesianPath path;
+    double u = 0, previous_distance = 0, previous_metric = 1;
+    for (int n=0; n<=count; ++n) {
+        const auto state = motion(n*dt);
+        if (n) u += (state[0]-previous_distance)/previous_metric;
+        previous_distance = state[0];
+        const auto rp = Interpolate(ref_, s+u);
+        const double q = std::min(u, settle);
+        const double offset = EvalPos(lateral,q), prime = EvalVel(lateral,q);
+        const double second = EvalAcc(lateral,q);
+        const double metric = std::hypot(1-rp.kappa*offset,prime);
+        if (!std::isfinite(metric) || metric < .1) return false;
+        previous_metric = metric;
+        const double v = std::max(0.0,state[1]), a = state[2];
+        const auto point = FrenetToCartesian(rp,s+u,v/metric,a/metric,offset,prime,second);
+        if (!std::isfinite(point.kappa) || std::fabs(point.kappa)>limits_.max_curvature ||
+            v*v*std::fabs(point.kappa)>limits_.max_lateral_accel) return false;
+        path.x.push_back(point.x);path.y.push_back(point.y);path.yaw.push_back(point.yaw);
+        path.kappa.push_back(point.kappa);path.v.push_back(v);path.a.push_back(a);
+    }
+    path.x[0]=ego.x;path.y[0]=ego.y;path.yaw[0]=ego.yaw;path.kappa[0]=ego.kappa;
+    if (!avoid_road_map_.EvaluateRecoveryPath(path,vehicle_shape_,dt).drivable ||
+        !CartesianTrajectoryClear(path,obstacles,vehicle_shape_,collision_cfg_,dt)) return false;
+    out_path=std::move(path);
+    return true;
+}
 
 bool FrenetPlanner::EmergencyStopProcess(const CartesianState& ego, double s,
                                                double d, double s_dot,
@@ -186,3 +263,4 @@ bool FrenetPlanner::StopProcess(
         predicted_obstacles, resolved_target_speed, external_command,
         out_path);
 }
+

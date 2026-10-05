@@ -330,9 +330,62 @@ int main() {
     Expect(!planner.Plan(ego, no_objects, unsupported, path),
            "external non-KEEP command remains unsupported");
 
+    // Public-route synthetic obstacle: it blocks the constant-speed coast
+    // extension, while a real stop before it is safe. Keep lateral tracking
+    // during braking rather than returning a one-point STOP.
+    FrenetPlanner collision_braking;
+    Expect(collision_braking.Init(config), "collision braking planner initializes");
+    CartesianState braking_ego = OffsetPose(
+        LoadPoseNearArcLength(waypoints,260.0,12.0),-.2);
+    braking_ego.a = .3;
+    const auto distant_pose = LoadPoseNearArcLength(waypoints,325.0,0.0);
+    auto distant_box = MakeAuthoritativeBox(801,distant_pose.x,distant_pose.y);
+    distant_box.motion_state = ObjectMotionState::LOW_THREAT;
+    PlannerCommand braking_keep{};
+    braking_keep.mode = LANE_KEEPING;
+    braking_keep.has_target_speed = true;
+    braking_keep.target_speed = 12.0;
+    CartesianPath braking_path;
+    const bool braking_ok = collision_braking.Plan(
+        braking_ego,{distant_box},braking_keep,braking_path);
+    Expect(braking_ok && braking_path.v.size()>2 && braking_path.v.back()==0,
+           "coast collision yields a fresh stopping trajectory");
+    bool braking_bounds = braking_ok && !braking_path.v.empty() &&
+        std::fabs(braking_path.v.front()-braking_ego.v)<1e-9 &&
+        std::fabs(braking_path.a.front()-braking_ego.a)<1e-9 &&
+        braking_path.a.back()==0;
+    const double braking_dt = collision_braking.sample_dt();
+    for(std::size_t i=1;i<braking_path.v.size();++i){
+        braking_bounds = braking_bounds &&
+            std::fabs(braking_path.a[i])<=3.0001 &&
+            std::fabs(braking_path.v[i]-braking_path.v[i-1])/braking_dt<=3.0001 &&
+            std::fabs(braking_path.a[i]-braking_path.a[i-1])/braking_dt<=6.0001;
+    }
+    Expect(braking_bounds,"collision braking respects measured v/a and accel/jerk limits through standstill");
+    Expect(braking_ok && (braking_path.v.size()-1)*braking_dt>=8.0 &&
+           IsCartesianTrajectoryTimeConsistent(braking_path,braking_dt),
+           "stopped footprint remains predicted through the full safety horizon");
+    AvoidRoadMap braking_map;std::string braking_map_error;
+    Expect(braking_map.Load(package_src+"/../config/hd_map/drivable.json",
+                           package_src+"/../config/hd_map/lines.json",braking_map_error),
+           "braking map loads");
+    VehicleShape braking_shape{};braking_shape.width=1.9;
+    braking_shape.length=4.635;braking_shape.rear_overhang=.79;
+    Expect(braking_ok && braking_map.PathClear(braking_path,braking_shape),
+           "collision braking remains inside the original road mask");
+    FrenetPlanner physically_blocked;
+    Expect(physically_blocked.Init(config),"physical collision planner initializes");
+    auto near_box = MakeAuthoritativeBox(802,braking_ego.x,braking_ego.y);
+    near_box.motion_state=ObjectMotionState::LOW_THREAT;
+    CartesianPath blocked_path;
+    Expect(!physically_blocked.Plan(braking_ego,{near_box},braking_keep,blocked_path) &&
+           physically_blocked.last_failure_reason()==FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED,
+           "braking fallback cannot override an actual body collision");
+
     if (g_failures == 0) {
         std::cout << "All command KEEP plan tests passed\n";
         return 0;
     }
     return 1;
 }
+
