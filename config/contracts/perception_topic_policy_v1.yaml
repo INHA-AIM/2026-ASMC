@@ -394,6 +394,19 @@ topic_families:
     p5b_action: consolidate_p5b
     rationale: Keep boundaries and reprojection available while grouping secondary stages behind a comparison preset.
 
+  - id: traffic_light_visualization
+    topics:
+      - {pattern: /perception/traffic_light/debug/image/compressed, type: sensor_msgs/CompressedImage}
+    producer:
+      file: src/asmc_camera/src/asmc_camera/nodes/traffic_light_visualizer_node.py
+      anchors: ['"/perception/traffic_light/debug/image/compressed"', 'get_num_connections() == 0']
+    consumers: []
+    bag_profiles: []
+    classification: debug_opt_in
+    current_mode: visualization_launch_and_subscriber_lazy
+    p5b_action: keep
+    rationale: The typed result drawn on its exact source frame is the visual traffic-light check; it starts only when visualization and the traffic-light producer are both enabled.
+
   - id: traffic_light_typed
     topics:
       - {pattern: /perception/traffic_light/detection, type: asmc_msgs/TrafficLightDetection}

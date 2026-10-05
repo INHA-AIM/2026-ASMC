@@ -109,6 +109,19 @@ calibration으로 투영·융합한 원본 RGB BEV와 fused semantic BEV를 같�
 렌더링하고 JPEG를 발행한다.
 `start_visualization`은 개발·검수용이고 기본값은 false다. 평상시 주행에는 필요하지 않다.
 
+신호등은 `start_traffic_light:=true`를 함께 주면 `camera_traffic_light_visualizer`가 추가로 뜬다.
+
+```bash
+roslaunch asmc_camera perception.launch start_visualization:=true start_traffic_light:=true
+asmc-ros-gui rqt-image /perception/traffic_light/debug/image/compressed
+```
+
+이 영상은 typed `/perception/traffic_light/detection`을 같은 stamp의 `/cam_extra` 원본 위에
+그린다. 테두리는 판정 색(빨강·노랑·초록, 무효·stale·미검출은 회색)이고, 왼쪽 위에 label과
+confidence, VALID/STALE/INVALID, 추론 시간, 상위 3개 후보가 표시된다. 같은 stamp의 원본이
+캐시에 없으면 최신 프레임 위에 그리고 그 사실을 문구로 남긴다. 다른 debug 영상처럼
+subscriber가 있을 때만 렌더링한다.
+
 이전 camera별 panel, fused/fused-quality, lane evidence/fitted/boundary/reprojection 영상이
 필요한 한시적 비교에서는 `visualization_legacy_rqt:=true`를 추가한다. camera별 지면
 calibration grid는 별도 `visualization_calibration_grid:=true`로만 켠다. RViz marker는

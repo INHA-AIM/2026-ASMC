@@ -107,6 +107,7 @@
       <arg name="bev_grid_config" value="$(arg bev_grid_config)"/>
       <arg name="legacy_rqt" value="$(arg visualization_legacy_rqt)"/>
       <arg name="calibration_grid" value="$(arg visualization_calibration_grid)"/>
+      <arg name="traffic_light" value="$(arg start_traffic_light)"/>
     </include>
   </group>
 

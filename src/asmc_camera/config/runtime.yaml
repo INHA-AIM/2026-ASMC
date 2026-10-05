@@ -52,6 +52,10 @@ components:
     mission_activation_status: pending_hd_map_zone_integration
   visualization:
     enabled_by_default: false
+    traffic_light_overlay:
+      enabled_by_default: false
+      enabled_with: [start_visualization, start_traffic_light]
+      image_topic: /perception/traffic_light/debug/image/compressed
     image_topics:
       - /perception/camera/debug/mosaic/compressed
       - /perception/bev/debug/comparison/compressed
