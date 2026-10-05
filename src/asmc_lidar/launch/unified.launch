@@ -1,0 +1,34 @@
+<launch>
+  <!-- One LiDAR+IMU path for all roads and GPS conditions. No mission/tunnel mode. -->
+  <arg name="rviz" default="true"/>
+  <arg name="start_bridge" default="false"/>
+  <arg name="transport_profile" default="local"/>
+  <arg name="stream_profile" default="competition"/>
+  <arg name="timestamp_mode" default="receive"/>
+  <arg name="cloud_topic" default="/velodyne_points"/>
+  <arg name="imu_topic" default="/imu"/>
+  <arg name="expected_lidar_frame" default="velodyne"/>
+  <arg name="map_adapter" default="true"/>
+  <arg name="legacy_yolo_bridge" default="false"/>
+  <include file="$(find asmc_lidar)/launch/ground_compare_live.launch">
+    <arg name="method" value="jaeho"/>
+    <arg name="comparison_config" value="$(find asmc_lidar)/config/ground_v4/jaeho_support.yaml"/>
+    <arg name="publish_unified" value="true"/>
+    <arg name="node_name" value="unified_lidar"/>
+    <arg name="rviz" value="false"/>
+    <arg name="start_bridge" value="$(arg start_bridge)"/>
+    <arg name="transport_profile" value="$(arg transport_profile)"/>
+    <arg name="stream_profile" value="$(arg stream_profile)"/>
+    <arg name="timestamp_mode" value="$(arg timestamp_mode)"/>
+    <arg name="cloud_topic" value="$(arg cloud_topic)"/>
+    <arg name="imu_topic" value="$(arg imu_topic)"/>
+    <arg name="expected_lidar_frame" value="$(arg expected_lidar_frame)"/>
+  </include>
+  <node if="$(arg map_adapter)" pkg="asmc_lidar" type="asmc_lidar_map_adapter_node"
+        name="lidar_map_adapter" output="screen"/>
+  <!-- Optional only: requires the old nested Msg overlay, not the default build. -->
+  <node if="$(arg legacy_yolo_bridge)" pkg="asmc_lidar" type="legacy_yolo_bridge.py"
+        name="lidar_legacy_yolo_bridge" output="screen"/>
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="unified_lidar_rviz"
+        args="-d $(find asmc_lidar)/rviz/unified.rviz"/>
+</launch>

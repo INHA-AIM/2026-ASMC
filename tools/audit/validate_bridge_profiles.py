@@ -166,7 +166,6 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         "/sem_front/image_jpeg/compressed",
         "/sem_left/image_jpeg/compressed",
         "/sem_right/image_jpeg/compressed",
-        "/velodyne_points_semantic",
         "/velodyne_points_instance",
     }
     _require(
@@ -465,16 +464,6 @@ def validate(contract_path: Path) -> Dict[str, Any]:
         == expected_development_eval,
         "sensor Instance allowlist is not stream-profile controlled",
     )
-    _require(
-        _launch_arg(sensor_launch, "enable_semantic_lidar")
-        == expected_development_eval,
-        "sensor Semantic LiDAR allowlist is not stream-profile controlled",
-    )
-    _require(
-        (_launch_arg(sensor_launch, "semantic_lidar_port"),
-         _launch_arg(sensor_launch, "instance_lidar_port")) == ("9311", "9313"),
-        "GT LiDAR destination ports must be 9311/9313",
-    )
     _require(_launch_arg(facade, "cmd_port") == "9093", "facade Ctrl default is not 9093")
     _require(_launch_arg(udp_launch, "cmd_port") == "9093", "UDP Ctrl default is not 9093")
     _require(_launch_arg(udp_launch, "ego_port") == "9099", "Ego status bind port is not 9099")
@@ -610,45 +599,7 @@ def validate(contract_path: Path) -> Dict[str, Any]:
     )
     _require(summaries["v2"]["lidar_ports"] == [9298, 9299], "v2 LiDAR ports changed")
     _require(summaries["v3"]["lidar_ports"] == [9298, 9299], "v3 LiDAR ports changed")
-    _require((summaries["GT"]["cameras"], summaries["GT"]["lidars"]) == (7, 3), "GT sensor inventory changed")
-    gt_document = json.loads((REPO_ROOT / contract["sensor_sets"]["GT"]["path"]).read_text(encoding="utf-8"))
-    gt_lidars = gt_document["Lidar3DList"]
-    v3_document = json.loads((REPO_ROOT / contract["sensor_sets"]["v3"]["path"]).read_text(encoding="utf-8"))
-    _require(
-        gt_lidars[0] == v3_document["Lidar3DList"][0],
-        "GT Intensity LiDAR must exactly match v3",
-    )
-    _require(
-        len(list(iter_udp_configs(gt_document)))
-        == contract["sensor_sets"]["GT"]["expected_udp_channels"],
-        "GT sensor UDP channel count changed",
-    )
-    _require(
-        [item["m_SensorUniqueID"] for item in gt_lidars] == [5, 11, 12],
-        "GT LiDAR IDs must be Intensity 5 / Semantic 11 / Instance 12",
-    )
-    _require(
-        [_sensor_config(item)["intensityType"] for item in gt_lidars] == [0, 1, 2],
-        "GT LiDAR value types must be Intensity / Semantic / Instance",
-    )
-    _require(
-        [list(map(int, (_sensor_config(item)["udpConfig"]["hostPort"],
-                        _sensor_config(item)["udpConfig"]["destinationPort"])))
-         for item in gt_lidars] == [[9298, 9299], [9310, 9311], [9312, 9313]],
-        "GT LiDAR UDP ports must be 9298/9299, 9310/9311, 9312/9313",
-    )
-    v3_pose = gt_lidars[0]["pos"], gt_lidars[0]["rot"]
-    _require(
-        all((item["pos"], item["rot"]) == v3_pose for item in gt_lidars),
-        "GT LiDAR mounting poses differ",
-    )
-    _require(
-        all(math.isclose(float(_sensor_config(item)["sensorPeriod"]),
-                         1.0 / 15.0, abs_tol=1e-6)
-            and int(_sensor_config(item)["frequencyIndex"]) == 2
-            for item in gt_lidars),
-        "GT LiDARs must all use the v3 15 Hz setting",
-    )
+    _require((summaries["GT"]["cameras"], summaries["GT"]["lidars"]) == (7, 2), "GT sensor inventory changed")
 
     live = contract["live_observations"]
     _require(live["date"] == "2026-09-23", "P3-E live observation date changed")

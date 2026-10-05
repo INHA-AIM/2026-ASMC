@@ -18,15 +18,15 @@ roslaunch asmc_lidar ground_compare_live.launch method:=linefit
 roslaunch asmc_lidar ground_compare_live.launch method:=patchwork patchwork_variant:=fixed_height
 ```
 
-기본은 `method:=all rviz:=true start_bridge:=false`다. 함께 켠 bridge는
+기본은 `method:=all rviz:=true start_bridge:=false`와 V4 전체 비교 설정이다. 함께 켠 bridge는
 `local / competition / receive` 설정과 기존 Hz 로그를 사용한다.
 기존 bridge가 `source` 시각으로 실행 중이면 그 설정을 바꾸지 않고 진단에
 실제 시각 출처를 표시한다. 단순히 launch 기본값을 측정 시각의 증거로 쓰지 않는다.
 
 ### 환경 조정 설정 선택
 
-`comparison_config`의 기본은 빈 값이며 기존 V1을 유지한다. 아래는 채택된
-새 기본값이 아니라 **검토용 설정을 명시적으로 선택하는 예시**다.
+현재 `comparison_config` 기본은 `ground_v4/comparison_all.yaml`이다. V1 재현은
+`comparison_config:=""`로 명시한다. 아래는 **과거 검토용 설정**을 선택하는 예시다.
 
 ```bash
 # linefit 처리 누락 수정만 적용. 다른 두 방법의 설정은 기존 그대로.
@@ -64,7 +64,7 @@ Patchwork++ 보완안은 `method:=patchwork`와
 곧 구조물 삭제를 뜻하지 않는다. 지원 평면은 시도 번호 4이며 상태에
 `ground_anchor_used`로 표시된다. `valid`는 입력 상태이지 전 영역 지면/객체 검출
 성공이 아니다. 이전 기준은 `ground_v3/roll_pitch_all.yaml`로 복귀한다.
-기본값과 운영 Main/판제 입력은 변경하지 않았다.
+비교 launch 기본값은 V4로 변경했지만 운영 Main/판제 입력은 변경하지 않았다.
 
 ### 출력 해석
 

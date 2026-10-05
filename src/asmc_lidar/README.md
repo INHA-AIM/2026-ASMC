@@ -1,4 +1,11 @@
-# asmc_lidar — 독립 LiDAR 실행·검토 패키지 (L2-A1/A2/V4)
+# asmc_lidar — 단일 LiDAR 후보 실행과 지면 연구 비교
+
+> **현재 실행·인계 정본:** [L2-I2 인계](../../docs/packages/asmc_lidar/l2i2-handoff-20261005.md).
+> `unified.launch`는 GPS/미션 모드 없이 V4 지면·군집/OBB·후보 추적을 계산하고
+> `base_link` 객체를 발행한다. 검증된 pose가 있으면 별도 노드가 `map` 후보를 발행한다.
+> 구조물 자동 억제는 OFF, 판제 운영 `/perception/objects`는 그대로다.
+> 아래 L2-A1/A2 항목은 연구·재현 이력이며, 과거의 “추적 없음” 설명은
+> 연구용 `review.launch`를 가리킨다.
 
 손재호 `6435af1`의 **프레임별** 터널 제거·군집·L-shape OBB를 재현하고,
 동일 입력에 Patchwork++ 지면 분할을 독립적으로 돌린다. 운영 LiDAR의
@@ -11,7 +18,8 @@ TRAVEL AOS는 이 패키지에 채택하지 않았다. 기존 데이터에서 �
 ### 최신 선택: 재호 평면 높이 검사 + 동일 scan 지원 영역 보완
 
 [V4 보고서](../../docs/packages/asmc_lidar/l2a2-v4-ground-selection-20261005.md)의
-후속 개발 기준은 `jaeho_support`다. **운영 승인/기본값 변경은 아니다.**
+후속 개발 기준은 `jaeho_support`다. **판제 운영 승인은 아니다.**
+L2-I1에서는 개발용 세 방법 비교 launch의 기본 설정만 V4 전체 비교로 바꿨다.
 일반도로 RANSAC의 잘못된 지면 선택을 줄였지만 기존 객체 하부 삭제와 터널
 잔여 마스크 변화는 남는다. 전용 터널 필터·군집·tracker 전체의 개선으로 해석하지 않는다.
 
@@ -31,7 +39,7 @@ Patchwork++ 연구 후보는 `method:=patchwork`,
 장애물 소실로 미채택했으므로 운영에 사용하지 않는다.
 한 master에서 동일 비교 launch를 여러 개 켜지 않는다.
 
-되돌리기는 `ground_v3/roll_pitch_all.yaml`을 선택한다. 설정 생략은 기존 V1이다.
+과거 V1을 재현하려면 `comparison_config:=""`를 명시한다.
 출력은 계속 rear-axle base_link이며 기존 Main/판제 입력과 연결되지 않는다.
 
 ### 실시간 세 방법 지면 비교
@@ -56,8 +64,8 @@ rear-axle `base_link`이며 GT 없이 작동한다. `nonground`는 장애물 확
 [객체 하부와 잔여 표면 구조 평가](../../docs/packages/asmc_lidar/l2a2-v1-live-ground-review-20261004.md),
 [재실행 도구](../../tools/lidar/ground_live_review/README.md)를 본다.
 
-환경 조정 검토는 선택적인 `comparison_config`로 실행한다. **생략하면 V1을
-그대로 사용하며 튜닝 후보나 linefit 누락 수정을 자동 적용하지 않는다.**
+환경 조정 검토는 선택적인 `comparison_config`로 실행한다. **현재 비교 launch에서
+생략하면 V4 전체 비교를 사용한다.** 아래 V2 설정은 과거 실험을 명시적으로 재현할 때 쓴다.
 
 ```bash
 # 파라미터 조정 없이 linefit의 sector/점 처리 누락만 수정한 대조군
@@ -73,8 +81,8 @@ roslaunch asmc_lidar ground_compare_live.launch \
 ### V3 공통 roll·pitch 및 터널 평면 진단 (연구용)
 
 V3 설정을 **명시적으로** 선택하면 같은 scan의 roll·pitch를 세 방법에
-적용하고 linefit의 모든 sector·점을 처리한다. 생략하면 기존 pitch-only
-V1이며 운영 LiDAR나 판제 토픽은 바뀌지 않는다.
+적용하고 linefit의 모든 sector·점을 처리한다. 현재 V4 비교 기본값도 같은
+roll·pitch와 linefit 전체 sector를 사용한다. 판제 토픽은 바뀌지 않는다.
 
 ```bash
 roslaunch asmc_lidar ground_compare_live.launch \
@@ -142,7 +150,8 @@ RViz의 `ground`와 `nonground`는 모드에 따라 출처가 달라진다. `gro
 `nonground`는 장애물 확정이 아니고, `reference`의 `uncertain`은 벽·천장 등
 기준선이 제외한 점이다. 카메라 입력을 연결하지 않은 실시간 실행은 명시적으로
 `missing`이며 유효 빈 검출이나 보호 OFF로 취급하지 않는다. 위치가 필요한
-판제용 `map` 객체·추적 ID·속도는 발행하지 않는다.
+판제용 `map` 객체·추적 ID·속도는 이 **연구용** `review.launch`에서 발행하지 않는다.
+신규 `unified.launch`의 별도 후보 토픽은 L2-I2 인계를 따른다.
 
 ## 고정 Capture 재생
 

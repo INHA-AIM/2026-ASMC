@@ -21,15 +21,6 @@
 | GT·BEV·lane 정책의 상세 근거 | [BEV/lane design note](./bev-lane-interface-plan.md) | Dated Detailed Design Note |
 | camera/map/LiDAR 개발 과정과 열린 결정 | [fusion roadmap](./roadmap.md) | Working Proposal + Chronological Record |
 | LiDAR 패키지의 현재 완성도와 개선 계획 | [LiDAR assessment](./lidar-assessment-and-roadmap.md) | Assessment Record + Working Proposal |
-| LiDAR 정차·오프라인 평가와 판제 인계 기준선 | [L1-A 검증 기록](./lidar-l1a-validation-20260926.md) · [소비 계약](../../contracts/perception/lidar-planning-consumer-v1.md) | Pinned Experiment Record · Design Frozen |
-| 격리 좌표·시간 변환 코어와 전후 비교 | [L1-B1 검증 기록](./lidar-l1b1-validation-20260927.md) · [재실행](../../../tools/lidar/frame_time/README.md) | Isolated Validation · 운영 미연결 |
-| LiDAR GPS 건강 상태·local/map 출력 선택 | [L1-B2 검증 기록](./lidar-l1b2-validation-20260927.md) · [재실행](../../../tools/lidar/gps_transition/README.md) | Isolated Candidate · 운영 미연결 |
-| LiDAR YOLO11m 도착 지연·보호 매칭 | [L1-B3 검증 기록](./lidar-l1b3-validation-20260928.md) · [재실행](../../../tools/lidar/camera_sync/README.md) | Causal scheduler validated · geometry/운영 미수락 |
-| LiDAR 보호 매칭 filter geometry와 AIM 자료 적합성 | [L1-B3-G](./lidar-l1b3g-validation-20260928.md) · [평가기](../../../tools/lidar/camera_sync/README.md) | 격리 replay 완료 · valid-empty fallback 위험 · 운영 미채택 |
-| 독립 벽 기하 보호·객체/OBB 분리 비교 | [L1-B4-A](./lidar-l1b4-validation-20260929.md) · [재실행](../../../tools/lidar/tunnel_geometry/README.md) | 합성 진급 통과 · 실제 구조물 조각 문제 · 운영 미채택 |
-| 실제 Autonav Capture GT 객체점·군집 비교 | [L1-B4-B](./lidar-l1b4b-capture-validation-20260929.md) · [재실행](../../../tools/lidar/capture_validation/README.md) | 105장면 격리/반복 검증 · 기하 후보 미채택 유지 · 다음은 군집화 비교 |
-| 고정 제거 마스크의 raw Euclidean/TRAVEL AOS 비교 | [L1-B5-A](./lidar-l1b5a-clustering-validation-20260929.md) · [재실행](../../../tools/lidar/clustering_compare/README.md) | Capture 투영 gate 차단 · 합성 회귀 · 운영 미채택 |
-| 독립 LiDAR 기준선·Patchwork++ adapter | [L2-A1 검증](../asmc_lidar/l2a1-runtime-review-20261002.md) · [새 패키지](../../../src/asmc_lidar/README.md) | Capture 210조건 기준선 parity · 운영 토픽 미연결 |
 | 특정 checkpoint의 학습 결과 | [v4 evaluation](../../records/perception/twinlitenet-v4-evaluation.md) | Experiment Record |
 | 현재 topic 소비·bag 사용과 P5 정리 gate | [P5-A topic audit](../../records/baselines/perception-p5a-topic-audit-v1.md) | Frozen Input Audit |
 | 실행 중 node/topic/rate/stamp/frame/consumer 검증 | [P5-C runtime acceptance](../../records/baselines/perception-p5c-runtime-acceptance-v1.md) | Active Acceptance Gate |
@@ -148,8 +139,7 @@ detection과 기존 문자열 state·JSON detail을 병행 발행한다. `behavi
 `asmc_perception` launch가 유일한 producer이고, planning 쪽 `traffic_light:=true`는 독립 호환
 시험에만 사용한다.
 
-현재 운영 LiDAR runtime은 독립 nested catkin workspace다. `asmc_lidar`는 별도 격리
-review 패키지이며 판제 입력을 대체하지 않는다. outer workspace의 sensor bridge를 먼저 띄우고
+LiDAR runtime은 독립 nested catkin workspace다. outer workspace의 sensor bridge를 먼저 띄우고
 별도로 build/run한다. current object topic, time matching, class hysteresis, GPU 세대별 실행과
 RViz 절차는 [sensor-fusion guide](../../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)가 정본이다.
 본선 v3 VLP16 설정과 손재호 소비 loop는 15 Hz이고 실제 완성 cloud 약 12 Hz는 허용한다.

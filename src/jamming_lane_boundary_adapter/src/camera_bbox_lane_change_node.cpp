@@ -1,0 +1,1485 @@
+// 카메라 BBOX로 내 차로 점유를 확인하면 옆 차로로 변경. 거리/라이다 입력 없음.
+// 이 파일에 파라미터, ROS callback, 주행 함수, main을 함께 둔다.
+#include "lane_boundary_adapter/boundary_family_adapter.hpp"
+
+#include <ros/ros.h>
+#include <lane_boundary_adapter/CameraBBoxLaneResult.h>
+#include <std_msgs/Int8.h>
+#include <asmc_msgs/LaneBoundaryFamily.h>
+#include <limits>
+#include <diagnostic_msgs/DiagnosticArray.h>
+#include <diagnostic_msgs/DiagnosticStatus.h>
+#include <geometry_msgs/PointStamped.h>
+#include <morai_msgs/CtrlCmd.h>
+#include <std_msgs/Bool.h>
+#include <visualization_msgs/MarkerArray.h>
+
+#include <algorithm>
+#include <cmath>
+#include <csignal>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+namespace {
+
+using lane_boundary_adapter::BoundaryFamilyAdapterConfig;
+using lane_boundary_adapter::BoundaryFamilyStripContext;
+using lane_boundary_adapter::FamilyPoint2d;
+using lane_boundary_adapter::SegmentSupport;
+using BboxResult = lane_boundary_adapter::CameraBBoxLaneResult;
+
+// ============================================================================
+// 1. Parameters: 기본값 / 단위 / 설명 (동일 이름의 ROS 인자로 변경 가능)
+// ============================================================================
+struct Parameters {
+    // 실행 모드와 목표점
+    bool enable_control = false;               // true: control_topic 발행. false: preview/RViz만 발행.
+    double lookahead_distance = 8.0;           // [m] base_link 전방 x 좌표. 곡선 길이/직선 반경이 아님.
+
+    // 속도와 차량 조향 모델
+    double target_speed_kph = 20.0;            // [km/h] 정상 추종 속도. MORAI 속도 제어 모드 사용.
+    double inferred_speed_kph = 20.0;           // [km/h] 추정 보완 구간이 포함된 경로의 속도 상한.
+    double wheelbase = 3.0;                    // [m] 차량 축거. MPC의 IONIQ 5 설정과 동일.
+    double steering_curvature_gain = 0.844;    // 실측 보정: kappa=gain*tan(delta)/wheelbase.
+    double max_steering_deg = 40.0;            // [deg] 조향 제한. CtrlCmd에는 rad로 발행.
+    double max_steering_rate = 1.0;            // [rad/s] 추종 중 조향 명령 변화율 제한.
+    double max_lateral_accel = 1.0;            // [m/s^2] 목표 곡률에 따라 속도를 낮추는 상한.
+
+    // 제어 주기와 입력 유효 시간
+    double control_rate = 20.0;                // [Hz] timeout 검사와 제어/preview 발행 주기.
+    double source_timeout = 0.5;              // [s] ROS 현재 시각 - 원본 카메라 stamp 허용값.
+    double receive_timeout = 0.35;             // [s] 새로운 stamp를 수신하지 못한 최대 시간(steady clock).
+    double future_tolerance = 0.05;            // [s] 미래 source stamp 허용 오차. zero stamp는 항상 거부.
+
+    // 현재 차로 선택과 경계 연결
+    int lane_index = -1;                       // -1: 최초 자기 차로 자동 선택 후 고정. 0: 좌-중앙, 1: 중앙-우.
+    int lane_confirm_frames = 3;               // 자동 선택 시 동일 차로가 연속 확인되어야 하는 새 frame 수.
+    double lane_selection_distance = 4.0;      // [m] 이 전방 x에서 y=0이 포함되는 띠를 자기 차로로 선택.
+    double lane_boundary_margin = 0.15;        // [m] 선택점에서 양 경계와 확보할 여유. 경계 위면 정지.
+    bool allow_inferred = true;                // STRUCTURE_INFERRED 허용. INVALID는 항상 사용 금지.
+    double min_confidence = 0.25;              // adapter effective_confidence 하한. 안전 확률은 아님.
+    double join_tolerance = 1e-4;              // [m] support 조각 양 경계 끝점 일치 오차. gap 보간 금지.
+
+    // 정지 동작과 표시 / 수치 설정
+    double stop_brake = 1.0;                   // [0,1] 입력 누락/invalid/비상정지/종료 시 brake.
+    double shutdown_stop_duration = 0.3;       // [s] SIGINT/SIGTERM 종료 직전 정지 명령 반복 시간.
+    double marker_z = -0.30;                   // [m] RViz 표시 높이. 조향 계산과 무관.
+    double centerline_marker_width = 0.22;     // [m] 인식된 두 차로 중심선 두께. 추종 경로보다 굵게 표시.
+    double centerpoint_marker_size = 0.65;     // [m] 각 차로 lookahead 중심점 지름. 빨간 추종점과 구분.
+    double centerlabel_marker_size = 0.45;     // [m] MY LANE / ADJACENT 텍스트 높이.
+    double centerlabel_z_offset = 0.8;         // [m] 중심점 위 이름 표시 높이.
+    double epsilon = 1e-6;                     // 보간·곡률·시간의 수치 비교/0 나눗셈 방지 허용오차.
+    double max_steering_dt = 0.1;              // [s] 루프 지연 후 조향 급변 방지용 dt 상한.
+
+    // 기존 boundary family adapter의 기하 검증 범위
+    double consumer_x_min = 0.0;               // [m] adapter 전방 범위 시작.
+    double consumer_x_max = 15.0;              // [m] adapter 전방 범위 끝. lookahead보다 커야 함.
+    double min_segment_length = 0.25;          // [m] adapter 최소 연속 segment 길이.
+    double lane_width_min = 2.4;               // [m] 허용 차로 폭 하한.
+    double lane_width_max = 4.6;               // [m] 허용 차로 폭 상한.
+    double max_width_variation = 0.8;          // [m] 한 segment 안에서 허용할 폭 변화.
+    double inferred_confidence_scale = 0.60;   // 추정 신뢰도 강등 계수. producer 강등과 중복하지 않음.
+
+    // 카메라 계약과 ROS 토픽
+    // 인수한 v3 설정 해시.
+    std::string expected_config_sha256 =
+        "691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070";
+    // 차선 경계 입력(base_link).
+    std::string input_topic = "/perception/lane/boundary_family";
+    // MORAI UDP bridge 주행 명령.
+    std::string control_topic = "/ctrl_cmd";
+    // 계산 결과 확인.
+    std::string preview_topic = "/planning/camera_bbox_lane_change/control_preview";
+    // 유효한 lookahead 목표점.
+    std::string target_topic = "/planning/camera_bbox_lane_change/target";
+    // 인식된 내/옆 차로 중심선과 선택 경로/목표점 RViz.
+    std::string markers_topic = "/planning/camera_bbox_lane_change/markers";
+    // 정지 이유/지연.
+    std::string diagnostics_topic = "/planning/camera_bbox_lane_change/diagnostics";
+    // Bool true: 제동.
+    std::string emergency_stop_topic = "/planning/camera_bbox_lane_change/emergency_stop";
+
+    // BBOX 차로 판정: 실제 거리나 장애물 크기를 만들지 않는다.
+    std::string bbox_topic = "/planning/camera_bbox_lane/result"; // 앞서 만든 판정 결과.
+    std::string reference_lane_topic = "/planning/camera_bbox_lane_change/reference_lane"; // 변경 중 기준 차로 유지.
+    double clipped_tracking_speed_kph = 5.0; // [km/h] 이미 확인한 장애물의 잘린 BBOX를 잠시 추적할 때 속도 상한.
+    double far_obstacle_speed_kph = 5.0; // [km/h] 먼 BBOX의 차로 미확정 시 접근 속도 상한. 0이면 정지.
+    double bbox_source_timeout = 0.5;      // [s] BBOX 원본 영상 나이 상한.
+    double bbox_receive_timeout = 0.5;     // [s] 새 BBOX 판정 미수신 상한.
+    double max_sensor_skew = 0.4;          // [s] 현재 차선과 BBOX/판정에 사용한 차선 stamp 차이.
+    int obstacle_confirm_frames = 2;      // 내 차로 검출을 연속 확인할 서로 다른 BBOX frame 수.
+    int adjacent_clear_frames = 3;        // 옆 차로 NO_DETECTION 연속 확인 수. 실제 빈 공간 보장은 아님.
+    bool ignore_bbox_during_lane_change = true; // 변경 중 BBOX 검출/UNKNOWN/유실에 의한 정지·감속 제외. 완료 즉시 복원.
+    bool one_lane_change_only = false;    // false: 새 내 차로의 장애물에 따라 반복 변경. 장애물 없는 자동 복귀는 하지 않음.
+    double obstacle_lateral_margin = 0.30; // [m] 도로 경계 검사에 사용할 차량 좌우 여유.
+    double obstacle_longitudinal_margin = 0.5; // [m] 차량 전후 여유. 장애물 거리 여유가 아님.
+    double vehicle_front = 3.845;           // [m] base_link(후륜축)에서 앞범퍼까지.
+    double vehicle_rear = 0.790;            // [m] base_link에서 뒤범퍼까지.
+    double vehicle_width = 1.892;           // [m] 차량 폭.
+    double planning_start_x = 1.0;          // [m] 근거리 관측 기준. 이 지점 접선으로 x=0까지만 보완.
+    double path_horizon = 11.0;             // [m] 변경 경로 및 차량 footprint 검사 범위.
+    double path_sample_step = 0.25;         // [m] 경로 / 충돌 검사 샘플 간격.
+    double max_lateral_step = 2.4;          // [m] 한 재계획 경로의 횡이동 상한. 차량 앞모서리 이탈 방지.
+    double lane_change_length = 10.0;       // [m] quintic 연결 경로가 이번 횡이동 목표에 도달하는 전방 거리.
+    double lane_change_speed_kph = 15.0;     // [km/h] 변경 중 속도 상한. 곡률에 따라 추가 감속.
+    double completion_lateral_error = 0.30; // [m] 목표 차로 근거리 중심선의 허용 횡오차.
+    double completion_heading_deg = 8.0;    // [deg] 목표 차로 중심선과 차량 방향 허용 오차.
+    int completion_confirm_frames = 3;     // 완료 판정에 필요한 서로 다른 camera frame 수.
+    double lane_change_timeout = 15.0;     // [s] 변경 중 전진 명령을 낸 누적 시간 한도. 정지 대기 제외.
+    double lane_change_pause_timeout = 30.0; // [s] 변경 중 연속 정지 대기 한도. 초과하면 재시작 필요.
+    double lane_change_cooldown = 4.0;      // [s] 완료 후 재변경 금지 시간.
+} params;
+
+constexpr double PI = 3.14159265358979323846;
+volatile std::sig_atomic_t shutdown_requested = 0;
+
+// ============================================================================
+// 2. Data / State: 차로 정보와 노드 상태
+// ============================================================================
+struct LaneChain {
+    int lane_index = -1;
+    std::vector<FamilyPoint2d> left_boundary;
+    std::vector<FamilyPoint2d> right_boundary;
+    std::vector<FamilyPoint2d> centerline;
+    bool contains_inferred = false;
+};
+
+// 같은 전방 위치에서 보간한 중심점과 양쪽 경계점.
+struct LaneSample {
+    FamilyPoint2d center;
+    FamilyPoint2d left;
+    FamilyPoint2d right;
+};
+
+struct LaneCandidate {
+    LaneChain lane;
+    FamilyPoint2d target;
+};
+
+struct FollowerState {
+    bool received_input = false;
+    bool target_ready = false;
+    bool lane_markers_valid = false;      // 표시 전용: 최신 차선 기하 검증 성공 여부.
+    bool emergency_stop = false;
+
+    int locked_lane = -1;                 // 내 차로: 변경 결정 즉시 옆 차로로 전환하고 유지.
+    int pending_lane = -1;
+    int confirmation_count = 0;
+    std::string stop_reason = "waiting_for_lane";
+
+    ros::Time source_stamp;                // 시간 검사를 통과한 마지막 입력 stamp.
+    ros::Time observed_stamp;              // 거부된 입력도 포함한 마지막 stamp (지연 진단용).
+    ros::SteadyTime received_at;           // 마지막 새 입력을 받은 실제 시각.
+    ros::SteadyTime last_control_time;
+
+    LaneChain selected_lane;
+    FamilyPoint2d target_point;
+    double last_steering = 0.0;             // 마지막 조향 명령 [rad]. 정지 중에는 유지.
+} follower_state;
+
+// ============================================================================
+// BBOX / Lane Change State: 차로 유지 -> 점유 확인 -> 변경 -> 새 차로 유지
+// ============================================================================
+struct LaneChangeState {
+    std::vector<LaneChain> lanes;
+    std::vector<FamilyPoint2d> path;
+    ros::Time bbox_stamp, bbox_lane_stamp;
+    ros::SteadyTime bbox_received_at;
+    bool bbox_received = false;
+    bool bbox_valid = false;
+    bool deferred_far = false;
+    bool clipped_association = false;
+    std::string bbox_error = "waiting_for_bbox";
+    int occupancy[2] = {BboxResult::UNOBSERVED, BboxResult::UNOBSERVED};
+    unsigned long bbox_sequence = 0;
+    unsigned long decision_sequence = 0;
+    int obstacle_hits = 0;
+    int clear_hits = 0;
+    int target_lane = -1;
+    bool changing = false;
+    bool change_failed = false;
+    std::string change_failure_reason;
+    ros::SteadyTime timing_updated_at;
+    double drive_time_sec = 0.0;          // 실제 속도 측정값이 아닌, 전진 명령을 유지한 시간.
+    double pause_time_sec = 0.0;          // 연속 정지 명령 시간. 재개하면 0으로 초기화.
+    bool last_command_driving = false;
+    int completion_hits = 0;
+    ros::Time completion_stamp;
+    ros::SteadyTime change_started, completed_at;
+    bool has_completed = false;
+    double maximum_path_curvature = 0.0;
+} change_state;
+
+ros::Subscriber bbox_subscriber;
+ros::Publisher reference_lane_publisher;
+
+void bboxCallback(const BboxResult::ConstPtr& message);
+std::string bboxStopReason();
+bool ignoreBboxDuringLaneChange();
+std::string updateLaneChangePlan();
+const LaneChain* getPlanningLane(int lane_index);
+bool samplePlanningLane(const LaneChain& lane, double x, LaneSample& sample);
+bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>& path, double lateral_scale = 1.0);
+bool buildRoadBoundedChangePath(const LaneChain& lane, std::vector<FamilyPoint2d>& path);
+bool pathInsideRoad(const std::vector<FamilyPoint2d>& path);
+void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>& path);
+void validateLaneChangeParameters();
+
+
+struct RosInterface {
+    ros::Subscriber lane_sub;
+    ros::Subscriber stop_sub;
+    ros::Publisher control_pub;
+    ros::Publisher preview_pub;
+    ros::Publisher target_pub;
+    ros::Publisher marker_pub;
+    ros::Publisher diagnostic_pub;
+} ros_interface;
+
+BoundaryFamilyAdapterConfig adapter_config;
+
+// ============================================================================
+// 3. Forward declarations
+// ============================================================================
+void loadParameters(ros::NodeHandle& private_nh);
+void validateParameters();
+void initializeRosInterface(ros::NodeHandle& nh);
+void handleShutdownSignal(int signal_number);
+
+void cameraLaneFollowingProcess();
+std::string getStopReason(const ros::SteadyTime& now);
+double calculateTargetCurvature();
+double calculateSteering(double curvature, double dt);
+double calculateTargetSpeed(double curvature);
+morai_msgs::CtrlCmd makeStopCommand();
+morai_msgs::CtrlCmd makeFollowingCommand(double dt);
+void publishControlCommand(const morai_msgs::CtrlCmd& command);
+void publishShutdownStop();
+
+void laneBoundaryCallback(const asmc_msgs::LaneBoundaryFamily::ConstPtr& msg);
+void emergencyStopCallback(const std_msgs::Bool::ConstPtr& msg);
+void rejectLaneInput(const std::string& reason);
+bool acceptInputTimestamp(const ros::Time& stamp);
+std::vector<LaneChain> buildContinuousLanes(const BoundaryFamilyStripContext& context);
+std::vector<LaneCandidate> findOwnLaneCandidates(const std::vector<LaneChain>& lanes);
+bool confirmOwnLane(int lane_index);
+double pointDistance(const FamilyPoint2d& first, const FamilyPoint2d& second);
+FamilyPoint2d interpolatePoint(const FamilyPoint2d& first, const FamilyPoint2d& second, double ratio);
+bool interpolateLaneAtX(const LaneChain& lane, double target_x, LaneSample& sample);
+
+void publishTargetPoint();
+void appendRecognizedLaneMarkers(visualization_msgs::MarkerArray& markers);
+void publishLaneMarkers(bool tracking);
+void publishDiagnostics(bool tracking, const std::string& reason, const morai_msgs::CtrlCmd& command);
+void addDiagnosticValue(diagnostic_msgs::DiagnosticStatus& status,
+                        const std::string& key, const std::string& value);
+
+}  // namespace
+
+// ============================================================================
+// 4. MAIN: ROS 초기화 -> 입력 수신 -> 차로 추종 -> 종료 시 정지
+// ============================================================================
+int main(int argc, char** argv) {
+    ros::init(argc, argv, "camera_bbox_lane_change", ros::init_options::NoSigintHandler);
+    std::signal(SIGINT, handleShutdownSignal);
+    std::signal(SIGTERM, handleShutdownSignal);
+
+    try {
+        ros::NodeHandle nh;
+        ros::NodeHandle private_nh("~");
+
+        loadParameters(private_nh);
+        validateParameters();
+        validateLaneChangeParameters();
+        initializeRosInterface(nh);
+
+        ros::WallRate control_rate(params.control_rate);
+        while (ros::ok() && !shutdown_requested) {
+            ros::spinOnce();
+            cameraLaneFollowingProcess();
+            control_rate.sleep();
+        }
+
+        if (ros::ok()) {
+            publishShutdownStop();
+        }
+        ros::shutdown();
+    } catch (const std::exception& error) {
+        ROS_FATAL("camera_lane_follower: %s", error.what());
+        return 1;
+    }
+
+    return 0;
+}
+
+namespace {
+
+// ============================================================================
+// 5. MAIN PROCESS: 한 주기의 차로 추종 흐름
+// ============================================================================
+void updateLaneChangeTiming(const ros::SteadyTime& now) {
+    if (!change_state.changing || change_state.change_failed) return;
+    const double elapsed = std::max(0.0, (now - change_state.timing_updated_at).toSec());
+    change_state.timing_updated_at = now;
+    if (change_state.last_command_driving) {
+        change_state.drive_time_sec += elapsed;
+        change_state.pause_time_sec = 0.0;
+    } else {
+        change_state.pause_time_sec += elapsed;
+    }
+    if (change_state.drive_time_sec > params.lane_change_timeout) {
+        change_state.change_failure_reason = "lane_change_timeout_restart_required";
+    } else if (change_state.pause_time_sec > params.lane_change_pause_timeout) {
+        change_state.change_failure_reason = "lane_change_pause_timeout_restart_required";
+    }
+    change_state.change_failed = !change_state.change_failure_reason.empty();
+}
+
+bool ignoreBboxDuringLaneChange() {
+    return params.ignore_bbox_during_lane_change && change_state.changing;
+}
+
+void cameraLaneFollowingProcess() {
+    // 1. 제어 주기 계산: 루프가 늦어져도 조향 변화량이 갑자기 커지지 않도록 제한.
+    const ros::SteadyTime now = ros::SteadyTime::now();
+    const double elapsed = (now - follower_state.last_control_time).toSec();
+    const double dt = std::clamp(elapsed, params.epsilon, params.max_steering_dt);
+    follower_state.last_control_time = now;
+
+    updateLaneChangeTiming(now);
+
+    // 2. 입력 상태와 비상정지 확인. 추종할 수 없으면 기본 명령은 제동.
+    std::string stop_reason = getStopReason(now);
+    if (change_state.change_failed) stop_reason = change_state.change_failure_reason;
+    if (stop_reason.empty()) {
+        stop_reason = bboxStopReason();
+    }
+    if (stop_reason.empty() && follower_state.target_ready) {
+        stop_reason = updateLaneChangePlan();
+    } else {
+        change_state.obstacle_hits = 0;
+        change_state.clear_hits = 0;
+    }
+    if (!stop_reason.empty()) change_state.completion_hits = 0;
+    const bool tracking = stop_reason.empty() && follower_state.target_ready;
+    morai_msgs::CtrlCmd command = makeStopCommand();
+
+    // 3. 유효한 목표점이 있을 때만 조향 / 속도를 계산.
+    if (tracking) {
+        command = makeFollowingCommand(dt);
+        publishTargetPoint();
+    }
+
+    change_state.last_command_driving = change_state.changing && tracking &&
+                                        command.velocity > params.epsilon;
+
+    // 목표 선택 직후 기준 차로도 전환한다. 점유는 항상 기하 차로 0/1로 변환해 사용한다.
+    if (follower_state.locked_lane >= 0) {
+        std_msgs::Int8 reference;
+        reference.data = follower_state.locked_lane;
+        reference_lane_publisher.publish(reference);
+    }
+
+    // 4. 제어 결과와 RViz / 진단 정보 발행.
+    publishControlCommand(command);
+    publishLaneMarkers(tracking);
+    publishDiagnostics(tracking, stop_reason, command);
+}
+
+// ============================================================================
+// 6. Pure Pursuit: 곡률 -> 조향각 -> 목표 속도
+// ============================================================================
+std::string getStopReason(const ros::SteadyTime& now) {
+    if (follower_state.emergency_stop) {
+        return "emergency_stop";
+    }
+
+    if (follower_state.received_input) {
+        const double receive_age = (now - follower_state.received_at).toSec();
+        if (receive_age > params.receive_timeout) {
+            return "receive_timeout";
+        }
+
+        const double source_age = (ros::Time::now() - follower_state.source_stamp).toSec();
+        if (source_age < -params.future_tolerance || source_age > params.source_timeout) {
+            return "source_timestamp_expired";
+        }
+    }
+
+    return follower_state.stop_reason;
+}
+
+double calculateTargetCurvature() {
+    const double target_x = follower_state.target_point.x;
+    const double target_y = follower_state.target_point.y;
+
+    // base_link: x 전방, y 좌측. 양의 곡률 / 조향은 좌회전.
+    return 2.0 * target_y / (target_x * target_x + target_y * target_y);
+}
+
+double calculateSteering(double curvature, double dt) {
+    // 차량 모델: curvature = gain * tan(steering) / wheelbase.
+    const double raw_steering = std::atan(params.wheelbase * curvature / params.steering_curvature_gain);
+    const double steering_limit = params.max_steering_deg * PI / 180.0;
+    const double desired_steering = std::clamp(raw_steering, -steering_limit, steering_limit);
+
+    // 한 주기에 허용할 조향 변화량 [rad].
+    const double change_limit = params.max_steering_rate * dt;
+    const double steering_change = desired_steering - follower_state.last_steering;
+    follower_state.last_steering += std::clamp(steering_change, -change_limit, change_limit);
+
+    return follower_state.last_steering;
+}
+
+double calculateTargetSpeed(double curvature) {
+    double target_speed = params.target_speed_kph;
+    // 변경 중에는 BBOX 때문에 속도 0이나 감속 명령이 생기지 않도록 한다.
+    if (!ignoreBboxDuringLaneChange()) {
+        if (change_state.clipped_association) target_speed = std::min(target_speed, params.clipped_tracking_speed_kph);
+        if (change_state.deferred_far) target_speed = std::min(target_speed, params.far_obstacle_speed_kph);
+    }
+
+    if (follower_state.selected_lane.contains_inferred) {
+        target_speed = std::min(target_speed, params.inferred_speed_kph);
+    }
+
+    // 횡가속도 a = v² * |curvature|. 계산 결과 m/s를 km/h로 변환.
+    if (std::abs(curvature) > params.epsilon) {
+        const double curve_speed = std::sqrt(params.max_lateral_accel / std::abs(curvature)) * 3.6;
+        target_speed = std::min(target_speed, curve_speed);
+    }
+
+    if (change_state.changing) {
+        target_speed = std::min(target_speed, params.lane_change_speed_kph);
+    }
+    if (change_state.maximum_path_curvature > params.epsilon) {
+        const double path_speed = std::sqrt(params.max_lateral_accel /
+                                           change_state.maximum_path_curvature) * 3.6;
+        target_speed = std::min(target_speed, path_speed);
+    }
+    return target_speed;
+}
+
+morai_msgs::CtrlCmd makeStopCommand() {
+    morai_msgs::CtrlCmd command;
+    command.longlCmdType = 1;  // 페달 제어: accel 기본값 0, brake로 제동.
+    command.brake = params.stop_brake;
+    command.steering = follower_state.last_steering;
+    return command;
+}
+
+morai_msgs::CtrlCmd makeFollowingCommand(double dt) {
+    // 목표 속도가 0이면 제동 명령을 유지하고, 조향 계산 상태만 갱신한다.
+    morai_msgs::CtrlCmd command = makeStopCommand();
+    const double curvature = calculateTargetCurvature();
+    const double steering = calculateSteering(curvature, dt);
+    const double target_speed = calculateTargetSpeed(curvature);
+
+    if (target_speed > 0.0) {
+        command = morai_msgs::CtrlCmd();
+        command.longlCmdType = 2;  // MORAI 내장 속도 제어.
+        command.velocity = target_speed;  // [km/h]
+        command.steering = steering;      // [rad], 기존 MPC / bridge와 동일.
+    }
+
+    return command;
+}
+
+void publishControlCommand(const morai_msgs::CtrlCmd& command) {
+    ros_interface.preview_pub.publish(command);
+
+    if (params.enable_control) {
+        ros_interface.control_pub.publish(command);
+    }
+}
+
+void publishShutdownStop() {
+    const ros::SteadyTime deadline = ros::SteadyTime::now() + ros::WallDuration(params.shutdown_stop_duration);
+
+    do {
+        publishControlCommand(makeStopCommand());
+        ros::WallDuration(1.0 / params.control_rate).sleep();
+    } while (ros::ok() && ros::SteadyTime::now() < deadline);
+}
+
+// ============================================================================
+// 7. Camera callback: 시간 검사 -> 경계 검증 -> 자기 차로 선택 -> 목표점 저장
+// ============================================================================
+void laneBoundaryCallback(const asmc_msgs::LaneBoundaryFamily::ConstPtr& msg) {
+    // 1. 처음부터 거부된 입력도 실제 지연값을 진단에 표시한다.
+    follower_state.observed_stamp = msg->header.stamp;
+    if (!acceptInputTimestamp(msg->header.stamp)) {
+        if (msg->header.stamp != follower_state.source_stamp) follower_state.lane_markers_valid = false;
+        return;
+    }
+    follower_state.lane_markers_valid = false;
+
+    // 2. 인수한 카메라 설정과 기하 계약 검사.
+    if (msg->config_sha256 != params.expected_config_sha256) {
+        rejectLaneInput("wrong_geometry_config_hash");
+        return;
+    }
+
+    const BoundaryFamilyStripContext context =
+        lane_boundary_adapter::BuildBoundaryFamilyStripContext(*msg, adapter_config);
+    if (!context.usable()) {
+        rejectLaneInput(context.reason);
+        return;
+    }
+
+    // 3. 유효한 경계 조각을 연결하고, 현재 차로부터 lookahead까지 이어지는 후보 선택.
+    const std::vector<LaneChain> lanes = buildContinuousLanes(context);
+    change_state.lanes = lanes;
+    follower_state.lane_markers_valid = true;
+    const std::vector<LaneCandidate> candidates = findOwnLaneCandidates(lanes);
+    if (candidates.empty()) {
+        rejectLaneInput("no_continuous_own_lane_to_lookahead");
+        return;
+    }
+    if (candidates.size() != 1) {
+        rejectLaneInput("ambiguous_own_lane");
+        return;
+    }
+
+    // 4. 같은 차로가 연속으로 확인되면 고정. 이후 유실되어도 옆 차로로 바꾸지 않는다.
+    const LaneCandidate& candidate = candidates.front();
+    if (!change_state.changing && !confirmOwnLane(candidate.lane.lane_index)) {
+        return;
+    }
+
+    follower_state.selected_lane = candidate.lane;
+    follower_state.target_point = candidate.target;
+    follower_state.target_ready = true;
+    follower_state.stop_reason.clear();
+}
+
+void emergencyStopCallback(const std_msgs::Bool::ConstPtr& msg) {
+    follower_state.emergency_stop = msg->data;
+}
+
+void rejectLaneInput(const std::string& reason) {
+    follower_state.target_ready = false;
+    follower_state.stop_reason = reason;
+    follower_state.pending_lane = -1;
+    follower_state.confirmation_count = 0;
+
+    // locked_lane은 유지: 자기 차로 유실을 차로 변경으로 처리하지 않는다.
+}
+
+bool acceptInputTimestamp(const ros::Time& stamp) {
+    if (stamp.isZero()) {
+        rejectLaneInput("zero_source_timestamp");
+        return false;
+    }
+
+    // 미래 입력을 수락한 stamp로 기록하면 정상 입력으로 복귀하지 못하므로 먼저 검사.
+    const double source_age = (ros::Time::now() - stamp).toSec();
+    if (source_age < -params.future_tolerance || source_age > params.source_timeout) {
+        rejectLaneInput("source_timestamp_expired");
+        return false;
+    }
+
+    if (follower_state.received_input) {
+        if (stamp == follower_state.source_stamp) {
+            return false;  // 중복 입력은 수신 유효 시간을 갱신하지 않는다.
+        }
+        if (stamp < follower_state.source_stamp) {
+            rejectLaneInput("source_timestamp_regression");
+            return false;
+        }
+    }
+
+    follower_state.received_input = true;
+    follower_state.source_stamp = stamp;
+    follower_state.received_at = ros::SteadyTime::now();
+    return true;
+}
+
+bool confirmOwnLane(int lane_index) {
+    if (follower_state.locked_lane >= 0) {
+        return true;
+    }
+
+    if (follower_state.pending_lane == lane_index) {
+        follower_state.confirmation_count++;
+    } else {
+        follower_state.confirmation_count = 1;
+    }
+    follower_state.pending_lane = lane_index;
+
+    if (follower_state.confirmation_count < params.lane_confirm_frames) {
+        follower_state.target_ready = false;
+        follower_state.stop_reason = "confirming_own_lane";
+        return false;
+    }
+
+    follower_state.locked_lane = lane_index;
+    ROS_INFO("Locked geometric lane %d (0=left-centre, 1=centre-right)", lane_index);
+    return true;
+}
+
+// ============================================================================
+// 8. 차로 연결과 목표점 보간: INVALID gap을 건너뛰지 않는다.
+// ============================================================================
+std::vector<LaneChain> buildContinuousLanes(const BoundaryFamilyStripContext& context) {
+    auto segments = context.segments;
+    std::sort(segments.begin(), segments.end(), [](const auto& first, const auto& second) {
+        if (first.lateral_index != second.lateral_index) {
+            return first.lateral_index < second.lateral_index;
+        }
+        return first.centerline.front().x < second.centerline.front().x;
+    });
+
+    std::vector<LaneChain> lanes;
+    bool may_join_previous = false;
+
+    for (const auto& segment : segments) {
+        const bool inferred = segment.support == SegmentSupport::kStructureInferred;
+        if (segment.effective_confidence < params.min_confidence || (inferred && !params.allow_inferred)) {
+            may_join_previous = false;
+            continue;
+        }
+
+        // x가 순서대로 증가하는 구간만 x=lookahead에서 보간할 수 있다.
+        bool increasing_x = true;
+        for (std::size_t i = 1; i < segment.centerline.size(); ++i) {
+            if (segment.centerline[i].x <= segment.centerline[i - 1].x + params.epsilon) {
+                increasing_x = false;
+                break;
+            }
+        }
+        if (!increasing_x) {
+            may_join_previous = false;
+            continue;
+        }
+
+        // 같은 차로이며 양쪽 경계 끝점이 모두 맞닿은 경우에만 이어 붙인다.
+        bool touching_previous = false;
+        if (may_join_previous && !lanes.empty()) {
+            const LaneChain& previous = lanes.back();
+            const bool same_lane = previous.lane_index == static_cast<int>(segment.lateral_index);
+            const double left_gap = pointDistance(previous.left_boundary.back(), segment.left_boundary.front());
+            const double right_gap = pointDistance(previous.right_boundary.back(), segment.right_boundary.front());
+            touching_previous = same_lane && left_gap <= params.join_tolerance && right_gap <= params.join_tolerance;
+        }
+
+        if (!touching_previous) {
+            LaneChain lane;
+            lane.lane_index = static_cast<int>(segment.lateral_index);
+            lanes.push_back(lane);
+        }
+
+        LaneChain& lane = lanes.back();
+        const std::size_t start_index = touching_previous ? 1 : 0;  // 겹친 끝점은 한 번만 저장.
+        lane.left_boundary.insert(lane.left_boundary.end(),
+                                  segment.left_boundary.begin() + start_index, segment.left_boundary.end());
+        lane.right_boundary.insert(lane.right_boundary.end(),
+                                   segment.right_boundary.begin() + start_index, segment.right_boundary.end());
+        lane.centerline.insert(lane.centerline.end(),
+                               segment.centerline.begin() + start_index, segment.centerline.end());
+        lane.contains_inferred = lane.contains_inferred || inferred;
+        may_join_previous = true;
+    }
+
+    return lanes;
+}
+
+std::vector<LaneCandidate> findOwnLaneCandidates(const std::vector<LaneChain>& lanes) {
+    std::vector<LaneCandidate> candidates;
+
+    for (const LaneChain& lane : lanes) {
+        // 변경 결정 때 갱신한 내 차로의 중심선을 추종한다. 출발 차로를 재선택하지 않는다.
+        const int tracking_lane = follower_state.locked_lane;
+        if (tracking_lane >= 0 && lane.lane_index != tracking_lane) {
+            continue;
+        }
+
+        LaneSample near_sample;
+        LaneSample target_sample;
+        if (!interpolateLaneAtX(lane, params.lane_selection_distance, near_sample)) {
+            continue;
+        }
+        if (!interpolateLaneAtX(lane, params.lookahead_distance, target_sample)) {
+            continue;
+        }
+
+        // 전방 선택 위치에서 차량 y=0이 양쪽 경계 안에 있어야 한다.
+        // 최초 자기 차로만 y=0으로 선택. 이후에는 변경 결정으로 갱신한 내 차로를 유지.
+        if (follower_state.locked_lane < 0 &&
+            (near_sample.left.y < params.lane_boundary_margin ||
+             near_sample.right.y > -params.lane_boundary_margin)) {
+            continue;
+        }
+
+        candidates.push_back({lane, target_sample.center});
+    }
+
+    return candidates;
+}
+
+double pointDistance(const FamilyPoint2d& first, const FamilyPoint2d& second) {
+    return std::hypot(first.x - second.x, first.y - second.y);
+}
+
+FamilyPoint2d interpolatePoint(const FamilyPoint2d& first, const FamilyPoint2d& second, double ratio) {
+    FamilyPoint2d point;
+    point.x = first.x + ratio * (second.x - first.x);
+    point.y = first.y + ratio * (second.y - first.y);
+    return point;
+}
+
+bool interpolateLaneAtX(const LaneChain& lane, double target_x, LaneSample& sample) {
+    // 관측한 중심선 밖으로 외삽하지 않는다.
+    if (lane.centerline.size() < 2) {
+        return false;
+    }
+    if (target_x < lane.centerline.front().x - params.epsilon ||
+        target_x > lane.centerline.back().x + params.epsilon) {
+        return false;
+    }
+
+    for (std::size_t i = 1; i < lane.centerline.size(); ++i) {
+        if (target_x > lane.centerline[i].x + params.epsilon) {
+            continue;
+        }
+
+        const double segment_dx = lane.centerline[i].x - lane.centerline[i - 1].x;
+        if (segment_dx <= params.epsilon) {
+            return false;
+        }
+
+        const double ratio = std::clamp((target_x - lane.centerline[i - 1].x) / segment_dx, 0.0, 1.0);
+        sample.center = interpolatePoint(lane.centerline[i - 1], lane.centerline[i], ratio);
+        sample.left = interpolatePoint(lane.left_boundary[i - 1], lane.left_boundary[i], ratio);
+        sample.right = interpolatePoint(lane.right_boundary[i - 1], lane.right_boundary[i], ratio);
+        return true;
+    }
+
+    return false;
+}
+
+// ============================================================================
+// 9. RViz / Diagnostics: 중심선, 목표점, 정지 이유 표시
+// ============================================================================
+void publishTargetPoint() {
+    geometry_msgs::PointStamped target;
+    target.header.frame_id = adapter_config.expected_frame_id;
+    target.header.stamp = follower_state.source_stamp;
+    target.point.x = follower_state.target_point.x;
+    target.point.y = follower_state.target_point.y;
+    ros_interface.target_pub.publish(target);
+}
+
+// 제어 가능 여부와 별개로 최신 관측 중심선을 표시한다. 끊긴 조각은 따로 그린다.
+void appendRecognizedLaneMarkers(visualization_msgs::MarkerArray& markers) {
+    if (!follower_state.lane_markers_valid || !follower_state.received_input) return;
+    const double source_age = (ros::Time::now() - follower_state.source_stamp).toSec();
+    const double receive_age = (ros::SteadyTime::now() - follower_state.received_at).toSec();
+    if (source_age < -params.future_tolerance || source_age > params.source_timeout ||
+        receive_age > params.receive_timeout) return;
+
+    int segment_id = 0;
+    for (const LaneChain& lane : change_state.lanes) {
+        if (lane.centerline.size() < 2) continue;
+        const int active_lane = follower_state.locked_lane;
+        const bool assigned = active_lane >= 0;
+        const bool own = assigned && lane.lane_index == active_lane;
+        const std::string name = !assigned ? "unassigned_lane" : (own ? "own_lane" : "adjacent_lane");
+
+        visualization_msgs::Marker line;
+        line.header.frame_id = adapter_config.expected_frame_id;
+        line.header.stamp = follower_state.source_stamp;
+        line.ns = name + "_centerline";
+        line.id = segment_id++;
+        line.type = visualization_msgs::Marker::LINE_STRIP;
+        line.action = visualization_msgs::Marker::ADD;
+        line.pose.orientation.w = 1.0;
+        line.scale.x = params.centerline_marker_width;
+        line.lifetime = ros::Duration(params.receive_timeout);
+        line.color.r = !assigned ? 0.65 : (own ? 0.1 : 1.0);
+        line.color.g = !assigned ? 0.65 : (own ? 1.0 : 0.15);
+        line.color.b = !assigned ? 0.65 : (own ? 0.15 : 1.0);
+        line.color.a = 1.0;
+        for (const auto& center : lane.centerline) {
+            geometry_msgs::Point point;
+            point.x = center.x;
+            point.y = center.y;
+            point.z = params.marker_z;
+            line.points.push_back(point);
+        }
+        markers.markers.push_back(line);
+
+        LaneSample center;
+        const bool has_lookahead = interpolateLaneAtX(lane, params.lookahead_distance, center);
+        visualization_msgs::Marker label = line;
+        label.ns = name + "_label";
+        label.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+        label.points.clear();
+        label.pose.position = line.points[line.points.size() / 2];
+        if (has_lookahead) {
+            label.pose.position.x = center.center.x;
+            label.pose.position.y = center.center.y;
+        }
+        label.pose.position.z += params.centerlabel_z_offset;
+        label.scale.x = label.scale.y = 0.0;
+        label.scale.z = params.centerlabel_marker_size;
+        label.text = !assigned ? "UNASSIGNED" : (own ? (change_state.changing ? "MY LANE (CHANGING)" : "MY LANE") : "ADJACENT");
+        label.text += " (" + std::to_string(lane.lane_index) + ")";
+        markers.markers.push_back(label);
+
+        // LD가 유효한 관측 조각 안에 있을 때만 점을 표시한다. gap을 보간하지 않는다.
+        if (!has_lookahead) continue;
+        visualization_msgs::Marker point = line;
+        point.ns = name + "_centerpoint";
+        point.type = visualization_msgs::Marker::SPHERE;
+        point.points.clear();
+        point.pose.position.x = center.center.x;
+        point.pose.position.y = center.center.y;
+        point.pose.position.z = params.marker_z;
+        point.scale.x = point.scale.y = point.scale.z = params.centerpoint_marker_size;
+        markers.markers.push_back(point);
+    }
+}
+
+void publishLaneMarkers(bool tracking) {
+    visualization_msgs::MarkerArray markers;
+
+    // 이전 마커를 지우고 최신 관측 중심선과 유효한 추종 경로만 다시 표시한다.
+    visualization_msgs::Marker clear;
+    clear.header.frame_id = adapter_config.expected_frame_id;
+    clear.header.stamp = ros::Time::now();
+    clear.action = visualization_msgs::Marker::DELETEALL;
+    markers.markers.push_back(clear);
+    appendRecognizedLaneMarkers(markers);
+
+    if (tracking) {
+        visualization_msgs::Marker line;
+        line.header.frame_id = adapter_config.expected_frame_id;
+        line.header.stamp = follower_state.source_stamp;
+        line.ns = "selected_centerline";
+        line.id = 0;
+        line.type = visualization_msgs::Marker::LINE_STRIP;
+        line.action = visualization_msgs::Marker::ADD;
+        line.pose.orientation.w = 1.0;
+        line.scale.x = 0.12;
+        line.lifetime = ros::Duration(params.receive_timeout);
+        line.color.g = 1.0;
+        line.color.b = 1.0;
+        line.color.a = 1.0;
+
+        for (const FamilyPoint2d& center : follower_state.selected_lane.centerline) {
+            geometry_msgs::Point point;
+            point.x = center.x;
+            point.y = center.y;
+            point.z = params.marker_z;
+            line.points.push_back(point);
+        }
+        markers.markers.push_back(line);
+
+        // 실제 조향 목표: 내 차로 중심선의 x=lookahead_distance 지점 (원점 거리도 LD 이상).
+        visualization_msgs::Marker waypoint = line;
+        waypoint.ns = "lookahead_target";
+        waypoint.id = 1;
+        waypoint.type = visualization_msgs::Marker::SPHERE;
+        waypoint.points.clear();
+        waypoint.pose.position.x = follower_state.target_point.x;
+        waypoint.pose.position.y = follower_state.target_point.y;
+        waypoint.pose.position.z = params.marker_z;
+        waypoint.scale.x = 0.5;
+        waypoint.scale.y = 0.5;
+        waypoint.scale.z = 0.5;
+        waypoint.color.r = 1.0;
+        waypoint.color.g = 0.0;
+        waypoint.color.b = 0.0;  // RGB(1, 0, 0): 빨간 목표점.
+        markers.markers.push_back(waypoint);
+    }
+
+    ros_interface.marker_pub.publish(markers);
+}
+
+void addDiagnosticValue(diagnostic_msgs::DiagnosticStatus& status,
+                        const std::string& key, const std::string& value) {
+    diagnostic_msgs::KeyValue item;
+    item.key = key;
+    item.value = value;
+    status.values.push_back(item);
+}
+
+void publishDiagnostics(bool tracking, const std::string& reason, const morai_msgs::CtrlCmd& command) {
+    double source_age = -1.0;
+    if (!follower_state.observed_stamp.isZero()) {
+        source_age = (ros::Time::now() - follower_state.observed_stamp).toSec();
+    }
+
+    diagnostic_msgs::DiagnosticStatus status;
+    status.name = "camera_bbox_lane_change";
+    status.hardware_id = "camera_bbox";
+    status.level = tracking && !change_state.deferred_far && !ignoreBboxDuringLaneChange() ? diagnostic_msgs::DiagnosticStatus::OK : diagnostic_msgs::DiagnosticStatus::WARN;
+    status.message = tracking ? (ignoreBboxDuringLaneChange() ? "changing_without_bbox_stop" :
+        (change_state.deferred_far ? "approaching_unresolved_far_obstacle" : "following")) : reason;
+    addDiagnosticValue(status, "bbox_stop_suppressed", ignoreBboxDuringLaneChange() ? "true" : "false");
+    addDiagnosticValue(status, "bbox_input_error", change_state.bbox_error);
+
+    addDiagnosticValue(status, "enable_control", params.enable_control ? "true" : "false");
+    addDiagnosticValue(status, "active_lane", std::to_string(follower_state.locked_lane));
+    addDiagnosticValue(status, "clipped_obstacle_tracking", change_state.clipped_association ? "true" : "false");
+    addDiagnosticValue(status, "locked_lane", std::to_string(follower_state.locked_lane));
+    addDiagnosticValue(status, "source_age_sec", std::to_string(source_age));
+    addDiagnosticValue(status, "lookahead_distance", std::to_string(params.lookahead_distance));
+    addDiagnosticValue(status, "target_y_m", tracking ? std::to_string(follower_state.target_point.y) : "unavailable");
+    addDiagnosticValue(status, "velocity_kph", std::to_string(command.velocity));
+    addDiagnosticValue(status, "steering_rad", std::to_string(command.steering));
+    addDiagnosticValue(status, "inferred", tracking && follower_state.selected_lane.contains_inferred ? "true" : "false");
+
+    addDiagnosticValue(status, "change_state", change_state.changing ? "changing" : "following_lane");
+    addDiagnosticValue(status, "target_lane", std::to_string(change_state.target_lane));
+    addDiagnosticValue(status, "bbox_valid", change_state.bbox_valid ? "true" : "false");
+    addDiagnosticValue(status, "far_obstacle_unresolved", change_state.deferred_far ? "true" : "false");
+    addDiagnosticValue(status, "bbox_age_sec", change_state.bbox_received ?
+        std::to_string((ros::Time::now() - change_state.bbox_stamp).toSec()) : "unavailable");
+    addDiagnosticValue(status, "lane0_state", std::to_string(change_state.occupancy[0]));
+    addDiagnosticValue(status, "lane1_state", std::to_string(change_state.occupancy[1]));
+    addDiagnosticValue(status, "obstacle_confirmations", std::to_string(change_state.obstacle_hits));
+    addDiagnosticValue(status, "adjacent_clear_confirmations", std::to_string(change_state.clear_hits));
+    addDiagnosticValue(status, "change_completed", change_state.has_completed ? "true" : "false");
+    addDiagnosticValue(status, "change_drive_time_sec", std::to_string(change_state.drive_time_sec));
+    addDiagnosticValue(status, "change_pause_time_sec", std::to_string(change_state.pause_time_sec));
+    addDiagnosticValue(status, "uses_obstacle_distance", "false");
+
+    diagnostic_msgs::DiagnosticArray diagnostics;
+    diagnostics.header.stamp = ros::Time::now();
+    diagnostics.status.push_back(status);
+    ros_interface.diagnostic_pub.publish(diagnostics);
+
+    if (!tracking) {
+        ROS_WARN_THROTTLE(2.0, "Camera lane follower STOP: %s (source age=%.3fs)", reason.c_str(), source_age);
+    }
+}
+
+// ============================================================================
+// 10. ROS 초기화와 파라미터 로드 / 검증
+// ============================================================================
+void initializeRosInterface(ros::NodeHandle& nh) {
+    adapter_config.consumer_x_min_m = params.consumer_x_min;
+    adapter_config.consumer_x_max_m = params.consumer_x_max;
+    adapter_config.min_segment_length_m = params.min_segment_length;
+    adapter_config.lane_width_min_m = params.lane_width_min;
+    adapter_config.lane_width_max_m = params.lane_width_max;
+    adapter_config.max_width_variation_m = params.max_width_variation;
+    adapter_config.inferred_confidence_scale = params.inferred_confidence_scale;
+
+    std::string reason;
+    if (!lane_boundary_adapter::ValidateBoundaryFamilyAdapterConfig(adapter_config, &reason)) {
+        throw std::runtime_error(reason);
+    }
+    if (nh.resolveName(params.control_topic) == nh.resolveName(params.preview_topic)) {
+        throw std::runtime_error("control_topic and preview_topic must differ");
+    }
+
+    bbox_subscriber = nh.subscribe(params.bbox_topic, 1, bboxCallback);
+    reference_lane_publisher = nh.advertise<std_msgs::Int8>(params.reference_lane_topic, 1);
+    follower_state.locked_lane = params.lane_index;
+    ros_interface.preview_pub = nh.advertise<morai_msgs::CtrlCmd>(params.preview_topic, 1);
+    if (params.enable_control) {
+        ros_interface.control_pub = nh.advertise<morai_msgs::CtrlCmd>(params.control_topic, 1);
+    }
+    ros_interface.target_pub = nh.advertise<geometry_msgs::PointStamped>(params.target_topic, 1);
+    ros_interface.marker_pub = nh.advertise<visualization_msgs::MarkerArray>(params.markers_topic, 1);
+    ros_interface.diagnostic_pub = nh.advertise<diagnostic_msgs::DiagnosticArray>(params.diagnostics_topic, 1);
+    ros_interface.lane_sub = nh.subscribe(params.input_topic, 1, laneBoundaryCallback);
+    ros_interface.stop_sub = nh.subscribe(params.emergency_stop_topic, 1, emergencyStopCallback);
+    follower_state.last_control_time = ros::SteadyTime::now();
+
+    ROS_WARN("Camera lane follower: control=%s lookahead_x=%.2fm speed=%.1fkm/h. "
+             "BBOX lane change enabled (no distance/clearance estimate); stop other /ctrl_cmd controllers.",
+             params.enable_control ? "ENABLED" : "preview only",
+             params.lookahead_distance, params.target_speed_kph);
+}
+
+void handleShutdownSignal(int) {
+    shutdown_requested = 1;
+}
+
+void loadParameters(ros::NodeHandle& private_nh) {
+    private_nh.param("bbox_topic", params.bbox_topic, params.bbox_topic);
+    private_nh.param("reference_lane_topic", params.reference_lane_topic, params.reference_lane_topic);
+    private_nh.param("bbox_source_timeout", params.bbox_source_timeout, params.bbox_source_timeout);
+    private_nh.param("bbox_receive_timeout", params.bbox_receive_timeout, params.bbox_receive_timeout);
+    private_nh.param("ignore_bbox_during_lane_change", params.ignore_bbox_during_lane_change, params.ignore_bbox_during_lane_change);
+    private_nh.param("one_lane_change_only", params.one_lane_change_only, params.one_lane_change_only);
+    private_nh.param("max_lateral_step", params.max_lateral_step, params.max_lateral_step);
+    private_nh.param("max_sensor_skew", params.max_sensor_skew, params.max_sensor_skew);
+    private_nh.param("obstacle_confirm_frames", params.obstacle_confirm_frames, params.obstacle_confirm_frames);
+    private_nh.param("adjacent_clear_frames", params.adjacent_clear_frames, params.adjacent_clear_frames);
+    private_nh.param("obstacle_lateral_margin", params.obstacle_lateral_margin, params.obstacle_lateral_margin);
+    private_nh.param("obstacle_longitudinal_margin", params.obstacle_longitudinal_margin, params.obstacle_longitudinal_margin);
+    private_nh.param("vehicle_front", params.vehicle_front, params.vehicle_front);
+    private_nh.param("vehicle_rear", params.vehicle_rear, params.vehicle_rear);
+    private_nh.param("vehicle_width", params.vehicle_width, params.vehicle_width);
+    private_nh.param("planning_start_x", params.planning_start_x, params.planning_start_x);
+    private_nh.param("path_horizon", params.path_horizon, params.path_horizon);
+    private_nh.param("path_sample_step", params.path_sample_step, params.path_sample_step);
+    private_nh.param("lane_change_length", params.lane_change_length, params.lane_change_length);
+    private_nh.param("lane_change_speed_kph", params.lane_change_speed_kph, params.lane_change_speed_kph);
+    private_nh.param("clipped_tracking_speed_kph", params.clipped_tracking_speed_kph, params.clipped_tracking_speed_kph);
+    private_nh.param("far_obstacle_speed_kph", params.far_obstacle_speed_kph, params.far_obstacle_speed_kph);
+    private_nh.param("completion_lateral_error", params.completion_lateral_error, params.completion_lateral_error);
+    private_nh.param("completion_heading_deg", params.completion_heading_deg, params.completion_heading_deg);
+    private_nh.param("completion_confirm_frames", params.completion_confirm_frames, params.completion_confirm_frames);
+    private_nh.param("lane_change_timeout", params.lane_change_timeout, params.lane_change_timeout);
+    private_nh.param("lane_change_pause_timeout", params.lane_change_pause_timeout, params.lane_change_pause_timeout);
+    private_nh.param("lane_change_cooldown", params.lane_change_cooldown, params.lane_change_cooldown);
+    private_nh.param("enable_control", params.enable_control, params.enable_control);
+    private_nh.param("lookahead_distance", params.lookahead_distance, params.lookahead_distance);
+    private_nh.param("target_speed_kph", params.target_speed_kph, params.target_speed_kph);
+    private_nh.param("inferred_speed_kph", params.inferred_speed_kph, params.inferred_speed_kph);
+    private_nh.param("wheelbase", params.wheelbase, params.wheelbase);
+    private_nh.param("steering_curvature_gain", params.steering_curvature_gain, params.steering_curvature_gain);
+    private_nh.param("max_steering_deg", params.max_steering_deg, params.max_steering_deg);
+    private_nh.param("max_steering_rate", params.max_steering_rate, params.max_steering_rate);
+    private_nh.param("max_lateral_accel", params.max_lateral_accel, params.max_lateral_accel);
+    private_nh.param("control_rate", params.control_rate, params.control_rate);
+    private_nh.param("source_timeout", params.source_timeout, params.source_timeout);
+    private_nh.param("receive_timeout", params.receive_timeout, params.receive_timeout);
+    private_nh.param("future_tolerance", params.future_tolerance, params.future_tolerance);
+    private_nh.param("lane_index", params.lane_index, params.lane_index);
+    private_nh.param("lane_confirm_frames", params.lane_confirm_frames, params.lane_confirm_frames);
+    private_nh.param("lane_selection_distance", params.lane_selection_distance, params.lane_selection_distance);
+    private_nh.param("lane_boundary_margin", params.lane_boundary_margin, params.lane_boundary_margin);
+    private_nh.param("allow_inferred", params.allow_inferred, params.allow_inferred);
+    private_nh.param("min_confidence", params.min_confidence, params.min_confidence);
+    private_nh.param("join_tolerance", params.join_tolerance, params.join_tolerance);
+    private_nh.param("stop_brake", params.stop_brake, params.stop_brake);
+    private_nh.param("shutdown_stop_duration", params.shutdown_stop_duration, params.shutdown_stop_duration);
+    private_nh.param("marker_z", params.marker_z, params.marker_z);
+    private_nh.param("epsilon", params.epsilon, params.epsilon);
+    private_nh.param("max_steering_dt", params.max_steering_dt, params.max_steering_dt);
+    private_nh.param("consumer_x_min", params.consumer_x_min, params.consumer_x_min);
+    private_nh.param("consumer_x_max", params.consumer_x_max, params.consumer_x_max);
+    private_nh.param("min_segment_length", params.min_segment_length, params.min_segment_length);
+    private_nh.param("lane_width_min", params.lane_width_min, params.lane_width_min);
+    private_nh.param("lane_width_max", params.lane_width_max, params.lane_width_max);
+    private_nh.param("max_width_variation", params.max_width_variation, params.max_width_variation);
+    private_nh.param("inferred_confidence_scale", params.inferred_confidence_scale, params.inferred_confidence_scale);
+    private_nh.param("expected_config_sha256", params.expected_config_sha256, params.expected_config_sha256);
+    private_nh.param("input_topic", params.input_topic, params.input_topic);
+    private_nh.param("control_topic", params.control_topic, params.control_topic);
+    private_nh.param("preview_topic", params.preview_topic, params.preview_topic);
+    private_nh.param("target_topic", params.target_topic, params.target_topic);
+    private_nh.param("markers_topic", params.markers_topic, params.markers_topic);
+    private_nh.param("centerline_marker_width", params.centerline_marker_width, params.centerline_marker_width);
+    private_nh.param("centerpoint_marker_size", params.centerpoint_marker_size, params.centerpoint_marker_size);
+    private_nh.param("centerlabel_marker_size", params.centerlabel_marker_size, params.centerlabel_marker_size);
+    private_nh.param("centerlabel_z_offset", params.centerlabel_z_offset, params.centerlabel_z_offset);
+
+    private_nh.param("diagnostics_topic", params.diagnostics_topic, params.diagnostics_topic);
+    private_nh.param("emergency_stop_topic", params.emergency_stop_topic, params.emergency_stop_topic);
+}
+
+void validateParameters() {
+    // 0보다 커야 하는 값.
+    const std::vector<double> positive_values = {
+        params.lookahead_distance, params.wheelbase, params.steering_curvature_gain,
+        params.max_steering_deg, params.max_steering_rate, params.max_lateral_accel,
+        params.control_rate, params.source_timeout, params.receive_timeout,
+        params.lane_selection_distance, params.join_tolerance, params.shutdown_stop_duration,
+        params.epsilon, params.max_steering_dt, params.consumer_x_max,
+        params.min_segment_length, params.lane_width_min, params.lane_width_max,
+        params.max_width_variation, params.inferred_confidence_scale,
+        params.centerline_marker_width, params.centerpoint_marker_size,
+        params.centerlabel_marker_size, params.centerlabel_z_offset
+    };
+    for (double value : positive_values) {
+        if (!std::isfinite(value) || value <= 0.0) {
+            throw std::runtime_error("parameters must be finite and positive");
+        }
+    }
+
+    // 0을 허용하는 값.
+    const std::vector<double> nonnegative_values = {
+        params.target_speed_kph, params.inferred_speed_kph, params.future_tolerance,
+        params.lane_boundary_margin, params.min_confidence, params.consumer_x_min
+    };
+    for (double value : nonnegative_values) {
+        if (!std::isfinite(value) || value < 0.0) {
+            throw std::runtime_error("parameters must be finite and nonnegative");
+        }
+    }
+
+    // 차로 선택 / lookahead / adapter 범위의 관계.
+    const bool invalid_lane_selection =
+        params.lane_index < -1 || params.lane_index > 1 || params.lane_confirm_frames < 1;
+    const bool invalid_lookahead_range =
+        params.consumer_x_min > params.lane_selection_distance ||
+        params.lane_selection_distance >= params.lookahead_distance ||
+        params.lookahead_distance >= params.consumer_x_max;
+    const bool invalid_lane_geometry =
+        params.lane_width_min >= params.lane_width_max ||
+        params.lane_boundary_margin * 2.0 >= params.lane_width_min ||
+        params.min_confidence > 1.0 || params.inferred_confidence_scale > 1.0;
+    const bool invalid_control_settings =
+        !std::isfinite(params.stop_brake) || params.stop_brake <= 0.0 || params.stop_brake > 1.0 ||
+        params.max_steering_deg >= 90.0;
+    const bool invalid_display_or_contract =
+        !std::isfinite(params.marker_z) || params.expected_config_sha256.empty();
+
+    if (invalid_lane_selection || invalid_lookahead_range || invalid_lane_geometry ||
+        invalid_control_settings || invalid_display_or_contract) {
+        throw std::runtime_error("invalid lane follower parameter ranges");
+    }
+
+    const std::vector<std::string> topics = {
+        params.input_topic, params.control_topic, params.preview_topic,
+        params.target_topic, params.markers_topic, params.diagnostics_topic,
+        params.emergency_stop_topic
+    };
+    for (const std::string& topic : topics) {
+        if (topic.empty()) {
+            throw std::runtime_error("topic names must not be empty");
+        }
+    }
+}
+
+
+// ============================================================================
+// 11. BBOX 입력: 상대 라벨을 고정된 기하 차로 index(0/1)의 점유 상태로 변환.
+// ============================================================================
+void bboxCallback(const BboxResult::ConstPtr& message) {
+    const auto reject = [](const std::string& reason) {
+        change_state.bbox_valid = false;
+        change_state.bbox_error = reason;
+        change_state.obstacle_hits = change_state.clear_hits = 0;
+    };
+    const auto stamp = message->header.stamp;
+    const double age = (ros::Time::now() - stamp).toSec();
+    if (stamp.isZero() || age < -params.future_tolerance || age > params.bbox_source_timeout) {
+        reject("bbox_timestamp_expired"); return;
+    }
+    // classifier timeout/UNKNOWN은 같은 stamp여도 즉시 거부한다.
+    if (!message->valid) {
+        // 원인은 보존한다. 변경 중 제동 제외 여부는 제어 단계에서 결정한다.
+        std::string detail = message->reason;
+        for (std::size_t i = 0; i < message->assignments.size() && i < message->box_reasons.size(); ++i) {
+            if (message->assignments[i] == BboxResult::UNKNOWN) {
+                detail += ":" + message->box_reasons[i];
+                break;
+            }
+        }
+        reject("bbox_classification_invalid:" + detail);
+        return;
+    }
+    if (change_state.bbox_received && stamp == change_state.bbox_stamp) return;
+    if (change_state.bbox_received && stamp < change_state.bbox_stamp) { reject("bbox_timestamp_regression"); return; }
+    const double lane_age = (ros::Time::now() - message->lane_stamp).toSec();
+    if (message->own_lane < 0 || message->own_lane > 1 || message->lane_stamp.isZero() ||
+        lane_age < -params.future_tolerance || lane_age > params.source_timeout ||
+        std::abs((stamp-message->lane_stamp).toSec()) > params.max_sensor_skew ||
+        message->assignments.size() != message->boxes.size() || message->box_reasons.size() != message->boxes.size() || message->clipped_association.size() != message->boxes.size()) {
+        reject("invalid_bbox_lane_contract"); return;
+    }
+    int own = BboxResult::NO_DETECTION, adjacent = BboxResult::NO_DETECTION;
+    bool deferred_far = false;
+    bool clipped_association = false;
+    for (std::size_t i=0; i<message->assignments.size(); ++i) {
+        const auto label = message->assignments[i];
+        if (message->clipped_association[i] && label != BboxResult::OWN && label != BboxResult::ADJACENT) {
+            reject("invalid_clipped_bbox_contract"); return;
+        }
+        clipped_association |= message->clipped_association[i];
+        if (label == BboxResult::UNKNOWN || label > BboxResult::DEFERRED_FAR) { reject("bbox_lane_unknown"); return; }
+        deferred_far |= label == BboxResult::DEFERRED_FAR;
+        if (label == BboxResult::OWN || label == BboxResult::BOTH) own = BboxResult::DETECTED;
+        if (label == BboxResult::ADJACENT || label == BboxResult::BOTH) adjacent = BboxResult::DETECTED;
+    }
+    if (deferred_far) {
+        if (own != BboxResult::DETECTED) own = BboxResult::UNOBSERVED;
+        if (adjacent != BboxResult::DETECTED) adjacent = BboxResult::UNOBSERVED;
+    }
+    if (message->own_state != own || message->adjacent_state != adjacent) { reject("bbox_occupancy_mismatch"); return; }
+    change_state.deferred_far = deferred_far;
+    change_state.clipped_association = clipped_association;
+    change_state.occupancy[message->own_lane] = own;
+    change_state.occupancy[1-message->own_lane] = adjacent;
+    change_state.bbox_stamp = stamp;
+    change_state.bbox_lane_stamp = message->lane_stamp;
+    change_state.bbox_received_at = ros::SteadyTime::now();
+    change_state.bbox_received = change_state.bbox_valid = true;
+    change_state.bbox_error.clear();
+    change_state.bbox_sequence++;
+}
+
+std::string bboxStopReason() {
+    // 차선 입력·경로·비상정지·변경 시간 제한은 별도 검사에서 계속 적용한다.
+    if (ignoreBboxDuringLaneChange()) return "";
+    if (!change_state.bbox_valid) return change_state.bbox_error;
+    if ((ros::SteadyTime::now()-change_state.bbox_received_at).toSec() > params.bbox_receive_timeout) return "bbox_receive_timeout";
+    const double age = (ros::Time::now()-change_state.bbox_stamp).toSec();
+    if (age < -params.future_tolerance || age > params.bbox_source_timeout) return "bbox_timestamp_expired";
+    if (std::abs((follower_state.source_stamp-change_state.bbox_stamp).toSec()) > params.max_sensor_skew ||
+        std::abs((follower_state.source_stamp-change_state.bbox_lane_stamp).toSec()) > params.max_sensor_skew) return "camera_bbox_timestamp_skew";
+    return "";
+}
+
+// ============================================================================
+// 12. 경로 생성 / 차량 모서리의 도로 경계 검사 (장애물 충돌 거리 검사는 없음)
+// ============================================================================
+const LaneChain* getPlanningLane(int lane_index) {
+    const LaneChain* found = nullptr;
+    for (const auto& lane : change_state.lanes) {
+        if (lane.lane_index != lane_index) continue;
+        LaneSample first, last;
+        if (!interpolateLaneAtX(lane, params.planning_start_x, first) ||
+            !interpolateLaneAtX(lane, params.path_horizon, last)) continue;
+        if (found != nullptr) return nullptr;  // 겹친 경계가 모호하면 변경하지 않는다.
+        found = &lane;
+    }
+    return found;
+}
+
+bool samplePlanningLane(const LaneChain& lane, double x, LaneSample& sample) {
+    if (x >= params.planning_start_x && interpolateLaneAtX(lane, x, sample)) return true;
+    // 후방 차로 점유 확인은 관측되지 않는 경계를 근거리 접선으로 연장한 보수적 근사다.
+    // 전방도 관측 끝 밖에서는 마지막 1m 접선으로 검사하되 주행 경로 자체에는 외삽하지 않는다.
+    double first_x = params.planning_start_x;
+    if (x >= params.planning_start_x) {
+        // 관측 중간의 INVALID gap을 다른 조각의 접선으로 메우지 않는다.
+        // 경로 끝까지 연속 관측된 조각만 앞범퍼 검사에 필요한 끝단 외삽을 허용한다.
+        if (x <= lane.centerline.back().x || lane.centerline.back().x < params.path_horizon) return false;
+        first_x = lane.centerline.back().x - 1.0;
+    }
+    LaneSample first, second;
+    if (!interpolateLaneAtX(lane, first_x, first) || !interpolateLaneAtX(lane, first_x + 1.0, second)) return false;
+    const double ratio = x - first_x;
+    sample.center = interpolatePoint(first.center, second.center, ratio);
+    sample.left = interpolatePoint(first.left, second.left, ratio);
+    sample.right = interpolatePoint(first.right, second.right, ratio);
+    return true;
+}
+
+bool buildPath(const LaneChain& lane, bool changing, std::vector<FamilyPoint2d>& path, double lateral_scale) {
+    path.clear();
+    LaneSample origin, next;
+    if (!samplePlanningLane(lane, 0.0, origin) || !samplePlanningLane(lane, 1.0, next)) return false;
+    const double origin_heading = next.center.y - origin.center.y;
+    const int steps = static_cast<int>(std::ceil(params.path_horizon / params.path_sample_step));
+    for (int index = 0; index <= steps; ++index) {
+        const double x = std::min(index * params.path_sample_step, params.path_horizon);
+        LaneSample sample;
+        if (!samplePlanningLane(lane, x, sample)) return false;
+        double y = sample.center.y;
+        if (changing) {
+            // 재계획할 때마다 현재 차량 위치/방향(y=0, dy/dx=0)에서 옆 중심선에 부드럽게 연결.
+            const double ratio = std::clamp(x / params.lane_change_length, 0.0, 1.0);
+            const double blend = ratio * ratio * ratio * (10.0 + ratio * (-15.0 + 6.0 * ratio));
+            // 짧은 관측 지평에서 차량 앞부분이 바깥 경계를 넘지 않도록 횡이동량을 제한.
+            const double lateral_gain = std::min(1.0, params.max_lateral_step /
+                std::max(std::abs(origin.center.y), params.epsilon)) * lateral_scale;
+            // 횡이동량만 줄인다. 도로 방향 정렬까지 줄이면 변경 중 차체가 비스듬한
+            // 상태에서 모든 후보의 앞 모서리가 바깥 경계를 넘어 영구 정지할 수 있다.
+            y -= origin.center.y * (1.0 - blend * lateral_gain);
+            y -= origin_heading * x * (1.0 - blend);
+        }
+        path.push_back({x, y});
+    }
+    return true;
+}
+
+bool buildRoadBoundedChangePath(const LaneChain& lane, std::vector<FamilyPoint2d>& path) {
+    // 방향을 바꾸지 않고, 큰 횡이동 후보부터 차량 footprint가 들어가는 후보를 선택한다.
+    for (double scale : {1.0, 0.85, 0.70, 0.55, 0.40}) {
+        if (buildPath(lane, true, path, scale) && pathInsideRoad(path)) return true;
+    }
+    return false;
+}
+
+bool pathInsideRoad(const std::vector<FamilyPoint2d>& path) {
+    change_state.maximum_path_curvature = 0.0;
+    for (std::size_t index = 0; index < path.size(); ++index) {
+        const auto& point = path[index];
+        const std::size_t previous = index == 0 ? 0 : index - 1;
+        const std::size_t next = std::min(index + 1, path.size() - 1);
+        const double yaw = std::atan2(path[next].y - path[previous].y, path[next].x - path[previous].x);
+        const double front = params.vehicle_front + params.obstacle_longitudinal_margin + params.path_sample_step;
+        const double rear = params.vehicle_rear + params.obstacle_longitudinal_margin + params.path_sample_step;
+        const double half_width = params.vehicle_width / 2.0 + params.obstacle_lateral_margin;
+        for (double dx : {-rear, front}) {
+            for (double dy : {-half_width, half_width}) {
+                const double x = point.x + dx * std::cos(yaw) - dy * std::sin(yaw);
+                const double y = point.y + dx * std::sin(yaw) + dy * std::cos(yaw);
+                // 두 차로의 바깥 경계 밖으로 차량 모서리가 나가는 후보는 거부.
+                double road_left = -std::numeric_limits<double>::infinity();
+                double road_right = std::numeric_limits<double>::infinity();
+                for (const auto& lane : change_state.lanes) {
+                    LaneSample sample;
+                    if (!samplePlanningLane(lane, x, sample)) continue;
+                    road_left = std::max(road_left, sample.left.y);
+                    road_right = std::min(road_right, sample.right.y);
+                }
+                if (y > road_left || y < road_right) return false;
+            }
+        }
+        if (index > 0 && index + 1 < path.size()) {
+            const auto& before = path[index - 1];
+            const auto& after = path[index + 1];
+            const double denominator = pointDistance(before, point) * pointDistance(point, after) * pointDistance(before, after);
+            if (denominator > params.epsilon) {
+                const double cross = (point.x - before.x) * (after.y - before.y) -
+                                     (point.y - before.y) * (after.x - before.x);
+                const double curvature = 2.0 * std::abs(cross) / denominator;
+                change_state.maximum_path_curvature = std::max(change_state.maximum_path_curvature, curvature);
+            }
+        }
+    }
+    const double steering_curvature_limit = params.steering_curvature_gain *
+        std::tan(params.max_steering_deg * PI / 180.0) / params.wheelbase;
+    return change_state.maximum_path_curvature <= steering_curvature_limit;
+}
+
+void storePlannedTarget(const LaneChain& lane, const std::vector<FamilyPoint2d>& path) {
+    follower_state.selected_lane = lane;
+    follower_state.selected_lane.centerline = path;
+    change_state.path = path;
+    for (std::size_t index = 1; index < path.size(); ++index) {
+        if (path[index].x < params.lookahead_distance) continue;
+        const double ratio = (params.lookahead_distance - path[index - 1].x) / (path[index].x - path[index - 1].x);
+        follower_state.target_point = interpolatePoint(path[index - 1], path[index], ratio);
+        return;
+    }
+}
+
+// ============================================================================
+// 13. 상태 전이: 새 BBOX로 점유 확인, 차선 frame으로 변경 완료 확인
+// ============================================================================
+std::string updateLaneChangePlan() {
+    if (change_state.change_failed) return change_state.change_failure_reason;
+    const auto now = ros::SteadyTime::now();
+    const bool new_scan = change_state.decision_sequence != change_state.bbox_sequence;
+    change_state.decision_sequence = change_state.bbox_sequence;
+    if (change_state.changing) {
+        const LaneChain* target = getPlanningLane(change_state.target_lane);
+        if (target == nullptr) return "target_lane_horizon_missing";
+        if (!ignoreBboxDuringLaneChange()) {
+            if (change_state.deferred_far) {
+                change_state.clear_hits = 0;
+                return "far_obstacle_lane_unresolved_during_change";
+            }
+            if (change_state.occupancy[change_state.target_lane] != BboxResult::NO_DETECTION) {
+                change_state.clear_hits = 0;
+                return "target_lane_detected";
+            }
+            if (new_scan) change_state.clear_hits = std::min(change_state.clear_hits + 1, params.adjacent_clear_frames);
+            if (change_state.clear_hits < params.adjacent_clear_frames) return "confirming_target_lane_after_stop";
+        }
+        std::vector<FamilyPoint2d> path;
+        if (!buildRoadBoundedChangePath(*target, path)) return "lane_change_path_blocked";
+        storePlannedTarget(*target, path);
+
+        LaneSample near, ahead;
+        samplePlanningLane(*target, params.planning_start_x, near);
+        samplePlanningLane(*target, params.planning_start_x + 1.0, ahead);
+        const double heading = std::atan2(ahead.center.y - near.center.y, 1.0);
+        if (follower_state.source_stamp != change_state.completion_stamp) {
+            change_state.completion_stamp = follower_state.source_stamp;
+            if (std::abs(near.center.y) <= params.completion_lateral_error &&
+                std::abs(heading) <= params.completion_heading_deg * PI / 180.0) {
+                change_state.completion_hits++;
+            } else {
+                change_state.completion_hits = 0;
+            }
+        }
+        if (change_state.completion_hits >= params.completion_confirm_frames) {
+            // 내 차로는 시작 때 이미 전환했다. 여기서는 차량의 이동 완료만 기록한다.
+            change_state.changing = false;
+            change_state.has_completed = true;
+            change_state.completed_at = now;
+            change_state.obstacle_hits = 0;
+            change_state.clear_hits = 0;
+            ROS_INFO("Lane change complete: following lane %d", follower_state.locked_lane);
+            return bboxStopReason(); // 완료한 주기부터 BBOX 유효성 검사를 다시 적용.
+        }
+        return "";
+    }
+
+    // 잘린 접점의 연속성만으로 새로운 차선변경을 시작하지 않는다.
+    if (change_state.clipped_association && (!change_state.has_completed ||
+        change_state.occupancy[follower_state.locked_lane] == BboxResult::DETECTED))
+        return "clipped_obstacle_cannot_start_change";
+    const LaneChain* current = getPlanningLane(follower_state.locked_lane);
+    if (current == nullptr) return "current_lane_horizon_missing";
+    const int adjacent_index = 1 - follower_state.locked_lane;
+    // 장애물이 나타나기 전부터 옆 차로의 연속 미검출을 확인해 변경 시작 지연을 줄인다.
+    if (new_scan) {
+        change_state.clear_hits = change_state.occupancy[adjacent_index] == BboxResult::NO_DETECTION ?
+            std::min(change_state.clear_hits + 1, params.adjacent_clear_frames) : 0;
+    }
+    const bool detected = change_state.occupancy[follower_state.locked_lane] == BboxResult::DETECTED;
+    if (change_state.deferred_far && detected) return "far_obstacle_lane_unresolved";
+    if (change_state.deferred_far && params.far_obstacle_speed_kph <= params.epsilon) return "far_obstacle_approach_disabled";
+    if (!detected) {
+        change_state.obstacle_hits = 0;
+        std::vector<FamilyPoint2d> path;
+        if (!buildPath(*current, false, path) || !pathInsideRoad(path)) return "following_path_outside_road";
+        storePlannedTarget(*current, path);
+        change_state.target_lane = follower_state.locked_lane;
+        return "";
+    }
+    if (change_state.has_completed && params.one_lane_change_only) return "lane_change_already_completed";
+    if (change_state.has_completed && (now-change_state.completed_at).toSec() < params.lane_change_cooldown) return "lane_change_cooldown";
+    if (new_scan) change_state.obstacle_hits++;
+
+    const LaneChain* adjacent = getPlanningLane(adjacent_index);
+    if (adjacent == nullptr) {
+        change_state.clear_hits = 0;
+        return "adjacent_lane_horizon_missing";
+    }
+    std::vector<FamilyPoint2d> path;
+    if (change_state.occupancy[adjacent_index] != BboxResult::NO_DETECTION || !buildRoadBoundedChangePath(*adjacent, path)) {
+        change_state.clear_hits = 0;
+        return "adjacent_lane_detected_or_path_invalid";
+    }
+    if (change_state.obstacle_hits < params.obstacle_confirm_frames ||
+        change_state.clear_hits < params.adjacent_clear_frames) return "confirming_bbox_lane_change";
+
+    // 모든 변경 조건이 충족되면 옆 차로를 즉시 내 차로로 지정한다.
+    // 변경 중 정지/입력 유실이 생겨도 이 선택을 되돌리지 않는다.
+    const int previous_lane = follower_state.locked_lane;
+    follower_state.locked_lane = adjacent_index;
+    change_state.target_lane = follower_state.locked_lane;
+    change_state.changing = true;
+    change_state.has_completed = false; // 이번 변경의 완료 여부를 새로 기록한다.
+    change_state.change_started = now;
+    change_state.timing_updated_at = now;
+    change_state.drive_time_sec = change_state.pause_time_sec = 0.0;
+    change_state.last_command_driving = false;
+    change_state.completion_hits = 0;
+    change_state.completion_stamp = ros::Time();
+    storePlannedTarget(*adjacent, path);
+    ROS_INFO("BBOX lane change started: %d -> %d (new own lane)", previous_lane, follower_state.locked_lane);
+    return "";
+}
+
+void validateLaneChangeParameters() {
+    if (!std::isfinite(params.clipped_tracking_speed_kph) || params.clipped_tracking_speed_kph <= 0 ||
+        params.clipped_tracking_speed_kph > 5) throw std::runtime_error("clipped_tracking_speed_kph must be in (0,5]");
+    if (!std::isfinite(params.far_obstacle_speed_kph) || params.far_obstacle_speed_kph < 0 ||
+        params.far_obstacle_speed_kph > 5.0) throw std::runtime_error("far_obstacle_speed_kph must be in [0, 5]");
+    for (double value : {params.bbox_source_timeout, params.bbox_receive_timeout, params.max_sensor_skew,
+         params.obstacle_lateral_margin, params.obstacle_longitudinal_margin, params.vehicle_front,
+         params.vehicle_rear, params.vehicle_width, params.planning_start_x, params.path_horizon,
+         params.path_sample_step, params.lane_change_length, params.max_lateral_step,
+         params.lane_change_speed_kph, params.completion_lateral_error, params.completion_heading_deg,
+         params.lane_change_timeout, params.lane_change_pause_timeout, params.lane_change_cooldown}) {
+        if (!std::isfinite(value) || value <= 0) throw std::runtime_error("lane change parameters must be finite and positive");
+    }
+    if (params.bbox_topic.empty() || params.reference_lane_topic.empty() || params.obstacle_confirm_frames < 1 ||
+        params.adjacent_clear_frames < 1 || params.completion_confirm_frames < 1 ||
+        params.lookahead_distance >= params.path_horizon || params.path_horizon >= params.consumer_x_max ||
+        params.lane_change_length > params.path_horizon || params.lane_change_length < params.lookahead_distance ||
+        params.planning_start_x + 1 >= params.lookahead_distance || params.path_sample_step > 0.5 ||
+        params.vehicle_width + 2*params.obstacle_lateral_margin >= params.lane_width_max) {
+        throw std::runtime_error("invalid lane change parameter relationships");
+    }
+}
+
+}  // namespace

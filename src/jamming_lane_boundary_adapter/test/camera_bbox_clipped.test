@@ -1,0 +1,10 @@
+<launch>
+  <include file="$(find lane_boundary_adapter)/launch/camera_bbox_lane.launch">
+    <arg name="hood_crop_bottom_ratio" value="0.21"/>
+    <arg name="lane_index" value="1"/>
+    <arg name="use_rviz" value="false"/>
+    <arg name="image_topic" value="/bbox_test/image"/>
+    <arg name="bbox_topic" value="/bbox_test/yolo"/>
+  </include>
+  <test pkg="lane_boundary_adapter" type="test_camera_bbox_clipped.py" test-name="camera_bbox_clipped" time-limit="90"/>
+</launch>

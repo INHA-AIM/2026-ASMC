@@ -12,7 +12,6 @@ import yaml
 PRIVILEGED_TOPICS = frozenset(
     (
         "/Object_topic",
-        "/velodyne_points_semantic",
         "/velodyne_points_instance",
         "/morai/gt/lidar_instance_raw",
         "/sem_front/image_jpeg/compressed",

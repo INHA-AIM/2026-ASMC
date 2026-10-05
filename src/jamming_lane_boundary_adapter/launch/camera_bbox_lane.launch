@@ -1,0 +1,42 @@
+<launch>
+  <arg name="contact_band_height_px" default="8.0"/>
+  <arg name="contact_row_tolerance_px" default="8.0"/>
+  <arg name="min_contact_overlap_ratio" default="0.10"/>
+  <arg name="min_contact_support_rows" default="3"/>
+  <!-- 차로 판정 / 표시 전용. 주행 명령은 발행하지 않는다. -->
+  <arg name="hood_crop_bottom_ratio" default="0.21"/>
+  <arg name="use_rviz" default="true"/>
+  <arg name="image_topic" default="/image_jpeg/compressed"/>
+  <arg name="bbox_topic" default="/planning/camera_bbox_lane/yolo"/>
+  <arg name="calibration_file" default="$(find asmc_perception)/config/bev/cameras_v2.yaml"/>
+  <arg name="expected_hash" default="691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070"/>
+  <arg name="reference_lane_topic" default=""/>
+  <arg name="lane_index" default="-1"/>
+  <arg name="boundary_margin_px" default="3.0"/>
+  <arg name="consumer_x_max" default="20.0"/>
+  <arg name="source_timeout" default="0.5"/>
+  <arg name="max_sensor_skew" default="0.20"/>
+  <node pkg="lane_boundary_adapter" type="camera_bbox_frame_bridge.py"
+        name="camera_bbox_frame_bridge" output="screen" required="true">
+    <param name="image_topic" value="$(arg image_topic)"/>
+    <param name="bbox_topic" value="$(arg bbox_topic)"/>
+  </node>
+  <node pkg="lane_boundary_adapter" type="camera_bbox_lane_node"
+        name="camera_bbox_lane" output="screen" required="true">
+    <param name="hood_crop_bottom_ratio" value="$(arg hood_crop_bottom_ratio)"/>
+    <param name="contact_band_height_px" value="$(arg contact_band_height_px)"/>
+    <param name="contact_row_tolerance_px" value="$(arg contact_row_tolerance_px)"/>
+    <param name="min_contact_overlap_ratio" value="$(arg min_contact_overlap_ratio)"/>
+    <param name="min_contact_support_rows" value="$(arg min_contact_support_rows)"/>
+    <param name="calibration_file" value="$(arg calibration_file)"/>
+    <param name="expected_hash" value="$(arg expected_hash)"/>
+    <param name="reference_lane_topic" value="$(arg reference_lane_topic)"/>
+    <param name="lane_index" value="$(arg lane_index)"/>
+    <param name="boundary_margin_px" value="$(arg boundary_margin_px)"/>
+    <param name="consumer_x_max" value="$(arg consumer_x_max)"/>
+    <param name="source_timeout" value="$(arg source_timeout)"/>
+    <param name="max_sensor_skew" value="$(arg max_sensor_skew)"/>
+  </node>
+  <node if="$(arg use_rviz)" pkg="rviz" type="rviz" name="camera_bbox_rviz"
+        args="-d $(find lane_boundary_adapter)/rviz/camera_bbox_lane.rviz"/>
+</launch>

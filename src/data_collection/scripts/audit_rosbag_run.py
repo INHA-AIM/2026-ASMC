@@ -19,8 +19,6 @@ PAIR_LIMITS_MS = {
     "rgb_sem_front": ("/image_jpeg/compressed", "/sem_front/image_jpeg/compressed", 30.0),
     "rgb_sem_left": ("/cam_left/image_jpeg/compressed", "/sem_left/image_jpeg/compressed", 30.0),
     "rgb_sem_right": ("/cam_right/image_jpeg/compressed", "/sem_right/image_jpeg/compressed", 30.0),
-    "intensity_semantic_lidar": ("/velodyne_points", "/velodyne_points_semantic", 50.0),
-    "semantic_instance_lidar": ("/velodyne_points_semantic", "/velodyne_points_instance", 50.0),
     "intensity_instance_lidar": ("/velodyne_points", "/velodyne_points_instance", 50.0),
 }
 
@@ -103,7 +101,6 @@ def audit(paths):
     first_bag_time = None
     last_bag_time = None
     instance_schema = None
-    semantic_schema = None
     instance_samples = {"sampled_points": 0, "nonzero_points": 0, "maximum_id": 0}
     instance_ids = set()
     object_ids = {"npc": set(), "pedestrian": set(), "obstacle": set()}
@@ -122,8 +119,6 @@ def audit(paths):
                     if values and source < values[-1]:
                         header_regressions[topic] = header_regressions.get(topic, 0) + 1
                     values.append(source)
-                if topic == "/velodyne_points_semantic" and semantic_schema is None:
-                    semantic_schema = pointcloud_schema(message)
                 if topic == "/velodyne_points_instance" and instance_schema is None:
                     instance_schema = pointcloud_schema(message)
                 if topic == "/velodyne_points_instance":
@@ -182,11 +177,6 @@ def audit(paths):
             "ok": p95 is not None and p95 <= limit,
         }
 
-    semantic_schema_ok = (
-        semantic_schema is not None
-        and semantic_schema.get("semantic_id") == PointField.UINT32
-        and "intensity" not in semantic_schema
-    )
     schema_ok = (
         instance_schema is not None
         and instance_schema.get("instance_id") == PointField.UINT32
@@ -209,13 +199,8 @@ def audit(paths):
             topics[name]["average_hz"] >= 18.0 for name in present_cameras
         )
     lidar_topics = ("/velodyne_points", "/velodyne_points_instance")
-    if "/velodyne_points_semantic" in topics:
-        checks["semantic_lidar_schema"] = semantic_schema_ok
     if all(name in topics for name in lidar_topics):
-        rate_topics = list(lidar_topics)
-        if "/velodyne_points_semantic" in topics:
-            rate_topics.append("/velodyne_points_semantic")
-        rates = [topics[name]["average_hz"] for name in rate_topics]
+        rates = [topics[name]["average_hz"] for name in lidar_topics]
         checks["lidar_rates_at_least_7hz"] = min(rates) >= 7.0
         checks["lidar_rate_difference_within_15pct"] = (
             max(rates) > 0 and (max(rates) - min(rates)) / max(rates) <= 0.15
@@ -231,15 +216,11 @@ def audit(paths):
             checks[name + "_p95"] = value["ok"]
 
     return {
-        "schema_version": "asmc-rosbag-audit-1.3.0",
+        "schema_version": "asmc-rosbag-audit-1.2.0",
         "bag_files": [os.path.basename(path) for path in paths],
         "duration_seconds": round(duration, 3),
         "topics": topics,
         "pairing": pairs,
-        "semantic_lidar": (
-            {"fields": semantic_schema, "schema_ok": semantic_schema_ok}
-            if semantic_schema is not None else None
-        ),
         "instance_lidar": (
             {
                 "fields": instance_schema,

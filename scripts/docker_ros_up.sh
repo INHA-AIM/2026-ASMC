@@ -8,13 +8,10 @@ COMPOSE_FILE="$REPO_ROOT/docker/ros-noetic/docker-compose.yaml"
 RTX50_COMPOSE_FILE="$REPO_ROOT/docker/ros-noetic/docker-compose.rtx50.yaml"
 CONTAINER="asmc-ros-noetic"
 
-export ASMC="$REPO_ROOT"
+export ASMC="${ASMC:-$REPO_ROOT}"
 export ASMC_DATA="${ASMC_DATA:-$(dirname "$REPO_ROOT")/data}"
 export TWINLITE_SOURCE="${TWINLITE_SOURCE:-$(dirname "$REPO_ROOT")/external/baselines/TwinLiteNetPlus}"
-[ -d "$ASMC_DATA" ] || {
-  echo "[FAIL] ASMC_DATA directory does not exist: $ASMC_DATA" >&2
-  exit 1
-}
+mkdir -p "$ASMC_DATA"
 
 COMPOSE=(docker compose -f "$COMPOSE_FILE")
 COMPOSE_RTX50=(docker compose -f "$COMPOSE_FILE" -f "$RTX50_COMPOSE_FILE")

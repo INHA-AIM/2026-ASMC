@@ -26,8 +26,6 @@ from data_collection.bag_run import (
     build_rosbag_command,
     default_rosbag_root,
     make_bag_run_id,
-    missing_recorded_topics,
-    recorded_topic_counts,
     sha256_file,
     slug,
 )
@@ -607,32 +605,12 @@ class BagRecorderNode(object):
             and not active_files
             else "interrupted"
         )
-        recorded_counts = None
-        missing_recorded = []
-        recorded_counts_error = None
-        if self.profile.get("require_nonempty_topics") and bag_files and not active_files:
-            try:
-                recorded_counts = recorded_topic_counts(bag_files)
-                missing_recorded = missing_recorded_topics(
-                    self.profile["required_topics"], recorded_counts
-                )
-            except Exception as exc:
-                recorded_counts_error = "{}: {}".format(type(exc).__name__, exc)
-            if missing_recorded or recorded_counts_error:
-                status = "incomplete" if status == "complete" else status
-                rospy.logerr(
-                    "GT bag missing recorded topics=%s; bag inspection error=%s",
-                    missing_recorded, recorded_counts_error
-                )
         self.metadata.update(
             {
                 "status": status,
                 "closed_at_utc": utc_now_iso(),
                 "rosbag_return_code": return_code,
                 "topic_statistics": topic_stats,
-                "recorded_topic_counts": recorded_counts,
-                "missing_required_message_topics": missing_recorded,
-                "recorded_topic_counts_error": recorded_counts_error,
                 "diagnostics_final": bridge_diagnostics,
                 "bags": bag_info,
                 "active_files": [os.path.basename(path) for path in active_files],

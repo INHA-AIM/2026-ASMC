@@ -28,7 +28,6 @@ DEVELOPMENT_EXTRA_TOPICS = (
     "/sem_front/image_jpeg/compressed",
     "/sem_left/image_jpeg/compressed",
     "/sem_right/image_jpeg/compressed",
-    "/velodyne_points_semantic",
     "/velodyne_points_instance",
 )
 
@@ -37,7 +36,6 @@ COMPETITION_FORBIDDEN_TOPICS = (
     "/sem_front/image_jpeg/compressed",
     "/sem_left/image_jpeg/compressed",
     "/sem_right/image_jpeg/compressed",
-    "/velodyne_points_semantic",
     "/velodyne_points_instance",
 )
 
@@ -52,9 +50,8 @@ NOMINAL_RATES_HZ = {
     "/sem_front/image_jpeg/compressed": 20.0,
     "/sem_left/image_jpeg/compressed": 20.0,
     "/sem_right/image_jpeg/compressed": 20.0,
-    "/velodyne_points": 15.0,
-    "/velodyne_points_semantic": 15.0,
-    "/velodyne_points_instance": 15.0,
+    "/velodyne_points": 10.0,
+    "/velodyne_points_instance": 10.0,
     "/gps": 5.0,
     "/imu": 50.0,
     "/vehicle/state": 50.0,
@@ -227,8 +224,7 @@ def main():
                 age_ms = (wall_now - stamp) * 1000.0
                 if 0.0 <= age_ms <= 60000.0:
                     header_ages_ms[topic_name].append(age_ms)
-            if topic_name in ("/velodyne_points_semantic",
-                              "/velodyne_points_instance") and hasattr(message, "fields"):
+            if topic_name == "/velodyne_points_instance" and hasattr(message, "fields"):
                 pointcloud_fields[topic_name] = {
                     field.name: field.datatype for field in message.fields
                 }
@@ -255,7 +251,6 @@ def main():
         "/gps": GPSMessage,
         "/imu": Imu,
         "/velodyne_points": PointCloud2,
-        "/velodyne_points_semantic": PointCloud2,
         "/velodyne_points_instance": PointCloud2,
         "/vehicle/state": VehicleState,
     }
@@ -298,7 +293,6 @@ def main():
     nominal_rates = dict(NOMINAL_RATES_HZ)
     if args.lidar_target_hz is not None:
         nominal_rates["/velodyne_points"] = args.lidar_target_hz
-        nominal_rates["/velodyne_points_semantic"] = args.lidar_target_hz
         nominal_rates["/velodyne_points_instance"] = args.lidar_target_hz
     with lock:
         snapshot = {topic: list(values) for topic, values in samples.items()}
@@ -395,18 +389,6 @@ def main():
             failures.append("threshold:lidar_target_hz")
             report["ok"] = False
     if profile == "development":
-        semantic_schema = pointcloud_fields.get("/velodyne_points_semantic", {})
-        semantic_ok = (semantic_schema.get("semantic_id") == 6
-                       and "intensity" not in semantic_schema)
-        report["semantic_lidar_schema"] = {
-            "fields": semantic_schema,
-            "expected": {"semantic_id": 6},
-            "ok": semantic_ok,
-        }
-        if not semantic_ok:
-            failures.append("/velodyne_points_semantic:schema")
-            report["ok"] = False
-            print("[FAIL] Semantic LiDAR must contain uint32 semantic_id and no intensity")
         schema = pointcloud_fields.get("/velodyne_points_instance", {})
         schema_ok = schema.get("instance_id") == 6 and "intensity" not in schema
         report["instance_lidar_schema"] = {
@@ -422,8 +404,6 @@ def main():
             "rgb_sem_front": ("/image_jpeg/compressed", "/sem_front/image_jpeg/compressed", 30.0),
             "rgb_sem_left": ("/cam_left/image_jpeg/compressed", "/sem_left/image_jpeg/compressed", 30.0),
             "rgb_sem_right": ("/cam_right/image_jpeg/compressed", "/sem_right/image_jpeg/compressed", 30.0),
-            "intensity_semantic_lidar": ("/velodyne_points", "/velodyne_points_semantic", 50.0),
-            "semantic_instance_lidar": ("/velodyne_points_semantic", "/velodyne_points_instance", 50.0),
             "intensity_instance_lidar": ("/velodyne_points", "/velodyne_points_instance", 50.0),
         }
         report["pairing"] = {}
@@ -445,10 +425,7 @@ def main():
         )
         rates = dict((topic, report["topics"][topic]["rate_hz"]) for topic in topics)
         camera_rate_ok = all(rates[topic] >= 18.0 for topic in camera_gate_topics)
-        lidar_rates = [rates[topic] for topic in (
-            "/velodyne_points", "/velodyne_points_semantic",
-            "/velodyne_points_instance",
-        )]
+        lidar_rates = [rates["/velodyne_points"], rates["/velodyne_points_instance"]]
         lidar_rate_ok = min(lidar_rates) >= 7.0
         lidar_difference_ok = (
             max(lidar_rates) > 0

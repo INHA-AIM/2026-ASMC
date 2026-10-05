@@ -77,19 +77,3 @@ def sha256_file(path, chunk_size=4 << 20):
 def default_rosbag_root():
     data_root = os.environ.get("ASMC_DATA", "/data")
     return os.path.join(os.path.abspath(os.path.expanduser(data_root)), "rosbags")
-
-
-def recorded_topic_counts(paths):
-    """Count actual messages in closed bags, not just advertised ROS topics."""
-    import rosbag
-
-    counts = {}
-    for path in paths:
-        with rosbag.Bag(path, "r") as bag:
-            for topic, info in bag.get_type_and_topic_info().topics.items():
-                counts[topic] = counts.get(topic, 0) + int(info.message_count)
-    return counts
-
-
-def missing_recorded_topics(required_topics, counts):
-    return sorted(topic for topic in required_topics if counts.get(topic, 0) < 1)

@@ -6,6 +6,14 @@
 > 허가하지 않는다. 계측 근거는 [L1-A 보고서](../../packages/asmc_perception/lidar-l1a-validation-20260926.md)와
 > [기준 manifest](../../../config/baselines/lidar_l1a_20260926.yaml)에 있다.
 
+2026-10-05 [L2-I2 후보 인계](../../packages/asmc_lidar/l2i2-handoff-20261005.md)는
+기존 운영 소스와 별개인 `asmc_lidar`에서 상태가 있는 local/map 객체와 격리된
+Frenet 입력 후보를 추가했다. `/perception/objects` 기본 publisher나 위 L1-A의
+원본 revision별 해석은 바꾸지 않는다. 최신 후보 토픽·MD5는
+[계약 YAML](../../../config/contracts/lidar_candidate_topic_contract_v1.yaml)에 고정했다.
+서준 브랜치의 `DetectedObjectArray` MD5 차이는 해결되지 않았고, 실제
+Behavior/Frenet/MPC 전체의 음영 전환 승인은 여전히 남았다.
+
 ## 현재 연결 상태와 메시지 경계
 
 2026-10-03 [L2-A2-H1 격리 지면 평가](../../packages/asmc_lidar/l2a2-h1-height-review-20261003.md)는

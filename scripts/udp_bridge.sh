@@ -27,8 +27,7 @@ Stream profiles:
 
 The script does not change MORAI UI settings. Import the generated sensor JSON
 matching the selected transport. v3 is the 15 Hz deployment setting; complete
-scans near 12 Hz are accepted. ASMC_sensor_set_GT.json is local development-only
-and adds 15 Hz Semantic LiDAR ID 11 and Instance LiDAR ID 12.
+scans near 12 Hz are accepted.
 
 Competition Vehicle Status is optional in the participant simulator. Use
 --require-competition-status only for the organizer/field acceptance gate.
@@ -235,9 +234,7 @@ echo "  TrafficLight GT: 7603/7502 (type 258; not consumed)"
 echo "  Vehicle state  : GPS/IMU -> /vehicle/state"
 echo "  Sensor ports   : competition allowlist 9291..9303"
 if [ "$STREAM_PROFILE" = "development" ]; then
-  echo "                   + Object/Semantic camera and LiDAR GT development inputs"
-  echo "  GT LiDAR UDP    : semantic 9311 -> /velodyne_points_semantic"
-  echo "                    instance 9313 -> /velodyne_points_instance"
+  echo "                   + Object/Semantic/Instance development inputs"
 fi
 echo "  Timestamp      : receive default; GT pairing: timestamp_mode:=source"
 echo "  Verify         : rostopic hz /Ego_topic"
@@ -246,7 +243,6 @@ echo "                  rostopic hz /image_jpeg/compressed"
 echo "                  rostopic hz /vehicle/state"
 if [ "$STREAM_PROFILE" = "development" ]; then
   echo "                  rostopic hz /sem_front/image_jpeg/compressed"
-  echo "                  rostopic hz /velodyne_points_semantic"
   echo "                  rostopic hz /velodyne_points_instance"
 else
   echo "                  python3 scripts/verify_morai_topics.py --profile competition"

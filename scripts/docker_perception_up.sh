@@ -1,20 +1,11 @@
 #!/usr/bin/env bash
 # Perception ML 학습 컨테이너 제어
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-REPO_ROOT="$(dirname "$SCRIPT_DIR")"
-COMPOSE_DIR="$REPO_ROOT/docker/perception-train"
-export ASMC="$REPO_ROOT"
-export ASMC_DATA="${ASMC_DATA:-$(dirname "$REPO_ROOT")/data}"
-export TWINLITE_SOURCE="${TWINLITE_SOURCE:-$(dirname "$REPO_ROOT")/external/baselines/TwinLiteNetPlus}"
-[ -d "$ASMC_DATA" ] || {
-  echo "[FAIL] ASMC_DATA directory does not exist: $ASMC_DATA" >&2
-  exit 1
-}
-[ -f "$TWINLITE_SOURCE/model/model.py" ] || {
-  echo "[FAIL] TwinLite source is incomplete: $TWINLITE_SOURCE" >&2
-  exit 1
-}
+COMPOSE_DIR="$(dirname "$(readlink -f "$0")")/../docker/perception-train"
+export ASMC="${ASMC:-$(dirname "$(readlink -f "$0")")/..}"
+export ASMC_DATA="${ASMC_DATA:-$(dirname "$(readlink -f "$ASMC")")/data}"
+export TWINLITE_SOURCE="${TWINLITE_SOURCE:-$(dirname "$(readlink -f "$ASMC")")/external/baselines/TwinLiteNetPlus}"
+mkdir -p "$ASMC_DATA"
 
 cmd="${1:-up}"
 echo "[DATA] $ASMC_DATA -> /data (ro)"

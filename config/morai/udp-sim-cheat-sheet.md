@@ -6,7 +6,7 @@
 > bridge 구현·통합 gate: [MORAI bridge guide](../../docs/packages/asmc_bridge/README.md)
 > 본선 센서셋: [`ASMC_sensor_set_v3.json`](./sensors/ASMC_sensor_set_v3.json) — 설정·소비 15 Hz, 완성 scan 약 12 Hz 허용<br>
 > 회귀 센서셋: [`ASMC_sensor_set_v2.json`](./sensors/ASMC_sensor_set_v2.json) — 10 Hz 비교용<br>
-> GT용: [`ASMC_sensor_set_GT.json`](./sensors/ASMC_sensor_set_GT.json) (v3 15 Hz + Semantic Camera×3 + Semantic/Instance LiDAR)
+> GT용: [`ASMC_sensor_set_GT.json`](./sensors/ASMC_sensor_set_GT.json) (v2 + Semantic Camera×3 + Instance LiDAR)
 
 ---
 
@@ -111,9 +111,9 @@ local 개발 profile을 명시해야 수신한다.
 
 Camera-10은 예전 **9090**이 아님 (rosbridge와 충돌).
 
-## GT Semantic/Instance LiDAR (ASMC_sensor_set_GT.json)
+## GT Instance LiDAR (ASMC_sensor_set_GT.json)
 
-ID 11·12는 local development profile에서만 독립 수신한다. 정합용 source stamp가 필요하면:
+ID 11은 local development profile에서만 독립 수신한다. 정합용 source stamp가 필요하면:
 
 ```bash
 ./scripts/udp_bridge.sh --streams development timestamp_mode:=source
@@ -121,11 +121,9 @@ ID 11·12는 local development profile에서만 독립 수신한다. 정합용 s
 
 | 센서 | Host / Dest | ROS 토픽 | field |
 |---|---|---|---|
-| Intensity LiDAR ID 5 | 9298 / **9299** | `/velodyne_points` | `intensity float32` |
-| Semantic LiDAR ID 11 | 9310 / **9311** | `/velodyne_points_semantic` | `semantic_id uint32` |
-| Instance LiDAR ID 12 | 9312 / **9313** | `/velodyne_points_instance` | `instance_id uint32` |
+| Instance LiDAR ID 11 | 9310 / **9311** | `/velodyne_points_instance` | `instance_id uint32` |
 
-확인: `./scripts/docker_ros_up.sh verify-gt 20`. 세 LiDAR의 실효 주기·source stamp·PointCloud2 schema를 검사한다. 동일 장착 위치가 점 인덱스의 일대일 대응을 보장하지는 않는다. Instance/Object/Semantic은 개발 oracle이며
+확인: `./scripts/docker_ros_up.sh verify-gt 20`. Instance/Object/Semantic은 개발 oracle이며
 대회 launch와 일반 raw bag에 포함하지 않는다.
 
 ---

@@ -100,7 +100,7 @@ Vehicle Status, Ego Ctrl Cmd, Competition Vehicle Status로 고정했다. 릴리
 | `ASMC_sensor_set_v1.json` | 340° | 10 Hz | 최초 설정·과거 재현 |
 | `ASMC_sensor_set_v2.json` | 328° | 10 Hz | 현재 회귀 기준 |
 | `ASMC_sensor_set_v3.json` | 328° | 15 Hz | 본선 설정, 실제 완성 scan 약 12 Hz 허용 |
-| `ASMC_sensor_set_GT.json` | 328° | 15 Hz | v3 + Semantic Camera 3대 + Semantic LiDAR ID 11 + Instance LiDAR ID 12, local 개발 전용 |
+| `ASMC_sensor_set_GT.json` | 328° | 10 Hz | v2 + Semantic Camera 3대 + Instance LiDAR, 개발 전용 |
 
 v3는 MORAI UI가 저장한 `sensorPeriod≈0.06666667`, `frequencyIndex=2`를 가진다. v2와 센서 pose,
 Camera×4, GPS/IMU, UDP `9290~9303`은 같다. export release 차이로 v3에는 일부 ROS2Native 빈
@@ -111,8 +111,6 @@ v3의 팀 요구는 UI 저장 주기와 손재호 코드의 소비 loop가 15 Hz
 MolitComp03 local 실측은 raw 약 600 packet/s, 50 packet/revolution, 완성 scan 약 12 Hz였고
 이는 허용된다. bridge는 azimuth 기준으로 8 Hz 오조립을 제거하며, 시뮬레이터에 없는 scan을
 복제해 15 Hz로 만들지 않는다. packet/parse error, latency·CPU와 tracking 품질은 계속 관찰한다.
-
-v3 GT LiDAR는 모두 `(0.8, 0, 1.45)m`, `sensorPeriod≈0.06666667`, `frequencyIndex=2`다. ID 5 Intensity는 9298/9299, ID 11 Semantic은 9310/9311, ID 12 Instance는 9312/9313을 사용한다. 기존 v2 GT 기록은 이 파일의 이전 Git revision/SHA로 재현하고 새 파일로 소급 해석하지 않는다.
 
 원본 네 파일은 UI export·provenance 기준이다. `sensors/generated/`의 v2/v3
 `local`/`lan2lan` 파일은 포트·pose·주기를 고정하고 UDP IP만 transport 계약으로 바꾸어
@@ -151,7 +149,7 @@ bridge 수신 socket은 `0.0.0.0`과 기존 destination port에 bind하므로 �
 Windows Firewall과 Hyper-V firewall에서는 MORAI `192.168.0.1` source에 대해 Autonav inbound UDP
 `9798`, `9092`, `9099`, `9291/9293/9295/9297/9299`, `9301/9303`만 허용한다. TrafficLight
 oracle `7502`, GT 전용
-`9305/9307/9309/9311/9313`과 Object oracle `7505`는 본선 allowlist에 넣지 않는다. Ctrl `9093`은
+`9305/9307/9309/9311`과 Object oracle `7505`는 본선 allowlist에 넣지 않는다. Ctrl `9093`은
 Autonav에서 MORAI로 나가는 목적지다. 기본 inbound action 전체를 Allow로 바꾸지 않는다.
 
 - WSL mirrored networking: <https://learn.microsoft.com/windows/wsl/networking#mirrored-mode-networking>

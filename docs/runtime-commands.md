@@ -5,15 +5,16 @@
 > **범위:** 본선·local 공통 실행 진입점. 학습·offline 분석·HD Map 생성용 내부
 > launch는 각 package README를 따른다.
 
-명령은 host의 팀 저장소 root `$ASMC`와 container의 `/root/ws`를 기준으로 한다.
-host의 `$ASMC`는 실제 checkout한 `2026-ASMC`를 가리켜야 한다.
-ROS launch 인자는 `name:=value` 형태로 덮어쓴다.
+명령은 host에서 현재 저장소 root를 ASMC로 잡고, container에서는 `/root/ws`인
+기준이다. ROS launch 인자는 `name:=value` 형태로 덮어쓴다.
 
 ## 1. 가장 빠른 local 실행
 
 ### Host — container 준비
 
 ```bash
+# 먼저 host에서 이 저장소 안의 아무 디렉터리로 이동
+export ASMC=$(git rev-parse --show-toplevel)
 cd "$ASMC"
 xhost +local:docker
 
@@ -32,6 +33,34 @@ source devel/setup.bash
 
 bridge는 perception·planning 통합 명령에 포함하지 않는다. 항상 별도 terminal의 log와
 diagnostics를 보며 입력 Hz를 검사한다.
+
+### LiDAR 후보 별도 실행 — 개발·손재호 인계용
+
+현재 판제 입력을 바꾸지 않고 새 후보를 볼 때는 먼저 컨테이너 `/root/ws`가
+`feat/asmc-lidar-integration` worktree인지 확인한다. 다른 worktree를 마운트한
+`asmc-ros-noetic`을 `docker_ros_up.sh up`으로 전환하면 기존 노드가 종료되므로
+실행 중인 작업을 마친 뒤 전환한다. 자세한 절차는 [LiDAR L2-I2 인계](./packages/asmc_lidar/l2i2-handoff-20261005.md)에 있다.
+bridge가 켜진 뒤 다른 터미널에서:
+
+~~~bash
+docker exec -it asmc-ros-noetic bash
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+roslaunch asmc_lidar unified.launch
+# 화면 없이: rviz:=false
+~~~
+
+이는 LiDAR+IMU만으로 local 후보 추적을 계속하며 GPS·일반/터널 전환 모드가 없다.
+기본 RViz는 `base_link`의 관측/예측 ID를 구분한다. 검증된 pose가 있는 map 후보는
+`rviz -d /root/ws/src/asmc_lidar/rviz/map_tracks.rviz`로 별도 창에서 본다.
+map 부재는 빈 객체가 아니라 `/perception/lidar/objects_map`의 상태로 확인한다.
+구조물 자동 삭제는 OFF이고 판제의 `/perception/objects` 대체 입력이 아니다.
+세 지면 방법 V4 비교는 단일 후보 launch를
+종료한 뒤 ground_compare_live.launch로 실행한다. Patchwork++는 연구용 미채택이다.
+[LiDAR L2-I2 인계](./packages/asmc_lidar/l2i2-handoff-20261005.md)에 토픽·회귀·롤백을 정리했다.
+
+### 입력 Hz·브릿지 진단 (별도 터미널)
 
 ```bash
 rostopic hz /Ego_topic
@@ -562,7 +591,7 @@ firewall=true
 9291, 9293, 9295, 9297, 9299, 9301, 9303
 ```
 
-TrafficLight oracle `7502`, Object oracle `7505`, GT `9305/9307/9309/9311/9313`은 본선
+TrafficLight oracle `7502`, Object oracle `7505`, GT `9305/9307/9309/9311`은 본선
 allowlist에 추가하지 않는다.
 
 6. WSL과 container에서 실제 NIC·route·bind를 확인한다.
@@ -619,48 +648,3 @@ xhost -local:docker
 ```
 
 주행·녹화 중에 `up`, `down`, `rebuild`로 container를 재생성하지 않는다.
-
-## 10. 개발용 LiDAR 실시간 지면 비교
-
-독립 LiDAR worktree가 마운트된 `asmc-ros-noetic` 컨테이너 안에서 실행한다.
-GT 센서·YOLO·기존 Main·카메라 perception은 필요 없다. UDP bridge가 이미
-실행 중이면 중복 실행하지 않는다. 운영 장애물 토픽을 바꾸는 명령이 아니다.
-
-```bash
-source /opt/ros/noetic/setup.bash
-source /root/ws/devel/setup.bash
-
-# 기존 bridge 사용, 세 방법과 RViz
-roslaunch asmc_lidar ground_compare_live.launch
-
-# bridge까지 함께 시작할 때만
-roslaunch asmc_lidar ground_compare_live.launch start_bridge:=true
-
-# 한 방법만 계산
-roslaunch asmc_lidar ground_compare_live.launch method:=linefit
-```
-
-| 옵션 | 기본값 | 선택 |
-|---|---|---|
-| `method` | `all` | `all / jaeho / patchwork / linefit` |
-| `patchwork_variant` | `guard25` | 고정 높이 1.80m + 25cm 보호. 보호 전 결과는 `fixed_height` |
-| `rviz` | `true` | `false`면 점군·진단만 발행 |
-| `start_bridge` | `false` | `true`면 기존 `asmc_bridge/bridge.launch` 포함 |
-| `transport_profile` | `local` | 함께 시작하는 bridge에 적용, `lan2lan`도 지원 |
-| `stream_profile` | `competition` | 함께 시작하는 bridge에 적용 |
-| `timestamp_mode` | `receive` | 함께 시작하는 bridge는 `receive / source`; 기존 bridge는 변경하지 않음 |
-| `cmd_ip` | local `127.0.0.1` | LAN2LAN 기본 `192.168.0.1` |
-| `cloud_topic / imu_topic` | `/velodyne_points / /imu` | 다른 입력 이름으로 remap |
-
-RViz fixed frame은 `base_link`다. Jaeho / Patchwork / Linefit 그룹을 토글해
-**같은 위치**에서 비교한다. `nonground`는 장애물 확정이 아니다.
-재호의 `structural_removed`와 `native_retained`를 통해 지면 탐색 도중 제거된
-수직면을 지면 삭제와 구분할 수 있다.
-
-```bash
-rostopic echo /lidar_candidate/ground_live/status
-rostopic hz /lidar_candidate/ground_live/linefit/nonground
-```
-
-[실시간 비교와 이전 단일 프레임 도구](packages/asmc_lidar/ground-method-comparison-visualization.md),
-[측정 보고서](packages/asmc_lidar/l2a2-v1-live-ground-review-20261004.md)를 함께 확인한다.

@@ -77,8 +77,7 @@ production planner는 GetTrafficLight를 필수 입력으로 요구하지 않는
 | GPS NMEA | `9301` | `/gps`, `/gps/fix` | `gps` |
 | IMU | `9303` | `/imu` | `imu` |
 | Semantic camera 3대 | `9305/9307/9309` | `/sem_*/image_jpeg/compressed` | 개발 GT 전용 |
-| Semantic LiDAR ID 11 | `9311` | `/velodyne_points_semantic` (`semantic_id uint32`) | 개발 GT 전용 |
-| Instance LiDAR ID 12 | `9313` | `/velodyne_points_instance` (`instance_id uint32`) | 개발 GT 전용 |
+| Instance LiDAR | `9311` | `/velodyne_points_instance` | 개발 GT 전용 |
 
 기본 `competition` stream profile은 Object/Semantic/Instance socket과 publisher를 생성하지 않는다.
 `development`는 이 입력을 추가하지만 local transport에서만 허용된다. CLI를 우회해
