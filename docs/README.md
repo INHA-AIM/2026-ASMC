@@ -24,8 +24,8 @@
 2026-10-05 패키지 목표는 `asmc_camera`(현재 `asmc_perception`)와 `asmc_lidar`다.
 카메라 YOLO 생산자는 안승현, 기존 LiDAR 기능·camera fusion의 이전 마무리는 손재호가 맡는다.
 [상세 이전 순서·공용 계약·완료 조건](./architecture/consolidation-roadmap.md)을 먼저 보고,
-현재 후보 실행·출력·미검증 항목은 [L2-I2 인계](./packages/asmc_lidar/l2i2-handoff-20261005.md)를 본다.
-과거 LiDAR 분석 문서는 근거 기록이며 새 후보의 운영 승인으로 읽지 않는다.
+현재 골격과 후속 구현·수락 항목은 [LiDAR 인계](./packages/asmc_lidar/README.md)를 본다.
+개인 LiDAR 연구 코드·보고서는 Git 이력에 보존했고 현재 패키지에는 검출 실행기가 없다.
 
 ## 1. 처음 보는 팀원이 읽을 문서
 
@@ -136,7 +136,7 @@ MORAI 화면에 입력할 값만 필요하면
 | [Perception runtime topic v1](./contracts/perception/runtime-v1.md) | typed 신호등·LiDAR 객체 frame/stamp/freshness와 legacy 종료 gate | Frozen Additive Interface |
 | [P5-D/E perception closeout](./records/baselines/perception-p5de-closeout-v1.md) | typed consumer 인계, 대표 lane-family bag과 최종 운영 경계 | Active Closeout Record |
 | [perception-map-fusion-roadmap.md](./packages/asmc_perception/roadmap.md) | camera/MGeo/LiDAR 전체 전략과 시간순 개발 근거 | Working Proposal + Chronological Record |
-| [lidar-assessment-and-roadmap.md](./packages/asmc_perception/lidar-assessment-and-roadmap.md) | LiDAR 패키지 완성도 평가와 증상별 원인, GT→센서 전환 간극과 판제 측 변경 제안, 개선 우선순위 | Assessment Record + Working Proposal |
+| [LiDAR 이전·인계](./packages/asmc_lidar/README.md) | 손재호 원본 기능 이전, 좌표·시간·공용 메시지·모드 분리와 완료 조건 | Handoff Plan |
 | [shadow-camera-perception-handoff.md](./handoffs/perception/shadow-camera.md) | 음영구간 v3 lane-family·drivable 판제 소비 계약과 성능 동결 | Active Handoff Guide |
 | [camera-object-detection-handoff.md](./handoffs/perception/camera-object-detection.md) | 손재호용 YOLO 즉시 사용·경량 후보·NAS fine-tune 인수 가이드 | Active Guide |
 | [rosbag 기록·재생·평가](./operations/rosbag-evaluation.md) | Real Time UDP raw/result bag과 lineage | Active Guide |
@@ -205,7 +205,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | [MORAI bridge guide](./packages/asmc_bridge/README.md) | 현재 bridge/state 구현과 Phase 3 통합 gate |
 | [asmc_bridge quick start](../src/asmc_bridge/README.md) | 단일 bridge 패키지 실행·component launch |
 | [asmc_perception](../src/asmc_perception/README.md) | camera·BEV·lane·traffic runtime, offline audit와 training 경계 |
-| [asmc_lidar](../src/asmc_lidar/README.md) | LiDAR+IMU 단일 후보 경로, 지면 비교와 손재호 인계 |
+| [asmc_lidar](../src/asmc_lidar/README.md) | 좌표·시간/IMU 라이브러리 골격, 빌드·계약 시험과 손재호 인계 |
 | [Perception package-group guide](./packages/asmc_perception/README.md) | 현재 camera/BEV/LiDAR/traffic/data 경계와 Phase 4 gate |
 | [Planning/Control package-group guide](./packages/planning-control/README.md) | 현재 Behavior/Frenet/MPC 경계, legacy와 변경 gate |
 | [Handoff index](./handoffs/README.md) | 파트 간 인수 조건과 deployment/legacy 상태 |

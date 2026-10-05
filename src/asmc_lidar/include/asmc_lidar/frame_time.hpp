@@ -1,5 +1,6 @@
 #pragma once
-// L1-B1 research core. No ROS, global state, sensor subscriptions or tracker.
+// Coordinate/time foundation for the LiDAR migration. ROS adapters provide
+// validated observations, extrinsics and pose samples; this library has no I/O.
 #include <Eigen/Geometry>
 #include <array>
 #include <cstdint>
@@ -7,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace asmc::lidar_eval {
+namespace asmc::lidar {
 using Ns = std::int64_t;
 using Vec = Eigen::Vector3d;
 using Rot = Eigen::Matrix3d;
@@ -20,7 +21,7 @@ struct Observation {
   Ns stamp_ns = 0, receipt_ns = 0, processing_ns = 0;
   std::string clock, stamp_provenance;
 };
-// Receipt/processing timestamps below use the explicitly declared replay clock.
+// Receipt/processing timestamps below use the explicitly declared common clock.
 // CPU durations are measured separately with steady_clock, never subtracted here.
 std::string validate_time(const Observation& t);
 class StampGuard {
@@ -106,4 +107,4 @@ std::optional<Pose> base_from_input(const Context& c);
 Result transform(const Object& object, const Context& context);
 struct Point { Vec xyz; float intensity; };
 std::vector<Point> transform_points(const std::vector<Point>& points, const Pose& transform);
-}  // namespace asmc::lidar_eval
+}  // namespace asmc::lidar

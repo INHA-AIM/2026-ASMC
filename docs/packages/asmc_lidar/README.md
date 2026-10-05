@@ -1,81 +1,119 @@
-# `asmc_lidar` L2-I1 당시 인계 — 한 경로, 구조물 억제 기본 OFF
+# LiDAR 기능 이전과 손재호 인계
 
-> 이 문서는 **L2-I1 당시 기록**이다. 현재 추적·메시지·map 어댑터의 정본은
-> [L2-I2 인계](./l2i2-handoff-20261005.md)이며, 아래 “추적 미제공” 설명은
-> 현재 `unified.launch`에 더 이상 적용되지 않는다. 연구·회귀 명령은 보존한다.
+현재 `asmc_lidar`는 **좌표·시간 기반과 공용 계약만 제공하는 빌드 가능한 골격**이다.
+검출·군집·OBB·추적·fusion·ROS 어댑터의 실행 구현은 손재호가 원본
+[`lidar+sensorfusion`](../../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)에서 이전한다.
+기존 원본 패키지가 현재 주행 경로이며, 골격은 객체 토픽을 발행하지 않는다.
 
-이 문서는 `feat/asmc-lidar-integration`의 **후속 개발용 실행 기준선**이다. 운영 판제 입력의 교체나 전 구간 인지 성능 승인이 아니다. 기존 `lidar+sensorfusion` nested workspace, `/last_lidar`, `/lidar_nogps`, `/perception/objects`, 메시지 MD5, 센서·브릿지 설정은 그대로 둔다.
+## 역할과 남긴 파일
 
-## 실행과 보는 방법
+카메라 목표 패키지는 `asmc_camera`(현재 이름 `asmc_perception`)다. 안승현이 이름 변경과
+YOLO 생산자 이전·모델/통합 부하 검증을 맡는다. 손재호는 `asmc_lidar`의 LiDAR 처리와
+카메라 box 매칭·클래스 유지 fusion을 맡는다. HD맵은 지도와 주행영역을 제공한다.
+자세한 역할 분담은 [통합 로드맵](../../architecture/consolidation-roadmap.md)을 따른다.
 
-브릿지는 기존처럼 별도 터미널에서 실행한다. 이 독립 worktree를 시험하려면
-컨테이너의 `/root/ws`가 `asmc-lidar-integration`을 마운트했는지 먼저 확인한다.
-기존 `asmc-ros-noetic` 컨테이너가 다른 worktree를 마운트했다면 아래 `up`이
-**같은 이름의 컨테이너를 재생성**하므로 실행 중인 노드를 종료하고 전환할 때만 수행한다.
-`ASMC_DATA`와 `TWINLITE_SOURCE`를 별도로 지정했던 환경에서는 그 값을 유지한다.
-
-```bash
-cd /path/to/asmc-lidar-integration
-export ASMC="$PWD"
-./scripts/docker_ros_up.sh up
-docker exec asmc-ros-noetic test -f /root/ws/src/asmc_lidar/launch/unified.launch
-```
-
-이후 Noetic 컨테이너의 `/root/ws`에서 빌드·환경을 올린 뒤:
-
-```bash
-source /opt/ros/noetic/setup.bash
-cd /root/ws
-catkin_make --only-pkg-with-deps asmc_lidar -j2
-source devel/setup.bash
-roslaunch asmc_lidar unified.launch
-# bridge가 없을 때만 start_bridge:=true (local/competition/receive 기본)
-```
-
-필수 입력은 `/velodyne_points`, `/imu`뿐이다. `/gps`, HD맵, 카메라는 현재 이 노드의 구독자가 아니다. 일반도로→터널→복귀 또는 GPS 정상→무효가 와도 같은 `ground_v4/jaeho_support.yaml`, ROI, 10cm voxel, roll·pitch, 1.5m Euclidean/10..10000 voxel, L-shape OBB를 사용한다. `unified.launch`에 구간·미션·GPS 모드 인자는 없다. 센서 원점의 수평화 좌표는 내부용이며 ROS 공개 frame은 **후륜축 `base_link`**다.
-
-| 후보 토픽 | 의미 |
+| 제공한 구성 | 사용할 때의 조건 |
 |---|---|
-| `/lidar_candidate/unified/nonground` | 지면 외 원본점. 구조물 의심점도 삭제하지 않은 상태. `source_index`는 해당 scan의 원본 인덱스 |
-| `/lidar_candidate/unified/structure_evidence` | 기존 RANSAC 탐색에서 거부된 평면 지지점. **벽 GT 또는 안전하게 무시할 물체라는 뜻이 아님** |
-| `/lidar_candidate/unified/markers` | 주황 OBB=프레임별 미분류 후보, 반투명 청록=미확정 구조물 지지 범위. 번호는 track ID가 아님 |
-| `/lidar_candidate/unified/status` | 원본 stamp, 설정 SHA, 객체/구조물 후보 수, 억제 OFF, 계산시간, 입력 상태 |
-| `/lidar_candidate/ground_live/jaeho/*` | 같은 scan의 V4 지면 분류 연구·회귀 토픽 |
+| `asmc_lidar_frame_time` 라이브러리 | 실제 수평화 행렬·센서 extrinsic·유효 pose를 호출자가 제공 |
+| IMU 선택 함수 | 도착 완료 표본만 전달, 유한값/유효 quaternion 검사 후 valid 지정 |
+| v3 장착 설정 | 출처 SHA와 단위 확인. 장착 z를 노면 기준 센서 높이로 사용하지 않음 |
+| 회귀시험 | 좌표·8코너·속도·관측시각·pose/IMU 선택 의미 검사. 실제 검출 성능 시험은 후속 |
+| 공용 `asmc_msgs` 타입 | LidarObject/Array, CameraObjectBox/Array 정의와 직렬화 검사. 생산자 구현은 아직 없음 |
 
-RViz는 `unified.launch`에서 열리고, 오래된 입력·무효 IMU·시각 역행 시 점군/marker를 지운다. `rviz:=false`로 끌 수 있다. `status=valid`는 입력 유효성이지 객체 검출 성공이 아니다. 분류·속도·지속 ID는 아직 **unknown/미제공**이며 0속도나 차량으로 위장하지 않는다. 1.5m 군집은 재현 기준선일 뿐 전 구간 최적화된 임계값이 아니다. 지면 단계가 이미 삭제한 객체 하부점은 이 코어가 복구하지 못한다.
+빌드·시험 명령과 API 위치는 [패키지 README](../../../src/asmc_lidar/README.md)에 있다.
+소스에는 지면·tracker 후보나 실행 launch를 남기지 않았다. 이전 `unified.launch`,
+`ground_compare_live.launch`를 안내하는 명령은 현재 버전에서 사용할 수 없다.
 
-세 지면 방법을 수동 주행 중 비교할 때는 단일 검출 launch를 종료하고 다음을 실행한다.
+## 손재호의 이전 순서
+
+1. **원본 기준선 고정:** 실제 작업 브랜치 SHA·launch 인자·센서 SHA·입력 bag·기존
+   message MD5를 남긴다. `Main`의 처리 단계, tracker 연관/ID 생애주기/OBB 안정화,
+   동정적 판단과 camera 분류 유지 정책을 목록으로 만든다.
+2. **동작 보존 이식:** 필요한 소스만 `asmc_lidar`로 옮겨 원본과 같은 입력으로 비교한다.
+   새 파일 배치는 `src/ground`, `src/structure`, `src/clustering`, `src/tracking`,
+   `src/fusion`, `src/ros` 등의 책임별 구조를 권장하되 실제 구현 때 만든다.
+   원본 CA tracker와 임계값을 유지하고 물리 이동과 알고리즘 변경을 별도 커밋으로 한다.
+3. **좌표·시간 적용:** local은 후륜축 `base_link`, map은 관측시점 유효 pose로만 변환한다.
+   중심·8코너·방향축·속도에 같은 변환을 적용하고 원본 stamp를 보존한다.
+   수평화 역변환과 장착 변환을 각각 한 번 적용한다. 좌표 변경으로 생긴 의도적 차이는
+   원인별로 기록한다. `frame_time`은 수평화·deskew·추적기를 대신하지 않는다.
+4. **단일 처리 경로:** GPS/미션으로 일반/터널 알고리즘을 전환하거나 tracker를 reset하지
+   않는다. 기존 천장·벽 처리를 관측 근거로 재구성하고 정상→음영→복귀 동일 단계 회귀를
+   남긴다. 무효 지면/문맥은 unknown이며 오래된 평면을 무조건 재사용하지 않는다.
+5. **지면·구조물 보완:** 터널 천장을 지면으로 선택하는 경우를 평면 높이·법선·실제
+   지지 영역으로 검사한다. 지면 보완은 동일 scan의 근거를 사용해 별도 검증한다.
+   기존 하부 삭제/군집 분할과 분리해 시험한다. 구조물 자동 억제는 OFF부터 시작하고
+   벽·가드레일·차량 측면·벽 근처/낮은 장애물 보존 회귀를 통과한 후 켠다.
+6. **공용 메시지·어댑터:** 아래 소비 계약으로 생산자를 구현한다. `Msg`는 선택적 legacy
+   경계에만 두고 새 패키지가 nested build/source 없이 빌드되게 한다. 외부 `morai_msgs`는
+   공용 메시지로 복사하지 않는다. map projection과 tracker 상태는 독립시킨다.
+7. **카메라·판제 연결:** 카메라 공통 box를 받아 시각/투영 매칭·분류를 보강한다.
+   camera empty/missing/stale을 구분하고 LiDAR 일반 장애물을 삭제하지 않는다.
+   Behavior/Frenet/MPC·음영 어댑터 담당자가 frame·stamp·MD5·무효 상태를 함께 검증한다.
+8. **인계 완료:** RViz 관측/예측 ID·속도 유효성·출력 상태, 일반도로/터널/복귀 실제 주행,
+   카메라 동시 실행 부하와 누락/지연을 기록한 후 운영 전환을 합의한다.
+
+검증된 수정사항이라도 원본에 자동 적용됐다고 가정하지 않는다. 기존 연구 구현은 필요할 때
+정리 전 Git 커밋에서 확인하고, source SHA·설정·같은 입력의 전후 결과를 붙여 선별 적용한다.
+
+## 입력·출력과 처리 책임
+
+[소비 계약](../../contracts/perception/lidar-planning-consumer-v1.md)과
+[기계 판독 계약](../../../config/contracts/lidar_candidate_topic_contract_v1.yaml)은
+후속 구현의 목표다. 현재 publisher 목록이 아니다.
+
+- local 객체는 LiDAR+IMU로 계속 처리한다. GPS는 map 가용성에만 사용한다.
+- scan stamp는 bridge 수신 시각이며 광선 측정 시각으로 바꾸어 설명하지 않는다.
+  CPU 처리시간은 monotonic clock으로 별도 측정한다.
+- pose는 이미 도착한 동일 clock의 유효 표본으로 최대 100ms 보간하고 외삽하지 않는다.
+  안테나와 후륜축 offset, HD맵 원점·높이, 복구 위치 점프는 ROS 어댑터에서 검증한다.
+- 절대속도 벡터는 축만 회전한다. 상대 위치 미분은 자차 병진/회전을 함께 사용한다.
+  twist가 없으면 unknown이며, 0속도나 static으로 위장하지 않는다.
+- 객체/구조물 경계/미확정을 구분한다. 평평함·긴 OBB·낮은 점 수·카메라 미검출만으로
+  삭제하지 않는다. 인접 차로·횡단 객체와 카메라 drivable의 장애물 구멍을 보존한다.
+- 주행 관련성·차로 귀속은 속성으로 전달한다. 추종 대상·기동 유지·회피·정지는 판제 책임이다.
+
+## 수락과 기존 패키지 삭제 조건
+
+| 대상 | 확인할 증거 |
+|---|---|
+| 원본 기능 | 동일 입력의 지면/군집/OBB·ID/연관·생애주기·분류 유지, 의도적 차이 목록 |
+| 좌표·시간 | 비영점 roll/pitch/yaw·장착 offset·8코너·속도, stamp 영점/역행, 미래 pose 제외 |
+| GPS | 정상/NaN/중단/stale/복구 점프에서 local 연속성·map 상태, 한 토픽 frame 고정 |
+| 구조물 | 벽/가드레일/차량 측면/낮은·인접·횡단 객체, 새 억제 OFF에서 추가 삭제 없음 |
+| 소비 | 기존 MD5 보존, camera·LiDAR 타입 직렬화, 세 판제 모듈과 음영 소비의 보류/freshness 처리 |
+| 부하 | 입력 Hz·처리 Hz·drop·queue·p50/p95/p99·CPU/GPU/메모리, 카메라 동시 실행과 RViz 영향 |
+
+15Hz 설정과 실제 수신/처리율을 함께 기록한다. 약 12Hz 완성 cloud를 허용한 운영 요구와
+15Hz 부하 시험 결과는 각각 표기한다. 실제 검증하지 않은 주행/이동 객체 조건은 미검증으로 남긴다.
+현재 골격 검증은 검출·추적 정확도나 주행 성능 승인에 해당하지 않는다.
+
+기존 패키지 삭제는 모든 consumer 이전과 rollback 확인 후 별도 PR로 한다. rollback은
+새 생산자/어댑터를 종료하고 고정한 원본 launch로 복원한다. 같은 토픽에 양쪽 생산자를
+동시에 붙이지 않는다. 이번 PR은 운영 입력 전환이나 카메라 rename을 수행하지 않는다.
+
+## 이번 골격의 검증 기록 — 2026-10-05
+
+- 기존 build/devel을 사용하지 않은 Noetic 임시 경로에서 패키지·공용 메시지 빌드와
+  전체 상위 catkin workspace 빌드가 통과했다.
+- CTest 2개가 통과했다. 좌표·시간 실행파일 내부 35개 사례와 IMU 선택시험을 포함한다.
+- 생성 메시지 직렬화/MD5 검사, 공용 계약 unit test 25개와 bridge profile test 2개가 통과했다.
+- 문서 보존 검사는 과거 Git 이력 대조까지 통과했다. CI에서 발견한 신규 타입 등록 누락과
+  기존 음영 어댑터 디렉터리 이동 후 남은 감사 경로를 교정했다. 실제 ROS 패키지명은
+  `lane_boundary_adapter`이며 디렉터리만 `jamming_lane_boundary_adapter`다.
+- 이 골격에는 runtime publisher가 없으므로 시뮬레이터 검출·주행 수락은 수행 대상이 아니다.
+  손재호의 기능 이전 후 위 수락 목록으로 검증한다.
+
+## 연구 이력 조회
+
+사용자 요청으로 개인 연구 코드·설정·비교 그림·보고서를 현재 트리에서 삭제했다.
+정리 전 전체 내용은 `020f6c2`, 원래 연구 worktree의 추가 GT 수집 변경은 `f1dfb84`에서
+조회할 수 있다. Git 이력을 재작성하지 않았으며 재호 작업 브랜치와 외부 연구 checkout은
+그대로다. 실제 bag·Capture 자료는 `$ASMC_DATA`에 유지한다.
 
 ```bash
-roslaunch asmc_lidar ground_compare_live.launch
-# 기본 all / V4 재호·Patchwork++·linefit 최신 비교 / RViz true
-# 하나만 계산: method:=jaeho|patchwork|linefit
+git show 020f6c2:src/asmc_lidar/src/ground_live.cpp
+git log --all -- src/asmc_lidar
 ```
 
-RViz의 Patchwork++는 **실험용·미채택**이다. 비교 결과를 운영 후보로 자동 연결하지 않는다. 예전 V1 재현이 필요하면 `comparison_config:=""`를 명시한다. 자세한 비교 근거는 [V4 선택 보고서](./l2a2-v4-ground-selection-20261005.md)에 있다.
-
-## 코어와 확장 지점
-
-`ground_live.cpp`는 공통 ROI·voxel·수평화와 V4 지면 라벨, RANSAC/동일-scan 보완 근거를 생성한다. `unified.cpp`는 **같은 출력과 원본점 계보**로 비지면 voxel을 군집화하고 L-shape OBB를 만든다. OBB의 중심·8코너·진행축은 실제 적용 수평화의 역변환 후 장착 변환을 각 한 번 적용한다. 원본점과 `structural_removed` 마스크는 모두 보존한다. 지면 탐색에서 거부된 평면의 연결 지지 구간은 미확정 구조물 근거로 분리하지만, 현재 판정이 객체점 삭제에 참여하지 않는다.
-
-`unified.hpp::OptionalContext`는 향후 HD맵/카메라 문맥을 위한 source·frame·관측 시각·품질의 공통 입력이다. 누락/stale/map frame 그대로 전달된 입력은 unknown이다. 이번 버전은 문맥으로 객체를 확정·삭제하지 않는다. 카메라 주행가능영역의 장애물 구멍은 삭제 근거가 아니다. 나중에는 객체 footprint와 HD맵 차로·주행 영역의 **겹침/인접/횡단 가능성**을 별도 속성으로 계산해야 하며, GPS는 map 출력 가용성에만 관여해야 한다. local 추적 상태를 GPS로 초기화하면 안 된다.
-
-손재호의 다음 작업은 구조물 지지 품질과 억제 회귀, 군집 분할·합침, 지속 ID·분류·속도·관측 품질이다. 기존 객체 성공/실패 분모와 벽 근처 차량·낮은 장애물·인접/횡단 객체 시험을 통과하기 전에는 구조물 억제를 켜지 않는다. 최종 판제용 typed 메시지와 GPS 정상/음영 map 출력은 tracker·판제와 별도 계약 후 연결한다. 현 표준 점군/Marker/Diagnostic 후보 토픽을 판제의 `/perception/objects` 대신 연결하면 안 된다.
-
-## 회귀·롤백
-
-```bash
-# Noetic 컨테이너에서
-cd /root/ws/build/asmc_lidar && ctest --output-on-failure
-# 고정 snapshot을 같은 코어로 재처리 (출력이 이미 있으면 오류; 덮어쓰지 않음)
-cd /root/ws
-devel/lib/asmc_lidar/asmc_lidar_unified_offline \
-  /data/lidar_assessment/20261004_gt_dual_ground/sync/snapshots.jsonl \
-  src/asmc_lidar/config/autonav_v3.yaml /data/lidar_assessment/<새_실험명>/unified_sync.jsonl
-```
-
-V4 고정 입력·원본 코드 SHA·해시는 [manifest](../../../config/baselines/lidar_l2a2_v4_20261005.yaml), 재실행법은 [실험 도구](../../../tools/lidar/ground_v4/README.md), 원인·실패 사례는 [V4 보고서](./l2a2-v4-ground-selection-20261005.md)에 보존했다. 원본 손재호 revision `6435af1`, V4 구현 `7898ffe`, 독립 연구 브랜치 `feat/asmc-lidar-runtime`을 비교 기준으로 유지한다. 연구 자료를 새 운영 계약으로 오해하지 않는다.
-
-롤백은 후보 `unified.launch`만 종료하면 된다. 기존 Main·판제·센서 설정을 바꾸지 않았으므로 운영 입력을 되돌리는 조치는 없다. 후보 승격 후라도 객체점 추가 소실, IMU/stamp 무효의 정상 빈 배열 오인, GPS 변화에 따른 local 결과 변화, 15Hz에서 누락/지연이 확인되면 억제·운영 연결을 보류한다.
-
-이 패키지에 포함된 기존 `review.launch`/`ground_compare.launch`의 `general/tunnel` 재현 인자는 **연구용 과거 기준선**이다. 신규 `unified.launch`의 모드가 아니다.
+복구가 필요하면 별도 worktree에서 검토하고 현재 골격에 연구 폴더를 일괄 복사하지 않는다.

@@ -28,7 +28,7 @@
 | UDP/sensor/state bridge와 통합 launch | `src/asmc_bridge/`; [개발 가이드](../packages/asmc_bridge/README.md) | 이강태·안승현, planning consumer 공동 리뷰 |
 | Perception façade와 typed 계약 | `src/asmc_perception/`; [runtime 계약](../contracts/perception/runtime-v1.md) | 안승현 주관, 손재호·장원태·planning consumer 공동 리뷰 |
 | Camera/BEV/traffic | `src/asmc_perception/` | 안승현, perception·planning consumer 공동 리뷰 |
-| LiDAR/3D·camera fusion | 원본 `src/lidar+sensorfusion/`, 개발 후보 `src/asmc_lidar/` | 손재호가 기능 이전·수락 후 asmc_lidar 정본화, 안승현 계약·패치 인계 |
+| LiDAR/3D·camera fusion | 원본 `src/lidar+sensorfusion/`, 이전용 골격 `src/asmc_lidar/` | 손재호가 기능 이전·수락 후 asmc_lidar 정본화, 안승현 계약·개선사항 인계 |
 | 데이터 수집 | `src/data_collection/` | 안승현, perception 공동 리뷰 |
 | Scenario/gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |
 | 공용 infra | `docker/`, `.github/`, `docs/`, `scripts/` 공용 진입점 | 통합 리뷰 필수 |
@@ -43,7 +43,7 @@
 | `asmc_bridge` | P3-G local closeout 완료. 실제 두 PC LAN2LAN은 6단계 현장 리허설에서 검증 |
 | `asmc_perception` | P4-C6 camera/BEV/lane/traffic runtime·offline·training 통합과 기존 package closeout 완료. `data_collection`은 독립 package이며 팀원 개발 중인 `src/lidar+sensorfusion`은 handoff 전 변경 금지 |
 | 목표 `asmc_camera` | 안승현: 현재 asmc_perception의 이름 변경부터 별도 검증. YOLO 생산자 이전·공용 검출 계약은 다음 변경. 기존 /perception 토픽 유지 |
-| 목표 `asmc_lidar` | 손재호: 원본 기능 보존·개선 적용·메시지/좌표 어댑터 이전 마무리. camera fusion은 내부 유지, 새 후보 CV tracker의 무조건 채택 금지 |
+| 목표 `asmc_lidar` | 손재호: 좌표·시간 골격 위에 원본 기능 보존·개선 적용·메시지/좌표 어댑터 이전 마무리. camera fusion 내부 유지, 개인 연구 runtime은 Git 이력에서만 조회 |
 | `learning*` 정리 | 완료. LBC teacher/debug 필요 기능만 `tools/research/lbc_teacher_bev` 이관 |
 | 실행·시각화 | P5-A~E 완료 기록 유지. bridge는 별도 실행, 웹 콘솔은 수요 발생 후 검토 |
 | LAN2LAN 현장 리허설 | 6단계 예정 |

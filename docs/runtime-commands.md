@@ -34,31 +34,15 @@ source devel/setup.bash
 bridge는 perception·planning 통합 명령에 포함하지 않는다. 항상 별도 terminal의 log와
 diagnostics를 보며 입력 Hz를 검사한다.
 
-### LiDAR 후보 별도 실행 — 개발·손재호 인계용
+### LiDAR 이전용 골격과 현재 실행 경로
 
-현재 판제 입력을 바꾸지 않고 새 후보를 볼 때는 먼저 컨테이너 `/root/ws`가
-`feat/asmc-lidar-integration` worktree인지 확인한다. 다른 worktree를 마운트한
-`asmc-ros-noetic`을 `docker_ros_up.sh up`으로 전환하면 기존 노드가 종료되므로
-실행 중인 작업을 마친 뒤 전환한다. 자세한 절차는 [LiDAR L2-I2 인계](./packages/asmc_lidar/l2i2-handoff-20261005.md)에 있다.
-bridge가 켜진 뒤 다른 터미널에서:
-
-~~~bash
-docker exec -it asmc-ros-noetic bash
-cd /root/ws
-source /opt/ros/noetic/setup.bash
-source devel/setup.bash
-roslaunch asmc_lidar unified.launch
-# 화면 없이: rviz:=false
-~~~
-
-이는 LiDAR+IMU만으로 local 후보 추적을 계속하며 GPS·일반/터널 전환 모드가 없다.
-기본 RViz는 `base_link`의 관측/예측 ID를 구분한다. 검증된 pose가 있는 map 후보는
-`rviz -d /root/ws/src/asmc_lidar/rviz/map_tracks.rviz`로 별도 창에서 본다.
-map 부재는 빈 객체가 아니라 `/perception/lidar/objects_map`의 상태로 확인한다.
-구조물 자동 삭제는 OFF이고 판제의 `/perception/objects` 대체 입력이 아니다.
-세 지면 방법 V4 비교는 단일 후보 launch를
-종료한 뒤 ground_compare_live.launch로 실행한다. Patchwork++는 연구용 미채택이다.
-[LiDAR L2-I2 인계](./packages/asmc_lidar/l2i2-handoff-20261005.md)에 토픽·회귀·롤백을 정리했다.
+`asmc_lidar`는 좌표·시간 라이브러리와 계약 시험만 제공한다. 손재호가 기존
+`lidar+sensorfusion`의 검출·추적·fusion을 이전할 예정이며 현재 객체 publisher는 없다.
+기존 실행은 [원본 sensor-fusion guide](../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md),
+새 골격의 빌드·시험은 [asmc_lidar README](../src/asmc_lidar/README.md),
+이전·삭제 조건은 [LiDAR 인계](./packages/asmc_lidar/README.md)를 따른다.
+이전 개인 연구용 비교·후보 launch는 삭제됐다. 옛 devel에 실행파일이 남아 있어도
+현재 소스에서 지원하는 기능으로 사용하지 않는다.
 
 ### 입력 Hz·브릿지 진단 (별도 터미널)
 

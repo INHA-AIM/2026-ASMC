@@ -1,5 +1,5 @@
-# Rear-axle base_link <- LiDAR sensor, metres/degrees. Do not infer road height
-# from mount z: observed road is around 1.8 m below this sensor origin.
+# Reference calibration for the future ROS adapter; no node loads this yet.
+# Rear-axle base_link <- LiDAR sensor, metres/degrees. Mount z is not road height.
 source: config/morai/sensors/ASMC_sensor_set_v3.json@4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f
 sensor_pose_base_link:
   x_m: 0.80
@@ -8,8 +8,3 @@ sensor_pose_base_link:
   roll_deg: 0.0
   pitch_deg: 0.0
   yaw_deg: 0.0
-patchwork_ground:
-  sensor_height_m: 1.80
-  min_range_m: 1.0
-  max_range_m: 60.0
-  enable_RNR: false

@@ -1,8 +1,0 @@
-cmake_minimum_required(VERSION 3.16)
-project(asmc_patchwork_adaptive_exact LANGUAGES CXX)
-set(CMAKE_CXX_STANDARD 17)
-find_package(PCL REQUIRED COMPONENTS common filters)
-add_executable(patchwork_adaptive_exact adaptive_exact.cpp)
-target_include_directories(patchwork_adaptive_exact PRIVATE ${PCL_INCLUDE_DIRS})
-target_link_libraries(patchwork_adaptive_exact PRIVATE ${PCL_LIBRARIES} jsoncpp)
-target_compile_options(patchwork_adaptive_exact PRIVATE -O2 -Wall -Wextra)

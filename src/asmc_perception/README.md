@@ -46,7 +46,7 @@ roslaunch data_collection bag_recorder.launch profile:=full_raw
 ```
 
 기존 LiDAR는 nested workspace의 `Main`, `Msg`와 Velodyne overlay를 사용한다.
-새 `asmc_lidar` 후보는 이 overlay 없이 빌드·실행되며, 어느 쪽도
+새 `asmc_lidar` 골격은 이 overlay 없이 라이브러리만 빌드하며, 어느 쪽도
 `asmc_perception` launch가 자동으로 시작하지 않는다.
 
 ### `camera_bev`와 `camera_bev_fusion`

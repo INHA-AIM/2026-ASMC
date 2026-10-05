@@ -60,6 +60,9 @@
 이 파일은 팀 저장소로 이동하지 않는다. 팀원이 반드시 알아야 하는 결론만 위 구조의
 `competition/`, `contracts/`, `packages/` 문서에 출처와 함께 요약한다.
 
-현재 main에 없는 LiDAR 평가 문서는 로컬 archive 브랜치
+당시 main에 없던 LiDAR 평가 문서는 로컬 archive 브랜치
 `archive/local-lidar-assessment-20260921`의 commit `997ba8e`에 원문을 보존했다. 팀 문서로
-승격할지는 `packages/asmc_perception/` 정리 단계에서 별도로 검토한다.
+승격할지는 당시 `packages/asmc_perception/` 정리 단계의 검토 항목이었다.
+2026-10-05 후속 결정으로 개인 LiDAR 실험 소스·문서는 현재 트리에서 삭제하고
+정리 전 commit `020f6c2`에 보존했다. 현재 팀 인계는
+[LiDAR 이전 계획](../packages/asmc_lidar/README.md)을 따른다.

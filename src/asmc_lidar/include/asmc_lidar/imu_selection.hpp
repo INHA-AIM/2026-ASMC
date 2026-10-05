@@ -3,6 +3,8 @@
 #include <deque>
 
 namespace asmc_lidar {
+// The caller supplies only already-arrived samples and marks nonfinite or
+// invalid quaternion inputs as valid=false. No implicit zero attitude fallback.
 struct ImuSample {
   std::uint64_t stamp_ns = 0;
   double roll_rad = 0.0;
@@ -20,6 +22,8 @@ struct ImuSelection {
 inline ImuSelection SelectImu(const std::deque<ImuSample>& arrived,
                               std::uint64_t scan_ns,
                               std::uint64_t max_age_ns = 100000000ULL) {
+  // A newer invalid sample is reported separately. The caller must publish this
+  // degradation even when a still-fresh valid sample can be selected.
   const ImuSample* latest_valid = nullptr;
   const ImuSample* latest_invalid = nullptr;
   bool stamped_arrived = false;

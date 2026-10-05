@@ -1,11 +1,11 @@
-#include <frame_time/core.hpp>
+#include <asmc_lidar/frame_time.hpp>
 #include <cmath>
 #include <cstring>
 #include <functional>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
-using namespace asmc::lidar_eval;
+using namespace asmc::lidar;
 static void check(bool value){if(!value)throw std::runtime_error("assertion failed");}
 static void close(const Vec& a,const Vec& b){check((a-b).norm()<1e-6);}
 static Observation time_at(Ns stamp=100500000000LL) {

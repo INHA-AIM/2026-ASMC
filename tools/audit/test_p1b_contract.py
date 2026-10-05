@@ -2,6 +2,7 @@
 
 import sys
 import unittest
+import yaml
 from dataclasses import replace
 from pathlib import Path
 
@@ -29,9 +30,9 @@ class P1BContractTest(unittest.TestCase):
 
     def test_repository_contract_is_valid(self):
         result = validate_contract(REPO_ROOT, self.contract, self.baseline)
-        self.assertEqual(result["message_count"], 28)
+        self.assertEqual(result["message_count"], 32)
         self.assertEqual(result["contract_message_count"], 25)
-        self.assertEqual(result["registered_message_count"], 28)
+        self.assertEqual(result["registered_message_count"], 32)
         self.assertEqual(result["legacy_message_count"], 13)
         self.assertEqual(result["new_message_count"], 12)
         self.assertEqual(result["topic_count"], 11)
@@ -41,6 +42,14 @@ class P1BContractTest(unittest.TestCase):
         self.assertEqual(md5s["BehaviorCommand"], "fad196232c8f54cbbe2a1bced9d3972a")
         self.assertEqual(md5s["DetectedObjectArray"], "14fbd9679c2d87ae7498e4269d9678da")
         self.assertEqual(md5s["LaneBoundaryFamily"], "70ac79f98ca1244c782ea4067becd6af")
+
+    def test_lidar_handoff_md5_matches_message_sources(self):
+        contract = yaml.safe_load((REPO_ROOT / "config/contracts/lidar_candidate_topic_contract_v1.yaml").read_text())
+        md5s = all_message_md5(self.specs)
+        for section in ("messages", "compatibility_messages"):
+            for type_name, expected in contract[section].items():
+                with self.subTest(type=type_name):
+                    self.assertEqual(md5s[type_name.split("/")[-1]], expected)
 
     def test_new_message_ros_md5_is_frozen(self):
         md5s = all_message_md5(self.specs)

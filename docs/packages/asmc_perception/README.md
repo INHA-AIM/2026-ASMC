@@ -26,7 +26,7 @@
 | camera–LiDAR 객체 분류 | [object detection handoff](../../handoffs/perception/camera-object-detection.md) | Active Handoff Guide |
 | GT·BEV·lane 정책의 상세 근거 | [BEV/lane design note](./bev-lane-interface-plan.md) | Dated Detailed Design Note |
 | camera/map/LiDAR 개발 과정과 열린 결정 | [fusion roadmap](./roadmap.md) | Working Proposal + Chronological Record |
-| LiDAR 패키지의 현재 완성도와 개선 계획 | [LiDAR assessment](./lidar-assessment-and-roadmap.md) | Assessment Record + Working Proposal |
+| LiDAR 패키지의 이전 계획 | [LiDAR 인계](../asmc_lidar/README.md) | Handoff Plan |
 | 특정 checkpoint의 학습 결과 | [v4 evaluation](../../records/perception/twinlitenet-v4-evaluation.md) | Experiment Record |
 | 현재 topic 소비·bag 사용과 P5 정리 gate | [P5-A topic audit](../../records/baselines/perception-p5a-topic-audit-v1.md) | Frozen Input Audit |
 | 실행 중 node/topic/rate/stamp/frame/consumer 검증 | [P5-C runtime acceptance](../../records/baselines/perception-p5c-runtime-acceptance-v1.md) | Active Acceptance Gate |
@@ -151,9 +151,9 @@ RViz 절차는 [sensor-fusion guide](../../../src/lidar+sensorfusion/RUN_SENSOR_
 본선 v3 VLP16 설정과 손재호 소비 loop는 15 Hz이고 실제 완성 cloud 약 12 Hz는 허용한다.
 v2 10 Hz는 과거 비교·회귀 기준이므로 본선 입력과 혼동하지 않는다.
 
-현재 파이프라인의 단계별 완성도, 증상별 원인, GT → 센서 전환에서 판제 쪽에도 필요한 변경과
-개선 우선순위는 [LiDAR assessment](./lidar-assessment-and-roadmap.md)에 있다. 실행 절차가 아니라
-평가와 제안이므로 `RUN_SENSOR_FUSION.md`의 정본 지위를 대체하지 않는다.
+원본 기능의 이전 순서와 좌표·시간·메시지·소비 수락 기준은
+[LiDAR 인계](../asmc_lidar/README.md)에 있다. 현재 asmc_lidar는 라이브러리 골격이며
+운영 실행 절차는 계속 `RUN_SENSOR_FUSION.md`를 따른다.
 
 ## 6. 개발 입력과 본선 입력을 분리한다
 
