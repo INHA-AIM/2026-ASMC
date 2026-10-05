@@ -468,6 +468,15 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME keep_candidate_target_test COMMAND keep_candidate_target_test)
 
+  # Recorded AVOID approach failure and low-speed SHIFT continuity regression.
+  add_executable(avoid_tracking_handoff_test tests/avoid_tracking_handoff_test.cpp)
+  target_compile_definitions(avoid_tracking_handoff_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+  )
+  target_link_libraries(avoid_tracking_handoff_test frenet_planner_core)
+  add_test(NAME avoid_tracking_handoff_test COMMAND avoid_tracking_handoff_test)
+
   # R5-F: TrajectoryRequest -> GenerateRequestedCandidates 경계 계약 회귀.
   add_executable(request_native_generator_test
     tests/request_native_generator_test.cpp

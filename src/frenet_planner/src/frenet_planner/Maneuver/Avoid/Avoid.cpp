@@ -296,8 +296,10 @@ bool FrenetPlanner::AvoidProcess(
     // 반복될 수 있기 때문이다.
     const bool use_low_speed_candidate_pipeline =
         result.low_speed_context ||
-        (avoid_committed && shift_phase &&
-         v2_avoidance_.escape_recovery_active);
+        (avoid_committed && shortest_lateral_phase &&
+         (std::fabs(ego.v) < limits_.near_low_speed_fallback_v ||
+          v2_avoidance_.spatial_lateral_active ||
+          v2_avoidance_.escape_recovery_active));
     if (use_low_speed_candidate_pipeline && !blocked_by_request) {
         std::vector<double> low_speed_targets;
         if (avoid_committed) {
@@ -453,13 +455,7 @@ bool FrenetPlanner::AvoidProcess(
 
         if (selected.x.empty()) {
             result.blocking_object_id = first_blocking_id;
-            if (avoid_committed) {
-                last_mode_ = AVOID;
-                last_failure_reason_ = first_blocking_id >= 0
-                    ? PlanFailureReason::COLLISION_BLOCKED
-                    : PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
-                return false;
-            }
+            // COMMITTED failure also reaches the single SHIFT probe below.
             // PREPARE 후보 없음은 terminal failure가 아니라 WAITING이다.
             // 아래 maintenance 생성 결과를 그대로 반환한다.
         } else {
@@ -477,10 +473,14 @@ bool FrenetPlanner::AvoidProcess(
                 v2_avoidance_.target_d = selected_target;
             }
             result.candidate_valid = true;
+            result.spatial_candidate_selected = true;
             result.selected_target_d = selected_target;
             result.selected_cost = selected_cost;
             result.candidate_path = selected;
             if (avoid_committed) {
+                if (shortest_lateral_phase) {
+                    v2_avoidance_.spatial_lateral_active = true;
+                }
                 out_path = std::move(selected);
                 UpdateCommittedAvoidLifecycle(s, d, ego.v, result);
                 last_failure_reason_ = PlanFailureReason::NONE;
@@ -665,6 +665,48 @@ bool FrenetPlanner::AvoidProcess(
             last_failure_reason_ = result.blocking_object_id >= 0
                 ? PlanFailureReason::COLLISION_BLOCKED
                 : PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+            // A centreline-only approach can be invalid even though the
+            // committed lateral corridor is clear. Do not repeatedly brake
+            // toward a shrinking entry distance: test SHIFT once, using the
+            // same observed ego/OBBs and all normal safety filters. The preview
+            // bounds this promotion; unrelated blocking objects do not trigger
+            // it. PREPARE never takes this branch.
+            const double preview_entry = std::max(
+                v2_avoidance_.shift_entry_distance,
+                EffectiveAvoidShiftStartDistance(
+                    std::max(std::max(0.0, ego.v), resolved_target_speed), d));
+            const bool target_blocks_approach =
+                result.blocking_object_id == v2_avoidance_.obstacle_id;
+            const bool approach_generation_failed =
+                last_failure_reason_ ==
+                    PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
+            if (approach_phase && std::isfinite(committed_target_gap) &&
+                committed_target_gap > 0.0 &&
+                committed_target_gap <= preview_entry &&
+                (target_blocks_approach || approach_generation_failed)) {
+                const AvoidanceContext saved_context = v2_avoidance_;
+                const PlanFailureReason saved_failure = last_failure_reason_;
+                v2_avoidance_.phase = AvoidPhase::SHIFT;
+                v2_avoidance_.start_d = d;
+                CartesianPath shift_path;
+                AvoidPrepareResult shift_result;
+                // Recursion is bounded to one probe: its phase is SHIFT, so
+                // approach_phase is false in the nested invocation.
+                if (AvoidProcess(ego, start, s, d, resolved_target_speed,
+                                 predicted_collision_obstacles, command,
+                                 false, true, shift_path, shift_result)) {
+                    shift_result.generated_candidate_count +=
+                        result.generated_candidate_count;
+                    shift_result.valid_candidate_count +=
+                        result.valid_candidate_count;
+                    result = std::move(shift_result);
+                    out_path = std::move(shift_path);
+                    return true;
+                }
+                // Failed SHIFT must not unlock or advance the transaction.
+                v2_avoidance_ = saved_context;
+                last_failure_reason_ = saved_failure;
+            }
             return false;
         }
         out_path = result.candidate_path;

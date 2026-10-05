@@ -293,6 +293,9 @@ public:
         // 상황에서 실제 OBB 비충돌·횡이격 증가 복구 후보를 확보했는가.
         // PREPARE 결과가 COMMIT될 때 context latch로 전달한다.
         bool escape_recovery_required = false;
+        // A valid distance-based lateral candidate was selected. This controls
+        // generator continuity only; it grants no collision-check exception.
+        bool spatial_candidate_selected = false;
 
         // PREPARE 당시 실제 차량 속도. COMMIT 직후 TRACKING/SHIFT 최초
         // 판정도 이후 lifecycle과 같은 속도 기준을 쓰기 위해 보존한다.
@@ -838,6 +841,11 @@ private:
         // 기동 시작 시점의 ego d. maneuver_progress를 (start_d -> target_d)
         // 구간의 진행률로 계산하기 위해 필요하다(D6-4에서 사용).
         double start_d = 0.0;
+        // Once committed, braking must not move the SHIFT entry farther ahead.
+        double shift_entry_distance = 0.0;
+        // Keep an accepted spatial lateral profile through SHIFT/RETURN even
+        // when launch speed crosses the normal generator boundary.
+        bool spatial_lateral_active = false;
 
         // FSM이 요청한 방향. NONE이면 Frenet이 좌/우를 고른다.
         LateralDirection requested_direction = LateralDirection::NONE;

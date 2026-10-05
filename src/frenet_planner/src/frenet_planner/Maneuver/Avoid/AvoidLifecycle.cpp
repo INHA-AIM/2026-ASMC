@@ -56,6 +56,7 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     // target speed를 써서 저속 차량도 고속 기준으로 너무 일찍 SHIFT했다.
     const double shift_distance = EffectiveAvoidShiftStartDistance(
         result.ego_speed_mps, v2_avoidance_.start_d);
+    v2_avoidance_.shift_entry_distance = shift_distance;
     v2_avoidance_.phase = std::isfinite(initial_gap) &&
                                   initial_gap <= shift_distance
                               ? AvoidPhase::SHIFT
@@ -65,6 +66,9 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     // 단계가 아니므로 latch하지 않는다.
     v2_avoidance_.escape_recovery_active =
         result.escape_recovery_required &&
+        v2_avoidance_.phase == AvoidPhase::SHIFT;
+    v2_avoidance_.spatial_lateral_active =
+        result.spatial_candidate_selected &&
         v2_avoidance_.phase == AvoidPhase::SHIFT;
 }
 
@@ -113,7 +117,13 @@ double FrenetPlanner::EffectiveAvoidShiftStartDistance(
     }
     // min/max는 안전 경계로만 유지하고, 사용자가 실제 시작거리를 직접
     // 튜닝할 수 있는 signed offset은 동적 계산에 명시적으로 적용한다.
-    dynamic_distance += avoid_cfg_.shift_start_distance_offset;
+    // A negative tuning offset cannot consume the distance physically needed
+    // to move sideways and keep the front bumper clear of the observed OBB.
+    const double geometric_minimum =
+        LowSpeedLateralTransitionDistance(ego_d, target_d) + geometry_clearance;
+    dynamic_distance = std::max(
+        dynamic_distance + avoid_cfg_.shift_start_distance_offset,
+        geometric_minimum);
     return clip(dynamic_distance, min_distance, max_distance);
 }
 
@@ -130,10 +140,15 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     const double gap = ForwardArcDistance(
         ego_s, v2_avoidance_.obstacle_s, track_length);
 
+    if (v2_avoidance_.phase == AvoidPhase::TRACKING) {
+        v2_avoidance_.shift_entry_distance = std::max(
+            v2_avoidance_.shift_entry_distance,
+            EffectiveAvoidShiftStartDistance(ego_speed, ego_d));
+    }
     if (!v2_avoidance_.completed &&
         v2_avoidance_.phase == AvoidPhase::TRACKING &&
         std::isfinite(gap) &&
-        gap <= EffectiveAvoidShiftStartDistance(ego_speed, ego_d)) {
+        gap <= v2_avoidance_.shift_entry_distance) {
         v2_avoidance_.phase = AvoidPhase::SHIFT;
         // 실제 SHIFT가 시작되는 횡위치를 진행률 기준으로 사용한다.
         if (std::isfinite(ego_d)) v2_avoidance_.start_d = ego_d;
@@ -191,13 +206,16 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     if (v2_avoidance_.phase != AvoidPhase::SHIFT) {
         v2_avoidance_.escape_recovery_active = false;
     }
+    if (v2_avoidance_.phase != AvoidPhase::SHIFT &&
+        v2_avoidance_.phase != AvoidPhase::RETURN) {
+        v2_avoidance_.spatial_lateral_active = false;
+    }
 
     double progress = 0.0;
     if (v2_avoidance_.completed) {
         progress = 1.0;
     } else if (v2_avoidance_.phase == AvoidPhase::TRACKING) {
-        const double start_distance =
-            EffectiveAvoidShiftStartDistance(ego_speed, ego_d);
+        const double start_distance = v2_avoidance_.shift_entry_distance;
         const double approach_ratio = std::isfinite(gap)
             ? clip((EffectiveAvoidDetectionDistance() - gap) /
                        std::max(1.0, EffectiveAvoidDetectionDistance() -
