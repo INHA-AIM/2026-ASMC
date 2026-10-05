@@ -48,6 +48,8 @@ if(CATKIN_ENABLE_TESTING)
       mpc_ros_converter mpc_core ${catkin_LIBRARIES})
   endif()
 
+  catkin_add_gtest(braking_steering_test test/braking_steering_test.cpp)
+
   catkin_add_gtest(mpc_controller_test test/mpc_controller_test.cpp)
   if(TARGET mpc_controller_test)
     target_link_libraries(mpc_controller_test mpc_core)
@@ -84,3 +86,4 @@ if(CATKIN_ENABLE_TESTING)
     target_link_libraries(reference_validator_test mpc_core)
   endif()
 endif()
+

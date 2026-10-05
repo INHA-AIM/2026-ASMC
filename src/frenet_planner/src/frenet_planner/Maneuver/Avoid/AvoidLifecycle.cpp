@@ -56,9 +56,13 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     // target speed를 써서 저속 차량도 고속 기준으로 너무 일찍 SHIFT했다.
     const double shift_distance = EffectiveAvoidShiftStartDistance(
         result.ego_speed_mps, v2_avoidance_.start_d);
-    v2_avoidance_.shift_entry_distance = shift_distance;
+    v2_avoidance_.map_entry_s = result.map_entry_s;
+    v2_avoidance_.map_transition_distance = result.map_transition_distance;
+    const double entry_gap = ForwardArcDistance(last_s_, result.map_entry_s, track_length);
+    v2_avoidance_.shift_entry_distance = avoid_road_map_.enabled()
+        ? initial_gap - std::max(0.0, entry_gap) : shift_distance;
     v2_avoidance_.phase = std::isfinite(initial_gap) &&
-                                  initial_gap <= shift_distance
+                                  initial_gap <= v2_avoidance_.shift_entry_distance
                               ? AvoidPhase::SHIFT
                               : AvoidPhase::TRACKING;
     // PREPARE에서 복구 후보로만 READY가 된 transaction은 COMMIT 직후에도
@@ -140,7 +144,7 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     const double gap = ForwardArcDistance(
         ego_s, v2_avoidance_.obstacle_s, track_length);
 
-    if (v2_avoidance_.phase == AvoidPhase::TRACKING) {
+    if (v2_avoidance_.phase == AvoidPhase::TRACKING && !avoid_road_map_.enabled()) {
         v2_avoidance_.shift_entry_distance = std::max(
             v2_avoidance_.shift_entry_distance,
             EffectiveAvoidShiftStartDistance(ego_speed, ego_d));
@@ -148,7 +152,9 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     if (!v2_avoidance_.completed &&
         v2_avoidance_.phase == AvoidPhase::TRACKING &&
         std::isfinite(gap) &&
-        gap <= v2_avoidance_.shift_entry_distance) {
+        (avoid_road_map_.enabled()
+             ? ForwardArcDistance(ego_s,v2_avoidance_.map_entry_s,track_length)<=0.0
+             : gap <= v2_avoidance_.shift_entry_distance)) {
         v2_avoidance_.phase = AvoidPhase::SHIFT;
         // 실제 SHIFT가 시작되는 횡위치를 진행률 기준으로 사용한다.
         if (std::isfinite(ego_d)) v2_avoidance_.start_d = ego_d;

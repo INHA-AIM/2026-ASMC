@@ -388,3 +388,8 @@ planner:
 # repository 루트의 R_KR_PG_KATRI까지는 항상 3단계 위다
 # (src/frenet_planner/src -> src/frenet_planner -> src -> repo root).
 waypoint_file: "../../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
+
+
+# Pinned ahnsh03 main 1ce434d: keep global reference; constrain AVOID only.
+avoid_hd_map:
+  enabled: true

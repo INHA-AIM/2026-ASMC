@@ -181,6 +181,12 @@ bool FrenetPlanner::AvoidProcess(
         }
     }
 
+    if (avoid_road_map_.enabled()) {
+        return MapAvoidProcess(ego, start, s, d, resolved_target_speed,
+            predicted_collision_obstacles, command, avoid_prepare,
+            avoid_committed, out_path, result);
+    }
+
     const bool approach_phase = avoid_committed &&
         v2_avoidance_.phase == AvoidPhase::TRACKING;
     const bool shift_phase = avoid_committed &&

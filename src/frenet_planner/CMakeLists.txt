@@ -45,6 +45,8 @@ add_library(frenet_planner_core
   src/frenet_planner/Maneuver/Follow.cpp
   src/frenet_planner/Maneuver/Keep.cpp
   src/frenet_planner/Maneuver/Stop.cpp
+  src/frenet_planner/Map/AvoidRoadMap.cpp
+  src/frenet_planner/Maneuver/Avoid/MapAvoid.cpp
   src/frenet_planner/Maneuver/Avoid/Avoid.cpp
   src/frenet_planner/Maneuver/Avoid/AvoidTargetResolver.cpp
   src/frenet_planner/Maneuver/Avoid/AvoidLifecycle.cpp
@@ -476,6 +478,13 @@ if(CATKIN_ENABLE_TESTING)
   )
   target_link_libraries(avoid_tracking_handoff_test frenet_planner_core)
   add_test(NAME avoid_tracking_handoff_test COMMAND avoid_tracking_handoff_test)
+
+  add_executable(avoid_road_constraints_test tests/avoid_road_constraints_test.cpp)
+  target_compile_definitions(avoid_road_constraints_test PRIVATE
+    FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+    FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt")
+  target_link_libraries(avoid_road_constraints_test frenet_planner_core)
+  add_test(NAME avoid_road_constraints_test COMMAND avoid_road_constraints_test)
 
   # R5-F: TrajectoryRequest -> GenerateRequestedCandidates 경계 계약 회귀.
   add_executable(request_native_generator_test

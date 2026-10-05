@@ -5,6 +5,7 @@
 #include <memory>
 #include <unordered_map>
 
+#include "frenet_planner/Map/AvoidRoadMap.hpp"
 #include "frenet_planner/Common/BehaviorTypes.hpp"
 #include "frenet_planner/Common/CartesianTypes.hpp"
 #include "frenet_planner/Common/FrenetTypes.hpp"
@@ -296,6 +297,9 @@ public:
         // A valid distance-based lateral candidate was selected. This controls
         // generator continuity only; it grants no collision-check exception.
         bool spatial_candidate_selected = false;
+        // Map-aware candidate locks the SHIFT station independently of ego speed.
+        double map_entry_s = 0.0;
+        double map_transition_distance = 0.0;
 
         // PREPARE 당시 실제 차량 속도. COMMIT 직후 TRACKING/SHIFT 최초
         // 판정도 이후 lifecycle과 같은 속도 기준을 쓰기 위해 보존한다.
@@ -803,6 +807,11 @@ private:
     // lock 여부)는 서로 다른 세 축이며 이 함수 안에서도 합치지 않는다.
     //
     // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1, orchestration).
+    AvoidRoadMap avoid_road_map_;
+    bool MapAvoidProcess(const CartesianState& ego, const FrenetState& start,
+        double s, double d, double speed, const std::vector<TrackedObject>& obstacles,
+        const PlannerCommand& command, bool prepare, bool committed,
+        CartesianPath& output, AvoidPrepareResult& result);
     bool AvoidProcess(
         const CartesianState& ego, const FrenetState& start,
         double s, double d, double resolved_target_speed,
@@ -843,6 +852,8 @@ private:
         double start_d = 0.0;
         // Once committed, braking must not move the SHIFT entry farther ahead.
         double shift_entry_distance = 0.0;
+        double map_entry_s = 0.0;
+        double map_transition_distance = 0.0;
         // Keep an accepted spatial lateral profile through SHIFT/RETURN even
         // when launch speed crosses the normal generator boundary.
         bool spatial_lateral_active = false;

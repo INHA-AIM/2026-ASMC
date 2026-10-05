@@ -42,8 +42,12 @@ class MpcControllerNode {
     ros::SteadyTime vehicle_state_received_at_;
     double vehicle_state_timeout_ = 0.20;
 
+    double last_successful_steering_ = 0.0;
+    ros::SteadyTime last_successful_control_at_;
+    bool has_successful_control_ = false;
     MpcController controller_;
     bool emergency_stop_active_ = false;
 };
 
 }  // namespace mpc_controller_ros
+

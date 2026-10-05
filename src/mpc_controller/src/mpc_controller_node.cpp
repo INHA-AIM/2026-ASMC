@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 
+#include "control/braking_steering.hpp"
 #include "config/parameter_loader.hpp"
 #include "message_converter.hpp"
 #include "reference/path_resampler.hpp"
@@ -129,6 +130,7 @@ void MpcControllerNode::vehicleStateCallback(
 }
 
 void MpcControllerNode::publishStop(const char* reason) {
+    has_successful_control_ = false;
     controller_.ResetOnFailSafe();
     control_pub_.publish(MakeRosStopCommand());
     ROS_WARN_THROTTLE(1.0, "MPC fail-safe STOP: %s", reason);
@@ -136,6 +138,7 @@ void MpcControllerNode::publishStop(const char* reason) {
 
 void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
     if (emergency_stop_active_) {
+        has_successful_control_ = false;
         controller_.ResetOnFailSafe();
         control_pub_.publish(MakeRosEmergencyStopCommand());
         return;
@@ -165,7 +168,20 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
     PlannedPath path;
     const TrajectoryStatus status = ConvertTrajectory(latest_trajectory_, path);
     if (status == TrajectoryStatus::STOP_TRAJECTORY) {
-        publishStop("valid planner STOP trajectory");
+        MPCState stop_state;
+        if (ConvertVehicleState(latest_vehicle_state_, stop_state) != VehicleStateStatus::OK) {
+            publishStop("invalid vehicle state during planner STOP");
+            return;
+        }
+        auto stop = MakeRosStopCommand();
+        if (has_successful_control_) {
+            const double age=(ros::SteadyTime::now()-last_successful_control_at_).toSec();
+            stop.steering=BrakingSteering(last_successful_steering_,age,
+                stop_state.vx,controller_.params().steering_rate_max);
+        }
+        controller_.ResetOnFailSafe();
+        control_pub_.publish(stop);
+        ROS_WARN_THROTTLE(1.0,"MPC planner STOP braking: steering=%+.3f",stop.steering);
         return;
     }
     if (status != TrajectoryStatus::OK) {
@@ -272,8 +288,12 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
         output.control.accel, output.first_acceleration_residual,
         output.cost.acceleration_control, output.cost.acceleration_rate);
 
+    last_successful_steering_=output.control.delta;
+    last_successful_control_at_=ros::SteadyTime::now();
+    has_successful_control_=true;
     control_pub_.publish(ToRosControlCommand(output.control,
                                              controller_.params()));
 }
 
 }  // namespace mpc_controller_ros
+

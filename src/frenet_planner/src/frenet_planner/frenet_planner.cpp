@@ -1,5 +1,7 @@
 #include "frenet_planner/frenet_planner.hpp"
 
+#include <yaml-cpp/yaml.h>
+#include <fstream>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -31,6 +33,31 @@ bool PathObeysCurvatureLimit(const CartesianPath& path, double limit) {
 }  // namespace
 
 bool FrenetPlanner::Init(const std::string& yaml_path) {
+    ref_loaded_ = false;
+    // Optional for synthetic/core tests; production explicitly enables the pinned map.
+    avoid_road_map_ = AvoidRoadMap{};
+    try {
+        auto config=YAML::LoadFile(yaml_path);
+        auto map=config["avoid_hd_map"];
+        if(map && map["enabled"].as<bool>(false)) {
+            std::string root=std::string(FRENET_PACKAGE_SRC_DIR)+"/../config/hd_map/";
+            const auto slash=yaml_path.find_last_of("/\\");
+            const std::string config_dir=slash==std::string::npos?"./":yaml_path.substr(0,slash+1);
+            if (map["directory"]) {
+                root=map["directory"].as<std::string>();
+                if(root.empty())throw std::runtime_error("empty HD map directory");
+                if(root.front()!='/')root=config_dir+root;
+                if(root.back()!='/')root+='/';
+            } else if(std::ifstream(config_dir+"hd_map/drivable.json").good()) {
+                root=config_dir+"hd_map/";
+            }
+            std::string error;
+            if(!avoid_road_map_.Load(root+"drivable.json",root+"lines.json",error)) {
+                std::fprintf(stderr,"[FrenetPlanner] HD map init failed: %s\n",error.c_str());
+                return false;
+            }
+        }
+    } catch(const std::exception& error) { std::fprintf(stderr,"%s\n",error.what()); return false; }
     std::string waypoint_file;
     std::string config_error;
     if (!LoadParams(yaml_path, ref_config_, object_tracking_cfg_, path_cfg_, limits_,
@@ -1023,3 +1050,4 @@ bool FrenetPlanner::PlanInternal(
                 *external_command, out_path);
     }
 }
+
