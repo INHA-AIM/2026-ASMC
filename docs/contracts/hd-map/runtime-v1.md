@@ -195,6 +195,23 @@ marking의 유효한 국소 횡거리로 Lane 외곽을 보정하고 MGeo 인접
 - route-only connector(파랑), 정적 장애물(주황), 동적 장애물(자홍), 일반 우회전(연두), 음영 반대차로(보라)
 - A134 로터리·A151 접속 surface(밝은 파랑), 인접차로 corridor fill(노랑), 그 밖의 H5 patch(주황) outline
 
+### 4.0 Ego 차량 박스와 base_link 추적
+
+`local_map_crop_node`는 현재 차로 판정과 같은 pose(`/gps`+`/imu`, GPS 안테나에서 0.35 m 뒤의 후륜축
+`base_link`)로 `/hd_map/debug/ego_markers`를 발행한다. RViz의 `Ego footprint (base_link, GPS+IMU)`가 이를 표시한다.
+
+- 박스: Ioniq 5 규정 치수로, `base_link` 뒤 0.79 m부터 앞 3.845 m까지, 폭 1.892 m다.
+- 박스 색: 차체가 compact 주행가능 grid 밖으로 나간 비율에 따라 초록(0%), 노랑(10% 미만), 빨강(그 이상)이다. pose가
+  0.5 s 넘게 갱신되지 않으면 회색 `GPS STALE`이다. 대회 음영 구간처럼 GPS가 (0, 0)으로 오면 마지막 pose에서
+  멈추고 회색이 된다.
+- 모서리 점은 각 모서리가 주행가능 칸 위인지(초록/빨강), 파란 점은 `base_link`다.
+- 텍스트: map 좌표, yaw, 현재 차로 link·상태·횡오프셋, 주행가능영역 밖 비율.
+- `publish_ego_tf`(debug launch에서 `rviz`와 같은 기본값)가 켜지면 같은 pose로 `map→base_link` TF를 낸다.
+  `follow_ego:=true`로 띄우면 RViz 시점이 `base_link`를 따라간다(Views 패널의 저장 시점
+  `Follow ego (base_link)`도 같음). 이때 브리지의 `publish_map_tf`는 끈 상태로 둔다. 브리지 TF는 GPS
+  안테나를 `base_link`로 쓰므로 0.35 m 어긋난다. 브리지가 내는 `base_link→velodyne` static TF와 이어지므로
+  `LiDAR /velodyne_points` display를 켜면 점군을 HD맵 위에 겹쳐 볼 수 있다.
+
 점선은 message의 `pattern`과 dash/gap 속성으로 시각화한다. polyline point 간격을 보고
 실선/점선을 추정하지 않는다.
 

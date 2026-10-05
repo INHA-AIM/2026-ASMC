@@ -1,0 +1,89 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+  - Class: rviz/Selection
+    Name: Selection
+  - Class: rviz/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.35
+      Cell Size: 10
+      Class: rviz/Grid
+      Color: 70; 78; 88
+      Enabled: true
+      Name: Metric grid
+      Plane: XY
+      Reference Frame: map
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /hd_map/debug/markers
+      Name: "HD map lanes, route, checkpoints, missions"
+      Queue Size: 2
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /hd_map/debug/ego_markers
+      Name: "Ego footprint (base_link, GPS+IMU)"
+      Queue Size: 2
+    - Alpha: 0.9
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: FlatColor
+      Enabled: false
+      Name: "LiDAR /velodyne_points (needs map->base_link TF)"
+      Size (m): 0.06
+      Style: Points
+      Topic: /velodyne_points
+      Unreliable: true
+      Use Fixed Frame: true
+    - Alpha: 0.34
+      Class: rviz/Map
+      Color Scheme: map
+      Draw Behind: true
+      Enabled: true
+      Name: "Compact drivable OccupancyGrid"
+      Topic: /hd_map/global/drivable_grid
+      Unreliable: false
+      Use Timestamp: false
+    - Alpha: 0.7
+      Class: rviz/Map
+      Color Scheme: map
+      Draw Behind: false
+      Enabled: false
+      Name: "Planner local drivable crop (120 m)"
+      Topic: /hd_map/local/drivable_grid
+      Unreliable: false
+      Use Timestamp: false
+  Enabled: true
+  Global Options:
+    Background Color: 12; 15; 20
+    Fixed Frame: map
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+  Views:
+    Current:
+      Angle: 3.141592653589793
+      Class: rviz/TopDownOrtho
+      Name: Follow ego (base_link)
+      Scale: 22
+      Target Frame: base_link
+      X: 0
+      Y: 0
+    Saved:
+      - Angle: 3.141592653589793
+        Class: rviz/TopDownOrtho
+        Name: Follow ego (base_link)
+        Scale: 22
+        Target Frame: base_link
+        X: 0
+        Y: 0
+Window Geometry:
+  Height: 950
+  Width: 1450

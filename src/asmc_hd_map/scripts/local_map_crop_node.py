@@ -11,12 +11,20 @@ import threading
 import time
 
 from asmc_msgs.msg import HdMapMeta, LaneArray, LaneAssociation
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Point, PoseStamped, TransformStamped
 from morai_msgs.msg import EgoVehicleStatus, GPSMessage
 from nav_msgs.msg import OccupancyGrid
 import numpy as np
 import rospy
 from sensor_msgs.msg import Imu
+from std_msgs.msg import ColorRGBA
+from visualization_msgs.msg import Marker, MarkerArray
+
+from asmc_hd_map.ego_footprint import (
+    VehicleFootprint,
+    footprint_corners,
+    footprint_drivable_summary,
+)
 
 from asmc_hd_map.lane_association import (
     LaneAssociator,
@@ -67,6 +75,28 @@ class LocalMapCropNode:
         self.latest_association = LaneAssociationResult(valid=False, state=0)
         self.last_publish = 0.0
         self.first_publish_logged = False
+        # Debug-only ego footprint on the HD map. base_link is the same rear-axle
+        # reference used by current-lane association. The map->base_link TF is
+        # off by default so it never competes with a runtime localization TF;
+        # the debug launch enables it with RViz so the view can follow base_link.
+        self.publish_ego_markers = bool(rospy.get_param("~publish_ego_markers", True))
+        self.publish_ego_tf = bool(rospy.get_param("~publish_ego_tf", False))
+        self.ego_frame_id = str(rospy.get_param("~ego_frame_id", "base_link"))
+        self.footprint = VehicleFootprint(
+            rear_overhang_m=float(rospy.get_param("~vehicle_rear_overhang_m", 0.79)),
+            wheelbase_m=float(rospy.get_param("~vehicle_wheelbase_m", 3.0)),
+            front_overhang_m=float(rospy.get_param("~vehicle_front_overhang_m", 0.845)),
+            width_m=float(rospy.get_param("~vehicle_width_m", 1.892)),
+        )
+        self.ego_markers_pub = (
+            rospy.Publisher("/hd_map/debug/ego_markers", MarkerArray, queue_size=1)
+            if self.publish_ego_markers else None
+        )
+        self.tf_broadcaster = None
+        if self.publish_ego_tf:
+            import tf2_ros
+
+            self.tf_broadcaster = tf2_ros.TransformBroadcaster()
 
         if self.pose_source == "gps_imu":
             try:
@@ -371,9 +401,136 @@ class LocalMapCropNode:
                 self.latest_association = self.lane_associator.update(
                     x_m, y_m, yaw_rad
                 )
+        if self.tf_broadcaster is not None:
+            transform = TransformStamped()
+            transform.header.stamp = stamp
+            transform.header.frame_id = "map"
+            transform.child_frame_id = self.ego_frame_id
+            transform.transform.translation.x = x_m
+            transform.transform.translation.y = y_m
+            transform.transform.rotation.z = math.sin(0.5 * yaw_rad)
+            transform.transform.rotation.w = math.cos(0.5 * yaw_rad)
+            self.tf_broadcaster.sendTransform(transform)
+        self._publish_ego_markers()
 
     def _on_publish_timer(self, _event) -> None:
         self._try_publish(force=True)
+        self._publish_ego_markers()
+
+    def _publish_ego_markers(self) -> None:
+        if self.ego_markers_pub is None:
+            return
+        with self.lock:
+            if self.latest_pose is None:
+                return
+            x_m, y_m, yaw_rad, _stamp = self.latest_pose
+            age_sec = time.monotonic() - self.latest_pose_received_monotonic
+            stale = age_sec > self.pose_stale_timeout_sec
+            association = self.latest_association
+            grid = self.global_grid_message
+            occupancy = self.global_occupancy
+        summary = None
+        if grid is not None and occupancy is not None:
+            summary = footprint_drivable_summary(
+                x_m, y_m, yaw_rad, occupancy, float(grid.info.resolution),
+                (grid.info.origin.position.x, grid.info.origin.position.y), self.footprint,
+            )
+        self.ego_markers_pub.publish(
+            self._ego_markers(x_m, y_m, yaw_rad, stale, age_sec, association, summary)
+        )
+
+    def _ego_markers(self, x_m, y_m, yaw_rad, stale, age_sec, association, summary) -> MarkerArray:
+        def marker(namespace: str, marker_type: int) -> Marker:
+            value = Marker()
+            value.header.frame_id = "map"
+            value.ns = namespace
+            value.type = marker_type
+            value.action = Marker.ADD
+            value.pose.orientation.w = 1.0
+            return value
+
+        def color(r: float, g: float, b: float, a: float) -> ColorRGBA:
+            return ColorRGBA(r=r, g=g, b=b, a=a)
+
+        def point(x: float, y: float, z: float) -> Point:
+            return Point(x=x, y=y, z=z)
+
+        outside = float(summary["outside_fraction"]) if summary else 0.0
+        if stale:
+            fill_color = color(0.55, 0.55, 0.55, 0.40)
+        elif outside <= 0.0:
+            fill_color = color(0.15, 0.9, 0.3, 0.45)
+        elif outside < 0.10:
+            fill_color = color(1.0, 0.85, 0.1, 0.55)
+        else:
+            fill_color = color(1.0, 0.2, 0.15, 0.6)
+        z = 0.8
+        offset = self.footprint.center_offset_m
+        body = marker("ego_footprint_fill", Marker.CUBE)
+        body.pose.position = point(
+            x_m + math.cos(yaw_rad) * offset, y_m + math.sin(yaw_rad) * offset, z
+        )
+        body.pose.orientation.z = math.sin(0.5 * yaw_rad)
+        body.pose.orientation.w = math.cos(0.5 * yaw_rad)
+        body.scale.x, body.scale.y, body.scale.z = self.footprint.length_m, self.footprint.width_m, 0.05
+        body.color = fill_color
+
+        corners = footprint_corners(x_m, y_m, yaw_rad, self.footprint)
+        outline = marker("ego_footprint_outline", Marker.LINE_STRIP)
+        outline.scale.x = 0.08
+        outline.color = color(1.0, 1.0, 1.0, 0.95)
+        outline.points = [point(cx, cy, z + 0.03) for cx, cy in corners + corners[:1]]
+
+        corner_marks = marker("ego_footprint_corners", Marker.SPHERE_LIST)
+        corner_marks.scale.x = corner_marks.scale.y = corner_marks.scale.z = 0.35
+        corner_marks.points = [point(cx, cy, z + 0.05) for cx, cy in corners]
+        flags = summary["corner_drivable"] if summary else [True] * 4
+        corner_marks.colors = [
+            color(0.15, 1.0, 0.3, 1.0) if ok else color(1.0, 0.1, 0.1, 1.0) for ok in flags
+        ]
+
+        heading = marker("ego_heading", Marker.ARROW)
+        heading.scale.x, heading.scale.y, heading.scale.z = 0.18, 0.45, 0.6
+        heading.color = color(1.0, 1.0, 1.0, 0.95)
+        nose = self.footprint.wheelbase_m + self.footprint.front_overhang_m + 1.5
+        heading.points = [
+            point(x_m, y_m, z + 0.06),
+            point(x_m + math.cos(yaw_rad) * nose, y_m + math.sin(yaw_rad) * nose, z + 0.06),
+        ]
+
+        base_link = marker("ego_base_link", Marker.SPHERE)
+        base_link.pose.position = point(x_m, y_m, z + 0.08)
+        base_link.scale.x = base_link.scale.y = base_link.scale.z = 0.4
+        base_link.color = color(0.2, 0.6, 1.0, 1.0)
+
+        state_names = {
+            LaneAssociation.STATE_INSIDE: "INSIDE",
+            LaneAssociation.STATE_BOUNDARY: "BOUNDARY",
+            LaneAssociation.STATE_NEARBY: "NEARBY",
+            LaneAssociation.STATE_STALE: "STALE",
+        }
+        lane_text = (
+            "lane %s %s lat %+.2f m" % (
+                association.link_id[-4:] if association.link_id else "-",
+                "STALE (last)" if stale else state_names.get(association.state, "UNKNOWN"),
+                association.signed_lateral_offset_m,
+            )
+            if association.valid else "lane -"
+        )
+        text = marker("ego_status_text", Marker.TEXT_VIEW_FACING)
+        text.pose.position = point(x_m, y_m, z + 3.0)
+        text.scale.z = 0.9
+        text.color = color(1.0, 1.0, 1.0, 1.0)
+        text.text = "\n".join([
+            "GPS STALE %.1f s (last pose)" % age_sec if stale else "base_link %.1f, %.1f  yaw %.0f°" % (
+                x_m, y_m, math.degrees(yaw_rad)
+            ),
+            lane_text,
+            "outside drivable %.0f%%" % (100.0 * outside) if summary else "drivable grid pending",
+        ])
+        output = MarkerArray()
+        output.markers = [body, outline, corner_marks, heading, base_link, text]
+        return output
 
     @staticmethod
     def _identity_matches(meta: HdMapMeta, lanes: LaneArray) -> bool:
