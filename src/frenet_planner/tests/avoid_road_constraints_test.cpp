@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <algorithm>
+#include <filesystem>
 int failures=0;
 void Expect(bool value,const char* name){std::cout<<(value?"[PASS] ":"[FAIL] ")<<name<<'\n';if(!value)++failures;}
 CartesianState Ego(const YAML::Node& v){return {v["x"].as<double>(),v["y"].as<double>(),v["yaw"].as<double>(),0,v["speed"].as<double>(),v["acceleration"].as<double>()};}
@@ -16,6 +17,72 @@ std::vector<TrackedObject> Objects(const YAML::Node& nodes){
  for(int i=0;i<8;++i){auto p=o["obb_corners"][i];obj.corners[i]={p["x"].as<double>(),p["y"].as<double>(),p["z"].as<double>()};}objects.push_back(obj);}
  return objects;
 }
+
+// Synthetic geometry only: a road widens after x=45, then several independently
+// tracked boxes occupy the same bypass corridor. No recorded bag is needed.
+void SyntheticReplanning(const YAML::Node& original) {
+ const auto dir=std::filesystem::absolute("avoid_replanning_fixture");
+ std::filesystem::create_directories(dir);
+ {std::ofstream f(dir/"waypoints.txt");for(int x=0;x<=200;++x)f<<x<<" 0\n";}
+ {std::ofstream f(dir/"drivable.json");f<<R"({"frame_id":"map","map_id":"waize_katri_2025-10-23","grid":{"origin_x":0,"origin_y":-6},"drivable_areas":[{"validity":"validated","polygon":[[0,-4],[200,-4],[200,4],[0,4]]}]})";}
+ {std::ofstream f(dir/"lines.json");f<<R"({"map_id":"kcity2025_competition_route_curation_candidate_v14","frame":{"local_origin_in_global":[302595,4124145]},"features":[{"feature_type":"lane_marking","attributes":{"pattern":"solid","functional_role":"lane_boundary_paint"},"geometry":{"coordinates":[[0,5],[200,5]]}}]})";}
+ auto grid=[&](bool narrow){std::ofstream f(dir/"drivable_grid.rle");f<<"3085 7232 0.2 0 -6\n";for(int row=10;row<50;++row)f<<row<<' '<<(narrow&&(row<21||row>=39)?225:0)<<" 1000\n";};
+ auto cfg=YAML::Clone(original);cfg["waypoint_file"]=(dir/"waypoints.txt").string();cfg["avoid_hd_map"]["directory"]=dir.string();
+ cfg["planner"]["collision_check"]["margin_growth_rate"]=0.0;
+ {std::ofstream f(dir/"params.yaml");f<<cfg;}
+ auto box=[](int id,double x,double y,double width){
+  TrackedObject o{};o.id=id;o.x=x;o.y=y;o.z=0;o.width=width;o.length=1;o.height=1;o.heading=0;
+  o.geometry_valid=o.z_valid=true;o.motion_state=ObjectMotionState::LOW_THREAT;
+  for(int i=0;i<8;++i){const double xs[4]={-.5,.5,.5,-.5},ys[4]={-.5,-.5,.5,.5};o.corners[i]={x+xs[i%4],y+width*ys[i%4],double(i/4)};}
+  return o;
+ };
+ PlannerCommand cmd{};cmd.mode=AVOID;cmd.target_object_id=1;cmd.requested_direction=LateralDirection::RIGHT;cmd.has_target_speed=true;cmd.target_speed=2;
+ CartesianPath p;FrenetPlanner::AvoidPrepareResult r;
+ grid(true);FrenetPlanner retime;Expect(retime.Init((dir/"params.yaml").string()),"synthetic widening road loads");
+ CartesianState ego{};ego.x=30;ego.y=-.7;ego.v=2;
+ std::vector<TrackedObject> objects{box(1,80,1.1,.1)};
+ retime.PrepareAvoid(ego,objects,cmd,p,r);
+ const bool committed=retime.CommitAvoid(r);const double original_entry=r.map_entry_s;
+ Expect(committed&&original_entry<45,"small initial box commits before road widens");
+ objects[0]=box(1,80,1.1,2.0);p={};r={};
+ const bool resumed=retime.PlanCommittedAvoid(ego,objects,cmd,p,r);
+ Expect(resumed&&r.candidate_valid&&r.map_entry_s>original_entry+2&&retime.avoid_phase_name()==std::string("TRACKING"),"changed box replans entry before measured lateral motion");
+ const double entry=r.map_entry_s;
+ p={};r={};retime.PlanCommittedAvoid(ego,objects,cmd,p,r);
+ Expect(r.candidate_valid&&std::fabs(r.map_entry_s-entry)<1e-6,"valid retimed bypass keeps its entry station");
+ grid(false);FrenetPlanner multi;Expect(multi.Init((dir/"params.yaml").string()),"synthetic wide road loads");
+ ego={};ego.x=30;ego.v=2;objects={box(1,80,.5,.3)};p={};r={};
+ multi.PrepareAvoid(ego,objects,cmd,p,r);const bool first=multi.CommitAvoid(r);const double nominal=r.selected_target_d;
+ Expect(first,"one box commits a nominal bypass");
+ // Advance along accepted samples until lateral motion is actually underway.
+ bool moved=false;
+ for(int i=0;i<150&&first;++i){
+  p={};r={};if(!multi.PlanCommittedAvoid(ego,objects,cmd,p,r)||p.x.size()<2)break;
+  ego={p.x[1],p.y[1],p.yaw[1],p.kappa[1],p.v[1],p.a[1]};
+  if(ego.y<-.35){moved=true;break;}
+ }
+ Expect(moved,"synthetic vehicle starts the lateral bypass");
+ objects.push_back(box(2,81,-.4,.4));p={};r={};
+ const bool widened=multi.PlanCommittedAvoid(ego,objects,cmd,p,r);
+ double s=0;multi.ProjectEgoToS(ego,s);
+ Expect(widened&&r.candidate_valid&&r.selected_target_d<nominal-.25,"second independent box widens the same-side bypass");
+ Expect(widened&&r.map_entry_s<=s+1e-6,"actual lateral motion prevents entry postponement");
+ const double wide_target=r.selected_target_d;p={};r={};multi.PlanCommittedAvoid(ego,objects,cmd,p,r);
+ Expect(r.candidate_valid&&std::fabs(r.selected_target_d-wide_target)<1e-6,"valid widened target is retained on the next cycle");
+ // A third box fills the entire remaining road; expansion must fail safely.
+ objects.push_back(box(3,80,0,20));p={};r={};
+ multi.PlanCommittedAvoid(ego,objects,cmd,p,r);
+ Expect(!r.candidate_valid,"widening cannot bypass a full-road physical barrier");
+ objects.pop_back();bool completed=false;int stalls=0;
+ for(int i=0;i<800;++i){
+  p={};r={};if(!multi.PlanCommittedAvoid(ego,objects,cmd,p,r)||p.x.size()<2){++stalls;break;}
+  if(multi.avoid_completed()){completed=true;break;}
+  ego={p.x[1],p.y[1],p.yaw[1],p.kappa[1],p.v[1],p.a[1]};
+ }
+ Expect(completed&&stalls==0,"two-box bypass completes its return under ideal tracking");
+ std::filesystem::remove_all(dir);
+}
+
 int main(){
  const std::string root=std::string(FRENET_PACKAGE_SRC_DIR)+"/../";
  const auto fixture=YAML::LoadFile(root+"tests/data/avoid_road_constraints.json");
@@ -108,9 +175,11 @@ int main(){
    if(!disturbed_committed&&result.candidate_valid){
      disturbed_committed=disturbed.CommitAvoid(result);path=result.candidate_path;
    }
-   if(!map.PathClear(path,shape)){++disturbed_stalls;break;}
+   // The injected yaw can put a previously valid body slightly outside the
+   // raster. Require the same bounded recovery contract as the production plan.
+   if(!(heading_injected?map.EvaluateRecoveryPath(path,shape,.1).drivable:map.PathClear(path,shape))){++disturbed_stalls;break;}
    if(heading_injected){
-     heading_resume_valid=result.candidate_valid&&map.PathClear(result.candidate_path,shape);
+     heading_resume_valid=result.candidate_valid&&map.EvaluateRecoveryPath(result.candidate_path,shape,.1).drivable;
      break;
    }
    disturbed_ego={path.x[1],path.y[1],path.yaw[1],path.kappa[1],path.v[1],path.a[1]};
@@ -136,5 +205,6 @@ int main(){
  junction_objects.push_back(barrier);path={};result={};
  junction.PrepareAvoid(junction_ego,junction_objects,command,path,result);
  Expect(!result.candidate_valid,"paint fallback cannot select a colliding trajectory");
+ SyntheticReplanning(config);
  return failures?1:0;
 }

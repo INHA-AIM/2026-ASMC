@@ -45,6 +45,8 @@ void FrenetPlanner::ApplyAvoidCommit(const AvoidPrepareResult& result) {
     // 진행률 기준점. maneuver_progress를 (start_d -> target_d) 구간으로
     // 계산한다(D6-3c).
     v2_avoidance_.start_d = last_d_;
+    v2_avoidance_.map_lateral_origin_d = last_d_;
+    v2_avoidance_.map_lateral_started = false;
     // AVOID를 멀리서 확보/COMMIT해도 곧바로 옆으로 흐르지 않는다.
     // TRACKING에서 global path를 유지하다 장애물 기준 진입거리에 도달하면
     // SHIFT로 넘어간다.

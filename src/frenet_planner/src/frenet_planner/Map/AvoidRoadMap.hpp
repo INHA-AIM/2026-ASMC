@@ -32,7 +32,8 @@ class AvoidRoadMap {
   // grid within the distance budget / 5 s, then stay inside for the entire path.
   PathEvaluation EvaluateRecoveryPath(const CartesianPath& path, const VehicleShape& shape,
                                       double dt, double distance_budget_m = 6.0,
-                                      double overlap_limit_m = .35, bool continuing_recovery = false) const;
+                                      double overlap_limit_m = .35, bool continuing_recovery = false,
+                                      double settled_travel_m = 0.0) const;
   double FootprintOverlapDepth(double x, double y, double yaw, const VehicleShape& shape) const {
     return enabled_ ? FootprintOverlap(x,y,yaw,shape).maximum : 0.0;
   }
@@ -49,7 +50,7 @@ class AvoidRoadMap {
   Overlap FootprintOverlap(double x, double y, double yaw, const VehicleShape& shape) const;
   PathEvaluation Evaluate(const CartesianPath& path, const VehicleShape& shape,
                           double dt, double recovery_distance_m, double overlap_limit_m,
-                          bool continuing_recovery) const;
+                          bool continuing_recovery, double settled_travel_m = 0.0) const;
   bool Inside(double x, double y) const;
   bool DrivablePoseClear(double x, double y, double yaw, const VehicleShape& shape) const;
   bool TouchesPaint(double x, double y, double yaw, const VehicleShape& shape) const;

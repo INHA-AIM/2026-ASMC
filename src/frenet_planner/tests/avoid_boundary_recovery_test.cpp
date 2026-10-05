@@ -32,6 +32,11 @@ int main(){
  Expect(!map.EvaluateRecoveryPath(leave_again,shape,.1).drivable,"departure after settled recovery rejected");
  Expect(!map.EvaluateRecoveryPath(recovery,shape,.1,.02).drivable,"remaining travel budget enforced");
  Expect(!map.EvaluateRecoveryPath(recovery,shape,.1,6,.01).drivable,"episode overlap limit cannot be renewed each plan");
+ auto settled_tail=Line(2,0,3,0);
+ Expect(!map.EvaluateRecoveryPath(settled_tail,shape,.1,.2,.10,true).drivable,"short remaining budget needs prior settled travel");
+ Expect(map.EvaluateRecoveryPath(settled_tail,shape,.1,.2,.10,true,.4).drivable,"actual settled travel survives replanning within the original budget");
+ Expect(!map.EvaluateRecoveryPath(Line(2,-1.10,3,0),shape,.1,.2,.20,true,.4).drivable,"settled credit is discarded when the body leaves the road again");
+ Expect(!map.EvaluateRecoveryPath(settled_tail,shape,.1,.2,.10,true,std::numeric_limits<double>::quiet_NaN()).drivable,"invalid settled credit rejected");
  Expect(!map.EvaluateRecoveryPath(Line(2,-1.10,4,0,201),shape,1.0).drivable,"slow recovery exceeds predicted five-second budget");
  recovery.x[0]=std::numeric_limits<double>::quiet_NaN();Expect(!map.EvaluateRecoveryPath(recovery,shape,.1).drivable,"nonfinite initial pose rejected");
 

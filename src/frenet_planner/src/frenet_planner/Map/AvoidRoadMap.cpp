@@ -170,13 +170,14 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::EvaluatePath(
 }
 
 AvoidRoadMap::PathEvaluation AvoidRoadMap::EvaluateRecoveryPath(
-    const CartesianPath& path,const VehicleShape& shape,double dt,double budget,double overlap_limit,bool continuing_recovery) const {
-  if(!std::isfinite(budget)||budget<0||!std::isfinite(overlap_limit)||overlap_limit<0)return {};
-  return Evaluate(path,shape,dt,budget,std::min(.35,overlap_limit),continuing_recovery);
+    const CartesianPath& path,const VehicleShape& shape,double dt,double budget,double overlap_limit,bool continuing_recovery,double settled_travel_m) const {
+  if(!std::isfinite(budget)||budget<0||!std::isfinite(overlap_limit)||overlap_limit<0||
+     !std::isfinite(settled_travel_m)||settled_travel_m<0)return {};
+  return Evaluate(path,shape,dt,budget,std::min(.35,overlap_limit),continuing_recovery,settled_travel_m);
 }
 
 AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
-    const CartesianPath& path,const VehicleShape& shape,double dt,double recovery_distance_m,double overlap_limit_m,bool continuing_recovery) const {
+    const CartesianPath& path,const VehicleShape& shape,double dt,double recovery_distance_m,double overlap_limit_m,bool continuing_recovery,double settled_travel_m) const {
   PathEvaluation result;
   if(path.x.empty()||path.y.size()!=path.x.size()||path.yaw.size()!=path.x.size()||
      !std::isfinite(dt)||dt<=0)return result;
@@ -188,8 +189,13 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
   if(recovery&&(recovery_distance_m<=0||initial.maximum>overlap_limit_m||initial.fraction>.10))return result;
   result.initial_overlap_m=initial.maximum;
   double continuous=0,travel=0,elapsed_total=0,settled_travel=0;
+  // Credit actual settled travel from this episode only while the enlarged
+  // body is still inside. Replanning must not restart the 0.5 m confirmation,
+  // nor renew the original distance/overlap limits.
+  if(continuing_recovery&&DrivablePoseClear(path.x[0],path.y[0],path.yaw[0],settled_shape))
+    settled_travel=std::min(.5,settled_travel_m);
   double previous_x=path.x[0],previous_y=path.y[0];
-  bool recovered=!recovery;
+  bool recovered=!recovery||settled_travel>=.5;
   bool previous_contact=false;
   auto sample=[&](double x,double y,double yaw,double elapsed){
     if(!std::isfinite(x)||!std::isfinite(y)||!std::isfinite(yaw))return false;

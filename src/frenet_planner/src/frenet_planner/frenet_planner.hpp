@@ -850,10 +850,15 @@ private:
         // 기동 시작 시점의 ego d. maneuver_progress를 (start_d -> target_d)
         // 구간의 진행률로 계산하기 위해 필요하다(D6-4에서 사용).
         double start_d = 0.0;
-        // Once committed, braking must not move the SHIFT entry farther ahead.
+        // Legacy entry remains locked. Map-aware retiming requires a blocked
+        // nominal plan and no measured lateral bypass motion.
         double shift_entry_distance = 0.0;
         double map_entry_s = 0.0;
         double map_transition_distance = 0.0;
+        // Measured lateral motion, rather than the nominal SHIFT/PASS label,
+        // locks the entry against being postponed during an actual bypass.
+        double map_lateral_origin_d = 0.0;
+        bool map_lateral_started = false;
         // Actual travel budget survives replanning while the body is outside.
         bool map_recovery_active = false;
         double map_recovery_last_s = 0.0;
