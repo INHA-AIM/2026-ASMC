@@ -172,7 +172,22 @@ marking의 유효한 국소 횡거리로 Lane 외곽을 보정하고 MGeo 인접
 - 흰색/노란색 실선·점선과 청록색 정지선
 - 공식 전역경로, 100 m station, link ID와 진행 방향
 - 체크포인트 3 m 원, 공식 heading, route station
-- 미션 corridor/boundary와 `official/derived_official/provisional` 상태
+- 미션 종류별 namespace. 각 종류를 RViz `MarkerArray`의 namespace 체크박스로 따로 켜고 끈다.
+
+  | 종류 (색) | 전역경로 span | 구간 면적 외곽선 | actor 후보 링크·방향 화살표 |
+  |---|---|---|---|
+  | 출발 5% (연두) | `mission_start_success` | — | — |
+  | 정적 장애물 (주황) | `mission_static_obstacle` | `mission_surface_static_obstacle` | `mission_actors_static_obstacle` |
+  | 동적 장애물 (자홍) | `mission_dynamic_obstacle` | `mission_surface_dynamic_obstacle` | `mission_actors_dynamic_obstacle` |
+  | GPS 음영 (보라) | `mission_gps_shadow` | `mission_surface_gps_shadow` | `mission_actors_gps_shadow` |
+  | 회전교차로 (파랑) | `mission_roundabout` | `mission_surface_roundabout` | `mission_actors_roundabout` |
+  | 주변 차량 (노랑) | `mission_surrounding_vehicle` | `mission_surface_surrounding_vehicle` | `mission_actors_surrounding_vehicle` |
+  | 신호 정지선 | `mission_boundaries` (station 점) | — | — |
+
+  - actor 선 색: 정적 장애물 빨강, 동적 장애물 분홍, NPC 차량 흰색. 화살표는 진행 방향이다.
+  - 미션 라벨은 `종류 [DER|TEAM]`, station 범위, actor 링크 요약이다(예: `ROUNDABOUT [TEAM] 859–915 m · NPC A147/A133/A134`).
+  - 면적과 actor는 [미션 시나리오 spec](../../handoffs/hd-map/mission-scenario-spec.md)에서 publisher 시작 시
+    매번 만든다. spec을 만들 수 없으면 이 두 레이어만 빠지고 경고가 남는다.
 - 청록색 60 km/h 구간과 자홍색 `COMP LIMIT NONE` 고주로 속도 예외
 - 연두색 `A236→A308` 신호등 인지 활성화 policy
 - build ID, geometry hash 앞 16자리와 P2-B product count
@@ -212,8 +227,8 @@ roslaunch asmc_hd_map hd_map_source_comparison.launch repo_root:=/root/ws
 다음 offset 후보로 옮긴다. station tick은 100 m마다 유지하되 숫자 label은 200 m마다 표시한다.
 따라서 정확한 full ID, station 소수값과 설명은 해당 latched metadata topic을 정본으로 사용한다.
 
-주황색은 실제 공간 범위를 가진 `provisional` 미션에만, 보라색은 `team_final` 미션에 사용한다. 신호등 인지 활성화 policy는
-주황색 미션과 분리한 `perception_activation_corridors`/`policy_text`로 표시한다. 범위는 A236
+미션 색은 상태가 아니라 종류를 나타낸다. 상태(`DER`/`TEAM`/`PROV`)는 라벨로 읽는다. 신호등 인지 활성화 policy는
+미션 corridor와 분리한 `perception_activation_corridors`/`policy_text`로 표시한다. 범위는 A236
 시작부터 A308 종료까지이며 밖에서는 신호등 노드를 중지할 수 있다는 hint를 제공한다.
 A866·A054·A846은 일반 전역경로 추종 구간이며, 이 구간에 보이는 청록색은 미션이 아니라
 60 km/h 속도 profile이다.

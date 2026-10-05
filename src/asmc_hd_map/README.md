@@ -40,6 +40,10 @@ RViz를 포함한 검수:
 roslaunch asmc_hd_map competition_map_debug.launch
 ```
 
+미션 구간은 종류별 namespace(`mission_<type>`, `mission_surface_<type>`, `mission_actors_<type>`)로
+나뉘어 RViz에서 따로 켜고 끌 수 있다. 범례는 [runtime contract §4](../../docs/contracts/hd-map/runtime-v1.md#4-rviz-표시)를 보고,
+구간별 회피 차로·actor 후보와 샘플링 API는 [미션 시나리오 spec](../../docs/handoffs/hd-map/mission-scenario-spec.md)을 본다.
+
 최종/legacy/원태 source와 최신/과거 주행가능영역 비교:
 
 ```bash

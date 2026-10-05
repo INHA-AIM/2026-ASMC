@@ -6,6 +6,7 @@ import cv2
 import json
 import math
 import numpy as np
+from pathlib import Path
 import sys
 
 from asmc_msgs.msg import (
@@ -484,7 +485,6 @@ def main() -> int:
         "route",
         "route_link_direction",
         "checkpoints_radius",
-        "mission_corridors",
         "speed_limit_corridors",
         "speed_limit_exceptions",
         "perception_activation_corridors",
@@ -521,11 +521,48 @@ def main() -> int:
     )
     _require(
         not any(
-            value.ns == "mission_corridors" and value.id == policy_index
+            value.ns == "mission_traffic_light" and value.id == policy_index
             for value in debug.markers
         ),
         "traffic-light activation policy must not paint a mission corridor",
     )
+    # Mission corridors are drawn per mission type. Expected counts come from
+    # the received zones and the current scenario spec, so editing zones or
+    # actor links does not require editing this verifier.
+    type_names = {
+        getattr(MissionZone, name): name[len("TYPE_"):].lower()
+        for name in dir(MissionZone) if name.startswith("TYPE_")
+    }
+    expected_corridors = Counter(
+        type_names[value.mission_type]
+        for value in missions.zones
+        if value.route_station_end_m - value.route_station_start_m > 1e-6
+        and value.mission_type not in (MissionZone.TYPE_SPEED_LIMIT, MissionZone.TYPE_HIGH_SPEED_EXCEPTION)
+        and json.loads(value.rule_payload_json).get("spatial_mission") is not False
+    )
+    for mission_type, count in expected_corridors.items():
+        _require(
+            sum(value.ns == "mission_%s" % mission_type for value in debug.markers) == count,
+            "mission_%s corridor count differs from the published zones" % mission_type,
+        )
+    import rospkg
+    from asmc_hd_map.mission_scenario import build_mission_scenario_spec
+
+    repo_root = Path(rospkg.RosPack().get_path("asmc_hd_map")).resolve().parents[1]
+    scenario = build_mission_scenario_spec(repo_root)
+    for zone in scenario["zones"]:
+        if zone["surface"]:
+            _require(
+                "mission_surface_%s" % zone["mission_type"] in namespaces,
+                "zone %s surface outline is missing" % zone["id"],
+            )
+        if zone["actor_sources"]:
+            _require(
+                sum(value.ns == "mission_actors_%s" % zone["mission_type"]
+                    and value.type == Marker.LINE_STRIP for value in debug.markers)
+                >= len(zone["actor_sources"]),
+                "zone %s actor links are missing" % zone["id"],
+            )
     text_markers = [value for value in debug.markers if value.type == Marker.TEXT_VIEW_FACING]
     _require(
         sum(value.ns == "route_link_labels" for value in text_markers) == 39,
