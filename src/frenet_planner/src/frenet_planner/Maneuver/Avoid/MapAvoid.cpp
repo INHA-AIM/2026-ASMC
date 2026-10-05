@@ -57,9 +57,13 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     auto generate=[&](double target_d,double delay,double transition,bool maintenance,CartesianPath& path){
         const double settle=maintenance ? std::max(10.0,std::min(25.0,ego.v*2.5)) : std::max(1.0,std::min(20.0,delay));
         const auto approach=MakeQuintic(d,initial_slope,0,0,0,0,settle);
-        const double shift_start=maintenance?0.0:delay;
-        const double shift_initial=delay>0?0.0:d;
-        const auto shift=MakeQuintic(shift_initial,delay>0?0.0:initial_slope,0,target_d,0,0,transition);
+        // A short remaining entry delay cannot accommodate a separate return to
+        // the centerline. Start the bypass from the measured d/yaw instead.
+        // The full trajectory still passes the same road and collision checks.
+        const double center_distance=std::max(2.0,LowSpeedLateralTransitionDistance(d,0.0)*1.25);
+        const double shift_start=maintenance?0.0:(delay<center_distance?0.0:delay);
+        const double shift_initial=shift_start>0?0.0:d;
+        const auto shift=MakeQuintic(shift_initial,shift_start>0?0.0:initial_slope,0,target_d,0,0,transition);
         const double pass_end=std::max(shift_start+transition,
             gap+v2_avoidance_.obstacle_longitudinal_half_extent+vehicle_shape_.rear_overhang+avoid_cfg_.pass_clearance);
         const double return_distance=std::max(transition,LowSpeedLateralTransitionDistance(target_d,0.0)*1.25);
