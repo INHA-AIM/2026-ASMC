@@ -105,12 +105,17 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                     CartesianPath candidate;++result.generated_candidate_count;
                     int blocking=-1;bool margin_recovery=false;
                     const bool generated=generate(target_d,delay,transition,false,candidate);
-                    const bool road=generated&&avoid_road_map_.PathClear(candidate,vehicle_shape_);
+                    const auto road_evaluation=generated
+                        ? avoid_road_map_.EvaluatePath(candidate,vehicle_shape_,dt)
+                        : AvoidRoadMap::PathEvaluation{};
+                    const bool road=road_evaluation.drivable;
                     const bool clear=generated&&road&&
                         CartesianTrajectoryClear(candidate,obstacles,vehicle_shape_,collision_cfg_,dt,&blocking,v2_avoidance_.obstacle_id,&margin_recovery);
                     if(!candidate.x.empty()){last_candidate_paths_.push_back(candidate);last_candidate_validity_.push_back(clear);}
                     if(!clear){if(blocking>=0)result.blocking_object_id=blocking;continue;}
                     ++result.valid_candidate_count;
+                    cost+=AvoidRoadMap::PaintCost(road_evaluation);
+                    if(cost>=best)continue;
                     best=cost;result.blocking_object_id=-1;result.escape_recovery_required=margin_recovery;result.candidate_valid=true;result.spatial_candidate_selected=true;
                     result.selected_target_d=target_d;result.selected_cost=cost;result.candidate_path=candidate;
                     result.map_entry_s=std::fmod(s+delay,length);result.map_transition_distance=transition;
@@ -118,6 +123,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
             }
         }
     }
+    if(result.candidate_valid)result.blocking_object_id=-1;
     if(committed){
         if(!result.candidate_valid){last_failure_reason_=result.blocking_object_id>=0?
             PlanFailureReason::COLLISION_BLOCKED:PlanFailureReason::TRANSIENT_GENERATION_FAILURE;return false;}

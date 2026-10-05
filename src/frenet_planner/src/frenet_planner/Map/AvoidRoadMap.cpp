@@ -80,7 +80,7 @@ bool AvoidRoadMap::Inside(double x, double y) const {
   return false;
 }
 
-bool AvoidRoadMap::PoseClear(double x,double y,double yaw,const VehicleShape& shape) const {
+bool AvoidRoadMap::DrivablePoseClear(double x,double y,double yaw,const VehicleShape& shape) const {
   if (!enabled_) return true;
   if (!std::isfinite(x)||!std::isfinite(y)||!std::isfinite(yaw)||
       !std::isfinite(shape.width)||!std::isfinite(shape.length)||!std::isfinite(shape.rear_overhang)||
@@ -94,6 +94,12 @@ bool AvoidRoadMap::PoseClear(double x,double y,double yaw,const VehicleShape& sh
     const double a=-rear+shape.length*i/nx,b=-half+shape.width*j/ny;
     if(!Inside(x+c*a-s*b,y+s*a+c*b))return false;
   }
+  return true;
+}
+
+bool AvoidRoadMap::TouchesPaint(double x,double y,double yaw,const VehicleShape& shape) const {
+  const double c=std::cos(yaw),s=std::sin(yaw);
+  const double rear=shape.rear_overhang,front=shape.length-rear,half=shape.width*.5;
   // Clip actual paint segments against the body rectangle. Do not bridge paint
   // gaps or infer pattern from them, and do not reject junction guide paint.
   const double center_x=x+c*(front-rear)*.5,center_y=y+s*(front-rear)*.5;
@@ -117,29 +123,65 @@ bool AvoidRoadMap::PoseClear(double x,double y,double yaw,const VehicleShape& sh
       if(u>v)std::swap(u,v);
       lo=std::max(lo,u);hi=std::min(hi,v);return lo<=hi;
     };
-    if(clip(ax,bx,-rear,front)&&clip(ay,by,-half,half))return false;
+    if(clip(ax,bx,-rear,front)&&clip(ay,by,-half,half))return true;
   }
   }
-  return true;
+  return false;
+}
+
+bool AvoidRoadMap::PoseClear(double x,double y,double yaw,const VehicleShape& shape) const {
+  return !enabled_ || (DrivablePoseClear(x,y,yaw,shape) && !TouchesPaint(x,y,yaw,shape));
+}
+
+AvoidRoadMap::PathEvaluation AvoidRoadMap::EvaluatePath(
+    const CartesianPath& path,const VehicleShape& shape,double dt) const {
+  PathEvaluation result;
+  if(path.x.empty()||path.y.size()!=path.x.size()||path.yaw.size()!=path.x.size()||
+     !std::isfinite(dt)||dt<=0)return result;
+  if(!enabled_){result.drivable=true;return result;}
+  double continuous=0;
+  bool previous_contact=false;
+  auto sample=[&](double x,double y,double yaw,double elapsed){
+    if(!DrivablePoseClear(x,y,yaw,shape))return false;
+    const bool contact=TouchesPaint(x,y,yaw,shape);
+    // Conservatively count the interval touching either endpoint. Dense samples
+    // prevent skipping a line between trajectory points; duplicates cost no time.
+    if(contact||previous_contact){
+      result.paint_contact_seconds+=elapsed;
+      continuous+=elapsed;
+      result.longest_paint_contact_seconds=std::max(result.longest_paint_contact_seconds,continuous);
+    }
+    if(!contact)continuous=0;
+    previous_contact=contact;
+    return true;
+  };
+  if(!sample(path.x[0],path.y[0],path.yaw[0],0))return result;
+  for(std::size_t i=1;i<path.x.size();++i){
+    if(!std::isfinite(path.x[i])||!std::isfinite(path.y[i])||
+       !std::isfinite(path.yaw[i]))return result;
+    const double angle=std::remainder(path.yaw[i]-path.yaw[i-1],2*M_PI);
+    const double subdivisions=std::ceil(std::max(
+      std::hypot(path.x[i]-path.x[i-1],path.y[i]-path.y[i-1])/.20,std::fabs(angle)/.02));
+    if(!std::isfinite(subdivisions)||subdivisions>100000)return result;
+    const int count=std::max(1,static_cast<int>(subdivisions));
+    for(int j=1;j<=count;++j){const double f=double(j)/count;
+      if(!sample(path.x[i-1]+f*(path.x[i]-path.x[i-1]),path.y[i-1]+f*(path.y[i]-path.y[i-1]),
+                 path.yaw[i-1]+f*angle,dt/count))return result;
+    }
+  }
+  result.drivable=true;
+  return result;
 }
 
 bool AvoidRoadMap::PathClear(const CartesianPath& path,const VehicleShape& shape) const {
-  if(!enabled_)return true;
-  if(path.x.empty()||path.y.size()!=path.x.size()||path.yaw.size()!=path.x.size())return false;
-  for(std::size_t i=0;i<path.x.size();++i){
-    // Reject invalid endpoints before computing an interpolation count.
-    // Converting an infinite distance to int would otherwise be undefined.
-    if(!std::isfinite(path.x[i])||!std::isfinite(path.y[i])||
-       !std::isfinite(path.yaw[i]))return false;
-    if(!PoseClear(path.x[i],path.y[i],path.yaw[i],shape))return false;
-    if(!i)continue;
-    const double angle=std::remainder(path.yaw[i]-path.yaw[i-1],2*M_PI);
-    const int count=std::max(1,static_cast<int>(std::ceil(std::max(
-      std::hypot(path.x[i]-path.x[i-1],path.y[i]-path.y[i-1])/.20,std::fabs(angle)/.02))));
-    for(int j=1;j<count;++j){const double f=double(j)/count;
-      if(!PoseClear(path.x[i-1]+f*(path.x[i]-path.x[i-1]),path.y[i-1]+f*(path.y[i]-path.y[i-1]),
-                    path.yaw[i-1]+f*angle,shape))return false;
-    }
-  }
-  return true;
+  return EvaluatePath(path,shape,.1).drivable;
+}
+
+double AvoidRoadMap::PaintCost(const PathEvaluation& evaluation) {
+  // User-specified competition policy: prolonged paint contact is penalized,
+  // not a physical obstacle. Prefer no contact, then a short recovery. Even a
+  // >3s contact remains an option when safer candidates do not exist. The 2.5s
+  // knee reserves 0.5s for tracking error; this is prediction, not a referee timer.
+  const double prolonged=std::max(0.0,evaluation.longest_paint_contact_seconds-2.5);
+  return 20.0*evaluation.paint_contact_seconds+100.0*prolonged*prolonged;
 }

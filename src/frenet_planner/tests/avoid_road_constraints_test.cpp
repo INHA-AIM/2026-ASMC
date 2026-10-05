@@ -25,6 +25,38 @@ int main(){
  if(!error.empty())std::cerr<<error<<'\n';
  VehicleShape shape{};shape.width=1.9;shape.length=4.635;shape.rear_overhang=.79;
  for(auto old:fixture["unsafe"]){CartesianPath path;for(auto p:old){path.x.push_back(p["x"].as<double>());path.y.push_back(p["y"].as<double>());path.yaw.push_back(p["yaw"].as<double>());}Expect(!map.PathClear(path,shape),"recorded departure trajectory rejected");}
+ // Build synthetic paint contact poses from the public map geometry, not a
+ // driving log. A footprint already touching paint must be able to recover.
+ const auto lines=YAML::LoadFile(root+"config/hd_map/lines.json");
+ bool found_paint=false;CartesianPath painted;
+ for(auto feature:lines["features"]){
+  const auto attr=feature["attributes"];
+  if(feature["feature_type"].as<std::string>()!="lane_marking" ||
+     attr["pattern"].as<std::string>()!="solid" ||
+     attr["functional_role"].as<std::string>()!="lane_boundary_paint")continue;
+  const auto coordinates=feature["geometry"]["coordinates"];
+  for(std::size_t i=1;i<coordinates.size()&&!found_paint;++i){
+   const double x=coordinates[i][0].as<double>(),y=coordinates[i][1].as<double>();
+   const double yaw=std::atan2(y-coordinates[i-1][1].as<double>(),x-coordinates[i-1][0].as<double>());
+   painted={};painted.x={x,x};painted.y={y,y};painted.yaw={yaw,yaw};
+   const auto evaluation=map.EvaluatePath(painted,shape,.1);
+   if(evaluation.drivable&&evaluation.paint_contact_seconds>0)found_paint=true;
+  }
+  if(found_paint)break;
+ }
+ Expect(found_paint,"public map contains paint inside drivable pavement");
+ if(found_paint){
+  const auto brief=map.EvaluatePath(painted,shape,.1);
+  Expect(!map.PoseClear(painted.x[0],painted.y[0],painted.yaw[0],shape),"strict diagnostic detects initial paint contact");
+  Expect(map.PathClear(painted,shape),"initial paint contact alone does not kill recovery candidates");
+  CartesianPath long_contact=painted;
+  long_contact.x.assign(41,painted.x[0]);long_contact.y.assign(41,painted.y[0]);long_contact.yaw.assign(41,painted.yaw[0]);
+  const auto prolonged=map.EvaluatePath(long_contact,shape,.1);
+  Expect(prolonged.drivable&&prolonged.longest_paint_contact_seconds>3,"prolonged paint contact is a scored fallback, not a wall");
+  Expect(AvoidRoadMap::PaintCost(prolonged)>AvoidRoadMap::PaintCost(brief)+200,"long contact costs more than brief contact");
+  painted.x.assign(2,10000);painted.y.assign(2,10000);
+  Expect(!map.PathClear(painted,shape),"paint policy does not relax physical road containment");
+ }
  FrenetPlanner planner;Expect(planner.Init("avoid_road_constraints_params.yaml"),"planner loads map");
  auto ego=Ego(fixture["approach"]["ego"]);auto objects=Objects(fixture["approach"]["objects"]);
  PlannerCommand command;command.mode=AVOID;command.target_object_id=83;command.has_target_speed=true;command.target_speed=50./3.6;
@@ -63,5 +95,15 @@ int main(){
  const bool junction_ok=junction.PrepareAvoid(junction_ego,junction_objects,command,path,result);
  Expect(junction_ok&&result.candidate_valid&&result.selected_target_d<0,"recorded junction state has a right bypass");
  Expect(result.candidate_valid&&map.PathClear(result.candidate_path,shape),"right bypass includes a road-constrained return");
+ // A paint-scored fallback must never override a physical OBB collision.
+ auto barrier=junction_objects.front();barrier.id=900;
+ barrier.motion_state=ObjectMotionState::LOW_THREAT;
+ barrier.x=junction_ego.x;barrier.y=junction_ego.y;
+ barrier.vx=barrier.vy=barrier.speed=0;barrier.width=barrier.length=20;
+ for(int i=0;i<8;++i){const double xs[4]={-10,10,10,-10},ys[4]={-10,-10,10,10};
+  barrier.corners[i].x=barrier.x+xs[i%4];barrier.corners[i].y=barrier.y+ys[i%4];}
+ junction_objects.push_back(barrier);path={};result={};
+ junction.PrepareAvoid(junction_ego,junction_objects,command,path,result);
+ Expect(!result.candidate_valid,"paint fallback cannot select a colliding trajectory");
  return failures?1:0;
 }
