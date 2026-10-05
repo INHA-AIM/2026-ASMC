@@ -102,7 +102,7 @@ planning/control 개발자는 [Planning/Control 개발 가이드](./packages/pla
 
 | 문서 | 역할 | 상태 |
 |---|---|---|
-| [대회 환경·규정·공개 자산](./competition/README.md) | 규정 v1.1, 센서, 미션과 배포 자산 | Canonical Summary |
+| [대회 환경·규정·공개 자산](./competition/README.md) | 규정 v1.2, 센서, 미션과 배포 자산 | Canonical Summary |
 | [개발·시뮬레이터 운영](./operations/README.md) | Docker, 현재 UDP profile, 진단과 시뮬 gate | Canonical |
 | [rosbag 기록·평가](./operations/rosbag-evaluation.md) | raw/result 기록, replay와 lineage | Active Guide |
 | [morai-msgs-beta-policy.md](./contracts/simulator/morai-msgs-beta-policy.md) | `beta_drive` submodule과 필드 정렬 규칙 | Canonical until port |

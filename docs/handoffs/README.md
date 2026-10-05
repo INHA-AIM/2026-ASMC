@@ -13,6 +13,7 @@ consumer가 어떤 freshness·quality·fallback을 검사해야 하는지, 어�
 | Camera lane/BEV→Planning | [음영 camera v3](./perception/shadow-camera.md) | Active, read-only adapter 인수 완료; deployment 미승인 |
 | Camera detector→LiDAR fusion | [객체 검출](./perception/camera-object-detection.md) | Active Guide, 기존 YOLO11m 기준선과 후속 비교 |
 | Behavior→Frenet v1 | [legacy 3-package 설계](./planning/behavior-legacy.md) | Legacy Reference, 현재 실행 금지 |
+| 규정집 v1.2→전 파트 | [v1.2 영향과 확인 요청](./competition/rule-v1.2-impacts.md) | Active Handoff, 판정 전용 채널·cmd type·속도 상한 |
 
 현재 Behavior↔Frenet production 계약은 handoff 문서가 아니라
 [FSM↔Frenet v2 frozen contract](../contracts/planning/fsm-frenet-v2.md)가 소유한다.
