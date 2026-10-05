@@ -1,5 +1,6 @@
 #include "behavior_planner/node/behavior_node.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 #include <asmc_msgs/BehaviorContext.h>
@@ -8,6 +9,7 @@
 
 #include "behavior_planner/context/msg_converter.hpp"
 #include "behavior_planner/global/utils.hpp"
+#include "behavior_planner/node/detected_msg_converter.hpp"
 #include "behavior_planner/node/morai_msg_converter.hpp"
 
 namespace behavior_planner {
@@ -55,6 +57,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     : nh_(std::move(nh)), pnh_(std::move(pnh)) {
   std::string ego_topic = "/vehicle/state";
   std::string objects_topic = "/Object_topic";
+  std::string objects_input_type = "morai";
   std::string feedback_topic = "/planning/feedback";
   std::string feedback_v2_topic = "/planning/frenet_feedback_v2";
   std::string context_topic = "/behavior/context";
@@ -66,12 +69,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   std::string node_path;
   std::string route_path;
   std::string traffic_light_path;
-  // P4-C3: typed is authoritative; the old String topic remains as a
-  // compatibility fallback for deployments that have not started the new
-  // asmc_perception producer yet.
-  std::string traffic_light_typed_topic =
-      "/perception/traffic_light/detection";
-  std::string traffic_light_legacy_topic = "/traffic_light/state";
+  std::string traffic_light_topic = "/traffic_light/state";
   bool use_traffic_light_mock = false;
   double traffic_light_stale_seconds = 1.0;
   double stop_target_offset_m = 5.0;
@@ -86,6 +84,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   pnh_.param("behavior/update_rate", rate_, rate_);
   pnh_.param("topics/ego", ego_topic, ego_topic);
   pnh_.param("topics/objects", objects_topic, objects_topic);
+  pnh_.param("objects/input_type", objects_input_type, objects_input_type);
   pnh_.param("topics/plan_feedback", feedback_topic, feedback_topic);
   pnh_.param("topics/frenet_feedback_v2", feedback_v2_topic,
              feedback_v2_topic);
@@ -109,6 +108,10 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
              avoid_target.max_distance);
   pnh_.param("avoid/max_lateral_offset", avoid_target.max_lateral_offset,
              avoid_target.max_lateral_offset);
+  pnh_.param("avoid/path_margin_m", avoid_target.path_margin_m,
+             avoid_target.path_margin_m);
+  pnh_.param("vehicle/width", avoid_target.ego_width,
+             avoid_target.ego_width);
   pnh_.param("publish_topics/feature_debug", debug_topic, debug_topic);
   pnh_.param("publish_topics/marker", marker_topic, marker_topic);
   pnh_.param("map/link_set_path", link_path, std::string());
@@ -117,10 +120,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   pnh_.param("traffic_light/mock_path", traffic_light_path, std::string());
   pnh_.param("traffic_light/use_mock", use_traffic_light_mock,
              use_traffic_light_mock);
-  pnh_.param("traffic_light/typed_topic", traffic_light_typed_topic,
-             traffic_light_typed_topic);
-  pnh_.param("traffic_light/topic", traffic_light_legacy_topic,
-             traffic_light_legacy_topic);
+  pnh_.param("traffic_light/topic", traffic_light_topic, traffic_light_topic);
   pnh_.param("traffic_light/stale_seconds", traffic_light_stale_seconds,
              traffic_light_stale_seconds);
   pnh_.param("stop/target_offset_m", stop_target_offset_m,
@@ -163,10 +163,14 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     objects_stale_seconds_ = 0.30;
   }
   if (avoid_target.max_distance <= 0.0 ||
-      avoid_target.max_lateral_offset <= 0.0) {
-    ROS_WARN("Invalid AVOID target limits; using 120.0 m / 1.75 m");
+      avoid_target.max_lateral_offset <= 0.0 ||
+      avoid_target.ego_width <= 0.0 || avoid_target.path_margin_m < 0.0) {
+    ROS_WARN("Invalid AVOID corridor; using 120.0 m / 1.75 m ceiling, "
+             "1.85 m ego width, 0.40 m margin");
     avoid_target.max_distance = 120.0;
     avoid_target.max_lateral_offset = 1.75;
+    avoid_target.ego_width = 1.85;
+    avoid_target.path_margin_m = 0.4;
   }
 
   if (!map_.load(link_path, node_path)) {
@@ -195,8 +199,14 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
            "release delay=%.2f s, objects stale after %.2f s",
            follow_target.max_distance, follow_target.max_lateral_offset,
            follow_release_delay_s, objects_stale_seconds_);
-  ROS_INFO("Behavior AVOID target limits: distance=%.2f m lateral=%.2f m",
-           avoid_target.max_distance, avoid_target.max_lateral_offset);
+  ROS_INFO("Behavior AVOID corridor: distance=%.2f m half_width=%.2f m "
+           "(ego_width=%.2f + margin=%.2f, ceiling=%.2f)",
+           avoid_target.max_distance,
+           std::min(avoid_target.max_lateral_offset,
+                    0.5 * avoid_target.ego_width +
+                        avoid_target.path_margin_m),
+           avoid_target.ego_width, avoid_target.path_margin_m,
+           avoid_target.max_lateral_offset);
 
   if (use_traffic_light_mock) {
     auto mock = std::make_shared<MockTrafficLightProvider>();
@@ -208,13 +218,9 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
              traffic_light_path.c_str());
   } else {
     lights_ = std::make_shared<RosTrafficLightProvider>(
-        nh_, traffic_light_typed_topic, traffic_light_legacy_topic,
-        traffic_light_stale_seconds);
-    ROS_INFO("Behavior traffic-light sources: typed=%s legacy_fallback=%s "
-             "(stale after %.2f s)",
-             traffic_light_typed_topic.c_str(),
-             traffic_light_legacy_topic.c_str(),
-             traffic_light_stale_seconds);
+        nh_, traffic_light_topic, traffic_light_stale_seconds);
+    ROS_INFO("Behavior traffic-light source: %s (stale after %.2f s)",
+             traffic_light_topic.c_str(), traffic_light_stale_seconds);
   }
 
   use_v2_interface_ = interface_version == "v2";
@@ -235,8 +241,18 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   visualization_ = BehaviorVisualization(marker_pub_);
 
   ego_sub_ = nh_.subscribe(ego_topic, 5, &BehaviorNode::egoCallback, this);
-  objects_sub_ =
-      nh_.subscribe(objects_topic, 5, &BehaviorNode::objectsCallback, this);
+  if (objects_input_type == "detected") {
+    objects_sub_ = nh_.subscribe(
+        objects_topic, 5, &BehaviorNode::detectedObjectsCallback, this);
+  } else {
+    if (objects_input_type != "morai") {
+      ROS_WARN("Unknown objects/input_type '%s'; using morai",
+               objects_input_type.c_str());
+      objects_input_type = "morai";
+    }
+    objects_sub_ = nh_.subscribe(
+        objects_topic, 5, &BehaviorNode::moraiObjectsCallback, this);
+  }
   if (use_v2_interface_) {
     feedback_sub_ = nh_.subscribe(feedback_v2_topic, 5,
                                   &BehaviorNode::feedbackV2Callback, this);
@@ -253,7 +269,8 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
       ros::WallDuration(1.0 / rate_), &BehaviorNode::timerCallback, this);
 
   ROS_INFO_STREAM("Behavior planner input: ego=" << ego_topic
-                  << ", objects=" << objects_topic);
+                  << ", objects=" << objects_topic
+                  << " (" << objects_input_type << ")");
   ROS_INFO_STREAM("Behavior interface " << (use_v2_interface_ ? "v2" : "v1")
                   << ": "
                   << (use_v2_interface_ ? command_v2_topic : context_topic)
@@ -334,10 +351,23 @@ void BehaviorNode::egoCallback(
   ego_received_ = true;
 }
 
-void BehaviorNode::objectsCallback(
+void BehaviorNode::moraiObjectsCallback(
     const morai_msgs::ObjectStatusList::ConstPtr& message) {
   if (!message) return;
   objects_ = MoraiMsgConverter::toPerceptionObjects(*message);
+  objects_received_at_ = ros::SteadyTime::now();
+  objects_received_ = true;
+}
+
+void BehaviorNode::detectedObjectsCallback(
+    const asmc_msgs::DetectedObjectArray::ConstPtr& message) {
+  if (!message) return;
+  if (message->header.stamp.isZero() || message->header.frame_id != "map") {
+    ROS_WARN_THROTTLE(
+        1.0, "Behavior rejected DetectedObjectArray with invalid header");
+    return;
+  }
+  objects_ = DetectedMsgConverter::toPerceptionObjects(*message);
   objects_received_at_ = ros::SteadyTime::now();
   objects_received_ = true;
 }

@@ -183,20 +183,31 @@ UrbanFeature FeatureBuilder::build(
     // can overlap the route even when its center is just outside the nominal
     // lateral acquisition band. Project the oriented box half extents onto
     // the route normal represented by Frenet d.
-    const double route_yaw = feature.ego.yaw;
+    double route_yaw = feature.ego.yaw;
+    Point2D obstacle_route_pose;
+    route_manager.getRoutePose(object.s, &obstacle_route_pose, &route_yaw);
     const double obstacle_yaw_delta = object.yaw - route_yaw;
     const double obstacle_lateral_half_extent =
         0.5 * std::abs(object.length * std::sin(obstacle_yaw_delta)) +
         0.5 * std::abs(object.width * std::cos(obstacle_yaw_delta));
+    const double obstacle_longitudinal_half_extent =
+        0.5 * std::abs(object.length * std::cos(obstacle_yaw_delta)) +
+        0.5 * std::abs(object.width * std::sin(obstacle_yaw_delta));
     const double obstacle_nearest_lateral_distance =
         std::max(0.0, std::abs(object.d) - obstacle_lateral_half_extent);
-    const bool static_obstacle_front =
+    const double path_corridor_half_width = std::min(
+        avoid_target_.max_lateral_offset,
+        0.5 * avoid_target_.ego_width + avoid_target_.path_margin_m);
+    const double obstacle_nearest_forward_gap =
+        avoid_route_gap - obstacle_longitudinal_half_extent;
+    const bool obstacle_blocks_route_corridor =
         avoid_route_gap > 0.0 &&
-        avoid_route_gap <= avoid_target_.max_distance &&
+        obstacle_nearest_forward_gap <= avoid_target_.max_distance &&
         ego_longitudinal > -2.0 &&
-        euclidean_distance <= avoid_target_.max_distance &&
+        euclidean_distance <=
+            avoid_target_.max_distance + obstacle_longitudinal_half_extent &&
         obstacle_nearest_lateral_distance <=
-            avoid_target_.max_lateral_offset;
+            path_corridor_half_width;
 
     if (current_lane_front) {
       object.gap = follow_topology_gap;
@@ -224,15 +235,18 @@ UrbanFeature FeatureBuilder::build(
       feature.risk.nearest_pedestrian_s =
           std::min(feature.risk.nearest_pedestrian_s, object.s);
     }
-    if (object.type == ObjectType::STATIC_OBSTACLE && static_obstacle_front &&
-        avoid_route_gap > 0.0) {
-      object.gap = avoid_route_gap;
+    const bool avoidable_obstacle =
+        object.type == ObjectType::STATIC_OBSTACLE ||
+        object.type == ObjectType::UNKNOWN;
+    if (avoidable_obstacle && obstacle_blocks_route_corridor) {
+      object.gap = std::max(0.0, obstacle_nearest_forward_gap);
       if (!feature.risk.static_obstacle_ahead ||
           object.gap < best_static_obstacle_gap) {
         feature.risk.static_obstacle_ahead = true;
         feature.risk.avoidance_object_id = object.id;
         feature.risk.nearest_obstacle_s = object.s;
-        feature.risk.nearest_obstacle_length = object.length;
+        feature.risk.nearest_obstacle_length =
+            2.0 * obstacle_longitudinal_half_extent;
         best_static_obstacle_gap = object.gap;
       }
     }

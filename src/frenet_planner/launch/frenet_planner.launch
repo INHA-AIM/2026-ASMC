@@ -1,4 +1,5 @@
 <launch>
+  <arg name="objects_topic" default="/perception/objects"/>
   <node pkg="frenet_planner" type="frenet_planner_node"
         name="frenet_planner" output="screen">
     <!-- Single parameter source: the node reads both its own runtime
@@ -6,5 +7,6 @@
          (planner:) directly from params.yaml. -->
     <param name="planner/config_path"
            value="$(find frenet_planner)/config/params.yaml"/>
+    <param name="topics/objects" value="$(arg objects_topic)"/>
   </node>
 </launch>

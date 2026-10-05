@@ -4,17 +4,16 @@ v2: {command_validity_seconds: 0.5, feedback_stale_seconds: 1.0}
 # Match Frenet's configured FOLLOW acquisition gate. A previously acquired
 # target is retained briefly across perception dropouts before KEEP release.
 follow: {max_target_distance: 60.0, max_lateral_offset: 1.75, release_delay_s: 0.4}
-avoid: {max_target_distance: 120.0, max_lateral_offset: 1.75}
-objects: {stale_seconds: 0.3}
+# AVOID is selected only when an UNKNOWN/STATIC OBB overlaps the ego-sized
+# route corridor. max_lateral_offset remains a defensive acquisition ceiling.
+avoid: {max_target_distance: 120.0, max_lateral_offset: 1.75, path_margin_m: 0.4}
+objects: {input_type: "morai", stale_seconds: 0.3}
 map:
   link_set_path: "$(find behavior_planner)/src/config/link_set.json"
   node_set_path: "$(find behavior_planner)/src/config/node_set.json"
 route: {route_links_path: "$(find behavior_planner)/src/config/route_links_1.yaml"}
 traffic_light:
   use_mock: false
-  # P4-C3 canonical input. Keep `topic` below until every deployment starts
-  # asmc_perception; it is fallback-only after the first typed sample arrives.
-  typed_topic: "/perception/traffic_light/detection"
   topic: "/traffic_light/state"
   stale_seconds: 1.0
   mock_path: "$(find behavior_planner)/src/config/traffic_light_mock.yaml"

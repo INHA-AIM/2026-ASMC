@@ -18,7 +18,11 @@ struct FollowTargetConfig {
 };
 struct AvoidTargetConfig {
   double max_distance = 120.0;
+  // Legacy acquisition ceiling. The actual AVOID corridor is narrower and is
+  // derived from ego half width + path_margin_m.
   double max_lateral_offset = 1.75;
+  double ego_width = 1.85;
+  double path_margin_m = 0.4;
 };
 class FeatureBuilder {
  public:

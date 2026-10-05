@@ -28,7 +28,8 @@ ObjectFeature ObjectProjector::project(const TrackedObject& object,
   // though its global-path s/d projection is correct. Frenet validates AVOID
   // targets in global Frenet coordinates, so Behavior uses that same boundary.
   feature.valid = route_valid &&
-                  (object.type == ObjectType::STATIC_OBSTACLE || map_valid);
+                  (object.type == ObjectType::STATIC_OBSTACLE ||
+                   object.type == ObjectType::UNKNOWN || map_valid);
   if (map_valid) {
     feature.link_id = map_projection.link_id;
     feature.link_s = map_projection.link_s;
