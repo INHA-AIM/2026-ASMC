@@ -2,6 +2,8 @@
 #define IMU_RANSAC_HPP
 
 #include <Global/Global.hpp>
+// Only the plane actually used for the current processed frame is exposed.
+GroundPlaneSnapshot CurrentGroundPlaneSnapshot();
 // IMU 보정 함수 (ImuFusion.cpp에서 구현)
 void CorrectingPoints(
     pcl::PointCloud<pcl::PointXYZI>::Ptr& input_cloud,

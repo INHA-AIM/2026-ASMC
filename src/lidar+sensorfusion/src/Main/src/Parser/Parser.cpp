@@ -1,9 +1,54 @@
 #include "Parser.hpp"
+#include <Parser/GpsSanityFilter.hpp>
+#include <Parser/SensorPoseHistory.hpp>
 #include <SensorFusion/SensorFusion.hpp>
+
+#include <algorithm>
+#include <memory>
+#include <mutex>
 
 namespace
 {
 ros::Publisher g_CameraImagePublisher;
+std::unique_ptr<GpsSanityFilter> g_GpsSanityFilter;
+SensorPoseHistory g_SensorPoseHistory;
+std::mutex g_GpsSanityMutex;
+double g_LidarPoseWaitTimeoutS = 0.05;
+}
+
+void ConfigureSensorPoseHistory(ros::NodeHandle& private_node)
+{
+    SensorPoseHistoryConfig config;
+    private_node.param("lidar_pose_gps_max_age_s", config.gps_max_age_s,
+                       config.gps_max_age_s);
+    private_node.param("lidar_pose_imu_max_age_s", config.imu_max_age_s,
+                       config.imu_max_age_s);
+    private_node.param("lidar_pose_can_max_age_s", config.can_max_age_s,
+                       config.can_max_age_s);
+    private_node.param("lidar_pose_maximum_speed_mps",
+                       config.maximum_extrapolation_speed_mps,
+                       config.maximum_extrapolation_speed_mps);
+    private_node.param("lidar_pose_history_duration_s",
+                       config.history_duration_s,
+                       config.history_duration_s);
+    private_node.param("lidar_pose_wait_timeout_s",
+                       g_LidarPoseWaitTimeoutS,
+                       g_LidarPoseWaitTimeoutS);
+    g_LidarPoseWaitTimeoutS = std::max(0.0, g_LidarPoseWaitTimeoutS);
+    g_SensorPoseHistory.Configure(config);
+    ROS_INFO(
+        "LiDAR pose synchronization: GPS age<=%.2fs IMU/CAN age<=%.2f/%.2fs extrapolation<=%.1fm/s callback_wait<=%.3fs",
+        config.gps_max_age_s, config.imu_max_age_s, config.can_max_age_s,
+        config.maximum_extrapolation_speed_mps,
+        g_LidarPoseWaitTimeoutS);
+}
+
+bool LookupSensorPoseForLidar(std::uint64_t lidar_stamp_ms,
+                              GPS_IMU* pose,
+                              std::string* reason)
+{
+    return g_SensorPoseHistory.WaitForLookup(
+        lidar_stamp_ms, g_LidarPoseWaitTimeoutS, pose, reason);
 }
 
 // Parser.cpp 파일 역할 
@@ -239,6 +284,15 @@ void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
     // Ensure arc_Buffer is large enough to hold all points
     memcpy(st_SensorData.st_RawLiDAR.arc_Buffer, pcl_Cloud.points.data(), s32_bytes);
     pthread_mutex_unlock(&st_SensorData.st_MutexLiDAR);
+
+    // LiDAR, not CAN, owns the perception pipeline cadence.  Signalling only
+    // after the complete raw frame has been published also gives the worker a
+    // real predicate to wait on instead of processing the same scan whenever
+    // a vehicle-status callback happens to run.
+    pthread_mutex_lock(&st_DataTemporal);
+    ++u64_LidarFrameGeneration;
+    pthread_cond_signal(&st_DataTemporalCond);
+    pthread_mutex_unlock(&st_DataTemporal);
         // cout << "After setting st_RawLiDAR.s32_Num: " << st_SensorData.st_RawLiDAR.s32_Num << endl;
 
 }
@@ -251,6 +305,34 @@ void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
 void *ParseGPS(void *pst_NodeHandle)
 {
     ros::NodeHandle *st_NodeHandle = (ros::NodeHandle *)pst_NodeHandle;
+    ros::NodeHandle private_node("~");
+    GpsSanityConfig sanity_config;
+    private_node.param("gps_sanity_min_x", sanity_config.min_x,
+                       sanity_config.min_x);
+    private_node.param("gps_sanity_min_y", sanity_config.min_y,
+                       sanity_config.min_y);
+    private_node.param("gps_sanity_max_x", sanity_config.max_x,
+                       sanity_config.max_x);
+    private_node.param("gps_sanity_max_y", sanity_config.max_y,
+                       sanity_config.max_y);
+    private_node.param("gps_sanity_base_jump_allowance_m",
+                       sanity_config.base_jump_allowance_m,
+                       sanity_config.base_jump_allowance_m);
+    private_node.param("gps_sanity_maximum_speed_mps",
+                       sanity_config.maximum_speed_mps,
+                       sanity_config.maximum_speed_mps);
+    private_node.param("gps_sanity_reanchor_after_s",
+                       sanity_config.reanchor_after_s,
+                       sanity_config.reanchor_after_s);
+    {
+        std::lock_guard<std::mutex> lock(g_GpsSanityMutex);
+        g_GpsSanityFilter.reset(new GpsSanityFilter(sanity_config));
+    }
+    ROS_INFO(
+        "GPS sanity gate: bounds=[%.1f,%.1f]x[%.1f,%.1f] max_speed=%.1fm/s reanchor=%.1fs",
+        sanity_config.min_x, sanity_config.max_x,
+        sanity_config.min_y, sanity_config.max_y,
+        sanity_config.maximum_speed_mps, sanity_config.reanchor_after_s);
     ros::Subscriber st_SubscribeGPS = st_NodeHandle->subscribe<morai_msgs::GPSMessage>("/gps", 1, GPSParser_Callback);
     ros::Rate rate(GPSHZ);
     while (ros::ok())
@@ -271,6 +353,10 @@ void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
     st_GPSData.f64_Longitude = st_Msg->longitude;
     st_GPSData.f64_Altitude = st_Msg->altitude;
     st_GPSData.b_isJamming = (st_Msg->status == 0);
+    if (st_Msg->status == 0) {
+        ROS_WARN_THROTTLE(1.0, "Rejected GPS sample: invalid status");
+        return;
+    }
 
     int32 s32_Zone = 52;
     bool b_North = true;
@@ -286,6 +372,31 @@ void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
     st_GPSData.f64_E = f64_East - f64_EastOffset;
     st_GPSData.f64_N = f64_North - f64_NorthOffset;
     st_GPSData.f64_U = 0;
+
+    const ros::Time source_stamp = st_Msg->header.stamp.isZero()
+        ? ros::Time::now() : st_Msg->header.stamp;
+    GpsSanityDecision sanity;
+    {
+        std::lock_guard<std::mutex> lock(g_GpsSanityMutex);
+        if (!g_GpsSanityFilter) {
+            g_GpsSanityFilter.reset(new GpsSanityFilter());
+        }
+        sanity = g_GpsSanityFilter->Evaluate(
+            st_GPSData.f64_E, st_GPSData.f64_N, source_stamp.toSec());
+    }
+    if (!sanity.accepted) {
+        ROS_WARN_THROTTLE(
+            1.0,
+            "Rejected GPS sample: status=%d map=(%.1f,%.1f) reason=%s jump=%.1fm allowed=%.1fm",
+            st_Msg->status, st_GPSData.f64_E, st_GPSData.f64_N,
+            sanity.reason.c_str(),
+            sanity.jump_m, sanity.allowed_jump_m);
+        return;
+    }
+
+    const std::uint64_t source_stamp_ms =
+        static_cast<std::uint64_t>(source_stamp.toNSec() / 1000000ULL);
+    g_SensorPoseHistory.AddGps(source_stamp_ms, st_GPSData);
 
     // cout << st_GPSData.f64_E << " " << st_GPSData.f64_N << endl;
 
@@ -305,7 +416,7 @@ void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
     // st_GPSData.f64_N = -sin(st_GPSRef.f64_RefLat) * cos(st_GPSRef.f64_RefLon) * f64_Dx - sin(st_GPSRef.f64_RefLat) * sin(st_GPSRef.f64_RefLon) * f64_Dy + cos(st_GPSRef.f64_RefLat) * f64_Dz;
 
     pthread_mutex_lock(&st_SensorData.st_MutexGPS);
-    st_SensorData.st_RawGPS.u64_Timestamp = GetMillisecond();
+    st_SensorData.st_RawGPS.u64_Timestamp = source_stamp_ms;
     st_SensorData.st_RawGPS.s32_Num = sizeof(GPS_DATA);
     memcpy(st_SensorData.st_RawGPS.arc_Buffer, &st_GPSData, sizeof(GPS_DATA));
     pthread_mutex_unlock(&st_SensorData.st_MutexGPS);
@@ -320,17 +431,9 @@ void *ParseCAN(void *pst_NodeHandle)
     ros::Subscriber st_SubscribeCAN = st_NodeHandle->subscribe<morai_msgs::EgoVehicleStatus>("/Competition_topic", 1, CANParser_Callback);
     ros::Publisher st_PublishCMD = st_NodeHandle->advertise<morai_msgs::CtrlCmd>("/ctrl_cmd_0", 1);
     ros::Rate rate(CANHZ);
-    auto t_StartTime = std::chrono::steady_clock::now();
-    auto t_EndTime = t_StartTime;
-
     while (ros::ok())
     {
         ros::spinOnce();
-        t_EndTime = std::chrono::steady_clock::now();
-
-        auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(t_EndTime - t_StartTime).count();
-        if (elapsed_time >= 100)
-            pthread_cond_signal(&st_DataTemporalCond);
         morai_msgs::CtrlCmd ctrl_msg;
         ctrl_msg.longlCmdType = 1;
 
@@ -352,8 +455,21 @@ void CANParser_Callback(const morai_msgs::EgoVehicleStatus::ConstPtr& st_Msg)
     st_CANData.f32_Steer_deg = st_Msg->wheel_angle;
     st_CANData.f32_Steer_rad = Deg2Rad(st_Msg->wheel_angle);
 
+    const ros::Time source_stamp = st_Msg->header.stamp.isZero()
+        ? ros::Time::now() : st_Msg->header.stamp;
+    const std::uint64_t source_stamp_ms =
+        static_cast<std::uint64_t>(source_stamp.toNSec() / 1000000ULL);
+    std::string sanity_reason;
+    if (!g_SensorPoseHistory.AddCan(
+            source_stamp_ms, st_CANData, &sanity_reason)) {
+        ROS_WARN_THROTTLE(
+            1.0, "Rejected vehicle-speed sample: %s speed=%.2fm/s",
+            sanity_reason.c_str(), st_CANData.f32_CurrentVel_MPS);
+        return;
+    }
+
     pthread_mutex_lock(&st_SensorData.st_MutexCAN);
-    st_SensorData.st_RawCAN.u64_Timestamp = GetMillisecond();
+    st_SensorData.st_RawCAN.u64_Timestamp = source_stamp_ms;
     st_SensorData.st_RawCAN.s32_Num = sizeof(CAN_DATA);
     memcpy(st_SensorData.st_RawCAN.arc_Buffer, &st_CANData, sizeof(CAN_DATA));
     pthread_mutex_unlock(&st_SensorData.st_MutexCAN);
@@ -401,8 +517,21 @@ void IMUParser_Callback(const sensor_msgs::Imu::ConstPtr& st_Msg)
     st_IMUData.f32_Yaw_deg = Rad2Deg(st_IMUData.f32_Yaw_rad);
     st_IMUData.b_ImuReady=true; //라이다에서 Kalman.cpp에서 사용중
 
+    const ros::Time source_stamp = st_Msg->header.stamp.isZero()
+        ? ros::Time::now() : st_Msg->header.stamp;
+    const std::uint64_t source_stamp_ms =
+        static_cast<std::uint64_t>(source_stamp.toNSec() / 1000000ULL);
+    std::string sanity_reason;
+    if (!g_SensorPoseHistory.AddImu(
+            source_stamp_ms, st_IMUData, &sanity_reason)) {
+        ROS_WARN_THROTTLE(
+            1.0, "Rejected IMU sample: %s yaw=%.1fdeg",
+            sanity_reason.c_str(), st_IMUData.f32_Yaw_deg);
+        return;
+    }
+
     pthread_mutex_lock(&st_SensorData.st_MutexIMU);
-    st_SensorData.st_RawIMU.u64_Timestamp = GetMillisecond();
+    st_SensorData.st_RawIMU.u64_Timestamp = source_stamp_ms;
     st_SensorData.st_RawIMU.s32_Num = sizeof(IMU_DATA);
     memcpy(st_SensorData.st_RawIMU.arc_Buffer, &st_IMUData, sizeof(IMU_DATA));
     pthread_mutex_unlock(&st_SensorData.st_MutexIMU);

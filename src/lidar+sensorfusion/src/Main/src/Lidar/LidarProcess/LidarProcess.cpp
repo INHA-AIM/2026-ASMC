@@ -145,7 +145,7 @@ static inline void PublishCloudWithPub(const pcl::PointCloud<pcl::PointXYZI>::Pt
     pub.publish(msg);
 }
 
-void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
+bool LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
                   const GPS_IMU& st_GPSIMU,
                   LiDAR& st_LiDAR,
                   MotionClassifier& motion_classifier)
@@ -159,7 +159,7 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
     const uint64_t raw = st_RawLiDAR.u64_Timestamp;
     if (raw == last_raw) {
         pthread_mutex_unlock(&st_SensorData.st_MutexLiDAR); // 반드시 잠금 해제
-        return; // 중복 프레임은 처리/갱신/속도계산 전부 스킵
+        return false; // 중복 프레임은 처리/갱신/속도계산 전부 스킵
     }
     last_raw = raw;
 
@@ -167,7 +167,7 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
     // prevents repeated PCL RANSAC errors while invalid UDP is rejected.
     if (st_RawLiDAR.s32_Num <= 0) {
         pthread_mutex_unlock(&st_SensorData.st_MutexLiDAR);
-        return;
+        return false;
     }
 
     // [MOVE/SET] ROS 시간은 여기서, raw(ms) -> ns 변환
@@ -212,7 +212,6 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
     LIDAR_STAGE(ransac_pub_ms,
                 PublishCloudWithPub(ransac_cloud, st_RawLiDAR, "velodyne", RansacPub()));
 
-
     // for (const auto& pt : ransac_cloud->points)
     // {
     //     // (1) 유한한 값이 아니면 스킵
@@ -237,7 +236,7 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
     // inout_cloud->is_dense = false;
     LIDAR_STAGE(cluster_ms,
                 Clustering(ransac_cloud, clustering_cloud, all_cluster_indices,
-                           st_GPSIMU));
+                           st_GPSIMU, st_LiDAR.st_Clustering));
     g_LidarStageProfile.cluster_points =
         static_cast<int>(clustering_cloud->points.size());
     g_LidarStageProfile.clusters = static_cast<int>(all_cluster_indices.size());
@@ -265,7 +264,9 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
 
     // 모든 트랙에서 판정 이력을 먼저 갱신한다. 주행가능영역 필터는 이후
     // Publisher 경계에서 적용하므로 도로 진입 전 이력을 잃지 않는다.
-    LIDAR_STAGE(motion_ms, motion_classifier.Update(object, ts_CurrTime));
+    LIDAR_STAGE(motion_ms,
+                motion_classifier.Update(
+                    object, ts_CurrTime, st_GPSIMU, st_VehicleSpec));
 
     // object를 f32_Dist 기준으로 정렬한 후 st_LiDAR.vec_Objects에 저장
     sort(object.begin(), object.end(), [](const LiDARObjectInfo& a, const LiDARObjectInfo& b) {return a.f32_Dist < b.f32_Dist;});// 작은 값 우선
@@ -281,6 +282,14 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
     // object.end());
 
     // 정렬된 결과를 st_LiDAR.vec_Objects에 복사
+    const auto ground_plane = CurrentGroundPlaneSnapshot();
+    for (auto& tracked_object : object) {
+        tracked_object.ground_evidence = ObjectGroundEvidence{};
+        if (tracked_object.s32_MissCount == 0) {
+            tracked_object.ground_evidence = MeasureObjectGroundEvidence(
+                tracked_object.pcl_ClusterPoints.points, ground_plane);
+        }
+    }
     st_LiDAR.vec_Objects = object;
     prev_objects_queue.push_back(object);
     st_LiDAR.Prev_Objects_Queue = prev_objects_queue;
@@ -320,4 +329,5 @@ void LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
 
     LIDAR_STAGE(marker_ms, marker_pub.publish(marker_array));
     g_LidarStageProfile.valid = true;
+    return true;
 }   

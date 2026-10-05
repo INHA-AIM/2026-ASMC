@@ -8,6 +8,7 @@ on:
       - 'src/frenet_planner/**'
       - 'src/mpc_controller/**'
       - 'src/planning_inputs/**'
+      - 'src/lidar+sensorfusion/src/Main/**'
       - '.github/workflows/planning-integration.yml'
 
 jobs:
@@ -52,3 +53,32 @@ jobs:
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
           python3 src/planning_inputs/test/ros_boundary_smoke_test.py
+
+  validated-lidar-build:
+    runs-on: ubuntu-22.04
+    container: ros:noetic
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install nested sensor build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates libyaml-cpp-dev libopencv-dev libpcl-dev libgeographic-dev python3-nose ros-noetic-tf2-geometry-msgs ros-noetic-visualization-msgs
+          rm -rf /var/lib/apt/lists/*
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build restored LiDAR workspace with frozen messages
+        run: |
+          source /opt/ros/noetic/setup.bash
+          cd src/lidar+sensorfusion
+          catkin_make -j2 -l2 -DCATKIN_ENABLE_TESTING=ON
+      - name: Run validated LiDAR regressions
+        run: |
+          source /opt/ros/noetic/setup.bash
+          cd src/lidar+sensorfusion
+          source devel/setup.bash
+          catkin_make tests -j2 -l2
+          catkin_make run_tests -j2 -l2
+          catkin_test_results build/test_results

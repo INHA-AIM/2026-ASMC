@@ -12,7 +12,8 @@
   <arg name="objects_source" default="morai" doc="morai or lidar"/>
   <arg name="canonical_objects_topic" default="/planning/objects"/>
   <arg name="state_topic" default="/planning/vehicle/state"/>
-  <arg name="lidar_input_topic" default="/lidar/tracked_objects_map"/>
+  <arg name="lidar_source_policy" default="validated_lidar" doc="validated_lidar or main_raw"/>
+  <arg name="lidar_input_topic" default="/last_lidar"/>
   <arg name="dashboard_lidar_objects_topic"
        default="/planning/objects"/>
   <arg name="dashboard_lidar_motion_debug_topic"
@@ -53,6 +54,7 @@
   <group if="$(eval arg('objects_source') == 'lidar')">
     <include file="$(find planning_inputs)/launch/objects.launch">
       <arg name="input_topic" value="$(arg lidar_input_topic)"/>
+      <arg name="source_policy" value="$(arg lidar_source_policy)"/>
       <arg name="state_topic" value="$(arg state_topic)"/>
       <arg name="output_topic" value="$(arg canonical_objects_topic)"/>
     </include>

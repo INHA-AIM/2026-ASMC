@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <memory>
+#include <planning_inputs/ValidatedTrackedObjectArray.h>
 #include <cmath>
 #include <limits>
 #include <string>
@@ -103,18 +105,45 @@ MotionClassifierConfig LoadMotionConfig(ros::NodeHandle& node) {
 
 class ObjectsNode {
  public:
-  ObjectsNode() : private_("~"), classifier_(LoadMotionConfig(private_)), filters_(private_) {
+  ObjectsNode() : private_("~"), classifier_(LoadMotionConfig(private_)) {
     std::string input,output,state;
     private_.param<std::string>("input_topic",input,"/planning/input/tracked_objects");
     private_.param<std::string>("output_topic",output,"/planning/objects");
     private_.param<std::string>("state_topic",state,"/planning/vehicle/state");
     if(input==output) throw std::runtime_error("planning object topics must differ");
     publisher_=node_.advertise<DetectedObjectArray>(output,2);
-    input_=node_.subscribe(input,2,&ObjectsNode::Objects,this);
+    std::string policy;
+    private_.param<std::string>("source_policy",policy,"validated_lidar");
+    if(policy=="validated_lidar") {
+      input_=node_.subscribe(input,2,&ObjectsNode::ValidatedObjects,this);
+    } else if(policy=="main_raw") {
+      filters_=std::make_unique<PlanningObjectFilter>(private_);
+      input_=node_.subscribe(input,2,&ObjectsNode::Objects,this);
+    } else throw std::runtime_error("unsupported planning LiDAR source_policy");
     state_=node_.subscribe(state,50,&ObjectsNode::State,this);
     ROS_INFO("Planning input: canonical main %s -> private %s; main sensor messages remain unchanged",input.c_str(),output.c_str());
   }
  private:
+  void ValidatedObjects(const ValidatedTrackedObjectArray::ConstPtr& source) {
+    if(!source) return;
+    DetectedObjectArray out;
+    ConversionStats stats; std::string detail;
+    if(ConvertTrackedObjects(source->tracked,&out,&stats,&detail)!=ConversionStatus::OK ||
+       source->motion_states.size()!=out.objects.size()) {
+      ROS_ERROR_THROTTLE(1.0,"Rejected validated planning input: %s",detail.c_str()); return;
+    }
+    const double t=source->tracked.header.stamp.toSec();
+    if(t<=last_source_) return;
+    for(std::size_t i=0;i<out.objects.size();++i) {
+      if(source->motion_states[i]>DetectedObject::MOTION_DYNAMIC) {
+        ROS_ERROR_THROTTLE(1.0,"Rejected invalid validated motion state"); return;
+      }
+      out.objects[i].motion_state=source->motion_states[i];
+    }
+    last_source_=t;
+    // Preserve Main's exact filtered geometry and applied velocity.
+    publisher_.publish(out);
+  }
   void State(const asmc_msgs::VehicleState::ConstPtr& s) {
     if(!s || !s->valid || s->header.frame_id!="map") return;
     headings_.Add(s->header.stamp.toSec(),s->yaw);
@@ -137,7 +166,7 @@ class ObjectsNode {
     if(!heading || !fresh) {
       classifier_.Reset();
       ROS_WARN_THROTTLE(1.0,"Planning motion state UNKNOWN: no fresh source-aligned heading");
-      filters_.Apply(*source,&out);
+      filters_->Apply(*source,&out);
       publisher_.publish(out);return;
     }
     std::vector<MotionObject> motion;motion.reserve(source->objects.size());
@@ -164,14 +193,14 @@ class ObjectsNode {
     }
     // Only confirmed LOW_THREAT has zero private planning velocity. Main's
     // public message and UNKNOWN/PENDING/DYNAMIC velocities remain untouched.
-    filters_.Apply(*source,&out);
+    filters_->Apply(*source,&out);
     publisher_.publish(out);
   }
   ros::NodeHandle node_,private_;
   ros::Subscriber input_,state_;ros::Publisher publisher_;
   ros::SteadyTime state_received_;
   HeadingHistory headings_; MotionClassifier classifier_;
-  PlanningObjectFilter filters_;
+  std::unique_ptr<PlanningObjectFilter> filters_;
   double last_source_=0;
 };
 }

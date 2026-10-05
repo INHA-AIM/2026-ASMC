@@ -10,7 +10,8 @@ class FilterContract(unittest.TestCase):
     def test_raw_source_and_required_adapter(self):
         root = ET.parse(PKG / 'launch/objects.launch').getroot()
         self.assertEqual(root.find("arg[@name='input_topic']").get('default'),
-                         '/lidar/tracked_objects_map')
+                         '/last_lidar')
+        self.assertEqual(root.find("arg[@name='source_policy']").get('default'), 'validated_lidar')
         node = root.find("node[@name='planning_objects_adapter']")
         self.assertEqual(node.get('required'), 'true')
         launch = ET.parse(ROOT / 'src/behavior_planner/launch/autonomy_no_bridges_v2.launch').getroot()
