@@ -13,11 +13,11 @@ class LaunchContracts(unittest.TestCase):
         self.assertEqual(args['traffic_light'], 'true')
         group = tree.find("group[@if='$(arg traffic_light)']")
         node = group.find("node[@name='traffic_light_infer']")
-        self.assertEqual(node.get('pkg'), 'asmc_perception')
+        self.assertEqual(node.get('pkg'), 'asmc_camera')
         self.assertEqual(node.get('required'), 'true')
         self.assertIn('--image-topic $(arg camera_topic)', node.get('args'))
         self.assertIn('--typed-topic /perception/traffic_light/detection', node.get('args'))
-        self.assertTrue((ROOT / 'src/asmc_perception/scripts' / node.get('type')).is_file())
+        self.assertTrue((ROOT / 'src/asmc_camera/scripts' / node.get('type')).is_file())
 
     def test_nested_lidar_mask_artifacts(self):
         package = ROOT / 'src/lidar+sensorfusion/src/Main'
