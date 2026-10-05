@@ -1,0 +1,74 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Enabled: true
+  Global Options:
+    Background Color: 15; 18; 24
+    Fixed Frame: base_link
+    Frame Rate: 20
+  Displays:
+    - Class: rviz/Grid
+      Name: Ground reference
+      Enabled: true
+      Alpha: 0.3
+      Color: 100; 100; 100
+      Cell Size: 1
+      Plane: XY
+      Plane Cell Count: 40
+    - Class: rviz/PointCloud2
+      Name: Input in base_link
+      Enabled: true
+      Topic: /lidar_candidate/input_base
+      Color Transformer: FlatColor
+      Color: 110; 110; 120
+      Size (m): 0.055
+      Style: Points
+      Queue Size: 2
+    - Class: rviz/PointCloud2
+      Name: Patchwork ground
+      Enabled: true
+      Topic: /lidar_candidate/ground
+      Color Transformer: FlatColor
+      Color: 30; 180; 240
+      Size (m): 0.09
+      Style: Points
+      Queue Size: 2
+    - Class: rviz/PointCloud2
+      Name: Patchwork nonground
+      Enabled: true
+      Topic: /lidar_candidate/nonground
+      Color Transformer: FlatColor
+      Color: 245; 175; 50
+      Size (m): 0.10
+      Style: Points
+      Queue Size: 2
+    - Class: rviz/PointCloud2
+      Name: Unassigned input
+      Enabled: true
+      Topic: /lidar_candidate/uncertain
+      Color Transformer: FlatColor
+      Color: 230; 55; 55
+      Size (m): 0.12
+      Style: Points
+      Queue Size: 2
+    - Class: rviz/MarkerArray
+      Name: Pinned reference frame OBB
+      Enabled: true
+      Marker Topic: /lidar_candidate/reference_obbs
+      Queue Size: 2
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 65
+      Focal Point:
+        X: 15
+        Y: 0
+        Z: 0
+      Pitch: 0.8
+      Yaw: 0.2

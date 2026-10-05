@@ -1,0 +1,19 @@
+<launch>
+  <arg name="frame_id" default="sync_001211"/>
+  <arg name="data_root" default="/data/lidar_assessment/20261004_gt_dual_ground"/>
+  <arg name="results" default="$(arg data_root)/reports/sync_method_sweep_v3_with_jaeho.jsonl"/>
+  <arg name="patchwork_results" default=""/>
+  <arg name="patchwork_key" default="pp_h180"/>
+  <arg name="rviz" default="true"/>
+  <node pkg="asmc_lidar" type="ground_compare_view_node.py" name="ground_compare_view"
+        output="screen" required="true">
+    <param name="frame_id" value="$(arg frame_id)"/>
+    <param name="data_root" value="$(arg data_root)"/>
+    <param name="results" value="$(arg results)"/>
+    <param name="patchwork_results" value="$(arg patchwork_results)"/>
+    <param name="patchwork_key" value="$(arg patchwork_key)"/>
+    <rosparam command="load" file="$(find asmc_lidar)/config/autonav_v3.yaml"/>
+  </node>
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="ground_compare_rviz"
+        args="-d $(find asmc_lidar)/rviz/ground_compare.rviz"/>
+</launch>

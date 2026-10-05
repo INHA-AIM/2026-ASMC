@@ -1,0 +1,169 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Enabled: true
+  Global Options:
+    Background Color: 15; 18; 24
+    Fixed Frame: base_link
+    Frame Rate: 20
+  Displays:
+    - Class: rviz/Axes
+      Name: Rear axle base_link
+      Enabled: true
+      Reference Frame: base_link
+      Length: 2
+      Radius: 0.06
+    - Class: rviz/MarkerArray
+      Name: Jaeho RANSAC plane normals (green ground, red rejected)
+      Enabled: true
+      Marker Topic: /lidar_candidate/ground_live/fit_markers
+      Queue Size: 1
+    - Class: rviz/Group
+      Name: jaeho V4 - selected ground baseline
+      Enabled: true
+      Displays:
+        - Class: rviz/PointCloud2
+          Name: nonground
+          Enabled: true
+          Topic: /lidar_candidate/ground_live/jaeho/nonground
+          Color Transformer: FlatColor
+          Color: 60; 210; 255
+          Style: Flat Squares
+          Size (m): 0.065
+          Alpha: 0.85
+          Queue Size: 1
+          Decay Time: 0
+        - Class: rviz/PointCloud2
+          Name: ground
+          Enabled: false
+          Topic: /lidar_candidate/ground_live/jaeho/ground
+          Color Transformer: FlatColor
+          Color: 95; 105; 110
+          Style: Flat Squares
+          Size (m): 0.065
+          Alpha: 0.85
+          Queue Size: 1
+          Decay Time: 0
+        - Class: rviz/PointCloud2
+          Name: uncertain
+          Enabled: false
+          Topic: /lidar_candidate/ground_live/jaeho/uncertain
+          Color Transformer: FlatColor
+          Color: 255; 40; 40
+          Style: Flat Squares
+          Size (m): 0.065
+          Alpha: 0.85
+          Queue Size: 1
+          Decay Time: 0
+        - Class: rviz/PointCloud2
+          Name: structural_removed
+          Enabled: false
+          Topic: /lidar_candidate/ground_live/jaeho/structural_removed
+          Color Transformer: FlatColor
+          Color: 60; 210; 255
+          Style: Flat Squares
+          Size (m): 0.065
+          Alpha: 0.85
+          Queue Size: 1
+          Decay Time: 0
+        - Class: rviz/PointCloud2
+          Name: native_retained
+          Enabled: false
+          Topic: /lidar_candidate/ground_live/jaeho/native_retained
+          Color Transformer: FlatColor
+          Color: 60; 210; 255
+          Style: Flat Squares
+          Size (m): 0.065
+          Alpha: 0.85
+          Queue Size: 1
+          Decay Time: 0
+    - Class: rviz/Group
+      Name: patchwork V4 - research only, NOT ADOPTED
+      Enabled: true
+      Displays:
+        - Class: rviz/PointCloud2
+          Name: nonground
+          Enabled: true
+          Topic: /lidar_candidate/ground_live/patchwork/nonground
+          Color Transformer: FlatColor
+          Color: 255; 175; 40
+          Style: Flat Squares
+          Size (m): 0.065
+          Alpha: 0.85
+          Queue Size: 1
+          Decay Time: 0
+        - Class: rviz/PointCloud2
+          Name: ground
+          Enabled: false
+          Topic: /lidar_candidate/ground_live/patchwork/ground
+          Color Transformer: FlatColor
+          Color: 95; 105; 110
+          Style: Flat Squares
+          Size (m): 0.065
+          Alpha: 0.85
+          Queue Size: 1
+          Decay Time: 0
+        - Class: rviz/PointCloud2
+          Name: uncertain
+          Enabled: false
+          Topic: /lidar_candidate/ground_live/patchwork/uncertain
+          Color Transformer: FlatColor
+          Color: 255; 40; 40
+          Style: Flat Squares
+          Size (m): 0.065
+          Alpha: 0.85
+          Queue Size: 1
+          Decay Time: 0
+    - Class: rviz/Group
+      Name: linefit V4 - research only
+      Enabled: true
+      Displays:
+        - Class: rviz/PointCloud2
+          Name: nonground
+          Enabled: true
+          Topic: /lidar_candidate/ground_live/linefit/nonground
+          Color Transformer: FlatColor
+          Color: 175; 100; 255
+          Style: Flat Squares
+          Size (m): 0.065
+          Alpha: 0.85
+          Queue Size: 1
+          Decay Time: 0
+        - Class: rviz/PointCloud2
+          Name: ground
+          Enabled: false
+          Topic: /lidar_candidate/ground_live/linefit/ground
+          Color Transformer: FlatColor
+          Color: 95; 105; 110
+          Style: Flat Squares
+          Size (m): 0.065
+          Alpha: 0.85
+          Queue Size: 1
+          Decay Time: 0
+        - Class: rviz/PointCloud2
+          Name: uncertain
+          Enabled: false
+          Topic: /lidar_candidate/ground_live/linefit/uncertain
+          Color Transformer: FlatColor
+          Color: 255; 40; 40
+          Style: Flat Squares
+          Size (m): 0.065
+          Alpha: 0.85
+          Queue Size: 1
+          Decay Time: 0
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 45
+      Focal Point:
+        X: 12
+        Y: 0
+        Z: 0
+      Pitch: 0.85
+      Yaw: 0
