@@ -86,6 +86,37 @@ int main(){
  std::cout<<"ideal_tracking committed="<<committed<<" complete="<<complete<<" stalls="<<stalls<<" max_planning_ms="<<max_ms<<'\n';
  Expect(committed,"static obstacle gets a complete map-constrained bypass");
  Expect(stalls==0&&complete,"ideal tracking completes avoidance and return without STOP gaps");
+ // Synthetic braking disturbance near the locked bypass offset. A small
+ // remaining lateral displacement must not imply a short heading transition.
+ FrenetPlanner disturbed;
+ Expect(disturbed.Init("avoid_road_constraints_params.yaml"),"disturbed planner loads");
+ auto disturbed_ego=Ego(fixture["approach"]["ego"]);
+ bool disturbed_committed=false,heading_injected=false,heading_resume_valid=false;
+ int disturbed_stalls=0;
+ for(int step=0;step<500;++step){
+   if(disturbed_committed&&!heading_injected&&
+      std::fabs(disturbed.last_d()-disturbed.avoid_locked_target_d())<.06&&
+      disturbed.avoid_phase_name()==std::string("PASS")){
+     disturbed_ego.yaw-=.2;disturbed_ego.v=0;disturbed_ego.a=0;
+     heading_injected=true;
+   }
+   path={};result={};
+   const bool ok=disturbed_committed
+     ? disturbed.PlanCommittedAvoid(disturbed_ego,objects,command,path,result)
+     : disturbed.PrepareAvoid(disturbed_ego,objects,command,path,result);
+   if(!ok||path.x.size()<2){++disturbed_stalls;break;}
+   if(!disturbed_committed&&result.candidate_valid){
+     disturbed_committed=disturbed.CommitAvoid(result);path=result.candidate_path;
+   }
+   if(!map.PathClear(path,shape)){++disturbed_stalls;break;}
+   if(heading_injected){
+     heading_resume_valid=result.candidate_valid&&map.PathClear(result.candidate_path,shape);
+     break;
+   }
+   disturbed_ego={path.x[1],path.y[1],path.yaw[1],path.kappa[1],path.v[1],path.a[1]};
+ }
+ Expect(heading_injected,"synthetic heading disturbance occurs near bypass offset");
+ Expect(heading_resume_valid&&disturbed_stalls==0,"stopped bypass generates a complete road-constrained heading recovery");
  FrenetPlanner junction;
  Expect(junction.Init("avoid_road_constraints_params.yaml"),"junction planner loads");
  auto junction_ego=Ego(fixture["junction"]["ego"]);

@@ -163,7 +163,13 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
             return a_preferred&&!b_preferred;
         });
         for(double target_d:targets){
-            const double natural=LowSpeedLateralTransitionDistance(d,target_d);
+            // A near-zero offset error can still have a substantial heading
+            // error. Reserve distance for that slope to settle; the sampled
+            // curvature, acceleration, road and collision checks remain final.
+            const double heading_distance=6.0*std::fabs(initial_slope)/
+                std::max(.01,limits_.max_curvature);
+            const double natural=std::max(
+                LowSpeedLateralTransitionDistance(d,target_d),heading_distance);
             double delay_min=0,delay_max=std::max(0.0,std::min(40.0,gap-clearance-1.0));
             if(committed){delay_min=std::max(0.0,ForwardArcDistance(s,v2_avoidance_.map_entry_s,length));delay_max=delay_min;}
             for(double delay=delay_min;delay<=delay_max+1e-6;delay+=2.0){
