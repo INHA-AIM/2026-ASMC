@@ -1,0 +1,61 @@
+schema: asmc-lidar-l1b2-baseline-v1
+status: isolated_candidate_passed_pending_continuous_driving_and_consumer_review
+runtime_connected: false
+revisions:
+  main: 1ce434d0082e3aec6cf79145c05484e1f66fac1c
+  son: 6435af10671235e735e4a9ed1bd747bd8d8389ac
+  seojun: 8b3f0b1fab5f8e8f10531b42fb63b2953c8df822
+source_sha256:
+  tools/lidar/gps_transition/core.py: 900b4172b4a97efa41c9b25a6d37923822239e5b88bbf2ec1c359136682f8c9b
+  tools/lidar/gps_transition/audit_bag.py: 4da0703c1703eb946b930b99d026490f5dcf0d417099f53f18c2b6a750319a37
+  tools/lidar/gps_transition/run_snapshot.py: 689fe9f8bf8111ef7db065940938004bf41bf85ccd576b4690be144f3e03d6d8
+  tools/lidar/gps_transition/test_core.py: 3d2a655753d248d933d78fa8e71c3dec980306a4fe7bc4b64671af96145703d1
+evaluation:
+  data_root: ASMC_DATA
+  audit_path: lidar_assessment/20260927/l1b2_v4/audit.json
+  audit_sha256: dba62f4b2d371670855b75ddd2bed67ad750a3416bfd779c26ddead7df8d1893
+  snapshot_path: lidar_assessment/20260927/l1b2_v4/snapshot.json
+  snapshot_sha256: 195b268937bcbe8436ce348c8343ab6c990884c428c5eb4c4f73d73fc466eba0
+  l1b1_result_sha256: 721447da44f7e34da6c943b9b20b4f65c9a77457045902b783367d2d9a773181
+  bag_sha256: c4ce3c2afe53167c38dba3f284fe166ef5ebc6cb755581815ea1200eb6c8b076
+  scene_manifest_sha256: c33e5741a6677e1bcd523b5c478d53754814feb75dbc5d179542774fd31c2d73
+policy:
+  clock: ros_receive
+  gps_max_age_ns: 500000000
+  recovery_valid_fixes: 3
+  jump_max_speed_mps: 40.0
+  jump_slack_m: 1.5
+  jump_threshold_status: experiment_only_not_runtime_policy
+  reanchor: independent_same_stamp_pose_within_2m_only
+  map_pose: must_be_trusted_at_observation_time_independent_of_raw_gps_health
+  local_frame: base_link_rear_axle_body
+  map_frame: map
+  existing_topic_message_md5_modified: false
+acceptance:
+  synthetic_tests: 6
+  synthetic_cases: 11
+  topic_messages:
+    /gps: 962
+    /last_lidar: 2559
+    /lidar_nogps: 2559
+    /velodyne_points: 2562
+  shadow_status1_zero_fix_each: 176
+  map_pose_assessed_from_recording: false
+  map_status_by_case:
+    ready: objects
+    invalid_zero_status1: gps_invalid
+    stale: gps_stale
+    recovering: gps_recovering
+    jump_rejected: gps_jump_rejected
+    pose_untrusted: pose_unavailable
+    vehicle_unavailable: objects
+    trajectory_unavailable: objects
+    detector_not_run: unassessed_detector_not_run
+    observed_empty: observed_empty
+    sensor_missing: sensor_missing
+limits:
+  - stationary_teleport_bag_is_not_continuous_driving
+  - no_observation_time_rear_axle_pose_or_applied_leveling_snapshot
+  - no_detector_or_tracker_accuracy_evaluation
+  - no_behavior_frenet_mpc_runtime_connection
+  - no_operational_topic_or_md5_change

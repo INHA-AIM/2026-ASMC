@@ -1,0 +1,48 @@
+schema: asmc-lidar-height-review-v1
+basis_commit: cb0ccb97de180f6ddbe5065863d99423c0568799
+branch: feat/asmc-lidar-runtime
+operational_change: false
+patchwork_adopted: false
+decision: height_stabilized_but_ground_object_preservation_gate_failed
+docker_image_id: sha256:1ecd9f50491565cad32e32980bb5df5b48487f470440cb66c9ec3b8dc5c11400
+data_root_variable: ASMC_DATA
+tool_sources:
+  tools/lidar/height_review/generate.py: 575dca7452c77035185b924eed8952470f7508d6d3f2f426dfddfa47c925abfb
+  tools/lidar/height_review/review.cpp: 6fb56731e8353274e1dc065bf6ed0734fee3fb62e631095eea07b7e31487a98e
+  tools/lidar/height_review/score.py: 473163a61c8b87f62abebc4c994ebb1b380e838bc8bb1b040197962524ebd171
+  tools/lidar/height_review/run.py: ff2d651d76ef708ccb650981b50d4303cfce3f2cc034eed07b65e0ea1cea7f17
+inputs:
+  path: lidar_assessment/20261003_l2a2_h1/inputs/manifest.json
+  sha256: f2812dd3700e448fe80101f422d4f742ae2ca1d04d4c25f6e2827145e0b63da4
+  manual_scans: 644
+  stationary_snapshots: 129
+  historical_capture_scenes: 62
+audit:
+  path: lidar_assessment/20261003_l2a2_h1/input_audit.json
+  sha256: 0cea1640df5653788bc922472955917a2d252f0d6da01b319ebe9a96f93eaaad
+results:
+  path: lidar_assessment/20261003_l2a2_h1/results/runs.json
+  sha256: 6f394139320d317ec937b091d92c1725b571af0e4ac54ba18f3bb1cd6a943da9
+report:
+  path: lidar_assessment/20261003_l2a2_h1/report_v1/summary.json
+  sha256: c63754f0f50754000cef426bc82d1d498f58cf8d6895ea78f78fc8d346ecaa5e
+synthetic:
+  path: lidar_assessment/20261003_l2a2_h1/synthetic.json
+  sha256: 45bb181c0d721d008d60a16305e06ff7df961f039f4239b44bd5356dea65d00f
+fixed_configuration:
+  sensor_height_m: 1.80
+  mount_z_base_link_m: 1.45
+  range_m: [1.0, 60.0]
+  voxel_m: 0.10
+  rnr: false
+  primary_attitude: pitch
+  secondary_attitude: roll_pitch
+  policies: [jaeho, original, singleton, fixed]
+  fixed_keeps_local_elevation_and_flatness_learning: true
+  minimum_elevation_history_candidate: 2
+scope:
+  no_clustering_or_structure_policy_change: true
+  no_runtime_default_change: true
+  no_new_height_estimator: true
+  no_gt_used_for_algorithm_decisions: true
+  no_push_or_pr: true

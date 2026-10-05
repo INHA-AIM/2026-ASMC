@@ -1,0 +1,45 @@
+schema_version: 1
+purpose: isolated_lidar_reference_and_patchwork_ground_review
+branch_base: 00e48a7
+operational_topics_changed: false
+reference:
+  teammate_revision: 6435af10671235e735e4a9ed1bd747bd8d8389ac
+  tunnel_core_header_sha256: b19eb10786cb1bb869b71106492fe1a02d656396a3ee8fb5da563b65a50d8f15
+  tunnel_core_source_sha256: a0bef37f2ebb5aac53930514b02b345b668a57987c72b739af62259cb6c59dd3
+  coordinate_time_core_header_sha256: e80cae45d5f0057fb5ccc29e8db52fb2fe14424cd7624c574a7232bf2cd6c4a7
+  coordinate_time_core_source_sha256: 14c544e839143edc175b1d5ff2d395dccdc7f5663346fee220d1dfa9e86c930d
+patchwork_plus_plus:
+  checkout_revision: 3e6903a1d5537a4cc2ace897b0bbb98a92d6014c
+  license: BSD-2-Clause
+  core_header_sha256: 3803a5cd4c1064c71fa09f3388369e04ca912d18cdc2b8f52a796a6bbfc362f8
+  core_source_sha256: f7037532eea5027994f672fbdca34be9b7be1033fd8d6f23cf6e41d0912f9b2a
+  plane_header_sha256: 0f89a35178aa247bbdd80b36b983e8fd4ca85b338b9f8d882af99235b33fc7c2
+  plane_source_sha256: a9b507089e6946954136a23b4e5ceb91e599fdca4da9ea6b2dc5f97fd8e9370c
+  types_header_sha256: 4265f49849f598d731908d4ce5ad05a78362fdda8518cd7f712046173bf31816
+sensor:
+  source: config/morai/sensors/ASMC_sensor_set_v3.json
+  sha256: 4c2e93cc4d1139caf92a4e7ed4e20b9c7a705599e7e3faaf247b596e0fd1ae9f
+  base_from_sensor_xyz_m: [0.80, 0.0, 1.45]
+  base_from_sensor_rpy_deg: [0.0, 0.0, 0.0]
+  patchwork_sensor_height_hypothesis_m: 1.80
+  patchwork_range_m: [1.0, 60.0]
+  patchwork_reflected_noise_removal: false
+frozen_capture:
+  input_relative_to_ASMC_DATA: lidar_assessment/20260929/l1b4b_capture_gt/inputs_v4/snapshots.jsonl
+  input_sha256: b84b33ba772047f5db74c1f0ab58aed12444361e93fba4a8717f377432a70163
+  reference_relative_to_ASMC_DATA: lidar_assessment/20260929/l1b5a_capture_final_v1/run/geometry.jsonl
+  reference_sha256: 7be335249003b5f9228f4f56fd4a6f7a3467616411c0bdfbdc09356cfc275783
+  scenes: 105
+  measured_conditions: 210
+  repeats_per_condition: 5
+  camera_conditions: [missing, valid_empty]
+  experiment_role: stationary_correlated_observations_not_independent_driving_accuracy
+evaluation:
+  original_stamp_unit: integer_nanoseconds
+  reference_profile: tunnel
+  normal_road_cluster_tolerance_m: 1.5
+  tunnel_cluster_tolerance_m: 1.0
+  original_to_voxel_lineage: required
+  preprocessing_fingerprint: fnv1a64_float4
+  center_corner_tolerance_m: 0.0001
+  ground_review_is_not_object_detector_adoption: true

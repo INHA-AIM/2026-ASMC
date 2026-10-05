@@ -1,0 +1,63 @@
+# Paths are relative to $ASMC_DATA; source manifests contain bag/config hashes.
+id: lidar_l2a2_v3_drive_20261005
+source_revision: 23c5f329f0d98c686a5b75c6356a1e6c45548161
+branch: feat/asmc-lidar-runtime
+operating_output_changed: false
+decision: no_whole_course_promotion_keep_operating_baseline
+comparison_config: src/asmc_lidar/config/ground_v3/roll_pitch_all.yaml
+comparison_config_sha256: cbd044900b4632f78be32625275307535feeec0d2d2b8c2a6f1e57216266cf10
+sensor_config_sha256: 6af452d0d8af5504715d3a58e00068b9cbf65077fa57acebed6969b5c1c8085b
+data_prefix: lidar_assessment/20261005_ground_v3_drive
+clock: bridge_receive_not_ray_time
+matching: exact_ordered_finite_xyz_hash_with_one_use_per_gt_scan
+max_gt_receipt_difference_ms: 250
+max_past_imu_gap_ms: 100
+object_gt_observations: 0
+datasets:
+  general:
+    capture: general_path_all
+    bag_sha256: 9657b8bde0d0b45a0ac877360b884a7783af89eee060e4a951d3b5c981abe65e
+    input: general_gt
+    selected_scans: 361
+    snapshots_sha256: bc4d6409b7775fb99f159b3d946b86aafe470fb91581d978c475162b5a4b6d46
+    source_sha256: b51b051d6af1170bf9ec968109c8144569119b7bb440510d383593df9dbc5b3b
+    result: general_v3/roll_pitch_all.jsonl
+    result_sha256: 0fc643b3034ec9e6b7b2fd261591d29a8a68a2427cdaef5b207cf3ab8862b0b2
+    summary: general_score/summary.json
+    summary_sha256: b88a694891f710b3bd05d4d30e933a0fc65ac4161720893fbab1fbd7617875ba
+  tunnel:
+    capture: tunnel_path_all
+    bag_sha256: a2f74b0cc7d46e4a93fe6c5d3d053c6f513c4fa40bb0366acd8aad9a5b593a12
+    input: tunnel_gt
+    selected_scans: 2360
+    snapshots_sha256: 06283d4026bff557d68fb6220cb56b22208ae86aea3258545556c0a269cece00
+    source_sha256: ee66abff7fe6cba31e2adf625b96dfb6a5001acf3004ca10f8f22481c112632f
+    result: tunnel_v3/roll_pitch_all.jsonl
+    result_sha256: 31bc147b8e938e7dda91369fff45896171fc789e93275cab30d7408c16b29da3
+    summary: tunnel_score/summary.json
+    summary_sha256: 29de57697b41021a7201cf47302c56e865226673125e8b17322001117c70c253
+  banked:
+    capture: banked_pi_all
+    bag_sha256: e17cef75808263662953c671fd5f8258af6d61018e5df588a5cd213bf851ba4a
+    input: banked_gt
+    selected_scans: 754
+    snapshots_sha256: 44ffb246367085c6ffa9d17a27b7483f32bad61c024e389bdc831134cd600d2e
+    source_sha256: 67fc078b8e25269d8bec3e49440b1db9e851a32699b381b84074f027def3b380
+    result: banked_v3/roll_pitch_all.jsonl
+    result_sha256: 67c20277b0a2ecc24f5bb01bbb0e7d84cfbb5c29241a615c6aedc0a5e799d431
+    summary: banked_score/summary.json
+    summary_sha256: cc536c8e6a7b9504f0848891b1096bf4f58ef3591c79a0113a06b6c8704a9340
+excluded:
+  tunnel_all: native_cruise_off_route_aborted
+  banked_path_all: uphill_speed_mode_reversed_then_cross_track_abort
+  general_all: exploratory_native_cruise_not_main_comparison
+  curve_path_check: short_path_controller_preflight
+restore_readback: final_restore_verified.json
+limitations:
+  - No labelled actor observation in these new runs; zero extra losses is not an actor pass.
+  - Semantic StandingOBJ is not wall or ceiling ground truth.
+  - Durations are wall clock, not simulator time.
+  - Measured live rates were 9.16 to 10.75 Hz; not a full-stack 15 Hz acceptance.
+  - Ramp is outside the competition route; actual roll over 3 degrees not collected.
+  - Offline adaptation starts at first admitted scan; live has pre-measurement warmup.
+  - Source collector was hardened after these captures; parameters and path/controller records are preserved in capture manifests.
