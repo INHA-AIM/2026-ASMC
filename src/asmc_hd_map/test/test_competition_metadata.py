@@ -77,6 +77,42 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
         self.assertEqual(document["validation"]["max_checkpoint_route_projection_error_m"], 0.0)
         self.assertEqual(document["validation"]["max_checkpoint_link_projection_error_m"], 0.0)
 
+    def test_route_speed_limits_cap_mgeo_by_the_competition_profile(self):
+        limits = {item["link_id"]: item for item in self.document["route_speed_limits"]}
+        self.assertEqual(list(limits), self.document["route"]["link_ids"])
+        for link_id in ("A2256W000202", "A2256W000315"):
+            self.assertEqual(limits[link_id]["mgeo_max_speed_kph"], 70.0)
+            self.assertEqual(limits[link_id]["effective_limit_kph"], 60.0)
+        for link_id in ("A2256W000411", "A2256W000420", "A2256W000408", "A2256W000445", "A2256W000153"):
+            self.assertIsNone(limits[link_id]["competition_cap_kph"])
+            self.assertEqual(limits[link_id]["speed_zone_id"], "high_speed_exception")
+        self.assertEqual(limits["A2256W000153"]["effective_limit_kph"], 50.0)
+        self.assertTrue(all(
+            item["effective_limit_kph"] <= 60.0
+            for item in limits.values() if item["competition_cap_kph"] is not None
+        ))
+        self.assertEqual(self.document["validation"]["route_speed_links_capped_below_mgeo"], 2)
+
+    def test_route_speed_limit_tampering_fails_closed(self):
+        changed = copy.deepcopy(self.document)
+        changed["route_speed_limits"][9]["effective_limit_kph"] = 70.0
+        with self.assertRaisesRegex(CompetitionMetadataError, "min\\(MGeo, cap\\)"):
+            validate_competition_metadata(changed)
+
+    def test_rule_v1_2_payloads(self):
+        missions = {item["id"]: item for item in self.document["mission_zones"]}
+        shadow = json.loads(missions["gps_shadow_candidate"]["rule_payload_json"])
+        self.assertEqual(shadow["random_mission_types"], ["static_obstacle"])
+        self.assertIs(shadow["lane_keeping_penalty"], False)
+        boundaries = [item for item in self.document["mission_zones"]
+                      if item["mission_type"] == "traffic_light"
+                      and item["route_station_start_m"] == item["route_station_end_m"]]
+        self.assertEqual(len(boundaries), 5)
+        for item in boundaries:
+            payload = json.loads(item["rule_payload_json"])
+            self.assertEqual(payload["judgement"], "signal_when_front_wheels_cross_stopline")
+            self.assertEqual(payload["red_without_deceleration"], "run_failure")
+
     def test_rule_v1_2_removed_the_a411_checkpoint(self):
         # Rule book v1.2 dropped the 2026-08-03 checkpoint 11 at (66.885, 89.198)
         # on A411 and renumbered the rest without moving them.

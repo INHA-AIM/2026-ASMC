@@ -21,13 +21,14 @@
 | 기본 60 kph | official | 전역 규칙으로 기록 |
 | 출발 5%, 고주로 link corridor | derived_official | 공식 규칙을 route station으로 계산 |
 | 신호등 상시 인지·GPS 음영·장애물·회전교차로·합류·주변 차량 | provisional | 팀 질의응답·현장 판단 또는 공식 그림의 팀 link 해석, 판제 강제 사용 금지 |
+| 신호등 경계 5개 | provisional | stage14의 traffic-light ID가 있는 검수 정지선에서 파생 |
+| 링크별 유효 제한속도 | derived_official | MGeo `max_speed`를 공식 속도 구간 상한으로 자른 값 |
 
 GPS 음영 후보는 전역경로 `A126` 구간이며, HD맵 주행면에는 그 옆 반대방향 링크 `A131`을
 회피 가능 차로로 함께 제공한다. `gps_shadow_candidate.rule_payload_json`의
 `usable_opposite_lane_link_ids=[A2256W000131]`과
 `drivable_area_bridge_id=gps_shadow_A126_A131`이 이 관계를 전달한다. 여전히 provisional이므로
 판제가 이 반대차로 사용을 강제 조건으로 취급해서는 안 된다.
-| 신호등 경계 5개 | provisional | stage14의 traffic-light ID가 있는 검수 정지선에서 파생 |
 
 입력 다섯 개의 SHA가 source config와 다르면 `--write`도 실패한다. 주최 파일이나 route/map이
 바뀌면 변경을 자동 수용하지 않고 source config의 SHA와 파생 결과를 함께 리뷰해야 한다.
@@ -81,12 +82,25 @@ traffic-light ID 기준 경계 5개로 분리하며 같은 신호에 속한 인�
 | 고주로 | `1118.74–1741.72 m` | `A411` 시작→`A153` 종료 | 별도 상한 없음 |
 | 고주로 이후 | `1741.72–2184.61 m` | `A451` 시작→`A751` 종료 | 60 km/h |
 
+주최 MGeo의 link `max_speed`는 이 구간과 맞지 않는다. 60 km/h 구간의 `A202`·`A315`는 70,
+고주로 예외 구간의 `A411`·`A420`·`A408`·`A445`는 120, `A153`은 50이다. 판제는 원본 link 속성
+대신 `route_speed_limits`를 읽는다. route link 39개마다 `mgeo_max_speed_kph`,
+`competition_cap_kph`(60 또는 `null`)와 `effective_limit_kph = min(MGeo, 상한)`을 담고, validator가
+순서·station·소속 구간·min 규칙을 검사한다. 60 km/h 상한 때문에 MGeo보다 낮아진 link는 A202·A315
+두 개다. 주최 MGeo 원본은 수정하지 않는다.
+
 `A866→A054→A846`은 회전교차로 종료 후 고주로 진입 전의 일반 전역경로 추종 구간이다. 기존
 `highway_merge_candidate`는 삭제했으며 A054·A846을 포함하는 별도 주행 미션은 없다.
 
 정적 장애물은 `A213` 종료 후 `A220` 시작 전 교차로 영역, 즉 `A222`로 한정한다. 동적 장애물은
 `A728→A599→A207→A205` 전 구간이다. 두 경계는 주최 측 수치 공지가 아니라 팀 질의응답과
 상황 검토에 따른 값이므로 `provisional`을 유지한다.
+
+규정집 v1.2의 판정 사실은 각 zone의 `rule_payload_json`에 기록한다. 속도는 Ego Vehicle Status
+속도로 판정하며 초과 즉시 15초, 3초 지속마다 15초가 추가된다. 신호 경계 5개는 앞바퀴가 정지선을
+넘는 순간의 신호(초록 또는 좌회전)로 판정하고, 위반은 15초, 빨간불에 감속 없이 통과하면 해당 차시
+실패다. GPS 음영은 GPS 전체 blackout이고 차로 준수 패널티가 없으며, 구간 안의 랜덤 미션은 장애물
+회피뿐이다. 장애물·끼어들기는 CollisionData로 충돌마다 15초다.
 
 모든 provisional zone은 `planning_enforcement_allowed=false`여야 한다. 이 값이 true이거나
 status가 비어 있으면 validator가 실패한다. P1-D 시각화에서는 표시할 수 있지만 판제의 속도,

@@ -456034,7 +456034,7 @@
     "Explicit obstacle-intersection links describe maneuverable space, not permission to leave mission policy."
   ],
   "map_id": "waize_katri_2025-10-23",
-  "product_sha256": "1e558a313f70a9e0a8ecd8862698c6ccb1b98855bb851c1cd2e4f47a37d1f296",
+  "product_sha256": "8b07b419f472df055ba2ef13753bb18d5c07b3fc8eca07f9de2229ba53c7c049",
   "reviewed_geometry_sha256": "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf",
   "schema_version": "asmc.hd_map.compact_drivable/v6",
   "selection": {
@@ -456455,7 +456455,7 @@
   "sources": {
     "competition_metadata": {
       "path": "src/asmc_hd_map/config/kcity2025_competition_metadata.yaml",
-      "sha256": "7812d740c5478ae19e64c1920f9b90e1da76836947d72825770f2d3502b675d7"
+      "sha256": "2db24b263a5cc895c92ecaacc9f4dcec12a5caf9fc9b8b710522eb4b525e5a24"
     },
     "current_link_set": {
       "path": "src/behavior_planner/src/config/link_set.json",
@@ -456463,7 +456463,7 @@
     },
     "input_audit": {
       "path": "src/asmc_hd_map/config/kcity2025_drivable_area_input_audit.yaml",
-      "sha256": "e3d8d33221c4e6e48b6307129ac196bf307f992aa878dcc3b77ba3b8ebc84581"
+      "sha256": "0f5515101971f51dad7f57084f035da23b3eb7c9a6ed21ddc75802491f95455b"
     },
     "legacy_drivable_h5": {
       "path": "src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5",

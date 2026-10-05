@@ -58,7 +58,7 @@ mission_zones:
     source_reference: official_rule_route_5_percent
     description: 출발 후 공식 전역경로 길이의 5%를 통과하면 출발 성공
     bounds: {kind: route_fraction, start_fraction: 0.0, end_fraction: 0.05}
-    rule_payload: {required_route_fraction: 0.05}
+    rule_payload: {required_route_fraction: 0.05, time_limit_s: 60, on_failure: run_failure}
 
   # Effective competition speed profile.  Keep these route partitions
   # non-overlapping so planning does not have to apply an all-route rule and
@@ -70,7 +70,11 @@ mission_zones:
     description: 출발부터 A846 종료까지 적용되는 공식 최고속도 60 km/h 구간
     bounds: {kind: link_span, start_link_id: A2256W000748, end_link_id: A2256W000846}
     speed_limit_kph: 60.0
-    rule_payload: {interpretation: effective_competition_speed_limit}
+    rule_payload:
+      interpretation: effective_competition_speed_limit
+      judged_by: ego_vehicle_status_speed
+      overspeed_penalty_s: 15
+      sustained_overspeed_repeat_s: 3
 
   - id: high_speed_exception
     mission_type: high_speed_exception
@@ -78,7 +82,10 @@ mission_zones:
     source_reference: official_rule_mapped_to_route_links
     description: 공식 고주로 속도 예외 corridor를 route link 경계에 투영
     bounds: {kind: link_span, start_link_id: A2256W000411, end_link_id: A2256W000153}
-    rule_payload: {speed_limit_kph: null, interpretation: no_competition_speed_cap}
+    rule_payload:
+      speed_limit_kph: null
+      interpretation: no_competition_speed_cap
+      official_boundary: A2256W000411 start to A2256W000153 end
 
   - id: speed_limit_60_after_high_speed
     mission_type: speed_limit
@@ -87,7 +94,11 @@ mission_zones:
     description: A451 시작부터 START/END까지 다시 적용되는 공식 최고속도 60 km/h 구간
     bounds: {kind: link_span, start_link_id: A2256W000451, end_link_id: A2256W000751}
     speed_limit_kph: 60.0
-    rule_payload: {interpretation: effective_competition_speed_limit}
+    rule_payload:
+      interpretation: effective_competition_speed_limit
+      judged_by: ego_vehicle_status_speed
+      overspeed_penalty_s: 15
+      sustained_overspeed_repeat_s: 3
 
   - id: traffic_light_activation_A236_to_A308
     mission_type: traffic_light
@@ -114,6 +125,11 @@ mission_zones:
       requires_official_boundary_confirmation: true
       usable_opposite_lane_link_ids: [A2256W000131]
       drivable_area_bridge_id: gps_shadow_A126_A131
+      # Rule book v1.2: GPS is fully blacked out, lane keeping is not scored
+      # here, and the random mission inside the zone is obstacle avoidance only.
+      gps_blackout: true
+      lane_keeping_penalty: false
+      random_mission_types: [static_obstacle]
 
   - id: static_obstacle_candidate
     mission_type: static_obstacle
@@ -124,6 +140,8 @@ mission_zones:
     rule_payload:
       boundary_interpretation: after_A213_before_A220_intersection
       requires_official_boundary_confirmation: true
+      judged_by: collision_data
+      collision_penalty_s: 15
 
   - id: dynamic_obstacle_candidate
     mission_type: dynamic_obstacle
@@ -134,6 +152,8 @@ mission_zones:
     rule_payload:
       boundary_interpretation: A728_through_A205
       requires_official_boundary_confirmation: true
+      judged_by: collision_data
+      collision_penalty_s: 15
 
   - id: roundabout_candidate
     mission_type: roundabout
@@ -141,7 +161,7 @@ mission_zones:
     source_reference: official_figure_team_link_mapping
     description: A148-A146-A151 회전교차로 후보
     bounds: {kind: link_span, start_link_id: A2256W000148, end_link_id: A2256W000151}
-    rule_payload: {requires_official_boundary_confirmation: true}
+    rule_payload: {requires_official_boundary_confirmation: true, mission: npc_cut_in, judged_by: collision_data}
 
   - id: surrounding_vehicle_candidate
     mission_type: surrounding_vehicle
@@ -149,10 +169,16 @@ mission_zones:
     source_reference: official_figure_team_link_mapping
     description: A411-A420-A408-A445-A153 주변 차량 인지 후보
     bounds: {kind: link_span, start_link_id: A2256W000411, end_link_id: A2256W000153}
-    rule_payload: {requires_official_boundary_confirmation: true}
+    rule_payload: {requires_official_boundary_confirmation: true, mission: npc_cut_in, judged_by: collision_data}
 
 traffic_light_zones:
   derive_from_reviewed_stoplines: true
   status: provisional
   source_reference: stage14_reviewed_stopline_projection
   planning_enforcement_allowed: false
+  # Rule book v1.2 judgement shared by every derived stopline boundary.
+  rule_payload:
+    judgement: signal_when_front_wheels_cross_stopline
+    proceed_on: [green, left_turn_arrow]
+    violation_penalty_s: 15
+    red_without_deceleration: run_failure

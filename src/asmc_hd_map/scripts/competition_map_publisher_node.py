@@ -588,6 +588,9 @@ def build_debug_markers(
     route.points = [_point(value, 0.08) for value in bundle["route_points"]]
     markers.append(route)
 
+    speed_by_link = {
+        str(value["link_id"]): value for value in bundle["metadata"].get("route_speed_limits") or []
+    }
     for index, item in enumerate(bundle["metadata"]["route"]["link_ranges"]):
         start = float(item["start_station_m"])
         end = float(item["end_station_m"])
@@ -615,6 +618,13 @@ def build_debug_markers(
         label.scale.z = 1.15
         label.color = _color(0.45, 0.75, 1.0, 0.95)
         label.text = "%s\n%.0f–%.0f m" % (short_link_id(item["link_id"]), start, end)
+        speed = speed_by_link.get(str(item["link_id"]))
+        if speed is not None:
+            label.text += "\n%.0f km/h" % float(speed["effective_limit_kph"])
+            if speed["competition_cap_kph"] is not None and float(speed["mgeo_max_speed_kph"]) > float(
+                speed["competition_cap_kph"]
+            ):
+                label.text += " (MGeo %.0f)" % float(speed["mgeo_max_speed_kph"])
         markers.append(label)
 
     route_length = float(bundle["metadata"]["route"]["length_xy_m"])

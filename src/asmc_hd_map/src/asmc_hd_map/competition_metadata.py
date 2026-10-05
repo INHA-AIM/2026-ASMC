@@ -497,12 +497,16 @@ def _build_traffic_light_missions(
                 for link_id in (item.get("topology") or {}).get("current_link_ids", [])
             }
         )
-        payload = {
+        shared_payload = config.get("rule_payload") or {}
+        if not isinstance(shared_payload, dict):
+            raise CompetitionMetadataError("traffic_light_zones.rule_payload must be a mapping")
+        payload = dict(shared_payload)
+        payload.update({
             "boundary_only": True,
             "hd_map_stopline_ids": feature_ids,
             "stopline_topology_link_ids": topology_ids,
             "traffic_light_id": traffic_light_id,
-        }
+        })
         missions.append(
             {
                 "id": "traffic_light_%s" % traffic_light_id,
@@ -527,6 +531,81 @@ def _build_traffic_light_missions(
         )
     missions.sort(key=lambda item: (item["route_station_start_m"], item["id"]))
     return missions
+
+
+def _build_route_speed_limits(
+    route_ranges: Sequence[Mapping[str, Any]],
+    link_by_id: Mapping[str, Mapping[str, Any]],
+    missions: Sequence[Mapping[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Cap each route link's MGeo max_speed by the competition speed profile.
+
+    The organizer MGeo keeps 70 km/h links inside the 60 km/h zone and 50/120
+    km/h links inside the uncapped high-speed exception, so planning reads the
+    effective per-link limit here instead of the raw link attribute.
+    """
+
+    profile = [
+        item for item in missions
+        if item["mission_type"] in ("speed_limit", "high_speed_exception")
+    ]
+    result: List[Dict[str, Any]] = []
+    for item in route_ranges:
+        link_id = str(item["link_id"])
+        zones = [zone for zone in profile if link_id in zone["link_ids"]]
+        if len(zones) != 1:
+            raise CompetitionMetadataError("route link %s is in %d speed zones" % (link_id, len(zones)))
+        zone = zones[0]
+        mgeo = _finite(link_by_id[link_id].get("max_speed"), "link.%s.max_speed" % link_id)
+        cap = float(zone["speed_limit_kph"]) if zone["has_speed_limit"] else None
+        result.append(
+            {
+                "link_id": link_id,
+                "route_station_start_m": _stable_float(item["start_station_m"]),
+                "route_station_end_m": _stable_float(item["end_station_m"]),
+                "speed_zone_id": str(zone["id"]),
+                "mgeo_max_speed_kph": _stable_float(mgeo),
+                "competition_cap_kph": cap,
+                "effective_limit_kph": _stable_float(mgeo if cap is None else min(mgeo, cap)),
+            }
+        )
+    return result
+
+
+def _validate_route_speed_limits(
+    limits: Any, route: Mapping[str, Any], speed_profile: Sequence[Mapping[str, Any]]
+) -> int:
+    ranges = route.get("link_ranges") or []
+    if not isinstance(limits, list) or [str(item.get("link_id")) for item in limits] != [
+        str(item["link_id"]) for item in ranges
+    ]:
+        raise CompetitionMetadataError("route_speed_limits must list every route link in order")
+    zones = {str(item["id"]): item for item in speed_profile}
+    capped = 0
+    for limit, link_range in zip(limits, ranges):
+        link_id = str(limit["link_id"])
+        if (
+            abs(float(limit["route_station_start_m"]) - float(link_range["start_station_m"])) > 1e-6
+            or abs(float(limit["route_station_end_m"]) - float(link_range["end_station_m"])) > 1e-6
+        ):
+            raise CompetitionMetadataError("route speed limit stations drift: %s" % link_id)
+        zone = zones.get(str(limit.get("speed_zone_id")))
+        if zone is None or link_id not in zone.get("link_ids", []):
+            raise CompetitionMetadataError("route speed limit has no owning speed zone: %s" % link_id)
+        mgeo = _finite(limit.get("mgeo_max_speed_kph"), link_id + ".mgeo_max_speed_kph")
+        cap = limit.get("competition_cap_kph")
+        if zone.get("has_speed_limit"):
+            if cap is None or abs(float(cap) - float(zone["speed_limit_kph"])) > 1e-9:
+                raise CompetitionMetadataError("route speed cap differs from its zone: %s" % link_id)
+            expected = min(mgeo, float(cap))
+        else:
+            if cap is not None:
+                raise CompetitionMetadataError("high-speed exception link must be uncapped: %s" % link_id)
+            expected = mgeo
+        if abs(_finite(limit.get("effective_limit_kph"), link_id + ".effective") - expected) > 1e-9:
+            raise CompetitionMetadataError("effective speed limit is not min(MGeo, cap): %s" % link_id)
+        capped += int(cap is not None and mgeo > float(cap))
+    return capped
 
 
 def validate_competition_metadata(document: Mapping[str, Any]) -> Dict[str, Any]:
@@ -688,6 +767,9 @@ def validate_competition_metadata(document: Mapping[str, Any]) -> Dict[str, Any]
         or gps_payload.get("drivable_area_bridge_id") != "gps_shadow_A126_A131"
     ):
         raise CompetitionMetadataError("GPS-shadow policy must bind A126 to opposite lane A131")
+    capped_link_count = _validate_route_speed_limits(
+        document.get("route_speed_limits"), route, speed_profile
+    )
 
     return {
         "passed": True,
@@ -696,6 +778,8 @@ def validate_competition_metadata(document: Mapping[str, Any]) -> Dict[str, Any]
         "mission_status_counts": dict(sorted(statuses.items())),
         "speed_profile_segment_count": len(speed_profile),
         "speed_profile_full_route_coverage": True,
+        "route_speed_limit_count": len(document.get("route_speed_limits") or []),
+        "route_speed_links_capped_below_mgeo": capped_link_count,
         "traffic_light_activation_start_m": _stable_float(activation_start),
         "traffic_light_activation_end_m": _stable_float(activation_end),
         "traffic_light_boundary_count": len(traffic_light_boundaries),
@@ -834,6 +918,7 @@ def build_competition_metadata(
         },
         "checkpoints": checkpoints,
         "mission_zones": missions,
+        "route_speed_limits": _build_route_speed_limits(route_ranges, link_by_id, missions),
     }
     document["validation"] = validate_competition_metadata(document)
     return document

@@ -27,7 +27,7 @@ sources:
     sha256: ffcccb478ab9fea5232631dab49145eb59c9211a88c6d2f460108355fc4c54ee
   competition_metadata:
     path: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml
-    sha256: 7812d740c5478ae19e64c1920f9b90e1da76836947d72825770f2d3502b675d7
+    sha256: 2db24b263a5cc895c92ecaacc9f4dcec12a5caf9fc9b8b710522eb4b525e5a24
   legacy_drivable_h5:
     path: src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5
     sha256: e8ce47f504cd0387686718dfe72f12d17e8c684d0cc23fe41d9938171d896e86

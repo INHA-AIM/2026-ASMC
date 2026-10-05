@@ -661,7 +661,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"required_route_fraction":0.05}'
+  rule_payload_json: '{"on_failure":"run_failure","required_route_fraction":0.05,"time_limit_s":60}'
   planning_enforcement_allowed: true
 - id: speed_limit_60_before_high_speed
   mission_type: speed_limit
@@ -713,7 +713,7 @@ mission_zones:
   polygon: []
   has_speed_limit: true
   speed_limit_kph: 60.0
-  rule_payload_json: '{"interpretation":"effective_competition_speed_limit"}'
+  rule_payload_json: '{"interpretation":"effective_competition_speed_limit","judged_by":"ego_vehicle_status_speed","overspeed_penalty_s":15,"sustained_overspeed_repeat_s":3}'
   planning_enforcement_allowed: true
 - id: high_speed_exception
   mission_type: high_speed_exception
@@ -737,7 +737,8 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"interpretation":"no_competition_speed_cap","speed_limit_kph":null}'
+  rule_payload_json: '{"interpretation":"no_competition_speed_cap","official_boundary":"A2256W000411 start to A2256W000153
+    end","speed_limit_kph":null}'
   planning_enforcement_allowed: true
 - id: speed_limit_60_after_high_speed
   mission_type: speed_limit
@@ -765,7 +766,7 @@ mission_zones:
   polygon: []
   has_speed_limit: true
   speed_limit_kph: 60.0
-  rule_payload_json: '{"interpretation":"effective_competition_speed_limit"}'
+  rule_payload_json: '{"interpretation":"effective_competition_speed_limit","judged_by":"ego_vehicle_status_speed","overspeed_penalty_s":15,"sustained_overspeed_repeat_s":3}'
   planning_enforcement_allowed: true
 - id: traffic_light_activation_A236_to_A308
   mission_type: traffic_light
@@ -818,7 +819,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"drivable_area_bridge_id":"gps_shadow_A126_A131","requires_official_boundary_confirmation":true,"usable_opposite_lane_link_ids":["A2256W000131"]}'
+  rule_payload_json: '{"drivable_area_bridge_id":"gps_shadow_A126_A131","gps_blackout":true,"lane_keeping_penalty":false,"random_mission_types":["static_obstacle"],"requires_official_boundary_confirmation":true,"usable_opposite_lane_link_ids":["A2256W000131"]}'
   planning_enforcement_allowed: false
 - id: static_obstacle_candidate
   mission_type: static_obstacle
@@ -836,7 +837,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"boundary_interpretation":"after_A213_before_A220_intersection","requires_official_boundary_confirmation":true}'
+  rule_payload_json: '{"boundary_interpretation":"after_A213_before_A220_intersection","collision_penalty_s":15,"judged_by":"collision_data","requires_official_boundary_confirmation":true}'
   planning_enforcement_allowed: false
 - id: dynamic_obstacle_candidate
   mission_type: dynamic_obstacle
@@ -857,7 +858,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"boundary_interpretation":"A728_through_A205","requires_official_boundary_confirmation":true}'
+  rule_payload_json: '{"boundary_interpretation":"A728_through_A205","collision_penalty_s":15,"judged_by":"collision_data","requires_official_boundary_confirmation":true}'
   planning_enforcement_allowed: false
 - id: roundabout_candidate
   mission_type: roundabout
@@ -877,7 +878,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"requires_official_boundary_confirmation":true}'
+  rule_payload_json: '{"judged_by":"collision_data","mission":"npc_cut_in","requires_official_boundary_confirmation":true}'
   planning_enforcement_allowed: false
 - id: surrounding_vehicle_candidate
   mission_type: surrounding_vehicle
@@ -901,7 +902,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"requires_official_boundary_confirmation":true}'
+  rule_payload_json: '{"judged_by":"collision_data","mission":"npc_cut_in","requires_official_boundary_confirmation":true}'
   planning_enforcement_allowed: false
 - id: traffic_light_C1256W000077
   mission_type: traffic_light
@@ -918,7 +919,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage02_new_road_219_to_213:A1256W000682"],"stopline_topology_link_ids":["A2256W000219"],"traffic_light_id":"C1256W000077"}'
+  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage02_new_road_219_to_213:A1256W000682"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","stopline_topology_link_ids":["A2256W000219"],"traffic_light_id":"C1256W000077","violation_penalty_s":15}'
   planning_enforcement_allowed: false
 - id: traffic_light_C1256W000091
   mission_type: traffic_light
@@ -935,7 +936,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage02_new_road_219_to_213:A1256W000807"],"stopline_topology_link_ids":["A2256W000213"],"traffic_light_id":"C1256W000091"}'
+  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage02_new_road_219_to_213:A1256W000807"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","stopline_topology_link_ids":["A2256W000213"],"traffic_light_id":"C1256W000091","violation_penalty_s":15}'
   planning_enforcement_allowed: false
 - id: traffic_light_C1256W000016
   mission_type: traffic_light
@@ -952,7 +953,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage04_link_202_and_following_intersection:A1256W000208"],"stopline_topology_link_ids":["A2256W000728"],"traffic_light_id":"C1256W000016"}'
+  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage04_link_202_and_following_intersection:A1256W000208"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","stopline_topology_link_ids":["A2256W000728"],"traffic_light_id":"C1256W000016","violation_penalty_s":15}'
   planning_enforcement_allowed: false
 - id: traffic_light_C1256W000123
   mission_type: traffic_light
@@ -969,7 +970,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage05_dynamic_obstacle_205_to_315:A1256W000582","kcity2025_competition_route_curation_candidate_v14:stopline:stage05_dynamic_obstacle_205_to_315:A1256W000757"],"stopline_topology_link_ids":["A2256W000310","A2256W000315"],"traffic_light_id":"C1256W000123"}'
+  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage05_dynamic_obstacle_205_to_315:A1256W000582","kcity2025_competition_route_curation_candidate_v14:stopline:stage05_dynamic_obstacle_205_to_315:A1256W000757"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","stopline_topology_link_ids":["A2256W000310","A2256W000315"],"traffic_light_id":"C1256W000123","violation_penalty_s":15}'
   planning_enforcement_allowed: false
 - id: traffic_light_C1256W000052
   mission_type: traffic_light
@@ -986,8 +987,282 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage07_post_turn_308:A1256W000593+A1256W000742"],"stopline_topology_link_ids":["A2256W000308","A2256W000309"],"traffic_light_id":"C1256W000052"}'
+  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage07_post_turn_308:A1256W000593+A1256W000742"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","stopline_topology_link_ids":["A2256W000308","A2256W000309"],"traffic_light_id":"C1256W000052","violation_penalty_s":15}'
   planning_enforcement_allowed: false
+route_speed_limits:
+- link_id: A2256W000748
+  route_station_start_m: 0.0
+  route_station_end_m: 72.628968697
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000182
+  route_station_start_m: 72.628968697
+  route_station_end_m: 94.954245905
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000329
+  route_station_start_m: 94.954245905
+  route_station_end_m: 160.009167271
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 40.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 40.0
+- link_id: A2256W000236
+  route_station_start_m: 160.009167271
+  route_station_end_m: 186.285731748
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 30.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 30.0
+- link_id: A2256W000219
+  route_station_start_m: 186.285731748
+  route_station_end_m: 208.458941227
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 40.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 40.0
+- link_id: A2256W000215
+  route_station_start_m: 208.458941227
+  route_station_end_m: 237.422790208
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 40.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 40.0
+- link_id: A2256W000213
+  route_station_start_m: 237.422790208
+  route_station_end_m: 315.906098142
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000222
+  route_station_start_m: 315.906098142
+  route_station_end_m: 346.74182354
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000220
+  route_station_start_m: 346.74182354
+  route_station_end_m: 365.775740557
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000202
+  route_station_start_m: 365.775740557
+  route_station_end_m: 427.851843628
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 70.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 60.0
+- link_id: A2256W000728
+  route_station_start_m: 427.851843628
+  route_station_end_m: 436.797566442
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000599
+  route_station_start_m: 436.797566442
+  route_station_end_m: 462.941612517
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000207
+  route_station_start_m: 462.941612517
+  route_station_end_m: 471.09159934
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000205
+  route_station_start_m: 471.09159934
+  route_station_end_m: 482.819185214
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000315
+  route_station_start_m: 482.819185214
+  route_station_end_m: 550.618735375
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 70.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 60.0
+- link_id: A2256W000318
+  route_station_start_m: 550.618735375
+  route_station_end_m: 580.868425414
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000308
+  route_station_start_m: 580.868425414
+  route_station_end_m: 609.876838441
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000083
+  route_station_start_m: 609.876838441
+  route_station_end_m: 635.112607342
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000304
+  route_station_start_m: 635.112607342
+  route_station_end_m: 858.502396418
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000148
+  route_station_start_m: 858.502396418
+  route_station_end_m: 885.100687559
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 30.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 30.0
+- link_id: A2256W000146
+  route_station_start_m: 885.100687559
+  route_station_end_m: 904.004157997
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 30.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 30.0
+- link_id: A2256W000151
+  route_station_start_m: 904.004157997
+  route_station_end_m: 914.83731383
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 30.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 30.0
+- link_id: A2256W000866
+  route_station_start_m: 914.83731383
+  route_station_end_m: 930.601906879
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 30.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 30.0
+- link_id: A2256W000054
+  route_station_start_m: 930.601906879
+  route_station_end_m: 984.711781717
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 30.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 30.0
+- link_id: A2256W000846
+  route_station_start_m: 984.711781717
+  route_station_end_m: 1118.741751169
+  speed_zone_id: speed_limit_60_before_high_speed
+  mgeo_max_speed_kph: 40.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 40.0
+- link_id: A2256W000411
+  route_station_start_m: 1118.741751169
+  route_station_end_m: 1286.154645438
+  speed_zone_id: high_speed_exception
+  mgeo_max_speed_kph: 120.0
+  competition_cap_kph: null
+  effective_limit_kph: 120.0
+- link_id: A2256W000420
+  route_station_start_m: 1286.154645438
+  route_station_end_m: 1368.728445622
+  speed_zone_id: high_speed_exception
+  mgeo_max_speed_kph: 120.0
+  competition_cap_kph: null
+  effective_limit_kph: 120.0
+- link_id: A2256W000408
+  route_station_start_m: 1368.728445622
+  route_station_end_m: 1518.246885521
+  speed_zone_id: high_speed_exception
+  mgeo_max_speed_kph: 120.0
+  competition_cap_kph: null
+  effective_limit_kph: 120.0
+- link_id: A2256W000445
+  route_station_start_m: 1518.246885521
+  route_station_end_m: 1593.586387385
+  speed_zone_id: high_speed_exception
+  mgeo_max_speed_kph: 120.0
+  competition_cap_kph: null
+  effective_limit_kph: 120.0
+- link_id: A2256W000153
+  route_station_start_m: 1593.586387385
+  route_station_end_m: 1741.720988511
+  speed_zone_id: high_speed_exception
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: null
+  effective_limit_kph: 50.0
+- link_id: A2256W000451
+  route_station_start_m: 1741.720988511
+  route_station_end_m: 1781.557329301
+  speed_zone_id: speed_limit_60_after_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000446
+  route_station_start_m: 1781.557329301
+  route_station_end_m: 1859.64157824
+  speed_zone_id: speed_limit_60_after_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000448
+  route_station_start_m: 1859.64157824
+  route_station_end_m: 1877.744798966
+  speed_zone_id: speed_limit_60_after_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000126
+  route_station_start_m: 1877.744798966
+  route_station_end_m: 1996.730791531
+  speed_zone_id: speed_limit_60_after_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000128
+  route_station_start_m: 1996.730791531
+  route_station_end_m: 2109.847527156
+  speed_zone_id: speed_limit_60_after_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000333
+  route_station_start_m: 2109.847527156
+  route_station_end_m: 2120.982191955
+  speed_zone_id: speed_limit_60_after_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000154
+  route_station_start_m: 2120.982191955
+  route_station_end_m: 2132.230987862
+  speed_zone_id: speed_limit_60_after_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000332
+  route_station_start_m: 2132.230987862
+  route_station_end_m: 2165.753338147
+  speed_zone_id: speed_limit_60_after_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
+- link_id: A2256W000751
+  route_station_start_m: 2165.753338147
+  route_station_end_m: 2184.611723336
+  speed_zone_id: speed_limit_60_after_high_speed
+  mgeo_max_speed_kph: 50.0
+  competition_cap_kph: 60.0
+  effective_limit_kph: 50.0
 validation:
   passed: true
   checkpoint_count: 15
@@ -997,6 +1272,8 @@ validation:
     provisional: 11
   speed_profile_segment_count: 3
   speed_profile_full_route_coverage: true
+  route_speed_limit_count: 39
+  route_speed_links_capped_below_mgeo: 2
   traffic_light_activation_start_m: 160.009167271
   traffic_light_activation_end_m: 609.876838441
   traffic_light_boundary_count: 5
