@@ -8,6 +8,7 @@
   <arg name="cloud_topic" default="/velodyne_points"/>
   <arg name="imu_topic" default="/imu"/>
   <arg name="expected_lidar_frame" default="velodyne"/>
+  <arg name="map_adapter" default="true"/>
   <arg name="legacy_yolo_bridge" default="false"/>
   <include file="$(find asmc_lidar)/launch/ground_compare_live.launch">
     <arg name="method" value="jaeho"/>
@@ -23,6 +24,8 @@
     <arg name="imu_topic" value="$(arg imu_topic)"/>
     <arg name="expected_lidar_frame" value="$(arg expected_lidar_frame)"/>
   </include>
+  <node if="$(arg map_adapter)" pkg="asmc_lidar" type="asmc_lidar_map_adapter_node"
+        name="lidar_map_adapter" output="screen"/>
   <!-- Optional only: requires the old nested Msg overlay, not the default build. -->
   <node if="$(arg legacy_yolo_bridge)" pkg="asmc_lidar" type="legacy_yolo_bridge.py"
         name="lidar_legacy_yolo_bridge" output="screen"/>

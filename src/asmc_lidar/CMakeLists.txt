@@ -60,6 +60,10 @@ add_executable(asmc_lidar_ground_live_node src/ground_live_node.cpp)
 target_include_directories(asmc_lidar_ground_live_node PRIVATE ${catkin_INCLUDE_DIRS})
 target_link_libraries(asmc_lidar_ground_live_node PRIVATE asmc_ground_live_backend ${catkin_LIBRARIES})
 add_dependencies(asmc_lidar_ground_live_node ${catkin_EXPORTED_TARGETS})
+add_executable(asmc_lidar_map_adapter_node src/map_adapter_node.cpp)
+target_include_directories(asmc_lidar_map_adapter_node PRIVATE ${catkin_INCLUDE_DIRS})
+target_link_libraries(asmc_lidar_map_adapter_node PRIVATE asmc_lidar_core ${catkin_LIBRARIES})
+add_dependencies(asmc_lidar_map_adapter_node ${catkin_EXPORTED_TARGETS})
 add_executable(asmc_lidar_ground_live_offline src/ground_live_offline.cpp)
 target_link_libraries(asmc_lidar_ground_live_offline PRIVATE asmc_ground_live_backend)
 add_executable(asmc_lidar_unified_offline src/unified_offline.cpp)
@@ -124,7 +128,7 @@ if(CATKIN_ENABLE_TESTING)
 endif()
 
 install(TARGETS asmc_lidar_core asmc_lidar_review_node asmc_lidar_offline asmc_lidar_ground_compare
-  asmc_ground_live_backend asmc_lidar_ground_live_node
+  asmc_ground_live_backend asmc_lidar_ground_live_node asmc_lidar_map_adapter_node
   asmc_lidar_ground_live_offline
   asmc_lidar_unified_offline
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

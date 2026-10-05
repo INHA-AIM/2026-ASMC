@@ -1,0 +1,67 @@
+schema_version: 1
+contract_id: asmc_lidar_l2i2_candidate_v1
+status: experimental_not_planner_default
+owner: asmc_lidar
+source_branch: feat/asmc-lidar-integration
+source_ground: jaeho_v4_support_all_roads
+source_stamp: bridge_receive_not_laser_firing_time
+frames:
+  local: rear_axle_base_link
+  map: hd_map_local_origin_utm52n_minus_302595_4124145
+messages:
+  asmc_msgs/LidarObject: b94cf82e0f325e9ce0364bb143df9f06
+  asmc_msgs/LidarObjectArray: 5f774d07dffd4c7dfa93a8d4b62c60b4
+  asmc_msgs/CameraObjectBox: 19dd1d30aebe2394009542ba9f509717
+  asmc_msgs/CameraObjectBoxArray: ab2b6ea012a198472d8bab05c354e759
+  asmc_msgs/TrackedObject: 6c96135eb03a3ee93bba474fa835f57d
+  asmc_msgs/TrackedObjectArray: e127b2aabd7494ad01a5a56b005bf07e
+  asmc_msgs/DetectedObject: a965285ae904ae3ade687b9c54c2c515
+  asmc_msgs/DetectedObjectArray: 14fbd9679c2d87ae7498e4269d9678da
+topics:
+  /perception/lidar/objects_local:
+    type: asmc_msgs/LidarObjectArray
+    frame: base_link
+    producer: asmc_lidar_ground_live_node
+    status_field: required
+  /perception/lidar/objects_map:
+    type: asmc_msgs/LidarObjectArray
+    frame: map
+    producer: asmc_lidar_map_adapter_node
+    unavailable_status: POSE_UNAVAILABLE
+  /perception/lidar/tracked_objects:
+    type: asmc_msgs/TrackedObjectArray
+    frame: map
+    producer: asmc_lidar_map_adapter_node
+    policy: withhold_entire_frame_if_any_observed_object_is_not_legacy_representable
+  /perception/objects_lidar_candidate:
+    type: asmc_msgs/DetectedObjectArray
+    frame: map
+    producer: asmc_lidar_map_adapter_node
+    policy: isolated_frenet_probe_only_not_perception_objects
+  /perception/camera/objects:
+    type: asmc_msgs/CameraObjectBoxArray
+    frame: Camera-1
+    producer: future_asmc_perception_or_optional_legacy_relay
+  /perception/lidar/map_status:
+    type: diagnostic_msgs/DiagnosticArray
+    frame: none
+    producer: asmc_lidar_map_adapter_node
+  /lidar_candidate/unified/map_tracks:
+    type: visualization_msgs/MarkerArray
+    frame: map
+    producer: asmc_lidar_map_adapter_node
+    policy: review_only_and_cleared_when_pose_unavailable
+rules:
+  - Never relabel predicted objects as fresh observations.
+  - Unknown velocity and dynamic state remain invalid, never numeric zero.
+  - Camera valid-empty is distinct from absent, stale, and malformed input.
+  - GPS loss affects map availability only; it must not reset local tracking.
+  - Map pose requires causal bracketing with at most 100 ms source-stamp gap and no extrapolation.
+  - GPS antenna lever and UTM offset are applied exactly once; full 3D Ego pose and IMU orientation are validated.
+  - The old Msg workspace is not a default asmc_lidar dependency.
+  - Existing /last_lidar, /lidar_nogps, and /perception/objects producers and MD5s remain unchanged.
+cutover_gates:
+  - real_normal_tunnel_recovery_and_motion_object_review
+  - restore_map_availability_when_simulator_ego_source_gap_exceeds_100ms_without_hiding_stale_pose
+  - validate_with_planner_branch_after_its_incompatible_DetectedObjectArray_MD5_is_reconciled
+  - structure_suppression_and_tracker_accuracy_owned_by_jaeho

@@ -41,6 +41,11 @@ int main() {
     {"interpolation_slerp_and_position",[]{auto t=time_at();auto a=sample(t.stamp_ns-40000000),b=sample(t.stamp_ns+40000000);a.map_from_reference=Pose::Identity();b.map_from_reference.linear()=rpy(0,0,.4);b.map_from_reference.translation()=Vec(2,4,6);PoseHistory h;h.append(a);h.append(b);auto r=h.at(t);check(r.valid);close(r.map_from_base.translation(),Vec(1,2,3));check((r.map_from_base.rotation()-rpy(0,0,.2)).norm()<1e-9);}},
     {"future_arrival_excluded",[]{auto t=time_at();PoseHistory h;auto a=sample(t.stamp_ns-10000000),b=sample(t.stamp_ns+10000000);b.arrival_ns=t.processing_ns+1;h.append(a);h.append(b);check(!h.at(t).valid);}},
     {"no_extrapolation",[]{auto t=time_at();PoseHistory h;h.append(sample(t.stamp_ns-1));check(!h.at(t).valid);}},
+    {"bounded_history_preserves_current_bracket",[]{auto t=time_at();PoseHistory h;
+      h.append(sample(t.stamp_ns-500000000));h.append(sample(t.stamp_ns-20000000));
+      h.append(sample(t.stamp_ns+20000000));h.trim_before(t.stamp_ns-100000000);
+      check(h.at(t).valid);h.clear();check(!h.at(t).valid);
+    }},
     {"100ms_boundary_inclusive",[]{auto t=time_at();PoseHistory h;h.append(sample(t.stamp_ns-50000000));h.append(sample(t.stamp_ns+50000000));check(h.at(t).valid);}},
     {"over100ms_rejected",[]{auto t=time_at();PoseHistory h;h.append(sample(t.stamp_ns-50000001));h.append(sample(t.stamp_ns+50000000));check(h.at(t).reason=="pose_gap_exceeded");}},
     {"invalid_pose_is_barrier",[]{auto t=time_at();PoseHistory h;auto p=sample(t.stamp_ns);p.valid=false;h.append(sample(t.stamp_ns-100));h.append(p);h.append(sample(t.stamp_ns+100));check(h.at(t).reason=="pose_invalid");}},

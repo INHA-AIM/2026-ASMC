@@ -45,6 +45,11 @@ std::string PoseHistory::append(const PoseSample& s) {
   last_arrival_ = s.arrival_ns; samples_.push_back(s);
   return "";
 }
+void PoseHistory::trim_before(Ns stamp_ns) {
+  samples_.erase(std::remove_if(samples_.begin(),samples_.end(),
+      [stamp_ns](const PoseSample& s){return s.stamp_ns<stamp_ns;}),samples_.end());
+}
+void PoseHistory::clear() { samples_.clear(); last_arrival_=-1; }
 PoseSelection PoseHistory::at(const Observation& t) const {
   PoseSelection out;
   out.query_stamp_ns=t.stamp_ns; out.clock=t.clock;

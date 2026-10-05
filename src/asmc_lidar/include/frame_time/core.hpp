@@ -53,6 +53,8 @@ class PoseHistory {
   explicit PoseHistory(Ns max_gap_ns = 100000000);
   std::string append(const PoseSample& sample);
   PoseSelection at(const Observation& observation) const;
+  void trim_before(Ns stamp_ns);
+  void clear();
  private:
   Ns max_gap_, last_arrival_ = -1;
   std::vector<PoseSample> samples_;
