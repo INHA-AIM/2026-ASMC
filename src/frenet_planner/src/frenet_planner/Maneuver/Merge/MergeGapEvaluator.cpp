@@ -39,31 +39,29 @@ RoundaboutGap FindRoundaboutGap(const RefLine& ref, const FrenetState& ego,
     const RefPoint conflict = Interpolate(ref, cfg.conflict_s);
     std::vector<Arrival> arrivals;
     for (const auto& obj : obstacles) {
-        if (obj.speed < cfg.min_object_speed) continue;
+        const auto effective_velocity = EffectiveObjectVelocity(obj);
+        if (std::hypot(effective_velocity.first, effective_velocity.second) <
+            cfg.min_object_speed) {
+            continue;
+        }
         double yaw_rate = obj.yaw_rate;
         if (yaw_rates) {
             const auto it = yaw_rates->find(obj.id);
             if (it != yaw_rates->end()) yaw_rate = it->second;
         }
 
-        // 회전교차로 차량을 현재 heading의 직선으로만 외삽하면 접선 방향 때문에
-        // conflict point를 보지 못한다. 관측된 yaw-rate를 이용한 constant-turn-rate
-        // 궤적을 샘플링해 conflict point 최근접 도달시각을 구한다.
+        // OBB heading이 아니라 map-frame vx/vy로 시작하고, yaw-rate가 있으면
+        // 그 이동 벡터를 회전시키는 공용 예측을 사용한다.
         const double t_end = cfg.max_wait_time + cfg.ego_clear_time;
         double best_t = 0.0;
         double best_miss = std::hypot(conflict.x - obj.x, conflict.y - obj.y);
+        TrackedObject predicted_object = obj;
+        predicted_object.yaw_rate = yaw_rate;
         for (double t = cfg.prediction_dt; t <= t_end + 1e-9; t += cfg.prediction_dt) {
-            double px, py;
-            if (std::fabs(yaw_rate) > 1e-3) {
-                px = obj.x + obj.speed / yaw_rate *
-                    (std::sin(obj.heading + yaw_rate * t) - std::sin(obj.heading));
-                py = obj.y - obj.speed / yaw_rate *
-                    (std::cos(obj.heading + yaw_rate * t) - std::cos(obj.heading));
-            } else {
-                px = obj.x + obj.speed * std::cos(obj.heading) * t;
-                py = obj.y + obj.speed * std::sin(obj.heading) * t;
-            }
-            const double miss = std::hypot(conflict.x - px, conflict.y - py);
+            const PredictedObjectPose predicted =
+                PredictTrackedObjectPose(predicted_object, t);
+            const double miss = std::hypot(
+                conflict.x - predicted.x, conflict.y - predicted.y);
             if (miss < best_miss) {
                 best_miss = miss;
                 best_t = t;
@@ -226,11 +224,21 @@ RoundaboutGap FindHighwayMergeGap(const RefLine& ref, const FrenetState& ego,
             const double dx = predicted.x - rp.x;
             const double dy = predicted.y - rp.y;
             const double obj_d = -dx * std::sin(rp.theta) + dy * std::cos(rp.theta);
-            const double alignment = std::cos(predicted.heading - rp.theta);
+            const auto predicted_velocity =
+                PredictTrackedObjectVelocity(obj, clear_absolute_t);
+            const double motion_speed = std::hypot(
+                predicted_velocity.first, predicted_velocity.second);
+            const double alignment = motion_speed > 0.1
+                ? (predicted_velocity.first * std::cos(rp.theta) +
+                   predicted_velocity.second * std::sin(rp.theta)) /
+                      motion_speed
+                : std::cos(predicted.heading - rp.theta);
             if (std::fabs(obj_d) > cfg.target_corridor_half_width ||
                 alignment < cfg.min_heading_alignment) continue;
             ++relevant_count;
-            const double longitudinal_speed = std::max(0.0, obj.speed * alignment);
+            const double longitudinal_speed = std::max(
+                0.0, predicted_velocity.first * std::cos(rp.theta) +
+                         predicted_velocity.second * std::sin(rp.theta));
             if (obj_s >= checkpoint.clear_s) {
                 const double gap = obj_s - checkpoint.clear_s;
                 if (gap < front_gap) {

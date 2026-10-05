@@ -32,6 +32,107 @@ double FrenetPlanner::EffectiveAvoidDetectionDistance() const {
     return std::max(avoid_cfg_.detection_distance, collision_horizon);
 }
 
+const TrackedObject* FrenetPlanner::FindSpatialAvoidReplacement(
+    double ego_s, const std::vector<TrackedObject>& obstacles,
+    const AvoidanceContext& context) const {
+    if (!avoid_cfg_.spatial_reconnect_enabled || !context.active ||
+        context.command_obstacle_id < 0 || context.obstacle_width <= 0.0 ||
+        context.obstacle_length <= 0.0) {
+        return nullptr;
+    }
+
+    const double max_ds = std::max(0.0, avoid_cfg_.reconnect_max_longitudinal_delta);
+    const double max_dd = std::max(0.0, avoid_cfg_.reconnect_max_lateral_delta);
+    const double max_size_delta = std::max(0.0, avoid_cfg_.reconnect_max_size_delta);
+    const double track_length = ref_.points.empty() ? 0.0 : ref_.points.back().s;
+    const double search_limit = EffectiveAvoidDetectionDistance();
+    const TrackedObject* unique_match = nullptr;
+
+    for (const auto& object : obstacles) {
+        if ((object.type != 0 && object.type != 3) ||
+            object.motion_state == ObjectMotionState::DYNAMIC ||
+            object.width <= 0.0 || object.length <= 0.0) {
+            continue;
+        }
+
+        double object_s = 0.0, object_d = 0.0, object_s_dot = 0.0;
+        ProjectObjectToFrenet(ref_, object, object_s, object_d, object_s_dot,
+                             ref_config_.ego_projection_search_window);
+        double gap = object_s - ego_s;
+        if (gap <= 0.0 && track_length > 0.0) gap += track_length;
+        const double unwrapped_s = ego_s + gap;
+        if (!(gap > 0.0 && gap <= search_limit) ||
+            std::fabs(unwrapped_s - context.obstacle_s) > max_ds ||
+            std::fabs(object_d - context.obstacle_d) > max_dd ||
+            std::fabs(object.length - context.obstacle_length) > max_size_delta ||
+            std::fabs(object.width - context.obstacle_width) > max_size_delta) {
+            continue;
+        }
+
+        const RefPoint object_ref = Interpolate(ref_, object_s);
+        const double heading_delta = object.heading - object_ref.theta;
+        const double lateral_half_extent =
+            0.5 * std::fabs(object.length * std::sin(heading_delta)) +
+            0.5 * std::fabs(object.width * std::cos(heading_delta));
+        const double nearest_lateral_distance =
+            std::max(0.0, std::fabs(object_d) - lateral_half_extent);
+        if (nearest_lateral_distance > lane_width_ * 0.5) continue;
+
+        // 여러 관측이 동시에 gate를 통과하면 잘못된 identity 결정을 하지 않는다.
+        if (unique_match != nullptr) return nullptr;
+        unique_match = &object;
+    }
+    return unique_match;
+}
+
+void FrenetPlanner::RefreshAvoidObservation(
+    double ego_s, const TrackedObject& object, AvoidanceContext& context,
+    bool refresh_committed_target) const {
+    double object_s = 0.0, object_d = 0.0, object_s_dot = 0.0;
+    ProjectObjectToFrenet(ref_, object, object_s, object_d, object_s_dot,
+                         ref_config_.ego_projection_search_window);
+
+    const double track_length = ref_.points.empty() ? 0.0 : ref_.points.back().s;
+    const double gap = ForwardArcDistance(ego_s, object_s, track_length);
+    const RefPoint object_ref = Interpolate(ref_, object_s);
+    const double heading_delta = object.heading - object_ref.theta;
+    const double lateral_half_extent =
+        0.5 * std::fabs(object.length * std::sin(heading_delta)) +
+        0.5 * std::fabs(object.width * std::cos(heading_delta));
+    const double longitudinal_half_extent =
+        0.5 * std::fabs(object.length * std::cos(heading_delta)) +
+        0.5 * std::fabs(object.width * std::sin(heading_delta));
+
+    double outward_sign = context.target_d - context.obstacle_d;
+    if (std::fabs(outward_sign) <= 1e-6) {
+        if (context.requested_direction == LateralDirection::LEFT) outward_sign = 1.0;
+        else if (context.requested_direction == LateralDirection::RIGHT) outward_sign = -1.0;
+        else outward_sign = context.target_d >= 0.0 ? 1.0 : -1.0;
+    } else {
+        outward_sign = outward_sign > 0.0 ? 1.0 : -1.0;
+    }
+
+    context.active = true;
+    context.obstacle_id = object.id;
+    context.obstacle_s = ego_s + gap;
+    context.obstacle_d = object_d;
+    context.obstacle_width = object.width;
+    context.obstacle_length = object.length;
+    context.obstacle_lateral_half_extent = lateral_half_extent;
+    context.obstacle_longitudinal_half_extent = longitudinal_half_extent;
+
+    if (refresh_committed_target && context.committed &&
+        !context.has_requested_target_d) {
+        const double clearance =
+            0.5 * vehicle_shape_.width + lateral_half_extent +
+            collision_cfg_.safety_margin + avoid_cfg_.direction_extra_margin;
+        const double required_target = object_d + outward_sign * clearance;
+        context.target_d = outward_sign > 0.0
+            ? std::max(context.target_d, required_target)
+            : std::min(context.target_d, required_target);
+    }
+}
+
 FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
     double ego_s, int target_object_id,
     const std::vector<TrackedObject>& obstacles,
@@ -84,16 +185,13 @@ FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
             nearest_lateral_distance <= lane_width_ * 0.5;
 
         if (in_front && in_range && same_corridor && geometry_ok) {
-            context.active = true;
+            RefreshAvoidObservation(
+                ego_s, *it, context, /*refresh_committed_target=*/false);
+            context.command_obstacle_id = target_object_id;
             // 요청 ID가 아니라 **실제로 찾은 객체의 ID**를 기록한다. 둘은
             // 항상 같아야 하지만, 같다고 가정해 요청 ID를 그대로 넣으면
             // 조회가 잘못되어도(예: nearest selection으로 회귀) 확보 ID는
             // 정상으로 보인다 - 진단과 회귀 검증이 그 오류를 놓친다.
-            context.obstacle_id = it->id;
-            context.obstacle_s = ego_s + gap;
-            context.obstacle_d = object_d;
-            context.obstacle_width = it->width;
-            context.obstacle_length = it->length;
             context.missing_cycles = 0;
             return AvoidTargetStatus::VALID;
         }
@@ -103,17 +201,31 @@ FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
         // (계약 8.2절). phase/target_d/start_d는 호출자가 관리하므로
         // 여기서는 확보 상태만 해제한다.
         context.active = false;
+        context.command_obstacle_id = -1;
         context.obstacle_id = -1;
         context.missing_cycles = 0;
         return AvoidTargetStatus::LOST;
+    }
+
+    if (context.active && context.command_obstacle_id == target_object_id) {
+        const TrackedObject* replacement =
+            FindSpatialAvoidReplacement(ego_s, obstacles, context);
+        if (replacement != nullptr) {
+            RefreshAvoidObservation(
+                ego_s, *replacement, context,
+                /*refresh_committed_target=*/false);
+            context.missing_cycles = 0;
+            return AvoidTargetStatus::VALID;
+        }
     }
 
     // 관측되지 않았다. 직전에 확보한 상태가 있으면 유예한다.
     //
     // 한 번도 확보하지 못한 대상에는 유예를 주지 않는다. FSM이 존재하지 않는
     // ID를 보낸 경우를 조용히 넘기게 된다(FOLLOW와 동일한 판단).
-    if (!context.active || context.obstacle_id != target_object_id) {
+    if (!context.active || context.command_obstacle_id != target_object_id) {
         context.active = false;
+        context.command_obstacle_id = -1;
         context.obstacle_id = -1;
         context.missing_cycles = 0;
         return AvoidTargetStatus::LOST;
@@ -121,6 +233,7 @@ FrenetPlanner::AvoidTargetStatus FrenetPlanner::ResolveExternalAvoidTarget(
 
     if (++context.missing_cycles > avoid_cfg_.dropout_grace_cycles) {
         context.active = false;
+        context.command_obstacle_id = -1;
         context.obstacle_id = -1;
         context.missing_cycles = 0;
         return AvoidTargetStatus::LOST;
@@ -162,7 +275,7 @@ FrenetPlanner::AvoidTargetPlan FrenetPlanner::DecideAvoidTargets(
     // legacy begin_avoidance 분기와 **같은 식**이다. 고정 ±avoid_offset(5.0)이
     // 아니라 장애물의 실제 횡위치 + 실제 폭을 반영한다.
     const double clearance =
-        0.5 * (vehicle_shape_.width + context.obstacle_width) +
+        0.5 * vehicle_shape_.width + context.obstacle_lateral_half_extent +
         collision_cfg_.safety_margin + avoid_cfg_.direction_extra_margin;
     const double left_target = context.obstacle_d + clearance;
     const double right_target = context.obstacle_d - clearance;

@@ -129,9 +129,20 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     // 잘못된 명령을 transaction 규칙에 태우면 그 자체가 새 transaction을
     // 열거나 fingerprint를 흔들 수 있다. 여기서 필요한 것은 "잠긴 기동을 그대로
     // 계속한다"뿐이므로, 이미 만들어 둔 ACTIVE_TRANSACTION 회신을 쓴다.
+    // manager만으로는 committed AVOID의 세부 phase를 알 수 없다. core가
+    // TRACKING이면 아직 횡이동을 시작하지 않았으므로 유효한 새 FSM
+    // transaction으로 교체할 수 있다. SHIFT/PASS/RETURN은 false가 되어 기존
+    // 비선점 안전 잠금을 그대로 유지한다. validation에서 거부된 명령은 이
+    // 경로에 들어오지 않으므로 잘못된 명령이 잠금을 해제하지도 않는다.
+    const bool allow_avoid_tracking_preemption =
+        !has_rejected_acceptance && command_manager_.has_active_command() &&
+        command_manager_.maneuver_type() ==
+            asmc_msgs::BehaviorCommand::AVOID &&
+        command_manager_.command_id() != command.command_id &&
+        planner_.avoid_tracking();
     const CommandAcceptance acceptance = has_rejected_acceptance
         ? rejected_acceptance
-        : command_manager_.Accept(command);
+        : command_manager_.Accept(command, allow_avoid_tracking_preemption);
 
     // manager와 core의 transaction boundary를 맞춘다. 새 AVOID/LANE_CHANGE뿐
     // 아니라 새 KEEP/FOLLOW/STOP/E-STOP도 freshness/conversion 조기 반환
@@ -737,8 +748,11 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     const CommandFingerprint fingerprint = MakeCommandFingerprint(command);
 
     // ---- 4d. AVOID post-COMMIT (D6-3b) --------------------------------
-    // target observation/pose는 더 이상 실행 조건이 아니다. core의 잠긴
-    // target_d/context만 사용하되 collision geometry는 매 cycle 새로 쓴다.
+    // target pose는 더 이상 실행 조건이 아니다. core의 잠긴
+    // target_d/context를 사용하되 collision geometry는 매 cycle 새로 쓴다.
+    // 단, 아직 횡이동 전인 TRACKING에서는 target의 장기 소실을 terminal
+    // failure로 올린다. SHIFT/PASS 이후에는 중간 급복귀를 막기 위해 잠긴
+    // 기동을 계속한다.
     if (planner_command.mode == AVOID &&
         avoid_route == AvoidPlanningRoute::POST_COMMIT) {
         CartesianPath committed_path;
@@ -751,32 +765,51 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
             ++v2_plan_fail_streak_;
             const FrenetPlanner::PlanFailureReason reason =
                 planner_.last_failure_reason();
-            // COMMITTED/EXECUTING에서는 이 통지가 상태를 WAITING으로 낮추지
-            // 않는다. lock/context도 그대로 둔다.
-            command_manager_.NotifyPlanFailed(/*terminal=*/false);
+            const bool terminal_target_lost =
+                reason == FrenetPlanner::PlanFailureReason::TARGET_OBJECT_LOST;
+            const uint8_t result_code = terminal_target_lost
+                ? asmc_msgs::FrenetFeedback::TARGET_OBJECT_LOST
+                : (reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
+                       ? asmc_msgs::FrenetFeedback::COLLISION_BLOCKED
+                       : asmc_msgs::FrenetFeedback::
+                             TRANSIENT_GENERATION_FAILURE);
+            const std::string detail = terminal_target_lost
+                ? "committed avoid target lost before lateral shift"
+                : (reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
+                       ? "committed avoid path blocked by collision"
+                       : "could not generate the committed avoid path");
+            // TRACKING 중 target 장기 소실은 terminal이다. 그 외 post-COMMIT
+            // 생성 실패는 기존대로 transaction/lock을 유지한다.
+            command_manager_.NotifyPlanFailed(
+                terminal_target_lost,
+                terminal_target_lost ? result_code
+                                     : asmc_msgs::FrenetFeedback::RESULT_NONE,
+                terminal_target_lost ? detail : std::string());
             has_last_v2_trajectory_ = false;
             CommandAcceptance failed = acceptance;
             failed.execution_state = command_manager_.execution_state();
-            failed.result_code =
-                reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
-                    ? asmc_msgs::FrenetFeedback::COLLISION_BLOCKED
-                    : asmc_msgs::FrenetFeedback::TRANSIENT_GENERATION_FAILURE;
-            failed.detail =
-                reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
-                    ? "committed avoid path blocked by collision"
-                    : "could not generate the committed avoid path";
+            failed.result_code = result_code;
+            failed.detail = detail;
             const asmc_msgs::Trajectory stop = MakeStopTrajectory(
                 stopReferenceVehicle(snapshot), trajectoryDt(),
-                reason == FrenetPlanner::PlanFailureReason::COLLISION_BLOCKED
-                    ? asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED
-                    : asmc_msgs::Trajectory::FAILURE_GENERATION);
+                terminal_target_lost
+                    ? asmc_msgs::Trajectory::FAILURE_INVALID_INPUT
+                    : (reason == FrenetPlanner::PlanFailureReason::
+                                       COLLISION_BLOCKED
+                           ? asmc_msgs::Trajectory::FAILURE_COLLISION_BLOCKED
+                           : asmc_msgs::Trajectory::FAILURE_GENERATION));
             trajectory_pub_.publish(stop);
+            // Refresh the RViz/dashboard snapshot on the failing cycle as
+            // well.  Otherwise the last valid candidate remains visible while
+            // feedback already reports 0 valid candidates and SAFE_STOP.
+            publishDebugMarkersV2(stop, command);
 
             // ===== 잠긴 진단은 SAFE_STOP에서도 유지한다 (D6-4b) =====
             //
-            // 여기서 바뀐 것은 **이번 cycle에 MPC로 보낸 궤적**뿐이다. AVOID
-            // transaction과 COMMIT lock은 그대로 살아 있다(계약 8.2.1절):
-            // manager는 EXECUTING이고 core의 v2_avoidance_도 committed다.
+            // 충돌/일시 생성 실패에서는 **이번 cycle에 MPC로 보낸 궤적**만
+            // 바뀌고 AVOID transaction과 COMMIT lock은 그대로 살아 있다.
+            // TRACKING target 소실은 terminal FAILED지만, 실패 피드백에 마지막
+            // 잠금값을 남겨 원인을 진단할 수 있게 하는 목적은 동일하다.
             //
             // 그런데 avoid_fields 없이 발행하면 publishFeedbackV2가 전부
             // sentinel로 채워
@@ -1235,10 +1268,17 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 
         // 5번: 발행 대상 결정.
         //
-        //   COMMIT 성공  -> AVOID candidate를 **처음** MPC로 보낸다
-        //   그 외        -> maintenance만 보낸다 (계약 5.2절)
+        //   COMMIT+SHIFT -> AVOID candidate를 **처음** MPC로 보낸다
+        //   COMMIT+TRACKING / 그 외 -> maintenance만 보낸다
+        //
+        // PREPARE candidate는 즉시 횡이동 경로지만 ApplyAvoidCommit()은 먼
+        // target이면 TRACKING을 선택할 수 있다. 이때 candidate를 한 주기
+        // 보냈다가 다음 주기에 중앙 maintenance로 되돌리면 불필요한 급조향이
+        // 생긴다. 실제 committed phase와 첫 발행 궤적을 일치시킨다.
+        const bool publish_committed_candidate =
+            committed_now && !planner_.avoid_tracking();
         const asmc_msgs::Trajectory& published =
-            committed_now ? avoid_trajectory : trajectory;
+            publish_committed_candidate ? avoid_trajectory : trajectory;
 
         v2_plan_fail_streak_ = 0;
         last_v2_trajectory_ = published;

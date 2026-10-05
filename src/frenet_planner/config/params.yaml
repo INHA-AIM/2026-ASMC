@@ -167,6 +167,12 @@ planner:
     # PREPARE에서 좌/우 후보 비용이 동률일 때 비선호 방향에 더하는 미세
     # tie-break 가중치.
     direction_tiebreak_cost: 1e-3
+    # 동일 장애물이 프레임 사이에 새 tracker ID를 받더라도, 직전 위치/크기와
+    # 공간적으로 유일하게 맞는 관측이면 진행 중인 AVOID target으로 재연결한다.
+    spatial_reconnect_enabled: true
+    reconnect_max_longitudinal_delta: 2.5 # [m]
+    reconnect_max_lateral_delta: 1.0      # [m]
+    reconnect_max_size_delta: 1.5         # [m]
 
   # --- LANE_CHANGE: FSM이 target_pose_map으로 지정한 인접 차로 목표로의
   # 횡이동 완료 판정(§17). 초기 개발값이며 MORAI 튜닝 대상이다.

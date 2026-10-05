@@ -357,8 +357,9 @@ public:
     //   MPC      = 직전 PREPARE의 중앙 maintenance
     // 라는 불일치가 생긴다.
     //
-    // 이 시점에 target_d를 처음 lock한다. PREPARE에서는 사이클마다 좌/우가
-    // 바뀔 수 있으므로 lock하지 않았다(계약 12.7.3절).
+    // 이 시점에 target_d와 회피 방향을 처음 lock한다. PREPARE에서는
+    // 사이클마다 좌/우가 바뀔 수 있으므로 lock하지 않았다. COMMIT 뒤 OBB가
+    // 커지면 geometry 기반 목표는 같은 방향 바깥쪽으로만 확장될 수 있다.
     //
     // 반환값은 실제로 lock했는지다. candidate_valid가 false인 결과를 넘기면
     // false를 돌려주고 아무것도 바꾸지 않는다 - 확보하지 않은 목표를
@@ -369,8 +370,8 @@ public:
     // context로 기동을 완주한다(계약 8.2.1절).
     bool avoid_committed() const { return v2_avoidance_.committed; }
 
-    // COMMIT 시점에 잠근 목표 d [m]. avoid_committed()가 false이면 의미가
-    // 없다. d는 음수가 유효하므로 sentinel을 쓸 수 없다.
+    // COMMIT된 현재 목표 d [m]. OBB 관측이 커지면 같은 회피 방향 바깥쪽으로
+    // 확장될 수 있다. avoid_committed()가 false이면 의미가 없다.
     double avoid_locked_target_d() const { return v2_avoidance_.target_d; }
 
     // COMMIT 시점의 ego d [m]. maneuver_progress를 (start_d -> target_d)
@@ -378,6 +379,10 @@ public:
     double avoid_start_d() const { return v2_avoidance_.start_d; }
 
     bool avoid_completed() const { return v2_avoidance_.completed; }
+    bool avoid_tracking() const {
+        return v2_avoidance_.active && v2_avoidance_.committed &&
+               v2_avoidance_.phase == AvoidPhase::TRACKING;
+    }
     double avoid_maneuver_progress() const {
         return v2_avoidance_.maneuver_progress;
     }
@@ -774,16 +779,24 @@ private:
 
     struct AvoidanceContext {
         bool active = false;
+        // BehaviorCommand에 고정된 논리 ID와 현재 perception 관측 ID를
+        // 분리한다. tracker ID가 바뀌어도 wire transaction은 유지한다.
+        int command_obstacle_id = -1;
         int obstacle_id = -1;
         AvoidPhase phase = AvoidPhase::TRACKING;
         double obstacle_s = 0.0;
         double obstacle_d = 0.0;
         double obstacle_width = 0.0;
         double obstacle_length = 0.0;
+        // OBB가 경로와 비스듬히 놓이면 raw width/length는 각각 횡/종방향
+        // 점유폭이 아니다. 현재 ref 접선/법선에 투영한 실제 반폭을 보존한다.
+        double obstacle_lateral_half_extent = 0.0;
+        double obstacle_longitudinal_half_extent = 0.0;
         double target_d = 0.0;
 
-        // 대상의 일시적 미관측 누적. avoid_cfg_.dropout_grace_cycles를 넘으면
-        // 대상 소실로 판정한다(계약 8.2절).
+        // 대상의 일시적 미관측 누적. PREPARE와 COMMIT 후 TRACKING에서
+        // avoid_cfg_.dropout_grace_cycles를 넘으면 대상 소실로 판정한다.
+        // SHIFT/PASS/RETURN은 중간 급복귀를 막기 위해 이 값으로 끊지 않는다.
         int missing_cycles = 0;
 
         // 기동 시작 시점의 ego d. maneuver_progress를 (start_d -> target_d)
@@ -802,9 +815,10 @@ private:
 
         // EXECUTE 재검증을 통과해 목표를 확정했는가 (D6-3a).
         //
-        // true이면 target_d / start_d가 잠긴 값이며, 후보 생성은 그 목표를
-        // **정확히** 겨냥한다(lateral tolerance 0). PREPARE에서는 항상
-        // false다.
+        // true이면 회피 방향과 target_d / start_d가 확정되며, 후보 생성은
+        // 현재 target_d를 **정확히** 겨냥한다(lateral tolerance 0).
+        // geometry 기반 target_d는 새 OBB가 커질 때 같은 방향 바깥쪽으로만
+        // 확장될 수 있다. PREPARE에서는 항상 false다.
         bool committed = false;
 
         // 완료 후에도 새 command_id가 올 때까지 context를 보존한다.
@@ -863,6 +877,16 @@ private:
                               double transition_distance_override = -1.0,
                               double minimum_path_distance = -1.0) const;
 
+    // KEEP 저속 fallback은 정상 후보 파이프라인의 FilterByCurvature를 거치지
+    // 않는다. 현재 d에서 중앙으로 복귀하는 기본 거리로 경로를 만든 뒤 최종
+    // Cartesian kappa를 직접 검사하고, 한계를 넘으면 횡복귀 거리를 늘려
+    // 최소한의 feasible 경로를 다시 찾는다. 급커브에서는 중앙 복귀 자체가
+    // 당장 불가능할 수 있으므로 마지막에는 현재 d 유지 경로를 검사한다.
+    bool PlanCurvatureFeasibleKeepLowSpeedFallback(
+        const CartesianState& ego, double s, double d,
+        double resolved_target_speed, CartesianPath& out_path,
+        double duration_s = 2.0) const;
+
     // FSM이 지정한 FOLLOW 대상의 확보 결과.
     enum class FollowTargetStatus {
         // 이번 사이클에 대상을 관측하고 검증까지 통과했다.
@@ -880,7 +904,7 @@ private:
     //   resolver: "FSM이 15번을 지정했다. 유효한가?"   -> 이 함수
     //
     // 같은 차선의 가장 가까운 차량을 스스로 고르지 않는다 - 대상 선택
-    // 권한은 FSM에 있다(docs/archive/planning/d1-legacy-behavior-boundary.md 0.1절 B 분류).
+    // 권한은 FSM에 있다(docs/d1-legacy-behavior-boundary.md 0.1절 B 분류).
     //
     // 더 가까운 차량이 나타나도 무시한다. 자동 handoff는 FSM이 지시한 대상을
     // 추종 중이라고 오인하게 만든다. 그 차량과 충돌 위험이 있으면 충돌
@@ -951,7 +975,7 @@ private:
     //
     // 모든 객체 탐색 -> 같은 차선 -> 저속/정지 -> 가장 가까운 것 -> 좌/우
     // 방향까지 자동 결정하는 acquisition을 스스로 하지 않는다 - 그 권한은
-    // 전부 FSM에 있다(docs/archive/planning/d1-legacy-behavior-boundary.md 0.1절 B 분류, 6.4절).
+    // 전부 FSM에 있다(docs/d1-legacy-behavior-boundary.md 0.1절 B 분류, 6.4절).
     //
     // ===== 속도 조건을 쓰지 않는 이유 =====
     //
@@ -977,6 +1001,20 @@ private:
         const std::vector<TrackedObject>& obstacles,
         AvoidanceContext& context) const;
 
+    // 기존 target geometry와 유일하게 일치하는 현재 관측만 반환한다.
+    // nullptr은 일치 없음과 모호한 복수 일치를 모두 뜻하며, 호출자는 기존
+    // dropout/fail-safe 정책을 그대로 적용한다.
+    const TrackedObject* FindSpatialAvoidReplacement(
+        double ego_s, const std::vector<TrackedObject>& obstacles,
+        const AvoidanceContext& context) const;
+
+    // 현재 OBB를 route s/d와 접선/법선 반폭으로 다시 투영한다. COMMIT 뒤
+    // geometry 기반 목표는 안전한 바깥 방향으로만 확장하고 안쪽으로 줄이지
+    // 않는다. FSM이 명시한 target pose는 authoritative이므로 건드리지 않는다.
+    void RefreshAvoidObservation(double ego_s, const TrackedObject& object,
+                                 AvoidanceContext& context,
+                                 bool refresh_committed_target) const;
+
     // v2 AVOID 대상의 유효 탐색거리 [m]. resolver와 진단 출력이 공유한다.
     // 정의: Maneuver/Avoid/AvoidTargetResolver.cpp (R6-F1).
     double EffectiveAvoidDetectionDistance() const;
@@ -991,7 +1029,8 @@ private:
     //
     //   target pose 없음
     //     -> legacy의 검증된 geometry 계산을 재사용한다:
-    //          clearance = 0.5*(자차폭 + 장애물폭) + safety_margin + 0.3
+    //          clearance = 0.5*자차폭 + OBB의 route-normal 반폭
+    //                      + safety_margin + 0.3
     //          left  = obstacle_d + clearance
     //          right = obstacle_d - clearance
     //        legacy가 begin_avoidance에서 쓰는 식과 동일하다. 고정 ±5 m

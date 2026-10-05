@@ -5,14 +5,15 @@
 // planner가 같은 차선의 가장 가까운 차량을 스스로 고르고, 주행 중 더
 // 가까운 차량이 나타나면 자동으로 handoff하는 정책은 v2에서 금지된다 -
 // 그러면 FSM은 자기가 지시한 대상을 추종 중이라고 오인한다
-// (docs/archive/planning/d1-legacy-behavior-boundary.md 0.1절 B 분류).
+// (docs/d1-legacy-behavior-boundary.md 0.1절 B 분류).
 //
 //   selector: "누구를 따라갈까?"                  -> 금지
 //   resolver: "FSM이 15번을 지정했다. 유효한가?"   -> 이것만 한다
 //
-// 계약: docs/contracts/planning/fsm-frenet-v2.md 12.5절(D5), 8.2절
+// 계약: docs/fsm-frenet-interface-v2.md 12.5절(D5), 8.2절
 
 #include "frenet_planner/frenet_planner.hpp"
+#include "frenet_planner/Maneuver/ManeuverUtils.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -87,7 +88,8 @@ CartesianState MakeEgo(const Pose2D& pose, double speed) {
 // 재생성하지 않으므로, corners 없는 객체는 충돌검사에서 무조건 겹침으로
 // 취급된다(CollisionChecker.cpp의 안전측 fallback).
 TrackedObject MakeVehicle(const Waypoints& waypoints, int id, double target_s,
-                       double speed) {
+                          double speed, double length = 4.5,
+                          double width = 2.0) {
     const Pose2D pose = PoseAt(waypoints, target_s);
     TrackedObject object;
     object.id = id;
@@ -97,8 +99,8 @@ TrackedObject MakeVehicle(const Waypoints& waypoints, int id, double target_s,
     object.speed = speed;
     object.vx = speed * std::cos(pose.yaw);
     object.vy = speed * std::sin(pose.yaw);
-    object.width = 2.0;
-    object.length = 4.5;
+    object.width = width;
+    object.length = length;
     object.height = 1.5;
     object.geometry_valid = true;
     object.z_valid = true;
@@ -172,6 +174,53 @@ int main() {
     constexpr double kEgoS = 200.0;
     constexpr double kEgoSpeed = 8.0;
     const CartesianState ego = MakeEgo(PoseAt(waypoints, kEgoS), kEgoSpeed);
+
+    // FOLLOW leader와 실제로 겹친 작은 OBB 조각은 geometry를 보존한 채
+    // leader의 motion만 공유한다.
+    {
+        TrackedObject leader =
+            MakeVehicle(waypoints, 15, kEgoS + 30.0, 5.0);
+        leader.type = 1;
+        leader.motion_state = ObjectMotionState::DYNAMIC;
+        TrackedObject fragment =
+            MakeVehicle(waypoints, 16, kEgoS + 30.8, 0.0, 1.0, 0.6);
+        fragment.type = 0;
+        fragment.motion_state = ObjectMotionState::LOW_THREAT;
+        const geometry::Corners8 original_corners = fragment.corners;
+        std::vector<TrackedObject> objects{leader, fragment};
+        const int linked = SynchronizeFollowLeaderFragments(15, objects);
+        Expect(linked == 1, "overlapping small OBB is linked to FOLLOW leader");
+        Expect(std::abs(objects[1].vx - leader.vx) < 1e-9 &&
+                   std::abs(objects[1].vy - leader.vy) < 1e-9,
+               "FOLLOW fragment inherits leader velocity");
+        Expect(objects[1].motion_state == leader.motion_state,
+               "FOLLOW fragment inherits leader motion state");
+        bool geometry_unchanged = true;
+        for (std::size_t i = 0; i < original_corners.size(); ++i) {
+            geometry_unchanged = geometry_unchanged &&
+                std::abs(objects[1].corners[i].x - original_corners[i].x) < 1e-9 &&
+                std::abs(objects[1].corners[i].y - original_corners[i].y) < 1e-9 &&
+                std::abs(objects[1].corners[i].z - original_corners[i].z) < 1e-9;
+        }
+        Expect(geometry_unchanged,
+               "FOLLOW fragment keeps authoritative OBB geometry");
+    }
+    {
+        TrackedObject leader =
+            MakeVehicle(waypoints, 15, kEgoS + 30.0, 5.0);
+        leader.type = 1;
+        leader.motion_state = ObjectMotionState::DYNAMIC;
+        TrackedObject obstacle =
+            MakeVehicle(waypoints, 16, kEgoS + 34.0, 0.0, 1.0, 0.6);
+        obstacle.type = 0;
+        obstacle.motion_state = ObjectMotionState::LOW_THREAT;
+        std::vector<TrackedObject> objects{leader, obstacle};
+        const int linked = SynchronizeFollowLeaderFragments(15, objects);
+        Expect(linked == 0, "separate small obstacle is not linked to leader");
+        Expect(std::abs(objects[1].vx) < 1e-9 &&
+                   std::abs(objects[1].vy) < 1e-9,
+               "separate obstacle keeps its own velocity");
+    }
 
     // --- 지정 대상만 있는 경우 --------------------------------------------
     {

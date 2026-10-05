@@ -7,10 +7,13 @@ ObjectFeature ObjectProjector::project(const TrackedObject& object,
                                        const RouteManager& route) const {
   ObjectFeature feature;
   feature.type = object.type;
+  feature.motion_state = object.motion_state;
   feature.id = object.id;
   feature.x = object.x;
   feature.y = object.y;
   feature.yaw = object.yaw;
+  feature.vx = object.vx;
+  feature.vy = object.vy;
   feature.speed = object.speed;
   feature.accel = object.accel;
   feature.length = object.length;

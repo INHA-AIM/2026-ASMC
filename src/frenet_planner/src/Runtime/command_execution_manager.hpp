@@ -11,7 +11,7 @@
 //
 // 이 경계를 지키지 않으면 adapter가 곧 state machine이 되어버린다. 상태를
 // 갖는 판단은 전부 이쪽에 둔다.
-// 계약: docs/contracts/planning/fsm-frenet-v2.md 12.8절
+// 계약: docs/fsm-frenet-interface-v2.md 12.8절
 //
 // ===== 왜 transaction인가 =====
 //
@@ -182,7 +182,12 @@ class CommandExecutionManager {
     //                       COMMITTED 중 payload mismatch
     //   NONE                CANCEL 성공, terminal latch, 미구현 maneuver,
     //                       진행 중 기동이 없을 때의 payload mismatch
-    CommandAcceptance Accept(const asmc_msgs::BehaviorCommand& message);
+    // allow_committed_tracking_preemption은 횡이동이 아직 시작되지 않은
+    // committed AVOID TRACKING에서만 node가 true로 넘긴다. 기본값 false는
+    // SHIFT/PASS/RETURN과 LANE_CHANGE의 기존 비선점 계약을 보존한다.
+    CommandAcceptance Accept(
+        const asmc_msgs::BehaviorCommand& message,
+        bool allow_committed_tracking_preemption = false);
 
     // 입력 데이터 stale을 기록한다. 명령 자체는 정상이므로 transaction을
     // 버리지 않고, 이 사이클의 planning만 막는다.

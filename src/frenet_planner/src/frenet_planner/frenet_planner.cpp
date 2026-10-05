@@ -5,11 +5,29 @@
 #include <cstdio>
 #include <limits>
 #include <unordered_map>
+#include <utility>
 
 #include "frenet_planner/Generator/BoundaryConditionPolicy.hpp"
 #include "frenet_planner/Math/Utils.hpp"
 #include "frenet_planner/Speed/CurveSpeed.hpp"
 #include "frenet_planner/Speed/TargetSpeedResolver.hpp"
+
+namespace {
+
+bool PathObeysCurvatureLimit(const CartesianPath& path, double limit) {
+    if (path.x.size() < 2 || path.kappa.size() != path.x.size() ||
+        !std::isfinite(limit) || limit <= 0.0) {
+        return false;
+    }
+    double observed_max = 0.0;
+    for (double kappa : path.kappa) {
+        if (!std::isfinite(kappa)) return false;
+        observed_max = std::max(observed_max, std::fabs(kappa));
+    }
+    return observed_max <= limit + 1e-6;
+}
+
+}  // namespace
 
 bool FrenetPlanner::Init(const std::string& yaml_path) {
     std::string waypoint_file;
@@ -202,6 +220,69 @@ bool FrenetPlanner::PlanLowSpeedFallback(const CartesianState& ego, double s, do
     }
     return out_path.x.size() >= 2 &&
            (required_distance <= 0.0 || s_i - s >= required_distance - 1e-6);
+}
+
+bool FrenetPlanner::PlanCurvatureFeasibleKeepLowSpeedFallback(
+    const CartesianState& ego, double s, double d,
+    double resolved_target_speed, CartesianPath& out_path,
+    double duration_s) const {
+    const double initial_distance = LowSpeedLateralTransitionDistance(d, 0.0);
+    auto generate = [&](double target_d, double transition_distance,
+                        CartesianPath& candidate) {
+        if (!PlanLowSpeedFallback(ego, s, d, target_d, candidate, duration_s,
+                                  resolved_target_speed,
+                                  transition_distance)) {
+            return false;
+        }
+        return PathObeysCurvatureLimit(candidate, limits_.max_curvature);
+    };
+
+    CartesianPath initial;
+    if (generate(0.0, initial_distance, initial)) {
+        out_path = std::move(initial);
+        return true;
+    }
+
+    constexpr double kExpansionFactor = 1.5;
+    constexpr int kMaximumExpansionAttempts = 8;
+    constexpr int kRefinementIterations = 6;
+    double infeasible_distance = initial_distance;
+    double feasible_distance = std::numeric_limits<double>::quiet_NaN();
+    CartesianPath feasible_path;
+    double trial_distance = initial_distance;
+    for (int attempt = 0; attempt < kMaximumExpansionAttempts; ++attempt) {
+        trial_distance *= kExpansionFactor;
+        CartesianPath candidate;
+        if (generate(0.0, trial_distance, candidate)) {
+            feasible_distance = trial_distance;
+            feasible_path = std::move(candidate);
+            break;
+        }
+        infeasible_distance = trial_distance;
+    }
+
+    if (std::isfinite(feasible_distance)) {
+        for (int iteration = 0; iteration < kRefinementIterations; ++iteration) {
+            const double midpoint = 0.5 * (infeasible_distance + feasible_distance);
+            CartesianPath candidate;
+            if (generate(0.0, midpoint, candidate)) {
+                feasible_distance = midpoint;
+                feasible_path = std::move(candidate);
+            } else {
+                infeasible_distance = midpoint;
+            }
+        }
+        out_path = std::move(feasible_path);
+        return true;
+    }
+
+    CartesianPath lateral_hold;
+    if (generate(d, 1.0, lateral_hold)) {
+        out_path = std::move(lateral_hold);
+        return true;
+    }
+    out_path = CartesianPath{};
+    return false;
 }
 
 double FrenetPlanner::LowSpeedLateralTransitionDistance(
@@ -774,12 +855,20 @@ bool FrenetPlanner::PlanInternal(
         }
         last_mode_ = external_command->mode;
         last_target_speed_ = resolved_target_speed;
-        const bool fallback_ok = PlanLowSpeedFallback(
-            ego, s, d, 0.0, out_path, limits_.low_speed_crawl_duration_s,
-            resolved_target_speed);
+        const bool keep_fallback = external_command->mode == LANE_KEEPING;
+        const bool fallback_ok = keep_fallback
+            ? PlanCurvatureFeasibleKeepLowSpeedFallback(
+                  ego, s, d, resolved_target_speed, out_path,
+                  limits_.low_speed_crawl_duration_s)
+            : PlanLowSpeedFallback(
+                  ego, s, d, 0.0, out_path,
+                  limits_.low_speed_crawl_duration_s,
+                  resolved_target_speed);
         if (fallback_ok) {
             last_candidate_paths_.push_back(out_path);
             last_candidate_validity_.push_back(true);
+        } else if (keep_fallback) {
+            last_failure_reason_ = PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
         }
         return fallback_ok;
     }

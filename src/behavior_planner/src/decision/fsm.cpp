@@ -43,14 +43,35 @@ BehaviorState StateFor(BehaviorType behavior, ManeuverPhase phase) {
 
 Fsm::ManeuverOutput Fsm::updateManeuver(
     BehaviorType candidate, const PlannerFeedbackData& feedback,
-    uint32_t active_command_id, bool stop_preempts_committed) {
+    uint32_t active_command_id, bool stop_preempts_committed,
+    bool cancel_reclassified_avoid, bool follow_owns_avoid_target) {
   // Emergency is the only unconditional maneuver preemption.
   if (candidate == BehaviorType::EMERGENCY_STOP) {
     active_lateral_behavior_ = BehaviorType::KEEP;
     maneuver_phase_ = ManeuverPhase::NONE;
     maneuver_command_id_ = 0;
+    avoid_missing_cycles_ = 0;
     return {candidate, StateFor(candidate, ManeuverPhase::NONE),
             ManeuverPhase::NONE};
+  }
+
+  // FOLLOW/AVOID temporal arbitration belongs here, not in the per-frame
+  // scorer. If the current AVOID observation is the same physical object as
+  // the retained FOLLOW target, a brief LOW_THREAT/UNKNOWN classification
+  // must not turn longitudinal tracking into a lateral maneuver.
+  if (candidate == BehaviorType::AVOID && follow_owns_avoid_target) {
+    candidate = BehaviorType::FOLLOW;
+  }
+
+  // A static-looking LiDAR target may mature into a moving vehicle/unknown,
+  // or a retained FOLLOW target may briefly look static after AVOID started.
+  // Both are explicit FSM preemption reasons, including after COMMIT.
+  if ((cancel_reclassified_avoid || follow_owns_avoid_target) &&
+      active_lateral_behavior_ == BehaviorType::AVOID) {
+    active_lateral_behavior_ = BehaviorType::KEEP;
+    maneuver_phase_ = ManeuverPhase::NONE;
+    maneuver_command_id_ = 0;
+    avoid_missing_cycles_ = 0;
   }
 
   if (IsLateralManeuver(active_lateral_behavior_)) {
@@ -83,10 +104,29 @@ Fsm::ManeuverOutput Fsm::updateManeuver(
     const bool terminal = maneuver_phase_ == ManeuverPhase::COMPLETE ||
                           maneuver_phase_ == ManeuverPhase::FAILED ||
                           maneuver_phase_ == ManeuverPhase::CANCELLED;
+
+    // AVOID target가 한두 frame 사라졌다고 PREPARE/READY transaction을
+    // KEEP으로 취소하지 않는다. COMMITTED는 아래 기존 lock 규칙이 이미
+    // 보호한다. terminal feedback과 STOP/E-STOP/FOLLOW 같은 명시적
+    // 다른 상태/위험은 유예하지 않는다.
+    if (active_lateral_behavior_ == BehaviorType::AVOID &&
+        maneuver_phase_ != ManeuverPhase::COMMITTED && !terminal) {
+      if (candidate == BehaviorType::AVOID) {
+        avoid_missing_cycles_ = 0;
+      } else if (candidate == BehaviorType::KEEP &&
+                 avoid_missing_cycles_ < avoid_release_grace_cycles_) {
+        ++avoid_missing_cycles_;
+        candidate = BehaviorType::AVOID;
+      } else {
+        avoid_missing_cycles_ = 0;
+      }
+    }
+
     if (terminal) {
       active_lateral_behavior_ = BehaviorType::KEEP;
       maneuver_phase_ = ManeuverPhase::NONE;
       maneuver_command_id_ = 0;
+      avoid_missing_cycles_ = 0;
     } else {
       const bool planned_stop_preemption =
           candidate == BehaviorType::STOP && stop_preempts_committed;
@@ -94,6 +134,7 @@ Fsm::ManeuverOutput Fsm::updateManeuver(
         active_lateral_behavior_ = BehaviorType::KEEP;
         maneuver_phase_ = ManeuverPhase::NONE;
         maneuver_command_id_ = 0;
+        avoid_missing_cycles_ = 0;
         return {candidate, StateFor(candidate, ManeuverPhase::NONE),
                 ManeuverPhase::NONE};
       }
@@ -109,6 +150,7 @@ Fsm::ManeuverOutput Fsm::updateManeuver(
       active_lateral_behavior_ = BehaviorType::KEEP;
       maneuver_phase_ = ManeuverPhase::NONE;
       maneuver_command_id_ = 0;
+      avoid_missing_cycles_ = 0;
     }
   }
 
@@ -118,6 +160,7 @@ Fsm::ManeuverOutput Fsm::updateManeuver(
     // The wire manager allocates the new command_id after this decision.
     // Bind it on the next cycle rather than capturing the previous command.
     maneuver_command_id_ = 0;
+    avoid_missing_cycles_ = 0;
     return {candidate, StateFor(candidate, maneuver_phase_),
             maneuver_phase_};
   }

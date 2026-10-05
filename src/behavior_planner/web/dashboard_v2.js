@@ -7,6 +7,7 @@
   const executionNames = ['IDLE', 'PREPARING', 'WAITING', 'READY', 'COMMITTED', 'EXECUTING', 'COMPLETED', 'FAILED'];
   const resultNames = ['NONE', 'NOT INITIALIZED', 'INVALID COMMAND', 'STALE COMMAND', 'TARGET PROJECTION FAILED', 'TARGET OBJECT LOST', 'GENERATION FAILURE', 'CURVATURE BLOCKED', 'COLLISION BLOCKED', 'TOO LATE TO CANCEL'];
   const requestNames = ['PREPARE', 'EXECUTE', 'CANCEL'];
+  const trajectorySourceNames = ['NONE', 'NEW', 'REUSED', 'LOCKED', 'SAFE STOP'];
   const lightNames = ['UNKNOWN', 'RED', 'YELLOW', 'GREEN'];
   const lightColors = ['#87939b', '#ff5263', '#ffd447', '#39e58c'];
   const movementNames = ['UNKNOWN', 'STRAIGHT', 'LEFT', 'LEFT UNPROTECTED', 'RIGHT UNPROTECTED', 'UTURN'];
@@ -28,7 +29,7 @@
     links: [], nodes: [], route: [], lights: {}, command: null, feedback: null,
     feature: null, trajectory: null, ego: null, lidarObjects: null,
     lidarMotionDebug: null, debugConfig: null, planningMarkers: null,
-    receivedAt: {}
+    recentPlanningIssue: null, receivedAt: {}
   };
   const view = {scale: 1, x: 0, y: 0, dragging: false, lastX: 0, lastY: 0, follow: false};
   const tracks = new Map();
@@ -445,6 +446,16 @@
 
     const trajectoryPoints = (trajectory.points || []).length;
     const horizon = trajectory.valid && trajectoryPoints > 1 && finite(trajectory.dt) ? (trajectoryPoints - 1) * Number(trajectory.dt) : NaN;
+    const reportsCandidateCounts = commandManeuver === 3 || commandManeuver === 4 ||
+      frenetManeuver === 3 || frenetManeuver === 4;
+    const candidateText = reportsCandidateCounts
+      ? `${feedback.valid_candidate_count ?? 0}/${feedback.generated_candidate_count ?? 0}`
+      : 'N/A';
+    const issue = data.recentPlanningIssue || {};
+    const issueAge = Date.now() / 1000 - Number(issue.observed_at);
+    const recentIssue = Number.isFinite(issueAge) && issueAge >= 0 && issueAge <= 5
+      ? `${issue.source || 'PLANNING'}: ${issue.reason || issue.detail || 'UNKNOWN'} (${issueAge.toFixed(1)}s ago)`
+      : 'NONE';
     $('planningGrid').innerHTML = kv([
       ['Vehicle state', `${vehicleStateSources[feature.vehicle_state_source] || 'UNKNOWN'} / ${feature.vehicle_state_valid ? 'VALID' : 'INVALID'}`],
       ['Ego speed', `${fmt(feature.ego_speed)} m/s`],
@@ -455,10 +466,12 @@
       ['Accepted', feedback.command_accepted ? 'YES' : 'NO'],
       ['Result', resultNames[feedback.result_code] || feedback.result_code || '–'],
       ['Plan', feedback.plan_valid ? 'VALID' : 'INVALID'],
-      ['Candidates', `${feedback.valid_candidate_count ?? 0}/${feedback.generated_candidate_count ?? 0}`],
+      ['Candidates', candidateText],
       ['Applied speed', `${fmt(feedback.applied_speed_mps)} m/s`],
       ['Trajectory', trajectory.valid ? `${trajectoryPoints} pts` : `INVALID (${trajectory.failure_reason ?? '–'})`],
-      ['Selected horizon', finite(horizon) ? `${fmt(horizon, 2)} s` : '–']
+      ['Trajectory source', trajectorySourceNames[feedback.trajectory_source] || feedback.trajectory_source || '–'],
+      ['Selected horizon', finite(horizon) ? `${fmt(horizon, 2)} s` : '–'],
+      ['Recent stop / issue', recentIssue]
     ]);
     $('riskGrid').innerHTML = kv([
       ['Raw signal', feature.traffic_light_raw_label || '–'],
@@ -601,6 +614,7 @@
       data.ego = snapshot.ego || data.ego;
       data.planningMarkers = snapshot.planning_markers || data.planningMarkers;
       data.debugConfig = snapshot.debug_config || data.debugConfig;
+      data.recentPlanningIssue = snapshot.recent_planning_issue || data.recentPlanningIssue;
       data.receivedAt = snapshot.received_at || {};
       if (snapshot.lidar_objects) {
         data.lidarObjects = snapshot.lidar_objects;

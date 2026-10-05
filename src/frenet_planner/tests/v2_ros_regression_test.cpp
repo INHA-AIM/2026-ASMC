@@ -36,7 +36,7 @@
 //               E-STOP preemption, COMPLETED 뒤 새 transaction
 //   Feedback    post-COMMIT collision SAFE_STOP에서 잠긴 진단 유지
 //
-// 계약: docs/contracts/planning/fsm-frenet-v2.md
+// 계약: docs/fsm-frenet-interface-v2.md
 
 #include <asmc_msgs/BehaviorCommand.h>
 #include <asmc_msgs/DetectedObjectArray.h>
@@ -2160,21 +2160,29 @@ int main(int argc, char** argv) {
         reset_avoid_state();
     }
 
-    std::printf("\n=== AVOID post-COMMIT long dropout ===\n");
+    std::printf("\n=== AVOID post-COMMIT SHIFT long dropout ===\n");
     {
-        // 계약 8.2.1절. COMMIT 이후에는 대상 소실이 실패 조건이 아니다.
-        // 잠긴 target_d와 context로 기동을 완주한다.
+        // 이미 SHIFT가 시작된 뒤에는 대상 소실만으로 기동을 끊지 않는다.
+        // 잠긴 target_d와 context로 장애물 옆 급복귀 없이 완주한다.
         const uint32_t id = ++command_id;
         double locked_target_d = 0.0;
         const bool executing = drive_to_executing(id, locked_target_d);
         Expect(executing, "AVOID reaches EXECUTING before the dropout");
 
+        // 현재 동적 시작거리 설정에서는 25 m target도 COMMIT 직후 잠깐
+        // TRACKING일 수 있다. target을 관측한 채 5 m 접근해 SHIFT에 먼저
+        // 들어간 뒤 dropout을 만든다.
+        const Pose2D shift_ego = PoseAt(waypoints, kAvoidEgoS + 5.0);
+        harness.SetObjects({harness.MakeVehicle(21, kAvoidObstacleS, 0.0)});
+        Command avoid = make_avoid(id, Command::EXECUTE);
+        harness.BeginWindow();
+        harness.RunCycles(avoid, shift_ego, kCruiseSpeed, 4);
+
         // 대상을 제거하고 유예보다 훨씬 오래 유지한다. ego는 clearance
         // 이전에 고정해 completion이 먼저 일어나지 않게 한다.
         harness.SetObjects({});
-        Command avoid = make_avoid(id, Command::EXECUTE);
         harness.BeginWindow();
-        harness.RunCycles(avoid, avoid_ego, kCruiseSpeed, 25);
+        harness.RunCycles(avoid, shift_ego, kCruiseSpeed, 25);
         const asmc_msgs::Trajectory* locked_ptr =
             harness.LastTrajectoryInWindow();
         const double locked_d = TrajectoryEndpointD(waypoints, locked_ptr);
@@ -2182,7 +2190,7 @@ int main(int argc, char** argv) {
         const bool got = harness.LastFor(id, feedback);
         Expect(got && feedback.execution_state == Feedback::EXECUTING &&
                    feedback.result_code != Feedback::TARGET_OBJECT_LOST,
-               "post-COMMIT dropout does not report TARGET_OBJECT_LOST");
+               "post-COMMIT SHIFT dropout does not report TARGET_OBJECT_LOST");
         Expect(got && feedback.execution_state != Feedback::FAILED &&
                    feedback.trajectory_source == Feedback::TRAJECTORY_LOCKED &&
                    feedback.plan_valid,
@@ -2193,6 +2201,37 @@ int main(int argc, char** argv) {
         Expect(std::isfinite(locked_d) &&
                    std::fabs(locked_d - locked_target_d) < 0.75,
                "post-COMMIT dropout keeps the lateral trajectory");
+        reset_avoid_state();
+    }
+
+    std::printf("\n=== AVOID post-COMMIT TRACKING long dropout ===\n");
+    {
+        // 횡이동을 시작하기 전 먼 target이 사라지면, 마지막 obstacle_s를
+        // 향해 허공으로 회피하지 않고 유예 뒤 terminal LOST를 올린다.
+        constexpr double kFarObstacleS = kAvoidObstacleS + 55.0;
+        harness.SetObjects({harness.MakeVehicle(21, kFarObstacleS, 0.0)});
+        const uint32_t id = ++command_id;
+        Command avoid = make_avoid(id, Command::PREPARE);
+        Feedback feedback;
+        const bool ready = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::READY, 40, feedback);
+        avoid.execution_request = Command::EXECUTE;
+        const bool committed = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::COMMITTED, 40, feedback);
+        const bool executing = harness.RunUntilState(
+            avoid, avoid_ego, kCruiseSpeed, Feedback::EXECUTING, 40, feedback);
+        Expect(ready && committed && executing,
+               "far AVOID reaches EXECUTING while still approaching");
+
+        harness.SetObjects({});
+        harness.BeginWindow();
+        harness.RunCycles(avoid, avoid_ego, kCruiseSpeed, 15);
+        harness.Settle(avoid_ego, kCruiseSpeed, 2);
+        Feedback lost;
+        Expect(harness.LastFor(id, lost) &&
+                   lost.execution_state == Feedback::FAILED &&
+                   lost.result_code == Feedback::TARGET_OBJECT_LOST,
+               "post-COMMIT TRACKING dropout becomes TARGET_OBJECT_LOST");
         reset_avoid_state();
     }
 

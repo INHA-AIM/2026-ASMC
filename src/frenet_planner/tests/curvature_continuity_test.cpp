@@ -21,6 +21,7 @@
 #include "frenet_planner/Math/FrenetConverter.hpp"
 #include "frenet_planner/Pipeline/TrajectoryRequest.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -76,6 +77,52 @@ ReferenceConfig MakeReferenceConfig() {
     return config;
 }
 
+FrenetPath MakeAnalyticCurvatureProbe() {
+    FrenetPath path{};
+    path.t = {0.0, 1.0, 2.0, 3.0};
+    path.s = {0.0, 10.0, 20.0, 30.0};
+    path.s_d = {10.0, 10.0, 10.0, 10.0};
+    path.s_dd = {0.0, 0.0, 0.0, 0.0};
+    path.s_ddd = {0.0, 0.0, 0.0, 0.0};
+    path.d = {0.0, 0.0, 0.0, 0.0};
+    path.d_d = {0.0, 0.0, 0.0, 0.0};
+    path.d_dd = {30.0, 30.0, 30.0, 30.0};
+    path.valid = true;
+    return path;
+}
+
+void TestCurvatureFilterMatchesEmittedRepresentation() {
+    const RefLine straight = BuildRefLine(
+        {0.0, 10.0, 20.0, 30.0}, {0.0, 0.0, 0.0, 0.0},
+        MakeReferenceConfig(),
+        /*max_curvature=*/1.0);
+    KinematicLimits limits{};
+    limits.max_lateral_accel = 100.0;
+    limits.max_longitudinal_accel = 100.0;
+    limits.max_curvature = 0.23;
+    limits.max_longitudinal_jerk = 100.0;
+
+    std::vector<FrenetPath> hybrid{MakeAnalyticCurvatureProbe()};
+    const CartesianPath emitted = ConvertToCartesianPath(hybrid.front(), straight);
+    Expect(!emitted.kappa.empty() && std::fabs(emitted.kappa.front()) > 0.23,
+           "setup: final HYBRID trajectory exceeds the curvature limit");
+    FilterByCurvature(hybrid, straight, limits);
+    Expect(!hybrid.front().valid,
+           "curvature filter rejects the exact HYBRID kappa that is published");
+
+    std::vector<FrenetPath> geometric{MakeAnalyticCurvatureProbe()};
+    const CartesianPath stop_emitted = ConvertToCartesianPath(
+        geometric.front(), straight,
+        CartesianGeometryMode::GEOMETRIC_YAW_CURVATURE);
+    Expect(!stop_emitted.kappa.empty() &&
+               std::fabs(stop_emitted.kappa.front()) < 1e-9,
+           "setup: STOP geometric output keeps straight-path curvature");
+    FilterByCurvature(geometric, straight, limits,
+                      CartesianGeometryMode::GEOMETRIC_YAW_CURVATURE);
+    Expect(geometric.front().valid,
+           "STOP filter uses the same geometric kappa it publishes");
+}
+
 }  // namespace
 
 // CASE B1/B3/B4: 실제 MORAI 스냅샷 재현. 유효 candidate가 남아야 하고,
@@ -125,6 +172,18 @@ void TestMoraiSnapshotsProduceValidCurvatureFeasiblePath() {
                std::string(snap.label) +
                    ": external KEEP produces a trajectory at the MORAI "
                    "curvature-starvation snapshot (no longer 0 valid candidates)");
+
+        if (ok && !path.kappa.empty()) {
+            double emitted_max_curvature = 0.0;
+            for (double kappa : path.kappa) {
+                emitted_max_curvature =
+                    std::max(emitted_max_curvature, std::fabs(kappa));
+            }
+            Expect(emitted_max_curvature <= 0.23 + 1e-9,
+                   std::string(snap.label) +
+                       ": selected Cartesian trajectory obeys the published-"
+                       "curvature limit");
+        }
 
         // path.kappa(최종 CartesianPath)는 analytic 공식이라 저속에서
         // ComputeGeometricPath 기반 production 필터(FilterByCurvature)가
@@ -231,6 +290,7 @@ void TestNormalKeepStillRecentersToCenter() {
 }
 
 int main() {
+    TestCurvatureFilterMatchesEmittedRepresentation();
     TestMoraiSnapshotsProduceValidCurvatureFeasiblePath();
     TestNormalKeepStillRecentersToCenter();
 

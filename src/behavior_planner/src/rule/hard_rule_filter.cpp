@@ -17,6 +17,24 @@ HardConstraint HardRuleFilter::apply(const UrbanFeature& feature,
   hard.max_speed =
       feature.route.speed_limit > 0.0 ? feature.route.speed_limit : 1e9;
 
+  // light_state remains UNKNOWN when the camera label is stale or
+  // not_detected. A non-UNKNOWN state therefore means a signal was actually
+  // observed and associated with the next map stop line. Apply only a normal
+  // speed ceiling here: green must not request STOP/E-STOP.
+  const bool visible_route_signal =
+      feature.signal.has_stop_line &&
+      feature.signal.light_state != TrafficLightState::UNKNOWN &&
+      std::isfinite(feature.signal.distance_to_stop_line) &&
+      feature.signal.distance_to_stop_line >= 0.0;
+  if (visible_route_signal &&
+      std::isfinite(traffic_stop_config_.visible_signal_speed_limit) &&
+      traffic_stop_config_.visible_signal_speed_limit > 0.0) {
+    hard.max_speed = std::min(
+        hard.max_speed, traffic_stop_config_.visible_signal_speed_limit);
+    hard.signal_approach_speed_limit = true;
+    result += "visible_signal_speed_limit;";
+  }
+
   // distance_to_stop_line은 물리 정지선까지의 거리지만 Frenet에 전달되는
   // 목표는 target_offset만큼 뒤이고, Frenet도 stop_buffer를 남긴다. 따라서
   // 현재 속도에서 편안하게 감속하는 데 필요한 거리뿐 아니라 두 여유 거리와

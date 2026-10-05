@@ -36,6 +36,7 @@ class V2CommandManager {
   uint32_t next_command_id_ = 0;
   bool has_active_command_ = false;
   bool active_transaction_locked_ = false;
+  bool active_signal_speed_limit_ = false;
 };
 
 }  // namespace behavior_planner

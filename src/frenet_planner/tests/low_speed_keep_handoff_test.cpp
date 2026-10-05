@@ -12,10 +12,14 @@
 // 실제 production FrenetPlanner::Plan()을 그대로 호출한다.
 
 #include "frenet_planner/frenet_planner.hpp"
+#include "frenet_planner/Math/FrenetConverter.hpp"
+#include "frenet_planner/Reference/Reference.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -26,6 +30,15 @@ int g_failures = 0;
 void Expect(bool condition, const std::string& name) {
     if (condition) std::cout << "[PASS] " << name << '\n';
     else { std::cerr << "[FAIL] " << name << '\n'; ++g_failures; }
+}
+
+double MaxAbsCurvature(const CartesianPath& path) {
+    double maximum = 0.0;
+    for (double kappa : path.kappa) {
+        if (!std::isfinite(kappa)) return std::numeric_limits<double>::infinity();
+        maximum = std::max(maximum, std::fabs(kappa));
+    }
+    return maximum;
 }
 
 CartesianState LoadPoseNearArcLength(const std::string& path, double target_s,
@@ -69,6 +82,17 @@ std::string MakeLocalConfig(const std::string& source, const std::string& waypoi
         }
     }
     return out_path;
+}
+
+ReferenceConfig MakeReferenceConfig() {
+    ReferenceConfig config{};
+    config.closure_tolerance_m = 0.05;
+    config.smoothing_window_m = 10.0;
+    config.resample_ds = 0.5;
+    config.relax_max_iter = 300;
+    config.relax_step = 0.3;
+    config.ego_projection_search_window = 30.0;
+    return config;
 }
 
 }  // namespace
@@ -120,6 +144,75 @@ int main() {
                     "speed=" + std::to_string(speed) +
                         ": fallback/normal trajectory has no negative velocity "
                         "sample (LOCK-1 invariant holds)");
+            Expect(MaxAbsCurvature(path) <= 0.23 + 1e-6,
+                    "speed=" + std::to_string(speed) +
+                        ": fallback/normal trajectory obeys the published "
+                        "curvature limit");
+        }
+    }
+
+    // MORAI 재현: 급커브에서 정상 KEEP 후보가 곡률로 전부 탈락하고
+    // v<1.5 m/s near-low-speed fallback으로 넘어갔을 때, 기존 고정 복귀
+    // 거리는 첫 샘플 kappa=0.25243을 발행해 MPC(0.23607) STOP을 만들었다.
+    // fallback은 횡복귀 거리를 자동으로 늘려 Frenet의 더 보수적인 0.23
+    // 계약 안의 경로만 반환해야 한다.
+    {
+        RefLine ref;
+        Expect(LoadReferenceLine(waypoint_file, ref, MakeReferenceConfig(),
+                                 /*max_curvature=*/0.23),
+               "curvature fallback snapshot: reference line loads");
+
+        FrenetPlanner planner;
+        Expect(planner.Init(config),
+               "curvature fallback snapshot: planner initializes");
+
+        CartesianState ego{};
+        ego.x = -94.434454;
+        ego.y = -356.620170;
+        ego.yaw = 1.7649386;
+        ego.v = 0.66832665;
+        ego.a = -2.4;
+
+        PlannerCommand snapshot_keep{};
+        snapshot_keep.mode = LANE_KEEPING;
+        snapshot_keep.has_target_speed = true;
+        snapshot_keep.target_speed = 4.8;
+        CartesianPath path;
+        const bool ok = planner.Plan(ego, no_objects, snapshot_keep, path);
+        Expect(ok && path.x.size() >= 2,
+               "curvature fallback snapshot: KEEP returns a usable path");
+        if (ok) {
+            const double max_curvature = MaxAbsCurvature(path);
+            Expect(max_curvature <= 0.23 + 1e-6,
+                   "curvature fallback snapshot: adaptive lateral recovery "
+                   "stays within max_curvature");
+
+            double ego_s = 0.0, ego_s_dot = 0.0, ego_s_ddot = 0.0;
+            double ego_d = 0.0, ego_d_prime = 0.0, ego_d_pprime = 0.0;
+            CartesianToFrenet(ref, ego, ego_s, ego_s_dot, ego_s_ddot,
+                              ego_d, ego_d_prime, ego_d_pprime,
+                              /*s_hint=*/nullptr, /*search_window=*/30.0);
+
+            CartesianState terminal{};
+            terminal.x = path.x.back();
+            terminal.y = path.y.back();
+            terminal.yaw = path.yaw.back();
+            terminal.v = path.v.back();
+            terminal.a = path.a.back();
+            terminal.kappa = path.kappa.back();
+            double terminal_s = 0.0, terminal_s_dot = 0.0;
+            double terminal_s_ddot = 0.0, terminal_d = 0.0;
+            double terminal_d_prime = 0.0, terminal_d_pprime = 0.0;
+            CartesianToFrenet(ref, terminal, terminal_s, terminal_s_dot,
+                              terminal_s_ddot, terminal_d,
+                              terminal_d_prime, terminal_d_pprime, &ego_s,
+                              /*search_window=*/30.0);
+            std::printf("  curvature fallback snapshot: max|kappa|=%.6f "
+                        "d %.3f -> %.3f\n",
+                        max_curvature, ego_d, terminal_d);
+            Expect(std::fabs(terminal_d) < std::fabs(ego_d),
+                   "curvature fallback snapshot: feasible path still makes "
+                   "progress toward d=0");
         }
     }
 

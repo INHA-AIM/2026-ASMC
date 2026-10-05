@@ -1,5 +1,6 @@
 #include "mpc_controller_node.hpp"
 
+#include <cstdio>
 #include <cmath>
 #include <stdexcept>
 #include <string>
@@ -179,6 +180,22 @@ void MpcControllerNode::controlTimerCallback(const ros::SteadyTimerEvent&) {
     const ReferenceValidationResult validation =
         ValidateReference(reference, controller_.params());
     if (!validation.ok()) {
+        if (validation.status ==
+                ReferenceValidationStatus::CURVATURE_OUT_OF_RANGE &&
+            validation.failed_index < reference.k_ref.size()) {
+            const MPCParams& params = controller_.params();
+            const double curvature_limit = params.steering_curvature_gain *
+                std::tan(params.steering_max) /
+                std::max(params.wheelbase, 1e-6);
+            char reason[192];
+            std::snprintf(
+                reason, sizeof(reason),
+                "CURVATURE_OUT_OF_RANGE index=%zu reference=%.5f limit=%.5f",
+                validation.failed_index,
+                reference.k_ref[validation.failed_index], curvature_limit);
+            publishStop(reason);
+            return;
+        }
         publishStop(ReferenceValidationStatusName(validation.status));
         return;
     }

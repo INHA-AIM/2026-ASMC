@@ -101,6 +101,38 @@ int main() {
     Expect(std::abs(geometry::PolygonArea(current) - geometry::PolygonArea(future)) < 1e-9,
            "future obstacle translation preserves footprint area");
 
+    TrackedObject heading_disagrees = MakeObstacle(
+        5.0, 0.0, -1.5, 0.0, 0.5 * std::acos(-1.0));
+    heading_disagrees.speed = 1.5;
+    const PredictedObjectPose velocity_pose =
+        PredictTrackedObjectPose(heading_disagrees, 2.0);
+    Expect(std::fabs(velocity_pose.x - 2.0) < 1e-9 &&
+               std::fabs(velocity_pose.y) < 1e-9,
+           "object center prediction uses vx/vy rather than OBB heading");
+
+    TrackedObject turning = heading_disagrees;
+    turning.x = 0.0;
+    turning.y = 0.0;
+    turning.vx = 1.0;
+    turning.vy = 0.0;
+    turning.yaw_rate = 0.5 * std::acos(-1.0);
+    const PredictedObjectPose turning_pose =
+        PredictTrackedObjectPose(turning, 1.0);
+    const double expected_turn_radius = 2.0 / std::acos(-1.0);
+    Expect(std::fabs(turning_pose.x - expected_turn_radius) < 1e-9 &&
+               std::fabs(turning_pose.y - expected_turn_radius) < 1e-9,
+           "turn-rate prediction rotates the vx/vy vector, not OBB heading");
+
+    TrackedObject low_threat = moving;
+    low_threat.motion_state = ObjectMotionState::LOW_THREAT;
+    Expect(!CheckObstacleOverlap(ego_footprint, {}, low_threat, 2.0),
+           "LOW_THREAT ignores noisy velocity for future collision");
+    const PredictedObjectPose static_pose =
+        PredictTrackedObjectPose(low_threat, 2.0);
+    Expect(std::fabs(static_pose.x - low_threat.x) < 1e-9 &&
+               std::fabs(static_pose.y - low_threat.y) < 1e-9,
+           "LOW_THREAT center remains stationary while raw velocity is retained");
+
     TrackedObject invalid = moving;
     invalid.geometry_valid = false;
     Expect(CheckObstacleOverlap(ego_footprint, {}, invalid, 0.0),

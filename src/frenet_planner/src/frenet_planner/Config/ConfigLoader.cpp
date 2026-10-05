@@ -173,6 +173,12 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/avoid/committed_target_index_cost_scale",
             avoid_cfg.committed_target_index_cost_scale);
     REQUIRE("planner/avoid/direction_tiebreak_cost",    avoid_cfg.direction_tiebreak_cost);
+    REQUIRE("planner/avoid/spatial_reconnect_enabled",  avoid_cfg.spatial_reconnect_enabled);
+    REQUIRE("planner/avoid/reconnect_max_longitudinal_delta",
+            avoid_cfg.reconnect_max_longitudinal_delta);
+    REQUIRE("planner/avoid/reconnect_max_lateral_delta",
+            avoid_cfg.reconnect_max_lateral_delta);
+    REQUIRE("planner/avoid/reconnect_max_size_delta", avoid_cfg.reconnect_max_size_delta);
 
     REQUIRE("planner/lane_change/lateral_position_tolerance", lane_change_cfg.lateral_position_tolerance);
     REQUIRE("planner/lane_change/lateral_speed_tolerance",     lane_change_cfg.lateral_speed_tolerance);

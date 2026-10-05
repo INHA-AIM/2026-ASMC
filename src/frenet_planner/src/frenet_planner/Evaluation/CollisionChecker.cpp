@@ -23,16 +23,48 @@ double LateralCenterDistance(const FrenetPath& path, size_t index,
 
 }  // namespace
 
+std::pair<double, double> EffectiveObjectVelocity(
+    const TrackedObject& object) {
+    // LOW_THREAT만 perception이 정적으로 확정한 상태다. 원본 vx/vy는
+    // 메시지와 TrackedObject에 보존하되 미래 충돌 위치에는 잡음을 쓰지 않는다.
+    if (object.motion_state == ObjectMotionState::LOW_THREAT) {
+        return {0.0, 0.0};
+    }
+    return {object.vx, object.vy};
+}
+
+std::pair<double, double> PredictTrackedObjectVelocity(
+    const TrackedObject& object, double t) {
+    const auto velocity = EffectiveObjectVelocity(object);
+    if (!std::isfinite(t) || !std::isfinite(object.yaw_rate)) {
+        return velocity;
+    }
+    const double angle = object.yaw_rate * t;
+    const double cosine = std::cos(angle);
+    const double sine = std::sin(angle);
+    return {cosine * velocity.first - sine * velocity.second,
+            sine * velocity.first + cosine * velocity.second};
+}
+
 PredictedObjectPose PredictTrackedObjectPose(const TrackedObject& obj, double t) {
     PredictedObjectPose pose;
+    const auto velocity = EffectiveObjectVelocity(obj);
+    // OBB heading은 형상의 방향이고 이동 방향이 아니다. 중심 이동은 항상
+    // perception이 준 map-frame 절대속도 vx/vy로 시작한다. yaw_rate가
+    // 있으면 그 속도 벡터를 회전시켜 constant-turn-rate로 적분한다.
     if (std::fabs(obj.yaw_rate) > 1e-3) {
-        pose.x = obj.x + obj.speed / obj.yaw_rate *
-            (std::sin(obj.heading + obj.yaw_rate * t) - std::sin(obj.heading));
-        pose.y = obj.y - obj.speed / obj.yaw_rate *
-            (std::cos(obj.heading + obj.yaw_rate * t) - std::cos(obj.heading));
+        const double angle = obj.yaw_rate * t;
+        const double sine = std::sin(angle);
+        const double cosine = std::cos(angle);
+        pose.x = obj.x +
+            (velocity.first * sine + velocity.second * (cosine - 1.0)) /
+                obj.yaw_rate;
+        pose.y = obj.y +
+            (velocity.first * (1.0 - cosine) + velocity.second * sine) /
+                obj.yaw_rate;
     } else {
-        pose.x = obj.x + obj.speed * std::cos(obj.heading) * t;
-        pose.y = obj.y + obj.speed * std::sin(obj.heading) * t;
+        pose.x = obj.x + velocity.first * t;
+        pose.y = obj.y + velocity.second * t;
     }
     pose.heading = obj.heading + obj.yaw_rate * t;
     return pose;
@@ -74,8 +106,10 @@ geometry::Polygon2D PredictObstacleFootprint(
     const TrackedObject& obstacle, double prediction_time) {
     if (!obstacle.geometry_valid || !std::isfinite(obstacle.vx) ||
         !std::isfinite(obstacle.vy) || !std::isfinite(prediction_time)) return {};
+    const PredictedObjectPose pose =
+        PredictTrackedObjectPose(obstacle, prediction_time);
     const geometry::Corners8 predicted = geometry::TranslateCorners(
-        obstacle.corners, obstacle.vx, obstacle.vy, prediction_time);
+        obstacle.corners, pose.x - obstacle.x, pose.y - obstacle.y, 1.0);
     return geometry::ComputeConvexHull(
         geometry::ProjectCornersToXY(predicted));
 }
@@ -86,8 +120,10 @@ bool CheckObstacleOverlap(const geometry::Polygon2D& ego_footprint,
                           double prediction_time) {
     if (!obstacle.geometry_valid || !std::isfinite(obstacle.vx) ||
         !std::isfinite(obstacle.vy) || !std::isfinite(prediction_time)) return true;
+    const PredictedObjectPose pose =
+        PredictTrackedObjectPose(obstacle, prediction_time);
     const geometry::Corners8 predicted = geometry::TranslateCorners(
-        obstacle.corners, obstacle.vx, obstacle.vy, prediction_time);
+        obstacle.corners, pose.x - obstacle.x, pose.y - obstacle.y, 1.0);
     geometry::ZRange obstacle_z;
     if (obstacle.z_valid) obstacle_z = geometry::ComputeZRange(predicted);
     if (!geometry::CheckZOverlap(ego_z, obstacle_z)) return false;

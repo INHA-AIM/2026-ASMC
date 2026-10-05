@@ -149,7 +149,8 @@ void CartesianToFrenet(const RefLine& ref, const CartesianState& cs,
 // 0/0 = NaN이 되고, 그 NaN이 FrenetToCartesian의 yaw/kappa/v/a 전부를 오염시킨다
 // (진짜 값은 전부 0이지만 "0 * NaN = NaN"으로 뒤덮임). 저속 구간만 골라
 // 안전한 값(위치 기반 yaw/kappa, s_dot/s_ddot을 그대로 v/a로)으로 대체한다.
-CartesianPath ConvertToCartesianPath(const FrenetPath& path, const RefLine& ref) {
+CartesianPath ConvertToCartesianPath(const FrenetPath& path, const RefLine& ref,
+                                     CartesianGeometryMode geometry_mode) {
     CartesianPath result;
 
     const size_t n = path.t.size();
@@ -185,8 +186,11 @@ CartesianPath ConvertToCartesianPath(const FrenetPath& path, const RefLine& ref)
 
         result.x.push_back(cs.x);
         result.y.push_back(cs.y);
-        result.yaw.push_back(cs.yaw);
-        result.kappa.push_back(cs.kappa);
+        const bool geometric_yaw_curvature =
+            geometry_mode == CartesianGeometryMode::GEOMETRIC_YAW_CURVATURE;
+        result.yaw.push_back(geometric_yaw_curvature ? geo.yaw[i] : cs.yaw);
+        result.kappa.push_back(
+            geometric_yaw_curvature ? geo.kappa[i] : cs.kappa);
         result.v.push_back(cs.v);
         result.a.push_back(cs.a);
     }

@@ -1,4 +1,30 @@
 /* LiDAR-oriented V2 diagnostics. The legacy V1 page keeps dashboard.css. */
+.legend-toggle {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 2;
+}
+
+.legend-toggle summary {
+  width: max-content;
+  padding: 7px 10px;
+  border: 1px solid #203342;
+  border-radius: 8px;
+  background: #0a151fdd;
+  color: #a9bac5;
+  cursor: pointer;
+  font-size: 11px;
+  list-style-position: inside;
+  backdrop-filter: blur(8px);
+}
+
+.legend-toggle .legend {
+  left: 0;
+  bottom: 36px;
+  width: min(650px, calc(100vw - 426px));
+}
+
 .hero-v2 {
   display: grid !important;
   grid-template-columns: 1.35fr 1fr;

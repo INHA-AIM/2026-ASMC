@@ -348,6 +348,21 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
     if (!CheckPositiveFinite(avoid_cfg.direction_tiebreak_cost,
                               "planner/avoid/direction_tiebreak_cost", error_message))
         return false;
+    if (!IsFinite(avoid_cfg.reconnect_max_longitudinal_delta) ||
+        avoid_cfg.reconnect_max_longitudinal_delta < 0.0) {
+        error_message = "planner/avoid/reconnect_max_longitudinal_delta must be finite and >= 0";
+        return false;
+    }
+    if (!IsFinite(avoid_cfg.reconnect_max_lateral_delta) ||
+        avoid_cfg.reconnect_max_lateral_delta < 0.0) {
+        error_message = "planner/avoid/reconnect_max_lateral_delta must be finite and >= 0";
+        return false;
+    }
+    if (!IsFinite(avoid_cfg.reconnect_max_size_delta) ||
+        avoid_cfg.reconnect_max_size_delta < 0.0) {
+        error_message = "planner/avoid/reconnect_max_size_delta must be finite and >= 0";
+        return false;
+    }
 
     // --- lane_change ---
     if (!IsFinite(lane_change_cfg.lateral_position_tolerance) ||

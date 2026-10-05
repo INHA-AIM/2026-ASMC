@@ -61,6 +61,7 @@ asmc_msgs::DetectedObject MakeObject(double center_x, double center_y) {
     asmc_msgs::DetectedObject object;
     object.id = 17;
     object.type = 2;
+    object.motion_state = asmc_msgs::DetectedObject::MOTION_DYNAMIC_PENDING;
     object.center.x = center_x;
     object.center.y = center_y;
     object.center.z = 1.0;
@@ -252,6 +253,8 @@ int main() {
                object_message, objects) ==
                ConversionStatus::OK && objects.size() == 1 &&
                objects[0].id == 17 &&
+               objects[0].motion_state ==
+                   ObjectMotionState::DYNAMIC_PENDING &&
                objects[0].vx == 2.0 && objects[0].vy == -0.5 &&
                objects[0].geometry_valid &&
                objects[0].z_valid &&

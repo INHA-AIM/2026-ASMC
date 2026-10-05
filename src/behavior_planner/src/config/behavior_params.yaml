@@ -4,9 +4,27 @@ v2: {command_validity_seconds: 0.5, feedback_stale_seconds: 1.0}
 # Match Frenet's configured FOLLOW acquisition gate. A previously acquired
 # target is retained briefly across perception dropouts before KEEP release.
 follow: {max_target_distance: 60.0, max_lateral_offset: 1.75, release_delay_s: 0.4}
-# AVOID is selected only when an UNKNOWN/STATIC OBB overlaps the ego-sized
-# route corridor. max_lateral_offset remains a defensive acquisition ceiling.
-avoid: {max_target_distance: 120.0, max_lateral_offset: 1.75, path_margin_m: 0.4}
+# AVOID uses the OBB's lateral overlap with the ego swept corridor. Strong
+# physical intrusion is immediate; boundary/margin intrusion needs a meaningful
+# share for consecutive frames. Height is deliberately not used here.
+avoid:
+  max_target_distance: 120.0
+  max_lateral_offset: 1.75
+  path_margin_m: 0.4
+  min_physical_overlap_m: 0.10
+  min_margin_overlap_m: 0.20
+  min_overlap_ratio: 0.20
+  # physical overlap / min(OBB projected width, ego width)
+  immediate_blocking_ratio: 0.70
+  blocking_enter_ratio: 0.35
+  blocking_exit_ratio: 0.15
+  overlap_confirm_cycles: 2
+  overlap_release_cycles: 3
+  reconnect_grace_cycles: 5
+  reconnect_max_longitudinal_delta_m: 3.0
+  reconnect_max_lateral_delta_m: 0.8
+  reconnect_max_size_delta_m: 1.5
+  release_grace_cycles: 3
 objects: {input_type: "morai", stale_seconds: 0.3}
 map:
   link_set_path: "$(find behavior_planner)/src/config/link_set.json"
@@ -16,8 +34,11 @@ traffic_light:
   use_mock: false
   topic: "/traffic_light/state"
   stale_seconds: 1.0
+  # 다음 지도 정지선과 연관된 신호가 실제 인식되면 색상과 무관하게 적용한다.
+  # GREEN은 KEEP/FOLLOW/AVOID를 유지하고 일반 Frenet 속도 궤적으로 감속한다.
+  visible_speed_limit_kph: 30.0
   mock_path: "$(find behavior_planner)/src/config/traffic_light_mock.yaml"
-vehicle: {length: 4.7, width: 1.85, wheelbase: 3.0}
+vehicle: {length: 4.635, width: 1.892, wheelbase: 3.0}
 lane: {default_width: 3.5}
 safety:
   front_min_gap: 8.0

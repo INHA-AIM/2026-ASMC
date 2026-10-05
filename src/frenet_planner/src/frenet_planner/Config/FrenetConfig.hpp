@@ -119,6 +119,13 @@ struct AvoidConfig {
     // 아닌 쪽에 더하는 미세 tie-break 가중치. 실제 궤적 품질에는 영향을
     // 주지 않고 방향 선택의 대칭만 깬다.
     double direction_tiebreak_cost;
+
+    // LiDAR tracker가 동일 물체에 새 ID를 부여했을 때, 직전 AVOID target과
+    // 공간적으로 유일하게 이어지는 관측을 같은 물체로 재연결한다.
+    bool spatial_reconnect_enabled;
+    double reconnect_max_longitudinal_delta; // [m]
+    double reconnect_max_lateral_delta;      // [m]
+    double reconnect_max_size_delta;         // [m]
 };
 
 // =========================================================

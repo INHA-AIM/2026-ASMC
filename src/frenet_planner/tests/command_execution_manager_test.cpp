@@ -957,7 +957,9 @@ int main() {
                "ownership: the maneuver stays EXECUTING");
     }
     {
-        // E-STOP은 정상 preempt이므로 들어온 명령을 계획한다.
+        // AVOID가 COMMIT됐더라도 core가 아직 TRACKING(횡이동 전)임을 확인한
+        // node는 새 FSM transaction으로 교체할 수 있다. 이 opt-in이 없으면
+        // 기존 비선점 계약이 그대로 적용된다.
         CommandExecutionManager manager = MakeFullManager();
         Command avoid = MakeLaneChange(405, Command::PREPARE);
         avoid.maneuver_type = Command::AVOID;
@@ -967,12 +969,35 @@ int main() {
         manager.NotifyCommitted();
         manager.NotifyExecutionStarted();
 
-        const auto emergency = manager.Accept(MakeEmergencyStop(406));
+        const auto replaced = manager.Accept(
+            MakeKeep(406), /*allow_committed_tracking_preemption=*/true);
+        Expect(replaced.command_accepted && replaced.transaction_started &&
+                   replaced.planning_target ==
+                       PlanningTarget::INCOMING_COMMAND,
+               "tracking preemption: a valid FSM command starts a new "
+               "transaction");
+        Expect(manager.command_id() == 406 &&
+                   manager.maneuver_type() == Command::KEEP &&
+                   manager.execution_state() == Feedback::EXECUTING,
+               "tracking preemption: the new KEEP owns planning");
+    }
+    {
+        // E-STOP은 정상 preempt이므로 들어온 명령을 계획한다.
+        CommandExecutionManager manager = MakeFullManager();
+        Command avoid = MakeLaneChange(407, Command::PREPARE);
+        avoid.maneuver_type = Command::AVOID;
+        avoid.primary_object_id = 21;
+        manager.Accept(avoid);
+        manager.NotifyPlanSucceeded();
+        manager.NotifyCommitted();
+        manager.NotifyExecutionStarted();
+
+        const auto emergency = manager.Accept(MakeEmergencyStop(408));
         Expect(emergency.planning_target == PlanningTarget::INCOMING_COMMAND,
                "ownership: EMERGENCY_STOP plans the incoming command");
         Expect(emergency.transaction_started,
                "ownership: EMERGENCY_STOP starts a transaction boundary");
-        Expect(manager.active_command().command_id == 406 &&
+        Expect(manager.active_command().command_id == 408 &&
                    manager.active_command().maneuver_type ==
                        Command::EMERGENCY_STOP,
                "ownership: EMERGENCY_STOP becomes the active command");

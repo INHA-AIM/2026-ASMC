@@ -63,7 +63,9 @@ std::vector<FrenetPath> ResolveManeuver(const FrenetState& start,
                                          const CollisionCheckConfig& collision_cfg,
                                          const StopConfig& stop_cfg,
                                          const MergeConfig& merge_cfg,
-                                         PlannerDebugStats* stats = nullptr);
+                                         PlannerDebugStats* stats = nullptr,
+                                         CartesianGeometryMode geometry_mode =
+                                             CartesianGeometryMode::HYBRID);
 
 // =========================================================
 // R5: TrajectoryRequest 기반 candidate 생성 — KEEP/FOLLOW/STOP 전용.
@@ -89,6 +91,7 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
     const std::vector<TrackedObject>& obstacles,
     const VehicleShape& vehicle_shape,
     const CollisionCheckConfig& collision_cfg,
-    PlannerDebugStats* stats = nullptr);
+    PlannerDebugStats* stats = nullptr,
+    CartesianGeometryMode geometry_mode = CartesianGeometryMode::HYBRID);
 
 #endif  // FRENET_GENERATOR_CANDIDATE_COMBINER_HPP

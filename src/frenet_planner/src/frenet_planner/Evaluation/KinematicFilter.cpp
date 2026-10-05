@@ -50,17 +50,19 @@ void FilterLongitudinalByKinematicLimits(std::vector<FrenetPath>& candidates,
 
 void FilterByCurvature(std::vector<FrenetPath>& combined,
                         const RefLine& ref,
-                        const KinematicLimits& limits) {
-    // 시간미분->호길이미분(TimeDerivToArcDeriv, s_dot로 나눔) 기반 계산은 저속에서
-    // 발산해 STOP/EMERGENCY처럼 정지에 수렴하는 후보를 전부 무효화시켰다
-    // (FrenetConverter.hpp의 ComputeGeometricPath 설계 노트 참고). 위치(x,y)
-    // 기반 기하학적 곡률로 대체해 고속/저속 구분 없이 일관되게 판정한다.
+                        const KinematicLimits& limits,
+                        CartesianGeometryMode geometry_mode) {
+    // 반드시 최종 발행 경로와 같은 변환 정책을 사용한다. 과거에는 여기서
+    // ComputeGeometricPath의 kappa를 검사한 뒤 ConvertToCartesianPath가 정상
+    // 속도 샘플의 kappa를 analytic 값으로 바꾸었다. 그 결과 Frenet 필터를
+    // 통과한 후보가 MPC 입력에서는 조향 한계를 넘을 수 있었다.
     for (auto& path : combined) {
         if (!path.valid) continue;
 
-        GeometricPath geo = ComputeGeometricPath(path.s, path.d, ref);
-        for (double k : geo.kappa) {
-            if (std::abs(k) > limits.max_curvature) {
+        const CartesianPath emitted =
+            ConvertToCartesianPath(path, ref, geometry_mode);
+        for (double k : emitted.kappa) {
+            if (!std::isfinite(k) || std::abs(k) > limits.max_curvature) {
                 path.valid = false;
                 path.rejection_reason = RejectionReason::CURVATURE;
                 break;
@@ -80,11 +82,12 @@ void FilterByCartesianLateralAcceleration(std::vector<FrenetPath>& candidates,
         std::max(0.0, std::min(utilization, 1.0));
     for (auto& path : candidates) {
         if (!path.valid) continue;
-        const GeometricPath geo = ComputeGeometricPath(path.s, path.d, ref);
-        const size_t count = std::min(geo.kappa.size(), path.s_d.size());
+        const CartesianPath emitted = ConvertToCartesianPath(path, ref);
+        const size_t count = std::min(emitted.kappa.size(), emitted.v.size());
         for (size_t i = 0; i < count; ++i) {
-            const double lateral_accel = path.s_d[i] * path.s_d[i] * std::fabs(geo.kappa[i]);
-            if (lateral_accel > limit) {
+            const double lateral_accel =
+                emitted.v[i] * emitted.v[i] * std::fabs(emitted.kappa[i]);
+            if (!std::isfinite(lateral_accel) || lateral_accel > limit) {
                 path.valid = false;
                 path.rejection_reason = RejectionReason::CURVATURE;
                 break;

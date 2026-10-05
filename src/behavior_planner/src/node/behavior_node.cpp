@@ -72,6 +72,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   std::string traffic_light_topic = "/traffic_light/state";
   bool use_traffic_light_mock = false;
   double traffic_light_stale_seconds = 1.0;
+  double visible_signal_speed_limit_kph = 20.0;
   double stop_target_offset_m = 5.0;
   TrafficStopConfig traffic_stop;
   SafetyConfig safety;
@@ -80,6 +81,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   double emergency_ttc_exit = 3.0;
   double emergency_release_hold_s = 0.5;
   double follow_release_delay_s = 0.4;
+  int avoid_release_grace_cycles = 3;
 
   pnh_.param("behavior/update_rate", rate_, rate_);
   pnh_.param("topics/ego", ego_topic, ego_topic);
@@ -110,6 +112,43 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
              avoid_target.max_lateral_offset);
   pnh_.param("avoid/path_margin_m", avoid_target.path_margin_m,
              avoid_target.path_margin_m);
+  pnh_.param("avoid/min_physical_overlap_m",
+             avoid_target.min_physical_overlap_m,
+             avoid_target.min_physical_overlap_m);
+  pnh_.param("avoid/min_margin_overlap_m",
+             avoid_target.min_margin_overlap_m,
+             avoid_target.min_margin_overlap_m);
+  pnh_.param("avoid/min_overlap_ratio", avoid_target.min_overlap_ratio,
+             avoid_target.min_overlap_ratio);
+  pnh_.param("avoid/immediate_blocking_ratio",
+             avoid_target.immediate_blocking_ratio,
+             avoid_target.immediate_blocking_ratio);
+  pnh_.param("avoid/blocking_enter_ratio",
+             avoid_target.blocking_enter_ratio,
+             avoid_target.blocking_enter_ratio);
+  pnh_.param("avoid/blocking_exit_ratio",
+             avoid_target.blocking_exit_ratio,
+             avoid_target.blocking_exit_ratio);
+  pnh_.param("avoid/overlap_confirm_cycles",
+             avoid_target.overlap_confirm_cycles,
+             avoid_target.overlap_confirm_cycles);
+  pnh_.param("avoid/overlap_release_cycles",
+             avoid_target.overlap_release_cycles,
+             avoid_target.overlap_release_cycles);
+  pnh_.param("avoid/reconnect_grace_cycles",
+             avoid_target.reconnect_grace_cycles,
+             avoid_target.reconnect_grace_cycles);
+  pnh_.param("avoid/reconnect_max_longitudinal_delta_m",
+             avoid_target.reconnect_max_longitudinal_delta_m,
+             avoid_target.reconnect_max_longitudinal_delta_m);
+  pnh_.param("avoid/reconnect_max_lateral_delta_m",
+             avoid_target.reconnect_max_lateral_delta_m,
+             avoid_target.reconnect_max_lateral_delta_m);
+  pnh_.param("avoid/reconnect_max_size_delta_m",
+             avoid_target.reconnect_max_size_delta_m,
+             avoid_target.reconnect_max_size_delta_m);
+  pnh_.param("avoid/release_grace_cycles", avoid_release_grace_cycles,
+             avoid_release_grace_cycles);
   pnh_.param("vehicle/width", avoid_target.ego_width,
              avoid_target.ego_width);
   pnh_.param("publish_topics/feature_debug", debug_topic, debug_topic);
@@ -123,6 +162,9 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   pnh_.param("traffic_light/topic", traffic_light_topic, traffic_light_topic);
   pnh_.param("traffic_light/stale_seconds", traffic_light_stale_seconds,
              traffic_light_stale_seconds);
+  pnh_.param("traffic_light/visible_speed_limit_kph",
+             visible_signal_speed_limit_kph,
+             visible_signal_speed_limit_kph);
   pnh_.param("stop/target_offset_m", stop_target_offset_m,
              stop_target_offset_m);
   pnh_.param("stop/red_light_stop_distance",
@@ -152,6 +194,14 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   pnh_.param("safety/emergency_release_hold_s", emergency_release_hold_s,
              emergency_release_hold_s);
 
+  if (!std::isfinite(visible_signal_speed_limit_kph) ||
+      visible_signal_speed_limit_kph <= 0.0) {
+    ROS_WARN("Invalid visible-signal speed limit; using 20.0 km/h");
+    visible_signal_speed_limit_kph = 20.0;
+  }
+  traffic_stop.visible_signal_speed_limit =
+      visible_signal_speed_limit_kph / 3.6;
+
   if (follow_target.max_distance <= 0.0 ||
       follow_target.max_lateral_offset <= 0.0) {
     ROS_WARN("Invalid FOLLOW target limits; using 60.0 m / 1.75 m");
@@ -164,13 +214,45 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   }
   if (avoid_target.max_distance <= 0.0 ||
       avoid_target.max_lateral_offset <= 0.0 ||
-      avoid_target.ego_width <= 0.0 || avoid_target.path_margin_m < 0.0) {
-    ROS_WARN("Invalid AVOID corridor; using 120.0 m / 1.75 m ceiling, "
-             "1.85 m ego width, 0.40 m margin");
+      avoid_target.ego_width <= 0.0 || avoid_target.path_margin_m < 0.0 ||
+      avoid_target.min_physical_overlap_m <= 0.0 ||
+      avoid_target.min_margin_overlap_m <= 0.0 ||
+      avoid_target.min_overlap_ratio < 0.0 ||
+      avoid_target.min_overlap_ratio > 1.0 ||
+      avoid_target.immediate_blocking_ratio < 0.0 ||
+      avoid_target.immediate_blocking_ratio > 1.0 ||
+      avoid_target.blocking_enter_ratio < 0.0 ||
+      avoid_target.blocking_enter_ratio >
+          avoid_target.immediate_blocking_ratio ||
+      avoid_target.blocking_exit_ratio < 0.0 ||
+      avoid_target.blocking_exit_ratio >=
+          avoid_target.blocking_enter_ratio ||
+      avoid_target.overlap_confirm_cycles < 1 ||
+      avoid_target.overlap_release_cycles < 1 ||
+      avoid_target.reconnect_grace_cycles < 0 ||
+      avoid_target.reconnect_max_longitudinal_delta_m <= 0.0 ||
+      avoid_target.reconnect_max_lateral_delta_m <= 0.0 ||
+      avoid_target.reconnect_max_size_delta_m < 0.0) {
+    ROS_WARN("Invalid AVOID corridor/overlap policy; using 120.0 m / 1.75 m "
+             "ceiling, 1.892 m ego width, 0.40 m margin, "
+             "0.10/0.20 m overlap, margin ratio 0.20, "
+             "blocking ratio 0.70/0.35/0.15, confirm/release 2/3 cycles");
     avoid_target.max_distance = 120.0;
     avoid_target.max_lateral_offset = 1.75;
-    avoid_target.ego_width = 1.85;
+    avoid_target.ego_width = 1.892;
     avoid_target.path_margin_m = 0.4;
+    avoid_target.min_physical_overlap_m = 0.10;
+    avoid_target.min_margin_overlap_m = 0.20;
+    avoid_target.min_overlap_ratio = 0.20;
+    avoid_target.immediate_blocking_ratio = 0.70;
+    avoid_target.blocking_enter_ratio = 0.35;
+    avoid_target.blocking_exit_ratio = 0.15;
+    avoid_target.overlap_confirm_cycles = 2;
+    avoid_target.overlap_release_cycles = 3;
+    avoid_target.reconnect_grace_cycles = 5;
+    avoid_target.reconnect_max_longitudinal_delta_m = 3.0;
+    avoid_target.reconnect_max_lateral_delta_m = 0.8;
+    avoid_target.reconnect_max_size_delta_m = 1.5;
   }
 
   if (!map_.load(link_path, node_path)) {
@@ -188,6 +270,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   decision_.setEmergencyRelease(emergency_ttc_exit,
                                 emergency_release_hold_s);
   decision_.setFollowReleaseDelay(follow_release_delay_s);
+  decision_.setAvoidReleaseGraceCycles(avoid_release_grace_cycles);
   ROS_INFO("Behavior stop target offset: %.2f m behind physical stop line",
            stop_target_offset_m);
   ROS_INFO("Behavior traffic STOP detection: min=%.2f m, dynamic=v^2/(2*%.2f)"
@@ -195,18 +278,39 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
            traffic_stop.minimum_detection_distance,
            traffic_stop.comfortable_decel, traffic_stop.braking_margin,
            traffic_stop.target_offset, traffic_stop.planner_stop_buffer);
+  ROS_INFO("Behavior visible traffic-signal speed limit: %.1f km/h "
+           "(normal Frenet comfort trajectory; no green-light STOP/E-STOP)",
+           visible_signal_speed_limit_kph);
   ROS_INFO("Behavior FOLLOW target limits: distance=%.2f m lateral=%.2f m, "
            "release delay=%.2f s, objects stale after %.2f s",
            follow_target.max_distance, follow_target.max_lateral_offset,
            follow_release_delay_s, objects_stale_seconds_);
   ROS_INFO("Behavior AVOID corridor: distance=%.2f m half_width=%.2f m "
-           "(ego_width=%.2f + margin=%.2f, ceiling=%.2f)",
+           "(ego_width=%.3f + margin=%.2f, ceiling=%.2f), "
+           "overlap physical=%.2f m margin=%.2f m margin_ratio=%.2f, "
+           "blocking_ratio immediate/enter/exit=%.2f/%.2f/%.2f "
+           "confirm/release=%d/%d, "
+           "reconnect grace=%d ds/dd/size=%.2f/%.2f/%.2f m, "
+           "release grace=%d cycles",
            avoid_target.max_distance,
            std::min(avoid_target.max_lateral_offset,
                     0.5 * avoid_target.ego_width +
                         avoid_target.path_margin_m),
            avoid_target.ego_width, avoid_target.path_margin_m,
-           avoid_target.max_lateral_offset);
+           avoid_target.max_lateral_offset,
+           avoid_target.min_physical_overlap_m,
+           avoid_target.min_margin_overlap_m,
+           avoid_target.min_overlap_ratio,
+           avoid_target.immediate_blocking_ratio,
+           avoid_target.blocking_enter_ratio,
+           avoid_target.blocking_exit_ratio,
+           avoid_target.overlap_confirm_cycles,
+           avoid_target.overlap_release_cycles,
+           avoid_target.reconnect_grace_cycles,
+           avoid_target.reconnect_max_longitudinal_delta_m,
+           avoid_target.reconnect_max_lateral_delta_m,
+           avoid_target.reconnect_max_size_delta_m,
+           avoid_release_grace_cycles);
 
   if (use_traffic_light_mock) {
     auto mock = std::make_shared<MockTrafficLightProvider>();

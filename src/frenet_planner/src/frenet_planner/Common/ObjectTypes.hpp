@@ -3,7 +3,16 @@
 #ifndef PLANNER_COMMON_OBJECT_TYPES_HPP
 #define PLANNER_COMMON_OBJECT_TYPES_HPP
 
+#include <cstdint>
+
 #include "frenet_planner/Geometry/GeometryTypes.hpp"
+
+enum class ObjectMotionState : std::uint8_t {
+    UNKNOWN = 0,
+    LOW_THREAT = 1,
+    DYNAMIC_PENDING = 2,
+    DYNAMIC = 3,
+};
 
 // asmc_msgs/DetectedObject.msg 기반 canonical 객체 표현. 스칼라 motion 필드
 // (ObjectInfo)와 authoritative OBB corner geometry(TrackedObstacle)를 하나로
@@ -16,6 +25,7 @@
 struct TrackedObject {
     int id = -1;
     int type = 0;
+    ObjectMotionState motion_state = ObjectMotionState::UNKNOWN;
     double x = 0.0;
     double y = 0.0;
     double z = 0.0;

@@ -84,7 +84,7 @@ double FrenetPlanner::EffectiveAvoidShiftStartDistance(
         avoid_cfg_.rear_overhang, 0.0, vehicle_shape_.length);
     const double front_extent = vehicle_shape_.length - rear_overhang;
     const double geometry_clearance =
-        front_extent + 0.5 * v2_avoidance_.obstacle_length +
+        front_extent + v2_avoidance_.obstacle_longitudinal_half_extent +
         collision_cfg_.safety_margin;
     double dynamic_distance =
         std::max(0.0, ego_speed) * shift_time + geometry_clearance;
@@ -139,7 +139,7 @@ void FrenetPlanner::UpdateCommittedAvoidLifecycle(
     const double rear_overhang = clip(
         avoid_cfg_.rear_overhang, 0.0, vehicle_shape_.length);
     const double clear_distance =
-        rear_overhang + 0.5 * v2_avoidance_.obstacle_length +
+        rear_overhang + v2_avoidance_.obstacle_longitudinal_half_extent +
         avoid_cfg_.pass_clearance;
     // Resolver는 seam 너머 전방 target을 ego_s + forward gap의 unwrapped
     // obstacle_s로 저장한다. raw subtraction은 ego가 seam을 지난 순간 거의

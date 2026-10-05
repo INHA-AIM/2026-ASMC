@@ -1,6 +1,7 @@
 #ifndef FRENET_COLLISION_CHECKER_HPP
 #define FRENET_COLLISION_CHECKER_HPP
 
+#include <utility>
 #include <vector>
 
 #include "frenet_planner/Reference/Reference.hpp"
@@ -32,13 +33,23 @@ struct CollisionCheckConfig {
     double reactive_lookahead;  // [s], 논문 기본값 3.0
 };
 
-// Highway gap/TTC의 기존 운동 예측만 유지하기 위한 중심 pose다. 충돌 형상은
-// 이 값으로 재생성하지 않고 아래 TrackedObject corner만 사용한다.
+// 공용 객체 운동 예측 결과. 충돌 형상은 이 pose로 재생성하지
+// 않고 perception의 authoritative TrackedObject corner를 중심 이동만 시킨다.
 struct PredictedObjectPose {
     double x = 0.0;
     double y = 0.0;
     double heading = 0.0;
 };
+
+// Perception motion state를 적용한 map-frame velocity. LOW_THREAT만 정지로
+// 취급하고 UNKNOWN/PENDING/DYNAMIC은 전달된 vx/vy를 그대로 사용한다.
+std::pair<double, double> EffectiveObjectVelocity(
+    const TrackedObject& obj);
+
+// yaw_rate가 있으면 현재 vx/vy 벡터 자체를 회전시킨다. OBB heading은
+// 형상 방향이므로 이동 벡터 생성에 사용하지 않는다.
+std::pair<double, double> PredictTrackedObjectVelocity(
+    const TrackedObject& obj, double t);
 
 PredictedObjectPose PredictTrackedObjectPose(const TrackedObject& obj, double t);
 

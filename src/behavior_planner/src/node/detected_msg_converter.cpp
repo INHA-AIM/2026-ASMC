@@ -9,6 +9,7 @@ constexpr std::uint8_t kUnknown = 0;
 constexpr std::uint8_t kVehicle = 1;
 constexpr std::uint8_t kPedestrian = 2;
 constexpr std::uint8_t kStaticObstacle = 3;
+constexpr std::uint8_t kMotionDynamic = 3;
 
 double PositiveOr(double value, double fallback) {
   return std::isfinite(value) && value > 0.0 ? value : fallback;
@@ -21,16 +22,24 @@ bool DetectedMsgConverter::toTrackedObject(
     TrackedObject* object) {
   if (!object || message.id < 0 || !std::isfinite(message.center.x) ||
       !std::isfinite(message.center.y) || !std::isfinite(message.yaw) ||
-      !std::isfinite(message.vx) || !std::isfinite(message.vy)) {
+      !std::isfinite(message.vx) || !std::isfinite(message.vy) ||
+      message.motion_state > kMotionDynamic) {
     return false;
   }
 
   object->id = message.id;
   object->type = type;
+  object->motion_state = static_cast<MotionState>(message.motion_state);
   object->x = message.center.x;
   object->y = message.center.y;
   object->yaw = message.yaw;
-  object->speed = std::hypot(message.vx, message.vy);
+  object->vx = message.vx;
+  object->vy = message.vy;
+  // LOW_THREAT는 정적에 준한다. 원본 vx/vy는 진단과 상태 전이를 위해
+  // 보존하지만 Behavior의 gap/TTC에는 잡음 속도를 섞지 않는다.
+  object->speed = object->motion_state == MotionState::LOW_THREAT
+                      ? 0.0
+                      : std::hypot(message.vx, message.vy);
   object->accel = 0.0;
   object->length = PositiveOr(message.length, 1.0);
   object->width = PositiveOr(message.width, 1.0);

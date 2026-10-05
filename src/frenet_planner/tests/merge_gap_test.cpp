@@ -199,9 +199,12 @@ void TestRoundaboutGapBlockedByPrecedingVehicle() {
 
     // 순환차가 conflict point(50, 0) 바로 위(50, 20)에서 -y 방향으로 곧장
     // 접근 중 - 궤적이 conflict point를 정확히 통과한다.
-    const TrackedObject circulating =
+    TrackedObject circulating =
         MakeVehicleAt(/*id=*/7, /*x=*/50.0, /*y=*/20.0, /*heading=*/-M_PI / 2.0,
                      /*speed=*/8.0);
+    // OBB yaw가 순간적으로 잘못되어도 map-frame velocity는 conflict point를
+    // 향한다. motion prediction이 box orientation을 쓰면 이 차량을 놓친다.
+    circulating.heading = 0.0;
 
     const RoundaboutGap gap = FindRoundaboutGap(
         ref, ego, {circulating}, cfg, /*desired_speed=*/5.0,

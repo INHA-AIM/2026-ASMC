@@ -9,6 +9,7 @@
        default="/perception/objects_lidar_test"/>
   <arg name="dashboard_lidar_motion_debug_topic"
        default="/lidar/motion_debug"/>
+  <arg name="avoid_path_margin_m" default="0.4"/>
 
   <!-- Same behavior_node executable; only the ROS boundary is switched to
        BehaviorCommand/FrenetFeedback v2. -->
@@ -24,6 +25,7 @@
          value="$(arg dashboard_lidar_objects_topic)"/>
     <arg name="dashboard_lidar_motion_debug_topic"
          value="$(arg dashboard_lidar_motion_debug_topic)"/>
+    <arg name="avoid_path_margin_m" value="$(arg avoid_path_margin_m)"/>
     <arg name="rviz" value="$(arg rviz)"/>
   </include>
 </launch>

@@ -174,6 +174,17 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
       feedback_matches && usesHandshake(active_command_.maneuver_type) &&
       (feedback->execution_state == Feedback::COMPLETED ||
        feedback->execution_state == Feedback::FAILED);
+
+  // 진행 중인 AVOID에서 perception ID가 잠깐 바뀌어도 wire fingerprint와
+  // command_id를 바꾸지 않는다. Frenet resolver가 기존 target geometry와
+  // 유일하게 일치하는 새 관측 ID를 검증해 재연결한다. terminal feedback
+  // 이후에는 새 target으로 정상 transaction을 시작할 수 있다.
+  if (has_active_command_ && !terminal_feedback &&
+      active_command_.maneuver_type == Command::AVOID &&
+      candidate.maneuver_type == Command::AVOID) {
+    candidate.source_link_id = active_command_.source_link_id;
+    candidate.primary_object_id = active_command_.primary_object_id;
+  }
   if (terminal_feedback) {
     active_transaction_locked_ = false;
   }
@@ -183,25 +194,38 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
     active_transaction_locked_ = true;
   }
   const bool emergency = candidate.maneuver_type == Command::EMERGENCY_STOP;
-  const auto preempt_it = context.extra_flags.find("stop_preempts_avoid");
-  const bool planned_stop_preempts_avoid =
-      candidate.maneuver_type == Command::STOP &&
-      active_command_.maneuver_type == Command::AVOID &&
-      preempt_it != context.extra_flags.end() && preempt_it->second;
+  // Context.selected_behavior is already the FSM's authoritative output.
+  // A locked transaction may freeze identity changes *within the same
+  // maneuver*, but it must not re-decide and reject an FSM mode transition.
+  const bool fsm_changed_maneuver =
+      has_active_command_ &&
+      candidate.maneuver_type != active_command_.maneuver_type;
 
   const bool restart_terminal_identity =
       terminal_feedback && context.maneuver_phase == ManeuverPhase::PREPARE &&
       sameIdentity(active_command_, candidate);
+  const auto signal_limit_it =
+      context.extra_flags.find("signal_approach_speed_limit");
+  const bool candidate_signal_speed_limit =
+      signal_limit_it != context.extra_flags.end() && signal_limit_it->second;
+  // Speed is otherwise frozen for each wire transaction. A signal-approach
+  // ceiling is a discrete speed-policy transition, so a non-committed command
+  // gets a new identity exactly when the ceiling activates or releases.
+  // A committed lateral maneuver remains immutable and picks up the ceiling
+  // when its transaction completes.
+  const bool signal_speed_policy_changed =
+      has_active_command_ &&
+      candidate_signal_speed_limit != active_signal_speed_limit_;
   if (!has_active_command_ || !sameIdentity(active_command_, candidate) ||
-      restart_terminal_identity) {
-    if (!active_transaction_locked_ || emergency ||
-        planned_stop_preempts_avoid) {
+      restart_terminal_identity || signal_speed_policy_changed) {
+    if (!active_transaction_locked_ || emergency || fsm_changed_maneuver) {
       ++next_command_id_;
       if (next_command_id_ == 0) ++next_command_id_;
       candidate.command_id = next_command_id_;
       active_command_ = candidate;
       has_active_command_ = true;
       active_transaction_locked_ = false;
+      active_signal_speed_limit_ = candidate_signal_speed_limit;
     }
   }
 

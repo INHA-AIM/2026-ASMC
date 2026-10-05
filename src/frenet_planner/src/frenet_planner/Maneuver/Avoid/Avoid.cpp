@@ -135,10 +135,49 @@ bool FrenetPlanner::AvoidProcess(
     result.low_speed_context = std::fabs(ego.v) < limits_.low_speed_fallback_v;
     result.ego_speed_mps = std::max(0.0, ego.v);
 
+    // COMMIT 뒤에도 실제 관측 OBB와 tracker identity를 갱신한다. 정확한
+    // 현재 ID를 우선하고, 그 ID가 사라졌을 때만 유일한 공간 일치 대상을
+    // 같은 물체로 재연결한다.
+    const TrackedObject* observed_target = nullptr;
+    if (avoid_committed) {
+        const auto exact = std::find_if(
+            predicted_collision_obstacles.begin(),
+            predicted_collision_obstacles.end(),
+            [this](const TrackedObject& object) {
+                return object.id == v2_avoidance_.obstacle_id &&
+                       object.width > 0.0 && object.length > 0.0;
+            });
+        if (exact != predicted_collision_obstacles.end()) {
+            observed_target = &*exact;
+        } else {
+            observed_target = FindSpatialAvoidReplacement(
+                s, predicted_collision_obstacles, v2_avoidance_);
+        }
+        if (observed_target != nullptr) {
+            RefreshAvoidObservation(
+                s, *observed_target, v2_avoidance_,
+                /*refresh_committed_target=*/true);
+        }
+    }
+
     // COMMIT 이후의 종방향 위치와 실제 d를 먼저 반영해야 이번 cycle의
     // 생성 목표가 TRACKING/SHIFT/PASS/RETURN 중 올바른 단계에 맞는다.
     if (avoid_committed) {
         UpdateCommittedAvoidLifecycle(s, d, ego.v, result);
+
+        // 아직 회피를 시작하지 않은 TRACKING에서만 영구 소실을 실패로
+        // 처리한다. SHIFT/PASS 중 관측 누락으로 KEEP에 급복귀하면 더 위험하다.
+        if (v2_avoidance_.phase == AvoidPhase::TRACKING) {
+            if (observed_target != nullptr) {
+                v2_avoidance_.missing_cycles = 0;
+            } else if (++v2_avoidance_.missing_cycles >
+                       avoid_cfg_.dropout_grace_cycles) {
+                last_failure_reason_ = PlanFailureReason::TARGET_OBJECT_LOST;
+                return false;
+            }
+        } else {
+            v2_avoidance_.missing_cycles = 0;
+        }
     }
 
     const bool approach_phase = avoid_committed &&
@@ -187,21 +226,10 @@ bool FrenetPlanner::AvoidProcess(
         }
     }
 
-    // TRACKING에서는 의도적으로 대상 장애물 전까지 global path를 유지한다.
-    // 긴 reactive coast가 먼 target까지 닿아 중앙 후보를 미리 제거하지 않도록
-    // 이 단계에서만 지정 target을 충돌 목록에서 제외한다. shift 진입거리
-    // 안에서는 즉시 다시 포함되어 전체 후보 충돌검사를 받는다.
-    std::vector<TrackedObject> phase_collision_obstacles =
+    // TRACKING에서도 실제 후보 구간은 target과 충돌 검사한다. 먼 target까지
+    // 이어지는 가상 reactive coast만 아래 coast-exempt ID로 제외한다.
+    const std::vector<TrackedObject>& phase_collision_obstacles =
         predicted_collision_obstacles;
-    if (approach_phase) {
-        phase_collision_obstacles.erase(
-            std::remove_if(phase_collision_obstacles.begin(),
-                           phase_collision_obstacles.end(),
-                           [this](const TrackedObject& object) {
-                               return object.id == v2_avoidance_.obstacle_id;
-                           }),
-            phase_collision_obstacles.end());
-    }
 
     // ---- target pose sanity: ego 전방이어야 한다 -------------------
     //
@@ -441,13 +469,9 @@ bool FrenetPlanner::AvoidProcess(
         const double search_tolerance =
             v2_avoidance_.committed ? 0.0 : path_cfg_.lateral_target_tolerance;
 
-        // escape_object_id: 접근/통과 구간에서 회피 대상 물체에 대한 충돌
-        // 스코핑을 완화하는 legacy avoid_escape_id와 동일한 입력이다(legacy는
-        // cmd.mode==AVOID일 때 cmd.target_object_id를 그대로 썼다 - command는
-        // FSM이 지정한 target_object_id를 이미 담고 있고 side_cmd가 이를
-        // 바꾸지 않았으므로, 여기서도 command.target_object_id를 그대로
-        // 옮긴다).
-        const int escape_object_id = command.target_object_id;
+        // wire command의 논리 ID가 아니라 공간 재연결까지 반영한 현재 관측
+        // ID를 충돌 스코핑에 사용한다.
+        const int escape_object_id = v2_avoidance_.obstacle_id;
 
         const int target_count = avoid_committed
             ? static_cast<int>(committed_targets.size())
@@ -462,6 +486,9 @@ bool FrenetPlanner::AvoidProcess(
             request.longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
             request.target_speed = resolved_target_speed;
             request.collision.escape_object_id = escape_object_id;
+            if (approach_phase) {
+                request.collision.coast_exempt_object_id = escape_object_id;
+            }
 
             PlannerDebugStats side_stats;
             auto generated = GenerateRequestedCandidates(

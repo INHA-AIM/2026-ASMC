@@ -156,7 +156,16 @@ bool FrenetPlanner::FollowProcess(
     if (!(cmd.min_gap > 0.0)) cmd.min_gap = following_cfg_.min_gap;
     cmd.gap_gain = following_cfg_.gap_gain;
 
+    // Behavior가 선택한 동일 leader 주변에서 LiDAR가 작은 정적 OBB를 따로
+    // 만든 경우, 그 fragment를 세계에 고정된 별도 장애물로 예측하면 FOLLOW
+    // 종방향 후보가 수 초 뒤 모두 충돌로 제거된다. OBB는 삭제하지 않고
+    // leader motion만 상속시켜 같은 물체의 추가 점유로 충돌 검사한다.
+    std::vector<TrackedObject> follow_collision_obstacles =
+        predicted_obstacles;
+    SynchronizeFollowLeaderFragments(cmd.target_object_id,
+                                     follow_collision_obstacles);
+
     return ExecuteManeuverPipeline(
         ego, start, s, d, s_dot, s_ddot, d_dot, d_ddot, obstacles,
-        predicted_obstacles, resolved_target_speed, cmd, out_path);
+        follow_collision_obstacles, resolved_target_speed, cmd, out_path);
 }

@@ -45,13 +45,15 @@ bool FrenetPlanner::PlanExternalKeepLowSpeedFallback(const CartesianState& ego,
                                                       double s, double d,
                                                       double resolved_target_speed,
                                                       CartesianPath& out_path) {
-    const bool fallback_ok = PlanLowSpeedFallback(
-        ego, s, d, /*target_d=*/0.0, out_path, limits_.low_speed_crawl_duration_s,
-        resolved_target_speed);
+    const bool fallback_ok = PlanCurvatureFeasibleKeepLowSpeedFallback(
+        ego, s, d, resolved_target_speed, out_path,
+        limits_.low_speed_crawl_duration_s);
     std::printf("[FrenetPlanner-KEEP] near-low-speed fail-safe: no "
-                "candidate (v=%.2f), emitting crawl fallback path\n",
-                ego.v);
-    last_failure_reason_ = PlanFailureReason::NONE;
+                "candidate (v=%.2f), curvature-feasible crawl=%d\n",
+                ego.v, fallback_ok ? 1 : 0);
+    last_failure_reason_ = fallback_ok
+        ? PlanFailureReason::NONE
+        : PlanFailureReason::TRANSIENT_GENERATION_FAILURE;
     return fallback_ok;
 }
 
@@ -95,6 +97,10 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     // 정지 다항식을 만든다(BRAKING).
     // =====================================================================
     const bool external_stop_mode = cmd.mode == STOP;
+    const CartesianGeometryMode geometry_mode =
+        external_stop_mode
+            ? CartesianGeometryMode::GEOMETRIC_YAW_CURVATURE
+            : CartesianGeometryMode::HYBRID;
     double stop_distance = 0.0;
     if (external_stop_mode) {
         UpdateExternalStopExecution(s, s_dot, cmd, stop_distance);
@@ -256,7 +262,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     }
     std::vector<FrenetPath> candidates = trajectory_pipeline.GenerateCandidates(
         maneuver_start, request, maneuver_limits, planning_collision_obstacles,
-        append_keep_continuity_candidates, &stats);
+        append_keep_continuity_candidates, &stats, geometry_mode);
 
     const double lateral_cost_target = cmd.has_stop_lateral_hold
         ? cmd.stop_lateral_hold_d : 0.0;
@@ -290,7 +296,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     last_candidate_validity_.reserve(candidates.size());
     for (const FrenetPath& candidate : candidates) {
         if (!candidate.s.empty() && candidate.s.size() == candidate.d.size()) {
-            last_candidate_paths_.push_back(ConvertToCartesianPath(candidate, ref_));
+            last_candidate_paths_.push_back(
+                ConvertToCartesianPath(candidate, ref_, geometry_mode));
             last_candidate_validity_.push_back(candidate.valid);
         }
     }
@@ -421,23 +428,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         return false;
     }
 
-    CartesianPath selected_cartesian = ConvertToCartesianPath(*best, ref_);
-
-    // STOP 종단부에서는 s_dot이 0으로 수렴한다. 일반 변환식은 d_dot/s_dot,
-    // d_ddot/s_dot^2를 사용하므로 0.1~0.6 m/s의 아주 낮은 속도에서도 작은
-    // 위치/미분 오차가 kappa를 수 배~수십 배로 증폭할 수 있다. 후보 안전성
-    // 필터는 위치로 계산한 ComputeGeometricPath의 곡률을 이미 사용하므로,
-    // STOP 출력도 동일한 기하 곡률/heading을 사용해야 필터와 MPC 사이의
-    // 계약이 일치한다. x/y와 종방향 v/a는 기존 정지 다항식을 그대로 둔다.
-    if (external_stop_mode) {
-        const GeometricPath stop_geometry =
-            ComputeGeometricPath(best->s, best->d, ref_);
-        if (stop_geometry.yaw.size() == selected_cartesian.yaw.size() &&
-            stop_geometry.kappa.size() == selected_cartesian.kappa.size()) {
-            selected_cartesian.yaw = stop_geometry.yaw;
-            selected_cartesian.kappa = stop_geometry.kappa;
-        }
-    }
+    CartesianPath selected_cartesian =
+        ConvertToCartesianPath(*best, ref_, geometry_mode);
 
     // STOP은 절대 후진하지 않는다. 정지 목표를 이미 지나쳤거나 아주 가까울 때
     // stopping quintic은 목표 s에 "도달"하려고 0을 지나 음수 속도로 내려가

@@ -78,7 +78,8 @@ void CommandExecutionManager::BeginTransaction(const Command& message) {
         ? Feedback::PREPARING : Feedback::EXECUTING;
 }
 
-CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
+CommandAcceptance CommandExecutionManager::Accept(
+    const Command& message, bool allow_committed_tracking_preemption) {
     CommandAcceptance acceptance;
 
     const bool is_emergency = message.maneuver_type == Command::EMERGENCY_STOP;
@@ -135,7 +136,7 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
         acceptance.command_accepted = true;
     } else if (!same_id) {
         // ---- 다른 command_id ---------------------------------------------
-        if (IsNonPreemptible()) {
+        if (IsNonPreemptible() && !allow_committed_tracking_preemption) {
             // 교차로 한가운데서 기동을 바꾸는 것이 가장 위험하다. 기존
             // transaction을 그대로 유지한다(계약 7.2절).
             //
@@ -150,7 +151,10 @@ CommandAcceptance CommandExecutionManager::Accept(const Command& message) {
                 "committed maneuver cannot be replaced by a new command";
             return acceptance;
         }
-        // terminal latch는 새 ID에서만 해제된다(계약 6.3절).
+        // terminal latch는 새 ID에서만 해제된다(계약 6.3절). committed
+        // TRACKING은 node가 core phase까지 확인한 경우에만 여기로 들어온다.
+        // 아직 횡이동 전이므로 FSM의 최신 transaction으로 교체해도 기동을
+        // 중간에서 끊는 문제가 없다.
         BeginTransaction(message);
         acceptance.transaction_started = true;
         acceptance.command_accepted = true;

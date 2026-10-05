@@ -12,6 +12,8 @@
        default="/perception/objects_lidar_test"/>
   <arg name="dashboard_lidar_motion_debug_topic"
        default="/lidar/motion_debug"/>
+  <arg name="avoid_path_margin_m" default="0.4"
+       doc="AVOID swept-corridor margin; use 0.8 for boundary A/B validation"/>
 
   <group if="$(arg traffic_light)">
     <node pkg="traffic_light" type="live_infer.py"
@@ -49,6 +51,7 @@
          value="$(eval arg('canonical_objects_topic') if arg('objects_source') == 'lidar' else arg('dashboard_lidar_objects_topic'))"/>
     <arg name="dashboard_lidar_motion_debug_topic"
          value="$(arg dashboard_lidar_motion_debug_topic)"/>
+    <arg name="avoid_path_margin_m" value="$(arg avoid_path_margin_m)"/>
   </include>
   <include file="$(find frenet_planner)/launch/frenet_planner.launch">
     <arg name="objects_topic" value="$(arg canonical_objects_topic)"/>

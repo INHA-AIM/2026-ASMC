@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Planning &amp; LiDAR Debug Console</title>
-  <link rel="stylesheet" href="dashboard.css?v=v2-lidar-2">
-  <link rel="stylesheet" href="dashboard_v2.css?v=v2-lidar-2">
+  <link rel="stylesheet" href="dashboard.css?v=v2-lidar-4">
+  <link rel="stylesheet" href="dashboard_v2.css?v=v2-lidar-4">
 </head>
 <body data-interface="v2">
   <header>
@@ -30,25 +30,28 @@
         <label><input id="showSignals" type="checkbox" checked>신호</label>
         <label><input id="showTrajectory" type="checkbox" checked>Frenet 경로</label>
       </div>
-      <div class="legend lidar-legend">
-        <span><i class="route"></i>글로벌 경로</span>
-        <span><i class="ego"></i>Ego</span>
-        <span><i class="object-vehicle"></i>VEHICLE</span>
-        <span><i class="object-pedestrian"></i>PEDESTRIAN</span>
-        <span><i class="object-unknown"></i>UNKNOWN/미분류</span>
-        <span><i class="motion-low"></i>LOW_THREAT</span>
-        <span><i class="motion-pending"></i>PENDING</span>
-        <span><i class="motion-dynamic"></i>DYNAMIC</span>
-        <span><i class="corridor"></i>AVOID 회랑</span>
-        <span><i class="avoid-target"></i>선택 회피 대상</span>
-        <span><i class="velocity-raw"></i>원본 KF 속도</span>
-        <span><i class="velocity"></i>판제 적용 속도</span>
-        <span><i class="candidate-valid"></i>유효 후보</span>
-        <span><i class="candidate-rejected"></i>탈락 후보</span>
-        <span><i class="trajectory"></i>선택 궤적</span>
-        <span><i class="signal"></i>신호등</span>
-        <span><i class="stop"></i>STOP 목표</span>
-      </div>
+      <details class="legend-toggle">
+        <summary>지도 범례</summary>
+        <div class="legend lidar-legend">
+          <span><i class="route"></i>글로벌 경로</span>
+          <span><i class="ego"></i>Ego</span>
+          <span><i class="object-vehicle"></i>차량</span>
+          <span><i class="object-pedestrian"></i>보행자</span>
+          <span><i class="object-unknown"></i>미분류 객체</span>
+          <span><i class="motion-low"></i>저위험</span>
+          <span><i class="motion-pending"></i>판정보류</span>
+          <span><i class="motion-dynamic"></i>동적</span>
+          <span><i class="corridor"></i>AVOID 회랑</span>
+          <span><i class="avoid-target"></i>AVOID 대상</span>
+          <span><i class="velocity-raw"></i>KF 속도</span>
+          <span><i class="velocity"></i>판제 속도</span>
+          <span><i class="candidate-valid"></i>유효 후보</span>
+          <span><i class="candidate-rejected"></i>탈락 후보</span>
+          <span><i class="trajectory"></i>선택 궤적</span>
+          <span><i class="signal"></i>신호</span>
+          <span><i class="stop"></i>정지 목표</span>
+        </div>
+      </details>
       <div id="cursor" class="cursor"></div>
     </section>
     <aside>
@@ -87,6 +90,6 @@
       <section><h2>Topic Health</h2><div id="health" class="kv"></div></section>
     </aside>
   </main>
-  <script src="dashboard_v2.js?v=v2-lidar-2"></script>
+  <script src="dashboard_v2.js?v=v2-lidar-4"></script>
 </body>
 </html>

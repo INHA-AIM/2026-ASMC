@@ -11,6 +11,10 @@ struct TrafficStopConfig {
   double braking_margin = 3.0;
   double target_offset = 5.0;
   double planner_stop_buffer = 0.5;
+  // A recognized route-associated signal uses an ordinary cruise-speed
+  // ceiling. Frenet therefore generates a jerk/acceleration-constrained KEEP
+  // trajectory instead of entering STOP or EMERGENCY_STOP for a green light.
+  double visible_signal_speed_limit = 20.0 / 3.6;
 };
 
 class HardRuleFilter {

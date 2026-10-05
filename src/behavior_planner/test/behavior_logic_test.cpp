@@ -25,61 +25,6 @@ TEST(TrafficLightLabelTest, SelectsAspectForRouteMovement) {
             InterpretTrafficLightLabel("not_detected", SignalMovement::LEFT));
 }
 
-TEST(TrafficLightSourceTest, UsesLegacyOnlyBeforeTypedProducerAppears) {
-  TrafficLightSample typed;
-  TrafficLightSample legacy;
-  legacy.received = true;
-  legacy.fresh = true;
-  legacy.valid = true;
-  legacy.label = "green";
-
-  auto selected = ResolveTrafficLightSample(typed, legacy);
-  EXPECT_EQ("legacy", selected.source);
-  EXPECT_EQ("green", selected.label);
-  EXPECT_TRUE(selected.actionable);
-
-  typed.received = true;
-  typed.fresh = true;
-  typed.valid = true;
-  typed.label = "red";
-  selected = ResolveTrafficLightSample(typed, legacy);
-  EXPECT_EQ("typed", selected.source);
-  EXPECT_EQ("red", selected.label);
-  EXPECT_TRUE(selected.actionable);
-}
-
-TEST(TrafficLightSourceTest, TypedInvalidAndStaleNeverFallBackToLegacy) {
-  TrafficLightSample typed;
-  typed.received = true;
-  typed.fresh = true;
-  typed.valid = false;
-  typed.label = "not_detected";
-  TrafficLightSample legacy;
-  legacy.received = true;
-  legacy.fresh = true;
-  legacy.valid = true;
-  legacy.label = "green";
-
-  auto selected = ResolveTrafficLightSample(typed, legacy);
-  EXPECT_EQ("typed", selected.source);
-  EXPECT_EQ("not_detected", selected.label);
-  EXPECT_FALSE(selected.actionable);
-
-  typed.valid = true;
-  typed.stale = true;
-  selected = ResolveTrafficLightSample(typed, legacy);
-  EXPECT_EQ("typed", selected.source);
-  EXPECT_EQ("stale", selected.label);
-  EXPECT_FALSE(selected.actionable);
-
-  typed.stale = false;
-  typed.fresh = false;
-  selected = ResolveTrafficLightSample(typed, legacy);
-  EXPECT_EQ("typed", selected.source);
-  EXPECT_EQ("stale", selected.label);
-  EXPECT_FALSE(selected.actionable);
-}
-
 TEST(V2CommandManagerTest, KeepFreezesDerivedSpeedUntilIntentChanges) {
   behavior_planner::V2CommandManager manager;
   behavior_planner::BehaviorContextData context;
@@ -108,6 +53,39 @@ TEST(V2CommandManagerTest, KeepFreezesDerivedSpeedUntilIntentChanges) {
   context.target.target_y = 0.0;
   const auto changed = manager.update(context, nullptr, ros::Time(10.3), 0.5);
   EXPECT_NE(first.command_id, changed.command_id);
+}
+
+TEST(V2CommandManagerTest, SignalSpeedPolicyRefreshesKeepOnlyOnTransitions) {
+  V2CommandManager manager;
+  BehaviorContextData context;
+  context.timestamp = 1.0;
+  context.selected_behavior = BehaviorType::KEEP;
+  context.target.current_link_id = "link_1";
+  context.target.desired_speed = 13.9;
+
+  const auto cruise =
+      manager.update(context, nullptr, ros::Time(11.0), 0.5);
+
+  context.target.desired_speed = 20.0 / 3.6;
+  context.extra_flags["signal_approach_speed_limit"] = true;
+  const auto limited =
+      manager.update(context, nullptr, ros::Time(11.1), 0.5);
+  EXPECT_NE(cruise.command_id, limited.command_id);
+  EXPECT_NEAR(20.0 / 3.6, limited.desired_speed_mps, 1e-9);
+
+  context.target.desired_speed = 5.4;
+  const auto limited_refresh =
+      manager.update(context, nullptr, ros::Time(11.2), 0.5);
+  EXPECT_EQ(limited.command_id, limited_refresh.command_id);
+  EXPECT_DOUBLE_EQ(limited.desired_speed_mps,
+                   limited_refresh.desired_speed_mps);
+
+  context.target.desired_speed = 13.9;
+  context.extra_flags.erase("signal_approach_speed_limit");
+  const auto released =
+      manager.update(context, nullptr, ros::Time(11.3), 0.5);
+  EXPECT_NE(limited.command_id, released.command_id);
+  EXPECT_DOUBLE_EQ(13.9, released.desired_speed_mps);
 }
 
 TEST(V2CommandManagerTest, LaneChangeUsesReadyExecuteHandshake) {
@@ -194,15 +172,73 @@ TEST(V2CommandManagerTest, AvoidLetsFrenetChooseDirectionAndUsesHandshake) {
   EXPECT_EQ(asmc_msgs::BehaviorCommand::EXECUTE, execute.execution_request);
 
   feedback.execution_state = asmc_msgs::FrenetFeedback::EXECUTING;
-  context.selected_behavior = BehaviorType::KEEP;
+  // The command manager consumes the FSM output. A committed FSM keeps AVOID,
+  // so the serializer must preserve the same transaction.
+  context.selected_behavior = BehaviorType::AVOID;
   const auto locked = manager.update(context, &feedback, ros::Time(40.2), 0.5);
   EXPECT_EQ(prepare.command_id, locked.command_id);
   EXPECT_EQ(asmc_msgs::BehaviorCommand::AVOID, locked.maneuver_type);
 
   feedback.execution_state = asmc_msgs::FrenetFeedback::COMPLETED;
+  context.selected_behavior = BehaviorType::KEEP;
   const auto keep = manager.update(context, &feedback, ros::Time(40.3), 0.5);
   EXPECT_NE(prepare.command_id, keep.command_id);
   EXPECT_EQ(asmc_msgs::BehaviorCommand::KEEP, keep.maneuver_type);
+}
+
+TEST(V2CommandManagerTest, AvoidKeepsTransactionAcrossPerceptionIdChange) {
+  V2CommandManager manager;
+  BehaviorContextData context;
+  context.selected_behavior = BehaviorType::AVOID;
+  context.target.current_link_id = "source";
+  context.target.avoidance_object_id = 150;
+  context.maneuver_phase = ManeuverPhase::PREPARE;
+
+  const auto first = manager.update(context, nullptr, ros::Time(41.0), 0.5);
+  context.target.current_link_id = "next_source";
+  context.target.avoidance_object_id = 191;
+  const auto changed_detection =
+      manager.update(context, nullptr, ros::Time(41.1), 0.5);
+
+  EXPECT_EQ(first.command_id, changed_detection.command_id);
+  EXPECT_EQ(150, changed_detection.primary_object_id);
+  EXPECT_EQ("source", changed_detection.source_link_id);
+
+  asmc_msgs::FrenetFeedback failed;
+  failed.command_id = first.command_id;
+  failed.execution_state = asmc_msgs::FrenetFeedback::FAILED;
+  context.target.current_link_id = "next_source";
+  context.target.avoidance_object_id = 191;
+  const auto restarted =
+      manager.update(context, &failed, ros::Time(41.2), 0.5);
+  EXPECT_NE(first.command_id, restarted.command_id);
+  EXPECT_EQ(191, restarted.primary_object_id);
+  EXPECT_EQ("next_source", restarted.source_link_id);
+}
+
+TEST(V2CommandManagerTest, FsmModeTransitionPreemptsLockedAvoid) {
+  V2CommandManager manager;
+  BehaviorContextData context;
+  context.selected_behavior = BehaviorType::AVOID;
+  context.target.current_link_id = "source";
+  context.target.avoidance_object_id = 150;
+  context.maneuver_phase = ManeuverPhase::PREPARE;
+
+  const auto avoid = manager.update(context, nullptr, ros::Time(42.0), 0.5);
+  asmc_msgs::FrenetFeedback executing;
+  executing.command_id = avoid.command_id;
+  executing.execution_state = asmc_msgs::FrenetFeedback::EXECUTING;
+  manager.update(context, &executing, ros::Time(42.1), 0.5);
+
+  context.selected_behavior = BehaviorType::FOLLOW;
+  context.target.lead_vehicle_id = 191;
+  context.maneuver_phase = ManeuverPhase::NONE;
+  const auto follow =
+      manager.update(context, &executing, ros::Time(42.2), 0.5);
+
+  EXPECT_NE(avoid.command_id, follow.command_id);
+  EXPECT_EQ(asmc_msgs::BehaviorCommand::FOLLOW, follow.maneuver_type);
+  EXPECT_EQ(191, follow.primary_object_id);
 }
 
 TEST(BehaviorFsmTest, KeepFollowKeepUsesCandidateWithoutLateralLifecycle) {
@@ -263,6 +299,59 @@ TEST(BehaviorFsmTest, AvoidLifecycleUsesOnlyMatchingFreshFeedback) {
   feedback.command_id = 42;
   output = fsm.updateManeuver(BehaviorType::KEEP, feedback, 42, false);
   EXPECT_EQ(BehaviorType::KEEP, output.behavior);
+  EXPECT_EQ(ManeuverPhase::NONE, output.phase);
+}
+
+TEST(BehaviorFsmTest, AvoidPrepareSurvivesShortKeepDropout) {
+  Fsm fsm;
+  fsm.setAvoidReleaseGraceCycles(2);
+  PlannerFeedbackData feedback;
+
+  auto output = fsm.updateManeuver(BehaviorType::AVOID, feedback, 0, false);
+  output = fsm.updateManeuver(BehaviorType::AVOID, feedback, 51, false);
+  output = fsm.updateManeuver(BehaviorType::KEEP, feedback, 51, false);
+  EXPECT_EQ(BehaviorType::AVOID, output.behavior);
+  output = fsm.updateManeuver(BehaviorType::KEEP, feedback, 51, false);
+  EXPECT_EQ(BehaviorType::AVOID, output.behavior);
+  output = fsm.updateManeuver(BehaviorType::KEEP, feedback, 51, false);
+  EXPECT_EQ(BehaviorType::KEEP, output.behavior);
+}
+
+TEST(BehaviorFsmTest, MovingReclassificationCancelsCommittedAvoid) {
+  Fsm fsm;
+  PlannerFeedbackData feedback;
+  fsm.updateManeuver(BehaviorType::AVOID, feedback, 0, false);
+  fsm.updateManeuver(BehaviorType::AVOID, feedback, 61, false);
+  feedback.valid = true;
+  feedback.command_id = 61;
+  feedback.execution_state = PlannerExecutionState::EXECUTING;
+  ASSERT_EQ(ManeuverPhase::COMMITTED,
+            fsm.updateManeuver(BehaviorType::AVOID, feedback, 61, false)
+                .phase);
+
+  const auto output = fsm.updateManeuver(
+      BehaviorType::FOLLOW, feedback, 61, false, true);
+  EXPECT_EQ(BehaviorType::FOLLOW, output.behavior);
+  EXPECT_EQ(ManeuverPhase::NONE, output.phase);
+}
+
+TEST(BehaviorFsmTest, RetainedFollowTargetOwnsTransientStaticAvoid) {
+  Fsm fsm;
+  PlannerFeedbackData feedback;
+  fsm.updateManeuver(BehaviorType::AVOID, feedback, 0, false);
+  fsm.updateManeuver(BehaviorType::AVOID, feedback, 61, false);
+  feedback.valid = true;
+  feedback.command_id = 61;
+  feedback.execution_state = PlannerExecutionState::EXECUTING;
+  ASSERT_EQ(ManeuverPhase::COMMITTED,
+            fsm.updateManeuver(BehaviorType::AVOID, feedback, 61, false)
+                .phase);
+
+  const auto output = fsm.updateManeuver(
+      BehaviorType::AVOID, feedback, 61, false,
+      /*cancel_reclassified_avoid=*/false,
+      /*follow_owns_avoid_target=*/true);
+  EXPECT_EQ(BehaviorType::FOLLOW, output.behavior);
   EXPECT_EQ(ManeuverPhase::NONE, output.phase);
 }
 
@@ -332,7 +421,7 @@ TEST(V2CommandManagerTest, EarlierPlannedStopPreemptsCommittedAvoid) {
   EXPECT_EQ(asmc_msgs::BehaviorCommand::STOP, stop.maneuver_type);
 }
 
-TEST(HardRuleFilterTest, GreenLightDoesNotForceStop) {
+TEST(HardRuleFilterTest, GreenLightUsesTwentyKphLimitWithoutStop) {
   UrbanFeature feature;
   feature.signal.has_stop_line = true;
   feature.signal.distance_to_stop_line = 10.0;
@@ -342,7 +431,34 @@ TEST(HardRuleFilterTest, GreenLightDoesNotForceStop) {
   const HardConstraint hard = HardRuleFilter().apply(feature, &reason);
   EXPECT_TRUE(hard.stop_line_constraint);
   EXPECT_FALSE(hard.force_stop);
-  EXPECT_EQ("no_hard_constraint", reason);
+  EXPECT_FALSE(hard.planned_stop);
+  EXPECT_TRUE(hard.signal_approach_speed_limit);
+  EXPECT_NEAR(20.0 / 3.6, hard.max_speed, 1e-9);
+  EXPECT_NE(std::string::npos, reason.find("visible_signal_speed_limit"));
+}
+
+TEST(HardRuleFilterTest, UnknownSignalDoesNotApplyApproachSpeedLimit) {
+  UrbanFeature feature;
+  feature.route.speed_limit = 13.9;
+  feature.signal.has_stop_line = true;
+  feature.signal.distance_to_stop_line = 50.0;
+  feature.signal.light_state = TrafficLightState::UNKNOWN;
+
+  const HardConstraint hard = HardRuleFilter().apply(feature, nullptr);
+  EXPECT_FALSE(hard.signal_approach_speed_limit);
+  EXPECT_DOUBLE_EQ(13.9, hard.max_speed);
+}
+
+TEST(HardRuleFilterTest, VisibleSignalPreservesLowerRouteSpeedLimit) {
+  UrbanFeature feature;
+  feature.route.speed_limit = 4.0;
+  feature.signal.has_stop_line = true;
+  feature.signal.distance_to_stop_line = 50.0;
+  feature.signal.light_state = TrafficLightState::GREEN;
+
+  const HardConstraint hard = HardRuleFilter().apply(feature, nullptr);
+  EXPECT_TRUE(hard.signal_approach_speed_limit);
+  EXPECT_DOUBLE_EQ(4.0, hard.max_speed);
 }
 
 TEST(HardRuleFilterTest, RedLightRequestsPlannedStop) {
@@ -399,7 +515,8 @@ TEST(HardRuleFilterTest, UnprotectedRightIgnoresVehicleRedLight) {
   EXPECT_TRUE(hard.stop_line_constraint);
   EXPECT_FALSE(hard.planned_stop);
   EXPECT_FALSE(hard.force_stop);
-  EXPECT_EQ("no_hard_constraint", reason);
+  EXPECT_TRUE(hard.signal_approach_speed_limit);
+  EXPECT_NE(std::string::npos, reason.find("visible_signal_speed_limit"));
 }
 
 TEST(HardRuleFilterTest, UnprotectedRightStillStopsForPedestrianRisk) {
@@ -436,7 +553,8 @@ TEST(BehaviorDecisionTest, RedLightPublishesPlannedStopTarget) {
   ASSERT_EQ(BehaviorType::STOP, context.selected_behavior);
   EXPECT_FALSE(context.hard.force_stop);
   EXPECT_TRUE(context.target.has_stop_target);
-  EXPECT_DOUBLE_EQ(10.0, context.target.desired_speed);
+  EXPECT_NEAR(20.0 / 3.6, context.target.desired_speed, 1e-9);
+  EXPECT_TRUE(context.extra_flags.at("signal_approach_speed_limit"));
 
   const asmc_msgs::BehaviorContext message = MsgConverter::toMsg(context, 1);
   EXPECT_EQ(asmc_msgs::BehaviorContext::STOP, message.selected_behavior);
@@ -476,6 +594,44 @@ TEST(BehaviorDecisionTest, StaticObstacleSelectsAvoidTarget) {
   EXPECT_EQ(BehaviorType::AVOID, context.selected_behavior);
   EXPECT_TRUE(context.enable.avoid);
   EXPECT_EQ(31, context.target.avoidance_object_id);
+}
+
+TEST(BehaviorDecisionTest, MovingReclassificationSwitchesCommittedAvoidToFollow) {
+  BehaviorDecision decision;
+  UrbanFeature feature;
+  feature.timestamp = 1.0;
+  feature.route.speed_limit = 10.0;
+  feature.risk.static_obstacle_ahead = true;
+  feature.risk.avoidance_object_id = 31;
+
+  EXPECT_EQ(BehaviorType::AVOID,
+            decision.decide(feature, PlannerFeedbackData{}, 0)
+                .selected_behavior);
+  EXPECT_EQ(BehaviorType::AVOID,
+            decision.decide(feature, PlannerFeedbackData{}, 77)
+                .selected_behavior);
+
+  PlannerFeedbackData executing;
+  executing.valid = true;
+  executing.command_id = 77;
+  executing.execution_state = PlannerExecutionState::EXECUTING;
+  ASSERT_EQ(ManeuverPhase::COMMITTED,
+            decision.decide(feature, executing, 77).maneuver_phase);
+
+  feature.timestamp = 1.1;
+  feature.risk.static_obstacle_ahead = false;
+  feature.risk.avoidance_object_id = -1;
+  feature.risk.avoid_target_reclassified_moving = true;
+  feature.surrounding.has_front_vehicle = true;
+  feature.surrounding.front_vehicle.id = 31;
+  feature.surrounding.front_vehicle.gap = 12.0;
+  feature.surrounding.front_vehicle.ttc = 6.0;
+  const BehaviorContextData follow = decision.decide(feature, executing, 77);
+
+  EXPECT_EQ(BehaviorType::FOLLOW, follow.selected_behavior);
+  EXPECT_EQ(ManeuverPhase::NONE, follow.maneuver_phase);
+  EXPECT_EQ(31, follow.target.lead_vehicle_id);
+  EXPECT_TRUE(follow.extra_flags.at("cancel_reclassified_avoid"));
 }
 
 TEST(BehaviorDecisionTest, ChoosesFirstLongitudinalConstraint) {
@@ -559,6 +715,58 @@ TEST(BehaviorDecisionTest, FollowDropoutGraceRetainsTargetThenReturnsKeep) {
   EXPECT_EQ(BehaviorType::KEEP,
             decision.decide(feature, asmc_msgs::PlanFeedback{})
                 .selected_behavior);
+}
+
+TEST(BehaviorDecisionTest, SameTargetStaticBlipStaysFollowThenAllowsAvoid) {
+  BehaviorDecision decision;
+  decision.setFollowReleaseDelay(0.4);
+  UrbanFeature feature;
+  feature.timestamp = 20.0;
+  feature.route.speed_limit = 13.9;
+  feature.surrounding.has_front_vehicle = true;
+  feature.surrounding.front_vehicle.id = 7;
+  feature.surrounding.front_vehicle.gap = 10.0;
+  feature.surrounding.front_vehicle.ttc = 3.0;
+  ASSERT_EQ(BehaviorType::FOLLOW,
+            decision.decide(feature, PlannerFeedbackData{}).selected_behavior);
+
+  feature.timestamp = 20.2;
+  feature.surrounding.has_front_vehicle = false;
+  feature.risk.static_obstacle_ahead = true;
+  feature.risk.avoidance_object_id = 7;
+  feature.risk.nearest_obstacle_s = 50.0;
+  feature.risk.nearest_obstacle_length = 2.0;
+  const BehaviorContextData retained =
+      decision.decide(feature, PlannerFeedbackData{});
+  EXPECT_EQ(BehaviorType::FOLLOW, retained.selected_behavior);
+  EXPECT_EQ(7, retained.target.lead_vehicle_id);
+  EXPECT_TRUE(retained.extra_flags.at("fsm_follow_owns_avoid_target"));
+  EXPECT_EQ("fsm_follow_owns_same_target", retained.debug.selected_reason);
+
+  feature.timestamp = 20.41;
+  const BehaviorContextData stable_static =
+      decision.decide(feature, PlannerFeedbackData{});
+  EXPECT_EQ(BehaviorType::AVOID, stable_static.selected_behavior);
+}
+
+TEST(BehaviorDecisionTest, DistinctStaticObstacleStillPreemptsFollow) {
+  BehaviorDecision decision;
+  UrbanFeature feature;
+  feature.timestamp = 30.0;
+  feature.route.speed_limit = 13.9;
+  feature.surrounding.has_front_vehicle = true;
+  feature.surrounding.front_vehicle.id = 7;
+  feature.surrounding.front_vehicle.gap = 20.0;
+  feature.surrounding.front_vehicle.ttc = 10.0;
+  feature.risk.static_obstacle_ahead = true;
+  feature.risk.avoidance_object_id = 31;
+  feature.risk.nearest_obstacle_s = 10.0;
+  feature.risk.nearest_obstacle_length = 2.0;
+
+  const BehaviorContextData context =
+      decision.decide(feature, PlannerFeedbackData{});
+  EXPECT_EQ(BehaviorType::AVOID, context.selected_behavior);
+  EXPECT_EQ(0U, context.extra_flags.count("fsm_follow_owns_avoid_target"));
 }
 
 TEST(BehaviorDecisionTest, FollowKeepsCruiseSpeedCeilingForFrenetGapControl) {

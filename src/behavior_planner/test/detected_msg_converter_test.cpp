@@ -12,6 +12,7 @@ asmc_msgs::DetectedObject MakeObject(int id, std::uint8_t type) {
   asmc_msgs::DetectedObject object;
   object.id = id;
   object.type = type;
+  object.motion_state = asmc_msgs::DetectedObject::MOTION_DYNAMIC_PENDING;
   object.center.x = 10.0 + id;
   object.center.y = -2.0;
   object.yaw = 0.25;
@@ -39,7 +40,23 @@ TEST(DetectedMsgConverter, PreservesUnknownForGeometryBasedAvoidance) {
   EXPECT_EQ(converted.obstacles.front().id, 3);
   EXPECT_EQ(converted.obstacles.back().id, 4);
   EXPECT_EQ(converted.obstacles.back().type, ObjectType::UNKNOWN);
+  EXPECT_EQ(converted.obstacles.back().motion_state,
+            MotionState::DYNAMIC_PENDING);
   EXPECT_NEAR(converted.pedestrians.front().speed, 5.0, 1e-9);
+}
+
+TEST(DetectedMsgConverter, LowThreatPreservesVectorButUsesStaticSpeed) {
+  asmc_msgs::DetectedObjectArray message;
+  auto object = MakeObject(5, 0);
+  object.motion_state = asmc_msgs::DetectedObject::MOTION_LOW_THREAT;
+  message.objects.push_back(object);
+
+  const PerceptionObjects converted =
+      DetectedMsgConverter::toPerceptionObjects(message);
+  ASSERT_EQ(converted.obstacles.size(), 1u);
+  EXPECT_DOUBLE_EQ(converted.obstacles.front().vx, 3.0);
+  EXPECT_DOUBLE_EQ(converted.obstacles.front().vy, 4.0);
+  EXPECT_DOUBLE_EQ(converted.obstacles.front().speed, 0.0);
 }
 
 TEST(DetectedMsgConverter, RejectsInvalidNumericObjects) {
