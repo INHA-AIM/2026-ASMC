@@ -179,6 +179,11 @@ add_dependencies(lane_change_test_publisher ${catkin_EXPORTED_TARGETS})
 target_link_libraries(lane_change_test_publisher ${catkin_LIBRARIES})
 
 if(CATKIN_ENABLE_TESTING)
+  add_executable(avoid_speed_memory_test tests/avoid_speed_memory_test.cpp)
+  target_include_directories(avoid_speed_memory_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  add_test(NAME avoid_speed_memory_test COMMAND avoid_speed_memory_test)
+
   add_executable(geometry_foundation_test
     tests/geometry_foundation_test.cpp
   )
@@ -552,4 +557,3 @@ install(PROGRAMS tools/planner_visualizer.py
 install(DIRECTORY config launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
-

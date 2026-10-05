@@ -134,7 +134,7 @@ planner:
 
   # --- AVOID: FSM이 지정한 대상의 유효성 검증 범위와 lateral 회피 ---
   avoid:
-    bypass_speed_cap: 2.5     # [m/s] 9 km/h; map-aware bypass only
+    bypass_speed_cap: 3.0     # [m/s] 10.8 km/h; map-aware bypass only
     detection_distance: 120.0 # [m] KEEP의 8 s reactive horizon보다 넓게 확보해 Behavior/AVOID 사이의 blind band를 없앤다
     avoid_offset: 5.0         # [m] 회피 시 lateral_d1 격자를 밀어낼 크기
     # [m] legacy geometry 기반(target pose 없음) target_d 계산에서 자차/장애물

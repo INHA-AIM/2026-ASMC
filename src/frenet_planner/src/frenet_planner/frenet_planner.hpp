@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <chrono>
 
 #include "frenet_planner/Map/AvoidRoadMap.hpp"
 #include "frenet_planner/Common/BehaviorTypes.hpp"
@@ -867,6 +868,10 @@ private:
         double map_recovery_settled_travel_m = 0.0;
         CartesianPath map_recovery_path;
         double map_recovery_path_target_d = 0.0;
+        // Per-maneuver, accepted speed-profile history. Reset with the context;
+        // failed plans invalidate it rather than advancing an unchecked path.
+        bool map_speed_profile_valid = false;
+        std::chrono::steady_clock::time_point map_speed_profile_at{};
         // Keep an accepted spatial lateral profile through SHIFT/RETURN even
         // when launch speed crosses the normal generator boundary.
         bool spatial_lateral_active = false;

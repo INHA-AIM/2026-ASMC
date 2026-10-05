@@ -2,6 +2,7 @@
 #include "frenet_planner/Math/Polynomial.hpp"
 #include "frenet_planner/Maneuver/ManeuverUtils.hpp"
 #include "frenet_planner/Math/Utils.hpp"
+#include "frenet_planner/Speed/AvoidSpeedMemory.hpp"
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -56,6 +57,19 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         v2_avoidance_.map_lateral_started=true;
     const bool may_retime=committed&&!returning&&!v2_avoidance_.map_lateral_started&&gap>clearance+4.0;
 
+    const auto profile_now=std::chrono::steady_clock::now();
+    const double profile_age=std::chrono::duration<double>(
+        profile_now-v2_avoidance_.map_speed_profile_at).count();
+    // The configured planning period is also used by KEEP's continuity policy.
+    // Actual elapsed time rejects stale history after a runtime pause.
+    const double elapsed=std::max(replanning_period_s_,profile_age);
+    const bool bypass_active=committed&&v2_avoidance_.map_speed_profile_valid&&
+        (v2_avoidance_.phase==AvoidPhase::SHIFT ||
+         v2_avoidance_.phase==AvoidPhase::PASS || returning);
+    const double initial_a=AvoidAccelerationSeed(ego.a,ego.v,crawl,
+        bypass_active,v2_avoidance_.map_recovery_path.a,dt,elapsed,
+        decel,limits_.max_longitudinal_accel);
+
     // Generate in distance, then time-sample with observed initial v/a. Approach,
     // shift, pass and return are validated together, including the rear-axle body.
     auto generate=[&](double target_d,double delay,double transition,bool maintenance,CartesianPath& path){
@@ -74,7 +88,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         const auto back=MakeQuintic(target_d,0,0,0,0,0,return_distance);
         const double total=maintenance?std::max(1.0,gap-clearance):
             (returning?transition:pass_end+return_distance);
-        double u=0,v=std::max(0.0,ego.v),a=clip(ego.a,-decel,limits_.max_longitudinal_accel);
+        double u=0,v=std::max(0.0,ego.v),a=initial_a;
         for(int n=0;n<1000;++n){
             double offset,prime,second;
             if(maintenance){const double z=std::min(u,settle);offset=EvalPos(approach,z);prime=EvalVel(approach,z);second=EvalAcc(approach,z);}
@@ -113,7 +127,8 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     // Keep the already accepted recovery/bypass curve while tracking it closely.
     // Re-fitting the same tiny boundary overlap each cycle can change the curve
     // enough to lose every candidate. This is never an unchecked stale-path fallback.
-    if(committed&&!v2_avoidance_.map_recovery_path.x.empty()){
+    if(committed&&!v2_avoidance_.map_recovery_path.x.empty()&&
+       std::fabs(initial_a-clip(ego.a,-decel,limits_.max_longitudinal_accel))<1e-6){
         const auto& cached=v2_avoidance_.map_recovery_path;
         std::size_t nearest=0;double distance=INFINITY;
         for(std::size_t i=0;i<cached.x.size();++i){
@@ -150,6 +165,8 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
                 result.candidate_path=continuation;result.escape_recovery_required=margin_recovery;
                 result.map_entry_s=v2_avoidance_.map_entry_s;result.map_transition_distance=v2_avoidance_.map_transition_distance;
                 v2_avoidance_.map_recovery_path=continuation;
+                v2_avoidance_.map_speed_profile_valid=true;
+                v2_avoidance_.map_speed_profile_at=std::chrono::steady_clock::now();
                 output=continuation;UpdateCommittedAvoidLifecycle(s,d,ego.v,result);
                 last_failure_reason_=PlanFailureReason::NONE;return true;
             }
@@ -239,7 +256,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     }
     if(result.candidate_valid)result.blocking_object_id=-1;
     if(committed){
-        if(!result.candidate_valid){last_failure_reason_=result.blocking_object_id>=0?
+        if(!result.candidate_valid){v2_avoidance_.map_speed_profile_valid=false;last_failure_reason_=result.blocking_object_id>=0?
             PlanFailureReason::COLLISION_BLOCKED:PlanFailureReason::TRANSIENT_GENERATION_FAILURE;return false;}
         if(!returning){
             v2_avoidance_.target_d=result.selected_target_d;
@@ -257,6 +274,8 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
         }
         v2_avoidance_.map_recovery_path=result.candidate_path;
         v2_avoidance_.map_recovery_path_target_d=result.selected_target_d;
+        v2_avoidance_.map_speed_profile_valid=true;
+        v2_avoidance_.map_speed_profile_at=std::chrono::steady_clock::now();
         output=result.candidate_path;UpdateCommittedAvoidLifecycle(s,d,ego.v,result);
         last_failure_reason_=PlanFailureReason::NONE;return true;
     }
