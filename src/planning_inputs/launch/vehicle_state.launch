@@ -1,0 +1,10 @@
+<launch>
+  <arg name="state_topic" default="/planning/vehicle/state"/>
+  <!-- Competition source. There is no EgoVehicleStatus fallback. -->
+  <node pkg="planning_inputs" type="planning_vehicle_state_node"
+        name="planning_gps_imu_state_adapter" output="screen">
+    <rosparam command="load"
+              file="$(find planning_inputs)/config/vehicle_state.yaml"/>
+    <param name="publish_topic" value="$(arg state_topic)"/>
+  </node>
+</launch>

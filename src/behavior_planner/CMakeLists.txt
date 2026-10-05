@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.0.2)
 project(behavior_planner)
 
 add_compile_options(-std=c++17 -Wall -Wextra)
-find_package(catkin REQUIRED COMPONENTS asmc_msgs roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_generation)
+find_package(catkin REQUIRED COMPONENTS planning_inputs asmc_msgs roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_generation)
 find_package(yaml-cpp REQUIRED)
 
 add_message_files(FILES UrbanFeatureDebug.msg)
 generate_messages(DEPENDENCIES std_msgs)
 
-catkin_package(CATKIN_DEPENDS asmc_msgs roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_runtime)
+catkin_package(CATKIN_DEPENDS planning_inputs asmc_msgs roscpp std_msgs geometry_msgs visualization_msgs morai_msgs message_runtime)
 # Preserve the requested src/<area> layout while exposing conventional
 # behavior_planner/<area>/... include paths to this target.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)

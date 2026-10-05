@@ -18,6 +18,20 @@ std::string Normalize(std::string label) {
 
 }  // namespace
 
+ResolvedTrafficLightSample ResolveTrafficLightSample(
+    const TrafficLightSample& typed, const TrafficLightSample& legacy) {
+  if (typed.received) {
+    if (!typed.fresh || typed.stale) {
+      return {"stale", "typed", false};
+    }
+    return {typed.label, "typed", typed.valid};
+  }
+  if (legacy.received && legacy.fresh) {
+    return {legacy.label, "legacy", true};
+  }
+  return {"stale", "none", false};
+}
+
 bool IsDetectedTrafficLightLabel(const std::string& raw_label) {
   const std::string label = Normalize(raw_label);
   return label == "red" || label == "yellow" || label == "green" ||
@@ -105,40 +119,91 @@ bool TrafficLightObservationState::hasRecentDetection(
 }
 
 RosTrafficLightProvider::RosTrafficLightProvider(
-    ros::NodeHandle& nh, const std::string& topic, double stale_seconds,
-    double detection_grace_seconds)
+    ros::NodeHandle& nh, const std::string& topic, double stale_seconds, double detection_grace_seconds)
+    : RosTrafficLightProvider(nh, "", topic, stale_seconds, detection_grace_seconds) {}
+
+RosTrafficLightProvider::RosTrafficLightProvider(
+    ros::NodeHandle& nh, const std::string& typed_topic,
+    const std::string& legacy_topic, double stale_seconds, double detection_grace_seconds)
     : stale_seconds_(stale_seconds > 0.0 ? stale_seconds : 1.0),
-      detection_grace_seconds_(detection_grace_seconds > 0.0
-                                   ? detection_grace_seconds
-                                   : 1.0) {
-  subscriber_ = nh.subscribe(topic, 1, &RosTrafficLightProvider::callback, this);
+      detection_grace_seconds_(detection_grace_seconds > 0.0 ? detection_grace_seconds : 1.0) {
+  if (!typed_topic.empty()) {
+    typed_subscriber_ = nh.subscribe(
+        typed_topic, 1, &RosTrafficLightProvider::typedCallback, this);
+  }
+  if (!legacy_topic.empty()) {
+    legacy_subscriber_ = nh.subscribe(
+        legacy_topic, 1, &RosTrafficLightProvider::legacyCallback, this);
+  }
 }
 
-void RosTrafficLightProvider::callback(
+void RosTrafficLightProvider::typedCallback(
+    const asmc_msgs::TrafficLightDetection::ConstPtr& message) {
+  if (!message) return;
+  std::lock_guard<std::mutex> lock(mutex_);
+  typed_label_ = message->label;
+  typed_valid_ = message->valid;
+  typed_stale_ = message->stale;
+  typed_received_at_ = ros::SteadyTime::now();
+  typed_received_ = true;
+  typed_observation_.update(typed_valid_ && !typed_stale_ ? typed_label_ : "not_detected", typed_received_at_.toSec());
+  ROS_INFO_ONCE("Behavior traffic-light consumer selected canonical typed input");
+}
+
+void RosTrafficLightProvider::legacyCallback(
     const std_msgs::String::ConstPtr& message) {
   if (!message) return;
   std::lock_guard<std::mutex> lock(mutex_);
-  observation_.update(message->data, ros::SteadyTime::now().toSec());
+  legacy_label_ = message->data;
+  legacy_received_at_ = ros::SteadyTime::now();
+  legacy_received_ = true;
+  legacy_observation_.update(legacy_label_, legacy_received_at_.toSec());
+}
+
+ResolvedTrafficLightSample RosTrafficLightProvider::resolveLocked() const {
+  const ros::SteadyTime now = ros::SteadyTime::now();
+  TrafficLightSample typed;
+  typed.received = typed_received_;
+  typed.fresh = typed_received_ &&
+                (now - typed_received_at_).toSec() <= stale_seconds_;
+  typed.valid = typed_valid_;
+  typed.stale = typed_stale_;
+  typed.label = typed_label_;
+
+  TrafficLightSample legacy;
+  legacy.received = legacy_received_;
+  legacy.fresh = legacy_received_ &&
+                 (now - legacy_received_at_).toSec() <= stale_seconds_;
+  legacy.valid = true;
+  legacy.label = legacy_label_;
+  return ResolveTrafficLightSample(typed, legacy);
 }
 
 TrafficLightState RosTrafficLightProvider::getState(
     const std::string&, SignalMovement movement) const {
   std::lock_guard<std::mutex> lock(mutex_);
-  return observation_.getState(movement, ros::SteadyTime::now().toSec(),
-                               stale_seconds_);
+  const ResolvedTrafficLightSample sample = resolveLocked();
+  if (!sample.actionable) {
+    return TrafficLightState::UNKNOWN;
+  }
+  return InterpretTrafficLightLabel(sample.label, movement);
 }
 
 bool RosTrafficLightProvider::hasRecentDetection(const std::string&) const {
   std::lock_guard<std::mutex> lock(mutex_);
-  return observation_.hasRecentDetection(
-      ros::SteadyTime::now().toSec(), stale_seconds_,
-      detection_grace_seconds_);
+  const auto sample = resolveLocked();
+  // Grace retains visibility only; invalid/stale typed input never borrows a
+  // legacy GREEN or renews a previous semantic state.
+  if (sample.source == "none" || sample.label == "stale") return false;
+  const auto& history = typed_received_ ? typed_observation_ : legacy_observation_;
+  return history.hasRecentDetection(ros::SteadyTime::now().toSec(),
+                                    stale_seconds_, detection_grace_seconds_);
 }
 
 std::string RosTrafficLightProvider::getRawLabel() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  return observation_.getRawLabel(ros::SteadyTime::now().toSec(),
-                                  stale_seconds_);
+  return resolveLocked().label;
 }
 
 }  // namespace behavior_planner
+

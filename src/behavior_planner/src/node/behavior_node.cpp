@@ -69,7 +69,12 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   std::string node_path;
   std::string route_path;
   std::string traffic_light_path;
-  std::string traffic_light_topic = "/traffic_light/state";
+  // P4-C3: typed is authoritative; the old String topic remains as a
+  // compatibility fallback for deployments that have not started the new
+  // asmc_perception producer yet.
+  std::string traffic_light_typed_topic =
+      "/perception/traffic_light/detection";
+  std::string traffic_light_legacy_topic = "/traffic_light/state";
   bool use_traffic_light_mock = false;
   double traffic_light_stale_seconds = 1.0;
   double traffic_light_detection_grace_seconds = 1.0;
@@ -160,7 +165,10 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   pnh_.param("traffic_light/mock_path", traffic_light_path, std::string());
   pnh_.param("traffic_light/use_mock", use_traffic_light_mock,
              use_traffic_light_mock);
-  pnh_.param("traffic_light/topic", traffic_light_topic, traffic_light_topic);
+  pnh_.param("traffic_light/typed_topic", traffic_light_typed_topic,
+             traffic_light_typed_topic);
+  pnh_.param("traffic_light/topic", traffic_light_legacy_topic,
+             traffic_light_legacy_topic);
   pnh_.param("traffic_light/stale_seconds", traffic_light_stale_seconds,
              traffic_light_stale_seconds);
   pnh_.param("traffic_light/detection_grace_seconds",
@@ -372,12 +380,13 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
              traffic_light_path.c_str());
   } else {
     lights_ = std::make_shared<RosTrafficLightProvider>(
-        nh_, traffic_light_topic, traffic_light_stale_seconds,
-        traffic_light_detection_grace_seconds);
-    ROS_INFO("Behavior traffic-light source: topic=%s, transport stale=%.2f s, "
-             "detection grace=%.2f s",
-             traffic_light_topic.c_str(), traffic_light_stale_seconds,
-             traffic_light_detection_grace_seconds);
+        nh_, traffic_light_typed_topic, traffic_light_legacy_topic,
+        traffic_light_stale_seconds, traffic_light_detection_grace_seconds);
+    ROS_INFO("Behavior traffic-light sources: typed=%s legacy_fallback=%s "
+             "(stale after %.2f s)",
+             traffic_light_typed_topic.c_str(),
+             traffic_light_legacy_topic.c_str(),
+             traffic_light_stale_seconds);
   }
 
   use_v2_interface_ = interface_version == "v2";
@@ -517,7 +526,7 @@ void BehaviorNode::moraiObjectsCallback(
 }
 
 void BehaviorNode::detectedObjectsCallback(
-    const asmc_msgs::DetectedObjectArray::ConstPtr& message) {
+    const planning_inputs::DetectedObjectArray::ConstPtr& message) {
   if (!message) return;
   if (message->header.stamp.isZero() || message->header.frame_id != "map") {
     ROS_WARN_THROTTLE(
@@ -543,4 +552,5 @@ void BehaviorNode::feedbackV2Callback(
 }
 
 }  // namespace behavior_planner
+
 

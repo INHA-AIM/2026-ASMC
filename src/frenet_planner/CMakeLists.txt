@@ -4,6 +4,7 @@ project(frenet_planner)
 add_compile_options(-std=c++17 -O2)
 
 find_package(catkin REQUIRED COMPONENTS
+  planning_inputs
   asmc_msgs
   morai_msgs
   roscpp
@@ -15,7 +16,7 @@ find_package(yaml-cpp REQUIRED)
 catkin_package(
   INCLUDE_DIRS src
   LIBRARIES frenet_planner_core
-  CATKIN_DEPENDS asmc_msgs morai_msgs roscpp sensor_msgs visualization_msgs
+  CATKIN_DEPENDS planning_inputs asmc_msgs morai_msgs roscpp sensor_msgs visualization_msgs
 )
 
 include_directories(
@@ -99,7 +100,7 @@ target_link_libraries(frenet_planner_message_converter
 
 # v2 인터페이스 어댑터. D3-1은 enum 매핑만 담고, D3-2에서 validation과
 # fingerprint가 여기에 추가된다. FSM 계약 경계이므로 planner core가 아니라
-# ROS 계층에 둔다 (docs/fsm-frenet-interface-v2.md 12.8절).
+# ROS 계층에 둔다 (docs/contracts/planning/fsm-frenet-v2.md 12.8절).
 add_library(frenet_behavior_command_adapter
   src/Runtime/behavior_command_adapter.cpp
 )
@@ -112,7 +113,7 @@ target_link_libraries(frenet_behavior_command_adapter
 
 # v2 transaction 관리. adapter가 stateless인 것과 달리 이쪽은 명령들 사이의
 # 관계(transaction / terminal latch / preemption)를 갖는 stateful 계층이다
-# (docs/fsm-frenet-interface-v2.md 12.8절).
+# (docs/contracts/planning/fsm-frenet-v2.md 12.8절).
 add_library(frenet_command_execution_manager
   src/Runtime/command_execution_manager.cpp
 )
@@ -584,3 +585,4 @@ install(PROGRAMS tools/planner_visualizer.py
 install(DIRECTORY config launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
+

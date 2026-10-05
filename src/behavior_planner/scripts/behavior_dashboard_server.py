@@ -9,8 +9,9 @@ import time
 
 import rospy
 from asmc_msgs.msg import (BehaviorCommand, BehaviorContext,
-                           DetectedObjectArray, FrenetFeedback, Trajectory,
+                           FrenetFeedback, Trajectory,
                            VehicleState)
+from planning_inputs.msg import DetectedObjectArray
 from behavior_planner.msg import UrbanFeatureDebug
 from morai_msgs.msg import ObjectStatusList
 from rosgraph_msgs.msg import Log

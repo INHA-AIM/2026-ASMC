@@ -1,7 +1,9 @@
 <launch>
-  <arg name="objects_topic" default="/perception/objects"/>
+  <arg name="state_topic" default="/vehicle/state"/>
+  <arg name="objects_topic" default="/planning/objects"/>
   <node pkg="frenet_planner" type="frenet_planner_node"
         name="frenet_planner" output="screen">
+    <remap from="/vehicle/state" to="$(arg state_topic)"/>
     <!-- Single parameter source: the node reads both its own runtime
          settings (runtime:) and the Frenet planner core settings
          (planner:) directly from params.yaml. -->

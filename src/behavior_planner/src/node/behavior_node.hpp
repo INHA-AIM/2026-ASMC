@@ -4,7 +4,7 @@
 #include <memory>
 #include <asmc_msgs/BehaviorContext.h>
 #include <asmc_msgs/BehaviorCommand.h>
-#include <asmc_msgs/DetectedObjectArray.h>
+#include <planning_inputs/DetectedObjectArray.h>
 #include <asmc_msgs/FrenetFeedback.h>
 #include <asmc_msgs/PlanFeedback.h>
 #include <asmc_msgs/VehicleState.h>
@@ -34,7 +34,7 @@ class BehaviorNode {
   void moraiObjectsCallback(
       const morai_msgs::ObjectStatusList::ConstPtr& message);
   void detectedObjectsCallback(
-      const asmc_msgs::DetectedObjectArray::ConstPtr& message);
+      const planning_inputs::DetectedObjectArray::ConstPtr& message);
   void feedbackCallback(const asmc_msgs::PlanFeedback::ConstPtr& message);
   void feedbackV2Callback(const asmc_msgs::FrenetFeedback::ConstPtr& message);
 

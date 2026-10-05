@@ -8,11 +8,11 @@
 namespace behavior_planner {
 namespace {
 
-asmc_msgs::DetectedObject MakeObject(int id, std::uint8_t type) {
-  asmc_msgs::DetectedObject object;
+planning_inputs::DetectedObject MakeObject(int id, std::uint8_t type) {
+  planning_inputs::DetectedObject object;
   object.id = id;
   object.type = type;
-  object.motion_state = asmc_msgs::DetectedObject::MOTION_DYNAMIC_PENDING;
+  object.motion_state = planning_inputs::DetectedObject::MOTION_DYNAMIC_PENDING;
   object.center.x = 10.0 + id;
   object.center.y = -2.0;
   object.yaw = 0.25;
@@ -24,7 +24,7 @@ asmc_msgs::DetectedObject MakeObject(int id, std::uint8_t type) {
 }
 
 TEST(DetectedMsgConverter, PreservesUnknownForGeometryBasedAvoidance) {
-  asmc_msgs::DetectedObjectArray message;
+  planning_inputs::DetectedObjectArray message;
   message.objects.push_back(MakeObject(1, 1));
   message.objects.push_back(MakeObject(2, 2));
   message.objects.push_back(MakeObject(3, 3));
@@ -46,9 +46,9 @@ TEST(DetectedMsgConverter, PreservesUnknownForGeometryBasedAvoidance) {
 }
 
 TEST(DetectedMsgConverter, LowThreatPreservesVectorButUsesStaticSpeed) {
-  asmc_msgs::DetectedObjectArray message;
+  planning_inputs::DetectedObjectArray message;
   auto object = MakeObject(5, 0);
-  object.motion_state = asmc_msgs::DetectedObject::MOTION_LOW_THREAT;
+  object.motion_state = planning_inputs::DetectedObject::MOTION_LOW_THREAT;
   message.objects.push_back(object);
 
   const PerceptionObjects converted =
@@ -60,7 +60,7 @@ TEST(DetectedMsgConverter, LowThreatPreservesVectorButUsesStaticSpeed) {
 }
 
 TEST(DetectedMsgConverter, RejectsInvalidNumericObjects) {
-  asmc_msgs::DetectedObjectArray message;
+  planning_inputs::DetectedObjectArray message;
   auto invalid = MakeObject(2, 2);
   invalid.center.x = std::numeric_limits<double>::quiet_NaN();
   message.objects.push_back(invalid);

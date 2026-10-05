@@ -18,7 +18,7 @@ struct PlannerCommand {
     // legacy 경로에서는 planner의 간이 FSM이 채우지만, v2에서는 이 그룹만이
     // 외부에서 들어오는 값이다. 여기 있는 필드를 planner가 계산해서 되써넣으면
     // "명령"과 "계산 결과"의 구분이 무너진다 - 그것이 D2 이전 상태였다.
-    // 상세: docs/fsm-frenet-interface-v2.md 12.3절
+    // 상세: docs/contracts/planning/fsm-frenet-v2.md 12.3절
     //
     // 알려진 예외 (D2에서 의도적으로 남김):
     //   STOP 실행부(frenet_planner.cpp의 APPROACH/BRAKING)는 cmd.mode와
@@ -26,7 +26,7 @@ struct PlannerCommand {
     //   덮어쓴다. 예: APPROACH에서 cmd.mode=LANE_KEEPING으로 바꿔 velocity
     //   keeping 생성기에 위임하고, 외부 보고용 last_mode_는 STOP으로 유지한다.
     //   C4에서 MORAI로 검증한 코드이므로 D2에서는 건드리지 않는다
-    //   (docs/d1-legacy-behavior-boundary.md 5.1절). 이 예외를 없애려면 후보
+    //   (docs/archive/planning/d1-legacy-behavior-boundary.md 5.1절). 이 예외를 없애려면 후보
     //   생성기 선택을 cmd.mode와 분리하는 별도 작업이 필요하다.
     // =====================================================================
 
@@ -41,7 +41,7 @@ struct PlannerCommand {
     //
     // v2에서 이 값은 authoritative다. planner가 "더 가까운 차가 있다"는 이유로
     // 스스로 바꾸면 FSM은 자기가 지시한 대상을 추종 중이라고 오인한다
-    // (docs/d1-legacy-behavior-boundary.md 0.1절 B 분류).
+    // (docs/archive/planning/d1-legacy-behavior-boundary.md 0.1절 B 분류).
     int target_object_id = -1;
 
     // 외부가 지정한 목표속도. has_target_speed=false이면 planner 기본값 사용.
@@ -140,7 +140,7 @@ struct PlannerCommand {
     // [B] Planner 계산 결과 - planner가 채워 후보 생성기에 전달한다
     //
     // FSM은 이 값들을 주지 않는다. 대상 ID와 모드만 받아서 planner가 직접
-    // 계산한다(docs/d1-legacy-behavior-boundary.md 6.2절). 구조체를 나누지
+    // 계산한다(docs/archive/planning/d1-legacy-behavior-boundary.md 6.2절). 구조체를 나누지
     // 않고 한 곳에 두는 이유는 ResolveManeuver가 단일 cmd를 받는 기존
     // 인터페이스를 유지하기 위함이다 - 경계는 이 주석과 필드 배치로 나타낸다.
     // =====================================================================
@@ -186,4 +186,5 @@ struct PlannerCommand {
 };
 
 #endif  // PLANNER_COMMON_PLANNER_COMMAND_HPP
+
 

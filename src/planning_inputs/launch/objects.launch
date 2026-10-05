@@ -1,0 +1,15 @@
+<launch>
+  <arg name="input_topic" default="/last_lidar"/>
+  <arg name="output_topic" default="/planning/objects"/>
+  <arg name="state_topic" default="/planning/vehicle/state"/>
+  <node pkg="planning_inputs" type="tracked_wire_bridge.py" name="planning_tracked_wire_bridge" output="screen">
+    <param name="input_topic" value="$(arg input_topic)"/>
+    <param name="output_topic" value="/planning/input/tracked_objects"/>
+  </node>
+  <node pkg="planning_inputs" type="planning_objects_adapter" name="planning_objects_adapter" output="screen">
+    <rosparam command="load" file="$(find planning_inputs)/config/motion_params.yaml"/>
+    <param name="input_topic" value="/planning/input/tracked_objects"/>
+    <param name="output_topic" value="$(arg output_topic)"/>
+    <param name="state_topic" value="$(arg state_topic)"/>
+  </node>
+</launch>

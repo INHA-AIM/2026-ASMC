@@ -18,7 +18,7 @@ double PositiveOr(double value, double fallback) {
 }  // namespace
 
 bool DetectedMsgConverter::toTrackedObject(
-    const asmc_msgs::DetectedObject& message, ObjectType type,
+    const planning_inputs::DetectedObject& message, ObjectType type,
     TrackedObject* object) {
   if (!object || message.id < 0 || !std::isfinite(message.center.x) ||
       !std::isfinite(message.center.y) || !std::isfinite(message.yaw) ||
@@ -47,7 +47,7 @@ bool DetectedMsgConverter::toTrackedObject(
 }
 
 PerceptionObjects DetectedMsgConverter::toPerceptionObjects(
-    const asmc_msgs::DetectedObjectArray& message) {
+    const planning_inputs::DetectedObjectArray& message) {
   PerceptionObjects result;
   result.vehicles.reserve(message.objects.size());
   result.pedestrians.reserve(message.objects.size());

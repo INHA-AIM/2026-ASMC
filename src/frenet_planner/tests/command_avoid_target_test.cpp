@@ -6,7 +6,7 @@
 //   모든 객체 탐색 -> 같은 차선 -> 저속/정지 -> 가장 가까운 것 ->
 //   좌/우 방향까지 자동 결정
 // 하는 acquisition은 v2에서 금지된다 - 그 권한은 전부 FSM에 있다
-// (docs/d1-legacy-behavior-boundary.md 0.1절 B 분류, 6.4절).
+// (docs/archive/planning/d1-legacy-behavior-boundary.md 0.1절 B 분류, 6.4절).
 //
 //   selector: "무엇을 피할까?"                     -> 금지
 //   resolver: "FSM이 21번을 피하라고 했다. 유효한가?" -> 이것만 한다
@@ -43,7 +43,7 @@
 //
 // 후보 생성과 안전성 판정은 여전히 D6-2b다.
 //
-// 계약: docs/fsm-frenet-interface-v2.md 12.7.1절(D6-1/D6-1a/D6-2a),
+// 계약: docs/contracts/planning/fsm-frenet-v2.md 12.7.1절(D6-1/D6-1a/D6-2a),
 //       12.7.2절, 3.3절, 8.2절
 
 #include "frenet_planner/frenet_planner.hpp"
@@ -3474,3 +3474,4 @@ int main() {
     std::cout << "all AVOID target binding checks passed\n";
     return 0;
 }
+

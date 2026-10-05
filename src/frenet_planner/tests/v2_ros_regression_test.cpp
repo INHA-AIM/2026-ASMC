@@ -36,10 +36,10 @@
 //               E-STOP preemption, COMPLETED 뒤 새 transaction
 //   Feedback    post-COMMIT collision SAFE_STOP에서 잠긴 진단 유지
 //
-// 계약: docs/fsm-frenet-interface-v2.md
+// 계약: docs/contracts/planning/fsm-frenet-v2.md
 
 #include <asmc_msgs/BehaviorCommand.h>
-#include <asmc_msgs/DetectedObjectArray.h>
+#include <planning_inputs/DetectedObjectArray.h>
 #include <asmc_msgs/FrenetFeedback.h>
 #include <asmc_msgs/Trajectory.h>
 #include <asmc_msgs/VehicleState.h>
@@ -206,7 +206,7 @@ class Harness {
         command_pub_ = nh.advertise<Command>("/behavior/command_v2", 1);
         vehicle_pub_ = nh.advertise<asmc_msgs::VehicleState>("/vehicle/state", 1);
         objects_pub_ =
-            nh.advertise<asmc_msgs::DetectedObjectArray>("/perception/objects", 1);
+            nh.advertise<planning_inputs::DetectedObjectArray>("/perception/objects", 1);
     }
 
     // 연결이 성립할 때까지 기다린다. latch 없는 topic이라 이 대기가 없으면
@@ -516,7 +516,7 @@ class Harness {
     }
 
     // FOLLOW 검증용 객체 목록을 설정한다. 다음 PublishInputs부터 반영된다.
-    void SetObjects(const std::vector<asmc_msgs::DetectedObject>& objects) {
+    void SetObjects(const std::vector<planning_inputs::DetectedObject>& objects) {
         objects_ = objects;
     }
 
@@ -585,12 +585,12 @@ class Harness {
     //   d=-0.8 w=2.0 -> target_d 약 +1.73
     //   d=+0.8 w=2.0 -> target_d 약 +3.82
     // 이 차이가 nearest-selector 돌연변이를 잡는다.
-    asmc_msgs::DetectedObject MakeStaticObjectAtOffset(
+    planning_inputs::DetectedObject MakeStaticObjectAtOffset(
         int id, double target_s, double lateral_d, double width,
         double length) const {
         const Pose2D pose = PoseAtOffset(waypoints_, target_s, lateral_d);
         const Pose2D reference = PoseAt(waypoints_, target_s);
-        asmc_msgs::DetectedObject object;
+        planning_inputs::DetectedObject object;
         object.id = id;
         object.center.x = pose.x;
         object.center.y = pose.y;
@@ -738,10 +738,10 @@ class Harness {
 
     // 경로 위 target_s 지점의 차량. FOLLOW 대상 검증(진행 방향/같은 차선/
     // 전방/범위)을 통과하도록 heading과 속도를 맞춘다.
-    asmc_msgs::DetectedObject MakeVehicle(int id, double target_s,
+    planning_inputs::DetectedObject MakeVehicle(int id, double target_s,
                                           double speed) const {
         const Pose2D pose = PoseAt(waypoints_, target_s);
-        asmc_msgs::DetectedObject object;
+        planning_inputs::DetectedObject object;
         object.id = id;
         object.center.x = pose.x;
         object.center.y = pose.y;
@@ -789,7 +789,7 @@ class Harness {
         vehicle.speed = speed;
         vehicle_pub_.publish(vehicle);
 
-        asmc_msgs::DetectedObjectArray objects;
+        planning_inputs::DetectedObjectArray objects;
         objects.header.stamp = stamp;
         objects.header.frame_id = "map";
         objects.objects = objects_;
@@ -810,7 +810,7 @@ class Harness {
     ros::Publisher command_pub_;
     ros::Publisher vehicle_pub_;
     ros::Publisher objects_pub_;
-    std::vector<asmc_msgs::DetectedObject> objects_;
+    std::vector<planning_inputs::DetectedObject> objects_;
     std::vector<Feedback> feedback_;
     std::vector<asmc_msgs::Trajectory> trajectory_;
     int begin_index_ = -1;
@@ -1874,7 +1874,7 @@ int main(int argc, char** argv) {
         // 두면 nearest-selector 돌연변이가 통과한다.
         //
         // 실측(D6-4b): d=-0.8 -> 약 +1.73, d=+0.8 -> 약 +3.82.
-        const std::vector<asmc_msgs::DetectedObject> both = {
+        const std::vector<planning_inputs::DetectedObject> both = {
             harness.MakeStaticObjectAtOffset(17, 240.0, -0.8, 2.0, 4.5),
             harness.MakeStaticObjectAtOffset(21, 255.0, 0.8, 2.0, 4.5),
         };
@@ -2571,3 +2571,4 @@ int main(int argc, char** argv) {
     std::printf("all v2 ROS regression checks passed\n");
     return 0;
 }
+

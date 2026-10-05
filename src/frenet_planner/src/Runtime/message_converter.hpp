@@ -4,7 +4,7 @@
 #include <vector>
 
 #include <asmc_msgs/BehaviorContext.h>
-#include <asmc_msgs/DetectedObjectArray.h>
+#include <planning_inputs/DetectedObjectArray.h>
 #include <asmc_msgs/Trajectory.h>
 #include <asmc_msgs/VehicleState.h>
 
@@ -36,7 +36,7 @@ ConversionStatus ConvertBehaviorContext(
 // 8-corner OBB로 검증되지 않는 object는 INVALID_OBJECT_GEOMETRY로 거부한다
 // - Planner는 center/width/length/yaw로 geometry를 재생성하지 않는다.
 ConversionStatus ConvertDetectedObjects(
-    const asmc_msgs::DetectedObjectArray& message,
+    const planning_inputs::DetectedObjectArray& message,
     std::vector<TrackedObject>& objects);
 // trajectory.header.stamp는 callback 수신 시각이 아니라 이 trajectory를
 // 만든 Ego snapshot의 source time이다(interfaces/README.md 4절). 그래서

@@ -32,6 +32,9 @@ map:
 route: {route_links_path: "$(find behavior_planner)/src/config/route_links_1.yaml"}
 traffic_light:
   use_mock: false
+  # P4-C3 canonical input. Keep `topic` below until every deployment starts
+  # asmc_perception; it is fallback-only after the first typed sample arrives.
+  typed_topic: "/perception/traffic_light/detection"
   topic: "/traffic_light/state"
   stale_seconds: 1.0
   # 토픽은 살아 있지만 분류기가 잠깐 not_detected를 낼 때 가시성만 유지한다.
@@ -86,3 +89,4 @@ roundabout_merge:
   speed_cap_mps: 6.944444444444445
   preview_distance_m: 45.0
   max_horizon_s: 10.0
+

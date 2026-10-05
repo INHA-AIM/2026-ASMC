@@ -1,4 +1,5 @@
 <launch>
+  <arg name="state_topic" default="/vehicle/state"/>
   <arg name="dashboard" default="true"/>
   <arg name="open_dashboard" default="false"/>
   <arg name="dashboard_port" default="8088"/>
@@ -22,12 +23,14 @@
     <param name="avoid/path_margin_m" value="$(arg avoid_path_margin_m)"/>
     <param name="interface_version" value="$(arg interface_version)"/>
     <param name="objects/input_type" value="$(arg objects_input_type)"/>
+    <param name="topics/ego" value="$(arg state_topic)"/>
     <param name="topics/objects" value="$(arg objects_topic)"/>
   </node>
 
   <group if="$(arg dashboard)">
     <node pkg="behavior_planner" type="behavior_dashboard_server.py"
           name="behavior_dashboard_server" output="screen">
+      <remap from="/vehicle/state" to="$(arg state_topic)"/>
       <param name="port" value="$(arg dashboard_port)"/>
       <param name="package_path" value="$(find behavior_planner)"/>
       <param name="interface_version" value="$(arg interface_version)"/>

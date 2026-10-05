@@ -114,7 +114,7 @@ ConversionStatus ConvertBehaviorContext(
 }
 
 ConversionStatus ConvertDetectedObjects(
-    const asmc_msgs::DetectedObjectArray& message,
+    const planning_inputs::DetectedObjectArray& message,
     std::vector<TrackedObject>& objects) {
     if (!IsMapFrame(message.header.frame_id)) {
         return ConversionStatus::INVALID_FRAME;
@@ -143,7 +143,7 @@ ConversionStatus ConvertDetectedObjects(
             return ConversionStatus::NON_FINITE_VALUE;
         }
         if (message_object.motion_state >
-            asmc_msgs::DetectedObject::MOTION_DYNAMIC) {
+            planning_inputs::DetectedObject::MOTION_DYNAMIC) {
             return ConversionStatus::INVALID_FLAG;
         }
 
