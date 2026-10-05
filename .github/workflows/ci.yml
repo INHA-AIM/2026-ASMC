@@ -19,8 +19,8 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            git ca-certificates libyaml-cpp-dev libeigen3-dev \
-            ros-noetic-tf ros-noetic-tf2-ros
+            git ca-certificates libyaml-cpp-dev libeigen3-dev libopencv-dev \
+            ros-noetic-tf ros-noetic-tf2-ros ros-noetic-rostest
           rm -rf /var/lib/apt/lists/*
 
       - uses: actions/checkout@v4
