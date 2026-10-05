@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import copy
 import hashlib
 import json
 import math
@@ -31,6 +32,7 @@ import rospy
 from std_msgs.msg import ColorRGBA, Header
 from visualization_msgs.msg import Marker, MarkerArray
 
+from asmc_hd_map.local_crop import downsample_occupancy
 from asmc_hd_map.map_overlay import dashed_polyline_segments
 from asmc_hd_map.runtime_bundle import (
     RuntimeBundleError,
@@ -546,12 +548,49 @@ def _mission_scenario_markers(scenario: Mapping[str, Any], stamp) -> List[Marker
     return markers
 
 
+# "lite" keeps what an operator needs on the map (lane markings, the merged
+# drivable outline, checkpoints, speed and mission layers). "full" adds the
+# per-lane, per-link and per-surface construction layers used to review the
+# HD-map build itself; they are ~180k line points that RViz has to redraw.
+LITE_EXCLUDED_NAMESPACES = {
+    "compact_lane_centerlines",
+    "compact_lane_polygons",
+    "compact_corridor_fills",
+    "compact_intersection_surface_patches",
+    "compact_roundabout_surface",
+    "compact_guarded_junctions",
+    "route",
+    "route_link_direction",
+    "route_link_labels",
+    "route_station",
+    "route_station_text",
+}
+LITE_EXCLUDED_PREFIXES = ("drivable_group_",)
+DEBUG_MARKER_DETAILS = ("lite", "full")
+
+
+def _drivable_outline_marker(product: Mapping[str, Any], stamp) -> Marker:
+    from asmc_hd_map.mission_scenario import merged_outline
+
+    merged = merged_outline(area["polygon"] for area in product.get("drivable_areas", []))
+    outline = _marker("drivable_area_outline", 0, Marker.LINE_LIST, stamp)
+    outline.scale.x = 0.14
+    outline.color = _color(0.2, 0.85, 1.0, 0.95)
+    for ring in merged["outlines"]:
+        for start, end in zip(ring, ring[1:]):
+            outline.points.extend((_point(start, 0.06), _point(end, 0.06)))
+    return outline
+
+
 def build_debug_markers(
     bundle: Mapping[str, Any],
     stamp,
     product: Mapping[str, Any] | None = None,
     scenario: Mapping[str, Any] | None = None,
+    detail: str = "full",
 ) -> MarkerArray:
+    if detail not in DEBUG_MARKER_DETAILS:
+        raise RuntimeBundleError("debug marker detail must be lite or full: %s" % detail)
     markers: List[Marker] = []
     # Text labels share one collision set even though their marker namespaces
     # remain independently toggleable in RViz.  This keeps a checkpoint at a
@@ -903,6 +942,14 @@ def build_debug_markers(
         )
     )
     markers.append(info)
+    if detail == "lite":
+        markers = [
+            value for value in markers
+            if value.ns not in LITE_EXCLUDED_NAMESPACES
+            and not value.ns.startswith(LITE_EXCLUDED_PREFIXES)
+        ]
+        if product is not None:
+            markers.append(_drivable_outline_marker(product, stamp))
     output = MarkerArray()
     output.markers = markers
     return output
@@ -989,10 +1036,17 @@ class CompetitionMapPublisher:
             self.grid_pub = rospy.Publisher(
                 "/hd_map/global/drivable_grid", OccupancyGrid, queue_size=1, latch=True
             )
-        # The debug topic follows the P1-B non-latched contract and is
-        # periodically republished so late RViz subscribers receive it.
+        # The debug topic follows the P1-B non-latched contract
+        # (publication: on_change_or_subscriber). The markers are static, so
+        # they are built once, sent to each new subscriber on connect, and
+        # refreshed slowly only while someone is subscribed (RViz "Reset"
+        # clears markers until the next send). Nothing is built or sent
+        # without a subscriber.
+        self.debug_detail = str(rospy.get_param("~debug_marker_detail", "lite")).strip().lower()
+        self.debug_markers = None
         self.debug_pub = rospy.Publisher(
-            "/hd_map/debug/markers", MarkerArray, queue_size=1, latch=False
+            "/hd_map/debug/markers", MarkerArray, queue_size=1, latch=False,
+            subscriber_listener=_DebugMarkerListener(self),
         )
         stamp = rospy.Time.now()
         messages = build_static_messages(bundle, stamp, self.product, self.occupancy)
@@ -1004,11 +1058,32 @@ class CompetitionMapPublisher:
             self.lanes_pub.publish(messages["lanes"])
             self.drivable_pub.publish(messages["drivable_areas"])
             self.grid_pub.publish(messages["grid"])
-        self.debug_pub.publish(build_debug_markers(bundle, stamp, self.product, self.scenario))
-        republish_hz = float(rospy.get_param("~debug_republish_hz", 1.0))
-        if republish_hz <= 0.0:
-            raise RuntimeBundleError("debug_republish_hz must be positive")
-        self.timer = rospy.Timer(rospy.Duration(1.0 / republish_hz), self._publish_debug)
+        # Display-only coarse copy of the drivable grid: RViz renders the 0.2 m
+        # planner grid (22 MB, 22M cells) slowly, while 0.6 m is ~2.5 MB.
+        viz_factor = int(rospy.get_param("~drivable_viz_downsample", 3))
+        if self.product is not None and viz_factor > 0:
+            coarse = downsample_occupancy(self.occupancy, viz_factor)
+            viz = OccupancyGrid()
+            viz.header = copy.deepcopy(messages["grid"].header)
+            viz.info = copy.deepcopy(messages["grid"].info)  # never mutate the planner grid
+            viz.info.resolution = messages["grid"].info.resolution * viz_factor
+            viz.info.height, viz.info.width = coarse.shape
+            viz.data = coarse.reshape(-1).tolist()
+            self.viz_grid_pub = rospy.Publisher(
+                "/hd_map/debug/drivable_grid_viz", OccupancyGrid, queue_size=1, latch=True
+            )
+            self.viz_grid_pub.publish(viz)
+        self.debug_markers = build_debug_markers(
+            bundle, stamp, self.product, self.scenario, self.debug_detail
+        )
+        self._publish_debug(None)
+        republish_hz = float(rospy.get_param("~debug_republish_hz", 0.2))
+        if republish_hz < 0.0:
+            raise RuntimeBundleError("debug_republish_hz must be non-negative")
+        self.timer = (
+            rospy.Timer(rospy.Duration(1.0 / republish_hz), self._publish_debug)
+            if republish_hz > 0.0 else None
+        )
         rospy.loginfo(
             "competition map published: build=%s geometry=%s markings=%d lanes=%d areas=%d "
             "checkpoints=%d missions=%d operational=%s complete=%s",
@@ -1024,9 +1099,20 @@ class CompetitionMapPublisher:
         )
 
     def _publish_debug(self, _event) -> None:
-        self.debug_pub.publish(build_debug_markers(
-            self.bundle, rospy.Time.now(), self.product, self.scenario
-        ))
+        if self.debug_markers is not None and self.debug_pub.get_num_connections() > 0:
+            self.debug_pub.publish(self.debug_markers)
+
+
+class _DebugMarkerListener(rospy.SubscribeListener):
+    """Send the cached debug markers to a subscriber as soon as it connects."""
+
+    def __init__(self, node: "CompetitionMapPublisher") -> None:
+        super().__init__()
+        self.node = node
+
+    def peer_subscribe(self, topic_name, topic_publish, peer_publish) -> None:
+        if self.node.debug_markers is not None:
+            peer_publish(self.node.debug_markers)
 
 
 def main() -> None:

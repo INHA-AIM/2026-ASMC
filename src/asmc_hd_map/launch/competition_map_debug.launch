@@ -2,7 +2,10 @@
   <!-- Reviewed markings/metadata plus the P2-B compact drivable product. -->
   <arg name="rviz" default="true"/>
   <arg name="data_root" default="/data"/>
-  <arg name="debug_republish_hz" default="1.0"/>
+  <!-- lite: lane markings, merged drivable outline, checkpoints, speed and
+       mission layers. full: adds per-lane/link/surface build-review layers. -->
+  <arg name="debug_marker_detail" default="lite"/>
+  <arg name="debug_republish_hz" default="0.2"/>
   <arg name="map_path"
        default="$(find asmc_hd_map)/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json"/>
   <arg name="metadata_path"
@@ -26,7 +29,7 @@
   <arg name="publish_ego_markers" default="true"/>
   <arg name="publish_ego_tf" default="$(arg rviz)"/>
   <arg name="ego_frame_id" default="base_link"/>
-  <arg name="follow_ego" default="false"/>
+  <arg name="follow_ego" default="true"/>
 
   <node pkg="asmc_hd_map" type="competition_map_publisher_node.py"
         name="competition_map_publisher" output="screen" required="true">
@@ -36,6 +39,7 @@
     <param name="baseline_path" value="$(arg baseline_path)"/>
     <param name="data_root" value="$(arg data_root)"/>
     <param name="debug_republish_hz" value="$(arg debug_republish_hz)"/>
+    <param name="debug_marker_detail" value="$(arg debug_marker_detail)"/>
   </node>
 
   <node if="$(arg publish_local)" pkg="asmc_hd_map" type="local_map_crop_node.py"

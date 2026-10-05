@@ -45,9 +45,6 @@ selection:
       - A2256W000227
       - A2256W000100
       - A2256W000226
-      # Outermost southbound junction link beside A746; the only A222 junction
-      # link that was left out of the reviewed box (H5 road covers it).
-      - A2256W001212
     dynamic_obstacle_maneuver:
       - A2256W000599
       - A2256W000206

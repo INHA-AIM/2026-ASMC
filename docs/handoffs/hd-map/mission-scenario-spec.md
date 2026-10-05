@@ -73,7 +73,7 @@ pose 규약은 다음과 같다.
 
 | zone | 회피·충돌 차로 | actor 후보 |
 |---|---|---|
-| `static_obstacle_candidate` (A222 교차로) | 정적 그룹 8개 (A221·A746·A1212 반대방향 포함) | static_obstacle: A222 |
+| `static_obstacle_candidate` (A222 교차로) | 정적 그룹 7개 (A221·A746 반대방향 포함) | static_obstacle: A222 |
 | `dynamic_obstacle_candidate` (A728→A205) | 동적 그룹 8개 | dynamic_obstacle: 교차 비경로 링크 7개 |
 | `gps_shadow_candidate` (A126) | A131 (반대 차로) | static_obstacle: A126, npc_vehicle(선택): A131 |
 | `roundabout_candidate` (A148→A151) | A134 | npc_vehicle: A147→A134, A133→A134 (노드 0728에서 ego A146→A151과 충돌) |

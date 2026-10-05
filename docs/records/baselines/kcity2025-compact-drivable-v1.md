@@ -19,20 +19,20 @@
 
 ## 결과
 
-- route lanes: `39`, selected lanes: `71` (extra same-direction `16`)
-- intersection support links: `23`, vector areas: `103`
-- base lane areas: `71`, adjacent corridor fills: `19`, intersection gap patches: `13`
+- route lanes: `39`, selected lanes: `70` (extra same-direction `16`)
+- intersection support links: `22`, vector areas: `102`
+- base lane areas: `70`, adjacent corridor fills: `18`, intersection gap patches: `14`
 - reviewed-boundary refinement: `41` lanes / `74` sides
 - explicit shadow opposite lane: `A2256W000131` beside route `A2256W000126`
-- reviewed non-route intersection lanes: `16`
-- static allowlist: `A2256W000100, A2256W000111, A2256W000221, A2256W000222, A2256W000226, A2256W000227, A2256W000746, A2256W001212`
+- reviewed non-route intersection lanes: `15`
+- static allowlist: `A2256W000100, A2256W000111, A2256W000221, A2256W000222, A2256W000226, A2256W000227, A2256W000746`
 - dynamic allowlist: `A2256W000066, A2256W000087, A2256W000206, A2256W000211, A2256W000599, A2256W000636, A2256W001124, A2256W001125`
 - roundabout extension: `A2256W000134`
 - roundabout surface stitch: `A2256W000151` (envelope reference only; not a new lane)
-- legacy road: `89834.44 m²`, compact road: `15005.00 m²` (`16.70%`)
+- legacy road: `89834.44 m²`, compact road: `14948.32 m²` (`16.64%`)
 - reviewed geometry SHA: `01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf`
-- product SHA: `2ebb98389b90ef40ff558c2870f05081f3155bcbbde60878e5d0791960144cb8`
-- grid SHA: `e4cfe317152a9dc5f7355a7483cacf74c712b49c1ae41d833a7cdcc0171e6e45`
+- product SHA: `f1a6478603774c1ee0146a332fbbe07c448de716c260167ba0c18469c0ad378a`
+- grid SHA: `b78b5765833b04048b1d81f66d6c9c5316d995a4867382e23f563f5519769574`
 
 ## 소비 규칙
 

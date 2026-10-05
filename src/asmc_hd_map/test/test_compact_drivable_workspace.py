@@ -30,8 +30,8 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
         self.assertEqual(self.artifact["reviewed_geometry_sha256"],
                          "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf")
         self.assertEqual(stats["route_lane_count"], 39)
-        self.assertEqual(stats["selected_lane_count"], 71)
-        self.assertEqual(stats["drivable_area_count"], 103)
+        self.assertEqual(stats["selected_lane_count"], 70)
+        self.assertEqual(stats["drivable_area_count"], 102)
         self.assertEqual(stats["checkpoint_centers_inside"], 15)
         self.assertLess(stats["compact_fraction_of_legacy"], 0.20)
         self.assertEqual(self.artifact["grid"]["resolution_m"], 0.2)
@@ -47,8 +47,8 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
         self.assertIn("A2256W000131", self.artifact["selection"]["selected_lane_link_ids"])
         self.assertEqual(stats["boundary_refined_lane_count"], 41)
         self.assertEqual(stats["boundary_refined_side_count"], 74)
-        self.assertEqual(stats["corridor_fill_area_count"], 19)
-        self.assertEqual(stats["intersection_surface_patch_count"], 13)
+        self.assertEqual(stats["corridor_fill_area_count"], 18)
+        self.assertEqual(stats["intersection_surface_patch_count"], 14)
         self.assertEqual(
             self.artifact["selection"]["intersection_groups"]["roundabout_maneuver"],
             ["A2256W000134"],
@@ -68,7 +68,7 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
             if lane["lane_type"] == "intersection"
         }
         self.assertEqual(intersection_lanes - route, explicit - route)
-        self.assertEqual(len(selection["intersection_support_link_ids"]), 23)
+        self.assertEqual(len(selection["intersection_support_link_ids"]), 22)
         closure = selection["intersection_node_pair_closures"]["dynamic_obstacle_maneuver"]
         self.assertEqual(
             closure["derived_link_ids"],
@@ -161,7 +161,8 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
             self.assertEqual(refinement["mode"], "mgeo_link_width_reviewed_widening")
             self.assertEqual((refinement["side"], refinement["maximum_extra_m"]), ("right", extra))
             self.assertEqual(refinement["profile"], "half_sine")
-        self.assertEqual(lanes["A2256W001212"]["drivable_group"], "static_obstacle_maneuver")
+        # The outermost southbound A1212 is not a maneuver lane for the static obstacle.
+        self.assertNotIn("A2256W001212", lanes)
 
         grid = self.arrays["occupancy"]
         resolution = float(self.artifact["grid"]["resolution_m"])
@@ -177,9 +178,8 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
         self.assertEqual(occupancy(-53.72, -130.50), 100)
         self.assertEqual(occupancy(-55.07, -149.22), 0)
         self.assertEqual(occupancy(-54.21, -150.27), 100)
-        # A1212 strip inside the junction box; opposite lanes past the node line stay out.
-        self.assertEqual(occupancy(-71.0, -140.0), 0)
-        self.assertEqual(occupancy(-73.5, -140.0), 100)
+        # The A1212 strip and opposite lanes past the node line stay out.
+        self.assertEqual(occupancy(-71.0, -140.0), 100)
         self.assertEqual(occupancy(-67.5, -121.0), 100)
 
     def test_obstacle_surfaces_are_connected_and_have_no_internal_holes(self):

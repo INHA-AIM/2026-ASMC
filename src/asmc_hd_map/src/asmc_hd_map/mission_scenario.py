@@ -119,12 +119,54 @@ def _distance_to_span(
     )
 
 
-def _surface(
-    areas: Sequence[Mapping[str, Any]], link_ids: Iterable[str]
-) -> Optional[Dict[str, Any]]:
+def merged_outline(
+    rings: Iterable[Iterable[Any]],
+    close_m: float = 0.2,
+    min_hole_m2: float = 5.0,
+    simplify_m: float = 0.1,
+) -> Dict[str, Any]:
+    """Union drivable polygons into clean display outlines.
+
+    Adjacent lane polygons meet with hairline gaps, so a plain union leaves
+    dozens of sliver rings that render as broken line fragments. A small
+    closing (grow then shrink by close_m) seals those gaps, holes smaller than
+    min_hole_m2 are dropped and the result is simplified. Real holes such as a
+    roundabout island survive.
+    """
+
     from shapely.geometry import Polygon
     from shapely.ops import unary_union
 
+    polygons = []
+    for raw in rings:
+        polygon = Polygon(_ring_xy(raw))
+        if not polygon.is_valid:
+            polygon = polygon.buffer(0)
+        if not polygon.is_empty:
+            polygons.append(polygon)
+    if not polygons:
+        return {"area_m2": 0.0, "piece_count": 0, "outlines": []}
+    union = unary_union(polygons)
+    if close_m > 0.0:
+        union = union.buffer(close_m, join_style=2).buffer(-close_m, join_style=2)
+    pieces = []
+    for piece in getattr(union, "geoms", [union]):
+        holes = [ring for ring in piece.interiors if Polygon(ring).area >= min_hole_m2]
+        pieces.append(Polygon(piece.exterior, holes).simplify(simplify_m))
+    outlines = []
+    for piece in pieces:
+        for ring in [piece.exterior] + list(piece.interiors):
+            outlines.append([[round(x, 3), round(y, 3)] for x, y in ring.coords])
+    return {
+        "area_m2": round(float(sum(piece.area for piece in pieces)), 3),
+        "piece_count": len(pieces),
+        "outlines": outlines,
+    }
+
+
+def _surface(
+    areas: Sequence[Mapping[str, Any]], link_ids: Iterable[str]
+) -> Optional[Dict[str, Any]]:
     allowed = set(link_ids)
     selected = [
         area for area in areas
@@ -132,25 +174,9 @@ def _surface(
     ]
     if not selected:
         return None
-    polygons = []
-    for area in selected:
-        polygon = Polygon(_ring_xy(area["polygon"]))
-        if not polygon.is_valid:
-            polygon = polygon.buffer(0)
-        if not polygon.is_empty:
-            polygons.append(polygon)
-    union = unary_union(polygons).simplify(0.05)
-    pieces = list(getattr(union, "geoms", [union]))
-    outlines = []
-    for piece in pieces:
-        for ring in [piece.exterior] + list(piece.interiors):
-            outlines.append([[round(x, 3), round(y, 3)] for x, y in ring.coords])
-    return {
-        "area_ids": sorted(str(area["id"]) for area in selected),
-        "area_m2": round(float(union.area), 3),
-        "piece_count": len(pieces),
-        "outlines": outlines,
-    }
+    merged = merged_outline(area["polygon"] for area in selected)
+    merged["area_ids"] = sorted(str(area["id"]) for area in selected)
+    return merged
 
 
 def _adjacent_lane_chain(

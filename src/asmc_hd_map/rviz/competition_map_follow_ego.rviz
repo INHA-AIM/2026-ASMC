@@ -19,30 +19,28 @@ Visualization Manager:
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /hd_map/debug/markers
-      Name: "HD map lanes, route, checkpoints, missions"
+      Name: "HD map lanes, drivable outline, checkpoints, missions"
       Queue Size: 2
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /hd_map/debug/ego_markers
       Name: "Ego footprint (base_link, GPS+IMU)"
       Queue Size: 2
-    - Alpha: 0.9
-      Class: rviz/PointCloud2
-      Color: 255; 255; 255
-      Color Transformer: FlatColor
-      Enabled: false
-      Name: "LiDAR /velodyne_points (needs map->base_link TF)"
-      Size (m): 0.06
-      Style: Points
-      Topic: /velodyne_points
-      Unreliable: true
-      Use Fixed Frame: true
-    - Alpha: 0.34
+    - Alpha: 0.4
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: true
       Enabled: true
-      Name: "Compact drivable OccupancyGrid"
+      Name: "Drivable area fill (0.6 m display copy)"
+      Topic: /hd_map/debug/drivable_grid_viz
+      Unreliable: false
+      Use Timestamp: false
+    - Alpha: 0.34
+      Class: rviz/Map
+      Color Scheme: map
+      Draw Behind: true
+      Enabled: false
+      Name: "Compact drivable OccupancyGrid (0.2 m, 22 MB; heavy)"
       Topic: /hd_map/global/drivable_grid
       Unreliable: false
       Use Timestamp: false
@@ -77,6 +75,13 @@ Visualization Manager:
       X: 0
       Y: 0
     Saved:
+      - Angle: 3.141592653589793
+        Class: rviz/TopDownOrtho
+        Name: Competition route overview (upright text)
+        Scale: 420
+        Target Frame: map
+        X: -25
+        Y: -105
       - Angle: 3.141592653589793
         Class: rviz/TopDownOrtho
         Name: Follow ego (base_link)

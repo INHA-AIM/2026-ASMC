@@ -40,10 +40,14 @@ RViz를 포함한 검수:
 roslaunch asmc_hd_map competition_map_debug.launch
 ```
 
-브리지를 켠 상태에서 ego 차량 박스를 HD맵 위에서 따라가며 보려면:
+RViz는 기본으로 ego 차량 박스(`base_link`)를 따라간다. 전체 경로 보기로 띄우려면 `follow_ego:=false`를
+준다. 기본 표시는 가벼운 `lite`(차선·주행가능영역·체크포인트·미션)다. HD맵 제작 검수용 차로·링크
+레이어까지 보려면 `debug_marker_detail:=full`을 준다.
 
 ```bash
-roslaunch asmc_hd_map competition_map_debug.launch follow_ego:=true
+roslaunch asmc_hd_map competition_map_debug.launch                       # ego 따라가기, lite
+roslaunch asmc_hd_map competition_map_debug.launch follow_ego:=false \
+  debug_marker_detail:=full                                                # 전체 경로, 제작 검수
 ```
 
 박스·색·TF 의미는 [runtime contract §4.0](../../docs/contracts/hd-map/runtime-v1.md#40-ego-차량-박스와-base_link-추적)을 본다.
@@ -70,8 +74,8 @@ publisher는 입력 SHA나 build 조합이 맞지 않으면 일부 토픽을 내
 | 항목 | 개수·기준 |
 |---|---|
 | 물리 차선·정지선 | 121 + 7 = 128 `LaneMarking` |
-| 차로 | 71 `Lane` |
-| vector 주행가능영역 | 103 `DrivableArea` = Lane 71 + corridor fill 19 + surface patch 13 |
+| 차로 | 70 `Lane` |
+| vector 주행가능영역 | 102 `DrivableArea` = Lane 70 + corridor fill 18 + surface patch 14 |
 | 체크포인트 | 15 (규정집 v1.2), 통과 반경 3 m |
 | mission/policy/speed zone | 15 |
 | raster | 0.2 m/cell, vector product의 파생 lookup |

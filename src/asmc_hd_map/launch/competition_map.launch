@@ -3,7 +3,8 @@
        may be disabled by launching with rviz:=false (the default). -->
   <arg name="rviz" default="false"/>
   <arg name="data_root" default="/data"/>
-  <arg name="debug_republish_hz" default="1.0"/>
+  <arg name="debug_republish_hz" default="0.2"/>
+  <arg name="debug_marker_detail" default="lite"/>
   <arg name="baseline_path" default=""/>
   <arg name="publish_local" default="true"/>
   <arg name="local_pose_source" default="gps_imu"/>
@@ -13,12 +14,13 @@
   <arg name="local_imu_topic" default="/imu"/>
   <arg name="local_extent_m" default="120.0"/>
   <arg name="local_publish_hz" default="5.0"/>
-  <arg name="follow_ego" default="false"/>
+  <arg name="follow_ego" default="true"/>
 
   <include file="$(find asmc_hd_map)/launch/competition_map_debug.launch">
     <arg name="rviz" value="$(arg rviz)"/>
     <arg name="data_root" value="$(arg data_root)"/>
     <arg name="debug_republish_hz" value="$(arg debug_republish_hz)"/>
+    <arg name="debug_marker_detail" value="$(arg debug_marker_detail)"/>
     <arg name="baseline_path" value="$(arg baseline_path)"/>
     <arg name="publish_local" value="$(arg publish_local)"/>
     <arg name="local_pose_source" value="$(arg local_pose_source)"/>

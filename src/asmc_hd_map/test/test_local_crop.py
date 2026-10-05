@@ -6,6 +6,7 @@ import yaml
 import numpy as np
 
 from asmc_hd_map.local_crop import (
+    downsample_occupancy,
     bounds_intersect,
     crop_bounds,
     crop_occupancy_grid,
@@ -76,6 +77,19 @@ class LocalCropTest(unittest.TestCase):
             crop_occupancy_grid(
                 np.zeros((2, 2), dtype=np.int8), 0.0, (0.0, 0.0), (0.0, 0.0), 2.0
             )
+
+    def test_display_downsample_keeps_any_drivable_cell_and_pads_with_non_drivable(self):
+        occupancy = np.full((5, 7), 100, dtype=np.int8)
+        occupancy[0, 0] = 0
+        occupancy[4, 6] = 0
+        coarse = downsample_occupancy(occupancy, 3)
+        self.assertEqual(coarse.shape, (2, 3))
+        self.assertEqual(coarse[0, 0], 0)
+        self.assertEqual(coarse[1, 2], 0)
+        self.assertEqual(int((coarse == 0).sum()), 2)
+        np.testing.assert_array_equal(downsample_occupancy(occupancy, 1), occupancy)
+        with self.assertRaises(ValueError):
+            downsample_occupancy(occupancy, 0)
 
     def test_phase_two_launch_and_contract_enable_local_crop(self):
         launch = (

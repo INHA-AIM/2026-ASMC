@@ -24,7 +24,7 @@ zones:
     actor_sources:
       - role: static_obstacle
         link_ids: [A2256W000222]
-        note: ego lane through the A222 junction; avoid via A221/A746/A1212
+        note: ego lane through the A222 junction; avoid via A221/A746
 
   dynamic_obstacle_candidate:
     maneuver_groups: [dynamic_obstacle_maneuver]

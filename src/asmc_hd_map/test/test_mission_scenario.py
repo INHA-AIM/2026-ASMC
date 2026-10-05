@@ -95,12 +95,33 @@ class MissionScenarioSpecTest(unittest.TestCase):
         second = [self.spec.sample_actor_pose(zone["id"], role, random.Random(3)) for _ in range(3)]
         self.assertEqual(first, second)
 
-    def test_surface_zones_have_one_connected_outline_set(self):
+    def test_surface_outlines_are_clean_rings_without_sliver_holes(self):
+        from shapely.geometry import Polygon
+
         for zone in self.spec.zones():
             if zone["surface"] is None:
                 continue
-            self.assertGreater(zone["surface"]["area_m2"], 0.0, zone["id"])
-            self.assertTrue(zone["surface"]["outlines"], zone["id"])
+            surface = zone["surface"]
+            self.assertGreater(surface["area_m2"], 0.0, zone["id"])
+            self.assertTrue(surface["outlines"], zone["id"])
+            rings = [abs(Polygon(ring).area) for ring in surface["outlines"]]
+            # Every ring is either an exterior or a real hole, never a lane-seam sliver.
+            self.assertTrue(all(area >= 5.0 for area in rings), (zone["id"], rings))
+
+    def test_merged_outline_preserves_the_vector_union_area(self):
+        import json
+        from shapely.geometry import Polygon
+        from shapely.ops import unary_union
+        from asmc_hd_map.mission_scenario import merged_outline
+
+        product = json.loads(
+            (REPO_ROOT / "src/asmc_hd_map/config/kcity2025_compact_drivable_map.json").read_text(encoding="utf-8")
+        )
+        rings = [area["polygon"] for area in product["drivable_areas"]]
+        raw = unary_union([Polygon([point[:2] for point in ring]).buffer(0) for ring in rings])
+        merged = merged_outline(rings)
+        self.assertAlmostEqual(merged["area_m2"], raw.area, delta=0.01 * raw.area)
+        self.assertLess(len(merged["outlines"]), 10)
 
     def test_route_pose_round_trips_through_route_station(self):
         for station in (10.0, 900.0, 1950.0):
