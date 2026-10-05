@@ -20,15 +20,15 @@
 | route/link station | derived_official | 공식 path와 검토된 39-link route에 XY 투영 |
 | 기본 60 kph | official | 전역 규칙으로 기록 |
 | 출발 5%, 고주로 link corridor | derived_official | 공식 규칙을 route station으로 계산 |
-| 신호등 상시 인지·GPS 음영·장애물·회전교차로·합류·주변 차량 | provisional | 팀 질의응답·현장 판단 또는 공식 그림의 팀 link 해석, 판제 강제 사용 금지 |
-| 신호등 경계 5개 | provisional | stage14의 traffic-light ID가 있는 검수 정지선에서 파생 |
+| 신호등 상시 인지·GPS 음영·장애물·회전교차로·합류·주변 차량 | team_final | 팀 질의응답·현장 판단 또는 공식 그림의 팀 link 해석. 2026-10-05 경계 sign-off, 판제 적용 가능 |
+| 신호등 경계 5개 | team_final | stage14의 traffic-light ID가 있는 검수 정지선에서 파생, 2026-10-05 sign-off |
 | 링크별 유효 제한속도 | derived_official | MGeo `max_speed`를 공식 속도 구간 상한으로 자른 값 |
 
 GPS 음영 후보는 전역경로 `A126` 구간이며, HD맵 주행면에는 그 옆 반대방향 링크 `A131`을
 회피 가능 차로로 함께 제공한다. `gps_shadow_candidate.rule_payload_json`의
 `usable_opposite_lane_link_ids=[A2256W000131]`과
-`drivable_area_bridge_id=gps_shadow_A126_A131`이 이 관계를 전달한다. 여전히 provisional이므로
-판제가 이 반대차로 사용을 강제 조건으로 취급해서는 안 된다.
+`drivable_area_bridge_id=gps_shadow_A126_A131`이 이 관계를 전달한다. 반대차로는 사용 가능 영역이지
+주행 의무가 아니다.
 
 입력 다섯 개의 SHA가 source config와 다르면 `--write`도 실패한다. 주최 파일이나 route/map이
 바뀌면 변경을 자동 수용하지 않고 source config의 SHA와 파생 결과를 함께 리뷰해야 한다.
@@ -66,7 +66,7 @@ route 투영 오차와 선택된 link 투영 오차는 모두 `0.0 m`다. 공유
 
 ## 3. 미션 권위와 소비 제한
 
-생성된 15개 zone은 `derived_official` 4개, `provisional` 11개다. 신호등 인지는 `A236` 시작부터
+생성된 15개 zone은 `derived_official` 4개, `team_final` 11개다. 신호등 인지는 `A236` 시작부터
 `A308` 종료까지만 필요한 별도 activation policy로 둔다. 이 policy는 공간 미션이 아니며
 `runtime_activation_hint=enable_within_zone_only`, `disable_outside_zone=true`를 전달하므로 후속
 runtime에서 구간 밖 신호등 노드를 중지할 수 있다. 실제 정지 위치는 이 policy 안의
@@ -94,7 +94,7 @@ traffic-light ID 기준 경계 5개로 분리하며 같은 신호에 속한 인�
 
 정적 장애물은 `A213` 종료 후 `A220` 시작 전 교차로 영역, 즉 `A222`로 한정한다. 동적 장애물은
 `A728→A599→A207→A205` 전 구간이다. 두 경계는 주최 측 수치 공지가 아니라 팀 질의응답과
-상황 검토에 따른 값이므로 `provisional`을 유지한다.
+상황 검토에 따른 값이며, 2026-10-05 팀 검수로 `team_final` 확정했다.
 
 규정집 v1.2의 판정 사실은 각 zone의 `rule_payload_json`에 기록한다. 속도는 Ego Vehicle Status
 속도로 판정하며 초과 즉시 15초, 3초 지속마다 15초가 추가된다. 신호 경계 5개는 앞바퀴가 정지선을
@@ -102,9 +102,14 @@ traffic-light ID 기준 경계 5개로 분리하며 같은 신호에 속한 인�
 실패다. GPS 음영은 GPS 전체 blackout이고 차로 준수 패널티가 없으며, 구간 안의 랜덤 미션은 장애물
 회피뿐이다. 장애물·끼어들기는 CollisionData로 충돌마다 15초다.
 
-모든 provisional zone은 `planning_enforcement_allowed=false`여야 한다. 이 값이 true이거나
-status가 비어 있으면 validator가 실패한다. P1-D 시각화에서는 표시할 수 있지만 판제의 속도,
-정지, 차선 변경 규칙을 직접 활성화하면 안 된다.
+`team_final`은 주최 수치는 없지만 팀이 대회용 경계로 확정한 상태다. `planning_enforcement_allowed=true`이고
+`rule_payload_json`에 `authority=team_final`과 `review.reviewed_on`·`review.decision`을 반드시 담는다.
+source에 `review`가 없거나 `requires_official_boundary_confirmation`이 남아 있으면 builder와 validator가
+실패한다. 동결된 `MissionZone` 메시지에는 team-final enum이 없으므로 publisher는 이 zone을
+`STATUS_DERIVED_OFFICIAL`로 발행한다. 근거 수준을 구분해야 하는 consumer는 payload의 `authority`를 읽는다.
+
+`provisional` zone은 지금 없지만 규칙은 유지한다. `planning_enforcement_allowed=false`여야 하며, 이 값이
+true이거나 status가 비어 있으면 validator가 실패한다.
 
 ## 4. 재생성과 검증
 

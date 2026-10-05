@@ -22,7 +22,11 @@ SOURCE_SCHEMA_VERSION = "asmc.competition_metadata.source/v1"
 METADATA_SCHEMA_VERSION = "asmc.competition_metadata/v1"
 # Rule book v1.2 (2026-09-30): START/END plus checkpoints 1-14.
 OFFICIAL_CHECKPOINT_COUNT = 15
-ALLOWED_MISSION_STATUS = {"official", "derived_official", "provisional"}
+# team_final: the organizer gives no numeric boundary, but the team signed the
+# boundary off for the competition, so planning may enforce it. The frozen
+# MissionZone message carries it as STATUS_DERIVED_OFFICIAL with
+# rule_payload.authority=team_final. Only provisional blocks planning.
+ALLOWED_MISSION_STATUS = {"official", "derived_official", "team_final", "provisional"}
 ALLOWED_MISSION_TYPES = {
     "start_success",
     "speed_limit",
@@ -394,6 +398,19 @@ def _mission_bounds(
     raise CompetitionMetadataError("unsupported mission bounds kind: %s" % kind)
 
 
+def _team_final_payload(
+    label: str, payload: Mapping[str, Any], review: Any
+) -> Dict[str, Any]:
+    if not isinstance(review, dict) or not review.get("reviewed_on") or not review.get("decision"):
+        raise CompetitionMetadataError("team_final %s needs review.reviewed_on and review.decision" % label)
+    if payload.get("requires_official_boundary_confirmation"):
+        raise CompetitionMetadataError("team_final %s still requires boundary confirmation" % label)
+    result = dict(payload)
+    result["authority"] = "team_final"
+    result["review"] = {"reviewed_on": str(review["reviewed_on"]), "decision": str(review["decision"])}
+    return result
+
+
 def _checkpoint_ids_in_span(
     checkpoints: Sequence[Mapping[str, Any]], start: float, end: float
 ) -> List[str]:
@@ -428,6 +445,8 @@ def _build_authored_missions(
         payload = spec.get("rule_payload") or {}
         if not isinstance(payload, dict):
             raise CompetitionMetadataError("mission rule_payload must be a mapping: %s" % mission_id)
+        if status == "team_final":
+            payload = _team_final_payload(mission_id, payload, spec.get("review"))
         has_speed_limit = "speed_limit_kph" in spec
         speed_limit = _finite(spec.get("speed_limit_kph", 0.0), mission_id + ".speed_limit_kph")
         result.append(
@@ -468,6 +487,8 @@ def _build_traffic_light_missions(
         raise CompetitionMetadataError("traffic_light_zones status is invalid")
     if status == "provisional" and config.get("planning_enforcement_allowed") is not False:
         raise CompetitionMetadataError("provisional traffic-light zones must disable planning enforcement")
+    if status == "team_final" and config.get("planning_enforcement_allowed") is not True:
+        raise CompetitionMetadataError("team_final traffic-light zones must enable planning enforcement")
 
     grouped: Dict[str, List[Mapping[str, Any]]] = {}
     for feature in hd_map.get("features", []):
@@ -507,6 +528,8 @@ def _build_traffic_light_missions(
             "stopline_topology_link_ids": topology_ids,
             "traffic_light_id": traffic_light_id,
         })
+        if status == "team_final":
+            payload = _team_final_payload(traffic_light_id, payload, config.get("review"))
         missions.append(
             {
                 "id": "traffic_light_%s" % traffic_light_id,
@@ -697,6 +720,13 @@ def validate_competition_metadata(document: Mapping[str, Any]) -> Dict[str, Any]
             raise CompetitionMetadataError("mission rule payload must be a JSON object")
         if status == "provisional" and mission.get("planning_enforcement_allowed") is not False:
             raise CompetitionMetadataError("provisional mission cannot enable planning enforcement")
+        if status == "team_final" and (
+            mission.get("planning_enforcement_allowed") is not True
+            or payload.get("authority") != "team_final"
+            or not (payload.get("review") or {}).get("reviewed_on")
+            or payload.get("requires_official_boundary_confirmation")
+        ):
+            raise CompetitionMetadataError("team_final mission lacks its review authority: %s" % mission_id)
         if mission.get("mission_type") in ("speed_limit", "high_speed_exception"):
             speed_profile.append(mission)
         if mission.get("mission_type") == "traffic_light":

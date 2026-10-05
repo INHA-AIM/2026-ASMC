@@ -394,9 +394,16 @@ def main() -> int:
     )
     status_counts = Counter(value.status for value in missions.zones)
     _require(status_counts[MissionZone.STATUS_OFFICIAL] == 0, "official mission count drift")
-    _require(status_counts[MissionZone.STATUS_DERIVED_OFFICIAL] == 4, "derived mission count drift")
-    _require(status_counts[MissionZone.STATUS_PROVISIONAL] == 11, "provisional mission count drift")
+    # 4 derived-official rules plus 11 team-final zones, which the frozen
+    # message carries as DERIVED_OFFICIAL with rule_payload.authority=team_final.
+    _require(status_counts[MissionZone.STATUS_DERIVED_OFFICIAL] == 15, "derived mission count drift")
+    _require(status_counts[MissionZone.STATUS_PROVISIONAL] == 0, "provisional mission count drift")
     mission_by_id = {value.id: value for value in missions.zones}
+    team_final = [
+        value.id for value in missions.zones
+        if json.loads(value.rule_payload_json).get("authority") == "team_final"
+    ]
+    _require(len(team_final) == 11, "team-final mission authority count drift")
     shadow_payload = json.loads(mission_by_id["gps_shadow_candidate"].rule_payload_json)
     _require(
         shadow_payload.get("usable_opposite_lane_link_ids") == ["A2256W000131"]

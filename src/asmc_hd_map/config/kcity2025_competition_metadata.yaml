@@ -770,7 +770,7 @@ mission_zones:
   planning_enforcement_allowed: true
 - id: traffic_light_activation_A236_to_A308
   mission_type: traffic_light
-  status: provisional
+  status: team_final
   source_reference: team_qna_and_situation_review
   description: A236 시작부터 A308 종료까지만 신호등 인지 노드 활성화가 필요한 구간
   route_station_start_m: 160.009167271
@@ -801,11 +801,11 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"disable_outside_zone":true,"perception_monitoring":"activation_zone","policy_scope":"link_span","requires_official_boundary_confirmation":true,"runtime_activation_hint":"enable_within_zone_only","spatial_mission":false,"stop_decision_requires_validated_signal_and_stopline":true}'
-  planning_enforcement_allowed: false
+  rule_payload_json: '{"authority":"team_final","disable_outside_zone":true,"perception_monitoring":"activation_zone","policy_scope":"link_span","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"runtime_activation_hint":"enable_within_zone_only","spatial_mission":false,"stop_decision_requires_validated_signal_and_stopline":true}'
+  planning_enforcement_allowed: true
 - id: gps_shadow_candidate
   mission_type: gps_shadow
-  status: provisional
+  status: team_final
   source_reference: team_map_review_shadow_zone
   description: A448 종료 노드부터 A126 종료까지의 GPS 음영 후보
   route_station_start_m: 1877.744798966
@@ -819,11 +819,11 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"drivable_area_bridge_id":"gps_shadow_A126_A131","gps_blackout":true,"lane_keeping_penalty":false,"random_mission_types":["static_obstacle"],"requires_official_boundary_confirmation":true,"usable_opposite_lane_link_ids":["A2256W000131"]}'
-  planning_enforcement_allowed: false
+  rule_payload_json: '{"authority":"team_final","drivable_area_bridge_id":"gps_shadow_A126_A131","gps_blackout":true,"lane_keeping_penalty":false,"random_mission_types":["static_obstacle"],"review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"usable_opposite_lane_link_ids":["A2256W000131"]}'
+  planning_enforcement_allowed: true
 - id: static_obstacle_candidate
   mission_type: static_obstacle
-  status: provisional
+  status: team_final
   source_reference: team_qna_and_situation_review
   description: A213 종료 후 A220 시작 전 교차로 영역인 A222 정적 장애물 구간
   route_station_start_m: 315.906098142
@@ -837,11 +837,11 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"boundary_interpretation":"after_A213_before_A220_intersection","collision_penalty_s":15,"judged_by":"collision_data","requires_official_boundary_confirmation":true}'
-  planning_enforcement_allowed: false
+  rule_payload_json: '{"authority":"team_final","boundary_interpretation":"after_A213_before_A220_intersection","collision_penalty_s":15,"judged_by":"collision_data","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"}}'
+  planning_enforcement_allowed: true
 - id: dynamic_obstacle_candidate
   mission_type: dynamic_obstacle
-  status: provisional
+  status: team_final
   source_reference: team_qna_and_situation_review
   description: A728부터 A205까지의 동적 장애물 구간
   route_station_start_m: 427.851843628
@@ -858,11 +858,11 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"boundary_interpretation":"A728_through_A205","collision_penalty_s":15,"judged_by":"collision_data","requires_official_boundary_confirmation":true}'
-  planning_enforcement_allowed: false
+  rule_payload_json: '{"authority":"team_final","boundary_interpretation":"A728_through_A205","collision_penalty_s":15,"judged_by":"collision_data","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"}}'
+  planning_enforcement_allowed: true
 - id: roundabout_candidate
   mission_type: roundabout
-  status: provisional
+  status: team_final
   source_reference: official_figure_team_link_mapping
   description: A148-A146-A151 회전교차로 후보
   route_station_start_m: 858.502396418
@@ -878,11 +878,11 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"judged_by":"collision_data","mission":"npc_cut_in","requires_official_boundary_confirmation":true}'
-  planning_enforcement_allowed: false
+  rule_payload_json: '{"authority":"team_final","judged_by":"collision_data","mission":"npc_cut_in","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"}}'
+  planning_enforcement_allowed: true
 - id: surrounding_vehicle_candidate
   mission_type: surrounding_vehicle
-  status: provisional
+  status: team_final
   source_reference: official_figure_team_link_mapping
   description: A411-A420-A408-A445-A153 주변 차량 인지 후보
   route_station_start_m: 1118.741751169
@@ -902,11 +902,11 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"judged_by":"collision_data","mission":"npc_cut_in","requires_official_boundary_confirmation":true}'
-  planning_enforcement_allowed: false
+  rule_payload_json: '{"authority":"team_final","judged_by":"collision_data","mission":"npc_cut_in","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"}}'
+  planning_enforcement_allowed: true
 - id: traffic_light_C1256W000077
   mission_type: traffic_light
-  status: provisional
+  status: team_final
   source_reference: stage14_reviewed_stopline_projection
   description: 검수된 정지선에서 파생한 신호등 경계 후보 C1256W000077
   route_station_start_m: 208.458941227
@@ -919,11 +919,11 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage02_new_road_219_to_213:A1256W000682"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","stopline_topology_link_ids":["A2256W000219"],"traffic_light_id":"C1256W000077","violation_penalty_s":15}'
-  planning_enforcement_allowed: false
+  rule_payload_json: '{"authority":"team_final","boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage02_new_road_219_to_213:A1256W000682"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"stopline_topology_link_ids":["A2256W000219"],"traffic_light_id":"C1256W000077","violation_penalty_s":15}'
+  planning_enforcement_allowed: true
 - id: traffic_light_C1256W000091
   mission_type: traffic_light
-  status: provisional
+  status: team_final
   source_reference: stage14_reviewed_stopline_projection
   description: 검수된 정지선에서 파생한 신호등 경계 후보 C1256W000091
   route_station_start_m: 315.906098142
@@ -936,11 +936,11 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage02_new_road_219_to_213:A1256W000807"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","stopline_topology_link_ids":["A2256W000213"],"traffic_light_id":"C1256W000091","violation_penalty_s":15}'
-  planning_enforcement_allowed: false
+  rule_payload_json: '{"authority":"team_final","boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage02_new_road_219_to_213:A1256W000807"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"stopline_topology_link_ids":["A2256W000213"],"traffic_light_id":"C1256W000091","violation_penalty_s":15}'
+  planning_enforcement_allowed: true
 - id: traffic_light_C1256W000016
   mission_type: traffic_light
-  status: provisional
+  status: team_final
   source_reference: stage14_reviewed_stopline_projection
   description: 검수된 정지선에서 파생한 신호등 경계 후보 C1256W000016
   route_station_start_m: 436.797566442
@@ -953,11 +953,11 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage04_link_202_and_following_intersection:A1256W000208"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","stopline_topology_link_ids":["A2256W000728"],"traffic_light_id":"C1256W000016","violation_penalty_s":15}'
-  planning_enforcement_allowed: false
+  rule_payload_json: '{"authority":"team_final","boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage04_link_202_and_following_intersection:A1256W000208"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"stopline_topology_link_ids":["A2256W000728"],"traffic_light_id":"C1256W000016","violation_penalty_s":15}'
+  planning_enforcement_allowed: true
 - id: traffic_light_C1256W000123
   mission_type: traffic_light
-  status: provisional
+  status: team_final
   source_reference: stage14_reviewed_stopline_projection
   description: 검수된 정지선에서 파생한 신호등 경계 후보 C1256W000123
   route_station_start_m: 550.618735375
@@ -970,11 +970,11 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage05_dynamic_obstacle_205_to_315:A1256W000582","kcity2025_competition_route_curation_candidate_v14:stopline:stage05_dynamic_obstacle_205_to_315:A1256W000757"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","stopline_topology_link_ids":["A2256W000310","A2256W000315"],"traffic_light_id":"C1256W000123","violation_penalty_s":15}'
-  planning_enforcement_allowed: false
+  rule_payload_json: '{"authority":"team_final","boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage05_dynamic_obstacle_205_to_315:A1256W000582","kcity2025_competition_route_curation_candidate_v14:stopline:stage05_dynamic_obstacle_205_to_315:A1256W000757"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"stopline_topology_link_ids":["A2256W000310","A2256W000315"],"traffic_light_id":"C1256W000123","violation_penalty_s":15}'
+  planning_enforcement_allowed: true
 - id: traffic_light_C1256W000052
   mission_type: traffic_light
-  status: provisional
+  status: team_final
   source_reference: stage14_reviewed_stopline_projection
   description: 검수된 정지선에서 파생한 신호등 경계 후보 C1256W000052
   route_station_start_m: 609.868390593
@@ -987,8 +987,8 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage07_post_turn_308:A1256W000593+A1256W000742"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","stopline_topology_link_ids":["A2256W000308","A2256W000309"],"traffic_light_id":"C1256W000052","violation_penalty_s":15}'
-  planning_enforcement_allowed: false
+  rule_payload_json: '{"authority":"team_final","boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage07_post_turn_308:A1256W000593+A1256W000742"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"stopline_topology_link_ids":["A2256W000308","A2256W000309"],"traffic_light_id":"C1256W000052","violation_penalty_s":15}'
+  planning_enforcement_allowed: true
 route_speed_limits:
 - link_id: A2256W000748
   route_station_start_m: 0.0
@@ -1269,7 +1269,7 @@ validation:
   mission_zone_count: 15
   mission_status_counts:
     derived_official: 4
-    provisional: 11
+    team_final: 11
   speed_profile_segment_count: 3
   speed_profile_full_route_coverage: true
   route_speed_limit_count: 39

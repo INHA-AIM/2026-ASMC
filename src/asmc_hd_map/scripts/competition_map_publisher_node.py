@@ -82,6 +82,9 @@ MISSION_TYPE_VALUES = {
 MISSION_STATUS_VALUES = {
     "official": MissionZone.STATUS_OFFICIAL,
     "derived_official": MissionZone.STATUS_DERIVED_OFFICIAL,
+    # The frozen message has no team-final enum; planning may enforce it, and
+    # rule_payload_json.authority keeps the team-review provenance.
+    "team_final": MissionZone.STATUS_DERIVED_OFFICIAL,
     "provisional": MissionZone.STATUS_PROVISIONAL,
 }
 LANE_TYPE_VALUES = {
@@ -392,6 +395,8 @@ def _mission_color(status: str) -> ColorRGBA:
         return _color(0.1, 0.9, 0.2, 0.75)
     if status == "derived_official":
         return _color(0.1, 0.65, 1.0, 0.75)
+    if status == "team_final":
+        return _color(0.75, 0.35, 1.0, 0.75)
     return _color(1.0, 0.35, 0.05, 0.60)
 
 
@@ -410,6 +415,7 @@ MISSION_LABELS = {
 MISSION_STATUS_LABELS = {
     "official": "OFF",
     "derived_official": "DER",
+    "team_final": "TEAM",
     "provisional": "PROV",
 }
 

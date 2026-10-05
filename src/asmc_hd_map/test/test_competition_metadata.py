@@ -144,7 +144,7 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
         self.assertEqual(len(missions), 15)
         self.assertEqual(self.document["validation"]["mission_status_counts"], {
             "derived_official": 4,
-            "provisional": 11,
+            "team_final": 11,
         })
         speed_profile = sorted(
             (
@@ -206,7 +206,7 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
         self.assertEqual(monitoring["route_station_end_m"], 609.876838441)
         self.assertEqual(monitoring["start_link_id"], "A2256W000236")
         self.assertEqual(monitoring["end_link_id"], "A2256W000308")
-        self.assertFalse(monitoring["planning_enforcement_allowed"])
+        self.assertTrue(monitoring["planning_enforcement_allowed"])
         monitoring_payload = json.loads(monitoring["rule_payload_json"])
         self.assertFalse(monitoring_payload["spatial_mission"])
         self.assertEqual(monitoring_payload["policy_scope"], "link_span")
@@ -216,8 +216,14 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
         self.assertTrue(monitoring_payload["disable_outside_zone"])
         traffic = [item for item in missions.values() if item["mission_type"] == "traffic_light"]
         self.assertEqual(len(traffic), 6)
-        self.assertTrue(all(item["status"] == "provisional" for item in traffic))
-        self.assertTrue(all(item["planning_enforcement_allowed"] is False for item in traffic))
+        self.assertTrue(all(item["status"] == "team_final" for item in traffic))
+        self.assertTrue(all(item["planning_enforcement_allowed"] is True for item in traffic))
+        for item in missions.values():
+            payload = json.loads(item["rule_payload_json"])
+            self.assertNotIn("requires_official_boundary_confirmation", payload)
+            if item["status"] == "team_final":
+                self.assertEqual(payload["authority"], "team_final")
+                self.assertEqual(payload["review"]["reviewed_on"], "2026-10-05")
         traffic_boundaries = [
             item
             for item in traffic
@@ -236,10 +242,22 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
     def test_provisional_mission_cannot_enable_planning(self):
         changed = copy.deepcopy(self.document)
         candidate = next(
-            item for item in changed["mission_zones"] if item["status"] == "provisional"
+            item for item in changed["mission_zones"] if item["status"] == "team_final"
         )
-        candidate["planning_enforcement_allowed"] = True
+        candidate["status"] = "provisional"
+        self.assertTrue(candidate["planning_enforcement_allowed"])
         with self.assertRaisesRegex(CompetitionMetadataError, "provisional mission"):
+            validate_competition_metadata(changed)
+
+    def test_team_final_mission_requires_review_authority(self):
+        changed = copy.deepcopy(self.document)
+        candidate = next(
+            item for item in changed["mission_zones"] if item["status"] == "team_final"
+        )
+        payload = json.loads(candidate["rule_payload_json"])
+        payload.pop("authority")
+        candidate["rule_payload_json"] = json.dumps(payload, sort_keys=True)
+        with self.assertRaisesRegex(CompetitionMetadataError, "review authority"):
             validate_competition_metadata(changed)
 
     def test_missing_authority_status_fails(self):

@@ -203,7 +203,7 @@ roslaunch asmc_hd_map hd_map_source_comparison.launch repo_root:=/root/ws
 특히 다음은 함께 확인한다.
 
 - checkpoint 15개와 route 순서·3 m 포함
-- speed profile 전 구간 coverage와 provisional enforcement 금지
+- speed profile 전 구간 coverage, `route_speed_limits`의 min(MGeo, 공식 상한), provisional enforcement 금지와 `team_final` review 근거
 - Lane/DrivableArea 연결성, hole·seam과 반대방향/미사용 차로 제외
 - `build_id`, source SHA, geometry hash와 feature count
 - global/local cell parity와 `LaneAssociation` hysteresis

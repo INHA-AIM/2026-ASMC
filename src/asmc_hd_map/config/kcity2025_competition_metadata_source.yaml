@@ -102,7 +102,8 @@ mission_zones:
 
   - id: traffic_light_activation_A236_to_A308
     mission_type: traffic_light
-    status: provisional
+    status: team_final
+    review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
     source_reference: team_qna_and_situation_review
     description: A236 시작부터 A308 종료까지만 신호등 인지 노드 활성화가 필요한 구간
     bounds: {kind: link_span, start_link_id: A2256W000236, end_link_id: A2256W000308}
@@ -113,16 +114,15 @@ mission_zones:
       runtime_activation_hint: enable_within_zone_only
       disable_outside_zone: true
       stop_decision_requires_validated_signal_and_stopline: true
-      requires_official_boundary_confirmation: true
 
   - id: gps_shadow_candidate
     mission_type: gps_shadow
-    status: provisional
+    status: team_final
+    review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
     source_reference: team_map_review_shadow_zone
     description: A448 종료 노드부터 A126 종료까지의 GPS 음영 후보
     bounds: {kind: after_link_to_link_end, after_link_id: A2256W000448, end_link_id: A2256W000126}
     rule_payload:
-      requires_official_boundary_confirmation: true
       usable_opposite_lane_link_ids: [A2256W000131]
       drivable_area_bridge_id: gps_shadow_A126_A131
       # Rule book v1.2: GPS is fully blacked out, lane keeping is not scored
@@ -133,49 +133,52 @@ mission_zones:
 
   - id: static_obstacle_candidate
     mission_type: static_obstacle
-    status: provisional
+    status: team_final
+    review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
     source_reference: team_qna_and_situation_review
     description: A213 종료 후 A220 시작 전 교차로 영역인 A222 정적 장애물 구간
     bounds: {kind: link_span, start_link_id: A2256W000222, end_link_id: A2256W000222}
     rule_payload:
       boundary_interpretation: after_A213_before_A220_intersection
-      requires_official_boundary_confirmation: true
       judged_by: collision_data
       collision_penalty_s: 15
 
   - id: dynamic_obstacle_candidate
     mission_type: dynamic_obstacle
-    status: provisional
+    status: team_final
+    review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
     source_reference: team_qna_and_situation_review
     description: A728부터 A205까지의 동적 장애물 구간
     bounds: {kind: link_span, start_link_id: A2256W000728, end_link_id: A2256W000205}
     rule_payload:
       boundary_interpretation: A728_through_A205
-      requires_official_boundary_confirmation: true
       judged_by: collision_data
       collision_penalty_s: 15
 
   - id: roundabout_candidate
     mission_type: roundabout
-    status: provisional
+    status: team_final
+    review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
     source_reference: official_figure_team_link_mapping
     description: A148-A146-A151 회전교차로 후보
     bounds: {kind: link_span, start_link_id: A2256W000148, end_link_id: A2256W000151}
-    rule_payload: {requires_official_boundary_confirmation: true, mission: npc_cut_in, judged_by: collision_data}
+    rule_payload: {mission: npc_cut_in, judged_by: collision_data}
 
   - id: surrounding_vehicle_candidate
     mission_type: surrounding_vehicle
-    status: provisional
+    status: team_final
+    review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
     source_reference: official_figure_team_link_mapping
     description: A411-A420-A408-A445-A153 주변 차량 인지 후보
     bounds: {kind: link_span, start_link_id: A2256W000411, end_link_id: A2256W000153}
-    rule_payload: {requires_official_boundary_confirmation: true, mission: npc_cut_in, judged_by: collision_data}
+    rule_payload: {mission: npc_cut_in, judged_by: collision_data}
 
 traffic_light_zones:
   derive_from_reviewed_stoplines: true
-  status: provisional
+  status: team_final
+  review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
   source_reference: stage14_reviewed_stopline_projection
-  planning_enforcement_allowed: false
+  planning_enforcement_allowed: true
   # Rule book v1.2 judgement shared by every derived stopline boundary.
   rule_payload:
     judgement: signal_when_front_wheels_cross_stopline

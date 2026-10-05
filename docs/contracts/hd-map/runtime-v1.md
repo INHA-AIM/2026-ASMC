@@ -82,8 +82,9 @@ display는 꺼져 있다.
 - `MissionZone.polygon`이 비어 있으면 오류가 아니라 `route_station_*`과 link 범위가
   authoritative하다는 뜻이다.
 - `MissionZone.status=PROVISIONAL`은 시각화·후보 policy에는 쓸 수 있지만 강제 판제 규칙으로
-  승격하면 안 된다. 현재 공식 규칙에서 계산된 속도 구간 4개는 `DERIVED_OFFICIAL`, 나머지
-  팀 검토 구간 11개는 `PROVISIONAL`이다.
+  승격하면 안 된다. 현재 15개 zone은 모두 `DERIVED_OFFICIAL`로 발행된다. 공식 규칙에서 계산된
+  4개와, 2026-10-05 팀 검수로 확정한 11개(`rule_payload_json.authority=team_final`)다. 메시지가
+  동결돼 team-final enum은 없으므로 근거 수준은 payload로 구분한다.
 - 혼합 source의 polyline 방향을 억지로 정규화하지 않으므로 `LaneMarking.left_lane_ids`와
   `right_lane_ids`는 현재 비워 둔다. 판제의 정확한 경계 관계는 `Lane.left_boundary_id`와
   `Lane.right_boundary_id`이고, 필요하면 이 필드로 marking→lane reverse index를 만든다.
@@ -211,7 +212,7 @@ roslaunch asmc_hd_map hd_map_source_comparison.launch repo_root:=/root/ws
 다음 offset 후보로 옮긴다. station tick은 100 m마다 유지하되 숫자 label은 200 m마다 표시한다.
 따라서 정확한 full ID, station 소수값과 설명은 해당 latched metadata topic을 정본으로 사용한다.
 
-주황색은 실제 공간 범위를 가진 `provisional` 미션에만 사용한다. 신호등 인지 활성화 policy는
+주황색은 실제 공간 범위를 가진 `provisional` 미션에만, 보라색은 `team_final` 미션에 사용한다. 신호등 인지 활성화 policy는
 주황색 미션과 분리한 `perception_activation_corridors`/`policy_text`로 표시한다. 범위는 A236
 시작부터 A308 종료까지이며 밖에서는 신호등 노드를 중지할 수 있다는 hint를 제공한다.
 A866·A054·A846은 일반 전역경로 추종 구간이며, 이 구간에 보이는 청록색은 미션이 아니라
@@ -234,7 +235,7 @@ A866·A054·A846은 일반 전역경로 추종 구간이며, 이 구간에 보�
 - 음영구간 `A126/A131` bridge와 일반도로 reviewed-boundary refinement
 - grid 0.2 m, `3085×7232`, 값 `0/100`, published boundary ID의 marking 참조 무결성
 - checkpoint 15개, 반경 3 m, route 2184.611723336 m
-- mission/policy/speed zone 15개와 상태 `0/4/11`
+- mission/policy/speed zone 15개와 발행 상태 `OFFICIAL 0 / DERIVED_OFFICIAL 15 / PROVISIONAL 0`, 그중 `authority=team_final` 11개
 - 정적 `A222`, 동적 `A728→A599→A207→A205`
 - `60→상한 없음→60` 세 속도 구간의 전역경로 완전·비중첩 coverage
 - A054·A846 미션 제외, 신호등 활성화 policy `A236→A308`, 정지 경계 5개의 policy 내부 포함
