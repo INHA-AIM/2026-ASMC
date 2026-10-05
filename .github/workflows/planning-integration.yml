@@ -73,7 +73,7 @@ jobs:
         run: |
           source /opt/ros/noetic/setup.bash
           cd src/lidar+sensorfusion
-          catkin_make -j2 -l2 -DCATKIN_ENABLE_TESTING=ON
+          catkin_make -j2 -l2 -DCATKIN_ENABLE_TESTING=ON -DCATKIN_WHITELIST_PACKAGES='Main;Msg;morai_msgs'
       - name: Run validated LiDAR regressions
         run: |
           source /opt/ros/noetic/setup.bash
