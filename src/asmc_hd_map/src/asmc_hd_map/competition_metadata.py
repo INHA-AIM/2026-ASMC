@@ -20,6 +20,8 @@ import yaml
 
 SOURCE_SCHEMA_VERSION = "asmc.competition_metadata.source/v1"
 METADATA_SCHEMA_VERSION = "asmc.competition_metadata/v1"
+# Rule book v1.2 (2026-09-30): START/END plus checkpoints 1-14.
+OFFICIAL_CHECKPOINT_COUNT = 15
 ALLOWED_MISSION_STATUS = {"official", "derived_official", "provisional"}
 ALLOWED_MISSION_TYPES = {
     "start_success",
@@ -545,9 +547,11 @@ def validate_competition_metadata(document: Mapping[str, Any]) -> Dict[str, Any]
         raise CompetitionMetadataError("route.link_ids is empty")
     valid_links = set(str(value) for value in route_link_ids)
     checkpoints = document.get("checkpoints")
-    if not isinstance(checkpoints, list) or len(checkpoints) != 16:
-        raise CompetitionMetadataError("metadata must contain 16 checkpoints")
-    expected_ids = ["START_END"] + [str(value) for value in range(1, 16)]
+    if not isinstance(checkpoints, list) or len(checkpoints) != OFFICIAL_CHECKPOINT_COUNT:
+        raise CompetitionMetadataError(
+            "metadata must contain %d checkpoints" % OFFICIAL_CHECKPOINT_COUNT
+        )
+    expected_ids = ["START_END"] + [str(value) for value in range(1, OFFICIAL_CHECKPOINT_COUNT)]
     if [str(item.get("id")) for item in checkpoints] != expected_ids:
         raise CompetitionMetadataError("checkpoint IDs/order are invalid")
     previous_station = -math.inf

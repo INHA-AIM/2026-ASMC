@@ -5,8 +5,8 @@ status: p2a_complete_no_geometry_change
 sources:
   competition_metadata:
     path: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml
-    sha256: 6e11a97cb0abbadd9bae98acd9884a92b97d59aa3d6d1a3547aa12b77217ddea
-    bytes: 28179
+    sha256: 7812d740c5478ae19e64c1920f9b90e1da76836947d72825770f2d3502b675d7
+    bytes: 27683
   current_global_info:
     path: src/behavior_planner/src/config/global_info.json
     sha256: bd74fa3f05830e0741c3c7f51d0f7935f389be3879251fd0231918538a05f133
@@ -55,8 +55,8 @@ legacy_drivable_prior:
   - -825.0457763671875
   road_nonzero_px: 2245861
   road_area_m2: 89834.44
-  checkpoint_centers_inside: 16
-  checkpoint_count: 16
+  checkpoint_centers_inside: 15
+  checkpoint_count: 15
 classification_policy:
   sample_step_m: 1.0
   marking_sample_step_m: 0.5

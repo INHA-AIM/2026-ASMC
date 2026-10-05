@@ -6,7 +6,7 @@
 
 - 전역경로 39개 링크는 위상적으로 닫혀 있고 총 길이는 `2184.612 m`다.
 - 기존 주행가능영역은 진짜 vector road mesh가 아니라 Node/Link 중심선 buffer에 검수 보정을 더한 H5 raster다.
-- 기존 road 면적은 `89834.44 m²`, 공식 checkpoint 중심은 `16/16` 모두 road 안에 있다.
+- 기존 road 면적은 `89834.44 m²`, 공식 checkpoint 중심은 `15/15` 모두 road 안에 있다.
 - 보호구간은 `984.488 m`, 차선 기반 clip 후보는 `1200.123 m`이며 합계가 전역경로를 정확히 한 번 덮는다.
 - stage14 geometry hash는 `01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf`로 유지됐다.
 

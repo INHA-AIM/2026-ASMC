@@ -45,7 +45,7 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
 
     def test_official_checkpoint_contract_and_reviewed_link_assignment(self):
         document = self.document
-        self.assertEqual(len(document["checkpoints"]), 16)
+        self.assertEqual(len(document["checkpoints"]), 15)
         self.assertEqual(document["route"]["length_xy_m"], 2184.611723336)
         self.assertEqual(document["route"]["start_success_5_percent_station_m"], 109.230586167)
         self.assertEqual(document["route"]["closure_error_xy_m"], 0.0)
@@ -62,11 +62,10 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
             "8": "A2256W000304",
             "9": "A2256W000866",
             "10": "A2256W000846",
-            "11": "A2256W000411",
-            "12": "A2256W000445",
-            "13": "A2256W000153",
-            "14": "A2256W000446",
-            "15": "A2256W000126",
+            "11": "A2256W000445",
+            "12": "A2256W000153",
+            "13": "A2256W000446",
+            "14": "A2256W000126",
         }
         self.assertEqual(
             {item["id"]: item["link_id"] for item in document["checkpoints"]},
@@ -77,6 +76,17 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
         self.assertEqual(document["checkpoints"][0]["route_station_m"], 0.0)
         self.assertEqual(document["validation"]["max_checkpoint_route_projection_error_m"], 0.0)
         self.assertEqual(document["validation"]["max_checkpoint_link_projection_error_m"], 0.0)
+
+    def test_rule_v1_2_removed_the_a411_checkpoint(self):
+        # Rule book v1.2 dropped the 2026-08-03 checkpoint 11 at (66.885, 89.198)
+        # on A411 and renumbered the rest without moving them.
+        for item in self.document["checkpoints"]:
+            position = item["pose"]["position"]
+            self.assertGreater(math.hypot(position["x"] - 66.88496106746607,
+                                          position["y"] - 89.19790052389726), 3.0)
+        by_id = {item["id"]: item for item in self.document["checkpoints"]}
+        self.assertEqual(by_id["11"]["pose"]["position"]["x"], 75.41420370276319)
+        self.assertEqual(by_id["14"]["pose"]["position"]["x"], -74.86074459552765)
 
     def test_official_yaw_is_preserved_and_quaternion_is_derived(self):
         source = json.loads(
@@ -212,13 +222,12 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
 
     def test_frozen_source_sha_fails_closed(self):
         source_text = self.config.read_text(encoding="utf-8")
+        pinned = self.document["sources"]["official_checkpoints"]["sha256"]
+        self.assertEqual(source_text.count(pinned), 1)
         with tempfile.TemporaryDirectory() as raw:
             changed_config = Path(raw) / "source.yaml"
             changed_config.write_text(
-                source_text.replace(
-                    "a77bcfdcc86be35ab62c15013dfd6f1ccb21869728778a997b360725165f5a6f",
-                    "0" * 64,
-                ),
+                source_text.replace(pinned, "0" * 64),
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(CompetitionMetadataError, "frozen input SHA changed"):

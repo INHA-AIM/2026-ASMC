@@ -35,7 +35,7 @@ publisher는 시작 전에 stage14 map, P1-C metadata, 공식 global path와 P2-
 | `/hd_map/global/lanes` | `asmc_msgs/LaneArray` | latched | route/same-direction/mission lane, A134 로터리와 음영 반대차로 총 70개 |
 | `/hd_map/global/drivable_areas` | `asmc_msgs/DrivableAreaArray` | latched | Lane 70 + corridor fill 18 + surface patch 14 = vector area 102개 |
 | `/hd_map/global/drivable_grid` | `nav_msgs/OccupancyGrid` | latched | vector area에서 만든 0.2 m lookup raster |
-| `/hd_map/global/checkpoints` | `asmc_msgs/CompetitionCheckpointArray` | latched | 공식 체크포인트 16개, 3 m, yaw, route/link station |
+| `/hd_map/global/checkpoints` | `asmc_msgs/CompetitionCheckpointArray` | latched | 공식 체크포인트 15개(규정집 v1.2), 3 m, yaw, route/link station |
 | `/hd_map/global/mission_zones` | `asmc_msgs/MissionZoneArray` | latched | 미션·속도 profile·상시 인지 policy zone 15개 |
 | `/hd_map/local/lanes` | `asmc_msgs/LaneArray` | pose update, non-latched | Ego 주변 120 m 정사각 영역과 교차하는 Lane subset |
 | `/hd_map/local/drivable_grid` | `nav_msgs/OccupancyGrid` | pose update, non-latched | global cell에 정렬된 `600×600`, 0.2 m local crop |
@@ -228,10 +228,10 @@ A866·A054·A846은 일반 전역경로 추종 구간이며, 이 구간에 보�
 - A134 로터리·A151 접속부의 단일 연결성, H5 기반 2 m envelope 확장과 중앙 섬 비주행 보존
 - 음영구간 `A126/A131` bridge와 일반도로 reviewed-boundary refinement
 - grid 0.2 m, `3085×7232`, 값 `0/100`, published boundary ID의 marking 참조 무결성
-- checkpoint 16개, 반경 3 m, route 2184.611723336 m
+- checkpoint 15개, 반경 3 m, route 2184.611723336 m
 - mission/policy/speed zone 15개와 상태 `0/4/11`
 - 정적 `A222`, 동적 `A728→A599→A207→A205`
 - `60→상한 없음→60` 세 속도 구간의 전역경로 완전·비중첩 coverage
 - A054·A846 미션 제외, 신호등 활성화 policy `A236→A308`, 정지 경계 5개의 policy 내부 포함
 - RViz marker namespace와 최소 marker 수
-- link label 39개, checkpoint label 16개, 축약 ID 사용과 text 중심 최소 간격 9 m
+- link label 39개, checkpoint label 15개, 축약 ID 사용과 text 중심 최소 간격 9 m

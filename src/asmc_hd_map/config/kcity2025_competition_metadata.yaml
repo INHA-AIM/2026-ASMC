@@ -5,8 +5,8 @@ frame_id: map
 sources:
   official_checkpoints:
     path: $ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_checkpoints.json
-    sha256: a77bcfdcc86be35ab62c15013dfd6f1ccb21869728778a997b360725165f5a6f
-    bytes: 3274
+    sha256: 8e853c1cbf2443e6df5c6aeeef1e02ec996649f117fd7180e2c64b97245fdef2
+    bytes: 3396
     authority: official
   official_global_path:
     path: $ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_global_path.txt
@@ -29,9 +29,9 @@ sources:
     bytes: 1957494
     authority: team_reviewed_candidate
 official_notice:
-  source: 디스코드 체크 포인트 정보 업로드 공지
-  author: YeongHu Park
-  announced: '2026-08-03'
+  source: 대회 규정집 v1.2 (2026.09.30) 체크포인트 별 Ego 위치 및 Heading 각도 정보
+  author: MORAI 대회 운영
+  announced: '2026-09-30'
   map: R-KR_PG_K-City_2025
   notes:
   - 지정 위치·Heading으로 Ego가 소환되나, 소환 과정에서 위치·각도가 일부 틀어질 수 있음
@@ -552,30 +552,6 @@ checkpoints:
   is_finish: false
   pose:
     position:
-      x: 66.88496106746607
-      y: 89.19790052389726
-      z: 28.29935643790693
-    orientation:
-      x: 0.0
-      y: 0.0
-      z: -0.702850022047
-      w: 0.711338067665
-  official_yaw_deg: -89.312222534
-  pass_radius_m: 3.0
-  route_station_m: 1286.154645438
-  link_id: A2256W000411
-  link_station_m: 167.412894269
-  source_reference: official_checkpoints
-  projection:
-    route_error_xy_m: 0.0
-    link_error_xy_m: 0.0
-- id: '12'
-  label: '12'
-  sequence: 12
-  is_start: false
-  is_finish: false
-  pose:
-    position:
       x: 75.41420370276319
       y: -217.855053961277
       z: 28.382283640697267
@@ -593,9 +569,9 @@ checkpoints:
   projection:
     route_error_xy_m: 0.0
     link_error_xy_m: 0.0
-- id: '13'
-  label: '13'
-  sequence: 13
+- id: '12'
+  label: '12'
+  sequence: 12
   is_start: false
   is_finish: false
   pose:
@@ -617,9 +593,9 @@ checkpoints:
   projection:
     route_error_xy_m: 0.0
     link_error_xy_m: 0.0
-- id: '14'
-  label: '14'
-  sequence: 14
+- id: '13'
+  label: '13'
+  sequence: 13
   is_start: false
   is_finish: false
   pose:
@@ -641,9 +617,9 @@ checkpoints:
   projection:
     route_error_xy_m: 0.0
     link_error_xy_m: 0.0
-- id: '15'
-  label: '15'
-  sequence: 15
+- id: '14'
+  label: '14'
+  sequence: 14
   is_start: false
   is_finish: false
   pose:
@@ -758,7 +734,6 @@ mission_zones:
   - '10'
   - '11'
   - '12'
-  - '13'
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
@@ -784,9 +759,9 @@ mission_zones:
   - A2256W000332
   - A2256W000751
   checkpoint_ids:
+  - '12'
   - '13'
   - '14'
-  - '15'
   polygon: []
   has_speed_limit: true
   speed_limit_kph: 60.0
@@ -839,7 +814,7 @@ mission_zones:
   link_ids:
   - A2256W000126
   checkpoint_ids:
-  - '15'
+  - '14'
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
@@ -923,7 +898,6 @@ mission_zones:
   - '10'
   - '11'
   - '12'
-  - '13'
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
@@ -1016,7 +990,7 @@ mission_zones:
   planning_enforcement_allowed: false
 validation:
   passed: true
-  checkpoint_count: 16
+  checkpoint_count: 15
   mission_zone_count: 15
   mission_status_counts:
     derived_official: 4

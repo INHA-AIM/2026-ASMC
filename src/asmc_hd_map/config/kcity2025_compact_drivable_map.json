@@ -452176,7 +452176,7 @@
     "Explicit obstacle-intersection links describe maneuverable space, not permission to leave mission policy."
   ],
   "map_id": "waize_katri_2025-10-23",
-  "product_sha256": "e3ace572721885a3d22bd2c14d6932c6215a3be451fb33c774ebd8982cda0ff9",
+  "product_sha256": "73d1a27d1bc7ddabd071d53b1175b07e45ebb8a4359385fba4067c381bd36bdd",
   "reviewed_geometry_sha256": "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf",
   "schema_version": "asmc.hd_map.compact_drivable/v5",
   "selection": {
@@ -452585,7 +452585,7 @@
   "sources": {
     "competition_metadata": {
       "path": "src/asmc_hd_map/config/kcity2025_competition_metadata.yaml",
-      "sha256": "6e11a97cb0abbadd9bae98acd9884a92b97d59aa3d6d1a3547aa12b77217ddea"
+      "sha256": "7812d740c5478ae19e64c1920f9b90e1da76836947d72825770f2d3502b675d7"
     },
     "current_link_set": {
       "path": "src/behavior_planner/src/config/link_set.json",
@@ -452593,7 +452593,7 @@
     },
     "input_audit": {
       "path": "src/asmc_hd_map/config/kcity2025_drivable_area_input_audit.yaml",
-      "sha256": "60d665ea5c88610dc63c7af2805bce34545b76927f9d77551442ba924cb23680"
+      "sha256": "e3d8d33221c4e6e48b6307129ac196bf307f992aa878dcc3b77ba3b8ebc84581"
     },
     "legacy_drivable_h5": {
       "path": "src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5",
@@ -452608,7 +452608,7 @@
     "base_lane_area_count": 70,
     "boundary_refined_lane_count": 41,
     "boundary_refined_side_count": 74,
-    "checkpoint_centers_inside": 16,
+    "checkpoint_centers_inside": 15,
     "compact_fraction_of_legacy": 0.166143,
     "compact_road_area_m2": 14925.4,
     "corridor_fill_area_count": 18,

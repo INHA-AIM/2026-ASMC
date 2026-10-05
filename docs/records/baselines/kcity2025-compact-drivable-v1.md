@@ -31,7 +31,7 @@
 - roundabout surface stitch: `A2256W000151` (envelope reference only; not a new lane)
 - legacy road: `89834.44 m²`, compact road: `14925.40 m²` (`16.61%`)
 - reviewed geometry SHA: `01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf`
-- product SHA: `e3ace572721885a3d22bd2c14d6932c6215a3be451fb33c774ebd8982cda0ff9`
+- product SHA: `73d1a27d1bc7ddabd071d53b1175b07e45ebb8a4359385fba4067c381bd36bdd`
 - grid SHA: `ee0db44e5d672e58e429a09a68ed119fb92400d2a83a2f304f9ddc9d1e011fd0`
 
 ## 소비 규칙

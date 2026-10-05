@@ -363,10 +363,10 @@ def main() -> int:
     _require(pattern_counts[LaneMarking.PATTERN_SOLID] == 97, "expected 90 solid lanes + 7 stoplines")
     _require(pattern_counts[LaneMarking.PATTERN_BROKEN] == 31, "expected 31 broken markings")
 
-    _require(len(checkpoints.checkpoints) == 16, "expected 16 checkpoints")
+    _require(len(checkpoints.checkpoints) == 15, "expected 15 checkpoints (rule book v1.2)")
     _require(
-        [value.sequence for value in checkpoints.checkpoints] == list(range(16)),
-        "checkpoint sequence must be contiguous 0..15",
+        [value.sequence for value in checkpoints.checkpoints] == list(range(15)),
+        "checkpoint sequence must be contiguous 0..14",
     )
     _require(
         all(value.link_id in lane_by_link and value.source_reference
@@ -521,7 +521,7 @@ def main() -> int:
         "every route link needs one compact debug label",
     )
     _require(
-        sum(value.ns == "checkpoints_text" for value in text_markers) == 16,
+        sum(value.ns == "checkpoints_text" for value in text_markers) == 15,
         "every checkpoint needs one debug label",
     )
     _require(

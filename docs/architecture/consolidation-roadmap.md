@@ -462,6 +462,9 @@ P2-A workspace 회귀, source 비교와 local crop 계약을 포함해 `asmc_hd_
 25종/11 topic이며, 현재 ROS 비의존 `asmc_hd_map` discovery는 118개다. 날짜가 다른 두
 검증 횟수를 같은 baseline 수치로 덮어쓰지 않는다.
 
+규정집 v1.2(2026-09-30)에서 checkpoint는 15개로 줄었다(구 11 삭제, 12~15 재번호). 아래 16개 수치는
+P1-C·P1-D 당시 검증 기록이며 현재 기준은 [competition metadata](../contracts/competition/kcity2025-metadata-v1.md)를 따른다.
+
 P1-C 기준으로 checkpoint 16개의 route/link XY 투영 오차는 모두 `0.0 m`, route station은
 단조 증가하며 START/END station 0과 5% station `109.230586167 m` 단위 테스트가 통과했다.
 P1-D publisher를 실제 ROS master에 실행한 뒤 늦게 접속한 validator가 latched 전역 토픽과

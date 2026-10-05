@@ -253,11 +253,11 @@
     },
     {
       "path": "docs/records/baselines/kcity2025-drivable-input-v1.md",
-      "sha256": "b0ace45d45af4a5b56317950f958bbb206b5a4fc651f33868b590850d8d90bf4"
+      "sha256": "beac0b15b194f8a82496c90595da8df834a2137103cb5e880a51b6294576d72f"
     },
     {
       "path": "docs/records/baselines/kcity2025-compact-drivable-v1.md",
-      "sha256": "95430c5b3fbc5beb9a4517faae11b1de335358a9dbbdd7a9e2d72a3071a0d9ff"
+      "sha256": "655b9202b51a43828e5514603ed8a44912cccbb64c06f145db0a756a1ba5ce1a"
     },
     {
       "path": "docs/archive/generated-msg/BehaviorCommand.msg.txt",

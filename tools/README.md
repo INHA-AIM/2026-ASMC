@@ -27,6 +27,11 @@ header를 우선 사용하고, 아직 build되지 않은 `asmc_msgs`에는 검�
 v1 byte parity 검사는 해당 commit을 별도 worktree에서 checkout했을 때만 의미가 있다. 다음
 repository freeze는 output 이름과 baseline ID를 v2로 올리는 별도 변경으로 수행한다.
 
+`asmc_hd_map` publisher는 v1 전체 snapshot 대신
+[`config/baselines/hd_map_runtime_pins_v1.yaml`](../config/baselines/hd_map_runtime_pins_v1.yaml)의
+`hd_map`·`competition_inputs.metadata_bundle` pin을 읽는다. 검수된 HD맵이나 metadata를 바꾸면
+`python3 src/asmc_hd_map/scripts/build_runtime_pins.py --write`로 같은 PR에서 갱신하고 `--check`로 확인한다.
+
 ```bash
 python3 tools/audit/validate_p1b_contract.py
 python3 tools/audit/validate_perception_contract.py

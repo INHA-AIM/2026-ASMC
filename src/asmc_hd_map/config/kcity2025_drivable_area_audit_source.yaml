@@ -27,7 +27,7 @@ sources:
     sha256: ffcccb478ab9fea5232631dab49145eb59c9211a88c6d2f460108355fc4c54ee
   competition_metadata:
     path: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml
-    sha256: 6e11a97cb0abbadd9bae98acd9884a92b97d59aa3d6d1a3547aa12b77217ddea
+    sha256: 7812d740c5478ae19e64c1920f9b90e1da76836947d72825770f2d3502b675d7
   legacy_drivable_h5:
     path: src/asmc_hd_map/development/won_tae_link_node/out/link_node_map.h5
     sha256: e8ce47f504cd0387686718dfe72f12d17e8c684d0cc23fe41d9938171d896e86
@@ -38,7 +38,7 @@ expected:
   local_origin_in_global: [302595.0, 4124145.0, 0.0]
   route_link_count: 39
   route_length_m: 2184.611723336
-  checkpoint_count: 16
+  checkpoint_count: 15
   lane_marking_count: 121
   stopline_count: 7
   reviewed_geometry_sha256: 01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf

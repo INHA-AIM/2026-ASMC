@@ -32,7 +32,7 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
         self.assertEqual(stats["route_lane_count"], 39)
         self.assertEqual(stats["selected_lane_count"], 70)
         self.assertEqual(stats["drivable_area_count"], 102)
-        self.assertEqual(stats["checkpoint_centers_inside"], 16)
+        self.assertEqual(stats["checkpoint_centers_inside"], 15)
         self.assertLess(stats["compact_fraction_of_legacy"], 0.20)
         self.assertEqual(self.artifact["grid"]["resolution_m"], 0.2)
         self.assertEqual(self.artifact["selection"]["endpoint_cap_style"], "node_normal_flat")

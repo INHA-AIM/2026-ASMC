@@ -70,6 +70,7 @@ ROS1 MD5는 `.msg` 파일 SHA가 아니다. 주석과 공백을 제외한 상수
 | `config/contracts/hd_map_topic_contract_v1.yaml` | 기존·HD Map 25개 message MD5, 필수 필드와 11개 HD Map topic |
 | `config/contracts/perception_runtime_topic_contract_v1.yaml` | perception additive 3개 message와 canonical/compatibility topic |
 | `config/baselines/runtime_baseline_v1.yaml` | P1-A 당시 package/topic/message 회귀 snapshot |
+| `config/baselines/hd_map_runtime_pins_v1.yaml` | HD Map publisher가 읽는 현재 map·metadata SHA와 개수 pin |
 | `src/asmc_msgs/test/test_message_serialization.py` | generated ROS type MD5와 serialization 왕복 |
 | `tools/audit/validate_p1b_contract.py` | ROS 설치 없이 source contract 검증 |
 
