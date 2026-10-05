@@ -7,6 +7,7 @@
 #include <chrono>
 
 #include "frenet_planner/Map/AvoidRoadMap.hpp"
+#include "frenet_planner/Maneuver/Merge/RoundaboutMerge.hpp"
 #include "frenet_planner/Common/BehaviorTypes.hpp"
 #include "frenet_planner/Common/CartesianTypes.hpp"
 #include "frenet_planner/Common/FrenetTypes.hpp"
@@ -68,6 +69,27 @@ public:
     // 내는 책임은 message_converter의 ConvertDetectedObjects에 있다.
     bool Plan(const CartesianState& ego, const std::vector<TrackedObject>& obstacles,
               const PlannerCommand& command, CartesianPath& out_path);
+
+    struct MergePrepareResult {
+        bool candidate_valid = false, ready = false, maneuver_completed = false;
+        std::uint64_t epoch = 0;
+        double entry_time = -1, exit_time = -1, progress = 0;
+        std::size_t generated = 0, valid = 0;
+        int blocking_object_id = -1;
+        CartesianPath candidate_path;
+    };
+    bool roundabout_merge_enabled() const { return roundabout_merge_cfg_.enabled && roundabout_zone_.valid; }
+    const RoundaboutMergeZone& roundabout_zone() const { return roundabout_zone_; }
+    bool PlanRoundaboutMerge(const CartesianState& ego,
+        const std::vector<TrackedObject>& obstacles, const PlannerCommand& command,
+        double planning_time, double observation_stamp, CartesianPath& out_path,
+        MergePrepareResult& result);
+    bool CanCommitRoundaboutMerge(const MergePrepareResult& result) const;
+    void ApplyRoundaboutMergeCommit(const MergePrepareResult& result);
+    void ResetRoundaboutMerge();
+    void RevokeRoundaboutReadiness();
+    bool roundabout_merge_committed() const { return roundabout_merge_committed_; }
+    const MergePrepareResult& last_roundabout_result() const { return last_roundabout_result_; }
 
     // Cartesian 점을 reference line의 종방향 좌표 s로 투영한다.
     // 외부 STOP 명령의 (stop_x, stop_y)를 PlannerCommand.stop_position으로
@@ -809,6 +831,14 @@ private:
     //
     // 정의: Maneuver/Avoid/Avoid.cpp (R6-F1, orchestration).
     AvoidRoadMap avoid_road_map_;
+    RoundaboutMergeConfig roundabout_merge_cfg_;
+    RoundaboutMergeZone roundabout_zone_;
+    bool roundabout_merge_committed_ = false;
+    int roundabout_safe_observations_ = 0;
+    double roundabout_last_observation_ = -1, roundabout_last_entry_ = -1;
+    std::uint64_t roundabout_epoch_ = 0;
+    MergePrepareResult last_roundabout_result_;
+
     bool MapAvoidProcess(const CartesianState& ego, const FrenetState& start,
         double s, double d, double speed, const std::vector<TrackedObject>& obstacles,
         const PlannerCommand& command, bool prepare, bool committed,

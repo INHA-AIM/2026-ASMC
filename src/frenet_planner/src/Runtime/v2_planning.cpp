@@ -151,6 +151,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     if (acceptance.transaction_started) {
         planner_.ResetExternalAvoidance();
         planner_.ResetExternalLaneChange();
+        planner_.ResetRoundaboutMerge();
     }
 
     // ===== 계획 대상 재결속 (D6-0a) =====
@@ -221,6 +222,7 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         // STOP이 HOLD에 도달해 COMPLETED로 latch된 경우, 마지막으로 만든
         // 0속도 HOLD 궤적을 계속 보낸다. 여기서 일괄 안전정지로 빠지면 정지
         // 유지 궤적이 매 사이클 교체되어 MPC 입장에서 불필요한 흔들림이 된다.
+        if (acceptance.transaction_cancelled) planner_.ResetRoundaboutMerge();
         const InputSnapshot latch_snapshot = takeSnapshot();
         if (command_manager_.completed_normally() && has_last_v2_trajectory_ &&
             last_v2_trajectory_command_id_ == command.command_id) {
@@ -304,9 +306,14 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
     if (!inputs_ready) {
         // 명령은 정상이므로 transaction을 버리지 않는다. 이 사이클의 planning
         // 만 막고, 입력이 회복되면 같은 transaction으로 계속한다(계약 11.3절).
+        if (command_manager_.maneuver_type() == asmc_msgs::BehaviorCommand::MERGE) {
+            command_manager_.NotifyPlanFailed(false);
+            planner_.RevokeRoundaboutReadiness();
+        }
         command_manager_.NotifyInputDataStale();
         CommandAcceptance stale = acceptance;
         stale.planning_target = PlanningTarget::NONE;
+        stale.execution_state = command_manager_.execution_state();
         // result_code는 RESULT_NONE으로 남는다 - FrenetFeedback.msg에
         // INPUT_DATA_STALE이 없고 기존 코드로 거짓 매핑하지 않는다.
         stale.detail = "ego/object input is not fresh";
@@ -380,6 +387,73 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         publishFeedbackV2(feedback_command_id, failed, &stop,
                           asmc_msgs::FrenetFeedback::TRAJECTORY_SAFE_STOP,
                           /*plan_valid=*/false);
+        return true;
+    }
+
+    if (planner_command.mode == MERGE) {
+        using Feedback = asmc_msgs::FrenetFeedback;
+        if (command_manager_.execution_state() == Feedback::COMMITTED)
+            command_manager_.NotifyExecutionStarted();
+        FrenetPlanner::MergePrepareResult result;
+        CartesianPath path;
+        bool ok = planner_.PlanRoundaboutMerge(ego, objects, planner_command,
+            snapshot.vehicle.header.stamp.toSec(), snapshot.objects.header.stamp.toSec(), path, result);
+        bool execute = !planner_.roundabout_merge_committed() && result.ready &&
+            command.execution_request == asmc_msgs::BehaviorCommand::EXECUTE;
+        if (execute) path = result.candidate_path;
+        asmc_msgs::Trajectory trajectory;
+        bool converted = ok && ConvertCartesianPath(path, planner_.sample_dt(),
+            snapshot.vehicle, trajectory) == ConversionStatus::OK;
+        if (!converted) {
+            const bool terminal = planner_.last_failure_reason() == FrenetPlanner::PlanFailureReason::INVALID_COMMAND;
+            command_manager_.NotifyPlanFailed(terminal);
+            has_last_v2_trajectory_ = false;
+            CommandAcceptance failed = acceptance;
+            failed.execution_state = command_manager_.execution_state();
+            failed.result_code = terminal ? Feedback::INVALID_COMMAND : Feedback::TRANSIENT_GENERATION_FAILURE;
+            failed.detail = terminal ? "unsupported roundabout zone/type or gap preference" : "roundabout candidate/maintenance blocked";
+            const auto stop = MakeStopTrajectory(stopReferenceVehicle(snapshot), trajectoryDt(), asmc_msgs::Trajectory::FAILURE_GENERATION);
+            trajectory_pub_.publish(stop);
+            publishFeedbackV2(feedback_command_id, failed, &stop, Feedback::TRAJECTORY_SAFE_STOP, false, ego_s_valid, ego_s);
+            return true;
+        }
+        if (!planner_.roundabout_merge_committed()) {
+            if (result.ready) command_manager_.NotifyPlanSucceeded();
+            else command_manager_.NotifyPlanFailed(false);
+            // Conversion, fresh inputs and today's candidate are all checked
+            // before either half of the atomic commit changes state.
+            if (execute) {
+                if (!planner_.CanCommitRoundaboutMerge(result) || !command_manager_.NotifyCommitted()) {
+                    command_manager_.NotifyPlanFailed(false);
+                    has_last_v2_trajectory_ = false;
+                    auto stopped = MakeStopTrajectory(stopReferenceVehicle(snapshot), trajectoryDt(), asmc_msgs::Trajectory::FAILURE_GENERATION);
+                    CommandAcceptance failed = acceptance;
+                    failed.execution_state = command_manager_.execution_state();
+                    failed.detail = "roundabout commit preflight failed";
+                    trajectory_pub_.publish(stopped);
+                    publishFeedbackV2(feedback_command_id, failed, &stopped, Feedback::TRAJECTORY_SAFE_STOP, false);
+                    return true;
+                }
+                planner_.ApplyRoundaboutMergeCommit(result);
+            }
+        } else if (result.maneuver_completed) {
+            command_manager_.NotifyManeuverCompleted();
+        }
+        last_v2_trajectory_ = trajectory;
+        has_last_v2_trajectory_ = true;
+        last_v2_trajectory_command_id_ = command.command_id;
+        v2_plan_fail_streak_ = 0;
+        trajectory_pub_.publish(trajectory);
+        publishDebugMarkersV2(trajectory, command);
+        CommandAcceptance succeeded = acceptance;
+        succeeded.execution_state = command_manager_.execution_state();
+        if (succeeded.result_code == Feedback::RESULT_NONE)
+            succeeded.detail = result.maneuver_completed ? "roundabout rear cleared; KEEP handoff" :
+                (planner_.roundabout_merge_committed() ? "roundabout committed" :
+                 (result.ready ? "roundabout ready after full traversal recheck" : "roundabout waiting/approaching stopline"));
+        publishFeedbackV2(feedback_command_id, succeeded, &trajectory,
+            planner_.roundabout_merge_committed() ? Feedback::TRAJECTORY_LOCKED : Feedback::TRAJECTORY_NEW,
+            result.candidate_valid || result.maneuver_completed, ego_s_valid, ego_s);
         return true;
     }
 
@@ -1694,3 +1768,4 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
 }
 
 }  // namespace frenet_planner_ros
+

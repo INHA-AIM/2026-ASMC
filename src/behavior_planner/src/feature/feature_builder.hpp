@@ -49,6 +49,9 @@ struct AvoidTargetConfig {
 };
 class FeatureBuilder {
  public:
+  void setRoundaboutMerge(bool enabled, const std::string& stop_node, const std::string& source, const std::string& target) {
+    roundabout_enabled_=enabled;roundabout_stop_node_=stop_node;roundabout_source_=source;roundabout_target_=target;
+  }
   void setStopTargetOffset(double offset_m) {
     stop_target_offset_m_ = offset_m > 0.0 ? offset_m : 0.0;
   }
@@ -91,6 +94,8 @@ class FeatureBuilder {
     double width = 0.0;
   };
 
+  bool roundabout_enabled_=false;
+  std::string roundabout_stop_node_,roundabout_source_,roundabout_target_;
   int frame_ = 0;
   int last_lead_vehicle_id_ = -1;
   double stop_target_offset_m_ = 0.0;
@@ -102,3 +107,4 @@ class FeatureBuilder {
   ObjectProjector projector_;
 };
 }
+

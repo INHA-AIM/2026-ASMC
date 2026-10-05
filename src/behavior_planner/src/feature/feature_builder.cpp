@@ -206,6 +206,21 @@ UrbanFeature FeatureBuilder::build(
     feature.signal.distance_to_movement = signal_movement.distance;
   }
 
+  feature.roundabout.enabled = roundabout_enabled_;
+  if (roundabout_enabled_) {
+    StopLineInfo stop;
+    if (route_manager.findStopLineByNode(roundabout_stop_node_, &stop)) {
+      feature.roundabout.source_link_id=roundabout_source_;
+      feature.roundabout.target_link_id=roundabout_target_;
+      feature.roundabout.distance_to_stop=stop.route_s-feature.ego.s;
+      // Begin early enough to stop from the measured speed, then hold a
+      // constant 25 km/h maneuver ceiling throughout the transaction.
+      double preview=std::max(45.0,feature.ego.speed*feature.ego.speed/(2*1.5)+4);
+      feature.roundabout.approach=feature.roundabout.distance_to_stop>=-.5 &&
+          feature.roundabout.distance_to_stop<=preview;
+    }
+  }
+
   StopLineInfo stop_line;
   double stop_distance = 1e9;
   if (route_manager.findNextSignalizedStopLine(
@@ -915,3 +930,4 @@ UrbanFeature FeatureBuilder::build(
 }
 
 }  // namespace behavior_planner
+

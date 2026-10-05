@@ -10,8 +10,10 @@ struct SignalFeature { TrafficLightState light_state=TrafficLightState::UNKNOWN;
 struct ObjectFeature { ObjectType type=ObjectType::UNKNOWN; MotionState motion_state=MotionState::UNKNOWN; int id=-1; double x=0,y=0,yaw=0,vx=0,vy=0,speed=0,accel=0,length=0,width=0,s=0,d=0,link_s=0,gap=1e9,relative_speed=0,ttc=1e9; std::string link_id; bool valid=false; };
 struct SurroundingFeature { bool has_front_vehicle=false; ObjectFeature front_vehicle; bool left_lane_safe=false,right_lane_safe=false; double left_front_gap=1e9,left_rear_gap=1e9,right_front_gap=1e9,right_rear_gap=1e9,left_rear_ttc=1e9,right_rear_ttc=1e9; };
 struct RiskFeature { bool static_obstacle_ahead=false,pedestrian_risk=false,emergency_risk=false,avoid_target_reclassified_moving=false,avoid_target_matches_front_lead=false,avoid_target_matches_recent_lead=false; int avoidance_object_id=-1; double min_ttc=1e9,nearest_obstacle_s=1e9,nearest_obstacle_length=0.0,nearest_pedestrian_s=1e9; };
-struct UrbanFeature { double timestamp=0; int frame_count=0; EgoFeature ego; RouteFeature route; SignalFeature signal; SurroundingFeature surrounding; RiskFeature risk; std::unordered_map<std::string,double> extra_values; std::unordered_map<std::string,bool> extra_flags; };
+struct RoundaboutFeature { bool enabled=false,approach=false; std::string source_link_id,target_link_id; double distance_to_stop=1e9; };
+struct UrbanFeature { RoundaboutFeature roundabout; double timestamp=0; int frame_count=0; EgoFeature ego; RouteFeature route; SignalFeature signal; SurroundingFeature surrounding; RiskFeature risk; std::unordered_map<std::string,double> extra_values; std::unordered_map<std::string,bool> extra_flags; };
 struct EgoState { double x=0,y=0,yaw=0,speed=0,stamp=0; uint8_t source=0; bool valid=false; };
 struct TrackedObject { int id=-1; ObjectType type=ObjectType::UNKNOWN; MotionState motion_state=MotionState::UNKNOWN; double x=0,y=0,yaw=0,vx=0,vy=0,speed=0,accel=0,length=4.5,width=1.8; };
 struct PerceptionObjects { std::vector<TrackedObject> vehicles,pedestrians,obstacles; };
 }
+

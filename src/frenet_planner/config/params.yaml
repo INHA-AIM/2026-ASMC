@@ -394,3 +394,15 @@ waypoint_file: "../../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt"
 # Pinned ahnsh03 main 1ce434d: keep global reference; constrain AVOID only.
 avoid_hd_map:
   enabled: true
+
+# Both planners enabled together for MORAI driving validation.
+# A single map-defined entry; highway MERGE and lane changes stay separate.
+roundabout_merge:
+  enabled: true
+  source_link: A2256W000148
+  target_link: A2256W000146
+  stop_node: A1256W000709
+  conflict_links: [A2256W000134, A2256W000151]
+  speed_cap_mps: 6.944444444444445
+  preview_distance_m: 45.0
+  max_horizon_s: 10.0

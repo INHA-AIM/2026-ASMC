@@ -59,6 +59,8 @@ FrenetPlannerNode::FrenetPlannerNode(ros::NodeHandle nh, ros::NodeHandle pnh)
         asmc_msgs::BehaviorCommand::AVOID, true);
     command_manager_.SetImplementedManeuver(
         asmc_msgs::BehaviorCommand::LANE_CHANGE, true);
+    command_manager_.SetImplementedManeuver(
+        asmc_msgs::BehaviorCommand::MERGE, planner_.roundabout_merge_enabled());
     marker_pub_ = nh_.advertise<visualization_msgs::MarkerArray>(
         runtime_.markers_topic, 1);
 
@@ -346,3 +348,4 @@ void FrenetPlannerNode::runV1PlanningCycle() {
 }
 
 }  // namespace frenet_planner_ros
+

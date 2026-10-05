@@ -421,6 +421,8 @@ bool ConvertBehaviorCommand(const asmc_msgs::BehaviorCommand& message,
         converted.min_gap = 0.0;
     }
 
+    converted.source_link_id = message.source_link_id;
+    converted.target_link_id = message.target_link_id;
     switch (message.merge_type) {
         case Command::MERGE_ROUNDABOUT:
             converted.merge_type = MergeType::ROUNDABOUT;
@@ -497,3 +499,4 @@ uint8_t ConvertToFeedbackManeuver(BehaviorState mode) {
 }
 
 }  // namespace frenet_planner_ros
+

@@ -1,0 +1,106 @@
+# 회전교차로 MERGE 구현과 검증
+
+2026-10-04 기준 주행 검증용 구현이다. 사용자 요청에 따라 기존 작업 브랜치에서
+두 노드의 `roundabout_merge.enabled`를 함께 `true`로 설정했다. 실제 ROS
+빌드·launch와 MORAI 폐루프 주행은 이 환경에서 확인하지 않았다.
+
+## 적용 범위와 대기 위치
+
+첫 단계는 고정 global reference를 사용하는 회전교차로 하나다.
+입구 링크 `A2256W000148`, 합류 링크 `A2256W000146`, 입구 정지선 노드
+`A1256W000709`를 명령과 지도 양쪽에서 확인한다. 회전 차량의 통로는
+`A2256W000134`와 `A2256W000151`의 링크별 주행 영역이다.
+교차로 전체 포장면을 회전 차량의 통로로 간주하지 않는다.
+전체 궤적의 도로 포함 여부는 별도의 기존 HD map grid로 검사한다.
+지도나 차량 제원은 변경하지 않았다.
+
+현재 reference에서 정지선은 s=883.054 m다. 기존 차량 footprint와 충돌 여유를
+포함해도 후륜을 이 위치에 맞춘 차량은 회전 통로와 겹치지 않고 도로 안에 있다.
+차체가 회전 통로와 처음 겹치는 위치는 s=884.954 m로 대기 위치보다 1.9 m 앞이다.
+후단 이탈 기준은 s=914.154 m이며, 완료 시에는 실제 현재 footprint가 통로와
+겹치지 않는지도 다시 확인한다. 이는 현재 지도/reference 기준 검증이다.
+시뮬레이터의 실제 지도 정합성까지 입증하는 결과는 아니다.
+
+## 동작
+
+1. 입구 전부터 MERGE PREPARE로 접근한다. 목표 상한은 25 km/h이며 곡률에 따른
+   속도 제한을 함께 적용한다. 접근 검사는 최소 45 m 전부터 시작하고,
+   현재 속도가 높으면 편안한 감속거리 기준으로 더 일찍 시작한다.
+2. 준비 중 출력은 정지선에서 멈출 수 있는 STOP 접근/대기 궤적이다.
+   일반 신호등의 정지 위치 설정과 분리하여 후륜 기준 정지선에 맞춘다.
+3. 동일 reference에 네 가지 속도 후보를 생성한다. 정지 상태에서도 출발하고
+   후단 이탈까지 최대 10초 안에 연결되는 후보를 검사한다. 도로 포함,
+   곡률·횡가속 제한, 전체 관측 객체와의 충돌을 함께 검사한다.
+4. 후보의 실제 차체 점유 시각으로 진입과 이탈을 찾는다. 준비 중에는 점유
+   구간 전체에 전방 1.5초/후방 2초 여유를 적용한다. 정적 객체와 ID가 바뀐
+   객체도 포함하며, 특정 FOLLOW 객체 하나에 판단을 묶지 않는다.
+5. 서로 다른 최신 객체 관측 세 번에서 안전한 후보가 확인되고 진입 시각이
+   안정적일 때 READY가 된다. EXECUTE 수신 시 현재 후보, 입력 신선도,
+   궤적 메시지 변환을 다시 확인한 후에만 commit한다. 입력 지연 또는
+   새 객체로 READY가 취소되면 과거 READY 토큰으로 출발할 수 없다.
+6. commit 뒤에는 FOLLOW/KEEP 점수 변화로 합류를 중단하지 않는다.
+   물리적 충돌 검사는 계속하며 막히면 기존 충돌 제동 경로를 사용한다.
+   후단이 통로를 벗어나고 KEEP 경로 생성까지 성공해야 완료한다.
+   긴급정지는 기존처럼 선점할 수 있다.
+
+고주로 합류와 차선 변경은 이번 실행 코드로 열지 않는다. 다른 합류 유형,
+다른 source/target 조합 또는 지정 gap ID는 지원하지 않는 명령으로 처리한다.
+기존 메시지 필드를 사용하므로 `.msg` 변경은 없다.
+
+## 검사 결과
+
+| 검사 | 결과 |
+|---|---:|
+| 회전교차로 후보 안전 검사 | 12/12 통과 |
+| 대기·READY·취소·출발·후단 이탈 검사 | 14/14 통과 |
+| Behavior 접근·명령 유지·긴급정지 검사 | 13/13 통과 |
+| 기존 FSM command binding 검사 | 8/8 통과 |
+| 기존 adapter/transaction/merge 계약 검사 | 290개 통과 |
+| 기존 주행 회귀 검사 | 14개 suite 통과 |
+
+실제 core 34개 translation unit를 빌드했다. ROS가 없는 환경이므로 runtime의
+메시지 연결은 저장소 `.msg`에서 만든 대체 구조체를 사용한 문법 검사로 확인했다.
+`v2_planning`, `feedback_builder`, `frenet_planner_node`,
+`behavior_command_adapter`는 통과했다. 실제 catkin 빌드와 serialization,
+launch parameter 전달, callback 순서를 검증한 것은 아니다.
+
+## 기존 세 bag의 최종 코드 재생
+
+객체는 각 계획 시점 이전에 수신된 최신 관측을 사용했다. 같은 객체 timestamp를
+여러 계획 사이클에서 재사용해도 READY 확인 횟수가 늘어나지 않는다.
+재생은 PREPARE/READY 평가만 수행하고 commit하거나 ROS 명령을 발행하지 않는다.
+
+| 기록 | 평가 사이클 | 접근/대기 궤적 생성 | 전체 통과 후보 존재 | READY |
+|---|---:|---:|---:|---:|
+| 221114 | 127 | 122 | 60 | 26 |
+| 221649 | 116 | 111 | 27 | 14 |
+| 230215 | 110 | 100 | 46 | 14 |
+
+후보가 없을 때 READY를 내지 않았고 세 기록 모두 안전 후보가 확인되는 구간에서
+READY가 나왔다. 접근/대기 경로도 생성하지 못한 사이클은 각각 5/5/10개로,
+runtime에서는 안전정지 출력 대상이다. 이 수치를 숨기거나 완주 성공률로
+해석하지 않는다. 기록 속 ego는 기존 KEEP/FOLLOW 동작으로 이동했기 때문에
+새 MERGE의 실제 감속·대기·출발 후 관측은 재현되지 않는다.
+
+재현 도구는 `src/frenet_planner/tools/roundabout_execution_shadow.cpp`다.
+외부 decoded bag을 `extract_merge_shadow_frames.py`로 변환한 frame JSON과
+경로가 해석된 parameter YAML을 입력한다.
+
+```sh
+python3 extract_merge_shadow_frames.py decoded_bag.json frames.json
+roundabout_execution_shadow frames.json resolved_params.yaml > shadow.log
+```
+
+원본 bag, 관측 frame JSON과 상세 객체 좌표 로그는 저장소에 포함하지 않는다.
+
+## 실제 적용 전 남은 확인
+
+실제 ROS 환경에서 pull 후 catkin 빌드하고 노드를 재시작해야 한다.
+`src/frenet_planner/config/params.yaml`과
+`src/behavior_planner/src/config/behavior_params.yaml`의
+`roundabout_merge.enabled`는 모두 켜져 있다. 다른 parameter 파일을 사용하는
+launch라면 해당 파일에도 동일 설정이 필요하다. 한 노드만 켜는 방식은 사용하지 않는다.
+
+첫 신규 주행에서는 정지선 대기 위치, WAIT→READY→COMMITTED→EXECUTING→COMPLETED,
+앞차/후방 회전 차량에 따른 대기 및 출발, 후단 이탈까지의 지속 실행을 기록한다.
+이 신규 bag이 있어야 실제 합류와 완주 성공을 판단할 수 있다.

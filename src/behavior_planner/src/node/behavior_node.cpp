@@ -294,6 +294,13 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
     avoid_target.reconnect_max_size_delta_m = 1.5;
   }
 
+  bool roundabout_enabled=false;
+  std::string roundabout_stop_node, roundabout_source, roundabout_target;
+  pnh_.param("roundabout_merge/enabled",roundabout_enabled,false);
+  pnh_.param<std::string>("roundabout_merge/stop_node",roundabout_stop_node,"A1256W000709");
+  pnh_.param<std::string>("roundabout_merge/source_link",roundabout_source,"A2256W000148");
+  pnh_.param<std::string>("roundabout_merge/target_link",roundabout_target,"A2256W000146");
+  builder_.setRoundaboutMerge(roundabout_enabled,roundabout_stop_node,roundabout_source,roundabout_target);
   if (!map_.load(link_path, node_path)) {
     ROS_ERROR("MGeo loading failed; check map paths");
   }
@@ -536,3 +543,4 @@ void BehaviorNode::feedbackV2Callback(
 }
 
 }  // namespace behavior_planner
+

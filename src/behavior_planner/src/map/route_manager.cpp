@@ -117,6 +117,15 @@ bool RouteManager::projectEgo(double x, double y, double* out_s, double* out_d,
   return true;
 }
 
+bool RouteManager::findStopLineByNode(const std::string& node_id, StopLineInfo* out) const {
+  if (!out) return false;
+  for (const auto& stop : stops_) if (stop.valid && stop.node_id == node_id) {
+    *out = stop;
+    return true;
+  }
+  return false;
+}
+
 bool RouteManager::findNextStopLine(double ego_s,
                                     StopLineInfo* out_stop_line) const {
   for (const StopLineInfo& stop : stops_) {
@@ -325,3 +334,4 @@ bool RouteManager::findNextSignalMovement(
 }
 
 }  // namespace behavior_planner
+

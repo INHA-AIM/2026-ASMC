@@ -53,6 +53,16 @@ catkin_install_python(PROGRAMS
 install(DIRECTORY launch src/config web DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
+  add_executable(roundabout_transaction_test test/roundabout_transaction_test.cpp
+    src/decision/fsm.cpp src/context/v2_command_manager.cpp
+    src/feature/feature_builder.cpp src/feature/object_projector.cpp
+    src/map/mgeo_loader.cpp src/map/route_manager.cpp
+    src/decision/behavior_decision.cpp src/decision/behavior_scorer.cpp
+    src/rule/hard_rule_filter.cpp)
+  add_dependencies(roundabout_transaction_test ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(roundabout_transaction_test ${catkin_LIBRARIES} yaml-cpp)
+  add_test(NAME roundabout_transaction_test COMMAND roundabout_transaction_test)
+
   catkin_add_gtest(fsm_command_binding_test
     test/fsm_command_binding_test.cpp
     src/decision/fsm.cpp)

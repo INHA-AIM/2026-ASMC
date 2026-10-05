@@ -47,6 +47,7 @@ asmc_msgs::BehaviorContext MsgConverter::toMsg(
   message.command_id = command_id;
   message.valid = std::isfinite(context.timestamp) && context.timestamp > 0.0;
   switch (context.selected_behavior) {
+    case BehaviorType::MERGE: message.selected_behavior = asmc_msgs::BehaviorContext::MERGE; break;
     case BehaviorType::KEEP: message.selected_behavior = asmc_msgs::BehaviorContext::KEEP; break;
     case BehaviorType::FOLLOW: message.selected_behavior = asmc_msgs::BehaviorContext::FOLLOW; break;
     case BehaviorType::LEFT_CHANGE: message.selected_behavior = asmc_msgs::BehaviorContext::LEFT_CHANGE; break;
@@ -171,3 +172,4 @@ UrbanFeatureDebug MsgConverter::toDebugMsg(
 }
 
 }  // namespace behavior_planner
+

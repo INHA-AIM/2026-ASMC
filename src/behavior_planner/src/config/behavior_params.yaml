@@ -74,3 +74,15 @@ stop:
 score_weight: {safety: 1.0, route: 0.8, efficiency: 0.5, comfort: 0.2}
 topics: {ego: "/vehicle/state", objects: "/Object_topic", plan_feedback: "/planning/feedback", frenet_feedback_v2: "/planning/frenet_feedback_v2"}
 publish_topics: {behavior_context: "/behavior/context", behavior_command_v2: "/behavior/command_v2", feature_debug: "/behavior/feature_debug", marker: "/behavior/markers"}
+
+# Both planners enabled together for MORAI driving validation.
+# A single map-defined entry; highway MERGE and lane changes stay separate.
+roundabout_merge:
+  enabled: true
+  source_link: A2256W000148
+  target_link: A2256W000146
+  stop_node: A1256W000709
+  conflict_links: [A2256W000134, A2256W000151]
+  speed_cap_mps: 6.944444444444445
+  preview_distance_m: 45.0
+  max_horizon_s: 10.0

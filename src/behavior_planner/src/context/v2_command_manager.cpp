@@ -76,6 +76,15 @@ asmc_msgs::BehaviorCommand V2CommandManager::makeCandidate(
     case BehaviorType::KEEP:
       command.maneuver_type = Command::KEEP;
       break;
+    case BehaviorType::MERGE:
+      command.maneuver_type = Command::MERGE;
+      command.merge_type = Command::MERGE_ROUNDABOUT;
+      command.target_link_id = context.target.target_link_id;
+      command.direction = Command::DIRECTION_NONE;
+      command.execution_request = context.maneuver_phase == ManeuverPhase::PREPARE
+          ? Command::PREPARE : Command::EXECUTE;
+      command.has_target_pose = false;
+      break;
     case BehaviorType::FOLLOW:
       command.maneuver_type = Command::FOLLOW;
       command.primary_object_id = context.target.lead_vehicle_id;
@@ -185,6 +194,13 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
     candidate.source_link_id = active_command_.source_link_id;
     candidate.primary_object_id = active_command_.primary_object_id;
   }
+  if (has_active_command_ && !terminal_feedback &&
+      active_command_.maneuver_type == Command::MERGE && candidate.maneuver_type == Command::MERGE) {
+    candidate = active_command_;
+    candidate.execution_request = context.maneuver_phase == ManeuverPhase::PREPARE
+        ? Command::PREPARE : Command::EXECUTE;
+    candidate.reason = "roundabout_merge";
+  }
   if (terminal_feedback) {
     active_transaction_locked_ = false;
   }
@@ -215,7 +231,7 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
   // A committed lateral maneuver remains immutable and picks up the ceiling
   // when its transaction completes.
   const bool intersection_approach_policy_changed =
-      has_active_command_ &&
+      has_active_command_ && candidate.maneuver_type != Command::MERGE &&
       candidate_intersection_approach != active_intersection_approach_;
   if (!has_active_command_ || !sameIdentity(active_command_, candidate) ||
       restart_terminal_identity || intersection_approach_policy_changed) {
@@ -249,3 +265,4 @@ asmc_msgs::BehaviorCommand V2CommandManager::update(
 }
 
 }  // namespace behavior_planner
+

@@ -162,6 +162,10 @@ BehaviorContextData BehaviorDecision::decide(
   } else if (avoid_precedes_stop) {
     best = {context.score.avoid, BehaviorType::AVOID, true};
   }
+  if (feature.roundabout.enabled && feature.roundabout.approach &&
+      !context.hard.planned_stop && !context.hard.force_stop && !context.hard.emergency_stop) {
+    best = {0.0, BehaviorType::MERGE, true};
+  }
   const Fsm::ManeuverOutput fsm_output = fsm_.updateManeuver(
       best.behavior, planner_feedback, active_command_id,
       stop_preempts_avoid, cancel_reclassified_avoid,
@@ -171,6 +175,13 @@ BehaviorContextData BehaviorDecision::decide(
   context.maneuver_phase = fsm_output.phase;
 
   switch (context.selected_behavior) {
+    case BehaviorType::MERGE:
+      context.target.current_link_id = feature.roundabout.source_link_id;
+      context.target.target_link_id = feature.roundabout.target_link_id;
+      context.target.desired_speed = 25.0/3.6;
+      context.target.has_target_pose = false;
+      context.extra_flags["roundabout_merge"] = true;
+      break;
     case BehaviorType::FOLLOW:
       // Behavior owns the maneuver and its cruise-speed ceiling.  The leader
       // ID and requested gap are sent to Frenet, which alone owns the
@@ -230,3 +241,4 @@ BehaviorContextData BehaviorDecision::decide(
 }
 
 }  // namespace behavior_planner
+

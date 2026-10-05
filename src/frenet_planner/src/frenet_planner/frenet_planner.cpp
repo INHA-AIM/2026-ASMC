@@ -34,6 +34,9 @@ bool PathObeysCurvatureLimit(const CartesianPath& path, double limit) {
 
 bool FrenetPlanner::Init(const std::string& yaml_path) {
     ref_loaded_ = false;
+    roundabout_merge_cfg_ = RoundaboutMergeConfig{};
+    roundabout_zone_ = RoundaboutMergeZone{};
+    ResetRoundaboutMerge();
     // Optional for synthetic/core tests; production explicitly enables the pinned map.
     avoid_road_map_ = AvoidRoadMap{};
     try {
@@ -137,6 +140,42 @@ bool FrenetPlanner::Init(const std::string& yaml_path) {
         }
     }
     ref_loaded_ = true;
+    try {
+        auto config = YAML::LoadFile(yaml_path);
+        auto merge = config["roundabout_merge"];
+        if (merge && merge["enabled"].as<bool>(false)) {
+            roundabout_merge_cfg_.enabled = true;
+            roundabout_merge_cfg_.speed_cap = merge["speed_cap_mps"].as<double>(25.0/3.6);
+            roundabout_merge_cfg_.max_horizon = merge["max_horizon_s"].as<double>(10.0);
+            roundabout_merge_cfg_.preview_distance = merge["preview_distance_m"].as<double>(45.0);
+            roundabout_merge_cfg_.source_link = merge["source_link"].as<std::string>(roundabout_merge_cfg_.source_link);
+            roundabout_merge_cfg_.target_link = merge["target_link"].as<std::string>(roundabout_merge_cfg_.target_link);
+            roundabout_merge_cfg_.stop_node = merge["stop_node"].as<std::string>(roundabout_merge_cfg_.stop_node);
+            if (merge["conflict_links"]) roundabout_merge_cfg_.conflict_links = merge["conflict_links"].as<std::vector<std::string>>();
+            if (!std::isfinite(roundabout_merge_cfg_.speed_cap) || roundabout_merge_cfg_.speed_cap <= 0 ||
+                !std::isfinite(roundabout_merge_cfg_.max_horizon) || roundabout_merge_cfg_.max_horizon < path_cfg_.time_horizon.max ||
+                roundabout_merge_cfg_.max_horizon > 10 || roundabout_merge_cfg_.conflict_links.empty() ||
+                !std::isfinite(roundabout_merge_cfg_.preview_distance) || roundabout_merge_cfg_.preview_distance <= 0)
+                throw std::runtime_error("invalid roundabout merge configuration");
+            if (!avoid_road_map_.enabled()) throw std::runtime_error("roundabout MERGE requires the HD map");
+            const auto slash=yaml_path.find_last_of("/\\");
+            std::string config_dir=slash==std::string::npos?"./":yaml_path.substr(0,slash+1);
+            std::string root=std::string(FRENET_PACKAGE_SRC_DIR)+"/../config/hd_map/";
+            auto map=config["avoid_hd_map"];
+            if(map["directory"]) { root=map["directory"].as<std::string>(); if(root.empty())throw std::runtime_error("empty HD map directory"); if(root.front()!='/')root=config_dir+root; if(root.back()!='/')root+='/'; }
+            else if(std::ifstream(config_dir+"hd_map/drivable.json").good())root=config_dir+"hd_map/";
+            std::string error;
+            if(!roundabout_zone_.Load(root+"drivable.json",root+"lines.json",ref_,vehicle_shape_,roundabout_merge_cfg_,collision_cfg_.safety_margin,error))
+                throw std::runtime_error(error);
+            auto p=Interpolate(ref_,roundabout_zone_.stop_s);
+            if(!avoid_road_map_.FootprintInside(p.x,p.y,p.theta,vehicle_shape_))
+                throw std::runtime_error("roundabout waiting footprint leaves drivable area");
+        }
+    } catch(const std::exception& error) {
+        ref_loaded_ = false;
+        std::fprintf(stderr,"[FrenetPlanner] roundabout init failed: %s\n",error.what());
+        return false;
+    }
     return true;
 }
 
@@ -587,6 +626,7 @@ bool FrenetPlanner::Plan(const CartesianState& ego,
                          const std::vector<TrackedObject>& obstacles,
                          const PlannerCommand& command,
                          CartesianPath& out_path) {
+    if (command.mode != MERGE) ResetRoundaboutMerge();
     PlanFailureReason reason = PlanFailureReason::NONE;
     if (!ValidateExternalCommand(command, reason)) {
         speed_profiler_.Reset();

@@ -53,6 +53,8 @@ add_library(frenet_planner_core
   src/frenet_planner/Maneuver/LaneChange/LaneChange.cpp
   src/frenet_planner/Maneuver/LaneChange/LaneChangeLifecycle.cpp
   src/frenet_planner/Maneuver/Merge/MergeGapEvaluator.cpp
+  src/frenet_planner/Maneuver/Merge/RoundaboutMerge.cpp
+  src/frenet_planner/Maneuver/Merge/RoundaboutExecution.cpp
   src/frenet_planner/Config/ConfigLoader.cpp
   src/frenet_planner/Config/ConfigValidator.cpp
   src/frenet_planner/visualization/planner_debug_writer.cpp
@@ -373,6 +375,31 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME command_execution_manager_test
            COMMAND command_execution_manager_test)
+
+  # Offline shadow tool consumes externally supplied, decoded bag frames.
+  add_executable(roundabout_merge_shadow tools/roundabout_merge_shadow.cpp)
+  target_link_libraries(roundabout_merge_shadow frenet_planner_core yaml-cpp)
+
+  foreach(merge_test roundabout_candidate_test roundabout_execution_test)
+    add_executable(${merge_test} tests/${merge_test}.cpp)
+    target_link_libraries(${merge_test} frenet_planner_core yaml-cpp)
+    target_compile_definitions(${merge_test} PRIVATE
+      FRENET_PACKAGE_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src"
+      FRENET_TEST_WAYPOINT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../../R_KR_PG_KATRI/2026_molit_comp_global_path.txt")
+    add_test(NAME ${merge_test} COMMAND ${merge_test})
+  endforeach()
+
+  add_executable(roundabout_execution_shadow tools/roundabout_execution_shadow.cpp)
+  target_link_libraries(roundabout_execution_shadow frenet_planner_core yaml-cpp)
+
+  # MERGE contract only: does not enable the runtime capability gate.
+  add_executable(merge_contract_test tests/merge_contract_test.cpp)
+  add_dependencies(merge_contract_test ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(merge_contract_test
+    frenet_command_execution_manager
+    ${catkin_LIBRARIES}
+  )
+  add_test(NAME merge_contract_test COMMAND merge_contract_test)
 
   # fix/yuntae-frenet-speed-continuity: longitudinal candidate validity 회귀.
   # negative s_d(reverse) candidate와 excessive jerk candidate가 accel-only

@@ -5,17 +5,20 @@
 
 namespace behavior_planner {
 
-BehaviorState Fsm::update(BehaviorType b){if(b==BehaviorType::FOLLOW)return BehaviorState::FOLLOW;if(b==BehaviorType::STOP)return BehaviorState::STOP;if(b==BehaviorType::EMERGENCY_STOP)return BehaviorState::EMERGENCY_STOP;if(b==BehaviorType::LEFT_CHANGE)return BehaviorState::LEFT_CHANGE_PREPARE;if(b==BehaviorType::RIGHT_CHANGE)return BehaviorState::RIGHT_CHANGE_PREPARE;if(b==BehaviorType::AVOID)return BehaviorState::AVOID_PREPARE;return BehaviorState::KEEP_LANE;}
+BehaviorState Fsm::update(BehaviorType b){if(b==BehaviorType::MERGE)return BehaviorState::MERGE_PREPARE;if(b==BehaviorType::FOLLOW)return BehaviorState::FOLLOW;if(b==BehaviorType::STOP)return BehaviorState::STOP;if(b==BehaviorType::EMERGENCY_STOP)return BehaviorState::EMERGENCY_STOP;if(b==BehaviorType::LEFT_CHANGE)return BehaviorState::LEFT_CHANGE_PREPARE;if(b==BehaviorType::RIGHT_CHANGE)return BehaviorState::RIGHT_CHANGE_PREPARE;if(b==BehaviorType::AVOID)return BehaviorState::AVOID_PREPARE;return BehaviorState::KEEP_LANE;}
 
 namespace {
 
 bool IsLateralManeuver(BehaviorType behavior) {
-  return behavior == BehaviorType::AVOID ||
+  return behavior == BehaviorType::MERGE || behavior == BehaviorType::AVOID ||
          behavior == BehaviorType::LEFT_CHANGE ||
          behavior == BehaviorType::RIGHT_CHANGE;
 }
 
 BehaviorState StateFor(BehaviorType behavior, ManeuverPhase phase) {
+  if (behavior == BehaviorType::MERGE) {
+    return phase == ManeuverPhase::PREPARE ? BehaviorState::MERGE_PREPARE : BehaviorState::MERGE_EXECUTE;
+  }
   if (behavior == BehaviorType::AVOID) {
     return phase == ManeuverPhase::PREPARE
                ? BehaviorState::AVOID_PREPARE
@@ -133,6 +136,11 @@ Fsm::ManeuverOutput Fsm::updateManeuver(
       }
     }
 
+    if (!terminal && active_lateral_behavior_ == BehaviorType::MERGE &&
+        candidate != BehaviorType::EMERGENCY_STOP && candidate != BehaviorType::STOP) {
+      candidate = BehaviorType::MERGE;
+    }
+
     if (terminal) {
       active_lateral_behavior_ = BehaviorType::KEEP;
       maneuver_phase_ = ManeuverPhase::NONE;
@@ -140,7 +148,8 @@ Fsm::ManeuverOutput Fsm::updateManeuver(
       avoid_missing_cycles_ = 0;
     } else {
       const bool planned_stop_preemption =
-          candidate == BehaviorType::STOP && stop_preempts_committed;
+          candidate == BehaviorType::STOP && stop_preempts_committed &&
+          active_lateral_behavior_ != BehaviorType::MERGE;
       if (planned_stop_preemption) {
         active_lateral_behavior_ = BehaviorType::KEEP;
         maneuver_phase_ = ManeuverPhase::NONE;
