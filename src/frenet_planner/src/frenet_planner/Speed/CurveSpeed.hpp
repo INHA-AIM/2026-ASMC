@@ -25,6 +25,14 @@ double LookaheadTargetSpeed(const RefLine& ref, double s_start, double ego_speed
                              const CurveSpeedConfig& cfg, double max_longitudinal_accel,
                              double max_lateral_accel, double max_curvature);
 
+// Backward braking envelope over the complete candidate travel distance plus
+// braking preview. Includes distance for the initial jerk-limited response.
+std::vector<SpeedEnvelopePoint> BuildKeepSpeedEnvelope(
+    const RefLine& ref, double s_start, double ego_speed, double initial_accel,
+    double candidate_duration, double sample_dt, double raw_speed_cap,
+    const CurveSpeedConfig& cfg, double max_longitudinal_accel,
+    double max_lateral_accel, double max_longitudinal_jerk);
+
 // 실제 MPC에 전달되는 Cartesian candidate를 기준으로 한 곡률-속도 envelope.
 // reference line의 kappa가 아니라 selected trajectory의 kappa를 사용하고,
 // 시작점부터 각 sample까지의 실제 Cartesian 호길이로 감속 가능 거리를

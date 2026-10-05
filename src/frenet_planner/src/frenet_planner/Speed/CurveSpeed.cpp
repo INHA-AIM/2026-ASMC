@@ -77,6 +77,79 @@ double LookaheadTargetSpeed(const RefLine& ref, double s_start, double ego_speed
     return clip(envelope_speed, 0.0, cfg.target_vel);
 }
 
+std::vector<SpeedEnvelopePoint> BuildKeepSpeedEnvelope(
+    const RefLine& ref, double s_start, double ego_speed, double initial_accel,
+    double candidate_duration, double sample_dt, double raw_speed_cap,
+    const CurveSpeedConfig& cfg, double max_longitudinal_accel,
+    double max_lateral_accel, double max_longitudinal_jerk) {
+    if (ref.points.empty() || !std::isfinite(s_start) ||
+        !std::isfinite(ego_speed) || !std::isfinite(initial_accel) ||
+        !std::isfinite(raw_speed_cap) || raw_speed_cap < 0.0 ||
+        candidate_duration <= 0.0 || sample_dt <= 0.0 ||
+        max_longitudinal_accel <= 0.0 || max_longitudinal_jerk <= 0.0) {
+        return {};
+    }
+    const double decel = std::min(max_longitudinal_accel, std::max(
+        cfg.min_usable_decel,
+        max_longitudinal_accel * cfg.comfortable_decel_factor));
+    const double cap = std::min(cfg.target_vel, raw_speed_cap);
+    const double travel_speed = std::max(cfg.target_vel, std::max(0.0, ego_speed));
+    // The braking equation assumes immediate constant deceleration. Reserve
+    // distance for ramping from the start acceleration to -decel first, so a
+    // jerk-limited profile can begin braking BEFORE that ideal boundary.
+    const double response_time = std::max(sample_dt,
+        (std::max(0.0, initial_accel) + decel) / max_longitudinal_jerk);
+    const double response_distance = travel_speed * response_time +
+        0.5 * max_longitudinal_accel * response_time * response_time;
+    const double span = travel_speed * candidate_duration +
+        travel_speed * travel_speed / (2.0 * decel) +
+        std::max(0.0, cfg.curve_lookahead_m) + response_distance;
+    const double end = s_start + span;
+    std::vector<SpeedEnvelopePoint> samples{{s_start, cap * cap}};
+    const bool closed = ref.closed_loop && ref.length > 0.0;
+    const long first_lap = closed
+        ? static_cast<long>(std::floor(s_start / ref.length)) : 0;
+    const long last_lap = closed
+        ? static_cast<long>(std::floor((end + response_distance) / ref.length)) : 0;
+    for (long lap = first_lap; lap <= last_lap; ++lap) {
+        const double shift = closed ? lap * ref.length : 0.0;
+        for (const RefPoint& point : ref.points) {
+            const double position = point.s + shift;
+            if (position < s_start || position > end + response_distance) continue;
+            const double local_cap = std::min(cap,
+                VelocityFromCurvature(std::fabs(point.kappa), cfg,
+                                      max_lateral_accel));
+            samples.push_back({std::max(s_start, position - response_distance),
+                               local_cap * local_cap});
+        }
+    }
+    // Include the interpolated current curvature, not only the next waypoint.
+    const double current_cap = std::min(cap, VelocityFromCurvature(
+        std::fabs(Interpolate(ref, s_start).kappa), cfg, max_lateral_accel));
+    samples.push_back({s_start, current_cap * current_cap});
+    samples.push_back({end, cap * cap});
+    std::sort(samples.begin(), samples.end(),
+        [](const SpeedEnvelopePoint& a, const SpeedEnvelopePoint& b) {
+            return a.s < b.s;
+        });
+    std::vector<SpeedEnvelopePoint> envelope;
+    for (const auto& point : samples) {
+        if (!envelope.empty() && point.s <= envelope.back().s + 1e-9) {
+            envelope.back().speed_squared = std::min(
+                envelope.back().speed_squared, point.speed_squared);
+        } else {
+            envelope.push_back(point);
+        }
+    }
+    for (std::size_t i = envelope.size() - 1; i > 0; --i) {
+        const double ds = envelope[i].s - envelope[i - 1].s;
+        envelope[i - 1].speed_squared = std::min(
+            envelope[i - 1].speed_squared,
+            envelope[i].speed_squared + 2.0 * decel * ds);
+    }
+    return envelope;
+}
+
 CandidateCurveSpeedResult EvaluateCandidateCurveSpeed(
     const CartesianPath& candidate,
     double raw_speed_cap,

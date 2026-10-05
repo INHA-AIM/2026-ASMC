@@ -11,7 +11,8 @@ TrajectoryPipeline::TrajectoryPipeline(const PlannerConfigBundle& config,
     : config_(config), ref_(ref) {}
 
 void TrajectoryPipeline::AppendKeepContinuityCandidates(
-    const FrenetState& maneuver_start, double target_speed,
+    const FrenetState& maneuver_start, const TrajectoryRequest& request,
+    const KinematicLimits& maneuver_limits,
     const std::vector<TrackedObject>& planning_collision_obstacles,
     std::vector<FrenetPath>& candidates,
     CartesianGeometryMode geometry_mode) const {
@@ -21,9 +22,13 @@ void TrajectoryPipeline::AppendKeepContinuityCandidates(
     FilterLateralByAcceleration(continuity_lateral, config_.limits);
 
     std::vector<FrenetPath> longitudinal_for_continuity =
-        GenerateVelocityKeepingCandidates(maneuver_start, target_speed,
-                                          config_.path);
-    FilterLongitudinalByKinematicLimits(longitudinal_for_continuity, config_.limits);
+        request.speed_envelope.empty()
+            ? GenerateVelocityKeepingCandidates(maneuver_start, request.target_speed,
+                                                config_.path)
+            : GenerateEnvelopeVelocityCandidates(
+                maneuver_start, request.target_speed, request.speed_envelope,
+                config_.path, maneuver_limits);
+    FilterLongitudinalByKinematicLimits(longitudinal_for_continuity, maneuver_limits);
 
     std::vector<FrenetPath> continuity_combined = CombineLateralLongitudinal(
         continuity_lateral, longitudinal_for_continuity);
@@ -52,7 +57,7 @@ std::vector<FrenetPath> TrajectoryPipeline::GenerateCandidates(
         stats, geometry_mode);
 
     if (append_keep_continuity_candidates) {
-        AppendKeepContinuityCandidates(maneuver_start, request.target_speed,
+        AppendKeepContinuityCandidates(maneuver_start, request, maneuver_limits,
                                        planning_collision_obstacles,
                                        candidates, geometry_mode);
     }

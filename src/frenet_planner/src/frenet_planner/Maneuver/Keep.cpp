@@ -332,20 +332,34 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     for (int generation_pass = 0;
          generation_pass < generation_pass_limit; ++generation_pass) {
         FrenetState pass_start = start;
-        if (external_keep_candidates) {
-            // The boundary policy answers whether the upstream/candidate cap
-            // requests acceleration or deceleration.  Use the raw intent here;
-            // using the necessarily-nearby first profiled sample would fall
-            // inside accel_intent_deadband and preserve stale braking memory.
-            // request.target_speed below uses the scalar generator target;
-            // the polynomial from the measured start state owns continuity.
-            pass_start.s_dd = ResolveVelocityKeepingBoundaryAcceleration(
-                start.s_dd, s_dot, final_raw_speed_cap,
+        request.target_speed = final_applied_target_speed;
+        if (is_true_external_keep) {
+            CurveSpeedConfig envelope_curve_config = cfg.curve_speed;
+            const double headroom = maneuver_limits.boundary_condition_accel_fraction;
+            envelope_curve_config.comfortable_decel_factor = std::min(
+                envelope_curve_config.comfortable_decel_factor, headroom);
+            envelope_curve_config.min_usable_decel = std::min(
+                envelope_curve_config.min_usable_decel,
+                maneuver_limits.max_longitudinal_accel * headroom);
+            request.speed_envelope = BuildKeepSpeedEnvelope(
+                ref_, s, s_dot, start.s_dd, cfg.path.time_horizon.max,
+                cfg.path.dt, final_applied_target_speed, envelope_curve_config,
+                maneuver_limits.max_longitudinal_accel,
+                maneuver_limits.max_lateral_accel,
+                maneuver_limits.max_longitudinal_jerk * headroom);
+            // An invalid spatial contract must not silently fall back to the
+            // terminal-velocity generator that caused delayed braking.
+            if (request.speed_envelope.empty()) {
+                candidates.clear();
+                break;
+            }
+        }
+        if (is_true_external_keep) {
+            pass_start.s_dd = ResolveEnvelopeBoundaryAcceleration(
+                start.s_dd, s_dot, final_raw_speed_cap, request.speed_envelope,
                 cfg.limits.accel_intent_deadband_mps);
         }
         selected_planning_s_dd = pass_start.s_dd;
-
-        request.target_speed = final_applied_target_speed;
         PlannerDebugStats pass_stats;
         candidates = trajectory_pipeline.GenerateCandidates(
             pass_start, request, maneuver_limits,
@@ -373,17 +387,16 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         speed_profile_input.raw_speed_cap = candidate_raw_speed_cap;
         const SpeedProfileOutput candidate_profile = speed_profiler_.Preview(
             speed_profile_input, speed_profile_limits);
-        const double candidate_planning_s_dd =
-            ResolveVelocityKeepingBoundaryAcceleration(
-                start.s_dd, s_dot, candidate_raw_speed_cap,
-                cfg.limits.accel_intent_deadband_mps);
+        // Rebuild when the applied ceiling or its environmental acceleration
+        // intent changes; all future sample speeds come from the spatial cap.
         const bool target_changed = std::fabs(
             candidate_profile.target_speed - final_applied_target_speed) >
             kRegenerationEpsilon;
-        const bool boundary_changed = std::fabs(
-            candidate_planning_s_dd - pass_start.s_dd) >
-            kRegenerationEpsilon;
-        const bool needs_regeneration = target_changed || boundary_changed;
+        const double candidate_boundary_accel = ResolveEnvelopeBoundaryAcceleration(
+            start.s_dd, s_dot, candidate_raw_speed_cap, request.speed_envelope,
+            cfg.limits.accel_intent_deadband_mps);
+        const bool needs_regeneration = target_changed || std::fabs(
+            candidate_boundary_accel - pass_start.s_dd) > kRegenerationEpsilon;
         const bool can_regenerate =
             generation_pass + 1 < generation_pass_limit;
         if (!needs_regeneration) {
@@ -625,7 +638,8 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
                         "speed_intent=%s raw_s_ddot=%+.2f planning_s_ddot=%+.2f "
                         "v0=%.2f v05=%.2f v10=%.2f base_cap=%.2f "
                         "candidate_cap=%.2f profiler_accel=%+.2f "
-                        "max_kappa=%.4f max_lat_accel=%.2f regenerations=%d\n",
+                        "max_kappa=%.4f max_lat_accel=%.2f regenerations=%d "
+                        "speed_plan=SPATIAL envelope_v0=%.2f\n",
                         ego.v,
                         final_raw_speed_cap,
                         previous_profiled_target,
@@ -649,7 +663,10 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
                         selected_speed_envelope.valid
                             ? selected_speed_envelope.max_lateral_accel
                             : std::numeric_limits<double>::quiet_NaN(),
-                        candidate_aware_regenerations);
+                        candidate_aware_regenerations,
+                        request.speed_envelope.empty()
+                            ? std::numeric_limits<double>::quiet_NaN()
+                            : std::sqrt(request.speed_envelope.front().speed_squared));
         }
         if (cmd.mode == FOLLOWING) {
             const double gap = leader_s - s;

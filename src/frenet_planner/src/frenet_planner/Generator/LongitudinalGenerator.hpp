@@ -16,6 +16,8 @@
 #include "frenet_planner/Common/FrenetTypes.hpp"
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
 
+struct KinematicLimits;
+
 // =========================================================
 // [Sec.V-A] Following — 선두 차량과의 constant-time-gap 추종
 //
@@ -84,5 +86,12 @@ std::vector<FrenetPath> GenerateMergeArrivalCandidates(const FrenetState& start,
 std::vector<FrenetPath> GenerateVelocityKeepingCandidates(const FrenetState& start,
                                                            double target_speed,
                                                            const PathGeneratorConfig& cfg);
+
+// A current admissible ceiling is not a terminal velocity boundary condition.
+// Integrate a jerk-limited profile against its position-dependent ceiling.
+std::vector<FrenetPath> GenerateEnvelopeVelocityCandidates(
+    const FrenetState& start, double target_speed,
+    const std::vector<SpeedEnvelopePoint>& envelope,
+    const PathGeneratorConfig& cfg, const KinematicLimits& limits);
 
 #endif  // FRENET_GENERATOR_LONGITUDINAL_GENERATOR_HPP

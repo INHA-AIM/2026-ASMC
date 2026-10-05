@@ -389,6 +389,12 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_test(NAME curve_speed_envelope_test COMMAND curve_speed_envelope_test)
 
+  # Current curve ceiling must produce braking before the curve, including
+  # repeated 20Hz replanning and the KEEP continuity candidate path.
+  add_executable(spatial_keep_speed_test tests/spatial_keep_speed_test.cpp)
+  target_link_libraries(spatial_keep_speed_test frenet_planner_core)
+  add_test(NAME spatial_keep_speed_test COMMAND spatial_keep_speed_test)
+
   # Legacy target name retained for build compatibility. The resolver now
   # owns only stateless raw-cap composition; temporal limits are covered by
   # speed_profiler_test below.
@@ -524,3 +530,4 @@ install(PROGRAMS tools/planner_visualizer.py
 install(DIRECTORY config launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
+

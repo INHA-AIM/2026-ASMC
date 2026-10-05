@@ -1,6 +1,8 @@
 #ifndef FRENET_PIPELINE_TRAJECTORY_REQUEST_HPP
 #define FRENET_PIPELINE_TRAJECTORY_REQUEST_HPP
 
+#include <vector>
+
 #include "frenet_planner/Generator/GeneratorConfig.hpp"
 
 // R4: PlannerCommand와 TrajectoryRequest의 역할을 분리한다.
@@ -100,6 +102,10 @@ struct TrajectoryRequest {
 
     LongitudinalMode longitudinal_mode = LongitudinalMode::VELOCITY_KEEPING;
     double target_speed = 0.0;
+
+    // Optional position-dependent ceiling, already resolved by the maneuver.
+    // Empty preserves the existing generator semantics for STOP/FOLLOW/AVOID.
+    std::vector<SpeedEnvelopePoint> speed_envelope;
 
     FollowingRequest following;
     StopRequest stop;

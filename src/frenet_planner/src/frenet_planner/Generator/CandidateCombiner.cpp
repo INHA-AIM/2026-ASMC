@@ -295,8 +295,10 @@ std::vector<FrenetPath> GenerateRequestedCandidates(
 
         case LongitudinalMode::VELOCITY_KEEPING:
         default:
-            longitudinal_set =
-                GenerateVelocityKeepingCandidates(start, request.target_speed, cfg);
+            longitudinal_set = request.speed_envelope.empty()
+                ? GenerateVelocityKeepingCandidates(start, request.target_speed, cfg)
+                : GenerateEnvelopeVelocityCandidates(
+                    start, request.target_speed, request.speed_envelope, cfg, limits);
             break;
     }
 

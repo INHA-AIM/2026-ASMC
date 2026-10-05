@@ -1,6 +1,8 @@
 #ifndef FRENET_GENERATOR_BOUNDARY_CONDITION_POLICY_HPP
 #define FRENET_GENERATOR_BOUNDARY_CONDITION_POLICY_HPP
 
+#include "frenet_planner/Generator/GeneratorConfig.hpp"
+
 #include "frenet_planner/Common/FrenetTypes.hpp"
 #include "frenet_planner/Evaluation/KinematicFilter.hpp"
 
@@ -48,5 +50,11 @@ double ResolveVelocityKeepingBoundaryAcceleration(double raw_s_ddot,
                                                    double current_s_dot,
                                                    double resolved_target_speed,
                                                    double deadband);
+
+// A decreasing spatial envelope is braking intent even if the scalar current
+// ceiling remains above measured speed. Preserve its existing braking state.
+double ResolveEnvelopeBoundaryAcceleration(
+    double raw_s_ddot, double current_s_dot, double raw_speed_cap,
+    const std::vector<SpeedEnvelopePoint>& envelope, double deadband);
 
 #endif  // FRENET_GENERATOR_BOUNDARY_CONDITION_POLICY_HPP

@@ -29,4 +29,11 @@ struct PathGeneratorConfig {
     double dt;                     // 최종 궤적을 샘플링할 시간 간격 [s]
 };
 
+// Unwrapped reference distance and squared speed ceiling. Linear interpolation
+// of v^2 preserves the constant-deceleration relation v^2 = v0^2 + 2*a*ds.
+struct SpeedEnvelopePoint {
+    double s;
+    double speed_squared;
+};
+
 #endif  // FRENET_GENERATOR_CONFIG_HPP
