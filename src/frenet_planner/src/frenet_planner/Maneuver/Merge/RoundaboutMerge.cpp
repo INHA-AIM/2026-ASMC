@@ -134,6 +134,12 @@ MergeCandidateCheck CheckRoundaboutCandidate(const CartesianPath& path,
     if(!entering&&!occupied)result.covers_exit=true;
     if(!result.covers_exit)return result;
     auto safety=EvaluateCartesianTrajectorySafety(path,objects,shape,collision,dt);
+    // A circulating car can stop beside us after commitment. If only its
+    // expanded margin touches the current pose, preserve physical collision
+    // checks and require increasing clearance while leaving that margin.
+    if(!entering&&!safety.clear&&safety.blocking_sample_index==0)
+        safety=EvaluateCartesianTrajectorySafety(path,objects,shape,collision,dt,
+                                                 safety.blocking_object_id);
     if(!safety.clear){result.blocking_object_id=safety.blocking_object_id;return result;}
     if(entering)for(size_t i=0;i<count;++i){
         auto p=Pose(path,i);if(!zone.Overlaps(p,shape,collision.safety_margin))continue;

@@ -3,7 +3,7 @@
   const ctx = canvas.getContext('2d');
   const $ = id => document.getElementById(id);
   const maneuverNames = ['KEEP', 'FOLLOW', 'MERGE', 'LANE CHANGE', 'AVOID', 'STOP', 'EMERGENCY STOP'];
-  const decisionNames = ['KEEP', 'FOLLOW', 'LEFT CHANGE', 'RIGHT CHANGE', 'STOP', 'YIELD', 'EMERGENCY STOP', 'AVOID'];
+  const decisionNames = ['KEEP', 'FOLLOW', 'LEFT CHANGE', 'RIGHT CHANGE', 'STOP', 'YIELD', 'EMERGENCY STOP', 'AVOID', 'MERGE'];
   const executionNames = ['IDLE', 'PREPARING', 'WAITING', 'READY', 'COMMITTED', 'EXECUTING', 'COMPLETED', 'FAILED'];
   const resultNames = ['NONE', 'NOT INITIALIZED', 'INVALID COMMAND', 'STALE COMMAND', 'TARGET PROJECTION FAILED', 'TARGET OBJECT LOST', 'GENERATION FAILURE', 'CURVATURE BLOCKED', 'COLLISION BLOCKED', 'TOO LATE TO CANCEL'];
   const requestNames = ['PREPARE', 'EXECUTE', 'CANCEL'];
@@ -788,3 +788,4 @@
   pollSnapshot();
   updatePanel();
 })();
+

@@ -176,8 +176,16 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::EvaluateRecoveryPath(
   return Evaluate(path,shape,dt,budget,std::min(.35,overlap_limit),continuing_recovery,settled_travel_m);
 }
 
+AvoidRoadMap::PathEvaluation AvoidRoadMap::EvaluateMergeBoundaryBridge(
+    const CartesianPath& path,const VehicleShape& shape,double dt,double distance,
+    double time,double settled_travel) const {
+  if(!std::isfinite(distance)||!std::isfinite(time)||distance<=0||time<=0)return {};
+  return Evaluate(path,shape,dt,std::min(6.0,distance),.15,true,
+                  settled_travel,true,std::min(5.0,time));
+}
+
 AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
-    const CartesianPath& path,const VehicleShape& shape,double dt,double recovery_distance_m,double overlap_limit_m,bool continuing_recovery,double settled_travel_m) const {
+    const CartesianPath& path,const VehicleShape& shape,double dt,double recovery_distance_m,double overlap_limit_m,bool continuing_recovery,double settled_travel_m,bool allow_initial_excursion,double time_budget_s) const {
   PathEvaluation result;
   if(path.x.empty()||path.y.size()!=path.x.size()||path.yaw.size()!=path.x.size()||
      !std::isfinite(dt)||dt<=0)return result;
@@ -185,7 +193,7 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
   const auto initial=FootprintOverlap(path.x[0],path.y[0],path.yaw[0],shape);
   VehicleShape settled_shape=shape;
   settled_shape.width+=.10;settled_shape.length+=.10;settled_shape.rear_overhang+=.05;
-  const bool recovery=initial.fraction>0 || continuing_recovery;
+  const bool recovery=initial.fraction>0 || continuing_recovery || allow_initial_excursion;
   if(recovery&&(recovery_distance_m<=0||initial.maximum>overlap_limit_m||initial.fraction>.10))return result;
   result.initial_overlap_m=initial.maximum;
   double continuous=0,travel=0,elapsed_total=0,settled_travel=0;
@@ -206,12 +214,12 @@ AvoidRoadMap::PathEvaluation AvoidRoadMap::Evaluate(
       if(recovered)return false; // no fresh departure after settled recovery
       settled_travel=0;
       const auto overlap=FootprintOverlap(x,y,yaw,shape);
-      if(overlap.maximum>(continuing_recovery?overlap_limit_m:std::min(overlap_limit_m,initial.maximum+.10))||overlap.fraction>.10||
-         travel>recovery_distance_m||elapsed_total>5.0)return false;
+      if(overlap.maximum>((continuing_recovery||allow_initial_excursion)?overlap_limit_m:std::min(overlap_limit_m,initial.maximum+.10))||overlap.fraction>.10||
+         travel>recovery_distance_m||elapsed_total>time_budget_s)return false;
       result.maximum_overlap_m=std::max(result.maximum_overlap_m,overlap.maximum);
       result.recovery_seconds=elapsed_total;
     }else {
-      if(!recovered&&(travel>recovery_distance_m||elapsed_total>5.0))return false;
+      if(!recovered&&(travel>recovery_distance_m||elapsed_total>time_budget_s))return false;
       if(DrivablePoseClear(x,y,yaw,settled_shape))settled_travel+=movement;
       else settled_travel=0;
       if(settled_travel>=.5)recovered=true;

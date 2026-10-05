@@ -14,17 +14,51 @@ namespace {
 bool MakeMergeProfile(const RefLine& ref, const CartesianState& ego,
     const FrenetState& start, double cap, double duration, double dt,
     const CurveSpeedConfig& curve, const KinematicLimits& limits,
-    CartesianPath& path) {
+    double settle, double target_d, bool release_positive_accel, CartesianPath& path) {
     const auto origin=Interpolate(ref,start.s);
     const double slope=(1-origin.kappa*start.d)*
         std::tan(std::remainder(ego.yaw-origin.theta,2*M_PI));
     if(!std::isfinite(slope)||std::fabs(start.d)>1.25)return false;
-    const double settle=std::max(10.0,std::min(25.0,ego.v*2.5));
-    auto lateral=MakeQuintic(start.d,slope,0,0,0,0,settle);
+    auto lateral=MakeQuintic(start.d,slope,0,target_d,0,0,settle);
+    // Preview the actual offset geometry, rather than only reference curvature.
+    // The shared envelope reserves distance for unwinding positive acceleration
+    // under the jerk limit before the curve's braking boundary.
+    RefLine geometry;
+    double arc=0,previous_metric=1;
+    const double span=std::max(80.0,std::max(cap,ego.v)*duration+30.0);
+    for(double ds=0;ds<=span;ds+=.25) {
+        auto rp=Interpolate(ref,start.s+ds);double q=std::min(ds,settle);
+        double d=EvalPos(lateral,q),dp=EvalVel(lateral,q),dpp=EvalAcc(lateral,q);
+        double m=std::hypot(1-rp.kappa*d,dp);
+        auto point=FrenetToCartesian(rp,start.s+ds,0,0,d,dp,dpp);
+        if(!std::isfinite(point.kappa)||m<.1)return false;
+        if(ds>0)arc+=.125*(previous_metric+m);
+        geometry.points.push_back({point.x,point.y,arc,point.yaw,point.kappa,0});
+        previous_metric=m;
+    }
+    geometry.length=arc;
+    auto envelope=BuildKeepSpeedEnvelope(geometry,0,ego.v,release_positive_accel?std::min(0.0,ego.a):ego.a,duration,dt,
+        cap,curve,limits.max_longitudinal_accel,limits.max_lateral_accel,
+        limits.max_longitudinal_jerk);
+    if(envelope.empty())return false;
+    auto target_at=[&](double position) {
+        auto it=std::lower_bound(envelope.begin(),envelope.end(),position,
+            [](const SpeedEnvelopePoint& p,double s){return p.s<s;});
+        if(it==envelope.begin())return std::sqrt(it->speed_squared);
+        if(it==envelope.end())return std::sqrt(envelope.back().speed_squared);
+        const auto& before=*(it-1);
+        double f=(position-before.s)/(it->s-before.s);
+        return std::sqrt(std::max(0.0,before.speed_squared+f*(it->speed_squared-before.speed_squared)));
+    };
+    double travelled=0;
     double distance=0, speed=std::max(0.0,ego.v);
     double accel=std::clamp(ego.a,-limits.max_longitudinal_accel,limits.max_longitudinal_accel);
+    // Try continuous profiles first. If none is kinematically feasible, drop
+    // positive acceleration memory before escalating to a complete safe stop.
+    if(release_positive_accel)accel=std::min(0.0,accel);
     double metric=std::hypot(1-origin.kappa*start.d,slope);
     if(metric<.1)return false;
+    if(speed<.01&&accel<0)accel=0;
     for(int i=0;i<=static_cast<int>(std::ceil(duration/dt));++i) {
         auto rp=Interpolate(ref,start.s+distance);
         double q=std::min(distance,settle);
@@ -38,14 +72,16 @@ bool MakeMergeProfile(const RefLine& ref, const CartesianState& ego,
            speed*speed*std::fabs(point.kappa)>limits.max_lateral_accel+1e-6)return false;
         path.x.push_back(point.x);path.y.push_back(point.y);path.yaw.push_back(point.yaw);
         path.kappa.push_back(point.kappa);path.v.push_back(speed);path.a.push_back(accel);
-        double target=std::min(cap,LookaheadTargetSpeed(ref,start.s+distance,speed,
-            curve,limits.max_longitudinal_accel,limits.max_lateral_accel,limits.max_curvature));
+        double target=std::min(cap,target_at(travelled));
         double requested=std::clamp(2*(target-speed),-limits.max_longitudinal_accel,limits.max_longitudinal_accel);
         double next_accel=std::clamp(requested,accel-limits.max_longitudinal_jerk*dt,accel+limits.max_longitudinal_jerk*dt);
         double next_speed=speed+.5*(accel+next_accel)*dt;
-        if(next_speed<-.001)return false;
-        next_speed=std::max(0.0,next_speed);
-        distance+=.5*(speed+next_speed)*dt/metric;
+        // Braking to zero is a valid boundary, not a reverse trajectory.
+        // Once stationary, negative acceleration is no longer a moving state.
+        if(next_speed<0){next_speed=0;next_accel=0;}
+        double step=.5*(speed+next_speed)*dt;
+        travelled+=step;
+        distance+=step/metric;
         speed=next_speed;accel=next_accel;
     }
     return !path.x.empty();
@@ -54,6 +90,9 @@ bool MakeMergeProfile(const RefLine& ref, const CartesianState& ego,
 
 void FrenetPlanner::ResetRoundaboutMerge() {
     roundabout_merge_committed_=false;
+    roundabout_preferred_d_=0;
+    roundabout_bridge_active_=roundabout_bridge_used_=false;
+    roundabout_bridge_travel_=roundabout_bridge_settled_=0;
     roundabout_safe_observations_=0;
     roundabout_last_observation_=roundabout_last_entry_=-1;
     ++roundabout_epoch_;
@@ -110,14 +149,63 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         result.maneuver_completed=ok;result.progress=ok?1:result.progress;
         last_roundabout_result_=result;return ok;
     }
+    // Consume the one bridge episode from actual boundary contact, not from a
+    // predicted corner metres ahead. Subsequent plans retain the same budget.
+    if(roundabout_merge_committed_&&!roundabout_bridge_used_ &&
+       !avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,vehicle_shape_)) {
+        roundabout_bridge_active_=roundabout_bridge_used_=true;
+        roundabout_bridge_start_time_=planning_time;
+        roundabout_bridge_x_=ego.x;roundabout_bridge_y_=ego.y;
+    }
+    if(roundabout_bridge_active_) {
+        double movement=std::hypot(ego.x-roundabout_bridge_x_,ego.y-roundabout_bridge_y_);
+        roundabout_bridge_travel_+=movement;
+        roundabout_bridge_x_=ego.x;roundabout_bridge_y_=ego.y;
+        VehicleShape settled=vehicle_shape_;
+        settled.width+=.10;settled.length+=.10;settled.rear_overhang+=.05;
+        if(avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,settled))
+            roundabout_bridge_settled_+=movement;
+        else roundabout_bridge_settled_=0;
+        if(roundabout_bridge_settled_>=.5)roundabout_bridge_active_=false;
+    }
     double best_cost=std::numeric_limits<double>::infinity();
+    bool selected_bridge=false, profile_failed=false;
+    double selected_paint=0, selected_d=roundabout_preferred_d_;
     last_candidate_paths_.clear();last_candidate_validity_.clear();
+    const double ordinary_settle=std::max(10.0,std::min(25.0,ego.v*2.5));
+    // Keep the same mission reference and prefer the last selected local
+    // offset, avoiding repeated left/right target changes at a raster corner.
+    // Strict grid containment is preferred; a committed-only bridge is bounded
+    // by 15 cm, 10% of the footprint, 6 m and 5 s before settled re-entry.
+    for(bool allow_bridge:{false,true}) {
+    if(allow_bridge&&(!roundabout_merge_committed_||result.candidate_valid))break;
+    for(bool release_positive_accel:{false,true}) {
+    if(release_positive_accel&&(ego.a<=0||!profile_failed||result.candidate_valid))break;
+    std::vector<std::pair<double,double>> geometries{
+        {ordinary_settle,roundabout_preferred_d_},{6,roundabout_preferred_d_},
+        {10,.35},{10,-.35},{6,.35},{6,-.35}};
+    if(roundabout_preferred_d_!=0){geometries.push_back({ordinary_settle,0});geometries.push_back({6,0});}
+    for(const auto geometry:geometries) {
     for(double fraction:{1.0,.8,.6,.4}) {
         ++result.generated;
         CartesianPath path;
         bool valid=MakeMergeProfile(ref_,ego,start,cap*fraction,
-            roundabout_merge_cfg_.max_horizon,path_cfg_.dt,curve_speed_cfg_,limits_,path);
-        if(valid) valid=avoid_road_map_.EvaluatePath(path,vehicle_shape_,path_cfg_.dt).drivable;
+            roundabout_merge_cfg_.max_horizon,path_cfg_.dt,curve_speed_cfg_,limits_,
+            geometry.first,geometry.second,release_positive_accel,path);
+        profile_failed|=!valid;
+        AvoidRoadMap::PathEvaluation road;bool bridge=false;
+        if(valid) {
+            road=avoid_road_map_.EvaluatePath(path,vehicle_shape_,path_cfg_.dt);
+            if(!road.drivable && allow_bridge && roundabout_merge_committed_ &&
+               (roundabout_bridge_active_||!roundabout_bridge_used_)) {
+                road=avoid_road_map_.EvaluateMergeBoundaryBridge(path,vehicle_shape_,path_cfg_.dt,
+                    6.0-roundabout_bridge_travel_,
+                    roundabout_bridge_active_?5.0-(planning_time-roundabout_bridge_start_time_):5.0,
+                    roundabout_bridge_settled_);
+                bridge=road.drivable;
+            }
+            valid=road.drivable;
+        }
         MergeCandidateCheck check;
         if(valid) {
             check=CheckRoundaboutCandidate(path,roundabout_zone_,ctx.predicted_obstacles,
@@ -129,13 +217,31 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         last_candidate_paths_.push_back(path);last_candidate_validity_.push_back(valid);
         if(!valid)continue;
         ++result.valid;
-        double cost=check.exit_time;
-        if(cost<best_cost){best_cost=cost;result.candidate_valid=true;
+        double cost=check.exit_time+AvoidRoadMap::PaintCost(road)+std::fabs(geometry.second);
+        if(cost<best_cost){best_cost=cost;selected_d=geometry.second;selected_bridge=bridge;selected_paint=road.paint_contact_seconds;result.candidate_valid=true;
             result.entry_time=check.entry_time;result.exit_time=check.exit_time;
             result.candidate_path=std::move(path);}
     }
+    // Prefer the original reference geometry when it is feasible. Alternate
+    // local shapes rescue geometry or prolonged paint contact, with bounded work.
+    if(result.candidate_valid&&selected_paint<.3)break;
+    }
+    if(result.candidate_valid)break;
+    }
+    if(result.candidate_valid)break;
+    }
+    if(result.candidate_valid)result.blocking_object_id=-1;
     if(roundabout_merge_committed_) {
-        if(result.candidate_valid){out_path=result.candidate_path;last_roundabout_result_=result;return true;}
+        if(result.candidate_valid){
+            if(selected_bridge&&!roundabout_bridge_active_&&
+               !avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,vehicle_shape_)) {
+                roundabout_bridge_active_=roundabout_bridge_used_=true;
+                roundabout_bridge_start_time_=planning_time;
+                roundabout_bridge_x_=ego.x;roundabout_bridge_y_=ego.y;
+            }
+            roundabout_preferred_d_=selected_d;
+            out_path=result.candidate_path;last_roundabout_result_=result;return true;
+        }
         last_roundabout_result_=result;
         bool braking=PlanCollisionBrakingPath(ego,ctx.s,ctx.d,ctx.predicted_obstacles,out_path);
         last_failure_reason_=braking?PlanFailureReason::NONE:PlanFailureReason::COLLISION_BLOCKED;
@@ -153,7 +259,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     }
     roundabout_last_observation_=observation_stamp;
     result.ready=result.candidate_valid && roundabout_safe_observations_>=merge_cfg_.safe_confirm_cycles &&
-        ctx.s>=roundabout_zone_.stop_s-merge_cfg_.commit_distance;
+        ctx.s>=roundabout_zone_.stop_s-1.0;
     // The PREPARE output remains a stop-capable approach/hold trajectory.
     // Its target is the rear axle at the map stopline, independent of the
     // normal traffic-light bumper offset. STOP's small buffer is compensated.

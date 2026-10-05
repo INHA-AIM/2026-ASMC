@@ -34,6 +34,11 @@ class AvoidRoadMap {
                                       double dt, double distance_budget_m = 6.0,
                                       double overlap_limit_m = .35, bool continuing_recovery = false,
                                       double settled_travel_m = 0.0) const;
+  // MERGE-only short bridge over a raster corner. Original grid stays intact;
+  // a full return and settled clearance are mandatory within the supplied budget.
+  PathEvaluation EvaluateMergeBoundaryBridge(const CartesianPath& path,
+      const VehicleShape& shape, double dt, double remaining_distance_m,
+      double remaining_time_s, double settled_travel_m = 0.0) const;
   double FootprintOverlapDepth(double x, double y, double yaw, const VehicleShape& shape) const {
     return enabled_ ? FootprintOverlap(x,y,yaw,shape).maximum : 0.0;
   }
@@ -50,7 +55,8 @@ class AvoidRoadMap {
   Overlap FootprintOverlap(double x, double y, double yaw, const VehicleShape& shape) const;
   PathEvaluation Evaluate(const CartesianPath& path, const VehicleShape& shape,
                           double dt, double recovery_distance_m, double overlap_limit_m,
-                          bool continuing_recovery, double settled_travel_m = 0.0) const;
+                          bool continuing_recovery, double settled_travel_m = 0.0,
+                          bool allow_initial_excursion = false, double time_budget_s = 5.0) const;
   bool Inside(double x, double y) const;
   bool DrivablePoseClear(double x, double y, double yaw, const VehicleShape& shape) const;
   bool TouchesPaint(double x, double y, double yaw, const VehicleShape& shape) const;

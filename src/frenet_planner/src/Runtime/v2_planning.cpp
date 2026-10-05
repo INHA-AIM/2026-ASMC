@@ -449,10 +449,11 @@ bool FrenetPlannerNode::runV2PlanningCycle(const ros::Time& now) {
         succeeded.execution_state = command_manager_.execution_state();
         if (succeeded.result_code == Feedback::RESULT_NONE)
             succeeded.detail = result.maneuver_completed ? "roundabout rear cleared; KEEP handoff" :
-                (planner_.roundabout_merge_committed() ? "roundabout committed" :
+                (planner_.roundabout_merge_committed() ? (result.candidate_valid ? "roundabout committed" : "roundabout collision braking") :
                  (result.ready ? "roundabout ready after full traversal recheck" : "roundabout waiting/approaching stopline"));
         publishFeedbackV2(feedback_command_id, succeeded, &trajectory,
-            planner_.roundabout_merge_committed() ? Feedback::TRAJECTORY_LOCKED : Feedback::TRAJECTORY_NEW,
+            planner_.roundabout_merge_committed() ?
+                (result.candidate_valid || result.maneuver_completed ? Feedback::TRAJECTORY_LOCKED : Feedback::TRAJECTORY_SAFE_STOP) : Feedback::TRAJECTORY_NEW,
             result.candidate_valid || result.maneuver_completed, ego_s_valid, ego_s);
         return true;
     }

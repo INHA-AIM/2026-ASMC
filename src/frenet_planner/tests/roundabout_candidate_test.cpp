@@ -23,6 +23,11 @@ int main(){
  expect(!check(path,{box(3,25,0,0)},false).safe,"committed replanning still checks physical collision");
  CartesianPath beyond=path;for(auto& x:beyond.x)x+=50;
  expect(check(beyond,{},false).safe,"post-commit path beyond corridor may hand off");
+ auto beside=box(9,0,2.2,0);
+ expect(check(path,{beside},false).safe,"committed path may leave an existing margin while physical clearance improves");
+ expect(!check(path,{beside},true).safe,"precommit margin overlap cannot authorize entry");
+ expect(!check(path,{beside,box(10,25,0,0)},false).safe,"margin recovery still rejects another physical obstacle");
+ expect(!check(path,{box(11,0,1.8,0)},false).safe,"initial physical overlap cannot be excused as margin recovery");
  expect(!check(beyond,{},true).safe,"entry candidate must actually traverse the corridor");
  expect(!CheckRoundaboutCandidate(path,zone,{},shape,collision,NAN,1.5,2,true).safe,"invalid sample interval cannot produce safety");
  return failures?1:0;

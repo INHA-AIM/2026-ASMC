@@ -12,6 +12,7 @@ int main(){
   // This replays planner inputs, not a closed-loop vehicle simulation.
   auto frames=YAML::LoadFile(std::string(FRENET_PACKAGE_SRC_DIR)+"/../tests/data/avoid_tracking_handoff.json");
   auto config=YAML::LoadFile(std::string(FRENET_PACKAGE_SRC_DIR)+"/../config/params.yaml");
+  config["roundabout_merge"]["enabled"]=false; // This test isolates legacy AVOID.
   config["avoid_hd_map"]["enabled"]=false; // Legacy handoff regression; map policy has separate tests.
   config["waypoint_file"]=FRENET_TEST_WAYPOINT_FILE;
   const std::string config_path="avoid_tracking_handoff_test_params.yaml";

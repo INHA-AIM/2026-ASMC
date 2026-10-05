@@ -834,6 +834,10 @@ private:
     RoundaboutMergeConfig roundabout_merge_cfg_;
     RoundaboutMergeZone roundabout_zone_;
     bool roundabout_merge_committed_ = false;
+    double roundabout_preferred_d_ = 0;
+    bool roundabout_bridge_active_ = false, roundabout_bridge_used_ = false;
+    double roundabout_bridge_start_time_ = 0, roundabout_bridge_travel_ = 0;
+    double roundabout_bridge_settled_ = 0, roundabout_bridge_x_ = 0, roundabout_bridge_y_ = 0;
     int roundabout_safe_observations_ = 0;
     double roundabout_last_observation_ = -1, roundabout_last_entry_ = -1;
     std::uint64_t roundabout_epoch_ = 0;

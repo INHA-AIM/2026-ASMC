@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cmath>
 #include <chrono>
+#include <algorithm>
 int main(){
  int failures=0;auto expect=[&](bool ok,const char* name){std::cout<<(ok?"[PASS] ":"[FAIL] ")<<name<<'\n';failures+=!ok;};
  const auto root=std::filesystem::path(FRENET_PACKAGE_SRC_DIR).parent_path();
@@ -47,6 +48,38 @@ int main(){
  }
  expect(complete&&r.progress==1,"ideal tracking clears rear footprint and makes KEEP handoff");
  planner.ResetRoundaboutMerge();expect(!planner.roundabout_merge_committed()&&!planner.CanCommitRoundaboutMerge(old),"transaction reset clears merge commitment and READY token");
+
+ auto ref_cfg=cfg["planner"]["reference"];
+ ReferenceConfig rc{ref_cfg["closure_tolerance_m"].as<double>(),ref_cfg["smoothing_window_m"].as<double>(),ref_cfg["resample_ds"].as<double>(),ref_cfg["relax_max_iter"].as<int>(),ref_cfg["relax_step"].as<double>(),ref_cfg["ego_projection_search_window"].as<double>()};
+ RefLine ref;expect(LoadReferenceLine(FRENET_TEST_WAYPOINT_FILE,ref,rc,cfg["planner"]["kinematic_limits"]["max_curvature"].as<double>()),"public map reference loads for boundary regressions");
+ auto pose_at=[&](double s){auto p=Interpolate(ref,s);return CartesianState{p.x,p.y,p.theta,0,0,0};};
+ ego=zone.waiting_pose;ego.v=.1;ego.a=-3;
+ planner.ResetRoundaboutMerge();expect(tick(300,300)&&r.candidate_valid,"low-speed braking boundary can reach zero and depart without reverse rejection");
+ ego=pose_at(zone.stop_s-6);planner.ResetRoundaboutMerge();tick(301,301);tick(301.1,301.1);tick(301.2,301.2);
+ expect(r.candidate_valid&&!r.ready,"safe distant candidate cannot commit six metres before the stopline");
+ ego=pose_at(zone.rear_clear_s-6);ego.v=5;ego.a=2.5;
+ planner.ResetRoundaboutMerge();planner.ApplyRoundaboutMergeCommit({});
+ expect(tick(302,302)&&r.candidate_valid,"positive acceleration entering exit curve does not force an empty trajectory");
+ bool lateral_safe=!out.v.empty();for(size_t i=0;i<out.v.size();++i)lateral_safe&=out.v[i]*out.v[i]*std::fabs(out.kappa[i])<=cfg["planner"]["kinematic_limits"]["max_lateral_accel"].as<double>()+1e-6;
+ expect(lateral_safe,"rescued exit candidate keeps the physical lateral acceleration limit");
+ AvoidRoadMap road;std::string error;VehicleShape shape{1.9,4.635,.79};
+ expect(road.Load((root/"config/hd_map/drivable.json").string(),(root/"config/hd_map/lines.json").string(),error),"original road grid loads without expansion");
+ auto centre=pose_at(zone.stop_s-15);CartesianPath bridge;
+ bool found=false;
+ for(double d=.1;d<2&&!found;d+=.025)for(double side:{-1.0,1.0}){
+  auto edge=centre;edge.x-=std::sin(centre.yaw)*d*side;edge.y+=std::cos(centre.yaw)*d*side;
+  double overlap=road.FootprintOverlapDepth(edge.x,edge.y,edge.yaw,shape);
+  if(overlap>0&&overlap<.1){
+   for(int i=0;i<=20;++i){double f=double(i)/20;bridge.x.push_back(edge.x+(centre.x-edge.x)*f);bridge.y.push_back(edge.y+(centre.y-edge.y)*f);bridge.yaw.push_back(centre.yaw);}found=true;break;
+  }
+ }
+ expect(found&&!road.EvaluatePath(bridge,shape,.1).drivable&&road.EvaluateMergeBoundaryBridge(bridge,shape,.1,6,5).drivable,"small map boundary contact can return to original grid within bounded bridge");
+ auto deep=bridge;if(!deep.x.empty()){double dx=deep.x.front()-centre.x,dy=deep.y.front()-centre.y,len=std::hypot(dx,dy);deep.x.front()+=.5*dx/len;deep.y.front()+=.5*dy/len;}
+ expect(!road.EvaluateMergeBoundaryBridge(deep,shape,.1,6,5).drivable,"bridge cannot excuse a substantial road departure");
+ auto no_return=bridge;if(!no_return.x.empty()){std::reverse(no_return.x.begin(),no_return.x.end());std::reverse(no_return.y.begin(),no_return.y.end());}
+ expect(!road.EvaluateMergeBoundaryBridge(no_return,shape,.1,6,5).drivable,"bridge must settle inside the original road rather than end outside");
+ expect(!road.EvaluateMergeBoundaryBridge(bridge,shape,.1,.01,5).drivable,"bridge cannot renew an exhausted distance budget");
+ expect(!road.EvaluateMergeBoundaryBridge(bridge,shape,.1,6,.01).drivable,"bridge cannot renew an exhausted time budget");
  cmd.merge_type=MergeType::HIGHWAY;expect(!tick(200,200)&&planner.last_failure_reason()==FrenetPlanner::PlanFailureReason::INVALID_COMMAND,"roundabout implementation cannot silently execute highway merge");
  std::filesystem::remove_all(dir);return failures?1:0;
 }
