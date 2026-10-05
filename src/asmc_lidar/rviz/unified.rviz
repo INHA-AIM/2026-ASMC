@@ -39,8 +39,13 @@ Visualization Manager:
       Decay Time: 0
     - Class: rviz/MarkerArray
       Name: Frame-local unclassified OBB and unconfirmed structure
-      Enabled: true
+      Enabled: false
       Marker Topic: /lidar_candidate/unified/markers
+      Queue Size: 1
+    - Class: rviz/MarkerArray
+      Name: Tracks observed green predicted orange ID speed
+      Enabled: true
+      Marker Topic: /lidar_candidate/unified/tracks
       Queue Size: 1
     - Class: rviz/MarkerArray
       Name: Jaeho ground plane attempts

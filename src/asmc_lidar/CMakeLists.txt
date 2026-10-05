@@ -3,7 +3,7 @@ project(asmc_lidar LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs visualization_msgs diagnostic_msgs pcl_conversions pcl_ros)
+find_package(catkin REQUIRED COMPONENTS asmc_bridge asmc_msgs morai_msgs roscpp sensor_msgs visualization_msgs diagnostic_msgs pcl_conversions pcl_ros)
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common filters segmentation search)
 find_package(yaml-cpp REQUIRED)
@@ -11,7 +11,7 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 find_package(OpenSSL REQUIRED)
 
 catkin_package(INCLUDE_DIRS include LIBRARIES asmc_lidar_core
-  CATKIN_DEPENDS roscpp sensor_msgs visualization_msgs diagnostic_msgs pcl_conversions pcl_ros)
+  CATKIN_DEPENDS asmc_bridge asmc_msgs morai_msgs roscpp sensor_msgs visualization_msgs diagnostic_msgs pcl_conversions pcl_ros)
 
 add_library(asmc_lidar_core
   src/core.cpp src/lshape.cpp src/general.cpp
@@ -48,7 +48,7 @@ if(NOT DIAGNOSTIC_RESULT EQUAL 0)
   message(FATAL_ERROR "Review diagnostic generation failed")
 endif()
 add_library(asmc_ground_live_backend
-  src/ground_live.cpp src/ground_config.cpp src/road_anchor.cpp src/unified.cpp ${LIVE_PP}/src/patchworkpp.cpp ${LIVE_PP}/src/plane_fit.cpp
+  src/ground_live.cpp src/ground_config.cpp src/road_anchor.cpp src/unified.cpp src/tracking.cpp ${LIVE_PP}/src/patchworkpp.cpp ${LIVE_PP}/src/plane_fit.cpp
   ${LIVE_LINEFIT} ${CMAKE_CURRENT_BINARY_DIR}/ground_live_linefit_segment.cc
   vendor/linefit/src/bin.cc vendor/linefit/src/viewer.cc)
 target_compile_definitions(asmc_ground_live_backend PRIVATE patchwork=patchwork_live)
@@ -70,7 +70,7 @@ target_include_directories(asmc_lidar_review_node PRIVATE ${catkin_INCLUDE_DIRS}
 target_link_libraries(asmc_lidar_review_node PRIVATE asmc_lidar_core ${catkin_LIBRARIES})
 add_dependencies(asmc_lidar_review_node ${catkin_EXPORTED_TARGETS})
 
-catkin_install_python(PROGRAMS scripts/ground_compare_view_node.py
+catkin_install_python(PROGRAMS scripts/ground_compare_view_node.py scripts/legacy_yolo_bridge.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 add_executable(asmc_lidar_offline src/offline.cpp)
@@ -80,6 +80,10 @@ target_link_libraries(asmc_lidar_ground_compare PRIVATE asmc_lidar_core)
 target_compile_options(asmc_lidar_ground_compare PRIVATE -Wall -Wextra)
 
 if(CATKIN_ENABLE_TESTING)
+  add_executable(asmc_lidar_tracking_test test/tracking_test.cpp)
+  target_link_libraries(asmc_lidar_tracking_test PRIVATE asmc_ground_live_backend)
+  target_compile_options(asmc_lidar_tracking_test PRIVATE -UNDEBUG)
+  add_test(NAME asmc_lidar_tracking_test COMMAND asmc_lidar_tracking_test)
   add_executable(asmc_lidar_unified_test test/unified_test.cpp)
   target_link_libraries(asmc_lidar_unified_test PRIVATE asmc_ground_live_backend)
   target_compile_options(asmc_lidar_unified_test PRIVATE -UNDEBUG)
