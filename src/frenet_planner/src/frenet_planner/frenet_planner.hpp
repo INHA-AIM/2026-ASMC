@@ -25,6 +25,7 @@
 #include "frenet_planner/Pipeline/PlannerConfigBundle.hpp"
 #include "frenet_planner/Pipeline/TrajectoryPipeline.hpp"
 #include "frenet_planner/Speed/SpeedProfiler.hpp"
+#include "frenet_planner/Speed/MergeAccelerationMemory.hpp"
 #include "frenet_planner/visualization/planner_debug_writer.hpp"
 
 // Frenet Frame Path Planner: 전역 경로(RefLine)를 기준으로 한 Local Planner.
@@ -835,6 +836,7 @@ private:
     RoundaboutMergeZone roundabout_zone_;
     bool roundabout_merge_committed_ = false;
     double roundabout_preferred_d_ = 0;
+    MergeAccelerationMemory roundabout_acceleration_memory_;
     bool roundabout_bridge_active_ = false, roundabout_bridge_used_ = false;
     double roundabout_bridge_start_time_ = 0, roundabout_bridge_travel_ = 0;
     double roundabout_bridge_settled_ = 0, roundabout_bridge_x_ = 0, roundabout_bridge_y_ = 0;

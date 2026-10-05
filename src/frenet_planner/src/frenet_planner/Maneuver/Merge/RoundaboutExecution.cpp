@@ -57,7 +57,8 @@ bool RecenterWaitingFallback(const RefLine& ref,const CartesianState& ego,
 bool MakeMergeProfile(const RefLine& ref, const CartesianState& ego,
     const FrenetState& start, double cap, double duration, double dt,
     const CurveSpeedConfig& curve, const KinematicLimits& limits,
-    double settle, double target_d, bool release_positive_accel, CartesianPath& path) {
+    double settle, double target_d, bool release_positive_accel, CartesianPath& path,
+    double accepted_acceleration = std::numeric_limits<double>::quiet_NaN()) {
     const auto origin=Interpolate(ref,start.s);
     const double slope=(1-origin.kappa*start.d)*
         std::tan(std::remainder(ego.yaw-origin.theta,2*M_PI));
@@ -81,7 +82,9 @@ bool MakeMergeProfile(const RefLine& ref, const CartesianState& ego,
     }
     geometry.length=arc;
     const double headroom=std::clamp(limits.boundary_condition_accel_fraction,1e-6,1.0);
-    auto envelope=BuildKeepSpeedEnvelope(geometry,0,ego.v,release_positive_accel?std::min(0.0,ego.a):ego.a,duration,dt,
+    const double preview_acceleration=std::isfinite(accepted_acceleration)
+        ?std::max(ego.a,accepted_acceleration):ego.a;
+    auto envelope=BuildKeepSpeedEnvelope(geometry,0,ego.v,release_positive_accel?std::min(0.0,preview_acceleration):preview_acceleration,duration,dt,
         cap,curve,limits.max_longitudinal_accel,limits.max_lateral_accel,
         limits.max_longitudinal_jerk*headroom);
     // Use the same spatial-envelope integrator as KEEP. Its feed-forward
@@ -89,6 +92,14 @@ bool MakeMergeProfile(const RefLine& ref, const CartesianState& ego,
     // a speed error in the middle of the curve. Generate in physical arc length.
     FrenetState motion_start{};motion_start.s_d=std::max(0.0,ego.v);
     motion_start.s_dd=release_positive_accel?std::min(0.0,ego.a):ego.a;
+    // Do not release a measured brake when the current spatial ceiling still
+    // calls for slowing down. An accepted seed is only a normal speed-recovery
+    // option; the fresh geometry envelope and all safety checks remain binding.
+    if(ego.a<0&&std::isfinite(accepted_acceleration)&&envelope.size()>1&&
+       cap>ego.v+limits.accel_intent_deadband_mps&&
+       std::sqrt(std::max(0.0,envelope[0].speed_squared))>ego.v+limits.accel_intent_deadband_mps&&
+       std::sqrt(std::max(0.0,envelope[1].speed_squared))>ego.v+limits.accel_intent_deadband_mps)
+        motion_start.s_dd=accepted_acceleration;
     if(motion_start.s_d<.01&&motion_start.s_dd<0)motion_start.s_dd=0;
     // A measured strong brake near standstill may already be outside the
     // jerk-limited stopping boundary. Release that initial memory sufficiently
@@ -132,6 +143,7 @@ bool MakeMergeProfile(const RefLine& ref, const CartesianState& ego,
 void FrenetPlanner::ResetRoundaboutMerge() {
     roundabout_merge_committed_=false;
     roundabout_preferred_d_=0;
+    roundabout_acceleration_memory_.Reset();
     roundabout_bridge_active_=roundabout_bridge_used_=false;
     roundabout_bridge_travel_=roundabout_bridge_settled_=0;
     roundabout_safe_observations_=0;
@@ -170,6 +182,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
        !std::isfinite(planning_time)||!std::isfinite(observation_stamp)||
        !std::isfinite(ego.x)||!std::isfinite(ego.y)||!std::isfinite(ego.yaw)||
        !std::isfinite(ego.v)||!std::isfinite(ego.a)||ego.v<0) {
+        roundabout_acceleration_memory_.Reset();
         last_failure_reason_=PlanFailureReason::INVALID_COMMAND;return false;
     }
     speed_profiler_.Reset();
@@ -181,9 +194,13 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     result.progress=std::clamp((ctx.s-roundabout_zone_.stop_s)/
         (roundabout_zone_.rear_clear_s-roundabout_zone_.stop_s),0.0,1.0);
     const double cap=std::min(ctx.resolved_target_speed,roundabout_merge_cfg_.speed_cap);
+    CartesianState traversal_ego=ego;
+    if(roundabout_merge_committed_)
+        traversal_ego.a=roundabout_acceleration_memory_.Seed(ego.a,planning_time);
     last_target_speed_=cap;
     if(roundabout_merge_committed_ && ctx.s>=roundabout_zone_.rear_clear_s &&
        !roundabout_zone_.Overlaps(ego,vehicle_shape_,collision_cfg_.safety_margin)) {
+        roundabout_acceleration_memory_.Reset();
         PlannerCommand keep=command;keep.mode=LANE_KEEPING;keep.target_speed=cap;keep.has_target_speed=true;
         bool ok=KeepProcess(ego,start,ctx.s,ctx.d,start.s_d,start.s_dd,start.d_d,start.d_dd,
             obstacles,ctx.predicted_obstacles,cap,keep,out_path);
@@ -240,7 +257,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         CartesianPath path;
         bool valid=MakeMergeProfile(ref_,ego,start,cap*fraction,
             roundabout_merge_cfg_.max_horizon,path_cfg_.dt,curve_speed_cfg_,limits_,
-            geometry.first,geometry.second,release_positive_accel,path);
+            geometry.first,geometry.second,release_positive_accel,path,traversal_ego.a);
         profile_failed|=!valid;
         AvoidRoadMap::PathEvaluation road;bool bridge=false;
         if(valid) {
@@ -289,9 +306,11 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
                 roundabout_bridge_x_=ego.x;roundabout_bridge_y_=ego.y;
             }
             roundabout_preferred_d_=selected_d;
+            roundabout_acceleration_memory_.Accept(result.candidate_path.a,planning_time,path_cfg_.dt);
             out_path=result.candidate_path;last_roundabout_result_=result;return true;
         }
         last_roundabout_result_=result;
+        roundabout_acceleration_memory_.Reset();
         // Keep a steerable, freshly checked stop trajectory when a complete
         // traversal is unavailable. This MERGE-only service-brake fallback can
         // retain an already measured service deceleration; the generic KEEP

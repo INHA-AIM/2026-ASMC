@@ -145,6 +145,34 @@ int main(){
  out={};bool braked=brake_init&&brake_planner.PlanRoundaboutMerge(ego,{occupying},cmd,600,600,out,r);
  expect(braked&&!r.candidate_valid&&out.x.size()>2&&out.v.back()<.05,"blocked traversal under service braking retains a multi-point stop trajectory");
  expect(braked&&CartesianTrajectoryClear(out,{occupying},shape,{.5,.1,3},.1),"steerable service stop still checks the occupying object's physical clearance");
+
+ MergeAccelerationMemory memory;
+ expect(memory.Seed(-2.4,1)==-2.4,"first traversal keeps measured braking seed");
+ memory.Accept({-2.4,-1.92,-1.44},1,.1);
+ expect(std::fabs(memory.Seed(-2.58,1.05)+2.16)<1e-9,"fresh replan advances accepted brake release rather than measured restart");
+ expect(memory.Seed(-2.58,1)==-2.58&&memory.Seed(-2.58,.9)==-2.58,"duplicate or reversed planning time does not advance memory");
+ expect(memory.Seed(-2.58,1.6)==-2.58,"stale traversal memory cannot seed a new plan");
+ expect(memory.Seed(.5,1.05)==.5,"positive measured acceleration remains authoritative");
+ memory.Reset();expect(memory.Seed(-2.58,1.05)==-2.58,"safety braking reset restores measured acceleration");
+ FrenetPlanner release_planner;bool release_ok=release_planner.Init(file.string());
+ ego=pose_at(zone.rear_clear_s-9);ego.v=2;ego.a=-2.58;
+ release_planner.ApplyRoundaboutMergeCommit({});
+ double minimum_speed=ego.v,previous_a=-10;bool advances=true;
+ for(int i=0;i<12&&release_ok;++i){
+  out={};release_ok=release_planner.PlanRoundaboutMerge(ego,{},cmd,700+i*.1,700+i*.1,out,r)&&r.candidate_valid&&out.x.size()>1;
+  if(!release_ok)break;
+  advances&=out.a.front()>=previous_a-1e-6;
+  previous_a=out.a.front();minimum_speed=std::min(minimum_speed,out.v[1]);
+  ego={out.x[1],out.y[1],out.yaw[1],out.kappa[1],out.v[1],-2.58};
+ }
+ expect(release_ok&&advances&&previous_a>0&&minimum_speed>.8,"persistent negative measurement cannot restart safe merge brake release every cycle");
+
+ occupying.x=ego.x;occupying.y=ego.y;
+ for(int i=0;i<8;++i){double dx[4]={-1,1,1,-1},dy[4]={-1,-1,1,1};occupying.corners[i]={ego.x+dx[i%4],ego.y+dy[i%4],double(i/4)};}
+ out={};bool physical_blocked=!release_planner.PlanRoundaboutMerge(ego,{occupying},cmd,701.3,701.3,out,r);
+ expect(physical_blocked,"accepted acceleration history cannot bypass a new physical obstacle");
+ out={};bool restored=release_planner.PlanRoundaboutMerge(ego,{},cmd,701.4,701.4,out,r);
+ expect(restored&&!out.a.empty()&&out.a.front()<0,"after safety rejection the next traversal starts from measured braking");
  cmd.merge_type=MergeType::HIGHWAY;expect(!tick(200,200)&&planner.last_failure_reason()==FrenetPlanner::PlanFailureReason::INVALID_COMMAND,"roundabout implementation cannot silently execute highway merge");
  std::filesystem::remove_all(dir);return failures?1:0;
 }
