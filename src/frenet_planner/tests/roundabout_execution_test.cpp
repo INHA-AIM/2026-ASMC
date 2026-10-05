@@ -80,6 +80,45 @@ int main(){
  expect(!road.EvaluateMergeBoundaryBridge(no_return,shape,.1,6,5).drivable,"bridge must settle inside the original road rather than end outside");
  expect(!road.EvaluateMergeBoundaryBridge(bridge,shape,.1,.01,5).drivable,"bridge cannot renew an exhausted distance budget");
  expect(!road.EvaluateMergeBoundaryBridge(bridge,shape,.1,6,.01).drivable,"bridge cannot renew an exhausted time budget");
+
+ // Synthetic offsets from the public map, independent of recorded vehicle poses.
+ bool waiting_recovered=false;
+ CartesianState displaced{};
+ for(double offset=.4;offset<=1.2&&!waiting_recovered;offset+=.025){
+  ego=pose_at(zone.stop_s);ego.x+=std::sin(ego.yaw)*offset;ego.y-=std::cos(ego.yaw)*offset;
+  const double overlap=road.FootprintOverlapDepth(ego.x,ego.y,ego.yaw,shape);
+  if(overlap<=0||overlap>.13)continue;
+  planner.ResetRoundaboutMerge();tick(400,400);tick(400.1,400.1);tick(400.2,400.2);
+  if(r.ready){waiting_recovered=true;displaced=ego;}
+ }
+ expect(waiting_recovered&&r.candidate_valid&&planner.CanCommitRoundaboutMerge(r),"slightly displaced waiting pose can certify bounded departure before commit");
+ expect(!planner.roundabout_merge_committed()&&!out.v.empty()&&out.v.back()==0,"boundary recovery certificate keeps PREPARE output stopped until commit");
+ if(waiting_recovered){
+  auto departure=r.candidate_path;old=r;
+  auto blocker=o;blocker.id=42;
+  const size_t j=std::min(departure.x.size()-1,static_cast<size_t>((r.entry_time+1)/planner.sample_dt()));
+  blocker.x=departure.x[j];blocker.y=departure.y[j];
+  for(int i=0;i<8;++i){double dx[4]={-1,1,1,-1},dy[4]={-1,-1,1,1};blocker.corners[i]={blocker.x+dx[i%4],blocker.y+dy[i%4],double(i/4)};}
+  tick(400.3,400.3,{blocker});
+  expect(!r.ready&&!r.candidate_valid&&!planner.CanCommitRoundaboutMerge(old),"pre-commit boundary recovery still rejects an occupying vehicle and stale token");
+  ego=displaced;ego.x+=std::sin(ego.yaw)*.5;ego.y-=std::cos(ego.yaw)*.5;
+  planner.ResetRoundaboutMerge();tick(401,401);
+  expect(!r.candidate_valid&&!r.ready,"pre-commit recovery cannot excuse substantial road departure");
+ }
+ // The waiting STOP uses a centre target, rather than ordinary STOP's lateral
+ // search or low-speed hold. Check the actual output, not just a request flag.
+ ego=pose_at(zone.stop_s-20);ego.x+=std::sin(ego.yaw)*.6;ego.y-=std::cos(ego.yaw)*.6;ego.v=5;ego.a=-1;
+ FrenetPlanner approach_planner;bool approaching=approach_planner.Init(file.string())&&approach_planner.PlanRoundaboutMerge(ego,{},cmd,402,402,out,r);
+ double terminal_d=1e9;
+ if(!out.x.empty()){auto rp=Interpolate(ref,FindClosestS(ref,out.x.back(),out.y.back(),nullptr,1e6));terminal_d=(out.y.back()-rp.y)*std::cos(rp.theta)-(out.x.back()-rp.x)*std::sin(rp.theta);}
+ expect(approaching&&out.x.size()>1&&std::fabs(terminal_d)<.05,"roundabout braking approach terminates on the reference centre rather than a side offset");
+ ego=pose_at(zone.stop_s-37);ego.x+=std::sin(ego.yaw)*.4;ego.y-=std::cos(ego.yaw)*.4;ego.yaw+=.01;ego.v=11;ego.a=-1.4;
+ FrenetPlanner fallback_planner;
+ bool fallback_ok=fallback_planner.Init(file.string())&&fallback_planner.PlanRoundaboutMerge(ego,{},cmd,403,403,out,r);
+ terminal_d=1e9;
+ if(!out.x.empty()){auto rp=Interpolate(ref,FindClosestS(ref,out.x.back(),out.y.back(),nullptr,1e6));terminal_d=(out.y.back()-rp.y)*std::cos(rp.theta)-(out.x.back()-rp.x)*std::sin(rp.theta);}
+ expect(fallback_ok&&out.x.size()>1&&std::fabs(terminal_d)<.05&&out.v.back()==0,"long waiting braking fallback recentres instead of freezing lateral error");
+ expect(fallback_ok&&!out.yaw.empty()&&std::fabs(std::remainder(out.yaw.front()-ego.yaw,2*M_PI))<.01,"waiting fallback centering preserves observed initial heading");
  cmd.merge_type=MergeType::HIGHWAY;expect(!tick(200,200)&&planner.last_failure_reason()==FrenetPlanner::PlanFailureReason::INVALID_COMMAND,"roundabout implementation cannot silently execute highway merge");
  std::filesystem::remove_all(dir);return failures?1:0;
 }

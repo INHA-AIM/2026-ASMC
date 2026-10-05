@@ -121,6 +121,10 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     // 정지 다항식을 만든다(BRAKING).
     // =====================================================================
     const bool external_stop_mode = cmd.mode == STOP;
+    const bool roundabout_waiting = external_stop_mode && roundabout_merge_enabled() &&
+        cmd.merge_type == MergeType::ROUNDABOUT &&
+        cmd.source_link_id == roundabout_merge_cfg_.source_link &&
+        cmd.target_link_id == roundabout_merge_cfg_.target_link;
     const CartesianGeometryMode geometry_mode =
         external_stop_mode
             ? CartesianGeometryMode::GEOMETRIC_YAW_CURVATURE
@@ -132,7 +136,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
         // 붙이지 않는다. 현재 d를 종단 목표로 고정하되 lateral quintic의
         // 종단 d_dot/d_ddot=0 조건은 유지되므로 차체는 경로 방향으로 곧게
         // 정렬된다. 허용 범위 밖이거나 속도가 높으면 기존 d=0 복귀 그대로다.
-        if (std::fabs(s_dot) <= cfg.stop.lateral_hold_speed &&
+        if (!roundabout_waiting && std::fabs(s_dot) <= cfg.stop.lateral_hold_speed &&
             std::fabs(d) <= cfg.stop.lateral_error_tolerance) {
             cmd.has_stop_lateral_hold = true;
             cmd.stop_lateral_hold_d = d;
@@ -263,7 +267,7 @@ bool FrenetPlanner::ExecuteManeuverPipeline(
     // 쓴다 - 이 tolerance를 실수로 0으로 좁히면 FOLLOW/STOP-BRAKING의
     // 정상적인 좌우 탐색 폭이 사라진다.
     request.lateral.search_tolerance =
-        (cmd.has_stop_lateral_hold || is_true_external_keep || is_stop_approach)
+        (roundabout_waiting || cmd.has_stop_lateral_hold || is_true_external_keep || is_stop_approach)
             ? 0.0 : cfg.path.lateral_target_tolerance;
     request.target_speed = cmd.target_speed;
     if (is_follow) {

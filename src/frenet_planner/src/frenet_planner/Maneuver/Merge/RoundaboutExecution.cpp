@@ -2,11 +2,53 @@
 #include "frenet_planner/Generator/BoundaryConditionPolicy.hpp"
 #include "frenet_planner/Speed/CurveSpeed.hpp"
 #include "frenet_planner/Math/Polynomial.hpp"
+#include "frenet_planner/Maneuver/ManeuverUtils.hpp"
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
 namespace {
+// STOP's braking fallback retains the current d. During a long
+// approach that repeatedly freezes a tracking offset instead of correcting it.
+// Rebuild only that constant-offset fallback, retaining its longitudinal stop
+// schedule and the observed initial heading. Short stops stay unchanged.
+bool RecenterWaitingFallback(const RefLine& ref,const CartesianState& ego,
+    double s,double d,const KinematicLimits& limits,double service_decel,
+    const CartesianPath& original,CartesianPath& centered) {
+    if(original.x.size()<2||std::fabs(d)<.2)return false;
+    std::vector<double> stations;double hint=s;
+    for(size_t i=0;i<original.x.size();++i) {
+        hint=FindClosestS(ref,original.x[i],original.y[i],&hint,5);
+        const auto rp=Interpolate(ref,hint);
+        double offset=(original.y[i]-rp.y)*std::cos(rp.theta)-
+            (original.x[i]-rp.x)*std::sin(rp.theta);
+        if(std::fabs(offset-d)>.005)return false;
+        stations.push_back(hint);
+    }
+    const double settle=std::max(10.0,std::min(25.0,ego.v*2.5));
+    if(stations.back()-s<settle)return false;
+    const auto origin=Interpolate(ref,s);
+    const double slope=(1-origin.kappa*d)*std::tan(std::remainder(ego.yaw-origin.theta,2*M_PI));
+    if(!std::isfinite(slope))return false;
+    const auto lateral=MakeQuintic(d,slope,0,0,0,0,settle);
+    for(size_t i=0;i<stations.size();++i) {
+        const auto rp=Interpolate(ref,stations[i]);
+        const double metric=std::fabs(1-rp.kappa*d);
+        if(metric<.1)return false;
+        const double sd=original.v[i]/metric;
+        const auto base=FrenetToCartesian(rp,stations[i],sd,0,d,0,0);
+        const double sdd=(original.a[i]-base.a)/metric;
+        const double q=std::min(settle,std::max(0.0,stations[i]-s));
+        const auto point=FrenetToCartesian(rp,stations[i],sd,sdd,
+            EvalPos(lateral,q),EvalVel(lateral,q),EvalAcc(lateral,q));
+        if(!std::isfinite(point.kappa)||std::fabs(point.kappa)>limits.max_curvature||
+           point.v*point.v*std::fabs(point.kappa)>limits.max_lateral_accel||
+           std::fabs(point.a)>std::max(service_decel,limits.max_longitudinal_accel))return false;
+        centered.x.push_back(point.x);centered.y.push_back(point.y);centered.yaw.push_back(point.yaw);
+        centered.kappa.push_back(point.kappa);centered.v.push_back(point.v);centered.a.push_back(point.a);
+    }
+    return !centered.x.empty();
+}
 // Fixed-reference spatial centering plus a bounded longitudinal profile. A
 // long quartic from rest spends the whole horizon accelerating; it cannot
 // certify the downstream exit at a modest end speed. This profile reaches
@@ -169,16 +211,24 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         if(roundabout_bridge_settled_>=.5)roundabout_bridge_active_=false;
     }
     double best_cost=std::numeric_limits<double>::infinity();
+    // A departure certificate must also be obtainable from a slightly displaced
+    // waiting pose. It does not execute movement during PREPARE: the stop path
+    // remains authoritative, and the complete departure still needs gap and
+    // physical collision checks. Never authorize a fresh boundary excursion
+    // from an already contained pre-commit pose.
+    const bool waiting_boundary_recovery = !roundabout_merge_committed_ &&
+        ctx.s >= roundabout_zone_.stop_s-1.0 &&
+        !avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,vehicle_shape_);
     bool selected_bridge=false, profile_failed=false;
     double selected_paint=0, selected_d=roundabout_preferred_d_;
     last_candidate_paths_.clear();last_candidate_validity_.clear();
     const double ordinary_settle=std::max(10.0,std::min(25.0,ego.v*2.5));
     // Keep the same mission reference and prefer the last selected local
     // offset, avoiding repeated left/right target changes at a raster corner.
-    // Strict grid containment is preferred; a committed-only bridge is bounded
+    // Strict grid containment is preferred; an execution/waiting recovery bridge is bounded
     // by 15 cm, 10% of the footprint, 6 m and 5 s before settled re-entry.
     for(bool allow_bridge:{false,true}) {
-    if(allow_bridge&&(!roundabout_merge_committed_||result.candidate_valid))break;
+    if(allow_bridge&&((!roundabout_merge_committed_&&!waiting_boundary_recovery)||result.candidate_valid))break;
     for(bool release_positive_accel:{false,true}) {
     if(release_positive_accel&&(ego.a<=0||!profile_failed||result.candidate_valid))break;
     std::vector<std::pair<double,double>> geometries{
@@ -196,7 +246,7 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
         AvoidRoadMap::PathEvaluation road;bool bridge=false;
         if(valid) {
             road=avoid_road_map_.EvaluatePath(path,vehicle_shape_,path_cfg_.dt);
-            if(!road.drivable && allow_bridge && roundabout_merge_committed_ &&
+            if(!road.drivable && allow_bridge && (roundabout_merge_committed_||waiting_boundary_recovery) &&
                (roundabout_bridge_active_||!roundabout_bridge_used_)) {
                 road=avoid_road_map_.EvaluateMergeBoundaryBridge(path,vehicle_shape_,path_cfg_.dt,
                     6.0-roundabout_bridge_travel_,
@@ -267,6 +317,14 @@ bool FrenetPlanner::PlanRoundaboutMerge(const CartesianState& ego,
     waiting.target_speed=cap;waiting.stop_position=roundabout_zone_.stop_s+stop_cfg_.stop_buffer;
     bool ok=StopProcess(ego,start,ctx.s,ctx.d,start.s_d,start.s_dd,start.d_d,start.d_dd,
         obstacles,ctx.predicted_obstacles,cap,waiting,out_path);
+    if(ok) {
+        CartesianPath centered;
+        if(RecenterWaitingFallback(ref_,ego,ctx.s,ctx.d,limits_,
+                stop_cfg_.max_service_decel,out_path,centered)&&
+           avoid_road_map_.EvaluatePath(centered,vehicle_shape_,path_cfg_.dt).drivable&&
+           CartesianTrajectoryClear(centered,ctx.predicted_obstacles,vehicle_shape_,
+                collision_cfg_,path_cfg_.dt))out_path=std::move(centered);
+    }
     if(!ok)result.ready=false;
     last_roundabout_result_=result;
     return ok;
