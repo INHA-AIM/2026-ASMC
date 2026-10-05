@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   morai_msgs
   sensor_msgs
+  pcl_conversions
   Msg
   tf2
   tf2_ros
@@ -24,7 +25,7 @@ find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
 
 catkin_package(
-  CATKIN_DEPENDS roscpp roslib std_msgs geometry_msgs tf2 tf2_ros tf2_geometry_msgs visualization_msgs morai_msgs Msg
+  CATKIN_DEPENDS roscpp roslib std_msgs geometry_msgs tf2 tf2_ros tf2_geometry_msgs visualization_msgs morai_msgs Msg pcl_conversions
 )
 
 include_directories(
