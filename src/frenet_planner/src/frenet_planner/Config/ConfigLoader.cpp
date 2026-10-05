@@ -153,6 +153,11 @@ bool LoadParams(const std::string& yaml_path,
     REQUIRE("planner/following/dropout_grace_cycles", following_cfg.dropout_grace_cycles);
 
     REQUIRE("planner/avoid/detection_distance",         avoid_cfg.detection_distance);
+    if (root["planner"]["avoid"]["bypass_speed_cap"]) {
+        REQUIRE("planner/avoid/bypass_speed_cap", avoid_cfg.bypass_speed_cap);
+    } else {
+        avoid_cfg.bypass_speed_cap = limits.low_speed_crawl_speed_cap;
+    }
     REQUIRE("planner/avoid/avoid_offset",               avoid_cfg.avoid_offset);
     REQUIRE("planner/avoid/direction_extra_margin",      avoid_cfg.direction_extra_margin);
     REQUIRE("planner/avoid/min_shift_start_distance",   avoid_cfg.min_shift_start_distance);

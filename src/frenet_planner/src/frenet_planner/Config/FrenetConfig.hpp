@@ -64,6 +64,8 @@ struct FollowingConfig {
 // FSM이 지정한 대상이 이 범위/조건을 만족하는지만 검증한다.
 // =========================================================
 struct AvoidConfig {
+    // Map-aware bypass cruise speed; independent of KEEP's low-speed fallback.
+    double bypass_speed_cap = 2.0; // [m/s]
     double detection_distance; // [m] FSM이 지정한 대상까지 이 거리 안이어야 유효(실제값은 충돌 lookahead와 자동 조정)
     // [m] 회피 시 lateral_d1 격자를 밀어낼 크기. 자차 폭(1.9m 기준) + 장애물
     // 폭 절반씩 + 여유(0.3m)를 감안한 최소 이격(~2.2m)보다 확실히 크게 잡아야

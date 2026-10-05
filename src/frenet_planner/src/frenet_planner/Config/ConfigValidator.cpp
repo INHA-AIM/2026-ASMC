@@ -270,6 +270,11 @@ bool ValidateConfig(const ReferenceConfig& reference_cfg,
     // --- avoid ---
     if (!CheckPositiveFinite(avoid_cfg.detection_distance, "planner/avoid/detection_distance", error_message))
         return false;
+    if (!IsFinite(avoid_cfg.bypass_speed_cap) ||
+        avoid_cfg.bypass_speed_cap < limits.low_speed_min_creep_speed) {
+        error_message = "planner/avoid/bypass_speed_cap must be finite and >= low_speed_min_creep_speed";
+        return false;
+    }
     if (!IsFinite(avoid_cfg.avoid_offset) || avoid_cfg.avoid_offset < 0.0) {
         error_message = "planner/avoid/avoid_offset must be finite and >= 0";
         return false;

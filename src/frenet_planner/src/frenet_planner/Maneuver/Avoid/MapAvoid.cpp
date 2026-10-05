@@ -21,7 +21,7 @@ bool FrenetPlanner::MapAvoidProcess(const CartesianState& ego,const FrenetState&
     const bool static_confirmed=target!=obstacles.end()&&target->motion_state==ObjectMotionState::LOW_THREAT;
     const double front=vehicle_shape_.length-vehicle_shape_.rear_overhang;
     const double clearance=front+v2_avoidance_.obstacle_longitudinal_half_extent+collision_cfg_.safety_margin;
-    const double crawl=std::min(speed,limits_.low_speed_crawl_speed_cap);
+    const double crawl=std::min(speed,avoid_cfg_.bypass_speed_cap);
     const double dt=path_cfg_.dt;
     const bool initial_inside=avoid_road_map_.FootprintInside(ego.x,ego.y,ego.yaw,vehicle_shape_);
     VehicleShape settled_shape=vehicle_shape_;
