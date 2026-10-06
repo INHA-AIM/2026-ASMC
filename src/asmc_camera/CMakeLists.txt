@@ -50,6 +50,7 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_traffic_light_visualization.py)
   catkin_add_nosetests(test/camera)
   catkin_add_nosetests(test/bev)
+  catkin_add_nosetests(test/detection)
 endif()
 
 install(DIRECTORY config launch
