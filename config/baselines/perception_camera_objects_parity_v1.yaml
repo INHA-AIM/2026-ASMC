@@ -1,0 +1,770 @@
+schema_version: 1
+audit_id: camera_objects_parity_v1
+status: implemented_acceptance_blocked
+verified_date: '2026-10-06'
+deployment_allowed: false
+next_stage_allowed: false
+code:
+  requested_base_main: af253c3575c1e704e70511c2a2033ec15e33299a
+  integration_base_main: c5d0b7854b47b6f52a2c080628740e0d8ce1fae6
+  implementation_commit: 918102d0e55bc89e6f90f9ce78b9c08207402d95
+  measurement_runtime_unchanged_after_rebase: true
+  preserved_p2_head: dc57f1e3216d603bfb1e21a2fd8155d7a37b2891
+  preserved_dirty_file_sha256:
+    src/asmc_camera/CMakeLists.txt: cbfa29c3133568bcdedf3856e7284477abaae09afc051ff4c52b5398ca144dcd
+    src/asmc_camera/config/camera/object_classes.yaml: 998d7d6d487ceecc290802649657ee4f42ccdc724229c0bb3fcc02f1c401f038
+    src/asmc_camera/setup.py: f2e42b3f36c46c681d731f570f4fa9791caafdbe8cd1bb7ac37bf0a7d7847f73
+    src/asmc_camera/src/asmc_camera/detection/__init__.py: 9c72a63b5e0cf46b0ef4215670d53fdc562e7a9d3d345d3b1df9eb3f5d996de6
+    src/asmc_camera/src/asmc_camera/detection/backend.py: 641ea8077c381ff00eb91bb0b3355b4dcdb2180afb0dbe9263ef2e32b40aeb22
+    src/asmc_camera/src/asmc_camera/detection/classes.py: e321c8068bcf1e166a897e3a175720e3793ca1bbdc0e246e4e6776989063daaf
+    src/asmc_camera/src/asmc_camera/detection/messages.py: 70cc13ff398511cd979c17e6740b1a2322e27a21a4898ad1067b47868f115920
+    src/asmc_camera/src/asmc_camera/detection/ultralytics_backend.py: 81fcd97726649eec19e695c4833f876c619385071f163e9ab2597b3295d0fe2a
+    src/asmc_camera/test/detection/__init__.py: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    src/asmc_camera/test/detection/test_detection_core.py: ebefa35b7b674de2fcacaf8f8cf17b9d9a91f96c61dc7a54f4a4d60ac98dc2af
+  protected_paths_identical_to_integration_main:
+  - src/asmc_hd_map
+  - src/asmc_controller
+  - config/baselines/hd_map_runtime_pins_v1.yaml
+  - config/contracts/hd_map_topic_contract_v1.yaml
+  - src/lidar+sensorfusion/src/Main/src
+  - src/lidar+sensorfusion/src/Msg
+  - src/lidar+sensorfusion/src/Main/YOLOWeight
+  only_changed_shared_message: asmc_msgs/CameraObjectBox
+  guarded_camera_configs_unchanged: 12
+environment:
+  image_id: sha256:1ecd9f50491565cad32e32980bb5df5b48487f470440cb66c9ec3b8dc5c11400
+  container: asmc-camera-objects
+  network: none
+  ros_master_port: 11312
+  gpu: NVIDIA GeForce RTX 4060 Ti
+  python: 3.8.10
+  interpreter: /usr/bin/python3
+  torch: 2.1.2+cu118
+  ultralytics: 8.4.150
+  numpy: 1.24.4
+  replay_rate: 1.0
+  sim_time: true
+  other_ros_gpu_inference: not running during measurements
+model:
+  path: src/asmc_camera/models/object_detection/yolo11m.pt
+  sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+  original_weights_preserved: true
+  conf_thres: 0.7
+  allowed_names:
+  - bus
+  - truck
+  - person
+  - car
+  iou: 0.7
+  max_det: 300
+  agnostic_nms: false
+  imgsz_precision_head: unchanged Ultralytics defaults
+messages:
+  CameraObjectBox: 34412c90553e06734f1acade77c8e1e3
+  CameraObjectBoxArray: 310c671afb3693e7909db6453d115b79
+  legacy_Msg_unchanged: true
+offline_exact_comparison:
+  status: pass
+  frames: 3514
+  exact_frames: 3514
+  errors: []
+  boundary_exceptions: []
+  weight_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+  bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+  bag_sha256: a8f360e666f58358062e83cedbc6b51f94e8dc897402a2605eed7761a7880268
+  legacy_source_sha256: 1cd5c1053245f3d3efbb63aac3cc311572bbbd51622b1ccd25976dd67a943cde
+  python: "3.8.10 (default, Mar 18 2025, 20:04:55) \n[GCC 9.4.0]"
+  interpreter: /usr/bin/python3
+  torch: 2.1.2+cu118
+  ultralytics: 8.4.150
+  gpu: NVIDIA GeForce RTX 4060 Ti
+  backend:
+    backend: ultralytics
+    weights: /root/ws/src/asmc_camera/models/object_detection/yolo11m.pt
+    weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+    device: cuda:0
+    model_device: cuda:0
+    ultralytics: 8.4.150
+    torch: 2.1.2+cu118
+    conf_thres: 0.7
+    allowed_names:
+    - bus
+    - truck
+    - person
+    - car
+    predict_overrides:
+      iou: 0.7
+      max_det: 300
+      agnostic_nms: false
+    warmup_ms: 525.0
+  duration_sec: 110.50086514299619
+  latency:
+    old_ms:
+      p50: 14.298189998953603
+      p95: 20.26838606034289
+    new_ms:
+      p50: 13.682035496458411
+      p95: 19.684207552927546
+replay_ab:
+  pass: true
+  runs:
+  - path: old
+    repeat: 1
+    bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+    fusion: false
+    input_frames: 3514
+    output_frames: 3423
+    rate_hz: 19.481424468743516
+    coverage: 0.9741035856573705
+    duplicate_stamps: 0
+    reverse_stamps: 0
+    zero_stamps: 0
+    frame_ids:
+    - camera_front
+    single_bbox_publisher: true
+    latency:
+      p50_ms: 30.768732
+      p95_ms: 48.831662299999984
+    candidate_invalid_frames: 0
+    diagnostic_warnings: 0
+    fusion_matched_reported: 0
+    fusion_offset_p95_max_ms: null
+    track_frames: 0
+    pass: true
+  - path: old
+    repeat: 2
+    bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+    fusion: false
+    input_frames: 3514
+    output_frames: 3414
+    rate_hz: 19.430934743289924
+    coverage: 0.9715424018212863
+    duplicate_stamps: 0
+    reverse_stamps: 0
+    zero_stamps: 0
+    frame_ids:
+    - camera_front
+    single_bbox_publisher: true
+    latency:
+      p50_ms: 29.181588499999997
+      p95_ms: 46.17006455
+    candidate_invalid_frames: 0
+    diagnostic_warnings: 0
+    fusion_matched_reported: 0
+    fusion_offset_p95_max_ms: null
+    track_frames: 0
+    pass: true
+  - path: new
+    repeat: 1
+    bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+    fusion: false
+    input_frames: 3514
+    output_frames: 3514
+    rate_hz: 19.992289198848056
+    coverage: 1.0
+    duplicate_stamps: 0
+    reverse_stamps: 0
+    zero_stamps: 0
+    frame_ids:
+    - camera_front
+    single_bbox_publisher: true
+    latency:
+      p50_ms: 11.0127685
+      p95_ms: 18.855513099999996
+    candidate_invalid_frames: 0
+    diagnostic_warnings: 1
+    fusion_matched_reported: 0
+    fusion_offset_p95_max_ms: null
+    track_frames: 0
+    pass: true
+  - path: new
+    repeat: 2
+    bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+    fusion: false
+    input_frames: 3514
+    output_frames: 3514
+    rate_hz: 19.99233052099412
+    coverage: 1.0
+    duplicate_stamps: 0
+    reverse_stamps: 0
+    zero_stamps: 0
+    frame_ids:
+    - camera_front
+    single_bbox_publisher: true
+    latency:
+      p50_ms: 11.2540245
+      p95_ms: 19.466150549999995
+    candidate_invalid_frames: 0
+    diagnostic_warnings: 1
+    fusion_matched_reported: 0
+    fusion_offset_p95_max_ms: null
+    track_frames: 0
+    pass: true
+  matched_not_degraded: null
+  stable_old_track_comparison: null
+  track_comparisons: []
+fusion:
+  primary_initial:
+    pass: false
+    runs:
+    - path: old
+      repeat: 1
+      bag: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+      fusion: true
+      input_frames: 979
+      output_frames: 911
+      rate_hz: 18.668402167875463
+      coverage: 0.9305413687436159
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      zero_stamps: 0
+      frame_ids:
+      - camera_front
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 35.929672000000004
+        p95_ms: 56.624983
+      candidate_invalid_frames: 0
+      diagnostic_warnings: 0
+      fusion_matched_reported: 468
+      fusion_offset_p95_max_ms: 45.1
+      track_frames: 515
+      pass: true
+    - path: old
+      repeat: 2
+      bag: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+      fusion: true
+      input_frames: 979
+      output_frames: 904
+      rate_hz: 18.49613196973214
+      coverage: 0.923391215526047
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      zero_stamps: 0
+      frame_ids:
+      - camera_front
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 35.690957499999996
+        p95_ms: 58.71250295
+      candidate_invalid_frames: 0
+      diagnostic_warnings: 0
+      fusion_matched_reported: 468
+      fusion_offset_p95_max_ms: 46.2
+      track_frames: 515
+      pass: true
+    - path: new
+      repeat: 1
+      bag: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+      fusion: true
+      input_frames: 979
+      output_frames: 978
+      rate_hz: 20.025862440020173
+      coverage: 0.9989785495403473
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      zero_stamps: 0
+      frame_ids:
+      - camera_front
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 12.593724499999999
+        p95_ms: 20.5875606
+      candidate_invalid_frames: 0
+      diagnostic_warnings: 1
+      fusion_matched_reported: 464
+      fusion_offset_p95_max_ms: 29.5
+      track_frames: 509
+      pass: true
+    - path: new
+      repeat: 2
+      bag: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+      fusion: true
+      input_frames: 979
+      output_frames: 978
+      rate_hz: 20.023567566048097
+      coverage: 0.9989785495403473
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      zero_stamps: 0
+      frame_ids:
+      - camera_front
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 12.9014615
+        p95_ms: 21.720402649999997
+      candidate_invalid_frames: 0
+      diagnostic_warnings: 1
+      fusion_matched_reported: 463
+      fusion_offset_p95_max_ms: 33.0
+      track_frames: 508
+      pass: true
+    matched_not_degraded: false
+    stable_old_track_comparison:
+      common_all_runs: 2003
+      old_stable: 2003
+      regressions:
+      - stamp_ns: 1790654812963000000
+        track: 242
+        old:
+        - unknown
+        - unknown
+        new:
+        - - unknown
+          - unknown
+        - - car
+          - car
+      - stamp_ns: 1790654813349000000
+        track: 242
+        old:
+        - unknown
+        - unknown
+        new:
+        - - unknown
+          - unknown
+        - - car
+          - car
+      - stamp_ns: 1790654813586000000
+        track: 242
+        old:
+        - unknown
+        - unknown
+        new:
+        - - unknown
+          - unknown
+        - - car
+          - car
+      - stamp_ns: 1790654813943000000
+        track: 242
+        old:
+        - unknown
+        - unknown
+        new:
+        - - unknown
+          - unknown
+        - - car
+          - car
+      - stamp_ns: 1790654814309000000
+        track: 242
+        old:
+        - unknown
+        - unknown
+        new:
+        - - unknown
+          - unknown
+        - - car
+          - car
+    track_comparisons:
+    - reference: old_1
+      candidate: old_2
+      common: 3031
+      mismatches: 1
+    - reference: old_1
+      candidate: new_1
+      common: 2722
+      mismatches: 0
+    - reference: old_1
+      candidate: new_2
+      common: 2979
+      mismatches: 54
+  primary_identity_diagnostic:
+    pass: false
+    runs:
+    - path: old
+      repeat: 1
+      bag: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+      fusion: true
+      input_frames: 979
+      output_frames: 892
+      rate_hz: 18.253871718523325
+      coverage: 0.9111338100102145
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      zero_stamps: 0
+      frame_ids:
+      - camera_front
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 34.5335835
+        p95_ms: 55.29401595
+      candidate_invalid_frames: 0
+      diagnostic_warnings: 0
+      fusion_matched_reported: 465
+      fusion_offset_p95_max_ms: 46.2
+      track_frames: 512
+      pass: true
+    - path: old
+      repeat: 2
+      bag: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+      fusion: true
+      input_frames: 979
+      output_frames: 897
+      rate_hz: 18.357022501513278
+      coverage: 0.916241062308478
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      zero_stamps: 0
+      frame_ids:
+      - camera_front
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 34.854137
+        p95_ms: 57.039306599999996
+      candidate_invalid_frames: 0
+      diagnostic_warnings: 0
+      fusion_matched_reported: 469
+      fusion_offset_p95_max_ms: 46.5
+      track_frames: 512
+      pass: true
+    - path: new
+      repeat: 1
+      bag: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+      fusion: true
+      input_frames: 979
+      output_frames: 978
+      rate_hz: 20.028338274171002
+      coverage: 0.9989785495403473
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      zero_stamps: 0
+      frame_ids:
+      - camera_front
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 12.361249
+        p95_ms: 20.7635243
+      candidate_invalid_frames: 0
+      diagnostic_warnings: 1
+      fusion_matched_reported: 466
+      fusion_offset_p95_max_ms: 31.7
+      track_frames: 508
+      pass: true
+    - path: new
+      repeat: 2
+      bag: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+      fusion: true
+      input_frames: 979
+      output_frames: 978
+      rate_hz: 20.022936219335524
+      coverage: 0.9989785495403473
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      zero_stamps: 0
+      frame_ids:
+      - camera_front
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 12.490923500000001
+        p95_ms: 20.649750249999997
+      candidate_invalid_frames: 0
+      diagnostic_warnings: 1
+      fusion_matched_reported: 462
+      fusion_offset_p95_max_ms: 28.2
+      track_frames: 508
+      pass: true
+    matched_not_degraded: false
+    stable_old_track_comparison:
+      common_all_runs: 2189
+      old_stable: 2189
+      regressions:
+      - stamp_ns: 1790654799798000000
+        track: 22
+        old:
+        - car
+        - car
+        new:
+        - - unknown
+          - unknown
+        - - unknown
+          - unknown
+    track_comparisons:
+    - reference: old_1
+      candidate: old_2
+      common: 3607
+      mismatches: 1
+    - reference: old_1
+      candidate: new_1
+      common: 2926
+      mismatches: 1
+    - reference: old_1
+      candidate: new_2
+      common: 3175
+      mismatches: 1
+  shadow:
+    pass: true
+    runs:
+    - path: old
+      repeat: 1
+      bag: /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+      fusion: true
+      input_frames: 494
+      output_frames: 417
+      rate_hz: 16.9104578967467
+      coverage: 0.8441295546558705
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      zero_stamps: 0
+      frame_ids:
+      - camera_front
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 35.624148
+        p95_ms: 57.8077694
+      candidate_invalid_frames: 0
+      diagnostic_warnings: 0
+      fusion_matched_reported: 150
+      fusion_offset_p95_max_ms: 40.6
+      track_frames: 186
+      pass: true
+    - path: old
+      repeat: 2
+      bag: /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+      fusion: true
+      input_frames: 494
+      output_frames: 438
+      rate_hz: 17.751068475038046
+      coverage: 0.8866396761133604
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      zero_stamps: 0
+      frame_ids:
+      - camera_front
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 33.014434
+        p95_ms: 55.456300799999994
+      candidate_invalid_frames: 0
+      diagnostic_warnings: 0
+      fusion_matched_reported: 144
+      fusion_offset_p95_max_ms: 40.5
+      track_frames: 180
+      pass: true
+    - path: new
+      repeat: 1
+      bag: /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+      fusion: true
+      input_frames: 494
+      output_frames: 494
+      rate_hz: 20.069602359635976
+      coverage: 1.0
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      zero_stamps: 0
+      frame_ids:
+      - camera_front
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 11.67476
+        p95_ms: 19.488829949999996
+      candidate_invalid_frames: 0
+      diagnostic_warnings: 1
+      fusion_matched_reported: 149
+      fusion_offset_p95_max_ms: 26.5
+      track_frames: 185
+      pass: true
+    - path: new
+      repeat: 2
+      bag: /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+      fusion: true
+      input_frames: 494
+      output_frames: 494
+      rate_hz: 20.077710059196338
+      coverage: 1.0
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      zero_stamps: 0
+      frame_ids:
+      - camera_front
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 11.375683
+        p95_ms: 19.35449195
+      candidate_invalid_frames: 0
+      diagnostic_warnings: 1
+      fusion_matched_reported: 149
+      fusion_offset_p95_max_ms: 26.5
+      track_frames: 186
+      pass: true
+    matched_not_degraded: true
+    stable_old_track_comparison:
+      common_all_runs: 680
+      old_stable: 680
+      regressions: []
+    track_comparisons:
+    - reference: old_1
+      candidate: old_2
+      common: 953
+      mismatches: 0
+    - reference: old_1
+      candidate: new_1
+      common: 1114
+      mismatches: 0
+    - reference: old_1
+      candidate: new_2
+      common: 902
+      mismatches: 0
+  bag_sha256:
+  - path: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+    sha256: 859cbd84a1e845b76426f96be2778c6f54ea77fe348631a976ef3adf666d0c02
+    bytes: 367087616
+  - path: /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+    sha256: 9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34
+    bytes: 175048680
+  same_observation_identity_diagnostic:
+    old_2.frames:
+      common_lidar_stamps: 445
+      matched_observations: 5191
+      unmatched_observations: 682
+      reassigned_ids: 2425
+      classification_differences: 0
+    new_1.frames:
+      common_lidar_stamps: 423
+      matched_observations: 4688
+      unmatched_observations: 746
+      reassigned_ids: 2600
+      classification_differences: 1
+    new_2.frames:
+      common_lidar_stamps: 436
+      matched_observations: 4995
+      unmatched_observations: 677
+      reassigned_ids: 2682
+      classification_differences: 2
+  unchanged_time_policy:
+    max_source_offset_sec: 0.05
+    arrival_wait_timeout_sec: 0.2
+  interpretation:
+  - Primary strict gates failed in both test sets; do not promote based on standalone
+    throughput or shadow pass.
+  - Latest-frame LiDAR processing produces different source-frame sets across replays;
+    total matched counts include that variability.
+  - 'Track IDs are not stable across independent replays: >2400 identical clusters
+    had reassigned IDs in the diagnostic old-old comparison.'
+  - Comparing unambiguous identical clusters at <=1 mm leaves 1 and 2 actual classification-transition
+    differences for the new runs, versus zero in old-old.
+  - The GPU backend output is exactly equal per frame; these runtime differences remain
+    unresolved at consumer timing and processing level.
+  - Fusion counts sum existing 5s reports; the final partial interval is excluded.
+fault_injection:
+  normal_empty: true
+  broken_jpeg_invalid_withheld: true
+  input_stop_no_repeated_output: true
+  decode_error_diagnostic: true
+  duplicate_warning: true
+  producer_exit_lane_survives: true
+  all_pass: true
+object_only_acceptance:
+  contract_id: asmc_perception_runtime_acceptance_v1
+  duration_sec: 5.01
+  groups:
+  - camera_objects
+  consumer_gates: []
+  static_validation:
+    contract_id: asmc_perception_runtime_acceptance_v1
+    topic_group_count: 4
+    camera_lane_topic_count: 33
+    all_topic_count: 40
+    default_forbidden_topic_count: 20
+    static_binding_count: 8
+    optional_consumer_gate_count: 2
+    deferred_topic_count: 2
+    p5_closeout:
+      phase_count: 3
+      consumer_count: 2
+      evidence_count: 6
+      representative_lane_family_messages: 293
+  missing_nodes: []
+  topics:
+    /perception/camera/objects:
+      type_expected: asmc_msgs/CameraObjectBoxArray
+      type_observed: asmc_msgs/CameraObjectBoxArray
+      publishers:
+      - /camera_object_detector
+      subscribers:
+      - /camera_objects_yolo_bbox_adapter
+      - /p2_replay_measurements
+      - /perception_runtime_acceptance_42804_1791292902368
+      expected_subscribers: []
+      count: 100
+      rate_hz: 20.004
+      min_rate_hz: 18.0
+      arrival_intervals:
+        samples: 99
+        p50_ms: 48.033
+        p95_ms: 73.872
+        max_ms: 80.732
+      last_arrival_age_sec: -0.002
+      max_stale_sec: 1.0
+      frame_ids:
+      - camera_front
+      zero_stamps: 0
+      stamp_regressions: 0
+      invalid_messages: 0
+      diagnostic_errors: []
+      failures: []
+      ok: true
+    /perception/camera/objects/diagnostics:
+      type_expected: diagnostic_msgs/DiagnosticArray
+      type_observed: diagnostic_msgs/DiagnosticArray
+      publishers:
+      - /camera_object_detector
+      subscribers:
+      - /p2_replay_measurements
+      - /perception_runtime_acceptance_42804_1791292902368
+      expected_subscribers: []
+      count: 5
+      rate_hz: 0.999
+      min_rate_hz: null
+      arrival_intervals:
+        samples: 4
+        p50_ms: 1001.114
+        p95_ms: 1001.989
+        max_ms: 1002.088
+      last_arrival_age_sec: 0.289
+      max_stale_sec: 3.0
+      frame_ids:
+      - ''
+      zero_stamps: 0
+      stamp_regressions: 0
+      invalid_messages: 0
+      diagnostic_errors: []
+      failures: []
+      ok: true
+  default_forbidden_publishers: []
+  allow_opt_in_debug: false
+  failures: []
+  ok: true
+regression:
+  full_latest_main_catkin_build: pass
+  contract_tests:
+    tests: 35
+    failures: 0
+  camera_package:
+    tests: 223
+    failures: 1
+    new_failures: 0
+  message_serialization:
+    tests: 1
+    failures: 0
+  lidar_core_ctest:
+    tests: 2
+    failures: 0
+  nested_lidar:
+    tests: 236
+    failures: 0
+  jamming:
+    tests: 94
+    failures: 0
+  known_existing_failure:
+    test: PerceptionFacadeContractTest.test_planning_launches_use_the_canonical_traffic_light_model
+    reason: test expects traffic_light=false, latest main autonomy_no_bridges_v2.launch
+      intentionally defaults true
+    reproduced_on_main: c5d0b7854b47b6f52a2c080628740e0d8ce1fae6
+acceptance_blockers:
+- primary_fusion_absolute_matched_count_not_degraded
+- primary_fusion_stable_observation_classification_equivalence
+evidence_archive:
+  path: config/baselines/evidence/camera_objects_p2a_v1/reports.tar.gz
+  sha256: bd3431f3ed7670e39e73a0b8f622d599a9e6ae3e99c250d30a5a803658b7ecd4
+  contents: Full summaries, per-frame outputs/tracks, identity centers and logs; includes
+    unsuccessful runs.
+merge_owner: user

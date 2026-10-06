@@ -1,0 +1,13 @@
+# Behaviour-preserving P2a profile. Side views and model/precision experiments follow later.
+views: [front]
+image_topic: /image_jpeg/compressed
+weights: $(find asmc_camera)/models/object_detection/yolo11m.pt
+expected_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+device: cuda:0
+require_cuda: true
+conf_thres: 0.7
+allowed_names: [bus, truck, person, car]
+predict_overrides:
+  iou: 0.7
+  max_det: 300
+  agnostic_nms: false

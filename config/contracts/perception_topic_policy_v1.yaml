@@ -33,6 +33,34 @@ launch_defaults:
 # currently names every expanded topic in the family. It is evidence of use,
 # not permission to expose a debug topic as a planning contract.
 topic_families:
+  - id: camera_objects
+    topics:
+      - {pattern: /perception/camera/objects, type: asmc_msgs/CameraObjectBoxArray}
+    producer:
+      file: src/asmc_camera/src/asmc_camera/nodes/object_detection_node.py
+      anchors: ['"/perception/camera/objects"']
+    consumers:
+      - file: src/lidar+sensorfusion/src/Main/scripts/camera_objects_yolo_bbox_adapter.py
+        anchor: '"/perception/camera/objects"'
+    bag_profiles: []
+    classification: candidate_contract
+    current_mode: explicit_argument
+    p5b_action: keep
+    rationale: Opt-in camera producer; LiDAR-owned candidate contract and legacy adapter.
+
+  - id: camera_objects_diagnostics
+    topics:
+      - {pattern: /perception/camera/objects/diagnostics, type: diagnostic_msgs/DiagnosticArray}
+    producer:
+      file: src/asmc_camera/src/asmc_camera/nodes/object_detection_node.py
+      anchors: ['"/perception/camera/objects/diagnostics"']
+    consumers: []
+    bag_profiles: []
+    classification: operational_diagnostics
+    current_mode: explicit_argument
+    p5b_action: keep
+    rationale: Source latency, model identity, replacement/error counters and duplicate producers.
+
   - id: camera_semantic_full_resolution
     topics:
       - {pattern: '/perception/camera/{view}/drivable/probability', type: sensor_msgs/Image}

@@ -89,6 +89,12 @@ target_link_libraries(main myHeader
 )
 
 if(CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+  catkin_add_nosetests(test/test_camera_objects_adapter.py)
+  catkin_add_nosetests(test/test_fusion_continuous_replay.py)
+  catkin_install_python(PROGRAMS test/test_camera_objects_adapter_ros.py
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+  add_rostest(test/camera_objects_adapter.test)
   catkin_add_gtest(test_ground_evidence test/test_ground_evidence.cpp)
   catkin_add_gtest(test_adaptive_clustering
     test/test_adaptive_clustering.cpp
@@ -125,6 +131,21 @@ if(CATKIN_ENABLE_TESTING)
   if(TARGET test_fusion_time_matcher)
     target_link_libraries(test_fusion_time_matcher ${catkin_LIBRARIES})
   endif()
+  catkin_add_gtest(test_fusion_replay test/test_fusion_replay.cpp)
+  if(TARGET test_fusion_replay)
+    target_link_libraries(test_fusion_replay ${catkin_LIBRARIES})
+  endif()
+  catkin_add_gtest(test_fusion_state_propagation test/test_fusion_state_propagation.cpp)
+  if(TARGET test_fusion_state_propagation)
+    add_dependencies(test_fusion_state_propagation ${catkin_EXPORTED_TARGETS})
+    target_link_libraries(test_fusion_state_propagation ${catkin_LIBRARIES})
+  endif()
+  add_executable(fusion_continuous_trace_replay test/fusion_continuous_trace_replay.cpp)
+  add_dependencies(fusion_continuous_trace_replay ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(fusion_continuous_trace_replay yaml-cpp ${catkin_LIBRARIES})
+  add_executable(fusion_class_trace_replay test/fusion_class_trace_replay.cpp)
+  add_dependencies(fusion_class_trace_replay ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(fusion_class_trace_replay yaml-cpp ${catkin_LIBRARIES})
   catkin_add_gtest(test_drivable_footprint
     test/test_drivable_footprint.cpp
     src/PlannerInterface/DrivableFootprint.cpp
@@ -182,6 +203,7 @@ if(CATKIN_ENABLE_TESTING)
 endif()
 
 catkin_install_python(PROGRAMS
+  scripts/camera_objects_yolo_bbox_adapter.py
   src/Camera/YOLO/YOLODetection.py
   scripts/build_known_static_object_catalog.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

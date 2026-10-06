@@ -8,6 +8,7 @@ implementation:
   detection_tracking_fusion: pending_jaeho_migration
   ros_publishers_and_adapters: not_implemented
   skeleton_publishes_topics: false
+  camera_object_producer: available_opt_in
 source_stamp: bridge_receive_not_laser_firing_time
 frames:
   local: rear_axle_base_link
@@ -15,8 +16,8 @@ frames:
 messages:
   asmc_msgs/LidarObject: b94cf82e0f325e9ce0364bb143df9f06
   asmc_msgs/LidarObjectArray: 5f774d07dffd4c7dfa93a8d4b62c60b4
-  asmc_msgs/CameraObjectBox: 19dd1d30aebe2394009542ba9f509717
-  asmc_msgs/CameraObjectBoxArray: ab2b6ea012a198472d8bab05c354e759
+  asmc_msgs/CameraObjectBox: 34412c90553e06734f1acade77c8e1e3
+  asmc_msgs/CameraObjectBoxArray: 310c671afb3693e7909db6453d115b79
 compatibility_messages:
   asmc_msgs/TrackedObject: 6c96135eb03a3ee93bba474fa835f57d
   asmc_msgs/TrackedObjectArray: e127b2aabd7494ad01a5a56b005bf07e
@@ -37,7 +38,10 @@ planned_topics:
     type: asmc_msgs/CameraObjectBoxArray
     frame: camera_id_in_header
     producer_owner: asmc_camera
-    implementation: pending_camera_rename_and_yolo_migration
+    implementation: available_opt_in
+    launch: roslaunch asmc_camera camera_objects.launch
+    compatibility_adapter: src/lidar+sensorfusion/src/Main/scripts/camera_objects_yolo_bbox_adapter.py
+    parity_evidence: config/baselines/perception_camera_objects_parity_v1.yaml
 rules:
   - Preserve observation stamp, point lineage, and local track state across GPS changes.
   - Distinguish observed-empty, predicted, input-invalid, pose-unavailable and sensor silence.

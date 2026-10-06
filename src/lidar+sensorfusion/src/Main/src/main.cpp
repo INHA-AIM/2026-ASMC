@@ -5,6 +5,8 @@
 #include <Lidar/LidarProcess/PipelineProfile.hpp>
 #include <Lidar/Tracking/MotionClassifier.hpp>
 #include <SensorFusion/SensorFusion.hpp>
+#include <SensorFusion/FusionTrace.hpp>
+#include <SensorFusion/FusionStateTrace.hpp>
 #include <PlannerInterface/PlannerObjectSender.hpp>
 #include <PlannerInterface/PlannerObjectRosPublisher.hpp>
 #include <ros/package.h>
@@ -453,9 +455,18 @@ void *TemporalThread(void *p_Arg)
         // snapshot are atomic with respect to the LiDAR callback.  If another
         // scan arrives while processing, the predicate remains different and
         // the next loop runs immediately without relying on another signal.
+        const auto previous_generation = processed_lidar_generation;
         CopyData(&st_CurrentData);
         processed_lidar_generation = u64_LidarFrameGeneration;
         pthread_mutex_unlock(&st_DataTemporal);
+
+        fusion_trace::Event("lidar_process_start",
+            st_CurrentData.st_RawLiDAR.u64_Timestamp * 1000000ULL,
+            [&](std::ostream& out) {
+                out << ",\"generation\":" << processed_lidar_generation
+                    << ",\"skipped_generations\":"
+                    << processed_lidar_generation - previous_generation - 1;
+            });
 
         DeadReckoningProcess(st_CurrentData.st_RawGPS, st_CurrentData.st_RawIMU, st_CurrentData.st_RawCAN, st_GPSIMU);
         ProcessCameraStream(st_CurrentData.st_RawCamera, st_CurrentData.st_RawCamera2 ,st_Camera, st_GPSIMU);
@@ -475,9 +486,17 @@ void *TemporalThread(void *p_Arg)
         const bool lidar_processed = pose_ready && LidarProcess(
             st_CurrentData.st_RawLiDAR, lidar_pose, st_LiDAR,
             *st_MotionClassifier);
+        if (lidar_processed) {
+            fusion_state_trace::Snapshot("class_lidar_ready", ts_CurrTime, ros::Time(),
+                st_LiDAR.vec_Objects, processed_lidar_generation);
+        }
         if (lidar_processed && b_EnableSensorFusion) {
             FusionProcess(st_CurrentData.st_RawYOLO, st_LiDAR, st_Camera,
                           ts_CurrTime);
+        }
+        if (lidar_processed) {
+            fusion_state_trace::Snapshot("class_publish_input", ts_CurrTime, ros::Time(),
+                st_LiDAR.vec_Objects, processed_lidar_generation);
         }
         if (lidar_processed && st_PlannerObjectRosPublisher) {
             st_PlannerObjectRosPublisher->Publish(
@@ -497,6 +516,15 @@ void *TemporalThread(void *p_Arg)
             st_PlannerObjectSender->Send(
                 st_LiDAR, lidar_pose, st_VehicleSpec);
         }
+        fusion_trace::Event("lidar_process_end",
+            st_CurrentData.st_RawLiDAR.u64_Timestamp * 1000000ULL,
+            [&](std::ostream& out) {
+                out << ",\"pose_ready\":" << (pose_ready ? "true" : "false")
+                    << ",\"processed\":" << (lidar_processed ? "true" : "false")
+                    << ",\"duration_ms\":" << std::chrono::duration<double, std::milli>(
+                        std::chrono::steady_clock::now() - lidar_pipeline_start).count()
+                    << ",\"objects\":" << st_LiDAR.vec_Objects.size();
+            });
 
         // 인지 전용: PlanningProcess/ControlProcess 호출 제거 (소스 부재)
         pthread_mutex_lock(&st_CopyMutex);
@@ -528,6 +556,14 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "Main");
     ros::NodeHandle st_NodeHandle;
     ros::NodeHandle st_PrivateNodeHandle("~");
+    std::string fusion_trace_path;
+    st_PrivateNodeHandle.param("fusion_trace_path", fusion_trace_path, std::string());
+    try {
+        fusion_trace::Sink().Configure(fusion_trace_path);
+    } catch (const std::exception& error) {
+        ROS_FATAL("%s", error.what());
+        return 1;
+    }
     st_PrivateNodeHandle.param(
         "enable_sensor_fusion", b_EnableSensorFusion, true);
     st_PrivateNodeHandle.param(
@@ -581,6 +617,9 @@ int main(int argc, char **argv)
     pthread_join(th_IMU, nullptr);
     pthread_join(th_Lidar, nullptr);
     pthread_join(th_Temporal, nullptr);
+
+    ReportFusionTotals();
+    fusion_trace::Sink().Flush();
 
     return 0;
 }

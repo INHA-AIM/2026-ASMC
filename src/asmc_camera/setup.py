@@ -9,6 +9,7 @@ setup_args = generate_distutils_setup(
         "asmc_camera.bev",
         "asmc_camera.camera",
         "asmc_camera.camera.backends",
+        "asmc_camera.detection",
         "asmc_camera.nodes",
         "asmc_camera.offline",
         "asmc_camera.offline.bev",

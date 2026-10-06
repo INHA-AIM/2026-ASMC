@@ -1,0 +1,11 @@
+# Normalized groups for asmc_msgs/CameraObjectBox.class_name (agreed 2026-10-06).
+# Raw detector labels are matched case-insensitively. A label in neither group
+# becomes default_group; excluded labels are dropped from the output because
+# they are road infrastructure, not obstacles. COCO and MORAI names coexist so
+# the same mapping serves the COCO and the later MORAI fine-tuned models.
+class_groups:
+  groups:
+    person: [person, bicycle, pedestrian]
+    vehicle: [car, truck, bus, motorcycle, train, vehicle, sedan, suv, van, wagon, mpv]
+  default_group: obstacle
+  excluded: [traffic light, stop sign]

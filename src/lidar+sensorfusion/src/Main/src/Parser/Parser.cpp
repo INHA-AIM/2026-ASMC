@@ -2,6 +2,7 @@
 #include <Parser/GpsSanityFilter.hpp>
 #include <Parser/SensorPoseHistory.hpp>
 #include <SensorFusion/SensorFusion.hpp>
+#include <SensorFusion/FusionTrace.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -291,8 +292,13 @@ void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
     // a vehicle-status callback happens to run.
     pthread_mutex_lock(&st_DataTemporal);
     ++u64_LidarFrameGeneration;
+    const auto generation = u64_LidarFrameGeneration;
     pthread_cond_signal(&st_DataTemporalCond);
     pthread_mutex_unlock(&st_DataTemporal);
+    fusion_trace::Event("lidar_input", ts_LiDARIn.toNSec(), [&](std::ostream& out) {
+        out << ",\"generation\":" << generation << ",\"points\":" << s32_Count
+            << ",\"buffer_stamp_ns\":" << (ts_LiDARIn.toNSec() / 1000000ULL) * 1000000ULL;
+    });
         // cout << "After setting st_RawLiDAR.s32_Num: " << st_SensorData.st_RawLiDAR.s32_Num << endl;
 
 }

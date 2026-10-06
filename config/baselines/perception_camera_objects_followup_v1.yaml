@@ -1,0 +1,4659 @@
+schema_version: 1
+status: accepted_opt_in_migration_with_documented_runtime_variance
+base_main: c5d0b7854b47b6f52a2c080628740e0d8ce1fae6
+base_p2a: a8c28f270ec5ca44ce72ee6461536be6565e7165
+container:
+  name: asmc-ros-noetic
+  workspace: asmc-camera-objects
+  image: sha256:1ecd9f50491565cad32e32980bb5df5b48487f470440cb66c9ec3b8dc5c11400
+  network: host
+  live_master_port: 11311
+  hdmap_archive: data/runtime_archive/hdmap-container-20261006/container-logs.tar.gz
+  obsolete_hdmap_worktree_removed: true
+checks:
+  outer_build: pass
+  nested_build: pass
+  camera_package_path: /root/ws/src/asmc_camera
+  main_package_path: /root/ws/src/lidar+sensorfusion/src/Main
+  camera_object_box_md5: 34412c90553e06734f1acade77c8e1e3
+  camera_object_array_md5: 310c671afb3693e7909db6453d115b79
+  main_start_yolo_false_nodes:
+  - /Main
+  - /camera_objects_yolo_bbox_adapter
+  cuda_kernel_and_model_warmup: pass
+  gpu: NVIDIA GeForce RTX 4060 Ti
+  torch: 2.1.2+cu118
+  ultralytics: 8.4.150
+  warmup_ms: 541.0
+  weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+cpu_validation:
+  nested_main_tests:
+    tests: 242
+    failures: 0
+    errors: 0
+  contract_and_analysis_tests:
+    tests: 44
+    failures: 0
+  detection_tests:
+    tests: 16
+    failures: 0
+  message_serialization:
+    tests: 1
+    failures: 0
+  jamming_lane_boundary_adapter:
+    tests: 94
+    failures: 0
+    errors: 0
+  camera_package:
+    tests: 223
+    failures: 1
+    new_failures: 0
+  known_failure: PerceptionFacadeContractTest.test_planning_launches_use_the_canonical_traffic_light_model
+  delayed_complete_observation_replay: pass
+  actual_ros_trace_callbacks:
+    camera_input: 5
+    yolo_input: 5
+    lidar_input: 5
+    lidar_process_start: 5
+    lidar_process_end: 5
+    final_summary: 1
+    pose_failures_expected_without_pose_input: 5
+    accounting_consistent: true
+  local_reports: /tmp/p2a-followup
+  archive: config/baselines/evidence/camera_objects_followup_v1/cpu_reports.tar.gz
+  original_p2_preserved:
+    head: dc57f1e3216d603bfb1e21a2fd8155d7a37b2891
+    dirty_file_sha_count: 10
+  recorded_class_state_replay:
+    old_1:
+      pass: true
+      frames: 506
+      object_states: 17313
+      observations: 120
+      misses: 6919
+    old_2:
+      pass: true
+      frames: 498
+      object_states: 16663
+      observations: 120
+      misses: 6829
+    new_1:
+      pass: true
+      frames: 502
+      object_states: 16346
+      observations: 116
+      misses: 6811
+    new_2:
+      pass: true
+      frames: 509
+      object_states: 16383
+      observations: 117
+      misses: 6897
+    wrong_initial_confirmations_rejected: true
+  trace_tool_clean_message_build: pass
+  clean_trace_tool_replay:
+    pass: true
+    frames: 506
+    object_states: 17313
+    observations: 120
+    misses: 6919
+acceptance:
+  deployment_allowed: true
+  next_stage_allowed: true
+  prior_failed_evidence: config/baselines/perception_camera_objects_parity_v1.yaml
+  live_user_confirmation: completed_2026_10_07
+  isolated_gpu_revalidation: completed_gates_not_met
+  ci_at_e0f21e6:
+    catkin_build: pass
+    planning_catkin_build: pass
+    validated_lidar_build: pass
+  historical_blockers:
+  - 'Primary trace reproduces original stable classification difference at 1790654794688000000:
+    old history lag 51ms versus new current observation. Continuous propagation is
+    correct in both.'
+  - Latest trace-disabled primary acceptance still has one stable geometric classification
+    regression at 1790654820956000000. Distinct processing/track histories remain;
+    not waived by CPU replay.
+  - Previous shadow 177 < 181 failure retained despite latest shadow passing; frame-selection
+    variability not removed or reclassified as acceptance.
+  ci_at_d8bda85:
+    catkin_build: pass
+    planning_catkin_build: pass
+    validated_lidar_build: pass
+  continuous_diagnostics: completed_runtime_fusion_gate_still_fails
+  decision_date: "2026-10-07"
+  decision_authority: user_approved_p2a_merge_plan
+  scope: front_yolo11m_opt_in_migration_only_not_full_stack_deployment
+  strict_verdict_unchanged: failed
+  accepted_exception_stamp_ns: 1790654820956000000
+  accepted_exception_labels: [unknown, car]
+  latest_primary_exception_count: 1
+  historical_shadow_failure_retained: true
+  hardware_cause_proven: false
+  basis: exact_3514_frame_detection_parity_continuous_state_replay_latest_gpu_counts_and_offsets
+verified_date: '2026-10-07'
+gpu_revalidation:
+  runtime_commit: d8bda851142d0637f7e8a437cd7656a744584368
+  validation_tool_commit: 5c30ac96ab12eac0dc4a5963343f43162494aa11
+  container: asmc-camera-fusion-check
+  network: none
+  master_port: 11312
+  other_ros_gpu_inference: absent_in_shared_and_verification_containers
+  stages:
+  - stage: fusion-primary-complete
+    returncode: 1
+    elapsed_sec: 226.10387243199511
+  - stage: fusion-shadow-complete
+    returncode: 1
+    elapsed_sec: 129.0589785589982
+  - stage: offline-latest
+    returncode: 0
+    elapsed_sec: 113.03325336700073
+  - stage: ab-latest
+    returncode: 0
+    elapsed_sec: 732.2785462309985
+  - stage: faults-latest
+    returncode: 1
+    elapsed_sec: 14.367684519995237
+  - stage: faults-latest-fresh-diagnostics
+    returncode: 0
+    elapsed_sec: 14.299636577998172
+  - stage: faults-startup-diagnostic-regression
+    returncode: 0
+    elapsed_sec: 13.760123533007572
+  offline_exact_comparison:
+    status: pass
+    frames: 3514
+    exact_frames: 3514
+    errors: []
+    boundary_exceptions: []
+    weight_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+    bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+    bag_sha256: a8f360e666f58358062e83cedbc6b51f94e8dc897402a2605eed7761a7880268
+    legacy_source_sha256: 1cd5c1053245f3d3efbb63aac3cc311572bbbd51622b1ccd25976dd67a943cde
+    python: "3.8.10 (default, Mar 18 2025, 20:04:55) \n[GCC 9.4.0]"
+    interpreter: /usr/bin/python3
+    torch: 2.1.2+cu118
+    ultralytics: 8.4.150
+    gpu: NVIDIA GeForce RTX 4060 Ti
+    backend:
+      backend: ultralytics
+      weights: /root/ws/src/asmc_camera/models/object_detection/yolo11m.pt
+      weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+      device: cuda:0
+      model_device: cuda:0
+      ultralytics: 8.4.150
+      torch: 2.1.2+cu118
+      conf_thres: 0.7
+      allowed_names:
+      - bus
+      - truck
+      - person
+      - car
+      predict_overrides:
+        iou: 0.7
+        max_det: 300
+        agnostic_nms: false
+      warmup_ms: 561.3
+    duration_sec: 109.93310861899226
+    latency:
+      old_ms:
+        p50: 14.178608995280229
+        p95: 20.030124796903692
+      new_ms:
+        p50: 13.376587005041074
+        p95: 19.12159279527259
+  replay_ab:
+    pass: true
+    matched_not_degraded: null
+    whole_bag_matched_not_degraded: null
+    stable_old_track_comparison: null
+    stable_old_observation_comparison: null
+    runs:
+    - path: old
+      repeat: 1
+      input_frames: 3514
+      output_frames: 3438
+      rate_hz: 19.566187813628364
+      coverage: 0.9783722253841776
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 28.9393795
+        p95_ms: 45.08208965000001
+      fusion_matched_5s_reported: 0
+      fusion_matched_reported: 0
+      fusion_totals: null
+      fusion_accounting_complete: false
+      fusion_offset_p95_max_ms: null
+      track_frames: 0
+      pass: true
+    - path: old
+      repeat: 2
+      input_frames: 3514
+      output_frames: 3434
+      rate_hz: 19.543528931521635
+      coverage: 0.977233921457029
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 29.596809
+        p95_ms: 45.7394957
+      fusion_matched_5s_reported: 0
+      fusion_matched_reported: 0
+      fusion_totals: null
+      fusion_accounting_complete: false
+      fusion_offset_p95_max_ms: null
+      track_frames: 0
+      pass: true
+    - path: new
+      repeat: 1
+      input_frames: 3514
+      output_frames: 3513
+      rate_hz: 19.987738692551158
+      coverage: 0.9997154240182129
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 11.4497
+        p95_ms: 19.171672599999994
+      fusion_matched_5s_reported: 0
+      fusion_matched_reported: 0
+      fusion_totals: null
+      fusion_accounting_complete: false
+      fusion_offset_p95_max_ms: null
+      track_frames: 0
+      pass: true
+    - path: new
+      repeat: 2
+      input_frames: 3514
+      output_frames: 3513
+      rate_hz: 19.990694888673076
+      coverage: 0.9997154240182129
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 11.330107
+        p95_ms: 19.486148399999998
+      fusion_matched_5s_reported: 0
+      fusion_matched_reported: 0
+      fusion_totals: null
+      fusion_accounting_complete: false
+      fusion_offset_p95_max_ms: null
+      track_frames: 0
+      pass: true
+  fusion_primary:
+    pass: false
+    matched_not_degraded: true
+    whole_bag_matched_not_degraded: true
+    stable_old_track_comparison:
+      common_all_runs: 2070
+      old_stable: 2069
+      regressions:
+      - stamp_ns: 1790654794688000000
+        track: 22
+        old:
+        - unknown
+        - unknown
+        new:
+        - - car
+          - car
+        - - unknown
+          - unknown
+    stable_old_observation_comparison:
+      common_lidar_stamps: 327
+      old_stable: 2954
+      unmatched_common_observations: 896
+      regressions:
+      - stamp_ns: 1790654794688000000
+        center:
+        - 19.66237255861796
+        - -492.23758172254986
+        - -0.8472483400991137
+        old:
+        - 22
+        - unknown
+        - unknown
+        new:
+        - - 22
+          - car
+          - car
+        - - 22
+          - unknown
+          - unknown
+    runs:
+    - path: old
+      repeat: 1
+      input_frames: 979
+      output_frames: 899
+      rate_hz: 18.394666025505853
+      coverage: 0.9182839632277835
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 34.64544
+        p95_ms: 54.973929399999996
+      fusion_matched_5s_reported: 461
+      fusion_matched_reported: 503
+      fusion_totals:
+        matched: 503
+        dropped: 1
+        pending_lidar: 1
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 48.6
+      track_frames: 505
+      pass: true
+    - path: old
+      repeat: 2
+      input_frames: 979
+      output_frames: 893
+      rate_hz: 18.274930837434212
+      coverage: 0.9121552604698672
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 34.868448
+        p95_ms: 55.64564019999998
+      fusion_matched_5s_reported: 455
+      fusion_matched_reported: 496
+      fusion_totals:
+        matched: 496
+        dropped: 4
+        pending_lidar: 1
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 46.1
+      track_frames: 501
+      pass: true
+    - path: new
+      repeat: 1
+      input_frames: 979
+      output_frames: 978
+      rate_hz: 20.030397680476415
+      coverage: 0.9989785495403473
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 12.693978
+        p95_ms: 21.04075175
+      fusion_matched_5s_reported: 460
+      fusion_matched_reported: 503
+      fusion_totals:
+        matched: 503
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 31.6
+      track_frames: 503
+      pass: true
+    - path: new
+      repeat: 2
+      input_frames: 979
+      output_frames: 978
+      rate_hz: 20.029483278431673
+      coverage: 0.9989785495403473
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 13.124984999999999
+        p95_ms: 21.9820785
+      fusion_matched_5s_reported: 457
+      fusion_matched_reported: 500
+      fusion_totals:
+        matched: 500
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 29.0
+      track_frames: 500
+      pass: true
+  fusion_shadow:
+    pass: false
+    matched_not_degraded: false
+    whole_bag_matched_not_degraded: false
+    stable_old_track_comparison:
+      common_all_runs: 696
+      old_stable: 696
+      regressions: []
+    stable_old_observation_comparison:
+      common_lidar_stamps: 145
+      old_stable: 911
+      unmatched_common_observations: 1013
+      regressions: []
+    runs:
+    - path: old
+      repeat: 1
+      input_frames: 494
+      output_frames: 455
+      rate_hz: 18.470035570166683
+      coverage: 0.9210526315789473
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 36.533572
+        p95_ms: 55.616643599999996
+      fusion_matched_5s_reported: 145
+      fusion_matched_reported: 181
+      fusion_totals:
+        matched: 181
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 33.1
+      track_frames: 181
+      pass: true
+    - path: old
+      repeat: 2
+      input_frames: 494
+      output_frames: 437
+      rate_hz: 17.721414509304868
+      coverage: 0.8846153846153846
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 33.997741999999995
+        p95_ms: 54.473845
+      fusion_matched_5s_reported: 146
+      fusion_matched_reported: 181
+      fusion_totals:
+        matched: 181
+        dropped: 2
+        pending_lidar: 1
+        pending_yolo: 2
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 40.5
+      track_frames: 184
+      pass: true
+    - path: new
+      repeat: 1
+      input_frames: 494
+      output_frames: 493
+      rate_hz: 20.05088686129751
+      coverage: 0.9979757085020243
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 12.858538
+        p95_ms: 21.467054199999996
+      fusion_matched_5s_reported: 143
+      fusion_matched_reported: 177
+      fusion_totals:
+        matched: 177
+        dropped: 0
+        pending_lidar: 1
+        pending_yolo: 2
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 25.8
+      track_frames: 178
+      pass: true
+    - path: new
+      repeat: 2
+      input_frames: 494
+      output_frames: 494
+      rate_hz: 20.079465041700196
+      coverage: 1.0
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 11.855675999999999
+        p95_ms: 18.712706349999998
+      fusion_matched_5s_reported: 151
+      fusion_matched_reported: 187
+      fusion_totals:
+        matched: 187
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 26.3
+      track_frames: 187
+      pass: true
+  fault_injection:
+    startup_silence_before_frames: true
+    normal_empty: true
+    broken_jpeg_invalid_withheld: true
+    input_stop_no_repeated_output: true
+    decode_error_diagnostic: true
+    duplicate_warning: true
+    producer_exit_lane_survives: true
+    all_pass: true
+  trace_integrity_pass: true
+  trace_runs:
+    new_1:
+      events:
+        camera_input: 975
+        lidar_input: 649
+        lidar_process_start: 503
+        lidar_process_end: 503
+        yolo_input: 966
+        match_decision: 651
+        class_before: 502
+        class_miss: 6811
+        class_after: 502
+        class_current: 502
+        yolo_expired: 463
+        class_observation: 116
+        fusion_summary: 1
+      final:
+        event: fusion_summary
+        stamp_ns: 0
+        steady_ns: 79809782300867
+        matched: 502
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      complete: true
+      accounting_consistent: true
+      lidar_input_frames: 649
+      lidar_processed_frames: 502
+      lidar_pose_failures: 1
+      skipped_generations: 146
+      duplicate_consumed_yolo_stamps: 0
+      offset_max_ms: 36.489564
+      processing_ms:
+        median: 75.895151
+        p95: 121.291559
+    new_2:
+      events:
+        camera_input: 974
+        lidar_input: 649
+        lidar_process_start: 510
+        lidar_process_end: 510
+        yolo_input: 966
+        match_decision: 667
+        class_before: 509
+        class_miss: 6897
+        class_after: 509
+        class_current: 509
+        yolo_expired: 456
+        class_observation: 117
+        fusion_summary: 1
+      final:
+        event: fusion_summary
+        stamp_ns: 0
+        steady_ns: 79866428279006
+        matched: 509
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      complete: true
+      accounting_consistent: true
+      lidar_input_frames: 649
+      lidar_processed_frames: 509
+      lidar_pose_failures: 1
+      skipped_generations: 139
+      duplicate_consumed_yolo_stamps: 0
+      offset_max_ms: 36.489564
+      processing_ms:
+        median: 75.919221
+        p95: 120.135401
+    old_1:
+      events:
+        camera_input: 972
+        lidar_input: 649
+        lidar_process_start: 511
+        lidar_process_end: 511
+        yolo_input: 927
+        match_decision: 729
+        class_before: 506
+        class_miss: 6919
+        class_after: 506
+        class_current: 506
+        yolo_expired: 419
+        class_observation: 120
+        fusion_summary: 1
+      final:
+        event: fusion_summary
+        stamp_ns: 0
+        steady_ns: 79697300452714
+        matched: 506
+        dropped: 3
+        pending_lidar: 1
+        pending_yolo: 1
+      complete: true
+      accounting_consistent: true
+      lidar_input_frames: 649
+      lidar_processed_frames: 510
+      lidar_pose_failures: 1
+      skipped_generations: 138
+      duplicate_consumed_yolo_stamps: 0
+      offset_max_ms: 48.357477
+      processing_ms:
+        median: 74.910637
+        p95: 118.27914
+    old_2:
+      events:
+        camera_input: 971
+        lidar_input: 649
+        lidar_process_start: 507
+        lidar_process_end: 507
+        yolo_input: 880
+        match_decision: 734
+        class_before: 498
+        class_miss: 6829
+        class_after: 498
+        class_current: 498
+        yolo_expired: 382
+        class_observation: 120
+        fusion_summary: 1
+      final:
+        event: fusion_summary
+        stamp_ns: 0
+        steady_ns: 79752882528744
+        matched: 498
+        dropped: 7
+        pending_lidar: 1
+        pending_yolo: 0
+      complete: true
+      accounting_consistent: true
+      lidar_input_frames: 649
+      lidar_processed_frames: 506
+      lidar_pose_failures: 1
+      skipped_generations: 142
+      duplicate_consumed_yolo_stamps: 0
+      offset_max_ms: 49.079887
+      processing_ms:
+        median: 74.545197
+        p95: 122.204897
+  common_source_box_comparisons:
+    new_1:
+      common_source_frames: 936
+      old_only_frames: 1
+      new_only_frames: 42
+      different_boxes_or_headers: []
+    new_2:
+      common_source_frames: 936
+      old_only_frames: 1
+      new_only_frames: 42
+      different_boxes_or_headers: []
+    old_2:
+      common_source_frames: 869
+      old_only_frames: 68
+      new_only_frames: 34
+      different_boxes_or_headers: []
+  classification_details: fusion-primary-trace/trace_analysis.json in gpu_reports
+    archive
+  trace_capture_commit: e0f21e6e4bcc744f8b21f5d5f8db4351099af408
+  primary_and_shadow_bag_sha256:
+    /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag: 859cbd84a1e845b76426f96be2778c6f54ea77fe348631a976ef3adf666d0c02
+    ? /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+    : 9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34
+  archive: config/baselines/evidence/camera_objects_followup_v1/gpu_reports.tar.gz
+  archive_sha256: 9991a0f5b85fd47e92827583d42a6d001f55f925e2605a22ecc05329c9ddac8e
+preservation:
+  hdmap_controller_maps_pins_msg_weights_identical_to_main: true
+  only_changed_shared_message: CameraObjectBox source_class_name
+  camera_runtime_unchanged_from_a8c28f2: true
+  original_p2_head_and_10_dirty_file_hashes_unchanged: true
+validation_fixes:
+- Flush shutdown statistics directly after rosconsole shutdown.
+- Include the final partial interval and require interval counts to equal whole-run
+  matched and dropped totals.
+- Fault checks wait for the injected source stamp; startup-silence regression reproduces
+  a stale pre-input diagnostic.
+- Declare generated morai_msgs/Msg target dependencies for the trace replay executable;
+  verified in a fresh ROS-only workspace without generated message cache.
+continuous_diagnostics:
+  date: '2026-10-07'
+  status: diagnosis_complete_acceptance_blocked
+  runtime_commit: 3177ffd1ba39cf07daad291d72d46faf43a07813
+  continuous_validation_tool_commit: 4626f3c8a850527f967a757e6a25c90904e765db
+  primary_trace_capture_head: ff88746559e22e707ff48fc815549861f486753c
+  shadow_trace_collection_tool_commit: c453b63a98e4465a1db33e31fb6415724a266893
+  trace_disabled_acceptance_head: d17ed0afc0c8071f94eb868a482e975c7b2fa575
+  container: asmc-camera-fusion-check
+  network: none
+  master_port: 11312
+  cuda_other_ros_inference: absent_at_start; shared bridge/master retained
+  policy_changes: []
+  scope: Replay recorded geometric observations through matching and continuous class
+    state transfer; not 3D projection or tracking reassociation.
+  cpu_recorded_input_probe:
+    pass: true
+    published_frames: 92
+    matched: 91
+    dropped: 0
+    states: 1219
+    carried_checks: 1241
+    matcher_decisions: 134
+    observations: 0
+    misses: 1148
+    births: 29
+    noise_recoveries: 0
+  fresh_message_build: pass; ROS-only new workspace with Main/Msg/morai_msgs
+  fresh_continuous_replay:
+    pass: true
+    published_frames: 508
+    matched: 500
+    dropped: 7
+    states: 16703
+    carried_checks: 16934
+    matcher_decisions: 732
+    observations: 119
+    misses: 6839
+    births: 410
+    noise_recoveries: 0
+  final_regressions:
+    outer_build: pass
+    nested_build: pass
+    main_tests:
+      tests: 267
+      failures: 0
+    camera_tests:
+      tests: 223
+      failures: 1
+      known_facade_failure:
+      - file: nosetests-test.test_facade_contract.py.xml
+        name: test_planning_launches_use_the_canonical_traffic_light_model
+        classname: test_facade_contract.PerceptionFacadeContractTest
+        message: "'false' != 'true'\n- false\n+ true\n : autonomy_no_bridges_v2.launch\
+          \ must not start a duplicate perception producer"
+        text: "Traceback (most recent call last):\n  File \"/usr/lib/python3.8/unittest/case.py\"\
+          , line 60, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.8/unittest/case.py\"\
+          , line 676, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.8/unittest/case.py\"\
+          , line 633, in _callTestMethod\n    method()\n  File \"/root/ws/src/asmc_camera/test/test_facade_contract.py\"\
+          , line 418, in test_planning_launches_use_the_canonical_traffic_light_model\n\
+          \    self.assertEqual(\n  File \"/usr/lib/python3.8/unittest/case.py\",\
+          \ line 912, in assertEqual\n    assertion_func(first, second, msg=msg)\n\
+          \  File \"/usr/lib/python3.8/unittest/case.py\", line 1292, in assertMultiLineEqual\n\
+          \    self.fail(self._formatMessage(msg, standardMsg))\n  File \"/usr/lib/python3.8/unittest/case.py\"\
+          , line 753, in fail\n    raise self.failureException(msg)\nAssertionError:\
+          \ 'false' != 'true'\n- false\n+ true\n : autonomy_no_bridges_v2.launch must\
+          \ not start a duplicate perception producer\n"
+    messages_tests:
+      tests: 1
+      failures: 0
+    jamming_tests:
+      tests: 94
+      failures: 0
+    contracts_diagnostics_tests:
+      tests: 48
+      failures: 0
+    validators:
+      count: 4
+      failures: 0
+  cpp_synthetic_state_tests:
+    tests: 5
+    failures: 0
+  continuous_fixture_tests:
+    tests: 15
+    failures: 0
+  continuous_actual_traces:
+    primary-trace:
+      new_1.fusion:
+        returncode: 0
+        stdout: '{"pass":true,"published_frames":506,"matched":504,"dropped":1,"states":16741,"carried_checks":16756,"matcher_decisions":663,"observations":116,"misses":6867,"births":403,"noise_recoveries":0}
+
+          '
+        stderr: ''
+      new_2.fusion:
+        returncode: 0
+        stdout: '{"pass":true,"published_frames":507,"matched":507,"dropped":0,"states":16480,"carried_checks":16480,"matcher_decisions":659,"observations":118,"misses":6913,"births":397,"noise_recoveries":0}
+
+          '
+        stderr: ''
+      old_1.fusion:
+        returncode: 0
+        stdout: '{"pass":true,"published_frames":508,"matched":500,"dropped":7,"states":16703,"carried_checks":16934,"matcher_decisions":732,"observations":119,"misses":6839,"births":410,"noise_recoveries":0}
+
+          '
+        stderr: ''
+      old_2.fusion:
+        returncode: 0
+        stdout: '{"pass":true,"published_frames":510,"matched":504,"dropped":5,"states":16866,"carried_checks":17004,"matcher_decisions":745,"observations":117,"misses":6872,"births":404,"noise_recoveries":0}
+
+          '
+        stderr: ''
+    shadow-trace:
+      new_1.fusion:
+        returncode: 0
+        stdout: '{"pass":true,"published_frames":186,"matched":186,"dropped":0,"states":11373,"carried_checks":11373,"matcher_decisions":208,"observations":0,"misses":2656,"births":265,"noise_recoveries":0}
+
+          '
+        stderr: ''
+      new_2.fusion:
+        returncode: 0
+        stdout: '{"pass":true,"published_frames":184,"matched":184,"dropped":0,"states":11745,"carried_checks":11745,"matcher_decisions":205,"observations":0,"misses":2664,"births":277,"noise_recoveries":0}
+
+          '
+        stderr: ''
+      old_1.fusion:
+        returncode: 0
+        stdout: '{"pass":true,"published_frames":183,"matched":182,"dropped":0,"states":11702,"carried_checks":11722,"matcher_decisions":253,"observations":0,"misses":2605,"births":279,"noise_recoveries":0}
+
+          '
+        stderr: ''
+      old_2.fusion:
+        returncode: 0
+        stdout: '{"pass":true,"published_frames":186,"matched":185,"dropped":0,"states":11313,"carried_checks":11333,"matcher_decisions":257,"observations":0,"misses":2642,"births":271,"noise_recoveries":0}
+
+          '
+        stderr: ''
+  continuous_totals:
+    published_frames: 2770
+    matched: 2752
+    dropped: 13
+    states: 112923
+    carried_checks: 113347
+    matcher_decisions: 3722
+    observations: 470
+    misses: 38058
+    births: 2706
+    noise_recoveries: 0
+  diagnostic_stages:
+  - stage: primary-trace
+    returncode: 1
+    elapsed_sec: 226.77554107600008
+  - stage: shadow-trace
+    returncode: 0
+    elapsed_sec: 129.07484421100526
+  acceptance_stages:
+  - stage: primary-acceptance
+    returncode: 1
+    elapsed_sec: 225.37206073499692
+  - stage: shadow-acceptance
+    returncode: 0
+    elapsed_sec: 128.10469674399064
+  - stage: objects-smoke
+    returncode: 0
+    elapsed_sec: 34.587801467991085
+  - stage: faults
+    returncode: 0
+    elapsed_sec: 13.951395324998884
+  trace_summaries:
+    primary-trace:
+      new_1:
+        processed_supply:
+          processed: 506
+          matched: 504
+          dropped: 1
+          pending: 1
+          startup_removed: 0
+          overflow_removed: 0
+        processed_supply_accounting_consistent: true
+        continuous_observation_complete: true
+        timeout_drops: 0
+        skipped_generations: 142
+        processing_ms:
+          median: 77.845344
+          p95: 120.330006
+        publication_state_lag_ms:
+          median: 0.0
+          p95: 81.0
+          max: 147.0
+        objects_without_update_in_published_frame: 822
+      new_2:
+        processed_supply:
+          processed: 507
+          matched: 507
+          dropped: 0
+          pending: 0
+          startup_removed: 0
+          overflow_removed: 0
+        processed_supply_accounting_consistent: true
+        continuous_observation_complete: true
+        timeout_drops: 0
+        skipped_generations: 141
+        processing_ms:
+          median: 76.1269165
+          p95: 118.771819
+        publication_state_lag_ms:
+          median: 0.0
+          p95: 82.0
+          max: 89.0
+        objects_without_update_in_published_frame: 600
+      old_1:
+        processed_supply:
+          processed: 508
+          matched: 500
+          dropped: 7
+          pending: 1
+          startup_removed: 0
+          overflow_removed: 0
+        processed_supply_accounting_consistent: true
+        continuous_observation_complete: true
+        timeout_drops: 0
+        skipped_generations: 140
+        processing_ms:
+          median: 77.215334
+          p95: 119.314613
+        publication_state_lag_ms:
+          median: 0.0
+          p95: 87.0
+          max: 153.0
+        objects_without_update_in_published_frame: 1279
+      old_2:
+        processed_supply:
+          processed: 510
+          matched: 504
+          dropped: 5
+          pending: 1
+          startup_removed: 0
+          overflow_removed: 0
+        processed_supply_accounting_consistent: true
+        continuous_observation_complete: true
+        timeout_drops: 0
+        skipped_generations: 138
+        processing_ms:
+          median: 73.484506
+          p95: 118.734442
+        publication_state_lag_ms:
+          median: 0.0
+          p95: 87.0
+          max: 152.0
+        objects_without_update_in_published_frame: 970
+    shadow-trace:
+      new_1:
+        processed_supply:
+          processed: 186
+          matched: 186
+          dropped: 0
+          pending: 0
+          startup_removed: 0
+          overflow_removed: 0
+        processed_supply_accounting_consistent: true
+        continuous_observation_complete: true
+        timeout_drops: 0
+        skipped_generations: 20
+        processing_ms:
+          median: 97.4364635
+          p95: 149.720883
+        publication_state_lag_ms:
+          median: 0.0
+          p95: 100.0
+          max: 232.0
+        objects_without_update_in_published_frame: 384
+      new_2:
+        processed_supply:
+          processed: 184
+          matched: 184
+          dropped: 0
+          pending: 0
+          startup_removed: 0
+          overflow_removed: 0
+        processed_supply_accounting_consistent: true
+        continuous_observation_complete: true
+        timeout_drops: 0
+        skipped_generations: 23
+        processing_ms:
+          median: 95.839247
+          p95: 153.388731
+        publication_state_lag_ms:
+          median: 0.0
+          p95: 0.0
+          max: 231.0
+        objects_without_update_in_published_frame: 320
+      old_1:
+        processed_supply:
+          processed: 183
+          matched: 182
+          dropped: 0
+          pending: 1
+          startup_removed: 0
+          overflow_removed: 0
+        processed_supply_accounting_consistent: true
+        continuous_observation_complete: true
+        timeout_drops: 0
+        skipped_generations: 24
+        processing_ms:
+          median: 95.721766
+          p95: 158.121393
+        publication_state_lag_ms:
+          median: 0.0
+          p95: 117.0
+          max: 232.0
+        objects_without_update_in_published_frame: 397
+      old_2:
+        processed_supply:
+          processed: 186
+          matched: 185
+          dropped: 0
+          pending: 1
+          startup_removed: 0
+          overflow_removed: 0
+        processed_supply_accounting_consistent: true
+        continuous_observation_complete: true
+        timeout_drops: 0
+        skipped_generations: 22
+        processing_ms:
+          median: 99.451176
+          p95: 148.389911
+        publication_state_lag_ms:
+          median: 0.0
+          p95: 118.0
+          max: 232.0
+        objects_without_update_in_published_frame: 338
+  processed_supply_comparisons:
+    primary-trace:
+      new_1:
+        common_matched_lidar_stamps: 398
+        old_only_matched_stamps:
+        - 1790654785770000000
+        - 1790654797626000000
+        - 1790654798380000000
+        - 1790654798832000000
+        - 1790654799338000000
+        - 1790654799557000000
+        - 1790654800238000000
+        - 1790654800926000000
+        - 1790654801076000000
+        - 1790654801442000000
+        - 1790654801678000000
+        - 1790654801810000000
+        - 1790654802196000000
+        - 1790654802435000000
+        - 1790654802589000000
+        - 1790654802976000000
+        - 1790654803189000000
+        - 1790654803440000000
+        - 1790654803594000000
+        - 1790654803729000000
+        - 1790654803982000000
+        - 1790654804498000000
+        - 1790654804735000000
+        - 1790654804885000000
+        - 1790654805018000000
+        - 1790654805235000000
+        - 1790654805471000000
+        - 1790654805622000000
+        - 1790654806139000000
+        - 1790654806375000000
+        - 1790654806505000000
+        - 1790654806740000000
+        - 1790654806978000000
+        - 1790654807110000000
+        - 1790654807784000000
+        - 1790654808001000000
+        - 1790654808153000000
+        - 1790654808538000000
+        - 1790654808925000000
+        - 1790654809527000000
+        - 1790654809895000000
+        - 1790654810286000000
+        - 1790654810493000000
+        - 1790654810743000000
+        - 1790654811450000000
+        - 1790654811587000000
+        - 1790654812278000000
+        - 1790654812492000000
+        - 1790654812880000000
+        - 1790654813131000000
+        - 1790654813349000000
+        - 1790654813586000000
+        - 1790654813738000000
+        - 1790654813878000000
+        - 1790654814092000000
+        - 1790654814243000000
+        - 1790654814479000000
+        - 1790654814694000000
+        - 1790654815302000000
+        - 1790654815540000000
+        - 1790654815778000000
+        - 1790654815910000000
+        - 1790654816295000000
+        - 1790654816533000000
+        - 1790654816747000000
+        - 1790654816902000000
+        - 1790654817141000000
+        - 1790654817373000000
+        - 1790654817504000000
+        - 1790654817740000000
+        - 1790654818107000000
+        - 1790654818342000000
+        - 1790654818710000000
+        - 1790654818880000000
+        - 1790654819096000000
+        - 1790654819246000000
+        - 1790654819482000000
+        - 1790654819985000000
+        - 1790654820135000000
+        - 1790654820373000000
+        - 1790654820524000000
+        - 1790654820892000000
+        - 1790654821040000000
+        - 1790654821278000000
+        - 1790654821407000000
+        - 1790654821642000000
+        - 1790654821882000000
+        - 1790654822032000000
+        - 1790654822247000000
+        - 1790654822486000000
+        - 1790654822701000000
+        - 1790654822938000000
+        - 1790654823175000000
+        - 1790654823542000000
+        - 1790654823844000000
+        - 1790654825336000000
+        - 1790654826376000000
+        - 1790654826744000000
+        - 1790654827043000000
+        - 1790654827412000000
+        - 1790654827782000000
+        - 1790654828638000000
+        new_only_matched_stamps:
+        - 1790654798295000000
+        - 1790654798748000000
+        - 1790654799273000000
+        - 1790654799494000000
+        - 1790654800173000000
+        - 1790654800776000000
+        - 1790654800990000000
+        - 1790654801379000000
+        - 1790654801594000000
+        - 1790654801743000000
+        - 1790654802115000000
+        - 1790654802347000000
+        - 1790654802501000000
+        - 1790654802889000000
+        - 1790654803125000000
+        - 1790654803274000000
+        - 1790654803506000000
+        - 1790654803682000000
+        - 1790654803895000000
+        - 1790654804434000000
+        - 1790654804583000000
+        - 1790654804649000000
+        - 1790654804798000000
+        - 1790654804952000000
+        - 1790654805170000000
+        - 1790654805318000000
+        - 1790654805535000000
+        - 1790654805689000000
+        - 1790654806052000000
+        - 1790654806289000000
+        - 1790654806438000000
+        - 1790654806677000000
+        - 1790654806891000000
+        - 1790654807039000000
+        - 1790654807871000000
+        - 1790654807934000000
+        - 1790654808089000000
+        - 1790654808241000000
+        - 1790654808623000000
+        - 1790654808989000000
+        - 1790654809590000000
+        - 1790654809979000000
+        - 1790654810342000000
+        - 1790654810579000000
+        - 1790654810830000000
+        - 1790654811386000000
+        - 1790654811537000000
+        - 1790654812341000000
+        - 1790654812579000000
+        - 1790654813044000000
+        - 1790654813280000000
+        - 1790654813434000000
+        - 1790654813649000000
+        - 1790654813791000000
+        - 1790654814026000000
+        - 1790654814178000000
+        - 1790654814393000000
+        - 1790654814543000000
+        - 1790654814780000000
+        - 1790654815151000000
+        - 1790654815390000000
+        - 1790654815608000000
+        - 1790654815843000000
+        - 1790654816231000000
+        - 1790654816447000000
+        - 1790654816685000000
+        - 1790654816835000000
+        - 1790654817052000000
+        - 1790654817204000000
+        - 1790654817438000000
+        - 1790654817675000000
+        - 1790654817825000000
+        - 1790654818193000000
+        - 1790654818410000000
+        - 1790654818796000000
+        - 1790654818945000000
+        - 1790654819181000000
+        - 1790654819397000000
+        - 1790654819933000000
+        - 1790654820070000000
+        - 1790654820284000000
+        - 1790654820452000000
+        - 1790654820805000000
+        - 1790654820956000000
+        - 1790654821189000000
+        - 1790654821342000000
+        - 1790654821579000000
+        - 1790654821797000000
+        - 1790654821945000000
+        - 1790654822181000000
+        - 1790654822398000000
+        - 1790654822637000000
+        - 1790654822789000000
+        - 1790654823090000000
+        - 1790654823308000000
+        - 1790654823623000000
+        - 1790654823927000000
+        - 1790654825385000000
+        - 1790654826441000000
+        - 1790654826829000000
+        - 1790654827196000000
+        - 1790654827581000000
+        - 1790654828183000000
+        - 1790654830648000000
+        - 1790654832684000000
+        - 1790654833448000000
+        different_yolo_selections:
+        - lidar_stamp_ns: 1790654786373000000
+          old_yolo_stamp_ns: 1790654786349985599
+          new_yolo_stamp_ns: 1790654786392801046
+          old_waited_ms: 72.507227
+          new_waited_ms: 70.329403
+        - lidar_stamp_ns: 1790654786673000000
+          old_yolo_stamp_ns: 1790654786651868820
+          new_yolo_stamp_ns: 1790654786692717075
+          old_waited_ms: 83.27341
+          new_waited_ms: 17.354007
+        - lidar_stamp_ns: 1790654787676000000
+          old_yolo_stamp_ns: 1790654787652085304
+          new_yolo_stamp_ns: 1790654787695428609
+          old_waited_ms: 60.271194
+          new_waited_ms: 59.299516
+        - lidar_stamp_ns: 1790654787816000000
+          old_yolo_stamp_ns: 1790654787834044218
+          new_yolo_stamp_ns: 1790654787801671266
+          old_waited_ms: 84.884471
+          new_waited_ms: 81.191029
+        - lidar_stamp_ns: 1790654788791000000
+          old_yolo_stamp_ns: 1790654788828454256
+          new_yolo_stamp_ns: 1790654788807853460
+          old_waited_ms: 62.543648
+          new_waited_ms: 9.527286
+        - lidar_stamp_ns: 1790654788854000000
+          old_yolo_stamp_ns: 1790654788886025428
+          new_yolo_stamp_ns: 1790654788828454256
+          old_waited_ms: 73.908473
+          new_waited_ms: 75.927551
+        - lidar_stamp_ns: 1790654789077000000
+          old_yolo_stamp_ns: 1790654789122673988
+          new_yolo_stamp_ns: 1790654789095180511
+          old_waited_ms: 65.795037
+          new_waited_ms: 11.275053
+        - lidar_stamp_ns: 1790654789141000000
+          old_yolo_stamp_ns: 1790654789189995527
+          new_yolo_stamp_ns: 1790654789122673988
+          old_waited_ms: 77.920199
+          new_waited_ms: 59.316711
+        - lidar_stamp_ns: 1790654789208000000
+          old_yolo_stamp_ns: 1790654789240372657
+          new_yolo_stamp_ns: 1790654789189995527
+          old_waited_ms: 86.901098
+          new_waited_ms: 95.801664
+        - lidar_stamp_ns: 1790654789293000000
+          old_yolo_stamp_ns: 1790654789323556661
+          new_yolo_stamp_ns: 1790654789293058872
+          old_waited_ms: 80.332164
+          new_waited_ms: 12.245755
+        - lidar_stamp_ns: 1790654790100000000
+          old_yolo_stamp_ns: 1790654790131371974
+          new_yolo_stamp_ns: 1790654790098880529
+          old_waited_ms: 82.787158
+          new_waited_ms: 86.984424
+        - lidar_stamp_ns: 1790654790184000000
+          old_yolo_stamp_ns: 1790654790220284223
+          new_yolo_stamp_ns: 1790654790202439308
+          old_waited_ms: 82.674821
+          new_waited_ms: 78.022519
+        - lidar_stamp_ns: 1790654790250000000
+          old_yolo_stamp_ns: 1790654790284145116
+          new_yolo_stamp_ns: 1790654790220284223
+          old_waited_ms: 78.809386
+          new_waited_ms: 74.763909
+        - lidar_stamp_ns: 1790654790473000000
+          old_yolo_stamp_ns: 1790654790434894323
+          new_yolo_stamp_ns: 1790654790490385770
+          old_waited_ms: 51.18466
+          new_waited_ms: 12.58412
+        - lidar_stamp_ns: 1790654791176000000
+          old_yolo_stamp_ns: 1790654791135421276
+          new_yolo_stamp_ns: 1790654791194075107
+          old_waited_ms: 59.779584
+          new_waited_ms: 61.479747
+        - lidar_stamp_ns: 1790654791394000000
+          old_yolo_stamp_ns: 1790654791426367282
+          new_yolo_stamp_ns: 1790654791394925355
+          old_waited_ms: 79.892763
+          new_waited_ms: 11.041426
+        - lidar_stamp_ns: 1790654791479000000
+          old_yolo_stamp_ns: 1790654791525566101
+          new_yolo_stamp_ns: 1790654791498363971
+          old_waited_ms: 63.13019
+          new_waited_ms: 73.319972
+        - lidar_stamp_ns: 1790654791544000000
+          old_yolo_stamp_ns: 1790654791591604232
+          new_yolo_stamp_ns: 1790654791525566101
+          old_waited_ms: 94.526543
+          new_waited_ms: 83.591948
+        - lidar_stamp_ns: 1790654792372000000
+          old_yolo_stamp_ns: 1790654792332223415
+          new_yolo_stamp_ns: 1790654792392375946
+          old_waited_ms: 71.269656
+          new_waited_ms: 12.1391
+        - lidar_stamp_ns: 1790654792672000000
+          old_yolo_stamp_ns: 1790654792651360273
+          new_yolo_stamp_ns: 1790654792690761327
+          old_waited_ms: 93.632937
+          new_waited_ms: 9.769877
+        - lidar_stamp_ns: 1790654793577000000
+          old_yolo_stamp_ns: 1790654793538591384
+          new_yolo_stamp_ns: 1790654793594921827
+          old_waited_ms: 66.574918
+          new_waited_ms: 11.00327
+        - lidar_stamp_ns: 1790654794482000000
+          old_yolo_stamp_ns: 1790654794530160903
+          new_yolo_stamp_ns: 1790654794501518011
+          old_waited_ms: 87.363657
+          new_waited_ms: 14.270714
+        - lidar_stamp_ns: 1790654794551000000
+          old_yolo_stamp_ns: 1790654794585310459
+          new_yolo_stamp_ns: 1790654794530160903
+          old_waited_ms: 82.165997
+          new_waited_ms: 87.633153
+        - lidar_stamp_ns: 1790654796281000000
+          old_yolo_stamp_ns: 1790654796241756200
+          new_yolo_stamp_ns: 1790654796298830032
+          old_waited_ms: 79.737889
+          new_waited_ms: 1.445801
+        - lidar_stamp_ns: 1790654796497000000
+          old_yolo_stamp_ns: 1790654796527815103
+          new_yolo_stamp_ns: 1790654796497390031
+          old_waited_ms: 13.468641
+          new_waited_ms: 1.557362
+        - lidar_stamp_ns: 1790654796582000000
+          old_yolo_stamp_ns: 1790654796600641965
+          new_yolo_stamp_ns: 1790654796629936456
+          old_waited_ms: 74.250399
+          new_waited_ms: 0.81154
+        - lidar_stamp_ns: 1790654796647000000
+          old_yolo_stamp_ns: 1790654796629936456
+          new_yolo_stamp_ns: 1790654796677286863
+          old_waited_ms: 77.505563
+          new_waited_ms: 1.343246
+        - lidar_stamp_ns: 1790654797476000000
+          old_yolo_stamp_ns: 1790654797453940629
+          new_yolo_stamp_ns: 1790654797494048595
+          old_waited_ms: 79.130528
+          new_waited_ms: 0.992273
+        - lidar_stamp_ns: 1790654798986000000
+          old_yolo_stamp_ns: 1790654799021870851
+          new_yolo_stamp_ns: 1790654799003754377
+          old_waited_ms: 1.188202
+          new_waited_ms: 0.772382
+        - lidar_stamp_ns: 1790654799050000000
+          old_yolo_stamp_ns: 1790654799082900285
+          new_yolo_stamp_ns: 1790654799021870851
+          old_waited_ms: 1.573976
+          new_waited_ms: 1.620893
+        - lidar_stamp_ns: 1790654799885000000
+          old_yolo_stamp_ns: 1790654799919743537
+          new_yolo_stamp_ns: 1790654799901785850
+          old_waited_ms: 1.535826
+          new_waited_ms: 1.115109
+        - lidar_stamp_ns: 1790654799950000000
+          old_yolo_stamp_ns: 1790654799982391595
+          new_yolo_stamp_ns: 1790654799919743537
+          old_waited_ms: 1.36934
+          new_waited_ms: 1.304933
+        - lidar_stamp_ns: 1790654802284000000
+          old_yolo_stamp_ns: 1790654802319122314
+          new_yolo_stamp_ns: 1790654802302233457
+          old_waited_ms: 1.50261
+          new_waited_ms: 1.208653
+        - lidar_stamp_ns: 1790654802652000000
+          old_yolo_stamp_ns: 1790654802689606666
+          new_yolo_stamp_ns: 1790654802626763820
+          old_waited_ms: 1.101469
+          new_waited_ms: 1.97387
+        - lidar_stamp_ns: 1790654807733000000
+          old_yolo_stamp_ns: 1790654807772933006
+          new_yolo_stamp_ns: 1790654807750361204
+          old_waited_ms: 1.301363
+          new_waited_ms: 1.419116
+        - lidar_stamp_ns: 1790654809292000000
+          old_yolo_stamp_ns: 1790654809321847438
+          new_yolo_stamp_ns: 1790654809293075084
+          old_waited_ms: 2.643468
+          new_waited_ms: 1.245907
+        - lidar_stamp_ns: 1790654809677000000
+          old_yolo_stamp_ns: 1790654809639358043
+          new_yolo_stamp_ns: 1790654809695188999
+          old_waited_ms: 1.423378
+          new_waited_ms: 1.434033
+        - lidar_stamp_ns: 1790654810197000000
+          old_yolo_stamp_ns: 1790654810227397203
+          new_yolo_stamp_ns: 1790654810195734262
+          old_waited_ms: 1.203033
+          new_waited_ms: 1.19149
+        - lidar_stamp_ns: 1790654811674000000
+          old_yolo_stamp_ns: 1790654811635551691
+          new_yolo_stamp_ns: 1790654811691637039
+          old_waited_ms: 18.001646
+          new_waited_ms: 1.316568
+        - lidar_stamp_ns: 1790654816989000000
+          old_yolo_stamp_ns: 1790654817026730537
+          new_yolo_stamp_ns: 1790654817007233381
+          old_waited_ms: 1.142637
+          new_waited_ms: 1.146658
+        - lidar_stamp_ns: 1790654818279000000
+          old_yolo_stamp_ns: 1790654818323179006
+          new_yolo_stamp_ns: 1790654818296934366
+          old_waited_ms: 0.790267
+          new_waited_ms: 0.86202
+        - lidar_stamp_ns: 1790654821494000000
+          old_yolo_stamp_ns: 1790654821524328947
+          new_yolo_stamp_ns: 1790654821492602825
+          old_waited_ms: 1.133939
+          new_waited_ms: 0.808443
+        - lidar_stamp_ns: 1790654823392000000
+          old_yolo_stamp_ns: 1790654823426615715
+          new_yolo_stamp_ns: 1790654823408238649
+          old_waited_ms: 1.03161
+          new_waited_ms: 0.899485
+        - lidar_stamp_ns: 1790654823455000000
+          old_yolo_stamp_ns: 1790654823487312078
+          new_yolo_stamp_ns: 1790654823426615715
+          old_waited_ms: 0.893802
+          new_waited_ms: 1.193022
+        - lidar_stamp_ns: 1790654824380000000
+          old_yolo_stamp_ns: 1790654824425607919
+          new_yolo_stamp_ns: 1790654824398288965
+          old_waited_ms: 1.217274
+          new_waited_ms: 1.266621
+        - lidar_stamp_ns: 1790654824681000000
+          old_yolo_stamp_ns: 1790654824727232456
+          new_yolo_stamp_ns: 1790654824699247121
+          old_waited_ms: 0.732654
+          new_waited_ms: 1.472652
+        - lidar_stamp_ns: 1790654824746000000
+          old_yolo_stamp_ns: 1790654824793605327
+          new_yolo_stamp_ns: 1790654824727232456
+          old_waited_ms: 1.42084
+          new_waited_ms: 1.363501
+        - lidar_stamp_ns: 1790654826678000000
+          old_yolo_stamp_ns: 1790654826724142313
+          new_yolo_stamp_ns: 1790654826695662021
+          old_waited_ms: 1.004033
+          new_waited_ms: 1.085575
+        - lidar_stamp_ns: 1790654827281000000
+          old_yolo_stamp_ns: 1790654827325957059
+          new_yolo_stamp_ns: 1790654827298443555
+          old_waited_ms: 0.8657
+          new_waited_ms: 0.878145
+        - lidar_stamp_ns: 1790654827346000000
+          old_yolo_stamp_ns: 1790654827392742633
+          new_yolo_stamp_ns: 1790654827325957059
+          old_waited_ms: 1.005608
+          new_waited_ms: 1.147203
+        - lidar_stamp_ns: 1790654828487000000
+          old_yolo_stamp_ns: 1790654828523998498
+          new_yolo_stamp_ns: 1790654828504644870
+          old_waited_ms: 0.764101
+          new_waited_ms: 0.752718
+        - lidar_stamp_ns: 1790654828550000000
+          old_yolo_stamp_ns: 1790654828582369565
+          new_yolo_stamp_ns: 1790654828523998498
+          old_waited_ms: 1.077782
+          new_waited_ms: 1.062913
+        - lidar_stamp_ns: 1790654828905000000
+          old_yolo_stamp_ns: 1790654828937008857
+          new_yolo_stamp_ns: 1790654828904198408
+          old_waited_ms: 11.224673
+          new_waited_ms: 12.84737
+        - lidar_stamp_ns: 1790654830498000000
+          old_yolo_stamp_ns: 1790654830528968334
+          new_yolo_stamp_ns: 1790654830497945785
+          old_waited_ms: 100.44046
+          new_waited_ms: 87.949042
+        - lidar_stamp_ns: 1790654830583000000
+          old_yolo_stamp_ns: 1790654830629041433
+          new_yolo_stamp_ns: 1790654830602149963
+          old_waited_ms: 57.156884
+          new_waited_ms: 62.547945
+        - lidar_stamp_ns: 1790654830885000000
+          old_yolo_stamp_ns: 1790654830922356843
+          new_yolo_stamp_ns: 1790654830903028249
+          old_waited_ms: 74.060349
+          new_waited_ms: 83.034391
+        - lidar_stamp_ns: 1790654830950000000
+          old_yolo_stamp_ns: 1790654830981793165
+          new_yolo_stamp_ns: 1790654830922356843
+          old_waited_ms: 61.144086
+          new_waited_ms: 61.769966
+        - lidar_stamp_ns: 1790654831015000000
+          old_yolo_stamp_ns: 1790654831048269033
+          new_yolo_stamp_ns: 1790654830981793165
+          old_waited_ms: 79.743645
+          new_waited_ms: 69.348727
+        - lidar_stamp_ns: 1790654832597000000
+          old_yolo_stamp_ns: 1790654832633246183
+          new_yolo_stamp_ns: 1790654832597956657
+          old_waited_ms: 90.656696
+          new_waited_ms: 14.505103
+        - lidar_stamp_ns: 1790654833383000000
+          old_yolo_stamp_ns: 1790654833431044578
+          new_yolo_stamp_ns: 1790654833402823686
+          old_waited_ms: 60.971055
+          new_waited_ms: 78.422966
+        - lidar_stamp_ns: 1790654833787000000
+          old_yolo_stamp_ns: 1790654833825619220
+          new_yolo_stamp_ns: 1790654833805701017
+          old_waited_ms: 62.011835
+          new_waited_ms: 68.776725
+        - lidar_stamp_ns: 1790654833852000000
+          old_yolo_stamp_ns: 1790654833884969711
+          new_yolo_stamp_ns: 1790654833825619220
+          old_waited_ms: 92.959554
+          new_waited_ms: 83.037763
+        old_only_processed_lidar_stamps:
+        - 1790654797626000000
+        - 1790654798380000000
+        - 1790654798832000000
+        - 1790654799338000000
+        - 1790654799557000000
+        - 1790654800238000000
+        - 1790654800926000000
+        - 1790654801076000000
+        - 1790654801442000000
+        - 1790654801678000000
+        - 1790654801810000000
+        - 1790654802196000000
+        - 1790654802435000000
+        - 1790654802589000000
+        - 1790654802976000000
+        - 1790654803189000000
+        - 1790654803440000000
+        - 1790654803594000000
+        - 1790654803729000000
+        - 1790654803982000000
+        - 1790654804498000000
+        - 1790654804735000000
+        - 1790654804885000000
+        - 1790654805018000000
+        - 1790654805235000000
+        - 1790654805471000000
+        - 1790654805622000000
+        - 1790654805990000000
+        - 1790654806139000000
+        - 1790654806375000000
+        - 1790654806505000000
+        - 1790654806740000000
+        - 1790654806978000000
+        - 1790654807110000000
+        - 1790654807784000000
+        - 1790654808001000000
+        - 1790654808153000000
+        - 1790654808538000000
+        - 1790654808925000000
+        - 1790654809527000000
+        - 1790654809895000000
+        - 1790654810286000000
+        - 1790654810493000000
+        - 1790654810743000000
+        - 1790654811450000000
+        - 1790654811587000000
+        - 1790654812278000000
+        - 1790654812492000000
+        - 1790654812880000000
+        - 1790654813131000000
+        - 1790654813349000000
+        - 1790654813586000000
+        - 1790654813738000000
+        - 1790654813878000000
+        - 1790654814092000000
+        - 1790654814243000000
+        - 1790654814479000000
+        - 1790654814694000000
+        - 1790654815087000000
+        - 1790654815302000000
+        - 1790654815540000000
+        - 1790654815778000000
+        - 1790654815910000000
+        - 1790654816295000000
+        - 1790654816533000000
+        - 1790654816747000000
+        - 1790654816902000000
+        - 1790654817141000000
+        - 1790654817373000000
+        - 1790654817504000000
+        - 1790654817740000000
+        - 1790654818107000000
+        - 1790654818342000000
+        - 1790654818710000000
+        - 1790654818880000000
+        - 1790654819096000000
+        - 1790654819246000000
+        - 1790654819482000000
+        - 1790654819985000000
+        - 1790654820135000000
+        - 1790654820373000000
+        - 1790654820524000000
+        - 1790654820892000000
+        - 1790654821040000000
+        - 1790654821278000000
+        - 1790654821407000000
+        - 1790654821642000000
+        - 1790654821882000000
+        - 1790654822032000000
+        - 1790654822247000000
+        - 1790654822486000000
+        - 1790654822701000000
+        - 1790654822938000000
+        - 1790654823175000000
+        - 1790654823542000000
+        - 1790654823844000000
+        - 1790654825336000000
+        - 1790654826376000000
+        - 1790654826744000000
+        - 1790654827043000000
+        - 1790654827412000000
+        - 1790654827782000000
+        - 1790654828638000000
+        new_only_processed_lidar_stamps:
+        - 1790654798295000000
+        - 1790654798748000000
+        - 1790654799273000000
+        - 1790654799494000000
+        - 1790654800173000000
+        - 1790654800776000000
+        - 1790654800990000000
+        - 1790654801379000000
+        - 1790654801594000000
+        - 1790654801743000000
+        - 1790654802115000000
+        - 1790654802347000000
+        - 1790654802501000000
+        - 1790654802889000000
+        - 1790654803125000000
+        - 1790654803274000000
+        - 1790654803506000000
+        - 1790654803682000000
+        - 1790654803895000000
+        - 1790654804434000000
+        - 1790654804649000000
+        - 1790654804798000000
+        - 1790654804952000000
+        - 1790654805170000000
+        - 1790654805318000000
+        - 1790654805535000000
+        - 1790654805689000000
+        - 1790654806052000000
+        - 1790654806289000000
+        - 1790654806438000000
+        - 1790654806677000000
+        - 1790654806891000000
+        - 1790654807039000000
+        - 1790654807871000000
+        - 1790654807934000000
+        - 1790654808241000000
+        - 1790654808623000000
+        - 1790654808989000000
+        - 1790654809590000000
+        - 1790654809979000000
+        - 1790654810342000000
+        - 1790654810579000000
+        - 1790654810830000000
+        - 1790654811386000000
+        - 1790654811537000000
+        - 1790654812341000000
+        - 1790654812579000000
+        - 1790654813044000000
+        - 1790654813280000000
+        - 1790654813434000000
+        - 1790654813649000000
+        - 1790654813791000000
+        - 1790654814026000000
+        - 1790654814178000000
+        - 1790654814393000000
+        - 1790654814543000000
+        - 1790654814780000000
+        - 1790654815151000000
+        - 1790654815390000000
+        - 1790654815608000000
+        - 1790654815843000000
+        - 1790654816231000000
+        - 1790654816447000000
+        - 1790654816685000000
+        - 1790654816835000000
+        - 1790654817052000000
+        - 1790654817204000000
+        - 1790654817438000000
+        - 1790654817675000000
+        - 1790654817825000000
+        - 1790654818193000000
+        - 1790654818410000000
+        - 1790654818796000000
+        - 1790654818945000000
+        - 1790654819181000000
+        - 1790654819397000000
+        - 1790654819933000000
+        - 1790654820070000000
+        - 1790654820284000000
+        - 1790654820452000000
+        - 1790654820805000000
+        - 1790654820956000000
+        - 1790654821189000000
+        - 1790654821342000000
+        - 1790654821579000000
+        - 1790654821797000000
+        - 1790654821945000000
+        - 1790654822181000000
+        - 1790654822398000000
+        - 1790654822637000000
+        - 1790654822789000000
+        - 1790654823090000000
+        - 1790654823308000000
+        - 1790654823623000000
+        - 1790654823927000000
+        - 1790654825385000000
+        - 1790654826441000000
+        - 1790654826829000000
+        - 1790654827196000000
+        - 1790654827581000000
+        - 1790654828183000000
+        processed_lidar_count_delta: -2
+        matched_count_delta: 4
+        processed_supply_deltas:
+          processed: -2
+          matched: 4
+          dropped: -6
+          pending: 0
+          startup_removed: 0
+          overflow_removed: 0
+        matched_delta_explained_by_processed_supply: true
+      new_2:
+        common_matched_lidar_stamps: 435
+        old_only_matched_stamps:
+        - 1790654798143000000
+        - 1790654799950000000
+        - 1790654800323000000
+        - 1790654801510000000
+        - 1790654802284000000
+        - 1790654802652000000
+        - 1790654804498000000
+        - 1790654804885000000
+        - 1790654805018000000
+        - 1790654805385000000
+        - 1790654805622000000
+        - 1790654805772000000
+        - 1790654806139000000
+        - 1790654806375000000
+        - 1790654806505000000
+        - 1790654806740000000
+        - 1790654806978000000
+        - 1790654807110000000
+        - 1790654807494000000
+        - 1790654807733000000
+        - 1790654808474000000
+        - 1790654809527000000
+        - 1790654810286000000
+        - 1790654811674000000
+        - 1790654811890000000
+        - 1790654812278000000
+        - 1790654812492000000
+        - 1790654812880000000
+        - 1790654813131000000
+        - 1790654813349000000
+        - 1790654813586000000
+        - 1790654813738000000
+        - 1790654813878000000
+        - 1790654814243000000
+        - 1790654814479000000
+        - 1790654814629000000
+        - 1790654814845000000
+        - 1790654815238000000
+        - 1790654815474000000
+        - 1790654815693000000
+        - 1790654817290000000
+        - 1790654817890000000
+        - 1790654818040000000
+        - 1790654818279000000
+        - 1790654818642000000
+        - 1790654818880000000
+        - 1790654819332000000
+        - 1790654819548000000
+        - 1790654820221000000
+        - 1790654822032000000
+        - 1790654822852000000
+        - 1790654823175000000
+        - 1790654823392000000
+        - 1790654823692000000
+        - 1790654824078000000
+        - 1790654824380000000
+        - 1790654824681000000
+        - 1790654824982000000
+        - 1790654825249000000
+        - 1790654825537000000
+        - 1790654825841000000
+        - 1790654826226000000
+        - 1790654826507000000
+        - 1790654826979000000
+        - 1790654827281000000
+        new_only_matched_stamps:
+        - 1790654798295000000
+        - 1790654800036000000
+        - 1790654800477000000
+        - 1790654801594000000
+        - 1790654802347000000
+        - 1790654802740000000
+        - 1790654804434000000
+        - 1790654804583000000
+        - 1790654804798000000
+        - 1790654804952000000
+        - 1790654805318000000
+        - 1790654805535000000
+        - 1790654805689000000
+        - 1790654805834000000
+        - 1790654806052000000
+        - 1790654806289000000
+        - 1790654806438000000
+        - 1790654806677000000
+        - 1790654806891000000
+        - 1790654807039000000
+        - 1790654807429000000
+        - 1790654807647000000
+        - 1790654807934000000
+        - 1790654808391000000
+        - 1790654809590000000
+        - 1790654810342000000
+        - 1790654811740000000
+        - 1790654811978000000
+        - 1790654812341000000
+        - 1790654812579000000
+        - 1790654813044000000
+        - 1790654813280000000
+        - 1790654813434000000
+        - 1790654813649000000
+        - 1790654813791000000
+        - 1790654814178000000
+        - 1790654814393000000
+        - 1790654814543000000
+        - 1790654814780000000
+        - 1790654814933000000
+        - 1790654815151000000
+        - 1790654815390000000
+        - 1790654815608000000
+        - 1790654817204000000
+        - 1790654817825000000
+        - 1790654817977000000
+        - 1790654818193000000
+        - 1790654818580000000
+        - 1790654818796000000
+        - 1790654819397000000
+        - 1790654819633000000
+        - 1790654820284000000
+        - 1790654821945000000
+        - 1790654822789000000
+        - 1790654823090000000
+        - 1790654823308000000
+        - 1790654823623000000
+        - 1790654823927000000
+        - 1790654824143000000
+        - 1790654824444000000
+        - 1790654824832000000
+        - 1790654825114000000
+        - 1790654825385000000
+        - 1790654825690000000
+        - 1790654826074000000
+        - 1790654826441000000
+        - 1790654826829000000
+        - 1790654827196000000
+        - 1790654830648000000
+        - 1790654832684000000
+        - 1790654833448000000
+        - 1790654834525000000
+        different_yolo_selections:
+        - lidar_stamp_ns: 1790654786373000000
+          old_yolo_stamp_ns: 1790654786349985599
+          new_yolo_stamp_ns: 1790654786392801046
+          old_waited_ms: 72.507227
+          new_waited_ms: 70.186718
+        - lidar_stamp_ns: 1790654786673000000
+          old_yolo_stamp_ns: 1790654786651868820
+          new_yolo_stamp_ns: 1790654786692717075
+          old_waited_ms: 83.27341
+          new_waited_ms: 74.409567
+        - lidar_stamp_ns: 1790654787676000000
+          old_yolo_stamp_ns: 1790654787652085304
+          new_yolo_stamp_ns: 1790654787695428609
+          old_waited_ms: 60.271194
+          new_waited_ms: 62.059358
+        - lidar_stamp_ns: 1790654787816000000
+          old_yolo_stamp_ns: 1790654787834044218
+          new_yolo_stamp_ns: 1790654787801671266
+          old_waited_ms: 84.884471
+          new_waited_ms: 79.555852
+        - lidar_stamp_ns: 1790654788791000000
+          old_yolo_stamp_ns: 1790654788828454256
+          new_yolo_stamp_ns: 1790654788807853460
+          old_waited_ms: 62.543648
+          new_waited_ms: 11.747591
+        - lidar_stamp_ns: 1790654788854000000
+          old_yolo_stamp_ns: 1790654788886025428
+          new_yolo_stamp_ns: 1790654788828454256
+          old_waited_ms: 73.908473
+          new_waited_ms: 73.284912
+        - lidar_stamp_ns: 1790654789077000000
+          old_yolo_stamp_ns: 1790654789122673988
+          new_yolo_stamp_ns: 1790654789095180511
+          old_waited_ms: 65.795037
+          new_waited_ms: 63.257635
+        - lidar_stamp_ns: 1790654789141000000
+          old_yolo_stamp_ns: 1790654789189995527
+          new_yolo_stamp_ns: 1790654789122673988
+          old_waited_ms: 77.920199
+          new_waited_ms: 83.464211
+        - lidar_stamp_ns: 1790654789208000000
+          old_yolo_stamp_ns: 1790654789240372657
+          new_yolo_stamp_ns: 1790654789189995527
+          old_waited_ms: 86.901098
+          new_waited_ms: 79.519682
+        - lidar_stamp_ns: 1790654789293000000
+          old_yolo_stamp_ns: 1790654789323556661
+          new_yolo_stamp_ns: 1790654789293058872
+          old_waited_ms: 80.332164
+          new_waited_ms: 11.768346
+        - lidar_stamp_ns: 1790654790100000000
+          old_yolo_stamp_ns: 1790654790131371974
+          new_yolo_stamp_ns: 1790654790098880529
+          old_waited_ms: 82.787158
+          new_waited_ms: 89.430086
+        - lidar_stamp_ns: 1790654790184000000
+          old_yolo_stamp_ns: 1790654790220284223
+          new_yolo_stamp_ns: 1790654790202439308
+          old_waited_ms: 82.674821
+          new_waited_ms: 73.552793
+        - lidar_stamp_ns: 1790654790250000000
+          old_yolo_stamp_ns: 1790654790284145116
+          new_yolo_stamp_ns: 1790654790220284223
+          old_waited_ms: 78.809386
+          new_waited_ms: 85.797293
+        - lidar_stamp_ns: 1790654790473000000
+          old_yolo_stamp_ns: 1790654790434894323
+          new_yolo_stamp_ns: 1790654790490385770
+          old_waited_ms: 51.18466
+          new_waited_ms: 52.112239
+        - lidar_stamp_ns: 1790654791176000000
+          old_yolo_stamp_ns: 1790654791135421276
+          new_yolo_stamp_ns: 1790654791194075107
+          old_waited_ms: 59.779584
+          new_waited_ms: 62.37906
+        - lidar_stamp_ns: 1790654791394000000
+          old_yolo_stamp_ns: 1790654791426367282
+          new_yolo_stamp_ns: 1790654791394925355
+          old_waited_ms: 79.892763
+          new_waited_ms: 12.596816
+        - lidar_stamp_ns: 1790654791479000000
+          old_yolo_stamp_ns: 1790654791525566101
+          new_yolo_stamp_ns: 1790654791498363971
+          old_waited_ms: 63.13019
+          new_waited_ms: 60.783717
+        - lidar_stamp_ns: 1790654791544000000
+          old_yolo_stamp_ns: 1790654791591604232
+          new_yolo_stamp_ns: 1790654791525566101
+          old_waited_ms: 94.526543
+          new_waited_ms: 96.115161
+        - lidar_stamp_ns: 1790654792372000000
+          old_yolo_stamp_ns: 1790654792332223415
+          new_yolo_stamp_ns: 1790654792392375946
+          old_waited_ms: 71.269656
+          new_waited_ms: 69.958938
+        - lidar_stamp_ns: 1790654792672000000
+          old_yolo_stamp_ns: 1790654792651360273
+          new_yolo_stamp_ns: 1790654792690761327
+          old_waited_ms: 93.632937
+          new_waited_ms: 88.2333
+        - lidar_stamp_ns: 1790654793577000000
+          old_yolo_stamp_ns: 1790654793538591384
+          new_yolo_stamp_ns: 1790654793594921827
+          old_waited_ms: 66.574918
+          new_waited_ms: 11.339822
+        - lidar_stamp_ns: 1790654794482000000
+          old_yolo_stamp_ns: 1790654794530160903
+          new_yolo_stamp_ns: 1790654794501518011
+          old_waited_ms: 87.363657
+          new_waited_ms: 1.274593
+        - lidar_stamp_ns: 1790654794551000000
+          old_yolo_stamp_ns: 1790654794585310459
+          new_yolo_stamp_ns: 1790654794530160903
+          old_waited_ms: 82.165997
+          new_waited_ms: 81.878369
+        - lidar_stamp_ns: 1790654796281000000
+          old_yolo_stamp_ns: 1790654796241756200
+          new_yolo_stamp_ns: 1790654796298830032
+          old_waited_ms: 79.737889
+          new_waited_ms: 1.69209
+        - lidar_stamp_ns: 1790654796497000000
+          old_yolo_stamp_ns: 1790654796527815103
+          new_yolo_stamp_ns: 1790654796497390031
+          old_waited_ms: 13.468641
+          new_waited_ms: 1.229119
+        - lidar_stamp_ns: 1790654797476000000
+          old_yolo_stamp_ns: 1790654797453940629
+          new_yolo_stamp_ns: 1790654797494048595
+          old_waited_ms: 79.130528
+          new_waited_ms: 1.514765
+        - lidar_stamp_ns: 1790654798986000000
+          old_yolo_stamp_ns: 1790654799021870851
+          new_yolo_stamp_ns: 1790654799003754377
+          old_waited_ms: 1.188202
+          new_waited_ms: 1.449983
+        - lidar_stamp_ns: 1790654799050000000
+          old_yolo_stamp_ns: 1790654799082900285
+          new_yolo_stamp_ns: 1790654799021870851
+          old_waited_ms: 1.573976
+          new_waited_ms: 1.524916
+        - lidar_stamp_ns: 1790654799885000000
+          old_yolo_stamp_ns: 1790654799919743537
+          new_yolo_stamp_ns: 1790654799901785850
+          old_waited_ms: 1.535826
+          new_waited_ms: 1.489642
+        - lidar_stamp_ns: 1790654802589000000
+          old_yolo_stamp_ns: 1790654802626763820
+          new_yolo_stamp_ns: 1790654802606484413
+          old_waited_ms: 1.518312
+          new_waited_ms: 0.803306
+        - lidar_stamp_ns: 1790654807784000000
+          old_yolo_stamp_ns: 1790654807829959869
+          new_yolo_stamp_ns: 1790654807772933006
+          old_waited_ms: 1.16043
+          new_waited_ms: 1.056639
+        - lidar_stamp_ns: 1790654808153000000
+          old_yolo_stamp_ns: 1790654808184590578
+          new_yolo_stamp_ns: 1790654808127258300
+          old_waited_ms: 1.579905
+          new_waited_ms: 0.978798
+        - lidar_stamp_ns: 1790654809292000000
+          old_yolo_stamp_ns: 1790654809321847438
+          new_yolo_stamp_ns: 1790654809293075084
+          old_waited_ms: 2.643468
+          new_waited_ms: 1.326447
+        - lidar_stamp_ns: 1790654809677000000
+          old_yolo_stamp_ns: 1790654809639358043
+          new_yolo_stamp_ns: 1790654809695188999
+          old_waited_ms: 1.423378
+          new_waited_ms: 1.139165
+        - lidar_stamp_ns: 1790654809895000000
+          old_yolo_stamp_ns: 1790654809924469947
+          new_yolo_stamp_ns: 1790654809894079923
+          old_waited_ms: 1.574685
+          new_waited_ms: 1.021228
+        - lidar_stamp_ns: 1790654810197000000
+          old_yolo_stamp_ns: 1790654810227397203
+          new_yolo_stamp_ns: 1790654810195734262
+          old_waited_ms: 1.203033
+          new_waited_ms: 0.771885
+        - lidar_stamp_ns: 1790654812042000000
+          old_yolo_stamp_ns: 1790654812022998332
+          new_yolo_stamp_ns: 1790654812088522672
+          old_waited_ms: 1.274462
+          new_waited_ms: 1.386693
+        - lidar_stamp_ns: 1790654816989000000
+          old_yolo_stamp_ns: 1790654817026730537
+          new_yolo_stamp_ns: 1790654817007233381
+          old_waited_ms: 1.142637
+          new_waited_ms: 1.239187
+        - lidar_stamp_ns: 1790654818342000000
+          old_yolo_stamp_ns: 1790654818389610052
+          new_yolo_stamp_ns: 1790654818323179006
+          old_waited_ms: 1.241291
+          new_waited_ms: 1.081025
+        - lidar_stamp_ns: 1790654819698000000
+          old_yolo_stamp_ns: 1790654819683376789
+          new_yolo_stamp_ns: 1790654819729935884
+          old_waited_ms: 1.202356
+          new_waited_ms: 0.94701
+        - lidar_stamp_ns: 1790654821494000000
+          old_yolo_stamp_ns: 1790654821524328947
+          new_yolo_stamp_ns: 1790654821492602825
+          old_waited_ms: 1.133939
+          new_waited_ms: 1.567662
+        - lidar_stamp_ns: 1790654821882000000
+          old_yolo_stamp_ns: 1790654821926817417
+          new_yolo_stamp_ns: 1790654821900257110
+          old_waited_ms: 0.917699
+          new_waited_ms: 1.222867
+        - lidar_stamp_ns: 1790654823455000000
+          old_yolo_stamp_ns: 1790654823487312078
+          new_yolo_stamp_ns: 1790654823426615715
+          old_waited_ms: 0.893802
+          new_waited_ms: 1.389884
+        - lidar_stamp_ns: 1790654824746000000
+          old_yolo_stamp_ns: 1790654824793605327
+          new_yolo_stamp_ns: 1790654824727232456
+          old_waited_ms: 1.42084
+          new_waited_ms: 1.889646
+        - lidar_stamp_ns: 1790654826678000000
+          old_yolo_stamp_ns: 1790654826724142313
+          new_yolo_stamp_ns: 1790654826695662021
+          old_waited_ms: 1.004033
+          new_waited_ms: 0.911114
+        - lidar_stamp_ns: 1790654826744000000
+          old_yolo_stamp_ns: 1790654826790091037
+          new_yolo_stamp_ns: 1790654826724142313
+          old_waited_ms: 1.139152
+          new_waited_ms: 1.27401
+        - lidar_stamp_ns: 1790654827346000000
+          old_yolo_stamp_ns: 1790654827392742633
+          new_yolo_stamp_ns: 1790654827325957059
+          old_waited_ms: 1.005608
+          new_waited_ms: 1.087551
+        - lidar_stamp_ns: 1790654827412000000
+          old_yolo_stamp_ns: 1790654827443856716
+          new_yolo_stamp_ns: 1790654827392742633
+          old_waited_ms: 0.73576
+          new_waited_ms: 2.023433
+        - lidar_stamp_ns: 1790654828487000000
+          old_yolo_stamp_ns: 1790654828523998498
+          new_yolo_stamp_ns: 1790654828504644870
+          old_waited_ms: 0.764101
+          new_waited_ms: 0.725256
+        - lidar_stamp_ns: 1790654828550000000
+          old_yolo_stamp_ns: 1790654828582369565
+          new_yolo_stamp_ns: 1790654828523998498
+          old_waited_ms: 1.077782
+          new_waited_ms: 1.296262
+        - lidar_stamp_ns: 1790654828905000000
+          old_yolo_stamp_ns: 1790654828937008857
+          new_yolo_stamp_ns: 1790654828904198408
+          old_waited_ms: 11.224673
+          new_waited_ms: 1.123871
+        - lidar_stamp_ns: 1790654830498000000
+          old_yolo_stamp_ns: 1790654830528968334
+          new_yolo_stamp_ns: 1790654830497945785
+          old_waited_ms: 100.44046
+          new_waited_ms: 87.97478
+        - lidar_stamp_ns: 1790654830583000000
+          old_yolo_stamp_ns: 1790654830629041433
+          new_yolo_stamp_ns: 1790654830602149963
+          old_waited_ms: 57.156884
+          new_waited_ms: 8.386699
+        - lidar_stamp_ns: 1790654830885000000
+          old_yolo_stamp_ns: 1790654830922356843
+          new_yolo_stamp_ns: 1790654830903028249
+          old_waited_ms: 74.060349
+          new_waited_ms: 70.850948
+        - lidar_stamp_ns: 1790654830950000000
+          old_yolo_stamp_ns: 1790654830981793165
+          new_yolo_stamp_ns: 1790654830922356843
+          old_waited_ms: 61.144086
+          new_waited_ms: 65.231242
+        - lidar_stamp_ns: 1790654831015000000
+          old_yolo_stamp_ns: 1790654831048269033
+          new_yolo_stamp_ns: 1790654830981793165
+          old_waited_ms: 79.743645
+          new_waited_ms: 79.423278
+        - lidar_stamp_ns: 1790654832597000000
+          old_yolo_stamp_ns: 1790654832633246183
+          new_yolo_stamp_ns: 1790654832597956657
+          old_waited_ms: 90.656696
+          new_waited_ms: 12.808451
+        - lidar_stamp_ns: 1790654833383000000
+          old_yolo_stamp_ns: 1790654833431044578
+          new_yolo_stamp_ns: 1790654833402823686
+          old_waited_ms: 60.971055
+          new_waited_ms: 77.431602
+        - lidar_stamp_ns: 1790654833787000000
+          old_yolo_stamp_ns: 1790654833825619220
+          new_yolo_stamp_ns: 1790654833805701017
+          old_waited_ms: 62.011835
+          new_waited_ms: 71.054119
+        - lidar_stamp_ns: 1790654833852000000
+          old_yolo_stamp_ns: 1790654833884969711
+          new_yolo_stamp_ns: 1790654833825619220
+          old_waited_ms: 92.959554
+          new_waited_ms: 86.377583
+        old_only_processed_lidar_stamps:
+        - 1790654798143000000
+        - 1790654799950000000
+        - 1790654800323000000
+        - 1790654801510000000
+        - 1790654802284000000
+        - 1790654802652000000
+        - 1790654804498000000
+        - 1790654804885000000
+        - 1790654805018000000
+        - 1790654805385000000
+        - 1790654805622000000
+        - 1790654805772000000
+        - 1790654805990000000
+        - 1790654806139000000
+        - 1790654806375000000
+        - 1790654806505000000
+        - 1790654806740000000
+        - 1790654806978000000
+        - 1790654807110000000
+        - 1790654807494000000
+        - 1790654807733000000
+        - 1790654808089000000
+        - 1790654808474000000
+        - 1790654809527000000
+        - 1790654810286000000
+        - 1790654811674000000
+        - 1790654811890000000
+        - 1790654812278000000
+        - 1790654812492000000
+        - 1790654812880000000
+        - 1790654813131000000
+        - 1790654813349000000
+        - 1790654813586000000
+        - 1790654813738000000
+        - 1790654813878000000
+        - 1790654814243000000
+        - 1790654814479000000
+        - 1790654814629000000
+        - 1790654814845000000
+        - 1790654815087000000
+        - 1790654815238000000
+        - 1790654815474000000
+        - 1790654815693000000
+        - 1790654817290000000
+        - 1790654817890000000
+        - 1790654818040000000
+        - 1790654818279000000
+        - 1790654818642000000
+        - 1790654818880000000
+        - 1790654819332000000
+        - 1790654819548000000
+        - 1790654820221000000
+        - 1790654822032000000
+        - 1790654822852000000
+        - 1790654823175000000
+        - 1790654823392000000
+        - 1790654823692000000
+        - 1790654824078000000
+        - 1790654824380000000
+        - 1790654824681000000
+        - 1790654824982000000
+        - 1790654825249000000
+        - 1790654825537000000
+        - 1790654825841000000
+        - 1790654826226000000
+        - 1790654826507000000
+        - 1790654826979000000
+        - 1790654827281000000
+        new_only_processed_lidar_stamps:
+        - 1790654798295000000
+        - 1790654800036000000
+        - 1790654800477000000
+        - 1790654801594000000
+        - 1790654802347000000
+        - 1790654802740000000
+        - 1790654804434000000
+        - 1790654804798000000
+        - 1790654804952000000
+        - 1790654805318000000
+        - 1790654805535000000
+        - 1790654805689000000
+        - 1790654805834000000
+        - 1790654806052000000
+        - 1790654806289000000
+        - 1790654806438000000
+        - 1790654806677000000
+        - 1790654806891000000
+        - 1790654807039000000
+        - 1790654807429000000
+        - 1790654807647000000
+        - 1790654807934000000
+        - 1790654808391000000
+        - 1790654809590000000
+        - 1790654810342000000
+        - 1790654811740000000
+        - 1790654811978000000
+        - 1790654812341000000
+        - 1790654812579000000
+        - 1790654813044000000
+        - 1790654813280000000
+        - 1790654813434000000
+        - 1790654813649000000
+        - 1790654813791000000
+        - 1790654814178000000
+        - 1790654814393000000
+        - 1790654814543000000
+        - 1790654814780000000
+        - 1790654814933000000
+        - 1790654815151000000
+        - 1790654815390000000
+        - 1790654815608000000
+        - 1790654817204000000
+        - 1790654817825000000
+        - 1790654817977000000
+        - 1790654818193000000
+        - 1790654818580000000
+        - 1790654818796000000
+        - 1790654819397000000
+        - 1790654819633000000
+        - 1790654820284000000
+        - 1790654821945000000
+        - 1790654822789000000
+        - 1790654823090000000
+        - 1790654823308000000
+        - 1790654823623000000
+        - 1790654823927000000
+        - 1790654824143000000
+        - 1790654824444000000
+        - 1790654824832000000
+        - 1790654825114000000
+        - 1790654825385000000
+        - 1790654825690000000
+        - 1790654826074000000
+        - 1790654826441000000
+        - 1790654826829000000
+        - 1790654827196000000
+        processed_lidar_count_delta: -1
+        matched_count_delta: 7
+        processed_supply_deltas:
+          processed: -1
+          matched: 7
+          dropped: -7
+          pending: -1
+          startup_removed: 0
+          overflow_removed: 0
+        matched_delta_explained_by_processed_supply: true
+      old_2:
+        common_matched_lidar_stamps: 384
+        old_only_matched_stamps:
+        - 1790654787439000000
+        - 1790654792435000000
+        - 1790654798380000000
+        - 1790654798986000000
+        - 1790654799188000000
+        - 1790654799408000000
+        - 1790654799644000000
+        - 1790654799885000000
+        - 1790654800086000000
+        - 1790654800323000000
+        - 1790654800689000000
+        - 1790654800926000000
+        - 1790654801076000000
+        - 1790654801291000000
+        - 1790654801442000000
+        - 1790654801678000000
+        - 1790654801810000000
+        - 1790654802046000000
+        - 1790654802196000000
+        - 1790654802589000000
+        - 1790654802976000000
+        - 1790654803355000000
+        - 1790654803594000000
+        - 1790654803729000000
+        - 1790654803982000000
+        - 1790654804347000000
+        - 1790654804735000000
+        - 1790654805083000000
+        - 1790654805235000000
+        - 1790654805471000000
+        - 1790654805622000000
+        - 1790654806139000000
+        - 1790654806375000000
+        - 1790654806591000000
+        - 1790654806740000000
+        - 1790654806827000000
+        - 1790654806978000000
+        - 1790654807193000000
+        - 1790654807579000000
+        - 1790654807733000000
+        - 1790654808304000000
+        - 1790654808474000000
+        - 1790654808688000000
+        - 1790654808839000000
+        - 1790654809076000000
+        - 1790654809207000000
+        - 1790654809440000000
+        - 1790654809677000000
+        - 1790654809807000000
+        - 1790654810045000000
+        - 1790654810286000000
+        - 1790654810428000000
+        - 1790654810664000000
+        - 1790654810894000000
+        - 1790654811146000000
+        - 1790654811674000000
+        - 1790654811890000000
+        - 1790654812278000000
+        - 1790654812492000000
+        - 1790654812880000000
+        - 1790654813131000000
+        - 1790654813349000000
+        - 1790654813586000000
+        - 1790654813738000000
+        - 1790654813878000000
+        - 1790654814092000000
+        - 1790654814243000000
+        - 1790654814479000000
+        - 1790654814694000000
+        - 1790654815302000000
+        - 1790654815540000000
+        - 1790654815693000000
+        - 1790654816295000000
+        - 1790654816533000000
+        - 1790654816902000000
+        - 1790654817141000000
+        - 1790654817373000000
+        - 1790654817504000000
+        - 1790654817740000000
+        - 1790654817890000000
+        - 1790654818040000000
+        - 1790654818279000000
+        - 1790654818494000000
+        - 1790654818642000000
+        - 1790654818880000000
+        - 1790654819096000000
+        - 1790654819246000000
+        - 1790654819482000000
+        - 1790654819852000000
+        - 1790654819985000000
+        - 1790654820221000000
+        - 1790654820373000000
+        - 1790654820524000000
+        - 1790654820737000000
+        - 1790654820892000000
+        - 1790654821127000000
+        - 1790654821278000000
+        - 1790654821494000000
+        - 1790654821642000000
+        - 1790654821882000000
+        - 1790654822097000000
+        - 1790654822333000000
+        - 1790654822486000000
+        - 1790654822852000000
+        - 1790654824078000000
+        - 1790654824380000000
+        - 1790654824681000000
+        - 1790654824982000000
+        - 1790654825249000000
+        - 1790654825537000000
+        - 1790654825905000000
+        - 1790654826291000000
+        - 1790654826678000000
+        - 1790654827043000000
+        - 1790654828033000000
+        - 1790654832144000000
+        new_only_matched_stamps:
+        - 1790654798295000000
+        - 1790654798748000000
+        - 1790654799137000000
+        - 1790654799273000000
+        - 1790654799494000000
+        - 1790654799798000000
+        - 1790654800036000000
+        - 1790654800173000000
+        - 1790654800624000000
+        - 1790654800776000000
+        - 1790654800990000000
+        - 1790654801226000000
+        - 1790654801379000000
+        - 1790654801594000000
+        - 1790654801743000000
+        - 1790654801980000000
+        - 1790654802115000000
+        - 1790654802501000000
+        - 1790654802889000000
+        - 1790654803274000000
+        - 1790654803506000000
+        - 1790654803682000000
+        - 1790654803895000000
+        - 1790654804283000000
+        - 1790654804434000000
+        - 1790654804649000000
+        - 1790654804798000000
+        - 1790654805170000000
+        - 1790654805318000000
+        - 1790654805535000000
+        - 1790654805689000000
+        - 1790654806052000000
+        - 1790654806289000000
+        - 1790654806438000000
+        - 1790654806677000000
+        - 1790654806891000000
+        - 1790654807039000000
+        - 1790654807278000000
+        - 1790654807647000000
+        - 1790654807871000000
+        - 1790654808241000000
+        - 1790654808391000000
+        - 1790654808623000000
+        - 1790654808776000000
+        - 1790654808989000000
+        - 1790654809140000000
+        - 1790654809378000000
+        - 1790654809590000000
+        - 1790654809741000000
+        - 1790654809979000000
+        - 1790654810112000000
+        - 1790654810342000000
+        - 1790654810579000000
+        - 1790654810830000000
+        - 1790654810981000000
+        - 1790654811232000000
+        - 1790654811740000000
+        - 1790654811978000000
+        - 1790654812341000000
+        - 1790654812579000000
+        - 1790654813044000000
+        - 1790654813280000000
+        - 1790654813434000000
+        - 1790654813649000000
+        - 1790654813791000000
+        - 1790654814026000000
+        - 1790654814178000000
+        - 1790654814393000000
+        - 1790654814543000000
+        - 1790654814780000000
+        - 1790654815151000000
+        - 1790654815390000000
+        - 1790654815608000000
+        - 1790654816231000000
+        - 1790654816447000000
+        - 1790654816835000000
+        - 1790654817052000000
+        - 1790654817204000000
+        - 1790654817438000000
+        - 1790654817675000000
+        - 1790654817825000000
+        - 1790654817977000000
+        - 1790654818193000000
+        - 1790654818410000000
+        - 1790654818580000000
+        - 1790654818796000000
+        - 1790654818945000000
+        - 1790654819181000000
+        - 1790654819397000000
+        - 1790654819783000000
+        - 1790654819933000000
+        - 1790654820070000000
+        - 1790654820284000000
+        - 1790654820452000000
+        - 1790654820674000000
+        - 1790654820805000000
+        - 1790654820956000000
+        - 1790654821189000000
+        - 1790654821342000000
+        - 1790654821579000000
+        - 1790654821797000000
+        - 1790654821945000000
+        - 1790654822181000000
+        - 1790654822398000000
+        - 1790654822789000000
+        - 1790654823927000000
+        - 1790654824143000000
+        - 1790654824444000000
+        - 1790654824832000000
+        - 1790654825114000000
+        - 1790654825385000000
+        - 1790654825690000000
+        - 1790654826074000000
+        - 1790654826441000000
+        - 1790654826829000000
+        - 1790654827196000000
+        - 1790654828183000000
+        - 1790654830648000000
+        - 1790654832684000000
+        - 1790654833448000000
+        different_yolo_selections:
+        - lidar_stamp_ns: 1790654787376000000
+          old_yolo_stamp_ns: 1790654787393926858
+          new_yolo_stamp_ns: 1790654787420956850
+          old_waited_ms: 62.865802
+          new_waited_ms: 62.361139
+        - lidar_stamp_ns: 1790654787816000000
+          old_yolo_stamp_ns: 1790654787834044218
+          new_yolo_stamp_ns: 1790654787801671266
+          old_waited_ms: 84.884471
+          new_waited_ms: 84.01095
+        - lidar_stamp_ns: 1790654787896000000
+          old_yolo_stamp_ns: 1790654787897628068
+          new_yolo_stamp_ns: 1790654787927566051
+          old_waited_ms: 82.278037
+          new_waited_ms: 82.140734
+        - lidar_stamp_ns: 1790654787982000000
+          old_yolo_stamp_ns: 1790654788000328540
+          new_yolo_stamp_ns: 1790654788029556274
+          old_waited_ms: 85.774939
+          new_waited_ms: 61.164638
+        - lidar_stamp_ns: 1790654788048000000
+          old_yolo_stamp_ns: 1790654788029556274
+          new_yolo_stamp_ns: 1790654788081535577
+          old_waited_ms: 67.183713
+          new_waited_ms: 93.798585
+        - lidar_stamp_ns: 1790654788133000000
+          old_yolo_stamp_ns: 1790654788161197662
+          new_yolo_stamp_ns: 1790654788175883293
+          old_waited_ms: 50.318401
+          new_waited_ms: 143.457795
+        - lidar_stamp_ns: 1790654788188000000
+          old_yolo_stamp_ns: 1790654788175883293
+          new_yolo_stamp_ns: 1790654788232401132
+          old_waited_ms: 93.935955
+          new_waited_ms: 93.733176
+        - lidar_stamp_ns: 1790654788573000000
+          old_yolo_stamp_ns: 1790654788592003345
+          new_yolo_stamp_ns: 1790654788551106929
+          old_waited_ms: 62.877838
+          new_waited_ms: 64.425558
+        - lidar_stamp_ns: 1790654789882000000
+          old_yolo_stamp_ns: 1790654789899955034
+          new_yolo_stamp_ns: 1790654789842941999
+          old_waited_ms: 79.776321
+          new_waited_ms: 80.796057
+        - lidar_stamp_ns: 1790654791394000000
+          old_yolo_stamp_ns: 1790654791426367282
+          new_yolo_stamp_ns: 1790654791394925355
+          old_waited_ms: 79.892763
+          new_waited_ms: 90.638554
+        - lidar_stamp_ns: 1790654792286000000
+          old_yolo_stamp_ns: 1790654792285505056
+          new_yolo_stamp_ns: 1790654792332223415
+          old_waited_ms: 72.369812
+          new_waited_ms: 74.199603
+        - lidar_stamp_ns: 1790654792372000000
+          old_yolo_stamp_ns: 1790654792332223415
+          new_yolo_stamp_ns: 1790654792418253898
+          old_waited_ms: 71.269656
+          new_waited_ms: 68.475173
+        - lidar_stamp_ns: 1790654794482000000
+          old_yolo_stamp_ns: 1790654794530160903
+          new_yolo_stamp_ns: 1790654794501518011
+          old_waited_ms: 87.363657
+          new_waited_ms: 12.749733
+        - lidar_stamp_ns: 1790654794551000000
+          old_yolo_stamp_ns: 1790654794585310459
+          new_yolo_stamp_ns: 1790654794530160903
+          old_waited_ms: 82.165997
+          new_waited_ms: 84.579412
+        - lidar_stamp_ns: 1790654794774000000
+          old_yolo_stamp_ns: 1790654794792180776
+          new_yolo_stamp_ns: 1790654794735227108
+          old_waited_ms: 14.05155
+          new_waited_ms: 69.365844
+        - lidar_stamp_ns: 1790654794991000000
+          old_yolo_stamp_ns: 1790654795009390592
+          new_yolo_stamp_ns: 1790654795029938459
+          old_waited_ms: 70.633513
+          new_waited_ms: 72.858757
+        - lidar_stamp_ns: 1790654795055000000
+          old_yolo_stamp_ns: 1790654795029938459
+          new_yolo_stamp_ns: 1790654795087349653
+          old_waited_ms: 86.864676
+          new_waited_ms: 79.717013
+        - lidar_stamp_ns: 1790654795980000000
+          old_yolo_stamp_ns: 1790654795997902393
+          new_yolo_stamp_ns: 1790654795941507339
+          old_waited_ms: 11.574449
+          new_waited_ms: 74.51368
+        - lidar_stamp_ns: 1790654797176000000
+          old_yolo_stamp_ns: 1790654797194132804
+          new_yolo_stamp_ns: 1790654797151340484
+          old_waited_ms: 12.459537
+          new_waited_ms: 72.822538
+        - lidar_stamp_ns: 1790654799050000000
+          old_yolo_stamp_ns: 1790654799082900285
+          new_yolo_stamp_ns: 1790654799021870851
+          old_waited_ms: 1.573976
+          new_waited_ms: 1.23986
+        - lidar_stamp_ns: 1790654799557000000
+          old_yolo_stamp_ns: 1790654799531601667
+          new_yolo_stamp_ns: 1790654799591566324
+          old_waited_ms: 0.936962
+          new_waited_ms: 1.494186
+        - lidar_stamp_ns: 1790654799950000000
+          old_yolo_stamp_ns: 1790654799982391595
+          new_yolo_stamp_ns: 1790654799919743537
+          old_waited_ms: 1.36934
+          new_waited_ms: 0.882695
+        - lidar_stamp_ns: 1790654801895000000
+          old_yolo_stamp_ns: 1790654801894899129
+          new_yolo_stamp_ns: 1790654801925086498
+          old_waited_ms: 1.39202
+          new_waited_ms: 1.2255
+        - lidar_stamp_ns: 1790654802652000000
+          old_yolo_stamp_ns: 1790654802689606666
+          new_yolo_stamp_ns: 1790654802626763820
+          old_waited_ms: 1.101469
+          new_waited_ms: 1.165889
+        - lidar_stamp_ns: 1790654804885000000
+          old_yolo_stamp_ns: 1790654804932062387
+          new_yolo_stamp_ns: 1790654804901630163
+          old_waited_ms: 1.273239
+          new_waited_ms: 1.232903
+        - lidar_stamp_ns: 1790654805904000000
+          old_yolo_stamp_ns: 1790654805902765274
+          new_yolo_stamp_ns: 1790654805934442281
+          old_waited_ms: 1.014205
+          new_waited_ms: 1.236312
+        - lidar_stamp_ns: 1790654807784000000
+          old_yolo_stamp_ns: 1790654807829959869
+          new_yolo_stamp_ns: 1790654807772933006
+          old_waited_ms: 1.16043
+          new_waited_ms: 1.458509
+        - lidar_stamp_ns: 1790654808001000000
+          old_yolo_stamp_ns: 1790654808000355243
+          new_yolo_stamp_ns: 1790654808031922578
+          old_waited_ms: 1.23374
+          new_waited_ms: 1.471188
+        - lidar_stamp_ns: 1790654808153000000
+          old_yolo_stamp_ns: 1790654808184590578
+          new_yolo_stamp_ns: 1790654808127258300
+          old_waited_ms: 1.579905
+          new_waited_ms: 1.060159
+        - lidar_stamp_ns: 1790654809292000000
+          old_yolo_stamp_ns: 1790654809321847438
+          new_yolo_stamp_ns: 1790654809293075084
+          old_waited_ms: 2.643468
+          new_waited_ms: 0.841142
+        - lidar_stamp_ns: 1790654809527000000
+          old_yolo_stamp_ns: 1790654809545717239
+          new_yolo_stamp_ns: 1790654809489159107
+          old_waited_ms: 1.387611
+          new_waited_ms: 1.446493
+        - lidar_stamp_ns: 1790654809895000000
+          old_yolo_stamp_ns: 1790654809924469947
+          new_yolo_stamp_ns: 1790654809894079923
+          old_waited_ms: 1.574685
+          new_waited_ms: 0.932854
+        - lidar_stamp_ns: 1790654810197000000
+          old_yolo_stamp_ns: 1790654810227397203
+          new_yolo_stamp_ns: 1790654810195734262
+          old_waited_ms: 1.203033
+          new_waited_ms: 1.017527
+        - lidar_stamp_ns: 1790654811450000000
+          old_yolo_stamp_ns: 1790654811423463821
+          new_yolo_stamp_ns: 1790654811483413934
+          old_waited_ms: 0.918418
+          new_waited_ms: 0.798976
+        - lidar_stamp_ns: 1790654816989000000
+          old_yolo_stamp_ns: 1790654817026730537
+          new_yolo_stamp_ns: 1790654817007233381
+          old_waited_ms: 1.142637
+          new_waited_ms: 1.039494
+        - lidar_stamp_ns: 1790654818342000000
+          old_yolo_stamp_ns: 1790654818389610052
+          new_yolo_stamp_ns: 1790654818323179006
+          old_waited_ms: 1.241291
+          new_waited_ms: 1.360367
+        - lidar_stamp_ns: 1790654822550000000
+          old_yolo_stamp_ns: 1790654822522982835
+          new_yolo_stamp_ns: 1790654822582814693
+          old_waited_ms: 1.061369
+          new_waited_ms: 1.03988
+        - lidar_stamp_ns: 1790654824296000000
+          old_yolo_stamp_ns: 1790654824295770168
+          new_yolo_stamp_ns: 1790654824325685501
+          old_waited_ms: 1.14839
+          new_waited_ms: 1.267969
+        - lidar_stamp_ns: 1790654824746000000
+          old_yolo_stamp_ns: 1790654824793605327
+          new_yolo_stamp_ns: 1790654824727232456
+          old_waited_ms: 1.42084
+          new_waited_ms: 1.220746
+        - lidar_stamp_ns: 1790654825754000000
+          old_yolo_stamp_ns: 1790654825728527307
+          new_yolo_stamp_ns: 1790654825786260366
+          old_waited_ms: 1.382263
+          new_waited_ms: 1.448725
+        - lidar_stamp_ns: 1790654826744000000
+          old_yolo_stamp_ns: 1790654826790091037
+          new_yolo_stamp_ns: 1790654826724142313
+          old_waited_ms: 1.139152
+          new_waited_ms: 77.476954
+        - lidar_stamp_ns: 1790654827281000000
+          old_yolo_stamp_ns: 1790654827325957059
+          new_yolo_stamp_ns: 1790654827298443555
+          old_waited_ms: 0.8657
+          new_waited_ms: 13.912164
+        - lidar_stamp_ns: 1790654827346000000
+          old_yolo_stamp_ns: 1790654827392742633
+          new_yolo_stamp_ns: 1790654827325957059
+          old_waited_ms: 1.005608
+          new_waited_ms: 1.214109
+        - lidar_stamp_ns: 1790654827412000000
+          old_yolo_stamp_ns: 1790654827443856716
+          new_yolo_stamp_ns: 1790654827392742633
+          old_waited_ms: 0.73576
+          new_waited_ms: 1.132966
+        - lidar_stamp_ns: 1790654828905000000
+          old_yolo_stamp_ns: 1790654828937008857
+          new_yolo_stamp_ns: 1790654828904198408
+          old_waited_ms: 11.224673
+          new_waited_ms: 76.207795
+        - lidar_stamp_ns: 1790654829374000000
+          old_yolo_stamp_ns: 1790654829391212224
+          new_yolo_stamp_ns: 1790654829336734533
+          old_waited_ms: 66.639352
+          new_waited_ms: 70.451552
+        - lidar_stamp_ns: 1790654829679000000
+          old_yolo_stamp_ns: 1790654829695606946
+          new_yolo_stamp_ns: 1790654829638234376
+          old_waited_ms: 61.643762
+          new_waited_ms: 58.728969
+        - lidar_stamp_ns: 1790654830583000000
+          old_yolo_stamp_ns: 1790654830629041433
+          new_yolo_stamp_ns: 1790654830602149963
+          old_waited_ms: 57.156884
+          new_waited_ms: 67.669564
+        - lidar_stamp_ns: 1790654831692000000
+          old_yolo_stamp_ns: 1790654831692044019
+          new_yolo_stamp_ns: 1790654831722531557
+          old_waited_ms: 9.982772
+          new_waited_ms: 82.241747
+        - lidar_stamp_ns: 1790654831777000000
+          old_yolo_stamp_ns: 1790654831795479297
+          new_yolo_stamp_ns: 1790654831823188066
+          old_waited_ms: 62.282844
+          new_waited_ms: 65.381968
+        - lidar_stamp_ns: 1790654831842000000
+          old_yolo_stamp_ns: 1790654831823188066
+          new_yolo_stamp_ns: 1790654831890664339
+          old_waited_ms: 74.168777
+          new_waited_ms: 158.952577
+        - lidar_stamp_ns: 1790654831910000000
+          old_yolo_stamp_ns: 1790654831890664339
+          new_yolo_stamp_ns: 1790654831940200805
+          old_waited_ms: 80.748183
+          new_waited_ms: 101.419877
+        - lidar_stamp_ns: 1790654832079000000
+          old_yolo_stamp_ns: 1790654832097549676
+          new_yolo_stamp_ns: 1790654832124780654
+          old_waited_ms: 61.689738
+          new_waited_ms: 61.075991
+        - lidar_stamp_ns: 1790654832296000000
+          old_yolo_stamp_ns: 1790654832296587705
+          new_yolo_stamp_ns: 1790654832326086282
+          old_waited_ms: 13.619749
+          new_waited_ms: 83.983656
+        - lidar_stamp_ns: 1790654832597000000
+          old_yolo_stamp_ns: 1790654832633246183
+          new_yolo_stamp_ns: 1790654832597956657
+          old_waited_ms: 90.656696
+          new_waited_ms: 10.788864
+        - lidar_stamp_ns: 1790654832898000000
+          old_yolo_stamp_ns: 1790654832898125886
+          new_yolo_stamp_ns: 1790654832929518938
+          old_waited_ms: 90.422608
+          new_waited_ms: 90.641912
+        - lidar_stamp_ns: 1790654833383000000
+          old_yolo_stamp_ns: 1790654833431044578
+          new_yolo_stamp_ns: 1790654833402823686
+          old_waited_ms: 60.971055
+          new_waited_ms: 81.612675
+        - lidar_stamp_ns: 1790654834292000000
+          old_yolo_stamp_ns: 1790654834292042016
+          new_yolo_stamp_ns: 1790654834321636676
+          old_waited_ms: 12.783552
+          new_waited_ms: 79.400248
+        - lidar_stamp_ns: 1790654834377000000
+          old_yolo_stamp_ns: 1790654834396588802
+          new_yolo_stamp_ns: 1790654834424969911
+          old_waited_ms: 62.390863
+          new_waited_ms: 65.087112
+        - lidar_stamp_ns: 1790654834442000000
+          old_yolo_stamp_ns: 1790654834424969911
+          new_yolo_stamp_ns: 1790654834489638328
+          old_waited_ms: 93.271361
+          new_waited_ms: 83.477791
+        old_only_processed_lidar_stamps:
+        - 1790654798380000000
+        - 1790654798986000000
+        - 1790654799188000000
+        - 1790654799408000000
+        - 1790654799644000000
+        - 1790654799885000000
+        - 1790654800086000000
+        - 1790654800323000000
+        - 1790654800689000000
+        - 1790654800926000000
+        - 1790654801076000000
+        - 1790654801291000000
+        - 1790654801442000000
+        - 1790654801678000000
+        - 1790654801810000000
+        - 1790654802046000000
+        - 1790654802196000000
+        - 1790654802589000000
+        - 1790654802976000000
+        - 1790654803355000000
+        - 1790654803594000000
+        - 1790654803729000000
+        - 1790654803982000000
+        - 1790654804347000000
+        - 1790654804583000000
+        - 1790654804735000000
+        - 1790654805083000000
+        - 1790654805235000000
+        - 1790654805471000000
+        - 1790654805622000000
+        - 1790654805990000000
+        - 1790654806139000000
+        - 1790654806375000000
+        - 1790654806591000000
+        - 1790654806827000000
+        - 1790654806978000000
+        - 1790654807193000000
+        - 1790654807579000000
+        - 1790654807733000000
+        - 1790654808089000000
+        - 1790654808304000000
+        - 1790654808474000000
+        - 1790654808688000000
+        - 1790654808839000000
+        - 1790654809076000000
+        - 1790654809207000000
+        - 1790654809440000000
+        - 1790654809677000000
+        - 1790654809807000000
+        - 1790654810045000000
+        - 1790654810286000000
+        - 1790654810428000000
+        - 1790654810664000000
+        - 1790654810894000000
+        - 1790654811146000000
+        - 1790654811674000000
+        - 1790654811890000000
+        - 1790654812278000000
+        - 1790654812492000000
+        - 1790654812880000000
+        - 1790654813131000000
+        - 1790654813349000000
+        - 1790654813586000000
+        - 1790654813738000000
+        - 1790654813878000000
+        - 1790654814092000000
+        - 1790654814243000000
+        - 1790654814479000000
+        - 1790654814694000000
+        - 1790654815087000000
+        - 1790654815302000000
+        - 1790654815540000000
+        - 1790654815693000000
+        - 1790654816295000000
+        - 1790654816533000000
+        - 1790654816902000000
+        - 1790654817141000000
+        - 1790654817373000000
+        - 1790654817504000000
+        - 1790654817740000000
+        - 1790654817890000000
+        - 1790654818040000000
+        - 1790654818279000000
+        - 1790654818494000000
+        - 1790654818642000000
+        - 1790654818880000000
+        - 1790654819096000000
+        - 1790654819246000000
+        - 1790654819482000000
+        - 1790654819852000000
+        - 1790654819985000000
+        - 1790654820221000000
+        - 1790654820373000000
+        - 1790654820524000000
+        - 1790654820737000000
+        - 1790654820892000000
+        - 1790654821127000000
+        - 1790654821278000000
+        - 1790654821494000000
+        - 1790654821642000000
+        - 1790654821882000000
+        - 1790654822097000000
+        - 1790654822333000000
+        - 1790654822852000000
+        - 1790654824078000000
+        - 1790654824380000000
+        - 1790654824681000000
+        - 1790654824982000000
+        - 1790654825249000000
+        - 1790654825537000000
+        - 1790654825905000000
+        - 1790654826291000000
+        - 1790654826678000000
+        - 1790654827043000000
+        - 1790654828033000000
+        new_only_processed_lidar_stamps:
+        - 1790654798295000000
+        - 1790654798748000000
+        - 1790654799137000000
+        - 1790654799273000000
+        - 1790654799494000000
+        - 1790654799798000000
+        - 1790654800036000000
+        - 1790654800173000000
+        - 1790654800624000000
+        - 1790654800776000000
+        - 1790654800990000000
+        - 1790654801226000000
+        - 1790654801379000000
+        - 1790654801594000000
+        - 1790654801743000000
+        - 1790654801980000000
+        - 1790654802115000000
+        - 1790654802501000000
+        - 1790654802889000000
+        - 1790654803274000000
+        - 1790654803506000000
+        - 1790654803682000000
+        - 1790654803895000000
+        - 1790654804283000000
+        - 1790654804434000000
+        - 1790654804649000000
+        - 1790654804798000000
+        - 1790654805170000000
+        - 1790654805318000000
+        - 1790654805535000000
+        - 1790654805689000000
+        - 1790654806052000000
+        - 1790654806289000000
+        - 1790654806438000000
+        - 1790654806677000000
+        - 1790654806891000000
+        - 1790654807039000000
+        - 1790654807278000000
+        - 1790654807647000000
+        - 1790654807871000000
+        - 1790654808241000000
+        - 1790654808391000000
+        - 1790654808623000000
+        - 1790654808776000000
+        - 1790654808989000000
+        - 1790654809140000000
+        - 1790654809378000000
+        - 1790654809590000000
+        - 1790654809741000000
+        - 1790654809979000000
+        - 1790654810112000000
+        - 1790654810342000000
+        - 1790654810579000000
+        - 1790654810830000000
+        - 1790654810981000000
+        - 1790654811232000000
+        - 1790654811740000000
+        - 1790654811978000000
+        - 1790654812341000000
+        - 1790654812579000000
+        - 1790654813044000000
+        - 1790654813280000000
+        - 1790654813434000000
+        - 1790654813649000000
+        - 1790654813791000000
+        - 1790654814026000000
+        - 1790654814178000000
+        - 1790654814393000000
+        - 1790654814543000000
+        - 1790654814780000000
+        - 1790654815151000000
+        - 1790654815390000000
+        - 1790654815608000000
+        - 1790654816231000000
+        - 1790654816447000000
+        - 1790654816835000000
+        - 1790654817052000000
+        - 1790654817204000000
+        - 1790654817438000000
+        - 1790654817675000000
+        - 1790654817825000000
+        - 1790654817977000000
+        - 1790654818193000000
+        - 1790654818410000000
+        - 1790654818580000000
+        - 1790654818796000000
+        - 1790654818945000000
+        - 1790654819181000000
+        - 1790654819397000000
+        - 1790654819783000000
+        - 1790654819933000000
+        - 1790654820070000000
+        - 1790654820284000000
+        - 1790654820452000000
+        - 1790654820674000000
+        - 1790654820805000000
+        - 1790654820956000000
+        - 1790654821189000000
+        - 1790654821342000000
+        - 1790654821579000000
+        - 1790654821797000000
+        - 1790654821945000000
+        - 1790654822181000000
+        - 1790654822398000000
+        - 1790654822789000000
+        - 1790654823927000000
+        - 1790654824143000000
+        - 1790654824444000000
+        - 1790654824832000000
+        - 1790654825114000000
+        - 1790654825385000000
+        - 1790654825690000000
+        - 1790654826074000000
+        - 1790654826441000000
+        - 1790654826829000000
+        - 1790654827196000000
+        - 1790654828183000000
+        processed_lidar_count_delta: 2
+        matched_count_delta: 4
+        processed_supply_deltas:
+          processed: 2
+          matched: 4
+          dropped: -2
+          pending: 0
+          startup_removed: 0
+          overflow_removed: 0
+        matched_delta_explained_by_processed_supply: true
+    shadow-trace:
+      new_1:
+        common_matched_lidar_stamps: 163
+        old_only_matched_stamps:
+        - 1789141093018000000
+        - 1789141093739000000
+        - 1789141094056000000
+        - 1789141094785000000
+        - 1789141095842000000
+        - 1789141096045000000
+        - 1789141096820000000
+        - 1789141097126000000
+        - 1789141097747000000
+        - 1789141098061000000
+        - 1789141098679000000
+        - 1789141098997000000
+        - 1789141099769000000
+        - 1789141100625000000
+        - 1789141100930000000
+        - 1789141101534000000
+        - 1789141101974000000
+        - 1789141102708000000
+        - 1789141103566000000
+        new_only_matched_stamps:
+        - 1789141093121000000
+        - 1789141093837000000
+        - 1789141094161000000
+        - 1789141094689000000
+        - 1789141094886000000
+        - 1789141095627000000
+        - 1789141095943000000
+        - 1789141096263000000
+        - 1789141096921000000
+        - 1789141097530000000
+        - 1789141097849000000
+        - 1789141098158000000
+        - 1789141098779000000
+        - 1789141099100000000
+        - 1789141099199000000
+        - 1789141100524000000
+        - 1789141100828000000
+        - 1789141101136000000
+        - 1789141101772000000
+        - 1789141102605000000
+        - 1789141102912000000
+        - 1789141104652000000
+        - 1789141109048000000
+        different_yolo_selections:
+        - lidar_stamp_ns: 1789141084874000000
+          old_yolo_stamp_ns: 1789141084898934125
+          new_yolo_stamp_ns: 1789141084886275529
+          old_waited_ms: 103.272327
+          new_waited_ms: 1.247244
+        - lidar_stamp_ns: 1789141086350000000
+          old_yolo_stamp_ns: 1789141086374028205
+          new_yolo_stamp_ns: 1789141086347799062
+          old_waited_ms: 107.207099
+          new_waited_ms: 12.529021
+        - lidar_stamp_ns: 1789141086452000000
+          old_yolo_stamp_ns: 1789141086474166870
+          new_yolo_stamp_ns: 1789141086449040889
+          old_waited_ms: 97.5247
+          new_waited_ms: 100.190329
+        - lidar_stamp_ns: 1789141087123000000
+          old_yolo_stamp_ns: 1789141087081386089
+          new_yolo_stamp_ns: 1789141087135074853
+          old_waited_ms: 100.649289
+          new_waited_ms: 11.510728
+        - lidar_stamp_ns: 1789141087225000000
+          old_yolo_stamp_ns: 1789141087248825788
+          new_yolo_stamp_ns: 1789141087235888242
+          old_waited_ms: 100.806305
+          new_waited_ms: 1.381679
+        - lidar_stamp_ns: 1789141087326000000
+          old_yolo_stamp_ns: 1789141087348730325
+          new_yolo_stamp_ns: 1789141087337114810
+          old_waited_ms: 131.443404
+          new_waited_ms: 1.525318
+        - lidar_stamp_ns: 1789141087440000000
+          old_yolo_stamp_ns: 1789141087466075658
+          new_yolo_stamp_ns: 1789141087438204050
+          old_waited_ms: 94.51547
+          new_waited_ms: 103.817009
+        - lidar_stamp_ns: 1789141087542000000
+          old_yolo_stamp_ns: 1789141087566590070
+          new_yolo_stamp_ns: 1789141087539149045
+          old_waited_ms: 106.297975
+          new_waited_ms: 8.793056
+        - lidar_stamp_ns: 1789141088734000000
+          old_yolo_stamp_ns: 1789141088760986566
+          new_yolo_stamp_ns: 1789141088745940923
+          old_waited_ms: 213.713338
+          new_waited_ms: 0.778239
+        - lidar_stamp_ns: 1789141088949000000
+          old_yolo_stamp_ns: 1789141088973495721
+          new_yolo_stamp_ns: 1789141088947726964
+          old_waited_ms: 10.709356
+          new_waited_ms: 1.346865
+        - lidar_stamp_ns: 1789141089419000000
+          old_yolo_stamp_ns: 1789141089394459486
+          new_yolo_stamp_ns: 1789141089430845022
+          old_waited_ms: 121.988114
+          new_waited_ms: 13.61723
+        - lidar_stamp_ns: 1789141089535000000
+          old_yolo_stamp_ns: 1789141089562356233
+          new_yolo_stamp_ns: 1789141089533013582
+          old_waited_ms: 110.421939
+          new_waited_ms: 1.108592
+        - lidar_stamp_ns: 1789141089634000000
+          old_yolo_stamp_ns: 1789141089662258386
+          new_yolo_stamp_ns: 1789141089632868528
+          old_waited_ms: 10.844115
+          new_waited_ms: 1.494178
+        - lidar_stamp_ns: 1789141089735000000
+          old_yolo_stamp_ns: 1789141089762343645
+          new_yolo_stamp_ns: 1789141089732951879
+          old_waited_ms: 105.764135
+          new_waited_ms: 1.204205
+        - lidar_stamp_ns: 1789141090479000000
+          old_yolo_stamp_ns: 1789141090507842779
+          new_yolo_stamp_ns: 1789141090491872549
+          old_waited_ms: 1.101594
+          new_waited_ms: 1.115939
+        - lidar_stamp_ns: 1789141091639000000
+          old_yolo_stamp_ns: 1789141091665533065
+          new_yolo_stamp_ns: 1789141091637154579
+          old_waited_ms: 0.749612
+          new_waited_ms: 0.90109
+        - lidar_stamp_ns: 1789141091740000000
+          old_yolo_stamp_ns: 1789141091765931367
+          new_yolo_stamp_ns: 1789141091738135814
+          old_waited_ms: 1.028702
+          new_waited_ms: 1.275567
+        - lidar_stamp_ns: 1789141091846000000
+          old_yolo_stamp_ns: 1789141091869980573
+          new_yolo_stamp_ns: 1789141091842487812
+          old_waited_ms: 1.505046
+          new_waited_ms: 0.951764
+        - lidar_stamp_ns: 1789141091950000000
+          old_yolo_stamp_ns: 1789141091973265647
+          new_yolo_stamp_ns: 1789141091946671247
+          old_waited_ms: 0.748846
+          new_waited_ms: 1.183411
+        - lidar_stamp_ns: 1789141092050000000
+          old_yolo_stamp_ns: 1789141092074058294
+          new_yolo_stamp_ns: 1789141092047216653
+          old_waited_ms: 0.98398
+          new_waited_ms: 2.447568
+        - lidar_stamp_ns: 1789141092171000000
+          old_yolo_stamp_ns: 1789141092140531063
+          new_yolo_stamp_ns: 1789141092181491136
+          old_waited_ms: 1.4829
+          new_waited_ms: 1.238486
+        - lidar_stamp_ns: 1789141092799000000
+          old_yolo_stamp_ns: 1789141092796642780
+          new_yolo_stamp_ns: 1789141092824081420
+          old_waited_ms: 1.413858
+          new_waited_ms: 1.271822
+        - lidar_stamp_ns: 1789141092898000000
+          old_yolo_stamp_ns: 1789141092896175622
+          new_yolo_stamp_ns: 1789141092923957347
+          old_waited_ms: 1.083994
+          new_waited_ms: 1.361826
+        - lidar_stamp_ns: 1789141093522000000
+          old_yolo_stamp_ns: 1789141093562667608
+          new_yolo_stamp_ns: 1789141093535873651
+          old_waited_ms: 1.638752
+          new_waited_ms: 0.997189
+        - lidar_stamp_ns: 1789141094361000000
+          old_yolo_stamp_ns: 1789141094333998918
+          new_yolo_stamp_ns: 1789141094371713876
+          old_waited_ms: 1.392019
+          new_waited_ms: 1.418251
+        - lidar_stamp_ns: 1789141096146000000
+          old_yolo_stamp_ns: 1789141096168924331
+          new_yolo_stamp_ns: 1789141096142711639
+          old_waited_ms: 1.180899
+          new_waited_ms: 1.050868
+        - lidar_stamp_ns: 1789141097226000000
+          old_yolo_stamp_ns: 1789141097249215126
+          new_yolo_stamp_ns: 1789141097236644268
+          old_waited_ms: 1.341955
+          new_waited_ms: 1.17537
+        - lidar_stamp_ns: 1789141097429000000
+          old_yolo_stamp_ns: 1789141097461316108
+          new_yolo_stamp_ns: 1789141097445825338
+          old_waited_ms: 1.461413
+          new_waited_ms: 0.825968
+        - lidar_stamp_ns: 1789141100727000000
+          old_yolo_stamp_ns: 1789141100755218029
+          new_yolo_stamp_ns: 1789141100740903615
+          old_waited_ms: 1.309821
+          new_waited_ms: 1.250744
+        - lidar_stamp_ns: 1789141101034000000
+          old_yolo_stamp_ns: 1789141101046785831
+          new_yolo_stamp_ns: 1789141101063333988
+          old_waited_ms: 1.379629
+          new_waited_ms: 1.572486
+        - lidar_stamp_ns: 1789141101436000000
+          old_yolo_stamp_ns: 1789141101461515188
+          new_yolo_stamp_ns: 1789141101446240425
+          old_waited_ms: 0.935483
+          new_waited_ms: 1.495708
+        - lidar_stamp_ns: 1789141103228000000
+          old_yolo_stamp_ns: 1789141103186997413
+          new_yolo_stamp_ns: 1789141103239253520
+          old_waited_ms: 0.959344
+          new_waited_ms: 1.092848
+        - lidar_stamp_ns: 1789141103346000000
+          old_yolo_stamp_ns: 1789141103369801044
+          new_yolo_stamp_ns: 1789141103343913078
+          old_waited_ms: 1.187698
+          new_waited_ms: 1.259341
+        - lidar_stamp_ns: 1789141104099000000
+          old_yolo_stamp_ns: 1789141104096757173
+          new_yolo_stamp_ns: 1789141104123327016
+          old_waited_ms: 0.75525
+          new_waited_ms: 1.14312
+        - lidar_stamp_ns: 1789141105527000000
+          old_yolo_stamp_ns: 1789141105550504684
+          new_yolo_stamp_ns: 1789141105539640665
+          old_waited_ms: 0.810251
+          new_waited_ms: 0.929821
+        - lidar_stamp_ns: 1789141105628000000
+          old_yolo_stamp_ns: 1789141105656180143
+          new_yolo_stamp_ns: 1789141105639922618
+          old_waited_ms: 1.207708
+          new_waited_ms: 0.768589
+        - lidar_stamp_ns: 1789141105847000000
+          old_yolo_stamp_ns: 1789141105868992567
+          new_yolo_stamp_ns: 1789141105844651699
+          old_waited_ms: 11.600274
+          new_waited_ms: 1.343285
+        old_only_processed_lidar_stamps:
+        - 1789141093018000000
+        - 1789141093739000000
+        - 1789141094056000000
+        - 1789141094785000000
+        - 1789141095842000000
+        - 1789141096045000000
+        - 1789141096820000000
+        - 1789141097126000000
+        - 1789141097747000000
+        - 1789141098061000000
+        - 1789141098679000000
+        - 1789141098997000000
+        - 1789141099769000000
+        - 1789141100625000000
+        - 1789141100930000000
+        - 1789141101534000000
+        - 1789141101974000000
+        - 1789141102708000000
+        - 1789141103566000000
+        new_only_processed_lidar_stamps:
+        - 1789141093121000000
+        - 1789141093837000000
+        - 1789141094161000000
+        - 1789141094689000000
+        - 1789141094886000000
+        - 1789141095627000000
+        - 1789141095943000000
+        - 1789141096263000000
+        - 1789141096921000000
+        - 1789141097530000000
+        - 1789141097849000000
+        - 1789141098158000000
+        - 1789141098779000000
+        - 1789141099100000000
+        - 1789141099199000000
+        - 1789141100524000000
+        - 1789141100828000000
+        - 1789141101136000000
+        - 1789141101772000000
+        - 1789141102605000000
+        - 1789141102912000000
+        - 1789141104652000000
+        processed_lidar_count_delta: 3
+        matched_count_delta: 4
+        processed_supply_deltas:
+          processed: 3
+          matched: 4
+          dropped: 0
+          pending: -1
+          startup_removed: 0
+          overflow_removed: 0
+        matched_delta_explained_by_processed_supply: true
+      new_2:
+        common_matched_lidar_stamps: 166
+        old_only_matched_stamps:
+        - 1789141093018000000
+        - 1789141093739000000
+        - 1789141094785000000
+        - 1789141095842000000
+        - 1789141096045000000
+        - 1789141096820000000
+        - 1789141097024000000
+        - 1789141097747000000
+        - 1789141098061000000
+        - 1789141098679000000
+        - 1789141099769000000
+        - 1789141100120000000
+        - 1789141100625000000
+        - 1789141102489000000
+        - 1789141102812000000
+        - 1789141103998000000
+        new_only_matched_stamps:
+        - 1789141093121000000
+        - 1789141093837000000
+        - 1789141094689000000
+        - 1789141094886000000
+        - 1789141095627000000
+        - 1789141095943000000
+        - 1789141096263000000
+        - 1789141096921000000
+        - 1789141097530000000
+        - 1789141097849000000
+        - 1789141098158000000
+        - 1789141099199000000
+        - 1789141099884000000
+        - 1789141100524000000
+        - 1789141102605000000
+        - 1789141102912000000
+        - 1789141104652000000
+        - 1789141109048000000
+        different_yolo_selections:
+        - lidar_stamp_ns: 1789141084874000000
+          old_yolo_stamp_ns: 1789141084898934125
+          new_yolo_stamp_ns: 1789141084886275529
+          old_waited_ms: 103.272327
+          new_waited_ms: 1.398536
+        - lidar_stamp_ns: 1789141086350000000
+          old_yolo_stamp_ns: 1789141086374028205
+          new_yolo_stamp_ns: 1789141086347799062
+          old_waited_ms: 107.207099
+          new_waited_ms: 11.077366
+        - lidar_stamp_ns: 1789141086452000000
+          old_yolo_stamp_ns: 1789141086474166870
+          new_yolo_stamp_ns: 1789141086449040889
+          old_waited_ms: 97.5247
+          new_waited_ms: 96.135319
+        - lidar_stamp_ns: 1789141087123000000
+          old_yolo_stamp_ns: 1789141087081386089
+          new_yolo_stamp_ns: 1789141087135074853
+          old_waited_ms: 100.649289
+          new_waited_ms: 12.060563
+        - lidar_stamp_ns: 1789141087225000000
+          old_yolo_stamp_ns: 1789141087248825788
+          new_yolo_stamp_ns: 1789141087235888242
+          old_waited_ms: 100.806305
+          new_waited_ms: 0.97529
+        - lidar_stamp_ns: 1789141087326000000
+          old_yolo_stamp_ns: 1789141087348730325
+          new_yolo_stamp_ns: 1789141087337114810
+          old_waited_ms: 131.443404
+          new_waited_ms: 1.219593
+        - lidar_stamp_ns: 1789141087440000000
+          old_yolo_stamp_ns: 1789141087466075658
+          new_yolo_stamp_ns: 1789141087438204050
+          old_waited_ms: 94.51547
+          new_waited_ms: 98.175867
+        - lidar_stamp_ns: 1789141087542000000
+          old_yolo_stamp_ns: 1789141087566590070
+          new_yolo_stamp_ns: 1789141087539149045
+          old_waited_ms: 106.297975
+          new_waited_ms: 112.558117
+        - lidar_stamp_ns: 1789141088734000000
+          old_yolo_stamp_ns: 1789141088760986566
+          new_yolo_stamp_ns: 1789141088745940923
+          old_waited_ms: 213.713338
+          new_waited_ms: 1.21888
+        - lidar_stamp_ns: 1789141088949000000
+          old_yolo_stamp_ns: 1789141088973495721
+          new_yolo_stamp_ns: 1789141088947726964
+          old_waited_ms: 10.709356
+          new_waited_ms: 1.182679
+        - lidar_stamp_ns: 1789141089419000000
+          old_yolo_stamp_ns: 1789141089394459486
+          new_yolo_stamp_ns: 1789141089430845022
+          old_waited_ms: 121.988114
+          new_waited_ms: 1.64928
+        - lidar_stamp_ns: 1789141089535000000
+          old_yolo_stamp_ns: 1789141089562356233
+          new_yolo_stamp_ns: 1789141089533013582
+          old_waited_ms: 110.421939
+          new_waited_ms: 1.028821
+        - lidar_stamp_ns: 1789141089634000000
+          old_yolo_stamp_ns: 1789141089662258386
+          new_yolo_stamp_ns: 1789141089632868528
+          old_waited_ms: 10.844115
+          new_waited_ms: 0.90565
+        - lidar_stamp_ns: 1789141089735000000
+          old_yolo_stamp_ns: 1789141089762343645
+          new_yolo_stamp_ns: 1789141089732951879
+          old_waited_ms: 105.764135
+          new_waited_ms: 1.1315
+        - lidar_stamp_ns: 1789141091639000000
+          old_yolo_stamp_ns: 1789141091665533065
+          new_yolo_stamp_ns: 1789141091637154579
+          old_waited_ms: 0.749612
+          new_waited_ms: 1.070977
+        - lidar_stamp_ns: 1789141091740000000
+          old_yolo_stamp_ns: 1789141091765931367
+          new_yolo_stamp_ns: 1789141091738135814
+          old_waited_ms: 1.028702
+          new_waited_ms: 1.304339
+        - lidar_stamp_ns: 1789141091846000000
+          old_yolo_stamp_ns: 1789141091869980573
+          new_yolo_stamp_ns: 1789141091842487812
+          old_waited_ms: 1.505046
+          new_waited_ms: 1.232824
+        - lidar_stamp_ns: 1789141091950000000
+          old_yolo_stamp_ns: 1789141091973265647
+          new_yolo_stamp_ns: 1789141091946671247
+          old_waited_ms: 0.748846
+          new_waited_ms: 0.948453
+        - lidar_stamp_ns: 1789141092050000000
+          old_yolo_stamp_ns: 1789141092074058294
+          new_yolo_stamp_ns: 1789141092047216653
+          old_waited_ms: 0.98398
+          new_waited_ms: 1.72044
+        - lidar_stamp_ns: 1789141092171000000
+          old_yolo_stamp_ns: 1789141092140531063
+          new_yolo_stamp_ns: 1789141092181491136
+          old_waited_ms: 1.4829
+          new_waited_ms: 1.202961
+        - lidar_stamp_ns: 1789141092799000000
+          old_yolo_stamp_ns: 1789141092796642780
+          new_yolo_stamp_ns: 1789141092824081420
+          old_waited_ms: 1.413858
+          new_waited_ms: 0.837486
+        - lidar_stamp_ns: 1789141093522000000
+          old_yolo_stamp_ns: 1789141093562667608
+          new_yolo_stamp_ns: 1789141093535873651
+          old_waited_ms: 1.638752
+          new_waited_ms: 1.276157
+        - lidar_stamp_ns: 1789141094361000000
+          old_yolo_stamp_ns: 1789141094333998918
+          new_yolo_stamp_ns: 1789141094371713876
+          old_waited_ms: 1.392019
+          new_waited_ms: 1.323756
+        - lidar_stamp_ns: 1789141096146000000
+          old_yolo_stamp_ns: 1789141096168924331
+          new_yolo_stamp_ns: 1789141096142711639
+          old_waited_ms: 1.180899
+          new_waited_ms: 0.934224
+        - lidar_stamp_ns: 1789141097226000000
+          old_yolo_stamp_ns: 1789141097249215126
+          new_yolo_stamp_ns: 1789141097236644268
+          old_waited_ms: 1.341955
+          new_waited_ms: 1.416408
+        - lidar_stamp_ns: 1789141097429000000
+          old_yolo_stamp_ns: 1789141097461316108
+          new_yolo_stamp_ns: 1789141097445825338
+          old_waited_ms: 1.461413
+          new_waited_ms: 1.394199
+        - lidar_stamp_ns: 1789141097950000000
+          old_yolo_stamp_ns: 1789141097948031902
+          new_yolo_stamp_ns: 1789141097975022792
+          old_waited_ms: 0.977653
+          new_waited_ms: 1.401006
+        - lidar_stamp_ns: 1789141100727000000
+          old_yolo_stamp_ns: 1789141100755218029
+          new_yolo_stamp_ns: 1789141100740903615
+          old_waited_ms: 1.309821
+          new_waited_ms: 1.464653
+        - lidar_stamp_ns: 1789141100930000000
+          old_yolo_stamp_ns: 1789141100956499338
+          new_yolo_stamp_ns: 1789141100941156148
+          old_waited_ms: 2.827398
+          new_waited_ms: 1.388206
+        - lidar_stamp_ns: 1789141101436000000
+          old_yolo_stamp_ns: 1789141101461515188
+          new_yolo_stamp_ns: 1789141101446240425
+          old_waited_ms: 0.935483
+          new_waited_ms: 1.50327
+        - lidar_stamp_ns: 1789141103228000000
+          old_yolo_stamp_ns: 1789141103186997413
+          new_yolo_stamp_ns: 1789141103239253520
+          old_waited_ms: 0.959344
+          new_waited_ms: 1.516323
+        - lidar_stamp_ns: 1789141103346000000
+          old_yolo_stamp_ns: 1789141103369801044
+          new_yolo_stamp_ns: 1789141103343913078
+          old_waited_ms: 1.187698
+          new_waited_ms: 1.172504
+        - lidar_stamp_ns: 1789141103566000000
+          old_yolo_stamp_ns: 1789141103538865804
+          new_yolo_stamp_ns: 1789141103576839685
+          old_waited_ms: 1.428878
+          new_waited_ms: 0.887588
+        - lidar_stamp_ns: 1789141105527000000
+          old_yolo_stamp_ns: 1789141105550504684
+          new_yolo_stamp_ns: 1789141105539640665
+          old_waited_ms: 0.810251
+          new_waited_ms: 1.359081
+        - lidar_stamp_ns: 1789141105628000000
+          old_yolo_stamp_ns: 1789141105656180143
+          new_yolo_stamp_ns: 1789141105639922618
+          old_waited_ms: 1.207708
+          new_waited_ms: 1.142652
+        - lidar_stamp_ns: 1789141105847000000
+          old_yolo_stamp_ns: 1789141105868992567
+          new_yolo_stamp_ns: 1789141105844651699
+          old_waited_ms: 11.600274
+          new_waited_ms: 1.308653
+        - lidar_stamp_ns: 1789141107929000000
+          old_yolo_stamp_ns: 1789141107955762147
+          new_yolo_stamp_ns: 1789141107942264795
+          old_waited_ms: 117.390422
+          new_waited_ms: 0.934814
+        old_only_processed_lidar_stamps:
+        - 1789141093018000000
+        - 1789141093739000000
+        - 1789141094785000000
+        - 1789141095842000000
+        - 1789141096045000000
+        - 1789141096820000000
+        - 1789141097024000000
+        - 1789141097747000000
+        - 1789141098061000000
+        - 1789141098679000000
+        - 1789141099769000000
+        - 1789141100120000000
+        - 1789141100625000000
+        - 1789141102489000000
+        - 1789141102812000000
+        - 1789141103998000000
+        new_only_processed_lidar_stamps:
+        - 1789141093121000000
+        - 1789141093837000000
+        - 1789141094689000000
+        - 1789141094886000000
+        - 1789141095627000000
+        - 1789141095943000000
+        - 1789141096263000000
+        - 1789141096921000000
+        - 1789141097530000000
+        - 1789141097849000000
+        - 1789141098158000000
+        - 1789141099199000000
+        - 1789141099884000000
+        - 1789141100524000000
+        - 1789141102605000000
+        - 1789141102912000000
+        - 1789141104652000000
+        processed_lidar_count_delta: 1
+        matched_count_delta: 2
+        processed_supply_deltas:
+          processed: 1
+          matched: 2
+          dropped: 0
+          pending: -1
+          startup_removed: 0
+          overflow_removed: 0
+        matched_delta_explained_by_processed_supply: true
+      old_2:
+        common_matched_lidar_stamps: 168
+        old_only_matched_stamps:
+        - 1789141093955000000
+        - 1789141094261000000
+        - 1789141094785000000
+        - 1789141095190000000
+        - 1789141095842000000
+        - 1789141096146000000
+        - 1789141096820000000
+        - 1789141097126000000
+        - 1789141097747000000
+        - 1789141098061000000
+        - 1789141098679000000
+        - 1789141098997000000
+        - 1789141099769000000
+        - 1789141102489000000
+        new_only_matched_stamps:
+        - 1789141093837000000
+        - 1789141094161000000
+        - 1789141094689000000
+        - 1789141094886000000
+        - 1789141095089000000
+        - 1789141095627000000
+        - 1789141095943000000
+        - 1789141096263000000
+        - 1789141096921000000
+        - 1789141097530000000
+        - 1789141097849000000
+        - 1789141098158000000
+        - 1789141098779000000
+        - 1789141099100000000
+        - 1789141099199000000
+        - 1789141099884000000
+        - 1789141102605000000
+        different_yolo_selections:
+        - lidar_stamp_ns: 1789141085494000000
+          old_yolo_stamp_ns: 1789141085490517139
+          new_yolo_stamp_ns: 1789141085516812324
+          old_waited_ms: 100.315086
+          new_waited_ms: 107.401734
+        - lidar_stamp_ns: 1789141086551000000
+          old_yolo_stamp_ns: 1789141086549108743
+          new_yolo_stamp_ns: 1789141086574583530
+          old_waited_ms: 138.217562
+          new_waited_ms: 135.202311
+        - lidar_stamp_ns: 1789141087123000000
+          old_yolo_stamp_ns: 1789141087081386089
+          new_yolo_stamp_ns: 1789141087135074853
+          old_waited_ms: 100.649289
+          new_waited_ms: 91.742316
+        - lidar_stamp_ns: 1789141087440000000
+          old_yolo_stamp_ns: 1789141087466075658
+          new_yolo_stamp_ns: 1789141087438204050
+          old_waited_ms: 94.51547
+          new_waited_ms: 93.033799
+        - lidar_stamp_ns: 1789141087542000000
+          old_yolo_stamp_ns: 1789141087566590070
+          new_yolo_stamp_ns: 1789141087539149045
+          old_waited_ms: 106.297975
+          new_waited_ms: 108.308808
+        - lidar_stamp_ns: 1789141087643000000
+          old_yolo_stamp_ns: 1789141087640669107
+          new_yolo_stamp_ns: 1789141087667252540
+          old_waited_ms: 102.696395
+          new_waited_ms: 109.198637
+        - lidar_stamp_ns: 1789141089183000000
+          old_yolo_stamp_ns: 1789141089181790113
+          new_yolo_stamp_ns: 1789141089209101915
+          old_waited_ms: 122.801078
+          new_waited_ms: 130.507612
+        - lidar_stamp_ns: 1789141089419000000
+          old_yolo_stamp_ns: 1789141089394459486
+          new_yolo_stamp_ns: 1789141089430845022
+          old_waited_ms: 121.988114
+          new_waited_ms: 126.509792
+        - lidar_stamp_ns: 1789141089535000000
+          old_yolo_stamp_ns: 1789141089562356233
+          new_yolo_stamp_ns: 1789141089533013582
+          old_waited_ms: 110.421939
+          new_waited_ms: 102.246552
+        - lidar_stamp_ns: 1789141089634000000
+          old_yolo_stamp_ns: 1789141089662258386
+          new_yolo_stamp_ns: 1789141089632868528
+          old_waited_ms: 10.844115
+          new_waited_ms: 108.921815
+        - lidar_stamp_ns: 1789141089735000000
+          old_yolo_stamp_ns: 1789141089762343645
+          new_yolo_stamp_ns: 1789141089732951879
+          old_waited_ms: 105.764135
+          new_waited_ms: 106.325708
+        - lidar_stamp_ns: 1789141090276000000
+          old_yolo_stamp_ns: 1789141090286847829
+          new_yolo_stamp_ns: 1789141090301772117
+          old_waited_ms: 11.974153
+          new_waited_ms: 210.96301
+        - lidar_stamp_ns: 1789141090786000000
+          old_yolo_stamp_ns: 1789141090783631086
+          new_yolo_stamp_ns: 1789141090811431884
+          old_waited_ms: 109.391423
+          new_waited_ms: 101.746642
+        - lidar_stamp_ns: 1789141090887000000
+          old_yolo_stamp_ns: 1789141090884644031
+          new_yolo_stamp_ns: 1789141090913663387
+          old_waited_ms: 108.070418
+          new_waited_ms: 106.590705
+        - lidar_stamp_ns: 1789141090988000000
+          old_yolo_stamp_ns: 1789141090985783576
+          new_yolo_stamp_ns: 1789141091013518333
+          old_waited_ms: 104.837759
+          new_waited_ms: 12.040109
+        - lidar_stamp_ns: 1789141091089000000
+          old_yolo_stamp_ns: 1789141091086818456
+          new_yolo_stamp_ns: 1789141091113476514
+          old_waited_ms: 237.316196
+          new_waited_ms: 0.796253
+        - lidar_stamp_ns: 1789141091639000000
+          old_yolo_stamp_ns: 1789141091665533065
+          new_yolo_stamp_ns: 1789141091637154579
+          old_waited_ms: 0.749612
+          new_waited_ms: 1.247254
+        - lidar_stamp_ns: 1789141091740000000
+          old_yolo_stamp_ns: 1789141091765931367
+          new_yolo_stamp_ns: 1789141091738135814
+          old_waited_ms: 1.028702
+          new_waited_ms: 1.138559
+        - lidar_stamp_ns: 1789141091846000000
+          old_yolo_stamp_ns: 1789141091869980573
+          new_yolo_stamp_ns: 1789141091842487812
+          old_waited_ms: 1.505046
+          new_waited_ms: 0.830355
+        - lidar_stamp_ns: 1789141091950000000
+          old_yolo_stamp_ns: 1789141091973265647
+          new_yolo_stamp_ns: 1789141091946671247
+          old_waited_ms: 0.748846
+          new_waited_ms: 0.747387
+        - lidar_stamp_ns: 1789141092050000000
+          old_yolo_stamp_ns: 1789141092074058294
+          new_yolo_stamp_ns: 1789141092047216653
+          old_waited_ms: 0.98398
+          new_waited_ms: 1.060071
+        - lidar_stamp_ns: 1789141092274000000
+          old_yolo_stamp_ns: 1789141092284569025
+          new_yolo_stamp_ns: 1789141092300454139
+          old_waited_ms: 1.443982
+          new_waited_ms: 1.369457
+        - lidar_stamp_ns: 1789141092380000000
+          old_yolo_stamp_ns: 1789141092392787456
+          new_yolo_stamp_ns: 1789141092413092374
+          old_waited_ms: 1.250249
+          new_waited_ms: 0.739451
+        - lidar_stamp_ns: 1789141093322000000
+          old_yolo_stamp_ns: 1789141093333395242
+          new_yolo_stamp_ns: 1789141093361701011
+          old_waited_ms: 0.928428
+          new_waited_ms: 0.892443
+        - lidar_stamp_ns: 1789141093522000000
+          old_yolo_stamp_ns: 1789141093562667608
+          new_yolo_stamp_ns: 1789141093535873651
+          old_waited_ms: 1.638752
+          new_waited_ms: 1.351378
+        - lidar_stamp_ns: 1789141094361000000
+          old_yolo_stamp_ns: 1789141094333998918
+          new_yolo_stamp_ns: 1789141094371713876
+          old_waited_ms: 1.392019
+          new_waited_ms: 1.101357
+        - lidar_stamp_ns: 1789141095292000000
+          old_yolo_stamp_ns: 1789141095288266897
+          new_yolo_stamp_ns: 1789141095315249919
+          old_waited_ms: 1.608751
+          new_waited_ms: 0.866888
+        - lidar_stamp_ns: 1789141096045000000
+          old_yolo_stamp_ns: 1789141096068885087
+          new_yolo_stamp_ns: 1789141096041880130
+          old_waited_ms: 1.244383
+          new_waited_ms: 0.964239
+        - lidar_stamp_ns: 1789141096478000000
+          old_yolo_stamp_ns: 1789141096488476276
+          new_yolo_stamp_ns: 1789141096437505006
+          old_waited_ms: 0.900399
+          new_waited_ms: 0.811394
+        - lidar_stamp_ns: 1789141097024000000
+          old_yolo_stamp_ns: 1789141097035814762
+          new_yolo_stamp_ns: 1789141097048031806
+          old_waited_ms: 1.490619
+          new_waited_ms: 1.224053
+        - lidar_stamp_ns: 1789141097226000000
+          old_yolo_stamp_ns: 1789141097249215126
+          new_yolo_stamp_ns: 1789141097236644268
+          old_waited_ms: 1.341955
+          new_waited_ms: 1.232243
+        - lidar_stamp_ns: 1789141097429000000
+          old_yolo_stamp_ns: 1789141097461316108
+          new_yolo_stamp_ns: 1789141097445825338
+          old_waited_ms: 1.461413
+          new_waited_ms: 1.418696
+        - lidar_stamp_ns: 1789141098579000000
+          old_yolo_stamp_ns: 1789141098590812921
+          new_yolo_stamp_ns: 1789141098607515335
+          old_waited_ms: 0.99517
+          new_waited_ms: 1.245838
+        - lidar_stamp_ns: 1789141100625000000
+          old_yolo_stamp_ns: 1789141100638307571
+          new_yolo_stamp_ns: 1789141100650087118
+          old_waited_ms: 1.409556
+          new_waited_ms: 1.49562
+        - lidar_stamp_ns: 1789141100930000000
+          old_yolo_stamp_ns: 1789141100956499338
+          new_yolo_stamp_ns: 1789141100941156148
+          old_waited_ms: 2.827398
+          new_waited_ms: 1.277136
+        - lidar_stamp_ns: 1789141101436000000
+          old_yolo_stamp_ns: 1789141101461515188
+          new_yolo_stamp_ns: 1789141101446240425
+          old_waited_ms: 0.935483
+          new_waited_ms: 1.318861
+        - lidar_stamp_ns: 1789141101974000000
+          old_yolo_stamp_ns: 1789141101985075473
+          new_yolo_stamp_ns: 1789141102013497352
+          old_waited_ms: 1.289223
+          new_waited_ms: 1.321801
+        - lidar_stamp_ns: 1789141102074000000
+          old_yolo_stamp_ns: 1789141102084857702
+          new_yolo_stamp_ns: 1789141102112458229
+          old_waited_ms: 1.104205
+          new_waited_ms: 1.218789
+        - lidar_stamp_ns: 1789141102389000000
+          old_yolo_stamp_ns: 1789141102387303590
+          new_yolo_stamp_ns: 1789141102418283462
+          old_waited_ms: 0.923184
+          new_waited_ms: 1.022999
+        - lidar_stamp_ns: 1789141103228000000
+          old_yolo_stamp_ns: 1789141103186997413
+          new_yolo_stamp_ns: 1789141103239253520
+          old_waited_ms: 0.959344
+          new_waited_ms: 0.884405
+        - lidar_stamp_ns: 1789141103346000000
+          old_yolo_stamp_ns: 1789141103369801044
+          new_yolo_stamp_ns: 1789141103343913078
+          old_waited_ms: 1.187698
+          new_waited_ms: 0.886894
+        - lidar_stamp_ns: 1789141103900000000
+          old_yolo_stamp_ns: 1789141103894969224
+          new_yolo_stamp_ns: 1789141103921483993
+          old_waited_ms: 1.5082
+          new_waited_ms: 1.493821
+        - lidar_stamp_ns: 1789141104875000000
+          old_yolo_stamp_ns: 1789141104884579896
+          new_yolo_stamp_ns: 1789141104913543462
+          old_waited_ms: 0.967472
+          new_waited_ms: 1.473044
+        - lidar_stamp_ns: 1789141104975000000
+          old_yolo_stamp_ns: 1789141104985805511
+          new_yolo_stamp_ns: 1789141105014164447
+          old_waited_ms: 1.22696
+          new_waited_ms: 0.818027
+        - lidar_stamp_ns: 1789141105191000000
+          old_yolo_stamp_ns: 1789141105188695907
+          new_yolo_stamp_ns: 1789141105214518547
+          old_waited_ms: 0.946515
+          new_waited_ms: 0.760055
+        - lidar_stamp_ns: 1789141105628000000
+          old_yolo_stamp_ns: 1789141105656180143
+          new_yolo_stamp_ns: 1789141105639922618
+          old_waited_ms: 1.207708
+          new_waited_ms: 0.774044
+        - lidar_stamp_ns: 1789141105847000000
+          old_yolo_stamp_ns: 1789141105868992567
+          new_yolo_stamp_ns: 1789141105844651699
+          old_waited_ms: 11.600274
+          new_waited_ms: 1.259624
+        - lidar_stamp_ns: 1789141106170000000
+          old_yolo_stamp_ns: 1789141106180690288
+          new_yolo_stamp_ns: 1789141106139916658
+          old_waited_ms: 0.712734
+          new_waited_ms: 95.88315
+        - lidar_stamp_ns: 1789141106270000000
+          old_yolo_stamp_ns: 1789141106278211832
+          new_yolo_stamp_ns: 1789141106309760093
+          old_waited_ms: 201.722127
+          new_waited_ms: 198.125526
+        - lidar_stamp_ns: 1789141106472000000
+          old_yolo_stamp_ns: 1789141106483397483
+          new_yolo_stamp_ns: 1789141106511523723
+          old_waited_ms: 11.238217
+          new_waited_ms: 111.117632
+        - lidar_stamp_ns: 1789141106586000000
+          old_yolo_stamp_ns: 1789141106583768367
+          new_yolo_stamp_ns: 1789141106611250877
+          old_waited_ms: 93.683298
+          new_waited_ms: 9.941368
+        - lidar_stamp_ns: 1789141107190000000
+          old_yolo_stamp_ns: 1789141107186988592
+          new_yolo_stamp_ns: 1789141107214216947
+          old_waited_ms: 208.070675
+          new_waited_ms: 203.875776
+        - lidar_stamp_ns: 1789141107391000000
+          old_yolo_stamp_ns: 1789141107388631820
+          new_yolo_stamp_ns: 1789141107415873289
+          old_waited_ms: 102.296908
+          new_waited_ms: 109.223675
+        - lidar_stamp_ns: 1789141107490000000
+          old_yolo_stamp_ns: 1789141107488737583
+          new_yolo_stamp_ns: 1789141107515742301
+          old_waited_ms: 101.96607
+          new_waited_ms: 104.398057
+        - lidar_stamp_ns: 1789141107929000000
+          old_yolo_stamp_ns: 1789141107955762147
+          new_yolo_stamp_ns: 1789141107942264795
+          old_waited_ms: 117.390422
+          new_waited_ms: 10.530704
+        old_only_processed_lidar_stamps:
+        - 1789141093955000000
+        - 1789141094261000000
+        - 1789141094785000000
+        - 1789141095190000000
+        - 1789141095842000000
+        - 1789141096146000000
+        - 1789141096820000000
+        - 1789141097126000000
+        - 1789141097747000000
+        - 1789141098061000000
+        - 1789141098679000000
+        - 1789141098997000000
+        - 1789141099769000000
+        - 1789141102489000000
+        new_only_processed_lidar_stamps:
+        - 1789141093837000000
+        - 1789141094161000000
+        - 1789141094689000000
+        - 1789141094886000000
+        - 1789141095089000000
+        - 1789141095627000000
+        - 1789141095943000000
+        - 1789141096263000000
+        - 1789141096921000000
+        - 1789141097530000000
+        - 1789141097849000000
+        - 1789141098158000000
+        - 1789141098779000000
+        - 1789141099100000000
+        - 1789141099199000000
+        - 1789141099884000000
+        - 1789141102605000000
+        processed_lidar_count_delta: 3
+        matched_count_delta: 3
+        processed_supply_deltas:
+          processed: 3
+          matched: 3
+          dropped: 0
+          pending: 0
+          startup_removed: 0
+          overflow_removed: 0
+        matched_delta_explained_by_processed_supply: true
+  common_source_box_comparisons:
+    primary-trace:
+      new_1:
+        common_source_frames: 899
+        old_only_frames: 1
+        new_only_frames: 79
+        different_boxes_or_headers: []
+      new_2:
+        common_source_frames: 899
+        old_only_frames: 1
+        new_only_frames: 79
+        different_boxes_or_headers: []
+      old_2:
+        common_source_frames: 856
+        old_only_frames: 44
+        new_only_frames: 40
+        different_boxes_or_headers: []
+    shadow-trace:
+      new_1:
+        common_source_frames: 448
+        old_only_frames: 0
+        new_only_frames: 46
+        different_boxes_or_headers: []
+      new_2:
+        common_source_frames: 448
+        old_only_frames: 0
+        new_only_frames: 46
+        different_boxes_or_headers: []
+      old_2:
+        common_source_frames: 400
+        old_only_frames: 48
+        new_only_frames: 30
+        different_boxes_or_headers: []
+  primary_trace_gate:
+    pass: false
+    matched_not_degraded: true
+    whole_bag_matched_not_degraded: true
+    stable_old_track_comparison:
+      common_all_runs: 1929
+      old_stable: 1929
+      regressions:
+      - stamp_ns: 1790654794688000000
+        track: 22
+        old:
+        - unknown
+        - unknown
+        new:
+        - - car
+          - car
+        - - car
+          - car
+    stable_old_observation_comparison:
+      common_lidar_stamps: 323
+      old_stable: 2967
+      unmatched_common_observations: 817
+      regressions:
+      - stamp_ns: 1790654794688000000
+        center:
+        - 19.66237255861796
+        - -492.23758172254986
+        - -0.8472483400991137
+        old:
+        - 22
+        - unknown
+        - unknown
+        new:
+        - - 22
+          - car
+          - car
+        - - 22
+          - car
+          - car
+    runs:
+    - path: old
+      repeat: 1
+      input_frames: 979
+      output_frames: 900
+      rate_hz: 18.416447073424326
+      coverage: 0.9193054136874361
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 34.8969825
+        p95_ms: 55.717776249999986
+      fusion_totals:
+        matched: 500
+        dropped: 7
+        pending_lidar: 1
+        pending_yolo: 1
+      fusion_accounting_complete: false
+      fusion_log_source: null
+      fusion_offset_p95_max_ms: 45.6
+      track_frames: 508
+      pass: false
+    - path: old
+      repeat: 2
+      input_frames: 979
+      output_frames: 896
+      rate_hz: 18.33275455745029
+      coverage: 0.9152196118488254
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 35.960393499999995
+        p95_ms: 58.47381875000001
+      fusion_totals:
+        matched: 504
+        dropped: 5
+        pending_lidar: 1
+        pending_yolo: 0
+      fusion_accounting_complete: true
+      fusion_log_source: null
+      fusion_offset_p95_max_ms: 47.6
+      track_frames: 510
+      pass: true
+    - path: new
+      repeat: 1
+      input_frames: 979
+      output_frames: 978
+      rate_hz: 20.027675691145475
+      coverage: 0.9989785495403473
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 12.428169
+        p95_ms: 20.731222649999996
+      fusion_totals:
+        matched: 504
+        dropped: 1
+        pending_lidar: 1
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_log_source: null
+      fusion_offset_p95_max_ms: 30.3
+      track_frames: 506
+      pass: true
+    - path: new
+      repeat: 2
+      input_frames: 979
+      output_frames: 978
+      rate_hz: 20.030780864252684
+      coverage: 0.9989785495403473
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 12.317563
+        p95_ms: 21.0810247
+      fusion_totals:
+        matched: 507
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_log_source: null
+      fusion_offset_p95_max_ms: 30.0
+      track_frames: 507
+      pass: true
+  shadow_trace_gate:
+    pass: true
+    matched_not_degraded: true
+    whole_bag_matched_not_degraded: true
+    stable_old_track_comparison:
+      common_all_runs: 855
+      old_stable: 855
+      regressions: []
+    stable_old_observation_comparison:
+      common_lidar_stamps: 155
+      old_stable: 1201
+      unmatched_common_observations: 904
+      regressions: []
+    runs:
+    - path: old
+      repeat: 1
+      input_frames: 494
+      output_frames: 448
+      rate_hz: 18.15501467200676
+      coverage: 0.9068825910931174
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 35.622830500000006
+        p95_ms: 53.121501849999994
+      fusion_totals:
+        matched: 182
+        dropped: 0
+        pending_lidar: 1
+        pending_yolo: 2
+      fusion_accounting_complete: true
+      fusion_log_source: rosout_5s_and_stdout_shutdown
+      fusion_offset_p95_max_ms: 30.5
+      track_frames: 183
+      pass: true
+    - path: old
+      repeat: 2
+      input_frames: 494
+      output_frames: 430
+      rate_hz: 17.4315889877694
+      coverage: 0.8704453441295547
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 37.260091
+        p95_ms: 57.61108029999999
+      fusion_totals:
+        matched: 185
+        dropped: 0
+        pending_lidar: 1
+        pending_yolo: 2
+      fusion_accounting_complete: true
+      fusion_log_source: rosout_5s_and_stdout_shutdown
+      fusion_offset_p95_max_ms: 39.5
+      track_frames: 186
+      pass: true
+    - path: new
+      repeat: 1
+      input_frames: 494
+      output_frames: 494
+      rate_hz: 20.07796834439781
+      coverage: 1.0
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 12.1451315
+        p95_ms: 19.877250099999998
+      fusion_totals:
+        matched: 186
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_log_source: rosout_5s_and_stdout_shutdown
+      fusion_offset_p95_max_ms: 26.0
+      track_frames: 186
+      pass: true
+    - path: new
+      repeat: 2
+      input_frames: 494
+      output_frames: 494
+      rate_hz: 20.078005564426775
+      coverage: 1.0
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 12.2822665
+        p95_ms: 20.016053149999998
+      fusion_totals:
+        matched: 184
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_log_source: rosout_5s_and_stdout_shutdown
+      fusion_offset_p95_max_ms: 26.1
+      track_frames: 184
+      pass: true
+  primary_acceptance:
+    pass: false
+    matched_not_degraded: true
+    whole_bag_matched_not_degraded: true
+    stable_old_track_comparison:
+      common_all_runs: 2058
+      old_stable: 2058
+      regressions: []
+    stable_old_observation_comparison:
+      common_lidar_stamps: 345
+      old_stable: 3206
+      unmatched_common_observations: 1021
+      regressions:
+      - stamp_ns: 1790654820956000000
+        center:
+        - -41.837174173703104
+        - -522.1257541214081
+        - -0.640490092706415
+        old:
+        - 355
+        - unknown
+        - unknown
+        new:
+        - - 343
+          - unknown
+          - unknown
+        - - 245
+          - car
+          - car
+    runs:
+    - path: old
+      repeat: 1
+      input_frames: 979
+      output_frames: 892
+      rate_hz: 18.251567024347892
+      coverage: 0.9111338100102145
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 35.048103499999996
+        p95_ms: 55.884879850000004
+      fusion_totals:
+        matched: 503
+        dropped: 7
+        pending_lidar: 1
+        pending_yolo: 0
+      fusion_accounting_complete: true
+      fusion_log_source: rosout_5s_and_stdout_shutdown
+      fusion_offset_p95_max_ms: 48.0
+      track_frames: 511
+      pass: true
+    - path: old
+      repeat: 2
+      input_frames: 979
+      output_frames: 877
+      rate_hz: 17.946530200236865
+      coverage: 0.8958120531154239
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 34.513405
+        p95_ms: 56.455258400000005
+      fusion_totals:
+        matched: 504
+        dropped: 6
+        pending_lidar: 1
+        pending_yolo: 0
+      fusion_accounting_complete: true
+      fusion_log_source: rosout_5s_and_stdout_shutdown
+      fusion_offset_p95_max_ms: 48.0
+      track_frames: 511
+      pass: true
+    - path: new
+      repeat: 1
+      input_frames: 979
+      output_frames: 978
+      rate_hz: 20.02711967182962
+      coverage: 0.9989785495403473
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 11.8361175
+        p95_ms: 19.661478949999996
+      fusion_totals:
+        matched: 510
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_log_source: rosout_5s_and_stdout_shutdown
+      fusion_offset_p95_max_ms: 34.4
+      track_frames: 510
+      pass: true
+    - path: new
+      repeat: 2
+      input_frames: 979
+      output_frames: 978
+      rate_hz: 20.02737351292185
+      coverage: 0.9989785495403473
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 11.812546000000001
+        p95_ms: 20.57071085
+      fusion_totals:
+        matched: 512
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_log_source: rosout_5s_and_stdout_shutdown
+      fusion_offset_p95_max_ms: 34.0
+      track_frames: 512
+      pass: true
+  shadow_acceptance:
+    pass: true
+    matched_not_degraded: true
+    whole_bag_matched_not_degraded: true
+    stable_old_track_comparison:
+      common_all_runs: 853
+      old_stable: 853
+      regressions: []
+    stable_old_observation_comparison:
+      common_lidar_stamps: 161
+      old_stable: 1517
+      unmatched_common_observations: 694
+      regressions: []
+    runs:
+    - path: old
+      repeat: 1
+      input_frames: 494
+      output_frames: 435
+      rate_hz: 17.632724692647216
+      coverage: 0.8805668016194332
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 33.773303999999996
+        p95_ms: 54.061977899999995
+      fusion_totals:
+        matched: 187
+        dropped: 0
+        pending_lidar: 1
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_log_source: rosout_5s_and_stdout_shutdown
+      fusion_offset_p95_max_ms: 41.7
+      track_frames: 188
+      pass: true
+    - path: old
+      repeat: 2
+      input_frames: 494
+      output_frames: 444
+      rate_hz: 18.001612665488814
+      coverage: 0.8987854251012146
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 33.978016999999994
+        p95_ms: 56.37264629999999
+      fusion_totals:
+        matched: 185
+        dropped: 0
+        pending_lidar: 1
+        pending_yolo: 2
+      fusion_accounting_complete: true
+      fusion_log_source: rosout_5s_and_stdout_shutdown
+      fusion_offset_p95_max_ms: 30.5
+      track_frames: 186
+      pass: true
+    - path: new
+      repeat: 1
+      input_frames: 494
+      output_frames: 494
+      rate_hz: 20.07086805703884
+      coverage: 1.0
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 11.363499000000001
+        p95_ms: 18.7668276
+      fusion_totals:
+        matched: 186
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_log_source: rosout_5s_and_stdout_shutdown
+      fusion_offset_p95_max_ms: 24.8
+      track_frames: 186
+      pass: true
+    - path: new
+      repeat: 2
+      input_frames: 494
+      output_frames: 494
+      rate_hz: 20.073017703666874
+      coverage: 1.0
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 11.1336515
+        p95_ms: 18.950579399999985
+      fusion_totals:
+        matched: 188
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_log_source: rosout_5s_and_stdout_shutdown
+      fusion_offset_p95_max_ms: 24.8
+      track_frames: 188
+      pass: true
+  object_only_short_revalidation:
+    pass: true
+    matched_not_degraded: null
+    whole_bag_matched_not_degraded: null
+    stable_old_track_comparison: null
+    stable_old_observation_comparison: null
+    runs:
+    - path: new
+      repeat: 1
+      input_frames: 196
+      output_frames: 196
+      rate_hz: 20.209309627222986
+      coverage: 1.0
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 12.3405825
+        p95_ms: 19.371465999999998
+      fusion_totals: null
+      fusion_accounting_complete: false
+      fusion_log_source: null
+      fusion_offset_p95_max_ms: null
+      track_frames: 0
+      pass: true
+    - path: new
+      repeat: 2
+      input_frames: 196
+      output_frames: 195
+      rate_hz: 20.100188450625208
+      coverage: 0.9948979591836735
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 10.873420999999999
+        p95_ms: 18.911937899999998
+      fusion_totals: null
+      fusion_accounting_complete: false
+      fusion_log_source: null
+      fusion_offset_p95_max_ms: null
+      track_frames: 0
+      pass: true
+  fault_injection:
+    startup_silence_before_frames: true
+    normal_empty: true
+    broken_jpeg_invalid_withheld: true
+    input_stop_no_repeated_output: true
+    decode_error_diagnostic: true
+    duplicate_warning: true
+    producer_exit_lane_survives: true
+    all_pass: true
+  strict_gates_unchanged: true
+  original_primary_failure_reproduced:
+    lidar_stamp_ns: 1790654794688000000
+    old_origin_lidar_ns: 1790654794637000000
+    old_origin_yolo_ns: 1790654794654529333
+    old_published_class: unknown
+    old_candidate_confirmations: 4
+    old_lidar_state_lag_ms: 51
+    new_origin_lidar_ns: 1790654794688000000
+    new_origin_yolo_ns: 1790654794677862167
+    new_published_class: car
+    new_lidar_state_lag_ms: 0
+    old_and_new_continuous_replay_pass: true
+    explanation: Both paths transfer the computed state correctly; publication includes
+      different historical observations.
+  prior_shadow_failure_accounting:
+    prior_reference: gpu_revalidation.fusion_shadow in this same record, unchanged
+    old_minimum_matches: 181
+    new_first_observed_track_frames: 178
+    new_first_matches: 177
+    new_first_pending_lidar: 1
+    new_first_dropped: 0
+    explanation: Observed output supply and pending account for the four-match deficit;
+      original run has no processing trace, so skipped generation identities and individual
+      delays cannot be proven retrospectively.
+    new_trace_verifies_processed_supply_relation: true
+    latest_shadow_pass_does_not_erase_prior_failure: true
+  preservation:
+    head_unchanged: true
+    status_unchanged: true
+    all_10_hashes_unchanged: true
+    hashes:
+      src/asmc_camera/CMakeLists.txt: true
+      src/asmc_camera/config/camera/object_classes.yaml: true
+      src/asmc_camera/setup.py: true
+      src/asmc_camera/src/asmc_camera/detection/__init__.py: true
+      src/asmc_camera/src/asmc_camera/detection/backend.py: true
+      src/asmc_camera/src/asmc_camera/detection/classes.py: true
+      src/asmc_camera/src/asmc_camera/detection/messages.py: true
+      src/asmc_camera/src/asmc_camera/detection/ultralytics_backend.py: true
+      src/asmc_camera/test/detection/__init__.py: true
+      src/asmc_camera/test/detection/test_detection_core.py: true
+  retained_validation:
+    offline_exact_3514_frames: gpu_revalidation.offline_exact_comparison, unchanged
+    full_object_only_ab: gpu_revalidation.replay_ab, unchanged
+    reason_not_repeated: Camera backend/producer, adapter, messages and weights are
+      byte-identical to 5868502; only Main class-copy extraction and opt-in tracing
+      changed.
+  observation_failures_retained:
+  - Initial CPU probe rejected missing births from bootstrap FrameFilter paths; hooks
+    added and repeated probe passed.
+  - Initial Python fixture shared mutable before/ready state; fixture isolated, negative
+    controls passed.
+  - Primary trace old_1 screen interval interleaved/truncated. Structured trace remained
+    complete. Run kept as failed; subsequent acceptance collects intact /rosout intervals
+    plus shutdown stdout.
+  archive: config/baselines/evidence/camera_objects_followup_v1/continuous_reports.tar.gz
+  archive_sha256: 3740cb84c038636525fcf6d5ebc0a32ff3c163989f1f5a3a375dd0aba97d8e0a
+  archive_bytes: 15284815

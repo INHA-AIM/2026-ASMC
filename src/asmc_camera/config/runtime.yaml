@@ -2,6 +2,15 @@ schema_version: 1
 profile: competition_runtime_v1
 
 components:
+  camera_objects:
+    enabled_by_default: false
+    launch_argument: start_camera_objects
+    canonical_topic: /perception/camera/objects
+    diagnostics_topic: /perception/camera/objects/diagnostics
+    source_stamp_policy: source_image_header
+    views: [front]
+    implementation: asmc_camera/object_detection_node.py
+    consumer: Main/camera_objects_yolo_bbox_adapter.py
   camera_lane:
     enabled_by_default: true
     sensor_set: ASMC_sensor_set_v3

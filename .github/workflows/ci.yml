@@ -19,7 +19,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            git ca-certificates libyaml-cpp-dev libeigen3-dev libopencv-dev \
+            git ca-certificates libyaml-cpp-dev libeigen3-dev libopencv-dev python3-opencv python3-numpy python3-nose \
             ros-noetic-tf ros-noetic-tf2-ros ros-noetic-rostest
           rm -rf /var/lib/apt/lists/*
 
@@ -51,8 +51,16 @@ jobs:
           python3 -m unittest tools/audit/test_perception_contract.py
           python3 -m unittest tools/audit/test_perception_topic_policy.py
           python3 -m unittest tools/audit/test_perception_runtime_acceptance.py
+          python3 -m unittest tools/perception/test_camera_object_parity.py
+          python3 -m unittest tools/perception/test_fusion_diagnostics.py
 
       - name: catkin_make
         run: |
           source /opt/ros/noetic/setup.bash
           ./scripts/build_ws.sh
+
+      - name: Check camera object processing without a GPU
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          python3 -m unittest discover -s src/asmc_camera/test/detection -p 'test_*.py'

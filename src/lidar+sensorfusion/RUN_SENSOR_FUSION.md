@@ -61,6 +61,30 @@ source devel/setup.bash
 ./start_main.sh
 ```
 
+### Opt-in camera-owned YOLO producer
+
+Build/source outer `asmc_msgs` before this nested workspace. Start the camera
+producer in a separate sourced outer terminal:
+
+```bash
+roslaunch asmc_camera camera_objects.launch
+```
+
+In the nested terminal (outer setup first, nested setup second):
+
+```bash
+roslaunch Main main.launch start_yolo:=false rviz:=false
+```
+
+This selects `camera_objects_yolo_bbox_adapter.py` instead of legacy YOLO.
+The adapter checks the outer message MD5 at startup, accepts valid front-camera
+results, and retains the old four labels, confidence 0.7, box order, integer
+coordinates and source header on `/YOLO/BBox`. Valid empty results are forwarded;
+invalid/side/zero-stamp results are withheld. Only one bbox publisher may run.
+Stop the new camera producer and restart Main with `start_yolo:=true` to roll back.
+GUI/bridge are separate. See [P2a guide](../../docs/handoffs/perception/camera-objects-p2a.md)
+and [evidence](../../config/baselines/perception_camera_objects_parity_v1.yaml).
+
 To run LiDAR-only, launch with `enable_sensor_fusion:=false`.
 
 Fusion outputs only `person`, `car`, or `unknown`; YOLO `truck` and `bus` are

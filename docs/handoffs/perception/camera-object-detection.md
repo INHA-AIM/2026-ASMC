@@ -3,10 +3,10 @@
 > **문서 상태:** Active Guide / Handoff
 > **Handoff 허브:** [README.md](../README.md)
 > **Perception 경계:** [Perception 개발·통합 가이드](../../packages/asmc_perception/README.md)
-> **기준일:** 2026-09-11
+> **기준일:** 2026-10-06 (P2a 보완; 과거 학습 수치는 당시 기록)
 > **대상:** LiDAR·센서융합 담당 손재호, 카메라 담당 안승현
 > **범위:** 기존 detector 즉시 사용, 경량 후보 선택, NAS Capture 데이터 fine-tune 준비
-> **이번 변경에 포함하지 않음:** 코드·launch·weight·데이터셋 수정, 학습과 GPU benchmark
+> **현재 구현:** [P2a 생산자·어댑터](camera-objects-p2a.md). 학습·모델 선택·동시 부하는 후속 단계
 
 ## 1. 먼저 내릴 결정
 
@@ -17,17 +17,19 @@ class filter가 이 weight에 맞아 있어 가장 빨리 LiDAR fusion을 진행
 2. 지연·VRAM이 부담일 때 동일 조건에서 공식 `YOLO11s`를 비교한다.
 3. 그다음 후보가 `YOLO26s`다. 현재 Ultralytics·export·ROS 환경 호환을 먼저 확인해야 하므로
    긴급 경로의 첫 선택은 아니다.
-4. COCO 모델의 MORAI 보행자 recall이 부족할 때 NAS 데이터를 사용해 2-class fine-tune한다.
+4. COCO 모델의 MORAI 보행자 recall이 부족할 때 NAS 데이터를 사용해 3-class fine-tune한다.
 5. 위 경량화 뒤에도 full-stack 지연 기준을 실패할 때만 unified model이나 TwinLiteNet+
    detection head를 검토한다.
 
-영상 detector의 목표 class는 다음 두 개로 제한한다.
+카메라 공통 그룹은 **`person / vehicle / obstacle`**로 고정한다.
 
-- `pedestrian`: 안전 우선 class
-- `vehicle`: 승용차·SUV·트럭·버스·밴 계열
+- `person`: person, bicycle, pedestrian
+- `vehicle`: car, truck, bus, motorcycle, train과 MORAI 차량 이름
+- `obstacle`: 그 밖의 라벨과 MORAI Obstacle; traffic light와 stop sign은 제외
 
-범위가 일정하지 않은 MORAI `Obstacle`은 세 번째 영상 class로 만들지 않는다. 카메라가
-분류하지 않은 물체도 LiDAR의 `unknown/general obstacle`로 계속 회피 대상이 될 수 있어야 한다.
+원래 라벨은 `source_class_name`에 별도로 남긴다. P2a의 실제 추론 허용 라벨은 기존 네 개
+`bus/truck/person/car`로 유지한다. 그룹을 추가해도 기존 LiDAR fusion의 분류 정책은 바꾸지 않는다.
+카메라 미검출은 LiDAR 객체 삭제 근거가 아니다. NAS 3클래스 학습·소비자 매핑은 후속 단계에서 검증한다.
 
 카메라 담당의 현재 1순위는 판단 파트에 음영 구간 차선·주행가능영역 정보를 넘기는 일이다.
 따라서 객체 작업은 이 문서를 기준으로 LiDAR·fusion 파트가 독립 착수하고, 신규 학습이나
@@ -46,6 +48,8 @@ adapter 수정이 실제로 필요해진 시점에 카메라 파트와 합류한
 | 다른 로컬 weight | `yolo11m(1).pt` | 파일명과 달리 4-class custom YOLO11s |
 | custom s SHA-256 | `6cf89c17d9a1122b9b6f3f6abe7574bf3f80cc4653e549d1bfd102ec8e421bf9` | 파일 식별용 |
 
+사용자는 두 기존 weight가 COCO로 학습됐음을 확인했다(2026-10-06). 이번 단계에서 둘 다 보존한다.
+
 두 weight는 2026-08-17 commit `e41cceefb7b079be74f51b0b74036989bee53502`에서 sensor-fusion
 workspace와 함께 들어왔다. commit과 실행 문서에는 **왜 YOLO11m을 선택했는지, 어떤 MORAI
 비교를 했는지 기록이 없다.** COCO weight와 Ultralytics 학습·export 도구를 바로 쓸 수 있고
@@ -60,13 +64,13 @@ class별 pedestrian recall·독립 test lineage가 저장소에 없다. 이름�
 현재 실행·topic 확인 절차는
 [`RUN_SENSOR_FUSION.md`](../../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)를 따른다.
 
-### 새 2-class weight는 아직 drop-in 교체가 아니다
+### 새 3-class weight는 아직 drop-in 교체가 아니다
 
 현재 [`YOLODetection.py`](../../../src/lidar+sensorfusion/src/Main/src/Camera/YOLO/YOLODetection.py)는
 `bus/truck/person/car`만 통과시킨다. downstream adapter도 `person/pedestrian`은 보행자로,
 `car/truck/bus`는 차량으로 해석하지만 문자열 `vehicle`은 아직 일반 장애물로 처리한다.
 
-따라서 새 checkpoint의 class name을 `pedestrian/vehicle`로 정의하면 weight 경로만 바꿔서는
+따라서 새 checkpoint의 class name을 `person/vehicle/obstacle`로 정의하면 weight 경로만 바꿔서는
 안 된다. 학습 결과를 runtime에 넣는 단계에서 filter와 canonical mapping을 함께 고쳐야 한다.
 이는 후속 통합 작업이며 이번 문서 작업에서는 수정하지 않는다. 긴급 사용에는 기존 COCO
 YOLO11m이 가장 안전한 이유다.
@@ -100,12 +104,12 @@ backend, confidence/NMS 조건에서 다시 재야 한다.
 
 ## 4. class 계약
 
-| 최종 의미 | COCO 출력 | NAS MORAI BBox class | 처리 |
+| 공통 그룹 | 원래 라벨 예 | NAS MORAI BBox class | P2a 사용 |
 |---|---|---|---|
-| `pedestrian` | `person` | `Pedestrian` | 검출·평가, 최우선 recall |
-| `vehicle` | `car`, `bus`, `truck` | `Vehicle`, `Sedan`, `SUV`, `Truck`, `Bus`, `Van`, `Wagon`, `MPV` | 하나의 차량 class로 병합 |
-| LiDAR-only unknown | 매핑하지 않음 | `Obstacle` 및 카메라 미검출 | 영상 class를 강제하지 않고 LiDAR에 유지 |
-| detector 비대상 | 나머지 COCO class | 그 밖의 MORAI class | 출력/fusion class에서 제외 |
+| `person` | person, bicycle, pedestrian | Pedestrian | person만 허용 |
+| `vehicle` | car, truck, bus, motorcycle, train | Vehicle, Sedan, SUV, Truck, Bus, Van, Wagon, MPV | car/truck/bus만 허용 |
+| `obstacle` | 그 밖의 검출 라벨 | Obstacle | 현재 허용 네 라벨에 없음 |
+| 제외 | traffic light, stop sign | 별도 신호등 경로 | 공통 객체에서 제외 |
 
 기존 COCO 80-class weight를 재학습 없이 쓸 때는 detector head를 바꾸지 않는다. 결과에서
 `person`과 `car/bus/truck`만 사용하는 방식이다. 내부 80-class 연산은 그대로이므로 출력
@@ -171,8 +175,8 @@ class u1 v1 u2 v2 unique_id (r, g, b, a)
 전방 RGB는 1280×720이다. 변환기는 다음을 지켜야 한다.
 
 1. 좌표를 영상 경계에 clip하고 `x2 > x1`, `y2 > y1`을 검사한다.
-2. 위 class 표에 따라 `Pedestrian → pedestrian`, 차량 8종 → `vehicle`로 병합한다.
-3. `Obstacle`은 세 번째 class나 `vehicle`로 합치지 않는다.
+2. 위 class 표에 따라 `Pedestrian → person`, 차량 8종 → `vehicle`로 병합한다.
+3. `Obstacle`은 독립 `obstacle`로 매핑하고 `vehicle`로 합치지 않는다. 품질·범위는 별도 slice로 평가한다.
 4. YOLO 형식은 `class_id x_center/W y_center/H width/W height/H`로 저장한다.
 5. BBox 파일이 없더라도 RGB가 manifest에 정상 등록된 frame이면 유효한 negative sample로
    보고 빈 label을 만든다. archive 누락을 negative로 오인하지 않는다.
@@ -183,16 +187,16 @@ class u1 v1 u2 v2 unique_id (r, g, b, a)
 
 | 대상 | annotation 수 | 비고 |
 |---|---:|---|
-| `Pedestrian` | 3,255 | `pedestrian` 양성 |
+| `Pedestrian` | 3,255 | `person` 양성 |
 | 차량 8종 합 | 7,913 | `vehicle` 양성; 현재 export에는 `Van` 행이 없음 |
-| `Obstacle` | 4,222 | detector target에서 제외 |
+| `Obstacle` | 4,222 | 후속 obstacle 학습 후보 |
 | 전방 RGB | 10,030 frames | 18개 primary run |
 
 이 수치는 frame 수나 고유 객체 수가 아니라 **frame별 box 행 수**다. BBox 파일은 물체가 있는
 frame에만 존재하므로 파일이 없는 정상 RGB를 누락 데이터로 버리지 않는다.
 
 vanilla Ultralytics YOLO label은 ignore-region을 직접 표현하지 않는다. 첫 fine-tune에서는
-`Obstacle` 행을 target에서 생략하고, 해당 물체가 person/vehicle false positive를 만드는지
+`Obstacle`의 독립 그룹 학습을 평가하고, 해당 물체가 person/vehicle false positive를 만드는지
 별도 slice로 측정한다. 문제가 실제로 확인될 때만 ignore-mask를 지원하는 loader를 후속
 작업으로 만든다. 범위가 불명확한 `Obstacle`을 차량에 합쳐 문제를 숨기지 않는다.
 
@@ -221,10 +225,10 @@ vanilla Ultralytics YOLO label은 ignore-region을 직접 표현하지 않는다
 - pedestrian recall이 유지되면서 지연과 VRAM이 줄 때만 m을 대체한다.
 - 출처 불명 custom s는 비교표에 별도 행으로 두고 공식 s와 섞어 부르지 않는다.
 
-### O2 — MORAI 2-class fine-tune
+### O2 — MORAI 3-class fine-tune
 
 - 초기 weight는 O1에서 채택된 COCO `YOLO11s` 또는 정확도 여유가 필요하면 `YOLO11m`이다.
-- NAS BBox2D로 `pedestrian/vehicle` head를 fine-tune한다.
+- NAS BBox2D로 `person/vehicle/obstacle` head를 fine-tune한다.
 - vehicle 추가가 같은 holdout의 pedestrian recall을 낮추면 pedestrian-only 후보를 우선한다.
 - 학습 command, epoch, batch와 augmentation은 GPU와 dataset manifest가 확정된 뒤 실험 기록에
   남긴다. 이 문서는 임의 hyperparameter를 정본으로 지정하지 않는다.
@@ -232,7 +236,7 @@ vanilla Ultralytics YOLO label은 ignore-region을 직접 표현하지 않는다
 ### O3 — YOLO26s/n 또는 공개 driving data 전이
 
 - O0~O2가 정확도나 runtime을 만족하지 못할 때만 YOLO26s/n을 같은 조건으로 비교한다.
-- COCO → BDD100K native detection → MORAI 2-class 전이는 단순 COCO → MORAI보다 이득이
+- COCO → BDD100K native detection → MORAI 3-class 전이는 단순 COCO → MORAI보다 이득이
   필요한 경우에만 진행한다.
 - BDD의 rider/bicycle/motorcycle/train을 임의로 vehicle에 합치지 않고 native head에서
   사전학습한 feature만 MORAI 단계로 전이한다.
@@ -243,7 +247,7 @@ vanilla Ultralytics YOLO label은 ignore-region을 직접 표현하지 않는다
 
 | 범주 | 기록할 값 |
 |---|---|
-| 정확도 | pedestrian/vehicle별 recall, precision, AP50, AP50–95 |
+| 정확도 | person/vehicle/obstacle별 recall, precision, AP50, AP50–95 |
 | 안전 slice | 작은·가린·원거리 pedestrian FN, sunny/foggy, 시간대별 FN/FP |
 | threshold | confidence와 NMS IoU sweep, 채택 operating point |
 | 실행 | preprocess, inference, decode/NMS 각각의 p50/p95 |
@@ -257,14 +261,15 @@ COCO 전체 mAP나 평균값 하나만으로 승격하지 않는다.
 
 ```text
 front RGB ─┬─ TwinLiteNet+ lane/drivable ───────────┐
-           └─ YOLO pedestrian/vehicle ─→ LiDAR class│
+           └─ YOLO person/vehicle/obstacle ─→ LiDAR class│
 left RGB  ─── TwinLiteNet+ shared weight ───────────┼→ 3-view BEV
 right RGB ─── TwinLiteNet+ shared weight ───────────┘
 TL RGB    ─── 현재 신호등 모델 ─────────────────────→ signal state
 LiDAR     ─── OBB/track/unknown obstacle ───────────→ fusion/planning
 ```
 
-- 객체 detector는 전방만, LiDAR 주기에 맞춘 8~10Hz를 첫 목표로 한다.
+- P2a 객체 detector는 전방만, 기존 20Hz 입력을 처리하며 단독 출력 18Hz 이상을 검증한다.
+  YOLO 10Hz와 LiDAR 처리 10Hz는 후속 성능 단계에서 기존 최대 주기와 비교한다.
 - 차선·주행가능영역은 전·좌·우에 같은 TwinLite weight를 적용한다.
 - 신호등 모델은 성능이 확보됐으므로 전용 카메라에서 그대로 유지한다.
 - 세 weight를 쓴다는 사실만으로 병목이라고 결론내리지 않는다. 실제 중복은 전방 RGB를
@@ -293,7 +298,7 @@ full-stack 병목이 확인되기 전에는 이 비용을 지지 않는다.
 - [ ] 지연이 문제일 때만 공식 YOLO11s를 동일 조건으로 비교
 - [ ] fine-tune이 필요하면 NAS에서 root metadata + `meta.tar.xz` + `cam_rgb_front/`만 먼저 수령
 - [ ] checksum 확인 뒤 run-level train/val/test manifest 작성
-- [ ] 2-class weight를 runtime에 넣기 전에 class filter/downstream mapping 변경을 별도 요청
+- [ ] 3-class weight를 runtime에 넣기 전에 class filter/downstream mapping 변경을 별도 요청
 - [ ] full-stack gate를 통과하면 unified/TwinLite detection-head 연구를 시작하지 않음
 
 관련 장기 전략과 BDD100K 라벨 매핑은 카메라 파트의 조사 기록을 팀 레포에 복사해 중복

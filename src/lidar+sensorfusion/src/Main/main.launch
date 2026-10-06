@@ -1,4 +1,5 @@
 <launch>
+  <arg name="start_yolo" default="true"/>
   <!-- MORAI sends VLP-16 packets (Velodyne product ID 0x22). -->
   <arg name="lidar_port" default="9299"/>
   <!-- Keep this false when 2026-ASMC/asmc_bridge sensor node publishes
@@ -14,6 +15,8 @@
        delayed YOLO result before declaring that a LiDAR frame has no match. -->
   <arg name="fusion_max_time_offset_sec" default="0.05"/>
   <arg name="fusion_sync_wait_timeout_sec" default="0.20"/>
+  <!-- Optional buffered JSONL observations; does not change fusion policy. -->
+  <arg name="fusion_trace_path" default=""/>
   <arg name="roi_min_x" default="-30.0"/>
   <arg name="roi_max_x" default="50.0"/>
   <arg name="roi_min_y" default="-20.0"/>
@@ -106,6 +109,7 @@
          vehicle bridge publishes the same EgoVehicleStatus on /Ego_topic. -->
     <remap from="/Competition_topic" to="/Ego_topic"/>
     <param name="enable_sensor_fusion" value="$(arg enable_sensor_fusion)"/>
+    <param name="fusion_trace_path" value="$(arg fusion_trace_path)"/>
     <param name="roi_min_x" value="$(arg roi_min_x)"/>
     <param name="roi_max_x" value="$(arg roi_max_x)"/>
     <param name="roi_min_y" value="$(arg roi_min_y)"/>
@@ -245,7 +249,8 @@
        YOLODetection.py relay가 시스템 Python 3.8로 shebang이 고정되기
        때문이다. 래퍼가 /opt/yolo-venv/bin/python(CUDA 12.8 PyTorch)을
        명시적으로 실행한다. -->
-  <node if="$(arg enable_sensor_fusion)" name="yolo_detection_node" pkg="Main" type="yolo_detection_node" output="screen">
+  <group if="$(arg enable_sensor_fusion)">
+  <node if="$(arg start_yolo)" name="yolo_detection_node" pkg="Main" type="yolo_detection_node" output="screen">
     <param name="weights" value="$(find Main)/YOLOWeight/yolo11m.pt"/>
     <!-- CUDA를 쓸 수 없으면 조용히 CPU로 내려가지 않고 노드를 종료한다.
          의도적으로 CPU에서 돌리려면 require_cuda를 false로 바꿔야 한다. -->
@@ -253,6 +258,10 @@
     <param name="device" value="$(arg yolo_device)"/>
     <param name="perf_log_interval_sec" value="$(arg yolo_perf_log_interval_sec)"/>
   </node>
+
+  <node unless="$(arg start_yolo)" name="camera_objects_yolo_bbox_adapter" pkg="Main"
+        type="camera_objects_yolo_bbox_adapter.py" output="screen" required="false"/>
+  </group>
 
   <node if="$(arg rviz)" name="sensor_fusion_rviz" pkg="rviz" type="rviz"
         args="-f map" output="screen"/>

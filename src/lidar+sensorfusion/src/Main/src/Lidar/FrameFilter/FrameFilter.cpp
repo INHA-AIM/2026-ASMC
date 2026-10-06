@@ -1,5 +1,6 @@
 #include <Lidar/FrameFilter/FrameFilter.hpp>
 #include <Lidar/Kalman/kalman_utils.hpp>
+#include <SensorFusion/FusionStateTrace.hpp>
 
 constexpr float Ton  = 0.8f;  // m/s
 constexpr float Toff = 0.5f;  // m/s
@@ -39,6 +40,7 @@ void FrameFilter(deque<vector<LiDARObjectInfo>>& prev_ObjectsQueue,
             vec_Object[s32_Idx].s32_Id           = st_Tracking.s32_NewTrackId++;
             vec_Object[s32_Idx].s32_Age          = 1;    // 첫 등장 프레임
             vec_Object[s32_Idx].s32_MissCount    = 0;
+            fusion_state_trace::Initial("class_track_birth", vec_Object[s32_Idx], ts_CurrTime);
             vec_Object[s32_Idx].b_KfInitialized  = false;
 
             // Initialize the filter on the first observation. Previously the
@@ -128,6 +130,7 @@ void FrameFilter(deque<vector<LiDARObjectInfo>>& prev_ObjectsQueue,
                 vec_Object[s32_Idx].s32_Id           = st_Tracking.s32_NewTrackId++;
                 vec_Object[s32_Idx].s32_Age          = 1;
                 vec_Object[s32_Idx].s32_MissCount    = 0;
+                fusion_state_trace::Initial("class_track_birth", vec_Object[s32_Idx], ts_CurrTime);
                 vec_Object[s32_Idx].b_KfInitialized  = false;
 
                 kalman_filter_update(

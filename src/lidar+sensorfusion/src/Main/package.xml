@@ -15,6 +15,8 @@
   
   <build_depend>rospy</build_depend>
   <exec_depend>rospy</exec_depend>
+  <exec_depend>asmc_msgs</exec_depend>
+  <test_depend>rostest</test_depend>
 
   <build_depend>roslib</build_depend>
   <build_export_depend>roslib</build_export_depend>

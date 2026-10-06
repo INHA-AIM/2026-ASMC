@@ -19,6 +19,7 @@ catkin_package(
 )
 
 catkin_install_python(PROGRAMS
+  scripts/object_detection_node.py
   scripts/camera_bev_fusion_node.py
   scripts/camera_bev_node.py
   scripts/camera_bev_visualizer_node.py
@@ -50,6 +51,7 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_traffic_light_visualization.py)
   catkin_add_nosetests(test/camera)
   catkin_add_nosetests(test/bev)
+  catkin_add_nosetests(test/detection)
 endif()
 
 install(DIRECTORY config launch

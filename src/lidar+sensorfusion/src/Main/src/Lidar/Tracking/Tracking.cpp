@@ -2,6 +2,8 @@
 #include <Lidar/Kalman/kalman_utils.hpp>
 #include <iomanip>
 #include <cstdint>
+#include <SensorFusion/FusionClassState.hpp>
+#include <SensorFusion/FusionStateTrace.hpp>
 const double DISP_SPIKE = 0.60;  // 프레임 간 위치 점프(m) 스파이크 기준
 const double V_SPIKE    = 6.00;  // 속도 스파이크(m/s) 기준(≈ 21.6 km/h)
 #include <cmath>
@@ -720,18 +722,9 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
 
             if (tracking_association::ShouldCarryPreviousClass(
                     vec_Compare[i], vec_NowObject[j])) {
-                vec_NowObject[j].str_ObjectClass =
-                    vec_Compare[i].str_ObjectClass;
-                vec_NowObject[j].str_YoloClass =
-                    vec_Compare[i].str_YoloClass;
-                vec_NowObject[j].last_seen_class =
-                    vec_Compare[i].last_seen_class;
-                vec_NowObject[j].continuity_counter =
-                    vec_Compare[i].continuity_counter;
-                vec_NowObject[j].class_miss_counter =
-                    vec_Compare[i].class_miss_counter;
-                vec_NowObject[j].is_class_locked =
-                    vec_Compare[i].is_class_locked;
+                fusion_state::Copy(vec_Compare[i], vec_NowObject[j]);
+            } else {
+                fusion_state_trace::Initial("class_tracking_reset", vec_NowObject[j], ts_CurrTime);
             }
 
             obb_util::stabilizeMatchedOBB(
@@ -860,6 +853,7 @@ void CompareCentroids(const deque<vector<LiDARObjectInfo>> &PastObject,
             vec_NowObject[j].s32_Id = st_Tracking.s32_NewTrackId++;
             vec_NowObject[j].s32_Age= 1;
             vec_NowObject[j].s32_MissCount = 0;
+            fusion_state_trace::Initial("class_track_birth", vec_NowObject[j], ts_CurrTime);
             vec_NowObject[j].f32_PrevE = std::numeric_limits<float>::quiet_NaN();
             vec_NowObject[j].f32_PrevN = std::numeric_limits<float>::quiet_NaN();
             kalman_filter_update(vec_NowObject[j],vec_NowObject[j].f32_CoreX,vec_NowObject[j].f32_CoreY,0,0,f64_Time,st_GPSIMU.st_IMU.f32_Yaw_deg);

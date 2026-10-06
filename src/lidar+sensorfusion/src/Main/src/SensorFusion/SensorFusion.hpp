@@ -23,6 +23,8 @@ void BufferFusionCameraFrame(const ros::Time& stamp,
                              const std::vector<uint8_t>& compressed);
 void BufferFusionYoloFrame(uint64 frame_seq, const ros::Time& image_stamp,
                            const std::vector<BBox>& boxes);
+// Called after worker shutdown; includes the last partial 5-second interval.
+void ReportFusionTotals();
 
 // LiDAR 시각화
 void InitFusionLidarViz(ros::NodeHandle& nh);
