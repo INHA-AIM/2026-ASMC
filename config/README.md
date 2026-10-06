@@ -21,13 +21,13 @@ python3 -m unittest tools/audit/test_bridge_profiles.py
 ```
 
 `generated/` 파일을 직접 고치면 검증이 실패한다. simulator UI export는 release별 `templates/`에
-반영한 뒤 재생성한다. top-level perception JSON은 `asmc_camera`, `data_collection`,
+반영한 뒤 재생성한다. top-level perception JSON은 `asmc_perception`, `data_collection`,
 dataset contract가 함께 쓰는 저장소 공통 정책이므로 현재 경로를 유지한다. 이동하려면
 모든 consumer와 문서 링크를 같은 PR에서 바꾸고 재현 검증을 통과해야 한다.
 
 P4-A 인지 기준선은 통합 전 분산 package의 topic/type/frame/stamp, model SHA,
 bag profile과 oracle 금지선을 기록한 **동결 snapshot**이다. 현재 실행 경로는
-`src/asmc_camera/`이다. snapshot 내용 테스트와 현재 계약·parity 검증은 아래처럼
+`src/asmc_perception/`이다. snapshot 내용 테스트와 현재 계약·parity 검증은 아래처럼
 실행한다.
 
 ```bash

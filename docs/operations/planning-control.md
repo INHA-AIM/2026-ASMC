@@ -77,7 +77,7 @@ roslaunch behavior_planner autonomy_no_bridges_v2.launch
 - Behavior v2, Frenet과 MPC
 - 신호등 typed/legacy consumer; camera inference producer는 기본으로 시작하지 않음
 
-신호등 producer는 별도 `asmc_camera` runtime이 소유한다. 독립 planning 호환 시험에서만
+신호등 producer는 별도 `asmc_perception` runtime이 소유한다. 독립 planning 호환 시험에서만
 아래처럼 명시적으로 켤 수 있으며, perception launch와 동시에 켜지 않는다.
 
 ```bash

@@ -7,7 +7,7 @@
 > Git·PR 규칙: [협업 규칙](../governance/README.md)
 
 현재 표는 실제 경로를 나타낸다. HD맵은 `asmc_hd_map`으로 통합됐고, 나머지 팀 소유 공용
-코드는 `asmc_msgs`, `asmc_bridge`, `asmc_camera` 경계로 순차 수렴시킨다. 단계별 삭제
+코드는 `asmc_msgs`, `asmc_bridge`, `asmc_perception` 경계로 순차 수렴시킨다. 단계별 삭제
 gate는 [저장소 통합 로드맵](./consolidation-roadmap.md)을 따른다. planning 소유
 패키지는 해당 로드맵의 일방적 이동 대상이 아니다.
 
@@ -95,7 +95,7 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 
 | 경로 | 담당 | GitHub |
 |------|------|--------|
-| `src/asmc_camera/` | camera/BEV/lane/traffic runtime·support·config·model + 분리된 offline/training | @ahnsh03 주관, perception·planning 공동 리뷰 |
+| `src/asmc_perception/` | camera/BEV/lane/traffic runtime·support·config·model + 분리된 offline/training | @ahnsh03 주관, perception·planning 공동 리뷰 |
 | `src/lane_boundary_adapter/` | camera lane typed 출력을 검토하는 read-only planning adapter | 통합·판제 공동 리뷰 |
 | `src/lidar+sensorfusion/` | 독립 nested LiDAR·camera fusion workspace | @sonshiny·통합 공동 리뷰 |
 | `src/data_collection/` | recorder·bag profile/replay, Capture GT·mask·dataset의 독립 package | @ahnsh03 |
@@ -105,7 +105,7 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 현재 package 경계, 본선 입력 규칙과 Phase 4 이관 gate는
 [Perception 개발·통합 가이드](../packages/asmc_perception/README.md)를 따른다. P4-C6에서
 camera/BEV/lane/traffic ROS node, runtime support/config/model과 가치 있는 학습·offline audit를
-`asmc_camera` 안의 명시적 경계로 통합했다. 실행·참조가 없는 camera 3D 연구와 기존 호환
+`asmc_perception` 안의 명시적 경계로 통합했다. 실행·참조가 없는 camera 3D 연구와 기존 호환
 package는 Git history를 남기고 제거했다.
 `data_collection`은 독립 경계다. 2026-10-05 후속 결정으로 카메라는 `asmc_camera`로
 rename하고, `lidar+sensorfusion`의 기능은 손재호가 수정사항을 반영하면서 독립
@@ -139,7 +139,7 @@ rename하고, `lidar+sensorfusion`의 기능은 손재호가 수정사항을 반
 | `scripts/udp_bridge.sh` · `src/asmc_bridge/` | 👀 | 👀 | ✅ | ✅ | — | 👀 |
 | `tools/aim_scenario_runner/` | — | — | — | 👀 | ✅ | 👀 |
 | `tools/grpc_inha_univ/` | — | — | — | 👀 | ✅ | — |
-| `src/asmc_camera/` | 👀 | 👀 | 👀 | ✅ 주관 | ✅ traffic 협의 | ✅ LiDAR interface 협의 |
+| `src/asmc_perception/` | 👀 | 👀 | 👀 | ✅ 주관 | ✅ traffic 협의 | ✅ LiDAR interface 협의 |
 | `src/lane_boundary_adapter/` | ✅ 합의 | ✅ 합의 | 👀 | ✅ 주관 | — | 👀 |
 | `src/data_collection/` | — | — | — | ✅ | 👀 | 👀 |
 | `src/asmc_hd_map/` | 👀 | 👀 | 👀 | ✅ 주관 | ✅ 관측 자료 협의 | 👀 |
@@ -170,9 +170,9 @@ CODEOWNERS 자동 리뷰: [.github/CODEOWNERS](../../.github/CODEOWNERS)
 | 모듈 | ASMC 경로 |
 |------|-----------|
 | Behavior / Frenet / MPC | `src/behavior_planner/`, `frenet_planner/`, `mpc_controller/` (v2 ROS 연결) |
-| Camera lane/drivable/traffic | `src/asmc_camera/` |
+| Camera lane/drivable/traffic | `src/asmc_perception/` |
 | LiDAR/3D perception | `src/lidar+sensorfusion/` |
-| 공통 BEV | camera v3는 `src/asmc_camera/`; 전역 map/LiDAR 결합 규격은 합의 중 |
+| 공통 BEV | camera v3는 `src/asmc_perception/`; 전역 map/LiDAR 결합 규격은 합의 중 |
 | Capture·dataset | `src/data_collection/`, `scripts/*perception*`, `scripts/*twinlite*` |
 | LBC GT/teacher BEV | `tools/research/lbc_teacher_bev/` |
 | Scenario / gRPC | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` |

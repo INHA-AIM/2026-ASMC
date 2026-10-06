@@ -11,7 +11,7 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
       - ASMC_DATA=/data
       - TWINLITE_ROOT=/opt/baselines/TwinLiteNetPlus
-      - PYTHONPATH=/root/ws/src/asmc_camera/src
+      - PYTHONPATH=/root/ws/src/asmc_perception/src
     volumes:
       - ../..:/root/ws:rw
       # Training consumes the external dataset but must not mutate the source.

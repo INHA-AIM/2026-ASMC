@@ -6,8 +6,8 @@ audited_base_commit: 64cd315f200a9902c9e61327f2eb97ccbded0e36
 audited_at: "2026-09-25"
 
 scope:
-  package: asmc_camera
-  launch: src/asmc_camera/launch/perception.launch
+  package: asmc_perception
+  launch: src/asmc_perception/launch/perception.launch
   views: [front, left, right]
   bag_profile_root: src/data_collection/config/bag_profiles
   runtime_behavior_changed: false
@@ -23,7 +23,7 @@ scope:
       reason: team-owned implementation is not complete
 
 launch_defaults:
-  source: src/asmc_camera/launch/perception.launch
+  source: src/asmc_perception/launch/perception.launch
   anchors:
     - '<arg name="start_camera_lane" default="true"/>'
     - '<arg name="start_traffic_light" default="false"/>'
@@ -39,12 +39,12 @@ topic_families:
       - {pattern: '/perception/camera/{view}/road_marking/class_id', type: sensor_msgs/Image}
       - {pattern: '/perception/camera/{view}/road_marking/confidence', type: sensor_msgs/Image}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/semantic_inference_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/semantic_inference_node.py
       anchors: ['return "/perception/camera/{}/{}/{}".format', 'self.confidence_publishers']
     consumers:
-      - file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_node.py
+      - file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_node.py
         anchor: camera.drivable_topic
-      - file: src/asmc_camera/src/asmc_camera/nodes/semantic_visualizer_node.py
+      - file: src/asmc_perception/src/asmc_perception/nodes/semantic_visualizer_node.py
         anchor: '"/perception/camera/{}/drivable/probability".format(view)'
     bag_profiles: [camera_semantic_result.yaml]
     classification: canonical_runtime
@@ -57,10 +57,10 @@ topic_families:
       - {pattern: '/perception/camera/{view}/road_marking/model_grid/class_id', type: sensor_msgs/Image}
       - {pattern: '/perception/camera/{view}/road_marking/model_grid/confidence', type: sensor_msgs/Image}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/semantic_inference_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/semantic_inference_node.py
       anchors: ['namespace = "/perception/camera/{}/road_marking/model_grid".format', 'self.model_grid_publishers']
     consumers:
-      - file: src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py
+      - file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
         anchor: 'base = "/perception/camera/{}/road_marking/model_grid".format(view)'
     bag_profiles: [camera_semantic_result.yaml]
     classification: required_internal_transport
@@ -72,7 +72,7 @@ topic_families:
     topics:
       - {pattern: /perception/camera/diagnostics, type: diagnostic_msgs/DiagnosticArray}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/semantic_inference_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/semantic_inference_node.py
       anchors: ['"/perception/camera/diagnostics"']
     consumers:
       - file: src/data_collection/scripts/monitor_transport_pilot.py
@@ -93,10 +93,10 @@ topic_families:
       - {pattern: '/perception/bev/debug/{view}/road_marking/class_id', type: sensor_msgs/Image}
       - {pattern: '/perception/bev/debug/{view}/road_marking/confidence', type: sensor_msgs/Image}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_node.py
       anchors: ['namespace = "/perception/bev/debug/{}".format(view)', '"road_marking_confidence": rospy.Publisher']
     consumers:
-      - file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_fusion_node.py
+      - file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_fusion_node.py
         anchor: 'namespace = "/perception/bev/debug/{}".format(view)'
     bag_profiles: [camera_semantic_result.yaml]
     classification: required_internal_transport
@@ -108,10 +108,10 @@ topic_families:
     topics:
       - {pattern: '/perception/bev/debug/{view}/coverage', type: sensor_msgs/Image}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_node.py
       anchors: ['publishers["coverage"] = rospy.Publisher', 'latch=True']
     consumers:
-      - file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_visualizer_node.py
+      - file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_visualizer_node.py
         anchor: 'if self.publish_per_view_mosaic:'
     bag_profiles: [camera_semantic_result.yaml]
     classification: debug_opt_in
@@ -123,7 +123,7 @@ topic_families:
     topics:
       - {pattern: /perception/bev/debug/diagnostics, type: diagnostic_msgs/DiagnosticArray}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_node.py
       anchors: ['"/perception/bev/debug/diagnostics"']
     consumers: []
     bag_profiles: []
@@ -139,12 +139,12 @@ topic_families:
       - {pattern: /perception/bev/camera/road_marking/confidence, type: sensor_msgs/Image}
       - {pattern: /perception/bev/camera/coverage, type: sensor_msgs/Image}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_fusion_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_fusion_node.py
       anchors: ['base = "/perception/bev/camera"', '"coverage": rospy.Publisher']
     consumers:
-      - file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_visualizer_node.py
+      - file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_visualizer_node.py
         anchor: 'fused_namespace = "/perception/bev/camera"'
-      - file: src/asmc_camera/src/asmc_camera/nodes/lane_vector_visualizer_node.py
+      - file: src/asmc_perception/src/asmc_perception/nodes/lane_vector_visualizer_node.py
         anchor: 'fused_base = "/perception/bev/camera"'
     bag_profiles: [camera_semantic_result.yaml, shadow_camera_perception_handoff_result.yaml]
     classification: canonical_runtime
@@ -156,12 +156,12 @@ topic_families:
     topics:
       - {pattern: /perception/bev/camera/source_count, type: sensor_msgs/Image}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_fusion_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_fusion_node.py
       anchors: ['base + "/source_count"']
     consumers:
-      - file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_visualizer_node.py
+      - file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_visualizer_node.py
         anchor: 'fused_namespace + "/source_count"'
-      - file: src/asmc_camera/src/asmc_camera/nodes/lane_vector_visualizer_node.py
+      - file: src/asmc_perception/src/asmc_perception/nodes/lane_vector_visualizer_node.py
         anchor: 'fused_base + "/source_count"'
     bag_profiles: [camera_semantic_result.yaml, shadow_camera_perception_handoff_result.yaml]
     classification: canonical_quality_metadata
@@ -173,7 +173,7 @@ topic_families:
     topics:
       - {pattern: /perception/bev/debug/source_view, type: sensor_msgs/Image}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_fusion_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_fusion_node.py
       anchors: ['"/perception/bev/debug/source_view"']
     consumers: []
     bag_profiles: []
@@ -186,7 +186,7 @@ topic_families:
     topics:
       - {pattern: /perception/bev/diagnostics, type: diagnostic_msgs/DiagnosticArray}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_fusion_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_fusion_node.py
       anchors: ['"/perception/bev/diagnostics"']
     consumers: []
     bag_profiles:
@@ -203,7 +203,7 @@ topic_families:
     topics:
       - {pattern: /perception/lane/boundary_observations, type: asmc_msgs/LaneBoundaryObservationArray}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
       anchors: ['"/perception/lane/boundary_observations"']
     consumers:
       - file: src/jamming_lane_boundary_adapter/src/lane_boundary_monitor_node.cpp
@@ -218,7 +218,7 @@ topic_families:
     topics:
       - {pattern: /perception/lane/boundary_family, type: asmc_msgs/LaneBoundaryFamily}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
       anchors: ['"/perception/lane/boundary_family"']
     consumers:
       - file: src/jamming_lane_boundary_adapter/src/boundary_family_monitor_node.cpp
@@ -238,10 +238,10 @@ topic_families:
     topics:
       - {pattern: /perception/lane/boundaries, type: visualization_msgs/MarkerArray}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
       anchors: ['"/perception/lane/boundaries"']
     consumers:
-      - file: src/asmc_camera/src/asmc_camera/nodes/lane_vector_visualizer_node.py
+      - file: src/asmc_perception/src/asmc_perception/nodes/lane_vector_visualizer_node.py
         anchor: '"/perception/lane/boundaries"'
     bag_profiles: [camera_semantic_result.yaml]
     classification: compatibility
@@ -254,10 +254,10 @@ topic_families:
       - {pattern: /perception/lane/debug/evidence_points, type: sensor_msgs/PointCloud2}
       - {pattern: /perception/lane/debug/markers, type: visualization_msgs/MarkerArray}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
       anchors: ['"/perception/lane/debug/evidence_points"', '"/perception/lane/debug/markers"']
     consumers:
-      - file: src/asmc_camera/src/asmc_camera/nodes/lane_vector_visualizer_node.py
+      - file: src/asmc_perception/src/asmc_perception/nodes/lane_vector_visualizer_node.py
         anchor: 'self._update_debug_subscribers(any(requested.values()))'
     bag_profiles: [camera_semantic_result.yaml]
     classification: debug_opt_in
@@ -269,7 +269,7 @@ topic_families:
     topics:
       - {pattern: /perception/lane/diagnostics, type: diagnostic_msgs/DiagnosticArray}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
       anchors: ['"/perception/lane/diagnostics"']
     consumers: []
     bag_profiles:
@@ -286,7 +286,7 @@ topic_families:
     topics:
       - {pattern: /perception/lane/pipeline_audit, type: diagnostic_msgs/DiagnosticArray}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
       anchors: ['"/perception/lane/pipeline_audit"']
     consumers: []
     bag_profiles:
@@ -304,10 +304,10 @@ topic_families:
     topics:
       - {pattern: /perception/lane/debug/shared_family/diagnostics, type: diagnostic_msgs/DiagnosticArray}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
       anchors: ['"/perception/lane/debug/shared_family/diagnostics"']
     consumers:
-      - file: src/asmc_camera/src/asmc_camera/nodes/lane_vector_visualizer_node.py
+      - file: src/asmc_perception/src/asmc_perception/nodes/lane_vector_visualizer_node.py
         anchor: '"/perception/lane/debug/shared_family/diagnostics"'
     bag_profiles:
       - camera_semantic_result.yaml
@@ -324,10 +324,10 @@ topic_families:
     topics:
       - {pattern: /perception/lane/debug/shared_family/markers, type: visualization_msgs/MarkerArray}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vectorizer_node.py
       anchors: ['"/perception/lane/debug/shared_family/markers"']
     consumers:
-      - file: src/asmc_camera/src/asmc_camera/nodes/lane_vector_visualizer_node.py
+      - file: src/asmc_perception/src/asmc_perception/nodes/lane_vector_visualizer_node.py
         anchor: '"/perception/lane/debug/shared_family/markers"'
     bag_profiles: [camera_semantic_result.yaml, shadow_boundary_result.yaml]
     classification: debug_opt_in
@@ -340,7 +340,7 @@ topic_families:
       - {pattern: '/perception/camera/{view}/debug/panel/compressed', type: sensor_msgs/CompressedImage}
       - {pattern: /perception/camera/debug/mosaic/compressed, type: sensor_msgs/CompressedImage}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/semantic_visualizer_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/semantic_visualizer_node.py
       anchors: ['"/perception/camera/{}/debug/panel/compressed".format(view)', '"/perception/camera/debug/mosaic/compressed"']
     consumers: []
     bag_profiles: []
@@ -353,7 +353,7 @@ topic_families:
     topics:
       - {pattern: '/perception/bev/debug/{view}/camera_grid_overlay/compressed', type: sensor_msgs/CompressedImage}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_visualizer_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_visualizer_node.py
       anchors: ['namespace + "/camera_grid_overlay/compressed"', 'get_num_connections() == 0']
     consumers: []
     bag_profiles: []
@@ -368,7 +368,7 @@ topic_families:
       - {pattern: /perception/bev/debug/fused_quality/compressed, type: sensor_msgs/CompressedImage}
       - {pattern: /perception/bev/debug/mosaic/compressed, type: sensor_msgs/CompressedImage}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/camera_bev_visualizer_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/camera_bev_visualizer_node.py
       anchors: ['"/perception/bev/debug/fused/compressed"', '"/perception/bev/debug/fused_quality/compressed"']
     consumers: []
     bag_profiles: []
@@ -385,7 +385,7 @@ topic_families:
       - {pattern: /perception/lane/debug/shared_family_bev/compressed, type: sensor_msgs/CompressedImage}
       - {pattern: /perception/lane/debug/camera_reprojection_mosaic/compressed, type: sensor_msgs/CompressedImage}
     producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/lane_vector_visualizer_node.py
+      file: src/asmc_perception/src/asmc_perception/nodes/lane_vector_visualizer_node.py
       anchors: ['base = "/perception/lane/debug"', 'requested = {']
     consumers: []
     bag_profiles: []
@@ -394,24 +394,11 @@ topic_families:
     p5b_action: consolidate_p5b
     rationale: Keep boundaries and reprojection available while grouping secondary stages behind a comparison preset.
 
-  - id: traffic_light_visualization
-    topics:
-      - {pattern: /perception/traffic_light/debug/image/compressed, type: sensor_msgs/CompressedImage}
-    producer:
-      file: src/asmc_camera/src/asmc_camera/nodes/traffic_light_visualizer_node.py
-      anchors: ['"/perception/traffic_light/debug/image/compressed"', 'get_num_connections() == 0']
-    consumers: []
-    bag_profiles: []
-    classification: debug_opt_in
-    current_mode: visualization_launch_and_subscriber_lazy
-    p5b_action: keep
-    rationale: The typed result drawn on its exact source frame is the visual traffic-light check; it starts only when visualization and the traffic-light producer are both enabled.
-
   - id: traffic_light_typed
     topics:
       - {pattern: /perception/traffic_light/detection, type: asmc_msgs/TrafficLightDetection}
     producer:
-      file: src/asmc_camera/scripts/traffic_light_node.py
+      file: src/asmc_perception/scripts/traffic_light_node.py
       anchors: ['parser.add_argument("--typed-topic", default="/perception/traffic_light/detection")']
     consumers:
       - file: src/behavior_planner/src/node/behavior_node.cpp
@@ -427,7 +414,7 @@ topic_families:
       - {pattern: /traffic_light/state, type: std_msgs/String}
       - {pattern: /traffic_light/detail, type: std_msgs/String}
     producer:
-      file: src/asmc_camera/scripts/traffic_light_node.py
+      file: src/asmc_perception/scripts/traffic_light_node.py
       anchors: ['parser.add_argument("--state-topic", default="/traffic_light/state")', 'parser.add_argument("--detail-topic", default="/traffic_light/detail")']
     consumers:
       - file: src/behavior_planner/src/node/behavior_node.cpp
@@ -456,5 +443,5 @@ p5b_runtime_overrides:
     current_mode: explicit_argument
     launch_argument: lane_publish_pipeline_audit
     default: false
-    evaluation_entrypoint: src/asmc_camera/tools/bev/run_shadow_lane_bag_batch.py
+    evaluation_entrypoint: src/asmc_perception/tools/bev/run_shadow_lane_bag_batch.py
     reason: Preserve detailed frame audit for result bags without paying its production projection, accumulation, and wire costs.

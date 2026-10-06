@@ -4,12 +4,11 @@
 >
 > **현재 상태:** P4-C6 package 통합과 P5-A~P5-E topic·시각화·consumer handoff·운영 closeout 완료
 
-> **2026-10-06 rename 완료:** 카메라 패키지는 `src/asmc_camera/`(구 `asmc_perception`)다.
-> 이 가이드의 문서 경로 `docs/packages/asmc_perception/`은 링크 점검과 함께 후속 PR에서 옮긴다.
-> YOLO 생산자는 별도 단계로 통합한다. 토픽의 `/perception/*` 이름은 유지한다.
+> **2026-10-05 다음 이전 목표:** 이 패키지는 안승현이 `asmc_camera`로 rename하고
+> YOLO 생산자를 별도 단계로 통합한다. 토픽의 `/perception/*` 이름은 유지한다.
 > LiDAR·camera 객체 fusion은 손재호가 `asmc_lidar`로 이전하며 카메라 패키지에 합치지 않는다.
 > [상세 계획과 호환·삭제 gate](../../architecture/consolidation-roadmap.md)를 따른다.
-> 구 명령 `roslaunch asmc_perception ...`은 더 이상 동작하지 않는다. `roslaunch asmc_camera ...`를 쓴다.
+> 아직 rename하지 않았으므로 아래 현재 명령·경로는 그대로 사용한다.
 
 이 문서는 긴 인지 설계·실험 문서를 대체하거나 요약 폐기하기 위한 문서가 아니다. 현재 어떤
 코드와 문서를 먼저 사용해야 하는지 안내하는 진입점이다. 날짜별 분석, 수치, 실패 원인과 후보
@@ -41,17 +40,17 @@ proposal, 날짜별 record 순으로 판단한다. roadmap의 과거 `candidate`
 
 | 역할 | 현재 경로 | 현재 경계 |
 |---|---|---|
-| camera semantic runtime·backend·config | `src/asmc_camera/` | canonical 1/3-camera 추론·시각화, `asmc_camera.camera` |
-| camera 상세 기록 | `src/asmc_camera/docs/camera-semantic-history.md` | 이전 live 측정·실험 이력; 현재 실행 정본 아님 |
-| camera BEV/lane runtime·수학·config | `src/asmc_camera/` | `base_link` raster, fusion, lane-vector, `asmc_camera.bev` |
-| BEV/lane offline audit | `src/asmc_camera/src/asmc_camera/offline/bev/`, `tools/bev/` | 음영 lane-family replay·pseudo-GT·audit; runtime에서 미기동 |
-| TwinLiteNet+ adapter | `src/asmc_camera/src/asmc_camera/training/twinlite/` | 학습·평가·checkpoint loader; runtime에서 미기동 |
+| camera semantic runtime·backend·config | `src/asmc_perception/` | canonical 1/3-camera 추론·시각화, `asmc_perception.camera` |
+| camera 상세 기록 | `src/asmc_perception/docs/camera-semantic-history.md` | 이전 live 측정·실험 이력; 현재 실행 정본 아님 |
+| camera BEV/lane runtime·수학·config | `src/asmc_perception/` | `base_link` raster, fusion, lane-vector, `asmc_perception.bev` |
+| BEV/lane offline audit | `src/asmc_perception/src/asmc_perception/offline/bev/`, `tools/bev/` | 음영 lane-family replay·pseudo-GT·audit; runtime에서 미기동 |
+| TwinLiteNet+ adapter | `src/asmc_perception/src/asmc_perception/training/twinlite/` | 학습·평가·checkpoint loader; runtime에서 미기동 |
 | 폐기한 camera 3D 연구 | Git history의 `src/perception/morai_3d_detection/` | 실행·참조가 없어 P4-C6에서 제거 |
 | LiDAR와 camera fusion | `src/lidar+sensorfusion/` | outer catkin에서 제외된 독립 nested workspace |
-| traffic-light runtime·model | `src/asmc_camera/` | canonical producer와 `models/traffic_light/best.pt`; legacy String topic 병행 |
+| traffic-light runtime·model | `src/asmc_perception/` | canonical producer와 `models/traffic_light/best.pt`; legacy String topic 병행 |
 | recorder·bag profile·replay·Capture·dataset | `src/data_collection/` | 인지 runtime과 분리한 데이터 수집 package |
 | 정적 도로·mission context | `src/asmc_hd_map/` | 완성된 별도 package, `/hd_map/*`를 통해 소비 |
-| 통합 `asmc_camera`(구 `asmc_perception`) | `src/asmc_camera/` | P4-C6 단일 launch와 camera/BEV/lane/traffic runtime·offline·training 소유 |
+| 통합 `asmc_perception` | `src/asmc_perception/` | P4-C6 단일 launch와 camera/BEV/lane/traffic runtime·offline·training 소유 |
 
 현재 경로를 목표 경로처럼 부르거나 먼저 삭제하지 않는다. 특히 `src/lidar+sensorfusion/`에는
 `Main`, 중복 `Msg`·`morai_msgs`와 vendor Velodyne package가 함께 있으므로 한 번에 이동할 수
@@ -61,9 +60,9 @@ proposal, 날짜별 record 순으로 판단한다. roadmap의 과거 `candidate`
 
 ```text
 allowed camera topics
-  └─ asmc_camera.camera
+  └─ asmc_perception.camera
        ├─ per-view drivable / road-marking
-       └─ asmc_camera.bev
+       └─ asmc_perception.bev
             ├─ fused camera BEV
             └─ canonical shared lane-boundary family ──> planning consumer
 
@@ -71,7 +70,7 @@ allowed VLP16
   └─ lidar+sensorfusion ──> object detection / tracking / camera class fusion
 
 extra camera
-  └─ asmc_camera traffic_light ──> typed detection + legacy state/detail
+  └─ asmc_perception traffic_light ──> typed detection + legacy state/detail
 
 /hd_map/* ──> static lane, drivable area, checkpoint and mission context
 ```
@@ -86,7 +85,7 @@ Camera BEV와 HD Map 주행가능영역은 같은 정보가 아니다.
 ## 4. 현재 camera·BEV interface
 
 Camera semantic 입력·출력의 정확한 목록과 실행 인자는
-[asmc_camera package README](../../../src/asmc_camera/README.md)를 따른다.
+[asmc_perception package README](../../../src/asmc_perception/README.md)를 따른다.
 주요 per-view 출력은 원본 timestamp를 보존한다.
 
 ```text
@@ -132,18 +131,18 @@ planning message나 family의 최대 유효거리가 아니다. legacy
 `/perception/lane/boundary_observations`는 기본 off인 호환·진단 경로다. 상세 필드, invalid
 상태와 판제 변환법은
 [shadow camera handoff](../../handoffs/perception/shadow-camera.md)가 우선한다. 날짜별 threshold와
-평가 근거는 [BEV 개발 이력](../../../src/asmc_camera/docs/bev-development-history.md)에 보존돼 있다.
+평가 근거는 [BEV 개발 이력](../../../src/asmc_perception/docs/bev-development-history.md)에 보존돼 있다.
 
 ## 5. Traffic light와 LiDAR 경계
 
-`asmc_camera`의 traffic-light producer는 `/cam_extra/image_jpeg/compressed`를 구독해 typed
+`asmc_perception`의 traffic-light producer는 `/cam_extra/image_jpeg/compressed`를 구독해 typed
 detection과 기존 문자열 state·JSON detail을 병행 발행한다. `behavior_planner`는 typed 입력을
 우선 사용하고 producer가 전혀 없는 구 배포에서만 String으로 fallback한다. K-City HD Map에는
 신호등 필요 구간이 metadata로 들어 있지만, 그
 구간에서만 inference process를 켜고 끄는 orchestration은 아직 구현됐다고 간주하지 않는다.
 실행과 stale 처리 계약은 [runtime contract](../../contracts/perception/runtime-v1.md)를 따른다.
 통합 planning launch는 이 producer를 기본으로 다시 시작하지 않는다. 일반 운행에서는
-`asmc_camera` launch가 유일한 producer이고, planning 쪽 `traffic_light:=true`는 독립 호환
+`asmc_perception` launch가 유일한 producer이고, planning 쪽 `traffic_light:=true`는 독립 호환
 시험에만 사용한다.
 
 LiDAR runtime은 독립 nested catkin workspace다. outer workspace의 sensor bridge를 먼저 띄우고
@@ -187,12 +186,12 @@ GT를 사용한 artifact를 일반 raw/result bag과 이름만으로 구분하�
 
 | 작업 | 실행 문서 |
 |---|---|
-| camera live inference·mosaic | [asmc_camera README](../../../src/asmc_camera/README.md) |
-| 3-camera BEV·lane pipeline·audit | [BEV 개발 이력](../../../src/asmc_camera/docs/bev-development-history.md) |
-| 학습 adapter·checkpoint 연결 | [TwinLite training README](../../../src/asmc_camera/training/README.md) |
+| camera live inference·mosaic | [asmc_perception README](../../../src/asmc_perception/README.md) |
+| 3-camera BEV·lane pipeline·audit | [BEV 개발 이력](../../../src/asmc_perception/docs/bev-development-history.md) |
+| 학습 adapter·checkpoint 연결 | [TwinLite training README](../../../src/asmc_perception/training/README.md) |
 | raw/result bag·Capture·dataset | [data collection README](../../../src/data_collection/README.md) |
 | LiDAR+camera fusion | [sensor-fusion guide](../../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md) |
-| traffic light | [asmc_camera README](../../../src/asmc_camera/README.md) · [이전 상세 기록](../../../src/asmc_camera/docs/traffic-light-history.md) |
+| traffic light | [asmc_perception README](../../../src/asmc_perception/README.md) · [이전 상세 기록](../../../src/asmc_perception/docs/traffic-light-history.md) |
 
 소스나 interface를 바꾸면 최소한 해당 unit test, raw bag replay, topic type/rate/frame/stamp,
 invalid·stale 처리와 downstream adapter를 같이 확인한다. 모델 수치가 좋아졌다는 이유만으로
@@ -211,7 +210,7 @@ P4-A 기준선은 완료됐다. 기계 정본은
 4. **완료:** 새 namespace로 runtime을 이식하고 기존 launch와 bag replay를 병행 검증한다.
 5. **완료:** 대표 raw/result bag에서 output parity, rate/latency와 invalid/stale 동작을 비교한다.
 6. nested `Msg` consumer를 `asmc_msgs`로, 중복 `morai_msgs`를 pinned submodule로 전환한다.
-7. **완료:** 학습 adapter와 offline BEV 분석을 `asmc_camera`의 명시적 비-runtime 경계로 옮기고 import 경계를 시험한다.
+7. **완료:** 학습 adapter와 offline BEV 분석을 `asmc_perception`의 명시적 비-runtime 경계로 옮기고 import 경계를 시험한다.
 8. **완료:** planning adapter와 simulator smoke, package reference gate 후 기존 camera/BEV/traffic package를 제거한다.
 9. **완료:** `learning_by_cheating`의 production과 무관한 privileged teacher/debug 기능만
    `tools/research/lbc_teacher_bev`로 이관하고 구 학습·제어 prototype을 제거했다.
@@ -220,7 +219,7 @@ Vendor Velodyne driver는 팀 인지 runtime과 같은 package로 합치지 않�
 실패 경계와 upstream ownership을 없앤다는 뜻은 아니다.
 
 P4-B에서 canonical `asmc_perception` façade와 additive interface를 추가했다. 실행과 현재 제한은
-[package README](../../../src/asmc_camera/README.md), typed topic의 frame/stamp/freshness 및
+[package README](../../../src/asmc_perception/README.md), typed topic의 frame/stamp/freshness 및
 cutover gate는 [Perception runtime contract v1](../../contracts/perception/runtime-v1.md)이 정본이다.
 traffic-light String과 LiDAR `Msg/TrackedObject*`는 그대로 유지된다. 신호등 typed topic은
 P4-C1에서 source image header를 보존해 병행 발행하며 P4-C2에서 대표 bag의 기존/new

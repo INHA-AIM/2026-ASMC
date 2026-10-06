@@ -33,7 +33,7 @@ route: {route_links_path: "$(find behavior_planner)/src/config/route_links_1.yam
 traffic_light:
   use_mock: false
   # P4-C3 canonical input. Keep `topic` below until every deployment starts
-  # asmc_camera; it is fallback-only after the first typed sample arrives.
+  # asmc_perception; it is fallback-only after the first typed sample arrives.
   typed_topic: "/perception/traffic_light/detection"
   topic: "/traffic_light/state"
   stale_seconds: 1.0

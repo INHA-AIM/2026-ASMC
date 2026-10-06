@@ -78,7 +78,7 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 │   ├── asmc_msgs/             # 팀 내부 ROS1 공용 message 계약
 │   ├── asmc_bridge/           # MORAI Network/Sensor UDP + VehicleState
 │   ├── asmc_hd_map/           # HD Map builder/runtime/검수
-│   ├── asmc_camera/       # camera·BEV·lane·traffic runtime + offline/training
+│   ├── asmc_perception/       # camera·BEV·lane·traffic runtime + offline/training
 │   ├── lane_boundary_adapter/ # read-only perception→planning adapter
 │   ├── data_collection/        # Capture GT · mask · dataset ✅
 │   ├── lidar+sensorfusion/     # 독립 nested LiDAR/fusion workspace
@@ -100,12 +100,12 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 ### Perception 경로 안내
 
 P4-C6부터 camera semantic, camera BEV/lane, traffic-light의 실행·offline·학습
-정본은 모두 `src/asmc_camera/`이다. 기존
+정본은 모두 `src/asmc_perception/`이다. 기존
 `camera_semantic_perception`, `drivable_bev`, `traffic_light`, `src/perception/` 경로는
 제거했으며 topic과 node 이름은 호환성을 위해 유지했다. 실시간 추론은
-`asmc-ros-noetic`에서 `roslaunch asmc_camera perception.launch`로 실행하며, 세부
+`asmc-ros-noetic`에서 `roslaunch asmc_perception perception.launch`로 실행하며, 세부
 경로와 인수 경계는
-[Perception package README](src/asmc_camera/README.md)를 따른다. `src/data_collection/`과
+[Perception package README](src/asmc_perception/README.md)를 따른다. `src/data_collection/`과
 `src/lidar+sensorfusion/`은 독립 경계로 남아 있다.
 
 ## Git과 PR

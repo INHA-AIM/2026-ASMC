@@ -21,7 +21,7 @@
 이 페이지에서 정본, 작업 중 설계안, 사용 가이드와 과거 기록을 구분한다. 내용이
 충돌하면 아래의 `정본 우선순위`를 적용하고, 기록 문서를 현재 설정으로 해석하지 않는다.
 
-카메라 패키지는 2026-10-06 `asmc_perception`에서 `asmc_camera`로 이름을 바꿨다. LiDAR 목표 패키지는 `asmc_lidar`다.
+2026-10-05 패키지 목표는 `asmc_camera`(현재 `asmc_perception`)와 `asmc_lidar`다.
 카메라 YOLO 생산자는 안승현, 기존 LiDAR 기능·camera fusion의 이전 마무리는 손재호가 맡는다.
 [상세 이전 순서·공용 계약·완료 조건](./architecture/consolidation-roadmap.md)을 먼저 보고,
 현재 골격과 후속 구현·수락 항목은 [LiDAR 인계](./packages/asmc_lidar/README.md)를 본다.
@@ -181,7 +181,7 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | Behavior/Frenet/MPC 실행 | [Planning/Control 운영 규약](./operations/planning-control.md) | [package-group guide](./packages/planning-control/README.md) |
 | Capture/마스크/학습 데이터 | [dataset contract](./contracts/perception/dataset-labeling-split.md) | [data_collection README](../src/data_collection/README.md) |
 | raw bag 녹화·재생·모델 A/B | [rosbag 재현 평가 guide](./operations/rosbag-evaluation.md) | [data_collection README](../src/data_collection/README.md) |
-| 카메라 live 추론 | [Perception package-group guide](./packages/asmc_perception/README.md#8-실행검증-진입점) | [asmc_camera README](../src/asmc_camera/README.md) |
+| 카메라 live 추론 | [Perception package-group guide](./packages/asmc_perception/README.md#8-실행검증-진입점) | [asmc_perception README](../src/asmc_perception/README.md) |
 | 카메라–LiDAR 객체 분류 | [object detector handoff](./handoffs/perception/camera-object-detection.md) | [sensor-fusion 실행](../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md), [rosbag 평가](./operations/rosbag-evaluation.md) |
 | HD Map·카메라·LiDAR 문맥 | [Perception package-group guide](./packages/asmc_perception/README.md) | [fusion roadmap](./packages/asmc_perception/roadmap.md), [BEV design note](./packages/asmc_perception/bev-lane-interface-plan.md) |
 | 음영구간 카메라 출력을 판제에 연결 | [shadow camera handoff](./handoffs/perception/shadow-camera.md) | [lane boundary adapter](../src/jamming_lane_boundary_adapter/README.md) |
@@ -204,15 +204,15 @@ agentic loop  반복 평가 도구에 대한 초기 연구 아이디어
 | [asmc_msgs guide](../src/asmc_msgs/README.md) | 공용 ROS1 message 소유·호환·추가 절차 |
 | [MORAI bridge guide](./packages/asmc_bridge/README.md) | 현재 bridge/state 구현과 Phase 3 통합 gate |
 | [asmc_bridge quick start](../src/asmc_bridge/README.md) | 단일 bridge 패키지 실행·component launch |
-| [asmc_camera](../src/asmc_camera/README.md) | camera·BEV·lane·traffic runtime, offline audit와 training 경계 |
+| [asmc_perception](../src/asmc_perception/README.md) | camera·BEV·lane·traffic runtime, offline audit와 training 경계 |
 | [asmc_lidar](../src/asmc_lidar/README.md) | 좌표·시간/IMU 라이브러리 골격, 빌드·계약 시험과 손재호 인계 |
 | [Perception package-group guide](./packages/asmc_perception/README.md) | 현재 camera/BEV/LiDAR/traffic/data 경계와 Phase 4 gate |
 | [Planning/Control package-group guide](./packages/planning-control/README.md) | 현재 Behavior/Frenet/MPC 경계, legacy와 변경 gate |
 | [Handoff index](./handoffs/README.md) | 파트 간 인수 조건과 deployment/legacy 상태 |
 | [Records index](./records/README.md) | 특정 시점의 baseline·실험·검수 결과와 현재 권위 |
 | [Archive index](./archive/README.md) | 현재 실행 금지인 과거 설계와 대체 문서 |
-| [TwinLite training](../src/asmc_camera/training/README.md) | binary/4-class 2-head 학습 adapter와 현재 후보 |
-| [BEV 개발 이력](../src/asmc_camera/docs/bev-development-history.md) | 3-camera fused metric BEV, 범위 audit와 calibration/live gate |
+| [TwinLite training](../src/asmc_perception/training/README.md) | binary/4-class 2-head 학습 adapter와 현재 후보 |
+| [BEV 개발 이력](../src/asmc_perception/docs/bev-development-history.md) | 3-camera fused metric BEV, 범위 audit와 calibration/live gate |
 | [data_collection](../src/data_collection/README.md) | Capture, sync, mask/cache와 dataset 실행법 |
 | [frenet_planner](../src/frenet_planner/README.md) | Frenet Planner 책임, runtime I/O, core 폴더 지도, 빌드/테스트 |
 | [interfaces](../src/interfaces/README.md) | provisional topic과 합의된 계약의 승격 위치 |

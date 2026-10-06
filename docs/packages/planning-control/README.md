@@ -128,7 +128,7 @@ accepted strip과 perception-side support marker를 한 화면에서 보며, hea
 `rviz:=false`로 끈다. 이 자동 시각화도 planning input이나 제어 연결을 의미하지 않는다.
 
 P5-D 인계 이후 판제 정본 lane 입력은 typed `/perception/lane/boundary_family`이고 legacy
-`boundary_observations`는 기본-OFF다. 신호등 producer는 `asmc_camera`이 소유하므로 planning
+`boundary_observations`는 기본-OFF다. 신호등 producer는 `asmc_perception`이 소유하므로 planning
 통합 launch의 `traffic_light` 기본값도 `false`다. planning은 typed detection을 한 번 받은 뒤
 invalid/stale 상태를 legacy String으로 우회하지 않는다.
 
