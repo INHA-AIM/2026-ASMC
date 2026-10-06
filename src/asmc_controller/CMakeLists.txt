@@ -42,6 +42,32 @@ install(DIRECTORY launch config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(parameter_loader_test test/parameter_loader_test.cpp)
+  if(TARGET parameter_loader_test)
+    target_compile_definitions(parameter_loader_test PRIVATE
+      CONTROLLER_YAML_PATH="${CMAKE_CURRENT_SOURCE_DIR}/config/controller.yaml")
+    target_link_libraries(parameter_loader_test mpc_core gtest_main)
+  endif()
+
+  find_package(rostest REQUIRED)
+  set(CONTROLLER_FAILSAFE_ROSTEST
+    "${CMAKE_CURRENT_BINARY_DIR}/controller_failsafe_verification.test")
+  file(WRITE "${CONTROLLER_FAILSAFE_ROSTEST}"
+    "<launch>\n"
+    "  <test test-name=\"controller_failsafe_verification\" "
+    "pkg=\"asmc_controller\" type=\"controller_failsafe_verification_test\" "
+    "time-limit=\"60\"/>\n"
+    "</launch>\n")
+  add_rostest_gtest(controller_failsafe_verification_test
+    "${CONTROLLER_FAILSAFE_ROSTEST}"
+    test/controller_failsafe_verification_test.cpp src/Control.cpp)
+  if(TARGET controller_failsafe_verification_test)
+    add_dependencies(controller_failsafe_verification_test
+      ${catkin_EXPORTED_TARGETS})
+    target_link_libraries(controller_failsafe_verification_test
+      mpc_core mpc_ros_converter ${catkin_LIBRARIES})
+  endif()
+
   catkin_add_gtest(offline_mpc_verification_test
     test/offline_mpc_verification_test.cpp)
   if(TARGET offline_mpc_verification_test)

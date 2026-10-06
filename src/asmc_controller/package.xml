@@ -10,5 +10,6 @@
   <depend>morai_msgs</depend>
   <depend>roscpp</depend>
   <depend>yaml-cpp</depend>
+  <test_depend>rostest</test_depend>
   <export/>
 </package>

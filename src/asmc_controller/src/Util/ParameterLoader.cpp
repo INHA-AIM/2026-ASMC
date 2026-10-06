@@ -50,10 +50,10 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
     loadInto(root, "control_frequency",      p.control_frequency);
 
     // 제약
-    loadInto(root, "MPC/Constraints/steering/max_angle", p.steering_max);
-    loadInto(root, "MPC/Constraints/steering/max_rate",  p.steering_rate_max);
-    loadInto(root, "MPC/Constraints/acceleration/max_forward", p.accel_max);
-    loadInto(root, "MPC/Constraints/acceleration/max_reverse", p.accel_min);
+    loadInto(root, "constraints/steering/max_angle", p.steering_max);
+    loadInto(root, "constraints/steering/max_rate",  p.steering_rate_max);
+    loadInto(root, "constraints/acceleration/max_forward", p.accel_max);
+    loadInto(root, "constraints/acceleration/max_reverse", p.accel_min);
     loadInto(root, "control_mapping/brake_full_decel", p.brake_full_decel);
     loadInto(root, "control_mapping/use_calibrated_lut",
              p.use_calibrated_pedal_mapping);
@@ -63,8 +63,8 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
     loadInto(root, "control_mapping/brake/pedal", p.brake_pedal_lut);
     loadInto(root, "control_mapping/brake/response_mps2",
              p.brake_response_lut);
-    loadInto(root, "MPC/Constraints/velocity/min",       p.vel_min);
-    loadInto(root, "MPC/Constraints/velocity/max",       p.vel_max);
+    loadInto(root, "constraints/velocity/min",       p.vel_min);
+    loadInto(root, "constraints/velocity/max",       p.vel_max);
 
     loadInto(root, "stuck_recovery/ego_speed_threshold", p.stuck_ego_speed);
     loadInto(root, "stuck_recovery/target_speed_threshold", p.stuck_target_speed);
@@ -74,20 +74,20 @@ void loadMPCParameters(const std::string& yaml_path, MPCParams& params) {
     loadInto(root, "stuck_recovery/launch_accel", p.stuck_launch_accel);
 
     // 비용 가중치
-    loadInto(root, "MPC/Cost/contour_error",  p.weight_contour_error);
-    loadInto(root, "MPC/Cost/lag_error",      p.weight_lag_error);
-    loadInto(root, "MPC/Cost/heading_error",  p.weight_heading_error);
-    loadInto(root, "MPC/Cost/speed_error",    p.weight_speed_error);
-    loadInto(root, "MPC/Cost/control",        p.weight_control);
-    loadInto(root, "MPC/Cost/control_rate",       p.weight_control_rate);
-    loadInto(root, "MPC/Cost/control_rate_accel", p.weight_control_rate_accel);
-    loadInto(root, "MPC/Cost/terminal",       p.weight_terminal);
+    loadInto(root, "cost/contour_error",  p.weight_contour_error);
+    loadInto(root, "cost/lag_error",      p.weight_lag_error);
+    loadInto(root, "cost/heading_error",  p.weight_heading_error);
+    loadInto(root, "cost/speed_error",    p.weight_speed_error);
+    loadInto(root, "cost/control",        p.weight_control);
+    loadInto(root, "cost/control_rate",       p.weight_control_rate);
+    loadInto(root, "cost/control_rate_accel", p.weight_control_rate_accel);
+    loadInto(root, "cost/terminal",       p.weight_terminal);
 
     // 솔버
-    loadInto(root, "MPC/Solver/lr_init",          p.lr_init);
-    loadInto(root, "MPC/Solver/lr_min",           p.lr_min);
-    loadInto(root, "MPC/Solver/convergence_eps",  p.convergence_eps);
-    loadInto(root, "MPC/Solver/line_search_steps",p.line_search_steps);
+    loadInto(root, "solver/lr_init",          p.lr_init);
+    loadInto(root, "solver/lr_min",           p.lr_min);
+    loadInto(root, "solver/convergence_eps",  p.convergence_eps);
+    loadInto(root, "solver/line_search_steps",p.line_search_steps);
 
     if (p.brake_full_decel <= 0.0) {
         std::printf("[MPC] Invalid brake_full_decel %.3f; using 8.9 m/s^2\n",
