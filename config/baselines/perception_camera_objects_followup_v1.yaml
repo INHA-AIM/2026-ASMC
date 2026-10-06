@@ -1,0 +1,32 @@
+schema_version: 1
+status: environment_ready_fusion_revalidation_pending
+base_main: c5d0b7854b47b6f52a2c080628740e0d8ce1fae6
+base_p2a: a8c28f270ec5ca44ce72ee6461536be6565e7165
+container:
+  name: asmc-ros-noetic
+  workspace: asmc-camera-objects
+  image: sha256:1ecd9f50491565cad32e32980bb5df5b48487f470440cb66c9ec3b8dc5c11400
+  network: host
+  live_master_port: 11311
+  hdmap_archive: data/runtime_archive/hdmap-container-20261006/container-logs.tar.gz
+  obsolete_hdmap_worktree_removed: true
+checks:
+  outer_build: pass
+  nested_build: pass
+  camera_package_path: /root/ws/src/asmc_camera
+  main_package_path: /root/ws/src/lidar+sensorfusion/src/Main
+  camera_object_box_md5: 34412c90553e06734f1acade77c8e1e3
+  camera_object_array_md5: 310c671afb3693e7909db6453d115b79
+  main_start_yolo_false_nodes: [/Main, /camera_objects_yolo_bbox_adapter]
+  cuda_kernel_and_model_warmup: pass
+  gpu: NVIDIA GeForce RTX 4060 Ti
+  torch: 2.1.2+cu118
+  ultralytics: 8.4.150
+  warmup_ms: 541.0
+  weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+acceptance:
+  deployment_allowed: false
+  next_stage_allowed: false
+  prior_failed_evidence: config/baselines/perception_camera_objects_parity_v1.yaml
+  live_user_confirmation: pending
+  isolated_gpu_revalidation: pending_live_completion

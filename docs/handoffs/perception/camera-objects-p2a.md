@@ -13,6 +13,11 @@ LiDAR 처리 주기, 50ms 관측 stamp 매칭과 200ms 도착 대기는 유지�
 ## 빌드와 직접 실행
 
 컨테이너·bridge·ROS master는 사용자가 준비한다. 모든 터미널은 동일한 ROS master를 사용한다.
+실시간 실행은 `asmc-ros-noetic`에서 `ROS_MASTER_URI=http://127.0.0.1:11311`,
+`ROS_HOSTNAME=localhost`로 통일한다. 컨테이너의 `/root/ws`는 `asmc-camera-objects`
+worktree여야 한다. 예전 HD맵 worktree나 rename 검증 worktree에는 P2a launch가 없다.
+컨테이너를 재생성했으면 기존 터미널에서 나와 새로 진입한다. bridge 또는 `roscore`가
+실행된 뒤 `rosparam`을 사용한다. `source`는 다른 workspace의 파일을 새 코드로 바꾸지 않는다.
 바깥 메시지를 먼저 생성하고 source한 뒤 nested workspace를 빌드한다.
 
 ```bash
@@ -30,6 +35,8 @@ catkin_make -j4 -DCATKIN_WHITELIST_PACKAGES='Main;Msg;morai_msgs'
 cd /root/ws
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
+export ROS_MASTER_URI=http://127.0.0.1:11311
+export ROS_HOSTNAME=localhost
 rosparam set /use_sim_time false
 roslaunch asmc_camera camera_objects.launch
 ```
@@ -41,6 +48,8 @@ cd /root/ws
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
 source src/lidar+sensorfusion/devel/setup.bash
+export ROS_MASTER_URI=http://127.0.0.1:11311
+export ROS_HOSTNAME=localhost
 roslaunch Main main.launch start_yolo:=false rviz:=false
 ```
 
@@ -54,6 +63,32 @@ roslaunch asmc_camera perception.launch start_camera_objects:=true
 `camera_objects_config`로 설정을 지정할 수 있다. RTX50 이미지에서는 기존
 `ASMC_YOLO_PYTHON` 환경 변수를 launch-prefix로 사용한다. 노드가 실패해도 차선 launch는 계속된다.
 GUI와 bridge는 이 launch가 열지 않는다.
+
+같은 ROS 환경을 읽은 GUI 터미널에서 기존 fusion overlay를 연다.
+
+```bash
+rqt_image_view --clear-config /fusion/debug_image
+```
+
+초록은 YOLO, 빨강은 LiDAR 투영, 청록은 fusion 매칭이다. 이 화면에는 Main이 필요하다.
+카메라 객체 launch만 실행하면 객체 메시지와 진단만 발행하고 별도 overlay는 만들지 않는다.
+차선·객체·신호등을 함께 확인할 때는 기존 객체 단독 launch를 종료하고 다음을 실행한다.
+
+```bash
+roslaunch asmc_camera perception.launch start_camera_objects:=true start_visualization:=true start_traffic_light:=true traffic_light_wait_first:=0
+```
+
+영상 publisher가 등록된 뒤 각 GUI 터미널에서 한 창씩 직접 실행한다.
+
+```bash
+rqt_image_view --clear-config /perception/camera/debug/mosaic/compressed
+rqt_image_view --clear-config /perception/bev/debug/comparison/compressed
+rqt_image_view --clear-config /perception/traffic_light/debug/image/compressed
+```
+
+`start_visualization`은 debug publisher만 켠다. 세 모델 동시 화면 확인과 객체 단독 18Hz
+수락 측정은 별도 실행이다. 모든 터미널에서 같은 master를 사용하고, 구·신 생산자를 동시에
+켜지 않는다.
 
 객체 단독 수락 검사와 운영 상태:
 
