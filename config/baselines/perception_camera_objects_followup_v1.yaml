@@ -1,5 +1,5 @@
 schema_version: 1
-status: diagnostics_implemented_fusion_revalidation_pending
+status: revalidation_complete_acceptance_blocked
 base_main: c5d0b7854b47b6f52a2c080628740e0d8ce1fae6
 base_p2a: a8c28f270ec5ca44ce72ee6461536be6565e7165
 container:
@@ -17,7 +17,9 @@ checks:
   main_package_path: /root/ws/src/lidar+sensorfusion/src/Main
   camera_object_box_md5: 34412c90553e06734f1acade77c8e1e3
   camera_object_array_md5: 310c671afb3693e7909db6453d115b79
-  main_start_yolo_false_nodes: [/Main, /camera_objects_yolo_bbox_adapter]
+  main_start_yolo_false_nodes:
+  - /Main
+  - /camera_objects_yolo_bbox_adapter
   cuda_kernel_and_model_warmup: pass
   gpu: NVIDIA GeForce RTX 4060 Ti
   torch: 2.1.2+cu118
@@ -25,12 +27,27 @@ checks:
   warmup_ms: 541.0
   weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
 cpu_validation:
-  nested_main_tests: {tests: 242, failures: 0, errors: 0}
-  contract_and_analysis_tests: {tests: 41, failures: 0}
-  detection_tests: {tests: 16, failures: 0}
-  message_serialization: {tests: 1, failures: 0}
-  jamming_lane_boundary_adapter: {tests: 94, failures: 0, errors: 0}
-  camera_package: {tests: 223, failures: 1, new_failures: 0}
+  nested_main_tests:
+    tests: 242
+    failures: 0
+    errors: 0
+  contract_and_analysis_tests:
+    tests: 44
+    failures: 0
+  detection_tests:
+    tests: 16
+    failures: 0
+  message_serialization:
+    tests: 1
+    failures: 0
+  jamming_lane_boundary_adapter:
+    tests: 94
+    failures: 0
+    errors: 0
+  camera_package:
+    tests: 223
+    failures: 1
+    new_failures: 0
   known_failure: PerceptionFacadeContractTest.test_planning_launches_use_the_canonical_traffic_light_model
   delayed_complete_observation_replay: pass
   actual_ros_trace_callbacks:
@@ -44,10 +61,627 @@ cpu_validation:
     accounting_consistent: true
   local_reports: /tmp/p2a-followup
   archive: config/baselines/evidence/camera_objects_followup_v1/cpu_reports.tar.gz
-  original_p2_preserved: {head: dc57f1e3216d603bfb1e21a2fd8155d7a37b2891, dirty_file_sha_count: 10}
+  original_p2_preserved:
+    head: dc57f1e3216d603bfb1e21a2fd8155d7a37b2891
+    dirty_file_sha_count: 10
+  recorded_class_state_replay:
+    old_1:
+      pass: true
+      frames: 506
+      object_states: 17313
+      observations: 120
+      misses: 6919
+    old_2:
+      pass: true
+      frames: 498
+      object_states: 16663
+      observations: 120
+      misses: 6829
+    new_1:
+      pass: true
+      frames: 502
+      object_states: 16346
+      observations: 116
+      misses: 6811
+    new_2:
+      pass: true
+      frames: 509
+      object_states: 16383
+      observations: 117
+      misses: 6897
+    wrong_initial_confirmations_rejected: true
 acceptance:
   deployment_allowed: false
   next_stage_allowed: false
   prior_failed_evidence: config/baselines/perception_camera_objects_parity_v1.yaml
-  live_user_confirmation: pending
-  isolated_gpu_revalidation: pending_live_completion
+  live_user_confirmation: completed_2026_10_07
+  isolated_gpu_revalidation: completed_gates_not_met
+  ci_at_e0f21e6:
+    catkin_build: pass
+    planning_catkin_build: pass
+    validated_lidar_build: pass
+  blockers:
+  - 'Primary bag: one stable geometric observation differs in published classification;
+    historical matching and publication phase differ in diagnostic trace.'
+  - 'Shadow bag: first new run matched 177 versus old minimum 181; different processed
+    LiDAR frame sets remain.'
+  ci_at_d8bda85:
+    catkin_build: pass
+    planning_catkin_build: pass
+    validated_lidar_build: pass
+verified_date: '2026-10-07'
+gpu_revalidation:
+  runtime_commit: d8bda851142d0637f7e8a437cd7656a744584368
+  validation_tool_commit: ed3e201ed33c288e990696aabd8b683afbd5f359
+  container: asmc-camera-fusion-check
+  network: none
+  master_port: 11312
+  other_ros_gpu_inference: absent_in_shared_and_verification_containers
+  stages:
+  - stage: fusion-primary-complete
+    returncode: 1
+    elapsed_sec: 226.10387243199511
+  - stage: fusion-shadow-complete
+    returncode: 1
+    elapsed_sec: 129.0589785589982
+  - stage: offline-latest
+    returncode: 0
+    elapsed_sec: 113.03325336700073
+  - stage: ab-latest
+    returncode: 0
+    elapsed_sec: 732.2785462309985
+  - stage: faults-latest
+    returncode: 1
+    elapsed_sec: 14.367684519995237
+  - stage: faults-latest-fresh-diagnostics
+    returncode: 0
+    elapsed_sec: 14.299636577998172
+  - stage: faults-startup-diagnostic-regression
+    returncode: 0
+    elapsed_sec: 13.760123533007572
+  offline_exact_comparison:
+    status: pass
+    frames: 3514
+    exact_frames: 3514
+    errors: []
+    boundary_exceptions: []
+    weight_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+    bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+    bag_sha256: a8f360e666f58358062e83cedbc6b51f94e8dc897402a2605eed7761a7880268
+    legacy_source_sha256: 1cd5c1053245f3d3efbb63aac3cc311572bbbd51622b1ccd25976dd67a943cde
+    python: "3.8.10 (default, Mar 18 2025, 20:04:55) \n[GCC 9.4.0]"
+    interpreter: /usr/bin/python3
+    torch: 2.1.2+cu118
+    ultralytics: 8.4.150
+    gpu: NVIDIA GeForce RTX 4060 Ti
+    backend:
+      backend: ultralytics
+      weights: /root/ws/src/asmc_camera/models/object_detection/yolo11m.pt
+      weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+      device: cuda:0
+      model_device: cuda:0
+      ultralytics: 8.4.150
+      torch: 2.1.2+cu118
+      conf_thres: 0.7
+      allowed_names:
+      - bus
+      - truck
+      - person
+      - car
+      predict_overrides:
+        iou: 0.7
+        max_det: 300
+        agnostic_nms: false
+      warmup_ms: 561.3
+    duration_sec: 109.93310861899226
+    latency:
+      old_ms:
+        p50: 14.178608995280229
+        p95: 20.030124796903692
+      new_ms:
+        p50: 13.376587005041074
+        p95: 19.12159279527259
+  replay_ab:
+    pass: true
+    matched_not_degraded: null
+    whole_bag_matched_not_degraded: null
+    stable_old_track_comparison: null
+    stable_old_observation_comparison: null
+    runs:
+    - path: old
+      repeat: 1
+      input_frames: 3514
+      output_frames: 3438
+      rate_hz: 19.566187813628364
+      coverage: 0.9783722253841776
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 28.9393795
+        p95_ms: 45.08208965000001
+      fusion_matched_5s_reported: 0
+      fusion_matched_reported: 0
+      fusion_totals: null
+      fusion_accounting_complete: false
+      fusion_offset_p95_max_ms: null
+      track_frames: 0
+      pass: true
+    - path: old
+      repeat: 2
+      input_frames: 3514
+      output_frames: 3434
+      rate_hz: 19.543528931521635
+      coverage: 0.977233921457029
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 29.596809
+        p95_ms: 45.7394957
+      fusion_matched_5s_reported: 0
+      fusion_matched_reported: 0
+      fusion_totals: null
+      fusion_accounting_complete: false
+      fusion_offset_p95_max_ms: null
+      track_frames: 0
+      pass: true
+    - path: new
+      repeat: 1
+      input_frames: 3514
+      output_frames: 3513
+      rate_hz: 19.987738692551158
+      coverage: 0.9997154240182129
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 11.4497
+        p95_ms: 19.171672599999994
+      fusion_matched_5s_reported: 0
+      fusion_matched_reported: 0
+      fusion_totals: null
+      fusion_accounting_complete: false
+      fusion_offset_p95_max_ms: null
+      track_frames: 0
+      pass: true
+    - path: new
+      repeat: 2
+      input_frames: 3514
+      output_frames: 3513
+      rate_hz: 19.990694888673076
+      coverage: 0.9997154240182129
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 11.330107
+        p95_ms: 19.486148399999998
+      fusion_matched_5s_reported: 0
+      fusion_matched_reported: 0
+      fusion_totals: null
+      fusion_accounting_complete: false
+      fusion_offset_p95_max_ms: null
+      track_frames: 0
+      pass: true
+  fusion_primary:
+    pass: false
+    matched_not_degraded: true
+    whole_bag_matched_not_degraded: true
+    stable_old_track_comparison:
+      common_all_runs: 2070
+      old_stable: 2069
+      regressions:
+      - stamp_ns: 1790654794688000000
+        track: 22
+        old:
+        - unknown
+        - unknown
+        new:
+        - - car
+          - car
+        - - unknown
+          - unknown
+    stable_old_observation_comparison:
+      common_lidar_stamps: 327
+      old_stable: 2954
+      unmatched_common_observations: 896
+      regressions:
+      - stamp_ns: 1790654794688000000
+        center:
+        - 19.66237255861796
+        - -492.23758172254986
+        - -0.8472483400991137
+        old:
+        - 22
+        - unknown
+        - unknown
+        new:
+        - - 22
+          - car
+          - car
+        - - 22
+          - unknown
+          - unknown
+    runs:
+    - path: old
+      repeat: 1
+      input_frames: 979
+      output_frames: 899
+      rate_hz: 18.394666025505853
+      coverage: 0.9182839632277835
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 34.64544
+        p95_ms: 54.973929399999996
+      fusion_matched_5s_reported: 461
+      fusion_matched_reported: 503
+      fusion_totals:
+        matched: 503
+        dropped: 1
+        pending_lidar: 1
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 48.6
+      track_frames: 505
+      pass: true
+    - path: old
+      repeat: 2
+      input_frames: 979
+      output_frames: 893
+      rate_hz: 18.274930837434212
+      coverage: 0.9121552604698672
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 34.868448
+        p95_ms: 55.64564019999998
+      fusion_matched_5s_reported: 455
+      fusion_matched_reported: 496
+      fusion_totals:
+        matched: 496
+        dropped: 4
+        pending_lidar: 1
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 46.1
+      track_frames: 501
+      pass: true
+    - path: new
+      repeat: 1
+      input_frames: 979
+      output_frames: 978
+      rate_hz: 20.030397680476415
+      coverage: 0.9989785495403473
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 12.693978
+        p95_ms: 21.04075175
+      fusion_matched_5s_reported: 460
+      fusion_matched_reported: 503
+      fusion_totals:
+        matched: 503
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 31.6
+      track_frames: 503
+      pass: true
+    - path: new
+      repeat: 2
+      input_frames: 979
+      output_frames: 978
+      rate_hz: 20.029483278431673
+      coverage: 0.9989785495403473
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 13.124984999999999
+        p95_ms: 21.9820785
+      fusion_matched_5s_reported: 457
+      fusion_matched_reported: 500
+      fusion_totals:
+        matched: 500
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 29.0
+      track_frames: 500
+      pass: true
+  fusion_shadow:
+    pass: false
+    matched_not_degraded: false
+    whole_bag_matched_not_degraded: false
+    stable_old_track_comparison:
+      common_all_runs: 696
+      old_stable: 696
+      regressions: []
+    stable_old_observation_comparison:
+      common_lidar_stamps: 145
+      old_stable: 911
+      unmatched_common_observations: 1013
+      regressions: []
+    runs:
+    - path: old
+      repeat: 1
+      input_frames: 494
+      output_frames: 455
+      rate_hz: 18.470035570166683
+      coverage: 0.9210526315789473
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 36.533572
+        p95_ms: 55.616643599999996
+      fusion_matched_5s_reported: 145
+      fusion_matched_reported: 181
+      fusion_totals:
+        matched: 181
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 33.1
+      track_frames: 181
+      pass: true
+    - path: old
+      repeat: 2
+      input_frames: 494
+      output_frames: 437
+      rate_hz: 17.721414509304868
+      coverage: 0.8846153846153846
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 33.997741999999995
+        p95_ms: 54.473845
+      fusion_matched_5s_reported: 146
+      fusion_matched_reported: 181
+      fusion_totals:
+        matched: 181
+        dropped: 2
+        pending_lidar: 1
+        pending_yolo: 2
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 40.5
+      track_frames: 184
+      pass: true
+    - path: new
+      repeat: 1
+      input_frames: 494
+      output_frames: 493
+      rate_hz: 20.05088686129751
+      coverage: 0.9979757085020243
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 12.858538
+        p95_ms: 21.467054199999996
+      fusion_matched_5s_reported: 143
+      fusion_matched_reported: 177
+      fusion_totals:
+        matched: 177
+        dropped: 0
+        pending_lidar: 1
+        pending_yolo: 2
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 25.8
+      track_frames: 178
+      pass: true
+    - path: new
+      repeat: 2
+      input_frames: 494
+      output_frames: 494
+      rate_hz: 20.079465041700196
+      coverage: 1.0
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      single_bbox_publisher: true
+      latency:
+        p50_ms: 11.855675999999999
+        p95_ms: 18.712706349999998
+      fusion_matched_5s_reported: 151
+      fusion_matched_reported: 187
+      fusion_totals:
+        matched: 187
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      fusion_accounting_complete: true
+      fusion_offset_p95_max_ms: 26.3
+      track_frames: 187
+      pass: true
+  fault_injection:
+    startup_silence_before_frames: true
+    normal_empty: true
+    broken_jpeg_invalid_withheld: true
+    input_stop_no_repeated_output: true
+    decode_error_diagnostic: true
+    duplicate_warning: true
+    producer_exit_lane_survives: true
+    all_pass: true
+  trace_integrity_pass: true
+  trace_runs:
+    new_1:
+      events:
+        camera_input: 975
+        lidar_input: 649
+        lidar_process_start: 503
+        lidar_process_end: 503
+        yolo_input: 966
+        match_decision: 651
+        class_before: 502
+        class_miss: 6811
+        class_after: 502
+        class_current: 502
+        yolo_expired: 463
+        class_observation: 116
+        fusion_summary: 1
+      final:
+        event: fusion_summary
+        stamp_ns: 0
+        steady_ns: 79809782300867
+        matched: 502
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      complete: true
+      accounting_consistent: true
+      lidar_input_frames: 649
+      lidar_processed_frames: 502
+      lidar_pose_failures: 1
+      skipped_generations: 146
+      duplicate_consumed_yolo_stamps: 0
+      offset_max_ms: 36.489564
+      processing_ms:
+        median: 75.895151
+        p95: 121.291559
+    new_2:
+      events:
+        camera_input: 974
+        lidar_input: 649
+        lidar_process_start: 510
+        lidar_process_end: 510
+        yolo_input: 966
+        match_decision: 667
+        class_before: 509
+        class_miss: 6897
+        class_after: 509
+        class_current: 509
+        yolo_expired: 456
+        class_observation: 117
+        fusion_summary: 1
+      final:
+        event: fusion_summary
+        stamp_ns: 0
+        steady_ns: 79866428279006
+        matched: 509
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      complete: true
+      accounting_consistent: true
+      lidar_input_frames: 649
+      lidar_processed_frames: 509
+      lidar_pose_failures: 1
+      skipped_generations: 139
+      duplicate_consumed_yolo_stamps: 0
+      offset_max_ms: 36.489564
+      processing_ms:
+        median: 75.919221
+        p95: 120.135401
+    old_1:
+      events:
+        camera_input: 972
+        lidar_input: 649
+        lidar_process_start: 511
+        lidar_process_end: 511
+        yolo_input: 927
+        match_decision: 729
+        class_before: 506
+        class_miss: 6919
+        class_after: 506
+        class_current: 506
+        yolo_expired: 419
+        class_observation: 120
+        fusion_summary: 1
+      final:
+        event: fusion_summary
+        stamp_ns: 0
+        steady_ns: 79697300452714
+        matched: 506
+        dropped: 3
+        pending_lidar: 1
+        pending_yolo: 1
+      complete: true
+      accounting_consistent: true
+      lidar_input_frames: 649
+      lidar_processed_frames: 510
+      lidar_pose_failures: 1
+      skipped_generations: 138
+      duplicate_consumed_yolo_stamps: 0
+      offset_max_ms: 48.357477
+      processing_ms:
+        median: 74.910637
+        p95: 118.27914
+    old_2:
+      events:
+        camera_input: 971
+        lidar_input: 649
+        lidar_process_start: 507
+        lidar_process_end: 507
+        yolo_input: 880
+        match_decision: 734
+        class_before: 498
+        class_miss: 6829
+        class_after: 498
+        class_current: 498
+        yolo_expired: 382
+        class_observation: 120
+        fusion_summary: 1
+      final:
+        event: fusion_summary
+        stamp_ns: 0
+        steady_ns: 79752882528744
+        matched: 498
+        dropped: 7
+        pending_lidar: 1
+        pending_yolo: 0
+      complete: true
+      accounting_consistent: true
+      lidar_input_frames: 649
+      lidar_processed_frames: 506
+      lidar_pose_failures: 1
+      skipped_generations: 142
+      duplicate_consumed_yolo_stamps: 0
+      offset_max_ms: 49.079887
+      processing_ms:
+        median: 74.545197
+        p95: 122.204897
+  common_source_box_comparisons:
+    new_1:
+      common_source_frames: 936
+      old_only_frames: 1
+      new_only_frames: 42
+      different_boxes_or_headers: []
+    new_2:
+      common_source_frames: 936
+      old_only_frames: 1
+      new_only_frames: 42
+      different_boxes_or_headers: []
+    old_2:
+      common_source_frames: 869
+      old_only_frames: 68
+      new_only_frames: 34
+      different_boxes_or_headers: []
+  classification_details: fusion-primary-trace/trace_analysis.json in gpu_reports
+    archive
+  trace_capture_commit: e0f21e6e4bcc744f8b21f5d5f8db4351099af408
+  primary_and_shadow_bag_sha256:
+    /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag: 859cbd84a1e845b76426f96be2778c6f54ea77fe348631a976ef3adf666d0c02
+    ? /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+    : 9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34
+  archive: config/baselines/evidence/camera_objects_followup_v1/gpu_reports.tar.gz
+  archive_sha256: 72edf2e190b445f833af89a992354beb406b5ecf43f31ec8cacfcd9b01dc0120
+preservation:
+  hdmap_controller_maps_pins_msg_weights_identical_to_main: true
+  only_changed_shared_message: CameraObjectBox source_class_name
+  camera_runtime_unchanged_from_a8c28f2: true
+  original_p2_head_and_10_dirty_file_hashes_unchanged: true
+validation_fixes:
+- Flush shutdown statistics directly after rosconsole shutdown.
+- Include the final partial interval and require interval counts to equal whole-run
+  matched and dropped totals.
+- Fault checks wait for the injected source stamp; startup-silence regression reproduces
+  a stale pre-input diagnostic.
