@@ -131,6 +131,14 @@ CPU는 `device: cpu`, `require_cuda: false`를 설정 파일에 명시해야 한
 기존 C++ fusion·50ms/200ms 정책을 변경하거나 이 결과를 수락 완료로 표시하지 않는다.
 이 문제를 해결하기 전 다음 단계 승격과 최종 병합은 보류한다.
 
+후속 진단에서는 기본 비활성인 `Main fusion_trace_path`로 카메라·YOLO·LiDAR 수신,
+처리 generation 누락, 선택된 stamp·대기·제거 사유, 분류 후보·확인·miss 카운터를
+버퍼링한 JSONL로 기록한다. 정상 종료의 `Fusion sync total`은 마지막 부분 구간까지
+포함하며 아직 남은 큐도 별도로 보고한다. 이 관측 기능은 매칭·분류 정책을 바꾸지 않는다.
+같은 관측을 55ms/12ms 지연으로 전달하는 CPU 재현 시험은 실제 matcher·class policy의
+결과 동등성을 확인하지만, 실제 bag의 서로 다른 처리 프레임 집합을 수락한 증거는 아니다.
+후속 환경·검증 상태는 [별도 기록](../../../config/baselines/perception_camera_objects_followup_v1.yaml)에 있다.
+
 검증은 GPU 전달·`--network none` 전용 컨테이너에서 직렬로 실행한다. 바깥과 nested 환경을
 위 순서로 source한다. 다른 실시간 GPU 추론은 중지된 상태여야 한다.
 bag 재생에는 별도 master에서 `/use_sim_time=true`와 `--clock`을 사용한다.
@@ -140,6 +148,8 @@ python3 tools/perception/compare_camera_objects.py /data/rosbags/hd_map_validati
 python3 tools/perception/replay_camera_objects.py /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag --output /tmp/p2-ab
 python3 tools/perception/replay_camera_objects.py /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag --fusion --output /tmp/p2-fusion-primary
 python3 tools/perception/analyze_fusion_identity.py /tmp/p2-fusion-primary
+python3 tools/perception/replay_camera_objects.py /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag --fusion --fusion-trace --output /tmp/p2-fusion-trace
+python3 tools/perception/analyze_fusion_trace.py /tmp/p2-fusion-trace
 python3 tools/perception/check_camera_object_faults.py --output /tmp/p2-faults.json
 ```
 
@@ -149,6 +159,10 @@ confidence `0.7±0.005`에서 포함·제외 차이만 예외로 나열하며 �
 재생은 구·신 두 번씩 실행하고 처리율·커버리지·중복/역행 stamp·단일 발행자·지연을 기록한다.
 fusion은 두 구 실행의 변동폭, 5초 매칭 로그와 공통 LiDAR stamp·track 분류를 비교한다.
 마지막 5초 미만 구간은 기존 로그가 집계하지 않으므로 보고 매칭 수와 전체 처리 프레임을 구분한다.
+새 기록의 전체 누적 매칭 수와, 상호 유일한 동일 관측의 구 경로 안정 분류 비교를 추가한다.
+기존 5초 로그·track gate도 유지한다. 대응되지 않은 관측이나 모호한 중심은 성공으로 간주하지 않는다.
+원인 추적 실행과 최종 추적 비활성 성능 실행을 구분하고, 사용자 실시간 확인 완료 전에는
+자동 GPU bag 재생을 시작하지 않는다.
 
 09-21 bag에는 Ego가 없어 fusion 주 검증에 쓰지 않는다. 음영 보완은 LiDAR가 들어 있는
 `20260912_003803_shadow_static_avoid` bag이다. LiDAR가 없는 09-13 bag은 fusion에서 제외한다.

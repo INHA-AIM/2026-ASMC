@@ -1,5 +1,5 @@
 schema_version: 1
-status: environment_ready_fusion_revalidation_pending
+status: diagnostics_implemented_fusion_revalidation_pending
 base_main: c5d0b7854b47b6f52a2c080628740e0d8ce1fae6
 base_p2a: a8c28f270ec5ca44ce72ee6461536be6565e7165
 container:
@@ -24,6 +24,27 @@ checks:
   ultralytics: 8.4.150
   warmup_ms: 541.0
   weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+cpu_validation:
+  nested_main_tests: {tests: 242, failures: 0, errors: 0}
+  contract_and_analysis_tests: {tests: 41, failures: 0}
+  detection_tests: {tests: 16, failures: 0}
+  message_serialization: {tests: 1, failures: 0}
+  jamming_lane_boundary_adapter: {tests: 94, failures: 0, errors: 0}
+  camera_package: {tests: 223, failures: 1, new_failures: 0}
+  known_failure: PerceptionFacadeContractTest.test_planning_launches_use_the_canonical_traffic_light_model
+  delayed_complete_observation_replay: pass
+  actual_ros_trace_callbacks:
+    camera_input: 5
+    yolo_input: 5
+    lidar_input: 5
+    lidar_process_start: 5
+    lidar_process_end: 5
+    final_summary: 1
+    pose_failures_expected_without_pose_input: 5
+    accounting_consistent: true
+  local_reports: /tmp/p2a-followup
+  archive: config/baselines/evidence/camera_objects_followup_v1/cpu_reports.tar.gz
+  original_p2_preserved: {head: dc57f1e3216d603bfb1e21a2fd8155d7a37b2891, dirty_file_sha_count: 10}
 acceptance:
   deployment_allowed: false
   next_stage_allowed: false
