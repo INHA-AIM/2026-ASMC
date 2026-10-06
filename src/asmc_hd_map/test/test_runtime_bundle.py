@@ -93,20 +93,23 @@ class RuntimeBundleTest(unittest.TestCase):
         self.assertEqual(view["Class"], "rviz/TopDownOrtho")
         self.assertAlmostEqual(float(view["Angle"]), math.pi, places=12)
 
-    def test_rviz_defaults_to_complete_global_map_not_optional_local_cache(self):
-        config = yaml.safe_load(RVIZ_PATH.read_text(encoding="utf-8"))
-        displays = config["Visualization Manager"]["Displays"]
-        maps = {
-            display.get("Topic"): display
-            for display in displays
-            if display.get("Class") == "rviz/Map"
-        }
-        # The drivable fill follows the ego at full 0.2 m resolution through the
-        # GPS+IMU local crop; the whole-map planner grid stays available but off
-        # because RViz has to texture its 22M cells.
-        self.assertTrue(maps["/hd_map/local/drivable_grid"]["Enabled"])
-        self.assertFalse(maps["/hd_map/global/drivable_grid"]["Enabled"])
-        self.assertNotIn("/hd_map/debug/drivable_grid_viz", maps)
+    def test_rviz_defaults_to_markers_without_optional_local_cache(self):
+        for filename in ("competition_map_debug.rviz", "competition_map_follow_ego.rviz"):
+            with self.subTest(preset=filename):
+                config = yaml.safe_load(RVIZ_PATH.with_name(filename).read_text(encoding="utf-8"))
+                displays = config["Visualization Manager"]["Displays"]
+                maps = {display.get("Topic"): display for display in displays
+                        if display.get("Class") == "rviz/Map"}
+                # Local crops are opt-in, so neither preset subscribes to their
+                # absent default output. Use vector outlines by default and
+                # keep the heavy whole-map raster available for manual review.
+                self.assertNotIn("/hd_map/local/drivable_grid", maps)
+                self.assertFalse(maps["/hd_map/global/drivable_grid"]["Enabled"])
+                self.assertNotIn("/hd_map/debug/drivable_grid_viz", maps)
+                markers = [display for display in displays
+                           if display.get("Marker Topic") == "/hd_map/debug/markers"]
+                self.assertEqual(len(markers), 1)
+                self.assertTrue(markers[0]["Enabled"])
 
     def test_role_and_source_mapping_do_not_infer_ambiguous_boundary(self):
         ambiguous = {

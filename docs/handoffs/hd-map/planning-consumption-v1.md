@@ -64,6 +64,12 @@ HD가 camera 노드를 직접 켜고 끄지는 않는다. 판제가 유효한 co
 | A315 | C1256W000123 | 550.618735375 |
 | A308 | C1256W000052 | 609.868390593 |
 
+이 표의 5개 경계는 공식 채점 교차로 4개소와 같은 단위가 아니다. v1.2 후속 공지의
+30초·서로 다른 4개소 모두 미준수 시 실패 규칙은 payload에 반영됐지만, 공식 교차로 대응은
+`unverified`이고 `judged_intersection_id=null`, `intersection_failure_evaluation_available=false`다.
+위 신호등 ID를 그대로 위반 집계의 교차로 ID로 쓰지 않는다. 상세 필드와 전 구간 `route_rules`는
+[대회 metadata 계약](../../contracts/competition/kcity2025-metadata-v1.md)을 따른다.
+
 ## 2. 교차로 패치와 현재 main 지도 갱신
 
 HD 제품은 `kcity2025_static_junction_widened_drivable_v6`다.
