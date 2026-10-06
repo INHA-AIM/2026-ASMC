@@ -61,6 +61,20 @@ operational_closeout:
     lane_rviz_config: src/jamming_lane_boundary_adapter/rviz/shadow_boundary_family_candidate.rviz
 
 topic_groups:
+  camera_objects:
+    required_nodes: [/camera_object_detector]
+    topics:
+      - pattern: /perception/camera/objects
+        type: asmc_msgs/CameraObjectBoxArray
+        publisher: /camera_object_detector
+        min_rate_hz: 18.0
+        require_nonzero_stamp: true
+        frame_id: camera_front
+      - pattern: /perception/camera/objects/diagnostics
+        type: diagnostic_msgs/DiagnosticArray
+        publisher: /camera_object_detector
+        min_messages: 2
+        max_stale_sec: 3.0
   camera_lane:
     required_nodes:
       - /camera_semantic_inference

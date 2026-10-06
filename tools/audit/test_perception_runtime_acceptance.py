@@ -51,7 +51,7 @@ class PerceptionRuntimeAcceptanceTest(unittest.TestCase):
     def test_repository_contract_is_valid(self):
         result = validate_contract(REPO_ROOT, self.path)
         self.assertEqual(33, result["camera_lane_topic_count"])
-        self.assertEqual(38, result["all_topic_count"])
+        self.assertEqual(40, result["all_topic_count"])
         self.assertEqual(20, result["default_forbidden_topic_count"])
         self.assertEqual(8, result["static_binding_count"])
         self.assertEqual(2, result["optional_consumer_gate_count"])

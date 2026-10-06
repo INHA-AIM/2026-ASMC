@@ -105,6 +105,10 @@ def parse_args(argv: Optional[Sequence[str]] = None):
     parser.add_argument("--duration", type=float)
     parser.add_argument("--max-stale-sec", type=float, default=1.0)
     parser.add_argument("--master-timeout-sec", type=float, default=3.0)
+    parser.add_argument("--camera-objects", action="store_true",
+                        help="require the opt-in front object producer and diagnostics")
+    parser.add_argument("--no-camera-lane", action="store_true",
+                        help="check selected producers without requiring lane inference")
     parser.add_argument(
         "--traffic-light",
         action="store_true",
@@ -175,11 +179,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.require_planning and not args.traffic_light:
         raise SystemExit("--require-planning also requires --traffic-light")
 
-    groups = ["camera_lane"]
+    if args.require_lane_adapter and args.no_camera_lane:
+        raise SystemExit("--require-lane-adapter cannot use --no-camera-lane")
+    groups = [] if args.no_camera_lane else ["camera_lane"]
+    if args.camera_objects:
+        groups.append("camera_objects")
     if args.traffic_light:
         groups.append("traffic_light")
     if args.visualization:
         groups.append("visualization")
+    if not groups:
+        raise SystemExit("select a producer when using --no-camera-lane")
     topic_specs = expand_topic_specs(contract, groups)
     specs_by_topic = {str(spec["topic"]): spec for spec in topic_specs}
 

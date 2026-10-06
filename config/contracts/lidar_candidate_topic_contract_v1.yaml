@@ -8,6 +8,7 @@ implementation:
   detection_tracking_fusion: pending_jaeho_migration
   ros_publishers_and_adapters: not_implemented
   skeleton_publishes_topics: false
+  camera_object_producer: available_opt_in
 source_stamp: bridge_receive_not_laser_firing_time
 frames:
   local: rear_axle_base_link
@@ -37,7 +38,10 @@ planned_topics:
     type: asmc_msgs/CameraObjectBoxArray
     frame: camera_id_in_header
     producer_owner: asmc_camera
-    implementation: pending_camera_rename_and_yolo_migration
+    implementation: available_opt_in
+    launch: roslaunch asmc_camera camera_objects.launch
+    compatibility_adapter: src/lidar+sensorfusion/src/Main/scripts/camera_objects_yolo_bbox_adapter.py
+    parity_evidence: config/baselines/perception_camera_objects_parity_v1.yaml
 rules:
   - Preserve observation stamp, point lineage, and local track state across GPS changes.
   - Distinguish observed-empty, predicted, input-invalid, pose-unavailable and sensor silence.

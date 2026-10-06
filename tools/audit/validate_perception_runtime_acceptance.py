@@ -13,7 +13,7 @@ import yaml
 
 
 CONTRACT_ID = "asmc_perception_runtime_acceptance_v1"
-REQUIRED_GROUPS = {"camera_lane", "traffic_light", "visualization"}
+REQUIRED_GROUPS = {"camera_lane", "traffic_light", "visualization", "camera_objects"}
 REQUIRED_CONSUMER_GATES = {"planning_traffic_light", "lane_adapter"}
 
 

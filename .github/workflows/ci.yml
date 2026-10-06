@@ -19,7 +19,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            git ca-certificates libyaml-cpp-dev libeigen3-dev libopencv-dev \
+            git ca-certificates libyaml-cpp-dev libeigen3-dev libopencv-dev python3-opencv python3-numpy python3-nose \
             ros-noetic-tf ros-noetic-tf2-ros ros-noetic-rostest
           rm -rf /var/lib/apt/lists/*
 
@@ -56,3 +56,9 @@ jobs:
         run: |
           source /opt/ros/noetic/setup.bash
           ./scripts/build_ws.sh
+
+      - name: Check camera object processing without a GPU
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          python3 -m unittest discover -s src/asmc_camera/test/detection -p 'test_*.py'
