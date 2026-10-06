@@ -11,6 +11,7 @@ import os
 import re
 import signal
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -86,7 +87,9 @@ def replay(args, path, repeat):
         if receiving.is_set():
             with lock:
                 tracks.append({"stamp_ns": message.header.stamp.to_nsec(),
-                               "objects": [[o.id, o.classification, o.yolo_class] for o in message.objects]})
+                               "objects": [[o.id, o.classification, o.yolo_class] for o in message.objects],
+                               "centers": {str(o.id): [o.cluster_center.x, o.cluster_center.y, o.cluster_center.z]
+                                           for o in message.objects}})
 
     def record_diagnostic(message):
         if receiving.is_set():
@@ -122,9 +125,20 @@ def replay(args, path, repeat):
         time.sleep(0.5)
         receiving.set()
         command = ["rosbag", "play", "--clock", "--quiet", "--delay=1.0", "--rate=1.0", str(args.bag)]
+        if args.play_duration:
+            command += ["--duration=" + str(args.play_duration)]
         if not args.fusion:
             command += ["--topics", "/image_jpeg/compressed"]
         playback = launch(command, "bag")
+        if args.acceptance and path == "new":
+            wait_for(lambda: len(outputs) >= 20, "live object frames before runtime acceptance")
+            with prefix.with_suffix(".acceptance.log").open("w") as log:
+                accepted = subprocess.run([sys.executable, str(Path(__file__).resolve().parents[2] / "scripts/verify_perception_runtime.py"),
+                                           "--camera-objects", "--no-camera-lane", "--duration", "5",
+                                           "--yaml-out", str(prefix.with_suffix(".acceptance.yaml"))],
+                                          stdout=log, stderr=subprocess.STDOUT, timeout=15)
+            if accepted.returncode:
+                raise RuntimeError("object-only runtime acceptance failed; see acceptance log")
         deadline = time.monotonic() + args.timeout
         while playback.poll() is None:
             if time.monotonic() > deadline:
@@ -196,13 +210,19 @@ def main():
     parser.add_argument("--fusion", action="store_true")
     parser.add_argument("--repeats", type=int, default=2)
     parser.add_argument("--timeout", type=float, default=240)
+    parser.add_argument("--path", choices=("both", "old", "new"), default="both")
+    parser.add_argument("--play-duration", type=float, help="short replay for a runtime checker smoke test")
+    parser.add_argument("--acceptance", action="store_true", help="also run object-only runtime acceptance during new-path replay")
     args = parser.parse_args()
+    if args.fusion and args.path != "both":
+        raise SystemExit("fusion comparison requires --path both")
     args.output.mkdir(parents=True, exist_ok=True)
     # rospy chooses its clock subscription at initialization; setting this
     # afterwards would leave the measurement process on wall time.
     rosgraph.Master("/p2_replay_preflight").setParam("/use_sim_time", True)
     rospy.init_node("p2_replay_measurements", disable_signals=True)
-    result = [replay(args, path, repeat) for path in ("old", "new") for repeat in range(1, args.repeats + 1)]
+    paths = ("old", "new") if args.path == "both" else (args.path,)
+    result = [replay(args, path, repeat) for path in paths for repeat in range(1, args.repeats + 1)]
     summary = {"runs": result, "pass": all(row["pass"] for row in result)}
     if args.fusion:
         frames = [json.loads((args.output / (r["path"] + "_" + str(r["repeat"]) + ".frames.json")).read_text())["tracks"] for r in result]
