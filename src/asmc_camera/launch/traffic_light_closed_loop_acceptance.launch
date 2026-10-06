@@ -1,0 +1,33 @@
+<launch>
+  <!-- P4-C4 deterministic ROS decision-loop acceptance.  All topics are
+       isolated and no Frenet/MPC/UDP control process is started. -->
+  <arg name="report_path"
+       default="/tmp/asmc_traffic_light_closed_loop_acceptance.json"/>
+  <arg name="timeout_s" default="12.0"/>
+
+  <node pkg="behavior_planner" type="behavior_node"
+        name="traffic_light_acceptance_behavior" output="screen" required="true">
+    <rosparam command="load"
+              file="$(find behavior_planner)/src/config/behavior_params.yaml"
+              subst_value="true"/>
+    <param name="interface_version" value="v2"/>
+    <param name="topics/ego" value="/acceptance/vehicle_state"/>
+    <param name="topics/objects" value="/acceptance/objects"/>
+    <param name="topics/frenet_feedback_v2" value="/acceptance/planning/feedback"/>
+    <param name="traffic_light/typed_topic"
+           value="/acceptance/traffic_light/detection"/>
+    <param name="traffic_light/topic" value="/acceptance/traffic_light/state"/>
+    <param name="publish_topics/behavior_command_v2"
+           value="/acceptance/behavior/command_v2"/>
+    <param name="publish_topics/feature_debug"
+           value="/acceptance/behavior/feature_debug"/>
+    <param name="publish_topics/marker" value="/acceptance/behavior/markers"/>
+  </node>
+
+  <node pkg="asmc_camera" type="traffic_light_closed_loop_acceptance.py"
+        name="traffic_light_closed_loop_acceptance" output="screen"
+        required="true">
+    <param name="report_path" value="$(arg report_path)"/>
+    <param name="timeout_s" value="$(arg timeout_s)"/>
+  </node>
+</launch>

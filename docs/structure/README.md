@@ -52,7 +52,7 @@ docs/
 │   └── simulator/                    MORAI message 호환 정책
 ├── packages/
 │   ├── asmc_bridge/                  UDP·센서 decoder·환경 profile
-│   ├── asmc_perception/              camera/LiDAR/BEV/fusion 개발 문서
+│   ├── asmc_camera/              camera/LiDAR/BEV/fusion 개발 문서
 │   └── planning-control/             planner/controller 설계 참고
 ├── operations/                       Docker, 네트워크, rosbag, 시뮬 검증·배포
 ├── handoffs/

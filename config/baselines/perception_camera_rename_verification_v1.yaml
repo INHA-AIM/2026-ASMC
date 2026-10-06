@@ -1,0 +1,559 @@
+schema_version: 1
+audit_id: camera_rename_verification_v1
+status: verified_with_known_existing_test_failure
+verified_date: '2026-10-06'
+code:
+  original_integrated_main: 4ffba4230a9a04d73c42a054f6dda1865e14d80b
+  reverted_main: c971d6b3a37b94f34baec0eb0f79360ddccbb3cd
+  verified_code_commit: 27477ee53434a316e1f59f3e4e119174596a1b0d
+  rename_pr: 62
+  revert_pr: 63
+  protected_paths_identical_to_original_main:
+  - src/asmc_hd_map
+  - src/asmc_msgs
+  - config/baselines/hd_map_runtime_pins_v1.yaml
+  - config/contracts/hd_map_topic_contract_v1.yaml
+  p2_worktree_unchanged: true
+runtime:
+  container_image_id: sha256:1ecd9f50491565cad32e32980bb5df5b48487f470440cb66c9ec3b8dc5c11400
+  gpu: NVIDIA GeForce RTX 4060 Ti
+  python: 3.8.10
+  torch: 2.1.2+cu118
+  ultralytics: 8.4.150
+  numpy: 1.24.4
+  ros_master_port: 11312
+models:
+  camera:
+    path: artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
+    sha256: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+  traffic_light:
+    path: src/asmc_camera/models/traffic_light/best.pt
+    sha256: 70ddaf222e7bc6ff2b4748c4b07c1b24dec72a2671f39bc18e0b243ddd93c0d5
+operator_review:
+  bag_three_windows: confirmed_updating
+  live_manual_simulator: confirmed_working
+  merge_owner: user
+tests:
+  packages:
+    asmc_camera:
+      tests: 207
+      errors: 0
+      failures: 1
+      skipped: 0
+    asmc_hd_map:
+      tests: 155
+      errors: 0
+      failures: 0
+      skipped: 0
+    asmc_msgs:
+      tests: 1
+      errors: 0
+      failures: 0
+      skipped: 0
+    lane_boundary_adapter:
+      tests: 67
+      errors: 0
+      failures: 0
+      skipped: 0
+  known_failures:
+  - package: asmc_camera
+    classname: test_facade_contract.PerceptionFacadeContractTest
+    name: test_planning_launches_use_the_canonical_traffic_light_model
+  contracts:
+    unit_tests: 32
+    result: passed
+  build: passed
+  manual_pause_support:
+    traffic_contract_tests: 4
+    facade_tests: 17
+    facade_failures: 1
+    new_failures: 0
+bag:
+  path: $ASMC_DATA/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+  sha256: a8f360e666f58358062e83cedbc6b51f94e8dc897402a2605eed7761a7880268
+  size_bytes: 1722857081
+  replay_rate: 0.5
+  initial_review_window_seconds:
+  - 44
+  - 86
+  full_replay_completed: true
+  input_counts:
+    front_input: 3514
+    extra_input: 1758
+    left_input: 3513
+    right_input: 3514
+  rates_at_half_speed:
+    mosaic: 6.246
+    lane_family: 4.394
+    traffic_detection: 5.0
+    traffic_overlay: 5.0
+    bev: 2.449
+  stamp_anomalies: {}
+  traffic_source_stamp_mismatches: 0
+  overlay_source_stamp_mismatches: 0
+  duplicate_publishers: {}
+  inference_errors: 0
+  decode_errors: 0
+  fusion_errors: 0
+  bev_warning:
+    message: waiting for synchronized views
+    final_sync_rejection_rate: 0.11726576311137302
+    output_continued: true
+live:
+  command: roslaunch asmc_camera perception.launch start_visualization:=true start_traffic_light:=true
+    traffic_light_wait_first:=0
+  use_sim_time: false
+  acceptance_command: python3 scripts/verify_perception_runtime.py --duration 15 --traffic-light
+    --visualization
+  contract_id: asmc_perception_runtime_acceptance_v1
+  duration_sec: 15.041
+  groups:
+  - camera_lane
+  - traffic_light
+  - visualization
+  ok: true
+  failures: []
+  missing_nodes: []
+  default_forbidden_publishers: []
+  topics:
+    /perception/bev/camera/coverage:
+      count: 149
+      rate_hz: 9.834
+      publishers:
+      - /camera_bev_fusion
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/camera/drivable_probability:
+      count: 149
+      rate_hz: 9.835
+      publishers:
+      - /camera_bev_fusion
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/camera/road_marking/class_id:
+      count: 149
+      rate_hz: 9.835
+      publishers:
+      - /camera_bev_fusion
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/camera/road_marking/confidence:
+      count: 149
+      rate_hz: 9.835
+      publishers:
+      - /camera_bev_fusion
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/debug/comparison/compressed:
+      count: 75
+      rate_hz: 4.999
+      publishers:
+      - /camera_bev_visualizer
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/debug/diagnostics:
+      count: 7
+      rate_hz: 0.5
+      publishers:
+      - /camera_bev
+      frame_ids:
+      - ''
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/debug/front/drivable_probability:
+      count: 212
+      rate_hz: 13.903
+      publishers:
+      - /camera_bev
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/debug/front/road_marking/class_id:
+      count: 212
+      rate_hz: 13.903
+      publishers:
+      - /camera_bev
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/debug/front/road_marking/confidence:
+      count: 211
+      rate_hz: 13.871
+      publishers:
+      - /camera_bev
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/debug/left/drivable_probability:
+      count: 211
+      rate_hz: 13.833
+      publishers:
+      - /camera_bev
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/debug/left/road_marking/class_id:
+      count: 210
+      rate_hz: 13.805
+      publishers:
+      - /camera_bev
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/debug/left/road_marking/confidence:
+      count: 210
+      rate_hz: 13.806
+      publishers:
+      - /camera_bev
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/debug/right/drivable_probability:
+      count: 221
+      rate_hz: 14.492
+      publishers:
+      - /camera_bev
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/debug/right/road_marking/class_id:
+      count: 220
+      rate_hz: 14.468
+      publishers:
+      - /camera_bev
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/debug/right/road_marking/confidence:
+      count: 220
+      rate_hz: 14.468
+      publishers:
+      - /camera_bev
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/bev/diagnostics:
+      count: 7
+      rate_hz: 0.5
+      publishers:
+      - /camera_bev_fusion
+      frame_ids:
+      - ''
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/debug/mosaic/compressed:
+      count: 118
+      rate_hz: 7.891
+      publishers:
+      - /camera_semantic_visualizer
+      frame_ids:
+      - camera_debug_mosaic
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/diagnostics:
+      count: 8
+      rate_hz: 0.492
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - ''
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/front/drivable/probability:
+      count: 305
+      rate_hz: 20.043
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_front
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/front/road_marking/class_id:
+      count: 305
+      rate_hz: 20.047
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_front
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/front/road_marking/confidence:
+      count: 305
+      rate_hz: 20.023
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_front
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/front/road_marking/model_grid/class_id:
+      count: 167
+      rate_hz: 10.937
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_front
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/front/road_marking/model_grid/confidence:
+      count: 167
+      rate_hz: 10.941
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_front
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/left/drivable/probability:
+      count: 302
+      rate_hz: 19.835
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_left
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/left/road_marking/class_id:
+      count: 302
+      rate_hz: 19.829
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_left
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/left/road_marking/confidence:
+      count: 302
+      rate_hz: 19.838
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_left
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/left/road_marking/model_grid/class_id:
+      count: 167
+      rate_hz: 10.937
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_left
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/left/road_marking/model_grid/confidence:
+      count: 167
+      rate_hz: 10.942
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_left
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/right/drivable/probability:
+      count: 302
+      rate_hz: 19.836
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_right
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/right/road_marking/class_id:
+      count: 302
+      rate_hz: 19.841
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_right
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/right/road_marking/confidence:
+      count: 302
+      rate_hz: 19.833
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_right
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/right/road_marking/model_grid/class_id:
+      count: 167
+      rate_hz: 10.934
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_right
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/camera/right/road_marking/model_grid/confidence:
+      count: 167
+      rate_hz: 10.939
+      publishers:
+      - /camera_semantic_inference
+      frame_ids:
+      - camera_right
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/lane/boundary_family:
+      count: 164
+      rate_hz: 10.875
+      publishers:
+      - /camera_lane_vectorizer
+      frame_ids:
+      - base_link
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/lane/diagnostics:
+      count: 8
+      rate_hz: 0.5
+      publishers:
+      - /camera_lane_vectorizer
+      frame_ids:
+      - ''
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /perception/traffic_light/detection:
+      count: 150
+      rate_hz: 9.983
+      publishers:
+      - /traffic_light_infer
+      frame_ids:
+      - camera_extra
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /traffic_light/detail:
+      count: 151
+      rate_hz: 10.007
+      publishers:
+      - /traffic_light_infer
+      frame_ids: []
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+    /traffic_light/state:
+      count: 151
+      rate_hz: 10.005
+      publishers:
+      - /traffic_light_infer
+      frame_ids: []
+      zero_stamps: 0
+      stamp_regressions: 0
+      diagnostic_errors: []
+      ok: true
+  diagnostics_snapshot:
+    camera_diagnostics:
+      level: 0
+      message: running
+      values:
+        decode_errors: '0'
+        inference_errors: '0'
+        end_to_end_p95_ms: '77.3970727'
+    bev_diagnostics:
+      level: 1
+      message: waiting for synchronized views
+      values:
+        sync_rejection_rate: '0.08637566137566137'
+        fusion_errors: '0'
+        camera_to_fused_ms_p95: '67.73954664999998'
+verification_fixes:
+  compressed_gui_selection: Select advertised compressed dropdown entry; wait up to
+    30s for publication.
+  traffic_light_wait_first: Default 10s preserved; 0 waits indefinitely during paused
+    simulator validation.
+limits:
+- The known planning traffic_light default facade test remains unchanged.
+- Bag replay was visual/runtime validation; it was not YOLO producer parity testing.
+- The BEV synchronization warning is recorded; its code is unchanged by this rename.
+- Planning consumer gates were not requested for this manual camera validation.

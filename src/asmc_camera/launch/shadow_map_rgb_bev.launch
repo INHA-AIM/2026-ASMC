@@ -1,0 +1,17 @@
+<launch>
+  <arg name="calibration_config"
+       default="$(find asmc_camera)/config/bev/cameras_v2.yaml"/>
+  <arg name="visualization_config"
+       default="$(find asmc_camera)/config/offline/bev/shadow_map_rgb_bev.yaml"/>
+  <arg name="pseudo_gt_path"
+       default="$(find asmc_camera)/../../artifacts/perception_eval/analysis/shadow_lane_map_pseudo_gt_pose_v4_20260914/shadow_lane_pseudo_gt.json"/>
+  <arg name="ego_topic" default="/Ego_topic"/>
+
+  <node pkg="asmc_camera" type="shadow_map_rgb_bev_node.py"
+        name="shadow_map_rgb_bev" output="screen" required="true">
+    <rosparam command="load" file="$(arg calibration_config)"/>
+    <rosparam command="load" file="$(arg visualization_config)"/>
+    <param name="pseudo_gt_path" value="$(arg pseudo_gt_path)"/>
+    <param name="ego_topic" value="$(arg ego_topic)"/>
+  </node>
+</launch>

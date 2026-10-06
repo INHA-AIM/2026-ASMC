@@ -25,7 +25,8 @@ Usage:
   asmc-ros-gui rqt-image [base-image-topic]
   asmc-ros-gui rviz [rviz options]
 
-rqt-image strips a trailing /compressed and selects compressed transport.
+rqt-image selects the published /compressed topic in the image-view dropdown.
+It waits up to 30 seconds for that topic before opening the window.
 Both modes use a fresh Qt settings directory so stale multi-monitor geometry
 cannot place the window off-screen. User RViz .rviz files are not modified.
 EOF
@@ -45,9 +46,32 @@ case "$mode" in
     if [[ $# -eq 0 ]]; then
       exec rqt_image_view --clear-config
     fi
-    topic="${1%/compressed}"
+    topic="${1%/compressed}/compressed"
     shift
-    exec rqt_image_view --clear-config "$topic" _image_transport:=compressed "$@"
+    # rqt_image_view chooses transport from its topic dropdown. A private
+    # _image_transport parameter does not select that dropdown's transport.
+    # Wait for registration so it maps this label to the compressed transport
+    # instead of adding an unknown label as a raw Image topic.
+    python3 - "$topic" <<'PY'
+import sys
+import time
+import rosgraph
+
+topic = sys.argv[1]
+master = rosgraph.Master('/asmc_ros_gui_launcher')
+deadline = time.monotonic() + 30.0
+while time.monotonic() < deadline:
+    try:
+        topics = dict(master.getPublishedTopics('/'))
+        if topics.get(topic) == 'sensor_msgs/CompressedImage':
+            break
+    except (OSError, rosgraph.MasterException):
+        pass
+    time.sleep(0.25)
+else:
+    sys.exit('No sensor_msgs/CompressedImage publisher for ' + topic + ' within 30s')
+PY
+    exec rqt_image_view --clear-config "$topic" "$@"
     ;;
   rviz)
     export XDG_CONFIG_HOME
