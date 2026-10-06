@@ -1,0 +1,8 @@
+<launch>
+  <arg name="config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
+  <node pkg="asmc_camera" type="object_detection_node.py" name="camera_object_detector"
+        output="screen" required="false" launch-prefix="$(optenv ASMC_YOLO_PYTHON)">
+    <rosparam command="load" file="$(arg config)" subst_value="true"/>
+    <rosparam command="load" file="$(find asmc_camera)/config/camera/object_classes.yaml"/>
+  </node>
+</launch>

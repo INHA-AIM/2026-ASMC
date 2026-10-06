@@ -4,6 +4,8 @@
        Topics/nodes are unchanged; LiDAR/fusion and data collection remain independent. -->
   <arg name="start_camera_lane" default="true"/>
   <arg name="start_traffic_light" default="false"/>
+  <arg name="start_camera_objects" default="false"/>
+  <arg name="camera_objects_config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
   <arg name="start_visualization" default="false"/>
   <arg name="visualization_legacy_rqt" default="false"/>
   <arg name="visualization_calibration_grid" default="false"/>
@@ -46,6 +48,12 @@
   <arg name="traffic_light_stale_sec" default="1.0"/>
   <!-- Set to 0 for manual validation while MORAI is paused. -->
   <arg name="traffic_light_wait_first" default="10.0"/>
+
+  <group if="$(arg start_camera_objects)">
+    <include file="$(find asmc_camera)/launch/camera_objects.launch">
+      <arg name="config" value="$(arg camera_objects_config)"/>
+    </include>
+  </group>
 
   <group if="$(arg start_camera_lane)">
     <include file="$(find asmc_camera)/launch/camera_lane.launch">
