@@ -134,6 +134,8 @@ if(CATKIN_ENABLE_TESTING)
   if(TARGET test_fusion_replay)
     target_link_libraries(test_fusion_replay ${catkin_LIBRARIES})
   endif()
+  add_executable(fusion_class_trace_replay test/fusion_class_trace_replay.cpp)
+  target_link_libraries(fusion_class_trace_replay yaml-cpp ${catkin_LIBRARIES})
   catkin_add_gtest(test_drivable_footprint
     test/test_drivable_footprint.cpp
     src/PlannerInterface/DrivableFootprint.cpp

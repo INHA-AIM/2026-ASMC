@@ -62,6 +62,12 @@ def main():
         launch(["rosrun", "Main", "camera_objects_yolo_bbox_adapter.py"], "adapter")
         wait_for(lambda: publisher.get_num_connections() >= 2, "warmed object and lane subscriptions", timeout=60)
         time.sleep(0.5)
+        # Retain a stale pre-input diagnostic deliberately. Without source
+        # stamp freshness the later decode assertion can read this snapshot.
+        wait_for(lambda: int(latest_values().get("latest_result_stamp_ns", 0)) == 0
+                 and float(latest_values().get("input_silence_sec", 0)) > 1.0,
+                 "startup silence diagnostic before fault frames")
+        checks["startup_silence_before_frames"] = True
         header = send(jpeg)
         wait_for(lambda: candidates and legacy_boxes and lane_outputs, "normal empty results and live lane output")
         checks["normal_empty"] = (candidates[-1].valid and not candidates[-1].boxes
@@ -73,7 +79,12 @@ def main():
         checks["broken_jpeg_invalid_withheld"] = (not candidates[-1].valid and not candidates[-1].boxes
                                                   and candidates[-1].header == header and len(legacy_boxes) == before)
         count = len(candidates)
-        wait_for(lambda: float(latest_values().get("input_silence_sec", 0)) > 1.0, "input silence diagnostic")
+        # The monitor may still expose startup silence from before either
+        # injected frame. Require the invalid frame's source stamp so this
+        # assertion observes its decode error and subsequent input stop.
+        wait_for(lambda: int(latest_values().get("latest_result_stamp_ns", 0)) == header.stamp.to_nsec()
+                 and float(latest_values().get("input_silence_sec", 0)) > 1.0,
+                 "fresh invalid-frame input silence diagnostic")
         checks["input_stop_no_repeated_output"] = len(candidates) == count
         checks["decode_error_diagnostic"] = int(latest_values().get("decode_errors", 0)) >= 1
         old = launch(["rosrun", "Main", "yolo_detection_node", "__name:=yolo_detection_node"], "legacy")
@@ -101,6 +112,11 @@ def main():
         for stream in streams:
             stream.close()
         args.output.write_text(json.dumps(checks, indent=2) + "\n")
+        args.output.with_suffix(".diagnostics.json").write_text(json.dumps([
+            {"stamp_ns": message.header.stamp.to_nsec(), "status": [
+                {"level": status.level, "message": status.message,
+                 "values": {value.key: value.value for value in status.values}}
+                for status in message.status]} for message in diagnostics], indent=2) + "\n")
     print(json.dumps(checks, indent=2))
     return 0 if checks.get("all_pass") else 1
 
