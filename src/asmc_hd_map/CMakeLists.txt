@@ -3,6 +3,7 @@ project(asmc_hd_map)
 
 find_package(catkin REQUIRED COMPONENTS
   asmc_msgs
+  message_generation
   geometry_msgs
   morai_msgs
   nav_msgs
@@ -13,7 +14,11 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 catkin_python_setup()
-catkin_package(CATKIN_DEPENDS asmc_msgs geometry_msgs morai_msgs nav_msgs rospy sensor_msgs std_msgs visualization_msgs)
+
+add_message_files(FILES HdMapRoute.msg MissionBoundary.msg HdMapContext.msg)
+generate_messages(DEPENDENCIES geometry_msgs std_msgs)
+
+catkin_package(CATKIN_DEPENDS message_runtime asmc_msgs geometry_msgs morai_msgs nav_msgs rospy sensor_msgs std_msgs visualization_msgs)
 
 if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_frames.py)
@@ -30,6 +35,9 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_local_crop.py)
   catkin_add_nosetests(test/test_semantic_query.py)
   catkin_add_nosetests(test/test_local_runtime.py)
+  catkin_add_nosetests(test/test_route_reference.py)
+  catkin_add_nosetests(test/test_context_publisher.py)
+  catkin_add_nosetests(test/test_planning_export.py)
   catkin_add_nosetests(test/test_review_bundle.py)
   catkin_add_nosetests(test/test_legacy_adoption.py)
   catkin_add_nosetests(test/test_hybrid_completion.py)
@@ -56,6 +64,7 @@ catkin_install_python(PROGRAMS
   scripts/build_runtime_pins.py
   scripts/rebuild_hd_map_artifacts.py
   scripts/export_mission_scenario_spec.py
+  scripts/export_planning_bundle.py
   scripts/sample_mission_scenarios.py
   scripts/build_drivable_area_input_audit.py
   scripts/build_compact_drivable_map.py
@@ -65,6 +74,7 @@ catkin_install_python(PROGRAMS
   scripts/verify_competition_map_topics.py
   scripts/verify_local_map_topics.py
   scripts/verify_hd_map_latency.py
+  scripts/verify_hd_map_context.py
   scripts/map_review_logger_node.py
   scripts/build_current_corridor.py
   scripts/calibrate_observed_lanes.py

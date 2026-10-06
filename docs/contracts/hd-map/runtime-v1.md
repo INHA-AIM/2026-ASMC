@@ -42,7 +42,7 @@ publisher는 시작 전에 stage14 map, P1-C metadata, 공식 global path와 P2-
 | `/hd_map/local/current_lane` | `asmc_msgs/LaneAssociation` | pose update, non-latched | 후륜축 중심 현재 허용 차로와 경계/이탈/전환 상태 |
 | `/hd_map/debug/markers` | `visualization_msgs/MarkerArray` | 1 Hz, non-latched | 차선·경로·link 방향·station·체크포인트·미션·build 정보 |
 
-P2-B v6의 `HdMapMeta.operational=true`, `complete=true`, `lane_count=71`,
+P2-B v6의 `HdMapMeta.operational=true`, `complete=true`, `lane_count=70`,
 `drivable_area_count=102`가 현재 기준이다. `lane_marking_count=128`은 물리 차선 도색 121개와
 정지선 7개를 같은 `LaneMarking` 계약으로 전달하기 때문이다.
 
@@ -68,7 +68,8 @@ latched global 토픽이다. 현재 vector 규모는 Lane 70개, DrivableArea 10
 전방을 위로 표시한 BEV에서는 후륜축 중심이 화면 폭의 50%, 아래에서 25% 위치에 온다.
 RViz의 카메라 중심 설정과 grid 창은 별개이며, `follow_ego` 뷰는 계속 base_link를 따라간다.
 `local_crop_mode:=map_square local_extent_m:=120`이면 기존 map 축 정사각 크롭을 사용한다.
-기본 로컬 크롭 주기는 최대 20 Hz이고 해당 토픽 구독자가 있을 때만 계산한다.
+운영 `competition_map.launch`의 크롭 기본값은 꺼짐이다. `publish_local:=true`로 켠
+로컬 크롭 주기는 최대 20 Hz이고 해당 토픽 구독자가 있을 때만 계산한다.
 현재 차로는 grid 계산을 기다리지 않고 각 유효 pose callback에서 즉시 발행한다.
 pose가 0.5 s 이상 만료되면 현재 차로는 `valid=false/STATE_STALE`로 발행하고 크롭은 중단한다.
 소비자는 크롭의 원래 pose stamp를 확인해야 하며 마지막 수신 데이터를 계속 새 데이터로 취급하면 안 된다.
@@ -102,7 +103,7 @@ signals = index.signals_ahead(route_station_m, distance_m=120.)
   MGeo 상한은 유지된다. 판제 SI 입력에는 `effective_limit_kph / 3.6`을 쓴다.
 - 주행구간: `active_missions(link_id, route_station_m)`는 부분 링크 구간을 station으로 좁히고
   provisional을 제외한다. station을 생략하면 링크에서 가능한 구간 후보이므로 실제 활성화에는
-  station을 함께 사용한다. topology 기반 route station 추정은 판제/localization의 책임이다.
+  station을 함께 사용한다. HD 공식 station은 `/hd_map/context`로 제공한다. 판제 자체 경로의 station은 경계 좌표를 재투영한다.
 - 신호등: 인지 활성 구간과 실제 정지선 경계 5개를 구분한다. `signals_ahead`는 길이가 0인
   경계도 route distance로 조회하고 `traffic_light_id`, 정지선 ID 및 선택한 도색 레이어의
   정지선 geometry를 반환한다. 총 7개 검수 정지선은 `LaneMarking.ROLE_STOP_LINE`이다.
@@ -397,3 +398,25 @@ A866·A054·A846은 일반 전역경로 추종 구간이며, 이 구간에 보�
 - A054·A846 미션 제외, 신호등 활성화 policy `A236→A308`, 정지 경계 5개의 policy 내부 포함
 - RViz marker namespace와 최소 marker 수
 - link label 39개, checkpoint label 15개, 축약 ID 사용과 text 중심 최소 간격 9 m
+
+## 5. 판제 선택 소비와 GPS 음영 처리
+
+운영 기본 실행은 전역 레이어와 `/hd_map/global/route`, `/hd_map/context`를 제공한다.
+크롭 노드는 유효 상태·현재 차로 조회를 계속 수행하지만 기본으로 local lane/grid publisher와
+전역 grid 구독을 만들지 않는다. RViz·ego marker·local crop을 켜면 필요한 grid를 받아 사용한다.
+
+`HdMapRoute`의 points와 stations는 공식 path의 map 좌표와 XY 누적거리다.
+`HdMapContext`는 후륜축 ego pose, 별도의 lane/route valid, route 상한(m/s), 활성 mission ID,
+기본 후방 30 m·전방 200 m의 미션 경계와 좌표를 제공한다. `~boundary_ahead_m`과
+`~boundary_behind_m`은 context 조회 창이며 전역 정보를 제한하지 않는다.
+`SemanticMapIndex.mission_boundaries(s, ahead_m, behind_m)`로 더 먼 구간도 조회한다.
+
+명시적 GPS 무효/status≤0 또는 좌표 sentinel은 즉시 현재 정보를 무효화한다. GPS 미수신은
+source stamp와 receipt 기준 0.5초 후 무효다. 유효 위치 추정·누적거리 외삽은 하지 않는다.
+마지막 유효 관측의 구간·음영구간은 `last_valid_*`와
+`gps_shadow_context_from_last_valid_pose=true`로 구분하며 현재 위치라고 사용하지 않는다.
+GPS 복귀 시 새 관측으로 차로와 route를 재획득한다. 음영에서 camera lane/drivable 소비,
+신호 색상, 속도 정책과 판제 자체 경로의 station 재투영은 판제가 반영한다.
+
+실행·파일 export·현재 main의 차이·판제 인수 검증은
+[판제 인수 문서](../../handoffs/hd-map/planning-consumption-v1.md)를 따른다.

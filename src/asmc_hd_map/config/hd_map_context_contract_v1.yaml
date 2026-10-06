@@ -1,0 +1,40 @@
+contract_id: asmc_hd_map_context_v1
+owner: asmc_hd_map
+shared_asmc_msgs_modified: false
+route:
+  topic: /hd_map/global/route
+  type: asmc_hd_map/HdMapRoute
+  latched: true
+  frame: map
+  station: official_global_path_xy_arc_length_from_point_zero
+  unit: m
+context:
+  topic: /hd_map/context
+  type: asmc_hd_map/HdMapContext
+  latched: false
+  queue_size: 1
+  publication: accepted_pose_and_20hz_health_timer
+  reference: base_link_rear_axle_center
+  header_stamp: health_publication_time
+  pose_stamp: last_accepted_input_pose_observation_time
+  speed_unit: m_per_s
+  speed_scope: official_route_projection_not_arbitrary_support_link
+  maximum_route_projection_distance_m: 15.0
+  boundary_ahead_m: 200.0
+  boundary_behind_m: 30.0
+  boundary_window_configurable: true
+  boundary_window_limits_global_map: false
+  boundary_point: official_route_point_at_station_in_map_frame
+  freshness_timeout_sec: 0.5
+  outage:
+    invalid_gps: immediate_pose_gps_unavailable
+    absent_samples: pose_stale_after_timeout
+    current_pose_lane_station_speed_missions_boundaries: invalid_or_cleared
+    static_globals: retained
+    last_valid_context: explicitly_historical_not_extrapolated
+    gps_shadow_zone_ids: retained_only_if_last_valid_pose_was_in_reviewed_shadow_zone
+    recovery: new_accepted_observation_reacquires_lane_and_route_without_old_hint
+runtime:
+  production_local_crops_enabled: false
+  debug_local_crops_enabled: true
+  global_grid_subscription_by_context_node: only_when_local_crops_or_ego_markers_enabled

@@ -14,6 +14,7 @@ consumer가 어떤 freshness·quality·fallback을 검사해야 하는지, 어�
 | Camera detector→LiDAR fusion | [객체 검출](./perception/camera-object-detection.md) | Active Guide, 기존 YOLO11m 기준선과 후속 비교 |
 | Behavior→Frenet v1 | [legacy 3-package 설계](./planning/behavior-legacy.md) | Legacy Reference, 현재 실행 금지 |
 | 규정집 v1.2→전 파트 | [v1.2 영향과 확인 요청](./competition/rule-v1.2-impacts.md) | Active Handoff, 판정 전용 채널·cmd type·속도 상한 |
+| HD맵→판제 | [전역 지도·미션 경계·GPS 상태](./hd-map/planning-consumption-v1.md) | Active Handoff, v6 지도 bundle·후륜축·station·음영 fallback 반영 항목 |
 | HD맵 미션 구간→시나리오 생성기·판제 | [미션 시나리오 spec](./hd-map/mission-scenario-spec.md) | Active Handoff, 구간별 회피 차로·actor 후보·샘플링 API, 값은 계속 수정 가능 |
 
 현재 Behavior↔Frenet production 계약은 handoff 문서가 아니라

@@ -31,7 +31,7 @@
        The map->base_link TF follows RViz by default so the view can track the
        vehicle; keep it off when a runtime localization node owns that TF and
        keep the bridge publish_map_tf off while this is on. -->
-  <arg name="publish_ego_markers" default="true"/>
+  <arg name="publish_ego_markers" default="$(arg rviz)"/>
   <arg name="publish_ego_tf" default="$(arg rviz)"/>
   <arg name="ego_frame_id" default="base_link"/>
   <arg name="follow_ego" default="true"/>
@@ -47,8 +47,9 @@
     <param name="debug_marker_detail" value="$(arg debug_marker_detail)"/>
   </node>
 
-  <node if="$(arg publish_local)" pkg="asmc_hd_map" type="local_map_crop_node.py"
+  <node pkg="asmc_hd_map" type="local_map_crop_node.py"
         name="local_map_crop" output="screen" required="true">
+    <param name="publish_crops" value="$(arg publish_local)"/>
     <param name="pose_source" value="$(arg local_pose_source)"/>
     <param name="ego_topic" value="$(arg local_ego_topic)"/>
     <param name="pose_topic" value="$(arg local_pose_topic)"/>

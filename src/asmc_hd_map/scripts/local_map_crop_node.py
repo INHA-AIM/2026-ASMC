@@ -10,7 +10,7 @@ from pathlib import Path
 import threading
 import time
 
-from asmc_msgs.msg import HdMapMeta, LaneArray, LaneAssociation
+from asmc_msgs.msg import HdMapMeta, LaneArray, LaneAssociation, MissionZoneArray
 from geometry_msgs.msg import Point, PoseStamped, TransformStamped
 from morai_msgs.msg import EgoVehicleStatus, GPSMessage
 from nav_msgs.msg import OccupancyGrid
@@ -20,6 +20,9 @@ from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Imu
 from std_msgs.msg import ColorRGBA
 from visualization_msgs.msg import Marker, MarkerArray
+
+from asmc_hd_map.msg import HdMapContext, HdMapRoute
+from asmc_hd_map.context_publisher import ContextPublisher
 
 from asmc_hd_map.ego_footprint import (
     VehicleFootprint,
@@ -74,12 +77,19 @@ class LocalMapCropNode:
         if self.pose_source not in {"gps_imu", "ego_status", "pose_stamped"}:
             raise ValueError("pose_source must be gps_imu, ego_status, or pose_stamped")
 
+        self.publish_crops = bool(rospy.get_param("~publish_crops", True))
+        self.context = ContextPublisher(
+            float(rospy.get_param("~boundary_ahead_m", 200.)),
+            float(rospy.get_param("~boundary_behind_m", 30.)),
+        )
+        self.pose_status = HdMapContext.POSE_WAITING
         self.lock = threading.RLock()
         self.meta = None
         self.global_lanes = None
         self.lane_bounds = []
         self.global_grid_message = None
         self.global_occupancy = None
+        self.latest_gps_stamp = None
         self.latest_pose = None
         self.latest_pose_received_monotonic = 0.0
         self.lane_associator = None
@@ -90,7 +100,7 @@ class LocalMapCropNode:
         # reference used by current-lane association. The map->base_link TF is
         # off by default so it never competes with a runtime localization TF;
         # the debug launch enables it with RViz so the view can follow base_link.
-        self.publish_ego_markers = bool(rospy.get_param("~publish_ego_markers", True))
+        self.publish_ego_markers = bool(rospy.get_param("~publish_ego_markers", False))
         self.publish_ego_tf = bool(rospy.get_param("~publish_ego_tf", False))
         self.ego_frame_id = str(rospy.get_param("~ego_frame_id", "base_link"))
         self.footprint = VehicleFootprint(
@@ -146,25 +156,28 @@ class LocalMapCropNode:
 
         self.lanes_pub = rospy.Publisher(
             "/hd_map/local/lanes", LaneArray, queue_size=1, latch=False
-        )
+        ) if self.publish_crops else None
         self.grid_pub = rospy.Publisher(
             "/hd_map/local/drivable_grid", numpy_msg(OccupancyGrid), queue_size=1, latch=False
-        )
+        ) if self.publish_crops else None
         self.association_pub = rospy.Publisher(
             "/hd_map/local/current_lane", LaneAssociation, queue_size=1, latch=False
         )
         self.subscribers = [
+            rospy.Subscriber("/hd_map/global/route", HdMapRoute, self._on_route, queue_size=1),
+            rospy.Subscriber("/hd_map/global/mission_zones", MissionZoneArray, self._on_missions, queue_size=1),
             rospy.Subscriber("/hd_map/meta", HdMapMeta, self._on_meta, queue_size=1),
             rospy.Subscriber(
                 "/hd_map/global/lanes", LaneArray, self._on_global_lanes, queue_size=1
             ),
-            rospy.Subscriber(
+        ]
+        if self.publish_crops or self.publish_ego_markers:
+            self.subscribers.append(rospy.Subscriber(
                 "/hd_map/global/drivable_grid",
                 OccupancyGrid,
                 self._on_global_grid,
                 queue_size=1, buff_size=32 * 1024 * 1024,
-            ),
-        ]
+            ))
         if self.pose_source == "gps_imu":
             self.subscribers.extend([
                 rospy.Subscriber(
@@ -198,7 +211,7 @@ class LocalMapCropNode:
             rospy.Duration.from_sec(self.minimum_period), self._on_publish_timer
         )
         rospy.loginfo(
-            "local HD-map crop ready pose_source=%s mode=%s window=%s publish<=%.1fHz "
+            "HD-map context ready pose_source=%s optional_crop_mode=%s window=%s health=%.1fHz "
             "geometry_frame=map%s",
             self.pose_source,
             self.crop_mode,
@@ -211,6 +224,38 @@ class LocalMapCropNode:
     def _on_meta(self, message: HdMapMeta) -> None:
         with self.lock:
             self.meta = message
+            self._configure_context(meta=message)
+
+    def _configure_context(self, **layers):
+        try:
+            self.context.configure(**layers)
+        except ValueError as error:
+            rospy.logerr("HD context rejected map snapshot: %s", error)
+
+    def _on_route(self, message):
+        with self.lock:
+            self._configure_context(route=message)
+
+    def _on_missions(self, message):
+        with self.lock:
+            self._configure_context(missions=message)
+
+    def _invalidate_pose(self, status):
+        with self.lock:
+            self.pose_status = status
+            self.context.invalidate()
+            if self.lane_associator is not None:
+                self.lane_associator.reset()
+        self._publish_association()
+        self._publish_context()
+
+    def _publish_context(self):
+        with self.lock:
+            status = self.pose_status
+            if self.latest_pose is not None and status == HdMapContext.POSE_VALID and self._pose_is_stale(self.latest_pose[3]):
+                status = self.pose_status = HdMapContext.POSE_STALE
+            lane_ready = self.meta is not None and self.global_lanes is not None and self._identity_matches(self.meta, self.global_lanes)
+            self.context.publish(self.latest_pose, status, self.latest_association, lane_ready)
 
     @staticmethod
     def _lane_message_bounds(lane):
@@ -324,12 +369,22 @@ class LocalMapCropNode:
             self.imu_samples.append((stamp.to_sec(), yaw))
 
     def _on_gps(self, message: GPSMessage) -> None:
+        stamp = message.header.stamp if message.header.stamp.to_nsec() else rospy.Time.now()
+        age = (rospy.Time.now() - stamp).to_sec()
+        with self.lock:
+            if (abs(age) > self.pose_stale_timeout_sec
+                    or (self.latest_pose is not None and stamp <= self.latest_pose[3])
+                    or (self.latest_gps_stamp is not None and stamp <= self.latest_gps_stamp)):
+                return  # Ignore packets older than either recovery or outage.
+            self.latest_gps_stamp = stamp
         if int(message.status) <= 0:
+            self._invalidate_pose(HdMapContext.POSE_GPS_UNAVAILABLE)
             rospy.logwarn_throttle(
                 2.0, "local HD-map crop ignored invalid GPS status=%s", message.status
             )
             return
         if not valid_wgs84_position(message.latitude, message.longitude):
+            self._invalidate_pose(HdMapContext.POSE_GPS_UNAVAILABLE)
             rospy.logwarn_throttle(
                 2.0,
                 "local HD-map crop ignored invalid GPS coordinate latitude=%s longitude=%s",
@@ -341,11 +396,13 @@ class LocalMapCropNode:
         with self.lock:
             samples = tuple(self.imu_samples)
         if not samples:
+            self._invalidate_pose(HdMapContext.POSE_INVALID)
             rospy.logwarn_throttle(2.0, "local HD-map crop is waiting for IMU orientation")
             return
         imu_stamp, yaw = min(samples, key=lambda value: abs(value[0] - stamp.to_sec()))
         gap_sec = abs(imu_stamp - stamp.to_sec())
         if gap_sec > self.maximum_imu_gap_sec:
+            self._invalidate_pose(HdMapContext.POSE_INVALID)
             rospy.logwarn_throttle(
                 2.0,
                 "local HD-map crop GPS/IMU gap %.1fms exceeds %.1fms",
@@ -358,6 +415,7 @@ class LocalMapCropNode:
         )
         offset_delta = float(np.linalg.norm(raw_offset - self.map_origin_xy))
         if not math.isfinite(offset_delta) or offset_delta > self.gps_offset_tolerance_m:
+            self._invalidate_pose(HdMapContext.POSE_INVALID)
             rospy.logerr_throttle(
                 2.0,
                 "local HD-map crop rejected GPS: sensor offset differs from map origin by "
@@ -377,6 +435,7 @@ class LocalMapCropNode:
                 (easting, northing), self.map_origin_xy, yaw, self.gps_lever_arm_xy
             )
         except (ValueError, OverflowError) as error:
+            self._invalidate_pose(HdMapContext.POSE_INVALID)
             rospy.logwarn_throttle(2.0, "local HD-map crop GPS conversion failed: %s", error)
             return
         self._set_pose(float(base_xy[0]), float(base_xy[1]), yaw, stamp)
@@ -413,6 +472,12 @@ class LocalMapCropNode:
         with self.lock:
             if self.latest_pose is not None and stamp <= self.latest_pose[3]:
                 return
+            recovering = self.latest_pose is None or self._pose_is_stale(self.latest_pose[3])
+            if recovering:
+                self.context.invalidate()
+                if self.lane_associator is not None:
+                    self.lane_associator.reset()
+            self.pose_status = HdMapContext.POSE_VALID
             self.latest_pose = (x_m, y_m, yaw_rad, stamp)
             self.latest_pose_received_monotonic = time.monotonic()
             if self.lane_associator is not None:
@@ -430,8 +495,10 @@ class LocalMapCropNode:
             transform.transform.rotation.w = math.cos(0.5 * yaw_rad)
             self.tf_broadcaster.sendTransform(transform)
         self._publish_association()
+        self._publish_context()
 
     def _on_publish_timer(self, _event) -> None:
+        self._publish_context()
         self._publish_association()
         self._try_publish(force=True)
         self._publish_ego_markers()
@@ -609,11 +676,14 @@ class LocalMapCropNode:
 
     def _pose_is_stale(self, stamp):
         return (
-            time.monotonic() - self.latest_pose_received_monotonic > self.pose_stale_timeout_sec
+            self.pose_status != HdMapContext.POSE_VALID
+            or time.monotonic() - self.latest_pose_received_monotonic > self.pose_stale_timeout_sec
             or (rospy.Time.now() - stamp).to_sec() > self.pose_stale_timeout_sec
         )
 
     def _try_publish(self, force: bool) -> None:
+        if not self.publish_crops:
+            return
         now = time.monotonic()
         with self.lock:
             if not force and now - self.last_publish < self.minimum_period:

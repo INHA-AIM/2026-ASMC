@@ -83,8 +83,13 @@ publisher는 입력 SHA나 build 조합이 맞지 않으면 일부 토픽을 내
 판제는 latched global vector/topic을 정본으로 사용한다. local lane/grid는 map frame과 global ID를
 유지하는 선택적 cache이며 planner horizon이나 별도 정본이 아니다. 현재 차로 association은
 GPS 안테나가 아니라 후륜축 중심 `base_link`의 map 좌표를 기준으로 한다.
-기본 local 창은 heading 기준 전방 90 m·후방 30 m·좌우 각 30 m(0.2 m, 600×300, 최대 20 Hz)다.
-현재 차로는 pose callback에서 즉시 발행한다. `hd_map_consumer_example.py`의 `~layers`와
+운영 `competition_map.launch`는 크롭을 기본으로 끄고 `/hd_map/context`는 계속 제공한다.
+크롭을 `publish_local:=true`로 켰을 때 local 창은 heading 기준 전방 90 m·후방 30 m·좌우 각 30 m(0.2 m, 600×300, 최대 20 Hz)다.
+현재 차로와 context는 pose callback에서 즉시 발행하고 20 Hz로 유효 상태를 갱신한다.
+공식 경로·누적거리는 `/hd_map/global/route`, 현재 구간·속도·미션 시작/종료 좌표는
+`/hd_map/context`에서 받는다. GPS 무효 시 현재 정보를 무효화하고 마지막 음영구간 정보만
+역사값으로 제공하며, 복귀하면 새 GPS로 재획득한다. 판제 반영 항목은
+[판제 인수 문서](../../docs/handoffs/hd-map/planning-consumption-v1.md)를 따른다. `hd_map_consumer_example.py`의 `~layers`와
 `SemanticMapIndex`로 필요한 vector/미션 레이어만 받고 제한속도·구간·신호등/정지선을 조회한다.
 링크별 유효 최대속도 39개는 속도 zone payload로 전달한다. 상세 설정과 좌표 변환은
 [runtime 계약](../../docs/contracts/hd-map/runtime-v1.md#22-선택-구독과-규칙-조회)을 따른다.

@@ -24,6 +24,8 @@ from nav_msgs.msg import OccupancyGrid
 import rospy
 from visualization_msgs.msg import Marker, MarkerArray
 from asmc_hd_map.semantic_query import SemanticMapIndex
+from asmc_hd_map.msg import HdMapRoute
+from asmc_hd_map.route_reference import RouteReference
 
 
 EXPECTED_TYPES = {
@@ -81,7 +83,12 @@ def main() -> int:
     rospy.init_node("verify_competition_map_topics", anonymous=True)
     timeout = float(rospy.get_param("~timeout_s", 10.0))
     published = dict(rospy.get_published_topics())
+    _require(published.get("/hd_map/global/route") == "asmc_hd_map/HdMapRoute", "official route topic missing")
+    _require(published.get("/hd_map/context") == "asmc_hd_map/HdMapContext", "HD context topic missing")
     for topic, expected_type in EXPECTED_TYPES.items():
+        if topic in {"/hd_map/local/lanes", "/hd_map/local/drivable_grid"} and not rospy.get_param("/local_map_crop/publish_crops", True):
+            _require(topic not in published, "disabled crop topic is advertised")
+            continue
         _require(published.get(topic) == expected_type, "%s type is %s, expected %s" % (
             topic, published.get(topic), expected_type
         ))
@@ -104,6 +111,15 @@ def main() -> int:
         "/hd_map/global/drivable_grid", OccupancyGrid, timeout=timeout
     )
     debug = rospy.wait_for_message("/hd_map/debug/markers", MarkerArray, timeout=timeout)
+
+    route = rospy.wait_for_message("/hd_map/global/route", HdMapRoute, timeout=timeout)
+    reference = RouteReference([(p.x, p.y, p.z) for p in route.points], route.stations_m)
+    _require(route.build_id == meta.build_id and route.geometry_sha256 == meta.geometry_sha256,
+             "official route identity differs from global layers")
+    _require(route.route_id == missions.route_id and route.route_sha256 in meta.source_sha256,
+             "official route namespace or source SHA drift")
+    _require(len(route.points) == 4430 and abs(reference.length_m - route.length_m) < 1e-6,
+             "official route stations drift")
 
     index = SemanticMapIndex(meta, {"missions": missions, "markings": markings})
     limits = list(index.speed_by_link.values())

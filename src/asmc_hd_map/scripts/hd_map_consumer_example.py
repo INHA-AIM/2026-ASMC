@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Read-only example: select global layers, index once, query current link."""
+"""Read-only example: select global layers, index once, query official-route context."""
 from asmc_msgs.msg import (
     CompetitionCheckpointArray, DrivableAreaArray, HdMapMeta, LaneArray,
-    LaneAssociation, LaneMarkingArray, MissionZoneArray,
+    LaneMarkingArray, MissionZone, MissionZoneArray,
 )
 import rospy
 from asmc_hd_map.semantic_query import SemanticMapIndex
+from asmc_hd_map.msg import HdMapContext
 
 
 class HdMapConsumerExample:
@@ -31,7 +32,7 @@ class HdMapConsumerExample:
                 buff_size=16 * 1024 * 1024,
             ))
         self.subscribers.append(rospy.Subscriber(
-            "/hd_map/local/current_lane", LaneAssociation, self._association, queue_size=1,
+            "/hd_map/context", HdMapContext, self._context, queue_size=1,
         ))
 
     def _meta(self, message):
@@ -53,18 +54,25 @@ class HdMapConsumerExample:
             return
         rospy.loginfo("HD-map selectable cache ready build=%s layers=%s", self.index.build_id, self.layers)
 
-    def _association(self, message):
+    def _context(self, message):
         index = self.index
-        if index is None or not message.valid or message.build_id != index.build_id:
+        if index is None or message.build_id != index.build_id:
             return
-        speed = index.speed_limit(message.link_id)
-        missions = index.active_missions(message.link_id)
-        rospy.loginfo_throttle(2., "Current lane=%s effective_limit_kph=%s missions=%s",
-                              message.lane_id, speed["effective_limit_kph"] if speed else None,
-                              [m.id for m in missions])
-        # A planner can also call index.spatial((x, y), yaw, layers=["lanes"]),
-        # and index.signals_ahead(route_station_m, braking_horizon_m).
-        # Estimate route station from the matched lane/route, not nearest Euclidean light.
+        if not message.pose_valid or not message.route_valid:
+            rospy.loginfo_throttle(2., "HD pose unavailable status=%d last_shadow_ids=%s",
+                                  message.pose_status, message.gps_shadow_zone_ids)
+            return
+        missions = index.missions_at_station(message.route_station_m)
+        signals = [b for b in message.boundaries if b.boundary_type == b.POINT
+                   and b.mission_type == MissionZone.TYPE_TRAFFIC_LIGHT and b.distance_m >= 0]
+        rospy.loginfo_throttle(2., "lane=%s official_s=%.1f speed_mps=%s missions=%s signals=%d",
+                              message.lane_id, message.route_station_m,
+                              message.route_speed_limit_mps if message.has_route_speed_limit else None,
+                              [m.id for m in missions], len(signals))
+        # Local geometry is an optional query over the full cached vectors:
+        # index.spatial((x, y), yaw, layers=["lanes"]). No raster subscription.
+        # Reproject message.boundaries[].point onto the planner's own reference
+        # if its smoothed/resampled station namespace differs from official_s.
 
 
 if __name__ == "__main__":

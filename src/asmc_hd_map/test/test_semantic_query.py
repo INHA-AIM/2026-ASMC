@@ -11,7 +11,7 @@ def layer(**fields):
 
 
 def mission(id, start, end, payload, provisional=False, signal=False):
-    return Obj(id=id, link_ids=["link"], route_station_start_m=start, route_station_end_m=end,
+    return Obj(id=id, start_link_id="link", end_link_id="link", link_ids=["link"], route_station_start_m=start, route_station_end_m=end,
                status=1 if provisional else 2, STATUS_PROVISIONAL=1,
                mission_type=3 if signal else 4, TYPE_TRAFFIC_LIGHT=3,
                rule_payload_json=json.dumps(payload))
@@ -22,7 +22,7 @@ class SemanticQueryTest(unittest.TestCase):
         self.meta = layer(operational=True)
         self.speed = mission("speed", 0, 100, {"route_speed_limits": [
             {"link_id": "link", "effective_limit_kph": 60., "mgeo_max_speed_kph": 70.,
-             "competition_cap_kph": 60.}
+             "competition_cap_kph": 60., "route_station_start_m": 0., "route_station_end_m": 100.}
         ]})
         self.signal = mission("signal", 90, 90, {"boundary_only": True,
             "traffic_light_id": "TL-1", "hd_map_stopline_ids": ["stop"]}, signal=True)
@@ -56,6 +56,29 @@ class SemanticQueryTest(unittest.TestCase):
         self.assertEqual([m.id for m in index.active_missions("link", 30.)], ["speed", "obstacle", "activation"])
         self.assertEqual([m.id for m in index.active_missions("link", 50.)], ["speed", "activation"])
         self.assertEqual(index.active_missions("unknown", 30.), [])
+
+    def test_station_rules_and_unbounded_transition_query(self):
+        index = SemanticMapIndex(self.meta, self.layers)
+        self.assertEqual([m.id for m in index.missions_at_station(30)], ["speed", "obstacle", "activation"])
+        self.assertIsNone(index.speed_at_station(100))
+        self.assertEqual(index.speed_at_station(99)["effective_limit_kph"], 60)
+        boundaries = index.mission_boundaries(80, ahead_m=300, behind_m=60)
+        self.assertTrue(any(b["boundary_type"] == "point" and b["mission"].id == "signal" for b in boundaries))
+        self.assertTrue(any(b["boundary_type"] == "exit" and b["distance_m"] == -30 for b in boundaries))
+        self.assertFalse(any(b["mission"].id == "provisional" for b in boundaries))
+
+    def test_closed_loop_boundaries_and_signals_cross_seam(self):
+        index = SemanticMapIndex(self.meta, self.layers)
+        index.signals.append(mission("near", 98, 98, {"boundary_only": True, "traffic_light_id": "TL-2"}, signal=True))
+        index.payloads["near"] = {"traffic_light_id": "TL-2"}
+        self.assertEqual([s["distance_m"] for s in index.signals_ahead(95, 100, route_length_m=100)], [3, 95])
+        boundaries = index.mission_boundaries(95, ahead_m=40, behind_m=10, route_length_m=100)
+        self.assertEqual([b["distance_m"] for b in boundaries], sorted(b["distance_m"] for b in boundaries))
+        entering = next(b for b in boundaries if b["mission"].id == "obstacle" and b["boundary_type"] == "enter")
+        self.assertEqual(entering["distance_m"], 30)
+        self.assertEqual(entering["route_station_m"], 25)
+        start = index.mission_boundaries(5, ahead_m=20, behind_m=10, route_length_m=100)
+        self.assertTrue(any(b["boundary_type"] == "exit" and b["distance_m"] == -5 for b in start))
 
     def test_identity_drift_is_rejected(self):
         self.layers["markings"].geometry_sha256 = "other"

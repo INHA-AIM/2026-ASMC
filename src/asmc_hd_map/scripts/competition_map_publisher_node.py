@@ -24,6 +24,7 @@ from asmc_msgs.msg import (
     MissionZone,
     MissionZoneArray,
 )
+from asmc_hd_map.msg import HdMapRoute
 from geometry_msgs.msg import Point
 from nav_msgs.msg import OccupancyGrid
 import numpy as np
@@ -326,8 +327,21 @@ def build_static_messages(
             payload["route_speed_limits"] = limits
             message.rule_payload_json = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         mission_array.zones.append(message)
+    route_message = HdMapRoute()
+    route_message.header = _header(stamp)
+    route_message.build_id = meta.build_id
+    route_message.map_id = meta.map_id
+    route_message.route_id = checkpoint_array.route_id
+    route_message.route_sha256 = str(metadata["sources"]["official_global_path"]["sha256"])
+    route_message.geometry_sha256 = meta.geometry_sha256
+    route_message.closed_loop = bool(metadata["route"]["closed_loop"])
+    route_message.length_m = float(bundle["route_stations"][-1])
+    route_message.local_origin_in_global = list(frame["local_origin_in_global"])
+    route_message.points = [Point(x=p[0], y=p[1], z=p[2]) for p in bundle["route_points"]]
+    route_message.stations_m = list(bundle["route_stations"])
     result = {
         "meta": meta,
+        "route": route_message,
         "lane_markings": lane_array,
         "checkpoints": checkpoint_array,
         "mission_zones": mission_array,
@@ -1030,6 +1044,9 @@ class CompetitionMapPublisher:
         self.checkpoints_pub = rospy.Publisher(
             "/hd_map/global/checkpoints", CompetitionCheckpointArray, queue_size=1, latch=True
         )
+        self.route_pub = rospy.Publisher(
+            "/hd_map/global/route", HdMapRoute, queue_size=1, latch=True
+        )
         self.missions_pub = rospy.Publisher(
             "/hd_map/global/mission_zones", MissionZoneArray, queue_size=1, latch=True
         )
@@ -1061,6 +1078,7 @@ class CompetitionMapPublisher:
         stamp = rospy.Time.now()
         messages = build_static_messages(bundle, stamp, self.product, self.occupancy)
         self.meta_pub.publish(messages["meta"])
+        self.route_pub.publish(messages["route"])
         self.markings_pub.publish(messages["lane_markings"])
         self.checkpoints_pub.publish(messages["checkpoints"])
         self.missions_pub.publish(messages["mission_zones"])

@@ -100,7 +100,7 @@ class SemanticMapIndex:
         """
         return self.speed_by_link.get(link_id)
 
-    def signals_ahead(self, station_m, distance_m=120.0):
+    def signals_ahead(self, station_m, distance_m=120.0, route_length_m=None):
         """Route-distance lookup including zero-length signal boundary zones.
 
         IDs join perception/simulator state; a static map cannot supply color.
@@ -108,9 +108,14 @@ class SemanticMapIndex:
         """
         if not math.isfinite(station_m) or not math.isfinite(distance_m) or distance_m < 0:
             raise ValueError("signal query requires finite station and nonnegative distance")
+        if route_length_m is not None:
+            self._validate_route_length(station_m, route_length_m)
         result = []
         for mission in self.signals:
             distance = mission.route_station_start_m - station_m
+            if route_length_m is not None:
+                if distance < 0:
+                    distance += route_length_m
             if 0 <= distance <= distance_m:
                 payload = self.payloads[mission.id]
                 ids = payload.get("hd_map_stopline_ids", [])
@@ -119,4 +124,53 @@ class SemanticMapIndex:
                                    stoplines=[self.by_id.get("markings", {})[i] for i in ids
                                               if i in self.by_id.get("markings", {})],
                                    mission=mission))
-        return result
+        return sorted(result, key=lambda value: value["distance_m"])
+
+    def missions_at_station(self, station_m):
+        """Official-route rules independent of current/support lane membership."""
+        if not math.isfinite(station_m) or station_m < 0:
+            raise ValueError("station must be finite and nonnegative")
+        return [m for m in self.items.get("missions", [])
+                if m.status != m.STATUS_PROVISIONAL
+                and not self.payloads[m.id].get("boundary_only", False)
+                and m.route_station_start_m <= station_m < m.route_station_end_m]
+
+    def speed_at_station(self, station_m):
+        if not math.isfinite(station_m) or station_m < 0:
+            raise ValueError("station must be finite and nonnegative")
+        return next((limit for limit in self.speed_by_link.values()
+                     if limit["route_station_start_m"] <= station_m < limit["route_station_end_m"]), None)
+
+    def mission_boundaries(self, station_m, ahead_m=200., behind_m=30., route_length_m=None):
+        """All rule transitions by route distance, including zero-length signals.
+
+        Returns original mission objects; callers join their static payloads once.
+        Geometry of boundary points comes from RouteReference.point_at(station).
+        """
+        if not all(math.isfinite(v) for v in (station_m, ahead_m, behind_m)) or min(station_m, ahead_m, behind_m) < 0:
+            raise ValueError("boundary query distances must be finite and nonnegative")
+        if route_length_m is not None:
+            self._validate_route_length(station_m, route_length_m)
+        result = []
+        for mission in self.items.get("missions", []):
+            if mission.status == mission.STATUS_PROVISIONAL:
+                continue
+            start, end = mission.route_station_start_m, mission.route_station_end_m
+            points = [(start, "point", mission.start_link_id)] if start == end else [
+                (start, "enter", mission.start_link_id), (end, "exit", mission.end_link_id)]
+            for station, kind, link in points:
+                distance = station - station_m
+                if route_length_m is not None:
+                    if distance < -behind_m:
+                        distance += route_length_m
+                    elif distance > ahead_m:
+                        distance -= route_length_m
+                if -behind_m <= distance <= ahead_m:
+                    result.append(dict(mission=mission, boundary_type=kind, link_id=link,
+                                       route_station_m=station, distance_m=distance))
+        return sorted(result, key=lambda b: (b["distance_m"], b["mission"].id, b["boundary_type"]))
+
+    @staticmethod
+    def _validate_route_length(station_m, length_m):
+        if not math.isfinite(length_m) or length_m <= 0 or not 0 <= station_m <= length_m:
+            raise ValueError("closed route queries require a positive length and in-range station")

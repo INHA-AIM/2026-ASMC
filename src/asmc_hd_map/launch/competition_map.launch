@@ -6,7 +6,7 @@
   <arg name="debug_republish_hz" default="0.0"/>
   <arg name="debug_marker_detail" default="lite"/>
   <arg name="baseline_path" default=""/>
-  <arg name="publish_local" default="true"/>
+  <arg name="publish_local" default="false"/>
   <arg name="local_pose_source" default="gps_imu"/>
   <arg name="local_ego_topic" default="/Ego_topic"/>
   <arg name="local_pose_topic" default="/localization/pose"/>

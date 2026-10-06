@@ -27,9 +27,13 @@ except ImportError:
 class LocalRuntimeTest(unittest.TestCase):
     def setUp(self):
         self.node = module.LocalMapCropNode.__new__(module.LocalMapCropNode)
+        self.node.context = Mock()
+        self.node.pose_status = module.HdMapContext.POSE_VALID
+        self.node.publish_crops = True
         self.node.lock = threading.RLock()
         self.node.meta = Obj(complete=True, operational=True, build_id="build", map_id="map", geometry_sha256="sha")
         self.node.global_lanes = Obj(build_id="build", map_id="map", geometry_sha256="sha")
+        self.node.latest_gps_stamp = None
         self.node.latest_pose = (1., 2., 0., rospy.Time(100))
         self.node.latest_pose_received_monotonic = time.monotonic()
         self.node.latest_association = module.LaneAssociationResult(valid=True, state=1, lane_id="lane")
@@ -82,6 +86,34 @@ class LocalRuntimeTest(unittest.TestCase):
             node._try_publish(True)
             crop.assert_not_called()
         node.grid_pub.publish.assert_not_called()
+
+    def test_invalid_gps_immediately_invalidates_lane_and_recovery_resets(self):
+        message = Obj(status=0, header=Obj(stamp=rospy.Time(100, 1000000)))
+        self.node._on_gps(message)
+        self.assertEqual(self.node.pose_status, module.HdMapContext.POSE_GPS_UNAVAILABLE)
+        self.assertFalse(self.node.association_pub.publish.call_args[0][0].valid)
+        self.node.context.publish.assert_called_once()
+        self.node._set_pose(30., 40., 0., rospy.Time(100, 2000000))
+        self.assertEqual(self.node.pose_status, module.HdMapContext.POSE_VALID)
+        self.assertEqual(self.node.lane_associator.reset.call_count, 2)
+        self.assertEqual(self.node.latest_pose[:2], (30., 40.))
+
+    def test_delayed_invalid_gps_cannot_invalidate_recovered_pose(self):
+        self.node._on_gps(Obj(status=0, header=Obj(stamp=rospy.Time(99))))
+        self.assertEqual(self.node.pose_status, module.HdMapContext.POSE_VALID)
+        self.node.context.invalidate.assert_not_called()
+
+    def test_old_valid_gps_cannot_recover_a_newer_outage(self):
+        self.node._on_gps(Obj(status=0, header=Obj(stamp=rospy.Time(100, 2000000))))
+        self.node._on_gps(Obj(status=1, header=Obj(stamp=rospy.Time(100, 1000000))))
+        self.assertEqual(self.node.pose_status, module.HdMapContext.POSE_GPS_UNAVAILABLE)
+        self.assertEqual(self.node.latest_pose[:2], (1., 2.))
+
+    def test_production_mode_never_computes_crops(self):
+        self.node.publish_crops = False
+        with patch.object(module, "crop_ego_occupancy_grid") as crop:
+            self.node._try_publish(True)
+            crop.assert_not_called()
 
     def test_numpy_grid_roundtrip_preserves_signed_unknown_and_orientation(self):
         grid = numpy_msg(OccupancyGrid)()
