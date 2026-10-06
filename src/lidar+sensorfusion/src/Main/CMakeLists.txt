@@ -89,6 +89,11 @@ target_link_libraries(main myHeader
 )
 
 if(CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+  catkin_add_nosetests(test/test_camera_objects_adapter.py)
+  catkin_install_python(PROGRAMS test/test_camera_objects_adapter_ros.py
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+  add_rostest(test/camera_objects_adapter.test)
   catkin_add_gtest(test_ground_evidence test/test_ground_evidence.cpp)
   catkin_add_gtest(test_adaptive_clustering
     test/test_adaptive_clustering.cpp
@@ -182,6 +187,7 @@ if(CATKIN_ENABLE_TESTING)
 endif()
 
 catkin_install_python(PROGRAMS
+  scripts/camera_objects_yolo_bbox_adapter.py
   src/Camera/YOLO/YOLODetection.py
   scripts/build_known_static_object_catalog.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
