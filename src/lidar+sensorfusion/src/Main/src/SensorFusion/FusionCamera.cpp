@@ -2,6 +2,8 @@
 #include "FusionClassPolicy.hpp"
 #include "FusionTimeMatcher.hpp"
 #include "FusionTrace.hpp"
+#include "FusionClassState.hpp"
+#include "FusionStateTrace.hpp"
 #include "Global/Global.hpp"       // LiDARObjectInfo가 정의된 헤더
 #include <iterator>
 #include <vector>
@@ -25,25 +27,6 @@ bool IsGroundNoise(const LiDARObjectInfo& object)
 {
     return object.str_ObjectClass == "noise" ||
            object.str_ObjectClass == "지면노이즈";
-}
-
-void CopyClassState(const LiDARObjectInfo& source, LiDARObjectInfo& target)
-{
-    target.str_ObjectClass = source.str_ObjectClass;
-    target.str_YoloClass = source.str_YoloClass;
-    target.last_seen_class = source.last_seen_class;
-    target.continuity_counter = source.continuity_counter;
-    target.class_miss_counter = source.class_miss_counter;
-    target.is_class_locked = false;
-}
-
-LiDARObjectInfo* FindObjectById(std::vector<LiDARObjectInfo>& objects, int32 id)
-{
-    const auto found = std::find_if(
-        objects.begin(), objects.end(), [id](const LiDARObjectInfo& object) {
-            return object.s32_Id == id;
-        });
-    return found == objects.end() ? nullptr : &(*found);
 }
 
 struct TimedLidarObjects {
@@ -73,22 +56,7 @@ void TraceObjectStates(const char* event, const ros::Time& lidar_stamp,
                        const ros::Time& yolo_stamp,
                        const std::vector<LiDARObjectInfo>& objects)
 {
-    fusion_trace::Event(event, lidar_stamp.toNSec(), [&](std::ostream& out) {
-        out << ",\"yolo_stamp_ns\":" << yolo_stamp.toNSec() << ",\"objects\":[";
-        bool first = true;
-        for (const auto& object : objects) {
-            if (!first) out << ',';
-            first = false;
-            out << "{\"id\":" << object.s32_Id
-                << ",\"class\":" << fusion_trace::Quote(object.str_ObjectClass)
-                << ",\"raw_class\":" << fusion_trace::Quote(object.str_YoloClass)
-                << ",\"candidate\":" << fusion_trace::Quote(object.last_seen_class)
-                << ",\"confirmations\":" << object.continuity_counter
-                << ",\"class_misses\":" << object.class_miss_counter
-                << ",\"lidar_misses\":" << object.s32_MissCount << '}';
-        }
-        out << ']';
-    });
+    fusion_state_trace::Snapshot(event, lidar_stamp, yolo_stamp, objects);
 }
 
 template <typename Frame>
@@ -684,6 +652,7 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
                  frame.stamp < first_arriving_yolo_stamp)) {
                 first_arriving_yolo_stamp = frame.stamp;
             }
+            fusion_trace::Event("yolo_admitted", frame.stamp.toNSec(), [](std::ostream&) {});
             InsertByStamp(yolo_history, std::move(frame));
             received_any_yolo = true;
         }
@@ -845,9 +814,9 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
         // The geometry comes from the synchronized historical frame, while
         // confidence/candidate counters must continue from the current track.
         for (auto& historical_object : synchronized_lidar.vec_Objects) {
-            if (LiDARObjectInfo* current = FindObjectById(
+            if (LiDARObjectInfo* current = fusion_state::Find(
                     st_LiDAR.vec_Objects, historical_object.s32_Id)) {
-                CopyClassState(*current, historical_object);
+                fusion_state::Copy(*current, historical_object, true);
             }
         }
 
@@ -896,9 +865,11 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
                           yolo_frame.stamp, synchronized_lidar.vec_Objects);
 
         for (const auto& historical_object : synchronized_lidar.vec_Objects) {
-            if (LiDARObjectInfo* current = FindObjectById(
+            if (LiDARObjectInfo* current = fusion_state::Find(
                     st_LiDAR.vec_Objects, historical_object.s32_Id)) {
-                CopyClassState(historical_object, *current);
+                fusion_state::Copy(historical_object, *current, true);
+                fusion_state_trace::Transferred(current->s32_Id,
+                    synchronized_lidar_frame.stamp, yolo_frame.stamp, lidar_stamp);
             }
         }
         TraceObjectStates("class_current", lidar_stamp,
@@ -910,33 +881,8 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
         // into the tracking history, which creates a false displacement and
         // therefore a persistent false velocity on the next LiDAR frame.
         if (!st_LiDAR.Prev_Objects_Queue.empty()) {
-            auto& previous_objects = st_LiDAR.Prev_Objects_Queue.back();
-
-            for (const auto& fused_object : st_LiDAR.vec_Objects) {
-                auto previous_it = std::find_if(
-                    previous_objects.begin(),
-                    previous_objects.end(),
-                    [&fused_object](const LiDARObjectInfo& previous_object) {
-                        return previous_object.s32_Id == fused_object.s32_Id;
-                    });
-
-                if (previous_it == previous_objects.end()) {
-                    continue;
-                }
-
-                previous_it->str_ObjectClass =
-                    fused_object.str_ObjectClass;
-                previous_it->str_YoloClass =
-                    fused_object.str_YoloClass;
-                previous_it->last_seen_class =
-                    fused_object.last_seen_class;
-                previous_it->continuity_counter =
-                    fused_object.continuity_counter;
-                previous_it->class_miss_counter =
-                    fused_object.class_miss_counter;
-                previous_it->is_class_locked =
-                    fused_object.is_class_locked;
-            }
+            fusion_state::Persist(st_LiDAR.vec_Objects,
+                                  st_LiDAR.Prev_Objects_Queue.back());
         }
 
         PublishFusionDebugImage(synchronized_lidar, synchronized_camera);

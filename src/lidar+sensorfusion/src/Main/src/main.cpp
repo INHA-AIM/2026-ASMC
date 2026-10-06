@@ -6,6 +6,7 @@
 #include <Lidar/Tracking/MotionClassifier.hpp>
 #include <SensorFusion/SensorFusion.hpp>
 #include <SensorFusion/FusionTrace.hpp>
+#include <SensorFusion/FusionStateTrace.hpp>
 #include <PlannerInterface/PlannerObjectSender.hpp>
 #include <PlannerInterface/PlannerObjectRosPublisher.hpp>
 #include <ros/package.h>
@@ -485,9 +486,17 @@ void *TemporalThread(void *p_Arg)
         const bool lidar_processed = pose_ready && LidarProcess(
             st_CurrentData.st_RawLiDAR, lidar_pose, st_LiDAR,
             *st_MotionClassifier);
+        if (lidar_processed) {
+            fusion_state_trace::Snapshot("class_lidar_ready", ts_CurrTime, ros::Time(),
+                st_LiDAR.vec_Objects, processed_lidar_generation);
+        }
         if (lidar_processed && b_EnableSensorFusion) {
             FusionProcess(st_CurrentData.st_RawYOLO, st_LiDAR, st_Camera,
                           ts_CurrTime);
+        }
+        if (lidar_processed) {
+            fusion_state_trace::Snapshot("class_publish_input", ts_CurrTime, ros::Time(),
+                st_LiDAR.vec_Objects, processed_lidar_generation);
         }
         if (lidar_processed && st_PlannerObjectRosPublisher) {
             st_PlannerObjectRosPublisher->Publish(
