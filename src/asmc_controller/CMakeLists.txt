@@ -42,6 +42,12 @@ install(DIRECTORY launch config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(offline_mpc_verification_test
+    test/offline_mpc_verification_test.cpp)
+  if(TARGET offline_mpc_verification_test)
+    target_link_libraries(offline_mpc_verification_test mpc_core)
+  endif()
+
   catkin_add_gtest(braking_warm_start_test test/braking_warm_start_test.cpp)
   if(TARGET braking_warm_start_test)
     target_link_libraries(braking_warm_start_test mpc_core gtest_main)
