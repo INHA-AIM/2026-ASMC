@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -102,7 +103,7 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
     def test_rule_v1_2_payloads(self):
         missions = {item["id"]: item for item in self.document["mission_zones"]}
         shadow = json.loads(missions["gps_shadow_candidate"]["rule_payload_json"])
-        self.assertEqual(shadow["random_mission_types"], ["static_obstacle"])
+        self.assertEqual(shadow["random_mission_types"], ["obstacle_avoidance"])
         self.assertIs(shadow["lane_keeping_penalty"], False)
         boundaries = [item for item in self.document["mission_zones"]
                       if item["mission_type"] == "traffic_light"
@@ -111,7 +112,83 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
         for item in boundaries:
             payload = json.loads(item["rule_payload_json"])
             self.assertEqual(payload["judgement"], "signal_when_front_wheels_cross_stopline")
-            self.assertEqual(payload["red_without_deceleration"], "run_failure")
+            self.assertEqual(payload["violation_penalty_s"], 30)
+            self.assertEqual(payload["judged_intersection_count"], 4)
+            self.assertEqual(payload["run_failure_condition"], "all_judged_intersections_violated")
+            self.assertTrue(payload["count_same_intersection_once"])
+            self.assertFalse(payload["reset_count_on_checkpoint_return"])
+            self.assertIsNone(payload["judged_intersection_id"])
+            self.assertFalse(payload["intersection_failure_evaluation_available"])
+            self.assertNotIn("red_without_deceleration", payload)
+
+    def test_rule_update_does_not_move_route_checkpoints_or_missions(self):
+        # Spatial fingerprint of main c971d6b, before the scoring-only update.
+        fields = ("id", "mission_type", "route_station_start_m", "route_station_end_m",
+                  "start_link_id", "end_link_id", "link_ids", "polygon")
+        spatial = {"route": self.document["route"], "checkpoints": self.document["checkpoints"],
+                   "missions": [{k: m[k] for k in fields} for m in self.document["mission_zones"]]}
+        digest = hashlib.sha256(json.dumps(spatial, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        self.assertEqual(digest, "e8f98cfcb406be98202913642f599bf85605eb0e64f2e77ba8ffcb872d3795f0")
+
+    def test_whole_route_rules_are_exposed_even_in_uncapped_speed_zone(self):
+        rules = self.document["route_rules"]
+        self.assertEqual(rules["run"]["time_limit_s"], 900)
+        self.assertEqual(rules["lane_keeping"]["penalty_s"], 5)
+        self.assertEqual(rules["lane_keeping"]["sustained_contact_repeat_s"], 3)
+        self.assertEqual(rules["lane_keeping"]["wheel_contact_count_min"], 1)
+        self.assertEqual(rules["lane_keeping"]["exempt_zone_ids"], ["gps_shadow_candidate"])
+        self.assertFalse(rules["collision"]["continuous_contact_additional_penalty"])
+        self.assertTrue(rules["collision"]["recollision_additional_penalty"])
+        carriers = [m for m in self.document["mission_zones"]
+                    if m["mission_type"] in ("speed_limit", "high_speed_exception")]
+        self.assertEqual(len(carriers), 3)
+        for mission in carriers:
+            self.assertEqual(json.loads(mission["rule_payload_json"])["route_rules"], rules)
+
+    def test_scoring_tampering_is_rejected(self):
+        mutations = [
+            ("traffic_light_C1256W000077", "boundary_only", False),
+            ("traffic_light_C1256W000077", "violation_penalty_s", 15),
+            ("traffic_light_C1256W000077", "red_without_deceleration", "run_failure"),
+            ("traffic_light_C1256W000077", "judged_intersection_count", 5),
+            ("traffic_light_C1256W000077", "reset_count_on_checkpoint_return", True),
+            ("traffic_light_C1256W000077", "violation_count_unit", "event"),
+            ("traffic_light_C1256W000077", "count_same_intersection_once", False),
+            ("traffic_light_C1256W000077", "judged_intersection_id", "guessed_A219"),
+            ("traffic_light_C1256W000077", "intersection_failure_evaluation_available", True),
+            ("gps_shadow_candidate", "random_mission_types", ["static_obstacle"]),
+            ("gps_shadow_candidate", "lane_keeping_penalty", True),
+            ("roundabout_candidate", "collision_penalty_s", 0),
+            ("static_obstacle_candidate", "continuous_contact_additional_penalty", True),
+            ("speed_limit_60_before_high_speed", "overspeed_penalty_s", 30),
+            ("speed_limit_60_after_high_speed", "sustained_overspeed_repeat_s", 5),
+            ("start_success_5_percent", "time_limit_s", 900),
+            ("high_speed_exception", "route_rules", {}),
+        ]
+        for mission_id, field, value in mutations:
+            with self.subTest(mission=mission_id, field=field):
+                changed = copy.deepcopy(self.document)
+                mission = next(m for m in changed["mission_zones"] if m["id"] == mission_id)
+                payload = json.loads(mission["rule_payload_json"])
+                payload[field] = value
+                mission["rule_payload_json"] = json.dumps(payload)
+                with self.assertRaises(CompetitionMetadataError):
+                    validate_competition_metadata(changed)
+
+    def test_missing_or_changed_global_rules_are_rejected(self):
+        for section, field, value in (("run", "time_limit_s", 600),
+                                      ("lane_keeping", "penalty_s", 15),
+                                      ("lane_keeping", "wheel_contact_count_min", 4),
+                                      ("checkpoints", "approved_recovery_penalty_s", 30)):
+            with self.subTest(section=section, field=field):
+                changed = copy.deepcopy(self.document)
+                changed["route_rules"][section][field] = value
+                with self.assertRaises(CompetitionMetadataError):
+                    validate_competition_metadata(changed)
+        changed = copy.deepcopy(self.document)
+        del changed["route_rules"]
+        with self.assertRaises(CompetitionMetadataError):
+            validate_competition_metadata(changed)
 
     def test_rule_v1_2_removed_the_a411_checkpoint(self):
         # Rule book v1.2 dropped the 2026-08-03 checkpoint 11 at (66.885, 89.198)

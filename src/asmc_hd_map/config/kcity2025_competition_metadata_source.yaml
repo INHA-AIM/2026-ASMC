@@ -3,6 +3,36 @@ metadata_id: kcity2025_competition_metadata_v1
 contract_id: asmc_hd_map_topic_contract_v1
 frame_id: map
 
+# Official scoring facts, NOT a participant-side judge or new spatial zones.
+# Attached to all three effective speed zones so any route station exposes the
+# same whole-route rules without changing MissionZone MD5 or geometry/counts.
+route_rules:
+  authority: official
+  source_reference: official_rule_v1_2_20260930_sections_2_2_3_and_3
+  scope: whole_route
+  run:
+    time_limit_s: 900
+    on_time_limit_exceeded: run_failure
+    mission_order_required: true
+    on_skipped_mission_or_checkpoint: run_failure
+  checkpoints:
+    pass_radius_m: 3.0
+    sequential_pass_required: true
+    recovery_requires_operator_and_team_approval: true
+    approved_recovery_penalty_s: 15
+  lane_keeping:
+    judged_by: ego_detail_status_wheel_contact
+    marking_types: [white_solid, yellow_solid, centerline]
+    wheel_contact_count_min: 1
+    sustained_contact_repeat_s: 3
+    penalty_s: 5
+    exempt_zone_ids: [gps_shadow_candidate]
+  collision: &collision_rule
+    judged_by: collision_data
+    collision_penalty_s: 15
+    continuous_contact_additional_penalty: false
+    recollision_additional_penalty: true
+
 inputs:
   official_checkpoints: $ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_checkpoints.json
   official_global_path: $ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_global_path.txt
@@ -74,6 +104,7 @@ mission_zones:
       interpretation: effective_competition_speed_limit
       judged_by: ego_vehicle_status_speed
       overspeed_penalty_s: 15
+      first_penalty: immediately_on_exceeding_limit
       sustained_overspeed_repeat_s: 3
 
   - id: high_speed_exception
@@ -98,6 +129,7 @@ mission_zones:
       interpretation: effective_competition_speed_limit
       judged_by: ego_vehicle_status_speed
       overspeed_penalty_s: 15
+      first_penalty: immediately_on_exceeding_limit
       sustained_overspeed_repeat_s: 3
 
   - id: traffic_light_activation_A236_to_A308
@@ -129,7 +161,9 @@ mission_zones:
       # here, and the random mission inside the zone is obstacle avoidance only.
       gps_blackout: true
       lane_keeping_penalty: false
-      random_mission_types: [static_obstacle]
+      # Official text says obstacle avoidance, not static-only. This is a rule
+      # category, not a MissionZone TYPE enum or a scenario spawn instruction.
+      random_mission_types: [obstacle_avoidance]
 
   - id: static_obstacle_candidate
     mission_type: static_obstacle
@@ -147,6 +181,8 @@ mission_zones:
       obstacle_expected_link_ids: [A2256W000222]
       judged_by: collision_data
       collision_penalty_s: 15
+      continuous_contact_additional_penalty: false
+      recollision_additional_penalty: true
 
   - id: dynamic_obstacle_candidate
     mission_type: dynamic_obstacle
@@ -162,6 +198,8 @@ mission_zones:
       obstacle_expected_link_ids: [A2256W000728, A2256W000599, A2256W000207, A2256W000205]
       judged_by: collision_data
       collision_penalty_s: 15
+      continuous_contact_additional_penalty: false
+      recollision_additional_penalty: true
 
   - id: roundabout_candidate
     mission_type: roundabout
@@ -170,7 +208,7 @@ mission_zones:
     source_reference: official_figure_team_link_mapping
     description: A148-A146-A151 회전교차로 후보
     bounds: {kind: link_span, start_link_id: A2256W000148, end_link_id: A2256W000151}
-    rule_payload: {mission: npc_cut_in, judged_by: collision_data}
+    rule_payload: {<<: *collision_rule, mission: npc_cut_in}
 
   - id: surrounding_vehicle_candidate
     mission_type: surrounding_vehicle
@@ -179,7 +217,7 @@ mission_zones:
     source_reference: official_figure_team_link_mapping
     description: A411-A420-A408-A445-A153 주변 차량 인지 후보
     bounds: {kind: link_span, start_link_id: A2256W000411, end_link_id: A2256W000153}
-    rule_payload: {mission: npc_cut_in, judged_by: collision_data}
+    rule_payload: {<<: *collision_rule, mission: npc_cut_in}
 
 traffic_light_zones:
   derive_from_reviewed_stoplines: true
@@ -187,9 +225,19 @@ traffic_light_zones:
   review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
   source_reference: stage14_reviewed_stopline_projection
   planning_enforcement_allowed: true
-  # Rule book v1.2 judgement shared by every derived stopline boundary.
+  # v1.2 signal-scoring follow-up notice, received 2026-10-06. Five map
+  # boundaries are NOT five judged intersections. Mapping remains unverified.
   rule_payload:
     judgement: signal_when_front_wheels_cross_stopline
     proceed_on: [green, left_turn_arrow]
-    violation_penalty_s: 15
-    red_without_deceleration: run_failure
+    scoring_source_reference: official_v1_2_signal_scoring_followup_received_20261006
+    violation_penalty_s: 30
+    run_failure_condition: all_judged_intersections_violated
+    judged_intersection_count: 4
+    violation_count_unit: distinct_judged_intersection
+    violation_count_scope: current_run
+    count_same_intersection_once: true
+    reset_count_on_checkpoint_return: false
+    judged_intersection_mapping_status: unverified
+    judged_intersection_id: null
+    intersection_failure_evaluation_available: false

@@ -5,8 +5,8 @@ status: p2a_complete_no_geometry_change
 sources:
   competition_metadata:
     path: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml
-    sha256: 6fcc2f9f4ed2664c8a1121c35923c10433c3bd6915682bc020908cb393bfdaad
-    bytes: 39498
+    sha256: 0ed56169908a4f8a2e44e3ca5d09f355acdd483127f055fe0fef79b6e904b17b
+    bytes: 45478
   current_global_info:
     path: src/behavior_planner/src/config/global_info.json
     sha256: bd74fa3f05830e0741c3c7f51d0f7935f389be3879251fd0231918538a05f133

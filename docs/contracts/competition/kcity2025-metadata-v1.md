@@ -110,15 +110,45 @@ traffic-light ID 기준 경계 5개로 분리하며 같은 신호에 속한 인�
 **교차로 4개소 모두** 미준수하면 해당 차시 실패다. 동일 교차로의 위반은 체크포인트 복귀 후 재통과를
 포함해 1회만 집계한다. [공식 변경 문구와 이전 기준](../../competition/README.md#51-교차로-신호준수-후속-공지--2026-10-06-반영)을 참고한다.
 
-**문서와 runtime의 적용 상태는 다르다.** 이번 문서 반영 기준 main의
-`kcity2025_competition_metadata_source.yaml` → 생성 metadata → `rule_payload_json`에는 아직
-`violation_penalty_s: 15`, `red_without_deceleration: run_failure`가 남아 있다. 이를 최신 채점
-규칙으로 사용하면 안 된다. 현재 신호 경계 **5개**는 공식 판정 교차로 **4개소**와 같은 단위가
-아니며 대응은 미확인이다. HD맵 담당자가 공식 근거로 교차로 식별·중복 집계 관계를 확인하고 source와
-생성물·검증을 함께 갱신해야 한다. [후속 인계](../../handoffs/competition/rule-v1.2-impacts.md#6-신호-채점-후속-공지--2026-10-06-반영)를 따른다.
+PR #64 후속 구현에서 source → 생성 metadata → `rule_payload_json`의 `violation_penalty_s`를
+30으로 바꾸고 `red_without_deceleration`은 제거했다. 새 필드는 아래와 같다.
+
+| 필드 | 값·의미 |
+|---|---|
+| `run_failure_condition` / `judged_intersection_count` | `all_judged_intersections_violated` / `4` |
+| `violation_count_unit` / `violation_count_scope` | `distinct_judged_intersection` / `current_run`; 이벤트 총횟수가 아님 |
+| `count_same_intersection_once` / `reset_count_on_checkpoint_return` | `true` / `false`; 복귀해도 같은 교차로 중복 집계 금지 |
+| `judged_intersection_mapping_status` / `judged_intersection_id` | `unverified` / `null`; 기존 traffic-light ID를 판정 교차로 ID로 사용하지 않음 |
+| `intersection_failure_evaluation_available` | `false`; 공식 교차로 대응 확인 전 자동 실패 집계 불가 |
+
+현재 신호 경계 **5개**는 공식 판정 교차로 **4개소**와 같은 단위가 아니며 대응은 미확인이다.
+`planning_enforcement_allowed=true`는 검수된 정지선에서 정지 판단에 사용할 수 있다는 기존 의미로
+유지한다. 위 flag는 **차시 실패 집계 가능 여부**로 별개다. penalty와 rule을 제공해도 판제에서
+자동 집계·정지 정책을 구현한 것은 아니다. [후속 인계](../../handoffs/competition/rule-v1.2-impacts.md#6-신호-채점-후속-공지--2026-10-06-반영)를 따른다.
 
 GPS 음영은 GPS 전체 blackout이고 차로 준수 패널티가 없으며, 구간 안의 랜덤 미션은 장애물
 회피뿐이다. 장애물·끼어들기는 CollisionData로 충돌마다 15초다.
+
+### 전 구간 채점 규칙의 전달
+
+metadata 최상위 `route_rules`를 동일한 값으로 세 속도 구간(고속 예외 포함)의 `rule_payload_json.route_rules`에
+넣는다. 따라서 `/hd_map/global/mission_zones`에서 현재 station에 해당하는 속도 구간을 선택하면 전 구간
+규칙도 얻는다. 이는 새 공간 미션이 아니라 `scope=whole_route`인 규칙 묶음이며 미션 개수·메시지 MD5는
+바뀌지 않는다. 동일 규칙이 세 번 실려 있다고 패널티를 세 번 적용해서는 안 된다.
+
+- `run`: 제한 900초·시간 초과 시 실패, 미션 순서 준수·미션/체크포인트 임의 생략 시 실패.
+- `checkpoints`: 반경 3 m·순서 준수, 운영요원/팀 승인 복귀에 15초.
+- `lane_keeping`: 흰/노란 실선·중앙선에 바퀴 1개 접촉 기준, 3초 지속마다 5초. `exempt_zone_ids`의
+  GPS 음영에서는 차로 패널티만 면제하며, 충돌·전체 제한시간·다른 미션까지 면제하지 않는다.
+- `collision`: 충돌 15초, 같은 객체에 지속 접촉 시 추가 없음, 재충돌 시 추가. 개별 장애물·회전교차로·
+  주변 차량 zone에도 같은 규칙을 제공한다.
+- 음영 payload `random_mission_types`는 `[obstacle_avoidance]`로 정정했다. 공식 규정은 정적만으로
+  제한하지 않는다. 이 문자열은 규정 범주이지 `MissionZone.TYPE_*`나 시나리오 actor enum이 아니다.
+
+공식 채점 provenance의 `ego_vehicle_status_speed`·`ego_detail_status_wheel_contact`는 주최측 판정
+방법을 뜻하며 참가팀에 해당 입력 사용을 허용하지 않는다. 기존 `competition_cap_kph=null`은 고속구간
+공식 상한 없음이고, `effective_limit_kph`에 남은 MGeo 값은 기존 경로 속도 정책이다. 이번 변경은 그
+정책이나 공간 경계, 반대차로 사용에 관한 팀 기준값을 새 공식 규정으로 승격하지 않는다.
 
 `team_final`은 주최 수치가 없어 팀이 검수한 **현재 기준값**이다. 판제가 적용할 수 있다는 뜻이며 고정값이라는
 뜻은 아니다. 판제 연동이나 주행 검증에서 문제가 나오면 source의 bounds·payload를 고치고 아래 수정 절차로
