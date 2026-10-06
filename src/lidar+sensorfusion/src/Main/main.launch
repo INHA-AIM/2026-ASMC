@@ -15,6 +15,8 @@
        delayed YOLO result before declaring that a LiDAR frame has no match. -->
   <arg name="fusion_max_time_offset_sec" default="0.05"/>
   <arg name="fusion_sync_wait_timeout_sec" default="0.20"/>
+  <!-- Optional buffered JSONL observations; does not change fusion policy. -->
+  <arg name="fusion_trace_path" default=""/>
   <arg name="roi_min_x" default="-30.0"/>
   <arg name="roi_max_x" default="50.0"/>
   <arg name="roi_min_y" default="-20.0"/>
@@ -107,6 +109,7 @@
          vehicle bridge publishes the same EgoVehicleStatus on /Ego_topic. -->
     <remap from="/Competition_topic" to="/Ego_topic"/>
     <param name="enable_sensor_fusion" value="$(arg enable_sensor_fusion)"/>
+    <param name="fusion_trace_path" value="$(arg fusion_trace_path)"/>
     <param name="roi_min_x" value="$(arg roi_min_x)"/>
     <param name="roi_max_x" value="$(arg roi_max_x)"/>
     <param name="roi_min_y" value="$(arg roi_min_y)"/>

@@ -130,6 +130,10 @@ if(CATKIN_ENABLE_TESTING)
   if(TARGET test_fusion_time_matcher)
     target_link_libraries(test_fusion_time_matcher ${catkin_LIBRARIES})
   endif()
+  catkin_add_gtest(test_fusion_replay test/test_fusion_replay.cpp)
+  if(TARGET test_fusion_replay)
+    target_link_libraries(test_fusion_replay ${catkin_LIBRARIES})
+  endif()
   catkin_add_gtest(test_drivable_footprint
     test/test_drivable_footprint.cpp
     src/PlannerInterface/DrivableFootprint.cpp
