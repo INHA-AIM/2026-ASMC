@@ -1,6 +1,6 @@
 import unittest
 from tools.perception.analyze_fusion_identity import compare, compare_stable_observations
-from tools.perception.analyze_fusion_trace import summarize
+from tools.perception.analyze_fusion_trace import summarize, compare_boxes, object_state
 
 
 def frame(objects):
@@ -52,6 +52,27 @@ class FusionDiagnosticsTest(unittest.TestCase):
         report = summarize([])
         self.assertFalse(report["complete"])
         self.assertFalse(report["accounting_consistent"])
+
+    def test_box_comparison_keeps_missing_frames_and_rejects_duplicates(self):
+        row = {"stamp_ns": 100, "frame_id": "camera_front", "objc": 1,
+               "boxes": [["car", 1, 2, 3, 4]]}
+        extra = dict(row, stamp_ns=200)
+        report = compare_boxes([row], [row, extra])
+        self.assertEqual(1, report["common_source_frames"])
+        self.assertEqual(1, report["new_only_frames"])
+        self.assertEqual([], report["different_boxes_or_headers"])
+        with self.assertRaises(ValueError):
+            compare_boxes([row, row], [row])
+
+    def test_current_state_is_joined_to_the_historical_lidar_stamp(self):
+        rows = [{"event": "class_after", "stamp_ns": 100000000,
+                 "yolo_stamp_ns": 110000000, "objects": [{"id": 22, "class": "car"}]},
+                {"event": "class_current", "stamp_ns": 175000000,
+                 "yolo_stamp_ns": 110000000, "objects": [{"id": 22, "class": "car"}]}]
+        report = object_state(rows, "class_current", 175000000, 22)
+        self.assertEqual(100000000, report[0]["fused_lidar_stamp_ns"])
+        self.assertEqual(75, report[0]["lidar_state_lag_ms"])
+        self.assertEqual([], object_state(rows, "class_current", 175000000, 23))
 
 
 if __name__ == "__main__":

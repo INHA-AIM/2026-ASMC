@@ -207,9 +207,13 @@ void BufferFusionYoloFrame(uint64 frame_seq, const ros::Time& image_stamp,
 
 void ReportFusionTotals()
 {
-    ROS_INFO("Fusion sync total: matched=%llu dropped=%llu pending lidar/yolo=%zu/%zu",
-             static_cast<unsigned long long>(g_TotalMatched),
-             static_cast<unsigned long long>(g_TotalDropped), g_PendingLidar, g_PendingYolo);
+    // Workers have joined after ros::waitForShutdown(), so rosconsole may
+    // already be shut down. Flush the final accounting directly to stdout
+    // so trace-disabled acceptance runs retain the last partial interval.
+    std::cout << "Fusion sync total: matched=" << g_TotalMatched
+              << " dropped=" << g_TotalDropped
+              << " pending lidar/yolo=" << g_PendingLidar << '/' << g_PendingYolo
+              << std::endl;
     fusion_trace::Event("fusion_summary", 0, [](std::ostream& out) {
         out << ",\"matched\":" << g_TotalMatched << ",\"dropped\":" << g_TotalDropped;
         out << ",\"pending_lidar\":" << g_PendingLidar << ",\"pending_yolo\":" << g_PendingYolo;

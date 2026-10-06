@@ -6,6 +6,65 @@ import json
 from pathlib import Path
 import statistics
 
+try:
+    from .analyze_fusion_identity import compare as compare_identity
+except ImportError:
+    from analyze_fusion_identity import compare as compare_identity
+
+
+def compare_boxes(reference, candidate):
+    """Compare identical source frames, keeping missing frames visible."""
+    def table(rows):
+        result = {row["stamp_ns"]: (row["frame_id"], row["objc"], row["boxes"]) for row in rows}
+        if len(result) != len(rows):
+            raise ValueError("duplicate YOLO output stamps")
+        return result
+    a, b = table(reference), table(candidate)
+    common = a.keys() & b.keys()
+    return {"common_source_frames": len(common),
+            "old_only_frames": len(a.keys() - b.keys()),
+            "new_only_frames": len(b.keys() - a.keys()),
+            "different_boxes_or_headers": [stamp for stamp in sorted(common) if a[stamp] != b[stamp]]}
+
+
+def object_state(rows, event, stamp, track_id):
+    states = []
+    # Every YOLO result is uniquely consumed, so its stamp identifies the
+    # historical LiDAR snapshot whose state was copied to a current track.
+    fused_stamps = {row["yolo_stamp_ns"]: row["stamp_ns"] for row in rows
+                    if row["event"] == "class_after"}
+    for row in rows:
+        if row["event"] != event or row["stamp_ns"] != stamp:
+            continue
+        obj = next((obj for obj in row["objects"] if obj["id"] == track_id), None)
+        if obj is not None:
+            historical = fused_stamps.get(row["yolo_stamp_ns"])
+            states.append({"yolo_stamp_ns": row["yolo_stamp_ns"], "state": obj,
+                           "fused_lidar_stamp_ns": historical,
+                           "lidar_state_lag_ms": (stamp-historical)/1e6 if historical is not None else None})
+    return states
+
+
+def explain_outputs(reference, candidate, reference_trace, candidate_trace):
+    """Join real geometric differences with historical and published states.
+
+    This explains differences; the strict replay gate remains unchanged.
+    """
+    differences = compare_identity(reference["tracks"], candidate["tracks"])["classification_differences"]
+    result = []
+    for difference in differences:
+        stamp = difference["stamp_ns"]
+        details = dict(difference)
+        for name, track, rows in (("old", difference["old"], reference_trace),
+                                  ("new", difference["new"], candidate_trace)):
+            details[name + "_trace"] = {
+                "before": object_state(rows, "class_before", stamp, track[0]),
+                "after": object_state(rows, "class_after", stamp, track[0]),
+                "current_updates": object_state(rows, "class_current", stamp, track[0]),
+            }
+        result.append(details)
+    return result
+
 
 def summarize(rows):
     counts = Counter(row["event"] for row in rows)
@@ -68,6 +127,15 @@ def main():
     if "old_1" in traces:
         result["comparisons"] = {name: compare(traces["old_1"], rows)
                                  for name, rows in traces.items() if name != "old_1"}
+        frame_files = {name: args.directory / (name + ".frames.json") for name in traces}
+        if all(path.exists() for path in frame_files.values()):
+            frames = {name: json.loads(path.read_text()) for name, path in frame_files.items()}
+            result["source_box_comparisons"] = {
+                name: compare_boxes(frames["old_1"]["outputs"], frame["outputs"])
+                for name, frame in frames.items() if name != "old_1"}
+            result["output_classification_explanations"] = {
+                name: explain_outputs(frames["old_1"], frames[name], traces["old_1"], rows)
+                for name, rows in traces.items() if name != "old_1"}
     result["trace_integrity_pass"] = all(row["complete"] and row["accounting_consistent"]
                                         for row in result["runs"].values())
     (args.directory / "trace_analysis.json").write_text(json.dumps(result, indent=2) + "\n")
