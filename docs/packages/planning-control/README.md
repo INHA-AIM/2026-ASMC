@@ -15,7 +15,7 @@
 |---|---|---|
 | Behavior/FSM | `src/behavior_planner/` | ROS node, v2 command가 현재 경로; v1 호환 가능 |
 | Frenet trajectory | `src/frenet_planner/` | ROS node + transport-independent C++ core |
-| MPC control | `src/mpc_controller/` | ROS node + transport-independent C++ core |
+| MPC control | `src/asmc_controller/` | ROS node + transport-independent C++ core |
 | state source | `src/asmc_bridge/src/vehicle_state/` | GPS/IMU→`asmc_msgs/VehicleState` |
 | MORAI bridge | `src/asmc_bridge/` | 외부 UDP↔내부 ROS |
 | camera lane pilot | `src/lane_boundary_adapter/` | read-only ROS debug, 제어 미연결 |

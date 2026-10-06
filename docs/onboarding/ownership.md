@@ -23,7 +23,7 @@
 | HD Map | `src/asmc_hd_map/` | 안승현; planning consumer 변경 시 판제 리뷰 |
 | Behavior | `src/behavior_planner/` | 정윤태·양서준 |
 | Frenet | `src/frenet_planner/` | 이강태·정윤태 |
-| MPC | `src/mpc_controller/` | 정윤태·양서준 |
+| MPC | `src/asmc_controller/` | 정윤태·양서준 |
 | Planning adapter | `src/jamming_lane_boundary_adapter/` | 통합·판제 공동; 판제 consumer 흡수 후 삭제 gate |
 | UDP/sensor/state bridge와 통합 launch | `src/asmc_bridge/`; [개발 가이드](../packages/asmc_bridge/README.md) | 이강태·안승현, planning consumer 공동 리뷰 |
 | Perception façade와 typed 계약 | `src/asmc_camera/`; [runtime 계약](../contracts/perception/runtime-v1.md) | 안승현 주관, 손재호·장원태·planning consumer 공동 리뷰 |

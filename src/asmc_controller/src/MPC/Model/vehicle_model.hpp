@@ -1,0 +1,85 @@
+#ifndef MPC_VEHICLE_MODEL_HPP
+#define MPC_VEHICLE_MODEL_HPP
+
+#include <array>
+#include <vector>
+
+#include "Global/Global.hpp"
+
+// ----------------------------------------
+// Kinematic Bicycle Model 한 스텝 적분 (Euler)
+//   x_dot   = vx * cos(yaw)
+//   y_dot   = vx * sin(yaw)
+//   yaw_dot = vx / L * steering_curvature_gain * tan(delta)
+//   vx_dot  = a
+// ----------------------------------------
+MPCState updateVehicleState(
+    const MPCState&   state,
+    const MPCControl& control,
+    double dt,
+    double wheelbase,
+    double v_min,
+    double v_max,
+    double steering_curvature_gain = 1.0);
+
+// ----------------------------------------
+// horizon 스텝 비선형 forward sim
+//   결과 size() == control_sequence.size() + 1  (x0 포함)
+// ----------------------------------------
+std::vector<MPCState> predictTrajectory(
+    const MPCState&                initial_state,
+    const std::vector<MPCControl>& control_sequence,
+    double dt,
+    double wheelbase,
+    double v_min,
+    double v_max,
+    double steering_curvature_gain = 1.0);
+
+// ----------------------------------------
+// 동작점 (x̄, ū) 에서 bicycle model 1차 Taylor 선형화
+//
+//   f(x, u) ≈ f(x̄, ū) + A*(x - x̄) + B*(u - ū)
+//           = A*x + B*u + c       (c = f(x̄,ū) - A*x̄ - B*ū)
+//
+//   반환: LinearizedModel { A, B, c }
+// ----------------------------------------
+LinearizedModel linearizeBicycle(
+    const MPCState&   state,    // 동작점 x̄
+    const MPCControl& control,  // 동작점 ū
+    double dt,
+    double wheelbase,
+    double steering_curvature_gain = 1.0);
+
+// ----------------------------------------
+// horizon N 스텝 전체 선형화 모델 계산
+//   각 스텝의 동작점은 비선형 모델로 forward sim한 trajectory 사용
+//   반환: size() == N  (k=0..N-1 각 스텝의 A_k, B_k, c_k)
+// ----------------------------------------
+std::vector<LinearizedModel> buildLTVModels(
+    const MPCState&                x0,
+    const std::vector<MPCControl>& U,
+    double dt,
+    double wheelbase,
+    double v_min,
+    double v_max,
+    double steering_curvature_gain = 1.0);
+
+// ----------------------------------------
+// Curvature-aware steering feed-forward.
+//
+//   yaw_dot = vx/L * gain * tan(delta)  (실측 보정 bicycle model)
+//   경로를 정확히 따라가는 정상상태(steady-state)라면
+//   yaw_dot = vx * kappa_ref 이므로 gain*tan(delta) = L*kappa_ref
+//   -> delta_ff = atan(L * kappa_ref / gain)
+//
+//   frenet_planner의 부호 규약과 동일: kappa_ref > 0 (좌회전, CCW)이면
+//   delta_ff > 0 (좌측 조향). cost/warm-start 양쪽에서 재사용하도록 여기
+//   하나로 둔다 - 복붙 금지.
+//
+//   결과는 steering_max 물리 한계 안으로 clip한다.
+// ----------------------------------------
+double SteeringFeedforward(double curvature, double wheelbase,
+                           double steering_max,
+                           double steering_curvature_gain = 1.0);
+
+#endif // MPC_VEHICLE_MODEL_HPP

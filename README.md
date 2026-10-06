@@ -74,7 +74,7 @@ docker exec -it asmc-ros-noetic bash -c './scripts/build_ws.sh'
 ├── src/
 │   ├── behavior_planner/      # planning ✅
 │   ├── frenet_planner/        # ROS trajectory planning + C++ core ✅
-│   ├── mpc_controller/        # ROS trajectory control + C++ core ✅
+│   ├── asmc_controller/        # ROS trajectory control + C++ core ✅
 │   ├── asmc_msgs/             # 팀 내부 ROS1 공용 message 계약
 │   ├── asmc_bridge/           # MORAI Network/Sensor UDP + VehicleState
 │   ├── asmc_hd_map/           # HD Map builder/runtime/검수

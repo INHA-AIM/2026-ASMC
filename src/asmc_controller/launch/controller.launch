@@ -1,0 +1,11 @@
+<launch>
+  <arg name="state_topic" default="/vehicle/state"/>
+  <node pkg="asmc_controller" type="mpc_controller_node"
+        name="mpc_controller" output="screen">
+    <rosparam command="load"
+              file="$(find asmc_controller)/config/runtime.yaml"/>
+    <param name="topics/vehicle_state" value="$(arg state_topic)"/>
+    <param name="mpc/config_path"
+           value="$(find asmc_controller)/config/controller.yaml"/>
+  </node>
+</launch>

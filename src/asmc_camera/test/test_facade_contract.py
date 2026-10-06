@@ -380,7 +380,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         rendered = ET.tostring(launch, encoding="unicode")
         self.assertIn("behavior_node_v2.launch", rendered)
         self.assertIn("frenet_planner.launch", rendered)
-        self.assertIn("mpc_controller.launch", rendered)
+        self.assertIn("controller.launch", rendered)
         self.assertNotIn("asmc_bridge", rendered)
         self.assertIn("traffic_light_vehicle_acceptance.py", rendered)
         self.assertIn('/acceptance/ctrl_cmd', rendered)

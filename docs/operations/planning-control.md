@@ -40,7 +40,7 @@ source devel/setup.bash
 
 ```bash
 catkin_make --only-pkg-with-deps \
-  behavior_planner frenet_planner mpc_controller asmc_bridge
+  behavior_planner frenet_planner asmc_controller asmc_bridge
 source devel/setup.bash
 ```
 
@@ -94,7 +94,7 @@ LiDAR perception으로 교체되기 전에는 competition launch로 사용하지
 |---|---|---|
 | `roslaunch behavior_planner behavior_node_v2.launch` | Behavior v2 단독 | 입력/feedback 별도 필요 |
 | `roslaunch frenet_planner frenet_planner.launch` | Frenet 단독 | state/object/command 별도 필요 |
-| `roslaunch mpc_controller mpc_controller.launch` | MPC 단독 | 입력 없으면 STOP이 정상 |
+| `roslaunch asmc_controller controller.launch` | MPC 단독 | 입력 없으면 STOP이 정상 |
 | `roslaunch frenet_planner keep_morai_no_obstacles.launch` | obstacle-free KEEP E2E | perception 미사용, production gate 아님 |
 | `roslaunch behavior_planner autonomy_no_bridges.launch` | v1 호환 smoke | 현재 v2 production 계약 아님 |
 
@@ -158,14 +158,14 @@ STOP이 발행된다는 사실만으로 안전 검증이 끝나지 않는다. �
 ## 8. 테스트
 
 ```bash
-catkin_make run_tests_behavior_planner run_tests_mpc_controller
+catkin_make run_tests_behavior_planner run_tests_asmc_controller
 
 cd build/frenet_planner
 ctest --output-on-failure
 cd ../..
 
 catkin_test_results build/test_results/behavior_planner
-catkin_test_results build/test_results/mpc_controller
+catkin_test_results build/test_results/asmc_controller
 ```
 
 Frenet은 catkin package 단위 `run_tests_frenet_planner` target을 등록하지 않고 package build

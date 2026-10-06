@@ -2,7 +2,7 @@
 
 > **문서 상태:** Active Reference — 팀 리뷰 후 Canonical 승격 여부를 결정한다.
 > **현재 package 경계:** [Planning/Control 개발 가이드](./README.md)
-> **범위:** `src/frenet_planner/`, `src/mpc_controller/` 코드를 수정할 때 지켜야 하는
+> **범위:** `src/frenet_planner/`, `src/asmc_controller/` 코드를 수정할 때 지켜야 하는
 > 아키텍처 규칙. 알고리즘 파라미터 튜닝 가이드가 아니다.
 > **기준 시점:** `Fix/yuntae-planner` 브랜치, Commit E(트래잭토리 provenance 수정 +
 > 이 문서 추가) 시점의 실제 코드 구조.
@@ -52,11 +52,11 @@ FrenetPlanner Core (frenet_planner.hpp/cpp + Common/Generator/Evaluation/
 
 /planning/trajectory + /vehicle/state
         ↓
-MPC ROS Runtime (mpc_controller_node, message_converter)
+MPC ROS Runtime (main.cpp / Control.cpp, message_converter)
         ↓
 Reference/Timing (path_resampler, trajectory_timing)
         ↓
-MpcController (warm-start / last control / stuck-recovery 상태 소유)
+MPC (warm-start / last control / stuck-recovery 상태 소유)
         ↓
 Model / Cost / Constraints / Solver (mpc_core, ROS 비의존)
         ↓
@@ -76,16 +76,16 @@ Frenet과 MPC는 `/planning/trajectory` 하나로만 연결된다. Behavior/FSM�
 | Behavior Command Adapter (`behavior_command_adapter`) | `BehaviorCommand` 유효성 검증 | transaction 상태 |
 | Command Execution Manager (`command_execution_manager`) | v2 명령 transaction 상태(IDLE/READY/COMMITTED/EXECUTING/...) | planning 결과 자체 |
 | Feedback Builder (`feedback_builder.cpp`) | `FrenetFeedback` 메시지 조립 | planning 로직 |
-| Message Converter (frenet, `message_converter.cpp`) | ROS message ↔ Core datatype 변환, 필드 유효성 검증 | candidate 선택/비용 정책 |
+| Message Converter (frenet, `MessageConverter.cpp`) | ROS message ↔ Core datatype 변환, 필드 유효성 검증 | candidate 선택/비용 정책 |
 | FrenetPlanner Core (`frenet_planner.hpp/cpp`) | maneuver pipeline 오케스트레이션, candidate 상태 캐시 | ROS 타입, 타이머 |
 | Generator | lateral/longitudinal candidate 샘플링 | 비용 평가, 충돌 검사 |
 | Evaluation | 비용/운동학/충돌 필터링 | candidate 생성 |
 | Maneuver | 모드별(KEEP/STOP/AVOID/...) 파이프라인 조립 | 저수준 수식 |
 | Reference/Speed/Geometry/Math | RefLine, 곡률, 다항식, 좌표 변환 등 순수 계산 | 모드 정책 |
-| MPC ROS Node (`mpc_controller_node`) | subscribe(trajectory, vehicle_state, behavior_command), freshness, ROS↔Core 변환 호출, 20Hz 타이머, publish, fail-safe | 최적화 수식, warm-start 정책 |
-| MPC Message Converter (`message_converter.cpp`) | Trajectory→PlannedPath, VehicleState→MPCState, 필드 유효성 검증, CtrlCmd 조립 | 시간 정렬 계산, 최적화 정책 |
+| MPC ROS Node (`main.cpp / Control.cpp`) | subscribe(trajectory, vehicle_state, behavior_command), freshness, ROS↔Core 변환 호출, 20Hz 타이머, publish, fail-safe | 최적화 수식, warm-start 정책 |
+| MPC Message Converter (`MessageConverter.cpp`) | Trajectory→PlannedPath, VehicleState→MPCState, 필드 유효성 검증, CtrlCmd 조립 | 시간 정렬 계산, 최적화 정책 |
 | MPC Reference (`path_resampler`, `trajectory_timing`) | trajectory 리샘플링, source-time offset 계산 | ROS 타입, freshness watchdog |
-| MpcController | warm-start, last_control, stuck/recovery 상태, solveMPC 호출 순서 | 최적화 수식 자체 |
+| MPC | warm-start, last_control, stuck/recovery 상태, solveMPC 호출 순서 | 최적화 수식 자체 |
 | Model/Cost/Constraints/Solver (`mpc_core`) | bicycle model 선형화, 비용 함수, box/rate 제약, gradient descent | ROS, provenance 검증 |
 
 ## 4. State Ownership 규칙
@@ -93,8 +93,8 @@ Frenet과 MPC는 `/planning/trajectory` 하나로만 연결된다. Behavior/FSM�
 - `FrenetPlanner`는 참조선, 마지막 target speed, AVOID lock 등 **planner 사이클
   상태**를 소유한다.
 - `CommandExecutionManager`는 v2 command transaction lifecycle을 소유한다.
-- `MpcController`는 `warm_start_`, `last_control_`, stuck/recovery cycle 카운터를
-  소유한다. `mpc_controller_node`는 이 상태를 직접 만지지 않고 `ControlProcess`/
+- `MPC`는 `warm_start_`, `last_control_`, stuck/recovery cycle 카운터를
+  소유한다. `main.cpp / Control.cpp`는 이 상태를 직접 만지지 않고 `MPCProcess`/
   `ResetOnFailSafe`를 통해서만 접근한다.
 - **Ego(현재 차량 상태)의 authoritative source는 하나뿐이다**: `/vehicle/state`.
   - Frenet은 `/vehicle/state`를 직접 구독해 planning의 현재 상태로 쓴다.
@@ -129,7 +129,7 @@ Frenet과 MPC는 `/planning/trajectory` 하나로만 연결된다. Behavior/FSM�
 - MPC의 reference 시작 offset은 `최신 /vehicle_state.header.stamp -
   trajectory.header.stamp`(둘 다 source time, `ComputeReferenceStartOffset`)로
   계산한다. 이 계산은 `reference/trajectory_timing`에 있고 `ros::Time`에
-  의존하지 않는다 - `ros::Time → double` 변환은 ROS 경계(`mpc_controller_node`)
+  의존하지 않는다 - `ros::Time → double` 변환은 ROS 경계(`main.cpp / Control.cpp`)
   에서 한다.
 - Feedback류 메시지(`FrenetFeedback.header.stamp`, `PlanFeedback.header.stamp`)는
   다른 계약이다 - "이 피드백이 생성된 시각"이며 `ros::Time::now()`가 맞다. 모든
@@ -153,9 +153,9 @@ Generator / Evaluation / Maneuver / Geometry / Reference / Speed / Math
 **MPC:**
 
 ```text
-ROS Runtime (mpc_controller_node)
+ROS init (main.cpp) → ControlProcess (Control.cpp)
     ↓
-Reference / Control (path_resampler, trajectory_timing, MpcController)
+Reference / Control (path_resampler, trajectory_timing, MPC)
     ↓
 Model / Cost / Constraints / Solver / Common (mpc_core)
 ```
@@ -173,7 +173,7 @@ Model / Cost / Constraints / Solver / Common (mpc_core)
 - 무엇을 만들어내는가?
 - 명시적으로 하지 않는 것은 무엇인가?
 
-`mpc_controller_node.cpp::controlTimerCallback`이나
+`Control.cpp::ControlProcess`이나
 `frenet_planner_node.cpp::planningTimerCallback`처럼, 대표 orchestration 함수를
 먼저 두고 그 아래에 단계별 helper를 배치하는 구조를 유지한다. 세부 수식은 더
 깊은 계층(Core)으로 내려보낸다.
@@ -231,7 +231,7 @@ trajectory timestamp provenance 수정은 "리팩토링"이 아니라 명시적�
 - [ ] 적절한 경우 negative/regression test가 있는가
 - [ ] 기존 패키지 테스트가 모두 남아있고 통과하는가
   - Frenet: catkin build의 `build/frenet_planner`에서 `ctest` (현재 25개 등록 테스트)
-  - MPC: catkin build의 `build/mpc_controller`에서 `ctest` (현재 5개 gtest 바이너리)
+  - MPC: catkin build의 `build/asmc_controller`에서 `ctest` (현재 11개 gtest 바이너리)
   - `v2_ros_regression_test`는 `add_test`에 등록되어 있지 않다 - roscore와
     `frenet_planner_node`를 수동으로 띄운 뒤 `rosrun`으로 실행한다(파일 상단
     주석의 실행법 참고).
@@ -261,7 +261,7 @@ verification complete, MORAI full-course validation pending" 같은 정확한
 
 - v1(`BehaviorContext`/`PlanFeedback`) 경로는 D10 cutover 이후 제거 후보다
   (현재는 v2와 병행 운영 중, `fsm-frenet-interface-v2.md` 10절).
-- `mpc_controller_node`가 여러 개별 timeout(`trajectory`, `vehicle_state`)을
+- `main.cpp / Control.cpp`가 여러 개별 timeout(`trajectory`, `vehicle_state`)을
   갖는 대신 하나의 input-freshness aggregator로 통합하는 안은 아직 결정되지
   않았다.
 
