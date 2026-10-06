@@ -309,7 +309,19 @@ def build_mission_scenario_spec(
 
         surface = None
         if mission_type in SURFACE_MISSION_TYPES and end > start:
-            surface = _surface(areas, set(zone_links) | {lane["link_id"] for lane in maneuver_lanes})
+            # The zone surface is where the ego may drive inside the zone: its
+            # route lanes, the maneuver lanes, and optionally the same-direction
+            # lanes beside the route (e.g. every lane of the high-speed road).
+            surface_links = set(zone_links) | {lane["link_id"] for lane in maneuver_lanes}
+            if zone_source.get("surface_adjacent_to_route"):
+                surface_links |= set(_adjacent_lane_chain(
+                    route_lanes, lane_by_id, str(zone_source["surface_adjacent_to_route"])
+                ))
+            for link_id in zone_source.get("surface_link_ids") or []:
+                if str(link_id) not in lane_by_link:
+                    warnings.append("%s: surface link %s is not a compact lane" % (zone_id, link_id))
+                surface_links.add(str(link_id))
+            surface = _surface(areas, surface_links)
         zones.append({
             "id": zone_id,
             "mission_type": mission_type,

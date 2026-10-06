@@ -16,6 +16,8 @@ inputs:
 # warnings, not errors.
 actor_link_max_distance_m: 100.0
 
+# Zone surface = route lanes + maneuver lanes, plus optional
+# surface_adjacent_to_route (left|right|both) and surface_link_ids.
 # roles: static_obstacle (fixed object), dynamic_obstacle (moving object or
 # pedestrian crossing the route), npc_vehicle (traffic driving along the link).
 zones:
@@ -53,6 +55,9 @@ zones:
 
   surrounding_vehicle_candidate:
     maneuver_groups: []
+    # The ego may use every same-direction lane of the high-speed road
+    # (A409/A410/A418 ... A422/A423/A432), so the zone surface covers them all.
+    surface_adjacent_to_route: left
     actor_sources:
       - role: npc_vehicle
         adjacent_to_route: left

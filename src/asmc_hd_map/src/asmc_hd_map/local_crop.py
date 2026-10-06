@@ -143,21 +143,3 @@ def crop_occupancy_grid(
         resolution=resolution,
     )
 
-
-def downsample_occupancy(occupancy: np.ndarray, factor: int) -> np.ndarray:
-    """Coarsen a 0/100 occupancy grid for display: a block is drivable if any cell is.
-
-    Only for visualization; the planner-facing grid keeps its native resolution.
-    The grid origin is unchanged and the resolution grows by ``factor``.
-    """
-
-    if factor < 1:
-        raise ValueError("downsample factor must be >= 1")
-    if factor == 1:
-        return np.asarray(occupancy, dtype=np.int8).copy()
-    height, width = occupancy.shape
-    rows, columns = -(-height // factor), -(-width // factor)
-    padded = np.full((rows * factor, columns * factor), 100, dtype=np.int8)
-    padded[:height, :width] = occupancy
-    blocks = padded.reshape(rows, factor, columns, factor)
-    return np.where((blocks == 0).any(axis=(1, 3)), 0, 100).astype(np.int8)

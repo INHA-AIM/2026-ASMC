@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-import copy
 import hashlib
 import json
 import math
@@ -32,7 +31,6 @@ import rospy
 from std_msgs.msg import ColorRGBA, Header
 from visualization_msgs.msg import Marker, MarkerArray
 
-from asmc_hd_map.local_crop import downsample_occupancy
 from asmc_hd_map.map_overlay import dashed_polyline_segments
 from asmc_hd_map.runtime_bundle import (
     RuntimeBundleError,
@@ -1061,21 +1059,6 @@ class CompetitionMapPublisher:
             self.lanes_pub.publish(messages["lanes"])
             self.drivable_pub.publish(messages["drivable_areas"])
             self.grid_pub.publish(messages["grid"])
-        # Display-only coarse copy of the drivable grid: RViz renders the 0.2 m
-        # planner grid (22 MB, 22M cells) slowly, while 0.6 m is ~2.5 MB.
-        viz_factor = int(rospy.get_param("~drivable_viz_downsample", 3))
-        if self.product is not None and viz_factor > 0:
-            coarse = downsample_occupancy(self.occupancy, viz_factor)
-            viz = OccupancyGrid()
-            viz.header = copy.deepcopy(messages["grid"].header)
-            viz.info = copy.deepcopy(messages["grid"].info)  # never mutate the planner grid
-            viz.info.resolution = messages["grid"].info.resolution * viz_factor
-            viz.info.height, viz.info.width = coarse.shape
-            viz.data = coarse.reshape(-1).tolist()
-            self.viz_grid_pub = rospy.Publisher(
-                "/hd_map/debug/drivable_grid_viz", OccupancyGrid, queue_size=1, latch=True
-            )
-            self.viz_grid_pub.publish(viz)
         self.debug_markers = build_debug_markers(
             bundle, stamp, self.product, self.scenario, self.debug_detail
         )

@@ -232,9 +232,9 @@ marker는 시작할 때 한 번 만들어 두고 새 구독자가 붙을 때만 
 지워지므로, 해당 display 체크를 껐다 켜면 다시 받는다. RViz가 없으면 아무것도 보내지 않는다.
 
 주행가능영역 면은 ego 주변 크롭을 기본으로 그린다. 전체 지도를 텍스처로 올리지 않아도 되고, planner와 같은
-0.2 m 해상도라 경계가 거칠지 않다. 맵 전체 면이 필요하면 `Drivable area overview (0.6 m whole map)`(표시
-전용 0.6 m 사본 `/hd_map/debug/drivable_grid_viz`, 2.5M칸)이나 0.2 m 원본 grid(22.3M칸, 무거움)를 켠다.
-0.6 m 사본은 RViz 표시만을 위한 것이다. planner와 local crop은 항상 0.2 m `/hd_map/global/drivable_grid`를 쓴다.
+0.2 m 해상도라 경계가 거칠지 않다. 크롭은 `local_crop_policy`대로 `map` 축(동·북)에 맞춘 120 m 정사각형이라
+도로 방향과는 비스듬해 보이는 것이 정상이며, ego는 항상 정사각형 중심에 있다. 맵 전체 면이 필요하면
+`Drivable area whole map (0.2 m planner grid, heavy)`(22.3M칸)를 켠다.
 차선 도색과 외곽선은 고정 marker라 RViz가 한 번 올린 뒤에는 거의 부하가 없어 따로 크롭하지 않는다.
 
 미션 면적과 전체 주행가능영역 외곽선은 차로 polygon의 합집합이다. 인접 차로 사이 미세한 틈이 만드는

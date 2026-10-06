@@ -26,21 +26,12 @@ Visualization Manager:
       Marker Topic: /hd_map/debug/ego_markers
       Name: "Ego footprint (base_link, GPS+IMU)"
       Queue Size: 2
-    - Alpha: 0.4
-      Class: rviz/Map
-      Color Scheme: map
-      Draw Behind: true
-      Enabled: false
-      Name: "Drivable area overview (0.6 m whole map)"
-      Topic: /hd_map/debug/drivable_grid_viz
-      Unreliable: false
-      Use Timestamp: false
     - Alpha: 0.34
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: true
       Enabled: false
-      Name: "Compact drivable OccupancyGrid (0.2 m, 22 MB; heavy)"
+      Name: "Drivable area whole map (0.2 m planner grid, heavy)"
       Topic: /hd_map/global/drivable_grid
       Unreliable: false
       Use Timestamp: false

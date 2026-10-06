@@ -61,7 +61,7 @@ export는 비-Python 소비자용 snapshot이다. git에 넣지 않으며 기본
 | `rule` | 규정 v1.2 판정 사실 (`judged_by`, 패널티, 랜덤 미션 종류 등) |
 | `maneuver_lanes[]` | 회피·충돌에 쓰이는 compact lane. `direction_vs_route`: `same`/`opposite`/`crossing` |
 | `actor_sources[]` | role(`static_obstacle`, `dynamic_obstacle`, `npc_vehicle`)별 스폰 후보 MGeo 링크. centerline xyz, 길이, MGeo 최고속도, from/to node |
-| `surface` | 구간 route 링크와 maneuver 링크에 속한 DrivableArea의 union 외곽선과 면적 |
+| `surface` | 구간 route 링크, maneuver 링크, `surface_adjacent_to_route`·`surface_link_ids`로 더한 차로에 속한 DrivableArea의 union 외곽선과 면적 (주변차량 구간은 고속도로 같은 방향 차로 전체) |
 
 pose 규약은 다음과 같다.
 - `map` frame이다. `yaw_deg = atan2(dy, dx)`로, MORAI 체크포인트 yaw와 같은 규약이다.
