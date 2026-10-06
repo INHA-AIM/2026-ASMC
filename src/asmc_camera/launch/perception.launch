@@ -44,6 +44,8 @@
   <arg name="traffic_light_hz" default="10.0"/>
   <arg name="traffic_light_min_detect" default="0.40"/>
   <arg name="traffic_light_stale_sec" default="1.0"/>
+  <!-- Set to 0 for manual validation while MORAI is paused. -->
+  <arg name="traffic_light_wait_first" default="10.0"/>
 
   <group if="$(arg start_camera_lane)">
     <include file="$(find asmc_camera)/launch/camera_lane.launch">
@@ -98,7 +100,7 @@
          source-image header on the typed result. -->
     <node pkg="asmc_camera" type="traffic_light_node.py" name="traffic_light_infer"
           output="screen" required="true"
-          args="--ckpt $(arg traffic_light_checkpoint) --image-topic $(arg traffic_light_image_topic) --state-topic $(arg traffic_light_state_topic) --detail-topic $(arg traffic_light_detail_topic) --typed-topic $(arg traffic_light_typed_topic) --device $(arg traffic_light_device) --hz $(arg traffic_light_hz) --min-detect $(arg traffic_light_min_detect) --stale-sec $(arg traffic_light_stale_sec)"/>
+          args="--ckpt $(arg traffic_light_checkpoint) --image-topic $(arg traffic_light_image_topic) --state-topic $(arg traffic_light_state_topic) --detail-topic $(arg traffic_light_detail_topic) --typed-topic $(arg traffic_light_typed_topic) --device $(arg traffic_light_device) --hz $(arg traffic_light_hz) --min-detect $(arg traffic_light_min_detect) --stale-sec $(arg traffic_light_stale_sec) --wait-first $(arg traffic_light_wait_first)"/>
   </group>
 
   <group if="$(arg start_visualization)">
