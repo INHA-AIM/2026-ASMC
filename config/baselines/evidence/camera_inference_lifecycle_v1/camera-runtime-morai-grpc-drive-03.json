@@ -1,0 +1,497 @@
+{
+  "profile": "cropped_yolo_jamming_preview",
+  "scenario_sha256": "c9ab17cef9b07dd3a7d4a2f56c6cc39f89f07cadccce8edce3d579e891237c85",
+  "actuator_transport": "grpc",
+  "grpc_mode_value": 2,
+  "expected_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+  "speed_ceiling_kph": 5.0,
+  "hood_crop_bottom_ratio": 0.21,
+  "runs": [
+    {
+      "repetition": 1,
+      "case": "approach",
+      "fixture_station_m": 1862.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": true,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.549480713001685,
+      "moved_m": 0.012678070464121527,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    },
+    {
+      "repetition": 1,
+      "case": "inside_start",
+      "fixture_station_m": 1912.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": false,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.55421830600244,
+      "moved_m": 0.01395867696204097,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    },
+    {
+      "repetition": 1,
+      "case": "reentry",
+      "fixture_station_m": 1882.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": false,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.549646766012302,
+      "moved_m": 0.0111236572265625,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    }
+  ],
+  "rpc": [
+    {
+      "method": "/morai_sim_api.scenario.Scenario/LoadMoraiScenario",
+      "request": {
+        "value": "2026_molit_comp_sample_scene.json"
+      },
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Unknown error"
+      }
+    },
+    {
+      "method": "/morai_sim_api.actor.Actor/SetVehicleControlMode",
+      "request": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE",
+          "clientKey": "asmc_camera_runtime_trial"
+        },
+        "mode": "VEHICLE_CONTROL_GAME_WHEEL"
+      },
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "method": "/morai_sim_api.actor.Actor/SetVehicleGear",
+      "request": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE",
+          "clientKey": "asmc_camera_runtime_trial"
+        },
+        "gear": "GEAR_MODE_D"
+      },
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "method": "/morai_sim_api.simulation.Simulation/Resume",
+      "request": {},
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "method": "/morai_sim_api.actor.Actor/SetTransform",
+      "request": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE",
+          "clientKey": "asmc_camera_runtime_trial"
+        },
+        "transform": {
+          "location": {
+            "x": 41.46453907936642,
+            "y": -478.49718586706075,
+            "z": 28.645308636140697
+          },
+          "rotation": {
+            "z": -138.90623235272935
+          }
+        }
+      },
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "method": "/morai_sim_api.actor.Actor/SetTransform",
+      "request": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE",
+          "clientKey": "asmc_camera_runtime_trial"
+        },
+        "transform": {
+          "location": {
+            "x": -80.41401468890274,
+            "y": -546.8449736273996,
+            "z": 28.781581250951863
+          },
+          "rotation": {
+            "z": -160.93121438806855
+          }
+        }
+      },
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "method": "/morai_sim_api.actor.Actor/SetTransform",
+      "request": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE",
+          "clientKey": "asmc_camera_runtime_trial"
+        },
+        "transform": {
+          "location": {
+            "x": -0.8155976632996151,
+            "y": -504.9470100166796,
+            "z": 28.728185105030096
+          },
+          "rotation": {
+            "z": -151.33935277757197
+          }
+        }
+      },
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "method": "/morai_sim_api.actor.Actor/SetTransform",
+      "request": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE",
+          "clientKey": "asmc_camera_runtime_trial"
+        },
+        "transform": {
+          "location": {
+            "x": -80.41401468890274,
+            "y": -546.8449736273996,
+            "z": 28.781581250951863
+          },
+          "rotation": {
+            "z": -160.93121438806855
+          }
+        }
+      },
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "method": "/morai_sim_api.actor.Actor/SetTransform",
+      "request": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE",
+          "clientKey": "asmc_camera_runtime_trial"
+        },
+        "transform": {
+          "location": {
+            "x": 25.418013179810078,
+            "y": -490.4066594417255,
+            "z": 28.64129820560507
+          },
+          "rotation": {
+            "z": -147.71400317758085
+          }
+        }
+      },
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "method": "/morai_sim_api.actor.Actor/SetTransform",
+      "request": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE",
+          "clientKey": "asmc_camera_runtime_trial"
+        },
+        "transform": {
+          "location": {
+            "x": -80.41401468890274,
+            "y": -546.8449736273996,
+            "z": 28.781581250951863
+          },
+          "rotation": {
+            "z": -160.93121438806855
+          }
+        }
+      },
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "method": "/morai_sim_api.actor.Actor/SetTransform",
+      "request": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE",
+          "clientKey": "asmc_camera_runtime_trial"
+        },
+        "transform": {
+          "location": {
+            "x": -161.41329956054688,
+            "y": -476.884521484375,
+            "z": 28.835159301757812
+          },
+          "rotation": {
+            "x": -0.0010939855128526688,
+            "y": 359.9060974121094,
+            "z": 59.62046813964844
+          }
+        }
+      },
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "method": "/morai_sim_api.actor.Actor/SetVelocity",
+      "request": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE",
+          "clientKey": "asmc_camera_runtime_trial"
+        }
+      },
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "method": "/morai_sim_api.actor.Actor/SetVehicleGear",
+      "request": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE",
+          "clientKey": "asmc_camera_runtime_trial"
+        },
+        "gear": "GEAR_MODE_D"
+      },
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "method": "/morai_sim_api.actor.Actor/SetVehicleControlMode",
+      "request": {
+        "actorInfo": {
+          "id": {
+            "value": "Ego"
+          },
+          "objectType": "OBJECT_TYPE_VEHICLE",
+          "clientKey": "asmc_camera_runtime_trial"
+        },
+        "mode": "VEHICLE_CONTROL_KEYBOARD"
+      },
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    }
+  ],
+  "failures": [],
+  "restored": true,
+  "full_actor_restore_claimed": false,
+  "original_ego": {
+    "actorInfo": {
+      "id": {
+        "value": "Ego"
+      },
+      "objectType": "OBJECT_TYPE_VEHICLE"
+    },
+    "boundingBox": {
+      "extent": {
+        "x": 1.0804173946380615,
+        "y": 2.3175039291381836,
+        "z": 0.8220231533050537
+      },
+      "location": {
+        "x": -160.61044311523438,
+        "y": -475.5859069824219,
+        "z": 29.29118537902832
+      },
+      "rotation": {
+        "x": -0.0010939855128526688,
+        "y": 359.9060974121094,
+        "z": 59.62046813964844
+      }
+    },
+    "transform": {
+      "location": {
+        "x": -161.41329956054688,
+        "y": -476.884521484375,
+        "z": 28.835159301757812
+      },
+      "rotation": {
+        "x": -0.0010939855128526688,
+        "y": 359.9060974121094,
+        "z": 59.62046813964844
+      }
+    },
+    "velocity": {
+      "x": 8.64540661282831e-10,
+      "y": -1.4454002231212293e-12,
+      "z": -1.4979819606963929e-09
+    },
+    "angularVelocity": {
+      "x": 3.725290298461914e-09,
+      "y": 2.6921043172478676e-10,
+      "z": -9.313225746154785e-10
+    },
+    "acceleration": {
+      "x": 0.0025380004663020372,
+      "y": -0.00010884413495659828,
+      "z": -0.00031072134152054787
+    },
+    "vehicleState": {
+      "gearMode": "GEAR_MODE_D",
+      "currentLinkInfo": {
+        "id": {
+          "value": "A2256W000436"
+        },
+        "waypointIdx": 18
+      },
+      "remainingDistance": -1.0,
+      "isPassDesPos": true,
+      "tlId": {
+        "value": "Not Detected"
+      },
+      "tlColor": "TL_COLOR_NOT_DETECTED"
+    },
+    "globalVelocity": {
+      "x": 1.7287674625166005e-09,
+      "y": -5.2386893434341886e-11
+    }
+  },
+  "original_mode": 1,
+  "scenario_load_response": {
+    "status": "STATUS_CODE_SUCCESS",
+    "description": "Unknown error"
+  },
+  "observed_mode_after_request": 2,
+  "restored_ego": {
+    "actorInfo": {
+      "id": {
+        "value": "Ego"
+      },
+      "objectType": "OBJECT_TYPE_VEHICLE"
+    },
+    "boundingBox": {
+      "extent": {
+        "x": 1.0804173946380615,
+        "y": 2.3175039291381836,
+        "z": 0.8220231533050537
+      },
+      "location": {
+        "x": -160.64117431640625,
+        "y": -475.5674133300781,
+        "z": 29.276464462280273
+      },
+      "rotation": {
+        "x": -2.584670539818035e-07,
+        "y": 359.8950500488281,
+        "z": 60.96736145019531
+      }
+    },
+    "transform": {
+      "location": {
+        "x": -161.41326904296875,
+        "y": -476.88446044921875,
+        "z": 28.820146560668945
+      },
+      "rotation": {
+        "x": -2.584670539818035e-07,
+        "y": 359.8950500488281,
+        "z": 60.96736145019531
+      }
+    },
+    "velocity": {
+      "x": 2.6218024973267973e-10,
+      "y": -1.3411548316355493e-08,
+      "z": -7.480117913960527e-11
+    },
+    "angularVelocity": {
+      "x": 3.725290298461914e-09,
+      "y": 2.02817318495363e-10,
+      "z": 9.313225746154785e-10
+    },
+    "acceleration": {
+      "x": 0.0025380004663020372,
+      "y": -0.00010884413495659828,
+      "z": -0.00031072134152054787
+    },
+    "vehicleState": {
+      "gearMode": "GEAR_MODE_N",
+      "currentLinkInfo": {
+        "id": {
+          "value": "A2256W000436"
+        },
+        "waypointIdx": 18
+      },
+      "remainingDistance": -1.0,
+      "isPassDesPos": true,
+      "tlId": {
+        "value": "Not Detected"
+      },
+      "tlColor": "TL_COLOR_NOT_DETECTED"
+    },
+    "globalVelocity": {
+      "x": 2.0954757373736754e-10,
+      "y": 2.0954757373736754e-10,
+      "z": -1.3411044719191523e-08
+    }
+  },
+  "accepted": false
+}

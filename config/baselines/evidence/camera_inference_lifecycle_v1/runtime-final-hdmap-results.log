@@ -1,0 +1,3 @@
+nosetests-test.test_runtime_bundle.py.xml: 1 tests, 1 errors, 0 failures, 0 skipped
+nosetests-test.test_scoring_ros.py.xml: 1 tests, 1 errors, 0 failures, 0 skipped
+Summary: 152 tests, 2 errors, 0 failures, 0 skipped

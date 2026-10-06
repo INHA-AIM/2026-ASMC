@@ -1,0 +1,550 @@
+{
+  "profile": "cropped_yolo_jamming_preview",
+  "scenario_sha256": "c9ab17cef9b07dd3a7d4a2f56c6cc39f89f07cadccce8edce3d579e891237c85",
+  "expected_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+  "speed_ceiling_kph": 5.0,
+  "hood_crop_bottom_ratio": 0.21,
+  "runs": [
+    {
+      "repetition": 1,
+      "case": "approach",
+      "fixture_station_m": 1862.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": true,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.552311539009679,
+      "moved_m": 0.012769940539948494,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    },
+    {
+      "repetition": 1,
+      "case": "inside_start",
+      "fixture_station_m": 1912.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": false,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.554581695003435,
+      "moved_m": 0.014007226063203933,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    },
+    {
+      "repetition": 1,
+      "case": "reentry",
+      "fixture_station_m": 1882.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": false,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.5539364099968225,
+      "moved_m": 0.011117935180664062,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    },
+    {
+      "repetition": 2,
+      "case": "approach",
+      "fixture_station_m": 1862.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": true,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.552045795004233,
+      "moved_m": 0.012769940539948494,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    },
+    {
+      "repetition": 2,
+      "case": "inside_start",
+      "fixture_station_m": 1912.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": false,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.552295171000878,
+      "moved_m": 0.014057866414590463,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    },
+    {
+      "repetition": 2,
+      "case": "reentry",
+      "fixture_station_m": 1882.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": false,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.553799342000275,
+      "moved_m": 0.011083602905273438,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    },
+    {
+      "repetition": 3,
+      "case": "approach",
+      "fixture_station_m": 1862.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": true,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.557094010000583,
+      "moved_m": 0.012769940539948494,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    },
+    {
+      "repetition": 3,
+      "case": "inside_start",
+      "fixture_station_m": 1912.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": false,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.555301749991486,
+      "moved_m": 0.014059672493838757,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    },
+    {
+      "repetition": 3,
+      "case": "reentry",
+      "fixture_station_m": 1882.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": false,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.55492786198738,
+      "moved_m": 0.011127471923828125,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    }
+  ],
+  "rpc": [
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    }
+  ],
+  "failures": [],
+  "restored": true,
+  "full_actor_restore_claimed": false,
+  "original_ego": {
+    "actorInfo": {
+      "id": {
+        "value": "Ego"
+      },
+      "objectType": "OBJECT_TYPE_VEHICLE"
+    },
+    "boundingBox": {
+      "extent": {
+        "x": 1.0804173946380615,
+        "y": 2.3175039291381836,
+        "z": 0.8220231533050537
+      },
+      "location": {
+        "x": -161.07318115234375,
+        "y": -476.2901916503906,
+        "z": 29.28312873840332
+      },
+      "rotation": {
+        "x": -0.0005839128280058503,
+        "y": 359.9670104980469,
+        "z": 55.5633544921875
+      }
+    },
+    "transform": {
+      "location": {
+        "x": -161.96621704101562,
+        "y": -477.5291442871094,
+        "z": 28.828725814819336
+      },
+      "rotation": {
+        "x": -0.0005839128280058503,
+        "y": 359.9670104980469,
+        "z": 55.5633544921875
+      }
+    },
+    "velocity": {
+      "x": -2.1306001407594977e-10,
+      "y": 9.896093276437479e-14,
+      "z": -2.3249768776878454e-09
+    },
+    "angularVelocity": {
+      "y": 5.966285243630409e-10
+    },
+    "acceleration": {
+      "x": 0.0025380004663020372,
+      "y": -0.00010884413495659828,
+      "z": -0.00031072134152054787
+    },
+    "vehicleState": {
+      "gearMode": "GEAR_MODE_D",
+      "currentLinkInfo": {
+        "id": {
+          "value": "A2256W000437"
+        },
+        "waypointIdx": 13
+      },
+      "remainingDistance": -1.0,
+      "isPassDesPos": true,
+      "tlId": {
+        "value": "Not Detected"
+      },
+      "tlColor": "TL_COLOR_NOT_DETECTED"
+    },
+    "globalVelocity": {
+      "x": 1.761509271780426e-09,
+      "y": -1.532316606933648e-09
+    }
+  },
+  "original_mode": 1,
+  "restored_ego": {
+    "actorInfo": {
+      "id": {
+        "value": "Ego"
+      },
+      "objectType": "OBJECT_TYPE_VEHICLE"
+    },
+    "boundingBox": {
+      "extent": {
+        "x": 1.0804173946380615,
+        "y": 2.3175039291381836,
+        "z": 0.8220231533050537
+      },
+      "location": {
+        "x": -161.1025848388672,
+        "y": -476.26959228515625,
+        "z": 29.275711059570312
+      },
+      "rotation": {
+        "x": -4.18549291225645e-07,
+        "y": 359.9458923339844,
+        "z": 56.910369873046875
+      }
+    },
+    "transform": {
+      "location": {
+        "x": -161.96615600585938,
+        "y": -477.5290832519531,
+        "z": 28.82074546813965
+      },
+      "rotation": {
+        "x": -4.18549291225645e-07,
+        "y": 359.9458923339844,
+        "z": 56.910369873046875
+      }
+    },
+    "velocity": {
+      "x": -8.625333780543087e-10,
+      "y": 6.706340371920305e-09,
+      "z": 4.2316554704768805e-09
+    },
+    "angularVelocity": {
+      "x": -3.725290298461914e-09,
+      "y": 2.9103830456733704e-10,
+      "z": 2.7939677238464355e-09
+    },
+    "acceleration": {
+      "x": 0.0025380004663020372,
+      "y": -0.00010884413495659828,
+      "z": -0.00031072134152054787
+    },
+    "vehicleState": {
+      "gearMode": "GEAR_MODE_D",
+      "currentLinkInfo": {
+        "id": {
+          "value": "A2256W000437"
+        },
+        "waypointIdx": 13
+      },
+      "remainingDistance": -1.0,
+      "isPassDesPos": true,
+      "tlId": {
+        "value": "Not Detected"
+      },
+      "tlColor": "TL_COLOR_NOT_DETECTED"
+    },
+    "globalVelocity": {
+      "x": -3.981404095299013e-09,
+      "y": 1.6763805898989403e-09,
+      "z": 6.705522359595761e-09
+    }
+  },
+  "accepted": false
+}

@@ -1,0 +1,268 @@
+{
+  "before": {
+    "actorInfo": {
+      "id": {
+        "value": "Ego"
+      },
+      "objectType": "OBJECT_TYPE_VEHICLE"
+    },
+    "boundingBox": {
+      "extent": {
+        "x": 1.0804173946380615,
+        "y": 2.3175039291381836,
+        "z": 0.8220231533050537
+      },
+      "location": {
+        "x": -161.0849609375,
+        "y": -476.3019714355469,
+        "z": 29.282310485839844
+      },
+      "rotation": {
+        "x": -0.0005210846429690719,
+        "y": 359.96722412109375,
+        "z": 55.563232421875
+      }
+    },
+    "transform": {
+      "location": {
+        "x": -161.97799682617188,
+        "y": -477.5409240722656,
+        "z": 28.827913284301758
+      },
+      "rotation": {
+        "x": -0.0005210846429690719,
+        "y": 359.96722412109375,
+        "z": 55.563232421875
+      }
+    },
+    "velocity": {
+      "x": 7.0300378851584355e-09,
+      "y": -5.364821475950521e-08,
+      "z": -4.144540266537433e-10
+    },
+    "angularVelocity": {
+      "x": 4.1632874925312535e-09,
+      "y": -1.0489545343439488e-10,
+      "z": 5.921049428536662e-09
+    },
+    "acceleration": {
+      "x": 0.0025380004663020372,
+      "y": -0.00010884413495659828,
+      "z": -0.00031072134152054787
+    },
+    "vehicleState": {
+      "gearMode": "GEAR_MODE_D",
+      "currentLinkInfo": {
+        "id": {
+          "value": "A2256W000437"
+        },
+        "waypointIdx": 13
+      },
+      "remainingDistance": -1.0,
+      "isPassDesPos": true,
+      "tlId": {
+        "value": "Not Detected"
+      },
+      "tlColor": "TL_COLOR_NOT_DETECTED"
+    },
+    "globalVelocity": {
+      "x": 4.465229075378829e-09,
+      "y": 5.4852478115208214e-09,
+      "z": -5.364417887676609e-08
+    }
+  },
+  "original": {
+    "actorInfo": {
+      "id": {
+        "value": "Ego"
+      },
+      "objectType": "OBJECT_TYPE_VEHICLE"
+    },
+    "boundingBox": {
+      "extent": {
+        "x": 1.0804173946380615,
+        "y": 2.3175039291381836,
+        "z": 0.8220231533050537
+      },
+      "location": {
+        "x": -161.14251708984375,
+        "y": -476.4208984375,
+        "z": 29.261186599731445
+      },
+      "rotation": {
+        "x": -359.30743408203125,
+        "y": 0.17712771892547607,
+        "z": 54.215789794921875
+      }
+    },
+    "transform": {
+      "location": {
+        "x": -162.07022094726562,
+        "y": -477.6370849609375,
+        "z": 28.812423706054688
+      },
+      "rotation": {
+        "x": -359.30743408203125,
+        "y": 0.17712771892547607,
+        "z": 54.215789794921875
+      }
+    },
+    "velocity": {
+      "x": 0.3003244400024414,
+      "y": 0.0007264349842444062,
+      "z": 0.00021292269229888916
+    },
+    "angularVelocity": {},
+    "acceleration": {
+      "x": 0.0025380004663020372,
+      "y": -0.00010884413495659828,
+      "z": -0.00031072134152054787
+    },
+    "vehicleState": {
+      "gearMode": "GEAR_MODE_D",
+      "currentLinkInfo": {
+        "id": {
+          "value": "A2256W000437"
+        },
+        "waypointIdx": 13
+      },
+      "remainingDistance": -1.0,
+      "isPassDesPos": true,
+      "tlId": {
+        "value": "Not Detected"
+      },
+      "tlColor": "TL_COLOR_NOT_DETECTED"
+    },
+    "globalVelocity": {
+      "x": 0.18112649023532867,
+      "y": 0.23955895006656647,
+      "z": -0.00019948784029111266
+    }
+  },
+  "original_mode": 1,
+  "responses": [
+    {
+      "stop": true
+    },
+    {
+      "stop": true
+    },
+    {
+      "stop": true
+    },
+    {
+      "stop": true
+    },
+    {
+      "stop": true
+    },
+    {
+      "pause": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "pose": true
+    },
+    {
+      "velocity": true
+    },
+    {
+      "mode": true
+    },
+    {
+      "gear": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "pose_after_mode_and_gear": true
+    },
+    {
+      "mode_final": true
+    }
+  ],
+  "paused_after": {
+    "actorInfo": {
+      "id": {
+        "value": "Ego"
+      },
+      "objectType": "OBJECT_TYPE_VEHICLE"
+    },
+    "boundingBox": {
+      "extent": {
+        "x": 1.0804173946380615,
+        "y": 2.3175039291381836,
+        "z": 0.8220231533050537
+      },
+      "location": {
+        "x": -161.17381286621094,
+        "y": -476.394775390625,
+        "z": 29.275907516479492
+      },
+      "rotation": {
+        "x": -1.9046488887397572e-05,
+        "y": 359.96875,
+        "z": 55.56282043457031
+      }
+    },
+    "transform": {
+      "location": {
+        "x": -162.06686401367188,
+        "y": -477.63372802734375,
+        "z": 28.821550369262695
+      },
+      "rotation": {
+        "x": -1.9046488887397572e-05,
+        "y": 359.96875,
+        "z": 55.56282043457031
+      }
+    },
+    "velocity": {
+      "x": 9.134073053473912e-09,
+      "y": -5.3649170439484806e-08,
+      "z": 1.0937473149397192e-11
+    },
+    "angularVelocity": {
+      "x": 4.6708210632573355e-09,
+      "y": -1.3348273875113392e-11,
+      "z": 6.490641801804031e-09
+    },
+    "acceleration": {
+      "x": 0.0025380004663020372,
+      "y": -0.00010884413495659828,
+      "z": -0.00031072134152054787
+    },
+    "vehicleState": {
+      "gearMode": "GEAR_MODE_D",
+      "currentLinkInfo": {
+        "id": {
+          "value": "A2256W000437"
+        },
+        "waypointIdx": 13
+      },
+      "remainingDistance": -1.0,
+      "isPassDesPos": true,
+      "tlId": {
+        "value": "Not Detected"
+      },
+      "tlColor": "TL_COLOR_NOT_DETECTED"
+    },
+    "globalVelocity": {
+      "x": 5.349263254572634e-09,
+      "y": 7.4399171268169084e-09,
+      "z": -5.364417887676609e-08
+    }
+  },
+  "mode_after": 1,
+  "simulation_left_paused": true,
+  "checks": {
+    "position_error_m": 0.010287564707845002,
+    "rotation_error_deg": 1.3470306396484375,
+    "gear_matches": true,
+    "mode_matches": true
+  },
+  "restored_strict": false
+}

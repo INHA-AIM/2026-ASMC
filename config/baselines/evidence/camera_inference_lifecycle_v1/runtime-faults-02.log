@@ -1,0 +1,3 @@
+[WARN] [1791315378.102772, 1791315378.098371]: camera objects decode failure: JPEG decoder returned no image
+[INFO] [1791315376.866975, 1791315376.858876]: camera object detector ready: model=not_a_model device=CPU_fixture
+{"passed": true, "checks": {"invalid_request_no_generation_change": true, "standby_no_compute": true, "prepare_empty_detection_ready_without_output": true, "active_empty_detection_valid": true, "old_inflight_result_withheld": true, "standby_invalidation": true, "decode_failure_clears_ready": true, "frozen_clock_input_stop_status_updates": true}}

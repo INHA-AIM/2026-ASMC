@@ -1,0 +1,319 @@
+{
+  "profile": "cropped_yolo_jamming_preview",
+  "scenario_sha256": "c9ab17cef9b07dd3a7d4a2f56c6cc39f89f07cadccce8edce3d579e891237c85",
+  "actuator_transport": "grpc",
+  "grpc_mode_value": 1,
+  "expected_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+  "speed_ceiling_kph": 5.0,
+  "hood_crop_bottom_ratio": 0.21,
+  "runs": [
+    {
+      "repetition": 1,
+      "case": "approach",
+      "fixture_station_m": 1862.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": true,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.55272654700093,
+      "moved_m": 0.01272400550203501,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    },
+    {
+      "repetition": 1,
+      "case": "inside_start",
+      "fixture_station_m": 1912.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": false,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.550761317994329,
+      "moved_m": 0.013959437461075528,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    },
+    {
+      "repetition": 1,
+      "case": "reentry",
+      "fixture_station_m": 1882.744798966,
+      "prepared": true,
+      "preview_ready": true,
+      "observed_family_sha256": "1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9",
+      "natural_gps_context_valid": false,
+      "driven": true,
+      "full_shadow_traversal": false,
+      "drive_sec": 5.553945000996464,
+      "moved_m": 0.011121749877929688,
+      "stop_reason": "gate_closed",
+      "fresh_hd_recovery": false
+    }
+  ],
+  "rpc": [
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    },
+    {
+      "response": {
+        "status": "STATUS_CODE_SUCCESS",
+        "description": "Success"
+      }
+    }
+  ],
+  "failures": [],
+  "restored": true,
+  "full_actor_restore_claimed": false,
+  "original_ego": {
+    "actorInfo": {
+      "id": {
+        "value": "Ego"
+      },
+      "objectType": "OBJECT_TYPE_VEHICLE"
+    },
+    "boundingBox": {
+      "extent": {
+        "x": 1.0804173946380615,
+        "y": 2.3175039291381836,
+        "z": 0.8220231533050537
+      },
+      "location": {
+        "x": -160.7860870361328,
+        "y": -475.8901672363281,
+        "z": 29.280956268310547
+      },
+      "rotation": {
+        "x": -0.0004497589834500104,
+        "y": 359.9222412109375,
+        "z": 58.26708984375
+      }
+    },
+    "transform": {
+      "location": {
+        "x": -161.61944580078125,
+        "y": -477.1695251464844,
+        "z": 28.825361251831055
+      },
+      "rotation": {
+        "x": -0.0004497589834500104,
+        "y": 359.9222412109375,
+        "z": 58.26708984375
+      }
+    },
+    "velocity": {
+      "x": -1.8406176582885792e-10,
+      "y": 2.640608001355793e-13,
+      "z": 1.8182524375021103e-09
+    },
+    "angularVelocity": {
+      "x": -3.725290298461914e-09,
+      "y": 1.7462298274040222e-10,
+      "z": 2.7939677238464355e-09
+    },
+    "acceleration": {
+      "x": 0.0025380004663020372,
+      "y": -0.00010884413495659828,
+      "z": -0.00031072134152054787
+    },
+    "vehicleState": {
+      "gearMode": "GEAR_MODE_D",
+      "currentLinkInfo": {
+        "id": {
+          "value": "A2256W000436"
+        },
+        "waypointIdx": 18
+      },
+      "remainingDistance": -1.0,
+      "isPassDesPos": true,
+      "tlId": {
+        "value": "Not Detected"
+      },
+      "tlColor": "TL_COLOR_NOT_DETECTED"
+    },
+    "globalVelocity": {
+      "x": -1.6239937172812802e-09,
+      "y": 8.381902949494702e-10
+    }
+  },
+  "original_mode": 1,
+  "restored_ego": {
+    "actorInfo": {
+      "id": {
+        "value": "Ego"
+      },
+      "objectType": "OBJECT_TYPE_VEHICLE"
+    },
+    "boundingBox": {
+      "extent": {
+        "x": 1.0804173946380615,
+        "y": 2.3175039291381836,
+        "z": 0.8220231533050537
+      },
+      "location": {
+        "x": -160.8163604736328,
+        "y": -475.87091064453125,
+        "z": 29.275882720947266
+      },
+      "rotation": {
+        "x": -2.534643783747015e-07,
+        "y": 359.9095458984375,
+        "z": 59.614227294921875
+      }
+    },
+    "transform": {
+      "location": {
+        "x": -161.619384765625,
+        "y": -477.1694641113281,
+        "z": 28.819948196411133
+      },
+      "rotation": {
+        "x": -2.534643783747015e-07,
+        "y": 359.9095458984375,
+        "z": 59.614227294921875
+      }
+    },
+    "velocity": {
+      "x": 5.0424331377030285e-11,
+      "y": -6.705610289259312e-09,
+      "z": 3.4870328846636767e-09
+    },
+    "angularVelocity": {
+      "x": -7.450580596923828e-09,
+      "y": 2.4283508537337184e-10
+    },
+    "acceleration": {
+      "x": 0.0025380004663020372,
+      "y": -0.00010884413495659828,
+      "z": -0.00031072134152054787
+    },
+    "vehicleState": {
+      "gearMode": "GEAR_MODE_D",
+      "currentLinkInfo": {
+        "id": {
+          "value": "A2256W000436"
+        },
+        "waypointIdx": 18
+      },
+      "remainingDistance": -1.0,
+      "isPassDesPos": true,
+      "tlId": {
+        "value": "Not Detected"
+      },
+      "tlColor": "TL_COLOR_NOT_DETECTED"
+    },
+    "globalVelocity": {
+      "x": -2.9336659768119944e-09,
+      "y": 1.885928080369581e-09,
+      "z": -6.705522359595761e-09
+    }
+  },
+  "accepted": false
+}
