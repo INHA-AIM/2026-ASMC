@@ -28,8 +28,8 @@ class DrivableAreaAuditWorkspaceTest(unittest.TestCase):
         )
         self.assertEqual(self.document["reviewed_hd_map"]["lane_marking_count"], 121)
         self.assertEqual(self.document["reviewed_hd_map"]["stopline_count"], 7)
-        self.assertEqual(self.document["legacy_drivable_prior"]["checkpoint_centers_inside"], 16)
-        self.assertEqual(self.document["legacy_drivable_prior"]["checkpoint_count"], 16)
+        self.assertEqual(self.document["legacy_drivable_prior"]["checkpoint_centers_inside"], 15)
+        self.assertEqual(self.document["legacy_drivable_prior"]["checkpoint_count"], 15)
 
     def test_route_partition_is_complete_and_conservative(self):
         summary = self.document["route_summary"]

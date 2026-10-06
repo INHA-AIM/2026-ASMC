@@ -1,5 +1,5 @@
-schema_version: asmc.hd_map.compact_drivable_source/v5
-build_id: kcity2025_roundabout_extended_drivable_v5
+schema_version: asmc.hd_map.compact_drivable_source/v6
+build_id: kcity2025_static_junction_widened_drivable_v6
 scope: competition_route_and_usable_same_direction_lanes
 
 sources:
@@ -112,6 +112,24 @@ surface_refinement:
         - A2256W000151
   minimum_patch_area_m2: 0.50
   vector_simplify_tolerance_m: 0.05
+  # The A222 static-obstacle junction corners are paved beyond the nominal
+  # 3.5 m right-turn links, and H5 cannot fill them because it was baked from
+  # the same link widths. GetMGeo was refused by the simulator (2026-10-05) and
+  # the observed-lane CSVs stop at the junction, so the inner-corner side of
+  # each right turn is widened conservatively from the organizer route figure
+  # registered to the official global path (about 0.5 m/px): pavement measured
+  # 1.0-1.75 m past A226 and 1.25-2.75 m past A111. Zero at both nodes.
+  intersection_link_widening:
+    - link_id: A2256W000226
+      side: right
+      maximum_extra_m: 1.0
+      profile: half_sine
+      basis: route_figure_registered_to_global_path_20261005
+    - link_id: A2256W000111
+      side: right
+      maximum_extra_m: 1.5
+      profile: half_sine
+      basis: route_figure_registered_to_global_path_20261005
 
 raster:
   # Native H5 was 0.20 m/px. v1 downsampled it to 0.40 m/px; v2+ use

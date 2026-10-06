@@ -252,6 +252,11 @@ class LaneAssociator:
             transition_candidate_samples=self.pending_samples,
         )
 
+    def reset(self) -> None:
+        """Discard continuity after localization loss; next pose reacquires."""
+        self.current_lane_id = ""
+        self._reset_pending()
+
     def _reset_pending(self) -> None:
         self.pending_lane_id = ""
         self.pending_samples = 0

@@ -32,7 +32,7 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
         self.assertEqual(stats["route_lane_count"], 39)
         self.assertEqual(stats["selected_lane_count"], 70)
         self.assertEqual(stats["drivable_area_count"], 102)
-        self.assertEqual(stats["checkpoint_centers_inside"], 16)
+        self.assertEqual(stats["checkpoint_centers_inside"], 15)
         self.assertLess(stats["compact_fraction_of_legacy"], 0.20)
         self.assertEqual(self.artifact["grid"]["resolution_m"], 0.2)
         self.assertEqual(self.artifact["selection"]["endpoint_cap_style"], "node_normal_flat")
@@ -153,6 +153,34 @@ class CompactDrivableWorkspaceTest(unittest.TestCase):
         self.assertEqual(occupancy(-102.97, 325.54), 0)
         self.assertEqual(occupancy(-114.11, 330.54), 0)
         self.assertEqual(occupancy(-89.43, 330.98), 0)
+
+    def test_static_junction_right_turn_corners_are_widened(self):
+        lanes = {lane["link_id"]: lane for lane in self.artifact["lanes"]}
+        for link_id, extra in (("A2256W000226", 1.0), ("A2256W000111", 1.5)):
+            refinement = lanes[link_id]["polygon_refinement"]
+            self.assertEqual(refinement["mode"], "mgeo_link_width_reviewed_widening")
+            self.assertEqual((refinement["side"], refinement["maximum_extra_m"]), ("right", extra))
+            self.assertEqual(refinement["profile"], "half_sine")
+        # The outermost southbound A1212 is not a maneuver lane for the static obstacle.
+        self.assertNotIn("A2256W001212", lanes)
+
+        grid = self.arrays["occupancy"]
+        resolution = float(self.artifact["grid"]["resolution_m"])
+        origin = np.asarray([self.artifact["grid"]["origin_x"], self.artifact["grid"]["origin_y"]])
+
+        def occupancy(x, y):
+            pixel = np.rint((np.asarray([x, y]) - origin) / resolution).astype(int)
+            return int(grid[pixel[1], pixel[0]])
+
+        # Inner-corner pavement past the nominal 3.5 m turn edge is now drivable,
+        # while the curb side beyond the reviewed widening stays non-drivable.
+        self.assertEqual(occupancy(-54.38, -131.38), 0)
+        self.assertEqual(occupancy(-53.72, -130.50), 100)
+        self.assertEqual(occupancy(-55.07, -149.22), 0)
+        self.assertEqual(occupancy(-54.21, -150.27), 100)
+        # The A1212 strip and opposite lanes past the node line stay out.
+        self.assertEqual(occupancy(-71.0, -140.0), 100)
+        self.assertEqual(occupancy(-67.5, -121.0), 100)
 
     def test_obstacle_surfaces_are_connected_and_have_no_internal_holes(self):
         for group in ("static_obstacle_maneuver", "dynamic_obstacle_maneuver"):

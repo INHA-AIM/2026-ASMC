@@ -24,6 +24,7 @@ from asmc_msgs.msg import (
     MissionZone,
     MissionZoneArray,
 )
+from asmc_hd_map.msg import HdMapRoute
 from geometry_msgs.msg import Point
 from nav_msgs.msg import OccupancyGrid
 import numpy as np
@@ -39,6 +40,7 @@ from asmc_hd_map.runtime_bundle import (
     marking_role_name,
     point_at_station,
     polyline_slice,
+    polyline_stations,
     short_link_id,
     source_type_name,
 )
@@ -82,6 +84,9 @@ MISSION_TYPE_VALUES = {
 MISSION_STATUS_VALUES = {
     "official": MissionZone.STATUS_OFFICIAL,
     "derived_official": MissionZone.STATUS_DERIVED_OFFICIAL,
+    # The frozen message has no team-final enum; planning may enforce it, and
+    # rule_payload_json.authority keeps the team-review provenance.
+    "team_final": MissionZone.STATUS_DERIVED_OFFICIAL,
     "provisional": MissionZone.STATUS_PROVISIONAL,
 }
 LANE_TYPE_VALUES = {
@@ -312,9 +317,31 @@ def build_static_messages(
     mission_array.build_id = meta.build_id
     mission_array.route_id = checkpoint_array.route_id
     mission_array.source_sha256 = str(bundle["metadata_sha256"])
-    mission_array.zones = [_mission_message(item) for item in bundle["mission_zones"]]
+    mission_array.zones = []
+    for item in bundle["mission_zones"]:
+        message = _mission_message(item)
+        limits = [limit for limit in metadata.get("route_speed_limits", [])
+                  if limit["speed_zone_id"] == item["id"]]
+        if limits:
+            payload = json.loads(message.rule_payload_json)
+            payload["route_speed_limits"] = limits
+            message.rule_payload_json = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        mission_array.zones.append(message)
+    route_message = HdMapRoute()
+    route_message.header = _header(stamp)
+    route_message.build_id = meta.build_id
+    route_message.map_id = meta.map_id
+    route_message.route_id = checkpoint_array.route_id
+    route_message.route_sha256 = str(metadata["sources"]["official_global_path"]["sha256"])
+    route_message.geometry_sha256 = meta.geometry_sha256
+    route_message.closed_loop = bool(metadata["route"]["closed_loop"])
+    route_message.length_m = float(bundle["route_stations"][-1])
+    route_message.local_origin_in_global = list(frame["local_origin_in_global"])
+    route_message.points = [Point(x=p[0], y=p[1], z=p[2]) for p in bundle["route_points"]]
+    route_message.stations_m = list(bundle["route_stations"])
     result = {
         "meta": meta,
+        "route": route_message,
         "lane_markings": lane_array,
         "checkpoints": checkpoint_array,
         "mission_zones": mission_array,
@@ -392,7 +419,49 @@ def _mission_color(status: str) -> ColorRGBA:
         return _color(0.1, 0.9, 0.2, 0.75)
     if status == "derived_official":
         return _color(0.1, 0.65, 1.0, 0.75)
+    if status == "team_final":
+        return _color(0.75, 0.35, 1.0, 0.75)
     return _color(1.0, 0.35, 0.05, 0.60)
+
+
+# Mission corridors, surfaces and actor links share one colour per mission type
+# (matching the drivable_group outlines) so each zone kind is recognisable and
+# toggles as its own RViz namespace; the authority stays in the label.
+MISSION_TYPE_COLORS = {
+    "start_success": (0.3, 1.0, 0.4),
+    "gps_shadow": (0.65, 0.45, 1.0),
+    "static_obstacle": (1.0, 0.55, 0.05),
+    "dynamic_obstacle": (1.0, 0.1, 0.7),
+    "roundabout": (0.15, 0.65, 1.0),
+    "highway_merge": (0.95, 0.65, 0.3),
+    # Not yellow or white: those are lane-paint colours on the same map.
+    "surrounding_vehicle": (0.6, 1.0, 0.1),
+}
+ACTOR_ROLE_STYLES = {
+    "static_obstacle": ((1.0, 0.25, 0.25), "OBST"),
+    "dynamic_obstacle": ((1.0, 0.45, 0.85), "DYN"),
+    "npc_vehicle": ((0.97, 0.97, 0.97), "NPC"),
+}
+
+
+def _mission_type_color(mission_type: str, status: str, alpha: float = 0.85) -> ColorRGBA:
+    rgb = MISSION_TYPE_COLORS.get(mission_type)
+    if rgb is None:
+        return _mission_color(status)
+    return _color(rgb[0], rgb[1], rgb[2], alpha)
+
+
+def _actor_summary(zone: Mapping[str, Any]) -> str:
+    parts = []
+    for role, (_, tag) in ACTOR_ROLE_STYLES.items():
+        links = [
+            short_link_id(item["link_id"]) for item in zone.get("actor_sources") or []
+            if item["role"] == role
+        ]
+        if links:
+            shown = "/".join(links[:4]) + ("/+%d" % (len(links) - 4) if len(links) > 4 else "")
+            parts.append("%s %s" % (tag, shown))
+    return " · ".join(parts)
 
 
 MISSION_LABELS = {
@@ -410,6 +479,7 @@ MISSION_LABELS = {
 MISSION_STATUS_LABELS = {
     "official": "OFF",
     "derived_official": "DER",
+    "team_final": "TEAM",
     "provisional": "PROV",
 }
 
@@ -424,7 +494,7 @@ def _mission_rule_payload(item: Mapping[str, Any]) -> Mapping[str, Any]:
     return payload
 
 
-def _mission_label(item: Mapping[str, Any], start: float, end: float) -> str:
+def _mission_label(item: Mapping[str, Any], start: float, end: float, actors: str = "") -> str:
     mission_type = str(item["mission_type"])
     name = MISSION_LABELS.get(mission_type, mission_type.upper())
     payload = _mission_rule_payload(item)
@@ -438,7 +508,8 @@ def _mission_label(item: Mapping[str, Any], start: float, end: float) -> str:
     status = MISSION_STATUS_LABELS.get(str(item["status"]), "?")
     if abs(end - start) <= 1e-6:
         return "%s [%s]\n%.0f m" % (name, status, start)
-    return "%s [%s]\n%.0f–%.0f m" % (name, status, start, end)
+    span = "%s [%s]\n%.0f–%.0f m" % (name, status, start, end)
+    return span + ("\n" + actors if actors else "")
 
 
 def _speed_color(has_limit: bool) -> ColorRGBA:
@@ -455,9 +526,94 @@ def _is_policy_only(item: Mapping[str, Any]) -> bool:
     return _mission_rule_payload(item).get("spatial_mission") is False
 
 
+def _mission_scenario_markers(scenario: Mapping[str, Any], stamp) -> List[Marker]:
+    """Draw each zone's surface outline and its actor links with direction arrows."""
+
+    markers: List[Marker] = []
+    counters: Dict[str, int] = defaultdict(int)
+
+    def next_marker(namespace: str, marker_type: int) -> Marker:
+        value = _marker(namespace, counters[namespace], marker_type, stamp)
+        counters[namespace] += 1
+        return value
+
+    for zone in scenario.get("zones") or []:
+        mission_type = str(zone["mission_type"])
+        surface = zone.get("surface")
+        if surface:
+            # Dashed so a zone boundary never reads as a solid lane marking.
+            outline = next_marker("mission_surface_%s" % mission_type, Marker.LINE_LIST)
+            outline.scale.x = 0.28
+            outline.color = _mission_type_color(mission_type, str(zone["status"]), 0.95)
+            for start, end in dashed_polyline_segments(surface["outlines"], 1.5, 1.0):
+                outline.points.extend((_point(start, 0.34), _point(end, 0.34)))
+            markers.append(outline)
+        for source in zone.get("actor_sources") or []:
+            rgb, _ = ACTOR_ROLE_STYLES.get(str(source["role"]), ((1.0, 1.0, 1.0), ""))
+            namespace = "mission_actors_%s" % mission_type
+            centerline = source["centerline"]
+            line = next_marker(namespace, Marker.LINE_STRIP)
+            line.scale.x = 0.30 if source["role"] == "npc_vehicle" else 0.22
+            line.color = _color(rgb[0], rgb[1], rgb[2], 0.9)
+            line.points = [_point(value, 0.55) for value in centerline]
+            markers.append(line)
+            stations = polyline_stations(centerline)
+            length = float(stations[-1])
+            for station in list(np.arange(min(4.0, 0.5 * length), length, 8.0)) + [max(0.0, length - 1.0)]:
+                head = point_at_station(centerline, stations, min(length, station + 1.5))
+                tail = point_at_station(centerline, stations, max(0.0, station - 1.5))
+                arrow = next_marker(namespace, Marker.ARROW)
+                arrow.scale.x, arrow.scale.y, arrow.scale.z = 0.25, 0.75, 0.9
+                arrow.color = _color(rgb[0], rgb[1], rgb[2], 0.95)
+                arrow.points = [_point(tail, 0.6), _point(head, 0.6)]
+                markers.append(arrow)
+    return markers
+
+
+# "lite" keeps what an operator needs on the map (lane markings, the merged
+# drivable outline, checkpoints, speed and mission layers). "full" adds the
+# per-lane, per-link and per-surface construction layers used to review the
+# HD-map build itself; they are ~180k line points that RViz has to redraw.
+LITE_EXCLUDED_NAMESPACES = {
+    "compact_lane_centerlines",
+    "compact_lane_polygons",
+    "compact_corridor_fills",
+    "compact_intersection_surface_patches",
+    "compact_roundabout_surface",
+    "compact_guarded_junctions",
+    "route",
+    "route_link_direction",
+    "route_link_labels",
+    "route_station",
+    "route_station_text",
+}
+# Actor-source links are scenario-generator review material, not map content.
+LITE_EXCLUDED_PREFIXES = ("drivable_group_", "mission_actors_")
+DEBUG_MARKER_DETAILS = ("lite", "full")
+
+
+def _drivable_outline_marker(product: Mapping[str, Any], stamp) -> Marker:
+    from asmc_hd_map.mission_scenario import merged_outline
+
+    merged = merged_outline(area["polygon"] for area in product.get("drivable_areas", []))
+    outline = _marker("drivable_area_outline", 0, Marker.LINE_LIST, stamp)
+    outline.scale.x = 0.14
+    outline.color = _color(0.2, 0.85, 1.0, 0.95)
+    for ring in merged["outlines"]:
+        for start, end in zip(ring, ring[1:]):
+            outline.points.extend((_point(start, 0.06), _point(end, 0.06)))
+    return outline
+
+
 def build_debug_markers(
-    bundle: Mapping[str, Any], stamp, product: Mapping[str, Any] | None = None
+    bundle: Mapping[str, Any],
+    stamp,
+    product: Mapping[str, Any] | None = None,
+    scenario: Mapping[str, Any] | None = None,
+    detail: str = "full",
 ) -> MarkerArray:
+    if detail not in DEBUG_MARKER_DETAILS:
+        raise RuntimeBundleError("debug marker detail must be lite or full: %s" % detail)
     markers: List[Marker] = []
     # Text labels share one collision set even though their marker namespaces
     # remain independently toggleable in RViz.  This keeps a checkpoint at a
@@ -588,6 +744,9 @@ def build_debug_markers(
     route.points = [_point(value, 0.08) for value in bundle["route_points"]]
     markers.append(route)
 
+    speed_by_link = {
+        str(value["link_id"]): value for value in bundle["metadata"].get("route_speed_limits") or []
+    }
     for index, item in enumerate(bundle["metadata"]["route"]["link_ranges"]):
         start = float(item["start_station_m"])
         end = float(item["end_station_m"])
@@ -615,6 +774,13 @@ def build_debug_markers(
         label.scale.z = 1.15
         label.color = _color(0.45, 0.75, 1.0, 0.95)
         label.text = "%s\n%.0f–%.0f m" % (short_link_id(item["link_id"]), start, end)
+        speed = speed_by_link.get(str(item["link_id"]))
+        if speed is not None:
+            label.text += "\n%.0f km/h" % float(speed["effective_limit_kph"])
+            if speed["competition_cap_kph"] is not None and float(speed["mgeo_max_speed_kph"]) > float(
+                speed["competition_cap_kph"]
+            ):
+                label.text += " (MGeo %.0f)" % float(speed["mgeo_max_speed_kph"])
         markers.append(label)
 
     route_length = float(bundle["metadata"]["route"]["length_xy_m"])
@@ -691,6 +857,11 @@ def build_debug_markers(
         )
         markers.append(text)
 
+    scenario_zones = {
+        str(zone["id"]): zone for zone in (scenario or {}).get("zones") or []
+    }
+    if scenario is not None:
+        markers.extend(_mission_scenario_markers(scenario, stamp))
     for index, item in enumerate(bundle["mission_zones"]):
         start = float(item["route_station_start_m"])
         end = float(item["route_station_end_m"])
@@ -704,7 +875,7 @@ def build_debug_markers(
             if policy_only
             else _speed_color(bool(item.get("has_speed_limit")))
             if speed_rule
-            else _mission_color(str(item["status"]))
+            else _mission_type_color(mission_type, str(item["status"]))
         )
         if policy_corridor:
             coordinates = polyline_slice(bundle["route_points"], bundle["route_stations"], start, end)
@@ -728,7 +899,7 @@ def build_debug_markers(
                 if mission_type == "speed_limit"
                 else "speed_limit_exceptions"
                 if mission_type == "high_speed_exception"
-                else "mission_corridors"
+                else "mission_%s" % mission_type
             )
             zone_marker = _marker(namespace, index, Marker.LINE_STRIP, stamp)
             zone_marker.scale.x = 0.42 if speed_rule else 0.28
@@ -765,7 +936,10 @@ def build_debug_markers(
         text.pose.position = _point(label_position, 2.8 + 0.15 * (index % 4))
         text.scale.z = 1.05
         text.color = color
-        text.text = _mission_label(item, start, end)
+        text.text = _mission_label(
+            item, start, end,
+            _actor_summary(scenario_zones.get(str(item["id"]), {})) if detail == "full" else "",
+        )
         markers.append(text)
 
     origin = choose_label_position(
@@ -792,6 +966,14 @@ def build_debug_markers(
         )
     )
     markers.append(info)
+    if detail == "lite":
+        markers = [
+            value for value in markers
+            if value.ns not in LITE_EXCLUDED_NAMESPACES
+            and not value.ns.startswith(LITE_EXCLUDED_PREFIXES)
+        ]
+        if product is not None:
+            markers.append(_drivable_outline_marker(product, stamp))
     output = MarkerArray()
     output.markers = markers
     return output
@@ -839,12 +1021,31 @@ class CompetitionMapPublisher:
                 raise RuntimeBundleError("compact occupancy grid SHA mismatch")
             with np.load(str(grid_path), allow_pickle=False) as archive:
                 self.occupancy = np.asarray(archive["occupancy"], dtype=np.int8)
+        # Mission surfaces and actor links are debug-only. The spec is rebuilt
+        # from the editable scenario source on every start; if it cannot be
+        # built, the competition topics are still published and only these
+        # markers are left out.
+        self.scenario = None
+        scenario_source_raw = str(rospy.get_param("~mission_scenario_source", "")).strip()
+        try:
+            from asmc_hd_map.mission_scenario import build_mission_scenario_spec
+
+            self.scenario = build_mission_scenario_spec(
+                bundle["repo_root"], Path(scenario_source_raw) if scenario_source_raw else None
+            )
+            for warning in self.scenario["warnings"]:
+                rospy.logwarn("mission scenario spec: %s", warning)
+        except Exception as error:  # noqa: BLE001 - visualization must not block the map
+            rospy.logwarn("mission scenario markers disabled: %s", error)
         self.meta_pub = rospy.Publisher("/hd_map/meta", HdMapMeta, queue_size=1, latch=True)
         self.markings_pub = rospy.Publisher(
             "/hd_map/global/lane_markings", LaneMarkingArray, queue_size=1, latch=True
         )
         self.checkpoints_pub = rospy.Publisher(
             "/hd_map/global/checkpoints", CompetitionCheckpointArray, queue_size=1, latch=True
+        )
+        self.route_pub = rospy.Publisher(
+            "/hd_map/global/route", HdMapRoute, queue_size=1, latch=True
         )
         self.missions_pub = rospy.Publisher(
             "/hd_map/global/mission_zones", MissionZoneArray, queue_size=1, latch=True
@@ -862,14 +1063,22 @@ class CompetitionMapPublisher:
             self.grid_pub = rospy.Publisher(
                 "/hd_map/global/drivable_grid", OccupancyGrid, queue_size=1, latch=True
             )
-        # The debug topic follows the P1-B non-latched contract and is
-        # periodically republished so late RViz subscribers receive it.
+        # The debug topic follows the P1-B non-latched contract
+        # (publication: on_change_or_subscriber). The markers are static, so
+        # they are built once and sent to each new subscriber on connect;
+        # resending a static set only makes RViz rebuild it. RViz "Reset"
+        # clears markers until the display is toggled (re-subscribes) or
+        # debug_republish_hz > 0 refreshes them while someone is subscribed.
+        self.debug_detail = str(rospy.get_param("~debug_marker_detail", "lite")).strip().lower()
+        self.debug_markers = None
         self.debug_pub = rospy.Publisher(
-            "/hd_map/debug/markers", MarkerArray, queue_size=1, latch=False
+            "/hd_map/debug/markers", MarkerArray, queue_size=1, latch=False,
+            subscriber_listener=_DebugMarkerListener(self),
         )
         stamp = rospy.Time.now()
         messages = build_static_messages(bundle, stamp, self.product, self.occupancy)
         self.meta_pub.publish(messages["meta"])
+        self.route_pub.publish(messages["route"])
         self.markings_pub.publish(messages["lane_markings"])
         self.checkpoints_pub.publish(messages["checkpoints"])
         self.missions_pub.publish(messages["mission_zones"])
@@ -877,11 +1086,17 @@ class CompetitionMapPublisher:
             self.lanes_pub.publish(messages["lanes"])
             self.drivable_pub.publish(messages["drivable_areas"])
             self.grid_pub.publish(messages["grid"])
-        self.debug_pub.publish(build_debug_markers(bundle, stamp, self.product))
-        republish_hz = float(rospy.get_param("~debug_republish_hz", 1.0))
-        if republish_hz <= 0.0:
-            raise RuntimeBundleError("debug_republish_hz must be positive")
-        self.timer = rospy.Timer(rospy.Duration(1.0 / republish_hz), self._publish_debug)
+        self.debug_markers = build_debug_markers(
+            bundle, stamp, self.product, self.scenario, self.debug_detail
+        )
+        self._publish_debug(None)
+        republish_hz = float(rospy.get_param("~debug_republish_hz", 0.0))
+        if republish_hz < 0.0:
+            raise RuntimeBundleError("debug_republish_hz must be non-negative")
+        self.timer = (
+            rospy.Timer(rospy.Duration(1.0 / republish_hz), self._publish_debug)
+            if republish_hz > 0.0 else None
+        )
         rospy.loginfo(
             "competition map published: build=%s geometry=%s markings=%d lanes=%d areas=%d "
             "checkpoints=%d missions=%d operational=%s complete=%s",
@@ -897,9 +1112,20 @@ class CompetitionMapPublisher:
         )
 
     def _publish_debug(self, _event) -> None:
-        self.debug_pub.publish(build_debug_markers(
-            self.bundle, rospy.Time.now(), self.product
-        ))
+        if self.debug_markers is not None and self.debug_pub.get_num_connections() > 0:
+            self.debug_pub.publish(self.debug_markers)
+
+
+class _DebugMarkerListener(rospy.SubscribeListener):
+    """Send the cached debug markers to a subscriber as soon as it connects."""
+
+    def __init__(self, node: "CompetitionMapPublisher") -> None:
+        super().__init__()
+        self.node = node
+
+    def peer_subscribe(self, topic_name, topic_publish, peer_publish) -> None:
+        if self.node.debug_markers is not None:
+            peer_publish(self.node.debug_markers)
 
 
 def main() -> None:

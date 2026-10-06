@@ -5,10 +5,12 @@ import unittest
 import numpy as np
 
 from asmc_hd_map.compact_drivable import (
+    CompactDrivableError,
     _same_direction_siblings,
     apply_intersection_node_pair_closures,
     corridor_bridge_polygon,
     explicit_intersection_links,
+    intersection_link_widening,
     lane_boundary_polygon,
     lane_width_polygon,
 )
@@ -56,6 +58,44 @@ class CompactDrivableUnitTest(unittest.TestCase):
         self.assertAlmostEqual(float(polygon[:, 1].min()), -2.0, places=4)
         self.assertAlmostEqual(float(polygon[:, 0].min()), 0.0, places=4)
         self.assertAlmostEqual(float(polygon[:, 0].max()), 10.0, places=4)
+
+    def test_lane_width_widening_is_one_sided_half_sine_with_flush_ends(self):
+        straight = link("turn", "road", [(0, 0), (10, 0)], link_type="1")
+        ring = np.asarray(lane_width_polygon(
+            straight, 0.25, {"side": "right", "maximum_extra_m": 1.0}
+        ))[:, :2]
+        half = len(ring) // 2
+        left, right = ring[:half], ring[half:][::-1]
+        self.assertTrue(np.allclose(left[:, 1], 1.75))
+        self.assertAlmostEqual(right[0, 1], -1.75)
+        self.assertAlmostEqual(right[-1, 1], -1.75)
+        self.assertAlmostEqual(right[:, 1].min(), -2.75, places=3)
+        self.assertAlmostEqual(right[np.argmin(right[:, 1]), 0], 5.0, places=3)
+
+    def test_intersection_widening_accepts_only_reviewed_intersection_links(self):
+        links = {
+            "turn": link("turn", "road", [(0, 0), (10, 0)], link_type="1"),
+            "road": link("road", "road", [(0, 0), (10, 0)]),
+        }
+        item = {"link_id": "turn", "side": "right", "maximum_extra_m": 1.0,
+                "profile": "half_sine", "basis": "review"}
+        widening = intersection_link_widening(
+            {"intersection_link_widening": [item]}, links, {"turn", "road"}, {"1"}
+        )
+        self.assertEqual(widening["turn"]["maximum_extra_m"], 1.0)
+        for bad in (
+            {"link_id": "road"},
+            {"link_id": "missing"},
+            {"side": "outer"},
+            {"maximum_extra_m": 3.5},
+            {"profile": "linear"},
+            {"basis": ""},
+        ):
+            with self.assertRaises((CompactDrivableError, KeyError)):
+                intersection_link_widening(
+                    {"intersection_link_widening": [dict(item, **bad)]},
+                    links, {"turn", "road"}, {"1"},
+                )
 
     def test_lane_boundary_polygon_follows_supported_reviewed_paint(self):
         value = link("route", "road", [(0, 0), (10, 0)])

@@ -1,8 +1,9 @@
 """Load and validate the frozen P1-D read-only runtime bundle.
 
 This module deliberately contains no ROS imports.  It verifies that the
-reviewed stage14 geometry, P1-C competition metadata, P1-A baseline, and the
-official route still agree before a ROS publisher is allowed to expose them.
+reviewed stage14 geometry, P1-C competition metadata, the HD-map runtime pins,
+and the official route still agree before a ROS publisher is allowed to expose
+them.
 It never repairs or joins lane-marking geometry at runtime.
 """
 
@@ -19,6 +20,17 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 import yaml
 
 from .schema import validate_canonical_document
+
+
+# The P1-A whole-repository baseline v1 stays frozen. Its hd_map and
+# competition_inputs.metadata_bundle sections are re-pinned here whenever a
+# reviewed HD-map or metadata change lands (rule book v1.2, 2026-09-30).
+RUNTIME_PINS_REL = Path("config/baselines/hd_map_runtime_pins_v1.yaml")
+RUNTIME_PINS_ID = "hd_map_runtime_pins_v1"
+DEFAULT_MAP_REL = Path(
+    "src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json"
+)
+DEFAULT_METADATA_REL = Path("src/asmc_hd_map/config/kcity2025_competition_metadata.yaml")
 
 
 class RuntimeBundleError(ValueError):
@@ -86,7 +98,7 @@ def find_repo_root(path: Path) -> Path:
 
     value = path.expanduser().resolve()
     for parent in (value.parent,) + tuple(value.parents):
-        if (parent / "config/baselines/runtime_baseline_v1.yaml").is_file():
+        if (parent / RUNTIME_PINS_REL).is_file():
             return parent
     raise RuntimeBundleError("repository root was not found from %s" % value)
 
@@ -303,6 +315,56 @@ def source_type_name(feature: Mapping[str, Any]) -> str:
     return "curated"
 
 
+def build_runtime_pins(repo_root: Path) -> Dict[str, Any]:
+    """Pin the reviewed map and metadata that the runtime publisher may load."""
+
+    repo_root = Path(repo_root).resolve()
+    map_path = _require_file(repo_root / DEFAULT_MAP_REL, "reviewed HD map")
+    metadata_path = _require_file(repo_root / DEFAULT_METADATA_REL, "competition metadata")
+    map_document = _load_json(map_path)
+    metadata = _load_yaml(metadata_path)
+    validation = metadata.get("validation") or {}
+    if validation.get("passed") is not True:
+        raise RuntimeBundleError("competition metadata validation is not passed")
+    features = list(map_document.get("features") or [])
+    feature_counts = Counter(str(feature.get("feature_type")) for feature in features)
+    statuses = Counter(str(item.get("status")) for item in metadata.get("mission_zones") or [])
+    return {
+        "schema_version": 1,
+        "baseline_id": RUNTIME_PINS_ID,
+        "purpose": "asmc_hd_map runtime publisher pins; supersedes only the hd_map and "
+        "competition_inputs.metadata_bundle sections of config/baselines/runtime_baseline_v1.yaml",
+        "hd_map": {
+            "path": DEFAULT_MAP_REL.as_posix(),
+            "map_id": map_document.get("map_id"),
+            "build_id": (map_document.get("build") or {}).get("build_id"),
+            "file_sha256": sha256_file(map_path),
+            "geometry_sha256": geometry_sha256(map_document),
+            "feature_counts": dict(sorted(feature_counts.items())),
+        },
+        "competition_inputs": {
+            "metadata_bundle": {
+                "path": DEFAULT_METADATA_REL.as_posix(),
+                "sha256": sha256_file(metadata_path),
+                "schema_version": metadata.get("schema_version"),
+                "checkpoint_count": len(metadata.get("checkpoints") or []),
+                "mission_zone_count": len(metadata.get("mission_zones") or []),
+                "mission_status_counts": dict(sorted(statuses.items())),
+            }
+        },
+    }
+
+
+def dump_runtime_pins(document: Mapping[str, Any]) -> str:
+    return yaml.safe_dump(
+        dict(document),
+        allow_unicode=True,
+        sort_keys=False,
+        default_flow_style=False,
+        width=120,
+    )
+
+
 def load_runtime_bundle(
     map_path: Path,
     metadata_path: Path,
@@ -315,8 +377,8 @@ def load_runtime_bundle(
     metadata_path = _require_file(Path(metadata_path), "competition metadata")
     repo_root = find_repo_root(map_path)
     baseline_path = _require_file(
-        Path(baseline_path) if baseline_path else repo_root / "config/baselines/runtime_baseline_v1.yaml",
-        "runtime baseline",
+        Path(baseline_path) if baseline_path else repo_root / RUNTIME_PINS_REL,
+        "HD-map runtime pins",
     )
     data_root = Path(data_root).expanduser().resolve() if data_root else default_data_root(repo_root)
 

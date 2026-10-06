@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import math
 import threading
 import sys
 import time
@@ -15,6 +16,9 @@ import rospy
 
 from asmc_hd_map.local_crop import (
     crop_occupancy_grid,
+    EgoWindow,
+    crop_ego_occupancy_grid,
+    select_ego_bounds,
     geometry_bounds,
     select_intersecting_bounds,
 )
@@ -35,6 +39,9 @@ def _lane_bounds(lane):
 def main() -> int:
     rospy.init_node("verify_local_map_topics", anonymous=True)
     timeout = float(rospy.get_param("~timeout_s", 30.0))
+    mode = str(rospy.get_param("~crop_mode", "ego"))
+    window = EgoWindow(**{key: float(rospy.get_param("~" + key, value)) for key, value in
+                          dict(front_m=90., rear_m=30., left_m=30., right_m=30.).items()})
     extent_m = float(rospy.get_param("~extent_m", 120.0))
     test_x = float(rospy.get_param("~test_x", -131.68979755061446))
     test_y = float(rospy.get_param("~test_y", -428.3310229377821))
@@ -119,7 +126,9 @@ def main() -> int:
     )
 
     bounds = [_lane_bounds(lane) for lane in global_lanes.lanes]
-    indices = select_intersecting_bounds(bounds, (test_x, test_y), extent_m)
+    yaw = math.radians(pose.heading)
+    indices = (select_ego_bounds(bounds, (test_x, test_y), yaw, window) if mode == "ego"
+               else select_intersecting_bounds(bounds, (test_x, test_y), extent_m))
     expected_lane_ids = [global_lanes.lanes[index].id for index in indices]
     _require(
         [lane.id for lane in local_lanes.lanes] == expected_lane_ids,
@@ -130,13 +139,16 @@ def main() -> int:
     global_occupancy = np.asarray(global_grid.data, dtype=np.int8).reshape(
         int(global_grid.info.height), int(global_grid.info.width)
     )
-    expected_grid = crop_occupancy_grid(
-        global_occupancy,
-        global_grid.info.resolution,
-        (global_grid.info.origin.position.x, global_grid.info.origin.position.y),
-        (test_x, test_y),
-        extent_m,
-    )
+    crop_args = (global_occupancy, global_grid.info.resolution,
+                 (global_grid.info.origin.position.x, global_grid.info.origin.position.y),
+                 (test_x, test_y))
+    expected_grid = (crop_ego_occupancy_grid(*crop_args, yaw, window) if mode == "ego"
+                     else crop_occupancy_grid(*crop_args, extent_m))
+    expected_yaw = yaw if mode == "ego" else 0.
+    _require(abs(local_grid.info.origin.orientation.z - math.sin(expected_yaw / 2)) < 1e-8,
+             "local grid orientation is incorrect")
+    _require(abs(local_grid.info.origin.orientation.w - math.cos(expected_yaw / 2)) < 1e-8,
+             "local grid orientation is incorrect")
     actual_grid = np.asarray(local_grid.data, dtype=np.int8).reshape(
         int(local_grid.info.height), int(local_grid.info.width)
     )
@@ -148,7 +160,7 @@ def main() -> int:
     _require(
         abs(local_grid.info.origin.position.x - expected_grid.origin_x) < 1e-9
         and abs(local_grid.info.origin.position.y - expected_grid.origin_y) < 1e-9,
-        "local grid origin is not aligned to the global cells",
+        "local grid map origin differs from the requested window",
     )
     _require(set(actual_grid.reshape(-1)).issubset({-1, 0, 100}), "invalid occupancy value")
 

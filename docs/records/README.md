@@ -36,7 +36,7 @@
 | [P5-C perception runtime acceptance v1](./baselines/perception-p5c-runtime-acceptance-v1.md) | 2026-09-25, `asmc_perception_runtime_acceptance_v1` | 현재 producer/subscriber/type/rate/stamp/frame와 이동 경로를 실행·정적으로 검증 | [`perception_runtime_acceptance_v1.yaml`](../../config/contracts/perception_runtime_acceptance_v1.yaml) |
 | [P5-D/E perception closeout v1](./baselines/perception-p5de-closeout-v1.md) | 2026-09-26, P5-D/E closeout | typed consumer 인계, 대표 lane-family bag, 중복 producer 방지와 최종 운영 경계 | [`perception_runtime_acceptance_v1.yaml`](../../config/contracts/perception_runtime_acceptance_v1.yaml) |
 | [P2-A drivable input](./baselines/kcity2025-drivable-input-v1.md) | P2-A, stage14 SHA | link별 clip/guard 입력 판정 | P2-B 결과가 후속 product |
-| [P2-B compact drivable](./baselines/kcity2025-compact-drivable-v1.md) | `kcity2025_roundabout_extended_drivable_v5` | Lane/vector/grid 개수와 product SHA | [HD Map runtime contract](../contracts/hd-map/runtime-v1.md)와 현 product hash |
+| [P2-B compact drivable](./baselines/kcity2025-compact-drivable-v1.md) | `kcity2025_static_junction_widened_drivable_v6` | Lane/vector/grid 개수와 product SHA | [HD Map runtime contract](../contracts/hd-map/runtime-v1.md)와 현 product hash |
 | [route curation 2026-09-17](./hd-map/kcity2025-route-curation-20260917.md) | stage01~14 audit | source별 선택, 사용자 검수와 링크별 보정 근거 | machine policy와 current package guide |
 
 `runtime-v1`은 최초 통합 전 상태를 동결한 snapshot이다. 이후 HD Map launch 이름,

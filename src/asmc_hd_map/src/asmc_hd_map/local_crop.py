@@ -7,6 +7,7 @@ global ``map`` frame: only their spatial extent changes.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 import math
 from typing import Iterable, Optional, Sequence, Tuple
 
@@ -142,3 +143,87 @@ def crop_occupancy_grid(
         origin_y=float(output_origin[1]),
         resolution=resolution,
     )
+
+
+@dataclass(frozen=True)
+class EgoWindow:
+    """Heading-aligned window: x forward, y left, referenced to rear axle."""
+
+    front_m: float = 90.0
+    rear_m: float = 30.0
+    left_m: float = 30.0
+    right_m: float = 30.0
+
+    def __post_init__(self):
+        if not all(math.isfinite(v) and v > 0 for v in (
+            self.front_m, self.rear_m, self.left_m, self.right_m
+        )):
+            raise ValueError("window distances must be positive and finite")
+
+    def corners(self, xy, yaw):
+        xy = np.asarray(xy, dtype=float)
+        if xy.shape != (2,) or not np.isfinite(xy).all() or not math.isfinite(yaw):
+            raise ValueError("ego pose must be finite XY and yaw")
+        c, s = math.cos(yaw), math.sin(yaw)
+        rotation = np.array([[c, -s], [s, c]])
+        local = np.array([
+            [-self.rear_m, -self.right_m], [self.front_m, -self.right_m],
+            [self.front_m, self.left_m], [-self.rear_m, self.left_m],
+        ])
+        return local @ rotation.T + xy
+
+
+def select_ego_bounds(item_bounds, xy, yaw, window):
+    """Conservative AABB/rotated-window intersection using separating axes.
+
+    Geometry and IDs remain intact; bounding boxes may select extra features.
+    """
+    corners = window.corners(xy, yaw)
+    c, s = math.cos(yaw), math.sin(yaw)
+    axes = np.array([[1., 0.], [0., 1.], [c, s], [-s, c]])
+    projected = corners @ axes.T
+    low, high = projected.min(axis=0), projected.max(axis=0)
+    indices = [i for i, bounds in enumerate(item_bounds) if bounds is not None]
+    if not indices:
+        return []
+    boxes = np.asarray([item_bounds[i] for i in indices], dtype=float)
+    centers = .5 * (boxes[:, :2] + boxes[:, 2:])
+    half_sizes = .5 * (boxes[:, 2:] - boxes[:, :2])
+    box_centers = centers @ axes.T
+    radii = half_sizes @ np.abs(axes.T)
+    intersects = np.all(box_centers + radii >= low - 1e-9, axis=1)
+    intersects &= np.all(box_centers - radii <= high + 1e-9, axis=1)
+    return [indices[i] for i in np.flatnonzero(intersects)]
+
+
+def crop_ego_occupancy_grid(occupancy, resolution, origin_xy, ego_xy, yaw, window):
+    """Nearest source-cell samples at rotated output cell centers (no smoothing).
+
+    Output +x is ego forward and +y left. Its origin is in map; the ROS grid
+    origin quaternion must contain yaw. Unknown source/outside cells stay -1.
+    """
+    source = np.asarray(occupancy)
+    resolution = float(resolution)
+    if source.ndim != 2 or not math.isfinite(resolution) or resolution <= 0:
+        raise ValueError("grid must be 2D with positive finite resolution")
+    origin = np.asarray(origin_xy, dtype=float)
+    if origin.shape != (2,) or not np.isfinite(origin).all():
+        raise ValueError("grid origin must be finite XY")
+    corner = window.corners(ego_xy, yaw)[0]
+    width = int(math.ceil((window.front_m + window.rear_m) / resolution - 1e-12))
+    height = int(math.ceil((window.left_m + window.right_m) / resolution - 1e-12))
+    # Cache the cell-center lattice; only the pose-dependent transform changes.
+    local_x, local_y = _cell_centers(width, height, resolution)
+    c, s = math.cos(yaw), math.sin(yaw)
+    xs = np.floor((corner[0] + c * local_x - s * local_y - origin[0]) / resolution).astype(np.int64)
+    ys = np.floor((corner[1] + s * local_x + c * local_y - origin[1]) / resolution).astype(np.int64)
+    valid = (xs >= 0) & (ys >= 0) & (xs < source.shape[1]) & (ys < source.shape[0])
+    output = np.full((height, width), -1, dtype=np.int8)
+    output[valid] = source[ys[valid], xs[valid]]
+    return OccupancyCrop(output, float(corner[0]), float(corner[1]), resolution)
+
+
+@lru_cache(maxsize=8)
+def _cell_centers(width, height, resolution):
+    return np.meshgrid((np.arange(width) + .5) * resolution,
+                       (np.arange(height) + .5) * resolution)

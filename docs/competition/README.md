@@ -1,8 +1,12 @@
 # 대회 환경·규정·공개 자산
 
-> **문서 역할:** Canonical Summary — 팀 개발에 필요한 본선 v1.1 요약과 자산 목록
+> **문서 역할:** Canonical Summary — 팀 개발에 필요한 본선 v1.2 요약과 자산 목록
 >
-> **기준:** 규정집 v1.1, 2026-09-08. 주최 측 최신 규정집과 공식 공지가 항상 우선한다.
+> **기준:** 규정집 v1.2, 2026-09-30 (v1.0 07-11, v1.1 09-08). 주최 측 최신 규정집과 공식 공지가
+> 항상 우선한다.
+
+v1.2 변경: 일정 추가, 체크포인트 15개로 정리, 네트워크 스펙(판정 전용 채널·CVS 미제공 필드) 명확화,
+시뮬레이터 성능 고정, 신호·차로 판정 기준 보완.
 
 이 문서는 팀 저장소에 필요한 결론만 둔다. 규정 원문·Q&A·배포 링크는 저장소 상위의
 `docs/competition/`에 보존하고, 구현 설정은 [운영 가이드](../operations/README.md)와
@@ -19,16 +23,25 @@
 | 항목 | 기준 |
 |---|---|
 | 주최 PC | i5-13600KF, RTX 4060 Ti, 32 GB, Windows 11 |
-| 참가 PC | 팀 알고리즘 PC, OS 자유 |
-| 외부 통신 | 주최가 허용한 UDP만 사용 |
+| 참가 PC | 데스크톱·서버·워크스테이션·노트북, OS 자유 |
+| 외부 통신 | 2-8의 허용 UDP만 사용, 그 외 사용 시 실격 |
 | 팀 PC 내부 | ROS1 Noetic 사용 가능 |
 | 판정 | Unity + UDP, 판정·녹화를 시뮬과 동시에 실행 |
 | 주행 | 2회, 제한시간 15분 |
-| 제출 후 | 코드·파라미터·주석 수정 불가 |
-| 지연 제출 | 패널티 시간 부과, 구체치는 후속 공지 기준 |
+| 제출 후 | 코드·파라미터·주석과 실행 명령 인자 수정 불가, 네트워크 IP·Port만 예외 |
+| 지연 제출 | 등록·PC 제출 시간 초과 시 각 주행 차시마다 30초 패널티 |
 | 현장 장비 | 휴대용 모니터·LAN cable 제공; keyboard·mouse 지참 |
 
-한 조는 5팀의 독립 single-player 환경이며 전체 7개 조다. 당일 시간표는 공식 공지를 따른다.
+각 팀은 독립 single-player 환경에서 주행한다. 10/30 당일은 08:30~09:30 등록·PC 제출,
+오전조 14팀 09:30~12:30, 오후조 20팀 13:30~17:30, 17:30~18:30 결과 집계이며, 앞 팀이 끝나 공석이
+생기면 다음 팀이 준비한다.
+
+| 일정 | 내용 |
+|---|---|
+| 09-30 | 규정 설명회·본선 순번 추첨 (온라인) |
+| 10-01 ~ 10-16 | 중간 점검 2차 (온라인) |
+| 10월 4주차 | 센서 파일 제출 및 검수 |
+| 10-29 / 10-30 / 10-31 | 현장 세팅 / 개최식·본선 / 시상식 |
 
 본선 profile에서 rosbridge, gRPC, Semantic/Instance/Object GT와 기타 privileged 입력을
 실행하지 않는다. 센서 지연과 packet 유실은 팀 책임이므로 판정·녹화 부하를 포함해 rate,
@@ -62,9 +75,15 @@ staleness, latency와 자원 사용량을 측정한다.
 | Right | 1.15, -0.65, 1.20 | 0, 10, 290 | 640×480 | 130° |
 
 - 맵: `R_KR_PG_K-City_2025`
-- 대회 SIM: `25.S4.MolitComp03`
-- 차량 제어: Ego Ctrl Cmd, `cmd type 1`, `ctrl mode 2`
+- 대회 SIM: `25.S4.MolitComp03`, System Time Scale 1·Target FPS 60, Rendering Quality High 고정
+- 차량 제어: Ego Ctrl Cmd, `cmd type 1`(accel/brake), `ctrl mode 2`만 허용
 - 상태: Competition Vehicle Status와 CollisionData
+- **판정 전용:** Ego Detail Status, Ego Vehicle Status, Get TrafficLight Status는 판정 프로그램만
+  쓰며 본선에서 참가팀은 사용할 수 없다. 팀 bridge는 26r1 호환을 위해 수신할 수 있지만 runtime
+  노드가 소비하면 안 된다 ([v1.2 영향](../handoffs/competition/rule-v1.2-impacts.md)).
+- Competition Vehicle Status 미제공: `pos_x/y/z`, `vel_y/z`, `accel_x/y/z`, 타이어 횡력·side slip·
+  cornering stiffness
+- 사용하지 않는 센서 네트워크는 Disconnect할 수 있다.
 
 현장 동일 포트·IP 파생 계약과 v3 15 Hz UI 저장본은 적용됐다. 다만 v3는 30초
 실제 완성 scan은 약 12 Hz로 관측됐고 팀 요구상 허용된다. 없는 scan을 복제하지 않으며
@@ -80,7 +99,7 @@ packet/latency/resource와 손재호 tracking 품질을 계속 관찰한다.
 | `2026_molit_comp_cam_set.json` | 주최 공개 카메라 센서셋 |
 | `2026_molit_comp_global_path.txt` | 전역경로 xyz 4,429점 |
 | `2026_molit_comp_sample_scene.json` | 샘플 시나리오와 Ego spawn |
-| `2026_molit_comp_checkpoints.json` | START/END + 1~15 pose·yaw |
+| `2026_molit_comp_checkpoints.json` | 규정집 v1.2 START/END + 1~14 pose·yaw (이전 16점은 `_20260803_16pt.json`) |
 | `link_set.json`, `node_set.json`, `global_info.json` | 기존 MGeo 원본 |
 
 대회 당일 새 맵은 제시되지 않지만 시나리오는 달라질 수 있다. 샘플 Ego spawn은 대략
@@ -106,7 +125,7 @@ ls "$ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_"*
 
 - 전역경로 길이: **2,184.61 m**
 - 출발 성공 5% station: **109.23 m**
-- 체크포인트: START/END와 1~15, 총 **16개**
+- 체크포인트: START/END와 1~14, 총 **15개** (v1.2에서 2026-08-03 공지의 11번 삭제, 12~15 재번호)
 - 통과 판정: 각 공식 pose의 반경 **3 m** 이내
 - 별도 MGeo 경로 생성은 허용되지만 체크포인트를 순서대로 경유해야 한다.
 - 실제 본선 시나리오는 당일 운영 요원이 load하며 2회에 같은 시나리오를 사용한다.
@@ -126,36 +145,42 @@ ls "$ASMC_DATA/R_KR_PG_K-city_2025/2026_molit_comp_"*
 | 출발 | 1분 안에 경로 5%를 통과하지 못하면 주행 실패 |
 | 속도 | 기본 60 kph. `A2256W000411` 시작→`A2256W000153` 끝은 고속 예외 |
 | 과속 | 초과 즉시 15초, 이후 3초 지속마다 15초 추가 |
-| 신호 | 앞바퀴가 정지선을 넘는 시점의 신호 기준, 위반 15초 |
-| 차로 | 바퀴 1개가 차선에 3초 지속 접촉할 때마다 5초; 차선변경 시간제한 없음 |
+| 신호 | 초록 또는 좌회전 신호에 맞게 주행; 앞바퀴가 정지선을 넘는 시점의 신호로 판정, 위반 15초; 빨간불에 감속 없이 통과하면 해당 차시 실패 |
+| 차로 | 흰·노란 실선과 중앙선; 바퀴 1개가 3초 지속 접촉할 때마다 5초 (Ego Detail Status 바퀴 위치); 차선변경 시간제한 없음 |
 | 장애물 | CollisionData 충돌마다 15초 |
-| GPS 음영 | GPS 전체 blackout; 해당 구역은 차로 준수 패널티 미적용 |
+| GPS 음영 | GPS 전체 blackout; 해당 구역은 차로 준수 패널티 미적용; 구역 내 랜덤 미션은 장애물 회피 |
 | NPC | 회전교차로·고속도로 외 구간에도 추가될 수 있음 |
 
 하이패스 30 kph와 Foggy 감속은 별도 강제 규칙이 아니다. 팀의 안전 감속 정책과 공식
 속도 채점 규칙을 구분한다.
 
-일반 센서 noise는 인가하지 않지만 GPS 음영 미션의 blackout은 유지된다. 완주팀은 실제
+올해 한시적으로 GPS·IMU noise는 인가하지 않지만 GPS 음영 미션의 blackout은 유지된다.
+카메라 Compression Ratio는 자유다. 완주팀은 실제
 주행시간+패널티의 2회 중 최단 기록으로 순위를 정한다. 미완주팀은 체크포인트 달성도와
 총 주행시간 순이며 완주팀이 항상 우선한다.
 
-주행 불능은 바퀴 네 개가 주행 영역을 벗어나거나, 충돌 후 복귀할 수 없거나, 체크포인트를
-불연속 통과한 경우다. 승인된 체크포인트 복귀에는 15초 패널티가 붙는다. 시뮬레이터 또는
+주행 불능은 바퀴 네 개가 중앙선·실선 등 주행 영역을 벗어나 경로를 완전히 이탈하거나(GPS 음영
+구역 예외), 충돌 후 주행할 수 없거나, 체크포인트를 불연속 통과한 경우다. 체크포인트는 각 위치
+반경 3 m 안으로 통과해야 한다. 승인된 체크포인트 복귀에는 15초 패널티가 붙는다. 시뮬레이터 또는
 주최 하드웨어 문제는 해당 차시를 무효로 하고 재주행한다.
 
 ## 6. 당일 절차와 배포 전 gate
 
-1. 주최 Client PC와 팀 PC를 LAN으로 연결한다.
-2. 운영 요원이 scenario·sensor set을 load하고 시뮬레이션을 준비한다.
-3. IP, route, UDP packet rate와 Ctrl 응답을 확인한다.
-4. 알고리즘을 시작한 뒤 제출 규칙에 따라 수정·조작을 중단한다.
-5. 판정 reset·시작, 주행과 점수 저장을 2회 수행한다.
+1. Operator 1명이 PC를 수령해 주최 Client PC와 LAN으로 연결한다.
+2. 운영 요원이 미션 시나리오를 load하고 Ego를 keyboard 모드·P기어로 둔다.
+3. 운영 요원이 센서 세팅 파일을 load하고 네트워크를 연결한 뒤 Operator와 함께 확인한다.
+4. 운영 요원이 판정 프로그램을 준비하고 Operator는 알고리즘 실행을 준비한다.
+5. Operator가 코드를 실행하면 이후 PC를 조작할 수 없다. 판정 프로그램은 주행 시작에 맞춰 시작한다.
+6. 주행 종료 후 판정 데이터를 저장하고 2번부터 다음 차시를 준비한다.
 
 - [ ] 허용 UDP 채널만 competition profile에서 기동
 - [ ] Ctrl mode 2와 packet 목적지 확인
 - [ ] Competition Vehicle Status·CollisionData 수신
 - [ ] 카메라·LiDAR·GPS·IMU 포트와 rate 확인
-- [ ] 체크포인트 16개, 3 m 반경과 순서 검증
+- [ ] 체크포인트 15개, 3 m 반경과 순서 검증
+- [ ] runtime 노드가 Ego Vehicle Status 파생 토픽(`/Ego_topic`)을 소비하지 않음
+- [ ] 모든 `/ctrl_cmd` 송신 노드가 `longlCmdType=1`만 사용
+- [ ] planning이 `route_speed_limits`의 effective 상한(60 구간 최대 60 km/h)을 지킴
 - [ ] 속도 예외 링크 경계와 15분 timeout 검증
 - [ ] GPS blackout에서 localization fallback 검증
 - [ ] 판정·녹화 동시 부하에서 drop·latency·CPU/GPU 확인

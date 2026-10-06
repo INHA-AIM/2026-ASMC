@@ -29,10 +29,10 @@
 - dynamic allowlist: `A2256W000066, A2256W000087, A2256W000206, A2256W000211, A2256W000599, A2256W000636, A2256W001124, A2256W001125`
 - roundabout extension: `A2256W000134`
 - roundabout surface stitch: `A2256W000151` (envelope reference only; not a new lane)
-- legacy road: `89834.44 m²`, compact road: `14925.40 m²` (`16.61%`)
+- legacy road: `89834.44 m²`, compact road: `14948.32 m²` (`16.64%`)
 - reviewed geometry SHA: `01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf`
-- product SHA: `e3ace572721885a3d22bd2c14d6932c6215a3be451fb33c774ebd8982cda0ff9`
-- grid SHA: `ee0db44e5d672e58e429a09a68ed119fb92400d2a83a2f304f9ddc9d1e011fd0`
+- product SHA: `e111234a66b2b0da87c8a98f093b4e1fd510234a6b71073f7c62a8f180f85795`
+- grid SHA: `b78b5765833b04048b1d81f66d6c9c5316d995a4867382e23f563f5519769574`
 
 ## 소비 규칙
 

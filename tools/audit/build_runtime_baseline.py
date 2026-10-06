@@ -38,6 +38,8 @@ HD_MAP_SUMMARY_REL = Path(
 )
 SENSOR_REL = Path("config/morai/sensors/ASMC_sensor_set_v2.json")
 CHECKPOINT_REL = Path("R_KR_PG_K-city_2025/2026_molit_comp_checkpoints.json")
+# Rule book v1.2 (2026-09-30): START/END plus checkpoints 1-14.
+OFFICIAL_CHECKPOINT_COUNT = 15
 GLOBAL_PATH_REL = Path("R_KR_PG_K-city_2025/2026_molit_comp_global_path.txt")
 COMPETITION_METADATA_REL = Path(
     "src/asmc_hd_map/config/kcity2025_competition_metadata.yaml"
@@ -738,8 +740,10 @@ def audit_competition_inputs(
     global_path = require_file(data_root / GLOBAL_PATH_REL, "official global path")
     checkpoints = read_json(checkpoint_path)
     checkpoint_items = checkpoints.get("checkpoints", [])
-    if len(checkpoint_items) != 16:
-        raise BaselineError(f"expected 16 official checkpoints, got {len(checkpoint_items)}")
+    if len(checkpoint_items) != OFFICIAL_CHECKPOINT_COUNT:
+        raise BaselineError(
+            f"expected {OFFICIAL_CHECKPOINT_COUNT} official checkpoints, got {len(checkpoint_items)}"
+        )
     if float(checkpoints.get("pass_radius_m", -1.0)) != 3.0:
         raise BaselineError("official checkpoint radius is not 3 m")
     points: List[Tuple[float, float, float]] = []
@@ -784,8 +788,10 @@ def audit_competition_inputs(
         metadata_validation = metadata.get("validation") or {}
         if metadata_validation.get("passed") is not True:
             raise BaselineError("P1-C competition metadata validation did not pass")
-        if len(metadata.get("checkpoints") or []) != 16:
-            raise BaselineError("P1-C competition metadata must contain 16 checkpoints")
+        if len(metadata.get("checkpoints") or []) != OFFICIAL_CHECKPOINT_COUNT:
+            raise BaselineError(
+                f"P1-C competition metadata must contain {OFFICIAL_CHECKPOINT_COUNT} checkpoints"
+            )
         statuses = Counter(
             str(item.get("status")) for item in (metadata.get("mission_zones") or [])
         )

@@ -45,7 +45,7 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
 
     def test_official_checkpoint_contract_and_reviewed_link_assignment(self):
         document = self.document
-        self.assertEqual(len(document["checkpoints"]), 16)
+        self.assertEqual(len(document["checkpoints"]), 15)
         self.assertEqual(document["route"]["length_xy_m"], 2184.611723336)
         self.assertEqual(document["route"]["start_success_5_percent_station_m"], 109.230586167)
         self.assertEqual(document["route"]["closure_error_xy_m"], 0.0)
@@ -62,11 +62,10 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
             "8": "A2256W000304",
             "9": "A2256W000866",
             "10": "A2256W000846",
-            "11": "A2256W000411",
-            "12": "A2256W000445",
-            "13": "A2256W000153",
-            "14": "A2256W000446",
-            "15": "A2256W000126",
+            "11": "A2256W000445",
+            "12": "A2256W000153",
+            "13": "A2256W000446",
+            "14": "A2256W000126",
         }
         self.assertEqual(
             {item["id"]: item["link_id"] for item in document["checkpoints"]},
@@ -77,6 +76,53 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
         self.assertEqual(document["checkpoints"][0]["route_station_m"], 0.0)
         self.assertEqual(document["validation"]["max_checkpoint_route_projection_error_m"], 0.0)
         self.assertEqual(document["validation"]["max_checkpoint_link_projection_error_m"], 0.0)
+
+    def test_route_speed_limits_cap_mgeo_by_the_competition_profile(self):
+        limits = {item["link_id"]: item for item in self.document["route_speed_limits"]}
+        self.assertEqual(list(limits), self.document["route"]["link_ids"])
+        for link_id in ("A2256W000202", "A2256W000315"):
+            self.assertEqual(limits[link_id]["mgeo_max_speed_kph"], 70.0)
+            self.assertEqual(limits[link_id]["effective_limit_kph"], 60.0)
+        for link_id in ("A2256W000411", "A2256W000420", "A2256W000408", "A2256W000445", "A2256W000153"):
+            self.assertIsNone(limits[link_id]["competition_cap_kph"])
+            self.assertEqual(limits[link_id]["speed_zone_id"], "high_speed_exception")
+        self.assertEqual(limits["A2256W000153"]["effective_limit_kph"], 50.0)
+        self.assertTrue(all(
+            item["effective_limit_kph"] <= 60.0
+            for item in limits.values() if item["competition_cap_kph"] is not None
+        ))
+        self.assertEqual(self.document["validation"]["route_speed_links_capped_below_mgeo"], 2)
+
+    def test_route_speed_limit_tampering_fails_closed(self):
+        changed = copy.deepcopy(self.document)
+        changed["route_speed_limits"][9]["effective_limit_kph"] = 70.0
+        with self.assertRaisesRegex(CompetitionMetadataError, "min\\(MGeo, cap\\)"):
+            validate_competition_metadata(changed)
+
+    def test_rule_v1_2_payloads(self):
+        missions = {item["id"]: item for item in self.document["mission_zones"]}
+        shadow = json.loads(missions["gps_shadow_candidate"]["rule_payload_json"])
+        self.assertEqual(shadow["random_mission_types"], ["static_obstacle"])
+        self.assertIs(shadow["lane_keeping_penalty"], False)
+        boundaries = [item for item in self.document["mission_zones"]
+                      if item["mission_type"] == "traffic_light"
+                      and item["route_station_start_m"] == item["route_station_end_m"]]
+        self.assertEqual(len(boundaries), 5)
+        for item in boundaries:
+            payload = json.loads(item["rule_payload_json"])
+            self.assertEqual(payload["judgement"], "signal_when_front_wheels_cross_stopline")
+            self.assertEqual(payload["red_without_deceleration"], "run_failure")
+
+    def test_rule_v1_2_removed_the_a411_checkpoint(self):
+        # Rule book v1.2 dropped the 2026-08-03 checkpoint 11 at (66.885, 89.198)
+        # on A411 and renumbered the rest without moving them.
+        for item in self.document["checkpoints"]:
+            position = item["pose"]["position"]
+            self.assertGreater(math.hypot(position["x"] - 66.88496106746607,
+                                          position["y"] - 89.19790052389726), 3.0)
+        by_id = {item["id"]: item for item in self.document["checkpoints"]}
+        self.assertEqual(by_id["11"]["pose"]["position"]["x"], 75.41420370276319)
+        self.assertEqual(by_id["14"]["pose"]["position"]["x"], -74.86074459552765)
 
     def test_official_yaw_is_preserved_and_quaternion_is_derived(self):
         source = json.loads(
@@ -98,7 +144,7 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
         self.assertEqual(len(missions), 15)
         self.assertEqual(self.document["validation"]["mission_status_counts"], {
             "derived_official": 4,
-            "provisional": 11,
+            "team_final": 11,
         })
         speed_profile = sorted(
             (
@@ -147,20 +193,28 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
             )
         )
         self.assertEqual(missions["gps_shadow_candidate"]["start_link_id"], "A2256W000126")
+        # Obstacle zones include approach and recovery distance around their
+        # junctions; the obstacle itself is expected on the junction links.
+        static = missions["static_obstacle_candidate"]
+        self.assertEqual(static["link_ids"], ["A2256W000213", "A2256W000222", "A2256W000220"])
+        self.assertAlmostEqual(static["route_station_start_m"], 0.5 * (237.422 + 315.906), places=2)
+        self.assertAlmostEqual(static["route_station_end_m"], 365.775, places=2)
         self.assertEqual(
-            missions["static_obstacle_candidate"]["link_ids"],
-            ["A2256W000222"],
+            json.loads(static["rule_payload_json"])["obstacle_expected_link_ids"], ["A2256W000222"]
         )
+        dynamic = missions["dynamic_obstacle_candidate"]
         self.assertEqual(
-            missions["dynamic_obstacle_candidate"]["link_ids"],
+            json.loads(dynamic["rule_payload_json"])["obstacle_expected_link_ids"],
             ["A2256W000728", "A2256W000599", "A2256W000207", "A2256W000205"],
         )
+        self.assertLess(dynamic["route_station_start_m"], 427.851)
+        self.assertGreater(dynamic["route_station_end_m"], 482.819)
         monitoring = missions["traffic_light_activation_A236_to_A308"]
         self.assertEqual(monitoring["route_station_start_m"], 160.009167271)
         self.assertEqual(monitoring["route_station_end_m"], 609.876838441)
         self.assertEqual(monitoring["start_link_id"], "A2256W000236")
         self.assertEqual(monitoring["end_link_id"], "A2256W000308")
-        self.assertFalse(monitoring["planning_enforcement_allowed"])
+        self.assertTrue(monitoring["planning_enforcement_allowed"])
         monitoring_payload = json.loads(monitoring["rule_payload_json"])
         self.assertFalse(monitoring_payload["spatial_mission"])
         self.assertEqual(monitoring_payload["policy_scope"], "link_span")
@@ -170,8 +224,13 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
         self.assertTrue(monitoring_payload["disable_outside_zone"])
         traffic = [item for item in missions.values() if item["mission_type"] == "traffic_light"]
         self.assertEqual(len(traffic), 6)
-        self.assertTrue(all(item["status"] == "provisional" for item in traffic))
-        self.assertTrue(all(item["planning_enforcement_allowed"] is False for item in traffic))
+        self.assertTrue(all(item["status"] == "team_final" for item in traffic))
+        self.assertTrue(all(item["planning_enforcement_allowed"] is True for item in traffic))
+        for item in missions.values():
+            if item["status"] == "team_final":
+                payload = json.loads(item["rule_payload_json"])
+                self.assertEqual(payload["authority"], "team_final")
+                self.assertTrue(item["planning_enforcement_allowed"])
         traffic_boundaries = [
             item
             for item in traffic
@@ -190,10 +249,22 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
     def test_provisional_mission_cannot_enable_planning(self):
         changed = copy.deepcopy(self.document)
         candidate = next(
-            item for item in changed["mission_zones"] if item["status"] == "provisional"
+            item for item in changed["mission_zones"] if item["status"] == "team_final"
         )
-        candidate["planning_enforcement_allowed"] = True
+        candidate["status"] = "provisional"
+        self.assertTrue(candidate["planning_enforcement_allowed"])
         with self.assertRaisesRegex(CompetitionMetadataError, "provisional mission"):
+            validate_competition_metadata(changed)
+
+    def test_team_final_mission_keeps_its_authority_tag(self):
+        changed = copy.deepcopy(self.document)
+        candidate = next(
+            item for item in changed["mission_zones"] if item["status"] == "team_final"
+        )
+        payload = json.loads(candidate["rule_payload_json"])
+        payload.pop("authority")
+        candidate["rule_payload_json"] = json.dumps(payload, sort_keys=True)
+        with self.assertRaisesRegex(CompetitionMetadataError, "authority tag"):
             validate_competition_metadata(changed)
 
     def test_missing_authority_status_fails(self):
@@ -212,13 +283,12 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
 
     def test_frozen_source_sha_fails_closed(self):
         source_text = self.config.read_text(encoding="utf-8")
+        pinned = self.document["sources"]["official_checkpoints"]["sha256"]
+        self.assertEqual(source_text.count(pinned), 1)
         with tempfile.TemporaryDirectory() as raw:
             changed_config = Path(raw) / "source.yaml"
             changed_config.write_text(
-                source_text.replace(
-                    "a77bcfdcc86be35ab62c15013dfd6f1ccb21869728778a997b360725165f5a6f",
-                    "0" * 64,
-                ),
+                source_text.replace(pinned, "0" * 64),
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(CompetitionMetadataError, "frozen input SHA changed"):

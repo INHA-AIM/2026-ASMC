@@ -2,7 +2,10 @@
   <!-- Reviewed markings/metadata plus the P2-B compact drivable product. -->
   <arg name="rviz" default="true"/>
   <arg name="data_root" default="/data"/>
-  <arg name="debug_republish_hz" default="1.0"/>
+  <!-- lite: lane markings, merged drivable outline, checkpoints, speed and
+       mission layers. full: adds per-lane/link/surface build-review layers. -->
+  <arg name="debug_marker_detail" default="lite"/>
+  <arg name="debug_republish_hz" default="0.0"/>
   <arg name="map_path"
        default="$(find asmc_hd_map)/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json"/>
   <arg name="metadata_path"
@@ -17,8 +20,21 @@
   <arg name="local_gps_topic" default="/gps"/>
   <arg name="local_imu_topic" default="/imu"/>
   <arg name="local_extent_m" default="120.0"/>
-  <arg name="local_publish_hz" default="5.0"/>
+  <arg name="local_crop_mode" default="ego"/>
+  <arg name="local_front_m" default="90.0"/>
+  <arg name="local_rear_m" default="30.0"/>
+  <arg name="local_left_m" default="30.0"/>
+  <arg name="local_right_m" default="30.0"/>
+  <arg name="local_publish_hz" default="20.0"/>
   <arg name="local_pose_stale_timeout_sec" default="0.5"/>
+  <!-- Ego footprint (Ioniq 5 around the rear-axle base_link) on the HD map.
+       The map->base_link TF follows RViz by default so the view can track the
+       vehicle; keep it off when a runtime localization node owns that TF and
+       keep the bridge publish_map_tf off while this is on. -->
+  <arg name="publish_ego_markers" default="$(arg rviz)"/>
+  <arg name="publish_ego_tf" default="$(arg rviz)"/>
+  <arg name="ego_frame_id" default="base_link"/>
+  <arg name="follow_ego" default="true"/>
 
   <node pkg="asmc_hd_map" type="competition_map_publisher_node.py"
         name="competition_map_publisher" output="screen" required="true">
@@ -28,10 +44,12 @@
     <param name="baseline_path" value="$(arg baseline_path)"/>
     <param name="data_root" value="$(arg data_root)"/>
     <param name="debug_republish_hz" value="$(arg debug_republish_hz)"/>
+    <param name="debug_marker_detail" value="$(arg debug_marker_detail)"/>
   </node>
 
-  <node if="$(arg publish_local)" pkg="asmc_hd_map" type="local_map_crop_node.py"
+  <node pkg="asmc_hd_map" type="local_map_crop_node.py"
         name="local_map_crop" output="screen" required="true">
+    <param name="publish_crops" value="$(arg publish_local)"/>
     <param name="pose_source" value="$(arg local_pose_source)"/>
     <param name="ego_topic" value="$(arg local_ego_topic)"/>
     <param name="pose_topic" value="$(arg local_pose_topic)"/>
@@ -44,8 +62,20 @@
     <param name="maximum_gps_imu_gap_ms" value="100.0"/>
     <param name="gps_offset_tolerance_m" value="1.0"/>
     <param name="extent_m" value="$(arg local_extent_m)"/>
+    <param name="crop_mode" value="$(arg local_crop_mode)"/>
+    <param name="front_m" value="$(arg local_front_m)"/>
+    <param name="rear_m" value="$(arg local_rear_m)"/>
+    <param name="left_m" value="$(arg local_left_m)"/>
+    <param name="right_m" value="$(arg local_right_m)"/>
     <param name="publish_hz" value="$(arg local_publish_hz)"/>
     <param name="pose_stale_timeout_sec" value="$(arg local_pose_stale_timeout_sec)"/>
+    <param name="publish_ego_markers" value="$(arg publish_ego_markers)"/>
+    <param name="publish_ego_tf" value="$(arg publish_ego_tf)"/>
+    <param name="ego_frame_id" value="$(arg ego_frame_id)"/>
+    <param name="vehicle_rear_overhang_m" value="0.79"/>
+    <param name="vehicle_wheelbase_m" value="3.0"/>
+    <param name="vehicle_front_overhang_m" value="0.845"/>
+    <param name="vehicle_width_m" value="1.892"/>
     <!-- Current-lane reference is the map-frame base_link origin (rear axle). -->
     <param name="lane_switch_penetration_m" value="0.30"/>
     <param name="lane_switch_confirmation_samples" value="2"/>
@@ -54,6 +84,10 @@
     <param name="lane_intersection_switch_margin_m" value="0.75"/>
   </node>
 
-  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="competition_map_debug_rviz"
+  <node if="$(eval arg('rviz') and not arg('follow_ego'))" pkg="rviz" type="rviz"
+        name="competition_map_debug_rviz"
         args="-d $(find asmc_hd_map)/rviz/competition_map_debug.rviz"/>
+  <node if="$(eval arg('rviz') and arg('follow_ego'))" pkg="rviz" type="rviz"
+        name="competition_map_debug_rviz"
+        args="-d $(find asmc_hd_map)/rviz/competition_map_follow_ego.rviz"/>
 </launch>

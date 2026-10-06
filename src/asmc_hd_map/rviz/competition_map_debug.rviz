@@ -19,23 +19,28 @@ Visualization Manager:
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /hd_map/debug/markers
-      Name: "HD map lanes, route, checkpoints, missions"
+      Name: "HD map lanes, drivable outline, checkpoints, missions"
+      Queue Size: 2
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /hd_map/debug/ego_markers
+      Name: "Ego footprint (base_link, GPS+IMU)"
       Queue Size: 2
     - Alpha: 0.34
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: true
-      Enabled: true
-      Name: "Compact drivable OccupancyGrid"
+      Enabled: false
+      Name: "Drivable area whole map (0.2 m planner grid, heavy)"
       Topic: /hd_map/global/drivable_grid
       Unreliable: false
       Use Timestamp: false
-    - Alpha: 0.7
+    - Alpha: 0.4
       Class: rviz/Map
       Color Scheme: map
-      Draw Behind: false
-      Enabled: false
-      Name: "Planner local drivable crop (120 m)"
+      Draw Behind: true
+      Enabled: true
+      Name: "Drivable area near ego (0.2 m, 120 m GPS+IMU crop)"
       Topic: /hd_map/local/drivable_grid
       Unreliable: false
       Use Timestamp: false
@@ -60,6 +65,21 @@ Visualization Manager:
       Target Frame: map
       X: -25
       Y: -105
+    Saved:
+      - Angle: 3.141592653589793
+        Class: rviz/TopDownOrtho
+        Name: Competition route overview (upright text)
+        Scale: 420
+        Target Frame: map
+        X: -25
+        Y: -105
+      - Angle: 3.141592653589793
+        Class: rviz/TopDownOrtho
+        Name: Follow ego (base_link)
+        Scale: 22
+        Target Frame: base_link
+        X: 0
+        Y: 0
 Window Geometry:
   Height: 950
   Width: 1450

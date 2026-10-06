@@ -2,7 +2,7 @@
 
 AutoNav K-City 2025 HD맵의 deterministic builder, 운영 publisher, local cache와 개발 검수
 도구를 소유하는 ROS1 package다. Phase 2 통합이 완료됐으며 운영 제품은
-`kcity2025_roundabout_extended_drivable_v5`다.
+`kcity2025_static_junction_widened_drivable_v6`다.
 
 > **문서 역할:** Active Package Guide — deterministic builder, runtime publisher와 개발 검수
 
@@ -40,6 +40,22 @@ RViz를 포함한 검수:
 roslaunch asmc_hd_map competition_map_debug.launch
 ```
 
+RViz는 기본으로 ego 차량 박스(`base_link`)를 따라간다. 전체 경로 보기로 띄우려면 `follow_ego:=false`를
+준다. 기본 표시는 가벼운 `lite`(차선·주행가능영역·체크포인트·미션)다. HD맵 제작 검수용 차로·링크
+레이어까지 보려면 `debug_marker_detail:=full`을 준다.
+
+```bash
+roslaunch asmc_hd_map competition_map_debug.launch                       # ego 따라가기, lite
+roslaunch asmc_hd_map competition_map_debug.launch follow_ego:=false \
+  debug_marker_detail:=full                                                # 전체 경로, 제작 검수
+```
+
+박스·색·TF 의미는 [runtime contract §4.0](../../docs/contracts/hd-map/runtime-v1.md#40-ego-차량-박스와-base_link-추적)을 본다.
+
+미션 구간은 종류별 namespace(`mission_<type>`, 점선 `mission_surface_<type>`, full 전용 `mission_actors_<type>`)로
+나뉘어 RViz에서 따로 켜고 끌 수 있다. 범례는 [runtime contract §4](../../docs/contracts/hd-map/runtime-v1.md#4-rviz-표시)를 보고,
+구간별 회피 차로·actor 후보와 샘플링 API는 [미션 시나리오 spec](../../docs/handoffs/hd-map/mission-scenario-spec.md)을 본다.
+
 최종/legacy/원태 source와 최신/과거 주행가능영역 비교:
 
 ```bash
@@ -60,13 +76,23 @@ publisher는 입력 SHA나 build 조합이 맞지 않으면 일부 토픽을 내
 | 물리 차선·정지선 | 121 + 7 = 128 `LaneMarking` |
 | 차로 | 70 `Lane` |
 | vector 주행가능영역 | 102 `DrivableArea` = Lane 70 + corridor fill 18 + surface patch 14 |
-| 체크포인트 | 16, 통과 반경 3 m |
+| 체크포인트 | 15 (규정집 v1.2), 통과 반경 3 m |
 | mission/policy/speed zone | 15 |
 | raster | 0.2 m/cell, vector product의 파생 lookup |
 
 판제는 latched global vector/topic을 정본으로 사용한다. local lane/grid는 map frame과 global ID를
 유지하는 선택적 cache이며 planner horizon이나 별도 정본이 아니다. 현재 차로 association은
 GPS 안테나가 아니라 후륜축 중심 `base_link`의 map 좌표를 기준으로 한다.
+운영 `competition_map.launch`는 크롭을 기본으로 끄고 `/hd_map/context`는 계속 제공한다.
+크롭을 `publish_local:=true`로 켰을 때 local 창은 heading 기준 전방 90 m·후방 30 m·좌우 각 30 m(0.2 m, 600×300, 최대 20 Hz)다.
+현재 차로와 context는 pose callback에서 즉시 발행하고 20 Hz로 유효 상태를 갱신한다.
+공식 경로·누적거리는 `/hd_map/global/route`, 현재 구간·속도·미션 시작/종료 좌표는
+`/hd_map/context`에서 받는다. GPS 무효 시 현재 정보를 무효화하고 마지막 음영구간 정보만
+역사값으로 제공하며, 복귀하면 새 GPS로 재획득한다. 판제 반영 항목은
+[판제 인수 문서](../../docs/handoffs/hd-map/planning-consumption-v1.md)를 따른다. `hd_map_consumer_example.py`의 `~layers`와
+`SemanticMapIndex`로 필요한 vector/미션 레이어만 받고 제한속도·구간·신호등/정지선을 조회한다.
+링크별 유효 최대속도 39개는 속도 zone payload로 전달한다. 상세 설정과 좌표 변환은
+[runtime 계약](../../docs/contracts/hd-map/runtime-v1.md#22-선택-구독과-규칙-조회)을 따른다.
 
 수치만으로 artifact를 동일하다고 판단하지 않는다. `/hd_map/meta`의 `build_id`, `map_id`,
 `geometry_sha256`와 `manifest_sha256`를 함께 확인한다.
@@ -101,7 +127,10 @@ GPS 안테나가 아니라 후륜축 중심 `base_link`의 map 좌표를 기준�
 저장소 루트에서 `$ASMC_DATA`를 설정한 뒤 실행한다.
 
 ```bash
+python3 src/asmc_hd_map/scripts/rebuild_hd_map_artifacts.py --check   # 아래 전부와 pin 일치
+
 python3 src/asmc_hd_map/scripts/build_competition_metadata.py --check
+python3 src/asmc_hd_map/scripts/build_runtime_pins.py --check
 
 PYTHONPATH=src/asmc_hd_map/src \
   python3 src/asmc_hd_map/scripts/build_drivable_area_input_audit.py --check
@@ -114,6 +143,7 @@ PYTHONPATH=src/asmc_hd_map/src \
 | policy/source | committed result |
 |---|---|
 | `kcity2025_competition_metadata_source.yaml` | `kcity2025_competition_metadata.yaml` |
+| reviewed map + committed metadata | `config/baselines/hd_map_runtime_pins_v1.yaml` |
 | `kcity2025_drivable_area_audit_source.yaml` | `kcity2025_drivable_area_input_audit.yaml` |
 | `kcity2025_compact_drivable_source.yaml` | `kcity2025_compact_drivable_map.json`, `...grid.npz` |
 
@@ -191,6 +221,14 @@ roslaunch asmc_hd_map hd_map_source_comparison.launch repo_root:=/root/ws
 
 ## 변경 절차와 회귀 gate
 
+미션 구간·속도·체크포인트·주행가능영역은 판제 연동 결과에 따라 계속 바뀔 수 있다. `team_final`도 팀 현재
+기준값일 뿐 수정 금지 상태가 아니다. source를 고친 뒤 생성물 연쇄는 한 번에 다시 만든다.
+
+```bash
+python3 src/asmc_hd_map/scripts/rebuild_hd_map_artifacts.py          # 다시 생성
+python3 src/asmc_hd_map/scripts/rebuild_hd_map_artifacts.py --check  # stale 단계만 보고
+```
+
 1. 바꾸려는 대상이 물리 도색, topology, metadata 또는 drivable surface 중 무엇인지 구분한다.
 2. source policy와 provenance를 수정하고 generated output 직접 편집은 피한다.
 3. builder `--check`, 관련 unit test와 feature count/hash 차이를 검토한다.
@@ -200,8 +238,8 @@ roslaunch asmc_hd_map hd_map_source_comparison.launch repo_root:=/root/ws
 
 특히 다음은 함께 확인한다.
 
-- checkpoint 16개와 route 순서·3 m 포함
-- speed profile 전 구간 coverage와 provisional enforcement 금지
+- checkpoint 15개와 route 순서·3 m 포함
+- speed profile 전 구간 coverage, `route_speed_limits`의 min(MGeo, 공식 상한), provisional enforcement 금지와 `team_final` authority 태그
 - Lane/DrivableArea 연결성, hole·seam과 반대방향/미사용 차로 제외
 - `build_id`, source SHA, geometry hash와 feature count
 - global/local cell parity와 `LaneAssociation` hysteresis

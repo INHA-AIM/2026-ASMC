@@ -13,14 +13,14 @@ inputs:
 # P1-A/P1-C frozen inputs. A changed organizer file or reviewed map must be
 # explicitly reviewed here instead of being silently accepted by --write.
 input_sha256:
-  official_checkpoints: a77bcfdcc86be35ab62c15013dfd6f1ccb21869728778a997b360725165f5a6f
+  official_checkpoints: 8e853c1cbf2443e6df5c6aeeef1e02ec996649f117fd7180e2c64b97245fdef2
   official_global_path: 50658991e607d9339d76e4cd6cb169dfc733ea53b93de2c3e222460bb497cc05
   current_link_set: 5ce0fd57da07b83221c0a4d117b0606b2d9c094c8de476a7d1176c78a4dc5b0f
   route_links: d5444dce6da7bb7da1f88c3cdf1cbdef4e1a0eebcf8d0d7a5db03830a97554bf
   reviewed_hd_map: ffcccb478ab9fea5232631dab49145eb59c9211a88c6d2f460108355fc4c54ee
 
 validation:
-  checkpoint_count: 16
+  checkpoint_count: 15
   pass_radius_m: 3.0
   expected_route_length_m: 2184.6117233360696
   route_length_tolerance_m: 0.000001
@@ -31,7 +31,9 @@ validation:
 
 # Checkpoints at a shared link node are geometrically ambiguous. This reviewed
 # assignment preserves the route ownership agreed in the P1-A roadmap. The
-# official position and yaw are never changed by this mapping.
+# official position and yaw are never changed by this mapping. Rule book v1.2
+# (2026-09-30) removed the 2026-08-03 checkpoint 11 on A411 and renumbered
+# 12-15 to 11-14 without moving them.
 checkpoint_link_assignment:
   START_END: A2256W000748
   "1": A2256W000748
@@ -44,11 +46,10 @@ checkpoint_link_assignment:
   "8": A2256W000304
   "9": A2256W000866
   "10": A2256W000846
-  "11": A2256W000411
-  "12": A2256W000445
-  "13": A2256W000153
-  "14": A2256W000446
-  "15": A2256W000126
+  "11": A2256W000445
+  "12": A2256W000153
+  "13": A2256W000446
+  "14": A2256W000126
 
 mission_zones:
   - id: start_success_5_percent
@@ -57,7 +58,7 @@ mission_zones:
     source_reference: official_rule_route_5_percent
     description: 출발 후 공식 전역경로 길이의 5%를 통과하면 출발 성공
     bounds: {kind: route_fraction, start_fraction: 0.0, end_fraction: 0.05}
-    rule_payload: {required_route_fraction: 0.05}
+    rule_payload: {required_route_fraction: 0.05, time_limit_s: 60, on_failure: run_failure}
 
   # Effective competition speed profile.  Keep these route partitions
   # non-overlapping so planning does not have to apply an all-route rule and
@@ -69,7 +70,11 @@ mission_zones:
     description: 출발부터 A846 종료까지 적용되는 공식 최고속도 60 km/h 구간
     bounds: {kind: link_span, start_link_id: A2256W000748, end_link_id: A2256W000846}
     speed_limit_kph: 60.0
-    rule_payload: {interpretation: effective_competition_speed_limit}
+    rule_payload:
+      interpretation: effective_competition_speed_limit
+      judged_by: ego_vehicle_status_speed
+      overspeed_penalty_s: 15
+      sustained_overspeed_repeat_s: 3
 
   - id: high_speed_exception
     mission_type: high_speed_exception
@@ -77,7 +82,10 @@ mission_zones:
     source_reference: official_rule_mapped_to_route_links
     description: 공식 고주로 속도 예외 corridor를 route link 경계에 투영
     bounds: {kind: link_span, start_link_id: A2256W000411, end_link_id: A2256W000153}
-    rule_payload: {speed_limit_kph: null, interpretation: no_competition_speed_cap}
+    rule_payload:
+      speed_limit_kph: null
+      interpretation: no_competition_speed_cap
+      official_boundary: A2256W000411 start to A2256W000153 end
 
   - id: speed_limit_60_after_high_speed
     mission_type: speed_limit
@@ -86,11 +94,16 @@ mission_zones:
     description: A451 시작부터 START/END까지 다시 적용되는 공식 최고속도 60 km/h 구간
     bounds: {kind: link_span, start_link_id: A2256W000451, end_link_id: A2256W000751}
     speed_limit_kph: 60.0
-    rule_payload: {interpretation: effective_competition_speed_limit}
+    rule_payload:
+      interpretation: effective_competition_speed_limit
+      judged_by: ego_vehicle_status_speed
+      overspeed_penalty_s: 15
+      sustained_overspeed_repeat_s: 3
 
   - id: traffic_light_activation_A236_to_A308
     mission_type: traffic_light
-    status: provisional
+    status: team_final
+    review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
     source_reference: team_qna_and_situation_review
     description: A236 시작부터 A308 종료까지만 신호등 인지 노드 활성화가 필요한 구간
     bounds: {kind: link_span, start_link_id: A2256W000236, end_link_id: A2256W000308}
@@ -101,57 +114,82 @@ mission_zones:
       runtime_activation_hint: enable_within_zone_only
       disable_outside_zone: true
       stop_decision_requires_validated_signal_and_stopline: true
-      requires_official_boundary_confirmation: true
 
   - id: gps_shadow_candidate
     mission_type: gps_shadow
-    status: provisional
+    status: team_final
+    review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
     source_reference: team_map_review_shadow_zone
     description: A448 종료 노드부터 A126 종료까지의 GPS 음영 후보
     bounds: {kind: after_link_to_link_end, after_link_id: A2256W000448, end_link_id: A2256W000126}
     rule_payload:
-      requires_official_boundary_confirmation: true
       usable_opposite_lane_link_ids: [A2256W000131]
       drivable_area_bridge_id: gps_shadow_A126_A131
+      # Rule book v1.2: GPS is fully blacked out, lane keeping is not scored
+      # here, and the random mission inside the zone is obstacle avoidance only.
+      gps_blackout: true
+      lane_keeping_penalty: false
+      random_mission_types: [static_obstacle]
 
   - id: static_obstacle_candidate
     mission_type: static_obstacle
-    status: provisional
-    source_reference: team_qna_and_situation_review
-    description: A213 종료 후 A220 시작 전 교차로 영역인 A222 정적 장애물 구간
-    bounds: {kind: link_span, start_link_id: A2256W000222, end_link_id: A2256W000222}
+    status: team_final
+    review: {reviewed_on: '2026-10-06', decision: widened_to_organizer_figure_box}
+    source_reference: team_qna_and_organizer_route_figure
+    description: A213 중간부터 A220 끝까지, 장애물이 놓이는 A222 교차로와 접근·복귀 거리를 포함한 정적 장애물 구간
+    # The organizer figure boxes the junction with its approach and exit, so the
+    # zone gives planning distance to prepare and to return to its lane. The
+    # obstacle itself is expected inside the junction (obstacle_expected_link_ids,
+    # and the scenario generator spawns only there).
+    bounds: {kind: link_fraction_span, start_link_id: A2256W000213, start_fraction: 0.5, end_link_id: A2256W000220, end_fraction: 1.0}
     rule_payload:
-      boundary_interpretation: after_A213_before_A220_intersection
-      requires_official_boundary_confirmation: true
+      boundary_interpretation: A213_midpoint_through_A220_end
+      obstacle_expected_link_ids: [A2256W000222]
+      judged_by: collision_data
+      collision_penalty_s: 15
 
   - id: dynamic_obstacle_candidate
     mission_type: dynamic_obstacle
-    status: provisional
-    source_reference: team_qna_and_situation_review
-    description: A728부터 A205까지의 동적 장애물 구간
-    bounds: {kind: link_span, start_link_id: A2256W000728, end_link_id: A2256W000205}
+    status: team_final
+    review: {reviewed_on: '2026-10-06', decision: widened_to_organizer_figure_box}
+    source_reference: team_qna_and_organizer_route_figure
+    description: A202 중간부터 A315 앞부분까지, A728-A205 교차로와 접근·복귀 거리를 포함한 동적 장애물 구간
+    # Same principle as the static zone: about 30 m of approach before the
+    # A728 stop line and 20 m of exit after A205; actors stay on the junction links.
+    bounds: {kind: link_fraction_span, start_link_id: A2256W000202, start_fraction: 0.5, end_link_id: A2256W000315, end_fraction: 0.3}
     rule_payload:
-      boundary_interpretation: A728_through_A205
-      requires_official_boundary_confirmation: true
+      boundary_interpretation: A202_midpoint_through_A315_30_percent
+      obstacle_expected_link_ids: [A2256W000728, A2256W000599, A2256W000207, A2256W000205]
+      judged_by: collision_data
+      collision_penalty_s: 15
 
   - id: roundabout_candidate
     mission_type: roundabout
-    status: provisional
+    status: team_final
+    review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
     source_reference: official_figure_team_link_mapping
     description: A148-A146-A151 회전교차로 후보
     bounds: {kind: link_span, start_link_id: A2256W000148, end_link_id: A2256W000151}
-    rule_payload: {requires_official_boundary_confirmation: true}
+    rule_payload: {mission: npc_cut_in, judged_by: collision_data}
 
   - id: surrounding_vehicle_candidate
     mission_type: surrounding_vehicle
-    status: provisional
+    status: team_final
+    review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
     source_reference: official_figure_team_link_mapping
     description: A411-A420-A408-A445-A153 주변 차량 인지 후보
     bounds: {kind: link_span, start_link_id: A2256W000411, end_link_id: A2256W000153}
-    rule_payload: {requires_official_boundary_confirmation: true}
+    rule_payload: {mission: npc_cut_in, judged_by: collision_data}
 
 traffic_light_zones:
   derive_from_reviewed_stoplines: true
-  status: provisional
+  status: team_final
+  review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
   source_reference: stage14_reviewed_stopline_projection
-  planning_enforcement_allowed: false
+  planning_enforcement_allowed: true
+  # Rule book v1.2 judgement shared by every derived stopline boundary.
+  rule_payload:
+    judgement: signal_when_front_wheels_cross_stopline
+    proceed_on: [green, left_turn_arrow]
+    violation_penalty_s: 15
+    red_without_deceleration: run_failure

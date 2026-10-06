@@ -69,6 +69,8 @@ polygon은 첫 점을 끝에 반복하지 않는 open ring이고 `map` 좌표를
 
 | 토픽 | 타입 | 전달 규칙 |
 |---|---|---|
+| `/hd_map/global/route` | `asmc_hd_map/HdMapRoute` | 공식 경로·XY 누적거리, latched |
+| `/hd_map/context` | `asmc_hd_map/HdMapContext` | 후륜축 pose·현재 구간·미션 경계·GPS 상태, non-latched |
 | `/hd_map/meta` | `asmc_msgs/HdMapMeta` | global, latched |
 | `/hd_map/global/lane_markings` | `asmc_msgs/LaneMarkingArray` | global, latched |
 | `/hd_map/global/lanes` | `asmc_msgs/LaneArray` | global, latched |
@@ -83,7 +85,11 @@ polygon은 첫 점을 끝에 반복하지 않는 open ring이고 `map` 좌표를
 
 모든 publisher queue size는 1이다. 전역 토픽은 build가 바뀔 때 다시 발행하고, 늦게 접속한
 consumer가 전체 정적 상태를 즉시 받을 수 있게 latch한다. `OccupancyGrid` 값은 drivable `0`,
-non-drivable `100`, unknown `-1`로 고정한다.
+non-drivable `100`, unknown `-1`로 고정한다. 로컬 grid의 header는 map이며 기본 ego heading
+크롭은 origin quaternion에 회전을 포함한다. cell 조회 시 origin translation과 rotation을
+모두 적용한다. 거리·주기 및 `map_square` 호환 설정은 [runtime v1](./runtime-v1.md)을 따른다.
+속도 zone payload의 `route_speed_limits`는 링크별 유효 상한을 km/h로 전달하며 미션 구간·신호등
+정지선 연결은 같은 `MissionZoneArray`에서 선택 조회한다. 기존 메시지 MD5는 유지한다.
 
 ## 4. 안전 규칙
 
@@ -121,3 +127,14 @@ P1-D와 2단계 gate를 거쳐 현재 구현됐다. 구현 결과와 실행법�
 
 후속 구현이 완료됐다는 사실은 v1 wire schema를 다시 열었다는 뜻이 아니다. 필드 변경이
 필요하면 기존 타입을 수정하지 않고 새 계약 version/type을 추가한다.
+
+## 6. 선택 소비와 GPS 상태 확장
+
+운영 launch는 local lane/grid 크롭을 기본으로 끈다. 전역 정보를 한 번 받아 필요한 레이어와
+거리만 판제가 선택한다. `publish_local:=true`는 선택 cache를 켜며 전체 미션·경로 조회를 제한하지 않는다.
+새 타입은 HD 패키지에 추가했고 기존 `asmc_msgs` MD5는 유지한다.
+[확장 계약 YAML](../../../src/asmc_hd_map/config/hd_map_context_contract_v1.yaml)과
+[판제 인수 문서](../../handoffs/hd-map/planning-consumption-v1.md)에 field, 단위, freshness와 적용 항목을 남겼다.
+GPS 무효는 즉시 `pose_valid=false`, GPS 미수신은 0.5초 후 STALE이다.
+현재 lane/station/speed/미션 경계는 사용하지 않고 역사값만 별도로 받는다.
+GPS 복귀 시 lane hysteresis와 route hint를 초기화하고 새 관측으로 다시 조회한다.

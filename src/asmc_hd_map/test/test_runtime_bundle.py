@@ -8,8 +8,11 @@ import unittest
 import yaml
 
 from asmc_hd_map.runtime_bundle import (
+    RUNTIME_PINS_REL,
     RuntimeBundleError,
+    build_runtime_pins,
     choose_label_position,
+    dump_runtime_pins,
     geometry_sha256,
     lateral_point_at_station,
     load_runtime_bundle,
@@ -28,7 +31,7 @@ MAP_PATH = (
     / "src/asmc_hd_map/reports/kcity2025_route_curation_20260917/route_curated_candidate_map.json"
 )
 METADATA_PATH = REPO_ROOT / "src/asmc_hd_map/config/kcity2025_competition_metadata.yaml"
-BASELINE_PATH = REPO_ROOT / "config/baselines/runtime_baseline_v1.yaml"
+BASELINE_PATH = REPO_ROOT / RUNTIME_PINS_REL
 RVIZ_PATH = REPO_ROOT / "src/asmc_hd_map/rviz/competition_map_debug.rviz"
 
 
@@ -44,10 +47,16 @@ class RuntimeBundleTest(unittest.TestCase):
             "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf",
         )
         self.assertEqual(self.bundle["feature_counts"], {"lane_marking": 121, "stopline": 7})
-        self.assertEqual(len(self.bundle["checkpoints"]), 16)
+        self.assertEqual(len(self.bundle["checkpoints"]), 15)
         self.assertEqual(len(self.bundle["mission_zones"]), 15)
         self.assertAlmostEqual(self.bundle["route_stations"][-1], 2184.611723336, places=6)
         self.assertEqual(geometry_sha256(self.bundle["map"]), self.bundle["geometry_sha256"])
+
+    def test_runtime_pins_match_committed_artifacts(self):
+        self.assertEqual(
+            BASELINE_PATH.read_text(encoding="utf-8"),
+            dump_runtime_pins(build_runtime_pins(REPO_ROOT)),
+        )
 
     def test_station_interpolation_and_slice_preserve_endpoints(self):
         points = [[0.0, 0.0, 1.0], [3.0, 0.0, 2.0], [3.0, 4.0, 3.0]]
@@ -92,8 +101,12 @@ class RuntimeBundleTest(unittest.TestCase):
             for display in displays
             if display.get("Class") == "rviz/Map"
         }
-        self.assertTrue(maps["/hd_map/global/drivable_grid"]["Enabled"])
-        self.assertFalse(maps["/hd_map/local/drivable_grid"]["Enabled"])
+        # The drivable fill follows the ego at full 0.2 m resolution through the
+        # GPS+IMU local crop; the whole-map planner grid stays available but off
+        # because RViz has to texture its 22M cells.
+        self.assertTrue(maps["/hd_map/local/drivable_grid"]["Enabled"])
+        self.assertFalse(maps["/hd_map/global/drivable_grid"]["Enabled"])
+        self.assertNotIn("/hd_map/debug/drivable_grid_viz", maps)
 
     def test_role_and_source_mapping_do_not_infer_ambiguous_boundary(self):
         ambiguous = {

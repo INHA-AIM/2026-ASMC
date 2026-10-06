@@ -448,6 +448,10 @@ traffic-light ID가 있는 검수 정지선에서 파생한 신호등 경계 5�
 모든 provisional zone은 `planning_enforcement_allowed=false`다. 신호등과 팀 link 해석 후보는
 P1-D에서 표시하지만 사람 승인 전 판제 강제 규칙으로 사용할 수 없다.
 
+2026-10-05 규정집 v1.2 반영 때 11개 후보 경계를 사람이 검수해 팀 기준값 `team_final`로 올렸다(현재
+`derived_official=4`, `team_final=11`). 메시지는 동결 상태라 `STATUS_DERIVED_OFFICIAL`과 payload
+`authority=team_final`로 전달한다. 판제 연동 결과에 따라 source를 고치고 `rebuild_hd_map_artifacts.py`로 다시 만든다.
+
 #### E. 1단계 테스트와 완료 조건
 
 - `asmc_msgs` 단독 catkin build와 기존 consumer build가 통과한다.
@@ -465,6 +469,9 @@ P2-A workspace 회귀, source 비교와 local crop 계약을 포함해 `asmc_hd_
 테스트를 통과했다. 이후 additive `LaneAssociation`이 추가돼 현재 contract validator 기준은
 25종/11 topic이며, 현재 ROS 비의존 `asmc_hd_map` discovery는 118개다. 날짜가 다른 두
 검증 횟수를 같은 baseline 수치로 덮어쓰지 않는다.
+
+규정집 v1.2(2026-09-30)에서 checkpoint는 15개로 줄었다(구 11 삭제, 12~15 재번호). 아래 16개 수치는
+P1-C·P1-D 당시 검증 기록이며 현재 기준은 [competition metadata](../contracts/competition/kcity2025-metadata-v1.md)를 따른다.
 
 P1-C 기준으로 checkpoint 16개의 route/link XY 투영 오차는 모두 `0.0 m`, route station은
 단조 증가하며 START/END station 0과 5% station `109.230586167 m` 단위 테스트가 통과했다.
@@ -503,6 +510,9 @@ compact vector/grid publisher의 토픽 계약은 유지하며 패키지 이동 
   섬을 제외한다. 총 DrivableArea는 102개이며 `OccupancyGrid`는 0.2 m 파생 raster다. 면적은
   14,925.40 m²(legacy 전체의 16.61%)이고 checkpoint 16개를 모두 포함한다. A179·A427과
   명시적 갓길·버스·미사용 toll lane은 제외한다.
+- **P2-B v6 (2026-10-05):** 정적 장애물 교차로의 우회전 `A226`·`A111` 모서리 안쪽을 최대 1.0 m·1.5 m
+  half-sine으로 넓혀 아스팔트 모서리를 채운다. 가장 바깥 남행 `A1212`는 회피에 쓰지 않으므로 넣지 않는다.
+  Lane 70개, DrivableArea 102개(fill 18, H5 patch 14)이며 checkpoint 15개를 모두 포함한다.
 - **P2-C 통합 완료:** stage14 차선 결과를 geometry regression 기준으로 삼아 builder,
   runtime publisher, 검증기와 RViz를 `asmc_hd_map` 한 패키지로 통합했다. 원태의 이전
   standalone 도구/H5는 `development/won_tae_link_node/`에 read-only provenance 자료로

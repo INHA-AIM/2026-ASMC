@@ -6,6 +6,7 @@ import cv2
 import json
 import math
 import numpy as np
+from pathlib import Path
 import sys
 
 from asmc_msgs.msg import (
@@ -22,6 +23,9 @@ from asmc_msgs.msg import (
 from nav_msgs.msg import OccupancyGrid
 import rospy
 from visualization_msgs.msg import Marker, MarkerArray
+from asmc_hd_map.semantic_query import SemanticMapIndex
+from asmc_hd_map.msg import HdMapRoute
+from asmc_hd_map.route_reference import RouteReference
 
 
 EXPECTED_TYPES = {
@@ -79,7 +83,12 @@ def main() -> int:
     rospy.init_node("verify_competition_map_topics", anonymous=True)
     timeout = float(rospy.get_param("~timeout_s", 10.0))
     published = dict(rospy.get_published_topics())
+    _require(published.get("/hd_map/global/route") == "asmc_hd_map/HdMapRoute", "official route topic missing")
+    _require(published.get("/hd_map/context") == "asmc_hd_map/HdMapContext", "HD context topic missing")
     for topic, expected_type in EXPECTED_TYPES.items():
+        if topic in {"/hd_map/local/lanes", "/hd_map/local/drivable_grid"} and not rospy.get_param("/local_map_crop/publish_crops", True):
+            _require(topic not in published, "disabled crop topic is advertised")
+            continue
         _require(published.get(topic) == expected_type, "%s type is %s, expected %s" % (
             topic, published.get(topic), expected_type
         ))
@@ -103,6 +112,28 @@ def main() -> int:
     )
     debug = rospy.wait_for_message("/hd_map/debug/markers", MarkerArray, timeout=timeout)
 
+    route = rospy.wait_for_message("/hd_map/global/route", HdMapRoute, timeout=timeout)
+    reference = RouteReference([(p.x, p.y, p.z) for p in route.points], route.stations_m)
+    _require(route.build_id == meta.build_id and route.geometry_sha256 == meta.geometry_sha256,
+             "official route identity differs from global layers")
+    _require(route.route_id == missions.route_id and route.route_sha256 in meta.source_sha256,
+             "official route namespace or source SHA drift")
+    _require(len(route.points) == 4430 and abs(reference.length_m - route.length_m) < 1e-6,
+             "official route stations drift")
+
+    index = SemanticMapIndex(meta, {"missions": missions, "markings": markings})
+    limits = list(index.speed_by_link.values())
+    _require(len(limits) == 39, "per-link effective speed limits are missing from ROS payloads")
+    for limit in limits:
+        cap = limit["competition_cap_kph"]
+        expected = min(limit["mgeo_max_speed_kph"], cap) if cap is not None else limit["mgeo_max_speed_kph"]
+        _require(abs(limit["effective_limit_kph"] - expected) < 1e-6, "effective speed cap differs from MGeo/competition minimum")
+    for signal in index.signals:
+        joined = index.signals_ahead(signal.route_station_start_m, 0.)
+        _require(joined and joined[0]["stoplines"], "signal has no reviewed stop-line geometry")
+        _require(all(line.role == LaneMarking.ROLE_STOP_LINE for line in joined[0]["stoplines"]),
+                 "signal references a non-stop-line marking")
+
     for name, message in (
         ("meta", meta),
         ("lane markings", markings),
@@ -115,9 +146,9 @@ def main() -> int:
         _require(message.header.frame_id == "map", "%s left the map frame" % name)
 
     _require(meta.geometry_sha256 == "01ec671fe402baf339f8f6bcfb83a97213d560f7311961c5f072a47d654bcfbf", "geometry SHA drift")
-    _require(meta.build_id == "kcity2025_roundabout_extended_drivable_v5", "P2-B v5 build ID drift")
+    _require(meta.build_id == "kcity2025_static_junction_widened_drivable_v6", "P2-B v6 build ID drift")
     _require(meta.operational and meta.complete, "P2-B map must be operational and complete")
-    _require(meta.lane_count == 70 and meta.drivable_area_count == 102, "P2-B v5 product count drift")
+    _require(meta.lane_count == 70 and meta.drivable_area_count == 102, "P2-B v6 product count drift")
     _require(
         "compact_drivable_product" in meta.source_ids and "legacy_drivable_h5" in meta.source_ids,
         "P2-B provenance is missing from HdMapMeta",
@@ -318,6 +349,10 @@ def main() -> int:
 
     _require(grid_value(-102.0, 340.0) == 100, "roundabout center island became drivable")
     _require(grid_value(-102.97, 325.54) == 0, "A134 centerline is not drivable")
+    _require(grid_value(-54.38, -131.38) == 0 and grid_value(-55.07, -149.22) == 0,
+             "A222 junction inner-corner pavement is not drivable")
+    _require(grid_value(-53.72, -130.50) == 100 and grid_value(-54.21, -150.27) == 100,
+             "A222 junction widening crossed the reviewed curb margin")
     source_counts = Counter(value.source_dataset for value in areas.areas)
     _require(
         source_counts["selected_lane_topology_corridor_fill"] == 18
@@ -363,10 +398,10 @@ def main() -> int:
     _require(pattern_counts[LaneMarking.PATTERN_SOLID] == 97, "expected 90 solid lanes + 7 stoplines")
     _require(pattern_counts[LaneMarking.PATTERN_BROKEN] == 31, "expected 31 broken markings")
 
-    _require(len(checkpoints.checkpoints) == 16, "expected 16 checkpoints")
+    _require(len(checkpoints.checkpoints) == 15, "expected 15 checkpoints (rule book v1.2)")
     _require(
-        [value.sequence for value in checkpoints.checkpoints] == list(range(16)),
-        "checkpoint sequence must be contiguous 0..15",
+        [value.sequence for value in checkpoints.checkpoints] == list(range(15)),
+        "checkpoint sequence must be contiguous 0..14",
     )
     _require(
         all(value.link_id in lane_by_link and value.source_reference
@@ -390,24 +425,31 @@ def main() -> int:
     )
     status_counts = Counter(value.status for value in missions.zones)
     _require(status_counts[MissionZone.STATUS_OFFICIAL] == 0, "official mission count drift")
-    _require(status_counts[MissionZone.STATUS_DERIVED_OFFICIAL] == 4, "derived mission count drift")
-    _require(status_counts[MissionZone.STATUS_PROVISIONAL] == 11, "provisional mission count drift")
+    # 4 derived-official rules plus 11 team-final zones, which the frozen
+    # message carries as DERIVED_OFFICIAL with rule_payload.authority=team_final.
+    _require(status_counts[MissionZone.STATUS_DERIVED_OFFICIAL] == 15, "derived mission count drift")
+    _require(status_counts[MissionZone.STATUS_PROVISIONAL] == 0, "provisional mission count drift")
     mission_by_id = {value.id: value for value in missions.zones}
+    team_final = [
+        value.id for value in missions.zones
+        if json.loads(value.rule_payload_json).get("authority") == "team_final"
+    ]
+    _require(len(team_final) == 11, "team-final mission authority count drift")
     shadow_payload = json.loads(mission_by_id["gps_shadow_candidate"].rule_payload_json)
     _require(
         shadow_payload.get("usable_opposite_lane_link_ids") == ["A2256W000131"]
         and shadow_payload.get("drivable_area_bridge_id") == "gps_shadow_A126_A131",
         "GPS-shadow policy must expose A131 and its A126 bridge",
     )
-    _require(
-        mission_by_id["static_obstacle_candidate"].link_ids == ["A2256W000222"],
-        "static obstacle bounds drift",
-    )
-    _require(
-        mission_by_id["dynamic_obstacle_candidate"].link_ids
-        == ["A2256W000728", "A2256W000599", "A2256W000207", "A2256W000205"],
-        "dynamic obstacle bounds drift",
-    )
+    # Obstacle zones span the approach and exit; obstacles spawn only on the
+    # junction links named in the payload, which must stay inside the zone.
+    for zone_id in ("static_obstacle_candidate", "dynamic_obstacle_candidate"):
+        zone = mission_by_id[zone_id]
+        expected = json.loads(zone.rule_payload_json).get("obstacle_expected_link_ids") or []
+        _require(
+            bool(expected) and set(expected).issubset(zone.link_ids),
+            "%s obstacle links must lie inside the zone" % zone_id,
+        )
     _require("highway_merge_candidate" not in mission_by_id, "A054/A846 must not be a mission zone")
     monitoring_policy = mission_by_id["traffic_light_activation_A236_to_A308"]
     monitoring_payload = json.loads(monitoring_policy.rule_payload_json)
@@ -467,18 +509,12 @@ def main() -> int:
         ),
         "effective speed profile does not cover the route exactly once",
     )
-    _require(len(debug.markers) > 100, "debug marker set is unexpectedly small")
+    detail = str(rospy.get_param("/competition_map_publisher/debug_marker_detail", "lite"))
+    _require(len(debug.markers) > 50, "debug marker set is unexpectedly small")
     namespaces = {value.ns for value in debug.markers}
-    for namespace in (
+    review_layers = (
         "route",
         "route_link_direction",
-        "checkpoints_radius",
-        "mission_corridors",
-        "speed_limit_corridors",
-        "speed_limit_exceptions",
-        "perception_activation_corridors",
-        "policy_text",
-        "build_info",
         "compact_lane_centerlines",
         "compact_lane_polygons",
         "compact_guarded_junctions",
@@ -489,7 +525,26 @@ def main() -> int:
         "drivable_group_gps_shadow_opposite_lane",
         "compact_corridor_fills",
         "compact_intersection_surface_patches",
-    ):
+    )
+    required = [
+        "checkpoints_radius",
+        "speed_limit_corridors",
+        "speed_limit_exceptions",
+        "perception_activation_corridors",
+        "policy_text",
+        "build_info",
+    ]
+    if detail == "full":
+        required.extend(review_layers)
+    else:
+        required.append("drivable_area_outline")
+        _require(
+            not namespaces.intersection(review_layers)
+            and "route_link_labels" not in namespaces
+            and not any(namespace.startswith("mission_actors_") for namespace in namespaces),
+            "lite debug markers must leave out the per-lane, per-link and actor review layers",
+        )
+    for namespace in required:
         _require(namespace in namespaces, "missing debug namespace: %s" % namespace)
     _require(
         sum(value.ns == "speed_limit_corridors" for value in debug.markers) == 2,
@@ -510,18 +565,56 @@ def main() -> int:
     )
     _require(
         not any(
-            value.ns == "mission_corridors" and value.id == policy_index
+            value.ns == "mission_traffic_light" and value.id == policy_index
             for value in debug.markers
         ),
         "traffic-light activation policy must not paint a mission corridor",
     )
+    # Mission corridors are drawn per mission type. Expected counts come from
+    # the received zones and the current scenario spec, so editing zones or
+    # actor links does not require editing this verifier.
+    type_names = {
+        getattr(MissionZone, name): name[len("TYPE_"):].lower()
+        for name in dir(MissionZone) if name.startswith("TYPE_")
+    }
+    expected_corridors = Counter(
+        type_names[value.mission_type]
+        for value in missions.zones
+        if value.route_station_end_m - value.route_station_start_m > 1e-6
+        and value.mission_type not in (MissionZone.TYPE_SPEED_LIMIT, MissionZone.TYPE_HIGH_SPEED_EXCEPTION)
+        and json.loads(value.rule_payload_json).get("spatial_mission") is not False
+    )
+    for mission_type, count in expected_corridors.items():
+        _require(
+            sum(value.ns == "mission_%s" % mission_type for value in debug.markers) == count,
+            "mission_%s corridor count differs from the published zones" % mission_type,
+        )
+    import rospkg
+    from asmc_hd_map.mission_scenario import build_mission_scenario_spec
+
+    repo_root = Path(rospkg.RosPack().get_path("asmc_hd_map")).resolve().parents[1]
+    scenario = build_mission_scenario_spec(repo_root)
+    for zone in scenario["zones"]:
+        if zone["surface"]:
+            _require(
+                "mission_surface_%s" % zone["mission_type"] in namespaces,
+                "zone %s surface outline is missing" % zone["id"],
+            )
+        if zone["actor_sources"] and detail == "full":
+            _require(
+                sum(value.ns == "mission_actors_%s" % zone["mission_type"]
+                    and value.type == Marker.LINE_STRIP for value in debug.markers)
+                >= len(zone["actor_sources"]),
+                "zone %s actor links are missing" % zone["id"],
+            )
     text_markers = [value for value in debug.markers if value.type == Marker.TEXT_VIEW_FACING]
     _require(
-        sum(value.ns == "route_link_labels" for value in text_markers) == 39,
+        detail != "full"
+        or sum(value.ns == "route_link_labels" for value in text_markers) == 39,
         "every route link needs one compact debug label",
     )
     _require(
-        sum(value.ns == "checkpoints_text" for value in text_markers) == 16,
+        sum(value.ns == "checkpoints_text" for value in text_markers) == 15,
         "every checkpoint needs one debug label",
     )
     _require(
