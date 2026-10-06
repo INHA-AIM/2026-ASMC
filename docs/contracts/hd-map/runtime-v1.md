@@ -321,17 +321,19 @@ marking의 유효한 국소 횡거리로 Lane 외곽을 보정하고 MGeo 인접
 |---|---|---|
 | `/hd_map/debug/markers` | 478 marker, 선 점 17.7만 개, 4.3 MB | 86 marker, 3.6만 개, 0.9 MB |
 | actor 후보 링크(`mission_actors_*`)와 라벨의 링크 목록 | 표시 | 숨김 |
-| 주행가능영역 면 (RViz 기본) | — | ego 전방 중심 크롭 `/hd_map/local/drivable_grid` (0.2 m, 600×300칸, GPS+IMU) |
+| 주행가능영역 표시 (RViz 기본) | full 상세 레이어 | 병합한 전역 외곽선, raster 면 비활성 |
 
 marker는 시작할 때 한 번 만들어 두고 새 구독자가 붙을 때만 보낸다. 고정된 내용을 다시 보내면 RViz가 매번
 다시 만들 뿐이라 주기 전송은 기본으로 끈다(`debug_republish_hz` 0). RViz에서 Reset을 누르면 marker가
 지워지므로, 해당 display 체크를 껐다 켜면 다시 받는다. RViz가 없으면 아무것도 보내지 않는다.
 
-주행가능영역 면은 ego 주변 크롭을 기본으로 그린다. 전체 지도를 텍스처로 올리지 않아도 되고, planner와 같은
-0.2 m 해상도다. 기본 크롭은 `local_crop_policy`대로 ego heading을 따라 회전하고 후륜축 중심보다
-전방에 더 많은 범위를 둔다. 맵 전체 면이 필요하면
-`Drivable area whole map (0.2 m planner grid, heavy)`(22.3M칸)를 켠다.
+운영과 debug launch 모두 크롭을 기본으로 끈다. 두 RViz 프리셋에서
+`Drivable area near ego` display를 제거했고, 기본 주행가능영역은 전역 외곽선 marker로 확인한다.
+전체 raster 면이 필요한 검수에는 비활성 display인
+`Drivable area whole map (0.2 m planner grid, heavy)`(22.3M칸)를 수동으로 켠다.
 차선 도색과 외곽선은 고정 marker라 RViz가 한 번 올린 뒤에는 거의 부하가 없어 따로 크롭하지 않는다.
+선택 크롭 기능은 `publish_local:=true`로 켤 수 있다. 별도 검수에서 필요한 경우에만
+RViz Map display를 추가해 `/hd_map/local/drivable_grid`를 지정한다.
 
 미션 면적과 전체 주행가능영역 외곽선은 차로 polygon의 합집합이다. 인접 차로 사이 미세한 틈이 만드는
 조각 고리를 없애기 위해 0.2 m closing을 하고, 5 m² 미만 구멍은 버린 뒤 0.1 m로 단순화한다. 벡터 합집합
