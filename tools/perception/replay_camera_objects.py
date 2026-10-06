@@ -196,7 +196,8 @@ def replay(args, path, repeat):
     if path == "new" and not args.fusion:
         result["pass"] &= rate >= 18.0
     if args.fusion:
-        result["pass"] &= bool(sync) and bool(tracks) and result["fusion_offset_p95_max_ms"] <= 50.0
+        result["pass"] &= (bool(sync) and bool(tracks) and len(totals) == 1
+                           and result["fusion_offset_p95_max_ms"] <= 50.0)
     prefix.with_suffix(".json").write_text(json.dumps(result, indent=2) + "\n")
     prefix.with_suffix(".frames.json").write_text(json.dumps({"outputs": outputs, "tracks": tracks}))
     print(json.dumps(result, indent=2), flush=True)
