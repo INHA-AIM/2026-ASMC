@@ -12,7 +12,7 @@ phase_status:
 
 consumer_handoff:
   traffic_light:
-    producer_owner: asmc_perception
+    producer_owner: asmc_camera
     canonical_topic: /perception/traffic_light/detection
     compatibility_topic: /traffic_light/state
     consumer_node: /behavior_planner
@@ -29,7 +29,7 @@ consumer_handoff:
       - config/baselines/perception_traffic_light_closed_loop_v1.yaml
       - config/baselines/perception_traffic_light_vehicle_closed_loop_v1.yaml
   lane_family:
-    producer_owner: asmc_perception
+    producer_owner: asmc_camera
     canonical_topic: /perception/lane/boundary_family
     compatibility_topic: /perception/lane/boundary_observations
     reference_consumer_node: /boundary_family_monitor
@@ -50,7 +50,7 @@ operational_closeout:
   web_console: deferred_until_operational_demand
   commands:
     bridge: ./scripts/udp_bridge.sh
-    perception: roslaunch asmc_perception perception.launch start_traffic_light:=true
+    perception: roslaunch asmc_camera perception.launch start_traffic_light:=true
     lane_adapter: roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch
     runtime_acceptance: ./scripts/verify_perception.sh
   visualization:
@@ -239,18 +239,18 @@ static_bindings:
       - TWINLITE_ROOT=/opt/baselines/TwinLiteNetPlus
       - /opt/baselines/TwinLiteNetPlus:ro
   - id: canonical_perception_launch
-    file: src/asmc_perception/launch/perception.launch
+    file: src/asmc_camera/launch/perception.launch
     anchors:
-      - pkg="asmc_perception" type="camera_bev_node.py"
-      - pkg="asmc_perception" type="camera_bev_fusion_node.py"
-      - pkg="asmc_perception" type="lane_vectorizer_node.py"
-      - pkg="asmc_perception" type="traffic_light_node.py"
+      - pkg="asmc_camera" type="camera_bev_node.py"
+      - pkg="asmc_camera" type="camera_bev_fusion_node.py"
+      - pkg="asmc_camera" type="lane_vectorizer_node.py"
+      - pkg="asmc_camera" type="traffic_light_node.py"
       - '<arg name="lane_enable_boundary_family_candidate" default="true"/>'
       - '<arg name="lane_enable_independent_boundary_pipeline" default="false"/>'
   - id: semantic_launch
-    file: src/asmc_perception/launch/camera_lane.launch
+    file: src/asmc_camera/launch/camera_lane.launch
     anchors:
-      - pkg="asmc_perception" type="semantic_inference_node.py"
+      - pkg="asmc_camera" type="semantic_inference_node.py"
   - id: planning_traffic_light_topics
     file: src/behavior_planner/src/node/behavior_node.cpp
     anchors:

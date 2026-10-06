@@ -23,7 +23,7 @@
 /src/asmc_bridge/                      @kante2 @ahnsh03
 
 # Perception
-/src/asmc_perception/                  @sonshiny @ahnsh03
+/src/asmc_camera/                      @sonshiny @ahnsh03
 /src/lidar+sensorfusion/               @sonshiny @ahnsh03
 
 # Privileged simulator teacher/research tools (not production runtime)

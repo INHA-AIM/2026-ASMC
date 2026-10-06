@@ -1,0 +1,366 @@
+# `asmc_camera` runtime
+
+> **상태:** P4-C6 — camera/BEV/lane/traffic runtime·offline·training 패키지 통합 완료
+
+분산된 camera semantic, metric BEV/lane과 traffic-light를 하나의 인지 실행 경계로 조합한다.
+camera semantic, BEV/fusion/lane과 신호등 ROS node 구현, 실행 support library·config, 모델,
+TwinLite 학습 adapter와 offline BEV audit은 이 패키지가 소유한다. P4-C6에서 기존
+`camera_semantic_perception`, `drivable_bev`, `traffic_light` ROS 패키지와 `src/perception` 그룹을
+제거했지만 topic과 node 이름은 바꾸지 않았다. `data_collection`과 팀원 개발 중인 LiDAR/fusion은 독립
+패키지·workspace이며 이 launch가 소유하거나 시작하지 않는다.
+
+2026-10-05 이전 계획은 [통합 로드맵](../../docs/architecture/consolidation-roadmap.md)을 따른다.
+**2026-10-06 패키지 이름을 `asmc_perception`에서 `asmc_camera`로 바꿨다.** node 이름, `/perception/*`
+토픽, launch 인자와 기본값은 그대로다. 구 패키지는 호환 wrapper 없이 완전히 옮겼으므로
+`roslaunch asmc_perception ...`와 `import asmc_perception`은 동작하지 않는다
+([이전 안내](../asmc_perception/README.md)). YOLO 생산자 이전은 별도 단계로 진행한다.
+`camera_bev_fusion`은 다중 카메라 처리로 카메라 쪽에 남고, LiDAR 객체에 카메라 분류를
+결합하는 fusion은 손재호가 이전을 마무리할 `asmc_lidar` 내부에 둔다. 별도 fusion 패키지는
+만들지 않는다.
+
+## 실행
+
+기본값은 competition-legal 3-camera lane pipeline만 실행한다. 실시간 ROS
+추론은 bridge·GUI와 같은 `asmc-ros-noetic` 컨테이너에서 직접 실행한다.
+ROS image가 CUDA/PyTorch/OpenCV를 소유하고 공식 TwinLite 소스는 read-only로
+마운트된다. bag replay ROS 추론도 이 컨테이너에서 실행한다.
+`asmc-perception-train`은 모델 학습과 학습 중 validation 전용이다.
+
+```bash
+docker exec -it asmc-ros-noetic bash
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+roslaunch asmc_camera perception.launch
+```
+
+신호등이 필요한 경우에만 명시적으로 추가한다.
+
+```bash
+roslaunch asmc_camera perception.launch \
+  start_traffic_light:=true
+```
+
+bag 기록·재생은 별도 `data_collection` 진입점을 사용한다.
+
+```bash
+roslaunch data_collection bag_recorder.launch profile:=full_raw
+```
+
+기존 LiDAR는 nested workspace의 `Main`, `Msg`와 Velodyne overlay를 사용한다.
+새 `asmc_lidar` 골격은 이 overlay 없이 라이브러리만 빌드하며, 어느 쪽도
+`asmc_camera` launch가 자동으로 시작하지 않는다.
+
+### `camera_bev`와 `camera_bev_fusion`
+
+`camera_bev` 노드는 front/left/right 카메라의 semantic probability·road-marking을
+카메라별 calibration으로 `base_link` 평면에 각각 투영한다. 출력은
+`/perception/bev/debug/{view}/*`이며, 현재는 후단 fusion의 내부 입력이자 개발
+비교 계층이다.
+
+`camera_bev_fusion`은 세 투영 결과의 source timestamp를 맞추고, calibration 품질·
+가시 영역 가중치로 겹침을 해결해 하나의 `/perception/bev/camera/*`를 만든다.
+`coverage`, `source_count`도 이 단계에서 만들며 lane vectorizer가 소비할 운영 정본은
+이 fused output이다. 두 노드는 중복 알고리즘이 아니라 **카메라별 투영 → 다중
+카메라 융합**의 순차 단계다.
+
+P5-A의 producer·subscriber·bag 감사 정본은
+[`perception_topic_policy_v1.yaml`](../../config/contracts/perception_topic_policy_v1.yaml)이다.
+`debug/{view}` semantic 3종과 `model_grid` 2종은 후단 계산 입력이므로 일반 debug image처럼
+끄지 않는다. per-view coverage, fused source count/view와 frame-level lane pipeline audit은
+P5-B에서 명시적 평가 옵션으로 전환했다.
+
+P5-C는 topic을 다시 바꾸지 않고 현재 연결을 실행 중 검사한다. perception과 필요한 선택
+process를 먼저 실행한 뒤 저장소 루트 host에서 다음을 사용한다.
+
+```bash
+./scripts/verify_perception.sh
+./scripts/verify_perception.sh --traffic-light --visualization
+./scripts/verify_perception.sh --traffic-light --require-planning
+```
+
+첫 명령은 camera→BEV→lane의 node/type/producer/subscriber/rate/stamp/frame을 검사한다.
+두 번째는 신호등과 canonical rqt 두 topic, 세 번째는 판제의 typed/legacy 신호등 구독까지
+확인한다. `lane_boundary_adapter`를 함께 띄운 검수에는 `--require-lane-adapter`를 별도로 쓴다.
+정확한 옵션과 실패 해석은
+[`perception-p5c-runtime-acceptance-v1.md`](../../docs/records/baselines/perception-p5c-runtime-acceptance-v1.md)를
+따른다.
+
+## 시각화
+
+debug image publisher를 함께 켠다.
+
+```bash
+roslaunch asmc_camera perception.launch start_visualization:=true
+```
+
+화면은 GUI 환경이 있는 `asmc-ros-noetic` 컨테이너에서 연다. 아래 명령은 먼저
+`docker exec -it asmc-ros-noetic bash`로 들어간 각각의 터미널에서 실행한다.
+
+```bash
+asmc-ros-gui rqt-image /perception/camera/debug/mosaic/compressed
+asmc-ros-gui rqt-image /perception/bev/debug/comparison/compressed
+```
+
+첫 topic은 좌·전방·우의 원본·주행가능·road-marking을 모은 9칸 영상이다. 두 번째는
+calibration으로 투영·융합한 원본 RGB BEV와 fused semantic BEV를 같은 범위로 나란히
+보여준다. semantic 쪽은 0.5 기준 이진 주행가능 영역과 고정 색상의 차선 class만
+표시하며 확률·confidence 밝기를 인코딩하지 않는다. 둘 다 subscriber가 있을 때만
+렌더링하고 JPEG를 발행한다.
+`start_visualization`은 개발·검수용이고 기본값은 false다. 평상시 주행에는 필요하지 않다.
+
+신호등은 `start_traffic_light:=true`를 함께 주면 `camera_traffic_light_visualizer`가 추가로 뜬다.
+
+```bash
+roslaunch asmc_camera perception.launch start_visualization:=true start_traffic_light:=true
+asmc-ros-gui rqt-image /perception/traffic_light/debug/image/compressed
+```
+
+이 영상은 typed `/perception/traffic_light/detection`을 같은 stamp의 `/cam_extra` 원본 위에
+그린다. 테두리는 판정 색(빨강·노랑·초록, 무효·stale·미검출은 회색)이고, 왼쪽 위에 label과
+confidence, VALID/STALE/INVALID, 추론 시간, 상위 3개 후보가 표시된다. 같은 stamp의 원본이
+캐시에 없으면 최신 프레임 위에 그리고 그 사실을 문구로 남긴다. 다른 debug 영상처럼
+subscriber가 있을 때만 렌더링한다.
+
+이전 camera별 panel, fused/fused-quality, lane evidence/fitted/boundary/reprojection 영상이
+필요한 한시적 비교에서는 `visualization_legacy_rqt:=true`를 추가한다. camera별 지면
+calibration grid는 별도 `visualization_calibration_grid:=true`로만 켠다. RViz marker는
+이 rqt 간소화의 변경 대상이 아니다.
+
+per-view projected coverage와 fused source count/view도 기본 off다. 평가 bag이나
+overlap 분석에서 필요하면 `publish_bev_debug_metadata:=true`를 지정한다. legacy rqt를
+켜면 이 metadata도 호환 기본값으로 함께 켜진다.
+
+큰 frame별 `/perception/lane/pipeline_audit`도 일반 주행에서는 광고·누적하지 않는다.
+rejection 원인 분석이나 result bag replay에서는 `lane_publish_pipeline_audit:=true`를
+지정한다. `run_shadow_lane_bag_batch.py`는 기존 평가 계약을 위해 이 값을 자동으로 켠다.
+
+`start_traffic_light`은 실제 producer를 켜는 옵션이다. 현재는 true로 켜면 전 구간에서 계속
+추론하며, HD맵의 `TRAFFIC_LIGHT_REQUIRED` 구간(A236~A308)에 따른 process/compute 활성화는
+판제 supervisor와 함께 연결할 후속 항목이다.
+
+## P4 closeout MORAI live 확인
+
+이 절은 package 통합 PR 전 사람이 MORAI를 주행하며 확인하는 최소 절차다.
+MORAI UI에서 실행 release에 맞는 `*_local.json`과
+`ASMC_sensor_set_v3_local.json`을 불러온 뒤 Play/Connect한다.
+
+```bash
+# Terminal A — asmc-ros-noetic container, local UDP bridge
+docker exec -it asmc-ros-noetic bash
+cd /root/ws
+./scripts/udp_bridge.sh
+
+# Terminal B — asmc-ros-noetic container, canonical perception
+docker exec -it asmc-ros-noetic bash
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+roslaunch asmc_camera perception.launch \
+  start_traffic_light:=true \
+  start_visualization:=true
+```
+
+별도 터미널에서 ROS 토픽을 확인한다. `rostopic hz`는 계속 대기하므로 항목별로
+`Ctrl+C`로 나오거나 터미널을 나눠 실행한다.
+
+```bash
+# Terminal C — asmc-ros-noetic container
+docker exec -it asmc-ros-noetic bash
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+
+# MORAI v3 camera input: front/left/right 약 20 Hz, extra 약 10 Hz
+rostopic hz /image_jpeg/compressed
+rostopic hz /cam_left/image_jpeg/compressed
+rostopic hz /cam_right/image_jpeg/compressed
+rostopic hz /cam_extra/image_jpeg/compressed
+
+# canonical runtime output: GPU 상태에 따라 입력보다 느릴 수 있지만 계속 갱신되어야 함
+rostopic hz /perception/camera/front/drivable/probability
+rostopic hz /perception/bev/camera/drivable_probability
+rostopic hz /perception/lane/boundary_family
+rostopic hz /perception/traffic_light/detection
+
+# 계약·상태 sample
+rostopic echo -n 1 /perception/lane/boundary_family/header
+rostopic echo -n 1 /perception/lane/boundary_family/operating_domain
+rostopic echo -n 1 /perception/lane/boundary_family/algorithm_id
+rostopic echo -n 1 /perception/lane/boundary_family/deployment_allowed
+rostopic echo -n 1 /perception/lane/diagnostics
+rostopic echo -n 1 /perception/bev/diagnostics
+rostopic echo -n 1 /perception/traffic_light/detection
+```
+
+`/perception/lane/boundary_family`는 음영구간 판제 소비 정본이며 무옵션
+`roslaunch asmc_camera perception.launch`에서도 기본 발행된다. legacy 개별 spline·tracker와
+`/perception/lane/boundary_observations`는 기본 비활성화다. 기존 호환·진단용으로
+필요할 때만 `lane_enable_independent_boundary_pipeline:=true`를 사용한다.
+
+음영구간 adapter는 제어와 연결하지 않고 별도로 켠다.
+
+```bash
+# Terminal D — asmc-ros-noetic container
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch
+
+# Terminal E — adapter output
+rostopic hz /planning/debug/lane_boundary_family/strips
+rostopic echo -n 1 /planning/diagnostics/lane_boundary_family_adapter
+```
+
+adapter launch는 `base_link` 전용 RViz를 자동으로 열고
+`/perception/lane/debug/shared_family/markers`와
+`/planning/debug/lane_boundary_family/strips`를 기본 표시한다. headless replay나 성능
+측정에서는 `rviz:=false`를 지정한다.
+
+rqt 영상이 필요할 때만 각각 별도 `asmc-ros-noetic` 터미널에서 연다.
+
+```bash
+asmc-ros-gui rqt-image /perception/camera/debug/mosaic/compressed
+asmc-ros-gui rqt-image /perception/bev/debug/comparison/compressed
+```
+
+자동 RViz의 음영 ODD 밖에서
+`valid=false` 또는 정지·disconnect 후 stale/marker clear는 정상 fail-safe다.
+음영구간은 A448 종료 후부터 A126 종료까지이며 회피용 반대 차로는 A131이다.
+이 구간에서는
+`frame_id=base_link`, `operating_domain=shadow_two_way_v1`, 동결 algorithm ID,
+`deployment_allowed=false`를 확인한다. observed는 청록, structure-inferred는 주황,
+invalid는 연결하지 않은 실제 공백으로 보여야 한다.
+
+신호등은 A236~A308에서 실제 색과 typed
+`/perception/traffic_light/detection`, 호환 `/traffic_light/state`의 전환을 같이 확인한다.
+이 live 검사에서는 `/ctrl_cmd`를 발행하지 않으므로 수동 주행 중에 사용해도 된다.
+
+## P4-C1 경계
+
+- camera lane은 v3 센서셋과 SHA로 고정한 `cameras_v3.yaml`을 사용한다.
+- v2와 v3의 네 camera pose, intrinsics, period와 UDP 설정이 동일한지는 unit test가 검사한다.
+- 신호등은 기존 `/traffic_light/state`, `/traffic_light/detail`과 typed
+  `/perception/traffic_light/detection`을 병행 발행한다.
+- typed 결과는 실제 추론에 사용한 `camera_extra` image header를 그대로 보존한다.
+- LiDAR는 기존 `/lidar/tracked_objects_map`, `/last_lidar`를 유지한다.
+- 신규 `asmc_msgs/TrafficLightDetection`, `asmc_msgs/TrackedObjectArray`는 additive 계약이다.
+- LiDAR typed producer는 아직 없으므로 해당 canonical topic을 발행한다고 가정하면 안 된다.
+- traffic-light 체크포인트는 `models/traffic_light/best.pt`가 정본이다.
+- Capture/gRPC GT, simulator object/traffic truth는 deployment 입력으로 사용하지 않는다.
+
+## P4-C2 parity 회귀
+
+대표 raw bag의 `camera_extra` 프레임을 기존 producer와 canonical producer에 한 장씩 같은
+순서로 넣어 legacy String, typed result, source header, stale 전환과 복구를 비교한 동결 시험이다.
+호환 producer 패키지는 P4-C6에서 제거했으므로 이 A/B harness를 현재 HEAD에서 다시 실행하지
+않는다. 결과와 입력·체크포인트 SHA는 baseline validator로 확인한다.
+
+```bash
+python3 tools/audit/validate_traffic_light_parity.py --check-artifacts
+```
+
+기준 결과는 `config/baselines/perception_traffic_light_parity_v1.yaml`이다. 이 통과는 producer
+병행 발행의 근거이며 판제 consumer cutover 완료를 뜻하지는 않는다.
+
+## P4-C3 판제 consumer
+
+`behavior_planner`는 이제 `/perception/traffic_light/detection`을 권위 입력으로 구독한다. 기존
+`/traffic_light/state` 구독도 유지하지만 typed message를 한 번도 받지 못한 구 실행을 위한
+fallback일 뿐이다. typed message를 받은 뒤에는 다음 규칙을 적용한다.
+
+- `valid=false` 또는 `stale=true`: `UNKNOWN`, legacy String으로 우회하지 않음
+- typed 수신이 local stale timeout을 넘김: `UNKNOWN`, legacy String으로 우회하지 않음
+- typed producer를 한 번도 보지 못함: fresh legacy String 사용
+
+기존 판제 통합 launch가 시작하는 executable은
+`traffic_light/live_infer.py`에서 `asmc_camera/traffic_light_node.py`로 바뀌었다. topic 이름은
+삭제하거나 remap하지 않았으며 producer 경로 변경은 두 launch 파일의 migration 주석과
+`behavior_planner/README.md`에 기록돼 있다. unit/build, live ROS 연결과 MORAI 차량
+정지·재출발까지 통과했다. 다만 모든 consumer/launch의 legacy 참조가 없어지기 전에는 기존
+topic을 제거하지 않는다.
+
+## P4-C4 신호 수락시험
+
+production `behavior_node`, 현재 MGeo와 전역경로를 쓰되 Frenet/MPC/UDP 출력은 시작하지 않는
+격리된 ROS decision-loop 시험을 제공한다.
+
+```bash
+# asmc-ros-noetic 컨테이너
+roslaunch asmc_camera traffic_light_closed_loop_acceptance.launch
+cat /tmp/asmc_traffic_light_closed_loop_acceptance.json
+```
+
+고정 pose는 A728 정지선 8.95 m 전방이다. 시험은 같은 typed stream에서
+`GREEN → KEEP`, `RED → STOP(map 목표점 포함)`, `GREEN → 새 KEEP command_id`를 검사한다.
+기준은 `config/baselines/perception_traffic_light_closed_loop_v1.yaml`이다. 이 시험은 판제 판단
+loop의 수락 근거이며 실제 simulator의 제동거리·MPC·UDP actuator까지 통과했다는 뜻은 아니다.
+
+실제 `behavior → Frenet → MPC → /ctrl_cmd → UDP → MORAI` 차량 시험은 다음처럼 별도 opt-in한다.
+기본 launch는 제어가 잠겨 있으며 아래 두 flag가 모두 있어야 Ego를 텔레포트하고 움직인다.
+
+```bash
+# controlled simulator only
+roslaunch asmc_camera traffic_light_vehicle_acceptance_stack.launch \
+  run_acceptance:=true allow_vehicle_control:=true \
+  repo_root:=/root/ws grpc_host:=host.docker.internal
+cat /tmp/asmc_traffic_light_vehicle_acceptance.json
+```
+
+MPC 출력은 `/acceptance/ctrl_cmd`에 격리되고 시험 node가 원래 Ego 상태를 저장한 뒤에만
+`/ctrl_cmd`로 전달한다. 종료 시 full brake, gate close, pose·speed·gear·control mode 복원을
+수행한다. 26.R1 local 실측에서 적색은 물리 정지선 5.21 m 전에 `0.0 m/s`로 멈췄고, 녹색에서
+1.33 m 재진행·2.27 m/s를 확인했다. 근거는
+`config/baselines/perception_traffic_light_vehicle_closed_loop_v1.yaml`이다. 이 결과는 synthetic
+typed 신호 이후 제어 loop 수락이며 camera 분류 정확도 시험은 아니다.
+
+## P4-C4/C5 물리 이식 경계
+
+다음 실제 node 구현은 `src/asmc_camera/src/asmc_camera/nodes/`로 이동했다.
+
+- camera semantic inference와 visualizer
+- per-view BEV, 3-view fusion과 BEV visualizer
+- lane vectorizer와 lane visualizer
+
+canonical launch는 모두 `pkg="asmc_camera"`로 실행한다. P4-C5에서 camera backend,
+runtime BEV/lane 수학과 config 정본도 각각
+`asmc_camera.camera`, `asmc_camera.bev`, `asmc_camera/config`으로 옮겼다. 기존 Python namespace는 canonical
+symbol을 다시 export하던 호환 package와 config mirror는 P4-C6 검증 후 제거했다.
+
+재학습 코드는 `asmc_camera.training.twinlite`, offline replay·pseudo-GT·audit 코드는
+`asmc_camera.offline.bev`와 `tools/bev/`에 분리했다. 이 namespace는 차량 runtime launch가
+import하거나 시작하지 않는다. 긴 실험 이력은 `docs/`에 보존한다.
+
+live 3-camera→BEV→lane 출력은 `config/baselines/perception_runtime_move_smoke_v1.yaml`에
+고정한다. 입력 bag과 recorder의 소유권은 계속 `data_collection`에 있다.
+
+P4-C5 representative raw bag을 0.5배속으로 두 진입점에 각각 재생한 결과 front class-ID 79,
+fused BEV 38, lane observation 43개의 공통 source stamp에서 payload mismatch가 모두 0이었다.
+ROS connection-local `header.seq`만 비교에서 제외하고 frame·stamp·config SHA와 전체 payload는
+그대로 비교했다. 당시 도구는 호환 package 제거와 함께 retired 처리했고, 측정값·input SHA와
+canonical config/model SHA는 `config/baselines/perception_support_config_parity_v1.yaml`에 보존한다.
+
+기계 판독 상태는 `config/runtime.yaml`, 파트 간 topic·message 정본은
+[`perception_runtime_topic_contract_v1.yaml`](../../config/contracts/perception_runtime_topic_contract_v1.yaml),
+전체 이관 gate는 [Perception 개발·통합 가이드](../../docs/packages/asmc_perception/README.md)를 따른다.
+
+## 검증
+
+```bash
+python3 -m unittest src/asmc_camera/test/test_facade_contract.py
+python3 -m unittest src/asmc_camera/test/test_traffic_light_contract.py
+python3 tools/audit/validate_perception_contract.py
+python3 tools/audit/validate_traffic_light_parity.py --check-artifacts
+roslaunch --nodes asmc_camera perception.launch
+roslaunch asmc_camera traffic_light_closed_loop_acceptance.launch
+# controlled simulator only; explicit opt-in required
+roslaunch asmc_camera traffic_light_vehicle_acceptance_stack.launch \
+  run_acceptance:=true allow_vehicle_control:=true
+```
+
+P4-C6에서 camera/BEV/traffic 호환 package를 제거하고 offline·training 자산까지 이 패키지로
+이관했다. legacy topic은 외부 소비자 호환 계약이므로 package 삭제와 무관하게 계속 병행한다.
+`data_collection`은 독립 package로 유지한다.
+`src/lidar+sensorfusion`은 담당 팀원이 개발 중인 독립 workspace이므로
+그 파일과 내부 `Msg`·`morai_msgs`는 건드리지 않는다. LiDAR 완성·handoff 뒤에만 별도 P4-D로
+canonical adapter와 message 전환을 진행한다.
