@@ -101,6 +101,11 @@ def summarize(rows):
     lag = [(row['stamp_ns'] - origin['source_lidar_stamp_ns']) / 1e6
            for row in publications for origin in row['origins']
            if origin['source_lidar_stamp_ns']]
+    final = finals[0] if len(finals) == 1 else None
+    supply = ({'processed': len(processed), 'matched': final['matched'],
+               'dropped': final['dropped'], 'pending': final.get('pending_lidar', 0),
+               'startup_removed': counts['lidar_startup_discard'] + counts['lidar_startup_overflow'],
+               'overflow_removed': counts['lidar_pending_overflow']} if final else None)
     consumed = [row["selected_yolo_stamp_ns"] for row in selected]
     return {
         "events": dict(counts), "final": finals[-1] if finals else None,
@@ -119,6 +124,9 @@ def summarize(rows):
                           "p95": durations[min(len(durations)-1, int(.95*len(durations)))]
                           if durations else None},
         "processed_lidar_stamps": processed,
+        "processed_supply": supply,
+        "processed_supply_accounting_consistent": supply is not None and supply['processed'] ==
+        sum(value for key, value in supply.items() if key != 'processed'),
         "duplicate_processed_stamps": len(processed) - len(set(processed)),
         "continuous_observation_complete": bool(publications)
         and len(ready) == len(processed) == len(publications)
@@ -153,6 +161,10 @@ def compare(reference, candidate):
                    if row['event'] == 'lidar_process_end' and row['processed']}
     processed_b = {row['stamp_ns'] for row in candidate
                    if row['event'] == 'lidar_process_end' and row['processed']}
+    old_supply = summarize(reference)['processed_supply']
+    new_supply = summarize(candidate)['processed_supply']
+    deltas = ({key: new_supply[key] - old_supply[key] for key in old_supply}
+              if old_supply is not None and new_supply is not None else None)
     return {"common_matched_lidar_stamps": len(common),
             "old_only_matched_stamps": sorted(a.keys() - b.keys()),
             "new_only_matched_stamps": sorted(b.keys() - a.keys()),
@@ -160,7 +172,11 @@ def compare(reference, candidate):
             "old_only_processed_lidar_stamps": sorted(processed_a - processed_b),
             "new_only_processed_lidar_stamps": sorted(processed_b - processed_a),
             "processed_lidar_count_delta": len(processed_b) - len(processed_a),
-            "matched_count_delta": len(b) - len(a)}
+            "matched_count_delta": len(b) - len(a),
+            "processed_supply_deltas": deltas,
+            "matched_delta_explained_by_processed_supply": deltas is not None and
+            deltas['matched'] == deltas['processed'] - sum(value for key, value in deltas.items()
+                if key not in ('processed', 'matched'))}
 
 
 def main():

@@ -10,6 +10,16 @@ def frame(objects):
 
 
 class FusionDiagnosticsTest(unittest.TestCase):
+    def test_processed_supply_reconciles_matches_drops_and_pending(self):
+        rows = [{'event': 'lidar_process_end', 'stamp_ns': stamp,
+                 'duration_ms': 1, 'processed': True, 'pose_ready': True}
+                for stamp in (100, 200, 300)]
+        rows.append({'event': 'fusion_summary', 'stamp_ns': 0, 'matched': 1,
+                     'dropped': 1, 'pending_lidar': 1})
+        self.assertTrue(summarize(rows)['processed_supply_accounting_consistent'])
+        rows[-1]['pending_lidar'] = 2
+        self.assertFalse(summarize(rows)['processed_supply_accounting_consistent'])
+
     def test_intact_ros_event_accounts_for_interleaved_screen_interval(self):
         complete = 'Fusion sync 5s: matched=61 dropped=1 offset median/p95/max=18.0/30.0/49.0 ms'
         screen = ('Fusion sync 5s: matched=61 dropped=1 offset median/p95/max=1[WARN] other node\n'
