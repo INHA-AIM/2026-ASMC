@@ -8,7 +8,8 @@
 
 ## 1. HD 패키지가 제공하는 결과
 
-운영 `roslaunch asmc_hd_map competition_map.launch rviz:=false`는 크롭을 기본으로 끈다.
+운영 `roslaunch asmc_hd_map competition_map.launch rviz:=false`와 debug launch 모두 크롭을 기본으로 끈다.
+RViz 프리셋은 전역 주행가능영역 외곽선을 기본으로 표시하고 `near ego` 크롭 display는 제거했다.
 차선·정지선·차로·주행가능영역·미션·체크포인트·공식 경로는 `/hd_map/global/*`에서
 latched 배열로 한 번 받고 필요한 레이어만 캐시한다. `/hd_map/context`와
 `/hd_map/local/current_lane`은 크롭 없이 GPS 기반으로 계속 제공한다.
@@ -41,6 +42,27 @@ Python 소비 예제는 `hd_map_consumer_example.py`의 `~layers`를 선택한�
 `speed_at_station`, `mission_boundaries`, `signals_ahead`, `spatial`을 조회한다.
 C++도 정적 배열과 ID별 payload를 받아 같은 방식으로 캐시할 수 있다.
 context의 `active_mission_ids`와 경계 ID를 전역 미션 payload에 연결한다.
+
+### 신호등 인지 활성 구간
+
+source의 `traffic_light_activation_A236_to_A308`은 **A236 시작 → A308 종료**다.
+전체 ID는 `A2256W000236` → `A2256W000308`, 공식 station은
+`[160.009167271, 609.876838441)` m다. 이 구간에서만 인지를 활성화한다는
+`enable_within_zone_only` / `disable_outside_zone=true` 정책을 metadata에 정의했다.
+HD가 camera 노드를 직접 켜고 끄지는 않는다. 판제가 유효한 context의
+`active_mission_ids`에 이 ID가 포함되는지 또는 전역 zone의 station 범위를 조회해 연결한다.
+
+이 활성 zone과 실제 신호 정지선 경계 5개를 구분한다. `mission_type=traffic_light`만
+검사하면 둘 다 포함되므로 payload의 `perception_monitoring=activation_zone`과
+`boundary_only=true`를 구분한다.
+
+| 실제 신호 경계 소유 link | 신호등 ID | 공식 station (m) |
+|---|---|---|
+| A219 | C1256W000077 | 208.458941227 |
+| A213 | C1256W000091 | 315.906098142 |
+| A728 | C1256W000016 | 436.797566442 |
+| A315 | C1256W000123 | 550.618735375 |
+| A308 | C1256W000052 | 609.868390593 |
 
 ## 2. 교차로 패치와 현재 main 지도 갱신
 

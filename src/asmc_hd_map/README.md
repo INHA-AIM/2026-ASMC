@@ -83,7 +83,7 @@ publisher는 입력 SHA나 build 조합이 맞지 않으면 일부 토픽을 내
 판제는 latched global vector/topic을 정본으로 사용한다. local lane/grid는 map frame과 global ID를
 유지하는 선택적 cache이며 planner horizon이나 별도 정본이 아니다. 현재 차로 association은
 GPS 안테나가 아니라 후륜축 중심 `base_link`의 map 좌표를 기준으로 한다.
-운영 `competition_map.launch`는 크롭을 기본으로 끄고 `/hd_map/context`는 계속 제공한다.
+운영·debug launch와 RViz 프리셋은 크롭을 기본으로 끄고 `/hd_map/context`는 계속 제공한다.
 크롭을 `publish_local:=true`로 켰을 때 local 창은 heading 기준 전방 90 m·후방 30 m·좌우 각 30 m(0.2 m, 600×300, 최대 20 Hz)다.
 현재 차로와 context는 pose callback에서 즉시 발행하고 20 Hz로 유효 상태를 갱신한다.
 공식 경로·누적거리는 `/hd_map/global/route`, 현재 구간·속도·미션 시작/종료 좌표는
@@ -93,6 +93,9 @@ GPS 안테나가 아니라 후륜축 중심 `base_link`의 map 좌표를 기준�
 `SemanticMapIndex`로 필요한 vector/미션 레이어만 받고 제한속도·구간·신호등/정지선을 조회한다.
 링크별 유효 최대속도 39개는 속도 zone payload로 전달한다. 상세 설정과 좌표 변환은
 [runtime 계약](../../docs/contracts/hd-map/runtime-v1.md#22-선택-구독과-규칙-조회)을 따른다.
+
+RViz 기본 프리셋은 주행가능영역의 전역 외곽선을 표시한다. `Drivable area near ego`는 제거했고,
+전체 raster 면 display는 필요할 때만 수동으로 켠다.
 
 수치만으로 artifact를 동일하다고 판단하지 않는다. `/hd_map/meta`의 `build_id`, `map_id`,
 `geometry_sha256`와 `manifest_sha256`를 함께 확인한다.

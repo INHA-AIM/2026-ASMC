@@ -35,15 +35,6 @@ Visualization Manager:
       Topic: /hd_map/global/drivable_grid
       Unreliable: false
       Use Timestamp: false
-    - Alpha: 0.4
-      Class: rviz/Map
-      Color Scheme: map
-      Draw Behind: true
-      Enabled: true
-      Name: "Drivable area near ego (0.2 m, 120 m GPS+IMU crop)"
-      Topic: /hd_map/local/drivable_grid
-      Unreliable: false
-      Use Timestamp: false
   Enabled: true
   Global Options:
     Background Color: 12; 15; 20
