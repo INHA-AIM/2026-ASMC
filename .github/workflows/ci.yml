@@ -64,3 +64,16 @@ jobs:
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
           python3 -m unittest discover -s src/asmc_camera/test/detection -p 'test_*.py'
+          python3 -m unittest discover -s src/asmc_camera/test/runtime -p 'test_*.py'
+
+      - name: Check inference control faults with generated ROS messages
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          export ROS_MASTER_URI=http://127.0.0.1:11312
+          export ROS_HOSTNAME=localhost
+          roscore -p 11312 > /tmp/camera-control-roscore.log 2>&1 &
+          core_pid=$!
+          trap 'kill "$core_pid" 2>/dev/null || true' EXIT
+          python3 tools/perception/check_inference_control_ros.py
+          python3 tools/perception/check_region_example_ros.py

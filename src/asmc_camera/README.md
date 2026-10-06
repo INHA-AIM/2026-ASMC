@@ -388,3 +388,9 @@ P4-C6에서 camera/BEV/traffic 호환 package를 제거하고 offline·training 
 `src/lidar+sensorfusion`은 담당 팀원이 개발 중인 독립 workspace이므로
 그 파일과 내부 `Msg`·`morai_msgs`는 건드리지 않는다. LiDAR 완성·handoff 뒤에만 별도 P4-D로
 canonical adapter와 message 전환을 진행한다.
+
+## 모델별 외부 실행 제어
+
+`managed:=true`에서 TwinLite·YOLO·ResNet18을 독립적으로 STANDBY/PREPARE/ACTIVE로
+요청할 수 있다. 직접 launch·서비스·GUI 명령, 판제 역할과 현재 수락 제한은
+[모델별 실행 상태 안내](../../docs/handoffs/perception/camera-inference-control.md)를 따른다.

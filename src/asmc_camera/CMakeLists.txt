@@ -3,6 +3,7 @@ project(asmc_camera)
 
 find_package(catkin REQUIRED COMPONENTS
   asmc_msgs
+  message_generation
   rospy
   sensor_msgs
   std_msgs
@@ -10,15 +11,21 @@ find_package(catkin REQUIRED COMPONENTS
 
 catkin_python_setup()
 
+add_message_files(FILES InferenceStatus.msg)
+add_service_files(FILES SetInferenceMode.srv)
+generate_messages(DEPENDENCIES std_msgs)
+
 catkin_package(
   CATKIN_DEPENDS
     asmc_msgs
+    message_runtime
     rospy
     sensor_msgs
     std_msgs
 )
 
 catkin_install_python(PROGRAMS
+  scripts/camera_region_example_node.py
   scripts/object_detection_node.py
   scripts/camera_bev_fusion_node.py
   scripts/camera_bev_node.py
@@ -52,6 +59,7 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/camera)
   catkin_add_nosetests(test/bev)
   catkin_add_nosetests(test/detection)
+  catkin_add_nosetests(test/runtime)
 endif()
 
 install(DIRECTORY config launch

@@ -18,6 +18,11 @@ from asmc_camera.camera.frame_buffer import EncodedFrame, LatestFrameBuffer
 from asmc_camera.camera.inference_engine import InferenceEngine
 
 
+from asmc_camera.runtime.cadence import CoherentFrames, downstream_gate
+from asmc_camera.runtime.ros_control import RosInferenceControl
+from asmc_msgs.msg import LaneBoundaryFamily
+
+
 SUPPORTED_VIEWS = ("front", "left", "right")
 
 
@@ -172,6 +177,9 @@ class SemanticInferenceNode:
         self._timestamp_fallbacks_by_view = {view: None for view in self.views}
         self._timestamp_regressions_by_view = {view: None for view in self.views}
 
+        self.control = RosInferenceControl("twinlite", self.views, 10., warmed_up=bool(warmup_iterations))
+        self.family_status_subscriber = rospy.Subscriber(
+            "/perception/lane/boundary_family", LaneBoundaryFamily, self.control.pipeline_observation, queue_size=1)
         self.subscribers = []
         for view in self.views:
             subscriber = rospy.Subscriber(
@@ -217,6 +225,7 @@ class SemanticInferenceNode:
         return "/perception/camera/{}/{}/{}".format(view, head, suffix)
 
     def _callback(self, message: CompressedImage, view: str) -> None:
+        self.control.state.observe(view, message.header.stamp.to_nsec())
         self.buffer.push(
             EncodedFrame(
                 view=view,
@@ -278,10 +287,24 @@ class SemanticInferenceNode:
         return True
 
     def _worker(self) -> None:
+        pending = CoherentFrames(self.views, int(float(
+            rospy.get_param("~managed_max_skew_ms", 35.)) * 1e6))
         while not rospy.is_shutdown():
             frames = self.buffer.pop_batch(timeout=0.2)
             if not frames:
                 continue
+            if self.control.state.managed:
+                if self.control.state.mode == 0:
+                    pending.clear()
+                    continue
+                frames = pending.offer(frames, self.control.state.generation)
+                if frames is None:
+                    continue
+            stamps = {frame.view: frame.stamp.to_nsec() for frame in frames}
+            token = self.control.state.begin(stamps)
+            if token is None:
+                continue
+            pending.clear()
             decoded = {}
             usable_frames = {}
             started = time.perf_counter()
@@ -296,7 +319,8 @@ class SemanticInferenceNode:
                 decoded[frame.view] = image
                 usable_frames[frame.view] = frame
             decode_ms = (time.perf_counter() - started) * 1000.0
-            if not decoded:
+            if not decoded or (self.control.state.managed and len(decoded) != len(frames)):
+                self.control.state.complete(token, stamps, False, "decode_error")
                 continue
             try:
                 # Snapshot the lazy-publish decision for the complete batch.
@@ -311,90 +335,95 @@ class SemanticInferenceNode:
             except Exception as exc:
                 with self._stats_lock:
                     self.inference_errors += 1
+                self.control.state.complete(token, stamps, False, "inference_error")
                 rospy.logerr_throttle(2.0, "semantic inference failed: %s", exc)
                 continue
 
-            started = time.perf_counter()
-            publish_model_grid = preserve_model_grid and self._should_publish_model_grid(
-                prediction.views, usable_frames
-            )
-            for view, value in prediction.views.items():
-                frame = usable_frames[view]
-                for head, output in value.probabilities.items():
-                    if head in self.categorical_heads:
-                        if not self._publish_unless_shutdown(
-                            self.publishers[view][head],
-                            self._image_message(output, frame, categorical=True)
+            with self.control.state.output_guard(token) as allowed:
+                if not allowed:
+                    continue
+                self.control.state.complete(token, {v: f.stamp.to_nsec() for v, f in usable_frames.items()})
+                started = time.perf_counter()
+                publish_model_grid = preserve_model_grid and self._should_publish_model_grid(
+                    prediction.views, usable_frames
+                )
+                for view, value in prediction.views.items():
+                    frame = usable_frames[view]
+                    for head, output in value.probabilities.items():
+                        if head in self.categorical_heads:
+                            if not self._publish_unless_shutdown(
+                                self.publishers[view][head],
+                                self._image_message(output, frame, categorical=True)
+                            ):
+                                return
+                            if not self._publish_unless_shutdown(
+                                self.confidence_publishers[view][head],
+                                self._image_message(
+                                    value.categorical_confidences[head], frame
+                                ),
+                            ):
+                                return
+                        else:
+                            if not self._publish_unless_shutdown(
+                                self.publishers[view][head],
+                                self._image_message(output, frame)
+                            ):
+                                return
+                    if publish_model_grid and view in self.model_grid_publishers:
+                        class_publisher = self.model_grid_publishers[view]
+                        confidence_publisher = self.model_grid_confidence_publishers[view]
+                        if (
+                            class_publisher.get_num_connections() > 0
+                            or confidence_publisher.get_num_connections() > 0
                         ):
-                            return
-                        if not self._publish_unless_shutdown(
-                            self.confidence_publishers[view][head],
-                            self._image_message(
-                                value.categorical_confidences[head], frame
-                            ),
-                        ):
-                            return
-                    else:
-                        if not self._publish_unless_shutdown(
-                            self.publishers[view][head],
-                            self._image_message(output, frame)
-                        ):
-                            return
-                if publish_model_grid and view in self.model_grid_publishers:
-                    class_publisher = self.model_grid_publishers[view]
-                    confidence_publisher = self.model_grid_confidence_publishers[view]
-                    if (
-                        class_publisher.get_num_connections() > 0
-                        or confidence_publisher.get_num_connections() > 0
+                            if not self._publish_unless_shutdown(
+                                class_publisher,
+                                self._image_message(
+                                    value.model_grid_probabilities["road_marking"],
+                                    frame,
+                                    categorical=True,
+                                ),
+                            ):
+                                return
+                            if not self._publish_unless_shutdown(
+                                confidence_publisher,
+                                self._image_message(
+                                    value.model_grid_categorical_confidences[
+                                        "road_marking"
+                                    ],
+                                    frame,
+                                ),
+                            ):
+                                return
+                publish_ms = (time.perf_counter() - started) * 1000.0
+                completed_ros_ns = int(rospy.Time.now().to_nsec())
+                completed_monotonic = time.monotonic()
+                with self._stats_lock:
+                    self.output_batches += 1
+                    self.total_output_batches += 1
+                    self.output_frames += len(prediction.views)
+                    for view in prediction.views:
+                        self.output_by_view[view] += 1
+                    self._latest_result_stamp_ns = completed_ros_ns
+                    for view, frame in usable_frames.items():
+                        stamp_ns = int(frame.stamp.to_nsec())
+                        self._latest_input_stamp_ns[view] = stamp_ns
+                        self._latest_receive_stamp_ns[view] = frame.received_ros_ns
+                        self._queue_age_samples.append(
+                            max(0.0, (completed_monotonic - frame.received_monotonic) * 1000.0)
+                        )
+                        end_to_end_ms = (completed_ros_ns - stamp_ns) / 1000000.0
+                        if 0.0 <= end_to_end_ms <= 60000.0:
+                            self._end_to_end_samples.append(end_to_end_ms)
+                    for name, value in (
+                        ("decode_ms", decode_ms),
+                        ("preprocess_ms", prediction.preprocess_ms),
+                        ("inference_ms", prediction.inference_ms),
+                        ("postprocess_ms", prediction.postprocess_ms),
+                        ("publish_ms", publish_ms),
                     ):
-                        if not self._publish_unless_shutdown(
-                            class_publisher,
-                            self._image_message(
-                                value.model_grid_probabilities["road_marking"],
-                                frame,
-                                categorical=True,
-                            ),
-                        ):
-                            return
-                        if not self._publish_unless_shutdown(
-                            confidence_publisher,
-                            self._image_message(
-                                value.model_grid_categorical_confidences[
-                                    "road_marking"
-                                ],
-                                frame,
-                            ),
-                        ):
-                            return
-            publish_ms = (time.perf_counter() - started) * 1000.0
-            completed_ros_ns = int(rospy.Time.now().to_nsec())
-            completed_monotonic = time.monotonic()
-            with self._stats_lock:
-                self.output_batches += 1
-                self.total_output_batches += 1
-                self.output_frames += len(prediction.views)
-                for view in prediction.views:
-                    self.output_by_view[view] += 1
-                self._latest_result_stamp_ns = completed_ros_ns
-                for view, frame in usable_frames.items():
-                    stamp_ns = int(frame.stamp.to_nsec())
-                    self._latest_input_stamp_ns[view] = stamp_ns
-                    self._latest_receive_stamp_ns[view] = frame.received_ros_ns
-                    self._queue_age_samples.append(
-                        max(0.0, (completed_monotonic - frame.received_monotonic) * 1000.0)
-                    )
-                    end_to_end_ms = (completed_ros_ns - stamp_ns) / 1000000.0
-                    if 0.0 <= end_to_end_ms <= 60000.0:
-                        self._end_to_end_samples.append(end_to_end_ms)
-                for name, value in (
-                    ("decode_ms", decode_ms),
-                    ("preprocess_ms", prediction.preprocess_ms),
-                    ("inference_ms", prediction.inference_ms),
-                    ("postprocess_ms", prediction.postprocess_ms),
-                    ("publish_ms", publish_ms),
-                ):
-                    self.timing_totals[name] += value
-                self._maybe_log()
+                        self.timing_totals[name] += value
+                    self._maybe_log()
 
     def _should_publish_model_grid(self, predictions, usable_frames):
         if not self.model_grid_publishers:
@@ -412,6 +441,20 @@ class SemanticInferenceNode:
         if stamp_ns <= 0:
             self.model_grid_incomplete_batches += 1
             return False
+        control = getattr(self, "control", None)
+        if control is not None and control.state.managed:
+            publish, following, reset = downstream_gate(
+                stamp_ns, self.last_model_grid_stamp_ns,
+                self.next_model_grid_stamp_ns, self.model_grid_period_ns,
+                control.state.target_hz)
+            self.last_model_grid_stamp_ns = stamp_ns
+            self.model_grid_timestamp_resets += int(reset)
+            if not publish:
+                self.model_grid_throttled_batches += 1
+                return False
+            self.next_model_grid_stamp_ns = following
+            self.model_grid_output_batches += 1
+            return True
         if (
             self.last_model_grid_stamp_ns
             and stamp_ns + self.model_grid_period_ns <= self.last_model_grid_stamp_ns
@@ -545,6 +588,7 @@ class SemanticInferenceNode:
         self.diagnostics_publisher.publish(message)
 
     def _shutdown(self) -> None:
+        self.control.close()
         self.buffer.close()
 
 

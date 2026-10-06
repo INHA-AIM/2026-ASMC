@@ -33,6 +33,10 @@ class ObjectFrame(EncodedFrame):
     header: object = None
 
 
+from asmc_camera.runtime.ros_control import RosInferenceControl
+from asmc_camera.runtime.state import ACTIVE
+
+
 class ObjectDetectionNode:
     def __init__(self, backend=None):
         check_message_build()
@@ -64,6 +68,8 @@ class ObjectDetectionNode:
         self.duplicates = []
         self.publisher = rospy.Publisher("/perception/camera/objects", CameraObjectBoxArray, queue_size=5)
         self.diagnostics = rospy.Publisher("/perception/camera/objects/diagnostics", DiagnosticArray, queue_size=5)
+        self.last_header = None
+        self.control = RosInferenceControl("yolo", ["front"], 20., on_transition=self._invalidate)
         self.subscriber = rospy.Subscriber(rospy.get_param("~image_topic", "/image_jpeg/compressed"),
                                            CompressedImage, self._callback, queue_size=1, buff_size=2**24)
         rospy.on_shutdown(self.shutdown)
@@ -74,6 +80,11 @@ class ObjectDetectionNode:
         rospy.loginfo("camera object detector ready: model=%s device=%s", backend.info.get("weights_sha256"),
                       backend.info.get("device"))
 
+    def _invalidate(self, mode):
+        if mode != ACTIVE and self.last_header is not None:
+            message = CameraObjectBoxArray(header=copy.deepcopy(self.last_header), valid=False)
+            self.publisher.publish(message)
+
     def _callback(self, message):
         with self.lock:
             self.last_input_at = time.monotonic()
@@ -82,6 +93,7 @@ class ObjectDetectionNode:
                 self.header_errors += 1
                 rospy.logwarn_throttle(5, "camera objects requires nonzero source stamp and camera_front frame_id")
                 return
+        self.control.state.observe("front", message.header.stamp.to_nsec())
         self.buffer.push(ObjectFrame(view="front", stamp=message.header.stamp,
                                      frame_id=message.header.frame_id, data=bytes(message.data),
                                      received_monotonic=time.monotonic(),
@@ -90,10 +102,20 @@ class ObjectDetectionNode:
     def _worker(self):
         while not self.stop.is_set() and not rospy.is_shutdown():
             for frame in self.buffer.pop_batch(timeout=0.2):
+                stamps = {"front": frame.stamp.to_nsec()}
+                token = self.control.state.begin(stamps)
+                if token is None:
+                    continue
                 message, timings, error = self.processor.process(frame.header, frame.data)
                 if self.stop.is_set():
                     return
-                self.publisher.publish(message)
+                with self.control.state.output_guard(token) as allowed:
+                    if not allowed:
+                        continue
+                    self.control.state.complete(token, stamps, message.valid, error[0] if error else "")
+                    if self.control.state.mode == ACTIVE:
+                        self.publisher.publish(message)
+                        self.last_header = copy.deepcopy(frame.header)
                 with self.lock:
                     self.output_frames += 1
                     self.latest_result_stamp_ns = frame.stamp.to_nsec()
@@ -157,6 +179,7 @@ class ObjectDetectionNode:
         return Header(stamp=rospy.Time.now())
 
     def shutdown(self):
+        self.control.close()
         self.stop.set()
         self.subscriber.unregister()
         self.buffer.close()

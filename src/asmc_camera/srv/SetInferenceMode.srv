@@ -1,0 +1,10 @@
+uint8 STANDBY=0
+uint8 PREPARE=1
+uint8 ACTIVE=2
+uint8 mode
+# Zero keeps the current target; legacy launches remain unrestricted until a request.
+float64 target_hz
+---
+bool accepted
+uint64 generation
+string reason

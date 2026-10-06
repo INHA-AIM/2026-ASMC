@@ -1,0 +1,27 @@
+# Development request policy only. Planning may replace this entire node.
+context_freshness_sec: 0.5
+prepare_lead_sec: 3.0
+prepare_min_distance_m: 20.0
+prepare_margin_m: 5.0
+recovery_hold_sec: 0.5
+recovery_exit_margin_m: 5.0
+gps_loss_modes: {twinlite: 2, yolo: 2, resnet18: 0}
+models:
+  twinlite:
+    node: /camera_semantic_inference
+    zone_ids: [gps_shadow_candidate]
+    initial_mode: 0
+    target_hz: 10.0
+    measured_prepare_p99_sec: 0.0
+  yolo:
+    node: /camera_object_detector
+    zone_ids: []
+    initial_mode: 2
+    always_active: true
+    target_hz: 20.0
+  resnet18:
+    node: /traffic_light_infer
+    zone_ids: [traffic_light_activation_A236_to_A308]
+    initial_mode: 0
+    target_hz: 10.0
+    measured_prepare_p99_sec: 0.0

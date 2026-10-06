@@ -1,0 +1,47 @@
+schema_version: 1
+contract_id: camera_inference_control_v1
+owner: asmc_camera
+decision_owner: planning
+legacy_default: ACTIVE_unrestricted
+managed_default: STANDBY
+models:
+  twinlite: /camera_semantic_inference
+  yolo: /camera_object_detector
+  resnet18: /traffic_light_infer
+service:
+  private_name: set_inference_mode
+  type: asmc_camera/SetInferenceMode
+  modes: {STANDBY: 0, PREPARE: 1, ACTIVE: 2}
+  target_hz_zero: keep_current
+  maximum_request_hz: 120
+  accepted_means: request_recorded_not_ready
+status:
+  private_name: inference_status
+  type: asmc_camera/InferenceStatus
+  latched: true
+  wall_publish_period_sec: 0.2
+  freshness_sec: 0.35
+  prepare_normal_frames_per_view: 3
+  generation_changes: [mode, rate, source_epoch]
+  success_is_distinct_from_semantic_validity: true
+  twinlite_pipeline_ready: fresh_valid_LaneBoundaryFamily_after_cutoff
+results:
+  source_header_preserved: true
+  repeat_old_observations_to_meet_rate: false
+  PREPARE:
+    twinlite: internal_lane_pipeline_runs_consumer_must_check_mode
+    yolo: no_operational_detections
+    resnet18: no_operational_detections
+  STANDBY:
+    gpu_model_retained: true
+    repeating_inference: false
+    ready: false
+    previous_result: invalidation_once_if_source_header_known
+    traffic_light_legacy: not_detected
+example:
+  launch: src/asmc_camera/launch/camera_region_example.launch
+  default_enabled: false
+  sole_control_owner_required: true
+  policy: src/asmc_camera/config/runtime/camera_region_example.yaml
+  vehicle_control: false
+scope_exclusions: [region_ownership, driving_mode, automatic_control_authority, TensorRT, three_view_yolo]

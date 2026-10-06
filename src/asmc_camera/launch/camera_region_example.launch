@@ -1,0 +1,10 @@
+<launch>
+  <!-- Does not start models, bridges, driving nodes, or HD-map publishers. -->
+  <arg name="allow_example_control" default="false"/>
+  <arg name="config" default="$(find asmc_camera)/config/runtime/camera_region_example.yaml"/>
+  <node if="$(arg allow_example_control)" pkg="asmc_camera" type="camera_region_example_node.py"
+        name="camera_region_example" output="screen">
+    <rosparam command="load" file="$(arg config)" ns="policy"/>
+    <param name="allow_example_control" value="$(arg allow_example_control)"/>
+  </node>
+</launch>

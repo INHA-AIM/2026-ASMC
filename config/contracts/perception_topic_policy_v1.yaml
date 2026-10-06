@@ -33,6 +33,23 @@ launch_defaults:
 # currently names every expanded topic in the family. It is evidence of use,
 # not permission to expose a debug topic as a planning contract.
 topic_families:
+  - id: camera_inference_status
+    topics:
+      - {pattern: /camera_semantic_inference/inference_status, type: asmc_camera/InferenceStatus}
+      - {pattern: /camera_object_detector/inference_status, type: asmc_camera/InferenceStatus}
+      - {pattern: /traffic_light_infer/inference_status, type: asmc_camera/InferenceStatus}
+    producer:
+      file: src/asmc_camera/src/asmc_camera/runtime/ros_control.py
+      anchors: ["'~inference_status'"]
+    consumers:
+      - file: src/asmc_camera/src/asmc_camera/runtime/ros_control.py
+        anchor: "'/camera_semantic_inference/inference_status'"
+    bag_profiles: []
+    classification: operational_diagnostics
+    current_mode: default_on
+    p5b_action: keep
+    rationale: Independent model readiness; planning owns mode requests and result consumption.
+
   - id: camera_objects
     topics:
       - {pattern: /perception/camera/objects, type: asmc_msgs/CameraObjectBoxArray}
@@ -439,7 +456,7 @@ topic_families:
     topics:
       - {pattern: /perception/traffic_light/detection, type: asmc_msgs/TrafficLightDetection}
     producer:
-      file: src/asmc_camera/scripts/traffic_light_node.py
+      file: src/asmc_camera/src/asmc_camera/nodes/traffic_light_node.py
       anchors: ['parser.add_argument("--typed-topic", default="/perception/traffic_light/detection")']
     consumers:
       - file: src/behavior_planner/src/node/behavior_node.cpp
@@ -455,7 +472,7 @@ topic_families:
       - {pattern: /traffic_light/state, type: std_msgs/String}
       - {pattern: /traffic_light/detail, type: std_msgs/String}
     producer:
-      file: src/asmc_camera/scripts/traffic_light_node.py
+      file: src/asmc_camera/src/asmc_camera/nodes/traffic_light_node.py
       anchors: ['parser.add_argument("--state-topic", default="/traffic_light/state")', 'parser.add_argument("--detail-topic", default="/traffic_light/detail")']
     consumers:
       - file: src/behavior_planner/src/node/behavior_node.cpp
