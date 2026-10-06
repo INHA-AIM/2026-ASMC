@@ -16,30 +16,32 @@ int CyclesFromSeconds(double seconds, double frequency_hz) {
 
 }  // namespace
 
-MPC::MPC(const MPCParams& params) : params_(params) {
+void InitMPC(const MPCParams& params) {
+    g_mpc = MPCContext{};
+    g_mpc.params = params;
     const double frequency =
-        params_.control_frequency > 0.0 ? params_.control_frequency : 20.0;
-    stuck_timeout_cycles_ =
-        CyclesFromSeconds(params_.stuck_timeout, frequency);
-    recovery_duration_cycles_ =
-        CyclesFromSeconds(params_.stuck_recovery_duration, frequency);
+        g_mpc.params.control_frequency > 0.0 ? g_mpc.params.control_frequency : 20.0;
+    g_mpc.stuck_timeout_cycles =
+        CyclesFromSeconds(g_mpc.params.stuck_timeout, frequency);
+    g_mpc.recovery_duration_cycles =
+        CyclesFromSeconds(g_mpc.params.stuck_recovery_duration, frequency);
 }
 
-void MPC::ResetOnFailSafe() {
-    warm_start_.clear();
-    last_control_ = MPCControl{};
-    stuck_cycles_ = 0;
-    recovery_cycles_left_ = 0;
+void ResetMPCOnFailSafe() {
+    g_mpc.warm_start.clear();
+    g_mpc.last_control = MPCControl{};
+    g_mpc.stuck_cycles = 0;
+    g_mpc.recovery_cycles_left = 0;
 }
 
-void MPC::ResetForPlannerStop(double published_steering) {
-    ResetOnFailSafe();
+void ResetMPCForPlannerStop(double published_steering) {
+    ResetMPCOnFailSafe();
     if (std::isfinite(published_steering))
-        last_control_.delta = std::clamp(published_steering,
-            -params_.steering_max, params_.steering_max);
+        g_mpc.last_control.delta = std::clamp(published_steering,
+            -g_mpc.params.steering_max, g_mpc.params.steering_max);
 }
 
-MPCOutput MPC::MPCProcess(
+MPCOutput MPCProcess(
     const MPCState& ego_state, const ReferencePath& reference) {
     MPCOutput output;
 
@@ -57,32 +59,32 @@ MPCOutput MPC::MPCProcess(
             reference.y_ref.back() - reference.y_ref.front());
     }
     const bool forward_intent =
-        max_reference_speed > params_.stuck_target_speed &&
-        path_progress > params_.stuck_min_path_progress;
+        max_reference_speed > g_mpc.params.stuck_target_speed &&
+        path_progress > g_mpc.params.stuck_min_path_progress;
     const bool ego_stopped =
-        std::fabs(ego_state.vx) < params_.stuck_ego_speed;
+        std::fabs(ego_state.vx) < g_mpc.params.stuck_ego_speed;
 
     if (!forward_intent || !ego_stopped) {
-        stuck_cycles_ = 0;
-        recovery_cycles_left_ = 0;
-    } else if (recovery_cycles_left_ == 0 &&
-               ++stuck_cycles_ >= stuck_timeout_cycles_) {
-        warm_start_.clear();
-        last_control_ = MPCControl{};
-        recovery_cycles_left_ = recovery_duration_cycles_;
-        stuck_cycles_ = 0;
+        g_mpc.stuck_cycles = 0;
+        g_mpc.recovery_cycles_left = 0;
+    } else if (g_mpc.recovery_cycles_left == 0 &&
+               ++g_mpc.stuck_cycles >= g_mpc.stuck_timeout_cycles) {
+        g_mpc.warm_start.clear();
+        g_mpc.last_control = MPCControl{};
+        g_mpc.recovery_cycles_left = g_mpc.recovery_duration_cycles;
+        g_mpc.stuck_cycles = 0;
         output.stuck_event = StuckEvent::RECOVERY_STARTED;
         output.stuck_event_ego_v = ego_state.vx;
         output.stuck_event_max_ref_v = max_reference_speed;
         output.stuck_event_path_progress = path_progress;
     }
 
-    const MPCControl optimization_previous_control = last_control_;
+    const MPCControl optimization_previous_control = g_mpc.last_control;
     const MPCResult result = solveMPC(
-        ego_state, reference, optimization_previous_control, warm_start_,
-        params_);
+        ego_state, reference, optimization_previous_control, g_mpc.warm_start,
+        g_mpc.params);
     if (!result.success ||
-        result.controls.size() != static_cast<std::size_t>(params_.horizon) ||
+        result.controls.size() != static_cast<std::size_t>(g_mpc.params.horizon) ||
         !std::isfinite(result.control.delta) ||
         !std::isfinite(result.control.accel)) {
         output.success = false;
@@ -90,34 +92,34 @@ MPCOutput MPC::MPCProcess(
         return output;
     }
 
-    warm_start_ = result.controls;
-    last_control_ = result.control;
+    g_mpc.warm_start = result.controls;
+    g_mpc.last_control = result.control;
     output.cost = computeCostBreakdown(
         result.predicted_states, result.controls, reference,
-        optimization_previous_control, params_);
+        optimization_previous_control, g_mpc.params);
     output.first_reference_curvature = reference.k_ref.empty()
         ? 0.0 : reference.k_ref.front();
     output.first_feedforward_steering = SteeringFeedforward(
-        output.first_reference_curvature, params_.wheelbase,
-        params_.steering_max, params_.steering_curvature_gain);
+        output.first_reference_curvature, g_mpc.params.wheelbase,
+        g_mpc.params.steering_max, g_mpc.params.steering_curvature_gain);
     output.first_reference_speed = reference.v_ref.empty()
         ? 0.0 : reference.v_ref.front();
     output.first_reference_acceleration = reference.a_ref.empty()
         ? 0.0 : reference.a_ref.front();
     output.first_used_reference_acceleration = clip(
         output.first_reference_acceleration,
-        params_.accel_min, params_.accel_max);
+        g_mpc.params.accel_min, g_mpc.params.accel_max);
     output.current_speed = ego_state.vx;
     output.first_speed_error =
         output.current_speed - output.first_reference_speed;
     MPCControl output_control = result.control;
-    if (recovery_cycles_left_ > 0 && forward_intent && ego_stopped) {
+    if (g_mpc.recovery_cycles_left > 0 && forward_intent && ego_stopped) {
         output_control.accel =
-            std::max(output_control.accel, params_.stuck_launch_accel);
+            std::max(output_control.accel, g_mpc.params.stuck_launch_accel);
         // 다음 cycle의 rate cost가 실제 출력한 가속과 이어지도록 동기화한다.
-        last_control_.accel = output_control.accel;
-        --recovery_cycles_left_;
-        if (recovery_cycles_left_ == 0) {
+        g_mpc.last_control.accel = output_control.accel;
+        --g_mpc.recovery_cycles_left;
+        if (g_mpc.recovery_cycles_left == 0) {
             output.stuck_event = StuckEvent::RECOVERY_COMPLETE;
         }
     }
@@ -129,3 +131,5 @@ MPCOutput MPC::MPCProcess(
     return output;
 }
 
+
+const MPCParams& GetMPCParams() { return g_mpc.params; }

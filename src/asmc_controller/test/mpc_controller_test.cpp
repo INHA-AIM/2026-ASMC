@@ -125,15 +125,15 @@ MPCResult SolveCurvedTrackingCase(const MPCParams& params,
 
 }  // namespace
 
-// D15: MpcController가 이전 process-global controller state를 대체한 뒤에도
-// 실제 solve 경로가 살아있는지 확인하는 smoke test.
-TEST(MpcControllerTest, ControlProcessProducesForwardAccelFromStandstill) {
-    MPC controller(MakeTestParams());
+// MPCProcess가 상태 초기화 후 실제 solve 경로를 유지하는지 확인한다.
+// 정지 상태에서의 출력 smoke test.
+TEST(MPCProcessTest, ControlProcessProducesForwardAccelFromStandstill) {
+    InitMPC(MakeTestParams());
     MPCState ego;  // 정지 상태(vx=0)에서 출발
     const ReferencePath reference = MakeStraightReference(3.0, 10, 0.1);
 
     const MPCOutput output =
-        controller.MPCProcess(ego, reference);
+        MPCProcess(ego, reference);
 
     ASSERT_TRUE(output.success);
     EXPECT_GT(output.control.accel, 0.0)
@@ -141,55 +141,53 @@ TEST(MpcControllerTest, ControlProcessProducesForwardAccelFromStandstill) {
     EXPECT_TRUE(std::isfinite(output.control.delta));
 }
 
-// D15: 두 MPC 인스턴스가 완전히 독립적인 상태를 갖는지 확인한다.
-// 이전 구조의 process-global state에서는 인스턴스 개념이 아예 없었다.
-// 이 테스트는 controller state가 실제로 분리됐다는 것의 회귀다.
-TEST(MpcControllerTest, TwoInstancesDoNotShareWarmStartOrParams) {
+// InitMPC 재호출은 이전 warm-start와 파라미터를 지워야 한다.
+TEST(MPCProcessTest, ReinitializationClearsWarmStartAndParams) {
     MPCParams params_a = MakeTestParams();
     params_a.horizon = 10;
     MPCParams params_b = MakeTestParams();
-    params_b.horizon = 6;  // 서로 다른 값 - 공유되면 나중 인스턴스가 덮어쓴다
+    params_b.horizon = 6;
 
-    MPC controller_a(params_a);
-    MPC controller_b(params_b);
-
-    EXPECT_EQ(10, controller_a.params().horizon);
-    EXPECT_EQ(6, controller_b.params().horizon);
-
-    // a를 여러 사이클 돌려 last_control_/warm_start_를 채운다.
+    InitMPC(params_a);
+    EXPECT_EQ(10, GetMPCParams().horizon);
     const ReferencePath reference_a = MakeStraightReference(3.0, 10, 0.1);
     MPCState ego_a;
     for (int i = 0; i < 3; ++i) {
-        const auto out = controller_a.MPCProcess(ego_a, reference_a);
+        const auto out = MPCProcess(ego_a, reference_a);
         ASSERT_TRUE(out.success);
         ego_a.vx += out.control.accel * params_a.dt;
     }
 
-    // b는 방금 만든 새 인스턴스이므로 정지 상태에서 시작한 것과 동일하게
-    // 동작해야 한다 - a의 warm-start/last_control이 새어 들어오면 안 된다.
+    InitMPC(params_b);
+    EXPECT_EQ(6, GetMPCParams().horizon);
     const ReferencePath reference_b = MakeStraightReference(3.0, 6, 0.1);
     MPCState ego_b;
-    const auto out_b = controller_b.MPCProcess(ego_b, reference_b);
-    ASSERT_TRUE(out_b.success);
-    EXPECT_GT(out_b.control.accel, 0.0);
-    EXPECT_EQ(6, controller_b.params().horizon);
+    const auto after_reset = MPCProcess(ego_b, reference_b);
+    ASSERT_TRUE(after_reset.success);
+    EXPECT_GT(after_reset.control.accel, 0.0);
+    InitMPC(params_b);
+    const auto fresh = MPCProcess(ego_b, reference_b);
+    ASSERT_TRUE(fresh.success);
+    EXPECT_DOUBLE_EQ(fresh.control.delta, after_reset.control.delta);
+    EXPECT_DOUBLE_EQ(fresh.control.accel, after_reset.control.accel);
 }
+
 
 // D15: warm-start가 사이클 간에 실제로 이어지는지 확인한다(상태 소유권
 // 회귀). 완전히 매 사이클 새로 푸는 것과 warm-start를 재사용하는 것은
 // 수렴 속도/결과가 달라야 한다 - 두 번째 사이클에서 previous control과
 // 이어지는 rate cost가 반영된 결과가 나오는지 본다.
-TEST(MpcControllerTest, WarmStartCarriesAcrossCycles) {
-    MPC controller(MakeTestParams());
+TEST(MPCProcessTest, WarmStartCarriesAcrossCycles) {
+    InitMPC(MakeTestParams());
     MPCState ego;
     const ReferencePath reference = MakeStraightReference(3.0, 10, 0.1);
 
-    const auto first = controller.MPCProcess(ego, reference);
+    const auto first = MPCProcess(ego, reference);
     ASSERT_TRUE(first.success);
     ego.vx += first.control.accel * 0.1;
     ego.x += ego.vx * 0.1;
 
-    const auto second = controller.MPCProcess(ego, reference);
+    const auto second = MPCProcess(ego, reference);
     ASSERT_TRUE(second.success);
     // 두 번째 사이클은 첫 사이클의 접근속도를 이어받아 계속 가속해야 한다
     // (참조 속도 3.0에 아직 도달하지 못한 상태).
@@ -200,7 +198,7 @@ TEST(MpcControllerTest, WarmStartCarriesAcrossCycles) {
 // (참조가 전진 + 충분히 진행) ego가 계속 멈춰 있으면 stuck_timeout 이후
 // RECOVERY_STARTED 이벤트가 나오고, 그 다음 recovery_duration 동안
 // launch_accel 이상의 가속을 강제해야 한다.
-TEST(MpcControllerTest, StuckRecoveryTriggersAfterTimeout) {
+TEST(MPCProcessTest, StuckRecoveryTriggersAfterTimeout) {
     MPCParams params = MakeTestParams();
     params.control_frequency = 20.0;  // 1 cycle = 0.05s
     params.stuck_timeout = 0.1;       // 2 cycle 안에 감지
@@ -210,7 +208,7 @@ TEST(MpcControllerTest, StuckRecoveryTriggersAfterTimeout) {
     params.stuck_target_speed = 0.3;
     params.stuck_min_path_progress = 0.5;
 
-    MPC controller(params);
+    InitMPC(params);
     // ego는 절대 움직이지 않는다(정지 데드락 시뮬레이션) - 참조는 전방으로
     // 충분히 진행하는 3 m/s 직선이라 forward_intent 조건을 만족한다.
     const ReferencePath reference = MakeStraightReference(3.0, 10, 0.1);
@@ -218,7 +216,7 @@ TEST(MpcControllerTest, StuckRecoveryTriggersAfterTimeout) {
 
     bool saw_recovery_started = false;
     for (int i = 0; i < 6 && !saw_recovery_started; ++i) {
-        const auto output = controller.MPCProcess(stuck_ego, reference);
+        const auto output = MPCProcess(stuck_ego, reference);
         ASSERT_TRUE(output.success);
         if (output.stuck_event ==
             StuckEvent::RECOVERY_STARTED) {
@@ -325,17 +323,17 @@ TEST(MpcContourLagSolverTest,
     contour_ego.y = 1.0;
     contour_ego.vx = 4.8;
 
-    // Use stateful controllers so cycle B consumes cycle A's shifted warm
+    // Keep state across each pair of cycles so cycle B consumes cycle A's shifted warm
     // start and previous steering exactly like runtime.
-    MPC lag_controller(params);
+    InitMPC(params);
     const MPCOutput before =
-        lag_controller.MPCProcess(nominal_ego, faster);
+        MPCProcess(nominal_ego, faster);
     const MPCOutput after =
-        lag_controller.MPCProcess(lagged_ego, decelerating);
-    MPC contour_controller(params);
-    ASSERT_TRUE(contour_controller.MPCProcess(nominal_ego, faster).success);
+        MPCProcess(lagged_ego, decelerating);
+    InitMPC(params);
+    ASSERT_TRUE(MPCProcess(nominal_ego, faster).success);
     const MPCOutput contour_reference =
-        contour_controller.MPCProcess(contour_ego, decelerating);
+        MPCProcess(contour_ego, decelerating);
     ASSERT_TRUE(before.success);
     ASSERT_TRUE(after.success);
     ASSERT_TRUE(contour_reference.success);

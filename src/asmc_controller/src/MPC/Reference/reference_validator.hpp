@@ -5,7 +5,7 @@
 #include "Global/Global.hpp"
 
 // ReferencePath 입력 유효성 검증 - Reference/input-preparation 계층
-// (message conversion 이후, MPC::MPCProcess 이전)에 위치한다.
+// (message conversion 이후, MPCProcess 이전)에 위치한다.
 //
 //   Trajectory -> PlannedPath -> ToReferencePath -> ReferencePath
 //                                                        │

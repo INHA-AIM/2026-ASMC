@@ -10,28 +10,6 @@
 
 namespace mpc_controller_ros {
 
-enum class TrajectoryStatus {
-    OK = 0,
-    STOP_TRAJECTORY,
-    INVALID_MESSAGE,
-    INVALID_FRAME,
-    INVALID_TIMESTAMP,
-    INVALID_DT,
-    INVALID_EGO,
-    INVALID_POINT,
-};
-
-// /vehicle/state -> MPCState(x0) 변환 상태. Trajectory.ego_at_plan과 같은
-// 계약(frame_id=="map", finite 필드)을 검사하지만 별도 입력이므로 별도 enum을
-// 쓴다 - 두 입력의 실패를 섞어 보고하지 않는다.
-enum class VehicleStateStatus {
-    OK = 0,
-    INVALID_MESSAGE,
-    INVALID_FRAME,
-    INVALID_TIMESTAMP,
-    NON_FINITE_VALUE,
-};
-
 const char* TrajectoryStatusName(TrajectoryStatus status);
 const char* VehicleStateStatusName(VehicleStateStatus status);
 

@@ -12,13 +12,13 @@ ReferencePath Curve(const MPCState& ego,const MPCParams& p,double delta) {
 TEST(PlannerStopContinuity, RestartIsRateBoundedAroundPublishedStopSteering) {
     MPCParams p;p.horizon=20;p.max_iterations=25;
     for(double delta:{-.42,.3}) {
-        MPC controller(p);controller.ResetForPlannerStop(delta);
-        MPCState ego{0,0,0,3};auto result=controller.MPCProcess(ego,Curve(ego,p,delta));
+        InitMPC(p);ResetMPCForPlannerStop(delta);
+        MPCState ego{0,0,0,3};auto result=MPCProcess(ego,Curve(ego,p,delta));
         ASSERT_TRUE(result.success);EXPECT_LE(std::fabs(result.control.delta-delta),p.steering_rate_max*p.dt+1e-8);
     }
 }
 TEST(PlannerStopContinuity, EmergencyResetStillStartsFromZero) {
-    MPCParams p;MPC controller(p);controller.ResetForPlannerStop(-.42);controller.ResetOnFailSafe();
-    MPCState ego{0,0,0,3};auto result=controller.MPCProcess(ego,Curve(ego,p,-.42));
+    MPCParams p;InitMPC(p);ResetMPCForPlannerStop(-.42);ResetMPCOnFailSafe();
+    MPCState ego{0,0,0,3};auto result=MPCProcess(ego,Curve(ego,p,-.42));
     ASSERT_TRUE(result.success);EXPECT_LE(std::fabs(result.control.delta),p.steering_rate_max*p.dt+1e-8);
 }

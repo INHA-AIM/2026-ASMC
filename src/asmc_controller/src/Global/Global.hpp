@@ -1,6 +1,10 @@
 #pragma once
 
 #include <array>
+#include <asmc_msgs/BehaviorCommand.h>
+#include <asmc_msgs/Trajectory.h>
+#include <asmc_msgs/VehicleState.h>
+#include <ros/ros.h>
 #include <cstddef>
 #include <string>
 #include <vector>
@@ -194,3 +198,58 @@ struct MPCOutput {
         double first_speed_error = 0.0;
         double first_acceleration_residual = 0.0;
     };
+
+namespace mpc_controller_ros {
+
+enum class TrajectoryStatus {
+    OK = 0,
+    STOP_TRAJECTORY,
+    INVALID_MESSAGE,
+    INVALID_FRAME,
+    INVALID_TIMESTAMP,
+    INVALID_DT,
+    INVALID_EGO,
+    INVALID_POINT,
+};
+
+// /vehicle/state -> MPCState(x0) 변환 상태. Trajectory.ego_at_plan과 같은
+// 계약(frame_id=="map", finite 필드)을 검사하지만 별도 입력이므로 별도 enum을
+// 쓴다 - 두 입력의 실패를 섞어 보고하지 않는다.
+enum class VehicleStateStatus {
+    OK = 0,
+    INVALID_MESSAGE,
+    INVALID_FRAME,
+    INVALID_TIMESTAMP,
+    NON_FINITE_VALUE,
+};
+
+}  // namespace mpc_controller_ros
+
+struct ControlContext {
+    ros::Publisher control_pub;
+    asmc_msgs::Trajectory latest_trajectory;
+    bool has_trajectory = false;
+    ros::SteadyTime trajectory_received_at;
+    double trajectory_timeout = 0.25;
+    asmc_msgs::VehicleState latest_vehicle_state;
+    bool has_vehicle_state = false;
+    ros::SteadyTime vehicle_state_received_at;
+    double vehicle_state_timeout = 0.20;
+    double last_successful_steering = 0.0;
+    ros::SteadyTime last_successful_control_at;
+    bool has_successful_control = false;
+    bool emergency_stop_active = false;
+};
+
+struct MPCContext {
+    MPCParams params;
+    MPCControl last_control;
+    std::vector<MPCControl> warm_start;
+    int stuck_cycles = 0;
+    int recovery_cycles_left = 0;
+    int stuck_timeout_cycles = 1;
+    int recovery_duration_cycles = 1;
+};
+
+extern ControlContext g_control;
+extern MPCContext g_mpc;

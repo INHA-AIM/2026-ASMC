@@ -6,6 +6,7 @@
 #include <morai_msgs/CtrlCmd.h>
 
 #include "Control.hpp"
+#include "MPC/MPC.hpp"
 #include "Util/ParameterLoader.hpp"
 
 namespace {
@@ -61,23 +62,23 @@ int main(int argc, char** argv) {
     }
 
     auto control_pub = nh.advertise<morai_msgs::CtrlCmd>(control_topic, 1);
-    mpc_controller_ros::Control control(params, control_pub,
-                                       trajectory_timeout,
-                                       vehicle_state_timeout);
+    InitMPC(params);
+    g_control.control_pub = control_pub;
+    g_control.trajectory_timeout = trajectory_timeout;
+    g_control.vehicle_state_timeout = vehicle_state_timeout;
     auto trajectory_sub = nh.subscribe(
-        trajectory_topic, 1, &mpc_controller_ros::Control::trajectoryCallback,
-        &control);
+        trajectory_topic, 1, &mpc_controller_ros::TrajectoryCallback);
     auto vehicle_state_sub = nh.subscribe(
         vehicle_state_topic, 1,
-        &mpc_controller_ros::Control::vehicleStateCallback, &control);
+        &mpc_controller_ros::VehicleStateCallback);
     auto behavior_command_sub = nh.subscribe(
         behavior_command_topic, 1,
-        &mpc_controller_ros::Control::behaviorCommandCallback, &control);
+        &mpc_controller_ros::BehaviorCommandCallback);
     const double frequency = params.control_frequency > 0.0
         ? params.control_frequency : 20.0;
     auto control_timer = nh.createSteadyTimer(
         ros::WallDuration(1.0 / frequency),
-        &mpc_controller_ros::Control::ControlProcess, &control);
+        &mpc_controller_ros::ControlProcess);
 
     ROS_INFO("MPC ROS runtime @ %.1f Hz: %s -> %s, stale timeout %.3f s",
              frequency, trajectory_topic.c_str(), control_topic.c_str(),

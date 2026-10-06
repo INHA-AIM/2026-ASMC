@@ -1,10 +1,9 @@
 #include "Control.hpp"
+#include "MPC/MPC.hpp"
 
 #include <algorithm>
 #include <cstdio>
 #include <cmath>
-#include <string>
-#include <utility>
 
 #include "Util/BrakingSteering.hpp"
 #include "Util/MessageConverter.hpp"
@@ -35,70 +34,64 @@ double SampleDiagnosticCartesianAcceleration(
 
 }  // namespace
 
-Control::Control(const MPCParams& params, ros::Publisher control_pub,
-                 double trajectory_timeout, double vehicle_state_timeout)
-    : control_pub_(std::move(control_pub)),
-      trajectory_timeout_(trajectory_timeout),
-      vehicle_state_timeout_(vehicle_state_timeout), controller_(params) {}
-
-void Control::behaviorCommandCallback(
+void BehaviorCommandCallback(
     const asmc_msgs::BehaviorCommand::ConstPtr& message) {
     if (!message) return;
     const bool emergency =
         message->maneuver_type == asmc_msgs::BehaviorCommand::EMERGENCY_STOP;
-    if (emergency != emergency_stop_active_) {
+    if (emergency != g_control.emergency_stop_active) {
         ROS_WARN("MPC emergency brake override %s (command_id=%u)",
                  emergency ? "ACTIVE" : "RELEASED", message->command_id);
     }
-    emergency_stop_active_ = emergency;
+    g_control.emergency_stop_active = emergency;
 }
 
-void Control::trajectoryCallback(
+void TrajectoryCallback(
     const asmc_msgs::Trajectory::ConstPtr& message) {
     if (!message) return;
-    latest_trajectory_ = *message;
-    trajectory_received_at_ = ros::SteadyTime::now();
-    has_trajectory_ = true;
+    g_control.latest_trajectory = *message;
+    g_control.trajectory_received_at = ros::SteadyTime::now();
+    g_control.has_trajectory = true;
 }
 
-void Control::vehicleStateCallback(
+void VehicleStateCallback(
     const asmc_msgs::VehicleState::ConstPtr& message) {
     if (!message) return;
-    latest_vehicle_state_ = *message;
-    vehicle_state_received_at_ = ros::SteadyTime::now();
-    has_vehicle_state_ = true;
+    g_control.latest_vehicle_state = *message;
+    g_control.vehicle_state_received_at = ros::SteadyTime::now();
+    g_control.has_vehicle_state = true;
 }
 
-void Control::publishStop(const char* reason) {
-    has_successful_control_ = false;
-    controller_.ResetOnFailSafe();
-    control_pub_.publish(MakeRosStopCommand());
+void PublishStop(const char* reason) {
+    g_control.has_successful_control = false;
+    ResetMPCOnFailSafe();
+    g_control.control_pub.publish(MakeRosStopCommand());
     ROS_WARN_THROTTLE(1.0, "MPC fail-safe STOP: %s", reason);
 }
 
-void Control::ControlProcess(const ros::SteadyTimerEvent&) {
-    if (emergency_stop_active_) {
-        has_successful_control_ = false;
-        controller_.ResetOnFailSafe();
-        control_pub_.publish(MakeRosEmergencyStopCommand());
+void ControlProcess(const ros::SteadyTimerEvent&) {
+    if (g_control.emergency_stop_active) {
+        g_control.has_successful_control = false;
+        ResetMPCOnFailSafe();
+        g_control.control_pub.publish(MakeRosEmergencyStopCommand());
         return;
     }
-    if (!has_trajectory_) {
-        publishStop("trajectory missing");
+    if (!g_control.has_trajectory) {
+        PublishStop("trajectory missing");
         return;
     }
-    if (!IsMessageFresh(trajectory_received_at_, ros::SteadyTime::now(),
-                       trajectory_timeout_)) {
-        publishStop("trajectory stale");
+    if (!IsMessageFresh(g_control.trajectory_received_at, ros::SteadyTime::now(),
+                       g_control.trajectory_timeout)) {
+        PublishStop("trajectory stale");
         return;
     }
-    if (!has_vehicle_state_) {
-        publishStop("vehicle state missing");
+    if (!g_control.has_vehicle_state) {
+        PublishStop("vehicle state missing");
         return;
     }
-    if (!IsMessageFresh(vehicle_state_received_at_, ros::SteadyTime::now(),
-                       vehicle_state_timeout_)) {
-        publishStop("vehicle state stale");
+    if (!IsMessageFresh(g_control.vehicle_state_received_at, ros::SteadyTime::now(),
+                       g_control.vehicle_state_timeout)) {
+        PublishStop("vehicle state stale");
         return;
     }
 
@@ -106,45 +99,45 @@ void Control::ControlProcess(const ros::SteadyTimerEvent&) {
     // ConvertTrajectory가 내부적으로 검증하지만 MPCState로는 변환하지 않는다
     // - x0는 아래에서 최신 /vehicle/state로부터 독립적으로 만든다.
     PlannedPath path;
-    const TrajectoryStatus status = ConvertTrajectory(latest_trajectory_, path);
+    const TrajectoryStatus status = ConvertTrajectory(g_control.latest_trajectory, path);
     if (status == TrajectoryStatus::STOP_TRAJECTORY) {
         MPCState stop_state;
-        if (ConvertVehicleState(latest_vehicle_state_, stop_state) != VehicleStateStatus::OK) {
-            publishStop("invalid vehicle state during planner STOP");
+        if (ConvertVehicleState(g_control.latest_vehicle_state, stop_state) != VehicleStateStatus::OK) {
+            PublishStop("invalid vehicle state during planner STOP");
             return;
         }
         auto stop = MakeRosStopCommand();
-        if (has_successful_control_) {
-            const double age=(ros::SteadyTime::now()-last_successful_control_at_).toSec();
-            stop.steering=BrakingSteering(last_successful_steering_,age,
-                stop_state.vx,controller_.params().steering_rate_max);
+        if (g_control.has_successful_control) {
+            const double age=(ros::SteadyTime::now()-g_control.last_successful_control_at).toSec();
+            stop.steering=BrakingSteering(g_control.last_successful_steering,age,
+                stop_state.vx,GetMPCParams().steering_rate_max);
         }
-        controller_.ResetForPlannerStop(stop.steering);
-        control_pub_.publish(stop);
+        ResetMPCForPlannerStop(stop.steering);
+        g_control.control_pub.publish(stop);
         ROS_WARN_THROTTLE(1.0,"MPC planner STOP braking: steering=%+.3f",stop.steering);
         return;
     }
     if (status != TrajectoryStatus::OK) {
-        publishStop(TrajectoryStatusName(status));
+        PublishStop(TrajectoryStatusName(status));
         return;
     }
 
     MPCState current_state;
     const VehicleStateStatus vehicle_status =
-        ConvertVehicleState(latest_vehicle_state_, current_state);
+        ConvertVehicleState(g_control.latest_vehicle_state, current_state);
     if (vehicle_status != VehicleStateStatus::OK) {
-        publishStop(VehicleStateStatusName(vehicle_status));
+        PublishStop(VehicleStateStatusName(vehicle_status));
         return;
     }
 
     const double start_time_offset = ComputeReferenceStartOffset(
-        latest_trajectory_.header.stamp.toSec(),
-        latest_vehicle_state_.header.stamp.toSec());
+        g_control.latest_trajectory.header.stamp.toSec(),
+        g_control.latest_vehicle_state.header.stamp.toSec());
     const ReferencePath reference = ToReferencePath(
-        path, controller_.params().dt, controller_.params().horizon,
+        path, GetMPCParams().dt, GetMPCParams().horizon,
         start_time_offset);
     if (reference.empty()) {
-        publishStop("reference interpolation failed");
+        PublishStop("reference interpolation failed");
         return;
     }
 
@@ -153,12 +146,12 @@ void Control::ControlProcess(const ros::SteadyTimerEvent&) {
     // solver가 그대로 따라가지 않는다. 여기서 거부하면 이 사이클은 ControlProcess를
     // 호출하지 않고 기존 fail-safe STOP 경로를 그대로 재사용한다.
     const ReferenceValidationResult validation =
-        ValidateReference(reference, controller_.params());
+        ValidateReference(reference, GetMPCParams());
     if (!validation.ok()) {
         if (validation.status ==
                 ReferenceValidationStatus::CURVATURE_OUT_OF_RANGE &&
             validation.failed_index < reference.k_ref.size()) {
-            const MPCParams& params = controller_.params();
+            const MPCParams& params = GetMPCParams();
             const double curvature_limit = params.steering_curvature_gain *
                 std::tan(params.steering_max) /
                 std::max(params.wheelbase, 1e-6);
@@ -168,29 +161,29 @@ void Control::ControlProcess(const ros::SteadyTimerEvent&) {
                 "CURVATURE_OUT_OF_RANGE index=%zu reference=%.5f limit=%.5f",
                 validation.failed_index,
                 reference.k_ref[validation.failed_index], curvature_limit);
-            publishStop(reason);
+            PublishStop(reason);
             return;
         }
-        publishStop(ReferenceValidationStatusName(validation.status));
+        PublishStop(ReferenceValidationStatusName(validation.status));
         return;
     }
 
     const MPCOutput output =
-        controller_.MPCProcess(current_state, reference);
+        MPCProcess(current_state, reference);
     if (output.stuck_event ==
         StuckEvent::RECOVERY_STARTED) {
         ROS_WARN("MPC stuck recovery start: ego_v=%.2f max_ref_v=%.2f "
                  "path_progress=%.2f duration=%.2fs launch_accel=%.2f",
                  output.stuck_event_ego_v, output.stuck_event_max_ref_v,
                  output.stuck_event_path_progress,
-                 controller_.params().stuck_recovery_duration,
-                 controller_.params().stuck_launch_accel);
+                 GetMPCParams().stuck_recovery_duration,
+                 GetMPCParams().stuck_launch_accel);
     } else if (output.stuck_event ==
                StuckEvent::RECOVERY_COMPLETE) {
         ROS_INFO("MPC stuck recovery pulse complete; normal MPC resumed");
     }
     if (!output.success) {
-        publishStop(output.failure_reason ? output.failure_reason
+        PublishStop(output.failure_reason ? output.failure_reason
                                           : "solver failure");
         return;
     }
@@ -207,7 +200,7 @@ void Control::ControlProcess(const ros::SteadyTimerEvent&) {
         "current_v=%.2f v_ref0=%.2f v_ref1=%.2f "
         "raw_cartesian_a0=%+.2f derived_a_ref0=%+.2f "
         "clipped_a_ref0=%+.2f a_cmd=%+.2f",
-        path.dt, controller_.params().dt, output.current_speed,
+        path.dt, GetMPCParams().dt, output.current_speed,
         output.first_reference_speed, v_ref1, raw_cartesian_a0,
         output.first_reference_acceleration,
         output.first_used_reference_acceleration, output.control.accel);
@@ -228,11 +221,11 @@ void Control::ControlProcess(const ros::SteadyTimerEvent&) {
         output.control.accel, output.first_acceleration_residual,
         output.cost.acceleration_control, output.cost.acceleration_rate);
 
-    last_successful_steering_=output.control.delta;
-    last_successful_control_at_=ros::SteadyTime::now();
-    has_successful_control_=true;
-    control_pub_.publish(ToRosControlCommand(output.control,
-                                             controller_.params()));
+    g_control.last_successful_steering=output.control.delta;
+    g_control.last_successful_control_at=ros::SteadyTime::now();
+    g_control.has_successful_control=true;
+    g_control.control_pub.publish(ToRosControlCommand(output.control,
+                                             GetMPCParams()));
 }
 
 }  // namespace mpc_controller_ros
