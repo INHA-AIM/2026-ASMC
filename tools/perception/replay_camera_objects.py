@@ -16,6 +16,8 @@ import threading
 import time
 from pathlib import Path
 
+from analyze_fusion_identity import compare_stable_observations
+
 import numpy as np
 import rosgraph
 import rospy
@@ -105,8 +107,11 @@ def replay(args, path, repeat):
                          rospy.Subscriber("/perception/camera/objects/diagnostics", DiagnosticArray, record_diagnostic, queue_size=100)]
         if args.fusion:
             subscriptions.append(rospy.Subscriber("/lidar/tracked_objects_map", TrackedObjectArray, record_track, queue_size=100))
-            launch(["roslaunch", "Main", "main.launch", "start_yolo:=" + ("true" if path == "old" else "false"),
-                    "rviz:=false", "start_velodyne_driver:=false"], "main")
+            command = ["roslaunch", "Main", "main.launch", "start_yolo:=" + ("true" if path == "old" else "false"),
+                       "rviz:=false", "start_velodyne_driver:=false"]
+            if args.fusion_trace:
+                command.append("fusion_trace_path:=" + str(prefix.with_suffix(".fusion.jsonl").resolve()))
+            launch(command, "main")
         elif path == "old":
             launch(["rosrun", "Main", "yolo_detection_node", "__name:=yolo_detection_node",
                     "/camera/image/compressed:=/image_jpeg/compressed"], "legacy")
@@ -165,6 +170,7 @@ def replay(args, path, repeat):
     latency = [row["latency_ms"] for row in outputs]
     logs = "\n".join(p.read_text() for p in args.output.glob(prefix.name + ".*.log"))
     sync = re.findall(r"Fusion sync 5s: matched=(\d+) dropped=(\d+) offset median/p95/max=([\d.]+)/([\d.]+)/([\d.]+) ms", logs)
+    totals = re.findall(r"Fusion sync total: matched=(\d+) dropped=(\d+) pending lidar/yolo=(\d+)/(\d+)", logs)
     result = {"path": path, "repeat": repeat, "bag": str(args.bag), "fusion": args.fusion,
               "input_frames": len(inputs), "output_frames": len(outputs), "rate_hz": rate,
               "coverage": len(set(source)) / len(inputs) if inputs else 0,
@@ -179,6 +185,9 @@ def replay(args, path, repeat):
               "fusion_intervals": [{"matched": int(m), "dropped": int(d), "median_ms": float(med),
                                     "p95_ms": float(p95), "max_ms": float(maximum)} for m, d, med, p95, maximum in sync],
               "fusion_matched_reported": sum(int(row[0]) for row in sync),
+              "fusion_totals": {"matched": int(totals[-1][0]), "dropped": int(totals[-1][1]),
+                                "pending_lidar": int(totals[-1][2]), "pending_yolo": int(totals[-1][3])}
+                               if totals else None,
               "fusion_offset_p95_max_ms": max((float(row[3]) for row in sync), default=None),
               "track_frames": len(tracks)}
     result["pass"] = (bool(outputs) and result["single_bbox_publisher"] and not result["duplicate_stamps"]
@@ -208,6 +217,7 @@ def main():
     parser.add_argument("bag", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--fusion", action="store_true")
+    parser.add_argument("--fusion-trace", action="store_true", help="write complete Main JSONL observations")
     parser.add_argument("--repeats", type=int, default=2)
     parser.add_argument("--timeout", type=float, default=240)
     parser.add_argument("--path", choices=("both", "old", "new"), default="both")
@@ -216,6 +226,10 @@ def main():
     args = parser.parse_args()
     if args.fusion and args.path != "both":
         raise SystemExit("fusion comparison requires --path both")
+    if args.fusion_trace and not args.fusion:
+        raise SystemExit("--fusion-trace requires --fusion")
+    if args.fusion and args.repeats != 2:
+        raise SystemExit("strict fusion comparison requires two old and two new runs")
     args.output.mkdir(parents=True, exist_ok=True)
     # rospy chooses its clock subscription at initialization; setting this
     # afterwards would leave the measurement process on wall time.
@@ -231,6 +245,11 @@ def main():
         minimum = min(r["fusion_matched_reported"] for r in result if r["path"] == "old")
         summary["matched_not_degraded"] = all(r["fusion_matched_reported"] >= minimum for r in result if r["path"] == "new")
         summary["pass"] &= summary["matched_not_degraded"]
+        if all(r["fusion_totals"] for r in result):
+            minimum_total = min(r["fusion_totals"]["matched"] for r in result if r["path"] == "old")
+            summary["whole_bag_matched_not_degraded"] = all(
+                r["fusion_totals"]["matched"] >= minimum_total for r in result if r["path"] == "new")
+            summary["pass"] &= summary["whole_bag_matched_not_degraded"]
         tables = [{(row["stamp_ns"], o[0]): tuple(o[1:]) for row in frame for o in row["objects"]}
                   for frame in frames]
         common = set.intersection(*(set(table) for table in tables))
@@ -241,6 +260,9 @@ def main():
         summary["stable_old_track_comparison"] = {"common_all_runs": len(common), "old_stable": len(stable),
                                                   "regressions": regressions}
         summary["pass"] &= bool(stable) and not regressions
+        observations = compare_stable_observations(frames[:2], frames[2:])
+        summary["stable_old_observation_comparison"] = observations
+        summary["pass"] &= bool(observations["old_stable"]) and not observations["regressions"]
     (args.output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     return 0 if summary["pass"] else 1
 
