@@ -90,6 +90,13 @@ cpu_validation:
       observations: 117
       misses: 6897
     wrong_initial_confirmations_rejected: true
+  trace_tool_clean_message_build: pass
+  clean_trace_tool_replay:
+    pass: true
+    frames: 506
+    object_states: 17313
+    observations: 120
+    misses: 6919
 acceptance:
   deployment_allowed: false
   next_stage_allowed: false
@@ -112,7 +119,7 @@ acceptance:
 verified_date: '2026-10-07'
 gpu_revalidation:
   runtime_commit: d8bda851142d0637f7e8a437cd7656a744584368
-  validation_tool_commit: ed3e201ed33c288e990696aabd8b683afbd5f359
+  validation_tool_commit: 5c30ac96ab12eac0dc4a5963343f43162494aa11
   container: asmc-camera-fusion-check
   network: none
   master_port: 11312
@@ -673,7 +680,7 @@ gpu_revalidation:
     ? /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
     : 9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34
   archive: config/baselines/evidence/camera_objects_followup_v1/gpu_reports.tar.gz
-  archive_sha256: 72edf2e190b445f833af89a992354beb406b5ecf43f31ec8cacfcd9b01dc0120
+  archive_sha256: 9991a0f5b85fd47e92827583d42a6d001f55f925e2605a22ecc05329c9ddac8e
 preservation:
   hdmap_controller_maps_pins_msg_weights_identical_to_main: true
   only_changed_shared_message: CameraObjectBox source_class_name
@@ -685,3 +692,5 @@ validation_fixes:
   matched and dropped totals.
 - Fault checks wait for the injected source stamp; startup-silence regression reproduces
   a stale pre-input diagnostic.
+- Declare generated morai_msgs/Msg target dependencies for the trace replay executable;
+  verified in a fresh ROS-only workspace without generated message cache.
