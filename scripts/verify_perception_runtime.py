@@ -240,6 +240,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "source_stamps_ns": [],
             "zero_stamps": 0,
             "stamp_regressions": 0,
+            "invalid_messages": 0,
             "frame_ids": set(),
             "diagnostic_errors": [],
         }
@@ -251,6 +252,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         with lock:
             sample = samples[topic]
             sample["arrivals"].append(now)
+            if specs_by_topic[topic].get("require_valid") and not getattr(message, "valid", False):
+                sample["invalid_messages"] += 1
             header = getattr(message, "header", None)
             if header is not None:
                 stamp_ns = int(header.stamp.to_nsec())
@@ -375,6 +378,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             topic_failures.append("zero_stamp")
         if sample["stamp_regressions"]:
             topic_failures.append("stamp_regression")
+        if sample["invalid_messages"]:
+            topic_failures.append("invalid_message")
         expected_frame = spec.get("frame_id")
         if expected_frame is not None and sample["frame_ids"] != [expected_frame]:
             topic_failures.append("frame_id")
@@ -402,6 +407,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "frame_ids": sample["frame_ids"],
             "zero_stamps": sample["zero_stamps"],
             "stamp_regressions": sample["stamp_regressions"],
+            "invalid_messages": sample["invalid_messages"],
             "diagnostic_errors": sample["diagnostic_errors"],
             "failures": topic_failures,
             "ok": not topic_failures,

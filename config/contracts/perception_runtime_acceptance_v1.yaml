@@ -68,6 +68,7 @@ topic_groups:
         type: asmc_msgs/CameraObjectBoxArray
         publisher: /camera_object_detector
         min_rate_hz: 18.0
+        require_valid: true
         require_nonzero_stamp: true
         frame_id: camera_front
       - pattern: /perception/camera/objects/diagnostics

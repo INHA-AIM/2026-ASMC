@@ -28,10 +28,20 @@ from verify_perception_runtime import (  # noqa: E402
     call_with_timeout,
     interval_summary,
     snapshot_samples,
+    parse_args,
 )
 
 
 class PerceptionRuntimeAcceptanceTest(unittest.TestCase):
+    def test_object_only_acceptance_selects_opt_in_valid_front_output(self):
+        args = parse_args(["--camera-objects", "--no-camera-lane"])
+        self.assertTrue(args.camera_objects)
+        self.assertTrue(args.no_camera_lane)
+        specs = expand_topic_specs(self.contract, ["camera_objects"])
+        self.assertEqual(2, len(specs))
+        self.assertTrue(specs[0]["require_valid"])
+        self.assertEqual("camera_front", specs[0]["frame_id"])
+        self.assertEqual(18.0, specs[0]["min_rate_hz"])
     @classmethod
     def setUpClass(cls):
         cls.path = (
