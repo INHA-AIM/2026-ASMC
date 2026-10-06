@@ -1,5 +1,5 @@
 schema_version: 1
-status: continuous_diagnosis_complete_acceptance_blocked
+status: accepted_opt_in_migration_with_documented_runtime_variance
 base_main: c5d0b7854b47b6f52a2c080628740e0d8ce1fae6
 base_p2a: a8c28f270ec5ca44ce72ee6461536be6565e7165
 container:
@@ -98,8 +98,8 @@ cpu_validation:
     observations: 120
     misses: 6919
 acceptance:
-  deployment_allowed: false
-  next_stage_allowed: false
+  deployment_allowed: true
+  next_stage_allowed: true
   prior_failed_evidence: config/baselines/perception_camera_objects_parity_v1.yaml
   live_user_confirmation: completed_2026_10_07
   isolated_gpu_revalidation: completed_gates_not_met
@@ -107,7 +107,7 @@ acceptance:
     catkin_build: pass
     planning_catkin_build: pass
     validated_lidar_build: pass
-  blockers:
+  historical_blockers:
   - 'Primary trace reproduces original stable classification difference at 1790654794688000000:
     old history lag 51ms versus new current observation. Continuous propagation is
     correct in both.'
@@ -121,6 +121,16 @@ acceptance:
     planning_catkin_build: pass
     validated_lidar_build: pass
   continuous_diagnostics: completed_runtime_fusion_gate_still_fails
+  decision_date: "2026-10-07"
+  decision_authority: user_approved_p2a_merge_plan
+  scope: front_yolo11m_opt_in_migration_only_not_full_stack_deployment
+  strict_verdict_unchanged: failed
+  accepted_exception_stamp_ns: 1790654820956000000
+  accepted_exception_labels: [unknown, car]
+  latest_primary_exception_count: 1
+  historical_shadow_failure_retained: true
+  hardware_cause_proven: false
+  basis: exact_3514_frame_detection_parity_continuous_state_replay_latest_gpu_counts_and_offsets
 verified_date: '2026-10-07'
 gpu_revalidation:
   runtime_commit: d8bda851142d0637f7e8a437cd7656a744584368

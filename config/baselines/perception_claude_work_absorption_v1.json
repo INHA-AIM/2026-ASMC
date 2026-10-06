@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "source_branch": "feat/camera-object-producer",
+  "source_head": "dc57f1e3216d603bfb1e21a2fd8155d7a37b2891",
+  "target_head": "f80f457783afc86dba8a33955b88a127804f23c6",
+  "message_absorption_commit": "3f16a41",
+  "library_absorption_commit": "7dc1840",
+  "files": [
+    {
+      "path": "src/asmc_camera/config/camera/object_classes.yaml",
+      "claude_sha256": "998d7d6d487ceecc290802649657ee4f42ccdc724229c0bb3fcc02f1c401f038",
+      "current_sha256": "998d7d6d487ceecc290802649657ee4f42ccdc724229c0bb3fcc02f1c401f038",
+      "resolution": "identical"
+    },
+    {
+      "path": "src/asmc_camera/src/asmc_camera/detection/__init__.py",
+      "claude_sha256": "9c72a63b5e0cf46b0ef4215670d53fdc562e7a9d3d345d3b1df9eb3f5d996de6",
+      "current_sha256": "9c72a63b5e0cf46b0ef4215670d53fdc562e7a9d3d345d3b1df9eb3f5d996de6",
+      "resolution": "identical"
+    },
+    {
+      "path": "src/asmc_camera/src/asmc_camera/detection/backend.py",
+      "claude_sha256": "641ea8077c381ff00eb91bb0b3355b4dcdb2180afb0dbe9263ef2e32b40aeb22",
+      "current_sha256": "179db0326f60b02e3f2520d0947a44f89b840f9ac7e7403b3b4b3a011d05c24f",
+      "resolution": "absorbed_with_backend_protocol_or_device_preflight_fix"
+    },
+    {
+      "path": "src/asmc_camera/src/asmc_camera/detection/classes.py",
+      "claude_sha256": "e321c8068bcf1e166a897e3a175720e3793ca1bbdc0e246e4e6776989063daaf",
+      "current_sha256": "e321c8068bcf1e166a897e3a175720e3793ca1bbdc0e246e4e6776989063daaf",
+      "resolution": "identical"
+    },
+    {
+      "path": "src/asmc_camera/src/asmc_camera/detection/messages.py",
+      "claude_sha256": "70cc13ff398511cd979c17e6740b1a2322e27a21a4898ad1067b47868f115920",
+      "current_sha256": "70cc13ff398511cd979c17e6740b1a2322e27a21a4898ad1067b47868f115920",
+      "resolution": "identical"
+    },
+    {
+      "path": "src/asmc_camera/src/asmc_camera/detection/ultralytics_backend.py",
+      "claude_sha256": "81fcd97726649eec19e695c4833f876c619385071f163e9ab2597b3295d0fe2a",
+      "current_sha256": "e1b8bff8d90be5339ed92d98d2abe17e8a4560b5a5606b45c317d77b729f40f1",
+      "resolution": "absorbed_with_backend_protocol_or_device_preflight_fix"
+    },
+    {
+      "path": "src/asmc_camera/test/detection/__init__.py",
+      "claude_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "current_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "resolution": "identical"
+    },
+    {
+      "path": "src/asmc_camera/test/detection/test_detection_core.py",
+      "claude_sha256": "ebefa35b7b674de2fcacaf8f8cf17b9d9a91f96c61dc7a54f4a4d60ac98dc2af",
+      "current_sha256": "ebefa35b7b674de2fcacaf8f8cf17b9d9a91f96c61dc7a54f4a4d60ac98dc2af",
+      "resolution": "identical"
+    },
+    {
+      "path": "src/asmc_camera/CMakeLists.txt",
+      "claude_sha256": "cbfa29c3133568bcdedf3856e7284477abaae09afc051ff4c52b5398ca144dcd",
+      "current_sha256": "210ceed1cb2c368653f481c59525969fa80a79e102ad62a6fb3941e71f84b5e6",
+      "resolution": "registration_present"
+    },
+    {
+      "path": "src/asmc_camera/setup.py",
+      "claude_sha256": "f2e42b3f36c46c681d731f570f4fa9791caafdbe8cd1bb7ac37bf0a7d7847f73",
+      "current_sha256": "f2e42b3f36c46c681d731f570f4fa9791caafdbe8cd1bb7ac37bf0a7d7847f73",
+      "resolution": "identical"
+    }
+  ],
+  "container_mounts_checked": true,
+  "unique_unabsorbed_source_files": 0
+}
