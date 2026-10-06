@@ -20,7 +20,7 @@ void require(bool value, const std::string& reason) {
     if (!value) throw std::runtime_error(reason);
 }
 LiDARObjectInfo read(const YAML::Node& o) {
-    LiDARObjectInfo state;
+    LiDARObjectInfo state{};
     state.s32_Id = o["id"].as<int>();
     state.str_ObjectClass = o["class"].as<std::string>();
     state.str_YoloClass = o["raw_class"].as<std::string>();
@@ -72,6 +72,7 @@ int main(int argc, char** argv) {
         std::set<int> observed;
         Objects current, history, historical;
         Stamp current_stamp = 0, selected_stamp = 0, selected_yolo = 0;
+        std::uint64_t current_generation = 0;
         bool frame_open = false, class_open = false, resolved_match = false, after_checked = false;
         std::uint64_t frames = 0, states = 0, matched = 0, dropped = 0, decisions = 0,
             observations = 0, misses = 0, births = 0, resets = 0, carried_checks = 0;
@@ -99,6 +100,9 @@ int main(int argc, char** argv) {
             } else if (event == "class_lidar_ready") {
                 require(!frame_open && !class_open && !resolved_match, "unfinished previous frame");
                 require(stamp && !pending.count(stamp) && !published_stamps.count(stamp), "duplicate/zero LiDAR stamp");
+                const auto generation = row["generation"].as<std::uint64_t>();
+                require(generation > current_generation, "non-increasing processing generation");
+                current_generation = generation;
                 current.clear();
                 for (const auto& recorded : row["objects"]) {
                     auto metadata = read(recorded);
@@ -182,6 +186,7 @@ int main(int argc, char** argv) {
                 class_open = resolved_match = after_checked = false;
             } else if (event == "class_publish_input") {
                 require(frame_open && !class_open && !resolved_match && stamp == current_stamp, "incomplete publication frame");
+                require(row["generation"].as<std::uint64_t>() == current_generation, "publication generation mismatch");
                 equal(current, row["objects"], "publication input");
                 equal(history, row["objects"], "persisted tracking history");
                 require(row["origins"].size() == current.size(), "missing publication provenance");

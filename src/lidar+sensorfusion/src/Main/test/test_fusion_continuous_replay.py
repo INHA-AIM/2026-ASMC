@@ -160,6 +160,11 @@ class ContinuousReplayTest(unittest.TestCase):
         del rows[2]
         self.rejected(rows, 'YOLO history admission/pruning mismatch')
 
+    def test_publication_generation_must_match_processed_frame(self):
+        rows = fixture()
+        rows[8]['generation'] = 2
+        self.rejected(rows, 'publication generation mismatch')
+
     def test_duplicate_final_summary_rejected(self):
         rows = fixture()
         rows.append(copy.deepcopy(rows[-1]))
