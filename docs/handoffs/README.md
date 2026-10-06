@@ -12,6 +12,7 @@ consumer가 어떤 freshness·quality·fallback을 검사해야 하는지, 어�
 |---|---|---|
 | Camera lane/BEV→Planning | [음영 camera v3](./perception/shadow-camera.md) | Active, read-only adapter 인수 완료; deployment 미승인 |
 | Camera runtime 단계별 계획 | [카메라 런타임 계획](./perception/camera-runtime-plan.md) | Active Plan, 구간 활성화·10Hz·3뷰·모델별 최적화 후속 단계 |
+| 판제→Camera 모델 실행 | [독립 추론 모드와 직접 실행](./perception/camera-inference-control.md) | STANDBY/PREPARE/ACTIVE 구현; 10Hz·MORAI 주행 수락 보류 |
 | Camera objects P2a | [직접 launch와 검증](./perception/camera-objects-p2a.md) | Opt-in YOLO11m 생산자와 기존 LiDAR 호환 어댑터 |
 | Camera detector→LiDAR fusion | [객체 검출](./perception/camera-object-detection.md) | Active Guide, 기존 YOLO11m 기준선과 후속 비교 |
 | Behavior→Frenet v1 | [legacy 3-package 설계](./planning/behavior-legacy.md) | Legacy Reference, 현재 실행 금지 |
