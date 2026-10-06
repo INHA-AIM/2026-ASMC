@@ -20,7 +20,7 @@
   <!-- Launch-only dependencies for obstacle-free MORAI KEEP verification. -->
   <exec_depend>asmc_bridge</exec_depend>
   <exec_depend>behavior_planner</exec_depend>
-  <exec_depend>mpc_controller</exec_depend>
+  <exec_depend>asmc_controller</exec_depend>
 
   <export/>
 </package>

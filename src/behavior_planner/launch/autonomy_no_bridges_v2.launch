@@ -76,7 +76,7 @@
     <arg name="state_topic" value="$(arg state_topic)"/>
     <arg name="objects_topic" value="$(arg canonical_objects_topic)"/>
   </include>
-  <include file="$(find mpc_controller)/launch/mpc_controller.launch">
+  <include file="$(find asmc_controller)/launch/controller.launch">
     <arg name="state_topic" value="$(arg state_topic)"/>
   </include>
 </launch>

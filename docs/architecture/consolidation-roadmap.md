@@ -248,7 +248,7 @@ src/
 ├── asmc_lidar/                # LiDAR+IMU, 지면/구조물/군집/OBB/추적, camera fusion·좌표 어댑터
 ├── behavior_planner/          # 판제 소유, 현 위치 유지
 ├── frenet_planner/            # 판제 소유, 현 위치 유지
-├── mpc_controller/            # 판제 소유, 현 위치 유지
+├── asmc_controller/            # 판제 소유, 현 위치 유지
 ├── jamming_lane_boundary_adapter/ # 판제 소유 음영 차선 경계 adapter, 이번 이전 대상 아님
 └── MORAI-ROS_morai_msgs/      # pinned external dependency
 

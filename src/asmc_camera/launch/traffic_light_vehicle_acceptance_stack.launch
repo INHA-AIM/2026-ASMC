@@ -18,7 +18,7 @@
        the original Ego state and opens its explicit forwarding gate. -->
   <group>
     <remap from="/ctrl_cmd" to="/acceptance/ctrl_cmd"/>
-    <include file="$(find mpc_controller)/launch/mpc_controller.launch"/>
+    <include file="$(find asmc_controller)/launch/controller.launch"/>
   </group>
 
   <!-- Opt-in only.  The default launch is safe for graph inspection and does

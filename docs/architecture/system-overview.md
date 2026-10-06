@@ -50,7 +50,7 @@ ego-BEV → lane/topology + safe drivable + object/lane context
 | 공통 BEV·차로 문맥 | map/camera/LiDAR layer와 object association | `src/asmc_camera/` camera layer; LiDAR handoff 후 공통 계약 | 인지·맵·LiDAR 공동 |
 | LiDAR 장애물 | clustering·OBB·tracking·카메라 보조 분류 | `src/lidar+sensorfusion/` | 손재호, 정윤태 |
 | PA/SA_plan 구 학습 실험 | 현재 runtime 미사용 | Git history | 안승현 |
-| Behavior + Frenet + MPC | ROS command→trajectory→control; bridge가 Ctrl UDP 전송 | `src/behavior_planner/`, `src/frenet_planner/`, `src/mpc_controller/` | 정윤태·양서준·이강태 |
+| Behavior + Frenet + MPC | ROS command→trajectory→control; bridge가 Ctrl UDP 전송 | `src/behavior_planner/`, `src/frenet_planner/`, `src/asmc_controller/` | 정윤태·양서준·이강태 |
 | Scenario / gRPC | 시나리오·시뮬 API | `tools/aim_scenario_runner/`, `tools/grpc_inha_univ/` | 장원태 |
 | Bridge | MORAI UDP 경계·내부 ROS 변환 | `src/asmc_bridge/` 단일 패키지 | 이강태, 안승현 |
 

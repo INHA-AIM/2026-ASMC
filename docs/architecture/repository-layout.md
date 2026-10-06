@@ -64,7 +64,7 @@ ROS 패키지와 standalone 프로젝트는 **`src/<모듈명>/`** 바로 아래
 | 패키지 | 경로 | 담당 | GitHub |
 |--------|------|------|--------|
 | Behavior planner | `src/behavior_planner/` | 정윤태·양서준 | @yuntae12-sudo · @yangseojun |
-| MPC (`mpc_controller_node`, ROS+core) | `src/mpc_controller/` | 정윤태·양서준 | @yuntae12-sudo · @yangseojun |
+| MPC (`mpc_controller_node`, ROS+core) | `src/asmc_controller/` | 정윤태·양서준 | @yuntae12-sudo · @yangseojun |
 | Frenet planner (`frenet_planner_node`, ROS+core) | `src/frenet_planner/` | 이강태 | @kante2 |
 | MORAI bridge | `src/asmc_bridge/` | 이강태·안승현 | @kante2 · @ahnsh03 |
 
@@ -131,7 +131,7 @@ rename하고, `lidar+sensorfusion`의 기능은 손재호가 수정사항을 반
 | 경로 | @yuntae12-sudo<br>정윤태 | @yangseojun<br>양서준 | @kante2<br>이강태 | @ahnsh03<br>안승현 | @wkddnjsxo<br>장원태 | @sonshiny<br>손재호 |
 |------|--------|--------|--------|--------|--------|--------|
 | `src/behavior_planner/` | ✅ | ✅ | 👀 | 👀 | — | — |
-| `src/mpc_controller/` | ✅ | ✅ | 👀 | 👀 | — | — |
+| `src/asmc_controller/` | ✅ | ✅ | 👀 | 👀 | — | — |
 | `src/frenet_planner/` | 👀 | 👀 | ✅ | 👀 | — | — |
 | `src/asmc_bridge/` | 👀 | 👀 | ✅ | ✅ | — | 👀 |
 | `tools/research/lbc_teacher_bev/` | — | — | — | ✅ | — | — |
@@ -169,7 +169,7 @@ CODEOWNERS 자동 리뷰: [.github/CODEOWNERS](../../.github/CODEOWNERS)
 
 | 모듈 | ASMC 경로 |
 |------|-----------|
-| Behavior / Frenet / MPC | `src/behavior_planner/`, `frenet_planner/`, `mpc_controller/` (v2 ROS 연결) |
+| Behavior / Frenet / MPC | `src/behavior_planner/`, `frenet_planner/`, `asmc_controller/` (v2 ROS 연결) |
 | Camera lane/drivable/traffic | `src/asmc_camera/` |
 | LiDAR/3D perception | `src/lidar+sensorfusion/` |
 | 공통 BEV | camera v3는 `src/asmc_camera/`; 전역 map/LiDAR 결합 규격은 합의 중 |

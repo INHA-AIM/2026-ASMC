@@ -96,7 +96,7 @@ ROS1은 한 토픽에 두 메시지 타입을 실을 수 없다. cutover 전까�
 | 대상 | 수정 여부 |
 |---|---|
 | `src/frenet_planner/**` | **수정한다** — 이 작업의 본체 |
-| `src/mpc_controller/**` | **수정한다** — 필요한 경우 (D10) |
+| `src/asmc_controller/**` | **수정한다** — 필요한 경우 (D10) |
 | `src/asmc_msgs/msg/*.msg` (신규 2개 추가) | **추가만 한다** — 원본 그대로, 내용 수정 없음 |
 | `src/asmc_msgs/CMakeLists.txt` | **수정한다** — 신규 메시지 등록 |
 | `src/behavior_planner/**` | **수정하지 않는다** — 죽은 msg 파일 포함 |

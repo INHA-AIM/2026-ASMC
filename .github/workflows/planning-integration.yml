@@ -6,7 +6,7 @@ on:
     paths:
       - 'src/behavior_planner/**'
       - 'src/frenet_planner/**'
-      - 'src/mpc_controller/**'
+      - 'src/asmc_controller/**'
       - 'src/planning_inputs/**'
       - 'src/lidar+sensorfusion/src/Main/**'
       - '.github/workflows/planning-integration.yml'
