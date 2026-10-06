@@ -392,15 +392,34 @@ class Trial:
         for handle in self.handles:handle.close()
         if self.original is not None:
             try:
+                # A successful setter or an immediate XY read is insufficient:
+                # changing control mode/gear can subsequently move the vehicle.
+                self.call(self.sim._simulation_stub.Pause, Empty(), True)
+                self.report['simulation_left_paused'] = True
+                self.mode(self.original_mode)
+                self.gear(self.original.vehicle_state.gear_mode)
+                self.call(self.sim._actor_stub.SetVelocity,SetVelocityParam(actor_info=self.info,velocity=0),True)
                 self.call(self.sim._actor_stub.SetTransform,
                     SetTransformParam(actor_info=self.info,transform=self.original.transform),True)
-                self.call(self.sim._actor_stub.SetVelocity,SetVelocityParam(actor_info=self.info,velocity=0),True)
-                self.gear(self.original.vehicle_state.gear_mode)
+                time.sleep(1.)
+                # Some simulator builds change control mode while setting gear.
                 self.mode(self.original_mode)
+                time.sleep(.2)
                 restored=self.state()
                 self.report['restored_ego']=MessageToDict(restored)
-                self.report['restored']=math.hypot(restored.transform.location.x-self.original.transform.location.x,
-                    restored.transform.location.y-self.original.transform.location.y)<.5
+                mode_response=self.call(self.sim._actor_stub.GetVehicleControlMode,self.info)
+                metrics=dict(
+                    position_error_m=math.sqrt(sum((getattr(restored.transform.location,a)-
+                        getattr(self.original.transform.location,a))**2 for a in ('x','y','z'))),
+                    rotation_error_deg=max(abs((getattr(restored.transform.rotation,a)-
+                        getattr(self.original.transform.rotation,a)+180)%360-180) for a in ('x','y','z')),
+                    gear_matches=restored.vehicle_state.gear_mode==self.original.vehicle_state.gear_mode,
+                    mode_matches=mode_response.mode==self.original_mode)
+                self.report['restoration_checks']=metrics
+                self.report['restored']=(metrics['position_error_m']<.1 and
+                    metrics['rotation_error_deg']<1. and metrics['gear_matches'] and metrics['mode_matches'])
+                if not self.report['restored']:
+                    self.report['failures'].append('settled Ego restoration did not meet pose/gear/mode tolerances')
             except Exception as exc:self.report['failures'].append('restore: '+str(exc))
         if self.control_pub:self.control_pub.unregister()
         self.client.disconnect()
