@@ -89,12 +89,12 @@ roslaunch lane_boundary_adapter camera_bbox_lane_change.launch \
   obstacle_confirm_frames:=2 \
   bbox_consumer_x_max:=20.0 \
   expected_config_sha256:=1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9 \
-  calibration_file:=/root/ws/src/asmc_perception/config/cameras_v3.yaml \
+  calibration_file:=/root/ws/src/asmc_camera/config/cameras_v3.yaml \
   use_rviz:=true
 '
 ```
 
-최신 `asmc_perception perception.launch`는 카메라 처리량에 맞춰
+최신 `asmc_camera perception.launch`는 카메라 처리량에 맞춰
 `camera_model_grid_max_hz:=5.0`으로 실행한다. classifier와 controller의
 `max_sensor_skew`는 같은 launch 인자로 전달된다. 위 해시는 현재 v3 설정에 대한 값이며
 설정이 달라지면 검토 없이 실시간 메시지에서 읽어 자동 승인하지 않는다.

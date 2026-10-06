@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements-lbc.txt requirements-mgeo.txt requirements-grpc.txt requirements-linknode.txt /tmp/
 RUN pip3 install --no-cache-dir --upgrade "pip<24.1"
 
-# 시스템 Python 3.8 용 CUDA PyTorch. asmc_perception traffic-light runtime이 이
+# 시스템 Python 3.8 용 CUDA PyTorch. asmc_camera traffic-light runtime이 이
 # 인터프리터를 사용한다. 기본 이미지는 RTX 40 시리즈용이며 신호등 ResNet18과
 # 센서퓨전 YOLO가 모두 이 CUDA 11.8 환경을 사용한다. RTX 50 전용 Python/CUDA
 # 환경은 이 파일이 아니라 Dockerfile.rtx50에서 추가한다.

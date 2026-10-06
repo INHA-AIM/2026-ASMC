@@ -101,13 +101,13 @@ class PerceptionRuntimeAcceptanceTest(unittest.TestCase):
 
     def test_full_perception_pipeline_cannot_be_added_to_planning(self):
         launch = self.signal_launch()
-        ET.SubElement(launch, "include", file="$(find asmc_perception)/launch/perception.launch")
+        ET.SubElement(launch, "include", file="$(find asmc_camera)/launch/perception.launch")
         with self.assertRaises(AcceptanceContractError):
             _validate_planning_signal_launch(launch, "autonomy_no_bridges_v2.launch", "true")
 
     def test_camera_producer_cannot_be_added_to_planning(self):
         launch = self.signal_launch()
-        ET.SubElement(launch, "node", pkg="asmc_perception", type="camera_bev_node.py")
+        ET.SubElement(launch, "node", pkg="asmc_camera", type="camera_bev_node.py")
         with self.assertRaises(AcceptanceContractError):
             _validate_planning_signal_launch(launch, "autonomy_no_bridges_v2.launch", "true")
 

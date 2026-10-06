@@ -7,7 +7,7 @@
 >
 > **적용 ODD:** `shadow_two_way_v1`
 >
-> **상세 실험:** [BEV 개발 이력](../../../src/asmc_perception/docs/bev-development-history.md)
+> **상세 실험:** [BEV 개발 이력](../../../src/asmc_camera/docs/bev-development-history.md)
 > **실행 계약:** [asmc_msgs](../../../src/asmc_msgs/msg/LaneBoundaryFamily.msg),
 > [jamming_lane_boundary_adapter](../../../src/jamming_lane_boundary_adapter/README.md)
 > **Planning 경계:** [Planning/Control 개발 가이드](../../packages/planning-control/README.md)
@@ -164,7 +164,7 @@ column:     (8 - y) / 0.10
 
 현재 raster는 `sensor_msgs/Image`이므로 메시지 자체에는 metric 원점과 해상도가 들어 있지
 않다. 이는 음영구간 v3의 **동결된 임시 전송 envelope**이며, 판제 consumer는
-[`bev_grid.yaml`](../../../src/asmc_perception/config/bev/bev_grid.yaml)과 동결 기록의 SHA-256
+[`bev_grid.yaml`](../../../src/asmc_camera/config/bev/bev_grid.yaml)과 동결 기록의 SHA-256
 `8bad13875a2b7d9eec4a35687433446b1a57112257ec34520cf5c1d6e47e0ad3`을 함께 pin해야 한다.
 다른 grid를 같은 토픽 이름으로 조용히 해석해서는 안 된다. 공통 BEV custom message와
 metadata topic은 MGeo/LiDAR 계약을 함께 합의할 때 결정하며, 이번 v3 인수에서 선행 확정하지
@@ -224,7 +224,7 @@ terminal에서 실행한다. bag replay ROS 추론도 같은 컨테이너를 사
 ```bash
 source /opt/ros/noetic/setup.bash
 source /root/ws/devel/setup.bash
-roslaunch asmc_perception perception.launch \
+roslaunch asmc_camera perception.launch \
   camera_checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
   lane_publish_pipeline_audit:=true
 ```
@@ -256,7 +256,7 @@ roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch rviz:=fa
 `shadow_camera_perception_handoff_result`를 쓴다.
 
 ```bash
-rosrun asmc_perception run_shadow_lane_bag_batch.py \
+rosrun asmc_camera run_shadow_lane_bag_batch.py \
   --selection /root/ws/artifacts/perception_eval/analysis/shadow_maneuver_20260913/selection.yaml \
   --checkpoint /root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
   --model-id <unique-v3-handoff-model-id> \
