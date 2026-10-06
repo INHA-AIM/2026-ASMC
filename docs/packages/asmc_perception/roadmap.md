@@ -31,7 +31,7 @@
 
 | 과거 표기 | 현재 위치·처리 |
 |---|---|
-| `camera_semantic_perception`, `drivable_bev`, `traffic_light`, `src/perception/` | `src/asmc_camera/` runtime·offline·training으로 통합 |
+| `camera_semantic_perception`, `drivable_bev`, `traffic_light`, `src/perception/` | `src/asmc_perception/` runtime·offline·training으로 통합 |
 | `learning_by_cheating` teacher/debug | `tools/research/lbc_teacher_bev/` |
 | `src/perception/morai_3d_detection/` | 미사용으로 제거; 필요할 때만 Git history에서 조회 |
 | `src/data_collection/` | 독립 recorder·dataset package로 유지 |
@@ -623,7 +623,7 @@ F1/Chamfer 채택 gate를 통과하지 못했다. 범위 audit도 모든 후보�
 fusion p95 `4.36 ms`, camera-to-fused p95 `98.23 ms`, per-view projection p95
 `2.78~3.72 ms`, 오류 0이었다. lane-vector는 30그룹 smoke만 통과시켰으며 재튜닝 수치로
 채택하지 않는다. 세부 정본과 artifact 링크는
-[`drivable_bev` README](../../../src/asmc_camera/docs/bev-development-history.md#2026-09-11-ground-plane-보정-및-재평가)를
+[`drivable_bev` README](../../../src/asmc_perception/docs/bev-development-history.md#2026-09-11-ground-plane-보정-및-재평가)를
 따른다.
 
 **2026-09-10 metric lane-vector pilot:** 모델 격자 class/max-confidence를 최대 10 Hz의
@@ -645,7 +645,7 @@ pseudo-GT를 카메라·LiDAR로 검산한 뒤 shared lane-family 대표 offline
 기준선이 안정된 다음 단계로 둔다. 이후 visible-only GT의 관측구간 정량 평가와 60-frame
 false-bridge 검수를 통과한 뒤 범위 audit을 다시 실행한다. 상세
 실행·artifact 계약은
-[`drivable_bev` README](../../../src/asmc_camera/docs/bev-development-history.md#2026-09-10-metric-lane-vector-pilot)를
+[`drivable_bev` README](../../../src/asmc_perception/docs/bev-development-history.md#2026-09-10-metric-lane-vector-pilot)를
 따른다.
 
 또한 Semantic의 white/yellow는 색상 표식이므로 같은 색의 주차칸·안전지대 표식을
@@ -754,7 +754,7 @@ front 투영 가용성은 48/48이고, LiDAR intensity≥40 비율은 경계 seg
 `map_pseudo_gt`, `deployment_allowed=false`다. 기존 12-run+4-maneuver 결과는 새 schema로
 재집계해 16/16 기술 gate 통과를 확인했으며, 과거 result에는 신규 frame audit 토픽이 없어
 탈락 사유 baseline은 다음 instrumented replay에서 확정한다. 실행법과 artifact는
-[`drivable_bev` README](../../../src/asmc_camera/docs/bev-development-history.md#2026-09-13-음영구간-진단map-pseudo-gt-gate)를
+[`drivable_bev` README](../../../src/asmc_perception/docs/bev-development-history.md#2026-09-13-음영구간-진단map-pseudo-gt-gate)를
 따른다.
 
 **2026-09-14 representative 진단 replay:** clear Sunny/Foggy, lateral sweep Sunny,
@@ -924,7 +924,7 @@ metric strip과 중심선을 debug Marker/diagnostics로만 만든다. y=0을 �
 정확도 기준은 아니며, 기존 v3 result bag에는 typed 토픽이 없어 최신 producer로 raw replay를
 다시 수행해야 전체 consumer audit가 가능하다.
 정본 수치와 lineage는
-[`drivable_bev` README](../../../src/asmc_camera/docs/bev-development-history.md#2026-09-12-음영구간-replay-결과)를
+[`drivable_bev` README](../../../src/asmc_perception/docs/bev-development-history.md#2026-09-12-음영구간-replay-결과)를
 따른다.
 
 2026-09-13에는 중앙선 straddle, lateral sweep, 정적 장애물 회피·복귀 Sunny/Foggy 4개
@@ -943,7 +943,7 @@ gate를 만족할 때, read-only planning adapter가 두 lane strip의 임시 �
 무가용 37(2.94%)로 usable 97.06%였고 contract/order 오류는 0이었다. 이는 제어 안전성이나
 metric accuracy 합격률이 아니라 판제 인터페이스 연속성 기준선이다. threshold 0.45 실험은
 개선이 없어 기존 white/yellow 0.50을 유지했다. 세부 결과는
-[`drivable_bev` maneuver replay](../../../src/asmc_camera/docs/bev-development-history.md#2026-09-13-차로-이탈회피-maneuver-replay)와
+[`drivable_bev` maneuver replay](../../../src/asmc_perception/docs/bev-development-history.md#2026-09-13-차로-이탈회피-maneuver-replay)와
 [`lane_boundary_adapter` README (현재 jamming_lane_boundary_adapter)](../../../src/jamming_lane_boundary_adapter/README.md#2026-09-13-회피차로-이탈-replay)를
 따른다.
 
@@ -1074,7 +1074,7 @@ internal gap p95는 전 구간 0m여서 기존 0.75m internal bridge 상향을 �
 때문이며, 사용자가 본 동시 red 전환과 일치한다. 다음 gate는 12+4 전체 matrix 확대 후,
 원거리 extrapolation 없이 강한 전방 support로 차량 근처 leading tail만 완성하는 same-frame
 정책 A/B다. 상세 수치는
-[`drivable_bev` 판제 가용구간 기준선](../../../src/asmc_camera/docs/bev-development-history.md#2026-09-15-판제-실제-가용구간-기준선)을
+[`drivable_bev` 판제 가용구간 기준선](../../../src/asmc_perception/docs/bev-development-history.md#2026-09-15-판제-실제-가용구간-기준선)을
 따른다.
 
 12+4 전체 16개 bag, 4,122 frame 확대에서도 현재 adapter audit window `0~15m`는 모든 frame에서 일부 strip이

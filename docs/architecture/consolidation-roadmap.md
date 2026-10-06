@@ -12,8 +12,7 @@
 ## 1. 결론
 
 팀이 직접 유지하는 공통 ROS 코드의 **목표**는 다음 다섯 패키지다.
-카메라 패키지는 2026-10-06 `asmc_perception`에서 `asmc_camera`로 이름을 바꿨다(호환 wrapper 없이 완전 이전, 옛 경로에는 이전 안내 README만 남김).
-YOLO 생산자 이전은 아직 남아 있으며,
+2026-10-05 현재 카메라의 실제 패키지 이름은 아직 `asmc_perception`이며,
 `asmc_lidar`는 좌표·시간 코어만 남긴 이전용 골격이다. 아래 목표를 운영 이전 완료로 해석하지 않는다.
 
 | 정본 패키지 | 책임 |
@@ -21,7 +20,7 @@ YOLO 생산자 이전은 아직 남아 있으며,
 | `asmc_msgs` | 팀 내부 typed message의 유일한 공용 패키지 |
 | `asmc_bridge` | MORAI UDP 수신·제어 송신, sensor decode, 외부→내부 상태 정규화 |
 | `asmc_hd_map` | HD Map build/runtime, 차선·차로·주행가능영역, 체크포인트·미션 메타데이터 |
-| `asmc_camera` (구 `asmc_perception`) | 카메라 객체 검출/YOLO·차선/주행영역·신호등, BEV·카메라 후처리 |
+| `asmc_camera` (현재 `asmc_perception`) | 카메라 객체 검출/YOLO·차선/주행영역·신호등, BEV·카메라 후처리 |
 | `asmc_lidar` | LiDAR+IMU 좌표·시간, 지면/구조물·군집/OBB·추적, 카메라 분류 fusion, 객체 local/map 어댑터 |
 
 이는 **팀 소유 공용·인지 코드의 경계**다. 독립 수집 패키지, 판제 소유 패키지와 음영 차선 어댑터는 별도다.
@@ -63,7 +62,7 @@ YOLO 생산자 이전은 아직 남아 있으며,
 
 | 항목 | 현재 | 완료 목표·담당 |
 |---|---|---|
-| 카메라 패키지 | `src/asmc_camera/`(2026-10-06 rename); YOLO 원본 실행기는 아직 LiDAR 쪽 | `src/asmc_camera/`; 안승현이 rename 후 YOLO 실행/계약을 별도 통합 |
+| 카메라 패키지 | `src/asmc_perception/`; YOLO 원본 실행기는 아직 LiDAR 쪽 | `src/asmc_camera/`; 안승현이 rename 후 YOLO 실행/계약을 별도 통합 |
 | 원본 LiDAR | `src/lidar+sensorfusion/`의 nested `Main`·`Msg` | 손재호가 기존 기능과 개선 패치를 `src/asmc_lidar/`로 이전 |
 | 새 LiDAR 골격 | 좌표·시간/IMU 코어·회귀시험, 공용 메시지 정의 | 손재호가 검출·추적·fusion·ROS 어댑터를 원본에서 이전 |
 | 구조물 억제 | 골격에는 구현 없음 | 구현 시 OFF에서 출발, 손재호의 객체 보존 회귀 이후에만 승격 |
@@ -89,9 +88,6 @@ topic/type/MD5, 실행 인자, 고정 bag과 실패 사례를 기록한다. 문�
    `roslaunch asmc_perception ...`는 최소 forwarding launch로 한 릴리스 호환을 제공하고,
    실제 consumer에서 쓰는 Python import도 조사해 필요하면 shim을 둔다. 두 이름을
    동시에 실행해 중복 노드가 생기지 않도록 안내한다. wrapper 제거는 담당자 확인 후 별도 PR이다.
-   **1~2 완료(2026-10-06):** `src/asmc_camera`로 완전히 이동했다. 담당자 결정으로 forwarding
-   launch와 import shim은 두지 않고 옛 경로에는 이전 안내 README만 남겼다(저장소 밖 consumer 없음).
-   `docs/packages/asmc_perception/` 문서 경로 이동은 링크 점검과 함께 후속 PR로 남긴다.
 3. **YOLO 물리 이전은 별도 변경:** 현재 weight·class mapping·threshold·box/stamp 출력을
    고정해 camera 쪽 단일 생산자로 옮긴다. 새 모델 비교·FP16/TensorRT·class 확장은
    이전과 섞지 않는다. LiDAR와 음영 어댑터가 같은 출력을 소비하도록 연결한다.
@@ -240,7 +236,7 @@ src/
 │   ├── maps/kcity2025/        # 작고 versioned인 최종 bundle/manifest
 │   ├── launch/ · rviz/
 │   └── test/
-├── asmc_camera/              # 2026-10-06 rename(구 asmc_perception)
+├── asmc_camera/              # 목표 이름; 현재 asmc_perception
 │   ├── src/asmc_camera/      # camera objects/YOLO, lane/road, traffic_light, bev
 │   ├── config/ · launch/ · rviz/
 │   ├── scripts/               # ROS node entrypoint만
@@ -290,7 +286,7 @@ LiDAR 인계는 [현재 골격과 이전 계획](../packages/asmc_lidar/README.m
 기존 nested Main/Msg 및 운영 출력은 새 계약이 판제와 검증되기 전까지 유지한다.
 
 사용자 측 독립 작업의 순서는 **개정 규정의 공식 근거 확인과 HD맵 갱신 → 카메라 객체
-검출의 asmc_camera 이전(rename은 2026-10-06 완료) 및 LiDAR/음영 어댑터 공통 소비 계약 → 동시 실행 부하
+검출의 asmc_camera 이전(현재 asmc_perception rename) 및 LiDAR/음영 어댑터 공통 소비 계약 → 동시 실행 부하
 기준선 → YOLO 선택과 BDD100K 다음 기존 데이터로 TwinLiteNet+ 학습 비교 →
 LAN2LAN 리허설**이다. COCO의 person/car/truck/bus는 현재 호환 기준이며 클래스
 확장은 소비자별 시험 뒤 결정한다. BDD100K 라벨을 기존 white/yellow/stopline head에
@@ -570,7 +566,7 @@ semantic, metric BEV/lane family, traffic light의 runtime·offline·training을
 - **완료:** camera semantic, metric BEV/lane family, traffic light를 하위 Python
   namespace와 하나의 ROS package로 이식했다.
 - model weight, manifest/SHA/config의 현재 배치는
-  [`asmc_camera` README](../../src/asmc_camera/README.md)를 따른다.
+  [`asmc_perception` README](../../src/asmc_perception/README.md)를 따른다.
 - **완료:** train/eval adapter는 `asmc_perception/training`, offline BEV audit은
   `asmc_perception/offline`으로 구분해 이식했다.
 - **P4-D 보류:** `src/lidar+sensorfusion/`은 팀원의 미완성 nested workspace로 유지한다.
@@ -634,7 +630,7 @@ publisher/필수 subscriber/rate/stamp/frame 기준으로 검사한다. 판제 �
 필수화하지 않는다.
 
 **P5 runtime·shared-family closeout 완료:** live와 bag replay ROS 추론은 모두
-`asmc-ros-noetic`에서 직접 `roslaunch asmc_camera perception.launch`로 실행한다.
+`asmc-ros-noetic`에서 직접 `roslaunch asmc_perception perception.launch`로 실행한다.
 `scripts/perception.sh`는 혼선을 막기 위해 제거했고 `asmc-perception-train`은 모델 학습·검증에만
 사용하며 host ROS network에서 격리한다. 음영구간 차선은 typed
 `/perception/lane/boundary_family`와 full-support marker를 기본 발행하고, 기존 개별
@@ -642,7 +638,7 @@ publisher/필수 subscriber/rate/stamp/frame 기준으로 검사한다. 판제 �
 `base_link` RViz를 함께 열어 full support와 판제 수락 구간인 0~15 m strip을 동시에 보여준다.
 이 strip은 검토용 MarkerArray이며 판제의 planning horizon이나 typed geometry를 제한하지 않는다.
 
-**P5-D consumer handoff 완료:** 신호등 producer의 소유자는 `asmc_camera`(구 `asmc_perception`), 판제 정본 입력은
+**P5-D consumer handoff 완료:** 신호등 producer의 소유자는 `asmc_perception`, 판제 정본 입력은
 typed `/perception/traffic_light/detection`으로 고정했다. Behavior는 typed 메시지를 한 번 받은 뒤
 invalid/stale 상태에서 legacy String으로 우회하지 않고 UNKNOWN으로 fail-closed한다. planning
 통합 launch는 중복 publisher를 막기 위해 신호등 producer를 기본으로 시작하지 않으며,
@@ -691,7 +687,7 @@ Phase 5는 P5-A~P5-E까지 완료됐다. 다음 우선순위는 LAN2LAN 현장 �
 [LiDAR 인계 계획](../packages/asmc_lidar/README.md)이며, 지면 제거,
 터널 벽·천장 억제, 거리 적응형 clustering, 추적 안정화와 HD Map 기반 고주로 차로 귀속을
 우선 검토한다. 담당자가 개발 중인 nested workspace는 합의·baseline 없이 이동하거나
-`asmc_camera`에 흡수하지 않는다. LAN2LAN 리허설은 이 통합의 안정 지점 뒤에 수행한다.
+`asmc_perception`에 흡수하지 않는다. LAN2LAN 리허설은 이 통합의 안정 지점 뒤에 수행한다.
 
 ## 7. 현장 LAN2LAN·Docker 단계
 
@@ -809,7 +805,7 @@ P4-C2는 대표 bag에서
 canonical/compatibility 출력은 source stamp별 payload mismatch 0으로 통과했다. P4-C6은
 TwinLite 학습 adapter, BEV offline audit와 traffic-light model을 역할별 canonical 경계로 옮기고
 `camera_semantic_perception`, `drivable_bev`, `traffic_light`, 미사용 `morai_3d_detection`과 빈
-`learning` placeholder를 제거했다. 긴 실험 기록은 `src/asmc_camera/docs/`(당시 `src/asmc_perception/docs/`)에 원문으로 보존했다.
+`learning` placeholder를 제거했다. 긴 실험 기록은 `src/asmc_perception/docs/`에 원문으로 보존했다.
 
 `data_collection`은 recorder, bag profile, replay, Capture와 dataset lifecycle을 소유하는 독립
 package로 유지하며 `asmc_perception` 통합·삭제 대상에 포함하지 않는다.

@@ -6,7 +6,7 @@
 
 ## 1. 한 줄 요약
 
-카메라 패키지는 2026-10-06 `asmc_perception`에서 `asmc_camera`로 이름을 바꿨다. LiDAR 목표 패키지는 `asmc_lidar`다.
+2026-10-05 패키지 목표는 `asmc_camera`(현재 `asmc_perception`)와 `asmc_lidar`다.
 YOLO 추론은 카메라 쪽, LiDAR 객체와 box의 매칭/분류 fusion은 LiDAR 쪽에 둔다.
 HD맵은 정적 문맥을 제공하며 별도 `asmc_fusion`은 만들지 않는다.
 이름 변경·원본 기능 이전은 아직 미완료이며 [통합 로드맵](./consolidation-roadmap.md)의
@@ -45,9 +45,9 @@ ego-BEV → lane/topology + safe drivable + object/lane context
 |------|------|-----------|------|
 | Expert / Behavior | rule + route, τ* 로깅 | `src/behavior_planner/` (+ LBC 학습 경로) | 정윤태·양서준 / 안승현 |
 | LBC teacher BEV | privileged simulator state → GT BEV | `tools/research/lbc_teacher_bev/` | 안승현 |
-| 차선·주행가능영역·eval | 카메라 학습·live 추론·음영 lane-family v3 | `src/asmc_camera/` runtime + offline/training | 안승현 |
+| 차선·주행가능영역·eval | 카메라 학습·live 추론·음영 lane-family v3 | `src/asmc_perception/` runtime + offline/training | 안승현 |
 | MGeo map prior | current Node/Link vector 후보·offline bake, pose 기반 local crop | `src/asmc_hd_map/` 후보와 기존 `src/asmc_hd_map/development/won_tae_link_node/` | 안승현·장원태 협의 |
-| 공통 BEV·차로 문맥 | map/camera/LiDAR layer와 object association | `src/asmc_camera/` camera layer; LiDAR handoff 후 공통 계약 | 인지·맵·LiDAR 공동 |
+| 공통 BEV·차로 문맥 | map/camera/LiDAR layer와 object association | `src/asmc_perception/` camera layer; LiDAR handoff 후 공통 계약 | 인지·맵·LiDAR 공동 |
 | LiDAR 장애물 | clustering·OBB·tracking·카메라 보조 분류 | `src/lidar+sensorfusion/` | 손재호, 정윤태 |
 | PA/SA_plan 구 학습 실험 | 현재 runtime 미사용 | Git history | 안승현 |
 | Behavior + Frenet + MPC | ROS command→trajectory→control; bridge가 Ctrl UDP 전송 | `src/behavior_planner/`, `src/frenet_planner/`, `src/mpc_controller/` | 정윤태·양서준·이강태 |

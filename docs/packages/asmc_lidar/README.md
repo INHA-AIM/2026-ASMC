@@ -7,7 +7,7 @@
 
 ## 역할과 남긴 파일
 
-카메라 패키지는 `asmc_camera`다(2026-10-06 `asmc_perception`에서 이름 변경). 안승현이
+카메라 목표 패키지는 `asmc_camera`(현재 이름 `asmc_perception`)다. 안승현이 이름 변경과
 YOLO 생산자 이전·모델/통합 부하 검증을 맡는다. 손재호는 `asmc_lidar`의 LiDAR 처리와
 카메라 box 매칭·클래스 유지 fusion을 맡는다. HD맵은 지도와 주행영역을 제공한다.
 자세한 역할 분담은 [통합 로드맵](../../architecture/consolidation-roadmap.md)을 따른다.

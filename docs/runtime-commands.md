@@ -80,13 +80,13 @@ docker exec -it asmc-ros-noetic bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-roslaunch asmc_camera perception.launch
+roslaunch asmc_perception perception.launch
 ```
 
 신호등과 debug image publisher까지 필요하면:
 
 ```bash
-roslaunch asmc_camera perception.launch \
+roslaunch asmc_perception perception.launch \
   start_traffic_light:=true \
   start_visualization:=true
 ```
@@ -231,7 +231,7 @@ docker exec -it asmc-ros-noetic bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-roslaunch asmc_camera perception.launch [arg:=value ...]
+roslaunch asmc_perception perception.launch [arg:=value ...]
 ```
 
 | arg | 기본값 | 설명 |
@@ -270,15 +270,15 @@ roslaunch asmc_camera perception.launch [arg:=value ...]
 
 ```bash
 # camera·BEV·lane만
-roslaunch asmc_camera perception.launch \
+roslaunch asmc_perception perception.launch \
   start_traffic_light:=false start_visualization:=false
 
 # 신호등만
-roslaunch asmc_camera perception.launch \
+roslaunch asmc_perception perception.launch \
   start_camera_lane:=false start_traffic_light:=true
 
 # 이미 실행 중인 producer의 시각화 publisher만
-roslaunch asmc_camera perception.launch \
+roslaunch asmc_perception perception.launch \
   start_camera_lane:=false start_visualization:=true
 ```
 
@@ -295,7 +295,7 @@ roslaunch asmc_camera perception.launch \
 
 ```bash
 # asmc-ros-noetic container
-roslaunch asmc_camera perception.launch
+roslaunch asmc_perception perception.launch
 ```
 
 bag 처리시간 비교처럼 family 근거 marker 비용을 제외하려면
@@ -323,7 +323,7 @@ read-only이며 Behavior/Frenet/제어 명령을 발행하지 않는다.
 
 ```bash
 # asmc-ros-noetic container
-roslaunch asmc_camera perception.launch start_visualization:=true
+roslaunch asmc_perception perception.launch start_visualization:=true
 ```
 
 팀 공통 rqt 확인 대상은 아래 두 영상이다.
@@ -366,7 +366,7 @@ asmc-ros-gui rviz
 이전 개별·중간 영상을 잠시 비교해야 할 때만 호환 profile을 켠다.
 
 ```bash
-roslaunch asmc_camera perception.launch \
+roslaunch asmc_perception perception.launch \
   start_visualization:=true \
   visualization_legacy_rqt:=true
 ```
@@ -376,7 +376,7 @@ reprojection 영상을 다시 광고한다. camera calibration grid는 호환 pr
 있으며 다음처럼 명시적으로 켠다.
 
 ```bash
-roslaunch asmc_camera perception.launch \
+roslaunch asmc_perception perception.launch \
   start_visualization:=true \
   visualization_calibration_grid:=true
 ```
@@ -388,7 +388,7 @@ RViz marker 구성은 이번 rqt 정리에서 변경하지 않았다.
 다시 켠다. `visualization_legacy_rqt:=true`를 사용하면 이 값도 기본 true가 된다.
 
 ```bash
-roslaunch asmc_camera perception.launch publish_bev_debug_metadata:=true
+roslaunch asmc_perception perception.launch publish_bev_debug_metadata:=true
 ```
 
 `road_marking/model_grid/*`와 `/perception/bev/debug/{view}`의 semantic raster는 이름에
@@ -399,7 +399,7 @@ roslaunch asmc_camera perception.launch publish_bev_debug_metadata:=true
 rejection 원인 분석에서만 다음처럼 켠다. 공식 batch 도구는 이 인자를 자동으로 전달한다.
 
 ```bash
-roslaunch asmc_camera perception.launch lane_publish_pipeline_audit:=true
+roslaunch asmc_perception perception.launch lane_publish_pipeline_audit:=true
 ```
 
 ### Perception runtime 수락검사
@@ -465,9 +465,9 @@ roslaunch behavior_planner autonomy_no_bridges_v2.launch [arg:=value ...]
 | `traffic_light` | `false` | 독립 호환 시험에서만 판제 launch가 신호등 producer를 시작할지 |
 | `traffic_light_device` | `auto` | 신호등 inference device |
 | `camera_topic` | `/cam_extra/image_jpeg/compressed` | 신호등 input |
-| `traffic_light_checkpoint` | `asmc_camera/models/traffic_light/best.pt` | checkpoint |
+| `traffic_light_checkpoint` | `asmc_perception/models/traffic_light/best.pt` | checkpoint |
 
-신호등 producer의 운영 소유자는 `asmc_camera`이고 planning launch 기본값은 `false`다.
+신호등 producer의 운영 소유자는 `asmc_perception`이고 planning launch 기본값은 `false`다.
 `traffic_light:=true`는 perception launch를 켜지 않은 독립 호환 시험에서만 사용한다. bridge와
 `/vehicle/state` producer도 중복으로 켜지 않는다.
 

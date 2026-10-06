@@ -14,7 +14,7 @@ from Msg.msg import Yolo_bbox, Yolo_bbox_arr
 from sensor_msgs.msg import CompressedImage, Image
 from std_msgs.msg import Header
 from lane_boundary_adapter.msg import CameraBBoxLaneResult as Result
-from asmc_camera.bev.calibration import load_calibration_snapshot
+from asmc_perception.bev.calibration import load_calibration_snapshot
 
 spec = importlib.util.spec_from_file_location('fixture', str(Path(__file__).with_name('lane_family_fixture.py')))
 fixture = importlib.util.module_from_spec(spec)
@@ -25,7 +25,7 @@ class BboxLaneTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         rospy.init_node('bbox_lane_test')
-        cls.camera = load_calibration_snapshot('/root/ws/src/asmc_camera/config/bev/cameras_v2.yaml')[1]['front']
+        cls.camera = load_calibration_snapshot('/root/ws/src/asmc_perception/config/bev/cameras_v2.yaml')[1]['front']
         cls.result = cls.overlay = None
         cls.lane_pub = rospy.Publisher('/perception/lane/boundary_family', LaneBoundaryFamily, queue_size=1)
         cls.image_pub = rospy.Publisher('/bbox_test/image', CompressedImage, queue_size=1)

@@ -2,7 +2,7 @@
 
 > **상태:** Frozen additive interface; P4-C6 package와 P5-D/E consumer·운영 closeout 완료
 > **기계 정본:** `config/contracts/perception_runtime_topic_contract_v1.yaml`
-> **실행 façade:** `src/asmc_camera/launch/perception.launch`
+> **실행 façade:** `src/asmc_perception/launch/perception.launch`
 
 이 계약은 신호등과 LiDAR 객체 결과를 판제가 소비할 canonical ROS1 타입으로 옮기기 위한
 경계다. P4-B에서 타입과 topic 의미를 먼저 고정했고 P4-C1에서 신호등 typed producer를
@@ -10,14 +10,14 @@
 `behavior_planner`가 typed 결과를 우선 소비하도록 연결했다. P4-C4에서 실제 ROS
 `behavior_node`를 사용한 `GREEN→KEEP→RED→STOP→GREEN→KEEP` 판단 loop를 고정하고, 별도 opt-in
 시험으로 Frenet/MPC/UDP와 실제 MORAI 차량 정지·재출발까지 확인했다. P4-C5에서 camera/BEV/lane
-runtime support와 config 소유권을 `asmc_camera`으로 옮기고 representative bag의
+runtime support와 config 소유권을 `asmc_perception`으로 옮기고 representative bag의
 canonical/compatibility payload parity를 통과했다. P4-C6에서 offline·training·model
-자산까지 `asmc_camera`으로 이관하고 구 camera/BEV/traffic package를 제거했지만,
+자산까지 `asmc_perception`으로 이관하고 구 camera/BEV/traffic package를 제거했지만,
 topic·node·message 계약은 그대로 유지했다. LiDAR canonical
 topic은 여전히 **발행된다고 가정하면 안 되며** 기계 정본의
 `producer_status`가 실제 producer 상태의 권위다.
 
-P5-D/E에서 신호등 producer 운영 소유자를 `asmc_camera`으로 확정하고 planning launch의
+P5-D/E에서 신호등 producer 운영 소유자를 `asmc_perception`으로 확정하고 planning launch의
 호환 include를 기본 off로 바꿨다. typed consumer 정책과 topic은 바뀌지 않았다. 음영구간
 lane-family 및 운영 명령은 별도
 [P5-D/E closeout](../../records/baselines/perception-p5de-closeout-v1.md)에 기록한다.
@@ -89,13 +89,13 @@ docker exec -it asmc-ros-noetic bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-roslaunch asmc_camera perception.launch
-roslaunch asmc_camera perception.launch start_visualization:=true
+roslaunch asmc_perception perception.launch
+roslaunch asmc_perception perception.launch start_visualization:=true
 ```
 
 기본 실행은 v3 sensor-set provenance를 가진 3-camera lane pipeline이며 traffic-light만 선택적으로
 추가한다. LiDAR/fusion은 아직 nested workspace, recorder는 `data_collection`이 독립적으로
-소유한다. `asmc_camera`은 두 component를 시작하거나 `Main`, `Msg`, 중복 `morai_msgs`를
+소유한다. `asmc_perception`은 두 component를 시작하거나 `Main`, `Msg`, 중복 `morai_msgs`를
 소유·삭제하지 않는다.
 
 v2와 v3는 VLP-16 주기가 다르지만 네 camera의 pose, intrinsics, period와 UDP 설정은 같다.
@@ -136,7 +136,7 @@ python3 tools/audit/validate_p1b_contract.py
 python3 tools/audit/validate_perception_contract.py
 python3 tools/audit/validate_traffic_light_parity.py --check-artifacts
 python3 -m unittest tools/audit/test_perception_contract.py
-python3 -m unittest src/asmc_camera/test/test_facade_contract.py
+python3 -m unittest src/asmc_perception/test/test_facade_contract.py
 ```
 
 ROS 환경에서는 `asmc_msgs` generated serialization과 façade launch parsing을 추가로 확인한다.

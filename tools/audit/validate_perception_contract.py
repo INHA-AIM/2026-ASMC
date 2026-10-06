@@ -159,7 +159,7 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
         if int(result.get("payload_mismatches", -1)) != 0:
             raise ContractError(f"perception payload parity regressed: {topic}")
 
-    canonical_source = repo_root / "src/asmc_camera/src/asmc_camera"
+    canonical_source = repo_root / "src/asmc_perception/src/asmc_perception"
     forbidden_imports = (
         "from camera_semantic_perception",
         "import camera_semantic_perception",
@@ -326,12 +326,12 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
             (item.get("pkg"), item.get("type"))
             for item in behavior_launch.iter("node")
         }
-        if ("asmc_camera", "traffic_light_node.py") not in nodes:
+        if ("asmc_perception", "traffic_light_node.py") not in nodes:
             raise ContractError(f"{filename} does not start canonical producer")
         if ("traffic_light", "live_infer.py") in nodes:
             raise ContractError(f"{filename} regressed to legacy producer")
 
-    launch_path = repo_root / "src" / "asmc_camera" / "launch" / "perception.launch"
+    launch_path = repo_root / "src" / "asmc_perception" / "launch" / "perception.launch"
     root = ET.parse(launch_path).getroot()
     arguments = {item.get("name"): item.get("default") for item in root.findall("arg")}
     for name in (
@@ -351,7 +351,7 @@ def validate_contract(repo_root: Path, contract_path: Path) -> Mapping[str, obje
         "lane_vectorizer_node.py",
         "traffic_light_node.py",
     ):
-        if ("asmc_camera", executable) not in runtime_nodes:
+        if ("asmc_perception", executable) not in runtime_nodes:
             raise ContractError(
                 f"facade launch does not use canonical executable: {executable}"
             )

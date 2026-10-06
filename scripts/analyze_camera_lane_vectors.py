@@ -27,32 +27,32 @@ import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src" / "asmc_camera" / "src"))
+sys.path.insert(0, str(REPO_ROOT / "src" / "asmc_perception" / "src"))
 sys.path.insert(
-    0, str(REPO_ROOT / "src/asmc_camera/src")
+    0, str(REPO_ROOT / "src/asmc_perception/src")
 )
-sys.path.insert(0, str(REPO_ROOT / "src/asmc_camera/src"))
+sys.path.insert(0, str(REPO_ROOT / "src/asmc_perception/src"))
 
-from asmc_camera.camera.geometry import LetterboxGeometry  # noqa: E402
-from asmc_camera.bev.calibration import load_calibration_snapshot  # noqa: E402
-from asmc_camera.bev.fusion import CameraBevFusion, build_quality_maps  # noqa: E402
-from asmc_camera.bev.grid import BevGridSpec  # noqa: E402
-from asmc_camera.offline.bev.lane_evaluation import nearest_distances  # noqa: E402
-from asmc_camera.bev.lane_evidence import reduce_evidence_to_nodes  # noqa: E402
-from asmc_camera.bev.lane_tracking import associate_lane_nodes  # noqa: E402
-from asmc_camera.bev.model_grid_projection import (  # noqa: E402
+from asmc_perception.camera.geometry import LetterboxGeometry  # noqa: E402
+from asmc_perception.bev.calibration import load_calibration_snapshot  # noqa: E402
+from asmc_perception.bev.fusion import CameraBevFusion, build_quality_maps  # noqa: E402
+from asmc_perception.bev.grid import BevGridSpec  # noqa: E402
+from asmc_perception.offline.bev.lane_evaluation import nearest_distances  # noqa: E402
+from asmc_perception.bev.lane_evidence import reduce_evidence_to_nodes  # noqa: E402
+from asmc_perception.bev.lane_tracking import associate_lane_nodes  # noqa: E402
+from asmc_perception.bev.model_grid_projection import (  # noqa: E402
     MetricEvidence,
     ModelGridGroundProjector,
 )
-from asmc_camera.offline.bev.offline_evaluation import project_model_grid_hard  # noqa: E402
-from asmc_camera.bev.projector import CameraBevProjector  # noqa: E402
-from asmc_camera.bev.spline_fitting import fit_lane_tracks  # noqa: E402
-from asmc_camera.bev.visualization import (  # noqa: E402
+from asmc_perception.offline.bev.offline_evaluation import project_model_grid_hard  # noqa: E402
+from asmc_perception.bev.projector import CameraBevProjector  # noqa: E402
+from asmc_perception.bev.spline_fitting import fit_lane_tracks  # noqa: E402
+from asmc_perception.bev.visualization import (  # noqa: E402
     draw_metric_evidence,
     draw_metric_grid,
     draw_metric_lanes,
 )
-from asmc_camera.training.twinlite import (  # noqa: E402
+from asmc_perception.training.twinlite import (  # noqa: E402
     MoraiTwinLiteDataset,
     adapt_twinlite_outputs,
     configure_twinlite_task,
@@ -86,7 +86,7 @@ def parse_args():
     parser.add_argument("--twinlite-root", default=os.environ.get("TWINLITE_ROOT"))
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--weights", default="auto", choices=("auto", "ema", "model"))
-    parser.add_argument("--lane-config", default=str(REPO_ROOT / "src/asmc_camera/config/bev/lane_fitting.yaml"))
+    parser.add_argument("--lane-config", default=str(REPO_ROOT / "src/asmc_perception/config/bev/lane_fitting.yaml"))
     parser.add_argument("--max-groups", type=int)
     parser.add_argument("--overlay-count", type=int, default=60)
     parser.add_argument("--log-interval", type=int, default=20)
@@ -421,7 +421,7 @@ def main():
     native, manifests, policy_id, policy_hash = load_native_index(
         data_root, {key[0] for key, _ in complete}, args.native_target_name
     )
-    calibration_path = REPO_ROOT / "src/asmc_camera/config/bev/cameras_v2.yaml"
+    calibration_path = REPO_ROOT / "src/asmc_perception/config/bev/cameras_v2.yaml"
     _, cameras = load_calibration_snapshot(calibration_path)
     lane_config_path = Path(args.lane_config).expanduser().resolve()
     with lane_config_path.open("r", encoding="utf-8") as stream:

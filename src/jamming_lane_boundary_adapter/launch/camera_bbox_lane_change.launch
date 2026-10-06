@@ -76,7 +76,7 @@
   <arg name="use_rviz" default="true"/>
   <arg name="bbox_consumer_x_max" default="20.0"/>
   <arg name="start_classifier" default="true"/>
-  <arg name="calibration_file" default="$(find asmc_camera)/config/bev/cameras_v2.yaml"/>
+  <arg name="calibration_file" default="$(find asmc_perception)/config/bev/cameras_v2.yaml"/>
   <include if="$(arg start_classifier)" file="$(find lane_boundary_adapter)/launch/camera_bbox_lane.launch">
     <arg name="use_rviz" value="false"/>
     <arg name="contact_band_height_px" value="$(arg contact_band_height_px)"/>

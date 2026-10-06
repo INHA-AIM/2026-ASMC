@@ -23,9 +23,9 @@ from torch.utils.data import DataLoader
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src" / "asmc_camera" / "src"))
+sys.path.insert(0, str(REPO_ROOT / "src" / "asmc_perception" / "src"))
 
-from asmc_camera.training.twinlite import (  # noqa: E402
+from asmc_perception.training.twinlite import (  # noqa: E402
     MoraiTwinLiteDataset,
     adapt_twinlite_outputs,
     load_external_twinlite,

@@ -166,7 +166,7 @@ roslaunch lane_boundary_adapter shadow_lane_consumer_pilot.launch
 인지 pipeline은 별도 터미널에서 실행한다.
 
 ```bash
-roslaunch asmc_camera perception.launch \
+roslaunch asmc_perception perception.launch \
   camera_checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt
 ```
 
