@@ -83,7 +83,11 @@ polygon은 첫 점을 끝에 반복하지 않는 open ring이고 `map` 좌표를
 
 모든 publisher queue size는 1이다. 전역 토픽은 build가 바뀔 때 다시 발행하고, 늦게 접속한
 consumer가 전체 정적 상태를 즉시 받을 수 있게 latch한다. `OccupancyGrid` 값은 drivable `0`,
-non-drivable `100`, unknown `-1`로 고정한다.
+non-drivable `100`, unknown `-1`로 고정한다. 로컬 grid의 header는 map이며 기본 ego heading
+크롭은 origin quaternion에 회전을 포함한다. cell 조회 시 origin translation과 rotation을
+모두 적용한다. 거리·주기 및 `map_square` 호환 설정은 [runtime v1](./runtime-v1.md)을 따른다.
+속도 zone payload의 `route_speed_limits`는 링크별 유효 상한을 km/h로 전달하며 미션 구간·신호등
+정지선 연결은 같은 `MissionZoneArray`에서 선택 조회한다. 기존 메시지 MD5는 유지한다.
 
 ## 4. 안전 규칙
 

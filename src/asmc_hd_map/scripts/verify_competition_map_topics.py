@@ -23,6 +23,7 @@ from asmc_msgs.msg import (
 from nav_msgs.msg import OccupancyGrid
 import rospy
 from visualization_msgs.msg import Marker, MarkerArray
+from asmc_hd_map.semantic_query import SemanticMapIndex
 
 
 EXPECTED_TYPES = {
@@ -103,6 +104,19 @@ def main() -> int:
         "/hd_map/global/drivable_grid", OccupancyGrid, timeout=timeout
     )
     debug = rospy.wait_for_message("/hd_map/debug/markers", MarkerArray, timeout=timeout)
+
+    index = SemanticMapIndex(meta, {"missions": missions, "markings": markings})
+    limits = list(index.speed_by_link.values())
+    _require(len(limits) == 39, "per-link effective speed limits are missing from ROS payloads")
+    for limit in limits:
+        cap = limit["competition_cap_kph"]
+        expected = min(limit["mgeo_max_speed_kph"], cap) if cap is not None else limit["mgeo_max_speed_kph"]
+        _require(abs(limit["effective_limit_kph"] - expected) < 1e-6, "effective speed cap differs from MGeo/competition minimum")
+    for signal in index.signals:
+        joined = index.signals_ahead(signal.route_station_start_m, 0.)
+        _require(joined and joined[0]["stoplines"], "signal has no reviewed stop-line geometry")
+        _require(all(line.role == LaneMarking.ROLE_STOP_LINE for line in joined[0]["stoplines"]),
+                 "signal references a non-stop-line marking")
 
     for name, message in (
         ("meta", meta),

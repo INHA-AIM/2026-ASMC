@@ -13,7 +13,12 @@
   <arg name="local_gps_topic" default="/gps"/>
   <arg name="local_imu_topic" default="/imu"/>
   <arg name="local_extent_m" default="120.0"/>
-  <arg name="local_publish_hz" default="5.0"/>
+  <arg name="local_crop_mode" default="ego"/>
+  <arg name="local_front_m" default="90.0"/>
+  <arg name="local_rear_m" default="30.0"/>
+  <arg name="local_left_m" default="30.0"/>
+  <arg name="local_right_m" default="30.0"/>
+  <arg name="local_publish_hz" default="20.0"/>
   <arg name="follow_ego" default="true"/>
 
   <include file="$(find asmc_hd_map)/launch/competition_map_debug.launch">
@@ -29,6 +34,11 @@
     <arg name="local_gps_topic" value="$(arg local_gps_topic)"/>
     <arg name="local_imu_topic" value="$(arg local_imu_topic)"/>
     <arg name="local_extent_m" value="$(arg local_extent_m)"/>
+    <arg name="local_crop_mode" value="$(arg local_crop_mode)"/>
+    <arg name="local_front_m" value="$(arg local_front_m)"/>
+    <arg name="local_rear_m" value="$(arg local_rear_m)"/>
+    <arg name="local_left_m" value="$(arg local_left_m)"/>
+    <arg name="local_right_m" value="$(arg local_right_m)"/>
     <arg name="local_publish_hz" value="$(arg local_publish_hz)"/>
     <arg name="follow_ego" value="$(arg follow_ego)"/>
   </include>

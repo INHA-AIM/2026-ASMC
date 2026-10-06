@@ -168,7 +168,7 @@ topics:
     scope: local
     latch: false
     queue_size: 1
-    publication: ego_update
+    publication: pose_callback_and_stale_timer
     authority: derived_association
   /hd_map/debug/markers:
     type: visualization_msgs/MarkerArray
@@ -198,6 +198,9 @@ consumer_rules:
   - MissionZone STATUS_UNSPECIFIED is invalid for publication.
   - MissionZone STATUS_PROVISIONAL must not activate mandatory planning or control rules.
   - OccupancyGrid uses 0 for drivable, 100 for non-drivable, and -1 for unknown.
+  - Local OccupancyGrid origin orientation must be applied when converting map positions to cells; header.frame_id remains map.
+  - Speed-zone rule_payload_json.route_speed_limits lists per-link MGeo maximum, competition cap and effective_limit_kph; divide by 3.6 for SI.
+  - Traffic-light mission payloads join traffic_light_id to hd_map_stopline_ids; live signal color comes from perception or simulator, never the static map.
 
 planning_consumption:
   recommended_mode: subscribe_global_once_and_query_by_map_position
@@ -222,16 +225,25 @@ planning_consumption:
 local_crop_policy:
   purpose: optional_bounded_lookup_and_visualization_cache
   geometry_frame: map
-  extent_m: 120.0
-  shape: axis_aligned_square
+  default_mode: ego
+  supported_modes: [ego, map_square]
+  front_m: 90.0
+  rear_m: 30.0
+  left_m: 30.0
+  right_m: 30.0
+  extent_m: 120.0 # map_square compatibility mode only
+  shape: heading_aligned_rectangle
+  grid_origin_orientation: ego_yaw_in_map
+  grid_axis_x: ego_forward
+  grid_axis_y: ego_left
   lane_selection: polygon_or_centerline_bounds_intersects_crop
   lane_geometry_clipped: false
   lane_ids_preserve_global_identity: true
   lane_array_complete: false
-  grid_alignment: global_grid_cells
+  grid_alignment: nearest_global_cell_at_output_cell_center
   grid_resolution_m: 0.2
   grid_width_cells: 600
-  grid_height_cells: 600
+  grid_height_cells: 300
   outside_global_grid_value: -1
   default_pose_source: gps_imu
   supported_pose_sources: [gps_imu, ego_status, pose_stamped]
@@ -243,7 +255,11 @@ local_crop_policy:
     gps_lever_arm_m: [0.35, 0.0]
     maximum_pair_gap_ms: 100.0
     maximum_origin_offset_error_m: 1.0
-  publish_hz: 5.0
+  publish_hz: 20.0
+  compute_only_subscribed_local_layers: true
+  current_lane_publication: each_distinct_pose_and_stale_timer
+  pose_age_policy: source_stamp_and_monotonic_receipt
+  stale_crop_policy: stop_publishing_lanes_and_grid_keep_invalid_association
   pose_stale_timeout_sec: 0.5
   current_lane_association:
     topic: /hd_map/local/current_lane

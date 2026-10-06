@@ -37,8 +37,8 @@ publisher는 시작 전에 stage14 map, P1-C metadata, 공식 global path와 P2-
 | `/hd_map/global/drivable_grid` | `nav_msgs/OccupancyGrid` | latched | vector area에서 만든 0.2 m lookup raster |
 | `/hd_map/global/checkpoints` | `asmc_msgs/CompetitionCheckpointArray` | latched | 공식 체크포인트 15개(규정집 v1.2), 3 m, yaw, route/link station |
 | `/hd_map/global/mission_zones` | `asmc_msgs/MissionZoneArray` | latched | 미션·속도 profile·상시 인지 policy zone 15개 |
-| `/hd_map/local/lanes` | `asmc_msgs/LaneArray` | pose update, non-latched | Ego 주변 120 m 정사각 영역과 교차하는 Lane subset |
-| `/hd_map/local/drivable_grid` | `nav_msgs/OccupancyGrid` | pose update, non-latched | global cell에 정렬된 `600×600`, 0.2 m local crop |
+| `/hd_map/local/lanes` | `asmc_msgs/LaneArray` | pose update, non-latched | ego 전방 90 m·후방 30 m·좌우 각 30 m 창과 교차하는 Lane subset |
+| `/hd_map/local/drivable_grid` | `nav_msgs/OccupancyGrid` | pose update, non-latched | ego heading으로 회전한 `600×300`, 0.2 m local crop |
 | `/hd_map/local/current_lane` | `asmc_msgs/LaneAssociation` | pose update, non-latched | 후륜축 중심 현재 허용 차로와 경계/이탈/전환 상태 |
 | `/hd_map/debug/markers` | `visualization_msgs/MarkerArray` | 1 Hz, non-latched | 차선·경로·link 방향·station·체크포인트·미션·build 정보 |
 
@@ -64,16 +64,108 @@ latched global 토픽이다. 현재 vector 규모는 Lane 70개, DrivableArea 10
 
 `local/lanes`와 `local/drivable_grid`는 bounded lookup 또는 디버그를 위한 선택적 파생
 캐시다. planner horizon을 뜻하지 않으며 local 메시지만으로 미션·체크포인트·도색을
-판단하면 안 된다. 따라서 현재 120 m 정사각형을 route-relative 전후방 crop으로 바꾸는 작업은
-판제의 정본 인터페이스나 정확도를 막지 않는다. 향후 대역폭/지연 측정에서 필요할 때 별도
-최적화로 진행한다. RViz도 기본적으로 전체 `global/drivable_grid`를 표시하고 120 m local Map
-display는 꺼져 있다.
+판단하면 안 된다. 기본 local 창은 ego heading 기준 전방 90 m·후방 30 m·좌우 각 30 m다.
+전방을 위로 표시한 BEV에서는 후륜축 중심이 화면 폭의 50%, 아래에서 25% 위치에 온다.
+RViz의 카메라 중심 설정과 grid 창은 별개이며, `follow_ego` 뷰는 계속 base_link를 따라간다.
+`local_crop_mode:=map_square local_extent_m:=120`이면 기존 map 축 정사각 크롭을 사용한다.
+기본 로컬 크롭 주기는 최대 20 Hz이고 해당 토픽 구독자가 있을 때만 계산한다.
+현재 차로는 grid 계산을 기다리지 않고 각 유효 pose callback에서 즉시 발행한다.
+pose가 0.5 s 이상 만료되면 현재 차로는 `valid=false/STATE_STALE`로 발행하고 크롭은 중단한다.
+소비자는 크롭의 원래 pose stamp를 확인해야 하며 마지막 수신 데이터를 계속 새 데이터로 취급하면 안 된다.
 
 `rostopic list`에 보일 수 있는 `/hd_map/global/drivable_grid_updates`는 RViz Map display가
 증분 갱신을 위해 구독하는 표준 보조 이름이며 이 패키지의 발행 계약이 아니다. publisher가
 없고 판제는 구독할 필요가 없다.
 
-### 2.2 필드 해석과 알려진 의도적 공백
+### 2.2 선택 구독과 규칙 조회
+
+`hd_map_consumer_example.py`의 `~layers`로 `lanes`, `areas`, `markings`, `checkpoints`, `missions`
+중 필요한 레이어만 구독한다. 기본은 `[lanes, missions, markings]`이고 22.3 MB 전역 grid를
+받을 필요가 없다. `SemanticMapIndex(meta, layers)`는 일치하는 build/frame/geometry만 받아
+배열과 bounds, link lookup, 파싱한 미션 payload를 한 번 캐시한다. ROS에 의존하지 않는
+조회 API이므로 판제 프로세스 안에서 사용하면 매 제어 주기의 ROS 왕복이 없다.
+
+```python
+from asmc_hd_map.semantic_query import SemanticMapIndex
+from asmc_hd_map.local_crop import EgoWindow
+
+index = SemanticMapIndex(meta, {"lanes": lanes, "missions": missions, "markings": markings})
+nearby = index.spatial((ego_x, ego_y), ego_yaw, EgoWindow(), layers=["lanes", "markings"])
+speed = index.speed_limit(current_link_id)  # None이면 경로 밖/정보 미수신: 무제한이 아님
+missions_now = index.active_missions(current_link_id, route_station_m)
+signals = index.signals_ahead(route_station_m, distance_m=120.)
+```
+
+- 제한속도: 속도 zone의 `rule_payload_json.route_speed_limits`에 공식 경로 링크 39개의
+  `mgeo_max_speed_kph`, `competition_cap_kph`(없으면 null), `effective_limit_kph`를 전달한다.
+  유효 상한은 둘의 최솟값이다. A202/A315는 70→60 km/h이며 고속 예외는 대회 상한만 없애므로
+  MGeo 상한은 유지된다. 판제 SI 입력에는 `effective_limit_kph / 3.6`을 쓴다.
+- 주행구간: `active_missions(link_id, route_station_m)`는 부분 링크 구간을 station으로 좁히고
+  provisional을 제외한다. station을 생략하면 링크에서 가능한 구간 후보이므로 실제 활성화에는
+  station을 함께 사용한다. topology 기반 route station 추정은 판제/localization의 책임이다.
+- 신호등: 인지 활성 구간과 실제 정지선 경계 5개를 구분한다. `signals_ahead`는 길이가 0인
+  경계도 route distance로 조회하고 `traffic_light_id`, 정지선 ID 및 선택한 도색 레이어의
+  정지선 geometry를 반환한다. 총 7개 검수 정지선은 `LaneMarking.ROLE_STOP_LINE`이다.
+  신호등 색·현재 현시는 인지 또는 simulator state와 ID로 결합한다. 정적 지도에는 현시가 없다.
+- spatial 조회는 bounds의 보수적 교차 검사다. 잘린 polygon이 아닌 원본 객체를 돌려주므로
+  collision/정확한 ROI 교차는 소비자가 polygon으로 판단한다. 곡선 앞쪽의 규칙은 공간 크롭에
+  가두지 말고 route station과 topology로 조회한다.
+
+### 2.3 크롭 거리 선정
+
+90/30/30/30 m는 이 맵의 로컬 노면 조회·시각화 기본값이다. 전방은 기존 방향 무관 60 m보다
+늘리고 후방은 차로 전환·이탈·교차로 연속성 확인을 위해 남긴다. 좌우 30 m는 주변 차로와
+교차로를 포함하는 cache 폭이며 계산/전송 셀 수는 360,000→180,000으로 줄어든다.
+`local_front_m`, `local_rear_m`, `local_left_m`, `local_right_m`를 독립적으로 조절할 수 있다.
+
+판제 감속 horizon은 `v * response_time + v² / (2 * deceleration) + margin`과 경로 곡률·상한을
+고려해 별도로 잡는다. 예를 들어 설계 가정 response 0.5 s, deceleration 3 m/s², margin 10 m이면
+60 km/h에서 약 65 m, 80 km/h에서 약 103 m, 90 km/h에서 약 127 m다. 이 수치는 차량에서
+측정한 제동 성능이 아니라 거리 검토용 가정이다. 고속 운용 시 local 전방을 120~150 m로
+늘릴 수 있지만, 원거리 신호등/속도 전환은 항상 전역 경로에서 필요한 horizon까지 조회해야 한다.
+후진 시에는 앞뒤 창을 바꾸거나 `map_square`를 선택한다. BEV 카메라 화면의 crop을 그대로
+판제 planning horizon으로 채택하지 않는다.
+
+전체 지도와 규칙 연결을 캐시하고 조회하는 구조는 [Autoware map loader](https://autowarefoundation.github.io/autoware_core/latest/map/autoware_map_loader/)와
+[Lanelet2 regulatory elements](https://github.com/fzi-forschungszentrum-informatik/Lanelet2/blob/master/lanelet2_core/doc/RegulatoryElementTagging.md)의
+역할 분리를 참고했다. 위 거리 기본값은 해당 프로젝트의 권장 상수가 아니라 이 패키지의 설계 선택이다.
+
+### 2.4 발행 지연 검증 (2026-10-06)
+
+ROS Noetic 컨테이너, 별도 test master, `ego_status` 입력 20 Hz × 100 pose에서 측정했다.
+각 pose stamp의 최초 도착만 집계하므로 stale 감시 timer의 재발행을 지연 표본으로 세지 않는다.
+
+| 항목 | 표본 | p50 | p95 | 최대 |
+|---|---|---|---|---|
+| 현재 차로 pose→수신 | 100 | 1.49 ms | 2.33 ms | 3.63 ms |
+| local grid pose→수신 | 100 | 27.41 ms | 53.64 ms | 72.01 ms |
+| 선택 vector/규칙 내부 조회 | 500 | 0.086 ms | 0.137 ms | 0.465 ms |
+
+이 값은 해당 호스트 시험 결과이며 실차의 무지연/실시간 보장은 아니다. grid에는 최대 한 주기의
+timer 대기와 계산·전송 시간이 있다. 중요 규칙은 전역 cache의 내부 조회와 pose callback 차로를
+사용한다. ROS master 연결·파일 SHA 검사·전역 배열의 최초 로딩 시간은 steady-state 지연에
+포함하지 않았다. GPS/IMU 동기화, 실제 센서·판제 부하와 폐루프 주행은 별도 검증이 필요하다.
+
+재현 절차는 **실차/주행 master와 분리된** 개발 shell에서만 사용한다. 검증기가 합성 pose를 보낸다.
+
+```bash
+export ROS_MASTER_URI=http://127.0.0.1:11378
+export ROS_IP=127.0.0.1
+roscore -p 11378
+# 같은 환경변수를 둔 다른 shell
+roslaunch asmc_hd_map competition_map.launch rviz:=false local_pose_source:=ego_status
+# 같은 환경변수를 둔 다른 shell
+rosrun asmc_hd_map verify_competition_map_topics.py
+rosrun asmc_hd_map verify_local_map_topics.py
+rosrun asmc_hd_map verify_hd_map_latency.py
+```
+
+전체 HD맵 unit test 150개와 추가 ROS pose/직렬화 회귀 5개, 전역·로컬 토픽 smoke,
+기존 message serialization, P1-B MD5 계약 검사와 catkin workspace build를 통과했다.
+geometry/metadata artifact와 pin은 그대로다. 기존 정사각 모드는
+`local_crop_mode:=map_square`와 verifier `_crop_mode:=map_square`로 확인한다.
+
+### 2.5 필드 해석과 알려진 의도적 공백
 
 - 모든 global 배열은 같은 `build_id`/`geometry_sha256`를 사용한다. 하나라도 다르면 함께
   사용하지 않는다.
@@ -107,8 +199,11 @@ WGS84→UTM52N, 맵 원점 `(302595, 4124145)m`, GPS 전방 lever arm 0.35 m를 
 pose를 사용할 수도 있다. 두 출력의 geometry는 `base_link`로 변환하지 않고 계속 `map`
 frame이며 Lane ID도 global namespace를 유지한다. Lane geometry 자체는 자르지 않고 polygon
 또는 centerline bounds가 crop과 교차하는 Lane 전체를 선택한다. `LaneArray.complete=false`가
-subset임을 나타낸다. grid는 global cell 경계에 정렬하고 global 범위 밖만 `-1` unknown으로
-padding한다. 판제가 global latched 데이터를 한 번 받아 자체 ROI index를 만드는 방식도
+subset임을 나타낸다. 기본 grid는 output cell 중심을 global grid에 최근접 표본화하며 원본
+`0/100/-1`을 보간하지 않는다. global 범위 밖은 `-1`이다. `header.frame_id=map`이며 grid origin의
+quaternion이 ego yaw를 담는다. map XY에서 grid cell을 구하려면 origin translation을 빼고
+origin rotation의 역회전을 적용한 뒤 resolution으로 나눈다. vector Lane은 이미 map 좌표이므로
+ego transform을 다시 적용하지 않는다. `map_square` 모드만 원본 global cell 경계에 정렬된다. 판제가 global latched 데이터를 한 번 받아 자체 ROI index를 만드는 방식도
 계속 허용하는 정도가 아니라 권장 기본 방식이다. P2-B 정책과 결과는
 [`kcity2025-compact-drivable-map-v1.md`](../../records/baselines/kcity2025-compact-drivable-v1.md)에서 관리한다.
 
@@ -225,15 +320,15 @@ marking의 유효한 국소 횡거리로 Lane 외곽을 보정하고 MGeo 인접
 |---|---|---|
 | `/hd_map/debug/markers` | 478 marker, 선 점 17.7만 개, 4.3 MB | 86 marker, 3.6만 개, 0.9 MB |
 | actor 후보 링크(`mission_actors_*`)와 라벨의 링크 목록 | 표시 | 숨김 |
-| 주행가능영역 면 (RViz 기본) | — | ego 주변 120 m 크롭 `/hd_map/local/drivable_grid` (0.2 m, 600×600칸, GPS+IMU) |
+| 주행가능영역 면 (RViz 기본) | — | ego 전방 중심 크롭 `/hd_map/local/drivable_grid` (0.2 m, 600×300칸, GPS+IMU) |
 
 marker는 시작할 때 한 번 만들어 두고 새 구독자가 붙을 때만 보낸다. 고정된 내용을 다시 보내면 RViz가 매번
 다시 만들 뿐이라 주기 전송은 기본으로 끈다(`debug_republish_hz` 0). RViz에서 Reset을 누르면 marker가
 지워지므로, 해당 display 체크를 껐다 켜면 다시 받는다. RViz가 없으면 아무것도 보내지 않는다.
 
 주행가능영역 면은 ego 주변 크롭을 기본으로 그린다. 전체 지도를 텍스처로 올리지 않아도 되고, planner와 같은
-0.2 m 해상도라 경계가 거칠지 않다. 크롭은 `local_crop_policy`대로 `map` 축(동·북)에 맞춘 120 m 정사각형이라
-도로 방향과는 비스듬해 보이는 것이 정상이며, ego는 항상 정사각형 중심에 있다. 맵 전체 면이 필요하면
+0.2 m 해상도다. 기본 크롭은 `local_crop_policy`대로 ego heading을 따라 회전하고 후륜축 중심보다
+전방에 더 많은 범위를 둔다. 맵 전체 면이 필요하면
 `Drivable area whole map (0.2 m planner grid, heavy)`(22.3M칸)를 켠다.
 차선 도색과 외곽선은 고정 marker라 RViz가 한 번 올린 뒤에는 거의 부하가 없어 따로 크롭하지 않는다.
 

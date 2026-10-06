@@ -316,7 +316,16 @@ def build_static_messages(
     mission_array.build_id = meta.build_id
     mission_array.route_id = checkpoint_array.route_id
     mission_array.source_sha256 = str(bundle["metadata_sha256"])
-    mission_array.zones = [_mission_message(item) for item in bundle["mission_zones"]]
+    mission_array.zones = []
+    for item in bundle["mission_zones"]:
+        message = _mission_message(item)
+        limits = [limit for limit in metadata.get("route_speed_limits", [])
+                  if limit["speed_zone_id"] == item["id"]]
+        if limits:
+            payload = json.loads(message.rule_payload_json)
+            payload["route_speed_limits"] = limits
+            message.rule_payload_json = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        mission_array.zones.append(message)
     result = {
         "meta": meta,
         "lane_markings": lane_array,

@@ -28,6 +28,8 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_nosetests(test/test_live_pose.py)
   catkin_add_nosetests(test/test_lane_association.py)
   catkin_add_nosetests(test/test_local_crop.py)
+  catkin_add_nosetests(test/test_semantic_query.py)
+  catkin_add_nosetests(test/test_local_runtime.py)
   catkin_add_nosetests(test/test_review_bundle.py)
   catkin_add_nosetests(test/test_legacy_adoption.py)
   catkin_add_nosetests(test/test_hybrid_completion.py)
@@ -62,6 +64,7 @@ catkin_install_python(PROGRAMS
   scripts/hd_map_consumer_example.py
   scripts/verify_competition_map_topics.py
   scripts/verify_local_map_topics.py
+  scripts/verify_hd_map_latency.py
   scripts/map_review_logger_node.py
   scripts/build_current_corridor.py
   scripts/calibrate_observed_lanes.py
