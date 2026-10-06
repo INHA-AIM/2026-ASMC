@@ -1,4 +1,5 @@
 #include "Control.hpp"
+#include "Global/ControlContext.hpp"
 #include "MPC/MPC.hpp"
 
 #include <algorithm>
@@ -10,6 +11,8 @@
 #include "MPC/Reference/path_resampler.hpp"
 #include "MPC/Reference/reference_validator.hpp"
 #include "MPC/Reference/trajectory_timing.hpp"
+
+ControlContext g_control;
 
 namespace mpc_controller_ros {
 namespace {

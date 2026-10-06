@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Global/Global.hpp"
+#include "Global/ControlContext.hpp"
 
 namespace mpc_controller_ros {
 

@@ -6,6 +6,7 @@
 #include <morai_msgs/CtrlCmd.h>
 
 #include "Control.hpp"
+#include "Global/ControlContext.hpp"
 #include "MPC/MPC.hpp"
 #include "Util/ParameterLoader.hpp"
 

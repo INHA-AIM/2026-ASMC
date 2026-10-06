@@ -17,7 +17,7 @@
 // 이 계층은 "물리적으로 말이 되는 참조인가"만 본다 - 경로 품질/비용은 다루지
 // 않는다(그건 cost_function의 책임). solver/vehicle_model/cost_function은
 // 이 계층에 의존하지 않는다 - upstream planner 데이터가 이미 정상이라고
-// 가정하고 최적화만 한다. ROS 비의존(ros::/asmc_msgs::/morai_msgs:: 없음) -
+// 가정하고 최적화만 한다. ROS 비의존 -
 // roscore 없이 단위 테스트할 수 있다.
 
 

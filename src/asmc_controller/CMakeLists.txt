@@ -23,8 +23,7 @@ set(MPC_CORE_SOURCES
   src/MPC/MPC.cpp)
 
 add_library(mpc_core ${MPC_CORE_SOURCES})
-add_dependencies(mpc_core ${catkin_EXPORTED_TARGETS})
-target_link_libraries(mpc_core yaml-cpp ${catkin_LIBRARIES})
+target_link_libraries(mpc_core yaml-cpp)
 
 add_library(mpc_ros_converter src/Util/MessageConverter.cpp)
 add_dependencies(mpc_ros_converter ${catkin_EXPORTED_TARGETS})
