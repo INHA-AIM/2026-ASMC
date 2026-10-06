@@ -2,6 +2,8 @@
 
 > 기준: main `af253c3575c1e704e70511c2a2033ec15e33299a`, 전방 YOLO11m 동작 보존.
 > opt-in 구현이며 LiDAR 전체 이전이나 대회 full-stack 성능 승인을 뜻하지 않는다.
+> 최신 통합 기준은 컨트롤러 PR #67을 포함한 main `c5d0b78`이다. 검출·LiDAR·HD맵 실행 코드는
+> 기존 측정 기준과 동일하며 최신 main에서 전체 빌드와 카메라·메시지 회귀를 다시 확인했다.
 
 `/image_jpeg/compressed` → `asmc_camera` → `/perception/camera/objects` →
 `Main` 호환 어댑터 → `/YOLO/BBox` → 기존 fusion으로 연결한다.
@@ -85,6 +87,15 @@ CPU는 `device: cpu`, `require_cuda: false`를 설정 파일에 명시해야 한
 
 ## 재현 도구와 증거
 
+현재 **구현 완료, 수락 보류**다. 3,514프레임 정확 비교, 구·신 1배속 A/B,
+객체 단독 runtime 검사, 음영 fusion과 장애 주입은 통과했다. 주 fusion bag의
+절대 매칭 수는 초기 구 468/468 대비 신 464/463, 추가 진단 구 465/469 대비 신 466/462로
+조건을 만족하지 못했다. 같은 source stamp·3D 중심으로 대응한 실제 객체의 분류 전환도
+신 경로에서 1~2프레임 달랐다. 실행 사이 track ID 재배정이 많으므로 같은 숫자 ID만으로
+객체 동등성을 단정하지 않는다. 실패 실행도 [증거](../../../config/baselines/perception_camera_objects_parity_v1.yaml)에 모두 보존한다.
+기존 C++ fusion·50ms/200ms 정책을 변경하거나 이 결과를 수락 완료로 표시하지 않는다.
+이 문제를 해결하기 전 다음 단계 승격과 최종 병합은 보류한다.
+
 검증은 GPU 전달·`--network none` 전용 컨테이너에서 직렬로 실행한다. 바깥과 nested 환경을
 위 순서로 source한다. 다른 실시간 GPU 추론은 중지된 상태여야 한다.
 bag 재생에는 별도 master에서 `/use_sim_time=true`와 `--clock`을 사용한다.
@@ -93,6 +104,8 @@ bag 재생에는 별도 master에서 `/use_sim_time=true`와 `--clock`을 사용
 python3 tools/perception/compare_camera_objects.py /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag --output /tmp/p2-offline.json
 python3 tools/perception/replay_camera_objects.py /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag --output /tmp/p2-ab
 python3 tools/perception/replay_camera_objects.py /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag --fusion --output /tmp/p2-fusion-primary
+python3 tools/perception/analyze_fusion_identity.py /tmp/p2-fusion-primary
+python3 tools/perception/check_camera_object_faults.py --output /tmp/p2-faults.json
 ```
 
 정확 비교는 원본 `SpeedSignDetection` 메서드를 그대로 실행하고 ROS 발행/스케줄만 대체한다.

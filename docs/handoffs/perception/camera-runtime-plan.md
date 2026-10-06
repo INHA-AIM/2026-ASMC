@@ -1,8 +1,9 @@
 # 카메라 런타임 단계별 개발 계획
 
-> **상태:** 1단계 병합 확인 완료. 2단계 P2a 구현·검증 진행 중.
+> **상태:** 1단계 병합 확인 완료. 2단계 P2a 구현 완료, 주 fusion 수락 조건 미충족으로 승격 보류.
 > **기준일:** 2026-10-06
 > **코드 기준:** PR #65가 병합된 main `af253c3575c1e704e70511c2a2033ec15e33299a`
+> **최신 통합 기준:** 작업 중 병합된 컨트롤러 PR #67의 main `c5d0b78`. P2a 검출·LiDAR·HD맵 실행 경로는 동일하다.
 > **실행 환경:** 개발 RTX 4060 Ti, 대회 RTX 4070 SUPER, ROS Noetic GPU 컨테이너
 > **관련 인수:** [음영 카메라](shadow-camera.md), [객체 검출](camera-object-detection.md), [HD맵 소비](../hd-map/planning-consumption-v1.md)
 
