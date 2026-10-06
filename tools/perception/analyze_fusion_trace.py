@@ -45,6 +45,24 @@ def object_state(rows, event, stamp, track_id):
     return states
 
 
+def publication_state(rows, stamp, track_id):
+    """State handed to the publisher, not a claim about publisher filtering."""
+    frames = [row for row in rows if row['event'] == 'class_publish_input'
+              and row['stamp_ns'] == stamp]
+    if len(frames) > 1:
+        raise ValueError('duplicate publication input stamp')
+    if not frames:
+        return None
+    row = frames[0]
+    obj = next((obj for obj in row['objects'] if obj['id'] == track_id), None)
+    origin = next((origin for origin in row['origins'] if origin['id'] == track_id), None)
+    if obj is None or origin is None:
+        return None
+    source = origin['source_lidar_stamp_ns']
+    return {'state': obj, 'generation': row['generation'], 'origin': origin,
+            'lidar_state_lag_ms': (stamp - source) / 1e6 if source else None}
+
+
 def explain_outputs(reference, candidate, reference_trace, candidate_trace):
     """Join real geometric differences with historical and published states.
 
@@ -61,6 +79,7 @@ def explain_outputs(reference, candidate, reference_trace, candidate_trace):
                 "before": object_state(rows, "class_before", stamp, track[0]),
                 "after": object_state(rows, "class_after", stamp, track[0]),
                 "current_updates": object_state(rows, "class_current", stamp, track[0]),
+                "publication_input": publication_state(rows, stamp, track[0]),
             }
         result.append(details)
     return result
@@ -75,6 +94,13 @@ def summarize(rows):
     classes = [row for row in rows if row["event"] == "class_after"]
     ends = [row for row in rows if row["event"] == "lidar_process_end"]
     durations = sorted(row["duration_ms"] for row in ends)
+    processed = [row['stamp_ns'] for row in ends if row['processed']]
+    publications = [row for row in rows if row['event'] == 'class_publish_input']
+    published = [row['stamp_ns'] for row in publications]
+    ready = [row for row in rows if row['event'] == 'class_lidar_ready']
+    lag = [(row['stamp_ns'] - origin['source_lidar_stamp_ns']) / 1e6
+           for row in publications for origin in row['origins']
+           if origin['source_lidar_stamp_ns']]
     consumed = [row["selected_yolo_stamp_ns"] for row in selected]
     return {
         "events": dict(counts), "final": finals[-1] if finals else None,
@@ -92,6 +118,21 @@ def summarize(rows):
         "processing_ms": {"median": statistics.median(durations) if durations else None,
                           "p95": durations[min(len(durations)-1, int(.95*len(durations)))]
                           if durations else None},
+        "processed_lidar_stamps": processed,
+        "duplicate_processed_stamps": len(processed) - len(set(processed)),
+        "continuous_observation_complete": bool(publications)
+        and len(ready) == len(processed) == len(publications)
+        and len(set(published)) == len(published) and set(published) == set(processed),
+        "publication_frames": len(publications),
+        "timeout_drops": sum(row['action'] == 'drop' and row.get('waited_ns', 0) >= 200000000
+                             for row in resolved),
+        "startup_discarded_lidar": counts['lidar_startup_discard'] + counts['lidar_startup_overflow'],
+        "publication_state_lag_ms": {
+            "median": statistics.median(lag) if lag else None,
+            "p95": sorted(lag)[min(len(lag)-1, int(.95*len(lag)))] if lag else None,
+            "max": max(lag) if lag else None},
+        "objects_without_update_in_published_frame": sum(not origin['updated_in_frame']
+            for row in publications for origin in row['origins']),
     }
 
 
@@ -108,10 +149,18 @@ def compare(reference, candidate):
                 "new_waited_ms": b[stamp]["waited_ns"]/1e6}
                for stamp in sorted(common)
                if a[stamp]["selected_yolo_stamp_ns"] != b[stamp]["selected_yolo_stamp_ns"]]
+    processed_a = {row['stamp_ns'] for row in reference
+                   if row['event'] == 'lidar_process_end' and row['processed']}
+    processed_b = {row['stamp_ns'] for row in candidate
+                   if row['event'] == 'lidar_process_end' and row['processed']}
     return {"common_matched_lidar_stamps": len(common),
             "old_only_matched_stamps": sorted(a.keys() - b.keys()),
             "new_only_matched_stamps": sorted(b.keys() - a.keys()),
-            "different_yolo_selections": changes}
+            "different_yolo_selections": changes,
+            "old_only_processed_lidar_stamps": sorted(processed_a - processed_b),
+            "new_only_processed_lidar_stamps": sorted(processed_b - processed_a),
+            "processed_lidar_count_delta": len(processed_b) - len(processed_a),
+            "matched_count_delta": len(b) - len(a)}
 
 
 def main():

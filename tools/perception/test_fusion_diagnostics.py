@@ -1,6 +1,6 @@
 import unittest
 from tools.perception.analyze_fusion_identity import compare, compare_stable_observations
-from tools.perception.analyze_fusion_trace import summarize, compare_boxes, object_state
+from tools.perception.analyze_fusion_trace import summarize, compare_boxes, object_state, publication_state
 from tools.perception.fusion_log_accounting import parse_fusion_logs
 
 
@@ -10,6 +10,28 @@ def frame(objects):
 
 
 class FusionDiagnosticsTest(unittest.TestCase):
+    def test_publisher_input_retains_source_provenance_without_current_update(self):
+        rows = [{'event': 'class_publish_input', 'stamp_ns': 200000000, 'generation': 3,
+                 'objects': [{'id': 7, 'class': 'unknown'}],
+                 'origins': [{'id': 7, 'source_lidar_stamp_ns': 100000000,
+                              'updated_in_frame': False}]}]
+        report = publication_state(rows, 200000000, 7)
+        self.assertEqual(100, report['lidar_state_lag_ms'])
+        self.assertFalse(report['origin']['updated_in_frame'])
+        self.assertEqual(3, report['generation'])
+        with self.assertRaises(ValueError):
+            publication_state(rows * 2, 200000000, 7)
+
+    def test_continuous_observation_missing_publication_is_not_complete(self):
+        rows = [{'event': 'lidar_process_end', 'stamp_ns': 100,
+                 'duration_ms': 1, 'processed': True, 'pose_ready': True},
+                {'event': 'class_lidar_ready', 'stamp_ns': 100}]
+        self.assertFalse(summarize(rows)['continuous_observation_complete'])
+        rows.append({'event': 'class_publish_input', 'stamp_ns': 100, 'origins': []})
+        self.assertTrue(summarize(rows)['continuous_observation_complete'])
+        rows.append(rows[-1])
+        self.assertFalse(summarize(rows)['continuous_observation_complete'])
+
     def test_reassigned_ids_are_compared_by_mutually_unique_geometry(self):
         a = [frame([(1, "car", [0, 0, 0]), (2, "person", [3, 0, 0])])]
         b = [frame([(22, "car", [0, 0, 0]), (21, "person", [3, 0, 0])])]
