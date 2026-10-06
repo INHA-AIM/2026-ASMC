@@ -1,6 +1,6 @@
 # LiDAR → 판단제어 공통 소비 계약
 
-> 상태: **이전 구현용 계약, 운영 생산자 미연결**. `asmc_lidar`는 좌표·시간 라이브러리
+> 상태: **LiDAR 이전 구현용 계약, 카메라 객체 생산자 opt-in 구현**. `asmc_lidar`는 좌표·시간 라이브러리
 > 골격이며 검출/추적/ROS 어댑터는 손재호의 후속 구현이다. 기존 주행은 원본
 > `lidar+sensorfusion`을 사용한다. [인계 계획](../../packages/asmc_lidar/README.md)과
 > [타입·목표 토픽](../../../config/contracts/lidar_candidate_topic_contract_v1.yaml)을 함께 본다.
@@ -12,10 +12,10 @@
 | `asmc_msgs/LidarObjectArray` | frame·관측 stamp·출력 상태와 객체 배열 |
 | `asmc_msgs/LidarObject` | 지속 ID/검출 번호·관측/예측·중심/8코너·속도/동정적 유효성 |
 | `asmc_msgs/CameraObjectBoxArray` | source header·영상 크기·입력 유효성·원본 픽셀 box 배열 |
-| `asmc_msgs/CameraObjectBox` | box·class name·confidence/유효성. 원본 numeric class ID는 현 타입에 없음 |
+| `asmc_msgs/CameraObjectBox` | box·그룹 class_name·원래 라벨 source_class_name·confidence/유효성. 원본 numeric class ID는 현 타입에 없음 |
 | `/perception/lidar/objects_local` | 후륜축 `base_link`의 local 결과. 생산자 구현 예정 |
 | `/perception/lidar/objects_map` | 같은 관측·ID를 관측시점 pose로 변환. 어댑터 구현 예정 |
-| `/perception/camera/objects` | camera ID를 header.frame_id로 식별하는 box. YOLO 생산자 이전 예정 |
+| `/perception/camera/objects` | P2a는 camera_front만 출력. 카메라 생산자+LiDAR 호환 어댑터 opt-in 구현 |
 
 기존 `TrackedObject*`, `DetectedObject*`의 MD5는 유지한다. 기존 `/last_lidar`,
 `/lidar_nogps`, `/perception/objects`를 자동 remap하지 않는다. 구 타입으로 표현할 수
@@ -24,7 +24,7 @@
 
 새 타입도 다음 소비자 계약 검토가 필요하다. `classification`/`camera_class`가 비어
 있으면 미확정이며, 지속 ID 미할당은 `track_id=-1`로 문서화해 사용한다.
-원본 COCO 숫자 ID나 추가 confidence가 필요하면 생산자 이전 전에 additive/versioned
+원래 라벨은 source_class_name에 보존한다. 원본 COCO 숫자 ID나 다른 정보가 필요하면 additive/versioned
 계약을 검토한다. 현 필드를 임의 의미로 재사용하거나 MD5를 묵시 변경하지 않는다.
 
 ## 좌표·시간·속도

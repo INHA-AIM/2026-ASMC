@@ -13,7 +13,7 @@
 
 팀이 직접 유지하는 공통 ROS 코드의 **목표**는 다음 다섯 패키지다.
 카메라 패키지는 2026-10-06 `asmc_perception`에서 `asmc_camera`로 이름을 바꿨다(호환 wrapper 없이 완전 이전, 옛 경로에는 이전 안내 README만 남김).
-YOLO 생산자 이전은 아직 남아 있으며,
+YOLO11m 카메라 생산자와 기존 LiDAR 호환 어댑터는 opt-in 구현됐으며,
 `asmc_lidar`는 좌표·시간 코어만 남긴 이전용 골격이다. 아래 목표를 운영 이전 완료로 해석하지 않는다.
 
 | 정본 패키지 | 책임 |
@@ -63,7 +63,7 @@ YOLO 생산자 이전은 아직 남아 있으며,
 
 | 항목 | 현재 | 완료 목표·담당 |
 |---|---|---|
-| 카메라 패키지 | `src/asmc_camera/`(2026-10-06 rename); YOLO 원본 실행기는 아직 LiDAR 쪽 | `src/asmc_camera/`; 안승현이 rename 후 YOLO 실행/계약을 별도 통합 |
+| 카메라 패키지 | `src/asmc_camera/`(2026-10-06 rename); YOLO11m opt-in 생산자 구현; 기본 LiDAR 실행기는 보존 | `src/asmc_camera/`; 안승현이 YOLO 실행/후속 성능을 검증 |
 | 원본 LiDAR | `src/lidar+sensorfusion/`의 nested `Main`·`Msg` | 손재호가 기존 기능과 개선 패치를 `src/asmc_lidar/`로 이전 |
 | 새 LiDAR 골격 | 좌표·시간/IMU 코어·회귀시험, 공용 메시지 정의 | 손재호가 검출·추적·fusion·ROS 어댑터를 원본에서 이전 |
 | 구조물 억제 | 골격에는 구현 없음 | 구현 시 OFF에서 출발, 손재호의 객체 보존 회귀 이후에만 승격 |
@@ -99,6 +99,9 @@ topic/type/MD5, 실행 인자, 고정 bag과 실패 사례를 기록한다. 문�
    원본 class와 정규화 class 의미를 보존한다. `person/car/truck/bus`는 호환 기준이다.
    빈 검출·미수신·stale·미지원 클래스는 구분하고 소비자별 crop/threshold는 어댑터에 명시한다.
    현재 후보 CameraBox 계약으로 표현이 부족하면 별도 계약 검토하며 기존 MD5를 묵시 변경하지 않는다.
+   **3~4 구현(2026-10-06, P2a):** 전방 YOLO11m 생산자와 source_class_name 계약, 기존
+   `/YOLO/BBox` 어댑터를 opt-in으로 추가했다. jamming 통합은 다음 단계다.
+   검증·증거와 직접 launch는 [P2a 안내](../handoffs/perception/camera-objects-p2a.md)를 따른다.
 5. 문서 `docs/packages/asmc_perception/` 이동은 코드 rename 때 링크 점검과 함께 처리한다.
    날짜가 있는 실험·학습 기록은 과거 이름을 보존한다. 지금은 문서 경로를 옮기지 않는다.
 
@@ -145,7 +148,7 @@ topic/type/MD5, 실행 인자, 고정 bag과 실패 사례를 기록한다. 문�
 |---|---|
 | `/perception/lidar/objects_local` | `base_link` 객체·관측/예측·지속 ID·분류/속도 유효성. GPS 없이 계속 실행 |
 | `/perception/lidar/objects_map` | 동일 ID/관측을 관측시점 유효 pose로 변환. 무효 pose는 정상 빈 관측과 구분 |
-| 카메라 공통 출력 | 현재 후보 `/perception/camera/objects`와 타입을 출발점으로 생산자/소비자 공동 동결. 패키지 rename으로 토픽 rename하지 않음 |
+| 카메라 공통 출력 | 후보 `/perception/camera/objects`와 타입의 opt-in 생산자·기존 LiDAR 어댑터 구현. 패키지 rename으로 토픽 rename하지 않음 |
 | 기존 typed/legacy 출력 | 기존 MD5 유지. 표현 가능한 유효 출력만 변환하고 보류 이유·상태를 알림 |
 | 판제 판단 | 객체 관련성과 차로 속성을 받아 대상 선택·충돌 판단·기동 유지. 인지로 정책을 되먹여 객체 삭제하지 않음 |
 

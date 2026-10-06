@@ -13,7 +13,7 @@ TwinLite 학습 adapter와 offline BEV audit은 이 패키지가 소유한다. P
 **2026-10-06 패키지 이름을 `asmc_perception`에서 `asmc_camera`로 바꿨다.** node 이름, `/perception/*`
 토픽, launch 인자와 기본값은 그대로다. 구 패키지는 호환 wrapper 없이 완전히 옮겼으므로
 `roslaunch asmc_perception ...`와 `import asmc_perception`은 동작하지 않는다
-([이전 안내](../asmc_perception/README.md)). YOLO 생산자 이전은 별도 단계로 진행한다.
+([이전 안내](../asmc_perception/README.md)). 전방 YOLO11m 생산자는 opt-in으로 추가했다([P2a 안내](../../docs/handoffs/perception/camera-objects-p2a.md)).
 `camera_bev_fusion`은 다중 카메라 처리로 카메라 쪽에 남고, LiDAR 객체에 카메라 분류를
 결합하는 fusion은 손재호가 이전을 마무리할 `asmc_lidar` 내부에 둔다. 별도 fusion 패키지는
 만들지 않는다.
@@ -50,6 +50,30 @@ roslaunch data_collection bag_recorder.launch profile:=full_raw
 기존 LiDAR는 nested workspace의 `Main`, `Msg`와 Velodyne overlay를 사용한다.
 새 `asmc_lidar` 골격은 이 overlay 없이 라이브러리만 빌드하며, 어느 쪽도
 `asmc_camera` launch가 자동으로 시작하지 않는다.
+
+### 전방 YOLO11m 객체 검출 (opt-in)
+
+bridge·컨테이너·GUI를 준비한 뒤 카메라 터미널에서 직접 실행한다.
+
+```bash
+roslaunch asmc_camera camera_objects.launch
+```
+
+별도 LiDAR 터미널에서 outer와 nested 환경을 순서대로 source하고 실행한다.
+
+```bash
+source /root/ws/devel/setup.bash
+source /root/ws/src/lidar+sensorfusion/devel/setup.bash
+roslaunch Main main.launch start_yolo:=false rviz:=false
+```
+
+차선과 함께 실행하려면 `perception.launch start_camera_objects:=true`를 사용한다.
+`/perception/camera/objects`는 전방 source header·원본 픽셀 좌표와
+`person/vehicle/obstacle` 그룹·원래 라벨을 보존한다. 현재 허용 라벨과 confidence는
+기존 `bus/truck/person/car`, 0.7이다. 처리 실패는 invalid 배열로 구분한다.
+LiDAR의 호환 어댑터가 기존 `/YOLO/BBox`로 변환하며 기본 `start_yolo:=true` 경로는 보존한다.
+객체만 검사할 때는 `python3 scripts/verify_perception_runtime.py --camera-objects --no-camera-lane`을 쓴다.
+모델·MD5·CPU/GPU·진단·롤백·증거는 [P2a 안내](../../docs/handoffs/perception/camera-objects-p2a.md)를 따른다.
 
 ### `camera_bev`와 `camera_bev_fusion`
 
