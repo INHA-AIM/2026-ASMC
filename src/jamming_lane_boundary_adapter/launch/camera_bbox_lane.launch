@@ -8,7 +8,7 @@
   <arg name="use_rviz" default="true"/>
   <arg name="image_topic" default="/image_jpeg/compressed"/>
   <arg name="bbox_topic" default="/planning/camera_bbox_lane/yolo"/>
-  <arg name="calibration_file" default="$(find asmc_perception)/config/bev/cameras_v2.yaml"/>
+  <arg name="calibration_file" default="$(find asmc_camera)/config/bev/cameras_v2.yaml"/>
   <arg name="expected_hash" default="691b998247c960bba06d84513b217709a55f8744530978e32d9028289e217070"/>
   <arg name="reference_lane_topic" default=""/>
   <arg name="lane_index" default="-1"/>

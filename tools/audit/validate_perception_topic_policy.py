@@ -38,6 +38,7 @@ REQUIRED_FAMILY_IDS = {
     "camera_grid_visualization",
     "bev_visualization",
     "lane_visualization",
+    "traffic_light_visualization",
     "traffic_light_typed",
     "traffic_light_legacy",
 }

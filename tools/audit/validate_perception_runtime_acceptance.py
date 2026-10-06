@@ -134,13 +134,13 @@ def _validate_planning_signal_launch(
     # Planning may own standalone signal inference; the complete camera/lane
     # pipeline remains an independently launched perception graph.
     for include in launch.iter("include"):
-        if "$(find asmc_perception)" in include.get("file", ""):
+        if "$(find asmc_camera)" in include.get("file", ""):
             raise AcceptanceContractError(
                 f"{launch_name} must not include the full perception pipeline"
             )
     perception_nodes = [
         node for node in launch.iter("node")
-        if node.get("pkg") == "asmc_perception"
+        if node.get("pkg") == "asmc_camera"
     ]
     if len(perception_nodes) != 1 or perception_nodes[0].get("type") != "traffic_light_node.py":
         raise AcceptanceContractError(
@@ -184,7 +184,7 @@ def _validate_p5_closeout(
     handoff = _mapping(contract.get("consumer_handoff"), "consumer_handoff")
     traffic = _mapping(handoff.get("traffic_light"), "consumer_handoff.traffic_light")
     expected_traffic = {
-        "producer_owner": "asmc_perception",
+        "producer_owner": "asmc_camera",
         "canonical_topic": "/perception/traffic_light/detection",
         "compatibility_topic": "/traffic_light/state",
         "consumer_node": "/behavior_planner",
@@ -199,7 +199,7 @@ def _validate_p5_closeout(
 
     lane = _mapping(handoff.get("lane_family"), "consumer_handoff.lane_family")
     expected_lane = {
-        "producer_owner": "asmc_perception",
+        "producer_owner": "asmc_camera",
         "canonical_topic": "/perception/lane/boundary_family",
         "compatibility_topic": "/perception/lane/boundary_observations",
         "reference_consumer_node": "/boundary_family_monitor",
@@ -301,7 +301,7 @@ def _validate_p5_closeout(
     expected_commands = {
         "bridge": "./scripts/udp_bridge.sh",
         "perception": (
-            "roslaunch asmc_perception perception.launch start_traffic_light:=true"
+            "roslaunch asmc_camera perception.launch start_traffic_light:=true"
         ),
         "lane_adapter": (
             "roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch"
@@ -314,7 +314,7 @@ def _validate_p5_closeout(
         if not (repo_root / relative).is_file():
             raise AcceptanceContractError(f"operational entrypoint is missing: {relative}")
     for relative in (
-        "src/asmc_perception/launch/perception.launch",
+        "src/asmc_camera/launch/perception.launch",
         "src/jamming_lane_boundary_adapter/launch/shadow_boundary_family_candidate.launch",
     ):
         if not (repo_root / relative).is_file():

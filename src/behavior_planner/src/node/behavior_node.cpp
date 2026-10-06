@@ -71,7 +71,7 @@ BehaviorNode::BehaviorNode(ros::NodeHandle nh, ros::NodeHandle pnh)
   std::string traffic_light_path;
   // P4-C3: typed is authoritative; the old String topic remains as a
   // compatibility fallback for deployments that have not started the new
-  // asmc_perception producer yet.
+  // asmc_camera producer yet.
   std::string traffic_light_typed_topic =
       "/perception/traffic_light/detection";
   std::string traffic_light_legacy_topic = "/traffic_light/state";

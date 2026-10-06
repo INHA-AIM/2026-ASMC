@@ -4,7 +4,7 @@
   <arg name="state_source" default="gps_imu" doc="gps_imu or ego_dev"/>
   <arg name="dashboard" default="false"/>
   <!-- Standalone planning starts signal inference by default. Disable with
-       traffic_light:=false when asmc_perception already publishes detections. -->
+       traffic_light:=false when asmc_camera already publishes detections. -->
   <arg name="traffic_light" default="true"
        doc="Set false only when an external traffic-light producer is running."/>
   <arg name="traffic_light_device" default="auto"/>
@@ -21,14 +21,14 @@
   <arg name="avoid_path_margin_m" default="0.4"
        doc="AVOID swept-corridor margin; use 0.8 for boundary A/B validation"/>
   <arg name="traffic_light_checkpoint"
-       default="$(find asmc_perception)/models/traffic_light/best.pt"/>
+       default="$(find asmc_camera)/models/traffic_light/best.pt"/>
 
   <group if="$(arg traffic_light)">
     <!-- CROSS-TEAM COMPATIBILITY NOTE: P4-C3 moved executable ownership from
-         traffic_light/live_infer.py to asmc_perception. This planning-owned
+         traffic_light/live_infer.py to asmc_camera. This planning-owned
          launch keeps the opt-in wrapper and legacy String topics until the
          planning owner approves their removal. -->
-    <node pkg="asmc_perception" type="traffic_light_node.py"
+    <node pkg="asmc_camera" type="traffic_light_node.py"
           name="traffic_light_infer" output="screen" required="true"
           args="--ckpt $(arg traffic_light_checkpoint) --image-topic $(arg camera_topic) --state-topic /traffic_light/state --detail-topic /traffic_light/detail --typed-topic /perception/traffic_light/detection --device $(arg traffic_light_device)"/>
   </group>
