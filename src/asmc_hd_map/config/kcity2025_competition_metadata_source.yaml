@@ -134,24 +134,32 @@ mission_zones:
   - id: static_obstacle_candidate
     mission_type: static_obstacle
     status: team_final
-    review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
-    source_reference: team_qna_and_situation_review
-    description: A213 종료 후 A220 시작 전 교차로 영역인 A222 정적 장애물 구간
-    bounds: {kind: link_span, start_link_id: A2256W000222, end_link_id: A2256W000222}
+    review: {reviewed_on: '2026-10-06', decision: widened_to_organizer_figure_box}
+    source_reference: team_qna_and_organizer_route_figure
+    description: A213 중간부터 A220 끝까지, 장애물이 놓이는 A222 교차로와 접근·복귀 거리를 포함한 정적 장애물 구간
+    # The organizer figure boxes the junction with its approach and exit, so the
+    # zone gives planning distance to prepare and to return to its lane. The
+    # obstacle itself is expected inside the junction (obstacle_expected_link_ids,
+    # and the scenario generator spawns only there).
+    bounds: {kind: link_fraction_span, start_link_id: A2256W000213, start_fraction: 0.5, end_link_id: A2256W000220, end_fraction: 1.0}
     rule_payload:
-      boundary_interpretation: after_A213_before_A220_intersection
+      boundary_interpretation: A213_midpoint_through_A220_end
+      obstacle_expected_link_ids: [A2256W000222]
       judged_by: collision_data
       collision_penalty_s: 15
 
   - id: dynamic_obstacle_candidate
     mission_type: dynamic_obstacle
     status: team_final
-    review: {reviewed_on: '2026-10-05', decision: boundary_signed_off_for_competition}
-    source_reference: team_qna_and_situation_review
-    description: A728부터 A205까지의 동적 장애물 구간
-    bounds: {kind: link_span, start_link_id: A2256W000728, end_link_id: A2256W000205}
+    review: {reviewed_on: '2026-10-06', decision: widened_to_organizer_figure_box}
+    source_reference: team_qna_and_organizer_route_figure
+    description: A202 중간부터 A315 앞부분까지, A728-A205 교차로와 접근·복귀 거리를 포함한 동적 장애물 구간
+    # Same principle as the static zone: about 30 m of approach before the
+    # A728 stop line and 20 m of exit after A205; actors stay on the junction links.
+    bounds: {kind: link_fraction_span, start_link_id: A2256W000202, start_fraction: 0.5, end_link_id: A2256W000315, end_fraction: 0.3}
     rule_payload:
-      boundary_interpretation: A728_through_A205
+      boundary_interpretation: A202_midpoint_through_A315_30_percent
+      obstacle_expected_link_ids: [A2256W000728, A2256W000599, A2256W000207, A2256W000205]
       judged_by: collision_data
       collision_penalty_s: 15
 

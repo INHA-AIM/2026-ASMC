@@ -379,6 +379,21 @@ def _mission_bounds(
             end_link,
             links,
         )
+    if kind == "link_fraction_span":
+        # Start/end inside a link, e.g. half way along the approach link, so a
+        # zone can include approach and recovery distance around a junction.
+        start_link = str(bounds.get("start_link_id"))
+        end_link = str(bounds.get("end_link_id"))
+        start_fraction = _finite(bounds.get("start_fraction", 0.0), "start_fraction")
+        end_fraction = _finite(bounds.get("end_fraction", 1.0), "end_fraction")
+        if not (0.0 <= start_fraction <= 1.0 and 0.0 <= end_fraction <= 1.0):
+            raise CompetitionMetadataError("link fractions must be within [0, 1]: %s" % spec.get("id"))
+        links = _route_slice(route_link_ids, start_link, end_link)
+        start = float(ranges[start_link]["start_station_m"]) + start_fraction * float(ranges[start_link]["length_m"])
+        end = float(ranges[end_link]["start_station_m"]) + end_fraction * float(ranges[end_link]["length_m"])
+        if end <= start:
+            raise CompetitionMetadataError("mission link fraction span is empty: %s" % spec.get("id"))
+        return start, end, start_link, end_link, links
     if kind == "after_link_to_link_end":
         after_link = str(bounds.get("after_link_id"))
         end_link = str(bounds.get("end_link_id"))

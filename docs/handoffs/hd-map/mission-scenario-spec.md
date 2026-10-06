@@ -73,8 +73,8 @@ pose 규약은 다음과 같다.
 
 | zone | 회피·충돌 차로 | actor 후보 |
 |---|---|---|
-| `static_obstacle_candidate` (A222 교차로) | 정적 그룹 7개 (A221·A746 반대방향 포함) | static_obstacle: A222 |
-| `dynamic_obstacle_candidate` (A728→A205) | 동적 그룹 8개 | dynamic_obstacle: 교차 비경로 링크 7개 |
+| `static_obstacle_candidate` (A213 중간→A220 끝) | 정적 그룹 7개 (A221·A746 반대방향 포함) | static_obstacle: **A222 교차로 안에서만** 스폰 |
+| `dynamic_obstacle_candidate` (A202 중간→A315 30%) | 동적 그룹 8개 | dynamic_obstacle: **A728→A599→A207→A205 안에서만** 스폰 |
 | `gps_shadow_candidate` (A126) | A131 (반대 차로) | static_obstacle: A126, npc_vehicle(선택): A131 |
 | `roundabout_candidate` (A148→A151) | A134 | npc_vehicle: A147→A134, A133→A134 (노드 0728에서 ego A146→A151과 충돌) |
 | `surrounding_vehicle_candidate` (A411→A153) | — | npc_vehicle: route 좌측 인접 차로 10개 자동 수집 |
@@ -82,6 +82,9 @@ pose 규약은 다음과 같다.
 
 ## 5. 생성기·판제 쪽 결정 (HD맵 범위 밖)
 
+- **스폰 위치:** 장애물 구간(미션 구간)은 교차로 앞뒤 접근·복귀 거리까지 포함하지만, 장애물은
+  `actor_sources` 링크에만 놓는다. 정적은 `A222`, 동적은 `A728→A599→A207→A205` 안이며, 각 zone의
+  `rule.obstacle_expected_link_ids`와 같다. `sample_actor_pose`는 이 링크 안에서만 pose를 뽑는다.
 - **스폰:** MORAI gRPC로 스폰한다. `tools/aim_scenario_runner`의 `NpcVehicleManager`·`RoutePositionHelper`를
   2025 맵 링크(`A2256W*`)로 옮겨 쓰면 된다. 현재 러너는 legacy KATRI 맵 기준이다.
 - **승인 기준(제안):**

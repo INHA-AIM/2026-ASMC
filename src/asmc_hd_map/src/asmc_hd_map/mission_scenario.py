@@ -124,6 +124,7 @@ def merged_outline(
     close_m: float = 0.2,
     min_hole_m2: float = 5.0,
     simplify_m: float = 0.1,
+    clip: Any = None,
 ) -> Dict[str, Any]:
     """Union drivable polygons into clean display outlines.
 
@@ -147,6 +148,8 @@ def merged_outline(
     if not polygons:
         return {"area_m2": 0.0, "piece_count": 0, "outlines": []}
     union = unary_union(polygons)
+    if clip is not None:
+        union = union.intersection(clip)
     if close_m > 0.0:
         union = union.buffer(close_m, join_style=2).buffer(-close_m, join_style=2)
     pieces = []
@@ -164,8 +167,25 @@ def merged_outline(
     }
 
 
+def _route_span_clip(
+    route_points: Sequence[Sequence[float]],
+    route_stations: Sequence[float],
+    start_m: float,
+    end_m: float,
+    half_width_m: float = 30.0,
+) -> Any:
+    """Band around the route slice whose ends are cut square at start/end."""
+
+    from shapely.geometry import LineString
+
+    from .runtime_bundle import polyline_slice
+
+    span = polyline_slice(route_points, route_stations, start_m, end_m)
+    return LineString([point[:2] for point in span]).buffer(half_width_m, cap_style=2)
+
+
 def _surface(
-    areas: Sequence[Mapping[str, Any]], link_ids: Iterable[str]
+    areas: Sequence[Mapping[str, Any]], link_ids: Iterable[str], clip: Any = None
 ) -> Optional[Dict[str, Any]]:
     allowed = set(link_ids)
     selected = [
@@ -174,7 +194,7 @@ def _surface(
     ]
     if not selected:
         return None
-    merged = merged_outline(area["polygon"] for area in selected)
+    merged = merged_outline((area["polygon"] for area in selected), clip=clip)
     merged["area_ids"] = sorted(str(area["id"]) for area in selected)
     return merged
 
@@ -321,7 +341,11 @@ def build_mission_scenario_spec(
                 if str(link_id) not in lane_by_link:
                     warnings.append("%s: surface link %s is not a compact lane" % (zone_id, link_id))
                 surface_links.add(str(link_id))
-            surface = _surface(areas, surface_links)
+            # Zones may start or end inside a link (link_fraction_span), so the
+            # surface is cut square at the zone's route stations.
+            surface = _surface(
+                areas, surface_links, _route_span_clip(route_points, route_stations, start, end)
+            )
         zones.append({
             "id": zone_id,
             "mission_type": mission_type,

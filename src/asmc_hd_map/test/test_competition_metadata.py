@@ -193,14 +193,22 @@ class CompetitionMetadataWorkspaceTest(unittest.TestCase):
             )
         )
         self.assertEqual(missions["gps_shadow_candidate"]["start_link_id"], "A2256W000126")
+        # Obstacle zones include approach and recovery distance around their
+        # junctions; the obstacle itself is expected on the junction links.
+        static = missions["static_obstacle_candidate"]
+        self.assertEqual(static["link_ids"], ["A2256W000213", "A2256W000222", "A2256W000220"])
+        self.assertAlmostEqual(static["route_station_start_m"], 0.5 * (237.422 + 315.906), places=2)
+        self.assertAlmostEqual(static["route_station_end_m"], 365.775, places=2)
         self.assertEqual(
-            missions["static_obstacle_candidate"]["link_ids"],
-            ["A2256W000222"],
+            json.loads(static["rule_payload_json"])["obstacle_expected_link_ids"], ["A2256W000222"]
         )
+        dynamic = missions["dynamic_obstacle_candidate"]
         self.assertEqual(
-            missions["dynamic_obstacle_candidate"]["link_ids"],
+            json.loads(dynamic["rule_payload_json"])["obstacle_expected_link_ids"],
             ["A2256W000728", "A2256W000599", "A2256W000207", "A2256W000205"],
         )
+        self.assertLess(dynamic["route_station_start_m"], 427.851)
+        self.assertGreater(dynamic["route_station_end_m"], 482.819)
         monitoring = missions["traffic_light_activation_A236_to_A308"]
         self.assertEqual(monitoring["route_station_start_m"], 160.009167271)
         self.assertEqual(monitoring["route_station_end_m"], 609.876838441)

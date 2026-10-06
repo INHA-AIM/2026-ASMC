@@ -14,7 +14,7 @@ hd_map:
 competition_inputs:
   metadata_bundle:
     path: src/asmc_hd_map/config/kcity2025_competition_metadata.yaml
-    sha256: 44d8b060cafd2210b0d9f15cd1802500bff675c2e4604341d43f32ad286ff471
+    sha256: 6fcc2f9f4ed2664c8a1121c35923c10433c3bd6915682bc020908cb393bfdaad
     schema_version: asmc.competition_metadata/v1
     checkpoint_count: 15
     mission_zone_count: 15

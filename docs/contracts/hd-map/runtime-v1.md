@@ -297,7 +297,7 @@ A866·A054·A846은 일반 전역경로 추종 구간이며, 이 구간에 보�
 - grid 0.2 m, `3085×7232`, 값 `0/100`, published boundary ID의 marking 참조 무결성
 - checkpoint 15개, 반경 3 m, route 2184.611723336 m
 - mission/policy/speed zone 15개와 발행 상태 `OFFICIAL 0 / DERIVED_OFFICIAL 15 / PROVISIONAL 0`, 그중 `authority=team_final` 11개
-- 정적 `A222`, 동적 `A728→A599→A207→A205`
+- 정적 장애물 구간 `A213` 중간→`A220` 끝(장애물 `A222`), 동적 `A202` 중간→`A315` 30%(장애물 `A728→A599→A207→A205`)
 - `60→상한 없음→60` 세 속도 구간의 전역경로 완전·비중첩 coverage
 - A054·A846 미션 제외, 신호등 활성화 policy `A236→A308`, 정지 경계 5개의 policy 내부 포함
 - RViz marker namespace와 최소 marker 수

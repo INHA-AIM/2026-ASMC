@@ -411,15 +411,15 @@ def main() -> int:
         and shadow_payload.get("drivable_area_bridge_id") == "gps_shadow_A126_A131",
         "GPS-shadow policy must expose A131 and its A126 bridge",
     )
-    _require(
-        mission_by_id["static_obstacle_candidate"].link_ids == ["A2256W000222"],
-        "static obstacle bounds drift",
-    )
-    _require(
-        mission_by_id["dynamic_obstacle_candidate"].link_ids
-        == ["A2256W000728", "A2256W000599", "A2256W000207", "A2256W000205"],
-        "dynamic obstacle bounds drift",
-    )
+    # Obstacle zones span the approach and exit; obstacles spawn only on the
+    # junction links named in the payload, which must stay inside the zone.
+    for zone_id in ("static_obstacle_candidate", "dynamic_obstacle_candidate"):
+        zone = mission_by_id[zone_id]
+        expected = json.loads(zone.rule_payload_json).get("obstacle_expected_link_ids") or []
+        _require(
+            bool(expected) and set(expected).issubset(zone.link_ids),
+            "%s obstacle links must lie inside the zone" % zone_id,
+        )
     _require("highway_merge_candidate" not in mission_by_id, "A054/A846 must not be a mission zone")
     monitoring_policy = mission_by_id["traffic_light_activation_A236_to_A308"]
     monitoring_payload = json.loads(monitoring_policy.rule_payload_json)

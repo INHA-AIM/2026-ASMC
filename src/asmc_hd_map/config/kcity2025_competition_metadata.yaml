@@ -824,41 +824,45 @@ mission_zones:
 - id: static_obstacle_candidate
   mission_type: static_obstacle
   status: team_final
-  source_reference: team_qna_and_situation_review
-  description: A213 종료 후 A220 시작 전 교차로 영역인 A222 정적 장애물 구간
-  route_station_start_m: 315.906098142
-  route_station_end_m: 346.74182354
-  start_link_id: A2256W000222
-  end_link_id: A2256W000222
+  source_reference: team_qna_and_organizer_route_figure
+  description: A213 중간부터 A220 끝까지, 장애물이 놓이는 A222 교차로와 접근·복귀 거리를 포함한 정적 장애물 구간
+  route_station_start_m: 276.664444175
+  route_station_end_m: 365.775740557
+  start_link_id: A2256W000213
+  end_link_id: A2256W000220
   link_ids:
+  - A2256W000213
   - A2256W000222
+  - A2256W000220
   checkpoint_ids:
   - '4'
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"authority":"team_final","boundary_interpretation":"after_A213_before_A220_intersection","collision_penalty_s":15,"judged_by":"collision_data","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"}}'
+  rule_payload_json: '{"authority":"team_final","boundary_interpretation":"A213_midpoint_through_A220_end","collision_penalty_s":15,"judged_by":"collision_data","obstacle_expected_link_ids":["A2256W000222"],"review":{"decision":"widened_to_organizer_figure_box","reviewed_on":"2026-10-06"}}'
   planning_enforcement_allowed: true
 - id: dynamic_obstacle_candidate
   mission_type: dynamic_obstacle
   status: team_final
-  source_reference: team_qna_and_situation_review
-  description: A728부터 A205까지의 동적 장애물 구간
-  route_station_start_m: 427.851843628
-  route_station_end_m: 482.819185214
-  start_link_id: A2256W000728
-  end_link_id: A2256W000205
+  source_reference: team_qna_and_organizer_route_figure
+  description: A202 중간부터 A315 앞부분까지, A728-A205 교차로와 접근·복귀 거리를 포함한 동적 장애물 구간
+  route_station_start_m: 396.813792092
+  route_station_end_m: 503.159050263
+  start_link_id: A2256W000202
+  end_link_id: A2256W000315
   link_ids:
+  - A2256W000202
   - A2256W000728
   - A2256W000599
   - A2256W000207
   - A2256W000205
+  - A2256W000315
   checkpoint_ids:
   - '5'
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"authority":"team_final","boundary_interpretation":"A728_through_A205","collision_penalty_s":15,"judged_by":"collision_data","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"}}'
+  rule_payload_json: '{"authority":"team_final","boundary_interpretation":"A202_midpoint_through_A315_30_percent","collision_penalty_s":15,"judged_by":"collision_data","obstacle_expected_link_ids":["A2256W000728","A2256W000599","A2256W000207","A2256W000205"],"review":{"decision":"widened_to_organizer_figure_box","reviewed_on":"2026-10-06"}}'
   planning_enforcement_allowed: true
 - id: roundabout_candidate
   mission_type: roundabout

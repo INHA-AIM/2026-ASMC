@@ -23,18 +23,24 @@ actor_link_max_distance_m: 100.0
 zones:
   static_obstacle_candidate:
     maneuver_groups: [static_obstacle_maneuver]
+    # Scenario generator: spawn the static obstacle only on A222 (the junction).
+    # The mission zone itself runs from the middle of A213 to the end of A220 so
+    # planning has approach and recovery distance; do not spawn on A213 or A220.
     actor_sources:
       - role: static_obstacle
         link_ids: [A2256W000222]
-        note: ego lane through the A222 junction; avoid via A221/A746
+        note: spawn only inside the A222 junction; ego avoids via A221/A746
 
   dynamic_obstacle_candidate:
     maneuver_groups: [dynamic_obstacle_maneuver]
+    # Scenario generator: spawn dynamic obstacles only within A728 through A205
+    # (A728 -> A599 -> A207 -> A205, the junction on the ego route). The mission
+    # zone runs from the middle of A202 to 30% into A315 for approach and
+    # recovery distance; do not spawn on A202 or A315.
     actor_sources:
       - role: dynamic_obstacle
-        link_ids: [A2256W000066, A2256W000087, A2256W000206, A2256W000211,
-                   A2256W000636, A2256W001124, A2256W001125]
-        note: non-route links of the A728-A205 junction that cross or join the ego path
+        link_ids: [A2256W000728, A2256W000599, A2256W000207, A2256W000205]
+        note: spawn only within A728 through A205 (route junction links)
 
   gps_shadow_candidate:
     maneuver_groups: [gps_shadow_opposite_lane]
