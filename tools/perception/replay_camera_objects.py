@@ -46,7 +46,7 @@ def wait_for(predicate, description, timeout=45):
 
 def percentile(values):
     return {"p50_ms": float(np.percentile(values, 50)), "p95_ms": float(np.percentile(values, 95))}
-    
+
 
 def replay(args, path, repeat):
     prefix = args.output / (path + "_" + str(repeat))
