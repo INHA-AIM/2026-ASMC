@@ -36,5 +36,5 @@ context:
     recovery: new_accepted_observation_reacquires_lane_and_route_without_old_hint
 runtime:
   production_local_crops_enabled: false
-  debug_local_crops_enabled: true
+  debug_local_crops_enabled: false
   global_grid_subscription_by_context_node: only_when_local_crops_or_ego_markers_enabled

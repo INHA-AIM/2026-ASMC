@@ -13,7 +13,7 @@
   <arg name="drivable_product_path"
        default="$(find asmc_hd_map)/config/kcity2025_compact_drivable_map.json"/>
   <arg name="baseline_path" default=""/>
-  <arg name="publish_local" default="true"/>
+  <arg name="publish_local" default="false"/>
   <arg name="local_pose_source" default="gps_imu"/>
   <arg name="local_ego_topic" default="/Ego_topic"/>
   <arg name="local_pose_topic" default="/localization/pose"/>

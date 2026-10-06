@@ -209,7 +209,7 @@ roslaunch asmc_hd_map competition_map.launch [arg:=value ...]
 | `data_root` | `/data` | 외부 data root |
 | `debug_republish_hz` | `1.0` | latched/static debug marker 재발행 Hz |
 | `baseline_path` | empty | 검증 baseline override |
-| `publish_local` | `true` | 위치 기반 local lane/grid 발행 |
+| `publish_local` | `false` | 선택적 local lane/grid 크롭 발행. 필요할 때만 `true`; 기본 RViz는 전역 외곽선 marker 사용 |
 | `local_pose_source` | `gps_imu` | `gps_imu`, `ego_status`, `pose_stamped` |
 | `local_ego_topic` | `/Ego_topic` | `ego_status` 입력 |
 | `local_pose_topic` | `/localization/pose` | `pose_stamped` 입력 |

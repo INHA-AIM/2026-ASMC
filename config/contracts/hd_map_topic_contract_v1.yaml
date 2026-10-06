@@ -224,7 +224,7 @@ planning_consumption:
 
 local_crop_policy:
   production_enabled_by_default: false
-  debug_enabled_by_default: true
+  debug_enabled_by_default: false
   purpose: optional_bounded_lookup_and_visualization_cache
   geometry_frame: map
   default_mode: ego

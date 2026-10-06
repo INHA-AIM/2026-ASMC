@@ -641,6 +641,36 @@ checkpoints:
   projection:
     route_error_xy_m: 0.0
     link_error_xy_m: 0.0
+route_rules:
+  authority: official
+  source_reference: official_rule_v1_2_20260930_sections_2_2_3_and_3
+  scope: whole_route
+  run:
+    time_limit_s: 900
+    on_time_limit_exceeded: run_failure
+    mission_order_required: true
+    on_skipped_mission_or_checkpoint: run_failure
+  checkpoints:
+    pass_radius_m: 3.0
+    sequential_pass_required: true
+    recovery_requires_operator_and_team_approval: true
+    approved_recovery_penalty_s: 15
+  lane_keeping:
+    judged_by: ego_detail_status_wheel_contact
+    marking_types:
+    - white_solid
+    - yellow_solid
+    - centerline
+    wheel_contact_count_min: 1
+    sustained_contact_repeat_s: 3
+    penalty_s: 5
+    exempt_zone_ids:
+    - gps_shadow_candidate
+  collision:
+    judged_by: collision_data
+    collision_penalty_s: 15
+    continuous_contact_additional_penalty: false
+    recollision_additional_penalty: true
 mission_zones:
 - id: start_success_5_percent
   mission_type: start_success
@@ -713,7 +743,7 @@ mission_zones:
   polygon: []
   has_speed_limit: true
   speed_limit_kph: 60.0
-  rule_payload_json: '{"interpretation":"effective_competition_speed_limit","judged_by":"ego_vehicle_status_speed","overspeed_penalty_s":15,"sustained_overspeed_repeat_s":3}'
+  rule_payload_json: '{"first_penalty":"immediately_on_exceeding_limit","interpretation":"effective_competition_speed_limit","judged_by":"ego_vehicle_status_speed","overspeed_penalty_s":15,"route_rules":{"authority":"official","checkpoints":{"approved_recovery_penalty_s":15,"pass_radius_m":3.0,"recovery_requires_operator_and_team_approval":true,"sequential_pass_required":true},"collision":{"collision_penalty_s":15,"continuous_contact_additional_penalty":false,"judged_by":"collision_data","recollision_additional_penalty":true},"lane_keeping":{"exempt_zone_ids":["gps_shadow_candidate"],"judged_by":"ego_detail_status_wheel_contact","marking_types":["white_solid","yellow_solid","centerline"],"penalty_s":5,"sustained_contact_repeat_s":3,"wheel_contact_count_min":1},"run":{"mission_order_required":true,"on_skipped_mission_or_checkpoint":"run_failure","on_time_limit_exceeded":"run_failure","time_limit_s":900},"scope":"whole_route","source_reference":"official_rule_v1_2_20260930_sections_2_2_3_and_3"},"sustained_overspeed_repeat_s":3}'
   planning_enforcement_allowed: true
 - id: high_speed_exception
   mission_type: high_speed_exception
@@ -738,7 +768,7 @@ mission_zones:
   has_speed_limit: false
   speed_limit_kph: 0.0
   rule_payload_json: '{"interpretation":"no_competition_speed_cap","official_boundary":"A2256W000411 start to A2256W000153
-    end","speed_limit_kph":null}'
+    end","route_rules":{"authority":"official","checkpoints":{"approved_recovery_penalty_s":15,"pass_radius_m":3.0,"recovery_requires_operator_and_team_approval":true,"sequential_pass_required":true},"collision":{"collision_penalty_s":15,"continuous_contact_additional_penalty":false,"judged_by":"collision_data","recollision_additional_penalty":true},"lane_keeping":{"exempt_zone_ids":["gps_shadow_candidate"],"judged_by":"ego_detail_status_wheel_contact","marking_types":["white_solid","yellow_solid","centerline"],"penalty_s":5,"sustained_contact_repeat_s":3,"wheel_contact_count_min":1},"run":{"mission_order_required":true,"on_skipped_mission_or_checkpoint":"run_failure","on_time_limit_exceeded":"run_failure","time_limit_s":900},"scope":"whole_route","source_reference":"official_rule_v1_2_20260930_sections_2_2_3_and_3"},"speed_limit_kph":null}'
   planning_enforcement_allowed: true
 - id: speed_limit_60_after_high_speed
   mission_type: speed_limit
@@ -766,7 +796,7 @@ mission_zones:
   polygon: []
   has_speed_limit: true
   speed_limit_kph: 60.0
-  rule_payload_json: '{"interpretation":"effective_competition_speed_limit","judged_by":"ego_vehicle_status_speed","overspeed_penalty_s":15,"sustained_overspeed_repeat_s":3}'
+  rule_payload_json: '{"first_penalty":"immediately_on_exceeding_limit","interpretation":"effective_competition_speed_limit","judged_by":"ego_vehicle_status_speed","overspeed_penalty_s":15,"route_rules":{"authority":"official","checkpoints":{"approved_recovery_penalty_s":15,"pass_radius_m":3.0,"recovery_requires_operator_and_team_approval":true,"sequential_pass_required":true},"collision":{"collision_penalty_s":15,"continuous_contact_additional_penalty":false,"judged_by":"collision_data","recollision_additional_penalty":true},"lane_keeping":{"exempt_zone_ids":["gps_shadow_candidate"],"judged_by":"ego_detail_status_wheel_contact","marking_types":["white_solid","yellow_solid","centerline"],"penalty_s":5,"sustained_contact_repeat_s":3,"wheel_contact_count_min":1},"run":{"mission_order_required":true,"on_skipped_mission_or_checkpoint":"run_failure","on_time_limit_exceeded":"run_failure","time_limit_s":900},"scope":"whole_route","source_reference":"official_rule_v1_2_20260930_sections_2_2_3_and_3"},"sustained_overspeed_repeat_s":3}'
   planning_enforcement_allowed: true
 - id: traffic_light_activation_A236_to_A308
   mission_type: traffic_light
@@ -819,7 +849,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"authority":"team_final","drivable_area_bridge_id":"gps_shadow_A126_A131","gps_blackout":true,"lane_keeping_penalty":false,"random_mission_types":["static_obstacle"],"review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"usable_opposite_lane_link_ids":["A2256W000131"]}'
+  rule_payload_json: '{"authority":"team_final","drivable_area_bridge_id":"gps_shadow_A126_A131","gps_blackout":true,"lane_keeping_penalty":false,"random_mission_types":["obstacle_avoidance"],"review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"usable_opposite_lane_link_ids":["A2256W000131"]}'
   planning_enforcement_allowed: true
 - id: static_obstacle_candidate
   mission_type: static_obstacle
@@ -839,7 +869,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"authority":"team_final","boundary_interpretation":"A213_midpoint_through_A220_end","collision_penalty_s":15,"judged_by":"collision_data","obstacle_expected_link_ids":["A2256W000222"],"review":{"decision":"widened_to_organizer_figure_box","reviewed_on":"2026-10-06"}}'
+  rule_payload_json: '{"authority":"team_final","boundary_interpretation":"A213_midpoint_through_A220_end","collision_penalty_s":15,"continuous_contact_additional_penalty":false,"judged_by":"collision_data","obstacle_expected_link_ids":["A2256W000222"],"recollision_additional_penalty":true,"review":{"decision":"widened_to_organizer_figure_box","reviewed_on":"2026-10-06"}}'
   planning_enforcement_allowed: true
 - id: dynamic_obstacle_candidate
   mission_type: dynamic_obstacle
@@ -862,7 +892,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"authority":"team_final","boundary_interpretation":"A202_midpoint_through_A315_30_percent","collision_penalty_s":15,"judged_by":"collision_data","obstacle_expected_link_ids":["A2256W000728","A2256W000599","A2256W000207","A2256W000205"],"review":{"decision":"widened_to_organizer_figure_box","reviewed_on":"2026-10-06"}}'
+  rule_payload_json: '{"authority":"team_final","boundary_interpretation":"A202_midpoint_through_A315_30_percent","collision_penalty_s":15,"continuous_contact_additional_penalty":false,"judged_by":"collision_data","obstacle_expected_link_ids":["A2256W000728","A2256W000599","A2256W000207","A2256W000205"],"recollision_additional_penalty":true,"review":{"decision":"widened_to_organizer_figure_box","reviewed_on":"2026-10-06"}}'
   planning_enforcement_allowed: true
 - id: roundabout_candidate
   mission_type: roundabout
@@ -882,7 +912,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"authority":"team_final","judged_by":"collision_data","mission":"npc_cut_in","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"}}'
+  rule_payload_json: '{"authority":"team_final","collision_penalty_s":15,"continuous_contact_additional_penalty":false,"judged_by":"collision_data","mission":"npc_cut_in","recollision_additional_penalty":true,"review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"}}'
   planning_enforcement_allowed: true
 - id: surrounding_vehicle_candidate
   mission_type: surrounding_vehicle
@@ -906,7 +936,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"authority":"team_final","judged_by":"collision_data","mission":"npc_cut_in","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"}}'
+  rule_payload_json: '{"authority":"team_final","collision_penalty_s":15,"continuous_contact_additional_penalty":false,"judged_by":"collision_data","mission":"npc_cut_in","recollision_additional_penalty":true,"review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"}}'
   planning_enforcement_allowed: true
 - id: traffic_light_C1256W000077
   mission_type: traffic_light
@@ -923,7 +953,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"authority":"team_final","boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage02_new_road_219_to_213:A1256W000682"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"stopline_topology_link_ids":["A2256W000219"],"traffic_light_id":"C1256W000077","violation_penalty_s":15}'
+  rule_payload_json: '{"authority":"team_final","boundary_only":true,"count_same_intersection_once":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage02_new_road_219_to_213:A1256W000682"],"intersection_failure_evaluation_available":false,"judged_intersection_count":4,"judged_intersection_id":null,"judged_intersection_mapping_status":"unverified","judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"reset_count_on_checkpoint_return":false,"review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"run_failure_condition":"all_judged_intersections_violated","scoring_source_reference":"official_v1_2_signal_scoring_followup_received_20261006","stopline_topology_link_ids":["A2256W000219"],"traffic_light_id":"C1256W000077","violation_count_scope":"current_run","violation_count_unit":"distinct_judged_intersection","violation_penalty_s":30}'
   planning_enforcement_allowed: true
 - id: traffic_light_C1256W000091
   mission_type: traffic_light
@@ -940,7 +970,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"authority":"team_final","boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage02_new_road_219_to_213:A1256W000807"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"stopline_topology_link_ids":["A2256W000213"],"traffic_light_id":"C1256W000091","violation_penalty_s":15}'
+  rule_payload_json: '{"authority":"team_final","boundary_only":true,"count_same_intersection_once":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage02_new_road_219_to_213:A1256W000807"],"intersection_failure_evaluation_available":false,"judged_intersection_count":4,"judged_intersection_id":null,"judged_intersection_mapping_status":"unverified","judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"reset_count_on_checkpoint_return":false,"review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"run_failure_condition":"all_judged_intersections_violated","scoring_source_reference":"official_v1_2_signal_scoring_followup_received_20261006","stopline_topology_link_ids":["A2256W000213"],"traffic_light_id":"C1256W000091","violation_count_scope":"current_run","violation_count_unit":"distinct_judged_intersection","violation_penalty_s":30}'
   planning_enforcement_allowed: true
 - id: traffic_light_C1256W000016
   mission_type: traffic_light
@@ -957,7 +987,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"authority":"team_final","boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage04_link_202_and_following_intersection:A1256W000208"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"stopline_topology_link_ids":["A2256W000728"],"traffic_light_id":"C1256W000016","violation_penalty_s":15}'
+  rule_payload_json: '{"authority":"team_final","boundary_only":true,"count_same_intersection_once":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage04_link_202_and_following_intersection:A1256W000208"],"intersection_failure_evaluation_available":false,"judged_intersection_count":4,"judged_intersection_id":null,"judged_intersection_mapping_status":"unverified","judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"reset_count_on_checkpoint_return":false,"review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"run_failure_condition":"all_judged_intersections_violated","scoring_source_reference":"official_v1_2_signal_scoring_followup_received_20261006","stopline_topology_link_ids":["A2256W000728"],"traffic_light_id":"C1256W000016","violation_count_scope":"current_run","violation_count_unit":"distinct_judged_intersection","violation_penalty_s":30}'
   planning_enforcement_allowed: true
 - id: traffic_light_C1256W000123
   mission_type: traffic_light
@@ -974,7 +1004,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"authority":"team_final","boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage05_dynamic_obstacle_205_to_315:A1256W000582","kcity2025_competition_route_curation_candidate_v14:stopline:stage05_dynamic_obstacle_205_to_315:A1256W000757"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"stopline_topology_link_ids":["A2256W000310","A2256W000315"],"traffic_light_id":"C1256W000123","violation_penalty_s":15}'
+  rule_payload_json: '{"authority":"team_final","boundary_only":true,"count_same_intersection_once":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage05_dynamic_obstacle_205_to_315:A1256W000582","kcity2025_competition_route_curation_candidate_v14:stopline:stage05_dynamic_obstacle_205_to_315:A1256W000757"],"intersection_failure_evaluation_available":false,"judged_intersection_count":4,"judged_intersection_id":null,"judged_intersection_mapping_status":"unverified","judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"reset_count_on_checkpoint_return":false,"review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"run_failure_condition":"all_judged_intersections_violated","scoring_source_reference":"official_v1_2_signal_scoring_followup_received_20261006","stopline_topology_link_ids":["A2256W000310","A2256W000315"],"traffic_light_id":"C1256W000123","violation_count_scope":"current_run","violation_count_unit":"distinct_judged_intersection","violation_penalty_s":30}'
   planning_enforcement_allowed: true
 - id: traffic_light_C1256W000052
   mission_type: traffic_light
@@ -991,7 +1021,7 @@ mission_zones:
   polygon: []
   has_speed_limit: false
   speed_limit_kph: 0.0
-  rule_payload_json: '{"authority":"team_final","boundary_only":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage07_post_turn_308:A1256W000593+A1256W000742"],"judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"red_without_deceleration":"run_failure","review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"stopline_topology_link_ids":["A2256W000308","A2256W000309"],"traffic_light_id":"C1256W000052","violation_penalty_s":15}'
+  rule_payload_json: '{"authority":"team_final","boundary_only":true,"count_same_intersection_once":true,"hd_map_stopline_ids":["kcity2025_competition_route_curation_candidate_v14:stopline:stage07_post_turn_308:A1256W000593+A1256W000742"],"intersection_failure_evaluation_available":false,"judged_intersection_count":4,"judged_intersection_id":null,"judged_intersection_mapping_status":"unverified","judgement":"signal_when_front_wheels_cross_stopline","proceed_on":["green","left_turn_arrow"],"reset_count_on_checkpoint_return":false,"review":{"decision":"boundary_signed_off_for_competition","reviewed_on":"2026-10-05"},"run_failure_condition":"all_judged_intersections_violated","scoring_source_reference":"official_v1_2_signal_scoring_followup_received_20261006","stopline_topology_link_ids":["A2256W000308","A2256W000309"],"traffic_light_id":"C1256W000052","violation_count_scope":"current_run","violation_count_unit":"distinct_judged_intersection","violation_penalty_s":30}'
   planning_enforcement_allowed: true
 route_speed_limits:
 - link_id: A2256W000748

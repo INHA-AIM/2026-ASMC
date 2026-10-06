@@ -112,11 +112,11 @@ class LocalCropTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             crop_ego_occupancy_grid(np.zeros((2, 2)), 1, (0, 0), (0, 0), float("nan"), EgoWindow())
 
-    def test_phase_two_launch_and_contract_enable_local_crop(self):
+    def test_phase_two_launch_keeps_crop_optional(self):
         launch = (
             self.repo_root / "src/asmc_hd_map/launch/competition_map_debug.launch"
         ).read_text(encoding="utf-8")
-        self.assertIn('name="publish_local" default="true"', launch)
+        self.assertIn('name="publish_local" default="false"', launch)
         self.assertIn('type="local_map_crop_node.py"', launch)
         contract = yaml.safe_load((
             self.repo_root / "config/contracts/hd_map_topic_contract_v1.yaml"

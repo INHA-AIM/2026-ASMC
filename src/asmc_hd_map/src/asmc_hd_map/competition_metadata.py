@@ -644,6 +644,93 @@ def _validate_route_speed_limits(
     return capped
 
 
+def _require_rule_fields(actual: Any, expected: Mapping[str, Any], label: str) -> None:
+    """Fail closed on outdated scoring facts, allowing additive payload fields."""
+    if not isinstance(actual, dict):
+        raise CompetitionMetadataError("%s must be a rule mapping" % label)
+    for key, value in expected.items():
+        path = "%s.%s" % (label, key)
+        if key not in actual:
+            raise CompetitionMetadataError("missing official rule: %s" % path)
+        if isinstance(value, dict):
+            _require_rule_fields(actual[key], value, path)
+        elif actual[key] != value or (isinstance(value, bool) and actual[key] is not value):
+            raise CompetitionMetadataError("official rule mismatch: %s" % path)
+
+
+def _validate_scoring_rules(document: Mapping[str, Any]) -> None:
+    """v1.2 + signal follow-up; no scoring counter or intersection inference.
+
+    Organizer-only judgement channels here describe official provenance. They
+    never authorize a participant node to subscribe to those channels.
+    """
+    rules = document.get("route_rules")
+    collision = {
+        "judged_by": "collision_data", "collision_penalty_s": 15,
+        "continuous_contact_additional_penalty": False,
+        "recollision_additional_penalty": True,
+    }
+    _require_rule_fields(rules, {
+        "authority": "official", "scope": "whole_route",
+        "run": {"time_limit_s": 900, "on_time_limit_exceeded": "run_failure",
+                "mission_order_required": True,
+                "on_skipped_mission_or_checkpoint": "run_failure"},
+        "checkpoints": {"pass_radius_m": 3.0, "sequential_pass_required": True,
+                        "recovery_requires_operator_and_team_approval": True,
+                        "approved_recovery_penalty_s": 15},
+        "lane_keeping": {"judged_by": "ego_detail_status_wheel_contact",
+                         "marking_types": ["white_solid", "yellow_solid", "centerline"],
+                         "wheel_contact_count_min": 1, "sustained_contact_repeat_s": 3,
+                         "penalty_s": 5, "exempt_zone_ids": ["gps_shadow_candidate"]},
+        "collision": collision,
+    }, "route_rules")
+    for mission in document["mission_zones"]:
+        kind = mission["mission_type"]
+        payload = json.loads(mission["rule_payload_json"])
+        label = str(mission["id"])
+        if kind in ("speed_limit", "high_speed_exception"):
+            if payload.get("route_rules") != rules:
+                raise CompetitionMetadataError("whole-route rules missing/drifted: %s" % label)
+        if kind == "speed_limit":
+            if mission["speed_limit_kph"] != 60.0:
+                raise CompetitionMetadataError("official speed cap must be 60 km/h")
+            _require_rule_fields(payload, {
+                "judged_by": "ego_vehicle_status_speed", "overspeed_penalty_s": 15,
+                "first_penalty": "immediately_on_exceeding_limit",
+                "sustained_overspeed_repeat_s": 3,
+            }, label)
+        if kind == "high_speed_exception":
+            if (mission["start_link_id"], mission["end_link_id"]) != ("A2256W000411", "A2256W000153"):
+                raise CompetitionMetadataError("official speed exception must be A411 through A153")
+        if kind == "start_success":
+            _require_rule_fields(payload, {"required_route_fraction": 0.05,
+                                          "time_limit_s": 60, "on_failure": "run_failure"}, label)
+        if kind == "gps_shadow":
+            _require_rule_fields(payload, {"gps_blackout": True, "lane_keeping_penalty": False,
+                                          "random_mission_types": ["obstacle_avoidance"]}, label)
+        if kind in ("static_obstacle", "dynamic_obstacle", "roundabout", "surrounding_vehicle"):
+            _require_rule_fields(payload, collision, label)
+        if kind == "traffic_light" and abs(
+            mission["route_station_end_m"] - mission["route_station_start_m"]
+        ) <= 1e-9:
+            _require_rule_fields(payload, {
+                "boundary_only": True,
+                "judgement": "signal_when_front_wheels_cross_stopline",
+                "proceed_on": ["green", "left_turn_arrow"], "violation_penalty_s": 30,
+                "run_failure_condition": "all_judged_intersections_violated",
+                "judged_intersection_count": 4,
+                "violation_count_unit": "distinct_judged_intersection",
+                "violation_count_scope": "current_run", "count_same_intersection_once": True,
+                "reset_count_on_checkpoint_return": False,
+                # Deliberately fail closed until official mapping is reviewed.
+                "judged_intersection_mapping_status": "unverified",
+                "judged_intersection_id": None,
+                "intersection_failure_evaluation_available": False,
+            }, label)
+            if "red_without_deceleration" in payload:
+                raise CompetitionMetadataError("superseded red_without_deceleration rule: %s" % label)
+
+
 def validate_competition_metadata(document: Mapping[str, Any]) -> Dict[str, Any]:
     if document.get("schema_version") != METADATA_SCHEMA_VERSION:
         raise CompetitionMetadataError("unsupported competition metadata schema")
@@ -811,6 +898,7 @@ def validate_competition_metadata(document: Mapping[str, Any]) -> Dict[str, Any]
     capped_link_count = _validate_route_speed_limits(
         document.get("route_speed_limits"), route, speed_profile
     )
+    _validate_scoring_rules(document)
 
     return {
         "passed": True,
@@ -923,6 +1011,19 @@ def build_competition_metadata(
     missions.extend(
         _build_traffic_light_missions(traffic_config, reviewed_map, route_ranges, checkpoints)
     )
+    route_rules = config.get("route_rules")
+    if not isinstance(route_rules, dict):
+        raise CompetitionMetadataError("route_rules mapping is required")
+    # Use existing non-overlapping speed zones as carriers, including the
+    # uncapped zone. The nested scope remains whole_route, not speed-only.
+    # No new spatial mission, message field, or consumer-side scoring is added.
+    for mission in missions:
+        if mission["mission_type"] in ("speed_limit", "high_speed_exception"):
+            payload = json.loads(mission["rule_payload_json"])
+            payload["route_rules"] = route_rules
+            mission["rule_payload_json"] = json.dumps(
+                payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            )
 
     route_ranges_output = [
         {
@@ -958,6 +1059,7 @@ def build_competition_metadata(
             "link_ranges": route_ranges_output,
         },
         "checkpoints": checkpoints,
+        "route_rules": route_rules,
         "mission_zones": missions,
         "route_speed_limits": _build_route_speed_limits(route_ranges, link_by_id, missions),
     }
