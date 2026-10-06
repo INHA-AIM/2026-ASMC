@@ -16,12 +16,13 @@ import time
 from pathlib import Path
 
 from analyze_fusion_identity import compare_stable_observations
-from fusion_log_accounting import parse_fusion_logs
+from fusion_log_accounting import parse_fusion_logs, parse_fusion_observations
 
 import numpy as np
 import rosgraph
 import rospy
 from diagnostic_msgs.msg import DiagnosticArray
+from rosgraph_msgs.msg import Log
 from sensor_msgs.msg import CompressedImage
 from asmc_msgs.msg import CameraObjectBoxArray
 from Msg.msg import Yolo_bbox_arr, TrackedObjectArray
@@ -55,6 +56,7 @@ def replay(args, path, repeat):
     processes, files, subscriptions = [], [], []
     lock = threading.Lock()
     inputs, outputs, diagnostics, candidates, tracks, graph_samples = [], [], [], [], [], []
+    sync_events = []
     receiving = threading.Event()
 
     def launch(command, suffix):
@@ -99,9 +101,17 @@ def replay(args, path, repeat):
                 diagnostics.append([{ "level": s.level, "message": s.message,
                                       "values": {v.key: v.value for v in s.values}} for s in message.status])
 
+    def record_sync(message):
+        if receiving.is_set() and message.name == '/Main' and message.msg.startswith('Fusion sync 5s:'):
+            with lock:
+                sync_events.append({'name': message.name, 'stamp_ns': message.header.stamp.to_nsec(),
+                                    'message': message.msg})
+
     try:
         rospy.set_param("/use_sim_time", True)
-        subscriptions = [rospy.Subscriber("/image_jpeg/compressed", CompressedImage, record_input, queue_size=20, buff_size=2**24),
+        if args.fusion:
+            subscriptions.append(rospy.Subscriber('/rosout', Log, record_sync, queue_size=1000))
+        subscriptions += [rospy.Subscriber("/image_jpeg/compressed", CompressedImage, record_input, queue_size=20, buff_size=2**24),
                          rospy.Subscriber("/YOLO/BBox", Yolo_bbox_arr, record_output, queue_size=100),
                          rospy.Subscriber("/perception/camera/objects", CameraObjectBoxArray, record_candidate, queue_size=100),
                          rospy.Subscriber("/perception/camera/objects/diagnostics", DiagnosticArray, record_diagnostic, queue_size=100)]
@@ -169,7 +179,10 @@ def replay(args, path, repeat):
     rate = (len(outputs) - 1) / elapsed if elapsed else 0
     latency = [row["latency_ms"] for row in outputs]
     logs = "\n".join(p.read_text() for p in args.output.glob(prefix.name + ".*.log"))
-    sync, totals, accounting_complete = parse_fusion_logs(logs)
+    sync, totals, accounting_complete = (parse_fusion_observations(logs, sync_events)
+        if args.fusion else parse_fusion_logs(logs))
+    if args.fusion:
+        prefix.with_suffix('.sync-events.json').write_text(json.dumps(sync_events, indent=2) + '\n')
     result = {"path": path, "repeat": repeat, "bag": str(args.bag), "fusion": args.fusion,
               "input_frames": len(inputs), "output_frames": len(outputs), "rate_hz": rate,
               "coverage": len(set(source)) / len(inputs) if inputs else 0,
@@ -186,6 +199,7 @@ def replay(args, path, repeat):
               "fusion_matched_reported": sum(row["matched"] for row in sync),
               "fusion_totals": totals,
               "fusion_accounting_complete": accounting_complete,
+              "fusion_log_source": 'rosout_5s_and_stdout_shutdown' if args.fusion else None,
               "fusion_offset_p95_max_ms": max((row["p95_ms"] for row in sync), default=None),
               "track_frames": len(tracks)}
     result["pass"] = (bool(outputs) and result["single_bbox_publisher"] and not result["duplicate_stamps"]

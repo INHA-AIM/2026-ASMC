@@ -2,6 +2,19 @@
 import re
 
 
+def parse_fusion_observations(screen_logs, rosout_events):
+    """Use intact ROS Log messages for intervals; stdout owns shutdown totals.
+
+    roslaunch can interleave stdout/stderr chunks in its screen forwarding.
+    Do not repair a truncated interval or substitute its counts with totals.
+    A missing/duplicate ROS event still fails exact interval reconciliation.
+    """
+    intervals = [row['message'] for row in rosout_events
+                 if row['name'] == '/Main' and row['message'].startswith('Fusion sync 5s:')]
+    shutdown = re.findall(r'Fusion sync (?:tail|total):[^\r\n]*', screen_logs)
+    return parse_fusion_logs('\n'.join(intervals + shutdown))
+
+
 def parse_fusion_logs(logs):
     pattern = (r"Fusion sync (5s|tail): matched=(\d+) dropped=(\d+) "
                r"offset median/p95/max=([\d.]+)/([\d.]+)/([\d.]+) ms")

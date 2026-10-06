@@ -1,7 +1,7 @@
 import unittest
 from tools.perception.analyze_fusion_identity import compare, compare_stable_observations
 from tools.perception.analyze_fusion_trace import summarize, compare_boxes, object_state, publication_state
-from tools.perception.fusion_log_accounting import parse_fusion_logs
+from tools.perception.fusion_log_accounting import parse_fusion_logs, parse_fusion_observations
 
 
 def frame(objects):
@@ -10,6 +10,21 @@ def frame(objects):
 
 
 class FusionDiagnosticsTest(unittest.TestCase):
+    def test_intact_ros_event_accounts_for_interleaved_screen_interval(self):
+        complete = 'Fusion sync 5s: matched=61 dropped=1 offset median/p95/max=18.0/30.0/49.0 ms'
+        screen = ('Fusion sync 5s: matched=61 dropped=1 offset median/p95/max=1[WARN] other node\n'
+                  'Fusion sync tail: matched=2 dropped=0 offset median/p95/max=1.0/2.0/3.0 ms\n'
+                  'Fusion sync total: matched=63 dropped=1 pending lidar/yolo=1/1')
+        events = [{'name': '/Main', 'message': complete}]
+        self.assertFalse(parse_fusion_logs(screen)[2])
+        intervals, total, valid = parse_fusion_observations(screen, events)
+        self.assertTrue(valid)
+        self.assertEqual(63, total['matched'])
+        self.assertEqual(61, intervals[0]['matched'])
+        self.assertFalse(parse_fusion_observations(screen, [])[2])
+        self.assertFalse(parse_fusion_observations(screen, events * 2)[2])
+        self.assertFalse(parse_fusion_observations(screen, [dict(events[0], name='/other')])[2])
+
     def test_publisher_input_retains_source_provenance_without_current_update(self):
         rows = [{'event': 'class_publish_input', 'stamp_ns': 200000000, 'generation': 3,
                  'objects': [{'id': 7, 'class': 'unknown'}],
