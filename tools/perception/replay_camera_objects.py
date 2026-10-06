@@ -8,7 +8,6 @@ stops only its own process groups. Each path runs twice by default.
 import argparse
 import json
 import os
-import re
 import signal
 import subprocess
 import sys
@@ -17,6 +16,7 @@ import time
 from pathlib import Path
 
 from analyze_fusion_identity import compare_stable_observations
+from fusion_log_accounting import parse_fusion_logs
 
 import numpy as np
 import rosgraph
@@ -169,8 +169,7 @@ def replay(args, path, repeat):
     rate = (len(outputs) - 1) / elapsed if elapsed else 0
     latency = [row["latency_ms"] for row in outputs]
     logs = "\n".join(p.read_text() for p in args.output.glob(prefix.name + ".*.log"))
-    sync = re.findall(r"Fusion sync 5s: matched=(\d+) dropped=(\d+) offset median/p95/max=([\d.]+)/([\d.]+)/([\d.]+) ms", logs)
-    totals = re.findall(r"Fusion sync total: matched=(\d+) dropped=(\d+) pending lidar/yolo=(\d+)/(\d+)", logs)
+    sync, totals, accounting_complete = parse_fusion_logs(logs)
     result = {"path": path, "repeat": repeat, "bag": str(args.bag), "fusion": args.fusion,
               "input_frames": len(inputs), "output_frames": len(outputs), "rate_hz": rate,
               "coverage": len(set(source)) / len(inputs) if inputs else 0,
@@ -182,13 +181,12 @@ def replay(args, path, repeat):
               "candidate_invalid_frames": sum(not c["valid"] for c in candidates),
               "diagnostic_warnings": sum(s["level"] > 0 for d in diagnostics for s in d),
               "last_diagnostics": diagnostics[-1] if diagnostics else [],
-              "fusion_intervals": [{"matched": int(m), "dropped": int(d), "median_ms": float(med),
-                                    "p95_ms": float(p95), "max_ms": float(maximum)} for m, d, med, p95, maximum in sync],
-              "fusion_matched_reported": sum(int(row[0]) for row in sync),
-              "fusion_totals": {"matched": int(totals[-1][0]), "dropped": int(totals[-1][1]),
-                                "pending_lidar": int(totals[-1][2]), "pending_yolo": int(totals[-1][3])}
-                               if totals else None,
-              "fusion_offset_p95_max_ms": max((float(row[3]) for row in sync), default=None),
+              "fusion_intervals": sync,
+              "fusion_matched_5s_reported": sum(row["matched"] for row in sync if row["kind"] == "5s"),
+              "fusion_matched_reported": sum(row["matched"] for row in sync),
+              "fusion_totals": totals,
+              "fusion_accounting_complete": accounting_complete,
+              "fusion_offset_p95_max_ms": max((row["p95_ms"] for row in sync), default=None),
               "track_frames": len(tracks)}
     result["pass"] = (bool(outputs) and result["single_bbox_publisher"] and not result["duplicate_stamps"]
                       and not result["reverse_stamps"] and not result["zero_stamps"]
@@ -196,7 +194,7 @@ def replay(args, path, repeat):
     if path == "new" and not args.fusion:
         result["pass"] &= rate >= 18.0
     if args.fusion:
-        result["pass"] &= (bool(sync) and bool(tracks) and len(totals) == 1
+        result["pass"] &= (bool(sync) and bool(tracks) and accounting_complete
                            and result["fusion_offset_p95_max_ms"] <= 50.0)
     prefix.with_suffix(".json").write_text(json.dumps(result, indent=2) + "\n")
     prefix.with_suffix(".frames.json").write_text(json.dumps({"outputs": outputs, "tracks": tracks}))

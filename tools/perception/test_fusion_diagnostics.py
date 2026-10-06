@@ -1,6 +1,7 @@
 import unittest
 from tools.perception.analyze_fusion_identity import compare, compare_stable_observations
 from tools.perception.analyze_fusion_trace import summarize, compare_boxes, object_state
+from tools.perception.fusion_log_accounting import parse_fusion_logs
 
 
 def frame(objects):
@@ -73,6 +74,18 @@ class FusionDiagnosticsTest(unittest.TestCase):
         self.assertEqual(100000000, report[0]["fused_lidar_stamp_ns"])
         self.assertEqual(75, report[0]["lidar_state_lag_ms"])
         self.assertEqual([], object_state(rows, "class_current", 175000000, 23))
+
+    def test_tail_must_reconcile_with_total_including_final_drops(self):
+        interval = "Fusion sync 5s: matched=397 dropped=0 offset median/p95/max=18.0/30.0/40.0 ms"
+        tail = "Fusion sync tail: matched=104 dropped=1 offset median/p95/max=18.0/31.0/49.0 ms"
+        total = "Fusion sync total: matched=501 dropped=1 pending lidar/yolo=1/1"
+        rows, count, complete = parse_fusion_logs('\n'.join((interval, tail, total)))
+        self.assertTrue(complete)
+        self.assertEqual(501, sum(row['matched'] for row in rows))
+        self.assertEqual(1, count['dropped'])
+        self.assertFalse(parse_fusion_logs('\n'.join((interval, total)))[2])
+        self.assertFalse(parse_fusion_logs('\n'.join((interval, tail, total, total)))[2])
+        self.assertFalse(parse_fusion_logs('\n'.join((interval, tail, total.replace('501', '502'))))[2])
 
 
 if __name__ == "__main__":

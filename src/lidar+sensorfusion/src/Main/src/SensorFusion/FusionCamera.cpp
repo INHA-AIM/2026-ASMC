@@ -7,6 +7,8 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 #include <opencv2/opencv.hpp>
 #include <Eigen/Dense>
 #include <ros/ros.h>
@@ -130,12 +132,8 @@ struct FusionSyncStats {
     std::vector<double> offsets_ms;
     ros::WallTime interval_start = ros::WallTime::now();
 
-    void ReportIfDue(std::size_t pending_lidar,
-                     std::size_t pending_yolo)
+    std::vector<double> OffsetSummary()
     {
-        const ros::WallTime now = ros::WallTime::now();
-        if ((now - interval_start).toSec() < 5.0) return;
-
         double median_ms = 0.0;
         double p95_ms = 0.0;
         double max_ms = 0.0;
@@ -149,17 +147,44 @@ struct FusionSyncStats {
             p95_ms = offsets_ms[p95_index];
             max_ms = offsets_ms.back();
         }
+        return {median_ms, p95_ms, max_ms};
+    }
+
+    void ReportIfDue(std::size_t pending_lidar,
+                     std::size_t pending_yolo)
+    {
+        const ros::WallTime now = ros::WallTime::now();
+        if ((now - interval_start).toSec() < 5.0) return;
+        const auto offsets = OffsetSummary();
         ROS_INFO(
             "Fusion sync 5s: matched=%llu dropped=%llu offset median/p95/max=%.1f/%.1f/%.1f ms pending lidar/yolo=%zu/%zu",
             static_cast<unsigned long long>(matched),
             static_cast<unsigned long long>(dropped),
-            median_ms, p95_ms, max_ms, pending_lidar, pending_yolo);
+            offsets[0], offsets[1], offsets[2], pending_lidar, pending_yolo);
         matched = 0;
         dropped = 0;
         offsets_ms.clear();
         interval_start = now;
     }
+
+    void ReportFinal(std::size_t pending_lidar, std::size_t pending_yolo)
+    {
+        const auto offsets = OffsetSummary();
+        std::ostringstream line;
+        line << std::fixed << std::setprecision(1)
+             << "Fusion sync tail: matched=" << matched << " dropped=" << dropped
+             << " offset median/p95/max=" << offsets[0] << '/' << offsets[1] << '/' << offsets[2]
+             << " ms pending lidar/yolo=" << pending_lidar << '/' << pending_yolo
+             << " duration=" << (ros::WallTime::now() - interval_start).toSec() << " s";
+        std::cout << line.str() << std::endl;
+    }
 };
+
+FusionSyncStats& SyncStats()
+{
+    static FusionSyncStats stats;
+    return stats;
+}
 
 }  // namespace
 
@@ -210,6 +235,7 @@ void ReportFusionTotals()
     // Workers have joined after ros::waitForShutdown(), so rosconsole may
     // already be shut down. Flush the final accounting directly to stdout
     // so trace-disabled acceptance runs retain the last partial interval.
+    SyncStats().ReportFinal(g_PendingLidar, g_PendingYolo);
     std::cout << "Fusion sync total: matched=" << g_TotalMatched
               << " dropped=" << g_TotalDropped
               << " pending lidar/yolo=" << g_PendingLidar << '/' << g_PendingYolo
@@ -638,7 +664,7 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
     static std::deque<TimedYoloFrame> yolo_history;
     static std::deque<TimedCameraImage> camera_history;
     static ros::Time last_queued_lidar_stamp;
-    static FusionSyncStats stats;
+    auto& stats = SyncStats();
     static bool received_any_yolo = false;
     ros::Time first_arriving_yolo_stamp;
 
