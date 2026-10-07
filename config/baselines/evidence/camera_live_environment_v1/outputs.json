@@ -1,0 +1,212 @@
+{
+  "duration_sec": 20.01862618199084,
+  "topics": {
+    "/perception/camera/objects": {
+      "count": 398,
+      "stamp": 1791343242.086579,
+      "frame_id": "camera_front",
+      "valid": true,
+      "boxes": 0,
+      "observed_hz": 19.88148419285879
+    },
+    "/vehicle/state": {
+      "count": 1002,
+      "stamp": 1791343242.0182853,
+      "frame_id": "map",
+      "valid": true,
+      "observed_hz": 50.003431349376
+    },
+    "/perception/camera/objects/debug/image/compressed": {
+      "count": 398,
+      "stamp": 1791343242.086579,
+      "frame_id": "camera_front",
+      "jpeg_decoded": true,
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "observed_hz": 19.88148419285879
+    },
+    "/perception/traffic_light/debug/image/compressed": {
+      "count": 199,
+      "stamp": 1791343241.965128,
+      "frame_id": "camera_extra",
+      "jpeg_decoded": true,
+      "shape": [
+        480,
+        640,
+        3
+      ],
+      "observed_hz": 9.940742096429394
+    },
+    "/fusion/debug_image": {
+      "count": 208,
+      "stamp": 1791343241.9690754,
+      "frame_id": "camera",
+      "width": 1280,
+      "height": 720,
+      "bytes": 2764800,
+      "observed_hz": 10.390323397272935
+    },
+    "/perception/camera/debug/mosaic/compressed": {
+      "count": 131,
+      "stamp": 1791343242.0170758,
+      "frame_id": "camera_debug_mosaic",
+      "jpeg_decoded": true,
+      "shape": [
+        1440,
+        1920,
+        3
+      ],
+      "observed_hz": 6.543905601167089
+    },
+    "/perception/bev/debug/comparison/compressed": {
+      "count": 100,
+      "stamp": 1791343241.877669,
+      "frame_id": "base_link",
+      "jpeg_decoded": true,
+      "shape": [
+        1050,
+        1344,
+        3
+      ],
+      "observed_hz": 4.9953477871504495
+    }
+  },
+  "status": {
+    "/camera_semantic_inference/inference_status": {
+      "mode": 2,
+      "loaded": true,
+      "warmed_up": true,
+      "prepared": true,
+      "pipeline_ready": false,
+      "target_hz": 10.0,
+      "processing_hz": 9.985684987985056,
+      "errors": 0,
+      "reason": "running"
+    },
+    "/traffic_light_infer/inference_status": {
+      "mode": 2,
+      "loaded": true,
+      "warmed_up": true,
+      "prepared": true,
+      "pipeline_ready": true,
+      "target_hz": 10.0,
+      "processing_hz": 9.959878655368252,
+      "errors": 0,
+      "reason": "running"
+    },
+    "/camera_object_detector/inference_status": {
+      "mode": 2,
+      "loaded": true,
+      "warmed_up": true,
+      "prepared": true,
+      "pipeline_ready": true,
+      "target_hz": 20.0,
+      "processing_hz": 19.539921185892116,
+      "errors": 0,
+      "reason": "running"
+    }
+  },
+  "publishers": {
+    "/gps": [
+      "/morai_sensor_bridge"
+    ],
+    "/YOLO/BBox": [
+      "/camera_objects_yolo_bbox_adapter"
+    ]
+  },
+  "logs": [
+    {
+      "name": "/Main",
+      "level": 4,
+      "stamp": 1791343223.6239371,
+      "message": "Drivable boundary dropped 6/6 static non-pedestrian objects below full-OBB road-overlap threshold"
+    },
+    {
+      "name": "/Main",
+      "level": 4,
+      "stamp": 1791343225.6585011,
+      "message": "Drivable boundary dropped 6/6 static non-pedestrian objects below full-OBB road-overlap threshold"
+    },
+    {
+      "name": "/Main",
+      "level": 2,
+      "stamp": 1791343227.0574148,
+      "message": "Fusion sync 5s: matched=56 dropped=0 offset median/p95/max=22.2/26.7/32.7 ms pending lidar/yolo=1/2"
+    },
+    {
+      "name": "/Main",
+      "level": 4,
+      "stamp": 1791343227.7189865,
+      "message": "Drivable boundary dropped 6/6 static non-pedestrian objects below full-OBB road-overlap threshold"
+    },
+    {
+      "name": "/Main",
+      "level": 4,
+      "stamp": 1791343229.7591124,
+      "message": "Drivable boundary dropped 6/6 static non-pedestrian objects below full-OBB road-overlap threshold"
+    },
+    {
+      "name": "/Main",
+      "level": 4,
+      "stamp": 1791343231.7732828,
+      "message": "Drivable boundary dropped 8/8 static non-pedestrian objects below full-OBB road-overlap threshold"
+    },
+    {
+      "name": "/Main",
+      "level": 2,
+      "stamp": 1791343232.1020663,
+      "message": "Fusion sync 5s: matched=55 dropped=0 offset median/p95/max=22.1/29.4/33.6 ms pending lidar/yolo=1/1"
+    },
+    {
+      "name": "/Main",
+      "level": 4,
+      "stamp": 1791343232.6500409,
+      "message": "Filtered ego-hood YOLO false positive from fusion input"
+    },
+    {
+      "name": "/Main",
+      "level": 4,
+      "stamp": 1791343233.8534439,
+      "message": "Drivable boundary dropped 6/6 static non-pedestrian objects below full-OBB road-overlap threshold"
+    },
+    {
+      "name": "/Main",
+      "level": 4,
+      "stamp": 1791343235.8728833,
+      "message": "Drivable boundary dropped 7/7 static non-pedestrian objects below full-OBB road-overlap threshold"
+    },
+    {
+      "name": "/Main",
+      "level": 2,
+      "stamp": 1791343237.1743443,
+      "message": "Fusion sync 5s: matched=55 dropped=0 offset median/p95/max=20.7/29.3/31.2 ms pending lidar/yolo=1/2"
+    },
+    {
+      "name": "/Main",
+      "level": 4,
+      "stamp": 1791343237.6812696,
+      "message": "Filtered ego-hood YOLO false positive from fusion input"
+    },
+    {
+      "name": "/Main",
+      "level": 4,
+      "stamp": 1791343237.9366932,
+      "message": "Drivable boundary dropped 8/8 static non-pedestrian objects below full-OBB road-overlap threshold"
+    },
+    {
+      "name": "/Main",
+      "level": 4,
+      "stamp": 1791343239.9777696,
+      "message": "Drivable boundary dropped 6/6 static non-pedestrian objects below full-OBB road-overlap threshold"
+    },
+    {
+      "name": "/Main",
+      "level": 4,
+      "stamp": 1791343242.0296688,
+      "message": "Drivable boundary dropped 5/5 static non-pedestrian objects below full-OBB road-overlap threshold"
+    }
+  ]
+}

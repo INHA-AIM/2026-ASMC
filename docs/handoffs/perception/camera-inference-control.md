@@ -6,6 +6,28 @@ PR #68의 전방 YOLO opt-in 이전은 main `7aed612`에 병합됐다. 후속 �
 
 ## 실행과 외부 요청
 
+공유 컨테이너 `asmc-ros-noetic`의 `/root/ws`는 현재 카메라 작업 worktree다.
+호스트의 각 터미널에서 직접 진입한 다음 같은 ROS master를 사용한다.
+
+```bash
+docker exec -it asmc-ros-noetic bash
+```
+
+```bash
+cd /root/ws
+source /opt/ros/noetic/setup.bash
+source devel/setup.bash
+export ROS_MASTER_URI=http://127.0.0.1:11311
+export ROS_HOSTNAME=localhost
+```
+
+bridge 터미널에서는 기존 실행을 중복으로 띄우지 않고 아래 launch를 실행한다.
+master가 없으면 roslaunch가 함께 시작한다. 실시간에는 `/use_sim_time=false`를 사용한다.
+
+```bash
+roslaunch asmc_bridge bridge.launch transport_profile:=local stream_profile:=competition
+```
+
 컨테이너·bridge와 rqt 창은 사용자가 별도로 실행한다. ROS 환경을 읽은 터미널에서
 다음 프로필 하나를 선택한다. 카메라는 어느 구간을 주행 중인지 판단하지 않는다.
 
@@ -51,6 +73,27 @@ YOLO 20Hz, 신호등 10Hz이며 새 입력만 처리한다. 이전 관측을 복
 상위 `perception.launch`를 일반 진입점으로 사용한다. 직접 backend만 반복 재현하려면
 `managed:=false`를 명시한다. 새 기본값은 이 프로필 도입에서 변경된 것이며 과거 증거의
 명령을 실행할 때도 당시 legacy/managed 프로필을 명시한다.
+
+### 목표 Hz를 파일에서 바꾸기
+
+상위 진입점의 기본값은 `src/asmc_camera/launch/perception.launch`의 다음 인자다.
+
+```xml
+<arg name="lane_target_hz" default="10.0"/>
+<arg name="objects_target_hz" default="20.0"/>
+<arg name="traffic_light_hz" default="10.0"/>
+```
+
+각각 TwinLite 배치, 전방 YOLO, camera4 ResNet의 목표다. 수정 후 카메라 launch를
+다시 시작하면 반영되며 catkin 재빌드는 필요 없다. launch 명령의 같은 이름 인자가
+파일 기본값을 덮어쓰고, 실행 중 판제 서비스의 양수 `target_hz` 요청이 다시 덮어쓴다.
+`target_hz: 0`은 현재 값을 유지한다. rosparam만 바꿔서는 실행 중 주기 관리자가 갱신되지 않는다.
+
+`camera_model_grid_max_hz`는 차선 model-grid 출력 제한이므로 추론 목표가 아니다.
+YOLO 클래스·confidence YAML과 `config/runtime.yaml`의 설명 값을 바꿔서 목표 Hz를
+조정하지 않는다. backend launch를 직접 실행할 때는 해당 파일의 `target_hz` 인자가 적용된다.
+선택적 구간 예시를 쓰면 `config/runtime/camera_region_example.yaml`의 모델별 요청 Hz도
+별도로 확인한다. 예시/판제가 요청하는 주기를 카메라 launch가 고정하지 않는다.
 
 | 모델 | 서비스 | 상태 토픽 |
 |---|---|---|
