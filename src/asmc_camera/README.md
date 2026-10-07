@@ -390,6 +390,11 @@ canonical adapter와 message 전환을 진행한다.
 
 ## 모델별 외부 실행 제어
 
+현재 차선 피팅과 `LaneBoundaryFamily`는 음영구간 전용이다. 음영구간 밖의 구현·검증은
+아직 완료되지 않았으므로 그 결과를 주행에 사용하면 안 된다. debug 프로필의 전체 ACTIVE와
+결과의 `valid`/`pipeline_ready`는 구간 밖 주행 사용을 허용하지 않는다. 구간 적용·활성화·
+결과 소비 조건은 판제가 결정하며 카메라 생산자에 GPS/구간 판단을 넣지 않는다.
+
 `managed:=true`에서 TwinLite·YOLO·ResNet18을 독립적으로 STANDBY/PREPARE/ACTIVE로
 요청할 수 있다. 직접 launch·서비스·GUI 명령, 판제 역할과 현재 수락 제한은
 [모델별 실행 상태 안내](../../docs/handoffs/perception/camera-inference-control.md)를 따른다.

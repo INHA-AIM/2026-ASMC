@@ -4,6 +4,17 @@ PR #68의 전방 YOLO opt-in 이전은 main `7aed612`에 병합됐다. 후속 �
 `feat/camera-region-activation`에서 모델 실행 인터페이스와 교체 가능한 예시를 제공한다.
 구간·결과 소비·주행 모드·제어권은 판제가 결정한다. 카메라 생산자는 GPS나 HD 구간을 읽지 않는다.
 
+**현재 차선 피팅·`LaneBoundaryFamily`는 음영구간 전용이다. 음영구간 밖의 차선 피팅은
+구현·검증 범위에 포함되지 않으며 주행에 사용하면 안 된다.** `valid=true`나
+`pipeline_ready=true`가 나와도 음영구간 밖의 사용을 허용하지 않는다.
+`operating_domain=shadow_two_way_v1`은 알고리즘 적용 범위의 식별자이며 현재 위치를
+검증하는 장치가 아니다. 판제가 구간 적용 조건과 결과 유효성을 함께 확인해야 한다.
+
+`profile:=debug`의 전 모델 ACTIVE는 영상·연산 확인용이다. 음영구간 밖에서 TwinLite·BEV·
+차선 화면을 볼 수 있지만 피팅 결과를 제어에 연결하지 않는다. 구간 밖의 무효 피팅을
+해결하려고 수락 임계값을 완화하지 않는다. 차선 연산도 제외하려면
+`profile:=debug start_camera_lane:=false`로 YOLO·신호등만 실행할 수 있다.
+
 ## 실행과 외부 요청
 
 공유 컨테이너 `asmc-ros-noetic`의 `/root/ws`는 현재 카메라 작업 worktree다.

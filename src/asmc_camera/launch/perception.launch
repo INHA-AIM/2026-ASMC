@@ -3,6 +3,9 @@
        offline/training support, models and config are owned by asmc_camera.
        Topics/nodes are unchanged; LiDAR/fusion and data collection remain independent. -->
   <!-- External planner controls models independently; no route policy starts here. -->
+  <!-- Lane fitting is implemented only for the shadow-road ODD. Even ACTIVE
+       debug output must not be consumed for driving outside that ODD.
+       The planner owns the domain gate; operating_domain is not a location check. -->
   <!-- idle: no models; planning: warm resident models in STANDBY;
        debug: all models ACTIVE with debug publishers; legacy: old lane loop.
        start_* selects which nodes exist; set_inference_mode controls loaded models. -->
