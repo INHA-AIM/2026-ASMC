@@ -1,0 +1,47 @@
+schema_version: 1
+experiment_id: camera_lidar_b1a_v1
+base_main: 07cc51a
+source_revision: 8dde9b691bebd4f9d5172d0c43bd6b16d2052c2b
+conditions:
+  simulator: stopped
+  network: none
+  ros_master_port: 11314
+  resource_sample_sec: 0.2
+  offline_processing_delay_sec: 0.13
+  realtime_rate: 1.0
+  repeats: 3
+  fresh_yolo_inference: false
+  source_headers_unchanged: true
+  operational_defaults_changed: false
+bags:
+  primary:
+    path: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+    injection_window_sec: [20.0, 40.0]
+    b0_trial: fusion-primary-C1-r1
+  shadow:
+    path: /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+    injection_window_sec: [6.0, 20.0]
+    b0_trial: fusion-shadow-C1-r1
+profiles:
+  T1: {enable_tunnel_experimental_filter: false}
+  T2: {enable_tunnel_experimental_filter: true, tunnel_protect_enable: false}
+  T3: {enable_tunnel_experimental_filter: true, tunnel_protect_enable: true}
+  T4: {enable_tunnel_experimental_filter: true, tunnel_protect_enable: true, tunnel_dynamic_roi_enable: false}
+gps_modes: [normal, invalid, missing]
+offline_profiles: [T1, T2, T3, T4]
+offline_gps_modes: [invalid]
+realtime_profiles: [T1, T3]
+frozen_yolo:
+  archive: config/baselines/evidence/camera_lidar_b0_v1/raw-fixed-fusion.tar.gz
+  weight_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+  allowed_names: [bus, truck, person, car]
+  confidence: 0.7
+  availability: recorded_output_ros_ns
+  coordinates: legacy_int_truncation_from_original_float
+  hood_mask: semantic_contour
+evaluation:
+  synthetic_ground_truth: true
+  natural_gps_denial_in_bags: false
+  independent_object_gt_in_bags: false
+  infer_recall_from_track_ID_counts: false
+  operational_adoption: none
