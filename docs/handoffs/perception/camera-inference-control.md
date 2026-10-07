@@ -85,6 +85,38 @@ YOLO 20Hz, 신호등 10Hz이며 새 입력만 처리한다. 이전 관측을 복
 `managed:=false`를 명시한다. 새 기본값은 이 프로필 도입에서 변경된 것이며 과거 증거의
 명령을 실행할 때도 당시 legacy/managed 프로필을 명시한다.
 
+### 보넷 mask (선택 기능, 기본 활성화 보류)
+
+YOLO만 입력 복사본에 검정 mask를 적용한다. 원본 영상·TwinLite·ResNet 입력과 객체의
+원본 좌표·source stamp·frame_id는 유지한다. crop이나 경계 box 삭제는 하지 않는다.
+mask는 입력 텐서 크기를 줄이지 않아 YOLO 연산량 절감을 의미하지 않는다.
+
+```bash
+# 보넷 mask를 켜고 전체 디버그 영상 확인
+roslaunch asmc_camera perception.launch profile:=debug objects_hood_mask:=true
+```
+
+```bash
+rqt_image_view --clear-config /perception/camera/objects/debug/image/compressed
+```
+
+전체영상 비교는 `objects_hood_mask:=false`로 명시한다. 상위·개별 YOLO launch 모두
+현재 기본값은 **false**다. 실제 보넷 윤곽 후보에서 보넷 오검출 634프레임은 제거됐지만
+고정 MORAI 정답 287프레임 중 원래 검출한 보행자 1명을 새로 놓쳤다. 기본 활성화 조건인
+실제 객체 신규 누락 0을 충족하지 못해 true 승격은 보류한다. 하단 21% 직사각형과
+더 좁은 윤곽 후보의 실패도 보존한다. confidence를 낮춰 실패를 면제하지 않는다.
+
+영역은 `src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml`의 정규화 다각형이다.
+현재 후보는 1280×720에서 114,058픽셀(약 12.38%)이며 모델 입력 해상도 변경이 아니다.
+다른 파일은 `objects_hood_mask_config:=/절대/경로.yaml`로 전달하고 launch를 재시작한다.
+PREPARE와 ACTIVE가 같은 영역을 사용하며, overlay는 생산자와 활성 상태·설정 SHA가
+일치할 때만 그린다. 진단의 `hood_mask_*`에 SHA·영역·크기가 기록되고
+`average_stage_ms`에 `hood_mask_ms`가 포함된다. 잘못된 설정은 시작 실패,
+프레임 처리 오류는 원본 header/크기의 `valid=false`로 보고한다.
+
+검증 결과와 미달 조건은 [보넷 mask 증거](../../../config/baselines/perception_camera_hood_mask_v1.yaml)에
+기록한다. 이번 기능은 기존 모델 준비·MORAI·fusion 수락 보류를 면제하지 않는다.
+
 ### 목표 Hz를 파일에서 바꾸기
 
 상위 진입점의 기본값은 `src/asmc_camera/launch/perception.launch`의 다음 인자다.

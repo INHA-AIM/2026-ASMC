@@ -1,0 +1,354 @@
+schema_version: 1
+baseline_id: perception_camera_hood_mask_v1
+code_commit: 021fe18e9acc8c8bf5a08190cb8542f20627c938
+base_main: 7aed6121c895a55e24bcbf24dfd907cada9ba140
+status: implemented_opt_in_acceptance_blocked
+requested_default_enabled: true
+actual_default_enabled: false
+reason: All three fixed candidates introduce real-object misses. Selected contour
+  loses one baseline-detected person; strict fusion matching gate also fails. No exception
+  or confidence change applied.
+scope: YOLO input copy only; no crop, output filtering, tensor size, shared image,
+  class, stamp, coordinate, message MD5, planner adapter or fusion policy change
+selected_mask:
+  config: src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml
+  sha256: 4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403
+  origin:
+    image: /data/datasets/20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel/frames/intensity/front/000265.png
+    semantic: /data/datasets/20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel/frames/semantic/front/000265.png
+    method: largest lower semantic ego-vehicle component, 5x5 erosion, 2px polygon
+      simplification
+    polygon:
+    - - 0.051562
+      - 0.998611
+    - - 0.947656
+      - 0.998611
+    - - 0.821875
+      - 0.888889
+    - - 0.786719
+      - 0.863889
+    - - 0.748437
+      - 0.843056
+    - - 0.650781
+      - 0.816667
+    - - 0.539844
+      - 0.806944
+    - - 0.377344
+      - 0.8125
+    - - 0.313281
+      - 0.823611
+    - - 0.257031
+      - 0.840278
+    - - 0.2125
+      - 0.863889
+    - - 0.177344
+      - 0.888889
+  geometry:
+    enabled: true
+    config_sha256: 4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403
+    polygon_normalized:
+    - - 0.051562
+      - 0.998611
+    - - 0.947656
+      - 0.998611
+    - - 0.821875
+      - 0.888889
+    - - 0.786719
+      - 0.863889
+    - - 0.748437
+      - 0.843056
+    - - 0.650781
+      - 0.816667
+    - - 0.539844
+      - 0.806944
+    - - 0.377344
+      - 0.8125
+    - - 0.313281
+      - 0.823611
+    - - 0.257031
+      - 0.840278
+    - - 0.2125
+      - 0.863889
+    - - 0.177344
+      - 0.888889
+    image_width: 1280
+    image_height: 720
+    polygon_pixels:
+    - - 65
+      - 718
+    - - 1212
+      - 718
+    - - 1052
+      - 640
+    - - 1007
+      - 622
+    - - 957
+      - 607
+    - - 832
+      - 588
+    - - 691
+      - 580
+    - - 483
+      - 585
+    - - 400
+      - 592
+    - - 328
+      - 605
+    - - 272
+      - 622
+    - - 227
+      - 640
+    excluded_pixels: 114058
+  excluded_fraction: 0.12376085069444444
+  mask_ms:
+    p50_ms: 0.3414649982005358
+    p95_ms: 0.48400880477856845
+  reference_rgb_sha256: a25eba59dfddde351b8314a2ff12f6c43e275a8cfe013071e51eb9cc53276fdc
+  reference_semantic_sha256: 2f3d6b157c257ba4dbdac8ace322b82b61321d5814ce263f2e02932903751cda
+environment:
+  gpu: NVIDIA GeForce RTX 4060 Ti
+  interpreter: /usr/bin/python3
+  python: "3.8.10 (default, Mar 18 2025, 20:04:55) \n[GCC 9.4.0]"
+  torch: 2.1.2+cu118
+  ultralytics: 8.4.150
+  weight_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+  network: none
+  other_ros_gpu_inference: false
+  morai_rendering_present: true
+  gpu_samples:
+    samples: 79
+    global_utilization_percent:
+      min: 31.0
+      max: 53.0
+      mean: 43.48
+    global_vram_mib:
+      min: 3885
+      max: 4606
+    scope: device-wide samples include model startup and Windows MORAI rendering;
+      not isolated process usage or a compute-saving comparison
+ground_truth:
+  source: independent preexisting MORAI BBox2D labels, not YOLO predictions
+  archive: /mnt/e/asmc_capture_export_20260911/meta.tar.xz
+  archive_sha256: 133e70f0705267caf5c95cd01d43982b633b085252dd94ab3ed6290f4a36da91
+  manifest_sha256: f5f763395ddcef3da6904a1de22729b9d6923622890faff10a5761fea19a053d
+  frames: 287
+  selection: union of 30 nearest-person and 30 nearest-vehicle frames, plus 120 uniformly
+    indexed person frames and 120 uniformly indexed vehicle frames over sorted run/frame
+    inventory; deduplicated before all candidate evaluations
+  matching: one-to-one, same person/vehicle label, IoU >= 0.5; maximize match count
+    then IoU; original per-box labels preserved
+  source_stamps: 287
+candidates:
+- name: rectangle21
+  config_sha256: 22e7e54b7beb84849384b1b2425730399a58c6e2abf22bbdaf8a4fcde2fad18e
+  frames: 287
+  counts:
+    person:
+      gt: 386
+      baseline_tp: 83
+      mask_tp: 81
+      new_misses: 3
+    vehicle:
+      gt: 540
+      baseline_tp: 111
+      mask_tp: 109
+      new_misses: 6
+  hood_positive_frames: 634
+  hood_remaining_frames: 0
+  pass_gate: false
+- name: contour
+  config_sha256: 4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403
+  frames: 287
+  counts:
+    person:
+      gt: 386
+      baseline_tp: 83
+      mask_tp: 82
+      new_misses: 1
+    vehicle:
+      gt: 540
+      baseline_tp: 111
+      mask_tp: 113
+      new_misses: 0
+  hood_positive_frames: 634
+  hood_remaining_frames: 0
+  pass_gate: false
+- name: contour-inner8
+  config_sha256: b798714fb0d3bf39eaaadbcb92965ec68156b2443917a1f5b9d03b0fc3121e0a
+  frames: 287
+  counts:
+    person:
+      gt: 386
+      baseline_tp: 83
+      mask_tp: 82
+      new_misses: 1
+    vehicle:
+      gt: 540
+      baseline_tp: 111
+      mask_tp: 113
+      new_misses: 1
+  hood_positive_frames: 634
+  hood_remaining_frames: 0
+  pass_gate: false
+counterexample:
+  frame_index: 9
+  run: 20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel
+  frame: '000125'
+  actor_id: '3'
+  baseline_confidence: 0.7010437250137329
+  mask_detections: []
+  exception_applied: false
+full_image_regression:
+  mask_enabled: false
+  frames: 3514
+  exact_frames: 3514
+  errors: []
+  boundary_exceptions: []
+  bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+  bag_sha256: a8f360e666f58358062e83cedbc6b51f94e8dc897402a2605eed7761a7880268
+  pass_gate: true
+object_only_runtime:
+- evidence: hood-runtime-contour
+  repeat: 1
+  input: 593
+  output: 592
+  hz: 19.93227602346283
+  latency:
+    p50_ms: 13.1374475
+    p95_ms: 20.538611699999997
+  duplicate_stamps: 0
+  reverse_stamps: 0
+  single_publisher: true
+  passed: true
+- evidence: hood-runtime-contour
+  repeat: 2
+  input: 593
+  output: 592
+  hz: 19.923246924372954
+  latency:
+    p50_ms: 13.0440185
+    p95_ms: 20.20802135
+  duplicate_stamps: 0
+  reverse_stamps: 0
+  single_publisher: true
+  passed: true
+- evidence: hood-runtime-gpu
+  repeat: 1
+  input: 593
+  output: 593
+  hz: 19.94958750963127
+  latency:
+    p50_ms: 11.913615
+    p95_ms: 19.8187476
+  duplicate_stamps: 0
+  reverse_stamps: 0
+  single_publisher: true
+  passed: true
+- evidence: hood-runtime-gpu
+  repeat: 2
+  input: 593
+  output: 593
+  hz: 19.954858124675496
+  latency:
+    p50_ms: 11.378221000000002
+    p95_ms: 18.6832946
+  duplicate_stamps: 0
+  reverse_stamps: 0
+  single_publisher: true
+  passed: true
+fusion:
+  bag: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+  runs:
+  - path: old
+    repeat: 1
+    actual_mask_enabled: false
+    matched: 500
+    dropped: 1
+    pending_lidar: 1
+    pending_yolo: 1
+    offset_p95_max_ms: 45.1
+    single_bbox_publisher: true
+  - path: old
+    repeat: 2
+    actual_mask_enabled: false
+    matched: 508
+    dropped: 4
+    pending_lidar: 1
+    pending_yolo: 0
+    offset_p95_max_ms: 48.0
+    single_bbox_publisher: true
+  - path: new
+    repeat: 1
+    actual_mask_enabled: true
+    matched: 510
+    dropped: 0
+    pending_lidar: 1
+    pending_yolo: 1
+    offset_p95_max_ms: 28.2
+    single_bbox_publisher: true
+  - path: new
+    repeat: 2
+    actual_mask_enabled: true
+    matched: 486
+    dropped: 0
+    pending_lidar: 1
+    pending_yolo: 1
+    offset_p95_max_ms: 34.0
+    single_bbox_publisher: true
+  strict_pass: false
+  whole_bag_matched_not_degraded: false
+  stable_geometry_comparison:
+    common_lidar_stamps: 324
+    old_stable: 2923
+    unmatched_common_observations: 815
+    regressions: []
+  legacy_metadata_note: Initial raw reports labeled hood_mask=true for both paths
+    because the flag recorded the request. Legacy launch remained full image; replay
+    tool now records actual and requested states separately.
+  bag_sha256: 859cbd84a1e845b76426f96be2778c6f54ea77fe348631a976ef3adf666d0c02
+tests:
+  build: pass
+  detection: 31
+  runtime: 26
+  matching_evaluator: 5
+  ros_mask_worker: 10
+  ros_mask_overlay: 10
+  messages: 1
+  camera: 264
+  camera_known_main_facade_failures: 1
+  hdmap: 160
+  lidar: 267
+  jamming: 94
+  audit: 48
+  protected_sources: asmc_msgs, asmc_hd_map, jamming/lane_boundary adapters and legacy
+    YOLO weights identical to merged main
+  initial_environment_failures:
+  - jamming three rostests could not import Msg; preserving initial XML/log then sourcing
+    nested environment gave 94 pass
+  - HDmap two tests missing /root/data fixture path; linking existing read-only /data
+    fixture gave 160 pass
+  - test result summary CLI supplied multiple paths; corrected per-package summaries,
+    original command error preserved
+  documentation: pass
+  matching_revision: Cardinality-first matching retains exactly the original lost-object
+    lists for all three frozen candidate prediction records.
+acceptance_holds:
+- 'Real-object new-miss gate: one person lost by selected contour'
+- 'Fusion absolute matched count: new_2 486 below both old runs 500/508'
+- Existing inference lifecycle first-one-second and MORAI traversal/recovery acceptance
+  holds are unchanged
+next_steps:
+- Resolve fixed person-loss and fusion counterexamples before default true promotion
+- Complete model preparation p99, first-second and sustained 10Hz, stale-input and
+  shadow-return gates
+- Measure simultaneous models, front/three-camera YOLO and LiDAR/YOLO 10Hz separately
+- YOLO26 comparison under fixed selected input profile
+- Independent resolution/FP16/batch/shared-decode bottleneck experiments
+- Per-model TensorRT parity/fallback, then combination validation
+- RTX 4070 SUPER warmup/load/long-run handover
+evidence:
+  directory: config/baselines/evidence/camera_hood_mask_v1
+  archive: config/baselines/evidence/camera_hood_mask_v1/raw-verification.tar.gz
+  archive_sha256: 671cf7363780536758af66c2e94384b266472c885710aa78c31b44fa888b76a0
+  archive_bytes: 14058220
+  file_manifest: config/baselines/evidence/camera_hood_mask_v1/files.json
