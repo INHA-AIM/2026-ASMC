@@ -6,7 +6,7 @@ branch: feat/lidar-camera-frame-boundaries
 base_main: 07cc51a93bb8382352575ca1d45559175529bb92
 depends_on_pr: 71
 b1a_handoff_revision: f1dda9b9db5ae447e1492ba37db9bff8fd4f2ff9
-tested_operational_revision: f620a6edb9a1578f0e1da05a837aa915b8385bb3
+tested_operational_revision: e51391d702350013c6b3835808de9dc013b11560
 operational_adoption: none
 operational_defaults_changed: false
 candidate_arguments:
@@ -39,15 +39,18 @@ implemented:
   legacy_motion_unrepresentable_policy: withheld; typed outputs may remain available
   subscriber_demand_geometry_serialization: true
   tf: base_link to lidar_leveled at original scan stamp
+  invalid_scan_stamp_policy: callback rejects zero, duplicate, backward stamps before
+    tracking; no current-time substitution
+  input_snapshot: raw buffer and generation atomic under common-path temporal lock
 validation:
   core_ctest:
     tests: 3
     failures: 0
   new_frame_boundary_ros:
-    test_cases: 9
+    test_cases: 10
     failures: 0
   nested_Main_catkin_test_results:
-    reported_tests: 286
+    reported_tests: 288
     errors: 0
     failures: 0
     count_is_aggregate: true
@@ -111,7 +114,7 @@ acceptance:
   normal_map_tracking: false
   prior_classification_exceptions_reused: false
 evidence_sha256:
-  config/baselines/evidence/lidar_camera_frame_boundaries_v1/README.md: 73a3c4c40db3ad716b8c5994be4c831c18f57f3a8e7eb6f0e20194fbf07f1e36
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/README.md: 9ca6bc04cbce0589cf660a2a4c9f0acbacb2cfaa2ee804dbd2d418cd1a5f86ee
   config/baselines/evidence/lidar_camera_frame_boundaries_v1/binary-sha.json: 05d2b60110652812b74ca4e3fb717e22b699149f198c8452db8b1420a65d10e6
   config/baselines/evidence/lidar_camera_frame_boundaries_v1/build-and-test-attempts.tar.gz: faec2ff9908deb324dbb2e95fe84b30754b3121c86be29ce449ae5471bba335e
   config/baselines/evidence/lidar_camera_frame_boundaries_v1/fixture-manifest.json: 317c756cc9196be4e3ca4435dbc411c3a90f0adc96846b4d5b6057938c362980
@@ -127,4 +130,8 @@ evidence_sha256:
   config/baselines/evidence/lidar_camera_frame_boundaries_v1/host-audit-attempts/07-corrected-library-path.log: 576f56db6265d01c7eaeaf00501c9962e5f3d19f9f39273233b4b95e703144ee
   config/baselines/evidence/lidar_camera_frame_boundaries_v1/host-audit-attempts/results.json: fd5e81a1b0dffb860628b2c1a7d5f543e8cac0a798edb612c0d992704dab0619
   config/baselines/evidence/lidar_camera_frame_boundaries_v1/manifest.json: ba9882d0cd769debb07fe5529c0399e26472703764e2fb7945ae1dacc8ec6c0a
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/parser-order-binary-sha.json: b98608a9ae6e0a27cd3ad362380459fbff1917c16a6f177a7bc436cc6da63497
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/parser-order-final.tar.gz: 1295626ee1d802f5d1c1881bb62b986f97fe321470eac09de30f6f32d851d343
+  config/baselines/evidence/lidar_camera_frame_boundaries_v1/parser-order-manifest.json: 64eb0267d48e8463e1534baab3214dedd6d43dfc41558776d7934d97694f68d6
 measurement_tool_revision: 539b5ee
+initial_tested_operational_revision: f620a6edb9a1578f0e1da05a837aa915b8385bb3

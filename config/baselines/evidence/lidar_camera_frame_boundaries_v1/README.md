@@ -8,7 +8,12 @@ or performance acceptance. Both runtime candidates remain opt-in.
   XML files describe the last execution of each test.
 - `manifest.json`: SHA256 of each file in that archive.
 - `binary-sha.json`: the tested Main executable, Main shared library and outer
-  `asmc_lidar_frame_time` library. Builds use temporary directories, not shared devel.
+  `asmc_lidar_frame_time` library at the initial implementation revision. Builds
+  use temporary directories, not shared devel.
+- `parser-order-final.tar.gz`, `parser-order-manifest.json`, and
+  `parser-order-binary-sha.json`: two subsequent successful runs and final Main
+  XML/binaries after rejecting invalid scan stamps and atomically storing source
+  buffer/generation. The earlier archive and binary hashes remain unchanged.
 - `host-audit-attempts`: validators and pure measurement tests. `06.log` records a
   host import-path error; `07-corrected-library-path.log` records the same tests
   passing with the camera library explicitly on PYTHONPATH. It is not a code fix.
@@ -19,8 +24,9 @@ or performance acceptance. Both runtime candidates remain opt-in.
 - `frame-boundary-host-state.json`: successful Windows process query that found
   Simulator running. No frame-boundary playback/workload trial was started.
 
-The corrected final core run passes 3 CTest targets. The new ROS suite passes 9
-cases; Main's aggregate catkin result is 286 tests with no failures. The outer
+The corrected final core run passes 3 CTest targets. The final new ROS suite passes
+10 cases; Main's aggregate catkin result is 288 tests with no failures (the initial
+revision had 9 new ROS cases and 286 aggregate tests). The outer
 aggregate is 533 tests with the known facade failure. The unrelated unchanged
 `behavior_planner/fsm_command_binding_test` link error is separately retained in
 `boundary-outer-tests-build.log`; a complete all-package test-target build has not
