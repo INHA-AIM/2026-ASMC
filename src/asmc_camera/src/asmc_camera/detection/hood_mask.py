@@ -75,11 +75,13 @@ class HoodMask:
                 bitmap = bitmap.astype(bool)
                 bitmap.setflags(write=False)
                 pixels.setflags(write=False)
-                self._cache[key] = (bitmap, pixels, excluded)
+                visible = np.logical_not(bitmap).astype(np.uint8)*255
+                visible.setflags(write=False)
+                self._cache[key] = (bitmap, pixels, excluded, visible)
                 # Bounding memory for malformed streams that change shape repeatedly.
                 if len(self._cache) > 4:
                     del self._cache[next(iter(self._cache))]
-            bitmap, pixels, excluded = self._cache[key]
+            bitmap, pixels, excluded, _ = self._cache[key]
             self._last_geometry = dict(image_width=width, image_height=height,
                                        polygon_pixels=pixels.tolist(), excluded_pixels=excluded)
             return bitmap, pixels
@@ -89,10 +91,10 @@ class HoodMask:
             return image
         if image.ndim != 3 or image.shape[2] != 3 or image.dtype != np.uint8:
             raise ValueError("hood mask expects a decoded uint8 BGR image")
-        bitmap, _ = self.geometry(*image.shape[:2])
-        output = image.copy()
-        output[bitmap] = 0
-        return output
+        self.geometry(*image.shape[:2])
+        with self._lock:
+            visible = self._cache[image.shape[:2]][3]
+        return cv2.copyTo(image, visible)
 
     @property
     def info(self):
