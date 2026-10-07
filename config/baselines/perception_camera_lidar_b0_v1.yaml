@@ -1,0 +1,1862 @@
+schema_version: 1
+baseline_id: perception_camera_lidar_b0_v1
+recorded_on: '2026-10-07'
+status: complete_measurement_and_failure_baseline
+base_main: 3b142b176ee904f1bbefe4546057a4ba62a1dccb
+branch: feat/camera-performance-comparison
+measured_runtime_revision: 299a21a81bcb76ba87fdba68d7c2035128132e7e
+supplemental_runner_revision: f293276
+operational_defaults_changed: false
+configuration_adoption: none
+environment:
+  gpu: NVIDIA GeForce RTX 4060 Ti, 8188 MiB, 591.86
+  container_image: sha256:1ecd9f50491565cad32e32980bb5df5b48487f470440cb66c9ec3b8dc5c11400
+  cpu_model: Intel(R) Core(TM) i5-14600K
+  cpu_affinity:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  - 16
+  - 17
+  - 18
+  - 19
+  cgroup_limits:
+    /sys/fs/cgroup/cpu.max: max 100000
+    /sys/fs/cgroup/memory.max: max
+  network: none
+  ros_master_port: 11312
+  simulator: stopped_verified_by_process_queries
+  shared_live_master_or_bridge_changed: false
+  windows_desktop_gpu_memory_included: true
+  gpu_process_memory: unavailable
+  resource_interval_sec: 0.2
+  sampled_peak_is_not_instantaneous_peak: true
+  full_competition_stack_claim: false
+  python: "3.8.10 (default, Mar 18 2025, 20:04:55) \n[GCC 9.4.0]"
+  interpreter: /usr/bin/python3
+  versions:
+    torch: 2.1.2+cu118
+    torchvision: 0.16.2+cu118
+    ultralytics: 8.4.150
+    numpy: 1.24.4
+    opencv-python: 5.0.0.93
+    scipy: 1.10.1
+    PyYAML: 6.0.3
+fixed_protocol:
+  expected: 51
+  completed: 51
+  individual_checks_passed: 49
+  individual_checks_failed:
+  - camera-camera-C6-r1
+  - camera-camera-C6-r2-debug
+  camera: 18
+  fusion: 24
+  gps_diagnostic: 6
+  debug_comparison: 3
+  lifecycle_trace_diagnostics: 2
+  supplemental_fusion_trace_diagnostics: 8
+  supplemental_clean_C2: 1
+  total_completed_final_bundle: 62
+  acceptance_rate_checks_trace_enabled: false
+  failed_traces_or_successes_do_not_replace_original_trials: true
+method:
+  all_models_resident: true
+  target_hz:
+    twinlite: 10
+    yolo: 20
+    resnet18: 10
+  yolo_views:
+  - front
+  twinlite_views:
+  - front
+  - left
+  - right
+  resnet_view: extra
+  yolo_weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+  hood_mask_sha256: 4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403
+  hood_mask_enabled: true
+  ego_hood_filter_enabled: false
+  lidar_rate: existing_latest_frame_maximum
+  fusion_offset_sec: 0.05
+  fusion_wait_sec: 0.2
+  first_second_anchor: RPC_start_conservative_in_untraced_trials
+  complete_20_second_transition_windows: true
+  full_bag_rate_end: corresponding_last_camera_input_received
+  main_intrinsic_fusion_debug: always_retained_existing_operation
+  camera_debug_off_in_normal_measurements: true
+  legacy_main_control: quarantined_test_namespace
+  final_shutdown_accounting_verified: true
+  classification_identity: same_LiDAR_stamp_mutually_unique_1mm_centers
+  track_ID_changes_are_not_quality_metrics: true
+camera:
+  C1:
+    passed:
+    - true
+    - true
+    - true
+    outputs:
+      yolo:
+        hz:
+        - 19.84559209258824
+        - 19.844346663148237
+        - 19.843272332008656
+        first_second:
+        - 18
+        - 19
+        - 18
+        five_second_hz:
+        - - 19.6
+          - 20.0
+          - 20.0
+          - 19.8
+        - - 19.8
+          - 20.0
+          - 19.8
+          - 19.8
+        - - 19.6
+          - 20.0
+          - 20.0
+          - 19.8
+        max_gap_sec:
+        - 0.11158667900599539
+        - 0.11213539601885714
+        - 0.12196177800069563
+        valid_ratio:
+        - 1.0
+        - 1.0
+        - 1.0
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 397
+          p50: 14.895947
+          p95: 22.050652
+          p99: 25.339068080000004
+          maximum: 27.970032
+        - samples: 397
+          p50: 17.367202
+          p95: 23.4872886
+          p99: 25.349979800000007
+          maximum: 28.270191
+        - samples: 397
+          p50: 16.194655
+          p95: 21.8528776
+          p99: 23.285093280000016
+          maximum: 26.231782
+        input_to_output_wall_ms:
+        - samples: 397
+          p50: 19.888593000359833
+          p95: 23.913647996960208
+          p99: 26.122976187616597
+          maximum: 28.17865600809455
+        - samples: 397
+          p50: 22.074734995840117
+          p95: 25.118023407412693
+          p99: 26.513502562884245
+          maximum: 28.833301010308787
+        - samples: 397
+          p50: 20.857563009485602
+          p95: 24.030704179313034
+          p99: 25.767371646361447
+          maximum: 28.048045991454273
+    gpu_p95_percent:
+    - 37.0
+    - 40.05
+    - 41.0
+    gpu_sampled_max_memory_mib:
+    - 3506.0
+    - 3315.0
+    - 3297.0
+  C2:
+    passed:
+    - true
+    - true
+    - true
+    outputs:
+      front:
+        hz:
+        - 9.947481003365388
+        - 9.948776526325416
+        - 9.946517227481893
+        first_second:
+        - 10
+        - 9
+        - 9
+        five_second_hz:
+        - - 10.0
+          - 10.0
+          - 9.8
+          - 10.0
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        max_gap_sec:
+        - 0.20240339197334833
+        - 0.1585161820112262
+        - 0.16482944900053553
+        valid_ratio:
+        - 1.0
+        - 1.0
+        - 1.0
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 199
+          p50: 37.696884
+          p95: 73.4872455
+          p99: 81.46347516000002
+          maximum: 85.236356
+        - samples: 199
+          p50: 40.16035
+          p95: 75.5508256
+          p99: 90.84452360000002
+          maximum: 97.786405
+        - samples: 199
+          p50: 36.354333
+          p95: 77.52974529999999
+          p99: 93.45535128
+          maximum: 98.543919
+        input_to_output_wall_ms:
+        - samples: 199
+          p50: 42.77998101315461
+          p95: 78.26427890977357
+          p99: 88.49886655865703
+          maximum: 89.96848200331442
+        - samples: 199
+          p50: 43.575354997301474
+          p95: 82.1194010961335
+          p99: 99.53784998040649
+          maximum: 102.5954500073567
+        - samples: 199
+          p50: 41.692856000736356
+          p95: 84.19599269109312
+          p99: 96.30349479441068
+          maximum: 102.13534598005936
+      left:
+        hz:
+        - 9.947481003365388
+        - 9.948776526325416
+        - 9.946517227481893
+        first_second:
+        - 10
+        - 9
+        - 9
+        five_second_hz:
+        - - 10.0
+          - 9.8
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        max_gap_sec:
+        - 0.20087855498422869
+        - 0.1587972859852016
+        - 0.16451308102114126
+        valid_ratio:
+        - 1.0
+        - 1.0
+        - 1.0
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 199
+          p50: 40.411508
+          p95: 81.9127695
+          p99: 92.95225962000008
+          maximum: 102.039489
+        - samples: 199
+          p50: 41.346091
+          p95: 76.4935897
+          p99: 95.17534542000006
+          maximum: 103.552208
+        - samples: 199
+          p50: 38.112414
+          p95: 84.75171839999999
+          p99: 101.36532932000001
+          maximum: 105.748089
+        input_to_output_wall_ms:
+        - samples: 199
+          p50: 45.18635501153767
+          p95: 85.06092951283789
+          p99: 94.53231975028766
+          maximum: 108.89697200036608
+        - samples: 199
+          p50: 45.56603898527101
+          p95: 82.91484670771752
+          p99: 96.15396763256291
+          maximum: 105.88261400698684
+        - samples: 199
+          p50: 43.34664600901306
+          p95: 85.15979730291289
+          p99: 104.07554303936196
+          maximum: 109.24415799672715
+      right:
+        hz:
+        - 9.947481003365388
+        - 9.948776526325416
+        - 9.946517227481893
+        first_second:
+        - 10
+        - 9
+        - 9
+        five_second_hz:
+        - - 10.0
+          - 9.8
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        max_gap_sec:
+        - 0.20062050101114437
+        - 0.15909400198142976
+        - 0.16471568698761985
+        valid_ratio:
+        - 1.0
+        - 1.0
+        - 1.0
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 199
+          p50: 46.305002
+          p95: 81.4863407
+          p99: 94.79078772000008
+          maximum: 115.064392
+        - samples: 199
+          p50: 45.496258
+          p95: 85.75508959999999
+          p99: 101.88737120000003
+          maximum: 105.479107
+        - samples: 199
+          p50: 42.339486
+          p95: 87.8901911
+          p99: 97.61015244000004
+          maximum: 103.752556
+        input_to_output_wall_ms:
+        - samples: 199
+          p50: 49.47231998085044
+          p95: 85.73165141860954
+          p99: 95.89917469013032
+          maximum: 116.92234600195661
+        - samples: 199
+          p50: 50.24196600425057
+          p95: 88.37683610909153
+          p99: 105.85747676901524
+          maximum: 110.18258999683894
+        - samples: 199
+          p50: 47.847150010056794
+          p95: 90.23196139314678
+          p99: 104.6678489173064
+          maximum: 105.18510299152695
+      family:
+        hz:
+        - 9.947481003365388
+        - 9.898782674434335
+        - 9.946517227481893
+        first_second:
+        - 10
+        - 9
+        - 9
+        five_second_hz:
+        - - 10.0
+          - 9.8
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 9.8
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        max_gap_sec:
+        - 0.19180240301648155
+        - 0.15812502498738468
+        - 0.1788215359847527
+        valid_ratio:
+        - 0.8140703517587939
+        - 0.8383838383838383
+        - 0.8391959798994975
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 199
+          p50: 76.579221
+          p95: 114.00276099999999
+          p99: 133.17751002000003
+          maximum: 144.630363
+        - samples: 198
+          p50: 74.19065900000001
+          p95: 110.53002200000002
+          p99: 125.83027486
+          maximum: 132.136502
+        - samples: 199
+          p50: 75.223503
+          p95: 113.4597086
+          p99: 128.82435626000006
+          maximum: 147.96814
+        input_to_output_wall_ms:
+        - samples: 199
+          p50: 81.78044101805426
+          p95: 119.02726441039704
+          p99: 138.5194277315168
+          maximum: 147.6037630054634
+        - samples: 198
+          p50: 77.8032669913955
+          p95: 113.42022939934395
+          p99: 131.011675283371
+          maximum: 139.28078699973412
+        - samples: 199
+          p50: 80.80441399943084
+          p95: 116.28270749351941
+          p99: 135.08459059114102
+          maximum: 154.5259989798069
+    gpu_p95_percent:
+    - 51.099999999999994
+    - 48.0
+    - 50.05
+    gpu_sampled_max_memory_mib:
+    - 3144.0
+    - 3128.0
+    - 3161.0
+  C3:
+    passed:
+    - true
+    - true
+    - true
+    outputs:
+      resnet18:
+        hz:
+        - 9.845784523411155
+        - 9.945186844834272
+        - 9.895784726234332
+        first_second:
+        - 9
+        - 10
+        - 10
+        five_second_hz:
+        - - 9.8
+          - 9.8
+          - 10.0
+          - 9.8
+        - - 10.0
+          - 9.8
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.0
+          - 9.8
+          - 10.0
+        max_gap_sec:
+        - 0.14399631400010549
+        - 0.17866295098792762
+        - 0.128088049008511
+        valid_ratio:
+        - 0.2182741116751269
+        - 0.22613065326633167
+        - 0.21212121212121213
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 197
+          p50: 63.995913
+          p95: 100.24046999999997
+          p99: 115.01142287999997
+          maximum: 119.348018
+        - samples: 199
+          p50: 57.372921
+          p95: 100.28317789999998
+          p99: 115.94821206000017
+          maximum: 136.185298
+        - samples: 198
+          p50: 69.005275
+          p95: 105.67457960000002
+          p99: 118.36762629000002
+          maximum: 123.976273
+        input_to_output_wall_ms:
+        - samples: 197
+          p50: 69.54407499870285
+          p95: 106.23981238459237
+          p99: 120.22518913727252
+          maximum: 125.86707802256569
+        - samples: 199
+          p50: 61.22961099026725
+          p95: 103.55408060422631
+          p99: 116.63093576964476
+          maximum: 138.7315219908487
+        - samples: 198
+          p50: 73.54769200901501
+          p95: 110.86809824773809
+          p99: 126.53697356785415
+          maximum: 128.002818004461
+    gpu_p95_percent:
+    - 30.0
+    - 47.099999999999994
+    - 35.0
+    gpu_sampled_max_memory_mib:
+    - 3125.0
+    - 3144.0
+    - 3200.0
+  C4:
+    passed:
+    - true
+    - true
+    - true
+    outputs:
+      front:
+        hz:
+        - 9.94786734237189
+        - 9.947086959275405
+        - 9.945747104558215
+        first_second:
+        - 10
+        - 10
+        - 9
+        five_second_hz:
+        - - 10.0
+          - 9.8
+          - 10.0
+          - 10.0
+        - - 10.0
+          - 9.8
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        max_gap_sec:
+        - 0.20246042901999317
+        - 0.1998531819845084
+        - 0.1467076190165244
+        valid_ratio:
+        - 1.0
+        - 1.0
+        - 1.0
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 199
+          p50: 32.651786
+          p95: 43.1566168
+          p99: 55.91852542000002
+          maximum: 78.713098
+        - samples: 199
+          p50: 32.199355
+          p95: 49.09905549999999
+          p99: 57.46234276000014
+          maximum: 75.298486
+        - samples: 199
+          p50: 34.970576
+          p95: 64.6890464
+          p99: 88.22698736000001
+          maximum: 97.036249
+        input_to_output_wall_ms:
+        - samples: 199
+          p50: 37.640439986716956
+          p95: 48.47815289685968
+          p99: 59.51949949783739
+          maximum: 85.92392300488427
+        - samples: 199
+          p50: 37.762084015412256
+          p95: 52.33573700243141
+          p99: 62.71839818917232
+          maximum: 83.99898000061512
+        - samples: 199
+          p50: 39.98188301920891
+          p95: 71.750758800772
+          p99: 94.53744725906292
+          maximum: 104.35078301816247
+      left:
+        hz:
+        - 9.94786734237189
+        - 9.947086959275405
+        - 9.945747104558215
+        first_second:
+        - 10
+        - 10
+        - 9
+        five_second_hz:
+        - - 10.0
+          - 9.8
+          - 10.0
+          - 10.0
+        - - 10.0
+          - 9.8
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        max_gap_sec:
+        - 0.2023452240100596
+        - 0.19712404801975936
+        - 0.1471398709982168
+        valid_ratio:
+        - 1.0
+        - 1.0
+        - 1.0
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 199
+          p50: 36.256435
+          p95: 67.2742538
+          p99: 75.97424210000001
+          maximum: 80.882707
+        - samples: 199
+          p50: 36.097853
+          p95: 69.72116449999997
+          p99: 83.30591610000005
+          maximum: 90.054223
+        - samples: 199
+          p50: 38.238139
+          p95: 74.30149490000001
+          p99: 80.55086796000002
+          maximum: 99.221714
+        input_to_output_wall_ms:
+        - samples: 199
+          p50: 41.22312099207193
+          p95: 73.40200549224392
+          p99: 78.6644777294714
+          maximum: 90.06259101442993
+        - samples: 199
+          p50: 40.60075801680796
+          p95: 75.43903159967158
+          p99: 87.52179648203311
+          maximum: 91.98774700053036
+        - samples: 199
+          p50: 42.9178930062335
+          p95: 78.49570748221595
+          p99: 83.35689101484604
+          maximum: 98.96702601690777
+      right:
+        hz:
+        - 9.94786734237189
+        - 9.947086959275405
+        - 9.945747104558215
+        first_second:
+        - 10
+        - 10
+        - 9
+        five_second_hz:
+        - - 10.0
+          - 9.8
+          - 10.0
+          - 10.0
+        - - 10.0
+          - 9.8
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        max_gap_sec:
+        - 0.20244654500856996
+        - 0.19654150097630918
+        - 0.14698930198210292
+        valid_ratio:
+        - 1.0
+        - 1.0
+        - 1.0
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 199
+          p50: 40.323995
+          p95: 53.178823499999964
+          p99: 81.38650698000002
+          maximum: 88.459558
+        - samples: 199
+          p50: 40.476539
+          p95: 63.19123949999999
+          p99: 83.71910410000002
+          maximum: 86.96341
+        - samples: 199
+          p50: 42.662262
+          p95: 77.3251729
+          p99: 88.42614054000013
+          maximum: 109.206511
+        input_to_output_wall_ms:
+        - samples: 199
+          p50: 44.60104199824855
+          p95: 59.681226909742676
+          p99: 84.02451714558994
+          maximum: 94.11758801434189
+        - samples: 199
+          p50: 44.65158598031849
+          p95: 66.23753021995071
+          p99: 87.32000319811051
+          maximum: 94.59838600014336
+        - samples: 199
+          p50: 46.657453989610076
+          p95: 79.68266158422921
+          p99: 92.66595039807734
+          maximum: 110.08522199699655
+      family:
+        hz:
+        - 9.94786734237189
+        - 9.947086959275405
+        - 9.945747104558215
+        first_second:
+        - 9
+        - 9
+        - 9
+        five_second_hz:
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        max_gap_sec:
+        - 0.18838239699834958
+        - 0.1910735710116569
+        - 0.14866863199858926
+        valid_ratio:
+        - 0.8140703517587939
+        - 0.8190954773869347
+        - 0.8140703517587939
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 199
+          p50: 71.895172
+          p95: 91.8554357
+          p99: 98.89469286000005
+          maximum: 109.52284
+        - samples: 199
+          p50: 71.579546
+          p95: 98.1245942
+          p99: 115.82333342000001
+          maximum: 121.072589
+        - samples: 199
+          p50: 74.677364
+          p95: 97.3759501
+          p99: 111.79748018000004
+          maximum: 119.139148
+        input_to_output_wall_ms:
+        - samples: 199
+          p50: 76.80743100354448
+          p95: 98.13712180184666
+          p99: 108.65292285860053
+          maximum: 111.7630270018708
+        - samples: 199
+          p50: 75.88907299214043
+          p95: 102.72524971805979
+          p99: 117.48281777661764
+          maximum: 125.89982501231134
+        - samples: 199
+          p50: 78.66864200332202
+          p95: 104.42661270790268
+          p99: 115.28839554055598
+          maximum: 125.10015000589192
+      yolo:
+        hz:
+        - 19.847625783336134
+        - 19.796152902760387
+        - 19.943720411488165
+        first_second:
+        - 19
+        - 18
+        - 19
+        five_second_hz:
+        - - 19.8
+          - 20.0
+          - 19.8
+          - 19.8
+        - - 19.8
+          - 19.6
+          - 20.0
+          - 19.8
+        - - 19.8
+          - 20.2
+          - 19.8
+          - 20.0
+        max_gap_sec:
+        - 0.11355066602118313
+        - 0.11237388700828888
+        - 0.1170795309881214
+        valid_ratio:
+        - 1.0
+        - 1.0
+        - 1.0
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 397
+          p50: 11.111481
+          p95: 22.5374264
+          p99: 25.25213684
+          maximum: 29.304596
+        - samples: 396
+          p50: 11.196630500000001
+          p95: 22.07264575
+          p99: 27.383123850000008
+          maximum: 30.626156
+        - samples: 399
+          p50: 12.109047
+          p95: 23.680482500000004
+          p99: 27.750422779999987
+          maximum: 31.014066
+        input_to_output_wall_ms:
+        - samples: 397
+          p50: 14.4951639813371
+          p95: 25.33306021359749
+          p99: 28.261881971266124
+          maximum: 30.177356995409355
+        - samples: 396
+          p50: 14.282046991866082
+          p95: 25.389990252733696
+          p99: 28.337126152473505
+          maximum: 32.41659700870514
+        - samples: 399
+          p50: 15.164508979069069
+          p95: 26.97588430019096
+          p99: 29.77695164969191
+          maximum: 34.49954101233743
+    gpu_p95_percent:
+    - 40.05
+    - 42.05
+    - 41.0
+    gpu_sampled_max_memory_mib:
+    - 3289.0
+    - 3348.0
+    - 3365.0
+  C5:
+    passed:
+    - true
+    - true
+    - true
+    outputs:
+      resnet18:
+        hz:
+        - 9.896822978302389
+        - 9.897508014830207
+        - 9.896102031296422
+        first_second:
+        - 10
+        - 10
+        - 10
+        five_second_hz:
+        - - 10.0
+          - 9.8
+          - 9.8
+          - 10.0
+        - - 10.0
+          - 9.8
+          - 10.0
+          - 9.8
+        - - 10.0
+          - 10.0
+          - 9.8
+          - 9.8
+        max_gap_sec:
+        - 0.14359323200187646
+        - 0.14651513498392887
+        - 0.14811805001227185
+        valid_ratio:
+        - 0.2222222222222222
+        - 0.22727272727272727
+        - 0.2222222222222222
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 198
+          p50: 50.366665
+          p95: 86.30293335
+          p99: 92.42414335000001
+          maximum: 96.023067
+        - samples: 198
+          p50: 53.8570605
+          p95: 91.08668000000002
+          p99: 99.26236757000001
+          maximum: 101.315645
+        - samples: 198
+          p50: 53.166213
+          p95: 86.34223820000001
+          p99: 97.63342831
+          maximum: 105.64513
+        input_to_output_wall_ms:
+        - samples: 198
+          p50: 56.61208300443832
+          p95: 90.58795205346541
+          p99: 97.40228685259353
+          maximum: 101.35741101112217
+        - samples: 198
+          p50: 60.513685006299056
+          p95: 93.29732799087651
+          p99: 102.2966403583996
+          maximum: 102.53396999905817
+        - samples: 198
+          p50: 57.89612099761143
+          p95: 91.28721850720467
+          p99: 103.02418445324292
+          maximum: 109.03418299858458
+      yolo:
+        hz:
+        - 19.897385879460806
+        - 19.847507013179882
+        - 19.845555065005087
+        first_second:
+        - 19
+        - 19
+        - 19
+        five_second_hz:
+        - - 19.8
+          - 20.0
+          - 19.8
+          - 20.0
+        - - 19.8
+          - 20.0
+          - 19.8
+          - 19.8
+        - - 19.6
+          - 20.0
+          - 20.0
+          - 19.8
+        max_gap_sec:
+        - 0.11459676502272487
+        - 0.11844395298976451
+        - 0.12414224600070156
+        valid_ratio:
+        - 1.0
+        - 1.0
+        - 1.0
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 398
+          p50: 15.9963245
+          p95: 25.74086404999999
+          p99: 29.16389493
+          maximum: 30.115819
+        - samples: 397
+          p50: 14.758658
+          p95: 24.054810999999997
+          p99: 26.473706080000003
+          maximum: 30.061467
+        - samples: 397
+          p50: 12.396312
+          p95: 22.214523999999994
+          p99: 24.685552240000007
+          maximum: 26.978331
+        input_to_output_wall_ms:
+        - samples: 398
+          p50: 19.762768497457728
+          p95: 29.9746351010981
+          p99: 32.95939343370263
+          maximum: 34.14527900167741
+        - samples: 397
+          p50: 18.647246004547924
+          p95: 28.259230189723894
+          p99: 30.623547637369484
+          maximum: 33.458264981163666
+        - samples: 397
+          p50: 17.238308006199077
+          p95: 26.437277399236336
+          p99: 28.88496801257134
+          maximum: 30.9788330050651
+    gpu_p95_percent:
+    - 40.099999999999994
+    - 41.05
+    - 39.0
+    gpu_sampled_max_memory_mib:
+    - 3271.0
+    - 3337.0
+    - 3404.0
+  C6:
+    passed:
+    - false
+    - true
+    - true
+    outputs:
+      front:
+        hz:
+        - 9.942688822752316
+        - 9.995653931661426
+        - 9.946257355139771
+        first_second:
+        - 9
+        - 9
+        - 10
+        five_second_hz:
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.2
+          - 9.8
+          - 10.0
+        - - 10.0
+          - 9.8
+          - 10.2
+          - 9.8
+        max_gap_sec:
+        - 0.14893249797751196
+        - 0.15291780099505559
+        - 0.20710889899055474
+        valid_ratio:
+        - 1.0
+        - 1.0
+        - 1.0
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 199
+          p50: 31.859264
+          p95: 51.36026409999998
+          p99: 86.0807735
+          maximum: 87.086501
+        - samples: 200
+          p50: 30.789134
+          p95: 58.581571000000004
+          p99: 84.5747034
+          maximum: 95.238191
+        - samples: 199
+          p50: 32.523223
+          p95: 48.401412799999996
+          p99: 56.11056882000008
+          maximum: 83.002307
+        input_to_output_wall_ms:
+        - samples: 199
+          p50: 36.28343399032019
+          p95: 55.04548439639618
+          p99: 92.63069277978506
+          maximum: 96.3720639992971
+        - samples: 200
+          p50: 35.366823998629116
+          p95: 60.66938190633665
+          p99: 91.78608827176501
+          maximum: 96.15663200384006
+        - samples: 199
+          p50: 37.94579199166037
+          p95: 50.996957501047284
+          p99: 62.83240013523029
+          maximum: 83.76209897687659
+      left:
+        hz:
+        - 9.942688822752316
+        - 9.945675662003119
+        - 9.946257355139771
+        first_second:
+        - 9
+        - 9
+        - 10
+        five_second_hz:
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.2
+          - 9.8
+          - 10.0
+        - - 10.0
+          - 9.8
+          - 10.2
+          - 9.8
+        max_gap_sec:
+        - 0.1482506349857431
+        - 0.1530145069991704
+        - 0.20721611997578293
+        valid_ratio:
+        - 1.0
+        - 1.0
+        - 1.0
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 199
+          p50: 35.572214
+          p95: 69.18628419999997
+          p99: 80.20128020000001
+          maximum: 98.074593
+        - samples: 199
+          p50: 33.255244
+          p95: 70.9889944
+          p99: 84.71624542000004
+          maximum: 96.157771
+        - samples: 199
+          p50: 35.673741
+          p95: 70.25788789999999
+          p99: 82.86319378000003
+          maximum: 87.533596
+        input_to_output_wall_ms:
+        - samples: 199
+          p50: 39.62190099991858
+          p95: 75.82301300135441
+          p99: 83.46341167401991
+          maximum: 99.2682829964906
+        - samples: 199
+          p50: 38.53965600137599
+          p95: 74.5621098903939
+          p99: 88.5463649168378
+          maximum: 98.22150800027885
+        - samples: 199
+          p50: 41.04344799998216
+          p95: 74.03144578565843
+          p99: 88.44810885377228
+          maximum: 89.45070000481792
+      right:
+        hz:
+        - 9.942688822752316
+        - 9.945675662003119
+        - 9.946257355139771
+        first_second:
+        - 9
+        - 9
+        - 10
+        five_second_hz:
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.2
+          - 9.8
+          - 10.0
+        - - 10.0
+          - 9.8
+          - 10.2
+          - 9.8
+        max_gap_sec:
+        - 0.14839089001179673
+        - 0.1534513210062869
+        - 0.207575700012967
+        valid_ratio:
+        - 1.0
+        - 1.0
+        - 1.0
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 199
+          p50: 40.463771
+          p95: 67.33595659999997
+          p99: 86.90730324000012
+          maximum: 99.220072
+        - samples: 199
+          p50: 38.985699
+          p95: 69.8691856
+          p99: 94.56653444000003
+          maximum: 97.296239
+        - samples: 199
+          p50: 41.48898
+          p95: 57.99827079999999
+          p99: 85.55520532
+          maximum: 93.956108
+        input_to_output_wall_ms:
+        - samples: 199
+          p50: 43.6977079953067
+          p95: 73.41892680560701
+          p99: 94.03374220884876
+          maximum: 102.58157600765117
+        - samples: 199
+          p50: 42.39904601126909
+          p95: 74.01992099767085
+          p99: 96.92112317599823
+          maximum: 99.51872599776834
+        - samples: 199
+          p50: 44.91207000683062
+          p95: 62.35062689811456
+          p99: 87.85845897567927
+          maximum: 96.93836301448755
+      family:
+        hz:
+        - 9.942688822752316
+        - 9.945675662003119
+        - 9.946257355139771
+        first_second:
+        - 8
+        - 9
+        - 9
+        five_second_hz:
+        - - 9.8
+          - 9.8
+          - 10.2
+          - 9.8
+        - - 9.8
+          - 10.0
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 10.0
+          - 10.2
+          - 9.8
+        max_gap_sec:
+        - 0.1558319739997387
+        - 0.15470230497885495
+        - 0.18920553699717857
+        valid_ratio:
+        - 0.8090452261306532
+        - 0.8090452261306532
+        - 0.8190954773869347
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 199
+          p50: 69.871143
+          p95: 100.73112969999998
+          p99: 125.29626352000001
+          maximum: 137.790707
+        - samples: 199
+          p50: 72.09705
+          p95: 94.7766967
+          p99: 99.24958268000013
+          maximum: 113.705338
+        - samples: 199
+          p50: 72.668776
+          p95: 100.23092279999999
+          p99: 105.09908424000004
+          maximum: 113.714189
+        input_to_output_wall_ms:
+        - samples: 199
+          p50: 75.19853001576848
+          p95: 106.35451481211929
+          p99: 129.31583002791743
+          maximum: 140.4532709857449
+        - samples: 199
+          p50: 76.85099198715761
+          p95: 99.61342229216825
+          p99: 106.10573862330068
+          maximum: 123.16678400384262
+        - samples: 199
+          p50: 78.16567600821145
+          p95: 105.16073459584732
+          p99: 114.54466632101685
+          maximum: 115.09585700696334
+      yolo:
+        hz:
+        - 19.89006240272786
+        - 19.89390941299237
+        - 19.844353021454225
+        first_second:
+        - 19
+        - 19
+        - 19
+        five_second_hz:
+        - - 19.8
+          - 20.0
+          - 20.0
+          - 19.8
+        - - 20.0
+          - 19.8
+          - 19.8
+          - 20.0
+        - - 19.8
+          - 20.0
+          - 19.8
+          - 19.8
+        max_gap_sec:
+        - 0.11283319498761557
+        - 0.12025488997460343
+        - 0.11629289999837056
+        valid_ratio:
+        - 1.0
+        - 1.0
+        - 1.0
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 398
+          p50: 11.949446
+          p95: 23.983874249999992
+          p99: 28.61202931
+          maximum: 33.721959
+        - samples: 398
+          p50: 10.7442125
+          p95: 21.279420899999998
+          p99: 25.504057139999993
+          maximum: 29.32504
+        - samples: 397
+          p50: 11.548867
+          p95: 23.502042799999998
+          p99: 26.882630360000004
+          maximum: 31.85858
+        input_to_output_wall_ms:
+        - samples: 398
+          p50: 16.01299199683126
+          p95: 27.021971208159812
+          p99: 30.71842832578112
+          maximum: 33.06688801967539
+        - samples: 398
+          p50: 14.00160048797261
+          p95: 23.729261658445466
+          p99: 26.654177437303577
+          maximum: 28.45148998312652
+        - samples: 397
+          p50: 14.898016001097858
+          p95: 26.162968191783875
+          p99: 29.35800569248386
+          maximum: 36.23105399310589
+      resnet18:
+        hz:
+        - 9.896279353263722
+        - 9.897554299987458
+        - 9.947844228039827
+        first_second:
+        - 9
+        - 9
+        - 10
+        five_second_hz:
+        - - 9.8
+          - 9.8
+          - 10.0
+          - 10.0
+        - - 9.8
+          - 9.8
+          - 10.0
+          - 10.0
+        - - 10.0
+          - 10.0
+          - 10.0
+          - 9.8
+        max_gap_sec:
+        - 0.14205844199750572
+        - 0.13529854398802854
+        - 0.16459650002070703
+        valid_ratio:
+        - 0.2222222222222222
+        - 0.2222222222222222
+        - 0.22613065326633167
+        duplicate_stamps:
+        - 0
+        - 0
+        - 0
+        reversed_stamps:
+        - 0
+        - 0
+        - 0
+        source_age_ms:
+        - samples: 198
+          p50: 43.614728
+          p95: 72.88483615
+          p99: 78.05176111
+          maximum: 82.05462
+        - samples: 198
+          p50: 46.9605275
+          p95: 81.5893461
+          p99: 92.69187973
+          maximum: 101.057223
+        - samples: 199
+          p50: 41.632123
+          p95: 73.2015258
+          p99: 89.06169218000004
+          maximum: 97.14973
+        input_to_output_wall_ms:
+        - samples: 198
+          p50: 49.519663996761665
+          p95: 77.69931361981436
+          p99: 84.45752255152911
+          maximum: 87.99690700834617
+        - samples: 198
+          p50: 52.451987998210825
+          p95: 89.00440774741583
+          p99: 97.2200505217188
+          maximum: 104.9214259837754
+        - samples: 199
+          p50: 47.41452800226398
+          p95: 79.62484561139718
+          p99: 93.09428414097059
+          maximum: 106.03179701138288
+    gpu_p95_percent:
+    - 42.05
+    - 42.0
+    - 41.0
+    gpu_sampled_max_memory_mib:
+    - 3289.0
+    - 3358.0
+    - 3426.0
+fusion:
+  primary-C1:
+    matched:
+    - 536
+    - 543
+    - 536
+    processed:
+    - 538
+    - 545
+    - 538
+    dropped:
+    - 1
+    - 1
+    - 1
+    shutdown_pending:
+    - pending_lidar: 1
+      pending_yolo: 1
+    - pending_lidar: 1
+      pending_yolo: 1
+    - pending_lidar: 1
+      pending_yolo: 1
+    offset_p95_max_interval_ms:
+    - 31.7
+    - 32.3
+    - 34.5
+    absolute_count_gate_pass: true
+    common_stable_classification_gate_pass: true
+    stable_corresponded_observations: 4381
+    stable_classification_differences: 0
+    unmatched_common_observations: 773
+  primary-C4:
+    matched:
+    - 530
+    - 530
+    - 532
+    processed:
+    - 532
+    - 532
+    - 534
+    dropped:
+    - 1
+    - 1
+    - 1
+    shutdown_pending:
+    - pending_lidar: 1
+      pending_yolo: 1
+    - pending_lidar: 1
+      pending_yolo: 1
+    - pending_lidar: 1
+      pending_yolo: 1
+    offset_p95_max_interval_ms:
+    - 31.7
+    - 31.7
+    - 32.7
+    absolute_count_gate_pass: false
+    common_stable_classification_gate_pass: true
+    stable_corresponded_observations: 2978
+    stable_classification_differences: 0
+    unmatched_common_observations: 1099
+  primary-C5:
+    matched:
+    - 537
+    - 535
+    - 534
+    processed:
+    - 539
+    - 537
+    - 536
+    dropped:
+    - 1
+    - 1
+    - 1
+    shutdown_pending:
+    - pending_lidar: 1
+      pending_yolo: 1
+    - pending_lidar: 1
+      pending_yolo: 1
+    - pending_lidar: 1
+      pending_yolo: 1
+    offset_p95_max_interval_ms:
+    - 34.0
+    - 32.3
+    - 34.0
+    absolute_count_gate_pass: false
+    common_stable_classification_gate_pass: true
+    stable_corresponded_observations: 2874
+    stable_classification_differences: 0
+    unmatched_common_observations: 1149
+  primary-C6:
+    matched:
+    - 530
+    - 531
+    - 529
+    processed:
+    - 532
+    - 533
+    - 532
+    dropped:
+    - 1
+    - 1
+    - 2
+    shutdown_pending:
+    - pending_lidar: 1
+      pending_yolo: 1
+    - pending_lidar: 1
+      pending_yolo: 1
+    - pending_lidar: 1
+      pending_yolo: 1
+    offset_p95_max_interval_ms:
+    - 34.5
+    - 32.5
+    - 34.0
+    absolute_count_gate_pass: false
+    common_stable_classification_gate_pass: true
+    stable_corresponded_observations: 2802
+    stable_classification_differences: 0
+    unmatched_common_observations: 1172
+  shadow-C1:
+    matched:
+    - 194
+    - 195
+    - 193
+    processed:
+    - 194
+    - 196
+    - 194
+    dropped:
+    - 0
+    - 0
+    - 0
+    shutdown_pending:
+    - pending_lidar: 0
+      pending_yolo: 1
+    - pending_lidar: 1
+      pending_yolo: 2
+    - pending_lidar: 1
+      pending_yolo: 2
+    offset_p95_max_interval_ms:
+    - 24.7
+    - 24.6
+    - 24.6
+    absolute_count_gate_pass: true
+    common_stable_classification_gate_pass: true
+    stable_corresponded_observations: 2217
+    stable_classification_differences: 0
+    unmatched_common_observations: 487
+  shadow-C4:
+    matched:
+    - 190
+    - 190
+    - 192
+    processed:
+    - 191
+    - 191
+    - 193
+    dropped:
+    - 0
+    - 0
+    - 0
+    shutdown_pending:
+    - pending_lidar: 1
+      pending_yolo: 2
+    - pending_lidar: 1
+      pending_yolo: 2
+    - pending_lidar: 1
+      pending_yolo: 2
+    offset_p95_max_interval_ms:
+    - 24.5
+    - 24.8
+    - 26.5
+    absolute_count_gate_pass: false
+    common_stable_classification_gate_pass: true
+    stable_corresponded_observations: 1344
+    stable_classification_differences: 0
+    unmatched_common_observations: 1032
+  shadow-C5:
+    matched:
+    - 194
+    - 194
+    - 194
+    processed:
+    - 195
+    - 196
+    - 195
+    dropped:
+    - 0
+    - 1
+    - 0
+    shutdown_pending:
+    - pending_lidar: 1
+      pending_yolo: 2
+    - pending_lidar: 1
+      pending_yolo: 2
+    - pending_lidar: 1
+      pending_yolo: 2
+    offset_p95_max_interval_ms:
+    - 24.7
+    - 24.7
+    - 26.0
+    absolute_count_gate_pass: true
+    common_stable_classification_gate_pass: true
+    stable_corresponded_observations: 1641
+    stable_classification_differences: 0
+    unmatched_common_observations: 924
+  shadow-C6:
+    matched:
+    - 191
+    - 191
+    - 191
+    processed:
+    - 192
+    - 192
+    - 192
+    dropped:
+    - 0
+    - 0
+    - 0
+    shutdown_pending:
+    - pending_lidar: 1
+      pending_yolo: 2
+    - pending_lidar: 1
+      pending_yolo: 2
+    - pending_lidar: 1
+      pending_yolo: 2
+    offset_p95_max_interval_ms:
+    - 26.0
+    - 24.8
+    - 29.3
+    absolute_count_gate_pass: false
+    common_stable_classification_gate_pass: true
+    stable_corresponded_observations: 1474
+    stable_classification_differences: 0
+    unmatched_common_observations: 1017
+gps:
+  original_primary_gps_fix_topic_present: false
+  gps_message_relay_original_headers_unchanged: true
+  injected_gap_sec:
+  - 8
+  - 14
+  gap_lidar_inputs:
+  - 80
+  - 80
+  - 80
+  gap_tracked_frames:
+  - 3
+  - 3
+  - 3
+  pose_failures:
+  - 80
+  - 80
+  - 80
+  first_output_after_restore_sec:
+  - 0.24153047000000072
+  - 0.2489196800000002
+  - 0.2510161310000001
+  mechanism: existing_GPS_max_age_0.30s_gate_blocks_LidarProcess_and_map_output
+  local_processing_continuity_implemented: false
+  gps_fix_injection_claim: false
+findings:
+  lane_transition_failure: C6 ninth semantic output at 0.9612s reached family at 1.0018s; first second contains
+    8
+  fusion_trace_processed_supply_accounting: true
+  timeout_in_supplemental_fusion_traces: 0
+  primary_C1_C4_C6_trace_skipped_generations:
+  - 107
+  - 115
+  - 115
+  absolute_matching_degradation_not_waived: true
+  new_common_stable_classification_differences: 0
+  unmatched_observations_not_counted_as_correct_or_as_GT_recall: true
+  qualitative_cases: 6
+  raw_cloud_camera_projection: false
+  case_labels_are_independent_GT: false
+measurement_failures:
+  previous_attempts_preserved: true
+  genuine_historical_C4_first_second_8_preserved: true
+  XMLRPC_shared_connection_defect_fixed: true
+  negative_control_errors: 516
+  corrected_concurrent_master_and_node_calls:
+  - 400
+  - 400
+  corrected_concurrency_errors: []
+  C2_r1_CPU_negative_control_overlap_preserved: true
+  clean_C2_r4_pass: true
+  later_success_does_not_waive_earlier_failure: true
+parity_reuse:
+  previous_baseline: perception_camera_acceptance_followup_v1.yaml
+  frames: 3514
+  exact_frames: 3514
+  unmasked: true
+  same_weight_and_bag_SHA: true
+  source_fingerprints_matched: 16
+  current_runtime_protected_files_matched: 219
+  new_GPU_parity_execution: false
+  previously_approved_classification_exceptions_automatically_waived: false
+  hood_person_loss_exception: previous_GT287_frame9_only_no_new_exception
+regression:
+  outer_build: pass
+  nested_build: pass
+  camera_tests: 278
+  known_facade_failure: 1
+  new_camera_failures: 0
+  messages: 1
+  hdmap: 160
+  Main: 267
+  lidar_core: 2
+  jamming: 94
+  measurement_and_related_tests: 38
+  validators: 4
+  documentation_migration: pass
+  final_PR_head_CI: must_be_verified_in_GitHub_check_runs_after_push
+evidence:
+  directory: config/baselines/evidence/camera_lidar_b0_v1
+  summary: summary.json
+  supplemental_analysis: supplemental-analysis.json
+  manifest: run-manifest.json
+  file_manifest: files.json
+  original_trial_source_and_wall_records: raw archives
+  raw_bags_and_model_weights_not_duplicated_in_archive: true
+  archives:
+    raw-preliminary.tar.gz:
+      bytes: 21143710
+      sha256: 125c1d08185da9f22df314cc77219b93cf9b607dcdd7fc07e03aece0585818b2
+    raw-fixed-camera.tar.gz:
+      bytes: 3500401
+      sha256: 058a0192732b0a4a142f903c7c54b2d167a1187613cde6b88b134a5d0dd600a5
+    raw-fixed-fusion.tar.gz:
+      bytes: 15898059
+      sha256: 37a07832f698162183f0ea06902b10db03c306ad5ef0dc76a850ee0fdccc9db4
+    raw-fixed-gps.tar.gz:
+      bytes: 16349896
+      sha256: 79528618d4c5a514087d18d382a667bfc32da4017d6f2ad32555b387efd588c4
+    raw-supplemental.tar.gz:
+      bytes: 20104596
+      sha256: 120311c8f8dbebd4a567548de6ce5378e975af945da80cbaf78fdf44a7a54196
+    raw-support.tar.gz:
+      bytes: 3425425
+      sha256: 4e4d40268e973260574ad93beb1c3caccf4079d4988ab594662d4cf77c4b8432
+next_steps:
+- B1_same_YOLO11_raw_LiDAR_depth_connectivity_vs_existing_box_protection
+- LiDAR_owner_local_map_separation_without_GPS
+- front_vs_three_camera_and_LiDAR_YOLO_rate_matrix_separate
+- YOLO26_detect_then_seg_boxes_then_same_seg_masks
+- training_and_bottleneck_optimizations_then_4070_SUPER

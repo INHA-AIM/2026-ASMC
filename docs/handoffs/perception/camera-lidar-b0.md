@@ -3,6 +3,82 @@
 > 역할: 실험 프로토콜과 결과 인수. 운영 프로필·주행 승인 아님.
 > 기준: 연구 문서가 반영된 main `3b142b1`, RTX 4060 Ti 8GB.
 > 측정 도구와 입력·설정은 실행별 SHA manifest로 고정한다.
+> 완료: 고정 51회 + lifecycle trace 2회 + fusion trace 8회 + 별도 C2 확인 1회.
+> 실행 조합 수락과 운영 기본값 변경은 없다.
+
+## 측정 결과 (2026-10-07)
+
+고정 프로토콜은 51/51회 완료했고 개별 검사 49회가 통과했다. 카메라 조합 C1~C5는
+각 3회 통과, C6는 2/3회 통과했다. C6 debug ON도 2/3회 통과했다.
+실패 두 번은 최종 차선 family의 ACTIVE 첫 1초 출력 8개였다. 고정 창을 유지하고
+첫 출력부터 시간을 다시 세거나 목표 Hz를 낮추지 않았다.
+
+C6 첫 실행의 아홉 번째 새 semantic 결과는 RPC 시작 후 0.9612초,
+같은 source의 family 출력은 1.0018초에 도착했다. 약 40.5ms downstream 지연으로
+첫 1초 경계를 넘은 사실은 원본 stamp와 wall 수신 시각으로 확인했다.
+내부 단계별 시간은 별도 trace에 연결하며, 이 결과를 모델 예열 실패로 확대하지 않는다.
+정상 카메라 구간의 YOLO는 조합별 약 19.8~19.9Hz였고 중복·역행 stamp는 없었다.
+
+| bag | 조합 | 3회 전체 구간 매칭 쌍 | C1 최솟값 대비 절대 수 기준 |
+|---|---|---|---|
+| 주 | C1 | 536 / 543 / 536 | 기준 |
+| 주 | C4 | 530 / 530 / 532 | 미수락 |
+| 주 | C5 | 537 / 535 / 534 | 미수락 |
+| 주 | C6 | 530 / 531 / 529 | 미수락 |
+| 음영 | C1 | 194 / 195 / 193 | 기준 |
+| 음영 | C4 | 190 / 190 / 192 | 미수락 |
+| 음영 | C5 | 194 / 194 / 194 | 통과 |
+| 음영 | C6 | 191 / 191 / 191 | 미수락 |
+
+공통 stamp·상호 유일한 중심 대응·C1 반복의 안정 분류라는 조건 아래 신규 분류 차이는
+0건이다. 주 bag C4/C5/C6의 대응 관측은 각각 2,978/2,874/2,802개지만 미대응도
+1,099/1,149/1,172개다. 이를 전체 객체 recall이나 추적 품질 통과로 해석하지 않는다.
+기존 PR #69 분류 차이 2건의 원본 승인 기록은 보존했고 B0에 자동 적용하지 않았다.
+
+주 bag trace에서 C1/C4/C6은 541/533/533개를 처리하고 539/531/531쌍을 매칭했다.
+생략 generation은 107/115/115개, pose 실패는 각 1개, timeout은 모두 0이었다.
+각각 dropped 1 + 종료 pending 1까지 처리 공급 집계가 맞는다. 이 진단 실행에서는
+C4/C6의 감소 8쌍을 추가 처리 생략 8개로 설명한다. trace OFF 실행의 개별 내부 사유를
+trace ON 기록으로 임의 대체하지 않는다. 처리 시간 p95는 약 105~110ms였으며
+이는 주 bag의 약 75ms LiDAR 입력 간격보다 길다. GPU 포화만으로 원인을 설명하지 않는다.
+
+GPS 중단 3회에서는 매번 단절 구간 LiDAR 입력 80개에 출력 3개만 남고 pose 실패가
+80회 기록됐다. 카메라·IMU·Ego 공급은 계속됐으며 복구 후 0.242/0.249/0.251초에
+출력이 재개됐다. 원인은 기존 GPS age ≤0.30초 게이트다. 주 bag에는 `/gps/fix`가
+없으므로 실제 단절 증명은 `/gps`에 한정하고 NavSatFix 단절을 검증했다고 하지 않는다.
+
+GPU는 RTX 4060 Ti 8188MiB, CPU는 i5-14600K/20개 사용 가능한 논리 CPU였다.
+카메라 측정의 GPU 전체 메모리 표본 최댓값은 3506MiB이며 Windows desktop 사용분도
+포함한다. 200ms 표본의 최댓값을 순간 peak나 노드별 VRAM으로 부르지 않는다.
+CPU·RSS·source age·같은 source의 wall 지연 p50/p95/p99는 반복별 원본 분석에 남겼다.
+
+[전체 반복 그림](../../../config/baselines/evidence/camera_lidar_b0_v1/profile-comparison.png),
+[수치 기준선](../../../config/baselines/perception_camera_lidar_b0_v1.yaml),
+[전체 보고서](../../../config/baselines/evidence/camera_lidar_b0_v1/summary.json)를 함께 본다.
+
+## 실패 보존과 정성 사례
+
+초기 측정의 drain/입력 공급 종료 창, Main legacy 제어 발행 격리, XML-RPC 연결 공유 결함을
+수정한 이전 실행도 원본 archive에 보존했다. 공유 연결 음성 대조에서는 오류 516개가
+재현됐고 수정 후 master 조회·노드 조회 각각 400회에서는 오류가 없었다.
+초기 C4 첫 1초 8개와 steady-window 실패도 삭제하지 않았다.
+CPU 음성 대조가 겹친 C2-r1은 표시해 보존했고, 별도 clean C2-r4를 추가해 통과를 확인했다.
+추가 성공으로 앞선 실패를 면제하거나 유리한 결과만 선택하지 않는다.
+
+원본 JPEG·raw XYZ·raw XY 그림·header·근접 source 대응을 주/음영 각 3개씩 보관했다.
+주 bag 차량 옆 구조물과 61.63m unknown OBB, 음영의 52.80m unknown OBB는
+벽 혼입·군집 합침의 검토 후보다. 실제 군집 점의 소속과 카메라 투영이 검증되지 않아
+합침 정답으로 확정하지 않았다. 음영 영상의 나무 상자는 현재 허용 YOLO 결과가 비지만
+독립 GT recall 분모로 사용하지 않았다. C1이 처리하고 C6가 생략한 stamp도 별도로 남겼다.
+[정성 검토 목록](../../../config/baselines/evidence/camera_lidar_b0_v1/qualitative-review.json)은
+추가 정확도 승인 자료가 아니라 B1의 재현 입력이다.
+
+outer/nested 빌드, 메시지 1·HD맵 160·Main 267·LiDAR core 2·jamming 94개와
+측정기 및 관련 시험 38개, 계약 validator 4개는 통과했다. 카메라 278개 중 기존 facade
+1건은 `autonomy_no_bridges_v2.launch`의 traffic_light false/true 차이 그대로이며 신규 실패는 없다.
+최종 PR HEAD의 CI 상태는 GitHub checks에서 확인한다. 보호 소스 219개와 외부 TwinLite
+소스 12개가 측정 시점과 같고 운영 소스·설정의 main diff가 없어 3,514프레임 unmasked
+동등성 증거를 재사용했다. mask의 기존 person 손실 1건 예외는 확대하지 않는다.
 
 ## 범위와 프로토콜
 

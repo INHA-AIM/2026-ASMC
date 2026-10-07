@@ -1,0 +1,18 @@
+[
+  {
+    "stamp_ns": 1790654817740000000,
+    "kind": "unknown_extent_review_candidate",
+    "note": "Longest OBB with height >=1m; possible structural mix or merged cluster, not independently labeled.",
+    "largest_extent_m": 61.63278579711914
+  },
+  {
+    "stamp_ns": 1790654818279000000,
+    "kind": "camera_object_association_review_candidate",
+    "note": "Fixed late-bag RGB and raw points for unsupported object/missed association review; no recall ground truth."
+  },
+  {
+    "stamp_ns": 1790654812492000000,
+    "kind": "lidar_latest_frame_selection_gap",
+    "note": "Same raw LiDAR stamp processed in C1-r1 and absent from C6-r1. Frame processing omission, not proof of an object miss."
+  }
+]

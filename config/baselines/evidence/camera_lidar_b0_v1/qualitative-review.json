@@ -1,0 +1,89 @@
+{
+  "cases": [
+    {
+      "case": "cases-primary/case-00",
+      "source_stamp_ns": 1790654817740000000,
+      "source_files": {
+        "raw_xy.png": "dc3201db35e76cc6750e1ddd97835c0e79e9ea1d3058cd5ba8b8e4005390970f",
+        "source.jpg": "98b897498678afbb621a656a32329581ece1e3423522dcdfa2f0af173833335c",
+        "raw_xyz.npz": "0dfda397506654ca3feb0bc07278c8a2f64d4ab816db7c1a9754498bbb1799b1"
+      },
+      "review_note": "Vehicle visibly beside tunnel side structure; YOLO car present. 61.63m unknown OBB is a structural-mix/merge review candidate; membership is unverified.",
+      "original_rgb_and_raw_xy_reviewed": true,
+      "camera_projection_performed": false,
+      "independent_ground_truth": false,
+      "quantitative_accuracy_or_recall_claim": false
+    },
+    {
+      "case": "cases-primary/case-01",
+      "source_stamp_ns": 1790654818279000000,
+      "source_files": {
+        "raw_xy.png": "1460e270ac594a2ddc055b951db5ca84a275f6c3b888a902d7e561027b4d6781",
+        "source.jpg": "c7ef329fa98cff6503217bfd7ed6a104ae13580fbc8378d818f8db3b1219b592",
+        "raw_xyz.npz": "b207ac19cb0a2d60b20c22e2a8c74652c9fb853558bb7d4d24e4015822c85111"
+      },
+      "review_note": "Closer visible vehicle beside tunnel wall; YOLO car present. No point-to-image object attribution without verified projection.",
+      "original_rgb_and_raw_xy_reviewed": true,
+      "camera_projection_performed": false,
+      "independent_ground_truth": false,
+      "quantitative_accuracy_or_recall_claim": false
+    },
+    {
+      "case": "cases-primary/case-02",
+      "source_stamp_ns": 1790654812492000000,
+      "source_files": {
+        "raw_xy.png": "6c6b0ba6fc905056df1dd9381a921400c71b6e1ee4ab7a0749a08534b9b5b222",
+        "source.jpg": "a519888802dab433616e9a80aee57bc169b3d9d26a770409eb7e7b0f27fe9ca2",
+        "raw_xyz.npz": "c4162eb18ff33dd0545f42f58b97b927cec526aba529b07a84a01080e8f2529e"
+      },
+      "review_note": "Visible vehicle; YOLO car present. Selected LiDAR source processed by C1 and omitted in C6; not an independently labeled vehicle miss.",
+      "original_rgb_and_raw_xy_reviewed": true,
+      "camera_projection_performed": false,
+      "independent_ground_truth": false,
+      "quantitative_accuracy_or_recall_claim": false
+    },
+    {
+      "case": "cases-shadow/case-00",
+      "source_stamp_ns": 1789141094585000000,
+      "source_files": {
+        "raw_xy.png": "3fb2fe78495465fc359f83b1b04e3923a4025227eaae6fb57a875e05277b75da",
+        "source.jpg": "cc3bd457d45ee2868656b9bd28432148cca9b263ff27f2856db9761b153f716f",
+        "raw_xyz.npz": "0d1770117a08f85b8a93d5455754e724fe8a0ec75a2bd764abcb639e8057c90e"
+      },
+      "review_note": "Small timber box visible ahead; no current allowed YOLO boxes. 52.80m unknown OBB may represent tunnel structure; actual cluster membership unverified.",
+      "original_rgb_and_raw_xy_reviewed": true,
+      "camera_projection_performed": false,
+      "independent_ground_truth": false,
+      "quantitative_accuracy_or_recall_claim": false
+    },
+    {
+      "case": "cases-shadow/case-01",
+      "source_stamp_ns": 1789141100930000000,
+      "source_files": {
+        "raw_xy.png": "53c9948982e96b033321afeaa9f5d316f56618f34f5ed54baca25f1c2b633aeb",
+        "source.jpg": "b465f665697a83c33fd7cd07dd640cb265bd6b8db92b4ba9ab739d0578ea896c",
+        "raw_xyz.npz": "05347a9a94c2c70d4825c364fd1b9dff2effb9635fd767678bb8b3eebf90c9d2"
+      },
+      "review_note": "Tunnel exit and distant colored roadside objects. No YOLO boxes; no independent supported-class recall label.",
+      "original_rgb_and_raw_xy_reviewed": true,
+      "camera_projection_performed": false,
+      "independent_ground_truth": false,
+      "quantitative_accuracy_or_recall_claim": false
+    },
+    {
+      "case": "cases-shadow/case-02",
+      "source_stamp_ns": 1789141098896000000,
+      "source_files": {
+        "raw_xy.png": "b6cd0d63cd08367f1d95f489190a2c5083fbc11c7f7f057b883cc780f82d4e5b",
+        "source.jpg": "ee5047002605dc5d30c2451b9ec6d2f64e09c4cb55ad2c439f3e12e8cc6f03e9",
+        "raw_xyz.npz": "143344fefd364554fc8cbe7b3ab5dfcc4fd320b6983faabd09d62ce6765cb558"
+      },
+      "review_note": "Near timber box visible; no current allowed YOLO boxes. LiDAR source omitted in C6 but processed in C1; this is a frame-supply omission.",
+      "original_rgb_and_raw_xy_reviewed": true,
+      "camera_projection_performed": false,
+      "independent_ground_truth": false,
+      "quantitative_accuracy_or_recall_claim": false
+    }
+  ],
+  "labels_are_not_gt": true
+}
