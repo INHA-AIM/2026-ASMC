@@ -45,6 +45,20 @@ def output_gate(name, row, lifecycle=True):
     return bool(row['five_second_hz']) and all(hz >= 9.5 for hz in row['five_second_hz']) and row['max_gap_sec'] <= .25
 
 
+def input_window_end(name, inputs, playback_end):
+    """Exclude absent camera input and bag publisher shutdown from rate gates.
+
+    Full-bag latency/geometry records still retain every drained output.
+    This rule never changes the service-anchored ACTIVE lifecycle window.
+    """
+    names = ('front', 'left', 'right') if name == 'family' else (
+        dict(yolo='front', resnet18='extra').get(name, name),)
+    last = [max((r['arrival'] for r in inputs.get(n, [])), default=None) for n in names]
+    if any(t is None for t in last):
+        return None
+    return min([playback_end]+last)
+
+
 def resource_report(samples):
     gpu = [s['gpu'] for s in samples if s.get('gpu') is not None]
     nodes = sorted({name for s in samples for name in s.get('nodes', {})})
@@ -91,3 +105,21 @@ def gps_phase_report(inputs, tracks, relays, bag_start_ns, gap_start=8., gap_end
     after = [r for r in tracks if r['ros_ns'] >= bag_start_ns+int(gap_end*1e9)]
     result['first_tracked_after_restore_sec'] = ((after[0]['ros_ns']-bag_start_ns)/1e9-gap_end if after else None)
     return result
+
+
+def make_protocol(config, phases):
+    jobs = []
+    for repeat in range(1, config['repeats']+1):
+        names = list(config['profiles'])
+        names = names[repeat-1:]+names[:repeat-1]
+        if 'camera' in phases:
+            jobs += [dict(phase='camera', profile=name, bag_id='camera', repeat=repeat) for name in names]
+        if 'fusion' in phases:
+            selected = [n for n in names if n in config['fusion']['profiles']]
+            for bag_id in config['fusion']['bags']:
+                jobs += [dict(phase='fusion', profile=name, bag_id=bag_id, repeat=repeat) for name in selected]
+        if 'gps' in phases:
+            jobs += [dict(phase='gps', profile='C1', bag_id='primary', repeat=repeat, gps_gap=gap) for gap in (False, True)]
+        if 'debug' in phases:
+            jobs.append(dict(phase='camera', profile='C6', bag_id='camera', repeat=repeat, debug=True))
+    return jobs

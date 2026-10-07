@@ -1,6 +1,10 @@
 import unittest
+from pathlib import Path
+from collections import Counter
+import xml.etree.ElementTree as ET
+import yaml
 
-from tools.perception.b0_measurements import (output_report, output_gate, resource_report,
+from tools.perception.b0_measurements import (output_report, output_gate, resource_report, input_window_end, make_protocol,
                                              fusion_report, gps_phase_report)
 
 
@@ -10,6 +14,25 @@ def output(t, stamp, valid=True, anchor='matched'):
 
 
 class B0MeasurementsTest(unittest.TestCase):
+    def test_fixed_protocol_keeps_three_repeats_and_rotates_order(self):
+        root = Path(__file__).resolve().parents[2]
+        config = yaml.safe_load((root/'config/experiments/camera_lidar_b0_v1.yaml').read_text())
+        jobs = make_protocol(config, ['camera', 'fusion', 'gps', 'debug'])
+        self.assertEqual(51, len(jobs))
+        cameras = [j for j in jobs if j['phase'] == 'camera' and not j.get('debug')]
+        self.assertEqual({name: 3 for name in config['profiles']}, dict(Counter(j['profile'] for j in cameras)))
+        self.assertEqual(['C1', 'C2', 'C3'], [next(j['profile'] for j in cameras if j['repeat'] == r) for r in (1, 2, 3)])
+        self.assertEqual(6, sum(j['phase'] == 'gps' for j in jobs))
+        self.assertEqual(3, sum(bool(j.get('gps_gap')) for j in jobs))
+
+    def test_test_launch_quarantines_existing_main_control_outputs(self):
+        launch = ET.parse(Path(__file__).with_name('b0_main.launch')).getroot()
+        group = launch.find('group')
+        remaps = {r.get('from'): r.get('to') for r in group.findall('remap')}
+        self.assertEqual('/b0/discarded_ctrl_cmd_0', remaps['/ctrl_cmd_0'])
+        self.assertEqual('/b0/discarded_ctrl_cmd', remaps['/ctrl_cmd'])
+        self.assertEqual('false', next(a.get('value') for a in group.find('include').findall('arg') if a.get('name') == 'start_yolo'))
+
     def test_old_epoch_and_invalidity_are_distinct(self):
         row = output_report([output(10.05, 5), output(10.1, 11, False), output(10.2, 12)], 10, 11, 10)
         self.assertEqual(2, row['messages'])
@@ -45,6 +68,12 @@ class B0MeasurementsTest(unittest.TestCase):
         self.assertTrue(output_gate('front', measured, lifecycle=False))
         drained = output_report(rows, 0, 20.6)
         self.assertFalse(output_gate('front', drained, lifecycle=False))
+
+    def test_full_bag_family_requires_all_three_camera_inputs(self):
+        inputs = {'front': [dict(arrival=19.)], 'left': [dict(arrival=19.1)], 'right': [dict(arrival=18.9)]}
+        self.assertEqual(18.9, input_window_end('family', inputs, 20.))
+        self.assertEqual(19., input_window_end('yolo', inputs, 20.))
+        self.assertIsNone(input_window_end('resnet18', inputs, 20.))
 
     def test_ambiguous_family_anchor_is_not_a_latency_sample(self):
         row = output_report([output(.1, 1, anchor='ambiguous')], 0, 1)

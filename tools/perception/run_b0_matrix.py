@@ -19,6 +19,8 @@ from xmlrpc.client import ServerProxy
 import rosbag
 import yaml
 
+from b0_measurements import make_protocol
+
 
 def sha(path):
     digest = hashlib.sha256()
@@ -54,10 +56,12 @@ def manifest(root, config, revision):
     paths = list((root/'src/asmc_camera/src/asmc_camera').rglob('*.py'))
     for folder, suffixes in [('src/asmc_camera/launch', ['*.launch']), ('src/asmc_camera/config', ['*.yaml']),
                              ('src/lidar+sensorfusion/src/Main/src', ['*.cpp', '*.hpp']),
-                             ('src/asmc_msgs/msg', ['*.msg']), ('tools/perception', ['*b0*.py'])]:
+                             ('src/asmc_msgs/msg', ['*.msg']), ('src/asmc_camera/msg', ['*.msg']),
+                             ('src/asmc_camera/srv', ['*.srv']), ('tools/perception', ['*b0*.py'])]:
         for suffix in suffixes:
             paths.extend((root/folder).rglob(suffix))
-    paths += [root/'src/lidar+sensorfusion/src/Main/main.launch', root/'config/experiments/camera_lidar_b0_v1.yaml']
+    paths += [root/'src/lidar+sensorfusion/src/Main/main.launch', root/'config/experiments/camera_lidar_b0_v1.yaml',
+              root/'tools/perception/b0_main.launch']
     weights = [root/'src/asmc_camera/models/object_detection/yolo11m.pt',
                root/'src/asmc_camera/models/traffic_light/best.pt',
                root/'artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt']
@@ -67,24 +71,6 @@ def manifest(root, config, revision):
                 gpu=subprocess.check_output(['nvidia-smi', '--query-gpu=name,memory.total,driver_version', '--format=csv,noheader'], text=True).strip(),
                 source_sha256={str(p.relative_to(root)): sha(p) for p in sorted(set(paths))},
                 weight_sha256={str(p.relative_to(root)): sha(p) for p in weights}, bags=bag_info)
-
-
-def protocol(config, phases):
-    jobs = []
-    for repeat in range(1, config['repeats']+1):
-        names = list(config['profiles'])
-        names = names[repeat-1:]+names[:repeat-1]
-        if 'camera' in phases:
-            jobs += [dict(phase='camera', profile=name, bag_id='camera', repeat=repeat) for name in names]
-        if 'fusion' in phases:
-            selected = [n for n in names if n in config['fusion']['profiles']]
-            for bag_id in config['fusion']['bags']:
-                jobs += [dict(phase='fusion', profile=name, bag_id=bag_id, repeat=repeat) for name in selected]
-        if 'gps' in phases:
-            jobs += [dict(phase='gps', profile='C1', bag_id='primary', repeat=repeat, gps_gap=gap) for gap in (False, True)]
-        if 'debug' in phases:
-            jobs.append(dict(phase='camera', profile='C6', bag_id='camera', repeat=repeat, debug=True))
-    return jobs
 
 
 def main():
@@ -109,7 +95,7 @@ def main():
     phases = args.phases.split(',')
     if set(phases)-{'camera', 'fusion', 'gps', 'debug'}:
         parser.error('unknown phase')
-    jobs = protocol(config, phases)
+    jobs = make_protocol(config, phases)
     (args.output/'protocol.json').write_text(json.dumps(jobs, indent=2)+'\n')
     results, diagnostic_keys = [], set()
     def run(job, diagnostic=False):

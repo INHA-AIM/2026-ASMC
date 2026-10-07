@@ -25,7 +25,7 @@ from asmc_msgs.msg import CameraObjectBoxArray, TrafficLightDetection, LaneBound
 from asmc_camera.msg import InferenceStatus
 from asmc_camera.srv import SetInferenceMode
 
-from b0_measurements import output_report, output_gate, resource_report, fusion_report, gps_phase_report
+from b0_measurements import output_report, output_gate, resource_report, fusion_report, gps_phase_report, input_window_end
 from b0_resources import ResourceSampler
 from analyze_fusion_trace import summarize as summarize_trace
 from lifecycle_measurements import trace_trial, trace_integrity
@@ -86,7 +86,7 @@ def main():
     inputs, outputs = defaultdict(list), defaultdict(list)
     arrivals, statuses, status_rows = {}, {}, []
     requests, tracks, bbox, rosout, diagnostics, graphs, relays = [], [], [], [], [], [], []
-    controls, processes, streams, subscribers, commands = [], [], [], [], []
+    controls, discarded_controls, processes, streams, subscribers, commands = [], [], [], [], [], []
     active_models = config['profiles'][args.profile]
     traced = args.diagnostic or args.phase == 'gps'
     report = dict(schema_version=1, profile=args.profile, phase=args.phase, bag_id=args.bag_id,
@@ -174,6 +174,9 @@ def main():
                                      values={v.key: v.value for v in s.values}) for s in m.status])), queue_size=100))
     for topic in ('/ctrl_cmd', '/ctrl_cmd_0'):
         subscribers.append(rospy.Subscriber(topic, CtrlCmd, lambda m, t=topic: controls.append(dict(topic=t, arrival=time.monotonic())), queue_size=100))
+    for topic in ('/b0/discarded_ctrl_cmd', '/b0/discarded_ctrl_cmd_0'):
+        subscribers.append(rospy.Subscriber(topic, CtrlCmd, lambda m, t=topic: discarded_controls.append(
+            dict(topic=t, arrival=time.monotonic(), accel=m.accel, brake=m.brake, steering=m.steering)), queue_size=100))
     if args.debug:
         debug_topics = ['/perception/camera/objects/debug/image/compressed', '/perception/camera/debug/mosaic/compressed',
                         '/perception/bev/debug/comparison/compressed', '/perception/traffic_light/debug/image/compressed']
@@ -237,13 +240,16 @@ def main():
                    'lane_enable_shared_family_debug:='+str(args.debug).lower(), 'traffic_light_wait_first:=0',
                    'lane_initial_mode:='+str(initial['twinlite']), 'objects_initial_mode:='+str(initial['yolo']),
                    'traffic_light_initial_mode:='+str(initial['resnet18'])]
+        command += ['lane_target_hz:='+str(config['conditions']['target_hz']['twinlite']),
+                    'objects_target_hz:='+str(config['conditions']['target_hz']['yolo']),
+                    'traffic_light_hz:='+str(config['conditions']['target_hz']['resnet18'])]
         camera = launch('camera', command)
         for node in NODES.values():
             rospy.wait_for_service(node+'/set_inference_mode', timeout=60)
         wait(loaded, 'all resident models loaded and dummy warmed', 60)
         report['load_dummy_warmup_sec'] = time.monotonic()-launch_start
         if args.phase != 'camera':
-            main_command = ['roslaunch', 'Main', 'main.launch', 'start_yolo:=false', 'rviz:=false', 'start_velodyne_driver:=false']
+            main_command = ['roslaunch', str(Path(__file__).resolve().with_name('b0_main.launch'))]
             if traced:
                 main_command.append('fusion_trace_path:='+str(args.output/'fusion.jsonl'))
             main_process = launch('main', main_command)
@@ -322,11 +328,17 @@ def main():
                     if traced:
                         begin = trace_trial(record, trace_rows[model])['accepted_monotonic']
                 for name in MODEL_OUTPUTS[model]:
-                    measurement = output_report(outputs[name], begin, ended, cutoff,
-                                                config['camera']['active_sec'] if args.phase == 'camera' else None) if begin and ended else dict(complete=False)
+                    window_end = ended if args.phase == 'camera' or ended is None else input_window_end(name, inputs, ended)
+                    measurement = output_report(outputs[name], begin, window_end, cutoff,
+                                                config['camera']['active_sec'] if args.phase == 'camera' else None) if begin and window_end else dict(complete=False)
+                    if args.phase != 'camera':
+                        measurement['window_basis'] = 'corresponding_camera_input_availability'
+                        measurement['window_end_monotonic'] = window_end
+                        measurement['post_input_end_outputs'] = sum(r['arrival'] >= window_end for r in outputs[name]) if window_end else None
                     report['measurements'][name] = measurement
                     report['checks'][name+'_rate'] = output_gate(name, measurement, lifecycle=args.phase == 'camera')
             report['checks']['no_control_messages'] = not controls
+            report['discarded_legacy_control_messages'] = len(discarded_controls)
             report['checks']['no_model_processing_errors'] = all(s.errors == 0 for s in statuses.values())
             report['resources'] = resource_report([r for r in resource_rows if started and ended and started <= r['arrival'] <= ended])
             report['resource_sampler_cost_ms'] = __import__('b0_measurements').quantiles([r['sampling_ms'] for r in resource_rows])
@@ -355,7 +367,8 @@ def main():
         report['classification_or_count_acceptance'] = 'computed_across_repeats_by_matrix_analysis'
         observation = dict(inputs=inputs, outputs=outputs, statuses=status_rows, requests=requests,
                            tracks=tracks, bbox=bbox, rosout=rosout, diagnostics=diagnostics,
-                           graph_samples=graphs, gps_relays=relays, control_messages=controls)
+                           graph_samples=graphs, gps_relays=relays, control_messages=controls,
+                           discarded_legacy_control_messages=discarded_controls)
         (args.output/'observations.json').write_text(json.dumps(observation)+'\n')
         (args.output/'resources.json').write_text(json.dumps(resource_rows)+'\n')
         report['execution_return_codes'] = {commands[i]['label']: p.returncode for i, p in enumerate(processes)}
