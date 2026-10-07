@@ -299,7 +299,10 @@ def main():
                        for key in sorted(stable) if any(table[key] != tables[0][key] for table in tables[2:])]
         summary["stable_old_track_comparison"] = {"common_all_runs": len(common), "old_stable": len(stable),
                                                   "regressions": regressions}
-        summary["pass"] &= bool(stable) and not regressions
+        # IDs are allocated independently in each run. Reusing a number for a
+        # different center must not veto the stable physical-observation gate.
+        # Retain this table as a diagnostic, including its apparent differences.
+        summary["numeric_track_comparison_diagnostic_only"] = True
         observations = compare_stable_observations(frames[:2], frames[2:])
         summary["stable_old_observation_comparison"] = observations
         summary["pass"] &= bool(observations["old_stable"]) and not observations["regressions"]
