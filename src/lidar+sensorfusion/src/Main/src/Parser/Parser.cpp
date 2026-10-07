@@ -260,8 +260,18 @@ void LiDARParser_Driver_ROS(ros::NodeHandle &st_NodeHandle)
 
 void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
 {   
+    if(frame_boundary::Enabled() && msg->header.stamp.isZero()) {
+        ROS_WARN_THROTTLE(1.,"Rejected LiDAR scan: zero source stamp");
+        return;
+    }
     pcl::PointCloud<pcl::PointXYZI> pcl_Cloud;
     pcl::fromROSMsg(*msg, pcl_Cloud);
+
+    if(frame_boundary::Enabled() && pcl_Cloud.size()>
+        sizeof(st_SensorData.st_RawLiDAR.arc_Buffer)/sizeof(pcl::PointXYZI)) {
+        ROS_WARN_THROTTLE(1.,"Rejected LiDAR scan: raw buffer capacity exceeded");
+        return;
+    }
 
 
     int32 s32_Count = pcl_Cloud.size();
@@ -283,8 +293,15 @@ void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
     // 단위는 ms 를 유지해야 한다 (LidarProcess 가 *1e6 으로 ns 로 되돌린다).
     const ros::Time ts_LiDARIn = msg->header.stamp.isZero() ? ros::Time::now()
                                                             : msg->header.stamp;
+    const auto source_ms=ts_LiDARIn.toNSec()/1000000ULL;
+    if(frame_boundary::Enabled() && (!source_ms ||
+        source_ms<=st_SensorData.st_RawLiDAR.u64_Timestamp)) {
+        pthread_mutex_unlock(&st_SensorData.st_MutexLiDAR);
+        ROS_WARN_THROTTLE(1.,"Rejected LiDAR scan: duplicate or regressing source stamp");
+        return;
+    }
     st_SensorData.st_RawLiDAR.u64_Timestamp =
-        static_cast<uint64>(ts_LiDARIn.toNSec() / 1000000ULL);
+        static_cast<uint64>(source_ms);
 
     st_SensorData.st_RawLiDAR.s32_Num  = s32_Count;  // Set the number of points (not bytes)
 

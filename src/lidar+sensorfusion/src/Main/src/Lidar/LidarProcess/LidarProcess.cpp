@@ -159,7 +159,7 @@ bool LidarProcess(const RAW_LIDAR_DATA& st_RawLiDAR,
 
     static uint64_t last_raw = 0;
     const uint64_t raw = st_RawLiDAR.u64_Timestamp;
-    if (raw == last_raw) {
+    if (raw == last_raw || (frame_boundary::Enabled() && raw<last_raw)) {
         pthread_mutex_unlock(&st_SensorData.st_MutexLiDAR); // 반드시 잠금 해제
         return false; // 중복 프레임은 처리/갱신/속도계산 전부 스킵
     }

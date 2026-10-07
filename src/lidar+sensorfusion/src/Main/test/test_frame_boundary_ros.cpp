@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <Geometry/FrameBoundaryPublisher.hpp>
 #include <Parser/SensorPoseHistory.hpp>
+#include <Parser/Parser.hpp>
 #include <Camera/Camera.hpp>
 #include <Lidar/Tracking/tracking_utils.hpp>
 #include <ros/package.h>
@@ -197,6 +198,34 @@ TEST(FrameBoundary, ContinuousLocalTrackingStateIsIndependentOfGpsHistory) {
     return states;
   };
   const auto normal=simulate(false), denied=simulate(true);EXPECT_EQ(normal,denied);
+}
+
+TEST(FrameBoundary, ParserRejectsZeroDuplicateAndBackwardStampsBeforeTrackerInput) {
+  Configure();Now(45.);
+  const auto old_stamp=st_SensorData.st_RawLiDAR.u64_Timestamp;
+  const auto old_count=st_SensorData.st_RawLiDAR.s32_Num;
+  const auto old_generation=u64_LidarFrameGeneration;
+  pthread_mutex_init(&st_SensorData.st_MutexLiDAR,nullptr);
+  st_SensorData.st_RawLiDAR.u64_Timestamp=0;u64_LidarFrameGeneration=0;
+  pcl::PointCloud<pcl::PointXYZI> cloud;cloud.push_back(pcl::PointXYZI());
+  sensor_msgs::PointCloud2::Ptr message(new sensor_msgs::PointCloud2);
+  pcl::toROSMsg(cloud,*message);message->header.frame_id="velodyne";
+  LiDARParser_Callback(message);
+  EXPECT_EQ(st_SensorData.st_RawLiDAR.u64_Timestamp,0u);
+  EXPECT_EQ(u64_LidarFrameGeneration,0u);
+  message->header.stamp=ros::Time(45.);LiDARParser_Callback(message);
+  EXPECT_EQ(st_SensorData.st_RawLiDAR.u64_Timestamp,45000u);
+  EXPECT_EQ(u64_LidarFrameGeneration,1u);
+  message->header.stamp=ros::Time(44.9);LiDARParser_Callback(message);
+  EXPECT_EQ(st_SensorData.st_RawLiDAR.u64_Timestamp,45000u);
+  message->header.stamp=ros::Time(45.);LiDARParser_Callback(message);
+  EXPECT_EQ(u64_LidarFrameGeneration,1u);
+  message->header.stamp=ros::Time(45.1);LiDARParser_Callback(message);
+  EXPECT_EQ(st_SensorData.st_RawLiDAR.u64_Timestamp,45100u);
+  EXPECT_EQ(u64_LidarFrameGeneration,2u);
+  st_SensorData.st_RawLiDAR.u64_Timestamp=old_stamp;
+  st_SensorData.st_RawLiDAR.s32_Num=old_count;u64_LidarFrameGeneration=old_generation;
+  pthread_mutex_destroy(&st_SensorData.st_MutexLiDAR);
 }
 
 bool Wait(const std::function<bool()>& condition) {
