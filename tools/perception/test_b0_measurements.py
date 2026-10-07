@@ -36,6 +36,16 @@ class B0MeasurementsTest(unittest.TestCase):
         self.assertFalse(row['complete'])
         self.assertFalse(output_gate('yolo', row))
 
+    def test_bag_shutdown_drain_is_not_an_active_output_window(self):
+        rows = [output(i*.1+.02, i+1) for i in range(200)]
+        rows.append(output(20.4, 200, False))
+        measured = output_report(rows, 0, 20.)
+        self.assertEqual(200, measured['messages'])
+        self.assertEqual(0, measured['duplicate_stamps'])
+        self.assertTrue(output_gate('front', measured, lifecycle=False))
+        drained = output_report(rows, 0, 20.6)
+        self.assertFalse(output_gate('front', drained, lifecycle=False))
+
     def test_ambiguous_family_anchor_is_not_a_latency_sample(self):
         row = output_report([output(.1, 1, anchor='ambiguous')], 0, 1)
         self.assertEqual(1, row['input_anchor_ambiguous'])

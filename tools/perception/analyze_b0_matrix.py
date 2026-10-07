@@ -26,13 +26,13 @@ def analyze(root):
         if len(baseline) != 3:
             continue
         old = [json.loads((root/r['label']/'observations.json').read_text())['tracks'] for r in baseline]
-        ref_counts = [r['report'].get('fusion', {}).get('totals', {}).get('matched') for r in baseline]
+        ref_counts = [(r['report'].get('fusion', {}).get('totals') or {}).get('matched') for r in baseline]
         for profile in ('C1', 'C4', 'C5', 'C6'):
             candidates = groups.get(('fusion', bag_id, profile, False, False, False), [])
             if len(candidates) != 3:
                 continue
             new = [json.loads((root/r['label']/'observations.json').read_text())['tracks'] for r in candidates]
-            counts = [r['report'].get('fusion', {}).get('totals', {}).get('matched') for r in candidates]
+            counts = [(r['report'].get('fusion', {}).get('totals') or {}).get('matched') for r in candidates]
             try:
                 identity = compare_stable_observations(old, new)
             except ValueError as exc:

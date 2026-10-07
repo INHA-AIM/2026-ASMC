@@ -272,17 +272,25 @@ def main():
             wait(lambda: bool(inputs['front']) and bool(inputs['lidar']), 'camera and LiDAR input', 10)
             started = min(inputs['front'][0]['arrival'], inputs['lidar'][0]['arrival'])
             deadline = time.monotonic()+bag_seconds+30
+            next_graph = 0.
             while playback.poll() is None:
                 if time.monotonic() > deadline:
                     raise RuntimeError('bag timeout')
                 if camera.poll() is not None or main_process.poll() is not None:
                     raise RuntimeError('inference/Main exited during replay')
-                graphs.append(dict(arrival=time.monotonic(), publishers=dict(master.getSystemState()[0]).get('/YOLO/BBox', [])))
-                time.sleep(.25)
+                if time.monotonic() >= next_graph:
+                    graphs.append(dict(arrival=time.monotonic(), publishers=dict(master.getSystemState()[0]).get('/YOLO/BBox', [])))
+                    next_graph = time.monotonic()+.25
+                time.sleep(.01)
             if playback.returncode:
                 raise RuntimeError('bag playback failed')
+            # Drain pending outputs for fusion accounting, but never include
+            # this artificial input-free period in throughput/gap gates.
+            ended = time.monotonic()
+            report['playback_finished_monotonic'] = ended
             time.sleep(.6)
-        ended = time.monotonic()
+        if args.phase == 'camera':
+            ended = time.monotonic()
         with lock:
             report['checks']['other_models_standby'] = all(statuses[m].mode == 0 for m in NODES if m not in active_models)
     except Exception as exc:
@@ -319,10 +327,12 @@ def main():
                     report['measurements'][name] = measurement
                     report['checks'][name+'_rate'] = output_gate(name, measurement, lifecycle=args.phase == 'camera')
             report['checks']['no_control_messages'] = not controls
+            report['checks']['no_model_processing_errors'] = all(s.errors == 0 for s in statuses.values())
             report['resources'] = resource_report([r for r in resource_rows if started and ended and started <= r['arrival'] <= ended])
             report['resource_sampler_cost_ms'] = __import__('b0_measurements').quantiles([r['sampling_ms'] for r in resource_rows])
             report['resources']['all_phases'] = resource_report(resource_rows)
             report['last_diagnostics'] = diagnostics[-1] if diagnostics else None
+            report['last_statuses'] = {m: next((r for r in reversed(status_rows) if r['model'] == m), None) for m in NODES}
             report['checks']['gpu_sample_available'] = report['resources']['gpu_available']
             if args.phase != 'camera':
                 main_log = (args.output/'main.log').read_text()
