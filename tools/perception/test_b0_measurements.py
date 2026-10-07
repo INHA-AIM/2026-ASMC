@@ -2,6 +2,7 @@ import unittest
 from pathlib import Path
 from collections import Counter
 import xml.etree.ElementTree as ET
+from unittest.mock import MagicMock, patch
 import yaml
 
 from tools.perception.b0_measurements import (output_report, output_gate, resource_report, input_window_end, make_protocol,
@@ -14,6 +15,20 @@ def output(t, stamp, valid=True, anchor='matched'):
 
 
 class B0MeasurementsTest(unittest.TestCase):
+    def test_resource_discovery_uses_private_xmlrpc_clients_from_uri(self):
+        from tools.perception.b0_resources import ResourceSampler
+        master, node = MagicMock(), MagicMock()
+        master.__enter__.return_value = master
+        node.__enter__.return_value = node
+        master.lookupNode.return_value = (1, '', 'http://127.0.0.1:8888')
+        node.getPid.return_value = (1, '', 123)
+        sampler = ResourceSampler('http://127.0.0.1:11312', ['/Main'])
+        with patch('tools.perception.b0_resources.ServerProxy', side_effect=[master, node]) as factory:
+            sampler._discover()
+        self.assertEqual({'/Main': 123}, sampler.pids)
+        self.assertEqual(['http://127.0.0.1:11312', 'http://127.0.0.1:8888'],
+                         [call.args[0] for call in factory.call_args_list])
+
     def test_fixed_protocol_keeps_three_repeats_and_rotates_order(self):
         root = Path(__file__).resolve().parents[2]
         config = yaml.safe_load((root/'config/experiments/camera_lidar_b0_v1.yaml').read_text())

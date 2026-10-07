@@ -26,8 +26,10 @@ def process_sample(pid):
 
 
 class ResourceSampler:
-    def __init__(self, master, node_names, interval=.2):
-        self.master, self.names, self.interval = master, node_names, interval
+    def __init__(self, master_uri, node_names, interval=.2):
+        # xmlrpc.client HTTPConnection/rosgraph.Master transports are not
+        # thread safe. Only an immutable URI crosses into the sampler thread.
+        self.master_uri, self.names, self.interval = master_uri, node_names, interval
         self.rows, self.errors, self.pids, self.previous = [], [], {}, {}
         self.stop = threading.Event()
         self.thread = threading.Thread(target=self._loop, daemon=True)
@@ -41,7 +43,12 @@ class ResourceSampler:
             if name in self.pids:
                 continue
             try:
-                code, _, pid = ServerProxy(self.master.lookupNode(name)).getPid('/b0_resources')
+                with ServerProxy(self.master_uri) as master:
+                    code, _, uri = master.lookupNode('/b0_resources', name)
+                if code != 1:
+                    continue
+                with ServerProxy(uri) as node:
+                    code, _, pid = node.getPid('/b0_resources')
                 if code == 1:
                     self.pids[name] = pid
             except Exception:

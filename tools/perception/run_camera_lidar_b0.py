@@ -199,7 +199,7 @@ def main():
             subscribers.append(rospy.Subscriber('/b0/source'+topic, kind, relay, queue_size=100))
 
     master = rosgraph.Master('/b0_probe')
-    sampler = ResourceSampler(master, list(NODES.values())+['/camera_bev', '/camera_bev_fusion', '/camera_lane_vectorizer', '/Main'], config['resource_sample_sec'])
+    sampler = ResourceSampler(os.environ['ROS_MASTER_URI'], list(NODES.values())+['/camera_bev', '/camera_bev_fusion', '/camera_lane_vectorizer', '/Main'], config['resource_sample_sec'])
     sampler.start()
     def launch(label, command):
         stream = (args.output/(label+'.log')).open('w')
