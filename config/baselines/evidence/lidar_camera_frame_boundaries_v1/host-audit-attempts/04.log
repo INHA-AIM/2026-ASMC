@@ -1,0 +1,17 @@
+python3 tools/audit/validate_perception_runtime_acceptance.py
+{
+  "all_topic_count": 40,
+  "camera_lane_topic_count": 33,
+  "contract_id": "asmc_perception_runtime_acceptance_v1",
+  "default_forbidden_topic_count": 20,
+  "deferred_topic_count": 2,
+  "optional_consumer_gate_count": 2,
+  "p5_closeout": {
+    "consumer_count": 2,
+    "evidence_count": 6,
+    "phase_count": 3,
+    "representative_lane_family_messages": 293
+  },
+  "static_binding_count": 8,
+  "topic_group_count": 4
+}

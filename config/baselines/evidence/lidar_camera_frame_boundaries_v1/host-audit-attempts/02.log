@@ -1,0 +1,2 @@
+python3 tools/audit/validate_perception_contract.py
+Perception contract valid: 3 messages, 3 canonical topics, 4 compatibility topics, 12 guarded canonical configs

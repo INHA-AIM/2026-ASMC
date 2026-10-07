@@ -1,0 +1,2 @@
+python3 tools/audit/check_documentation_migration.py
+documentation migration check passed: markdown=37, generated_text=2, redirects=12, frozen=5, history=not requested

@@ -1,0 +1,2 @@
+python3 tools/audit/validate_p1b_contract.py
+P1-B contract valid: 32 registered messages; HD Map contract owns 25 (13 frozen + 12 additive), 11 topics
