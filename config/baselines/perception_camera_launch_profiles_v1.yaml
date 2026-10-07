@@ -123,6 +123,7 @@ weights_sha256:
   yolo11m: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
   twinlite_v6_best_mean: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
   resnet18: 70ddaf222e7bc6ff2b4748c4b07c1b24dec72a2671f39bc18e0b243ddd93c0d5
+offline_and_p5_replay_profile: legacy
 previous_lifecycle_evidence: config/baselines/perception_camera_inference_lifecycle_v1.yaml
 provider_code_sha_unchanged: true
 previous_strict_10hz_and_morai_holds_preserved: true

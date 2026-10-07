@@ -199,6 +199,7 @@ def commands_for(item, args):
     ]
     pipeline = [
         "roslaunch", "asmc_camera", "perception.launch",
+        "profile:=legacy",
         "start_camera_lane:=true",
         "start_traffic_light:=false",
         "start_visualization:=false",
