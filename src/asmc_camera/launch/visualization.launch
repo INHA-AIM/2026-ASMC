@@ -15,7 +15,10 @@
   <arg name="camera_lane" default="false"/>
   <arg name="camera_objects" default="false"/>
   <arg name="objects_config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
-  <arg name="objects_hood_mask" default="false"/>
+  <arg name="objects_hood_mask" default="true"/>
+  <arg name="objects_ego_hood_filter" default="false"/>
+  <arg name="objects_ego_hood_filter_config" default="$(find asmc_camera)/config/camera/yolo_ego_hood_filter_v1.yaml"/>
+  <arg name="objects_debug_raw" default="false"/>
   <arg name="objects_hood_mask_config" default="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml"/>
   <arg name="traffic_light_image_topic" default="/cam_extra/image_jpeg/compressed"/>
   <arg name="traffic_light_detection_topic" default="/perception/traffic_light/detection"/>
@@ -25,6 +28,9 @@
           name="camera_object_visualizer" output="screen" required="false">
       <rosparam command="load" file="$(arg objects_config)" subst_value="true"/>
       <param name="hood_mask" type="bool" value="$(arg objects_hood_mask)"/>
+      <param name="ego_hood_filter" type="bool" value="$(arg objects_ego_hood_filter)"/>
+      <param name="ego_hood_filter_config" value="$(arg objects_ego_hood_filter_config)"/>
+      <param name="debug_raw" type="bool" value="$(arg objects_debug_raw)"/>
       <param name="hood_mask_config" value="$(arg objects_hood_mask_config)"/>
     </node>
   </group>

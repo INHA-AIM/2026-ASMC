@@ -28,7 +28,7 @@ def main():
     rosgraph.Master('/hood_mask_preflight').setParam('/use_sim_time',False)
     rospy.init_node('camera_object_detector')
     rospy.set_param('/use_sim_time',False)
-    for key,value in dict(managed=True,initial_mode=0,target_hz=20.,hood_mask=True,
+    for key,value in dict(managed=True,initial_mode=0,target_hz=20.,hood_mask=True,ego_hood_filter=False,debug_raw=False,
         hood_mask_config=str(Path(__file__).resolve().parents[2]/'src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml'),
         class_groups=dict(groups=dict(person=['person'],vehicle=['car']))).items():rospy.set_param('~'+key,value)
     backend=RecordingBackend();node=ObjectDetectionNode(backend=backend)

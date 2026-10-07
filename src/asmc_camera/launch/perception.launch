@@ -20,7 +20,10 @@
   <arg name="start_traffic_light" default="$(eval arg('profile') in ['planning', 'debug'])"/>
   <arg name="start_camera_objects" default="$(eval arg('profile') in ['planning', 'debug'])"/>
   <arg name="camera_objects_config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
-  <arg name="objects_hood_mask" default="false"/>
+  <arg name="objects_hood_mask" default="true"/>
+  <arg name="objects_ego_hood_filter" default="false"/>
+  <arg name="objects_ego_hood_filter_config" default="$(find asmc_camera)/config/camera/yolo_ego_hood_filter_v1.yaml"/>
+  <arg name="objects_debug_raw" default="$(eval arg('profile') == 'debug')"/>
   <arg name="objects_hood_mask_config" default="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml"/>
   <arg name="start_visualization" default="$(eval arg('profile') == 'debug')"/>
   <arg name="visualization_legacy_rqt" default="false"/>
@@ -68,6 +71,9 @@
     <include file="$(find asmc_camera)/launch/camera_objects.launch">
       <arg name="config" value="$(arg camera_objects_config)"/>
       <arg name="objects_hood_mask" value="$(arg objects_hood_mask)"/>
+      <arg name="objects_ego_hood_filter" value="$(arg objects_ego_hood_filter)"/>
+      <arg name="objects_ego_hood_filter_config" value="$(arg objects_ego_hood_filter_config)"/>
+      <arg name="objects_debug_raw" value="$(arg objects_debug_raw)"/>
       <arg name="objects_hood_mask_config" value="$(arg objects_hood_mask_config)"/>
       <arg name="managed" value="$(arg managed)"/>
       <arg name="initial_mode" value="$(arg objects_initial_mode)"/>
@@ -152,6 +158,9 @@
       <arg name="camera_objects" value="$(arg start_camera_objects)"/>
       <arg name="objects_config" value="$(arg camera_objects_config)"/>
       <arg name="objects_hood_mask" value="$(arg objects_hood_mask)"/>
+      <arg name="objects_ego_hood_filter" value="$(arg objects_ego_hood_filter)"/>
+      <arg name="objects_ego_hood_filter_config" value="$(arg objects_ego_hood_filter_config)"/>
+      <arg name="objects_debug_raw" value="$(arg objects_debug_raw)"/>
       <arg name="objects_hood_mask_config" value="$(arg objects_hood_mask_config)"/>
       <arg name="traffic_light_image_topic" value="$(arg traffic_light_image_topic)"/>
       <arg name="traffic_light_detection_topic" value="$(arg traffic_light_typed_topic)"/>

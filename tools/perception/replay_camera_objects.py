@@ -56,6 +56,7 @@ def replay(args, path, repeat):
     processes, files, subscriptions = [], [], []
     lock = threading.Lock()
     inputs, outputs, diagnostics, candidates, tracks, graph_samples = [], [], [], [], [], []
+    raw_debug = []
     sync_events = []
     receiving = threading.Event()
 
@@ -95,6 +96,12 @@ def replay(args, path, repeat):
                                "centers": {str(o.id): [o.cluster_center.x, o.cluster_center.y, o.cluster_center.z]
                                            for o in message.objects}})
 
+    def record_raw(message):
+        if receiving.is_set():
+            with lock:
+                raw_debug.append(dict(stamp_ns=message.header.stamp.to_nsec(), valid=message.valid,
+                                      frame_id=message.header.frame_id, boxes=len(message.boxes)))
+
     def record_diagnostic(message):
         if receiving.is_set():
             with lock:
@@ -115,6 +122,9 @@ def replay(args, path, repeat):
                          rospy.Subscriber("/YOLO/BBox", Yolo_bbox_arr, record_output, queue_size=100),
                          rospy.Subscriber("/perception/camera/objects", CameraObjectBoxArray, record_candidate, queue_size=100),
                          rospy.Subscriber("/perception/camera/objects/diagnostics", DiagnosticArray, record_diagnostic, queue_size=100)]
+        if path == "new" and args.debug_raw:
+            subscriptions.append(rospy.Subscriber("/perception/camera/objects/debug/raw", CameraObjectBoxArray,
+                                                  record_raw, queue_size=100))
         if args.fusion:
             subscriptions.append(rospy.Subscriber("/lidar/tracked_objects_map", TrackedObjectArray, record_track, queue_size=100))
             command = ["roslaunch", "Main", "main.launch", "start_yolo:=" + ("true" if path == "old" else "false"),
@@ -129,7 +139,9 @@ def replay(args, path, repeat):
             launch(["rosrun", "Main", "camera_objects_yolo_bbox_adapter.py"], "adapter")
         if path == "new":
             launch(["roslaunch", "asmc_camera", "camera_objects.launch", "managed:=false",
-                    "objects_hood_mask:=" + str(args.hood_mask).lower()], "producer")
+                    "objects_hood_mask:=" + str(args.hood_mask).lower(),
+                    "objects_ego_hood_filter:=" + str(args.ego_hood_filter).lower(),
+                    "objects_debug_raw:=" + str(args.debug_raw).lower()], "producer")
         def ready():
             pubs, subs, _ = graph()
             producers = dict(pubs).get("/YOLO/BBox", [])
@@ -186,6 +198,8 @@ def replay(args, path, repeat):
         prefix.with_suffix('.sync-events.json').write_text(json.dumps(sync_events, indent=2) + '\n')
     result = {"path": path, "repeat": repeat, "bag": str(args.bag), "fusion": args.fusion,
               "hood_mask": args.hood_mask and path == "new", "hood_mask_requested": args.hood_mask,
+              "ego_hood_filter": args.ego_hood_filter and path == "new", "debug_raw": args.debug_raw and path == "new",
+              "debug_raw_subscribed": args.debug_raw and path == "new", "debug_raw_frames": len(raw_debug),
               "input_frames": len(inputs), "output_frames": len(outputs), "rate_hz": rate,
               "coverage": len(set(source)) / len(inputs) if inputs else 0,
               "duplicate_stamps": len(source) - len(set(source)),
@@ -209,11 +223,17 @@ def replay(args, path, repeat):
                       and result["frame_ids"] == ["camera_front"] and not result["candidate_invalid_frames"])
     if path == "new" and not args.fusion:
         result["pass"] &= rate >= 18.0
+    if path == "new" and args.debug_raw:
+        raw_stamps = [row['stamp_ns'] for row in raw_debug]
+        result['debug_raw_duplicate_stamps'] = len(raw_stamps)-len(set(raw_stamps))
+        result['debug_raw_reverse_stamps'] = sum(b<a for a,b in zip(raw_stamps,raw_stamps[1:]))
+        result['pass'] &= (bool(raw_debug) and not result['debug_raw_duplicate_stamps']
+                           and not result['debug_raw_reverse_stamps'] and all(row['valid'] for row in raw_debug))
     if args.fusion:
         result["pass"] &= (bool(sync) and bool(tracks) and accounting_complete
                            and result["fusion_offset_p95_max_ms"] <= 50.0)
     prefix.with_suffix(".json").write_text(json.dumps(result, indent=2) + "\n")
-    prefix.with_suffix(".frames.json").write_text(json.dumps({"outputs": outputs, "tracks": tracks}))
+    prefix.with_suffix(".frames.json").write_text(json.dumps({"outputs": outputs, "tracks": tracks, "debug_raw": raw_debug}))
     print(json.dumps(result, indent=2), flush=True)
     return result
 
@@ -233,6 +253,8 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--fusion", action="store_true")
     parser.add_argument("--hood-mask", action="store_true", help="measure opt-in mask; default explicitly preserves full-image parity")
+    parser.add_argument("--ego-hood-filter", action="store_true")
+    parser.add_argument("--debug-raw", action="store_true")
     parser.add_argument("--fusion-trace", action="store_true", help="write complete Main JSONL observations")
     parser.add_argument("--repeats", type=int, default=2)
     parser.add_argument("--timeout", type=float, default=240)
@@ -240,6 +262,8 @@ def main():
     parser.add_argument("--play-duration", type=float, help="short replay for a runtime checker smoke test")
     parser.add_argument("--acceptance", action="store_true", help="also run object-only runtime acceptance during new-path replay")
     args = parser.parse_args()
+    if args.hood_mask and args.ego_hood_filter:
+        parser.error("mask and post-filter are mutually exclusive")
     if args.fusion and args.path != "both":
         raise SystemExit("fusion comparison requires --path both")
     if args.fusion_trace and not args.fusion:

@@ -18,6 +18,7 @@ class PolicyError(RuntimeError):
 REQUIRED_FAMILY_IDS = {
     "camera_inference_status",
     "camera_objects",
+    "camera_objects_debug_raw",
     "camera_objects_diagnostics",
     "camera_objects_visualization",
     "camera_semantic_full_resolution",

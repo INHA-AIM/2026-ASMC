@@ -71,3 +71,22 @@ class LaunchModesTest(unittest.TestCase):
     def test_region_example_is_off_unless_explicitly_requested(self):
         config=roslaunch.config.load_config_default([str(LAUNCH/'camera_region_example.launch')],None,verbose=False)
         self.assertFalse(config.nodes)
+
+    def test_filter_and_raw_options_are_shared_and_debug_only(self):
+        for profile in ['debug','planning']:
+            config=self.config('profile:='+profile,'start_visualization:=true',
+                'objects_hood_mask:=false','objects_ego_hood_filter:=true',
+                'objects_ego_hood_filter_config:=/tmp/filter.yaml')
+            for node in ['camera_object_detector','camera_object_visualizer']:
+                self.assertTrue(config.params['/'+node+'/ego_hood_filter'].value)
+                self.assertEqual('/tmp/filter.yaml',config.params['/'+node+'/ego_hood_filter_config'].value)
+                self.assertEqual(profile=='debug',config.params['/'+node+'/debug_raw'].value)
+        config=self.config('profile:=debug','objects_debug_raw:=false')
+        self.assertFalse(config.params['/camera_object_detector/debug_raw'].value)
+
+    def test_selected_mask_default_keeps_idle_off_and_filter_off(self):
+        self.assertFalse(self.config('profile:=idle').nodes)
+        config=self.config('profile:=debug')
+        for node in ['camera_object_detector','camera_object_visualizer']:
+            self.assertTrue(config.params['/'+node+'/hood_mask'].value)
+            self.assertFalse(config.params['/'+node+'/ego_hood_filter'].value)

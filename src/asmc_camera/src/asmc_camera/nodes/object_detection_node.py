@@ -15,6 +15,7 @@ from asmc_camera.camera.frame_buffer import EncodedFrame, LatestFrameBuffer
 from asmc_camera.detection.classes import load_class_groups
 from asmc_camera.detection.processor import ObjectFrameProcessor
 from asmc_camera.detection.hood_mask import HoodMask
+from asmc_camera.detection.ego_hood_filter import EgoHoodFilter
 from asmc_camera.detection.ultralytics_backend import UltralyticsDetector
 
 
@@ -46,6 +47,10 @@ class ObjectDetectionNode:
         groups = load_class_groups(rospy.get_param("~class_groups"))
         hood_mask = HoodMask.load(bool(rospy.get_param("~hood_mask", False)),
                                   rospy.get_param("~hood_mask_config", ""))
+        ego_hood_filter = EgoHoodFilter.load(bool(rospy.get_param("~ego_hood_filter", False)),
+                                            rospy.get_param("~ego_hood_filter_config", ""))
+        if hood_mask.enabled and ego_hood_filter.enabled:
+            raise ValueError("hood input mask and ego hood post-filter are mutually exclusive")
         if backend is None:
             backend = UltralyticsDetector(
                 weights=rospy.get_param("~weights"),
@@ -57,12 +62,12 @@ class ObjectDetectionNode:
                 predict_overrides=rospy.get_param("~predict_overrides", {}),
                 log=rospy.loginfo,
             )
-        self.processor = ObjectFrameProcessor(backend, groups, hood_mask=hood_mask)
+        self.processor = ObjectFrameProcessor(backend, groups, hood_mask=hood_mask, ego_hood_filter=ego_hood_filter)
         self.backend_info = dict(backend.info)
         self.buffer = LatestFrameBuffer(["front"], batch_wait_ms=0)
         self.stop = threading.Event()
         self.lock = threading.Lock()
-        self.output_frames = self.decode_errors = self.inference_errors = self.mask_errors = self.header_errors = 0
+        self.output_frames = self.decode_errors = self.inference_errors = self.mask_errors = self.filter_errors = self.header_errors = 0
         self.latest_input_stamp_ns = self.latest_result_stamp_ns = 0
         self.last_input_at = 0.0
         self.started_at = time.monotonic()
@@ -70,6 +75,10 @@ class ObjectDetectionNode:
         self.e2e_samples, self.queue_samples = deque(maxlen=500), deque(maxlen=500)
         self.duplicates = []
         self.publisher = rospy.Publisher("/perception/camera/objects", CameraObjectBoxArray, queue_size=5)
+        self.raw_publisher = (rospy.Publisher("/perception/camera/objects/debug/raw", CameraObjectBoxArray, queue_size=5)
+                              if bool(rospy.get_param("~debug_raw", False)) else None)
+        self.filter_counts = dict(raw=0, kept=0, excluded=0)
+        self.excluded_boxes = 0
         self.diagnostics = rospy.Publisher("/perception/camera/objects/diagnostics", DiagnosticArray, queue_size=5)
         self.last_header = None
         self.control = RosInferenceControl("yolo", ["front"], 20., on_transition=self._invalidate)
@@ -87,6 +96,8 @@ class ObjectDetectionNode:
         if mode != ACTIVE and self.last_header is not None:
             message = CameraObjectBoxArray(header=copy.deepcopy(self.last_header), valid=False)
             self.publisher.publish(message)
+            if self.raw_publisher is not None:
+                self.raw_publisher.publish(message)
 
     def _callback(self, message):
         with self.lock:
@@ -109,7 +120,11 @@ class ObjectDetectionNode:
                 token = self.control.state.begin(stamps)
                 if token is None:
                     continue
-                message, timings, error = self.processor.process(frame.header, frame.data)
+                if self.raw_publisher is not None:
+                    message, raw, timings, error = self.processor.process_with_raw(frame.header, frame.data)
+                else:
+                    message, timings, error = self.processor.process(frame.header, frame.data)
+                    raw = None
                 if self.stop.is_set():
                     return
                 with self.control.state.output_guard(token) as allowed:
@@ -118,8 +133,12 @@ class ObjectDetectionNode:
                     self.control.state.complete(token, stamps, message.valid, error[0] if error else "")
                     if self.control.state.mode == ACTIVE:
                         self.publisher.publish(message)
+                        if self.raw_publisher is not None:
+                            self.raw_publisher.publish(raw)
                         self.last_header = copy.deepcopy(frame.header)
                 with self.lock:
+                    self.filter_counts = dict(self.processor.last_counts)
+                    self.excluded_boxes += self.filter_counts["excluded"]
                     self.output_frames += 1
                     self.latest_result_stamp_ns = frame.stamp.to_nsec()
                     self.queue_samples.append((time.monotonic() - frame.received_monotonic) * 1000)
@@ -131,6 +150,8 @@ class ObjectDetectionNode:
                     if error:
                         if error[0] == "decode":
                             self.decode_errors += 1
+                        elif error[0] == "filter":
+                            self.filter_errors += 1
                         elif error[0] == "mask":
                             self.mask_errors += 1
                         else:
@@ -159,6 +180,10 @@ class ObjectDetectionNode:
             with self.lock:
                 values = dict(self.backend_info)
                 values.update({"hood_mask_"+key: value for key,value in self.processor.hood_mask.info.items()})
+                values.update({"ego_hood_filter_"+key: value for key,value in self.processor.ego_hood_filter.info.items()})
+                values.update(debug_raw_enabled=self.raw_publisher is not None,
+                              ego_hood_filter_last_counts=self.filter_counts,
+                              ego_hood_filter_excluded_total=self.excluded_boxes, filter_errors=self.filter_errors)
                 fps = (self.output_frames - previous_count) / max(now - previous_at, 1e-6)
                 previous_count, previous_at = self.output_frames, now
                 values.update(processing_fps=round(fps, 3), output_frames=self.output_frames,
@@ -175,7 +200,7 @@ class ObjectDetectionNode:
                 values["average_stage_ms"] = {k: round(float(np.mean(v)), 3) for k, v in self.stage_samples.items()}
             status = DiagnosticStatus(name="camera_objects/inference", hardware_id=str(values.get("device", "unknown")))
             status.level = DiagnosticStatus.WARN if (self.duplicates or values["input_silence_sec"] > 1
-                                                     or self.decode_errors or self.inference_errors or self.mask_errors or self.header_errors) else DiagnosticStatus.OK
+                                                     or self.decode_errors or self.inference_errors or self.mask_errors or self.filter_errors or self.header_errors) else DiagnosticStatus.OK
             status.message = "input/processing warning" if status.level else "running"
             status.values = [KeyValue(key=str(k), value=str(v)) for k, v in values.items()]
             self.diagnostics.publish(DiagnosticArray(header=copy.deepcopy(self._diagnostic_header()), status=[status]))

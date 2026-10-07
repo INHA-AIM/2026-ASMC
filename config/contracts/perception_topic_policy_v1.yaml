@@ -85,6 +85,21 @@ topic_families:
     p5b_action: keep
     rationale: Exact source frame YOLO overlay; independent of LiDAR and GPS, without operational message changes.
 
+  - id: camera_objects_debug_raw
+    topics:
+      - {pattern: /perception/camera/objects/debug/raw, type: asmc_msgs/CameraObjectBoxArray}
+    producer:
+      file: src/asmc_camera/src/asmc_camera/nodes/object_detection_node.py
+      anchors: ['"/perception/camera/objects/debug/raw"']
+    consumers:
+      - file: src/asmc_camera/src/asmc_camera/nodes/object_visualizer_node.py
+        anchor: "'/perception/camera/objects/debug/raw'"
+    bag_profiles: []
+    classification: debug_opt_in
+    current_mode: visualization_launch_and_subscriber_lazy
+    p5b_action: keep
+    rationale: Optional same-inference pre-ego-filter results; debug comparison only, not a planning input.
+
   - id: camera_objects_diagnostics
     topics:
       - {pattern: /perception/camera/objects/diagnostics, type: diagnostic_msgs/DiagnosticArray}

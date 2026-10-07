@@ -53,6 +53,7 @@ jobs:
           python3 -m unittest tools/audit/test_perception_runtime_acceptance.py
           python3 -m unittest tools/perception/test_camera_object_parity.py
           python3 -m unittest tools/perception/test_fusion_diagnostics.py
+          python3 -m unittest tools/perception/test_track_continuity.py
 
       - name: catkin_make
         run: |
@@ -80,4 +81,7 @@ jobs:
           python3 tools/perception/check_region_example_ros.py
           python3 tools/perception/check_object_visualization_ros.py
           python3 tools/perception/check_object_visualization_ros.py --hood-mask
+          python3 tools/perception/check_object_visualization_ros.py --hood-mask --debug-raw
           python3 tools/perception/check_hood_mask_ros.py
+          python3 tools/perception/check_ego_hood_filter_ros.py
+          python3 tools/perception/check_object_visualization_ros.py --ego-hood-filter
