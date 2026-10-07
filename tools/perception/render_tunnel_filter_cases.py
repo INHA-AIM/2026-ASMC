@@ -65,6 +65,9 @@ def main():
             fig.text(.01,.01,'Stage points precede final OBB rejection. Evaluation roll/pitch rounded to 5 decimals. No independent GT; removed points are not free space.',fontsize=10)
             fig.tight_layout(rect=[0,.035,1,.96]);name=bag+'-case-%02d.png'%ci
             fig.savefig(args.output/name,dpi=110);plt.close(fig)
+            for profile,points in cloud.items():
+                np.savez_compressed(args.output/(bag+'-case-%02d-'%ci+profile+'.npz'),
+                                    A=points['A'],B=points['B'],tags=points['tags'],stamp=points['stamp'])
             results.append(dict(case=case['case'],image=name,raw_lidar_stamp_ns=meta['raw_lidar_stamp_ns'],
                 raw_camera_stamp_ns=meta['raw_camera_stamp_ns'],camera_lidar_offset_ms=meta['camera_lidar_offset_ms'],
                 frame_indices={k:indices[k][ci] for k in indices},stages={s:frame[s]['B'] for s in frame},
