@@ -85,37 +85,70 @@ YOLO 20Hz, 신호등 10Hz이며 새 입력만 처리한다. 이전 관측을 복
 `managed:=false`를 명시한다. 새 기본값은 이 프로필 도입에서 변경된 것이며 과거 증거의
 명령을 실행할 때도 당시 legacy/managed 프로필을 명시한다.
 
-### 보넷 mask (선택 기능, 기본 활성화 보류)
+### 보넷 제외: semantic GT 윤곽 mask 기본 활성화
 
-YOLO만 입력 복사본에 검정 mask를 적용한다. 원본 영상·TwinLite·ResNet 입력과 객체의
-원본 좌표·source stamp·frame_id는 유지한다. crop이나 경계 box 삭제는 하지 않는다.
-mask는 입력 텐서 크기를 줄이지 않아 YOLO 연산량 절감을 의미하지 않는다.
+기본은 보넷 semantic GT에서 확인한 윤곽을 입력 복사본에 검게 가리는 방식이다.
+원본 영상·TwinLite·ResNet 입력, 객체 원본 좌표·source header는 유지한다.
+상위·개별 객체·시각화 launch의 `objects_hood_mask`는 **true**이고,
+`objects_ego_hood_filter`는 **false**다. `profile:=idle`은 여전히 아무 모델도 실행하지 않는다.
 
 ```bash
-# 보넷 mask를 켜고 전체 디버그 영상 확인
-roslaunch asmc_camera perception.launch profile:=debug objects_hood_mask:=true
+roslaunch asmc_camera perception.launch profile:=debug
 ```
 
 ```bash
 rqt_image_view --clear-config /perception/camera/objects/debug/image/compressed
 ```
 
-전체영상 비교는 `objects_hood_mask:=false`로 명시한다. 상위·개별 YOLO launch 모두
-현재 기본값은 **false**다. 실제 보넷 윤곽 후보에서 보넷 오검출 634프레임은 제거됐지만
-고정 MORAI 정답 287프레임 중 원래 검출한 보행자 1명을 새로 놓쳤다. 기본 활성화 조건인
-실제 객체 신규 누락 0을 충족하지 못해 true 승격은 보류한다. 하단 21% 직사각형과
-더 좁은 윤곽 후보의 실패도 보존한다. confidence를 낮춰 실패를 면제하지 않는다.
+전체영상 비교·롤백은 명시적으로 mask를 끈다.
 
-영역은 `src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml`의 정규화 다각형이다.
-현재 후보는 1280×720에서 114,058픽셀(약 12.38%)이며 모델 입력 해상도 변경이 아니다.
-다른 파일은 `objects_hood_mask_config:=/절대/경로.yaml`로 전달하고 launch를 재시작한다.
-PREPARE와 ACTIVE가 같은 영역을 사용하며, overlay는 생산자와 활성 상태·설정 SHA가
-일치할 때만 그린다. 진단의 `hood_mask_*`에 SHA·영역·크기가 기록되고
-`average_stage_ms`에 `hood_mask_ms`가 포함된다. 잘못된 설정은 시작 실패,
-프레임 처리 오류는 원본 header/크기의 `valid=false`로 보고한다.
+```bash
+roslaunch asmc_camera perception.launch profile:=debug objects_hood_mask:=false
+```
 
-검증 결과와 미달 조건은 [보넷 mask 증거](../../../config/baselines/perception_camera_hood_mask_v1.yaml)에
-기록한다. 이번 기능은 기존 모델 준비·MORAI·fusion 수락 보류를 면제하지 않는다.
+실험용 후처리는 mask를 끄고 켠다. 두 방식 동시 활성화는 시작 오류다.
+
+```bash
+roslaunch asmc_camera perception.launch profile:=debug \
+  objects_hood_mask:=false objects_ego_hood_filter:=true
+```
+
+후처리 규칙은 원본 라벨 `car`, 임시 정수 좌표 기준 너비 ≥60%, 중심 y ≥85%,
+하단 y ≥95%를 모두 요구한다. 출력 소수 좌표·confidence·순서는 바꾸지 않는다.
+GT287과 근접 시험39에서는 새 실제 객체 누락이 없었지만, 제외 박스에 옆 차량 일부가
+함께 들어가는 사례를 보넷 전용으로 확정할 수 없어 기본 방식으로 선정하지 않았다.
+
+선정 mask는 고정 GT287에서 기존 보행자 검출 1건을 놓친다. **2026-10-07 사용자 지시에
+따라 그 특정 사례만 수락 예외로 기록**했다. 신규 누락을 일반적으로 허용하는 기준이 아니다.
+실제 보넷 윤곽은 semantic GT와 원본 RGB에서 확인했다. 하단21% 직사각형은 사용하지 않는다.
+이전 엄격한 실패 판정·자료는 수정하지 않고 [후속 선정 증거](../../../config/baselines/perception_camera_hood_policy_selection_v1.yaml)에 새 결정을 기록한다.
+
+영역 파일은 `src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml`이며,
+1280×720에서 114,058픽셀(약12.38%)이다. 센서 pose/FOV/해상도 설정이 바뀌면 윤곽을 다시 확인한다.
+`objects_hood_mask_config:=/절대/경로.yaml`로 변경 후 launch를 재시작한다.
+후처리 설정은 `yolo_ego_hood_filter_v1.yaml`과 `objects_ego_hood_filter_config`다.
+PREPARE와 ACTIVE는 같은 설정을 사용하고 STANDBY에서는 반복 추론을 멈춘다.
+진단에는 방식·설정 SHA·단계 시간·후처리 전/후 개수가 포함된다.
+mask는 입력 텐서 크기를 유지하므로 연산량 절감을 의미하지 않는다.
+
+`profile:=debug`에서는 `/perception/camera/objects/debug/raw`도 발행한다.
+이는 **해당 실행에서 YOLO가 반환한 결과**이며 mask 모드에서도 별도 전체영상 추론을 하지 않는다.
+`objects_debug_raw:=false`로 끌 수 있고 planning·객체 단독 launch 기본은 false다.
+운영 `/perception/camera/objects`는 정제 결과다. overlay는 정확히 같은 source stamp의
+원본 영상·정제 결과·debug raw를 사용하고 유지 박스와 후처리 제외 박스를 구분한다.
+잘못된 설정은 시작 실패, 프레임 오류는 원본 header/크기의 `valid=false`다.
+
+### fusion 지표와 추적 연속성
+
+`Fusion sync matched`는 LiDAR와 YOLO **프레임 쌍**을 50ms 안에서 연결해 fusion을
+수행한 횟수다. 박스 수·검출 차량 수·새 track 수가 아니며 빈 YOLO 결과도 매칭될 수 있다.
+재검출이나 track 재생성 자체로 이 카운트가 올라가지 않는다.
+따라서 매칭 수 감소가 깜박임 감소를 뜻한다고 해석하지 않는다.
+
+`tools/perception/analyze_track_continuity.py`는 별도로 track별 관측 공백·재등장·분류 상실을
+기록한다. 새 ID 수를 성능 점수로 사용하지 않는다. 실행별 track ID만으로 실제 객체의
+ID 분절을 확정하지 않으며, 그 판단은 독립 actor identity 또는 검토한 시공간 대응이 필요하다.
+기존 프레임 동기화 수락 조건과 모델 준비·MORAI·fusion 보류는 유지한다.
 
 ### 목표 Hz를 파일에서 바꾸기
 
@@ -279,3 +312,19 @@ MORAI 테스트 도구는 actor 일괄 삭제를 사용하지 않고 종료 시 
 
 3카메라 YOLO, 동시 모델 성능, LiDAR/YOLO 10Hz 조합, 판제의 jamming/crop 통합,
 YOLO26·학습, batch·공유 처리·TensorRT, 4070 SUPER 인수는 후속 독립 단계다.
+
+### 이후 검증 순서
+
+1. 모델별 준비 수락: 세대별 STANDBY→PREPARE→ACTIVE, 실제 입력 연속3회 준비,
+   준비 p99·ACTIVE 첫1초 출력·지속10Hz·입력 중단·재진입을 측정한다.
+   차선 피팅의 소비는 음영구간으로 제한하며 구간 판단과 결과 선택은 판제가 담당한다.
+2. Fusion은 프레임 공급·시간 매칭과 객체 연속성을 분리한다. 처리 LiDAR stamp 집합,
+   timeout/pending, source offset, 독립 actor별 검출 공백·분류 공백·ID 변경을 함께 제출한다.
+   독립 객체 대응이 없는 track ID 증감을 재검출 성능으로 해석하지 않는다.
+3. 동일 장면으로 세 모델 동시 실행, 전방/3카메라 YOLO, LiDAR 최대주기/10Hz와
+   YOLO20/10Hz 조합을 독립 비교한다. 기존 50ms/200ms 정책 변경은 별도 실험으로 남긴다.
+4. 선정 실행 조합에서 YOLO26s/m 출력·성능 비교 후, 해상도·FP16·동일 모델 batch·
+   공통 영상 디코딩·모델별 TensorRT를 병목 근거에 따라 각각 검증한다.
+5. RTX4070 SUPER에서 예열·동시 부하·장시간 안정성·fallback을 인수한다.
+
+보넷 방식 선정으로 위 수락을 대신하지 않으며 PR #69는 남은 수락 보류가 해결될 때까지 Draft다.

@@ -49,16 +49,16 @@ roslaunch data_collection bag_recorder.launch profile:=full_raw
 새 `asmc_lidar` 골격은 이 overlay 없이 라이브러리만 빌드하며, 어느 쪽도
 `asmc_camera` launch가 자동으로 시작하지 않는다.
 
-### 보넷 mask 시험
+### 보넷 mask 기본값과 비교
 
 ```bash
-roslaunch asmc_camera perception.launch profile:=debug objects_hood_mask:=true
+roslaunch asmc_camera perception.launch profile:=debug
 ```
 
 YOLO 입력 복사본에만 정규화 다각형을 적용하고 원본 좌표를 유지한다. overlay에 영역과
-활성 상태를 표시한다. 현재 실제 보행자 신규 누락 1건으로 기본값은 **false**이며,
-일반 debug 명령은 전체영상을 사용한다. 전체영상 비교는 `objects_hood_mask:=false`를
-명시한다. 영역 파일·진단·수락 결과는 [mask 안내](../../docs/handoffs/perception/camera-inference-control.md#보넷-mask-선택-기능-기본-활성화-보류)를 따른다.
+활성 상태를 표시한다. 기존 보행자 누락 1건의 사용자 수락 예외를 기록하고 기본값을 **true**로 선정했다.
+일반 debug 명령은 semantic GT 보넷 윤곽 mask를 사용한다. 전체영상 비교는 `objects_hood_mask:=false`를
+명시한다. 영역 파일·진단·수락 결과는 [mask 안내](../../docs/handoffs/perception/camera-inference-control.md#보넷-제외-semantic-gt-윤곽-mask-기본-활성화)를 따른다.
 mask는 YOLO 합성곱 연산량을 줄이는 기능이 아니다.
 
 ### 전방 YOLO11m 객체 검출 (opt-in)

@@ -1,0 +1,12 @@
+{
+  "semantic_rgb": [
+    0,
+    0,
+    0
+  ],
+  "ego_connected_component_pixels": 118141,
+  "ego_silhouette_pixels": 118223,
+  "mask_pixels": 114058,
+  "mask_pixels_outside_ego_silhouette": 0,
+  "semantic_holes_inside_mask": 82
+}
