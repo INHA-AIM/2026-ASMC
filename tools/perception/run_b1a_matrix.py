@@ -10,7 +10,7 @@ import sys
 import time
 from xmlrpc.client import ServerProxy
 import yaml
-from b1a_protocol import jobs
+from b1a_protocol import jobs, require_stopped_simulator
 from run_b0_matrix import stop
 
 
@@ -22,14 +22,20 @@ def main():
     parser.add_argument('--phases',default='offline,realtime')
     parser.add_argument('--smoke',action='store_true')
     parser.add_argument('--revision',required=True,help='host worktree commit; recorded alongside tool SHA')
+    parser.add_argument('--host-state',type=Path,required=True,help='fresh Windows Simulator check, updated by host monitor')
     args=parser.parse_args()
     root=Path(__file__).resolve().parents[2]
     config=yaml.safe_load((root/'config/experiments/camera_lidar_b1a_v1.yaml').read_text())
     port=config['conditions']['ros_master_port']; uri='http://127.0.0.1:%d'%port
     if os.environ.get('ROS_MASTER_URI')!=uri: parser.error('isolated master required')
+    def host_check():
+        state=json.loads(args.host_state.read_text())
+        require_stopped_simulator(state,time.time())
+        return state
+    initial_host_state=host_check()
     args.output.mkdir(parents=True,exist_ok=False)
     sources=[root/'config/experiments/camera_lidar_b1a_v1.yaml']+list((root/'tools/perception').glob('*b1a*.py'))+list((root/'tools/perception/b1a_probe').glob('*'))
-    manifest=dict(config=config,revision=args.revision,code_sha256={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sources if p.is_file()},
+    manifest=dict(config=config,revision=args.revision,host_state=initial_host_state,code_sha256={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sources if p.is_file()},
                   source=json.loads((args.source/'source-manifest.json').read_text()),
                   fixtures=json.loads((args.fixtures/'manifest.json').read_text()),
                   binary_sha256={name:hashlib.sha256((args.source/'devel/lib/Main'/name).read_bytes()).hexdigest() for name in ('main','tunnel_filter_offline_eval')},
@@ -45,6 +51,7 @@ def main():
         print('START '+label,flush=True); core=child=None
         with (args.output/(label+'.core.log')).open('w') as corelog,(args.output/(label+'.trial.log')).open('w') as triallog:
             try:
+                host_check()
                 try: ServerProxy(uri).getPid('/b1a_matrix')
                 except (OSError,ConnectionError): pass
                 else: raise RuntimeError('refuse to reuse an existing master')
@@ -58,17 +65,23 @@ def main():
                 command=[sys.executable,str(root/'tools/perception/run_b1a_trial.py'),'--job',json.dumps(job),
                          '--output',str(args.output/label),'--fixtures',str(args.fixtures),'--source',str(args.source)]
                 child=subprocess.Popen(command,stdout=triallog,stderr=subprocess.STDOUT,start_new_session=True)
-                child.wait()
+                while child.poll() is None:
+                    host_check()
+                    time.sleep(.2)
                 report=args.output/label/'report.json'
                 rows.append(dict(label=label,job=job,return_code=child.returncode,report_exists=report.exists(),
                                  complete=json.loads(report.read_text())['complete'] if report.exists() else False))
             except Exception as exc:
                 rows.append(dict(label=label,job=job,error=str(exc),report_exists=False,complete=False))
+            except KeyboardInterrupt:
+                rows.append(dict(label=label,job=job,error='matrix interrupted',report_exists=False,complete=False))
+                raise
             finally:
                 if child: stop(child)
                 if core: stop(core)
                 (args.output/'index.json').write_text(json.dumps(rows,indent=2)+'\n')
         print('END '+json.dumps(rows[-1]),flush=True)
+        if rows[-1].get('error'): break
     return 0 if all(r['complete'] for r in rows) else 1
 
 

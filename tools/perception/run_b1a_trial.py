@@ -144,6 +144,8 @@ def main():
             child_code=child.poll()
     except Exception as exc:
         error=str(exc)
+    except KeyboardInterrupt:
+        error='trial interrupted; incomplete attempt retained'
     finally:
         for process in reversed(processes): stop(process)
         for stream in streams: stream.close()

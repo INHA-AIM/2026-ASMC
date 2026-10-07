@@ -6,10 +6,20 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from b1a_protocol import frozen_events, gps_action, legacy_boxes, jobs, test_launch, launch_values
+from b1a_protocol import require_stopped_simulator
 from analyze_b1a_matrix import offline, realtime
 
 
 class ProtocolTest(unittest.TestCase):
+    def test_simulator_running_stale_or_failed_host_check_is_rejected(self):
+        state=dict(checked_unix=100.,return_code=0,error='',simulator_processes=[])
+        require_stopped_simulator(state,101.)
+        with self.assertRaises(RuntimeError):require_stopped_simulator(state,161.)
+        state['simulator_processes']=['Simulator']
+        with self.assertRaises(RuntimeError):require_stopped_simulator(state,101.)
+        state.update(simulator_processes=[],return_code=1)
+        with self.assertRaises(RuntimeError):require_stopped_simulator(state,101.)
+
     def row(self, **extra):
         return dict(valid=True, frame_id='camera_front', stamp_ns=100, ros_ns=120,
                     arrival=1.2, boxes=[dict(label='car', confidence=.7, xyxy=[-.9, 1.9, 3.2, 4.8])], **extra)

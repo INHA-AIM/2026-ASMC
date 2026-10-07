@@ -1,5 +1,10 @@
 # 카메라·MGeo·LiDAR 인지 융합 개발 로드맵
 
+> **2026-10-07 B0 병합·B1 분리:** B0 측정·실패 기준선 PR #70 병합 완료 (`07cc51a`).
+> 다음은 [B1a 재호 터널 필터 검증](../../handoffs/perception/camera-lidar-b1a.md)이다.
+> local/map 공동 설계·YOLO11m COCO 확대는 별도 단계로 두고, 잔여 문제에 B1b 기하 개선을
+> 적용한 뒤 YOLO26을 비교한다. 카메라 only 운용과 운영 기본값 변경은 아직 확정하지 않는다.
+
 > **2026-10-07 장애물 융합 연구:** [카메라와 LiDAR 분석·실험 계획](../../handoffs/perception/camera-lidar-fusion-study.md).
 > 기존 YOLO11m을 기준으로 기하 연관 → YOLO26 detect/seg 교체 → mask 효과를 분리 비교한다.
 > TwinLiteNet+와 신호등 모델은 유지하며 depth 추가는 후순위다. 참고 구현 검수 완료와

@@ -5,6 +5,12 @@ import re
 import xml.etree.ElementTree as ET
 
 
+def require_stopped_simulator(state, now):
+    age=now-state['checked_unix']
+    if age<0 or age>60 or state['return_code']!=0 or state['error'] or state['simulator_processes']:
+        raise RuntimeError('fresh successful host check with Simulator stopped is required')
+
+
 def gps_action(mode, relative_sec, window):
     if mode not in ('normal', 'invalid', 'missing'):
         raise ValueError('unknown GPS mode')
