@@ -1,5 +1,5 @@
 <launch>
-  <arg name="managed" default="false"/>
+  <arg name="managed" default="true"/>
   <arg name="initial_mode" default="0"/>
   <arg name="target_hz" default="20.0"/>
   <arg name="config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>

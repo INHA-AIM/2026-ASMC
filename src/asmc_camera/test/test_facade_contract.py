@@ -49,13 +49,13 @@ class PerceptionFacadeContractTest(unittest.TestCase):
     def test_facade_has_one_explicit_component_switch_per_runtime_scope(self):
         arguments = {item.get("name"): item for item in self.launch_root.findall("arg")}
         expected = {
-            "start_camera_lane": "true",
-            "start_traffic_light": "false",
-            "start_visualization": "false",
+            "start_camera_lane": "$(eval arg('profile') in ['planning', 'debug', 'legacy'])",
+            "start_traffic_light": "$(eval arg('profile') in ['planning', 'debug'])",
+            "start_visualization": "$(eval arg('profile') == 'debug')",
             "visualization_legacy_rqt": "false",
             "visualization_calibration_grid": "false",
             "publish_bev_debug_metadata": "$(arg visualization_legacy_rqt)",
-            "lane_enable_shared_family_debug": "true",
+            "lane_enable_shared_family_debug": "$(eval arg('profile') in ['debug', 'legacy'])",
             "lane_enable_boundary_family_candidate": "true",
             "lane_enable_independent_boundary_pipeline": "false",
             "lane_publish_pipeline_audit": "false",
@@ -171,7 +171,7 @@ class PerceptionFacadeContractTest(unittest.TestCase):
         self.assertEqual(
             "/perception/lane/boundary_family", lane_family["canonical_topic"]
         )
-        self.assertTrue(lane_family["shared_family_debug_enabled_by_default"])
+        self.assertFalse(lane_family["shared_family_debug_enabled_by_default"])
         self.assertEqual(
             "noncanonical_diagnostic_only",
             lane_family["compatibility_topic_policy"],
@@ -283,6 +283,8 @@ class PerceptionFacadeContractTest(unittest.TestCase):
             [
                 "/perception/camera/debug/mosaic/compressed",
                 "/perception/bev/debug/comparison/compressed",
+                "/perception/camera/objects/debug/image/compressed",
+                "/perception/traffic_light/debug/image/compressed",
             ],
             visualization["image_topics"],
         )

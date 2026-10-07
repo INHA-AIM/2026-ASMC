@@ -1,32 +1,64 @@
-"""Resolve actual launch substitutions to check opt-in failure isolation."""
+"""Resolve actual ROS launch profiles, component overrides and failure isolation."""
 from pathlib import Path
 import unittest
 import roslaunch
 
-
 LAUNCH = Path(__file__).resolve().parents[2] / 'launch'
-
+MODELS = ('camera_semantic_inference','camera_object_detector','traffic_light_infer')
 
 class LaunchModesTest(unittest.TestCase):
-    def config(self, managed):
+    def config(self, *arguments):
         return roslaunch.config.load_config_default(
-            [(str(LAUNCH/'perception.launch'), ['managed:='+managed,
-              'start_camera_objects:=true','start_traffic_light:=true'])], None,
-            verbose=False)
+            [(str(LAUNCH/'perception.launch'),list(arguments))],None,verbose=False)
 
-    def test_managed_models_do_not_take_other_models_down(self):
-        config = self.config('true')
-        self.assertFalse(any(node.required for node in config.nodes))
-        for name in ('camera_semantic_inference','camera_object_detector','traffic_light_infer'):
+    def test_bare_launch_loads_no_models_or_visualizers(self):
+        self.assertFalse(self.config().nodes)
+
+    def test_planning_loads_all_models_standby_without_debug_or_region_owner(self):
+        config=self.config('profile:=planning')
+        self.assertFalse(any(n.required for n in config.nodes))
+        for name in MODELS:
             self.assertTrue(config.params['/'+name+'/managed'].value)
             self.assertEqual(0,config.params['/'+name+'/initial_mode'].value)
-        self.assertNotIn('camera_region_example',[node.name for node in config.nodes])
+        self.assertFalse(any('visualizer' in n.name or n.name=='camera_region_example' for n in config.nodes))
+        self.assertFalse(config.params['/camera_lane_vectorizer/shared_lane_family/runtime_debug_enabled'].value)
+        self.assertEqual(10.,config.params['/traffic_light_infer/target_hz'].value)
 
-    def test_legacy_required_nodes_and_switch_defaults_are_preserved(self):
-        config=self.config('false')
+    def test_debug_starts_all_models_active_and_each_overlay(self):
+        config=self.config('profile:=debug')
+        for name in MODELS:
+            self.assertTrue(config.params['/'+name+'/managed'].value)
+            self.assertEqual(2,config.params['/'+name+'/initial_mode'].value)
+        nodes={n.name for n in config.nodes}
+        self.assertTrue({'camera_object_visualizer','camera_traffic_light_visualizer','camera_semantic_visualizer','camera_bev_visualizer'}<=nodes)
+        self.assertFalse(any(n.required for n in config.nodes))
+        self.assertNotIn('camera_region_example',nodes)
+
+    def test_yolo_debug_can_run_without_lane_traffic_lidar_or_gps(self):
+        config=self.config('profile:=debug','start_camera_lane:=false','start_traffic_light:=false')
+        self.assertEqual({'camera_object_detector','camera_object_visualizer'},{n.name for n in config.nodes})
+
+    def test_model_exclusion_and_initial_mode_override_are_independent(self):
+        config=self.config('profile:=debug','start_camera_objects:=false','lane_initial_mode:=0')
+        self.assertEqual(0,config.params['/camera_semantic_inference/initial_mode'].value)
+        self.assertEqual(2,config.params['/traffic_light_infer/initial_mode'].value)
+        self.assertFalse(any(n.name.startswith('camera_object') for n in config.nodes))
+
+    def test_legacy_keeps_lane_unrestricted_and_required_without_debug(self):
+        config=self.config('profile:=legacy')
+        self.assertFalse(config.params['/camera_semantic_inference/managed'].value)
         self.assertTrue(next(n for n in config.nodes if n.name=='camera_semantic_inference').required)
-        self.assertTrue(next(n for n in config.nodes if n.name=='traffic_light_infer').required)
-        self.assertFalse(next(n for n in config.nodes if n.name=='camera_object_detector').required)
+        self.assertFalse(any('visualizer' in n.name or n.name in MODELS[1:] for n in config.nodes))
+
+    def test_direct_backend_launches_default_to_managed_standby(self):
+        for filename,name in [('camera_lane.launch',MODELS[0]),('camera_objects.launch',MODELS[1])]:
+            config=roslaunch.config.load_config_default([str(LAUNCH/filename)],None,verbose=False)
+            self.assertTrue(config.params['/'+name+'/managed'].value)
+            self.assertEqual(0,config.params['/'+name+'/initial_mode'].value)
+
+    def test_unknown_profile_is_rejected(self):
+        with self.assertRaises(roslaunch.RLException):
+            self.config('profile:=mistyped')
 
     def test_region_example_is_off_unless_explicitly_requested(self):
         config=roslaunch.config.load_config_default([str(LAUNCH/'camera_region_example.launch')],None,verbose=False)

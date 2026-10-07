@@ -6,21 +6,51 @@ PR #68의 전방 YOLO opt-in 이전은 main `7aed612`에 병합됐다. 후속 �
 
 ## 실행과 외부 요청
 
-컨테이너와 bridge는 별도로 실행한다. ROS 환경을 읽은 터미널에서 직접 launch한다.
-기존 실행은 `managed:=false` 기본값으로 기존 반복 추론을 유지한다.
+컨테이너·bridge와 rqt 창은 사용자가 별도로 실행한다. ROS 환경을 읽은 터미널에서
+다음 프로필 하나를 선택한다. 카메라는 어느 구간을 주행 중인지 판단하지 않는다.
+
+| 직접 launch | 모델 로드와 실행 | 시각화 |
+|---|---|---|
+| `roslaunch asmc_camera perception.launch` | idle: 모델·차선 downstream을 실행하지 않음, 서비스 없음 | 없음 |
+| `roslaunch asmc_camera perception.launch profile:=planning` | 세 모델 로드·dummy 예열 후 STANDBY, 외부 요청 대기 | 꺼짐 |
+| `roslaunch asmc_camera perception.launch profile:=debug` | 세 모델 ACTIVE, TwinLite 3뷰·YOLO 전방·ResNet camera4 | debug publisher 켜짐, rqt 별도 |
+| `roslaunch asmc_camera perception.launch profile:=legacy` | 기존 차선 반복 추론, 모델 목표 Hz 제한 없음 | 꺼짐 |
+
+인자 없는 idle launch는 노드가 없어 종료한다. 판제가 서비스를 호출하려면 planning으로
+모델 노드를 먼저 띄운다. STANDBY는 GPU 모델을 유지하며 반복 추론을 중단하는 상태이고,
+노드를 실행하지 않는 `start_*=false`와 다르다. 서비스 요청은 없는 노드를 생성하지 않는다.
 
 ```bash
 rosparam set /use_sim_time false
-roslaunch asmc_camera perception.launch \
-  managed:=true \
-  start_camera_objects:=true \
-  start_traffic_light:=true \
-  traffic_light_wait_first:=0 \
-  start_visualization:=true
+# 판제용: 이후 모델별 서비스로 준비·활성화
+roslaunch asmc_camera perception.launch profile:=planning
 ```
 
-managed 실행은 세 모델을 로드·dummy 예열한 뒤 STANDBY로 시작한다. 모델을 GPU에
-유지하고 최신 영상만 보관한다. 각 모델의 서비스는 독립적이다.
+```bash
+# 디버그용: 서비스 요청 없이 모든 모델 추론·시각화 시작
+roslaunch asmc_camera perception.launch profile:=debug
+```
+
+```bash
+# YOLO만 디버그: 차선·신호등 모델과 관련 시각화도 실행하지 않음
+roslaunch asmc_camera perception.launch profile:=debug \
+  start_camera_lane:=false start_traffic_light:=false
+```
+
+planning/debug의 `managed`는 true다. 목표는 TwinLite 10Hz **배치율**(각 뷰 10Hz),
+YOLO 20Hz, 신호등 10Hz이며 새 입력만 처리한다. 이전 관측을 복제해 Hz를 채우지 않는다.
+입력이나 연산 성능이 부족하면 목표보다 낮아질 수 있다. legacy는 입력·연산 성능이
+허용하는 만큼 반복 처리하며 같은 목표 제한을 적용하지 않는다.
+
+`start_camera_lane`, `start_camera_objects`, `start_traffic_light`는 프로필에서 선택한
+모델을 개별 제외/추가하는 고급 옵션이다. `*_initial_mode`로 초기 모드,
+`lane_target_hz`, `objects_target_hz`, `traffic_light_hz`로 모델별 목표를 덮어쓸 수 있다.
+`start_visualization`은 시각화 publisher만 제어한다. planning은 차선 리뷰 marker도
+기본 비활성이고, 운영 `LaneBoundaryFamily`는 차선 모델을 활성화하면 계속 제공한다.
+개별 backend launch `camera_lane.launch`/`camera_objects.launch`도 기본 managed STANDBY이며,
+상위 `perception.launch`를 일반 진입점으로 사용한다. 직접 backend만 반복 재현하려면
+`managed:=false`를 명시한다. 새 기본값은 이 프로필 도입에서 변경된 것이며 과거 증거의
+명령을 실행할 때도 당시 legacy/managed 프로필을 명시한다.
 
 | 모델 | 서비스 | 상태 토픽 |
 |---|---|---|
@@ -88,6 +118,13 @@ rqt_image_view --clear-config /perception/bev/debug/comparison/compressed
 rqt_image_view --clear-config /perception/traffic_light/debug/image/compressed
 ```
 
+YOLO 전용 overlay는 같은 source stamp·frame_id·영상 크기에만 박스를 그린다.
+LiDAR·GPS·차선 추론이 필요하지 않으며 정상 빈 검출도 영상으로 확인할 수 있다.
+
+```bash
+rqt_image_view --clear-config /perception/camera/objects/debug/image/compressed
+```
+
 전체영상 YOLO와 기존 LiDAR fusion은 바깥 workspace를 source한 뒤 nested workspace를
 source하고 직접 실행한다. 유효한 Ego 속도·GPS·IMU·LiDAR 입력도 필요하다.
 
@@ -128,6 +165,8 @@ GPS/HD context가 없으면 차선 ACTIVE를 유지한다. 복귀에는 새 유�
 
 단위 시험, 생성 메시지/실제 ROS 서비스 장애 시험, 선택적 예시 ROS 시험, 실제 GPU bag
 시험과 MORAI 기록은 `config/baselines/perception_camera_inference_lifecycle_v1.yaml`에서 관리한다.
+프로필 변경과 YOLO overlay의 추가 검증은 `config/baselines/perception_camera_launch_profiles_v1.yaml`에 기록한다.
+기존 GPU 수락 증거는 당시 프로필 기준으로 보존하며 새 debug 동시 실행의 처리율 보장으로 해석하지 않는다.
 GPU 시험은 동일 bag의 실패 실행도 보존한다. 세 모델을 함께 로드하고 한 모델씩 ACTIVE로
 측정한 시험이며 세 모델 동시 추론 성능 보장은 아니다.
 

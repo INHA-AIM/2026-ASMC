@@ -1,5 +1,14 @@
 schema_version: 1
-profile: competition_runtime_v1
+profile: camera_runtime_profiles_v1
+launch_profiles:
+  default: idle
+  idle: {load_models: false, inference: false, visualization: false}
+  planning: {load_models: true, managed: true, initial_mode: STANDBY, visualization: false}
+  debug: {load_models: true, managed: true, initial_mode: ACTIVE, visualization: true}
+  legacy: {camera_lane: true, camera_objects: false, traffic_light: false, managed: false}
+model_target_hz: {twinlite: 10.0, yolo: 20.0, resnet18: 10.0}
+activation_owner: planning
+# Component flags select node creation. A loaded managed model's service controls inference.
 
 components:
   camera_objects:
@@ -12,7 +21,7 @@ components:
     implementation: asmc_camera/object_detection_node.py
     consumer: Main/camera_objects_yolo_bbox_adapter.py
   camera_lane:
-    enabled_by_default: true
+    enabled_by_default: false
     sensor_set: ASMC_sensor_set_v3
     output_frame: base_link
     source_stamp_policy: newest_synchronized_camera_source
@@ -41,7 +50,7 @@ components:
       enabled_by_default: true
       canonical_topic: /perception/lane/boundary_family
       operating_domain: shadow_two_way_v1
-      shared_family_debug_enabled_by_default: true
+      shared_family_debug_enabled_by_default: false
       shared_family_debug_topic: /perception/lane/debug/shared_family/markers
       compatibility_topic: /perception/lane/boundary_observations
       compatibility_topic_policy: noncanonical_diagnostic_only
@@ -49,7 +58,7 @@ components:
       compatibility_launch_argument: lane_enable_independent_boundary_pipeline
   traffic_light:
     enabled_by_default: false
-    activation_zone: TRAFFIC_LIGHT_REQUIRED
+    activation_owner: planning
     legacy_topics: [/traffic_light/state, /traffic_light/detail]
     canonical_topic: /perception/traffic_light/detection
     implementation: asmc_camera/traffic_light_node.py
@@ -61,6 +70,11 @@ components:
     mission_activation_status: pending_hd_map_zone_integration
   visualization:
     enabled_by_default: false
+    object_overlay:
+      enabled_by_default: false
+      enabled_with: [start_visualization, start_camera_objects]
+      image_topic: /perception/camera/objects/debug/image/compressed
+      depends_on_lidar_or_gps: false
     traffic_light_overlay:
       enabled_by_default: false
       enabled_with: [start_visualization, start_traffic_light]
@@ -68,6 +82,8 @@ components:
     image_topics:
       - /perception/camera/debug/mosaic/compressed
       - /perception/bev/debug/comparison/compressed
+      - /perception/camera/objects/debug/image/compressed
+      - /perception/traffic_light/debug/image/compressed
     legacy_rqt:
       enabled_by_default: false
       launch_argument: visualization_legacy_rqt
@@ -112,4 +128,4 @@ external_components:
   lidar_fusion:
     owner_workspace: src/lidar+sensorfusion
     integration_policy: team_owned_deferred_until_handoff
-    producer_status: declared_not_published_p4b
+    producer_status: opt_in_camera_producer_with_Main_adapter_p2a

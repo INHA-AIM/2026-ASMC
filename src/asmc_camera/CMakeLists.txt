@@ -26,6 +26,7 @@ catkin_package(
 
 catkin_install_python(PROGRAMS
   scripts/camera_region_example_node.py
+  scripts/object_visualizer_node.py
   scripts/object_detection_node.py
   scripts/camera_bev_fusion_node.py
   scripts/camera_bev_node.py

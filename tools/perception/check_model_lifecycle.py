@@ -96,7 +96,7 @@ def main():
         report['stages'].append(item)
         return item
     try:
-        camera=run('camera',['roslaunch','asmc_camera','perception.launch','managed:=true',
+        camera=run('camera',['roslaunch','asmc_camera','perception.launch','profile:=planning',
             'start_camera_objects:=true','start_traffic_light:=true','traffic_light_wait_first:=0',
             'lane_enable_shared_family_debug:=false'])
         for model in NODES:wait_ready(model)

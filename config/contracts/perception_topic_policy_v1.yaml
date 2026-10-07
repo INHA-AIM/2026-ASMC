@@ -10,7 +10,9 @@ scope:
   launch: src/asmc_camera/launch/perception.launch
   views: [front, left, right]
   bag_profile_root: src/data_collection/config/bag_profiles
-  runtime_behavior_changed: false
+  runtime_behavior_changed: false  # The original P5-A audit itself changed no runtime behavior.
+  current_launch_default_profile: idle
+  current_component_modes_apply_when_loaded: true
   excluded_owners:
     - component: UDP bridge and transport diagnostics
       owner: asmc_bridge
@@ -25,9 +27,14 @@ scope:
 launch_defaults:
   source: src/asmc_camera/launch/perception.launch
   anchors:
-    - '<arg name="start_camera_lane" default="true"/>'
-    - '<arg name="start_traffic_light" default="false"/>'
-    - '<arg name="start_visualization" default="false"/>'
+  - <arg name="profile" default="idle" doc="idle | planning | debug | legacy"/>
+  - '<arg name="managed" default="$(eval {''idle'': True, ''planning'': True, ''debug'':
+    True, ''legacy'': False}[arg(''profile'')])"/>'
+  - <arg name="start_camera_lane" default="$(eval arg('profile') in ['planning', 'debug',
+    'legacy'])"/>
+  - <arg name="start_traffic_light" default="$(eval arg('profile') in ['planning',
+    'debug'])"/>
+  - <arg name="start_visualization" default="$(eval arg('profile') == 'debug')"/>
 
 # `bag_profiles` is the exact set of committed data_collection profiles that
 # currently names every expanded topic in the family. It is evidence of use,
@@ -64,6 +71,19 @@ topic_families:
     current_mode: explicit_argument
     p5b_action: keep
     rationale: Opt-in camera producer; LiDAR-owned candidate contract and legacy adapter.
+
+  - id: camera_objects_visualization
+    topics:
+      - {pattern: /perception/camera/objects/debug/image/compressed, type: sensor_msgs/CompressedImage}
+    producer:
+      file: src/asmc_camera/src/asmc_camera/nodes/object_visualizer_node.py
+      anchors: ["'/perception/camera/objects/debug/image/compressed'"]
+    consumers: []
+    bag_profiles: []
+    classification: debug_opt_in
+    current_mode: visualization_launch_and_subscriber_lazy
+    p5b_action: keep
+    rationale: Exact source frame YOLO overlay; independent of LiDAR and GPS, without operational message changes.
 
   - id: camera_objects_diagnostics
     topics:

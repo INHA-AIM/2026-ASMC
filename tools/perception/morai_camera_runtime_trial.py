@@ -284,10 +284,10 @@ class Trial:
             self.subscribers.append(rospy.Subscriber(topic,kind,lambda m,n=name:self.receive(n,m),queue_size=10))
         self.subscribers.append(rospy.Subscriber('/gps',GPSMessage,self.gps,queue_size=5))
         self.subscribers.append(rospy.Subscriber('/CollisionData',CollisionData,self.collision_callback,queue_size=5))
-        self.run_process('camera',['roslaunch','asmc_camera','perception.launch','managed:=true',
+        self.run_process('camera',['roslaunch','asmc_camera','perception.launch','profile:=planning',
             'lane_enable_shared_family_debug:=false','camera_model_grid_max_hz:=15.0'] +
             (['start_camera_objects:=true','start_traffic_light:=true','traffic_light_wait_first:=0']
-             if self.args.canonical_example else []))
+             if self.args.canonical_example else ['start_camera_objects:=false','start_traffic_light:=false']))
         self.run_process('hd_map',['roslaunch','asmc_hd_map','competition_map.launch',
             'publish_local:=true','local_gps_topic:=/camera_trial/gps','rviz:=false'])
         if self.args.canonical_example:

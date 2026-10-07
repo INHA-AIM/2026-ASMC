@@ -128,7 +128,7 @@ def replay(args, path, repeat):
         else:
             launch(["rosrun", "Main", "camera_objects_yolo_bbox_adapter.py"], "adapter")
         if path == "new":
-            launch(["roslaunch", "asmc_camera", "camera_objects.launch"], "producer")
+            launch(["roslaunch", "asmc_camera", "camera_objects.launch", "managed:=false"], "producer")
         def ready():
             pubs, subs, _ = graph()
             producers = dict(pubs).get("/YOLO/BBox", [])
