@@ -184,7 +184,8 @@ def replay(args, path, repeat):
         if args.fusion else parse_fusion_logs(logs))
     if args.fusion:
         prefix.with_suffix('.sync-events.json').write_text(json.dumps(sync_events, indent=2) + '\n')
-    result = {"path": path, "repeat": repeat, "bag": str(args.bag), "fusion": args.fusion, "hood_mask": args.hood_mask,
+    result = {"path": path, "repeat": repeat, "bag": str(args.bag), "fusion": args.fusion,
+              "hood_mask": args.hood_mask and path == "new", "hood_mask_requested": args.hood_mask,
               "input_frames": len(inputs), "output_frames": len(outputs), "rate_hz": rate,
               "coverage": len(set(source)) / len(inputs) if inputs else 0,
               "duplicate_stamps": len(source) - len(set(source)),
