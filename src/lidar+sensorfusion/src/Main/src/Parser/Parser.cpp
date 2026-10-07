@@ -283,6 +283,10 @@ void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
     // cout << "bytes: " << bytes << endl;
 
 
+    // Match TemporalThread's lock order: the source buffer and generation must
+    // be one atomic observation in the common path, including under overload.
+    const bool atomic_observation=frame_boundary::Enabled();
+    if(atomic_observation) pthread_mutex_lock(&st_DataTemporal);
     pthread_mutex_lock(&st_SensorData.st_MutexLiDAR);
     // cout << "Before setting st_RawLiDAR.s32_Num: " << st_SensorData.st_RawLiDAR.s32_Num << endl;
 
@@ -297,6 +301,7 @@ void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
     if(frame_boundary::Enabled() && (!source_ms ||
         source_ms<=st_SensorData.st_RawLiDAR.u64_Timestamp)) {
         pthread_mutex_unlock(&st_SensorData.st_MutexLiDAR);
+        if(atomic_observation) pthread_mutex_unlock(&st_DataTemporal);
         ROS_WARN_THROTTLE(1.,"Rejected LiDAR scan: duplicate or regressing source stamp");
         return;
     }
@@ -315,7 +320,7 @@ void LiDARParser_Callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
     // after the complete raw frame has been published also gives the worker a
     // real predicate to wait on instead of processing the same scan whenever
     // a vehicle-status callback happens to run.
-    pthread_mutex_lock(&st_DataTemporal);
+    if(!atomic_observation) pthread_mutex_lock(&st_DataTemporal);
     ++u64_LidarFrameGeneration;
     const auto generation = u64_LidarFrameGeneration;
     pthread_cond_signal(&st_DataTemporalCond);
