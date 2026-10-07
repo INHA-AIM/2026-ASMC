@@ -14,6 +14,7 @@ from asmc_msgs.msg import CameraObjectBox, CameraObjectBoxArray
 from asmc_camera.camera.frame_buffer import EncodedFrame, LatestFrameBuffer
 from asmc_camera.detection.classes import load_class_groups
 from asmc_camera.detection.processor import ObjectFrameProcessor
+from asmc_camera.detection.hood_mask import HoodMask
 from asmc_camera.detection.ultralytics_backend import UltralyticsDetector
 
 
@@ -43,6 +44,8 @@ class ObjectDetectionNode:
         if list(rospy.get_param("~views", ["front"])) != ["front"]:
             raise ValueError("P2a supports views=[front] only")
         groups = load_class_groups(rospy.get_param("~class_groups"))
+        hood_mask = HoodMask.load(bool(rospy.get_param("~hood_mask", False)),
+                                  rospy.get_param("~hood_mask_config", ""))
         if backend is None:
             backend = UltralyticsDetector(
                 weights=rospy.get_param("~weights"),
@@ -54,12 +57,12 @@ class ObjectDetectionNode:
                 predict_overrides=rospy.get_param("~predict_overrides", {}),
                 log=rospy.loginfo,
             )
-        self.processor = ObjectFrameProcessor(backend, groups)
+        self.processor = ObjectFrameProcessor(backend, groups, hood_mask=hood_mask)
         self.backend_info = dict(backend.info)
         self.buffer = LatestFrameBuffer(["front"], batch_wait_ms=0)
         self.stop = threading.Event()
         self.lock = threading.Lock()
-        self.output_frames = self.decode_errors = self.inference_errors = self.header_errors = 0
+        self.output_frames = self.decode_errors = self.inference_errors = self.mask_errors = self.header_errors = 0
         self.latest_input_stamp_ns = self.latest_result_stamp_ns = 0
         self.last_input_at = 0.0
         self.started_at = time.monotonic()
@@ -128,6 +131,8 @@ class ObjectDetectionNode:
                     if error:
                         if error[0] == "decode":
                             self.decode_errors += 1
+                        elif error[0] == "mask":
+                            self.mask_errors += 1
                         else:
                             self.inference_errors += 1
                 if error:
@@ -153,11 +158,13 @@ class ObjectDetectionNode:
                     rospy.logwarn_throttle(5, "camera object graph check failed: %s", exc)
             with self.lock:
                 values = dict(self.backend_info)
+                values.update({"hood_mask_"+key: value for key,value in self.processor.hood_mask.info.items()})
                 fps = (self.output_frames - previous_count) / max(now - previous_at, 1e-6)
                 previous_count, previous_at = self.output_frames, now
                 values.update(processing_fps=round(fps, 3), output_frames=self.output_frames,
                               received_frames=self.buffer.received["front"], replaced_frames=self.buffer.replaced["front"],
                               decode_errors=self.decode_errors, inference_errors=self.inference_errors,
+                              mask_errors=self.mask_errors,
                               header_errors=self.header_errors, duplicate_nodes=self.duplicates,
                               latest_input_stamp_ns=self.latest_input_stamp_ns,
                               latest_result_stamp_ns=self.latest_result_stamp_ns,
@@ -168,7 +175,7 @@ class ObjectDetectionNode:
                 values["average_stage_ms"] = {k: round(float(np.mean(v)), 3) for k, v in self.stage_samples.items()}
             status = DiagnosticStatus(name="camera_objects/inference", hardware_id=str(values.get("device", "unknown")))
             status.level = DiagnosticStatus.WARN if (self.duplicates or values["input_silence_sec"] > 1
-                                                     or self.decode_errors or self.inference_errors or self.header_errors) else DiagnosticStatus.OK
+                                                     or self.decode_errors or self.inference_errors or self.mask_errors or self.header_errors) else DiagnosticStatus.OK
             status.message = "input/processing warning" if status.level else "running"
             status.values = [KeyValue(key=str(k), value=str(v)) for k, v in values.items()]
             self.diagnostics.publish(DiagnosticArray(header=copy.deepcopy(self._diagnostic_header()), status=[status]))

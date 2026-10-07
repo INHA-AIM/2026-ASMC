@@ -128,7 +128,8 @@ def replay(args, path, repeat):
         else:
             launch(["rosrun", "Main", "camera_objects_yolo_bbox_adapter.py"], "adapter")
         if path == "new":
-            launch(["roslaunch", "asmc_camera", "camera_objects.launch", "managed:=false"], "producer")
+            launch(["roslaunch", "asmc_camera", "camera_objects.launch", "managed:=false",
+                    "objects_hood_mask:=" + str(args.hood_mask).lower()], "producer")
         def ready():
             pubs, subs, _ = graph()
             producers = dict(pubs).get("/YOLO/BBox", [])
@@ -183,7 +184,7 @@ def replay(args, path, repeat):
         if args.fusion else parse_fusion_logs(logs))
     if args.fusion:
         prefix.with_suffix('.sync-events.json').write_text(json.dumps(sync_events, indent=2) + '\n')
-    result = {"path": path, "repeat": repeat, "bag": str(args.bag), "fusion": args.fusion,
+    result = {"path": path, "repeat": repeat, "bag": str(args.bag), "fusion": args.fusion, "hood_mask": args.hood_mask,
               "input_frames": len(inputs), "output_frames": len(outputs), "rate_hz": rate,
               "coverage": len(set(source)) / len(inputs) if inputs else 0,
               "duplicate_stamps": len(source) - len(set(source)),
@@ -230,6 +231,7 @@ def main():
     parser.add_argument("bag", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--fusion", action="store_true")
+    parser.add_argument("--hood-mask", action="store_true", help="measure opt-in mask; default explicitly preserves full-image parity")
     parser.add_argument("--fusion-trace", action="store_true", help="write complete Main JSONL observations")
     parser.add_argument("--repeats", type=int, default=2)
     parser.add_argument("--timeout", type=float, default=240)

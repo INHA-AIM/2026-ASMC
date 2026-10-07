@@ -20,6 +20,8 @@
   <arg name="start_traffic_light" default="$(eval arg('profile') in ['planning', 'debug'])"/>
   <arg name="start_camera_objects" default="$(eval arg('profile') in ['planning', 'debug'])"/>
   <arg name="camera_objects_config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
+  <arg name="objects_hood_mask" default="false"/>
+  <arg name="objects_hood_mask_config" default="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml"/>
   <arg name="start_visualization" default="$(eval arg('profile') == 'debug')"/>
   <arg name="visualization_legacy_rqt" default="false"/>
   <arg name="visualization_calibration_grid" default="false"/>
@@ -65,6 +67,8 @@
   <group if="$(arg start_camera_objects)">
     <include file="$(find asmc_camera)/launch/camera_objects.launch">
       <arg name="config" value="$(arg camera_objects_config)"/>
+      <arg name="objects_hood_mask" value="$(arg objects_hood_mask)"/>
+      <arg name="objects_hood_mask_config" value="$(arg objects_hood_mask_config)"/>
       <arg name="managed" value="$(arg managed)"/>
       <arg name="initial_mode" value="$(arg objects_initial_mode)"/>
       <arg name="target_hz" value="$(arg objects_target_hz)"/>
@@ -147,6 +151,8 @@
       <arg name="camera_lane" value="$(arg start_camera_lane)"/>
       <arg name="camera_objects" value="$(arg start_camera_objects)"/>
       <arg name="objects_config" value="$(arg camera_objects_config)"/>
+      <arg name="objects_hood_mask" value="$(arg objects_hood_mask)"/>
+      <arg name="objects_hood_mask_config" value="$(arg objects_hood_mask_config)"/>
       <arg name="traffic_light_image_topic" value="$(arg traffic_light_image_topic)"/>
       <arg name="traffic_light_detection_topic" value="$(arg traffic_light_typed_topic)"/>
     </include>

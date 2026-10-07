@@ -60,6 +60,14 @@ class LaunchModesTest(unittest.TestCase):
         with self.assertRaises(roslaunch.RLException):
             self.config('profile:=mistyped')
 
+    def test_mask_options_are_forwarded_to_detector_and_overlay(self):
+        for enabled in ('true','false'):
+            config=self.config('profile:=debug','objects_hood_mask:='+enabled,
+                               'objects_hood_mask_config:=/tmp/test-mask.yaml')
+            for node in ('camera_object_detector','camera_object_visualizer'):
+                self.assertEqual(enabled=='true',config.params['/'+node+'/hood_mask'].value)
+                self.assertEqual('/tmp/test-mask.yaml',config.params['/'+node+'/hood_mask_config'].value)
+
     def test_region_example_is_off_unless_explicitly_requested(self):
         config=roslaunch.config.load_config_default([str(LAUNCH/'camera_region_example.launch')],None,verbose=False)
         self.assertFalse(config.nodes)

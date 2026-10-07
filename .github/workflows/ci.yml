@@ -78,3 +78,4 @@ jobs:
           python3 tools/perception/check_inference_control_ros.py
           python3 tools/perception/check_region_example_ros.py
           python3 tools/perception/check_object_visualization_ros.py
+          python3 tools/perception/check_object_visualization_ros.py --hood-mask

@@ -120,6 +120,21 @@ class NodeWorkerTest(unittest.TestCase):
         time.sleep(.1)
         self.assertEqual([], self.outputs)
 
+    def test_mask_is_applied_during_prepare_and_active(self):
+        from asmc_camera.detection.hood_mask import HoodMask
+        self.node.processor.hood_mask=HoodMask([(0,.79),(1,.79),(1,1),(0,1)])
+        jpeg=cv2.imencode('.jpg',np.full((24,32,3),200,np.uint8))[1].tobytes()
+        self.request(1);self.send(1,jpeg)
+        self.wait(lambda:self.backend.detect.call_count==1)
+        self.assertFalse(self.backend.detect.call_args.args[0][19:].any())
+        self.assertTrue(self.backend.detect.call_args.args[0][:19].any())
+        self.assertEqual([],self.outputs)
+        self.request(2);self.send(2,jpeg)
+        self.wait(lambda:len(self.outputs)==1)
+        self.assertTrue(self.outputs[0].valid)
+        self.assertEqual((32,24),(self.outputs[0].image_width,self.outputs[0].image_height))
+        self.assertFalse(self.backend.detect.call_args.args[0][19:].any())
+
 
 if __name__ == "__main__":
     unittest.main()

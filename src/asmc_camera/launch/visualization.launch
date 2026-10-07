@@ -15,6 +15,8 @@
   <arg name="camera_lane" default="false"/>
   <arg name="camera_objects" default="false"/>
   <arg name="objects_config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
+  <arg name="objects_hood_mask" default="false"/>
+  <arg name="objects_hood_mask_config" default="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml"/>
   <arg name="traffic_light_image_topic" default="/cam_extra/image_jpeg/compressed"/>
   <arg name="traffic_light_detection_topic" default="/perception/traffic_light/detection"/>
 
@@ -22,6 +24,8 @@
     <node pkg="asmc_camera" type="object_visualizer_node.py"
           name="camera_object_visualizer" output="screen" required="false">
       <rosparam command="load" file="$(arg objects_config)" subst_value="true"/>
+      <param name="hood_mask" type="bool" value="$(arg objects_hood_mask)"/>
+      <param name="hood_mask_config" value="$(arg objects_hood_mask_config)"/>
     </node>
   </group>
   <group if="$(arg camera_lane)">

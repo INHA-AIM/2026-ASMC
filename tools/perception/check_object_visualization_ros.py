@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Actual ROS source pairing and header rejection for YOLO debug, without GPU/GPS/LiDAR."""
 import copy
+import argparse
+from pathlib import Path
 import json
 import time
 import cv2
@@ -11,6 +13,7 @@ from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Header
 from asmc_msgs.msg import CameraObjectBoxArray,CameraObjectBox
 from asmc_camera.nodes.object_visualizer_node import ObjectVisualizerNode
+from diagnostic_msgs.msg import DiagnosticArray,DiagnosticStatus,KeyValue
 
 
 def wait(predicate,description,timeout=10):
@@ -22,6 +25,9 @@ def wait(predicate,description,timeout=10):
 
 
 def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--hood-mask',action='store_true')
+    args=parser.parse_args()
     master=rosgraph.Master('/object_overlay_preflight')
     def ready():
         try:master.getPid();return True
@@ -29,7 +35,15 @@ def main():
     wait(ready,'master ready',15)
     master.setParam('/use_sim_time',False)
     rospy.init_node('object_overlay_ros_check',anonymous=True)
+    rospy.set_param('~hood_mask',args.hood_mask)
+    rospy.set_param('~hood_mask_config',str(Path(__file__).resolve().parents[2]/'src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml'))
     visualizer=ObjectVisualizerNode()
+    diagnostic_publisher=rospy.Publisher('/perception/camera/objects/diagnostics',DiagnosticArray,queue_size=1,latch=True)
+    def profile(enabled,sha):
+        diagnostic_publisher.publish(DiagnosticArray(status=[DiagnosticStatus(name='camera_objects/inference',values=[
+            KeyValue(key='hood_mask_enabled',value=str(enabled)),KeyValue(key='hood_mask_config_sha256',value=sha)])]))
+    profile(args.hood_mask,visualizer.hood_mask.config_sha256)
+    wait(lambda:visualizer.producer_profile is not None,'matching producer diagnostic')
     outputs=[]
     subscription=rospy.Subscriber('/perception/camera/objects/debug/image/compressed',CompressedImage,outputs.append,queue_size=10)
     images=rospy.Publisher('/image_jpeg/compressed',CompressedImage,queue_size=5)
@@ -60,7 +74,19 @@ def main():
     image,result=pair(6);result.valid=False;result.image_width=result.image_height=0
     images.publish(image);objects.publish(result)
     wait(lambda:len(outputs)==3,'invalid result displayed');checks['invalid_result_displayed']=(outputs[-1].header.stamp==image.header.stamp and outputs[-1].header.frame_id==image.header.frame_id)
-    subscription.unregister();images.unregister();objects.unregister()
+    if args.hood_mask:
+        decoded=cv2.imdecode(np.frombuffer(outputs[-1].data,np.uint8),1)
+        checks['mask_shading_original_dimensions']=decoded.shape==(160,240,3) and int(decoded[150,180,2])>int(decoded[150,180,0])+20
+        profile(True,'different-configuration')
+        wait(lambda:visualizer.producer_profile[1]=='different-configuration','different mask diagnostic')
+        image,result=pair(7);images.publish(image);objects.publish(result);time.sleep(.2)
+        checks['mismatched_mask_profile_withheld']=len(outputs)==3
+        profile(True,visualizer.hood_mask.config_sha256)
+        wait(lambda:visualizer.producer_profile[1]==visualizer.hood_mask.config_sha256,'profile restored')
+        image,result=pair(8);images.publish(image);objects.publish(result)
+        wait(lambda:len(outputs)==4,'overlay after matching profile restored')
+        checks['matching_mask_profile_resumes']=True
+    subscription.unregister();images.unregister();objects.unregister();diagnostic_publisher.unregister()
     rospy.signal_shutdown('done')
     print(json.dumps(dict(checks=checks,passed=all(checks.values())),indent=2))
     return 0 if all(checks.values()) else 1
