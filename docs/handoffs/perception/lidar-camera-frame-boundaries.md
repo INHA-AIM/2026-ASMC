@@ -99,10 +99,13 @@ source devel/setup.bash
 `use_sim_time=false`를 사용한다. bag 재생은 전용 격리 환경만 사용한다.
 
 ```bash
-roslaunch asmc_camera camera_objects.launch
+roslaunch asmc_camera camera_objects.launch initial_mode:=2
 ```
 
 별도 터미널에서 바깥·nested 환경을 모두 source한 뒤 pitch-only 후보:
+
+위 `initial_mode:=2`는 객체 모델을 ACTIVE로 시작한다. 개별 객체 launch도 기본은
+STANDBY이므로 생략하면 입력을 받아도 반복 추론·운영 결과를 내지 않는다.
 
 ```bash
 roslaunch Main main.launch start_yolo:=false rviz:=false \
