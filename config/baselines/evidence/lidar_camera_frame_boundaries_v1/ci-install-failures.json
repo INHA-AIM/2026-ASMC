@@ -1,0 +1,11 @@
+{
+  "archive": "ci-install-failures.tar.gz",
+  "sha256": "52cf40c85ecb2f7a365c00dc49a6482d2db697379f03c146008b094e0d36e99f",
+  "failed_revision": "682bff65153c09b16a69aa6bd378708b01e781c6",
+  "phase": "dependency install; source build and tests not reached",
+  "failures": [
+    "Ubuntu HTTP package download Connection failed",
+    "retry apt index failure followed by no installation candidate"
+  ],
+  "workflow_fix": "same Ubuntu hosts over HTTPS and Acquire::Retries=3; same packages/build/test steps"
+}
