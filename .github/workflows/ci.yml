@@ -19,7 +19,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            git ca-certificates libyaml-cpp-dev libeigen3-dev libopencv-dev python3-opencv python3-numpy python3-nose \
+            git ca-certificates libyaml-cpp-dev libeigen3-dev libopencv-dev python3-opencv python3-numpy python3-scipy python3-nose \
             ros-noetic-tf ros-noetic-tf2-ros ros-noetic-rostest
           rm -rf /var/lib/apt/lists/*
 
@@ -53,6 +53,7 @@ jobs:
           python3 -m unittest tools/audit/test_perception_runtime_acceptance.py
           python3 -m unittest tools/perception/test_camera_object_parity.py
           python3 -m unittest tools/perception/test_fusion_diagnostics.py
+          python3 -m unittest tools/perception/test_track_continuity.py
 
       - name: catkin_make
         run: |
@@ -64,3 +65,24 @@ jobs:
           source /opt/ros/noetic/setup.bash
           source devel/setup.bash
           python3 -m unittest discover -s src/asmc_camera/test/detection -p 'test_*.py'
+          python3 -m unittest tools/perception/test_hood_evaluation.py
+          python3 -m unittest tools/perception/test_lifecycle_measurements.py
+          python3 -m unittest discover -s src/asmc_camera/test/runtime -p 'test_*.py'
+
+      - name: Check inference control faults with generated ROS messages
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          export ROS_MASTER_URI=http://127.0.0.1:11312
+          export ROS_HOSTNAME=localhost
+          roscore -p 11312 > /tmp/camera-control-roscore.log 2>&1 &
+          core_pid=$!
+          trap 'kill "$core_pid" 2>/dev/null || true' EXIT
+          python3 tools/perception/check_inference_control_ros.py
+          python3 tools/perception/check_region_example_ros.py
+          python3 tools/perception/check_object_visualization_ros.py
+          python3 tools/perception/check_object_visualization_ros.py --hood-mask
+          python3 tools/perception/check_object_visualization_ros.py --hood-mask --debug-raw
+          python3 tools/perception/check_hood_mask_ros.py
+          python3 tools/perception/check_ego_hood_filter_ros.py
+          python3 tools/perception/check_object_visualization_ros.py --ego-hood-filter

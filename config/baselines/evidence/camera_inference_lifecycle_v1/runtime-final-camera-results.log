@@ -1,0 +1,2 @@
+nosetests-test.test_facade_contract.py.xml: 17 tests, 0 errors, 1 failures, 0 skipped
+Summary: 244 tests, 0 errors, 1 failures, 0 skipped

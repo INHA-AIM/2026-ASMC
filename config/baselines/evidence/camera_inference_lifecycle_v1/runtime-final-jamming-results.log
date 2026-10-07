@@ -1,0 +1,4 @@
+rostest-test_camera_bbox_clipped.xml: 1 tests, 0 errors, 1 failures, 0 skipped
+rostest-test_camera_bbox_lane.xml: 1 tests, 0 errors, 1 failures, 0 skipped
+rostest-test_camera_bbox_lane_change.xml: 1 tests, 0 errors, 1 failures, 0 skipped
+Summary: 59 tests, 0 errors, 3 failures, 0 skipped

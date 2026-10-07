@@ -1,0 +1,26 @@
+{
+  "gt-manifest.json": {
+    "sha256": "f5f763395ddcef3da6904a1de22729b9d6923622890faff10a5761fea19a053d",
+    "bytes": 319276
+  },
+  "hood-reference-contact.jpg": {
+    "sha256": "39c87ee66787cbc89a99d3d212ede13ce760a6e2646b8299def91c76b51b41d8",
+    "bytes": 445600
+  },
+  "mask-region.png": {
+    "sha256": "dbd5f501ca36b11b411a2795adc039fe4267bba3a08860f060d763e614bb9ed6",
+    "bytes": 380712
+  },
+  "person-loss.png": {
+    "sha256": "035e9abb0cb4a93bf711effeb3269344c18b08eafe9bd178447fed980bf280f7",
+    "bytes": 1283887
+  },
+  "raw-verification.tar.gz": {
+    "sha256": "671cf7363780536758af66c2e94384b266472c885710aa78c31b44fa888b76a0",
+    "bytes": 14058220
+  },
+  "source-stamps.json": {
+    "sha256": "2f4dd4a2e1a2297d7df20de01c1cec2ba9941658955cf3c135f8aebeb5f8edd8",
+    "bytes": 53434
+  }
+}

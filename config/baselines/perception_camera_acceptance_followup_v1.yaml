@@ -1,0 +1,610 @@
+schema_version: 1
+baseline_id: perception_camera_acceptance_followup_v1
+recorded_on: '2026-10-07'
+implementation_base: 3fc78c8cd88998def743e0836b0fe41f009e186e
+status: accepted_with_user_approved_exceptions
+pr: https://github.com/INHAautonav/2026-ASMC/pull/69
+merge_owner: assistant_at_user_request
+acceptance_decision:
+  authority: explicit_user_approval_2026_10_07
+  approved_classification_difference_count: 2
+  approved_source_stamps_ns:
+  - 1790654794688000000
+  - 1790654812792000000
+  original_automatic_failure_preserved: true
+  precise_cause_of_each_untraced_difference_proven: false
+  additional_differences_automatically_waived: false
+  known_facade_failure_retained: true
+  merge_authorized_by_user: true
+scope_revision:
+  authority: user_approved_plan_2026_10_07
+  merge_requirements:
+  - independent_camera_lifecycle
+  - output_rate
+  - camera_lidar_fusion
+  - regression
+  - final_ci
+  deferred_to_planning_integration:
+  - continuous_shadow_driving
+  - control_authority_transfer
+  - driving_exit_recovery
+  historical_failures_preserved: true
+  vehicle_control_or_teleport_in_this_followup: false
+interfaces:
+  existing_services_and_status_types_unchanged: true
+  diagnostic_private_parameter: lifecycle_trace_path
+  diagnostic_default: disabled
+  diagnostic_writes: buffered_events_flushed_at_shutdown
+  inactive_trace_serialization_or_file_io: false
+  active_time_anchor: server_request_acceptance
+  untraced_time_anchor: rpc_start_conservative
+  require_acknowledged_generation_prepared_and_pipeline_ready: true
+  count_old_epoch_results: false
+hood:
+  default: semantic_contour_mask
+  accepted_exception: existing_gt287_frame9_person_loss_only
+  additional_misses_automatically_waived: false
+  tensor_size_reduction_claim: false
+environment:
+  gpu: NVIDIA_GeForce_RTX_4060_Ti
+  container: asmc-camera-fusion-check
+  network: none
+  ros_master_port: 11312
+  cpu_ros_test_master_port: 11313
+  simultaneous_model_inference_performance_claim: false
+  simulator_rendering_on_same_windows_gpu: true
+  exclusive_gpu_claim: false
+lifecycle:
+  observed_traced_sessions: 3
+  warm_prepare_trials_per_model: 30
+  empirical_quantiles_are_hardware_guarantees: false
+  readiness_seconds:
+    twinlite:
+      actual_image_ready:
+        p95: 0.3546699534053914
+        p99: 0.37073102880036457
+        maximum: 0.37568764499155805
+      pipeline_ready:
+        p95: 1.43030308499001
+        p99: 3.4116664908360708
+        maximum: 4.1095461180084385
+    yolo:
+      actual_image_ready:
+        p95: 0.22928821061213966
+        p99: 0.23864654504926877
+        maximum: 0.2422247460053768
+      pipeline_ready:
+        p95: 0.29998901181243126
+        p99: 0.3527817257776042
+        maximum: 0.3726287330209743
+    resnet18:
+      actual_image_ready:
+        p95: 0.2986459460866172
+        p99: 0.30720457590563455
+        maximum: 0.3104969430132769
+      pipeline_ready:
+        p95: 0.49321152644843097
+        p99: 0.49476338236738227
+        maximum: 0.4948377140099183
+  example_lead_seconds:
+    twinlite: 4.412
+    yolo: 3.0
+    resnet18: 3.0
+  lane_pipeline_readiness_includes_valid_lane_availability: true
+  lane_fitting_consumption_domain: shadow_only_planner_owned
+  traced_rate_runs_passed: 3
+  untraced_rate_runs_passed: 2
+  twinlite_and_resnet_gate:
+    first_second_minimum: 9
+    five_second_window_minimum_hz: 9.5
+    maximum_gap_seconds: 0.25
+  yolo_minimum_hz: 18.0
+  duplicates_and_reversed_stamps_maximum: 0
+  old_run05_right_first_second_8:
+    original_failure_retained: true
+    per_frame_server_trace_available: false
+    precise_historical_cause: not_proven
+    runtime_scheduling_policy_changed: false
+    followup_measurement_change: generation_readiness_wait_and_server_acceptance_anchor
+  gpu_input_stop_preparation_failure_recovery_reentry_passed: true
+  final_rate_source_fingerprints: lifecycle-input-stop-final-corrected/report.json
+  later_runtime_change: shutdown_only_stop_signal_verified_by_real_worker_regression
+  historical_failure_precise_cause_not_proven: true
+  first_second_measurement_was_not_shifted_to_first_output: true
+  standby_prepare_invalidation_messages: previous-source invalidation allowed; fresh
+    operational results forbidden
+fusion:
+  matched_means: synchronized_lidar_yolo_frame_pairs_including_empty_detections
+  reacquisition_separately_increments_matched: false
+  maximum_source_offset_p95_ms: 50.0
+  absolute_count_gate_unchanged: true
+  diagnostic_and_untraced_acceptance_runs_separated: true
+  current_status: primary_classification_user_accepted_exception_shadow_current_bundle_pass
+  numeric_track_comparison: diagnostic_only_same_stamp_mutually_unique_1mm_centers_own_classification_gate
+  runs:
+    primary-trace:
+      original_automatic_pass: false
+      matched_not_degraded: true
+      whole_bag_matched_not_degraded: true
+      totals:
+      - path: old
+        repeat: 1
+        matched: 505
+        dropped: 8
+        pending_lidar: 1
+        pending_yolo: 1
+        offset_p95_max_ms: 49.3
+        bbox_single_publisher: true
+      - path: old
+        repeat: 2
+        matched: 509
+        dropped: 2
+        pending_lidar: 1
+        pending_yolo: 1
+        offset_p95_max_ms: 48.6
+        bbox_single_publisher: true
+      - path: new
+        repeat: 1
+        matched: 512
+        dropped: 1
+        pending_lidar: 1
+        pending_yolo: 1
+        offset_p95_max_ms: 33.2
+        bbox_single_publisher: true
+      - path: new
+        repeat: 2
+        matched: 510
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+        offset_p95_max_ms: 32.9
+        bbox_single_publisher: true
+      stable_geometry:
+        common_lidar_stamps: 346
+        old_stable: 3080
+        unmatched_common_observations: 1056
+        regressions: []
+      trace_integrity: true
+      continuous_cpu_replays_passed: true
+      processed_supply:
+        new_1:
+          processed_supply:
+            processed: 514
+            matched: 512
+            dropped: 1
+            pending: 1
+            startup_removed: 0
+            overflow_removed: 0
+          processing_ms:
+            median: 76.428689
+            p95: 117.849347
+          skipped_generations: 134
+          timeout_drops: 0
+        new_2:
+          processed_supply:
+            processed: 510
+            matched: 510
+            dropped: 0
+            pending: 0
+            startup_removed: 0
+            overflow_removed: 0
+          processing_ms:
+            median: 75.183675
+            p95: 118.217528
+          skipped_generations: 138
+          timeout_drops: 0
+        old_1:
+          processed_supply:
+            processed: 514
+            matched: 505
+            dropped: 8
+            pending: 1
+            startup_removed: 0
+            overflow_removed: 0
+          processing_ms:
+            median: 74.698032
+            p95: 116.710862
+          skipped_generations: 134
+          timeout_drops: 0
+        old_2:
+          processed_supply:
+            processed: 512
+            matched: 509
+            dropped: 2
+            pending: 1
+            startup_removed: 0
+            overflow_removed: 0
+          processing_ms:
+            median: 72.410978
+            p95: 119.301995
+          skipped_generations: 135
+          timeout_drops: 0
+      supply_deltas:
+        new_1:
+          processed: 0
+          matched: 7
+          dropped: -7
+          pending: 0
+          startup_removed: 0
+          overflow_removed: 0
+        new_2:
+          processed: -4
+          matched: 5
+          dropped: -8
+          pending: -1
+          startup_removed: 0
+          overflow_removed: 0
+        old_2:
+          processed: -2
+          matched: 4
+          dropped: -6
+          pending: 0
+          startup_removed: 0
+          overflow_removed: 0
+      all_deltas_accounted: true
+    shadow-trace:
+      original_automatic_pass: false
+      matched_not_degraded: false
+      whole_bag_matched_not_degraded: false
+      totals:
+      - path: old
+        repeat: 1
+        matched: 181
+        dropped: 1
+        pending_lidar: 1
+        pending_yolo: 1
+        offset_p95_max_ms: 39.7
+        bbox_single_publisher: true
+      - path: old
+        repeat: 2
+        matched: 185
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+        offset_p95_max_ms: 29.3
+        bbox_single_publisher: true
+      - path: new
+        repeat: 1
+        matched: 187
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+        offset_p95_max_ms: 26.0
+        bbox_single_publisher: true
+      - path: new
+        repeat: 2
+        matched: 169
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+        offset_p95_max_ms: 28.8
+        bbox_single_publisher: true
+      stable_geometry:
+        common_lidar_stamps: 144
+        old_stable: 1253
+        unmatched_common_observations: 721
+        regressions: []
+      trace_integrity: true
+      continuous_cpu_replays_passed: true
+      processed_supply:
+        new_1:
+          processed_supply:
+            processed: 187
+            matched: 187
+            dropped: 0
+            pending: 0
+            startup_removed: 0
+            overflow_removed: 0
+          processing_ms:
+            median: 95.253
+            p95: 145.711976
+          skipped_generations: 21
+          timeout_drops: 0
+        new_2:
+          processed_supply:
+            processed: 169
+            matched: 169
+            dropped: 0
+            pending: 0
+            startup_removed: 0
+            overflow_removed: 0
+          processing_ms:
+            median: 96.582376
+            p95: 178.294159
+          skipped_generations: 34
+          timeout_drops: 0
+        old_1:
+          processed_supply:
+            processed: 183
+            matched: 181
+            dropped: 1
+            pending: 1
+            startup_removed: 0
+            overflow_removed: 0
+          processing_ms:
+            median: 93.7816415
+            p95: 152.687103
+          skipped_generations: 24
+          timeout_drops: 0
+        old_2:
+          processed_supply:
+            processed: 185
+            matched: 185
+            dropped: 0
+            pending: 0
+            startup_removed: 0
+            overflow_removed: 0
+          processing_ms:
+            median: 94.8858205
+            p95: 148.597604
+          skipped_generations: 22
+          timeout_drops: 0
+      supply_deltas:
+        new_1:
+          processed: 4
+          matched: 6
+          dropped: -1
+          pending: -1
+          startup_removed: 0
+          overflow_removed: 0
+        new_2:
+          processed: -14
+          matched: -12
+          dropped: -1
+          pending: -1
+          startup_removed: 0
+          overflow_removed: 0
+        old_2:
+          processed: 2
+          matched: 4
+          dropped: -1
+          pending: -1
+          startup_removed: 0
+          overflow_removed: 0
+      all_deltas_accounted: true
+    primary-acceptance:
+      original_automatic_pass: false
+      matched_not_degraded: true
+      whole_bag_matched_not_degraded: true
+      totals:
+      - path: old
+        repeat: 1
+        matched: 507
+        dropped: 4
+        pending_lidar: 1
+        pending_yolo: 0
+        offset_p95_max_ms: 48.9
+        bbox_single_publisher: true
+      - path: old
+        repeat: 2
+        matched: 509
+        dropped: 2
+        pending_lidar: 1
+        pending_yolo: 1
+        offset_p95_max_ms: 46.0
+        bbox_single_publisher: true
+      - path: new
+        repeat: 1
+        matched: 511
+        dropped: 0
+        pending_lidar: 1
+        pending_yolo: 1
+        offset_p95_max_ms: 34.0
+        bbox_single_publisher: true
+      - path: new
+        repeat: 2
+        matched: 511
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+        offset_p95_max_ms: 30.3
+        bbox_single_publisher: true
+      stable_geometry:
+        common_lidar_stamps: 346
+        old_stable: 3197
+        unmatched_common_observations: 1001
+        regressions:
+        - stamp_ns: 1790654794688000000
+          center:
+          - 19.66237255861796
+          - -492.23758172254986
+          - -0.8472483400991137
+          old:
+          - 22
+          - unknown
+          - unknown
+          new:
+          - - 22
+            - car
+            - car
+          - - 22
+            - unknown
+            - unknown
+        - stamp_ns: 1790654812792000000
+          center:
+          - -41.35505459988133
+          - -525.2145452295512
+          - -0.8383016930764385
+          old:
+          - 241
+          - car
+          - car
+          new:
+          - - 228
+            - unknown
+            - unknown
+          - - 229
+            - car
+            - car
+    shadow-acceptance:
+      original_automatic_pass: true
+      matched_not_degraded: true
+      whole_bag_matched_not_degraded: true
+      totals:
+      - path: old
+        repeat: 1
+        matched: 186
+        dropped: 0
+        pending_lidar: 1
+        pending_yolo: 2
+        offset_p95_max_ms: 32.3
+        bbox_single_publisher: true
+      - path: old
+        repeat: 2
+        matched: 183
+        dropped: 1
+        pending_lidar: 1
+        pending_yolo: 1
+        offset_p95_max_ms: 40.5
+        bbox_single_publisher: true
+      - path: new
+        repeat: 1
+        matched: 186
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+        offset_p95_max_ms: 26.0
+        bbox_single_publisher: true
+      - path: new
+        repeat: 2
+        matched: 183
+        dropped: 0
+        pending_lidar: 1
+        pending_yolo: 2
+        offset_p95_max_ms: 24.7
+        bbox_single_publisher: true
+      stable_geometry:
+        common_lidar_stamps: 159
+        old_stable: 1484
+        unmatched_common_observations: 704
+        regressions: []
+  trace_primary_numeric_gate_failure_retained: true
+  unmatched_or_ambiguous_observations_counted_as_success: false
+  traced_explanation_is_exact_proof_of_untraced_failures: false
+  primary_classification_hold_stamps_ns:
+  - 1790654794688000000
+  - 1790654812792000000
+  primary_classification_hold_labels:
+  - old:
+    - unknown
+    - unknown
+    new:
+    - - car
+      - car
+    - - unknown
+      - unknown
+  - old:
+    - car
+    - car
+    new:
+    - - unknown
+      - unknown
+    - - car
+      - car
+prior_evidence:
+- config/baselines/perception_camera_inference_lifecycle_v1.yaml
+- config/baselines/perception_camera_hood_policy_selection_v1.yaml
+next_stage:
+  condition: user_merges_PR69_after_acceptance
+  base: actual_merged_main_sha
+  same_worktree_and_container_mount: true
+  model_combinations:
+  - single_model
+  - twinlite_yolo
+  - resnet_yolo
+  - twinlite_yolo_resnet
+  yolo_camera_sets:
+  - front
+  - front_left_right
+  lidar_yolo_hz_matrix:
+  - maximum_20
+  - maximum_10
+  - 1020
+  - 1010
+  current_fusion_50ms_200ms_preserved_for_initial_matrix: true
+  later_stages:
+  - YOLO26s_m
+  - resolution_FP16_batch_shared_decode
+  - model_specific_TensorRT
+  - RTX4070_SUPER_handover
+implementation_revision: 5dbc517b5bd89919e81a4dd24c4d1ab995b49b7d
+hold_reasons: []
+resolved_hold_reasons:
+- reason: primary_bag_two_stable_observation_classification_differences
+  resolution: explicit_user_acceptance_of_these_two_observations_only
+parity:
+  status: pass
+  frames: 3514
+  exact_frames: 3514
+  errors: []
+  boundary_exceptions: []
+  weight_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+  bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+  bag_sha256: a8f360e666f58358062e83cedbc6b51f94e8dc897402a2605eed7761a7880268
+  legacy_source_sha256: 1cd5c1053245f3d3efbb63aac3cc311572bbbd51622b1ccd25976dd67a943cde
+  python: "3.8.10 (default, Mar 18 2025, 20:04:55) \n[GCC 9.4.0]"
+  interpreter: /usr/bin/python3
+  torch: 2.1.2+cu118
+  ultralytics: 8.4.150
+  gpu: NVIDIA GeForce RTX 4060 Ti
+  backend:
+    backend: ultralytics
+    weights: /root/ws/src/asmc_camera/models/object_detection/yolo11m.pt
+    weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+    device: cuda:0
+    model_device: cuda:0
+    ultralytics: 8.4.150
+    torch: 2.1.2+cu118
+    conf_thres: 0.7
+    allowed_names:
+    - bus
+    - truck
+    - person
+    - car
+    predict_overrides:
+      iou: 0.7
+      max_det: 300
+      agnostic_nms: false
+    warmup_ms: 625.3
+    model_load_ms: 423.9035100035835
+  hood_mask: false
+  duration_sec: 109.26148481701966
+  latency:
+    old_ms:
+      p50: 14.02058100211434
+      p95: 20.068029989488423
+    new_ms:
+      p50: 13.388724997639656
+      p95: 19.379618552920874
+regression:
+  camera_tests: 278
+  camera_known_facade_failures: 1
+  camera_new_failures: 0
+  messages_tests: 1
+  hdmap_tests: 160
+  lidar_Main_tests: 267
+  lidar_core_tests: 2
+  jamming_tests: 94
+  runtime_tests: 29
+  analysis_tests: 24
+  existing_ros_worker_overlay_faults_passed: true
+  corrected_jamming_source_order: ROS_noetic_then_outer_then_nested_for_runtime_tests
+  known_facade_failure: 'test_planning_launches_use_the_canonical_traffic_light_model:
+    autonomy_no_bridges_v2.launch traffic_light false vs true'
+preservation:
+  hdmap_messages_lidar_and_jamming_match_base_main: true
+  jamming_crop_defaults_unchanged: true
+  shared_bridge_and_master_untouched: true
+failed_attempts_retained:
+- jamming initial ROS tests and offline parity lacked nested Msg environment; corrected
+  source order passes
+- source SHA helper relative-path startup error; corrected absolute path and final
+  model fault run passes
+evidence:
+  directory: config/baselines/evidence/camera_acceptance_followup_v1
+  raw_archive: raw.tar.gz
+  source_fingerprint_manifest: code-files.sha256.json
+  file_manifest: files.json
+  raw_archive_sha256: a335cf96a96ff059f87a05bb4fba378ea080ed87ebe642413e0f3ad730c09241
+  raw_archive_bytes: 17109530
+gpu_final_fault_capture_revision: faeb84a

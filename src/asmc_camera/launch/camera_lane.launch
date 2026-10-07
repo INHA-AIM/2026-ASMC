@@ -1,9 +1,12 @@
 <launch>
+  <arg name="managed" default="true"/>
+  <arg name="initial_mode" default="0"/>
+  <arg name="target_hz" default="10.0"/>
   <!-- Canonical P4-C camera runtime. Implementation, support modules and
        runtime configuration are owned by asmc_camera. -->
   <arg name="views" default="front, left, right"/>
   <arg name="checkpoint"
-       default="/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v5_actor_negative_init_ema_b12_e18_20260906/best_mean.pt"/>
+       default="$(find asmc_camera)/../../artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt"/>
   <arg name="device" default="cuda"/>
   <arg name="amp" default="true"/>
   <arg name="warmup_iterations" default="1"/>
@@ -12,7 +15,10 @@
   <arg name="model_grid_max_hz" default="10.0"/>
 
   <node pkg="asmc_camera" type="semantic_inference_node.py"
-        name="camera_semantic_inference" output="screen" required="true">
+        name="camera_semantic_inference" output="screen" required="$(eval not arg('managed'))">
+    <param name="managed" value="$(arg managed)"/>
+    <param name="initial_mode" value="$(arg initial_mode)"/>
+    <param name="target_hz" value="$(arg target_hz)"/>
     <rosparam command="load"
               file="$(find asmc_camera)/config/camera/cameras.yaml"/>
     <rosparam command="load"

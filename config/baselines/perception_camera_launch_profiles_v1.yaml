@@ -1,0 +1,166 @@
+schema_version: 1
+baseline_id: perception_camera_launch_profiles_v1
+code_commit: 9f44b0c68696f84013d5409e5eb95c26165e689c
+requested_change: all_off_default_external_planning_standby_one_option_debug_with_yolo_overlay
+profiles:
+  idle:
+    nodes: []
+    modes: {}
+    managed: {}
+  planning:
+    nodes:
+    - camera_object_detector
+    - camera_semantic_inference
+    - camera_bev
+    - camera_bev_fusion
+    - camera_lane_vectorizer
+    - traffic_light_infer
+    modes:
+      camera_semantic_inference: 0
+      camera_object_detector: 0
+      traffic_light_infer: 0
+    managed:
+      camera_semantic_inference: true
+      camera_object_detector: true
+      traffic_light_infer: true
+  debug:
+    nodes:
+    - camera_object_detector
+    - camera_semantic_inference
+    - camera_bev
+    - camera_bev_fusion
+    - camera_lane_vectorizer
+    - traffic_light_infer
+    - camera_object_visualizer
+    - camera_semantic_visualizer
+    - camera_bev_visualizer
+    - camera_traffic_light_visualizer
+    modes:
+      camera_semantic_inference: 2
+      camera_object_detector: 2
+      traffic_light_infer: 2
+    managed:
+      camera_semantic_inference: true
+      camera_object_detector: true
+      traffic_light_infer: true
+  legacy:
+    nodes:
+    - camera_semantic_inference
+    - camera_bev
+    - camera_bev_fusion
+    - camera_lane_vectorizer
+    modes:
+      camera_semantic_inference: 0
+    managed:
+      camera_semantic_inference: false
+target_hz:
+  twinlite_batch: 10.0
+  yolo_front: 20.0
+  resnet_camera4: 10.0
+default_off_vs_standby: idle has no model nodes or services; planning retains loaded
+  warmed models and awaits external requests
+planning_owns:
+- regions
+- result_consumption
+- driving_mode
+advanced_model_switches:
+- start_camera_lane
+- start_camera_objects
+- start_traffic_light
+tests:
+  build: pass
+  runtime_tests: 25
+  detection_tests: 22
+  camera_tests: 254
+  camera_errors: 0
+  camera_failures: 1
+  known_main_failure: PerceptionFacadeContractTest.test_planning_launches_use_the_canonical_traffic_light_model
+  ros_control_checks: 8
+  region_ros_checks: 9
+  overlay_ros_checks: 7
+  initial_overlay_failure: Fixture compared full Header including rospy publisher-assigned
+    seq after intentionally dropped images; source stamp/frame and drawing were correct.
+    Original failure retained.
+  corrected_overlay: all seven checks pass; different source stamp/frame/dimensions
+    rejected, valid empty and invalid results displayed
+  audit_tests: 33
+  contracts: pass
+  documentation: pass
+debug_gpu_smoke:
+  scope: debug_profile_four_image_publishers_smoke_not_performance_acceptance
+  errors: []
+  images:
+    mosaic:
+      messages: 121
+      decodable: true
+      last_source_stamp_ns: 1789980378247966289
+    bev:
+      messages: 100
+      decodable: true
+      last_source_stamp_ns: 1789980378063709974
+    yolo:
+      messages: 399
+      decodable: true
+      last_source_stamp_ns: 1789980378249657869
+    resnet:
+      messages: 198
+      decodable: true
+      last_source_stamp_ns: 1789980378122157096
+  model_modes:
+    resnet: 2
+    yolo: 2
+    twinlite: 2
+  all_active: true
+  passed: true
+scope: debug image publication and decoding only; simultaneous target rate acceptance
+  remains unproven
+bag:
+  path: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+  sha256: a8f360e666f58358062e83cedbc6b51f94e8dc897402a2605eed7761a7880268
+  start_sec: 44
+  duration_sec: 20
+weights_sha256:
+  yolo11m: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+  twinlite_v6_best_mean: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+  resnet18: 70ddaf222e7bc6ff2b4748c4b07c1b24dec72a2671f39bc18e0b243ddd93c0d5
+offline_and_p5_replay_profile: legacy
+previous_lifecycle_evidence: config/baselines/perception_camera_inference_lifecycle_v1.yaml
+provider_code_sha_unchanged: true
+previous_strict_10hz_and_morai_holds_preserved: true
+protected_areas_unchanged:
+- src/asmc_msgs
+- src/asmc_hd_map
+- src/lane_boundary_adapter
+- src/jamming_lane_boundary_adapter
+- config/baselines/hd_map_runtime_pins_v1.yaml
+artifacts:
+- path: config/baselines/evidence/camera_launch_profiles_v1/debug-gpu-smoke.json
+  sha256: 06f5a32b4ddd0c3c3d1dc65374d168fbb8d2863935e8fd390db2647686874f7f
+  bytes: 713
+- path: config/baselines/evidence/camera_launch_profiles_v1/profiles-camera-results.log
+  sha256: d7ad976d771949af3b197962aab5f6fc403b64764ef6cb9a7d32e03ac45e9461
+  bytes: 138
+- path: config/baselines/evidence/camera_launch_profiles_v1/profiles-control-ros.log
+  sha256: 2ba498017d00f3fb17abc089061688718d84831684e4082b8a5797b2e02ba5de
+  bytes: 571
+- path: config/baselines/evidence/camera_launch_profiles_v1/profiles-detection-unit.log
+  sha256: f877b2099b576e46b66c73d88fbfbddf20b983f74dd1b7ffc07ea8149d3b811d
+  bytes: 121
+- path: config/baselines/evidence/camera_launch_profiles_v1/profiles-overlay-ros-01.log
+  sha256: d5ae9177dc7f97e9581655c602d7303455e2198585effc889fe72262b387f70f
+  bytes: 466
+- path: config/baselines/evidence/camera_launch_profiles_v1/profiles-overlay-ros-02.log
+  sha256: bae75d528127e3cd8db842efae474e4776be2fdb0a14a302af0cc8b01b649ab2
+  bytes: 473
+- path: config/baselines/evidence/camera_launch_profiles_v1/profiles-region-ros.log
+  sha256: 4e96c025557acea9d2909ac1849d2eb887cc746debc7ed2c41f98b2dacf8a9bf
+  bytes: 281
+- path: config/baselines/evidence/camera_launch_profiles_v1/profiles-resolved-launches.json
+  sha256: edd97fac185b963868911dcbf90e6e4aeb808e02f1477a3e73b06679605310f8
+  bytes: 1446
+- path: config/baselines/evidence/camera_launch_profiles_v1/profiles-runtime-unit.log
+  sha256: 38fff7fffd13be2264c0db57591bb32df0b8d70be510126b5f735713231818b5
+  bytes: 124
+- path: config/baselines/evidence/camera_launch_profiles_v1/raw.tar.gz
+  sha256: f5820fe7ed5b2213b35de4fc3a2ed775fa320be9490deab4602fd03aafec6ce7
+  bytes: 41410

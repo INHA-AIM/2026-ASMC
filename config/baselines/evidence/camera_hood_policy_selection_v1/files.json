@@ -1,0 +1,78 @@
+{
+  "challenge-excluded-review.jpg": {
+    "bytes": 443082,
+    "sha256": "7c96a925f220f7547470bbb55fe4b2e2e1063bb8aa2d1f45d9c5c1e2ca87def7"
+  },
+  "challenge-manifest.json": {
+    "bytes": 24105,
+    "sha256": "b96a282ce59b23371194577ad6dcbcf239bcd30c0c5c1bbb2b29560975829249"
+  },
+  "challenges-excluded-review.json": {
+    "bytes": 11555,
+    "sha256": "21f2e0e663ea1b43e90a02af605fcdf927ee6c7f368f326bfd15fb57f3f4dbb5"
+  },
+  "challenges-summary.json": {
+    "bytes": 2737,
+    "sha256": "a507cf4870ddbd5a79561ae8b8eed6d10c966d268c3ed212e94e7c1b48e8514b"
+  },
+  "close-car-full-green-mask-blue.jpg": {
+    "bytes": 171440,
+    "sha256": "dc7ceff66f0ba8eb18dfc7abcc90da17b04ac378476c78d53a633f5774846e8e"
+  },
+  "code-files.json": {
+    "bytes": 2796,
+    "sha256": "a2eead13fa77eac5e40a60a834ea1c88f16cb23ca2c2dc955cb6af3d72d22301"
+  },
+  "expanded-inventory.json": {
+    "bytes": 89580,
+    "sha256": "22b68cf8e8c34ee623309381e6c860884528e844259827183adffd1ffb89c78f"
+  },
+  "fusion-primary-continuity-summary.json": {
+    "bytes": 1131,
+    "sha256": "e9f16d6dacbc6cf6cdfc7e7c37e5fa1349e3dfd0df460c1541a2621221690a6c"
+  },
+  "fusion-shadow-continuity-summary.json": {
+    "bytes": 1131,
+    "sha256": "db2ee553e759ee79ba7bf4e650f5ea588b3160dbd425cb316858a298b18ffa12"
+  },
+  "gt-excluded-review-0.jpg": {
+    "bytes": 513911,
+    "sha256": "b3ea19762012c65a6cdd8d8e26d04790d4f8047b29cff61050b97e6d8266845d"
+  },
+  "gt-excluded-review-1.jpg": {
+    "bytes": 459475,
+    "sha256": "1fa01a3c996cdf28f6758544c8e70cb4f17efedee6ffc0380d950c2522c9ad54"
+  },
+  "gt-excluded-review-2.jpg": {
+    "bytes": 448399,
+    "sha256": "539c678094848714914274af668bf62f276bf65ae0843bb4ac750d86e0b9fc85"
+  },
+  "gt287-excluded-review.json": {
+    "bytes": 31579,
+    "sha256": "cbabcc57b5a29b962a9be9804efa58bb897fb3c078b3cc3873eb19232baeded4"
+  },
+  "gt287-summary.json": {
+    "bytes": 2911,
+    "sha256": "fc4934c508f2f2e0cf88c072a1ed815cdfb782c173d194a20c11d2c620e5af56"
+  },
+  "raw-comparison.tar.gz": {
+    "bytes": 26165502,
+    "sha256": "4d338c5ea7c98387a023a85164c6e189042e369edcec50dafe448d4078dcd8fb"
+  },
+  "semantic-derived-contour.png": {
+    "bytes": 380712,
+    "sha256": "dbd5f501ca36b11b411a2795adc039fe4267bba3a08860f060d763e614bb9ed6"
+  },
+  "semantic-mask-geometry.json": {
+    "bytes": 231,
+    "sha256": "2e31b2805214c5afd9e5853e583ac1a126aed5df02b03177fed24b2811eb828e"
+  },
+  "semantic-reference.png": {
+    "bytes": 33815,
+    "sha256": "317dc7f458344fba102d87377a12ff32526c6a92d0073a77bde9ebf08587a4a2"
+  },
+  "stationary-challenges.jpg": {
+    "bytes": 339569,
+    "sha256": "093b4abde19f6e801c0416f69b1f9ceeb24f60fa3db72b6e9100c5b56cdd125d"
+  }
+}

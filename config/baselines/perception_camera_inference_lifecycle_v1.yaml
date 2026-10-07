@@ -1,0 +1,628 @@
+schema_version: 1
+baseline_id: perception_camera_inference_lifecycle_v1
+recorded_date: '2026-10-07'
+status: implemented_acceptance_on_hold
+base_main: 7aed6121c895a55e24bcbf24dfd907cada9ba140
+provider_tested_commit: 8e7fea85e9889e874880b97098ddaf37e278632f
+restoration_tool_followup_commit: 314e1cb585b4296262b801a57ca41eaa2dda11b4
+planning_owns:
+- regions
+- result_consumption
+- driving_mode
+- control_authority
+p2a:
+  pr: 68
+  merged: true
+  acceptance_scope: opt_in_front_yolo_migration
+  one_runtime_classification_difference_exception_does_not_waive_new_gates: true
+  prior_failed_evidence_preserved: true
+environment:
+  container_image: sha256:1ecd9f50491565cad32e32980bb5df5b48487f470440cb66c9ec3b8dc5c11400
+  isolated_gpu_container: asmc-camera-fusion-check
+  network: none
+  live_container: asmc-ros-noetic
+  live_master_port: 11311
+  gpu: NVIDIA GeForce RTX 4060 Ti
+  interpreter: /usr/bin/python3
+  python: "3.8.10 (default, Mar 18 2025, 20:04:55) \n[GCC 9.4.0]"
+  torch: 2.1.2+cu118
+  ultralytics: 8.4.150
+interfaces:
+  service: asmc_camera/SetInferenceMode
+  service_md5: 94a789aab65be7cc8d09e8f777708430
+  status: asmc_camera/InferenceStatus
+  status_md5: e106e808a882b2b0140346746e164145
+  legacy_default: ACTIVE_unrestricted
+  managed_default: STANDBY
+  prepare_normal_new_frames_per_view: 3
+code_sha256:
+  src/asmc_camera/src/asmc_camera/runtime/state.py: 366af8ebd9f880e5380094b0353bd183ee1115d086b023c459e0b4cf65c5d581
+  src/asmc_camera/src/asmc_camera/runtime/ros_control.py: f5b9b29ea38a6b0a350f359d937cb2690db2a4d94f95db61516f34ae02e3f52b
+  src/asmc_camera/src/asmc_camera/runtime/cadence.py: 1212c90bb18b710bc9ee68edd3e55986a1a5b512cd1f126008f3189f318d8273
+  src/asmc_camera/src/asmc_camera/runtime/region_example.py: e418cd26a1b0d363b713aa9737b765dc07fdbc8858c5f879dfbe1a76bafd6db8
+  src/asmc_camera/src/asmc_camera/nodes/semantic_inference_node.py: e263e45c0a11431167012ff71d80a85d8d2a8d5a5bbf002fe87d2fec03384651
+  src/asmc_camera/src/asmc_camera/nodes/object_detection_node.py: 3384b089c3273a50933f30f67fd580c80c23f5835cdeb69680ab18efb9197786
+  src/asmc_camera/src/asmc_camera/nodes/traffic_light_node.py: 254df33a909b3d431c6925efa5ea80ee5172f12d1e8d3c5b3a68917b3725fcd4
+weights_sha256:
+  yolo11m: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+  twinlite_v6_best_mean: a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b
+  resnet18: 70ddaf222e7bc6ff2b4748c4b07c1b24dec72a2671f39bc18e0b243ddd93c0d5
+cpu_and_regression:
+  camera_tests: 244
+  camera_errors: 0
+  camera_failures: 1
+  known_baseline_failure: PerceptionFacadeContractTest.test_planning_launches_use_the_canonical_traffic_light_model
+  message_tests: 1
+  hdmap_tests: 160
+  hdmap_failures: 0
+  nested_workspace_tests: 267
+  nested_workspace_failures: 0
+  jamming_tests: 94
+  jamming_failures: 0
+  runtime_unit_tests: 19
+  detection_unit_tests: 18
+  ros_fault_checks: 8
+  region_example_ros_checks: 9
+  contracts: pass
+  documentation_migration: pass
+  initial_test_environment_errors_preserved:
+  - HDmap missing ASMC_DATA=/data
+  - jamming missing generated Msg overlay
+  correct_final_test_environment:
+  - ASMC_DATA=/data
+  - source outer workspace before nested Msg/Main/morai_msgs
+yolo_exact_parity:
+  report: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-final-yolo-parity.json
+  bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+  bag_sha256: a8f360e666f58358062e83cedbc6b51f94e8dc897402a2605eed7761a7880268
+  frames: 3514
+  exact_frames: 3514
+  errors: 0
+  boundary_exceptions: 0
+  latency_ms:
+    old_ms:
+      p50: 16.347318000043742
+      p95: 22.74140764784533
+    new_ms:
+      p50: 15.53355500800535
+      p95: 21.955422993050888
+gpu_lifecycle:
+  scope: all_models_loaded_one_model_active_at_a_time
+  bag_start_sec: 44
+  bag_duration_sec: 75
+  active_stage_sec: 10
+  gates:
+    first_second_new_results_minimum: 9
+    five_second_window_hz_minimum: 9.5
+    maximum_gap_sec: 0.25
+    yolo_active_hz_minimum: 18
+  final_repeated_runs:
+  - 5
+  - 6
+  - 7
+  final_runs_passed: 2
+  final_runs_failed: 1
+  accepted: false
+  hold_reason: Run 05 right camera first ACTIVE second had 8 new results; threshold
+    9. No hardware-variance waiver applied.
+  prepare_p99_measured: false
+  example_p99_sec_is_placeholder: true
+  runs:
+  - report: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-lifecycle-01.json
+    passed: false
+    failed_checks:
+    - twinlite_front_10hz
+    - twinlite_left_10hz
+    - twinlite_right_10hz
+    - twinlite_family_10hz
+    scope: development_iteration
+  - report: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-lifecycle-02.json
+    passed: false
+    failed_checks:
+    - twinlite_family_10hz
+    scope: development_iteration
+  - report: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-lifecycle-03.json
+    passed: false
+    failed_checks:
+    - twinlite_family_10hz
+    scope: development_iteration
+  - report: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-lifecycle-04.json
+    passed: true
+    failed_checks: []
+    scope: development_iteration
+  - report: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-lifecycle-05.json
+    passed: false
+    failed_checks:
+    - twinlite_right_10hz
+    scope: final_provider_code
+    active_outputs:
+      yolo_active:
+        yolo:
+          messages: 199
+          hz: 19.88118376378277
+          valid_messages: 199
+          first_second: 19
+          five_second_hz:
+          - 19.6
+          - 20.2
+          max_gap_sec: 0.10238496499368921
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 1.0
+      resnet_active:
+        resnet18:
+          messages: 100
+          hz: 9.999771548211816
+          valid_messages: 20
+          first_second: 10
+          five_second_hz:
+          - 10.0
+          - 10.0
+          max_gap_sec: 0.14312043000245467
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 0.2
+      twinlite_active:
+        front:
+          messages: 99
+          hz: 9.893046691916512
+          valid_messages: 99
+          first_second: 9
+          five_second_hz:
+          - 9.8
+          - 9.8
+          max_gap_sec: 0.18270401799236424
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 1.0
+        left:
+          messages: 98
+          hz: 9.793116927351699
+          valid_messages: 98
+          first_second: 9
+          five_second_hz:
+          - 9.8
+          - 9.8
+          max_gap_sec: 0.18231354899762664
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 1.0
+        right:
+          messages: 98
+          hz: 9.793116927351699
+          valid_messages: 98
+          first_second: 8
+          five_second_hz:
+          - 9.8
+          - 9.8
+          max_gap_sec: 0.18264940100198146
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 1.0
+        family:
+          messages: 99
+          hz: 9.893046691916512
+          valid_messages: 71
+          first_second: 9
+          five_second_hz:
+          - 9.8
+          - 10.0
+          max_gap_sec: 0.18977614399045706
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 0.7171717171717171
+  - report: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-lifecycle-06.json
+    passed: true
+    failed_checks: []
+    scope: final_provider_code
+    active_outputs:
+      yolo_active:
+        yolo:
+          messages: 199
+          hz: 19.88298625592301
+          valid_messages: 199
+          first_second: 19
+          five_second_hz:
+          - 19.8
+          - 20.0
+          max_gap_sec: 0.09801945999788586
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 1.0
+      resnet_active:
+        resnet18:
+          messages: 99
+          hz: 9.891217184692644
+          valid_messages: 20
+          first_second: 9
+          five_second_hz:
+          - 9.8
+          - 10.0
+          max_gap_sec: 0.13966504199197516
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 0.20202020202020202
+      twinlite_active:
+        front:
+          messages: 99
+          hz: 9.892249334609057
+          valid_messages: 99
+          first_second: 9
+          five_second_hz:
+          - 9.8
+          - 10.0
+          max_gap_sec: 0.17898895099642687
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 1.0
+        left:
+          messages: 99
+          hz: 9.892249334609057
+          valid_messages: 99
+          first_second: 9
+          five_second_hz:
+          - 9.8
+          - 10.0
+          max_gap_sec: 0.17891195000265725
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 1.0
+        right:
+          messages: 99
+          hz: 9.892249334609057
+          valid_messages: 99
+          first_second: 9
+          five_second_hz:
+          - 9.8
+          - 10.0
+          max_gap_sec: 0.17865911799890455
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 1.0
+        family:
+          messages: 100
+          hz: 9.992171045059655
+          valid_messages: 72
+          first_second: 9
+          five_second_hz:
+          - 9.8
+          - 10.0
+          max_gap_sec: 0.18618631199933589
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 0.72
+  - report: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-lifecycle-07.json
+    passed: true
+    failed_checks: []
+    scope: final_provider_code
+    active_outputs:
+      yolo_active:
+        yolo:
+          messages: 199
+          hz: 19.886107209520812
+          valid_messages: 199
+          first_second: 19
+          five_second_hz:
+          - 19.8
+          - 20.0
+          max_gap_sec: 0.09680641200975515
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 1.0
+      resnet_active:
+        resnet18:
+          messages: 98
+          hz: 9.791149859932165
+          valid_messages: 19
+          first_second: 9
+          five_second_hz:
+          - 9.8
+          - 9.8
+          max_gap_sec: 0.1418968639918603
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 0.19387755102040816
+      twinlite_active:
+        front:
+          messages: 99
+          hz: 9.890571110855356
+          valid_messages: 99
+          first_second: 10
+          five_second_hz:
+          - 10.0
+          - 9.8
+          max_gap_sec: 0.2215544610080542
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 1.0
+        left:
+          messages: 99
+          hz: 9.890571110855356
+          valid_messages: 99
+          first_second: 10
+          five_second_hz:
+          - 10.0
+          - 9.8
+          max_gap_sec: 0.22079371800646186
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 1.0
+        right:
+          messages: 99
+          hz: 9.890571110855356
+          valid_messages: 99
+          first_second: 10
+          five_second_hz:
+          - 10.0
+          - 9.8
+          max_gap_sec: 0.22090284700971097
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 1.0
+        family:
+          messages: 99
+          hz: 9.890571110855356
+          valid_messages: 75
+          first_second: 9
+          five_second_hz:
+          - 9.8
+          - 10.0
+          max_gap_sec: 0.22085992300708313
+          duplicate_stamps: 0
+          reversed_stamps: 0
+          valid_ratio: 0.7575757575757576
+morai:
+  scenario: 2026_molit_comp_sample_scene.json
+  scenario_sha256: c9ab17cef9b07dd3a7d4a2f56c6cc39f89f07cadccce8edce3d579e891237c85
+  map: R_KR_PR_K-city_2025
+  official_spawn_verified: true
+  official_route_sha256: 50658991e607d9339d76e4cd6cb169dfc733ea53b93de2c3e222460bb497cc05
+  shadow_station_start_m: 1877.744798966
+  shadow_station_end_m: 1996.730791531
+  gps_trial: relay-only injection; original GPS unchanged; natural interruption not
+    established
+  drive_speed_ceiling_kph: 5.0
+  fixed_family_sha256: 1657f282fe70c13bdb285bbf2536405768a07b2b6462590e71c75787ef6d0cf9
+  hood_crop_bottom_ratio: 0.21
+  adapter_code_and_defaults_changed: false
+  all_actor_restore_claimed: false
+  accepted: false
+  hold_reasons:
+  - Actuator responses successful but movement under 0.5 m; no complete shadow traversal
+  - Exit fixture HD pose/route valid but lane invalid; fresh HD recovery not demonstrated
+  - Canonical live fusion profile lacked Ego speed input; processing/fusion not accepted
+  - Strict settled Ego restoration has 1.347 degree rotation difference despite position/gear/mode
+    restoration
+  trials:
+  - report: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-canonical-example-01.json
+    profile: canonical_yolo_external_region_example
+    runs: 9
+    prepared: 9
+    preview_ready: 9
+    actual_drives: 0
+    movement_range_m: null
+    full_shadow_traversals: 0
+    fresh_hd_recoveries: 0
+    gps_injection_lane_active: 9
+    raw_failures: []
+    raw_restored_flag_scope: immediate_XY_only_not_full_restoration
+    raw_driven_flag_scope: command_attempt_not_actual_movement
+    actuator_transport: udp
+    grpc_mode_value: 3
+  - report: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-drive-01.json
+    profile: cropped_yolo_jamming_preview
+    runs: 9
+    prepared: 9
+    preview_ready: 9
+    actual_drives: 0
+    movement_range_m:
+    - 0.011083602905273438
+    - 0.014059672493838757
+    full_shadow_traversals: 0
+    fresh_hd_recoveries: 0
+    gps_injection_lane_active: 0
+    raw_failures: []
+    raw_restored_flag_scope: immediate_XY_only_not_full_restoration
+    raw_driven_flag_scope: command_attempt_not_actual_movement
+    actuator_transport: null
+    grpc_mode_value: null
+  - report: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-grpc-drive-01.json
+    profile: cropped_yolo_jamming_preview
+    runs: 3
+    prepared: 3
+    preview_ready: 3
+    actual_drives: 0
+    movement_range_m:
+    - 0.011081695556640625
+    - 0.014060718179395106
+    full_shadow_traversals: 0
+    fresh_hd_recoveries: 0
+    gps_injection_lane_active: 0
+    raw_failures: []
+    raw_restored_flag_scope: immediate_XY_only_not_full_restoration
+    raw_driven_flag_scope: command_attempt_not_actual_movement
+    actuator_transport: grpc
+    grpc_mode_value: null
+  - report: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-grpc-drive-02.json
+    profile: cropped_yolo_jamming_preview
+    runs: 3
+    prepared: 3
+    preview_ready: 3
+    actual_drives: 0
+    movement_range_m:
+    - 0.011121749877929688
+    - 0.013959437461075528
+    full_shadow_traversals: 0
+    fresh_hd_recoveries: 0
+    gps_injection_lane_active: 0
+    raw_failures: []
+    raw_restored_flag_scope: immediate_XY_only_not_full_restoration
+    raw_driven_flag_scope: command_attempt_not_actual_movement
+    actuator_transport: grpc
+    grpc_mode_value: 1
+  - report: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-grpc-drive-03.json
+    profile: cropped_yolo_jamming_preview
+    runs: 3
+    prepared: 3
+    preview_ready: 3
+    actual_drives: 0
+    movement_range_m:
+    - 0.0111236572265625
+    - 0.01395867696204097
+    full_shadow_traversals: 0
+    fresh_hd_recoveries: 0
+    gps_injection_lane_active: 0
+    raw_failures: []
+    raw_restored_flag_scope: immediate_XY_only_not_full_restoration
+    raw_driven_flag_scope: command_attempt_not_actual_movement
+    actuator_transport: grpc
+    grpc_mode_value: 2
+  - report: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-preview-01.json
+    profile: cropped_yolo_jamming_preview
+    runs: 3
+    prepared: 3
+    preview_ready: 3
+    actual_drives: 0
+    movement_range_m: null
+    full_shadow_traversals: 0
+    fresh_hd_recoveries: 0
+    gps_injection_lane_active: 0
+    raw_failures: []
+    raw_restored_flag_scope: immediate_XY_only_not_full_restoration
+    raw_driven_flag_scope: command_attempt_not_actual_movement
+    actuator_transport: null
+    grpc_mode_value: null
+  final_restoration:
+    report: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-final-restoration.json
+    position_error_m: 0.010287564707845002
+    rotation_error_deg: 1.3470306396484375
+    gear_matches: true
+    mode_matches: true
+    restored_strict: false
+    simulation_left_paused: true
+protected_areas:
+  base_main_unchanged:
+  - src/asmc_msgs
+  - src/asmc_hd_map
+  - src/lane_boundary_adapter
+  - src/jamming_lane_boundary_adapter
+  - config/baselines/hd_map_runtime_pins_v1.yaml
+  reproduction_branch: verify/asmc-camera-rename
+  remaining_local_branches:
+  - main
+  - feat/camera-region-activation
+  - verify/asmc-camera-rename
+  claude_work_absorption: config/baselines/perception_claude_work_absorption_v1.json
+followups:
+- measure readiness p99 and first-second failure cause
+- restore simulator control and verify real shadow drive/recovery
+- three_camera_yolo
+- simultaneous_model_load
+- lidar_yolo_10hz
+- planning_jamming_crop_integration
+- yolo26_training
+- batch_shared_processing_tensorrt
+- 4070_SUPER_handover
+artifacts:
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-final-restoration.json
+  sha256: 78c3853abe76023c51b74ea29204ab636fce5161ec0ac94433aeb35beefaa9a5
+  bytes: 5829
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-canonical-example-01.json
+  sha256: ed0467d416a0072538a0b4a8a173986a6bda0a94800d2180b4ee6fc78886613e
+  bytes: 22657
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-canonical-example-01.tar.gz
+  sha256: de5a0a51b26e835d80b4263e5df0fb8572450617e75f8412aa0c6eb547186b23
+  bytes: 171908
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-drive-01.json
+  sha256: 7912ab06fab0b9d37c79738d6ed8a94515ed92c0c2ad270e8993588a50ccc424
+  bytes: 13253
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-drive-01.tar.gz
+  sha256: c1c7d9c578bb9a4d0d398e4b1d12b6a07814f79b6749f307727d8144317e3eda
+  bytes: 291660
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-grpc-drive-01.json
+  sha256: c6c11c5b9d5aa31ea494b0fc10e72c32c1d02dd633d7e88dd7872344762fcbe4
+  bytes: 7496
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-grpc-drive-01.tar.gz
+  sha256: b7e80ed0503fae6accb919919dce05982f96db68d9b9b837f618b11291ad2253
+  bytes: 122286
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-grpc-drive-02.json
+  sha256: 38d179419dbb4f11383aa367618e90f95cd491eb34dd81a13312cfdbd6e39771
+  bytes: 7542
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-grpc-drive-02.tar.gz
+  sha256: 8d6e4f918b5429f6f5eb6cce302c7d69bc6db98348dde9d98089fa570c5d8ee7
+  bytes: 122785
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-grpc-drive-03.json
+  sha256: 293a52e20d462b037a5c990ff07fee6dc69e6f9aa665855a9f2f6c0bccc5eb16
+  bytes: 12726
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-grpc-drive-03.tar.gz
+  sha256: 91a0f7affb198ec634f7f703e357b1ad6761bfedd7502a750c04f161c7ed5bdb
+  bytes: 121840
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-preview-01.json
+  sha256: 5275d5ea093a938a81962a84d5a2db27206fa5b07844e8c0f0182b746ca17290
+  bytes: 7036
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/camera-runtime-morai-preview-01.tar.gz
+  sha256: 2d712e517147df6b6dc3a01bc7ef27b8a70e6fea8d268f47a82d9460c6aedf33
+  bytes: 50687
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/gpu_lifecycle_raw.tar.gz
+  sha256: 3207fd588ffa08affb784ac564edfbc44ea96a12490645281ef2a52e58f288c8
+  bytes: 49086
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/regression_raw.tar.gz
+  sha256: 0a9e808942d5ddb97108770234a454402020b5dd693d72b44545365f04bcb7fd
+  bytes: 53521
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-core.log
+  sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  bytes: 0
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-faults-01.log
+  sha256: 61509566f7ce662c9871785ed5017f900eeb9d88df2bf0fd072ab15cf50af354
+  bytes: 697
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-faults-02.log
+  sha256: e38a260c9bba03b4e33db06e4470b214bf050dfb430cb2827c0fbed132949c8e
+  bytes: 571
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-final-camera-results.log
+  sha256: 819826e31faf50edd974c035d3b47ab785565c99d62349b21a652fa1581f32f7
+  bytes: 138
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-final-hdmap-fixed-results.log
+  sha256: 0ebee481c7f42013dc29a436a611f4573425ac60b0977c4c9dbdf243c5862de1
+  bytes: 52
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-final-hdmap-results.log
+  sha256: a425b46b52eb07df82c560b689dfff21d9312703c37fb7a31f279d6f974201c9
+  bytes: 217
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-final-jamming-results.log
+  sha256: 1cf09497358e14a0d596bece823dcb716d9942844e2107c3862cbbda2857ba1c
+  bytes: 289
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-final-jamming-with-msg-results.log
+  sha256: 9cab2a41ea6e6a157e5ddebf8729e764904a7c52978670d5406fbbf89bb12891
+  bytes: 51
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-final-msg-results.log
+  sha256: 780634b4e78c3e0dc96cbc8796dcd0f71c28892443a1d8ea2ecbb6d86e014ce4
+  bytes: 50
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-final-nested-results.log
+  sha256: a0b3821a4a5ba640a3cbc71e59af49e375153f2c6848c441161c426661d9d04e
+  bytes: 52
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-final-yolo-parity.json
+  sha256: af2f69b31cd7526befc0fd9868ad636e5f921004f1d33a9804eec42a1629b06a
+  bytes: 1508
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-lifecycle-01.json
+  sha256: cc8b8f979752612d7c001a04b4f690300182c4da44a7ff86bd2aa2b2e371631c
+  bytes: 20322
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-lifecycle-02.json
+  sha256: 3ed223a83fa6dedfddca94cf25f7d103d4711868ae9058eba6e867d56aa63a1f
+  bytes: 20331
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-lifecycle-03.json
+  sha256: 3a995a689d3508c440a2d89a43f13048236b41c651b8efbae9d47e0b18ec8664
+  bytes: 20312
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-lifecycle-04.json
+  sha256: 878eff64f28dfde52cd14856e3309553d81a56ea50675319d135003e30cb76e1
+  bytes: 20306
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-lifecycle-05.json
+  sha256: 1fc2987dfeff62ab75e56cbf6424173e9b8a9282ff003eff3dfd23b789253949
+  bytes: 20657
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-lifecycle-06.json
+  sha256: a5db60239de919f8c7a5b379d33fb39a88ef334b8039b4612db9973a62369195
+  bytes: 20666
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-lifecycle-07.json
+  sha256: 04733ceeec09526fe8784a3ed5d4f89085d1f9a611c6b7f18297d3381d25aff1
+  bytes: 20666
+- path: config/baselines/evidence/camera_inference_lifecycle_v1/runtime-region-ros-01.log
+  sha256: 4e96c025557acea9d2909ac1849d2eb887cc746debc7ed2c41f98b2dacf8a9bf
+  bytes: 281

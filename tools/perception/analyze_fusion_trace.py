@@ -201,8 +201,13 @@ def main():
             result["output_classification_explanations"] = {
                 name: explain_outputs(frames["old_1"], frames[name], traces["old_1"], rows)
                 for name, rows in traces.items() if name != "old_1"}
-    result["trace_integrity_pass"] = all(row["complete"] and row["accounting_consistent"]
-                                        for row in result["runs"].values())
+    result["trace_integrity_pass"] = all(
+        row["complete"] and row["accounting_consistent"]
+        and row["processed_supply_accounting_consistent"]
+        and row["continuous_observation_complete"]
+        and not row["duplicate_processed_stamps"]
+        and not row["duplicate_consumed_yolo_stamps"]
+        for row in result["runs"].values())
     (args.directory / "trace_analysis.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result["runs"], indent=2))
     return 0 if result["trace_integrity_pass"] else 1

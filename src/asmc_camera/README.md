@@ -11,7 +11,7 @@ TwinLite 학습 adapter와 offline BEV audit은 이 패키지가 소유한다. P
 
 2026-10-05 이전 계획은 [통합 로드맵](../../docs/architecture/consolidation-roadmap.md)을 따른다.
 **2026-10-06 패키지 이름을 `asmc_perception`에서 `asmc_camera`로 바꿨다.** node 이름, `/perception/*`
-토픽, launch 인자와 기본값은 그대로다. 구 패키지는 호환 wrapper 없이 완전히 옮겼으므로
+당시에는 토픽, launch 인자와 기본값을 유지했다. 이후 모델 실행 상태와 프로필을 추가했다. 구 패키지는 호환 wrapper 없이 완전히 옮겼으므로
 `roslaunch asmc_perception ...`와 `import asmc_perception`은 동작하지 않는다
 ([이전 안내](../asmc_perception/README.md)). 전방 YOLO11m 생산자는 opt-in으로 추가했다([P2a 안내](../../docs/handoffs/perception/camera-objects-p2a.md)).
 `camera_bev_fusion`은 다중 카메라 처리로 카메라 쪽에 남고, LiDAR 객체에 카메라 분류를
@@ -20,26 +20,24 @@ TwinLite 학습 adapter와 offline BEV audit은 이 패키지가 소유한다. P
 
 ## 실행
 
-기본값은 competition-legal 3-camera lane pipeline만 실행한다. 실시간 ROS
-추론은 bridge·GUI와 같은 `asmc-ros-noetic` 컨테이너에서 직접 실행한다.
-ROS image가 CUDA/PyTorch/OpenCV를 소유하고 공식 TwinLite 소스는 read-only로
-마운트된다. bag replay ROS 추론도 이 컨테이너에서 실행한다.
-`asmc-perception-train`은 모델 학습과 학습 중 validation 전용이다.
+기본 `perception.launch`는 모델을 실행하지 않는 idle 프로필이다. bridge·컨테이너와
+GUI는 별도로 준비하고, ROS 환경을 읽은 터미널에서 다음 중 하나를 직접 실행한다.
 
 ```bash
-docker exec -it asmc-ros-noetic bash
-cd /root/ws
-source /opt/ros/noetic/setup.bash
-source devel/setup.bash
-roslaunch asmc_camera perception.launch
+# 판제용: 세 모델 로드·예열 후 STANDBY, 모델별 서비스로 활성화
+roslaunch asmc_camera perception.launch profile:=planning
 ```
-
-신호등이 필요한 경우에만 명시적으로 추가한다.
 
 ```bash
-roslaunch asmc_camera perception.launch \
-  start_traffic_light:=true
+# 디버그용: 모든 모델 ACTIVE + debug 영상 발행
+roslaunch asmc_camera perception.launch profile:=debug
 ```
+
+planning/debug는 TwinLite 10Hz 배치·전방 YOLO 20Hz·camera4 ResNet 10Hz를 목표로 한다.
+기본 `start_*=false`(idle)는 모델 노드 자체가 없고, planning의 STANDBY는 GPU 모델을
+유지하며 서비스 요청을 받는다. 구간·결과 소비·주행 모드는 판제가 결정한다.
+기존 차선 반복 추론은 `profile:=legacy`로 명시적으로 재현한다. 목표 Hz와 초기 모드,
+모델별 제외·서비스·시각화는 [직접 실행 안내](../../docs/handoffs/perception/camera-inference-control.md)를 따른다.
 
 bag 기록·재생은 별도 `data_collection` 진입점을 사용한다.
 
@@ -51,12 +49,25 @@ roslaunch data_collection bag_recorder.launch profile:=full_raw
 새 `asmc_lidar` 골격은 이 overlay 없이 라이브러리만 빌드하며, 어느 쪽도
 `asmc_camera` launch가 자동으로 시작하지 않는다.
 
+### 보넷 mask 기본값과 비교
+
+```bash
+roslaunch asmc_camera perception.launch profile:=debug
+```
+
+YOLO 입력 복사본에만 정규화 다각형을 적용하고 원본 좌표를 유지한다. overlay에 영역과
+활성 상태를 표시한다. 기존 보행자 누락 1건의 사용자 수락 예외를 기록하고 기본값을 **true**로 선정했다.
+일반 debug 명령은 semantic GT 보넷 윤곽 mask를 사용한다. 전체영상 비교는 `objects_hood_mask:=false`를
+명시한다. 영역 파일·진단·수락 결과는 [mask 안내](../../docs/handoffs/perception/camera-inference-control.md#보넷-제외-semantic-gt-윤곽-mask-기본-활성화)를 따른다.
+mask는 YOLO 합성곱 연산량을 줄이는 기능이 아니다.
+
 ### 전방 YOLO11m 객체 검출 (opt-in)
 
 bridge·컨테이너·GUI를 준비한 뒤 카메라 터미널에서 직접 실행한다.
 
 ```bash
-roslaunch asmc_camera camera_objects.launch
+roslaunch asmc_camera perception.launch profile:=debug \
+  start_camera_lane:=false start_traffic_light:=false
 ```
 
 별도 LiDAR 터미널에서 outer와 nested 환경을 순서대로 source하고 실행한다.
@@ -67,7 +78,8 @@ source /root/ws/src/lidar+sensorfusion/devel/setup.bash
 roslaunch Main main.launch start_yolo:=false rviz:=false
 ```
 
-차선과 함께 실행하려면 `perception.launch start_camera_objects:=true`를 사용한다.
+차선과 함께 화면을 확인하려면 `perception.launch profile:=debug`를 사용한다.
+YOLO 전용 화면은 `/perception/camera/objects/debug/image/compressed`이며 LiDAR/GPS가 필요 없다.
 `/perception/camera/objects`는 전방 source header·원본 픽셀 좌표와
 `person/vehicle/obstacle` 그룹·원래 라벨을 보존한다. 현재 허용 라벨과 confidence는
 기존 `bus/truck/person/car`, 0.7이다. 처리 실패는 invalid 배열로 구분한다.
@@ -115,15 +127,15 @@ process를 먼저 실행한 뒤 저장소 루트 host에서 다음을 사용한�
 debug image publisher를 함께 켠다.
 
 ```bash
-roslaunch asmc_camera perception.launch start_visualization:=true
+roslaunch asmc_camera perception.launch profile:=debug
 ```
 
 화면은 GUI 환경이 있는 `asmc-ros-noetic` 컨테이너에서 연다. 아래 명령은 먼저
 `docker exec -it asmc-ros-noetic bash`로 들어간 각각의 터미널에서 실행한다.
 
 ```bash
-asmc-ros-gui rqt-image /perception/camera/debug/mosaic/compressed
-asmc-ros-gui rqt-image /perception/bev/debug/comparison/compressed
+rqt_image_view --clear-config /perception/camera/debug/mosaic/compressed
+rqt_image_view --clear-config /perception/bev/debug/comparison/compressed
 ```
 
 첫 topic은 좌·전방·우의 원본·주행가능·road-marking을 모은 9칸 영상이다. 두 번째는
@@ -131,13 +143,13 @@ calibration으로 투영·융합한 원본 RGB BEV와 fused semantic BEV를 같�
 보여준다. semantic 쪽은 0.5 기준 이진 주행가능 영역과 고정 색상의 차선 class만
 표시하며 확률·confidence 밝기를 인코딩하지 않는다. 둘 다 subscriber가 있을 때만
 렌더링하고 JPEG를 발행한다.
-`start_visualization`은 개발·검수용이고 기본값은 false다. 평상시 주행에는 필요하지 않다.
+`start_visualization`은 idle/planning에서 false, debug에서 true다. rqt 창은 별도로 연다.
 
 신호등은 `start_traffic_light:=true`를 함께 주면 `camera_traffic_light_visualizer`가 추가로 뜬다.
 
 ```bash
-roslaunch asmc_camera perception.launch start_visualization:=true start_traffic_light:=true
-asmc-ros-gui rqt-image /perception/traffic_light/debug/image/compressed
+roslaunch asmc_camera perception.launch profile:=debug
+rqt_image_view --clear-config /perception/traffic_light/debug/image/compressed
 ```
 
 이 영상은 typed `/perception/traffic_light/detection`을 같은 stamp의 `/cam_extra` 원본 위에
@@ -159,7 +171,8 @@ overlap 분석에서 필요하면 `publish_bev_debug_metadata:=true`를 지정�
 rejection 원인 분석이나 result bag replay에서는 `lane_publish_pipeline_audit:=true`를
 지정한다. `run_shadow_lane_bag_batch.py`는 기존 평가 계약을 위해 이 값을 자동으로 켠다.
 
-`start_traffic_light`은 실제 producer를 켜는 옵션이다. 현재는 true로 켜면 전 구간에서 계속
+`start_traffic_light`은 producer 노드 생성 옵션이며 구간 판단 옵션이 아니다.
+planning은 STANDBY로 외부 요청을 기다리고 debug는 ACTIVE로 계속
 추론하며, HD맵의 `TRAFFIC_LIGHT_REQUIRED` 구간(A236~A308)에 따른 process/compute 활성화는
 판제 supervisor와 함께 연결할 후속 항목이다.
 
@@ -180,9 +193,7 @@ docker exec -it asmc-ros-noetic bash
 cd /root/ws
 source /opt/ros/noetic/setup.bash
 source devel/setup.bash
-roslaunch asmc_camera perception.launch \
-  start_traffic_light:=true \
-  start_visualization:=true
+roslaunch asmc_camera perception.launch profile:=debug
 ```
 
 별도 터미널에서 ROS 토픽을 확인한다. `rostopic hz`는 계속 대기하므로 항목별로
@@ -218,7 +229,7 @@ rostopic echo -n 1 /perception/traffic_light/detection
 ```
 
 `/perception/lane/boundary_family`는 음영구간 판제 소비 정본이며 무옵션
-`roslaunch asmc_camera perception.launch`에서도 기본 발행된다. legacy 개별 spline·tracker와
+`profile:=planning`/`profile:=debug`에서 차선 파이프라인을 켜면 발행된다. legacy 개별 spline·tracker와
 `/perception/lane/boundary_observations`는 기본 비활성화다. 기존 호환·진단용으로
 필요할 때만 `lane_enable_independent_boundary_pipeline:=true`를 사용한다.
 
@@ -244,8 +255,8 @@ adapter launch는 `base_link` 전용 RViz를 자동으로 열고
 rqt 영상이 필요할 때만 각각 별도 `asmc-ros-noetic` 터미널에서 연다.
 
 ```bash
-asmc-ros-gui rqt-image /perception/camera/debug/mosaic/compressed
-asmc-ros-gui rqt-image /perception/bev/debug/comparison/compressed
+rqt_image_view --clear-config /perception/camera/debug/mosaic/compressed
+rqt_image_view --clear-config /perception/bev/debug/comparison/compressed
 ```
 
 자동 RViz의 음영 ODD 밖에서
@@ -388,3 +399,14 @@ P4-C6에서 camera/BEV/traffic 호환 package를 제거하고 offline·training 
 `src/lidar+sensorfusion`은 담당 팀원이 개발 중인 독립 workspace이므로
 그 파일과 내부 `Msg`·`morai_msgs`는 건드리지 않는다. LiDAR 완성·handoff 뒤에만 별도 P4-D로
 canonical adapter와 message 전환을 진행한다.
+
+## 모델별 외부 실행 제어
+
+현재 차선 피팅과 `LaneBoundaryFamily`는 음영구간 전용이다. 음영구간 밖의 구현·검증은
+아직 완료되지 않았으므로 그 결과를 주행에 사용하면 안 된다. debug 프로필의 전체 ACTIVE와
+결과의 `valid`/`pipeline_ready`는 구간 밖 주행 사용을 허용하지 않는다. 구간 적용·활성화·
+결과 소비 조건은 판제가 결정하며 카메라 생산자에 GPS/구간 판단을 넣지 않는다.
+
+`managed:=true`에서 TwinLite·YOLO·ResNet18을 독립적으로 STANDBY/PREPARE/ACTIVE로
+요청할 수 있다. 직접 launch·서비스·GUI 명령, 판제 역할과 현재 수락 제한은
+[모델별 실행 상태 안내](../../docs/handoffs/perception/camera-inference-control.md)를 따른다.

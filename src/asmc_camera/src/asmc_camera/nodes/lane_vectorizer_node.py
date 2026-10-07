@@ -66,6 +66,9 @@ from asmc_camera.bev.shared_lane_family import (
 from asmc_camera.bev.spline_fitting import fit_lane_tracks_with_audit
 
 
+from asmc_camera.runtime.ros_control import LaneEpochGate
+
+
 @dataclass(frozen=True)
 class _ViewFrame:
     view: str
@@ -129,6 +132,9 @@ def _names(value):
 
 class LaneVectorizerNode:
     def __init__(self) -> None:
+        self.last_runtime_header = None
+        self.runtime_generation = None
+        self.epoch_gate = LaneEpochGate(on_standby=self._runtime_invalidate)
         self.views = _names(rospy.get_param("~views", ["front", "left", "right"]))
         camera_values = dict(rospy.get_param("~cameras"))
         cameras = calibrations_from_dict(
@@ -515,7 +521,17 @@ class LaneVectorizerNode:
             self.publish_pipeline_audit,
         )
 
+    def _runtime_invalidate(self):
+        if self.last_runtime_header is not None and hasattr(self, "boundary_family_publisher"):
+            message = LaneBoundaryFamily()
+            message.header = self.last_runtime_header
+            message.valid = False
+            message.status_reason = "inference_standby"
+            self.boundary_family_publisher.publish(message)
+
     def _view_callback(self, view, class_message, confidence_message):
+        if not self.epoch_gate.allows(class_message.header.stamp):
+            return
         self.inputs[view] += 1
         stamps = (
             int(class_message.header.stamp.to_nsec()),
@@ -569,7 +585,13 @@ class LaneVectorizerNode:
         return None
 
     def _process(self, frames):
-        with self.processing_lock:
+        with self.processing_lock, self.epoch_gate.lock:
+            if not all(self.epoch_gate.allows(f.header.stamp) for f in frames.values()):
+                return
+            if self.epoch_gate.enabled and self.runtime_generation != self.epoch_gate.generation:
+                self.boundary_tracker.reset()
+                self.runtime_generation = self.epoch_gate.generation
+            self.last_runtime_header = max(frames.values(), key=lambda f: f.stamp_ns).header
             started = time.perf_counter()
             family_candidate_published = False
             timings = {

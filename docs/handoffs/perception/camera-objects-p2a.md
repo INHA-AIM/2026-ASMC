@@ -54,7 +54,7 @@ source devel/setup.bash
 export ROS_MASTER_URI=http://127.0.0.1:11311
 export ROS_HOSTNAME=localhost
 rosparam set /use_sim_time false
-roslaunch asmc_camera camera_objects.launch
+roslaunch asmc_camera perception.launch profile:=debug start_camera_lane:=false start_traffic_light:=false
 ```
 
 LiDAR 터미널:
@@ -72,10 +72,10 @@ roslaunch Main main.launch start_yolo:=false rviz:=false
 차선과 객체를 함께 켜려면 카메라 터미널의 launch를 다음으로 선택한다.
 
 ```bash
-roslaunch asmc_camera perception.launch start_camera_objects:=true
+roslaunch asmc_camera perception.launch profile:=debug start_traffic_light:=false
 ```
 
-객체만 켜는 상위 launch는 `start_camera_lane:=false start_camera_objects:=true`다.
+객체만 켜는 상위 launch는 `profile:=debug start_camera_lane:=false start_traffic_light:=false`다.
 `camera_objects_config`로 설정을 지정할 수 있다. RTX50 이미지에서는 기존
 `ASMC_YOLO_PYTHON` 환경 변수를 launch-prefix로 사용한다. 노드가 실패해도 차선 launch는 계속된다.
 GUI와 bridge는 이 launch가 열지 않는다.
@@ -87,11 +87,17 @@ rqt_image_view --clear-config /fusion/debug_image
 ```
 
 초록은 YOLO, 빨강은 LiDAR 투영, 청록은 fusion 매칭이다. 이 화면에는 Main이 필요하다.
-카메라 객체 launch만 실행하면 객체 메시지와 진단만 발행하고 별도 overlay는 만들지 않는다.
+현재 debug 프로필은 LiDAR/GPS 없이 YOLO 전용 overlay도 제공한다.
+
+```bash
+rqt_image_view --clear-config /perception/camera/objects/debug/image/compressed
+```
+
+개별 `camera_objects.launch`는 기본 STANDBY이므로 일반 확인은 상위 debug 프로필을 사용한다.
 차선·객체·신호등을 함께 확인할 때는 기존 객체 단독 launch를 종료하고 다음을 실행한다.
 
 ```bash
-roslaunch asmc_camera perception.launch start_camera_objects:=true start_visualization:=true start_traffic_light:=true traffic_light_wait_first:=0
+roslaunch asmc_camera perception.launch profile:=debug
 ```
 
 영상 publisher가 등록된 뒤 각 GUI 터미널에서 한 창씩 직접 실행한다.

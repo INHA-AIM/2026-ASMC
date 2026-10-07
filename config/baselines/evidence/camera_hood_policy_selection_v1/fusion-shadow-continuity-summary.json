@@ -1,0 +1,34 @@
+{
+  "new_1.frames": {
+    "output_frames": 183,
+    "track_ids": 275,
+    "classification_loss_transitions": 0,
+    "internal_missing_output_frames": 3294,
+    "presence_reacquisitions": 802,
+    "physical_object_fragmentation": "not_measured_without_independent_actor_identity"
+  },
+  "new_2.frames": {
+    "output_frames": 188,
+    "track_ids": 291,
+    "classification_loss_transitions": 0,
+    "internal_missing_output_frames": 3365,
+    "presence_reacquisitions": 822,
+    "physical_object_fragmentation": "not_measured_without_independent_actor_identity"
+  },
+  "old_1.frames": {
+    "output_frames": 186,
+    "track_ids": 295,
+    "classification_loss_transitions": 0,
+    "internal_missing_output_frames": 3452,
+    "presence_reacquisitions": 804,
+    "physical_object_fragmentation": "not_measured_without_independent_actor_identity"
+  },
+  "old_2.frames": {
+    "output_frames": 187,
+    "track_ids": 273,
+    "classification_loss_transitions": 0,
+    "internal_missing_output_frames": 3241,
+    "presence_reacquisitions": 839,
+    "physical_object_fragmentation": "not_measured_without_independent_actor_identity"
+  }
+}

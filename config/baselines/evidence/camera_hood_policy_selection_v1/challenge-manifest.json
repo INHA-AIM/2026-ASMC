@@ -1,0 +1,882 @@
+{
+  "split": "heldout_stationary_pose_challenges",
+  "annotation_source": "independent owned actor RPC identity and original image visual extent; approximate manual boxes",
+  "frames": [
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/000.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            405,
+            330,
+            800,
+            592
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 8,
+        "lateral": 0,
+        "zoffset": 0,
+        "yaw": 180
+      },
+      "source_stamp_ns": 1791351093153379440,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/001.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            405,
+            330,
+            800,
+            592
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 8,
+        "lateral": 0,
+        "zoffset": 0,
+        "yaw": 180
+      },
+      "source_stamp_ns": 1791351093307237386,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/002.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            405,
+            330,
+            800,
+            592
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 8,
+        "lateral": 0,
+        "zoffset": 0,
+        "yaw": 180
+      },
+      "source_stamp_ns": 1791351093453701019,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/003.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            330,
+            860,
+            675
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 5,
+        "lateral": 0,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351094035331010,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/004.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            330,
+            860,
+            675
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 5,
+        "lateral": 0,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351094186203479,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/005.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            330,
+            860,
+            675
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 5,
+        "lateral": 0,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351094337670803,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/006.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            940,
+            370,
+            1280,
+            654
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 4,
+        "lateral": -3,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351094923466682,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/007.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            940,
+            370,
+            1280,
+            654
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 4,
+        "lateral": -3,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351095092438697,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/008.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            940,
+            370,
+            1280,
+            654
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 4,
+        "lateral": -3,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351095226035118,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/009.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            457,
+            148,
+            630
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 4,
+        "lateral": 3,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351095799736499,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/010.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            457,
+            148,
+            630
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 4,
+        "lateral": 3,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351095934509038,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/011.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            457,
+            148,
+            630
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 4,
+        "lateral": 3,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351096067960977,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/012.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            795,
+            450,
+            1280,
+            718
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 3,
+        "lateral": -3,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351096705506086,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/013.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            795,
+            450,
+            1280,
+            718
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 3,
+        "lateral": -3,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351096855002164,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/014.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            795,
+            450,
+            1280,
+            718
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 3,
+        "lateral": -3,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351097006575107,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/015.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 3,
+        "lateral": 3,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351097643774747,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/016.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 3,
+        "lateral": 3,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351097777776479,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/017.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 3,
+        "lateral": 3,
+        "zoffset": 0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351097948870182,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/018.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            384,
+            810,
+            667
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 6,
+        "lateral": 0,
+        "zoffset": -0.5,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351098535968065,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/019.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            384,
+            810,
+            667
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 6,
+        "lateral": 0,
+        "zoffset": -0.5,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351098686619043,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/020.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            384,
+            810,
+            667
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 6,
+        "lateral": 0,
+        "zoffset": -0.5,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351098839571237,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/021.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            400,
+            1010,
+            670
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 5,
+        "lateral": 0,
+        "zoffset": -1.0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351099446146726,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/022.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            400,
+            1010,
+            670
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 5,
+        "lateral": 0,
+        "zoffset": -1.0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351099649878263,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/023.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            400,
+            1010,
+            670
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 5,
+        "lateral": 0,
+        "zoffset": -1.0,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351099798710346,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/024.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            395,
+            1050,
+            670
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 5,
+        "lateral": 0,
+        "zoffset": -1.5,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351100391236543,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/025.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            395,
+            1050,
+            670
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 5,
+        "lateral": 0,
+        "zoffset": -1.5,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351100544240713,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/026.png",
+      "ground_truth": [
+        {
+          "label": "vehicle",
+          "xyxy": [
+            0,
+            395,
+            1050,
+            670
+          ],
+          "annotation": "visible extent manually reviewed before candidate inference",
+          "actor": {
+            "id": {
+              "value": "hood_vehicle_4843392b"
+            },
+            "objectType": "OBJECT_TYPE_VEHICLE"
+          }
+        }
+      ],
+      "pose": {
+        "distance": 5,
+        "lateral": 0,
+        "zoffset": -1.5,
+        "yaw": 90
+      },
+      "source_stamp_ns": 1791351100691658735,
+      "review_note": "visible vehicle extent; lowered poses are synthetic geometry stress"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/027.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 5,
+        "lateral": 0,
+        "zoffset": 0,
+        "yaw": 0
+      },
+      "source_stamp_ns": 1791351101402252912,
+      "review_note": "spawned pedestrian not visible; no person coverage claimed"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/028.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 5,
+        "lateral": 0,
+        "zoffset": 0,
+        "yaw": 0
+      },
+      "source_stamp_ns": 1791351101537492275,
+      "review_note": "spawned pedestrian not visible; no person coverage claimed"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/029.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 5,
+        "lateral": 0,
+        "zoffset": 0,
+        "yaw": 0
+      },
+      "source_stamp_ns": 1791351101689889430,
+      "review_note": "spawned pedestrian not visible; no person coverage claimed"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/030.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 3,
+        "lateral": -2,
+        "zoffset": 0,
+        "yaw": 0
+      },
+      "source_stamp_ns": 1791351102302684783,
+      "review_note": "spawned pedestrian not visible; no person coverage claimed"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/031.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 3,
+        "lateral": -2,
+        "zoffset": 0,
+        "yaw": 0
+      },
+      "source_stamp_ns": 1791351102450775384,
+      "review_note": "spawned pedestrian not visible; no person coverage claimed"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/032.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 3,
+        "lateral": -2,
+        "zoffset": 0,
+        "yaw": 0
+      },
+      "source_stamp_ns": 1791351102601288557,
+      "review_note": "spawned pedestrian not visible; no person coverage claimed"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/033.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 3,
+        "lateral": 2,
+        "zoffset": 0,
+        "yaw": 0
+      },
+      "source_stamp_ns": 1791351103187731981,
+      "review_note": "spawned pedestrian not visible; no person coverage claimed"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/034.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 3,
+        "lateral": 2,
+        "zoffset": 0,
+        "yaw": 0
+      },
+      "source_stamp_ns": 1791351103340402603,
+      "review_note": "spawned pedestrian not visible; no person coverage claimed"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/035.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 3,
+        "lateral": 2,
+        "zoffset": 0,
+        "yaw": 0
+      },
+      "source_stamp_ns": 1791351103473146677,
+      "review_note": "spawned pedestrian not visible; no person coverage claimed"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/036.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 4,
+        "lateral": 0,
+        "zoffset": -0.5,
+        "yaw": 0
+      },
+      "source_stamp_ns": 1791351104053772211,
+      "review_note": "spawned pedestrian not visible; no person coverage claimed"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/037.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 4,
+        "lateral": 0,
+        "zoffset": -0.5,
+        "yaw": 0
+      },
+      "source_stamp_ns": 1791351104228580951,
+      "review_note": "spawned pedestrian not visible; no person coverage claimed"
+    },
+    {
+      "image": "/data/runtime_archive/hood-challenges-20261007-final/038.png",
+      "ground_truth": [],
+      "pose": {
+        "distance": 4,
+        "lateral": 0,
+        "zoffset": -0.5,
+        "yaw": 0
+      },
+      "source_stamp_ns": 1791351104380436658,
+      "review_note": "spawned pedestrian not visible; no person coverage claimed"
+    }
+  ]
+}

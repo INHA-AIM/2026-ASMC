@@ -1,0 +1,186 @@
+{
+  "frames": 287,
+  "counts": {
+    "mask_new_misses": {
+      "person": 1,
+      "vehicle": 0
+    },
+    "filter_new_misses": {
+      "person": 0,
+      "vehicle": 0
+    }
+  },
+  "excluded_boxes": 60,
+  "reviewed_exclusions": 60,
+  "acceptance": "post_filter_not_accepted_ambiguous_box_deletion",
+  "mask": {
+    "enabled": true,
+    "config_sha256": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+    "polygon_normalized": [
+      [
+        0.051562,
+        0.998611
+      ],
+      [
+        0.947656,
+        0.998611
+      ],
+      [
+        0.821875,
+        0.888889
+      ],
+      [
+        0.786719,
+        0.863889
+      ],
+      [
+        0.748437,
+        0.843056
+      ],
+      [
+        0.650781,
+        0.816667
+      ],
+      [
+        0.539844,
+        0.806944
+      ],
+      [
+        0.377344,
+        0.8125
+      ],
+      [
+        0.313281,
+        0.823611
+      ],
+      [
+        0.257031,
+        0.840278
+      ],
+      [
+        0.2125,
+        0.863889
+      ],
+      [
+        0.177344,
+        0.888889
+      ]
+    ],
+    "image_width": 1280,
+    "image_height": 720,
+    "polygon_pixels": [
+      [
+        65,
+        718
+      ],
+      [
+        1212,
+        718
+      ],
+      [
+        1052,
+        640
+      ],
+      [
+        1007,
+        622
+      ],
+      [
+        957,
+        607
+      ],
+      [
+        832,
+        588
+      ],
+      [
+        691,
+        580
+      ],
+      [
+        483,
+        585
+      ],
+      [
+        400,
+        592
+      ],
+      [
+        328,
+        605
+      ],
+      [
+        272,
+        622
+      ],
+      [
+        227,
+        640
+      ]
+    ],
+    "excluded_pixels": 114058
+  },
+  "filter": {
+    "enabled": true,
+    "config_sha256": "9f4133b6b1c6cf113c510c202c5205c75e817626b4539a13adf1482b0fc1b323",
+    "source_class_names": [
+      "car"
+    ],
+    "min_width_ratio": 0.6,
+    "min_center_y_ratio": 0.85,
+    "min_bottom_ratio": 0.95
+  },
+  "model": {
+    "backend": "ultralytics",
+    "weights": "/root/ws/src/asmc_camera/models/object_detection/yolo11m.pt",
+    "weights_sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+    "device": "cuda:0",
+    "model_device": "cuda:0",
+    "ultralytics": "8.4.150",
+    "torch": "2.1.2+cu118",
+    "conf_thres": 0.7,
+    "allowed_names": [
+      "bus",
+      "truck",
+      "person",
+      "car"
+    ],
+    "predict_overrides": {
+      "iou": 0.7,
+      "max_det": 300,
+      "agnostic_nms": false
+    },
+    "warmup_ms": 578.7
+  },
+  "manifest_sha256": "f5f763395ddcef3da6904a1de22729b9d6923622890faff10a5761fea19a053d",
+  "ambiguous_exclusions": 27,
+  "ambiguous_frames": [
+    11,
+    15,
+    19,
+    144,
+    145,
+    146,
+    149,
+    150,
+    153,
+    154,
+    155,
+    156,
+    157,
+    158,
+    159,
+    160,
+    161,
+    163,
+    164,
+    166,
+    167,
+    168,
+    169,
+    170,
+    171,
+    172,
+    174
+  ]
+}

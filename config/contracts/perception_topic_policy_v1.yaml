@@ -10,7 +10,9 @@ scope:
   launch: src/asmc_camera/launch/perception.launch
   views: [front, left, right]
   bag_profile_root: src/data_collection/config/bag_profiles
-  runtime_behavior_changed: false
+  runtime_behavior_changed: false  # The original P5-A audit itself changed no runtime behavior.
+  current_launch_default_profile: idle
+  current_component_modes_apply_when_loaded: true
   excluded_owners:
     - component: UDP bridge and transport diagnostics
       owner: asmc_bridge
@@ -25,14 +27,36 @@ scope:
 launch_defaults:
   source: src/asmc_camera/launch/perception.launch
   anchors:
-    - '<arg name="start_camera_lane" default="true"/>'
-    - '<arg name="start_traffic_light" default="false"/>'
-    - '<arg name="start_visualization" default="false"/>'
+  - <arg name="profile" default="idle" doc="idle | planning | debug | legacy"/>
+  - '<arg name="managed" default="$(eval {''idle'': True, ''planning'': True, ''debug'':
+    True, ''legacy'': False}[arg(''profile'')])"/>'
+  - <arg name="start_camera_lane" default="$(eval arg('profile') in ['planning', 'debug',
+    'legacy'])"/>
+  - <arg name="start_traffic_light" default="$(eval arg('profile') in ['planning',
+    'debug'])"/>
+  - <arg name="start_visualization" default="$(eval arg('profile') == 'debug')"/>
 
 # `bag_profiles` is the exact set of committed data_collection profiles that
 # currently names every expanded topic in the family. It is evidence of use,
 # not permission to expose a debug topic as a planning contract.
 topic_families:
+  - id: camera_inference_status
+    topics:
+      - {pattern: /camera_semantic_inference/inference_status, type: asmc_camera/InferenceStatus}
+      - {pattern: /camera_object_detector/inference_status, type: asmc_camera/InferenceStatus}
+      - {pattern: /traffic_light_infer/inference_status, type: asmc_camera/InferenceStatus}
+    producer:
+      file: src/asmc_camera/src/asmc_camera/runtime/ros_control.py
+      anchors: ["'~inference_status'"]
+    consumers:
+      - file: src/asmc_camera/src/asmc_camera/runtime/ros_control.py
+        anchor: "'/camera_semantic_inference/inference_status'"
+    bag_profiles: []
+    classification: operational_diagnostics
+    current_mode: default_on
+    p5b_action: keep
+    rationale: Independent model readiness; planning owns mode requests and result consumption.
+
   - id: camera_objects
     topics:
       - {pattern: /perception/camera/objects, type: asmc_msgs/CameraObjectBoxArray}
@@ -47,6 +71,34 @@ topic_families:
     current_mode: explicit_argument
     p5b_action: keep
     rationale: Opt-in camera producer; LiDAR-owned candidate contract and legacy adapter.
+
+  - id: camera_objects_visualization
+    topics:
+      - {pattern: /perception/camera/objects/debug/image/compressed, type: sensor_msgs/CompressedImage}
+    producer:
+      file: src/asmc_camera/src/asmc_camera/nodes/object_visualizer_node.py
+      anchors: ["'/perception/camera/objects/debug/image/compressed'"]
+    consumers: []
+    bag_profiles: []
+    classification: debug_opt_in
+    current_mode: visualization_launch_and_subscriber_lazy
+    p5b_action: keep
+    rationale: Exact source frame YOLO overlay; independent of LiDAR and GPS, without operational message changes.
+
+  - id: camera_objects_debug_raw
+    topics:
+      - {pattern: /perception/camera/objects/debug/raw, type: asmc_msgs/CameraObjectBoxArray}
+    producer:
+      file: src/asmc_camera/src/asmc_camera/nodes/object_detection_node.py
+      anchors: ['"/perception/camera/objects/debug/raw"']
+    consumers:
+      - file: src/asmc_camera/src/asmc_camera/nodes/object_visualizer_node.py
+        anchor: "'/perception/camera/objects/debug/raw'"
+    bag_profiles: []
+    classification: debug_opt_in
+    current_mode: visualization_launch_and_subscriber_lazy
+    p5b_action: keep
+    rationale: Optional same-inference pre-ego-filter results; debug comparison only, not a planning input.
 
   - id: camera_objects_diagnostics
     topics:
@@ -439,7 +491,7 @@ topic_families:
     topics:
       - {pattern: /perception/traffic_light/detection, type: asmc_msgs/TrafficLightDetection}
     producer:
-      file: src/asmc_camera/scripts/traffic_light_node.py
+      file: src/asmc_camera/src/asmc_camera/nodes/traffic_light_node.py
       anchors: ['parser.add_argument("--typed-topic", default="/perception/traffic_light/detection")']
     consumers:
       - file: src/behavior_planner/src/node/behavior_node.cpp
@@ -455,7 +507,7 @@ topic_families:
       - {pattern: /traffic_light/state, type: std_msgs/String}
       - {pattern: /traffic_light/detail, type: std_msgs/String}
     producer:
-      file: src/asmc_camera/scripts/traffic_light_node.py
+      file: src/asmc_camera/src/asmc_camera/nodes/traffic_light_node.py
       anchors: ['parser.add_argument("--state-topic", default="/traffic_light/state")', 'parser.add_argument("--detail-topic", default="/traffic_light/detail")']
     consumers:
       - file: src/behavior_planner/src/node/behavior_node.cpp

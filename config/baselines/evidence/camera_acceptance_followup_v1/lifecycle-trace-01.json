@@ -1,0 +1,4672 @@
+{
+  "checks": {
+    "standby_no_compute": true,
+    "yolo_other_models_standby": true,
+    "resnet18_other_models_standby": true,
+    "twinlite_other_models_standby": true,
+    "stop_compute": true,
+    "complete_traces": true,
+    "yolo_active_rate": true,
+    "yolo_no_duplicate_reverse": true,
+    "resnet18_active_rate": true,
+    "resnet18_no_duplicate_reverse": true,
+    "front_active_rate": true,
+    "front_no_duplicate_reverse": true,
+    "left_active_rate": true,
+    "left_no_duplicate_reverse": true,
+    "right_active_rate": true,
+    "right_no_duplicate_reverse": true,
+    "family_active_rate": true,
+    "family_no_duplicate_reverse": true,
+    "yolo_prepare_no_operational_output": true,
+    "resnet18_prepare_no_operational_output": true,
+    "stop_operational_outputs": true,
+    "twinlite_all_prepare_trials_ready": true,
+    "yolo_all_prepare_trials_ready": true,
+    "resnet18_all_prepare_trials_ready": true
+  },
+  "failures": [],
+  "trace_enabled": true,
+  "timing_anchor": "server_acceptance",
+  "launch_to_all_loaded_and_dummy_warmed_sec": 4.826120860991068,
+  "transitions": [
+    {
+      "model": "yolo",
+      "mode": 1,
+      "generation": 1,
+      "call_started": 139688.554208075,
+      "call_returned": 139688.556408145,
+      "ready_observed_monotonic": 139688.929478805,
+      "accepted_monotonic": 139688.555993161,
+      "source_cutoff_ns": 1789980359451568841,
+      "first_normal_processing_sec": 0.16052717401180416,
+      "actual_image_ready_sec": 0.21580882600392215,
+      "status_prepared_sec": 0.3726287330209743,
+      "pipeline_ready_sec": 0.3726287330209743
+    },
+    {
+      "model": "yolo",
+      "mode": 0,
+      "generation": 2,
+      "call_started": 139688.929513786,
+      "call_returned": 139688.931759125,
+      "accepted_monotonic": 139688.931464263,
+      "source_cutoff_ns": 1789980359847971916,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "yolo",
+      "mode": 1,
+      "generation": 3,
+      "call_started": 139689.033804685,
+      "call_returned": 139689.036208308,
+      "ready_observed_monotonic": 139689.332818598,
+      "accepted_monotonic": 139689.035853221,
+      "source_cutoff_ns": 1789980359965139389,
+      "first_normal_processing_sec": 0.04369895000127144,
+      "actual_image_ready_sec": 0.18294093501754105,
+      "status_prepared_sec": 0.2932639399950858,
+      "pipeline_ready_sec": 0.2932639399950858
+    },
+    {
+      "model": "yolo",
+      "mode": 0,
+      "generation": 4,
+      "call_started": 139689.3328423,
+      "call_returned": 139689.334869486,
+      "accepted_monotonic": 139689.334543384,
+      "source_cutoff_ns": 1789980360245765686,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "yolo",
+      "mode": 1,
+      "generation": 5,
+      "call_started": 139689.436845112,
+      "call_returned": 139689.438824783,
+      "ready_observed_monotonic": 139689.730172726,
+      "accepted_monotonic": 139689.43855639,
+      "source_cutoff_ns": 1789980360352441787,
+      "first_normal_processing_sec": 0.041028267005458474,
+      "actual_image_ready_sec": 0.18771272798767313,
+      "status_prepared_sec": 0.2909780709887855,
+      "pipeline_ready_sec": 0.2909780709887855
+    },
+    {
+      "model": "yolo",
+      "mode": 0,
+      "generation": 6,
+      "call_started": 139689.730194618,
+      "call_returned": 139689.731808003,
+      "accepted_monotonic": 139689.731556187,
+      "source_cutoff_ns": 1789980360643679141,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "yolo",
+      "mode": 1,
+      "generation": 7,
+      "call_started": 139689.833769065,
+      "call_returned": 139689.835797922,
+      "ready_observed_monotonic": 139690.132043566,
+      "accepted_monotonic": 139689.835465073,
+      "source_cutoff_ns": 1789980360752557992,
+      "first_normal_processing_sec": 0.01809579599648714,
+      "actual_image_ready_sec": 0.1355276250105817,
+      "status_prepared_sec": 0.29461691799224354,
+      "pipeline_ready_sec": 0.29461691799224354
+    },
+    {
+      "model": "yolo",
+      "mode": 0,
+      "generation": 8,
+      "call_started": 139690.13207101,
+      "call_returned": 139690.134363802,
+      "accepted_monotonic": 139690.133956647,
+      "source_cutoff_ns": 1789980361063611507,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "yolo",
+      "mode": 1,
+      "generation": 9,
+      "call_started": 139690.236576405,
+      "call_returned": 139690.238801527,
+      "ready_observed_monotonic": 139690.53495132,
+      "accepted_monotonic": 139690.238481905,
+      "source_cutoff_ns": 1789980361163381814,
+      "first_normal_processing_sec": 0.030162871000356972,
+      "actual_image_ready_sec": 0.14344822900602594,
+      "status_prepared_sec": 0.29212538100546226,
+      "pipeline_ready_sec": 0.29212538100546226
+    },
+    {
+      "model": "yolo",
+      "mode": 0,
+      "generation": 10,
+      "call_started": 139690.534993024,
+      "call_returned": 139690.536899676,
+      "accepted_monotonic": 139690.536640873,
+      "source_cutoff_ns": 1789980361439949989,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "yolo",
+      "mode": 1,
+      "generation": 11,
+      "call_started": 139690.638808767,
+      "call_returned": 139690.640986234,
+      "ready_observed_monotonic": 139690.932217374,
+      "accepted_monotonic": 139690.64054659,
+      "source_cutoff_ns": 1789980361562518358,
+      "first_normal_processing_sec": 0.037582960998406634,
+      "actual_image_ready_sec": 0.14180813799612224,
+      "status_prepared_sec": 0.2908700219995808,
+      "pipeline_ready_sec": 0.2908700219995808
+    },
+    {
+      "model": "yolo",
+      "mode": 0,
+      "generation": 12,
+      "call_started": 139690.932244844,
+      "call_returned": 139690.934615053,
+      "accepted_monotonic": 139690.934076804,
+      "source_cutoff_ns": 1789980361837044477,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "yolo",
+      "mode": 1,
+      "generation": 13,
+      "call_started": 139691.03667834,
+      "call_returned": 139691.038396985,
+      "ready_observed_monotonic": 139691.334916349,
+      "accepted_monotonic": 139691.03811343,
+      "source_cutoff_ns": 1789980361948698997,
+      "first_normal_processing_sec": 0.030686976009747013,
+      "actual_image_ready_sec": 0.2422247460053768,
+      "status_prepared_sec": 0.2943605420005042,
+      "pipeline_ready_sec": 0.2943605420005042
+    },
+    {
+      "model": "yolo",
+      "mode": 0,
+      "generation": 14,
+      "call_started": 139691.334962569,
+      "call_returned": 139691.337832225,
+      "accepted_monotonic": 139691.337176772,
+      "source_cutoff_ns": 1789980362261201143,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "yolo",
+      "mode": 1,
+      "generation": 15,
+      "call_started": 139691.439811303,
+      "call_returned": 139691.441771288,
+      "ready_observed_monotonic": 139691.733228951,
+      "accepted_monotonic": 139691.441576543,
+      "source_cutoff_ns": 1789980362347382783,
+      "first_normal_processing_sec": 0.03551385100581683,
+      "actual_image_ready_sec": 0.1720549830060918,
+      "status_prepared_sec": 0.2913359079975635,
+      "pipeline_ready_sec": 0.2913359079975635
+    },
+    {
+      "model": "yolo",
+      "mode": 0,
+      "generation": 16,
+      "call_started": 139691.733258157,
+      "call_returned": 139691.735266961,
+      "accepted_monotonic": 139691.735067604,
+      "source_cutoff_ns": 1789980362656360387,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "yolo",
+      "mode": 1,
+      "generation": 17,
+      "call_started": 139691.837348663,
+      "call_returned": 139691.838940274,
+      "ready_observed_monotonic": 139692.13532705,
+      "accepted_monotonic": 139691.838642814,
+      "source_cutoff_ns": 1789980362759887933,
+      "first_normal_processing_sec": 0.0322178500064183,
+      "actual_image_ready_sec": 0.13543553900672123,
+      "status_prepared_sec": 0.29485352101619355,
+      "pipeline_ready_sec": 0.29485352101619355
+    },
+    {
+      "model": "yolo",
+      "mode": 0,
+      "generation": 18,
+      "call_started": 139692.135360542,
+      "call_returned": 139692.137645687,
+      "accepted_monotonic": 139692.13725809,
+      "source_cutoff_ns": 1789980363059287786,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "yolo",
+      "mode": 1,
+      "generation": 19,
+      "call_started": 139692.239663155,
+      "call_returned": 139692.24142812,
+      "ready_observed_monotonic": 139692.537726336,
+      "accepted_monotonic": 139692.241114644,
+      "source_cutoff_ns": 1789980363142696619,
+      "first_normal_processing_sec": 0.03627426800085232,
+      "actual_image_ready_sec": 0.1681378289940767,
+      "status_prepared_sec": 0.29311971299466677,
+      "pipeline_ready_sec": 0.29311971299466677
+    },
+    {
+      "model": "yolo",
+      "mode": 2,
+      "generation": 20,
+      "call_started": 139692.537790249,
+      "call_returned": 139692.539616868,
+      "accepted_monotonic": 139692.539410048,
+      "source_cutoff_ns": 1789980363461401462,
+      "first_normal_processing_sec": 0.032582201005425304,
+      "actual_image_ready_sec": 0.1803137910028454,
+      "status_prepared_sec": 0.195160757022677,
+      "pipeline_ready_sec": 0.195160757022677
+    },
+    {
+      "model": "yolo",
+      "mode": 0,
+      "generation": 21,
+      "call_started": 139702.540920654,
+      "call_returned": 139702.543417131,
+      "accepted_monotonic": 139702.54313432,
+      "source_cutoff_ns": 1789980373471672058,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "resnet18",
+      "mode": 1,
+      "generation": 1,
+      "call_started": 139703.048428878,
+      "call_returned": 139703.050100598,
+      "ready_observed_monotonic": 139703.387301745,
+      "accepted_monotonic": 139703.049765959,
+      "source_cutoff_ns": 1789980373919941186,
+      "first_normal_processing_sec": 0.10401271798764355,
+      "actual_image_ready_sec": 0.27599284998723306,
+      "status_prepared_sec": 0.33374134098994546,
+      "pipeline_ready_sec": 0.33374134098994546
+    },
+    {
+      "model": "resnet18",
+      "mode": 0,
+      "generation": 2,
+      "call_started": 139703.387333043,
+      "call_returned": 139703.389306488,
+      "accepted_monotonic": 139703.388849559,
+      "source_cutoff_ns": 1789980374250747442,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "resnet18",
+      "mode": 1,
+      "generation": 3,
+      "call_started": 139703.491313318,
+      "call_returned": 139703.493175875,
+      "ready_observed_monotonic": 139703.784243278,
+      "accepted_monotonic": 139703.492828239,
+      "source_cutoff_ns": 1789980374325351715,
+      "first_normal_processing_sec": 0.027131997019750997,
+      "actual_image_ready_sec": 0.2281181020080112,
+      "status_prepared_sec": 0.29122020601062104,
+      "pipeline_ready_sec": 0.29122020601062104
+    },
+    {
+      "model": "resnet18",
+      "mode": 0,
+      "generation": 4,
+      "call_started": 139703.784266489,
+      "call_returned": 139703.785739819,
+      "accepted_monotonic": 139703.785556943,
+      "source_cutoff_ns": 1789980374656394720,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "resnet18",
+      "mode": 1,
+      "generation": 5,
+      "call_started": 139703.887727396,
+      "call_returned": 139703.889785052,
+      "ready_observed_monotonic": 139704.18583353,
+      "accepted_monotonic": 139703.889350225,
+      "source_cutoff_ns": 1789980374743324756,
+      "first_normal_processing_sec": 0.034841867978684604,
+      "actual_image_ready_sec": 0.23851443699095398,
+      "status_prepared_sec": 0.295270182978129,
+      "pipeline_ready_sec": 0.295270182978129
+    },
+    {
+      "model": "resnet18",
+      "mode": 0,
+      "generation": 6,
+      "call_started": 139704.185866886,
+      "call_returned": 139704.18760566,
+      "accepted_monotonic": 139704.18731366,
+      "source_cutoff_ns": 1789980375053600072,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "resnet18",
+      "mode": 1,
+      "generation": 7,
+      "call_started": 139704.289539848,
+      "call_returned": 139704.291488647,
+      "ready_observed_monotonic": 139704.587304086,
+      "accepted_monotonic": 139704.29119656,
+      "source_cutoff_ns": 1789980375153610944,
+      "first_normal_processing_sec": 0.049666626000544056,
+      "actual_image_ready_sec": 0.2503985149960499,
+      "status_prepared_sec": 0.2938908090000041,
+      "pipeline_ready_sec": 0.2938908090000041
+    },
+    {
+      "model": "resnet18",
+      "mode": 0,
+      "generation": 8,
+      "call_started": 139704.587344932,
+      "call_returned": 139704.590067883,
+      "accepted_monotonic": 139704.589528215,
+      "source_cutoff_ns": 1789980375451383352,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "resnet18",
+      "mode": 1,
+      "generation": 9,
+      "call_started": 139704.692111888,
+      "call_returned": 139704.694343443,
+      "ready_observed_monotonic": 139704.990375627,
+      "accepted_monotonic": 139704.694044114,
+      "source_cutoff_ns": 1789980375537199497,
+      "first_normal_processing_sec": 0.021081446000607684,
+      "actual_image_ready_sec": 0.23181162198306993,
+      "status_prepared_sec": 0.291470908006886,
+      "pipeline_ready_sec": 0.291470908006886
+    },
+    {
+      "model": "resnet18",
+      "mode": 0,
+      "generation": 10,
+      "call_started": 139704.990421503,
+      "call_returned": 139704.99282011,
+      "accepted_monotonic": 139704.992416617,
+      "source_cutoff_ns": 1789980375852038383,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "resnet18",
+      "mode": 1,
+      "generation": 11,
+      "call_started": 139705.094845914,
+      "call_returned": 139705.096955166,
+      "ready_observed_monotonic": 139705.387971213,
+      "accepted_monotonic": 139705.096683314,
+      "source_cutoff_ns": 1789980375952450752,
+      "first_normal_processing_sec": 0.027960817998973653,
+      "actual_image_ready_sec": 0.22919408298912458,
+      "status_prepared_sec": 0.2892636089818552,
+      "pipeline_ready_sec": 0.2892636089818552
+    },
+    {
+      "model": "resnet18",
+      "mode": 0,
+      "generation": 12,
+      "call_started": 139705.387996472,
+      "call_returned": 139705.390107387,
+      "accepted_monotonic": 139705.389694352,
+      "source_cutoff_ns": 1789980376252265691,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "resnet18",
+      "mode": 1,
+      "generation": 13,
+      "call_started": 139705.492108718,
+      "call_returned": 139705.494117499,
+      "ready_observed_monotonic": 139705.790367495,
+      "accepted_monotonic": 139705.493793585,
+      "source_cutoff_ns": 1789980376337572097,
+      "first_normal_processing_sec": 0.02961466502165422,
+      "actual_image_ready_sec": 0.22502229001838714,
+      "status_prepared_sec": 0.2925306920078583,
+      "pipeline_ready_sec": 0.2925306920078583
+    },
+    {
+      "model": "resnet18",
+      "mode": 0,
+      "generation": 14,
+      "call_started": 139705.790390309,
+      "call_returned": 139705.792262313,
+      "accepted_monotonic": 139705.791862839,
+      "source_cutoff_ns": 1789980376653429746,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "resnet18",
+      "mode": 1,
+      "generation": 15,
+      "call_started": 139705.894227728,
+      "call_returned": 139705.896138707,
+      "ready_observed_monotonic": 139706.191854564,
+      "accepted_monotonic": 139705.89571399,
+      "source_cutoff_ns": 1789980376726731061,
+      "first_normal_processing_sec": 0.02822577499318868,
+      "actual_image_ready_sec": 0.2333353550056927,
+      "status_prepared_sec": 0.2911388979991898,
+      "pipeline_ready_sec": 0.2911388979991898
+    },
+    {
+      "model": "resnet18",
+      "mode": 0,
+      "generation": 16,
+      "call_started": 139706.191879625,
+      "call_returned": 139706.193532231,
+      "accepted_monotonic": 139706.193215565,
+      "source_cutoff_ns": 1789980377025919914,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "resnet18",
+      "mode": 1,
+      "generation": 17,
+      "call_started": 139706.295595866,
+      "call_returned": 139706.297720816,
+      "ready_observed_monotonic": 139706.588759718,
+      "accepted_monotonic": 139706.297383499,
+      "source_cutoff_ns": 1789980377148267030,
+      "first_normal_processing_sec": 0.013224552996689454,
+      "actual_image_ready_sec": 0.22066782199544832,
+      "status_prepared_sec": 0.2901943939796183,
+      "pipeline_ready_sec": 0.2901943939796183
+    },
+    {
+      "model": "resnet18",
+      "mode": 0,
+      "generation": 18,
+      "call_started": 139706.58879778,
+      "call_returned": 139706.590921874,
+      "accepted_monotonic": 139706.590712731,
+      "source_cutoff_ns": 1789980377521830558,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "resnet18",
+      "mode": 1,
+      "generation": 19,
+      "call_started": 139706.693098785,
+      "call_returned": 139706.695143724,
+      "ready_observed_monotonic": 139706.991525015,
+      "accepted_monotonic": 139706.694857059,
+      "source_cutoff_ns": 1789980377521830558,
+      "first_normal_processing_sec": 0.039724522997858,
+      "actual_image_ready_sec": 0.24077545100590214,
+      "status_prepared_sec": 0.2932592240103986,
+      "pipeline_ready_sec": 0.2932592240103986
+    },
+    {
+      "model": "resnet18",
+      "mode": 2,
+      "generation": 20,
+      "call_started": 139706.991556939,
+      "call_returned": 139706.993671352,
+      "accepted_monotonic": 139706.993348319,
+      "source_cutoff_ns": 1789980377918618917,
+      "first_normal_processing_sec": 0.14398040101514198,
+      "actual_image_ready_sec": 0.3482031850144267,
+      "status_prepared_sec": 0.3951818610075861,
+      "pipeline_ready_sec": 0.3951818610075861
+    },
+    {
+      "model": "resnet18",
+      "mode": 0,
+      "generation": 21,
+      "call_started": 139716.995513471,
+      "call_returned": 139716.997220733,
+      "accepted_monotonic": 139716.996967998,
+      "source_cutoff_ns": 1789980387841892004,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "twinlite",
+      "mode": 1,
+      "generation": 1,
+      "call_started": 139717.501917131,
+      "call_returned": 139717.50375823,
+      "ready_observed_monotonic": 139717.86181386,
+      "accepted_monotonic": 139717.503424906,
+      "source_cutoff_ns": 1789980388413154602,
+      "first_normal_processing_sec": 0.18417991901515052,
+      "actual_image_ready_sec": 0.3099742690101266,
+      "status_prepared_sec": 0.3554477159923408,
+      "pipeline_ready_sec": 0.3554477159923408
+    },
+    {
+      "model": "twinlite",
+      "mode": 0,
+      "generation": 2,
+      "call_started": 139717.861858187,
+      "call_returned": 139717.864889332,
+      "accepted_monotonic": 139717.864437897,
+      "source_cutoff_ns": 1789980388795638084,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "twinlite",
+      "mode": 1,
+      "generation": 3,
+      "call_started": 139717.967159778,
+      "call_returned": 139717.969974923,
+      "ready_observed_monotonic": 139718.666327793,
+      "accepted_monotonic": 139717.969352993,
+      "source_cutoff_ns": 1789980388831666707,
+      "first_normal_processing_sec": 0.04458715100190602,
+      "actual_image_ready_sec": 0.2738863659906201,
+      "status_prepared_sec": 0.2904654309968464,
+      "pipeline_ready_sec": 0.6933310949825682
+    },
+    {
+      "model": "twinlite",
+      "mode": 0,
+      "generation": 4,
+      "call_started": 139718.666367526,
+      "call_returned": 139718.669170637,
+      "accepted_monotonic": 139718.668523143,
+      "source_cutoff_ns": 1789980389597138404,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "twinlite",
+      "mode": 1,
+      "generation": 5,
+      "call_started": 139718.771170726,
+      "call_returned": 139718.773627984,
+      "ready_observed_monotonic": 139719.264470983,
+      "accepted_monotonic": 139718.773147895,
+      "source_cutoff_ns": 1789980389698986768,
+      "first_normal_processing_sec": 0.08137468100176193,
+      "actual_image_ready_sec": 0.3356152350024786,
+      "status_prepared_sec": 0.4912258480035234,
+      "pipeline_ready_sec": 0.4912258480035234
+    },
+    {
+      "model": "twinlite",
+      "mode": 0,
+      "generation": 6,
+      "call_started": 139719.264503298,
+      "call_returned": 139719.266601053,
+      "accepted_monotonic": 139719.266077108,
+      "source_cutoff_ns": 1789980390182485580,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "twinlite",
+      "mode": 1,
+      "generation": 7,
+      "call_started": 139719.36875292,
+      "call_returned": 139719.371170784,
+      "ready_observed_monotonic": 139719.667883524,
+      "accepted_monotonic": 139719.370533905,
+      "source_cutoff_ns": 1789980390307983160,
+      "first_normal_processing_sec": 0.06613403101800941,
+      "actual_image_ready_sec": 0.2743183200072963,
+      "status_prepared_sec": 0.2951777440030128,
+      "pipeline_ready_sec": 0.2951777440030128
+    },
+    {
+      "model": "twinlite",
+      "mode": 0,
+      "generation": 8,
+      "call_started": 139719.667916096,
+      "call_returned": 139719.670421066,
+      "accepted_monotonic": 139719.669964861,
+      "source_cutoff_ns": 1789980390548220872,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "twinlite",
+      "mode": 1,
+      "generation": 9,
+      "call_started": 139719.772721669,
+      "call_returned": 139719.775250453,
+      "ready_observed_monotonic": 139720.278057586,
+      "accepted_monotonic": 139719.774774839,
+      "source_cutoff_ns": 1789980390699658393,
+      "first_normal_processing_sec": 0.08612453800742514,
+      "actual_image_ready_sec": 0.3033661410154309,
+      "status_prepared_sec": 0.5014859240036458,
+      "pipeline_ready_sec": 0.5014859240036458
+    },
+    {
+      "model": "twinlite",
+      "mode": 0,
+      "generation": 10,
+      "call_started": 139720.278086139,
+      "call_returned": 139720.280457914,
+      "accepted_monotonic": 139720.279930488,
+      "source_cutoff_ns": 1789980391200739622,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "twinlite",
+      "mode": 1,
+      "generation": 11,
+      "call_started": 139720.382457321,
+      "call_returned": 139720.384112582,
+      "ready_observed_monotonic": 139721.484465501,
+      "accepted_monotonic": 139720.383733521,
+      "source_cutoff_ns": 1789980391302303075,
+      "first_normal_processing_sec": 0.08019940098165534,
+      "actual_image_ready_sec": 0.32963263397687115,
+      "status_prepared_sec": 0.494703063974157,
+      "pipeline_ready_sec": 1.096927844977472
+    },
+    {
+      "model": "twinlite",
+      "mode": 0,
+      "generation": 12,
+      "call_started": 139721.484502578,
+      "call_returned": 139721.48687363,
+      "accepted_monotonic": 139721.486343943,
+      "source_cutoff_ns": 1789980392411993026,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "twinlite",
+      "mode": 1,
+      "generation": 13,
+      "call_started": 139721.58901882,
+      "call_returned": 139721.591011749,
+      "ready_observed_monotonic": 139722.487447281,
+      "accepted_monotonic": 139721.590716168,
+      "source_cutoff_ns": 1789980392488029479,
+      "first_normal_processing_sec": 0.08168599699274637,
+      "actual_image_ready_sec": 0.30838401400251314,
+      "status_prepared_sec": 0.492607610009145,
+      "pipeline_ready_sec": 0.8935521880048327
+    },
+    {
+      "model": "twinlite",
+      "mode": 0,
+      "generation": 14,
+      "call_started": 139722.487490087,
+      "call_returned": 139722.497147936,
+      "accepted_monotonic": 139722.496492014,
+      "source_cutoff_ns": 1789980393398104906,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "twinlite",
+      "mode": 1,
+      "generation": 15,
+      "call_started": 139722.599166336,
+      "call_returned": 139722.601286804,
+      "ready_observed_monotonic": 139722.893355054,
+      "accepted_monotonic": 139722.600804912,
+      "source_cutoff_ns": 1789980393518229722,
+      "first_normal_processing_sec": 0.041568931977963075,
+      "actual_image_ready_sec": 0.2793573050003033,
+      "status_prepared_sec": 0.2892325769935269,
+      "pipeline_ready_sec": 0.2892325769935269
+    },
+    {
+      "model": "twinlite",
+      "mode": 0,
+      "generation": 16,
+      "call_started": 139722.893401477,
+      "call_returned": 139722.895983348,
+      "accepted_monotonic": 139722.895462625,
+      "source_cutoff_ns": 1789980393831613779,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "twinlite",
+      "mode": 1,
+      "generation": 17,
+      "call_started": 139722.99800698,
+      "call_returned": 139723.00027327,
+      "ready_observed_monotonic": 139723.302007153,
+      "accepted_monotonic": 139722.999965956,
+      "source_cutoff_ns": 1789980393910231351,
+      "first_normal_processing_sec": 0.0658334250038024,
+      "actual_image_ready_sec": 0.2901689480058849,
+      "status_prepared_sec": 0.29745072399964556,
+      "pipeline_ready_sec": 0.29745072399964556
+    },
+    {
+      "model": "twinlite",
+      "mode": 0,
+      "generation": 18,
+      "call_started": 139723.302050616,
+      "call_returned": 139723.305038835,
+      "accepted_monotonic": 139723.304718941,
+      "source_cutoff_ns": 1789980394203605651,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    },
+    {
+      "model": "twinlite",
+      "mode": 1,
+      "generation": 19,
+      "call_started": 139723.407135219,
+      "call_returned": 139723.408783788,
+      "ready_observed_monotonic": 139723.910279234,
+      "accepted_monotonic": 139723.408434204,
+      "source_cutoff_ns": 1789980394342972517,
+      "first_normal_processing_sec": 0.08771235099993646,
+      "actual_image_ready_sec": 0.30426396400434896,
+      "status_prepared_sec": 0.498584505985491,
+      "pipeline_ready_sec": 0.498584505985491
+    },
+    {
+      "model": "twinlite",
+      "mode": 2,
+      "generation": 20,
+      "call_started": 139723.910329853,
+      "call_returned": 139723.9131726,
+      "accepted_monotonic": 139723.912394382,
+      "source_cutoff_ns": 1789980394792626142,
+      "first_normal_processing_sec": 0.040783134987577796,
+      "actual_image_ready_sec": 0.24535837600706145,
+      "status_prepared_sec": 0.39568486501229927,
+      "pipeline_ready_sec": 0.39568486501229927
+    },
+    {
+      "model": "twinlite",
+      "mode": 0,
+      "generation": 21,
+      "call_started": 139733.917832408,
+      "call_returned": 139733.919767834,
+      "accepted_monotonic": 139733.919219351,
+      "source_cutoff_ns": 1789980404847383737,
+      "first_normal_processing_sec": null,
+      "actual_image_ready_sec": null,
+      "status_prepared_sec": null,
+      "pipeline_ready_sec": null
+    }
+  ],
+  "stages": [
+    {
+      "name": "all_standby",
+      "start": 139686.549991008,
+      "end": 139688.549991008,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 2.0,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 2.0,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 2.0,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 2.0,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 2.0,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 2.0,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "yolo_standby_1",
+      "start": 139688.931762963,
+      "end": 139689.03176296302,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 2,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 6
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "yolo_standby_2",
+      "start": 139689.334877391,
+      "end": 139689.434877391,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 4,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 11
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "yolo_standby_3",
+      "start": 139689.731812534,
+      "end": 139689.83181253402,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 6,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 16
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "yolo_standby_4",
+      "start": 139690.134390013,
+      "end": 139690.234390013,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 8,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 21
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "yolo_standby_5",
+      "start": 139690.536903635,
+      "end": 139690.636903635,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 10,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 26
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "yolo_standby_6",
+      "start": 139690.934622381,
+      "end": 139691.034622381,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 12,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 31
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "yolo_standby_7",
+      "start": 139691.337836745,
+      "end": 139691.437836745,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 14,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 35
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "yolo_standby_8",
+      "start": 139691.735271635,
+      "end": 139691.835271635,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 16,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 40
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "yolo_standby_9",
+      "start": 139692.137651503,
+      "end": 139692.237651503,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 18,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 45
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "yolo_active",
+      "start": 139692.539620293,
+      "end": 139702.539620293,
+      "request": {
+        "model": "yolo",
+        "mode": 2,
+        "generation": 20,
+        "call_started": 139692.537790249,
+        "call_returned": 139692.539616868
+      },
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        },
+        "yolo": {
+          "mode": 2,
+          "generation": 20,
+          "prepared": true,
+          "pipeline_ready": true,
+          "successful_batches": 244
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "measurement": {
+        "model": "yolo",
+        "mode": 2,
+        "generation": 20,
+        "call_started": 139692.537790249,
+        "call_returned": 139692.539616868,
+        "accepted_monotonic": 139692.539410048,
+        "source_cutoff_ns": 1789980363461401462,
+        "first_normal_processing_sec": 0.032582201005425304,
+        "actual_image_ready_sec": 0.1803137910028454,
+        "status_prepared_sec": 0.195160757022677,
+        "pipeline_ready_sec": 0.195160757022677,
+        "outputs": {
+          "yolo": {
+            "messages": 197,
+            "hz": 19.699585826011543,
+            "valid_messages": 197,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 18,
+            "five_second_hz": [
+              19.8,
+              19.6
+            ],
+            "max_gap_sec": 0.09562665500561707,
+            "first_output_sec": 0.03305679702316411,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "resnet18": {
+            "messages": 0,
+            "hz": 0.0,
+            "valid_messages": 0,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 0,
+            "five_second_hz": [
+              0.0,
+              0.0
+            ],
+            "max_gap_sec": 10.000210245023482,
+            "first_output_sec": null,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "front": {
+            "messages": 0,
+            "hz": 0.0,
+            "valid_messages": 0,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 0,
+            "five_second_hz": [
+              0.0,
+              0.0
+            ],
+            "max_gap_sec": 10.000210245023482,
+            "first_output_sec": null,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "left": {
+            "messages": 0,
+            "hz": 0.0,
+            "valid_messages": 0,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 0,
+            "five_second_hz": [
+              0.0,
+              0.0
+            ],
+            "max_gap_sec": 10.000210245023482,
+            "first_output_sec": null,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "right": {
+            "messages": 0,
+            "hz": 0.0,
+            "valid_messages": 0,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 0,
+            "five_second_hz": [
+              0.0,
+              0.0
+            ],
+            "max_gap_sec": 10.000210245023482,
+            "first_output_sec": null,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "family": {
+            "messages": 0,
+            "hz": 0.0,
+            "valid_messages": 0,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 0,
+            "five_second_hz": [
+              0.0,
+              0.0
+            ],
+            "max_gap_sec": 10.000210245023482,
+            "first_output_sec": null,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "yolo_stop_drain",
+      "start": 139702.543422458,
+      "end": 139703.043422458,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 1,
+          "hz": 2.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 1,
+          "five_second_hz": [],
+          "max_gap_sec": 0.4999462929845322,
+          "first_output_sec": 5.370701546780765e-05,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "resnet18_standby_1",
+      "start": 139703.389313883,
+      "end": 139703.489313883,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 2,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 3
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "resnet18_standby_2",
+      "start": 139703.785744182,
+      "end": 139703.88574418201,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 4,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 6
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "resnet18_standby_3",
+      "start": 139704.187609354,
+      "end": 139704.287609354,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 6,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 9
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "resnet18_standby_4",
+      "start": 139704.590075161,
+      "end": 139704.690075161,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 8,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 12
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "resnet18_standby_5",
+      "start": 139704.992826123,
+      "end": 139705.092826123,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 10,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 15
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "resnet18_standby_6",
+      "start": 139705.390114289,
+      "end": 139705.49011428902,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 12,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 18
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "resnet18_standby_7",
+      "start": 139705.79226709,
+      "end": 139705.89226709,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 14,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 21
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "resnet18_standby_8",
+      "start": 139706.193536597,
+      "end": 139706.29353659702,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 16,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 24
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "resnet18_standby_9",
+      "start": 139706.590926451,
+      "end": 139706.690926451,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 18,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 27
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "resnet18_active",
+      "start": 139706.99367574,
+      "end": 139716.99367574,
+      "request": {
+        "model": "resnet18",
+        "mode": 2,
+        "generation": 20,
+        "call_started": 139706.991556939,
+        "call_returned": 139706.993671352
+      },
+      "statuses": {
+        "resnet18": {
+          "mode": 2,
+          "generation": 20,
+          "prepared": true,
+          "pipeline_ready": true,
+          "successful_batches": 127
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "measurement": {
+        "model": "resnet18",
+        "mode": 2,
+        "generation": 20,
+        "call_started": 139706.991556939,
+        "call_returned": 139706.993671352,
+        "accepted_monotonic": 139706.993348319,
+        "source_cutoff_ns": 1789980377918618917,
+        "first_normal_processing_sec": 0.14398040101514198,
+        "actual_image_ready_sec": 0.3482031850144267,
+        "status_prepared_sec": 0.3951818610075861,
+        "pipeline_ready_sec": 0.3951818610075861,
+        "outputs": {
+          "yolo": {
+            "messages": 0,
+            "hz": 0.0,
+            "valid_messages": 0,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 0,
+            "five_second_hz": [
+              0.0,
+              0.0
+            ],
+            "max_gap_sec": 10.000327421003021,
+            "first_output_sec": null,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "resnet18": {
+            "messages": 99,
+            "hz": 9.899675863819908,
+            "valid_messages": 30,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 9,
+            "five_second_hz": [
+              9.8,
+              10.0
+            ],
+            "max_gap_sec": 0.14444083700072952,
+            "first_output_sec": 0.14444083700072952,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "front": {
+            "messages": 0,
+            "hz": 0.0,
+            "valid_messages": 0,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 0,
+            "five_second_hz": [
+              0.0,
+              0.0
+            ],
+            "max_gap_sec": 10.000327421003021,
+            "first_output_sec": null,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "left": {
+            "messages": 0,
+            "hz": 0.0,
+            "valid_messages": 0,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 0,
+            "five_second_hz": [
+              0.0,
+              0.0
+            ],
+            "max_gap_sec": 10.000327421003021,
+            "first_output_sec": null,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "right": {
+            "messages": 0,
+            "hz": 0.0,
+            "valid_messages": 0,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 0,
+            "five_second_hz": [
+              0.0,
+              0.0
+            ],
+            "max_gap_sec": 10.000327421003021,
+            "first_output_sec": null,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "family": {
+            "messages": 0,
+            "hz": 0.0,
+            "valid_messages": 0,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 0,
+            "five_second_hz": [
+              0.0,
+              0.0
+            ],
+            "max_gap_sec": 10.000327421003021,
+            "first_output_sec": null,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "resnet18_stop_drain",
+      "start": 139716.997226416,
+      "end": 139717.497226416,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 129
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 0,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 0
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 1,
+          "hz": 2.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 1,
+          "five_second_hz": [],
+          "max_gap_sec": 0.4999518579861615,
+          "first_output_sec": 4.8142013838514686e-05,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "twinlite_standby_1",
+      "start": 139717.864897834,
+      "end": 139717.964897834,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 129
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 2,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 3
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 1,
+          "hz": 9.999999999417923,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 1,
+          "five_second_hz": [],
+          "max_gap_sec": 0.09979199001099914,
+          "first_output_sec": 0.00020800999482162297,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "twinlite_standby_2",
+      "start": 139718.669176456,
+      "end": 139718.769176456,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 129
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 4,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 10
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 2,
+          "hz": 19.999999998835847,
+          "valid_messages": 1,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 2,
+          "five_second_hz": [],
+          "max_gap_sec": 0.07668426100281067,
+          "first_output_sec": 0.02327115199295804,
+          "duplicate_stamps": 1,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "twinlite_standby_3",
+      "start": 139719.266604816,
+      "end": 139719.366604816,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 129
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 6,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 14
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 1,
+          "hz": 9.999999999417923,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 1,
+          "five_second_hz": [],
+          "max_gap_sec": 0.09921513198059984,
+          "first_output_sec": 0.0007848680252209306,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "twinlite_standby_4",
+      "start": 139719.67042666,
+      "end": 139719.77042666002,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 129
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 8,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 17
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 1,
+          "hz": 9.999999999417923,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 1,
+          "five_second_hz": [],
+          "max_gap_sec": 0.07193721403018571,
+          "first_output_sec": 0.02806278597563505,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "twinlite_standby_5",
+      "start": 139720.280462402,
+      "end": 139720.380462402,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 129
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 10,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 22
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 2,
+          "hz": 19.999999998835847,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 2,
+          "five_second_hz": [],
+          "max_gap_sec": 0.09843471602653153,
+          "first_output_sec": 0.001109115983126685,
+          "duplicate_stamps": 1,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "twinlite_standby_6",
+      "start": 139721.48687748,
+      "end": 139721.58687748,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 129
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 12,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 32
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 1,
+          "hz": 9.999999999417923,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 1,
+          "five_second_hz": [],
+          "max_gap_sec": 0.09950007300358266,
+          "first_output_sec": 0.0004999270022381097,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "twinlite_standby_7",
+      "start": 139722.497153642,
+      "end": 139722.597153642,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 129
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 14,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 41
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 1,
+          "hz": 9.999999999417923,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 1,
+          "five_second_hz": [],
+          "max_gap_sec": 0.057868825999321416,
+          "first_output_sec": 0.04213117400649935,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "twinlite_standby_8",
+      "start": 139722.895987814,
+      "end": 139722.995987814,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 129
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 16,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 44
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 2,
+          "hz": 19.999999998835847,
+          "valid_messages": 1,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 2,
+          "five_second_hz": [],
+          "max_gap_sec": 0.06618566799443215,
+          "first_output_sec": 0.03348804300185293,
+          "duplicate_stamps": 1,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "twinlite_standby_9",
+      "start": 139723.305043187,
+      "end": 139723.405043187,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 129
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 18,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 47
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.10000000000582077,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 2,
+          "hz": 19.999999998835847,
+          "valid_messages": 1,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 2,
+          "five_second_hz": [],
+          "max_gap_sec": 0.06936293598846532,
+          "first_output_sec": 0.03034823600319214,
+          "duplicate_stamps": 1,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "twinlite_active",
+      "start": 139723.913177373,
+      "end": 139733.913177373,
+      "request": {
+        "model": "twinlite",
+        "mode": 2,
+        "generation": 20,
+        "call_started": 139723.910329853,
+        "call_returned": 139723.9131726
+      },
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 129
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 2,
+          "generation": 20,
+          "prepared": true,
+          "pipeline_ready": true,
+          "successful_batches": 149
+        }
+      },
+      "measurement": {
+        "model": "twinlite",
+        "mode": 2,
+        "generation": 20,
+        "call_started": 139723.910329853,
+        "call_returned": 139723.9131726,
+        "accepted_monotonic": 139723.912394382,
+        "source_cutoff_ns": 1789980394792626142,
+        "first_normal_processing_sec": 0.040783134987577796,
+        "actual_image_ready_sec": 0.24535837600706145,
+        "status_prepared_sec": 0.39568486501229927,
+        "pipeline_ready_sec": 0.39568486501229927,
+        "outputs": {
+          "yolo": {
+            "messages": 0,
+            "hz": 0.0,
+            "valid_messages": 0,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 0,
+            "five_second_hz": [
+              0.0,
+              0.0
+            ],
+            "max_gap_sec": 10.00078299100278,
+            "first_output_sec": null,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "resnet18": {
+            "messages": 0,
+            "hz": 0.0,
+            "valid_messages": 0,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 0,
+            "five_second_hz": [
+              0.0,
+              0.0
+            ],
+            "max_gap_sec": 10.00078299100278,
+            "first_output_sec": null,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "front": {
+            "messages": 100,
+            "hz": 9.999217070299911,
+            "valid_messages": 100,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 10,
+            "five_second_hz": [
+              10.0,
+              10.0
+            ],
+            "max_gap_sec": 0.199301455024397,
+            "first_output_sec": 0.043960395007161424,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "left": {
+            "messages": 100,
+            "hz": 9.999217070299911,
+            "valid_messages": 100,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 10,
+            "five_second_hz": [
+              10.0,
+              10.0
+            ],
+            "max_gap_sec": 0.19949373297276907,
+            "first_output_sec": 0.047166048985673115,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "right": {
+            "messages": 100,
+            "hz": 9.999217070299911,
+            "valid_messages": 100,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 10,
+            "five_second_hz": [
+              10.0,
+              10.0
+            ],
+            "max_gap_sec": 0.19948846599436365,
+            "first_output_sec": 0.04887581500224769,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          },
+          "family": {
+            "messages": 99,
+            "hz": 9.899224899596913,
+            "valid_messages": 50,
+            "excluded_old_epoch_messages": 0,
+            "first_second": 10,
+            "five_second_hz": [
+              9.8,
+              10.0
+            ],
+            "max_gap_sec": 0.19543743500253186,
+            "first_output_sec": 0.09086067700991407,
+            "duplicate_stamps": 0,
+            "reversed_stamps": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "twinlite_stop_drain",
+      "start": 139733.919771506,
+      "end": 139734.419771506,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 129
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 151
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 0.5,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 1,
+          "hz": 2.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 1,
+          "five_second_hz": [],
+          "max_gap_sec": 0.47049804002745077,
+          "first_output_sec": 0.02950195997254923,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    },
+    {
+      "name": "all_standby_again",
+      "start": 139734.424549894,
+      "end": 139735.424549894,
+      "request": null,
+      "statuses": {
+        "resnet18": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 129
+        },
+        "yolo": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 247
+        },
+        "twinlite": {
+          "mode": 0,
+          "generation": 21,
+          "prepared": false,
+          "pipeline_ready": false,
+          "successful_batches": 151
+        }
+      },
+      "outputs": {
+        "yolo": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 1.0,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "resnet18": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 1.0,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "front": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 1.0,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "left": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 1.0,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "right": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 1.0,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        },
+        "family": {
+          "messages": 0,
+          "hz": 0.0,
+          "valid_messages": 0,
+          "excluded_old_epoch_messages": 0,
+          "first_second": 0,
+          "five_second_hz": [],
+          "max_gap_sec": 1.0,
+          "first_output_sec": null,
+          "duplicate_stamps": 0,
+          "reversed_stamps": 0
+        }
+      }
+    }
+  ],
+  "readiness": {
+    "twinlite": {
+      "actual_image_ready_sec": {
+        "samples": 10,
+        "p95_sec": 0.3329230645409552,
+        "p99_sec": 0.3350768009101739
+      },
+      "pipeline_ready_sec": {
+        "samples": 10,
+        "p95_sec": 1.0054087993397844,
+        "p99_sec": 1.0786240358499344
+      }
+    },
+    "yolo": {
+      "actual_image_ready_sec": {
+        "samples": 10,
+        "p95_sec": 0.23033758200472224,
+        "p99_sec": 0.23984731320524588
+      },
+      "pipeline_ready_sec": {
+        "samples": 10,
+        "p95_sec": 0.337629887618823,
+        "p99_sec": 0.36562896394054406
+      }
+    },
+    "resnet18": {
+      "actual_image_ready_sec": {
+        "samples": 10,
+        "p95_sec": 0.26447539924120067,
+        "p99_sec": 0.27368935983802656
+      },
+      "pipeline_ready_sec": {
+        "samples": 10,
+        "p95_sec": 0.3164293198846281,
+        "p99_sec": 0.330278936768882
+      }
+    }
+  },
+  "startup": {
+    "twinlite": [
+      {
+        "event": "startup",
+        "monotonic": 139686.382933412,
+        "generation": 0,
+        "mode": 0,
+        "model_load_ms": 2243.432503018994,
+        "dummy_warmup_ms": 1559.6620540018193
+      }
+    ],
+    "yolo": [
+      {
+        "event": "startup",
+        "monotonic": 139686.3230654,
+        "generation": 0,
+        "mode": 0,
+        "model_load_ms": 790.44297998189,
+        "dummy_warmup_ms": 1021.6
+      }
+    ],
+    "resnet18": [
+      {
+        "event": "startup",
+        "monotonic": 139685.960889005,
+        "generation": 0,
+        "mode": 0,
+        "model_load_ms": 816.8776870006695,
+        "dummy_warmup_ms": 569.2437039979268
+      }
+    ]
+  },
+  "passed": true
+}

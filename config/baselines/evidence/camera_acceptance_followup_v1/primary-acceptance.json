@@ -1,0 +1,886 @@
+{
+  "runs": [
+    {
+      "path": "old",
+      "repeat": 1,
+      "bag": "/data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag",
+      "fusion": true,
+      "hood_mask": false,
+      "hood_mask_requested": true,
+      "ego_hood_filter": false,
+      "debug_raw": false,
+      "debug_raw_subscribed": false,
+      "debug_raw_frames": 0,
+      "input_frames": 979,
+      "output_frames": 889,
+      "rate_hz": 18.190217951089828,
+      "coverage": 0.9080694586312564,
+      "duplicate_stamps": 0,
+      "reverse_stamps": 0,
+      "zero_stamps": 0,
+      "frame_ids": [
+        "camera_front"
+      ],
+      "single_bbox_publisher": true,
+      "latency": {
+        "p50_ms": 34.70738,
+        "p95_ms": 55.853265599999965
+      },
+      "candidate_invalid_frames": 0,
+      "diagnostic_warnings": 0,
+      "last_diagnostics": [],
+      "fusion_intervals": [
+        {
+          "kind": "5s",
+          "matched": 67,
+          "dropped": 0,
+          "median_ms": 18.2,
+          "p95_ms": 38.1,
+          "max_ms": 49.0
+        },
+        {
+          "kind": "5s",
+          "matched": 66,
+          "dropped": 0,
+          "median_ms": 17.9,
+          "p95_ms": 39.8,
+          "max_ms": 47.6
+        },
+        {
+          "kind": "5s",
+          "matched": 57,
+          "dropped": 1,
+          "median_ms": 18.2,
+          "p95_ms": 38.5,
+          "max_ms": 39.4
+        },
+        {
+          "kind": "5s",
+          "matched": 40,
+          "dropped": 0,
+          "median_ms": 18.6,
+          "p95_ms": 40.0,
+          "max_ms": 47.1
+        },
+        {
+          "kind": "5s",
+          "matched": 40,
+          "dropped": 1,
+          "median_ms": 17.9,
+          "p95_ms": 44.7,
+          "max_ms": 49.2
+        },
+        {
+          "kind": "5s",
+          "matched": 41,
+          "dropped": 1,
+          "median_ms": 18.2,
+          "p95_ms": 45.8,
+          "max_ms": 48.1
+        },
+        {
+          "kind": "5s",
+          "matched": 42,
+          "dropped": 0,
+          "median_ms": 18.2,
+          "p95_ms": 35.5,
+          "max_ms": 47.3
+        },
+        {
+          "kind": "5s",
+          "matched": 48,
+          "dropped": 0,
+          "median_ms": 18.5,
+          "p95_ms": 44.8,
+          "max_ms": 49.9
+        },
+        {
+          "kind": "5s",
+          "matched": 62,
+          "dropped": 0,
+          "median_ms": 18.9,
+          "p95_ms": 46.7,
+          "max_ms": 48.8
+        },
+        {
+          "kind": "tail",
+          "matched": 44,
+          "dropped": 1,
+          "median_ms": 18.2,
+          "p95_ms": 48.9,
+          "max_ms": 49.1
+        }
+      ],
+      "fusion_matched_5s_reported": 463,
+      "fusion_matched_reported": 507,
+      "fusion_totals": {
+        "matched": 507,
+        "dropped": 4,
+        "pending_lidar": 1,
+        "pending_yolo": 0
+      },
+      "fusion_accounting_complete": true,
+      "fusion_log_source": "rosout_5s_and_stdout_shutdown",
+      "fusion_offset_p95_max_ms": 48.9,
+      "track_frames": 512,
+      "pass": true
+    },
+    {
+      "path": "old",
+      "repeat": 2,
+      "bag": "/data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag",
+      "fusion": true,
+      "hood_mask": false,
+      "hood_mask_requested": true,
+      "ego_hood_filter": false,
+      "debug_raw": false,
+      "debug_raw_subscribed": false,
+      "debug_raw_frames": 0,
+      "input_frames": 979,
+      "output_frames": 925,
+      "rate_hz": 18.93746262773354,
+      "coverage": 0.9448416751787538,
+      "duplicate_stamps": 0,
+      "reverse_stamps": 0,
+      "zero_stamps": 0,
+      "frame_ids": [
+        "camera_front"
+      ],
+      "single_bbox_publisher": true,
+      "latency": {
+        "p50_ms": 36.257591999999995,
+        "p95_ms": 56.1880276
+      },
+      "candidate_invalid_frames": 0,
+      "diagnostic_warnings": 0,
+      "last_diagnostics": [],
+      "fusion_intervals": [
+        {
+          "kind": "5s",
+          "matched": 67,
+          "dropped": 0,
+          "median_ms": 18.1,
+          "p95_ms": 37.5,
+          "max_ms": 45.2
+        },
+        {
+          "kind": "5s",
+          "matched": 66,
+          "dropped": 0,
+          "median_ms": 17.9,
+          "p95_ms": 34.3,
+          "max_ms": 48.2
+        },
+        {
+          "kind": "5s",
+          "matched": 57,
+          "dropped": 1,
+          "median_ms": 17.8,
+          "p95_ms": 33.3,
+          "max_ms": 37.6
+        },
+        {
+          "kind": "5s",
+          "matched": 41,
+          "dropped": 0,
+          "median_ms": 18.5,
+          "p95_ms": 40.2,
+          "max_ms": 47.8
+        },
+        {
+          "kind": "5s",
+          "matched": 41,
+          "dropped": 0,
+          "median_ms": 17.7,
+          "p95_ms": 27.6,
+          "max_ms": 41.0
+        },
+        {
+          "kind": "5s",
+          "matched": 41,
+          "dropped": 1,
+          "median_ms": 18.0,
+          "p95_ms": 26.5,
+          "max_ms": 28.1
+        },
+        {
+          "kind": "5s",
+          "matched": 42,
+          "dropped": 0,
+          "median_ms": 18.0,
+          "p95_ms": 27.6,
+          "max_ms": 39.8
+        },
+        {
+          "kind": "5s",
+          "matched": 49,
+          "dropped": 0,
+          "median_ms": 17.9,
+          "p95_ms": 38.4,
+          "max_ms": 48.4
+        },
+        {
+          "kind": "5s",
+          "matched": 62,
+          "dropped": 0,
+          "median_ms": 18.2,
+          "p95_ms": 46.0,
+          "max_ms": 49.7
+        },
+        {
+          "kind": "tail",
+          "matched": 43,
+          "dropped": 0,
+          "median_ms": 18.2,
+          "p95_ms": 37.3,
+          "max_ms": 49.1
+        }
+      ],
+      "fusion_matched_5s_reported": 466,
+      "fusion_matched_reported": 509,
+      "fusion_totals": {
+        "matched": 509,
+        "dropped": 2,
+        "pending_lidar": 1,
+        "pending_yolo": 1
+      },
+      "fusion_accounting_complete": true,
+      "fusion_log_source": "rosout_5s_and_stdout_shutdown",
+      "fusion_offset_p95_max_ms": 46.0,
+      "track_frames": 512,
+      "pass": true
+    },
+    {
+      "path": "new",
+      "repeat": 1,
+      "bag": "/data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag",
+      "fusion": true,
+      "hood_mask": true,
+      "hood_mask_requested": true,
+      "ego_hood_filter": false,
+      "debug_raw": false,
+      "debug_raw_subscribed": false,
+      "debug_raw_frames": 0,
+      "input_frames": 979,
+      "output_frames": 979,
+      "rate_hz": 20.040692641568963,
+      "coverage": 1.0,
+      "duplicate_stamps": 0,
+      "reverse_stamps": 0,
+      "zero_stamps": 0,
+      "frame_ids": [
+        "camera_front"
+      ],
+      "single_bbox_publisher": true,
+      "latency": {
+        "p50_ms": 12.299155,
+        "p95_ms": 20.99264219999999
+      },
+      "candidate_invalid_frames": 0,
+      "diagnostic_warnings": 1,
+      "last_diagnostics": [
+        {
+          "level": 0,
+          "message": "running",
+          "values": {
+            "backend": "ultralytics",
+            "weights": "/root/ws/src/asmc_camera/models/object_detection/yolo11m.pt",
+            "weights_sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+            "device": "cuda:0",
+            "model_device": "cuda:0",
+            "ultralytics": "8.4.150",
+            "torch": "2.1.2+cu118",
+            "conf_thres": "0.7",
+            "allowed_names": "['bus', 'truck', 'person', 'car']",
+            "predict_overrides": "{'iou': 0.7, 'max_det': 300, 'agnostic_nms': False}",
+            "warmup_ms": "536.6",
+            "model_load_ms": "357.0874730066862",
+            "hood_mask_enabled": "True",
+            "hood_mask_config_sha256": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+            "hood_mask_polygon_normalized": "[[0.051562, 0.998611], [0.947656, 0.998611], [0.821875, 0.888889], [0.786719, 0.863889], [0.748437, 0.843056], [0.650781, 0.816667], [0.539844, 0.806944], [0.377344, 0.8125], [0.313281, 0.823611], [0.257031, 0.840278], [0.2125, 0.863889], [0.177344, 0.888889]]",
+            "hood_mask_image_width": "1280",
+            "hood_mask_image_height": "720",
+            "hood_mask_polygon_pixels": "[[65, 718], [1212, 718], [1052, 640], [1007, 622], [957, 607], [832, 588], [691, 580], [483, 585], [400, 592], [328, 605], [272, 622], [227, 640]]",
+            "hood_mask_excluded_pixels": "114058",
+            "ego_hood_filter_enabled": "False",
+            "ego_hood_filter_config_sha256": "",
+            "ego_hood_filter_source_class_names": "['car']",
+            "ego_hood_filter_min_width_ratio": "0.6",
+            "ego_hood_filter_min_center_y_ratio": "0.85",
+            "ego_hood_filter_min_bottom_ratio": "0.95",
+            "debug_raw_enabled": "False",
+            "ego_hood_filter_last_counts": "{'raw': 0, 'kept': 0, 'excluded': 0}",
+            "ego_hood_filter_excluded_total": "0",
+            "filter_errors": "0",
+            "processing_fps": "13.981",
+            "output_frames": "979",
+            "received_frames": "979",
+            "replaced_frames": "0",
+            "decode_errors": "0",
+            "inference_errors": "0",
+            "mask_errors": "0",
+            "header_errors": "0",
+            "duplicate_nodes": "[]",
+            "latest_input_stamp_ns": "1790654834577614307",
+            "latest_result_stamp_ns": "1790654834577614307",
+            "input_silence_sec": "0.379",
+            "end_to_end_p50_ms": "11.9030485",
+            "end_to_end_p95_ms": "19.44380215",
+            "queue_to_output_p50_ms": "16.58985551330261",
+            "queue_to_output_p95_ms": "22.138229847769253",
+            "average_stage_ms": "{'decode_ms': 2.259, 'hood_mask_ms': 0.354, 'inference_ms': 13.433, 'preprocess_ms': 0.918, 'postprocess_ms': 1.55, 'ego_hood_filter_ms': 0.003}"
+          }
+        }
+      ],
+      "fusion_intervals": [
+        {
+          "kind": "5s",
+          "matched": 67,
+          "dropped": 0,
+          "median_ms": 18.0,
+          "p95_ms": 34.0,
+          "max_ms": 44.4
+        },
+        {
+          "kind": "5s",
+          "matched": 68,
+          "dropped": 0,
+          "median_ms": 17.7,
+          "p95_ms": 20.8,
+          "max_ms": 36.5
+        },
+        {
+          "kind": "5s",
+          "matched": 57,
+          "dropped": 0,
+          "median_ms": 17.8,
+          "p95_ms": 28.1,
+          "max_ms": 31.8
+        },
+        {
+          "kind": "5s",
+          "matched": 41,
+          "dropped": 0,
+          "median_ms": 18.1,
+          "p95_ms": 20.4,
+          "max_ms": 31.6
+        },
+        {
+          "kind": "5s",
+          "matched": 41,
+          "dropped": 0,
+          "median_ms": 16.9,
+          "p95_ms": 20.5,
+          "max_ms": 24.9
+        },
+        {
+          "kind": "5s",
+          "matched": 42,
+          "dropped": 0,
+          "median_ms": 18.4,
+          "p95_ms": 27.0,
+          "max_ms": 29.0
+        },
+        {
+          "kind": "5s",
+          "matched": 42,
+          "dropped": 0,
+          "median_ms": 18.2,
+          "p95_ms": 25.3,
+          "max_ms": 33.4
+        },
+        {
+          "kind": "5s",
+          "matched": 50,
+          "dropped": 0,
+          "median_ms": 17.6,
+          "p95_ms": 29.4,
+          "max_ms": 31.7
+        },
+        {
+          "kind": "5s",
+          "matched": 62,
+          "dropped": 0,
+          "median_ms": 18.0,
+          "p95_ms": 26.4,
+          "max_ms": 33.2
+        },
+        {
+          "kind": "tail",
+          "matched": 41,
+          "dropped": 0,
+          "median_ms": 17.8,
+          "p95_ms": 20.7,
+          "max_ms": 32.7
+        }
+      ],
+      "fusion_matched_5s_reported": 470,
+      "fusion_matched_reported": 511,
+      "fusion_totals": {
+        "matched": 511,
+        "dropped": 0,
+        "pending_lidar": 1,
+        "pending_yolo": 1
+      },
+      "fusion_accounting_complete": true,
+      "fusion_log_source": "rosout_5s_and_stdout_shutdown",
+      "fusion_offset_p95_max_ms": 34.0,
+      "track_frames": 512,
+      "pass": true
+    },
+    {
+      "path": "new",
+      "repeat": 2,
+      "bag": "/data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag",
+      "fusion": true,
+      "hood_mask": true,
+      "hood_mask_requested": true,
+      "ego_hood_filter": false,
+      "debug_raw": false,
+      "debug_raw_subscribed": false,
+      "debug_raw_frames": 0,
+      "input_frames": 979,
+      "output_frames": 979,
+      "rate_hz": 20.037315806284237,
+      "coverage": 1.0,
+      "duplicate_stamps": 0,
+      "reverse_stamps": 0,
+      "zero_stamps": 0,
+      "frame_ids": [
+        "camera_front"
+      ],
+      "single_bbox_publisher": true,
+      "latency": {
+        "p50_ms": 12.984807,
+        "p95_ms": 21.018318199999996
+      },
+      "candidate_invalid_frames": 0,
+      "diagnostic_warnings": 1,
+      "last_diagnostics": [
+        {
+          "level": 0,
+          "message": "running",
+          "values": {
+            "backend": "ultralytics",
+            "weights": "/root/ws/src/asmc_camera/models/object_detection/yolo11m.pt",
+            "weights_sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+            "device": "cuda:0",
+            "model_device": "cuda:0",
+            "ultralytics": "8.4.150",
+            "torch": "2.1.2+cu118",
+            "conf_thres": "0.7",
+            "allowed_names": "['bus', 'truck', 'person', 'car']",
+            "predict_overrides": "{'iou': 0.7, 'max_det': 300, 'agnostic_nms': False}",
+            "warmup_ms": "509.9",
+            "model_load_ms": "356.3430840149522",
+            "hood_mask_enabled": "True",
+            "hood_mask_config_sha256": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+            "hood_mask_polygon_normalized": "[[0.051562, 0.998611], [0.947656, 0.998611], [0.821875, 0.888889], [0.786719, 0.863889], [0.748437, 0.843056], [0.650781, 0.816667], [0.539844, 0.806944], [0.377344, 0.8125], [0.313281, 0.823611], [0.257031, 0.840278], [0.2125, 0.863889], [0.177344, 0.888889]]",
+            "hood_mask_image_width": "1280",
+            "hood_mask_image_height": "720",
+            "hood_mask_polygon_pixels": "[[65, 718], [1212, 718], [1052, 640], [1007, 622], [957, 607], [832, 588], [691, 580], [483, 585], [400, 592], [328, 605], [272, 622], [227, 640]]",
+            "hood_mask_excluded_pixels": "114058",
+            "ego_hood_filter_enabled": "False",
+            "ego_hood_filter_config_sha256": "",
+            "ego_hood_filter_source_class_names": "['car']",
+            "ego_hood_filter_min_width_ratio": "0.6",
+            "ego_hood_filter_min_center_y_ratio": "0.85",
+            "ego_hood_filter_min_bottom_ratio": "0.95",
+            "debug_raw_enabled": "False",
+            "ego_hood_filter_last_counts": "{'raw': 0, 'kept': 0, 'excluded': 0}",
+            "ego_hood_filter_excluded_total": "0",
+            "filter_errors": "0",
+            "processing_fps": "11.982",
+            "output_frames": "979",
+            "received_frames": "979",
+            "replaced_frames": "0",
+            "decode_errors": "0",
+            "inference_errors": "0",
+            "mask_errors": "0",
+            "header_errors": "0",
+            "duplicate_nodes": "[]",
+            "latest_input_stamp_ns": "1790654834577614307",
+            "latest_result_stamp_ns": "1790654834577614307",
+            "input_silence_sec": "0.433",
+            "end_to_end_p50_ms": "12.064679",
+            "end_to_end_p95_ms": "19.967102099999998",
+            "queue_to_output_p50_ms": "17.24435899814125",
+            "queue_to_output_p95_ms": "22.733366677130107",
+            "average_stage_ms": "{'decode_ms': 2.235, 'hood_mask_ms': 0.338, 'inference_ms': 13.743, 'preprocess_ms': 0.918, 'postprocess_ms': 1.556, 'ego_hood_filter_ms': 0.004}"
+          }
+        }
+      ],
+      "fusion_intervals": [
+        {
+          "kind": "5s",
+          "matched": 67,
+          "dropped": 0,
+          "median_ms": 17.9,
+          "p95_ms": 28.2,
+          "max_ms": 34.5
+        },
+        {
+          "kind": "5s",
+          "matched": 68,
+          "dropped": 0,
+          "median_ms": 17.7,
+          "p95_ms": 20.8,
+          "max_ms": 36.5
+        },
+        {
+          "kind": "5s",
+          "matched": 56,
+          "dropped": 0,
+          "median_ms": 17.8,
+          "p95_ms": 30.3,
+          "max_ms": 32.4
+        },
+        {
+          "kind": "5s",
+          "matched": 41,
+          "dropped": 0,
+          "median_ms": 17.5,
+          "p95_ms": 27.9,
+          "max_ms": 46.0
+        },
+        {
+          "kind": "5s",
+          "matched": 41,
+          "dropped": 0,
+          "median_ms": 17.4,
+          "p95_ms": 21.4,
+          "max_ms": 27.6
+        },
+        {
+          "kind": "5s",
+          "matched": 42,
+          "dropped": 0,
+          "median_ms": 17.8,
+          "p95_ms": 27.0,
+          "max_ms": 32.8
+        },
+        {
+          "kind": "5s",
+          "matched": 42,
+          "dropped": 0,
+          "median_ms": 18.2,
+          "p95_ms": 27.6,
+          "max_ms": 33.4
+        },
+        {
+          "kind": "5s",
+          "matched": 48,
+          "dropped": 0,
+          "median_ms": 17.5,
+          "p95_ms": 29.5,
+          "max_ms": 34.4
+        },
+        {
+          "kind": "5s",
+          "matched": 62,
+          "dropped": 0,
+          "median_ms": 18.0,
+          "p95_ms": 26.0,
+          "max_ms": 33.2
+        },
+        {
+          "kind": "tail",
+          "matched": 44,
+          "dropped": 0,
+          "median_ms": 17.9,
+          "p95_ms": 26.4,
+          "max_ms": 32.7
+        }
+      ],
+      "fusion_matched_5s_reported": 467,
+      "fusion_matched_reported": 511,
+      "fusion_totals": {
+        "matched": 511,
+        "dropped": 0,
+        "pending_lidar": 0,
+        "pending_yolo": 1
+      },
+      "fusion_accounting_complete": true,
+      "fusion_log_source": "rosout_5s_and_stdout_shutdown",
+      "fusion_offset_p95_max_ms": 30.3,
+      "track_frames": 511,
+      "pass": true
+    }
+  ],
+  "pass": false,
+  "track_comparisons": [
+    {
+      "reference": "old_1",
+      "candidate": "old_2",
+      "common": 2853,
+      "mismatches": [
+        {
+          "stamp_ns": 1790654812792000000,
+          "track": 241,
+          "old": [
+            "car",
+            "car"
+          ],
+          "new": [
+            "unknown",
+            "unknown"
+          ]
+        },
+        {
+          "stamp_ns": 1790654812880000000,
+          "track": 241,
+          "old": [
+            "car",
+            "car"
+          ],
+          "new": [
+            "unknown",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    {
+      "reference": "old_1",
+      "candidate": "new_1",
+      "common": 2591,
+      "mismatches": [
+        {
+          "stamp_ns": 1790654794688000000,
+          "track": 22,
+          "old": [
+            "unknown",
+            "unknown"
+          ],
+          "new": [
+            "car",
+            "car"
+          ]
+        },
+        {
+          "stamp_ns": 1790654799885000000,
+          "track": 22,
+          "old": [
+            "unknown",
+            "unknown"
+          ],
+          "new": [
+            "car",
+            "car"
+          ]
+        },
+        {
+          "stamp_ns": 1790654812792000000,
+          "track": 241,
+          "old": [
+            "car",
+            "car"
+          ],
+          "new": [
+            "unknown",
+            "unknown"
+          ]
+        },
+        {
+          "stamp_ns": 1790654812880000000,
+          "track": 241,
+          "old": [
+            "car",
+            "car"
+          ],
+          "new": [
+            "unknown",
+            "unknown"
+          ]
+        },
+        {
+          "stamp_ns": 1790654813044000000,
+          "track": 241,
+          "old": [
+            "car",
+            "car"
+          ],
+          "new": [
+            "unknown",
+            "unknown"
+          ]
+        },
+        {
+          "stamp_ns": 1790654813280000000,
+          "track": 241,
+          "old": [
+            "car",
+            "car"
+          ],
+          "new": [
+            "unknown",
+            "unknown"
+          ]
+        },
+        {
+          "stamp_ns": 1790654813500000000,
+          "track": 241,
+          "old": [
+            "car",
+            "car"
+          ],
+          "new": [
+            "unknown",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    {
+      "reference": "old_1",
+      "candidate": "new_2",
+      "common": 3045,
+      "mismatches": [
+        {
+          "stamp_ns": 1790654799798000000,
+          "track": 22,
+          "old": [
+            "unknown",
+            "unknown"
+          ],
+          "new": [
+            "car",
+            "car"
+          ]
+        },
+        {
+          "stamp_ns": 1790654812792000000,
+          "track": 241,
+          "old": [
+            "car",
+            "car"
+          ],
+          "new": [
+            "unknown",
+            "unknown"
+          ]
+        },
+        {
+          "stamp_ns": 1790654812880000000,
+          "track": 241,
+          "old": [
+            "car",
+            "car"
+          ],
+          "new": [
+            "unknown",
+            "unknown"
+          ]
+        },
+        {
+          "stamp_ns": 1790654813131000000,
+          "track": 241,
+          "old": [
+            "car",
+            "car"
+          ],
+          "new": [
+            "unknown",
+            "unknown"
+          ]
+        },
+        {
+          "stamp_ns": 1790654813500000000,
+          "track": 241,
+          "old": [
+            "car",
+            "car"
+          ],
+          "new": [
+            "unknown",
+            "unknown"
+          ]
+        }
+      ]
+    }
+  ],
+  "matched_not_degraded": true,
+  "whole_bag_matched_not_degraded": true,
+  "stable_old_track_comparison": {
+    "common_all_runs": 2006,
+    "old_stable": 2004,
+    "regressions": [
+      {
+        "stamp_ns": 1790654794688000000,
+        "track": 22,
+        "old": [
+          "unknown",
+          "unknown"
+        ],
+        "new": [
+          [
+            "car",
+            "car"
+          ],
+          [
+            "unknown",
+            "unknown"
+          ]
+        ]
+      }
+    ]
+  },
+  "numeric_track_comparison_diagnostic_only": true,
+  "stable_old_observation_comparison": {
+    "common_lidar_stamps": 346,
+    "old_stable": 3197,
+    "unmatched_common_observations": 1001,
+    "regressions": [
+      {
+        "stamp_ns": 1790654794688000000,
+        "center": [
+          19.66237255861796,
+          -492.23758172254986,
+          -0.8472483400991137
+        ],
+        "old": [
+          22,
+          "unknown",
+          "unknown"
+        ],
+        "new": [
+          [
+            22,
+            "car",
+            "car"
+          ],
+          [
+            22,
+            "unknown",
+            "unknown"
+          ]
+        ]
+      },
+      {
+        "stamp_ns": 1790654812792000000,
+        "center": [
+          -41.35505459988133,
+          -525.2145452295512,
+          -0.8383016930764385
+        ],
+        "old": [
+          241,
+          "car",
+          "car"
+        ],
+        "new": [
+          [
+            228,
+            "unknown",
+            "unknown"
+          ],
+          [
+            229,
+            "car",
+            "car"
+          ]
+        ]
+      }
+    ]
+  }
+}

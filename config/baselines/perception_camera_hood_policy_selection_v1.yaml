@@ -1,0 +1,554 @@
+schema_version: 1
+baseline_id: perception_camera_hood_policy_selection_v1
+code_commit: 04fff7190e67c657a208f19168a9a5c7c43cee46
+base_main: 7aed6121c895a55e24bcbf24dfd907cada9ba140
+status: mask_selected_with_specific_user_exception_pr_acceptance_held
+pr: 69
+pr_draft: true
+decision:
+  selected: semantic_ego_silhouette_input_mask
+  mask_default_enabled: true
+  post_filter_default_enabled: false
+  reason: Post-filter deletes geometrically ambiguous boxes containing other object
+    regions; use independently checked semantic ego silhouette. User accepts the previously
+    identified single person miss.
+  user_steering_date: '2026-10-07'
+  strict_original_zero_miss_gate: false
+  exception_scope: Only the fixed GT287 frame9 person loss is accepted; confidence
+    and other strict gates unchanged.
+  old_failed_baseline_preserved: config/baselines/perception_camera_hood_mask_v1.yaml
+  accepted_person_loss:
+    frame: 9
+    image: /data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000125.png
+    ground_truth:
+      label: person
+      source_class: Pedestrian
+      xyxy:
+      - 829.2599
+      - 0.1260986
+      - 1161.32
+      - 632.3082
+      actor_id: '3'
+    full:
+    - source_class_name: person
+      confidence: 0.7010437250137329
+      xyxy:
+      - 827.8284912109375
+      - 2.054107666015625
+      - 1160.105712890625
+      - 411.8253173828125
+    mask: []
+mask:
+  config: src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml
+  sha256: 4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403
+  semantic_reference: config/baselines/evidence/camera_hood_policy_selection_v1/semantic-reference.png
+  geometry:
+    semantic_rgb:
+    - 0
+    - 0
+    - 0
+    ego_connected_component_pixels: 118141
+    ego_silhouette_pixels: 118223
+    mask_pixels: 114058
+    mask_pixels_outside_ego_silhouette: 0
+    semantic_holes_inside_mask: 82
+  compute_reduction_claim: false
+  calibration: fixed MORAI front camera; recheck after sensor pose/FOV/resolution
+    changes
+post_filter:
+  config: src/asmc_camera/config/camera/yolo_ego_hood_filter_v1.yaml
+  sha256: 9f4133b6b1c6cf113c510c202c5205c75e817626b4539a13adf1482b0fc1b323
+  semantics: car only; int coordinates for predicate only; width >=60%, center y >=85%,
+    bottom >=95%; stable output order and float coordinates
+  experimentally_available: true
+  accepted: false
+  baseline_and_filter_share_one_full_image_inference: true
+  ambiguity_definition: Conservative overlap with independent GT visible extent plus
+    original RGB review; overlap is not proof of a real-object detection loss.
+evaluation:
+  gt287:
+    frames: 287
+    counts:
+      mask_new_misses:
+        person: 1
+        vehicle: 0
+      filter_new_misses:
+        person: 0
+        vehicle: 0
+    excluded_boxes: 60
+    reviewed_exclusions: 60
+    acceptance: post_filter_not_accepted_ambiguous_box_deletion
+    mask:
+      enabled: true
+      config_sha256: 4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403
+      polygon_normalized:
+      - - 0.051562
+        - 0.998611
+      - - 0.947656
+        - 0.998611
+      - - 0.821875
+        - 0.888889
+      - - 0.786719
+        - 0.863889
+      - - 0.748437
+        - 0.843056
+      - - 0.650781
+        - 0.816667
+      - - 0.539844
+        - 0.806944
+      - - 0.377344
+        - 0.8125
+      - - 0.313281
+        - 0.823611
+      - - 0.257031
+        - 0.840278
+      - - 0.2125
+        - 0.863889
+      - - 0.177344
+        - 0.888889
+      image_width: 1280
+      image_height: 720
+      polygon_pixels:
+      - - 65
+        - 718
+      - - 1212
+        - 718
+      - - 1052
+        - 640
+      - - 1007
+        - 622
+      - - 957
+        - 607
+      - - 832
+        - 588
+      - - 691
+        - 580
+      - - 483
+        - 585
+      - - 400
+        - 592
+      - - 328
+        - 605
+      - - 272
+        - 622
+      - - 227
+        - 640
+      excluded_pixels: 114058
+    filter:
+      enabled: true
+      config_sha256: 9f4133b6b1c6cf113c510c202c5205c75e817626b4539a13adf1482b0fc1b323
+      source_class_names:
+      - car
+      min_width_ratio: 0.6
+      min_center_y_ratio: 0.85
+      min_bottom_ratio: 0.95
+    model:
+      backend: ultralytics
+      weights: /root/ws/src/asmc_camera/models/object_detection/yolo11m.pt
+      weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+      device: cuda:0
+      model_device: cuda:0
+      ultralytics: 8.4.150
+      torch: 2.1.2+cu118
+      conf_thres: 0.7
+      allowed_names:
+      - bus
+      - truck
+      - person
+      - car
+      predict_overrides:
+        iou: 0.7
+        max_det: 300
+        agnostic_nms: false
+      warmup_ms: 578.7
+    manifest_sha256: f5f763395ddcef3da6904a1de22729b9d6923622890faff10a5761fea19a053d
+    ambiguous_exclusions: 27
+    ambiguous_frames:
+    - 11
+    - 15
+    - 19
+    - 144
+    - 145
+    - 146
+    - 149
+    - 150
+    - 153
+    - 154
+    - 155
+    - 156
+    - 157
+    - 158
+    - 159
+    - 160
+    - 161
+    - 163
+    - 164
+    - 166
+    - 167
+    - 168
+    - 169
+    - 170
+    - 171
+    - 172
+    - 174
+  stationary_challenges39:
+    frames: 39
+    counts:
+      mask_new_misses:
+        person: 0
+        vehicle: 0
+      filter_new_misses:
+        person: 0
+        vehicle: 0
+    excluded_boxes: 24
+    reviewed_exclusions: 24
+    acceptance: post_filter_not_accepted_ambiguous_box_deletion
+    mask:
+      enabled: true
+      config_sha256: 4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403
+      polygon_normalized:
+      - - 0.051562
+        - 0.998611
+      - - 0.947656
+        - 0.998611
+      - - 0.821875
+        - 0.888889
+      - - 0.786719
+        - 0.863889
+      - - 0.748437
+        - 0.843056
+      - - 0.650781
+        - 0.816667
+      - - 0.539844
+        - 0.806944
+      - - 0.377344
+        - 0.8125
+      - - 0.313281
+        - 0.823611
+      - - 0.257031
+        - 0.840278
+      - - 0.2125
+        - 0.863889
+      - - 0.177344
+        - 0.888889
+      image_width: 1280
+      image_height: 720
+      polygon_pixels:
+      - - 65
+        - 718
+      - - 1212
+        - 718
+      - - 1052
+        - 640
+      - - 1007
+        - 622
+      - - 957
+        - 607
+      - - 832
+        - 588
+      - - 691
+        - 580
+      - - 483
+        - 585
+      - - 400
+        - 592
+      - - 328
+        - 605
+      - - 272
+        - 622
+      - - 227
+        - 640
+      excluded_pixels: 114058
+    filter:
+      enabled: true
+      config_sha256: 9f4133b6b1c6cf113c510c202c5205c75e817626b4539a13adf1482b0fc1b323
+      source_class_names:
+      - car
+      min_width_ratio: 0.6
+      min_center_y_ratio: 0.85
+      min_bottom_ratio: 0.95
+    model:
+      backend: ultralytics
+      weights: /root/ws/src/asmc_camera/models/object_detection/yolo11m.pt
+      weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+      device: cuda:0
+      model_device: cuda:0
+      ultralytics: 8.4.150
+      torch: 2.1.2+cu118
+      conf_thres: 0.7
+      allowed_names:
+      - bus
+      - truck
+      - person
+      - car
+      predict_overrides:
+        iou: 0.7
+        max_det: 300
+        agnostic_nms: false
+      warmup_ms: 562.8
+    manifest_sha256: b96a282ce59b23371194577ad6dcbcf239bcd30c0c5c1bbb2b29560975829249
+    ambiguous_exclusions: 9
+    ambiguous_frames:
+    - 0
+    - 1
+    - 2
+    - 9
+    - 10
+    - 11
+    - 18
+    - 19
+    - 20
+  challenge_gt: Approximate manually reviewed visible vehicle boxes, frozen before
+    inference; RPC actor identity/pose independently recorded.
+  split: Original calibration GT287 retained; heldout stationary pose challenges39;
+    no threshold tuning on heldout.
+  person_challenge_limitation: Spawned pedestrians not visible in 12 frames; no additional
+    person coverage claimed.
+  shape_coverage_limitation: Existing archive has 7896 vehicle and 3231 person GT
+    rows but no actual vehicle meeting all three filter conditions; experiment does
+    not prove universal safety. Heldout vehicle boxes also do not meet all three risky
+    geometry conditions; lowered-pose requests do not establish visibility of that
+    silhouette.
+  original_variation: 3514-frame no-mask/no-filter exact comparison has no boundary
+    exceptions; GPU runtime counts vary across repeats.
+output_contract:
+  canonical: /perception/camera/objects
+  raw: /perception/camera/objects/debug/raw
+  raw_semantics: YOLO return of this execution before post-filter; mask mode does
+    not perform another full-image inference.
+  raw_default: debug profile only; off in planning and direct objects launch
+  flags_mutually_exclusive: true
+  source_header_coordinates_class_confidence_order_preserved: true
+  message_md5_changed: false
+  preservation_scope: No changes to coordinates/confidence/order returned by that
+    execution; mask can change predictions compared with full-image inference.
+validation:
+  unmasked_exact:
+    status: pass
+    frames: 3514
+    exact_frames: 3514
+    errors: []
+    boundary_exceptions: []
+    weight_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+    bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+    bag_sha256: a8f360e666f58358062e83cedbc6b51f94e8dc897402a2605eed7761a7880268
+    legacy_source_sha256: 1cd5c1053245f3d3efbb63aac3cc311572bbbd51622b1ccd25976dd67a943cde
+    python: "3.8.10 (default, Mar 18 2025, 20:04:55) \n[GCC 9.4.0]"
+    interpreter: /usr/bin/python3
+    torch: 2.1.2+cu118
+    ultralytics: 8.4.150
+    gpu: NVIDIA GeForce RTX 4060 Ti
+    backend:
+      backend: ultralytics
+      weights: /root/ws/src/asmc_camera/models/object_detection/yolo11m.pt
+      weights_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+      device: cuda:0
+      model_device: cuda:0
+      ultralytics: 8.4.150
+      torch: 2.1.2+cu118
+      conf_thres: 0.7
+      allowed_names:
+      - bus
+      - truck
+      - person
+      - car
+      predict_overrides:
+        iou: 0.7
+        max_det: 300
+        agnostic_nms: false
+      warmup_ms: 625.8
+    hood_mask: false
+    duration_sec: 111.07941254098841
+    latency:
+      old_ms:
+        p50: 13.935054506873712
+        p95: 20.0434859500092
+      new_ms:
+        p50: 13.32972850650549
+        p95: 19.318166098673828
+  object_rates:
+    rate-mask:
+    - rate_hz: 19.93922426266918
+      output_frames: 592
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      latency:
+        p50_ms: 12.004036500000002
+        p95_ms: 19.40707134999999
+      debug_raw: false
+    - rate_hz: 19.927061672755293
+      output_frames: 592
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      latency:
+        p50_ms: 11.837609
+        p95_ms: 20.00722985
+      debug_raw: false
+    rate-mask-debug-subscribed:
+    - rate_hz: 19.92353854546612
+      output_frames: 592
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      latency:
+        p50_ms: 11.7035175
+        p95_ms: 19.838305249999994
+      debug_raw: true
+      debug_raw_frames: 592
+    - rate_hz: 19.92283590015457
+      output_frames: 592
+      duplicate_stamps: 0
+      reverse_stamps: 0
+      latency:
+        p50_ms: 11.5955835
+        p95_ms: 19.646118699999995
+      debug_raw: true
+      debug_raw_frames: 592
+  rate_debug_limitations: rate-mask-debug earlier runs enabled raw without a subscriber;
+    preserved in archive, not used to estimate transport cost. Selected measurements
+    actually subscribe.
+  ros_checks: 'hood-comparison-final-ros.log: selected mask+raw exact pairing, post-filter
+    worker and overlay, modes/empty/error/invalidation checks all pass'
+  cpu:
+    detection_tests: 42
+    runtime_tests: 28
+    additional_evaluator_policy_fusion_continuity_tests: 25
+  regression:
+    outer_and_nested_build: pass
+    camera:
+      tests: 277
+      failures: 1
+      known_failure: facade traffic_light default false vs historical true expectation
+    messages:
+      tests: 1
+      failures: 0
+    hd_map:
+      tests: 160
+      failures: 0
+    lidar_main:
+      tests: 267
+      failures: 0
+    lidar_core_ctest:
+      tests: 2
+      failures: 0
+    jamming_lane_boundary:
+      tests: 94
+      failures: 0
+    new_failures: 0
+  final_ci: 'Final PR-head required checks and run links are recorded in PR #69; older
+    ba5c8ff checks are not used.'
+  tooling_failures_preserved: wrong target names in regression.log/corrected.log and
+    first overlay test introspection failure preserved; corrected final tests pass.
+fusion:
+  counter_meaning: Count of synchronized LiDAR/YOLO frame pairs; increments after
+    IOUFusion regardless of box count, including valid empty detections.
+  counter_source: src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionCamera.cpp:890-891
+  reacquisition_increments_counter: false
+  strict_absolute_matching_gate_unchanged: true
+  primary:
+    pass_gate: true
+    runs:
+    - path: old
+      repeat: 1
+      totals:
+        matched: 503
+        dropped: 5
+        pending_lidar: 1
+        pending_yolo: 1
+      offset_p95_max_ms: 46.2
+      track_frames: 509
+    - path: old
+      repeat: 2
+      totals:
+        matched: 494
+        dropped: 10
+        pending_lidar: 1
+        pending_yolo: 1
+      offset_p95_max_ms: 47.8
+      track_frames: 505
+    - path: new
+      repeat: 1
+      totals:
+        matched: 507
+        dropped: 0
+        pending_lidar: 1
+        pending_yolo: 1
+      offset_p95_max_ms: 34.0
+      track_frames: 508
+    - path: new
+      repeat: 2
+      totals:
+        matched: 509
+        dropped: 0
+        pending_lidar: 1
+        pending_yolo: 1
+      offset_p95_max_ms: 34.0
+      track_frames: 510
+    stable_observations:
+      common_lidar_stamps: 332
+      old_stable: 2925
+      unmatched_common_observations: 948
+      regressions: []
+  shadow:
+    pass_gate: false
+    runs:
+    - path: old
+      repeat: 1
+      totals:
+        matched: 185
+        dropped: 0
+        pending_lidar: 1
+        pending_yolo: 2
+      offset_p95_max_ms: 33.1
+      track_frames: 186
+    - path: old
+      repeat: 2
+      totals:
+        matched: 186
+        dropped: 0
+        pending_lidar: 1
+        pending_yolo: 1
+      offset_p95_max_ms: 41.5
+      track_frames: 187
+    - path: new
+      repeat: 1
+      totals:
+        matched: 183
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      offset_p95_max_ms: 26.1
+      track_frames: 183
+    - path: new
+      repeat: 2
+      totals:
+        matched: 188
+        dropped: 0
+        pending_lidar: 0
+        pending_yolo: 1
+      offset_p95_max_ms: 26.1
+      track_frames: 188
+    stable_observations:
+      common_lidar_stamps: 157
+      old_stable: 1206
+      unmatched_common_observations: 961
+      regressions: []
+  diagnosis: Shadow new1 matched183 vs old185/186, no timeout drops or pending LiDAR,
+    but only183 track output frames vs186/187. No demonstrated benefit from reduced
+    flicker; absolute gate still fails.
+  continuity: Separate per-run gaps/reacquisitions/class loss included. Track IDs
+    alone do not measure physical-object fragmentation or improved recall.
+acceptance_holds:
+- shadow new1 absolute fusion matching count
+- previous strict fusion failures retained
+- model lifecycle first-second rate failure
+- MORAI traversal/exit and Ego orientation restoration evidence
+unchanged:
+- message MD5 and other message schemas
+- HD map data/runtime pin
+- LiDAR 50ms match/200ms wait and defense hood filter
+- planner ownership and jamming adapters/21 percent crop defaults
+evidence_directory: config/baselines/evidence/camera_hood_policy_selection_v1
+evidence_files_manifest: config/baselines/evidence/camera_hood_policy_selection_v1/files.json
+evidence_files_manifest_sha256: f82dd02468c8396ce14acfc168db8f5621b54d2476d281c52b00e11cfd534e6f
+raw_archive_sha256: 4d338c5ea7c98387a023a85164c6e189042e369edcec50dafe448d4078dcd8fb
+raw_archive_bytes: 26165502

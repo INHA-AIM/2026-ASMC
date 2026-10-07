@@ -1,0 +1,14 @@
+[WARN] [1791335195.338213]: object overlay rejected mismatched source header
+[WARN] [1791335195.538799]: object overlay rejected mismatched image dimensions
+{
+  "checks": {
+    "exact_source_stamp_and_frame_id": true,
+    "decodable_box_overlay": true,
+    "empty_result_displayed": true,
+    "different_stamp_not_drawn": true,
+    "different_camera_not_drawn": true,
+    "different_dimensions_not_drawn": true,
+    "invalid_result_displayed": true
+  },
+  "passed": true
+}

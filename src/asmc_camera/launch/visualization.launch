@@ -12,37 +12,64 @@
   <!-- perception.launch passes start_traffic_light so the overlay exists
        only when the traffic-light producer runs. -->
   <arg name="traffic_light" default="false"/>
+  <arg name="camera_lane" default="false"/>
+  <arg name="camera_objects" default="false"/>
+  <arg name="objects_config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
+  <arg name="objects_hood_mask" default="true"/>
+  <arg name="objects_ego_hood_filter" default="false"/>
+  <arg name="objects_ego_hood_filter_config" default="$(find asmc_camera)/config/camera/yolo_ego_hood_filter_v1.yaml"/>
+  <arg name="objects_debug_raw" default="false"/>
+  <arg name="objects_hood_mask_config" default="$(find asmc_camera)/config/camera/yolo_hood_mask_v1.yaml"/>
+  <arg name="traffic_light_image_topic" default="/cam_extra/image_jpeg/compressed"/>
+  <arg name="traffic_light_detection_topic" default="/perception/traffic_light/detection"/>
 
-  <node pkg="asmc_camera" type="semantic_visualizer_node.py"
-        name="camera_semantic_visualizer" output="screen" required="true">
-    <rosparam command="load"
-              file="$(find asmc_camera)/config/camera/cameras.yaml"/>
-    <rosparam command="load"
-              file="$(find asmc_camera)/config/camera/visualization.yaml"/>
-    <rosparam param="views">[left, front, right]</rosparam>
-    <param name="secondary_mode" value="$(arg secondary_mode)"/>
-    <param name="publish_per_view_panels" value="$(arg legacy_rqt)"/>
-  </node>
+  <group if="$(arg camera_objects)">
+    <node pkg="asmc_camera" type="object_visualizer_node.py"
+          name="camera_object_visualizer" output="screen" required="false">
+      <rosparam command="load" file="$(arg objects_config)" subst_value="true"/>
+      <param name="hood_mask" type="bool" value="$(arg objects_hood_mask)"/>
+      <param name="ego_hood_filter" type="bool" value="$(arg objects_ego_hood_filter)"/>
+      <param name="ego_hood_filter_config" value="$(arg objects_ego_hood_filter_config)"/>
+      <param name="debug_raw" type="bool" value="$(arg objects_debug_raw)"/>
+      <param name="hood_mask_config" value="$(arg objects_hood_mask_config)"/>
+    </node>
+  </group>
+  <group if="$(arg camera_lane)">
 
-  <node pkg="asmc_camera" type="camera_bev_visualizer_node.py"
-        name="camera_bev_visualizer" output="screen" required="true">
-    <rosparam command="load" file="$(arg bev_grid_config)"/>
-    <rosparam command="load" file="$(arg camera_calibration_config)"/>
-    <rosparam command="load" file="$(find asmc_camera)/config/bev/fusion.yaml"/>
-    <rosparam command="load" file="$(find asmc_camera)/config/bev/visualization.yaml"/>
-    <rosparam param="enabled_views">[front, left, right]</rosparam>
-    <param name="publish_legacy_outputs" value="$(arg legacy_rqt)"/>
-    <param name="publish_calibration_grid" value="$(arg calibration_grid)"/>
-    <param name="publish_per_view_mosaic" value="$(arg publish_per_view_bev)"/>
-  </node>
+    <node pkg="asmc_camera" type="semantic_visualizer_node.py"
+          name="camera_semantic_visualizer" output="screen" required="false">
+      <rosparam command="load"
+                file="$(find asmc_camera)/config/camera/cameras.yaml"/>
+      <rosparam command="load"
+                file="$(find asmc_camera)/config/camera/visualization.yaml"/>
+      <rosparam param="views">[left, front, right]</rosparam>
+      <param name="secondary_mode" value="$(arg secondary_mode)"/>
+      <param name="publish_per_view_panels" value="$(arg legacy_rqt)"/>
+    </node>
 
+    <node pkg="asmc_camera" type="camera_bev_visualizer_node.py"
+          name="camera_bev_visualizer" output="screen" required="false">
+      <rosparam command="load" file="$(arg bev_grid_config)"/>
+      <rosparam command="load" file="$(arg camera_calibration_config)"/>
+      <rosparam command="load" file="$(find asmc_camera)/config/bev/fusion.yaml"/>
+      <rosparam command="load" file="$(find asmc_camera)/config/bev/visualization.yaml"/>
+      <rosparam param="enabled_views">[front, left, right]</rosparam>
+      <param name="publish_legacy_outputs" value="$(arg legacy_rqt)"/>
+      <param name="publish_calibration_grid" value="$(arg calibration_grid)"/>
+      <param name="publish_per_view_mosaic" value="$(arg publish_per_view_bev)"/>
+    </node>
+
+  </group>
   <group if="$(arg traffic_light)">
     <node pkg="asmc_camera" type="traffic_light_visualizer_node.py"
-          name="camera_traffic_light_visualizer" output="screen" required="true"/>
+          name="camera_traffic_light_visualizer" output="screen" required="false">
+      <param name="image_topic" value="$(arg traffic_light_image_topic)"/>
+      <param name="detection_topic" value="$(arg traffic_light_detection_topic)"/>
+    </node>
   </group>
-  <group if="$(arg legacy_rqt)">
+  <group if="$(eval arg('legacy_rqt') and arg('camera_lane'))">
     <node pkg="asmc_camera" type="lane_vector_visualizer_node.py"
-          name="camera_lane_vector_visualizer" output="screen" required="true">
+          name="camera_lane_vector_visualizer" output="screen" required="false">
       <rosparam command="load" file="$(arg bev_grid_config)"/>
       <rosparam command="load" file="$(arg camera_calibration_config)"/>
       <rosparam command="load" file="$(find asmc_camera)/config/bev/visualization.yaml"/>

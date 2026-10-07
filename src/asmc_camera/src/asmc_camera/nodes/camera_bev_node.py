@@ -36,8 +36,12 @@ def _enabled_views(value):
     return values
 
 
+from asmc_camera.runtime.ros_control import LaneEpochGate
+from asmc_camera.runtime.cadence import downstream_gate
+
 class CameraBevNode:
     def __init__(self) -> None:
+        self.epoch_gate = LaneEpochGate()
         grid_values = {
             name: rospy.get_param("~" + name)
             for name in (
@@ -172,82 +176,86 @@ class CameraBevNode:
         marking_message: Image,
         confidence_message: Image,
     ) -> None:
-        stamp_ns = int(drivable_message.header.stamp.to_nsec())
-        self.monitor.count_input(view, stamp_ns)
-        paired_stamps = {
-            stamp_ns,
-            int(marking_message.header.stamp.to_nsec()),
-            int(confidence_message.header.stamp.to_nsec()),
-        }
-        if stamp_ns <= 0 or len(paired_stamps) != 1:
-            self.monitor.count_error(view)
-            rospy.logwarn_throttle(2.0, "%s BEV received invalid/mismatched stamps", view)
-            return
-        previous_input_ns = self.last_input_stamp_ns[view]
-        should_publish, following_output_ns, timestamp_reset = source_time_gate_with_reset(
-            stamp_ns,
-            previous_input_ns,
-            self.next_output_stamp_ns[view],
-            self.minimum_period_ns,
-        )
-        if previous_input_ns and stamp_ns <= previous_input_ns and not timestamp_reset:
-            self.monitor.count_error(view)
-            rospy.logwarn_throttle(2.0, "%s BEV source timestamp did not increase", view)
-            return
-        if timestamp_reset:
-            self.timestamp_resets[view] += 1
-            rospy.loginfo("%s BEV source-time epoch reset", view)
-        self.last_input_stamp_ns[view] = stamp_ns
-        if not should_publish:
-            self.monitor.count_throttled(view)
-            return
-
-        try:
-            drivable = self._mono8_array(drivable_message)
-            marking = self._mono8_array(marking_message)
-            confidence = self._mono8_array(confidence_message)
-            started = time.perf_counter()
-            projected = self.projectors[view].project(
-                drivable, marking, confidence
-            )
-            projection_ms = (time.perf_counter() - started) * 1000.0
-
-            started = time.perf_counter()
-            header = drivable_message.header
-            self.publishers[view]["drivable"].publish(
-                self._image_message(projected.drivable_probability, header)
-            )
-            self.publishers[view]["road_marking"].publish(
-                self._image_message(projected.road_marking_class_id, header)
-            )
-            self.publishers[view]["road_marking_confidence"].publish(
-                self._image_message(projected.road_marking_confidence, header)
-            )
-            coverage_publisher = self.publishers[view].get("coverage")
-            if coverage_publisher is not None:
-                coverage_publisher.publish(
-                    self._image_message(projected.coverage, header)
-                )
-            publish_ms = (time.perf_counter() - started) * 1000.0
-        except Exception as exc:
-            # message_filters callbacks can finish after rospy has closed the
-            # publishers during an orderly roslaunch shutdown.  That is not a
-            # projection failure and must not pollute runtime diagnostics.
-            if rospy.is_shutdown():
+        with self.epoch_gate.lock:
+            if not self.epoch_gate.allows(drivable_message.header.stamp):
                 return
-            self.monitor.count_error(view)
-            rospy.logerr_throttle(2.0, "%s BEV projection failed: %s", view, exc)
-            return
+            stamp_ns = int(drivable_message.header.stamp.to_nsec())
+            self.monitor.count_input(view, stamp_ns)
+            paired_stamps = {
+                stamp_ns,
+                int(marking_message.header.stamp.to_nsec()),
+                int(confidence_message.header.stamp.to_nsec()),
+            }
+            if stamp_ns <= 0 or len(paired_stamps) != 1:
+                self.monitor.count_error(view)
+                rospy.logwarn_throttle(2.0, "%s BEV received invalid/mismatched stamps", view)
+                return
+            previous_input_ns = self.last_input_stamp_ns[view]
+            should_publish, following_output_ns, timestamp_reset = downstream_gate(
+                stamp_ns,
+                previous_input_ns,
+                self.next_output_stamp_ns[view],
+                self.minimum_period_ns,
+                self.epoch_gate.target_hz,
+            )
+            if previous_input_ns and stamp_ns <= previous_input_ns and not timestamp_reset:
+                self.monitor.count_error(view)
+                rospy.logwarn_throttle(2.0, "%s BEV source timestamp did not increase", view)
+                return
+            if timestamp_reset:
+                self.timestamp_resets[view] += 1
+                rospy.loginfo("%s BEV source-time epoch reset", view)
+            self.last_input_stamp_ns[view] = stamp_ns
+            if not should_publish:
+                self.monitor.count_throttled(view)
+                return
 
-        self.next_output_stamp_ns[view] = following_output_ns
-        result_stamp_ns = int(rospy.Time.now().to_nsec())
-        self.monitor.count_output(
-            view,
-            projection_ms,
-            publish_ms,
-            source_stamp_ns=stamp_ns,
-            result_stamp_ns=result_stamp_ns,
-        )
+            try:
+                drivable = self._mono8_array(drivable_message)
+                marking = self._mono8_array(marking_message)
+                confidence = self._mono8_array(confidence_message)
+                started = time.perf_counter()
+                projected = self.projectors[view].project(
+                    drivable, marking, confidence
+                )
+                projection_ms = (time.perf_counter() - started) * 1000.0
+
+                started = time.perf_counter()
+                header = drivable_message.header
+                self.publishers[view]["drivable"].publish(
+                    self._image_message(projected.drivable_probability, header)
+                )
+                self.publishers[view]["road_marking"].publish(
+                    self._image_message(projected.road_marking_class_id, header)
+                )
+                self.publishers[view]["road_marking_confidence"].publish(
+                    self._image_message(projected.road_marking_confidence, header)
+                )
+                coverage_publisher = self.publishers[view].get("coverage")
+                if coverage_publisher is not None:
+                    coverage_publisher.publish(
+                        self._image_message(projected.coverage, header)
+                    )
+                publish_ms = (time.perf_counter() - started) * 1000.0
+            except Exception as exc:
+                # message_filters callbacks can finish after rospy has closed the
+                # publishers during an orderly roslaunch shutdown.  That is not a
+                # projection failure and must not pollute runtime diagnostics.
+                if rospy.is_shutdown():
+                    return
+                self.monitor.count_error(view)
+                rospy.logerr_throttle(2.0, "%s BEV projection failed: %s", view, exc)
+                return
+
+            self.next_output_stamp_ns[view] = following_output_ns
+            result_stamp_ns = int(rospy.Time.now().to_nsec())
+            self.monitor.count_output(
+                view,
+                projection_ms,
+                publish_ms,
+                source_stamp_ns=stamp_ns,
+                result_stamp_ns=result_stamp_ns,
+            )
 
     @staticmethod
     def _mono8_array(message: Image) -> np.ndarray:

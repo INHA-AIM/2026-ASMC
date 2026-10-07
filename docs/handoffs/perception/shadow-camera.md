@@ -224,7 +224,7 @@ terminal에서 실행한다. bag replay ROS 추론도 같은 컨테이너를 사
 ```bash
 source /opt/ros/noetic/setup.bash
 source /root/ws/devel/setup.bash
-roslaunch asmc_camera perception.launch \
+roslaunch asmc_camera perception.launch profile:=legacy \
   camera_checkpoint:=/root/ws/artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt \
   lane_publish_pipeline_audit:=true
 ```

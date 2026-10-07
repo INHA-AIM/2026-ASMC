@@ -1,0 +1,90 @@
+{
+  "duration_sec": 12.01116186400759,
+  "use_sim_time": false,
+  "topics": {
+    "/gps": {
+      "count": 61,
+      "stamp": 1791343159.043019,
+      "frame_id": "gps",
+      "age_sec": 0.0004949569702148438,
+      "status": 1,
+      "latitude": 37.23897,
+      "longitude": 126.77298166666667,
+      "eastOffset": 302595.0,
+      "northOffset": 4124145.0,
+      "observed_hz": 5.07860943767575
+    },
+    "/imu": {
+      "count": 566,
+      "stamp": 1791343159.047405,
+      "frame_id": "imu",
+      "age_sec": 0.0004513263702392578,
+      "quaternion_norm": 1.0000000055890665,
+      "acceleration_x": -0.01663445122539997,
+      "observed_hz": 47.12283511023728
+    },
+    "/Ego_topic": {
+      "count": 589,
+      "stamp": 1791343159.0471272,
+      "frame_id": "base_link",
+      "age_sec": 0.000247955322265625,
+      "speed_mps": 0.503071090259499,
+      "position": {
+        "x": -138.12367248535156,
+        "y": -438.78570556640625
+      },
+      "heading": 60.52101135253906,
+      "observed_hz": 49.037720635918305
+    },
+    "/vehicle/state": {
+      "count": 601,
+      "stamp": 1791343159.043019,
+      "frame_id": "map",
+      "age_sec": 0.012598276138305664,
+      "valid": true,
+      "speed": 0.0,
+      "x": -137.93194244295591,
+      "y": -438.4929241538048,
+      "observed_hz": 50.036791344969274
+    },
+    "/image_jpeg/compressed": {
+      "count": 240,
+      "stamp": 1791343159.0453281,
+      "frame_id": "camera_front",
+      "age_sec": 0.0004918575286865234,
+      "bytes": 153089,
+      "observed_hz": 19.981414181019343
+    },
+    "/cam_left/image_jpeg/compressed": {
+      "count": 240,
+      "stamp": 1791343159.0427628,
+      "frame_id": "camera_left",
+      "age_sec": 0.0006442070007324219,
+      "bytes": 53521,
+      "observed_hz": 19.981414181019343
+    },
+    "/cam_right/image_jpeg/compressed": {
+      "count": 240,
+      "stamp": 1791343159.0440216,
+      "frame_id": "camera_right",
+      "age_sec": 0.00037980079650878906,
+      "bytes": 60003,
+      "observed_hz": 19.981414181019343
+    },
+    "/cam_extra/image_jpeg/compressed": {
+      "count": 120,
+      "stamp": 1791343159.043807,
+      "frame_id": "camera_extra",
+      "age_sec": 0.0003097057342529297,
+      "bytes": 34354,
+      "observed_hz": 9.990707090509671
+    },
+    "/velodyne_points": {
+      "count": 160,
+      "stamp": 1791343159.0189438,
+      "frame_id": "velodyne",
+      "age_sec": 0.0008566379547119141,
+      "observed_hz": 13.32094278734623
+    }
+  }
+}

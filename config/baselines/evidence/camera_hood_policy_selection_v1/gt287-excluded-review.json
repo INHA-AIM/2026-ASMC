@@ -1,0 +1,962 @@
+[
+  {
+    "frame": 11,
+    "image": "/data/datasets/20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel/frames/intensity/front/000151.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7188022136688232,
+      "xyxy": [
+        63.0926513671875,
+        578.8521728515625,
+        1236.173828125,
+        712.6949462890625
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 15,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000130.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7750374674797058,
+      "xyxy": [
+        65.1063232421875,
+        577.849365234375,
+        1187.481689453125,
+        714.2138671875
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 19,
+    "image": "/data/datasets/20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel/frames/intensity/front/000360.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7350164651870728,
+      "xyxy": [
+        68.0029296875,
+        577.0511474609375,
+        1210.54150390625,
+        712.4757080078125
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 23,
+    "image": "/data/datasets/20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/frames/intensity/front/000138.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7825816869735718,
+      "xyxy": [
+        63.9586181640625,
+        578.400146484375,
+        1193.1827392578125,
+        712.6572265625
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 24,
+    "image": "/data/datasets/20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel/frames/intensity/front/000366.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.792330265045166,
+      "xyxy": [
+        59.64013671875,
+        579.129150390625,
+        1212.231201171875,
+        713.9547119140625
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 25,
+    "image": "/data/datasets/20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel/frames/intensity/front/000364.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7759702801704407,
+      "xyxy": [
+        66.60595703125,
+        576.9442138671875,
+        1188.052978515625,
+        712.9920654296875
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 27,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000131.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.736833930015564,
+      "xyxy": [
+        64.988037109375,
+        578.0692749023438,
+        1188.936279296875,
+        713.3908081054688
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 29,
+    "image": "/data/datasets/20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/front/000127.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7403841018676758,
+      "xyxy": [
+        65.5911865234375,
+        578.07373046875,
+        1203.56494140625,
+        715.0496826171875
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 30,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000137.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7477774620056152,
+      "xyxy": [
+        64.4766845703125,
+        577.276123046875,
+        1197.1661376953125,
+        714.03369140625
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 31,
+    "image": "/data/datasets/20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/front/000144.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7140858769416809,
+      "xyxy": [
+        64.5919189453125,
+        578.2021484375,
+        1200.8773193359375,
+        714.880859375
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 40,
+    "image": "/data/datasets/20260904_002519_kcity_comp_sample_foggy_sim3pm_wheel/frames/intensity/front/000358.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7395168542861938,
+      "xyxy": [
+        66.64453125,
+        578.1591796875,
+        1194.189697265625,
+        712.737060546875
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 43,
+    "image": "/data/datasets/20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/frames/intensity/front/000147.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7214347720146179,
+      "xyxy": [
+        26.59619140625,
+        577.1009521484375,
+        1253.976318359375,
+        714.0799560546875
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 47,
+    "image": "/data/datasets/20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/front/000117.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7222010493278503,
+      "xyxy": [
+        65.65185546875,
+        578.4414672851562,
+        1190.278076171875,
+        715.1243286132812
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 48,
+    "image": "/data/datasets/20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/frames/intensity/front/000136.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7999864220619202,
+      "xyxy": [
+        65.73486328125,
+        578.1334228515625,
+        1191.982421875,
+        713.213134765625
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 50,
+    "image": "/data/datasets/20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/front/000126.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7673671841621399,
+      "xyxy": [
+        65.2403564453125,
+        578.2223510742188,
+        1206.1260986328125,
+        715.4569702148438
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 54,
+    "image": "/data/datasets/20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/front/000142.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7735694050788879,
+      "xyxy": [
+        65.3431396484375,
+        577.8602294921875,
+        1195.8349609375,
+        714.0860595703125
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 58,
+    "image": "/data/datasets/20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/front/000133.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7574449777603149,
+      "xyxy": [
+        63.02294921875,
+        576.942626953125,
+        1190.028564453125,
+        713.6513671875
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 63,
+    "image": "/data/datasets/20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel/frames/intensity/front/000146.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7453538775444031,
+      "xyxy": [
+        58.99462890625,
+        578.7587890625,
+        1184.096923828125,
+        713.083740234375
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 64,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000267.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7722458243370056,
+      "xyxy": [
+        65.7330322265625,
+        577.9907836914062,
+        1198.362060546875,
+        713.9445190429688
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 66,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000266.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7831570506095886,
+      "xyxy": [
+        64.6199951171875,
+        578.1250610351562,
+        1206.795654296875,
+        713.6651000976562
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 70,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000265.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7232468128204346,
+      "xyxy": [
+        65.9019775390625,
+        576.950927734375,
+        1241.4368896484375,
+        713.8472900390625
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 74,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000114.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7101497054100037,
+      "xyxy": [
+        61.8634033203125,
+        578.131103515625,
+        1184.6658935546875,
+        712.7384033203125
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 86,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000263.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.762542724609375,
+      "xyxy": [
+        68.3404541015625,
+        578.0382080078125,
+        1220.358642578125,
+        712.845703125
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 88,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000113.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.729768693447113,
+      "xyxy": [
+        66.028564453125,
+        577.9263916015625,
+        1190.64501953125,
+        713.4019775390625
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 113,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000260.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7959048748016357,
+      "xyxy": [
+        66.148681640625,
+        578.2323608398438,
+        1187.8897705078125,
+        713.9270629882812
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 144,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000553.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8489606976509094,
+      "xyxy": [
+        65.4354248046875,
+        578.0357666015625,
+        1186.31201171875,
+        713.7862548828125
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 145,
+    "image": "/data/datasets/20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel/frames/intensity/front/000470.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7218808531761169,
+      "xyxy": [
+        62.1109619140625,
+        578.5430908203125,
+        1227.9468994140625,
+        713.2611083984375
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 146,
+    "image": "/data/datasets/20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel/frames/intensity/front/000471.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8886297345161438,
+      "xyxy": [
+        65.05224609375,
+        578.4133911132812,
+        1192.873291015625,
+        712.7255249023438
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 149,
+    "image": "/data/datasets/20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000074.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.709139883518219,
+      "xyxy": [
+        60.621337890625,
+        578.5059814453125,
+        1238.256103515625,
+        712.3759765625
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 150,
+    "image": "/data/datasets/20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000290.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7490675449371338,
+      "xyxy": [
+        64.474853515625,
+        578.34912109375,
+        1221.365966796875,
+        712.170166015625
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 153,
+    "image": "/data/datasets/20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/front/000460.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8935719728469849,
+      "xyxy": [
+        57.0843505859375,
+        578.335693359375,
+        1224.004638671875,
+        715.73681640625
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 154,
+    "image": "/data/datasets/20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel/frames/intensity/front/000472.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8534045219421387,
+      "xyxy": [
+        58.434814453125,
+        578.9406127929688,
+        1223.6070556640625,
+        712.7302856445312
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 155,
+    "image": "/data/datasets/20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000317.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7607726454734802,
+      "xyxy": [
+        62.998291015625,
+        578.3563232421875,
+        1227.508544921875,
+        712.4432373046875
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 156,
+    "image": "/data/datasets/20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000305.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7188519835472107,
+      "xyxy": [
+        64.410888671875,
+        578.9395141601562,
+        1192.304931640625,
+        713.5707397460938
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 157,
+    "image": "/data/datasets/20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel/frames/intensity/front/000599.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8475650548934937,
+      "xyxy": [
+        62.321044921875,
+        578.05078125,
+        1222.1181640625,
+        713.2421875
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 158,
+    "image": "/data/datasets/20260903_225540_kcity_comp_sample_foggy_sim11am_wheel/frames/intensity/front/000118.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.853877067565918,
+      "xyxy": [
+        63.43603515625,
+        578.3448486328125,
+        1198.448486328125,
+        713.2490234375
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 159,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000493.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7913936376571655,
+      "xyxy": [
+        65.2796630859375,
+        578.0663452148438,
+        1197.298828125,
+        715.3086547851562
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 160,
+    "image": "/data/datasets/20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel/frames/intensity/front/000348.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8256521821022034,
+      "xyxy": [
+        64.342529296875,
+        578.575927734375,
+        1228.41748046875,
+        712.778564453125
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 161,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000552.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7703345417976379,
+      "xyxy": [
+        66.804443359375,
+        578.3953857421875,
+        1194.614990234375,
+        713.7242431640625
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 163,
+    "image": "/data/datasets/20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000291.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.741230845451355,
+      "xyxy": [
+        62.294189453125,
+        578.4917602539062,
+        1216.184326171875,
+        713.3856811523438
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 164,
+    "image": "/data/datasets/20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel/frames/intensity/front/000372.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7288144826889038,
+      "xyxy": [
+        64.0762939453125,
+        578.8076171875,
+        1204.2955322265625,
+        712.749267578125
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 166,
+    "image": "/data/datasets/20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/front/000417.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8078126907348633,
+      "xyxy": [
+        61.30615234375,
+        578.8446655273438,
+        1227.3232421875,
+        712.1251831054688
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 167,
+    "image": "/data/datasets/20260903_215137_kcity_comp_sample_sunny_sim3pm_wheel/frames/intensity/front/000470.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8380958437919617,
+      "xyxy": [
+        61.2908935546875,
+        578.6641845703125,
+        1245.8427734375,
+        712.7242431640625
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 168,
+    "image": "/data/datasets/20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/front/000359.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8142172694206238,
+      "xyxy": [
+        64.025146484375,
+        578.7493286132812,
+        1226.990478515625,
+        712.2428588867188
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 169,
+    "image": "/data/datasets/20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/front/000418.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8316713571548462,
+      "xyxy": [
+        62.505615234375,
+        578.4783935546875,
+        1196.89453125,
+        712.5147705078125
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 170,
+    "image": "/data/datasets/20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000335.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8474477529525757,
+      "xyxy": [
+        56.792236328125,
+        578.45849609375,
+        1221.46435546875,
+        714.3148193359375
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 171,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000551.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8356596231460571,
+      "xyxy": [
+        64.720947265625,
+        578.4105224609375,
+        1185.07763671875,
+        713.2352294921875
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 172,
+    "image": "/data/datasets/20260904_170026_kcity_comp_sample_b_seg06_foggy_sim3pm_wheel/frames/intensity/front/000003.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.741239607334137,
+      "xyxy": [
+        63.49267578125,
+        578.4365234375,
+        1221.63134765625,
+        712.37890625
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 174,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000494.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8083767294883728,
+      "xyxy": [
+        64.91455078125,
+        578.11376953125,
+        1193.623779296875,
+        715.044189453125
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 177,
+    "image": "/data/datasets/20260903_220750_kcity_comp_sample_sunny_sim5pm_wheel/frames/intensity/front/000486.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.809702455997467,
+      "xyxy": [
+        62.7659912109375,
+        578.0109252929688,
+        1270.3570556640625,
+        713.2439575195312
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 178,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000550.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8361549377441406,
+      "xyxy": [
+        63.65869140625,
+        577.8724365234375,
+        1190.3785400390625,
+        713.2579345703125
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 183,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000491.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8183661103248596,
+      "xyxy": [
+        65.22607421875,
+        577.897216796875,
+        1197.8092041015625,
+        714.327392578125
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 187,
+    "image": "/data/datasets/20260904_004217_kcity_comp_sample_foggy_sim5pm_wheel/frames/intensity/front/000401.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7269472479820251,
+      "xyxy": [
+        11.470703125,
+        578.080810546875,
+        1203.714599609375,
+        715.99755859375
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 189,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000383.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7859054803848267,
+      "xyxy": [
+        64.6697998046875,
+        578.456298828125,
+        1191.615234375,
+        713.620361328125
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 190,
+    "image": "/data/datasets/20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/front/000331.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7150296568870544,
+      "xyxy": [
+        57.131103515625,
+        578.4837036132812,
+        1197.278076171875,
+        713.3190307617188
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 194,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000547.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7285133004188538,
+      "xyxy": [
+        66.38818359375,
+        578.23876953125,
+        1187.46923828125,
+        713.578857421875
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 230,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000476.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7114437818527222,
+      "xyxy": [
+        65.9754638671875,
+        578.2593994140625,
+        1193.4158935546875,
+        714.7816162109375
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 232,
+    "image": "/data/datasets/20260903_211826_kcity_comp_sample_sunny_sim_unknown_wheel/frames/intensity/front/000477.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7207757234573364,
+      "xyxy": [
+        65.5758056640625,
+        578.318603515625,
+        1197.429443359375,
+        714.8189697265625
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 235,
+    "image": "/data/datasets/20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/front/000454.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7684073448181152,
+      "xyxy": [
+        63.2882080078125,
+        578.7896728515625,
+        1192.072509765625,
+        713.6309814453125
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 241,
+    "image": "/data/datasets/20260903_213829_kcity_comp_sample_sunny_sim11am_wheel/frames/intensity/front/000453.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7671986222267151,
+      "xyxy": [
+        62.8616943359375,
+        578.9271850585938,
+        1193.2723388671875,
+        713.5623168945312
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  }
+]

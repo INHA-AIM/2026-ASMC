@@ -58,7 +58,7 @@ def main():
         return {value.key: value.value for value in diagnostics[-1].status[0].values} if diagnostics else {}
 
     try:
-        graph = launch(["roslaunch", "asmc_camera", "perception.launch", "start_camera_objects:=true"], "camera")
+        graph = launch(["roslaunch", "asmc_camera", "perception.launch", "profile:=legacy", "start_camera_objects:=true"], "camera")
         launch(["rosrun", "Main", "camera_objects_yolo_bbox_adapter.py"], "adapter")
         wait_for(lambda: publisher.get_num_connections() >= 2, "warmed object and lane subscriptions", timeout=60)
         time.sleep(0.5)

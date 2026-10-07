@@ -26,6 +26,10 @@ from asmc_camera.bev.performance_monitor import source_time_gate_with_reset
 from asmc_camera.bev.projector import CameraBevProjector, ProjectedSemantic
 
 
+from asmc_camera.runtime.ros_control import LaneEpochGate
+from asmc_camera.runtime.cadence import downstream_gate
+
+
 @dataclass(frozen=True)
 class _ViewFrame:
     view: str
@@ -48,6 +52,7 @@ def _names(value):
 
 class CameraBevFusionNode:
     def __init__(self) -> None:
+        self.epoch_gate = LaneEpochGate()
         self.grid = BevGridSpec.from_mapping(
             {
                 name: rospy.get_param("~" + name)
@@ -204,6 +209,8 @@ class CameraBevFusionNode:
     def _view_callback(
         self, view: str, drivable: Image, marking: Image, confidence: Image
     ) -> None:
+        if not self.epoch_gate.allows(drivable.header.stamp):
+            return
         stamps = [
             int(message.header.stamp.to_nsec())
             for message in (drivable, marking, confidence)
@@ -250,14 +257,17 @@ class CameraBevFusionNode:
         return None
 
     def _fuse_and_publish(self, frames) -> None:
-        with self.processing_lock:
+        with self.processing_lock, self.epoch_gate.lock:
+            if not all(self.epoch_gate.allows(f.header.stamp) for f in frames.values()):
+                return
             stamp_ns = max(frame.stamp_ns for frame in frames.values())
             should_publish, following_output_ns, timestamp_reset = (
-                source_time_gate_with_reset(
+                downstream_gate(
                     stamp_ns,
                     self.last_input_source_stamp_ns,
                     self.next_output_stamp_ns,
                     self.minimum_output_period_ns,
+                    self.epoch_gate.target_hz,
                 )
             )
             if timestamp_reset:

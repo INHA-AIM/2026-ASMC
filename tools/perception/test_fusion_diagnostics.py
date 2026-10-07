@@ -81,6 +81,17 @@ class FusionDiagnosticsTest(unittest.TestCase):
         self.assertEqual(1, report["old_stable"])
         self.assertEqual(1, len(report["regressions"]))
 
+    def test_same_numeric_id_with_changed_geometry_is_not_claimed_stable(self):
+        a = [frame([(22, "unknown", [0, 0, 0]), (7, "car", [5, 0, 0])])]
+        b = [frame([(22, "unknown", [.04, 0, 0]), (8, "car", [5, 0, 0])])]
+        new = [frame([(22, "car", [0, 0, 0]), (9, "car", [5, 0, 0])])]
+        report = compare_stable_observations([a, b], [new, a])
+        self.assertEqual(1, report['old_stable'])
+        self.assertGreater(report['unmatched_common_observations'], 0)
+        self.assertEqual([], report['regressions'])
+        # A single old/new pair still reports the actual observed difference.
+        self.assertEqual(1, len(compare(a, new)['classification_differences']))
+
     def test_duplicate_stamps_are_not_silently_overwritten(self):
         row = frame([(1, "car", [0, 0, 0])])
         with self.assertRaises(ValueError):

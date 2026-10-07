@@ -1,0 +1,386 @@
+[
+  {
+    "frame": 0,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/000.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8340515494346619,
+      "xyxy": [
+        66.621826171875,
+        577.768798828125,
+        1220.412353515625,
+        712.5517578125
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 1,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/001.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8319022059440613,
+      "xyxy": [
+        66.876708984375,
+        577.72900390625,
+        1221.611328125,
+        712.4312744140625
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 2,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/002.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8340915441513062,
+      "xyxy": [
+        66.7183837890625,
+        577.7139892578125,
+        1220.3228759765625,
+        712.4725341796875
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 9,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/009.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.867392361164093,
+      "xyxy": [
+        62.9034423828125,
+        577.615478515625,
+        1198.6524658203125,
+        712.7822265625
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 10,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/010.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8705072402954102,
+      "xyxy": [
+        62.930908203125,
+        577.7564697265625,
+        1200.826904296875,
+        712.8189697265625
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 11,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/011.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8665223717689514,
+      "xyxy": [
+        62.9261474609375,
+        577.6016845703125,
+        1201.57568359375,
+        712.8099365234375
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 15,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/015.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7341560125350952,
+      "xyxy": [
+        65.3172607421875,
+        578.023681640625,
+        1202.6307373046875,
+        713.1160888671875
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 16,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/016.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7288568615913391,
+      "xyxy": [
+        65.0931396484375,
+        578.0310668945312,
+        1203.063720703125,
+        713.0548706054688
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 17,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/017.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7395429015159607,
+      "xyxy": [
+        65.23046875,
+        578.11376953125,
+        1201.321533203125,
+        713.1328125
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 18,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/018.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8263237476348877,
+      "xyxy": [
+        51.54052734375,
+        575.998779296875,
+        1210.034912109375,
+        713.15283203125
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 19,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/019.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8208907842636108,
+      "xyxy": [
+        51.143798828125,
+        575.9362182617188,
+        1209.885009765625,
+        713.1298217773438
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 20,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/020.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.8223259449005127,
+      "xyxy": [
+        50.8829345703125,
+        575.9229736328125,
+        1209.92529296875,
+        713.1680908203125
+      ]
+    },
+    "review": "mixed_or_ambiguous",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 27,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/027.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7232643961906433,
+      "xyxy": [
+        65.4766845703125,
+        578.0113525390625,
+        1203.8328857421875,
+        713.030517578125
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 28,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/028.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7287313342094421,
+      "xyxy": [
+        65.45166015625,
+        578.13525390625,
+        1200.3680419921875,
+        713.1282958984375
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 29,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/029.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7172045707702637,
+      "xyxy": [
+        65.4732666015625,
+        578.1014404296875,
+        1200.810302734375,
+        713.1043701171875
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 30,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/030.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7292475700378418,
+      "xyxy": [
+        65.4512939453125,
+        578.0489501953125,
+        1199.300048828125,
+        713.0567626953125
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 31,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/031.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7155916690826416,
+      "xyxy": [
+        65.3323974609375,
+        578.0769653320312,
+        1202.924560546875,
+        713.0459594726562
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 32,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/032.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.723414957523346,
+      "xyxy": [
+        65.3741455078125,
+        578.083740234375,
+        1200.84130859375,
+        713.057861328125
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 33,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/033.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7298668622970581,
+      "xyxy": [
+        65.41845703125,
+        578.02587890625,
+        1203.70947265625,
+        713.091796875
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 34,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/034.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7190766334533691,
+      "xyxy": [
+        65.5374755859375,
+        578.0634765625,
+        1202.97314453125,
+        713.115478515625
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 35,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/035.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7378216981887817,
+      "xyxy": [
+        65.28173828125,
+        578.0301513671875,
+        1204.212646484375,
+        713.1300048828125
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 36,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/036.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7251501679420471,
+      "xyxy": [
+        65.334228515625,
+        578.0595703125,
+        1199.3724365234375,
+        713.04638671875
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 37,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/037.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.725957989692688,
+      "xyxy": [
+        65.347900390625,
+        578.0648193359375,
+        1199.71728515625,
+        713.091796875
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  },
+  {
+    "frame": 38,
+    "image": "/data/runtime_archive/hood-challenges-20261007-final/038.png",
+    "box": {
+      "source_class_name": "car",
+      "confidence": 0.7272173166275024,
+      "xyxy": [
+        65.28076171875,
+        578.098876953125,
+        1202.5751953125,
+        713.07763671875
+      ]
+    },
+    "review": "ego_hood",
+    "review_basis": "Original RGB visual review; independent GT overlap is conservatively ambiguous, not a sole ego detection."
+  }
+]

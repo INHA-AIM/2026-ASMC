@@ -1,0 +1,10 @@
+[WARN] [1791315317.372964, 0.000000]: camera objects requires nonzero source stamp and camera_front frame_id
+[INFO] [1791315317.296285, 0.000000]: camera object detector ready: model=not_a_model device=CPU_fixture
+Traceback (most recent call last):
+  File "/root/ws/tools/perception/check_inference_control_ros.py", line 110, in <module>
+    raise SystemExit(main())
+  File "/root/ws/tools/perception/check_inference_control_ros.py", line 67, in main
+    wait(lambda:received[-1].prepared)
+  File "/root/ws/tools/perception/check_inference_control_ros.py", line 50, in wait
+    if not predicate():raise RuntimeError('ROS lifecycle fixture timed out')
+RuntimeError: ROS lifecycle fixture timed out

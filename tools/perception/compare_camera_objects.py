@@ -27,6 +27,8 @@ from ultralytics import YOLO
 from asmc_msgs.msg import CameraObjectBoxArray
 from asmc_camera.detection.classes import load_class_groups
 from asmc_camera.detection.messages import build_box_array
+from asmc_camera.detection.processor import ObjectFrameProcessor
+from asmc_camera.detection.hood_mask import HoodMask
 from asmc_camera.detection.ultralytics_backend import UltralyticsDetector, file_sha256
 from camera_object_parity import boundary_only
 
@@ -113,8 +115,10 @@ def main():
             original.SpeedSignDetection()
             timing["old_ms"].append((time.perf_counter() - before) * 1000)
             before = time.perf_counter()
-            detections, _ = detector.detect(image)
-            candidate = build_box_array(message.header, image.shape[1], image.shape[0], True, detections, groups)
+            processor = ObjectFrameProcessor(detector, groups, decode=lambda *a: image, hood_mask=HoodMask())
+            candidate, _, error = processor.process(message.header, message.data)
+            if error:
+                raise RuntimeError("full-image producer processing failed: " + str(error))
             wire = io.BytesIO()
             candidate.serialize(wire)
             received = CameraObjectBoxArray().deserialize(wire.getvalue())
@@ -128,7 +132,7 @@ def main():
                 errors.append({"frame": index, "reason": "header/count"})
             elif old_rows != new_rows:
                 candidates = [(d.source_class_name, int(d.xmin), int(d.ymin), int(d.xmax), int(d.ymax), d.confidence)
-                              for d in detections]
+                              for d in candidate.boxes]
                 candidates += original.model.candidates
                 allowed = boundary_only(old_rows, new_rows, candidates)
                 record = {"frame": index, "stamp_ns": message.header.stamp.to_nsec(),
@@ -148,7 +152,7 @@ def main():
               "legacy_source_sha256": file_sha256(MAIN / "src/Camera/YOLO/YOLODetection.py"),
               "python": sys.version, "interpreter": sys.executable,
               "torch": torch.__version__, "ultralytics": ultralytics.__version__,
-              "gpu": torch.cuda.get_device_name(0), "backend": detector.info,
+              "gpu": torch.cuda.get_device_name(0), "backend": detector.info, "hood_mask": False,
               "duration_sec": time.monotonic() - started,
               "latency": {name: {"p50": float(np.percentile(values, 50)),
                                  "p95": float(np.percentile(values, 95))}

@@ -301,7 +301,7 @@ def _validate_p5_closeout(
     expected_commands = {
         "bridge": "./scripts/udp_bridge.sh",
         "perception": (
-            "roslaunch asmc_camera perception.launch start_traffic_light:=true"
+            "roslaunch asmc_camera perception.launch profile:=legacy start_traffic_light:=true"
         ),
         "lane_adapter": (
             "roslaunch lane_boundary_adapter shadow_boundary_family_candidate.launch"

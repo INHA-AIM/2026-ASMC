@@ -1,0 +1,5 @@
+version: 1
+source_class_names: [car]
+min_width_ratio: 0.60
+min_center_y_ratio: 0.85
+min_bottom_ratio: 0.95
