@@ -85,9 +85,12 @@ python3 tools/perception/watch_b1a_host.py --state /tmp/asmc-b1a/evidence/host-s
 python3 /root/ws/tools/perception/make_b1a_fixtures.py --output /evidence/fixtures-final
 python3 /root/ws/tools/perception/run_b1a_matrix.py \
   --fixtures /evidence/fixtures-final --output /evidence/protocol-final \
-  --revision <ホストで確認した実行コミットSHA> --host-state /evidence/host-state.json
+  --revision 19a0b29 --host-state /evidence/host-state.json
 python3 /root/ws/tools/perception/analyze_b1a_matrix.py /evidence/protocol-final
 ```
+
+`--revision`에는 호스트에서 확인한 실제 측정 도구 커밋 SHA를 기록한다. 위 값은 이 검증의
+도구 고정 revision이며 다른 코드로 재현할 때는 그 코드의 SHA로 교체한다.
 
 ## 직접 launch·시각화
 
@@ -128,6 +131,33 @@ GUI의 최신 영상/점군 조합은 동기 정답이 아니다. 같은 관측�
 대표 프레임과 수평화 역변환·장착 변환을 검증한 투영 자료를 사용한다.
 
 ## 판단 범위와 후속 단계
+
+### 확인할 출력 경계
+
+이 브랜치의 `/lidar_nogps`는 일반 구간에서 항상 비어 있지 않은 공통 local 생산자가 아니다.
+무효 GPS·터널 latch에 따라 local 객체를 채우며 `/last_lidar`는 그때 비운다. 동시에
+`/lidar/tracked_objects_map`은 별도로 발행된다. 무효 좌표와 GPS 메시지 중단에서 pose의
+유효성·최신성을 표시하는 계약이 없어 map 발행을 소비 가능 판정으로 간주하지 않는다.
+
+GPS status=0 또는 좌표 모두 0이면 즉시 jamming 상태로 들어간다. 터널 latch는 무효
+샘플 3회로 확인하고 유효 샘플 3회로 해제한다. 정상 상태에서 메시지만 끊는 경우는
+이 무효 샘플 판정이 발생하지 않는다. 현재 main의 stale GPS gate로 local 처리도 멈췄던
+B0 결과와 다른 실행 경로이며, 어느 쪽의 운영 수정도 이번 PR에서 수행하지 않는다.
+
+터널 점군의 수평화는 `Ry(pitch) Rx(roll)`인 반면 기존 map 어댑터는 pitch 역회전만
+적용한다. 원본 코드에 대한 별도 합성 벡터 probe로 이 좌표 경계를 확인한다. 이 문제의
+수정과 frame_id·관측 pose·유효성 계약은 local/map 공동 설계로 분리한다.
+
+터널 실험 플래그 ON은 GPS 정상 구간에서도 진입 전 천장 절단과 대형 OBB 방어 규칙을
+적용한다. 따라서 정상 GPS의 T1/T3가 항상 동일하다는 가설은 두지 않는다. OFF 보존은
+T1의 실제 RANSAC과 기존 함수 재계산 결과의 비트 단위 대응으로 검사한다.
+실험 ON의 `replica_mismatch`는 변경된 최종 점군과 원래 RANSAC의 비교이며, 자체로
+처리 결함·누락 정답을 뜻하지 않는다.
+
+투영은 원본 수평화 공식의 역행렬과 원본 장착 변환·광학 축을 합성 시험으로 확인한다.
+평가기의 roll/pitch 기록은 소수 5자리이므로 대표 투영은 진단 그림이다. 같은 raw scan과
+카메라 stamp 차이, 사용한 보정 SHA를 기록하며 물리적 센서 보정의 독립 수락이나 객체 GT
+검증으로 확대하지 않는다. 단계별 keep 점에는 최종 OBB 방어 규칙으로 제외되는 군집도 있다.
 
 벽·천장 제거 수와 track ID 개수는 정답 정확도·recall이 아니다. 원본 영상·점군과 같은
 stamp에서 제거·유지 점, 객체 잘림·합침을 검토한다. 제거된 구조물을 자유 공간으로 보지 않는다.

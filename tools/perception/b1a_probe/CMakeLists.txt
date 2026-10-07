@@ -8,3 +8,6 @@ include_directories(../Main/src ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${Ope
 add_executable(b1a_protection_probe probe.cpp)
 add_dependencies(b1a_protection_probe ${catkin_EXPORTED_TARGETS})
 target_link_libraries(b1a_protection_probe myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} yaml-cpp Geographic)
+add_executable(b1a_map_pose_probe map_pose_probe.cpp)
+add_dependencies(b1a_map_pose_probe ${catkin_EXPORTED_TARGETS})
+target_link_libraries(b1a_map_pose_probe myHeader ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} yaml-cpp Geographic)
