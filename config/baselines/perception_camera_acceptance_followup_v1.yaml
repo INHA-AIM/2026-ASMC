@@ -2,9 +2,20 @@ schema_version: 1
 baseline_id: perception_camera_acceptance_followup_v1
 recorded_on: '2026-10-07'
 implementation_base: 3fc78c8cd88998def743e0836b0fe41f009e186e
-status: acceptance_hold
+status: accepted_with_user_approved_exceptions
 pr: https://github.com/INHAautonav/2026-ASMC/pull/69
-merge_owner: user
+merge_owner: assistant_at_user_request
+acceptance_decision:
+  authority: explicit_user_approval_2026_10_07
+  approved_classification_difference_count: 2
+  approved_source_stamps_ns:
+  - 1790654794688000000
+  - 1790654812792000000
+  original_automatic_failure_preserved: true
+  precise_cause_of_each_untraced_difference_proven: false
+  additional_differences_automatically_waived: false
+  known_facade_failure_retained: true
+  merge_authorized_by_user: true
 scope_revision:
   authority: user_approved_plan_2026_10_07
   merge_requirements:
@@ -108,7 +119,7 @@ fusion:
   maximum_source_offset_p95_ms: 50.0
   absolute_count_gate_unchanged: true
   diagnostic_and_untraced_acceptance_runs_separated: true
-  current_status: primary_classification_hold_shadow_current_bundle_pass
+  current_status: primary_classification_user_accepted_exception_shadow_current_bundle_pass
   numeric_track_comparison: diagnostic_only_same_stamp_mutually_unique_1mm_centers_own_classification_gate
   runs:
     primary-trace:
@@ -517,8 +528,10 @@ next_stage:
   - model_specific_TensorRT
   - RTX4070_SUPER_handover
 implementation_revision: 5dbc517b5bd89919e81a4dd24c4d1ab995b49b7d
-hold_reasons:
-- primary_bag_two_stable_observation_classification_differences
+hold_reasons: []
+resolved_hold_reasons:
+- reason: primary_bag_two_stable_observation_classification_differences
+  resolution: explicit_user_acceptance_of_these_two_observations_only
 parity:
   status: pass
   frames: 3514

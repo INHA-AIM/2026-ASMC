@@ -210,6 +210,15 @@ vanilla Ultralytics YOLO label은 ignore-region을 직접 표현하지 않는다
 
 ## 6. 학습·비교 순서
 
+2026-10-07 사용자 확인: AIM 데이터는 Windows D드라이브에 있다. 로컬에서
+`D:\asmc_aim\dataset` (`/mnt/d/asmc_aim/dataset`) 디렉터리의 존재를 확인했다.
+전체 파일 구성·이미지 GT 유무·RGB와 annotation 정합은 아직 감사하지 않았다.
+아래 O0~O3는 이전 계획의 기록이며, 최신 실행 순서는 `camera-runtime-plan.md`를 따른다.
+후속 학습은 YOLO26s/m COCO 사전학습 모델 평가 → NAS MORAI BBox2D 추가 학습 →
+AIM 데이터 감사 및 검수 라벨 보강 순서로 계획한다. AIM에 이미지 GT가 없으면 자동
+예측을 임시 라벨로 사용하고 누락·오검출을 수동 수정한다. 미라벨 프레임을 정상 음성
+샘플로 간주하지 않으며, 독립 평가 세션은 학습·규칙 조정에서 분리한다.
+
 ### O0 — 학습 없이 바로 사용
 
 - 현 `yolo11m.pt`와 현 launch를 사용한다.
