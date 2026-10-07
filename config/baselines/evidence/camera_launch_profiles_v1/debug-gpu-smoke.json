@@ -1,0 +1,33 @@
+{
+  "scope": "debug_profile_four_image_publishers_smoke_not_performance_acceptance",
+  "errors": [],
+  "images": {
+    "mosaic": {
+      "messages": 121,
+      "decodable": true,
+      "last_source_stamp_ns": 1789980378247966289
+    },
+    "bev": {
+      "messages": 100,
+      "decodable": true,
+      "last_source_stamp_ns": 1789980378063709974
+    },
+    "yolo": {
+      "messages": 399,
+      "decodable": true,
+      "last_source_stamp_ns": 1789980378249657869
+    },
+    "resnet": {
+      "messages": 198,
+      "decodable": true,
+      "last_source_stamp_ns": 1789980378122157096
+    }
+  },
+  "model_modes": {
+    "resnet": 2,
+    "yolo": 2,
+    "twinlite": 2
+  },
+  "all_active": true,
+  "passed": true
+}

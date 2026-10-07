@@ -1,0 +1,65 @@
+{
+  "idle": {
+    "nodes": [],
+    "modes": {},
+    "managed": {}
+  },
+  "planning": {
+    "nodes": [
+      "camera_object_detector",
+      "camera_semantic_inference",
+      "camera_bev",
+      "camera_bev_fusion",
+      "camera_lane_vectorizer",
+      "traffic_light_infer"
+    ],
+    "modes": {
+      "camera_semantic_inference": 0,
+      "camera_object_detector": 0,
+      "traffic_light_infer": 0
+    },
+    "managed": {
+      "camera_semantic_inference": true,
+      "camera_object_detector": true,
+      "traffic_light_infer": true
+    }
+  },
+  "debug": {
+    "nodes": [
+      "camera_object_detector",
+      "camera_semantic_inference",
+      "camera_bev",
+      "camera_bev_fusion",
+      "camera_lane_vectorizer",
+      "traffic_light_infer",
+      "camera_object_visualizer",
+      "camera_semantic_visualizer",
+      "camera_bev_visualizer",
+      "camera_traffic_light_visualizer"
+    ],
+    "modes": {
+      "camera_semantic_inference": 2,
+      "camera_object_detector": 2,
+      "traffic_light_infer": 2
+    },
+    "managed": {
+      "camera_semantic_inference": true,
+      "camera_object_detector": true,
+      "traffic_light_infer": true
+    }
+  },
+  "legacy": {
+    "nodes": [
+      "camera_semantic_inference",
+      "camera_bev",
+      "camera_bev_fusion",
+      "camera_lane_vectorizer"
+    ],
+    "modes": {
+      "camera_semantic_inference": 0
+    },
+    "managed": {
+      "camera_semantic_inference": false
+    }
+  }
+}

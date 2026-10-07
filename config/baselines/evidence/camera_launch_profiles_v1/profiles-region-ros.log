@@ -1,0 +1,1 @@
+{"passed": true, "checks": {"outside": true, "lane_prepare": true, "lane_active": true, "gps_loss_lane_stays_active": true, "recovery_hold": true, "fresh_recovery_after_exit": true, "resnet_prepare": true, "resnet_active": true, "example_removed_external_controller_works": true}}
