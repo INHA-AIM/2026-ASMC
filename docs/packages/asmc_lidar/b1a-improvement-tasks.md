@@ -68,3 +68,8 @@ B1a 원본·고정 재호 브랜치는 대조군으로 보존한다.
 있다. HD맵/새 LiDAR의 후륜축 pose와 혼용하지 않는다. 판제와 권위 pose·lever·높이
 정책을 확인하며 중복 map TF를 발행하지 않는다. KITTI stereo baseline/rectification,
 nuScenes reference LiDAR 원점을 우리 MORAI 설정으로 복사하지 않는다.
+
+시간 연결도 남은 과제다. Main은 현재 source header를 ms로 양자화하고 이를
+`receipt_ns`로도 쓴다. 원본 ns와 실제 callback receipt를 내부 context에 별도로
+보존하고 replay clock lag와 비교해야 한다. 순수 코어의 causal receipt 시험 통과를
+Main의 수신 계측 완료로 확대하지 않는다. 진행 중 고정 측정의 소스는 바꾸지 않는다.

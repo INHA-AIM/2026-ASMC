@@ -25,7 +25,7 @@ YOLO 생산자를 `asmc_camera`에 opt-in 구현했다. 모델/통합 부하 검
 | IMU 선택 함수 | 도착 완료 표본만 전달, 유한값/유효 quaternion 검사 후 valid 지정 |
 | v3 장착 설정 | 출처 SHA와 단위 확인. 장착 z를 노면 기준 센서 높이로 사용하지 않음 |
 | 회귀시험 | 좌표·8코너·속도·관측시각·pose/IMU 선택 의미 검사. 실제 검출 성능 시험은 후속 |
-| 공용 `asmc_msgs` 타입 | LidarObject/Array, CameraObjectBox/Array 정의와 직렬화 검사. 카메라 객체 생산자는 opt-in 구현; LiDAR 생산자는 아직 없음 |
+| 공용 `asmc_msgs` 타입 | LidarObject/Array, CameraObjectBox/Array 정의와 직렬화 검사. 카메라 생산자와 Main의 typed LiDAR 출력은 opt-in 구현; asmc_lidar 자체 ROS 노드는 아직 없음 |
 
 빌드·시험 명령과 API 위치는 [패키지 README](../../../src/asmc_lidar/README.md)에 있다.
 소스에는 지면·tracker 후보나 실행 launch를 남기지 않았다. 이전 `unified.launch`,

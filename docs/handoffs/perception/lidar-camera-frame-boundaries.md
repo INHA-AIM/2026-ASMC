@@ -59,8 +59,11 @@ dynamic validity는 모두 false다. 이를 유효한 0속도·정적 판정으�
 기존 `PoseHistory`는 100ms 이내 bracketing 보간만 제공한다. 별도
 `BoundedPoseHistory` API는 다음 정책을 사용한다.
 
-- scan 수신 이전에 도착했고 source stamp도 scan 이전인 정상 GPS의 age는 최대
-  300ms다. 처리 중 늦게 도착한 GPS로 과거 관측의 map 출력을 소급 허용하지 않는다.
+- 현재 Main은 scan source-ms를 receipt cutoff로도 사용하며 이 시각 이전에 도착했고
+  source stamp도 scan 이전인 정상 GPS의 age는 최대 300ms다. 실제 callback receipt를
+  캡처한 값은 아니며 원본 ns stamp도 ms로 양자화된다. 순수 API의 receipt 정책과
+  Main 적용의 차이는 [시간 검토](camera-lidar-coordinate-reference-review.md#남은-한계와-후속-담당)에
+  남긴다. 실제 수신 시각·원본 ns·replay clock 검증 전 시간 계약 수락은 보류한다.
 - GPS 관측 당시 IMU로 안테나 offset을 제거한 뒤, 유효 scan IMU·속도로 짧은
   위치 보정을 한다. GPS 관측과 scan의 자세를 혼동하지 않는다.
 - 무효 status·0 좌표·비유한 값·잘못된 map offset은 map 가용성을 해제한다.
@@ -155,10 +158,40 @@ map gate, fusion 종료 집계를 보고하며 자동 운영 승인을 내리지
 smoke이며 반복 프로토콜 수락을 대체하지 않는다. timer의 마지막 부분 집계 누락과
 ROS 종료 후 logging 실패 시도는 보존했고 직접 stdout 최종 집계를 확인했다.
 
-아직 남은 수락은 동일 scan의 전체 파이프라인 CPU 재현, pitch-only/roll·pitch 객체
-보존·지면 비교, 주/음영 GPS 3조건 반복, 정상 map 추적 품질, subscriber 비용,
-실제 GPU 추론·fusion 부하와 사용자 직접 launch 확인이다. 기준 미달·독립 GT 부족은
-보류로 남기며 기존 분류 차이 2건의 승인도 새 실패에 자동 적용하지 않는다.
+### 2026-10-08 고정 재생 결과
+
+Simulator 종료를 감시하며 state 54회와 subscriber cost 24회, 총 78회를 완료했다.
+실행 완료는 운영 수락을 뜻하지 않는다. 원본 전체 로그·관측·자원 기록과 분석은
+[증거 목록](../../../config/baselines/evidence/lidar_camera_frame_boundaries_v1/README.md)에 있다.
+
+공통 경로의 주/음영 typed local은 매 실행 각각 649/208개 source stamp를 보고했다.
+주 bag에는 입력 무효 1–2개가 포함됐으며 음영은 모든 208개가 처리됐다.
+중복/역행 stamp는 0이고, GPS 무효·전달 중단에서도 local 공급은 이어졌다.
+map observer gate 위반은 0이지만 observer와 Main callback의 수신 경계는 다르므로
+시간 계약 수락으로 확대하지 않는다. 정상 GPS에서도 일부 `POSE_UNAVAILABLE`이
+있다. source-ms cutoff 및 replay clock 지연 문제와 함께 원본 기록을 유지한다.
+
+24개의 정상/무효·중단 GPS 대조 모두 strict local payload 일치는 실패했다.
+공통 stamp 집합은 같지만 주 bag 542–602프레임, 음영 179–197프레임에서 형상·ID 등을
+포함한 payload가 달랐다. 첫 primary/pitch 반복의 상호 유일 중심 대응(1mm)에서는
+대조별 8,252관측의 분류가 같았지만, 미대응 관측 1,300여 개가 남는다.
+정상 GPS 두 반복 사이에도 형상·ID 차이와 분류 차이 1건이 있었다.
+이는 원인을 GPS 또는 추적 결함으로 단정할 증거도, 스케줄링 차이로 면제할 근거도
+아니다. 동일 raw 관측·IMU/CAN 선택을 고정하는 전체 CPU 재현이 필요하다.
+
+구독 없음/local/map/동시 구독을 각 3회 비교했을 때 주 bag Main CPU의 실행별
+p50 중앙값은 34.7–34.9%(한 CPU core=100%), RSS 실행별 p95 최대는 221.6MiB 이하였다.
+음영 CPU는 20.5–24.4%, RSS는 246.4MiB 이하였다. 주 bag local 단독/동시 출력 p95
+wall 지연은 각각 44.5–45.6/44.5–45.3ms, 음영은 47.2–48.1/47.0–49.7ms였다.
+이 표본에서는 검출을 두 번 하는 수준의 추가 부하는 관측되지 않았지만,
+비용 0 또는 전체 카메라/GPU 스택 성능 보장은 아니다. 고정 YOLO, 진단 observer
+포함, GUI 없음이라는 측정 범위를 유지한다.
+
+아직 남은 수락은 실제 callback receipt·원본 ns의 시간 계약 적용, 방향을 검증한
+자차 속도, 동일 scan의 전체 파이프라인 CPU 재현, pitch-only/roll·pitch 객체
+보존·지면 비교, 정상 map 추적 품질, 실제 GPU 추론·fusion 부하와 사용자 직접
+launch 확인이다. 새 경계와 roll 기본값은 OFF이며 PR #72는 Draft다.
+기준 미달·독립 GT 부족은 보류로 남기고 기존 분류 차이 승인을 새 실패에 적용하지 않는다.
 
 재호 후속 과제는 [B1a 개선 과제](../../packages/asmc_lidar/b1a-improvement-tasks.md)의
 단일 경로 터널 필터 이식·잔여 벽/군집 혼합·객체 보호/높이·충돌 경계·전체 패키지

@@ -1,0 +1,388 @@
+{
+  "config": {
+    "schema_version": 1,
+    "experiment_id": "lidar_camera_frame_boundaries_v1",
+    "conditions": {
+      "simulator": "stopped",
+      "network": "none",
+      "ros_master_port": 11314,
+      "resource_sample_sec": 0.2,
+      "realtime_rate": 1.0,
+      "repeats": 3,
+      "fresh_yolo_inference": false,
+      "fusion_trace": false,
+      "gui": false,
+      "operational_defaults_changed": false
+    },
+    "bags": {
+      "primary": {
+        "path": "/data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag",
+        "injection_window_sec": [
+          20.0,
+          40.0
+        ],
+        "b0_trial": "fusion-primary-C1-r1"
+      },
+      "shadow": {
+        "path": "/data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag",
+        "injection_window_sec": [
+          6.0,
+          20.0
+        ],
+        "b0_trial": "fusion-shadow-C1-r1"
+      }
+    },
+    "profiles": {
+      "legacy": {
+        "enable_common_geometry": false,
+        "lidar_level_roll": false
+      },
+      "common_pitch": {
+        "enable_common_geometry": true,
+        "lidar_level_roll": false
+      },
+      "common_roll_pitch": {
+        "enable_common_geometry": true,
+        "lidar_level_roll": true
+      }
+    },
+    "gps_modes": [
+      "normal",
+      "invalid",
+      "missing"
+    ],
+    "subscriber_modes": [
+      "none",
+      "local",
+      "map",
+      "both"
+    ],
+    "frozen_yolo": {
+      "archive": "config/baselines/evidence/camera_lidar_b0_v1/raw-fixed-fusion.tar.gz",
+      "weight_sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+      "allowed_names": [
+        "bus",
+        "truck",
+        "person",
+        "car"
+      ],
+      "confidence": 0.7,
+      "availability": "recorded_output_ros_ns",
+      "coordinates": "legacy_int_truncation_from_original_float",
+      "hood_mask": "semantic_contour"
+    },
+    "gates": {
+      "local_gps_independent": true,
+      "map_max_gps_age_sec": 0.3,
+      "gps_recovery_samples": 3,
+      "imu_can_max_age_sec": 0.12,
+      "fusion_offset_sec": 0.05,
+      "fusion_wait_sec": 0.2,
+      "promote_common_geometry": false,
+      "promote_roll_pitch": false
+    },
+    "followup": {
+      "real_gpu_inference": "after frozen-input coordinate and state comparison",
+      "independent_object_gt": "not present in these bags; visual review required",
+      "normal_map_tracking_quality": "review before any default promotion"
+    }
+  },
+  "revision": "682bff65153c09b16a69aa6bd378708b01e781c6",
+  "host_state": {
+    "checked_unix": 1791401683.7225597,
+    "checker": "Windows Get-Process Simulator",
+    "return_code": 0,
+    "simulator_processes": [],
+    "error": ""
+  },
+  "code_sha256": {
+    "config/experiments/lidar_camera_frame_boundaries_v1.yaml": "1fdda75fb427569e1dec49208976118f148cdcaf26b21b17b181a0b1e29a26a4",
+    "src/asmc_lidar/CMakeLists.txt": "a7eb02e68251782fafb6f696e6725b2a0768b13af4314eb81ec4223eab7ed441",
+    "src/asmc_lidar/README.md": "3464f2064be7e1c67436d3d3093d24e4da988952f6496bc20beb00a3a860211a",
+    "src/asmc_lidar/package.xml": "b1c1473493f905781761aad26cba6833caf395add230b9fb6c715ebc207b5598",
+    "src/asmc_lidar/config/autonav_v3.yaml": "e841fd425e2a35c325b7b5f12da12cb8b067119526acd4c343c14581997f1e88",
+    "src/asmc_lidar/test/imu_selection_test.cpp": "65e825062be921fb3724830f89b3c6d2e950c8da0d6f758df890dff353cb1ac5",
+    "src/asmc_lidar/test/geometry_boundary_test.cpp": "a689f58bb08cbb6f997f983e4daa03d41af8cc50911964fc59e33a1883be28d7",
+    "src/asmc_lidar/test/frame_time_core_test.cpp": "bb21b979597eb0d41a0a901682ed533efe2aeaa9864cde43d5b30254cbd79234",
+    "src/asmc_lidar/include/asmc_lidar/frame_time.hpp": "4310c0bc743eb7740ca677e636d7163b0b78ed9d15527c5002e0933f874e8634",
+    "src/asmc_lidar/include/asmc_lidar/projection.hpp": "4fb9e46148971c10ea7c9c02d2044274a3ed5374f79fb2dd61a6aff46773af91",
+    "src/asmc_lidar/include/asmc_lidar/imu_selection.hpp": "4729d03c5fa0fec28e129e9efccc23781711783aa6feac19b7796144dde514f5",
+    "src/asmc_lidar/include/asmc_lidar/bounded_pose.hpp": "01073e875c23bc22c1b7c68f9cd62b497b3af3f72e98812845d34b6e05b31ffe",
+    "src/asmc_lidar/src/projection.cpp": "d1a66bd384d3ae5064c21b168a32c3934e38a4953d8be9e1974e868d71cb7fae",
+    "src/asmc_lidar/src/bounded_pose.cpp": "d50a10667345821956d1abea39bfe59e67be3afdcb1ad8aba6f2c90b1440f974",
+    "src/asmc_lidar/src/frame_time_core.cpp": "8c5dcf618e6ffe7882807394de9ce7ead1f00b1648e7d6de396642532a54a382",
+    "src/lidar+sensorfusion/src/Main/CMakeLists.txt": "156b2ee6e7d7f970438f636947578895d2158029dc2a533fe4b10e0ab703c473",
+    "src/lidar+sensorfusion/src/Main/setting.yaml": "a6d84af1ab14015cdf555ae715cdd8288cde9f1c1ee7d8e0a96e3931751ad7a2",
+    "src/lidar+sensorfusion/src/Main/main.launch": "ff8e4a73a5130d8a59b7cd32354c4bdd0dc0c5c491568380872b2113d09f6768",
+    "src/lidar+sensorfusion/src/Main/package.xml": "8cfa3cd4fce247834efc95cd6954de1802398b683a81f76135aa61d68bf40e4a",
+    "src/lidar+sensorfusion/src/Main/known_static_objects.yaml": "2d8fe6e5b47215e85fbe05f03b552e06096499f0bba43e1a54166245ab4242a1",
+    "src/lidar+sensorfusion/src/Main/YOLOWeight/yolo11m.pt": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+    "src/lidar+sensorfusion/src/Main/YOLOWeight/yolo11m(1).pt": "6cf89c17d9a1122b9b6f3f6abe7574bf3f80cc4653e549d1bfd102ec8e421bf9",
+    "src/lidar+sensorfusion/src/Main/scripts/camera_objects_yolo_bbox_adapter.py": "524492f6208166e2d36907b11bdb410ec9a7451f8cfdb6fce21c17fdbedbd0c4",
+    "src/lidar+sensorfusion/src/Main/scripts/build_known_static_object_catalog.py": "7d1c771dccb004e22e21ba594f02ce0a77cb9a86c6530299e1f0e06241fdbb99",
+    "src/lidar+sensorfusion/src/Main/scripts/yolo_detection_node": "ed823451690a2dea8a54acc5f8724b3de1086ed9d2ed082657d4a51ad562bc00",
+    "src/lidar+sensorfusion/src/Main/scripts/__pycache__/camera_objects_yolo_bbox_adapter.cpython-38.pyc": "5be9329d03d6afd1698b2c9283f5e6f5876f3da47c48fb52d9ec9e39387839c6",
+    "src/lidar+sensorfusion/src/Main/test/test_fusion_continuous_replay.py": "528f22d309ddc9f09590d8abe1837cca3e898d9ddbe4a5ea232fb8697de72e73",
+    "src/lidar+sensorfusion/src/Main/test/test_static_structure_exclusion_filter.cpp": "bdd8fea5fe1489874463a9ec4b9f8062fcfb700eeaaab254ea247193310bc13a",
+    "src/lidar+sensorfusion/src/Main/test/test_frame_boundary_ros.cpp": "2a28ab4c6b37b1c7511f4e5d051180e7294702f03584ffead5b38d65a2769a3a",
+    "src/lidar+sensorfusion/src/Main/test/test_fusion_class_policy.cpp": "41707481327478bb26f527212c1a516e99b885fb7977367818be457e138e532a",
+    "src/lidar+sensorfusion/src/Main/test/frame_boundary.test": "8286dfdf4d0e1aeffa65ef362659370d0b557a7c7e345fe9f6241112e871696f",
+    "src/lidar+sensorfusion/src/Main/test/test_fusion_state_propagation.cpp": "6e87a88f660cf504c6b940c179bc12b93eca710f925ba8a91e7df03531f4e90f",
+    "src/lidar+sensorfusion/src/Main/test/test_planning_relevance_filter.cpp": "0cb08ccce599d8643021a269470f37d6f2ef5b702378f16d10bca34e6246f4c3",
+    "src/lidar+sensorfusion/src/Main/test/test_known_static_object_filter.cpp": "b50ef18db1ab15b562b6531a8f4d18b4404278b19d67cb5d86dae365737e0849",
+    "src/lidar+sensorfusion/src/Main/test/fusion_continuous_trace_replay.cpp": "b2d88795702acc70bb67b210825203138768e61e2d60dfcf0e91964d09ee0d4b",
+    "src/lidar+sensorfusion/src/Main/test/test_fusion_time_matcher.cpp": "746def434406f7becdb98f24e9e7ef57b3bf723a6ab3ec0e361e8e797bfc6c9b",
+    "src/lidar+sensorfusion/src/Main/test/camera_objects_adapter.test": "6617432bb998cba285a68f77537017ba0d5dc4d00ef2c694a11f67a203d484c4",
+    "src/lidar+sensorfusion/src/Main/test/test_camera_objects_adapter.py": "ee8b341fb383a115207d3a5eed7cdaff3f96b84e4f296d4d103dfd3bf2925734",
+    "src/lidar+sensorfusion/src/Main/test/test_tracking_association.cpp": "941cd26e9767fd0d12b404d55a85e9d2e5bc71ae4ea3dbed959708abc059332c",
+    "src/lidar+sensorfusion/src/Main/test/test_sensor_pose_history.cpp": "67dd8675ca59c250168660b6aeb66b93bc8ca2f75c350691efbf6ca24c01e0cc",
+    "src/lidar+sensorfusion/src/Main/test/test_gps_sanity_filter.cpp": "78e053d5d1ab565d65cdd72848044aa66909b600bab3118fb4a08f66044bf4f8",
+    "src/lidar+sensorfusion/src/Main/test/fusion_class_trace_replay.cpp": "0c4bafb4c1c40d0c4e99db95bfdffd727deab86f8b0d86c5f734c6087761a3f6",
+    "src/lidar+sensorfusion/src/Main/test/test_runtime_globals.cpp": "6ee38e9d9b7f9a64ddd17a67fafd6a0eafb545d6706faec454fa58dedc71f53b",
+    "src/lidar+sensorfusion/src/Main/test/test_camera_objects_adapter_ros.py": "ce5979ee332ab7729d5fc0847a3749308ea55d6681046524e6c0d44d8b523b31",
+    "src/lidar+sensorfusion/src/Main/test/test_fusion_replay.cpp": "0764e682e6fb4d416f47b9992f10840167f44f176f9256d0e0aaaff8fb6a33a7",
+    "src/lidar+sensorfusion/src/Main/test/test_motion_classifier.cpp": "35d801b7a1f93ac29bc2b26a5ea5931ee6927b60a33e11e4d56bacde8a3250ef",
+    "src/lidar+sensorfusion/src/Main/test/test_ground_evidence.cpp": "2e34ee478a15f02b05f884bd81ef286b5f03657a58eaf918bba37c216efa4e02",
+    "src/lidar+sensorfusion/src/Main/test/test_drivable_boundary_filter.cpp": "f4dc5f5d1cb53ee1d659dd0298d059bc4c1104ff66e88e81f9e7384c20b6b782",
+    "src/lidar+sensorfusion/src/Main/test/test_drivable_footprint.cpp": "2aa782d0fe4a4bc6e8a8c920114416e58df6a9cb7f505f6c3f7db7a95b5818d9",
+    "src/lidar+sensorfusion/src/Main/test/test_adaptive_clustering.cpp": "8eafa530f27bf9113eaba311229e8e342a16e1d87bf31f9f6b1a11f3e6d56d47",
+    "src/lidar+sensorfusion/src/Main/test/__pycache__/test_camera_objects_adapter.cpython-38.pyc": "d98b89b9b7ebce0f038035d29eba10596e9a7e276d2e16c9549030d56a40065c",
+    "src/lidar+sensorfusion/src/Main/src/main.cpp": "8431dd17291f324f75b8c5dcd19869e589daca7e0efad918f4c6a492a4a83d68",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/StaticStructureExclusionFilter.cpp": "35029c449040b63517b9bed41dd31b5833f422c3af467a43ffb27095ebcd60c0",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectSender.cpp": "b52b5d6dd3fbccb254c29813de869516c69b9185fb7393a2c18917a8ee4ef6d4",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlanningRelevanceFilter.hpp": "ec68501a9fdfb0e0f26f69c9826c2ae56733e4a3d70932de03f5213932192127",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.hpp": "eff6c628373cbe121af149a66b3f735a1d905803fe15ddd269d3bc442227979b",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/KnownStaticObjectFilter.cpp": "5b932c69fbb454ddb0004cd504e39c4637617a1b9fbd3a2d5fb80acfa394fce2",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/DrivableBoundaryFilter.cpp": "088796cf4153a6cf9c7a791ce6c96b670624fc2a28473daa4e3b2ab3929b2b7a",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlanningRelevanceFilter.cpp": "dd32883d367e8517034cda9097a35c03da852e82804941828dfa50a10aabf61c",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/StaticStructureExclusionFilter.hpp": "6b4f24ae5e496732520a6f743f0c396e9ab3c9ea5858ec7644c1e84db291c2a7",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectAdapter.hpp": "68aac75f6ca683ef3865db8c46f369d14086ddc680c81a31bc0a0e8581744bb2",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectSender.hpp": "1e3aa05c54823b64eeb28673207252854c604ce433e4b87467edd9b16cdaf221",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/DrivableBoundaryFilter.hpp": "9e39f5c92a508e91963de0385cb9613949fb7b5b649431e2694294b1434b2786",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/DrivableFootprint.hpp": "2e52903fc0978c9547ea833223610842145fe5b09dd00be07d288a4d2affc194",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/KnownStaticObjectFilter.hpp": "e6b38578eaeb81f0ed033daf9c4527a4f35981b7a057d5ad855dc6cfe813289e",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.cpp": "9c2fc1a26435f2885552ae5e6c9d4e3497908d7c1319614bf7284ef9858669d1",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectTypes.hpp": "c1ae89819ae7cdd19074f79bfdf728630f3d56ceafc69df00dddd832d5b599b2",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/DrivableFootprint.cpp": "e8028b9cca8e07f97471c23642c4db1e8cd0dfd43110a18e5bd59090e31e092e",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectAdapter.cpp": "4bc8300942fe442326162526570c8d8a46c6aa2439550c6acee14c7b55512e0d",
+    "src/lidar+sensorfusion/src/Main/src/Camera/LaneDetection.cpp": "52770b12ebcc27fa984541c495abc7a59b5ca4d6b3f1a008782685580a03aeaa",
+    "src/lidar+sensorfusion/src/Main/src/Camera/TrafficLight.cpp": "3fef4a73f4072a152f62c7562a2e5b5278f46fd2d634e2a22051d132bdb3ec4d",
+    "src/lidar+sensorfusion/src/Main/src/Camera/StopLine.cpp": "7124cd819ff23dc4b6836a2a9e43c0100dbe295d9e7be5f980beba5069001f72",
+    "src/lidar+sensorfusion/src/Main/src/Camera/Camera.cpp": "39415a2d39df556d0d1b8109b2cbd04b0dd289f8f0ff0b40a4d71901a2292493",
+    "src/lidar+sensorfusion/src/Main/src/Camera/Camera.hpp": "1bac11f0a0f25e39d92c4fcdd1e3e2de88a7c493a9f193a7bdbe3bdba1e6d304",
+    "src/lidar+sensorfusion/src/Main/src/Camera/YOLO/YOLODetection.py": "1cd5c1053245f3d3efbb63aac3cc311572bbbd51622b1ccd25976dd67a943cde",
+    "src/lidar+sensorfusion/src/Main/src/Camera/YOLO/__pycache__/YOLODetection.cpython-38.pyc": "44cc514ece2d7f7f79b43e0e661ecfcb354903cac13dcc74861c9d9f490c2091",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionStateTrace.hpp": "e0958747025923739e114ae0b88f7cfbf90b9b2d90c24d8ceb4adc7df3f7ff6b",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionClassPolicy.hpp": "5167f228d5f1617c123a72a58a1e89d20728a582530306b59130053e5d9b1c1b",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionTimeMatcher.hpp": "064e00ef0e446bdc5e46e7c248533fc289494ca49264b9486ca4f12821d8ea80",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionLiDAR.cpp": "81d57dddacf8d800937fbbdfd968d48d05303f619458527e1ddaa98a01d79a69",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/SensorFusion.cpp": "864ea8d631b822bc9337057e305bdd33538e271100c728920d6d96adbdbe18b8",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionTrace.hpp": "cf600609ff36ce64a4272e210dbb5c42ee8899284cd921a30864151fae235eac",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionCamera.cpp": "45c71455ed80260e47782e2529e2308032ee123bd44336966b8909a1932c650a",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionClassState.hpp": "5eab401baaef45d73b0abc6be4e539f9e370215384e1ecf6dd43df9a178b7163",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/SensorFusion.hpp": "e165354b899497b4e62779ea4ae97952332eaf3147e6530c5fb57f34fe37dba4",
+    "src/lidar+sensorfusion/src/Main/src/Global/Global.hpp": "7dd518ece0173d5209482ba8d12907838423aaff043d64e48fb6274ca6c63e0c",
+    "src/lidar+sensorfusion/src/Main/src/Global/Global.cpp": "707589ca0a5d043831e20f10a7b96a45cc63074268a82b2e6f305a801fd01d60",
+    "src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundary.cpp": "fa81fc6045d87a94366ca159c16c458f7f0aeb250816a5fe6d24cf2d8e052e02",
+    "src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundary.hpp": "e51d03f7a9652e774f9bfded286e7ec9b738bbda93fa9c0d79c4bb87bcc6a73c",
+    "src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundaryPublisher.hpp": "5136354e7827f9cce67cb26ec213c0b584455d6e0faaa79866d5bccb7fb32724",
+    "src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundaryPublisher.cpp": "4682fb440e6ec90afbaede0d6fd8587c1e6a107681e7a28aaf77ba9ee3003fc3",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/revision.txt": "6793772a7b3481d5cef2c03dcf8a6545ec0a57a77d39c11beb2d6bb6d74ff1b7",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/UDPReceive/LiDARReceiver.cpp": "3b589d44ac3d167e28c89a9c74444d7015ae1bf3a25c087b3fc54a6f6beecb57",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/UDPReceive/LiDARReceiver.hpp": "48579e358c2bc0da2030e072d94f45ba1d26a188e3741a6250b49335e624d0e8",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Kalman/kalman_utils.hpp": "0e7905fd97a2aa8219e58a8a86549910f44cc967a61f059283ee6c54bdb69500",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Kalman/Kalman.cpp": "b12660ab57b1433b09ab876c7fa73f8dcf38788220e263ce21708b78076615ba",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/FrameFilter/FrameFilter.cpp": "af413aa180b26a968f413cd2052bc718e78a1d7a94764186748596dfe1fbb155",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/FrameFilter/FrameFilter.hpp": "f89b4428a7c006d3c478e0b27985c00520c9b0fc2c292aa15fec3d377d204043",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp": "f23fa8311e64b340b4d11256608916580dfeee1c7fd1183e75e91854d5ba669f",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.hpp": "3fd777ca746949b1be4c6e75e57be2d2509565caca2bfa8752ab3b68a5246029",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/PipelineProfile.hpp": "6356f0ed778f102f73297d8a09df65cc3e0f39c875f72a4a0f5c6baf7a0f02f2",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/RoiVoxel/RoiVoxel.cpp": "0d0ade13762fe75b6934203790041baa697053b17edadf4cde0589f795d64d2d",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/RoiVoxel/RoiVoxel.hpp": "87e774a14559a11f8a1485a42b1e51857504adf09740c434fc69cfda7fe9f4c0",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Clustering/Clustering.hpp": "f6c5d3bce5699db032d9af622f3ec672d36b9b60eaa55f2adf12db0c9903e42a",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Clustering/Clustering.cpp": "2c80ca4c576a4ab93c6cb670bb5a5500509e8d8bb1977313b754065255cff6b3",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.hpp": "0ac41f97d1205feca7ce76d4a8fd96af225ab187a4e3ea1cd84392b849a8f6df",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp": "b8080233674d5d188cb2ec5f96ec9c7efc518cb7963372136a976e0a8da465b0",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Visualization/Visualization.hpp": "2bf6f170a9bed8381a907988014e7b85658c13112ccc62610bf2e17292cbb9c2",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Visualization/Visualization.cpp": "db324fd0276b3fe8c1f1d8487cb91c3f4cb492b89afe16d10c672cfd957e7c96",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/ImuRansac/ImuRansac.hpp": "70b378dd851d2e6b14e10cce1ad24f53358d72ae6230d6b080568c6cda75bbb7",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/ImuRansac/ImuFusion.cpp": "fa38728eb231a7f6f6f77b06f4823b53a7642364435e3598b42706ecf7389f5c",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/ImuRansac/GroundEvidence.hpp": "b1af1be8a3a0f6f228ffbed9a9937d908351149af89409ccadded7efb1938e22",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/ImuRansac/Ransac.cpp": "f485474c92915cc87807126659f7717149b63d2847941d2eabd344e874ccaf09",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/IMMFilter/IMMFilter.cpp": "b41ed97aadf35c4b6dcaf33e312ecb650d06dcb49da601fc16b7363652c6bfb1",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/IMMFilter/IMMFilter.hpp": "996c70cf2bb2bcf20223f70605b45ee27ee5093e6f81c6acc1d6765fcc0860e1",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/MotionClassifier.cpp": "8938f1e1791eae84063c95f17847191ec771bcee23dd2b0358607cede8ed87f6",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/Tracking.cpp": "75abf8c0a33dade82b73e7f9acc88e8283be23f526f1d8f5b65776570c2e504f",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/MotionClassifier.hpp": "3d6d2281b82e7b2a788fb8e56be8058347647b7af792330f3424916fb47ad49b",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/tracking_utils.hpp": "ef6e8dd459374afffff8308d990a481de7d37708d7387dcc78d2932bef1e3967",
+    "src/lidar+sensorfusion/src/Main/src/DeadReckoning/DeadReckoning.cpp": "7d5fa205c5704f9866ae7edab79b19935467ed0b688b73f13c73c17966fb6c30",
+    "src/lidar+sensorfusion/src/Main/src/DeadReckoning/DeadReckoning.hpp": "f23566901228535e0d00861645928909ed28a31f639cde196328804b70d31c46",
+    "src/lidar+sensorfusion/src/Main/src/Parser/SensorPoseHistory.cpp": "832b3c7b9b06854ecce68753cd4038b4ad0a827d1eb997377b06f9715be6e87c",
+    "src/lidar+sensorfusion/src/Main/src/Parser/GpsSanityFilter.cpp": "ff1090eb1f5b1f7a47b2e3a32731a3fcc7f6f82c2bab634aec272f0961233b82",
+    "src/lidar+sensorfusion/src/Main/src/Parser/Parser.cpp": "9a6436a42c0ffa08e94e692bd43f0787d592694d2b699ba999b384b82328c1d4",
+    "src/lidar+sensorfusion/src/Main/src/Parser/SensorPoseHistory.hpp": "940fca3f98803a72e3bf6149f5ee5716ae08a39cf2cd469533afd5ff459c1a5e",
+    "src/lidar+sensorfusion/src/Main/src/Parser/Parser.hpp": "90f84bcb15919052e098c7bbf9d63c78151b2c5a881f4972bedbbe29c5b3a2d0",
+    "src/lidar+sensorfusion/src/Main/src/Parser/GpsSanityFilter.hpp": "aa57d7bc5fc1043cefe2fa903e25561e9f0ce37a0f8845a93506e0149369682a",
+    "tools/perception/frame_boundary_measurements.py": "582127e96f86721aacc3e1aca0d0e04e68dc17cf648675b9ac71c557923f69c5",
+    "tools/perception/run_frame_boundary_matrix.py": "3ec29cde5099ac4d283c711e40212d59e86c43d11e4dba5e45a340180948cb59",
+    "tools/perception/test_frame_boundary_measurements.py": "a3a37b65aa4d9387fb447243135279aff751ce690980884d526f15912399c6ad",
+    "tools/perception/run_frame_boundary_trial.py": "827904af33921ee3dd12a4e203c7147349ebc4978e670cfc7db13f11d1f1cfb0",
+    "tools/perception/analyze_frame_boundary_matrix.py": "0a53ca015f12ca5129acc619ab4631c1b380950ab853d94be596c8ad04ba00ef"
+  },
+  "fixtures": {
+    "schema_version": 1,
+    "config_sha256": "7741672eba80fd65999ac8e8ebf81b995d241a80ed11a270e61c69bca79be5e9",
+    "original_archive_sha256": "37a07832f698162183f0ea06902b10db03c306ad5ef0dc76a850ee0fdccc9db4",
+    "fresh_inference": false,
+    "bags": {
+      "primary": {
+        "source": "/data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag",
+        "source_sha256": "859cbd84a1e845b76426f96be2778c6f54ea77fe348631a976ef3adf666d0c02",
+        "source_start_sec": 1790654785.6578424,
+        "source_duration_sec": 48.926517724990845,
+        "source_topics": [
+          "/Ego_topic",
+          "/cam_extra/image_jpeg/compressed",
+          "/cam_left/image_jpeg/compressed",
+          "/cam_right/image_jpeg/compressed",
+          "/gps",
+          "/image_jpeg/compressed",
+          "/imu",
+          "/morai_sensor_bridge/diagnostics",
+          "/morai_udp_bridge/diagnostics",
+          "/tf_static",
+          "/velodyne_points"
+        ],
+        "yolo_events": 978,
+        "yolo_event_sha256": "ac6745a62d2664f569efbcd0b25029c02d92114dd81c6f51f8a4800ba738e20b",
+        "variants": {
+          "normal": {
+            "path": "/evidence/fixtures/primary-normal.bag",
+            "sha256": "ab14a17eb0ef1267cba1a1dff73a021cdce7e543e401837745ca3d8844f24a54",
+            "topics": {
+              "/Ego_topic": 2445,
+              "/camera/image/compressed": 979,
+              "/imu": 2384,
+              "/velodyne_points": 649,
+              "/gps": 245,
+              "/YOLO/BBox": 978
+            },
+            "injected_gps_messages": 0,
+            "omitted_gps_messages": 0,
+            "image_bytes_and_sensor_headers_unchanged": true,
+            "natural_gps_denial": false
+          },
+          "invalid": {
+            "path": "/evidence/fixtures/primary-invalid.bag",
+            "sha256": "c6c9a3f35c6a9d10721305c532e91955b5a10daaecca1eb4635ddab0d10982b1",
+            "topics": {
+              "/Ego_topic": 2445,
+              "/camera/image/compressed": 979,
+              "/imu": 2384,
+              "/velodyne_points": 649,
+              "/gps": 245,
+              "/YOLO/BBox": 978
+            },
+            "injected_gps_messages": 100,
+            "omitted_gps_messages": 0,
+            "image_bytes_and_sensor_headers_unchanged": true,
+            "natural_gps_denial": false
+          },
+          "missing": {
+            "path": "/evidence/fixtures/primary-missing.bag",
+            "sha256": "f12c6c5654d33f33c14a925d933dc0ade9300169645985b2f842c18c303b49b0",
+            "topics": {
+              "/Ego_topic": 2445,
+              "/camera/image/compressed": 979,
+              "/imu": 2384,
+              "/velodyne_points": 649,
+              "/gps": 145,
+              "/YOLO/BBox": 978
+            },
+            "injected_gps_messages": 0,
+            "omitted_gps_messages": 100,
+            "image_bytes_and_sensor_headers_unchanged": true,
+            "natural_gps_denial": false
+          }
+        }
+      },
+      "shadow": {
+        "source": "/data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag",
+        "source_sha256": "9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34",
+        "source_start_sec": 1789141084.3867638,
+        "source_duration_sec": 24.751930475234985,
+        "source_topics": [
+          "/Ego_topic",
+          "/cam_extra/image_jpeg/compressed",
+          "/cam_left/image_jpeg/compressed",
+          "/cam_right/image_jpeg/compressed",
+          "/gps",
+          "/gps/fix",
+          "/image_jpeg/compressed",
+          "/imu",
+          "/morai_sensor_bridge/diagnostics",
+          "/morai_udp_bridge/diagnostics",
+          "/tf_static",
+          "/velodyne_points"
+        ],
+        "yolo_events": 493,
+        "yolo_event_sha256": "2a05873f4f88c166a25213a0e9adac5b6fcd66d2420cb40d605da6b8aba06547",
+        "variants": {
+          "normal": {
+            "path": "/evidence/fixtures/shadow-normal.bag",
+            "sha256": "c9bdd50d53661f430826f544df35dd1b3ef56a99cf2db3918656d208bf254665",
+            "topics": {
+              "/imu": 1223,
+              "/Ego_topic": 1238,
+              "/camera/image/compressed": 494,
+              "/gps/fix": 124,
+              "/gps": 124,
+              "/YOLO/BBox": 493,
+              "/velodyne_points": 208
+            },
+            "injected_gps_messages": 0,
+            "omitted_gps_messages": 0,
+            "image_bytes_and_sensor_headers_unchanged": true,
+            "natural_gps_denial": false
+          },
+          "invalid": {
+            "path": "/evidence/fixtures/shadow-invalid.bag",
+            "sha256": "9d182ece0a41f893a27303941dfff55fbe00e883c12ee941dc58a0dd011133a9",
+            "topics": {
+              "/imu": 1223,
+              "/Ego_topic": 1238,
+              "/camera/image/compressed": 494,
+              "/gps/fix": 124,
+              "/gps": 124,
+              "/YOLO/BBox": 493,
+              "/velodyne_points": 208
+            },
+            "injected_gps_messages": 140,
+            "omitted_gps_messages": 0,
+            "image_bytes_and_sensor_headers_unchanged": true,
+            "natural_gps_denial": false
+          },
+          "missing": {
+            "path": "/evidence/fixtures/shadow-missing.bag",
+            "sha256": "89a73745c22831a6c985a3faceb299c29dd237fe22d4fe0cc2fdfdd7c7f9544f",
+            "topics": {
+              "/imu": 1223,
+              "/Ego_topic": 1238,
+              "/camera/image/compressed": 494,
+              "/gps/fix": 54,
+              "/gps": 54,
+              "/YOLO/BBox": 493,
+              "/velodyne_points": 208
+            },
+            "injected_gps_messages": 0,
+            "omitted_gps_messages": 140,
+            "image_bytes_and_sensor_headers_unchanged": true,
+            "natural_gps_denial": false
+          }
+        }
+      }
+    }
+  },
+  "binary_sha256": "94a811002b82746c378d2f1b8ffa813dba0267ef1d0696aa79e76917fdf2397d",
+  "library_sha256": "e8e46822785c4a0ba5012eaed96a99ee1a1d79ca17aba8fb154ea10bf6e53aa1"
+}

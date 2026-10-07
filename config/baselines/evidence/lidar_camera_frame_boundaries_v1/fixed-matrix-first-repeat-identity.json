@@ -1,0 +1,51 @@
+{
+  "state-primary-common_pitch-invalid-both-r1": {
+    "common_lidar_stamps": 649,
+    "matched_observations": 8252,
+    "unmatched_observations": 1343,
+    "unmatched_candidate_observations": 1362,
+    "old_only_lidar_stamps": [],
+    "new_only_lidar_stamps": [],
+    "reassigned_ids": 6122,
+    "classification_differences": []
+  },
+  "state-primary-common_pitch-missing-both-r1": {
+    "common_lidar_stamps": 649,
+    "matched_observations": 8252,
+    "unmatched_observations": 1343,
+    "unmatched_candidate_observations": 1332,
+    "old_only_lidar_stamps": [],
+    "new_only_lidar_stamps": [],
+    "reassigned_ids": 5455,
+    "classification_differences": []
+  },
+  "state-primary-common_pitch-normal-both-r2": {
+    "common_lidar_stamps": 649,
+    "matched_observations": 8964,
+    "unmatched_observations": 631,
+    "unmatched_candidate_observations": 606,
+    "old_only_lidar_stamps": [],
+    "new_only_lidar_stamps": [],
+    "reassigned_ids": 6596,
+    "classification_differences": [
+      {
+        "stamp_ns": 1790654799885000000,
+        "old": [
+          22,
+          "unknown",
+          "unknown"
+        ],
+        "new": [
+          22,
+          "car",
+          "car"
+        ],
+        "center": [
+          -0.0736125573828943,
+          -2.6808955669403076,
+          0.8009184914374176
+        ]
+      }
+    ]
+  }
+}

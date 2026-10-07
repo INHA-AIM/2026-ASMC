@@ -83,6 +83,16 @@ raw 점에는 `L_scan⁻¹`을 적용하지 않는다. `L_scan`은 해당 scan�
 [수치 증거](../../../config/baselines/evidence/lidar_camera_frame_boundaries_v1/fusion-coordinate-audit.json)에
 기록한다. 이는 54개의 독립 실환경 보정 GT 시험이나 모델 성능 측정이 아니다.
 
+기록된 typed local/map 코너에서 실제 적용한 rigid pose도 복원해, 관측 이전 Ego
+위치와 읽기 전용으로 비교했다. 주/음영의 첫 normal/pitch-only 실행에서 각각
+637/205개를 비교했고 local→map rigid 잔차는 최대 `2.64e-13m`였다. Ego에 대한
+XY 차이 p95는 각각 **0.170/0.257m**, 최대 **0.404/0.337m**였다. Ego 표본은
+최대 28.7/33.4ms 이전 값이며, rear-axle map/ENU heading이라는 참조 가정과
+시차가 포함된다. 이 값은 독립 객체 GT recall이나 pose 수락 임계값이 아니다.
+검사기는 [pose 출력 감사](../../../tools/perception/audit_map_pose_outputs.py), 원본은
+[주 bag](../../../config/baselines/evidence/lidar_camera_frame_boundaries_v1/frame-pose-audit-primary.json)과
+[음영 bag](../../../config/baselines/evidence/lidar_camera_frame_boundaries_v1/frame-pose-audit-shadow.json)에 있다.
+
 ## 남은 한계와 후속 담당
 
 1. **센서 시간:** bridge의 stamp는 수신 시각이며 카메라 노출/레이저 ray 시각이
@@ -90,6 +100,15 @@ raw 점에는 `L_scan⁻¹`을 적용하지 않는다. `L_scan`은 해당 scan�
    고를 뿐 서로 다른 관측 시각 사이의 차량 움직임을 보상하지 않는다. 별도
    IMU/CAN 상대 운동 보상 실험은 이후 기하 단계에서 검토하며 GPS를 local 필수로
    만들거나 음영 내부 전역 위치 추정을 추가하지 않는다.
+   Main의 내부 `RAW_LIDAR_DATA.u64_Timestamp`는 header를 ms로 양자화한다.
+   `PrepareScan`과 `SensorPoseHistory::MapAt`는 이 source-ms 값을
+   `Observation.receipt_ns`에도 넣는다. 실제 Main callback 수신 시각을 기록한
+   값이 아니다. 따라서 현재 GPS 도착 cutoff는 scan source-ms이며 더 보수적인
+   기준이다. 원본 ns 보존·실제 callback receipt 캡처·clock 지연을 구분하기 전
+   관측 시간 계약을 완료로 표시하지 않는다. 주 bag 649개 원본 LiDAR header 모두
+   ms 미만 값이 있었고, replay observer의 ROS clock도 일부 header보다 늦게 갱신됐다.
+   원본 header를 바꾸거나 receipt를 임의로 보정해서 숨기지 않는다. 이 수정은
+   고정 baseline 이후 별도 묶음으로 시험한다.
 2. **평면/높이:** 카메라 고정 지면은 검증한 음영 ODD 밖의 경사·roll 변화까지
    보장하지 않는다. 차선 피팅 소비는 음영에 한정한다. 주 bag 높이 감사의 최대
    0.047803m 차이도 다른 bag/장비의 altitude datum 보장은 아니다.
@@ -99,8 +118,14 @@ raw 점에는 `L_scan⁻¹`을 적용하지 않는다. `L_scan`은 해당 scan�
    이것들을 새 후륜축/3D pose의 대체품으로 사용하지 않는다. 판제의 권위 pose
    제공자·원점·레버 정책을 공동 확인해야 한다. 이번 작업에서 다른 담당 운영
    pose 소스를 자동 교체하거나 중복 `map → base_link` TF를 만들지 않았다.
-4. **수락:** GPS 조건별 전체 파이프라인/ID, 객체 보존, 정상 map 추적 품질,
-   local/map 동시 구독 비용과 실제 GPU fusion 부하는 별도 bag 수락 항목이다.
+   또한 현재 CAN parser는 `norm(velocity)`로 방향 없는 속력을 만들고 bounded
+   map 예측은 이를 body `+x` 속도로 쓴다. 후진/횡이동까지 정확하다고 볼 수 없다.
+   부호·좌표가 검증된 body velocity 또는 명시적인 전진 ODD/gate를 확인해야 한다.
+4. **수락:** state 54회와 구독 비용 24회 재생을 완료했다. local 공급 지속과
+   map observer gate를 확인했지만, GPS 대비 24쌍 모두 strict payload가 달랐다.
+   정상 반복도 달라 원인 분리에 결정론적 raw/IMU/CAN 재현이 필요하다.
+   동시 구독 비용은 [운영 경계 결과](lidar-camera-frame-boundaries.md)에 기록했다.
+   객체 보존·정상 map 추적 품질·실제 GPU fusion은 남아 있다.
    행렬 대조만으로 터널 필터·추적 품질을 수락하지 않는다.
 
 이 한계·연결 지점은 [운영 경계 인계](lidar-camera-frame-boundaries.md)와

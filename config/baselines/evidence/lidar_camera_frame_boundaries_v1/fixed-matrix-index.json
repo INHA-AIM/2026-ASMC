@@ -1,0 +1,1172 @@
+[
+  {
+    "label": "state-primary-legacy-normal-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "legacy",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-legacy-invalid-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "legacy",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-legacy-missing-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "legacy",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_pitch-normal-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_pitch-invalid-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_pitch",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_pitch-missing-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_pitch",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_roll_pitch-normal-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_roll_pitch-invalid-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_roll_pitch-missing-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-legacy-normal-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "legacy",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-legacy-invalid-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "legacy",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-legacy-missing-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "legacy",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_pitch-normal-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_pitch-invalid-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_pitch",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_pitch-missing-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_pitch",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_roll_pitch-normal-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_roll_pitch-invalid-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_roll_pitch-missing-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_pitch-normal-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_pitch-invalid-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_pitch",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_pitch-missing-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_pitch",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_roll_pitch-normal-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_roll_pitch-invalid-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_roll_pitch-missing-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-legacy-normal-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "legacy",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-legacy-invalid-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "legacy",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-legacy-missing-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "legacy",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_pitch-normal-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_pitch-invalid-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_pitch",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_pitch-missing-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_pitch",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_roll_pitch-normal-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_roll_pitch-invalid-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_roll_pitch-missing-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-legacy-normal-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "legacy",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-legacy-invalid-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "legacy",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-legacy-missing-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "legacy",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_roll_pitch-normal-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_roll_pitch-invalid-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_roll_pitch-missing-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-legacy-normal-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "legacy",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-legacy-invalid-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "legacy",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-legacy-missing-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "legacy",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_pitch-normal-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_pitch-invalid-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_pitch",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-primary-common_pitch-missing-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "primary",
+      "profile": "common_pitch",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_roll_pitch-normal-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_roll_pitch-invalid-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_roll_pitch-missing-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-legacy-normal-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "legacy",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-legacy-invalid-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "legacy",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-legacy-missing-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "legacy",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_pitch-normal-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_pitch-invalid-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_pitch",
+      "gps_mode": "invalid",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "state-shadow-common_pitch-missing-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "state",
+      "bag_id": "shadow",
+      "profile": "common_pitch",
+      "gps_mode": "missing",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-primary-common_roll_pitch-normal-none-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "none",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-primary-common_roll_pitch-normal-local-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "local",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-primary-common_roll_pitch-normal-map-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "map",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-primary-common_roll_pitch-normal-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-shadow-common_roll_pitch-normal-none-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "none",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-shadow-common_roll_pitch-normal-local-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "local",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-shadow-common_roll_pitch-normal-map-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "map",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-shadow-common_roll_pitch-normal-both-r1",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 1
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-primary-common_roll_pitch-normal-none-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "none",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-primary-common_roll_pitch-normal-local-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "local",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-primary-common_roll_pitch-normal-map-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "map",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-primary-common_roll_pitch-normal-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-shadow-common_roll_pitch-normal-none-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "none",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-shadow-common_roll_pitch-normal-local-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "local",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-shadow-common_roll_pitch-normal-map-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "map",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-shadow-common_roll_pitch-normal-both-r2",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 2
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-primary-common_roll_pitch-normal-none-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "none",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-primary-common_roll_pitch-normal-local-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "local",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-primary-common_roll_pitch-normal-map-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "map",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-primary-common_roll_pitch-normal-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "primary",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-shadow-common_roll_pitch-normal-none-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "none",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-shadow-common_roll_pitch-normal-local-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "local",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-shadow-common_roll_pitch-normal-map-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "map",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  },
+  {
+    "label": "cost-shadow-common_roll_pitch-normal-both-r3",
+    "job": {
+      "phase": "realtime",
+      "suite": "cost",
+      "bag_id": "shadow",
+      "profile": "common_roll_pitch",
+      "gps_mode": "normal",
+      "subscribers": "both",
+      "repeat": 3
+    },
+    "return_code": 0,
+    "report_exists": true,
+    "complete": true
+  }
+]
