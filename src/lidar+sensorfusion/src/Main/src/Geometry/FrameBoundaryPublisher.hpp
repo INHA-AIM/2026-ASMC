@@ -12,6 +12,7 @@ class Publisher {
   void Publish(const LiDAR& lidar);
   void SetLegacyReason(const std::string& reason);
   void Invalid(const ros::Time& stamp,const std::string& reason);
+  void ReportTotals();
  private:
   bool Accept(const ros::Time& stamp);
   void Diagnostics(const ros::WallTimerEvent&);

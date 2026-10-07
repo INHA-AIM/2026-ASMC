@@ -1,6 +1,7 @@
 #include <Geometry/FrameBoundaryPublisher.hpp>
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <diagnostic_msgs/KeyValue.h>
+#include <iostream>
 
 namespace frame_boundary {
 namespace {
@@ -42,6 +43,16 @@ Publisher::Publisher(ros::NodeHandle& node) {
 }
 void Publisher::SetLegacyReason(const std::string& reason) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);legacy_reason_=reason;
+}
+void Publisher::ReportTotals() {
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  if(!Enabled()) return;
+  // Timer diagnostics can miss the last frames at bag end. This shutdown log
+  // is accounting only: it publishes neither a new observation nor a stamp.
+  // rosconsole has already shut down after worker joins; flush directly.
+  std::cout << "[LIDAR_FRAME_TOTAL] processed=" << processed_ << " invalid=" << invalid_
+            << " stamp_errors=" << stamp_errors_ << " source_stamp_ns=" << last_stamp_.toNSec()
+            << std::endl;
 }
 bool Publisher::Accept(const ros::Time& stamp) {
   if(stamp.isZero() || (!last_stamp_.isZero() && stamp<=last_stamp_)) {

@@ -25,6 +25,7 @@ from b1a_protocol import launch_values, test_launch, require_stopped_simulator
 from b0_measurements import quantiles, resource_report
 from b0_resources import ResourceSampler
 from run_b0_matrix import stop
+from frame_boundary_measurements import frame_totals
 
 
 def geometry(message):
@@ -203,6 +204,12 @@ def main():
                   complete=error is None and report.get('observer_input_complete',False) and not controls)
     report['processed_cumulative']=max([int(d['values'].get('processed','0')) for d in diagnostics]+[0])
     report['input_invalid_cumulative']=max([int(d['values'].get('invalid','0')) for d in diagnostics]+[0])
+    report['timer_diagnostics_are_partial']=True
+    if job['profile']!='legacy':
+        try:
+            report['final_frame_totals']=frame_totals((args.output/'node.log').read_text(errors='replace'))
+        except ValueError as exc:
+            report['complete']=False;report['error']=report['error'] or str(exc)
     (args.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(dict(job=job,complete=report['complete'],error=error)),flush=True)
     return 0 if report['complete'] else 1

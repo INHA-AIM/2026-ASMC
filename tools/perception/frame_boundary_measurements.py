@@ -1,5 +1,14 @@
 """Pure protocol and source-stamp checks for the frame-boundary experiment."""
 import math
+import re
+
+
+def frame_totals(log):
+    matches=re.findall(r'\[LIDAR_FRAME_TOTAL\] processed=(\d+) invalid=(\d+) '
+        r'stamp_errors=(\d+) source_stamp_ns=(\d+)',log)
+    if len(matches)!=1:
+        raise ValueError('missing or duplicate final frame-boundary accounting')
+    return dict(zip(('processed','invalid','stamp_errors','source_stamp_ns'),map(int,matches[0])))
 
 
 def jobs(config, suite):

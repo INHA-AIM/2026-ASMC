@@ -2,10 +2,15 @@ import copy
 from pathlib import Path
 import unittest
 import yaml
-from tools.perception.frame_boundary_measurements import jobs, stamp_table, compare_local, map_gate
+from tools.perception.frame_boundary_measurements import jobs, stamp_table, compare_local, map_gate, frame_totals
 
 
 class MeasurementsTest(unittest.TestCase):
+    def test_final_accounting_missing_or_duplicate_is_failure(self):
+        log='[LIDAR_FRAME_TOTAL] processed=208 invalid=0 stamp_errors=0 source_stamp_ns=123000000'
+        self.assertEqual(frame_totals(log)['processed'],208)
+        for invalid in ('',log+'\n'+log):
+            with self.assertRaises(ValueError):frame_totals(invalid)
     def row(self, stamp=1000000000, status=2):
         return dict(stamp_ns=stamp, arrival=10., status=status, objects=[], frame_id='base_link',
             stamp_provenance='bridge_receive_ms')

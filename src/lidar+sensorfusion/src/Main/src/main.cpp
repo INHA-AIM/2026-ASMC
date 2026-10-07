@@ -655,6 +655,7 @@ int main(int argc, char **argv)
     pthread_join(th_Temporal, nullptr);
 
     ReportFusionTotals();
+    if(st_FrameBoundaryPublisher) st_FrameBoundaryPublisher->ReportTotals();
     fusion_trace::Sink().Flush();
 
     return 0;
