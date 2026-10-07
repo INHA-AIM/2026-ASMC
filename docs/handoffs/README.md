@@ -15,6 +15,7 @@ consumer가 어떤 freshness·quality·fallback을 검사해야 하는지, 어�
 | 판제→Camera 모델 실행 | [독립 추론 모드와 직접 실행](./perception/camera-inference-control.md) | STANDBY/PREPARE/ACTIVE 구현; 10Hz·MORAI 주행 수락 보류 |
 | Camera objects P2a | [직접 launch와 검증](./perception/camera-objects-p2a.md) | Opt-in YOLO11m 생산자와 기존 LiDAR 호환 어댑터 |
 | Camera detector→LiDAR fusion | [객체 검출](./perception/camera-object-detection.md) | Active Guide, 기존 YOLO11m 기준선과 후속 비교 |
+| Camera mask·LiDAR 장애물 융합 연구 | [YOLO26과 융합 후보 분석](./perception/camera-lidar-fusion-study.md) | Working Proposal, 공개 모델·데이터·소스 검수와 격리 비교 계획. 운영 미적용 |
 | Behavior→Frenet v1 | [legacy 3-package 설계](./planning/behavior-legacy.md) | Legacy Reference, 현재 실행 금지 |
 | 규정집 v1.2→전 파트 | [v1.2 영향과 확인 요청](./competition/rule-v1.2-impacts.md) | Active Handoff, 판정 전용 채널·cmd type·속도 상한 |
 | HD맵→판제 | [전역 지도·미션 경계·GPS 상태](./hd-map/planning-consumption-v1.md) | Active Handoff, v6 지도 bundle·후륜축·station·음영 fallback 반영 항목 |

@@ -23,6 +23,9 @@
 
 카메라 패키지는 2026-10-06 `asmc_perception`에서 `asmc_camera`로 이름을 바꿨다. LiDAR 목표 패키지는 `asmc_lidar`다.
 카메라 YOLO 생산자는 안승현, 기존 LiDAR 기능·camera fusion의 이전 마무리는 손재호가 맡는다.
+YOLO26-seg·공개 데이터·터널 장애물 융합의 후속 연구는
+[카메라와 LiDAR 분석·비교 계획](./handoffs/perception/camera-lidar-fusion-study.md)을 본다.
+이는 소스 검수와 실험 계획이며 운영 모델 변경이나 성능 수락이 아니다.
 [상세 이전 순서·공용 계약·완료 조건](./architecture/consolidation-roadmap.md)을 먼저 보고,
 현재 골격과 후속 구현·수락 항목은 [LiDAR 인계](./packages/asmc_lidar/README.md)를 본다.
 개인 LiDAR 연구 코드·보고서는 Git 이력에 보존했고 현재 패키지에는 검출 실행기가 없다.
