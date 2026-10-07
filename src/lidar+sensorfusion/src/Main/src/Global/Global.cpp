@@ -1,4 +1,6 @@
 #include "Global/Global.hpp"
+#include <Geometry/FrameBoundary.hpp>
+#include <PlannerInterface/PlannerObjectAdapter.hpp>
 
 float64 Deg2Rad(const float64 &f64_Deg)
 {
@@ -679,6 +681,12 @@ Point2D Frenet2ENU(Planning &st_Planning, float32 f32_s, float32 f32_d)
 
 void Body2ENU(VehicleSpec& st_VehicleSpec, const GPS_IMU& st_GPSIMU, Object& st_Object)
 {
+    if(frame_boundary::Enabled()) {
+        const auto point=TransformLidarPointToMap({st_Object.f32_CoreX,st_Object.f32_CoreY,st_Object.f32_CoreZ},st_GPSIMU,st_VehicleSpec);
+        st_Object.f32_CoreE=point.x; st_Object.f32_CoreN=point.y;
+        return;
+    }
+
     float32 f32_Xb = st_Object.f32_CoreX + st_VehicleSpec.st_LiDARPos.f32_X - st_VehicleSpec.st_GPSPos.f32_X;
     float32 f32_Yb = st_Object.f32_CoreY + st_VehicleSpec.st_LiDARPos.f32_Y - st_VehicleSpec.st_GPSPos.f32_Y;
     float32 f32_Zb = st_Object.f32_CoreZ + st_VehicleSpec.st_LiDARPos.f32_Z - st_VehicleSpec.st_GPSPos.f32_Z;
@@ -767,6 +775,23 @@ Point2D Body2ENU_Point(const VehicleSpec& st_VehicleSpec, const GPS_IMU& st_GPSI
 
 void MinMax2ENU(VehicleSpec& st_VehicleSpec, const GPS_IMU& st_GPSIMU, Object& st_Object)
 {
+    if(frame_boundary::Enabled()) {
+        asmc::lidar::Vec low=asmc::lidar::Vec::Constant(std::numeric_limits<double>::infinity());
+        asmc::lidar::Vec high=-low;
+        for(unsigned i=0;i<8;++i) {
+            const auto p=TransformLidarPointToMap({(i&1)?st_Object.f32_MaxX:st_Object.f32_MinX,
+                (i&2)?st_Object.f32_MaxY:st_Object.f32_MinY,(i&4)?st_Object.f32_MaxZ:st_Object.f32_MinZ},
+                st_GPSIMU,st_VehicleSpec);
+            if(!std::isfinite(p.x)||!std::isfinite(p.y)||!std::isfinite(p.z)) {
+                low=high=asmc::lidar::Vec::Constant(std::numeric_limits<double>::quiet_NaN());break;
+            }
+            const asmc::lidar::Vec point(p.x,p.y,p.z);low=low.cwiseMin(point);high=high.cwiseMax(point);
+        }
+        st_Object.f32_MinE_X=low.x();st_Object.f32_MinE_Y=low.y();st_Object.f32_MinE_Z=low.z();
+        st_Object.f32_MaxE_X=high.x();st_Object.f32_MaxE_Y=high.y();st_Object.f32_MaxE_Z=high.z();
+        return;
+    }
+
     float32 f32_MINX = st_Object.f32_MinX + st_VehicleSpec.st_LiDARPos.f32_X - st_VehicleSpec.st_GPSPos.f32_X;
     float32 f32_MINY = st_Object.f32_MinY + st_VehicleSpec.st_LiDARPos.f32_Y - st_VehicleSpec.st_GPSPos.f32_Y;
     float32 f32_MINZ = st_Object.f32_MinZ + st_VehicleSpec.st_LiDARPos.f32_Z - st_VehicleSpec.st_GPSPos.f32_Z;

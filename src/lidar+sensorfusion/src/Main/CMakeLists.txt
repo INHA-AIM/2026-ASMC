@@ -14,6 +14,9 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   pcl_conversions
   Msg
+  asmc_lidar
+  asmc_msgs
+  diagnostic_msgs
   tf
   tf2
   tf2_ros
@@ -22,11 +25,12 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(OpenCV REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 find_package(PCL REQUIRED)
 
 catkin_package(
-  CATKIN_DEPENDS roscpp roslib std_msgs geometry_msgs tf tf2 tf2_ros tf2_geometry_msgs visualization_msgs morai_msgs Msg pcl_conversions
+  CATKIN_DEPENDS asmc_lidar asmc_msgs diagnostic_msgs roscpp roslib std_msgs geometry_msgs tf tf2 tf2_ros tf2_geometry_msgs visualization_msgs morai_msgs Msg pcl_conversions
 )
 
 include_directories(
@@ -40,6 +44,8 @@ include_directories(
 # 인지(라이다/카메라/센서퓨전) 전용 라이브러리.
 # Planning/Control/Visualizer 소스는 이 리포에 없으므로 제외.
 add_library(myHeader
+  src/Geometry/FrameBoundary.cpp
+  src/Geometry/FrameBoundaryPublisher.cpp
   src/Global/Global.cpp
   src/Parser/Parser.cpp
   src/Parser/GpsSanityFilter.cpp
@@ -76,7 +82,7 @@ add_library(myHeader
 )
 add_dependencies(myHeader ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-target_link_libraries(myHeader ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} yaml-cpp Geographic)
+target_link_libraries(myHeader ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} yaml-cpp Geographic OpenSSL::Crypto)
 
 add_executable(main src/main.cpp)
 add_dependencies(main myHeader ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -90,6 +96,11 @@ target_link_libraries(main myHeader
 
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
+  add_rostest_gtest(test_frame_boundary_ros test/frame_boundary.test
+    test/test_frame_boundary_ros.cpp test/test_runtime_globals.cpp)
+  if(TARGET test_frame_boundary_ros)
+    target_link_libraries(test_frame_boundary_ros myHeader ${catkin_LIBRARIES})
+  endif()
   catkin_add_nosetests(test/test_camera_objects_adapter.py)
   catkin_add_nosetests(test/test_fusion_continuous_replay.py)
   catkin_install_python(PROGRAMS test/test_camera_objects_adapter_ros.py
@@ -114,10 +125,10 @@ if(CATKIN_ENABLE_TESTING)
   endif()
   catkin_add_gtest(test_motion_classifier
     test/test_motion_classifier.cpp
-    src/Lidar/Tracking/MotionClassifier.cpp
+    test/test_runtime_globals.cpp
   )
   if(TARGET test_motion_classifier)
-    target_link_libraries(test_motion_classifier ${catkin_LIBRARIES})
+    target_link_libraries(test_motion_classifier myHeader ${catkin_LIBRARIES})
   endif()
   catkin_add_gtest(test_fusion_class_policy
     test/test_fusion_class_policy.cpp
@@ -195,10 +206,10 @@ if(CATKIN_ENABLE_TESTING)
   endif()
   catkin_add_gtest(test_sensor_pose_history
     test/test_sensor_pose_history.cpp
-    src/Parser/SensorPoseHistory.cpp
+    test/test_runtime_globals.cpp
   )
   if(TARGET test_sensor_pose_history)
-    target_link_libraries(test_sensor_pose_history ${catkin_LIBRARIES})
+    target_link_libraries(test_sensor_pose_history myHeader ${catkin_LIBRARIES})
   endif()
 endif()
 

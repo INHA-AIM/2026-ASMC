@@ -10,6 +10,7 @@ on:
       - 'src/planning_inputs/**'
       - 'src/lidar+sensorfusion/src/Main/**'
       - 'src/asmc_msgs/**'
+      - 'src/asmc_lidar/**'
       - 'src/asmc_camera/**'
       - '.github/workflows/planning-integration.yml'
 
@@ -66,7 +67,7 @@ jobs:
       - name: Install nested sensor build dependencies
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends git ca-certificates libyaml-cpp-dev libopencv-dev libpcl-dev libgeographic-dev python3-nose ros-noetic-rostest ros-noetic-pcl-conversions ros-noetic-tf ros-noetic-tf2-geometry-msgs ros-noetic-visualization-msgs
+          apt-get install -y --no-install-recommends git ca-certificates libyaml-cpp-dev libopencv-dev libpcl-dev libgeographic-dev libssl-dev python3-nose ros-noetic-rostest ros-noetic-pcl-conversions ros-noetic-tf ros-noetic-tf2-geometry-msgs ros-noetic-visualization-msgs
           rm -rf /var/lib/apt/lists/*
       - uses: actions/checkout@v4
         with:
@@ -74,7 +75,7 @@ jobs:
       - name: Build restored LiDAR workspace with frozen messages
         run: |
           source /opt/ros/noetic/setup.bash
-          catkin_make -j2 -l2 -DCATKIN_WHITELIST_PACKAGES=asmc_msgs
+          catkin_make -j2 -l2 -DCATKIN_WHITELIST_PACKAGES='asmc_msgs;asmc_lidar'
           source devel/setup.bash
           cd src/lidar+sensorfusion
           catkin_make -j2 -l2 -DCATKIN_ENABLE_TESTING=ON -DCATKIN_WHITELIST_PACKAGES='Main;Msg;morai_msgs'

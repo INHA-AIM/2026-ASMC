@@ -26,6 +26,8 @@
 // #include <boost/bind.hpp>
 
 #include "ImuRansac.hpp"
+#include <Geometry/FrameBoundary.hpp>
+extern VehicleSpec st_VehicleSpec;
 
 
 // double roll;
@@ -49,16 +51,25 @@ void CorrectingPoints(pcl::PointCloud<pcl::PointXYZI>::Ptr& pcl_InputCloud3,
          0,          1, 0,
         -f64_SinPitch, 0, f64_CosPitch;
 
+    asmc::lidar::Rot exact=R.cast<double>();
+    if(frame_boundary::Enabled()) {
+        exact=asmc::lidar::leveling_rotation(st_GPSIMU.st_IMU.f32_Roll_rad,
+            st_GPSIMU.st_IMU.f32_Pitch_rad,frame_boundary::SensorMount(st_VehicleSpec).rotation(),
+            frame_boundary::UseRoll(),true);
+        frame_boundary::StoreLeveling(exact);
+    }
     pcl_OutputCloud3->points.clear();  // 이전 포인트 제거
 
     for (const auto& point : pcl_InputCloud3->points) {
         Eigen::Vector3f pt(point.x, point.y, point.z);
-        Eigen::Vector3f corrected = R * pt;
+        Eigen::Vector3f corrected = frame_boundary::Enabled()
+            ? (exact*pt.cast<double>()).cast<float>().eval() : (R*pt).eval();
 
         pcl::PointXYZI pcl_NewPoint;
         pcl_NewPoint.x = corrected.x();
         pcl_NewPoint.y = corrected.y();
         pcl_NewPoint.z = corrected.z();
+        if(frame_boundary::Enabled()) pcl_NewPoint.intensity=point.intensity;
 
         pcl_OutputCloud3->points.push_back(pcl_NewPoint);
     }

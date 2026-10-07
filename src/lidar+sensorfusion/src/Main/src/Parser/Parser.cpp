@@ -1,6 +1,7 @@
 #include "Parser.hpp"
 #include <Parser/GpsSanityFilter.hpp>
 #include <Parser/SensorPoseHistory.hpp>
+#include <Geometry/FrameBoundary.hpp>
 #include <SensorFusion/SensorFusion.hpp>
 #include <SensorFusion/FusionTrace.hpp>
 
@@ -50,6 +51,13 @@ bool LookupSensorPoseForLidar(std::uint64_t lidar_stamp_ms,
 {
     return g_SensorPoseHistory.WaitForLookup(
         lidar_stamp_ms, g_LidarPoseWaitTimeoutS, pose, reason);
+}
+
+bool LookupLocalStateForLidar(std::uint64_t stamp_ms,GPS_IMU* local,std::string* reason) {
+    return g_SensorPoseHistory.WaitForLocalLookup(stamp_ms,g_LidarPoseWaitTimeoutS,local,reason);
+}
+asmc::lidar::PoseSelection LookupMapPoseForLidar(std::uint64_t stamp_ms,const GPS_IMU& local) {
+    return g_SensorPoseHistory.MapAt(stamp_ms,local);
 }
 
 // Parser.cpp 파일 역할 
@@ -359,7 +367,19 @@ void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
     st_GPSData.f64_Longitude = st_Msg->longitude;
     st_GPSData.f64_Altitude = st_Msg->altitude;
     st_GPSData.b_isJamming = (st_Msg->status == 0);
-    if (st_Msg->status == 0) {
+    const ros::Time received=ros::Time::now();
+    const ros::Time original_stamp=st_Msg->header.stamp;
+    auto invalidate=[&] {
+        const auto stamp=original_stamp.isZero()?received:original_stamp;
+        g_SensorPoseHistory.AddGpsInvalid(stamp.toNSec()/1000000ULL,received.toNSec()/1000000ULL);
+    };
+    if (st_Msg->status == 0 || (frame_boundary::Enabled() &&
+        (original_stamp.isZero() || !std::isfinite(st_Msg->latitude) ||
+         !std::isfinite(st_Msg->longitude) || !std::isfinite(st_Msg->altitude) ||
+         !std::isfinite(st_Msg->eastOffset) || !std::isfinite(st_Msg->northOffset) ||
+         !frame_boundary::MapOffsetsValid(st_Msg->eastOffset,st_Msg->northOffset) ||
+         (st_Msg->latitude==0. && st_Msg->longitude==0.)))) {
+        invalidate();
         ROS_WARN_THROTTLE(1.0, "Rejected GPS sample: invalid status");
         return;
     }
@@ -377,7 +397,8 @@ void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
     );
     st_GPSData.f64_E = f64_East - f64_EastOffset;
     st_GPSData.f64_N = f64_North - f64_NorthOffset;
-    st_GPSData.f64_U = 0;
+    st_GPSData.f64_U = frame_boundary::Enabled()
+        ? st_Msg->altitude-frame_boundary::MapAltitudeOrigin() : 0;
 
     const ros::Time source_stamp = st_Msg->header.stamp.isZero()
         ? ros::Time::now() : st_Msg->header.stamp;
@@ -391,6 +412,7 @@ void GPSParser_Callback(const morai_msgs::GPSMessage::ConstPtr &st_Msg)
             st_GPSData.f64_E, st_GPSData.f64_N, source_stamp.toSec());
     }
     if (!sanity.accepted) {
+        invalidate();
         ROS_WARN_THROTTLE(
             1.0,
             "Rejected GPS sample: status=%d map=(%.1f,%.1f) reason=%s jump=%.1fm allowed=%.1fm",
@@ -458,6 +480,9 @@ void CANParser_Callback(const morai_msgs::EgoVehicleStatus::ConstPtr& st_Msg)
     CAN_DATA st_CANData;
     st_CANData.f32_CurrentVel_KPH = 3.6 * sqrt(pow(st_Msg->velocity.x, 2) + pow(st_Msg->velocity.y, 2) + pow(st_Msg->velocity.z, 2));
     st_CANData.f32_CurrentVel_MPS = sqrt(pow(st_Msg->velocity.x, 2) + pow(st_Msg->velocity.y, 2) + pow(st_Msg->velocity.z, 2));
+    if(frame_boundary::Enabled() && st_Msg->header.stamp.isZero()) {
+        st_CANData.f32_CurrentVel_MPS=NAN; st_CANData.f32_CurrentVel_KPH=NAN;
+    }
     st_CANData.f32_Steer_deg = st_Msg->wheel_angle;
     st_CANData.f32_Steer_rad = Deg2Rad(st_Msg->wheel_angle);
 
@@ -522,6 +547,11 @@ void IMUParser_Callback(const sensor_msgs::Imu::ConstPtr& st_Msg)
     st_IMUData.f32_Pitch_deg = Rad2Deg(st_IMUData.f32_Pitch_rad);
     st_IMUData.f32_Yaw_deg = Rad2Deg(st_IMUData.f32_Yaw_rad);
     st_IMUData.b_ImuReady=true; //라이다에서 Kalman.cpp에서 사용중
+    if(frame_boundary::Enabled()) {
+        const auto& q=st_Msg->orientation;
+        const double norm=q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w;
+        st_IMUData.b_ImuReady=!st_Msg->header.stamp.isZero() && std::isfinite(norm) && std::abs(norm-1.)<=.001;
+    }
 
     const ros::Time source_stamp = st_Msg->header.stamp.isZero()
         ? ros::Time::now() : st_Msg->header.stamp;

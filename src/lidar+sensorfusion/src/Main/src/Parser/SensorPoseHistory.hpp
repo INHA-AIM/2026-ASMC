@@ -2,6 +2,7 @@
 #define SENSOR_POSE_HISTORY_HPP
 
 #include <Global/Global.hpp>
+#include <asmc_lidar/bounded_pose.hpp>
 
 #include <cstdint>
 #include <condition_variable>
@@ -45,6 +46,11 @@ public:
     // never rewrites the stamp or substitutes a stale pose.
     bool WaitForLookup(std::uint64_t lidar_stamp_ms, double timeout_s,
                        GPS_IMU* pose, std::string* reason = nullptr) const;
+    bool WaitForLocalLookup(std::uint64_t stamp_ms, double timeout_s,
+                            GPS_IMU* local, std::string* reason = nullptr) const;
+    void AddGpsInvalid(std::uint64_t stamp_ms, std::uint64_t arrival_ms);
+    asmc::lidar::PoseSelection MapAt(std::uint64_t stamp_ms,
+                                    const GPS_IMU& local) const;
     void Reset();
 
 private:
@@ -67,12 +73,16 @@ private:
     bool LookupLocked(std::uint64_t lidar_stamp_ms, GPS_IMU* pose,
                       std::string* reason) const;
 
+    bool LookupLocalLocked(std::uint64_t stamp_ms, GPS_IMU* local,
+                           std::string* reason) const;
+    asmc::lidar::BoundedPoseHistory bounded_gps_;
     mutable std::mutex mutex_;
     mutable std::condition_variable sample_cv_;
     SensorPoseHistoryConfig config_;
     std::deque<TimedGps> gps_;
     std::deque<TimedImu> imu_;
     std::deque<TimedCan> can_;
+    std::uint64_t invalid_imu_stamp_ms_ = 0, invalid_can_stamp_ms_ = 0;
     bool has_accepted_imu_ = false;
     double accepted_imu_yaw_rad_ = 0.0;
     std::uint64_t accepted_imu_stamp_ms_ = 0;

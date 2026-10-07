@@ -1,4 +1,5 @@
 #include "kalman_utils.hpp"
+#include <Geometry/FrameBoundary.hpp>
 
 
 
@@ -50,6 +51,9 @@ inline void compensate_ego_yaw(LiDARObjectInfo &o, float ego_yaw_now_deg)
     // 1) 현재 yaw [deg] → rad 변환
     float yaw_now = ego_yaw_now_deg * M_PI / 180.0f;
 
+    if(frame_boundary::Enabled() && o.tracking_frame_valid) {
+        frame_boundary::AlignTrackingFrame(o,yaw_now); return;
+    }
     // 2) Δyaw = 현재 - 과거 ([-π, π]로 정규화)
     float dpsi = wrapToPi(yaw_now - o.f32_PrevYaw);
 
@@ -71,6 +75,17 @@ inline void compensate_ego_yaw(LiDARObjectInfo &o, float ego_yaw_now_deg)
 std::pair<float, float> predictKalmanPosition(
         const LiDARObjectInfo& obj, float64 dt, float ego_yaw_now)
 {
+    if(frame_boundary::Enabled() && obj.tracking_frame_valid) {
+        LiDARObjectInfo aligned{};
+        aligned.Eigen_KfState_CA=obj.Eigen_KfState_CA;aligned.Eigen_KfP_CA=obj.Eigen_KfP_CA;
+        aligned.tracking_frame_valid=true;aligned.tracking_height_input=obj.tracking_height_input;
+        aligned.tracking_yaw_from_input=obj.tracking_yaw_from_input;
+        aligned.tracking_origin_in_yaw=obj.tracking_origin_in_yaw;
+        aligned.f32_PrevYaw=obj.f32_PrevYaw;aligned.f32_OBB_YawRad=obj.f32_OBB_YawRad;
+        frame_boundary::AlignTrackingFrame(aligned,to_ccw_rad(ego_yaw_now));
+        const auto& x=aligned.Eigen_KfState_CA;
+        return {x(0)+dt*x(2)+.5*dt*dt*x(4),x(1)+dt*x(3)+.5*dt*dt*x(5)};
+    }
     //1) Δψ = 현재요 - 이전프레임요
     const float yaw_now = to_ccw_rad(ego_yaw_now);                 // ★
     float dpsi = wrapToPi(yaw_now - obj.f32_PrevYaw);  

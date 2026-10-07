@@ -1,4 +1,6 @@
 #include <Lidar/Tracking/MotionClassifier.hpp>
+#include <Geometry/FrameBoundary.hpp>
+#include <PlannerInterface/PlannerObjectAdapter.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -31,6 +33,17 @@ bool FillMapObbBounds(const LiDARObjectInfo& object,
                       const VehicleSpec& vehicle,
                       double* min_e, double* max_e,
                       double* min_n, double* max_n) {
+    if(frame_boundary::Enabled()) {
+        *min_e=*min_n=std::numeric_limits<double>::infinity();
+        *max_e=*max_n=-std::numeric_limits<double>::infinity();
+        for(const auto& p:object.OBB_Corners_Body) {
+            const auto q=TransformLidarPointToMap({p.x,p.y,p.z},gps_imu,vehicle);
+            if(!std::isfinite(q.x) || !std::isfinite(q.y)) return false;
+            *min_e=std::min(*min_e,q.x); *max_e=std::max(*max_e,q.x);
+            *min_n=std::min(*min_n,q.y); *max_n=std::max(*max_n,q.y);
+        }
+        return *max_e-*min_e>.05 && *max_n-*min_n>.05;
+    }
     constexpr double kDegToRad = 3.14159265358979323846 / 180.0;
     const double roll = gps_imu.st_IMU.f32_Roll_deg * kDegToRad;
     const double pitch = gps_imu.st_IMU.f32_Pitch_deg * kDegToRad;
@@ -613,6 +626,7 @@ void MotionClassifier::UpdateImpl(
         UpdateAcceptedHistory(track, sample);
         UpdateDecision(track, sample);
         WriteDiagnostics(track, object);
+        object.motion_valid=track.state!=MotionState::Unknown;
     }
 
     for (auto it = tracks_.begin(); it != tracks_.end();) {
@@ -624,3 +638,11 @@ void MotionClassifier::UpdateImpl(
     }
 }
 
+
+void MotionClassifier::InvalidateMapHistory(std::vector<LiDARObjectInfo>& objects) {
+    tracks_.clear();
+    for(auto& object:objects) {
+        object.motion_valid=false;
+        WriteDiagnostics(TrackState{},object);
+    }
+}

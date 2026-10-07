@@ -19,7 +19,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            git ca-certificates libyaml-cpp-dev libeigen3-dev libopencv-dev python3-opencv python3-numpy python3-scipy python3-nose \
+            git ca-certificates libyaml-cpp-dev libssl-dev libeigen3-dev libopencv-dev python3-opencv python3-numpy python3-scipy python3-nose \
             ros-noetic-tf ros-noetic-tf2-ros ros-noetic-rostest
           rm -rf /var/lib/apt/lists/*
 
@@ -60,6 +60,13 @@ jobs:
           source /opt/ros/noetic/setup.bash
           ./scripts/build_ws.sh
 
+      - name: Check LiDAR coordinate and time foundation
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          cd build/asmc_lidar
+          ctest --output-on-failure
+
       - name: Check camera object processing without a GPU
         run: |
           source /opt/ros/noetic/setup.bash
@@ -69,6 +76,7 @@ jobs:
           python3 -m unittest tools/perception/test_lifecycle_measurements.py
           python3 -m unittest tools/perception/test_b0_measurements.py
           python3 -m unittest tools/perception/test_b1a_protocol.py
+          python3 -m unittest tools/perception/test_frame_boundary_measurements.py
           python3 -m unittest tools/perception/test_tunnel_case_geometry.py
           python3 -m unittest tools/perception/test_tunnel_summary.py
           python3 -m unittest tools/perception/test_camera_lidar_evidence.py

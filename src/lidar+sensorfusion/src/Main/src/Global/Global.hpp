@@ -2,6 +2,7 @@
 #define GLOBAL_HPP
 
 #include <ros/ros.h>
+#include <asmc_lidar/frame_time.hpp>
 #include <Lidar/ImuRansac/GroundEvidence.hpp>
 #include <iostream>
 #include <algorithm>
@@ -515,6 +516,14 @@ struct LiDARUDP
 
 struct LiDARObjectInfo
 {
+    bool motion_valid = false;
+    // Exact preprocessing basis for the internal 2D relative CA tracker.
+    // Public 3D velocity remains invalid because vertical/angular derivatives
+    // have not been measured by this tracker.
+    bool tracking_frame_valid = false;
+    float tracking_height_input = 0;
+    asmc::lidar::Rot tracking_yaw_from_input = asmc::lidar::Rot::Identity();
+    asmc::lidar::Vec tracking_origin_in_yaw = asmc::lidar::Vec::Zero();
 	string str_ObjectClass = "unknown";      //car,person,truck
 
     // str_ObjectClass를 확정시킨 YOLO 원본 라벨(car/truck/bus/person).
@@ -644,6 +653,7 @@ struct LiDARTracking
 
 struct LiDAR
 {
+    asmc::lidar::Context frame_context;
     // ===== 설정값 =====
     int32 s32_LiDARMode;
     LiDARUDP st_UDP;

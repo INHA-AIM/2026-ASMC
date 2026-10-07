@@ -61,6 +61,8 @@ public:
                 const GPS_IMU& gps_imu,
                 const VehicleSpec& vehicle);
 
+    void InvalidateMapHistory(std::vector<LiDARObjectInfo>& objects);
+
 private:
     struct VelocitySample {
         double stamp_sec = 0.0;

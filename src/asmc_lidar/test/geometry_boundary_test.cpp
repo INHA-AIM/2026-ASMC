@@ -73,5 +73,11 @@ int main() {
   require(lever.valid && (lever.map_from_base.translation()-
       (sample.map_from_reference.translation()-rpy(0,0,.2)*Vec(1,0,0))).norm()<1e-10,
       "antenna lever used later scan attitude");
+  sample.stamp_ns=2650000000LL;sample.arrival_ns=2750000000LL;
+  sample.map_from_reference.translation().x()=10000.;lever_history.append(sample);
+  time.processing_ns=2800000000LL;
+  const auto causal=lever_history.at(time,rpy(0,0,.5),Vec::Zero());
+  require(causal.valid && causal.sample_stamps==std::vector<Ns>{2600000000LL},
+      "GPS received after scan was used retroactively");
   std::cout<<"geometry and bounded pose boundary tests passed\n";
 }

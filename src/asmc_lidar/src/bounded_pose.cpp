@@ -33,7 +33,9 @@ PoseSelection BoundedPoseHistory::at(const Observation& time, const Rot& rotatio
   unsigned consecutive = 0;
   Ns last_source = 0;
   for (const auto& s : samples_) {
-    if (s.clock != time.clock || s.arrival_ns > time.processing_ns ||
+    // A late GPS callback cannot retroactively make an earlier scan's map
+    // output available. Receipt time belongs to the observation, not publish.
+    if (s.clock != time.clock || s.arrival_ns > time.receipt_ns ||
         s.stamp_ns > time.stamp_ns || s.stamp_ns <= last_source) continue;
     if (last_source && s.stamp_ns - last_source > max_age_) consecutive=0;
     last_source=s.stamp_ns; latest=&s;

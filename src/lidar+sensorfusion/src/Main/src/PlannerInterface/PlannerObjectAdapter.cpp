@@ -1,4 +1,5 @@
 #include <PlannerInterface/PlannerObjectAdapter.hpp>
+#include <Geometry/FrameBoundary.hpp>
 
 #include <Eigen/Geometry>
 
@@ -82,6 +83,12 @@ PlannerPoint3D TransformLidarPointToMap(
     const PlannerPoint3D& point_lidar,
     const GPS_IMU& gps_imu,
     const VehicleSpec& vehicle) {
+    if(frame_boundary::Enabled()) {
+        const auto& context=frame_boundary::Current();
+        const auto base=asmc::lidar::base_from_input(context);
+        if(!base || !context.map_pose.valid) return {NAN,NAN,NAN};
+        return FromEigen(context.map_pose.map_from_base * *base * ToEigen(point_lidar));
+    }
     const Eigen::Vector3d lidar_in_gps_vehicle(
         vehicle.st_LiDARPos.f32_X - vehicle.st_GPSPos.f32_X,
         vehicle.st_LiDARPos.f32_Y - vehicle.st_GPSPos.f32_Y,
@@ -103,6 +110,12 @@ PlannerPoint3D RotateLidarVectorToMap(
     const PlannerPoint3D& vector_lidar,
     const GPS_IMU& gps_imu,
     const VehicleSpec& vehicle) {
+    if(frame_boundary::Enabled()) {
+        const auto& context=frame_boundary::Current();
+        const auto base=asmc::lidar::base_from_input(context);
+        if(!base || !context.map_pose.valid) return {NAN,NAN,NAN};
+        return FromEigen(context.map_pose.map_from_base.rotation()*base->rotation()*ToEigen(vector_lidar));
+    }
     return FromEigen(MapFromVehicleRotation(gps_imu) *
                      VehicleFromLidarRotation(vehicle) *
                      RawLidarFromPreprocessedRotation(gps_imu) *

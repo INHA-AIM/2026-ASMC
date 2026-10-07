@@ -51,6 +51,10 @@ bool LookupSensorPoseForLidar(std::uint64_t lidar_stamp_ms,
                               std::string* reason = nullptr);
 //==========================GPS========================== // 
 
+bool LookupLocalStateForLidar(std::uint64_t stamp_ms, GPS_IMU* local,
+                              std::string* reason = nullptr);
+asmc::lidar::PoseSelection LookupMapPoseForLidar(std::uint64_t stamp_ms,
+                                               const GPS_IMU& local);
 //==========================CAN========================== // 
 void *ParseCAN(void *pst_NodeHandle);
 void CANParser_Callback(const morai_msgs::EgoVehicleStatus::ConstPtr& st_Msg);

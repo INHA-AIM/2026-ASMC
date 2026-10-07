@@ -20,6 +20,8 @@ public:
     void Publish(const LiDAR& lidar, const GPS_IMU& gps_imu,
                  const VehicleSpec& vehicle, const ros::Time& stamp);
 
+    void SuppressMap(const ros::Time& stamp);
+
 private:
     ros::Publisher objects_publisher_;
     ros::Publisher markers_publisher_;
