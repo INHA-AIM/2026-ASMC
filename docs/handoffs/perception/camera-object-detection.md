@@ -8,6 +8,12 @@
 > **범위:** 기존 detector 즉시 사용, 경량 후보 선택, NAS Capture 데이터 fine-tune 준비
 > **현재 구현:** [P2a 생산자·어댑터](camera-objects-p2a.md). 학습·모델 선택·동시 부하는 후속 단계
 
+> **2026-10-07 후속 연구:** [카메라와 LiDAR 장애물 융합 분석](camera-lidar-fusion-study.md)에
+> YOLO26 detect/seg, 공개 데이터·가중치, 터널 객체 분리와 full-stack 부하 비교를 정리했다.
+> 아래 YOLO11m 긴급 실행 경로는 유지한다. 연구 비교에서는 YOLO26-seg를 MORAI fine-tune
+> 이전에도 시험할 수 있으며, 아래 O0~O3의 순서를 필수 선행 조건으로 강제하지 않는다.
+> 새 모델·mask는 아직 운영 채택이나 기존 메시지 변경이 아니다.
+
 ## 1. 먼저 내릴 결정
 
 객체 분류가 급하면 **저장소의 기존 COCO YOLO11m을 그대로 사용**한다. 현재 ROS launch와

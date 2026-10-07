@@ -1,5 +1,10 @@
 # 카메라·MGeo·LiDAR 인지 융합 개발 로드맵
 
+> **2026-10-07 장애물 융합 연구:** [카메라와 LiDAR 분석·실험 계획](../../handoffs/perception/camera-lidar-fusion-study.md).
+> 기존 YOLO11m을 기준으로 기하 연관 → YOLO26 detect/seg 교체 → mask 효과를 분리 비교한다.
+> TwinLiteNet+와 신호등 모델은 유지하며 depth 추가는 후순위다. 참고 구현 검수 완료와
+> 실제 모델·full-stack 검증 예정 상태를 구분한다. 기존 운영 연결과 아래 연구 이력은 유지한다.
+
 > **2026-10-05 우선 적용할 이전 결정:** [통합 로드맵](../../architecture/consolidation-roadmap.md)의
 > 카메라/LiDAR 상세 계획을 따른다. 목표는 `asmc_camera` + `asmc_lidar`, 객체 fusion은
 > LiDAR 내부, HD맵은 정적 문맥 제공이다. 카메라 rename/YOLO 생산자는 안승현,
