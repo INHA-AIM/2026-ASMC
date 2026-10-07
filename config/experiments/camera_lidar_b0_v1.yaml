@@ -1,0 +1,59 @@
+schema_version: 1
+experiment_id: camera_lidar_b0_v1
+base_main: 3b142b176ee904f1bbefe4546057a4ba62a1dccb
+gpu: {name: NVIDIA GeForce RTX 4060 Ti, memory_mib: 8188}
+conditions:
+  simulator: stopped
+  network: none
+  ros_master_port: 11312
+  all_models_loaded: true
+  target_hz: {twinlite: 10.0, yolo: 20.0, resnet18: 10.0}
+  hood_mask: true
+  ego_hood_filter: false
+  lifecycle_trace: false
+  fusion_trace: false
+  camera_debug: false
+  gui: false
+  extra_recorder: false
+  main_intrinsic_fusion_debug: retained_without_operational_code_change
+  fusion_max_time_offset_sec: 0.05
+  fusion_sync_wait_timeout_sec: 0.20
+  lidar_processing_rate: existing_latest_frame_maximum
+profiles:
+  C1: [yolo]
+  C2: [twinlite]
+  C3: [resnet18]
+  C4: [twinlite, yolo]
+  C5: [resnet18, yolo]
+  C6: [twinlite, yolo, resnet18]
+repeats: 3
+camera:
+  bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+  start_sec: 44.0
+  duration_sec: 42.0
+  standby_sec: 2.0
+  prepare_timeout_sec: 10.0
+  active_sec: 20.0
+fusion:
+  profiles: [C1, C4, C5, C6]
+  bags:
+    primary: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+    shadow: /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+gps:
+  profile: C1
+  bag_id: primary
+  gap_start_sec: 8.0
+  gap_end_sec: 14.0
+  trace: true
+  interpretation: diagnostic_not_rate_acceptance
+debug_comparison: {profile: C6, phase: camera, repeats: 3}
+resource_sample_sec: 0.2
+gates:
+  first_second_minimum: 9
+  five_second_minimum_hz: 9.5
+  maximum_gap_sec: 0.25
+  yolo_minimum_hz: 18.0
+  duplicate_stamps_maximum: 0
+  reversed_stamps_maximum: 0
+  fusion_offset_p95_max_ms: 50.0
+  operational_defaults_changed: false

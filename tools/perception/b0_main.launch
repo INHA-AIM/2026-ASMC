@@ -1,0 +1,15 @@
+<launch>
+  <arg name="fusion_trace_path" default=""/>
+  <!-- Existing Main ParseCAN publishes a legacy control stub even in
+       perception-only mode. Quarantine it in the test master only. -->
+  <group>
+    <remap from="/ctrl_cmd_0" to="/b0/discarded_ctrl_cmd_0"/>
+    <remap from="/ctrl_cmd" to="/b0/discarded_ctrl_cmd"/>
+    <include file="$(find Main)/main.launch">
+      <arg name="start_yolo" value="false"/>
+      <arg name="rviz" value="false"/>
+      <arg name="start_velodyne_driver" value="false"/>
+      <arg name="fusion_trace_path" value="$(arg fusion_trace_path)"/>
+    </include>
+  </group>
+</launch>

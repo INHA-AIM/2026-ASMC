@@ -1,0 +1,178 @@
+{
+  "fusion-primary-C1-trace": {
+    "processed_supply": {
+      "processed": 541,
+      "matched": 539,
+      "dropped": 1,
+      "pending": 1,
+      "startup_removed": 0,
+      "overflow_removed": 0
+    },
+    "skipped_generations": 107,
+    "lidar_pose_failures": 1,
+    "timeout_drops": 0,
+    "processing_ms": {
+      "median": 74.166601,
+      "p95": 105.499493
+    },
+    "complete": true,
+    "accounting_consistent": true,
+    "processed_supply_accounting_consistent": true,
+    "continuous_observation_complete": true,
+    "duplicate_consumed_yolo_stamps": 0
+  },
+  "fusion-primary-C4-trace": {
+    "processed_supply": {
+      "processed": 533,
+      "matched": 531,
+      "dropped": 1,
+      "pending": 1,
+      "startup_removed": 0,
+      "overflow_removed": 0
+    },
+    "skipped_generations": 115,
+    "lidar_pose_failures": 1,
+    "timeout_drops": 0,
+    "processing_ms": {
+      "median": 74.3536225,
+      "p95": 109.832861
+    },
+    "complete": true,
+    "accounting_consistent": true,
+    "processed_supply_accounting_consistent": true,
+    "continuous_observation_complete": true,
+    "duplicate_consumed_yolo_stamps": 0
+  },
+  "fusion-primary-C5-trace": {
+    "processed_supply": {
+      "processed": 541,
+      "matched": 539,
+      "dropped": 1,
+      "pending": 1,
+      "startup_removed": 0,
+      "overflow_removed": 0
+    },
+    "skipped_generations": 107,
+    "lidar_pose_failures": 1,
+    "timeout_drops": 0,
+    "processing_ms": {
+      "median": 74.274172,
+      "p95": 105.892446
+    },
+    "complete": true,
+    "accounting_consistent": true,
+    "processed_supply_accounting_consistent": true,
+    "continuous_observation_complete": true,
+    "duplicate_consumed_yolo_stamps": 0
+  },
+  "fusion-primary-C6-trace": {
+    "processed_supply": {
+      "processed": 533,
+      "matched": 531,
+      "dropped": 1,
+      "pending": 1,
+      "startup_removed": 0,
+      "overflow_removed": 0
+    },
+    "skipped_generations": 115,
+    "lidar_pose_failures": 1,
+    "timeout_drops": 0,
+    "processing_ms": {
+      "median": 73.9303565,
+      "p95": 109.834397
+    },
+    "complete": true,
+    "accounting_consistent": true,
+    "processed_supply_accounting_consistent": true,
+    "continuous_observation_complete": true,
+    "duplicate_consumed_yolo_stamps": 0
+  },
+  "fusion-shadow-C1-trace": {
+    "processed_supply": {
+      "processed": 195,
+      "matched": 194,
+      "dropped": 0,
+      "pending": 1,
+      "startup_removed": 0,
+      "overflow_removed": 0
+    },
+    "skipped_generations": 13,
+    "lidar_pose_failures": 0,
+    "timeout_drops": 0,
+    "processing_ms": {
+      "median": 94.00646,
+      "p95": 131.553944
+    },
+    "complete": true,
+    "accounting_consistent": true,
+    "processed_supply_accounting_consistent": true,
+    "continuous_observation_complete": true,
+    "duplicate_consumed_yolo_stamps": 0
+  },
+  "fusion-shadow-C4-trace": {
+    "processed_supply": {
+      "processed": 191,
+      "matched": 190,
+      "dropped": 0,
+      "pending": 1,
+      "startup_removed": 0,
+      "overflow_removed": 0
+    },
+    "skipped_generations": 17,
+    "lidar_pose_failures": 0,
+    "timeout_drops": 0,
+    "processing_ms": {
+      "median": 89.939959,
+      "p95": 141.232861
+    },
+    "complete": true,
+    "accounting_consistent": true,
+    "processed_supply_accounting_consistent": true,
+    "continuous_observation_complete": true,
+    "duplicate_consumed_yolo_stamps": 0
+  },
+  "fusion-shadow-C5-trace": {
+    "processed_supply": {
+      "processed": 191,
+      "matched": 191,
+      "dropped": 0,
+      "pending": 0,
+      "startup_removed": 0,
+      "overflow_removed": 0
+    },
+    "skipped_generations": 16,
+    "lidar_pose_failures": 1,
+    "timeout_drops": 0,
+    "processing_ms": {
+      "median": 90.46079399999999,
+      "p95": 135.447582
+    },
+    "complete": true,
+    "accounting_consistent": true,
+    "processed_supply_accounting_consistent": true,
+    "continuous_observation_complete": true,
+    "duplicate_consumed_yolo_stamps": 0
+  },
+  "fusion-shadow-C6-trace": {
+    "processed_supply": {
+      "processed": 192,
+      "matched": 191,
+      "dropped": 0,
+      "pending": 1,
+      "startup_removed": 0,
+      "overflow_removed": 0
+    },
+    "skipped_generations": 16,
+    "lidar_pose_failures": 0,
+    "timeout_drops": 0,
+    "processing_ms": {
+      "median": 91.686809,
+      "p95": 141.016434
+    },
+    "complete": true,
+    "accounting_consistent": true,
+    "processed_supply_accounting_consistent": true,
+    "continuous_observation_complete": true,
+    "duplicate_consumed_yolo_stamps": 0
+  }
+}
