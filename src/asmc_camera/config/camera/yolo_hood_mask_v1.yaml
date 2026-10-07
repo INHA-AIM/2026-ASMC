@@ -1,0 +1,9 @@
+# Initial comparison candidate: same excluded area as the legacy 21% crop.
+# Black pixels suppress hood evidence; dense YOLO inference still computes them.
+# Coordinates are normalized to the full source image. No crop or resize occurs.
+version: 1
+polygon:
+  - [0.0, 0.79]
+  - [1.0, 0.79]
+  - [1.0, 1.0]
+  - [0.0, 1.0]
