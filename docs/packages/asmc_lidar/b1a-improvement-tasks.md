@@ -48,3 +48,11 @@
 
 구간·결과 소비·차량 제어는 판제 책임이다. 차선 피팅은 음영 ODD에서만 소비한다.
 COCO 확대, YOLO26, 카메라 수·주기, 학습·TensorRT는 독립적인 후속 실험이다.
+
+## 공통 기반 연결 상태
+
+[Main의 opt-in 좌표·GPS 경계](../../handoffs/perception/lidar-camera-frame-boundaries.md)에
+관측 행렬·local 연관·map 가용성·typed 출력과 검증 보류를 정리했다. 터널 필터
+입력은 raw/leveled 좌표와 행렬을 명시하고, 기존 전방 YOLO 보호와 후단 클래스
+fusion을 구분해 이 지점에 연결한다. GPS에 따른 별도 검출 경로는 도입하지 않는다.
+B1a 원본·고정 재호 브랜치는 대조군으로 보존한다.

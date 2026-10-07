@@ -3,7 +3,9 @@
 현재 `asmc_lidar`는 **좌표·시간 기반과 공용 계약만 제공하는 빌드 가능한 골격**이다.
 검출·군집·OBB·추적·fusion·ROS 어댑터의 실행 구현은 손재호가 원본
 [`lidar+sensorfusion`](../../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)에서 이전한다.
-기존 원본 패키지가 현재 주행 경로이며, 골격은 객체 토픽을 발행하지 않는다.
+기존 원본 패키지가 현재 주행 경로다. `asmc_lidar` 자체는 ROS 노드를 갖지 않지만,
+`Main`의 opt-in 어댑터가 코어를 연결해 typed local/map 객체를 제공한다.
+[좌표·GPS 경계 구현과 수락 보류](../../handoffs/perception/lidar-camera-frame-boundaries.md)를 참고한다.
 
 **B1a 검증 인계:** [확인된 경계·공통 기반 수정·재호 후속 과제](b1a-improvement-tasks.md).
 원본 44회 증거는 보존하며, 기본 좌표·시간·GPS 경계 수정과 터널 필터의 운영 채택은 분리한다.

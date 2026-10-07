@@ -86,3 +86,12 @@ HD맵·카메라 문맥의 frame/시간·유효 범위가 맞지 않으면 관�
 
 좌표·시간 코어 시험은 [패키지 README](../../../src/asmc_lidar/README.md)에 있다.
 실제 GPS 전환·차량/횡단 객체·카메라 동시 부하·세 판제 모듈의 운영 수락은 후속 작업이다.
+
+## Main 공통 경계의 opt-in 후보
+
+`enable_common_geometry:=true`에서 기존 `asmc_msgs/LidarObjectArray`로
+`/perception/lidar/objects_local` (`base_link`)과 `objects_map` (`map`)을 제공한다.
+[구현·시간 정책·직접 launch·수락 상태](../../handoffs/perception/lidar-camera-frame-boundaries.md)를
+확인한다. 생산 호스트는 아직 nested Main이며 골격의 전체 기능 이전은 완료되지 않았다.
+관측 상태·속도/dynamic validity를 소비자가 확인해야 하며 자동 remap·판제 cutover는 없다.
+strict 100ms bracketing API와 opt-in 300ms 제한 GPS 보정 API를 구분한다.
