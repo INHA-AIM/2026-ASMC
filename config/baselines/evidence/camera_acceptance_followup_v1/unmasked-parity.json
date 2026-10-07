@@ -1,0 +1,51 @@
+{
+  "status": "pass",
+  "frames": 3514,
+  "exact_frames": 3514,
+  "errors": [],
+  "boundary_exceptions": [],
+  "weight_sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+  "bag": "/data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag",
+  "bag_sha256": "a8f360e666f58358062e83cedbc6b51f94e8dc897402a2605eed7761a7880268",
+  "legacy_source_sha256": "1cd5c1053245f3d3efbb63aac3cc311572bbbd51622b1ccd25976dd67a943cde",
+  "python": "3.8.10 (default, Mar 18 2025, 20:04:55) \n[GCC 9.4.0]",
+  "interpreter": "/usr/bin/python3",
+  "torch": "2.1.2+cu118",
+  "ultralytics": "8.4.150",
+  "gpu": "NVIDIA GeForce RTX 4060 Ti",
+  "backend": {
+    "backend": "ultralytics",
+    "weights": "/root/ws/src/asmc_camera/models/object_detection/yolo11m.pt",
+    "weights_sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+    "device": "cuda:0",
+    "model_device": "cuda:0",
+    "ultralytics": "8.4.150",
+    "torch": "2.1.2+cu118",
+    "conf_thres": 0.7,
+    "allowed_names": [
+      "bus",
+      "truck",
+      "person",
+      "car"
+    ],
+    "predict_overrides": {
+      "iou": 0.7,
+      "max_det": 300,
+      "agnostic_nms": false
+    },
+    "warmup_ms": 625.3,
+    "model_load_ms": 423.9035100035835
+  },
+  "hood_mask": false,
+  "duration_sec": 109.26148481701966,
+  "latency": {
+    "old_ms": {
+      "p50": 14.02058100211434,
+      "p95": 20.068029989488423
+    },
+    "new_ms": {
+      "p50": 13.388724997639656,
+      "p95": 19.379618552920874
+    }
+  }
+}

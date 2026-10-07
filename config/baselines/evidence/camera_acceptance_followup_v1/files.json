@@ -1,0 +1,50 @@
+{
+  "raw.tar.gz": {
+    "sha256": "a335cf96a96ff059f87a05bb4fba378ea080ed87ebe642413e0f3ad730c09241",
+    "bytes": 17109530
+  },
+  "code-files.sha256.json": {
+    "sha256": "cd1dc53628cc640f1dd527ea8dfb08623dbfd225c3a5d47605288ad19e440af3",
+    "bytes": 2008
+  },
+  "lifecycle-trace-01.json": {
+    "sha256": "07b1a47a2cfe04aa7b07ae61453629a670a57eb8a847febbc8f7c8861cb76e06",
+    "bytes": 135668
+  },
+  "lifecycle-input-stop-final-corrected.json": {
+    "sha256": "34cf04f6e53ba4f03f63d9fb423db234a09771c1def1660af681a833594d42b3",
+    "bytes": 69021
+  },
+  "shadow-acceptance.json": {
+    "sha256": "58f765dbdb99fa2a40fb75b2f653ff48ebf109ac6b4bd660c501d60e72dc7ee6",
+    "bytes": 15654
+  },
+  "lifecycle-untraced-2.json": {
+    "sha256": "c50e39f62d496cd17f34206221ea2e6fe0b675395de323ab8072505dd4053c3d",
+    "bytes": 48339
+  },
+  "lifecycle-trace-02.json": {
+    "sha256": "66fe5321a3a0988ff25a17b4dd371d513843e015017e4997e33a646582d33739",
+    "bytes": 135661
+  },
+  "lifecycle-trace-03.json": {
+    "sha256": "3366f75bfbd8da4d245eea1df79656bb30cd92876ebe45b88a0dd142b38bf376",
+    "bytes": 135648
+  },
+  "unmasked-parity.json": {
+    "sha256": "8628af7836f2199b8dd56fd8bfcadbe0bf7adea9a0756f7f0b681078ad648779",
+    "bytes": 1572
+  },
+  "primary-acceptance.json": {
+    "sha256": "109bd7b8c7a9dbaa0972826eb2adb269983cf05d64a6e86e51c0784b2ad52d12",
+    "bytes": 23208
+  },
+  "lifecycle-untraced-1.json": {
+    "sha256": "d85b7fdee8df184c7e8d4ad1a670e8186d19d1c3ab9b9bd4719b858c9db757f0",
+    "bytes": 48341
+  },
+  "lifecycle-input-stop.json": {
+    "sha256": "7d9251f55805fdb197c991528bf4a43d8688e831d4d3f66a10c7e05828c66de7",
+    "bytes": 91049
+  }
+}

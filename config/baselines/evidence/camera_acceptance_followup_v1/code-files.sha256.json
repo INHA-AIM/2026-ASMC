@@ -1,0 +1,18 @@
+{
+  "tools/perception/check_model_lifecycle.py": "ac0ec888dc66515570609993504ccc73fc48a0d96b3fe78c41126da9a8140a1d",
+  "tools/perception/lifecycle_measurements.py": "39de2cfd5742e5c964a1c9057b1eab444f031f293801c6725d2ba29868737ab3",
+  "tools/perception/replay_camera_objects.py": "797ff20b928587144f21dab20c29ed19e531f77cf8fabec732af543b5df7aecb",
+  "tools/perception/analyze_fusion_trace.py": "6e234ecaddffb4f7c4db5d539c66b0ce78e30970288e750357357832533ed2a7",
+  "tools/perception/analyze_fusion_identity.py": "36f91a8ce59ec5c2fa7aaa37e46b690e38356b872ca5a9e7f4bd63f5afb4e28d",
+  "src/asmc_camera/src/asmc_camera/runtime/region_example.py": "e418cd26a1b0d363b713aa9737b765dc07fdbc8858c5f879dfbe1a76bafd6db8",
+  "src/asmc_camera/src/asmc_camera/runtime/cadence.py": "1212c90bb18b710bc9ee68edd3e55986a1a5b512cd1f126008f3189f318d8273",
+  "src/asmc_camera/src/asmc_camera/runtime/ros_control.py": "97d3a4a6a8381117be906a97cd2bfe7672726436cf91e78882e05999085e9017",
+  "src/asmc_camera/src/asmc_camera/runtime/__init__.py": "e54975b9f121c584b9955d211c1fb23f139ad913e339da0637007a73e1ca37d8",
+  "src/asmc_camera/src/asmc_camera/runtime/state.py": "981164aae3863143a3c93ee99ad8d86a7e9a3c23d253d62c934f43b64b62bb18",
+  "src/asmc_camera/src/asmc_camera/runtime/trace.py": "44d2976f5f7ae2f613124cc8672b01352190a31cb3256993343a1cabff24a8fc",
+  "src/asmc_camera/src/asmc_camera/nodes/semantic_inference_node.py": "a94b8204e4f553b7d6958f6b77184659d2d00c8da6c01378057cdfe15d9fd9a3",
+  "src/asmc_camera/src/asmc_camera/nodes/object_detection_node.py": "a6abc3d25c47815b0c84fd4aca3cbb49210f85e0090c0d223e6ec9d683fa75a5",
+  "src/asmc_camera/src/asmc_camera/nodes/traffic_light_node.py": "1afe64dcb402c334a2b6d9c53683a431573411d2db61b3ca506e67d44d2c74ce",
+  "src/asmc_camera/src/asmc_camera/detection/ultralytics_backend.py": "6f9fa793626dd9b10c74c16637bc1be01ed745447cddd27968636ba1c6108098",
+  "src/asmc_camera/config/runtime/camera_region_example.yaml": "c564e583c0cbe5135c0d9d3b3aa8aa7603d663709c026730ea66c33b15ff8ae6"
+}
