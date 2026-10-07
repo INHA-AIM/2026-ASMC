@@ -6,6 +6,7 @@ output gates without buffered instrumentation and uses the conservative RPC
 start as its timing anchor. Preparation requires the acknowledged generation.
 """
 import argparse
+import hashlib
 import json
 import os
 import signal
@@ -48,6 +49,15 @@ def main():
     requests, stages = [], []
     report = dict(checks={}, failures=[], trace_enabled=not args.no_trace,
                   timing_anchor='server_acceptance' if not args.no_trace else 'rpc_start_conservative')
+    workspace = Path(__file__).resolve().parents[2]
+    source_files = [Path(__file__).resolve(), Path(__file__).resolve().with_name('lifecycle_measurements.py')]
+    library = workspace/'src/asmc_camera/src/asmc_camera'
+    source_files += [library/name for name in (
+        'runtime/state.py','runtime/ros_control.py','runtime/trace.py',
+        'nodes/semantic_inference_node.py','nodes/object_detection_node.py','nodes/traffic_light_node.py',
+        'detection/ultralytics_backend.py')]
+    report['execution_source_sha256'] = {str(path.relative_to(workspace)):hashlib.sha256(path.read_bytes()).hexdigest()
+                                       for path in source_files}
     camera = playback = None
     def status(model, msg):
         with lock:
@@ -180,9 +190,10 @@ def main():
             if not args.no_trace:
                 return trace_trial(record,traces[record['model']],rows if ended else None,ended)
             result=dict(record,accepted_monotonic=record['call_started'])
+            matching=[s for s in status_rows if s['model']==record['model'] and s['generation']==record['generation']]
+            if not matching:raise ValueError('missing acknowledged-generation status')
+            result['source_cutoff_ns']=matching[0]['source_cutoff_ns']
             if ended:
-                matching=[s for s in status_rows if s['model']==record['model'] and s['generation']==record['generation']]
-                if not matching:raise ValueError('missing acknowledged-generation status')
                 result['outputs']={name:rate_report(values,record['call_started'],ended,matching[0]['source_cutoff_ns'])
                                    for name,values in rows.items()}
             return result
@@ -203,10 +214,11 @@ def main():
                     stage['outputs']={name:rate_report(values,stage['start'],stage['end']) for name,values in rows.items()}
                 report['stages'].append(stage)
             for model in ('yolo','resnet18'):
-                ranges=[(r['call_returned'],next(n['call_started'] for n in requests[i+1:] if n['model']==model))
+                ranges=[(r['call_returned'],next(n['call_started'] for n in requests[i+1:] if n['model']==model),
+                         correlate(r)['source_cutoff_ns'])
                         for i,r in enumerate(requests) if r['model']==model and r['mode']==1]
                 report['checks'][model+'_prepare_no_operational_output']=not any(
-                    a<=t<b for t,_,_ in rows.get(model,[]) for a,b in ranges)
+                    a<=t<b and stamp>cutoff for t,stamp,_ in rows.get(model,[]) for a,b,cutoff in ranges)
             last=report['stages'][-1]
             report['checks']['stop_operational_outputs']=last['name']=='all_standby_again' and all(
                 not r['messages'] for r in last['outputs'].values())

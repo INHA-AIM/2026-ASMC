@@ -45,6 +45,7 @@ class LatestCompressedImage:
         self._jpeg = None
         self._header = None
         self._seq = 0
+        self.on_receive = None
         self._sub = rospy.Subscriber(
             topic,
             compressed_image_cls,
@@ -58,6 +59,8 @@ class LatestCompressedImage:
             self._jpeg = bytes(message.data)
             self._header = copy.deepcopy(message.header)
             self._seq += 1
+        if self.on_receive is not None:
+            self.on_receive(message.header)
 
     def latest(self):
         with self._lock:
@@ -184,6 +187,9 @@ def main(argv=None):
 
     control = RosInferenceControl("resnet18", ["camera4"], args.hz, on_transition=invalidate)
     control.state.record('startup', model_load_ms=model_load_ms, dummy_warmup_ms=dummy_warmup_ms)
+    if control.state.trace is not None:
+        source.on_receive = lambda header: control.state.record(
+            'received', view='camera4', source_stamp_ns=header.stamp.to_nsec())
     rospy.loginfo(
         "traffic-light ready input=%s legacy=%s,%s typed=%s model=%s device=%s val_acc=%.4f",
         args.image_topic,

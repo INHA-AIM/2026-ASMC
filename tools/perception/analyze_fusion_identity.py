@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Diagnose replay track IDs using identical source-stamped LiDAR observations.
 
-This report supplements the strict replay gates; it does not relax them.
+The stable multi-run comparison supplies the replay classification gate;
+pairwise differences and numeric track IDs remain diagnostic observations.
 Only unambiguous clusters whose 3D centers differ by <=1 mm are compared.
 Unmatched/ambiguous observations are counted, never treated as successes.
 """
