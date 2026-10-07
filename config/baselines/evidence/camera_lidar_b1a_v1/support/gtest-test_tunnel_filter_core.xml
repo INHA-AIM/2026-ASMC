@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="28" failures="0" disabled="0" errors="0" time="0.408" timestamp="2026-10-07T23:27:51" name="AllTests">
+  <testsuite name="TunnelFilterGate" tests="1" failures="0" disabled="0" errors="0" time="0" timestamp="2026-10-07T23:27:51">
+    <testcase name="GpsNormalDoesNotRunExperiment" status="run" result="completed" time="0" timestamp="2026-10-07T23:27:51" classname="TunnelFilterGate" />
+  </testsuite>
+  <testsuite name="TunnelFilterCeiling" tests="1" failures="0" disabled="0" errors="0" time="0" timestamp="2026-10-07T23:27:51">
+    <testcase name="CutoffBoundaryKeepsExactThreshold" status="run" result="completed" time="0" timestamp="2026-10-07T23:27:51" classname="TunnelFilterCeiling" />
+  </testsuite>
+  <testsuite name="TunnelFilterLeveling" tests="2" failures="0" disabled="0" errors="0" time="0" timestamp="2026-10-07T23:27:51">
+    <testcase name="MatchesPitchOnlyCorrectionAndKeepsIntensity" status="run" result="completed" time="0" timestamp="2026-10-07T23:27:51" classname="TunnelFilterLeveling" />
+    <testcase name="RollAndPitchLevelTiltedGround" status="run" result="completed" time="0" timestamp="2026-10-07T23:27:51" classname="TunnelFilterLeveling" />
+  </testsuite>
+  <testsuite name="TunnelFilterGround" tests="7" failures="0" disabled="0" errors="0" time="0.133" timestamp="2026-10-07T23:27:51">
+    <testcase name="RejectsPlaneOutsideGroundHeight" status="run" result="completed" time="0" timestamp="2026-10-07T23:27:51" classname="TunnelFilterGround" />
+    <testcase name="RejectsTiltedNormalAndJumps" status="run" result="completed" time="0" timestamp="2026-10-07T23:27:51" classname="TunnelFilterGround" />
+    <testcase name="ReusesPreviousPlaneForThreeFramesThenUnavailable" status="run" result="completed" time="0" timestamp="2026-10-07T23:27:51" classname="TunnelFilterGround" />
+    <testcase name="FourthFailureUsesFailSafeBandNotPassThrough" status="run" result="completed" time="0.096" timestamp="2026-10-07T23:27:51" classname="TunnelFilterGround" />
+    <testcase name="HorizontalCeilingIsNeverChosenAsGround" status="run" result="completed" time="0.025" timestamp="2026-10-07T23:27:51" classname="TunnelFilterGround" />
+    <testcase name="RaisedSideSlabDoesNotLiftGround" status="run" result="completed" time="0.009" timestamp="2026-10-07T23:27:51" classname="TunnelFilterGround" />
+    <testcase name="RefitRemovesFarGroundWhenPriorIsStale" status="run" result="completed" time="0.003" timestamp="2026-10-07T23:27:51" classname="TunnelFilterGround" />
+  </testsuite>
+  <testsuite name="TunnelFilterWall" tests="14" failures="0" disabled="0" errors="0" time="0.206" timestamp="2026-10-07T23:27:51">
+    <testcase name="SupportRequiresContinuousBins" status="run" result="completed" time="0" timestamp="2026-10-07T23:27:51" classname="TunnelFilterWall" />
+    <testcase name="ShortSpanIsNotAWall" status="run" result="completed" time="0" timestamp="2026-10-07T23:27:51" classname="TunnelFilterWall" />
+    <testcase name="LeftAndRightAreIndependentAndNeedPersistence" status="run" result="completed" time="0.009" timestamp="2026-10-07T23:27:51" classname="TunnelFilterWall" />
+    <testcase name="TrackIgnoresTiltSignFlipButNotAzimuthChange" status="run" result="completed" time="0" timestamp="2026-10-07T23:27:51" classname="TunnelFilterWall" />
+    <testcase name="TrackCompensatesEgoMotionBetweenSparseFrames" status="run" result="completed" time="0" timestamp="2026-10-07T23:27:51" classname="TunnelFilterWall" />
+    <testcase name="ProtectedPointsSurviveWallRemoval" status="run" result="completed" time="0.019" timestamp="2026-10-07T23:27:51" classname="TunnelFilterWall" />
+    <testcase name="AmbiguousPointsKeptWhenCameraUnavailable" status="run" result="completed" time="0.011" timestamp="2026-10-07T23:27:51" classname="TunnelFilterWall" />
+    <testcase name="CarBesideWallIsNotAbsorbed" status="run" result="completed" time="0.057" timestamp="2026-10-07T23:27:51" classname="TunnelFilterWall" />
+    <testcase name="TwoLevelWallRemovesBarrierAndUpperWall" status="run" result="completed" time="0.013" timestamp="2026-10-07T23:27:51" classname="TunnelFilterWall" />
+    <testcase name="OppositelyTiltedBarrierIsStillAStep" status="run" result="completed" time="0.017" timestamp="2026-10-07T23:27:51" classname="TunnelFilterWall" />
+    <testcase name="CoplanarRunAcrossOcclusionGapIsRemoved" status="run" result="completed" time="0.009" timestamp="2026-10-07T23:27:51" classname="TunnelFilterWall" />
+    <testcase name="YawedVehicleStillRemovesWallCrossingAhead" status="run" result="completed" time="0.026" timestamp="2026-10-07T23:27:51" classname="TunnelFilterWall" />
+    <testcase name="BendingWallCrossingAheadIsRemovedByContinuation" status="run" result="completed" time="0.014" timestamp="2026-10-07T23:27:51" classname="TunnelFilterWall" />
+    <testcase name="PlaneInFrontOfWallIsRejectedAndPersonSurvives" status="run" result="completed" time="0.031" timestamp="2026-10-07T23:27:51" classname="TunnelFilterWall" />
+  </testsuite>
+  <testsuite name="TunnelFilterObb" tests="1" failures="0" disabled="0" errors="0" time="0" timestamp="2026-10-07T23:27:51">
+    <testcase name="CeilingAndWallRulesRespectProtection" status="run" result="completed" time="0" timestamp="2026-10-07T23:27:51" classname="TunnelFilterObb" />
+  </testsuite>
+  <testsuite name="TunnelFilterPipeline" tests="1" failures="0" disabled="0" errors="0" time="0.069" timestamp="2026-10-07T23:27:51">
+    <testcase name="EndToEndSyntheticTunnelKeepsCar" status="run" result="completed" time="0.069" timestamp="2026-10-07T23:27:51" classname="TunnelFilterPipeline" />
+  </testsuite>
+  <testsuite name="TunnelFilterPreGpsGuard" tests="1" failures="0" disabled="0" errors="0" time="0" timestamp="2026-10-07T23:27:52">
+    <testcase name="RemovesOnlyTunnelSpanningObb" status="run" result="completed" time="0" timestamp="2026-10-07T23:27:52" classname="TunnelFilterPreGpsGuard" />
+  </testsuite>
+</testsuites>

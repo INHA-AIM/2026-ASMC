@@ -1,0 +1,60 @@
+Python 3.8.10
+Linux 8f6a5f9b548d 6.18.33.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun 18 21:54:43 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+Architecture:                            x86_64
+CPU op-mode(s):                          32-bit, 64-bit
+Byte Order:                              Little Endian
+Address sizes:                           46 bits physical, 48 bits virtual
+CPU(s):                                  20
+On-line CPU(s) list:                     0-19
+Thread(s) per core:                      2
+Core(s) per socket:                      10
+Socket(s):                               1
+NUMA node(s):                            1
+Vendor ID:                               GenuineIntel
+CPU family:                              6
+Model:                                   183
+Model name:                              Intel(R) Core(TM) i5-14600K
+Stepping:                                1
+CPU MHz:                                 3494.399
+BogoMIPS:                                6988.79
+Virtualization:                          VT-x
+Hypervisor vendor:                       Microsoft
+Virtualization type:                     full
+L1d cache:                               480 KiB
+L1i cache:                               320 KiB
+L2 cache:                                20 MiB
+L3 cache:                                24 MiB
+NUMA node0 CPU(s):                       0-19
+Vulnerability Gather data sampling:      Not affected
+Vulnerability Ghostwrite:                Not affected
+Vulnerability Indirect target selection: Not affected
+Vulnerability Itlb multihit:             Not affected
+Vulnerability L1tf:                      Not affected
+Vulnerability Mds:                       Not affected
+Vulnerability Meltdown:                  Not affected
+Vulnerability Mmio stale data:           Not affected
+Vulnerability Old microcode:             Not affected
+Vulnerability Reg file data sampling:    Not affected
+Vulnerability Retbleed:                  Mitigation; Enhanced IBRS
+Vulnerability Spec rstack overflow:      Not affected
+Vulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl
+Vulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:                Mitigation; Enhanced / Automatic IBRS; IBPB conditional; PBRSB-eIBRS SW sequence; BHI BHI_DIS_S
+Vulnerability Srbds:                     Not affected
+Vulnerability Tsa:                       Not affected
+Vulnerability Tsx async abort:           Not affected
+Vulnerability Vmscape:                   Not affected
+Flags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid tsc_known_freq pni pclmulqdq vmx ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves avx_vnni vnmi umip waitpkg gfni vaes vpclmulqdq rdpid movdiri movdir64b fsrm md_clear serialize ibt flush_l1d arch_capabilities
+name, memory.total [MiB], driver_version
+NVIDIA GeForce RTX 4060 Ti, 8188 MiB, 591.86
+    PID COMMAND
+      1 tail -f /dev/null
+  11360 bash -lc source /opt/ros/noetic/setup.bash; source /root/ws/devel/setup.bash; source /root/filter_ws/devel/setup.bash; export ROS_MASTER_URI=http://127.0.0.1:11314 ROS_HOSTNAME=localhost; python3 /root/ws/tools/perception/run_b1a_matrix.py --fixtures /evidence/fixtures-final --output /evidence/protocol-79448bc --revision 79448bc
+  11422 python3 /root/ws/tools/perception/run_b1a_matrix.py --fixtures /evidence/fixtures-final --output /evidence/protocol-79448bc --revision 79448bc
+  11460 /usr/bin/python3 /opt/ros/noetic/bin/roscore -p 11314
+  11487 /usr/bin/python3 /opt/ros/noetic/bin/rosmaster --core -p 11314 -w 3 __log:=/root/.ros/log/77399740-c25d-11f1-91d0-1d2ffb87347f/master.log
+  11513 /usr/bin/python3 /root/ws/tools/perception/run_b1a_trial.py --job {"phase": "offline", "bag_id": "primary", "profile": "T1", "gps_mode": "invalid", "repeat": 1} --output /evidence/protocol-79448bc/offline-primary-T1-invalid-r1 --fixtures /evidence/fixtures-final --source /root/filter_ws
+  11554 /opt/ros/noetic/lib/rosout/rosout __name:=rosout __log:=/root/.ros/log/77399740-c25d-11f1-91d0-1d2ffb87347f/rosout-1.log
+  11571 /root/filter_ws/devel/lib/Main/tunnel_filter_offline_eval --bag /evidence/fixtures-final/primary-invalid.bag --out /evidence/protocol-79448bc/offline-primary-T1-invalid-r1 --processing-delay 0.13 --dump-clouds
+  11657 bash -lc python3 --version; uname -a; lscpu; nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv; ps -eo pid,args
+  11672 ps -eo pid,args

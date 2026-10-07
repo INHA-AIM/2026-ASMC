@@ -1,0 +1,10 @@
+Python 3.8.10
+libopencv-dev	4.2.0+dfsg-5
+libpcl-dev	1.10.0+dfsg-5ubuntu1
+ros-noetic-roscpp	1.17.4-1focal.20250519.225343
+9604a9d8104d38c3bd9830382a3571d0
+e127b2aabd7494ad01a5a56b005bf07e
+310c671afb3693e7909db6453d115b79
+Linux 8f6a5f9b548d 6.18.33.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun 18 21:54:43 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+name, memory.total [MiB], driver_version
+NVIDIA GeForce RTX 4060 Ti, 8188 MiB, 591.86

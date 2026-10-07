@@ -1,0 +1,672 @@
+schema_version: 1
+baseline_id: perception_camera_lidar_b1a_v1
+recorded_on: '2026-10-08'
+status: complete_verification_baseline_operational_adoption_held
+base_main: 07cc51a93bb8382352575ca1d45559175529bb92
+branch: feat/camera-lidar-b1a-verification
+source_revision: 8dde9b691bebd4f9d5172d0c43bd6b16d2052c2b
+measured_tool_revision: 19a0b29
+postprocessing_revision: df1a20c16b0c057d18e1867a6665e31eca78e94a
+operational_source_changed: false
+operational_defaults_changed: false
+operational_adoption: none
+environment:
+  container: asmc-camera-lidar-b1a
+  image: sha256:1ecd9f50491565cad32e32980bb5df5b48487f470440cb66c9ec3b8dc5c11400
+  network: none
+  ros_master_port: 11314
+  gpu: NVIDIA GeForce RTX 4060 Ti, 8188 MiB, driver 591.86
+  cpu: Intel Core i5-14600K, 20 logical CPUs
+  python: 3.8.10
+  PCL: 1.10.0
+  opencv_dev: 4.2.0
+  roscpp: 1.17.4
+  simulator: absent_verified_by_15_second_process_monitor
+  resource_sample_sec: 0.2
+  gui_during_measurement: false
+  fresh_yolo_inference: false
+  shared_live_master_or_bridge_changed: false
+  gpu_process_memory: unavailable
+  full_stack_performance_claim: false
+fixed_protocol:
+  expected: 44
+  completed: 44
+  offline: 8
+  realtime: 36
+  repeats: 3
+  stage_accounting_failures: 0
+  offline_processing_delay_sec: 0.13
+  realtime_bag_rate: 1.0
+  filter_OFF_native_replica_mismatches: 0
+  independent_object_GT: false
+  natural_GPS_denial: false
+  all_trial_successes_are_not_operational_acceptance: true
+  premature_simulator_running_trials: Preserved in raw-preliminary.tar.gz; excluded
+    from fixed protocol.
+inputs:
+  experiment_config_sha256: 6239ee2a8a2aa413c154a38b4a0173c061895b3fa83642c2b1c02dd157e519b1
+  frozen_yolo_archive_sha256: 37a07832f698162183f0ea06902b10db03c306ad5ef0dc76a850ee0fdccc9db4
+  bags:
+    primary:
+      source: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+      sha256: 859cbd84a1e845b76426f96be2778c6f54ea77fe348631a976ef3adf666d0c02
+      duration_sec: 48.926517724990845
+      raw_scans: 649
+      frozen_yolo_events: 978
+      yolo_event_sha256: ac6745a62d2664f569efbcd0b25029c02d92114dd81c6f51f8a4800ba738e20b
+      injection_window_sec:
+      - 20.0
+      - 40.0
+      fixtures:
+        normal:
+          sha256: ab14a17eb0ef1267cba1a1dff73a021cdce7e543e401837745ca3d8844f24a54
+          topics:
+            /Ego_topic: 2445
+            /camera/image/compressed: 979
+            /imu: 2384
+            /velodyne_points: 649
+            /gps: 245
+            /YOLO/BBox: 978
+        invalid:
+          sha256: c6c9a3f35c6a9d10721305c532e91955b5a10daaecca1eb4635ddab0d10982b1
+          topics:
+            /Ego_topic: 2445
+            /camera/image/compressed: 979
+            /imu: 2384
+            /velodyne_points: 649
+            /gps: 245
+            /YOLO/BBox: 978
+        missing:
+          sha256: f12c6c5654d33f33c14a925d933dc0ade9300169645985b2f842c18c303b49b0
+          topics:
+            /Ego_topic: 2445
+            /camera/image/compressed: 979
+            /imu: 2384
+            /velodyne_points: 649
+            /gps: 145
+            /YOLO/BBox: 978
+    shadow:
+      source: /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+      sha256: 9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34
+      duration_sec: 24.751930475234985
+      raw_scans: 208
+      frozen_yolo_events: 493
+      yolo_event_sha256: 2a05873f4f88c166a25213a0e9adac5b6fcd66d2420cb40d605da6b8aba06547
+      injection_window_sec:
+      - 6.0
+      - 20.0
+      fixtures:
+        normal:
+          sha256: c9bdd50d53661f430826f544df35dd1b3ef56a99cf2db3918656d208bf254665
+          topics:
+            /imu: 1223
+            /Ego_topic: 1238
+            /camera/image/compressed: 494
+            /gps/fix: 124
+            /gps: 124
+            /YOLO/BBox: 493
+            /velodyne_points: 208
+        invalid:
+          sha256: 9d182ece0a41f893a27303941dfff55fbe00e883c12ee941dc58a0dd011133a9
+          topics:
+            /imu: 1223
+            /Ego_topic: 1238
+            /camera/image/compressed: 494
+            /gps/fix: 124
+            /gps: 124
+            /YOLO/BBox: 493
+            /velodyne_points: 208
+        missing:
+          sha256: 89a73745c22831a6c985a3faceb299c29dd237fe22d4fe0cc2fdfdd7c7f9544f
+          topics:
+            /imu: 1223
+            /Ego_topic: 1238
+            /camera/image/compressed: 494
+            /gps/fix: 54
+            /gps: 54
+            /YOLO/BBox: 493
+            /velodyne_points: 208
+offline:
+  primary-T1:
+    frames: 649
+    active_frames: 0
+    stage_counts_sum: null
+    protection_available_frames: 0
+    unavailable_protection_frames: 0
+    removed_obb_candidates: 0
+    protected_wall_attached_candidates: 0
+    removed_protected_candidates: 0
+  primary-T2:
+    frames: 649
+    active_frames: 271
+    stage_counts_sum:
+      input_voxel: 2381589
+      ceiling_removed: 77066
+      ground_removed: 525108
+      wall_removed: 1413649
+      kept: 365766
+      clusters: 1307
+      protected: 0
+    protection_available_frames: 0
+    unavailable_protection_frames: 271
+    removed_obb_candidates: 452
+    protected_wall_attached_candidates: 0
+    removed_protected_candidates: 0
+  primary-T3:
+    frames: 649
+    active_frames: 271
+    stage_counts_sum:
+      input_voxel: 2381589
+      ceiling_removed: 77066
+      ground_removed: 525108
+      wall_removed: 1737188
+      kept: 42227
+      clusters: 565
+      protected: 13544
+    protection_available_frames: 271
+    unavailable_protection_frames: 0
+    removed_obb_candidates: 3
+    protected_wall_attached_candidates: 79
+    removed_protected_candidates: 0
+  primary-T4:
+    frames: 649
+    active_frames: 271
+    stage_counts_sum:
+      input_voxel: 2537064
+      ceiling_removed: 77436
+      ground_removed: 674878
+      wall_removed: 1740506
+      kept: 44244
+      clusters: 568
+      protected: 13549
+    protection_available_frames: 271
+    unavailable_protection_frames: 0
+    removed_obb_candidates: 3
+    protected_wall_attached_candidates: 81
+    removed_protected_candidates: 0
+  shadow-T1:
+    frames: 208
+    active_frames: 0
+    stage_counts_sum: null
+    protection_available_frames: 0
+    unavailable_protection_frames: 0
+    removed_obb_candidates: 0
+    protected_wall_attached_candidates: 0
+    removed_protected_candidates: 0
+  shadow-T2:
+    frames: 208
+    active_frames: 121
+    stage_counts_sum:
+      input_voxel: 1078726
+      ceiling_removed: 38403
+      ground_removed: 239939
+      wall_removed: 616920
+      kept: 183464
+      clusters: 569
+      protected: 0
+    protection_available_frames: 0
+    unavailable_protection_frames: 121
+    removed_obb_candidates: 140
+    protected_wall_attached_candidates: 0
+    removed_protected_candidates: 0
+  shadow-T3:
+    frames: 208
+    active_frames: 121
+    stage_counts_sum:
+      input_voxel: 1078726
+      ceiling_removed: 38403
+      ground_removed: 239939
+      wall_removed: 775457
+      kept: 24927
+      clusters: 278
+      protected: 0
+    protection_available_frames: 121
+    unavailable_protection_frames: 0
+    removed_obb_candidates: 4
+    protected_wall_attached_candidates: 0
+    removed_protected_candidates: 0
+  shadow-T4:
+    frames: 208
+    active_frames: 121
+    stage_counts_sum:
+      input_voxel: 1166328
+      ceiling_removed: 38673
+      ground_removed: 325839
+      wall_removed: 778608
+      kept: 23208
+      clusters: 239
+      protected: 0
+    protection_available_frames: 121
+    unavailable_protection_frames: 0
+    removed_obb_candidates: 4
+    protected_wall_attached_candidates: 0
+    removed_protected_candidates: 0
+realtime:
+  primary-T1-normal:
+    processed_scans:
+    - 570
+    - 567
+    - 567
+    unprocessed_scans:
+    - 79
+    - 82
+    - 82
+    window_processed_scans:
+    - 219
+    - 216
+    - 215
+    window_nonempty_local_publications:
+    - 0
+    - 0
+    - 0
+    active_diagnostics:
+    - 0
+    - 0
+    - 0
+    map_wall_latency_p95_ms:
+    - 170.21761999058072
+    - 170.83196738967672
+    - 162.49449170281878
+    max_absolute_map_center_during_window_m:
+    - 554.8310350107975
+    - 555.3112228446647
+    - 554.7343862058232
+  primary-T3-normal:
+    processed_scans:
+    - 580
+    - 574
+    - 573
+    unprocessed_scans:
+    - 69
+    - 75
+    - 76
+    window_processed_scans:
+    - 221
+    - 218
+    - 221
+    window_nonempty_local_publications:
+    - 0
+    - 0
+    - 0
+    active_diagnostics:
+    - 0
+    - 0
+    - 0
+    map_wall_latency_p95_ms:
+    - 165.438488998916
+    - 163.65521749539766
+    - 164.33704658411443
+    max_absolute_map_center_during_window_m:
+    - 561.1852189360629
+    - 554.5694271231117
+    - 558.1417764603799
+  primary-T1-invalid:
+    processed_scans:
+    - 571
+    - 566
+    - 570
+    unprocessed_scans:
+    - 78
+    - 83
+    - 79
+    window_processed_scans:
+    - 218
+    - 214
+    - 217
+    window_nonempty_local_publications:
+    - 216
+    - 211
+    - 216
+    active_diagnostics:
+    - 0
+    - 0
+    - 0
+    map_wall_latency_p95_ms:
+    - 164.00542329938617
+    - 162.96297329827212
+    - 165.57698103715677
+    max_absolute_map_center_during_window_m:
+    - 4124172.940794654
+    - 4124172.940794654
+    - 4124172.940091234
+  primary-T3-invalid:
+    processed_scans:
+    - 621
+    - 617
+    - 618
+    unprocessed_scans:
+    - 28
+    - 32
+    - 31
+    window_processed_scans:
+    - 264
+    - 264
+    - 264
+    window_nonempty_local_publications:
+    - 238
+    - 263
+    - 264
+    active_diagnostics:
+    - 270
+    - 269
+    - 270
+    map_wall_latency_p95_ms:
+    - 137.445579492487
+    - 140.29106340312865
+    - 146.06533685437168
+    max_absolute_map_center_during_window_m:
+    - 4124166.6443610354
+    - 4124166.6443610354
+    - 4124166.6410492663
+  primary-T1-missing:
+    processed_scans:
+    - 570
+    - 566
+    - 568
+    unprocessed_scans:
+    - 79
+    - 83
+    - 81
+    window_processed_scans:
+    - 219
+    - 216
+    - 217
+    window_nonempty_local_publications:
+    - 0
+    - 0
+    - 0
+    active_diagnostics:
+    - 0
+    - 0
+    - 0
+    map_wall_latency_p95_ms:
+    - 166.26294450543355
+    - 165.45207959716208
+    - 173.19035520777106
+    max_absolute_map_center_during_window_m:
+    - 531.3524868646775
+    - 531.3524868646775
+    - 531.3524868646775
+  primary-T3-missing:
+    processed_scans:
+    - 578
+    - 577
+    - 578
+    unprocessed_scans:
+    - 71
+    - 72
+    - 71
+    window_processed_scans:
+    - 225
+    - 221
+    - 223
+    window_nonempty_local_publications:
+    - 0
+    - 0
+    - 0
+    active_diagnostics:
+    - 0
+    - 0
+    - 0
+    map_wall_latency_p95_ms:
+    - 164.80047134245976
+    - 160.0133815896698
+    - 159.48974810307848
+    max_absolute_map_center_during_window_m:
+    - 530.3045689706868
+    - 529.5101028314427
+    - 529.5101028314427
+  shadow-T1-normal:
+    processed_scans:
+    - 202
+    - 204
+    - 204
+    unprocessed_scans:
+    - 6
+    - 4
+    - 4
+    window_processed_scans:
+    - 113
+    - 115
+    - 115
+    window_nonempty_local_publications:
+    - 0
+    - 0
+    - 0
+    active_diagnostics:
+    - 0
+    - 0
+    - 0
+    map_wall_latency_p95_ms:
+    - 188.79602241213436
+    - 184.32091320282782
+    - 190.3836301935372
+    max_absolute_map_center_during_window_m:
+    - 555.1985741753798
+    - 555.1985741753798
+    - 555.1985741753798
+  shadow-T3-normal:
+    processed_scans:
+    - 205
+    - 206
+    - 206
+    unprocessed_scans:
+    - 3
+    - 2
+    - 2
+    window_processed_scans:
+    - 116
+    - 118
+    - 117
+    window_nonempty_local_publications:
+    - 0
+    - 0
+    - 0
+    active_diagnostics:
+    - 0
+    - 0
+    - 0
+    map_wall_latency_p95_ms:
+    - 173.68732649629237
+    - 177.16115273942708
+    - 166.56297919107598
+    max_absolute_map_center_during_window_m:
+    - 557.8863345826455
+    - 557.8863345826455
+    - 557.8814721432891
+  shadow-T1-invalid:
+    processed_scans:
+    - 203
+    - 204
+    - 204
+    unprocessed_scans:
+    - 5
+    - 4
+    - 4
+    window_processed_scans:
+    - 115
+    - 116
+    - 115
+    window_nonempty_local_publications:
+    - 109
+    - 110
+    - 91
+    active_diagnostics:
+    - 0
+    - 0
+    - 0
+    map_wall_latency_p95_ms:
+    - 195.25324330170403
+    - 178.52906800544588
+    - 184.73309740656987
+    max_absolute_map_center_during_window_m:
+    - 4124174.5059070396
+    - 4124174.5059070396
+    - 4124174.5059070396
+  shadow-T3-invalid:
+    processed_scans:
+    - 207
+    - 206
+    - 207
+    unprocessed_scans:
+    - 1
+    - 2
+    - 1
+    window_processed_scans:
+    - 118
+    - 118
+    - 118
+    window_nonempty_local_publications:
+    - 106
+    - 106
+    - 106
+    active_diagnostics:
+    - 122
+    - 122
+    - 122
+    map_wall_latency_p95_ms:
+    - 102.57182061468484
+    - 103.02510604378767
+    - 102.68161994463298
+    max_absolute_map_center_during_window_m:
+    - 4124170.1277818345
+    - 4124170.1277818345
+    - 4124170.1218033466
+  shadow-T1-missing:
+    processed_scans:
+    - 204
+    - 204
+    - 204
+    unprocessed_scans:
+    - 4
+    - 4
+    - 4
+    window_processed_scans:
+    - 115
+    - 115
+    - 116
+    window_nonempty_local_publications:
+    - 0
+    - 0
+    - 0
+    active_diagnostics:
+    - 0
+    - 0
+    - 0
+    map_wall_latency_p95_ms:
+    - 190.44232539599767
+    - 188.75412161578427
+    - 179.4051608128939
+    max_absolute_map_center_during_window_m:
+    - 515.2940720098917
+    - 515.2940720098917
+    - 515.2940720098917
+  shadow-T3-missing:
+    processed_scans:
+    - 204
+    - 206
+    - 206
+    unprocessed_scans:
+    - 4
+    - 2
+    - 2
+    window_processed_scans:
+    - 116
+    - 117
+    - 117
+    window_nonempty_local_publications:
+    - 0
+    - 0
+    - 0
+    active_diagnostics:
+    - 0
+    - 0
+    - 0
+    map_wall_latency_p95_ms:
+    - 184.36870048753917
+    - 168.36376789433413
+    - 169.4682931905845
+    max_absolute_map_center_during_window_m:
+    - 515.2940720098917
+    - 515.2940720098917
+    - 515.2940720098917
+checks:
+  python_tests: 85
+  new_B1a_python_tests: 14
+  original_filter_core_tests: 28
+  original_filter_core_failures: 0
+  ROS_protection_boundary_cases: 7
+  synthetic_tall_object_diagnostic:
+    reproduced: true
+    protected_points_removed_before_protection: 30
+    object_preservation_pass: false
+  synthetic_map_pose_controls:
+    roll_zero_vector_error_m: 1.66827e-07
+    roll_0_15_rad_vector_error_m: 0.335096
+    nonzero_roll_coordinate_contract_pass: false
+  no_duplicate_processed_scans: true
+  no_public_control_messages: true
+  single_frozen_yolo_publisher_all_36: true
+  startup_output_stamp_reversals:
+    affected_trials: 29
+    map: 29
+    nogps: 29
+    last: 29
+    total: 87
+    tunnel: 0
+    explanation: Startup empty ROS-now fallback to first real LiDAR stamp; not zero
+      globally. Processed ROI stamps have no reversal.
+  existing_facade_failure: B0 baseline retains 1 known facade failure; production
+    source unchanged.
+  existing_approved_classification_differences: B0 retains 2 approved differences;
+    no new waiver.
+interpretation:
+  wall_ceiling_removal: Observed, but point counts are not GT accuracy.
+  healthy_empty_YOLO: 'Available empty detections differ from unavailable protection:
+    the latter keeps ambiguous wall points conservatively.'
+  GPS_invalid: Local processing continues; map still publishes without pose validity,
+    reaching approximately 4.124 million m.
+  GPS_missing: Processing continues but tunnel filter does not activate.
+  local_frame: IMU-leveled sensor coordinates labeled velodyne; not confirmed rear-axle
+    base_link.
+  tall_objects: Point-level ceiling cutoff precedes YOLO protection; synthetic loss
+    reproduced.
+  wall_attached: 79 retained protected candidate observations in primary T3; not unique
+    GT objects.
+  independent_recall: 'Unavailable: bags have no independently labeled object GT.'
+  camera_only: Not adopted; unsupported obstacles and planner connection require separate
+    evaluation.
+evidence:
+  directory: config/baselines/evidence/camera_lidar_b1a_v1
+  files_manifest: files.json
+  summary: summary.json
+  analysis: analysis.json
+  retained_full_archives:
+    raw-fixed-offline.tar.gz:
+      path: /home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/perception_baselines/camera_lidar_b1a_v1/full-evidence/raw-fixed-offline.tar.gz
+      sha256: 240625d2d36ecb1c03e15f431c93422e4ff80ff359830ca89015f8ee30ed99d0
+      bytes: 264221427
+    raw-preliminary.tar.gz:
+      path: /home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/perception_baselines/camera_lidar_b1a_v1/full-evidence/raw-preliminary.tar.gz
+      sha256: 37b44e2fc80c566a6d302343c19a82dcb0e019d5bdc0a10777880cc017d78dcc
+      bytes: 270814417
+  representative_cases: 6
+  representative_lossless_point_arrays: 18
+  source_files_SHA_verified: 197
+  original_source_mismatches: []
+  measurement_binaries_unchanged:
+    main: true
+    tunnel_filter_offline_eval: true
+  source_archive_excludes_only_unused_legacy_weights:
+  - src/Main/YOLOWeight/yolo11m(1).pt
+  - src/Main/YOLOWeight/yolo11m.pt
+  large_fixture_bags_in_Git: false
+  fixture_recreation: Original bag SHA + frozen event JSON + make_b1a_fixtures.py;
+    original sensor data read-only.
+next_steps:
+- local/map pose and frame contract with LiDAR and planning owners
+- separate YOLO11m COCO class expansion profile; keep legacy four-class compatibility
+- B1b depth/connectivity on residual wall attachment and cluster merging
+- YOLO26 detect, seg boxes-only, then same seg masks
+- first-second lane supply, camera/rate combinations, data audit/training, FP16/batch/shared
+  decoding/TensorRT, RTX 4070 SUPER

@@ -96,6 +96,10 @@ python3 /root/ws/tools/perception/analyze_b1a_matrix.py /evidence/protocol-final
 
 전체 측정이 종료된 후에만 별도 시각화를 실행한다. 각 터미널에서 위 ROS 환경과 master
 11314를 설정한다. GUI에는 DISPLAY와 X11 마운트가 필요하며 GUI 컨테이너 진입은 별도로 한다.
+현재 `asmc-camera-lidar-b1a`는 측정 종료 후 로그를 보존하고 X11을 연결한 GUI 확인용
+프로필로 재생성했다. Qt 화면 연결을 확인했고 master·필터·GUI는 자동 실행하지 않았다.
+GUI 프로필의 software GL 설정은 측정 프로필과 구분한다. 각 터미널에서 이 컨테이너에
+직접 진입하고 ROS 환경을 읽은 뒤 아래 명령을 실행한다. 공유 실시간 master 11311과 격리돼 있다.
 원본 Main launch는 드라이버·구 YOLO를 실행하므로 아래 생성된 **시험 launch**를 사용한다.
 
 master 터미널:
@@ -177,3 +181,93 @@ stamp에서 제거·유지 점, 객체 잘림·합침을 검토한다. 제거된
 
 판제가 구간 활성화와 결과 소비를 결정한다. 차선 피팅 소비는 음영 ODD로 한정하며,
 기존 jamming 어댑터와 21% crop 기본 설정은 유지한다.
+
+
+## 완료 결과 — 2026-10-08
+
+고정 조건의 오프라인 8회와 1배속 36회를 모두 완료했다. **검증 기준선 완료이며 필터 운영 채택은 보류한다.**
+측정 도구는 `19a0b29`, 팀원 소스는 `8dde9b6`, 후처리·보존 도구는 `df1a20c`로 고정했다.
+197개 원본 파일과 실제 측정 바이너리 SHA는 일치한다. 운영 카메라·LiDAR 소스·메시지·모델·
+HD맵·기본 설정을 바꾸지 않았으므로 기존 B0 회귀와 3,514프레임 동등성 증거를 재사용한다.
+기존 facade 실패 1건·승인된 분류 차이 2건은 B0 증거에 그대로 남으며 새 예외로 확대하지 않는다.
+
+### 처리 scan과 GPS 조건
+
+다음은 전체 입력 중 실제 처리한 서로 다른 LiDAR source stamp 수다. 객체 수·recall이 아니다.
+입력은 주 bag 649 scan, 음영 bag 208 scan이다. 생략 stamp·지연·리소스·GPS 복구·출력 좌표는
+[전체 지표](../../../config/baselines/evidence/camera_lidar_b1a_v1/summary.json)에 반복별로 보존했다.
+
+| bag | GPS | T1 OFF — 1/2/3회 | T3 ON+보호 — 1/2/3회 |
+|---|---|---|---|
+| 주 | 정상 | 570 / 567 / 567 | 580 / 574 / 573 |
+| 주 | 무효 | 571 / 566 / 570 | 621 / 617 / 618 |
+| 주 | 전달 중단 | 570 / 566 / 568 | 578 / 577 / 578 |
+| 음영 | 정상 | 202 / 204 / 204 | 205 / 206 / 206 |
+| 음영 | 무효 | 203 / 204 / 204 | 207 / 206 / 207 |
+| 음영 | 전달 중단 | 204 / 204 / 204 | 204 / 206 / 206 |
+
+무효 주입 구간의 T3 처리량은 주 bag 265개 입력 중 매번 264개, 음영 bag 118개 중 매번
+118개였다. 정상 또는 전달 중단에서는 실험 터널 필터가 활성화되지 않았다. 무효 샘플 후
+local 처리는 이어지지만 무효 map 좌표도 계속 발행돼 최대 절댓값이 약 **4,124,175m**에
+이른다. map 발행 자체를 유효 위치로 판단하면 안 된다. 정상 GPS 3회로 latch가 해제되는
+과정도 기록했다. `/lidar_nogps`는 정상 구간의 항상 활성인 local 출력이 아니다.
+
+29개 실행에서 초기 빈 출력의 ROS-now fallback stamp 다음에 실제 첫 LiDAR stamp가
+나오며 역행했다. map·nogps·last 각각 29건, 총 87건이다. 모두 첫 실제 source 출력으로
+넘어가는 시점이며 처리된 ROI stamp에는 역행·중복이 없었다. 전역 역행 0이라고 판정하지
+않는다. [원본 쌍](../../../config/baselines/evidence/camera_lidar_b1a_v1/support/startup-stamp-reversals.json)을
+local/map 출력 계약의 초기 무관측 정책 검토에 넘긴다.
+
+### 제거 효과와 객체 보존 한계
+
+오프라인 T3 활성 구간에서 주 bag은 천장 77,066점·벽 1,737,188점을 제거하고 42,227점을
+유지했다. 음영 bag은 천장 38,403점·벽 775,457점을 제거하고 24,927점을 유지했다.
+모두 voxel 입력 이후 단계 합계이며 raw→ROI 축소로 사라진 점과 구분한다. 단계 합계
+불일치는 없었다. T1 OFF의 실제 RANSAC과 원본 함수 재현은 주 649·음영 208 scan 모두
+일치했다. 필터 ON은 정상 구간의 진입 전 천장 처리도 바꾸므로 OFF 동일성을 요구하지 않는다.
+
+T2는 보호 입력을 사용할 수 없어 애매한 벽 점을 보수적으로 남긴다. T3의 정상 빈 YOLO
+결과는 사용 가능한 보호 입력이므로 이 점들을 더 제거한다. 따라서 T2/T3 차이를 모두
+검출 객체 보호량으로 해석하지 않는다. 주 T3에는 벽에 붙은 보호 후보 **79개 관측**이 남았다.
+이는 79개의 독립 차량이라는 뜻이 아니다. 잔여 벽 혼입은 B1b 깊이·연결성 비교 대상이다.
+
+원본 C++ core 시험 28개, 실제 ROS 보호의 ±50ms 포함·초과·빈 결과·미수신·늦은 도착
+7개 경우를 확인했다. 높은 차량의 보호점 30개가 보호 판정보다 앞선 천장 절단에서 전부
+사라지는 합성 반례도 재현했다. 이 반례 재현 성공을 객체 보존 성공으로 표시하지 않는다.
+보호 경로는 그 처리 시점에 도착한 최근접 결과를 즉시 사용하며 늦은 결과로 이전 점군을
+다시 보호하지 않는다. 기존 fusion matcher의 200ms 대기와 다른 동작이다.
+별도 map probe는 roll 0에서 벡터 오차 0.00000017m, roll 0.15rad에서 **0.335096m**를
+보였다. 수평화의 roll 역변환이 map 어댑터에서 빠지는 경계 문제는 운영 수정 없이 남겼다.
+
+같은 scan의 원본 영상·필터 전후 점군을 6개 사례로 비교했다. 주 bag의 흰 차량 점은
+대표 사례에서 유지되고 벽·천장 점은 제거됐다. 음영의 상자는 기존 YOLO 네 클래스에서
+검출되지 않으며, 일부 사례에서 LiDAR 군집도 없어 카메라 class 확대·미지원 장애물 평가가
+필요하다. T1에도 해당 객체의 독립 대응이 없으므로 이를 T3가 새로 놓친 정답으로 단정하지
+않는다. GT가 없어 차량·보행자·상자 recall이나 충돌 안전성은 수락하지 않았다.
+
+- [대표 그림 모음](../../../config/baselines/evidence/camera_lidar_b1a_v1/cases/index.html)
+- [주 bag 차량 사례](../../../config/baselines/evidence/camera_lidar_b1a_v1/cases/primary-case-01.png)
+- [음영 상자 사례](../../../config/baselines/evidence/camera_lidar_b1a_v1/cases/shadow-case-02.png)
+- [baseline](../../../config/baselines/perception_camera_lidar_b1a_v1.yaml)
+
+### 증거 보존과 PR 범위
+
+Git에는 모든 고정·예비 실행의 프레임 지표·관측·로그·CPU/RSS·전체 GPU 표본과 6개 그림,
+18개 무손실 대표 점군 NPZ, 원본 replay source를 넣었다. 원본 영상과 입력 bag은 SHA와
+생성 recipe로 연결한다. 전체 scan 점군이 든 대용량 원본 archive는 다음 호스트 경로에
+별도 보존했다. 일부 성공 실행만 선택하거나 실패 사례를 삭제하지 않았다.
+
+```text
+data/perception_baselines/camera_lidar_b1a_v1/full-evidence/
+```
+
+이 경로는 workspace 공통 루트 기준이다. [provenance](../../../config/baselines/evidence/camera_lidar_b1a_v1/provenance.json)에
+절대 경로·바이트 수·SHA를 기록했다. Git archive에서 제외한 것은 전체 `clouds.bin`뿐이며
+모든 scalar 기록은 남겼다. replay source에서 제외한 두 legacy weight는 새 추론에 쓰지
+않으며 기존 저장 위치와 원본 SHA는 보존한다. `/tmp` fixture는 원본 bag·고정 YOLO events로
+재생성할 수 있다. Simulator 실행 중이었던 예비 측정은 고정 수락 측정에서 제외했다.
+
+PR #71은 검증 도구·실패 기준선·후속 과제만 다룬다. 실제 필터 도입, GPS 의존성 수정,
+map 계약, COCO 확대, B1b 알고리즘은 별도 PR로 검증한다. 다음 우선순위는 **local/map
+출력 계약 검토와 독립 YOLO11m COCO 확대 시험**이다. 이 결과를 바탕으로 남은 벽 혼입·
+객체 합침을 B1b에서 비교한다. 카메라 only 회피는 아직 결정하지 않았다.

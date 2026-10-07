@@ -1,0 +1,62 @@
+[
+  {
+    "case": "exact",
+    "available": true,
+    "protected_points": 30,
+    "pass": true
+  },
+  {
+    "case": "boundary_p50",
+    "available": true,
+    "protected_points": 30,
+    "pass": true
+  },
+  {
+    "case": "boundary_m50",
+    "available": true,
+    "protected_points": 30,
+    "pass": true
+  },
+  {
+    "case": "outside",
+    "available": false,
+    "protected_points": 0,
+    "pass": true
+  },
+  {
+    "case": "missing",
+    "available": false,
+    "protected_points": 0,
+    "pass": true
+  },
+  {
+    "case": "empty",
+    "available": true,
+    "protected_points": 0,
+    "pass": true
+  },
+  {
+    "case": "late",
+    "available": false,
+    "protected_points": 0,
+    "pass": true
+  },
+  {
+    "case": "tall_protected_ceiling_cut_diagnostic",
+    "removed": 30,
+    "pass": true,
+    "object_preservation_pass": false
+  },
+  {
+    "roll_rad": 0,
+    "vector_error_m": 1.66827e-07,
+    "diagnostic_reproduced": true,
+    "coordinate_contract_pass": true
+  },
+  {
+    "roll_rad": 0.15,
+    "vector_error_m": 0.335096,
+    "diagnostic_reproduced": true,
+    "coordinate_contract_pass": false
+  }
+]
