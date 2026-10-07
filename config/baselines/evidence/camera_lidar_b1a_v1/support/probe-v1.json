@@ -1,0 +1,21 @@
+[0m[INFO] [1791384087.103416944]: Fusion intrinsics: 1280x720 HFOV=90.00 fx=640.000 fy=640.000 cx=640.000 cy=360.000[0m
+[0m[INFO] [1791384087.103790519]: Fusion camera pose: xyz=(1.900, 0.000, 1.200)m rpy=(0.000, 2.000, 0.000)deg[0m
+[0m[INFO] [1791384087.103798893]: Fusion LiDAR pose: xyz=(0.800, 0.000, 1.450)m rpy=(0.000, 0.000, 0.000)deg[0m
+[0m[INFO] [1791384087.103841526]: T_camera_mount_lidar:
+  0.999391          0 -0.0348995   -1.10805
+         0          1          0          0
+ 0.0348995          0   0.999391   0.211458
+         0          0          0          1[0m
+[0m[INFO] [1791384087.103871634]: P_opencv_lidar:
+    639.61       -640   -22.3357   -709.155
+   337.445          0   -652.174   -534.233
+  0.999391          0 -0.0348995   -1.10805[0m
+[0m[INFO] [1791384087.120282445]: [TUNNEL_EXP] ground=unavailable h=-1.45 L=off R=off kept=30 clusters=1 removed(obb) c=0 w=0 total=0.7ms[0m
+B1A_PROBE {"case":"exact","available":true,"protected_points":30,"pass":true}
+B1A_PROBE {"case":"boundary_p50","available":true,"protected_points":30,"pass":true}
+B1A_PROBE {"case":"boundary_m50","available":true,"protected_points":30,"pass":true}
+B1A_PROBE {"case":"outside","available":false,"protected_points":0,"pass":true}
+B1A_PROBE {"case":"missing","available":false,"protected_points":0,"pass":true}
+B1A_PROBE {"case":"empty","available":true,"protected_points":0,"pass":true}
+B1A_PROBE {"case":"late","available":false,"protected_points":0,"pass":true}
+B1A_PROBE {"case":"tall_protected_ceiling_cut_diagnostic","removed":30,"pass":true,"object_preservation_pass":false}

@@ -1,0 +1,17 @@
+    PID COMMAND
+      1 tail -f /dev/null
+  12708 [roscore] <defunct>
+  30564 [roscore] <defunct>
+  30962 [roscore] <defunct>
+  31473 [roscore] <defunct>
+  31870 [roscore] <defunct>
+  32665 /usr/bin/python3 /opt/ros/noetic/bin/roslaunch asmc_bridge bridge.launch transport_profile:=local stream_profile:=competition
+  32735 /usr/bin/python3 /opt/ros/noetic/bin/rosmaster --core -p 11311 -w 3 __log:=/root/.ros/log/ce4ad496-c1fd-11f1-9600-d62a3c4caf92/master.log
+  32764 /opt/ros/noetic/lib/rosout/rosout __name:=rosout __log:=/root/.ros/log/ce4ad496-c1fd-11f1-9600-d62a3c4caf92/rosout-1.log
+  32767 /usr/bin/python3 /root/ws/devel/lib/asmc_bridge/morai_udp_bridge.py __name:=morai_udp_bridge __log:=/root/.ros/log/ce4ad496-c1fd-11f1-9600-d62a3c4caf92/morai_udp_bridge-2.log
+  32768 /usr/bin/python3 /root/ws/devel/lib/asmc_bridge/morai_sensor_bridge.py __name:=morai_sensor_bridge __log:=/root/.ros/log/ce4ad496-c1fd-11f1-9600-d62a3c4caf92/morai_sensor_bridge-3.log
+  32773 /opt/ros/noetic/lib/tf2_ros/static_transform_publisher 0.80 0.0 1.45 0.0 0.0 0.0 base_link velodyne __name:=base_to_velodyne __log:=/root/.ros/log/ce4ad496-c1fd-11f1-9600-d62a3c4caf92/base_to_velodyne-4.log
+  32774 /root/ws/devel/lib/asmc_bridge/vehicle_state_node __name:=gps_imu_vehicle_state_adapter __log:=/root/.ros/log/ce4ad496-c1fd-11f1-9600-d62a3c4caf92/gps_imu_vehicle_state_adapter-5.log
+  34653 bash
+  34697 bash
+  38360 ps -eo pid,args

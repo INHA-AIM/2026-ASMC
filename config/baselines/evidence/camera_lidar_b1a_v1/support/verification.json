@@ -1,0 +1,19 @@
+{
+  "python_unittest_count": 85,
+  "python_unittest_passed": true,
+  "new_B1a_tests": 14,
+  "documentation_migration_passed": true,
+  "validators_passed": [
+    "p1b_contract",
+    "perception_contract",
+    "perception_topic_policy",
+    "perception_runtime_acceptance"
+  ],
+  "production_source_diff_from_base_main": [],
+  "source_SHA_match_count": 197,
+  "original_filter_core_tests": 28,
+  "core_failures": 0,
+  "GUI_Qt_screen_check": "rdp-0 2560x1440",
+  "GUI_changes_after_measurement": true,
+  "final_GitHub_CI": "check final PR HEAD externally"
+}

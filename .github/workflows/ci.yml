@@ -68,6 +68,9 @@ jobs:
           python3 -m unittest tools/perception/test_hood_evaluation.py
           python3 -m unittest tools/perception/test_lifecycle_measurements.py
           python3 -m unittest tools/perception/test_b0_measurements.py
+          python3 -m unittest tools/perception/test_b1a_protocol.py
+          python3 -m unittest tools/perception/test_tunnel_case_geometry.py
+          python3 -m unittest tools/perception/test_tunnel_summary.py
           python3 -m unittest tools/perception/test_camera_lidar_evidence.py
           python3 -m unittest discover -s src/asmc_camera/test/runtime -p 'test_*.py'
 

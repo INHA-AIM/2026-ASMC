@@ -1,0 +1,64 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Fixed Frame: velodyne
+    Background Color: 30; 30; 30
+    Frame Rate: 20
+  Displays:
+    - Class: rviz/Grid
+      Name: Leveled sensor debug coordinates, not base_link
+      Enabled: true
+      Cell Size: 1
+      Plane Cell Count: 80
+    - Class: rviz/PointCloud2
+      Name: 1 IMU leveled input
+      Enabled: false
+      Topic: /lidar/tunnel/debug_imu_corrected
+      Color Transformer: FlatColor
+      Color: 160; 160; 160
+      Style: Points
+      Size (Pixels): 2
+    - Class: rviz/PointCloud2
+      Name: 2 Ceiling removed
+      Enabled: false
+      Topic: /lidar/tunnel/debug_ceiling_filtered
+      Color Transformer: FlatColor
+      Color: 255; 170; 40
+      Style: Points
+      Size (Pixels): 2
+    - Class: rviz/PointCloud2
+      Name: 3 Ground removed
+      Enabled: false
+      Topic: /lidar/tunnel/debug_ground_removed
+      Color Transformer: FlatColor
+      Color: 0; 180; 255
+      Style: Points
+      Size (Pixels): 2
+    - Class: rviz/PointCloud2
+      Name: 4 Wall filtered
+      Enabled: true
+      Topic: /lidar/tunnel/debug_wall_filtered
+      Color Transformer: FlatColor
+      Color: 60; 240; 90
+      Style: Points
+      Size (Pixels): 3
+    - Class: rviz/MarkerArray
+      Name: Final obstacles
+      Enabled: true
+      Marker Topic: /lidar/tunnel/final_obstacle_markers
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 45
+      Pitch: 0.9
+      Yaw: 3.14
+      Focal Point:
+        X: 10
+        Y: 0
+        Z: 0
+Window Geometry:
+  Width: 1280
+  Height: 800

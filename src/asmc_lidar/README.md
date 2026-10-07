@@ -4,6 +4,10 @@
 ROS 발행 노드는 손재호가 기존 `lidar+sensorfusion`에서 이전하며 구현한다.
 실제 주행에는 기존 패키지를 사용한다. 이 패키지에는 실행 launch가 없다.
 
+2026-10-08 B1a의 GPS·map·수평화·카메라 투영·추적 경계와 담당별 후속 작업은
+[B1a 개선 과제](../../docs/packages/asmc_lidar/b1a-improvement-tasks.md)에 정리했다.
+공통 기반을 `Main`에 연결하는 후속 구현과 재호의 전체 이전·필터 개선을 구분한다.
+
 담당 작업과 완료 조건은 [LiDAR 인계 문서](../../docs/packages/asmc_lidar/README.md),
 카메라와의 역할 분담은 [통합 로드맵](../../docs/architecture/consolidation-roadmap.md)에 있다.
 

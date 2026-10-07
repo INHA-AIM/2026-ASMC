@@ -1,0 +1,10 @@
+{
+  "measurements_ended": true,
+  "gui_only_changed_after_measurement": true,
+  "network": "none",
+  "master": 11314,
+  "software_GL": true,
+  "display": ":0",
+  "shared_container_changed": false,
+  "container_id": "9b828b86d822c2bf1607238bb6b0649e75bd569f6a9c131f0f684823a4c29c4a"
+}

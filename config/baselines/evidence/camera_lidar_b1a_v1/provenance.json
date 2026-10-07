@@ -1,0 +1,61 @@
+{
+  "analysis_revision": "df1a20c",
+  "packaging_script_sha256": "a495fb77d94b8dc36ec25e4ab773c1b8e16e87ea865977fc85e0c91aa141da0f",
+  "source_revision": "8dde9b691bebd4f9d5172d0c43bd6b16d2052c2b",
+  "original_source_files": 197,
+  "source_mismatches": [],
+  "source_archive_excluded_unused_weights": [
+    "src/Main/YOLOWeight/yolo11m(1).pt",
+    "src/Main/YOLOWeight/yolo11m.pt"
+  ],
+  "measurement_binaries_unchanged": {
+    "main": true,
+    "tunnel_filter_offline_eval": true
+  },
+  "fixture_bags_verified": {
+    "primary": {
+      "normal": true,
+      "invalid": true,
+      "missing": true
+    },
+    "shadow": {
+      "normal": true,
+      "invalid": true,
+      "missing": true
+    }
+  },
+  "fixture_bags_archived": false,
+  "fixture_recreation": "Original bag SHA + frozen event JSON + make_b1a_fixtures.py; original sensor data read-only.",
+  "retained_full_archives": {
+    "raw-fixed-offline.tar.gz": {
+      "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/perception_baselines/camera_lidar_b1a_v1/full-evidence/raw-fixed-offline.tar.gz",
+      "sha256": "240625d2d36ecb1c03e15f431c93422e4ff80ff359830ca89015f8ee30ed99d0",
+      "bytes": 264221427
+    },
+    "raw-preliminary.tar.gz": {
+      "path": "/home/aim06/projects/2026-2-kcity-autonomous-driving/2026-ai-sw-mobility-competition/data/perception_baselines/camera_lidar_b1a_v1/full-evidence/raw-preliminary.tar.gz",
+      "sha256": "37b44e2fc80c566a6d302343c19a82dcb0e019d5bdc0a10777880cc017d78dcc",
+      "bytes": 270814417
+    }
+  },
+  "original_raw_bags_verified": {
+    "primary": true,
+    "shadow": true
+  },
+  "core_tests": {
+    "tests": "28",
+    "failures": "0",
+    "disabled": "0",
+    "errors": "0",
+    "time": "0.408",
+    "timestamp": "2026-10-07T23:27:51",
+    "name": "AllTests"
+  },
+  "generated_message_MD5_in": "support/environment-fixed.txt",
+  "postprocessing_sha256": {
+    "analyze_b1a_matrix.py": "4d4c040ea0b24d4e168ef03e1a5fab0c0f0ce74a17ef09368428e64d5c829ef8",
+    "summarize_tunnel_evidence.py": "5754aad51cbd3faf4c034581d5bdeb29373a322eb2a92d280b4daf63671d0c67",
+    "render_tunnel_filter_cases.py": "91d1c6c0bfe650619825f31f043e0fc94c484ca2073dd7f1801dda3d7cb127e0",
+    "tunnel_case_geometry.py": "99856541826bb00b50e3ae6d191ecf1f17931e1c69e556a9f736e0669ee1ca67"
+  }
+}
