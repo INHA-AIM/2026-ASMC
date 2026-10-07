@@ -205,6 +205,7 @@ class SemanticInferenceNode:
                 queue_size=1,
             )
         )
+        self._stop = threading.Event()
         self.worker = threading.Thread(target=self._worker, name="semantic-inference")
         self.worker.daemon = True
         self.worker.start()
@@ -295,7 +296,7 @@ class SemanticInferenceNode:
     def _worker(self) -> None:
         pending = CoherentFrames(self.views, int(float(
             rospy.get_param("~managed_max_skew_ms", 35.)) * 1e6))
-        while not rospy.is_shutdown():
+        while not self._stop.is_set() and not rospy.is_shutdown():
             frames = self.buffer.pop_batch(timeout=0.2)
             if not frames:
                 continue
@@ -338,6 +339,8 @@ class SemanticInferenceNode:
                     decoded,
                     preserve_model_grid=preserve_model_grid,
                 )
+                if self._stop.is_set():
+                    return
             except Exception as exc:
                 with self._stats_lock:
                     self.inference_errors += 1
@@ -597,6 +600,7 @@ class SemanticInferenceNode:
         self.diagnostics_publisher.publish(message)
 
     def _shutdown(self) -> None:
+        self._stop.set()
         self.buffer.close()
         if self.worker is not threading.current_thread():
             self.worker.join(timeout=2.)
