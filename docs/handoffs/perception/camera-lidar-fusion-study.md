@@ -19,6 +19,11 @@
 
 ## 현재 구현과 문제를 구분하는 방법
 
+2026-10-08 B1a 검증 후의 좌표·GPS·출력·추적 경계와 담당별 실행 과제는
+[LiDAR B1a 개선 과제](../../packages/asmc_lidar/b1a-improvement-tasks.md)에 정리했다.
+카메라 클래스 fusion의 raw 투영 행렬과 수평화 군집 입력 불일치를 코드에서 확인했으며,
+터널의 수평화 전 YOLO 보호와 구분한다. 실제 투영 오차와 수정 수락은 후속 구현에서 측정한다.
+
 | 경로 | 검토된 상태 | 후속 개발에서 주의할 점 |
 |---|---|---|
 | `asmc_camera` 객체 생산자 | 전방 YOLO11m, `conf=0.7`, `bus/truck/person/car`, box 공용 메시지 | opt-in 생산자이며 신규 mask 필드는 없음. 현재 class 그룹에 `obstacle`이 있어도 임의 장애물을 검출한다는 뜻은 아님 |

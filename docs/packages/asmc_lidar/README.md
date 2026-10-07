@@ -5,6 +5,9 @@
 [`lidar+sensorfusion`](../../../src/lidar+sensorfusion/RUN_SENSOR_FUSION.md)에서 이전한다.
 기존 원본 패키지가 현재 주행 경로이며, 골격은 객체 토픽을 발행하지 않는다.
 
+**B1a 검증 인계:** [확인된 경계·공통 기반 수정·재호 후속 과제](b1a-improvement-tasks.md).
+원본 44회 증거는 보존하며, 기본 좌표·시간·GPS 경계 수정과 터널 필터의 운영 채택은 분리한다.
+
 ## 역할과 남긴 파일
 
 카메라 패키지는 `asmc_camera`다(2026-10-06 `asmc_perception`에서 이름 변경). 안승현이
