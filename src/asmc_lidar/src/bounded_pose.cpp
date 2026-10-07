@@ -50,7 +50,10 @@ PoseSelection BoundedPoseHistory::at(const Observation& time, const Rot& rotatio
   const double dt=double(time.stamp_ns-latest->stamp_ns)*1e-9;
   out.map_from_base.linear()=rotation;
   out.map_from_base.translation()=latest->map_from_reference.translation()+rotation*velocity*dt;
-  if (latest->reference_is_gps) out.map_from_base.translation()-=rotation*latest->gps_in_base;
+  // The antenna position belongs to the GPS observation, so remove the
+  // lever using that observation's attitude, not a later scan attitude.
+  if (latest->reference_is_gps)
+    out.map_from_base.translation()-=latest->map_from_reference.rotation()*latest->gps_in_base;
   out.valid=true; out.reason=dt==0. ? "gps_observed" : "gps_bounded_prediction";
   return out;
 }

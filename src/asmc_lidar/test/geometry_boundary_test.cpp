@@ -62,5 +62,16 @@ int main() {
   sample.stamp_ns=sample.arrival_ns=2000000000; sample.valid=true; history.append(sample);
   time={2000000000,2000000000,2000000000,"ros","bridge_receive"};
   require(history.at(time,Rot::Identity(),Vec::Zero()).reason=="gps_recovering","silence recovery");
+  BoundedPoseHistory lever_history;
+  sample.valid=true;sample.gps_in_base=Vec(1,0,0);sample.reference_is_gps=true;
+  sample.map_from_reference.linear()=rpy(0,0,.2);
+  for(Ns t:{2200000000LL,2400000000LL,2600000000LL}) {
+    sample.stamp_ns=sample.arrival_ns=t;lever_history.append(sample);
+  }
+  time={2700000000LL,2700000000LL,2700000000LL,"ros","bridge_receive"};
+  const auto lever=lever_history.at(time,rpy(0,0,.5),Vec::Zero());
+  require(lever.valid && (lever.map_from_base.translation()-
+      (sample.map_from_reference.translation()-rpy(0,0,.2)*Vec(1,0,0))).norm()<1e-10,
+      "antenna lever used later scan attitude");
   std::cout<<"geometry and bounded pose boundary tests passed\n";
 }
