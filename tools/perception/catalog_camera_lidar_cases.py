@@ -75,7 +75,10 @@ def export(bag_path, observations, selections, output):
                       raw_camera_frame_id=image.header.frame_id,
                       camera_lidar_offset_ms=(camera_stamp-cloud.header.stamp.to_nsec())/1e6,
                       input_alignment_within_50ms=abs(camera_stamp-cloud.header.stamp.to_nsec()) <= 50000000,
-                      raw_point_count=len(xyz), tracked_observation=track, yolo_observation=boxes,
+                      raw_point_count=len(xyz), tracked_observation=track,
+                      yolo_exact_camera_source=bool(boxes and boxes['stamp_ns'] == camera_stamp),
+                      yolo_observation=boxes if boxes and boxes['stamp_ns'] == camera_stamp else None,
+                      nearest_unmatched_yolo_observation=boxes if boxes and boxes['stamp_ns'] != camera_stamp else None,
                       independent_ground_truth=False, camera_projection_performed=False,
                       geometry_labels='unreviewed_candidate_not_accuracy_ground_truth',
                       source_files={p.name: sha(p) for p in folder.iterdir() if p.is_file()})

@@ -35,8 +35,11 @@ def input_coverage(observation, report):
             continue
         rows = observation['outputs'].get(name, [])
         if report['phase'] == 'camera':
-            request = next(r for r in observation['requests'] if r['mode'] == 2 and
-                           r['model'] == dict(front='twinlite', left='twinlite', right='twinlite').get(name, name))
+            request = next((r for r in observation['requests'] if r['mode'] == 2 and
+                           r['model'] == dict(front='twinlite', left='twinlite', right='twinlite').get(name, name)), None)
+            if request is None:
+                result[name] = dict(incomplete=True, reason='no_accepted_active_request')
+                continue
             start = request['call_started']
             # This input coverage is diagnostic and uses the conservative RPC
             # start even when a trace trial's rate gate uses server acceptance.
@@ -56,6 +59,25 @@ def input_coverage(observation, report):
     return result
 
 
+def lane_transition_witness(observation):
+    request = next((r for r in observation['requests'] if r['model'] == 'twinlite' and r['mode'] == 2), None)
+    if request is None:
+        return None
+    status = next((r for r in observation['statuses'] if r['model'] == 'twinlite' and
+                   r['generation'] == request['generation']), None)
+    if status is None:
+        return dict(incomplete=True, reason='missing_active_generation_status')
+    start, cutoff = request['call_started'], status['source_cutoff_ns']
+    rows = [r for r in observation['outputs'].get('family', []) if r['arrival'] >= start and r['stamp_ns'] > cutoff]
+    return dict(anchor='conservative_rpc_start', generation=request['generation'], source_cutoff_ns=cutoff,
+        first_ten_family_outputs=[dict(stamp_ns=r['stamp_ns'], family_from_request_sec=r['arrival']-start,
+            valid=r['valid'], exact_source_semantic_outputs=[
+                dict(view=view, semantic_from_request_sec=other['arrival']-start,
+                     semantic_to_family_ms=(r['arrival']-other['arrival'])*1000)
+                for view in ('front', 'left', 'right') for other in observation['outputs'].get(view, [])
+                if other['stamp_ns'] == r['stamp_ns']]) for r in rows[:10]])
+
+
 def summarize(root):
     index = json.loads((root/'index.json').read_text())
     trials, sources = {}, {}
@@ -66,6 +88,7 @@ def summarize(root):
             continue
         report = json.loads((path/'report.json').read_text())
         observation = json.loads((path/'observations.json').read_text())
+        resources = json.loads((path/'resources.json').read_text())
         if entry['job']['phase'] == 'fusion' and not entry['diagnostic']:
             sources[entry['label']] = observation['tracks']
         prepared = {}
@@ -77,7 +100,10 @@ def summarize(root):
             prepared[request['model']] = ((ready['arrival']-request['call_started']) if ready else None)
         trials[entry['label']] = dict(
             source_coverage=input_coverage(observation, report),
+            lane_transition_witness=lane_transition_witness(observation),
             prepare_to_pipeline_status_sec=prepared,
+            observed_resource_interval_sec=quantiles([b['arrival']-a['arrival']
+                for a, b in zip(resources, resources[1:])]),
             semantic_native_last_periodic_log=native_semantic_log((path/'camera.log').read_text(errors='replace')),
             lidar_wall_latency_ms=quantiles([r['wall_latency_ms'] for r in observation['tracks']]),
             qualitative_track_miss_observations=sum(g['miss_count'] > 0 for r in observation['tracks'] for g in r['geometry']),

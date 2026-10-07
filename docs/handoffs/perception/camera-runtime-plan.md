@@ -3,7 +3,7 @@
 > **상태:** P2a 이전 수락 완료. PR #69 모델별 준비·출력 수락 및 분류 차이 2건의 사용자 승인 완료. 기존 실패 이력과 P2a 분류 차이 1건의 예외를 보존.
 > **기준일:** 2026-10-07
 > **코드 기준:** PR #65가 병합된 main `af253c3575c1e704e70511c2a2033ec15e33299a`
-> **최신 통합 기준:** 작업 중 병합된 컨트롤러 PR #67의 main `c5d0b78`. P2a 검출·LiDAR·HD맵 실행 경로는 동일하다.
+> **P2a 당시 통합 기준:** 컨트롤러 PR #67의 main `c5d0b78`. 당시 P2a 검출·LiDAR·HD맵 실행 경로는 동일했다.
 > **수락:** 사용자 승인으로 PR #68을 main `7aed612`에 병합. CPU 재현과 최신 GPU 검증을 함께 근거로 삼으며
 > 알려진 실행 변동을 허용한 결정과 원래 엄격한 실패 판정은 구분한다.
 > **후속 기준:** PR #69는 `4074b43`으로 병합됐고, 연구 문서 merge main은 `3b142b1`이다.
@@ -11,8 +11,8 @@
 > **실행 환경:** 개발 RTX 4060 Ti, 대회 RTX 4070 SUPER, ROS Noetic GPU 컨테이너
 > **관련 인수:** [음영 카메라](shadow-camera.md), [객체 검출](camera-object-detection.md), [HD맵 소비](../hd-map/planning-consumption-v1.md)
 
-카메라 rename의 bag 시각화와 사용자 수동 운전 확인은 완료됐다. 다음 작업은 최신 main에
-복원을 정리하고, YOLO 이전·구간별 준비·동시 실행·최적화를 각각 검증하는 것이다.
+카메라 rename, 전방 YOLO 이전과 모델별 실행 상태는 PR #69까지 병합됐다.
+현재 작업은 연구 문서 main `3b142b1`에서 시작한 B0 통합 부하·실패 기준선이다.
 전체 순서는 아래에 보존하고 2단계 구현·검증은 [P2a 사용·검증 안내](camera-objects-p2a.md)에서 관리한다. 뒤 단계의 주기, 카메라 수, 동기화 허용값,
 backend는 측정과 해당 단계의 상세 계획을 거쳐 결정한다.
 
@@ -28,8 +28,10 @@ HD 코드·메시지·HD runtime pins와 관련 규정 문서는 `81e556d` 대�
 #65의 CI 3개와 병합 후 main의
 [catkin CI](https://github.com/INHAautonav/2026-ASMC/actions/runs/37449492266/job/112222301086)가 모두 통과했다.
 
-`feat/camera-object-producer`는 `dc57f1e`에 메시지 필드 변경이 커밋돼 있고 검출 라이브러리,
-클래스 설정과 테스트가 미커밋 상태로 남아 있다. 이 작업은 HEAD와 미커밋 파일 SHA를 보존했다. 최신 main에서 `feat/camera-object-producer-main`과 `asmc-camera-objects` worktree를 만들고 메시지 커밋과 검출 라이브러리만 가져왔다.
+Claude의 `feat/camera-object-producer` 메시지 커밋 `dc57f1e`와 미커밋 검출 라이브러리는
+P2a에 흡수했다. [흡수 SHA 기록](../../../config/baselines/perception_claude_work_absorption_v1.json)을
+보존하고 원본 작업 worktree·로컬 브랜치는 정리했다. 현재 작업은
+`feat/camera-performance-comparison`과 `asmc-camera-objects`이며 재현 브랜치는 별도로 유지한다.
 
 다음 목록은 P2a 완료 당시의 기준선이다. 후속 실행 상태 구현은 위 3단계 안내를 따른다.
 
@@ -142,9 +144,9 @@ track 분류 유지·unknown 전환·장애물 반응 시간을 함께 평가한
 | 단계 | 작업 | 단계 종료 근거 | 클로드 계획 대응 |
 |---|---|---|---|
 | 1 | 최신 main에 카메라 복원 정리, 검증 기준 보존 | 완료: #65 병합·로컬 main 갱신·동일성·validator 4개·main CI 통과 | P1 마무리 |
-| 2 | 전방 YOLO 생산자를 asmc_camera로 이전 | 기존 YOLO11m+어댑터 동등성, fusion 비교, 단일 발행자 | P2a |
-| 3 | 모델별 외부 준비·활성화 API와 교체 가능한 구간 예시 | 준비 확인, 첫 1초·지속 10Hz, 오래된 판정 제거; 구간·GPS 복귀·주행 통합은 판제 소유 | 추가 단계 |
-| 4 | 카메라 수·YOLO 주기·fusion 정책 분석 | GPU별 프로필 비교와 3뷰/전방·20/10Hz 선택 근거 | P4/P5 분석 일부 |
+| 2 | 전방 YOLO 생산자를 asmc_camera로 이전 | 완료: PR #68/#69, 승인된 예외와 원래 실패 기록 보존 | P2a |
+| 3 | 모델별 외부 준비·활성화 API와 교체 가능한 구간 예시 | 완료: PR #69. 구간·GPS 복귀·주행 통합은 판제 소유 | 추가 단계 |
+| 4 | 현재 모델의 통합 부하 B0 → 기하 연관 B1 → 카메라 수·주기 비교 | B0는 주기·모델·fusion 정책 고정. 이후 변경은 독립 비교 | 연구 문서 B0/B1, P4/P5 분석 일부 |
 | 5 | jamming도 공통 객체 생산자를 소비하도록 통합 | crop·좌표·freshness·확인 시간 회귀, 중복 YOLO 제거 | P3 |
 | 6 | 선택한 프로필의 차선 주기·BEV·공통 영상 처리 개선 | 한 변경씩 품질·지연 비교, 개선 효과 확인 | P5/P6/P7/P8 |
 | 7 | YOLO26s/26m 비교, 필요시 MORAI 3클래스 학습 | person·vehicle·obstacle GT 평가와 소비자 클래스 정책 | P2b/P9b |

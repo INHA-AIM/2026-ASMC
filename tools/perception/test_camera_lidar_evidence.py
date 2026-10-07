@@ -29,6 +29,13 @@ class SupplementalEvidenceTest(unittest.TestCase):
         self.assertEqual(2, row['input_frames'])
         self.assertEqual(1, row['output_frames'])
 
+    def test_aborted_request_does_not_invent_a_coverage_window(self):
+        observation = dict(inputs={}, outputs={}, requests=[])
+        report = dict(phase='camera', measurements={'front': dict(complete=False)})
+        row = input_coverage(observation, report)['front']
+        self.assertTrue(row['incomplete'])
+        self.assertEqual('no_accepted_active_request', row['reason'])
+
 
 if __name__ == '__main__':
     unittest.main()
