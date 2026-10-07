@@ -10,12 +10,15 @@ find_package(Eigen3 REQUIRED)
 catkin_package(INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIRS}
   LIBRARIES asmc_lidar_frame_time CATKIN_DEPENDS asmc_msgs)
 
-add_library(asmc_lidar_frame_time src/frame_time_core.cpp)
+add_library(asmc_lidar_frame_time src/frame_time_core.cpp src/projection.cpp src/bounded_pose.cpp)
 target_include_directories(asmc_lidar_frame_time PUBLIC include)
 target_link_libraries(asmc_lidar_frame_time PUBLIC Eigen3::Eigen)
 target_compile_options(asmc_lidar_frame_time PRIVATE -Wall -Wextra)
 
 if(CATKIN_ENABLE_TESTING)
+  add_executable(asmc_lidar_geometry_boundary_test test/geometry_boundary_test.cpp)
+  target_link_libraries(asmc_lidar_geometry_boundary_test PRIVATE asmc_lidar_frame_time)
+  add_test(NAME asmc_lidar_geometry_boundary_test COMMAND asmc_lidar_geometry_boundary_test)
   add_executable(asmc_lidar_frame_time_core_test test/frame_time_core_test.cpp)
   target_link_libraries(asmc_lidar_frame_time_core_test PRIVATE asmc_lidar_frame_time)
   add_test(NAME asmc_lidar_frame_time_core_test COMMAND asmc_lidar_frame_time_core_test)
