@@ -3,8 +3,8 @@ baseline_id: perception_lidar_camera_frame_boundaries_v1
 recorded_on: '2026-10-08'
 status: implemented_cpu_ros_verified_bag_gpu_acceptance_pending
 branch: feat/lidar-camera-frame-boundaries
-base_main: 07cc51a93bb8382352575ca1d45559175529bb92
-depends_on_pr: 71
+base_main: 534ddc5e952f768b9e9cd898d88bcd3f1cc268fd
+depends_on_pr: null
 b1a_handoff_revision: f1dda9b9db5ae447e1492ba37db9bff8fd4f2ff9
 tested_operational_revision: e51391d702350013c6b3835808de9dc013b11560
 operational_adoption: none
@@ -20,8 +20,9 @@ environment:
   temporary_nested_workspace: /tmp/boundary_nested
   network: none
   gpu: RTX 4060 Ti 8GB; no new GPU inference measurement
-  simulator: running; bag and workload trials not started
-  snapshot: config/baselines/evidence/lidar_camera_frame_boundaries_v1/frame-boundary-host-state.json
+  simulator: stopped by user; fresh Windows host monitor during measurements
+  snapshot: original failed host check preserved; latest successful checks archived
+    with smoke evidence
 implemented:
   scan_specific_leveling_and_projection: true
   mounting_aware_roll_pitch_candidate: true
@@ -68,7 +69,7 @@ validation:
     source_diff_vs_main: false
   documentation_and_contract_validators: 5 passed
   contract_and_measurement_unittests:
-    tests: 37
+    tests: 38
     failures: 0
   existing_measurement_unittests:
     tests: 43
@@ -135,3 +136,57 @@ evidence_sha256:
   config/baselines/evidence/lidar_camera_frame_boundaries_v1/parser-order-manifest.json: 64eb0267d48e8463e1534baab3214dedd6d43dfc41558776d7934d97694f68d6
 measurement_tool_revision: 539b5ee
 initial_tested_operational_revision: f620a6edb9a1578f0e1da05a837aa915b8385bb3
+b1a_pr_71:
+  state: merged
+  merge_commit: 534ddc5e952f768b9e9cd898d88bcd3f1cc268fd
+  authorization: user explicit approval on 2026-10-08
+rebase_source_sha_preserved: true
+coordinate_reference_review:
+  document: docs/handoffs/perception/camera-lidar-coordinate-reference-review.md
+  evidence: config/baselines/evidence/lidar_camera_frame_boundaries_v1/fusion-coordinate-audit.json
+  repositories: 6
+  synthetic_cases: 54
+  passed: true
+  physical_and_temporal_calibration_accepted: false
+final_accounting_smoke:
+  tested_revision: ef4554c plus recorded stdout accounting diff; later committed c1d00b1
+  condition: shadow common_pitch GPS missing; both typed subscribers
+  complete: true
+  raw_scans: 208
+  final_totals:
+    processed: 208
+    invalid: 0
+    stamp_errors: 0
+    source_stamp_ns: 1789141109048000000
+  typed_local:
+    frames: 208
+    duplicate_stamps: 0
+    regressions: 0
+    statuses:
+      '1': 208
+      '2': 0
+      '3': 0
+      '4': 0
+    latency_ms:
+      samples: 208
+      p50: 32.1222950151423
+      p95: 47.50608085596468
+      p99: 52.017545439885005
+      maximum: 55.77697299304418
+  typed_map:
+    frames: 208
+    duplicate_stamps: 0
+    regressions: 0
+    statuses:
+      '1': 84
+      '2': 0
+      '3': 0
+      '4': 124
+    latency_ms:
+      samples: 208
+      p50: 32.243759007542394
+      p95: 47.6077946004807
+      p99: 52.225227615563206
+      maximum: 55.92943599913269
+  all_previous_attempts_retained: true
+  full_repeated_protocol_acceptance: false

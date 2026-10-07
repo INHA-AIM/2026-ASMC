@@ -1,8 +1,12 @@
 # LiDAR·카메라 좌표와 GPS 경계 — opt-in 구현
 
-`feat/lidar-camera-frame-boundaries`는 B1a PR #71 위에 쌓은 작업이다. #71의
-실패 원본과 고정 재호 브랜치 `8dde9b6`은 유지한다. #71을 사용자가 병합한 뒤
-main으로 기준을 옮긴다. 새 경로와 roll 보정은 각각 수락 전이며 기본 OFF다.
+`feat/lidar-camera-frame-boundaries`는 B1a PR #71 병합 main `534ddc5`를 기준으로
+한다. 사용자의 승인으로 #71을 병합했고, 실패 원본과 고정 재호 브랜치 `8dde9b6`은
+유지한다. 새 경로와 roll 보정은 각각 수락 전이며 기본 OFF다.
+
+external 6개 구현의 좌표·관측 시각 처리와 실제 Python/C++의 54조건 수치 대조는
+[좌표 계약 참고 구현 검토](camera-lidar-coordinate-reference-review.md)에 기록한다.
+합성 행렬 일치와 실제 시간 정합·지면/높이·객체 보존 수락은 구분한다.
 
 ## 운영 경계와 구현 위치
 
@@ -145,6 +149,11 @@ state 54회, subscriber cost 24회를 직렬 실행한다. 별도 diagnostic 6�
 원본 성공·실패는 모두 보존한다. 분석기는 GPS 조건별 local stamp/geometry/ID와
 map gate, fusion 종료 집계를 보고하며 자동 운영 승인을 내리지 않는다. realtime
 스케줄링 차이를 결정론적 전체 파이프라인 동등성으로 표시하지 않는다.
+
+종료 집계 smoke에서는 GPS 전달 중단 조건의 208 scan 모두 local 출력되고 map
+124개는 `POSE_UNAVAILABLE`로 보고됐다. stamp 중복/역행은 0이었다. 이는 한 번의
+smoke이며 반복 프로토콜 수락을 대체하지 않는다. timer의 마지막 부분 집계 누락과
+ROS 종료 후 logging 실패 시도는 보존했고 직접 stdout 최종 집계를 확인했다.
 
 아직 남은 수락은 동일 scan의 전체 파이프라인 CPU 재현, pitch-only/roll·pitch 객체
 보존·지면 비교, 주/음영 GPS 3조건 반복, 정상 map 추적 품질, subscriber 비용,

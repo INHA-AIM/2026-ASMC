@@ -56,3 +56,15 @@ COCO 확대, YOLO26, 카메라 수·주기, 학습·TensorRT는 독립적인 후
 입력은 raw/leveled 좌표와 행렬을 명시하고, 기존 전방 YOLO 보호와 후단 클래스
 fusion을 구분해 이 지점에 연결한다. GPS에 따른 별도 검출 경로는 도입하지 않는다.
 B1a 원본·고정 재호 브랜치는 대조군으로 보존한다.
+
+## 참고 구현의 좌표와 pose 인계
+
+[external 6개 좌표 구현 검토](../../handoffs/perception/camera-lidar-coordinate-reference-review.md)를
+함께 읽는다. 실제 camera Python/LiDAR C++의 54조건 투영 일치는 확인했지만 센서별
+관측 시각 정렬은 별도다. bridge 수신 stamp와 scan ray 시각을 혼동하지 않고, 각 scan의
+수평화 행렬을 역변환한다. 공개 후륜축 `base_link`와 내부 `lidar_leveled`는 다르다.
+
+기존 bridge의 기본 OFF map TF와 GPS/IMU VehicleState는 안테나 위치를 쓰는 부분이
+있다. HD맵/새 LiDAR의 후륜축 pose와 혼용하지 않는다. 판제와 권위 pose·lever·높이
+정책을 확인하며 중복 map TF를 발행하지 않는다. KITTI stereo baseline/rectification,
+nuScenes reference LiDAR 원점을 우리 MORAI 설정으로 복사하지 않는다.
