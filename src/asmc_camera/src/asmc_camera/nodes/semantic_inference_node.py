@@ -42,6 +42,7 @@ class SemanticInferenceNode:
             raise ValueError("camera_topics missing views: {}".format(missing_topics))
 
         backend_name = str(rospy.get_param("~backend", "twinlite"))
+        load_started = time.perf_counter()
         backend = create_backend(
             backend_name,
             checkpoint=str(rospy.get_param("~checkpoint")),
@@ -60,6 +61,8 @@ class SemanticInferenceNode:
             backend,
             restore_original=bool(rospy.get_param("~restore_original", True)),
         )
+        model_load_ms = (time.perf_counter() - load_started) * 1000.
+        dummy_warmup_ms = 0.
         warmup_iterations = int(rospy.get_param("~warmup_iterations", 1))
         if warmup_iterations < 0:
             raise ValueError("warmup_iterations must be non-negative")
@@ -72,6 +75,7 @@ class SemanticInferenceNode:
             started = time.perf_counter()
             for _ in range(warmup_iterations):
                 self.engine.infer(warmup_views)
+            dummy_warmup_ms = (time.perf_counter() - started) * 1000.
             rospy.loginfo(
                 "camera semantic warmup complete: iterations=%d views=%d elapsed_ms=%.1f",
                 warmup_iterations,
@@ -178,6 +182,8 @@ class SemanticInferenceNode:
         self._timestamp_regressions_by_view = {view: None for view in self.views}
 
         self.control = RosInferenceControl("twinlite", self.views, 10., warmed_up=bool(warmup_iterations))
+        self.control.state.record('startup', model_load_ms=model_load_ms,
+                                  dummy_warmup_ms=dummy_warmup_ms)
         self.family_status_subscriber = rospy.Subscriber(
             "/perception/lane/boundary_family", LaneBoundaryFamily, self.control.pipeline_observation, queue_size=1)
         self.subscribers = []
@@ -396,6 +402,9 @@ class SemanticInferenceNode:
                             ):
                                 return
                 publish_ms = (time.perf_counter() - started) * 1000.0
+                self.control.state.record('published', stamps=stamps, decode_ms=decode_ms,
+                    preprocess_ms=prediction.preprocess_ms, inference_ms=prediction.inference_ms,
+                    postprocess_ms=prediction.postprocess_ms, publish_ms=publish_ms)
                 completed_ros_ns = int(rospy.Time.now().to_nsec())
                 completed_monotonic = time.monotonic()
                 with self._stats_lock:
@@ -588,8 +597,10 @@ class SemanticInferenceNode:
         self.diagnostics_publisher.publish(message)
 
     def _shutdown(self) -> None:
-        self.control.close()
         self.buffer.close()
+        if self.worker is not threading.current_thread():
+            self.worker.join(timeout=2.)
+        self.control.close()
 
 
 def main() -> None:

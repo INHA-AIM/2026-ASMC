@@ -115,6 +115,7 @@ class UltralyticsDetector:
             if key in OPTIONAL_PREDICT_ARGS
         }
 
+        load_started = time.perf_counter()
         self.model = YOLO(str(weights_path))
         try:
             self.model.fuse()
@@ -134,6 +135,7 @@ class UltralyticsDetector:
                 "model parameters are on %s but %s was requested; refusing a silent "
                 "CPU fallback" % (model_device, self.device)
             )
+        model_load_ms = (time.perf_counter() - load_started) * 1000.
         warmup_ms = self._warmup()
         self.info = {
             "backend": "ultralytics",
@@ -147,6 +149,7 @@ class UltralyticsDetector:
             "allowed_names": list(self.allowed_names),
             "predict_overrides": dict(self.predict_overrides),
             "warmup_ms": round(warmup_ms, 1),
+            "model_load_ms": model_load_ms,
         }
 
     def _select_device(self, requested: str, require_cuda: bool, log) -> str:

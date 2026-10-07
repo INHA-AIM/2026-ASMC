@@ -82,6 +82,8 @@ class ObjectDetectionNode:
         self.diagnostics = rospy.Publisher("/perception/camera/objects/diagnostics", DiagnosticArray, queue_size=5)
         self.last_header = None
         self.control = RosInferenceControl("yolo", ["front"], 20., on_transition=self._invalidate)
+        self.control.state.record('startup', model_load_ms=self.backend_info.get('model_load_ms'),
+                                  dummy_warmup_ms=self.backend_info.get('warmup_ms'))
         self.subscriber = rospy.Subscriber(rospy.get_param("~image_topic", "/image_jpeg/compressed"),
                                            CompressedImage, self._callback, queue_size=1, buff_size=2**24)
         rospy.on_shutdown(self.shutdown)
@@ -136,6 +138,8 @@ class ObjectDetectionNode:
                         if self.raw_publisher is not None:
                             self.raw_publisher.publish(raw)
                         self.last_header = copy.deepcopy(frame.header)
+                        self.control.state.record('published', stamps=stamps, timings=timings,
+                                                  valid=bool(message.valid))
                 with self.lock:
                     self.filter_counts = dict(self.processor.last_counts)
                     self.excluded_boxes += self.filter_counts["excluded"]
@@ -211,13 +215,13 @@ class ObjectDetectionNode:
         return Header(stamp=rospy.Time.now())
 
     def shutdown(self):
-        self.control.close()
         self.stop.set()
         self.subscriber.unregister()
         self.buffer.close()
         for thread in (self.worker, self.monitor):
             if thread is not threading.current_thread():
                 thread.join(timeout=2)
+        self.control.close()
 
 
 def main():

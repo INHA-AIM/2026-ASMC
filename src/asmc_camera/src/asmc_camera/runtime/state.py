@@ -10,7 +10,7 @@ STANDBY, PREPARE, ACTIVE = range(3)
 
 class InferenceState:
     def __init__(self, views, managed=False, initial_mode=STANDBY, target_hz=10.,
-                 warmed_up=True, freshness_sec=.35, clock=time.monotonic):
+                 warmed_up=True, freshness_sec=.35, clock=time.monotonic, trace=None):
         self.views = tuple(views)
         if not self.views or initial_mode not in (STANDBY, PREPARE, ACTIVE):
             raise ValueError('invalid views or initial mode')
@@ -18,6 +18,7 @@ class InferenceState:
             raise ValueError('invalid target rate or freshness')
         self.lock = threading.RLock()
         self.clock, self.freshness = clock, freshness_sec
+        self.trace = trace
         self.managed = managed
         self.mode = initial_mode if managed else ACTIVE
         self.target_hz, self.warmed_up = target_hz, warmed_up
@@ -43,6 +44,11 @@ class InferenceState:
                 self.latest_input = {v: 0 for v in self.views}
                 self.generation += 1
             self.latest_input[view] = stamp_ns
+            self.record('input', view=view, source_stamp_ns=stamp_ns)
+
+    def record(self, event, **values):
+        if self.trace is not None:
+            self.trace(event, generation=self.generation, mode=self.mode, **values)
 
     def _reset(self):
         self.hits = {v: 0 for v in self.views}
@@ -67,12 +73,15 @@ class InferenceState:
             self.cutoff = max(self.latest_input.values())
             self._reset()
             self.reason = 'standby' if mode == STANDBY else 'awaiting_new_images'
+            self.record('request_accepted', target_hz=target, source_cutoff_ns=self.cutoff)
             return True, self.generation, 'accepted_not_ready'
 
     def begin(self, stamps):
         with self.lock:
             now = self.clock()
             if self.mode == STANDBY or (self.managed and now + .002 < self.next_at):
+                if self.mode != STANDBY:
+                    self.record('rate_wait', stamps=stamps, deadline=self.next_at)
                 return None
             if not stamps or any(v not in self.views or n <= 0 for v, n in stamps.items()):
                 return None
@@ -82,6 +91,7 @@ class InferenceState:
             if self.managed:
                 self.next_at = (now + 1. / self.target_hz if not self.next_at
                                 else max(self.next_at + 1. / self.target_hz, now + .001))
+            self.record('begin', stamps=stamps, deadline=self.next_at)
             return self.generation
 
     @contextmanager
@@ -100,6 +110,7 @@ class InferenceState:
                 self.hits = {v: 0 for v in self.views}
                 self.reason = error
                 self.last_output_valid = False
+                self.record('error', stamps=stamps, reason=error)
                 return True
             for view, stamp in stamps.items():
                 if stamp > self.latest_output[view]:
@@ -111,6 +122,7 @@ class InferenceState:
             self.successful_batches += 1
             self.samples.append(now)
             self.reason = 'running' if self.mode == ACTIVE else 'preparing'
+            self.record('complete', stamps=stamps, hits=dict(self.hits), valid=bool(valid))
             return True
 
     def snapshot(self):

@@ -4,15 +4,19 @@ import rospy
 from asmc_camera.msg import InferenceStatus
 from asmc_camera.srv import SetInferenceMode, SetInferenceModeResponse
 from .state import InferenceState, STANDBY, ACTIVE
+from .trace import LifecycleTrace
 
 
 class RosInferenceControl:
     def __init__(self, model, views, default_hz, warmed_up=True, on_transition=None):
         self.model = model
+        self.trace = LifecycleTrace(rospy.get_param('~lifecycle_trace_path', ''))
         self.state = InferenceState(
             views, managed=bool(rospy.get_param('~managed', False)),
             initial_mode=int(rospy.get_param('~initial_mode', STANDBY)),
-            target_hz=float(rospy.get_param('~target_hz', default_hz)), warmed_up=warmed_up)
+            target_hz=float(rospy.get_param('~target_hz', default_hz)), warmed_up=warmed_up,
+            trace=self.trace if self.trace.path is not None else None)
+        self.state.record('control_ready', loaded=True, warmed_up=bool(warmed_up))
         self.on_transition = on_transition
         self.pipeline = None
         self.publisher = rospy.Publisher('~inference_status', InferenceStatus, queue_size=1, latch=True)
@@ -46,6 +50,8 @@ class RosInferenceControl:
         with self.state.lock:
             self.pipeline = (message.header.stamp.to_nsec(), bool(message.valid),
                              self.state.clock(), self.state.generation)
+            self.state.record('pipeline_output', source_stamp_ns=message.header.stamp.to_nsec(),
+                              valid=bool(message.valid))
 
     def publish(self, event=None):
         with self.state.lock:
@@ -71,11 +77,14 @@ class RosInferenceControl:
             else:
                 msg.pipeline_ready = values['prepared']
             self.publisher.publish(msg)
+            self.state.record('status', prepared=msg.prepared, pipeline_ready=msg.pipeline_ready,
+                              successful_batches=msg.successful_batches, reason=msg.reason)
 
     def close(self):
         self.stopped.set()
         self.thread.join(timeout=1.)
         self.service.shutdown()
+        self.trace.close()
 
 
 class LaneEpochGate:

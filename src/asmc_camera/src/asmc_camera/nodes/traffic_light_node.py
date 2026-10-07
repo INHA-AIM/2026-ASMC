@@ -125,9 +125,11 @@ def main(argv=None):
         return 1
 
     checkpoint = os.path.abspath(os.path.expanduser(args.ckpt))
+    load_started = time.perf_counter()
     model, transform, classes, size, validation_accuracy = load_model(
         checkpoint, device
     )
+    model_load_ms = (time.perf_counter() - load_started) * 1000.
     model_id = "sha256:" + _sha256(checkpoint)
     output_height, output_width = size, int(round(size * 4 / 3))
     mean = torch.tensor(IMAGENET_MEAN, device=device).view(1, 3, 1, 1)
@@ -147,12 +149,14 @@ def main(argv=None):
         return (value - mean) / std
 
     # Warm the exact runtime preprocessing, dtype and model before input handling.
+    warmup_started = time.perf_counter()
     dummy = Image.new("RGB", (output_width, output_height))
     tensor = preprocess(dummy) if device.type == "cuda" else transform(dummy).unsqueeze(0).to(device)
     with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=device.type == "cuda"):
         model(tensor)
     if device.type == "cuda":
         torch.cuda.synchronize(device)
+    dummy_warmup_ms = (time.perf_counter() - warmup_started) * 1000.
 
     source = LatestCompressedImage(rospy, CompressedImage, args.image_topic)
     state_publisher = rospy.Publisher(
@@ -179,6 +183,7 @@ def main(argv=None):
                 candidate_labels=[], candidate_confidences=[]))
 
     control = RosInferenceControl("resnet18", ["camera4"], args.hz, on_transition=invalidate)
+    control.state.record('startup', model_load_ms=model_load_ms, dummy_warmup_ms=dummy_warmup_ms)
     rospy.loginfo(
         "traffic-light ready input=%s legacy=%s,%s typed=%s model=%s device=%s val_acc=%.4f",
         args.image_topic,
@@ -317,6 +322,7 @@ def main(argv=None):
                 last_result_at = time.monotonic()
                 stale_published = False
                 count += 1
+                control.state.record('published', stamps=stamps, inference_ms=inference_ms)
 
             if args.print_topk:
                 rospy.loginfo(
