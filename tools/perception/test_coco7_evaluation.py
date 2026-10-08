@@ -89,6 +89,46 @@ class Coco7EvaluationTest(unittest.TestCase):
         trajectory.valid=False
         self.assertEqual(0.,speed_command(preview,trajectory))
 
+    def test_restoration_requires_stationary_pose_mode_and_gear(self):
+        import copy
+        from drive_coco7_preview import restoration_check
+        xyz=lambda **kw:SimpleNamespace(**dict(x=kw.get('x',0.),y=0.,z=kw.get('z',0.)))
+        target=SimpleNamespace(transform=SimpleNamespace(location=xyz(),rotation=xyz(z=359.9)),
+            global_velocity=xyz(),vehicle_state=SimpleNamespace(gear_mode=1))
+        state=copy.deepcopy(target);state.transform.rotation.z=-.1
+        self.assertTrue(restoration_check(state,target,1,1)['passed'])
+        for mutate in (lambda s:setattr(s.global_velocity,'x',.06),
+                       lambda s:setattr(s.transform.location,'x',.11),
+                       lambda s:setattr(s.transform.rotation,'z',2.),
+                       lambda s:setattr(s.vehicle_state,'gear_mode',4)):
+            state=copy.deepcopy(target);mutate(state)
+            self.assertFalse(restoration_check(state,target,1,1)['passed'])
+        self.assertFalse(restoration_check(target,target,3,1)['passed'])
+
+    def test_restore_transform_mode_side_effect_is_repaired_last(self):
+        import capture_coco7_actors  # Adds the pinned MORAI protobuf path.
+        from morai.actor.actor_get_pb2 import ActorState
+        from morai.common.object_info_pb2 import ObjectInfo
+        from drive_coco7_preview import restore_ego
+        target=ActorState();target.vehicle_state.gear_mode=1
+        class Actors:
+            def __init__(self):
+                self.state=ActorState();self.state.CopyFrom(target);self.mode=1;self.calls=[]
+            def SetPause(self,r):self.calls.append('pause')
+            def SetVelocity(self,r):self.calls.append('velocity')
+            def ControlVehicle(self,r):self.calls.append('brake')
+            def SetTransform(self,r):
+                self.state.transform.CopyFrom(r.transform);self.mode=3
+                self.state.vehicle_state.gear_mode=4;self.calls.append('transform')
+            def SetVehicleControlMode(self,r):self.mode=r.mode;self.calls.append('mode')
+            def SetVehicleGear(self,r):self.state.vehicle_state.gear_mode=r.gear;self.calls.append('gear')
+            def GetActorState(self,*args,**kw):return self.state
+            def GetVehicleControlMode(self,*args,**kw):return SimpleNamespace(mode=self.mode)
+        actors=Actors();report={}
+        self.assertTrue(restore_ego(actors,ObjectInfo(),target,1,lambda f,r:f(r),report,sleep=lambda _:None))
+        self.assertGreater(max(i for i,v in enumerate(actors.calls) if v=='mode'),actors.calls.index('transform'))
+        self.assertEqual(3,len(report['restoration_checks']))
+
     def test_policy_comparison_keeps_failed_repeat_and_classification_difference(self):
         import json
         import tempfile

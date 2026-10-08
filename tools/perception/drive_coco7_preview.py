@@ -15,6 +15,61 @@ import time
 import numpy as np
 
 
+def restoration_check(state, original, mode, original_mode):
+    position = math.sqrt(sum((getattr(state.transform.location,k)-getattr(original.transform.location,k))**2 for k in 'xyz'))
+    rotation = max(abs((getattr(state.transform.rotation,k)-getattr(original.transform.rotation,k)+180)%360-180) for k in 'xyz')
+    speed = math.sqrt(sum(getattr(state.global_velocity,k)**2 for k in 'xyz'))
+    return dict(position_error_m=position, rotation_error_deg=rotation, speed_mps=speed,
+                gear_matches=state.vehicle_state.gear_mode==original.vehicle_state.gear_mode,
+                mode_matches=mode==original_mode,
+                passed=position<.1 and rotation<1 and speed<.05 and
+                state.vehicle_state.gear_mode==original.vehicle_state.gear_mode and mode==original_mode)
+
+
+def restore_ego(actors, ego, original, original_mode, mutate, report, sleep=time.sleep):
+    from morai.actor.actor_set_pb2 import (EnableActor, SetVelocityParam,
+        SetTransformParam, VehicleControlModeParam, VehicleGear)
+    from morai.actor.actor_control_pb2 import VehicleCtrlCmd
+    from capture_coco7_actors import MessageToDict
+    report['restore_pause_scope']='Temporary Ego pause; prior pause state unavailable; explicitly resumed.'
+    paused=False
+    try:
+        mutate(actors.SetPause,EnableActor(actor_info=ego,enable=True));paused=True
+        mutate(actors.SetVehicleControlMode,VehicleControlModeParam(actor_info=ego,mode=3))
+        mutate(actors.ControlVehicle,VehicleCtrlCmd(actor_info=ego,long_cmd_type=1,brake=1.,steer=0.))
+        mutate(actors.SetVelocity,SetVelocityParam(actor_info=ego,velocity=0.))
+        mutate(actors.SetTransform,SetTransformParam(actor_info=ego,transform=original.transform))
+        mutate(actors.SetPause,EnableActor(actor_info=ego,enable=False));paused=False
+        sleep(1.)
+        state=actors.GetActorState(ego,timeout=3)
+        yaw=(state.transform.rotation.z-original.transform.rotation.z+180)%360-180
+        # SetTransform can yield a repeatable yaw offset in this MORAI build.
+        # One bounded correction targets the saved pose; never relax tolerance.
+        if 1 <= abs(yaw) <= 5:
+            mutate(actors.SetPause,EnableActor(actor_info=ego,enable=True));paused=True
+            request=SetTransformParam(actor_info=ego,transform=original.transform)
+            request.transform.rotation.z-=yaw
+            report['restore_yaw_correction_deg']=-yaw
+            mutate(actors.SetTransform,request)
+            mutate(actors.SetPause,EnableActor(actor_info=ego,enable=False));paused=False
+        # SetTransform changes the control mode in this simulator. Restore mode
+        # and gear last, after all transforms and after queued UDP commands drain.
+        mutate(actors.SetVehicleControlMode,VehicleControlModeParam(actor_info=ego,mode=original_mode))
+        mutate(actors.SetVehicleGear,VehicleGear(actor_info=ego,gear=original.vehicle_state.gear_mode))
+        sleep(1.)
+        report['restoration_checks']=[]
+        for _ in range(3):
+            sleep(.5)
+            state=actors.GetActorState(ego,timeout=3)
+            mode=actors.GetVehicleControlMode(ego,timeout=3).mode
+            report['restoration_checks'].append(restoration_check(state,original,mode,original_mode))
+        report['restored_ego']=MessageToDict(state)
+        return all(c['passed'] for c in report['restoration_checks'])
+    finally:
+        if paused:
+            mutate(actors.SetPause,EnableActor(actor_info=ego,enable=False))
+
+
 def speed_command(preview, trajectory):
     """Never convert an explicit planner/controller stop into a drive request."""
     if not trajectory.valid or not trajectory.points or preview.brake > .5:
@@ -141,21 +196,7 @@ def main():
             publisher.unregister()
         if changed:
             try:
-                # Stop first, then restore after the UDP publisher is gone so
-                # its hardcoded D gear cannot overwrite the original gear.
-                mutate(actors.SetVelocity,SetVelocityParam(actor_info=ego,velocity=0))
-                mutate(actors.SetVehicleGear,VehicleGear(actor_info=ego,gear=original.vehicle_state.gear_mode))
-                mutate(actors.SetTransform,SetTransformParam(actor_info=ego,transform=original.transform))
-                mutate(actors.SetVehicleControlMode,VehicleControlModeParam(actor_info=ego,mode=original_mode))
-                time.sleep(1.)
-                restored=actors.GetActorState(ego,timeout=3)
-                mode=actors.GetVehicleControlMode(ego,timeout=3).mode
-                position_error=math.sqrt(sum((getattr(restored.transform.location,k)-getattr(original.transform.location,k))**2 for k in 'xyz'))
-                angle_error=max(abs((getattr(restored.transform.rotation,k)-getattr(original.transform.rotation,k)+180)%360-180) for k in 'xyz')
-                report['restored_ego']=MessageToDict(restored)
-                report['restoration_checks']=dict(position_error_m=position_error,rotation_error_deg=angle_error,
-                    gear_matches=restored.vehicle_state.gear_mode==original.vehicle_state.gear_mode,mode_matches=mode==original_mode)
-                report['restored']=position_error<.1 and angle_error<1 and mode==original_mode and restored.vehicle_state.gear_mode==original.vehicle_state.gear_mode
+                report['restored']=restore_ego(actors,ego,original,original_mode,mutate,report)
                 if not report['restored']: report['failures'].append('Ego restoration tolerance not met')
             except Exception as exc: report['failures'].append('restore: '+str(exc))
         for sub in subs: sub.unregister()

@@ -9,6 +9,7 @@ import argparse
 from collections import defaultdict
 import json
 import os
+import signal
 from pathlib import Path
 import subprocess
 import sys
@@ -50,6 +51,10 @@ def main():
     runtime = yaml.safe_load(a.runtime.read_text())
     report = dict(scope='bounded simulator drive and stationary model re-entry; not a competition driving approval',
                   failures=[], requests=[], provenance=provenance(a.models, Path(runtime['weights']), a.revision))
+    def interrupted(signum, frame):
+        raise RuntimeError('owned rehearsal interrupted by signal '+str(signum))
+    signal.signal(signal.SIGINT,interrupted)
+    signal.signal(signal.SIGTERM,interrupted)
     statuses = {}; anchors = {}; outputs = defaultdict(list); trajectories = []
     lock = threading.RLock(); subs = []; processes = []; handles = []
     sampler = None; drive_process = None
@@ -156,6 +161,8 @@ def main():
         report['drive'] = json.loads((a.output/'drive/report.json').read_text()) if (a.output/'drive/report.json').exists() else None
         if not report['drive'] or not report['drive']['passed']:
             report['failures'].append('bounded drive failed; original gate report retained')
+        if not report['drive'] or not report['drive'].get('restored'):
+            raise RuntimeError('Ego restoration failed; aborting re-entry and further physical trials')
         if any(t in ('/ctrl_cmd','/ctrl_cmd_0') and names for t,names in master.getSystemState()[0]):
             raise RuntimeError('drive public publisher remained after restoration')
         # Re-entry is useful evidence even when actual motion was blocked.
