@@ -25,6 +25,28 @@
 24점 삭제/보존과 신규 분류 차이는 [원본 이미지·점군 비교 갤러리](../../../config/baselines/evidence/lidar_continuous_regression_v1/user-review/index.html)에서 확인한다.
 24점은 장애물 정답이 없는 합성 지면 높이 입력이며, 실제 장애물 소실 사례로 해석하지 않는다.
 
+## 재호: PR #72 반영 후 비교 갤러리 먼저 보기
+
+PR #72가 반영된 checkout에서
+`config/baselines/evidence/lidar_continuous_regression_v1/user-review/index.html`을
+파일 탐색기에서 브라우저로 연다. HTML·사진·GIF·상태/속도 JSON을 모두 Git에 포함했으므로
+**ROS, GPU, MORAI, bag 원본이나 기존 임시 컨테이너가 없어도 볼 수 있다.** GitHub의
+HTML 소스 보기 대신 로컬의 `user-review` 폴더 전체를 사용한다.
+
+HTTP로 보고 싶으면 **저장소 루트** 터미널에서 아래 명령을 실행하고 브라우저로
+`http://localhost:8767/index.html`을 연다. 종료는 해당 터미널의 `Ctrl+C`다.
+
+```bash
+python3 -m http.server 8767 --bind 127.0.0.1 \
+  --directory config/baselines/evidence/lidar_continuous_regression_v1/user-review
+```
+
+검토 순서는 **연속 구간 1·2·3의 벽 조각/바닥 노이즈 → 분류 10번의 OBB와 우측 영상 →
+11관측의 분류 카운터 → 속도 급변 분포**다. 24점은 사진 없는 합성 정책 시험이다.
+같은 source stamp의 point→cluster→OBB→track/분류 이력을 이어서 확인한다.
+[재호 과제 목록](b1a-improvement-tasks.md)의 구조물 표현·속도 책임 절에서 후속 작업을 선택한다.
+현재 세션의 localhost 8766 서버나 `/tmp` 경로는 향후 재현에 필요하지 않다.
+
 ## 역할과 남긴 파일
 
 카메라 패키지는 `asmc_camera`다(2026-10-06 `asmc_perception`에서 이름 변경). 안승현이

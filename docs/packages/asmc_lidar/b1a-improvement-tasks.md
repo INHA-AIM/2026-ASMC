@@ -111,4 +111,57 @@ strict 100ms 보간과 Main bounded 300ms 보정을 구분하고 ROS/steady 시�
 실제 속도 정확도와 구분한다. 합성 unknown 24점은 대응 사진이 없으며 실제 장애물
 소실 사례로 사용하지 않는다.
 
+## 구조물 표현과 속도 급변: LiDAR·판제의 책임
+
+아래는 후속 설계/시험 제안이다. 이번 PR에서 새 구조물 출력이나 속도 필터를 구현한
+것은 아니다. 갤러리는 [패키지 인계 README](README.md)의 브라우저 안내대로 먼저 연다.
+
+### 벽을 꼭 객체 OBB로 만들어야 하는가
+
+현재 Main의 일반 경로는 남은 점을 거리 기반으로 군집화하고 각 군집에 L-Shape OBB를
+씌운다. 벽 조각이 나오는 것은 이 경로에 벽 점이 남았기 때문이며, 벽을 의미적으로
+판별해 구조물 경계를 제공하는 구현이라고 보지 않는다. 정지 차량도 있으므로 정적이라는
+이유만으로 구조물로 전환하지 않는다.
+
+| 대상/목적 | 비교할 표현 |
+|---|---|
+| 차량·보행자·독립 장애물 | 객체 ID와 관측 근거가 있는 OBB/형상, 추적 상태 |
+| 벽·가드레일·터널 표면 | 실제 지지 범위의 표면·선분·다각형 경계 또는 점유 grid/voxel |
+| 구조물인지 객체인지 미확정 | 점/voxel 점유 근거 유지, 삭제/자유 공간으로 처리하지 않음 |
+
+OBB로 구조물을 근사하는 것 자체가 오류는 아니다. 충돌 검사나 debug에 쓸 수 있지만
+잘게 쪼갠 벽에 차량용 ID·속도를 부여하거나 거대한 벽 OBB로 도로를 덮는 표현은 피한다.
+벽을 객체 목록에서 분리하더라도 충돌 경계는 계속 제공한다. raw voxel을 남기는 것만으로
+판제 계약이 완성되지는 않으며 좌표·stamp·해상도·점유/미관측 의미와 소비 경로를 정한다.
+GPS 독립 local 관측과 필요한 map 변환 경계는 기존 설계를 따른다.
+
+참고 구현으로 Autoware는 [점군 기반 occupancy grid](https://autowarefoundation.github.io/autoware_universe/latest/perception/autoware_probabilistic_occupancy_grid_map/)와
+[라벨/군집 기반 객체 형상 추정](https://autowarefoundation.github.io/autoware_universe/main/perception/autoware_shape_estimation/)을 별도 모듈로 제공한다.
+우리의 객체/구조물 경계 분리 제안은 이 구분을 참고한 설계이며 유일한 정석을 주장하지 않는다.
+
+### 박스가 흔들리면 속도도 흔들리는가
+
+현재 `Clustering.cpp:Clustering`은 관측 군집점의 평균을 만들고,
+`Tracking.cpp:Objectinfo_for_km`은 이를 `f32_CoreX/Y/Z`에 넣는다. L-Shape의 기하학적 중심은
+별도 `f32_OBB_CenterX/Y/Z`다. `CompareCentroids`는 군집 중심을 관측으로 연관/KF에
+넣고 `Kalman.cpp:kalman_filter_update`는 상대속도를 추정한다. KF 후 공개 상태의
+Core X/Y는 필터 위치이므로 raw 군집 중심·OBB 중심·필터 위치를 구분해 기록한다.
+
+시야·가림·지면 제거로 같은 차량의 관측 면이 달라지면 OBB와 평균 군집 중심이 함께
+움직일 수 있다. 하지만 OBB 크기 변화가 직접 속도를 계산하는 구현은 아니다.
+군집 분할/합침, 다른 객체 연결, KF 초기화, miss 후 재관측, 자차 운동/시간 처리도 함께
+분리한다. 주 bag의 최대 급변은 pitch에서 45.75m/s(초기화 후보, 기록 중심 변화 3.22m,
+scan dt 50.35ms), roll에서 36.20m/s(초기화 후보, 중심 변화 2.27m, scan dt 62.38ms)다.
+중심 변화는 기록된 3D 상태의 거리이며 실제 이동이나 2D 속도의 독립 정답이 아니다.
+박스 치수 변화만이 원인이라고 확정하지 않는다. 관측 공백이 있을 때 초기 속도에 사용한
+dt가 마지막 실측 이후 경과시간과 맞는지도 고정 trace로 확인한다.
+
+- **LiDAR:** 지지점·군집/연관을 개선하고, 위치/형상 안정성과 초기화·재관측 dt·자차 보상을
+  검증한다. 결과의 source stamp·관측/예측 구분·속도 유효성/품질을 계약으로 전달한다.
+- **판제:** age·유효성·불확실성을 확인해 소비하고 기동 결정에 히스테리시스/보수적 여유를
+  둔다. 검증되지 않은 속도를 그대로 장래 궤적에 쓰거나 unknown을 0속도/static으로 간주하지 않는다.
+
+판제의 소비 안정화와 LiDAR 관측/추적 정확도 개선은 각각 검증한다. 현재 typed 공개
+velocity/dynamic validity는 false로 유지한다.
+
 입력·결과·검증 범위는 [연속 회귀 문서](../../handoffs/perception/lidar-continuous-regression.md)와 그 baseline을 따른다.

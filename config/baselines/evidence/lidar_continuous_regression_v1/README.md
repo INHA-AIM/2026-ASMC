@@ -44,3 +44,7 @@ trace·원본 JPEG로 생성했다. 24점은 이전 지면 높이의 일직선 �
 측방 보완 전 v2, 측방 보완 v3, ns 문자열 표시·소스 SHA를 포함한 전체 최종 v4 재실행 및
 실제 exporter binary/build 로그는 호스트에 보존한다. 최종 render 종료 로그도 갤러리에 포함한다.
 이 추가 자료는 기존 수락 보류를 자동 해제하지 않는다.
+
+재호가 PR #72 반영 후 다시 확인할 때는 [패키지 인계 README의 갤러리 여는 방법](../../../../docs/packages/asmc_lidar/README.md#재호-pr-72-반영-후-비교-갤러리-먼저-보기)을 따른다.
+로컬 `user-review/index.html`을 브라우저로 직접 열거나 그 폴더만 HTTP로 제공한다.
+모든 표시 자료는 저장소에 포함되며 ROS/GPU/MORAI·bag 재생과 현재 임시 서버가 필요 없다.
