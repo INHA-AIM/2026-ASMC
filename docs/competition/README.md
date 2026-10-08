@@ -13,6 +13,11 @@ v1.2 변경: 일정 추가, 체크포인트 15개로 정리, 네트워크 스펙
 `docs/competition/`에 보존하고, 구현 설정은 [운영 가이드](../operations/README.md)와
 [HD Map 계약](../contracts/hd-map/topic-v1.md)을 따른다.
 
+장애물 출제 에셋·시나리오 높이·Object Info 속도는
+[2026-10-06 전달 Q&A와 분류 설계](../handoffs/competition/obstacle-assets-and-labels.md)를 참고한다.
+F2 전체 객체가 범위이며 `OBJ_G80_Open_Door`는 제외라는 답변과,
+미검수 102개 집계·후속 학습 제안을 구분한다.
+
 ## 1. 본선 환경과 금지 경계
 
 ```text

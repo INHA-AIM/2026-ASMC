@@ -205,3 +205,20 @@ velocity/dynamic validity는 false로 유지한다.
 GPS 조건만 바꾼 local 상태 동등성·관측별 좌표와 시간 계약도 계속 검사한다.
 
 입력·결과·검증 범위는 [연속 회귀 문서](../../handoffs/perception/lidar-continuous-regression.md)와 그 baseline을 따른다.
+
+### MORAI 속도 GT 기준 — 2026-10-06 전달 Q&A 반영
+
+운영진은 Object Info의 순간 선속도를 **후륜 차축 중심 기준**으로 답변했고 위치 미분보다
+Velocity_XYZ의 직접 사용을 권장했다. 원문 출처·시각, 높이·출제 범위와 변환 조건은
+[객체 에셋·속도 GT 안내](../../handoffs/competition/obstacle-assets-and-labels.md#lidar-속도-검증에-연결할-기준)에 모았다.
+
+현재 브릿지의 `/Object_topic` velocity는 km/h이므로 이 수집 경로에서는 성분별 `/3.6`이
+필요하다. 이미 m/s인 Ego velocity와 혼동하지 않는다. 후륜축 속도를 부분 군집 평균이나
+추정 OBB 중심 속도와 그대로 비교하지 않고 기준점·좌표·source 시간·자차 보상을 맞춘다.
+기하 중심 속도가 필요하면 같은 시점의 객체 각속도·제원으로 `v_P = v_R + omega × r_RP`를
+사용한다. 현재 ObjectStatus에는 객체 yaw rate가 없으며 Ego IMU로 대신하지 않는다.
+독립 각속도/기준점이 없으면 중심 GT는 미확보로 기록한다.
+
+재호의 우선 과제는 **GT 단위/기준점 정렬 → 초기화·재관측 dt/연결 검증 → 위치 관측 개선**이다.
+Object GT는 개발 평가 전용이며 본선 입력으로 사용하지 않는다. 이번 문서 반영은 속도
+알고리즘 수정이나 공개 velocity/dynamic validity 승격이 아니다.

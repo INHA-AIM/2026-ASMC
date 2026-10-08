@@ -19,6 +19,7 @@ consumer가 어떤 freshness·quality·fallback을 검사해야 하는지, 어�
 | Camera·LiDAR 통합 부하 | [B0 기준선 프로토콜](./perception/camera-lidar-b0.md) | 현행 모델 6조합·fusion·GPS 진단, 운영 기본값 변경 없음 |
 | Behavior→Frenet v1 | [legacy 3-package 설계](./planning/behavior-legacy.md) | Legacy Reference, 현재 실행 금지 |
 | 규정집 v1.2→전 파트 | [v1.2 영향과 확인 요청](./competition/rule-v1.2-impacts.md) | Active Handoff, 판정 전용 채널·cmd type·속도 상한 |
+| 장애물 출제 범위→Camera·LiDAR·판제 | [MORAI 객체·분류·속도 GT](./competition/obstacle-assets-and-labels.md) | 10/06 전달 Q&A 요약; 102개 목록 미검수, 네 그룹·학습은 설계 후보 |
 | HD맵→판제 | [전역 지도·미션 경계·GPS 상태](./hd-map/planning-consumption-v1.md) | Active Handoff, v6 지도 bundle·후륜축·station·음영 fallback 반영 항목 |
 | HD맵 미션 구간→시나리오 생성기·판제 | [미션 시나리오 spec](./hd-map/mission-scenario-spec.md) | Active Handoff, 구간별 회피 차로·actor 후보·샘플링 API, 값은 계속 수정 가능 |
 

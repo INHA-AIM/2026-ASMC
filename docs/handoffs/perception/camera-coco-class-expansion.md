@@ -4,6 +4,10 @@ PR #72를 `a8c4f3b`에 병합한 뒤 별도 카메라 브랜치에서 비교한�
 네 클래스이며 전체 COCO 관측은 명시적인 실험 프로필**이다. 실행별 성공·실패와
 원본 결과는 [실험 baseline](../../../config/baselines/perception_camera_coco_classes_v1.yaml)에 연결한다.
 
+후속 허용 클래스 선정과 `person / animal / vehicle / obstacle` 후보, MORAI 출제 범위와
+학습 라벨은 [객체 에셋·분류 설계](../competition/obstacle-assets-and-labels.md)에 모았다.
+현재 세 그룹과 80종 실험은 유지하며 animal 추가·신규 학습은 아직 구현하지 않았다.
+
 ## 직접 실행과 시각화
 
 컨테이너·bridge·ROS master와 source 환경은 별도로 준비한다. 실시간 bridge와 같은
