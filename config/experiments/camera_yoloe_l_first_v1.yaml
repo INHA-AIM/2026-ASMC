@@ -58,13 +58,6 @@ fusion:
   bags:
     primary: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
     shadow: /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
-gps:
-  profile: C1
-  bag_id: primary
-  gap_start_sec: 8.0
-  gap_end_sec: 14.0
-  trace: true
-  interpretation: diagnostic_not_rate_acceptance
 debug_comparison:
   profile: C6
   phase: camera
@@ -79,38 +72,6 @@ gates:
   reversed_stamps_maximum: 0
   fusion_offset_p95_max_ms: 50.0
   operational_defaults_changed: false
-object_profiles:
-  baseline:
-    config: src/asmc_camera/config/camera/yolo11m_coco_all.yaml
-    groups: src/asmc_camera/config/camera/object_classes_seg_experiment.yaml
-  yolo26:
-    config: src/asmc_camera/config/camera/yolo26s_seg_experiment.yaml
-    groups: src/asmc_camera/config/camera/object_classes_seg_experiment.yaml
-  yoloe:
-    config: src/asmc_camera/config/camera/yoloe26s_seg_experiment.yaml
-    groups: src/asmc_camera/config/camera/object_classes_seg_experiment.yaml
-seg_selection:
-  candidates:
-  - yolo26
-  - yoloe
-  precision: fp32
-  imgsz: 640
-  confidence_fixed: 0.7
-  confidence_sweep:
-    start: 0.1
-    stop: 0.7
-    step: 0.05
-  split_runs:
-    train: 12
-    selection: 3
-    heldout: 3
-  training: false
-  operational_defaults_changed: false
-  ranking:
-  - macro_f1
-  - mask_iou
-  - p95_latency
-  fusion_mask_use: false
 prompt_profiles:
   base27:
   - person
@@ -207,3 +168,22 @@ first_run:
   runtime: TensorRT FP16
   training: false
   defaults_changed: false
+base_source: 17dd7a6
+quality:
+  confidence_fixed: 0.7
+  sweep:
+  - 0.1
+  - 0.15
+  - 0.2
+  - 0.25
+  - 0.3
+  - 0.35
+  - 0.4
+  - 0.45
+  - 0.5
+  - 0.55
+  - 0.6
+  - 0.65
+  - 0.7
+  GT: existing gt-v2 selection split only
+  fusion_mask_use: false

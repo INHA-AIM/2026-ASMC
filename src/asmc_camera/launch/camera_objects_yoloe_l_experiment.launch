@@ -6,6 +6,7 @@
   <arg name="debug" default="true"/>
   <arg name="initial_mode" default="2"/>
   <arg name="target_hz" default="20.0"/>
+  <arg name="confidence" default="0.7"/>
   <arg name="config" default="$(eval find('asmc_camera')+'/config/camera/yoloe_l/'+{'rich42':'rich42','base27':'base27'}[arg('prompt_profile')]+'_'+{'tensorrt':'tensorrt','pytorch':'pytorch'}[arg('runtime_backend')]+'_'+{'2plus1':'2plus1','sequential':'sequential','batch3':'batch3'}[arg('batch_mode')]+'.yaml')"/>
   <include file="$(find asmc_camera)/launch/perception.launch">
     <arg name="profile" value="planning"/>
@@ -21,4 +22,5 @@
     <arg name="camera_objects_config" value="$(arg config)"/>
     <arg name="objects_class_groups_config" value="$(find asmc_camera)/config/camera/object_classes_yoloe_l_v1.yaml"/>
   </include>
+  <param name="/camera_object_detector/conf_thres" type="double" value="$(arg confidence)"/>
 </launch>

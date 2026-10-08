@@ -34,14 +34,24 @@ class ObjectVisualizerNode:
         self.image = message_filters.Subscriber(
             rospy.get_param('~image_topic', '/image_jpeg/compressed'), CompressedImage,
             queue_size=5, buff_size=16 << 20)
-        self.objects = message_filters.Subscriber(
-            '/perception/camera/objects', CameraObjectBoxArray, queue_size=5)
+        # Several cameras may share a stamp. Reject other views before the
+        # synchronizer consumes the front image, rather than after pairing it.
+        self.expected_frame_id=rospy.get_param('~frame_id','camera_front')
+        self.objects = message_filters.SimpleFilter()
+        self.object_subscriber=rospy.Subscriber('/perception/camera/objects',CameraObjectBoxArray,
+            lambda m:self._accept_view(self.objects,m),queue_size=5)
         inputs = [self.image, self.objects]
         if self.debug_raw:
-            self.raw = message_filters.Subscriber('/perception/camera/objects/debug/raw',CameraObjectBoxArray,queue_size=5)
+            self.raw = message_filters.SimpleFilter()
+            self.raw_subscriber=rospy.Subscriber('/perception/camera/objects/debug/raw',CameraObjectBoxArray,
+                lambda m:self._accept_view(self.raw,m),queue_size=5)
             inputs.append(self.raw)
         self.sync = message_filters.TimeSynchronizer(inputs, int(rospy.get_param('~sync_queue_size',30)))
         self.sync.registerCallback(self.render)
+
+    def _accept_view(self, target, message):
+        if message.header.frame_id==self.expected_frame_id:
+            target.signalMessage(message)
 
     def _diagnostic(self, message):
         for status in message.status:

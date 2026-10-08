@@ -64,6 +64,11 @@ class BatchedSegmentationDetector:
         for views in (['front'], ['left'], ['left', 'right'], ['front', 'left', 'right']):
             images = {v: np.zeros((720,1280,3) if v == 'front' else (480,640,3), np.uint8) for v in views}
             self.infer_images(images, views)
+        runtime=self.model.predictor.model
+        if runtime.device.type!='cuda' or runtime.format!=('engine' if runtime_backend=='tensorrt' else 'pt'):
+            raise DetectorStartupError('runtime device/format fallback is forbidden')
+        if runtime.end2end:
+            raise DetectorStartupError('runtime changed the official one-to-many head')
         self.info = dict(backend=runtime_backend, model_kind='yoloe', weights=str(path),
             weights_sha256=actual, prompt_embeddings_sha256=file_sha256(Path(prompt_embeddings)),
             prompt_names=self.names_list, batch_mode=batch_mode, shapes=SHAPES,
@@ -71,6 +76,10 @@ class BatchedSegmentationDetector:
             torch=torch.__version__, conf_thres=self.conf, model_load_ms=load_ms,
             warmup_ms=(time.monotonic()-warm)*1000, masks_materialized=True)
         self.info.update(head='one-to-many', postprocessing='class-aware NMS, IoU 0.7, max_det 300')
+        if runtime_backend=='tensorrt':
+            import tensorrt
+            self.info.update(tensorrt=tensorrt.__version__,input_fp16=runtime.fp16,
+                             export_metadata=runtime.metadata)
 
     def infer_images(self, images, order):
         from ultralytics.utils.ops import scale_masks

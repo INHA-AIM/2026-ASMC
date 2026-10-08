@@ -115,6 +115,8 @@ jobs:
           roslaunch --nodes asmc_camera camera_objects_seg_experiment.launch model:=yoloe views:=all debug:=false
           roslaunch --nodes asmc_camera camera_objects_seg_experiment.launch model:=yolo26 classes:=mission debug:=false
           roslaunch --nodes asmc_camera camera_objects_seg_experiment.launch model:=yoloe classes:=mission views:=all debug:=false
+          roslaunch --nodes asmc_camera camera_objects_yoloe_l_experiment.launch debug:=false
+          roslaunch --nodes asmc_camera camera_objects_yoloe_l_experiment.launch prompt_profile:=base27 batch_mode:=batch3 debug:=false
           python3 tools/perception/check_region_example_ros.py
           python3 tools/perception/check_object_visualization_ros.py
           python3 tools/perception/check_object_visualization_ros.py --hood-mask

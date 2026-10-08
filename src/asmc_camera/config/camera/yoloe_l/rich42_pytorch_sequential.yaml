@@ -5,6 +5,8 @@ views:
 image_topic: /image_jpeg/compressed
 weights: /data/models/camera_yoloe_l_v1/yoloe-26l-seg.pt
 expected_sha256: a612d2d505f24e14d87ec82d688b823b6cb600646664f16125ce6c84ce360da9
+source_checkpoint_sha256: a612d2d505f24e14d87ec82d688b823b6cb600646664f16125ce6c84ce360da9
+expected_prompt_sha256: 15e87fd9192435e26da45261be5f7dc5ae1a9b64062385ef88db013f888b4225
 device: cuda:0
 require_cuda: true
 conf_thres: 0.7
@@ -58,5 +60,3 @@ runtime_backend: pytorch
 batch_mode: sequential
 batch_wait_ms: 10
 prompt_embeddings: /data/models/camera_yoloe_l_v1/rich42.npz
-expected_prompt_sha256: 15e87fd9192435e26da45261be5f7dc5ae1a9b64062385ef88db013f888b4225
-source_checkpoint_sha256: a612d2d505f24e14d87ec82d688b823b6cb600646664f16125ce6c84ce360da9

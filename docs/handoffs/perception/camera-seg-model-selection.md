@@ -1,5 +1,8 @@
 # YOLO26·YOLOE seg 모델 선정
 
+후속 대형 모델 첫 실행은 [YOLOE-l 42종/27종·3뷰 실험](camera-yoloe-l-first-run.md)에서
+진행한다. 아래 s 모델의 성공·실패는 기존 증거로 보존한다.
+
 작업 브랜치는 `feat/camera-seg-model-selection`, 작업 폴더는 `asmc-camera-objects`다.
 PR #73의 `62981e6` 위에서 진행하며 #73 병합 후 최신 main으로 옮긴다. 기존 검증
 worktree와 shared 컨테이너 마운트는 유지한다. 학습·운영 모델/기본값 승격은 이번 범위에

@@ -440,3 +440,10 @@ canonical adapter와 message 전환을 진행한다.
 역변환·장착 변환·local/map 출력과 원본 박스의 fusion은 Main의
 [공통 경계 어댑터](../../docs/handoffs/perception/lidar-camera-frame-boundaries.md)가 담당한다.
 구간 활성화·결과 소비·차선 주행 모드는 판제가 결정한다.
+
+## YOLOE-l 3뷰 첫 실행 실험
+
+별도 [42종/27종·TensorRT batch 실험 안내](../../docs/handoffs/perception/camera-yoloe-l-first-run.md)를
+따른다. `camera_objects_yoloe_l_experiment.launch`는 준비된 실험 runtime에서만 실행하며,
+기존 운영 YOLO11m 기본값을 변경하지 않는다. 원본 이름과 네 소비 그룹을 보존하고,
+공식 l checkpoint의 one-to-many head·동일 NMS를 PyTorch/TensorRT에 사용한다.

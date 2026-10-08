@@ -15,7 +15,8 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--results',type=Path,required=True);p.add_argument('--datasets',type=Path,required=True)
     p.add_argument('--hood-config',type=Path,required=True);p.add_argument('--confidence',type=float,default=.7)
-    a=p.parse_args();root=a.results;dest=root/'comparison-gallery';dest.mkdir(exist_ok=False)
+    p.add_argument('--output',type=Path)
+    a=p.parse_args();root=a.results;dest=a.output or root/'comparison-gallery';dest.mkdir(exist_ok=False)
     gt=[json.loads(line) for line in (root/'gt-v2/frames.jsonl').read_text().splitlines()]
     gt={(r['run'],r['view'],r['frame']):r for r in gt if r['split']=='selection' and r['annotation_complete']}
     paths={'rich42':root/'quality-rich42-pytorch-v2','base27':root/'quality-base27-pytorch'}
@@ -81,7 +82,7 @@ def main():
             caption=name+' / '+', '.join(events[name].get(key,{}).get('reasons',[]))
             figures.append('<figure><figcaption>'+html.escape(caption)+'</figcaption><img loading="lazy" width="640" src="'+filename+'"></figure>')
         gallery.append('<article><h3>'+html.escape(' / '.join(key))+'</h3>'+''.join(figures)+'</article>')
-    (root/'continuity.json').write_text(json.dumps(summaries,indent=2)+'\n')
+    (dest.parent/(dest.name+'-continuity.json')).write_text(json.dumps(summaries,indent=2)+'\n')
     (dest/'index.html').write_text('<!doctype html><meta charset="utf-8"><title>YOLOE-l prompt comparison</title><style>article{display:flex;flex-wrap:wrap}h3{width:100%}figure{margin:5px}</style><h1>Actual rich42 vs base27 · confidence '+str(a.confidence)+'</h1><p>Blue: GT. Green: predictions and instance mask. Red: front hood exclusion. Unverified object subtypes remain unverified.</p>'+''.join(gallery))
 
 
