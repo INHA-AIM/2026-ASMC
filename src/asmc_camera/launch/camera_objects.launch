@@ -3,6 +3,7 @@
   <arg name="initial_mode" default="0"/>
   <arg name="target_hz" default="20.0"/>
   <arg name="config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
+  <arg name="class_groups_config" default="$(find asmc_camera)/config/camera/object_classes.yaml"/>
   <arg name="objects_hood_mask" default="true"/>
   <arg name="objects_ego_hood_filter" default="false"/>
   <arg name="objects_ego_hood_filter_config" default="$(find asmc_camera)/config/camera/yolo_ego_hood_filter_v1.yaml"/>
@@ -14,7 +15,7 @@
     <param name="initial_mode" value="$(arg initial_mode)"/>
     <param name="target_hz" value="$(arg target_hz)"/>
     <rosparam command="load" file="$(arg config)" subst_value="true"/>
-    <rosparam command="load" file="$(find asmc_camera)/config/camera/object_classes.yaml"/>
+    <rosparam command="load" file="$(arg class_groups_config)"/>
     <param name="hood_mask" type="bool" value="$(arg objects_hood_mask)"/>
     <param name="ego_hood_filter" type="bool" value="$(arg objects_ego_hood_filter)"/>
     <param name="ego_hood_filter_config" value="$(arg objects_ego_hood_filter_config)"/>

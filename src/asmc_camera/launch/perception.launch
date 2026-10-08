@@ -20,6 +20,7 @@
   <arg name="start_traffic_light" default="$(eval arg('profile') in ['planning', 'debug'])"/>
   <arg name="start_camera_objects" default="$(eval arg('profile') in ['planning', 'debug'])"/>
   <arg name="camera_objects_config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
+  <arg name="objects_class_groups_config" default="$(find asmc_camera)/config/camera/object_classes.yaml"/>
   <arg name="objects_hood_mask" default="true"/>
   <arg name="objects_ego_hood_filter" default="false"/>
   <arg name="objects_ego_hood_filter_config" default="$(find asmc_camera)/config/camera/yolo_ego_hood_filter_v1.yaml"/>
@@ -70,6 +71,7 @@
   <group if="$(arg start_camera_objects)">
     <include file="$(find asmc_camera)/launch/camera_objects.launch">
       <arg name="config" value="$(arg camera_objects_config)"/>
+      <arg name="class_groups_config" value="$(arg objects_class_groups_config)"/>
       <arg name="objects_hood_mask" value="$(arg objects_hood_mask)"/>
       <arg name="objects_ego_hood_filter" value="$(arg objects_ego_hood_filter)"/>
       <arg name="objects_ego_hood_filter_config" value="$(arg objects_ego_hood_filter_config)"/>

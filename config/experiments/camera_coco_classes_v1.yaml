@@ -1,0 +1,74 @@
+schema_version: 1
+experiment_id: camera_coco_classes_v1
+base_main: a8c4f3b9dd15edee4d5b6434934ffe52011efcb8
+gpu:
+  name: NVIDIA GeForce RTX 4060 Ti
+  memory_mib: 8188
+conditions:
+  simulator: stopped
+  network: none
+  ros_master_port: 11316
+  all_models_loaded: false
+  target_hz:
+    twinlite: 10.0
+    yolo: 20.0
+    resnet18: 10.0
+  hood_mask: true
+  ego_hood_filter: false
+  lifecycle_trace: false
+  fusion_trace: false
+  camera_debug: false
+  gui: false
+  extra_recorder: false
+  main_intrinsic_fusion_debug: retained_without_operational_code_change
+  fusion_max_time_offset_sec: 0.05
+  fusion_sync_wait_timeout_sec: 0.2
+  lidar_processing_rate: existing_latest_frame_maximum
+profiles:
+  C1:
+  - yolo
+repeats: 3
+camera:
+  bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+  start_sec: 44.0
+  duration_sec: 42.0
+  standby_sec: 2.0
+  prepare_timeout_sec: 10.0
+  active_sec: 20.0
+  expected_front_frames: 3514
+fusion:
+  profiles:
+  - C1
+  bags:
+    primary: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+    shadow: /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+  repeats: 2
+resource_sample_sec: 0.2
+gates:
+  first_second_minimum: 9
+  five_second_minimum_hz: 9.5
+  maximum_gap_sec: 0.25
+  yolo_minimum_hz: 18.0
+  duplicate_stamps_maximum: 0
+  reversed_stamps_maximum: 0
+  fusion_offset_p95_max_ms: 50.0
+  operational_defaults_changed: false
+object_profiles:
+  baseline:
+    config: src/asmc_camera/config/camera/yolo11m_coco.yaml
+    groups: src/asmc_camera/config/camera/object_classes.yaml
+  all:
+    config: src/asmc_camera/config/camera/yolo11m_coco_all.yaml
+    groups: src/asmc_camera/config/camera/object_classes_coco_all.yaml
+ground_truth:
+  gt287: config/baselines/evidence/camera_hood_mask_v1/gt-manifest.json
+  challenges39: config/baselines/evidence/camera_hood_policy_selection_v1/challenge-manifest.json
+review:
+  new_classes_have_independent_gt: false
+  infra_detection_is_avoidance_approval: false
+  operational_defaults_changed: false
+  legacy_bbox_allowed_names:
+  - bus
+  - truck
+  - person
+  - car

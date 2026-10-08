@@ -61,7 +61,13 @@ def main():
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--diagnostic', action='store_true')
     parser.add_argument('--gps-gap', action='store_true')
+    parser.add_argument('--objects-only', action='store_true', help='load only YOLO; requires profile C1')
+    parser.add_argument('--objects-config', type=Path)
+    parser.add_argument('--objects-class-groups-config', type=Path)
     args = parser.parse_args()
+    if args.objects_only and args.profile != 'C1':
+        parser.error('objects-only trials require C1')
+    loaded_models = ['yolo'] if args.objects_only else list(NODES)
     config = yaml.safe_load(args.config.read_text())
     master_uri = urlparse(os.environ.get('ROS_MASTER_URI', ''))
     if master_uri.hostname not in ('localhost', '127.0.0.1') or master_uri.port != config['conditions']['ros_master_port']:
@@ -91,7 +97,7 @@ def main():
     traced = args.diagnostic or args.phase == 'gps'
     report = dict(schema_version=1, profile=args.profile, phase=args.phase, bag_id=args.bag_id,
                   bag=bag_path, bag_duration_sec=bag_seconds, repeat=args.repeat,
-                  all_models_loaded=True, active_models=active_models, trace_enabled=traced,
+                  all_models_loaded=not args.objects_only, loaded_models=loaded_models, active_models=active_models, trace_enabled=traced,
                   camera_debug=args.debug, main_intrinsic_fusion_debug=args.phase != 'camera',
                   gps_gap=args.gps_gap, commands=commands, failures=[], checks={},
                   source_config_sha256=hashlib.sha256(args.config.read_bytes()).hexdigest(),
@@ -163,7 +169,8 @@ def main():
     topics.update({v: ('/perception/camera/'+v+'/road_marking/class_id', Image) for v in ('front', 'left', 'right')})
     for name, (topic, kind) in topics.items():
         subscribers.append(rospy.Subscriber(topic, kind, lambda m, n=name: receive_output(n, m), queue_size=100, buff_size=2**24))
-    for model, node in NODES.items():
+    for model in loaded_models:
+        node = NODES[model]
         rospy.set_param(node+'/lifecycle_trace_path', str(args.output/(model+'.lifecycle.jsonl')) if traced else '')
         subscribers.append(rospy.Subscriber(node+'/inference_status', InferenceStatus,
                            lambda m, n=model: receive_status(n, m), queue_size=100))
@@ -231,7 +238,7 @@ def main():
             raise RuntimeError('request rejected: '+str(row))
         return row
     def loaded():
-        return all(m in statuses and statuses[m].loaded and statuses[m].warmed_up for m in NODES)
+        return all(m in statuses and statuses[m].loaded and statuses[m].warmed_up for m in loaded_models)
     try:
         launch_start = time.monotonic()
         initial = {m: 2 if m in active_models and args.phase != 'camera' else 0 for m in NODES}
@@ -243,8 +250,14 @@ def main():
         command += ['lane_target_hz:='+str(config['conditions']['target_hz']['twinlite']),
                     'objects_target_hz:='+str(config['conditions']['target_hz']['yolo']),
                     'traffic_light_hz:='+str(config['conditions']['target_hz']['resnet18'])]
+        if args.objects_only:
+            command += ['start_camera_lane:=false', 'start_traffic_light:=false']
+        if args.objects_config:
+            command.append('camera_objects_config:='+str(args.objects_config))
+        if args.objects_class_groups_config:
+            command.append('objects_class_groups_config:='+str(args.objects_class_groups_config))
         camera = launch('camera', command)
-        for node in NODES.values():
+        for node in (NODES[m] for m in loaded_models):
             rospy.wait_for_service(node+'/set_inference_mode', timeout=60)
         wait(loaded, 'all resident models loaded and dummy warmed', 60)
         report['load_dummy_warmup_sec'] = time.monotonic()-launch_start
@@ -261,7 +274,8 @@ def main():
             play += ['/gps:=/b0/source/gps', '/gps/fix:=/b0/source/gps/fix']
         playback = launch('bag', play)
         if args.phase == 'camera':
-            wait(lambda: all(inputs[v] for v in IMAGE_TOPICS), 'four input cameras', 10)
+            expected_views = ['front'] if args.objects_only else list(IMAGE_TOPICS)
+            wait(lambda: all(inputs[v] for v in expected_views), 'required input cameras', 10)
             time.sleep(config['camera']['standby_sec'])
             report['checks']['standby_no_compute'] = all(s.successful_batches == 0 for s in statuses.values())
             prepare = [request(m, 1) for m in active_models]
@@ -298,7 +312,11 @@ def main():
         if args.phase == 'camera':
             ended = time.monotonic()
         with lock:
-            report['checks']['other_models_standby'] = all(statuses[m].mode == 0 for m in NODES if m not in active_models)
+            report['checks']['other_models_standby'] = all(statuses[m].mode == 0 for m in loaded_models if m not in active_models)
+            graph_nodes = {node for entries in master.getSystemState()
+                           for _, publishers in entries for node in publishers}
+            report['checks']['requested_model_nodes_only'] = (not args.objects_only or
+                all(NODES[m] not in graph_nodes for m in NODES if m not in loaded_models))
     except Exception as exc:
         report['failures'].append(str(exc))
     finally:
@@ -311,7 +329,7 @@ def main():
             subscriber.unregister()
         trace_rows = {}
         if traced:
-            for model in NODES:
+            for model in loaded_models:
                 path = args.output/(model+'.lifecycle.jsonl')
                 trace_rows[model] = [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
             report['checks']['complete_model_traces'] = all(trace_integrity(rows) for rows in trace_rows.values())
@@ -344,7 +362,7 @@ def main():
             report['resource_sampler_cost_ms'] = __import__('b0_measurements').quantiles([r['sampling_ms'] for r in resource_rows])
             report['resources']['all_phases'] = resource_report(resource_rows)
             report['last_diagnostics'] = diagnostics[-1] if diagnostics else None
-            report['last_statuses'] = {m: next((r for r in reversed(status_rows) if r['model'] == m), None) for m in NODES}
+            report['last_statuses'] = {m: next((r for r in reversed(status_rows) if r['model'] == m), None) for m in loaded_models}
             report['checks']['gpu_sample_available'] = report['resources']['gpu_available']
             if args.phase != 'camera':
                 main_log = (args.output/'main.log').read_text()

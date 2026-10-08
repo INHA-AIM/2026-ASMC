@@ -78,6 +78,7 @@ jobs:
           python3 -m unittest tools/perception/test_hood_evaluation.py
           python3 -m unittest tools/perception/test_lifecycle_measurements.py
           python3 -m unittest tools/perception/test_b0_measurements.py
+          python3 -m unittest discover -s tools/perception -p 'test_camera_coco_measurements.py'
           python3 -m unittest tools/perception/test_b1a_protocol.py
           python3 -m unittest tools/perception/test_frame_boundary_measurements.py
           python3 -m unittest tools/perception/test_lidar_continuous_measurements.py
@@ -96,6 +97,10 @@ jobs:
           core_pid=$!
           trap 'kill "$core_pid" 2>/dev/null || true' EXIT
           python3 tools/perception/check_inference_control_ros.py
+          python3 tools/perception/check_camera_coco_ros.py --profile baseline
+          python3 tools/perception/check_camera_coco_ros.py --profile all
+          roslaunch --nodes asmc_camera camera_objects_coco_experiment.launch classes:=all
+          roslaunch --nodes asmc_camera camera_objects_coco_experiment.launch classes:=baseline debug:=false
           python3 tools/perception/check_region_example_ros.py
           python3 tools/perception/check_object_visualization_ros.py
           python3 tools/perception/check_object_visualization_ros.py --hood-mask

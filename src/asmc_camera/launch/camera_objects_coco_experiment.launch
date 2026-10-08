@@ -1,0 +1,21 @@
+<launch>
+  <!-- Observation experiment only. The legacy /YOLO/BBox adapter keeps four labels. -->
+  <arg name="classes" default="all" doc="baseline | all"/>
+  <arg name="debug" default="true"/>
+  <arg name="initial_mode" default="2"/>
+  <arg name="target_hz" default="20.0"/>
+  <arg name="objects_hood_mask" default="true"/>
+  <include file="$(find asmc_camera)/launch/perception.launch">
+    <arg name="profile" value="debug"/>
+    <arg name="start_camera_lane" value="false"/>
+    <arg name="start_traffic_light" value="false"/>
+    <arg name="start_camera_objects" value="true"/>
+    <arg name="start_visualization" value="$(arg debug)"/>
+    <arg name="objects_debug_raw" value="$(arg debug)"/>
+    <arg name="objects_initial_mode" value="$(arg initial_mode)"/>
+    <arg name="objects_target_hz" value="$(arg target_hz)"/>
+    <arg name="objects_hood_mask" value="$(arg objects_hood_mask)"/>
+    <arg name="camera_objects_config" value="$(eval find('asmc_camera')+'/config/camera/'+{'baseline': 'yolo11m_coco.yaml', 'all': 'yolo11m_coco_all.yaml'}[arg('classes')])"/>
+    <arg name="objects_class_groups_config" value="$(eval find('asmc_camera')+'/config/camera/'+{'baseline': 'object_classes.yaml', 'all': 'object_classes_coco_all.yaml'}[arg('classes')])"/>
+  </include>
+</launch>
