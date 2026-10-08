@@ -1,0 +1,693 @@
+[
+  {
+    "name": "yolo11m-640-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo11m",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo11m-960-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo11m",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo11m-1280-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo11m",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-640-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo26m",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-960-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo26m",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-1280-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo26m",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-640-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo26l",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-960-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo26l",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-1280-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo26l",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-seg-640-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo26m-seg",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-seg-960-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo26m-seg",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-seg-1280-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo26m-seg",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-seg-640-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo26l-seg",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-seg-960-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo26l-seg",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-seg-1280-all20-2plus1-C1-r1",
+    "job": {
+      "model": "yolo26l-seg",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 1,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": false,
+    "failures": [
+      "yolo left supply/latency gate"
+    ]
+  },
+  {
+    "name": "yolo11m-960-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo11m",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo11m-1280-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo11m",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-640-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo26m",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-960-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo26m",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-1280-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo26m",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-640-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo26l",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-960-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo26l",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-1280-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo26l",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-seg-640-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo26m-seg",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-seg-960-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo26m-seg",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": false,
+    "failures": [
+      "yolo right supply/latency gate"
+    ]
+  },
+  {
+    "name": "yolo26m-seg-1280-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo26m-seg",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-seg-640-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo26l-seg",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-seg-960-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo26l-seg",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-seg-1280-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo26l-seg",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": false,
+    "failures": [
+      "yolo right supply/latency gate"
+    ]
+  },
+  {
+    "name": "yolo11m-640-all20-2plus1-C1-r2",
+    "job": {
+      "model": "yolo11m",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 2,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo11m-1280-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo11m",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": false,
+    "failures": [
+      "yolo front supply/latency gate",
+      "yolo left supply/latency gate",
+      "yolo right supply/latency gate"
+    ]
+  },
+  {
+    "name": "yolo26m-640-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo26m",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-960-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo26m",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-1280-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo26m",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-640-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo26l",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-960-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo26l",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-1280-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo26l",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": false,
+    "failures": [
+      "yolo right supply/latency gate"
+    ]
+  },
+  {
+    "name": "yolo26m-seg-640-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo26m-seg",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-seg-960-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo26m-seg",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26m-seg-1280-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo26m-seg",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-seg-640-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo26l-seg",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-seg-960-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo26l-seg",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo26l-seg-1280-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo26l-seg",
+      "width": 1280,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": false,
+    "failures": [
+      "yolo front supply/latency gate",
+      "yolo left supply/latency gate",
+      "yolo right supply/latency gate"
+    ]
+  },
+  {
+    "name": "yolo11m-640-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo11m",
+      "width": 640,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  },
+  {
+    "name": "yolo11m-960-all20-2plus1-C1-r3",
+    "job": {
+      "model": "yolo11m",
+      "width": 960,
+      "rates": "all20",
+      "batch": "2plus1",
+      "profile": "C1",
+      "repeat": 3,
+      "seconds": 20,
+      "confidence": 0.7
+    },
+    "passed": true,
+    "failures": []
+  }
+]

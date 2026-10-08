@@ -1,0 +1,51 @@
+schema_version: 1
+baseline_id: perception_camera_coco7_live_v1
+status: in_progress_not_operationally_accepted
+base_main: a8c4f3b9dd15edee4d5b6434934ffe52011efcb8
+integration_branch: feat/camera-three-view-coco-runtime
+source_labels:
+- person
+- dog
+- bicycle
+- car
+- motorcycle
+- bus
+- truck
+all_ego_masks: true
+gpu: RTX 4060 Ti 8188 MiB
+morai_rendering: running
+max_vram_fraction: 0.9
+model_default_promotion: pending
+fusion_policy_default: unique
+backend_parity:
+  source_report_sha256: 714f8dd95e3bf0de408ca56cd86db0bd27975a79fe3e87cca8f968b1578172b8
+  sample_comparisons: 270
+  failures: 0
+  side_mask_controls: 45
+  new_side_mask_misses: 0
+  side_overlap_frames:
+  - 20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000230.png
+  - 20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000229.png
+  - 20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000290.png
+screening:
+  trials: 45
+  failures: 6
+  purpose: exploratory; minimum feasibility is separate from target20; early runner
+    source not individually pinned
+gt:
+  selection_complete_frames: 2252
+  heldout_complete_frames: 2474
+  missing_verified_classes:
+  - dog
+  - bicycle
+  - motorcycle
+pending:
+- rate_profiles_three_repeats
+- concurrent_and_full_stack
+- heldout_frozen_confidence
+- bag_fusion_reuse
+- low_speed_driving
+- 30min_stability
+- default_promotion
+artifacts: ../../artifacts/camera-coco7-live-v1
+model_directory: ../../data/models/camera_coco7_v1
