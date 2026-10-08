@@ -50,6 +50,7 @@ def main():
     for entry in config['object_profiles'].values():
         paths += [root/entry['config'], root/entry['groups']]
     for path in paths:
+        path = path.resolve()
         metadata['source_sha256'][str(path.relative_to(root))] = hashlib.sha256(path.read_bytes()).hexdigest()
     (args.output/'manifest.json').write_text(json.dumps(metadata, indent=2)+'\n')
     jobs = make_protocol(config, phases)
