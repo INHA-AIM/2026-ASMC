@@ -5,6 +5,10 @@ LiDAR 어댑터의 네 클래스/confidence 0.7, 50ms 매칭·200ms 대기는 �
 작업 폴더는 `asmc-camera-objects`, 브랜치는 `feat/camera-yoloe-l-first-run`이다.
 PR #74의 s 모델 결과를 보존하고 별도 후속 변경으로 관리한다.
 
+구조물 혼동의 클래스별 검토와 새 17종 후보는
+[프롬프트 정리 문서](camera-yoloe-l-prompt-cleanup.md)를 따른다.
+이는 새 vocabulary 실제 재추론 전의 후보이며 아래 27/42종 결과를 대체하지 않는다.
+
 ## 실행 계약
 
 프롬프트 순서는 [고정 실험 설정](../../../config/experiments/camera_yoloe_l_first_v1.yaml)의

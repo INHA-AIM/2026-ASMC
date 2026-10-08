@@ -4,6 +4,7 @@ import argparse
 import hashlib
 from pathlib import Path
 import yaml
+from prepare_yoloe_l import profile_names
 
 
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
@@ -16,6 +17,7 @@ def main():
     a=p.parse_args();policy=yaml.safe_load(a.policy.read_text());a.output.mkdir(parents=True,exist_ok=True)
     checkpoint_sha=sha(a.prepared/'yoloe-26l-seg.pt')
     for profile,names in policy['prompt_profiles'].items():
+        names = profile_names(policy, profile)
         for backend in ['pytorch','tensorrt']:
             filename='yoloe-26l-seg.pt' if backend=='pytorch' else profile+'.engine'
             if not (a.prepared/filename).is_file():continue

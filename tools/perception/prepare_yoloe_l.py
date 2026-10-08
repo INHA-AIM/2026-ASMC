@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import struct
 import time
 import numpy as np
@@ -20,16 +21,35 @@ def sha(path):
     return h.hexdigest()
 
 
+def profile_names(policy, profile):
+    """Validate a vocabulary before using its identifier in output paths."""
+    if not re.fullmatch(r'[a-z][a-z0-9_]*', profile):
+        raise ValueError('unsafe prompt profile identifier')
+    profiles = policy['prompt_profiles']
+    if profile not in profiles:
+        raise ValueError('unknown prompt profile: ' + profile)
+    names = profiles[profile]
+    if not isinstance(names, list) or not names:
+        raise ValueError('prompt profile must contain names')
+    if any(not isinstance(name, str) or not name.strip() or name != name.strip()
+           for name in names):
+        raise ValueError('prompt names must be nonempty, trimmed strings')
+    if len(set(names)) != len(names):
+        raise ValueError('duplicate prompt names')
+    return names
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--directory', type=Path, required=True)
     p.add_argument('--config', type=Path, required=True)
-    p.add_argument('--profile', choices=['rich42','base27'], required=True)
+    p.add_argument('--profile', required=True, help='profile in the supplied frozen config')
     p.add_argument('--stage', choices=['prompts','onnx','engine'], required=True)
-    a = p.parse_args(); a.directory.mkdir(parents=True, exist_ok=True)
-    os.chdir(a.directory)
+    a = p.parse_args()
     policy = yaml.safe_load(a.config.read_text())
-    names = policy['prompt_profiles'][a.profile]
+    names = profile_names(policy, a.profile)
+    a.directory.mkdir(parents=True, exist_ok=True)
+    os.chdir(a.directory)
     checkpoint = a.directory/'yoloe-26l-seg.pt'
     cache = a.directory/(a.profile+'.npz')
     onnx_path = a.directory/(a.profile+'.onnx')

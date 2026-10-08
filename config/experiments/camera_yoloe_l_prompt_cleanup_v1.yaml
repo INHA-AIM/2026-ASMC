@@ -1,0 +1,338 @@
+schema_version: 1
+experiment_id: camera_yoloe_l_prompt_cleanup_v1
+base_main: a8c4f3b
+gpu:
+  name: NVIDIA GeForce RTX 4060 Ti
+  memory_mib: 8188
+conditions:
+  simulator: stopped
+  network: none
+  ros_master_port: 11318
+  all_models_loaded: true
+  target_hz:
+    twinlite: 10.0
+    yolo: 20.0
+    resnet18: 10.0
+  hood_mask: true
+  ego_hood_filter: false
+  lifecycle_trace: false
+  fusion_trace: false
+  camera_debug: false
+  gui: false
+  extra_recorder: false
+  main_intrinsic_fusion_debug: retained_without_operational_code_change
+  fusion_max_time_offset_sec: 0.05
+  fusion_sync_wait_timeout_sec: 0.2
+  lidar_processing_rate: existing_latest_frame_maximum
+profiles:
+  C1:
+  - yolo
+  C2:
+  - twinlite
+  C3:
+  - resnet18
+  C4:
+  - twinlite
+  - yolo
+  C5:
+  - resnet18
+  - yolo
+  C6:
+  - twinlite
+  - yolo
+  - resnet18
+repeats: 3
+camera:
+  bag: /data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag
+  start_sec: 44.0
+  duration_sec: 42.0
+  standby_sec: 2.0
+  prepare_timeout_sec: 10.0
+  active_sec: 20.0
+fusion:
+  profiles:
+  - C1
+  - C4
+  - C5
+  - C6
+  bags:
+    primary: /data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag
+    shadow: /data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag
+debug_comparison:
+  profile: C6
+  phase: camera
+  repeats: 3
+resource_sample_sec: 0.2
+gates:
+  first_second_minimum: 9
+  five_second_minimum_hz: 9.5
+  maximum_gap_sec: 0.25
+  yolo_minimum_hz: 10.0
+  duplicate_stamps_maximum: 0
+  reversed_stamps_maximum: 0
+  fusion_offset_p95_max_ms: 50.0
+  operational_defaults_changed: false
+prompt_profiles:
+  obstacle17:
+  - person
+  - dog
+  - deer
+  - bicycle
+  - car
+  - truck
+  - bus
+  - motorcycle
+  - scooter
+  - electric scooter
+  - bollard
+  - cargo box
+  - wooden box
+  - steel barricade
+  - traffic cone
+  - traffic barrel
+  - baby stroller
+first_run:
+  model: yoloe-26l-seg.pt
+  batch_modes:
+  - 2plus1
+  - sequential
+  - batch3
+  batch_wait_ms: 10
+  tensor_hw:
+    front:
+    - 736
+    - 1280
+    left:
+    - 480
+    - 640
+    right:
+    - 480
+    - 640
+  source_p95_max_ms: 150
+  source_p99_max_ms: 200
+  minimum_five_second_hz: 10
+  vram_headroom_target: 0.85
+  runtime: TensorRT FP16
+  training: false
+  defaults_changed: false
+base_source: 17dd7a6
+quality:
+  confidence_fixed: 0.7
+  sweep:
+  - 0.1
+  - 0.15
+  - 0.2
+  - 0.25
+  - 0.3
+  - 0.35
+  - 0.4
+  - 0.45
+  - 0.5
+  - 0.55
+  - 0.6
+  - 0.65
+  - 0.7
+  GT: existing gt-v2 selection split only
+  fusion_mask_use: false
+prompt_review:
+  status: CPU reviewed; new prompt embeddings, engines and real reinference pending
+    simulator shutdown confirmation
+  reference_policy_sha256: ddbca4eb7da14cdd25eb21769d44cbcb454ac3d41824e6930a9fbc9894a2ed9d
+  reference_predictions_sha256: 6c330a6afb9c6ffe2d1fe684fdb8c9b7e54f57c59d2a7a58036ec8ea5395e583
+  reference_confidence: 0.3
+  reference_frames: 2252
+  annotation_scope: Actor GT is not an exhaustive annotation of fixed background objects.
+    Unmatched boxes are not automatically false positives.
+  new_profile_inference_required: true
+  operational_defaults_changed: false
+  experimental_launch_default_changed: false
+  user_live_cases: WoodBox and container buildings reported as concrete barrier; no
+    independently captured paired live RGB.
+  classes:
+    person:
+      decision: retain
+      reason: Observed people; retain original label.
+      observations: 143
+    dog:
+      decision: retain_unvalidated
+      reason: Mission animal candidate; no detections in selection data.
+      observations: 0
+    deer:
+      decision: retain_unvalidated
+      reason: Mission animal candidate; no detections in selection data.
+      observations: 0
+    animal:
+      decision: remove_alias
+      reason: Broad animal alias competes with dog/deer; unknown pet appearance remains
+        unvalidated.
+      observations: 0
+    bicycle:
+      decision: retain_unvalidated
+      reason: Mission bicycle candidate; no detections in selection data.
+      observations: 0
+    car:
+      decision: retain
+      reason: Observed cars; fine subtype GT partly available.
+      observations: 236
+    truck:
+      decision: retain
+      reason: Observed trucks; fine subtype GT partly available.
+      observations: 43
+    bus:
+      decision: retain
+      reason: Observed buses; fine subtype GT partly available.
+      observations: 132
+    motorcycle:
+      decision: retain_unvalidated
+      reason: Mission motorcycle candidate; no detections in selection data.
+      observations: 0
+    scooter:
+      decision: retain_unvalidated
+      reason: Mission candidate; Scooter asset appearance needs review.
+      observations: 0
+    electric scooter:
+      decision: retain_unvalidated
+      reason: Mission electric scooter candidate; no detections in selection data.
+      observations: 0
+    bollard:
+      decision: retain_unvalidated
+      reason: Portable/static mission candidate; tiny distant sample is not sufficient
+        validation.
+      observations: 2
+    box:
+      decision: remove_alias
+      reason: Keep cargo box and wooden box; no observed generic box detection.
+      observations: 0
+    cargo box:
+      decision: retain
+      reason: Observed on-road crate; coarse Obstacle GT does not verify exact material.
+      observations: 75
+    wooden box:
+      decision: retain
+      reason: Observed wooden-looking on-road crate; exact subtype not independently
+        labelled.
+      observations: 9
+    wooden crate:
+      decision: remove_alias
+      reason: Redundant wooden box expression; no observations.
+      observations: 0
+    cardboard box:
+      decision: remove_alias
+      reason: Observed wooden-looking crate with cardboard label; retain more relevant
+        box expressions.
+      observations: 2
+    pallet:
+      decision: remove_alias
+      reason: No supporting mission/sample evidence; pallet coverage not established.
+      observations: 0
+    concrete barrier:
+      decision: remove_confusion
+      reason: Verified guardrail detections; user also reports WoodBox/container confusion.
+        Real barriers remain an unmet coverage item.
+      observations: 68
+    road barrier:
+      decision: remove_alias
+      reason: Broad unvalidated barrier expression; genuine portable barriers remain
+        in mission inventory.
+      observations: 0
+    plastic road barrier:
+      decision: remove_confusion
+      reason: Reviewed samples are a traffic barrel or guardrail; actual plastic barrier
+        coverage remains unmet.
+      observations: 5
+    steel barricade:
+      decision: retain_unvalidated
+      reason: Retain specific portable barricade mission candidate; no observed detection,
+        not accepted coverage.
+      observations: 0
+    barricade:
+      decision: remove_alias
+      reason: Broad unvalidated alias; retain steel barricade candidate.
+      observations: 0
+    lane separator:
+      decision: remove_environment
+      reason: Verified guardrail detections; not a generic obstacle output candidate.
+      observations: 417
+    traffic cone:
+      decision: retain
+      reason: Reviewed cone sample is correct; coarse Obstacle GT does not verify
+        subtype.
+      observations: 860
+    traffic barrel:
+      decision: retain
+      reason: Reviewed roadside orange barrel is correct; actor GT omits some fixed
+        background barrels.
+      observations: 137
+    barrel:
+      decision: remove_alias
+      reason: Keep traffic barrel; isolated broad barrel detection not independently
+        validated.
+      observations: 1
+    drum:
+      decision: remove_alias
+      reason: Keep traffic barrel for first cleanup; mission drum coverage still unvalidated.
+      observations: 0
+    road sign:
+      decision: remove_environment
+      reason: Reviewed overhead sign; infrastructure recognition outside this generic
+        obstacle experiment.
+      observations: 15
+    speed limit sign:
+      decision: remove_environment
+      reason: Infrastructure outside this generic obstacle experiment; no subtype
+        validation.
+      observations: 7
+    stop sign:
+      decision: remove_environment
+      reason: Infrastructure outside this generic obstacle experiment; no subtype
+        validation.
+      observations: 2
+    traffic light:
+      decision: remove_confusion
+      reason: Reviewed high-confidence boxes are guardrail reflectors; ResNet colour
+        decision unchanged.
+      observations: 994
+    speed bump:
+      decision: remove_confusion
+      reason: Reviewed large box covers curb/road surface; not a verified speed bump.
+      observations: 42
+    manhole cover:
+      decision: remove_environment
+      reason: Road surface element, no observations; separate traversability policy
+        needed.
+      observations: 0
+    baby stroller:
+      decision: retain_unvalidated
+      reason: Mission stroller candidate; no observations.
+      observations: 0
+    stroller:
+      decision: remove_alias
+      reason: Keep baby stroller expression; no observations.
+      observations: 0
+    tree:
+      decision: remove_environment
+      reason: Background/mission tree ambiguity; explicitly record excluded physical
+        asset coverage.
+      observations: 0
+    streetlight:
+      decision: remove_environment
+      reason: Reviewed lamp head; infrastructure outside generic obstacle profile.
+      observations: 1
+    utility pole:
+      decision: remove_environment
+      reason: Reviewed pole appears correctly labelled but unnecessary for current
+        generic obstacle profile.
+      observations: 13
+    guardrail:
+      decision: remove_environment
+      reason: Reviewed guardrail appears correctly labelled; collision boundary is
+        separate from object output.
+      observations: 182
+    fence:
+      decision: remove_confusion
+      reason: Reviewed large box covers tunnel wall.
+      observations: 2
+    fire:
+      decision: remove_environment
+      reason: Effect/event detection, not a physical obstacle profile; no observations.
+      observations: 0
