@@ -24,6 +24,17 @@ from run_coco7_live_trials import NODES, measurement_gate, provenance
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def reentry_gate(owner, row):
+    # A successfully processed image without a visible traffic light is an
+    # invalid planning verdict, not an inference supply failure. Keep verdict
+    # validity in the report; assess new processing independently.
+    supply=dict(row)
+    if owner=='resnet18':
+        supply['valid_messages']=supply.get('messages',0)
+    return bool(not row.get('stale_messages',0) and measurement_gate(supply) and
+                (owner=='yolo' or supply.get('first_second',0)>=9))
+
+
 def main():
     import rosgraph
     import rospy
@@ -38,6 +49,7 @@ def main():
     p.add_argument('--models', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--revision', required=True)
+    p.add_argument('--actuator-transport',choices=('udp','grpc'),default='udp')
     p.add_argument('--drive-seconds', type=float, default=10.)
     p.add_argument('--reentry-seconds', type=float, default=20.)
     a = p.parse_args()
@@ -109,6 +121,7 @@ def main():
         with lock:
             anchor = anchors.get((view, stamp))
             outputs[label].append(dict(arrival=now, stamp_ns=stamp, valid=bool(getattr(message, 'valid', True)),
+                                       stale=bool(getattr(message,'stale',False)),
                                        wall_latency_ms=(now-anchor)*1000 if anchor is not None else None,
                                        source_age_ms=(rospy.Time.now().to_nsec()-stamp)/1e6,
                                        input_anchor='matched' if anchor is not None else 'missing'))
@@ -148,7 +161,8 @@ def main():
         wait(lambda: len([t for t,v in trajectories if v]) >= 3 and trajectories[-1][1] and
              time.monotonic()-trajectories[-1][0] < .25, 30., 'preview not ready with actual inputs')
         drive = [sys.executable, str(ROOT/'tools/perception/drive_coco7_preview.py'),
-                 '--output',str(a.output/'drive'),'--seconds',str(a.drive_seconds)]
+                 '--output',str(a.output/'drive'),'--seconds',str(a.drive_seconds),
+                 '--actuator-transport',a.actuator_transport]
         with (a.output/'drive.log').open('w') as handle:
             child = subprocess.Popen(drive, stdout=handle, stderr=subprocess.STDOUT, start_new_session=True)
             drive_process = child
@@ -169,6 +183,7 @@ def main():
         transition(0, False)
         report['standby_checked'] = time.monotonic()
         transition(1, True)
+        report['reentry_error_baselines']={owner:statuses[owner].errors for owner in NODES}
         active = transition(2, True)
         end = max(r['call_started'] for r in active.values())+a.reentry_seconds
         wait(lambda: time.monotonic() >= end, a.reentry_seconds+2., 're-entry input interrupted')
@@ -178,7 +193,13 @@ def main():
                 owner = 'yolo' if label.startswith('yolo_') else 'twinlite' if label.startswith('twinlite_') else 'resnet18'
                 start = active[owner]['call_started']
                 row = output_report(rows,start,start+a.reentry_seconds,statuses[owner].source_cutoff.to_nsec(),a.reentry_seconds)
-                passed = measurement_gate(row) and (owner == 'yolo' or row['first_second'] >= 9)
+                row['stale_messages']=sum(r.get('stale',False) for r in rows
+                    if start<=r['arrival']<start+a.reentry_seconds and
+                    r['stamp_ns']>statuses[owner].source_cutoff.to_nsec())
+                passed = reentry_gate(owner,row)
+                if statuses[owner].errors!=report['reentry_error_baselines'][owner]:
+                    passed=False
+                    report['failures'].append('re-entry processing errors: '+owner)
                 report['reentry'][label] = dict(passed=passed, measurements=row)
                 if not passed: report['failures'].append('re-entry supply: '+label)
         expected = {'yolo_'+v for v in ('front','left','right')} | {'twinlite_'+v for v in ('front','left','right')} | {'resnet18'}

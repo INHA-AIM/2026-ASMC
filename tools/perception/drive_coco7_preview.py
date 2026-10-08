@@ -86,6 +86,7 @@ def main():
     from capture_coco7_actors import grpc, ActorStub, ObjectInfo, OBJECT_TYPE_VEHICLE, MessageToDict
     from morai.actor.actor_set_pb2 import VehicleControlModeParam, VehicleGear, SetTransformParam, SetVelocityParam
     from morai.actor.actor_enum_pb2 import VEHICLE_CONTROL_AUTO_MODE, GEAR_MODE_D
+    from morai.actor.actor_control_pb2 import VehicleCtrlCmd
     import rosgraph
     import rospy
     from asmc_camera.msg import InferenceStatus
@@ -95,6 +96,8 @@ def main():
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--seconds',type=float,default=10.)
     p.add_argument('--grpc-host',default='host.docker.internal')
+    p.add_argument('--actuator-transport',choices=('udp','grpc'),default='udp',
+                   help='gRPC is a separate actuator diagnostic; never also send UDP commands')
     p.add_argument('--route',type=Path,default=Path('/root/ws/R_KR_PG_KATRI/2026_molit_comp_global_path.txt'))
     a=p.parse_args()
     if not 0 < a.seconds <= 30: p.error('trial must be at most 30 seconds')
@@ -116,7 +119,8 @@ def main():
                 failures=[],rpc=[],samples=[],restored=False,
                 bridge_control_destination=dict(ip=rospy.get_param('/morai_udp_bridge/cmd_ip',None),
                                                 port=rospy.get_param('/morai_udp_bridge/cmd_port',None)),
-                actuator_policy='UDP type2 speed capped at5km/h from valid trajectory; preview steering; MPC actuator conversion is explicit',
+                actuator_transport=a.actuator_transport,
+                actuator_policy=a.actuator_transport+' type2 speed capped at5km/h from valid trajectory; preview steering; MPC actuator conversion is explicit',
                 actor_restore_scope='Ego pose/gear/control mode only; other actors untouched')
     def save(): (a.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
     def mutate(method,request):
@@ -141,6 +145,17 @@ def main():
              rospy.Subscriber('/perception/camera/objects',CameraObjectBoxArray,receive_objects,queue_size=20),
              rospy.Subscriber('/CollisionData',CollisionData,receive_collision,queue_size=1)]
     publisher=None; changed=False
+    def send(command):
+        if a.actuator_transport=='udp':
+            publisher.publish(command)
+        else:
+            # Mirror the repository CtrlCmd bridge's speed convention. The SDK
+            # documents normalized steering; retain the same max steering as UDP.
+            steer=max(-1.,min(1.,math.degrees(command.steering)/40.))
+            response=actors.ControlVehicle(VehicleCtrlCmd(actor_info=ego,
+                long_cmd_type=command.longlCmdType,velocity=command.velocity,
+                throttle=command.accel,brake=command.brake,steer=steer),timeout=.3)
+            if response.status!=1:raise RuntimeError('gRPC actuator command rejected: '+str(response))
     try:
         deadline=time.monotonic()+10
         while time.monotonic()<deadline:
@@ -151,8 +166,9 @@ def main():
             time.sleep(.05)
         if not ready: raise RuntimeError('preview/model subscription readiness timeout')
         if publishers(): raise RuntimeError('public publisher appeared during preparation')
-        publisher=rospy.Publisher('/ctrl_cmd',CtrlCmd,queue_size=1)
-        time.sleep(.3)
+        if a.actuator_transport=='udp':
+            publisher=rospy.Publisher('/ctrl_cmd',CtrlCmd,queue_size=1)
+            time.sleep(.3)
         changed=True
         mutate(actors.SetVehicleControlMode,VehicleControlModeParam(actor_info=ego,mode=VEHICLE_CONTROL_AUTO_MODE))
         mutate(actors.SetVehicleGear,VehicleGear(actor_info=ego,gear=GEAR_MODE_D))
@@ -181,9 +197,10 @@ def main():
                     elif speed>0:
                         command=CtrlCmd(longlCmdType=2,velocity=speed,steering=preview.steering)
             actual=publishers()
-            if actual!={'/ctrl_cmd':[rospy.get_name()]}: reason='duplicate public control publisher'
+            expected={'/ctrl_cmd':[rospy.get_name()]} if a.actuator_transport=='udp' else {}
+            if actual!=expected: reason='duplicate public control publisher'
             if reason: command=CtrlCmd(longlCmdType=1,brake=1.)
-            publisher.publish(command)
+            send(command)
             report['samples'].append(dict(elapsed_sec=now-begin,position=point.tolist(),
                 speed_kph=math.sqrt(sum(getattr(state.global_velocity,k)**2 for k in 'xyz'))*3.6,
                 route_distance_m=distance,command_kph=command.velocity,brake=command.brake,guard=reason))
@@ -202,6 +219,9 @@ def main():
         if publisher:
             for _ in range(10): publisher.publish(CtrlCmd(longlCmdType=1,brake=1.));time.sleep(.05)
             publisher.unregister()
+        elif changed and a.actuator_transport=='grpc':
+            try:send(CtrlCmd(longlCmdType=1,brake=1.))
+            except Exception as exc:report['failures'].append('gRPC final brake: '+str(exc))
         if changed:
             try:
                 report['restored']=restore_ego(actors,ego,original,original_mode,mutate,report)

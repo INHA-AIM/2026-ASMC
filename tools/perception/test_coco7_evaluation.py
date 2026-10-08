@@ -105,28 +105,50 @@ class Coco7EvaluationTest(unittest.TestCase):
             self.assertFalse(restoration_check(state,target,1,1)['passed'])
         self.assertFalse(restoration_check(target,target,3,1)['passed'])
 
+    def test_reentry_distinguishes_absent_light_verdict_from_processing_supply(self):
+        from run_coco7_drive_rehearsal import reentry_gate
+        row=dict(complete=True,five_second_hz=[9.8,10.],messages=99,valid_messages=0,
+            first_second=10,duplicate_stamps=0,reversed_stamps=0,max_gap_sec=.15,
+            input_anchor_missing=0,input_to_output_wall_ms=dict(p95=90.,p99=100.))
+        self.assertTrue(reentry_gate('resnet18',row))
+        self.assertEqual(0,row['valid_messages'])
+        self.assertFalse(reentry_gate('yolo',row))
+        for field,value in [('first_second',8),('max_gap_sec',.3),('duplicate_stamps',1),('complete',False),('stale_messages',1)]:
+            failing=dict(row);failing[field]=value
+            self.assertFalse(reentry_gate('resnet18',failing))
+
     def test_restore_transform_mode_side_effect_is_repaired_last(self):
-        import capture_coco7_actors  # Adds the pinned MORAI protobuf path.
-        from morai.actor.actor_get_pb2 import ActorState
-        from morai.common.object_info_pb2 import ObjectInfo
+        import copy
+        from unittest.mock import patch
         from drive_coco7_preview import restore_ego
-        target=ActorState();target.vehicle_state.gear_mode=1
+        xyz=lambda:SimpleNamespace(x=0.,y=0.,z=0.)
+        target=SimpleNamespace(transform=SimpleNamespace(location=xyz(),rotation=xyz()),
+            global_velocity=xyz(),vehicle_state=SimpleNamespace(gear_mode=1))
+        request=lambda **kw:SimpleNamespace(**copy.deepcopy(kw))
+        modules={'morai.actor.actor_set_pb2':SimpleNamespace(**{name:request for name in
+            ('EnableActor','SetVelocityParam','SetTransformParam','VehicleControlModeParam','VehicleGear')}),
+            'morai.actor.actor_control_pb2':SimpleNamespace(VehicleCtrlCmd=request),
+            'capture_coco7_actors':SimpleNamespace(MessageToDict=lambda _: {})}
         class Actors:
             def __init__(self):
-                self.state=ActorState();self.state.CopyFrom(target);self.mode=1;self.calls=[]
+                self.state=copy.deepcopy(target);self.mode=1;self.calls=[]
             def SetPause(self,r):self.calls.append('pause')
             def SetVelocity(self,r):self.calls.append('velocity')
             def ControlVehicle(self,r):self.calls.append('brake')
             def SetTransform(self,r):
-                self.state.transform.CopyFrom(r.transform);self.mode=3
+                self.state.transform=copy.deepcopy(r.transform);self.mode=3
+                self.state.transform.rotation.z+=1.344
                 self.state.vehicle_state.gear_mode=4;self.calls.append('transform')
             def SetVehicleControlMode(self,r):self.mode=r.mode;self.calls.append('mode')
             def SetVehicleGear(self,r):self.state.vehicle_state.gear_mode=r.gear;self.calls.append('gear')
             def GetActorState(self,*args,**kw):return self.state
             def GetVehicleControlMode(self,*args,**kw):return SimpleNamespace(mode=self.mode)
         actors=Actors();report={}
-        self.assertTrue(restore_ego(actors,ObjectInfo(),target,1,lambda f,r:f(r),report,sleep=lambda _:None))
-        self.assertGreater(max(i for i,v in enumerate(actors.calls) if v=='mode'),actors.calls.index('transform'))
+        with patch.dict(sys.modules,modules):
+            self.assertTrue(restore_ego(actors,SimpleNamespace(),target,1,lambda f,r:f(r),report,sleep=lambda _:None))
+        self.assertEqual(2,actors.calls.count('transform'))
+        self.assertAlmostEqual(-1.344,report['restore_yaw_correction_deg'])
+        self.assertGreater(max(i for i,v in enumerate(actors.calls) if v=='mode'),max(i for i,v in enumerate(actors.calls) if v=='transform'))
         self.assertEqual(3,len(report['restoration_checks']))
 
     def test_policy_comparison_keeps_failed_repeat_and_classification_difference(self):
