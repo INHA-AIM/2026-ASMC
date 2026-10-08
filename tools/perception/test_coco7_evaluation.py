@@ -76,6 +76,33 @@ class Coco7EvaluationTest(unittest.TestCase):
         trajectory.valid=False
         self.assertEqual(0.,speed_command(preview,trajectory))
 
+    def test_policy_comparison_keeps_failed_repeat_and_classification_difference(self):
+        import json
+        import tempfile
+        from compare_coco7_fusion_trials import compare_trials
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp); index=[]
+            for bag in ('primary','shadow'):
+                for policy in ('unique','bounded_reuse'):
+                    for repeat in (1,2,3):
+                        bad=bag=='primary' and policy=='bounded_reuse' and repeat==2
+                        label=f'{bag}-{policy}-r{repeat}'
+                        directory=root/label;directory.mkdir()
+                        frame=dict(stamp_ns=100,objects=[[7,'unknown' if bad else 'car','car']],
+                                   centers={'7':[1.,2.,3.]})
+                        (directory/'observations.json').write_text(json.dumps(dict(tracks=[frame])))
+                        index.append(dict(path=label,complete=True,passed=not bad,checks={},
+                            job=dict(bag_id=bag,policy=policy,repeat=repeat,diagnostic=False),
+                            fusion=dict(totals=dict(matched=1),offset_p95_max_ms=1.)))
+            (root/'index.json').write_text(json.dumps(index))
+            result=compare_trials(root)
+            self.assertEqual(['primary-bounded_reuse-r2'],result['failed_trials'])
+            self.assertEqual(1,len(result['bags']['primary']['stable']['regressions']))
+            (root/'index.json').write_text(json.dumps(index[:-1]))
+            with self.assertRaisesRegex(ValueError,'three complete repeats'):compare_trials(root)
+            (root/'REJECTED_PROTOCOL.json').write_text('{}')
+            with self.assertRaisesRegex(ValueError,'rejected experiment'):compare_trials(root)
+
     def test_three_view_verifier_checks_each_source_stream(self):
         rows=[dict(arrival=i*.1+.025,stamp_ns=i+1,valid=True,
                    wall_latency_ms=25.,source_age_ms=25.,input_anchor='matched') for i in range(50)]

@@ -56,8 +56,11 @@ def main():
     p.add_argument('--trace',type=Path,required=True)
     p.add_argument('--policy',choices=['unique','bounded_reuse'],required=True)
     p.add_argument('--output',type=Path,required=True)
-    a=p.parse_args();rows=[json.loads(line) for line in a.trace.read_text().splitlines()]
-    report=reuse_report(rows,a.policy)
+    a=p.parse_args()
+    # Diagnostic traces also contain point clouds. Retain only the small
+    # accounting state rather than every decoded scan in memory at once.
+    with a.trace.open() as stream:
+        report=reuse_report((json.loads(line) for line in stream),a.policy)
     a.output.write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report));return 0 if report['passed'] else 1
 
