@@ -61,13 +61,13 @@ def main():
     p.add_argument('--split', choices=['selection','heldout'], default='selection')
     p.add_argument('--model', choices=MODELS, nargs='+', default=list(MODELS))
     p.add_argument('--width', type=int, nargs='+', default=[640,960,1280])
-    p.add_argument('--actors', type=Path, help='Additional controlled captures, inspection only: no pixel GT')
+    p.add_argument('--ego-mask-off', action='store_true', help='Explicit original-input control, including all side GT frames')
     a = p.parse_args(); a.output.mkdir(parents=True, exist_ok=True)
     manifest = a.gt/'frames.jsonl'
     rows = [json.loads(line) for line in manifest.read_text().splitlines()]
     rows = [r for r in rows if r['split']==a.split and r['annotation_complete']]
     masks = load_view_masks(['front','left','right'],
-        HoodMask.load(True, ROOT/'src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml'), True,
+        HoodMask.load(not a.ego_mask_off, ROOT/'src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml'), not a.ego_mask_off,
         {v: ROOT/f'src/asmc_camera/config/camera/yolo_ego_mask_{v}_v1.yaml' for v in ['left','right']})
     all_results = []
     for model in a.model:
