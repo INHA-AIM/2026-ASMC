@@ -60,7 +60,8 @@ def main():
     import rospy
     from asmc_camera.msg import InferenceStatus
     from asmc_camera.srv import SetInferenceMode
-    from asmc_msgs.msg import CameraObjectBoxArray, TrafficLightDetection, LaneBoundaryFamily, Trajectory, VehicleState, BehaviorCommand, DetectedObjectArray
+    from asmc_msgs.msg import CameraObjectBoxArray, TrafficLightDetection, LaneBoundaryFamily, Trajectory, VehicleState, BehaviorCommand
+    from planning_inputs.msg import DetectedObjectArray
     from sensor_msgs.msg import Image, CompressedImage
     from morai_msgs.msg import CtrlCmd
     from Msg.msg import Yolo_bbox_arr
