@@ -1,5 +1,6 @@
 <launch>
   <arg name="fusion_trace_path" default=""/>
+  <arg name="fusion_yolo_policy" default="unique"/>
   <!-- Existing Main ParseCAN publishes a legacy control stub even in
        perception-only mode. Quarantine it in the test master only. -->
   <group>
@@ -10,6 +11,7 @@
       <arg name="rviz" value="false"/>
       <arg name="start_velodyne_driver" value="false"/>
       <arg name="fusion_trace_path" value="$(arg fusion_trace_path)"/>
+      <arg name="fusion_yolo_policy" value="$(arg fusion_yolo_policy)"/>
     </include>
   </group>
 </launch>

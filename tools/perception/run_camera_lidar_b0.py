@@ -67,6 +67,8 @@ def main():
     parser.add_argument('--objects-views', choices=['front', 'all'], default='front')
     parser.add_argument('--objects-side-ego-mask', action='store_true')
     parser.add_argument('--seg-debug', action='store_true')
+    parser.add_argument('--fusion-yolo-policy',choices=['unique','bounded_reuse'],default='unique')
+    parser.add_argument('--objects-min-rate',type=float,help='Explicit new experiment gate; absent retains historical 18Hz')
     args = parser.parse_args()
     if args.objects_only and args.profile != 'C1':
         parser.error('objects-only trials require C1')
@@ -107,6 +109,8 @@ def main():
                   all_models_loaded=not args.objects_only, loaded_models=loaded_models, active_models=active_models, trace_enabled=traced,
                   camera_debug=args.debug, main_intrinsic_fusion_debug=args.phase != 'camera',
                   gps_gap=args.gps_gap, commands=commands, failures=[], checks={},
+                  fusion_yolo_policy=args.fusion_yolo_policy,
+                  explicit_objects_minimum_hz=args.objects_min_rate,
                   source_config_sha256=hashlib.sha256(args.config.read_bytes()).hexdigest(),
                   timing_anchor='server_acceptance' if traced else 'rpc_start_conservative')
     report['execution_source_sha256'] = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
@@ -288,7 +292,8 @@ def main():
         wait(loaded, 'all resident models loaded and dummy warmed', 60)
         report['load_dummy_warmup_sec'] = time.monotonic()-launch_start
         if args.phase != 'camera':
-            main_command = ['roslaunch', str(Path(__file__).resolve().with_name('b0_main.launch'))]
+            main_command = ['roslaunch', str(Path(__file__).resolve().with_name('b0_main.launch')),
+                            'fusion_yolo_policy:='+args.fusion_yolo_policy]
             if traced:
                 main_command.append('fusion_trace_path:='+str(args.output/'fusion.jsonl'))
             main_process = launch('main', main_command)
@@ -382,6 +387,10 @@ def main():
                         measurement['post_input_end_outputs'] = sum(r['arrival'] >= window_end for r in outputs[name]) if window_end else None
                     report['measurements'][name] = measurement
                     report['checks'][name+'_rate'] = output_gate('yolo' if model=='yolo' else name, measurement, lifecycle=args.phase == 'camera')
+                    if model=='yolo' and args.objects_min_rate is not None:
+                        from run_coco7_live_trials import measurement_gate
+                        report['checks'][name+'_rate']=measurement_gate(measurement,args.objects_min_rate)
+                        measurement['explicit_minimum_hz']=args.objects_min_rate
             report['checks']['no_control_messages'] = not controls
             report['discarded_legacy_control_messages'] = len(discarded_controls)
             report['checks']['no_model_processing_errors'] = all(s.errors == 0 for s in statuses.values())

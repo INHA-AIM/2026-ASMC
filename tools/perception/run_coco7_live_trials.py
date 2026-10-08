@@ -169,7 +169,8 @@ def main():
                 report['preparation'][model]=dict(seconds=time.monotonic()-req['call_started'],pipeline_ready=statuses[model].pipeline_ready)
             if j.get('full_stack'):
                 launch(['roslaunch',str(ROOT/'tools/perception/coco7_preview_stack.launch'),
-                    'fusion_yolo_policy:='+j.get('fusion_policy','unique')], 'preview')
+                    'fusion_yolo_policy:='+j.get('fusion_policy','unique'),
+                    'camera_objects_conf_thres:='+str(j.get('confidence',.7))], 'preview')
                 time.sleep(2.)
             sampler=ResourceSampler(os.environ['ROS_MASTER_URI'],list(NODES.values())+['/camera_bev','/camera_bev_fusion','/camera_lane_vectorizer','/Main','/behavior_planner','/frenet_planner','/mpc_controller'],system_metrics=True);sampler.start()
             active={model:request(model,2) for model in selected}

@@ -18,10 +18,11 @@ def temporal_report(gt, predictions, confidence):
             sequence[row['run'],row['view'],a['actor_id']].append((int(row['frame']),a['actor_id'] in hits,a['source_class_name']))
     report=[]
     for key,values in sequence.items():
-        values.sort();windows=deque(maxlen=5);stable=None;max_misses=current_misses=0;reentries=0;previous=None;contiguous=True
+        values.sort();windows=deque(maxlen=5);stable=None;max_misses=current_misses=0;reentries=0;previous=None;contiguous=True;length=longest=0
         for frame,hit,label in values:
             if previous is not None and frame!=previous+1:
-                windows.clear();contiguous=False;current_misses=0
+                windows.clear();contiguous=False;current_misses=0;length=0
+            length+=1;longest=max(longest,length)
             windows.append(hit)
             if len(windows)==5 and sum(windows)>=3 and stable is None:stable=frame
             if hit:
@@ -33,8 +34,10 @@ def temporal_report(gt, predictions, confidence):
         report.append(dict(run=key[0],view=key[1],actor_id=key[2],label=values[0][2],inputs=len(values),
             first_visible_frame=values[0][0],first_stable_frame=stable,
             stable_input_delay=stable-values[0][0] if stable is not None else None,
-            maximum_consecutive_missed_visible_inputs=max_misses,reentries=reentries,contiguous_gt=contiguous))
-    return dict(objects=report,not_stably_detected=sum(r['first_stable_frame'] is None for r in report),
+            maximum_consecutive_missed_visible_inputs=max_misses,reentries=reentries,contiguous_gt=contiguous,
+            longest_contiguous_visible_inputs=longest,stability_evaluable=longest>=5))
+    return dict(objects=report,not_stably_detected=sum(r['stability_evaluable'] and r['first_stable_frame'] is None for r in report),
+                insufficient_contiguous_gt=sum(not r['stability_evaluable'] for r in report),
                 interpretation='3 hits in 5 consecutive annotated source inputs; frame counts, not wall seconds; visibility gaps reset window')
 
 

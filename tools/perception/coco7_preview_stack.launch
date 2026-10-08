@@ -1,6 +1,7 @@
 <launch>
   <!-- Compute with real sensor/path inputs; commands never reach the UDP bridge. -->
   <arg name="fusion_yolo_policy" default="unique"/>
+  <arg name="camera_objects_conf_thres" default="0.7"/>
   <remap from="/ctrl_cmd" to="/evaluation/ctrl_cmd"/>
   <remap from="/ctrl_cmd_0" to="/evaluation/ctrl_cmd_0"/>
   <include file="$(find asmc_hd_map)/launch/competition_map.launch">
@@ -12,6 +13,7 @@
     <arg name="rviz" value="false"/>
     <arg name="start_velodyne_driver" value="false"/>
     <arg name="fusion_yolo_policy" value="$(arg fusion_yolo_policy)"/>
+    <arg name="camera_objects_conf_thres" value="$(arg camera_objects_conf_thres)"/>
   </include>
   <group>
     <remap from="/ctrl_cmd" to="/evaluation/ctrl_cmd"/>

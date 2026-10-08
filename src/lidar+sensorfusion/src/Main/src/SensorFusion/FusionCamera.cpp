@@ -214,7 +214,12 @@ void BufferFusionYoloFrame(uint64 frame_seq, const ros::Time& image_stamp,
     g_YoloSilent = false;
     TimedYoloFrame frame{image_stamp, frame_seq, boxes};
     frame.epoch = g_CameraEpoch;
-    ros::param::param<std::string>("~camera_calibration_id", frame.calibration_id, "legacy_vehicle_spec");
+    static const std::string calibration_id = [] {
+        std::string id;
+        ros::param::param<std::string>("~camera_calibration_id", id, "legacy_vehicle_spec");
+        return id;
+    }();
+    frame.calibration_id = calibration_id;
     InsertByStamp(g_YoloInputQueue, std::move(frame));
     fusion_trace::Event("yolo_input", image_stamp.toNSec(), [&](std::ostream& out) {
         out << ",\"sequence\":" << frame_seq << ",\"boxes\":[";
@@ -767,10 +772,13 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
         last_queued_lidar_stamp = lidar_stamp;
     }
 
-    std::string consumption_policy = "unique";
-    ros::param::param<std::string>("~fusion_yolo_policy", consumption_policy, "unique");
-    if (consumption_policy != "unique" && consumption_policy != "bounded_reuse")
-        throw std::runtime_error("invalid fusion_yolo_policy");
+    static const std::string consumption_policy = [] {
+        std::string policy;
+        ros::param::param<std::string>("~fusion_yolo_policy", policy, "unique");
+        if (policy != "unique" && policy != "bounded_reuse")
+            throw std::runtime_error("invalid fusion_yolo_policy");
+        return policy;
+    }();
     const bool reuse = consumption_policy == "bounded_reuse";
     double max_time_offset_sec = 0.05;
     double wait_timeout_sec = 0.20;
@@ -874,16 +882,7 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
         }
 
         TimedYoloFrame yolo_frame = yolo_history[decision.yolo_index];
-        const bool reused = fusion_sync::ConsumeMatchedFrame(yolo_history, decision.yolo_index, reuse);
         g_ProcessingCameraEpoch = yolo_frame.epoch;
-        if (reused) ++g_TotalReused; else ++g_TotalFresh;
-        fusion_trace::Event("camera_observation_use", synchronized_lidar_frame.stamp.toNSec(), [&](std::ostream& out) {
-            out << ",\"camera_id\":" << fusion_trace::Quote(yolo_frame.camera_id)
-                << ",\"calibration_id\":" << fusion_trace::Quote(yolo_frame.calibration_id)
-                << ",\"epoch\":" << yolo_frame.epoch
-                << ",\"source_stamp_ns\":" << yolo_frame.stamp.toNSec()
-                << ",\"reused\":" << (reused ? "true" : "false");
-        });
 
         LiDAR synchronized_lidar;
         synchronized_lidar.frame_context=synchronized_lidar_frame.context;
@@ -916,6 +915,7 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
         }
         synchronized_camera.front_image_stamp = yolo_frame.stamp;
         if (synchronized_camera.bgr_image.empty()) {
+            if (!reuse) yolo_history.erase(yolo_history.begin()+decision.yolo_index);
             ++stats.dropped;
             ++g_TotalDropped;
             fusion_trace::Event("camera_decode_drop", synchronized_lidar_frame.stamp.toNSec(),
@@ -928,6 +928,15 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
                               max_time_offset_sec);
             continue;
         }
+
+        const bool reused = fusion_sync::ConsumeMatchedFrame(yolo_history, decision.yolo_index, reuse);
+        fusion_trace::Event("camera_observation_use", synchronized_lidar_frame.stamp.toNSec(), [&](std::ostream& out) {
+            out << ",\"camera_id\":" << fusion_trace::Quote(yolo_frame.camera_id)
+                << ",\"calibration_id\":" << fusion_trace::Quote(yolo_frame.calibration_id)
+                << ",\"epoch\":" << yolo_frame.epoch
+                << ",\"source_stamp_ns\":" << yolo_frame.stamp.toNSec()
+                << ",\"reused\":" << (reused ? "true" : "false");
+        });
 
         // The geometry comes from the synchronized historical frame, while
         // confidence/candidate counters must continue from the current track.
@@ -1008,6 +1017,7 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
 
         ++stats.matched;
         ++g_TotalMatched;
+        if (reused) ++g_TotalReused; else ++g_TotalFresh;
         stats.offsets_ms.push_back(decision.offset_ns / 1e6);
         PruneInputsBefore(yolo_history, camera_history,
                           synchronized_lidar_frame.stamp,

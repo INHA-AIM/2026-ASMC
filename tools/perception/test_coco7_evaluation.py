@@ -6,6 +6,7 @@ from evaluate_coco7_models import evaluate, summary
 from run_coco7_live_trials import measurement_gate, deadline_report
 from b0_measurements import output_report
 from fusion_log_accounting import parse_fusion_logs
+from analyze_coco7_trials import temporal_report
 
 
 def ann(label, verified=True):
@@ -46,6 +47,15 @@ class Coco7EvaluationTest(unittest.TestCase):
         self.assertTrue(parse_fusion_logs(tail+total)[2])
         self.assertEqual(1,parse_fusion_logs(tail+total)[1]['reused'])
         self.assertFalse(parse_fusion_logs(tail+total.replace('reused=1','reused=2'))[2])
+
+    def test_stable_detection_requires_five_consecutive_inputs(self):
+        gt={str(i):dict(run='r',view='front',frame=str(i),annotations=[ann('car')]) for i in range(7)}
+        rows=[dict(image=str(i),predictions=[dict(source_class_name='car',confidence=.9,xyxy=[0,0,10,10])] if i in (1,3,4) else []) for i in range(7)]
+        r=temporal_report(gt,rows,.7)['objects'][0]
+        self.assertEqual(4,r['first_stable_frame'])
+        missing=temporal_report(gt,[rows[i] for i in (0,1,4,5,6)],.7)
+        self.assertEqual(1,missing['insufficient_contiguous_gt'])
+        self.assertEqual(0,missing['not_stably_detected'])
 
 
 if __name__=='__main__':unittest.main()

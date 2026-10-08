@@ -7,6 +7,7 @@
   <arg name="map_altitude_origin_m" default="0.0"/>
   <arg name="start_yolo" default="false"/>
   <arg name="fusion_yolo_policy" default="unique" doc="unique | bounded_reuse"/>
+  <arg name="camera_objects_conf_thres" default="0.7" doc="Match the selected producer confidence; legacy default is preserved."/>
   <!-- MORAI sends VLP-16 packets (Velodyne product ID 0x22). -->
   <arg name="lidar_port" default="9299"/>
   <!-- Keep this false when 2026-ASMC/asmc_bridge sensor node publishes
@@ -273,7 +274,9 @@
   </node>
 
   <node unless="$(arg start_yolo)" name="camera_objects_yolo_bbox_adapter" pkg="Main"
-        type="camera_objects_yolo_bbox_adapter.py" output="screen" required="false"/>
+        type="camera_objects_yolo_bbox_adapter.py" output="screen" required="false">
+    <param name="conf_thres" value="$(arg camera_objects_conf_thres)"/>
+  </node>
   </group>
 
   <node if="$(arg rviz)" name="sensor_fusion_rviz" pkg="rviz" type="rviz"
