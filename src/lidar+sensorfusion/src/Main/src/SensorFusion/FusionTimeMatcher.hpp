@@ -18,6 +18,14 @@ std::uint64_t LatestEmptyStamp(const Frames& frames) {
     return barrier;
 }
 
+template <class Frame>
+std::int64_t EligibleObservationStamp(const Frame& frame, std::uint64_t empty_barrier) {
+    // Empty observations are valid geometry/time matches too. Suppressing
+    // every older stamp starves a waiting LiDAR snapshot in empty scenes.
+    if (!frame.boxes.empty() && frame.stamp.toNSec() < empty_barrier) return 0;
+    return static_cast<std::int64_t>(frame.stamp.toNSec());
+}
+
 template <class Frames>
 bool ConsumeMatchedFrame(Frames& frames, std::size_t index, bool reusable) {
     const bool used_before = frames.at(index).consumed;

@@ -836,8 +836,7 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
         yolo_stamps_ns.reserve(yolo_history.size());
         const uint64 empty_barrier = reuse ? fusion_sync::LatestEmptyStamp(yolo_history) : 0;
         for (const auto& frame : yolo_history) {
-            yolo_stamps_ns.push_back(frame.stamp.toNSec() < empty_barrier
-                ? 0 : static_cast<int64>(frame.stamp.toNSec()));
+            yolo_stamps_ns.push_back(fusion_sync::EligibleObservationStamp(frame, empty_barrier));
         }
         const int64 waited_ns = static_cast<int64>(std::llround(
             (decision_time - lidar_frame.queued_at).toSec() * 1e9));

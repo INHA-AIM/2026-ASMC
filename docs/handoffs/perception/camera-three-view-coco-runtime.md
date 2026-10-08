@@ -110,6 +110,21 @@ fresh/reused 매칭 수를 분리한다. 총 매칭 수 증가만으로 객체 �
 명시적으로 전달한다. 이번 운영 연결은 전방 bbox뿐이다. 3뷰 mask fusion은 후속 구현이다.
 legacy classification의 car 범주와 별도로 `yolo_class`에는 원래 7종 이름을 유지한다.
 
+정상 빈 결과는 유효한 시간 관측이다. 최신 빈 결과는 이전의 비어 있지 않은 박스를
+막지만, 시간 범위 안의 이전 빈 관측까지 지우지 않는다. 최초 재사용 시험에서는
+모든 과거 stamp를 막아 음영 장면의 빈 관측을 대량으로 거부하는 결함이 확인됐다.
+`FusionTimeMatcher.hpp::EligibleObservationStamp`와 실제 matcher 시험으로 이를
+분리했다. 수정 전 실행은 `fusion-coco7-10hz-v2`에 보존하며 운영 수락으로 세지 않는다.
+앞선 `fusion-coco7-10hz`는 뷰별 15Hz가 10Hz 요청을 덮어쓴 설정 오류다. 원본과
+`REJECTED_PROTOCOL.json`을 보존한다. 실행기는 run-local YAML에 scalar와 뷰별 주기를
+함께 고정하고 ROS의 실제 파라미터도 확인한다.
+
+동일 영상이 여러 관측에 쓰이므로 `analyze_fusion_trace.object_state`는 trace 순서상
+이미 적용된 최근 LiDAR 갱신을 연결한다. 미래의 재사용 갱신으로 과거 상태의 원인을
+덮어쓰지 않는다. 기존 연속 C++ 재현기는 unique 소비 기준으로 보존하며, 그것의
+통과를 reuse 정책 전체의 증명으로 확대하지 않는다. reuse의 실제 기록은 별도
+`analyze_coco7_fusion.py`로 고유 증거·카운터 중복·빈 결과 barrier를 검사한다.
+
 ## Jamming 연결
 
 `lane_boundary_adapter camera_bbox_detector.launch` 기본은 공유 카메라 전방 결과의

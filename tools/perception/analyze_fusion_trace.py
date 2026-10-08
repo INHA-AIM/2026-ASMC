@@ -29,11 +29,15 @@ def compare_boxes(reference, candidate):
 
 def object_state(rows, event, stamp, track_id):
     states = []
-    # Every YOLO result is uniquely consumed, so its stamp identifies the
-    # historical LiDAR snapshot whose state was copied to a current track.
-    fused_stamps = {row["yolo_stamp_ns"]: row["stamp_ns"] for row in rows
-                    if row["event"] == "class_after"}
+    # Reuse makes one image correspond to several LiDAR snapshots. Only an
+    # update already encountered in trace order can explain a current state;
+    # a dict constructed over the entire trace incorrectly selects a future use.
+    fused_stamps = {}
     for row in rows:
+        if row['event'] == 'camera_epoch_invalidated':
+            fused_stamps.clear()
+        elif row['event'] == 'class_after':
+            fused_stamps[row['yolo_stamp_ns']] = row['stamp_ns']
         if row["event"] != event or row["stamp_ns"] != stamp:
             continue
         obj = next((obj for obj in row["objects"] if obj["id"] == track_id), None)

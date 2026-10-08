@@ -82,9 +82,26 @@ TEST(FusionTimeMatcher, LatestEmptyAlsoBlocksReuseForWaitingOlderLidar) {
     EXPECT_EQ(120*kMs, barrier);
     std::vector<std::int64_t> stamps;
     for (const auto& frame : frames)
-        stamps.push_back(frame.stamp.ns < barrier ? 0 : frame.stamp.ns);
+        stamps.push_back(fusion_sync::EligibleObservationStamp(frame, barrier));
     const auto result = fusion_sync::DecideMatch(100*kMs, stamps, 10*kMs, 50*kMs, 200*kMs);
     EXPECT_EQ(fusion_sync::MatchAction::Match, result.action);
     EXPECT_EQ(1u, result.yolo_index); // Empty, rather than resurrected 90ms box.
     EXPECT_EQ(0u, fusion_sync::LatestEmptyStamp(std::vector<Frame>{{{150*kMs},{1}}}));
+}
+
+TEST(FusionTimeMatcher, LatestEmptyRetainsEarlierNormalEmptyObservations) {
+    struct Stamp { std::uint64_t ns; std::uint64_t toNSec() const { return ns; } };
+    struct Frame { Stamp stamp; std::vector<int> boxes; };
+    const std::vector<Frame> frames{{{90*kMs},{1}},{{120*kMs},{}},{{180*kMs},{}}};
+    const auto barrier=fusion_sync::LatestEmptyStamp(frames);
+    std::vector<std::int64_t> stamps;
+    for (const auto& frame : frames) stamps.push_back(fusion_sync::EligibleObservationStamp(frame,barrier));
+    EXPECT_EQ(0,stamps[0]);
+    EXPECT_EQ(120*kMs,stamps[1]);
+    const auto result=fusion_sync::DecideMatch(130*kMs,stamps,10*kMs,50*kMs,200*kMs);
+    EXPECT_EQ(fusion_sync::MatchAction::Match,result.action);
+    EXPECT_EQ(1u,result.yolo_index);
+    EXPECT_EQ(10*kMs,result.offset_ns);
+    // Legacy unique matching (zero barrier) retains the earlier detection.
+    EXPECT_EQ(90*kMs,fusion_sync::EligibleObservationStamp(frames[0],0));
 }

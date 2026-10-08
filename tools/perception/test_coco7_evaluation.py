@@ -17,6 +17,18 @@ def ann(label, verified=True):
 
 
 class Coco7EvaluationTest(unittest.TestCase):
+    def test_reused_image_origin_cannot_be_replaced_by_a_future_lidar_update(self):
+        from analyze_fusion_trace import object_state
+        obj=dict(id=7)
+        rows=[dict(event='class_after',stamp_ns=100,yolo_stamp_ns=90,objects=[obj]),
+              dict(event='class_current',stamp_ns=110,yolo_stamp_ns=90,objects=[obj]),
+              dict(event='class_after',stamp_ns=120,yolo_stamp_ns=90,objects=[obj]),
+              dict(event='class_current',stamp_ns=125,yolo_stamp_ns=90,objects=[obj])]
+        self.assertEqual(100,object_state(rows,'class_current',110,7)[0]['fused_lidar_stamp_ns'])
+        self.assertEqual(120,object_state(rows,'class_current',125,7)[0]['fused_lidar_stamp_ns'])
+        rows.insert(1,dict(event='camera_epoch_invalidated',stamp_ns=105))
+        self.assertIsNone(object_state(rows,'class_current',110,7)[0]['fused_lidar_stamp_ns'])
+
     def test_fusion_rate_override_replaces_view_map_without_mutating_source(self):
         from run_coco7_fusion_trials import pin_uniform_rate
         original=dict(target_hz=20.,target_hz_by_view=dict(front=20.,left=15.,right=15.),conf_thres=.65)
@@ -86,6 +98,8 @@ class Coco7EvaluationTest(unittest.TestCase):
         self.assertFalse(reuse_report([first,observe,empty,admitted,again,final],'bounded_reuse')['passed'])
         waiting_old_lidar=dict(again,stamp_ns=105)
         self.assertFalse(reuse_report([first,observe,empty,admitted,waiting_old_lidar,final],'bounded_reuse')['passed'])
+        older_empty=dict(event='yolo_input',stamp_ns=100,boxes=[])
+        self.assertTrue(reuse_report([older_empty,first,observe,empty,admitted,waiting_old_lidar,final],'bounded_reuse')['passed'])
         self.assertFalse(reuse_report([first,observe,again],'bounded_reuse')['passed'])
 
     def test_unknown_subtype_is_not_a_negative_or_a_positive(self):

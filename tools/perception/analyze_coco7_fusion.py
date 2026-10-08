@@ -25,7 +25,8 @@ def reuse_report(rows, policy):
                 violations.append(dict(reason='fresh/reused flag disagrees with distinct source observations',row=row))
             vision.add(key);uses.append(row)
             barrier=max(empties,default=0)
-            if policy=='bounded_reuse' and row['source_stamp_ns']<barrier:
+            if (policy=='bounded_reuse' and row['source_stamp_ns']<barrier and
+                    inputs.get(row['source_stamp_ns']) != []):
                 violations.append(dict(reason='older nonempty observation resurrected after empty result',row=row,barrier=barrier))
         elif event in ('class_observation','class_miss'):
             if current is None or row['stamp_ns']!=current['source_stamp_ns']:
