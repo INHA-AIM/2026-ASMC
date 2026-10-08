@@ -1,0 +1,12 @@
+[
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "base27",
+    "batch_mode": "2plus1",
+    "profile": "C1",
+    "repeat": 4,
+    "debug": false,
+    "runtime_config": "/results/selected-configs/base27.yaml"
+  }
+]

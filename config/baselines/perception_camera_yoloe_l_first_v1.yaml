@@ -1,0 +1,833 @@
+schema_version: 1
+status: first_run_completed_operational_acceptance_withheld
+measurement_runtime_base_revision: 0a90b34
+base_source_revision: 17dd7a6
+experiment: config/experiments/camera_yoloe_l_first_v1.yaml
+evidence: config/baselines/evidence/camera_yoloe_l_first_v1
+model: yoloe-26l-seg.pt
+checkpoint_sha256: a612d2d505f24e14d87ec82d688b823b6cb600646664f16125ce6c84ce360da9
+prompt_profile: rich42
+batch_mode: 2plus1
+selected_experimental_confidence: 0.3
+launch_default_confidence: 0.7
+source_hz: 20
+target_hz_per_view: 20
+minimum_feasibility_hz: 10
+strict_twenty_hz_met: false
+normal_eligible_trials: 33
+total_trials: 36
+performance_failed_trials: []
+condition_deviation: first base27 r1 gallery rendering overlap 6.1608s; retained and
+  excluded; clean r2/r3/r4
+diagnostic_trials: 2
+quality:
+  rich42-pytorch:
+    fixed_07_macro_f1: 0.30141855524744726
+    selected_confidence: 0.3
+    selected_macro_f1: 0.3713299618944934
+  rich42-tensorrt:
+    fixed_07_macro_f1: 0.3022430533851934
+    selected_confidence: 0.3
+    selected_macro_f1: 0.3718351379823237
+  base27-pytorch:
+    fixed_07_macro_f1: 0.1880152110748723
+    selected_confidence: 0.25
+    selected_macro_f1: 0.2559666357135341
+  base27-tensorrt:
+    fixed_07_macro_f1: 0.18879896509000152
+    selected_confidence: 0.25
+    selected_macro_f1: 0.25629919566107484
+whole_GPU_peak_mib: 3528
+whole_GPU_total_mib: 8188
+precision: TensorRT internal FP16 allowed; FP32 inputs/outputs
+fusion_scope: front bbox only; unchanged four-class confidence 0.7 adapter
+fusion_parity_accepted: false
+new_repeat_classification_differences: 1
+prior_exceptions_applied: false
+training_performed: false
+operational_defaults_changed: false
+GT_limits:
+- animal GT absent
+- Obstacle/Vehicle subtype unverified where marked
+- selection only; heldout unused
+legacy_parity:
+  frames: 3514
+  exact: 3514
+  hood_mask: false
+known_facade_failures: 1
+nested_targeted_test_failures: 0
+raw_evidence:
+  numeric_archive_sha256: b4c90fb78ffab336a9e2acd7c0d4eb0d6ac44b15b0415d890b35930b974ad6cc
+  local_root: artifacts/camera-yoloe-l-first-v1
+  RGB_and_instance_masks: retained locally; not uploaded in numeric archive
+groups:
+- phase: camera
+  bag: camera
+  prompt: rich42
+  batch_mode: 2plus1
+  profile: C1
+  debug: false
+  fixed07_batch_selection: true
+  repeats: 3
+  passed_repeats: 3
+  measurements:
+    yolo_front:
+      hz_min: 19.743464531210304
+      hz_max: 19.797048901424624
+      complete_windows_min_hz: 19.4
+      first_second_min: 17
+      worst_source_p95_ms: 36.2276875
+      worst_source_p99_ms: 41.956213600000005
+      worst_wall_p95_ms: 40.30024325038539
+      max_gap_sec: 0.12403929501306266
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_left:
+      hz_min: 18.646676991526075
+      hz_max: 18.793778895531833
+      complete_windows_min_hz: 18.0
+      first_second_min: 17
+      worst_source_p95_ms: 38.46455575
+      worst_source_p99_ms: 45.12027572999998
+      worst_wall_p95_ms: 41.59350300033111
+      max_gap_sec: 0.15712355900905095
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_right:
+      hz_min: 19.843431440229093
+      hz_max: 19.897033996886364
+      complete_windows_min_hz: 19.6
+      first_second_min: 18
+      worst_source_p95_ms: 40.0619914
+      worst_source_p99_ms: 46.152529320000006
+      worst_wall_p95_ms: 42.88665339699946
+      max_gap_sec: 0.10370289199636318
+      duplicate_stamps: 0
+      reversed_stamps: 0
+  peak_vram_mib: 3343.0
+  all_phases_peak_vram_mib: 3343.0
+- phase: camera
+  bag: camera
+  prompt: rich42
+  batch_mode: sequential
+  profile: C1
+  debug: false
+  fixed07_batch_selection: true
+  repeats: 3
+  passed_repeats: 3
+  measurements:
+    yolo_front:
+      hz_min: 19.794178605323882
+      hz_max: 19.8959151587057
+      complete_windows_min_hz: 19.4
+      first_second_min: 18
+      worst_source_p95_ms: 49.842923799999994
+      worst_source_p99_ms: 56.834926049999986
+      worst_wall_p95_ms: 53.11843173840316
+      max_gap_sec: 0.12364202499156818
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_left:
+      hz_min: 18.84483445092099
+      hz_max: 19.246048583170086
+      complete_windows_min_hz: 18.4
+      first_second_min: 17
+      worst_source_p95_ms: 49.562188
+      worst_source_p99_ms: 59.753792840000145
+      worst_wall_p95_ms: 53.707400400890045
+      max_gap_sec: 0.1240836629876867
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_right:
+      hz_min: 19.844560416487095
+      hz_max: 19.8959151587057
+      complete_windows_min_hz: 19.6
+      first_second_min: 18
+      worst_source_p95_ms: 53.228459449999995
+      worst_source_p99_ms: 62.112769959999994
+      worst_wall_p95_ms: 57.0938954479061
+      max_gap_sec: 0.11115570599213243
+      duplicate_stamps: 0
+      reversed_stamps: 0
+  peak_vram_mib: 3336.0
+  all_phases_peak_vram_mib: 3336.0
+- phase: camera
+  bag: camera
+  prompt: rich42
+  batch_mode: batch3
+  profile: C1
+  debug: false
+  fixed07_batch_selection: true
+  repeats: 3
+  passed_repeats: 3
+  measurements:
+    yolo_front:
+      hz_min: 19.64446380799637
+      hz_max: 19.84565086628231
+      complete_windows_min_hz: 19.2
+      first_second_min: 17
+      worst_source_p95_ms: 68.25734059999999
+      worst_source_p99_ms: 81.50609028
+      worst_wall_p95_ms: 72.12046220083721
+      max_gap_sec: 0.1389245179889258
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_left:
+      hz_min: 19.29577137124678
+      hz_max: 19.493997363504526
+      complete_windows_min_hz: 19.0
+      first_second_min: 18
+      worst_source_p95_ms: 71.23739780000001
+      worst_source_p99_ms: 83.24604894
+      worst_wall_p95_ms: 76.08246579184198
+      max_gap_sec: 0.12376950000179932
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_right:
+      hz_min: 19.844407459986154
+      hz_max: 19.89563991128554
+      complete_windows_min_hz: 19.6
+      first_second_min: 18
+      worst_source_p95_ms: 71.1923086
+      worst_source_p99_ms: 83.18083484000002
+      worst_wall_p95_ms: 75.1556552015245
+      max_gap_sec: 0.10562611199566163
+      duplicate_stamps: 0
+      reversed_stamps: 0
+  peak_vram_mib: 3385.0
+  all_phases_peak_vram_mib: 3385.0
+- phase: camera
+  bag: camera
+  prompt: base27
+  batch_mode: 2plus1
+  profile: C1
+  debug: false
+  fixed07_batch_selection: false
+  repeats: 3
+  passed_repeats: 3
+  measurements:
+    yolo_front:
+      hz_min: 19.693897332887964
+      hz_max: 19.79297044243317
+      complete_windows_min_hz: 19.4
+      first_second_min: 18
+      worst_source_p95_ms: 32.8159906
+      worst_source_p99_ms: 38.96103148
+      worst_wall_p95_ms: 36.03041031747126
+      max_gap_sec: 0.1216042650048621
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_left:
+      hz_min: 18.89158323481007
+      hz_max: 18.894145156933124
+      complete_windows_min_hz: 18.6
+      first_second_min: 18
+      worst_source_p95_ms: 33.870948750000004
+      worst_source_p99_ms: 38.345626060000015
+      worst_wall_p95_ms: 37.93883698817808
+      max_gap_sec: 0.12685782500193454
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_right:
+      hz_min: 19.841160169893115
+      hz_max: 19.843850865879496
+      complete_windows_min_hz: 19.6
+      first_second_min: 18
+      worst_source_p95_ms: 34.7205584
+      worst_source_p99_ms: 40.29371432
+      worst_wall_p95_ms: 37.33803719514981
+      max_gap_sec: 0.10500081902137026
+      duplicate_stamps: 0
+      reversed_stamps: 0
+  peak_vram_mib: 3528.0
+  all_phases_peak_vram_mib: 3528.0
+- phase: camera
+  bag: camera
+  prompt: rich42
+  batch_mode: 2plus1
+  profile: C1
+  debug: false
+  fixed07_batch_selection: false
+  repeats: 3
+  passed_repeats: 3
+  measurements:
+    yolo_front:
+      hz_min: 19.74641255076937
+      hz_max: 19.84410467865714
+      complete_windows_min_hz: 19.6
+      first_second_min: 18
+      worst_source_p95_ms: 41.1345312
+      worst_source_p99_ms: 47.28238096000001
+      worst_wall_p95_ms: 43.782903181272566
+      max_gap_sec: 0.12141041801078245
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_left:
+      hz_min: 18.594475920555304
+      hz_max: 18.697917480183825
+      complete_windows_min_hz: 18.0
+      first_second_min: 17
+      worst_source_p95_ms: 42.707539
+      worst_source_p99_ms: 48.828489689999984
+      worst_wall_p95_ms: 45.04168408311671
+      max_gap_sec: 0.12539314801688306
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_right:
+      hz_min: 19.84410467865714
+      hz_max: 19.89638530431952
+      complete_windows_min_hz: 19.6
+      first_second_min: 18
+      worst_source_p95_ms: 44.728782599999995
+      worst_source_p99_ms: 53.922388280000035
+      worst_wall_p95_ms: 47.393423010362305
+      max_gap_sec: 0.11173099500592798
+      duplicate_stamps: 0
+      reversed_stamps: 0
+  peak_vram_mib: 3459.0
+  all_phases_peak_vram_mib: 3459.0
+- phase: camera
+  bag: camera
+  prompt: rich42
+  batch_mode: 2plus1
+  profile: C4
+  debug: false
+  fixed07_batch_selection: false
+  repeats: 3
+  passed_repeats: 3
+  measurements:
+    family:
+      hz_min: 9.945188296123074
+      hz_max: 9.94812010623619
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 104.4237213
+      worst_source_p99_ms: 118.78357592000003
+      worst_wall_p95_ms: 107.34987001051195
+      max_gap_sec: 0.1988186950038653
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    front:
+      hz_min: 9.945188296123074
+      hz_max: 9.94812010623619
+      complete_windows_min_hz: 9.8
+      first_second_min: 10
+      worst_source_p95_ms: 51.7105598
+      worst_source_p99_ms: 62.67129848000001
+      worst_wall_p95_ms: 54.67617590329609
+      max_gap_sec: 0.20184168600826524
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    left:
+      hz_min: 9.945188296123074
+      hz_max: 9.94812010623619
+      complete_windows_min_hz: 9.8
+      first_second_min: 10
+      worst_source_p95_ms: 69.90747449999999
+      worst_source_p99_ms: 83.03453038
+      worst_wall_p95_ms: 74.44717150938231
+      max_gap_sec: 0.2021769779967144
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    right:
+      hz_min: 9.945188296123074
+      hz_max: 9.94812010623619
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 63.754162
+      worst_source_p99_ms: 81.59390016000002
+      worst_wall_p95_ms: 68.76641010749152
+      max_gap_sec: 0.20347610602038912
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_front:
+      hz_min: 19.798278437730865
+      hz_max: 19.846662780682518
+      complete_windows_min_hz: 19.4
+      first_second_min: 17
+      worst_source_p95_ms: 53.959058999999996
+      worst_source_p99_ms: 64.42963495
+      worst_wall_p95_ms: 58.15510661923326
+      max_gap_sec: 0.12740759900771081
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_left:
+      hz_min: 18.84683090256249
+      hz_max: 18.948352343181813
+      complete_windows_min_hz: 18.6
+      first_second_min: 17
+      worst_source_p95_ms: 55.731370999999996
+      worst_source_p99_ms: 66.88520720000002
+      worst_wall_p95_ms: 59.68365779262967
+      max_gap_sec: 0.1303639590041712
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_right:
+      hz_min: 19.89360902591589
+      hz_max: 19.89826974297193
+      complete_windows_min_hz: 19.8
+      first_second_min: 18
+      worst_source_p95_ms: 56.67470924999999
+      worst_source_p99_ms: 67.46009088999999
+      worst_wall_p95_ms: 61.34028245724039
+      max_gap_sec: 0.12965640300535597
+      duplicate_stamps: 0
+      reversed_stamps: 0
+  peak_vram_mib: 3441.0
+  all_phases_peak_vram_mib: 3441.0
+- phase: camera
+  bag: camera
+  prompt: rich42
+  batch_mode: 2plus1
+  profile: C5
+  debug: false
+  fixed07_batch_selection: false
+  repeats: 3
+  passed_repeats: 3
+  measurements:
+    resnet18:
+      hz_min: 9.846994844392318
+      hz_max: 9.89799158516456
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 87.2349376
+      worst_source_p99_ms: 99.32810793
+      worst_wall_p95_ms: 92.8339870122727
+      max_gap_sec: 0.1492208859999664
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_front:
+      hz_min: 19.794958968233278
+      hz_max: 19.798320172920118
+      complete_windows_min_hz: 19.6
+      first_second_min: 18
+      worst_source_p95_ms: 40.238987
+      worst_source_p99_ms: 46.629417800000006
+      worst_wall_p95_ms: 43.61715299455682
+      max_gap_sec: 0.12243028200464323
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_left:
+      hz_min: 18.6460783148459
+      hz_max: 18.79840501267163
+      complete_windows_min_hz: 18.2
+      first_second_min: 17
+      worst_source_p95_ms: 42.42732920000001
+      worst_source_p99_ms: 49.12730633999999
+      worst_wall_p95_ms: 44.939029750821646
+      max_gap_sec: 0.12766043000738136
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_right:
+      hz_min: 19.795836495117904
+      hz_max: 19.848315930932543
+      complete_windows_min_hz: 19.6
+      first_second_min: 18
+      worst_source_p95_ms: 43.47436725
+      worst_source_p99_ms: 52.70952460000002
+      worst_wall_p95_ms: 46.80184859316796
+      max_gap_sec: 0.10794038799940608
+      duplicate_stamps: 0
+      reversed_stamps: 0
+  peak_vram_mib: 3462.0
+  all_phases_peak_vram_mib: 3462.0
+- phase: camera
+  bag: camera
+  prompt: rich42
+  batch_mode: 2plus1
+  profile: C6
+  debug: false
+  fixed07_batch_selection: false
+  repeats: 3
+  passed_repeats: 3
+  measurements:
+    family:
+      hz_min: 9.945621958598695
+      hz_max: 9.945736779815586
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 107.8848247
+      worst_source_p99_ms: 126.38596798000012
+      worst_wall_p95_ms: 113.68866499105933
+      max_gap_sec: 0.20145063000381924
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    front:
+      hz_min: 9.945621958598695
+      hz_max: 9.945736779815586
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 51.8698587
+      worst_source_p99_ms: 59.033047380000006
+      worst_wall_p95_ms: 58.27690890582744
+      max_gap_sec: 0.19633873799466528
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    left:
+      hz_min: 9.945621958598695
+      hz_max: 9.945736779815586
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 71.3994039
+      worst_source_p99_ms: 82.51199348000003
+      worst_wall_p95_ms: 76.77071889629588
+      max_gap_sec: 0.1962729670049157
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    resnet18:
+      hz_min: 9.8976332071825
+      hz_max: 9.94885945230152
+      complete_windows_min_hz: 9.8
+      first_second_min: 10
+      worst_source_p95_ms: 85.5244307
+      worst_source_p99_ms: 95.92634024000002
+      worst_wall_p95_ms: 91.70227852009702
+      max_gap_sec: 0.15646838099928573
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    right:
+      hz_min: 9.945621958598695
+      hz_max: 9.945736779815586
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 63.0050525
+      worst_source_p99_ms: 82.14068879999999
+      worst_wall_p95_ms: 66.70218851650132
+      max_gap_sec: 0.1971984189876821
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_front:
+      hz_min: 19.793882099998832
+      hz_max: 19.84524489277522
+      complete_windows_min_hz: 19.2
+      first_second_min: 16
+      worst_source_p95_ms: 58.740643
+      worst_source_p99_ms: 72.91717535000001
+      worst_wall_p95_ms: 62.32581624499289
+      max_gap_sec: 0.12226173302042298
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_left:
+      hz_min: 18.695520377576656
+      hz_max: 18.84499188687137
+      complete_windows_min_hz: 18.2
+      first_second_min: 16
+      worst_source_p95_ms: 59.58657079999999
+      worst_source_p99_ms: 72.79569288
+      worst_wall_p95_ms: 61.99492199812083
+      max_gap_sec: 0.13576173401088454
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_right:
+      hz_min: 19.793882099998832
+      hz_max: 19.844726204477276
+      complete_windows_min_hz: 19.4
+      first_second_min: 17
+      worst_source_p95_ms: 61.36179025
+      worst_source_p99_ms: 73.62210705
+      worst_wall_p95_ms: 63.440212987188715
+      max_gap_sec: 0.11028048198204488
+      duplicate_stamps: 0
+      reversed_stamps: 0
+  peak_vram_mib: 3455.0
+  all_phases_peak_vram_mib: 3455.0
+- phase: camera
+  bag: camera
+  prompt: rich42
+  batch_mode: 2plus1
+  profile: C6
+  debug: true
+  fixed07_batch_selection: false
+  repeats: 3
+  passed_repeats: 3
+  measurements:
+    family:
+      hz_min: 9.944544865222175
+      hz_max: 9.946677665427455
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 108.72578139999999
+      worst_source_p99_ms: 136.83254462
+      worst_wall_p95_ms: 116.4203689142596
+      max_gap_sec: 0.21522595902206376
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    front:
+      hz_min: 9.94481509363366
+      hz_max: 9.994517452484597
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 67.96708479999998
+      worst_source_p99_ms: 86.32941471999999
+      worst_wall_p95_ms: 77.71024798566941
+      max_gap_sec: 0.20270974899176508
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    left:
+      hz_min: 9.94481509363366
+      hz_max: 9.994517452484597
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 72.90180869999999
+      worst_source_p99_ms: 88.97778188000002
+      worst_wall_p95_ms: 79.77331949805375
+      max_gap_sec: 0.20227904798230156
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    resnet18:
+      hz_min: 9.897115402081734
+      hz_max: 9.948467808114328
+      complete_windows_min_hz: 9.8
+      first_second_min: 10
+      worst_source_p95_ms: 89.86521400000001
+      worst_source_p99_ms: 96.87261058
+      worst_wall_p95_ms: 95.39418889326043
+      max_gap_sec: 0.14239516001543961
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    right:
+      hz_min: 9.94481509363366
+      hz_max: 9.994517452484597
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 78.10214819999999
+      worst_source_p99_ms: 89.43922440000001
+      worst_wall_p95_ms: 85.13106499158312
+      max_gap_sec: 0.20293941599084064
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_front:
+      hz_min: 16.644184414613495
+      hz_max: 16.89308899504254
+      complete_windows_min_hz: 13.4
+      first_second_min: 12
+      worst_source_p95_ms: 97.17159759999997
+      worst_source_p99_ms: 113.68176648000001
+      worst_wall_p95_ms: 102.62677540304139
+      max_gap_sec: 0.12564084702171385
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_left:
+      hz_min: 16.546118226065957
+      hz_max: 16.693170782083456
+      complete_windows_min_hz: 13.4
+      first_second_min: 12
+      worst_source_p95_ms: 117.2550415
+      worst_source_p99_ms: 139.57082015
+      worst_wall_p95_ms: 123.04706050781533
+      max_gap_sec: 0.21440221701050177
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_right:
+      hz_min: 16.594201878833875
+      hz_max: 16.793129888562998
+      complete_windows_min_hz: 13.4
+      first_second_min: 12
+      worst_source_p95_ms: 106.25235119999999
+      worst_source_p99_ms: 126.65632384999991
+      worst_wall_p95_ms: 109.91115840297428
+      max_gap_sec: 0.17413679498713464
+      duplicate_stamps: 0
+      reversed_stamps: 0
+  peak_vram_mib: 3457.0
+  all_phases_peak_vram_mib: 3457.0
+- phase: fusion
+  bag: primary
+  prompt: rich42
+  batch_mode: 2plus1
+  profile: C6
+  debug: false
+  fixed07_batch_selection: false
+  repeats: 3
+  passed_repeats: 3
+  measurements:
+    family:
+      hz_min: 9.980794314599695
+      hz_max: 10.001962580803921
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 107.1356434
+      worst_source_p99_ms: 124.53214682
+      worst_wall_p95_ms: 111.68263640138322
+      max_gap_sec: 0.20712701001320966
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    front:
+      hz_min: 10.000620758779638
+      hz_max: 10.001387982401349
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 48.59211280000001
+      worst_source_p99_ms: 59.95511192000002
+      worst_wall_p95_ms: 53.20554838981481
+      max_gap_sec: 0.17888348599080928
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    left:
+      hz_min: 10.001246761965678
+      hz_max: 10.001962580803921
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 54.02135360000001
+      worst_source_p99_ms: 62.606507560000026
+      worst_wall_p95_ms: 57.83143719891086
+      max_gap_sec: 0.17967349500395358
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    resnet18:
+      hz_min: 9.960444125874465
+      hz_max: 9.980899439232166
+      complete_windows_min_hz: 9.8
+      first_second_min: 10
+      worst_source_p95_ms: 88.77078879999999
+      worst_source_p99_ms: 101.20950969999998
+      worst_wall_p95_ms: 96.42008288064972
+      max_gap_sec: 0.12328200601041317
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    right:
+      hz_min: 10.001101624819185
+      hz_max: 10.001835757187566
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 53.05062240000001
+      worst_source_p99_ms: 77.36320156000004
+      worst_wall_p95_ms: 57.76293521048501
+      max_gap_sec: 0.17930231499485672
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_front:
+      hz_min: 19.941417756321705
+      hz_max: 19.960376277881053
+      complete_windows_min_hz: 19.6
+      first_second_min: 18
+      worst_source_p95_ms: 50.47400175
+      worst_source_p99_ms: 57.79348904
+      worst_wall_p95_ms: 53.31649950676365
+      max_gap_sec: 0.12542662798659876
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_left:
+      hz_min: 19.920721064608532
+      hz_max: 19.941136181833407
+      complete_windows_min_hz: 19.6
+      first_second_min: 18
+      worst_source_p95_ms: 53.0081195
+      worst_source_p99_ms: 60.62322069
+      worst_wall_p95_ms: 56.30625581397908
+      max_gap_sec: 0.13436953397467732
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_right:
+      hz_min: 19.41051561057464
+      hz_max: 19.470447335026307
+      complete_windows_min_hz: 18.8
+      first_second_min: 18
+      worst_source_p95_ms: 50.9872582
+      worst_source_p99_ms: 59.213215840000004
+      worst_wall_p95_ms: 54.69845850166166
+      max_gap_sec: 0.13907813699916005
+      duplicate_stamps: 0
+      reversed_stamps: 0
+  peak_vram_mib: 3408.0
+  all_phases_peak_vram_mib: 3408.0
+- phase: fusion
+  bag: shadow
+  prompt: rich42
+  batch_mode: 2plus1
+  profile: C6
+  debug: false
+  fixed07_batch_selection: false
+  repeats: 3
+  passed_repeats: 3
+  measurements:
+    family:
+      hz_min: 9.982455495638746
+      hz_max: 9.982599856508154
+      complete_windows_min_hz: 9.8
+      first_second_min: 9
+      worst_source_p95_ms: 122.63476675000001
+      worst_source_p99_ms: 142.64352350000004
+      worst_wall_p95_ms: 125.62283024453791
+      max_gap_sec: 0.22171685000648722
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    front:
+      hz_min: 9.982175847509343
+      hz_max: 9.982377122786572
+      complete_windows_min_hz: 10.0
+      first_second_min: 10
+      worst_source_p95_ms: 58.3074565
+      worst_source_p99_ms: 79.95431760000001
+      worst_wall_p95_ms: 62.953048502095044
+      max_gap_sec: 0.17354428599355742
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    left:
+      hz_min: 9.982455495638746
+      hz_max: 9.982599856508154
+      complete_windows_min_hz: 10.0
+      first_second_min: 10
+      worst_source_p95_ms: 61.30698975
+      worst_source_p99_ms: 83.8249467
+      worst_wall_p95_ms: 65.92631750390865
+      max_gap_sec: 0.17247786797815934
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    resnet18:
+      hz_min: 9.901111828767784
+      hz_max: 9.982513796548101
+      complete_windows_min_hz: 9.8
+      first_second_min: 10
+      worst_source_p95_ms: 87.92427780000001
+      worst_source_p99_ms: 95.63748212
+      worst_wall_p95_ms: 92.27710978593677
+      max_gap_sec: 0.13765444699674845
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    right:
+      hz_min: 9.982310262372966
+      hz_max: 9.982542794147204
+      complete_windows_min_hz: 10.0
+      first_second_min: 10
+      worst_source_p95_ms: 60.93300175
+      worst_source_p99_ms: 76.38975505000003
+      worst_wall_p95_ms: 65.0808285063249
+      max_gap_sec: 0.17326180398231372
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_front:
+      hz_min: 19.802039892620158
+      hz_max: 19.883541722810662
+      complete_windows_min_hz: 19.4
+      first_second_min: 18
+      worst_source_p95_ms: 56.420043700000015
+      worst_source_p99_ms: 63.06499253999999
+      worst_wall_p95_ms: 59.084196847106796
+      max_gap_sec: 0.1278424559859559
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_left:
+      hz_min: 19.72171680831662
+      hz_max: 19.762015554374265
+      complete_windows_min_hz: 19.6
+      first_second_min: 18
+      worst_source_p95_ms: 56.09546375
+      worst_source_p99_ms: 65.21023314
+      worst_wall_p95_ms: 59.09501949645346
+      max_gap_sec: 0.12842270502005704
+      duplicate_stamps: 0
+      reversed_stamps: 0
+    yolo_right:
+      hz_min: 19.112708133206546
+      hz_max: 19.193629081717127
+      complete_windows_min_hz: 18.8
+      first_second_min: 17
+      worst_source_p95_ms: 56.485541049999995
+      worst_source_p99_ms: 65.18596575999999
+      worst_wall_p95_ms: 59.154027490876615
+      max_gap_sec: 0.15745828600483947
+      duplicate_stamps: 0
+      reversed_stamps: 0
+  peak_vram_mib: 3360.0
+  all_phases_peak_vram_mib: 3360.0

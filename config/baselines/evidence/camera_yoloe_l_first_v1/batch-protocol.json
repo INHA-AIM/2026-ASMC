@@ -1,0 +1,92 @@
+[
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C1",
+    "repeat": 1,
+    "debug": false,
+    "runtime_config": "/root/ws/src/asmc_camera/config/camera/yoloe_l/rich42_tensorrt_2plus1.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "sequential",
+    "profile": "C1",
+    "repeat": 1,
+    "debug": false,
+    "runtime_config": "/root/ws/src/asmc_camera/config/camera/yoloe_l/rich42_tensorrt_sequential.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "batch3",
+    "profile": "C1",
+    "repeat": 1,
+    "debug": false,
+    "runtime_config": "/root/ws/src/asmc_camera/config/camera/yoloe_l/rich42_tensorrt_batch3.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "sequential",
+    "profile": "C1",
+    "repeat": 2,
+    "debug": false,
+    "runtime_config": "/root/ws/src/asmc_camera/config/camera/yoloe_l/rich42_tensorrt_sequential.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "batch3",
+    "profile": "C1",
+    "repeat": 2,
+    "debug": false,
+    "runtime_config": "/root/ws/src/asmc_camera/config/camera/yoloe_l/rich42_tensorrt_batch3.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C1",
+    "repeat": 2,
+    "debug": false,
+    "runtime_config": "/root/ws/src/asmc_camera/config/camera/yoloe_l/rich42_tensorrt_2plus1.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "batch3",
+    "profile": "C1",
+    "repeat": 3,
+    "debug": false,
+    "runtime_config": "/root/ws/src/asmc_camera/config/camera/yoloe_l/rich42_tensorrt_batch3.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "2plus1",
+    "profile": "C1",
+    "repeat": 3,
+    "debug": false,
+    "runtime_config": "/root/ws/src/asmc_camera/config/camera/yoloe_l/rich42_tensorrt_2plus1.yaml"
+  },
+  {
+    "phase": "camera",
+    "bag_id": "camera",
+    "prompt": "rich42",
+    "batch_mode": "sequential",
+    "profile": "C1",
+    "repeat": 3,
+    "debug": false,
+    "runtime_config": "/root/ws/src/asmc_camera/config/camera/yoloe_l/rich42_tensorrt_sequential.yaml"
+  }
+]

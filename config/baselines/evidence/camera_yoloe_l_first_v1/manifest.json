@@ -1,0 +1,510 @@
+{
+  "revision": "0a90b34",
+  "created_unix": 1791471365.4541535,
+  "interpreter": "/usr/bin/python3",
+  "python": "3.8.10 (default, Mar 18 2025, 20:04:55) \n[GCC 9.4.0]",
+  "torch": "2.1.2+cu118",
+  "ultralytics": "8.4.150",
+  "cv2": "5.0.0",
+  "numpy": "1.24.4",
+  "gpu": "NVIDIA GeForce RTX 4060 Ti, 8188 MiB, 591.86",
+  "source_sha256": {
+    "config/experiments/camera_lidar_b0_v1.yaml": "7a0c83c4a33016c9a4db89111aec4605983196a494dc2207b69ed423284a5170",
+    "src/asmc_camera/config/bev/bev_grid.yaml": "8bad13875a2b7d9eec4a35687433446b1a57112257ec34520cf5c1d6e47e0ad3",
+    "src/asmc_camera/config/bev/bev_grid_dev.yaml": "12c9cc1ab434d98a7720033bd75e871a9d8ed89490b6ca4e0f87acca9f912540",
+    "src/asmc_camera/config/bev/cameras_v2.yaml": "79067010d2680c7ed56a04240a3e75559ccf5169d1c038f6ea7c5a6d10dfeed2",
+    "src/asmc_camera/config/bev/fusion.yaml": "9b8a11f2c4849df99675df64b5ceec823b05c12ee82bfb0fc2e496a76982706c",
+    "src/asmc_camera/config/bev/lane_fitting.yaml": "00b0909db8813e8bda08e9c9efa079bc6556b98d56511c9b532da79aec060a9d",
+    "src/asmc_camera/config/bev/visualization.yaml": "497286b20abb22e16464596d8f1354d6a19958129300f04c2a0b12c8f4bda5e8",
+    "src/asmc_camera/config/bev/visualization_dev.yaml": "dd5f1ca51182ba792b4a97e3ce75595729ea163a0dd2e967bbfa2701a7b04bc7",
+    "src/asmc_camera/config/camera/cameras.yaml": "67741f269c4fc59b123e3a1c12bfa312db580e725c28592d33a184b7fc056d07",
+    "src/asmc_camera/config/camera/object_classes.yaml": "998d7d6d487ceecc290802649657ee4f42ccdc724229c0bb3fcc02f1c401f038",
+    "src/asmc_camera/config/camera/object_classes_coco_all.yaml": "80a6cde8252c9a1bf6251136dcbc92239fb1d9e68d39759d07eb28d68ca2bc79",
+    "src/asmc_camera/config/camera/object_classes_mission_v1.yaml": "ff72c6fe4b1f45e936932d49d5b8c1b6e2adf70cb1991512fa736a5ea2201c9e",
+    "src/asmc_camera/config/camera/object_classes_seg_experiment.yaml": "f0e4325b637086a06fc91cfcac299759841e978391504d5747bfc46e7061f41d",
+    "src/asmc_camera/config/camera/object_classes_yoloe_l_v1.yaml": "e7c5aaa987fac39bfab87aedaf4dbbd1ff986912678046125d8f41db70b15a12",
+    "src/asmc_camera/config/camera/twinlite_medium.yaml": "4f8ab7228971b84a31324f8448b5aa90c22e6e9d106afedf638015ba4d1536dd",
+    "src/asmc_camera/config/camera/visualization.yaml": "da013db2e5c5333a0c969c883b57735a4f6704cdc7db879743076d8fa2fa32d3",
+    "src/asmc_camera/config/camera/yolo11m_coco.yaml": "be81e882062d3accd1b0f06b6bef768e7f47d4b73af3f0f2c128866914f80c07",
+    "src/asmc_camera/config/camera/yolo11m_coco_all.yaml": "a5ede846867d509c08c4e44d205ae5bdd47943709d7181e1de471de0f7459774",
+    "src/asmc_camera/config/camera/yolo26s_seg_experiment.yaml": "2a52fdff030622ebeb515314886ab5ca4ef20887ecbb042ca781f787a68dad3f",
+    "src/asmc_camera/config/camera/yolo26s_seg_mission_experiment.yaml": "0ff6580c1b93198882297bc99f37f5471410131f8a2b619d1ea5a3911761bfdb",
+    "src/asmc_camera/config/camera/yolo_ego_hood_filter_v1.yaml": "9f4133b6b1c6cf113c510c202c5205c75e817626b4539a13adf1482b0fc1b323",
+    "src/asmc_camera/config/camera/yolo_hood_mask_v1.yaml": "4e94448bca0b5081e53411c5450938074d69bc223166cb173a41b8f80a210403",
+    "src/asmc_camera/config/camera/yoloe26s_seg_experiment.yaml": "c23ed41e00fa70d0c925cd00e84c4c4ab4183433d7d3ceaf7e96e5cd1f397192",
+    "src/asmc_camera/config/camera/yoloe26s_seg_mission_experiment.yaml": "a615dcc813f27b681815927f9ad18e6ad40ddb48c73e08b2944d2cd87bbaea52",
+    "src/asmc_camera/config/camera/yoloe_l/base27_pytorch_2plus1.yaml": "cdc15b8082ea81e89fbf7d46ef90b78e67bb350225b0d8de8af5578fd6039bb5",
+    "src/asmc_camera/config/camera/yoloe_l/base27_pytorch_batch3.yaml": "15502da7c1da5acd003b45598a8bf34c7e12ebca3d6e23ac2272aac5c82e3453",
+    "src/asmc_camera/config/camera/yoloe_l/base27_pytorch_sequential.yaml": "df1a7e34a2b33d1d2c6857baba7c02aa126e11346a7abc77efcf360175551fc1",
+    "src/asmc_camera/config/camera/yoloe_l/base27_tensorrt_2plus1.yaml": "c69f501276646177f71f43214caa15374deb699f8edfd02953999b36df553ce9",
+    "src/asmc_camera/config/camera/yoloe_l/base27_tensorrt_batch3.yaml": "e0c9db1444461db48b671586bc5b672793eb1bbf03e4794bb05a3ba4ed6933ea",
+    "src/asmc_camera/config/camera/yoloe_l/base27_tensorrt_sequential.yaml": "316068ba6c572c871ed1c7b5ae3e51b843fb921645094e143e6eb7e1d7a1162f",
+    "src/asmc_camera/config/camera/yoloe_l/rich42_pytorch_2plus1.yaml": "da42865354484a42224c04f512d2cd8ce8075f03415d549d3b2448f1e7069572",
+    "src/asmc_camera/config/camera/yoloe_l/rich42_pytorch_batch3.yaml": "b6a1c21aecabdf56f78b1fd7ab55893d44ef1eedeec30245dc76001af02b433d",
+    "src/asmc_camera/config/camera/yoloe_l/rich42_pytorch_sequential.yaml": "8353ddde7003778040ff982c7ae4a977b716963b42bdae910fef5ba71294825b",
+    "src/asmc_camera/config/camera/yoloe_l/rich42_tensorrt_2plus1.yaml": "b79d00374d1fd226efa5a150db5e600555c325ee3835fced90ab5666d707b998",
+    "src/asmc_camera/config/camera/yoloe_l/rich42_tensorrt_batch3.yaml": "b6986a692635342535ffc6212b5002ceb7fa7742e5b17b95955b49a0b7d537a6",
+    "src/asmc_camera/config/camera/yoloe_l/rich42_tensorrt_sequential.yaml": "78657343727299343301b3c7c33d1179867db6335a455bf527d98c1ac69cde3e",
+    "src/asmc_camera/config/cameras_v3.yaml": "86d36e10f5ca1f9b32d201b3222e4328a63d9ff1452b49defec07c7b2ca806ec",
+    "src/asmc_camera/config/offline/bev/shadow_map_rgb_bev.yaml": "4fe28a08fa121d30cd38f38a504dbb0facb34c41e2c1d6acda7d94216e52629b",
+    "src/asmc_camera/config/offline/bev/shadow_zone_kcity2025.yaml": "8f26ca53c0775aaf7713c6fd93990f1cb7c42ddf4f03f20431e644b6b577a177",
+    "src/asmc_camera/config/runtime/camera_region_example.yaml": "c564e583c0cbe5135c0d9d3b3aa8aa7603d663709c026730ea66c33b15ff8ae6",
+    "src/asmc_camera/config/runtime.yaml": "34c1f5300a9dfa446273edd4e5ca3cd072c507124e862d5e4b581e8777d739e5",
+    "src/asmc_camera/launch/camera_lane.launch": "03d0c11b544360f7f4cd1a7571471bdfbc398f601b3a09f9c111416b495ab778",
+    "src/asmc_camera/launch/camera_objects.launch": "c7de8dd688fd597eb5a3acdecc2dc50646b4bb159a0fdae27f3d5473b292286a",
+    "src/asmc_camera/launch/camera_objects_coco_experiment.launch": "63a1ae36a1ca5a49902724b7821a1d0a5ff2e2fcab4f7e5275cb3e05c2799e2b",
+    "src/asmc_camera/launch/camera_objects_seg_experiment.launch": "b95594675b13708b3c852b67e6f196e4b9bc43c6161dc7d547d16931936f8ff2",
+    "src/asmc_camera/launch/camera_objects_yoloe_l_experiment.launch": "41dad145b4969672c77616b89e9250318f7d63a60bb65c1a18c72b650cc04b2c",
+    "src/asmc_camera/launch/camera_region_example.launch": "1723d6cbac87f2a441d038b8e732fda0746a9d008ab40a7b754a3b15916d433f",
+    "src/asmc_camera/launch/perception.launch": "e87b556cc65b32d57dbaee525b4c2bf12350d99f0e42de9189242af72e370e97",
+    "src/asmc_camera/launch/shadow_lane_family_offline.launch": "0cfa0cee6c98b554935e4ca5f0a2253a6168e685c002e43b3a536ea6363d911a",
+    "src/asmc_camera/launch/shadow_map_rgb_bev.launch": "31391ac40fcf8cbaba612e1b41a2aa0f48a6d0898c12b54c12f7b3868fbe0bbd",
+    "src/asmc_camera/launch/traffic_light_closed_loop_acceptance.launch": "b974c939547fe28612d8763c20f33b4850d2724dc2c23e13c6e38b161732fc94",
+    "src/asmc_camera/launch/traffic_light_vehicle_acceptance_stack.launch": "b31c4f4bc30249a04b692bd0472a4bedfecfac34ae7fb1cef859ba9511aa71e7",
+    "src/asmc_camera/launch/visualization.launch": "4385e75126543b67f22f20f1e86f18990a61e231c249c470f5538449761f9fdf",
+    "src/asmc_camera/msg/InferenceStatus.msg": "8b180bb3253c351be2b8f479b8a3400f10e578e9eff8ec97f5c27947ca2da561",
+    "src/asmc_camera/src/asmc_camera/__init__.py": "54f86aa2ad4626963d3edbd2bc3d4474abd846fda1588c28d809251cfdd18a8f",
+    "src/asmc_camera/src/asmc_camera/bev/__init__.py": "97e21d5c85cd3ca3229dd0030f4afb0cb9f6f5585e772dab0c6fd5283f806d03",
+    "src/asmc_camera/src/asmc_camera/bev/boundary_candidates.py": "6a35ad105f76bd1ff058e969bcbaf6c6506bdb3cbd66e5a7a86c3148ad6bd51d",
+    "src/asmc_camera/src/asmc_camera/bev/boundary_family_output.py": "d1ce8f64f5a2db3352961e47ccf84cb9654293ef6ef71fe355f8ab73b8ca45cd",
+    "src/asmc_camera/src/asmc_camera/bev/boundary_output.py": "75e85d860eb3d756e31e43528cff9ab6f5d0a7715fb57fdc863ebacf259e2578",
+    "src/asmc_camera/src/asmc_camera/bev/calibration.py": "1bf6efb0c96e1056e12ed9afbff1474b247529ea09b03fbb0b7bc9acccf1fedc",
+    "src/asmc_camera/src/asmc_camera/bev/fusion.py": "98cdac0bc2db898f36d697e896237bf0cf805199891a365d0dc708a5f40096d2",
+    "src/asmc_camera/src/asmc_camera/bev/grid.py": "c5bca661d9f1a69bf5870fa28a97681fc58a0599ef6be8166d2887248c335f56",
+    "src/asmc_camera/src/asmc_camera/bev/homography.py": "9633bc9d702e5bc7834d01001a547b588eba41d3e8e16610cdc236492935c64e",
+    "src/asmc_camera/src/asmc_camera/bev/invalid_support.py": "6a44ab5dfb21fc82b6763145269b88e02221a874e43a61aaf540ff525310a713",
+    "src/asmc_camera/src/asmc_camera/bev/lane_evidence.py": "6681f00e5de654bdaf389ff13c2634830aab3d22684d7af59a097a0de49e8c24",
+    "src/asmc_camera/src/asmc_camera/bev/lane_tracking.py": "237449d1fe92cbf2c8de8670be2ed5b399ca35b58d3562edfaa92149800c79f9",
+    "src/asmc_camera/src/asmc_camera/bev/model_grid_projection.py": "2a44693fcc293595d181e9fc97547a827c5fecb7252a1442e577fc6c513a9b20",
+    "src/asmc_camera/src/asmc_camera/bev/performance_monitor.py": "616fbb06c1dc8d978e96c6b2fefd89a6a2a4f6a0f99dbc344b8f80cecf60be17",
+    "src/asmc_camera/src/asmc_camera/bev/pipeline_audit.py": "20ff0a2f5c38fa0d451eab05aced8773cf9a6e641a7cc08d48821adabb7d5a56",
+    "src/asmc_camera/src/asmc_camera/bev/planning_usability.py": "49bb30188e8278eb621c7d1576f8cc189fba435ea53a9ef1d127cb2be95aeaa8",
+    "src/asmc_camera/src/asmc_camera/bev/projector.py": "d32c04a7a6e1945c6a26b269a116d6adf0a90cda3d7ce57af38a8410273b140e",
+    "src/asmc_camera/src/asmc_camera/bev/shared_lane_family.py": "f48ad445432d900c3d623429fc063ac56016f8e9d7e5109a3d100dfe17b8705d",
+    "src/asmc_camera/src/asmc_camera/bev/spline_fitting.py": "4ea21fd102b2b1bb182dfdd3d78c8b0f535d7c70f60d46dfb02971c23b2a21ff",
+    "src/asmc_camera/src/asmc_camera/bev/visualization.py": "9d4dabc7bdb7a4ff6bf7656103c9747ae54059a4d3851a22af89843915d16326",
+    "src/asmc_camera/src/asmc_camera/camera/__init__.py": "7b4aae0a416827070fcbc1221b1f1e501505c92d3a413738d560f43118fe0330",
+    "src/asmc_camera/src/asmc_camera/camera/backend.py": "17d1868e4e8a15bbc3f80bc2b700deb595b451ba9064b40a6d74bcfb6826d11b",
+    "src/asmc_camera/src/asmc_camera/camera/backends/__init__.py": "8c4cf2d26cceb5399bf7060d81dbee02cf3c92561122fea82179af030beb62c2",
+    "src/asmc_camera/src/asmc_camera/camera/backends/twinlite.py": "115c08d0e9a55a93eab5d169bf0c45ffcf5ffccd7ab1a16cf6c627fcda4be9ea",
+    "src/asmc_camera/src/asmc_camera/camera/frame_buffer.py": "071bac35371ef4331ea5c66c3c784023f2f338421e6eb4767c4a99016067fb9a",
+    "src/asmc_camera/src/asmc_camera/camera/geometry.py": "d790ec017dc8207c6b619bafc233ea60ece8f4a2aec57fb93ecce9e637552515",
+    "src/asmc_camera/src/asmc_camera/camera/inference_engine.py": "4592cec42ce2afe33ea17e8d538467b52f219ee3e6cca7e1e20c5038b585148f",
+    "src/asmc_camera/src/asmc_camera/camera/visualization.py": "5f500ad22838348c7b75b6dcf75aa97dae4c1922e5320b72c5e47045b46779bd",
+    "src/asmc_camera/src/asmc_camera/detection/__init__.py": "9c72a63b5e0cf46b0ef4215670d53fdc562e7a9d3d345d3b1df9eb3f5d996de6",
+    "src/asmc_camera/src/asmc_camera/detection/backend.py": "179db0326f60b02e3f2520d0947a44f89b840f9ac7e7403b3b4b3a011d05c24f",
+    "src/asmc_camera/src/asmc_camera/detection/batch_processor.py": "67c34c2ec8b15e88294bcb88ac5df3df5c596888b96668052e5257e34e46f570",
+    "src/asmc_camera/src/asmc_camera/detection/batched_backend.py": "353c977e3c783c960bd65d39db218817ee705be9a1bb0420f7e0afb8bed56374",
+    "src/asmc_camera/src/asmc_camera/detection/batching.py": "d099ed782f24aeb89bac64064260cd63bac5df10211dddb7ce356946a1b51297",
+    "src/asmc_camera/src/asmc_camera/detection/classes.py": "cabd099360a9d8151b817539a4de007c6af8e6927dee62c31d1caff1afe4fb30",
+    "src/asmc_camera/src/asmc_camera/detection/ego_hood_filter.py": "27191c4ac74b3ec6e990425fde44a34e6480183e2801388d5ddbae22c73593ba",
+    "src/asmc_camera/src/asmc_camera/detection/hood_mask.py": "dff5f991c5f63a90b0c832ee5fd1161edea1a34808b687ec7838af509bfa2b5e",
+    "src/asmc_camera/src/asmc_camera/detection/messages.py": "70cc13ff398511cd979c17e6740b1a2322e27a21a4898ad1067b47868f115920",
+    "src/asmc_camera/src/asmc_camera/detection/processor.py": "78ba3341e4eba489cf83d67c8cb86c1b28a286ed45dd4c603be20b8b0d6442fb",
+    "src/asmc_camera/src/asmc_camera/detection/segmentation.py": "eeac480a968be6b5538ff5385ce4fd288cc371ed0cefd5c7cc4a80d3df822ba0",
+    "src/asmc_camera/src/asmc_camera/detection/ultralytics_backend.py": "301cf9477c5e3d30e20e8a45300ffde70b55f5417ab04bcfa5daa84c954dd921",
+    "src/asmc_camera/src/asmc_camera/detection/visualization.py": "3108b52a522b47d09f709a39ba7d17130b2fead55083ffcbc78f39f7d3a469f6",
+    "src/asmc_camera/src/asmc_camera/nodes/__init__.py": "f40ae99eb1cac103a4b242ee30fae736ceae86c8fa38a7021602222d9613f03a",
+    "src/asmc_camera/src/asmc_camera/nodes/camera_bev_fusion_node.py": "ad6ccb09e37d0fefb504295fedf43f9a1e226e046b409636aa1eb669e598fc4f",
+    "src/asmc_camera/src/asmc_camera/nodes/camera_bev_node.py": "7202554deaf6686fd3765af1fb208c8ff39ba66d849b03100b036f2c0f5b2e84",
+    "src/asmc_camera/src/asmc_camera/nodes/camera_bev_visualizer_node.py": "8e4e52dab90fc944f6ade5a8bfea2a33ec3ef74a351263f65e8f9693c0346a30",
+    "src/asmc_camera/src/asmc_camera/nodes/camera_region_example_node.py": "dff6670fde31eaf5839978aa0c2bc2cbbb52243a5c36a9cd92ad7d578979eab8",
+    "src/asmc_camera/src/asmc_camera/nodes/lane_vector_visualizer_node.py": "4bdc6d5f06fd966e2f6fdd1410919720e101dad540532486306e22bafb14ed41",
+    "src/asmc_camera/src/asmc_camera/nodes/lane_vectorizer_node.py": "12dbdc71effaa533d28c69c82b1c72e8afafec722fddb1461e618e157e316b83",
+    "src/asmc_camera/src/asmc_camera/nodes/object_detection_node.py": "c035ec3df29554c00a0bc374039baface378ad87ee11fcbe08f338e539501af5",
+    "src/asmc_camera/src/asmc_camera/nodes/object_visualizer_node.py": "4f5bef65314b65e2a58ed351659b19c764aa1c204902d514ae31c40d91698754",
+    "src/asmc_camera/src/asmc_camera/nodes/semantic_inference_node.py": "a94b8204e4f553b7d6958f6b77184659d2d00c8da6c01378057cdfe15d9fd9a3",
+    "src/asmc_camera/src/asmc_camera/nodes/semantic_visualizer_node.py": "8a519d78fa61e850e685c7e76146172e893662d9d8328e8318cd701e00cdc7e1",
+    "src/asmc_camera/src/asmc_camera/nodes/traffic_light_node.py": "1afe64dcb402c334a2b6d9c53683a431573411d2db61b3ca506e67d44d2c74ce",
+    "src/asmc_camera/src/asmc_camera/nodes/traffic_light_visualizer_node.py": "9b58b6f47529d156b3b6aee01ea6bd71657a223b83e3d7eb6e1f9b65b6c81d7b",
+    "src/asmc_camera/src/asmc_camera/offline/__init__.py": "552571af44b3d1eaa48df7d7d387b7350e2f2d7e8d04fa78385c96f67ac94362",
+    "src/asmc_camera/src/asmc_camera/offline/bev/__init__.py": "9272ea8f157b66c883080ae3ea6f3092d6e53897b59623679bdf5be603b1f94d",
+    "src/asmc_camera/src/asmc_camera/offline/bev/bag_batch.py": "c945e5d00c84b2eb8afb7c609d91686ab47437132f86dc91bed80e1232d49cd8",
+    "src/asmc_camera/src/asmc_camera/offline/bev/invalid_map_audit.py": "a38bc331b4fe336d34c1193ec0854d1e29c30766beca2d6fb966b6b843594725",
+    "src/asmc_camera/src/asmc_camera/offline/bev/invalid_support_review.py": "33b486b864691971614471171788d875212a6117eed512df2ca618fa3a6def2e",
+    "src/asmc_camera/src/asmc_camera/offline/bev/lane_evaluation.py": "fe850aab771a406c24756263e02ff24d21c1b28d7483f94f05944c00087f386d",
+    "src/asmc_camera/src/asmc_camera/offline/bev/map_lane_calibration.py": "b613117134fea731f546e582c4dcce4b515560f601b7775dbc6b25bf85bc3c4d",
+    "src/asmc_camera/src/asmc_camera/offline/bev/offline_evaluation.py": "935a9de50eff88c7ee89094a1a032fdf13202f565c58c38741c97fa161353f32",
+    "src/asmc_camera/src/asmc_camera/offline/bev/pose_time_alignment.py": "4bd2373f09deb4fada645cdf6b4e2c8b7536d5364f0ec466eee4f5e71c1ec209",
+    "src/asmc_camera/src/asmc_camera/offline/bev/rgb_bev.py": "9009de17de3ba347f8c2a488024736b5a2465373d93f3bf41a20dbfd5b7e3fcf",
+    "src/asmc_camera/src/asmc_camera/offline/bev/shadow_map_gt.py": "86d6918dcf2118ddd72bb0b9d2f9265157f94b2edf76ad2dd0e71c2564c57edb",
+    "src/asmc_camera/src/asmc_camera/offline/bev/shadow_result_audit.py": "127c086c530cae2a596f25ae1109b2bebf480162b91998f4d89ff52cf0bb0aec",
+    "src/asmc_camera/src/asmc_camera/offline/bev/shared_runtime_audit.py": "64f0c88fcd89274b856f015f7ebab98adac5f5980fa9f1d0bc3d4d07247e6d56",
+    "src/asmc_camera/src/asmc_camera/runtime/__init__.py": "e54975b9f121c584b9955d211c1fb23f139ad913e339da0637007a73e1ca37d8",
+    "src/asmc_camera/src/asmc_camera/runtime/cadence.py": "1212c90bb18b710bc9ee68edd3e55986a1a5b512cd1f126008f3189f318d8273",
+    "src/asmc_camera/src/asmc_camera/runtime/region_example.py": "e418cd26a1b0d363b713aa9737b765dc07fdbc8858c5f879dfbe1a76bafd6db8",
+    "src/asmc_camera/src/asmc_camera/runtime/ros_control.py": "97d3a4a6a8381117be906a97cd2bfe7672726436cf91e78882e05999085e9017",
+    "src/asmc_camera/src/asmc_camera/runtime/state.py": "bb882955bbca0dd8bbeeceb3c45b8cb47811b991bd0548e4e70fc97a75a458ab",
+    "src/asmc_camera/src/asmc_camera/runtime/trace.py": "44d2976f5f7ae2f613124cc8672b01352190a31cb3256993343a1cabff24a8fc",
+    "src/asmc_camera/src/asmc_camera/traffic_light_contract.py": "a9c6ee84763c9109cc8520ceabb5ed4daf3586abfa642158c7880bc734bb9b53",
+    "src/asmc_camera/src/asmc_camera/traffic_light_model.py": "60e5ee2c35b7211bddaca00dad6d4f3e8274aeb6f76d4ffb92fbce756135b61c",
+    "src/asmc_camera/src/asmc_camera/traffic_light_visualization.py": "65b5f04eaea671af516de24bf39c637e8f893f8256a5c3ac768d298f822fe962",
+    "src/asmc_camera/src/asmc_camera/training/__init__.py": "3ef0e1f8e6769620f77d325969c882fc10b9aba53a5d416822752acca6753691",
+    "src/asmc_camera/src/asmc_camera/training/twinlite/__init__.py": "241ce3d268aa75a3ed444d1283cb7e5cf4e2c3f77126aa8da2314815b671bf36",
+    "src/asmc_camera/src/asmc_camera/training/twinlite/dataset.py": "c1384bafec07f4a901bbd5ab386d32ef228990301ae01fe024df52c2ffdd02b3",
+    "src/asmc_camera/src/asmc_camera/training/twinlite/external_model.py": "8af79ac9c934d6f229febce72b3374764dc8d809849dbd33c9b50d9ff1b4d414",
+    "src/asmc_camera/src/asmc_camera/training/twinlite/losses.py": "00efda6cb56d93f091f577183b76c33250c148064b1c396d35c1319799d27ed7",
+    "src/asmc_camera/src/asmc_camera/training/twinlite/tasks.py": "ff8e65a9a932992e9283fdcc8548e43f4ea0f5b8a4599276e49391f3421574d2",
+    "src/asmc_camera/src/asmc_camera/training/twinlite/training.py": "0a19594d7cab36cb70f83e3f2252c5719cdb7344e80086b451867383048bfef8",
+    "src/asmc_camera/srv/SetInferenceMode.srv": "75274f74f0b0e792e5054e7b1e345438ff09163f152bfab1b8d1bf3fdaf8b712",
+    "src/asmc_msgs/msg/BehaviorCommand.msg": "4d1eae77eceeb23ce4e6453340e57a7e44d5b96251af88de391c9ad64e493d5b",
+    "src/asmc_msgs/msg/BehaviorContext.msg": "364e6bd6c949d9eb30200c47f5439c173cb837dd214058c36cb1359f6790a576",
+    "src/asmc_msgs/msg/CameraObjectBox.msg": "93d6dc273e1249c65539d01e08cfc0a7da6ca05a91ad70d15adecf07fa05a94a",
+    "src/asmc_msgs/msg/CameraObjectBoxArray.msg": "11b751d52c38b759355437e6c22378196a92b026c888226e656f9a0e8b4f209c",
+    "src/asmc_msgs/msg/CompetitionCheckpoint.msg": "0d2a14ec11ff92106b461fb98d64d08b4958345b586f0f70ba8474d10244ee4b",
+    "src/asmc_msgs/msg/CompetitionCheckpointArray.msg": "528ed5154faa0b3624647c7eaafce4753ca883839909c500f75c92a01671125e",
+    "src/asmc_msgs/msg/DetectedObject.msg": "0137ff768f5cad6e5e2c3784dd6af818dcd4888a647b4f08a73a60a3d6ff630e",
+    "src/asmc_msgs/msg/DetectedObjectArray.msg": "b9d4660cd540fb36ee9ac7673e5d25a64cab9416b031128922d145f277a5fcad",
+    "src/asmc_msgs/msg/DrivableArea.msg": "6c2b8f838ac50d927e2489b5477989c9715226641d9ae609d68c68cf9175f8d7",
+    "src/asmc_msgs/msg/DrivableAreaArray.msg": "d6d143bab65d2f5b7598e21f011e8f2b35e19981e699144c546e8ed43b1c7f45",
+    "src/asmc_msgs/msg/FrenetFeedback.msg": "e68970875d9120c1d845de237b8b9f488b8d6f20f11de54d02291061c51b400f",
+    "src/asmc_msgs/msg/HdMapMeta.msg": "e8bf223ccd185df17e8c6c2601a9aa8d7913f9235f6590325b694ea489278e2c",
+    "src/asmc_msgs/msg/Lane.msg": "c842278e9a430499e723b050b7cb84119f2f3e8c5b74877795252fa55f8bc761",
+    "src/asmc_msgs/msg/LaneArray.msg": "a199edb1a688ef6f60c87348017fe5142da648f396164e006d77ce9d2f181ecd",
+    "src/asmc_msgs/msg/LaneAssociation.msg": "57ced1b68797a8a1777b55540e0762b3c31b68a2836f304e587c89ce776f956a",
+    "src/asmc_msgs/msg/LaneBoundaryFamily.msg": "6bc3ca95dba989daa017db8cb57ca8061b9c73c5e273335fb40300c826d8611f",
+    "src/asmc_msgs/msg/LaneBoundaryFamilyMember.msg": "18764087479b4a0da230c3cd749a01408092c9b19afeea25ccd404c7f0229d69",
+    "src/asmc_msgs/msg/LaneBoundaryObservation.msg": "752dea18724055c250e69770c55b9141af77a950721312b790558d7748d26687",
+    "src/asmc_msgs/msg/LaneBoundaryObservationArray.msg": "e9b5f165668069858fab289f149fe7b17a40812a1dc0f02e0fcf0011db86b081",
+    "src/asmc_msgs/msg/LaneMarking.msg": "024758c33675a9a3954b6568bb28be719af29c55b41a9a0f6f94af885332fb5a",
+    "src/asmc_msgs/msg/LaneMarkingArray.msg": "c2ddbcd1379f10b04f79ccda07ddd20c3071acef11ec382a46d6cb35f15d10b0",
+    "src/asmc_msgs/msg/LidarObject.msg": "34a294d0c578ef5e17134ee156c5d6f9bf76d09a577442f444806e6171b66066",
+    "src/asmc_msgs/msg/LidarObjectArray.msg": "b484b53e59922fd4ad19799c46573ee7502e7edf5872834b1253dc60893db169",
+    "src/asmc_msgs/msg/MissionZone.msg": "d06e3ec39bd8c0292c22ce9b09e388ff7bf084d62fa5f8b552a63f01da8334e6",
+    "src/asmc_msgs/msg/MissionZoneArray.msg": "8c7f097982bf18eb465b509bd5e65811e5f71ae731e36a89f5931f6c629b77af",
+    "src/asmc_msgs/msg/PlanFeedback.msg": "17278e09283ac563bf4880b0192d3dab3f20b816479f6e43572feb5969428c2e",
+    "src/asmc_msgs/msg/TrackedObject.msg": "7163062e669b753dad99c3c015a3c093268be24ea410cf7a3ac884e2f8c0f4b1",
+    "src/asmc_msgs/msg/TrackedObjectArray.msg": "01c70fbbe038ce38c5f77e95d2ed43eb7e742314b470df5db6d5b435580f2d22",
+    "src/asmc_msgs/msg/TrafficLightDetection.msg": "2f4ad8a1923e484f92d22612aeb4cdae370e726eec44c1e970facdf775813a55",
+    "src/asmc_msgs/msg/Trajectory.msg": "1fe76fb79468ba3579c18ccc96d33a971b40dd17704509e854625b554c43406d",
+    "src/asmc_msgs/msg/TrajectoryPoint.msg": "9bdce6e444790723cf69f664a698cde1a8b848fb917a92e58d3e0ce11812ac04",
+    "src/asmc_msgs/msg/VehicleState.msg": "8167c328acb6cdc21270d4fceda53f90686dfc27c1540217ff6d6c6204cb451f",
+    "src/lidar+sensorfusion/src/Main/main.launch": "ff8e4a73a5130d8a59b7cd32354c4bdd0dc0c5c491568380872b2113d09f6768",
+    "src/lidar+sensorfusion/src/Main/src/Camera/Camera.cpp": "39415a2d39df556d0d1b8109b2cbd04b0dd289f8f0ff0b40a4d71901a2292493",
+    "src/lidar+sensorfusion/src/Main/src/Camera/Camera.hpp": "1bac11f0a0f25e39d92c4fcdd1e3e2de88a7c493a9f193a7bdbe3bdba1e6d304",
+    "src/lidar+sensorfusion/src/Main/src/Camera/LaneDetection.cpp": "52770b12ebcc27fa984541c495abc7a59b5ca4d6b3f1a008782685580a03aeaa",
+    "src/lidar+sensorfusion/src/Main/src/Camera/StopLine.cpp": "7124cd819ff23dc4b6836a2a9e43c0100dbe295d9e7be5f980beba5069001f72",
+    "src/lidar+sensorfusion/src/Main/src/Camera/TrafficLight.cpp": "3fef4a73f4072a152f62c7562a2e5b5278f46fd2d634e2a22051d132bdb3ec4d",
+    "src/lidar+sensorfusion/src/Main/src/DeadReckoning/DeadReckoning.cpp": "7d5fa205c5704f9866ae7edab79b19935467ed0b688b73f13c73c17966fb6c30",
+    "src/lidar+sensorfusion/src/Main/src/DeadReckoning/DeadReckoning.hpp": "f23566901228535e0d00861645928909ed28a31f639cde196328804b70d31c46",
+    "src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundary.cpp": "190279b631c7df9804ed9affff1ca7516d692ec1c87cf09610474576c067af18",
+    "src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundary.hpp": "12074c382cff8384956bcf092a29936bdb44d4c1a906eddddeb77ee5367ba52f",
+    "src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundaryPublisher.cpp": "a7d63f13aede38e4d8c9e46b83e2127b7070d1ec01c67f2b4cdfc9864e62da61",
+    "src/lidar+sensorfusion/src/Main/src/Geometry/FrameBoundaryPublisher.hpp": "5136354e7827f9cce67cb26ec213c0b584455d6e0faaa79866d5bccb7fb32724",
+    "src/lidar+sensorfusion/src/Main/src/Global/Global.cpp": "707589ca0a5d043831e20f10a7b96a45cc63074268a82b2e6f305a801fd01d60",
+    "src/lidar+sensorfusion/src/Main/src/Global/Global.hpp": "940a60d08143baca968fe9ea8a0e0335abbf9f2d78ff9316a6c6642e424e78fc",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Clustering/Clustering.cpp": "2c80ca4c576a4ab93c6cb670bb5a5500509e8d8bb1977313b754065255cff6b3",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Clustering/Clustering.hpp": "f6c5d3bce5699db032d9af622f3ec672d36b9b60eaa55f2adf12db0c9903e42a",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/FrameFilter/FrameFilter.cpp": "af413aa180b26a968f413cd2052bc718e78a1d7a94764186748596dfe1fbb155",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/FrameFilter/FrameFilter.hpp": "f89b4428a7c006d3c478e0b27985c00520c9b0fc2c292aa15fec3d377d204043",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.cpp": "b8080233674d5d188cb2ec5f96ec9c7efc518cb7963372136a976e0a8da465b0",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/HungarianAlg/HungarianAlg.hpp": "0ac41f97d1205feca7ce76d4a8fd96af225ab187a4e3ea1cd84392b849a8f6df",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/IMMFilter/IMMFilter.cpp": "b41ed97aadf35c4b6dcaf33e312ecb650d06dcb49da601fc16b7363652c6bfb1",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/IMMFilter/IMMFilter.hpp": "996c70cf2bb2bcf20223f70605b45ee27ee5093e6f81c6acc1d6765fcc0860e1",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/ImuRansac/GroundEvidence.hpp": "b1af1be8a3a0f6f228ffbed9a9937d908351149af89409ccadded7efb1938e22",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/ImuRansac/ImuFusion.cpp": "fa38728eb231a7f6f6f77b06f4823b53a7642364435e3598b42706ecf7389f5c",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/ImuRansac/ImuRansac.hpp": "70b378dd851d2e6b14e10cce1ad24f53358d72ae6230d6b080568c6cda75bbb7",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/ImuRansac/Ransac.cpp": "6411f75bd17f8c079063e381b8c94c869334d080fdaab72eb1879172d62616b9",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Kalman/Kalman.cpp": "b12660ab57b1433b09ab876c7fa73f8dcf38788220e263ce21708b78076615ba",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Kalman/kalman_utils.hpp": "0e7905fd97a2aa8219e58a8a86549910f44cc967a61f059283ee6c54bdb69500",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.cpp": "73bc82e56a9e3ab5628d7d6d86f582a533ef79b44f980edfc9e539322443c9df",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/LidarProcess.hpp": "3fd777ca746949b1be4c6e75e57be2d2509565caca2bfa8752ab3b68a5246029",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/PipelineProfile.hpp": "6356f0ed778f102f73297d8a09df65cc3e0f39c875f72a4a0f5c6baf7a0f02f2",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/LidarProcess/PipelineTrace.hpp": "2472b549128ea6376de488dd7a565914dc1c705896ceb4d8cbf2b97ed463680b",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/RoiVoxel/RoiVoxel.cpp": "0d0ade13762fe75b6934203790041baa697053b17edadf4cde0589f795d64d2d",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/RoiVoxel/RoiVoxel.hpp": "87e774a14559a11f8a1485a42b1e51857504adf09740c434fc69cfda7fe9f4c0",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/MotionClassifier.cpp": "8938f1e1791eae84063c95f17847191ec771bcee23dd2b0358607cede8ed87f6",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/MotionClassifier.hpp": "3d6d2281b82e7b2a788fb8e56be8058347647b7af792330f3424916fb47ad49b",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/Tracking.cpp": "87a2e6c0f8b246bc7574903d0e2bf8403a16b6367c39d368d4adca3806fd213f",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Tracking/tracking_utils.hpp": "ef6e8dd459374afffff8308d990a481de7d37708d7387dcc78d2932bef1e3967",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/UDPReceive/LiDARReceiver.cpp": "3b589d44ac3d167e28c89a9c74444d7015ae1bf3a25c087b3fc54a6f6beecb57",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/UDPReceive/LiDARReceiver.hpp": "48579e358c2bc0da2030e072d94f45ba1d26a188e3741a6250b49335e624d0e8",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Visualization/Visualization.cpp": "db324fd0276b3fe8c1f1d8487cb91c3f4cb492b89afe16d10c672cfd957e7c96",
+    "src/lidar+sensorfusion/src/Main/src/Lidar/Visualization/Visualization.hpp": "2bf6f170a9bed8381a907988014e7b85658c13112ccc62610bf2e17292cbb9c2",
+    "src/lidar+sensorfusion/src/Main/src/Parser/GpsSanityFilter.cpp": "ff1090eb1f5b1f7a47b2e3a32731a3fcc7f6f82c2bab634aec272f0961233b82",
+    "src/lidar+sensorfusion/src/Main/src/Parser/GpsSanityFilter.hpp": "aa57d7bc5fc1043cefe2fa903e25561e9f0ce37a0f8845a93506e0149369682a",
+    "src/lidar+sensorfusion/src/Main/src/Parser/Parser.cpp": "2ed0e858d46723a0d910f6448e30156777a6e560c25736cad38139839dff1785",
+    "src/lidar+sensorfusion/src/Main/src/Parser/Parser.hpp": "4ebfbcd14199b6d3419c3c92d6a940358b43a8cc1d654dc5483563123a90ee80",
+    "src/lidar+sensorfusion/src/Main/src/Parser/SensorPoseHistory.cpp": "a68cc83072cc130fb1e2776c44f7c87726dfc746cdebf4ad326333272c8959b1",
+    "src/lidar+sensorfusion/src/Main/src/Parser/SensorPoseHistory.hpp": "e2784b10589c8f0ab646fbb98e0f4f073a065e1ba040e9e979de31aaca1dc514",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/DrivableBoundaryFilter.cpp": "088796cf4153a6cf9c7a791ce6c96b670624fc2a28473daa4e3b2ab3929b2b7a",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/DrivableBoundaryFilter.hpp": "9e39f5c92a508e91963de0385cb9613949fb7b5b649431e2694294b1434b2786",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/DrivableFootprint.cpp": "e8028b9cca8e07f97471c23642c4db1e8cd0dfd43110a18e5bd59090e31e092e",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/DrivableFootprint.hpp": "2e52903fc0978c9547ea833223610842145fe5b09dd00be07d288a4d2affc194",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/KnownStaticObjectFilter.cpp": "5b932c69fbb454ddb0004cd504e39c4637617a1b9fbd3a2d5fb80acfa394fce2",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/KnownStaticObjectFilter.hpp": "e6b38578eaeb81f0ed033daf9c4527a4f35981b7a057d5ad855dc6cfe813289e",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectAdapter.cpp": "4bc8300942fe442326162526570c8d8a46c6aa2439550c6acee14c7b55512e0d",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectAdapter.hpp": "68aac75f6ca683ef3865db8c46f369d14086ddc680c81a31bc0a0e8581744bb2",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.cpp": "9c2fc1a26435f2885552ae5e6c9d4e3497908d7c1319614bf7284ef9858669d1",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectRosPublisher.hpp": "eff6c628373cbe121af149a66b3f735a1d905803fe15ddd269d3bc442227979b",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectSender.cpp": "b52b5d6dd3fbccb254c29813de869516c69b9185fb7393a2c18917a8ee4ef6d4",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectSender.hpp": "1e3aa05c54823b64eeb28673207252854c604ce433e4b87467edd9b16cdaf221",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlannerObjectTypes.hpp": "c1ae89819ae7cdd19074f79bfdf728630f3d56ceafc69df00dddd832d5b599b2",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlanningRelevanceFilter.cpp": "dd32883d367e8517034cda9097a35c03da852e82804941828dfa50a10aabf61c",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/PlanningRelevanceFilter.hpp": "ec68501a9fdfb0e0f26f69c9826c2ae56733e4a3d70932de03f5213932192127",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/StaticStructureExclusionFilter.cpp": "35029c449040b63517b9bed41dd31b5833f422c3af467a43ffb27095ebcd60c0",
+    "src/lidar+sensorfusion/src/Main/src/PlannerInterface/StaticStructureExclusionFilter.hpp": "6b4f24ae5e496732520a6f743f0c396e9ab3c9ea5858ec7644c1e84db291c2a7",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionCamera.cpp": "422777e4d1f6a5d6df383009193d00c6aa04789bc887a4a7b76841e7ade091fc",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionClassPolicy.hpp": "5167f228d5f1617c123a72a58a1e89d20728a582530306b59130053e5d9b1c1b",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionClassState.hpp": "5eab401baaef45d73b0abc6be4e539f9e370215384e1ecf6dd43df9a178b7163",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionLiDAR.cpp": "81d57dddacf8d800937fbbdfd968d48d05303f619458527e1ddaa98a01d79a69",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionStateTrace.hpp": "e0958747025923739e114ae0b88f7cfbf90b9b2d90c24d8ceb4adc7df3f7ff6b",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionTimeMatcher.hpp": "064e00ef0e446bdc5e46e7c248533fc289494ca49264b9486ca4f12821d8ea80",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/FusionTrace.hpp": "1c8f56b950316454bc5e1aa10b4ef43aad4d23b9852f816e6f6bb30e6d146191",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/SensorFusion.cpp": "2665005c5288453af0a68c421f8e53bfc5876ef8721b16792c6defcfba904813",
+    "src/lidar+sensorfusion/src/Main/src/SensorFusion/SensorFusion.hpp": "6c6161f42a336db3595d9f8c6ff4e67dbd5c63b8f2c4f07b1a9c53b8908d2035",
+    "src/lidar+sensorfusion/src/Main/src/main.cpp": "8c4d1adb60e9f3453a6e3e6030d7a0f2b66ebb49060cd89edbbc5eb3da0d5c7f",
+    "tools/perception/analyze_b0_matrix.py": "46e014c969a48be0f5e476941dcdb7e24590a7da875fe7b97b9ef82cca7e4636",
+    "tools/perception/b0_main.launch": "57a9542cc5d9e4bb004bc13d4cdde97e6fa52f06a948d79f432a8dfdd48764d8",
+    "tools/perception/b0_measurements.py": "87dc41de3c58da3d81699913e41d1ddd28e94a70921679320e508c3411eaf395",
+    "tools/perception/b0_resources.py": "8dd75a6320a071885b191824774ba9691bc3400c5a57801c988ae89208d32c48",
+    "tools/perception/run_b0_matrix.py": "430408d47d27a458b08368f63b3865fb4bcb8eea96a7b3525e12cc4f52a50b56",
+    "tools/perception/run_camera_lidar_b0.py": "8f642a4a18369bdbc204209eb2d8e8b2d53967039be2d81885b162419e31ea50",
+    "tools/perception/test_b0_measurements.py": "e1b989e6bde35e0e80b1c64bc7f72dd5e51f8cbc74b68aadedd19967f4aac889"
+  },
+  "weight_sha256": {
+    "src/asmc_camera/models/object_detection/yolo11m.pt": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+    "src/asmc_camera/models/traffic_light/best.pt": "70ddaf222e7bc6ff2b4748c4b07c1b24dec72a2671f39bc18e0b243ddd93c0d5",
+    "artifacts/perception_eval/runs/twinlite_medium_morai_v6_road_marking_init_b_b12_e18_20260908/best_mean.pt": "a26311b3af4e92880f632509eff3c81defc1b95135f5b463c7a08e5b6e23d24b"
+  },
+  "bags": {
+    "camera": {
+      "path": "/data/rosbags/hd_map_validation/20260921_174512_kcity2025_manual_route_hdmap/20260921_174512_kcity2025_manual_route_hdmap_0.bag",
+      "sha256": "a8f360e666f58358062e83cedbc6b51f94e8dc897402a2605eed7761a7880268",
+      "duration_sec": 176.05691480636597,
+      "topics": {
+        "/cam_extra/image_jpeg/compressed": {
+          "type": "sensor_msgs/CompressedImage",
+          "frames": 1758
+        },
+        "/cam_left/image_jpeg/compressed": {
+          "type": "sensor_msgs/CompressedImage",
+          "frames": 3513
+        },
+        "/cam_right/image_jpeg/compressed": {
+          "type": "sensor_msgs/CompressedImage",
+          "frames": 3514
+        },
+        "/gps": {
+          "type": "morai_msgs/GPSMessage",
+          "frames": 879
+        },
+        "/gps/fix": {
+          "type": "sensor_msgs/NavSatFix",
+          "frames": 879
+        },
+        "/hd_map/debug/markers": {
+          "type": "visualization_msgs/MarkerArray",
+          "frames": 35
+        },
+        "/hd_map/global/checkpoints": {
+          "type": "asmc_msgs/CompetitionCheckpointArray",
+          "frames": 1
+        },
+        "/hd_map/global/drivable_areas": {
+          "type": "asmc_msgs/DrivableAreaArray",
+          "frames": 1
+        },
+        "/hd_map/global/drivable_grid": {
+          "type": "nav_msgs/OccupancyGrid",
+          "frames": 1
+        },
+        "/hd_map/global/lane_markings": {
+          "type": "asmc_msgs/LaneMarkingArray",
+          "frames": 1
+        },
+        "/hd_map/global/lanes": {
+          "type": "asmc_msgs/LaneArray",
+          "frames": 1
+        },
+        "/hd_map/global/mission_zones": {
+          "type": "asmc_msgs/MissionZoneArray",
+          "frames": 1
+        },
+        "/hd_map/local/drivable_grid": {
+          "type": "nav_msgs/OccupancyGrid",
+          "frames": 517
+        },
+        "/hd_map/local/lanes": {
+          "type": "asmc_msgs/LaneArray",
+          "frames": 517
+        },
+        "/hd_map/meta": {
+          "type": "asmc_msgs/HdMapMeta",
+          "frames": 1
+        },
+        "/image_jpeg/compressed": {
+          "type": "sensor_msgs/CompressedImage",
+          "frames": 3514
+        },
+        "/imu": {
+          "type": "sensor_msgs/Imu",
+          "frames": 8324
+        },
+        "/morai_udp_bridge/diagnostics": {
+          "type": "diagnostic_msgs/DiagnosticArray",
+          "frames": 35
+        },
+        "/rosout": {
+          "type": "rosgraph_msgs/Log",
+          "frames": 67
+        },
+        "/rosout_agg": {
+          "type": "rosgraph_msgs/Log",
+          "frames": 35
+        },
+        "/tf_static": {
+          "type": "tf2_msgs/TFMessage",
+          "frames": 1
+        },
+        "/velodyne_points": {
+          "type": "sensor_msgs/PointCloud2",
+          "frames": 1422
+        }
+      }
+    },
+    "primary": {
+      "path": "/data/rosbags/raw/lidar_manual_20260929_130623/raw_0.bag",
+      "sha256": "859cbd84a1e845b76426f96be2778c6f54ea77fe348631a976ef3adf666d0c02",
+      "duration_sec": 48.926517724990845,
+      "topics": {
+        "/Ego_topic": {
+          "type": "morai_msgs/EgoVehicleStatus",
+          "frames": 2445
+        },
+        "/cam_extra/image_jpeg/compressed": {
+          "type": "sensor_msgs/CompressedImage",
+          "frames": 490
+        },
+        "/cam_left/image_jpeg/compressed": {
+          "type": "sensor_msgs/CompressedImage",
+          "frames": 979
+        },
+        "/cam_right/image_jpeg/compressed": {
+          "type": "sensor_msgs/CompressedImage",
+          "frames": 979
+        },
+        "/gps": {
+          "type": "morai_msgs/GPSMessage",
+          "frames": 245
+        },
+        "/image_jpeg/compressed": {
+          "type": "sensor_msgs/CompressedImage",
+          "frames": 979
+        },
+        "/imu": {
+          "type": "sensor_msgs/Imu",
+          "frames": 2384
+        },
+        "/morai_sensor_bridge/diagnostics": {
+          "type": "diagnostic_msgs/DiagnosticArray",
+          "frames": 10
+        },
+        "/morai_udp_bridge/diagnostics": {
+          "type": "diagnostic_msgs/DiagnosticArray",
+          "frames": 10
+        },
+        "/tf_static": {
+          "type": "tf2_msgs/TFMessage",
+          "frames": 1
+        },
+        "/velodyne_points": {
+          "type": "sensor_msgs/PointCloud2",
+          "frames": 649
+        }
+      }
+    },
+    "shadow": {
+      "path": "/data/rosbags/raw/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel/bags/20260912_003803_kcity2025_shadow_static_avoid_v1_sunny_11am_wheel_0.bag",
+      "sha256": "9bcb0e134a08c9b21cb9e8d29ca0e62710173cf9bebcc091d5dfc82454006b34",
+      "duration_sec": 24.751930475234985,
+      "topics": {
+        "/Ego_topic": {
+          "type": "morai_msgs/EgoVehicleStatus",
+          "frames": 1238
+        },
+        "/cam_extra/image_jpeg/compressed": {
+          "type": "sensor_msgs/CompressedImage",
+          "frames": 247
+        },
+        "/cam_left/image_jpeg/compressed": {
+          "type": "sensor_msgs/CompressedImage",
+          "frames": 494
+        },
+        "/cam_right/image_jpeg/compressed": {
+          "type": "sensor_msgs/CompressedImage",
+          "frames": 494
+        },
+        "/gps": {
+          "type": "morai_msgs/GPSMessage",
+          "frames": 124
+        },
+        "/gps/fix": {
+          "type": "sensor_msgs/NavSatFix",
+          "frames": 124
+        },
+        "/image_jpeg/compressed": {
+          "type": "sensor_msgs/CompressedImage",
+          "frames": 494
+        },
+        "/imu": {
+          "type": "sensor_msgs/Imu",
+          "frames": 1223
+        },
+        "/morai_sensor_bridge/diagnostics": {
+          "type": "diagnostic_msgs/DiagnosticArray",
+          "frames": 5
+        },
+        "/morai_udp_bridge/diagnostics": {
+          "type": "diagnostic_msgs/DiagnosticArray",
+          "frames": 5
+        },
+        "/tf_static": {
+          "type": "tf2_msgs/TFMessage",
+          "frames": 1
+        },
+        "/velodyne_points": {
+          "type": "sensor_msgs/PointCloud2",
+          "frames": 208
+        }
+      }
+    }
+  },
+  "tensorrt": "10.13.0.35",
+  "frozen_image_digest": "sha256:847c0870a0df69205362c82e9ecd18e1ca7005224284f9730a810a6e39b8c5b3",
+  "experiment_sha256": "ddbca4eb7da14cdd25eb21769d44cbcb454ac3d41824e6930a9fbc9894a2ed9d",
+  "measurements_revision": "0a90b34",
+  "revision_scope": "Runtime base commit; every report also stores actual execution source hashes",
+  "prepared_sha256": {
+    "base27.engine": "3deda735ef5762acca97ece884fa94911a5bc9a236be3a0ec79913d566cff70e",
+    "base27.engine.provenance.json": "f63457543c807954fec622c163f583b64d58d873fe97d57054e98204cce6325b",
+    "base27.metadata.json": "68b3b79a3ddddf60091738a6186ad3e6456cbea2abac2e93681d5b432719e491",
+    "base27.npz": "cb1819e0499b1a9b100be77e8b60239898544310f9f8c7439dc00e6ece4c1862",
+    "base27.onnx": "8b50a75b8e386d9e997c98266ad17926d4af461ff0219ad6411589422a8de8ff",
+    "base27.onnx.provenance.json": "6befde69c7bc2ae5f1fab9756dc059053af10db76b9baab8cb02f2c9f4f6d899",
+    "base27.prompts.provenance.json": "6c84b074d4be19fe684909526fb797418fe46c8c388a8d19c177236c7d5d228a",
+    "mobileclip2_b.ts": "35d7f213e4d75f38514e4656ad3cb91158bd33e3805d8ac349f23b186f66982f",
+    "rich42.engine": "88a6c7518cf43acd80a724b01be7d776c884f6575c7bd47e4f4c0fe26d99a165",
+    "rich42.engine.provenance.json": "ea217f771ea00b7e5c41594de475127970e7959be07f06a99fa34cb2434fb10b",
+    "rich42.metadata.json": "16dbf3a059524954812813e72224304bef421a29df55cdaad7b86537357ebdf6",
+    "rich42.npz": "15e87fd9192435e26da45261be5f7dc5ae1a9b64062385ef88db013f888b4225",
+    "rich42.onnx": "9e0dacf5834be81521604ea0fec1ba7ef3f18e9a0e752bd87b8b1622541f5e14",
+    "rich42.onnx.provenance.json": "28c38e35e2b28d445ebab1f6b5777a4768e4a3084039b9dce9f005c268a4bd1f",
+    "rich42.prompts.provenance.json": "121d12e3ffa1f759577cd9286bc0856d9ee74f8dfe17b016d154a0504e5a7748",
+    "yoloe-26l-seg.pt": "a612d2d505f24e14d87ec82d688b823b6cb600646664f16125ce6c84ce360da9"
+  },
+  "first_run_tools_sha256": {
+    "analyze_yoloe_l_diagnostics.py": "565aeeadc1827f2a209e760f1378cd6b1fd4a7da604f2f650fecee18d837e221",
+    "build_yoloe_l_gallery.py": "f71399fd1573e3e187ee11fea5963e7b912358ebfaae9c72c9e33e74f443d6a8",
+    "check_yoloe_l_engine.py": "402023545b3ae4ae48fe753b98cf65fadf4821aae43b918556c807807f57bfc3",
+    "fingerprint_yoloe_l.py": "0941f0069ad0102e039a78b7c761ce012ac07eef11525eaedf3660cbc714e13c",
+    "prepare_yoloe_l.py": "269729ba2471dad2ab82301f028f959557d670c602f057232766cf8c398bd2ff",
+    "run_yoloe_l_trials.py": "ab1bdf6075fe09ef193d29508851f2f67a0ed4005897f65ba3aaae89e7c8a9d0",
+    "summarize_yoloe_l.py": "06ff5ea122243251b576987c07e232e959cc18b7695c0ec0f5e3f270b02ff41e",
+    "test_yoloe_l_measurements.py": "157d7f094052cc730a6ee1df1caeaa45f8495ba9479609be8f725cdc5cde4ed8",
+    "write_yoloe_l_configs.py": "0a8046088044e7fb8c0938b933ae0196bd211e93799abd8197419a611b52f464",
+    "yoloe_l_measurements.py": "ff78241c0e57c8de9cd12797e3e0b9c8c05ba513cb3c3622828f1ae3be4fd924"
+  },
+  "gt_manifest_sha256": "ed2cefea5274c3366e2514b983ace614532a3926697be5e5d2ba68c0404cf968",
+  "gallery_scope": "Local raw Capture imagery; not uploaded with numeric PR evidence"
+}

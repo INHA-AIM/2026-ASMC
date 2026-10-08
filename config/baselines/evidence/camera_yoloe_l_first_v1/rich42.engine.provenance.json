@@ -1,0 +1,102 @@
+{
+  "engine_sha256": "88a6c7518cf43acd80a724b01be7d776c884f6575c7bd47e4f4c0fe26d99a165",
+  "tensorrt": "10.13.0.35",
+  "io": [
+    {
+      "name": "images",
+      "dtype": "DataType.FLOAT",
+      "shape": [
+        -1,
+        3,
+        -1,
+        -1
+      ]
+    },
+    {
+      "name": "output0",
+      "dtype": "DataType.FLOAT",
+      "shape": [
+        -1,
+        78,
+        -1
+      ]
+    },
+    {
+      "name": "output1",
+      "dtype": "DataType.FLOAT",
+      "shape": [
+        -1,
+        32,
+        -1,
+        -1
+      ]
+    }
+  ],
+  "minimum": [
+    1,
+    3,
+    480,
+    640
+  ],
+  "optimum": [
+    2,
+    3,
+    480,
+    640
+  ],
+  "maximum": [
+    3,
+    3,
+    736,
+    1280
+  ],
+  "internal_precision": "FP16 enabled; I/O dtype recorded separately",
+  "workspace_bytes": 1073741824,
+  "profile": "rich42",
+  "names": [
+    "person",
+    "dog",
+    "deer",
+    "animal",
+    "bicycle",
+    "car",
+    "truck",
+    "bus",
+    "motorcycle",
+    "scooter",
+    "electric scooter",
+    "bollard",
+    "box",
+    "cargo box",
+    "wooden box",
+    "wooden crate",
+    "cardboard box",
+    "pallet",
+    "concrete barrier",
+    "road barrier",
+    "plastic road barrier",
+    "steel barricade",
+    "barricade",
+    "lane separator",
+    "traffic cone",
+    "traffic barrel",
+    "barrel",
+    "drum",
+    "road sign",
+    "speed limit sign",
+    "stop sign",
+    "traffic light",
+    "speed bump",
+    "manhole cover",
+    "baby stroller",
+    "stroller",
+    "tree",
+    "streetlight",
+    "utility pole",
+    "guardrail",
+    "fence",
+    "fire"
+  ],
+  "stage": "engine",
+  "elapsed_sec": 241.93079371500062
+}
