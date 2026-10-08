@@ -41,7 +41,10 @@ class Coco7EvaluationTest(unittest.TestCase):
             with self.assertRaises(ValueError): pin_uniform_rate(original,hz)
 
     def test_debug_measurement_consumes_exactly_the_enabled_outputs(self):
-        from run_coco7_live_trials import debug_topics
+        from run_coco7_live_trials import debug_topics, debug_masks_enabled
+        self.assertIs(False,debug_masks_enabled(dict(model='yolo26m-seg')))
+        self.assertEqual('false',str(debug_masks_enabled({})).lower())
+        self.assertIs(True,debug_masks_enabled(dict(debug=True)))
         self.assertEqual([],debug_topics(dict(model='yolo26m-seg',debug=False)))
         masks=debug_topics(dict(model='yolo26m-seg',debug=True))
         standard=debug_topics(dict(model='yolo26m-seg',debug=True,debug_masks=False))

@@ -21,6 +21,10 @@ RATES = dict(all20=dict(front=20.,left=20.,right=20.), all15=dict(front=15.,left
              all10=dict(front=10.,left=10.,right=10.), front20_side10=dict(front=20.,left=10.,right=10.))
 
 
+def debug_masks_enabled(job):
+    return bool(job.get('debug',False) and job.get('debug_masks',True))
+
+
 def debug_topics(job):
     if not job.get('debug'): return []
     topics=['/perception/camera/objects/debug/image/compressed',
@@ -29,7 +33,7 @@ def debug_topics(job):
         '/perception/camera/debug/mosaic/compressed',
         '/perception/bev/debug/comparison/compressed',
         '/perception/traffic_light/debug/image/compressed']
-    if 'seg' in job['model'] and job.get('debug_masks',True):
+    if 'seg' in job['model'] and debug_masks_enabled(job):
         topics += ['/perception/camera/objects/debug/instances/compressed',
             '/perception/camera/objects/debug/left/instances/compressed',
             '/perception/camera/objects/debug/right/instances/compressed']
@@ -195,7 +199,7 @@ def main():
             launch(['roslaunch','asmc_camera','perception.launch','profile:=planning',
                 'camera_objects_config:='+str(out/'runtime.yaml'),'objects_views:=[front, left, right]',
                 'start_visualization:='+str(j.get('debug',False)).lower(),
-                'objects_debug_masks:='+str(j.get('debug') and j.get('debug_masks',True)).lower(),
+                'objects_debug_masks:='+str(debug_masks_enabled(j)).lower(),
                 'lane_target_hz:=10','traffic_light_hz:=10','objects_target_hz:=20','traffic_light_wait_first:=0'], 'camera')
             wait_for(lambda:all(n in statuses and statuses[n].loaded and statuses[n].warmed_up for n in NODES),90,'model load timeout')
             time.sleep(2.)
