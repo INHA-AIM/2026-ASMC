@@ -135,6 +135,8 @@ def main():
             if not reply.accepted:raise RuntimeError('mode request rejected '+model)
             return row
         try:
+            sampler=ResourceSampler(os.environ['ROS_MASTER_URI'],list(NODES.values())+['/camera_bev','/camera_bev_fusion','/camera_lane_vectorizer','/Main','/behavior_planner','/frenet_planner','/mpc_controller'],system_metrics=True)
+            sampler.start()
             graph=master.getSystemState()
             if any(topic in ('/ctrl_cmd','/ctrl_cmd_0') and names for topic,names in graph[0]):
                 raise RuntimeError('public control publisher present before preview trial')
@@ -194,7 +196,6 @@ def main():
                                for label,age in [('trajectory',.25),('state',.20),('behavior',.5),('objects',.3)])
                 wait_for(preview_ready,30,'preview pipeline did not become ready with real inputs')
                 report['preview_prepare_seconds']=time.monotonic()-preview_started
-            sampler=ResourceSampler(os.environ['ROS_MASTER_URI'],list(NODES.values())+['/camera_bev','/camera_bev_fusion','/camera_lane_vectorizer','/Main','/behavior_planner','/frenet_planner','/mpc_controller'],system_metrics=True);sampler.start()
             active={model:request(model,2) for model in selected}
             begin=min(r['call_started'] for r in active.values())
             end=max(r['call_started'] for r in active.values())+float(j.get('seconds',20))
@@ -241,9 +242,13 @@ def main():
             report['failures'].append(str(exc));report['passed']=False
         finally:
             if sampler:
-                resources=sampler.close();report['resources']=resource_report(resources)
-                report['resources']['system']={name:quantiles([r['system'].get(name) for r in resources if r.get('system')])
+                resources=sampler.close()
+                steady=[r for r in resources if begin is not None and begin<=r['arrival']<end]
+                report['resources']=resource_report(steady)
+                report['resources']['system']={name:quantiles([r['system'].get(name) for r in steady if r.get('system')])
                     for name in ('cpu_percent','memory_used_mib')}
+                report['resources_startup_and_active']=resource_report(resources)
+                report['resource_scope']='Startup/load/prepare and ACTIVE recorded; resources contains ACTIVE only; 90% gate covers all phases.'
                 (out/'resources.json').write_text(json.dumps(resources)+'\n')
                 samples=[r['gpu'] for r in resources if r.get('gpu')]
                 if not samples or max(r['memory_used_mib']/r['memory_total_mib'] for r in samples)>.9:
@@ -256,6 +261,9 @@ def main():
             save();index.append(dict(name=name,job=j,passed=report['passed'],failures=report['failures']))
             (a.output/'index.json').write_text(json.dumps(index,indent=2)+'\n')
             print(json.dumps(index[-1]),flush=True)
+        if rospy.is_shutdown():
+            (a.output/'interrupted.json').write_text(json.dumps(dict(completed=len(index),requested=len(jobs),accepted=False))+'\n')
+            return 1
     return 0 if all(row['passed'] for row in index) else 1
 
 

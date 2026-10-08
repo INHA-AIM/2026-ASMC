@@ -49,11 +49,27 @@ planned_topics:
     launch: roslaunch asmc_camera camera_objects.launch
     compatibility_adapter: src/lidar+sensorfusion/src/Main/scripts/camera_objects_yolo_bbox_adapter.py
     parity_evidence: config/baselines/perception_camera_objects_parity_v1.yaml
+    experimental_profiles:
+      coco7_three_view:
+        status: validation_in_progress_not_default_promoted
+        launch: roslaunch asmc_camera camera_objects_three_view_experiment.launch
+        frames: [camera_front, camera_left, camera_right]
+        class_name_semantics: original_detector_label_equal_to_source_class_name
+        labels: [person, dog, bicycle, car, motorcycle, bus, truck]
+        ego_mask_views: [front, left, right]
+        evidence: config/baselines/perception_camera_coco7_live_v1.yaml
+        supply_checker: tools/perception/verify_coco7_runtime.py
+        fusion_consumer_scope: front_bbox_only
+        fusion_policy_default: unique
+        fusion_reuse_candidate: bounded_reuse_acceptance_pending
 rules:
   - Preserve observation stamp, point lineage, and local track state across GPS changes.
   - Distinguish observed-empty, predicted, input-invalid, pose-unavailable and sensor silence.
   - Unknown velocity and dynamic state remain invalid, never a valid zero/static result.
   - Camera missing, empty or stale is not evidence to delete LiDAR objects.
+  - A camera profile declares class_name semantics; raw COCO7 outputs preserve original labels and never silently group them.
+  - Reused camera evidence keeps its source stamp and does not duplicate a track's temporal class confirmation or miss evidence.
+  - Three-view object publication does not imply three-view LiDAR fusion; the current compatibility adapter consumes camera_front only.
   - Strict PoseHistory API uses already-arrived bracketing samples at most 100 ms apart, without extrapolation.
   - Main opt-in BoundedPoseHistory API uses causal normal GPS at most 300 ms old with valid scan IMU and vehicle speed.
   - Invalid GPS disables map immediately; silence exceeding 300 ms disables map; recovery requires three consecutive normal samples.

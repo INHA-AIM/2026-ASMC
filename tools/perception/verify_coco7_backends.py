@@ -60,6 +60,9 @@ def main():
         if objects:overlap.append(dict(row,overlap_actors=objects))
     selected+= [r for r in overlap if r['image'] not in {s['image'] for s in selected}]
     report=dict(samples=len(selected),confidence=a.confidence,side_overlap_frames=len(overlap),parity=[],mask_controls=[],
+                backends=[],masks={v:m.info for v,m in masks.items()},
+                gt_manifest_sha256=file_sha256(a.gt/'frames.jsonl'),
+                tool_sha256=file_sha256(Path(__file__)),
                 acceptance=dict(box_iou=.95,confidence_delta=.03,mask_iou=.95),all_side_overlap_frames=[r['image'] for r in overlap])
     def save():(a.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
     for model in a.model:
@@ -70,6 +73,7 @@ def main():
                 weight=a.models/(model+suffix)
                 detector=BatchedYoloDetector(weights=str(weight),expected_sha256=file_sha256(weight),runtime_backend=backend,
                     task=task,front_width=width,conf_thres=a.confidence)
+                report['backends'].append(dict(model=model,width=width,**detector.info))
                 outputs=[]
                 for row in selected:
                     image=cv2.imread(str(a.datasets/row['image']))
@@ -100,6 +104,7 @@ def main():
                         x,y=pt.masks[g],trt.masks[t];u=np.count_nonzero(x|y)
                         mi.append(float(np.count_nonzero(x&y)/u) if u else 1.)
                 report['parity'].append(dict(model=model,width=width,image=row['image'],
+                    source_sha256=row['source_sha256'],
                     pytorch=pboxes,tensorrt=tboxes,pairs=pairs,confidence_deltas=delta,mask_ious=mi,
                     passed=len(pairs)==len(pboxes)==len(tboxes) and all(d<=.03 for d in delta) and all(v>=.95 for v in mi)))
             print(model,width,'completed',flush=True);save()
