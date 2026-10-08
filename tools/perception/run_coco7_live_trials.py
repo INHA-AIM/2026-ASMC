@@ -60,7 +60,7 @@ def main():
     import rospy
     from asmc_camera.msg import InferenceStatus
     from asmc_camera.srv import SetInferenceMode
-    from asmc_msgs.msg import CameraObjectBoxArray, TrafficLightDetection, LaneBoundaryFamily, Trajectory, VehicleState
+    from asmc_msgs.msg import CameraObjectBoxArray, TrafficLightDetection, LaneBoundaryFamily, Trajectory, VehicleState, BehaviorCommand, DetectedObjectArray
     from sensor_msgs.msg import Image, CompressedImage
     from morai_msgs.msg import CtrlCmd
     from Msg.msg import Yolo_bbox_arr
@@ -153,6 +153,8 @@ def main():
             subs.append(rospy.Subscriber('/YOLO/BBox',Yolo_bbox_arr,lambda m:bbox.append(dict(arrival=time.monotonic(),source_stamp_ns=m.header.stamp.to_nsec(),count=m.objc)),queue_size=100))
             subs.append(rospy.Subscriber('/planning/trajectory',Trajectory,lambda m:planning['trajectory'].append(dict(arrival=time.monotonic(),valid=m.valid,failure_reason=m.failure_reason,points=len(m.points))),queue_size=100))
             subs.append(rospy.Subscriber('/planning/vehicle/state',VehicleState,lambda m:planning['state'].append(dict(arrival=time.monotonic(),valid=m.valid)),queue_size=100))
+            subs.append(rospy.Subscriber('/behavior/command_v2',BehaviorCommand,lambda m:planning['behavior'].append(dict(arrival=time.monotonic())),queue_size=100))
+            subs.append(rospy.Subscriber('/planning/objects',DetectedObjectArray,lambda m:planning['objects'].append(dict(arrival=time.monotonic())),queue_size=100))
             for topic in ('/evaluation/ctrl_cmd','/evaluation/ctrl_cmd_0','/ctrl_cmd','/ctrl_cmd_0'):
                 subs.append(rospy.Subscriber(topic,CtrlCmd,lambda m,t=topic:controls.append(dict(topic=t,arrival=time.monotonic(),velocity=m.velocity,accel=m.accel,brake=m.brake)),queue_size=100))
             launch(['roslaunch','asmc_camera','perception.launch','profile:=planning',
@@ -171,7 +173,17 @@ def main():
                 launch(['roslaunch',str(ROOT/'tools/perception/coco7_preview_stack.launch'),
                     'fusion_yolo_policy:='+j.get('fusion_policy','unique'),
                     'camera_objects_conf_thres:='+str(j.get('confidence',.7))], 'preview')
-                time.sleep(2.)
+                # Planner startup is separate from model ACTIVE transition. Do
+                # not let its first path/map loading gap masquerade as a YOLO
+                # scheduling regression, or accept a STOP heartbeat as ready.
+                preview_started=time.monotonic()
+                def preview_ready():
+                    now=time.monotonic()
+                    return all(len([r for r in planning[label] if r['arrival']>preview_started and r.get('valid',True)])>=3 and
+                               now-planning[label][-1]['arrival']<age
+                               for label,age in [('trajectory',.25),('state',.20),('behavior',.5),('objects',.3)])
+                wait_for(preview_ready,30,'preview pipeline did not become ready with real inputs')
+                report['preview_prepare_seconds']=time.monotonic()-preview_started
             sampler=ResourceSampler(os.environ['ROS_MASTER_URI'],list(NODES.values())+['/camera_bev','/camera_bev_fusion','/camera_lane_vectorizer','/Main','/behavior_planner','/frenet_planner','/mpc_controller'],system_metrics=True);sampler.start()
             active={model:request(model,2) for model in selected}
             begin=min(r['call_started'] for r in active.values())
@@ -204,11 +216,11 @@ def main():
                 for v in ('front','left','right')}
             if j.get('full_stack'):
                 report['planning']={label:deadline_report(planning[label],begin,end,gap,rate)
-                    for label,gap,rate in [('trajectory',.25,19.),('state',.20,9.)]}
+                    for label,gap,rate in [('trajectory',.25,19.),('state',.20,9.),('behavior',.5,9.),('objects',.3,0.)]}
                 report['planning']['control']=deadline_report([r for r in controls if r['topic']=='/evaluation/ctrl_cmd'],begin,end,.25,19.)
                 report['planning']['trajectory_failure_reasons']={str(reason):sum(begin<=r['arrival']<end and r['failure_reason']==reason for r in planning['trajectory'])
                     for reason in sorted({r['failure_reason'] for r in planning['trajectory']})}
-                for label in ('trajectory','state','control'):
+                for label in ('trajectory','state','behavior','objects','control'):
                     if not report['planning'][label]['passed']:report['failures'].append('planning '+label+' deadline gate')
                 if not report['planning']['trajectory']['valid_messages']:
                     report['failures'].append('planner did not produce any valid trajectory; STOP heartbeat alone is not whole-stack validation')
