@@ -355,6 +355,8 @@ user_visual_review:
     input_scope: synthetic collinear already-leveled points at previous ground height;
       attitude is context only, no CorrectingPoints call
     interpretation: conservative unknown-preservation policy, not proven obstacle-loss fix
+    corresponding_camera_image: unavailable; fixture generated from coordinates,
+      not recorded from a camera/LiDAR scene
   classes:
     observations: 11
     car_to_unknown: 10
@@ -365,6 +367,9 @@ user_visual_review:
     outside_front_case_has_original_right_image: true
     camera_maximum_source_offset_ms: 50
     repeated_observations_of_same_objects_included: true
+    user_visual_review_completed: true
+    user_disposition: camera label refinement as follow-up; case 10 geometry requires
+      LiDAR point/cluster/OBB and association review
     accepted: false
   speed:
     metric: same-track internal CA relative velocity vector delta >2m/s,
@@ -385,10 +390,25 @@ user_visual_review:
       no automatic class/object/map/velocity-validity approval
     independent_real_speed_gt: false
     primary_contains_tunnel: true
+    user_assessment: overall speed-estimate stability appears improved; independent
+      real-speed accuracy remains unmeasured
+  user_visual_findings:
+    scope: qualitative review of recorded RGB and projected OBBs; no independent GT
+    case_10: OBB does not adequately describe the visible car; trace point support,
+      clustering, OBB and class/track association before choosing a fix
+    context_1_2_3: walls appear as fragmented object OBBs in both configurations
+    floor_noise:
+      context_1: pitch-only looks better
+      context_2_3: roll+pitch looks better
+      quantitative_noise_metric: not measured
+    lidar_followup: structural boundary/object separation, supported clusters and
+      OBB/track continuity; avoid treating removed walls as free space
+    camera_followup: YOLO class coverage and label stability; preserve original
+      labels and independent legacy class policy
   runtime_changes_in_review: none
 pending:
-- 'roll candidate: 11 new primary class differences and additional synthetic unmatched
-  observations'
+- 'roll candidate: additional synthetic unmatched observations; user-reviewed class
+  differences and wall/OBB findings assigned to camera/LiDAR follow-up'
 - independent real object/ground labels and new loss/merge/association review
 - normal map tracking quality against legacy
 - fresh GPU inference and final subscriber cost verification
