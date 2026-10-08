@@ -27,6 +27,7 @@ def main():
     p.add_argument('--hood-config',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--baseline',action='store_true')
+    p.add_argument('--batched',action='store_true',help='YOLOE-l native view packing; never substitute old 640px inference')
     args=p.parse_args()
     args.output.mkdir(parents=True,exist_ok=False)
     cfg=yaml.safe_load(args.config.read_text())
@@ -37,7 +38,13 @@ def main():
                 expected_sha256=cfg['expected_sha256'],predict_overrides=cfg.get('predict_overrides',{}))
     if not args.baseline:
         kwargs.update(model_kind=cfg.get('model_kind','yolo'),prompt_embeddings=prompt)
-    detector=(UltralyticsDetector if args.baseline else SegmentationDetector)(**kwargs)
+    if args.batched:
+        from asmc_camera.detection.batched_backend import BatchedSegmentationDetector
+        kwargs.update(prompt_embeddings=cfg['prompt_embeddings'], runtime_backend=cfg['runtime_backend'],batch_mode=cfg['batch_mode'],
+                      source_checkpoint_sha256=cfg.get('source_checkpoint_sha256',''),expected_prompt_sha256=cfg.get('expected_prompt_sha256',''))
+        detector=BatchedSegmentationDetector(**kwargs)
+    else:
+        detector=(UltralyticsDetector if args.baseline else SegmentationDetector)(**kwargs)
     hood=HoodMask.load(True,args.hood_config)
     rows=[json.loads(line) for line in (args.gt/'frames.jsonl').read_text().splitlines()]
     selected=[r for r in rows if r['split']=='selection' and r['annotation_complete']]
@@ -54,6 +61,9 @@ def main():
             started=time.monotonic()
             if args.baseline:
                 detections,timings=detector.detect(image_input); masks=[None]*len(detections)
+            elif args.batched:
+                result=detector.infer_images({row['view']:image_input},[row['view']])[row['view']]
+                detections,masks,timings=result.detections,result.masks,result.timings
             else:
                 result=detector.predict_frame(image_input); detections,masks,timings=result.detections,result.masks,result.timings
             all_latency.append((time.monotonic()-started)*1000)

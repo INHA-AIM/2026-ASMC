@@ -58,11 +58,21 @@ class ObjectDetectionNode:
         if hood_mask.enabled and ego_hood_filter.enabled:
             raise ValueError("hood input mask and ego hood post-filter are mutually exclusive")
         if backend is None:
-            if experimental:
+            batched = bool(rospy.get_param('~batched_experiment', False))
+            if batched and not experimental:
+                raise ValueError('batched runtime requires seg_experiment=true')
+            if batched:
+                from asmc_camera.detection.batched_backend import BatchedSegmentationDetector
+                factory = BatchedSegmentationDetector
+            elif experimental:
                 from asmc_camera.detection.segmentation import SegmentationDetector
                 factory = SegmentationDetector
             else:
                 factory = UltralyticsDetector
+            extra = dict(batch_mode=rospy.get_param('~batch_mode', '2plus1'),
+                         runtime_backend=rospy.get_param('~runtime_backend', 'tensorrt'),
+                         source_checkpoint_sha256=rospy.get_param('~source_checkpoint_sha256',''),
+                         expected_prompt_sha256=rospy.get_param('~expected_prompt_sha256','')) if batched else {}
             backend = factory(
                 weights=rospy.get_param("~weights"),
                 device=rospy.get_param("~device", "cuda:0"),
@@ -74,14 +84,19 @@ class ObjectDetectionNode:
                 log=rospy.loginfo,
                 model_kind=rospy.get_param('~model_kind', 'yolo'),
                 prompt_embeddings=rospy.get_param('~prompt_embeddings', ''),
+                **extra
             )
+        self.batch_backend = backend if getattr(backend, 'batched', False) is True else None
         self.processors = {v: ObjectFrameProcessor(backend, groups,
             hood_mask=hood_mask if v == 'front' else HoodMask(),
             ego_hood_filter=ego_hood_filter if v == 'front' else EgoHoodFilter(),
             include_masks=self.debug_masks) for v in self.views}
         self.processor = self.processors.get('front', self.processors[self.views[0]])
         self.backend_info = dict(backend.info)
-        self.buffer = LatestFrameBuffer(self.views, batch_wait_ms=0)
+        batch_wait = float(rospy.get_param('~batch_wait_ms', 10 if self.batch_backend else 0))
+        if not 0 <= batch_wait <= 10:
+            raise ValueError('object batch wait must be in [0,10] ms')
+        self.buffer = LatestFrameBuffer(self.views, batch_wait_ms=batch_wait)
         self.view_counts = {v: 0 for v in self.views}
         self.rotation = 0
         self.stop = threading.Event()
@@ -149,6 +164,20 @@ class ObjectDetectionNode:
             order = self.views[self.rotation:]+self.views[:self.rotation]
             frames.sort(key=lambda f: order.index(f.view))
             self.rotation = (self.rotation+1) % len(self.views)
+            if self.batch_backend is not None:
+                from asmc_camera.detection.batch_processor import process_batch
+                admitted, tokens = [], {}
+                for frame in frames:
+                    token = self.control.state.begin({frame.view:frame.stamp.to_nsec()}, per_view=True)
+                    if token is not None:
+                        admitted.append(frame)
+                        tokens[frame.view] = token
+                for frame, message, raw, timings, error in process_batch(
+                        admitted, self.processors, self.batch_backend, self.raw_publisher is not None):
+                    if self.stop.is_set():
+                        return
+                    self._consume(frame, tokens[frame.view], message, raw, timings, error)
+                continue
             for frame in frames:
                 processor = self.processors[frame.view]
                 stamps = {frame.view: frame.stamp.to_nsec()}
@@ -162,43 +191,43 @@ class ObjectDetectionNode:
                     raw = None
                 if self.stop.is_set():
                     return
-                with self.control.state.output_guard(token) as allowed:
-                    if not allowed:
-                        continue
-                    self.control.state.complete(token, stamps, message.valid, error[0] if error else "")
-                    if self.control.state.mode == ACTIVE:
-                        self.publisher.publish(message)
-                        if self.raw_publisher is not None:
-                            self.raw_publisher.publish(raw)
-                        self.last_header = copy.deepcopy(frame.header)
-                        self.last_headers[frame.view] = copy.deepcopy(frame.header)
-                        if self.debug_masks and message.valid:
-                            self._publish_masks(frame, processor, message)
-                        self.control.state.record('published', stamps=stamps, timings=timings,
-                                                  valid=bool(message.valid))
-                with self.lock:
-                    self.filter_counts = dict(processor.last_counts)
-                    self.excluded_boxes += self.filter_counts["excluded"]
-                    self.output_frames += 1
-                    self.view_counts[frame.view] += 1
-                    self.latest_result_stamp_ns = frame.stamp.to_nsec()
-                    self.queue_samples.append((time.monotonic() - frame.received_monotonic) * 1000)
-                    elapsed_ns = rospy.Time.now().to_nsec() - frame.stamp.to_nsec()
-                    if elapsed_ns >= 0:
-                        self.e2e_samples.append(elapsed_ns / 1e6)
-                    for key, value in timings.items():
-                        self.stage_samples.setdefault(key, deque(maxlen=500)).append(value)
-                    if error:
-                        if error[0] == "decode":
-                            self.decode_errors += 1
-                        elif error[0] == "filter":
-                            self.filter_errors += 1
-                        elif error[0] == "mask":
-                            self.mask_errors += 1
-                        else:
-                            self.inference_errors += 1
-                if error:
-                    rospy.logwarn_throttle(2, "camera objects %s failure: %s", *error)
+                self._consume(frame, token, message, raw, timings, error)
+
+    def _consume(self, frame, token, message, raw, timings, error):
+        processor = self.processors[frame.view]
+        stamps = {frame.view:frame.stamp.to_nsec()}
+        with self.control.state.output_guard(token) as allowed:
+            if not allowed:
+                return
+            self.control.state.complete(token, stamps, message.valid, error[0] if error else '')
+            if self.control.state.mode == ACTIVE:
+                self.publisher.publish(message)
+                if self.raw_publisher is not None:
+                    self.raw_publisher.publish(raw if raw is not None else message)
+                self.last_header = copy.deepcopy(frame.header)
+                self.last_headers[frame.view] = copy.deepcopy(frame.header)
+                if self.debug_masks and message.valid:
+                    self._publish_masks(frame, processor, message)
+                self.control.state.record('published', stamps=stamps, timings=timings, valid=bool(message.valid))
+        with self.lock:
+            self.filter_counts = dict(processor.last_counts)
+            self.excluded_boxes += self.filter_counts['excluded']
+            self.output_frames += 1
+            self.view_counts[frame.view] += 1
+            self.latest_result_stamp_ns = frame.stamp.to_nsec()
+            self.queue_samples.append((time.monotonic()-frame.received_monotonic)*1000)
+            elapsed_ns = rospy.Time.now().to_nsec()-frame.stamp.to_nsec()
+            if elapsed_ns >= 0:
+                self.e2e_samples.append(elapsed_ns/1e6)
+            for key,value in timings.items():
+                self.stage_samples.setdefault(key,deque(maxlen=500)).append(value)
+            if error:
+                if error[0] == 'decode': self.decode_errors += 1
+                elif error[0] == 'filter': self.filter_errors += 1
+                elif error[0] == 'mask': self.mask_errors += 1
+                else: self.inference_errors += 1
+        if error:
+            rospy.logwarn_throttle(2, 'camera objects %s failure: %s', *error)
 
     def _monitor(self):
         previous_count, previous_at, graph_at = 0, self.started_at, 0

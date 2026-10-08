@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""Prepare checkpoint-bound prompts and bounded FP16 engines, outside live ROS."""
+import argparse
+import gc
+import hashlib
+import json
+import os
+from pathlib import Path
+import struct
+import time
+import numpy as np
+import yaml
+
+
+def sha(path):
+    h = hashlib.sha256()
+    with Path(path).open('rb') as stream:
+        for block in iter(lambda: stream.read(1024*1024), b''):
+            h.update(block)
+    return h.hexdigest()
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--directory', type=Path, required=True)
+    p.add_argument('--config', type=Path, required=True)
+    p.add_argument('--profile', choices=['rich42','base27'], required=True)
+    p.add_argument('--stage', choices=['prompts','onnx','engine'], required=True)
+    a = p.parse_args(); a.directory.mkdir(parents=True, exist_ok=True)
+    os.chdir(a.directory)
+    policy = yaml.safe_load(a.config.read_text())
+    names = policy['prompt_profiles'][a.profile]
+    checkpoint = a.directory/'yoloe-26l-seg.pt'
+    cache = a.directory/(a.profile+'.npz')
+    onnx_path = a.directory/(a.profile+'.onnx')
+    meta_path = a.directory/(a.profile+'.metadata.json')
+    started = time.monotonic()
+    if a.stage in ('prompts','onnx'):
+        import torch
+        import ultralytics
+        from ultralytics import YOLOE
+        model = YOLOE(str(checkpoint))
+        if a.stage == 'prompts':
+            embeddings = model.get_text_pe(names)
+            np.savez_compressed(cache, names=np.array(names), embeddings=embeddings.cpu().numpy(),
+                                weights_sha256=np.array(sha(checkpoint)))
+            record=dict(checkpoint_sha256=sha(checkpoint),prompt_sha256=sha(cache),
+                        text_encoder_sha256=sha(a.directory/'mobileclip2_b.ts'),names=names,
+                        profile=a.profile,stage=a.stage,ultralytics=ultralytics.__version__,torch=torch.__version__)
+            (a.directory/(a.profile+'.prompts.provenance.json')).write_text(json.dumps(record,indent=2)+'\n')
+            print(json.dumps(record),flush=True)
+            return
+        from asmc_camera.detection.segmentation import load_prompt_embeddings
+        cached_names,values=load_prompt_embeddings(cache,sha(checkpoint))
+        if cached_names!=names: raise ValueError('cached prompt/order mismatch')
+        embeddings=torch.as_tensor(values)
+        model.set_classes(names, embeddings)
+        exported = Path(model.export(format='onnx', dynamic=True, batch=1, imgsz=[736,1280],
+                                     device=0, nms=None, opset=17, simplify=True))
+        if exported != onnx_path:
+            exported.replace(onnx_path)
+        import onnx
+        graph = onnx.load(str(onnx_path))
+        metadata = {item.key: item.value for item in graph.metadata_props}
+        # ONNX stores Python repr values; engine headers require JSON values.
+        import ast
+        for key in ('names','imgsz','args','kpt_shape'):
+            if key in metadata: metadata[key] = ast.literal_eval(metadata[key])
+        for key in ('stride','batch','channels'):
+            if key in metadata: metadata[key] = int(metadata[key])
+        metadata.update(names=dict(enumerate(names)), batch=3, task='segment', imgsz=[736,1280])
+        metadata['end2end']=ast.literal_eval(str(metadata['end2end']))
+        if metadata['end2end']: raise RuntimeError('export silently changed the checkpoint head')
+        meta_path.write_text(json.dumps(metadata,indent=2)+'\n')
+        del model, embeddings; gc.collect(); torch.cuda.empty_cache()
+        record = dict(checkpoint_sha256=sha(checkpoint), prompt_sha256=sha(cache),
+                      onnx_sha256=sha(onnx_path), text_encoder_sha256=sha(a.directory/'mobileclip2_b.ts'),
+                      ultralytics=ultralytics.__version__, torch=torch.__version__)
+    else:
+        import tensorrt as trt
+        logger = trt.Logger(trt.Logger.WARNING)
+        builder = trt.Builder(logger)
+        network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
+        parser = trt.OnnxParser(network, logger)
+        if not parser.parse(onnx_path.read_bytes()):
+            raise RuntimeError('\n'.join(str(parser.get_error(i)) for i in range(parser.num_errors)))
+        if not builder.platform_has_fast_fp16: raise RuntimeError('FP16 unsupported; refusing fallback')
+        config = builder.create_builder_config()
+        config.set_flag(trt.BuilderFlag.FP16)
+        config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, 1024**3)
+        profile = builder.create_optimization_profile()
+        profile.set_shape(network.get_input(0).name, (1,3,480,640), (2,3,480,640), (3,3,736,1280))
+        config.add_optimization_profile(profile)
+        plan = builder.build_serialized_network(network, config)
+        if plan is None: raise RuntimeError('TensorRT build failed')
+        metadata = json.loads(meta_path.read_text())
+        if metadata['end2end']: raise RuntimeError('engine input must preserve one-to-many head')
+        metadata['args'].update(quantize=16, dynamic=True, batch=3)
+        encoded = json.dumps(metadata).encode()
+        engine_path = a.directory/(a.profile+'.engine')
+        engine_path.write_bytes(struct.pack('<i',len(encoded))+encoded+bytes(plan))
+        with trt.Runtime(logger) as runtime:
+            engine = runtime.deserialize_cuda_engine(plan)
+            io = [dict(name=engine.get_tensor_name(i),dtype=str(engine.get_tensor_dtype(engine.get_tensor_name(i))),
+                       shape=list(engine.get_tensor_shape(engine.get_tensor_name(i)))) for i in range(engine.num_io_tensors)]
+        record = dict(engine_sha256=sha(engine_path), tensorrt=trt.__version__, io=io,
+                      minimum=[1,3,480,640], optimum=[2,3,480,640], maximum=[3,3,736,1280],
+                      internal_precision='FP16 enabled; I/O dtype recorded separately',workspace_bytes=1024**3)
+    record.update(profile=a.profile,names=names,stage=a.stage,elapsed_sec=time.monotonic()-started)
+    (a.directory/(a.profile+'.'+a.stage+'.provenance.json')).write_text(json.dumps(record,indent=2)+'\n')
+    print(json.dumps(record),flush=True)
+
+
+if __name__ == '__main__': main()

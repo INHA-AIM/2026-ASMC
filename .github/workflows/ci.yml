@@ -86,6 +86,7 @@ jobs:
           python3 -m unittest discover -s tools/perception -p 'test_seg_lidar_support.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_seg_accuracy.py'
           python3 -m unittest discover -s tools/perception -p 'test_camera_mission_classes.py'
+          python3 -m unittest discover -s tools/perception -p 'test_yoloe_l_measurements.py'
           python3 -m unittest tools/perception/test_b1a_protocol.py
           python3 -m unittest tools/perception/test_frame_boundary_measurements.py
           python3 -m unittest tools/perception/test_lidar_continuous_measurements.py
@@ -107,6 +108,7 @@ jobs:
           python3 tools/perception/check_camera_coco_ros.py --profile baseline
           python3 tools/perception/check_camera_coco_ros.py --profile all
           python3 tools/perception/check_camera_seg_ros.py
+          python3 tools/perception/check_camera_seg_ros.py --batched
           roslaunch --nodes asmc_camera camera_objects_coco_experiment.launch classes:=all
           roslaunch --nodes asmc_camera camera_objects_coco_experiment.launch classes:=baseline debug:=false
           roslaunch --nodes asmc_camera camera_objects_seg_experiment.launch model:=yolo26 views:=front debug:=false

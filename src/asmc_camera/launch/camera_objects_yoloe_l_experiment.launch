@@ -1,0 +1,24 @@
+<launch>
+  <!-- Engine and embedding are separately prepared for each frozen vocabulary. -->
+  <arg name="prompt_profile" default="rich42" doc="rich42 | base27"/>
+  <arg name="batch_mode" default="2plus1" doc="2plus1 | sequential | batch3"/>
+  <arg name="runtime_backend" default="tensorrt" doc="tensorrt | pytorch"/>
+  <arg name="debug" default="true"/>
+  <arg name="initial_mode" default="2"/>
+  <arg name="target_hz" default="20.0"/>
+  <arg name="config" default="$(eval find('asmc_camera')+'/config/camera/yoloe_l/'+{'rich42':'rich42','base27':'base27'}[arg('prompt_profile')]+'_'+{'tensorrt':'tensorrt','pytorch':'pytorch'}[arg('runtime_backend')]+'_'+{'2plus1':'2plus1','sequential':'sequential','batch3':'batch3'}[arg('batch_mode')]+'.yaml')"/>
+  <include file="$(find asmc_camera)/launch/perception.launch">
+    <arg name="profile" value="planning"/>
+    <arg name="start_camera_lane" value="false"/>
+    <arg name="start_traffic_light" value="false"/>
+    <arg name="start_camera_objects" value="true"/>
+    <arg name="start_visualization" value="$(arg debug)"/>
+    <arg name="objects_debug_masks" value="$(arg debug)"/>
+    <arg name="objects_debug_raw" value="false"/>
+    <arg name="objects_initial_mode" value="$(arg initial_mode)"/>
+    <arg name="objects_target_hz" value="$(arg target_hz)"/>
+    <arg name="objects_views" value="[front, left, right]"/>
+    <arg name="camera_objects_config" value="$(arg config)"/>
+    <arg name="objects_class_groups_config" value="$(find asmc_camera)/config/camera/object_classes_yoloe_l_v1.yaml"/>
+  </include>
+</launch>

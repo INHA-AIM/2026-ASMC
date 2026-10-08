@@ -21,6 +21,7 @@ from asmc_camera.srv import SetInferenceMode
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--adapter',action='store_true',help='requires the nested Msg build')
+    parser.add_argument('--batched',action='store_true',help='exercise the opt-in batch worker with the same lifecycle contracts')
     args=parser.parse_args()
     root=Path(__file__).resolve().parents[2]
     deadline=time.monotonic()+15
@@ -39,10 +40,13 @@ def main():
     rospy.set_param('~class_groups',yaml.safe_load((root/'src/asmc_camera/config/camera/object_classes_seg_experiment.yaml').read_text())['class_groups'])
     names=['person','dog','car','wooden crate']
     class Backend:
+        batched=args.batched
         info=dict(device='CPU_fixture',weights_sha256='fixture')
         empty=False
         fail=False
         input_black=[]
+        def infer_images(self,images,order):
+            return {view:self.predict_frame(images[view]) for view in order}
         def predict_frame(self,image,include_masks=True):
             if self.fail:raise RuntimeError('injected inference failure')
             self.input_black.append(bool(np.any(np.all(image==0,axis=2))))
