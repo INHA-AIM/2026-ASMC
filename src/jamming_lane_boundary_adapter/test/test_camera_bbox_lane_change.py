@@ -11,6 +11,7 @@ import unittest
 import cv2
 import numpy as np
 import rospy
+import rospkg
 import rostest
 from asmc_msgs.msg import LaneBoundaryFamily
 from diagnostic_msgs.msg import DiagnosticArray
@@ -31,7 +32,7 @@ class LaneChangeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         rospy.init_node('bbox_change_integration')
-        cls.camera=load_calibration_snapshot('/root/ws/src/asmc_camera/config/bev/cameras_v2.yaml')[1]['front']
+        cls.camera=load_calibration_snapshot(Path(rospkg.RosPack().get_path('asmc_camera'))/'config/bev/cameras_v2.yaml')[1]['front']
         cls.jpeg=cv2.imencode('.jpg',np.zeros((720,1280,3),dtype=np.uint8))[1].tobytes()
         cls.lane_pub=rospy.Publisher('/perception/lane/boundary_family',LaneBoundaryFamily,queue_size=1)
         cls.image_pub=rospy.Publisher('/image_jpeg/compressed',CompressedImage,queue_size=1)
