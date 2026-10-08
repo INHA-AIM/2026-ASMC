@@ -336,3 +336,29 @@ prompt_review:
       decision: remove_environment
       reason: Effect/event detection, not a physical obstacle profile; no observations.
       observations: 0
+side_ego_mask_review:
+  status: implemented opt-in; CPU geometry tested; GPU recall and throughput pending
+    shutdown confirmation
+  default_enabled: false
+  views:
+  - left
+  - right
+  source: train-only RGB-reviewed black semantic AND instance corner component; 36
+    references per view
+  source_camera_resolution:
+  - 640
+  - 480
+  calibration_margin_pixels: 1
+  foreground_GT_pixel_overlap_found: true
+  pixel_overlap_is_not_inference_miss_count: true
+  accepted_front_mask_exception_applies: false
+  configs:
+    left: src/asmc_camera/config/camera/yolo_ego_mask_left_v1.yaml
+    right: src/asmc_camera/config/camera/yolo_ego_mask_right_v1.yaml
+  quality_ablation:
+  - rich42/side_OFF stored reference
+  - rich42/side_ON real inference
+  - obstacle17/side_OFF real inference
+  - obstacle17/side_ON real inference
+  fixed_front_mask: true
+  new_fence_prompt: false

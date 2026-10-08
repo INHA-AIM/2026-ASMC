@@ -15,7 +15,7 @@ from asmc_msgs.msg import CameraObjectBox, CameraObjectBoxArray
 from asmc_camera.camera.frame_buffer import EncodedFrame, LatestFrameBuffer
 from asmc_camera.detection.classes import load_class_groups
 from asmc_camera.detection.processor import ObjectFrameProcessor
-from asmc_camera.detection.hood_mask import HoodMask
+from asmc_camera.detection.hood_mask import HoodMask, load_view_masks
 from asmc_camera.detection.ego_hood_filter import EgoHoodFilter
 from asmc_camera.detection.ultralytics_backend import UltralyticsDetector
 
@@ -53,6 +53,9 @@ class ObjectDetectionNode:
         groups = load_class_groups(rospy.get_param("~class_groups"))
         hood_mask = HoodMask.load(bool(rospy.get_param("~hood_mask", False)),
                                   rospy.get_param("~hood_mask_config", ""))
+        view_masks = load_view_masks(self.views, hood_mask,
+                                    bool(rospy.get_param('~side_ego_mask', False)),
+                                    rospy.get_param('~side_ego_mask_configs', {}))
         ego_hood_filter = EgoHoodFilter.load(bool(rospy.get_param("~ego_hood_filter", False)),
                                             rospy.get_param("~ego_hood_filter_config", ""))
         if hood_mask.enabled and ego_hood_filter.enabled:
@@ -88,7 +91,7 @@ class ObjectDetectionNode:
             )
         self.batch_backend = backend if getattr(backend, 'batched', False) is True else None
         self.processors = {v: ObjectFrameProcessor(backend, groups,
-            hood_mask=hood_mask if v == 'front' else HoodMask(),
+            hood_mask=view_masks[v],
             ego_hood_filter=ego_hood_filter if v == 'front' else EgoHoodFilter(),
             include_masks=self.debug_masks) for v in self.views}
         self.processor = self.processors.get('front', self.processors[self.views[0]])
@@ -250,6 +253,7 @@ class ObjectDetectionNode:
             with self.lock:
                 values = dict(self.backend_info)
                 values.update({"hood_mask_"+key: value for key,value in self.processor.hood_mask.info.items()})
+                values['ego_mask_by_view'] = {v: p.hood_mask.info for v, p in self.processors.items()}
                 values.update({"ego_hood_filter_"+key: value for key,value in self.processor.ego_hood_filter.info.items()})
                 values.update(debug_raw_enabled=self.raw_publisher is not None,
                               ego_hood_filter_last_counts=self.filter_counts,
@@ -293,7 +297,8 @@ class ObjectDetectionNode:
             if mask is not None:
                 color = np.array([60+(index*47)%190, 180, 60+(index*83)%190])
                 image[mask] = (image[mask]*.55+color*.45).astype(np.uint8)
-        image = render_object_overlay(image, message, processor.hood_mask)
+        image = render_object_overlay(image, message, processor.hood_mask,
+                                      mask_label='hood mask' if frame.view == 'front' else 'ego mask '+frame.view)
         ok, data = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY,80])
         if ok:
             publisher.publish(CompressedImage(header=copy.deepcopy(frame.header),format='jpeg',data=data.tobytes()))

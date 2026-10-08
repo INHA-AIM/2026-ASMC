@@ -113,3 +113,67 @@ bollard, cargo box, wooden box, steel barricade, traffic cone, traffic barrel, b
 
 현재 새 프로필의 모델 설정과 engine이 없으므로 `prompt_profile:=obstacle17` 직접 실행은
 아직 제공하지 않는다. GPU 재검증 후 실행 명령과 브라우저 갤러리 주소를 갱신한다.
+
+
+## 좌·우 차체와 사이드미러 mask 추가
+
+사용자가 보여준 우측 `car` 박스는 자기 차체와 사이드미러를 포함한다. 전방 보넷 mask를
+측방에 복사하지 않고, **학습 split 12개 실행에서 뷰별 36개 RGB·semantic·instance 표본**으로
+좌·우 각각의 고정 윤곽을 만들었다. 현재 자료에서 검은 semantic AND instance 픽셀의
+차체 모서리 연결 성분을 RGB로 확인했다. 검은색 전체가 MORAI의 일반 Ego 클래스라는 뜻은 아니다.
+
+설정은 `src/asmc_camera/config/camera/yolo_ego_mask_left_v1.yaml`과
+`yolo_ego_mask_right_v1.yaml`이다. 정규화 좌표·해상도별 캐시·1픽셀 윤곽 여유를 사용한다.
+현재 640×480에서 좌40658/우40706픽셀(각 약13.2%)을 제외한다. 원본 RGB와 영상 크기,
+결과 픽셀 좌표·source header는 유지한다. TwinLite·ResNet 입력은 바꾸지 않는다.
+입력 텐서 크기는 그대로이므로 GPU 계산량 절감을 주장하지 않는다.
+
+생산자는 뷰마다 해당 설정을 적용한다. PREPARE·ACTIVE에서 같은 입력 경로를 사용하며,
+특정 뷰의 mask 오류는 그 관측을 invalid로 만들고 정상 뷰의 batch 처리를 유지한다.
+`ego_mask_by_view` 진단에 활성 상태·설정 SHA·제외 영역을 추가했다. 측방 instances overlay에는
+반투명 빨강 윤곽과 `ego mask left/right ON`을 표시한다. 전방 overlay 설정 확인은 유지한다.
+
+### 검증 결과와 보류
+
+- 검출 CPU 시험62개, calibration CPU 시험2개 통과. 실제 ROS launch 파라미터 전파도 확인했다.
+- 각 36개 calibration 표본의 Ego 윤곽은 모두 포함했다.
+- 학습/선정 split의 instance GT를 검사했다. 왼쪽2231프레임·5101개 관측,
+  오른쪽2785프레임·8953개 관측에 대응하는 mask를 읽었다. 동일 객체의 여러 프레임은 별도 관측이다.
+- **가까운 실제 객체의 일부 GT 픽셀이 고정 윤곽과 겹친다.** 왼쪽 누적 vehicle2942/person4/
+  obstacle1345픽셀, 오른쪽 person4485/vehicle253/obstacle294픽셀이다. 이는 픽셀 수이며
+  검출 누락 수가 아니다. 가까운 차량의2395픽셀, 사이드미러 앞 사람의2280픽셀 사례를 보존했다.
+- 실제 추론의 자기 차량 억제·근접 객체 recall·3뷰 처리율은 아직 미검증이다.
+  전방 mask 누락1건 수락 예외를 측방에 적용하지 않는다. 측방 기본값은 **OFF**로 유지한다.
+
+수치·source SHA·겹침 목록은
+[측방 기하 증거](../../../config/baselines/evidence/camera_yoloe_l_prompt_cleanup_v1/side_ego_geometry.json)에
+보존했다. 로컬 브라우저 자료는
+`artifacts/camera-yoloe-l-first-v1/prompt-cleanup-v1/side-ego-mask-v1/index.html`이다.
+mask 표시/실제 검은 입력과 근접 객체 겹침 장면을 함께 볼 수 있다.
+
+GPU 재개 시 rich42/obstacle17 각각에서 측방 OFF/ON을 실제 추론해 prompt 변경 효과와
+mask 효과를 분리한다. `evaluate_camera_seg_models.py --side-ego-mask`와 engine 비교 도구는
+좌·우 별도 설정 및 SHA를 기록한다. PyTorch와 TensorRT의 입력 mask가 다르면 비교를 거부한다.
+기존 rich42에는 fence가 남아 있지만 이는 원본 비교군이다. 새 obstacle17에는 fence가 없으며,
+새 engine으로 실제 추론한 뒤 제외 결과를 확인한다.
+
+현재 준비된 기존 engine으로 mask만 직접 시험하려면 다음처럼 명시한다. 이 명령은 **기존
+rich42 재사용**이므로 fence를 제거한 새 vocabulary 실행으로 소개하지 않는다.
+
+```bash
+roslaunch asmc_camera camera_objects_yoloe_l_experiment.launch \
+  confidence:=0.3 objects_side_ego_mask:=true
+```
+
+뷰별 영상은 별도 GUI 터미널에서 연다.
+
+```bash
+rqt_image_view --clear-config /perception/camera/objects/debug/left/instances/compressed
+```
+
+```bash
+rqt_image_view --clear-config /perception/camera/objects/debug/right/instances/compressed
+```
+
+센서 장착·시야·Ego 모델이 바뀌면 새로 윤곽을 확인해야 한다. 운영 마스크의 영역을 넓혀
+사람·차량 누락을 숨기거나 배경 구조물을 자유 공간으로 간주하지 않는다.

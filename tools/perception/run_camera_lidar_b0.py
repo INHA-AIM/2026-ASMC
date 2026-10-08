@@ -65,6 +65,7 @@ def main():
     parser.add_argument('--objects-config', type=Path)
     parser.add_argument('--objects-class-groups-config', type=Path)
     parser.add_argument('--objects-views', choices=['front', 'all'], default='front')
+    parser.add_argument('--objects-side-ego-mask', action='store_true')
     parser.add_argument('--seg-debug', action='store_true')
     args = parser.parse_args()
     if args.objects_only and args.profile != 'C1':
@@ -277,6 +278,8 @@ def main():
             command.append('objects_class_groups_config:='+str(args.objects_class_groups_config))
         if args.objects_views == 'all':
             command.append('objects_views:=[front, left, right]')
+        if args.objects_side_ego_mask:
+            command.append('objects_side_ego_mask:=true')
         if args.seg_debug:
             command.append('objects_debug_masks:='+str(args.debug).lower())
         camera = launch('camera', command)

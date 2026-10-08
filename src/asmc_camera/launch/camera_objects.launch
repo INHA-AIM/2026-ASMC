@@ -5,6 +5,9 @@
   <arg name="config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
   <arg name="class_groups_config" default="$(find asmc_camera)/config/camera/object_classes.yaml"/>
   <arg name="objects_hood_mask" default="true"/>
+  <arg name="objects_side_ego_mask" default="false"/>
+  <arg name="objects_left_ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_ego_mask_left_v1.yaml"/>
+  <arg name="objects_right_ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_ego_mask_right_v1.yaml"/>
   <arg name="objects_ego_hood_filter" default="false"/>
   <arg name="objects_ego_hood_filter_config" default="$(find asmc_camera)/config/camera/yolo_ego_hood_filter_v1.yaml"/>
   <arg name="objects_debug_raw" default="false"/>
@@ -19,6 +22,11 @@
     <rosparam command="load" file="$(arg config)" subst_value="true"/>
     <rosparam command="load" file="$(arg class_groups_config)"/>
     <param name="hood_mask" type="bool" value="$(arg objects_hood_mask)"/>
+    <param name="side_ego_mask" type="bool" value="$(arg objects_side_ego_mask)"/>
+    <rosparam param="side_ego_mask_configs" subst_value="true">
+      left: $(arg objects_left_ego_mask_config)
+      right: $(arg objects_right_ego_mask_config)
+    </rosparam>
     <param name="ego_hood_filter" type="bool" value="$(arg objects_ego_hood_filter)"/>
     <param name="ego_hood_filter_config" value="$(arg objects_ego_hood_filter_config)"/>
     <param name="debug_raw" type="bool" value="$(arg objects_debug_raw)"/>

@@ -9,7 +9,7 @@ from std_msgs.msg import Header
 
 from asmc_camera.detection.backend import Detection
 from asmc_camera.detection.classes import load_class_groups
-from asmc_camera.detection.hood_mask import HoodMask
+from asmc_camera.detection.hood_mask import HoodMask, load_view_masks
 from asmc_camera.detection.processor import ObjectFrameProcessor
 from asmc_camera.detection.visualization import render_object_overlay
 
@@ -18,6 +18,28 @@ POLYGON = [(0,.79),(1,.79),(1,1),(0,1)]
 
 
 class HoodMaskTest(unittest.TestCase):
+    def test_per_view_masks_are_independent_and_opt_in(self):
+        root=Path(__file__).resolve().parents[2]/'config/camera'
+        front=HoodMask.load(True,root/'yolo_hood_mask_v1.yaml')
+        paths={v:str(root/('yolo_ego_mask_'+v+'_v1.yaml')) for v in ('left','right')}
+        disabled=load_view_masks(['front','left','right'],front)
+        self.assertIs(front,disabled['front'])
+        self.assertFalse(disabled['left'].enabled);self.assertFalse(disabled['right'].enabled)
+        masks=load_view_masks(['front','left','right'],front,True,paths)
+        self.assertIs(front,masks['front'])
+        image=np.full((480,640,3),200,np.uint8)
+        left,right=masks['left'].apply(image),masks['right'].apply(image)
+        self.assertTrue(left[-1,0].all());self.assertFalse(left[-1,-1].any())
+        self.assertFalse(right[-1,0].any());self.assertTrue(right[-1,-1].all())
+        self.assertTrue((image==200).all())
+        self.assertNotEqual(masks['left'].config_sha256,masks['right'].config_sha256)
+
+    def test_missing_or_unknown_side_config_fails_at_startup(self):
+        for configs in [{},{'left':'missing.yaml'},{'front':'missing.yaml'}]:
+            with self.assertRaises((ValueError,FileNotFoundError)):
+                load_view_masks(['left','right'],HoodMask(),True,configs)
+        self.assertFalse(load_view_masks(['left'],HoodMask(),False,{'left':'missing.yaml'})['left'].enabled)
+
     def test_disabled_is_identity_even_without_config(self):
         image = np.full((720,1280,3),127,np.uint8)
         self.assertIs(image,HoodMask.load(False,'missing.yaml').apply(image))

@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 import yaml
 from asmc_camera.detection.batched_backend import BatchedSegmentationDetector
-from asmc_camera.detection.hood_mask import HoodMask
+from asmc_camera.detection.hood_mask import HoodMask, load_view_masks
 from asmc_camera.detection.classes import load_class_groups
 from seg_measurements import match_boxes
 
@@ -18,13 +18,25 @@ def main():
     p.add_argument('--reference',type=Path,required=True);p.add_argument('--datasets',type=Path,required=True)
     p.add_argument('--config',type=Path,required=True);p.add_argument('--groups',type=Path,required=True)
     p.add_argument('--hood-config',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--side-ego-mask',action='store_true')
+    p.add_argument('--left-ego-mask-config',type=Path);p.add_argument('--right-ego-mask-config',type=Path)
     a=p.parse_args();cfg=yaml.safe_load(a.config.read_text());cfg['conf_thres']=.1
-    model=BatchedSegmentationDetector(**cfg);hood=HoodMask.load(True,a.hood_config)
+    hood=HoodMask.load(True,a.hood_config)
+    view_masks=load_view_masks(['front','left','right'],hood,a.side_ego_mask,dict(
+        left=a.left_ego_mask_config or a.hood_config.parent/'yolo_ego_mask_left_v1.yaml',
+        right=a.right_ego_mask_config or a.hood_config.parent/'yolo_ego_mask_right_v1.yaml'))
+    reference_summary=json.loads((a.reference/'summary.json').read_text())
+    reference_masks=reference_summary.get('ego_masks_by_view',{'front':reference_summary['hood']})
+    for view,mask in view_masks.items():
+        previous=reference_masks.get(view,{'enabled':False,'config_sha256':''})
+        if previous['enabled'] != mask.enabled or previous['config_sha256'] != mask.config_sha256:
+            raise ValueError('PyTorch/TensorRT input masks differ for '+view)
+    model=BatchedSegmentationDetector(**cfg)
     groups=load_class_groups(yaml.safe_load(a.groups.read_text())['class_groups'])
     rows=[json.loads(l) for l in (a.reference/'predictions.jsonl').read_text().splitlines()]
     selected=rows[::max(1,len(rows)//90)];records=[];total=Counter()
     for row in selected:
-        image=cv2.imread(str(a.datasets/row['image']));image=hood.apply(image) if row['view']=='front' else image
+        image=cv2.imread(str(a.datasets/row['image']));image=view_masks[row['view']].apply(image)
         result=model.infer_images({row['view']:image},[row['view']])[row['view']]
         predicted=[dict(source_class_name=d.source_class_name,group=groups.group_of(d.source_class_name),confidence=d.confidence,xyxy=[d.xmin,d.ymin,d.xmax,d.ymax]) for d in result.detections]
         # Source labels must agree too; group-only correspondence is insufficient here.
@@ -42,7 +54,8 @@ def main():
                                     max_coordinate_delta=max(abs(x-y) for x,y in zip(original['xyxy'],current['xyxy'])),confidence_delta=current['confidence']-original['confidence']))
         total.update(reference=len(row['predictions']),engine=len(predicted),matched=len(pairs),reference_unmatched=len(row['predictions'])-len(pairs),engine_unmatched=len(predicted)-len(pairs))
         records.append(dict(image=row['image'],view=row['view'],pairs=comparisons,reference=row['predictions'],engine=predicted,timings=result.timings))
-    a.output.write_text(json.dumps(dict(model=model.info,frames=len(records),totals=dict(total),records=records,
+    a.output.write_text(json.dumps(dict(model=model.info,ego_masks_by_view={v:m.info for v,m in view_masks.items()},
+        frames=len(records),totals=dict(total),records=records,
         interpretation='FP16 differences retained; no blanket confidence-boundary exemption or exact-equivalence claim'),indent=2)+'\n')
 
 

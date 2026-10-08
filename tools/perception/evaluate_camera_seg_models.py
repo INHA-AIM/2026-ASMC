@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 import yaml
 from asmc_camera.detection.classes import load_class_groups
-from asmc_camera.detection.hood_mask import HoodMask
+from asmc_camera.detection.hood_mask import HoodMask, load_view_masks
 from asmc_camera.detection.segmentation import SegmentationDetector
 from asmc_camera.detection.ultralytics_backend import UltralyticsDetector
 from seg_measurements import GROUPS, INFRASTRUCTURE, frame_metrics, summarize, choose_threshold
@@ -25,12 +25,19 @@ def main():
     p.add_argument('--config',type=Path,required=True)
     p.add_argument('--groups',type=Path,required=True)
     p.add_argument('--hood-config',type=Path,required=True)
+    p.add_argument('--side-ego-mask',action='store_true',help='apply separate left/right Ego silhouettes')
+    p.add_argument('--left-ego-mask-config',type=Path)
+    p.add_argument('--right-ego-mask-config',type=Path)
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--baseline',action='store_true')
     p.add_argument('--batched',action='store_true',help='YOLOE-l native view packing; never substitute old 640px inference')
     args=p.parse_args()
     args.output.mkdir(parents=True,exist_ok=False)
     cfg=yaml.safe_load(args.config.read_text())
+    hood=HoodMask.load(True,args.hood_config)
+    view_masks=load_view_masks(['front','left','right'],hood,args.side_ego_mask,dict(
+        left=args.left_ego_mask_config or args.hood_config.parent/'yolo_ego_mask_left_v1.yaml',
+        right=args.right_ego_mask_config or args.hood_config.parent/'yolo_ego_mask_right_v1.yaml'))
     groups=load_class_groups(yaml.safe_load(args.groups.read_text())['class_groups'])
     weights=cfg['weights'].replace('$(optenv ASMC_SEG_MODELS /data/models/camera_seg_v1)','/data/models/camera_seg_v1').replace('$(find asmc_camera)','/root/ws/src/asmc_camera')
     prompt=cfg.get('prompt_embeddings','').replace('$(optenv ASMC_SEG_MODELS /data/models/camera_seg_v1)','/data/models/camera_seg_v1')
@@ -45,7 +52,6 @@ def main():
         detector=BatchedSegmentationDetector(**kwargs)
     else:
         detector=(UltralyticsDetector if args.baseline else SegmentationDetector)(**kwargs)
-    hood=HoodMask.load(True,args.hood_config)
     rows=[json.loads(line) for line in (args.gt/'frames.jsonl').read_text().splitlines()]
     selected=[r for r in rows if r['split']=='selection' and r['annotation_complete']]
     sweep=[round(.10+.05*i,2) for i in range(13)]
@@ -57,7 +63,7 @@ def main():
         for index,row in enumerate(selected):
             image=cv2.imread(str(args.datasets/row['image']))
             if image is None:raise ValueError('RGB decode failed: '+row['image'])
-            image_input=hood.apply(image) if row['view']=='front' else image
+            image_input=view_masks[row['view']].apply(image)
             started=time.monotonic()
             if args.baseline:
                 detections,timings=detector.detect(image_input); masks=[None]*len(detections)
@@ -117,7 +123,8 @@ def main():
     thresholds=[dict(confidence=c,metrics=summarize(sums[c]['counts'],sums[c]['masks'],sums[c]['names'])) for c in sweep]
     result=dict(selection_frames=len(selected),thresholds=thresholds,selected_threshold=choose_threshold(thresholds),
                 fixed_07=next(r for r in thresholds if r['confidence']==.7),
-                model=detector.info,hood=hood.info,source_config_sha256=hashlib.sha256(args.config.read_bytes()).hexdigest(),
+                model=detector.info,hood=hood.info,ego_masks_by_view={v:m.info for v,m in view_masks.items()},
+                source_config_sha256=hashlib.sha256(args.config.read_bytes()).hexdigest(),
                 gt_manifest_sha256=hashlib.sha256((args.gt/'frames.jsonl').read_bytes()).hexdigest(),
                 input_latency_ms={key:float(np.percentile(all_latency,q)) for key,q in [('p50',50),('p95',95),('p99',99)]},
                 labels=dict(labels),matched_to_missed_transitions=dict(gaps),observed_gt_frames=dict(total_gt),

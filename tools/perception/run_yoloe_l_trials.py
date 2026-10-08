@@ -32,6 +32,7 @@ def main():
                  '--objects-config',j['runtime_config'],'--objects-class-groups-config',
                  str(root/'src/asmc_camera/config/camera/object_classes_yoloe_l_v1.yaml'),'--objects-views','all']
         if j.get('debug'):command+=['--debug','--seg-debug']
+        if j.get('side_ego_mask'):command+=['--objects-side-ego-mask']
         if j.get('diagnostic'):command+=['--diagnostic']
         core=child=None
         print('START '+label,flush=True)

@@ -13,6 +13,7 @@ from asmc_camera.detection.batch_processor import process_batch
 from asmc_camera.detection.classes import load_class_groups
 from asmc_camera.detection.processor import ObjectFrameProcessor
 from asmc_camera.detection.segmentation import SegmentationFrame
+from asmc_camera.detection.hood_mask import HoodMask
 
 
 class BatchTest(unittest.TestCase):
@@ -71,6 +72,32 @@ class BatchTest(unittest.TestCase):
         for frame,msg,raw,timings,error in process_batch(frames,processors,backend):
             self.assertFalse(msg.valid);self.assertEqual(frame.header,msg.header)
             self.assertEqual((64,48),(msg.image_width,msg.image_height));self.assertEqual('inference',error[0])
+
+    def test_masks_each_view_before_batch_and_preserves_source_geometry(self):
+        backend,processors,frames=self.fixture()
+        source=np.full((48,64,3),200,np.uint8)
+        for p in processors.values():p.decode=lambda *args:source
+        processors['front'].hood_mask=HoodMask([(0,.8),(1,.8),(1,1),(0,1)])
+        processors['left'].hood_mask=HoodMask([(.8,0),(1,0),(1,1),(.8,1)])
+        rows=process_batch(frames,processors,backend)
+        images=backend.infer_images.call_args.args[0]
+        self.assertFalse(images['front'][-1,0].any());self.assertTrue(images['front'][0,-1].all())
+        self.assertTrue(images['left'][-1,0].all());self.assertFalse(images['left'][0,-1].any())
+        for frame,message,_,_,error in rows:
+            self.assertIsNone(error);self.assertTrue(message.valid)
+            self.assertEqual(frame.header,message.header)
+            self.assertEqual((64,48),(message.image_width,message.image_height))
+        self.assertTrue((source==200).all())
+
+    def test_one_mask_failure_does_not_drop_other_view(self):
+        backend,processors,frames=self.fixture()
+        processors['left'].hood_mask=Mock(apply=Mock(side_effect=ValueError('bad side mask')))
+        rows=process_batch(frames,processors,backend)
+        self.assertTrue(rows[0][1].valid)
+        self.assertFalse(rows[1][1].valid);self.assertEqual('mask',rows[1][-1][0])
+        self.assertEqual(frames[1].header,rows[1][1].header)
+        self.assertEqual((64,48),(rows[1][1].image_width,rows[1][1].image_height))
+        self.assertEqual(['front'],backend.infer_images.call_args.args[1])
 
     def test_box_mask_count_mismatch_is_not_silently_truncated(self):
         backend,processors,frames=self.fixture()

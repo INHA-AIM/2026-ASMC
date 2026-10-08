@@ -9,6 +9,23 @@ import numpy as np
 import yaml
 
 
+def load_view_masks(views, front_mask, side_enabled=False, side_configs=None):
+    """Reuse exclusion geometry while keeping each camera's calibration separate."""
+    if not views or len(set(views)) != len(views) or set(views)-{'front', 'left', 'right'}:
+        raise ValueError('ego masks require unique front/left/right views')
+    masks = {view: front_mask if view == 'front' else HoodMask() for view in views}
+    if side_enabled:
+        if not isinstance(side_configs, dict) or set(side_configs)-{'left', 'right'}:
+            raise ValueError('side ego mask configs must map left/right to their own files')
+        for view in views:
+            if view == 'front':
+                continue
+            if not side_configs.get(view):
+                raise ValueError('missing ego mask config for ' + view)
+            masks[view] = HoodMask.load(True, side_configs[view])
+    return masks
+
+
 class HoodMask:
     def __init__(self, polygon=None, config_sha256=""):
         self.enabled = polygon is not None

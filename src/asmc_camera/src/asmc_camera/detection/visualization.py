@@ -5,7 +5,8 @@ import cv2
 import numpy as np
 
 
-def render_object_overlay(image, detection, hood_mask=None, raw_detection=None, ego_hood_filter=None):
+def render_object_overlay(image, detection, hood_mask=None, raw_detection=None, ego_hood_filter=None,
+                          mask_label='hood mask'):
     output = image.copy()
     if hood_mask is not None and hood_mask.enabled:
         bitmap, polygon = hood_mask.geometry(*image.shape[:2])
@@ -16,7 +17,7 @@ def render_object_overlay(image, detection, hood_mask=None, raw_detection=None, 
     title = 'YOLO objects: {}'.format(len(detection.boxes)) if detection.valid else 'YOLO result INVALID'
     cv2.putText(output, title, (10, 26), cv2.FONT_HERSHEY_SIMPLEX, .65, color, 2)
     if hood_mask is not None:
-        label = 'hood mask ON ' + hood_mask.config_sha256[:8] if hood_mask.enabled else 'hood mask OFF'
+        label = mask_label + ' ON ' + hood_mask.config_sha256[:8] if hood_mask.enabled else mask_label + ' OFF'
         cv2.putText(output,label,(10,50),cv2.FONT_HERSHEY_SIMPLEX,.55,(255,255,255),1)
     if ego_hood_filter is not None:
         state = 'ON ' + ego_hood_filter.config_sha256[:8] if ego_hood_filter.enabled else 'OFF'

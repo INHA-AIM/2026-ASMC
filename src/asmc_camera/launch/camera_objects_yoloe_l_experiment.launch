@@ -4,6 +4,8 @@
   <arg name="batch_mode" default="2plus1" doc="2plus1 | sequential | batch3"/>
   <arg name="runtime_backend" default="tensorrt" doc="tensorrt | pytorch"/>
   <arg name="debug" default="true"/>
+  <!-- Per-view semantic/instance silhouette candidates; GPU recall gate pending. -->
+  <arg name="objects_side_ego_mask" default="false"/>
   <arg name="initial_mode" default="2"/>
   <arg name="target_hz" default="20.0"/>
   <arg name="confidence" default="0.7"/>
@@ -16,6 +18,7 @@
     <arg name="start_visualization" value="$(arg debug)"/>
     <arg name="objects_debug_masks" value="$(arg debug)"/>
     <arg name="objects_debug_raw" value="false"/>
+    <arg name="objects_side_ego_mask" value="$(arg objects_side_ego_mask)"/>
     <arg name="objects_initial_mode" value="$(arg initial_mode)"/>
     <arg name="objects_target_hz" value="$(arg target_hz)"/>
     <arg name="objects_views" value="[front, left, right]"/>
