@@ -9,7 +9,7 @@ from Msg.msg import Yolo_bbox, Yolo_bbox_arr
 
 
 EXPECTED_MD5 = "310c671afb3693e7909db6453d115b79"
-ALLOWED_NAMES = ("bus", "truck", "person", "car")
+ALLOWED_NAMES = ("person", "dog", "bicycle", "car", "motorcycle", "bus", "truck")
 
 
 def check_message_build(actual=None):

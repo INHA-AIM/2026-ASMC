@@ -1,6 +1,7 @@
 #include "SensorFusion.hpp" // (or your relevant main header)
 #include "FusionClassPolicy.hpp"
 #include "FusionTimeMatcher.hpp"
+#include <asmc_camera/InferenceStatus.h>
 #include "FusionTrace.hpp"
 #include "FusionClassState.hpp"
 #include "FusionStateTrace.hpp"
@@ -46,12 +47,40 @@ struct TimedYoloFrame {
     ros::Time stamp;
     uint64 frame_seq = 0;
     std::vector<BBox> boxes;
+    std::string camera_id = "front";
+    std::string calibration_id;
+    uint64 epoch = 0;
+    bool consumed = false;
 };
 
 std::mutex g_FusionInputMutex;
 std::deque<TimedCameraImage> g_CameraInputQueue;
 std::deque<TimedYoloFrame> g_YoloInputQueue;
 std::uint64_t g_TotalMatched = 0, g_TotalDropped = 0;
+std::uint64_t g_TotalFresh = 0, g_TotalReused = 0;
+uint64 g_CameraEpoch = 1, g_ControlGeneration = 0, g_SourceCutoff = 0;
+bool g_CameraActive = true, g_HasControl = false;
+ros::WallTime g_LastControl, g_LastYolo;
+bool g_YoloSilent = false;
+uint64 g_ControlBatches = 0;
+uint64 g_ProcessingCameraEpoch = 1;
+
+void CameraControl(const asmc_camera::InferenceStatus::ConstPtr& status) {
+    std::lock_guard<std::mutex> lock(g_FusionInputMutex);
+    const bool active = status->mode == asmc_camera::InferenceStatus::ACTIVE &&
+        status->reason != "source_image_stale";
+    if (!g_HasControl || status->generation != g_ControlGeneration || active != g_CameraActive ||
+        status->successful_batches < g_ControlBatches) {
+        ++g_CameraEpoch;
+        g_YoloInputQueue.clear();
+    }
+    g_HasControl = true;
+    g_ControlGeneration = status->generation;
+    g_ControlBatches = status->successful_batches;
+    g_SourceCutoff = status->source_cutoff.toNSec();
+    g_CameraActive = active;
+    g_LastControl = ros::WallTime::now();
+}
 std::size_t g_PendingLidar = 0, g_PendingYolo = 0;
 
 void TraceObjectStates(const char* event, const ros::Time& lidar_stamp,
@@ -180,7 +209,13 @@ void BufferFusionYoloFrame(uint64 frame_seq, const ros::Time& image_stamp,
 {
     if (image_stamp.isZero()) return;
     std::lock_guard<std::mutex> lock(g_FusionInputMutex);
-    InsertByStamp(g_YoloInputQueue, {image_stamp, frame_seq, boxes});
+    if (!g_CameraActive || image_stamp.toNSec() <= g_SourceCutoff) return;
+    g_LastYolo = ros::WallTime::now();
+    g_YoloSilent = false;
+    TimedYoloFrame frame{image_stamp, frame_seq, boxes};
+    frame.epoch = g_CameraEpoch;
+    ros::param::param<std::string>("~camera_calibration_id", frame.calibration_id, "legacy_vehicle_spec");
+    InsertByStamp(g_YoloInputQueue, std::move(frame));
     fusion_trace::Event("yolo_input", image_stamp.toNSec(), [&](std::ostream& out) {
         out << ",\"sequence\":" << frame_seq << ",\"boxes\":[";
         for (std::size_t index = 0; index < boxes.size(); ++index) {
@@ -208,10 +243,12 @@ void ReportFusionTotals()
     SyncStats().ReportFinal(g_PendingLidar, g_PendingYolo);
     std::cout << "Fusion sync total: matched=" << g_TotalMatched
               << " dropped=" << g_TotalDropped
+              << " fresh=" << g_TotalFresh << " reused=" << g_TotalReused
               << " pending lidar/yolo=" << g_PendingLidar << '/' << g_PendingYolo
               << std::endl;
     fusion_trace::Event("fusion_summary", 0, [](std::ostream& out) {
-        out << ",\"matched\":" << g_TotalMatched << ",\"dropped\":" << g_TotalDropped;
+        out << ",\"matched\":" << g_TotalMatched << ",\"dropped\":" << g_TotalDropped
+            << ",\"fresh\":" << g_TotalFresh << ",\"reused\":" << g_TotalReused;
         out << ",\"pending_lidar\":" << g_PendingLidar << ",\"pending_yolo\":" << g_PendingYolo;
     });
 }
@@ -235,16 +272,17 @@ static inline bool overlapsYBand(const cv::Rect& r, int ymin_px, int ymax_px, in
  * @param st_LiDAR LiDAR 데이터 구조체
  * @param st_Camera 카메라 데이터 구조체
  */
-static void LidarToImage(LiDAR &st_LiDAR, CAMERA &st_Camera)
+static void LidarToImage(LiDAR &st_LiDAR, CAMERA &st_Camera,
+                         const CameraParameters& calibration)
 {
     st_Camera.fusion_data.vec_Lidar_BBoxes.clear();
 
-    Eigen::Matrix<double,3,4> projection=st_Camera.params.sensor_fusion_projection_matrix;
+    Eigen::Matrix<double,3,4> projection=calibration.sensor_fusion_projection_matrix;
     if(frame_boundary::Enabled()) {
         asmc::lidar::Pose camera_mount;
-        camera_mount.matrix()=st_Camera.params.bird_eye_view_transform.inverse();
+        camera_mount.matrix()=calibration.bird_eye_view_transform.inverse();
         const auto p=asmc::lidar::camera_projection(st_LiDAR.frame_context,camera_mount,
-            st_Camera.params.intrinsic_matrix_90_fov.leftCols<3>());
+            calibration.intrinsic_matrix_90_fov.leftCols<3>());
         if(!p) {ROS_ERROR_THROTTLE(1.,"Invalid scan projection context"); return;}
         projection=*p;
     }
@@ -411,7 +449,8 @@ static void IOUFusion(LiDAR& st_LiDAR, CAMERA &st_Camera,
         const auto& cam =
             st_Camera.yolo_results.detected_objects[candidate.camera_idx];
 
-        if (is_new_yolo_frame) {
+        if (is_new_yolo_frame && fusion_class::BeginObservation(lid_object,
+                st_Camera.front_image_stamp.toNSec(), g_ProcessingCameraEpoch)) {
             fusion_trace::Event("class_observation", st_Camera.front_image_stamp.toNSec(),
                 [&](std::ostream& out) {
                     out << ",\"id\":" << lid_object.s32_Id
@@ -436,7 +475,8 @@ static void IOUFusion(LiDAR& st_LiDAR, CAMERA &st_Camera,
         // Prediction-only tracks preserve their class until LiDAR tracking
         // itself decides whether the track survives.
         if (object.s32_MissCount > 0 || IsGroundNoise(object)) continue;
-        if (matched_lidar_indices_this_frame.find(i) == matched_lidar_indices_this_frame.end())
+        if (matched_lidar_indices_this_frame.find(i) == matched_lidar_indices_this_frame.end() &&
+            fusion_class::BeginObservation(object, st_Camera.front_image_stamp.toNSec(), g_ProcessingCameraEpoch))
         {
             fusion_trace::Event("class_miss", st_Camera.front_image_stamp.toNSec(),
                 [&](std::ostream& out) { out << ",\"id\":" << object.s32_Id; });
@@ -533,7 +573,7 @@ static ros::Publisher& FusionDebugRawImagePub()
 static void PublishFusionDebugImage(LiDAR& st_LiDAR, CAMERA& st_Camera)
 {
     if (st_Camera.bgr_image.empty()) return;
-    if(frame_boundary::Enabled() && !FusionDebugImagePub().getNumSubscribers() &&
+    if(!FusionDebugImagePub().getNumSubscribers() &&
         !FusionDebugRawImagePub().getNumSubscribers()) return;
 
     // The processing loop can run faster than the sensors. Limit JPEG encoding
@@ -643,6 +683,10 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
     // when this processing loop is slower than the camera callback.
     (void)st_RawYOLO;
 
+    static ros::NodeHandle control_nh;
+    static ros::Subscriber control_sub = control_nh.subscribe(
+        "/camera_object_detector/inference_status", 1, CameraControl);
+    static uint64 admitted_epoch = 0;
     static std::deque<TimedLidarObjects> pending_lidar;
     static std::deque<TimedYoloFrame> yolo_history;
     static std::deque<TimedCameraImage> camera_history;
@@ -658,6 +702,36 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
         std::deque<TimedCameraImage> new_camera;
         {
             std::lock_guard<std::mutex> lock(g_FusionInputMutex);
+            if (g_HasControl && (ros::WallTime::now()-g_LastControl).toSec() > .6 && g_CameraActive) {
+                g_CameraActive = false;
+                ++g_CameraEpoch;
+                g_YoloInputQueue.clear();
+            }
+            if (!g_LastYolo.isZero() && !g_YoloSilent &&
+                (ros::WallTime::now()-g_LastYolo).toSec() > .35) {
+                g_YoloSilent = true;
+                ++g_CameraEpoch;
+                g_YoloInputQueue.clear();
+            }
+            if (admitted_epoch != g_CameraEpoch) {
+                pending_lidar.clear(); yolo_history.clear(); camera_history.clear();
+                received_any_yolo = false;
+                admitted_epoch = g_CameraEpoch;
+            }
+            if (!g_CameraActive || g_YoloSilent) {
+                for (auto& object : st_LiDAR.vec_Objects) {
+                    if (!IsGroundNoise(object)) {
+                        object.str_ObjectClass = object.str_YoloClass = "unknown";
+                        object.last_seen_class = "unknown";
+                        object.continuity_counter = object.class_miss_counter = 0;
+                        object.camera_observation_ns = 0;
+                        object.camera_observation_epoch = g_CameraEpoch;
+                    }
+                }
+                if (!st_LiDAR.Prev_Objects_Queue.empty())
+                    fusion_state::Persist(st_LiDAR.vec_Objects, st_LiDAR.Prev_Objects_Queue.back());
+                return;
+            }
             new_yolo.swap(g_YoloInputQueue);
             new_camera.swap(g_CameraInputQueue);
         }
@@ -693,6 +767,11 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
         last_queued_lidar_stamp = lidar_stamp;
     }
 
+    std::string consumption_policy = "unique";
+    ros::param::param<std::string>("~fusion_yolo_policy", consumption_policy, "unique");
+    if (consumption_policy != "unique" && consumption_policy != "bounded_reuse")
+        throw std::runtime_error("invalid fusion_yolo_policy");
+    const bool reuse = consumption_policy == "bounded_reuse";
     double max_time_offset_sec = 0.05;
     double wait_timeout_sec = 0.20;
     ros::param::param("~fusion_max_time_offset_sec", max_time_offset_sec,
@@ -740,8 +819,13 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
         const TimedLidarObjects& lidar_frame = pending_lidar.front();
         std::vector<int64> yolo_stamps_ns;
         yolo_stamps_ns.reserve(yolo_history.size());
+        uint64 empty_barrier = 0;
+        if (reuse) for (const auto& frame : yolo_history)
+            if (frame.boxes.empty() && frame.stamp <= lidar_frame.stamp)
+                empty_barrier = std::max(empty_barrier, frame.stamp.toNSec());
         for (const auto& frame : yolo_history) {
-            yolo_stamps_ns.push_back(static_cast<int64>(frame.stamp.toNSec()));
+            yolo_stamps_ns.push_back(frame.stamp.toNSec() < empty_barrier
+                ? 0 : static_cast<int64>(frame.stamp.toNSec()));
         }
         const int64 waited_ns = static_cast<int64>(std::llround(
             (decision_time - lidar_frame.queued_at).toSec() * 1e9));
@@ -780,7 +864,7 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
                     : decision.offset_ns / 1e6;
             ROS_WARN_THROTTLE(
                 2.0,
-                "Skipping LiDAR-centered fusion after %.1f ms wait: no unique YOLO frame within %.1f ms (nearest %.1f ms)",
+                "Skipping LiDAR-centered fusion after %.1f ms wait: no eligible YOLO frame within %.1f ms (nearest %.1f ms)",
                 waited_ns / 1e6, max_time_offset_sec * 1000.0,
                 nearest_ms);
             PruneInputsBefore(yolo_history, camera_history,
@@ -789,9 +873,17 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
             continue;
         }
 
-        TimedYoloFrame yolo_frame =
-            std::move(yolo_history[decision.yolo_index]);
-        yolo_history.erase(yolo_history.begin() + decision.yolo_index);
+        TimedYoloFrame yolo_frame = yolo_history[decision.yolo_index];
+        const bool reused = fusion_sync::ConsumeMatchedFrame(yolo_history, decision.yolo_index, reuse);
+        g_ProcessingCameraEpoch = yolo_frame.epoch;
+        if (reused) ++g_TotalReused; else ++g_TotalFresh;
+        fusion_trace::Event("camera_observation_use", synchronized_lidar_frame.stamp.toNSec(), [&](std::ostream& out) {
+            out << ",\"camera_id\":" << fusion_trace::Quote(yolo_frame.camera_id)
+                << ",\"calibration_id\":" << fusion_trace::Quote(yolo_frame.calibration_id)
+                << ",\"epoch\":" << yolo_frame.epoch
+                << ",\"source_stamp_ns\":" << yolo_frame.stamp.toNSec()
+                << ",\"reused\":" << (reused ? "true" : "false");
+        });
 
         LiDAR synchronized_lidar;
         synchronized_lidar.frame_context=synchronized_lidar_frame.context;
@@ -881,7 +973,7 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
             }
         }
         
-        LidarToImage(synchronized_lidar, synchronized_camera);
+        LidarToImage(synchronized_lidar, synchronized_camera, synchronized_camera.params);
 
         TraceObjectStates("class_before", synchronized_lidar_frame.stamp,
                           yolo_frame.stamp, synchronized_lidar.vec_Objects);
@@ -895,7 +987,8 @@ void runCameraFusion(RAW_YOLO_DATA& st_RawYOLO, LiDAR& st_LiDAR,
                     st_LiDAR.vec_Objects, historical_object.s32_Id)) {
                 fusion_state::Copy(historical_object, *current, true);
                 fusion_state_trace::Transferred(current->s32_Id,
-                    synchronized_lidar_frame.stamp, yolo_frame.stamp, lidar_stamp);
+                    synchronized_lidar_frame.stamp,
+                    ros::Time().fromNSec(current->camera_observation_ns), lidar_stamp);
             }
         }
         TraceObjectStates("class_current", lidar_stamp,

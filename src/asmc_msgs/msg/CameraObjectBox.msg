@@ -5,14 +5,10 @@ float32 ymin
 float32 xmax
 float32 ymax
 
-# Normalized group shared by all consumers: person, vehicle or obstacle.
-# person covers pedestrians, cyclists and children; vehicle covers cars,
-# trucks, buses and motorcycles; obstacle is any other object whose kind is
-# not distinguished.
+# Producer profile selects raw detector labels or legacy consumer groups.
 string class_name
-# Raw label emitted by the detector model (for example truck, bicycle or a
-# fine-tuned MORAI label). Model-dependent: use it for diagnostics and
-# refinement, not as the safety-relevant class.
+# Original detector label, preserved across grouping. Consumers apply their
+# own eligibility policy; a label alone does not establish collision risk.
 string source_class_name
 
 float32 confidence

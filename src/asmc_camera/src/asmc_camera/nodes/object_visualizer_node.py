@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """YOLO overlay on the exact source image, independent of LiDAR/GPS."""
+import ast
 import cv2
 import message_filters
 import numpy as np
@@ -15,6 +16,9 @@ from asmc_camera.detection.ego_hood_filter import EgoHoodFilter
 
 class ObjectVisualizerNode:
     def __init__(self):
+        self.view = rospy.get_param('~view', 'front')
+        if self.view not in ('front', 'left', 'right'):
+            raise ValueError('invalid object overlay view')
         self.hood_mask = HoodMask.load(bool(rospy.get_param('~hood_mask',False)),
                                       rospy.get_param('~hood_mask_config',''))
         self.ego_hood_filter = EgoHoodFilter.load(bool(rospy.get_param('~ego_hood_filter',False)),
@@ -30,13 +34,13 @@ class ObjectVisualizerNode:
         if not 1 <= self.quality <= 100:
             raise ValueError('jpeg_quality must be in [1,100]')
         self.publisher = rospy.Publisher(
-            '/perception/camera/objects/debug/image/compressed', CompressedImage, queue_size=1)
+            rospy.get_param('~debug_topic', '/perception/camera/objects/debug/image/compressed'), CompressedImage, queue_size=1)
         self.image = message_filters.Subscriber(
             rospy.get_param('~image_topic', '/image_jpeg/compressed'), CompressedImage,
             queue_size=5, buff_size=16 << 20)
         # Several cameras may share a stamp. Reject other views before the
         # synchronizer consumes the front image, rather than after pairing it.
-        self.expected_frame_id=rospy.get_param('~frame_id','camera_front')
+        self.expected_frame_id=rospy.get_param('~frame_id','camera_'+self.view)
         self.objects = message_filters.SimpleFilter()
         self.object_subscriber=rospy.Subscriber('/perception/camera/objects',CameraObjectBoxArray,
             lambda m:self._accept_view(self.objects,m),queue_size=5)
@@ -57,10 +61,17 @@ class ObjectVisualizerNode:
         for status in message.status:
             if status.name == 'camera_objects/inference':
                 values = {v.key:v.value for v in status.values}
-                if 'hood_mask_enabled' in values and 'hood_mask_config_sha256' in values:
+                if 'ego_mask_by_view' in values:
+                    try:
+                        profile = ast.literal_eval(values['ego_mask_by_view'])[self.view]
+                        self.producer_profile = (str(profile['enabled']), profile['config_sha256'])
+                    except (ValueError, SyntaxError, KeyError, TypeError):
+                        self.producer_profile = None
+                elif self.view == 'front' and 'hood_mask_enabled' in values and 'hood_mask_config_sha256' in values:
                     self.producer_profile = (values['hood_mask_enabled'],values['hood_mask_config_sha256'])
                 if 'ego_hood_filter_enabled' in values and 'ego_hood_filter_config_sha256' in values:
-                    self.producer_filter_profile = (values['ego_hood_filter_enabled'],values['ego_hood_filter_config_sha256'],values.get('debug_raw_enabled'))
+                    self.producer_filter_profile = ((values['ego_hood_filter_enabled'],values['ego_hood_filter_config_sha256'],values.get('debug_raw_enabled'))
+                        if self.view == 'front' else ('False', '', values.get('debug_raw_enabled')))
 
     def render(self, source, detection, raw=None):
         if not self.publisher.get_num_connections():
@@ -97,7 +108,8 @@ class ObjectVisualizerNode:
         if detection.valid and (detection.image_height,detection.image_width) != image.shape[:2]:
             rospy.logwarn_throttle(2., 'object overlay rejected mismatched image dimensions')
             return
-        output = render_object_overlay(image,detection,self.hood_mask,raw,self.ego_hood_filter)
+        output = render_object_overlay(image,detection,self.hood_mask,raw,self.ego_hood_filter,
+            mask_label='hood mask' if self.view == 'front' else 'ego mask '+self.view)
         ok, encoded = cv2.imencode('.jpg',output,[cv2.IMWRITE_JPEG_QUALITY,self.quality])
         if ok:
             self.publisher.publish(CompressedImage(header=source.header,format='jpeg',data=encoded.tobytes()))

@@ -52,3 +52,13 @@ class AdapterTest(unittest.TestCase):
     def test_old_build_fails_explicitly(self):
         with self.assertRaisesRegex(RuntimeError, "stale outer asmc_msgs"):
             adapter.check_message_build("old")
+
+    def test_seven_raw_labels_and_explicit_legacy_four(self):
+        message = self.message()
+        message.boxes = [CameraObjectBox(xmin=1, ymin=2, xmax=20, ymax=30,
+            class_name=label, source_class_name=label, confidence=.9, confidence_valid=True)
+            for label in ("person", "dog", "bicycle", "car", "motorcycle", "bus", "truck")]
+        self.assertEqual([b.source_class_name for b in message.boxes],
+                         [b.classes for b in adapter.convert(message).yolo_bbox_arr])
+        self.assertEqual(["person", "car", "bus", "truck"],
+            [b.classes for b in adapter.convert(message, allowed_names=["bus", "truck", "person", "car"]).yolo_bbox_arr])

@@ -80,6 +80,7 @@ if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
   add_rostest(test/camera_bbox_lane_change.test DEPENDENCIES camera_bbox_lane_change_node camera_bbox_lane_node)
   add_rostest(test/camera_bbox_clipped.test DEPENDENCIES camera_bbox_lane_node)
+  add_rostest(test/camera_bbox_ego_mask.test DEPENDENCIES camera_bbox_lane_node)
   add_rostest(test/camera_bbox_lane.test DEPENDENCIES camera_bbox_lane_node)
 
   catkin_add_gtest(lane_boundary_adapter_test

@@ -16,6 +16,9 @@
   <arg name="camera_objects" default="false"/>
   <arg name="objects_config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
   <arg name="objects_hood_mask" default="true"/>
+  <arg name="objects_side_ego_mask" default="true"/>
+  <arg name="objects_left_ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_ego_mask_left_v1.yaml"/>
+  <arg name="objects_right_ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_ego_mask_right_v1.yaml"/>
   <arg name="objects_ego_hood_filter" default="false"/>
   <arg name="objects_ego_hood_filter_config" default="$(find asmc_camera)/config/camera/yolo_ego_hood_filter_v1.yaml"/>
   <arg name="objects_debug_raw" default="false"/>
@@ -32,6 +35,26 @@
       <param name="ego_hood_filter_config" value="$(arg objects_ego_hood_filter_config)"/>
       <param name="debug_raw" type="bool" value="$(arg objects_debug_raw)"/>
       <param name="hood_mask_config" value="$(arg objects_hood_mask_config)"/>
+    </node>
+    <node pkg="asmc_camera" type="object_visualizer_node.py" name="camera_object_visualizer_left"
+          output="screen" required="false">
+      <param name="view" value="left"/>
+      <param name="frame_id" value="camera_left"/>
+      <param name="image_topic" value="/cam_left/image_jpeg/compressed"/>
+      <param name="debug_topic" value="/perception/camera/objects/debug/left/image/compressed"/>
+      <param name="hood_mask" value="$(arg objects_side_ego_mask)"/>
+      <param name="hood_mask_config" value="$(arg objects_left_ego_mask_config)"/>
+      <param name="debug_raw" value="$(arg objects_debug_raw)"/>
+    </node>
+    <node pkg="asmc_camera" type="object_visualizer_node.py" name="camera_object_visualizer_right"
+          output="screen" required="false">
+      <param name="view" value="right"/>
+      <param name="frame_id" value="camera_right"/>
+      <param name="image_topic" value="/cam_right/image_jpeg/compressed"/>
+      <param name="debug_topic" value="/perception/camera/objects/debug/right/image/compressed"/>
+      <param name="hood_mask" value="$(arg objects_side_ego_mask)"/>
+      <param name="hood_mask_config" value="$(arg objects_right_ego_mask_config)"/>
+      <param name="debug_raw" value="$(arg objects_debug_raw)"/>
     </node>
   </group>
   <group if="$(arg camera_lane)">

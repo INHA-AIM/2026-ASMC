@@ -7,6 +7,14 @@
 
 namespace fusion_sync {
 
+template <class Frames>
+bool ConsumeMatchedFrame(Frames& frames, std::size_t index, bool reusable) {
+    const bool used_before = frames.at(index).consumed;
+    if (reusable) frames.at(index).consumed = true;
+    else frames.erase(frames.begin() + index);
+    return used_before;
+}
+
 enum class MatchAction {
     Wait,
     Match,
@@ -34,6 +42,7 @@ inline MatchDecision DecideMatch(
 
     for (std::size_t index = 0; index < yolo_stamps_ns.size(); ++index) {
         const std::int64_t stamp_ns = yolo_stamps_ns[index];
+        if (stamp_ns <= 0) continue;  // An invalidated observation is never a candidate.
         if (stamp_ns >= lidar_stamp_ns) has_future_frame = true;
         const std::int64_t offset_ns = stamp_ns >= lidar_stamp_ns
             ? stamp_ns - lidar_stamp_ns

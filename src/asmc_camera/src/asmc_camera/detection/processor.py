@@ -10,8 +10,11 @@ from asmc_camera.detection.ego_hood_filter import EgoHoodFilter
 
 
 class ObjectFrameProcessor:
-    def __init__(self, backend, groups, decode=cv2.imdecode, hood_mask=None, ego_hood_filter=None, include_masks=False):
+    def __init__(self, backend, groups, decode=cv2.imdecode, hood_mask=None, ego_hood_filter=None, include_masks=False, label_mode="group"):
         self.backend, self.groups, self.decode = backend, groups, decode
+        if label_mode not in ("source", "group"):
+            raise ValueError("invalid label_mode")
+        self.label_mode = label_mode
         self.hood_mask = hood_mask if hood_mask is not None else HoodMask()
         self.ego_hood_filter = ego_hood_filter if ego_hood_filter is not None else EgoHoodFilter()
         if self.hood_mask.enabled and self.ego_hood_filter.enabled:
@@ -31,7 +34,7 @@ class ObjectFrameProcessor:
         self.last_counts = dict(raw=0, kept=0, excluded=0)
         self.last_image, self.last_masks = None, []
         def invalid(width, height, stage, exc):
-            message = build_box_array(header, width, height, False, [], self.groups)
+            message = build_box_array(header, width, height, False, [], self.groups, self.label_mode)
             return message, message if include_raw else None, timings, (stage, str(exc))
         started = time.perf_counter()
         timings = {}
@@ -63,15 +66,15 @@ class ObjectFrameProcessor:
             timings.update(backend_timings)
         except Exception as exc:
             return invalid(width, height, "inference", exc)
-        raw = build_box_array(header, width, height, True, detections, self.groups) if include_raw else None
+        raw = build_box_array(header, width, height, True, detections, self.groups, self.label_mode) if include_raw else None
         filter_started = time.perf_counter()
         try:
             kept, excluded = self.ego_hood_filter.partition(detections, width, height)
         except Exception as exc:
             timings["ego_hood_filter_ms"] = (time.perf_counter()-filter_started)*1000
-            message = build_box_array(header, width, height, False, [], self.groups)
+            message = build_box_array(header, width, height, False, [], self.groups, self.label_mode)
             return message, raw, timings, ("filter", str(exc))
         timings["ego_hood_filter_ms"] = (time.perf_counter()-filter_started)*1000
         self.last_counts = dict(raw=len(detections), kept=len(kept), excluded=len(excluded))
-        message = build_box_array(header, width, height, True, kept, self.groups)
+        message = build_box_array(header, width, height, True, kept, self.groups, self.label_mode)
         return message, raw, timings, None

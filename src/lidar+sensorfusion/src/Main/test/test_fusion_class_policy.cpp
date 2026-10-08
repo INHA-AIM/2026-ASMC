@@ -2,12 +2,12 @@
 
 #include <gtest/gtest.h>
 
-TEST(FusionClassPolicy, NormalizesToThreeOutputClasses) {
+TEST(FusionClassPolicy, NormalizesSevenLabelsWithLegacyVehicleCategory) {
     EXPECT_EQ("person", fusion_class::Normalize("Person"));
     EXPECT_EQ("car", fusion_class::Normalize("car"));
     EXPECT_EQ("car", fusion_class::Normalize("TRUCK"));
     EXPECT_EQ("car", fusion_class::Normalize("bus"));
-    EXPECT_EQ("unknown", fusion_class::Normalize("bicycle"));
+    EXPECT_EQ("bicycle", fusion_class::Normalize("bicycle"));
 }
 
 TEST(FusionClassPolicy, InitialClassNeedsFiveConsistentObservations) {
@@ -45,11 +45,29 @@ TEST(FusionClassPolicy, ThreeMissesKeepClassAndFourthResetsIt) {
 TEST(FusionClassPolicy, UnsupportedObservationDoesNotEraseConfirmedClass) {
     LiDARObjectInfo object;
     object.str_ObjectClass = "car";
-    fusion_class::Observe(object, "bicycle", "bicycle", 5, 3);
+    fusion_class::Observe(object, "train", "train", 5, 3);
     EXPECT_EQ("car", object.str_ObjectClass);
 }
 
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
+}
+
+TEST(FusionClassPolicy, SevenLabelsAndRepeatedSourceCannotConfirm) {
+    for (const auto& label : {"person", "dog", "bicycle", "motorcycle", "car", "truck", "bus"}) {
+        LiDARObjectInfo object;
+        EXPECT_NE("unknown", fusion_class::Normalize(label));
+        ASSERT_TRUE(fusion_class::BeginObservation(object, 100, 1));
+        fusion_class::Observe(object, label, label, 2, 3);
+        EXPECT_FALSE(fusion_class::BeginObservation(object, 100, 1));
+        EXPECT_FALSE(fusion_class::BeginObservation(object, 99, 1));
+        EXPECT_EQ(1, object.continuity_counter);
+        ASSERT_TRUE(fusion_class::BeginObservation(object, 200, 1));
+        fusion_class::Observe(object, label, label, 2, 3);
+        EXPECT_EQ(label, object.str_YoloClass);
+        EXPECT_TRUE(fusion_class::IsConfirmed(object.str_ObjectClass));
+        ASSERT_TRUE(fusion_class::BeginObservation(object, 201, 2));
+        EXPECT_EQ(0, object.class_miss_counter);
+    }
 }

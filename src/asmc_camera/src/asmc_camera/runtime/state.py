@@ -10,7 +10,8 @@ STANDBY, PREPARE, ACTIVE = range(3)
 
 class InferenceState:
     def __init__(self, views, managed=False, initial_mode=STANDBY, target_hz=10.,
-                 warmed_up=True, freshness_sec=.35, clock=time.monotonic, trace=None):
+                 warmed_up=True, freshness_sec=.35, clock=time.monotonic, trace=None,
+                 target_hz_by_view=None):
         self.views = tuple(views)
         if not self.views or initial_mode not in (STANDBY, PREPARE, ACTIVE):
             raise ValueError('invalid views or initial mode')
@@ -22,6 +23,11 @@ class InferenceState:
         self.managed = managed
         self.mode = initial_mode if managed else ACTIVE
         self.target_hz, self.warmed_up = target_hz, warmed_up
+        self.target_hz_by_view = dict(target_hz_by_view or {})
+        if (set(self.target_hz_by_view)-set(self.views) or
+                any(not math.isfinite(v) or not 0 < v <= 120
+                    for v in self.target_hz_by_view.values())):
+            raise ValueError('invalid per-view target rates')
         self.generation = 0
         self.latest_input = {v: 0 for v in self.views}
         self.latest_output = {v: 0 for v in self.views}
@@ -67,10 +73,13 @@ class InferenceState:
             if not math.isfinite(target_hz) or target_hz < 0 or target_hz > 120:
                 return False, self.generation, 'target_hz_must_be_zero_or_in_(0,120]'
             target = target_hz or self.target_hz
-            if self.managed and mode == self.mode and target == self.target_hz:
+            if (self.managed and mode == self.mode and target == self.target_hz
+                    and (not target_hz or not self.target_hz_by_view)):
                 return True, self.generation, 'unchanged'
             self.managed = True
             self.mode, self.target_hz = mode, target
+            if target_hz:
+                self.target_hz_by_view.clear()
             self.generation += 1
             self.cutoff = max(self.latest_input.values())
             self._reset()
@@ -95,7 +104,8 @@ class InferenceState:
                 if per_view:
                     for view in stamps:
                         old = self.next_by_view[view]
-                        self.next_by_view[view] = now + 1./self.target_hz if not old else max(old+1./self.target_hz, now+.001)
+                        hz = self.target_hz_by_view.get(view, self.target_hz)
+                        self.next_by_view[view] = now + 1./hz if not old else max(old+1./hz, now+.001)
                 else:
                     self.next_at = (now + 1. / self.target_hz if not self.next_at
                                     else max(self.next_at + 1. / self.target_hz, now + .001))

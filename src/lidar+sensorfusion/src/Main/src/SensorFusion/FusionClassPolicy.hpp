@@ -13,13 +13,15 @@ inline std::string Normalize(std::string label) {
                    [](unsigned char value) {
                        return static_cast<char>(std::tolower(value));
                    });
-    if (label == "person") return "person";
+    if (label == "person" || label == "dog" || label == "bicycle" ||
+        label == "motorcycle") return label;
     if (label == "car" || label == "truck" || label == "bus") return "car";
     return "unknown";
 }
 
 inline bool IsConfirmed(const std::string& label) {
-    return label == "car" || label == "person";
+    return label == "car" || label == "person" || label == "dog" ||
+           label == "bicycle" || label == "motorcycle";
 }
 
 // 정규화 없이 소문자만 맞춘 YOLO 원본 라벨. truck/bus를 보존한다.
@@ -29,6 +31,20 @@ inline std::string RawLabel(std::string label) {
                        return static_cast<char>(std::tolower(value));
                    });
     return label.empty() ? "unknown" : label;
+}
+
+// A repeated image is not another independent confirmation/miss.
+inline bool BeginObservation(LiDARObjectInfo& object, uint64 stamp_ns, uint64 epoch) {
+    if (object.camera_observation_epoch == epoch &&
+        stamp_ns <= object.camera_observation_ns) return false;
+    if (object.camera_observation_epoch != epoch) {
+        object.last_seen_class = "unknown";
+        object.continuity_counter = 0;
+        object.class_miss_counter = 0;
+    }
+    object.camera_observation_epoch = epoch;
+    object.camera_observation_ns = stamp_ns;
+    return true;
 }
 
 inline void Observe(LiDARObjectInfo& object, const std::string& label,

@@ -30,7 +30,8 @@ bool IsNoise(const std::string& object_class) {
 std::int16_t MapObjectType(const std::string& object_class) {
     if (object_class == "person" || object_class == "pedestrian") return 1;
     if (object_class == "car" || object_class == "truck" ||
-        object_class == "bus") return 2;
+        object_class == "bus" || object_class == "bicycle" ||
+        object_class == "motorcycle") return 2;
     return 3;
 }
 

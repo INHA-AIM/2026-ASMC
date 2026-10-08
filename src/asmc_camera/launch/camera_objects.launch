@@ -5,7 +5,7 @@
   <arg name="config" default="$(find asmc_camera)/config/camera/yolo11m_coco.yaml"/>
   <arg name="class_groups_config" default="$(find asmc_camera)/config/camera/object_classes.yaml"/>
   <arg name="objects_hood_mask" default="true"/>
-  <arg name="objects_side_ego_mask" default="false"/>
+  <arg name="objects_side_ego_mask" default="true"/>
   <arg name="objects_left_ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_ego_mask_left_v1.yaml"/>
   <arg name="objects_right_ego_mask_config" default="$(find asmc_camera)/config/camera/yolo_ego_mask_right_v1.yaml"/>
   <arg name="objects_ego_hood_filter" default="false"/>

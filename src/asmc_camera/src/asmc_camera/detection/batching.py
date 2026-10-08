@@ -40,13 +40,20 @@ class ImageTransform:
                           interpolation=cv2.INTER_NEAREST).astype(bool)
 
 
-def pack_image(image, view, common_hw=None):
+def shapes_for_front(width):
+    if width not in (640, 960, 1280):
+        raise ValueError('front width must be 640, 960 or 1280')
+    height = ((width * 720 // 1280 + 31) // 32) * 32
+    return dict(front=(height, width), left=(480, 640), right=(480, 640))
+
+
+def pack_image(image, view, common_hw=None, shapes=None):
     if view not in SHAPES or image.ndim != 3 or image.shape[2] != 3:
         raise ValueError('invalid view/image')
     oh, ow = image.shape[:2]
     if oh <= 0 or ow <= 0:
         raise ValueError('empty image')
-    target_h, target_w = SHAPES[view]
+    target_h, target_w = (shapes or SHAPES)[view]
     scale = min(target_h/oh, target_w/ow)
     rh, rw = int(round(oh*scale)), int(round(ow*scale))
     tensor_h, tensor_w = common_hw or (target_h, target_w)

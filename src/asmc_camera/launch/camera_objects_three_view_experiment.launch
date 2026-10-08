@@ -1,0 +1,23 @@
+<launch>
+  <!-- Explicit candidate config. This launch does not select an unmeasured winner. -->
+  <arg name="config" default="$(find asmc_camera)/config/camera/coco7_three_view_candidate.yaml"/>
+  <arg name="debug" default="true"/>
+  <arg name="initial_mode" default="2"/>
+  <arg name="target_hz" default="20.0"/>
+  <arg name="start_camera_lane" default="false"/>
+  <arg name="start_traffic_light" default="false"/>
+  <include file="$(find asmc_camera)/launch/perception.launch">
+    <arg name="profile" value="planning"/>
+    <arg name="start_camera_lane" value="$(arg start_camera_lane)"/>
+    <arg name="start_traffic_light" value="$(arg start_traffic_light)"/>
+    <arg name="start_camera_objects" value="true"/>
+    <arg name="start_visualization" value="$(arg debug)"/>
+    <arg name="camera_objects_config" value="$(arg config)"/>
+    <arg name="objects_views" value="[front, left, right]"/>
+    <arg name="objects_initial_mode" value="$(arg initial_mode)"/>
+    <arg name="objects_target_hz" value="$(arg target_hz)"/>
+    <arg name="objects_debug_masks" value="$(arg debug)"/>
+    <arg name="objects_hood_mask" value="true"/>
+    <arg name="objects_side_ego_mask" value="true"/>
+  </include>
+</launch>

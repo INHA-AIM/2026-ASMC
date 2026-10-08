@@ -52,6 +52,7 @@ class LaneChangeTest(unittest.TestCase):
         self.log=open('/tmp/'+self._testMethodName+'-bbox-change.log','w')
         self.process=subprocess.Popen(['roslaunch','lane_boundary_adapter','camera_bbox_lane_change.launch',
             'use_rviz:=false','enable_control:=true','control_topic:=/bbox_change_test/command',
+            'ego_mask_enabled:=false',
             'lane_change_timeout:='+('10.0' if self._testMethodName.startswith('test_ignore') else '5.0'),
             *([] if self._testMethodName.startswith(('test_ignore','test_repeat')) else ['ignore_bbox_during_lane_change:=false']),
             *([] if self._testMethodName.startswith('test_repeat') else

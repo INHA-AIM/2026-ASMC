@@ -46,8 +46,9 @@ class ObjectDetectionNode:
         self.views = list(rospy.get_param("~views", ["front"]))
         if not self.views or len(set(self.views)) != len(self.views) or set(self.views)-{'front','left','right'}:
             raise ValueError("views must contain unique front/left/right names")
+        production_batch = bool(rospy.get_param("~batched_runtime", False))
         experimental = bool(rospy.get_param('~seg_experiment', False))
-        if self.views != ['front'] and not experimental:
+        if self.views != ['front'] and not (experimental or production_batch):
             raise ValueError('multiple object views require seg_experiment=true')
         self.debug_masks = bool(rospy.get_param('~debug_masks', False))
         groups = load_class_groups(rospy.get_param("~class_groups"))
@@ -61,18 +62,24 @@ class ObjectDetectionNode:
         if hood_mask.enabled and ego_hood_filter.enabled:
             raise ValueError("hood input mask and ego hood post-filter are mutually exclusive")
         if backend is None:
-            batched = bool(rospy.get_param('~batched_experiment', False))
-            if batched and not experimental:
+            batched = production_batch or bool(rospy.get_param('~batched_experiment', False))
+            if batched and not (experimental or production_batch):
                 raise ValueError('batched runtime requires seg_experiment=true')
             if batched:
-                from asmc_camera.detection.batched_backend import BatchedSegmentationDetector
-                factory = BatchedSegmentationDetector
+                if production_batch:
+                    from asmc_camera.detection.yolo_batch_backend import BatchedYoloDetector
+                    factory = BatchedYoloDetector
+                else:
+                    from asmc_camera.detection.batched_backend import BatchedSegmentationDetector
+                    factory = BatchedSegmentationDetector
             elif experimental:
                 from asmc_camera.detection.segmentation import SegmentationDetector
                 factory = SegmentationDetector
             else:
                 factory = UltralyticsDetector
-            extra = dict(batch_mode=rospy.get_param('~batch_mode', '2plus1'),
+            extra = dict(task=rospy.get_param('~task', 'detect'),
+                         front_width=int(rospy.get_param('~front_width', 1280)),
+                         batch_mode=rospy.get_param('~batch_mode', '2plus1'),
                          runtime_backend=rospy.get_param('~runtime_backend', 'tensorrt'),
                          source_checkpoint_sha256=rospy.get_param('~source_checkpoint_sha256',''),
                          expected_prompt_sha256=rospy.get_param('~expected_prompt_sha256','')) if batched else {}
@@ -93,7 +100,8 @@ class ObjectDetectionNode:
         self.processors = {v: ObjectFrameProcessor(backend, groups,
             hood_mask=view_masks[v],
             ego_hood_filter=ego_hood_filter if v == 'front' else EgoHoodFilter(),
-            include_masks=self.debug_masks) for v in self.views}
+            include_masks=self.debug_masks,
+            label_mode=rospy.get_param("~label_mode", "group")) for v in self.views}
         self.processor = self.processors.get('front', self.processors[self.views[0]])
         self.backend_info = dict(backend.info)
         batch_wait = float(rospy.get_param('~batch_wait_ms', 10 if self.batch_backend else 0))
@@ -260,7 +268,9 @@ class ObjectDetectionNode:
                               ego_hood_filter_excluded_total=self.excluded_boxes, filter_errors=self.filter_errors)
                 fps = (self.output_frames - previous_count) / max(now - previous_at, 1e-6)
                 previous_count, previous_at = self.output_frames, now
-                values.update(processing_fps=round(fps, 3), output_frames=self.output_frames,
+                values.update(label_mode=self.processor.label_mode,
+                              target_hz_by_view=dict(self.control.state.target_hz_by_view),
+                              processing_fps=round(fps, 3), output_frames=self.output_frames,
                               received_frames=sum(self.buffer.received.values()), replaced_frames=sum(self.buffer.replaced.values()),
                               views=self.views, output_by_view=dict(self.view_counts),
                               received_by_view=dict(self.buffer.received), replaced_by_view=dict(self.buffer.replaced),

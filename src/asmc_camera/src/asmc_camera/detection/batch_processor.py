@@ -21,7 +21,7 @@ def process_batch(frames, processors, backend, include_raw=False):
             h, w = image.shape[:2]
             timings['decode_ms'] = (time.monotonic()-start)*1000
         except Exception as exc:
-            rows[frame.view] = (frame, build_box_array(frame.header,0,0,False,[],p.groups),None,timings,('decode',str(exc)))
+            rows[frame.view] = (frame, build_box_array(frame.header,0,0,False,[],p.groups, p.label_mode),None,timings,('decode',str(exc)))
             continue
         start = time.monotonic()
         try:
@@ -29,7 +29,7 @@ def process_batch(frames, processors, backend, include_raw=False):
             timings['hood_mask_ms'] = (time.monotonic()-start)*1000
             rows[frame.view] = (frame, w, h, timings)
         except Exception as exc:
-            rows[frame.view] = (frame, build_box_array(frame.header,w,h,False,[],p.groups),None,timings,('mask',str(exc)))
+            rows[frame.view] = (frame, build_box_array(frame.header,w,h,False,[],p.groups, p.label_mode),None,timings,('mask',str(exc)))
     error, detected = None, {}
     if images:
         try:
@@ -48,18 +48,18 @@ def process_batch(frames, processors, backend, include_raw=False):
             continue
         _, w, h, timings = row
         if error:
-            output.append((frame,build_box_array(frame.header,w,h,False,[],p.groups),None,timings,error))
+            output.append((frame,build_box_array(frame.header,w,h,False,[],p.groups, p.label_mode),None,timings,error))
             continue
         result = detected[frame.view]
         timings.update(result.timings)
-        raw = build_box_array(frame.header,w,h,True,result.detections,p.groups) if include_raw else None
+        raw = build_box_array(frame.header,w,h,True,result.detections,p.groups, p.label_mode) if include_raw else None
         try:
             kept, excluded = p.ego_hood_filter.partition(result.detections,w,h)
             # Preserve result/mask correspondence if a future explicit filter is used.
             p.last_masks = [m for d,m in zip(result.detections,result.masks) if any(d is k for k in kept)]
             p.last_counts = dict(raw=len(result.detections),kept=len(kept),excluded=len(excluded))
-            message = build_box_array(frame.header,w,h,True,kept,p.groups)
+            message = build_box_array(frame.header,w,h,True,kept,p.groups, p.label_mode)
             output.append((frame,message,raw,timings,None))
         except Exception as exc:
-            output.append((frame,build_box_array(frame.header,w,h,False,[],p.groups),raw,timings,('filter',str(exc))))
+            output.append((frame,build_box_array(frame.header,w,h,False,[],p.groups, p.label_mode),raw,timings,('filter',str(exc))))
     return output

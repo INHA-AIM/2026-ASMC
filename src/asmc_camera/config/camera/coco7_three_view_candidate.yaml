@@ -1,0 +1,26 @@
+# Candidate only; model selection has not been accepted.
+views:
+- front
+- left
+- right
+image_topic: /image_jpeg/compressed
+weights: $(find asmc_camera)/models/object_detection/yolo11m.pt
+expected_sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+device: cuda:0
+require_cuda: true
+conf_thres: 0.7
+allowed_names:
+- person
+- dog
+- bicycle
+- car
+- motorcycle
+- bus
+- truck
+batched_runtime: true
+runtime_backend: pytorch
+task: detect
+front_width: 640
+batch_mode: 2plus1
+batch_wait_ms: 10
+label_mode: source
