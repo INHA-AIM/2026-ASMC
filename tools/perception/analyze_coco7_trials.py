@@ -70,7 +70,15 @@ def main():
         for path in parent.glob('*/report.json'):
             r=json.loads(path.read_text());live.append(dict(path=str(path.relative_to(root)),job=r['job'],passed=r['passed'],failures=r['failures'],
                 measurements=r.get('measurements'),target_attainment=r.get('target_attainment'),resources=r.get('resources'),planning=r.get('planning')))
-    report=dict(quality=quality,live=live,rejected_provenance=rejected,failed_trials=sum(not r['passed'] for r in live),trials=len(live))
+    review_galleries=[dict(path=name+'/index.html',label=label) for name,label in [
+        ('full-mask-controls-selection','Seg: black mask 신규 누락 전체'),
+        ('full-neutral-mask-controls-selection','Seg: neutral mask 신규 누락 전체'),
+        ('full-detect-mask-controls-selection','Detect: black mask 신규 누락 전체'),
+        ('full-detect-neutral-controls-selection','Detect: neutral mask 신규 누락 전체'),
+        ('actor-model-gallery','동일 MORAI 스폰 영상 · detect/seg 비교')]
+        if (root/name/'index.html').exists()]
+    report=dict(quality=quality,live=live,rejected_provenance=rejected,review_galleries=review_galleries,
+                failed_trials=sum(not r['passed'] for r in live),trials=len(live))
     (root/'comparison.json').write_text(json.dumps(report,indent=2)+'\n')
     body=['<!doctype html><meta charset="utf-8"><style>body{font:16px system-ui;margin:24px}table{border-collapse:collapse}td,th{padding:8px;border:1px solid #ccc}img{max-width:95%}</style><h1>COCO7 · same images, live MORAI 4060 Ti</h1>',
           '<p>Four labelled classes in Capture GT; dog/bicycle/motorcycle remain inspection only. Failed repeats are retained. Minimum feasibility does not mean target 20 Hz.</p><p><a href="near-object-gallery/index.html">근거리 차량 · 960/1280 · PyTorch/TensorRT 비교</a></p>',
@@ -78,7 +86,9 @@ def main():
     for r in quality:
         s=r['selected'];chosen=f'{s["confidence"]:.2f} / F1 {s["macro_f1"]:.3f}' if s else 'ineligible FP'
         body.append(f'<tr><td>{r["model"]}</td><td>{r["width"]}</td><td>{r["fixed"]["macro_f1"]:.3f}</td><td>{r["fixed"]["false_positives"]} / {r["baseline_fp_limit"]}</td><td>{chosen}</td><td><a href="quality/{r["model"]}-{r["width"]}-selection/gallery/index.html">GT / output / mask</a></td></tr>')
-    body+=['</table><h2>All live trials</h2><table><tr><th>Condition</th><th>Output Hz front / left / right</th><th>VRAM MiB</th><th>Minimum gate</th></tr>']
+    body+=['</table><p>Score-only confidence selection is not operating acceptance. Close-object continuity, mask preservation, all repeats, and heldout evidence must also be reviewed.</p><h2>누락·스폰 검토 갤러리</h2><ul>']
+    body += ['<li><a href="'+r['path']+'">'+html.escape(r['label'])+'</a></li>' for r in review_galleries]
+    body+=['</ul><h2>All live trials</h2><table><tr><th>Condition</th><th>Output Hz front / left / right</th><th>VRAM MiB</th><th>Minimum gate</th></tr>']
     for r in live:
         m=r['measurements'] or {};rates=' / '.join(str(round(m.get('yolo_'+v,{}).get('hz',0),2)) for v in ('front','left','right'))
         memory=(r['resources'] or {}).get('gpu_memory_mib',{}).get('maximum')

@@ -27,6 +27,8 @@ backend_parity:
   - 20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/left/000230.png
   - 20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000229.png
   - 20260904_000940_kcity_comp_sample_foggy_sim1pm_wheel/frames/intensity/right/000290.png
+  side_mask_controls_scope: 45 selected backend controls only; not full selection
+    mask acceptance
 screening:
   trials: 45
   failures: 6
@@ -40,16 +42,12 @@ gt:
   - bicycle
   - motorcycle
 pending:
-- heldout_frozen_confidence
-- full_mask_off_controls
 - bag_fusion_reuse
 - low_speed_driving
 - 30min_stability
 - shared_container_reconnection
 - default_promotion
 - final_regression_and_CI
-- debug_on_cost
-- actor_capture_inspection
 - legacy_3514_parity
 - mask_acceptance_or_alternative_model
 artifacts: ../../artifacts/camera-coco7-live-v1
@@ -98,6 +96,14 @@ completed_measurement_sets:
     index_sha256: 55c026b17bb5d03f2d8ce1d930ebb50fb3cfc0c301dffb3a43bf71d397bd8cc1
     failed_trials:
     - yolo26m-seg-960-front20_side10-2plus1-C6-r2
+  live-finalist-debug:
+    trials: 3
+    failed: 3
+    index_sha256: 914ca992e4c6bef23ea461eba2135019b5fba6ee77084222c8d14e1537abcb32
+    failed_trials:
+    - yolo26m-seg-960-all15-2plus1-C6-r1-debug
+    - yolo26m-seg-960-all15-2plus1-C6-r2-debug
+    - yolo26m-seg-960-all15-2plus1-C6-r3-debug
 near_object_diagnostic:
   gallery: ../../artifacts/camera-coco7-live-v1/near-object-gallery/index.html
   case: 'foggy front 000227–000229: 960 finds close car; 1280 m-seg misses even at0.25
@@ -179,3 +185,111 @@ mask_ablation:
     exceptions_applied: false
     model: yolo26m
     front_width: 960
+  full-detect-neutral-controls-selection:
+    images: 2252
+    confidence: 0.7
+    new_missed:
+      front: 0
+      left: 0
+      right: 2
+    recovered:
+      front: 1
+      left: 0
+      right: 3
+    passed: false
+    exceptions_applied: false
+    report_sha256: 269d27769dfd717f1dc5e022ee043ba122902b9520f480b31fe8ebae9e2ed03e
+    model: yolo26m
+    front_width: 960
+frozen_heldout:
+- artifact: quality-heldout-frozen/yolo26m-seg-960-heldout
+  frames: 2474
+  confidence: 0.65
+  macro_f1: 0.17751780260998587
+  false_positives: 4
+  mask_iou: 0.7528355087527436
+  summary_sha256: 4c957b1ef2da29b0827b56e39d29a29eb271bb043b55f56c66e889f4d6195af6
+  used_for_retuning: false
+- artifact: baseline-heldout-frozen/yolo11m-960-heldout
+  frames: 2474
+  confidence: 0.7
+  macro_f1: 0.09997315953994369
+  false_positives: 1
+  mask_iou: null
+  summary_sha256: af7c36ccc533b57d0e6e5d82d31ceb7c0327139b3b03b56ebd3714d24418b9b7
+  used_for_retuning: false
+controlled_actor_comparison:
+  artifact: actor-model-gallery/index.html
+  same_source_rgb: true
+  ground_valid_fixtures: 97
+  rejected_fixtures: 21
+  pixel_gt: false
+  recall_claimed: false
+  models:
+  - yolo26m-960@0.7
+  - yolo26m-seg-960@0.65
+rejected_protocol_runs:
+- artifact: fusion-coco7-10hz
+  reason: requested10Hz but per-view15Hz overrides; original retained, excluded from10Hz
+    inference
+fusion_before_empty_fix:
+  artifact: fusion-coco7-10hz-v2
+  interrupted_after_confirmed_defect: true
+  complete: false
+  index_sha256: 429c1b023ac2c562b561424c6666816c66e7850d990f6e8f76ef2cca628a2c01
+  completed_trials:
+  - job:
+      bag_id: primary
+      policy: unique
+      repeat: 1
+      diagnostic: false
+    passed: true
+    totals:
+      matched: 397
+      dropped: 105
+      pending_lidar: 1
+      pending_yolo: 0
+      fresh: 397
+      reused: 0
+  - job:
+      bag_id: primary
+      policy: bounded_reuse
+      repeat: 1
+      diagnostic: false
+    passed: true
+    totals:
+      matched: 365
+      dropped: 137
+      pending_lidar: 1
+      pending_yolo: 2
+      fresh: 326
+      reused: 39
+  - job:
+      bag_id: shadow
+      policy: unique
+      repeat: 1
+      diagnostic: false
+    passed: false
+    totals:
+      matched: 168
+      dropped: 9
+      pending_lidar: 1
+      pending_yolo: 1
+      fresh: 168
+      reused: 0
+  - job:
+      bag_id: shadow
+      policy: bounded_reuse
+      repeat: 1
+      diagnostic: false
+    passed: true
+    totals:
+      matched: 36
+      dropped: 144
+      pending_lidar: 1
+      pending_yolo: 2
+      fresh: 36
+      reused: 0
+  reason: latest empty barrier incorrectly excluded earlier normal empty observations;
+    fixed with real matcher regression
+  main_tests_after_fix: 311
