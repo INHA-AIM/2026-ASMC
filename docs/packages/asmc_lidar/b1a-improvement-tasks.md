@@ -89,9 +89,10 @@ strict 100ms 보간과 Main bounded 300ms 보정을 구분하고 ROS/steady 시�
 
 ## PR #72에서 새로 고정한 회귀 입력
 
-- 현재 지면 fit 실패 + 직전 유효 평면 + roll 10°: 기존 fallback의 점 24개 소실을 공통 경로에서 수정했다. 평면을 운반할 자세/이동 근거가 없으면 unknown으로 보존한다.
+- 현재 지면 fit 실패 + 직전 유효 평면 + roll context 10°: 합성 unknown 24점의 fallback 삭제와 common 보존을 비교했다. 입력은 이전 지면 높이에 놓인 일직선 점이며 장애물 정답이 아니다. 평면을 운반할 자세/이동 근거가 없으면 unknown으로 보존하는 보수적 정책이다. 실제 객체 소실 수정으로 확대하지 않는다.
 - 노면 접촉 30cm 물체·보행자 재진입·차량·벽의 합성 입력: roll 후보의 미대응 관측이 99→106으로 증가했다. 지면 하부 삭제와 군집 합침을 따로 확인한다.
 - 고정 shadow case-01: 유지점 수는 7037→7031이지만 후보는 23→13이다. 후보 수를 차량 정답 수로 사용하지 않고 point→cluster→OBB→연관을 추적한다.
-- 주 bag의 roll 신규 분류 차이 11건, 음영 CA 속도 급변 527→555: 기존 승인 예외와 구분한다. 공개 속도 validity는 false이며 기본 roll은 OFF다.
+- 주 bag의 roll 신규 분류 차이 11관측은 [원본 영상·점군 갤러리](../../../config/baselines/evidence/lidar_continuous_regression_v1/user-review/index.html)로 검토한다. 10관측은 car→unknown, 1관측은 반대이고 같은 객체의 연속 관측이 포함된다. 숫자 ID를 실행 간 객체 정답으로 사용하지 않는다.
+- CA 상대속도 변화 >2m/s는 주 bag 657→599(-8.8%), 음영 527→555(+5.3%)다. 사용자는 음영의 증가를 이 지표에 한해 허용했다. 신규 분류 차이·객체 보존·속도 정확도 승인으로 확대하지 않는다. 공개 속도 validity는 false이며 기본 roll은 OFF다.
 
 입력·결과·검증 범위는 [연속 회귀 문서](../../handoffs/perception/lidar-continuous-regression.md)와 그 baseline을 따른다.

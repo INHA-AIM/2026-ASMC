@@ -1,0 +1,431 @@
+{
+  "metric": "same-track successive CA relative velocity vector delta >2 m/s; NOT physical speed/error",
+  "threshold_mps": 2,
+  "independent_speed_GT": false,
+  "bags": {
+    "primary": {
+      "legacy": {
+        "count": 668,
+        "jump_mps": {
+          "mean": 7.410613610314474,
+          "p50": 4.719102299980071,
+          "p95": 24.800830742611854,
+          "p99": 32.57485574002008,
+          "max": 36.42357388515844
+        },
+        "distinct_ids": 312,
+        "initialization_transition_candidates": 294,
+        "observed_age_at_least_5_candidates": 382,
+        "largest": [
+          {
+            "stamp_ns": 1790654809440000000,
+            "id": 257,
+            "jump_mps": 36.42357388515844,
+            "dt_sec": 0.062000000000000006,
+            "kf_init_count": 2,
+            "age": 3,
+            "misses": 0,
+            "center_delta_m": 2.266060643428196,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1790654793793000000,
+            "id": 37,
+            "jump_mps": 36.12349731694752,
+            "dt_sec": 0.065,
+            "kf_init_count": 2,
+            "age": 2,
+            "misses": 0,
+            "center_delta_m": 3.0006621542685665,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1790654801291000000,
+            "id": 143,
+            "jump_mps": 34.88371276527856,
+            "dt_sec": 0.065,
+            "kf_init_count": 2,
+            "age": 6,
+            "misses": 0,
+            "center_delta_m": 4.287767177041152,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1790654807193000000,
+            "id": 222,
+            "jump_mps": 34.82680352000509,
+            "dt_sec": 0.083,
+            "kf_init_count": 2,
+            "age": 7,
+            "misses": 0,
+            "center_delta_m": 3.1402267195392275,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1790654807039000000,
+            "id": 224,
+            "jump_mps": 33.5450109341166,
+            "dt_sec": 0.061000000000000006,
+            "kf_init_count": 2,
+            "age": 5,
+            "misses": 0,
+            "center_delta_m": 1.9656766730490567,
+            "cause": "initialization transition candidate"
+          }
+        ]
+      },
+      "common_pitch": {
+        "count": 657,
+        "jump_mps": {
+          "mean": 7.09496607903968,
+          "p50": 4.318337371308545,
+          "p95": 24.737795717370133,
+          "p99": 32.83701904759401,
+          "max": 45.74791779645249
+        },
+        "distinct_ids": 307,
+        "initialization_transition_candidates": 281,
+        "observed_age_at_least_5_candidates": 388,
+        "largest": [
+          {
+            "stamp_ns": 1790654807784197568,
+            "id": 239,
+            "jump_mps": 45.74791779645249,
+            "dt_sec": 0.050351858000000006,
+            "kf_init_count": 2,
+            "age": 3,
+            "misses": 0,
+            "center_delta_m": 3.2172085320834323,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1790654821642683506,
+            "id": 418,
+            "jump_mps": 36.644672480742926,
+            "dt_sec": 0.063396693,
+            "kf_init_count": 2,
+            "age": 10,
+            "misses": 0,
+            "center_delta_m": 2.344041494666648,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1790654793793042659,
+            "id": 31,
+            "jump_mps": 36.303348740973206,
+            "dt_sec": 0.064988851,
+            "kf_init_count": 2,
+            "age": 9,
+            "misses": 0,
+            "center_delta_m": 2.572007509152668,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1790654799188595294,
+            "id": 103,
+            "jump_mps": 35.83209950953746,
+            "dt_sec": 0.050918817000000005,
+            "kf_init_count": 2,
+            "age": 3,
+            "misses": 0,
+            "center_delta_m": 1.825114590088418,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1790654801291597366,
+            "id": 142,
+            "jump_mps": 34.202427306104305,
+            "dt_sec": 0.065173149,
+            "kf_init_count": 2,
+            "age": 6,
+            "misses": 0,
+            "center_delta_m": 4.270893279660605,
+            "cause": "initialization transition candidate"
+          }
+        ]
+      },
+      "common_roll_pitch": {
+        "count": 599,
+        "jump_mps": {
+          "mean": 7.3269929056411,
+          "p50": 4.3183591278719415,
+          "p95": 24.596197111906957,
+          "p99": 31.19408955921576,
+          "max": 36.19548184000914
+        },
+        "distinct_ids": 303,
+        "initialization_transition_candidates": 282,
+        "observed_age_at_least_5_candidates": 324,
+        "largest": [
+          {
+            "stamp_ns": 1790654809440462350,
+            "id": 288,
+            "jump_mps": 36.19548184000914,
+            "dt_sec": 0.062381982,
+            "kf_init_count": 2,
+            "age": 3,
+            "misses": 0,
+            "center_delta_m": 2.2654634177719295,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1790654795441576957,
+            "id": 60,
+            "jump_mps": 35.502317524085036,
+            "dt_sec": 0.063223123,
+            "kf_init_count": 2,
+            "age": 4,
+            "misses": 0,
+            "center_delta_m": 3.4025314650083662,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1790654796647626638,
+            "id": 73,
+            "jump_mps": 34.73979374156938,
+            "dt_sec": 0.06488442400000001,
+            "kf_init_count": 2,
+            "age": 9,
+            "misses": 0,
+            "center_delta_m": 2.257475179390315,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1790654812642819404,
+            "id": 317,
+            "jump_mps": 32.61907843792412,
+            "dt_sec": 0.063558817,
+            "kf_init_count": 2,
+            "age": 8,
+            "misses": 0,
+            "center_delta_m": 2.0734017597062815,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1790654818642883539,
+            "id": 358,
+            "jump_mps": 31.948424463663535,
+            "dt_sec": 0.062852383,
+            "kf_init_count": 2,
+            "age": 2,
+            "misses": 0,
+            "center_delta_m": 2.2828761493849203,
+            "cause": "initialization transition candidate"
+          }
+        ]
+      }
+    },
+    "shadow": {
+      "legacy": {
+        "count": 557,
+        "jump_mps": {
+          "mean": 6.739390929270583,
+          "p50": 4.324746075935603,
+          "p95": 20.832729906388003,
+          "p99": 28.804128028350117,
+          "max": 31.264378810660208
+        },
+        "distinct_ids": 236,
+        "initialization_transition_candidates": 218,
+        "observed_age_at_least_5_candidates": 386,
+        "largest": [
+          {
+            "stamp_ns": 1789141093622000000,
+            "id": 75,
+            "jump_mps": 31.264378810660208,
+            "dt_sec": 0.1,
+            "kf_init_count": 2,
+            "age": 21,
+            "misses": 0,
+            "center_delta_m": 3.373029160992823,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1789141098997000000,
+            "id": 208,
+            "jump_mps": 31.118050599842498,
+            "dt_sec": 0.101,
+            "kf_init_count": 2,
+            "age": 7,
+            "misses": 0,
+            "center_delta_m": 3.184642314483623,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1789141096045000000,
+            "id": 160,
+            "jump_mps": 30.481603451340465,
+            "dt_sec": 0.10200000000000001,
+            "kf_init_count": 2,
+            "age": 4,
+            "misses": 0,
+            "center_delta_m": 3.1050908827726786,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1789141097950000000,
+            "id": 191,
+            "jump_mps": 30.223078792666776,
+            "dt_sec": 0.101,
+            "kf_init_count": 2,
+            "age": 6,
+            "misses": 0,
+            "center_delta_m": 4.415853671137807,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1789141099199000000,
+            "id": 215,
+            "jump_mps": 29.14765018837454,
+            "dt_sec": 0.099,
+            "kf_init_count": 2,
+            "age": 3,
+            "misses": 0,
+            "center_delta_m": 3.545135869268413,
+            "cause": "initialization transition candidate"
+          }
+        ]
+      },
+      "common_pitch": {
+        "count": 527,
+        "jump_mps": {
+          "mean": 5.59110911786658,
+          "p50": 3.7697296012330184,
+          "p95": 15.096246355798314,
+          "p99": 20.447650013548994,
+          "max": 27.015194000800136
+        },
+        "distinct_ids": 259,
+        "initialization_transition_candidates": 234,
+        "observed_age_at_least_5_candidates": 339,
+        "largest": [
+          {
+            "stamp_ns": 1789141095292590379,
+            "id": 167,
+            "jump_mps": 27.015194000800136,
+            "dt_sec": 0.10256743400000001,
+            "kf_init_count": 2,
+            "age": 2,
+            "misses": 0,
+            "center_delta_m": 2.9981913800876625,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1789141093121555566,
+            "id": 86,
+            "jump_mps": 22.84874144833911,
+            "dt_sec": 0.10306978200000001,
+            "kf_init_count": 2,
+            "age": 13,
+            "misses": 0,
+            "center_delta_m": 2.3864116850292336,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1789141094361975669,
+            "id": 145,
+            "jump_mps": 22.038226048304562,
+            "dt_sec": 0.10058856000000001,
+            "kf_init_count": 2,
+            "age": 2,
+            "misses": 0,
+            "center_delta_m": 2.1725175386293825,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1789141093121555566,
+            "id": 61,
+            "jump_mps": 20.836104701219753,
+            "dt_sec": 0.10306978200000001,
+            "kf_init_count": 2,
+            "age": 25,
+            "misses": 0,
+            "center_delta_m": 2.2403651313324957,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1789141090583647727,
+            "id": 48,
+            "jump_mps": 20.502408540703914,
+            "dt_sec": 0.104473114,
+            "kf_init_count": 2,
+            "age": 15,
+            "misses": 0,
+            "center_delta_m": 2.3077581997779766,
+            "cause": "initialization transition candidate"
+          }
+        ]
+      },
+      "common_roll_pitch": {
+        "count": 555,
+        "jump_mps": {
+          "mean": 5.415527527267275,
+          "p50": 3.5065493204715628,
+          "p95": 15.636975684425407,
+          "p99": 21.40436349199143,
+          "max": 27.01475925488944
+        },
+        "distinct_ids": 251,
+        "initialization_transition_candidates": 225,
+        "observed_age_at_least_5_candidates": 383,
+        "largest": [
+          {
+            "stamp_ns": 1789141095292590379,
+            "id": 154,
+            "jump_mps": 27.01475925488944,
+            "dt_sec": 0.10256743400000001,
+            "kf_init_count": 2,
+            "age": 2,
+            "misses": 0,
+            "center_delta_m": 2.9993809293681224,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1789141097126265764,
+            "id": 195,
+            "jump_mps": 25.075005645797646,
+            "dt_sec": 0.101667404,
+            "kf_init_count": 2,
+            "age": 2,
+            "misses": 0,
+            "center_delta_m": 2.7514932191977257,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1789141104435792922,
+            "id": 296,
+            "jump_mps": 24.869948511052527,
+            "dt_sec": 0.117598295,
+            "kf_init_count": 2,
+            "age": 2,
+            "misses": 0,
+            "center_delta_m": 2.86545716066638,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1789141107695778369,
+            "id": 322,
+            "jump_mps": 22.020748919651513,
+            "dt_sec": 0.10436010300000001,
+            "kf_init_count": 2,
+            "age": 7,
+            "misses": 0,
+            "center_delta_m": 2.4988933370530675,
+            "cause": "initialization transition candidate"
+          },
+          {
+            "stamp_ns": 1789141094785983324,
+            "id": 140,
+            "jump_mps": 21.813240568948,
+            "dt_sec": 0.09689951000000001,
+            "kf_init_count": 2,
+            "age": 3,
+            "misses": 0,
+            "center_delta_m": 2.3214617931877606,
+            "cause": "initialization transition candidate"
+          }
+        ]
+      }
+    }
+  }
+}

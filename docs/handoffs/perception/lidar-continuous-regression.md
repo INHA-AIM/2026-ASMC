@@ -10,7 +10,7 @@
 |---|---|---|
 | 관측 시간 | 원본 ROS source ns, callback ROS receipt, steady receipt/processing 분리 | 같은 ms 안의 다른 source stamp, 미래 입력·늦은 GPS 배제 |
 | GPS/map | strict 100ms 보간 유지, bounded 300ms 보정은 별도 API | 무효 barrier·정상 3회 복구·receipt 이전 표본만 선택 |
-| 지면 실패 | common 경로는 근거 없는 이전 평면을 재사용하지 않고 유한 점을 보존 | 실패 fixture에서 이전 평면이 점 24개를 전부 삭제하던 문제 재현 후 수정 |
+| 지면 실패 | common 경로는 근거 없는 이전 평면을 재사용하지 않고 유한 점을 보존 | 합성 unknown 24점의 삭제/보존 정책 차이 재현; 실제 장애물 소실의 정답은 아님 |
 | 연속 처리 | 실제 ROI/voxel·지면·군집·OBB·CA/Hungarian·fusion 함수 재사용 | 이전 상태를 이어가는 고정 입력 CPU 대조; 실시간 부하 시험과 구분 |
 | 추적 진단 | source dt·할당 ID/비용·OBB·miss·KF 초기화/상태·legacy 속도 기록 | 속도 정확도나 객체 정답으로 사용하지 않음 |
 | 점 대응 | voxel index, 원 센서 centroid, 수평화 centroid, 제거/보존 기록 | raw beam 대응·scan 내부 deskew를 증명하지 않음 |
@@ -48,8 +48,8 @@ trace OFF에서는 점 대응 set·추가 점군 복사·파일 기록을 만들
 실행별로 기록한다. 기존 78회 결과와 실패는
 [이전 경계 baseline](../../../config/baselines/perception_lidar_camera_frame_boundaries_v1.yaml)에 그대로 남긴다.
 
-- 지면 실패 fixture 수정 전: ROS 시험 13개 중 1개 실패, 알려진 점 24개 소실.
-- 수정 후: ROS 14개 통과. 실제 PCL 지면 함수로 roll 0/±5/±10° × pitch 0/±4°의 15조건을 검사해 지면 256점 제거와 높은 점 24개 보존을 확인했다. 이는 전체 장애물 보존 수락과 다르다.
+- 지면 실패 fixture 수정 전: ROS 시험 13개 중 1개 실패. 합성 unknown 24점이 이전 평면으로 삭제됐다. 이 점은 이전 지면 높이에 놓인 일직선 입력이며 실제 장애물 정답이 아니다.
+- 수정 후: ROS 14개 통과. **별도** 실제 PCL 지면 시험에서 roll 0/±5/±10° × pitch 0/±3°의 15조건을 검사해 지면 256점 제거와 높은 점 24개 보존을 확인했다. 이 별도 elevated-point 정답을 지면 fit 실패 사례에 적용하지 않는다. 전체 장애물 보존 수락과도 다르다.
 - 첫 CPU 시도는 tmpfs 용량 부족으로 중단됐다. 해당 실패 로그와 점군 trace를 보존하고
   별도 디스크 및 압축을 사용하는 후속 실행과 구분한다. 일부 출력만으로 완료 판정하지 않는다.
 - 실제 bag에는 객체/속도 독립 GT가 없다. 합성 truth의 정확도와 실제 bag 안정성·미대응
@@ -126,6 +126,62 @@ roslaunch Main main.launch start_yolo:=false rviz:=false \
 이 명령은 미수락 후보를 시험하는 opt-in이다. 카메라 생산자와 GUI는 별도 실행한다.
 roll을 분리 비교하려면 `lidar_level_roll:=false`, 기존 경로는 `enable_common_geometry:=false`다.
 카메라 모델·보넷 mask·클래스·confidence·메시지 MD5와 jamming 21% crop은 이번에 변경하지 않았다.
+
+## 사용자 직접 검토 — 24점·신규 분류·속도 변화
+
+[비교 갤러리](../../../config/baselines/evidence/lidar_continuous_regression_v1/user-review/index.html)는
+브라우저로 열면 24점 그림, 11개 관측의 원본 JPEG·확대·점군/OBB, 세 구간 전후 연속
+영상을 제공한다. GitHub에서는 HTML을 렌더링하지 않으므로 로컬 checkout의 파일을 연다.
+자료 생성은 오프라인이며 공유 bridge/master/GUI·운영 설정을 바꾸지 않았다.
+
+**24점의 의미를 정정한다.** 지면 fit 실패 fixture의 점은 `x=8..8.46m, y=0.2m,
+z=-1.5m`에 놓인 합성 일직선 입력이다. 이전 64점 평면과 높이가 같고, 현재 seed가
+최소 30개에 못 미친다. roll 0→10°는 context이며 이 24점에 `CorrectingPoints`를
+호출하지 않는다. 실제 장애물이나 raw scan을 자세 변화로 변환한 정답 시험이 아니다.
+실제 `NormalVectorFiltering`을 별도 프로세스에서 실행해 동일 입력이 이전 fallback에서는
+0점, common에서는 24점 남는 것을 확인했다. 이전 정책은 변경 전 common과 같은
+평면 재사용 동작을 유지하는 opt-out 분기로 재현했다. 지면일 수도 있어 단순 삭제를
+장애물 손실 결함으로 판정할 수 없다. 현재 처리는 근거 부족 시 unknown 보존 정책이며,
+남은 지면의 오검출/연산 비용은 재호의 후속 검토 대상이다. 두 실제 bag에서는 모든 처리
+관측의 현재 plane fit이 유효했으므로 이 fallback 사례가 실제 bag의 차이를 설명하지 않는다.
+
+분류 11관측은 10개 `car→unknown`, 1개 `unknown→car`다. 같은 객체의 연속 관측을
+포함하므로 차량 11대 소실로 계산하지 않는다. 각 그림은 발행에 전달한 실제 post-fusion
+상태와 해당 관측의 수평화 역행렬을 사용한다. raw voxel centroid에는 역변환을 다시
+적용하지 않는다. 원본 JPEG는 가장 가까운 source stamp(50ms 이내)이며 실제 YOLO
+매칭 stamp와 같다고 가정하지 않는다. YOLO box를 다른 시점 영상에 겹치지 않았다.
+전방 밖의 10번 관측은 같은 시점 우측 원본 영상과 고정 camera snapshot의 투영을 함께
+제공한다. 분류 카운터·이력이 다른 상태에서 실측 OBB는 남아 있다는 점과 객체 자체
+보존을 구분해 검토한다. 영상 대응도 독립 객체 GT를 대신하지 않는다.
+
+속도 지표는 같은 ID의 내부 CA 상대속도 벡터 갱신량 `|v_now-v_previous|>2m/s`다.
+실제 차량 속도·가속도·속도 오차가 아니며, 초기화·군집·연관·자세·실제 운동이 섞인다.
+아래 분위수는 **2m/s 초과로 센 이벤트들의 변화량**이다.
+
+| bag / 구성 | 횟수 | 변화량 p50 (m/s) | p95 (m/s) | 최대 (m/s) |
+|---|---:|---:|---:|---:|
+| 주 / legacy | 668 | 4.72 | 24.80 | 36.42 |
+| 주 / common pitch | 657 | 4.32 | 24.74 | 45.75 |
+| 주 / common roll+pitch | 599 | 4.32 | 24.60 | 36.20 |
+| 음영 / legacy | 557 | 4.32 | 20.83 | 31.26 |
+| 음영 / common pitch | 527 | 3.77 | 15.10 | 27.02 |
+| 음영 / common roll+pitch | 555 | 3.51 | 15.64 | 27.01 |
+
+roll만 분리하면 주 bag 횟수는 58회(-8.83%), 최대는 9.55m/s(-20.88%) 감소했지만
+p95는 약 0.57%만 감소했다. 음영은 28회(+5.31%) 증가, p50은 약 6.98% 감소,
+p95는 약 3.58% 증가했고 최대는 거의 같다. legacy→roll은 좌표 변경 효과까지 섞여
+주 668→599(-10.33%), 음영 557→555(-0.36%)다. 주 bag 자체도 터널을 포함하므로
+이 집계를 순수 일반도로/음영 외 성능으로 확대하지 않는다. 초기화 후보가 주 bag
+281→282개로 거의 같은데 전체 급변은 감소했다. 원인 확정이나 속도 정확도 근거는 아니다.
+
+사용자는 **주 bag에서 감소한 조건에서 음영 급변 증가를 허용**했다. 이 승인만 기록하고
+신규 분류·객체 보존·map 품질·공개 속도 validity는 자동 수락하지 않는다. PR은 Draft,
+공통/roll 기본값은 OFF로 유지한다. 다음 카메라 작업은 이 검토 이후 별도 단계다.
+
+재현 도구는 `export_ground_failure_review.py/.cpp`(기존 실제 Main test 라이브러리
+링크, 전용 master 11314), `render_lidar_user_review.py`(기록된 행렬/점과 원본 이미지)다.
+중간 렌더링 실패와 보완 전 갤러리는 호스트 `artifacts/lidar-pr72`에 보존했다.
+최종 갤러리는 11관측 전체, 전방 밖 사례, ns 문자열 표시와 파일 SHA를 검사했다.
 
 ## 최종 회귀
 

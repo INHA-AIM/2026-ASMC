@@ -18,6 +18,7 @@
 | [고정 관측 검토](fixed-case-review.json) | 기존 B1a 6관측과 같은 source ns; 독립 GT 없음 |
 | [압축본 SHA](archives.json) | portable 파일 SHA/크기 |
 | [전체 raw 목록](raw-manifest.json) | 호스트 `artifacts/lidar-pr72`의 파일별 SHA/크기 |
+| [사용자 비교 갤러리](user-review/index.html) | 합성 unknown 24점, 신규 분류 차이 11관측과 전후 영상, 속도 급변 분포·최대 변화 |
 
 큰 전체 voxel trace와 첫 실패의 부분 trace는 호스트 `artifacts/lidar-pr72`에 보존한다.
 CPU portable trace에서는 `ground_points`만 생략하며 연속 전체 객체/KF/분류/매칭 기록은
@@ -31,3 +32,15 @@ callback receipt는 다른 지표다. frozen YOLO 재생을 새 GPU 추론·전�
 
 합성 첫 16프레임만 직진·자세 변화 없는 속도 truth다. 낮은 물체·부분 관측·군집 합침의
 미대응은 모두 남겼다. 실제 bag의 객체 보존·속도 정확도는 독립 GT 수락이 아니다.
+
+사용자 갤러리는 새 추론/운영 변경 없이 실제 지면 함수를 호출한 export와 기존 CPU
+trace·원본 JPEG로 생성했다. 24점은 이전 지면 높이의 일직선 합성 입력이며 장애물
+정답이 없다. 기존 문서의 단순 “점 소실 수정”을 실제 객체 손실 근거로 사용하지 않는다.
+전방 밖 분류 관측 1건에는 원본 bag의 우측 이미지도 연결했다. 영상은 source stamp
+최근접 50ms 이내이며 실제 YOLO 선택 영상과 같다고 가정하지 않는다.
+
+`user-review/sha256.json`은 추가 자료의 파일 SHA와 보정/분석 출처 SHA다.
+기존 archives/raw manifest snapshot은 그대로 유지한다. render v1의 전방 밖 사례 실패,
+측방 보완 전 v2, 측방 보완 v3, ns 문자열 표시·소스 SHA를 포함한 전체 최종 v4 재실행 및
+실제 exporter binary/build 로그는 호스트에 보존한다. 최종 render 종료 로그도 갤러리에 포함한다.
+이 추가 자료는 기존 수락 보류를 자동 해제하지 않는다.

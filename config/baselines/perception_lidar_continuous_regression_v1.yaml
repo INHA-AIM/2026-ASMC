@@ -342,6 +342,50 @@ evidence:
   portable_root: config/baselines/evidence/lidar_continuous_regression_v1
   full_raw_host_root: artifacts/lidar-pr72
   raw_manifest: config/baselines/evidence/lidar_continuous_regression_v1/raw-manifest.json
+user_visual_review:
+  date: '2026-10-08'
+  gallery: config/baselines/evidence/lidar_continuous_regression_v1/user-review/index.html
+  original_sha_manifest: config/baselines/evidence/lidar_continuous_regression_v1/user-review/sha256.json
+  ground_failure:
+    actual_filter_export_verified: true
+    input_points: 24
+    previous_plane_fallback_output: 0
+    common_unknown_preservation_output: 24
+    independent_object_gt: false
+    input_scope: synthetic collinear already-leveled points at previous ground height;
+      attitude is context only, no CorrectingPoints call
+    interpretation: conservative unknown-preservation policy, not proven obstacle-loss fix
+  classes:
+    observations: 11
+    car_to_unknown: 10
+    unknown_to_car: 1
+    numeric_track_ids_comparable_between_runs: false
+    original_front_images: 11
+    target_in_front_image: 10
+    outside_front_case_has_original_right_image: true
+    camera_maximum_source_offset_ms: 50
+    repeated_observations_of_same_objects_included: true
+    accepted: false
+  speed:
+    metric: same-track internal CA relative velocity vector delta >2m/s,
+      not physical speed or speed error
+    primary_pitch_to_roll:
+      counts: [657, 599]
+      spike_p50_mps: [4.318337371308545, 4.3183591278719415]
+      spike_p95_mps: [24.737795717370133, 24.596197111906957]
+      spike_max_mps: [45.74791779645249, 36.19548184000914]
+      count_change_percent: -8.82800608828006
+    shadow_pitch_to_roll:
+      counts: [527, 555]
+      spike_p50_mps: [3.7697296012330184, 3.5065493204715628]
+      spike_p95_mps: [15.096246355798314, 15.636975684425407]
+      spike_max_mps: [27.015194000800136, 27.01475925488944]
+      count_change_percent: 5.313092979127135
+    user_exception: shadow increase allowed for this metric given primary decrease;
+      no automatic class/object/map/velocity-validity approval
+    independent_real_speed_gt: false
+    primary_contains_tunnel: true
+  runtime_changes_in_review: none
 pending:
 - 'roll candidate: 11 new primary class differences and additional synthetic unmatched
   observations'

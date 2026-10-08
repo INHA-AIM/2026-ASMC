@@ -22,6 +22,8 @@
 
 `Main` 연결 구현은 opt-in이며 공통 경계와 roll 기본값은 모두 OFF다.
 현재 골격에 지면 제거·구조물 분류·OBB·tracker ROS 노드가 이전된 것은 아니다.
+24점 삭제/보존과 신규 분류 차이는 [원본 이미지·점군 비교 갤러리](../../../config/baselines/evidence/lidar_continuous_regression_v1/user-review/index.html)에서 확인한다.
+24점은 장애물 정답이 없는 합성 지면 높이 입력이며, 실제 장애물 소실 사례로 해석하지 않는다.
 
 ## 역할과 남긴 파일
 
